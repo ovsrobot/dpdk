@@ -527,6 +527,20 @@ enum rte_flow_item_type {
 	 */
 	RTE_FLOW_ITEM_TYPE_PFCP,
 
+	/**
+	 * Matches Packet Classification type (PCTYPE).
+	 * See struct rte_flow_item_pctype.
+	 *
+	 */
+	RTE_FLOW_ITEM_TYPE_PCTYPE,
+
+	/**
+	 * Matches flow type.
+	 * See struct rte_flow_item_flowtype.
+	 *
+	 */
+	RTE_FLOW_ITEM_TYPE_FLOWTYPE,
+
 };
 
 /**
@@ -1547,6 +1561,46 @@ static const struct rte_flow_item_pfcp rte_flow_item_pfcp_mask = {
 #endif
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
+ * RTE_FLOW_ITEM_TYPE_PCTYPE
+ *
+ * Match Packet Classification type (PCTYPE)
+ *
+ */
+struct rte_flow_item_pctype {
+	uint64_t pctype;
+};
+
+/** Default mask for RTE_FLOW_ITEM_TYPE_PCTYPE. */
+#ifndef __cplusplus
+static const struct rte_flow_item_pctype rte_flow_item_pctype_mask = {
+	.pctype = 0xffffffffffffffff,
+};
+#endif
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
+ * RTE_FLOW_ITEM_TYPE_FLOWTYPE
+ *
+ * Match flow type
+ *
+ */
+struct rte_flow_item_flowtype {
+	uint16_t flowtype;
+};
+
+/** Default mask for RTE_FLOW_ITEM_TYPE_FLOWTYPE. */
+#ifndef __cplusplus
+static const struct rte_flow_item_flowtype rte_flow_item_flowtype_mask = {
+	.flowtype = 0xffff,
+};
+#endif
+
+/**
  * Matching pattern item definition.
  *
  * A pattern is formed by stacking items starting from the lowest protocol
@@ -2099,6 +2153,17 @@ enum rte_flow_action_type {
 	 * see enum RTE_ETH_EVENT_FLOW_AGED
 	 */
 	RTE_FLOW_ACTION_TYPE_AGE,
+
+	/**
+	 * Map Packet Classification type to flow type.
+	 *
+	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_PCTYPE,
+	 * and a valid RTE_FLOW_ITEM_FLOWTYPE the PMD should return a
+	 * RTE_FLOW_ERROR_TYPE_ACTION error.
+	 *
+	 * See struct rte_flow_action_map.
+	 */
+	RTE_FLOW_ACTION_TYPE_MAP,
 };
 
 /**
@@ -2658,6 +2723,19 @@ struct rte_flow_action_set_meta {
  */
 struct rte_flow_action_set_dscp {
 	uint8_t dscp;
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
+ * RTE_FLOW_ACTION_TYPE_MAP
+ *
+ * Map a packet classification type to a flow type.
+ */
+struct rte_flow_action_map {
+	uint16_t flowtype;
+	uint64_t pctype;
 };
 
 /* Mbuf dynamic field offset for metadata. */

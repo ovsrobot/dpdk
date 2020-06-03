@@ -1362,6 +1362,44 @@ Matches a PFCP Header.
 - ``seid``: session endpoint identifier.
 - Default ``mask`` matches s_field and seid.
 
+Item: ``PCTYPE``
+^^^^^^^^^^^^^^^^
+
+Matches a PCTYPE
+
+.. _table_rte_flow_item_pctype:
+
+.. table:: PCTYPE
+
+   +----------+----------+---------------------------------------+
+   | Field    | Subfield | Value                                 |
+   +==========+==========+=======================================+
+   | ``spec`` | ``data`` | 64 bit pctype value                   |
+   +----------+----------+---------------------------------------+
+   | ``last`` | ``data`` | upper range value                     |
+   +----------+----------+---------------------------------------+
+   | ``mask`` | ``data`` | bit-mask applies to "spec" and "last" |
+   +----------+----------+---------------------------------------+
+
+Item: ``FLOWTYPE``
+^^^^^^^^^^^^^^^^^^
+
+Matches a FLOWTYPE
+
+.. _table_rte_flow_item_flowtype:
+
+.. table:: FLOWTYPE
+
+   +----------+----------+---------------------------------------+
+   | Field    | Subfield | Value                                 |
+   +==========+==========+=======================================+
+   | ``spec`` | ``data`` | 16 bit flowtype value                 |
+   +----------+----------+---------------------------------------+
+   | ``last`` | ``data`` | upper range value                     |
+   +----------+----------+---------------------------------------+
+   | ``mask`` | ``data`` | bit-mask applies to "spec" and "last" |
+   +----------+----------+---------------------------------------+
+
 Actions
 ~~~~~~~
 
@@ -2643,6 +2681,23 @@ timeout passed without any matching on the flow.
    | ``reserved`` | 8 bits reserved, must be zero   |
    +--------------+---------------------------------+
    | ``context``  | user input flow context         |
+   +--------------+---------------------------------+
+
+Action: ``MAP``
+^^^^^^^^^^^^^^^
+
+Map pctype to flowtype.
+
+.. _table_rte_flow_action_map:
+
+.. table:: MAP
+
+   +--------------+---------------------------------+
+   | Field        | Value                           |
+   +==============+=================================+
+   | ``pctype``   | 64 bit pctype value             |
+   +--------------+---------------------------------+
+   | ``flowtype`` | 16 bit flowtype value           |
    +--------------+---------------------------------+
 
 Negative types
