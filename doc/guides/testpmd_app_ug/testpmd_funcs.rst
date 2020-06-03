@@ -4281,6 +4281,8 @@ This section lists supported actions and their attributes, if any.
 
   - ``dscp_value {unsigned}``: The new DSCP value to be set
 
+- ``map``: map Packet Classification (PC) type to flow type.
+
 Destroying flow rules
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -4935,6 +4937,31 @@ if seid is set)::
         actions queue index 3 / end
  testpmd> flow create 0 ingress pattern eth / ipv6 / pfcp s_field is 1
         seid is 1 / end actions queue index 3 / end
+
+Sample PCTYPE mapping rules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following sequence of commands is required for pctype mapping::
+
+ testpmd> port stop 0
+ testpmd> flow create 0 ingress pattern end actions map pctype 15 flowtype 27 /
+        end
+ testpmd> show port 0 pctype mapping
+ pctype: 15  ->  flowtype: 27
+
+ testpmd> port start 0
+ testpmd> flow create 0 ingress pattern end actions rss types end queues 0 1 2
+        3 end / end
+ testpmd> flow create 0 ingress pattern eth / ipv4 / esp / end actions rss
+        types esp end queues end / end
+
+ testpmd> flow list 0
+ ID Group   Prio    Attr Rule
+ 0  0       0       i--  => MAP
+ 1  0       0       i--  => RSS
+ 2  0       0       i--  ETH IPV4 ESP => RSS
+ testpmd> set verbose 1
+ testpmd> start
 
 BPF Functions
 --------------

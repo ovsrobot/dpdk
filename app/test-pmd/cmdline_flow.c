@@ -349,6 +349,9 @@ enum index {
 	ACTION_SET_IPV6_DSCP_VALUE,
 	ACTION_AGE,
 	ACTION_AGE_TIMEOUT,
+	ACTION_MAP,
+	ACTION_MAP_PCTYPE,
+	ACTION_MAP_FLOWTYPE,
 };
 
 /** Maximum size for pattern in struct rte_flow_item_raw. */
@@ -366,6 +369,11 @@ struct action_rss_data {
 	struct rte_flow_action_rss conf;
 	uint8_t key[RSS_HASH_KEY_LENGTH];
 	uint16_t queue[ACTION_RSS_QUEUE_NUM];
+};
+
+/** Storage for struct rte_flow_action_map including external data. */
+struct action_map_data {
+	struct rte_flow_action_map conf;
 };
 
 /** Maximum data size in struct rte_flow_action_raw_encap. */
@@ -1161,6 +1169,7 @@ static const enum index next_action[] = {
 	ACTION_SET_IPV4_DSCP,
 	ACTION_SET_IPV6_DSCP,
 	ACTION_AGE,
+	ACTION_MAP,
 	ZERO,
 };
 
@@ -1190,6 +1199,13 @@ static const enum index action_rss[] = {
 	ACTION_RSS_KEY,
 	ACTION_RSS_KEY_LEN,
 	ACTION_RSS_QUEUES,
+	ACTION_NEXT,
+	ZERO,
+};
+
+static const enum index action_map[] = {
+	ACTION_MAP_PCTYPE,
+	ACTION_MAP_FLOWTYPE,
 	ACTION_NEXT,
 	ZERO,
 };
@@ -1421,6 +1437,9 @@ static int parse_vc_action_rss_type(struct context *, const struct token *,
 static int parse_vc_action_rss_queue(struct context *, const struct token *,
 				     const char *, unsigned int, void *,
 				     unsigned int);
+static int parse_vc_action_map(struct context *, const struct token *,
+			       const char *, unsigned int, void *,
+			       unsigned int);
 static int parse_vc_action_vxlan_encap(struct context *, const struct token *,
 				       const char *, unsigned int, void *,
 				       unsigned int);
@@ -3609,6 +3628,36 @@ static const struct token token_list[] = {
 		.call = parse_vc_action_raw_decap_index,
 		.comp = comp_set_raw_index,
 	},
+	[ACTION_MAP] = {
+		.name = "map",
+		.help = "map Packet Classification type to flow type",
+		.priv = PRIV_ACTION(MAP, sizeof(struct action_map_data)),
+		.next = NEXT(action_map),
+		.args = ARGS(ARGS_ENTRY(struct rte_flow_action_map, pctype),
+			     ARGS_ENTRY(struct rte_flow_action_map,
+						flowtype)),
+		.call = parse_vc_action_map,
+	},
+	[ACTION_MAP_PCTYPE] = {
+		.name = "pctype",
+		.help = "Packet Classification type ",
+		.next = NEXT(action_map, NEXT_ENTRY(UNSIGNED)),
+		.args = ARGS(ARGS_ENTRY_ARB
+			     (offsetof(struct action_map_data, conf) +
+			      offsetof(struct rte_flow_action_map, pctype),
+			      sizeof(((struct rte_flow_action_map *)0)->
+				     pctype))),
+	},
+	[ACTION_MAP_FLOWTYPE] = {
+		.name = "flowtype",
+		.help = "flow type ",
+		.next = NEXT(action_map, NEXT_ENTRY(UNSIGNED)),
+		.args = ARGS(ARGS_ENTRY_ARB
+			     (offsetof(struct action_map_data, conf) +
+			      offsetof(struct rte_flow_action_map, flowtype),
+			      sizeof(((struct rte_flow_action_map *)0)->
+				     flowtype))),
+	},
 	/* Top level command. */
 	[SET] = {
 		.name = "set",
@@ -5205,6 +5254,42 @@ parse_vc_action_set_meta(struct context *ctx, const struct token *token,
 	if (ret < 0)
 		return -1;
 	return len;
+}
+
+/** Parse MAP action. */
+static int
+parse_vc_action_map(struct context *ctx, const struct token *token,
+		    const char *str, unsigned int len,
+		    void *buf, unsigned int size)
+{
+	struct buffer *out = buf;
+	struct rte_flow_action *action;
+	struct action_map_data *action_map_data;
+	int ret;
+
+	ret = parse_vc(ctx, token, str, len, buf, size);
+	if (ret < 0)
+		return ret;
+	/* Nothing else to do if there is no buffer. */
+	if (!out)
+		return ret;
+	if (!out->args.vc.actions_n)
+		return -1;
+	action = &out->args.vc.actions[out->args.vc.actions_n - 1];
+	/* Point to selected object. */
+	ctx->object = out->args.vc.data;
+	ctx->objmask = NULL;
+	/* Set up default configuration. */
+	action_map_data = ctx->object;
+	*action_map_data = (struct action_map_data){
+		.conf = (struct rte_flow_action_map){
+			.flowtype = 0,
+			.pctype = 0
+		},
+	};
+
+	action->conf = &action_map_data->conf;
+	return ret;
 }
 
 /** Parse tokens for destroy command. */
