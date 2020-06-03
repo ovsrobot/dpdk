@@ -762,6 +762,10 @@ struct i40e_rss_pattern_info {
 	uint64_t types;
 };
 
+struct i40e_map_pattern_info {
+	uint8_t action_flag;
+};
+
 /* Tunnel filter number HW supports */
 #define I40E_MAX_TUNNEL_FILTER_NUM 400
 
@@ -992,6 +996,19 @@ struct i40e_rss_filter {
 	struct i40e_rte_flow_rss_conf rss_filter_info;
 };
 
+struct i40e_rte_flow_map_conf {
+	struct rte_flow_action_map conf; /**< MAP parameters. */
+	bool valid; /* Check if it's valid */
+};
+
+TAILQ_HEAD(i40e_map_conf_list, i40e_map_filter);
+
+/* MAP filter list structure */
+struct i40e_map_filter {
+	TAILQ_ENTRY(i40e_map_filter) next;
+	struct i40e_rte_flow_map_conf map_filter_info;
+};
+
 struct i40e_vf_msg_cfg {
 	/* maximal VF message during a statistic period */
 	uint32_t max_msg;
@@ -1085,6 +1102,8 @@ struct i40e_pf {
 	uint16_t switch_domain_id;
 
 	struct i40e_vf_msg_cfg vf_msg_cfg;
+	struct i40e_rte_flow_map_conf map_info; /* MAP info */
+	struct i40e_map_conf_list map_config_list; /* MAP rule list */
 };
 
 enum pending_msg {
@@ -1219,6 +1238,7 @@ union i40e_filter_t {
 	struct rte_eth_tunnel_filter_conf tunnel_filter;
 	struct i40e_tunnel_filter_conf consistent_tunnel_filter;
 	struct i40e_rte_flow_rss_conf rss_conf;
+	struct i40e_rte_flow_map_conf map_conf;
 };
 
 typedef int (*parse_filter_t)(struct rte_eth_dev *dev,
@@ -1365,6 +1385,10 @@ int i40e_config_rss_filter(struct i40e_pf *pf,
 		struct i40e_rte_flow_rss_conf *conf, bool add);
 int i40e_vf_representor_init(struct rte_eth_dev *ethdev, void *init_params);
 int i40e_vf_representor_uninit(struct rte_eth_dev *ethdev);
+int i40e_map_conf_init(struct i40e_rte_flow_map_conf *out,
+		       const struct rte_flow_action_map *in);
+int i40e_config_map_filter(struct i40e_pf *pf,
+		struct i40e_rte_flow_map_conf *conf, bool add);
 
 #define I40E_DEV_TO_PCI(eth_dev) \
 	RTE_DEV_TO_PCI((eth_dev)->device)
