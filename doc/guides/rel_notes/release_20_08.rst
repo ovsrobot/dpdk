@@ -56,6 +56,24 @@ New Features
      Also, make sure to start the actual text at the margin.
      =========================================================
 
+* **Added a map action to the rte_flow API.**
+
+  Added a map action to map Packet Classification (PC) types to flow types
+
+  * Added new action: ``RTE_FLOW_ACTION_MAP``
+  * Added new type: ``RTE_FLOW_ITEM_TYPE_PCTYPE``
+  * Added new type: ``RTE_FLOW_ITEM_TYPE_FLOWTYPE``
+
+* **Updated Intel i40e driver.**
+
+  Updated i40e PMD with new features and improvements, including:
+
+  * added support for the rte_flow map action
+
+* **Updated the testpmd application.**
+
+  Added support for the rte_flow map action to the testpmd application.
+
 
 Removed Items
 -------------
