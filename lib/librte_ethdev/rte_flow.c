@@ -173,6 +173,7 @@ static const struct rte_flow_desc_data rte_flow_desc_action[] = {
 	MK_FLOW_ACTION(SET_IPV4_DSCP, sizeof(struct rte_flow_action_set_dscp)),
 	MK_FLOW_ACTION(SET_IPV6_DSCP, sizeof(struct rte_flow_action_set_dscp)),
 	MK_FLOW_ACTION(AGE, sizeof(struct rte_flow_action_age)),
+	MK_FLOW_ACTION(MAP, sizeof(struct rte_flow_action_map)),
 };
 
 int
@@ -596,11 +597,13 @@ rte_flow_conv_action_conf(void *buf, const size_t size,
 			const struct rte_flow_action_rss *rss;
 			const struct rte_flow_action_vxlan_encap *vxlan_encap;
 			const struct rte_flow_action_nvgre_encap *nvgre_encap;
+			const struct rte_flow_action_map *map;
 		} src;
 		union {
 			struct rte_flow_action_rss *rss;
 			struct rte_flow_action_vxlan_encap *vxlan_encap;
 			struct rte_flow_action_nvgre_encap *nvgre_encap;
+			struct rte_flow_action_map *map;
 		} dst;
 		size_t tmp;
 		int ret;
@@ -664,6 +667,17 @@ rte_flow_conv_action_conf(void *buf, const size_t size,
 						 off);
 			off += ret;
 		}
+		break;
+	case RTE_FLOW_ACTION_TYPE_MAP:
+		src.map = action->conf;
+		dst.map = buf;
+		rte_memcpy(dst.map,
+			   (&(struct rte_flow_action_map){
+				.pctype = src.map->pctype,
+				.flowtype = src.map->flowtype,
+			   }),
+			   size > sizeof(*dst.map) ? sizeof(*dst.map) : size);
+		off = sizeof(*dst.map);
 		break;
 	default:
 		off = rte_flow_desc_action[action->type].size;
