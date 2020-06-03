@@ -1660,6 +1660,9 @@ eth_i40e_dev_init(struct rte_eth_dev *dev, void *init_params __rte_unused)
 	/* initialize RSS rule list */
 	TAILQ_INIT(&pf->rss_config_list);
 
+	/* initialize MAP rule list */
+	TAILQ_INIT(&pf->map_config_list);
+
 	/* initialize Traffic Manager configuration */
 	i40e_tm_conf_init(dev);
 
@@ -13406,6 +13409,59 @@ i40e_config_rss_filter(struct i40e_pf *pf,
 			i40e_rss_clear_hash_function(pf, conf);
 		else
 			i40e_rss_disable_hash(pf, conf);
+	}
+
+	return 0;
+}
+
+int
+i40e_map_conf_init(struct i40e_rte_flow_map_conf *out,
+		   const struct rte_flow_action_map *in)
+{
+	int ret = 0;
+
+	if ((in->pctype >= I40E_FILTER_PCTYPE_MAX) ||
+		(in->flowtype >= I40E_FLOW_TYPE_MAX))
+		ret = EINVAL;
+	else
+		out->conf = (struct rte_flow_action_map){
+			.pctype = in->pctype,
+			.flowtype = in->flowtype,
+		};
+	return ret;
+}
+
+int
+i40e_config_map_filter(struct i40e_pf *pf,
+		struct i40e_rte_flow_map_conf *map_conf, bool add)
+{
+	struct i40e_rte_flow_map_conf *map_info = &pf->map_info;
+	struct rte_flow_action_map update_conf = map_info->conf;
+	struct rte_pmd_i40e_flow_type_mapping type_map;
+	int ret;
+
+	if (add) {
+		update_conf.flowtype = map_conf->conf.flowtype;
+		update_conf.pctype = map_conf->conf.pctype;
+
+		type_map.flow_type = map_conf->conf.flowtype;
+		type_map.pctype = (1ULL << map_conf->conf.pctype);
+		ret = rte_pmd_i40e_flow_type_mapping_update(
+				pf->dev_data->port_id, &type_map, 1, 0);
+		if (ret)
+			return ret;
+
+		/* Update MAP info in pf */
+		if (i40e_map_conf_init(map_info, &update_conf))
+			return -EINVAL;
+
+	} else {
+		if (!map_conf->valid)
+			return 0;
+
+		map_info->conf.flowtype = 0;
+		map_info->conf.pctype = 0;
+		map_info->valid = false;
 	}
 
 	return 0;
