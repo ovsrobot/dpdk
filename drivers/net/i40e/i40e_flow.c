@@ -4996,6 +4996,185 @@ i40e_config_rss_filter_del(struct rte_eth_dev *dev,
 }
 
 static int
+i40e_flow_parse_map_pattern(__rte_unused struct rte_eth_dev *dev,
+			     const struct rte_flow_item *pattern,
+			     struct i40e_map_pattern_info *p_info,
+			     struct rte_flow_error *error)
+{
+	const struct rte_flow_item *item = pattern;
+	enum rte_flow_item_type item_type;
+	struct rte_flow_item *items;
+	uint32_t item_num = 0; /* non-void item number of pattern*/
+	uint32_t i = 0;
+
+	if (item->type == RTE_FLOW_ITEM_TYPE_END) {
+		p_info->action_flag = 1;
+		return 0;
+	}
+
+	/* Convert pattern to item types */
+	while ((pattern + i)->type != RTE_FLOW_ITEM_TYPE_END) {
+		if ((pattern + i)->type != RTE_FLOW_ITEM_TYPE_VOID)
+			item_num++;
+		i++;
+	}
+	item_num++;
+
+	items = rte_zmalloc("i40e_pattern",
+			    item_num * sizeof(struct rte_flow_item), 0);
+	if (!items) {
+		rte_flow_error_set(error, ENOMEM, RTE_FLOW_ERROR_TYPE_ITEM_NUM,
+				   NULL, "No memory for PMD internal items.");
+		return -ENOMEM;
+	}
+
+	i40e_pattern_skip_void_item(items, pattern);
+
+	rte_free(items);
+
+	for (; item->type != RTE_FLOW_ITEM_TYPE_END; item++) {
+		if (item->last) {
+			rte_flow_error_set(error, EINVAL,
+					   RTE_FLOW_ERROR_TYPE_ITEM,
+					   item,
+					   "Not supported");
+			return -rte_errno;
+		}
+		item_type = item->type;
+		switch (item_type) {
+		case RTE_FLOW_ITEM_TYPE_ETH:
+			p_info->action_flag = 1;
+			break;
+
+		default:
+			rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ITEM,
+					item,
+					"item not supported");
+			return -rte_errno;
+		}
+	}
+
+	return 0;
+}
+
+static int
+i40e_flow_parse_map_action(__rte_unused struct rte_eth_dev *dev,
+			    const struct rte_flow_action *actions,
+			    struct i40e_map_pattern_info *p_info,
+			    struct rte_flow_error *error,
+			    union i40e_filter_t *filter)
+{
+	const struct rte_flow_action *act;
+	const struct rte_flow_action_map *map;
+	struct i40e_rte_flow_map_conf *map_conf = &filter->map_conf;
+	uint32_t index = 0;
+
+	NEXT_ITEM_OF_ACTION(act, actions, index);
+
+	/**
+	 * check if the first not void action is MAP.
+	 */
+	if ((act->type != RTE_FLOW_ACTION_TYPE_MAP) ||
+		(p_info->action_flag == 0)) {
+		memset(map_conf, 0, sizeof(struct i40e_rte_flow_map_conf));
+		rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION,
+			act, "Not supported action.");
+		return -rte_errno;
+	}
+
+	map = act->conf;
+
+	if (i40e_map_conf_init(map_conf, map))
+		return rte_flow_error_set
+			(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION, act,
+			 "MAP context initialization failure");
+
+	map_conf->valid = true;
+
+	return 0;
+}
+
+static int
+i40e_parse_map_filter(struct rte_eth_dev *dev,
+			const struct rte_flow_attr *attr,
+			const struct rte_flow_item pattern[],
+			const struct rte_flow_action actions[],
+			union i40e_filter_t *filter,
+			struct rte_flow_error *error)
+{
+	struct i40e_map_pattern_info p_info;
+	int ret;
+
+	memset(&p_info, 0, sizeof(struct i40e_map_pattern_info));
+
+	ret = i40e_flow_parse_map_pattern(dev, pattern, &p_info, error);
+	if (ret)
+		return ret;
+
+	ret = i40e_flow_parse_map_action(dev, actions, &p_info, error, filter);
+	if (ret)
+		return ret;
+
+	ret = i40e_flow_parse_attr(attr, error);
+	if (ret)
+		return ret;
+
+	cons_filter_type = RTE_ETH_FILTER_MAP;
+
+	return 0;
+}
+
+static int
+i40e_config_map_filter_set(struct rte_eth_dev *dev,
+		struct i40e_rte_flow_map_conf *conf)
+{
+	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct i40e_map_filter *map_filter;
+	int ret;
+
+	ret = i40e_config_map_filter(pf, conf, 1);
+	if (ret)
+		return ret;
+
+	map_filter = rte_zmalloc("i40e_map_filter", sizeof(*map_filter), 0);
+	if (map_filter == NULL) {
+		PMD_DRV_LOG(ERR, "Failed to alloc memory.");
+		return -ENOMEM;
+	}
+	map_filter->map_filter_info = *conf;
+
+	/* the rule newly created is always valid
+	 * the existing rule covered by new rule will be set invalid
+	 */
+	map_filter->map_filter_info.valid = true;
+
+	TAILQ_INSERT_TAIL(&pf->map_config_list, map_filter, next);
+
+	return 0;
+}
+
+static int
+i40e_config_map_filter_del(struct rte_eth_dev *dev,
+		struct i40e_rte_flow_map_conf *conf)
+{
+	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct i40e_map_filter *map_filter;
+	void *temp;
+
+	i40e_config_map_filter(pf, conf, 0);
+
+	TAILQ_FOREACH_SAFE(map_filter, &pf->map_config_list, next, temp) {
+		if (!memcmp(&map_filter->map_filter_info, conf,
+			sizeof(struct rte_flow_action_map))) {
+			TAILQ_REMOVE(&pf->map_config_list, map_filter, next);
+			rte_free(map_filter);
+		}
+	}
+	return 0;
+}
+
+static int
 i40e_flow_validate(struct rte_eth_dev *dev,
 		   const struct rte_flow_attr *attr,
 		   const struct rte_flow_item pattern[],
@@ -5037,6 +5216,12 @@ i40e_flow_validate(struct rte_eth_dev *dev,
 
 	if ((actions + i)->type == RTE_FLOW_ACTION_TYPE_RSS) {
 		ret = i40e_parse_rss_filter(dev, attr, pattern,
+					actions, &cons_filter, error);
+		return ret;
+	}
+
+	if ((actions + i)->type == RTE_FLOW_ACTION_TYPE_MAP) {
+		ret = i40e_parse_map_filter(dev, attr, pattern,
 					actions, &cons_filter, error);
 		return ret;
 	}
@@ -5137,6 +5322,13 @@ i40e_flow_create(struct rte_eth_dev *dev,
 		flow->rule = TAILQ_LAST(&pf->rss_config_list,
 				i40e_rss_conf_list);
 		break;
+	case RTE_ETH_FILTER_MAP:
+		ret = i40e_config_map_filter_set(dev, &cons_filter.map_conf);
+		if (ret)
+			goto free_flow;
+		flow->rule = TAILQ_LAST(&pf->map_config_list,
+			i40e_map_conf_list);
+		break;
 	default:
 		goto free_flow;
 	}
@@ -5183,6 +5375,10 @@ i40e_flow_destroy(struct rte_eth_dev *dev,
 	case RTE_ETH_FILTER_HASH:
 		ret = i40e_config_rss_filter_del(dev,
 			&((struct i40e_rss_filter *)flow->rule)->rss_filter_info);
+		break;
+	case RTE_ETH_FILTER_MAP:
+		ret = i40e_config_map_filter_del(dev,
+		&((struct i40e_map_filter *)flow->rule)->map_filter_info);
 		break;
 	default:
 		PMD_DRV_LOG(WARNING, "Filter type (%d) not supported",
