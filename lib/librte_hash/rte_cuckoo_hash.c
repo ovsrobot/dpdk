@@ -979,6 +979,9 @@ __rte_hash_add_key_with_hash(const struct rte_hash *h, const void *key,
 	/* Did not find a match, so get a new slot for storing the new key */
 	if (h->use_local_cache) {
 		lcore_id = rte_lcore_id();
+		if (lcore_id == LCORE_ID_ANY)
+			return -EINVAL;
+
 		cached_free_slots = &h->local_free_slots[lcore_id];
 		/* Try to get a free slot from the local cache */
 		if (cached_free_slots->len == 0) {
@@ -1382,6 +1385,10 @@ remove_entry(const struct rte_hash *h, struct rte_hash_bucket *bkt, unsigned i)
 
 	if (h->use_local_cache) {
 		lcore_id = rte_lcore_id();
+		ERR_IF_TRUE((lcore_id == LCORE_ID_ANY),
+			    "%s: attempt to remove entry from non EAL thread\n",
+			    __func__);
+
 		cached_free_slots = &h->local_free_slots[lcore_id];
 		/* Cache full, need to free it. */
 		if (cached_free_slots->len == LCORE_CACHE_SIZE) {
@@ -1637,6 +1644,8 @@ rte_hash_free_key_with_position(const struct rte_hash *h,
 
 	if (h->use_local_cache) {
 		lcore_id = rte_lcore_id();
+		RETURN_IF_TRUE((lcore_id == LCORE_ID_ANY), -EINVAL);
+
 		cached_free_slots = &h->local_free_slots[lcore_id];
 		/* Cache full, need to free it. */
 		if (cached_free_slots->len == LCORE_CACHE_SIZE) {

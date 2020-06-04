@@ -85,6 +85,7 @@ For concurrent writes, and concurrent reads and writes the following flag values
 
 *  If the multi-writer flag (RTE_HASH_EXTRA_FLAGS_MULTI_WRITER_ADD) is set, multiple threads writing to the table is allowed.
    Key add, delete, and table reset are protected from other writer threads. With only this flag set, readers are not protected from ongoing writes.
+   The writer threads must be EAL threads, it is not safe to write to a multi-writer hash table from an interrupt, control or other threads.
 
 *  If the read/write concurrency (RTE_HASH_EXTRA_FLAGS_RW_CONCURRENCY) is set, multithread read/write operation is safe
    (i.e., application does not need to stop the readers from accessing the hash table until writers finish their updates. Readers and writers can operate on the table concurrently).
