@@ -62,6 +62,7 @@ New Features
 
      Application features:
      * Measure rte_flow insertion rate.
+     * Measure rte_flow deletion rate.
 
 
 Removed Items
