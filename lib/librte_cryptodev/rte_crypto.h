@@ -31,8 +31,10 @@ enum rte_crypto_op_type {
 	/**< Undefined operation type */
 	RTE_CRYPTO_OP_TYPE_SYMMETRIC,
 	/**< Symmetric operation */
-	RTE_CRYPTO_OP_TYPE_ASYMMETRIC
+	RTE_CRYPTO_OP_TYPE_ASYMMETRIC,
 	/**< Asymmetric operation */
+	RTE_CRYPTO_OP_TYPE_SECURITY
+	/**< Security operation */
 };
 
 /** Status of crypto operation */
@@ -120,6 +122,13 @@ struct rte_crypto_op {
 
 		struct rte_crypto_asym_op asym[0];
 		/**< Asymmetric operation parameters */
+
+#ifdef RTE_LIBRTE_SECURITY
+		uint8_t security[0];
+		/**< Security operation parameters
+		 * - Must be accessed through a rte_security_op pointer
+		 */
+#endif
 
 	}; /**< operation specific parameters */
 };
