@@ -293,6 +293,30 @@ struct rte_security_pdcp_xform {
 	uint32_t hfn_ovrd;
 };
 
+/** DOCSIS direction */
+enum rte_security_docsis_direction {
+	RTE_SECURITY_DOCSIS_UPLINK,
+	/**< Uplink
+	 * - Decryption, followed by CRC Verification
+	 */
+	RTE_SECURITY_DOCSIS_DOWNLINK,
+	/**< Downlink
+	 * - CRC Generation, followed by Encryption
+	 */
+};
+
+/**
+ * DOCSIS security session configuration.
+ *
+ * This structure contains data required to create a DOCSIS security session.
+ */
+struct rte_security_docsis_xform {
+	enum rte_security_docsis_direction direction;
+	/** DOCSIS direction */
+	uint16_t crc_size;
+	/**< CRC size in bytes */
+};
+
 /**
  * Security session action type.
  */
@@ -325,6 +349,8 @@ enum rte_security_session_protocol {
 	/**< MACSec Protocol */
 	RTE_SECURITY_PROTOCOL_PDCP,
 	/**< PDCP Protocol */
+	RTE_SECURITY_PROTOCOL_DOCSIS,
+	/**< DOCSIS Protocol */
 };
 
 /**
@@ -340,6 +366,7 @@ struct rte_security_session_conf {
 		struct rte_security_ipsec_xform ipsec;
 		struct rte_security_macsec_xform macsec;
 		struct rte_security_pdcp_xform pdcp;
+		struct rte_security_docsis_xform docsis;
 	};
 	/**< Configuration parameters for security session */
 	struct rte_crypto_sym_xform *crypto_xform;
@@ -353,6 +380,77 @@ struct rte_security_session {
 	/**< Private session material */
 	uint64_t opaque_data;
 	/**< Opaque user defined data */
+};
+
+/**
+ * DOCSIS operation parameters
+ */
+struct rte_security_docsis_op {
+	struct rte_crypto_sym_op crypto_sym;
+	/**< Symmetric crypto operation parameters */
+
+	struct {
+		struct {
+			uint16_t offset;
+			/**<
+			 * Starting point for CRC processing, specified
+			 * as the number of bytes from start of the packet in
+			 * the source mbuf in crypto_sym
+			 */
+			uint16_t length;
+			/**<
+			 * The length, in bytes, of the source mbuf on which the
+			 * CRC will be computed
+			 */
+		} data;
+		/**< Data offset and length for CRC */
+
+		struct {
+			uint8_t *data;
+			/**<
+			 * This points to the location where the CRC should be
+			 * written (in the case of generation) or where the
+			 * purported result exists (in the case of
+			 * verification).
+			 *
+			 * The caller must ensure the required length of
+			 * physically contiguous memory is available at this
+			 * address.
+			 *
+			 * This may point into the mbuf packet data. For
+			 * generation, the result will overwrite any data at
+			 * this location.
+			 */
+			rte_iova_t phys_addr;
+			/**< Physical address of output data */
+		} output;
+		/**< Output location */
+	} crc;
+	/**< CRC operation parameters */
+
+	uint64_t reserved;
+	/**< Reserved for future use */
+};
+
+/**
+ * Security operation types
+ */
+enum rte_security_op_type {
+	RTE_SECURITY_OP_TYPE_DOCSIS = 1
+	/**< DOCSIS operation */
+};
+
+/**
+ * Security operation parameters
+ */
+struct rte_security_op {
+	enum rte_security_op_type type;
+	/**< Type of operation */
+	RTE_STD_C11
+	union {
+		struct rte_security_docsis_op docsis;
+	};
+	/**< Parameters for security operation */
 };
 
 /**
@@ -523,6 +621,10 @@ struct rte_security_pdcp_stats {
 	uint64_t reserved;
 };
 
+struct rte_security_docsis_stats {
+	uint64_t reserved;
+};
+
 struct rte_security_stats {
 	enum rte_security_session_protocol protocol;
 	/**< Security protocol to be configured */
@@ -532,6 +634,7 @@ struct rte_security_stats {
 		struct rte_security_macsec_stats macsec;
 		struct rte_security_ipsec_stats ipsec;
 		struct rte_security_pdcp_stats pdcp;
+		struct rte_security_docsis_stats docsis;
 	};
 };
 
@@ -591,6 +694,13 @@ struct rte_security_capability {
 			/**< Capability flags, see RTE_SECURITY_PDCP_* */
 		} pdcp;
 		/**< PDCP capability */
+		struct {
+			enum rte_security_docsis_direction direction;
+			/**< DOCSIS direction */
+			uint16_t crc_size;
+			/**< CRC size in bytes */
+		} docsis;
+		/**< DOCSIS capability */
 	};
 
 	const struct rte_cryptodev_capabilities *crypto_capabilities;
@@ -649,6 +759,10 @@ struct rte_security_capability_idx {
 			enum rte_security_pdcp_domain domain;
 			uint32_t capa_flags;
 		} pdcp;
+		struct {
+			enum rte_security_docsis_direction direction;
+			uint16_t crc_size;
+		} docsis;
 	};
 };
 
