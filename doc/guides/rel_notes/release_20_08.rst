@@ -60,6 +60,9 @@ New Features
 
      Add new application to test rte_flow performance.
 
+     Application features:
+     * Measure rte_flow insertion rate.
+
 
 Removed Items
 -------------
