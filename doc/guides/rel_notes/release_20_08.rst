@@ -56,6 +56,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =========================================================
 
+   * **Add flow performance application.**
+
+     Add new application to test rte_flow performance.
+
 
 Removed Items
 -------------
