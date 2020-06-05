@@ -51,9 +51,9 @@ ice_dcf_init_rxq(struct rte_eth_dev *dev, struct ice_rx_queue *rxq)
 	uint16_t buf_size, max_pkt_len, len;
 
 	buf_size = rte_pktmbuf_data_room_size(rxq->mp) - RTE_PKTMBUF_HEADROOM;
-
-	/* Calculate the maximum packet length allowed */
-	len = rxq->rx_buf_len * IAVF_MAX_CHAINED_RX_BUFFERS;
+	rxq->rx_hdr_len = 0;
+	rxq->rx_buf_len = RTE_ALIGN(buf_size, (1 << ICE_RLAN_CTX_DBUF_S));
+	len = ICE_SUPPORT_CHAIN_NUM * rxq->rx_buf_len;
 	max_pkt_len = RTE_MIN(len, dev->data->dev_conf.rxmode.max_rx_pkt_len);
 
 	/* Check if the jumbo frame and maximum packet length are set
@@ -131,6 +131,14 @@ ice_dcf_dev_start(struct rte_eth_dev *dev)
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Fail to init queues");
 		return ret;
+	}
+
+	if (hw->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_RSS_PF) {
+		ret = ice_dcf_init_rss(hw);
+		if (ret) {
+			PMD_DRV_LOG(ERR, "Failed to configure RSS");
+			return ret;
+		}
 	}
 
 	dev->data->dev_link.link_status = ETH_LINK_UP;
