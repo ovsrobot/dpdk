@@ -29,10 +29,18 @@ extern "C" {
  * Type of generic device
  */
 enum rte_devtype {
-	RTE_DEVTYPE_WHITELISTED_PCI,
-	RTE_DEVTYPE_BLACKLISTED_PCI,
+	RTE_DEVTYPE_ALLOWLIST_PCI,
+	RTE_DEVTYPE_BLOCKLIST_PCI,
 	RTE_DEVTYPE_VIRTUAL,
 };
+
+#define RTE_DEVTYPE_WHITELISTED_PCI \
+	_Pragma("GCC message \"'RTE_DEVTYPE_WHITELISTED' is deprecated\"") \
+	RTE_DEVTYPE_ALLOWLIST_PCI
+
+#define RTE_DEVTYPE_BLACKLISTED_PCI \
+	_Pragma("GCC message \"'RTE_DEVTYPE_BLACKLISTED' is deprecated\"") \
+	RTE_DEVTYPE_BLOCKLIST_PCI
 
 /**
  * Structure that stores a device given by the user with its arguments

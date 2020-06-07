@@ -70,9 +70,17 @@ enum rte_kernel_driver {
  * Device policies.
  */
 enum rte_dev_policy {
-	RTE_DEV_WHITELISTED,
-	RTE_DEV_BLACKLISTED,
+	RTE_DEV_ALLOWLIST,
+	RTE_DEV_BLOCKLIST,
 };
+
+#define RTE_DEV_WHITELISTED \
+	_Pragma("GCC message \"'RTE_DEV_WHITELISTED' is deprecated\"") \
+	RTE_DEV_ALLOWLIST
+
+#define RTE_DEV_BLACKLISTED \
+	_Pragma("GCC message \"'RTE_DEV_BLACKLISTED' is deprecated\"") \
+	RTE_DEV_BLOCKLIST
 
 /**
  * A generic memory resource representation.
