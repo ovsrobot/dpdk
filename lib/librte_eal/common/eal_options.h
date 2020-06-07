@@ -13,10 +13,10 @@ enum {
 	/* long options mapped to a short option */
 #define OPT_HELP              "help"
 	OPT_HELP_NUM            = 'h',
-#define OPT_PCI_BLACKLIST     "pci-blacklist"
-	OPT_PCI_BLACKLIST_NUM   = 'b',
-#define OPT_PCI_WHITELIST     "pci-whitelist"
-	OPT_PCI_WHITELIST_NUM   = 'w',
+#define OPT_PCI_BLOCKLIST     "pci-blocklist"
+	OPT_PCI_BLOCKLIST_NUM   = 'b',
+#define OPT_PCI_ALLOWLIST     "pci-allowlist"
+	OPT_PCI_ALLOWLIST_NUM   = 'w',
 
 	/* first long only option value must be >= 256, so that we won't
 	 * conflict with short options */

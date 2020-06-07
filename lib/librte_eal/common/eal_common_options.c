@@ -48,7 +48,7 @@
 
 const char
 eal_short_options[] =
-	"b:" /* pci-blacklist */
+	"b:" /* pci-blocklist */
 	"c:" /* coremask */
 	"s:" /* service coremask */
 	"d:" /* driver */
@@ -59,7 +59,7 @@ eal_short_options[] =
 	"n:" /* memory channels */
 	"r:" /* memory ranks */
 	"v"  /* version */
-	"w:" /* pci-whitelist */
+	"w:" /* pci-allowlist */
 	;
 
 const struct option
@@ -84,8 +84,8 @@ eal_long_options[] = {
 	{OPT_NO_PCI,            0, NULL, OPT_NO_PCI_NUM           },
 	{OPT_NO_SHCONF,         0, NULL, OPT_NO_SHCONF_NUM        },
 	{OPT_IN_MEMORY,         0, NULL, OPT_IN_MEMORY_NUM        },
-	{OPT_PCI_BLACKLIST,     1, NULL, OPT_PCI_BLACKLIST_NUM    },
-	{OPT_PCI_WHITELIST,     1, NULL, OPT_PCI_WHITELIST_NUM    },
+	{OPT_PCI_BLOCKLIST,     1, NULL, OPT_PCI_BLOCKLIST_NUM    },
+	{OPT_PCI_ALLOWLIST,     1, NULL, OPT_PCI_ALLOWLIST_NUM    },
 	{OPT_PROC_TYPE,         1, NULL, OPT_PROC_TYPE_NUM        },
 	{OPT_SOCKET_MEM,        1, NULL, OPT_SOCKET_MEM_NUM       },
 	{OPT_SOCKET_LIMIT,      1, NULL, OPT_SOCKET_LIMIT_NUM     },
@@ -98,6 +98,11 @@ eal_long_options[] = {
 	{OPT_MATCH_ALLOCATIONS, 0, NULL, OPT_MATCH_ALLOCATIONS_NUM},
 	{OPT_TELEMETRY,         0, NULL, OPT_TELEMETRY_NUM        },
 	{OPT_NO_TELEMETRY,      0, NULL, OPT_NO_TELEMETRY_NUM     },
+
+	/* undocumented compatibility with older versions */
+	{"pci-blacklist",       1, NULL, OPT_PCI_BLOCKLIST_NUM    },
+	{"pci-whitelist"  ,     1, NULL, OPT_PCI_ALLOWLIST_NUM    },
+
 	{0,                     0, NULL, 0                        }
 };
 
@@ -1292,21 +1297,21 @@ eal_parse_common_option(int opt, const char *optarg,
 	static int w_used;
 
 	switch (opt) {
-	/* blacklist */
+	/* blocklist */
 	case 'b':
 		if (w_used)
 			goto bw_used;
-		if (eal_option_device_add(RTE_DEVTYPE_BLACKLISTED_PCI,
+		if (eal_option_device_add(RTE_DEVTYPE_BLOCKLIST_PCI,
 				optarg) < 0) {
 			return -1;
 		}
 		b_used = 1;
 		break;
-	/* whitelist */
+	/* allowlist */
 	case 'w':
 		if (b_used)
 			goto bw_used;
-		if (eal_option_device_add(RTE_DEVTYPE_WHITELISTED_PCI,
+		if (eal_option_device_add(RTE_DEVTYPE_ALLOWLIST_PCI,
 				optarg) < 0) {
 			return -1;
 		}
@@ -1590,7 +1595,7 @@ eal_parse_common_option(int opt, const char *optarg,
 
 	return 0;
 bw_used:
-	RTE_LOG(ERR, EAL, "Options blacklist (-b) and whitelist (-w) "
+	RTE_LOG(ERR, EAL, "Options blocklist (-b) and allowlist (-w) "
 		"cannot be used at the same time\n");
 	return -1;
 }
@@ -1796,14 +1801,14 @@ eal_common_usage(void)
 	       "  -n CHANNELS         Number of memory channels\n"
 	       "  -m MB               Memory to allocate (see also --"OPT_SOCKET_MEM")\n"
 	       "  -r RANKS            Force number of memory ranks (don't detect)\n"
-	       "  -b, --"OPT_PCI_BLACKLIST" Add a PCI device in black list.\n"
+	       "  -b, --"OPT_PCI_BLOCKLIST" Add a PCI device in block list.\n"
 	       "                      Prevent EAL from using this PCI device. The argument\n"
 	       "                      format is <domain:bus:devid.func>.\n"
-	       "  -w, --"OPT_PCI_WHITELIST" Add a PCI device in white list.\n"
+	       "  -w, --"OPT_PCI_ALLOWLIST" Add a PCI device in allow list.\n"
 	       "                      Only use the specified PCI devices. The argument format\n"
 	       "                      is <[domain:]bus:devid.func>. This option can be present\n"
 	       "                      several times (once per device).\n"
-	       "                      [NOTE: PCI whitelist cannot be used with -b option]\n"
+	       "                      [NOTE: PCI allowlist cannot be used with -b option]\n"
 	       "  --"OPT_VDEV"              Add a virtual device.\n"
 	       "                      The argument format is <driver><id>[,key=val,...]\n"
 	       "                      (ex: --vdev=net_pcap0,iface=eth2).\n"
