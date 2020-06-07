@@ -42,10 +42,10 @@ parse_fx () # <index file>
 	for line in $( (sed '/^-\+$/d' $1 ; echo) | sed 's,^$,§,') ; do
 		if echo "$line" | grep -q '^§$' ; then
 			# empty line delimit end of section
-			whitelist=$(files $flines)
-			blacklist=$(files $xlines)
-			match=$(aminusb "$whitelist" "$blacklist")
-			if [ -n "$whitelist" ] ; then
+			allowlist=$(files $flines)
+			blocklist=$(files $xlines)
+			match=$(aminusb "$allowlist" "$blocklist")
+			if [ -n "$allowlist" ] ; then
 				printf "# $title "
 				maintainers=$(echo "$maintainers" | sed -r 's,.*<(.*)>.*,\1,')
 				maintainers=$(printf "$maintainers" | sed -e 's,^,<,' -e 's,$,>,')
