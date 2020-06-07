@@ -39,11 +39,11 @@ STRIPPED_PERFLIST=$(subst $(SPACESTR),,$(PERFLIST))
 STRIPPED_DRIVERSLIST=$(subst $(SPACESTR),,$(DRIVERSLIST))
 STRIPPED_DUMPLIST=$(subst $(SPACESTR),,$(DUMPLIST))
 
-coverage: BLACKLIST=-$(STRIPPED_PERFLIST)
-test-fast: BLACKLIST=-$(STRIPPED_PERFLIST),$(STRIPPED_DRIVERSLIST),$(STRIPPED_DUMPLIST)
-test-perf: WHITELIST=$(STRIPPED_PERFLIST)
-test-drivers: WHITELIST=$(STRIPPED_DRIVERSLIST)
-test-dump: WHITELIST=$(STRIPPED_DUMPLIST)
+coverage: BLOCKLIST=-$(STRIPPED_PERFLIST)
+test-fast: BLOCKLIST=-$(STRIPPED_PERFLIST),$(STRIPPED_DRIVERSLIST),$(STRIPPED_DUMPLIST)
+test-perf: ALLOWLIST=$(STRIPPED_PERFLIST)
+test-drivers: ALLOWLIST=$(STRIPPED_DRIVERSLIST)
+test-dump: ALLOWLIST=$(STRIPPED_DUMPLIST)
 
 test test-fast test-perf test-drivers test-dump:
 	@mkdir -p $(AUTOTEST_DIR) ; \
@@ -52,7 +52,7 @@ test test-fast test-perf test-drivers test-dump:
 		python $(RTE_SDK)/app/test/autotest.py \
 			$(RTE_OUTPUT)/app/test \
 			$(RTE_TARGET) \
-			$(BLACKLIST) $(WHITELIST); \
+			$(BLOCKLIST) $(ALLOWLIST); \
 	else \
 		echo "No test found, please do a 'make' first, or specify O=" ; \
 	fi
@@ -69,7 +69,7 @@ coverage:
 		python $(RTE_SDK)/app/test/autotest.py \
 			$(RTE_OUTPUT)/app/test \
 			$(RTE_TARGET) \
-			$(BLACKLIST) $(WHITELIST) ; \
+			$(BLOCKLIST) $(ALLOWLIST) ; \
 		$(RTE_OUTPUT)/app/dpdk-procinfo --file-prefix=ring_perf -- -m; \
 	else \
 		echo "No test found, please do a 'make' first, or specify O=" ;\
