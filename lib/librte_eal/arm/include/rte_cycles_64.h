@@ -11,6 +11,36 @@ extern "C" {
 
 #include "generic/rte_cycles.h"
 
+/** Read generic counter frequency */
+static inline uint64_t
+__rte_rd_generic_cntr_freq(void)
+{
+	uint64_t freq;
+
+	asm volatile("mrs %0, cntfrq_el0" : "=r" (freq));
+	return freq;
+}
+
+/** Read generic counter */
+static inline uint64_t
+__rte_rd_generic_cntr(void)
+{
+	uint64_t tsc;
+
+	asm volatile("mrs %0, cntvct_el0" : "=r" (tsc));
+	return tsc;
+}
+
+static inline uint64_t
+__rte_rd_generic_cntr_precise(void)
+{
+	uint64_t tsc;
+
+	asm volatile("isb" : : : "memory");
+	asm volatile("mrs %0, cntvct_el0" : "=r" (tsc));
+	return tsc;
+}
+
 /**
  * Read the time base register.
  *
@@ -25,10 +55,7 @@ extern "C" {
 static inline uint64_t
 rte_rdtsc(void)
 {
-	uint64_t tsc;
-
-	asm volatile("mrs %0, cntvct_el0" : "=r" (tsc));
-	return tsc;
+	return __rte_rd_generic_cntr();
 }
 #else
 /**
@@ -49,13 +76,21 @@ rte_rdtsc(void)
  * asm volatile("msr pmcr_el0, %0" : : "r" (val));
  *
  */
+
+/** Read PMU cycle counter */
 static inline uint64_t
-rte_rdtsc(void)
+__rte_rd_pmu_cycle_cntr(void)
 {
 	uint64_t tsc;
 
 	asm volatile("mrs %0, pmccntr_el0" : "=r"(tsc));
 	return tsc;
+}
+
+static inline uint64_t
+rte_rdtsc(void)
+{
+	return __rte_rd_pmu_cycle_cntr();
 }
 #endif
 
