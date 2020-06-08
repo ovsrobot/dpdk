@@ -2764,7 +2764,7 @@ attach_port(char *identifier)
 		return;
 	}
 
-	if (rte_dev_probe(identifier) < 0) {
+	if (rte_dev_probe(identifier) == NULL) {
 		TESTPMD_LOG(ERR, "Failed to attach port %s\n", identifier);
 		return;
 	}

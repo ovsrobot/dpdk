@@ -148,9 +148,9 @@ int rte_eal_hotplug_add(const char *busname, const char *devname,
  * @param devargs
  *   Device arguments including bus, class and driver properties.
  * @return
- *   0 on success, negative on error.
+ *   Generic device pointer on success, NULL on error.
  */
-int rte_dev_probe(const char *devargs);
+struct rte_device *rte_dev_probe(const char *devargs);
 
 /**
  * Hotplug remove a given device from a specific bus.
