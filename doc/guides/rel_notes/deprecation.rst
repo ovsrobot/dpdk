@@ -138,3 +138,8 @@ Deprecation Notices
   driver probe scheme. The legacy virtio support will be available through
   the existing VFIO/UIO based kernel driver scheme.
   More details at https://patches.dpdk.org/patch/69351/
+
+* eal: Change ``rte_dev_probe`` API to return a pointer on the probed
+  rte_device or NULL instead of 0 or an error code in DPDK v20.11. This
+  change will help calling application in avoiding to iterate the devices
+  list when willing to call rte_dev_remove() later.
