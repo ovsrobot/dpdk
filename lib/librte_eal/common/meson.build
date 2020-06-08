@@ -8,6 +8,7 @@ if is_windows
 		'eal_common_bus.c',
 		'eal_common_class.c',
 		'eal_common_devargs.c',
+		'eal_common_debug.c',
 		'eal_common_errno.c',
 		'eal_common_launch.c',
 		'eal_common_lcore.c',
