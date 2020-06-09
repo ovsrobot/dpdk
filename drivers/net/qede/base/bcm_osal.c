@@ -14,6 +14,44 @@
 #include "ecore_iov_api.h"
 #include "ecore_mcp_api.h"
 #include "ecore_l2_api.h"
+#include <rte_bus_pci.h>
+#include <rte_io.h>
+
+int osal_pci_find_next_ext_capability(struct rte_pci_device *dev,
+				      int cap)
+{
+	int pos = PCI_CFG_SPACE_SIZE;
+	uint32_t header;
+	int ttl;
+
+	/* minimum 8 bytes per capability */
+	ttl = (PCI_CFG_SPACE_EXP_SIZE - PCI_CFG_SPACE_SIZE) / 8;
+
+	if (rte_pci_read_config(dev, &header, 4, pos) < 0)
+		return -1;
+
+	/*
+	 * If we have no capabilities, this is indicated by cap ID,
+	 * cap version and next pointer all being 0.
+	 */
+	if (header == 0)
+		return 0;
+
+	while (ttl-- > 0) {
+		if (PCI_EXT_CAP_ID(header) == cap)
+			return pos;
+
+		pos = PCI_EXT_CAP_NEXT(header);
+
+		if (pos < PCI_CFG_SPACE_SIZE)
+			break;
+
+		if (rte_pci_read_config(dev, &header, 4, pos) < 0)
+			return -1;
+	}
+
+	return 0;
+}
 
 /* Array of memzone pointers */
 static const struct rte_memzone *ecore_mz_mapping[RTE_MAX_MEMZONE];

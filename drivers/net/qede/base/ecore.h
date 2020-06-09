@@ -27,6 +27,26 @@
 #include "ecore_proto_if.h"
 #include "mcp_public.h"
 
+#define PCICFG_VENDOR_ID_OFFSET 0x00
+#define PCICFG_DEVICE_ID_OFFSET 0x02
+#define PCI_CFG_SPACE_SIZE 256
+#define PCI_EXP_DEVCTL 0x0008
+#define PCI_EXT_CAP_ID(header) (int)((header) & 0x0000ffff)
+#define PCI_EXT_CAP_NEXT(header) (((header) >> 20) & 0xffc)
+#define PCI_CFG_SPACE_EXP_SIZE 4096
+
+#define PCI_SRIOV_CTRL 0x08 /* SR-IOV Control */
+#define PCI_SRIOV_TOTAL_VF 0x0e /* Total VFs */
+#define PCI_SRIOV_INITIAL_VF 0x0c /* Initial VFs */
+#define PCI_SRIOV_NUM_VF 0x10 /* Number of VFs */
+#define PCI_SRIOV_VF_OFFSET 0x14 /* First VF Offset */
+#define PCI_SRIOV_VF_STRIDE 0x16 /* Following VF Stride */
+#define PCI_SRIOV_VF_DID 0x1a
+#define PCI_SRIOV_SUP_PGSIZE 0x1c
+#define PCI_SRIOV_CAP 0x04
+#define PCI_SRIOV_FUNC_LINK 0x12
+#define PCI_EXT_CAP_ID_SRIOV 0x10
+
 #define ECORE_MAJOR_VERSION		8
 #define ECORE_MINOR_VERSION		40
 #define ECORE_REVISION_VERSION		26
@@ -916,6 +936,9 @@ struct ecore_dev {
 	/* @DPDK */
 	struct ecore_dbg_feature	dbg_features[DBG_FEATURE_NUM];
 	u8				engine_for_debug;
+
+	/* DPDK specific ecore field */
+	struct rte_pci_device		*pci_dev;
 };
 
 enum ecore_hsi_def_type {
