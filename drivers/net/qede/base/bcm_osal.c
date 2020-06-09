@@ -14,8 +14,36 @@
 #include "ecore_iov_api.h"
 #include "ecore_mcp_api.h"
 #include "ecore_l2_api.h"
+#include "../qede_sriov.h"
+
 #include <rte_bus_pci.h>
 #include <rte_io.h>
+
+int osal_pf_vf_msg(struct ecore_hwfn *p_hwfn)
+{
+	int rc;
+
+	rc = qed_schedule_iov(p_hwfn, QED_IOV_WQ_MSG_FLAG);
+
+	if (rc) {
+		DP_VERBOSE(p_hwfn, ECORE_MSG_IOV,
+			   "Failed to schedule alarm handler rc=%d\n", rc);
+	}
+
+	return rc;
+}
+
+void osal_poll_mode_dpc(osal_int_ptr_t hwfn_cookie)
+{
+	struct ecore_hwfn *p_hwfn = (struct ecore_hwfn *)hwfn_cookie;
+
+	if (!p_hwfn)
+		return;
+
+	OSAL_SPIN_LOCK(&p_hwfn->spq_lock);
+	ecore_int_sp_dpc((osal_int_ptr_t)(p_hwfn));
+	OSAL_SPIN_UNLOCK(&p_hwfn->spq_lock);
+}
 
 int osal_pci_find_next_ext_capability(struct rte_pci_device *dev,
 				      int cap)
