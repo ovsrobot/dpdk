@@ -9,4 +9,5 @@ sources = files(
 	'qede_filter.c',
 	'qede_main.c',
 	'qede_rxtx.c',
+	'qede_sriov.c',
 )
