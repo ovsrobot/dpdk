@@ -5744,6 +5744,17 @@ i40e_vsi_setup(struct i40e_pf *pf,
 			vsi->nb_msix = RTE_MIN(vsi->nb_qps,
 					       RTE_MAX_RXTX_INTR_VEC_ID);
 		}
+	} else if (type == I40E_VSI_FDIR) {
+		ret = i40e_res_pool_alloc(&pf->msix_pool, 1);
+		if (ret < 0) {
+			PMD_DRV_LOG(WARNING, "MSIX vectors used up, FDIR can`t bind interrupt");
+			vsi->msix_intr = 0;
+			vsi->nb_msix = 0;
+		} else {
+			vsi->msix_intr = ret;
+			vsi->nb_msix = 1;
+		}
+
 	} else if (type != I40E_VSI_SRIOV) {
 		ret = i40e_res_pool_alloc(&pf->msix_pool, 1);
 		if (ret < 0) {
