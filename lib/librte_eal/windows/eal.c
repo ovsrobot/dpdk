@@ -244,7 +244,8 @@ rte_eal_init(int argc, char **argv)
 	if (fctret < 0)
 		exit(1);
 
-	eal_thread_init_master(rte_config.master_lcore);
+	rte_thread_init(rte_config.master_lcore,
+		&lcore_config[rte_config.master_lcore].cpuset);
 
 	RTE_LCORE_FOREACH_SLAVE(i) {
 

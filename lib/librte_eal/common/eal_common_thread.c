@@ -73,20 +73,10 @@ eal_cpuset_socket_id(rte_cpuset_t *cpusetp)
 	return socket_id;
 }
 
-int
-rte_thread_set_affinity(rte_cpuset_t *cpusetp)
+static void
+thread_update_affinity(rte_cpuset_t *cpusetp)
 {
-	int s;
-	unsigned lcore_id;
-	pthread_t tid;
-
-	tid = pthread_self();
-
-	s = pthread_setaffinity_np(tid, sizeof(rte_cpuset_t), cpusetp);
-	if (s != 0) {
-		RTE_LOG(ERR, EAL, "pthread_setaffinity_np failed\n");
-		return -1;
-	}
+	unsigned int lcore_id = rte_lcore_id();
 
 	/* store socket_id in TLS for quick access */
 	RTE_PER_LCORE(_socket_id) =
@@ -96,14 +86,24 @@ rte_thread_set_affinity(rte_cpuset_t *cpusetp)
 	memmove(&RTE_PER_LCORE(_cpuset), cpusetp,
 		sizeof(rte_cpuset_t));
 
-	lcore_id = rte_lcore_id();
 	if (lcore_id != (unsigned)LCORE_ID_ANY) {
 		/* EAL thread will update lcore_config */
 		lcore_config[lcore_id].socket_id = RTE_PER_LCORE(_socket_id);
 		memmove(&lcore_config[lcore_id].cpuset, cpusetp,
 			sizeof(rte_cpuset_t));
 	}
+}
 
+int
+rte_thread_set_affinity(rte_cpuset_t *cpusetp)
+{
+	if (pthread_setaffinity_np(pthread_self(), sizeof(rte_cpuset_t),
+			cpusetp) != 0) {
+		RTE_LOG(ERR, EAL, "pthread_setaffinity_np failed\n");
+		return -1;
+	}
+
+	thread_update_affinity(cpusetp);
 	return 0;
 }
 
@@ -149,6 +149,25 @@ exit:
 	return ret;
 }
 
+void
+rte_thread_init(unsigned int lcore_id, rte_cpuset_t *cpuset)
+{
+	/* set the lcore ID in per-lcore memory area */
+	RTE_PER_LCORE(_lcore_id) = lcore_id;
+
+#ifndef RTE_EXEC_ENV_WINDOWS
+	/* acquire system unique id  */
+	rte_gettid();
+#else
+	/* FIXME: gettid unimplemented => recursive locks can't work */
+#endif
+
+	thread_update_affinity(cpuset);
+
+#ifndef RTE_EXEC_ENV_WINDOWS
+	__rte_trace_mem_per_thread_alloc();
+#endif
+}
 
 struct rte_thread_ctrl_params {
 	void *(*start_routine)(void *);
@@ -156,16 +175,14 @@ struct rte_thread_ctrl_params {
 	pthread_barrier_t configured;
 };
 
-static void *rte_thread_init(void *arg)
+static void *ctrl_thread_init(void *arg)
 {
 	int ret;
-	rte_cpuset_t *cpuset = &internal_config.ctrl_cpuset;
 	struct rte_thread_ctrl_params *params = arg;
 	void *(*start_routine)(void *) = params->start_routine;
 	void *routine_arg = params->arg;
 
-	/* Store cpuset in TLS for quick access */
-	memmove(&RTE_PER_LCORE(_cpuset), cpuset, sizeof(rte_cpuset_t));
+	rte_thread_init(rte_lcore_id(), &internal_config.ctrl_cpuset);
 
 	ret = pthread_barrier_wait(&params->configured);
 	if (ret == PTHREAD_BARRIER_SERIAL_THREAD) {
@@ -173,9 +190,6 @@ static void *rte_thread_init(void *arg)
 		free(params);
 	}
 
-#ifndef RTE_EXEC_ENV_WINDOWS
-	__rte_trace_mem_per_thread_alloc();
-#endif
 	return start_routine(routine_arg);
 }
 
@@ -197,7 +211,7 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 
 	pthread_barrier_init(&params->configured, NULL, 2);
 
-	ret = pthread_create(thread, attr, rte_thread_init, (void *)params);
+	ret = pthread_create(thread, attr, ctrl_thread_init, (void *)params);
 	if (ret != 0) {
 		free(params);
 		return -ret;
