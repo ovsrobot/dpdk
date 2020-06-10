@@ -111,7 +111,8 @@ enum bnxt_ulp_chf_idx {
 	BNXT_ULP_CHF_IDX_I_L3 = 11,
 	BNXT_ULP_CHF_IDX_O_L4 = 12,
 	BNXT_ULP_CHF_IDX_I_L4 = 13,
-	BNXT_ULP_CHF_IDX_LAST = 14
+	BNXT_ULP_CHF_IDX_VFR_FLAG = 14,
+	BNXT_ULP_CHF_IDX_LAST = 15
 };
 
 enum bnxt_ulp_def_regfile_index {

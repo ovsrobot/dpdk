@@ -57,7 +57,6 @@ struct bnxt_ulp_mapper_data {
 /* Internal Structure for passing the arguments around */
 struct bnxt_ulp_mapper_parms {
 	uint32_t				dev_id;
-	enum bnxt_ulp_byte_order		order;
 	uint32_t				act_tid;
 	struct bnxt_ulp_mapper_act_tbl_info	*atbls;
 	uint32_t				num_atbls;
@@ -71,12 +70,12 @@ struct bnxt_ulp_mapper_parms {
 	struct ulp_regfile			*regfile;
 	struct tf				*tfp;
 	struct bnxt_ulp_context			*ulp_ctx;
-	uint8_t					encap_byte_swap;
 	uint32_t				fid;
 	enum bnxt_ulp_flow_db_tables		tbl_idx;
 	struct bnxt_ulp_mapper_data		*mapper_data;
 	enum bnxt_ulp_cache_table_opc		tcam_tbl_opc;
 	struct bnxt_ulp_mapper_cache_entry	*cache_ptr;
+	struct bnxt_ulp_device_params		*device_params;
 };
 
 struct bnxt_ulp_mapper_create_parms {

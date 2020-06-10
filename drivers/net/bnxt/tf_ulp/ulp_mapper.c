@@ -313,8 +313,8 @@ ulp_mapper_cache_res_type_get(struct ulp_flow_db_res_params *res,
 
 static int32_t
 ulp_mapper_cache_entry_free(struct bnxt_ulp_context *ulp,
-			   struct tf *tfp,
-			   struct ulp_flow_db_res_params *res)
+			    struct tf *tfp,
+			    struct ulp_flow_db_res_params *res)
 {
 	struct bnxt_ulp_mapper_cache_entry *cache_entry;
 	struct tf_free_identifier_parms ident_parms;
@@ -945,7 +945,7 @@ ulp_mapper_action_info_process(struct bnxt_ulp_mapper_parms *parms,
 		bit_size = BNXT_ULP_FLMP_BLOB_SIZE_IN_BITS;
 	else
 		bit_size = tbl->result_bit_size;
-	if (!ulp_blob_init(&blob, bit_size, parms->order)) {
+	if (!ulp_blob_init(&blob, bit_size, parms->device_params->byte_order)) {
 		BNXT_TF_DBG(ERR, "action blob init failed\n");
 		return -EINVAL;
 	}
@@ -968,7 +968,7 @@ ulp_mapper_action_info_process(struct bnxt_ulp_mapper_parms *parms,
 			return rc;
 		}
 		/* set the swap index if 64 bit swap is enabled */
-		if (parms->encap_byte_swap && encap_flds) {
+		if (parms->device_params->encap_byte_swap && encap_flds) {
 			if ((i + 1) == num_flds)
 				ulp_blob_encap_swap_idx_set(&blob);
 			/* if 64 bit swap is enabled perform the 64bit swap */
@@ -978,6 +978,98 @@ ulp_mapper_action_info_process(struct bnxt_ulp_mapper_parms *parms,
 	}
 
 	rc = ulp_mapper_action_alloc_and_set(parms, &blob);
+	return rc;
+}
+
+static int32_t
+ulp_mapper_mark_gfid_process(struct bnxt_ulp_mapper_parms *parms,
+			     struct bnxt_ulp_mapper_class_tbl_info *tbl,
+			     uint64_t flow_id)
+{
+	struct ulp_flow_db_res_params fid_parms;
+	uint32_t vfr_flag, mark, gfid, mark_flag;
+	int32_t rc = 0;
+
+	vfr_flag = ULP_UTIL_CHF_IDX_RD(parms, BNXT_ULP_CHF_IDX_VFR_FLAG);
+	if (!(tbl->mark_enable &&
+	      (ULP_BITMAP_ISSET(parms->act_bitmap->bits,
+			      BNXT_ULP_ACTION_BIT_MARK) || vfr_flag)))
+		return rc; /* no need to perform gfid process */
+
+	/* Get the mark id details from action property */
+	memcpy(&mark, &parms->act_prop->act_details[BNXT_ULP_ACT_PROP_IDX_MARK],
+	       sizeof(mark));
+	mark = tfp_be_to_cpu_32(mark);
+
+	TF_GET_GFID_FROM_FLOW_ID(flow_id, gfid);
+	mark_flag  = BNXT_ULP_MARK_GLOBAL_HW_FID;
+	mark_flag |= (vfr_flag) ? BNXT_ULP_MARK_VFR_ID : 0;
+	rc = ulp_mark_db_mark_add(parms->ulp_ctx, mark_flag,
+				  gfid, mark);
+	if (rc) {
+		BNXT_TF_DBG(ERR, "Failed to add mark to flow\n");
+		return rc;
+	}
+	fid_parms.direction = tbl->direction;
+	fid_parms.resource_func = BNXT_ULP_RESOURCE_FUNC_HW_FID;
+	fid_parms.critical_resource = 0;
+	fid_parms.resource_type	= mark_flag;
+	fid_parms.resource_hndl	= gfid;
+	rc = ulp_flow_db_resource_add(parms->ulp_ctx,
+				      parms->tbl_idx,
+				      parms->fid,
+				      &fid_parms);
+	if (rc)
+		BNXT_TF_DBG(ERR, "Fail to link res to flow rc = %d\n", rc);
+	return rc;
+}
+
+static int32_t
+ulp_mapper_mark_act_ptr_process(struct bnxt_ulp_mapper_parms *parms,
+				struct bnxt_ulp_mapper_class_tbl_info *tbl)
+{
+	struct ulp_flow_db_res_params fid_parms;
+	uint32_t vfr_flag, act_idx, mark, mark_flag;
+	uint64_t val64;
+	int32_t rc = 0;
+
+	vfr_flag = ULP_UTIL_CHF_IDX_RD(parms, BNXT_ULP_CHF_IDX_VFR_FLAG);
+	if (!(tbl->mark_enable &&
+	      (ULP_BITMAP_ISSET(parms->act_bitmap->bits,
+				BNXT_ULP_ACTION_BIT_MARK) || vfr_flag)))
+		return rc; /* no need to perform mark action process */
+
+	/* Get the mark id details from action property */
+	memcpy(&mark, &parms->act_prop->act_details[BNXT_ULP_ACT_PROP_IDX_MARK],
+	       sizeof(mark));
+	mark = tfp_be_to_cpu_32(mark);
+
+	if (!ulp_regfile_read(parms->regfile,
+			      BNXT_ULP_REGFILE_INDEX_ACTION_PTR_MAIN,
+			      &val64)) {
+		BNXT_TF_DBG(ERR, "read action ptr main failed\n");
+		return -EINVAL;
+	}
+	act_idx = tfp_be_to_cpu_64(val64);
+	mark_flag  = BNXT_ULP_MARK_LOCAL_HW_FID;
+	mark_flag |= (vfr_flag) ? BNXT_ULP_MARK_VFR_ID : 0;
+	rc = ulp_mark_db_mark_add(parms->ulp_ctx, mark_flag,
+				  act_idx, mark);
+	if (rc) {
+		BNXT_TF_DBG(ERR, "Failed to add mark to flow\n");
+		return rc;
+	}
+	fid_parms.direction = tbl->direction;
+	fid_parms.resource_func = BNXT_ULP_RESOURCE_FUNC_HW_FID;
+	fid_parms.critical_resource = 0;
+	fid_parms.resource_type	= mark_flag;
+	fid_parms.resource_hndl	= act_idx;
+	rc = ulp_flow_db_resource_add(parms->ulp_ctx,
+				      parms->tbl_idx,
+				      parms->fid,
+				      &fid_parms);
+	if (rc)
+		BNXT_TF_DBG(ERR, "Fail to link res to flow rc = %d\n", rc);
 	return rc;
 }
 
@@ -1015,9 +1107,12 @@ ulp_mapper_tcam_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 		return -EINVAL;
 	}
 
-	if (!ulp_blob_init(&key, tbl->key_bit_size, parms->order) ||
-	    !ulp_blob_init(&mask, tbl->key_bit_size, parms->order) ||
-	    !ulp_blob_init(&data, tbl->result_bit_size, parms->order)) {
+	if (!ulp_blob_init(&key, tbl->key_bit_size,
+			   parms->device_params->byte_order) ||
+	    !ulp_blob_init(&mask, tbl->key_bit_size,
+			   parms->device_params->byte_order) ||
+	    !ulp_blob_init(&data, tbl->result_bit_size,
+			   parms->device_params->byte_order)) {
 		BNXT_TF_DBG(ERR, "blob inits failed.\n");
 		return -EINVAL;
 	}
@@ -1160,6 +1255,11 @@ ulp_mapper_tcam_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 			parms->cache_ptr->tcam_idx = aparms.idx;
 		}
 
+		/* Mark action */
+		rc = ulp_mapper_mark_act_ptr_process(parms, tbl);
+		if (rc)
+			goto error;
+
 	} else {
 		BNXT_TF_DBG(ERR, "Not supporting search before alloc now\n");
 		rc = -EINVAL;
@@ -1220,7 +1320,6 @@ ulp_mapper_em_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	uint32_t i, num_kflds, num_dflds;
 	uint16_t tmplen;
 	struct tf *tfp = bnxt_ulp_cntxt_tfp_get(parms->ulp_ctx);
-	struct ulp_rte_act_prop	 *a_prop = parms->act_prop;
 	struct ulp_flow_db_res_params	fid_parms = { 0 };
 	struct tf_insert_em_entry_parms iparms = { 0 };
 	struct tf_delete_em_entry_parms free_parms = { 0 };
@@ -1234,8 +1333,10 @@ ulp_mapper_em_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	}
 
 	/* Initialize the key/result blobs */
-	if (!ulp_blob_init(&key, tbl->blob_key_bit_size, parms->order) ||
-	    !ulp_blob_init(&data, tbl->result_bit_size, parms->order)) {
+	if (!ulp_blob_init(&key, tbl->blob_key_bit_size,
+			   parms->device_params->byte_order) ||
+	    !ulp_blob_init(&data, tbl->result_bit_size,
+			   parms->device_params->byte_order)) {
 		BNXT_TF_DBG(ERR, "blob inits failed.\n");
 		return -EINVAL;
 	}
@@ -1305,56 +1406,16 @@ ulp_mapper_em_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 		return rc;
 	}
 
-	if (tbl->mark_enable &&
-	    ULP_BITMAP_ISSET(parms->act_bitmap->bits,
-			     BNXT_ULP_ACTION_BIT_MARK)) {
-		uint32_t val, mark, gfid, flag;
-		/* TBD: Need to determine if GFID is enabled globally */
-		if (sizeof(val) != BNXT_ULP_ACT_PROP_SZ_MARK) {
-			BNXT_TF_DBG(ERR, "Mark size (%d) != expected (%zu)\n",
-				    BNXT_ULP_ACT_PROP_SZ_MARK, sizeof(val));
-			rc = -EINVAL;
-			goto error;
-		}
-
-		memcpy(&val,
-		       &a_prop->act_details[BNXT_ULP_ACT_PROP_IDX_MARK],
-		       sizeof(val));
-
-		mark = tfp_be_to_cpu_32(val);
-
-		TF_GET_GFID_FROM_FLOW_ID(iparms.flow_id, gfid);
-		flag = BNXT_ULP_MARK_GLOBAL_HW_FID;
-		rc = ulp_mark_db_mark_add(parms->ulp_ctx,
-					  flag,
-					  gfid,
-					  mark);
-		if (rc) {
-			BNXT_TF_DBG(ERR, "Failed to add mark to flow\n");
-			goto error;
-		}
-
-		/*
-		 * Link the mark resource to the flow in the flow db
-		 * The mark is never the critical resource, so it is 0.
-		 */
-		memset(&fid_parms, 0, sizeof(fid_parms));
-		fid_parms.direction	= tbl->direction;
-		fid_parms.resource_func	= BNXT_ULP_RESOURCE_FUNC_HW_FID;
-		fid_parms.resource_type	= flag;
-		fid_parms.resource_hndl	= gfid;
-		fid_parms.critical_resource = 0;
-
-		rc = ulp_flow_db_resource_add(parms->ulp_ctx,
-					      parms->tbl_idx,
-					      parms->fid,
-					      &fid_parms);
-		if (rc) {
-			BNXT_TF_DBG(ERR, "Fail to link res to flow rc = %d\n",
-				    rc);
-			/* Need to free the identifier, so goto error */
-			goto error;
-		}
+	/* Mark action process */
+	if (parms->device_params->global_fid_enable &&
+	    tbl->table_type == TF_MEM_EXTERNAL)
+		rc = ulp_mapper_mark_gfid_process(parms, tbl, iparms.flow_id);
+	else if (!parms->device_params->global_fid_enable &&
+		 tbl->table_type == TF_MEM_INTERNAL)
+		rc = ulp_mapper_mark_act_ptr_process(parms, tbl);
+	if (rc) {
+		BNXT_TF_DBG(ERR, "Failed to add mark to flow\n");
+		goto error;
 	}
 
 	/* Link the EM resource to the flow in the flow db */
@@ -1409,7 +1470,8 @@ ulp_mapper_index_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 
 	bnxt_ulp_cntxt_tbl_scope_id_get(parms->ulp_ctx, &tbl_scope_id);
 
-	if (!ulp_blob_init(&data, tbl->result_bit_size, parms->order)) {
+	if (!ulp_blob_init(&data, tbl->result_bit_size,
+			   parms->device_params->byte_order)) {
 		BNXT_TF_DBG(ERR, "Failed initial index table blob\n");
 		return -EINVAL;
 	}
@@ -1538,7 +1600,8 @@ ulp_mapper_cache_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 		BNXT_TF_DBG(ERR, "Failed to get key fields\n");
 		return -EINVAL;
 	}
-	if (!ulp_blob_init(&key, tbl->key_bit_size, parms->order)) {
+	if (!ulp_blob_init(&key, tbl->key_bit_size,
+			   parms->device_params->byte_order)) {
 		BNXT_TF_DBG(ERR, "Failed to alloc blob\n");
 		return -EINVAL;
 	}
@@ -1858,7 +1921,6 @@ ulp_mapper_flow_create(struct bnxt_ulp_context *ulp_ctx,
 		       struct bnxt_ulp_mapper_create_parms *cparms,
 		       uint32_t *flowid)
 {
-	struct bnxt_ulp_device_params *device_params;
 	struct bnxt_ulp_mapper_parms parms;
 	struct ulp_regfile regfile;
 	int32_t	 rc, trc;
@@ -1916,15 +1978,13 @@ ulp_mapper_flow_create(struct bnxt_ulp_context *ulp_ctx,
 		return -EINVAL;
 	}
 
-	/* Get the byte order for the further processing from device params */
-	device_params = bnxt_ulp_device_params_get(parms.dev_id);
-	if (!device_params) {
+	/* Get the device params, it will be used in later processing */
+	parms.device_params = bnxt_ulp_device_params_get(parms.dev_id);
+	if (!parms.device_params) {
 		BNXT_TF_DBG(ERR, "No class tables for %d:%d\n",
 			    parms.dev_id, parms.class_tid);
 		return -EINVAL;
 	}
-	parms.order = device_params->byte_order;
-	parms.encap_byte_swap = device_params->encap_byte_swap;
 
 	/* initialize the registry file for further processing */
 	if (!ulp_regfile_init(parms.regfile)) {
@@ -2033,7 +2093,7 @@ ulp_mapper_init(struct bnxt_ulp_context *ulp_ctx)
 		/* All regfile entries are stored as 64bit big-endian values. */
 		regval = tfp_cpu_to_be_64((uint64_t)iparms.id);
 		rc = ulp_mapper_def_regfile_write(data, iparms.dir,
-						 reg_idx, regval);
+						  reg_idx, regval);
 		if (rc) {
 			BNXT_TF_DBG(ERR, "Failed to write to default "
 				    "regfile.\n");
