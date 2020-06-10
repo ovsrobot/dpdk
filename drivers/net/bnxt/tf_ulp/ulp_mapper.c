@@ -796,7 +796,7 @@ ulp_mapper_keymask_field_process(struct bnxt_ulp_mapper_parms *parms,
 			return -EINVAL;
 		}
 		break;
-	case BNXT_ULP_MAPPER_OPC_ADD_PAD:
+	case BNXT_ULP_MAPPER_OPC_SET_TO_ZERO:
 		if (!ulp_blob_pad_push(blob, bitlen)) {
 			BNXT_TF_DBG(ERR, "%s pad too large for blob\n", name);
 			return -EINVAL;
