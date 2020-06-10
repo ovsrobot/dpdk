@@ -16,7 +16,7 @@
 
 #define MIXED_CRYPTO_MIN_FW_VER 0x04090000
 
-uint8_t cryptodev_qat_driver_id;
+uint8_t qat_sym_driver_id;
 
 static const struct rte_cryptodev_capabilities qat_gen1_sym_capabilities[] = {
 	QAT_BASE_GEN1_SYM_CAPABILITIES,
@@ -24,6 +24,12 @@ static const struct rte_cryptodev_capabilities qat_gen1_sym_capabilities[] = {
 };
 
 static const struct rte_cryptodev_capabilities qat_gen2_sym_capabilities[] = {
+	QAT_BASE_GEN1_SYM_CAPABILITIES,
+	QAT_EXTRA_GEN2_SYM_CAPABILITIES,
+	RTE_CRYPTODEV_END_OF_CAPABILITIES_LIST()
+};
+
+static const struct rte_cryptodev_capabilities qat_gen3_sym_capabilities[] = {
 	QAT_BASE_GEN1_SYM_CAPABILITIES,
 	QAT_EXTRA_GEN2_SYM_CAPABILITIES,
 	RTE_CRYPTODEV_END_OF_CAPABILITIES_LIST()
@@ -74,7 +80,7 @@ static void qat_sym_dev_info_get(struct rte_cryptodev *dev,
 			qat_qps_per_service(sym_hw_qps, QAT_SERVICE_SYMMETRIC);
 		info->feature_flags = dev->feature_flags;
 		info->capabilities = internals->qat_dev_capabilities;
-		info->driver_id = cryptodev_qat_driver_id;
+		info->driver_id = qat_sym_driver_id;
 		/* No limit of number of sessions */
 		info->sym.max_nb_sessions = 0;
 	}
@@ -268,33 +274,51 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 		struct qat_dev_cmd_param *qat_dev_cmd_param __rte_unused)
 {
 	int i = 0;
+	struct qat_device_info *qat_dev_instance =
+			&qat_pci_devs[qat_pci_dev->qat_dev_id];
 	struct rte_cryptodev_pmd_init_params init_params = {
 			.name = "",
-			.socket_id = qat_pci_dev->pci_dev->device.numa_node,
+			.socket_id = qat_dev_instance->pci_dev->device.numa_node,
 			.private_data_size = sizeof(struct qat_sym_dev_private)
 	};
 	char name[RTE_CRYPTODEV_NAME_MAX_LEN];
+	char memz_name[RTE_CRYPTODEV_NAME_MAX_LEN];
 	struct rte_cryptodev *cryptodev;
 	struct qat_sym_dev_private *internals;
+	const struct rte_cryptodev_capabilities *capabilities;
+	uint64_t capa_size;
+
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		qat_pci_dev->qat_sym_driver_id =
+				qat_sym_driver_id;
+	} else if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
+		if (qat_pci_dev->qat_sym_driver_id !=
+				qat_sym_driver_id) {
+			QAT_LOG(ERR, "Device %s have different driver id than "
+					"corresponding device in primary process"
+					, name);
+			return -(EFAULT);
+		}
+	}
 
 	snprintf(name, RTE_CRYPTODEV_NAME_MAX_LEN, "%s_%s",
 			qat_pci_dev->name, "sym");
 	QAT_LOG(DEBUG, "Creating QAT SYM device %s", name);
 
 	/* Populate subset device to use in cryptodev device creation */
-	qat_pci_dev->sym_rte_dev.driver = &cryptodev_qat_sym_driver;
-	qat_pci_dev->sym_rte_dev.numa_node =
-				qat_pci_dev->pci_dev->device.numa_node;
-	qat_pci_dev->sym_rte_dev.devargs = NULL;
+	qat_dev_instance->sym_rte_dev.driver = &cryptodev_qat_sym_driver;
+	qat_dev_instance->sym_rte_dev.numa_node =
+			qat_dev_instance->pci_dev->device.numa_node;
+	qat_dev_instance->sym_rte_dev.devargs = NULL;
 
 	cryptodev = rte_cryptodev_pmd_create(name,
-			&(qat_pci_dev->sym_rte_dev), &init_params);
+			&(qat_dev_instance->sym_rte_dev), &init_params);
 
 	if (cryptodev == NULL)
 		return -ENODEV;
 
-	qat_pci_dev->sym_rte_dev.name = cryptodev->data->name;
-	cryptodev->driver_id = cryptodev_qat_driver_id;
+	qat_dev_instance->sym_rte_dev.name = cryptodev->data->name;
+	cryptodev->driver_id = qat_sym_driver_id;
 	cryptodev->dev_ops = &crypto_qat_ops;
 
 	cryptodev->enqueue_burst = qat_sym_pmd_enqueue_op_burst;
@@ -310,27 +334,49 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 			RTE_CRYPTODEV_FF_OOP_LB_IN_LB_OUT |
 			RTE_CRYPTODEV_FF_DIGEST_ENCRYPTED;
 
+
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return 0;
+
+	snprintf(memz_name, RTE_CRYPTODEV_NAME_MAX_LEN, "%s_%s_MEMZONE",
+			qat_pci_dev->name, "sym");
+
 	internals = cryptodev->data->dev_private;
 	internals->qat_dev = qat_pci_dev;
-	qat_pci_dev->sym_dev = internals;
-
 	internals->sym_dev_id = cryptodev->data->dev_id;
+
 	switch (qat_pci_dev->qat_dev_gen) {
 	case QAT_GEN1:
-		internals->qat_dev_capabilities = qat_gen1_sym_capabilities;
+		capabilities = qat_gen1_sym_capabilities;
+		capa_size = sizeof(qat_gen1_sym_capabilities);
 		break;
 	case QAT_GEN2:
+		capabilities = qat_gen2_sym_capabilities;
+		capa_size = sizeof(qat_gen2_sym_capabilities);
+		break;
 	case QAT_GEN3:
-		internals->qat_dev_capabilities = qat_gen2_sym_capabilities;
+		capabilities = qat_gen3_sym_capabilities;
+		capa_size = sizeof(qat_gen3_sym_capabilities);
 		break;
 	default:
-		internals->qat_dev_capabilities = qat_gen2_sym_capabilities;
 		QAT_LOG(DEBUG,
-			"QAT gen %d capabilities unknown, default to GEN2",
+			"QAT gen %d capabilities unknown	",
 					qat_pci_dev->qat_dev_gen);
-		break;
+		return -(EINVAL);
 	}
 
+	internals->mz = rte_memzone_reserve(memz_name,
+		capa_size,
+		rte_socket_id(), 0);
+	if (internals->mz == NULL) {
+		QAT_LOG(DEBUG, "Error allocating memzone, destroying PMD"
+				" for %s", name);
+		rte_cryptodev_pmd_destroy(cryptodev);
+		return -EFAULT;
+	}
+
+	memcpy(internals->mz->addr, capabilities, capa_size);
+	internals->qat_dev_capabilities = internals->mz->addr;
 	while (1) {
 		if (qat_dev_cmd_param[i].name == NULL)
 			break;
@@ -340,8 +386,10 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 		i++;
 	}
 
+	qat_pci_dev->sym_dev = internals;
 	QAT_LOG(DEBUG, "Created QAT SYM device %s as cryptodev instance %d",
 			cryptodev->data->name, internals->sym_dev_id);
+
 	return 0;
 }
 
@@ -355,10 +403,11 @@ qat_sym_dev_destroy(struct qat_pci_device *qat_pci_dev)
 	if (qat_pci_dev->sym_dev == NULL)
 		return 0;
 
+	rte_memzone_free(qat_pci_dev->sym_dev->mz);
 	/* free crypto device */
 	cryptodev = rte_cryptodev_pmd_get_dev(qat_pci_dev->sym_dev->sym_dev_id);
 	rte_cryptodev_pmd_destroy(cryptodev);
-	qat_pci_dev->sym_rte_dev.name = NULL;
+	qat_pci_devs[qat_pci_dev->qat_dev_id].sym_rte_dev.name = NULL;
 	qat_pci_dev->sym_dev = NULL;
 
 	return 0;
@@ -367,4 +416,4 @@ qat_sym_dev_destroy(struct qat_pci_device *qat_pci_dev)
 static struct cryptodev_driver qat_crypto_drv;
 RTE_PMD_REGISTER_CRYPTO_DRIVER(qat_crypto_drv,
 		cryptodev_qat_sym_driver,
-		cryptodev_qat_driver_id);
+		qat_sym_driver_id);
