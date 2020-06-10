@@ -324,13 +324,14 @@ ulp_mapper_ident_fields_get(struct bnxt_ulp_mapper_class_tbl_info *tbl,
 
 static struct bnxt_ulp_mapper_cache_entry *
 ulp_mapper_cache_entry_get(struct bnxt_ulp_context *ulp,
-			   enum bnxt_ulp_cache_tbl_id id,
+			   uint32_t id,
 			   uint16_t key)
 {
 	struct bnxt_ulp_mapper_data *mapper_data;
 
 	mapper_data = bnxt_ulp_cntxt_ptr2_mapper_data_get(ulp);
-	if (!mapper_data || !mapper_data->cache_tbl[id]) {
+	if (!mapper_data || id >= BNXT_ULP_CACHE_TBL_MAX_SZ ||
+	    !mapper_data->cache_tbl[id]) {
 		BNXT_TF_DBG(ERR, "Unable to acquire the cache tbl (%d)\n", id);
 		return NULL;
 	}
@@ -1691,8 +1692,15 @@ ulp_mapper_cache_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	 */
 	cache_key = ulp_blob_data_get(&key, &tmplen);
 	ckey = (uint16_t *)cache_key;
+
+	/*
+	 * The id computed based on resource sub type and direction where
+	 * dir is the bit0 and rest of the bits come from resource
+	 * sub type.
+	 */
 	cache_entry = ulp_mapper_cache_entry_get(parms->ulp_ctx,
-						 tbl->cache_tbl_id,
+						 (tbl->resource_sub_type << 1 |
+						 (tbl->direction & 0x1)),
 						 *ckey);
 
 	/*
@@ -1756,12 +1764,13 @@ ulp_mapper_cache_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	fid_parms.resource_func	= tbl->resource_func;
 
 	/*
-	 * Cache resource type is composed of both table_type and cache_tbl_id
-	 * need to set it appropriately via setter.
+	 * Cache resource type is composed of table_type, resource
+	 * sub type and direction, it needs to set appropriately via setter.
 	 */
 	ulp_mapper_cache_res_type_set(&fid_parms,
 				      tbl->resource_type,
-				      tbl->cache_tbl_id);
+				      (tbl->resource_sub_type << 1 |
+				       (tbl->direction & 0x1)));
 	fid_parms.resource_hndl	= (uint64_t)*ckey;
 	fid_parms.critical_resource = tbl->critical_resource;
 	rc = ulp_flow_db_resource_add(parms->ulp_ctx,
