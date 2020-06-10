@@ -395,6 +395,7 @@ EXPERIMENTAL {
 	rte_trace_save;
 
 	# added in 20.08
+	rte_lcore_dump;
 	rte_thread_register;
 	rte_thread_unregister;
 };

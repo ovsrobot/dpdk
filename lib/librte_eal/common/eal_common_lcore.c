@@ -245,3 +245,35 @@ eal_lcore_external_release(unsigned int lcore_id)
 	}
 	rte_spinlock_unlock(&external_lcore_lock);
 }
+
+void
+rte_lcore_dump(FILE *f)
+{
+	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
+	unsigned int lcore_id;
+	const char *role;
+	int ret;
+
+	rte_spinlock_lock(&external_lcore_lock);
+	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
+		switch (rte_eal_lcore_role(lcore_id)) {
+		case ROLE_RTE:
+			role = "RTE";
+			break;
+		case ROLE_SERVICE:
+			role = "SERVICE";
+			break;
+		case ROLE_EXTERNAL:
+			role = "EXTERNAL";
+			break;
+		default:
+			continue;
+		}
+
+		ret = eal_thread_dump_affinity(&lcore_config[lcore_id].cpuset,
+			cpuset, sizeof(cpuset));
+		fprintf(f, "lcore %u, role %s, cpuset %s%s\n", lcore_id, role,
+			cpuset, ret == 0 ? "" : "...");
+	}
+	rte_spinlock_unlock(&external_lcore_lock);
+}

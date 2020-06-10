@@ -229,6 +229,16 @@ unsigned int rte_get_next_lcore(unsigned int i, int skip_master, int wrap);
 	     i = rte_get_next_lcore(i, 1, 0))
 
 /**
+ * List all lcores.
+ *
+ * @param f
+ *   The output stream where the dump should be sent.
+ */
+__rte_experimental
+void
+rte_lcore_dump(FILE *f);
+
+/**
  * Set core affinity of the current thread.
  * Support both EAL and non-EAL thread and update TLS.
  *
