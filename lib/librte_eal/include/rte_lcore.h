@@ -238,6 +238,55 @@ __rte_experimental
 void
 rte_lcore_dump(FILE *f);
 
+enum rte_lcore_event_type {
+	RTE_LCORE_EVENT_NEW_EXTERNAL,
+	RTE_LCORE_EVENT_RELEASE_EXTERNAL,
+};
+
+/**
+ * Callback prototype for getting lcore events.
+ *
+ * @param lcore_id
+ *   The lcore to consider for this event.
+ * @param event
+ *   The type of event on the lcore.
+ * @param arg
+ *   An opaque pointer passed at notifier registration.
+ * @return
+ *   - -1 when refusing this event,
+ *   - 0 otherwise.
+ */
+typedef int (*rte_lcore_notifier_cb)(unsigned int lcore_id,
+	enum rte_lcore_event_type event, void *arg);
+
+/**
+ * Register a lcore notifier.
+ *
+ * @param cb
+ *   The callback invoked for each lcore event with the arg argument.
+ *   See rte_lcore_notifier_cb description.
+ * @param arg
+ *   An optional argument that gets passed to the callback when it gets
+ *   invoked.
+ * @return
+ *   On success, returns an opaque pointer for the created notifier.
+ *   NULL on failure.
+ */
+__rte_experimental
+void *
+rte_lcore_notifier_register(rte_lcore_notifier_cb cb, void *arg);
+
+/**
+ * Unregister a lcore notifier.
+ *
+ * @param handle
+ *   The handle pointer returned by a former successful call to
+ *   rte_lcore_notifier_register.
+ */
+__rte_experimental
+void
+rte_lcore_notifier_unregister(void *handle);
+
 /**
  * Set core affinity of the current thread.
  * Support both EAL and non-EAL thread and update TLS.

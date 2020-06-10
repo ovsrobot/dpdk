@@ -212,6 +212,47 @@ rte_socket_id_by_idx(unsigned int idx)
 	return config->numa_nodes[idx];
 }
 
+struct lcore_notifier {
+	TAILQ_ENTRY(lcore_notifier) next;
+	rte_lcore_notifier_cb cb;
+	void *arg;
+};
+static TAILQ_HEAD(lcore_notifiers_head, lcore_notifier) lcore_notifiers =
+	TAILQ_HEAD_INITIALIZER(lcore_notifiers);
+static rte_spinlock_t lcore_notifiers_lock = RTE_SPINLOCK_INITIALIZER;
+
+void *
+rte_lcore_notifier_register(rte_lcore_notifier_cb cb, void *arg)
+{
+	struct lcore_notifier *notifier;
+
+	if (cb == NULL)
+		return NULL;
+
+	notifier = calloc(1, sizeof(*notifier));
+	if (notifier == NULL)
+		return NULL;
+
+	notifier->cb = cb;
+	notifier->arg = arg;
+	rte_spinlock_lock(&lcore_notifiers_lock);
+	TAILQ_INSERT_TAIL(&lcore_notifiers, notifier, next);
+	rte_spinlock_unlock(&lcore_notifiers_lock);
+
+	return notifier;
+}
+
+void
+rte_lcore_notifier_unregister(void *handle)
+{
+	struct lcore_notifier *notifier = handle;
+
+	rte_spinlock_lock(&lcore_notifiers_lock);
+	TAILQ_REMOVE(&lcore_notifiers, notifier, next);
+	rte_spinlock_unlock(&lcore_notifiers_lock);
+	free(notifier);
+}
+
 rte_spinlock_t external_lcore_lock = RTE_SPINLOCK_INITIALIZER;
 
 unsigned int
@@ -276,4 +317,54 @@ rte_lcore_dump(FILE *f)
 			cpuset, ret == 0 ? "" : "...");
 	}
 	rte_spinlock_unlock(&external_lcore_lock);
+}
+
+int
+eal_lcore_external_notify_allocated(unsigned int lcore_id)
+{
+	struct lcore_notifier *notifier;
+	int ret = 0;
+
+	RTE_LOG(DEBUG, EAL, "New lcore %u.\n", lcore_id);
+	rte_spinlock_lock(&lcore_notifiers_lock);
+	TAILQ_FOREACH(notifier, &lcore_notifiers, next) {
+		if (notifier->cb(lcore_id, RTE_LCORE_EVENT_NEW_EXTERNAL,
+				notifier->arg) == 0)
+			continue;
+
+		/* Some notifier refused the new lcore, inform all notifiers
+		 * that acked it.
+		 */
+		RTE_LOG(DEBUG, EAL, "A lcore notifier refused new lcore %u.\n",
+			lcore_id);
+
+		notifier = TAILQ_PREV(notifier, lcore_notifiers_head, next);
+		while (notifier != NULL) {
+			notifier->cb(lcore_id,
+				RTE_LCORE_EVENT_RELEASE_EXTERNAL,
+				notifier->arg);
+			notifier = TAILQ_PREV(notifier, lcore_notifiers_head,
+				next);
+		}
+		ret = -1;
+		break;
+	}
+	rte_spinlock_unlock(&lcore_notifiers_lock);
+
+	return ret;
+}
+
+void
+eal_lcore_external_notify_removed(unsigned int lcore_id)
+{
+	struct lcore_notifier *notifier;
+
+	RTE_LOG(DEBUG, EAL, "Released lcore %u.\n", lcore_id);
+	rte_spinlock_lock(&lcore_notifiers_lock);
+	TAILQ_FOREACH_REVERSE(notifier, &lcore_notifiers, lcore_notifiers_head,
+			next) {
+		notifier->cb(lcore_id, RTE_LCORE_EVENT_RELEASE_EXTERNAL,
+			notifier->arg);
+	}
+	rte_spinlock_unlock(&lcore_notifiers_lock);
 }

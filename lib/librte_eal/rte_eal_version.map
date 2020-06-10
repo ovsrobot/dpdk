@@ -396,6 +396,8 @@ EXPERIMENTAL {
 
 	# added in 20.08
 	rte_lcore_dump;
+	rte_lcore_notifier_register;
+	rte_lcore_notifier_unregister;
 	rte_thread_register;
 	rte_thread_unregister;
 };

@@ -285,6 +285,12 @@ rte_thread_register(void)
 
 	rte_thread_init(lcore_id, &cpuset);
 
+	if (lcore_id != LCORE_ID_ANY &&
+			eal_lcore_external_notify_allocated(lcore_id) < 0) {
+		eal_lcore_external_release(lcore_id);
+		RTE_PER_LCORE(_lcore_id) = lcore_id = LCORE_ID_ANY;
+	}
+
 	RTE_LOG(DEBUG, EAL, "Registered thread as lcore %u.\n", lcore_id);
 	RTE_PER_LCORE(thread_registered) = true;
 }
@@ -298,8 +304,11 @@ rte_thread_unregister(void)
 		return;
 
 	lcore_id = RTE_PER_LCORE(_lcore_id);
-	if (lcore_id != LCORE_ID_ANY)
+	if (lcore_id != LCORE_ID_ANY) {
+		eal_lcore_external_notify_removed(lcore_id);
 		eal_lcore_external_release(lcore_id);
+		RTE_PER_LCORE(_lcore_id) = LCORE_ID_ANY;
+	}
 
 	rte_thread_uninit();
 

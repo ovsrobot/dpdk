@@ -284,12 +284,38 @@ uint64_t get_tsc_freq_arch(void);
 unsigned int eal_lcore_external_reserve(void);
 
 /**
+ * Evaluate all lcore notifiers with a RTE_LCORE_EVENT_NEW_EXTERNAL event for
+ * the passed lcore.
+ * If an error is returned by one of them, then this change is rolled back:
+ * all previous lcore notifiers that had acked the RTE_LCORE_EVENT_NEW_EXTERNAL
+ * event receive a RTE_LCORE_EVENT_RELEASE_EXTERNAL event for the passed lcore.
+ *
+ * @param lcore_id
+ *   The lcore to consider.
+ * @return
+ *   - 0 if all notifiers agreed on the new lcore
+ *   - -1 if one of them refused
+ */
+int eal_lcore_external_notify_allocated(unsigned int lcore_id);
+
+/**
  * Release an external lcore.
  *
  * @param lcore_id
  *   The lcore with role ROLE_EXTERNAL to release.
  */
 void eal_lcore_external_release(unsigned int lcore_id);
+
+/**
+ * Evaluate all lcore notifiers with a RTE_LCORE_EVENT_RELEASE_EXTERNAL event
+ * for the passed lcore.
+ * This function must be called with a lcore that successfully passed
+ * eal_lcore_external_notify_allocated().
+ *
+ * @param lcore_id
+ *   The lcore with role ROLE_EXTERNAL to release.
+ */
+void eal_lcore_external_notify_removed(unsigned int lcore_id);
 
 /**
  * Prepare physical memory mapping
