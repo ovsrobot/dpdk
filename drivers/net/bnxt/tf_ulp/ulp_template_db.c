@@ -587,7 +587,7 @@ struct bnxt_ulp_mapper_tbl_list_info ulp_class_tmpl_list[] = {
 	}
 };
 
-struct bnxt_ulp_mapper_class_tbl_info ulp_class_tbl_list[] = {
+struct bnxt_ulp_mapper_tbl_info ulp_class_tbl_list[] = {
 	{
 	.resource_func = BNXT_ULP_RESOURCE_FUNC_CACHE_TABLE,
 	.resource_type = TF_TCAM_TBL_TYPE_L2_CTXT_TCAM,
@@ -602,6 +602,7 @@ struct bnxt_ulp_mapper_class_tbl_info ulp_class_tbl_list[] = {
 	.result_start_idx = 0,
 	.result_bit_size = 10,
 	.result_num_fields = 1,
+	.encap_num_fields = 0,
 	.ident_start_idx = 0,
 	.ident_nums = 1,
 	.mark_enable = BNXT_ULP_MARK_ENABLE_NO,
@@ -623,6 +624,7 @@ struct bnxt_ulp_mapper_class_tbl_info ulp_class_tbl_list[] = {
 	.result_start_idx = 1,
 	.result_bit_size = 64,
 	.result_num_fields = 13,
+	.encap_num_fields = 0,
 	.ident_start_idx = 1,
 	.ident_nums = 0,
 	.mark_enable = BNXT_ULP_MARK_ENABLE_NO,
@@ -644,6 +646,7 @@ struct bnxt_ulp_mapper_class_tbl_info ulp_class_tbl_list[] = {
 	.result_start_idx = 14,
 	.result_bit_size = 10,
 	.result_num_fields = 1,
+	.encap_num_fields = 0,
 	.ident_start_idx = 1,
 	.ident_nums = 1,
 	.mark_enable = BNXT_ULP_MARK_ENABLE_NO,
@@ -665,6 +668,7 @@ struct bnxt_ulp_mapper_class_tbl_info ulp_class_tbl_list[] = {
 	.result_start_idx = 15,
 	.result_bit_size = 38,
 	.result_num_fields = 8,
+	.encap_num_fields = 0,
 	.ident_start_idx = 2,
 	.ident_nums = 0,
 	.mark_enable = BNXT_ULP_MARK_ENABLE_NO,
@@ -686,6 +690,7 @@ struct bnxt_ulp_mapper_class_tbl_info ulp_class_tbl_list[] = {
 	.result_start_idx = 23,
 	.result_bit_size = 64,
 	.result_num_fields = 9,
+	.encap_num_fields = 0,
 	.ident_start_idx = 2,
 	.ident_nums = 0,
 	.mark_enable = BNXT_ULP_MARK_ENABLE_YES,
@@ -1615,7 +1620,7 @@ struct bnxt_ulp_mapper_tbl_list_info ulp_act_tmpl_list[] = {
 	}
 };
 
-struct bnxt_ulp_mapper_act_tbl_info ulp_act_tbl_list[] = {
+struct bnxt_ulp_mapper_tbl_info ulp_act_tbl_list[] = {
 	{
 	.resource_func = BNXT_ULP_RESOURCE_FUNC_INDEX_TABLE,
 	.resource_type = TF_TBL_TYPE_EXT,

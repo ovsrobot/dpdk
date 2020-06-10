@@ -155,7 +155,7 @@ struct bnxt_ulp_mapper_tbl_list_info {
 	uint32_t	num_tbls;
 };
 
-struct bnxt_ulp_mapper_class_tbl_info {
+struct bnxt_ulp_mapper_tbl_info {
 	enum bnxt_ulp_resource_func	resource_func;
 	uint32_t			resource_type; /* TF_ enum type */
 	enum bnxt_ulp_resource_sub_type	resource_sub_type;
@@ -175,6 +175,7 @@ struct bnxt_ulp_mapper_class_tbl_info {
 	uint32_t	result_start_idx;
 	uint16_t	result_bit_size;
 	uint16_t	result_num_fields;
+	uint16_t	encap_num_fields;
 
 	/* Information for accessing the ulp_ident_list */
 	uint32_t	ident_start_idx;
@@ -183,20 +184,6 @@ struct bnxt_ulp_mapper_class_tbl_info {
 	uint8_t		mark_enable;
 	enum bnxt_ulp_regfile_index	regfile_wr_idx;
 	enum bnxt_ulp_vfr_flag		vfr_flag;
-};
-
-struct bnxt_ulp_mapper_act_tbl_info {
-	enum bnxt_ulp_resource_func	resource_func;
-	uint32_t			resource_type; /* TF_ enum type */
-	enum bnxt_ulp_resource_sub_type	resource_sub_type;
-	uint8_t		direction;
-	uint8_t		srch_b4_alloc;
-	uint32_t	result_start_idx;
-	uint16_t	result_bit_size;
-	uint16_t	encap_num_fields;
-	uint16_t	result_num_fields;
-
-	enum bnxt_ulp_regfile_index	regfile_wr_idx;
 };
 
 struct bnxt_ulp_mapper_class_key_field_info {
@@ -263,8 +250,8 @@ extern struct bnxt_ulp_mapper_tbl_list_info	ulp_act_tmpl_list[];
  * table entry to include the start index and number of instructions in the
  * field lists.
  */
-extern struct bnxt_ulp_mapper_class_tbl_info	ulp_class_tbl_list[];
-extern struct bnxt_ulp_mapper_act_tbl_info	ulp_act_tbl_list[];
+extern struct bnxt_ulp_mapper_tbl_info	ulp_class_tbl_list[];
+extern struct bnxt_ulp_mapper_tbl_info	ulp_act_tbl_list[];
 
 /*
  * The ulp_class_result_field_list provides the instructions for creating result
