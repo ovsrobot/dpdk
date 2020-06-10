@@ -413,6 +413,7 @@ bnxt_ulp_set_mark_in_mbuf(struct bnxt *bp, struct rx_pkt_cmpl_hi *rxcmp1,
 	uint32_t mark_id;
 	uint32_t flags2;
 	int rc;
+	uint32_t vfr_flag;
 
 	cfa_code = rte_le_to_cpu_16(rxcmp1->cfa_code);
 	flags2 = rte_le_to_cpu_32(rxcmp1->flags2);
@@ -466,7 +467,7 @@ bnxt_ulp_set_mark_in_mbuf(struct bnxt *bp, struct rx_pkt_cmpl_hi *rxcmp1,
 	}
 
 	rc = ulp_mark_db_mark_get(bp->ulp_ctx, gfid,
-				  cfa_code, &mark_id);
+				  cfa_code, &vfr_flag, &mark_id);
 	if (!rc) {
 		/* Got the mark, write it to the mbuf and return */
 		mbuf->hash.fdir.hi = mark_id;
