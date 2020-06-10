@@ -608,7 +608,7 @@ struct bnxt_ulp_mapper_tbl_info ulp_class_tbl_list[] = {
 	.mark_enable = BNXT_ULP_MARK_ENABLE_NO,
 	.vfr_flag = BNXT_ULP_VFR_FLAG_NO,
 	.critical_resource = BNXT_ULP_CRITICAL_RESOURCE_NO,
-	.regfile_wr_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
+	.regfile_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
 	},
 	{
 	.resource_func = BNXT_ULP_RESOURCE_FUNC_TCAM_TABLE,
@@ -630,7 +630,7 @@ struct bnxt_ulp_mapper_tbl_info ulp_class_tbl_list[] = {
 	.mark_enable = BNXT_ULP_MARK_ENABLE_NO,
 	.vfr_flag = BNXT_ULP_VFR_FLAG_NO,
 	.critical_resource = BNXT_ULP_CRITICAL_RESOURCE_NO,
-	.regfile_wr_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
+	.regfile_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
 	},
 	{
 	.resource_func = BNXT_ULP_RESOURCE_FUNC_CACHE_TABLE,
@@ -652,7 +652,7 @@ struct bnxt_ulp_mapper_tbl_info ulp_class_tbl_list[] = {
 	.mark_enable = BNXT_ULP_MARK_ENABLE_NO,
 	.vfr_flag = BNXT_ULP_VFR_FLAG_NO,
 	.critical_resource = BNXT_ULP_CRITICAL_RESOURCE_NO,
-	.regfile_wr_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
+	.regfile_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
 	},
 	{
 	.resource_func = BNXT_ULP_RESOURCE_FUNC_TCAM_TABLE,
@@ -674,7 +674,7 @@ struct bnxt_ulp_mapper_tbl_info ulp_class_tbl_list[] = {
 	.mark_enable = BNXT_ULP_MARK_ENABLE_NO,
 	.vfr_flag = BNXT_ULP_VFR_FLAG_NO,
 	.critical_resource = BNXT_ULP_CRITICAL_RESOURCE_NO,
-	.regfile_wr_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
+	.regfile_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
 	},
 	{
 	.resource_func = BNXT_ULP_RESOURCE_FUNC_EM_TABLE,
@@ -696,7 +696,7 @@ struct bnxt_ulp_mapper_tbl_info ulp_class_tbl_list[] = {
 	.mark_enable = BNXT_ULP_MARK_ENABLE_YES,
 	.vfr_flag = BNXT_ULP_VFR_FLAG_NO,
 	.critical_resource = BNXT_ULP_CRITICAL_RESOURCE_YES,
-	.regfile_wr_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
+	.regfile_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
 	}
 };
 
@@ -1598,14 +1598,14 @@ struct bnxt_ulp_mapper_ident_info ulp_ident_list[] = {
 	{
 	.resource_func = BNXT_ULP_RESOURCE_FUNC_IDENTIFIER,
 	.ident_type = TF_IDENT_TYPE_L2_CTXT,
-	.regfile_wr_idx = BNXT_ULP_REGFILE_INDEX_L2_CNTXT_ID_0,
+	.regfile_idx = BNXT_ULP_REGFILE_INDEX_L2_CNTXT_ID_0,
 	.ident_bit_size = 10,
 	.ident_bit_pos = 0
 	},
 	{
 	.resource_func = BNXT_ULP_RESOURCE_FUNC_IDENTIFIER,
 	.ident_type = TF_IDENT_TYPE_EM_PROF,
-	.regfile_wr_idx = BNXT_ULP_REGFILE_INDEX_EM_PROFILE_ID_0,
+	.regfile_idx = BNXT_ULP_REGFILE_INDEX_EM_PROFILE_ID_0,
 	.ident_bit_size = 10,
 	.ident_bit_pos = 0
 	}
@@ -1631,7 +1631,7 @@ struct bnxt_ulp_mapper_tbl_info ulp_act_tbl_list[] = {
 	.result_bit_size = 128,
 	.result_num_fields = 26,
 	.encap_num_fields = 0,
-	.regfile_wr_idx = BNXT_ULP_REGFILE_INDEX_ACTION_PTR_MAIN
+	.regfile_idx = BNXT_ULP_REGFILE_INDEX_ACTION_PTR_MAIN
 	}
 };
 
