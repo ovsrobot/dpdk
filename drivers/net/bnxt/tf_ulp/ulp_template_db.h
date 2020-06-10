@@ -120,6 +120,12 @@ enum bnxt_ulp_cf_idx {
 	BNXT_ULP_CF_IDX_LAST = 28
 };
 
+enum bnxt_ulp_critical_resource {
+	BNXT_ULP_CRITICAL_RESOURCE_NO = 0,
+	BNXT_ULP_CRITICAL_RESOURCE_YES = 1,
+	BNXT_ULP_CRITICAL_RESOURCE_LAST = 2
+};
+
 enum bnxt_ulp_device_id {
 	BNXT_ULP_DEVICE_ID_WH_PLUS = 0,
 	BNXT_ULP_DEVICE_ID_THOR = 1,

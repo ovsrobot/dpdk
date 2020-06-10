@@ -568,7 +568,7 @@ ulp_mapper_ident_process(struct bnxt_ulp_mapper_parms *parms,
 		fid_parms.resource_func	= ident->resource_func;
 		fid_parms.resource_type	= ident->ident_type;
 		fid_parms.resource_hndl	= iparms.id;
-		fid_parms.critical_resource	= 0;
+		fid_parms.critical_resource = BNXT_ULP_CRITICAL_RESOURCE_NO;
 
 		rc = ulp_flow_db_resource_add(parms->ulp_ctx,
 					      parms->tbl_idx,
@@ -922,7 +922,7 @@ ulp_mapper_mark_gfid_process(struct bnxt_ulp_mapper_parms *parms,
 	}
 	fid_parms.direction = tbl->direction;
 	fid_parms.resource_func = BNXT_ULP_RESOURCE_FUNC_HW_FID;
-	fid_parms.critical_resource = 0;
+	fid_parms.critical_resource = BNXT_ULP_CRITICAL_RESOURCE_NO;
 	fid_parms.resource_type	= mark_flag;
 	fid_parms.resource_hndl	= gfid;
 	rc = ulp_flow_db_resource_add(parms->ulp_ctx,
@@ -970,7 +970,7 @@ ulp_mapper_mark_act_ptr_process(struct bnxt_ulp_mapper_parms *parms,
 	}
 	fid_parms.direction = tbl->direction;
 	fid_parms.resource_func = BNXT_ULP_RESOURCE_FUNC_HW_FID;
-	fid_parms.critical_resource = 0;
+	fid_parms.critical_resource = BNXT_ULP_CRITICAL_RESOURCE_NO;
 	fid_parms.resource_type	= mark_flag;
 	fid_parms.resource_hndl	= act_idx;
 	rc = ulp_flow_db_resource_add(parms->ulp_ctx,
@@ -1506,7 +1506,7 @@ ulp_mapper_index_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	fid_parms.resource_func	= tbl->resource_func;
 	fid_parms.resource_type	= tbl->resource_type;
 	fid_parms.resource_hndl	= aparms.idx;
-	fid_parms.critical_resource	= 0;
+	fid_parms.critical_resource = BNXT_ULP_CRITICAL_RESOURCE_NO;
 
 	rc = ulp_flow_db_resource_add(parms->ulp_ctx,
 				      parms->tbl_idx,
@@ -1870,7 +1870,7 @@ ulp_mapper_resources_free(struct bnxt_ulp_context	*ulp_ctx,
 	 * Set the critical resource on the first resource del, then iterate
 	 * while status is good
 	 */
-	res_parms.critical_resource = 1;
+	res_parms.critical_resource = BNXT_ULP_CRITICAL_RESOURCE_YES;
 	rc = ulp_flow_db_resource_del(ulp_ctx, tbl_type, fid, &res_parms);
 
 	if (rc) {
@@ -1896,8 +1896,8 @@ ulp_mapper_resources_free(struct bnxt_ulp_context	*ulp_ctx,
 				    tbl_type, fid, res_parms.resource_func,
 				    res_parms.resource_hndl, trc);
 
-		/* All subsequent call require the critical_resource be zero */
-		res_parms.critical_resource = 0;
+		/* All subsequent call require the non-critical_resource */
+		res_parms.critical_resource = BNXT_ULP_CRITICAL_RESOURCE_NO;
 
 		rc = ulp_flow_db_resource_del(ulp_ctx,
 					      tbl_type,
