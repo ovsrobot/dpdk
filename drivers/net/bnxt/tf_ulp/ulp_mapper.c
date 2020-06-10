@@ -889,7 +889,7 @@ ulp_mapper_action_alloc_and_set(struct bnxt_ulp_mapper_parms *parms,
 
 	/* Set the allocation parameters for the table*/
 	alloc_parms.dir = atbls->direction;
-	alloc_parms.type = atbls->table_type;
+	alloc_parms.type = atbls->resource_type;
 	alloc_parms.search_enable = atbls->srch_b4_alloc;
 	alloc_parms.result = ulp_blob_data_get(blob,
 					       &alloc_parms.result_sz_in_bytes);
@@ -910,7 +910,7 @@ ulp_mapper_action_alloc_and_set(struct bnxt_ulp_mapper_parms *parms,
 	/* Need to calculate the idx for the result record */
 	uint64_t tmpidx = alloc_parms.idx;
 
-	if (atbls->table_type == TF_TBL_TYPE_EXT)
+	if (atbls->resource_type == TF_TBL_TYPE_EXT)
 		tmpidx = TF_ACT_REC_OFFSET_2_PTR(alloc_parms.idx);
 	else
 		tmpidx = alloc_parms.idx;
@@ -935,7 +935,7 @@ ulp_mapper_action_alloc_and_set(struct bnxt_ulp_mapper_parms *parms,
 		uint16_t	length;
 
 		set_parm.dir	= atbls->direction;
-		set_parm.type	= atbls->table_type;
+		set_parm.type	= atbls->resource_type;
 		set_parm.idx	= alloc_parms.idx;
 		set_parm.data	= ulp_blob_data_get(blob, &length);
 		set_parm.data_sz_in_bytes = length / 8;
@@ -958,7 +958,7 @@ ulp_mapper_action_alloc_and_set(struct bnxt_ulp_mapper_parms *parms,
 	memset(&fid_parms, 0, sizeof(fid_parms));
 	fid_parms.direction		= atbls->direction;
 	fid_parms.resource_func		= atbls->resource_func;
-	fid_parms.resource_type		= atbls->table_type;
+	fid_parms.resource_type		= atbls->resource_type;
 	fid_parms.resource_hndl		= alloc_parms.idx;
 	fid_parms.critical_resource	= 0;
 
@@ -1209,7 +1209,7 @@ ulp_mapper_tcam_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	}
 
 	aparms.dir		= tbl->direction;
-	aparms.tcam_tbl_type	= tbl->table_type;
+	aparms.tcam_tbl_type	= tbl->resource_type;
 	aparms.search_enable	= tbl->srch_b4_alloc;
 	aparms.key_sz_in_bits	= tbl->key_bit_size;
 	aparms.key		= ulp_blob_data_get(&key, &tmplen);
@@ -1339,7 +1339,7 @@ ulp_mapper_tcam_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	if (parms->tcam_tbl_opc == BNXT_ULP_MAPPER_TCAM_TBL_OPC_NORMAL) {
 		fid_parms.direction = tbl->direction;
 		fid_parms.resource_func	= tbl->resource_func;
-		fid_parms.resource_type	= tbl->table_type;
+		fid_parms.resource_type	= tbl->resource_type;
 		fid_parms.critical_resource = tbl->critical_resource;
 		fid_parms.resource_hndl	= aparms.idx;
 		rc = ulp_flow_db_resource_add(parms->ulp_ctx,
@@ -1366,12 +1366,12 @@ ulp_mapper_tcam_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 error:
 	parms->tcam_tbl_opc = BNXT_ULP_MAPPER_TCAM_TBL_OPC_NORMAL;
 	free_parms.dir			= tbl->direction;
-	free_parms.tcam_tbl_type	= tbl->table_type;
+	free_parms.tcam_tbl_type	= tbl->resource_type;
 	free_parms.idx			= aparms.idx;
 	trc = tf_free_tcam_entry(tfp, &free_parms);
 	if (trc)
 		BNXT_TF_DBG(ERR, "Failed to free tcam[%d][%d][%d] on failure\n",
-			    tbl->table_type, tbl->direction, aparms.idx);
+			    tbl->resource_type, tbl->direction, aparms.idx);
 
 	return rc;
 }
@@ -1460,7 +1460,7 @@ ulp_mapper_em_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	 */
 	iparms.dup_check		= 0;
 	iparms.dir			= tbl->direction;
-	iparms.mem			= tbl->table_type;
+	iparms.mem			= tbl->resource_type;
 	iparms.key			= ulp_blob_data_get(&key, &tmplen);
 	iparms.key_sz_in_bits		= tbl->key_bit_size;
 	iparms.em_record		= ulp_blob_data_get(&data, &tmplen);
@@ -1474,10 +1474,10 @@ ulp_mapper_em_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 
 	/* Mark action process */
 	if (parms->device_params->global_fid_enable &&
-	    tbl->table_type == TF_MEM_EXTERNAL)
+	    tbl->resource_type == TF_MEM_EXTERNAL)
 		rc = ulp_mapper_mark_gfid_process(parms, tbl, iparms.flow_id);
 	else if (!parms->device_params->global_fid_enable &&
-		 tbl->table_type == TF_MEM_INTERNAL)
+		 tbl->resource_type == TF_MEM_INTERNAL)
 		rc = ulp_mapper_mark_act_ptr_process(parms, tbl);
 	if (rc) {
 		BNXT_TF_DBG(ERR, "Failed to add mark to flow\n");
@@ -1488,7 +1488,7 @@ ulp_mapper_em_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	memset(&fid_parms, 0, sizeof(fid_parms));
 	fid_parms.direction		= tbl->direction;
 	fid_parms.resource_func		= tbl->resource_func;
-	fid_parms.resource_type		= tbl->table_type;
+	fid_parms.resource_type		= tbl->resource_type;
 	fid_parms.critical_resource	= tbl->critical_resource;
 	fid_parms.resource_hndl		= iparms.flow_handle;
 
@@ -1561,7 +1561,7 @@ ulp_mapper_index_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	}
 
 	aparms.dir		= tbl->direction;
-	aparms.type		= tbl->table_type;
+	aparms.type		= tbl->resource_type;
 	aparms.search_enable	= tbl->srch_b4_alloc;
 	aparms.result		= ulp_blob_data_get(&data, &tmplen);
 	aparms.result_sz_in_bytes = ULP_SZ_BITS2BYTES(tbl->result_bit_size);
@@ -1571,7 +1571,7 @@ ulp_mapper_index_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	rc = tf_alloc_tbl_entry(tfp, &aparms);
 	if (rc) {
 		BNXT_TF_DBG(ERR, "Alloc table[%d][%s] failed rc=%d\n",
-			    tbl->table_type,
+			    tbl->resource_type,
 			    (tbl->direction == TF_DIR_RX) ? "RX" : "TX",
 			    rc);
 		return rc;
@@ -1588,7 +1588,7 @@ ulp_mapper_index_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 
 	if (!tbl->srch_b4_alloc) {
 		sparms.dir		= tbl->direction;
-		sparms.type		= tbl->table_type;
+		sparms.type		= tbl->resource_type;
 		sparms.data		= ulp_blob_data_get(&data, &tmplen);
 		sparms.data_sz_in_bytes =
 			ULP_SZ_BITS2BYTES(tbl->result_bit_size);
@@ -1598,7 +1598,7 @@ ulp_mapper_index_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 		rc = tf_set_tbl_entry(tfp, &sparms);
 		if (rc) {
 			BNXT_TF_DBG(ERR, "Set table[%d][%s][%d] failed rc=%d\n",
-				    tbl->table_type,
+				    tbl->resource_type,
 				    (tbl->direction == TF_DIR_RX) ? "RX" : "TX",
 				    sparms.idx,
 				    rc);
@@ -1611,7 +1611,7 @@ ulp_mapper_index_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	memset(&fid_parms, 0, sizeof(fid_parms));
 	fid_parms.direction	= tbl->direction;
 	fid_parms.resource_func	= tbl->resource_func;
-	fid_parms.resource_type	= tbl->table_type;
+	fid_parms.resource_type	= tbl->resource_type;
 	fid_parms.resource_hndl	= aparms.idx;
 	fid_parms.critical_resource	= 0;
 
@@ -1632,7 +1632,7 @@ error:
 	 * write to the entry or link the flow
 	 */
 	free_parms.dir	= tbl->direction;
-	free_parms.type	= tbl->table_type;
+	free_parms.type	= tbl->resource_type;
 	free_parms.idx	= aparms.idx;
 	free_parms.tbl_scope_id = tbl_scope_id;
 
@@ -1760,7 +1760,7 @@ ulp_mapper_cache_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	 * need to set it appropriately via setter.
 	 */
 	ulp_mapper_cache_res_type_set(&fid_parms,
-				      tbl->table_type,
+				      tbl->resource_type,
 				      tbl->cache_tbl_id);
 	fid_parms.resource_hndl	= (uint64_t)*ckey;
 	fid_parms.critical_resource = tbl->critical_resource;
