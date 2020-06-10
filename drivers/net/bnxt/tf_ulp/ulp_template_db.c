@@ -294,17 +294,17 @@ struct bnxt_ulp_rte_act_info ulp_act_info[] = {
 };
 
 struct bnxt_ulp_cache_tbl_params ulp_cache_tbl_params[] = {
-	[BNXT_ULP_CACHE_TBL_ID_L2_CNTXT_TCAM_INGRESS] = {
-		.num_entries             = 16384
+	[BNXT_ULP_RESOURCE_SUB_TYPE_TT_L2_CNTXT_TCAM_CACHE << 1 | TF_DIR_RX] = {
+		.num_entries        = 16384
 	},
-	[BNXT_ULP_CACHE_TBL_ID_L2_CNTXT_TCAM_EGRESS] = {
-		.num_entries             = 16384
+	[BNXT_ULP_RESOURCE_SUB_TYPE_TT_L2_CNTXT_TCAM_CACHE << 1 | TF_DIR_TX] = {
+		.num_entries        = 16384
 	},
-	[BNXT_ULP_CACHE_TBL_ID_PROFILE_TCAM_INGRESS] = {
-		.num_entries             = 16384
+	[BNXT_ULP_RESOURCE_SUB_TYPE_TT_PROFILE_TCAM_CACHE << 1 | TF_DIR_RX] = {
+		.num_entries        = 16384
 	},
-	[BNXT_ULP_CACHE_TBL_ID_PROFILE_TCAM_EGRESS] = {
-		.num_entries             = 16384
+	[BNXT_ULP_RESOURCE_SUB_TYPE_TT_PROFILE_TCAM_CACHE << 1 | TF_DIR_TX] = {
+		.num_entries        = 16384
 	}
 };
 
