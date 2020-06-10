@@ -1537,8 +1537,8 @@ struct bnxt_ulp_mapper_result_field_info ulp_class_result_field_list[] = {
 	{
 	.field_bit_size = 33,
 	.result_opcode = BNXT_ULP_RESULT_OPC_SET_TO_REGFILE,
-	.result_operand = {(BNXT_ULP_REGFILE_INDEX_ACTION_PTR_MAIN >> 8) & 0xff,
-		BNXT_ULP_REGFILE_INDEX_ACTION_PTR_MAIN & 0xff,
+	.result_operand = {(BNXT_ULP_REGFILE_INDEX_MAIN_ACTION_PTR >> 8) & 0xff,
+		BNXT_ULP_REGFILE_INDEX_MAIN_ACTION_PTR & 0xff,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 	},
@@ -1631,7 +1631,7 @@ struct bnxt_ulp_mapper_tbl_info ulp_act_tbl_list[] = {
 	.result_bit_size = 128,
 	.result_num_fields = 26,
 	.encap_num_fields = 0,
-	.regfile_idx = BNXT_ULP_REGFILE_INDEX_ACTION_PTR_MAIN
+	.regfile_idx = BNXT_ULP_REGFILE_INDEX_MAIN_ACTION_PTR
 	}
 };
 

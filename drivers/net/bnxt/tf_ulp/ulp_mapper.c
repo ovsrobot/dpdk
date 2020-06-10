@@ -954,7 +954,7 @@ ulp_mapper_mark_act_ptr_process(struct bnxt_ulp_mapper_parms *parms,
 	mark = tfp_be_to_cpu_32(mark);
 
 	if (!ulp_regfile_read(parms->regfile,
-			      BNXT_ULP_REGFILE_INDEX_ACTION_PTR_MAIN,
+			      BNXT_ULP_REGFILE_INDEX_MAIN_ACTION_PTR,
 			      &val64)) {
 		BNXT_TF_DBG(ERR, "read action ptr main failed\n");
 		return -EINVAL;
