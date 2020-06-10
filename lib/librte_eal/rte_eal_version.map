@@ -393,4 +393,8 @@ EXPERIMENTAL {
 	rte_trace_point_lookup;
 	rte_trace_regexp;
 	rte_trace_save;
+
+	# added in 20.08
+	rte_thread_register;
+	rte_thread_unregister;
 };

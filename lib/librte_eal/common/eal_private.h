@@ -275,6 +275,23 @@ uint64_t get_tsc_freq(void);
 uint64_t get_tsc_freq_arch(void);
 
 /**
+ * Ask for a free lcore to associate to a non-EAL thread.
+ *
+ * @return
+ *   The id of a lcore with role ROLE_EXTERNAL or RTE_MAX_LCORE if none was
+ *   available.
+ */
+unsigned int eal_lcore_external_reserve(void);
+
+/**
+ * Release an external lcore.
+ *
+ * @param lcore_id
+ *   The lcore with role ROLE_EXTERNAL to release.
+ */
+void eal_lcore_external_release(unsigned int lcore_id);
+
+/**
  * Prepare physical memory mapping
  * i.e. hugepages on Linux and
  *      contigmem on BSD.

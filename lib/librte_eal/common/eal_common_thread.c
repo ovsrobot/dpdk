@@ -29,6 +29,7 @@ RTE_DEFINE_PER_LCORE(int, _thread_id) = -1;
 static RTE_DEFINE_PER_LCORE(unsigned int, _socket_id) =
 	(unsigned int)SOCKET_ID_ANY;
 static RTE_DEFINE_PER_LCORE(rte_cpuset_t, _cpuset);
+static RTE_DEFINE_PER_LCORE(bool, thread_registered);
 
 unsigned rte_socket_id(void)
 {
@@ -254,4 +255,48 @@ fail:
 	pthread_cancel(*thread);
 	pthread_join(*thread, NULL);
 	return -ret;
+}
+
+void
+rte_thread_register(void)
+{
+	unsigned int lcore_id;
+	rte_cpuset_t cpuset;
+
+	/* EAL init flushes all lcores, we can't register before. */
+	assert(internal_config.init_complete == 1);
+
+	if (RTE_PER_LCORE(thread_registered))
+		return;
+
+	if (pthread_getaffinity_np(pthread_self(), sizeof(cpuset),
+			&cpuset) != 0)
+		CPU_ZERO(&cpuset);
+
+	lcore_id = eal_lcore_external_reserve();
+	if (lcore_id >= RTE_MAX_LCORE)
+		lcore_id = LCORE_ID_ANY;
+
+	rte_thread_init(lcore_id, &cpuset);
+
+	RTE_LOG(DEBUG, EAL, "Registered thread as lcore %u.\n", lcore_id);
+	RTE_PER_LCORE(thread_registered) = true;
+}
+
+void
+rte_thread_unregister(void)
+{
+	unsigned int lcore_id;
+
+	if (!RTE_PER_LCORE(thread_registered))
+		return;
+
+	lcore_id = RTE_PER_LCORE(_lcore_id);
+	if (lcore_id != LCORE_ID_ANY)
+		eal_lcore_external_release(lcore_id);
+
+	rte_thread_uninit();
+
+	RTE_LOG(DEBUG, EAL, "Unregistered thread (was lcore %u).\n", lcore_id);
+	RTE_PER_LCORE(thread_registered) = false;
 }
