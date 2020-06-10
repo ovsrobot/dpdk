@@ -1394,7 +1394,7 @@ ulp_mapper_em_tbl_process(struct bnxt_ulp_mapper_parms *parms,
 	 */
 	iparms.dup_check		= 0;
 	iparms.dir			= tbl->direction;
-	iparms.mem			= tbl->mem;
+	iparms.mem			= tbl->table_type;
 	iparms.key			= ulp_blob_data_get(&key, &tmplen);
 	iparms.key_sz_in_bits		= tbl->key_bit_size;
 	iparms.em_record		= ulp_blob_data_get(&data, &tmplen);
