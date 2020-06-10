@@ -605,6 +605,7 @@ struct bnxt_ulp_mapper_class_tbl_info ulp_class_tbl_list[] = {
 	.ident_start_idx = 0,
 	.ident_nums = 1,
 	.mark_enable = BNXT_ULP_MARK_ENABLE_NO,
+	.vfr_flag = BNXT_ULP_VFR_FLAG_NO,
 	.critical_resource = 0,
 	.regfile_wr_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
 	},
@@ -625,6 +626,7 @@ struct bnxt_ulp_mapper_class_tbl_info ulp_class_tbl_list[] = {
 	.ident_start_idx = 1,
 	.ident_nums = 0,
 	.mark_enable = BNXT_ULP_MARK_ENABLE_NO,
+	.vfr_flag = BNXT_ULP_VFR_FLAG_NO,
 	.critical_resource = 0,
 	.regfile_wr_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
 	},
@@ -645,6 +647,7 @@ struct bnxt_ulp_mapper_class_tbl_info ulp_class_tbl_list[] = {
 	.ident_start_idx = 1,
 	.ident_nums = 1,
 	.mark_enable = BNXT_ULP_MARK_ENABLE_NO,
+	.vfr_flag = BNXT_ULP_VFR_FLAG_NO,
 	.critical_resource = 0,
 	.regfile_wr_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
 	},
@@ -665,6 +668,7 @@ struct bnxt_ulp_mapper_class_tbl_info ulp_class_tbl_list[] = {
 	.ident_start_idx = 2,
 	.ident_nums = 0,
 	.mark_enable = BNXT_ULP_MARK_ENABLE_NO,
+	.vfr_flag = BNXT_ULP_VFR_FLAG_NO,
 	.critical_resource = 0,
 	.regfile_wr_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
 	},
@@ -685,6 +689,7 @@ struct bnxt_ulp_mapper_class_tbl_info ulp_class_tbl_list[] = {
 	.ident_start_idx = 2,
 	.ident_nums = 0,
 	.mark_enable = BNXT_ULP_MARK_ENABLE_YES,
+	.vfr_flag = BNXT_ULP_VFR_FLAG_NO,
 	.critical_resource = 1,
 	.regfile_wr_idx = BNXT_ULP_REGFILE_INDEX_NOT_USED
 	}

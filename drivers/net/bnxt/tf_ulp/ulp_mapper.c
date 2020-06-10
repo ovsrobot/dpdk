@@ -1054,13 +1054,12 @@ ulp_mapper_mark_gfid_process(struct bnxt_ulp_mapper_parms *parms,
 			     uint64_t flow_id)
 {
 	struct ulp_flow_db_res_params fid_parms;
-	uint32_t vfr_flag, mark, gfid, mark_flag;
+	uint32_t mark, gfid, mark_flag;
 	int32_t rc = 0;
 
-	vfr_flag = ULP_COMP_FLD_IDX_RD(parms, BNXT_ULP_CF_IDX_VFR_FLAG);
 	if (!(tbl->mark_enable &&
 	      (ULP_BITMAP_ISSET(parms->act_bitmap->bits,
-			      BNXT_ULP_ACTION_BIT_MARK) || vfr_flag)))
+			      BNXT_ULP_ACTION_BIT_MARK) || tbl->vfr_flag)))
 		return rc; /* no need to perform gfid process */
 
 	/* Get the mark id details from action property */
@@ -1070,7 +1069,7 @@ ulp_mapper_mark_gfid_process(struct bnxt_ulp_mapper_parms *parms,
 
 	TF_GET_GFID_FROM_FLOW_ID(flow_id, gfid);
 	mark_flag  = BNXT_ULP_MARK_GLOBAL_HW_FID;
-	mark_flag |= (vfr_flag) ? BNXT_ULP_MARK_VFR_ID : 0;
+	mark_flag |= (tbl->vfr_flag) ? BNXT_ULP_MARK_VFR_ID : 0;
 	rc = ulp_mark_db_mark_add(parms->ulp_ctx, mark_flag,
 				  gfid, mark);
 	if (rc) {
@@ -1096,14 +1095,13 @@ ulp_mapper_mark_act_ptr_process(struct bnxt_ulp_mapper_parms *parms,
 				struct bnxt_ulp_mapper_class_tbl_info *tbl)
 {
 	struct ulp_flow_db_res_params fid_parms;
-	uint32_t vfr_flag, act_idx, mark, mark_flag;
+	uint32_t act_idx, mark, mark_flag;
 	uint64_t val64;
 	int32_t rc = 0;
 
-	vfr_flag = ULP_COMP_FLD_IDX_RD(parms, BNXT_ULP_CF_IDX_VFR_FLAG);
 	if (!(tbl->mark_enable &&
 	      (ULP_BITMAP_ISSET(parms->act_bitmap->bits,
-				BNXT_ULP_ACTION_BIT_MARK) || vfr_flag)))
+				BNXT_ULP_ACTION_BIT_MARK) || tbl->vfr_flag)))
 		return rc; /* no need to perform mark action process */
 
 	/* Get the mark id details from action property */
@@ -1119,7 +1117,7 @@ ulp_mapper_mark_act_ptr_process(struct bnxt_ulp_mapper_parms *parms,
 	}
 	act_idx = tfp_be_to_cpu_64(val64);
 	mark_flag  = BNXT_ULP_MARK_LOCAL_HW_FID;
-	mark_flag |= (vfr_flag) ? BNXT_ULP_MARK_VFR_ID : 0;
+	mark_flag |= (tbl->vfr_flag) ? BNXT_ULP_MARK_VFR_ID : 0;
 	rc = ulp_mark_db_mark_add(parms->ulp_ctx, mark_flag,
 				  act_idx, mark);
 	if (rc) {
