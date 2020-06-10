@@ -26,6 +26,11 @@ __rte_noreturn void *eal_thread_loop(void *arg);
 void rte_thread_init(unsigned int lcore_id, rte_cpuset_t *cpuset);
 
 /**
+ * Uninitialize per-lcore info for current thread.
+ */
+void rte_thread_uninit(void);
+
+/**
  * Get the NUMA socket id from cpu id.
  * This function is private to EAL.
  *

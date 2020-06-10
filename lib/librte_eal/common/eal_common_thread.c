@@ -22,6 +22,7 @@
 #include "eal_internal_cfg.h"
 #include "eal_private.h"
 #include "eal_thread.h"
+#include "eal_trace.h"
 
 RTE_DEFINE_PER_LCORE(unsigned int, _lcore_id) = LCORE_ID_ANY;
 RTE_DEFINE_PER_LCORE(int, _thread_id) = -1;
@@ -166,6 +167,14 @@ rte_thread_init(unsigned int lcore_id, rte_cpuset_t *cpuset)
 
 #ifndef RTE_EXEC_ENV_WINDOWS
 	__rte_trace_mem_per_thread_alloc();
+#endif
+}
+
+void
+rte_thread_uninit(void)
+{
+#ifndef RTE_EXEC_ENV_WINDOWS
+	trace_mem_per_thread_free();
 #endif
 }
 
