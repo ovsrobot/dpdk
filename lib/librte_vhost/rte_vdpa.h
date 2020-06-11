@@ -185,4 +185,56 @@ rte_vhost_host_notifier_ctrl(int vid, bool enable);
 __rte_experimental
 int
 rte_vdpa_relay_vring_used(int vid, uint16_t qid, void *vring_m);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Get number of queue pairs supported by the vDPA device
+ *
+ * @param dev
+ *  vDP device pointer
+ * @param queue_num
+ *  pointer on where the number of queue is stored
+ * @return
+ *  0 on success, -1 on failure
+ */
+__rte_experimental
+int
+rte_vdpa_get_queue_num(struct rte_vdpa_device *dev, uint32_t *queue_num);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Get the Virtio features supported by the vDPA device
+ *
+ * @param dev
+ *  vDP device pointer
+ * @param features
+ *  pointer on where the supported features are stored
+ * @return
+ *  0 on success, -1 on failure
+ */
+__rte_experimental
+int
+rte_vdpa_get_features(struct rte_vdpa_device *dev, uint64_t *features);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Get the Vhost-user protocol features supported by the vDPA device
+ *
+ * @param dev
+ *  vDP device pointer
+ * @param features
+ *  pointer on where the supported protocol features are stored
+ * @return
+ *  0 on success, -1 on failure
+ */
+__rte_experimental
+int
+rte_vdpa_get_protocol_features(struct rte_vdpa_device *dev, uint64_t *features);
+
 #endif /* _RTE_VDPA_H_ */
