@@ -9280,15 +9280,22 @@ cmd_global_config_parsed(void *parsed_result,
 {
 	struct cmd_global_config_result *res = parsed_result;
 	struct rte_eth_global_cfg conf;
-	int ret;
+	int ret = -ENOTSUP;
 
-	memset(&conf, 0, sizeof(conf));
-	conf.cfg_type = RTE_ETH_GLOBAL_CFG_TYPE_GRE_KEY_LEN;
-	conf.cfg.gre_key_len = res->len;
-	ret = rte_eth_dev_filter_ctrl(res->port_id, RTE_ETH_FILTER_NONE,
-				      RTE_ETH_FILTER_SET, &conf);
-	if (ret != 0)
-		printf("Global config error\n");
+#ifdef RTE_LIBRTE_I40E_PMD
+	if (ret == -ENOTSUP)
+		ret = rte_pmd_i40e_set_gre_key_len(res->port_id, res->len);
+#endif
+	if (ret == -ENOTSUP) {
+		memset(&conf, 0, sizeof(conf));
+		conf.cfg_type = RTE_ETH_GLOBAL_CFG_TYPE_GRE_KEY_LEN;
+		conf.cfg.gre_key_len = res->len;
+		ret = rte_eth_dev_filter_ctrl(res->port_id, RTE_ETH_FILTER_NONE,
+					      RTE_ETH_FILTER_SET, &conf);
+	}
+
+	if (ret < 0)
+		printf("Global config error: (%s)\n", strerror(-ret));
 }
 
 cmdline_parse_token_string_t cmd_global_config_cmd =
