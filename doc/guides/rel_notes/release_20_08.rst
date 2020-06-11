@@ -62,6 +62,13 @@ New Features
 
   * Added new PMD devarg ``reclaim_mem_mode``.
 
+* **Updated Intel i40e driver.**
+
+  Updated i40e PMD with new features and improvements, including:
+
+  * Added a new type of cloud filter to support the coexistence of the
+    following two rules. One selects L4 destination as input set and
+    the other one selects L4 source port.
 
 Removed Items
 -------------
