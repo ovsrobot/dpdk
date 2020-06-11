@@ -47,7 +47,6 @@ static const char * const ifcvf_valid_arguments[] = {
 static int ifcvf_vdpa_logtype;
 
 struct ifcvf_internal {
-	struct rte_vdpa_dev_addr dev_addr;
 	struct rte_pci_device *pdev;
 	struct ifcvf_hw hw;
 	int vfio_container_fd;
@@ -1176,8 +1175,6 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 		(1ULL << VHOST_USER_F_PROTOCOL_FEATURES) |
 		(1ULL << VHOST_F_LOG_ALL);
 
-	internal->dev_addr.pci_addr = pci_dev->addr;
-	internal->dev_addr.type = VDPA_ADDR_PCI;
 	list->internal = internal;
 
 	if (rte_kvargs_count(kvlist, IFCVF_SW_FALLBACK_LM)) {
@@ -1188,8 +1185,7 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	}
 	internal->sw_lm = sw_fallback_lm;
 
-	internal->did = rte_vdpa_register_device(&internal->dev_addr,
-				&ifcvf_ops);
+	internal->did = rte_vdpa_register_device(&pci_dev->device, &ifcvf_ops);
 	if (internal->did < 0) {
 		DRV_LOG(ERR, "failed to register device %s", pci_dev->name);
 		goto error;
