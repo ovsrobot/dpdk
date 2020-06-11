@@ -1431,7 +1431,6 @@ rte_intr_free_epoll_fd(struct rte_intr_handle *intr_handle)
 		if (rte_epoll_ctl(rev->epfd, EPOLL_CTL_DEL, rev->fd, rev)) {
 			/* force free if the entry valid */
 			eal_epoll_data_safe_free(rev);
-			rev->status = RTE_EPOLL_INVALID;
 		}
 	}
 }
