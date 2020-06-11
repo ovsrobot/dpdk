@@ -332,8 +332,13 @@ free_vq(struct virtio_net *dev, struct vhost_virtqueue *vq)
 {
 	if (vq_is_packed(dev))
 		rte_free(vq->shadow_used_packed);
-	else
+	else {
 		rte_free(vq->shadow_used_split);
+		if (vq->async_pkts_pending)
+			rte_free(vq->async_pkts_pending);
+		if (vq->async_pending_info)
+			rte_free(vq->async_pending_info);
+	}
 	rte_free(vq->batch_copy_elems);
 	rte_mempool_free(vq->iotlb_pool);
 	rte_free(vq);
@@ -1527,3 +1532,70 @@ RTE_INIT(vhost_log_init)
 	if (vhost_data_log_level >= 0)
 		rte_log_set_level(vhost_data_log_level, RTE_LOG_WARNING);
 }
+
+int rte_vhost_async_channel_register(int vid, uint16_t queue_id,
+					uint32_t features,
+					struct rte_vhost_async_channel_ops *ops)
+{
+	struct vhost_virtqueue *vq;
+	struct virtio_net *dev = get_device(vid);
+	struct dma_channel_features f;
+
+	if (dev == NULL || ops == NULL)
+		return -1;
+
+	f.intval = features;
+
+	vq = dev->virtqueue[queue_id];
+
+	if (vq == NULL)
+		return -1;
+
+	/** packed queue is not supported */
+	if (vq_is_packed(dev) || !f.inorder)
+		return -1;
+
+	if (ops->check_completed_copies == NULL ||
+		ops->transfer_data == NULL)
+		return -1;
+
+	rte_spinlock_lock(&vq->access_lock);
+
+	vq->async_ops.check_completed_copies = ops->check_completed_copies;
+	vq->async_ops.transfer_data = ops->transfer_data;
+
+	vq->async_inorder = f.inorder;
+	vq->async_threshold = f.threshold;
+
+	vq->async_registered = true;
+
+	rte_spinlock_unlock(&vq->access_lock);
+
+	return 0;
+}
+
+int rte_vhost_async_channel_unregister(int vid, uint16_t queue_id)
+{
+	struct vhost_virtqueue *vq;
+	struct virtio_net *dev = get_device(vid);
+
+	if (dev == NULL)
+		return -1;
+
+	vq = dev->virtqueue[queue_id];
+
+	if (vq == NULL)
+		return -1;
+
+	rte_spinlock_lock(&vq->access_lock);
+
+	vq->async_ops.transfer_data = NULL;
+	vq->async_ops.check_completed_copies = NULL;
+
+	vq->async_registered = false;
+
+	rte_spinlock_unlock(&vq->access_lock);
+
+	return 0;
+}
+

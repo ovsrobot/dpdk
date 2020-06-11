@@ -464,12 +464,25 @@ vhost_user_set_vring_num(struct virtio_net **pdev,
 	} else {
 		if (vq->shadow_used_split)
 			rte_free(vq->shadow_used_split);
+		if (vq->async_pkts_pending)
+			rte_free(vq->async_pkts_pending);
+		if (vq->async_pending_info)
+			rte_free(vq->async_pending_info);
+
 		vq->shadow_used_split = rte_malloc(NULL,
 				vq->size * sizeof(struct vring_used_elem),
 				RTE_CACHE_LINE_SIZE);
-		if (!vq->shadow_used_split) {
+		vq->async_pkts_pending = rte_malloc(NULL,
+				vq->size * sizeof(uintptr_t),
+				RTE_CACHE_LINE_SIZE);
+		vq->async_pending_info = rte_malloc(NULL,
+				vq->size * sizeof(uint64_t),
+				RTE_CACHE_LINE_SIZE);
+		if (!vq->shadow_used_split ||
+			!vq->async_pkts_pending ||
+			!vq->async_pending_info) {
 			VHOST_LOG_CONFIG(ERR,
-					"failed to allocate memory for shadow used ring.\n");
+					"failed to allocate memory for vq internal data.\n");
 			return RTE_VHOST_MSG_RESULT_ERR;
 		}
 	}
@@ -1147,7 +1160,8 @@ vhost_user_set_mem_table(struct virtio_net **pdev, struct VhostUserMsg *msg,
 			goto err_mmap;
 		}
 
-		populate = (dev->dequeue_zero_copy) ? MAP_POPULATE : 0;
+		populate = (dev->dequeue_zero_copy || dev->async_copy) ?
+			MAP_POPULATE : 0;
 		mmap_addr = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE,
 				 MAP_SHARED | populate, fd, 0);
 
@@ -1162,7 +1176,7 @@ vhost_user_set_mem_table(struct virtio_net **pdev, struct VhostUserMsg *msg,
 		reg->host_user_addr = (uint64_t)(uintptr_t)mmap_addr +
 				      mmap_offset;
 
-		if (dev->dequeue_zero_copy)
+		if (dev->dequeue_zero_copy || dev->async_copy)
 			if (add_guest_pages(dev, reg, alignment) < 0) {
 				VHOST_LOG_CONFIG(ERR,
 					"adding guest pages to region %u failed.\n",
@@ -1945,6 +1959,12 @@ vhost_user_get_vring_base(struct virtio_net **pdev,
 	} else {
 		rte_free(vq->shadow_used_split);
 		vq->shadow_used_split = NULL;
+		if (vq->async_pkts_pending)
+			rte_free(vq->async_pkts_pending);
+		if (vq->async_pending_info)
+			rte_free(vq->async_pending_info);
+		vq->async_pkts_pending = NULL;
+		vq->async_pending_info = NULL;
 	}
 
 	rte_free(vq->batch_copy_elems);

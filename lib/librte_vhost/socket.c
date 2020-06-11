@@ -42,6 +42,7 @@ struct vhost_user_socket {
 	bool use_builtin_virtio_net;
 	bool extbuf;
 	bool linearbuf;
+	bool async_copy;
 
 	/*
 	 * The "supported_features" indicates the feature bits the
@@ -210,6 +211,7 @@ vhost_user_add_connection(int fd, struct vhost_user_socket *vsocket)
 	size_t size;
 	struct vhost_user_connection *conn;
 	int ret;
+	struct virtio_net *dev;
 
 	if (vsocket == NULL)
 		return;
@@ -240,6 +242,13 @@ vhost_user_add_connection(int fd, struct vhost_user_socket *vsocket)
 
 	if (vsocket->linearbuf)
 		vhost_enable_linearbuf(vid);
+
+	if (vsocket->async_copy) {
+		dev = get_device(vid);
+
+		if (dev)
+			dev->async_copy = 1;
+	}
 
 	VHOST_LOG_CONFIG(INFO, "new device, handle is %d\n", vid);
 
@@ -888,6 +897,17 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 		VHOST_LOG_CONFIG(ERR,
 			"error: enabling dequeue zero copy and IOMMU features "
 			"simultaneously is not supported\n");
+		goto out_mutex;
+	}
+
+	vsocket->async_copy = flags & RTE_VHOST_USER_ASYNC_COPY;
+
+	if (vsocket->async_copy &&
+		(flags & (RTE_VHOST_USER_IOMMU_SUPPORT |
+		RTE_VHOST_USER_POSTCOPY_SUPPORT))) {
+		VHOST_LOG_CONFIG(ERR, "error: enabling async copy and IOMMU "
+			"or post-copy feature simultaneously is not "
+			"supported\n");
 		goto out_mutex;
 	}
 
