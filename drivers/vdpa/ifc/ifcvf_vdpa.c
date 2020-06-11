@@ -880,7 +880,7 @@ ifcvf_dev_config(int vid)
 	struct internal_list *list;
 	struct ifcvf_internal *internal;
 
-	vdev = rte_vdpa_get_device(rte_vhost_get_vdpa_device_id(vid));
+	vdev = rte_vhost_get_vdpa_device(vid);
 	list = find_internal_resource_by_vdev(vdev);
 	if (list == NULL) {
 		DRV_LOG(ERR, "Invalid vDPA device: %p", vdev);
@@ -906,7 +906,7 @@ ifcvf_dev_close(int vid)
 	struct internal_list *list;
 	struct ifcvf_internal *internal;
 
-	vdev = rte_vdpa_get_device(rte_vhost_get_vdpa_device_id(vid));
+	vdev = rte_vhost_get_vdpa_device(vid);
 	list = find_internal_resource_by_vdev(vdev);
 	if (list == NULL) {
 		DRV_LOG(ERR, "Invalid vDPA device: %p", vdev);
@@ -946,7 +946,7 @@ ifcvf_set_features(int vid)
 	struct ifcvf_internal *internal;
 	uint64_t log_base = 0, log_size = 0;
 
-	vdev = rte_vdpa_get_device(rte_vhost_get_vdpa_device_id(vid));
+	vdev = rte_vhost_get_vdpa_device(vid);
 	list = find_internal_resource_by_vdev(vdev);
 	if (list == NULL) {
 		DRV_LOG(ERR, "Invalid vDPA device: %p", vdev);
@@ -977,7 +977,7 @@ ifcvf_get_vfio_group_fd(int vid)
 	struct rte_vdpa_device *vdev;
 	struct internal_list *list;
 
-	vdev = rte_vdpa_get_device(rte_vhost_get_vdpa_device_id(vid));
+	vdev = rte_vhost_get_vdpa_device(vid);
 	list = find_internal_resource_by_vdev(vdev);
 	if (list == NULL) {
 		DRV_LOG(ERR, "Invalid vDPA device: %p", vdev);
@@ -993,7 +993,7 @@ ifcvf_get_vfio_device_fd(int vid)
 	struct rte_vdpa_device *vdev;
 	struct internal_list *list;
 
-	vdev = rte_vdpa_get_device(rte_vhost_get_vdpa_device_id(vid));
+	vdev = rte_vhost_get_vdpa_device(vid);
 	list = find_internal_resource_by_vdev(vdev);
 	if (list == NULL) {
 		DRV_LOG(ERR, "Invalid vDPA device: %p", vdev);
@@ -1012,7 +1012,7 @@ ifcvf_get_notify_area(int vid, int qid, uint64_t *offset, uint64_t *size)
 	struct vfio_region_info reg = { .argsz = sizeof(reg) };
 	int ret;
 
-	vdev = rte_vdpa_get_device(rte_vhost_get_vdpa_device_id(vid));
+	vdev = rte_vhost_get_vdpa_device(vid);
 	list = find_internal_resource_by_vdev(vdev);
 	if (list == NULL) {
 		DRV_LOG(ERR, "Invalid vDPA device: %p", vdev);
