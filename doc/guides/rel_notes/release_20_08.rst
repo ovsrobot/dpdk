@@ -62,6 +62,20 @@ New Features
 
   * Added new PMD devarg ``reclaim_mem_mode``.
 
+* **Updated the Intel i40e driver.**
+
+  Updated the Intel i40e driver with new features and improvements, including:
+
+  * Re-implemented get_fdir_info and get_fdir_stat in private API.
+  * Re-implemented set_gre_key_len in private API.
+  * Added support for flow query RSS.
+
+* **Updated the Intel ixgbe driver.**
+
+  Updated the Intel ixgbe driver with new features and improvements, including:
+
+  * Re-implemented get_fdir_info and get_fdir_stat in private API.
+
 
 Removed Items
 -------------
