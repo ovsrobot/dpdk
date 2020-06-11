@@ -138,6 +138,26 @@ static inline uint32_t i40e_read_addr(volatile void *addr)
 #define I40E_PCI_REG_WRITE_RELAXED(reg, value)	\
 	rte_write32_relaxed((rte_cpu_to_le_32(value)), reg)
 
+#if defined(RTE_ARCH_X86)
+#define I40E_PCI_REG_WC_WRITE(queue, reg, value, ...)			\
+	do {								\
+		uint32_t val = rte_cpu_to_le_32(value);			\
+		volatile void *addr = reg;				\
+		if (queue->use_movdiri)					\
+			rte_write32_wc(val, addr);			\
+		else							\
+			rte_write32##__VA_ARGS__(val, addr);		\
+	} while (0)
+#define I40E_PCI_REG_WC_WRITE_RELAXED(queue, reg, value) \
+		I40E_PCI_REG_WC_WRITE(queue, reg, value, _relaxed)
+#else
+	#define I40E_PCI_REG_WC_WRITE(queue, reg, value) \
+		I40E_PCI_REG_WRITE(reg, value)
+	#define I40E_PCI_REG_WC_WRITE_RELAXED(queue, reg, value) \
+		I40E_PCI_REG_WRITE_RELAXED(reg, value)
+#endif
+
+
 #define I40E_WRITE_FLUSH(a) I40E_READ_REG(a, I40E_GLGEN_STAT)
 #define I40EVF_WRITE_FLUSH(a) I40E_READ_REG(a, I40E_VFGEN_RSTAT)
 

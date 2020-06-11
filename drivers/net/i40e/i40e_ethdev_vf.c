@@ -1790,6 +1790,11 @@ i40evf_rxq_init(struct rte_eth_dev *dev, struct i40e_rx_queue *rxq)
 	rxq->max_pkt_len = RTE_MIN(len,
 		dev_data->dev_conf.rxmode.max_rx_pkt_len);
 
+#if defined(RTE_ARCH_X86)
+	/* use MOVDIRI if supported*/
+	rxq->use_movdiri = rte_cpu_get_flag_enabled(RTE_CPUFLAG_MOVDIRI);
+#endif
+
 	/**
 	 * Check if the jumbo frame and maximum packet length are set correctly
 	 */
@@ -1854,6 +1859,11 @@ i40evf_tx_init(struct rte_eth_dev *dev)
 
 	for (i = 0; i < dev->data->nb_tx_queues; i++)
 		txq[i]->qtx_tail = hw->hw_addr + I40E_QTX_TAIL1(i);
+
+#if defined(RTE_ARCH_X86)
+       /* use MOVDIRI if supported*/
+	txq[i]->use_movdiri = rte_cpu_get_flag_enabled(RTE_CPUFLAG_MOVDIRI);
+#endif
 
 	i40e_set_tx_function(dev);
 }

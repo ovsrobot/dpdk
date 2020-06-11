@@ -142,6 +142,10 @@ i40e_fdir_rx_queue_init(struct i40e_rx_queue *rxq)
 	}
 	rxq->qrx_tail = hw->hw_addr +
 		I40E_QRX_TAIL(rxq->vsi->base_queue);
+#if defined(RTE_ARCH_X86)
+	/* use MOVDIRI if supported*/
+	rxq->use_movdiri = rte_cpu_get_flag_enabled(RTE_CPUFLAG_MOVDIRI);
+#endif
 
 	rte_wmb();
 	/* Init the RX tail regieter. */
