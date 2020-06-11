@@ -113,11 +113,26 @@ rte_vdpa_unregister_device(struct rte_vdpa_device *);
  * @param name
  *  the vdpa device name
  * @return
- *  device id on success, -1 on failure
+ *  vDPA device pointer on success, NULL on failure
  */
 __rte_experimental
-int
-rte_vdpa_find_device_id_by_name(const char *name);
+struct rte_vdpa_device *
+rte_vdpa_find_device_by_name(const char *name);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Get the generic device from the vdpa device
+ *
+ * @param vdpa_dev
+ *  the vdpa device pointer
+ * @return
+ *  generic device pointer on success, NULL on failure
+ */
+__rte_experimental
+struct rte_device *
+rte_vdpa_get_rte_device(struct rte_vdpa_device *vdpa_dev);
 
 /**
  * @warning

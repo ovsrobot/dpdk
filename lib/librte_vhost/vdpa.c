@@ -40,14 +40,14 @@ rte_vdpa_find_device_id(struct rte_vdpa_device *dev)
 	return -1;
 }
 
-int
-rte_vdpa_find_device_id_by_name(const char *name)
+struct rte_vdpa_device *
+rte_vdpa_find_device_by_name(const char *name)
 {
 	struct rte_vdpa_device *dev;
 	int i;
 
 	if (name == NULL)
-		return -1;
+		return NULL;
 
 	for (i = 0; i < MAX_VHOST_DEVICE; ++i) {
 		dev = &vdpa_devices[i];
@@ -55,10 +55,19 @@ rte_vdpa_find_device_id_by_name(const char *name)
 			continue;
 
 		if (strcmp(dev->device->name, name) == 0)
-			return i;
+			return dev;
 	}
 
-	return -1;
+	return NULL;
+}
+
+struct rte_device *
+rte_vdpa_get_rte_device(struct rte_vdpa_device *vdpa_dev)
+{
+	if (vdpa_dev == NULL)
+		return NULL;
+
+	return vdpa_dev->device;
 }
 
 struct rte_vdpa_device *
