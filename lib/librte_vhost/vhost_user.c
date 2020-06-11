@@ -2833,8 +2833,14 @@ static int process_slave_message_reply(struct virtio_net *dev,
 	struct VhostUserMsg msg_reply;
 	int ret;
 
-	if ((msg->flags & VHOST_USER_NEED_REPLY) == 0)
-		return 0;
+	if (!(msg->flags & VHOST_USER_REPLY_MASK)) {
+		if (msg->flags & VHOST_USER_NEED_REPLY) {
+			ret = -1;
+			goto out;
+		} else {
+			return 0;
+		}
+	}
 
 	ret = read_vhost_message(dev->slave_req_fd, &msg_reply);
 	if (ret <= 0) {
