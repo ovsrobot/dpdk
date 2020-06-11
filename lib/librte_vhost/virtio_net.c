@@ -1133,8 +1133,8 @@ virtio_dev_rx_single_packed(struct virtio_net *dev,
 
 static __rte_noinline uint32_t
 virtio_dev_rx_packed(struct virtio_net *dev,
-		     struct vhost_virtqueue *vq,
-		     struct rte_mbuf **pkts,
+		     struct vhost_virtqueue *__restrict vq,
+		     struct rte_mbuf **__restrict pkts,
 		     uint32_t count)
 {
 	uint32_t pkt_idx = 0;
@@ -1219,7 +1219,7 @@ out_access_unlock:
 
 uint16_t
 rte_vhost_enqueue_burst(int vid, uint16_t queue_id,
-	struct rte_mbuf **pkts, uint16_t count)
+	struct rte_mbuf **__restrict pkts, uint16_t count)
 {
 	struct virtio_net *dev = get_device(vid);
 
@@ -2124,9 +2124,9 @@ free_zmbuf(struct vhost_virtqueue *vq)
 
 static __rte_noinline uint16_t
 virtio_dev_tx_packed_zmbuf(struct virtio_net *dev,
-			   struct vhost_virtqueue *vq,
+			   struct vhost_virtqueue *__restrict vq,
 			   struct rte_mempool *mbuf_pool,
-			   struct rte_mbuf **pkts,
+			   struct rte_mbuf **__restrict pkts,
 			   uint32_t count)
 {
 	uint32_t pkt_idx = 0;
@@ -2160,9 +2160,9 @@ virtio_dev_tx_packed_zmbuf(struct virtio_net *dev,
 
 static __rte_noinline uint16_t
 virtio_dev_tx_packed(struct virtio_net *dev,
-		     struct vhost_virtqueue *vq,
+		     struct vhost_virtqueue *__restrict vq,
 		     struct rte_mempool *mbuf_pool,
-		     struct rte_mbuf **pkts,
+		     struct rte_mbuf **__restrict pkts,
 		     uint32_t count)
 {
 	uint32_t pkt_idx = 0;
