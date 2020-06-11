@@ -18,18 +18,21 @@
 
 #define MAX_VDPA_NAME_LEN 128
 
+struct rte_vdpa_device;
+
 /**
  * vdpa device operations
  */
 struct rte_vdpa_dev_ops {
 	/** Get capabilities of this device */
-	int (*get_queue_num)(int did, uint32_t *queue_num);
+	int (*get_queue_num)(struct rte_vdpa_device *dev, uint32_t *queue_num);
 
 	/** Get supported features of this device */
-	int (*get_features)(int did, uint64_t *features);
+	int (*get_features)(struct rte_vdpa_device *dev, uint64_t *features);
 
 	/** Get supported protocol features of this device */
-	int (*get_protocol_features)(int did, uint64_t *protocol_features);
+	int (*get_protocol_features)(struct rte_vdpa_device *dev,
+			uint64_t *protocol_features);
 
 	/** Driver configure/close the device */
 	int (*dev_conf)(int vid);
@@ -79,10 +82,10 @@ struct rte_vdpa_device {
  * @param ops
  *  the vdpa device operations
  * @return
- *  device id on success, -1 on failure
+ *  vDPA device pointer on success, NULL on failure
  */
 __rte_experimental
-int
+struct rte_vdpa_device *
 rte_vdpa_register_device(struct rte_device *rte_dev,
 		struct rte_vdpa_dev_ops *ops);
 
@@ -93,13 +96,13 @@ rte_vdpa_register_device(struct rte_device *rte_dev,
  * Unregister a vdpa device
  *
  * @param did
- *  vdpa device id
+ *  vDPA device pointer
  * @return
  *  device id on success, -1 on failure
  */
 __rte_experimental
 int
-rte_vdpa_unregister_device(int did);
+rte_vdpa_unregister_device(struct rte_vdpa_device *);
 
 /**
  * @warning
