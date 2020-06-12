@@ -789,6 +789,23 @@ CONFIG_RTE_LIBRTE_PMD_DPAA_EVENTDEV=n
 CONFIG_RTE_LIBRTE_PMD_DPAA2_EVENTDEV=n
 
 #
+# Compile PMD for dlb event device
+#
+CONFIG_RTE_LIBRTE_PMD_DLB_EVENTDEV=y
+# Specify an upper bound on cycles between each CQ access when hard polling
+CONFIG_RTE_LIBRTE_PMD_DLB_POLL_INTERVAL=1000
+# Specify control state to use when executing UMWAIT instruction.
+# If 0,  then use CO.2, which has a slower wakeup time, but greater
+# power savings.
+# If 1, then use C0.1, which has a faster wakeup time, but smaller
+# power savings.
+CONFIG_RTE_LIBRTE_PMD_DLB_UMWAIT_CTL_STATE=0
+# Suppress statistics calculation
+CONFIG_RTE_LIBRTE_PMD_DLB_QUELL_STATS=n
+# Specify software credit quanta
+CONFIG_RTE_LIBRTE_PMD_DLB_SW_CREDIT_QUANTA=32
+
+#
 # Compile raw device support
 # EXPERIMENTAL: API may change without prior notice
 #
