@@ -4656,7 +4656,7 @@ s32 ixgbe_host_interface_command(struct ixgbe_hw *hw, u32 *buffer,
 	 * Read Flash command requires reading buffer length from
 	 * two byes instead of one byte
 	 */
-	if (resp->cmd == 0x30) {
+	if (resp->cmd == 0x30 || resp->cmd == 0x31) {
 		for (; bi < dword_len + 2; bi++) {
 			buffer[bi] = IXGBE_READ_REG_ARRAY(hw, IXGBE_FLEX_MNG,
 							  bi);
