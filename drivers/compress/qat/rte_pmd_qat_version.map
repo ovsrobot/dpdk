@@ -1,3 +1,14 @@
 DPDK_20.0 {
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	qat_sym_get_qp;
+	qat_sym_enqueue_frame_aead;
+	qat_sym_enqueue_frame_cipher;
+	qat_sym_enqueue_frame_auth;
+	qat_sym_enqueue_frame_chain;
+	qat_sym_dequeue_frame;
+};

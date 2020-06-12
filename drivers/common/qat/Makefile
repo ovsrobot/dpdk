@@ -39,6 +39,8 @@ ifeq ($(CONFIG_RTE_LIBRTE_PMD_QAT_SYM),y)
 	SRCS-y += qat_sym.c
 	SRCS-y += qat_sym_session.c
 	SRCS-y += qat_sym_pmd.c
+	SRCS-y += qat_sym_frame.c
+
 	build_qat = yes
 endif
 endif
@@ -62,7 +64,7 @@ ifdef build_qat
 	LDLIBS += -lrte_pci -lrte_bus_pci
 
 	# export include files
-	SYMLINK-y-include +=
+	SYMLINK-y-include += qat_sym_frame.h
 
 	# versioning export map
 	EXPORT_MAP := ../../compress/qat/rte_pmd_qat_version.map
