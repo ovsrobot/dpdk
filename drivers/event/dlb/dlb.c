@@ -1805,11 +1805,27 @@ dlb_event_enqueue_delayed(void *event_port,
 }
 
 static uint16_t
+dlb_event_enqueue_new_burst(void *event_port,
+			     const struct rte_event events[],
+			     uint16_t num)
+{
+	return __dlb_event_enqueue_burst(event_port, events, num, false);
+}
+
+static uint16_t
 dlb_event_enqueue_new_burst_delayed(void *event_port,
 				     const struct rte_event events[],
 				     uint16_t num)
 {
 	return __dlb_event_enqueue_burst(event_port, events, num, true);
+}
+
+static uint16_t
+dlb_event_enqueue_forward_burst(void *event_port,
+				 const struct rte_event events[],
+				 uint16_t num)
+{
+	return __dlb_event_enqueue_burst(event_port, events, num, false);
 }
 
 static uint16_t
@@ -2917,6 +2933,10 @@ dlb_entry_points_init(struct rte_eventdev *dev)
 	/* Expose PMD's eventdev interface */
 
 	dev->dev_ops = &dlb_eventdev_entry_ops;
+	dev->enqueue = dlb_event_enqueue;
+	dev->enqueue_burst = dlb_event_enqueue_burst;
+	dev->enqueue_new_burst = dlb_event_enqueue_new_burst;
+	dev->enqueue_forward_burst = dlb_event_enqueue_forward_burst;
 
 }
 
