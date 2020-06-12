@@ -2350,6 +2350,17 @@ enum {
 #define IXGBE_ALT_MAC_ADDR_PTR		0x37
 #define IXGBE_FREE_SPACE_PTR		0X3E
 
+#if defined(PREBOOT_SUPPORT) || defined(QV_RELEASE)
+/* Minimum Rollback Revision offsets */
+#define IXGBE_MINRREV_PHY_ANALOG_LO	0x46
+#define IXGBE_MINRREV_PHY_ANALOG_HI	0x47
+#define IXGBE_MINRREV_OROM_LO		0x48
+#define IXGBE_MINRREV_OROM_HI		0x49
+#define IXGBE_MINRREV_FW_LO		0x4A
+#define IXGBE_MINRREV_FW_HI		0x4B
+#endif /* PREBOOT_SUPPORT || QV_RELEASE*/
+
+
 /* External Thermal Sensor Config */
 #define IXGBE_ETS_CFG			0x26
 #define IXGBE_ETS_LTHRES_DELTA_MASK	0x07C0
