@@ -205,8 +205,10 @@ rte_event_crypto_adapter_create_ext(uint8_t id, uint8_t dev_id,
 	struct rte_event_crypto_adapter *adapter;
 	char mem_name[CRYPTO_ADAPTER_NAME_LEN];
 	struct rte_event_dev_info dev_info;
+	struct rte_event_port_conf *port_conf = conf_arg;
 	int socket_id;
 	uint8_t i;
+	uint8_t disable_impl_rel;
 	int ret;
 
 	EVENT_CRYPTO_ADAPTER_ID_VALID_OR_ERR_RET(id, -EINVAL);
@@ -268,8 +270,11 @@ rte_event_crypto_adapter_create_ext(uint8_t id, uint8_t dev_id,
 
 	event_crypto_adapter[id] = adapter;
 
+	disable_impl_rel = !!(port_conf->event_port_cfg &
+		RTE_EVENT_PORT_CFG_DISABLE_IMPL_REL);
+
 	rte_eventdev_trace_crypto_adapter_create(id, dev_id, adapter, conf_arg,
-		mode);
+		disable_impl_rel, mode);
 	return 0;
 }
 

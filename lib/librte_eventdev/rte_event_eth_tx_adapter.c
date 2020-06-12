@@ -910,6 +910,7 @@ rte_event_eth_tx_adapter_create(uint8_t id, uint8_t dev_id,
 				struct rte_event_port_conf *port_conf)
 {
 	struct rte_eventdev *dev;
+	uint8_t disable_impl_rel;
 	int ret;
 
 	if (port_conf == NULL)
@@ -943,8 +944,12 @@ rte_event_eth_tx_adapter_create(uint8_t id, uint8_t dev_id,
 		txa_dev_id_array[id] = TXA_INVALID_DEV_ID;
 		return ret;
 	}
+
+	disable_impl_rel = !!(port_conf->event_port_cfg &
+		RTE_EVENT_PORT_CFG_DISABLE_IMPL_REL);
+
 	rte_eventdev_trace_eth_tx_adapter_create(id, dev_id, NULL, port_conf,
-		ret);
+		disable_impl_rel, ret);
 	txa_dev_id_array[id] = dev_id;
 	return 0;
 }
@@ -955,6 +960,8 @@ rte_event_eth_tx_adapter_create_ext(uint8_t id, uint8_t dev_id,
 				void *conf_arg)
 {
 	struct rte_eventdev *dev;
+	struct rte_event_port_conf *port_conf = conf_arg;
+	uint8_t disable_impl_rel;
 	int ret;
 
 	RTE_EVENT_ETH_TX_ADAPTER_ID_VALID_OR_ERR_RET(id, -EINVAL);
@@ -986,8 +993,11 @@ rte_event_eth_tx_adapter_create_ext(uint8_t id, uint8_t dev_id,
 		return ret;
 	}
 
+	disable_impl_rel = !!(port_conf->event_port_cfg &
+		RTE_EVENT_PORT_CFG_DISABLE_IMPL_REL);
+
 	rte_eventdev_trace_eth_tx_adapter_create(id, dev_id, conf_cb, conf_arg,
-		ret);
+		disable_impl_rel, ret);
 	txa_dev_id_array[id] = dev_id;
 	return 0;
 }

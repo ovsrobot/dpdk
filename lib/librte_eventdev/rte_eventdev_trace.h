@@ -53,13 +53,14 @@ RTE_TRACE_POINT(
 RTE_TRACE_POINT(
 	rte_eventdev_trace_port_setup,
 	RTE_TRACE_POINT_ARGS(uint8_t dev_id, uint8_t port_id,
-		const struct rte_event_port_conf *port_conf, int rc),
+		const struct rte_event_port_conf *port_conf,
+		uint8_t disable_impl_rel, int rc),
 	rte_trace_point_emit_u8(dev_id);
 	rte_trace_point_emit_u8(port_id);
 	rte_trace_point_emit_i32(port_conf->new_event_threshold);
 	rte_trace_point_emit_u16(port_conf->dequeue_depth);
 	rte_trace_point_emit_u16(port_conf->enqueue_depth);
-	rte_trace_point_emit_u8(port_conf->disable_implicit_release);
+	rte_trace_point_emit_u8(disable_impl_rel);
 	rte_trace_point_emit_int(rc);
 )
 
@@ -159,13 +160,14 @@ RTE_TRACE_POINT(
 RTE_TRACE_POINT(
 	rte_eventdev_trace_eth_tx_adapter_create,
 	RTE_TRACE_POINT_ARGS(uint8_t adptr_id, uint8_t dev_id, void *conf_cb,
-		struct rte_event_port_conf *port_conf, int rc),
+		struct rte_event_port_conf *port_conf, uint8_t disable_impl_rel,
+		int rc),
 	rte_trace_point_emit_u8(adptr_id);
 	rte_trace_point_emit_u8(dev_id);
 	rte_trace_point_emit_i32(port_conf->new_event_threshold);
 	rte_trace_point_emit_u16(port_conf->dequeue_depth);
 	rte_trace_point_emit_u16(port_conf->enqueue_depth);
-	rte_trace_point_emit_u8(port_conf->disable_implicit_release);
+	rte_trace_point_emit_u8(disable_impl_rel);
 	rte_trace_point_emit_ptr(conf_cb);
 	rte_trace_point_emit_int(rc);
 )
@@ -249,7 +251,8 @@ RTE_TRACE_POINT(
 RTE_TRACE_POINT(
 	rte_eventdev_trace_crypto_adapter_create,
 	RTE_TRACE_POINT_ARGS(uint8_t adptr_id, uint8_t dev_id, void *adapter,
-		struct rte_event_port_conf *port_conf, uint8_t mode),
+		struct rte_event_port_conf *port_conf, uint8_t disable_impl_rel,
+		uint8_t mode),
 	rte_trace_point_emit_u8(adptr_id);
 	rte_trace_point_emit_u8(dev_id);
 	rte_trace_point_emit_ptr(adapter);
@@ -257,7 +260,7 @@ RTE_TRACE_POINT(
 	rte_trace_point_emit_i32(port_conf->new_event_threshold);
 	rte_trace_point_emit_u16(port_conf->dequeue_depth);
 	rte_trace_point_emit_u16(port_conf->enqueue_depth);
-	rte_trace_point_emit_u8(port_conf->disable_implicit_release);
+	rte_trace_point_emit_u8(disable_impl_rel);
 )
 
 RTE_TRACE_POINT(

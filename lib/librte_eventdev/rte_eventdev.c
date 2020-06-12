@@ -736,6 +736,7 @@ rte_event_port_setup(uint8_t dev_id, uint8_t port_id,
 {
 	struct rte_eventdev *dev;
 	struct rte_event_port_conf def_conf;
+	uint8_t disable_impl_rel;
 	int diag;
 
 	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(dev_id, -EINVAL);
@@ -812,7 +813,12 @@ rte_event_port_setup(uint8_t dev_id, uint8_t port_id,
 	if (!diag)
 		diag = rte_event_port_unlink(dev_id, port_id, NULL, 0);
 
-	rte_eventdev_trace_port_setup(dev_id, port_id, port_conf, diag);
+	disable_impl_rel = !!(port_conf->event_port_cfg &
+		RTE_EVENT_PORT_CFG_DISABLE_IMPL_REL);
+
+	rte_eventdev_trace_port_setup(dev_id, port_id, port_conf,
+				      disable_impl_rel, diag);
+
 	if (diag < 0)
 		return diag;
 
@@ -1422,10 +1428,8 @@ rte_event_pmd_allocate(const char *name, int socket_id)
 		eventdev->data = eventdev_data;
 
 		if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
-
 			strlcpy(eventdev->data->name, name,
 				RTE_EVENTDEV_NAME_MAX_LEN);
-
 			eventdev->data->dev_id = dev_id;
 			eventdev->data->socket_id = socket_id;
 			eventdev->data->dev_started = 0;
