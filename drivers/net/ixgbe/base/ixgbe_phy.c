@@ -143,7 +143,7 @@ fail:
 		else
 			DEBUGOUT("I2C byte read combined error.\n");
 		retry++;
-	} while (retry < max_retry);
+	} while (retry <= max_retry);
 
 	return IXGBE_ERR_I2C;
 }
@@ -208,7 +208,7 @@ fail:
 		else
 			DEBUGOUT("I2C byte write combined error.\n");
 		retry++;
-	} while (retry < max_retry);
+	} while (retry <= max_retry);
 
 	return IXGBE_ERR_I2C;
 }
@@ -2062,7 +2062,7 @@ fail:
 		else
 			DEBUGOUT("I2C byte read error.\n");
 		retry++;
-	} while (retry < max_retry);
+	} while (retry <= max_retry);
 
 	return status;
 }
@@ -2165,7 +2165,7 @@ fail:
 		else
 			DEBUGOUT("I2C byte write error.\n");
 		retry++;
-	} while (retry < max_retry);
+	} while (retry <= max_retry);
 
 	if (lock)
 		hw->mac.ops.release_swfw_sync(hw, swfw_mask);
