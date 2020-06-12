@@ -467,7 +467,7 @@ struct rte_event_timer {
 	 *  - op: RTE_EVENT_OP_NEW
 	 *  - event_type: RTE_EVENT_TYPE_TIMER
 	 */
-	volatile enum rte_event_timer_state state;
+	enum rte_event_timer_state state;
 	/**< State of the event timer. */
 	uint64_t timeout_ticks;
 	/**< Expiry timer ticks expressed in number of *timer_ticks_ns* from
