@@ -2938,16 +2938,17 @@ i40e_dev_free_queues(struct rte_eth_dev *dev)
 	}
 }
 
-#define I40E_FDIR_NUM_TX_DESC  I40E_MIN_RING_DESC
-#define I40E_FDIR_NUM_RX_DESC  I40E_MIN_RING_DESC
+#define I40E_FDIR_NUM_TX_DESC  (256)
+#define I40E_FDIR_NUM_RX_DESC  (256)
 
 enum i40e_status_code
 i40e_fdir_setup_tx_resources(struct i40e_pf *pf)
 {
 	struct i40e_tx_queue *txq;
 	const struct rte_memzone *tz = NULL;
-	uint32_t ring_size;
+	uint32_t ring_size, i;
 	struct rte_eth_dev *dev;
+	volatile struct i40e_tx_desc *txdp;
 
 	if (!pf) {
 		PMD_DRV_LOG(ERR, "PF is not available");
@@ -2987,6 +2988,14 @@ i40e_fdir_setup_tx_resources(struct i40e_pf *pf)
 
 	txq->tx_ring_phys_addr = tz->iova;
 	txq->tx_ring = (struct i40e_tx_desc *)tz->addr;
+
+	/* Set all the DD flags to 1 */
+	for (i = 0; i < I40E_FDIR_NUM_TX_DESC; i += 2) {
+		txdp = &txq->tx_ring[i + 1];
+		txdp->cmd_type_offset_bsz |= I40E_TX_DESC_DTYPE_DESC_DONE;
+		txdp->buffer_addr = rte_cpu_to_le_64(pf->fdir.dma_addr[i / 2]);
+	}
+
 	/*
 	 * don't need to allocate software ring and reset for the fdir
 	 * program queue just set the queue has been configured.

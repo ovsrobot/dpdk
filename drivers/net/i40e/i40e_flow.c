@@ -17,6 +17,7 @@
 #include <rte_malloc.h>
 #include <rte_tailq.h>
 #include <rte_flow_driver.h>
+#include <rte_bitmap.h>
 
 #include "i40e_logs.h"
 #include "base/i40e_type.h"
@@ -133,6 +134,8 @@ const struct rte_flow_ops i40e_flow_ops = {
 
 static union i40e_filter_t cons_filter;
 static enum rte_filter_type cons_filter_type = RTE_ETH_FILTER_NONE;
+/* internal pattern w/o VOID items */
+struct rte_flow_item g_items[32];
 
 /* Pattern matched ethertype filter */
 static enum rte_flow_item_type pattern_ethertype[] = {
@@ -2026,9 +2029,6 @@ i40e_flow_parse_ethertype_pattern(struct rte_eth_dev *dev,
 	const struct rte_flow_item_eth *eth_spec;
 	const struct rte_flow_item_eth *eth_mask;
 	enum rte_flow_item_type item_type;
-	uint16_t outer_tpid;
-
-	outer_tpid = i40e_get_outer_vlan(dev);
 
 	for (; item->type != RTE_FLOW_ITEM_TYPE_END; item++) {
 		if (item->last) {
@@ -2088,7 +2088,7 @@ i40e_flow_parse_ethertype_pattern(struct rte_eth_dev *dev,
 			if (filter->ether_type == RTE_ETHER_TYPE_IPV4 ||
 			    filter->ether_type == RTE_ETHER_TYPE_IPV6 ||
 			    filter->ether_type == RTE_ETHER_TYPE_LLDP ||
-			    filter->ether_type == outer_tpid) {
+			    filter->ether_type == i40e_get_outer_vlan(dev)) {
 				rte_flow_error_set(error, EINVAL,
 						   RTE_FLOW_ERROR_TYPE_ITEM,
 						   item,
@@ -2331,6 +2331,7 @@ i40e_flow_set_fdir_flex_pit(struct i40e_pf *pf,
 		field_idx = layer_idx * I40E_MAX_FLXPLD_FIED + i;
 		flx_pit = MK_FLX_PIT(min_next_off, NONUSE_FLX_PIT_FSIZE,
 				     NONUSE_FLX_PIT_DEST_OFF);
+
 		I40E_WRITE_REG(hw, I40E_PRTQF_FLX_PIT(field_idx), flx_pit);
 		min_next_off++;
 	}
@@ -2590,7 +2591,6 @@ i40e_flow_parse_fdir_pattern(struct rte_eth_dev *dev,
 	uint16_t flex_size;
 	bool cfg_flex_pit = true;
 	bool cfg_flex_msk = true;
-	uint16_t outer_tpid;
 	uint16_t ether_type;
 	uint32_t vtc_flow_cpu;
 	bool outer_ip = true;
@@ -2599,7 +2599,6 @@ i40e_flow_parse_fdir_pattern(struct rte_eth_dev *dev,
 	memset(off_arr, 0, sizeof(off_arr));
 	memset(len_arr, 0, sizeof(len_arr));
 	memset(flex_mask, 0, I40E_FDIR_MAX_FLEX_LEN);
-	outer_tpid = i40e_get_outer_vlan(dev);
 	filter->input.flow_ext.customized_pctype = false;
 	for (; item->type != RTE_FLOW_ITEM_TYPE_END; item++) {
 		if (item->last) {
@@ -2667,7 +2666,7 @@ i40e_flow_parse_fdir_pattern(struct rte_eth_dev *dev,
 				if (next_type == RTE_FLOW_ITEM_TYPE_VLAN ||
 				    ether_type == RTE_ETHER_TYPE_IPV4 ||
 				    ether_type == RTE_ETHER_TYPE_IPV6 ||
-				    ether_type == outer_tpid) {
+				    ether_type == i40e_get_outer_vlan(dev)) {
 					rte_flow_error_set(error, EINVAL,
 						     RTE_FLOW_ERROR_TYPE_ITEM,
 						     item,
@@ -2711,7 +2710,7 @@ i40e_flow_parse_fdir_pattern(struct rte_eth_dev *dev,
 
 				if (ether_type == RTE_ETHER_TYPE_IPV4 ||
 				    ether_type == RTE_ETHER_TYPE_IPV6 ||
-				    ether_type == outer_tpid) {
+				    ether_type == i40e_get_outer_vlan(dev)) {
 					rte_flow_error_set(error, EINVAL,
 						     RTE_FLOW_ERROR_TYPE_ITEM,
 						     item,
@@ -5028,7 +5027,6 @@ i40e_flow_validate(struct rte_eth_dev *dev,
 				   NULL, "NULL attribute.");
 		return -rte_errno;
 	}
-
 	memset(&cons_filter, 0, sizeof(cons_filter));
 
 	/* Get the non-void item of action */
@@ -5050,12 +5048,16 @@ i40e_flow_validate(struct rte_eth_dev *dev,
 	}
 	item_num++;
 
-	items = rte_zmalloc("i40e_pattern",
-			    item_num * sizeof(struct rte_flow_item), 0);
-	if (!items) {
-		rte_flow_error_set(error, ENOMEM, RTE_FLOW_ERROR_TYPE_ITEM_NUM,
-				   NULL, "No memory for PMD internal items.");
-		return -ENOMEM;
+	if (item_num <= ARRAY_SIZE(g_items)) {
+		items = g_items;
+	} else {
+		items = rte_zmalloc("i40e_pattern",
+				    item_num * sizeof(struct rte_flow_item), 0);
+		if (!items) {
+			rte_flow_error_set(error, ENOMEM, RTE_FLOW_ERROR_TYPE_ITEM_NUM,
+					   NULL, "No memory for PMD internal items.");
+			return -ENOMEM;
+		}
 	}
 
 	i40e_pattern_skip_void_item(items, pattern);
@@ -5063,22 +5065,60 @@ i40e_flow_validate(struct rte_eth_dev *dev,
 	i = 0;
 	do {
 		parse_filter = i40e_find_parse_filter_func(items, &i);
+
 		if (!parse_filter && !flag) {
 			rte_flow_error_set(error, EINVAL,
 					   RTE_FLOW_ERROR_TYPE_ITEM,
 					   pattern, "Unsupported pattern");
-			rte_free(items);
+
+			if (items != g_items)
+				rte_free(items);
 			return -rte_errno;
 		}
+
 		if (parse_filter)
 			ret = parse_filter(dev, attr, items, actions,
 					   error, &cons_filter);
+
 		flag = true;
 	} while ((ret < 0) && (i < RTE_DIM(i40e_supported_patterns)));
 
-	rte_free(items);
+	if (items != g_items)
+		rte_free(items);
 
 	return ret;
+}
+
+static
+uint32_t bin_search(uint64_t data)
+{
+	uint32_t pos = 0;
+
+	if ((data & 0xFFFFFFFF) == 0) {
+		data >>= 32;
+		pos += 32;
+	}
+
+	if ((data & 0xFFFF) == 0) {
+		data >>= 16;
+		pos += 16;
+	}
+	if ((data & 0xFF) == 0) {
+		data >>= 8;
+		pos += 8;
+	}
+	if ((data & 0xF) == 0) {
+		data >>= 4;
+		pos += 4;
+	}
+	if ((data & 0x3) == 0) {
+		data >>= 2;
+		pos += 2;
+	}
+	if ((data & 0x1) == 0)
+		pos += 1;
+
+	return pos;
 }
 
 static struct rte_flow *
@@ -5089,20 +5129,53 @@ i40e_flow_create(struct rte_eth_dev *dev,
 		 struct rte_flow_error *error)
 {
 	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
-	struct rte_flow *flow;
+	struct rte_flow *flow = NULL;
+	struct i40e_fdir_info *fdir_info = &pf->fdir;
+	uint32_t i = 0, pos = 0;
 	int ret;
-
-	flow = rte_zmalloc("i40e_flow", sizeof(struct rte_flow), 0);
-	if (!flow) {
-		rte_flow_error_set(error, ENOMEM,
-				   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
-				   "Failed to allocate memory");
-		return flow;
-	}
+	uint64_t slab = 0;
+	bool wait_for_status = true;
 
 	ret = i40e_flow_validate(dev, attr, pattern, actions, error);
 	if (ret < 0)
 		return NULL;
+
+	if (cons_filter_type == RTE_ETH_FILTER_FDIR) {
+		/* scan from gurant fdir flow */
+		if (fdir_info->fdir_actual_cnt < fdir_info->fdir_space_size) {
+			if (rte_bitmap_scan(fdir_info->fdir_flow_bitmap.b, &pos, &slab)) {
+				i = bin_search(slab);
+				rte_bitmap_clear(fdir_info->fdir_flow_bitmap.b, pos + i);
+				flow = &fdir_info->fdir_flow_bitmap.fdir_flow[pos + i].flow;
+
+				memset(flow, 0, sizeof(struct rte_flow));
+
+				if (fdir_info->fdir_invalprio == 1) {
+					if (fdir_info->fdir_guarantee_free_space > 0) {
+						fdir_info->fdir_guarantee_free_space--;
+						wait_for_status = false;
+					} else {
+						wait_for_status = true;
+					}
+				}
+				fdir_info->fdir_actual_cnt++;
+			}
+		} else {
+			rte_flow_error_set(error, ENOMEM,
+					   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
+					   "Fdir space full");
+			return flow;
+		}
+
+	} else {
+		flow = rte_zmalloc("i40e_flow", sizeof(struct rte_flow), 0);
+		if (!flow) {
+			rte_flow_error_set(error, ENOMEM,
+					   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
+					   "Failed to allocate memory");
+			return flow;
+		}
+	}
 
 	switch (cons_filter_type) {
 	case RTE_ETH_FILTER_ETHERTYPE:
@@ -5115,9 +5188,17 @@ i40e_flow_create(struct rte_eth_dev *dev,
 		break;
 	case RTE_ETH_FILTER_FDIR:
 		ret = i40e_flow_add_del_fdir_filter(dev,
-				       &cons_filter.fdir_filter, 1);
-		if (ret)
+			       &cons_filter.fdir_filter, 1,
+			       wait_for_status);
+		if (ret) {
+			rte_bitmap_clear(fdir_info->fdir_flow_bitmap.b, i);
+			fdir_info->fdir_actual_cnt--;
+			if (fdir_info->fdir_invalprio == 1)
+				fdir_info->fdir_guarantee_free_space++;
+
 			goto free_flow;
+		}
+
 		flow->rule = TAILQ_LAST(&pf->fdir.fdir_list,
 					i40e_fdir_filter_list);
 		break;
@@ -5149,7 +5230,10 @@ free_flow:
 	rte_flow_error_set(error, -ret,
 			   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 			   "Failed to create flow.");
-	rte_free(flow);
+
+	if (cons_filter_type != RTE_ETH_FILTER_FDIR)
+		rte_free(flow);
+
 	return NULL;
 }
 
@@ -5159,7 +5243,9 @@ i40e_flow_destroy(struct rte_eth_dev *dev,
 		  struct rte_flow_error *error)
 {
 	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct i40e_fdir_info *fdir_info = &pf->fdir;
 	enum rte_filter_type filter_type = flow->filter_type;
+	struct i40e_fdir_flows *f;
 	int ret = 0;
 
 	switch (filter_type) {
@@ -5173,7 +5259,7 @@ i40e_flow_destroy(struct rte_eth_dev *dev,
 		break;
 	case RTE_ETH_FILTER_FDIR:
 		ret = i40e_flow_add_del_fdir_filter(dev,
-		       &((struct i40e_fdir_filter *)flow->rule)->fdir, 0);
+		       &((struct i40e_fdir_filter *)flow->rule)->fdir, 0, false);
 
 		/* If the last flow is destroyed, disable fdir. */
 		if (!ret && TAILQ_EMPTY(&pf->fdir.fdir_list)) {
@@ -5193,11 +5279,25 @@ i40e_flow_destroy(struct rte_eth_dev *dev,
 
 	if (!ret) {
 		TAILQ_REMOVE(&pf->flow_list, flow, node);
-		rte_free(flow);
-	} else
+		if (filter_type == RTE_ETH_FILTER_FDIR) {
+			f = FLOW_TO_FLOW_BITMAP(flow);
+			rte_bitmap_set(fdir_info->fdir_flow_bitmap.b, f->idx);
+			fdir_info->fdir_actual_cnt--;
+
+			if (fdir_info->fdir_invalprio == 1)
+				/* check if the budget will be gained back to guaranteed space */
+				if (fdir_info->fdir_guarantee_free_space <
+					fdir_info->fdir_guarantee_available_space)
+					fdir_info->fdir_guarantee_free_space++;
+		} else {
+			rte_free(flow);
+		}
+
+	} else {
 		rte_flow_error_set(error, -ret,
 				   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 				   "Failed to destroy flow.");
+	}
 
 	return ret;
 }
@@ -5347,6 +5447,7 @@ i40e_flow_flush_fdir_filter(struct i40e_pf *pf)
 	struct rte_flow *flow;
 	void *temp;
 	int ret;
+	uint32_t i = 0;
 
 	ret = i40e_fdir_flush(dev);
 	if (!ret) {
@@ -5362,9 +5463,23 @@ i40e_flow_flush_fdir_filter(struct i40e_pf *pf)
 		TAILQ_FOREACH_SAFE(flow, &pf->flow_list, node, temp) {
 			if (flow->filter_type == RTE_ETH_FILTER_FDIR) {
 				TAILQ_REMOVE(&pf->flow_list, flow, node);
-				rte_free(flow);
 			}
 		}
+
+		/* clear bitmap */
+		rte_bitmap_reset(fdir_info->fdir_flow_bitmap.b);
+		for (i = 0; i < fdir_info->fdir_space_size; i++) {
+			fdir_info->fdir_flow_bitmap.fdir_flow[i].idx = i;
+			rte_bitmap_set(fdir_info->fdir_flow_bitmap.b, i);
+		}
+
+		fdir_info->fdir_actual_cnt = 0;
+		fdir_info->fdir_guarantee_free_space =
+			fdir_info->fdir_guarantee_available_space;
+		memset(fdir_info->fdir_filter_array,
+			0,
+			sizeof(struct i40e_fdir_filter) *
+			I40E_MAX_FDIR_FILTER_NUM);
 
 		for (pctype = I40E_FILTER_PCTYPE_NONF_IPV4_UDP;
 		     pctype <= I40E_FILTER_PCTYPE_L2_PAYLOAD; pctype++)

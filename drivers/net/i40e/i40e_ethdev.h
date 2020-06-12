@@ -264,6 +264,15 @@ enum i40e_flxpld_layer_idx {
 #define I40E_DEFAULT_DCB_APP_NUM    1
 #define I40E_DEFAULT_DCB_APP_PRIO   3
 
+/*
+ * Struct to store flow created.
+ */
+struct rte_flow {
+	TAILQ_ENTRY(rte_flow) node;
+	enum rte_filter_type filter_type;
+	void *rule;
+};
+
 /**
  * The overhead from MTU to max frame size.
  * Considering QinQ packet, the VLAN tag needs to be counted twice.
@@ -674,17 +683,33 @@ struct i40e_fdir_filter {
 	struct i40e_fdir_filter_conf fdir;
 };
 
+struct i40e_fdir_flows {
+	uint32_t idx;
+	struct rte_flow flow;
+};
+
+struct i40e_fdir_flow_bitmap {
+	struct rte_bitmap *b;
+	struct i40e_fdir_flows *fdir_flow;
+};
+
+#define FLOW_TO_FLOW_BITMAP(f) \
+	container_of((f), struct i40e_fdir_flows, flow)
+
 TAILQ_HEAD(i40e_fdir_filter_list, i40e_fdir_filter);
 /*
  *  A structure used to define fields of a FDIR related info.
  */
 struct i40e_fdir_info {
+#define PRG_PKT_CNT	(128)
+
 	struct i40e_vsi *fdir_vsi;     /* pointer to fdir VSI structure */
 	uint16_t match_counter_index;  /* Statistic counter index used for fdir*/
 	struct i40e_tx_queue *txq;
 	struct i40e_rx_queue *rxq;
-	void *prg_pkt;                 /* memory for fdir program packet */
-	uint64_t dma_addr;             /* physic address of packet memory*/
+	void *prg_pkt[PRG_PKT_CNT];                 /* memory for fdir program packet */
+	uint64_t dma_addr[PRG_PKT_CNT];             /* physic address of packet memory*/
+
 	/* input set bits for each pctype */
 	uint64_t input_set[I40E_FILTER_PCTYPE_MAX];
 	/*
@@ -697,6 +722,21 @@ struct i40e_fdir_info {
 	struct i40e_fdir_filter_list fdir_list;
 	struct i40e_fdir_filter **hash_map;
 	struct rte_hash *hash_table;
+
+	struct i40e_fdir_filter *fdir_filter_array;
+
+	/* 0 - At filter invalidation the hardware tries first to
+	 *	increment the "best effort" space.
+	 *  1 - At filter invalidation the hardware tries first the
+	 *	increment its "guaranteed" space
+	 */
+	uint32_t fdir_invalprio;
+
+	uint32_t fdir_space_size;
+	uint32_t fdir_actual_cnt;
+	uint32_t fdir_guarantee_available_space;
+	uint32_t fdir_guarantee_free_space;
+	struct i40e_fdir_flow_bitmap fdir_flow_bitmap;
 
 	/* Mark if flex pit and mask is set */
 	bool flex_pit_flag[I40E_MAX_FLXPLD_LAYER];
@@ -878,15 +918,6 @@ struct i40e_mirror_rule {
 };
 
 TAILQ_HEAD(i40e_mirror_rule_list, i40e_mirror_rule);
-
-/*
- * Struct to store flow created.
- */
-struct rte_flow {
-	TAILQ_ENTRY(rte_flow) node;
-	enum rte_filter_type filter_type;
-	void *rule;
-};
 
 TAILQ_HEAD(i40e_flow_list, rte_flow);
 
@@ -1312,8 +1343,8 @@ int i40e_add_del_fdir_filter(struct rte_eth_dev *dev,
 			     const struct rte_eth_fdir_filter *filter,
 			     bool add);
 int i40e_flow_add_del_fdir_filter(struct rte_eth_dev *dev,
-				  const struct i40e_fdir_filter_conf *filter,
-				  bool add);
+			      const struct i40e_fdir_filter_conf *filter,
+			      bool add, bool wait_status);
 int i40e_dev_tunnel_filter_set(struct i40e_pf *pf,
 			       struct rte_eth_tunnel_filter_conf *tunnel_filter,
 			       uint8_t add);
