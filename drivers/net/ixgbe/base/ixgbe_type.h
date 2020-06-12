@@ -169,6 +169,10 @@
 #define IXGBE_FLA_X550EM_x	IXGBE_FLA
 #define IXGBE_FLA_X550EM_a	0x15F68
 #define IXGBE_FLA_BY_MAC(_hw)	IXGBE_BY_MAC((_hw), FLA)
+#define IXGBE_FLA_FL_SIZE_SHIFT_X540	17
+#define IXGBE_FLA_FL_SIZE_SHIFT_X550	12
+#define IXGBE_FLA_FL_SIZE_MASK_X540	(0x7 << IXGBE_FLA_FL_SIZE_SHIFT_X540)
+#define IXGBE_FLA_FL_SIZE_MASK_X550	(0x7 << IXGBE_FLA_FL_SIZE_SHIFT_X550)
 
 #define IXGBE_EEMNGCTL	0x10110
 #define IXGBE_EEMNGDATA	0x10114
@@ -1402,6 +1406,7 @@ struct ixgbe_dmac_config {
 #define IXGBE_BARCTRL_FLSIZE		0x0700
 #define IXGBE_BARCTRL_FLSIZE_SHIFT	8
 #define IXGBE_BARCTRL_CSRSIZE		0x2000
+#define IXGBE_BARCTRL_CSRSIZE_SHIFT	13
 
 /* RSCCTL Bit Masks */
 #define IXGBE_RSCCTL_RSCEN	0x01
@@ -3905,6 +3910,37 @@ struct ixgbe_hw_stats {
 	u64 o2bspc;
 };
 
+#ifdef IXGBE_NVMUPD_SUPPORT
+/* NVM Update commands */
+#define IXGBE_NVMUPD_CMD_REG_READ	0x0000000B
+#define IXGBE_NVMUPD_CMD_REG_WRITE	0x0000000C
+
+/* NVM Update features API */
+#define IXGBE_NVMUPD_FEATURES_API_VER_MAJOR		0
+#define IXGBE_NVMUPD_FEATURES_API_VER_MINOR		0
+#define IXGBE_NVMUPD_FEATURES_API_FEATURES_ARRAY_LEN	12
+#define IXGBE_NVMUPD_EXEC_FEATURES			0xe
+#define IXGBE_NVMUPD_FEATURE_FLAT_NVM_SUPPORT		BIT(0)
+#define IXGBE_NVMUPD_FEATURE_REGISTER_ACCESS_SUPPORT	BIT(1)
+
+#define IXGBE_NVMUPD_MOD_PNT_MASK			0xFF
+
+struct ixgbe_nvm_access {
+	u32 command;
+	u32 config;
+	u32 offset;	/* in bytes */
+	u32 data_size;	/* in bytes */
+	u8 data[1];
+};
+
+struct ixgbe_nvm_features {
+	u8 major;
+	u8 minor;
+	u16 size;
+	u8 features[IXGBE_NVMUPD_FEATURES_API_FEATURES_ARRAY_LEN];
+};
+
+#endif
 /* forward declaration */
 struct ixgbe_hw;
 
@@ -4200,6 +4236,10 @@ struct ixgbe_hw {
 	bool allow_unsupported_sfp;
 	bool wol_enabled;
 	bool need_crosstalk_fix;
+#ifdef IXGBE_NVMUPD_SUPPORT
+	/* NVM Update features */
+	struct ixgbe_nvm_features nvmupd_features;
+#endif
 };
 
 #define ixgbe_call_func(hw, func, params, error) \

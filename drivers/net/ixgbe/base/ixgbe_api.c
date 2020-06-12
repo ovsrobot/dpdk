@@ -95,6 +95,19 @@ s32 ixgbe_init_shared_code(struct ixgbe_hw *hw)
 	}
 	hw->mac.max_link_up_time = IXGBE_LINK_UP_TIME;
 
+#ifdef IXGBE_NVMUPD_SUPPORT
+	/* NVM Update features structure initialization */
+	hw->nvmupd_features.major = IXGBE_NVMUPD_FEATURES_API_VER_MAJOR;
+	hw->nvmupd_features.minor = IXGBE_NVMUPD_FEATURES_API_VER_MINOR;
+	hw->nvmupd_features.size = sizeof(hw->nvmupd_features);
+	memset(hw->nvmupd_features.features, 0x0,
+	       IXGBE_NVMUPD_FEATURES_API_FEATURES_ARRAY_LEN *
+	       sizeof(*hw->nvmupd_features.features));
+
+	hw->nvmupd_features.features[0] =
+		IXGBE_NVMUPD_FEATURE_REGISTER_ACCESS_SUPPORT;
+#endif /* IXGBE_NVMUPD_SUPPORT */
+
 	return status;
 }
 
