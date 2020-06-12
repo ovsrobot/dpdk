@@ -49,6 +49,7 @@ order_producer(void *arg)
 		const uint32_t flow = (uintptr_t)m % nb_flows;
 		/* Maintain seq number per flow */
 		m->seqn = producer_flow_seq[flow]++;
+		m->udata64 = flow;
 
 		ev.flow_id = flow;
 		ev.mbuf = m;
@@ -318,10 +319,11 @@ order_event_dev_port_setup(struct evt_test *test, struct evt_options *opt,
 		opt->wkr_deq_dep = dev_info.max_event_port_dequeue_depth;
 
 	/* port configuration */
-	const struct rte_event_port_conf p_conf = {
+	struct rte_event_port_conf p_conf = {
 			.dequeue_depth = opt->wkr_deq_dep,
 			.enqueue_depth = dev_info.max_event_port_dequeue_depth,
 			.new_event_threshold = dev_info.max_num_events,
+			.event_port_cfg = 0,
 	};
 
 	/* setup one port per worker, linking to all queues */
@@ -350,6 +352,8 @@ order_event_dev_port_setup(struct evt_test *test, struct evt_options *opt,
 	p->port_id = port; /* last port */
 	p->queue_id = 0;
 	p->t = t;
+
+	p_conf.new_event_threshold /= 2;
 
 	ret = rte_event_port_setup(opt->dev_id, port, &p_conf);
 	if (ret) {

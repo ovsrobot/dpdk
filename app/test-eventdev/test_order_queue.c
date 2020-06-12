@@ -34,6 +34,8 @@ order_queue_worker(void *arg)
 			continue;
 		}
 
+		ev.flow_id = ev.mbuf->udata64;
+
 		if (ev.queue_id == 0) { /* from ordered queue */
 			order_queue_process_stage_0(&ev);
 			while (rte_event_enqueue_burst(dev_id, port, &ev, 1)
@@ -68,6 +70,8 @@ order_queue_worker_burst(void *arg)
 		}
 
 		for (i = 0; i < nb_rx; i++) {
+			ev[i].flow_id = ev[i].mbuf->udata64;
+
 			if (ev[i].queue_id == 0) { /* from ordered queue */
 				order_queue_process_stage_0(&ev[i]);
 			} else if (ev[i].queue_id == 1) {/* from atomic queue */

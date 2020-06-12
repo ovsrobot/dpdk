@@ -356,6 +356,7 @@ pipeline_atq_eventdev_setup(struct evt_test *test, struct evt_options *opt)
 		.dequeue_depth = opt->wkr_deq_dep,
 		.enqueue_depth = info.max_event_port_dequeue_depth,
 		.new_event_threshold = info.max_num_events,
+		.event_port_cfg = 0,
 	};
 
 	if (!t->internal_port)
