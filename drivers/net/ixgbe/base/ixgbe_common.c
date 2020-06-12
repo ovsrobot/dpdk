@@ -422,7 +422,7 @@ s32 ixgbe_start_hw_generic(struct ixgbe_hw *hw)
  *    82599
  *    X540
  **/
-s32 ixgbe_start_hw_gen2(struct ixgbe_hw *hw)
+void ixgbe_start_hw_gen2(struct ixgbe_hw *hw)
 {
 	u32 i;
 	u32 regval;
@@ -447,8 +447,6 @@ s32 ixgbe_start_hw_gen2(struct ixgbe_hw *hw)
 			    IXGBE_DCA_RXCTRL_HEAD_WRO_EN);
 		IXGBE_WRITE_REG(hw, IXGBE_DCA_RXCTRL(i), regval);
 	}
-
-	return IXGBE_SUCCESS;
 }
 
 /**
@@ -739,7 +737,7 @@ s32 ixgbe_read_pba_num_generic(struct ixgbe_hw *hw, u32 *pba_num)
 		DEBUGOUT("NVM Read Error\n");
 		return ret_val;
 	}
-	*pba_num |= data;
+	*pba_num |= (u32)data;
 
 	return IXGBE_SUCCESS;
 }
