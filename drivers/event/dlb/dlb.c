@@ -1820,6 +1820,20 @@ dlb_event_enqueue_forward_burst_delayed(void *event_port,
 	return __dlb_event_enqueue_burst(event_port, events, num, true);
 }
 
+
+static int
+dlb_eventdev_timeout_ticks(struct rte_eventdev *dev, uint64_t ns,
+			   uint64_t *timeout_ticks)
+{
+	RTE_SET_USED(dev);
+	uint64_t cycles_per_ns;
+
+	cycles_per_ns = rte_get_timer_hz() / 1E9;
+	*timeout_ticks = ns * cycles_per_ns;
+
+	return 0;
+}
+
 /* Note: 1 QM instance per QM device, QM instance/device == event device */
 static int
 dlb_eventdev_configure(const struct rte_eventdev *dev)
@@ -2891,6 +2905,13 @@ dlb_entry_points_init(struct rte_eventdev *dev)
 		.port_unlink      = dlb_eventdev_port_unlink,
 		.port_unlinks_in_progress =
 				    dlb_eventdev_port_unlinks_in_progress,
+		.timeout_ticks    = dlb_eventdev_timeout_ticks,
+		.dump             = dlb_eventdev_dump,
+		.xstats_get       = dlb_eventdev_xstats_get,
+		.xstats_get_names = dlb_eventdev_xstats_get_names,
+		.xstats_get_by_name = dlb_eventdev_xstats_get_by_name,
+		.xstats_reset	    = dlb_eventdev_xstats_reset,
+		.dev_selftest     = test_dlb_eventdev,
 	};
 
 	/* Expose PMD's eventdev interface */
