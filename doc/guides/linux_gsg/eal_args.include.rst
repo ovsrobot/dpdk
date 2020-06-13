@@ -44,20 +44,20 @@ Lcore-related options
 Device-related options
 ~~~~~~~~~~~~~~~~~~~~~~
 
-*   ``-b, --pci-blacklist <[domain:]bus:devid.func>``
+*   ``-b, --pci-skip-probe <[domain:]bus:devid.func>``
 
-    Blacklist a PCI device to prevent EAL from using it. Multiple -b options are
-    allowed.
-
-.. Note::
-    PCI blacklist cannot be used with ``-w`` option.
-
-*   ``-w, --pci-whitelist <[domain:]bus:devid.func>``
-
-    Add a PCI device in white list.
+    Skip probing a PCI device to prevent EAL from using it.
+    Multiple -b options are allowed.
 
 .. Note::
-    PCI whitelist cannot be used with ``-b`` option.
+    PCI skip probe cannot be used with the only list ``-w`` option.
+
+*   ``-w, --pci-only-list <[domain:]bus:devid.func>``
+
+    Add a PCI device in to the list of probed devices.
+
+.. Note::
+    PCI only list cannot be used with the skip probe ``-b`` option.
 
 *   ``--vdev <device arguments>``
 

@@ -68,11 +68,11 @@ Fail-safe command line parameters
 
 .. note::
 
-   In case where the sub-device is also used as a whitelist device, using ``-w``
+   In case where the sub-device is also used as a allowlist device, using ``-w``
    on the EAL command line, the fail-safe PMD will use the device with the
    options provided to the EAL instead of its own parameters.
 
-   When trying to use a PCI device automatically probed by the blacklist mode,
+   When trying to use a PCI device automatically probed by the blocklist mode,
    the name for the fail-safe sub-device must be the full PCI id:
    Domain:Bus:Device.Function, *i.e.* ``00:00:00.0`` instead of ``00:00.0``,
    as the second form is historically accepted by the DPDK.
@@ -123,8 +123,8 @@ This section shows some example of using **testpmd** with a fail-safe PMD.
 #. To build a PMD and configure DPDK, refer to the document
    :ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>`.
 
-#. Start testpmd. The sub-device ``84:00.0`` should be blacklisted from normal EAL
-   operations to avoid probing it twice, as the PCI bus is in blacklist mode.
+#. Start testpmd. The sub-device ``84:00.0`` should be blocklisted from normal EAL
+   operations to avoid probing it twice, as the PCI bus is in blocklist mode.
 
    .. code-block:: console
 
@@ -132,13 +132,13 @@ This section shows some example of using **testpmd** with a fail-safe PMD.
          --vdev 'net_failsafe0,mac=de:ad:be:ef:01:02,dev(84:00.0),dev(net_ring0)' \
          -b 84:00.0 -b 00:04.0 -- -i
 
-   If the sub-device ``84:00.0`` is not blacklisted, it will be probed by the
+   If the sub-device ``84:00.0`` is not blocklisted, it will be probed by the
    EAL first. When the fail-safe then tries to initialize it the probe operation
    fails.
 
-   Note that PCI blacklist mode is the default PCI operating mode.
+   Note that PCI blocklist mode is the default PCI operating mode.
 
-#. Alternatively, it can be used alongside any other device in whitelist mode.
+#. Alternatively, it can be used alongside any other device in allowlist mode.
 
    .. code-block:: console
 
