@@ -30,7 +30,7 @@
 #define no_hpet "--no-hpet"
 #define no_huge "--no-huge"
 #define no_shconf "--no-shconf"
-#define pci_whitelist "--pci-whitelist"
+#define pci_allowlist "--pci-allowlist"
 #define vdev "--vdev"
 #define memtest "memtest"
 #define memtest1 "memtest1"
@@ -223,12 +223,12 @@ get_number_of_sockets(void)
 #endif
 
 /*
- * Test that the app doesn't run with invalid whitelist option.
+ * Test that the app doesn't run with invalid allowlist option.
  * Final tests ensures it does run with valid options as sanity check (one
  * test for with Domain+BDF, second for just with BDF)
  */
 static int
-test_whitelist_flag(void)
+test_allowlist_flag(void)
 {
 	unsigned i;
 #ifdef RTE_EXEC_ENV_FREEBSD
@@ -245,45 +245,45 @@ test_whitelist_flag(void)
 
 	const char *wlinval[][7] = {
 		{prgname, prefix, mp_flag,
-				pci_whitelist, "error", "", ""},
+				pci_allowlist, "error", "", ""},
 		{prgname, prefix, mp_flag,
-				pci_whitelist, "0:0:0", "", ""},
+				pci_allowlist, "0:0:0", "", ""},
 		{prgname, prefix, mp_flag,
-				pci_whitelist, "0:error:0.1", "", ""},
+				pci_allowlist, "0:error:0.1", "", ""},
 		{prgname, prefix, mp_flag,
-				pci_whitelist, "0:0:0.1error", "", ""},
+				pci_allowlist, "0:0:0.1error", "", ""},
 		{prgname, prefix, mp_flag,
-				pci_whitelist, "error0:0:0.1", "", ""},
+				pci_allowlist, "error0:0:0.1", "", ""},
 		{prgname, prefix, mp_flag,
-				pci_whitelist, "0:0:0.1.2", "", ""},
+				pci_allowlist, "0:0:0.1.2", "", ""},
 	};
-	/* Test with valid whitelist option */
+	/* Test with valid allowlist option */
 	const char *wlval1[] = {prgname, prefix, mp_flag,
-			pci_whitelist, "00FF:09:0B.3"};
+			pci_allowlist, "00FF:09:0B.3"};
 	const char *wlval2[] = {prgname, prefix, mp_flag,
-			pci_whitelist, "09:0B.3", pci_whitelist, "0a:0b.1"};
+			pci_allowlist, "09:0B.3", pci_allowlist, "0a:0b.1"};
 	const char *wlval3[] = {prgname, prefix, mp_flag,
-			pci_whitelist, "09:0B.3,type=test",
-			pci_whitelist, "08:00.1,type=normal",
+			pci_allowlist, "09:0B.3,type=test",
+			pci_allowlist, "08:00.1,type=normal",
 	};
 
 	for (i = 0; i < RTE_DIM(wlinval); i++) {
 		if (launch_proc(wlinval[i]) == 0) {
 			printf("Error - process did run ok with invalid "
-			    "whitelist parameter\n");
+			    "allowlist parameter\n");
 			return -1;
 		}
 	}
 	if (launch_proc(wlval1) != 0 ) {
-		printf("Error - process did not run ok with valid whitelist\n");
+		printf("Error - process did not run ok with valid allowlist\n");
 		return -1;
 	}
 	if (launch_proc(wlval2) != 0 ) {
-		printf("Error - process did not run ok with valid whitelist value set\n");
+		printf("Error - process did not run ok with valid allowlist value set\n");
 		return -1;
 	}
 	if (launch_proc(wlval3) != 0 ) {
-		printf("Error - process did not run ok with valid whitelist + args\n");
+		printf("Error - process did not run ok with valid allowlist + args\n");
 		return -1;
 	}
 
@@ -291,7 +291,7 @@ test_whitelist_flag(void)
 }
 
 /*
- * Test that the app doesn't run with invalid blacklist option.
+ * Test that the app doesn't run with invalid blocklist option.
  * Final test ensures it does run with valid options as sanity check
  */
 static int
@@ -317,7 +317,7 @@ test_invalid_b_flag(void)
 		{prgname, prefix, mp_flag, "-b", "error0:0:0.1"},
 		{prgname, prefix, mp_flag, "-b", "0:0:0.1.2"},
 	};
-	/* Test with valid blacklist option */
+	/* Test with valid blocklist option */
 	const char *blval[] = {prgname, prefix, mp_flag,
 			       "-b", "FF:09:0B.3"};
 
@@ -326,12 +326,12 @@ test_invalid_b_flag(void)
 	for (i = 0; i != RTE_DIM(blinval); i++) {
 		if (launch_proc(blinval[i]) == 0) {
 			printf("Error - process did run ok with invalid "
-			    "blacklist parameter\n");
+			    "blocklist parameter\n");
 			return -1;
 		}
 	}
 	if (launch_proc(blval) != 0) {
-		printf("Error - process did not run ok with valid blacklist value\n");
+		printf("Error - process did not run ok with valid blocklist value\n");
 		return -1;
 	}
 	return 0;
@@ -419,7 +419,7 @@ test_invalid_r_flag(void)
 			{prgname, prefix, mp_flag, "-r", "-1"},
 			{prgname, prefix, mp_flag, "-r", "17"},
 	};
-	/* Test with valid blacklist option */
+	/* Test with valid blocklist option */
 	const char *rval[] = {prgname, prefix, mp_flag, "-r", "16"};
 
 	int i;
@@ -1489,9 +1489,9 @@ test_eal_flags(void)
 		return ret;
 	}
 
-	ret = test_whitelist_flag();
+	ret = test_allowlist_flag();
 	if (ret < 0) {
-		printf("Error in test_invalid_whitelist_flag()\n");
+		printf("Error in test_invalid_allowlist_flag()\n");
 		return ret;
 	}
 
@@ -1543,7 +1543,7 @@ REGISTER_TEST_COMMAND(eal_flags_master_opt_autotest, test_master_lcore_flag);
 REGISTER_TEST_COMMAND(eal_flags_n_opt_autotest, test_invalid_n_flag);
 REGISTER_TEST_COMMAND(eal_flags_hpet_autotest, test_no_hpet_flag);
 REGISTER_TEST_COMMAND(eal_flags_no_huge_autotest, test_no_huge_flag);
-REGISTER_TEST_COMMAND(eal_flags_w_opt_autotest, test_whitelist_flag);
+REGISTER_TEST_COMMAND(eal_flags_w_opt_autotest, test_allowlist_flag);
 REGISTER_TEST_COMMAND(eal_flags_b_opt_autotest, test_invalid_b_flag);
 REGISTER_TEST_COMMAND(eal_flags_vdev_opt_autotest, test_invalid_vdev_flag);
 REGISTER_TEST_COMMAND(eal_flags_r_opt_autotest, test_invalid_r_flag);
