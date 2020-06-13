@@ -74,9 +74,13 @@ enum rte_dev_policy {
 	RTE_DEV_BLOCKED,
 };
 
-/* Backwards compatiablity will be deprecated */
-#define RTE_DEV_WHITELISTED RTE_DEV_ALLOWED
-#define RTE_DEV_BLACKLISTED RTE_DEV_BLOCKED
+#define RTE_DEV_WHITELISTED \
+	_Pragma("GCC warning \"'RTE_DEV_WHITELISTED' macro is deprecated.\"") \
+	RTE_DEV_ALLOWED
+
+#define RTE_DEV_BLACKLISTED \
+	_Pragma("GCC warning \"'RTE_DEV_BLACKLISTED' macro is deprecated.\"") \
+	RTE_DEV_BLOCKED
 
 /**
  * A generic memory resource representation.
