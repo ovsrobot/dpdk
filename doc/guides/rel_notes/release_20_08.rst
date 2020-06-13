@@ -91,6 +91,11 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =========================================================
 
+* eal: The definitions related to including and excluding devices
+  has been changed from blacklist/whitelist to blocklist/allowlist.
+  There are compatiablity macros and command line mapping to accept
+  the old values but applications and scripts are strongly encouraged
+  to migrate to the new names.
 
 ABI Changes
 -----------
