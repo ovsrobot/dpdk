@@ -29,10 +29,14 @@ extern "C" {
  * Type of generic device
  */
 enum rte_devtype {
-	RTE_DEVTYPE_WHITELISTED_PCI,
-	RTE_DEVTYPE_BLACKLISTED_PCI,
+	RTE_DEVTYPE_ALLOWED_PCI,
+	RTE_DEVTYPE_BLOCKED_PCI,
 	RTE_DEVTYPE_VIRTUAL,
 };
+
+/* Backwards compatiablity will be removed later */
+#define RTE_DEVTYPE_WHITELISTED_PCI RTE_DEVTYPE_ALLOWED_PCI
+#define RTE_DEVTYPE_BLACKLISTED_PCI RTE_DEVTYPE_BLOCKED_PCI
 
 /**
  * Structure that stores a device given by the user with its arguments

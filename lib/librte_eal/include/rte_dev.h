@@ -70,9 +70,13 @@ enum rte_kernel_driver {
  * Device policies.
  */
 enum rte_dev_policy {
-	RTE_DEV_WHITELISTED,
-	RTE_DEV_BLACKLISTED,
+	RTE_DEV_ALLOWED,
+	RTE_DEV_BLOCKED,
 };
+
+/* Backwards compatiablity will be deprecated */
+#define RTE_DEV_WHITELISTED RTE_DEV_ALLOWED
+#define RTE_DEV_BLACKLISTED RTE_DEV_BLOCKED
 
 /**
  * A generic memory resource representation.
