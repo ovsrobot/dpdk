@@ -24,32 +24,34 @@
 #include "iavf_generic_flow.h"
 
 enum iavf_pattern_hint_type {
-	IAVF_PATTERN_HINT_NONE,
-	IAVF_PATTERN_HINT_IPV4,
-	IAVF_PATTERN_HINT_IPV4_UDP,
-	IAVF_PATTERN_HINT_IPV4_TCP,
-	IAVF_PATTERN_HINT_IPV4_SCTP,
-	IAVF_PATTERN_HINT_IPV6,
-	IAVF_PATTERN_HINT_IPV6_UDP,
-	IAVF_PATTERN_HINT_IPV6_TCP,
-	IAVF_PATTERN_HINT_IPV6_SCTP,
+	IAVF_PHINT_NONE				= 0x00000000,
+	IAVF_PHINT_IPV4				= 0x00000001,
+	IAVF_PHINT_IPV4_UDP			= 0x00000002,
+	IAVF_PHINT_IPV4_TCP			= 0x00000004,
+	IAVF_PHINT_IPV4_SCTP			= 0x00000008,
+	IAVF_PHINT_IPV6				= 0x00000010,
+	IAVF_PHINT_IPV6_UDP			= 0x00000020,
+	IAVF_PHINT_IPV6_TCP			= 0x00000040,
+	IAVF_PHINT_IPV6_SCTP			= 0x00000080,
+	IAVF_PHINT_C_VLAN			= 0x00000100,
+	IAVF_PHINT_S_VLAN			= 0x00000200,
+	IAVF_PHINT_IPV4_GTPU_IP			= 0x00000400,
+	IAVF_PHINT_IPV4_GTPU_EH			= 0x00000800,
+	IAVF_PHINT_IPV4_GTPU_EH_DWNLINK		= 0x00001000,
+	IAVF_PHINT_IPV4_GTPU_EH_UPLINK		= 0x00002000,
 };
 
-enum iavf_gtpu_hint {
-	IAVF_GTPU_HINT_DOWNLINK,
-	IAVF_GTPU_HINT_UPLINK,
-	IAVF_GTPU_HINT_NONE,
-};
+#define GTPU_EH_DWNLINK	0
+#define GTPU_EH_UPLINK	1
 
 struct iavf_pattern_match_type {
-	enum iavf_pattern_hint_type phint_type;
+	uint64_t pattern_hint;
 };
 
 struct iavf_hash_match_type {
-	enum iavf_pattern_hint_type phint_type;
 	uint64_t hash_type;
 	struct virtchnl_proto_hdrs *proto_hdrs;
-	enum iavf_gtpu_hint gtpu_hint;
+	uint64_t pattern_hint;
 };
 
 struct iavf_rss_meta {
@@ -83,42 +85,52 @@ iavf_hash_parse_pattern_action(struct iavf_adapter *ad,
 			       void **meta,
 			       struct rte_flow_error *error);
 
-struct iavf_pattern_match_type phint_empty = {
-	IAVF_PATTERN_HINT_NONE};
-struct iavf_pattern_match_type phint_eth_ipv4 = {
-	IAVF_PATTERN_HINT_IPV4};
-struct iavf_pattern_match_type phint_eth_ipv4_udp = {
-	IAVF_PATTERN_HINT_IPV4_UDP};
-struct iavf_pattern_match_type phint_eth_ipv4_tcp = {
-	IAVF_PATTERN_HINT_IPV4_TCP};
-struct iavf_pattern_match_type phint_eth_ipv4_sctp = {
-	IAVF_PATTERN_HINT_IPV4_SCTP};
-struct iavf_pattern_match_type phint_eth_ipv4_gtpu_eh = {
-	IAVF_PATTERN_HINT_IPV4_UDP};
-struct iavf_pattern_match_type phint_eth_ipv4_esp = {
-	IAVF_PATTERN_HINT_IPV4};
-struct iavf_pattern_match_type phint_eth_ipv4_ah = {
-	IAVF_PATTERN_HINT_IPV4};
-struct iavf_pattern_match_type phint_eth_ipv4_l2tpv3 = {
-	IAVF_PATTERN_HINT_IPV4};
-struct iavf_pattern_match_type phint_eth_ipv4_pfcp = {
-	IAVF_PATTERN_HINT_IPV4_UDP};
-struct iavf_pattern_match_type phint_eth_ipv6 = {
-	IAVF_PATTERN_HINT_IPV6};
-struct iavf_pattern_match_type phint_eth_ipv6_udp = {
-	IAVF_PATTERN_HINT_IPV6_UDP};
-struct iavf_pattern_match_type phint_eth_ipv6_tcp = {
-	IAVF_PATTERN_HINT_IPV6_TCP};
-struct iavf_pattern_match_type phint_eth_ipv6_sctp = {
-	IAVF_PATTERN_HINT_IPV6_SCTP};
-struct iavf_pattern_match_type phint_eth_ipv6_esp = {
-	IAVF_PATTERN_HINT_IPV6};
-struct iavf_pattern_match_type phint_eth_ipv6_ah = {
-	IAVF_PATTERN_HINT_IPV6};
-struct iavf_pattern_match_type phint_eth_ipv6_l2tpv3 = {
-	IAVF_PATTERN_HINT_IPV6};
-struct iavf_pattern_match_type phint_eth_ipv6_pfcp = {
-	IAVF_PATTERN_HINT_IPV6_UDP};
+static struct iavf_pattern_match_type phint_empty = {
+	IAVF_PHINT_NONE};
+static struct iavf_pattern_match_type phint_eth_ipv4 = {
+	IAVF_PHINT_IPV4};
+static struct iavf_pattern_match_type phint_eth_ipv4_udp = {
+	IAVF_PHINT_IPV4_UDP};
+static struct iavf_pattern_match_type phint_eth_ipv4_tcp = {
+	IAVF_PHINT_IPV4_TCP};
+static struct iavf_pattern_match_type phint_eth_ipv4_sctp = {
+	IAVF_PHINT_IPV4_SCTP};
+static struct iavf_pattern_match_type phint_eth_ipv4_gtpu_ipv4 = {
+	IAVF_PHINT_IPV4};
+static struct iavf_pattern_match_type phint_eth_ipv4_gtpu_eh_ipv4 = {
+	IAVF_PHINT_IPV4};
+static struct iavf_pattern_match_type phint_eth_ipv4_gtpu_eh_ipv4_udp = {
+	IAVF_PHINT_IPV4_UDP};
+static struct iavf_pattern_match_type phint_eth_ipv4_gtpu_eh_ipv4_tcp = {
+	IAVF_PHINT_IPV4_TCP};
+static struct iavf_pattern_match_type phint_eth_ipv4_esp = {
+	IAVF_PHINT_IPV4};
+static struct iavf_pattern_match_type phint_eth_ipv4_ah = {
+	IAVF_PHINT_IPV4};
+static struct iavf_pattern_match_type phint_eth_ipv4_l2tpv3 = {
+	IAVF_PHINT_IPV4};
+static struct iavf_pattern_match_type phint_eth_ipv4_pfcp = {
+	IAVF_PHINT_IPV4_UDP};
+static struct iavf_pattern_match_type phint_eth_vlan_ipv4 = {
+	IAVF_PHINT_C_VLAN};
+static struct iavf_pattern_match_type phint_eth_ipv6 = {
+	IAVF_PHINT_IPV6};
+static struct iavf_pattern_match_type phint_eth_ipv6_udp = {
+	IAVF_PHINT_IPV6_UDP};
+static struct iavf_pattern_match_type phint_eth_ipv6_tcp = {
+	IAVF_PHINT_IPV6_TCP};
+static struct iavf_pattern_match_type phint_eth_ipv6_sctp = {
+	IAVF_PHINT_IPV6_SCTP};
+static struct iavf_pattern_match_type phint_eth_ipv6_esp = {
+	IAVF_PHINT_IPV6};
+static struct iavf_pattern_match_type phint_eth_ipv6_ah = {
+	IAVF_PHINT_IPV6};
+static struct iavf_pattern_match_type phint_eth_ipv6_l2tpv3 = {
+	IAVF_PHINT_IPV6};
+static struct iavf_pattern_match_type phint_eth_ipv6_pfcp = {
+	IAVF_PHINT_IPV6_UDP};
+static struct iavf_pattern_match_type phint_eth_vlan_ipv6 = {
+	IAVF_PHINT_C_VLAN};
 
 /**
  * Supported pattern for hash.
@@ -131,26 +143,30 @@ static struct iavf_pattern_match_item iavf_hash_pattern_list[] = {
 	{iavf_pattern_eth_ipv4_udp, IAVF_INSET_NONE, &phint_eth_ipv4_udp},
 	{iavf_pattern_eth_ipv4_tcp, IAVF_INSET_NONE, &phint_eth_ipv4_tcp},
 	{iavf_pattern_eth_ipv4_sctp, IAVF_INSET_NONE, &phint_eth_ipv4_sctp},
-	{iavf_pattern_eth_ipv6, IAVF_INSET_NONE, &phint_eth_ipv6},
+	{iavf_pattern_eth_ipv4_gtpu_ipv4, IAVF_INSET_NONE,
+					&phint_eth_ipv4_gtpu_ipv4},
 	{iavf_pattern_eth_ipv4_gtpu_eh_ipv4, IAVF_INSET_NONE,
-						&phint_eth_ipv4_gtpu_eh},
+					&phint_eth_ipv4_gtpu_eh_ipv4},
 	{iavf_pattern_eth_ipv4_gtpu_eh_ipv4_udp, IAVF_INSET_NONE,
-						&phint_eth_ipv4_gtpu_eh},
+					&phint_eth_ipv4_gtpu_eh_ipv4_udp},
 	{iavf_pattern_eth_ipv4_gtpu_eh_ipv4_tcp, IAVF_INSET_NONE,
-						&phint_eth_ipv4_gtpu_eh},
+					&phint_eth_ipv4_gtpu_eh_ipv4_tcp},
 	{iavf_pattern_eth_ipv4_esp, IAVF_INSET_NONE, &phint_eth_ipv4_esp},
 	{iavf_pattern_eth_ipv4_ah, IAVF_INSET_NONE, &phint_eth_ipv4_ah},
 	{iavf_pattern_eth_ipv4_l2tpv3, IAVF_INSET_NONE,
-						&phint_eth_ipv4_l2tpv3},
+					&phint_eth_ipv4_l2tpv3},
 	{iavf_pattern_eth_ipv4_pfcp, IAVF_INSET_NONE, &phint_eth_ipv4_pfcp},
+	{iavf_pattern_eth_vlan_ipv4, IAVF_INSET_NONE, &phint_eth_vlan_ipv4},
+	{iavf_pattern_eth_ipv6, IAVF_INSET_NONE, &phint_eth_ipv6},
 	{iavf_pattern_eth_ipv6_udp, IAVF_INSET_NONE, &phint_eth_ipv6_udp},
 	{iavf_pattern_eth_ipv6_tcp, IAVF_INSET_NONE, &phint_eth_ipv6_tcp},
 	{iavf_pattern_eth_ipv6_sctp, IAVF_INSET_NONE, &phint_eth_ipv6_sctp},
 	{iavf_pattern_eth_ipv6_esp, IAVF_INSET_NONE, &phint_eth_ipv6_esp},
 	{iavf_pattern_eth_ipv6_ah, IAVF_INSET_NONE, &phint_eth_ipv6_ah},
 	{iavf_pattern_eth_ipv6_l2tpv3, IAVF_INSET_NONE,
-						&phint_eth_ipv6_l2tpv3},
+					&phint_eth_ipv6_l2tpv3},
 	{iavf_pattern_eth_ipv6_pfcp, IAVF_INSET_NONE, &phint_eth_ipv6_pfcp},
+	{iavf_pattern_eth_vlan_ipv6, IAVF_INSET_NONE, &phint_eth_vlan_ipv6},
 	{iavf_pattern_empty, IAVF_INSET_NONE, &phint_empty},
 };
 
@@ -206,6 +222,28 @@ static struct iavf_pattern_match_item iavf_hash_pattern_list[] = {
 	VIRTCHNL_PROTO_HDR_IPV4, \
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_SRC) | \
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_DST), {BUFF_NOUSED } }
+
+#define proto_hint_ipv4_src_prot { \
+	VIRTCHNL_PROTO_HDR_IPV4, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_SRC) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_PROT), \
+	{BUFF_NOUSED } }
+
+#define proto_hint_ipv4_dst_prot { \
+	VIRTCHNL_PROTO_HDR_IPV4, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_DST) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_PROT), \
+	{BUFF_NOUSED } }
+
+#define proto_hint_ipv4_only_prot { \
+	VIRTCHNL_PROTO_HDR_IPV4, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_PROT), {BUFF_NOUSED } }
+
+#define proto_hint_ipv4_prot { \
+	VIRTCHNL_PROTO_HDR_IPV4, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_SRC) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_DST) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_PROT), {BUFF_NOUSED } }
 
 #define proto_hint_udp_src_port { \
 	VIRTCHNL_PROTO_HDR_UDP, \
@@ -271,6 +309,36 @@ static struct iavf_pattern_match_item iavf_hash_pattern_list[] = {
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_SRC) | \
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_DST), {BUFF_NOUSED } }
 
+#define proto_hint_ipv6_src_prot { \
+	VIRTCHNL_PROTO_HDR_IPV6, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_SRC) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PROT), \
+	{BUFF_NOUSED } }
+
+#define proto_hint_ipv6_dst_prot { \
+	VIRTCHNL_PROTO_HDR_IPV6, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_DST) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PROT), \
+	{BUFF_NOUSED } }
+
+#define proto_hint_ipv6_only_prot { \
+	VIRTCHNL_PROTO_HDR_IPV6, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PROT), {BUFF_NOUSED } }
+
+#define proto_hint_ipv6_prot { \
+	VIRTCHNL_PROTO_HDR_IPV6, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_SRC) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_DST) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PROT), {BUFF_NOUSED } }
+
+#define proto_hint_gtpu_eh_only { \
+	VIRTCHNL_PROTO_HDR_GTPU_EH, \
+	FIELD_FOR_PROTO_ONLY, {BUFF_NOUSED } }
+
+#define proto_hint_gtpu_ip_only { \
+	VIRTCHNL_PROTO_HDR_GTPU_IP, \
+	FIELD_FOR_PROTO_ONLY, {BUFF_NOUSED } }
+
 #define proto_hint_gtpu_up_only { \
 	VIRTCHNL_PROTO_HDR_GTPU_EH_PDU_UP, \
 	FIELD_FOR_PROTO_ONLY, {BUFF_NOUSED } }
@@ -295,6 +363,8 @@ static struct iavf_pattern_match_item iavf_hash_pattern_list[] = {
 	VIRTCHNL_PROTO_HDR_PFCP, \
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_PFCP_SEID), {BUFF_NOUSED } }
 
+/* ETH */
+
 struct virtchnl_proto_hdrs hdrs_hint_eth_src = {
 	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_eth_src }
 };
@@ -315,6 +385,8 @@ struct virtchnl_proto_hdrs hdrs_hint_cvlan = {
 	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_cvlan }
 };
 
+/* IPV4 */
+
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_src = {
 	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_ipv4_src }
 };
@@ -323,117 +395,77 @@ struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst = {
 	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_ipv4_dst }
 };
 
-struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_gtpu_up = {
-	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_TWO, {proto_hint_gtpu_up_only,
-	proto_hint_ipv4_src }
-};
-
-struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_gtpu_dwn = {
-	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_TWO, {proto_hint_gtpu_dwn_only,
-	proto_hint_ipv4_src }
-};
-
-struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_gtpu_up = {
-	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_TWO, {proto_hint_gtpu_up_only,
-	proto_hint_ipv4_dst }
-};
-
-struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_gtpu_dwn = {
-	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_TWO, {proto_hint_gtpu_dwn_only,
-	proto_hint_ipv4_dst }
-};
-
-struct virtchnl_proto_hdrs hdrs_hint_ipv4_esp = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only,
-	proto_hint_esp }
-};
-
-struct virtchnl_proto_hdrs hdrs_hint_ipv4_ah = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only,
-	proto_hint_ah }
-};
-
-struct virtchnl_proto_hdrs hdrs_hint_ipv4_l2tpv3 = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only,
-	proto_hint_l2tpv3 }
-};
-
-struct virtchnl_proto_hdrs hdrs_hint_ipv4_pfcp = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only,
-	proto_hint_pfcp }
-};
-
 struct virtchnl_proto_hdrs hdrs_hint_ipv4 = {
 	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_ipv4 }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_udp_src_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_src,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_src_prot,
 	proto_hint_udp_src_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_udp_dst_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_src,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_src_prot,
 	proto_hint_udp_dst_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_udp_src_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_dst,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_dst_prot,
 	proto_hint_udp_src_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_udp_dst_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_dst,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_dst_prot,
 	proto_hint_udp_dst_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_udp_src_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only_prot,
 	proto_hint_udp_src_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_udp_dst_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only_prot,
 	proto_hint_udp_dst_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_udp = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_prot,
 	proto_hint_udp }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_tcp_src_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_src,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_src_prot,
 	proto_hint_tcp_src_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_tcp_dst_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_src,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_src_prot,
 	proto_hint_tcp_dst_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_tcp_src_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_dst,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_dst_prot,
 	proto_hint_tcp_src_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_tcp_dst_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_dst,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_dst_prot,
 	proto_hint_tcp_dst_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_tcp_src_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only_prot,
 	proto_hint_tcp_src_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_tcp_dst_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only_prot,
 	proto_hint_tcp_dst_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_tcp = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_prot,
 	proto_hint_tcp }
 };
 
@@ -472,6 +504,255 @@ struct virtchnl_proto_hdrs hdrs_hint_ipv4_sctp = {
 	proto_hint_sctp }
 };
 
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_esp = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only,
+	proto_hint_esp }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_ah = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only,
+	proto_hint_ah }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_l2tpv3 = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only,
+	proto_hint_l2tpv3 }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_pfcp = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv4_only,
+	proto_hint_pfcp }
+};
+
+/* GTPU IP */
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_gtpu_ip = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_TWO, {proto_hint_gtpu_ip_only,
+	proto_hint_ipv4_src }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_gtpu_ip = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_TWO, {proto_hint_gtpu_ip_only,
+	proto_hint_ipv4_dst }
+};
+
+/* GTPU EH */
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_udp_src_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_only_prot, proto_hint_udp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_udp_dst_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_only_prot, proto_hint_udp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_tcp_src_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_only_prot, proto_hint_tcp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_tcp_dst_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_only_prot, proto_hint_tcp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_TWO, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_src }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_udp_src_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_src_prot, proto_hint_udp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_udp_dst_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_src_prot, proto_hint_udp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_tcp_src_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_src_prot, proto_hint_tcp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_tcp_dst_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_src_prot, proto_hint_tcp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_TWO, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_dst }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_udp_src_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_dst_prot, proto_hint_udp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_udp_dst_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_dst_prot, proto_hint_udp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_tcp_src_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_dst_prot, proto_hint_tcp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_tcp_dst_gtpu_eh = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_eh_only,
+	proto_hint_ipv4_dst_prot, proto_hint_tcp_dst_port}
+};
+
+/* GTPU UP */
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_udp_src_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_only_prot, proto_hint_udp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_udp_dst_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_only_prot, proto_hint_udp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_tcp_src_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_only_prot, proto_hint_tcp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_tcp_dst_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_only_prot, proto_hint_tcp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_TWO, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_src }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_udp_src_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_src_prot, proto_hint_udp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_udp_dst_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_src_prot, proto_hint_udp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_tcp_src_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_src_prot, proto_hint_tcp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_tcp_dst_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_src_prot, proto_hint_tcp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_TWO, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_dst }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_udp_src_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_dst_prot, proto_hint_udp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_udp_dst_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_dst_prot, proto_hint_udp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_tcp_src_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_dst_prot, proto_hint_tcp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_tcp_dst_gtpu_up = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_up_only,
+	proto_hint_ipv4_dst_prot, proto_hint_tcp_dst_port}
+};
+
+/* GTPU DWN */
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_udp_src_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_only_prot, proto_hint_udp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_udp_dst_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_only_prot, proto_hint_udp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_tcp_src_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_only_prot, proto_hint_tcp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_tcp_dst_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_only_prot, proto_hint_tcp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_TWO, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_src }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_udp_src_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_src_prot, proto_hint_udp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_udp_dst_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_src_prot, proto_hint_udp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_tcp_src_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_src_prot, proto_hint_tcp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_tcp_dst_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_src_prot, proto_hint_tcp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_TWO, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_dst }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_udp_src_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_dst_prot, proto_hint_udp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_udp_dst_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_dst_prot, proto_hint_udp_dst_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_tcp_src_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_dst_prot, proto_hint_tcp_src_port}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_tcp_dst_gtpu_dwn = {
+	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_THREE, {proto_hint_gtpu_dwn_only,
+	proto_hint_ipv4_dst_prot, proto_hint_tcp_dst_port}
+};
+
+/* IPV6 */
+
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_src = {
 	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_ipv6_src }
 };
@@ -480,97 +761,77 @@ struct virtchnl_proto_hdrs hdrs_hint_ipv6_dst = {
 	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_ipv6_dst }
 };
 
-struct virtchnl_proto_hdrs hdrs_hint_ipv6_esp = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only,
-	proto_hint_esp }
-};
-
-struct virtchnl_proto_hdrs hdrs_hint_ipv6_ah = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only,
-	proto_hint_ah }
-};
-
-struct virtchnl_proto_hdrs hdrs_hint_ipv6_l2tpv3 = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only,
-	proto_hint_l2tpv3 }
-};
-
-struct virtchnl_proto_hdrs hdrs_hint_ipv6_pfcp = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only,
-	proto_hint_pfcp }
-};
-
 struct virtchnl_proto_hdrs hdrs_hint_ipv6 = {
 	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_ipv6 }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_src_udp_src_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_src,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_src_prot,
 	proto_hint_udp_src_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_src_udp_dst_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_src,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_src_prot,
 	proto_hint_udp_dst_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_dst_udp_src_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_dst,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_dst_prot,
 	proto_hint_udp_src_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_dst_udp_dst_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_dst,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_dst_prot,
 	proto_hint_udp_dst_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_udp_src_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_udp_only,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only_prot,
 	proto_hint_udp_src_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_udp_dst_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_udp_only,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only_prot,
 	proto_hint_udp_dst_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_udp = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_prot,
 	proto_hint_udp }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_src_tcp_src_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_src,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_src_prot,
 	proto_hint_tcp_src_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_src_tcp_dst_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_src,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_src_prot,
 	proto_hint_tcp_dst_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_dst_tcp_src_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_dst,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_dst_prot,
 	proto_hint_tcp_src_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_dst_tcp_dst_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_dst,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_dst_prot,
 	proto_hint_tcp_dst_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_tcp_src_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_udp_only,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only_prot,
 	proto_hint_tcp_src_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_tcp_dst_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_udp_only,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only_prot,
 	proto_hint_tcp_dst_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_tcp = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_prot,
 	proto_hint_tcp }
 };
 
@@ -595,12 +856,12 @@ struct virtchnl_proto_hdrs hdrs_hint_ipv6_dst_sctp_dst_port = {
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_sctp_src_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_udp_only,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only,
 	proto_hint_sctp_src_port }
 };
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv6_sctp_dst_port = {
-	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_udp_only,
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only,
 	proto_hint_sctp_dst_port }
 };
 
@@ -609,337 +870,762 @@ struct virtchnl_proto_hdrs hdrs_hint_ipv6_sctp = {
 	proto_hint_sctp }
 };
 
-/**
- * The first member is pattern hint type,
- * the second member is hash type,
- * the third member is virtchnl protocol hdrs.
- * the forth member is downlink/uplink type.
- */
-struct iavf_hash_match_type iavf_hash_type_list[] = {
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_esp = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only,
+	proto_hint_esp }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_ah = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only,
+	proto_hint_ah }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_l2tpv3 = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only,
+	proto_hint_l2tpv3 }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pfcp = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_only,
+	proto_hint_pfcp }
+};
+
+struct iavf_hash_match_type iavf_hash_map_list[] = {
 	/* IPV4 */
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_L2_SRC_ONLY, &hdrs_hint_eth_src,
-						IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_L2_DST_ONLY, &hdrs_hint_eth_dst,
-						IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_ETH | ETH_RSS_L2_SRC_ONLY,
-			&hdrs_hint_eth_src, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_ETH | ETH_RSS_L2_DST_ONLY,
-			&hdrs_hint_eth_dst, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_ETH, &hdrs_hint_eth,
-						IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_S_VLAN, &hdrs_hint_svlan,
-						IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_C_VLAN, &hdrs_hint_cvlan,
-						IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_L3_SRC_ONLY, &hdrs_hint_ipv4_src,
-						IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_L3_DST_ONLY, &hdrs_hint_ipv4_dst,
-						IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_IPV4 | ETH_RSS_L3_SRC_ONLY,
-			&hdrs_hint_ipv4_src, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_IPV4 | ETH_RSS_L3_DST_ONLY,
-			&hdrs_hint_ipv4_dst, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_ESP, &hdrs_hint_ipv4_esp,
-	IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_AH, &hdrs_hint_ipv4_ah,
-	IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_L2TPV3, &hdrs_hint_ipv4_l2tpv3,
-	IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_IPV4, &hdrs_hint_ipv4,
-	IAVF_GTPU_HINT_NONE},
+	{ETH_RSS_L2_SRC_ONLY,
+		&hdrs_hint_eth_src, IAVF_PHINT_IPV4},
+	{ETH_RSS_L2_DST_ONLY,
+		&hdrs_hint_eth_dst, IAVF_PHINT_IPV4},
+	{ETH_RSS_ETH,
+		&hdrs_hint_eth, IAVF_PHINT_IPV4},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src, IAVF_PHINT_IPV4},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst, IAVF_PHINT_IPV4},
+	{ETH_RSS_IPV4 | ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src, IAVF_PHINT_IPV4},
+	{ETH_RSS_IPV4 | ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst, IAVF_PHINT_IPV4},
+	{ETH_RSS_IPV4,
+		&hdrs_hint_ipv4, IAVF_PHINT_IPV4},
+	{ETH_RSS_ESP,
+		&hdrs_hint_ipv4_esp, IAVF_PHINT_IPV4},
+	{ETH_RSS_AH,
+		&hdrs_hint_ipv4_ah, IAVF_PHINT_IPV4},
+	{ETH_RSS_L2TPV3,
+		&hdrs_hint_ipv4_l2tpv3, IAVF_PHINT_IPV4},
 	/* IPV4 UDP */
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv4_src_udp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv4_src_udp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_L3_SRC_ONLY | ETH_RSS_GTPU,
-		&hdrs_hint_ipv4_src_gtpu_up, IAVF_GTPU_HINT_UPLINK},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_L3_SRC_ONLY | ETH_RSS_GTPU,
-		&hdrs_hint_ipv4_src_gtpu_dwn, IAVF_GTPU_HINT_DOWNLINK},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_L3_SRC_ONLY,
-		&hdrs_hint_ipv4_src, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv4_dst_udp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv4_dst_udp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_L3_DST_ONLY | ETH_RSS_GTPU,
-		&hdrs_hint_ipv4_dst_gtpu_up, IAVF_GTPU_HINT_UPLINK},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_L3_DST_ONLY | ETH_RSS_GTPU,
-		&hdrs_hint_ipv4_dst_gtpu_dwn, IAVF_GTPU_HINT_DOWNLINK},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_L3_DST_ONLY,
-		&hdrs_hint_ipv4_dst, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_NONFRAG_IPV4_UDP |
+	{ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_udp_src_port, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_udp_dst_port, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_udp_src_port, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_udp_dst_port, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
 		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv4_src_udp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_NONFRAG_IPV4_UDP |
+		&hdrs_hint_ipv4_src_udp_src_port, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
 		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv4_src_udp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_NONFRAG_IPV4_UDP |
-		ETH_RSS_L3_SRC_ONLY | ETH_RSS_GTPU,
-		&hdrs_hint_ipv4_src_gtpu_up, IAVF_GTPU_HINT_UPLINK},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_NONFRAG_IPV4_UDP |
-		ETH_RSS_L3_SRC_ONLY | ETH_RSS_GTPU,
-		&hdrs_hint_ipv4_src_gtpu_dwn, IAVF_GTPU_HINT_DOWNLINK},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_NONFRAG_IPV4_UDP |
+		&hdrs_hint_ipv4_src_udp_dst_port, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
 		ETH_RSS_L3_SRC_ONLY, &hdrs_hint_ipv4_src,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_NONFRAG_IPV4_UDP |
+		IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
 		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv4_dst_udp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_NONFRAG_IPV4_UDP |
+		&hdrs_hint_ipv4_dst_udp_src_port, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
 		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv4_dst_udp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_NONFRAG_IPV4_UDP |
-		ETH_RSS_L3_DST_ONLY | ETH_RSS_GTPU,
-		&hdrs_hint_ipv4_dst_gtpu_up, IAVF_GTPU_HINT_UPLINK},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_NONFRAG_IPV4_UDP |
-		ETH_RSS_L3_DST_ONLY | ETH_RSS_GTPU,
-		&hdrs_hint_ipv4_dst_gtpu_dwn, IAVF_GTPU_HINT_DOWNLINK},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_NONFRAG_IPV4_UDP |
+		&hdrs_hint_ipv4_dst_udp_dst_port, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
 		ETH_RSS_L3_DST_ONLY, &hdrs_hint_ipv4_dst,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv4_udp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv4_udp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_PFCP,
-		&hdrs_hint_ipv4_pfcp, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_UDP, ETH_RSS_NONFRAG_IPV4_UDP,
-		&hdrs_hint_ipv4_udp, IAVF_GTPU_HINT_NONE},
+		IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_udp_src_port, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_udp_dst_port, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_udp_src_port, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_udp_dst_port, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_PFCP,
+		&hdrs_hint_ipv4_pfcp, IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP,
+		&hdrs_hint_ipv4_udp, IAVF_PHINT_IPV4_UDP},
 	/* IPV4 TCP */
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv4_src_tcp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv4_src_tcp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_L3_SRC_ONLY,
-		&hdrs_hint_ipv4_src, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv4_dst_tcp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv4_dst_tcp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_L3_DST_ONLY,
-		&hdrs_hint_ipv4_dst, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_NONFRAG_IPV4_TCP |
+	{ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_tcp_src_port, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_tcp_dst_port, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_src_port, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_dst_port, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
 		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv4_src_tcp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_NONFRAG_IPV4_TCP |
+		&hdrs_hint_ipv4_src_tcp_src_port, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
 		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv4_src_tcp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_NONFRAG_IPV4_TCP |
+		&hdrs_hint_ipv4_src_tcp_dst_port, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
 		ETH_RSS_L3_SRC_ONLY, &hdrs_hint_ipv4_src,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_NONFRAG_IPV4_TCP |
+		IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
 		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv4_dst_tcp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_NONFRAG_IPV4_TCP |
+		&hdrs_hint_ipv4_dst_tcp_src_port, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
 		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv4_dst_tcp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_NONFRAG_IPV4_TCP |
+		&hdrs_hint_ipv4_dst_tcp_dst_port, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
 		ETH_RSS_L3_DST_ONLY, &hdrs_hint_ipv4_dst,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv4_tcp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv4_tcp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_TCP, ETH_RSS_NONFRAG_IPV4_TCP,
-		&hdrs_hint_ipv4_tcp, IAVF_GTPU_HINT_NONE},
+		IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_tcp_src_port, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_tcp_dst_port, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_tcp_src_port, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_tcp_dst_port, IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP,
+		&hdrs_hint_ipv4_tcp, IAVF_PHINT_IPV4_TCP},
 	/* IPV4 SCTP */
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_L3_SRC_ONLY |
-		ETH_RSS_L4_SRC_ONLY, &hdrs_hint_ipv4_src_sctp_src_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_L3_SRC_ONLY |
-		ETH_RSS_L4_DST_ONLY, &hdrs_hint_ipv4_src_sctp_dst_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_L3_SRC_ONLY,
-		&hdrs_hint_ipv4_src, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_L3_DST_ONLY |
-		ETH_RSS_L4_SRC_ONLY, &hdrs_hint_ipv4_dst_sctp_src_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_L3_DST_ONLY |
-		ETH_RSS_L4_DST_ONLY, &hdrs_hint_ipv4_dst_sctp_dst_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_L3_DST_ONLY,
-		&hdrs_hint_ipv4_dst, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_NONFRAG_IPV4_SCTP |
+	{ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_sctp_src_port, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_sctp_dst_port, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_sctp_src_port, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_sctp_dst_port, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_NONFRAG_IPV4_SCTP |
 		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv4_src_sctp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_NONFRAG_IPV4_SCTP |
+		&hdrs_hint_ipv4_src_sctp_src_port, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_NONFRAG_IPV4_SCTP |
 		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv4_src_sctp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_NONFRAG_IPV4_SCTP |
+		&hdrs_hint_ipv4_src_sctp_dst_port, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_NONFRAG_IPV4_SCTP |
 		ETH_RSS_L3_SRC_ONLY, &hdrs_hint_ipv4_src,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_NONFRAG_IPV4_SCTP |
+		IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_NONFRAG_IPV4_SCTP |
 		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv4_dst_sctp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_NONFRAG_IPV4_SCTP |
+		&hdrs_hint_ipv4_dst_sctp_src_port, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_NONFRAG_IPV4_SCTP |
 		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv4_dst_sctp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_NONFRAG_IPV4_SCTP |
+		&hdrs_hint_ipv4_dst_sctp_dst_port, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_NONFRAG_IPV4_SCTP |
 		ETH_RSS_L3_DST_ONLY, &hdrs_hint_ipv4_dst,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv4_sctp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv4_sctp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4_SCTP, ETH_RSS_NONFRAG_IPV4_SCTP,
-		&hdrs_hint_ipv4_sctp, IAVF_GTPU_HINT_NONE},
+		IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_sctp_src_port, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_sctp_dst_port, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_NONFRAG_IPV4_SCTP | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_sctp_src_port, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_NONFRAG_IPV4_SCTP | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_sctp_dst_port, IAVF_PHINT_IPV4_SCTP},
+	{ETH_RSS_NONFRAG_IPV4_SCTP,
+		&hdrs_hint_ipv4_sctp, IAVF_PHINT_IPV4_SCTP},
 	/* IPV6 */
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_L2_SRC_ONLY,
-		&hdrs_hint_eth_src, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_L2_DST_ONLY,
-		&hdrs_hint_eth_dst, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_IPV6 | ETH_RSS_L2_SRC_ONLY,
-		&hdrs_hint_eth_src, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_IPV6 | ETH_RSS_L2_DST_ONLY,
-		&hdrs_hint_eth_dst, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_ETH,
-		&hdrs_hint_eth, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_S_VLAN,
-		&hdrs_hint_svlan, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV4, ETH_RSS_C_VLAN,
-		&hdrs_hint_cvlan, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_L3_SRC_ONLY,
-		&hdrs_hint_ipv6_src, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_L3_DST_ONLY,
-		&hdrs_hint_ipv6_dst, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_IPV6 | ETH_RSS_L3_SRC_ONLY,
-		&hdrs_hint_ipv6_src, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_IPV6 | ETH_RSS_L3_DST_ONLY,
-		&hdrs_hint_ipv6_dst, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_ESP,
-		&hdrs_hint_ipv6_esp, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_AH,
-		&hdrs_hint_ipv6_ah, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_L2TPV3,
-		&hdrs_hint_ipv6_l2tpv3, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6, ETH_RSS_IPV6,
-		&hdrs_hint_ipv6, IAVF_GTPU_HINT_NONE},
+	{ETH_RSS_L2_SRC_ONLY,
+		&hdrs_hint_eth_src, IAVF_PHINT_IPV6},
+	{ETH_RSS_L2_DST_ONLY,
+		&hdrs_hint_eth_dst, IAVF_PHINT_IPV6},
+	{ETH_RSS_ETH,
+		&hdrs_hint_eth, IAVF_PHINT_IPV6},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv6_src, IAVF_PHINT_IPV6},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv6_dst, IAVF_PHINT_IPV6},
+	{ETH_RSS_IPV6 | ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv6_src, IAVF_PHINT_IPV6},
+	{ETH_RSS_IPV6 | ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv6_dst, IAVF_PHINT_IPV6},
+	{ETH_RSS_IPV6,
+		&hdrs_hint_ipv6, IAVF_PHINT_IPV6},
+	{ETH_RSS_ESP,
+		&hdrs_hint_ipv6_esp, IAVF_PHINT_IPV6},
+	{ETH_RSS_AH,
+		&hdrs_hint_ipv6_ah, IAVF_PHINT_IPV6},
+	{ETH_RSS_L2TPV3,
+		&hdrs_hint_ipv6_l2tpv3, IAVF_PHINT_IPV6},
 	/* IPV6 UDP */
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_L3_SRC_ONLY |
-		ETH_RSS_L4_SRC_ONLY, &hdrs_hint_ipv6_src_udp_src_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_L3_SRC_ONLY |
-		ETH_RSS_L4_DST_ONLY, &hdrs_hint_ipv6_src_udp_dst_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_L3_SRC_ONLY,
-		&hdrs_hint_ipv6_src, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_L3_DST_ONLY |
-		ETH_RSS_L4_SRC_ONLY, &hdrs_hint_ipv6_dst_udp_src_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_L3_DST_ONLY |
-		ETH_RSS_L4_DST_ONLY, &hdrs_hint_ipv6_dst_udp_dst_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_L3_DST_ONLY,
-		&hdrs_hint_ipv6_dst, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_NONFRAG_IPV6_UDP |
+	{ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_udp_src_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_udp_dst_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_udp_src_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_udp_dst_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_NONFRAG_IPV6_UDP |
 		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv6_src_udp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_NONFRAG_IPV6_UDP |
+		&hdrs_hint_ipv4_src_udp_src_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_NONFRAG_IPV6_UDP |
 		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv6_src_udp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_NONFRAG_IPV6_UDP |
-		ETH_RSS_L3_SRC_ONLY, &hdrs_hint_ipv6_src,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_NONFRAG_IPV6_UDP |
+		&hdrs_hint_ipv4_src_udp_dst_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_NONFRAG_IPV6_UDP |
+		ETH_RSS_L3_SRC_ONLY, &hdrs_hint_ipv4_src,
+		IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_NONFRAG_IPV6_UDP |
 		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv6_dst_udp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_NONFRAG_IPV6_UDP |
+		&hdrs_hint_ipv4_dst_udp_src_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_NONFRAG_IPV6_UDP |
 		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv6_dst_udp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_NONFRAG_IPV6_UDP |
-		ETH_RSS_L3_DST_ONLY, &hdrs_hint_ipv6_dst,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv6_udp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv6_udp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_PFCP,
-		&hdrs_hint_ipv6_pfcp, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_UDP, ETH_RSS_NONFRAG_IPV6_UDP,
-		&hdrs_hint_ipv6_udp, IAVF_GTPU_HINT_NONE},
+		&hdrs_hint_ipv4_dst_udp_dst_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_NONFRAG_IPV6_UDP |
+		ETH_RSS_L3_DST_ONLY, &hdrs_hint_ipv4_dst,
+		IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_udp_src_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_udp_dst_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_NONFRAG_IPV6_UDP | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_udp_src_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_NONFRAG_IPV6_UDP | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_udp_dst_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_PFCP,
+		&hdrs_hint_ipv4_pfcp, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_NONFRAG_IPV6_UDP,
+		&hdrs_hint_ipv4_udp, IAVF_PHINT_IPV6_UDP},
 	/* IPV6 TCP */
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_L3_SRC_ONLY |
-		ETH_RSS_L4_SRC_ONLY, &hdrs_hint_ipv6_src_tcp_src_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_L3_SRC_ONLY |
-		ETH_RSS_L4_DST_ONLY, &hdrs_hint_ipv6_src_tcp_dst_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_L3_SRC_ONLY,
-		&hdrs_hint_ipv6_src, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_L3_DST_ONLY |
-		ETH_RSS_L4_SRC_ONLY, &hdrs_hint_ipv6_dst_tcp_src_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_L3_DST_ONLY |
-		ETH_RSS_L4_DST_ONLY, &hdrs_hint_ipv6_dst_tcp_dst_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_L3_DST_ONLY,
-		&hdrs_hint_ipv6_dst, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_NONFRAG_IPV6_TCP |
+	{ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_tcp_src_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_tcp_dst_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_src_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_dst_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_NONFRAG_IPV6_TCP |
 		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv6_src_tcp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_NONFRAG_IPV6_TCP |
+		&hdrs_hint_ipv4_src_tcp_src_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_NONFRAG_IPV6_TCP |
 		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv6_src_tcp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_NONFRAG_IPV6_TCP |
-		ETH_RSS_L3_SRC_ONLY, &hdrs_hint_ipv6_src,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_NONFRAG_IPV6_TCP |
+		&hdrs_hint_ipv4_src_tcp_dst_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_NONFRAG_IPV6_TCP |
+		ETH_RSS_L3_SRC_ONLY, &hdrs_hint_ipv4_src,
+		IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_NONFRAG_IPV6_TCP |
 		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv6_dst_tcp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_NONFRAG_IPV6_TCP |
+		&hdrs_hint_ipv4_dst_tcp_src_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_NONFRAG_IPV6_TCP |
 		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv6_dst_tcp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_NONFRAG_IPV6_TCP |
-		ETH_RSS_L3_DST_ONLY, &hdrs_hint_ipv6_dst,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv6_tcp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv6_tcp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_TCP, ETH_RSS_NONFRAG_IPV6_TCP,
-		&hdrs_hint_ipv6_tcp, IAVF_GTPU_HINT_NONE},
+		&hdrs_hint_ipv4_dst_tcp_dst_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_NONFRAG_IPV6_TCP |
+		ETH_RSS_L3_DST_ONLY, &hdrs_hint_ipv4_dst,
+		IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_tcp_src_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_tcp_dst_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_NONFRAG_IPV6_TCP | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_tcp_src_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_NONFRAG_IPV6_TCP | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_tcp_dst_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_NONFRAG_IPV6_TCP,
+		&hdrs_hint_ipv4_tcp, IAVF_PHINT_IPV6_TCP},
 	/* IPV6 SCTP */
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_L3_SRC_ONLY |
-		ETH_RSS_L4_SRC_ONLY, &hdrs_hint_ipv6_src_sctp_src_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_L3_SRC_ONLY |
-		ETH_RSS_L4_DST_ONLY, &hdrs_hint_ipv6_src_sctp_dst_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_L3_SRC_ONLY,
-		&hdrs_hint_ipv6_src, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_L3_DST_ONLY |
-		ETH_RSS_L4_SRC_ONLY, &hdrs_hint_ipv6_dst_sctp_src_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_L3_DST_ONLY |
-		ETH_RSS_L4_DST_ONLY, &hdrs_hint_ipv6_dst_sctp_dst_port,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_L3_DST_ONLY,
-		&hdrs_hint_ipv6_dst, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_NONFRAG_IPV6_SCTP |
+	{ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_sctp_src_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_sctp_dst_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_sctp_src_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_sctp_dst_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_NONFRAG_IPV6_SCTP |
 		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv6_src_sctp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_NONFRAG_IPV6_SCTP |
+		&hdrs_hint_ipv4_src_sctp_src_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_NONFRAG_IPV6_SCTP |
 		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv6_src_sctp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_NONFRAG_IPV6_SCTP |
-		ETH_RSS_L3_SRC_ONLY, &hdrs_hint_ipv6_src,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_NONFRAG_IPV6_SCTP |
+		&hdrs_hint_ipv4_src_sctp_dst_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_NONFRAG_IPV6_SCTP |
+		ETH_RSS_L3_SRC_ONLY, &hdrs_hint_ipv4_src,
+		IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_NONFRAG_IPV6_SCTP |
 		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv6_dst_sctp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_NONFRAG_IPV6_SCTP |
+		&hdrs_hint_ipv4_dst_sctp_src_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_NONFRAG_IPV6_SCTP |
 		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv6_dst_sctp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_NONFRAG_IPV6_SCTP |
-		ETH_RSS_L3_DST_ONLY, &hdrs_hint_ipv6_dst,
-		IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_L4_SRC_ONLY,
-		&hdrs_hint_ipv6_sctp_src_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_L4_DST_ONLY,
-		&hdrs_hint_ipv6_sctp_dst_port, IAVF_GTPU_HINT_NONE},
-	{IAVF_PATTERN_HINT_IPV6_SCTP, ETH_RSS_NONFRAG_IPV6_SCTP,
-		&hdrs_hint_ipv6_sctp, IAVF_GTPU_HINT_NONE},
+		&hdrs_hint_ipv4_dst_sctp_dst_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_NONFRAG_IPV6_SCTP |
+		ETH_RSS_L3_DST_ONLY, &hdrs_hint_ipv4_dst,
+		IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_sctp_src_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_sctp_dst_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_NONFRAG_IPV6_SCTP | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_sctp_src_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_NONFRAG_IPV6_SCTP | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_sctp_dst_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_NONFRAG_IPV6_SCTP,
+		&hdrs_hint_ipv4_sctp, IAVF_PHINT_IPV6_SCTP},
+	/* VLAN */
+	{ETH_RSS_S_VLAN,
+		&hdrs_hint_svlan, IAVF_PHINT_S_VLAN},
+	{ETH_RSS_C_VLAN,
+		&hdrs_hint_cvlan, IAVF_PHINT_C_VLAN},
+};
+
+struct iavf_hash_match_type iavf_gtpu_hash_map_list[] = {
+	/* GTPU */
+	/* GTPU IP */
+	/* GTPU IPV4*/
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_ip,
+		IAVF_PHINT_IPV4_GTPU_IP | IAVF_PHINT_IPV4},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_ip,
+		IAVF_PHINT_IPV4_GTPU_IP | IAVF_PHINT_IPV4},
+	{ETH_RSS_IPV4 |
+		ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_ip,
+		IAVF_PHINT_IPV4_GTPU_IP | IAVF_PHINT_IPV4},
+	{ETH_RSS_IPV4 |
+		ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_ip,
+		IAVF_PHINT_IPV4_GTPU_IP | IAVF_PHINT_IPV4},
+	/* GTPU EH */
+	/* Inner IPV4 */
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4},
+	{ETH_RSS_IPV4 |
+		ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4},
+	{ETH_RSS_IPV4 |
+		ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4},
+	/* Inner IPV4->UDP */
+	{ETH_RSS_L3_SRC_ONLY |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_udp_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_SRC_ONLY |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_udp_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_udp_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_DST_ONLY |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_udp_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_DST_ONLY |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_udp_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_udp_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_udp_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_udp_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_udp_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_udp_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_udp_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_udp_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_UDP},
+	/* Inner IPV4->TCP */
+	{ETH_RSS_L3_SRC_ONLY |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_tcp_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_SRC_ONLY |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_tcp_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_tcp_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_DST_ONLY |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_DST_ONLY |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_tcp_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_tcp_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_tcp_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_tcp_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_src_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_tcp_dst_gtpu_eh,
+		IAVF_PHINT_IPV4_GTPU_EH | IAVF_PHINT_IPV4_TCP},
+	/* GTPU EH UP */
+	/* Inner IPV4 */
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4},
+	{ETH_RSS_IPV4 |
+		ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4},
+	{ETH_RSS_IPV4 |
+		ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4},
+	/* Inner IPV4->UDP */
+	{ETH_RSS_L3_SRC_ONLY |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_udp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_SRC_ONLY |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_udp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_udp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_DST_ONLY |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_udp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_DST_ONLY |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_udp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_udp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_udp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_udp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_udp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_udp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_udp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_udp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_UDP},
+	/* Inner IPV4->TCP */
+	{ETH_RSS_L3_SRC_ONLY |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_tcp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_SRC_ONLY |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_tcp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_tcp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_DST_ONLY |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_DST_ONLY |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_tcp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_tcp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_tcp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_tcp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_tcp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_UPLINK | IAVF_PHINT_IPV4_TCP},
+	/* GTPU EH DWN */
+	/* Inner IPV4 */
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4},
+	{ETH_RSS_IPV4 |
+		ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4},
+	{ETH_RSS_IPV4 |
+		ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4},
+	/* Inner IPV4->UDP */
+	{ETH_RSS_L3_SRC_ONLY |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_udp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_SRC_ONLY |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_udp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_udp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_DST_ONLY |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_udp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_DST_ONLY |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_udp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_udp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_udp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_udp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_udp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_udp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_udp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	{ETH_RSS_NONFRAG_IPV4_UDP |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_udp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_UDP},
+	/* Inner IPV4->TCP */
+	{ETH_RSS_L3_SRC_ONLY |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_tcp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_SRC_ONLY |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_tcp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_tcp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_DST_ONLY |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_DST_ONLY |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_tcp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_src_tcp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_src_tcp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_tcp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_src_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_dst_tcp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
+	{ETH_RSS_NONFRAG_IPV4_TCP |
+		ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv4_tcp_dst_gtpu_up,
+		IAVF_PHINT_IPV4_GTPU_EH_DWNLINK | IAVF_PHINT_IPV4_TCP},
 };
 
 struct virtchnl_proto_hdrs *iavf_hash_default_hdrs[] = {
@@ -1037,10 +1723,12 @@ iavf_hash_init(struct iavf_adapter *ad)
 }
 
 static int
-iavf_hash_check_inset(const struct rte_flow_item pattern[],
-		      struct rte_flow_error *error)
+iavf_hash_parse_pattern(struct iavf_pattern_match_item *pattern_match_item,
+			const struct rte_flow_item pattern[], uint64_t *phint,
+			struct rte_flow_error *error)
 {
 	const struct rte_flow_item *item = pattern;
+	const struct rte_flow_item_gtp_psc *psc;
 
 	for (item = pattern; item->type != RTE_FLOW_ITEM_TYPE_END; item++) {
 		if (item->last) {
@@ -1049,45 +1737,45 @@ iavf_hash_check_inset(const struct rte_flow_item pattern[],
 					   "Not support range");
 			return -rte_errno;
 		}
+
+		switch (item->type) {
+		case RTE_FLOW_ITEM_TYPE_GTPU:
+			*phint |= IAVF_PHINT_IPV4_GTPU_IP;
+			break;
+		case RTE_FLOW_ITEM_TYPE_GTP_PSC:
+			psc = item->spec;
+			*phint &= ~IAVF_PHINT_IPV4_GTPU_IP;
+			if (!psc)
+				*phint |= IAVF_PHINT_IPV4_GTPU_EH;
+			else if (psc->pdu_type == GTPU_EH_UPLINK)
+				*phint |= IAVF_PHINT_IPV4_GTPU_EH_UPLINK;
+			else if (psc->pdu_type == GTPU_EH_DWNLINK)
+				*phint |= IAVF_PHINT_IPV4_GTPU_EH_DWNLINK;
+			break;
+		default:
+			break;
+		}
 	}
+
+	/* update and restore pattern hint */
+	*phint |= ((struct iavf_pattern_match_type *)
+				(pattern_match_item->meta))->pattern_hint;
 
 	return 0;
 }
 
-static void
-iavf_hash_refine_type(uint64_t *rss_type, const struct rte_flow_item pattern[],
-		      enum iavf_gtpu_hint *gtpu_hint)
-{
-	const struct rte_flow_item *item;
-
-	for (item = pattern; item->type != RTE_FLOW_ITEM_TYPE_END; item++) {
-		if (item->type == RTE_FLOW_ITEM_TYPE_GTP_PSC) {
-			const struct rte_flow_item_gtp_psc *psc = item->spec;
-
-			if (psc && (psc->pdu_type == IAVF_GTPU_HINT_UPLINK ||
-				    psc->pdu_type == IAVF_GTPU_HINT_DOWNLINK)) {
-				*rss_type |= ETH_RSS_GTPU;
-				*gtpu_hint = psc->pdu_type;
-			}
-		}
-	}
-}
-
 static int
 iavf_hash_parse_action(struct iavf_pattern_match_item *pattern_match_item,
-		       const struct rte_flow_item pattern[],
 		       const struct rte_flow_action actions[],
-		       void **meta, struct rte_flow_error *error)
+		       uint64_t pattern_hint, void **meta,
+		       struct rte_flow_error *error)
 {
-	struct iavf_pattern_match_type *mt = (struct iavf_pattern_match_type *)
-					(pattern_match_item->meta);
 	struct iavf_rss_meta *rss_meta = (struct iavf_rss_meta *)*meta;
-	uint32_t type_list_len = RTE_DIM(iavf_hash_type_list);
-	struct iavf_hash_match_type *type_match_item;
-	enum iavf_gtpu_hint gtpu_hint = IAVF_GTPU_HINT_NONE;
+	struct iavf_hash_match_type *hash_map_list;
 	enum rte_flow_action_type action_type;
 	const struct rte_flow_action_rss *rss;
 	const struct rte_flow_action *action;
+	uint32_t mlist_len;
 	bool item_found = false;
 	uint64_t rss_type;
 	uint16_t i;
@@ -1106,12 +1794,6 @@ iavf_hash_parse_action(struct iavf_pattern_match_item *pattern_match_item,
 			 * of the same level.
 			 */
 			rss_type = rte_eth_rss_hf_refine(rss_type);
-
-			/**
-			 * Refine the hash type base on some specific item of
-			 * the pattern, such as identify the gtpu hash.
-			 */
-			iavf_hash_refine_type(&rss_type, pattern, &gtpu_hint);
 
 			/* Check if pattern is empty. */
 			if (pattern_match_item->pattern_list !=
@@ -1148,35 +1830,29 @@ iavf_hash_parse_action(struct iavf_pattern_match_item *pattern_match_item,
 				rss_meta->rss_algorithm =
 					VIRTCHNL_RSS_ALG_TOEPLITZ_ASYMMETRIC;
 
-			type_match_item =
-			rte_zmalloc("iavf_type_match_item",
-				    sizeof(struct iavf_hash_match_type), 0);
-			if (!type_match_item) {
-				rte_flow_error_set(error, EINVAL,
-						   RTE_FLOW_ERROR_TYPE_HANDLE,
-						   NULL,
-						   "No memory for type_match_item");
-				return -ENOMEM;
+			if ((pattern_hint & IAVF_PHINT_IPV4_GTPU_IP) ||
+			    (pattern_hint & IAVF_PHINT_IPV4_GTPU_EH) ||
+			    (pattern_hint & IAVF_PHINT_IPV4_GTPU_EH_UPLINK) ||
+			    (pattern_hint & IAVF_PHINT_IPV4_GTPU_EH_DWNLINK)) {
+				hash_map_list = iavf_gtpu_hash_map_list;
+				mlist_len = RTE_DIM(iavf_gtpu_hash_map_list);
+			} else {
+				hash_map_list = iavf_hash_map_list;
+				mlist_len = RTE_DIM(iavf_hash_map_list);
 			}
 
 			/* Find matched proto hdrs according to hash type. */
-			for (i = 0; i < type_list_len; i++) {
+			for (i = 0; i < mlist_len; i++) {
 				struct iavf_hash_match_type *ht_map =
-					&iavf_hash_type_list[i];
+					&hash_map_list[i];
 				if (rss_type == ht_map->hash_type &&
-				    mt->phint_type == ht_map->phint_type &&
-				    gtpu_hint == ht_map->gtpu_hint) {
-					type_match_item->hash_type =
-						ht_map->hash_type;
-					type_match_item->proto_hdrs =
-						ht_map->proto_hdrs;
+				    pattern_hint == ht_map->pattern_hint) {
 					rss_meta->proto_hdrs =
-						type_match_item->proto_hdrs;
+						ht_map->proto_hdrs;
 					item_found = true;
+					break;
 				}
 			}
-
-			rte_free(type_match_item);
 
 			if (!item_found)
 				return rte_flow_error_set(error, ENOTSUP,
@@ -1209,6 +1885,7 @@ iavf_hash_parse_pattern_action(__rte_unused struct iavf_adapter *ad,
 {
 	struct iavf_pattern_match_item *pattern_match_item;
 	struct iavf_rss_meta *rss_meta_ptr;
+	uint64_t phint = IAVF_PHINT_NONE;
 	int ret = 0;
 
 	rss_meta_ptr = rte_zmalloc(NULL, sizeof(*rss_meta_ptr), 0);
@@ -1228,12 +1905,13 @@ iavf_hash_parse_pattern_action(__rte_unused struct iavf_adapter *ad,
 		goto error;
 	}
 
-	ret = iavf_hash_check_inset(pattern, error);
+	ret = iavf_hash_parse_pattern(pattern_match_item, pattern, &phint,
+				      error);
 	if (ret)
 		goto error;
 
 	/* Check rss action. */
-	ret = iavf_hash_parse_action(pattern_match_item, pattern, actions,
+	ret = iavf_hash_parse_action(pattern_match_item, actions, phint,
 				     (void **)&rss_meta_ptr, error);
 
 error:
