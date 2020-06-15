@@ -685,12 +685,9 @@ show_port(void)
 			printf("Link get failed (port %u): %s\n",
 			       i, rte_strerror(-ret));
 		} else {
-			printf("\t  -- link speed %d duplex %d,"
-					" auto neg %d status %d\n",
-					link.link_speed,
-					link.link_duplex,
-					link.link_autoneg,
-					link.link_status);
+			rte_eth_link_printf("\t  -- link speed: %M, duplex: %D,"
+					" auto neg: %A, status: %S\n",
+					&link);
 		}
 		printf("\t  -- promiscuous (%d)\n",
 				rte_eth_promiscuous_get(i));
