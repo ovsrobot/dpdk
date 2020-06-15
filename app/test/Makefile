@@ -249,6 +249,9 @@ SRCS-$(CONFIG_RTE_LIBRTE_SECURITY) += test_security.c
 
 SRCS-$(CONFIG_RTE_LIBRTE_IPSEC) += test_ipsec.c test_ipsec_perf.c
 SRCS-$(CONFIG_RTE_LIBRTE_IPSEC) += test_ipsec_sad.c
+
+SRCS-$(CONFIG_RTE_LIBRTE_ETHER) += test_ethdev_link.c
+
 ifeq ($(CONFIG_RTE_LIBRTE_IPSEC),y)
 LDLIBS += -lrte_ipsec
 endif

@@ -2386,6 +2386,169 @@ rte_eth_link_get_nowait(uint16_t port_id, struct rte_eth_link *eth_link)
 }
 
 int
+rte_eth_link_printf(const char *const fmt,
+		    struct rte_eth_link *link)
+{
+	char text[200];
+	int ret;
+	ret = rte_eth_link_format(text, 200, fmt, link);
+	printf("%s", text);
+	return ret;
+}
+
+int
+rte_eth_link_format(char *str, int32_t len, const char *const fmt,
+		    struct rte_eth_link *link)
+{
+	int offset = 0;
+	int32_t clen = len;
+	const char *fmt_cur = fmt;
+	double gbits = (double)link->link_speed / 1000.;
+	/* TBD: make it international? */
+	static const char LINK_DOWN_STR[]     = "Link down";
+	static const char LINK_UP_STR[]       = "Link up at ";
+	static const char UNKNOWN_SPEED_STR[] = "Unknown speed";
+	static const char MBITS_STR[]	      = "Mbit/s";
+	static const char GBITS_STR[]	      = "Gbit/s";
+	static const char AUTONEG_STR[]       = "Autoneg";
+	static const char FIXED_STR[]         = "Fixed";
+	static const char FDX_STR[]           = "FDX";
+	static const char HDX_STR[]           = "HDX";
+	static const char UNKNOWN_STR[]       = "Unknown";
+	static const char UP_STR[]            = "Up";
+	static const char DOWN_STR[]          = "Down";
+	if (str == NULL || len == 0)
+		return -1;
+	/* default format string, if no fmt is specified */
+	if (fmt == NULL) {
+		if (link->link_status == ETH_LINK_DOWN)
+			return snprintf(str, (size_t)clen, "%s", LINK_DOWN_STR);
+
+		offset = snprintf(str, (size_t)clen, "%s", LINK_UP_STR);
+		if (offset < 0 || (clen - offset) <= 0)
+			return -1;
+		clen -= offset;
+		str += offset;
+		if (link->link_speed == ETH_SPEED_NUM_UNKNOWN) {
+			offset = snprintf(str, clen, "%s",
+					  UNKNOWN_SPEED_STR);
+			if (offset < 0 || (clen - offset) <= 0)
+				return -1;
+			clen -= offset;
+			str += offset;
+		} else {
+			if (link->link_speed < ETH_SPEED_NUM_1G) {
+				offset = snprintf(str, clen,
+						  "%u %s",
+						  link->link_speed,
+						  MBITS_STR);
+				if (offset < 0 || (clen - offset) <= 0)
+					return -1;
+				clen -= offset;
+				str += offset;
+
+			} else {
+				offset = snprintf(str, clen,
+						  "%.1f %s",
+						  gbits,
+						  GBITS_STR);
+				if (offset < 0 || (clen - offset) <= 0)
+					return -1;
+				clen -= offset;
+				str += offset;
+			}
+		}
+		offset = snprintf(str, clen, " %s", link->link_duplex ?
+			       FDX_STR : HDX_STR);
+		if (offset < 0 || (clen - offset) <= 0)
+			return -1;
+		clen -= offset;
+		str += offset;
+		offset = snprintf(str, clen, " %s", link->link_autoneg ?
+			       AUTONEG_STR : FIXED_STR);
+		if (offset < 0 || (clen - offset) <= 0)
+			return -1;
+		clen -= offset;
+		str += offset;
+	/* Formated status */
+	} else {
+		char c = *fmt_cur;
+		while (c) {
+			if (clen <= 0)
+				return -1;
+			if (c == '%') {
+				c = *++fmt_cur;
+				switch (c) {
+				/* Speed in Mbits/s */
+				case 'M':
+					if (link->link_speed ==
+					    ETH_SPEED_NUM_UNKNOWN)
+						offset = snprintf(str,
+						  clen, "%s",
+						  UNKNOWN_STR);
+					else
+						offset = snprintf(str,
+						  clen, "%u",
+						  link->link_speed);
+					break;
+				/* Speed in Gbits/s */
+				case 'G':
+					if (link->link_speed ==
+					    ETH_SPEED_NUM_UNKNOWN)
+						offset = snprintf(str,
+						  clen, "%s",
+						  UNKNOWN_STR);
+					else {
+						offset = snprintf(str,
+						  clen, "%.1f",
+						  gbits);
+					}
+					break;
+				/* Link status */
+				case 'S':
+					offset = snprintf(str, clen,
+						"%s",
+						link->link_status ?
+						UP_STR : DOWN_STR);
+					break;
+				/* Link autoneg */
+				case 'A':
+					offset = snprintf(str, clen,
+						"%s",
+						link->link_autoneg ?
+						AUTONEG_STR :
+						FIXED_STR);
+					break;
+				/* Link duplex */
+				case 'D':
+					offset = snprintf(str, clen,
+						"%s",
+						link->link_duplex ?
+						FDX_STR : HDX_STR);
+					break;
+				/* Error cases */
+				default:
+					return -1;
+
+				}
+				if (offset < 0 || (clen - offset) <= 0)
+					return -1;
+				clen -= offset;
+				str += offset;
+			} else {
+				*str++ = c;
+				clen--;
+			}
+			c = *++fmt_cur;
+		}
+	}
+	/* teminate string */
+	clen = len - clen;
+	*str = 0;
+	return clen;
+}
+
+int
 rte_eth_stats_get(uint16_t port_id, struct rte_eth_stats *stats)
 {
 	struct rte_eth_dev *dev;

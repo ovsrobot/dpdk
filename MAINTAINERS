@@ -377,6 +377,7 @@ T: git://dpdk.org/next/dpdk-next-net
 F: lib/librte_ethdev/
 F: devtools/test-null.sh
 F: doc/guides/prog_guide/switch_representation.rst
+F: app/test/test_ethdev*
 
 Flow API
 M: Ori Kam <orika@mellanox.com>
