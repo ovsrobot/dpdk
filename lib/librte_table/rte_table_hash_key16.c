@@ -44,7 +44,7 @@ struct rte_bucket_4_16 {
 	uint64_t key[4][2];
 
 	/* Cache line 2 */
-	uint8_t data[0];
+	uint8_t data[0] __rte_cache_aligned;
 };
 
 struct rte_table_hash {
