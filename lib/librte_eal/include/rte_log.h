@@ -376,6 +376,31 @@ int rte_vlog(uint32_t level, uint32_t logtype, const char *format, va_list ap)
 		 RTE_LOGTYPE_ ## t, # t ": " __VA_ARGS__) :	\
 	 0)
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Register a dynamic log type in constructor context with its name and level.
+ *
+ * It is a wrapper macro for declaring the logtype, register the log and sets
+ * it's level in the constructor context.
+ *
+ * @param type
+ *   The log type identifier
+ * @param name
+ *    Name for the log type to be registered
+ * @param level
+ *   Log level. A value between EMERG (1) and DEBUG (8).
+ */
+#define RTE_LOG_REGISTER(type, name, level)			\
+int type;							\
+RTE_INIT(__##type)						\
+{								\
+	type = rte_log_register(RTE_STR(name));			\
+	if (type >= 0)						\
+		rte_log_set_level(type, RTE_LOG_##level);	\
+}
+
 #ifdef __cplusplus
 }
 #endif
