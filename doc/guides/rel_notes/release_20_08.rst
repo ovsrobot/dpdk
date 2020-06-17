@@ -55,6 +55,12 @@ New Features
      This section is a comment. Do not overwrite or remove it.
      Also, make sure to start the actual text at the margin.
      =========================================================
+* **Updated the Intel ice driver.**
+
+  Updated the Intel ice driver with new features and improvements, including:
+
+  * Add support more PPPoE packet type for switch filter
+
 
 * **Updated Mellanox mlx5 driver.**
 
