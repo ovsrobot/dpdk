@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2015 Intel Corporation
  */
-
+#include <signal.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <getopt.h>
@@ -34,6 +34,7 @@ static struct {
 } latency_numbers;
 
 int hw_timestamping;
+static volatile bool quit_signal;
 
 #define TICKS_PER_CYCLE_SHIFT 16
 static uint64_t ticks_per_cycle_mult;
@@ -215,7 +216,7 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
  * Main thread that does the work, reading from INPUT_PORT
  * and writing to OUTPUT_PORT
  */
-static  __rte_noreturn void
+static void
 lcore_main(void)
 {
 	uint16_t port;
@@ -230,7 +231,7 @@ lcore_main(void)
 
 	printf("\nCore %u forwarding packets. [Ctrl+C to quit]\n",
 			rte_lcore_id());
-	for (;;) {
+	while (!quit_signal) {
 		RTE_ETH_FOREACH_DEV(port) {
 			struct rte_mbuf *bufs[BURST_SIZE];
 			const uint16_t nb_rx = rte_eth_rx_burst(port, 0,
@@ -249,18 +250,38 @@ lcore_main(void)
 	}
 }
 
+static void
+stop_and_close_eth_dev(uint16_t port_id)
+{
+	RTE_ETH_FOREACH_DEV(port_id) {
+		printf("Closing port %d...", port_id);
+		rte_eth_dev_stop(port_id);
+		rte_eth_dev_close(port_id);
+		printf(" Done\n");
+	}
+}
+
+static void
+int_handler(int sig_num)
+{
+	printf("Exiting on signal %d\n", sig_num);
+	quit_signal = true;
+}
+
 /* Main function, does initialisation and calls the per-lcore functions */
 int
 main(int argc, char *argv[])
 {
 	struct rte_mempool *mbuf_pool;
 	uint16_t nb_ports;
-	uint16_t portid;
+	uint16_t portid = 0;
 	struct option lgopts[] = {
 		{ NULL,  0, 0, 0 }
 	};
 	int opt, option_index;
-
+	quit_signal = false;
+	/* catch ctrl-c so we can clear resources on exit */
+	signal(SIGINT, int_handler);
 
 	/* init EAL */
 	int ret = rte_eal_init(argc, argv);
@@ -278,25 +299,33 @@ main(int argc, char *argv[])
 			break;
 		default:
 			printf(usage, argv[0]);
+			stop_and_close_eth_dev(portid);
+			rte_eal_cleanup();
 			return -1;
 		}
 	optind = 1; /* reset getopt lib */
 
 	nb_ports = rte_eth_dev_count_avail();
-	if (nb_ports < 2 || (nb_ports & 1))
+	if (nb_ports < 2 || (nb_ports & 1)) {
+		stop_and_close_eth_dev(portid);
 		rte_exit(EXIT_FAILURE, "Error: number of ports must be even\n");
+	}
 
 	mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL",
 		NUM_MBUFS * nb_ports, MBUF_CACHE_SIZE, 0,
 		RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
-	if (mbuf_pool == NULL)
+	if (mbuf_pool == NULL) {
+		stop_and_close_eth_dev(portid);
 		rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
+	}
 
 	/* initialize all ports */
 	RTE_ETH_FOREACH_DEV(portid)
-		if (port_init(portid, mbuf_pool) != 0)
+		if (port_init(portid, mbuf_pool) != 0) {
+			stop_and_close_eth_dev(portid);
 			rte_exit(EXIT_FAILURE, "Cannot init port %"PRIu8"\n",
 					portid);
+		}
 
 	if (rte_lcore_count() > 1)
 		printf("\nWARNING: Too much enabled lcores - "
@@ -304,5 +333,7 @@ main(int argc, char *argv[])
 
 	/* call lcore_main on master core only */
 	lcore_main();
+	stop_and_close_eth_dev(portid);
+	rte_eal_cleanup();
 	return 0;
 }
