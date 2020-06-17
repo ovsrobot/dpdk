@@ -220,6 +220,17 @@ flush_tx_error_callback(struct rte_mbuf **unsent, uint16_t count,
 
 }
 
+static void
+stop_and_close_eth_dev(uint16_t port_id)
+{
+	RTE_ETH_FOREACH_DEV(port_id) {
+		printf("Closing port %d...", port_id);
+		rte_eth_dev_stop(port_id);
+		rte_eth_dev_close(port_id);
+		printf(" Done\n");
+	}
+}
+
 static inline int
 free_tx_buffers(struct rte_eth_dev_tx_buffer *tx_buffer[]) {
 	uint16_t port_id;
@@ -251,18 +262,22 @@ configure_tx_buffers(struct rte_eth_dev_tx_buffer *tx_buffer[])
 		tx_buffer[port_id] = rte_zmalloc_socket("tx_buffer",
 				RTE_ETH_TX_BUFFER_SIZE(MAX_PKTS_BURST), 0,
 				rte_eth_dev_socket_id(port_id));
-		if (tx_buffer[port_id] == NULL)
+		if (tx_buffer[port_id] == NULL) {
+			stop_and_close_eth_dev(port_id);
 			rte_exit(EXIT_FAILURE, "Cannot allocate buffer for tx on port %u\n",
 				 port_id);
+		}
 
 		rte_eth_tx_buffer_init(tx_buffer[port_id], MAX_PKTS_BURST);
 
 		ret = rte_eth_tx_buffer_set_err_callback(tx_buffer[port_id],
 				flush_tx_error_callback, NULL);
-		if (ret < 0)
+		if (ret < 0) {
+			stop_and_close_eth_dev(port_id);
 			rte_exit(EXIT_FAILURE,
 			"Cannot set error callback for tx buffer on port %u\n",
 				 port_id);
+		}
 	}
 	return 0;
 }
@@ -662,7 +677,7 @@ main(int argc, char **argv)
 	int ret;
 	unsigned nb_ports;
 	unsigned int lcore_id, last_lcore_id, master_lcore_id;
-	uint16_t port_id;
+	uint16_t port_id = 0;
 	uint16_t nb_ports_available;
 	struct worker_thread_args worker_args = {NULL, NULL};
 	struct send_thread_args send_args = {NULL, NULL};
@@ -686,25 +701,31 @@ main(int argc, char **argv)
 		return -1;
 
 	/* Check if we have enought cores */
-	if (rte_lcore_count() < 3)
+	if (rte_lcore_count() < 3) {
+		stop_and_close_eth_dev(port_id);
 		rte_exit(EXIT_FAILURE, "Error, This application needs at "
 				"least 3 logical cores to run:\n"
 				"1 lcore for packet RX\n"
 				"1 lcore for packet TX\n"
 				"and at least 1 lcore for worker threads\n");
+	}
 
 	nb_ports = rte_eth_dev_count_avail();
 	if (nb_ports == 0)
 		rte_exit(EXIT_FAILURE, "Error: no ethernet ports detected\n");
-	if (nb_ports != 1 && (nb_ports & 1))
+	if (nb_ports != 1 && (nb_ports & 1)) {
+		stop_and_close_eth_dev(port_id);
 		rte_exit(EXIT_FAILURE, "Error: number of ports must be even, except "
 				"when using a single port\n");
+	}
 
 	mbuf_pool = rte_pktmbuf_pool_create("mbuf_pool", MBUF_PER_POOL,
 			MBUF_POOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
 			rte_socket_id());
-	if (mbuf_pool == NULL)
+	if (mbuf_pool == NULL) {
+		stop_and_close_eth_dev(port_id);
 		rte_exit(EXIT_FAILURE, "%s\n", rte_strerror(rte_errno));
+	}
 
 	nb_ports_available = nb_ports;
 
@@ -719,12 +740,15 @@ main(int argc, char **argv)
 		/* init port */
 		printf("Initializing port %u... done\n", port_id);
 
-		if (configure_eth_port(port_id) != 0)
+		if (configure_eth_port(port_id) != 0) {
+			stop_and_close_eth_dev(port_id);
 			rte_exit(EXIT_FAILURE, "Cannot initialize port %"PRIu8"\n",
 					port_id);
+		}
 	}
 
 	if (!nb_ports_available) {
+		stop_and_close_eth_dev(port_id);
 		rte_exit(EXIT_FAILURE,
 			"All available ports are disabled. Please set portmask.\n");
 	}
@@ -732,19 +756,25 @@ main(int argc, char **argv)
 	/* Create rings for inter core communication */
 	rx_to_workers = rte_ring_create("rx_to_workers", RING_SIZE, rte_socket_id(),
 			RING_F_SP_ENQ);
-	if (rx_to_workers == NULL)
+	if (rx_to_workers == NULL) {
+		stop_and_close_eth_dev(port_id);
 		rte_exit(EXIT_FAILURE, "%s\n", rte_strerror(rte_errno));
+	}
 
 	workers_to_tx = rte_ring_create("workers_to_tx", RING_SIZE, rte_socket_id(),
 			RING_F_SC_DEQ);
-	if (workers_to_tx == NULL)
+	if (workers_to_tx == NULL) {
+		stop_and_close_eth_dev(port_id);
 		rte_exit(EXIT_FAILURE, "%s\n", rte_strerror(rte_errno));
+	}
 
 	if (!disable_reorder) {
 		send_args.buffer = rte_reorder_create("PKT_RO", rte_socket_id(),
 				REORDER_BUFFER_SIZE);
-		if (send_args.buffer == NULL)
+		if (send_args.buffer == NULL) {
+			stop_and_close_eth_dev(port_id);
 			rte_exit(EXIT_FAILURE, "%s\n", rte_strerror(rte_errno));
+		}
 	}
 
 	last_lcore_id   = get_last_lcore_id();
@@ -774,10 +804,15 @@ main(int argc, char **argv)
 	rx_thread(rx_to_workers);
 
 	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
-		if (rte_eal_wait_lcore(lcore_id) < 0)
+		if (rte_eal_wait_lcore(lcore_id) < 0) {
+			stop_and_close_eth_dev(port_id);
+			rte_eal_cleanup();
 			return -1;
+		}
 	}
 
 	print_stats();
+	stop_and_close_eth_dev(port_id);
+	rte_eal_cleanup();
 	return 0;
 }
