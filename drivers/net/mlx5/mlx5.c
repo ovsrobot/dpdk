@@ -184,9 +184,6 @@ static rte_spinlock_t mlx5_shared_data_lock = RTE_SPINLOCK_INITIALIZER;
 /* Process local data for secondary processes. */
 static struct mlx5_local_data mlx5_local_data;
 
-/** Driver-specific log messages type. */
-int mlx5_logtype;
-
 /** Data associated with devices to spawn. */
 struct mlx5_dev_spawn_data {
 	uint32_t ifindex; /**< Network interface index. */
@@ -3895,16 +3892,14 @@ static struct rte_pci_driver mlx5_driver = {
 		     RTE_PCI_DRV_PROBE_AGAIN,
 };
 
+/* Initialize driver log type. */
+RTE_LOG_REGISTER(mlx5_logtype, pmd.net.mlx5, NOTICE);
+
 /**
  * Driver initialization routine.
  */
 RTE_INIT(rte_mlx5_pmd_init)
 {
-	/* Initialize driver log type. */
-	mlx5_logtype = rte_log_register("pmd.net.mlx5");
-	if (mlx5_logtype >= 0)
-		rte_log_set_level(mlx5_logtype, RTE_LOG_NOTICE);
-
 	/* Build the static tables for Verbs conversion. */
 	mlx5_set_ptype_table();
 	mlx5_set_cksum_table();
