@@ -9,6 +9,7 @@
 #include <rte_cycles.h>
 #include <rte_lcore.h>
 #include <rte_mbuf.h>
+#include <signal.h>
 
 #define RX_RING_SIZE 1024
 #define TX_RING_SIZE 1024
@@ -17,6 +18,7 @@
 #define MBUF_CACHE_SIZE 250
 #define BURST_SIZE 32
 
+static volatile bool force_quit;
 static const struct rte_eth_conf port_conf_default = {
 	.rxmode = {
 		.max_rx_pkt_len = RTE_ETHER_MAX_LEN,
@@ -162,6 +164,26 @@ lcore_main(void)
 	}
 }
 
+static void
+stop_and_close_eth_dev(uint16_t port_id)
+{
+	RTE_ETH_FOREACH_DEV(port_id) {
+		printf("Closing port %d...", port_id);
+		rte_eth_dev_stop(port_id);
+		rte_eth_dev_close(port_id);
+		printf(" Done\n");
+	}
+}
+
+static void
+int_handler(int signum)
+{
+	printf("\n\nSignal %d received, preparing to exit...\n",
+				signum);
+	force_quit = true;
+
+}
+
 /*
  * The main function, which does initialization and calls the per-lcore
  * functions.
@@ -171,7 +193,10 @@ main(int argc, char *argv[])
 {
 	struct rte_mempool *mbuf_pool;
 	unsigned nb_ports;
-	uint16_t portid;
+	uint16_t portid = 0;
+
+	force_quit = false;
+	signal(SIGINT, int_handler);
 
 	/* Initialize the Environment Abstraction Layer (EAL). */
 	int ret = rte_eal_init(argc, argv);
@@ -183,21 +208,27 @@ main(int argc, char *argv[])
 
 	/* Check that there is an even number of ports to send/receive on. */
 	nb_ports = rte_eth_dev_count_avail();
-	if (nb_ports < 2 || (nb_ports & 1))
+	if (nb_ports < 2 || (nb_ports & 1)) {
+		stop_and_close_eth_dev(portid);
 		rte_exit(EXIT_FAILURE, "Error: number of ports must be even\n");
+	}
 
 	/* Creates a new mempool in memory to hold the mbufs. */
 	mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS * nb_ports,
 		MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 
-	if (mbuf_pool == NULL)
+	if (mbuf_pool == NULL) {
+		stop_and_close_eth_dev(portid);
 		rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
+	}
 
 	/* Initialize all ports. */
 	RTE_ETH_FOREACH_DEV(portid)
-		if (port_init(portid, mbuf_pool) != 0)
+		if (port_init(portid, mbuf_pool) != 0) {
+			stop_and_close_eth_dev(portid);
 			rte_exit(EXIT_FAILURE, "Cannot init port %"PRIu16 "\n",
 					portid);
+		}
 
 	if (rte_lcore_count() > 1)
 		printf("\nWARNING: Too many lcores enabled. Only 1 used.\n");
@@ -205,5 +236,7 @@ main(int argc, char *argv[])
 	/* Call lcore_main on the master core only. */
 	lcore_main();
 
+	stop_and_close_eth_dev(portid);
+	rte_eal_cleanup();
 	return 0;
 }
