@@ -13,23 +13,34 @@ def is_function_line(ln):
 
 def main(args):
     if not args[1].endswith('version.map') or \
-            not args[2].endswith('exports.def'):
+            not args[2].endswith('exports.def') and \
+            not args[2].endswith('mingw.map'):
         return 1
 
 # special case, allow override if an def file already exists alongside map file
+# for mingw also replace per_lcore__* to __emutls_v.per_lcore__*
     override_file = join(dirname(args[1]), basename(args[2]))
     if exists(override_file):
         with open(override_file) as f_in:
-            functions = f_in.readlines()
+            lines = f_in.readlines()
+            if args[2].endswith('mingw.map'):
+                lines = [l.replace('per_lcore__', '__emutls_v.per_lcore__') for l in lines]
+            functions = lines
 
 # generate def file from map file.
-# This works taking indented lines only which end with a ";" and which don't
+# For clang this works taking indented lines only which end with a ";" and which don't
 # have a colon in them, i.e. the lines defining functions only.
+# mingw keeps the original .map file but replaces per_lcore__* to __emutls_v.per_lcore__*
     else:
         with open(args[1]) as f_in:
-            functions = [ln[:-2] + '\n' for ln in sorted(f_in.readlines())
+            lines = f_in.readlines()
+            if args[2].endswith('mingw.map'):
+                lines = [l.replace('per_lcore__', '__emutls_v.per_lcore__') for l in lines]
+                functions = lines
+            else:
+                functions = [ln[:-2] + '\n' for ln in sorted(lines)
                          if is_function_line(ln)]
-            functions = ["EXPORTS\n"] + functions
+                functions = ["EXPORTS\n"] + functions
 
     with open(args[2], 'w') as f_out:
         f_out.writelines(functions)

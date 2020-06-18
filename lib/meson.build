@@ -150,18 +150,27 @@ foreach l:libraries
 			implib = dir_name + '.dll.a'
 
 			def_file = custom_target(name + '_def',
-				command: [map_to_def_cmd, '@INPUT@', '@OUTPUT@'],
+				command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
 				input: version_map,
 				output: 'rte_@0@_exports.def'.format(name))
+
+			mingw_map = custom_target(name + '_mingw',
+				command: [map_to_win_cmd, '@INPUT@', '@OUTPUT@'],
+				input: version_map,
+				output: 'rte_@0@_mingw.map'.format(name))
 
 			if is_ms_linker
 				lk_args = ['-Wl,/def:' + def_file.full_path(),
 					'-Wl,/implib:lib\\' + implib]
 			else
-				lk_args = ['-Wl,--version-script=' + version_map]
+				if is_windows
+					lk_args = ['-Wl,--version-script=' + mingw_map.full_path()]
+				else
+					lk_args = ['-Wl,--version-script=' + version_map]
+				endif
 			endif
 
-			lk_deps = [version_map, def_file]
+			lk_deps = [version_map, def_file, mingw_map]
 			if not is_windows
 				# on unix systems check the output of the
 				# check-symbols.sh script, using it as a
