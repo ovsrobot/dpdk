@@ -488,6 +488,31 @@ rte_eal_mbuf_user_pool_ops(void);
 const char *
 rte_eal_get_runtime_dir(void);
 
+void
+rte_eal_set_runtime_dir(char *run_dir, size_t size);
+
+void
+rte_eal_config_remap(void *mem_cfg_addr);
+
+const char *
+rte_eal_mbuf_user_pool_ops(void);
+
+rte_usage_hook_t
+rte_set_application_usage_hook(rte_usage_hook_t usage_func);
+
+int
+rte_eal_has_hugepages(void);
+
+int
+rte_eal_has_pci(void);
+
+struct internal_config *
+rte_eal_get_internal_configuration(void);
+
+rte_usage_hook_t *
+rte_eal_get_application_usage_hook(void);
+
+
 #ifdef __cplusplus
 }
 #endif

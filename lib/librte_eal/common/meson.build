@@ -7,6 +7,7 @@ if is_windows
 	sources += files(
 		'eal_common_bus.c',
 		'eal_common_class.c',
+		'eal_common_config.c',
 		'eal_common_devargs.c',
 		'eal_common_dynmem.c',
 		'eal_common_errno.c',
@@ -34,6 +35,7 @@ sources += files(
 	'eal_common_bus.c',
 	'eal_common_cpuflags.c',
 	'eal_common_class.c',
+	'eal_common_config.c',
 	'eal_common_devargs.c',
 	'eal_common_dev.c',
 	'eal_common_errno.c',
