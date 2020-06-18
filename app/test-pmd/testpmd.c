@@ -1961,13 +1961,23 @@ fwd_stats_display(void)
 	       acc_stats_border, acc_stats_border);
 #ifdef RTE_TEST_PMD_RECORD_CORE_CYCLES
 #define CYC_PER_MHZ 1E6
-	if (total_recv > 0)
-		printf("\n  CPU cycles/packet=%.2F (total cycles="
-		       "%"PRIu64" / total RX packets=%"PRIu64") at %"PRIu64
-		       " MHz Clock\n",
-		       (double) fwd_cycles / total_recv,
-		       fwd_cycles, total_recv,
-		       (uint64_t)(rte_get_tsc_hz() / CYC_PER_MHZ));
+	if (total_recv > 0 || total_xmit > 0) {
+		if (strcmp(cur_fwd_eng->fwd_mode_name, "txonly") == 0 ||
+		    strcmp(cur_fwd_eng->fwd_mode_name, "flowgen") == 0)
+			printf("\n  CPU cycles/packet=%.2F (total cycles="
+			     "%"PRIu64" / total %s packets=%"PRIu64") at %"
+			     PRIu64" MHz Clock\n",
+			     (double) fwd_cycles / total_xmit,
+			     fwd_cycles, cur_fwd_eng->fwd_mode_name, total_xmit,
+			     (uint64_t)(rte_get_tsc_hz() / CYC_PER_MHZ));
+		else
+			printf("\n  CPU cycles/packet=%.2F (total cycles="
+			    "%"PRIu64" / total %s packets=%"PRIu64") at %"
+			    PRIu64" MHz Clock\n",
+			    (double) fwd_cycles / total_recv,
+			    fwd_cycles, cur_fwd_eng->fwd_mode_name, total_recv,
+			    (uint64_t)(rte_get_tsc_hz() / CYC_PER_MHZ));
+	}
 #endif
 }
 
