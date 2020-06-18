@@ -2412,6 +2412,20 @@ launch_timer(unsigned int lcore_id)
 	return 0;
 }
 
+static int
+autodetect_mode(void)
+{
+	/*
+	 * Empty poll and telemetry modes have to be specifically requested to
+	 * be enabled, but we can auto-detect between legacy mode with or
+	 * without interrupts. Both ACPI and pstate can be used.
+	 */
+	if (rte_power_check_env_supported(PM_ENV_ACPI_CPUFREQ))
+		return APP_MODE_LEGACY;
+	if (rte_power_check_env_supported(PM_ENV_PSTATE_CPUFREQ))
+		return APP_MODE_LEGACY;
+	return APP_MODE_INTERRUPT;
+}
 
 int
 main(int argc, char **argv)
@@ -2449,7 +2463,7 @@ main(int argc, char **argv)
 		rte_exit(EXIT_FAILURE, "Invalid L3FWD parameters\n");
 
 	if (app_mode == APP_MODE_DEFAULT)
-		app_mode = APP_MODE_LEGACY;
+		app_mode = autodetect_mode();
 
 	/* only legacy and empty poll mode rely on power library */
 	if ((app_mode == APP_MODE_LEGACY || app_mode == APP_MODE_EMPTY_POLL) &&
