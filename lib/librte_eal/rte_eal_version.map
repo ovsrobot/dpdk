@@ -397,6 +397,8 @@ EXPERIMENTAL {
 	# added in 20.08
 	rte_lcore_callback_register;
 	rte_lcore_callback_unregister;
+	rte_lcore_dump;
+	rte_lcore_iterate;
 	rte_thread_register;
 	rte_thread_unregister;
 };
