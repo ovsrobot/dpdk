@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <string.h>
 
+#include <rte_common.h>
 #include <rte_lcore.h>
 
 #include "test.h"
@@ -113,6 +114,95 @@ skip_lcore_any:
 	return ret;
 }
 
+struct limit_lcore_context {
+	unsigned int init;
+	unsigned int max;
+	unsigned int uninit;
+};
+static int
+limit_lcores_init(unsigned int lcore_id __rte_unused, void *arg)
+{
+	struct limit_lcore_context *l = arg;
+
+	l->init++;
+	if (l->init > l->max)
+		return -1;
+	return 0;
+}
+static void
+limit_lcores_uninit(unsigned int lcore_id __rte_unused, void *arg)
+{
+	struct limit_lcore_context *l = arg;
+
+	l->uninit++;
+}
+
+static int
+test_lcores_callback(unsigned int eal_threads_count)
+{
+	struct limit_lcore_context l;
+	void *handle;
+
+	/* Refuse last lcore => callback register error. */
+	memset(&l, 0, sizeof(l));
+	l.max = eal_threads_count - 1;
+	handle = rte_lcore_callback_register("limit", limit_lcores_init,
+		limit_lcores_uninit, &l);
+	if (handle != NULL) {
+		printf("lcore callback register should have failed\n");
+		goto error;
+	}
+	/* Refusal happens at the n th call to the init callback.
+	 * Besides, n - 1 were accepted, so we expect as many uninit calls when
+	 * the rollback happens.
+	 */
+	if (l.init != eal_threads_count) {
+		printf("lcore init calls failed: expected %u, got %u\n",
+			eal_threads_count, l.init);
+		goto error;
+	}
+	if (l.uninit != eal_threads_count - 1) {
+		printf("lcore uninit calls failed: expected %u, got %u\n",
+			eal_threads_count - 1, l.uninit);
+		goto error;
+	}
+
+	/* Accept all lcore and unregister. */
+	memset(&l, 0, sizeof(l));
+	l.max = eal_threads_count;
+	handle = rte_lcore_callback_register("limit", limit_lcores_init,
+		limit_lcores_uninit, &l);
+	if (handle == NULL) {
+		printf("lcore callback register failed\n");
+		goto error;
+	}
+	if (l.uninit != 0) {
+		printf("lcore uninit got called %u times during register\n",
+			l.uninit);
+		goto error;
+	}
+	rte_lcore_callback_unregister(handle);
+	handle = NULL;
+	if (l.init != eal_threads_count) {
+		printf("lcore init got called %u times during unregister (expected %u)\n",
+			l.init, eal_threads_count);
+		goto error;
+	}
+	if (l.uninit != eal_threads_count) {
+		printf("lcore uninit calls failed: expected %u, got %u\n",
+			eal_threads_count, l.uninit);
+		goto error;
+	}
+
+	return 0;
+
+error:
+	if (handle != NULL)
+		rte_lcore_callback_unregister(handle);
+
+	return -1;
+}
+
 static int
 test_lcores(void)
 {
@@ -132,6 +222,11 @@ test_lcores(void)
 
 	if (test_non_eal_lcores(eal_threads_count) < 0)
 		return TEST_FAILED;
+
+	if (test_lcores_callback(eal_threads_count) < 0)
+		return TEST_FAILED;
+
+	/* FIXME: missing a test on callback + registering non-EAL threads */
 
 	return TEST_SUCCESS;
 }
