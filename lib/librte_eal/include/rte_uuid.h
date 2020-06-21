@@ -15,6 +15,7 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
+#include <string.h>
 
 /**
  * Struct describing a Universal Unique Identifier
