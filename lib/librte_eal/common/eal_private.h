@@ -62,6 +62,7 @@ struct rte_config {
 	struct rte_mem_config *mem_config;
 } __rte_packed;
 
+
 /**
  * Get the global configuration structure.
  *
