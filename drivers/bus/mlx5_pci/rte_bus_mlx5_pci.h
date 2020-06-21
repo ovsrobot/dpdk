@@ -55,6 +55,7 @@ struct rte_mlx5_pci_driver {
 	enum mlx5_class dev_class;		/**< Class of this driver */
 	struct rte_pci_driver pci_driver;	/**< Inherit core pci driver. */
 	TAILQ_ENTRY(rte_mlx5_pci_driver) next;
+	bool loaded;
 };
 
 /**
