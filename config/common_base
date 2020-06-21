@@ -367,6 +367,12 @@ CONFIG_RTE_LIBRTE_MLX4_PMD=n
 CONFIG_RTE_LIBRTE_MLX4_DEBUG=n
 
 #
+# Compile Mellanox PCI BUS for ConnectX-4, ConnectX-5,
+# ConnectX-6 & BlueField (MLX5) PMD
+#
+CONFIG_RTE_LIBRTE_MLX5_PCI_BUS=n
+
+#
 # Compile burst-oriented Mellanox ConnectX-4, ConnectX-5,
 # ConnectX-6 & BlueField (MLX5) PMD
 #
