@@ -13,6 +13,7 @@
 #include <rte_log.h>
 #include <rte_kvargs.h>
 #include <rte_devargs.h>
+#include <rte_bitops.h>
 
 #include "mlx5_prm.h"
 
@@ -202,9 +203,9 @@ int mlx5_dev_to_pci_addr(const char *dev_path, struct rte_pci_addr *pci_addr);
 #define MLX5_CLASS_ARG_NAME "class"
 
 enum mlx5_class {
-	MLX5_CLASS_NET,
-	MLX5_CLASS_VDPA,
 	MLX5_CLASS_INVALID,
+	MLX5_CLASS_NET = RTE_BIT(0),
+	MLX5_CLASS_VDPA = RTE_BIT(1),
 };
 
 __rte_internal
