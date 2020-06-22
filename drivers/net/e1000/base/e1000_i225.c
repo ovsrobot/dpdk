@@ -124,6 +124,36 @@ void e1000_release_swfw_sync_i225(struct e1000_hw *hw, u16 mask)
 	e1000_put_hw_semaphore_generic(hw);
 }
 
+/*
+ * e1000_setup_copper_link_i225 - Configure copper link settings
+ * @hw: pointer to the HW structure
+ *
+ * Configures the link for auto-neg or forced speed and duplex.  Then we check
+ * for link, once link is established calls to configure collision distance
+ * and flow control are called.
+ */
+s32 e1000_setup_copper_link_i225(struct e1000_hw *hw)
+{
+	u32 phpm_reg;
+	s32 ret_val;
+	u32 ctrl;
+
+	DEBUGFUNC("e1000_setup_copper_link_i225");
+
+	ctrl = E1000_READ_REG(hw, E1000_CTRL);
+	ctrl |= E1000_CTRL_SLU;
+	ctrl &= ~(E1000_CTRL_FRCSPD | E1000_CTRL_FRCDPX);
+	E1000_WRITE_REG(hw, E1000_CTRL, ctrl);
+
+	phpm_reg = E1000_READ_REG(hw, E1000_I225_PHPM);
+	phpm_reg &= ~E1000_I225_PHPM_GO_LINKD;
+	E1000_WRITE_REG(hw, E1000_I225_PHPM, phpm_reg);
+
+	ret_val = e1000_setup_copper_link_generic(hw);
+
+	return ret_val;
+}
+
 /* e1000_get_hw_semaphore_i225 - Acquire hardware semaphore
  * @hw: pointer to the HW structure
  *
