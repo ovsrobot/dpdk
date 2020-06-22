@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 2001-2020 Intel Corporation
+ */
+
 #include "e1000_api.h"
 
 STATIC s32 e1000_init_nvm_params_i225(struct e1000_hw *hw);
