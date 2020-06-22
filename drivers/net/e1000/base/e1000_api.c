@@ -344,6 +344,9 @@ s32 e1000_set_mac_type(struct e1000_hw *hw)
 		break;
 	case E1000_DEV_ID_I225_LM:
 	case E1000_DEV_ID_I225_V:
+	case E1000_DEV_ID_I225_K:
+	case E1000_DEV_ID_I225_I:
+	case E1000_DEV_ID_I220_V:
 		mac->type = e1000_i225;
 		break;
 	case E1000_DEV_ID_I350_VF:
