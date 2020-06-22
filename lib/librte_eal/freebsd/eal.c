@@ -877,7 +877,14 @@ rte_eal_init(int argc, char **argv)
 
 	eal_check_mem_on_local_socket();
 
-	eal_thread_init_master(rte_config.master_lcore);
+	if (pthread_setaffinity_np(pthread_self(), sizeof(rte_cpuset_t),
+			&lcore_config[rte_config.master_lcore].cpuset) != 0) {
+		rte_eal_init_alert("Cannot set affinity");
+		rte_errno = EINVAL;
+		return -1;
+	}
+	rte_thread_init(rte_config.master_lcore,
+		&lcore_config[rte_config.master_lcore].cpuset);
 
 	ret = eal_thread_dump_affinity(cpuset, sizeof(cpuset));
 
@@ -908,6 +915,11 @@ rte_eal_init(int argc, char **argv)
 		snprintf(thread_name, sizeof(thread_name),
 				"lcore-slave-%d", i);
 		rte_thread_setname(lcore_config[i].thread_id, thread_name);
+
+		ret = pthread_setaffinity_np(lcore_config[i].thread_id,
+			sizeof(rte_cpuset_t), &lcore_config[i].cpuset);
+		if (ret != 0)
+			rte_panic("Cannot set affinity\n");
 	}
 
 	/*
