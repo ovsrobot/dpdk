@@ -784,6 +784,75 @@
 #define E1000_TIMINCA_INCPERIOD_SHIFT	24
 #define E1000_TIMINCA_INCVALUE_MASK	0x00FFFFFF
 
+/* Time Sync Interrupt Cause/Mask Register Bits */
+#define TSINTR_SYS_WRAP	(1 << 0) /* SYSTIM Wrap around. */
+#define TSINTR_TXTS	(1 << 1) /* Transmit Timestamp. */
+#define TSINTR_TT0	(1 << 3) /* Target Time 0 Trigger. */
+#define TSINTR_TT1	(1 << 4) /* Target Time 1 Trigger. */
+#define TSINTR_AUTT0	(1 << 5) /* Auxiliary Timestamp 0 Taken. */
+#define TSINTR_AUTT1	(1 << 6) /* Auxiliary Timestamp 1 Taken. */
+
+#define TSYNC_INTERRUPTS	TSINTR_TXTS
+
+/* TSAUXC Configuration Bits */
+#define TSAUXC_EN_TT0	(1 << 0)  /* Enable target time 0. */
+#define TSAUXC_EN_TT1	(1 << 1)  /* Enable target time 1. */
+#define TSAUXC_EN_CLK0	(1 << 2)  /* Enable Configurable Frequency Clock 0. */
+#define TSAUXC_ST0	(1 << 4)  /* Start Clock 0 Toggle on Target Time 0. */
+#define TSAUXC_EN_CLK1	(1 << 5)  /* Enable Configurable Frequency Clock 1. */
+#define TSAUXC_ST1	(1 << 7)  /* Start Clock 1 Toggle on Target Time 1. */
+#define TSAUXC_EN_TS0	(1 << 8)  /* Enable hardware timestamp 0. */
+#define TSAUXC_EN_TS1	(1 << 10) /* Enable hardware timestamp 0. */
+
+/* SDP Configuration Bits */
+#define AUX0_SEL_SDP0	(0u << 0)  /* Assign SDP0 to auxiliary time stamp 0. */
+#define AUX0_SEL_SDP1	(1u << 0)  /* Assign SDP1 to auxiliary time stamp 0. */
+#define AUX0_SEL_SDP2	(2u << 0)  /* Assign SDP2 to auxiliary time stamp 0. */
+#define AUX0_SEL_SDP3	(3u << 0)  /* Assign SDP3 to auxiliary time stamp 0. */
+#define AUX0_TS_SDP_EN	(1u << 2)  /* Enable auxiliary time stamp trigger 0. */
+#define AUX1_SEL_SDP0	(0u << 3)  /* Assign SDP0 to auxiliary time stamp 1. */
+#define AUX1_SEL_SDP1	(1u << 3)  /* Assign SDP1 to auxiliary time stamp 1. */
+#define AUX1_SEL_SDP2	(2u << 3)  /* Assign SDP2 to auxiliary time stamp 1. */
+#define AUX1_SEL_SDP3	(3u << 3)  /* Assign SDP3 to auxiliary time stamp 1. */
+#define AUX1_TS_SDP_EN	(1u << 5)  /* Enable auxiliary time stamp trigger 1. */
+#define TS_SDP0_EN	(1u << 8)  /* SDP0 is assigned to Tsync. */
+#define TS_SDP1_EN	(1u << 11) /* SDP1 is assigned to Tsync. */
+#define TS_SDP2_EN	(1u << 14) /* SDP2 is assigned to Tsync. */
+#define TS_SDP3_EN	(1u << 17) /* SDP3 is assigned to Tsync. */
+#define TS_SDP0_SEL_TT0	(0u << 6)  /* Target time 0 is output on SDP0. */
+#define TS_SDP0_SEL_TT1	(1u << 6)  /* Target time 1 is output on SDP0. */
+#define TS_SDP1_SEL_TT0	(0u << 9)  /* Target time 0 is output on SDP1. */
+#define TS_SDP1_SEL_TT1	(1u << 9)  /* Target time 1 is output on SDP1. */
+#define TS_SDP0_SEL_FC0	(2u << 6)  /* Freq clock  0 is output on SDP0. */
+#define TS_SDP0_SEL_FC1	(3u << 6)  /* Freq clock  1 is output on SDP0. */
+#define TS_SDP1_SEL_FC0	(2u << 9)  /* Freq clock  0 is output on SDP1. */
+#define TS_SDP1_SEL_FC1	(3u << 9)  /* Freq clock  1 is output on SDP1. */
+#define TS_SDP2_SEL_TT0	(0u << 12) /* Target time 0 is output on SDP2. */
+#define TS_SDP2_SEL_TT1	(1u << 12) /* Target time 1 is output on SDP2. */
+#define TS_SDP2_SEL_FC0	(2u << 12) /* Freq clock  0 is output on SDP2. */
+#define TS_SDP2_SEL_FC1	(3u << 12) /* Freq clock  1 is output on SDP2. */
+#define TS_SDP3_SEL_TT0	(0u << 15) /* Target time 0 is output on SDP3. */
+#define TS_SDP3_SEL_TT1	(1u << 15) /* Target time 1 is output on SDP3. */
+#define TS_SDP3_SEL_FC0	(2u << 15) /* Freq clock  0 is output on SDP3. */
+#define TS_SDP3_SEL_FC1	(3u << 15) /* Freq clock  1 is output on SDP3. */
+
+#define E1000_CTRL_SDP0_DIR	0x00400000  /* SDP0 Data direction */
+#define E1000_CTRL_SDP1_DIR	0x00800000  /* SDP1 Data direction */
+
+/* Extended Device Control */
+#define E1000_CTRL_EXT_SDP2_DIR	0x00000400 /* SDP2 Data direction */
+
+/* ETQF register bit definitions */
+#define E1000_ETQF_1588			(1 << 30)
+#define E1000_FTQF_VF_BP		0x00008000
+#define E1000_FTQF_1588_TIME_STAMP	0x08000000
+#define E1000_FTQF_MASK			0xF0000000
+#define E1000_FTQF_MASK_PROTO_BP	0x10000000
+/* Immediate Interrupt Rx (A.K.A. Low Latency Interrupt) */
+#define E1000_IMIREXT_CTRL_BP	0x00080000  /* Bypass check of ctrl bits */
+#define E1000_IMIREXT_SIZE_BP	0x00001000  /* Packet size bypass */
+
+#define E1000_RXDADV_STAT_TSIP		0x08000 /* timestamp in packet */
 #define E1000_TSICR_TXTS		0x00000002
 #define E1000_TSIM_TXTS			0x00000002
 /* TUPLE Filtering Configuration */

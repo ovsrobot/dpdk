@@ -148,14 +148,12 @@ struct e1000_adv_context_desc {
 /* Immediate Interrupt Rx (A.K.A. Low Latency Interrupt) */
 #define E1000_IMIR_PORT_IM_EN	0x00010000  /* TCP port enable */
 #define E1000_IMIR_PORT_BP	0x00020000  /* TCP port check bypass */
-#define E1000_IMIREXT_SIZE_BP	0x00001000  /* Packet size bypass */
 #define E1000_IMIREXT_CTRL_URG	0x00002000  /* Check URG bit in header */
 #define E1000_IMIREXT_CTRL_ACK	0x00004000  /* Check ACK bit in header */
 #define E1000_IMIREXT_CTRL_PSH	0x00008000  /* Check PSH bit in header */
 #define E1000_IMIREXT_CTRL_RST	0x00010000  /* Check RST bit in header */
 #define E1000_IMIREXT_CTRL_SYN	0x00020000  /* Check SYN bit in header */
 #define E1000_IMIREXT_CTRL_FIN	0x00040000  /* Check FIN bit in header */
-#define E1000_IMIREXT_CTRL_BP	0x00080000  /* Bypass check of ctrl bits */
 
 #define E1000_RXDADV_RSSTYPE_MASK	0x0000000F
 #define E1000_RXDADV_RSSTYPE_SHIFT	12
@@ -164,7 +162,6 @@ struct e1000_adv_context_desc {
 #define E1000_RXDADV_SPLITHEADER_EN	0x00001000
 #define E1000_RXDADV_SPH		0x8000
 #define E1000_RXDADV_STAT_TS		0x10000 /* Pkt was time stamped */
-#define E1000_RXDADV_STAT_TSIP		0x08000 /* timestamp in packet */
 #define E1000_RXDADV_ERR_HBO		0x00800000
 
 /* RSS Hash results */
@@ -251,7 +248,6 @@ struct e1000_adv_context_desc {
 /* ETQF register bit definitions */
 #define E1000_ETQF_FILTER_ENABLE	(1 << 26)
 #define E1000_ETQF_IMM_INT		(1 << 29)
-#define E1000_ETQF_1588			(1 << 30)
 
 /*
  * ETQF filter list: one static filter per filter consumer. This is
@@ -263,10 +259,6 @@ struct e1000_adv_context_desc {
  */
 #define E1000_ETQF_FILTER_EAPOL		0
 
-#define E1000_FTQF_VF_BP		0x00008000
-#define E1000_FTQF_1588_TIME_STAMP	0x08000000
-#define E1000_FTQF_MASK			0xF0000000
-#define E1000_FTQF_MASK_PROTO_BP	0x10000000
 #define E1000_FTQF_MASK_SOURCE_ADDR_BP	0x20000000
 #define E1000_FTQF_MASK_DEST_ADDR_BP	0x40000000
 #define E1000_FTQF_MASK_SOURCE_PORT_BP	0x80000000

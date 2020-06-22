@@ -698,4 +698,14 @@
 
 
 
+/* IEEE 1588 TIMESYNCH */
+#define E1000_TRGTTIML0	0x0B644 /* Target Time Register 0 Low  - RW */
+#define E1000_TRGTTIMH0	0x0B648 /* Target Time Register 0 High - RW */
+#define E1000_TRGTTIML1	0x0B64C /* Target Time Register 1 Low  - RW */
+#define E1000_TRGTTIMH1	0x0B650 /* Target Time Register 1 High - RW */
+#define E1000_FREQOUT0	0x0B654 /* Frequency Out 0 Control Register - RW */
+#define E1000_FREQOUT1	0x0B658 /* Frequency Out 1 Control Register - RW */
+#define E1000_TSSDP	0x0003C  /* Time Sync SDP Configuration Register - RW */
+
+
 #endif
