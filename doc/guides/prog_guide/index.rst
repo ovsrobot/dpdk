@@ -60,6 +60,7 @@ Programmer's Guide
     bpf_lib
     ipsec_lib
     graph_lib
+    if_proxy_lib
     source_org
     dev_kit_build_system
     dev_kit_root_make_help

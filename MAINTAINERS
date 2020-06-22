@@ -1502,6 +1502,7 @@ F: lib/librte_node/
 IF Proxy - EXPERIMENTAL
 M: Andrzej Ostruszka <aostruszka@marvell.com>
 F: lib/librte_if_proxy/
+F: doc/guides/prog_guide/if_proxy_lib.rst
 
 Test Applications
 -----------------
