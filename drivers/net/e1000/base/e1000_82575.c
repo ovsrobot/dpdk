@@ -76,10 +76,10 @@ STATIC void e1000_clear_vfta_i350(struct e1000_hw *hw);
 
 STATIC void e1000_i2c_start(struct e1000_hw *hw);
 STATIC void e1000_i2c_stop(struct e1000_hw *hw);
-STATIC s32 e1000_clock_in_i2c_byte(struct e1000_hw *hw, u8 *data);
+STATIC void e1000_clock_in_i2c_byte(struct e1000_hw *hw, u8 *data);
 STATIC s32 e1000_clock_out_i2c_byte(struct e1000_hw *hw, u8 data);
 STATIC s32 e1000_get_i2c_ack(struct e1000_hw *hw);
-STATIC s32 e1000_clock_in_i2c_bit(struct e1000_hw *hw, bool *data);
+STATIC void e1000_clock_in_i2c_bit(struct e1000_hw *hw, bool *data);
 STATIC s32 e1000_clock_out_i2c_bit(struct e1000_hw *hw, bool data);
 STATIC void e1000_raise_i2c_clk(struct e1000_hw *hw, u32 *i2cctl);
 STATIC void e1000_lower_i2c_clk(struct e1000_hw *hw, u32 *i2cctl);
@@ -3305,9 +3305,7 @@ s32 e1000_read_i2c_byte_generic(struct e1000_hw *hw, u8 byte_offset,
 		if (status != E1000_SUCCESS)
 			goto fail;
 
-		status = e1000_clock_in_i2c_byte(hw, data);
-		if (status != E1000_SUCCESS)
-			goto fail;
+		e1000_clock_in_i2c_byte(hw, data);
 
 		status = e1000_clock_out_i2c_bit(hw, nack);
 		if (status != E1000_SUCCESS)
@@ -3471,7 +3469,7 @@ STATIC void e1000_i2c_stop(struct e1000_hw *hw)
  *
  *  Clocks in one byte data via I2C data/clock
  **/
-STATIC s32 e1000_clock_in_i2c_byte(struct e1000_hw *hw, u8 *data)
+STATIC void e1000_clock_in_i2c_byte(struct e1000_hw *hw, u8 *data)
 {
 	s32 i;
 	bool bit = 0;
@@ -3483,8 +3481,6 @@ STATIC s32 e1000_clock_in_i2c_byte(struct e1000_hw *hw, u8 *data)
 		e1000_clock_in_i2c_bit(hw, &bit);
 		*data |= bit << i;
 	}
-
-	return E1000_SUCCESS;
 }
 
 /**
@@ -3573,7 +3569,7 @@ STATIC s32 e1000_get_i2c_ack(struct e1000_hw *hw)
  *
  *  Clocks in one bit via I2C data/clock
  **/
-STATIC s32 e1000_clock_in_i2c_bit(struct e1000_hw *hw, bool *data)
+STATIC void e1000_clock_in_i2c_bit(struct e1000_hw *hw, bool *data)
 {
 	u32 i2cctl = E1000_READ_REG(hw, E1000_I2CPARAMS);
 
@@ -3591,8 +3587,6 @@ STATIC s32 e1000_clock_in_i2c_bit(struct e1000_hw *hw, bool *data)
 
 	/* Minimum low period of clock is 4.7 us */
 	usec_delay(E1000_I2C_T_LOW);
-
-	return E1000_SUCCESS;
 }
 
 /**
