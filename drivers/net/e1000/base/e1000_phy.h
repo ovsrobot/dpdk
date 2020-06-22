@@ -122,8 +122,6 @@ s32 e1000_write_xmdio_reg(struct e1000_hw *hw, u16 addr, u8 dev_addr,
 #define GS40G_MAC_SPEED_1G		0X0006
 #define GS40G_COPPER_SPEC		0x0010
 
-#endif /* NO_I210_SUPPORT */
-#ifndef NO_I225_SUPPORT
 #define E1000_I225_PHPM			0x0E14 /* I225 PHY Power Management */
 #define E1000_I225_PHPM_DIS_1000_D3	0x0008 /* Disable 1G in D3 */
 #define E1000_I225_PHPM_LINK_ENERGY	0x0010 /* Link Energy Detect */

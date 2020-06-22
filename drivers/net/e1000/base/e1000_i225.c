@@ -1137,7 +1137,6 @@ s32 e1000_set_d3_lplu_state_i225(struct e1000_hw *hw, bool active)
 	return E1000_SUCCESS;
 }
 
-
 /**
  *  e1000_set_eee_i225 - Enable/disable EEE support
  *  @hw: pointer to the HW structure

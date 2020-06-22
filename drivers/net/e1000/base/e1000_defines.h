@@ -147,9 +147,7 @@
 	E1000_RXDEXT_STATERR_CXE |	\
 	E1000_RXDEXT_STATERR_RXE)
 
-#if !defined(EXTERNAL_RELEASE) || defined(E1000E_MQ)
 #define E1000_MRQC_ENABLE_RSS_2Q		0x00000001
-#endif /* !EXTERNAL_RELEASE || E1000E_MQ */
 #define E1000_MRQC_RSS_FIELD_MASK		0xFFFF0000
 #define E1000_MRQC_RSS_FIELD_IPV4_TCP		0x00010000
 #define E1000_MRQC_RSS_FIELD_IPV4		0x00020000
@@ -1129,9 +1127,7 @@
 /* NVM Addressing bits based on type 0=small, 1=large */
 #define E1000_EECD_ADDR_BITS	0x00000400
 #define E1000_EECD_TYPE		0x00002000 /* NVM Type (1-SPI, 0-Microwire) */
-#ifndef E1000_NVM_GRANT_ATTEMPTS
 #define E1000_NVM_GRANT_ATTEMPTS	1000 /* NVM # attempts to gain grant */
-#endif
 #define E1000_EECD_AUTO_RD		0x00000200  /* NVM Auto Read done */
 #define E1000_EECD_SIZE_EX_MASK		0x00007800  /* NVM Size */
 #define E1000_EECD_SIZE_EX_SHIFT	11
@@ -1347,9 +1343,7 @@
 #define PCIE_LINK_SPEED_5000		0x02
 #define PCIE_DEVICE_CONTROL2_16ms	0x0005
 
-#ifndef ETH_ADDR_LEN
 #define ETH_ADDR_LEN			6
-#endif
 
 #define PHY_REVISION_MASK		0xFFFFFFF0
 #define MAX_PHY_REG_ADDRESS		0x1F  /* 5 bit address bus (0-0x1F) */
@@ -1606,7 +1600,6 @@
 #define I210_TXPBSIZE_DEFAULT		0x04000014 /* TXPBSIZE default */
 
 
-#ifndef NO_I225_SUPPORT
 #define I225_RXPBSIZE_DEFAULT		0x000000A2 /* RXPBSIZE default */
 #define I225_TXPBSIZE_DEFAULT		0x04000014 /* TXPBSIZE default */
 #define E1000_RXPBS_SIZE_I225_MASK	0x0000003F /* Rx packet buffer size */
@@ -1641,7 +1634,7 @@
 #define E1000_INVM_DEFAULT_AL		0x202F
 #define E1000_INVM_AUTOLOAD		0x0A
 #define E1000_INVM_PLL_WO_VAL		0x0010
-#endif /* NO_I225_SUPPORT */
+
 /* Proxy Filter Control Extended */
 #define E1000_PROXYFCEX_MDNS		0x00000001 /* mDNS */
 #define E1000_PROXYFCEX_MDNS_M		0x00000002 /* mDNS Multicast */
@@ -1682,10 +1675,6 @@
 #define E1000_STATUS_LAN_ID_OFFSET	2
 #define E1000_VFTA_ENTRIES		128
 
-#ifndef E1000_UNUSEDARG
 #define E1000_UNUSEDARG
-#endif /* E1000_UNUSEDARG */
-#ifndef ERROR_REPORT
 #define ERROR_REPORT(fmt)	do { } while (0)
-#endif /* ERROR_REPORT */
 #endif /* _E1000_DEFINES_H_ */
