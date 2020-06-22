@@ -106,7 +106,7 @@ int trace_metadata_create(void);
 void trace_metadata_destroy(void);
 int trace_mkdir(void);
 int trace_epoch_time_save(void);
-void trace_mem_per_thread_free(void);
+void trace_mem_free(void);
 
 /* EAL interface */
 int eal_trace_init(void);

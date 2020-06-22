@@ -256,6 +256,11 @@ __rte_trace_mem_per_thread_alloc(void)
 }
 
 void
+__rte_trace_mem_per_thread_free(void)
+{
+}
+
+void
 __rte_trace_point_emit_field(size_t sz, const char *field,
 	const char *type)
 {
