@@ -11,8 +11,8 @@
 #define E1000_STATUS	0x00008  /* Device Status - RO */
 #define E1000_EECD	0x00010  /* EEPROM/Flash Control - RW */
 /* NVM  Register Descriptions */
-#define E1000_EERD		0x12014  /* EEprom mode read - RW */
-#define E1000_EEWR		0x12018  /* EEprom mode write - RW */
+#define E1000_EERD		0x00014  /* EEprom mode read - RW */
+#define E1000_EEWR		0x00018  /* EEprom mode write - RW */
 #define E1000_CTRL_EXT	0x00018  /* Extended Device Control - RW */
 #define E1000_MDIC	0x00020  /* MDI Control - RW */
 #define E1000_MDICNFG	0x00E04  /* MDI Config - RW */

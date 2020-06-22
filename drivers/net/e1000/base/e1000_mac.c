@@ -4,6 +4,8 @@
 
 #include "e1000_api.h"
 
+STATIC s32 e1000_validate_mdi_setting_generic(struct e1000_hw *hw);
+STATIC void e1000_set_lan_id_multi_port_pcie(struct e1000_hw *hw);
 STATIC void e1000_config_collision_dist_generic(struct e1000_hw *hw);
 
 /**
@@ -19,8 +21,32 @@ void e1000_init_mac_ops_generic(struct e1000_hw *hw)
 
 	/* General Setup */
 	mac->ops.init_params = e1000_null_ops_generic;
+	mac->ops.init_hw = e1000_null_ops_generic;
+	mac->ops.reset_hw = e1000_null_ops_generic;
+	mac->ops.setup_physical_interface = e1000_null_ops_generic;
+	mac->ops.get_bus_info = e1000_null_ops_generic;
+	mac->ops.set_lan_id = e1000_set_lan_id_multi_port_pcie;
+	mac->ops.read_mac_addr = e1000_read_mac_addr_generic;
 	mac->ops.config_collision_dist = e1000_config_collision_dist_generic;
+	mac->ops.clear_hw_cntrs = e1000_null_mac_generic;
+	/* LED */
+	mac->ops.cleanup_led = e1000_null_ops_generic;
+	mac->ops.setup_led = e1000_null_ops_generic;
+	mac->ops.blink_led = e1000_null_ops_generic;
+	mac->ops.led_on = e1000_null_ops_generic;
+	mac->ops.led_off = e1000_null_ops_generic;
+	/* LINK */
+	mac->ops.setup_link = e1000_null_ops_generic;
+	mac->ops.get_link_up_info = e1000_null_link_info;
+	mac->ops.check_for_link = e1000_null_ops_generic;
+	/* Management */
+	mac->ops.check_mng_mode = e1000_null_mng_mode;
+	/* VLAN, MC, etc. */
+	mac->ops.update_mc_addr_list = e1000_null_update_mc;
+	mac->ops.clear_vfta = e1000_null_mac_generic;
+	mac->ops.write_vfta = e1000_null_write_vfta;
 	mac->ops.rar_set = e1000_rar_set_generic;
+	mac->ops.validate_mdi_setting = e1000_validate_mdi_setting_generic;
 }
 
 /**
@@ -211,6 +237,26 @@ s32 e1000_get_bus_info_pcie_generic(struct e1000_hw *hw)
 	mac->ops.set_lan_id(hw);
 
 	return E1000_SUCCESS;
+}
+
+/**
+ *  e1000_set_lan_id_multi_port_pcie - Set LAN id for PCIe multiple port devices
+ *
+ *  @hw: pointer to the HW structure
+ *
+ *  Determines the LAN function id by reading memory-mapped registers
+ *  and swaps the port value if requested.
+ **/
+STATIC void e1000_set_lan_id_multi_port_pcie(struct e1000_hw *hw)
+{
+	struct e1000_bus_info *bus = &hw->bus;
+	u32 reg;
+
+	/* The status register reports the correct function number
+	 * for the device regardless of function swap state.
+	 */
+	reg = E1000_READ_REG(hw, E1000_STATUS);
+	bus->func = (reg & E1000_STATUS_FUNC_MASK) >> E1000_STATUS_FUNC_SHIFT;
 }
 
 /**
@@ -1984,6 +2030,25 @@ void e1000_update_adaptive_generic(struct e1000_hw *hw)
 	}
 }
 
+/**
+ *  e1000_validate_mdi_setting_generic - Verify MDI/MDIx settings
+ *  @hw: pointer to the HW structure
+ *
+ *  Verify that when not using auto-negotiation that MDI/MDIx is correctly
+ *  set, which is forced to MDI mode only.
+ **/
+STATIC s32 e1000_validate_mdi_setting_generic(struct e1000_hw *hw)
+{
+	DEBUGFUNC("e1000_validate_mdi_setting_generic");
+
+	if (!hw->mac.autoneg && (hw->phy.mdix == 0 || hw->phy.mdix == 3)) {
+		DEBUGOUT("Invalid MDI setting detected\n");
+		hw->phy.mdix = 1;
+		return -E1000_ERR_CONFIG;
+	}
+
+	return E1000_SUCCESS;
+}
 
 /**
  *  e1000_validate_mdi_setting_crossover_generic - Verify MDI/MDIx settings
