@@ -941,9 +941,7 @@ s32 e1000_setup_link_generic(struct e1000_hw *hw)
 	 * based on the EEPROM flow control settings.
 	 */
 	if (hw->fc.requested_mode == e1000_fc_default) {
-		ret_val = e1000_set_default_fc_generic(hw);
-		if (ret_val)
-			return ret_val;
+		hw->fc.requested_mode = e1000_fc_full;
 	}
 
 	/* Save off the requested flow control mode for use later.  Depending
