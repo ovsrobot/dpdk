@@ -236,6 +236,11 @@ SRCS-y += test_graph.c
 SRCS-y += test_graph_perf.c
 endif
 
+ifeq ($(CONFIG_RTE_LIBRTE_IF_PROXY),y)
+SRCS-y += test_if_proxy.c
+LDLIBS += -lrte_if_proxy
+endif
+
 ifeq ($(CONFIG_RTE_LIBRTE_RAWDEV),y)
 SRCS-y += test_rawdev.c
 endif
