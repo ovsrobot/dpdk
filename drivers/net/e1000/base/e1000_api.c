@@ -333,6 +333,12 @@ s32 e1000_set_mac_type(struct e1000_hw *hw)
 	case E1000_DEV_ID_I211_COPPER:
 		mac->type = e1000_i211;
 		break;
+#ifndef NO_I225_SUPPORT
+	case E1000_DEV_ID_I225_LM:
+	case E1000_DEV_ID_I225_V:
+		mac->type = e1000_i225;
+		break;
+#endif /* NO_I225_SUPPORT */
 	case E1000_DEV_ID_82576_VF:
 	case E1000_DEV_ID_82576_VF_HV:
 		mac->type = e1000_vfadapt;
@@ -450,6 +456,9 @@ s32 e1000_setup_init_funcs(struct e1000_hw *hw, bool init_device)
 	case e1000_i210:
 	case e1000_i211:
 		e1000_init_function_pointers_i210(hw);
+		break;
+	case e1000_i225:
+		e1000_init_function_pointers_i225(hw);
 		break;
 	case e1000_vfadapt:
 		e1000_init_function_pointers_vf(hw);

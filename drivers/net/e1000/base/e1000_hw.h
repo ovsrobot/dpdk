@@ -155,6 +155,10 @@ struct e1000_hw;
 #define E1000_DEV_ID_I210_COPPER_FLASHLESS	0x157B
 #define E1000_DEV_ID_I210_SERDES_FLASHLESS	0x157C
 #define E1000_DEV_ID_I211_COPPER		0x1539
+#ifndef NO_I225_SUPPORT
+#define E1000_DEV_ID_I225_LM			0x15F2
+#define E1000_DEV_ID_I225_V			0x15F3
+#endif /* NO_I225_SUPPORT */
 #define E1000_DEV_ID_I354_BACKPLANE_1GBPS	0x1F40
 #define E1000_DEV_ID_I354_SGMII			0x1F41
 #define E1000_DEV_ID_I354_BACKPLANE_2_5GBPS	0x1F45
@@ -214,6 +218,9 @@ enum e1000_mac_type {
 	e1000_i354,
 	e1000_i210,
 	e1000_i211,
+#ifndef NO_I225_SUPPORT
+	e1000_i225,
+#endif /* NO_I225_SUPPORT */
 	e1000_vfadapt,
 	e1000_vfadapt_i350,
 	e1000_num_macs  /* List is 1-based, so subtract 1 for true count. */
@@ -348,6 +355,17 @@ enum e1000_serdes_link_state {
 	e1000_serdes_link_forced_up
 };
 
+#ifndef NO_I225_SUPPORT
+enum e1000_invm_structure_type {
+	e1000_invm_unitialized_structure		= 0x00,
+	e1000_invm_word_autoload_structure		= 0x01,
+	e1000_invm_csr_autoload_structure		= 0x02,
+	e1000_invm_phy_register_autoload_structure	= 0x03,
+	e1000_invm_rsa_key_sha256_structure		= 0x04,
+	e1000_invm_invalidated_structure		= 0x0f,
+};
+
+#endif /* NO_I225_SUPPORT */
 #define __le16 u16
 #define __le32 u32
 #define __le64 u64
@@ -1008,6 +1026,7 @@ struct e1000_hw {
 #include "e1000_ich8lan.h"
 #include "e1000_82575.h"
 #include "e1000_i210.h"
+#include "e1000_i225.h"
 
 /* These functions must be implemented by drivers */
 void e1000_pci_clear_mwi(struct e1000_hw *hw);

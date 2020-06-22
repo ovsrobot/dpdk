@@ -14,6 +14,7 @@
 
 #include "e1000_api.h"
 #include "e1000_i210.h"
+#include "e1000_i225.h"
 
 STATIC s32  e1000_init_phy_params_82575(struct e1000_hw *hw);
 STATIC s32  e1000_init_mac_params_82575(struct e1000_hw *hw);
@@ -430,12 +431,17 @@ STATIC s32 e1000_init_mac_params_82575(struct e1000_hw *hw)
 	if (mac->type >= e1000_82580)
 		mac->ops.reset_hw = e1000_reset_hw_82580;
 	else
-	mac->ops.reset_hw = e1000_reset_hw_82575;
+		mac->ops.reset_hw = e1000_reset_hw_82575;
 	/* hw initialization */
 	if ((mac->type == e1000_i210) || (mac->type == e1000_i211))
 		mac->ops.init_hw = e1000_init_hw_i210;
 	else
-	mac->ops.init_hw = e1000_init_hw_82575;
+#ifndef NO_I225_SUPPORT
+	if (mac->type == e1000_i225)
+		mac->ops.init_hw = e1000_init_hw_i225;
+	else
+#endif /* NO_I225_SUPPORT */
+		mac->ops.init_hw = e1000_init_hw_82575;
 	/* link setup */
 	mac->ops.setup_link = e1000_setup_link_generic;
 	/* physical interface link setup */
