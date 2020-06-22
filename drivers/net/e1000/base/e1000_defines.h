@@ -411,6 +411,10 @@
 #define E1000_RXCSUM_IPPCSE	0x00001000 /* IP payload checksum enable */
 #define E1000_RXCSUM_PCSD	0x00002000 /* packet checksum disabled */
 
+/* GPY211 - I225 defines */
+#define GPY_MMD_MASK		0xFFFF0000
+#define GPY_MMD_SHIFT		16
+#define GPY_REG_MASK		0x0000FFFF
 /* Header split receive */
 #define E1000_RFCTL_NFSW_DIS		0x00000040
 #define E1000_RFCTL_NFSR_DIS		0x00000080
@@ -421,8 +425,8 @@
 #define E1000_RFCTL_LEF			0x00040000
 
 /* Collision related configuration parameters */
-#define E1000_COLLISION_THRESHOLD	15
 #define E1000_CT_SHIFT			4
+#define E1000_COLLISION_THRESHOLD	15
 #define E1000_COLLISION_DISTANCE	63
 #define E1000_COLD_SHIFT		12
 
@@ -593,6 +597,8 @@
 #define E1000_IMS_VMMB		E1000_ICR_VMMB    /* Mail box activity */
 #define E1000_IMS_RXSEQ		E1000_ICR_RXSEQ   /* Rx sequence error */
 #define E1000_IMS_RXDMT0	E1000_ICR_RXDMT0  /* Rx desc min. threshold */
+#define E1000_QVECTOR_MASK	0x7FFC		/* Q-vector mask */
+#define E1000_ITR_VAL_MASK	0x04		/* ITR value mask */
 #define E1000_IMS_RXO		E1000_ICR_RXO     /* Rx overrun */
 #define E1000_IMS_RXT0		E1000_ICR_RXT0    /* Rx timer intr */
 #define E1000_IMS_TXD_LOW	E1000_ICR_TXD_LOW
@@ -625,6 +631,7 @@
 #define E1000_ICS_LSC		E1000_ICR_LSC       /* Link Status Change */
 #define E1000_ICS_RXSEQ		E1000_ICR_RXSEQ     /* Rx sequence error */
 #define E1000_ICS_RXDMT0	E1000_ICR_RXDMT0    /* Rx desc min. threshold */
+#define E1000_ICS_DRSTA		IGC_ICR_DRSTA     /* Device Reset Aserted */
 
 /* Extended Interrupt Cause Set */
 #define E1000_EICS_RX_QUEUE0	E1000_EICR_RX_QUEUE0 /* Rx Queue 0 Interrupt */
@@ -820,7 +827,7 @@
 #define E1000_THSTAT_PWR_DOWN		0x00000001 /* Power Down Event */
 #define E1000_THSTAT_LINK_THROTTLE	0x00000002 /* Link Spd Throttle Event */
 
-/* I350 EEE defines */
+/* EEE defines */
 #define E1000_IPCNFG_EEE_2_5G_AN	0x00000010 /* IPCNFG EEE Ena 2.5G AN */
 #define E1000_IPCNFG_EEE_1G_AN		0x00000008 /* IPCNFG EEE Ena 1G AN */
 #define E1000_IPCNFG_EEE_100M_AN	0x00000004 /* IPCNFG EEE Ena 100M AN */
@@ -1396,6 +1403,8 @@
 #define GG82563_PHY_INBAND_CTRL		GG82563_REG(194, 18) /* Inband Ctrl */
 
 /* MDI Control */
+#define E1000_MDIC_DATA_MASK	0x0000FFFF
+#define E1000_MDIC_INT_EN	0x20000000
 #define E1000_MDIC_REG_MASK	0x001F0000
 #define E1000_MDIC_REG_SHIFT	16
 #define E1000_MDIC_PHY_MASK	0x03E00000
@@ -1405,6 +1414,11 @@
 #define E1000_MDIC_READY	0x10000000
 #define E1000_MDIC_ERROR	0x40000000
 #define E1000_MDIC_DEST		0x80000000
+
+#define E1000_N0_QUEUE -1
+
+#define E1000_MAX_MAC_HDR_LEN	127
+#define E1000_MAX_NETWORK_HDR_LEN	511
 
 /* SerDes Control */
 #define E1000_GEN_CTL_READY		0x80000000
