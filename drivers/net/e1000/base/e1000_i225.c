@@ -406,8 +406,8 @@ STATIC s32 e1000_get_hw_semaphore_i225(struct e1000_hw *hw)
 		/* In rare circumstances, the SW semaphore may already be held
 		 * unintentionally. Clear the semaphore once before giving up.
 		 */
-		if (hw->dev_spec._82575.clear_semaphore_once) {
-			hw->dev_spec._82575.clear_semaphore_once = false;
+		if (hw->dev_spec._i225.clear_semaphore_once) {
+			hw->dev_spec._i225.clear_semaphore_once = false;
 			e1000_put_hw_semaphore_generic(hw);
 			for (i = 0; i < timeout; i++) {
 				swsm = E1000_READ_REG(hw, E1000_SWSM);
@@ -1147,7 +1147,7 @@ s32 e1000_set_eee_i225(struct e1000_hw *hw, bool adv2p5G, bool adv1G,
 	eeer = E1000_READ_REG(hw, E1000_EEER);
 
 	/* enable or disable per user setting */
-	if (!(hw->dev_spec._82575.eee_disable)) {
+	if (!(hw->dev_spec._i225.eee_disable)) {
 		u32 eee_su = E1000_READ_REG(hw, E1000_EEE_SU);
 
 		if (adv100M)
@@ -1168,12 +1168,6 @@ s32 e1000_set_eee_i225(struct e1000_hw *hw, bool adv2p5G, bool adv1G,
 		eeer |= (E1000_EEER_TX_LPI_EN | E1000_EEER_RX_LPI_EN |
 			E1000_EEER_LPI_FC);
 
-#ifndef EXTERNAL_RELEASE
-		/*
-		 * This bit is supposed to be cleared by the NVM. However, older
-		 * NVMs may not have done this (Springville HW HSD #359296).
-		 */
-#endif /* EXTERNAL_RELEASE */
 		/* This bit should not be set in normal operation. */
 		if (eee_su & E1000_EEE_SU_LPI_CLK_STP)
 			DEBUGOUT("LPI Clock Stop Bit should not be set!\n");

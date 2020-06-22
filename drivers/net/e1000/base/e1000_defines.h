@@ -858,6 +858,7 @@
 #define E1000_EEE_SU_LPI_CLK_STP	0x00800000 /* EEE LPI Clock Stop */
 #define E1000_EEE_LP_ADV_DEV_I210	7          /* EEE LP Adv Device */
 #define E1000_EEE_LP_ADV_ADDR_I210	61         /* EEE LP Adv Register */
+#define E1000_EEE_SU_LPI_CLK_STP	0x00800000 /* EEE LPI Clock Stop */
 #ifndef NO_I225_SUPPORT
 #define E1000_EEE_LP_ADV_DEV_I225	7          /* EEE LP Adv Device */
 #define E1000_EEE_LP_ADV_ADDR_I225	61         /* EEE LP Adv Register */
@@ -1056,6 +1057,8 @@
 #define E1000_EECD_FLUPD_I225		0x00800000 /* Update FLASH */
 #define E1000_EECD_FLUDONE_I225		0x04000000 /* Update FLASH done */
 #define E1000_EECD_FLASH_DETECTED_I225	0x00080000 /* FLASH detected */
+#define E1000_FLUDONE_ATTEMPTS		20000
+#define E1000_EERD_EEWR_MAX_COUNT	512 /* buffered EEPROM words rw */
 
 #endif /* NO_I225_SUPPORT */
 #define E1000_NVM_RW_REG_DATA	16  /* Offset to data in NVM read/write regs */
