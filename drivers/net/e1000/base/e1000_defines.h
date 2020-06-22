@@ -1100,7 +1100,11 @@
 #define ANEG_MULTIGBT_AN_CTRL	0x0020 /* MULTI GBT AN Control Register */
 #define MMD_DEVADDR_SHIFT	16     /* Shift MMD to higher bits */
 #define CR_2500T_FD_CAPS	0x0080 /* Advertise 2500T FD capability */
+
 #define PHY_CONTROL_LB		0x4000 /* PHY Loopback bit */
+
+
+#define E1000_PHY_RST_COMP	0x0100 /* Internal PHY reset completion */
 
 /* NVM Control */
 #define E1000_EECD_SK		0x00000001 /* NVM Clock */

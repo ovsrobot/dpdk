@@ -2877,6 +2877,7 @@ s32 e1000_phy_sw_reset_generic(struct e1000_hw *hw)
 s32 e1000_phy_hw_reset_generic(struct e1000_hw *hw)
 {
 	struct e1000_phy_info *phy = &hw->phy;
+	u32 phpm = 0, timeout = 10000;
 	s32 ret_val;
 	u32 ctrl;
 
@@ -2892,6 +2893,7 @@ s32 e1000_phy_hw_reset_generic(struct e1000_hw *hw)
 	if (ret_val)
 		return ret_val;
 
+	phpm = E1000_READ_REG(hw, E1000_I225_PHPM);
 	ctrl = E1000_READ_REG(hw, E1000_CTRL);
 	E1000_WRITE_REG(hw, E1000_CTRL, ctrl | E1000_CTRL_PHY_RST);
 	E1000_WRITE_FLUSH(hw);
@@ -2901,7 +2903,15 @@ s32 e1000_phy_hw_reset_generic(struct e1000_hw *hw)
 	E1000_WRITE_REG(hw, E1000_CTRL, ctrl);
 	E1000_WRITE_FLUSH(hw);
 
-	usec_delay(150);
+	/* SW should guarantee 100us for the completion of the PHY reset */
+	usec_delay(100);
+	do {
+		phpm = E1000_READ_REG(hw, E1000_I225_PHPM);
+		timeout--;
+		usec_delay(1);
+	} while (!(phpm & E1000_PHY_RST_COMP) && timeout);
+
+	usec_delay(100);
 
 	phy->ops.release(hw);
 
