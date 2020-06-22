@@ -1100,6 +1100,11 @@ CONFIG_RTE_LIBRTE_GRAPH_STATS=y
 CONFIG_RTE_LIBRTE_NODE=y
 
 #
+# Compile librte_if_proxy
+#
+CONFIG_RTE_LIBRTE_IF_PROXY=n
+
+#
 # Compile the test application
 #
 CONFIG_RTE_APP_TEST=y

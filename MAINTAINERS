@@ -1499,6 +1499,9 @@ M: Nithin Dabilpuram <ndabilpuram@marvell.com>
 M: Pavan Nikhilesh <pbhagavatula@marvell.com>
 F: lib/librte_node/
 
+IF Proxy - EXPERIMENTAL
+M: Andrzej Ostruszka <aostruszka@marvell.com>
+F: lib/librte_if_proxy/
 
 Test Applications
 -----------------

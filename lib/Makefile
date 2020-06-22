@@ -127,6 +127,9 @@ DEPDIRS-librte_graph := librte_eal
 DIRS-$(CONFIG_RTE_LIBRTE_NODE) += librte_node
 DEPDIRS-librte_node := librte_graph librte_lpm librte_ethdev librte_mbuf
 
+DIRS-$(CONFIG_RTE_LIBRTE_IF_PROXY) += librte_if_proxy
+DEPDIRS-librte_if_proxy := librte_eal librte_ethdev
+
 ifeq ($(CONFIG_RTE_EXEC_ENV_LINUX),y)
 DIRS-$(CONFIG_RTE_LIBRTE_KNI) += librte_kni
 endif
