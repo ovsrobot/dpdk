@@ -42,6 +42,8 @@ malloc_elem_find_max_iova_contig(struct malloc_elem *elem, size_t align)
 	rte_iova_t expected_iova;
 	struct rte_memseg *ms;
 	size_t page_sz, cur, max;
+	const struct internal_config *internal_conf =
+			rte_eal_get_internal_configuration();
 
 	page_sz = (size_t)elem->msl->page_sz;
 	data_start = RTE_PTR_ADD(elem, MALLOC_ELEM_HEADER_LEN);
@@ -60,7 +62,7 @@ malloc_elem_find_max_iova_contig(struct malloc_elem *elem, size_t align)
 	 */
 	if (!elem->msl->external &&
 			(rte_eal_iova_mode() == RTE_IOVA_VA ||
-				(internal_config.legacy_mem &&
+				(internal_conf->legacy_mem &&
 					rte_eal_has_hugepages())))
 		return RTE_PTR_DIFF(data_end, contig_seg_start);
 
@@ -340,18 +342,24 @@ remove_elem(struct malloc_elem *elem)
 static int
 next_elem_is_adjacent(struct malloc_elem *elem)
 {
+	const struct internal_config *internal_conf =
+			rte_eal_get_internal_configuration();
+
 	return elem->next == RTE_PTR_ADD(elem, elem->size) &&
 			elem->next->msl == elem->msl &&
-			(!internal_config.match_allocations ||
+			(!internal_conf->match_allocations ||
 			 elem->orig_elem == elem->next->orig_elem);
 }
 
 static int
 prev_elem_is_adjacent(struct malloc_elem *elem)
 {
+	const struct internal_config *internal_conf =
+			rte_eal_get_internal_configuration();
+
 	return elem == RTE_PTR_ADD(elem->prev, elem->prev->size) &&
 			elem->prev->msl == elem->msl &&
-			(!internal_config.match_allocations ||
+			(!internal_conf->match_allocations ||
 			 elem->orig_elem == elem->prev->orig_elem);
 }
 

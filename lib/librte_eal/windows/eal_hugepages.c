@@ -54,10 +54,12 @@ hugepage_info_init(void)
 	struct hugepage_info *hpi;
 	unsigned int socket_id;
 	int ret = 0;
+	struct internal_config *internal_conf =
+			rte_eal_get_internal_configuration();
 
 	/* Only one hugepage size available on Windows. */
-	internal_config.num_hugepage_sizes = 1;
-	hpi = &internal_config.hugepage_info[0];
+	internal_conf->num_hugepage_sizes = 1;
+	hpi = &internal_conf->hugepage_info[0];
 
 	hpi->hugepage_sz = GetLargePageMinimum();
 	if (hpi->hugepage_sz == 0)
