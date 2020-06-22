@@ -1205,3 +1205,73 @@ s32 e1000_set_d3_lplu_state_i225(struct e1000_hw *hw, bool active)
 	E1000_WRITE_REG(hw, E1000_I225_PHPM, data);
 	return E1000_SUCCESS;
 }
+
+
+/**
+ *  e1000_set_eee_i225 - Enable/disable EEE support
+ *  @hw: pointer to the HW structure
+ *  @adv2p5G: boolean flag enabling 2.5G EEE advertisement
+ *  @adv1G: boolean flag enabling 1G EEE advertisement
+ *  @adv100M: boolean flag enabling 100M EEE advertisement
+ *
+ *  Enable/disable EEE based on setting in dev_spec structure.
+ *
+ **/
+s32 e1000_set_eee_i225(struct e1000_hw *hw, bool adv2p5G, bool adv1G,
+		       bool adv100M)
+{
+	u32 ipcnfg, eeer;
+
+	DEBUGFUNC("e1000_set_eee_i225");
+
+	if (hw->mac.type != e1000_i225 ||
+	    hw->phy.media_type != e1000_media_type_copper)
+		goto out;
+	ipcnfg = E1000_READ_REG(hw, E1000_IPCNFG);
+	eeer = E1000_READ_REG(hw, E1000_EEER);
+
+	/* enable or disable per user setting */
+	if (!(hw->dev_spec._82575.eee_disable)) {
+		u32 eee_su = E1000_READ_REG(hw, E1000_EEE_SU);
+
+		if (adv100M)
+			ipcnfg |= E1000_IPCNFG_EEE_100M_AN;
+		else
+			ipcnfg &= ~E1000_IPCNFG_EEE_100M_AN;
+
+		if (adv1G)
+			ipcnfg |= E1000_IPCNFG_EEE_1G_AN;
+		else
+			ipcnfg &= ~E1000_IPCNFG_EEE_1G_AN;
+
+		if (adv2p5G)
+			ipcnfg |= E1000_IPCNFG_EEE_2_5G_AN;
+		else
+			ipcnfg &= ~E1000_IPCNFG_EEE_2_5G_AN;
+
+		eeer |= (E1000_EEER_TX_LPI_EN | E1000_EEER_RX_LPI_EN |
+			E1000_EEER_LPI_FC);
+
+#ifndef EXTERNAL_RELEASE
+		/*
+		 * This bit is supposed to be cleared by the NVM. However, older
+		 * NVMs may not have done this (Springville HW HSD #359296).
+		 */
+#endif /* EXTERNAL_RELEASE */
+		/* This bit should not be set in normal operation. */
+		if (eee_su & E1000_EEE_SU_LPI_CLK_STP)
+			DEBUGOUT("LPI Clock Stop Bit should not be set!\n");
+	} else {
+		ipcnfg &= ~(E1000_IPCNFG_EEE_2_5G_AN | E1000_IPCNFG_EEE_1G_AN |
+			E1000_IPCNFG_EEE_100M_AN);
+		eeer &= ~(E1000_EEER_TX_LPI_EN | E1000_EEER_RX_LPI_EN |
+			E1000_EEER_LPI_FC);
+	}
+	E1000_WRITE_REG(hw, E1000_IPCNFG, ipcnfg);
+	E1000_WRITE_REG(hw, E1000_EEER, eeer);
+	E1000_READ_REG(hw, E1000_IPCNFG);
+	E1000_READ_REG(hw, E1000_EEER);
+out:
+
+	return E1000_SUCCESS;
+}
