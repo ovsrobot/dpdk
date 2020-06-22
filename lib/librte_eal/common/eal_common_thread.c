@@ -236,3 +236,36 @@ fail:
 	pthread_join(*thread, NULL);
 	return -ret;
 }
+
+void
+rte_thread_register(void)
+{
+	unsigned int lcore_id;
+	rte_cpuset_t cpuset;
+
+	/* EAL init flushes all lcores, we can't register before. */
+	assert(internal_config.init_complete == 1);
+	if (pthread_getaffinity_np(pthread_self(), sizeof(cpuset),
+			&cpuset) != 0)
+		CPU_ZERO(&cpuset);
+	lcore_id = eal_lcore_non_eal_allocate();
+	if (lcore_id >= RTE_MAX_LCORE)
+		lcore_id = LCORE_ID_ANY;
+	rte_thread_init(lcore_id, &cpuset);
+	if (lcore_id != LCORE_ID_ANY)
+		RTE_LOG(DEBUG, EAL, "Registered non-EAL thread as lcore %u.\n",
+			lcore_id);
+}
+
+void
+rte_thread_unregister(void)
+{
+	unsigned int lcore_id = rte_lcore_id();
+
+	if (lcore_id != LCORE_ID_ANY)
+		eal_lcore_non_eal_release(lcore_id);
+	rte_thread_uninit();
+	if (lcore_id != LCORE_ID_ANY)
+		RTE_LOG(DEBUG, EAL, "Unregistered non-EAL thread (was lcore %u).\n",
+			lcore_id);
+}
