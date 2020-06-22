@@ -86,6 +86,8 @@ s32  e1000_phy_force_speed_duplex_82577(struct e1000_hw *hw);
 s32  e1000_get_cable_length_82577(struct e1000_hw *hw);
 s32  e1000_write_phy_reg_gs40g(struct e1000_hw *hw, u32 offset, u16 data);
 s32  e1000_read_phy_reg_gs40g(struct e1000_hw *hw, u32 offset, u16 *data);
+s32  e1000_write_phy_reg_gpy(struct e1000_hw *hw, u32 offset, u16 data);
+s32  e1000_read_phy_reg_gpy(struct e1000_hw *hw, u32 offset, u16 *data);
 s32 e1000_read_phy_reg_mphy(struct e1000_hw *hw, u32 address, u32 *data);
 s32 e1000_write_phy_reg_mphy(struct e1000_hw *hw, u32 address, u32 data,
 			     bool line_override);
@@ -115,6 +117,10 @@ bool e1000_is_mphy_ready(struct e1000_hw *hw);
 #define GS40G_MAC_SPEED_1G		0X0006
 #define GS40G_COPPER_SPEC		0x0010
 
+/* GPY211 - I225 defines */
+#define GPY_MMD_MASK			0xFFFF0000
+#define GPY_MMD_SHIFT			16
+#define GPY_REG_MASK			0x0000FFFF
 /* BM/HV Specific Registers */
 #define BM_PORT_CTRL_PAGE		769
 #define BM_WUC_PAGE			800

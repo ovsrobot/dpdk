@@ -273,6 +273,7 @@ enum e1000_phy_type {
 	e1000_phy_82580,
 	e1000_phy_vf,
 	e1000_phy_i210,
+	e1000_phy_i225,
 };
 
 enum e1000_bus_type {

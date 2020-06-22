@@ -986,6 +986,11 @@
 #define PHY_1000T_STATUS	0x0A /* 1000Base-T Status Reg */
 #define PHY_EXT_STATUS		0x0F /* Extended Status Reg */
 
+/* PHY GPY 211 registers */
+#define STANDARD_AN_REG_MASK	0x0007 /* MMD */
+#define ANEG_MULTIGBT_AN_CTRL	0x0020 /* MULTI GBT AN Control Register */
+#define MMD_DEVADDR_SHIFT	16     /* Shift MMD to higher bits */
+#define CR_2500T_FD_CAPS	0x0080 /* Advertise 2500T FD capability */
 #define PHY_CONTROL_LB		0x4000 /* PHY Loopback bit */
 
 /* NVM Control */
