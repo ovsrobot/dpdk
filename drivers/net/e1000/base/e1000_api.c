@@ -305,6 +305,10 @@ s32 e1000_set_mac_type(struct e1000_hw *hw)
 	case E1000_DEV_ID_82576_SERDES_QUAD:
 		mac->type = e1000_82576;
 		break;
+	case E1000_DEV_ID_82576_VF:
+	case E1000_DEV_ID_82576_VF_HV:
+		mac->type = e1000_vfadapt;
+		break;
 	case E1000_DEV_ID_82580_COPPER:
 	case E1000_DEV_ID_82580_FIBER:
 	case E1000_DEV_ID_82580_SERDES:
@@ -337,21 +341,14 @@ s32 e1000_set_mac_type(struct e1000_hw *hw)
 	case E1000_DEV_ID_I211_COPPER:
 		mac->type = e1000_i211;
 		break;
-#ifndef NO_I225_SUPPORT
 	case E1000_DEV_ID_I225_LM:
 	case E1000_DEV_ID_I225_V:
 		mac->type = e1000_i225;
-		break;
-#endif /* NO_I225_SUPPORT */
-	case E1000_DEV_ID_82576_VF:
-	case E1000_DEV_ID_82576_VF_HV:
-		mac->type = e1000_vfadapt;
 		break;
 	case E1000_DEV_ID_I350_VF:
 	case E1000_DEV_ID_I350_VF_HV:
 		mac->type = e1000_vfadapt_i350;
 		break;
-
 	case E1000_DEV_ID_I354_BACKPLANE_1GBPS:
 	case E1000_DEV_ID_I354_SGMII:
 	case E1000_DEV_ID_I354_BACKPLANE_2_5GBPS:

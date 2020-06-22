@@ -222,9 +222,7 @@ enum e1000_mac_type {
 	e1000_i354,
 	e1000_i210,
 	e1000_i211,
-#ifndef NO_I225_SUPPORT
 	e1000_i225,
-#endif /* NO_I225_SUPPORT */
 	e1000_vfadapt,
 	e1000_vfadapt_i350,
 	e1000_num_macs  /* List is 1-based, so subtract 1 for true count. */
@@ -360,7 +358,6 @@ enum e1000_serdes_link_state {
 	e1000_serdes_link_forced_up
 };
 
-#ifndef NO_I225_SUPPORT
 enum e1000_invm_structure_type {
 	e1000_invm_unitialized_structure		= 0x00,
 	e1000_invm_word_autoload_structure		= 0x01,
@@ -370,7 +367,6 @@ enum e1000_invm_structure_type {
 	e1000_invm_invalidated_structure		= 0x0f,
 };
 
-#endif /* NO_I225_SUPPORT */
 #define __le16 u16
 #define __le32 u32
 #define __le64 u64
@@ -701,6 +697,7 @@ struct e1000_mac_operations {
 	void (*update_mc_addr_list)(struct e1000_hw *, u8 *, u32);
 	s32  (*reset_hw)(struct e1000_hw *);
 	s32  (*init_hw)(struct e1000_hw *);
+	s32  (*set_eee)(struct e1000_hw *, bool, bool, bool);
 	void (*shutdown_serdes)(struct e1000_hw *);
 	void (*power_up_serdes)(struct e1000_hw *);
 	s32  (*setup_link)(struct e1000_hw *);
@@ -999,9 +996,20 @@ struct e1000_dev_spec_vf {
 	u32 v2p_mailbox;
 };
 
+struct e1000_dev_spec_i225 {
+	bool global_device_reset;
+	bool eee_disable;
+	bool clear_semaphore_once;
+	bool module_plugged;
+	u8 media_port;
+	bool mas_capable;
+	u32 mtu;
+};
+
 struct e1000_hw {
 	void *back;
 
+	u8 pf_id;               /* device profile info */
 	u8 *hw_addr;
 	u8 *flash_address;
 	unsigned long io_base;
@@ -1023,6 +1031,7 @@ struct e1000_hw {
 		struct e1000_dev_spec_ich8lan ich8lan;
 		struct e1000_dev_spec_82575 _82575;
 		struct e1000_dev_spec_vf vf;
+		struct e1000_dev_spec_i225 _i225;
 	} dev_spec;
 
 	u16 device_id;

@@ -1,14 +1,9 @@
-#ifndef NO_API_SUPPORT
 #include "e1000_api.h"
-#else
-#include "e1000_hw.h"
-#endif /* NO_API_SUPPORT */
-#ifndef EXTERNAL_RELEASE
-#ifdef WPP_TRACING_ENABLED
-#include <e1000_i225.tmh>
-#endif /* WPP_TRACING_ENABLED */
-#endif /* EXTERNAL_RELEASE */
 
+STATIC s32 e1000_init_nvm_params_i225(struct e1000_hw *hw);
+STATIC s32 e1000_init_mac_params_i225(struct e1000_hw *hw);
+STATIC s32 e1000_init_phy_params_i225(struct e1000_hw *hw);
+STATIC s32 e1000_reset_hw_i225(struct e1000_hw *hw);
 STATIC s32 e1000_acquire_nvm_i225(struct e1000_hw *hw);
 STATIC void e1000_release_nvm_i225(struct e1000_hw *hw);
 STATIC s32 e1000_get_hw_semaphore_i225(struct e1000_hw *hw);
@@ -18,6 +13,236 @@ STATIC s32 __e1000_write_nvm_srwr(struct e1000_hw *hw, u16 offset, u16 words,
 #endif /* QV_RELEASE */
 STATIC s32 e1000_pool_flash_update_done_i225(struct e1000_hw *hw);
 STATIC s32 e1000_valid_led_default_i225(struct e1000_hw *hw, u16 *data);
+
+/**
+ *  e1000_init_nvm_params_i225 - Init NVM func ptrs.
+ *  @hw: pointer to the HW structure
+ **/
+STATIC s32 e1000_init_nvm_params_i225(struct e1000_hw *hw)
+{
+	struct e1000_nvm_info *nvm = &hw->nvm;
+	u32 eecd = E1000_READ_REG(hw, E1000_EECD);
+	u16 size;
+
+	DEBUGFUNC("e1000_init_nvm_params_i225");
+
+	size = (u16)((eecd & E1000_EECD_SIZE_EX_MASK) >>
+		     E1000_EECD_SIZE_EX_SHIFT);
+	/*
+	 * Added to a constant, "size" becomes the left-shift value
+	 * for setting word_size.
+	 */
+	size += NVM_WORD_SIZE_BASE_SHIFT;
+
+	/* Just in case size is out of range, cap it to the largest
+	 * EEPROM size supported
+	 */
+	if (size > 15)
+		size = 15;
+
+	nvm->word_size = 1 << size;
+	nvm->opcode_bits = 8;
+	nvm->delay_usec = 1;
+	nvm->type = e1000_nvm_eeprom_spi;
+
+
+	nvm->page_size = eecd & E1000_EECD_ADDR_BITS ? 32 : 8;
+	nvm->address_bits = eecd & E1000_EECD_ADDR_BITS ?
+			    16 : 8;
+
+	if (nvm->word_size == (1 << 15))
+		nvm->page_size = 128;
+
+	nvm->ops.acquire = e1000_acquire_nvm_i225;
+	nvm->ops.release = e1000_release_nvm_i225;
+	nvm->ops.valid_led_default = e1000_valid_led_default_i225;
+	if (e1000_get_flash_presence_i225(hw)) {
+		hw->nvm.type = e1000_nvm_flash_hw;
+		nvm->ops.read    = e1000_read_nvm_srrd_i225;
+		nvm->ops.write   = e1000_write_nvm_srwr_i225;
+		nvm->ops.validate = e1000_validate_nvm_checksum_i225;
+		nvm->ops.update   = e1000_update_nvm_checksum_i225;
+	} else {
+		hw->nvm.type = e1000_nvm_invm;
+		nvm->ops.write    = e1000_null_write_nvm;
+		nvm->ops.validate = e1000_null_ops_generic;
+		nvm->ops.update   = e1000_null_ops_generic;
+	}
+
+	return E1000_SUCCESS;
+}
+
+/**
+ *  e1000_init_mac_params_i225 - Init MAC func ptrs.
+ *  @hw: pointer to the HW structure
+ **/
+STATIC s32 e1000_init_mac_params_i225(struct e1000_hw *hw)
+{
+	struct e1000_mac_info *mac = &hw->mac;
+	struct e1000_dev_spec_i225 *dev_spec = &hw->dev_spec._i225;
+
+	DEBUGFUNC("e1000_init_mac_params_i225");
+
+	/* Initialize function pointer */
+	e1000_init_mac_ops_generic(hw);
+
+	/* Set media type */
+	hw->phy.media_type = e1000_media_type_copper;
+	/* Set mta register count */
+	mac->mta_reg_count = 128;
+	/* Set rar entry count */
+	mac->rar_entry_count = E1000_RAR_ENTRIES_BASE;
+	/* Set EEE */
+	mac->ops.set_eee = e1000_set_eee_i225;
+	/* reset */
+	mac->ops.reset_hw = e1000_reset_hw_i225;
+	/* hw initialization */
+	mac->ops.init_hw = e1000_init_hw_i225;
+	/* link setup */
+	mac->ops.setup_link = e1000_setup_link_generic;
+	mac->ops.check_for_link = e1000_check_for_copper_link_generic;
+	/* link info */
+	mac->ops.get_link_up_info = e1000_get_speed_and_duplex_copper_generic;
+	/* acquire SW_FW sync */
+	mac->ops.acquire_swfw_sync = e1000_acquire_swfw_sync_i225;
+	/* release SW_FW sync */
+	mac->ops.release_swfw_sync = e1000_release_swfw_sync_i225;
+
+	/* Allow a single clear of the SW semaphore on I225 */
+	dev_spec->clear_semaphore_once = true;
+	mac->ops.setup_physical_interface = e1000_setup_copper_link_i225;
+
+	/* Set if part includes ASF firmware */
+	mac->asf_firmware_present = true;
+
+	/* multicast address update */
+	mac->ops.update_mc_addr_list = e1000_update_mc_addr_list_generic;
+
+	mac->ops.write_vfta = e1000_write_vfta_generic;
+
+	return E1000_SUCCESS;
+}
+
+/**
+ *  e1000_init_phy_params_i225 - Init PHY func ptrs.
+ *  @hw: pointer to the HW structure
+ **/
+STATIC s32 e1000_init_phy_params_i225(struct e1000_hw *hw)
+{
+	struct e1000_phy_info *phy = &hw->phy;
+	s32 ret_val = E1000_SUCCESS;
+	u32 ctrl_ext;
+
+	DEBUGFUNC("e1000_init_phy_params_i225");
+
+	phy->ops.read_i2c_byte = e1000_read_i2c_byte_generic;
+	phy->ops.write_i2c_byte = e1000_write_i2c_byte_generic;
+
+	if (hw->phy.media_type != e1000_media_type_copper) {
+		phy->type = e1000_phy_none;
+		goto out;
+	}
+
+	phy->ops.power_up   = e1000_power_up_phy_copper;
+	phy->ops.power_down = e1000_power_down_phy_copper_base;
+
+	phy->autoneg_mask = AUTONEG_ADVERTISE_SPEED_DEFAULT_2500;
+
+	phy->reset_delay_us	= 100;
+
+	phy->ops.acquire	= e1000_acquire_phy_base;
+	phy->ops.check_reset_block = e1000_check_reset_block_generic;
+	phy->ops.commit		= e1000_phy_sw_reset_generic;
+	phy->ops.release	= e1000_release_phy_base;
+	phy->ops.reset		= e1000_phy_hw_reset_generic;
+
+	ctrl_ext = E1000_READ_REG(hw, E1000_CTRL_EXT);
+
+	/* Make sure the PHY is in a good state. Several people have reported
+	 * firmware leaving the PHY's page select register set to something
+	 * other than the default of zero, which causes the PHY ID read to
+	 * access something other than the intended register.
+	 */
+	ret_val = hw->phy.ops.reset(hw);
+	if (ret_val)
+		goto out;
+
+	E1000_WRITE_REG(hw, E1000_CTRL_EXT, ctrl_ext);
+	phy->ops.read_reg = e1000_read_phy_reg_gpy;
+	phy->ops.write_reg = e1000_write_phy_reg_gpy;
+
+	ret_val = e1000_get_phy_id(hw);
+	/* Verify phy id and set remaining function pointers */
+	switch (phy->id) {
+	case I225_I_PHY_ID:
+		phy->type		= e1000_phy_i225;
+		phy->ops.set_d0_lplu_state = e1000_set_d0_lplu_state_i225;
+		phy->ops.set_d3_lplu_state = e1000_set_d3_lplu_state_i225;
+		/* TODO - complete with GPY PHY information */
+		break;
+	default:
+		ret_val = -E1000_ERR_PHY;
+		goto out;
+	}
+
+out:
+	return ret_val;
+}
+
+/**
+ *  e1000_reset_hw_i225 - Reset hardware
+ *  @hw: pointer to the HW structure
+ *
+ *  This resets the hardware into a known state.
+ **/
+STATIC s32 e1000_reset_hw_i225(struct e1000_hw *hw)
+{
+	u32 ctrl;
+	s32 ret_val;
+
+	DEBUGFUNC("e1000_reset_hw_i225");
+
+	/*
+	 * Prevent the PCI-E bus from sticking if there is no TLP connection
+	 * on the last TLP read/write transaction when MAC is reset.
+	 */
+	ret_val = e1000_disable_pcie_master_generic(hw);
+	if (ret_val)
+		DEBUGOUT("PCI-E Master disable polling has failed.\n");
+
+	DEBUGOUT("Masking off all interrupts\n");
+	E1000_WRITE_REG(hw, E1000_IMC, 0xffffffff);
+
+	E1000_WRITE_REG(hw, E1000_RCTL, 0);
+	E1000_WRITE_REG(hw, E1000_TCTL, E1000_TCTL_PSP);
+	E1000_WRITE_FLUSH(hw);
+
+	msec_delay(10);
+
+	ctrl = E1000_READ_REG(hw, E1000_CTRL);
+
+	DEBUGOUT("Issuing a global reset to MAC\n");
+	E1000_WRITE_REG(hw, E1000_CTRL, ctrl | E1000_CTRL_DEV_RST);
+
+	ret_val = e1000_get_auto_rd_done_generic(hw);
+	if (ret_val) {
+		/*
+		 * When auto config read does not complete, do not
+		 * return with an error. This can happen in situations
+		 * where there is no eeprom and prevents getting link.
+		 */
+		DEBUGOUT("Auto Read Done did not complete\n");
+	}
+
+	/* Clear any pending interrupt events. */
+	E1000_WRITE_REG(hw, E1000_IMC, 0xffffffff);
+	E1000_READ_REG(hw, E1000_ICR);
+
+	/* Install any alternate MAC address into RAR0 */
+	ret_val = e1000_check_alt_mac_addr_generic(hw);
+
+	return ret_val;
+}
 
 /* e1000_acquire_nvm_i225 - Request for access to EEPROM
  * @hw: pointer to the HW structure
@@ -407,88 +632,6 @@ STATIC s32 e1000_read_invm_word_i225(struct e1000_hw *hw, u8 address, u16 *data)
 	return status;
 }
 
-/* e1000_read_invm_i225 - Read invm wrapper function for I225
- * @hw: pointer to the HW structure
- * @address: the word address (aka eeprom offset) to read
- * @data: pointer to the data read
- *
- * Wrapper function to return data formerly found in the NVM.
- */
-STATIC s32 e1000_read_invm_i225(struct e1000_hw *hw, u16 offset,
-				u16 E1000_UNUSEDARG words, u16 *data)
-{
-	s32 ret_val = E1000_SUCCESS;
-
-	UNREFERENCED_1PARAMETER(words);
-
-	DEBUGFUNC("e1000_read_invm_i225");
-
-	/* Only the MAC addr is required to be present in the iNVM */
-	switch (offset) {
-	case NVM_MAC_ADDR:
-		ret_val = e1000_read_invm_word_i225(hw, (u8)offset, &data[0]);
-		ret_val |= e1000_read_invm_word_i225(hw, (u8)offset + 1,
-						     &data[1]);
-		ret_val |= e1000_read_invm_word_i225(hw, (u8)offset + 2,
-						     &data[2]);
-		if (ret_val != E1000_SUCCESS)
-			DEBUGOUT("MAC Addr not found in iNVM\n");
-		break;
-	case NVM_INIT_CTRL_2:
-		ret_val = e1000_read_invm_word_i225(hw, (u8)offset, data);
-		if (ret_val != E1000_SUCCESS) {
-			*data = NVM_INIT_CTRL_2_DEFAULT_I225;
-			ret_val = E1000_SUCCESS;
-		}
-		break;
-	case NVM_INIT_CTRL_4:
-		ret_val = e1000_read_invm_word_i225(hw, (u8)offset, data);
-		if (ret_val != E1000_SUCCESS) {
-			*data = NVM_INIT_CTRL_4_DEFAULT_I225;
-			ret_val = E1000_SUCCESS;
-		}
-		break;
-	case NVM_LED_1_CFG:
-		ret_val = e1000_read_invm_word_i225(hw, (u8)offset, data);
-		if (ret_val != E1000_SUCCESS) {
-			*data = NVM_LED_1_CFG_DEFAULT_I225;
-			ret_val = E1000_SUCCESS;
-		}
-		break;
-	case NVM_LED_0_2_CFG:
-		ret_val = e1000_read_invm_word_i225(hw, (u8)offset, data);
-		if (ret_val != E1000_SUCCESS) {
-			*data = NVM_LED_0_2_CFG_DEFAULT_I225;
-			ret_val = E1000_SUCCESS;
-		}
-		break;
-	case NVM_ID_LED_SETTINGS:
-		ret_val = e1000_read_invm_word_i225(hw, (u8)offset, data);
-		if (ret_val != E1000_SUCCESS) {
-			*data = ID_LED_RESERVED_FFFF;
-			ret_val = E1000_SUCCESS;
-		}
-		break;
-	case NVM_SUB_DEV_ID:
-		*data = hw->subsystem_device_id;
-		break;
-	case NVM_SUB_VEN_ID:
-		*data = hw->subsystem_vendor_id;
-		break;
-	case NVM_DEV_ID:
-		*data = hw->device_id;
-		break;
-	case NVM_VEN_ID:
-		*data = hw->vendor_id;
-		break;
-	default:
-		DEBUGOUT1("NVM word 0x%02x is not mapped.\n", offset);
-		*data = NVM_RESERVED_WORD;
-		break;
-	}
-	return ret_val;
-}
-
 #if defined(NVM_VERSION_SUPPORT) || defined(QV_RELEASE)
 /* e1000_read_invm_version_i225 - Reads iNVM version and image type
  * @hw: pointer to the HW structure
@@ -750,237 +893,6 @@ s32 e1000_pool_flash_update_done_i225(struct e1000_hw *hw)
 	return ret_val;
 }
 
-/* e1000_init_nvm_params_i225 - Initialize i225 NVM function pointers
- * @hw: pointer to the HW structure
- *
- * Initialize the i225/i211 NVM parameters and function pointers.
- */
-STATIC s32 e1000_init_nvm_params_i225(struct e1000_hw *hw)
-{
-	s32 ret_val;
-	struct e1000_nvm_info *nvm = &hw->nvm;
-
-	DEBUGFUNC("e1000_init_nvm_params_i225");
-
-	ret_val = e1000_init_nvm_params_82575(hw);
-	nvm->ops.acquire = e1000_acquire_nvm_i225;
-	nvm->ops.release = e1000_release_nvm_i225;
-	nvm->ops.valid_led_default = e1000_valid_led_default_i225;
-	if (e1000_get_flash_presence_i225(hw)) {
-		hw->nvm.type = e1000_nvm_flash_hw;
-		nvm->ops.read    = e1000_read_nvm_srrd_i225;
-		nvm->ops.write   = e1000_write_nvm_srwr_i225;
-		nvm->ops.validate = e1000_validate_nvm_checksum_i225;
-		nvm->ops.update   = e1000_update_nvm_checksum_i225;
-	} else {
-		hw->nvm.type = e1000_nvm_invm;
-		nvm->ops.read     = e1000_read_invm_i225;
-#ifndef NO_NULL_OPS_SUPPORT
-		nvm->ops.write    = e1000_null_write_nvm;
-		nvm->ops.validate = e1000_null_ops_generic;
-		nvm->ops.update   = e1000_null_ops_generic;
-#else
-		nvm->ops.write    = NULL;
-		nvm->ops.validate = NULL;
-		nvm->ops.update   = NULL;
-#endif /* NO_NULL_OPS_SUPPORT */
-	}
-	return ret_val;
-}
-
-#ifdef I225_LTR_SUPPORT
-/* e1000_set_ltr_i225 - Set Latency Tolerance Reporting thresholds.
- * @hw: pointer to the HW structure
- * @link: bool indicating link status
- *
- * Set the LTR thresholds based on the link speed (Mbps), EEE, and DMAC
- * settings, otherwise specify that there is no LTR requirement.
- */
-STATIC s32 e1000_set_ltr_i225(struct e1000_hw *hw, bool link)
-{
-	u16 speed, duplex;
-	u32 tw_system, ltrc, ltrv, ltr_min, ltr_max, scale_min, scale_max;
-	s32 size;
-
-	DEBUGFUNC("e1000_set_ltr_i225");
-
-	/* If we do not have link, LTR thresholds are zero. */
-	if (link) {
-		hw->mac.ops.get_link_up_info(hw, &speed, &duplex);
-
-		/* Check if using copper interface with EEE enabled or if the
-		 * link speed is 10 Mbps.
-		 */
-		if ((hw->phy.media_type == e1000_media_type_copper) &&
-		    !(hw->dev_spec._82575.eee_disable) &&
-		     (speed != SPEED_10)) {
-			/* EEE enabled, so send LTRMAX threshold. */
-			ltrc = E1000_READ_REG(hw, E1000_LTRC) |
-				E1000_LTRC_EEEMS_EN;
-			E1000_WRITE_REG(hw, E1000_LTRC, ltrc);
-
-			/* Calculate tw_system (nsec). */
-			if (speed == SPEED_100) {
-				tw_system = ((E1000_READ_REG(hw, E1000_EEE_SU) &
-					     E1000_TW_SYSTEM_100_MASK) >>
-					     E1000_TW_SYSTEM_100_SHIFT) * 500;
-			} else {
-				tw_system = (E1000_READ_REG(hw, E1000_EEE_SU) &
-					     E1000_TW_SYSTEM_1000_MASK) * 500;
-				}
-		} else {
-			tw_system = 0;
-			}
-
-		/* Get the Rx packet buffer size. */
-		size = E1000_READ_REG(hw, E1000_RXPBS) &
-			E1000_RXPBS_SIZE_I225_MASK;
-
-		/* Calculations vary based on DMAC settings. */
-		if (E1000_READ_REG(hw, E1000_DMACR) & E1000_DMACR_DMAC_EN) {
-			size -= (E1000_READ_REG(hw, E1000_DMACR) &
-				 E1000_DMACR_DMACTHR_MASK) >>
-				 E1000_DMACR_DMACTHR_SHIFT;
-			/* Convert size to bits. */
-			size *= 1024 * 8;
-		} else {
-			/* Convert size to bytes, subtract the MTU, and then
-			 * convert the size to bits.
-			 */
-			size *= 1024;
-			size -= hw->dev_spec._82575.mtu;
-			size *= 8;
-		}
-
-		if (size < 0) {
-			DEBUGOUT1("Invalid effective Rx buffer size %d\n",
-				  size);
-			return -E1000_ERR_CONFIG;
-		}
-
-		/* Calculate the thresholds. Since speed is in Mbps, simplify
-		 * the calculation by multiplying size/speed by 1000 for result
-		 * to be in nsec before dividing by the scale in nsec. Set the
-		 * scale such that the LTR threshold fits in the register.
-		 */
-		ltr_min = (1000 * size) / speed;
-		ltr_max = ltr_min + tw_system;
-		scale_min = (ltr_min / 1024) < 1024 ? E1000_LTRMINV_SCALE_1024 :
-			    E1000_LTRMINV_SCALE_32768;
-		scale_max = (ltr_max / 1024) < 1024 ? E1000_LTRMAXV_SCALE_1024 :
-			    E1000_LTRMAXV_SCALE_32768;
-		ltr_min /= scale_min == E1000_LTRMINV_SCALE_1024 ? 1024 : 32768;
-		ltr_max /= scale_max == E1000_LTRMAXV_SCALE_1024 ? 1024 : 32768;
-
-		/* Only write the LTR thresholds if they differ from before. */
-		ltrv = E1000_READ_REG(hw, E1000_LTRMINV);
-		if (ltr_min != (ltrv & E1000_LTRMINV_LTRV_MASK)) {
-			ltrv = E1000_LTRMINV_LSNP_REQ | ltr_min |
-			      (scale_min << E1000_LTRMINV_SCALE_SHIFT);
-			E1000_WRITE_REG(hw, E1000_LTRMINV, ltrv);
-		}
-
-		ltrv = E1000_READ_REG(hw, E1000_LTRMAXV);
-		if (ltr_max != (ltrv & E1000_LTRMAXV_LTRV_MASK)) {
-			ltrv = E1000_LTRMAXV_LSNP_REQ | ltr_max |
-			      (scale_min << E1000_LTRMAXV_SCALE_SHIFT);
-			E1000_WRITE_REG(hw, E1000_LTRMAXV, ltrv);
-		}
-	}
-
-	return E1000_SUCCESS;
-}
-
-/* e1000_check_for_link_i225 - Check for link
- * @hw: pointer to the HW structure
- *
- * Checks to see of the link status of the hardware has changed.  If a
- * change in link status has been detected, then we read the PHY registers
- * to get the current speed/duplex if link exists.
- */
-s32 e1000_check_for_link_i225(struct e1000_hw *hw)
-{
-	struct e1000_mac_info *mac = &hw->mac;
-	s32 ret_val;
-	bool link = false;
-
-	DEBUGFUNC("e1000_check_for_link_i225");
-
-	if (hw->phy.media_type != e1000_media_type_copper) {
-		u16 speed, duplex;
-
-		ret_val = e1000_get_pcs_speed_and_duplex_82575(hw, &speed,
-							       &duplex);
-		/* Use this flag to determine if link needs to be checked or
-		 * not.  If we have link clear the flag so that we do not
-		 * continue to check for link.
-		 */
-		hw->mac.get_link_status = !hw->mac.serdes_has_link;
-
-		link = hw->mac.serdes_has_link;
-	} else {
-		/* We only want to go out to the PHY registers to see if
-		 * Auto-Neg has completed and/or if our link status has
-		 * changed.  The get_link_status flag is set upon receiving
-		 * a Link Status Change or Rx Sequence Error interrupt.
-		 */
-		if (!mac->get_link_status) {
-			ret_val = E1000_SUCCESS;
-			goto out;
-		}
-
-		/* First we want to see if the MII Status Register reports
-		 * link.  If so, then we want to get the current speed/duplex
-		 * of the PHY.
-		 */
-		ret_val = e1000_phy_has_link_generic(hw, 1, 0, &link);
-		if (ret_val)
-			goto out;
-
-		if (!link)
-			goto out; /* No link detected */
-
-		mac->get_link_status = false;
-
-		/* Check if there was DownShift, must be checked
-		 * immediately after link-up
-		 */
-		e1000_check_downshift_generic(hw);
-
-		/* If we are forcing speed/duplex, then we simply return since
-		 * we have already determined whether we have link or not.
-		 */
-		if (!mac->autoneg) {
-			ret_val = -E1000_ERR_CONFIG;
-			goto out;
-		}
-
-		/* Auto-Neg is enabled.  Auto Speed Detection takes care
-		 * of MAC speed/duplex configuration.  So we only need to
-		 * configure Collision Distance in the MAC.
-		 */
-		mac->ops.config_collision_dist(hw);
-
-		/* Configure Flow Control now that Auto-Neg has completed.
-		 * First, we need to restore the desired flow control
-		 * settings because we may have had to re-autoneg with a
-		 * different link partner.
-		 */
-		ret_val = e1000_config_fc_after_link_up_generic(hw);
-		if (ret_val)
-			DEBUGOUT("Error configuring flow control\n");
-	}
-
-out:
-	/* Now that we are aware of our link settings, we can set the LTR
-	 * thresholds.
-	 */
-	ret_val = e1000_set_ltr_i225(hw, link);
-
-	return ret_val;
-}
-
-#endif /* I225_LTR_SUPPORT */
 /* e1000_init_function_pointers_i225 - Init func ptrs.
  * @hw: pointer to the HW structure
  *
@@ -988,8 +900,12 @@ out:
  */
 void e1000_init_function_pointers_i225(struct e1000_hw *hw)
 {
-	e1000_init_function_pointers_82575(hw);
+	e1000_init_mac_ops_generic(hw);
+	e1000_init_phy_ops_generic(hw);
+	e1000_init_nvm_ops_generic(hw);
+	hw->mac.ops.init_params = e1000_init_mac_params_i225;
 	hw->nvm.ops.init_params = e1000_init_nvm_params_i225;
+	hw->phy.ops.init_params = e1000_init_phy_params_i225;
 }
 
 /* e1000_valid_led_default_i225 - Verify a valid default LED config
