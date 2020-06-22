@@ -2905,7 +2905,7 @@ s32 e1000_phy_hw_reset_generic(struct e1000_hw *hw)
 
 	phy->ops.release(hw);
 
-	return phy->ops.get_cfg_done(hw);
+	return ret_val;
 }
 
 /**
