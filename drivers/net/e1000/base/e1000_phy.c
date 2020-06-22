@@ -1450,6 +1450,7 @@ s32 e1000_phy_setup_autoneg(struct e1000_hw *hw)
 	s32 ret_val;
 	u16 mii_autoneg_adv_reg;
 	u16 mii_1000t_ctrl_reg = 0;
+	u16 aneg_multigbt_an_ctrl = 0;
 
 	DEBUGFUNC("e1000_phy_setup_autoneg");
 
@@ -1464,6 +1465,18 @@ s32 e1000_phy_setup_autoneg(struct e1000_hw *hw)
 		/* Read the MII 1000Base-T Control Register (Address 9). */
 		ret_val = phy->ops.read_reg(hw, PHY_1000T_CTRL,
 					    &mii_1000t_ctrl_reg);
+		if (ret_val)
+			return ret_val;
+	}
+
+	if ((phy->autoneg_mask & ADVERTISE_2500_FULL) &&
+	    hw->phy.id == I225_I_PHY_ID) {
+	/* Read the MULTI GBT AN Control Register - reg 7.32 */
+		ret_val = phy->ops.read_reg(hw, (STANDARD_AN_REG_MASK <<
+					    MMD_DEVADDR_SHIFT) |
+					    ANEG_MULTIGBT_AN_CTRL,
+					    &aneg_multigbt_an_ctrl);
+
 		if (ret_val)
 			return ret_val;
 	}
@@ -1519,6 +1532,18 @@ s32 e1000_phy_setup_autoneg(struct e1000_hw *hw)
 	if (phy->autoneg_advertised & ADVERTISE_1000_FULL) {
 		DEBUGOUT("Advertise 1000mb Full duplex\n");
 		mii_1000t_ctrl_reg |= CR_1000T_FD_CAPS;
+	}
+
+	/* We do not allow the Phy to advertise 2500 Mb Half Duplex */
+	if (phy->autoneg_advertised & ADVERTISE_2500_HALF)
+		DEBUGOUT("Advertise 2500mb Half duplex request denied!\n");
+
+	/* Do we want to advertise 2500 Mb Full Duplex? */
+	if (phy->autoneg_advertised & ADVERTISE_2500_FULL) {
+		DEBUGOUT("Advertise 2500mb Full duplex\n");
+		aneg_multigbt_an_ctrl |= CR_2500T_FD_CAPS;
+	} else {
+		aneg_multigbt_an_ctrl &= ~CR_2500T_FD_CAPS;
 	}
 
 	/* Check for a software override of the flow control settings, and
@@ -1584,6 +1609,14 @@ s32 e1000_phy_setup_autoneg(struct e1000_hw *hw)
 	if (phy->autoneg_mask & ADVERTISE_1000_FULL)
 		ret_val = phy->ops.write_reg(hw, PHY_1000T_CTRL,
 					     mii_1000t_ctrl_reg);
+
+	if ((phy->autoneg_mask & ADVERTISE_2500_FULL) &&
+	    hw->phy.id == I225_I_PHY_ID)
+		ret_val = phy->ops.write_reg(hw,
+					     (STANDARD_AN_REG_MASK <<
+					     MMD_DEVADDR_SHIFT) |
+					     ANEG_MULTIGBT_AN_CTRL,
+					     aneg_multigbt_an_ctrl);
 
 	return ret_val;
 }

@@ -331,6 +331,8 @@
 #define ADVERTISE_100_FULL		0x0008
 #define ADVERTISE_1000_HALF		0x0010 /* Not used, just FYI */
 #define ADVERTISE_1000_FULL		0x0020
+#define ADVERTISE_2500_HALF		0x0040 /* NOT used, just FYI */
+#define ADVERTISE_2500_FULL		0x0080
 
 /* 1000/H is not supported, nor spec-compliant. */
 #define E1000_ALL_SPEED_DUPLEX	( \
