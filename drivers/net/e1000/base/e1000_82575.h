@@ -252,7 +252,7 @@ struct e1000_adv_context_desc {
 #define E1000_ETQF_FILTER_ENABLE	(1 << 26)
 #define E1000_ETQF_IMM_INT		(1 << 29)
 #define E1000_ETQF_1588			(1 << 30)
-#define E1000_ETQF_QUEUE_ENABLE		(1U << 31)
+
 /*
  * ETQF filter list: one static filter per filter consumer. This is
  *                   to avoid filter collisions later. Add new filters

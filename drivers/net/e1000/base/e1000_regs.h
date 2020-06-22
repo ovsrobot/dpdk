@@ -5,13 +5,15 @@
 #ifndef _E1000_REGS_H_
 #define _E1000_REGS_H_
 
+/* General Register Descriptions */
 #define E1000_CTRL	0x00000  /* Device Control - RW */
 #define E1000_CTRL_DUP	0x00004  /* Device Control Duplicate (Shadow) - RW */
 #define E1000_STATUS	0x00008  /* Device Status - RO */
 #define E1000_EECD	0x00010  /* EEPROM/Flash Control - RW */
-#define E1000_EERD	0x00014  /* EEPROM Read - RW */
+/* NVM  Register Descriptions */
+#define E1000_EERD		0x12014  /* EEprom mode read - RW */
+#define E1000_EEWR		0x12018  /* EEprom mode write - RW */
 #define E1000_CTRL_EXT	0x00018  /* Extended Device Control - RW */
-#define E1000_FLA	0x0001C  /* Flash Access - RW */
 #define E1000_MDIC	0x00020  /* MDI Control - RW */
 #define E1000_MDICNFG	0x00E04  /* MDI Config - RW */
 #define E1000_REGISTER_SET_SIZE		0x20000 /* CSR Size */
@@ -43,12 +45,12 @@
 #define E1000_FCT	0x00030  /* Flow Control Type - RW */
 #define E1000_CONNSW	0x00034  /* Copper/Fiber switch control - RW */
 #define E1000_VET	0x00038  /* VLAN Ether Type - RW */
-#define E1000_ICR	0x000C0  /* Interrupt Cause Read - R/clr */
+#define E1000_ICR	0x01500  /* Intr Cause Read - RC/W1C */
 #define E1000_ITR	0x000C4  /* Interrupt Throttling Rate - RW */
-#define E1000_ICS	0x000C8  /* Interrupt Cause Set - WO */
-#define E1000_IMS	0x000D0  /* Interrupt Mask Set - RW */
-#define E1000_IMC	0x000D8  /* Interrupt Mask Clear - WO */
-#define E1000_IAM	0x000E0  /* Interrupt Acknowledge Auto Mask */
+#define E1000_ICS	0x01504  /* Intr Cause Set - WO */
+#define E1000_IMS	0x01508  /* Intr Mask Set/Read - RW */
+#define E1000_IMC	0x0150C  /* Intr Mask Clear - WO */
+#define E1000_IAM	0x01510  /* Intr Ack Auto Mask- RW */
 #define E1000_IVAR	0x000E4  /* Interrupt Vector Allocation Register - RW */
 #define E1000_SVCR	0x000F0
 #define E1000_SVT	0x000F4
@@ -94,7 +96,6 @@
 #define E1000_EEARBC_I225	0x12024 /* EEPROM Auto Read Bus Control */
 #endif /* NO_I225_SUPPORT */
 #define E1000_FLASHT	0x01028  /* FLASH Timer Register */
-#define E1000_EEWR	0x0102C  /* EEPROM Write Register - RW */
 #define E1000_FLSWCTL	0x01030  /* FLASH control register */
 #define E1000_FLSWDATA	0x01034  /* FLASH data register */
 #define E1000_FLSWCNT	0x01038  /* FLASH Access Counter */
@@ -289,6 +290,7 @@
 #define E1000_TIDV	0x03820  /* Tx Interrupt Delay Value - RW */
 #define E1000_TADV	0x0382C  /* Tx Interrupt Absolute Delay Val - RW */
 #define E1000_TSPMT	0x03830  /* TCP Segmentation PAD & Min Threshold - RW */
+/* Statistics Register Descriptions */
 #define E1000_CRCERRS	0x04000  /* CRC Error Count - R/clr */
 #define E1000_ALGNERRC	0x04004  /* Alignment Error Count - R/clr */
 #define E1000_SYMERRS	0x04008  /* Symbol Error Count - R/clr */
@@ -348,6 +350,7 @@
 #define E1000_TSCTC	0x040F8  /* TCP Segmentation Context Tx - R/clr */
 #define E1000_TSCTFC	0x040FC  /* TCP Segmentation Context Tx Fail - R/clr */
 #define E1000_IAC	0x04100  /* Interrupt Assertion Count */
+/* Interrupt Cause */
 #define E1000_ICRXPTC	0x04104  /* Interrupt Cause Rx Pkt Timer Expire Count */
 #define E1000_ICRXATC	0x04108  /* Interrupt Cause Rx Abs Timer Expire Count */
 #define E1000_ICTXPTC	0x0410C  /* Interrupt Cause Tx Pkt Timer Expire Count */
@@ -470,6 +473,7 @@
 #define E1000_WUC	0x05800  /* Wakeup Control - RW */
 #define E1000_WUFC	0x05808  /* Wakeup Filter Control - RW */
 #define E1000_WUS	0x05810  /* Wakeup Status - RO */
+/* Management registers */
 #define E1000_MANC	0x05820  /* Management Control - RW */
 #define E1000_IPAV	0x05838  /* IP Address Valid - RW */
 #define E1000_IP4AT	0x05840  /* IPv4 Address Table - RW Array */
@@ -487,6 +491,7 @@
 #define E1000_RWPFC	0x05584  /* Range Wake Port Filter Control - RW */
 #define E1000_WFUTPS	0x05588  /* Wake Filter UDP TCP Status - RW1C */
 #define E1000_WCS	0x0558C  /* Wake Control Status - RW1C */
+/* MSI-X Table Register Descriptions */
 #define E1000_PBACL	0x05B68  /* MSIx PBA Clear - Read/Write 1's to clear */
 #define E1000_FFLT	0x05F00  /* Flexible Filter Length Table - RW Array */
 #define E1000_HOST_IF	0x08800  /* Host Interface */
@@ -501,17 +506,20 @@
 #define E1000_MANC2H		0x05860 /* Management Control To Host - RW */
 /* Management Decision Filters */
 #define E1000_MDEF(_n)		(0x05890 + (4 * (_n)))
+/* Semaphore registers */
 #define E1000_SW_FW_SYNC	0x05B5C /* SW-FW Synchronization - RW */
 #define E1000_CCMCTL	0x05B48 /* CCM Control Register */
 #define E1000_GIOCTL	0x05B44 /* GIO Analog Control Register */
 #define E1000_SCCTL	0x05B4C /* PCIc PLL Configuration Register */
+/* PCIe Register Description */
 #define E1000_GCR	0x05B00 /* PCI-Ex Control */
 #define E1000_GCR2	0x05B64 /* PCI-Ex Control #2 */
 #define E1000_GSCL_1	0x05B10 /* PCI-Ex Statistic Control #1 */
 #define E1000_GSCL_2	0x05B14 /* PCI-Ex Statistic Control #2 */
 #define E1000_GSCL_3	0x05B18 /* PCI-Ex Statistic Control #3 */
 #define E1000_GSCL_4	0x05B1C /* PCI-Ex Statistic Control #4 */
-#define E1000_FACTPS	0x05B30 /* Function Active and Power State to MNG */
+/* Function Active and Power State to MNG */
+#define E1000_FACTPS	0x05B30
 #define E1000_SWSM	0x05B50 /* SW Semaphore */
 #define E1000_FWSM	0x05B54 /* FW Semaphore */
 /* Driver-only SW semaphore (not used by BOOT agents) */
@@ -530,10 +538,13 @@
 #define E1000_IMIREXT(_i)	(0x05AA0 + ((_i) * 4)) /* Immediate INTR Ext*/
 #define E1000_IMIRVP		0x05AC0 /* Immediate INT Rx VLAN Priority -RW */
 #define E1000_MSIXBM(_i)	(0x01600 + ((_i) * 4)) /* MSI-X Alloc Reg -RW */
-#define E1000_RETA(_i)	(0x05C00 + ((_i) * 4)) /* Redirection Table - RW */
-#define E1000_RSSRK(_i)	(0x05C80 + ((_i) * 4)) /* RSS Random Key - RW */
+/* Redirection Table - RW Array */
+#define E1000_RETA(_i)	(0x05C00 + ((_i) * 4))
+/* RSS Random Key - RW Array */
+#define E1000_RSSRK(_i)	(0x05C80 + ((_i) * 4))
 #define E1000_RSSIM	0x05864 /* RSS Interrupt Mask */
 #define E1000_RSSIR	0x05868 /* RSS Interrupt Request */
+#define E1000_UTA	0x0A000 /* Unicast Table Array - RW */
 /* VT Registers */
 #define E1000_SWPBS	0x03004 /* Switch Packet Buffer Size - RW */
 #define E1000_MBVFICR	0x00C80 /* Mailbox VF Cause - RWC */
@@ -545,7 +556,6 @@
 #define E1000_DTXSWC	0x03500 /* DMA Tx Switch Control - RW */
 #define E1000_WVBR	0x03554 /* VM Wrong Behavior - RWS */
 #define E1000_RPLOLR	0x05AF0 /* Replication Offload - RW */
-#define E1000_UTA	0x0A000 /* Unicast Table Array - RW */
 #define E1000_IOVTCL	0x05BBC /* IOV Control Register */
 #define E1000_VMRCTL	0X05D80 /* Virtual Mirror Rule Control */
 #define E1000_VMRVLAN	0x05D90 /* Virtual Mirror Rule VLAN */
@@ -600,6 +610,14 @@
 #define E1000_TTQF(_n)	(0x059E0 + (4 * (_n))) /* 2-tuple Queue Fltr */
 #define E1000_SYNQF(_n)	(0x055FC + (4 * (_n))) /* SYN Packet Queue Fltr */
 #define E1000_ETQF(_n)	(0x05CB0 + (4 * (_n))) /* EType Queue Fltr */
+
+/* ETQF register bit definitions */
+#define E1000_ETQF_FILTER_ENABLE	(1 << 26)
+#define E1000_ETQF_IMM_INT		(1 << 29)
+#define E1000_ETQF_QUEUE_ENABLE		(1 << 31)
+#define E1000_ETQF_QUEUE_SHIFT		16
+#define E1000_ETQF_QUEUE_MASK		0x00070000
+#define E1000_ETQF_ETYPE_MASK		0x0000FFFF
 
 #define E1000_RTTDCS	0x3600 /* Reedtown Tx Desc plane control and status */
 #define E1000_RTTPCS	0x3474 /* Reedtown Tx Packet Plane control and status */
