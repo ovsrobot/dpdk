@@ -597,7 +597,7 @@ s32 e1000_write_sfp_data_byte(struct e1000_hw *hw, u16 offset, u8 data)
 				 * lane and update whole word
 				 */
 				data_local = i2ccmd & 0xFF00;
-				data_local |= data;
+				data_local |= (u32)data;
 				i2ccmd = ((offset <<
 					E1000_I2CCMD_REG_ADDR_SHIFT) |
 					E1000_I2CCMD_OPCODE_WRITE | data_local);
