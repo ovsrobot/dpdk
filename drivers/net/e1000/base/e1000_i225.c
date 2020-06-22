@@ -840,31 +840,171 @@ bool e1000_get_flash_presence_i225(struct e1000_hw *hw)
 	return ret_val;
 }
 
+/* e1000_set_flsw_flash_burst_counter_i225 - sets FLSW NVM Burst
+ * Counter in FLSWCNT register.
+ *
+ * @hw: pointer to the HW structure
+ * @burst_counter: size in bytes of the Flash burst to read or write
+ */
+s32 e1000_set_flsw_flash_burst_counter_i225(struct e1000_hw *hw,
+					    u32 burst_counter)
+{
+	s32 ret_val = E1000_SUCCESS;
+
+	DEBUGFUNC("e1000_set_flsw_flash_burst_counter_i225");
+
+	/* Validate input data */
+	if (burst_counter < E1000_I225_SHADOW_RAM_SIZE) {
+		/* Write FLSWCNT - burst counter */
+		E1000_WRITE_REG(hw, E1000_I225_FLSWCNT, burst_counter);
+	} else {
+		ret_val = E1000_ERR_INVALID_ARGUMENT;
+	}
+
+	return ret_val;
+}
+
+/* e1000_write_erase_flash_command_i225 - write/erase to a sector
+ * region on a given address.
+ *
+ * @hw: pointer to the HW structure
+ * @opcode: opcode to be used for the write command
+ * @address: the offset to write into the FLASH image
+ */
+s32 e1000_write_erase_flash_command_i225(struct e1000_hw *hw, u32 opcode,
+					 u32 address)
+{
+	u32 flswctl = 0;
+	s32 timeout = E1000_NVM_GRANT_ATTEMPTS;
+	s32 ret_val = E1000_SUCCESS;
+
+	DEBUGFUNC("e1000_write_erase_flash_command_i225");
+
+	flswctl = E1000_READ_REG(hw, E1000_I225_FLSWCTL);
+	/* Polling done bit on FLSWCTL register */
+	while (timeout) {
+		if (flswctl & E1000_FLSWCTL_DONE)
+			break;
+		usec_delay(5);
+		flswctl = E1000_READ_REG(hw, E1000_I225_FLSWCTL);
+		timeout--;
+	}
+
+	if (!timeout) {
+		DEBUGOUT("Flash transaction was not done\n");
+		return -E1000_ERR_NVM;
+	}
+
+	/* Build and issue command on FLSWCTL register */
+	flswctl = address | opcode;
+	E1000_WRITE_REG(hw, E1000_I225_FLSWCTL, flswctl);
+
+	/* Check if issued command is valid on FLSWCTL register */
+	flswctl = E1000_READ_REG(hw, E1000_I225_FLSWCTL);
+	if (!(flswctl & E1000_FLSWCTL_CMDV)) {
+		DEBUGOUT("Write flash command failed\n");
+		ret_val = E1000_ERR_INVALID_ARGUMENT;
+	}
+
+	return ret_val;
+}
+
 /* e1000_update_flash_i225 - Commit EEPROM to the flash
+ * if fw_valid_bit is set, FW is active. setting FLUPD bit in EEC
+ * register makes the FW load the internal shadow RAM into the flash.
+ * Otherwise, fw_valid_bit is 0. if FL_SECU.block_prtotected_sw = 0
+ * then FW is not active so the SW is responsible shadow RAM dump.
+ *
  * @hw: pointer to the HW structure
  */
 s32 e1000_update_flash_i225(struct e1000_hw *hw)
 {
-	s32 ret_val;
+	u16 current_offset_data = 0;
+	u32 block_sw_protect = 1;
+	u16 base_address = 0x0;
+	u32 i, fw_valid_bit;
+	u16 current_offset;
+	s32 ret_val = 0;
 	u32 flup;
 
 	DEBUGFUNC("e1000_update_flash_i225");
 
-	ret_val = e1000_pool_flash_update_done_i225(hw);
-	if (ret_val == -E1000_ERR_NVM) {
-		DEBUGOUT("Flash update time out\n");
-		goto out;
+	block_sw_protect = E1000_READ_REG(hw, E1000_I225_FLSECU) &
+					  E1000_FLSECU_BLK_SW_ACCESS_I225;
+	fw_valid_bit = E1000_READ_REG(hw, E1000_FWSM) &
+				      E1000_FWSM_FW_VALID_I225;
+	if (fw_valid_bit) {
+		ret_val = e1000_pool_flash_update_done_i225(hw);
+		if (ret_val == -E1000_ERR_NVM) {
+			DEBUGOUT("Flash update time out\n");
+			goto out;
+		}
+
+		flup = E1000_READ_REG(hw, E1000_EECD) | E1000_EECD_FLUPD_I225;
+		E1000_WRITE_REG(hw, E1000_EECD, flup);
+
+		ret_val = e1000_pool_flash_update_done_i225(hw);
+		if (ret_val == E1000_SUCCESS)
+			DEBUGOUT("Flash update complete\n");
+		else
+			DEBUGOUT("Flash update time out\n");
+	} else if (!block_sw_protect) {
+		/* FW is not active and security protection is disabled.
+		 * therefore, SW is in charge of shadow RAM dump.
+		 * Check which sector is valid. if sector 0 is valid,
+		 * base address remains 0x0. otherwise, sector 1 is
+		 * valid and it's base address is 0x1000
+		 */
+		if (E1000_READ_REG(hw, E1000_EECD) & E1000_EECD_SEC1VAL_I225)
+			base_address = 0x1000;
+
+		/* Valid sector erase */
+		ret_val = e1000_write_erase_flash_command_i225(hw,
+						  E1000_I225_ERASE_CMD_OPCODE,
+						  base_address);
+		if (!ret_val) {
+			DEBUGOUT("Sector erase failed\n");
+			goto out;
+		}
+
+		current_offset = base_address;
+
+		/* Write */
+		for (i = 0; i < E1000_I225_SHADOW_RAM_SIZE / 2; i++) {
+			/* Set burst write length */
+			ret_val = e1000_set_flsw_flash_burst_counter_i225(hw,
+									  0x2);
+			if (ret_val != E1000_SUCCESS)
+				break;
+
+			/* Set address and opcode */
+			ret_val = e1000_write_erase_flash_command_i225(hw,
+						E1000_I225_WRITE_CMD_OPCODE,
+						2 * current_offset);
+			if (ret_val != E1000_SUCCESS)
+				break;
+
+			ret_val = e1000_read_nvm_eerd(hw, current_offset,
+						      1, &current_offset_data);
+			if (ret_val) {
+				DEBUGOUT("Failed to read from EEPROM\n");
+				goto out;
+			}
+
+			/* Write CurrentOffseData to FLSWDATA register */
+			E1000_WRITE_REG(hw, E1000_I225_FLSWDATA,
+					current_offset_data);
+			current_offset++;
+
+			/* Wait till operation has finished */
+			ret_val = e1000_poll_eerd_eewr_done(hw,
+						E1000_NVM_POLL_READ);
+			if (ret_val)
+				break;
+
+			usec_delay(1000);
+		}
 	}
-
-	flup = E1000_READ_REG(hw, E1000_EECD) | E1000_EECD_FLUPD_I225;
-	E1000_WRITE_REG(hw, E1000_EECD, flup);
-
-	ret_val = e1000_pool_flash_update_done_i225(hw);
-	if (ret_val == E1000_SUCCESS)
-		DEBUGOUT("Flash update complete\n");
-	else
-		DEBUGOUT("Flash update time out\n");
-
 out:
 	return ret_val;
 }

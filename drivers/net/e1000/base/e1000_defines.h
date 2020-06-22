@@ -1124,14 +1124,15 @@
 /* Firmware code revision field word offset*/
 #define E1000_I210_FW_VER_OFFSET	328
 
-#ifndef NO_I225_SUPPORT
 #define E1000_EECD_FLUPD_I225		0x00800000 /* Update FLASH */
 #define E1000_EECD_FLUDONE_I225		0x04000000 /* Update FLASH done */
 #define E1000_EECD_FLASH_DETECTED_I225	0x00080000 /* FLASH detected */
 #define E1000_FLUDONE_ATTEMPTS		20000
 #define E1000_EERD_EEWR_MAX_COUNT	512 /* buffered EEPROM words rw */
+#define E1000_EECD_SEC1VAL_I225		0x02000000 /* Sector One Valid */
+#define E1000_FLSECU_BLK_SW_ACCESS_I225	0x00000004 /* Block SW access */
+#define E1000_FWSM_FW_VALID_I225	0x8000 /* FW valid bit */
 
-#endif /* NO_I225_SUPPORT */
 #define E1000_NVM_RW_REG_DATA	16  /* Offset to data in NVM read/write regs */
 #define E1000_NVM_RW_REG_DONE	2   /* Offset to READ/WRITE done bit */
 #define E1000_NVM_RW_REG_START	1   /* Start operation */

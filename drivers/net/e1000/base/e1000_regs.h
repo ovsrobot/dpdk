@@ -31,9 +31,11 @@
 #define E1000_SCTL	0x00024  /* SerDes Control - RW */
 #define E1000_FCAL	0x00028  /* Flow Control Address Low - RW */
 #define E1000_FCAH	0x0002C  /* Flow Control Address High -RW */
-#if !defined(EXTERNAL_RELEASE) || defined(ULP_SUPPORT)
 #define E1000_FEXT	0x0002C  /* Future Extended - RW */
-#endif /* !EXTERNAL_RELEASE || ULP_SUPPORT */
+#define E1000_I225_FLSWCTL	0x12048 /* FLASH control register */
+#define E1000_I225_FLSWDATA	0x1204C /* FLASH data register */
+#define E1000_I225_FLSWCNT	0x12050 /* FLASH Access Counter */
+#define E1000_I225_FLSECU	0x12114 /* FLASH Security */
 #define E1000_FEXTNVM	0x00028  /* Future Extended NVM - RW */
 #define E1000_FEXTNVM3	0x0003C  /* Future Extended NVM 3 - RW */
 #define E1000_FEXTNVM4	0x00024  /* Future Extended NVM 4 - RW */
