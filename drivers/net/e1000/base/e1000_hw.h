@@ -770,6 +770,15 @@ struct e1000_nvm_operations {
 	s32  (*write)(struct e1000_hw *, u16, u16, u16 *);
 };
 
+struct e1000_info {
+	s32 (*get_invariants)(struct e1000_hw *hw);
+	struct e1000_mac_operations *mac_ops;
+	const struct e1000_phy_operations *phy_ops;
+	struct e1000_nvm_operations *nvm_ops;
+};
+
+extern const struct e1000_info e1000_i225_info;
+
 struct e1000_mac_info {
 	struct e1000_mac_operations ops;
 	u8 addr[ETH_ADDR_LEN];
