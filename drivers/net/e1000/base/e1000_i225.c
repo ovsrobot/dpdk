@@ -1147,3 +1147,61 @@ s32 e1000_init_hw_i225(struct e1000_hw *hw)
 	ret_val = e1000_init_hw_82575(hw);
 	return ret_val;
 }
+
+/*
+ * e1000_set_d0_lplu_state_i225 - Set Low-Power-Link-Up (LPLU) D0 state
+ * @hw: pointer to the HW structure
+ * @active: true to enable LPLU, false to disable
+ *
+ * Note: since I225 does not actually support LPLU, this function
+ * simply enables/disables 1G and 2.5G speeds in D0.
+ */
+s32 e1000_set_d0_lplu_state_i225(struct e1000_hw *hw, bool active)
+{
+	u32 data;
+
+	DEBUGFUNC("e1000_set_d0_lplu_state_i225");
+
+	data = E1000_READ_REG(hw, E1000_I225_PHPM);
+
+	if (active) {
+		data |= E1000_I225_PHPM_DIS_1000;
+		data |= E1000_I225_PHPM_DIS_2500;
+	} else {
+		data &= ~E1000_I225_PHPM_DIS_1000;
+		data &= ~E1000_I225_PHPM_DIS_2500;
+	}
+
+	E1000_WRITE_REG(hw, E1000_I225_PHPM, data);
+	return E1000_SUCCESS;
+}
+
+/*
+ * e1000_set_d3_lplu_state_i225 - Set Low-Power-Link-Up (LPLU) D3 state
+ * @hw: pointer to the HW structure
+ * @active: true to enable LPLU, false to disable
+ *
+ * Note: since I225 does not actually support LPLU, this function
+ * simply enables/disables 100M, 1G and 2.5G speeds in D3.
+ */
+s32 e1000_set_d3_lplu_state_i225(struct e1000_hw *hw, bool active)
+{
+	u32 data;
+
+	DEBUGFUNC("e1000_set_d3_lplu_state_i225");
+
+	data = E1000_READ_REG(hw, E1000_I225_PHPM);
+
+	if (active) {
+		data |= E1000_I225_PHPM_DIS_100_D3;
+		data |= E1000_I225_PHPM_DIS_1000_D3;
+		data |= E1000_I225_PHPM_DIS_2500_D3;
+	} else {
+		data &= ~E1000_I225_PHPM_DIS_100_D3;
+		data &= ~E1000_I225_PHPM_DIS_1000_D3;
+		data &= ~E1000_I225_PHPM_DIS_2500_D3;
+	}
+
+	E1000_WRITE_REG(hw, E1000_I225_PHPM, data);
+	return E1000_SUCCESS;
+}
