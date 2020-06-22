@@ -476,6 +476,17 @@
 #define E1000_IP6AT	0x05880  /* IPv6 Address Table - RW Array */
 #define E1000_WUPL	0x05900  /* Wakeup Packet Length - RW */
 #define E1000_WUPM	0x05A00  /* Wakeup Packet Memory - RO A */
+#define E1000_WUPM_EXT	0x0B800  /* Wakeup Packet Memory Extended - RO Array */
+#define E1000_WUFC_EXT	0x0580C  /* Wakeup Filter Control Extended - RW */
+#define E1000_WUS_EXT	0x05814  /* Wakeup Status Extended - RW1C */
+#define E1000_FHFTSL	0x05804  /* Flex Filter Indirect Table Select - RW */
+#define E1000_PROXYFCEX	0x05590  /* Proxy Filter Control Extended - RW1C */
+#define E1000_PROXYEXS	0x05594  /* Proxy Extended Status - RO */
+#define E1000_WFUTPF	0x05500  /* Wake Flex UDP TCP Port Filter - RW Array */
+#define E1000_RFUTPF	0x05580  /* Range Flex UDP TCP Port Filter - RW */
+#define E1000_RWPFC	0x05584  /* Range Wake Port Filter Control - RW */
+#define E1000_WFUTPS	0x05588  /* Wake Filter UDP TCP Status - RW1C */
+#define E1000_WCS	0x0558C  /* Wake Control Status - RW1C */
 #define E1000_PBACL	0x05B68  /* MSIx PBA Clear - Read/Write 1's to clear */
 #define E1000_FFLT	0x05F00  /* Flexible Filter Length Table - RW Array */
 #define E1000_HOST_IF	0x08800  /* Host Interface */

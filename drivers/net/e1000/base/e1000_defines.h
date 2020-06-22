@@ -1515,8 +1515,23 @@
 #define E1000_INVM_DEFAULT_AL		0x202F
 #define E1000_INVM_AUTOLOAD		0x0A
 #define E1000_INVM_PLL_WO_VAL		0x0010
-
 #endif /* NO_I225_SUPPORT */
+/* Proxy Filter Control Extended */
+#define E1000_PROXYFCEX_MDNS		0x00000001 /* mDNS */
+#define E1000_PROXYFCEX_MDNS_M		0x00000002 /* mDNS Multicast */
+#define E1000_PROXYFCEX_MDNS_U		0x00000004 /* mDNS Unicast */
+#define E1000_PROXYFCEX_IPV4_M		0x00000008 /* IPv4 Multicast */
+#define E1000_PROXYFCEX_IPV6_M		0x00000010 /* IPv6 Multicast */
+#define E1000_PROXYFCEX_IGMP		0x00000020 /* IGMP */
+#define E1000_PROXYFCEX_IGMP_M		0x00000040 /* IGMP Multicast */
+#define E1000_PROXYFCEX_ARPRES		0x00000080 /* ARP Response */
+#define E1000_PROXYFCEX_ARPRES_D	0x00000100 /* ARP Response Directed */
+#define E1000_PROXYFCEX_ICMPV4		0x00000200 /* ICMPv4 */
+#define E1000_PROXYFCEX_ICMPV4_D	0x00000400 /* ICMPv4 Directed */
+#define E1000_PROXYFCEX_ICMPV6		0x00000800 /* ICMPv6 */
+#define E1000_PROXYFCEX_ICMPV6_D	0x00001000 /* ICMPv6 Directed */
+#define E1000_PROXYFCEX_DNS			0x00002000 /* DNS */
+
 /* Proxy Filter Control */
 #define E1000_PROXYFC_D0		0x00000001 /* Enable offload in D0 */
 #define E1000_PROXYFC_EX		0x00000004 /* Directed exact proxy */
@@ -1526,6 +1541,7 @@
 #define E1000_PROXYFC_IPV4		0x00000040 /* Directed IPv4 Enable */
 #define E1000_PROXYFC_IPV6		0x00000080 /* Directed IPv6 Enable */
 #define E1000_PROXYFC_NS		0x00000200 /* IPv6 Neighbor Solicitation */
+#define E1000_PROXYFC_NS_DIRECTED	0x00000400 /* Directed NS Proxy Ena */
 #define E1000_PROXYFC_ARP		0x00000800 /* ARP Request Proxy Ena */
 /* Proxy Status */
 #define E1000_PROXYS_CLEAR		0xFFFFFFFF /* Clear */
