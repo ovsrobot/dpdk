@@ -749,8 +749,9 @@ s32 e1000_read_pba_string_generic(struct e1000_hw *hw, u8 *pba_num,
 
 	DEBUGFUNC("e1000_read_pba_string_generic");
 
-	if ((hw->mac.type >= e1000_i210) &&
-	    !e1000_get_flash_presence_i210(hw)) {
+	if ((hw->mac.type == e1000_i210 ||
+	     hw->mac.type == e1000_i211) &&
+	     !e1000_get_flash_presence_i210(hw)) {
 		DEBUGOUT("Flashless no PBA string\n");
 		return -E1000_ERR_NVM_PBA_SECTION;
 	}
@@ -1287,6 +1288,9 @@ void e1000_get_fw_version(struct e1000_hw *hw, struct e1000_fw_version *fw_vers)
 			return;
 		}
 		/* fall through */
+#ifndef NO_I225_SUPPORT
+	case e1000_i225:
+#endif /* NO_I225_SUPPORT */
 	case e1000_i350:
 		hw->nvm.ops.read(hw, NVM_ETRACK_HIWORD, 1, &etrack_test);
 		/* find combo image version */
