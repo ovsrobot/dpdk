@@ -7,10 +7,8 @@ STATIC s32 e1000_reset_hw_i225(struct e1000_hw *hw);
 STATIC s32 e1000_acquire_nvm_i225(struct e1000_hw *hw);
 STATIC void e1000_release_nvm_i225(struct e1000_hw *hw);
 STATIC s32 e1000_get_hw_semaphore_i225(struct e1000_hw *hw);
-#ifndef QV_RELEASE
 STATIC s32 __e1000_write_nvm_srwr(struct e1000_hw *hw, u16 offset, u16 words,
 				  u16 *data);
-#endif /* QV_RELEASE */
 STATIC s32 e1000_pool_flash_update_done_i225(struct e1000_hw *hw);
 STATIC s32 e1000_valid_led_default_i225(struct e1000_hw *hw, u16 *data);
 

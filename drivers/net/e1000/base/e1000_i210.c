@@ -776,8 +776,6 @@ void e1000_init_function_pointers_i210(struct e1000_hw *hw)
 {
 	e1000_init_function_pointers_82575(hw);
 	hw->nvm.ops.init_params = e1000_init_nvm_params_i210;
-
-	return;
 }
 
 /**
