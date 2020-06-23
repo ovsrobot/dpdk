@@ -6,6 +6,9 @@
 #define _QAT_SYM_H_
 
 #include <rte_cryptodev_pmd.h>
+#ifdef RTE_LIBRTE_SECURITY
+#include <rte_net_crc.h>
+#endif
 
 #ifdef BUILD_QAT_SYM
 #include <openssl/evp.h>
@@ -76,10 +79,10 @@ cipher_encrypt_err:
 
 static inline uint32_t
 qat_bpicipher_postprocess(struct qat_sym_session *ctx,
-				struct rte_crypto_op *op)
+				struct rte_crypto_op *op,
+				struct rte_crypto_sym_op *sym_op)
 {
 	int block_len = qat_cipher_get_block_size(ctx->qat_cipher_alg);
-	struct rte_crypto_sym_op *sym_op = op->sym;
 	uint8_t last_block_len = block_len > 0 ?
 			sym_op->cipher.data.length % block_len : 0;
 
@@ -132,14 +135,52 @@ qat_bpicipher_postprocess(struct qat_sym_session *ctx,
 	return sym_op->cipher.data.length - last_block_len;
 }
 
+#ifdef RTE_LIBRTE_SECURITY
+static inline void
+qat_crc_verify(struct qat_sym_session *ctx, struct rte_crypto_op *op,
+		struct rte_security_docsis_op *doc_op,
+		struct rte_crypto_sym_op *sym_op)
+{
+	uint32_t crc = 0;
+	uint8_t *crc_data;
+	uint32_t crc_offset;
+
+	if (ctx->qat_dir == ICP_QAT_HW_CIPHER_DECRYPT &&
+			doc_op != NULL &&
+			doc_op->crc.length != 0) {
+
+		crc_offset = doc_op->crc.offset;
+		crc_data = (uint8_t *) rte_pktmbuf_mtod_offset(
+				sym_op->m_src, uint8_t *, crc_offset);
+
+		if (unlikely((sym_op->m_dst != NULL)
+				&& (sym_op->m_dst != sym_op->m_src)))
+			/* out-of-place operation (OOP) */
+			crc_data = (uint8_t *) rte_pktmbuf_mtod_offset(
+					sym_op->m_dst, uint8_t *, crc_offset);
+
+		crc = rte_net_crc_calc(crc_data, doc_op->crc.length,
+				RTE_NET_CRC32_ETH);
+
+		if (crc != *(uint32_t *)(crc_data + doc_op->crc.length))
+			op->status = RTE_CRYPTO_OP_STATUS_AUTH_FAILED;
+	}
+}
+#endif
+
 static inline void
 qat_sym_process_response(void **op, uint8_t *resp)
 {
-
 	struct icp_qat_fw_comn_resp *resp_msg =
 			(struct icp_qat_fw_comn_resp *)resp;
 	struct rte_crypto_op *rx_op = (struct rte_crypto_op *)(uintptr_t)
 			(resp_msg->opaque_data);
+	struct rte_crypto_sym_op *sym_op;
+	struct qat_sym_session *sess;
+#ifdef RTE_LIBRTE_SECURITY
+	struct rte_security_op *sec_op;
+	struct rte_security_docsis_op *doc_op = NULL;
+#endif
 
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 	QAT_DP_HEXDUMP_LOG(DEBUG, "qat_response:", (uint8_t *)resp_msg,
@@ -152,15 +193,36 @@ qat_sym_process_response(void **op, uint8_t *resp)
 
 		rx_op->status = RTE_CRYPTO_OP_STATUS_AUTH_FAILED;
 	} else {
-		struct qat_sym_session *sess = (struct qat_sym_session *)
-						get_sym_session_private_data(
-						rx_op->sym->session,
-						cryptodev_qat_driver_id);
+#ifdef RTE_LIBRTE_SECURITY
+		if (unlikely(rx_op->type == RTE_CRYPTO_OP_TYPE_SECURITY)) {
+			/*
+			 * Assuming at this point that if it's a security
+			 * op, that this is for DOCSIS
+			 */
+			sec_op = (struct rte_security_op *)&rx_op->security;
+			doc_op = &sec_op->docsis;
+			sess = (struct qat_sym_session *)
+					get_sec_session_private_data(
+					doc_op->crypto_sym.sec_session);
+			sym_op = &doc_op->crypto_sym;
+		} else
+#endif
+		{
+			sess = (struct qat_sym_session *)
+					get_sym_session_private_data(
+					rx_op->sym->session,
+					cryptodev_qat_driver_id);
+			sym_op = rx_op->sym;
+		}
 
-
-		if (sess->bpi_ctx)
-			qat_bpicipher_postprocess(sess, rx_op);
 		rx_op->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
+
+		if (sess->bpi_ctx) {
+			qat_bpicipher_postprocess(sess, rx_op, sym_op);
+#ifdef RTE_LIBRTE_SECURITY
+			qat_crc_verify(sess, rx_op, doc_op, sym_op);
+#endif
+		}
 	}
 	*op = (void *)rx_op;
 }

@@ -9,6 +9,9 @@
 #include <rte_crypto_sym.h>
 #include <rte_bus_pci.h>
 #include <rte_byteorder.h>
+#ifdef RTE_LIBRTE_SECURITY
+#include <rte_net_crc.h>
+#endif
 
 #include "qat_sym.h"
 
@@ -44,11 +47,10 @@ cipher_decrypt_err:
 
 
 static inline uint32_t
-qat_bpicipher_preprocess(struct qat_sym_session *ctx,
-				struct rte_crypto_op *op)
+qat_bpicipher_preprocess(struct qat_sym_session *ctx, struct rte_crypto_op *op,
+				struct rte_crypto_sym_op *sym_op)
 {
 	int block_len = qat_cipher_get_block_size(ctx->qat_cipher_alg);
-	struct rte_crypto_sym_op *sym_op = op->sym;
 	uint8_t last_block_len = block_len > 0 ?
 			sym_op->cipher.data.length % block_len : 0;
 
@@ -98,6 +100,29 @@ qat_bpicipher_preprocess(struct qat_sym_session *ctx,
 
 	return sym_op->cipher.data.length - last_block_len;
 }
+
+#ifdef RTE_LIBRTE_SECURITY
+static inline void
+qat_crc_generate(struct qat_sym_session *ctx,
+			struct rte_security_docsis_op *doc_op,
+			struct rte_crypto_sym_op *sym_op)
+{
+	uint8_t *crc_data;
+	uint32_t *crc;
+
+	if (ctx->qat_dir == ICP_QAT_HW_CIPHER_ENCRYPT &&
+			doc_op != NULL &&
+			doc_op->crc.length != 0) {
+
+		crc_data = (uint8_t *) rte_pktmbuf_mtod_offset(
+				sym_op->m_src, uint8_t *,
+				doc_op->crc.offset);
+		crc = (uint32_t *)(crc_data + doc_op->crc.length);
+		*crc = rte_net_crc_calc(crc_data, doc_op->crc.length,
+				RTE_NET_CRC32_ETH);
+	}
+}
+#endif
 
 static inline void
 set_cipher_iv(uint16_t iv_length, uint16_t iv_offset,
@@ -162,16 +187,15 @@ qat_sym_build_request(void *in_op, uint8_t *out_msg,
 	uint8_t do_sgl = 0;
 	uint8_t in_place = 1;
 	int alignment_adjustment = 0;
+	struct rte_crypto_sym_op *sym;
+#ifdef RTE_LIBRTE_SECURITY
+	struct rte_security_op *sec_op;
+	struct rte_security_docsis_op *doc_op = NULL;
+#endif
+
 	struct rte_crypto_op *op = (struct rte_crypto_op *)in_op;
 	struct qat_sym_op_cookie *cookie =
 				(struct qat_sym_op_cookie *)op_cookie;
-
-	if (unlikely(op->type != RTE_CRYPTO_OP_TYPE_SYMMETRIC)) {
-		QAT_DP_LOG(ERR, "QAT PMD only supports symmetric crypto "
-				"operation requests, op (%p) is not a "
-				"symmetric operation.", op);
-		return -EINVAL;
-	}
 
 	if (unlikely(op->sess_type == RTE_CRYPTO_OP_SESSIONLESS)) {
 		QAT_DP_LOG(ERR, "QAT PMD only supports session oriented"
@@ -179,8 +203,40 @@ qat_sym_build_request(void *in_op, uint8_t *out_msg,
 		return -EINVAL;
 	}
 
-	ctx = (struct qat_sym_session *)get_sym_session_private_data(
-			op->sym->session, cryptodev_qat_driver_id);
+	if (likely(op->type == RTE_CRYPTO_OP_TYPE_SYMMETRIC &&
+			op->sess_type == RTE_CRYPTO_OP_WITH_SESSION)) {
+		sym = op->sym;
+		ctx = (struct qat_sym_session *)get_sym_session_private_data(
+				sym->session, cryptodev_qat_driver_id);
+#ifdef RTE_LIBRTE_SECURITY
+	} else if (op->type == RTE_CRYPTO_OP_TYPE_SECURITY &&
+			op->sess_type == RTE_CRYPTO_OP_SECURITY_SESSION) {
+		sec_op = (struct rte_security_op *)&op->security;
+		if (sec_op->type == RTE_SECURITY_OP_TYPE_DOCSIS) {
+			doc_op = &sec_op->docsis;
+			sym = &doc_op->crypto_sym;
+			ctx = (struct qat_sym_session *)
+				get_sec_session_private_data(sym->sec_session);
+		} else {
+			QAT_DP_LOG(ERR, "QAT PMD only supports security"
+					" operation requests for DOCSIS, op"
+					" (%p) is not for DOCSIS.", op);
+			return -EINVAL;
+		}
+#endif
+	} else {
+		QAT_DP_LOG(ERR, "QAT PMD only supports symmetric crypto "
+				"%soperation requests, op (%p) is not a "
+				"symmetric %soperation or the associated "
+				"session type is invalid.",
+#ifdef RTE_LIBRTE_SECURITY
+				"and security ", op, "or security "
+#else
+				"", op, ""
+#endif
+				);
+		return -EINVAL;
+	}
 
 	if (unlikely(ctx == NULL)) {
 		QAT_DP_LOG(ERR, "Session was not created for this device");
@@ -231,27 +287,34 @@ qat_sym_build_request(void *in_op, uint8_t *out_msg,
 				ICP_QAT_HW_CIPHER_ALGO_ZUC_3G_128_EEA3) {
 
 			if (unlikely(
-			    (op->sym->cipher.data.length % BYTE_LENGTH != 0) ||
-			    (op->sym->cipher.data.offset % BYTE_LENGTH != 0))) {
+			    (sym->cipher.data.length % BYTE_LENGTH != 0) ||
+			    (sym->cipher.data.offset % BYTE_LENGTH != 0))) {
 				QAT_DP_LOG(ERR,
 		  "SNOW3G/KASUMI/ZUC in QAT PMD only supports byte aligned values");
 				op->status = RTE_CRYPTO_OP_STATUS_INVALID_ARGS;
 				return -EINVAL;
 			}
-			cipher_len = op->sym->cipher.data.length >> 3;
-			cipher_ofs = op->sym->cipher.data.offset >> 3;
+			cipher_len = sym->cipher.data.length >> 3;
+			cipher_ofs = sym->cipher.data.offset >> 3;
 
 		} else if (ctx->bpi_ctx) {
-			/* DOCSIS - only send complete blocks to device
+			/* DOCSIS processing */
+
+#ifdef RTE_LIBRTE_SECURITY
+			/* Calculate CRC */
+			qat_crc_generate(ctx, doc_op, sym);
+#endif
+
+			/* Only send complete blocks to device.
 			 * Process any partial block using CFB mode.
 			 * Even if 0 complete blocks, still send this to device
 			 * to get into rx queue for post-process and dequeuing
 			 */
-			cipher_len = qat_bpicipher_preprocess(ctx, op);
-			cipher_ofs = op->sym->cipher.data.offset;
+			cipher_len = qat_bpicipher_preprocess(ctx, op, sym);
+			cipher_ofs = sym->cipher.data.offset;
 		} else {
-			cipher_len = op->sym->cipher.data.length;
-			cipher_ofs = op->sym->cipher.data.offset;
+			cipher_len = sym->cipher.data.length;
+			cipher_ofs = sym->cipher.data.offset;
 		}
 
 		set_cipher_iv(ctx->cipher_iv.length, ctx->cipher_iv.offset,
@@ -428,58 +491,58 @@ qat_sym_build_request(void *in_op, uint8_t *out_msg,
 		min_ofs = op->sym->aead.data.offset;
 	}
 
-	if (op->sym->m_src->nb_segs > 1 ||
-			(op->sym->m_dst && op->sym->m_dst->nb_segs > 1))
+	if (sym->m_src->nb_segs > 1 ||
+			(sym->m_dst && sym->m_dst->nb_segs > 1))
 		do_sgl = 1;
 
 	/* adjust for chain case */
 	if (do_cipher && do_auth)
 		min_ofs = cipher_ofs < auth_ofs ? cipher_ofs : auth_ofs;
 
-	if (unlikely(min_ofs >= rte_pktmbuf_data_len(op->sym->m_src) && do_sgl))
+	if (unlikely(min_ofs >= rte_pktmbuf_data_len(sym->m_src) && do_sgl))
 		min_ofs = 0;
 
-	if (unlikely((op->sym->m_dst != NULL) &&
-			(op->sym->m_dst != op->sym->m_src))) {
+	if (unlikely((sym->m_dst != NULL) &&
+			(sym->m_dst != sym->m_src))) {
 		/* Out-of-place operation (OOP)
 		 * Don't align DMA start. DMA the minimum data-set
 		 * so as not to overwrite data in dest buffer
 		 */
 		in_place = 0;
 		src_buf_start =
-			rte_pktmbuf_iova_offset(op->sym->m_src, min_ofs);
+			rte_pktmbuf_iova_offset(sym->m_src, min_ofs);
 		dst_buf_start =
-			rte_pktmbuf_iova_offset(op->sym->m_dst, min_ofs);
+			rte_pktmbuf_iova_offset(sym->m_dst, min_ofs);
 
 	} else {
 		/* In-place operation
 		 * Start DMA at nearest aligned address below min_ofs
 		 */
 		src_buf_start =
-			rte_pktmbuf_iova_offset(op->sym->m_src, min_ofs)
+			rte_pktmbuf_iova_offset(sym->m_src, min_ofs)
 						& QAT_64_BTYE_ALIGN_MASK;
 
-		if (unlikely((rte_pktmbuf_iova(op->sym->m_src) -
-					rte_pktmbuf_headroom(op->sym->m_src))
+		if (unlikely((rte_pktmbuf_iova(sym->m_src) -
+					rte_pktmbuf_headroom(sym->m_src))
 							> src_buf_start)) {
 			/* alignment has pushed addr ahead of start of mbuf
 			 * so revert and take the performance hit
 			 */
 			src_buf_start =
-				rte_pktmbuf_iova_offset(op->sym->m_src,
+				rte_pktmbuf_iova_offset(sym->m_src,
 								min_ofs);
 		}
 		dst_buf_start = src_buf_start;
 
 		/* remember any adjustment for later, note, can be +/- */
 		alignment_adjustment = src_buf_start -
-			rte_pktmbuf_iova_offset(op->sym->m_src, min_ofs);
+			rte_pktmbuf_iova_offset(sym->m_src, min_ofs);
 	}
 
 	if (do_cipher || do_aead) {
 		cipher_param->cipher_offset =
 				(uint32_t)rte_pktmbuf_iova_offset(
-				op->sym->m_src, cipher_ofs) - src_buf_start;
+				sym->m_src, cipher_ofs) - src_buf_start;
 		cipher_param->cipher_length = cipher_len;
 	} else {
 		cipher_param->cipher_offset = 0;
@@ -557,8 +620,8 @@ qat_sym_build_request(void *in_op, uint8_t *out_msg,
 
 		ICP_QAT_FW_COMN_PTR_TYPE_SET(qat_req->comn_hdr.comn_req_flags,
 				QAT_COMN_PTR_TYPE_SGL);
-		ret = qat_sgl_fill_array(op->sym->m_src,
-		   (int64_t)(src_buf_start - rte_pktmbuf_iova(op->sym->m_src)),
+		ret = qat_sgl_fill_array(sym->m_src,
+		   (int64_t)(src_buf_start - rte_pktmbuf_iova(sym->m_src)),
 		   &cookie->qat_sgl_src,
 		   qat_req->comn_mid.src_length,
 		   QAT_SYM_SGL_MAX_NUMBER);
@@ -599,9 +662,9 @@ qat_sym_build_request(void *in_op, uint8_t *out_msg,
 
 	/* Handle Single-Pass GCM */
 	if (ctx->is_single_pass) {
-		cipher_param->spc_aad_addr = op->sym->aead.aad.phys_addr;
+		cipher_param->spc_aad_addr = sym->aead.aad.phys_addr;
 		cipher_param->spc_auth_res_addr =
-				op->sym->aead.digest.phys_addr;
+				sym->aead.digest.phys_addr;
 	}
 
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
