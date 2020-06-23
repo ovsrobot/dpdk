@@ -31,8 +31,10 @@ enum rte_crypto_op_type {
 	/**< Undefined operation type */
 	RTE_CRYPTO_OP_TYPE_SYMMETRIC,
 	/**< Symmetric operation */
-	RTE_CRYPTO_OP_TYPE_ASYMMETRIC
+	RTE_CRYPTO_OP_TYPE_ASYMMETRIC,
 	/**< Asymmetric operation */
+	RTE_CRYPTO_OP_TYPE_SECURITY
+	/**< Security operation */
 };
 
 /** Status of crypto operation */
@@ -121,8 +123,15 @@ struct rte_crypto_op {
 		struct rte_crypto_asym_op asym[0];
 		/**< Asymmetric operation parameters */
 
+		uint8_t security[0];
+		/**< Security operation parameters
+		 * - Must be accessed through a rte_security_op pointer
+		 */
 	}; /**< operation specific parameters */
 };
+
+/** Maximum size of security crypto op */
+#define RTE_CRYPTO_OP_SECURITY_MAX_SZ (88U)
 
 /**
  * Reset the fields of a crypto operation to their default values.
@@ -143,7 +152,10 @@ __rte_crypto_op_reset(struct rte_crypto_op *op, enum rte_crypto_op_type type)
 		break;
 	case RTE_CRYPTO_OP_TYPE_ASYMMETRIC:
 		memset(op->asym, 0, sizeof(struct rte_crypto_asym_op));
-	break;
+		break;
+	case RTE_CRYPTO_OP_TYPE_SECURITY:
+		memset(op->security, 0, RTE_CRYPTO_OP_SECURITY_MAX_SZ);
+		break;
 	case RTE_CRYPTO_OP_TYPE_UNDEFINED:
 	default:
 		break;
@@ -317,6 +329,9 @@ __rte_crypto_op_get_priv_data(struct rte_crypto_op *op, uint32_t size)
 			if (op->type == RTE_CRYPTO_OP_TYPE_ASYMMETRIC)
 				return (void *)((uint8_t *)(op + 1) +
 					sizeof(struct rte_crypto_asym_op));
+			if (op->type == RTE_CRYPTO_OP_TYPE_SECURITY)
+				return (void *)((uint8_t *)(op + 1) +
+					RTE_CRYPTO_OP_SECURITY_MAX_SZ);
 		}
 	}
 
