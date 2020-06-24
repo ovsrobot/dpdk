@@ -35,6 +35,7 @@ Sample Applications User Guides
     link_status_intr
     server_node_efd
     service_cores
+    mp_crypto
     multi_process
     qos_metering
     qos_scheduler
