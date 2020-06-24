@@ -160,38 +160,6 @@ struct e1000_adv_context_desc {
 #define E1000_IMIREXT_CTRL_FIN	0x00040000  /* Check FIN bit in header */
 #define E1000_IMIREXT_CTRL_BP	0x00080000  /* Bypass check of ctrl bits */
 
-/* Receive Descriptor - Advanced */
-union e1000_adv_rx_desc {
-	struct {
-		__le64 pkt_addr; /* Packet buffer address */
-		__le64 hdr_addr; /* Header buffer address */
-	} read;
-	struct {
-		struct {
-			union {
-				__le32 data;
-				struct {
-					__le16 pkt_info; /*RSS type, Pkt type*/
-					/* Split Header, header buffer len */
-					__le16 hdr_info;
-				} hs_rss;
-			} lo_dword;
-			union {
-				__le32 rss; /* RSS Hash */
-				struct {
-					__le16 ip_id; /* IP id */
-					__le16 csum; /* Packet Checksum */
-				} csum_ip;
-			} hi_dword;
-		} lower;
-		struct {
-			__le32 status_error; /* ext status/error */
-			__le16 length; /* Packet length */
-			__le16 vlan; /* VLAN tag */
-		} upper;
-	} wb;  /* writeback */
-};
-
 #define E1000_RXDADV_RSSTYPE_MASK	0x0000000F
 #define E1000_RXDADV_RSSTYPE_SHIFT	12
 #define E1000_RXDADV_HDRBUFLEN_MASK	0x7FE0
@@ -248,20 +216,6 @@ union e1000_adv_rx_desc {
 #define E1000_RXDADV_IPSEC_ERROR_INVALID_LENGTH		0x10000000
 #define E1000_RXDADV_IPSEC_ERROR_AUTHENTICATION_FAILED	0x18000000
 
-/* Transmit Descriptor - Advanced */
-union e1000_adv_tx_desc {
-	struct {
-		__le64 buffer_addr;    /* Address of descriptor's data buf */
-		__le32 cmd_type_len;
-		__le32 olinfo_status;
-	} read;
-	struct {
-		__le64 rsvd;       /* Reserved */
-		__le32 nxtseq_seed;
-		__le32 status;
-	} wb;
-};
-
 /* Adv Transmit Descriptor Config Masks */
 #define E1000_ADVTXD_DTYP_CTXT	0x00200000 /* Advanced Context Descriptor */
 #define E1000_ADVTXD_DTYP_DATA	0x00300000 /* Advanced Data Descriptor */
@@ -283,14 +237,6 @@ union e1000_adv_tx_desc {
 #define E1000_ADVTXD_POPTS_ISCO_FULL	0x00001800
 #define E1000_ADVTXD_POPTS_IPSEC	0x00000400 /* IPSec offload request */
 #define E1000_ADVTXD_PAYLEN_SHIFT	14 /* Adv desc PAYLEN shift */
-
-/* Context descriptors */
-struct e1000_adv_tx_context_desc {
-	__le32 vlan_macip_lens;
-	__le32 seqnum_seed;
-	__le32 type_tucmd_mlhl;
-	__le32 mss_l4len_idx;
-};
 
 #define E1000_ADVTXD_MACLEN_SHIFT	9  /* Adv ctxt desc mac len shift */
 #define E1000_ADVTXD_VLAN_SHIFT		16  /* Adv ctxt vlan tag shift */
@@ -354,7 +300,6 @@ struct e1000_adv_tx_context_desc {
 #define E1000_ETQF_FILTER_ENABLE	(1 << 26)
 #define E1000_ETQF_IMM_INT		(1 << 29)
 #define E1000_ETQF_1588			(1 << 30)
-#define E1000_ETQF_QUEUE_ENABLE		(1U << 31)
 /*
  * ETQF filter list: one static filter per filter consumer. This is
  *                   to avoid filter collisions later. Add new filters
@@ -444,13 +389,14 @@ struct e1000_adv_tx_context_desc {
 
 #define ALL_QUEUES		0xFFFF
 
+s32 e1000_reset_init_script_82575(struct e1000_hw *hw);
+s32 e1000_init_nvm_params_82575(struct e1000_hw *hw);
+
 /* Rx packet buffer size defines */
 #define E1000_RXPBS_SIZE_MASK_82576	0x0000007F
 void e1000_vmdq_set_loopback_pf(struct e1000_hw *hw, bool enable);
 void e1000_vmdq_set_anti_spoofing_pf(struct e1000_hw *hw, bool enable, int pf);
 void e1000_vmdq_set_replication_pf(struct e1000_hw *hw, bool enable);
-s32 e1000_init_nvm_params_82575(struct e1000_hw *hw);
-s32  e1000_init_hw_82575(struct e1000_hw *hw);
 
 enum e1000_promisc_type {
 	e1000_promisc_disabled = 0,   /* all promisc modes disabled */
