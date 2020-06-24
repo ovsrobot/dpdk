@@ -1546,8 +1546,6 @@ STATIC s32 e1000_check_for_copper_link_ich8lan(struct e1000_hw *hw)
 
 
 		if (hw->mac.type >= e1000_pch_lpt) {
-			u16 phy_reg;
-
 			hw->phy.ops.read_reg_locked(hw, I217_PLL_CLOCK_GATE_REG,
 						    &phy_reg);
 			phy_reg &= ~I217_PLL_CLOCK_GATE_MASK;
