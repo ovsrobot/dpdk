@@ -486,7 +486,7 @@ STATIC s32 e1000_init_mac_params_82575(struct e1000_hw *hw)
 	/* acquire SW_FW sync */
 	mac->ops.acquire_swfw_sync = e1000_acquire_swfw_sync_82575;
 	mac->ops.release_swfw_sync = e1000_release_swfw_sync_82575;
-	if (mac->type >= e1000_i210) {
+	if (mac->type == e1000_i210 || mac->type == e1000_i211) {
 		mac->ops.acquire_swfw_sync = e1000_acquire_swfw_sync_i210;
 		mac->ops.release_swfw_sync = e1000_release_swfw_sync_i210;
 	}
