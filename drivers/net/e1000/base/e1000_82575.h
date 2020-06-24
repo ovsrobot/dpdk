@@ -234,25 +234,6 @@ struct e1000_adv_context_desc {
 #define E1000_ADVTXD_POPTS_IPSEC	0x00000400 /* IPSec offload request */
 #define E1000_ADVTXD_PAYLEN_SHIFT	14 /* Adv desc PAYLEN shift */
 
-#define E1000_ADVTXD_MACLEN_SHIFT	9  /* Adv ctxt desc mac len shift */
-#define E1000_ADVTXD_VLAN_SHIFT		16  /* Adv ctxt vlan tag shift */
-#define E1000_ADVTXD_TUCMD_IPV4		0x00000400  /* IP Packet Type: 1=IPv4 */
-#define E1000_ADVTXD_TUCMD_IPV6		0x00000000  /* IP Packet Type: 0=IPv6 */
-#define E1000_ADVTXD_TUCMD_L4T_UDP	0x00000000  /* L4 Packet TYPE of UDP */
-#define E1000_ADVTXD_TUCMD_L4T_TCP	0x00000800  /* L4 Packet TYPE of TCP */
-#define E1000_ADVTXD_TUCMD_L4T_SCTP	0x00001000  /* L4 Packet TYPE of SCTP */
-#define E1000_ADVTXD_TUCMD_IPSEC_TYPE_ESP	0x00002000 /* IPSec Type ESP */
-/* IPSec Encrypt Enable for ESP */
-#define E1000_ADVTXD_TUCMD_IPSEC_ENCRYPT_EN	0x00004000
-/* Req requires Markers and CRC */
-#define E1000_ADVTXD_TUCMD_MKRREQ	0x00002000
-#define E1000_ADVTXD_L4LEN_SHIFT	8  /* Adv ctxt L4LEN shift */
-#define E1000_ADVTXD_MSS_SHIFT		16  /* Adv ctxt MSS shift */
-/* Adv ctxt IPSec SA IDX mask */
-#define E1000_ADVTXD_IPSEC_SA_INDEX_MASK	0x000000FF
-/* Adv ctxt IPSec ESP len mask */
-#define E1000_ADVTXD_IPSEC_ESP_LEN_MASK		0x000000FF
-
 /* Additional Transmit Descriptor Control definitions */
 #define E1000_TXDCTL_QUEUE_ENABLE	0x02000000 /* Ena specific Tx Queue */
 #define E1000_TXDCTL_SWFLSH		0x04000000 /* Tx Desc. wbk flushing */
