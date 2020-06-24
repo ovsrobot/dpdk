@@ -63,7 +63,6 @@ mlx5_dev_to_pci_addr(const char *dev_path,
 			   &pci_addr->bus,
 			   &pci_addr->devid,
 			   &pci_addr->function) == 4) {
-			ret = 0;
 			break;
 		}
 	}
