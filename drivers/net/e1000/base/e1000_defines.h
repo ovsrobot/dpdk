@@ -251,6 +251,7 @@
 #define E1000_CTRL_SWDPIO0	0x00400000 /* SWDPIN 0 Input or output */
 #define E1000_CTRL_SWDPIO2	0x01000000 /* SWDPIN 2 input or output */
 #define E1000_CTRL_SWDPIO3	0x02000000 /* SWDPIN 3 input or output */
+#define E1000_CTRL_DEV_RST	0x20000000 /* Device reset */
 #define E1000_CTRL_RST		0x04000000 /* Global reset */
 #define E1000_CTRL_RFCE		0x08000000 /* Receive Flow Control enable */
 #define E1000_CTRL_TFCE		0x10000000 /* Transmit flow control enable */
