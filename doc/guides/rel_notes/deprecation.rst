@@ -130,3 +130,8 @@ Deprecation Notices
   Python 2 support will be completely removed in 20.11.
   In 20.08, explicit deprecation warnings will be displayed when running
   scripts with Python 2.
+
+* eal: Change ``rte_dev_probe`` API in DPDK v20.11 to return a pointer on the
+  probed rte_device or NULL instead of 0 or an error code. This change will
+  allow applications avoid iterating on devices after a probe to get access to
+  the new rte_device.
