@@ -116,4 +116,7 @@ qat_comp_process_response(void **op __rte_unused, uint8_t *resp __rte_unused,
 			  void *op_cookie __rte_unused,
 			  uint64_t *dequeue_err_count __rte_unused);
 
+void
+rxq_free_desc(struct qat_qp *qp, struct qat_queue *q);
+
 #endif /* _QAT_QP_H_ */

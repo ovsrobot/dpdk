@@ -547,8 +547,8 @@ txq_write_tail(struct qat_qp *qp, struct qat_queue *q) {
 	q->csr_tail = q->tail;
 }
 
-static inline
-void rxq_free_desc(struct qat_qp *qp, struct qat_queue *q)
+void
+rxq_free_desc(struct qat_qp *qp, struct qat_queue *q)
 {
 	uint32_t old_head, new_head;
 	uint32_t max_head;

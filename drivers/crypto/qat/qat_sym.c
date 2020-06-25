@@ -336,7 +336,6 @@ qat_sym_build_request(void *in_op, uint8_t *out_msg,
 			set_cipher_iv(ctx->cipher_iv.length,
 					ctx->cipher_iv.offset,
 					cipher_param, op, qat_req);
-
 		} else if (ctx->qat_hash_alg ==
 				ICP_QAT_HW_AUTH_ALGO_AES_CBC_MAC) {
 
