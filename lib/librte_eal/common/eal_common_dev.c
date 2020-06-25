@@ -120,7 +120,9 @@ rte_eal_hotplug_add(const char *busname, const char *devname,
 	if (ret != 0)
 		return ret;
 
-	ret = rte_dev_probe(devargs);
+	if (rte_dev_probe(devargs) == NULL)
+		ret = -1;
+
 	free(devargs);
 
 	return ret;
@@ -192,7 +194,7 @@ err_devarg:
 	return ret;
 }
 
-int
+struct rte_device *
 rte_dev_probe(const char *devargs)
 {
 	struct eal_dev_mp_req req;
@@ -212,12 +214,12 @@ rte_dev_probe(const char *devargs)
 		if (ret != 0) {
 			RTE_LOG(ERR, EAL,
 				"Failed to send hotplug request to primary\n");
-			return -ENOMSG;
+			return NULL;
 		}
 		if (req.result != 0)
 			RTE_LOG(ERR, EAL,
 				"Failed to hotplug add device\n");
-		return req.result;
+		return NULL;
 	}
 
 	/* attach a shared device from primary start from here: */
@@ -236,7 +238,7 @@ rte_dev_probe(const char *devargs)
 		 * process.
 		 */
 		if (ret != -EEXIST)
-			return ret;
+			return dev;
 	}
 
 	/* primary send attach sync request to secondary. */
@@ -261,11 +263,11 @@ rte_dev_probe(const char *devargs)
 
 		/* for -EEXIST, we don't need to rollback. */
 		if (ret == -EEXIST)
-			return ret;
+			return dev;
 		goto rollback;
 	}
 
-	return 0;
+	return dev;
 
 rollback:
 	req.t = EAL_DEV_REQ_TYPE_ATTACH_ROLLBACK;
@@ -282,7 +284,7 @@ rollback:
 			"Failed to rollback device attach on primary."
 			"Devices in secondary may not sync with primary\n");
 
-	return ret;
+	return NULL;
 }
 
 int

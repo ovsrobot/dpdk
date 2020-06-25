@@ -341,6 +341,7 @@ rte_pmd_failsafe_probe(struct rte_vdev_device *vdev)
 	struct rte_eth_dev *eth_dev;
 	struct sub_device  *sdev;
 	struct rte_devargs devargs;
+	struct rte_device *dev;
 	uint8_t i;
 	int ret;
 
@@ -378,8 +379,8 @@ rte_pmd_failsafe_probe(struct rte_vdev_device *vdev)
 				continue;
 			}
 			if (!devargs_already_listed(&devargs)) {
-				ret = rte_dev_probe(devargs.name);
-				if (ret < 0) {
+				dev = rte_dev_probe(devargs.name);
+				if (dev == NULL) {
 					ERROR("Failed to probe devargs %s",
 					      devargs.name);
 					continue;
