@@ -861,6 +861,278 @@ using one of the crypto PMDs available in DPDK.
                                             num_dequeued_ops);
     } while (total_num_dequeued_ops < num_enqueued_ops);
 
+QAT Direct Symmetric Crypto Data-path APIs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+QAT direct symmetric crypto data-path APIs are a set of APIs that especially
+for QAT symmetric PMD that provides fast data-path enqueue/dequeue operations.
+The direct data-path APIs take advantage of existing Cryptodev APIs for device,
+queue pairs, and session management. In addition the user are required to get
+the QAT queue pair pointer data prior to call the direct data-path APIs.
+The APIs are advanced features as an alternative to
+``rte_cryptodev_enqueue_burst`` and ``rte_cryptodev_dequeue_burst``. The APIs
+are designed for the user to develop close-to-native performance symmetric
+crypto data-path implementation for their applications that do not necessarily
+depend on cryptodev operations and cryptodev operation mempools, or mbufs.
+
+The fast data-path enqueue/dequeue is achieved through minimized data to
+issue a QAT symmetric crypto request and reduced branches inside the enqueue
+functions. To minimize the write and read of the opaque data in/out of QAT
+descriptors, the APIs also adopts the idea of the crypto workload frame, which
+is essentially a data structure to describe a burst of crypto jobs. In this
+case only the first QAT descriptors will be written the frame pointer upon
+enqueue, and the user shall provides a way for the driver to know the number of
+elements in the dequeued frame, and how and what to write the status fields for
+each frame element. Upon dequeue, only a finished frame or NULL is returned to
+the caller application.
+
+To simply the enqueue APIs a QAT symmetric job is defined:
+
+.. code-block:: c
+
+	/* Structure to fill QAT tx queue. */
+	struct qat_sym_job {
+		union {
+			/**
+			 * When QAT_SYM_DESC_FLAG_IS_SGL bit is set in flags, sgl
+			 * field is used as input data. Otherwise data_iova is
+			 * used.
+			 **/
+			rte_iova_t data_iova;
+			struct rte_crypto_sgl *sgl;
+		};
+		union {
+			/**
+			 * Depends on the calling API one of the following fields in
+			 * the following structures are used.
+			 *
+			 * Different than cryptodev, all ofs and len fields have the
+			 * unit of bytes, including Snow3G/Kasumi/Zuc.
+			 **/
+			struct {
+				uint32_t cipher_ofs;
+				uint32_t cipher_len;
+			} cipher_only;
+
+			struct {
+				uint32_t auth_ofs;
+				uint32_t auth_len;
+				rte_iova_t digest_iova;
+			} auth_only;
+
+			struct {
+				uint32_t aead_ofs;
+				uint32_t aead_len;
+				rte_iova_t tag_iova;
+				/* The aad is required to be filled only for CCM, for GCM
+				 * only aad_iova is mandatory.
+				 *
+				 * Also for CCM the first byte of aad data will be
+				 * used to construct B0 data
+				 */
+				uint8_t *aad;
+				rte_iova_t aad_iova;
+			} aead;
+
+			struct {
+				uint32_t cipher_ofs;
+				uint32_t cipher_len;
+				uint32_t auth_ofs;
+				uint32_t auth_len;
+				rte_iova_t digest_iova;
+			} chain;
+		};
+		uint8_t *iv;
+		rte_iova_t iv_iova;
+
+	#define QAT_SYM_DESC_FLAG_IS_SGL	(1 << 0)
+		uint32_t flags;
+	};
+
+Different than Cryptodev operation, the ``qat_sym_job`` structure focuses
+only on the data field required for QAT to execute a single job, and is
+not stored as opaque data in the QAT request descriptor. The user can freely
+allocate the structure buffer from stack and reuse it to fill all jobs.
+
+To use the QAT direct symmetric crypto APIs safely, the user has to carefully
+set the correct fields in qat_sym_job structure, otherwise the application or
+the system may crash. Also there are a few limitations to the QAT direct
+symmetric crypto APIs:
+
+* Only support in-place operations.
+* Docsis is NOT supported.
+* GMAC only digest generation or verification is NOT supported.
+* APIs are NOT thread-safe.
+* CANNOT mix the direct API's enqueue with rte_cryptodev_enqueue_burst, or
+* vice versa.
+
+The following sample code shows how to use QAT direct API to process a user
+defined frame with maximum 32 buffers with AES-CBC and HMAC-SHA chained
+algorithm of a frame defined by user.
+
+See *DPDK API Reference* for details on each API definitions.
+
+.. code-block:: c
+
+	#include <qat_sym_frame.h>
+
+	#define FRAME_ELT_OK 0
+	#define FRAME_ELT_FAIL 1
+	#define FRAME_OK 0
+	#define FRAME_SOME_ELT_ERROR 1
+	#define FRAME_SIZE 32
+
+	/* User created frame element struct */
+	struct sample_frame_elt {
+		/* The status field of frame element */
+		uint8_t status;
+		/* Pre-created and initialized cryptodev session */
+		struct rte_cryptodev_sym_session *session;
+		union {
+			__rte_iova_t data;
+			struct rte_crypto_sgl sgl;
+		};
+		uint32_t data_len;
+		__rte_iova_t digest;
+		uint8_t *iv;
+		uint8_t is_sgl;
+	};
+
+	/* User created frame struct */
+	struct sample_frame {
+		struct sample_frame_elt elts[FRAME_SIZE]; /**< All frame elements */
+		uint32_t n_elts; /**< Number of elements */
+	};
+
+	/* Frame enqueue function use QAT direct AES-CBC-* + HMAC-SHA* API */
+	static int
+	enqueue_frame_to_qat_direct_api(
+		uint8_t qat_cryptodev_id, /**< Initialized QAT cryptodev ID */
+		uint16_t qat_qp_id, /**< Initialized QAT queue pair ID */
+		struct sample_frame *frame /**< Initialized user frame struct */)
+	{
+		/* Get QAT queue pair data, provided as one of the QAT direct APIs. */
+		void *qp = qat_sym_get_qp(qat_cryptodev_id, qat_qp_id);
+		struct qat_sym_job job;
+		uint32_t i, tail;
+
+		/**
+		 * If qat_cryptodev_id does not represent an initialized QAT device, or
+		 * the qat_qp_id is not valid or initialized, qat_sym_get_qp will
+		 *  return NULL.
+		 **/
+		if (qp == NULL)
+			return -1;
+
+		for (i = 0; i < frame->n_elts; i++) {
+			struct sample_frame_elt *fe = &f-elts[i];
+			int ret;
+
+			/* Fill the job data with frame element data */
+			if (fe->is_sgl != 0) {
+				/* The buffer is a SGL buffer */
+				job.sgl = &frame->sgl;
+				/* Set SGL flag in the job */
+				job.flag |= QAT_SYM_DESC_FLAG_IS_SGL;
+			} else {
+				job.data_iova = fe->data;
+				/* Unset SGL flag in the job */
+				job.flag &= ~QAT_SYM_DESC_FLAG_IS_SGL;
+			}
+
+			job.chain.cipher_ofs = job.chain.auth_ofs = 0;
+			job.chain.cipher_len = job.chain.auth_len = fe->data_len;
+			job.chain.digest_iova = fe->digest;
+
+			job.iv = fe->iv;
+
+			/* Call QAT direct data-path enqueue chaining op API */
+			ret = qat_sym_enqueue_frame_chain(qp, fe->session, &job,
+				&tail, /**< Tail should be updated only by the function */
+				i == 0 ? 1 : 0, /**< Set 1 for first job in the frame */
+				i == frame->n_elts - 1, /**< Set 1 for last job */
+				(void *)frame /**< Frame will written to first job's opaque */);
+
+			/**
+			 * In case one element is failed to be enqueued, simply abandon
+			 * enqueuing the whole frame.
+			 **/
+			if (!ret)
+				return -1;
+
+			/**
+			 * To this point the frame is enqueued. The job buffer can be
+			 * safely reused for enqueuing next frame element.
+			 **/
+		}
+
+		return 0;
+	}
+
+	/**
+	 * User created function to return the number of elements in a frame.
+	 * The function return and parameter should follow the prototype
+	 * qat_qp_get_frame_n_element_t() in qat_sym_frame.h
+	 **/
+	static uint32_t
+	get_frame_nb_elts(void *f)
+	{
+		struct sample_frame *frame = f;
+		return frame->n_elts;
+	}
+
+	/* Frame dequeue function use QAT direct dequeue API */
+	static struct sample_frame *
+	dequeue_frame_with_qat_direct_api(
+		uint8_t qat_cryptodev_id, /**< Initialized QAT cryptodev ID */
+		uint16_t qat_qp_id /**< Initialized QAT queue pair ID */)
+	{
+		void *qp = qat_sym_get_qp(qat_cryptodev_id, qat_qp_id);
+		struct sample_frame *ret_frame;
+		int ret;
+
+		/**
+		 * If qat_cryptodev_id does not represent an initialized QAT device, or
+		 * the qat_qp_id is not valid or initialized, qat_sym_get_qp will
+		 *  return NULL.
+		 **/
+		if (qp == NULL)
+			return NULL;
+
+		ret = qat_sym_dequeue_frame(qp,
+			&ret_frame, /**< Valid frame or NULL will write to ret_frame */
+			get_frame_nb_elts, /**< Function to get frame element size */
+			/* Offset from the start of the frame to the first status field */
+			offsetof(struct sample_frame, elts),
+			sizeof(struct sample_frame), /**< Interval between status fields */
+			FRAME_ELT_OK, /**< Value to write to status when elt successful */
+			FRAME_ELT_FAIL /**< Value to write to status when elt failed */);
+
+		if (ret == 0) {
+			/**
+			 * Return 0 means the frame is successfully retrieved, and all
+			 * elements in the frame are successfully processed.
+			 **/
+			ret_frame->state = FRAME_OK;
+			return ret_frame;
+		} else {
+			/**
+			 * Return negative number but ret_frame is not NULL means the frame
+			 * is successfully retrieved, but 1 or more elements are failed.
+			 **/
+			if (ret_frame) {
+				ret_frame->sate = FRAME_SOME_ELT_ERROR;
+				return ret_frame;
+			} else {
+				/**
+				 * Return negative number and ret_frame is NULL means QAT is
+				 * yet to process all elements in the frame.
+				 **/
+				 return NULL;
+			}
+		}
+	}
+
 Asymmetric Cryptography
 -----------------------
 
