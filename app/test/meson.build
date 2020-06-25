@@ -312,6 +312,7 @@ driver_test_names = [
         'cryptodev_sw_mvsam_autotest',
         'cryptodev_sw_snow3g_autotest',
         'cryptodev_sw_zuc_autotest',
+	'cryptodev_qat_sym_api_autotest',
         'eventdev_selftest_octeontx',
         'eventdev_selftest_sw',
         'rawdev_autotest',

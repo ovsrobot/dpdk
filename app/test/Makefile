@@ -297,6 +297,10 @@ ifeq ($(CONFIG_RTE_LIBRTE_PMD_CRYPTO_SCHEDULER),y)
 LDLIBS += -lrte_pmd_crypto_scheduler
 endif
 
+ifeq ($(CONFIG_RTE_LIBRTE_PMD_QAT_SYM),y)
+LDLIBS += -lrte_pmd_qat
+endif
+
 endif
 
 ifeq ($(CONFIG_RTE_APP_TEST_RESOURCE_TAR),y)

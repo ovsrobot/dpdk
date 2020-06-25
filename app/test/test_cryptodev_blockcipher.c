@@ -461,25 +461,43 @@ iterate:
 	}
 
 	/* Process crypto operation */
-	if (rte_cryptodev_enqueue_burst(dev_id, 0, &op, 1) != 1) {
-		snprintf(test_msg, BLOCKCIPHER_TEST_MSG_LEN,
-			"line %u FAILED: %s",
-			__LINE__, "Error sending packet for encryption");
-		status = TEST_FAILED;
-		goto error_exit;
-	}
+	if (qat_api_test) {
+		uint8_t is_cipher = 0, is_auth = 0;
 
-	op = NULL;
+		if (t->feature_mask & BLOCKCIPHER_TEST_FEATURE_OOP) {
+			RTE_LOG(DEBUG, USER1,
+			"QAT direct API does not support OOP, Test Skipped.\n");
+			snprintf(test_msg, BLOCKCIPHER_TEST_MSG_LEN, "SKIPPED");
+			status = TEST_SUCCESS;
+			goto error_exit;
+		}
+		if (t->op_mask & BLOCKCIPHER_TEST_OP_CIPHER)
+			is_cipher = 1;
+		if (t->op_mask & BLOCKCIPHER_TEST_OP_AUTH)
+			is_auth = 1;
 
-	while (rte_cryptodev_dequeue_burst(dev_id, 0, &op, 1) == 0)
-		rte_pause();
+		process_qat_api_op(dev_id, 0, op, is_cipher, is_auth, 0);
+	} else {
+		if (rte_cryptodev_enqueue_burst(dev_id, 0, &op, 1) != 1) {
+			snprintf(test_msg, BLOCKCIPHER_TEST_MSG_LEN,
+				"line %u FAILED: %s",
+				__LINE__, "Error sending packet for encryption");
+			status = TEST_FAILED;
+			goto error_exit;
+		}
 
-	if (!op) {
-		snprintf(test_msg, BLOCKCIPHER_TEST_MSG_LEN,
-			"line %u FAILED: %s",
-			__LINE__, "Failed to process sym crypto op");
-		status = TEST_FAILED;
-		goto error_exit;
+		op = NULL;
+
+		while (rte_cryptodev_dequeue_burst(dev_id, 0, &op, 1) == 0)
+			rte_pause();
+
+		if (!op) {
+			snprintf(test_msg, BLOCKCIPHER_TEST_MSG_LEN,
+				"line %u FAILED: %s",
+				__LINE__, "Failed to process sym crypto op");
+			status = TEST_FAILED;
+			goto error_exit;
+		}
 	}
 
 	debug_hexdump(stdout, "m_src(after):",
