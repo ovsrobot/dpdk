@@ -10,9 +10,6 @@
  *
  * Wireless base band device abstraction APIs.
  *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
- *
  * This API allows an application to discover, configure and use a device to
  * process operations. An asynchronous API (enqueue, followed by later dequeue)
  * is used for processing operations.
@@ -55,7 +52,6 @@ enum rte_bbdev_state {
  * @return
  *   The total number of usable devices.
  */
-__rte_experimental
 uint16_t
 rte_bbdev_count(void);
 
@@ -68,7 +64,6 @@ rte_bbdev_count(void);
  * @return
  *   true if device ID is valid and device is attached, false otherwise.
  */
-__rte_experimental
 bool
 rte_bbdev_is_valid(uint16_t dev_id);
 
@@ -82,7 +77,6 @@ rte_bbdev_is_valid(uint16_t dev_id);
  *   - The next device, or
  *   - RTE_BBDEV_MAX_DEVS if none found
  */
-__rte_experimental
 uint16_t
 rte_bbdev_find_next(uint16_t dev_id);
 
@@ -112,7 +106,6 @@ rte_bbdev_find_next(uint16_t dev_id);
  *   - -EBUSY if the identified device has already started
  *   - -ENOMEM if unable to allocate memory
  */
-__rte_experimental
 int
 rte_bbdev_setup_queues(uint16_t dev_id, uint16_t num_queues, int socket_id);
 
@@ -130,7 +123,6 @@ rte_bbdev_setup_queues(uint16_t dev_id, uint16_t num_queues, int socket_id);
  *   - -EBUSY if the identified device has already started
  *   - -ENOTSUP if the interrupts are not supported by the device
  */
-__rte_experimental
 int
 rte_bbdev_intr_enable(uint16_t dev_id);
 
@@ -160,7 +152,6 @@ struct rte_bbdev_queue_conf {
  *   - EINVAL if the identified queue size or priority are invalid
  *   - EBUSY if the identified queue or its device have already started
  */
-__rte_experimental
 int
 rte_bbdev_queue_configure(uint16_t dev_id, uint16_t queue_id,
 		const struct rte_bbdev_queue_conf *conf);
@@ -176,7 +167,6 @@ rte_bbdev_queue_configure(uint16_t dev_id, uint16_t queue_id,
  *   - 0 on success
  *   - negative value on failure - as returned from PMD driver
  */
-__rte_experimental
 int
 rte_bbdev_start(uint16_t dev_id);
 
@@ -190,7 +180,6 @@ rte_bbdev_start(uint16_t dev_id);
  * @return
  *   - 0 on success
  */
-__rte_experimental
 int
 rte_bbdev_stop(uint16_t dev_id);
 
@@ -204,7 +193,6 @@ rte_bbdev_stop(uint16_t dev_id);
  * @return
  *   - 0 on success
  */
-__rte_experimental
 int
 rte_bbdev_close(uint16_t dev_id);
 
@@ -222,7 +210,6 @@ rte_bbdev_close(uint16_t dev_id);
  *   - 0 on success
  *   - negative value on failure - as returned from PMD driver
  */
-__rte_experimental
 int
 rte_bbdev_queue_start(uint16_t dev_id, uint16_t queue_id);
 
@@ -238,7 +225,6 @@ rte_bbdev_queue_start(uint16_t dev_id, uint16_t queue_id);
  *   - 0 on success
  *   - negative value on failure - as returned from PMD driver
  */
-__rte_experimental
 int
 rte_bbdev_queue_stop(uint16_t dev_id, uint16_t queue_id);
 
@@ -272,7 +258,6 @@ struct rte_bbdev_stats {
  *   - 0 on success
  *   - EINVAL if invalid parameter pointer is provided
  */
-__rte_experimental
 int
 rte_bbdev_stats_get(uint16_t dev_id, struct rte_bbdev_stats *stats);
 
@@ -284,7 +269,6 @@ rte_bbdev_stats_get(uint16_t dev_id, struct rte_bbdev_stats *stats);
  * @return
  *   - 0 on success
  */
-__rte_experimental
 int
 rte_bbdev_stats_reset(uint16_t dev_id);
 
@@ -347,7 +331,6 @@ struct rte_bbdev_info {
  *   - 0 on success
  *   - EINVAL if invalid parameter pointer is provided
  */
-__rte_experimental
 int
 rte_bbdev_info_get(uint16_t dev_id, struct rte_bbdev_info *dev_info);
 
@@ -374,7 +357,6 @@ struct rte_bbdev_queue_info {
  *   - 0 on success
  *   - EINVAL if invalid parameter pointer is provided
  */
-__rte_experimental
 int
 rte_bbdev_queue_info_get(uint16_t dev_id, uint16_t queue_id,
 		struct rte_bbdev_queue_info *queue_info);
@@ -491,7 +473,6 @@ extern struct rte_bbdev rte_bbdev_devices[];
  *   The number of operations actually enqueued (this is the number of processed
  *   entries in the @p ops array).
  */
-__rte_experimental
 static inline uint16_t
 rte_bbdev_enqueue_enc_ops(uint16_t dev_id, uint16_t queue_id,
 		struct rte_bbdev_enc_op **ops, uint16_t num_ops)
@@ -522,7 +503,6 @@ rte_bbdev_enqueue_enc_ops(uint16_t dev_id, uint16_t queue_id,
  *   The number of operations actually enqueued (this is the number of processed
  *   entries in the @p ops array).
  */
-__rte_experimental
 static inline uint16_t
 rte_bbdev_enqueue_dec_ops(uint16_t dev_id, uint16_t queue_id,
 		struct rte_bbdev_dec_op **ops, uint16_t num_ops)
@@ -553,7 +533,6 @@ rte_bbdev_enqueue_dec_ops(uint16_t dev_id, uint16_t queue_id,
  *   The number of operations actually enqueued (this is the number of processed
  *   entries in the @p ops array).
  */
-__rte_experimental
 static inline uint16_t
 rte_bbdev_enqueue_ldpc_enc_ops(uint16_t dev_id, uint16_t queue_id,
 		struct rte_bbdev_enc_op **ops, uint16_t num_ops)
@@ -584,7 +563,6 @@ rte_bbdev_enqueue_ldpc_enc_ops(uint16_t dev_id, uint16_t queue_id,
  *   The number of operations actually enqueued (this is the number of processed
  *   entries in the @p ops array).
  */
-__rte_experimental
 static inline uint16_t
 rte_bbdev_enqueue_ldpc_dec_ops(uint16_t dev_id, uint16_t queue_id,
 		struct rte_bbdev_dec_op **ops, uint16_t num_ops)
@@ -617,7 +595,6 @@ rte_bbdev_enqueue_ldpc_dec_ops(uint16_t dev_id, uint16_t queue_id,
  *   The number of operations actually dequeued (this is the number of entries
  *   copied into the @p ops array).
  */
-__rte_experimental
 static inline uint16_t
 rte_bbdev_dequeue_enc_ops(uint16_t dev_id, uint16_t queue_id,
 		struct rte_bbdev_enc_op **ops, uint16_t num_ops)
@@ -650,7 +627,6 @@ rte_bbdev_dequeue_enc_ops(uint16_t dev_id, uint16_t queue_id,
  *   copied into the @p ops array).
  */
 
-__rte_experimental
 static inline uint16_t
 rte_bbdev_dequeue_dec_ops(uint16_t dev_id, uint16_t queue_id,
 		struct rte_bbdev_dec_op **ops, uint16_t num_ops)
@@ -682,7 +658,6 @@ rte_bbdev_dequeue_dec_ops(uint16_t dev_id, uint16_t queue_id,
  *   The number of operations actually dequeued (this is the number of entries
  *   copied into the @p ops array).
  */
-__rte_experimental
 static inline uint16_t
 rte_bbdev_dequeue_ldpc_enc_ops(uint16_t dev_id, uint16_t queue_id,
 		struct rte_bbdev_enc_op **ops, uint16_t num_ops)
@@ -713,7 +688,6 @@ rte_bbdev_dequeue_ldpc_enc_ops(uint16_t dev_id, uint16_t queue_id,
  *   The number of operations actually dequeued (this is the number of entries
  *   copied into the @p ops array).
  */
-__rte_experimental
 static inline uint16_t
 rte_bbdev_dequeue_ldpc_dec_ops(uint16_t dev_id, uint16_t queue_id,
 		struct rte_bbdev_dec_op **ops, uint16_t num_ops)
@@ -765,7 +739,6 @@ typedef void (*rte_bbdev_cb_fn)(uint16_t dev_id,
  * @return
  *   Zero on success, negative value on failure.
  */
-__rte_experimental
 int
 rte_bbdev_callback_register(uint16_t dev_id, enum rte_bbdev_event_type event,
 		rte_bbdev_cb_fn cb_fn, void *cb_arg);
@@ -789,7 +762,6 @@ rte_bbdev_callback_register(uint16_t dev_id, enum rte_bbdev_event_type event,
  *   - EINVAL if invalid parameter pointer is provided
  *   - EAGAIN if the provided callback pointer does not exist
  */
-__rte_experimental
 int
 rte_bbdev_callback_unregister(uint16_t dev_id, enum rte_bbdev_event_type event,
 		rte_bbdev_cb_fn cb_fn, void *cb_arg);
@@ -810,7 +782,6 @@ rte_bbdev_callback_unregister(uint16_t dev_id, enum rte_bbdev_event_type event,
  *   - 0 on success
  *   - negative value on failure - as returned from PMD driver
  */
-__rte_experimental
 int
 rte_bbdev_queue_intr_enable(uint16_t dev_id, uint16_t queue_id);
 
@@ -827,7 +798,6 @@ rte_bbdev_queue_intr_enable(uint16_t dev_id, uint16_t queue_id);
  *   - 0 on success
  *   - negative value on failure - as returned from PMD driver
  */
-__rte_experimental
 int
 rte_bbdev_queue_intr_disable(uint16_t dev_id, uint16_t queue_id);
 
@@ -855,7 +825,6 @@ rte_bbdev_queue_intr_disable(uint16_t dev_id, uint16_t queue_id);
  *   - ENOTSUP if interrupts are not supported by the identified device
  *   - negative value on failure - as returned from PMD driver
  */
-__rte_experimental
 int
 rte_bbdev_queue_intr_ctl(uint16_t dev_id, uint16_t queue_id, int epfd, int op,
 		void *data);
