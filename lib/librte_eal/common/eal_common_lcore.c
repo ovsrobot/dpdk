@@ -12,7 +12,7 @@
 #include <rte_errno.h>
 #include <rte_lcore.h>
 #include <rte_log.h>
-#include <rte_spinlock.h>
+#include <rte_rwlock.h>
 
 #include "eal_memcfg.h"
 #include "eal_private.h"
@@ -223,7 +223,7 @@ rte_socket_id_by_idx(unsigned int idx)
 	return config->numa_nodes[idx];
 }
 
-static rte_spinlock_t lcore_lock = RTE_SPINLOCK_INITIALIZER;
+static rte_rwlock_t lcore_lock = RTE_RWLOCK_INITIALIZER;
 struct lcore_callback {
 	TAILQ_ENTRY(lcore_callback) next;
 	char *name;
@@ -272,7 +272,7 @@ rte_lcore_callback_register(const char *name, rte_lcore_init_cb init,
 	callback->init = init;
 	callback->uninit = uninit;
 	callback->arg = arg;
-	rte_spinlock_lock(&lcore_lock);
+	rte_rwlock_write_lock(&lcore_lock);
 	if (callback->init == NULL)
 		goto no_init;
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
@@ -298,7 +298,7 @@ no_init:
 		callback->name, callback->init == NULL ? "NO " : "",
 		callback->uninit == NULL ? "NO " : "");
 out:
-	rte_spinlock_unlock(&lcore_lock);
+	rte_rwlock_write_unlock(&lcore_lock);
 	return callback;
 }
 
@@ -309,7 +309,7 @@ rte_lcore_callback_unregister(void *handle)
 	struct lcore_callback *callback = handle;
 	unsigned int lcore_id;
 
-	rte_spinlock_lock(&lcore_lock);
+	rte_rwlock_write_lock(&lcore_lock);
 	if (callback->uninit == NULL)
 		goto no_uninit;
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
@@ -319,7 +319,7 @@ rte_lcore_callback_unregister(void *handle)
 	}
 no_uninit:
 	TAILQ_REMOVE(&lcore_callbacks, callback, next);
-	rte_spinlock_unlock(&lcore_lock);
+	rte_rwlock_write_unlock(&lcore_lock);
 	RTE_LOG(DEBUG, EAL, "Unregistered lcore callback %s-%p.\n",
 		callback->name, callback->arg);
 	free(callback->name);
@@ -339,7 +339,7 @@ eal_lcore_non_eal_allocate(void)
 		RTE_LOG(ERR, EAL, "Multiprocess in use, cannot allocate new lcore.\n");
 		return RTE_MAX_LCORE;
 	}
-	rte_spinlock_lock(&lcore_lock);
+	rte_rwlock_write_lock(&lcore_lock);
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
 		if (cfg->lcore_role[lcore_id] != ROLE_OFF)
 			continue;
@@ -370,7 +370,7 @@ eal_lcore_non_eal_allocate(void)
 		goto out;
 	}
 out:
-	rte_spinlock_unlock(&lcore_lock);
+	rte_rwlock_write_unlock(&lcore_lock);
 	return lcore_id;
 }
 
@@ -380,7 +380,7 @@ eal_lcore_non_eal_release(unsigned int lcore_id)
 	struct rte_config *cfg = rte_eal_get_configuration();
 	struct lcore_callback *callback;
 
-	rte_spinlock_lock(&lcore_lock);
+	rte_rwlock_write_lock(&lcore_lock);
 	if (cfg->lcore_role[lcore_id] != ROLE_NON_EAL)
 		goto out;
 	TAILQ_FOREACH(callback, &lcore_callbacks, next)
@@ -388,5 +388,62 @@ eal_lcore_non_eal_release(unsigned int lcore_id)
 	cfg->lcore_role[lcore_id] = ROLE_OFF;
 	cfg->lcore_count--;
 out:
-	rte_spinlock_unlock(&lcore_lock);
+	rte_rwlock_write_unlock(&lcore_lock);
+}
+
+int
+rte_lcore_iterate(rte_lcore_iterate_cb cb, void *arg)
+{
+	struct rte_config *cfg = rte_eal_get_configuration();
+	unsigned int lcore_id;
+	int ret = 0;
+
+	rte_rwlock_read_lock(&lcore_lock);
+	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
+		if (cfg->lcore_role[lcore_id] == ROLE_OFF)
+			continue;
+		ret = cb(lcore_id, arg);
+		if (ret != 0)
+			break;
+	}
+	rte_rwlock_read_unlock(&lcore_lock);
+	return ret;
+}
+
+static int
+lcore_dump_cb(unsigned int lcore_id, void *arg)
+{
+	struct rte_config *cfg = rte_eal_get_configuration();
+	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
+	const char *role;
+	FILE *f = arg;
+	int ret;
+
+	switch (cfg->lcore_role[lcore_id]) {
+	case ROLE_RTE:
+		role = "RTE";
+		break;
+	case ROLE_SERVICE:
+		role = "SERVICE";
+		break;
+	case ROLE_NON_EAL:
+		role = "NON_EAL";
+		break;
+	default:
+		role = "UNKNOWN";
+		break;
+	}
+
+	ret = eal_thread_dump_affinity(&lcore_config[lcore_id].cpuset, cpuset,
+		sizeof(cpuset));
+	fprintf(f, "lcore %u, socket %u, role %s, cpuset %s%s\n", lcore_id,
+		rte_lcore_to_socket_id(lcore_id), role, cpuset,
+		ret == 0 ? "" : "...");
+	return 0;
+}
+
+void
+rte_lcore_dump(FILE *f)
+{
+	rte_lcore_iterate(lcore_dump_cb, f);
 }

@@ -398,6 +398,8 @@ EXPERIMENTAL {
 	__rte_trace_mem_per_thread_free;
 	rte_lcore_callback_register;
 	rte_lcore_callback_unregister;
+	rte_lcore_dump;
+	rte_lcore_iterate;
 	rte_thread_register;
 	rte_thread_unregister;
 };
