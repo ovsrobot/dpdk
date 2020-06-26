@@ -154,6 +154,9 @@ pkt_burst_noisy_vnf(struct fwd_stream *fs)
 
 	nb_rx = rte_eth_rx_burst(fs->rx_port, fs->rx_queue,
 			pkts_burst, nb_pkt_per_burst);
+#ifdef RTE_TEST_PMD_RECORD_BURST_STATS
+	fs->rx_burst_stats.pkt_burst_spread[nb_rx]++;
+#endif
 	if (unlikely(nb_rx == 0))
 		goto flush;
 	fs->rx_packets += nb_rx;
@@ -164,6 +167,9 @@ pkt_burst_noisy_vnf(struct fwd_stream *fs)
 				pkts_burst, nb_rx);
 		if (unlikely(nb_tx < nb_rx) && fs->retry_enabled)
 			nb_tx += do_retry(nb_rx, nb_tx, pkts_burst, fs);
+#ifdef RTE_TEST_PMD_RECORD_BURST_STATS
+		fs->tx_burst_stats.pkt_burst_spread[nb_tx]++;
+#endif
 		fs->tx_packets += nb_tx;
 		fs->fwd_dropped += drop_pkts(pkts_burst, nb_rx, nb_tx);
 		return;
@@ -187,6 +193,9 @@ pkt_burst_noisy_vnf(struct fwd_stream *fs)
 					nb_deqd);
 			if (unlikely(nb_tx < nb_rx) && fs->retry_enabled)
 				nb_tx += do_retry(nb_rx, nb_tx, tmp_pkts, fs);
+#ifdef RTE_TEST_PMD_RECORD_BURST_STATS
+			fs->tx_burst_stats.pkt_burst_spread[nb_tx]++;
+#endif
 			fs->fwd_dropped += drop_pkts(tmp_pkts, nb_deqd, nb_tx);
 		}
 	}
@@ -211,6 +220,9 @@ flush:
 					 tmp_pkts, nb_deqd);
 		if (unlikely(sent < nb_deqd) && fs->retry_enabled)
 			nb_tx += do_retry(nb_rx, nb_tx, tmp_pkts, fs);
+#ifdef RTE_TEST_PMD_RECORD_BURST_STATS
+		fs->tx_burst_stats.pkt_burst_spread[nb_tx]++;
+#endif
 		fs->fwd_dropped += drop_pkts(tmp_pkts, nb_deqd, sent);
 		ncf->prev_time = rte_get_timer_cycles();
 	}
