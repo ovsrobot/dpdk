@@ -41,6 +41,8 @@ struct rte_mem_config {
 	rte_rwlock_t memory_hotplug_lock;
 	/**< Indicates whether memory hotplug request is in progress. */
 
+	uint8_t mp_status; /**< Indicates whether multiprocess can be used. */
+
 	/* memory segments and zones */
 	struct rte_fbarray memzones; /**< Memzone descriptors. */
 
@@ -90,6 +92,14 @@ eal_mcfg_wait_complete(void);
 /* check if DPDK version of current process matches one stored in the config */
 int
 eal_mcfg_check_version(void);
+
+/* mark primary process as not supporting multi-process. */
+bool
+eal_mcfg_forbid_multiprocess(void);
+
+/* instruct primary process that a secondary process attached once. */
+bool
+eal_mcfg_enable_multiprocess(void);
 
 /* set mem config as complete */
 void

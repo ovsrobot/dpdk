@@ -44,6 +44,42 @@ eal_mcfg_check_version(void)
 	return 0;
 }
 
+enum mp_status {
+	MP_UNKNOWN,
+	MP_FORBIDDEN,
+	MP_ENABLED,
+};
+
+static bool
+eal_mcfg_set_mp_status(enum mp_status status)
+{
+	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
+	uint8_t expected;
+	uint8_t desired;
+
+	expected = MP_UNKNOWN;
+	desired = status;
+	if (__atomic_compare_exchange_n(&mcfg->mp_status, &expected, desired,
+			false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST))
+		return true;
+
+	return __atomic_load_n(&mcfg->mp_status, __ATOMIC_RELAXED) == desired;
+}
+
+bool
+eal_mcfg_forbid_multiprocess(void)
+{
+	assert(rte_eal_get_configuration()->process_type == RTE_PROC_PRIMARY);
+	return eal_mcfg_set_mp_status(MP_FORBIDDEN);
+}
+
+bool
+eal_mcfg_enable_multiprocess(void)
+{
+	assert(rte_eal_get_configuration()->process_type == RTE_PROC_SECONDARY);
+	return eal_mcfg_set_mp_status(MP_ENABLED);
+}
+
 void
 eal_mcfg_update_internal(void)
 {
