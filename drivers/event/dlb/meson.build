@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2019-2020 Intel Corporation
 
-sources = files('dlb_selftest.c',
+sources = files('dlb.c',
+		'dlb_selftest.c',
 		'dlb_xstats.c',
 		'rte_pmd_dlb.c',
 		'dlb_iface.c',
