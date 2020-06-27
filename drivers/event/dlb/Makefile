@@ -20,11 +20,13 @@ LIBABIVER := 1
 EXPORT_MAP := rte_pmd_dlb_event_version.map
 
 # library source files
+SRCS-$(CONFIG_RTE_LIBRTE_PMD_DLB_EVENTDEV) += rte_pmd_dlb.c
 SRCS-$(CONFIG_RTE_LIBRTE_PMD_DLB_EVENTDEV) += dlb_iface.c
 SRCS-$(CONFIG_RTE_LIBRTE_PMD_DLB_EVENTDEV) += pf/dlb_pf.c
 SRCS-$(CONFIG_RTE_LIBRTE_PMD_DLB_EVENTDEV) += pf/dlb_main.c
 SRCS-$(CONFIG_RTE_LIBRTE_PMD_DLB_EVENTDEV) += pf/base/dlb_resource.c
 
 # export include files
+SYMLINK-y-include += rte_pmd_dlb.h
 
 include $(RTE_SDK)/mk/rte.lib.mk

@@ -1,0 +1,6 @@
+DPDK_20.08 {
+	global:
+
+	rte_pmd_dlb_set_token_pop_mode;
+	local: *;
+};
