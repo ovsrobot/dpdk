@@ -16,5 +16,12 @@ ifeq ($(CONFIG_RTE_EAL_VFIO)$(CONFIG_RTE_LIBRTE_FSLMC_BUS),yy)
 DIRS-$(CONFIG_RTE_LIBRTE_PMD_DPAA2_EVENTDEV) += dpaa2
 endif
 DIRS-$(CONFIG_RTE_LIBRTE_PMD_OPDL_EVENTDEV) += opdl
+# DLB limited to linux x86 architectures
+ifneq ($(filter y,$(CONFIG_RTE_ARCH_X86_64) \
+		  $(CONFIG_RTE_ARCH_X86)),)
+ifeq ($(CONFIG_RTE_EXEC_ENV_LINUX),y)
+DIRS-$(CONFIG_RTE_LIBRTE_PMD_DLB_EVENTDEV) += dlb
+endif
+endif
 
 include $(RTE_SDK)/mk/rte.subdir.mk
