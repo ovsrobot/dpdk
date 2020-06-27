@@ -269,7 +269,7 @@ rte_event_crypto_adapter_create_ext(uint8_t id, uint8_t dev_id,
 	event_crypto_adapter[id] = adapter;
 
 	rte_eventdev_trace_crypto_adapter_create(id, dev_id, adapter, conf_arg,
-		mode);
+						 mode);
 	return 0;
 }
 

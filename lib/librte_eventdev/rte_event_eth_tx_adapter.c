@@ -943,8 +943,9 @@ rte_event_eth_tx_adapter_create(uint8_t id, uint8_t dev_id,
 		txa_dev_id_array[id] = TXA_INVALID_DEV_ID;
 		return ret;
 	}
+
 	rte_eventdev_trace_eth_tx_adapter_create(id, dev_id, NULL, port_conf,
-		ret);
+						 ret);
 	txa_dev_id_array[id] = dev_id;
 	return 0;
 }
@@ -987,7 +988,7 @@ rte_event_eth_tx_adapter_create_ext(uint8_t id, uint8_t dev_id,
 	}
 
 	rte_eventdev_trace_eth_tx_adapter_create(id, dev_id, conf_cb, conf_arg,
-		ret);
+						 ret);
 	txa_dev_id_array[id] = dev_id;
 	return 0;
 }

@@ -937,6 +937,7 @@ rte_event_port_setup_v21(uint8_t dev_id, uint8_t port_id,
 		diag = rte_event_port_unlink(dev_id, port_id, NULL, 0);
 
 	rte_eventdev_trace_port_setup(dev_id, port_id, port_conf, diag);
+
 	if (diag < 0)
 		return diag;
 
@@ -1550,10 +1551,8 @@ rte_event_pmd_allocate(const char *name, int socket_id)
 		eventdev->data = eventdev_data;
 
 		if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
-
 			strlcpy(eventdev->data->name, name,
 				RTE_EVENTDEV_NAME_MAX_LEN);
-
 			eventdev->data->dev_id = dev_id;
 			eventdev->data->socket_id = socket_id;
 			eventdev->data->dev_started = 0;
