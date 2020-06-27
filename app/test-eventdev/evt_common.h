@@ -169,6 +169,7 @@ evt_configure_eventdev(struct evt_options *opt, uint8_t nb_queues,
 			.dequeue_timeout_ns = opt->deq_tmo_nsec,
 			.nb_event_queues = nb_queues,
 			.nb_event_ports = nb_ports,
+			.nb_single_link_event_port_queues = 0,
 			.nb_events_limit  = info.max_num_events,
 			.nb_event_queue_flows = opt->nb_flows,
 			.nb_event_port_dequeue_depth =

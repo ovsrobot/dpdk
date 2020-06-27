@@ -88,6 +88,60 @@ rte_event_pmd_pci_probe(struct rte_pci_driver *pci_drv,
 	return -ENXIO;
 }
 
+/**
+ * @internal
+ * Wrapper for use by pci drivers as a .probe function to attach to a event
+ * interface.  Same as rte_event_pmd_pci_probe, except caller can specify
+ * the name.
+ */
+static inline int
+rte_event_pmd_pci_probe_named(struct rte_pci_driver *pci_drv,
+			    struct rte_pci_device *pci_dev,
+			    size_t private_data_size,
+			    eventdev_pmd_pci_callback_t devinit,
+			    const char *name)
+{
+	struct rte_eventdev *eventdev;
+
+	int retval;
+
+	if (devinit == NULL)
+		return -EINVAL;
+
+	eventdev = rte_event_pmd_allocate(name,
+			 pci_dev->device.numa_node);
+	if (eventdev == NULL)
+		return -ENOMEM;
+
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		eventdev->data->dev_private =
+				rte_zmalloc_socket(
+						"eventdev private structure",
+						private_data_size,
+						RTE_CACHE_LINE_SIZE,
+						rte_socket_id());
+
+		if (eventdev->data->dev_private == NULL)
+			rte_panic("Cannot allocate memzone for private "
+					"device data");
+	}
+
+	eventdev->dev = &pci_dev->device;
+
+	/* Invoke PMD device initialization function */
+	retval = devinit(eventdev);
+	if (retval == 0)
+		return 0;
+
+	RTE_EDEV_LOG_ERR("driver %s: (vendor_id=0x%x device_id=0x%x)"
+			" failed", pci_drv->driver.name,
+			(unsigned int) pci_dev->id.vendor_id,
+			(unsigned int) pci_dev->id.device_id);
+
+	rte_event_pmd_release(eventdev);
+
+	return -ENXIO;
+}
 
 /**
  * @internal

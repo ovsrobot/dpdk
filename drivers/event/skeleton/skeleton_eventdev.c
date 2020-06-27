@@ -209,7 +209,7 @@ skeleton_eventdev_port_def_conf(struct rte_eventdev *dev, uint8_t port_id,
 	port_conf->new_event_threshold = 32 * 1024;
 	port_conf->dequeue_depth = 16;
 	port_conf->enqueue_depth = 16;
-	port_conf->disable_implicit_release = 0;
+	port_conf->event_port_cfg = 0;
 }
 
 static void

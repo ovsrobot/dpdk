@@ -32,6 +32,8 @@
 #include <rte_ethdev.h>
 #include <rte_cryptodev.h>
 #include <rte_cryptodev_pmd.h>
+#include <rte_compat.h>
+#include <rte_function_versioning.h>
 
 #include "rte_eventdev.h"
 #include "rte_eventdev_pmd.h"
@@ -87,7 +89,47 @@ rte_event_dev_socket_id(uint8_t dev_id)
 }
 
 int
-rte_event_dev_info_get(uint8_t dev_id, struct rte_event_dev_info *dev_info)
+rte_event_dev_info_get_v20(uint8_t dev_id,
+			     struct rte_event_dev_info_v20 *dev_info)
+{
+	struct rte_event_dev_info new_dev_info;
+	int err;
+
+	if (dev_info == NULL)
+		return -EINVAL;
+
+	memset(&new_dev_info, 0, sizeof(struct rte_event_dev_info));
+
+	err = rte_event_dev_info_get(dev_id, &new_dev_info);
+	if (err)
+		return err;
+
+	dev_info->driver_name = new_dev_info.driver_name;
+	dev_info->dev = new_dev_info.dev;
+	dev_info->min_dequeue_timeout_ns = new_dev_info.min_dequeue_timeout_ns;
+	dev_info->max_dequeue_timeout_ns = new_dev_info.max_dequeue_timeout_ns;
+	dev_info->max_event_queues = new_dev_info.max_event_queues;
+	dev_info->max_event_queue_flows = new_dev_info.max_event_queue_flows;
+	dev_info->max_event_queue_priority_levels =
+		new_dev_info.max_event_queue_priority_levels;
+	dev_info->max_event_priority_levels =
+		new_dev_info.max_event_priority_levels;
+	dev_info->max_event_ports = new_dev_info.max_event_ports;
+	dev_info->max_event_port_dequeue_depth =
+		new_dev_info.max_event_port_dequeue_depth;
+	dev_info->max_event_port_enqueue_depth =
+		new_dev_info.max_event_port_enqueue_depth;
+	dev_info->max_num_events = new_dev_info.max_num_events;
+	dev_info->event_dev_cap = new_dev_info.event_dev_cap;
+	dev_info->dequeue_timeout_ns = new_dev_info.dequeue_timeout_ns;
+
+	return 0;
+}
+VERSION_SYMBOL(rte_event_dev_info_get, _v20, 20);
+
+int
+rte_event_dev_info_get_v21(uint8_t dev_id,
+			     struct rte_event_dev_info *dev_info)
 {
 	struct rte_eventdev *dev;
 
@@ -107,6 +149,10 @@ rte_event_dev_info_get(uint8_t dev_id, struct rte_event_dev_info *dev_info)
 	dev_info->dev = dev->dev;
 	return 0;
 }
+BIND_DEFAULT_SYMBOL(rte_event_dev_info_get, _v21, 21);
+MAP_STATIC_SYMBOL(int rte_event_dev_info_get(uint8_t dev_id,
+			struct rte_event_dev_info *dev_info),
+			rte_event_dev_info_get_v21);
 
 int
 rte_event_eth_rx_adapter_caps_get(uint8_t dev_id, uint16_t eth_port_id,
@@ -385,7 +431,29 @@ rte_event_dev_port_config(struct rte_eventdev *dev, uint8_t nb_ports)
 }
 
 int
-rte_event_dev_configure(uint8_t dev_id,
+rte_event_dev_configure_v20(uint8_t dev_id,
+			      const struct rte_event_dev_config_v20 *dev_conf)
+{
+	struct rte_event_dev_config new_dev_conf;
+
+	new_dev_conf.dequeue_timeout_ns = dev_conf->dequeue_timeout_ns;
+	new_dev_conf.nb_events_limit = dev_conf->nb_events_limit;
+	new_dev_conf.nb_event_queues = dev_conf->nb_event_queues;
+	new_dev_conf.nb_event_ports = dev_conf->nb_event_ports;
+	new_dev_conf.nb_event_queue_flows = dev_conf->nb_event_queue_flows;
+	new_dev_conf.nb_event_port_dequeue_depth =
+		dev_conf->nb_event_port_dequeue_depth;
+	new_dev_conf.nb_event_port_enqueue_depth =
+		dev_conf->nb_event_port_enqueue_depth;
+	new_dev_conf.event_dev_cfg = dev_conf->event_dev_cfg;
+	new_dev_conf.nb_single_link_event_port_queues = 0;
+
+	return rte_event_dev_configure(dev_id, &new_dev_conf);
+}
+VERSION_SYMBOL(rte_event_dev_info_get, _v20, 20);
+
+int
+rte_event_dev_configure_v21(uint8_t dev_id,
 			const struct rte_event_dev_config *dev_conf)
 {
 	struct rte_eventdev *dev;
@@ -437,9 +505,29 @@ rte_event_dev_configure(uint8_t dev_id,
 					dev_id);
 		return -EINVAL;
 	}
-	if (dev_conf->nb_event_queues > info.max_event_queues) {
-		RTE_EDEV_LOG_ERR("%d nb_event_queues=%d > max_event_queues=%d",
-		dev_id, dev_conf->nb_event_queues, info.max_event_queues);
+	if (dev_conf->nb_event_queues > info.max_event_queues +
+			info.max_single_link_event_port_queue_pairs) {
+		RTE_EDEV_LOG_ERR("%d nb_event_queues=%d > max_event_queues=%d + max_single_link_event_port_queue_pairs=%d",
+				 dev_id, dev_conf->nb_event_queues,
+				 info.max_event_queues,
+				 info.max_single_link_event_port_queue_pairs);
+		return -EINVAL;
+	}
+	if (dev_conf->nb_event_queues -
+			dev_conf->nb_single_link_event_port_queues >
+			info.max_event_queues) {
+		RTE_EDEV_LOG_ERR("id%d nb_event_queues=%d - nb_single_link_event_port_queues=%d > max_event_queues=%d",
+				 dev_id, dev_conf->nb_event_queues,
+				 dev_conf->nb_single_link_event_port_queues,
+				 info.max_event_queues);
+		return -EINVAL;
+	}
+	if (dev_conf->nb_single_link_event_port_queues >
+			dev_conf->nb_event_queues) {
+		RTE_EDEV_LOG_ERR("dev%d nb_single_link_event_port_queues=%d > nb_event_queues=%d",
+				 dev_id,
+				 dev_conf->nb_single_link_event_port_queues,
+				 dev_conf->nb_event_queues);
 		return -EINVAL;
 	}
 
@@ -448,9 +536,31 @@ rte_event_dev_configure(uint8_t dev_id,
 		RTE_EDEV_LOG_ERR("dev%d nb_event_ports cannot be zero", dev_id);
 		return -EINVAL;
 	}
-	if (dev_conf->nb_event_ports > info.max_event_ports) {
-		RTE_EDEV_LOG_ERR("id%d nb_event_ports=%d > max_event_ports= %d",
-		dev_id, dev_conf->nb_event_ports, info.max_event_ports);
+	if (dev_conf->nb_event_ports > info.max_event_ports +
+			info.max_single_link_event_port_queue_pairs) {
+		RTE_EDEV_LOG_ERR("id%d nb_event_ports=%d > max_event_ports=%d + max_single_link_event_port_queue_pairs=%d",
+				 dev_id, dev_conf->nb_event_ports,
+				 info.max_event_ports,
+				 info.max_single_link_event_port_queue_pairs);
+		return -EINVAL;
+	}
+	if (dev_conf->nb_event_ports -
+			dev_conf->nb_single_link_event_port_queues
+			> info.max_event_ports) {
+		RTE_EDEV_LOG_ERR("id%d nb_event_ports=%d - nb_single_link_event_port_queues=%d > max_event_ports=%d",
+				 dev_id, dev_conf->nb_event_ports,
+				 dev_conf->nb_single_link_event_port_queues,
+				 info.max_event_ports);
+		return -EINVAL;
+	}
+
+	if (dev_conf->nb_single_link_event_port_queues >
+	    dev_conf->nb_event_ports) {
+		RTE_EDEV_LOG_ERR(
+				 "dev%d nb_single_link_event_port_queues=%d > nb_event_ports=%d",
+				 dev_id,
+				 dev_conf->nb_single_link_event_port_queues,
+				 dev_conf->nb_event_ports);
 		return -EINVAL;
 	}
 
@@ -528,6 +638,10 @@ rte_event_dev_configure(uint8_t dev_id,
 	rte_eventdev_trace_configure(dev_id, dev_conf, diag);
 	return diag;
 }
+BIND_DEFAULT_SYMBOL(rte_event_dev_configure, _v21, 21);
+MAP_STATIC_SYMBOL(int rte_event_dev_configure(uint8_t dev_id,
+			const struct rte_event_dev_config *dev_conf),
+			rte_event_dev_configure_v21);
 
 static inline int
 is_valid_queue(struct rte_eventdev *dev, uint8_t queue_id)
@@ -666,7 +780,33 @@ is_valid_port(struct rte_eventdev *dev, uint8_t port_id)
 }
 
 int
-rte_event_port_default_conf_get(uint8_t dev_id, uint8_t port_id,
+rte_event_port_default_conf_get_v20(uint8_t dev_id, uint8_t port_id,
+				 struct rte_event_port_conf_v20 *port_conf)
+{
+	struct rte_event_port_conf new_port_conf;
+	int err;
+
+	if (port_conf == NULL)
+		return -EINVAL;
+
+	memset(&new_port_conf, 0, sizeof(new_port_conf));
+
+	err = rte_event_port_default_conf_get(dev_id, port_id, &new_port_conf);
+	if (err)
+		return err;
+
+	port_conf->new_event_threshold = new_port_conf.new_event_threshold;
+	port_conf->dequeue_depth = new_port_conf.dequeue_depth;
+	port_conf->enqueue_depth = new_port_conf.enqueue_depth;
+	port_conf->disable_implicit_release = !!(new_port_conf.event_port_cfg &
+		RTE_EVENT_PORT_CFG_DISABLE_IMPL_REL);
+
+	return 0;
+}
+VERSION_SYMBOL(rte_event_port_default_conf_get, _v20, 20);
+
+int
+rte_event_port_default_conf_get_v21(uint8_t dev_id, uint8_t port_id,
 				 struct rte_event_port_conf *port_conf)
 {
 	struct rte_eventdev *dev;
@@ -687,9 +827,35 @@ rte_event_port_default_conf_get(uint8_t dev_id, uint8_t port_id,
 	(*dev->dev_ops->port_def_conf)(dev, port_id, port_conf);
 	return 0;
 }
+BIND_DEFAULT_SYMBOL(rte_event_port_default_conf_get, _v21, 21);
+MAP_STATIC_SYMBOL(int rte_event_port_default_conf_get(uint8_t dev_id,
+			uint8_t port_id, struct rte_event_port_conf *port_conf),
+			rte_event_port_default_conf_get_v21);
 
 int
-rte_event_port_setup(uint8_t dev_id, uint8_t port_id,
+rte_event_port_setup_v20(uint8_t dev_id, uint8_t port_id,
+		     const struct rte_event_port_conf_v20 *port_conf)
+{
+	struct rte_event_port_conf new_port_conf;
+
+	if (port_conf == NULL)
+		return -EINVAL;
+
+	new_port_conf.new_event_threshold = port_conf->new_event_threshold;
+	new_port_conf.dequeue_depth = port_conf->dequeue_depth;
+	new_port_conf.enqueue_depth = port_conf->enqueue_depth;
+	new_port_conf.event_port_cfg = 0;
+	if (port_conf->disable_implicit_release)
+		new_port_conf.event_port_cfg =
+			RTE_EVENT_PORT_CFG_DISABLE_IMPL_REL;
+
+	return rte_event_port_setup(dev_id, port_id, &new_port_conf);
+
+}
+VERSION_SYMBOL(rte_event_port_setup, _v20, 20);
+
+int
+rte_event_port_setup_v21(uint8_t dev_id, uint8_t port_id,
 		     const struct rte_event_port_conf *port_conf)
 {
 	struct rte_eventdev *dev;
@@ -737,7 +903,8 @@ rte_event_port_setup(uint8_t dev_id, uint8_t port_id,
 		return -EINVAL;
 	}
 
-	if (port_conf && port_conf->disable_implicit_release &&
+	if (port_conf &&
+	    (port_conf->event_port_cfg & RTE_EVENT_PORT_CFG_DISABLE_IMPL_REL) &&
 	    !(dev->data->event_dev_cap &
 	      RTE_EVENT_DEV_CAP_IMPLICIT_RELEASE_DISABLE)) {
 		RTE_EDEV_LOG_ERR(
@@ -775,6 +942,10 @@ rte_event_port_setup(uint8_t dev_id, uint8_t port_id,
 
 	return 0;
 }
+BIND_DEFAULT_SYMBOL(rte_event_port_setup, _v21, 21);
+MAP_STATIC_SYMBOL(int rte_event_port_setup(uint8_t dev_id, uint8_t port_id,
+		  const struct rte_event_port_conf *port_conf),
+		  rte_event_port_setup_v21);
 
 int
 rte_event_dev_attr_get(uint8_t dev_id, uint32_t attr_id,
@@ -809,6 +980,7 @@ rte_event_port_attr_get(uint8_t dev_id, uint8_t port_id, uint32_t attr_id,
 			uint32_t *attr_value)
 {
 	struct rte_eventdev *dev;
+	uint32_t config;
 
 	if (!attr_value)
 		return -EINVAL;
@@ -829,6 +1001,10 @@ rte_event_port_attr_get(uint8_t dev_id, uint8_t port_id, uint32_t attr_id,
 		break;
 	case RTE_EVENT_PORT_ATTR_NEW_EVENT_THRESHOLD:
 		*attr_value = dev->data->ports_cfg[port_id].new_event_threshold;
+		break;
+	case RTE_EVENT_PORT_ATTR_IMPLICIT_RELEASE_DISABLE:
+		config = dev->data->ports_cfg[port_id].event_port_cfg;
+		*attr_value = !!(config & RTE_EVENT_PORT_CFG_DISABLE_IMPL_REL);
 		break;
 	default:
 		return -EINVAL;

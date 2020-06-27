@@ -291,6 +291,12 @@ struct rte_event;
  * single queue to each port or map a single queue to many port.
  */
 
+#define RTE_EVENT_DEV_CAP_CARRY_FLOW_ID (1ULL << 9)
+/**< Event device preserves the flow ID from the enqueued
+ * event to the dequeued event if the flag is set. Otherwise,
+ * the content of this field is implementation dependent.
+ */
+
 /* Event device priority levels */
 #define RTE_EVENT_DEV_PRIORITY_HIGHEST   0
 /**< Highest priority expressed across eventdev subsystem
@@ -380,6 +386,58 @@ struct rte_event_dev_info {
 	 * event port by this device.
 	 * A device that does not support bulk enqueue will set this as 1.
 	 */
+	uint8_t max_event_port_links;
+	/**< Maximum number of queues that can be linked to a single event
+	 * port by this device.
+	 */
+	int32_t max_num_events;
+	/**< A *closed system* event dev has a limit on the number of events it
+	 * can manage at a time. An *open system* event dev does not have a
+	 * limit and will specify this as -1.
+	 */
+	uint32_t event_dev_cap;
+	/**< Event device capabilities(RTE_EVENT_DEV_CAP_)*/
+	uint8_t max_single_link_event_port_queue_pairs;
+	/**< Maximum number of event ports and queues that are optimized for
+	 * (and only capable of) single-link configurations supported by this
+	 * device. These ports and queues are not accounted for in
+	 * max_event_ports or max_event_queues.
+	 */
+};
+
+struct rte_event_dev_info_v20 {
+	const char *driver_name;	/**< Event driver name */
+	struct rte_device *dev;	/**< Device information */
+	uint32_t min_dequeue_timeout_ns;
+	/**< Minimum supported global dequeue timeout(ns) by this device */
+	uint32_t max_dequeue_timeout_ns;
+	/**< Maximum supported global dequeue timeout(ns) by this device */
+	uint32_t dequeue_timeout_ns;
+	/**< Configured global dequeue timeout(ns) for this device */
+	uint8_t max_event_queues;
+	/**< Maximum event_queues supported by this device */
+	uint32_t max_event_queue_flows;
+	/**< Maximum supported flows in an event queue by this device*/
+	uint8_t max_event_queue_priority_levels;
+	/**< Maximum number of event queue priority levels by this device.
+	 * Valid when the device has RTE_EVENT_DEV_CAP_QUEUE_QOS capability
+	 */
+	uint8_t max_event_priority_levels;
+	/**< Maximum number of event priority levels by this device.
+	 * Valid when the device has RTE_EVENT_DEV_CAP_EVENT_QOS capability
+	 */
+	uint8_t max_event_ports;
+	/**< Maximum number of event ports supported by this device */
+	uint8_t max_event_port_dequeue_depth;
+	/**< Maximum number of events can be dequeued at a time from an
+	 * event port by this device.
+	 * A device that does not support bulk dequeue will set this as 1.
+	 */
+	uint32_t max_event_port_enqueue_depth;
+	/**< Maximum number of events can be enqueued at a time from an
+	 * event port by this device.
+	 * A device that does not support bulk enqueue will set this as 1.
+	 */
 	int32_t max_num_events;
 	/**< A *closed system* event dev has a limit on the number of events it
 	 * can manage at a time. An *open system* event dev does not have a
@@ -406,6 +464,14 @@ struct rte_event_dev_info {
  */
 int
 rte_event_dev_info_get(uint8_t dev_id, struct rte_event_dev_info *dev_info);
+
+int
+rte_event_dev_info_get_v20(uint8_t dev_id,
+			     struct rte_event_dev_info_v20 *dev_info);
+
+int
+rte_event_dev_info_get_v21(uint8_t dev_id,
+			     struct rte_event_dev_info *dev_info);
 
 /**
  * The count of ports.
@@ -494,6 +560,67 @@ struct rte_event_dev_config {
 	 */
 	uint32_t event_dev_cfg;
 	/**< Event device config flags(RTE_EVENT_DEV_CFG_)*/
+	uint8_t nb_single_link_event_port_queues;
+	/**< Number of event ports and queues that will be singly-linked to
+	 * each other. These are a subset of the overall event ports and
+	 * queues; this value cannot exceed *nb_event_ports* or
+	 * *nb_event_queues*. If the device has ports and queues that are
+	 * optimized for single-link usage, this field is a hint for how many
+	 * to allocate; otherwise, regular event ports and queues can be used.
+	 */
+};
+
+/** Event device configuration structure */
+struct rte_event_dev_config_v20 {
+	uint32_t dequeue_timeout_ns;
+	/**< rte_event_dequeue_burst() timeout on this device.
+	 * This value should be in the range of *min_dequeue_timeout_ns* and
+	 * *max_dequeue_timeout_ns* which previously provided in
+	 * rte_event_dev_info_get()
+	 * The value 0 is allowed, in which case, default dequeue timeout used.
+	 * @see RTE_EVENT_DEV_CFG_PER_DEQUEUE_TIMEOUT
+	 */
+	int32_t nb_events_limit;
+	/**< In a *closed system* this field is the limit on maximum number of
+	 * events that can be inflight in the eventdev at a given time. The
+	 * limit is required to ensure that the finite space in a closed system
+	 * is not overwhelmed. The value cannot exceed the *max_num_events*
+	 * as provided by rte_event_dev_info_get().
+	 * This value should be set to -1 for *open system*.
+	 */
+	uint8_t nb_event_queues;
+	/**< Number of event queues to configure on this device.
+	 * This value cannot exceed the *max_event_queues* which previously
+	 * provided in rte_event_dev_info_get()
+	 */
+	uint8_t nb_event_ports;
+	/**< Number of event ports to configure on this device.
+	 * This value cannot exceed the *max_event_ports* which previously
+	 * provided in rte_event_dev_info_get()
+	 */
+	uint32_t nb_event_queue_flows;
+	/**< Number of flows for any event queue on this device.
+	 * This value cannot exceed the *max_event_queue_flows* which previously
+	 * provided in rte_event_dev_info_get()
+	 */
+	uint32_t nb_event_port_dequeue_depth;
+	/**< Maximum number of events can be dequeued at a time from an
+	 * event port by this device.
+	 * This value cannot exceed the *max_event_port_dequeue_depth*
+	 * which previously provided in rte_event_dev_info_get().
+	 * Ignored when device is not RTE_EVENT_DEV_CAP_BURST_MODE capable.
+	 * @see rte_event_port_setup()
+	 */
+	uint32_t nb_event_port_enqueue_depth;
+	/**< Maximum number of events can be enqueued at a time from an
+	 * event port by this device.
+	 * This value cannot exceed the *max_event_port_enqueue_depth*
+	 * which previously provided in rte_event_dev_info_get().
+	 * Ignored when device is not RTE_EVENT_DEV_CAP_BURST_MODE capable.
+	 * @see rte_event_port_setup()
+	 */
+	uint32_t event_dev_cfg;
+	/**< Event device config flags(RTE_EVENT_DEV_CFG_)*/
 };
 
 /**
@@ -519,6 +646,13 @@ int
 rte_event_dev_configure(uint8_t dev_id,
 			const struct rte_event_dev_config *dev_conf);
 
+int
+rte_event_dev_configure_v20(uint8_t dev_id,
+			const struct rte_event_dev_config_v20 *dev_conf);
+
+int
+rte_event_dev_configure_v21(uint8_t dev_id,
+			const struct rte_event_dev_config *dev_conf);
 
 /* Event queue specific APIs */
 
@@ -671,8 +805,52 @@ rte_event_queue_attr_get(uint8_t dev_id, uint8_t queue_id, uint32_t attr_id,
 
 /* Event port specific APIs */
 
+/* Event port configuration bitmap flags */
+#define RTE_EVENT_PORT_CFG_DISABLE_IMPL_REL    (1ULL << 0)
+/**< Configure the port not to release outstanding events in
+ * rte_event_dev_dequeue_burst(). If set, all events received through
+ * the port must be explicitly released with RTE_EVENT_OP_RELEASE or
+ * RTE_EVENT_OP_FORWARD. Must be unset if the device is not
+ * RTE_EVENT_DEV_CAP_IMPLICIT_RELEASE_DISABLE capable.
+ */
+#define RTE_EVENT_PORT_CFG_SINGLE_LINK         (1ULL << 1)
+/**< This event port links only to a single event queue.
+ *
+ *  @see rte_event_port_setup(), rte_event_port_link()
+ */
+
 /** Event port configuration structure */
 struct rte_event_port_conf {
+	int32_t new_event_threshold;
+	/**< A backpressure threshold for new event enqueues on this port.
+	 * Use for *closed system* event dev where event capacity is limited,
+	 * and cannot exceed the capacity of the event dev.
+	 * Configuring ports with different thresholds can make higher priority
+	 * traffic less likely to  be backpressured.
+	 * For example, a port used to inject NIC Rx packets into the event dev
+	 * can have a lower threshold so as not to overwhelm the device,
+	 * while ports used for worker pools can have a higher threshold.
+	 * This value cannot exceed the *nb_events_limit*
+	 * which was previously supplied to rte_event_dev_configure().
+	 * This should be set to '-1' for *open system*.
+	 */
+	uint16_t dequeue_depth;
+	/**< Configure number of bulk dequeues for this event port.
+	 * This value cannot exceed the *nb_event_port_dequeue_depth*
+	 * which previously supplied to rte_event_dev_configure().
+	 * Ignored when device is not RTE_EVENT_DEV_CAP_BURST_MODE capable.
+	 */
+	uint16_t enqueue_depth;
+	/**< Configure number of bulk enqueues for this event port.
+	 * This value cannot exceed the *nb_event_port_enqueue_depth*
+	 * which previously supplied to rte_event_dev_configure().
+	 * Ignored when device is not RTE_EVENT_DEV_CAP_BURST_MODE capable.
+	 */
+	uint32_t event_port_cfg; /**< Port cfg flags(EVENT_PORT_CFG_) */
+};
+
+/** Event port configuration structure */
+struct rte_event_port_conf_v20 {
 	int32_t new_event_threshold;
 	/**< A backpressure threshold for new event enqueues on this port.
 	 * Use for *closed system* event dev where event capacity is limited,
@@ -733,6 +911,14 @@ int
 rte_event_port_default_conf_get(uint8_t dev_id, uint8_t port_id,
 				struct rte_event_port_conf *port_conf);
 
+int
+rte_event_port_default_conf_get_v20(uint8_t dev_id, uint8_t port_id,
+				struct rte_event_port_conf_v20 *port_conf);
+
+int
+rte_event_port_default_conf_get_v21(uint8_t dev_id, uint8_t port_id,
+				      struct rte_event_port_conf *port_conf);
+
 /**
  * Allocate and set up an event port for an event device.
  *
@@ -757,6 +943,14 @@ int
 rte_event_port_setup(uint8_t dev_id, uint8_t port_id,
 		     const struct rte_event_port_conf *port_conf);
 
+int
+rte_event_port_setup_v20(uint8_t dev_id, uint8_t port_id,
+			   const struct rte_event_port_conf_v20 *port_conf);
+
+int
+rte_event_port_setup_v21(uint8_t dev_id, uint8_t port_id,
+			   const struct rte_event_port_conf *port_conf);
+
 /**
  * The queue depth of the port on the enqueue side
  */
@@ -769,6 +963,10 @@ rte_event_port_setup(uint8_t dev_id, uint8_t port_id,
  * The new event threshold of the port
  */
 #define RTE_EVENT_PORT_ATTR_NEW_EVENT_THRESHOLD 2
+/**
+ * The implicit release disable attribute of the port
+ */
+#define RTE_EVENT_PORT_ATTR_IMPLICIT_RELEASE_DISABLE 3
 
 /**
  * Get an attribute from a port.

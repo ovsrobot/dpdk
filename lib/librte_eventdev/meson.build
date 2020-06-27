@@ -7,6 +7,7 @@ else
 	cflags += '-DBSD'
 endif
 
+use_function_versioning = true
 sources = files('rte_eventdev.c',
 		'rte_event_ring.c',
 		'eventdev_trace_points.c',
