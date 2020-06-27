@@ -1271,14 +1271,25 @@ static void hinic_disable_interrupt(struct rte_eth_dev *dev)
 
 static int hinic_set_dev_promiscuous(struct hinic_nic_dev *nic_dev, bool enable)
 {
-	u32 rx_mode_ctrl = nic_dev->rx_mode_status;
+	u32 rx_mode_ctrl;
+	int err;
+
+	err = hinic_mutex_lock(&nic_dev->rx_mode_mutex);
+	if (err)
+		return err;
+
+	rx_mode_ctrl = nic_dev->rx_mode_status;
 
 	if (enable)
 		rx_mode_ctrl |= HINIC_RX_MODE_PROMISC;
 	else
 		rx_mode_ctrl &= (~HINIC_RX_MODE_PROMISC);
 
-	return hinic_config_rx_mode(nic_dev, rx_mode_ctrl);
+	err = hinic_config_rx_mode(nic_dev, rx_mode_ctrl);
+
+	(void)hinic_mutex_unlock(&nic_dev->rx_mode_mutex);
+
+	return err;
 }
 
 /**
@@ -1731,14 +1742,25 @@ static void hinic_remove_all_vlanid(struct rte_eth_dev *eth_dev)
 static int hinic_set_dev_allmulticast(struct hinic_nic_dev *nic_dev,
 				bool enable)
 {
-	u32 rx_mode_ctrl = nic_dev->rx_mode_status;
+	u32 rx_mode_ctrl;
+	int err;
+
+	err = hinic_mutex_lock(&nic_dev->rx_mode_mutex);
+	if (err)
+		return err;
+
+	rx_mode_ctrl = nic_dev->rx_mode_status;
 
 	if (enable)
 		rx_mode_ctrl |= HINIC_RX_MODE_MC_ALL;
 	else
 		rx_mode_ctrl &= (~HINIC_RX_MODE_MC_ALL);
 
-	return hinic_config_rx_mode(nic_dev, rx_mode_ctrl);
+	err = hinic_config_rx_mode(nic_dev, rx_mode_ctrl);
+
+	(void)hinic_mutex_unlock(&nic_dev->rx_mode_mutex);
+
+	return err;
 }
 
 /**
@@ -3130,6 +3152,8 @@ static int hinic_func_init(struct rte_eth_dev *eth_dev)
 	}
 	rte_bit_relaxed_set32(HINIC_DEV_INTR_EN, &nic_dev->dev_status);
 
+	hinic_mutex_init(&nic_dev->rx_mode_mutex, NULL);
+
 	/* initialize filter info */
 	filter_info = &nic_dev->filter;
 	tcam_info = &nic_dev->tcam;
@@ -3203,6 +3227,8 @@ static int hinic_dev_uninit(struct rte_eth_dev *dev)
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
+
+	hinic_mutex_destroy(&nic_dev->rx_mode_mutex);
 
 	hinic_dev_close(dev);
 
