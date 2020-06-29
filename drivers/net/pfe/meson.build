@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright 2019 NXP
 
-if host_machine.system() != 'linux'
+if not is_linux
 	build = false
 endif
 deps += ['common_dpaax']

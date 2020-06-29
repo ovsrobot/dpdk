@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (C) 2019 Marvell International Ltd.
 
-if host_machine.system() != 'linux'
+if not is_linux
         build = false
 endif
 
