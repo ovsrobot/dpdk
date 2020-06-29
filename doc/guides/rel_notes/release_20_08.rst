@@ -84,6 +84,12 @@ New Features
   * Dump ``rte_flow`` memory consumption.
   * Measure packet per second forwarding.
 
+* **Added support for new sync modes into mempool ring driver.**
+
+  Added ability to select new ring synchronisation modes:
+  ``relaxed tail sync (ring_mt_rts)`` and ``head/tail sync (ring_mt_hts)``
+  via mempool ops API.
+
 
 Removed Items
 -------------
