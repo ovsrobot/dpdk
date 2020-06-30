@@ -1013,7 +1013,7 @@ init_port(void)
 
 		if (hairpinq != 0) {
 			for (hairpin_q = RXQ_NUM, std_queue = 0;
-					std_queue < nr_queues;
+					hairpin_q < nr_queues;
 					hairpin_q++, std_queue++) {
 				hairpin_conf.peers[0].port = port_id;
 				hairpin_conf.peers[0].queue =
@@ -1028,7 +1028,7 @@ init_port(void)
 			}
 
 			for (hairpin_q = TXQ_NUM, std_queue = 0;
-					std_queue < nr_queues;
+					hairpin_q < nr_queues;
 					hairpin_q++, std_queue++) {
 				hairpin_conf.peers[0].port = port_id;
 				hairpin_conf.peers[0].queue =
