@@ -3158,6 +3158,7 @@ set_pkt_forwarding_mode(const char *fwd_mode_name)
 			       fwd_mode_name,
 			       retry_enabled == 0 ? "" : " with retry");
 			cur_fwd_eng = fwd_eng;
+			cur_fwd_config.fwd_eng = fwd_eng;
 			return;
 		}
 		i++;
