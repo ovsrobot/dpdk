@@ -504,10 +504,7 @@ F: drivers/mempool/bucket/
 Marvell OCTEON TX2
 M: Jerin Jacob <jerinj@marvell.com>
 M: Nithin Dabilpuram <ndabilpuram@marvell.com>
-F: drivers/common/octeontx2/
 F: drivers/mempool/octeontx2/
-F: doc/guides/platform/img/octeontx2_*
-F: doc/guides/platform/octeontx2.rst
 F: doc/guides/mempool/octeontx2.rst
 
 
@@ -753,8 +750,11 @@ M: Nithin Dabilpuram <ndabilpuram@marvell.com>
 M: Kiran Kumar K <kirankumark@marvell.com>
 T: git://dpdk.org/next/dpdk-next-net-mrvl
 F: drivers/net/octeontx2/
+F: drivers/common/octeontx2/
 F: doc/guides/nics/features/octeontx2*.ini
 F: doc/guides/nics/octeontx2.rst
+F: doc/guides/platform/img/octeontx2_*
+F: doc/guides/platform/octeontx2.rst
 
 Marvell OCTEON TX2 - security
 M: Anoob Joseph <anoobj@marvell.com>
