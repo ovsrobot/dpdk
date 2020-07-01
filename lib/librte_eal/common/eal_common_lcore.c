@@ -16,9 +16,14 @@
 #include "eal_private.h"
 #include "eal_thread.h"
 
+unsigned int rte_get_initial_lcore(void)
+{
+	return rte_eal_get_configuration()->initial_lcore;
+}
+
 unsigned int rte_get_master_lcore(void)
 {
-	return rte_eal_get_configuration()->master_lcore;
+	return rte_eal_get_configuration()->initial_lcore;
 }
 
 unsigned int rte_lcore_count(void)
@@ -72,7 +77,7 @@ int rte_lcore_is_enabled(unsigned int lcore_id)
 	return cfg->lcore_role[lcore_id] == ROLE_RTE;
 }
 
-unsigned int rte_get_next_lcore(unsigned int i, int skip_master, int wrap)
+unsigned int rte_get_next_lcore(unsigned int i, int skip_initial, int wrap)
 {
 	i++;
 	if (wrap)
@@ -80,7 +85,7 @@ unsigned int rte_get_next_lcore(unsigned int i, int skip_master, int wrap)
 
 	while (i < RTE_MAX_LCORE) {
 		if (!rte_lcore_is_enabled(i) ||
-		    (skip_master && (i == rte_get_master_lcore()))) {
+		    (skip_initial && (i == rte_get_initial_lcore()))) {
 			i++;
 			if (wrap)
 				i %= RTE_MAX_LCORE;

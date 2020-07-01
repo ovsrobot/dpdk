@@ -273,6 +273,7 @@ rte_eal_init(int argc, char **argv)
 	if (fctret < 0)
 		exit(1);
 
+<<<<<<< HEAD
 	/* Prevent creation of shared memory files. */
 	if (internal_conf->in_memory == 0) {
 		RTE_LOG(WARNING, EAL, "Multi-process support is requested, "
@@ -333,7 +334,7 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
-	eal_thread_init_master(config->master_lcore);
+	eal_thread_initial_lcore(config->master_lcore);
 
 	bscan = rte_bus_scan();
 	if (bscan < 0) {
@@ -341,17 +342,20 @@ rte_eal_init(int argc, char **argv)
 		rte_errno = ENODEV;
 		return -1;
 	}
+=======
+	eal_thread_set_initial_lcore(rte_config.initial_lcore);
+>>>>>>> 28604a3e5a3a... eal: rename terms used for DPDK lcores
 
-	RTE_LCORE_FOREACH_SLAVE(i) {
+	RTE_LCORE_FOREACH_WORKER(i) {
 
 		/*
-		 * create communication pipes between master thread
+		 * create communication pipes between initial thread
 		 * and children
 		 */
-		if (_pipe(lcore_config[i].pipe_master2slave,
+		if (_pipe(lcore_config[i].pipe_init2worker,
 			sizeof(char), _O_BINARY) < 0)
 			rte_panic("Cannot create pipe\n");
-		if (_pipe(lcore_config[i].pipe_slave2master,
+		if (_pipe(lcore_config[i].pipe_worker2init,
 			sizeof(char), _O_BINARY) < 0)
 			rte_panic("Cannot create pipe\n");
 
@@ -363,10 +367,10 @@ rte_eal_init(int argc, char **argv)
 	}
 
 	/*
-	 * Launch a dummy function on all slave lcores, so that master lcore
+	 * Launch a dummy function on all worker lcores, so that initial lcore
 	 * knows they are all ready when this function returns.
 	 */
-	rte_eal_mp_remote_launch(sync_func, NULL, SKIP_MASTER);
+	rte_eal_mp_remote_launch(sync_func, NULL, SKIP_INITIAL);
 	rte_eal_mp_wait_lcore();
 	return fctret;
 }

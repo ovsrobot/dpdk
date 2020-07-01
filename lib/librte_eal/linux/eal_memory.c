@@ -1737,7 +1737,7 @@ memseg_primary_init_32(void)
 	/* the allocation logic is a little bit convoluted, but here's how it
 	 * works, in a nutshell:
 	 *  - if user hasn't specified on which sockets to allocate memory via
-	 *    --socket-mem, we allocate all of our memory on master core socket.
+	 *    --socket-mem, we allocate all of our memory on initial core socket.
 	 *  - if user has specified sockets to allocate memory on, there may be
 	 *    some "unused" memory left (e.g. if user has specified --socket-mem
 	 *    such that not all memory adds up to 2 gigabytes), so add it to all
@@ -1751,7 +1751,7 @@ memseg_primary_init_32(void)
 	for (i = 0; i < rte_socket_count(); i++) {
 		int hp_sizes = (int) internal_conf->num_hugepage_sizes;
 		uint64_t max_socket_mem, cur_socket_mem;
-		unsigned int master_lcore_socket;
+		unsigned int initial_lcore_socket;
 		struct rte_config *cfg = rte_eal_get_configuration();
 		bool skip;
 
@@ -1767,10 +1767,10 @@ memseg_primary_init_32(void)
 		skip = active_sockets != 0 &&
 				internal_conf->socket_mem[socket_id] == 0;
 		/* ...or if we didn't specifically request memory on *any*
-		 * socket, and this is not master lcore
+		 * socket, and this is not initial lcore
 		 */
-		master_lcore_socket = rte_lcore_to_socket_id(cfg->master_lcore);
-		skip |= active_sockets == 0 && socket_id != master_lcore_socket;
+		initial_lcore_socket = rte_lcore_to_socket_id(cfg->initial_lcore);
+		skip |= active_sockets == 0 && socket_id != initial_lcore_socket;
 
 		if (skip) {
 			RTE_LOG(DEBUG, EAL, "Will not preallocate memory on socket %u\n",

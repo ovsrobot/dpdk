@@ -16,12 +16,12 @@
 __rte_noreturn void *eal_thread_loop(void *arg);
 
 /**
- * Init per-lcore info for master thread
+ * Init per-lcore info for initial thread
  *
  * @param lcore_id
- *   identifier of master lcore
+ *   identifier of initial lcore
  */
-void eal_thread_init_master(unsigned lcore_id);
+void eal_thread_initial_lcore(unsigned lcore_id);
 
 /**
  * Get the NUMA socket id from cpu id.

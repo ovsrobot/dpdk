@@ -54,10 +54,18 @@ rte_lcore_id(void)
 }
 
 /**
- * Get the id of the master lcore
+ * Get the id of the initial lcore
  *
  * @return
- *   the id of the master lcore
+ *   the id of the initial lcore
+ */
+unsigned int rte_get_initial_lcore(void);
+
+/**
+ * Deprecated API to get the id of the initial lcore
+ *
+ * @return
+ *   the id of the initial lcore
  */
 unsigned int rte_get_master_lcore(void);
 
@@ -179,15 +187,15 @@ int rte_lcore_is_enabled(unsigned int lcore_id);
  *
  * @param i
  *   The current lcore (reference).
- * @param skip_master
- *   If true, do not return the ID of the master lcore.
+ * @param skip_initial
+ *   If true, do not return the ID of the initial lcore.
  * @param wrap
  *   If true, go back to 0 when RTE_MAX_LCORE is reached; otherwise,
  *   return RTE_MAX_LCORE.
  * @return
  *   The next lcore_id or RTE_MAX_LCORE if not found.
  */
-unsigned int rte_get_next_lcore(unsigned int i, int skip_master, int wrap);
+unsigned int rte_get_next_lcore(unsigned int i, int skip_initial, int wrap);
 
 /**
  * Macro to browse all running lcores.
@@ -198,12 +206,19 @@ unsigned int rte_get_next_lcore(unsigned int i, int skip_master, int wrap);
 	     i = rte_get_next_lcore(i, 0, 0))
 
 /**
- * Macro to browse all running lcores except the master lcore.
+ * Macro to browse all running lcores except the initial lcore.
  */
-#define RTE_LCORE_FOREACH_SLAVE(i)					\
+#define RTE_LCORE_FOREACH_WORKER(i)					\
 	for (i = rte_get_next_lcore(-1, 1, 0);				\
 	     i<RTE_MAX_LCORE;						\
 	     i = rte_get_next_lcore(i, 1, 0))
+
+/**
+ * Backward compatibility
+ */
+#define RTE_LCORE_FOREACH_SLAVE(x)		\
+	RTE_LCORE_FOREACH_WORKER(x)
+
 
 /**
  * Set core affinity of the current thread.
