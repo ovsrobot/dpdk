@@ -2649,9 +2649,9 @@ set_fwd_lcores_list(unsigned int *lcorelist, unsigned int nb_lc)
 			printf("lcore %u not enabled\n", lcore_cpuid);
 			return -1;
 		}
-		if (lcore_cpuid == rte_get_master_lcore()) {
+		if (lcore_cpuid == rte_get_initial_lcore()) {
 			printf("lcore %u cannot be masked on for running "
-			       "packet forwarding, which is the master lcore "
+			       "packet forwarding, which is the initial lcore "
 			       "and reserved for command line parsing only\n",
 			       lcore_cpuid);
 			return -1;

@@ -654,7 +654,7 @@ softnic_fwd_begin(portid_t pi)
 		if (!rte_lcore_is_enabled(lcore))
 			continue;
 
-		if (lcore == rte_get_master_lcore())
+		if (lcore == rte_get_initial_lcore())
 			continue;
 
 		if (fwd_core_present == 0) {
