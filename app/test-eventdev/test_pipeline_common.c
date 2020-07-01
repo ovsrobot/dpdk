@@ -60,7 +60,7 @@ pipeline_launch_lcores(struct evt_test *test, struct evt_options *opt,
 
 	int port_idx = 0;
 	/* launch workers */
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		if (!(opt->wlcores[lcore_id]))
 			continue;
 
@@ -107,7 +107,7 @@ pipeline_opt_check(struct evt_options *opt, uint64_t nb_queues)
 {
 	unsigned int lcores;
 	/*
-	 * N worker + 1 master
+	 * N worker + 1 initial lcore
 	 */
 	lcores = 2;
 
@@ -129,8 +129,8 @@ pipeline_opt_check(struct evt_options *opt, uint64_t nb_queues)
 	}
 
 	/* Validate worker lcores */
-	if (evt_lcores_has_overlap(opt->wlcores, rte_get_master_lcore())) {
-		evt_err("worker lcores overlaps with master lcore");
+	if (evt_lcores_has_overlap(opt->wlcores, rte_get_initial_lcore())) {
+		evt_err("worker lcores overlaps with initial lcore");
 		return -1;
 	}
 	if (evt_has_disabled_lcore(opt->wlcores)) {
