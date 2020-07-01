@@ -195,7 +195,7 @@ dpaa2_configure_stashing(struct dpaa2_dpio_dev *dpio_dev, int lcoreid)
 
 	/* Set the Stashing Destination */
 	if (lcoreid < 0) {
-		lcoreid = rte_get_master_lcore();
+		lcoreid = rte_get_initial_lcore();
 		if (lcoreid < 0) {
 			DPAA2_BUS_ERR("Getting CPU Index failed");
 			return -1;
@@ -259,7 +259,7 @@ dpaa2_affine_qbman_swp(void)
 	uint64_t tid = syscall(SYS_gettid);
 
 	if (lcore_id == LCORE_ID_ANY)
-		lcore_id = rte_get_master_lcore();
+		lcore_id = rte_get_initial_lcore();
 	/* if the core id is not supported */
 	else if (lcore_id >= RTE_MAX_LCORE)
 		return -1;
@@ -307,7 +307,7 @@ dpaa2_affine_qbman_ethrx_swp(void)
 	uint64_t tid = syscall(SYS_gettid);
 
 	if (lcore_id == LCORE_ID_ANY)
-		lcore_id = rte_get_master_lcore();
+		lcore_id = rte_get_initial_lcore();
 	/* if the core id is not supported */
 	else if (lcore_id >= RTE_MAX_LCORE)
 		return -1;
