@@ -3727,6 +3727,50 @@ print_fdir_flow_type(uint32_t flow_types_mask)
 	printf("\n");
 }
 
+static int
+get_fdir_info(portid_t port_id, struct rte_eth_fdir_info *fdir_info)
+{
+	int ret;
+
+	ret = rte_eth_dev_filter_supported(port_id,
+					   RTE_ETH_FILTER_FDIR);
+	if (!ret)
+		rte_eth_dev_filter_ctrl(port_id, RTE_ETH_FILTER_FDIR,
+					RTE_ETH_FILTER_INFO, fdir_info);
+
+#ifdef RTE_LIBRTE_I40E_PMD
+	if (ret == -ENOTSUP)
+		ret = rte_pmd_i40e_get_fdir_info(port_id, fdir_info);
+#endif
+#ifdef RTE_LIBRTE_IXGBE_PMD
+	if (ret == -ENOTSUP)
+		ret = rte_pmd_ixgbe_get_fdir_info(port_id, fdir_info);
+#endif
+	return ret;
+}
+
+static int
+get_fdir_stat(portid_t port_id, struct rte_eth_fdir_stats *fdir_stat)
+{
+	int ret;
+
+	ret = rte_eth_dev_filter_supported(port_id,
+					   RTE_ETH_FILTER_FDIR);
+	if (!ret)
+		rte_eth_dev_filter_ctrl(port_id, RTE_ETH_FILTER_FDIR,
+					RTE_ETH_FILTER_STATS, fdir_stat);
+
+#ifdef RTE_LIBRTE_I40E_PMD
+	if (ret == -ENOTSUP)
+		ret = rte_pmd_i40e_get_fdir_stats(port_id, fdir_stat);
+#endif
+#ifdef RTE_LIBRTE_IXGBE_PMD
+	if (ret == -ENOTSUP)
+		ret = rte_pmd_ixgbe_get_fdir_stats(port_id, fdir_stat);
+#endif
+	return ret;
+}
+
 void
 fdir_get_infos(portid_t port_id)
 {
@@ -3738,19 +3782,20 @@ fdir_get_infos(portid_t port_id)
 
 	if (port_id_is_invalid(port_id, ENABLED_WARN))
 		return;
-	ret = rte_eth_dev_filter_supported(port_id, RTE_ETH_FILTER_FDIR);
-	if (ret < 0) {
-		printf("\n FDIR is not supported on port %-2d\n",
-			port_id);
+
+	memset(&fdir_info, 0, sizeof(fdir_info));
+	ret = get_fdir_info(port_id, &fdir_info);
+	if (ret) {
+		printf("Get fdir infos error: (%s)\n", strerror(-ret));
+		return;
+	}
+	memset(&fdir_stat, 0, sizeof(fdir_stat));
+	ret = get_fdir_stat(port_id, &fdir_stat);
+	if (ret) {
+		printf("Get fdir status error: (%s)\n", strerror(-ret));
 		return;
 	}
 
-	memset(&fdir_info, 0, sizeof(fdir_info));
-	rte_eth_dev_filter_ctrl(port_id, RTE_ETH_FILTER_FDIR,
-			       RTE_ETH_FILTER_INFO, &fdir_info);
-	memset(&fdir_stat, 0, sizeof(fdir_stat));
-	rte_eth_dev_filter_ctrl(port_id, RTE_ETH_FILTER_FDIR,
-			       RTE_ETH_FILTER_STATS, &fdir_stat);
 	printf("\n  %s FDIR infos for port %-2d     %s\n",
 	       fdir_stats_border, port_id, fdir_stats_border);
 	printf("  MODE: ");
