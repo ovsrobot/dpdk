@@ -124,9 +124,9 @@ LAN
 LPM
    Longest Prefix Match
 
-master lcore
+initial lcore
    The execution unit that executes the main() function and that launches
-   other lcores.
+   other lcores. Described in older versions as master lcore.
 
 mbuf
    An mbuf is a data structure used internally to carry messages (mainly
@@ -184,8 +184,8 @@ RTE
 Rx
    Reception
 
-Slave lcore
-   Any *lcore* that is not the *master lcore*.
+Worker lcore
+   Any *lcore* that is not the *initial lcore*.
 
 Socket
    A physical CPU, that includes several *cores*.

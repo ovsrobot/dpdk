@@ -236,9 +236,6 @@ Upkeep round
     (brought down or up accordingly). Additionally, any sub-device marked for
     removal is cleaned-up.
 
-Slave
-    In the context of the fail-safe PMD, synonymous to sub-device.
-
 Sub-device
     A device being utilized by the fail-safe PMD.
     This is another PMD running underneath the fail-safe PMD.

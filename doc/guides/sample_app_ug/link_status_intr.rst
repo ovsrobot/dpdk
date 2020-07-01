@@ -401,9 +401,9 @@ However, it improves performance:
             /* if timer has reached its timeout */
 
             if (unlikely(timer_tsc >= (uint64_t) timer_period)) {
-                /* do this only on master core */
+                /* do this only on initial core */
 
-                if (lcore_id == rte_get_master_lcore()) {
+                if (lcore_id == rte_get_initial_lcore()) {
                     print_stats();
 
                     /* reset the timer */
