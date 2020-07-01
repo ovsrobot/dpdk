@@ -107,6 +107,13 @@ New Features
   * Dump ``rte_flow`` memory consumption.
   * Measure packet per second forwarding.
 
+* **Updated the Intel i40e driver.**
+
+  Updated the Intel i40e driver with new features and improvements, including:
+
+  * Re-implemented get_fdir_info and get_fdir_stat in private API.
+  * Re-implemented set_gre_key_len in private API.
+
 
 Removed Items
 -------------
