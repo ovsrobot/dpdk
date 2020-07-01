@@ -18,7 +18,7 @@
 
 #include "rte_eth_vhost.h"
 
-static int vhost_logtype;
+RTE_LOG_REGISTER(vhost_logtype, pmd.net.vhost, NOTICE);
 
 #define VHOST_LOG(level, ...) \
 	rte_log(RTE_LOG_ ## level, vhost_logtype, __VA_ARGS__)
@@ -1571,9 +1571,3 @@ RTE_PMD_REGISTER_PARAM_STRING(net_vhost,
 	"linear-buffer=<0|1> "
 	"ext-buffer=<0|1>");
 
-RTE_INIT(vhost_init_log)
-{
-	vhost_logtype = rte_log_register("pmd.net.vhost");
-	if (vhost_logtype >= 0)
-		rte_log_set_level(vhost_logtype, RTE_LOG_NOTICE);
-}
