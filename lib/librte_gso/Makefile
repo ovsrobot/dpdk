@@ -17,6 +17,7 @@ SRCS-$(CONFIG_RTE_LIBRTE_GSO) += rte_gso.c
 SRCS-$(CONFIG_RTE_LIBRTE_GSO) += gso_common.c
 SRCS-$(CONFIG_RTE_LIBRTE_GSO) += gso_tcp4.c
 SRCS-$(CONFIG_RTE_LIBRTE_GSO) += gso_tunnel_tcp4.c
+SRCS-$(CONFIG_RTE_LIBRTE_GSO) += gso_tunnel_udp4.c
 SRCS-$(CONFIG_RTE_LIBRTE_GSO) += gso_udp4.c
 
 # install this header file
