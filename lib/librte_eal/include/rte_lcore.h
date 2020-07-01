@@ -67,6 +67,7 @@ unsigned int rte_get_initial_lcore(void);
  * @return
  *   the id of the initial lcore
  */
+__rte_deprecated
 unsigned int rte_get_master_lcore(void);
 
 /**
@@ -216,7 +217,8 @@ unsigned int rte_get_next_lcore(unsigned int i, int skip_initial, int wrap);
 /**
  * Backward compatibility
  */
-#define RTE_LCORE_FOREACH_SLAVE(x)		\
+#define RTE_LCORE_FOREACH_SLAVE(x)					\
+	_Pragma("GCC warning \"'RTE_LCORE_FOREACH_SLAVE' macro is deprecated\"") \
 	RTE_LCORE_FOREACH_WORKER(x)
 
 
