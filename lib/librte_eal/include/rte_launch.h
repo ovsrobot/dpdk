@@ -76,8 +76,8 @@ enum rte_rmt_call_initial_t {
 /**
  * Deprecated backward compatiable definitions
  */
-#define SKIP_MASTER	SKIP_INITIAL
-#define CALL_MASTER	CALL_INITIAL
+#define SKIP_MASTER _Pragma("GCC warning \"'SKIP_MASTER' is deprecated\"") SKIP_INITIAL
+#define CALL_MASTER _Pragma("GCC warning \"'CALL_MASTER' is deprecated\"") CALL_INITIAL
 
 /**
  * Launch a function on all lcores.
