@@ -162,7 +162,7 @@ cmd_quit_parsed(__rte_unused void *parsed_result,
 	uint32_t lcore_id;
 
 	/* Stop transmission first. */
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		conf = &fwd_lcore_conf[lcore_id];
 
 		if (!conf->nb_stream)
@@ -668,7 +668,7 @@ assign_stream_to_lcores(void)
 	uint8_t lcore_num, nb_extra;
 
 	lcore_num = rte_lcore_count();
-	/* Exclude master core */
+	/* Exclude initial core */
 	lcore_num--;
 
 	nb_streams = (fwd_mode == IOFWD) ? num_queues * 2 : num_queues;
@@ -678,7 +678,7 @@ assign_stream_to_lcores(void)
 	sm_id = 0;
 	i = 0;
 
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		conf = &fwd_lcore_conf[lcore_id];
 
 		if (i < nb_extra) {
@@ -697,7 +697,7 @@ assign_stream_to_lcores(void)
 	}
 
 	/* Print packet forwading config. */
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		conf = &fwd_lcore_conf[lcore_id];
 
 		if (!conf->nb_stream)
@@ -765,7 +765,7 @@ start_pkt_fwd(void)
 	assign_stream_to_lcores();
 	in_test = 1;
 
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		conf = &fwd_lcore_conf[lcore_id];
 
 		if (!conf->nb_stream)
@@ -826,7 +826,7 @@ cmd_stop_parsed(__rte_unused void *parsed_result,
 	struct ntb_fwd_lcore_conf *conf;
 	uint32_t lcore_id;
 
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		conf = &fwd_lcore_conf[lcore_id];
 
 		if (!conf->nb_stream)
@@ -1074,7 +1074,7 @@ cmdline_parse_ctx_t main_ctx[] = {
 	NULL,
 };
 
-/* prompt function, called from main on MASTER lcore */
+/* prompt function, called from main on initial lcore */
 static void
 prompt(void)
 {
