@@ -114,6 +114,12 @@ New Features
   * Re-implemented get_fdir_info and get_fdir_stat in private API.
   * Re-implemented set_gre_key_len in private API.
 
+* **Updated the Intel ixgbe driver.**
+
+  Updated the Intel ixgbe driver with new features and improvements, including:
+
+  * Re-implemented get_fdir_info and get_fdir_stat in private API.
+
 
 Removed Items
 -------------
