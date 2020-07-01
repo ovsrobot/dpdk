@@ -590,7 +590,7 @@ static void cmd_start_parsed(__rte_unused void *parsed_result,
 		return;
 	}
 
-	/* start lcore main on core != master_core - ARP response thread */
+	/* start lcore main on core != initial_core - ARP response thread */
 	slave_core_id = rte_get_next_lcore(rte_lcore_id(), 1, 0);
 	if ((slave_core_id >= RTE_MAX_LCORE) || (slave_core_id == 0))
 		return;
@@ -802,7 +802,7 @@ cmdline_parse_ctx_t main_ctx[] = {
 	NULL,
 };
 
-/* prompt function, called from main on MASTER lcore */
+/* prompt function, called from main on initial lcore */
 static void prompt(__rte_unused void *arg1)
 {
 	struct cmdline *cl;
@@ -852,12 +852,12 @@ main(int argc, char *argv[])
 	rte_spinlock_init(&global_flag_stru_p->lock);
 
 	/* check state of lcores */
-	RTE_LCORE_FOREACH_SLAVE(slave_core_id) {
+	RTE_LCORE_FOREACH_WORKER(slave_core_id) {
 		if (rte_eal_get_lcore_state(slave_core_id) != WAIT)
 			return -EBUSY;
 	}
 
-	/* start lcore main on core != master_core - ARP response thread */
+	/* start lcore main on core != initial_core - ARP response thread */
 	slave_core_id = rte_get_next_lcore(rte_lcore_id(), 1, 0);
 	if ((slave_core_id >= RTE_MAX_LCORE) || (slave_core_id == 0))
 		return -EPERM;
