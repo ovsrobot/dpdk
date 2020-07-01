@@ -599,7 +599,7 @@ cmdline_parse_ctx_t main_ctx[] = {
 	NULL,
 };
 
-/* prompt function, called from main on MASTER lcore */
+/* prompt function, called from main on initial lcore */
 void
 prompt(void)
 {
