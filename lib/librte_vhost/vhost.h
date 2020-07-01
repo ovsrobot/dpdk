@@ -356,8 +356,8 @@ struct virtio_net {
 	uint32_t		max_guest_pages;
 	struct guest_page       *guest_pages;
 
-	int			slave_req_fd;
-	rte_spinlock_t		slave_req_lock;
+	int			client_req_fd;
+	rte_spinlock_t		client_req_lock;
 
 	int			postcopy_ufd;
 	int			postcopy_listening;

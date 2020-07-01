@@ -632,9 +632,9 @@ vhost_new_device(void)
 	vhost_devices[i] = dev;
 	dev->vid = i;
 	dev->flags = VIRTIO_DEV_BUILTIN_VIRTIO_NET;
-	dev->slave_req_fd = -1;
+	dev->client_req_fd = -1;
 	dev->postcopy_ufd = -1;
-	rte_spinlock_init(&dev->slave_req_lock);
+	rte_spinlock_init(&dev->client_req_lock);
 
 	return i;
 }
