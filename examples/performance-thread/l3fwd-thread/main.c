@@ -2211,7 +2211,7 @@ lthread_rx(void *dummy)
 /*
  * Start scheduler with initial lthread on lcore
  *
- * This lthread loop spawns all rx and tx lthreads on master lcore
+ * This lthread loop spawns all rx and tx lthreads on intial lcore
  */
 
 static void *
@@ -2265,7 +2265,7 @@ lthread_spawner(__rte_unused void *arg)
  * (main_lthread_master).
  */
 static int
-lthread_master_spawner(__rte_unused void *arg) {
+lthread_initial_spawner(__rte_unused void *arg) {
 	struct lthread *lt;
 	int lcore_id = rte_lcore_id();
 
@@ -3765,14 +3765,14 @@ main(int argc, char **argv)
 #endif
 
 		lthread_num_schedulers_set(nb_lcores);
-		rte_eal_mp_remote_launch(sched_spawner, NULL, SKIP_MASTER);
-		lthread_master_spawner(NULL);
+		rte_eal_mp_remote_launch(sched_spawner, NULL, SKIP_INITIAL);
+		lthread_initial_spawner(NULL);
 
 	} else {
 		printf("Starting P-Threading Model\n");
 		/* launch per-lcore init on every lcore */
-		rte_eal_mp_remote_launch(pthread_run, NULL, CALL_MASTER);
-		RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+		rte_eal_mp_remote_launch(pthread_run, NULL, CALL_INITIAL);
+		RTE_LCORE_FOREACH_WORKER(lcore_id) {
 			if (rte_eal_wait_lcore(lcore_id) < 0)
 				return -1;
 		}
