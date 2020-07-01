@@ -7,11 +7,11 @@
  * The vhost-user protocol connection is an external interface, so it must be
  * robust against invalid inputs.
  *
- * This is important because the vhost-user master is only one step removed
+ * This is important because the vhost-user server is only one step removed
  * from the guest.  Malicious guests that have escaped will then launch further
- * attacks from the vhost-user master.
+ * attacks from the vhost-user server.
  *
- * Even in deployments where guests are trusted, a bug in the vhost-user master
+ * Even in deployments where guests are trusted, a bug in the vhost-user server
  * can still cause invalid messages to be sent.  Such messages must not
  * compromise the stability of the DPDK application by causing crashes, memory
  * corruption, or other problematic behavior.
@@ -78,7 +78,7 @@ static const char *vhost_message_str[VHOST_USER_MAX] = {
 	[VHOST_USER_SET_VRING_ENABLE]  = "VHOST_USER_SET_VRING_ENABLE",
 	[VHOST_USER_SEND_RARP]  = "VHOST_USER_SEND_RARP",
 	[VHOST_USER_NET_SET_MTU]  = "VHOST_USER_NET_SET_MTU",
-	[VHOST_USER_SET_SLAVE_REQ_FD]  = "VHOST_USER_SET_SLAVE_REQ_FD",
+	[VHOST_USER_SET_CLIENT_REQ_FD]  = "VHOST_USER_SET_CLIENT_REQ_FD",
 	[VHOST_USER_IOTLB_MSG]  = "VHOST_USER_IOTLB_MSG",
 	[VHOST_USER_CRYPTO_CREATE_SESS] = "VHOST_USER_CRYPTO_CREATE_SESS",
 	[VHOST_USER_CRYPTO_CLOSE_SESS] = "VHOST_USER_CRYPTO_CLOSE_SESS",
@@ -114,7 +114,7 @@ validate_msg_fds(struct VhostUserMsg *msg, int expected_fds)
 	VHOST_LOG_CONFIG(ERR,
 		" Expect %d FDs for request %s, received %d\n",
 		expected_fds,
-		vhost_message_str[msg->request.master],
+		vhost_message_str[msg->request.server],
 		msg->fd_num);
 
 	close_msg_fds(msg);
@@ -215,9 +215,9 @@ vhost_backend_cleanup(struct virtio_net *dev)
 		dev->inflight_info = NULL;
 	}
 
-	if (dev->slave_req_fd >= 0) {
-		close(dev->slave_req_fd);
-		dev->slave_req_fd = -1;
+	if (dev->client_req_fd >= 0) {
+		close(dev->client_req_fd);
+		dev->client_req_fd = -1;
 	}
 
 	if (dev->postcopy_ufd >= 0) {
@@ -346,7 +346,7 @@ vhost_user_set_features(struct virtio_net **pdev, struct VhostUserMsg *msg,
 			return RTE_VHOST_MSG_RESULT_OK;
 
 		/*
-		 * Error out if master tries to change features while device is
+		 * Error out if server tries to change features while device is
 		 * in running state. The exception being VHOST_F_LOG_ALL, which
 		 * is enabled when the live-migration starts.
 		 */
@@ -1235,10 +1235,10 @@ vhost_user_set_mem_table(struct virtio_net **pdev, struct VhostUserMsg *msg,
 		if (validate_msg_fds(&ack_msg, 0) != 0)
 			goto err_mmap;
 
-		if (ack_msg.request.master != VHOST_USER_SET_MEM_TABLE) {
+		if (ack_msg.request.server != VHOST_USER_SET_MEM_TABLE) {
 			VHOST_LOG_CONFIG(ERR,
 				"Bad qemu ack on postcopy set-mem-table (%d)\n",
-				ack_msg.request.master);
+				ack_msg.request.server);
 			goto err_mmap;
 		}
 
@@ -2049,14 +2049,14 @@ vhost_user_set_protocol_features(struct virtio_net **pdev,
 {
 	struct virtio_net *dev = *pdev;
 	uint64_t protocol_features = msg->payload.u64;
-	uint64_t slave_protocol_features = 0;
+	uint64_t client_protocol_features = 0;
 
 	if (validate_msg_fds(msg, 0) != 0)
 		return RTE_VHOST_MSG_RESULT_ERR;
 
 	rte_vhost_driver_get_protocol_features(dev->ifname,
-			&slave_protocol_features);
-	if (protocol_features & ~slave_protocol_features) {
+			&client_protocol_features);
+	if (protocol_features & ~client_protocol_features) {
 		VHOST_LOG_CONFIG(ERR,
 			"(%d) received invalid protocol features.\n",
 			dev->vid);
@@ -2228,15 +2228,15 @@ vhost_user_set_req_fd(struct virtio_net **pdev, struct VhostUserMsg *msg,
 
 	if (fd < 0) {
 		VHOST_LOG_CONFIG(ERR,
-				"Invalid file descriptor for slave channel (%d)\n",
+				"Invalid file descriptor for client channel (%d)\n",
 				fd);
 		return RTE_VHOST_MSG_RESULT_ERR;
 	}
 
-	if (dev->slave_req_fd >= 0)
-		close(dev->slave_req_fd);
+	if (dev->client_req_fd >= 0)
+		close(dev->client_req_fd);
 
-	dev->slave_req_fd = fd;
+	dev->client_req_fd = fd;
 
 	return RTE_VHOST_MSG_RESULT_OK;
 }
@@ -2472,7 +2472,7 @@ static vhost_message_handler_t vhost_message_handlers[VHOST_USER_MAX] = {
 	[VHOST_USER_SET_VRING_ENABLE] = vhost_user_set_vring_enable,
 	[VHOST_USER_SEND_RARP] = vhost_user_send_rarp,
 	[VHOST_USER_NET_SET_MTU] = vhost_user_net_set_mtu,
-	[VHOST_USER_SET_SLAVE_REQ_FD] = vhost_user_set_req_fd,
+	[VHOST_USER_SET_CLIENT_REQ_FD] = vhost_user_set_req_fd,
 	[VHOST_USER_IOTLB_MSG] = vhost_user_iotlb_msg,
 	[VHOST_USER_POSTCOPY_ADVISE] = vhost_user_set_postcopy_advise,
 	[VHOST_USER_POSTCOPY_LISTEN] = vhost_user_set_postcopy_listen,
@@ -2541,16 +2541,16 @@ send_vhost_reply(int sockfd, struct VhostUserMsg *msg)
 }
 
 static int
-send_vhost_slave_message(struct virtio_net *dev, struct VhostUserMsg *msg)
+send_vhost_client_message(struct virtio_net *dev, struct VhostUserMsg *msg)
 {
 	int ret;
 
 	if (msg->flags & VHOST_USER_NEED_REPLY)
-		rte_spinlock_lock(&dev->slave_req_lock);
+		rte_spinlock_lock(&dev->client_req_lock);
 
-	ret = send_vhost_message(dev->slave_req_fd, msg);
+	ret = send_vhost_message(dev->client_req_fd, msg);
 	if (ret < 0 && (msg->flags & VHOST_USER_NEED_REPLY))
-		rte_spinlock_unlock(&dev->slave_req_lock);
+		rte_spinlock_unlock(&dev->client_req_lock);
 
 	return ret;
 }
@@ -2564,7 +2564,7 @@ vhost_user_check_and_alloc_queue_pair(struct virtio_net *dev,
 {
 	uint32_t vring_idx;
 
-	switch (msg->request.master) {
+	switch (msg->request.server) {
 	case VHOST_USER_SET_VRING_KICK:
 	case VHOST_USER_SET_VRING_CALL:
 	case VHOST_USER_SET_VRING_ERR:
@@ -2667,7 +2667,7 @@ vhost_user_msg_handler(int vid, int fd)
 	}
 
 	ret = 0;
-	request = msg.request.master;
+	request = msg.request.server;
 	if (request > VHOST_USER_NONE && request < VHOST_USER_MAX &&
 			vhost_message_str[request]) {
 		if (request != VHOST_USER_IOTLB_MSG)
@@ -2710,7 +2710,7 @@ vhost_user_msg_handler(int vid, int fd)
 	case VHOST_USER_SET_VRING_ENABLE:
 	case VHOST_USER_SEND_RARP:
 	case VHOST_USER_NET_SET_MTU:
-	case VHOST_USER_SET_SLAVE_REQ_FD:
+	case VHOST_USER_SET_CLIENT_REQ_FD:
 		if (!(dev->flags & VIRTIO_DEV_VDPA_CONFIGURED)) {
 			vhost_user_lock_all_queue_pairs(dev);
 			unlock_required = 1;
@@ -2850,7 +2850,7 @@ skip_to_post_handle:
 	return 0;
 }
 
-static int process_slave_message_reply(struct virtio_net *dev,
+static int process_client_message_reply(struct virtio_net *dev,
 				       const struct VhostUserMsg *msg)
 {
 	struct VhostUserMsg msg_reply;
@@ -2859,11 +2859,11 @@ static int process_slave_message_reply(struct virtio_net *dev,
 	if ((msg->flags & VHOST_USER_NEED_REPLY) == 0)
 		return 0;
 
-	ret = read_vhost_message(dev->slave_req_fd, &msg_reply);
+	ret = read_vhost_message(dev->client_req_fd, &msg_reply);
 	if (ret <= 0) {
 		if (ret < 0)
 			VHOST_LOG_CONFIG(ERR,
-				"vhost read slave message reply failed\n");
+				"vhost read client message reply failed\n");
 		else
 			VHOST_LOG_CONFIG(INFO,
 				"vhost peer closed\n");
@@ -2872,10 +2872,10 @@ static int process_slave_message_reply(struct virtio_net *dev,
 	}
 
 	ret = 0;
-	if (msg_reply.request.slave != msg->request.slave) {
+	if (msg_reply.request.client != msg->request.client) {
 		VHOST_LOG_CONFIG(ERR,
 			"Received unexpected msg type (%u), expected %u\n",
-			msg_reply.request.slave, msg->request.slave);
+			msg_reply.request.client, msg->request.client);
 		ret = -1;
 		goto out;
 	}
@@ -2883,7 +2883,7 @@ static int process_slave_message_reply(struct virtio_net *dev,
 	ret = msg_reply.payload.u64 ? -1 : 0;
 
 out:
-	rte_spinlock_unlock(&dev->slave_req_lock);
+	rte_spinlock_unlock(&dev->client_req_lock);
 	return ret;
 }
 
@@ -2892,7 +2892,7 @@ vhost_user_iotlb_miss(struct virtio_net *dev, uint64_t iova, uint8_t perm)
 {
 	int ret;
 	struct VhostUserMsg msg = {
-		.request.slave = VHOST_USER_SLAVE_IOTLB_MSG,
+		.request.client = VHOST_USER_CLIENT_IOTLB_MSG,
 		.flags = VHOST_USER_VERSION,
 		.size = sizeof(msg.payload.iotlb),
 		.payload.iotlb = {
@@ -2902,7 +2902,7 @@ vhost_user_iotlb_miss(struct virtio_net *dev, uint64_t iova, uint8_t perm)
 		},
 	};
 
-	ret = send_vhost_message(dev->slave_req_fd, &msg);
+	ret = send_vhost_message(dev->client_req_fd, &msg);
 	if (ret < 0) {
 		VHOST_LOG_CONFIG(ERR,
 				"Failed to send IOTLB miss message (%d)\n",
@@ -2914,11 +2914,11 @@ vhost_user_iotlb_miss(struct virtio_net *dev, uint64_t iova, uint8_t perm)
 }
 
 static int
-vhost_user_slave_config_change(struct virtio_net *dev, bool need_reply)
+vhost_user_client_config_change(struct virtio_net *dev, bool need_reply)
 {
 	int ret;
 	struct VhostUserMsg msg = {
-		.request.slave = VHOST_USER_SLAVE_CONFIG_CHANGE_MSG,
+		.request.client = VHOST_USER_CLIENT_CONFIG_CHANGE_MSG,
 		.flags = VHOST_USER_VERSION,
 		.size = 0,
 	};
@@ -2926,7 +2926,7 @@ vhost_user_slave_config_change(struct virtio_net *dev, bool need_reply)
 	if (need_reply)
 		msg.flags |= VHOST_USER_NEED_REPLY;
 
-	ret = send_vhost_slave_message(dev, &msg);
+	ret = send_vhost_client_message(dev, &msg);
 	if (ret < 0) {
 		VHOST_LOG_CONFIG(ERR,
 				"Failed to send config change (%d)\n",
@@ -2934,11 +2934,11 @@ vhost_user_slave_config_change(struct virtio_net *dev, bool need_reply)
 		return ret;
 	}
 
-	return process_slave_message_reply(dev, &msg);
+	return process_client_message_reply(dev, &msg);
 }
 
 int
-rte_vhost_slave_config_change(int vid, bool need_reply)
+rte_vhost_client_config_change(int vid, bool need_reply)
 {
 	struct virtio_net *dev;
 
@@ -2946,17 +2946,17 @@ rte_vhost_slave_config_change(int vid, bool need_reply)
 	if (!dev)
 		return -ENODEV;
 
-	return vhost_user_slave_config_change(dev, need_reply);
+	return vhost_user_client_config_change(dev, need_reply);
 }
 
-static int vhost_user_slave_set_vring_host_notifier(struct virtio_net *dev,
+static int vhost_user_client_set_vring_host_notifier(struct virtio_net *dev,
 						    int index, int fd,
 						    uint64_t offset,
 						    uint64_t size)
 {
 	int ret;
 	struct VhostUserMsg msg = {
-		.request.slave = VHOST_USER_SLAVE_VRING_HOST_NOTIFIER_MSG,
+		.request.client = VHOST_USER_CLIENT_VRING_HOST_NOTIFIER_MSG,
 		.flags = VHOST_USER_VERSION | VHOST_USER_NEED_REPLY,
 		.size = sizeof(msg.payload.area),
 		.payload.area = {
@@ -2973,14 +2973,14 @@ static int vhost_user_slave_set_vring_host_notifier(struct virtio_net *dev,
 		msg.fd_num = 1;
 	}
 
-	ret = send_vhost_slave_message(dev, &msg);
+	ret = send_vhost_client_message(dev, &msg);
 	if (ret < 0) {
 		VHOST_LOG_CONFIG(ERR,
 			"Failed to set host notifier (%d)\n", ret);
 		return ret;
 	}
 
-	return process_slave_message_reply(dev, &msg);
+	return process_client_message_reply(dev, &msg);
 }
 
 int rte_vhost_host_notifier_ctrl(int vid, uint16_t qid, bool enable)
@@ -3002,9 +3002,9 @@ int rte_vhost_host_notifier_ctrl(int vid, uint16_t qid, bool enable)
 	if (!(dev->features & (1ULL << VIRTIO_F_VERSION_1)) ||
 	    !(dev->features & (1ULL << VHOST_USER_F_PROTOCOL_FEATURES)) ||
 	    !(dev->protocol_features &
-			(1ULL << VHOST_USER_PROTOCOL_F_SLAVE_REQ)) ||
+			(1ULL << VHOST_USER_PROTOCOL_F_CLIENT_REQ)) ||
 	    !(dev->protocol_features &
-			(1ULL << VHOST_USER_PROTOCOL_F_SLAVE_SEND_FD)) ||
+			(1ULL << VHOST_USER_PROTOCOL_F_CLIENT_SEND_FD)) ||
 	    !(dev->protocol_features &
 			(1ULL << VHOST_USER_PROTOCOL_F_HOST_NOTIFIER)))
 		return -ENOTSUP;
@@ -3034,7 +3034,7 @@ int rte_vhost_host_notifier_ctrl(int vid, uint16_t qid, bool enable)
 				goto disable;
 			}
 
-			if (vhost_user_slave_set_vring_host_notifier(dev, i,
+			if (vhost_user_client_set_vring_host_notifier(dev, i,
 					vfio_device_fd, offset, size) < 0) {
 				ret = -EFAULT;
 				goto disable;
@@ -3043,7 +3043,7 @@ int rte_vhost_host_notifier_ctrl(int vid, uint16_t qid, bool enable)
 	} else {
 disable:
 		for (i = q_start; i <= q_last; i++) {
-			vhost_user_slave_set_vring_host_notifier(dev, i, -1,
+			vhost_user_client_set_vring_host_notifier(dev, i, -1,
 					0, 0);
 		}
 	}

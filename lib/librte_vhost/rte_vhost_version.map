@@ -65,7 +65,7 @@ EXPERIMENTAL {
 	rte_vhost_clr_inflight_desc_packed;
 	rte_vhost_get_vhost_ring_inflight;
 	rte_vhost_get_vring_base_from_inflight;
-	rte_vhost_slave_config_change;
+	rte_vhost_client_config_change;
 	rte_vdpa_find_device_by_name;
 	rte_vdpa_get_rte_device;
 	rte_vdpa_get_queue_num;

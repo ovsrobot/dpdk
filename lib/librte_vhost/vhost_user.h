@@ -14,16 +14,17 @@
 
 #define VHOST_MEMORY_MAX_NREGIONS 8
 
-#define VHOST_USER_PROTOCOL_FEATURES	((1ULL << VHOST_USER_PROTOCOL_F_MQ) | \
-					 (1ULL << VHOST_USER_PROTOCOL_F_LOG_SHMFD) |\
-					 (1ULL << VHOST_USER_PROTOCOL_F_RARP) | \
-					 (1ULL << VHOST_USER_PROTOCOL_F_REPLY_ACK) | \
-					 (1ULL << VHOST_USER_PROTOCOL_F_NET_MTU) | \
-					 (1ULL << VHOST_USER_PROTOCOL_F_SLAVE_REQ) | \
-					 (1ULL << VHOST_USER_PROTOCOL_F_CRYPTO_SESSION) | \
-					 (1ULL << VHOST_USER_PROTOCOL_F_SLAVE_SEND_FD) | \
-					 (1ULL << VHOST_USER_PROTOCOL_F_HOST_NOTIFIER) | \
-					 (1ULL << VHOST_USER_PROTOCOL_F_PAGEFAULT))
+#define VHOST_USER_PROTOCOL_FEATURES				\
+	((1ULL << VHOST_USER_PROTOCOL_F_MQ) |			\
+	 (1ULL << VHOST_USER_PROTOCOL_F_LOG_SHMFD) |		\
+	 (1ULL << VHOST_USER_PROTOCOL_F_RARP) |			\
+	 (1ULL << VHOST_USER_PROTOCOL_F_REPLY_ACK) |		\
+	 (1ULL << VHOST_USER_PROTOCOL_F_NET_MTU) |		\
+	 (1ULL << VHOST_USER_PROTOCOL_F_CLIENT_REQ) |		\
+	 (1ULL << VHOST_USER_PROTOCOL_F_CRYPTO_SESSION) |	\
+	 (1ULL << VHOST_USER_PROTOCOL_F_CLIENT_SEND_FD) |	\
+	 (1ULL << VHOST_USER_PROTOCOL_F_HOST_NOTIFIER) |	\
+	 (1ULL << VHOST_USER_PROTOCOL_F_PAGEFAULT))
 
 typedef enum VhostUserRequest {
 	VHOST_USER_NONE = 0,
@@ -47,7 +48,7 @@ typedef enum VhostUserRequest {
 	VHOST_USER_SET_VRING_ENABLE = 18,
 	VHOST_USER_SEND_RARP = 19,
 	VHOST_USER_NET_SET_MTU = 20,
-	VHOST_USER_SET_SLAVE_REQ_FD = 21,
+	VHOST_USER_SET_CLIENT_REQ_FD = 21,
 	VHOST_USER_IOTLB_MSG = 22,
 	VHOST_USER_CRYPTO_CREATE_SESS = 26,
 	VHOST_USER_CRYPTO_CLOSE_SESS = 27,
@@ -59,13 +60,13 @@ typedef enum VhostUserRequest {
 	VHOST_USER_MAX = 33
 } VhostUserRequest;
 
-typedef enum VhostUserSlaveRequest {
-	VHOST_USER_SLAVE_NONE = 0,
-	VHOST_USER_SLAVE_IOTLB_MSG = 1,
-	VHOST_USER_SLAVE_CONFIG_CHANGE_MSG = 2,
-	VHOST_USER_SLAVE_VRING_HOST_NOTIFIER_MSG = 3,
-	VHOST_USER_SLAVE_MAX
-} VhostUserSlaveRequest;
+typedef enum VhostUserClientRequest {
+	VHOST_USER_CLIENT_NONE = 0,
+	VHOST_USER_CLIENT_IOTLB_MSG = 1,
+	VHOST_USER_CLIENT_CONFIG_CHANGE_MSG = 2,
+	VHOST_USER_CLIENT_VRING_HOST_NOTIFIER_MSG = 3,
+	VHOST_USER_CLIENT_MAX
+} VhostUserClientRequest;
 
 typedef struct VhostUserMemoryRegion {
 	uint64_t guest_phys_addr;
@@ -124,8 +125,8 @@ typedef struct VhostUserInflight {
 
 typedef struct VhostUserMsg {
 	union {
-		uint32_t master; /* a VhostUserRequest value */
-		uint32_t slave;  /* a VhostUserSlaveRequest value*/
+		uint32_t server; /* a VhostUserRequest value */
+		uint32_t client;  /* a VhostUserClientRequest value*/
 	} request;
 
 #define VHOST_USER_VERSION_MASK     0x3
