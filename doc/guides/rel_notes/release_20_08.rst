@@ -107,6 +107,9 @@ New Features
   * Dump ``rte_flow`` memory consumption.
   * Measure packet per second forwarding.
 
+* **Renamed master lcore to initial lcore.**
+
+  The name given to the first thread in DPDK is changed from master lcore to initial lcore.
 
 Removed Items
 -------------
@@ -121,7 +124,6 @@ Removed Items
    =========================================================
 
 * Removed ``RTE_KDRV_NONE`` based PCI device driver probing.
-
 
 API Changes
 -----------
@@ -142,6 +144,9 @@ API Changes
 
 * vhost: The API of ``rte_vhost_host_notifier_ctrl`` was changed to be per
   queue and not per device, a qid parameter was added to the arguments list.
+
+* ``rte_get_master_lcore`` was renamed to ``rte_get_initial_lcore``
+  The old function is deprecated and will be removed in future release.
 
 
 ABI Changes
