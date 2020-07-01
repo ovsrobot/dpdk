@@ -250,4 +250,20 @@ void rte_mbuf_dyn_dump(FILE *out);
 #define RTE_MBUF_DYNFIELD_METADATA_NAME "rte_flow_dynfield_metadata"
 #define RTE_MBUF_DYNFLAG_METADATA_NAME "rte_flow_dynflag_metadata"
 
+/*
+ * The timestamp dynamic field provides some timing information, the
+ * units and time references (initial phase) are not explicitly defined
+ * but are maintained always the same for a given port. Some devices allow
+ * to query rte_eth_read_clock() that will return the current device
+ * timestamp. The dynamic timestamp flag tells whether the field contains
+ * actual timestamp value. For the packets being sent this value can be
+ * used by PMD to schedule packet sending.
+ *
+ * After PKT_RX_TIMESTAMP flag and fixed timestamp field deprecation
+ * and obsoleting, these dynamic flag and field will be used to manage
+ * the timestamps on receiving datapath as well.
+ */
+#define RTE_MBUF_DYNFIELD_TIMESTAMP_NAME "rte_dynfield_timestamp"
+#define RTE_MBUF_DYNFLAG_TIMESTAMP_NAME "rte_dynflag_timestamp"
+
 #endif
