@@ -79,7 +79,7 @@ eal_long_options[] = {
 	{OPT_TRACE_DIR,         1, NULL, OPT_TRACE_DIR_NUM        },
 	{OPT_TRACE_BUF_SIZE,    1, NULL, OPT_TRACE_BUF_SIZE_NUM   },
 	{OPT_TRACE_MODE,        1, NULL, OPT_TRACE_MODE_NUM       },
-	{OPT_MASTER_LCORE,      1, NULL, OPT_MASTER_LCORE_NUM     },
+	{OPT_INITIAL_LCORE,      1, NULL, OPT_INITIAL_LCORE_NUM     },
 	{OPT_MBUF_POOL_OPS_NAME, 1, NULL, OPT_MBUF_POOL_OPS_NAME_NUM},
 	{OPT_NO_HPET,           0, NULL, OPT_NO_HPET_NUM          },
 	{OPT_NO_HUGE,           0, NULL, OPT_NO_HUGE_NUM          },
@@ -142,7 +142,7 @@ struct device_option {
 static struct device_option_list devopt_list =
 TAILQ_HEAD_INITIALIZER(devopt_list);
 
-static int master_lcore_parsed;
+static int initial_lcore_parsed;
 static int mem_parsed;
 static int core_parsed;
 
@@ -485,12 +485,12 @@ eal_parse_service_coremask(const char *coremask)
 		for (j = 0; j < BITS_PER_HEX && idx < RTE_MAX_LCORE;
 				j++, idx++) {
 			if ((1 << j) & val) {
-				/* handle master lcore already parsed */
+				/* handle initial lcore already parsed */
 				uint32_t lcore = idx;
-				if (master_lcore_parsed &&
-						cfg->master_lcore == lcore) {
+				if (initial_lcore_parsed &&
+						cfg->initial_lcore == lcore) {
 					RTE_LOG(ERR, EAL,
-						"lcore %u is master lcore, cannot use as service core\n",
+						"lcore %u is initial lcore, cannot use as service core\n",
 						idx);
 					return -1;
 				}
@@ -658,12 +658,12 @@ eal_parse_service_corelist(const char *corelist)
 				min = idx;
 			for (idx = min; idx <= max; idx++) {
 				if (cfg->lcore_role[idx] != ROLE_SERVICE) {
-					/* handle master lcore already parsed */
+					/* handle initial lcore already parsed */
 					uint32_t lcore = idx;
-					if (cfg->master_lcore == lcore &&
-							master_lcore_parsed) {
+					if (cfg->initial_lcore == lcore &&
+							initial_lcore_parsed) {
 						RTE_LOG(ERR, EAL,
-							"Error: lcore %u is master lcore, cannot use as service core\n",
+							"Error: lcore %u is initial lcore, cannot use as service core\n",
 							idx);
 						return -1;
 					}
@@ -746,25 +746,25 @@ eal_parse_corelist(const char *corelist, int *cores)
 	return 0;
 }
 
-/* Changes the lcore id of the master thread */
+/* Changes the lcore id of the initial thread */
 static int
-eal_parse_master_lcore(const char *arg)
+eal_parse_initial_lcore(const char *arg)
 {
 	char *parsing_end;
 	struct rte_config *cfg = rte_eal_get_configuration();
 
 	errno = 0;
-	cfg->master_lcore = (uint32_t) strtol(arg, &parsing_end, 0);
+	cfg->initial_lcore = (uint32_t) strtol(arg, &parsing_end, 0);
 	if (errno || parsing_end[0] != 0)
 		return -1;
-	if (cfg->master_lcore >= RTE_MAX_LCORE)
+	if (cfg->initial_lcore >= RTE_MAX_LCORE)
 		return -1;
-	master_lcore_parsed = 1;
+	initial_lcore_parsed = 1;
 
-	/* ensure master core is not used as service core */
-	if (lcore_config[cfg->master_lcore].core_role == ROLE_SERVICE) {
+	/* ensure initial core is not used as service core */
+	if (lcore_config[cfg->initial_lcore].core_role == ROLE_SERVICE) {
 		RTE_LOG(ERR, EAL,
-			"Error: Master lcore is used as a service core\n");
+			"Error: Initial lcore is used as a service core\n");
 		return -1;
 	}
 
@@ -1502,10 +1502,10 @@ eal_parse_common_option(int opt, const char *optarg,
 		conf->process_type = eal_parse_proc_type(optarg);
 		break;
 
-	case OPT_MASTER_LCORE_NUM:
-		if (eal_parse_master_lcore(optarg) < 0) {
+	case OPT_INITIAL_LCORE_NUM:
+		if (eal_parse_initial_lcore(optarg) < 0) {
 			RTE_LOG(ERR, EAL, "invalid parameter for --"
-					OPT_MASTER_LCORE "\n");
+					OPT_INITIAL_LCORE "\n");
 			return -1;
 		}
 		break;
@@ -1673,9 +1673,9 @@ compute_ctrl_threads_cpuset(struct internal_config *internal_cfg)
 
 	RTE_CPU_AND(cpuset, cpuset, &default_set);
 
-	/* if no remaining cpu, use master lcore cpu affinity */
+	/* if no remaining cpu, use initial lcore cpu affinity */
 	if (!CPU_COUNT(cpuset)) {
-		memcpy(cpuset, &lcore_config[rte_get_master_lcore()].cpuset,
+		memcpy(cpuset, &lcore_config[rte_get_initial_lcore()].cpuset,
 			sizeof(*cpuset));
 	}
 }
@@ -1707,12 +1707,12 @@ eal_adjust_config(struct internal_config *internal_cfg)
 	if (internal_conf->process_type == RTE_PROC_AUTO)
 		internal_conf->process_type = eal_proc_type_detect();
 
-	/* default master lcore is the first one */
-	if (!master_lcore_parsed) {
-		cfg->master_lcore = rte_get_next_lcore(-1, 0, 0);
-		if (cfg->master_lcore >= RTE_MAX_LCORE)
+	/* default initial lcore is the first one */
+	if (!initial_lcore_parsed) {
+		cfg->initial_lcore = rte_get_next_lcore(-1, 0, 0);
+		if (cfg->initial_lcore >= RTE_MAX_LCORE)
 			return -1;
-		lcore_config[cfg->master_lcore].core_role = ROLE_RTE;
+		lcore_config[cfg->initial_lcore].core_role = ROLE_RTE;
 	}
 
 	compute_ctrl_threads_cpuset(internal_cfg);
@@ -1732,8 +1732,8 @@ eal_check_common_options(struct internal_config *internal_cfg)
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 
-	if (cfg->lcore_role[cfg->master_lcore] != ROLE_RTE) {
-		RTE_LOG(ERR, EAL, "Master lcore is not enabled for DPDK\n");
+	if (cfg->lcore_role[cfg->initial_lcore] != ROLE_RTE) {
+		RTE_LOG(ERR, EAL, "Initial lcore is not enabled for DPDK\n");
 		return -1;
 	}
 
@@ -1831,7 +1831,7 @@ eal_common_usage(void)
 	       "                      '( )' can be omitted for single element group,\n"
 	       "                      '@' can be omitted if cpus and lcores have the same value\n"
 	       "  -s SERVICE COREMASK Hexadecimal bitmask of cores to be used as service cores\n"
-	       "  --"OPT_MASTER_LCORE" ID   Core ID that is used as master\n"
+	       "  --"OPT_INITIAL_LCORE" ID   Core ID that is used as initial\n"
 	       "  --"OPT_MBUF_POOL_OPS_NAME" Pool ops name for mbuf to use\n"
 	       "  -n CHANNELS         Number of memory channels\n"
 	       "  -m MB               Memory to allocate (see also --"OPT_SOCKET_MEM")\n"

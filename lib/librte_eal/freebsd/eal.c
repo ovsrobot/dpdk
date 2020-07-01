@@ -622,10 +622,10 @@ eal_check_mem_on_local_socket(void)
 	int socket_id;
 	const struct rte_config *config = rte_eal_get_configuration();
 
-	socket_id = rte_lcore_to_socket_id(config->master_lcore);
+	socket_id = rte_lcore_to_socket_id(config->initial_lcore);
 
 	if (rte_memseg_list_walk(check_socket, &socket_id) == 0)
-		RTE_LOG(WARNING, EAL, "WARNING: Master core has no memory on local socket!\n");
+		RTE_LOG(WARNING, EAL, "WARNING: Initial core has no memory on local socket!\n");
 }
 
 
@@ -845,23 +845,23 @@ rte_eal_init(int argc, char **argv)
 
 	eal_check_mem_on_local_socket();
 
-	eal_thread_init_master(config->master_lcore);
+	eal_thread_initial_lcore(config->initial_lcore);
 
 	ret = eal_thread_dump_affinity(cpuset, sizeof(cpuset));
 
-	RTE_LOG(DEBUG, EAL, "Master lcore %u is ready (tid=%p;cpuset=[%s%s])\n",
-		config->master_lcore, thread_id, cpuset,
+	RTE_LOG(DEBUG, EAL, "Initial lcore %u is ready (tid=%p;cpuset=[%s%s])\n",
+		rte_config.initial_lcore, thread_id, cpuset,
 		ret == 0 ? "" : "...");
 
-	RTE_LCORE_FOREACH_SLAVE(i) {
+	RTE_LCORE_FOREACH_WORKER(i) {
 
 		/*
-		 * create communication pipes between master thread
+		 * create communication pipes between initial thread
 		 * and children
 		 */
-		if (pipe(lcore_config[i].pipe_master2slave) < 0)
+		if (pipe(lcore_config[i].pipe_init2worker) < 0)
 			rte_panic("Cannot create pipe\n");
-		if (pipe(lcore_config[i].pipe_slave2master) < 0)
+		if (pipe(lcore_config[i].pipe_worker2init) < 0)
 			rte_panic("Cannot create pipe\n");
 
 		lcore_config[i].state = WAIT;
@@ -874,15 +874,15 @@ rte_eal_init(int argc, char **argv)
 
 		/* Set thread_name for aid in debugging. */
 		snprintf(thread_name, sizeof(thread_name),
-				"lcore-slave-%d", i);
+				"lcore-work-%d", i);
 		rte_thread_setname(lcore_config[i].thread_id, thread_name);
 	}
 
 	/*
-	 * Launch a dummy function on all slave lcores, so that master lcore
+	 * Launch a dummy function on all worker lcores, so that initial lcore
 	 * knows they are all ready when this function returns.
 	 */
-	rte_eal_mp_remote_launch(sync_func, NULL, SKIP_MASTER);
+	rte_eal_mp_remote_launch(sync_func, NULL, SKIP_INITIAL);
 	rte_eal_mp_wait_lcore();
 
 	/* initialize services so vdevs register service during bus_probe. */

@@ -79,6 +79,7 @@ DPDK_20.0 {
 	rte_hexdump;
 	rte_hypervisor_get;
 	rte_hypervisor_get_name;
+	rte_init_lcore_id;
 	rte_intr_allow_others;
 	rte_intr_callback_register;
 	rte_intr_callback_unregister;
