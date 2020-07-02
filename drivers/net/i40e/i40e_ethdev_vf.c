@@ -90,6 +90,7 @@ static int i40evf_dev_xstats_reset(struct rte_eth_dev *dev);
 static int i40evf_vlan_filter_set(struct rte_eth_dev *dev,
 				  uint16_t vlan_id, int on);
 static int i40evf_vlan_offload_set(struct rte_eth_dev *dev, int mask);
+static void i40evf_dev_release(struct rte_eth_dev *dev);
 static void i40evf_dev_close(struct rte_eth_dev *dev);
 static int  i40evf_dev_reset(struct rte_eth_dev *dev);
 static int i40evf_dev_promiscuous_enable(struct rte_eth_dev *dev);
@@ -1080,13 +1081,10 @@ i40evf_request_queues(struct rte_eth_dev *dev, uint16_t num)
 	args.out_buffer = vf->aq_resp;
 	args.out_size = I40E_AQ_BUF_SZ;
 
-	rte_eal_alarm_cancel(i40evf_dev_alarm_handler, dev);
 	err = i40evf_execute_vf_cmd(dev, &args);
 	if (err)
 		PMD_DRV_LOG(ERR, "fail to execute command OP_REQUEST_QUEUES");
 
-	rte_eal_alarm_set(I40EVF_ALARM_INTERVAL,
-			  i40evf_dev_alarm_handler, dev);
 	return err;
 }
 
@@ -1514,7 +1512,7 @@ i40evf_dev_init(struct rte_eth_dev *eth_dev)
 	hw->bus.device = pci_dev->addr.devid;
 	hw->bus.func = pci_dev->addr.function;
 	hw->hw_addr = (void *)pci_dev->mem_resource[0].addr;
-	hw->adapter_stopped = 0;
+	hw->adapter_stopped = 1;
 	hw->adapter_closed = 0;
 
 	/* Pass the information to the rte_eth_dev_close() that it should also
@@ -1610,16 +1608,39 @@ i40evf_dev_configure(struct rte_eth_dev *dev)
 	ad->tx_vec_allowed = true;
 
 	if (num_queue_pairs > vf->vsi_res->num_queue_pairs) {
-		int ret = 0;
+		struct i40e_hw *hw;
+		int ret;
 
+		/*
+		 * All VF resources will be reallocated, so change queue pairs
+		 * in secondary processes is forbidden.
+		 */
+		if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+			PMD_DRV_LOG(ERR,
+				"For secondary processes, change queue pairs is forbidden!");
+			return -ENOTSUP;
+		}
+
+		hw  = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 		PMD_DRV_LOG(INFO, "change queue pairs from %u to %u",
 			    vf->vsi_res->num_queue_pairs, num_queue_pairs);
+		if (hw->adapter_stopped == 0) {
+			PMD_DRV_LOG(WARNING, "Device must be stopped first!");
+			return -EINVAL;
+		}
+
+		rte_eal_alarm_cancel(i40evf_dev_alarm_handler, dev);
 		ret = i40evf_request_queues(dev, num_queue_pairs);
-		if (ret != 0)
+		if (ret)
 			return ret;
 
-		ret = i40evf_dev_reset(dev);
-		if (ret != 0)
+		/*
+		 * The device has been reseted after queue resources changed
+		 * and must be reinitiated.
+		 */
+		i40evf_dev_release(dev);
+		ret = i40evf_dev_init(dev);
+		if (ret)
 			return ret;
 	}
 
@@ -2356,10 +2377,7 @@ static void
 i40evf_dev_close(struct rte_eth_dev *dev)
 {
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct i40e_vf *vf = I40EVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
-
 	i40evf_dev_stop(dev);
-	i40e_dev_free_queues(dev);
 	/*
 	 * disable promiscuous mode before reset vf
 	 * it is a workaround solution when work with kernel driver
@@ -2370,19 +2388,30 @@ i40evf_dev_close(struct rte_eth_dev *dev)
 	rte_eal_alarm_cancel(i40evf_dev_alarm_handler, dev);
 
 	i40evf_reset_vf(dev);
-	i40e_shutdown_adminq(hw);
-	i40evf_disable_irq0(hw);
+	i40evf_dev_release(dev);
 
 	dev->dev_ops = NULL;
 	dev->rx_pkt_burst = NULL;
 	dev->tx_pkt_burst = NULL;
+
+	hw->adapter_closed = 1;
+}
+
+static void
+i40evf_dev_release(struct rte_eth_dev *dev)
+{
+	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct i40e_vf *vf = I40EVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+
+	i40e_shutdown_adminq(hw);
+	i40evf_disable_irq0(hw);
 
 	rte_free(vf->vf_res);
 	vf->vf_res = NULL;
 	rte_free(vf->aq_resp);
 	vf->aq_resp = NULL;
 
-	hw->adapter_closed = 1;
+	i40e_dev_free_queues(dev);
 }
 
 /*
