@@ -250,6 +250,10 @@ struct rte_event_crypto_adapter_conf {
 	 * max_nb crypto ops. This isn't treated as a requirement; batching
 	 * may cause the adapter to process more than max_nb crypto ops.
 	 */
+	uint64_t reserved_64s[4];
+	/**< Reserved for future fields. */
+	void *reserved_ptrs[4];
+	/**< Reserved for future fields. */
 };
 
 /**

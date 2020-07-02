@@ -171,6 +171,10 @@ struct rte_event_timer_adapter_conf {
 	/**< Total number of timers per adapter */
 	uint64_t flags;
 	/**< Timer adapter config flags (RTE_EVENT_TIMER_ADAPTER_F_*) */
+	uint64_t reserved_64s[4];
+	/**< Reserved for future fields. */
+	void *reserved_ptrs[4];
+	/**< Reserved for future fields. */
 };
 
 /**
@@ -268,6 +272,10 @@ struct rte_event_timer_adapter_info {
 	/**< Event timer adapter capabilities */
 	int16_t event_dev_port_id;
 	/**< Event device port ID, if applicable */
+	uint64_t reserved_64s[4];
+	/**< Reserved for future fields. */
+	void *reserved_ptrs[4];
+	/**< Reserved for future fields. */
 };
 
 /**

@@ -97,6 +97,10 @@ struct rte_event_eth_tx_adapter_conf {
 	 * max_nb_tx mbufs. This isn't treated as a requirement; batching may
 	 * cause the adapter to process more than max_nb_tx mbufs.
 	 */
+	uint64_t reserved_64s[4];
+	/**< Reserved for future fields. */
+	void *reserved_ptrs[4];
+	/**< Reserved for future fields. */
 };
 
 /**

@@ -112,6 +112,10 @@ struct rte_event_eth_rx_adapter_conf {
 	 * max_nb_rx mbufs. This isn't treated as a requirement; batching may
 	 * cause the adapter to process more than max_nb_rx mbufs.
 	 */
+	uint64_t reserved_64s[4];
+	/**< Reserved for future fields. */
+	void *reserved_ptrs[4];
+	/**< Reserved for future fields. */
 };
 
 /**
@@ -171,6 +175,10 @@ struct rte_event_eth_rx_adapter_queue_conf {
 	 * The event adapter sets ev.event_type to RTE_EVENT_TYPE_ETHDEV in the
 	 * enqueued event.
 	 */
+	uint64_t reserved_64s[4];
+	/**< Reserved for future fields. */
+	void *reserved_ptrs[4];
+	/**< Reserved for future fields. */
 };
 
 /**

@@ -387,6 +387,10 @@ struct rte_event_dev_info {
 	 */
 	uint32_t event_dev_cap;
 	/**< Event device capabilities(RTE_EVENT_DEV_CAP_)*/
+	uint64_t reserved_64s[4];
+	/**< Reserved for future fields. */
+	void *reserved_ptrs[4];
+	/**< Reserved for future fields. */
 };
 
 /**
@@ -494,6 +498,10 @@ struct rte_event_dev_config {
 	 */
 	uint32_t event_dev_cfg;
 	/**< Event device config flags(RTE_EVENT_DEV_CFG_)*/
+	uint64_t reserved_64s[4];
+	/**< Reserved for future fields. */
+	void *reserved_ptrs[4];
+	/**< Reserved for future fields. */
 };
 
 /**
@@ -574,6 +582,10 @@ struct rte_event_queue_conf {
 	 * event device supported priority value.
 	 * Valid when the device has RTE_EVENT_DEV_CAP_QUEUE_QOS capability
 	 */
+	uint64_t reserved_64s[4];
+	/**< Reserved for future fields. */
+	void *reserved_ptrs[4];
+	/**< Reserved for future fields. */
 };
 
 /**
@@ -705,6 +717,10 @@ struct rte_event_port_conf {
 	 * RTE_EVENT_OP_FORWARD. Must be false when the device is not
 	 * RTE_EVENT_DEV_CAP_IMPLICIT_RELEASE_DISABLE capable.
 	 */
+	uint64_t reserved_64s[4];
+	/**< Reserved for future fields. */
+	void *reserved_ptrs[4];
+	/**< Reserved for future fields. */
 };
 
 /**
