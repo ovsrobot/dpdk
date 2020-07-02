@@ -529,6 +529,11 @@ struct rte_event_timer_adapter {
 	RTE_STD_C11
 	uint8_t allocated : 1;
 	/**< Flag to indicate that this adapter has been allocated */
+
+	uint64_t reserved_64s[4];
+	/**< Reserved for future fields */
+	void *reserved_ptrs[4];
+	/**< Reserved for future fields */
 } __rte_cache_aligned;
 
 #define ADAPTER_VALID_OR_ERR_RET(adapter, retval) do {		\

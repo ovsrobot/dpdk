@@ -105,6 +105,11 @@ struct rte_event_timer_adapter_data {
 	RTE_STD_C11
 	uint8_t started : 1;
 	/**< Flag to indicate adapter started. */
+
+	uint64_t reserved_64s[4];
+	/**< Reserved for future fields */
+	void *reserved_ptrs[4];
+	/**< Reserved for future fields */
 } __rte_cache_aligned;
 
 #ifdef __cplusplus
