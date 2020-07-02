@@ -241,4 +241,8 @@ EXPERIMENTAL {
 	__rte_ethdev_trace_rx_burst;
 	__rte_ethdev_trace_tx_burst;
 	rte_flow_get_aged_flows;
+
+	# added in 20.08
+	rte_eth_link_format;
+	rte_eth_link_printf;
 };
