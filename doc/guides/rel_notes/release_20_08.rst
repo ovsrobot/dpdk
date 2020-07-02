@@ -91,6 +91,16 @@ New Features
 
   * Added support for DCF datapath configuration.
 
+* **Updated Broadcom bnxt driver.**
+
+  Updated the Broadcom bnxt driver with new features and improvements, including:
+
+  * Added support for VF representors.
+  * Added support for multiple devices.
+  * Added support for new resource manager API.
+  * Added support for VXLAN encap/decap.
+  * Added support for rte_flow_query for COUNT action.
+
 * **Added support for BPF_ABS/BPF_IND load instructions.**
 
   Added support for two BPF non-generic instructions:
@@ -106,7 +116,6 @@ New Features
   * Measure ``rte_flow`` deletion rate.
   * Dump ``rte_flow`` memory consumption.
   * Measure packet per second forwarding.
-
 
 Removed Items
 -------------
