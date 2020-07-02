@@ -266,6 +266,7 @@ extern struct fwd_engine tx_only_engine;
 extern struct fwd_engine csum_fwd_engine;
 extern struct fwd_engine icmp_echo_engine;
 extern struct fwd_engine noisy_vnf_engine;
+extern struct fwd_engine five_tuple_swap_fwd_engine;
 #ifdef SOFTNIC
 extern struct fwd_engine softnic_fwd_engine;
 #endif

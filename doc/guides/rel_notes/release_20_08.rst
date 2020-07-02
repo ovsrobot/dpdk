@@ -107,6 +107,12 @@ New Features
   * Dump ``rte_flow`` memory consumption.
   * Measure packet per second forwarding.
 
+* **Added new testpmd forward mode.**
+
+  Added new ``5tswap`` forward mode to testpmd.
+  the  ``5tswap`` swaps source and destination in layers 2,3,4
+  for ipv4 and ipv6 in L3 and UDP and TCP in L4.
+
 
 Removed Items
 -------------
