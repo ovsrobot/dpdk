@@ -130,3 +130,31 @@ Deprecation Notices
   Python 2 support will be completely removed in 20.11.
   In 20.08, explicit deprecation warnings will be displayed when running
   scripts with Python 2.
+
+* eventdev: Three public data structures will be updated in 20.11;
+  ``rte_event_dev_info``, ``rte_event_dev_config``, and
+  ``rte_event_port_conf``.
+  Two new members will be added to the ``rte_event_dev_info`` struct.
+  The first, max_event_port_links, will be a uint8_t, and represents the
+  maximum number of queues that can be linked to a single event port by
+  this device. The second, max_single_link_event_port_queue_pairs, will be a
+  uint8_t, and represents the maximum number of event ports and queues that
+  are optimized for (and only capable of) single-link configurations
+  supported by this device. These ports and queues are not accounted for in
+  max_event_ports or max_event_queues.
+  One new member will be added to the ``rte_event_dev_config`` struct. The
+  nb_single_link_event_port_queues member will be a uint8_t, and will
+  represent the number of event ports and queues that will be singly-linked
+  to each other. These are a subset of the overall event ports and queues.
+  This value cannot exceed nb_event_ports or nb_event_queues. If the
+  device has ports and queues that are optimized for single-link usage, this
+  field is a hint for how many to allocate; otherwise, regular event ports and
+  queues can be used.
+  Finally, the ``rte_event_port_conf`` struct will be
+  modified as follows. The uint8_t implicit_release_disabled field
+  will be replaced by a uint32_t event_port_cfg field. The new field will
+  initially have two bits assigned. RTE_EVENT_PORT_CFG_DISABLE_IMPL_REL
+  will have the same meaning as implicit_release_disabled. The second bit,
+  RTE_EVENT_PORT_CFG_SINGLE_LINK will be set if the event port links only
+  to a single event queue.
+
