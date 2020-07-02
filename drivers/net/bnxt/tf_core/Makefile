@@ -25,6 +25,7 @@ SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_shadow_tbl.c
 SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_shadow_tcam.c
 SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_tcam.c
 SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_util.c
+SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_if_tbl.c
 
 SYMLINK-$(CONFIG_RTE_LIBRTE_BNXT_PMD)-include += tf_core/tf_core.h
 SYMLINK-$(CONFIG_RTE_LIBRTE_BNXT_PMD)-include += tf_core/tf_project.h
@@ -33,3 +34,4 @@ SYMLINK-$(CONFIG_RTE_LIBRTE_BNXT_PMD)-include += tf_core/tf_identifier.h
 SYMLINK-$(CONFIG_RTE_LIBRTE_BNXT_PMD)-include += tf_core/tf_tbl.h
 SYMLINK-$(CONFIG_RTE_LIBRTE_BNXT_PMD)-include += tf_core/stack.h
 SYMLINK-$(CONFIG_RTE_LIBRTE_BNXT_PMD)-include += tf_core/tf_tcam.h
+SYMLINK-$(CONFIG_RTE_LIBRTE_BNXT_PMD)-include += tf_core/tf_if_tbl.h
