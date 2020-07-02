@@ -238,7 +238,7 @@ dpdk_conf.set('RTE_ENABLE_TRACE_FP', get_option('enable_trace_fp'))
 dpdk_conf.set('RTE_MAX_VFIO_GROUPS', 64)
 dpdk_conf.set('RTE_DRIVER_MEMPOOL_BUCKET_SIZE_KB', 64)
 dpdk_conf.set('RTE_LIBRTE_DPAA2_USE_PHYS_IOVA', true)
-
+dpdk_conf.set('RTE_METRICS_MAX_METRICS', 256)
 
 compile_time_cpuflags = []
 subdir(arch_subdir)

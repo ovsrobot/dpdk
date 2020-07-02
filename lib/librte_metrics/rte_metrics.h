@@ -34,7 +34,6 @@ extern int metrics_initialized;
 
 /** Maximum length of metric name (including null-terminator) */
 #define RTE_METRICS_MAX_NAME_LEN 64
-#define RTE_METRICS_MAX_METRICS 256
 
 /**
  * Global metric special id.
