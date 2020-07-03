@@ -107,6 +107,12 @@ New Features
   * Dump ``rte_flow`` memory consumption.
   * Measure packet per second forwarding.
 
+* **Added the support for vfio-pci new VF token interface.**
+
+  From Linux 5.7, vfio-pci supports to bind both SR-IOV PF and the created VFs,
+  it uses a shared VF token (UUID) to represent the collaboration between PF
+  and VFs. Update DPDK PCI driver to gain the access to the PF and VFs devices
+  by appending the VF token parameter.
 
 Removed Items
 -------------
