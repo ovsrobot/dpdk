@@ -1907,7 +1907,7 @@ struct rte_pci_driver mlx5_driver = {
 /**
  * Driver initialization routine.
  */
-RTE_INIT(rte_mlx5_pmd_init)
+RTE_INIT_PRIO(rte_mlx5_pmd_init, CLASS)
 {
 	/* Initialize driver log type. */
 	mlx5_logtype = rte_log_register("pmd.net.mlx5");
