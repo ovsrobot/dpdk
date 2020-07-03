@@ -122,6 +122,12 @@ New Features
   * Dump ``rte_flow`` memory consumption.
   * Measure packet per second forwarding.
 
+* **Added support for DOCSIS protocol to dpdk-test-crypto-perf application.**
+
+  Updated the ``dpdk-test-crypto-perf`` application to support the DOCSIS
+  protocol in order to measure the throughput of combined crypto and CRC
+  operations.
+
 
 Removed Items
 -------------
