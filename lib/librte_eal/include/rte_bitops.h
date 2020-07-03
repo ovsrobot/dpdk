@@ -17,6 +17,8 @@
 #include <rte_debug.h>
 #include <rte_compat.h>
 
+#define RTE_BIT(bit_num)	(1UL << (bit_num))
+
 /*------------------------ 32-bit relaxed operations ------------------------*/
 
 /**
