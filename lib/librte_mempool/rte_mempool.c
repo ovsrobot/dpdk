@@ -622,6 +622,12 @@ rte_mempool_populate_default(struct rte_mempool *mp)
 			goto fail;
 		}
 
+		if (max_alloc_size < min_chunk_size) {
+			rte_errno = ENOMEM;
+			ret = -rte_errno;
+			goto fail;
+		}
+
 		/* if we're trying to reserve contiguous memory, add appropriate
 		 * memzone flag.
 		 */
