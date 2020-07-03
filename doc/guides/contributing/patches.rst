@@ -529,6 +529,10 @@ results in a subfolder of the current working directory.
 The environment variable ``DPDK_ABI_REF_DIR`` can be set so that the results go
 to a different location.
 
+Sample::
+
+        DPDK_ABI_REF_VERSION=v19.11 DPDK_ABI_REF_DIR=/tmp ./devtools/test-meson-builds.sh
+
 
 Sending Patches
 ---------------
