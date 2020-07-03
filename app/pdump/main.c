@@ -41,10 +41,12 @@
 #define PDUMP_RING_SIZE_ARG "ring-size"
 #define PDUMP_MSIZE_ARG "mbuf-size"
 #define PDUMP_NUM_MBUFS_ARG "total-num-mbufs"
+#define PDUMP_SNAPLEN_ARG "snaplen"
 
 #define VDEV_NAME_FMT "net_pcap_%s_%d"
 #define VDEV_PCAP_ARGS_FMT "tx_pcap=%s"
 #define VDEV_IFACE_ARGS_FMT "tx_iface=%s"
+#define VDEV_SNAPLEN_ARGS_FMT "snaplen=%d"
 #define TX_STREAM_SIZE 64
 
 #define MP_NAME "pdump_pool_%d"
@@ -97,6 +99,7 @@ static const char * const valid_pdump_arguments[] = {
 	PDUMP_RING_SIZE_ARG,
 	PDUMP_MSIZE_ARG,
 	PDUMP_NUM_MBUFS_ARG,
+	PDUMP_SNAPLEN_ARG,
 	NULL
 };
 
@@ -116,6 +119,7 @@ struct pdump_tuples {
 	uint32_t ring_size;
 	uint16_t mbuf_data_size;
 	uint32_t total_num_mbufs;
+	uint16_t snaplen;
 
 	/* params for library API call */
 	uint32_t dir;
@@ -160,7 +164,8 @@ pdump_usage(const char *prgname)
 			" tx-dev=<iface or pcap file>,"
 			"[ring-size=<ring size>default:16384],"
 			"[mbuf-size=<mbuf data size>default:2176],"
-			"[total-num-mbufs=<number of mbufs>default:65535]'\n",
+			"[total-num-mbufs=<number of mbufs>default:65535],",
+			"[snaplen=<snap length>default:0, meaning no truncation]'\n",
 			prgname);
 }
 
@@ -369,6 +374,19 @@ parse_pdump(const char *optarg)
 		pt->total_num_mbufs = (uint16_t) v.val;
 	} else
 		pt->total_num_mbufs = MBUFS_PER_POOL;
+
+	/* snaplen parsing and validation */
+	cnt1 = rte_kvargs_count(kvlist, PDUMP_SNAPLEN_ARG);
+	if (cnt1 == 1) {
+		v.min = 1;
+		v.max = UINT16_MAX;
+		ret = rte_kvargs_process(kvlist, PDUMP_SNAPLEN_ARG,
+						&parse_uint_value, &v);
+		if (ret < 0)
+			goto free_kvlist;
+		pt->snaplen = (uint16_t) v.val;
+	} else
+		pt->snaplen = 0;
 
 	num_tuples++;
 
@@ -692,6 +710,9 @@ create_mp_ring_vdev(void)
 				 VDEV_IFACE_ARGS_FMT, pt->rx_dev) :
 			snprintf(vdev_args, sizeof(vdev_args),
 				 VDEV_PCAP_ARGS_FMT, pt->rx_dev);
+			snprintf(vdev_args + strlen(vdev_args),
+				 sizeof(vdev_args) - strlen(vdev_args),
+				 ","VDEV_SNAPLEN_ARGS_FMT, pt->snaplen);
 			if (rte_eal_hotplug_add("vdev", vdev_name,
 						vdev_args) < 0) {
 				cleanup_rings();
@@ -722,6 +743,9 @@ create_mp_ring_vdev(void)
 					 VDEV_IFACE_ARGS_FMT, pt->tx_dev) :
 				snprintf(vdev_args, sizeof(vdev_args),
 					 VDEV_PCAP_ARGS_FMT, pt->tx_dev);
+				snprintf(vdev_args + strlen(vdev_args),
+					 sizeof(vdev_args) - strlen(vdev_args),
+					 ","VDEV_SNAPLEN_ARGS_FMT, pt->snaplen);
 				if (rte_eal_hotplug_add("vdev", vdev_name,
 							vdev_args) < 0) {
 					cleanup_rings();
@@ -762,6 +786,9 @@ create_mp_ring_vdev(void)
 				 VDEV_IFACE_ARGS_FMT, pt->rx_dev) :
 			snprintf(vdev_args, sizeof(vdev_args),
 				 VDEV_PCAP_ARGS_FMT, pt->rx_dev);
+			snprintf(vdev_args + strlen(vdev_args),
+				 sizeof(vdev_args) - strlen(vdev_args),
+				 ","VDEV_SNAPLEN_ARGS_FMT, pt->snaplen);
 			if (rte_eal_hotplug_add("vdev", vdev_name,
 						vdev_args) < 0) {
 				cleanup_rings();
@@ -799,6 +826,9 @@ create_mp_ring_vdev(void)
 				 VDEV_IFACE_ARGS_FMT, pt->tx_dev) :
 			snprintf(vdev_args, sizeof(vdev_args),
 				 VDEV_PCAP_ARGS_FMT, pt->tx_dev);
+			snprintf(vdev_args + strlen(vdev_args),
+				 sizeof(vdev_args) - strlen(vdev_args),
+				 ","VDEV_SNAPLEN_ARGS_FMT, pt->snaplen);
 			if (rte_eal_hotplug_add("vdev", vdev_name,
 						vdev_args) < 0) {
 				cleanup_rings();
