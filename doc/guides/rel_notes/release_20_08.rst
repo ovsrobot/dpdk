@@ -56,6 +56,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =========================================================
 
+* **rte_*mb APIs are updated to use DMB instruction.**
+
+  Armv8-a memory model has been strengthened to require other-multi-copy
+  atomicity. This allows for using DMB instruction instead of DSB for IO
+  barriers. rte_*mb APIs, for Armv8-a platforms, are changed to use DMB
+  instruction to reflect this.
+
 * **Updated PCAP driver.**
 
   Updated PCAP driver with new features and improvements, including:
