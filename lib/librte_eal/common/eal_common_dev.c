@@ -431,7 +431,7 @@ rte_dev_event_callback_register(const char *device_name,
 				void *cb_arg)
 {
 	struct dev_event_callback *event_cb;
-	int ret;
+	int ret = 0;
 
 	if (!cb_fn)
 		return -EINVAL;
@@ -484,7 +484,7 @@ rte_dev_event_callback_register(const char *device_name,
 	}
 
 	rte_spinlock_unlock(&dev_event_lock);
-	return 0;
+	return ret;
 error:
 	free(event_cb);
 	rte_spinlock_unlock(&dev_event_lock);
