@@ -56,6 +56,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =========================================================
 
+* **Added support for DOCSIS protocol to rte_security.**
+
+  Added support for combined crypto and CRC operations for the DOCSIS protocol
+  to ``rte_security``.
+
 * **Updated PCAP driver.**
 
   Updated PCAP driver with new features and improvements, including:
