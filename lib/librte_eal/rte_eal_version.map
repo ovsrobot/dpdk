@@ -395,4 +395,5 @@ INTERNAL {
 	rte_mem_map;
 	rte_mem_page_size;
 	rte_mem_unmap;
+	__rte_trace_mem_per_thread_alloc;
 };
