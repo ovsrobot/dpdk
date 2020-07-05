@@ -448,6 +448,11 @@ F: app/test/test_compressdev*
 F: doc/guides/prog_guide/compressdev.rst
 F: doc/guides/compressdevs/features/default.ini
 
+RegEx API
+M: Ori Kam <orika@mellanox.com>
+F: lib/librte_regexdev/
+F: doc/guides/prog_guid/regexdev_lib.rst
+ 
 Eventdev API
 M: Jerin Jacob <jerinj@marvell.com>
 T: git://dpdk.org/next/dpdk-next-eventdev
@@ -1188,6 +1193,16 @@ M: Liang Ma <liang.j.ma@intel.com>
 M: Peter Mccarthy <peter.mccarthy@intel.com>
 F: drivers/event/opdl/
 F: doc/guides/eventdevs/opdl.rst
+
+
+RegEx Drivers
+------------------
+M: Ori Kam <orika@mellanox.com>
+F: drivers/regex/
+
+Mellanox BF2
+M: Ori Kam <orika@mellanox.com>
+F: drivers/regex/mlx5/
 
 
 Rawdev Drivers
