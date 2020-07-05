@@ -107,6 +107,11 @@ foreach l:libraries
 			shared_dep = declare_dependency(include_directories: includes)
 			static_dep = shared_dep
 		else
+			if is_windows and use_function_versioning
+				message('@0@: Function versioning is not supported by Windows.'
+				.format(name))
+				use_function_versioning = false
+			endif
 
 			if use_function_versioning
 				cflags += '-DRTE_USE_FUNCTION_VERSIONING'

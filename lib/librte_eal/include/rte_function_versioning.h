@@ -7,7 +7,7 @@
 #define _RTE_FUNCTION_VERSIONING_H_
 #include <rte_common.h>
 
-#ifndef RTE_USE_FUNCTION_VERSIONING
+#if !defined RTE_USE_FUNCTION_VERSIONING && !defined RTE_EXEC_ENV_WINDOWS
 #error Use of function versioning disabled, is "use_function_versioning=true" in meson.build?
 #endif
 
