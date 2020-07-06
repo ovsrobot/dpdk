@@ -397,6 +397,24 @@ uint64_t get_tsc_freq(void);
 uint64_t get_tsc_freq_arch(void);
 
 /**
+ * Allocate a free lcore to associate to a non-EAL thread.
+ *
+ * @return
+ *   - the id of a lcore with role ROLE_NON_EAL on success.
+ *   - RTE_MAX_LCORE if none was available.
+ */
+unsigned int eal_lcore_non_eal_allocate(void);
+
+/**
+ * Release the lcore used by a non-EAL thread.
+ * Counterpart of eal_lcore_non_eal_allocate().
+ *
+ * @param lcore_id
+ *   The lcore with role ROLE_NON_EAL to release.
+ */
+void eal_lcore_non_eal_release(unsigned int lcore_id);
+
+/**
  * Prepare physical memory mapping
  * i.e. hugepages on Linux and
  *      contigmem on BSD.
@@ -713,5 +731,15 @@ void __rte_thread_init(unsigned int lcore_id, rte_cpuset_t *cpuset);
  * Uninitialize per-lcore info for current thread.
  */
 void __rte_thread_uninit(void);
+
+/**
+ * Mark primary process as not supporting multi-process.
+ */
+bool eal_disable_multiprocess(void);
+
+/**
+ * Instruct primary process that a secondary process wants to attach.
+ */
+bool eal_enable_multiprocess(void);
 
 #endif /* _EAL_PRIVATE_H_ */
