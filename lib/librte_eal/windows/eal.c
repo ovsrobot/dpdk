@@ -66,6 +66,12 @@ eal_proc_type_detect(void)
 	return ptype;
 }
 
+bool
+eal_disable_multiprocess(void)
+{
+	return true;
+}
+
 /* display usage */
 static void
 eal_usage(const char *prgname)

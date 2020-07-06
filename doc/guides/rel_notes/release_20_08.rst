@@ -56,6 +56,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =========================================================
 
+* **Added non-EAL threads registration API.**
+
+  Added a new API to register non-EAL threads as lcores. This can be used by
+  applications to have its threads known of DPDK without suffering from the
+  non-EAL previous limitations in terms of performance.
+
 * **Updated PCAP driver.**
 
   Updated PCAP driver with new features and improvements, including:
