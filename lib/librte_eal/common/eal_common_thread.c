@@ -261,7 +261,7 @@ rte_thread_register(void)
 		rte_errno = EINVAL;
 		return -1;
 	}
-	if (!eal_disable_multiprocess()) {
+	if (!rte_mp_disable()) {
 		RTE_LOG(ERR, EAL, "Multiprocess in use, registering non-EAL threads is not supported.\n");
 		rte_errno = EINVAL;
 		return -1;
