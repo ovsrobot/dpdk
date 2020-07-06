@@ -249,7 +249,8 @@ print_link_info(struct link *link, char *out, size_t out_size)
 	struct rte_eth_link eth_link;
 	uint16_t mtu;
 	int ret;
-
+	char link_speed_text[16];
+	char link_status_text[10];
 	memset(&stats, 0, sizeof(stats));
 	rte_eth_stats_get(link->port_id, &stats);
 
@@ -268,18 +269,19 @@ print_link_info(struct link *link, char *out, size_t out_size)
 	}
 
 	rte_eth_dev_get_mtu(link->port_id, &mtu);
-
+	rte_eth_link_strf(link_speed_text, 16, "%M", &eth_link);
+	rte_eth_link_strf(link_status_text, 10, "%S", &eth_link);
 	snprintf(out, out_size,
 		"\n"
 		"%s: flags=<%s> mtu %u\n"
 		"\tether %02X:%02X:%02X:%02X:%02X:%02X rxqueues %u txqueues %u\n"
-		"\tport# %u  speed %u Mbps\n"
+		"\tport# %u  speed %s Mbps\n"
 		"\tRX packets %" PRIu64"  bytes %" PRIu64"\n"
 		"\tRX errors %" PRIu64"  missed %" PRIu64"  no-mbuf %" PRIu64"\n"
 		"\tTX packets %" PRIu64"  bytes %" PRIu64"\n"
 		"\tTX errors %" PRIu64"\n",
 		link->name,
-		eth_link.link_status == 0 ? "DOWN" : "UP",
+		link_status_text,
 		mtu,
 		mac_addr.addr_bytes[0], mac_addr.addr_bytes[1],
 		mac_addr.addr_bytes[2], mac_addr.addr_bytes[3],
@@ -287,7 +289,7 @@ print_link_info(struct link *link, char *out, size_t out_size)
 		link->n_rxq,
 		link->n_txq,
 		link->port_id,
-		eth_link.link_speed,
+		link_speed_text,
 		stats.ipackets,
 		stats.ibytes,
 		stats.ierrors,
