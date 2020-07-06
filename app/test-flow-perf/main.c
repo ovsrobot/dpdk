@@ -59,6 +59,13 @@ static struct rte_mempool *mbuf_mp;
 static uint32_t nb_lcores;
 static uint32_t flows_count;
 static uint32_t iterations_number;
+/*
+ * hairpinq: represent the number of hairpin queues needed
+ * to be initialized.
+ *
+ * In 0 case means no hairpin queues needed which is the
+ * default.
+ */
 static uint32_t hairpinq;
 static uint32_t nb_lcores;
 
@@ -929,6 +936,7 @@ init_port(void)
 {
 	int ret;
 	uint16_t std_queue;
+	/* hairpin_q represent hairpin queue id to be initialized. */
 	uint16_t hairpin_q;
 	uint16_t port_id;
 	uint16_t nr_ports;
@@ -1012,8 +1020,19 @@ init_port(void)
 				rte_strerror(-ret), port_id);
 
 		if (hairpinq != 0) {
+			/*
+			 * Each hairpin queue setup need a hairpin configuration
+			 * object, which determine the TX path for hairpin.
+			 *
+			 * The peering here represent the TX side, which mean the
+			 * peer.port represent TX port, and peer.queue represent
+			 * tx_queue.
+			 *
+			 * So if RXQ=4 and TXQ=4, and first hairpin_q is 4 after
+			 * [0, 1, 2, 3], then tx_queue is TXQ+i which is 4 as well.
+			 */
 			for (hairpin_q = RXQ_NUM, std_queue = 0;
-					std_queue < nr_queues;
+					hairpin_q < nr_queues;
 					hairpin_q++, std_queue++) {
 				hairpin_conf.peers[0].port = port_id;
 				hairpin_conf.peers[0].queue =
@@ -1028,7 +1047,7 @@ init_port(void)
 			}
 
 			for (hairpin_q = TXQ_NUM, std_queue = 0;
-					std_queue < nr_queues;
+					hairpin_q < nr_queues;
 					hairpin_q++, std_queue++) {
 				hairpin_conf.peers[0].port = port_id;
 				hairpin_conf.peers[0].queue =
