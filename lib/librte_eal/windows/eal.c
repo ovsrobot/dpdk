@@ -67,7 +67,7 @@ eal_proc_type_detect(void)
 }
 
 bool
-eal_disable_multiprocess(void)
+rte_mp_disable(void)
 {
 	return true;
 }

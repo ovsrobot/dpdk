@@ -734,11 +734,6 @@ void __rte_thread_init(unsigned int lcore_id, rte_cpuset_t *cpuset);
 void __rte_thread_uninit(void);
 
 /**
- * Mark primary process as not supporting multi-process.
- */
-bool eal_disable_multiprocess(void);
-
-/**
  * Instruct primary process that a secondary process wants to attach.
  */
 bool eal_enable_multiprocess(void);
