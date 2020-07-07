@@ -51,6 +51,13 @@ print_usage () {
 
 check_forbidden_additions() { # <patch>
 	res=0
+	c11_atomics_dir="lib/librte_distributor lib/librte_hash lib/librte_kni
+			 lib/librte_lpm lib/librte_rcu lib/librte_ring
+			 lib/librte_stack lib/librte_vhost
+			 drivers/event/octeontx drivers/event/octeontx2
+			 drivers/event/opdl drivers/net/bnx2x drivers/net/hinic
+			 drivers/net/hns3 drivers/net/memif drivers/net/thunderx
+			 drivers/net/virtio examples/l2fwd-event"
 
 	# refrain from new additions of rte_panic() and rte_exit()
 	# multiple folders and expressions are separated by spaces
@@ -74,6 +81,39 @@ check_forbidden_additions() { # <patch>
 		-v EXPRESSIONS='for[[:space:]]*\\((char|u?int|unsigned|s?size_t)' \
 		-v RET_ON_FAIL=1 \
 		-v MESSAGE='Declaring a variable inside for()' \
+
+	# refrain from new additions of 16/32/64 bits rte_atomic_xxx()
+	# multiple folders and expressions are separated by spaces
+	awk -v FOLDERS="$c11_atomics_dir" \
+		-v EXPRESSIONS="rte_atomic[0-9][0-9]_.*\\\(" \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Use of rte_atomicNN_xxx APIs not allowed, use __atomic_xxx built-ins' \
+		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		"$1" || res=1
+
+	# refrain from new additions of rte_smp_XXmb()
+	# multiple folders and expressions are separated by spaces
+	awk -v FOLDERS="$c11_atomics_dir" \
+		-v EXPRESSIONS="rte_smp_(r|w)?mb\\\(" \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Use of rte_smp_r/wmb not allowed, use __atomic_xxx built-ins' \
+		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		"$1" || res=1
+
+	# refrain from using compiler __sync built-ins
+	awk -v FOLDERS="lib drivers app examples" \
+		-v EXPRESSIONS="__sync_.*\\\(" \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Use of __sync_xxx built-ins not allowed, use __atomic_xxx built-ins' \
+		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		"$1" || res=1
+
+	# refrain from using compiler __atomic_thread_fence()
+	# It should be avoided on x86 for SMP case.
+	awk -v FOLDERS="lib drivers app examples" \
+		-v EXPRESSIONS="__atomic_thread_fence\\\(" \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Use of __atomic_thread_fence is not allowed, use rte_atomic_thread_fence' \
 		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
 		"$1" || res=1
 
