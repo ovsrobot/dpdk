@@ -110,6 +110,11 @@ New Features
   which are used to access packet data in a safe manner. Currently JIT support
   for these instructions is implemented for x86 only.
 
+* **Added eCPRI protocol support in rte_flow.**
+
+  The ``ECPRI`` item have been added to support eCPRI packet offloading for
+  5G network.
+
 * **Added flow performance test application.**
 
   Added new application to test ``rte_flow`` performance, including:
