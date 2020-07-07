@@ -41,6 +41,10 @@ hugepage_claim_privilege(void)
 		goto exit;
 	}
 
+	/* AdjustTokenPrivileges() may succeed with ERROR_NOT_ALL_ASSIGNED. */
+	if (GetLastError() != ERROR_SUCCESS)
+		goto exit;
+
 	ret = 0;
 
 exit:
