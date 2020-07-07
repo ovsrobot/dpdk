@@ -119,6 +119,11 @@ New Features
   See the :doc:`../sample_app_ug/l2_forward_real_virtual` for more
   details of this parameter usage.
 
+* **Updated NXP dpaa2 ethdev PMD.**
+
+  Updated the NXP dpaa2 ethdev  with new features and improvements, including:
+
+  * Added support to use datapath APIs from non-EAL pthread
 
 Removed Items
 -------------
