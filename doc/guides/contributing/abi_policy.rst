@@ -40,7 +40,9 @@ General Guidelines
    maintaining ABI stability through one year of DPDK releases starting from
    DPDK 19.11. This policy will be reviewed in 2020, with intention of
    lengthening the stability period. Additional implementation detail can be
-   found in the :ref:`release notes <20_02_abi_changes>`.
+   found in the :ref:`release notes <20_02_abi_changes>`. Please note that this
+   policy does not currently apply to the :doc:`Window build
+   <../windows_gsg/intro>`.
 
 What is an ABI?
 ~~~~~~~~~~~~~~~
