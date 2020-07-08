@@ -1027,6 +1027,15 @@ port_offload_cap_display(portid_t port_id)
 			printf("off\n");
 	}
 
+	if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_SEND_ON_TIMESTAMP) {
+		printf("Tx scheduling on timestamp:    ");
+		if (ports[port_id].dev_conf.txmode.offloads &
+		    DEV_TX_OFFLOAD_SEND_ON_TIMESTAMP)
+			printf("on\n");
+		else
+			printf("off\n");
+	}
+
 }
 
 int
@@ -2990,6 +2999,40 @@ set_tx_pkt_segments(unsigned *seg_lengths, unsigned nb_segs)
 
 	tx_pkt_length  = tx_pkt_len;
 	tx_pkt_nb_segs = (uint8_t) nb_segs;
+}
+
+void
+show_tx_pkt_times(void)
+{
+	printf("Interburst gap: %u\n", tx_pkt_times[0]);
+	printf("Intraburst gap: %u\n", tx_pkt_times[1]);
+}
+
+void
+set_tx_pkt_times(unsigned int *tx_times)
+{
+	int offset;
+	int flag;
+
+	static const struct rte_mbuf_dynfield desc_offs = {
+		.name = RTE_MBUF_DYNFIELD_TIMESTAMP_NAME,
+		.size = sizeof(uint64_t),
+		.align = __alignof__(uint64_t),
+	};
+	static const struct rte_mbuf_dynflag desc_flag = {
+		.name = RTE_MBUF_DYNFLAG_TX_TIMESTAMP_NAME,
+	};
+
+	offset = rte_mbuf_dynfield_register(&desc_offs);
+	if (offset < 0 && rte_errno != EEXIST)
+		printf("Dynamic timestamp field registration error: %d",
+		       rte_errno);
+	flag = rte_mbuf_dynflag_register(&desc_flag);
+	if (flag < 0 && rte_errno != EEXIST)
+		printf("Dynamic timestamp flag registration error: %d",
+		       rte_errno);
+	tx_pkt_times[0] = tx_times[0];
+	tx_pkt_times[1] = tx_times[1];
 }
 
 void
