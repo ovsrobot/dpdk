@@ -126,6 +126,17 @@ New Features
   See the :doc:`../sample_app_ug/l2_forward_real_virtual` for more
   details of this parameter usage.
 
+* **Updated Intel i40e driver.**
+
+  Updated i40e PMD with new features and improvements, including:
+
+  * Improved cloud filter.
+    This new feature enables cloud filter for IPv4_UDP/IPv4_TCP/IPv4_SCTP
+    and IPv6_UDP/IPv6_TCP/IPv6_SCTP with SRC port only or DST port only.
+    This supports different filter types for the same packet type.
+    E.g. one IPv4_UDP rules with SRC port only and another IPv4_UDP rule
+    with DST port only.
+
 
 Removed Items
 -------------
