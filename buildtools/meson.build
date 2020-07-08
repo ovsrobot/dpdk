@@ -17,3 +17,4 @@ else
 endif
 map_to_win_cmd = py3 + files('map_to_win.py')
 sphinx_wrapper = py3 + files('call-sphinx-build.py')
+pmdinfogen = py3 + files('pmdinfogen.py')
