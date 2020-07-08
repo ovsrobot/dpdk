@@ -97,6 +97,13 @@ New Features
 
   Updated Marvell octeontx2 driver with cn98xx support.
 
+* **Updated the Intel i40e driver.**
+
+  Updated the Intel i40e driver with new features and improvements, including:
+
+  * Re-implemented get_fdir_info and get_fdir_stat in private API.
+  * Re-implemented set_gre_key_len in private API.
+
 * **Updated the Intel ice driver.**
 
   Updated the Intel ice driver with new features and improvements, including:
