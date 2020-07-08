@@ -103,6 +103,7 @@ New Features
 
   * Re-implemented get_fdir_info and get_fdir_stat in private API.
   * Re-implemented set_gre_key_len in private API.
+  * Added support for flow query RSS.
 
 * **Updated the Intel ixgbe driver.**
 
