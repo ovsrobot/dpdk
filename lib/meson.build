@@ -40,7 +40,7 @@ if is_windows
 		'kvargs',
 		'eal',
 		'ring',
-		'mempool', 'mbuf', 'pci',
+		'mempool', 'mbuf', 'pci', 'net',
 	] # only supported libraries for windows
 endif
 

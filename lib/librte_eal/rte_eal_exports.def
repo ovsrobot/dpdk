@@ -145,3 +145,4 @@ EXPORTS
 	rte_mem_map
 	rte_mem_page_size
 	rte_mem_unmap
+	rte_rand
