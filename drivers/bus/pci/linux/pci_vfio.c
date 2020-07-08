@@ -547,6 +547,14 @@ pci_vfio_mmap_bar(int vfio_dev_fd, struct mapped_pci_resource *vfio_res,
 			bar_index,
 			memreg[0].offset, memreg[0].size,
 			memreg[1].offset, memreg[1].size);
+
+		if (memreg[0].size == 0 && memreg[1].size == 0) {
+			/* No need to map this BAR */
+			RTE_LOG(DEBUG, EAL, "Skipping BAR%d\n", bar_index);
+			bar->size = 0;
+			bar->addr = 0;
+			return 0;
+		}
 	} else {
 		memreg[0].offset = bar->offset;
 		memreg[0].size = bar->size;
@@ -556,7 +564,9 @@ pci_vfio_mmap_bar(int vfio_dev_fd, struct mapped_pci_resource *vfio_res,
 	bar_addr = mmap(bar->addr, bar->size, 0, MAP_PRIVATE |
 			MAP_ANONYMOUS | additional_flags, -1, 0);
 	if (bar_addr != MAP_FAILED) {
-		void *map_addr = NULL;
+		/* Set non NULL initial value for in case of no PCI mapping */
+		void *map_addr = bar_addr;
+
 		if (memreg[0].size) {
 			/* actual map of first part */
 			map_addr = pci_map_resource(bar_addr, vfio_dev_fd,
