@@ -544,6 +544,22 @@ vdev_unplug(struct rte_device *dev)
 	return rte_vdev_uninit(dev->name);
 }
 
+static int
+vdev_remove(void)
+{
+	struct rte_vdev_device *dev;
+	int ret = 0;
+
+	TAILQ_FOREACH(dev, &vdev_device_list, next) {
+		if (vdev_remove_driver(dev) != 0) {
+			VDEV_LOG(INFO, "driver of %s is not removed\n",
+				dev->device.name);
+			ret = -1;
+		}
+	}
+	return ret;
+}
+
 static struct rte_bus rte_vdev_bus = {
 	.scan = vdev_scan,
 	.probe = vdev_probe,
@@ -552,7 +568,8 @@ static struct rte_bus rte_vdev_bus = {
 	.unplug = vdev_unplug,
 	.parse = vdev_parse,
 	.dev_iterate = rte_vdev_dev_iterate,
-};
+	.remove = vdev_remove,
+	};
 
 RTE_REGISTER_BUS(vdev, rte_vdev_bus);
 RTE_LOG_REGISTER(vdev_logtype_bus, bus.vdev, NOTICE);

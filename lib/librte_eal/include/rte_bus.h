@@ -68,6 +68,18 @@ typedef int (*rte_bus_scan_t)(void);
 typedef int (*rte_bus_probe_t)(void);
 
 /**
+ * Implementation specific remove function which is responsible for unlinking
+ * devices on that bus from attached drivers.
+ *
+ * This is called while iterating over each registered bus.
+ *
+ * @return
+ *	0 for successful remove
+ *	!0 for any error while removing
+ */
+typedef int (*rte_bus_remove_t)(void);
+
+/**
  * Device iterator to find a device on a bus.
  *
  * This function returns an rte_device if one of those held by the bus
@@ -248,6 +260,7 @@ struct rte_bus {
 	const char *name;            /**< Name of the bus */
 	rte_bus_scan_t scan;         /**< Scan for devices attached to bus */
 	rte_bus_probe_t probe;       /**< Probe devices on bus */
+	rte_bus_remove_t remove;	 /**< remove device on bus */
 	rte_bus_find_device_t find_device; /**< Find a device on the bus */
 	rte_bus_plug_t plug;         /**< Probe single device for drivers */
 	rte_bus_unplug_t unplug;     /**< Remove single device from driver */
@@ -300,6 +313,16 @@ int rte_bus_scan(void);
  *	!0 otherwise
  */
 int rte_bus_probe(void);
+
+/**
+ * For each device on the buses,call the driver-specific remove
+ * for device uninitialization.
+ *
+ * @return
+ *	 0 for successful match/probe
+ *	!0 otherwise
+ */
+int rte_bus_remove(void);
 
 /**
  * Dump information of all the buses registered with EAL.

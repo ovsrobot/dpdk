@@ -85,6 +85,24 @@ rte_bus_probe(void)
 	return 0;
 }
 
+/* Remove all devices of all buses */
+int
+rte_bus_remove(void)
+{
+	int ret;
+	struct rte_bus *bus;
+
+	TAILQ_FOREACH(bus, &rte_bus_list, next) {
+		if (!strcmp(bus->name, "vdev") || !strcmp(bus->name, "pci")) {
+			ret = bus->remove();
+			if (ret)
+				RTE_LOG(INFO, EAL, "Bus (%s) remove failed.\n",
+					bus->name);
+		}
+	}
+	return 0;
+}
+
 /* Dump information of a single bus */
 static int
 bus_dump_one(FILE *f, struct rte_bus *bus)

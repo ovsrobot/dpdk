@@ -320,6 +320,28 @@ pci_probe(void)
 	return (probed && probed == failed) ? -1 : 0;
 }
 
+/*
+ * Scan the content of the PCI bus, and call the remove() function for
+ * all registered drivers of devices that have already been probed.
+ */
+static int
+pci_remove(void)
+{
+	struct rte_pci_device *dev = NULL;
+	int ret = 0;
+
+	FOREACH_DEVICE_ON_PCIBUS(dev) {
+		if (rte_dev_is_probed(&dev->device))
+			if (rte_pci_detach_dev(dev) != 0) {
+				RTE_LOG(INFO, EAL,
+					"failed to detach driver form %s\n",
+					dev->device.name);
+				ret = -1;
+			}
+	}
+	return ret;
+}
+
 /* dump one device */
 static int
 pci_dump_one_device(FILE *f, struct rte_pci_device *dev)
@@ -669,6 +691,7 @@ struct rte_pci_bus rte_pci_bus = {
 	.bus = {
 		.scan = rte_pci_scan,
 		.probe = pci_probe,
+		.remove = pci_remove,
 		.find_device = pci_find_device,
 		.plug = pci_plug,
 		.unplug = pci_unplug,
