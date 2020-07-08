@@ -59,7 +59,7 @@ endif
 CHECK_SYMBOLS_SCRIPT = $(RTE_SDK)/buildtools/check-symbols.sh
 CHECK_SYMBOLS = $(CHECK_SYMBOLS_SCRIPT) $(SRCDIR)/$(EXPORT_MAP) $@
 
-PMDINFO_GEN = $(RTE_SDK_BIN)/app/dpdk-pmdinfogen $@ $@.pmd.c
+PMDINFO_GEN = $(RTE_SDK)/buildtools/pmdinfogen.py $@ $@.pmd.c
 PMDINFO_CC = $(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) -c -o $@.pmd.o $@.pmd.c
 PMDINFO_LD = $(CROSS)ld -r $(filter-out -export-dynamic,$(LDFLAGS)) -o $@.o $@.pmd.o $@
 PMDINFO_TO_O = if grep -q 'RTE_PMD_REGISTER_.*(.*)' $<; then \

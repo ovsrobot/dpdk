@@ -12,6 +12,6 @@ export RTE_SDK
 # directory list
 #
 
-ROOTDIRS-y := buildtools lib kernel drivers app
+ROOTDIRS-y := lib kernel drivers app
 
 include $(RTE_SDK)/mk/rte.sdkroot.mk

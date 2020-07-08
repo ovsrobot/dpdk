@@ -98,7 +98,6 @@ install-runtime:
 	$(Q)cp $(CP_FLAGS)    $O/lib/* $(DESTDIR)$(libdir)
 	$(Q)$(call rte_mkdir, $(DESTDIR)$(bindir))
 	$(Q)tar -cf -      -C $O --exclude 'app/*.map' \
-		--exclude app/dpdk-pmdinfogen \
 		--exclude 'app/cmdline*' --exclude app/test \
 		--exclude app/testacl --exclude app/testpipeline app | \
 	    tar -xf -      -C $(DESTDIR)$(bindir) $(TAR_X_FLAGS)
@@ -134,7 +133,6 @@ install-sdk:
 	$(Q)cp $(CP_FLAGS)      $(RTE_SDK)/buildtools    $(DESTDIR)$(sdkdir)
 	$(Q)$(call rte_mkdir,                            $(DESTDIR)$(targetdir)/app)
 	$(Q)cp $(CP_FLAGS)      $O/.config               $(DESTDIR)$(targetdir)
-	$(Q)cp $(CP_FLAGS)      $O/app/dpdk-pmdinfogen   $(DESTDIR)$(targetdir)/app
 	$(Q)$(call rte_symlink, $(DESTDIR)$(includedir), $(DESTDIR)$(targetdir)/include)
 	$(Q)$(call rte_symlink, $(DESTDIR)$(libdir),     $(DESTDIR)$(targetdir)/lib)
 
