@@ -275,7 +275,7 @@ int rte_timer_reset(struct rte_timer *tim, uint64_t ticks,
  * @param arg
  *   The user argument of the callback function.
  */
-void
+int
 rte_timer_reset_sync(struct rte_timer *tim, uint64_t ticks,
 		     enum rte_timer_type type, unsigned tim_lcore,
 		     rte_timer_cb_t fct, void *arg);
@@ -314,7 +314,7 @@ int rte_timer_stop(struct rte_timer *tim);
  * @param tim
  *   The timer handle.
  */
-void rte_timer_stop_sync(struct rte_timer *tim);
+int rte_timer_stop_sync(struct rte_timer *tim);
 
 /**
  * Test if a timer is pending.

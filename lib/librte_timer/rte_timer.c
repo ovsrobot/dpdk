@@ -576,14 +576,24 @@ rte_timer_alt_reset(uint32_t timer_data_id, struct rte_timer *tim,
 }
 
 /* loop until rte_timer_reset() succeed */
-void
+int
 rte_timer_reset_sync(struct rte_timer *tim, uint64_t ticks,
 		     enum rte_timer_type type, unsigned tim_lcore,
 		     rte_timer_cb_t fct, void *arg)
 {
+	struct rte_timer_data *timer_data;
+	TIMER_DATA_VALID_GET_OR_ERR_RET(default_data_id, timer_data, -EINVAL);
+
+	if (tim->status.state == RTE_TIMER_RUNNING &&
+	(tim->status.owner != (uint16_t)tim_lcore ||
+	tim != timer_data->priv_timer[tim_lcore].running_tim))
+		return -1;
+
 	while (rte_timer_reset(tim, ticks, type, tim_lcore,
 			       fct, arg) != 0)
 		rte_pause();
+
+	return 0;
 }
 
 static int
@@ -642,11 +652,22 @@ rte_timer_alt_stop(uint32_t timer_data_id, struct rte_timer *tim)
 }
 
 /* loop until rte_timer_stop() succeed */
-void
+int
 rte_timer_stop_sync(struct rte_timer *tim)
 {
+	struct rte_timer_data *timer_data;
+	TIMER_DATA_VALID_GET_OR_ERR_RET(default_data_id, timer_data, -EINVAL);
+	unsigned int lcore_id = rte_lcore_id();
+
+	if (tim->status.state == RTE_TIMER_RUNNING &&
+	(tim->status.owner != (uint16_t)lcore_id ||
+	tim != timer_data->priv_timer[lcore_id].running_tim))
+		return -1;
+
 	while (rte_timer_stop(tim) != 0)
 		rte_pause();
+
+	return 0;
 }
 
 /* Test the PENDING status of the timer handle tim */
