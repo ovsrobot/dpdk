@@ -772,6 +772,7 @@ fslmc_process_mcp(struct rte_dpaa2_device *dev)
 	 */
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
 		rte_mcp_ptr_list[MC_PORTAL_INDEX] = (void *)v_addr;
+		free(dev_name);
 		return 0;
 	}
 
