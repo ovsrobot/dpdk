@@ -3060,7 +3060,7 @@ int rte_pmd_i40e_flow_add_del_packet_template(
 		(enum i40e_fdir_status)conf->action.report_status;
 	filter_conf.action.flex_off = conf->action.flex_off;
 
-	return i40e_flow_add_del_fdir_filter(dev, &filter_conf, add);
+	return i40e_flow_add_del_fdir_filter(dev, &filter_conf, add, true);
 }
 
 int
