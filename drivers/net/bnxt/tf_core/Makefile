@@ -16,10 +16,10 @@ SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_msg.c
 SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_tbl.c
 SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_em_common.c
 SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_em_internal.c
-ifeq ($(CONFIG_RTE_LIBRTE_BNXT_PMD_SYSTEM), n)
-SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_em_host.c
+ifeq ($(CONFIG_RTE_LIBRTE_BNXT_PMD_SYSTEM),y)
+SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_em_system.c
 else
-SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD_SYSTEM) += tf_core/tf_em_system.c
+SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_em_host.c
 endif
 SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_session.c
 SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += tf_core/tf_device.c
