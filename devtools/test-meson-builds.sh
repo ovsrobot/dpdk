@@ -143,7 +143,7 @@ build () # <directory> <target compiler | cross file> <meson options>
 	config $srcdir $builds_dir/$targetdir $cross --werror $*
 	compile $builds_dir/$targetdir
 	if [ -n "$DPDK_ABI_REF_VERSION" ]; then
-		abirefdir=${DPDK_ABI_REF_DIR:-reference}/$DPDK_ABI_REF_VERSION
+		abirefdir=${DPDK_ABI_REF_DIR:-$(pwd)/reference}/$DPDK_ABI_REF_VERSION
 		if [ ! -d $abirefdir/$targetdir ]; then
 			# clone current sources
 			if [ ! -d $abirefdir/src ]; then
