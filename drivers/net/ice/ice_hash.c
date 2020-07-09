@@ -714,6 +714,17 @@ ice_hash_parse_action(struct ice_pattern_match_item *pattern_match_item,
 			 */
 			rss_type = rte_eth_rss_hf_refine(rss_type);
 
+			/* Check if only L2/L3/L4 SRC/DST_ONLY exists. */
+			if ((rss_type & ~(ETH_RSS_L2_SRC_ONLY |
+					  ETH_RSS_L2_DST_ONLY |
+					  ETH_RSS_L3_SRC_ONLY |
+					  ETH_RSS_L3_DST_ONLY |
+					  ETH_RSS_L4_SRC_ONLY |
+					  ETH_RSS_L4_DST_ONLY)) == 0)
+				return rte_flow_error_set(error, ENOTSUP,
+					RTE_FLOW_ERROR_TYPE_ACTION, action,
+					"rss type with only L2/L3/L4 src/dst only is invalid");
+
 			combine_type = ETH_RSS_L2_SRC_ONLY |
 					ETH_RSS_L2_DST_ONLY |
 					ETH_RSS_L3_SRC_ONLY |
