@@ -75,6 +75,7 @@ test_sources = files('commands.c',
 	'test_lpm_perf.c',
 	'test_malloc.c',
 	'test_mbuf.c',
+	'test_mbuf_perf.c',
 	'test_member.c',
 	'test_member_perf.c',
 	'test_memcpy.c',
@@ -297,7 +298,8 @@ perf_test_names = [
         'hash_readwrite_perf_autotest',
         'hash_readwrite_lf_perf_autotest',
         'trace_perf_autotest',
-	'ipsec_perf_autotest',
+        'ipsec_perf_autotest',
+        'mbuf_perf_autotest',
 ]
 
 driver_test_names = [

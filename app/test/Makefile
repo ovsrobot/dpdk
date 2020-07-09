@@ -112,6 +112,7 @@ SRCS-y += test_mempool.c
 SRCS-y += test_mempool_perf.c
 
 SRCS-y += test_mbuf.c
+SRCS-y += test_mbuf_perf.c
 SRCS-y += test_logs.c
 
 SRCS-y += test_memcpy.c
