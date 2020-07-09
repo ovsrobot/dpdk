@@ -10,3 +10,4 @@ drivers = ['isal', 'octeontx', 'qat', 'zlib']
 std_deps = ['compressdev'] # compressdev pulls in all other needed deps
 config_flag_fmt = 'RTE_LIBRTE_@0@_PMD'
 driver_name_fmt = 'rte_pmd_@0@'
+rte_debug_fmt = 'RTE_DEBUG_COMPRESS_@0@'

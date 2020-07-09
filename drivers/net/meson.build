@@ -60,3 +60,4 @@ std_deps += ['bus_pci']         # very many PMDs depend on PCI, so make std
 std_deps += ['bus_vdev']        # same with vdev bus
 config_flag_fmt = 'RTE_LIBRTE_@0@_PMD'
 driver_name_fmt = 'rte_pmd_@0@'
+rte_debug_fmt = 'RTE_DEBUG_NET_@0@'

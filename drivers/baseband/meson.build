@@ -9,3 +9,4 @@ drivers = ['null', 'turbo_sw', 'fpga_lte_fec', 'fpga_5gnr_fec']
 
 config_flag_fmt = 'RTE_LIBRTE_PMD_BBDEV_@0@'
 driver_name_fmt = 'rte_pmd_bbdev_@0@'
+rte_debug_fmt = 'RTE_DEBUG_BASEBAND_@0@'

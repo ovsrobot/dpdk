@@ -13,3 +13,4 @@ endif
 std_deps = ['eventdev', 'kvargs']
 config_flag_fmt = 'RTE_LIBRTE_@0@_EVENTDEV_PMD'
 driver_name_fmt = 'rte_pmd_@0@_event'
+rte_debug_fmt = 'RTE_DEBUG_EVENT_@0@'

@@ -9,3 +9,4 @@ drivers = ['bucket', 'dpaa', 'dpaa2', 'octeontx', 'octeontx2', 'ring', 'stack']
 std_deps = ['mempool']
 config_flag_fmt = 'RTE_LIBRTE_@0@_MEMPOOL'
 driver_name_fmt = 'rte_mempool_@0@'
+rte_debug_fmt = 'RTE_DEBUG_MEMPOOL_@0@'

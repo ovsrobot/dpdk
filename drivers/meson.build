@@ -99,6 +99,9 @@ foreach class:dpdk_driver_classes
 				fmt_name = name
 			endif
 			dpdk_conf.set(config_flag_fmt.format(fmt_name.to_upper()),1)
+			if get_option('rte_debug')
+				dpdk_conf.set(rte_debug_fmt.format(fmt_name.to_upper()),1)
+			endif
 			lib_name = driver_name_fmt.format(fmt_name)
 
 			dpdk_extra_ldflags += pkgconfig_extra_libs
