@@ -171,6 +171,12 @@ New Features
   See the :doc:`../sample_app_ug/l2_forward_real_virtual` for more
   details of this parameter usage.
 
+* **Added support for new sync modes into mempool ring driver.**
+
+  Added ability to select new ring synchronisation modes:
+  ``relaxed tail sync (ring_mt_rts)`` and ``head/tail sync (ring_mt_hts)``
+  via mempool ops API.
+
 
 Removed Items
 -------------
