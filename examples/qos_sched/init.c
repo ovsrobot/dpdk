@@ -160,14 +160,8 @@ app_init_port(uint16_t portid, struct rte_mempool *mp)
 			 "rte_eth_link_get: err=%d, port=%u: %s\n",
 			 ret, portid, rte_strerror(-ret));
 
-	if (link.link_status) {
-		printf(" Link Up - speed %u Mbps - %s\n",
-			(uint32_t) link.link_speed,
-			(link.link_duplex == ETH_LINK_FULL_DUPLEX) ?
-			("full-duplex") : ("half-duplex"));
-	} else {
-		printf(" Link Down\n");
-	}
+	rte_eth_link_printf(NULL, &link);
+
 	ret = rte_eth_promiscuous_enable(portid);
 	if (ret != 0)
 		rte_exit(EXIT_FAILURE,
