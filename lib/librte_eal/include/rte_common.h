@@ -104,6 +104,16 @@ typedef uint16_t unaligned_uint16_t;
 #define __rte_unused __attribute__((__unused__))
 
 /**
+ * Define a wrapper for restricted pointers which can be supported
+ * by all compilers.
+ */
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L
+#define __rte_restrict __restrict
+#else
+#define __rte_restrict restrict
+#endif
+
+/**
  * definition to mark a variable or function parameter as used so
  * as to avoid a compiler warning
  */
