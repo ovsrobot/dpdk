@@ -213,33 +213,74 @@ parameters defined in ``fpga_5gnr_fec_conf`` structure:
   time_out = flr_time_out x 16.384us. For instance, if you want to set 10ms for
   the FLR time out then set this setting to 0x262=610.
 
+A companion application pf_config_app is provided as a standalone application
+described in next section. 
 
-An example configuration code calling the function ``fpga_5gnr_fec_configure()`` is shown
-below:
+PF Config App
+-------------
 
-.. code-block:: c
+The PF Configuration Application ``pf_config_app`` provides a means to
+configure the baseband device at the host-level. The program sets the various
+parameters through memory-mapped IO read/writes. Then the BBDEV driver can be
+used to run the workload.
 
-  struct fpga_5gnr_fec_conf conf;
-  unsigned int i;
+The parameters are parsed from a given configuration file (with .cfg extentions)
+that is specific to particular BBDEV device, although they follow same format.
 
-  memset(&conf, 0, sizeof(struct fpga_5gnr_fec_conf));
-  conf.pf_mode_en = 1;
+External Dependencies
+~~~~~~~~~~~~~~~~~~~~~
 
-  for (i = 0; i < FPGA_5GNR_FEC_NUM_VFS; ++i) {
-      conf.vf_ul_queues_number[i] = 4;
-      conf.vf_dl_queues_number[i] = 4;
-  }
-  conf.ul_bandwidth = 12;
-  conf.dl_bandwidth = 5;
-  conf.dl_load_balance = 64;
-  conf.ul_load_balance = 64;
+The third party .INI parser is a pre-requisite for building the application.
+It can be downloaded from [github]:
 
-  /* setup FPGA PF */
-  ret = fpga_5gnr_fec_configure(info->dev_name, &conf);
-  TEST_ASSERT_SUCCESS(ret,
-      "Failed to configure 4G FPGA PF for bbdev %s",
-      info->dev_name);
+.. code-block:: console
 
+    git clone https://github.com/benhoyt/inih
+
+Use the version release 44 tracked by tag 'r44':
+
+.. code-block:: console
+
+    git checkout r44
+
+The application features a makefile in the `extra/` directory which generates
+the library, `libinih.a`. To compile the inih library, run make as:
+
+.. code-block:: console
+
+    make -f Makefile.static
+
+Building PF Config App
+~~~~~~~~~~~~~~~~~~~~~~
+
+Before building the application, set the following environment variables with
+the location where the INI library is located:
+
+.. code-block:: console
+
+    export INIH_PATH=<path-to-inih-lib>
+
+If not set, makefile will look into current folder.
+
+Next, build the program by typing ``make`` from the pf_Config_app subdirectory
+to produce the binary ``pf_config_app_fpga_5gnr``.
+
+Usage
+~~~~~
+
+The application executes as the following:
+
+.. code-block:: console
+
+    ./pf_config_app_fpga_5gnr [-h] [-a] [-c CFG_FILE] [-f NUM_VFS] [-p PCI_ID]
+
+* ``-c CFG_FILE``: Specifies configuration file to use
+* ``-f NUM_VFS``: Specifies number of Virtual Functions to enable through SRIOV
+* ``-p PCI_ID``: Specifies PCI ID of device to configure
+* ``-a``: Configures all PCI devices
+* ``-h``: Prints help
+
+Default configure file is provided: ``fpga_5gnr_config.cfg``.
 
 Test Application
 ----------------
