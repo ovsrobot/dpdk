@@ -599,6 +599,7 @@ check_all_ports_link_status(uint32_t port_mask)
 	struct rte_eth_link link;
 	uint16_t portid;
 	int ret;
+	char link_status_text[60];
 
 	printf("\nChecking link status");
 	fflush(stdout);
@@ -623,16 +624,9 @@ check_all_ports_link_status(uint32_t port_mask)
 			}
 			/* Print link status if flag set */
 			if (print_flag == 1) {
-				if (link.link_status)
-					printf("Port%d Link Up. Speed %u Mbps "
-					       "-%s\n",
-					       portid, link.link_speed,
-					       (link.link_duplex ==
-						ETH_LINK_FULL_DUPLEX)
-						       ? ("full-duplex")
-						       : ("half-duplex\n"));
-				else
-					printf("Port %d Link Down\n", portid);
+				rte_eth_link_strf(link_status_text, 60, NULL,
+						    &link);
+				printf("Port %d %s", portid, link_status_text);
 				continue;
 			}
 			/* Clear all_ports_up flag if any link down */
