@@ -383,6 +383,10 @@ __rte_internal
 int mlx5_devx_cmd_modify_rqt(struct mlx5_devx_obj *rqt,
 			     struct mlx5_devx_rqt_attr *rqt_attr);
 
+__rte_internal
+int mlx5_devx_cmd_register_access(void *ctx, uint16_t reg_id,
+				  uint32_t arg, uint32_t *value,
+				  uint32_t write);
 /**
  * Create virtio queue counters object DevX API.
  *

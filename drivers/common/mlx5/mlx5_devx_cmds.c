@@ -12,6 +12,63 @@
 
 
 /**
+ * Perform access to the registers. Reads data from and writes data to
+ * the specified register.
+ *
+ * @param[in] ctx
+ *   Context returned from mlx5 open_device() glue function.
+ * @param[in] reg_id
+ *   Register identifier according to the PRM.
+ * @param[in] arg
+ *   Register access auxiliary parameter according to the PRM.
+ * @param[inout] value
+ *   Pointer to the value to be wriiten to the register or
+ *   to the buffer where the read data to be stored.
+ * @param[in] write
+ *   Non-zero value means write to the register should be performed,
+ *   otherwise read access will be performed.
+ *
+ * @return
+ *   0 on success, a negative value otherwise.
+ */
+int
+mlx5_devx_cmd_register_access(void *ctx, uint16_t reg_id,
+			      uint32_t arg, uint32_t *value,
+			      uint32_t write)
+{
+	uint32_t in[MLX5_ST_SZ_DW(access_register_in)]   = {0};
+	uint32_t out[MLX5_ST_SZ_DW(access_register_out)] = {0};
+	int status, rc;
+
+	MLX5_SET(access_register_in, in, opcode, MLX5_CMD_OP_ACCESS_REGISTER);
+	MLX5_SET(access_register_in, in, op_mod, write ?
+					MLX5_ACCESS_REGISTER_IN_OP_MOD_WRITE :
+					MLX5_ACCESS_REGISTER_IN_OP_MOD_READ);
+	MLX5_SET(access_register_in, in, register_id, reg_id);
+	MLX5_SET(access_register_in, in, argument, arg);
+	if (write && value)
+		MLX5_SET(access_register_in, in, register_data, *value);
+	rc = mlx5_glue->devx_general_cmd(ctx, in, sizeof(in), out, sizeof(out));
+	if (rc)
+		goto error;
+	status = MLX5_GET(access_register_out, out, status);
+	if (status) {
+		int syndrome = MLX5_GET(access_register_out, out, syndrome);
+
+		DRV_LOG(DEBUG, "Failed to access NIC register 0x%X, "
+			       "status %x, syndrome = %x",
+			       reg_id, status, syndrome);
+		return -1;
+	}
+	if (value && !write)
+		*value = MLX5_GET(access_register_out, out, register_data);
+	return 0;
+error:
+	rc = (rc > 0) ? -rc : rc;
+	return rc;
+};
+
+/**
  * Allocate flow counters via devx interface.
  *
  * @param[in] ctx

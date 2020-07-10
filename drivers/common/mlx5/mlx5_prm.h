@@ -776,6 +776,7 @@ enum {
 	MLX5_CMD_OP_SUSPEND_QP = 0x50F,
 	MLX5_CMD_OP_RESUME_QP = 0x510,
 	MLX5_CMD_OP_QUERY_NIC_VPORT_CONTEXT = 0x754,
+	MLX5_CMD_OP_ACCESS_REGISTER = 0x805,
 	MLX5_CMD_OP_ALLOC_TRANSPORT_DOMAIN = 0x816,
 	MLX5_CMD_OP_CREATE_TIR = 0x900,
 	MLX5_CMD_OP_CREATE_SQ = 0X904,
@@ -2543,6 +2544,30 @@ struct mlx5_ifc_set_pp_rate_limit_context_bits {
 	u8 rate_mode[0x4];
 	u8 typical_packet_size[0x10];
 	u8 reserved_at_60[0x120];
+};
+
+struct mlx5_ifc_access_register_out_bits {
+	u8 status[0x8];
+	u8 reserved_at_8[0x18];
+	u8 syndrome[0x20];
+	u8 reserved_at_40[0x40];
+	u8 register_data[0][0x20];
+};
+
+enum {
+	MLX5_ACCESS_REGISTER_IN_OP_MOD_WRITE  = 0x0,
+	MLX5_ACCESS_REGISTER_IN_OP_MOD_READ   = 0x1,
+};
+
+struct mlx5_ifc_access_register_in_bits {
+	u8 opcode[0x10];
+	u8 reserved_at_10[0x10];
+	u8 reserved_at_20[0x10];
+	u8 op_mod[0x10];
+	u8 reserved_at_40[0x10];
+	u8 register_id[0x10];
+	u8 argument[0x20];
+	u8 register_data[0][0x20];
 };
 
 /* CQE format mask. */
