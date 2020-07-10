@@ -2383,6 +2383,180 @@ rte_eth_link_get_nowait(uint16_t port_id, struct rte_eth_link *eth_link)
 	return 0;
 }
 
+static int
+rte_eth_link_strf_parser(char *str, size_t len, const char *const fmt,
+			   const struct rte_eth_link *link)
+{
+	size_t offset = 0;
+	const char *fmt_cur = fmt;
+	char *str_cur = str;
+	double gbits = (double)link->link_speed / 1000.;
+	static const char autoneg_str[]       = "Autoneg";
+	static const char fixed_str[]         = "Fixed";
+	static const char fdx_str[]           = "FDX";
+	static const char hdx_str[]           = "HDX";
+	static const char unknown_str[]       = "Unknown";
+	static const char up_str[]            = "Up";
+	static const char down_str[]          = "Down";
+	char gbits_str[20];
+	char mbits_str[20];
+
+	/* preformat complex formatting to easily concatinate it further */
+	snprintf(mbits_str, sizeof(mbits_str), "%u", link->link_speed);
+	snprintf(gbits_str, sizeof(gbits_str), "%.1f", gbits);
+	/* init str before formatting */
+	str[0] = 0;
+	while (*fmt_cur) {
+		/* check str bounds */
+		if (offset > (len - 1)) {
+			str[len - 1] = '\0';
+			return -1;
+		}
+		if (*fmt_cur == '%') {
+			/* set null terminator to current position,
+			 * it's required for strlcat
+			 */
+			*str_cur = '\0';
+			switch (*++fmt_cur) {
+			/* Speed in Mbits/s */
+			case 'M':
+				if (link->link_speed ==
+				    ETH_SPEED_NUM_UNKNOWN)
+					offset = strlcat(str, unknown_str,
+							 len);
+				else
+					offset = strlcat(str, mbits_str, len);
+				break;
+			/* Speed in Gbits/s */
+			case 'G':
+				if (link->link_speed ==
+				    ETH_SPEED_NUM_UNKNOWN)
+					offset = strlcat(str, unknown_str,
+							 len);
+				else
+					offset = strlcat(str, gbits_str, len);
+				break;
+			/* Link status */
+			case 'S':
+				offset = strlcat(str, link->link_status ?
+					up_str : down_str, len);
+				break;
+			/* Link autoneg */
+			case 'A':
+				offset = strlcat(str, link->link_autoneg ?
+					autoneg_str : fixed_str, len);
+				break;
+			/* Link duplex */
+			case 'D':
+				offset = strlcat(str, link->link_duplex ?
+					fdx_str : hdx_str, len);
+				break;
+			/* ignore unknown specifier */
+			default:
+				*str_cur = '%';
+				offset++;
+				fmt_cur--;
+				break;
+
+			}
+			if (offset > (len - 1))
+				return -1;
+
+			str_cur = str + offset;
+		} else {
+			*str_cur++ = *fmt_cur;
+			offset++;
+		}
+		fmt_cur++;
+	}
+	*str_cur = '\0';
+	return offset;
+}
+
+int
+rte_eth_link_printf(const char *const fmt,
+		    const struct rte_eth_link *link)
+{
+	char text[200];
+	int ret;
+
+	ret = rte_eth_link_strf(text, 200, fmt, link);
+	if (ret > 0)
+		printf("%s", text);
+	return ret;
+}
+
+int
+rte_eth_link_strf(char *str, size_t len, const char *const fmt,
+		    const struct rte_eth_link *link)
+{
+	size_t offset = 0;
+	double gbits = (double)link->link_speed / 1000.;
+	char speed_gbits_str[20];
+	char speed_mbits_str[20];
+	/* TBD: make it international? */
+	static const char link_down_str[]     = "Link down\n";
+	static const char link_up_str[]       = "Link up at ";
+	static const char unknown_speed_str[] = "Unknown speed ";
+	static const char mbits_str[]	      = "Mbit/s";
+	static const char gbits_str[]	      = "Gbit/s";
+	static const char fdx_str[]           = "FDX ";
+	static const char hdx_str[]           = "HDX ";
+	/* autoneg is latest param in default string, so add '\n' */
+	static const char autoneg_str[]       = "Autoneg\n";
+	static const char fixed_str[]         = "Fixed\n";
+	if (str == NULL || len == 0)
+		return -1;
+	/* default format string, if no fmt is specified */
+	if (fmt == NULL) {
+		if (link->link_status == ETH_LINK_DOWN) {
+			if (sizeof(link_down_str) > len)
+				return -1;
+			return strlcpy(str, link_down_str, len);
+		}
+
+		/* preformat complex strings to easily concatinate it further */
+		snprintf(speed_mbits_str, 20, "%u %s ", link->link_speed,
+			 mbits_str);
+		snprintf(speed_gbits_str, 20, "%.1f %s ", gbits, gbits_str);
+
+		offset = strlcpy(str, link_up_str, len);
+		/* reserve one byte to null terminator */
+		if (offset > (len - 1))
+			return -1;
+		/* link speed */
+		if (link->link_speed == ETH_SPEED_NUM_UNKNOWN) {
+			offset = strlcat(str, unknown_speed_str, len);
+			if (offset > (len - 1))
+				return -1;
+		} else {
+			if (link->link_speed < ETH_SPEED_NUM_1G) {
+				offset = strlcat(str, speed_mbits_str, len);
+				if (offset > (len - 1))
+					return -1;
+			} else {
+				offset = strlcat(str, speed_gbits_str, len);
+				if (offset > (len - 1))
+					return -1;
+			}
+		}
+		/* link duplex */
+		offset = strlcat(str, link->link_duplex ?
+			       fdx_str : hdx_str, len);
+		if (offset > (len - 1))
+			return -1;
+		/* link autonegotiation */
+		offset = strlcat(str, link->link_autoneg ?
+			       autoneg_str : fixed_str, len);
+		if (offset > (len - 1))
+			return -1;
+	/* Formatted status */
+	} else
+		offset = rte_eth_link_strf_parser(str, len, fmt, link);
+
+	return offset;
+}
+
 int
 rte_eth_stats_get(uint16_t port_id, struct rte_eth_stats *stats)
 {
