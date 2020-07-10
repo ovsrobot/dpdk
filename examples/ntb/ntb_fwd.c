@@ -729,6 +729,7 @@ start_pkt_fwd(void)
 	struct rte_eth_link eth_link;
 	uint32_t lcore_id;
 	int ret, i;
+	char link_status_text[60];
 
 	ret = ntb_fwd_config_setup();
 	if (ret < 0) {
@@ -747,11 +748,10 @@ start_pkt_fwd(void)
 				return;
 			}
 			if (eth_link.link_status) {
-				printf("Eth%u Link Up. Speed %u Mbps - %s\n",
-					eth_port_id, eth_link.link_speed,
-					(eth_link.link_duplex ==
-					 ETH_LINK_FULL_DUPLEX) ?
-					("full-duplex") : ("half-duplex"));
+				rte_eth_link_strf(link_status_text, 60, NULL,
+						    &link);
+				printf("Eth%u %s", eth_port_id,
+				       link_status_text);
 				break;
 			}
 		}
