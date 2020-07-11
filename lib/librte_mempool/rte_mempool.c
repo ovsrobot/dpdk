@@ -1266,6 +1266,7 @@ rte_mempool_dump(FILE *f, struct rte_mempool *mp)
 	unsigned lcore_id;
 #endif
 	struct rte_mempool_memhdr *memhdr;
+	struct rte_mempool_ops *ops;
 	unsigned common_count;
 	unsigned cache_count;
 	size_t mem_len = 0;
@@ -1287,6 +1288,10 @@ rte_mempool_dump(FILE *f, struct rte_mempool *mp)
 	       mp->header_size + mp->elt_size + mp->trailer_size);
 
 	fprintf(f, "  private_data_size=%"PRIu32"\n", mp->private_data_size);
+
+	ops = rte_mempool_get_ops(mp->ops_index);
+	fprintf(f, "  ops_index=%d ops_name: <%s>\n",
+		mp->ops_index, ops ? ops->name:"NA");
 
 	STAILQ_FOREACH(memhdr, &mp->mem_list, next)
 		mem_len += memhdr->len;
@@ -1330,7 +1335,6 @@ rte_mempool_dump(FILE *f, struct rte_mempool *mp)
 #else
 	fprintf(f, "  no statistics available\n");
 #endif
-
 	rte_mempool_audit(mp);
 }
 
