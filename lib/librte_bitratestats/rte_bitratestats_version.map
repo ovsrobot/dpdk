@@ -7,3 +7,9 @@ DPDK_20.0 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	rte_stats_bitrate_free;
+};
