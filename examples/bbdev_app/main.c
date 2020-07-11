@@ -313,6 +313,7 @@ check_port_link_status(uint16_t port_id)
 	uint8_t count;
 	struct rte_eth_link link;
 	int link_get_err = -EINVAL;
+	char link_status_text[60];
 
 	printf("\nChecking link status.");
 	fflush(stdout);
@@ -323,11 +324,8 @@ check_port_link_status(uint16_t port_id)
 		link_get_err = rte_eth_link_get_nowait(port_id, &link);
 
 		if (link_get_err >= 0 && link.link_status) {
-			const char *dp = (link.link_duplex ==
-				ETH_LINK_FULL_DUPLEX) ?
-				"full-duplex" : "half-duplex";
-			printf("\nPort %u Link Up - speed %u Mbps - %s\n",
-				port_id, link.link_speed, dp);
+			rte_eth_link_to_str(link_status_text, 60, NULL, &link);
+			printf("\nPort %u %s", port_id, link_status_text);
 			return 0;
 		}
 		printf(".");
