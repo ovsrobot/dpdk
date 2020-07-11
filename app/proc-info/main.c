@@ -661,6 +661,7 @@ show_port(void)
 {
 	uint16_t i = 0;
 	int ret = 0, j, k;
+	int rxq_count;
 
 	snprintf(bdr_str, MAX_STRING_LEN, " show - Port PMD %"PRIu64,
 			rte_get_tsc_hz());
@@ -672,12 +673,26 @@ show_port(void)
 		struct rte_eth_dev_info dev_info;
 		struct rte_eth_rxq_info queue_info;
 		struct rte_eth_rss_conf rss_conf;
+		struct rte_ether_addr ethaddr;
+		char name[RTE_ETH_NAME_MAX_LEN];
 
 		memset(&rss_conf, 0, sizeof(rss_conf));
 
-		snprintf(bdr_str, MAX_STRING_LEN, " Port (%u)", i);
+		rte_eth_dev_get_name_by_port(i, name);
+
+		snprintf(bdr_str, MAX_STRING_LEN, " Port (%u)(%s)", i, name);
 		STATS_BDR_STR(5, bdr_str);
 		printf("  - generic config\n");
+		ret = rte_eth_macaddr_get(i, &ethaddr);
+		if (ret != 0) {
+			printf("macaddr get failed (port %u): %s\n",
+			       i, rte_strerror(-ret));
+		} else {
+			char buf[RTE_ETHER_ADDR_FMT_SIZE];
+			rte_ether_format_addr(buf, RTE_ETHER_ADDR_FMT_SIZE,
+				&ethaddr);
+			printf("\t  -- MAC:%s\n", buf);
+		}
 
 		printf("\t  -- Socket %d\n", rte_eth_dev_socket_id(i));
 		ret = rte_eth_link_get(i, &link);
@@ -685,18 +700,21 @@ show_port(void)
 			printf("Link get failed (port %u): %s\n",
 			       i, rte_strerror(-ret));
 		} else {
-			printf("\t  -- link speed %d duplex %d,"
-					" auto neg %d status %d\n",
-					link.link_speed,
-					link.link_duplex,
-					link.link_autoneg,
-					link.link_status);
+			printf("\t  -- link speed: %d Mbps %s,"
+				":auto neg %d :status-%s\n",
+				link.link_speed,
+				(link.link_duplex == ETH_LINK_FULL_DUPLEX) ?
+				 ("full-duplex") : ("half-duplex"),
+				link.link_autoneg,
+				(link.link_status) ? ("up") : ("down"));
 		}
-		printf("\t  -- promiscuous (%d)\n",
-				rte_eth_promiscuous_get(i));
+		printf("\t  -- promiscuous: %s\n",
+			rte_eth_promiscuous_get(i) ? "enabled" : "disabled");
 		ret = rte_eth_dev_get_mtu(i, &mtu);
 		if (ret == 0)
 			printf("\t  -- mtu (%d)\n", mtu);
+		printf("\t  -- multicast mode: %s\n",
+			rte_eth_allmulticast_get(i) ? "enabled" : "disabled");
 
 		ret = rte_eth_dev_info_get(i, &dev_info);
 		if (ret != 0) {
@@ -704,7 +722,17 @@ show_port(void)
 				i, strerror(-ret));
 			return;
 		}
+		printf("\t  -- Driver name: %s\n", dev_info.driver_name);
+		if (dev_info.device->devargs && dev_info.device->devargs->args)
+			printf("\t  -- Devargs: %s\n",
+				dev_info.device->devargs->args);
+		printf("\t  -- min size of RX buf: %u\n",
+			dev_info.min_rx_bufsize);
+		printf("\t  -- max config length of RX pkt: %u\n",
+			dev_info.max_rx_pktlen);
 
+		printf("\t  -- num of RX queues: %u\n", dev_info.nb_rx_queues);
+		printf("\t  -- num of TX queues: %u\n", dev_info.nb_tx_queues);
 		printf("  - queue\n");
 		for (j = 0; j < dev_info.nb_rx_queues; j++) {
 			ret = rte_eth_rx_queue_info_get(i, j, &queue_info);
@@ -718,7 +746,15 @@ show_port(void)
 						queue_info.nb_desc,
 						queue_info.conf.offloads,
 						queue_info.mp->socket_id);
+				printf("\t  -- mempool name: %s\n",
+						(queue_info.mp == NULL) ?
+						"NULL" : queue_info.mp->name);
+
 			}
+			rxq_count = rte_eth_rx_queue_count(i, j);
+			if (rxq_count >= 0)
+				printf("\t  -- used rx desc count: %d\n",
+						rxq_count);
 		}
 
 		ret = rte_eth_dev_rss_hash_conf_get(i, &rss_conf);
@@ -734,7 +770,7 @@ show_port(void)
 			}
 		}
 
-		printf("  - cyrpto context\n");
+		printf("  - crypto context\n");
 #ifdef RTE_LIBRTE_SECURITY
 		void *p_ctx = rte_eth_dev_get_sec_ctx(i);
 		printf("\t  -- security context - %p\n", p_ctx);
@@ -1064,7 +1100,7 @@ display_crypto_feature_info(uint64_t x)
 	printf("\t\t  + AESNI: CPU (%c), HW (%c)\n",
 		(x & RTE_CRYPTODEV_FF_CPU_AESNI) ? 'y' : 'n',
 		(x & RTE_CRYPTODEV_FF_HW_ACCELERATED) ? 'y' : 'n');
-	printf("\t\t  + INLINE (%c)\n",
+	printf("\t\t  + SECURITY OFFLOAD(%c)\n",
 		(x & RTE_CRYPTODEV_FF_SECURITY) ? 'y' : 'n');
 	printf("\t\t  + ARM: NEON (%c), CE (%c)\n",
 		(x & RTE_CRYPTODEV_FF_CPU_NEON) ? 'y' : 'n',
@@ -1122,6 +1158,26 @@ show_crypto(void)
 				stats.dequeued_count,
 				stats.dequeue_err_count);
 		}
+#ifdef RTE_LIBRTE_SECURITY
+		void *p_ctx = rte_cryptodev_get_sec_ctx(i);
+		printf("\t  -- security context - %p\n", p_ctx);
+
+		if (p_ctx) {
+			printf("\t  -- size %u\n",
+					rte_security_session_get_size(p_ctx));
+			const struct rte_security_capability *s_cap =
+				rte_security_capabilities_get(p_ctx);
+			if (s_cap) {
+				printf("\t  -- action (0x%x), protocol (0x%x),"
+						" offload flags (0x%x)\n",
+						s_cap->action,
+						s_cap->protocol,
+						s_cap->ol_flags);
+				printf("\t  -- capabilities - oper type %x\n",
+						s_cap->crypto_capabilities->op);
+			}
+		}
+#endif
 	}
 
 	STATS_BDR_STR(50, "");
@@ -1176,8 +1232,10 @@ show_mempool(char *name)
 
 	if (name != NULL) {
 		struct rte_mempool *ptr = rte_mempool_lookup(name);
+		struct rte_mempool_ops *ops;
 		if (ptr != NULL) {
 			flags = ptr->flags;
+			ops = rte_mempool_get_ops(ptr->ops_index);
 			printf("  - Name: %s on socket %d\n"
 				"  - flags:\n"
 				"\t  -- No spread (%c)\n"
@@ -1207,6 +1265,8 @@ show_mempool(char *name)
 			printf("  - Count: avail (%u), in use (%u)\n",
 				rte_mempool_avail_count(ptr),
 				rte_mempool_in_use_count(ptr));
+			printf("  - ops_index %d ops_name %s\n",
+				ptr->ops_index, ops ? ops->name:"NA");
 
 			STATS_BDR_STR(50, "");
 			return;
