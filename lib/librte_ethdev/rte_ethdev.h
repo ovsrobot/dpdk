@@ -2295,6 +2295,62 @@ int rte_eth_link_get(uint16_t port_id, struct rte_eth_link *link);
  */
 int rte_eth_link_get_nowait(uint16_t port_id, struct rte_eth_link *link);
 
+
+/**
+ * print formatted link status to stdout. This function treats all
+ * special values like ETH_SPEED_NUM_UNKNOWN, ETH_LINK_DOWN etc. and convert
+ * them to textual representation.
+ *
+ * @param fmt
+ *   Format string which allows to format link status.
+ *   If NULL is provided, default formatting will be applied.
+ *   Following specifiers are available:
+ *    - '%M' link speed in Mbits/s
+ *    - '%G' link speed in Gbits/s
+ *    - '%S' link status. e.g. Up or Down
+ *    - '%A' link autonegotiation state
+ *    - '%D' link duplex state
+ * @param eth_link
+ *   Link status provided by rte_eth_link_get function
+ * @return
+ *   - Number of bytes written to stdout.
+ *   - (-EINVAL) if fmt is too long
+ *
+ */
+__rte_experimental
+int rte_eth_link_printf(const char *const fmt,
+			const struct rte_eth_link *eth_link);
+
+/**
+ * Format link status to textual representation. This function treats all
+ * special values like ETH_SPEED_NUM_UNKNOWN, ETH_LINK_DOWN etc. and convert
+ * them to textual representation.
+ *
+ * @param str
+ *   A pointer to a string to be filled with textual representation of
+ *   device status.
+ * @param len
+ *   Length of available memory at 'str' string.
+ * @param fmt
+ *   Format string which allows to format link status.
+ *   If NULL is provided, default formatting will be applied.
+ *   Following specifiers are available:
+ *    - '%M' link speed in Mbits/s
+ *    - '%G' link speed in Gbits/s
+ *    - '%S' link status. e.g. Up or Down
+ *    - '%A' link autonegotiation state
+ *    - '%D' link duplex state
+ * @param eth_link
+ *   Link status provided by rte_eth_link_get function
+ * @return
+ *   - Number of bytes written to str array.
+ *   - (-EINVAL) if size of target buffer is too small for the string
+ *
+ */
+__rte_experimental
+int rte_eth_link_to_str(char *str, size_t len, const char *const fmt,
+			const struct rte_eth_link *eth_link);
+
 /**
  * Retrieve the general I/O statistics of an Ethernet device.
  *
