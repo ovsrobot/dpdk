@@ -205,6 +205,11 @@ New Features
   the  ``5tswap`` swaps source and destination in layers 2,3,4
   for ipv4 and ipv6 in L3 and UDP and TCP in L4.
 
+* **Added eCPRI protocol support in rte_flow.**
+
+  The ``ECPRI`` item have been added to support eCPRI packet offloading for
+  5G network.
+
 * **Added flow performance test application.**
 
   Added new application to test ``rte_flow`` performance, including:
