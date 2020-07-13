@@ -57,6 +57,8 @@ static int gbl_driver_id;
 static enum rte_security_session_action_type gbl_action_type =
 	RTE_SECURITY_ACTION_TYPE_NONE;
 
+int hw_dp_test;
+
 struct crypto_testsuite_params {
 	struct rte_mempool *mbuf_pool;
 	struct rte_mempool *large_mbuf_pool;
@@ -145,6 +147,168 @@ ceil_byte_length(uint32_t num_bits)
 		return ((num_bits >> 3) + 1);
 	else
 		return (num_bits >> 3);
+}
+
+static uint32_t
+get_dequeue_count(void *opaque __rte_unused)
+{
+	return 1;
+}
+
+static void
+write_status(void *opaque __rte_unused, uint32_t index __rte_unused,
+		uint8_t is_op_success)
+{
+	struct rte_crypto_op *op = opaque;
+	op->status = is_op_success ? RTE_CRYPTO_OP_STATUS_SUCCESS :
+			RTE_CRYPTO_OP_STATUS_ERROR;
+}
+
+void
+process_sym_hw_api_op(uint8_t dev_id, uint16_t qp_id, struct rte_crypto_op *op,
+		uint8_t is_cipher, uint8_t is_auth, uint8_t len_in_bits)
+{
+	int32_t n;
+	struct rte_crypto_sym_op *sop;
+	struct rte_crypto_sym_vec vec;
+	struct rte_crypto_sgl sgl;
+	struct rte_crypto_op *ret_op = NULL;
+	struct rte_crypto_vec data_vec[UINT8_MAX], iv_vec, aad_vec, digest_vec;
+	union rte_crypto_sym_ofs ofs;
+	int32_t status;
+	uint32_t min_ofs, max_len, nb_ops;
+	uint32_t n_success_ops;
+	union rte_cryptodev_hw_session_ctx sess;
+	enum {
+		cipher = 0,
+		auth,
+		chain,
+		aead
+	} hw_dp_test_type;
+	uint32_t count = 0;
+	uint32_t flags = RTE_CRYPTO_HW_DP_FF_CRYPTO_SESSION |
+			RTE_CRYPTO_HW_DP_FF_SET_OPAQUE_ARRAY |
+			RTE_CRYPTO_HW_DP_FF_KICK_QUEUE;
+
+	memset(&vec, 0, sizeof(vec));
+
+	vec.sgl = &sgl;
+	vec.iv_vec = &iv_vec;
+	vec.aad_vec = &aad_vec;
+	vec.digest_vec = &digest_vec;
+	vec.status = &status;
+	vec.num = 1;
+
+	sop = op->sym;
+
+	sess.crypto_sess = sop->session;
+
+	if (is_cipher && is_auth) {
+		hw_dp_test_type = chain;
+		min_ofs = RTE_MIN(sop->cipher.data.offset,
+				sop->auth.data.offset);
+		max_len = RTE_MAX(sop->cipher.data.length,
+				sop->auth.data.length);
+	} else if (is_cipher) {
+		hw_dp_test_type = cipher;
+		min_ofs = sop->cipher.data.offset;
+		max_len = sop->cipher.data.length;
+	} else if (is_auth) {
+		hw_dp_test_type = auth;
+		min_ofs = sop->auth.data.offset;
+		max_len = sop->auth.data.length;
+	} else { /* aead */
+		hw_dp_test_type = aead;
+		min_ofs = sop->aead.data.offset;
+		max_len = sop->aead.data.length;
+	}
+
+	if (len_in_bits) {
+		max_len = max_len >> 3;
+		min_ofs = min_ofs >> 3;
+	}
+
+	n = rte_crypto_mbuf_to_vec(sop->m_src, 0, min_ofs + max_len,
+			data_vec, RTE_DIM(data_vec));
+	if (n < 0 || n != sop->m_src->nb_segs) {
+		op->status = RTE_CRYPTO_OP_STATUS_ERROR;
+		return;
+	}
+
+	sgl.vec = data_vec;
+	sgl.num = n;
+
+	ofs.raw = 0;
+
+	iv_vec.base = rte_crypto_op_ctod_offset(op, void *, IV_OFFSET);
+	iv_vec.iova = rte_crypto_op_ctophys_offset(op, IV_OFFSET);
+
+	switch (hw_dp_test_type) {
+	case aead:
+		ofs.ofs.cipher.head = sop->cipher.data.offset;
+		aad_vec.base = (void *)sop->aead.aad.data;
+		aad_vec.iova = sop->aead.aad.phys_addr;
+		digest_vec.base = (void *)sop->aead.digest.data;
+		digest_vec.iova = sop->aead.digest.phys_addr;
+		if (len_in_bits) {
+			ofs.ofs.cipher.head >>= 3;
+			ofs.ofs.cipher.tail >>= 3;
+		}
+		nb_ops = rte_cryptodev_sym_hw_crypto_enqueue_aead(dev_id, qp_id,
+			sess, ofs, &vec, (void **)&op, flags);
+		break;
+	case cipher:
+		ofs.ofs.cipher.head = sop->cipher.data.offset;
+		if (len_in_bits) {
+			ofs.ofs.cipher.head >>= 3;
+			ofs.ofs.cipher.tail >>= 3;
+		}
+		nb_ops = rte_cryptodev_sym_hw_crypto_enqueue_cipher(dev_id,
+			qp_id, sess, ofs, &vec, (void **)&op, flags);
+		break;
+	case auth:
+		ofs.ofs.auth.head = sop->auth.data.offset;
+		digest_vec.base = (void *)sop->auth.digest.data;
+		digest_vec.iova = sop->auth.digest.phys_addr;
+		nb_ops = rte_cryptodev_sym_hw_crypto_enqueue_auth(dev_id, qp_id,
+			sess, ofs, &vec, (void **)&op, flags);
+		break;
+	case chain:
+		ofs.ofs.cipher.head =
+			sop->cipher.data.offset - sop->auth.data.offset;
+		ofs.ofs.cipher.tail =
+			(sop->auth.data.offset + sop->auth.data.length) -
+			(sop->cipher.data.offset + sop->cipher.data.length);
+		if (len_in_bits) {
+			ofs.ofs.cipher.head >>= 3;
+			ofs.ofs.cipher.tail >>= 3;
+		}
+		digest_vec.base = (void *)sop->auth.digest.data;
+		digest_vec.iova = sop->auth.digest.phys_addr;
+		nb_ops = rte_cryptodev_sym_hw_crypto_enqueue_chain(dev_id,
+			qp_id, sess, ofs, &vec, (void **)&op, flags);
+		break;
+	}
+
+	if (nb_ops < vec.num) {
+		op->status = RTE_CRYPTO_OP_STATUS_ERROR;
+		return;
+	}
+
+	nb_ops = 0;
+	flags = RTE_CRYPTO_HW_DP_FF_GET_OPAQUE_ARRAY |
+		RTE_CRYPTO_HW_DP_FF_DEQUEUE_EXHAUST;
+	while (count++ < 1024 && nb_ops < vec.num) {
+		nb_ops = rte_cryptodev_sym_hw_crypto_dequeue(dev_id, qp_id,
+			get_dequeue_count, write_status, (void **)&ret_op,
+			&n_success_ops, flags);
+	}
+
+	if (count == 1024 || n_success_ops == 0 || nb_ops == 0 ||
+			ret_op != op) {
+		op->status = RTE_CRYPTO_OP_STATUS_ERROR;
+		return;
+	}
 }
 
 static void
@@ -2456,7 +2620,11 @@ test_snow3g_authentication(const struct snow3g_hash_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 0, 1, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 				ut_params->op);
 	ut_params->obuf = ut_params->op->sym->m_src;
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
@@ -2535,7 +2703,11 @@ test_snow3g_authentication_verify(const struct snow3g_hash_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 0, 1, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 				ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 	ut_params->obuf = ut_params->op->sym->m_src;
@@ -2605,6 +2777,9 @@ test_kasumi_authentication(const struct kasumi_hash_test_data *tdata)
 	if (gbl_action_type == RTE_SECURITY_ACTION_TYPE_CPU_CRYPTO)
 		process_cpu_crypt_auth_op(ts_params->valid_devs[0],
 			ut_params->op);
+	else if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 0, 1, 1);
 	else
 		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 			ut_params->op);
@@ -2676,7 +2851,11 @@ test_kasumi_authentication_verify(const struct kasumi_hash_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 0, 1, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 				ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 	ut_params->obuf = ut_params->op->sym->m_src;
@@ -2883,8 +3062,12 @@ test_kasumi_encryption(const struct kasumi_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
-						ut_params->op);
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 0, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+				ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 
 	ut_params->obuf = ut_params->op->sym->m_dst;
@@ -2969,7 +3152,11 @@ test_kasumi_encryption_sgl(const struct kasumi_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 0, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 						ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 
@@ -3292,7 +3479,11 @@ test_kasumi_decryption(const struct kasumi_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 0, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 						ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 
@@ -3367,7 +3558,11 @@ test_snow3g_encryption(const struct snow3g_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 0, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 						ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 
@@ -3742,7 +3937,11 @@ static int test_snow3g_decryption(const struct snow3g_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 0, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 						ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 	ut_params->obuf = ut_params->op->sym->m_dst;
@@ -3910,7 +4109,11 @@ test_zuc_cipher_auth(const struct wireless_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 1, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 			ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 	ut_params->obuf = ut_params->op->sym->m_src;
@@ -4005,7 +4208,11 @@ test_snow3g_cipher_auth(const struct snow3g_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 1, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 			ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 	ut_params->obuf = ut_params->op->sym->m_src;
@@ -4141,7 +4348,11 @@ test_snow3g_auth_cipher(const struct snow3g_test_data *tdata,
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 1, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 			ut_params->op);
 
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
@@ -4330,7 +4541,11 @@ test_snow3g_auth_cipher_sgl(const struct snow3g_test_data *tdata,
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 1, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 			ut_params->op);
 
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
@@ -4512,7 +4727,11 @@ test_kasumi_auth_cipher(const struct kasumi_test_data *tdata,
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 1, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 			ut_params->op);
 
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
@@ -4702,7 +4921,11 @@ test_kasumi_auth_cipher_sgl(const struct kasumi_test_data *tdata,
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 1, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 			ut_params->op);
 
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
@@ -4843,7 +5066,11 @@ test_kasumi_cipher_auth(const struct kasumi_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 1, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 			ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 
@@ -4930,7 +5157,11 @@ test_zuc_encryption(const struct wireless_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 0, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 						ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 
@@ -5017,7 +5248,11 @@ test_zuc_encryption_sgl(const struct wireless_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 0, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 						ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 
@@ -5105,7 +5340,11 @@ test_zuc_authentication(const struct wireless_test_data *tdata)
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 0, 1, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 				ut_params->op);
 	ut_params->obuf = ut_params->op->sym->m_src;
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
@@ -5237,7 +5476,11 @@ test_zuc_auth_cipher(const struct wireless_test_data *tdata,
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 1, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 			ut_params->op);
 
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
@@ -5423,7 +5666,11 @@ test_zuc_auth_cipher_sgl(const struct wireless_test_data *tdata,
 	if (retval < 0)
 		return retval;
 
-	ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+	if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 1, 1);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
 			ut_params->op);
 
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
@@ -7029,6 +7276,9 @@ test_authenticated_encryption(const struct aead_test_data *tdata)
 	/* Process crypto operation */
 	if (gbl_action_type == RTE_SECURITY_ACTION_TYPE_CPU_CRYPTO)
 		process_cpu_aead_op(ts_params->valid_devs[0], ut_params->op);
+	else if (hw_dp_test)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 0, 0, 0);
 	else
 		TEST_ASSERT_NOT_NULL(
 			process_crypto_request(ts_params->valid_devs[0],
@@ -8521,6 +8771,9 @@ test_authenticated_decryption(const struct aead_test_data *tdata)
 	/* Process crypto operation */
 	if (gbl_action_type == RTE_SECURITY_ACTION_TYPE_CPU_CRYPTO)
 		process_cpu_aead_op(ts_params->valid_devs[0], ut_params->op);
+	else if (hw_dp_test == 1)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 0, 0, 0);
 	else
 		TEST_ASSERT_NOT_NULL(
 			process_crypto_request(ts_params->valid_devs[0],
@@ -11461,6 +11714,9 @@ test_authenticated_encryption_SGL(const struct aead_test_data *tdata,
 	if (oop == IN_PLACE &&
 			gbl_action_type == RTE_SECURITY_ACTION_TYPE_CPU_CRYPTO)
 		process_cpu_aead_op(ts_params->valid_devs[0], ut_params->op);
+	else if (oop == IN_PLACE && hw_dp_test == 1)
+		process_sym_hw_api_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 0, 0, 0);
 	else
 		TEST_ASSERT_NOT_NULL(
 			process_crypto_request(ts_params->valid_devs[0],
@@ -13022,6 +13278,75 @@ test_cryptodev_nitrox(void)
 	return unit_test_suite_runner(&cryptodev_nitrox_testsuite);
 }
 
+static struct unit_test_suite cryptodev_sym_direct_api_testsuite = {
+	.suite_name = "Crypto Sym direct API Test Suite",
+	.setup = testsuite_setup,
+	.teardown = testsuite_teardown,
+	.unit_test_cases = {
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow3g_encryption_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow3g_decryption_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow3g_auth_cipher_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_snow3g_auth_cipher_verify_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_kasumi_hash_generate_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_kasumi_hash_verify_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_kasumi_encryption_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_kasumi_decryption_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown, test_AES_cipheronly_all),
+		TEST_CASE_ST(ut_setup, ut_teardown, test_authonly_all),
+		TEST_CASE_ST(ut_setup, ut_teardown, test_AES_chain_all),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_AES_CCM_authenticated_encryption_test_case_128_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_AES_CCM_authenticated_decryption_test_case_128_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_AES_GCM_authenticated_encryption_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_AES_GCM_authenticated_decryption_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_AES_GCM_auth_encryption_test_case_192_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_AES_GCM_auth_decryption_test_case_192_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_AES_GCM_auth_encryption_test_case_256_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_AES_GCM_auth_decryption_test_case_256_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_AES_GCM_auth_encrypt_SGL_in_place_1500B),
+		TEST_CASES_END() /**< NULL terminate unit test array */
+	}
+};
+
+static int
+test_qat_sym_direct_api(void /*argv __rte_unused, int argc __rte_unused*/)
+{
+	int ret;
+
+	gbl_driver_id =	rte_cryptodev_driver_id_get(
+			RTE_STR(CRYPTODEV_NAME_QAT_SYM_PMD));
+
+	if (gbl_driver_id == -1) {
+		RTE_LOG(ERR, USER1, "QAT PMD must be loaded. Check that both "
+		"CONFIG_RTE_LIBRTE_PMD_QAT and CONFIG_RTE_LIBRTE_PMD_QAT_SYM "
+		"are enabled in config file to run this testsuite.\n");
+		return TEST_SKIPPED;
+	}
+
+	hw_dp_test = 1;
+	ret = unit_test_suite_runner(&cryptodev_sym_direct_api_testsuite);
+	hw_dp_test = 0;
+
+	return ret;
+}
+
+REGISTER_TEST_COMMAND(cryptodev_qat_sym_api_autotest, test_qat_sym_direct_api);
 REGISTER_TEST_COMMAND(cryptodev_qat_autotest, test_cryptodev_qat);
 REGISTER_TEST_COMMAND(cryptodev_aesni_mb_autotest, test_cryptodev_aesni_mb);
 REGISTER_TEST_COMMAND(cryptodev_cpu_aesni_mb_autotest,
