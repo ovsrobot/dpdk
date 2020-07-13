@@ -15,6 +15,7 @@ int
 cpufreq_check_scaling_driver(const char *driver_name)
 {
 	unsigned int lcore_id = 0; /* always check core 0 */
+	size_t len;
 	char fullpath[PATH_MAX];
 	char readbuf[PATH_MAX];
 	char *s;
@@ -38,6 +39,10 @@ cpufreq_check_scaling_driver(const char *driver_name)
 	/* if we can't read it, consider unsupported */
 	if (s == NULL)
 		return 0;
+
+	/* when read from sysfs, driver name has an extra newline at the end */
+	len = strnlen(readbuf, sizeof(readbuf));
+	readbuf[len - 1] = '\0';
 
 	/* does the driver name match? */
 	if (strncmp(readbuf, driver_name, sizeof(readbuf)) != 0)
