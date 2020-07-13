@@ -1425,7 +1425,10 @@ rss_config_display(struct rte_flow_action_rss *rss_conf)
 	if (rss_conf->queue_num == 0)
 		printf("none\n");
 	for (i = 0; i < rss_conf->queue_num; i++)
-		printf("%d\n", rss_conf->queue[i]);
+		if (i == rss_conf->queue_num - 1)
+			printf("%d\n", rss_conf->queue[i]);
+		else
+			printf("%d ", rss_conf->queue[i]);
 
 	printf(" function: ");
 	switch (rss_conf->func) {
