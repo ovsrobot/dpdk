@@ -308,7 +308,7 @@ tx_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 
 	/* update tail pointer */
 	rte_wmb();
-	IXGBE_PCI_REG_WRITE_RELAXED(txq->tdt_reg_addr, txq->tx_tail);
+	IXGBE_PCI_REG_WC_WRITE_RELAXED(txq->tdt_reg_addr, txq->tx_tail);
 
 	return nb_pkts;
 }
@@ -1918,7 +1918,7 @@ ixgbe_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 			   (unsigned) nb_rx);
 		rx_id = (uint16_t) ((rx_id == 0) ?
 				     (rxq->nb_rx_desc - 1) : (rx_id - 1));
-		IXGBE_PCI_REG_WRITE(rxq->rdt_reg_addr, rx_id);
+		IXGBE_PCI_REG_WC_WRITE(rxq->rdt_reg_addr, rx_id);
 		nb_hold = 0;
 	}
 	rxq->nb_rx_hold = nb_hold;
