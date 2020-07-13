@@ -225,6 +225,17 @@ void rte_pci_unmap_device(struct rte_pci_device *dev);
 void rte_pci_dump(FILE *f);
 
 /**
+ * Find device's extended capability
+ *
+ *  @param dev
+ *    A pointer to rte_pci_device structure
+ *
+ *  @param cap
+ *    Extended capability to find
+ */
+int rte_pci_find_next_ext_capability(struct rte_pci_device *dev, int cap);
+
+/**
  * Register a PCI driver.
  *
  * @param driver

@@ -23,6 +23,7 @@
 #include <rte_common.h>
 #include <rte_devargs.h>
 #include <rte_vfio.h>
+#include <rte_pci_regs.h>
 
 #include "private.h"
 
@@ -663,6 +664,46 @@ rte_pci_get_iommu_class(void)
 		}
 	}
 	return iova_mode;
+}
+
+int rte_pci_find_next_ext_capability(struct rte_pci_device *dev, int cap)
+{
+	int pos = PCI_CFG_SPACE_SIZE;
+	uint32_t header;
+	int ttl;
+
+	/* minimum 8 bytes per capability */
+	ttl = (PCI_CFG_SPACE_EXP_SIZE - PCI_CFG_SPACE_SIZE) / 8;
+
+	if (rte_pci_read_config(dev, &header, 4, pos) < 0) {
+		RTE_LOG(ERR, EAL, "error in reading extended capabilities\n");
+		return -EINVAL;
+	}
+
+	/*
+	 * If we have no capabilities, this is indicated by cap ID,
+	 * cap version and next pointer all being 0.
+	 */
+	if (header == 0)
+		return 0;
+
+	while (ttl-- > 0) {
+		if (PCI_EXT_CAP_ID(header) == cap)
+			return pos;
+
+		pos = PCI_EXT_CAP_NEXT(header);
+
+		if (pos < PCI_CFG_SPACE_SIZE)
+			break;
+
+		if (rte_pci_read_config(dev, &header, 4, pos) < 0) {
+			RTE_LOG(ERR, EAL,
+				"error in reading extended capabilities\n");
+			return -EINVAL;
+		}
+	}
+
+	return 0;
 }
 
 struct rte_pci_bus rte_pci_bus = {
