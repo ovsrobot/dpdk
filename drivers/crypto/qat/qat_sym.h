@@ -212,11 +212,14 @@ qat_sym_process_response(void **op, uint8_t *resp)
 	}
 	*op = (void *)rx_op;
 }
+
+extern struct rte_crytodev_sym_hw_dp_ops qat_hw_dp_ops;
 #else
 
 static inline void
 qat_sym_process_response(void **op __rte_unused, uint8_t *resp __rte_unused)
 {
 }
+
 #endif
 #endif /* _QAT_SYM_H_ */

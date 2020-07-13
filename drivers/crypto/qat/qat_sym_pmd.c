@@ -259,7 +259,9 @@ static struct rte_cryptodev_ops crypto_qat_ops = {
 		/* Crypto related operations */
 		.sym_session_get_size	= qat_sym_session_get_private_size,
 		.sym_session_configure	= qat_sym_session_configure,
-		.sym_session_clear	= qat_sym_session_clear
+		.sym_session_clear	= qat_sym_session_clear,
+
+		.sym_hw_enq_deq = &qat_hw_dp_ops
 };
 
 #ifdef RTE_LIBRTE_SECURITY
@@ -382,7 +384,8 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 			RTE_CRYPTODEV_FF_OOP_LB_IN_SGL_OUT |
 			RTE_CRYPTODEV_FF_OOP_LB_IN_LB_OUT |
 			RTE_CRYPTODEV_FF_DIGEST_ENCRYPTED |
-			RTE_CRYPTODEV_FF_SECURITY;
+			RTE_CRYPTODEV_FF_SECURITY |
+			RTE_CRYPTODEV_FF_SYM_HW_DIRECT_API;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
