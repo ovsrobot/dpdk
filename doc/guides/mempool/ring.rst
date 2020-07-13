@@ -29,6 +29,16 @@ and can be selected via mempool ops API:
   Underlying **rte_ring** operates in multi-thread producer,
   single-thread consumer sync mode.
 
+- ``ring_mt_rts``
+
+  For underlying **rte_ring** both producer and consumer operate in
+  multi-thread Relaxed Tail Sync (RTS) mode.
+
+- ``ring_mt_hts``
+
+  For underlying **rte_ring** both producer and consumer operate in
+  multi-thread Haad-Tail Sync (HTS) mode.
+
 
 For more information about ``rte_ring`` structure, behaviour and available
 synchronisation modes please refer to: :doc:`../prog_guide/ring_lib`.
