@@ -4,13 +4,13 @@
 
 #include <string.h>
 #include <fcntl.h>
-#include <linux/pci_regs.h>
 #include <sys/eventfd.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <stdbool.h>
 
+#include <rte_pci_regs.h>
 #include <rte_log.h>
 #include <rte_pci.h>
 #include <rte_bus_pci.h>

@@ -18,6 +18,7 @@
 #include <rte_spinlock.h>
 #include <rte_bus_pci.h>
 #include <rte_io.h>
+#include <rte_pci_regs.h>
 
 #include "bnx2x_osal.h"
 #include "bnx2x_ethdev.h"
@@ -31,7 +32,6 @@
 #include "elink.h"
 
 #ifndef RTE_EXEC_ENV_FREEBSD
-#include <linux/pci_regs.h>
 
 #define PCIY_PMG                       PCI_CAP_ID_PM
 #define PCIY_MSI                       PCI_CAP_ID_MSI

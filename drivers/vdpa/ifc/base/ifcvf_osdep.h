@@ -6,8 +6,8 @@
 #define _IFCVF_OSDEP_H_
 
 #include <stdint.h>
-#include <linux/pci_regs.h>
 
+#include <rte_pci_regs.h>
 #include <rte_cycles.h>
 #include <rte_pci.h>
 #include <rte_bus_pci.h>

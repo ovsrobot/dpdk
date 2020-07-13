@@ -9,8 +9,8 @@
 #include <inttypes.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <linux/pci_regs.h>
 
+#include <rte_pci_regs.h>
 #include <rte_alarm.h>
 #include <rte_atomic.h>
 #include <rte_bus_pci.h>

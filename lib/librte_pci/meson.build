@@ -2,4 +2,4 @@
 # Copyright(c) 2017 Intel Corporation
 
 sources = files('rte_pci.c')
-headers = files('rte_pci.h')
+headers = files('rte_pci.h', 'rte_pci_regs.h')

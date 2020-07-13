@@ -10,12 +10,12 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/sysmacros.h>
-#include <linux/pci_regs.h>
 
 #if defined(RTE_ARCH_X86)
 #include <sys/io.h>
 #endif
 
+#include <rte_pci_regs.h>
 #include <rte_string_fns.h>
 #include <rte_log.h>
 #include <rte_pci.h>

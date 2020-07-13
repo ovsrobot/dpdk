@@ -15,5 +15,6 @@ EXPORT_MAP := rte_pci_version.map
 SRCS-$(CONFIG_RTE_LIBRTE_PCI) += rte_pci.c
 
 SYMLINK-$(CONFIG_RTE_LIBRTE_PCI)-include += rte_pci.h
+SYMLINK-y-include += rte_pci_regs.h
 
 include $(RTE_SDK)/mk/rte.lib.mk
