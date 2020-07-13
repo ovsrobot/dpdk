@@ -1914,6 +1914,124 @@ rte_cryptodev_sym_cpu_crypto_process(uint8_t dev_id,
 	return dev->dev_ops->sym_cpu_process(dev, sess, ofs, vec);
 }
 
+uint32_t
+rte_cryptodev_sym_hw_crypto_enqueue_aead(uint8_t dev_id, uint16_t qp_id,
+	union rte_cryptodev_hw_session_ctx session,
+	union rte_crypto_sym_ofs ofs, struct rte_crypto_sym_vec *vec,
+	void **opaque, uint32_t flags)
+{
+	struct rte_cryptodev *dev;
+
+	if (!rte_cryptodev_get_qp_status(dev_id, qp_id))
+		return -EINVAL;
+
+	dev = rte_cryptodev_pmd_get_dev(dev_id);
+	if (!(dev->feature_flags & RTE_CRYPTODEV_FF_SYM_HW_DIRECT_API) ||
+		dev->dev_ops->sym_hw_enq_deq == NULL ||
+			dev->dev_ops->sym_hw_enq_deq->enqueue_aead == NULL)
+		return -ENOTSUP;
+	if (vec == NULL || vec->num == 0 || session.crypto_sess == NULL)
+		return -EINVAL;
+
+	return dev->dev_ops->sym_hw_enq_deq->enqueue_aead(dev, qp_id, session,
+			ofs, vec, opaque, flags);
+}
+
+uint32_t
+rte_cryptodev_sym_hw_crypto_enqueue_cipher(uint8_t dev_id, uint16_t qp_id,
+	union rte_cryptodev_hw_session_ctx session,
+	union rte_crypto_sym_ofs ofs, struct rte_crypto_sym_vec *vec,
+	void **opaque, uint32_t flags)
+{
+	struct rte_cryptodev *dev;
+
+	if (!rte_cryptodev_get_qp_status(dev_id, qp_id))
+		return -EINVAL;
+
+	dev = rte_cryptodev_pmd_get_dev(dev_id);
+	if (!(dev->feature_flags & RTE_CRYPTODEV_FF_SYM_HW_DIRECT_API) ||
+		dev->dev_ops->sym_hw_enq_deq == NULL ||
+			dev->dev_ops->sym_hw_enq_deq->enqueue_cipher == NULL)
+		return -ENOTSUP;
+	if (vec == NULL || vec->num == 0 || session.crypto_sess == NULL)
+		return -EINVAL;
+
+	return dev->dev_ops->sym_hw_enq_deq->enqueue_cipher(dev, qp_id, session,
+			ofs, vec, opaque, flags);
+}
+
+uint32_t
+rte_cryptodev_sym_hw_crypto_enqueue_auth(uint8_t dev_id, uint16_t qp_id,
+	union rte_cryptodev_hw_session_ctx session,
+	union rte_crypto_sym_ofs ofs, struct rte_crypto_sym_vec *vec,
+	void **opaque, uint32_t flags)
+{
+	struct rte_cryptodev *dev;
+
+	if (!rte_cryptodev_get_qp_status(dev_id, qp_id))
+		return -EINVAL;
+
+	dev = rte_cryptodev_pmd_get_dev(dev_id);
+	if (!(dev->feature_flags & RTE_CRYPTODEV_FF_SYM_HW_DIRECT_API) ||
+		dev->dev_ops->sym_hw_enq_deq == NULL ||
+			dev->dev_ops->sym_hw_enq_deq->enqueue_auth == NULL)
+		return -ENOTSUP;
+	if (vec == NULL || vec->num == 0 || session.crypto_sess == NULL)
+		return -EINVAL;
+
+	return dev->dev_ops->sym_hw_enq_deq->enqueue_auth(dev, qp_id, session,
+			ofs, vec, opaque, flags);
+}
+
+uint32_t
+rte_cryptodev_sym_hw_crypto_enqueue_chain(uint8_t dev_id, uint16_t qp_id,
+	union rte_cryptodev_hw_session_ctx session,
+	union rte_crypto_sym_ofs ofs, struct rte_crypto_sym_vec *vec,
+	void **opaque, uint32_t flags)
+{
+	struct rte_cryptodev *dev;
+
+	if (!rte_cryptodev_get_qp_status(dev_id, qp_id))
+		return -EINVAL;
+
+	dev = rte_cryptodev_pmd_get_dev(dev_id);
+	if (!(dev->feature_flags & RTE_CRYPTODEV_FF_SYM_HW_DIRECT_API) ||
+		dev->dev_ops->sym_hw_enq_deq == NULL ||
+			dev->dev_ops->sym_hw_enq_deq->enqueue_chain == NULL)
+		return -ENOTSUP;
+	if (vec == NULL || vec->num == 0 || session.crypto_sess == NULL)
+		return -EINVAL;
+
+	return dev->dev_ops->sym_hw_enq_deq->enqueue_chain(dev, qp_id, session,
+			ofs, vec, opaque, flags);
+}
+
+uint32_t
+rte_cryptodev_sym_hw_crypto_dequeue(uint8_t dev_id, uint16_t qp_id,
+	rte_cryptodev_get_dequeue_count_t get_dequeue_count,
+	rte_cryptodev_post_dequeue_t post_dequeue,
+	void **out_opaque,
+	uint32_t *n_success_jobs, uint32_t flags)
+{
+	struct rte_cryptodev *dev;
+
+	if (!rte_cryptodev_get_qp_status(dev_id, qp_id))
+		return -EINVAL;
+
+	dev = rte_cryptodev_pmd_get_dev(dev_id);
+	if (!(dev->feature_flags & RTE_CRYPTODEV_FF_SYM_HW_DIRECT_API) ||
+		dev->dev_ops->sym_hw_enq_deq == NULL ||
+			dev->dev_ops->sym_hw_enq_deq->dequeue == NULL)
+		return -ENOTSUP;
+
+	if (!get_dequeue_count || !post_dequeue || !n_success_jobs)
+		return -EINVAL;
+
+	return dev->dev_ops->sym_hw_enq_deq->dequeue(dev, qp_id,
+			get_dequeue_count, post_dequeue, out_opaque,
+			n_success_jobs, flags);
+}
+
 /** Initialise rte_crypto_op mempool element */
 static void
 rte_crypto_op_init(struct rte_mempool *mempool,

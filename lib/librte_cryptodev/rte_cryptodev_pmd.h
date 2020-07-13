@@ -316,6 +316,88 @@ typedef uint32_t (*cryptodev_sym_cpu_crypto_process_t)
 	(struct rte_cryptodev *dev, struct rte_cryptodev_sym_session *sess,
 	union rte_crypto_sym_ofs ofs, struct rte_crypto_sym_vec *vec);
 
+/**
+ * Enqueue actual symmetric crypto processing on user provided data.
+ *
+ * @param	dev		Crypto device pointer
+ * @param	qp_id		The index of the queue pair from which to
+ *				retrieve processed packets. The value must be
+ *				in the range [0, nb_queue_pair - 1] previously
+ *				supplied to rte_cryptodev_configure().
+ * @param	session		Union of different session types, depends on
+ *				RTE_CRYPTO_HW_DP_FF_* flag.
+ * @param	ofs		Start and stop offsets for auth and cipher
+ *				operations.
+ * @param	vec		Vectorized operation descriptor.
+ * @param	opaque		Opaque data to be written to HW
+ *				descriptor for enqueue. In case
+ *				RTE_CRYPTO_HW_DP_FF_SET_OPAQUE_ARRAY flag is
+ *				set this value should be an array of all
+ *				'vec->num' opaque data with the size stated in
+ *				the vec. Otherwise only the first opaque
+ *				data in the array will be stored in the first
+ *				HW descriptor waiting for dequeue.
+ * @param	flags		Bit-mask of one or more RTE_CRYPTO_HW_DP_FF_*
+ *				flags.
+ *
+ * @return
+ *  - Returns number of successfully processed packets. In case the returned
+ *    value is smaller than 'vec->num', the vec's status array will be written
+ *    the error number accordingly.
+ */
+typedef uint32_t (*cryptodev_sym_hw_crypto_enqueue_t)
+	(struct rte_cryptodev *dev, uint16_t qp_id,
+	union rte_cryptodev_hw_session_ctx session,
+	union rte_crypto_sym_ofs ofs, struct rte_crypto_sym_vec *vec,
+	void **opaque, uint32_t flags);
+
+/**
+ * Dequeue symmetric crypto processing of user provided data.
+ *
+ * @param	dev			Crypto device pointer
+ * @param	qp_id			The index of the queue pair from which
+ *					to retrieve processed packets. The
+ *					value must be in the range [0,
+ *					nb_queue_pair - 1] previously
+ *					supplied to rte_cryptodev_configure().
+ * @param	get_dequeue_count	User provided callback function to
+ *					obtain dequeue count.
+ * @param	post_dequeue		User provided callback function to
+ *					post-process a dequeued operation.
+ * @param	out_opaque		Opaque data to be retrieve from HW
+ *					queue. In case of the flag
+ *					RTE_CRYPTO_HW_DP_FF_GET_OPAQUE_ARRAY
+ *					is set every dequeued operation
+ *					will be written its stored opaque data
+ *					into this array, otherwise only the
+ *					first dequeued operation will be
+ *					written the opaque data.
+ * @param	n_success_jobs		Driver written value to specific the
+ *					total successful operations count.
+ * @param	flags			Bit-mask of one or more
+ *					RTE_CRYPTO_HW_DP_FF_* flags.
+ *
+ * @return
+ *  - Returns number of dequeued packets.
+ */
+typedef uint32_t (*cryptodev_sym_hw_crypto_dequeue_t)
+	(struct rte_cryptodev *dev, uint16_t qp_id,
+	rte_cryptodev_get_dequeue_count_t get_dequeue_count,
+	rte_cryptodev_post_dequeue_t post_dequeue,
+	void **out_opaque,
+	uint32_t *n_success_jobs, uint32_t flags);
+
+/**
+ * Structure of HW crypto Data-plane APIs.
+ */
+struct rte_crytodev_sym_hw_dp_ops {
+	cryptodev_sym_hw_crypto_enqueue_t enqueue_aead;
+	cryptodev_sym_hw_crypto_enqueue_t enqueue_cipher;
+	cryptodev_sym_hw_crypto_enqueue_t enqueue_auth;
+	cryptodev_sym_hw_crypto_enqueue_t enqueue_chain;
+	cryptodev_sym_hw_crypto_dequeue_t dequeue;
+	void *reserved[3];
+};
 
 /** Crypto device operations function pointer table */
 struct rte_cryptodev_ops {
@@ -348,8 +430,12 @@ struct rte_cryptodev_ops {
 	/**< Clear a Crypto sessions private data. */
 	cryptodev_asym_free_session_t asym_session_clear;
 	/**< Clear a Crypto sessions private data. */
-	cryptodev_sym_cpu_crypto_process_t sym_cpu_process;
-	/**< process input data synchronously (cpu-crypto). */
+	union {
+		cryptodev_sym_cpu_crypto_process_t sym_cpu_process;
+		/**< process input data synchronously (cpu-crypto). */
+		struct rte_crytodev_sym_hw_dp_ops *sym_hw_enq_deq;
+		/**< Get HW crypto data-path call back functions and data */
+	};
 };
 
 

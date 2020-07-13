@@ -57,12 +57,27 @@ struct rte_crypto_sgl {
 struct rte_crypto_sym_vec {
 	/** array of SGL vectors */
 	struct rte_crypto_sgl *sgl;
-	/** array of pointers to IV */
-	void **iv;
-	/** array of pointers to AAD */
-	void **aad;
-	/** array of pointers to digest */
-	void **digest;
+	union {
+		/* Supposed to be used with CPU crypto API call. */
+		struct {
+			/** array of pointers to IV */
+			void **iv;
+			/** array of pointers to AAD */
+			void **aad;
+			/** array of pointers to digest */
+			void **digest;
+		};
+
+		/* Supposed to be used with HW crypto API call. */
+		struct {
+			/** array of vectors to IV */
+			struct rte_crypto_vec *iv_vec;
+			/** array of vectors to AAD */
+			struct rte_crypto_vec *aad_vec;
+			/** array of vectors to Digest */
+			struct rte_crypto_vec *digest_vec;
+		};
+	};
 	/**
 	 * array of statuses for each operation:
 	 *  - 0 on success

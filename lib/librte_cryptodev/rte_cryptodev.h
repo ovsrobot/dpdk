@@ -466,7 +466,8 @@ rte_cryptodev_asym_get_xform_enum(enum rte_crypto_asym_xform_type *xform_enum,
 /**< Support symmetric session-less operations */
 #define RTE_CRYPTODEV_FF_NON_BYTE_ALIGNED_DATA		(1ULL << 23)
 /**< Support operations on data which is not byte aligned */
-
+#define RTE_CRYPTODEV_FF_SYM_HW_DIRECT_API		(1ULL << 24)
+/**< Support hardware accelerator specific raw data as input */
 
 /**
  * Get the name of a crypto device feature flag
@@ -1350,6 +1351,259 @@ uint32_t
 rte_cryptodev_sym_cpu_crypto_process(uint8_t dev_id,
 	struct rte_cryptodev_sym_session *sess, union rte_crypto_sym_ofs ofs,
 	struct rte_crypto_sym_vec *vec);
+
+/* HW direct symmetric crypto data-path APIs */
+#define RTE_CRYPTO_HW_DP_FF_ENQUEUE_EXHAUST	(1ULL << 0)
+/**< Bit-mask to indicate the last job in a burst. With this bit set the
+ *   driver may read but not write the drv_data buffer, and kick the HW to
+ *   start processing all jobs written.
+ */
+#define RTE_CRYPTO_HW_DP_FF_CRYPTO_SESSION	(1ULL << 1)
+/**< Bit-mask indicating sess is a cryptodev sym session */
+#define RTE_CRYPTO_HW_DP_FF_SESSIONLESS		(1ULL << 2)
+/**< Bit-mask indicating sess is a cryptodev sym xform and session-less
+ *   operation is in-place
+ **/
+#define RTE_CRYPTO_HW_DP_FF_SECURITY_SESSION	(1ULL << 3)
+/**< Bit-mask indicating sess is a security session */
+#define RTE_CRYPTO_HW_DP_FF_SET_OPAQUE_ARRAY	(1ULL << 4)
+/**< Bit-mask to indicate opaque is an array, all elements in it will be
+ *   stored as opaque data.
+ */
+#define RTE_CRYPTO_HW_DP_FF_KICK_QUEUE		(1ULL << 5)
+/**< Bit-mask to command the HW to start processing all stored ops in the
+ *   queue immediately.
+ */
+
+/**< Bit-masks used for dequeuing job */
+#define RTE_CRYPTO_HW_DP_FF_GET_OPAQUE_ARRAY	(1ULL << 0)
+/**< Bit-mask to indicate opaque is an array with enough room to fill all
+ *   dequeued opaque data pointers.
+ */
+#define RTE_CRYPTO_HW_DP_FF_DEQUEUE_EXHAUST	(1ULL << 1)
+/**< Bit-mask to indicate dequeuing as many as n jobs in dequeue-many function.
+ *   Without this bit once the driver found out the ready-to-dequeue jobs are
+ *   not as many as n, it shall stop immediate, leave all processed jobs in the
+ *   queue, and return the ready jobs in negative. With this bit set the
+ *   function shall continue dequeue all done jobs and return the dequeued
+ *   job count in positive.
+ */
+
+/**
+ * Typedef that the user provided to get the dequeue count. User may use it to
+ * return a fixed number or the number parsed from the opaque data stored in
+ * the first processed job.
+ *
+ * @param	opaque		Dequeued opaque data.
+ **/
+typedef uint32_t (*rte_cryptodev_get_dequeue_count_t)
+	(void *opaque);
+
+/**
+ * Typedef that the user provided to deal with post dequeue operation, such
+ * as filling status.
+ *
+ * @param	opaque		Dequeued opaque data. In case
+ *				RTE_CRYPTO_HW_DP_FF_GET_OPAQUE_ARRAY bit is
+ *				set, this value will be the opaque data stored
+ *				in the specific processed jobs referenced by
+ *				index, otherwise it will be the opaque data
+ *				stored in the first processed job in the burst.
+ * @param	index		Index number of the processed job.
+ * @param	is_op_success	Driver filled operation status.
+ **/
+typedef void (*rte_cryptodev_post_dequeue_t)(void *opaque, uint32_t index,
+		uint8_t is_op_success);
+
+/**
+ * Union
+ */
+union rte_cryptodev_hw_session_ctx {
+	struct rte_cryptodev_sym_session *crypto_sess;
+	struct rte_crypto_sym_xform *xform;
+	struct rte_security_session *sec_sess;
+};
+
+/**
+ * Enqueue actual AEAD symmetric crypto processing on user provided data.
+ *
+ * @param	dev_id		The device identifier.
+ * @param	qp_id		The index of the queue pair from which to
+ *				retrieve processed packets. The value must be
+ *				in the range [0, nb_queue_pair - 1] previously
+ *				supplied to rte_cryptodev_configure().
+ * @param	session		Union of different session types, depends on
+ *				RTE_CRYPTO_HW_DP_FF_* flag.
+ * @param	ofs		Start and stop offsets for auth and cipher
+ *				operations.
+ * @param	vec		Vectorized operation descriptor.
+ * @param	opaque		Opaque data to be written to HW
+ *				descriptor for enqueue. In case
+ *				RTE_CRYPTO_HW_DP_FF_SET_OPAQUE_ARRAY flag is
+ *				set this value should be an array of all
+ *				'vec->num' opaque data with the size stated in
+ *				the vec. Otherwise only the first opaque
+ *				data in the array will be stored in the first
+ *				HW descriptor waiting for dequeue.
+ * @param	flags		Bit-mask of one or more RTE_CRYPTO_HW_DP_FF_*
+ *				flags.
+ *
+ * @return
+ *  - Returns number of successfully processed packets. In case the returned
+ *    value is smaller than 'vec->num', the vec's status array will be written
+ *    the error number accordingly.
+ */
+__rte_experimental
+uint32_t
+rte_cryptodev_sym_hw_crypto_enqueue_aead(uint8_t dev_id, uint16_t qp_id,
+	union rte_cryptodev_hw_session_ctx session,
+	union rte_crypto_sym_ofs ofs, struct rte_crypto_sym_vec *vec,
+	void **opaque, uint32_t flags);
+
+/**
+ * Enqueue actual cipher-only symmetric crypto processing on user provided data.
+ *
+ * @param	dev_id		The device identifier.
+ * @param	qp_id		The index of the queue pair from which to
+ *				retrieve processed packets. The value must be
+ *				in the range [0, nb_queue_pair - 1] previously
+ *				supplied to rte_cryptodev_configure().
+ * @param	session		Union of different session types, depends on
+ *				RTE_CRYPTO_HW_DP_FF_* flag.
+ * @param	ofs		Start and stop offsets for auth and cipher
+ *				operations.
+ * @param	vec		Vectorized operation descriptor.
+ * @param	opaque		Opaque data to be written to HW
+ *				descriptor for enqueue. In case
+ *				RTE_CRYPTO_HW_DP_FF_SET_OPAQUE_ARRAY flag is
+ *				set this value should be an array of all
+ *				'vec->num' opaque data with the size stated in
+ *				the vec. Otherwise only the first opaque
+ *				data in the array will be stored in the first
+ *				HW descriptor waiting for dequeue.
+ * @param	flags		Bit-mask of one or more RTE_CRYPTO_HW_DP_FF_*
+ *				flags.
+ *
+ * @return
+ *  - Returns number of successfully processed packets. In case the returned
+ *    value is smaller than 'vec->num', the vec's status array will be written
+ *    the error number accordingly.
+ */
+__rte_experimental
+uint32_t
+rte_cryptodev_sym_hw_crypto_enqueue_cipher(uint8_t dev_id, uint16_t qp_id,
+	union rte_cryptodev_hw_session_ctx session,
+	union rte_crypto_sym_ofs ofs, struct rte_crypto_sym_vec *vec,
+	void **opaque, uint32_t flags);
+
+/**
+ * Enqueue actual auth-only symmetric crypto processing on user provided data.
+ *
+ * @param	dev_id		The device identifier.
+ * @param	qp_id		The index of the queue pair from which to
+ *				retrieve processed packets. The value must be
+ *				in the range [0, nb_queue_pair - 1] previously
+ *				supplied to rte_cryptodev_configure().
+ * @param	session		Union of different session types, depends on
+ *				RTE_CRYPTO_HW_DP_FF_* flag.
+ * @param	ofs		Start and stop offsets for auth and cipher
+ *				operations.
+ * @param	vec		Vectorized operation descriptor.
+ * @param	opaque		Opaque data to be written to HW
+ *				descriptor for enqueue. In case
+ *				RTE_CRYPTO_HW_DP_FF_SET_OPAQUE_ARRAY flag is
+ *				set this value should be an array of all
+ *				'vec->num' opaque data with the size stated in
+ *				the vec. Otherwise only the first opaque
+ *				data in the array will be stored in the first
+ *				HW descriptor waiting for dequeue.
+ * @param	flags		Bit-mask of one or more RTE_CRYPTO_HW_DP_FF_*
+ *				flags.
+ *
+ * @return
+ *  - Returns number of successfully processed packets. In case the returned
+ *    value is smaller than 'vec->num', the vec's status array will be written
+ *    the error number accordingly.
+ */
+__rte_experimental
+uint32_t
+rte_cryptodev_sym_hw_crypto_enqueue_auth(uint8_t dev_id, uint16_t qp_id,
+	union rte_cryptodev_hw_session_ctx session,
+	union rte_crypto_sym_ofs ofs, struct rte_crypto_sym_vec *vec,
+	void **opaque, uint32_t flags);
+
+/**
+ * Enqueue actual chained symmetric crypto processing on user provided data.
+ *
+ * @param	dev_id		The device identifier.
+ * @param	qp_id		The index of the queue pair from which to
+ *				retrieve processed packets. The value must be
+ *				in the range [0, nb_queue_pair - 1] previously
+ *				supplied to rte_cryptodev_configure().
+ * @param	session		Union of different session types, depends on
+ *				RTE_CRYPTO_HW_DP_FF_* flag.
+ * @param	ofs		Start and stop offsets for auth and cipher
+ *				operations.
+ * @param	vec		Vectorized operation descriptor.
+ * @param	opaque		Opaque data to be written to HW
+ *				descriptor for enqueue. In case
+ *				RTE_CRYPTO_HW_DP_FF_SET_OPAQUE_ARRAY flag is
+ *				set this value should be an array of all
+ *				'vec->num' opaque data with the size stated in
+ *				the vec. Otherwise only the first opaque
+ *				data in the array will be stored in the first
+ *				HW descriptor waiting for dequeue.
+ * @param	flags		Bit-mask of one or more RTE_CRYPTO_HW_DP_FF_*
+ *				flags.
+ *
+ * @return
+ *  - Returns number of successfully processed packets. In case the returned
+ *    value is smaller than 'vec->num', the vec's status array will be written
+ *    the error number accordingly.
+ */
+__rte_experimental
+uint32_t
+rte_cryptodev_sym_hw_crypto_enqueue_chain(uint8_t dev_id, uint16_t qp_id,
+	union rte_cryptodev_hw_session_ctx session,
+	union rte_crypto_sym_ofs ofs, struct rte_crypto_sym_vec *vec,
+	void **opaque, uint32_t flags);
+
+/**
+ * Dequeue symmetric crypto processing of user provided data.
+ *
+ * @param	dev_id			The device identifier.
+ * @param	qp_id			The index of the queue pair from which
+ *					to retrieve processed packets. The
+ *					value must be in the range [0,
+ *					nb_queue_pair - 1] previously
+ *					supplied to rte_cryptodev_configure().
+ * @param	get_dequeue_count	User provided callback function to
+ *					obtain dequeue count.
+ * @param	post_dequeue		User provided callback function to
+ *					post-process a dequeued operation.
+ * @param	out_opaque		Opaque data to be retrieve from HW
+ *					queue. In case of the flag
+ *					RTE_CRYPTO_HW_DP_FF_GET_OPAQUE_ARRAY
+ *					is set every dequeued operation
+ *					will be written its stored opaque data
+ *					into this array, otherwise only the
+ *					first dequeued operation will be
+ *					written the opaque data.
+ * @param	n_success_jobs		Driver written value to specific the
+ *					total successful operations count.
+ * @param	flags			Bit-mask of one or more
+ *					RTE_CRYPTO_HW_DP_FF_* flags.
+ *
+ * @return
+ *  - Returns number of dequeued packets.
+ */
+__rte_experimental
+uint32_t
+rte_cryptodev_sym_hw_crypto_dequeue(uint8_t dev_id, uint16_t qp_id,
+	rte_cryptodev_get_dequeue_count_t get_dequeue_count,
+	rte_cryptodev_post_dequeue_t post_dequeue,
+	void **out_opaque,
+	uint32_t *n_success_jobs, uint32_t flags);
 
 #ifdef __cplusplus
 }

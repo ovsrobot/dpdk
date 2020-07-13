@@ -106,4 +106,9 @@ EXPERIMENTAL {
 
 	# added in 20.08
 	rte_cryptodev_get_qp_status;
+	rte_cryptodev_sym_hw_crypto_enqueue_aead;
+	rte_cryptodev_sym_hw_crypto_enqueue_cipher;
+	rte_cryptodev_sym_hw_crypto_enqueue_auth;
+	rte_cryptodev_sym_hw_crypto_enqueue_chain;
+	rte_cryptodev_sym_hw_crypto_dequeue;
 };
