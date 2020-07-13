@@ -711,8 +711,8 @@ struct i40e_fdir_info {
 	uint16_t match_counter_index;  /* Statistic counter index used for fdir*/
 	struct i40e_tx_queue *txq;
 	struct i40e_rx_queue *rxq;
-	void *prg_pkt;                 /* memory for fdir program packet */
-	uint64_t dma_addr;             /* physic address of packet memory*/
+	void *prg_pkt[PRG_PKT_CNT];     /* memory for fdir program packet */
+	uint64_t dma_addr[PRG_PKT_CNT]; /* physic address of packet memory*/
 
 	/* input set bits for each pctype */
 	uint64_t input_set[I40E_FILTER_PCTYPE_MAX];
@@ -1386,7 +1386,7 @@ int i40e_add_del_fdir_filter(struct rte_eth_dev *dev,
 			     bool add);
 int i40e_flow_add_del_fdir_filter(struct rte_eth_dev *dev,
 			      const struct i40e_fdir_filter_conf *filter,
-			      bool add);
+			      bool add, bool wait_status);
 int i40e_dev_tunnel_filter_set(struct i40e_pf *pf,
 			       struct rte_eth_tunnel_filter_conf *tunnel_filter,
 			       uint8_t add);

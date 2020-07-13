@@ -26,6 +26,7 @@
 #include <rte_dev.h>
 #include <rte_tailq.h>
 #include <rte_hash_crc.h>
+#include <rte_bitmap.h>
 
 #include "i40e_logs.h"
 #include "base/i40e_prototype.h"
@@ -1045,8 +1046,16 @@ static int
 i40e_init_fdir_filter_list(struct rte_eth_dev *dev)
 {
 	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct i40e_hw *hw = I40E_PF_TO_HW(pf);
 	struct i40e_fdir_info *fdir_info = &pf->fdir;
 	char fdir_hash_name[RTE_HASH_NAMESIZE];
+	uint32_t alloc = hw->func_caps.fd_filters_guaranteed;
+	uint32_t best = hw->func_caps.fd_filters_best_effort;
+	uint32_t glqf_ctl_reg = 0;
+	struct rte_bitmap *bmp = NULL;
+	uint32_t bmp_size;
+	void *mem = NULL;
+	uint32_t i = 0;
 	int ret;
 
 	struct rte_hash_parameters fdir_hash_params = {
@@ -1067,6 +1076,7 @@ i40e_init_fdir_filter_list(struct rte_eth_dev *dev)
 		PMD_INIT_LOG(ERR, "Failed to create fdir hash table!");
 		return -EINVAL;
 	}
+
 	fdir_info->hash_map = rte_zmalloc("i40e_fdir_hash_map",
 					  sizeof(struct i40e_fdir_filter *) *
 					  I40E_MAX_FDIR_FILTER_NUM,
@@ -1077,8 +1087,93 @@ i40e_init_fdir_filter_list(struct rte_eth_dev *dev)
 		ret = -ENOMEM;
 		goto err_fdir_hash_map_alloc;
 	}
+
+	fdir_info->fdir_filter_array = rte_zmalloc("fdir_filter",
+			sizeof(struct i40e_fdir_filter) *
+			I40E_MAX_FDIR_FILTER_NUM,
+			0);
+
+	if (!fdir_info->fdir_filter_array) {
+		PMD_INIT_LOG(ERR,
+			     "Failed to allocate memory for fdir filter array!");
+		ret = -ENOMEM;
+		goto err_fdir_filter_array_alloc;
+	}
+
+	glqf_ctl_reg = i40e_read_rx_ctl(hw, I40E_GLQF_CTL);
+	if (!pf->support_multi_driver) {
+		fdir_info->fdir_invalprio = 1;
+		glqf_ctl_reg |= I40E_GLQF_CTL_INVALPRIO_MASK;
+		PMD_DRV_LOG(INFO, "FDIR INVALPRIO set to guaranteed first");
+	} else {
+		if (glqf_ctl_reg | I40E_GLQF_CTL_INVALPRIO_MASK) {
+			fdir_info->fdir_invalprio = 1;
+			PMD_DRV_LOG(INFO, "FDIR INVALPRIO is: guaranteed first");
+		} else {
+			fdir_info->fdir_invalprio = 0;
+			PMD_DRV_LOG(INFO, "FDIR INVALPRIO is: shared first");
+		}
+	}
+
+	i40e_write_rx_ctl(hw, I40E_GLQF_CTL, glqf_ctl_reg);
+	PMD_DRV_LOG(INFO, "FDIR guarantee space: %u, best_effort space %u.", alloc, best);
+
+	fdir_info->fdir_space_size = alloc + best;
+	fdir_info->fdir_actual_cnt = 0;
+	fdir_info->fdir_guarantee_available_space = alloc;
+	fdir_info->fdir_guarantee_free_space =
+		fdir_info->fdir_guarantee_available_space;
+
+	fdir_info->fdir_flow_pool.pool =
+			rte_zmalloc("i40e_fdir_entry",
+				sizeof(struct i40e_fdir_entry) *
+				fdir_info->fdir_space_size,
+				0);
+
+	if (!fdir_info->fdir_flow_pool.pool) {
+		PMD_INIT_LOG(ERR,
+			     "Failed to allocate memory for bitmap flow!");
+		ret = -ENOMEM;
+		goto err_fdir_bitmap_flow_alloc;
+	}
+
+	for (i = 0; i < fdir_info->fdir_space_size; i++)
+		fdir_info->fdir_flow_pool.pool[i].idx = i;
+
+	bmp_size =
+		rte_bitmap_get_memory_footprint(fdir_info->fdir_space_size);
+
+	mem = rte_zmalloc("fdir_bmap", bmp_size, RTE_CACHE_LINE_SIZE);
+	if (mem == NULL) {
+		PMD_INIT_LOG(ERR,
+			     "Failed to allocate memory for fdir bitmap!");
+		ret = -ENOMEM;
+		goto err_fdir_mem_alloc;
+	}
+
+	bmp = rte_bitmap_init(fdir_info->fdir_space_size, mem, bmp_size);
+	if (bmp == NULL) {
+		PMD_INIT_LOG(ERR,
+			     "Failed to initialization fdir bitmap!");
+		ret = -ENOMEM;
+		goto err_fdir_bmp_alloc;
+	}
+
+	for (i = 0; i < fdir_info->fdir_space_size; i++)
+		rte_bitmap_set(bmp, i);
+
+	fdir_info->fdir_flow_pool.b = bmp;
+
 	return 0;
 
+err_fdir_bmp_alloc:
+	rte_free(mem);
+err_fdir_mem_alloc:
+	rte_free(fdir_info->fdir_flow_pool.pool);
+err_fdir_bitmap_flow_alloc:
+	rte_free(fdir_info->fdir_filter_array);
+err_fdir_filter_array_alloc:
+	rte_free(fdir_info->hash_map);
 err_fdir_hash_map_alloc:
 	rte_hash_free(fdir_info->hash_table);
 
@@ -1749,17 +1844,33 @@ i40e_rm_fdir_filter_list(struct i40e_pf *pf)
 	struct i40e_fdir_info *fdir_info;
 
 	fdir_info = &pf->fdir;
-	/* Remove all flow director rules and hash */
+
+	/* Remove all flow director rules */
+	while ((p_fdir = TAILQ_FIRST(&fdir_info->fdir_list)))
+		TAILQ_REMOVE(&fdir_info->fdir_list, p_fdir, rules);
+}
+
+static void
+i40e_fdir_memory_cleanup(struct i40e_pf *pf)
+{
+	struct i40e_fdir_info *fdir_info;
+
+	fdir_info = &pf->fdir;
+
+	/* flow director memory cleanup */
 	if (fdir_info->hash_map)
 		rte_free(fdir_info->hash_map);
 	if (fdir_info->hash_table)
 		rte_hash_free(fdir_info->hash_table);
+	if (fdir_info->fdir_flow_pool.b)
+		rte_bitmap_free(fdir_info->fdir_flow_pool.b);
+	if (fdir_info->fdir_flow_pool.pool)
+		rte_free(fdir_info->fdir_flow_pool.pool);
+	if (fdir_info->fdir_filter_array)
+		rte_free(fdir_info->fdir_filter_array);
 
-	while ((p_fdir = TAILQ_FIRST(&fdir_info->fdir_list))) {
-		TAILQ_REMOVE(&fdir_info->fdir_list, p_fdir, rules);
-		rte_free(p_fdir);
-	}
 }
+
 
 void i40e_flex_payload_reg_set_default(struct i40e_hw *hw)
 {
@@ -2618,8 +2729,13 @@ i40e_dev_close(struct rte_eth_dev *dev)
 	/* Remove all flows */
 	while ((p_flow = TAILQ_FIRST(&pf->flow_list))) {
 		TAILQ_REMOVE(&pf->flow_list, p_flow, node);
-		rte_free(p_flow);
+		/* Do not free FDIR flows since they are static allocated */
+		if (p_flow->filter_type != RTE_ETH_FILTER_FDIR)
+			rte_free(p_flow);
 	}
+
+	/* release the fdir static allocated memory */
+	i40e_fdir_memory_cleanup(pf);
 
 	/* Remove all Traffic Manager configuration */
 	i40e_tm_conf_uninit(dev);
