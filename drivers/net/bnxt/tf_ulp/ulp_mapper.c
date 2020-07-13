@@ -16,6 +16,7 @@
 #include "ulp_mark_mgr.h"
 #include "ulp_flow_db.h"
 #include "ulp_mapper.h"
+#include "tf_util.h"
 
 static struct bnxt_ulp_glb_resource_info *
 ulp_mapper_glb_resource_info_list_get(uint32_t *num_entries)
@@ -719,15 +720,13 @@ ulp_mapper_ident_extract(struct bnxt_ulp_mapper_parms *parms,
 	/* Search identifier also increase the reference count */
 	rc = tf_search_identifier(tfp, &sparms);
 	if (rc) {
-		BNXT_TF_DBG(ERR, "Search ident %s:%s:%x failed.\n",
+		BNXT_TF_DBG(ERR, "Search ident %s:%x failed.\n",
 			    tf_dir_2_str(sparms.dir),
-			    tf_tbl_type_2_str(sparms.ident_type),
 			    sparms.search_id);
 		return rc;
 	}
-	BNXT_TF_INF("Search ident %s:%s:%x.success.\n",
+	BNXT_TF_DBG(INFO, "Search ident %s:%x.success.\n",
 		    tf_dir_2_str(sparms.dir),
-		    tf_tbl_type_2_str(sparms.ident_type),
 		    sparms.search_id);
 
 	/* Write it to the regfile */
