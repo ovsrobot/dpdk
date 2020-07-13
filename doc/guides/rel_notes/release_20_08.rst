@@ -225,6 +225,11 @@ New Features
   See the :doc:`../sample_app_ug/l2_forward_real_virtual` for more
   details of this parameter usage.
 
+* **Added support for GEN2 device 200xx to Intel QAT driver.**
+
+  Added support for Intel GEN2 QuickAssist device 200xx
+  (PF Did 0x18ee, VF Did 0x18ef).
+
 
 Removed Items
 -------------

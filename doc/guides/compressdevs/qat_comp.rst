@@ -1,5 +1,5 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
-    Copyright(c) 2018 Intel Corporation.
+    Copyright(c) 2018-2020 Intel Corporation.
 
 Intel(R) QuickAssist (QAT) Compression Poll Mode Driver
 =======================================================
@@ -9,6 +9,7 @@ support for the following hardware accelerator devices:
 
 * ``Intel QuickAssist Technology C62x``
 * ``Intel QuickAssist Technology C3xxx``
+* ``Intel QuickAssist Technology 200xx``
 * ``Intel QuickAssist Technology DH895x``
 
 
