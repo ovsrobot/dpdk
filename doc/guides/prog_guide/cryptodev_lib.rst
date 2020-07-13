@@ -631,6 +631,59 @@ a call argument. Status different than zero must be treated as error.
 For more details, e.g. how to convert an mbuf to an SGL, please refer to an
 example usage in the IPsec library implementation.
 
+Cryptodev Direct Symmetric Crypto Data-plane APIs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Direct symmetric crypto data-path APIs are a set of APIs that especially
+provided for Symmetric HW Crypto PMD that provides fast data-path
+enqueue/dequeue operations. The direct data-path APIs take advantage of
+existing Cryptodev APIs for device, queue pairs, and session management. In
+addition the user are required to get the queue pair pointer data and function
+pointers. The APIs are provided as an advanced feature as an alternative
+to ``rte_cryptodev_enqueue_burst`` and ``rte_cryptodev_dequeue_burst``. The
+APIs are designed for the user to develop close-to-native performance symmetric
+crypto data-path implementation for their applications that do not necessarily
+depend on cryptodev operations and cryptodev operation mempools, or mbufs.
+
+Cryptodev PMDs who supports this feature will have
+``RTE_CRYPTODEV_FF_SYM_HW_DIRECT_API`` feature flag presented. The user uses
+``rte_cryptodev_sym_get_hw_ops`` function call to get all the function pointers
+for different enqueue and dequeue operations, plus the device specific
+queue pair data. After the ``rte_crypto_hw_ops`` structure is properly set by
+the driver, the user can use the function pointers and the queue data pointers
+in the structure to enqueue and dequeue crypto jobs.
+
+Direct Data-plane APIs share the same ``struct rte_crypto_sym_vec`` structure
+as synchronous mode. However to pass IOVA addresses the user are required to
+pass the ``struct rte_crypto_vec`` arrays for IV, AAD, and digests, instead
+of VOID pointers as synchronous mode.
+
+Different than Cryptodev operation, the ``rte_crypto_sym_vec`` structure
+focuses only on the data field required for crypto PMD to execute a single job,
+and is not supposed stored as opaque data. The user can freely allocate the
+structure buffer from stack and reuse it to fill all jobs.
+
+In addtion, to maximum the flexibility in the enqueue/dequeue operation, the
+data-plane APIs supports some special operations specified in the flag
+parameters in both enqueue and dequeue functions. For example, setting or
+unsetting the flag ``RTE_CRYPTO_HW_DP_FF_ENQUEUE_EXHAUST`` shall make the
+PMD behaving differently: setting the flag will make the PMD attempts enqueuing
+as many jobs in the ``struct rte_crypto_sym_vec``, but unsetting it will
+make the PMD only enqueue the ``num`` or zero operations depends on the
+queue status.
+
+To use the direct symmetric crypto APIs safely, the user has to carefully
+set the correct fields in rte_crypto_sym_vec structure, otherwise the
+application or the system may crash. Also there are a few limitations to the
+direct symmetric crypto APIs:
+
+* Only support in-place operations.
+* APIs are NOT thread-safe.
+* CANNOT mix the direct API's enqueue with rte_cryptodev_enqueue_burst, or
+  vice versa.
+
+See *DPDK API Reference* for details on each API definitions.
+
 Sample code
 -----------
 

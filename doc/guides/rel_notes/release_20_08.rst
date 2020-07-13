@@ -225,6 +225,14 @@ New Features
   See the :doc:`../sample_app_ug/l2_forward_real_virtual` for more
   details of this parameter usage.
 
+* **Add Cryptodev data-path APIs for no mbuf-centric data-path.**
+
+  Cryptodev is added a set of data-path APIs that are not based on
+  cryptodev operations. The APIs are designed for external applications
+  or libraries that want to use cryptodev but their data-path
+  implementations are not mbuf-centric. QAT Symmetric PMD is also updated
+  to add the support to these APIs.
+
 
 Removed Items
 -------------
