@@ -117,6 +117,13 @@ Deprecation Notices
   break the ABI checks, that is why change is planned for 20.11.
   The list of internal APIs are mainly ones listed in ``rte_ethdev_driver.h``.
 
+* rawdev: The rawdev APIs which take a device-specific structure as
+  parameter directly, or indirectly via a "private" pointer inside another
+  structure, will be modified to take an additional parameter of the
+  structure size. The affected APIs will include ``rte_rawdev_info_get``,
+  ``rte_rawdev_configure``, ``rte_rawdev_queue_conf_get`` and
+  ``rte_rawdev_queue_setup``.
+
 * traffic manager: All traffic manager API's in ``rte_tm.h`` were mistakenly made
   ABI stable in the v19.11 release. The TM maintainer and other contributors have
   agreed to keep the TM APIs as experimental in expectation of additional spec
