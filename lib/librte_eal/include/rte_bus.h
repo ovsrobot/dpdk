@@ -220,8 +220,13 @@ enum rte_bus_scan_mode {
 };
 
 /* Backwards compatibility will be deprecated */
-#define RTE_BUS_SCAN_WHITELIST  RTE_BUS_SCAN_ALLOWLIST
-#define RTE_BUS_SCAN_BLACKLIST	RTE_BUS_SCAN_BLOCKLIST
+#define RTE_BUS_SCAN_WHITELIST  \
+	_Pragma("GCC warning \"'RTE_BUS_SCAN_WHITELIST' macro is deprecated.\"") \
+	RTE_BUS_SCAN_ALLOWLIST
+
+#define RTE_BUS_SCAN_BLACKLIST	\
+	_Pragma("GCC warning \"'RTE_BUS_SCAN_BLACKLIST' macro is deprecated.\"") \
+	RTE_BUS_SCAN_BLOCKLIST
 
 /**
  * A structure used to configure bus operations.

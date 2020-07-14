@@ -34,9 +34,13 @@ enum rte_devtype {
 	RTE_DEVTYPE_VIRTUAL,
 };
 
-/* Backwards compatiablity will be removed later */
-#define RTE_DEVTYPE_WHITELISTED_PCI RTE_DEVTYPE_ALLOWED_PCI
-#define RTE_DEVTYPE_BLACKLISTED_PCI RTE_DEVTYPE_BLOCKED_PCI
+#define RTE_DEVTYPE_WHITELISTED_PCI \
+	_Pragma("GCC warning \"'RTE_DEVTYPE_WHITELISTED_PCI' macro is deprecated.\"") \
+	RTE_DEVTYPE_ALLOWED_PCI
+
+#define RTE_DEVTYPE_BLACKLISTED_PCI \
+	_Pragma("GCC warning \"'RTE_DEVTYPE_BLACKLISTED_PCI' macro is deprecated.\"") \
+	RTE_DEVTYPE_BLOCKED_PCI
 
 /**
  * Structure that stores a device given by the user with its arguments
