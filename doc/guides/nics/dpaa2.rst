@@ -527,10 +527,10 @@ which are lower than logging ``level``.
 Using ``pmd.net.dpaa2`` as log matching criteria, all PMD logs can be enabled
 which are lower than logging ``level``.
 
-Whitelisting & Blacklisting
+Allowlisting & Blocklisting
 ---------------------------
 
-For blacklisting a DPAA2 device, following commands can be used.
+For blocking a DPAA2 device, following commands can be used.
 
  .. code-block:: console
 

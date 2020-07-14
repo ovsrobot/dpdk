@@ -29,8 +29,8 @@ Most Mellanox ConnectX-3 devices provide two ports but expose a single PCI
 bus address, thus unlike most drivers, librte_pmd_mlx4 registers itself as a
 PCI driver that allocates one Ethernet device per detected port.
 
-For this reason, one cannot white/blacklist a single port without also
-white/blacklisting the others on the same device.
+For this reason, one cannot white/blocklist a single port without also
+white/blocklisting the others on the same device.
 
 Besides its dependency on libibverbs (that implies libmlx4 and associated
 kernel support), librte_pmd_mlx4 relies heavily on system calls for control
@@ -422,7 +422,7 @@ devices managed by librte_pmd_mlx4.
       eth4
       eth5
 
-#. Optionally, retrieve their PCI bus addresses for whitelisting::
+#. Optionally, retrieve their PCI bus addresses for allowlisting::
 
       {
           for intf in eth2 eth3 eth4 eth5;

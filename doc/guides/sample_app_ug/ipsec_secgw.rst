@@ -329,8 +329,8 @@ This means that if the application is using a single core and both hardware
 and software crypto devices are detected, hardware devices will be used.
 
 A way to achieve the case where you want to force the use of virtual crypto
-devices is to whitelist the Ethernet devices needed and therefore implicitly
-blacklisting all hardware crypto devices.
+devices is to allowlist the Ethernet devices needed and therefore implicitly
+blocklisting all hardware crypto devices.
 
 For example, something like the following command line:
 

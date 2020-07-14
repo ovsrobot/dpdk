@@ -40,8 +40,8 @@ expose a single PCI bus address, thus, librte_pmd_cxgbe registers
 itself as a PCI driver that allocates one Ethernet device per detected
 port.
 
-For this reason, one cannot whitelist/blacklist a single port without
-whitelisting/blacklisting the other ports on the same device.
+For this reason, one cannot allowlist/blocklist a single port without
+allowlisting/blocklisting the other ports on the same device.
 
 .. _t5-nics:
 
