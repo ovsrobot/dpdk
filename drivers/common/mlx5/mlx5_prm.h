@@ -253,7 +253,7 @@
 #define MLX5_MAX_LOG_RQ_SEGS 5u
 
 /* The alignment needed for WQ buffer. */
-#define MLX5_WQE_BUF_ALIGNMENT sysconf(_SC_PAGESIZE)
+#define MLX5_WQE_BUF_ALIGNMENT rte_mem_page_size()
 
 /* Completion mode. */
 enum mlx5_completion_mode {

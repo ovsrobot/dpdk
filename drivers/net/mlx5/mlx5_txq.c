@@ -8,7 +8,6 @@
 #include <string.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <sys/mman.h>
 #include <inttypes.h>
 
 /* Verbs header. */
@@ -26,6 +25,7 @@
 #include <rte_malloc.h>
 #include <rte_ethdev_driver.h>
 #include <rte_common.h>
+#include <rte_eal_paging.h>
 
 #include <mlx5_glue.h>
 #include <mlx5_devx_cmds.h>
@@ -340,10 +340,14 @@ txq_uar_init(struct mlx5_txq_ctrl *txq_ctrl)
 {
 	struct mlx5_priv *priv = txq_ctrl->priv;
 	struct mlx5_proc_priv *ppriv = MLX5_PROC_PRIV(PORT_ID(priv));
-	const size_t page_size = sysconf(_SC_PAGESIZE);
 #ifndef RTE_ARCH_64
 	unsigned int lock_idx;
 #endif
+	const size_t page_size = rte_mem_page_size();
+	if (page_size == (size_t)-1) {
+		DRV_LOG(ERR, "Failed to get mem page size");
+		rte_errno = ENOMEM;
+	}
 
 	if (txq_ctrl->type != MLX5_TXQ_TYPE_STANDARD)
 		return;
@@ -382,7 +386,12 @@ txq_uar_init_secondary(struct mlx5_txq_ctrl *txq_ctrl, int fd)
 	void *addr;
 	uintptr_t uar_va;
 	uintptr_t offset;
-	const size_t page_size = sysconf(_SC_PAGESIZE);
+	const size_t page_size = rte_mem_page_size();
+	if (page_size == (size_t)-1) {
+		DRV_LOG(ERR, "Failed to get mem page size");
+		rte_errno = ENOMEM;
+		return -rte_errno;
+	}
 
 	if (txq_ctrl->type != MLX5_TXQ_TYPE_STANDARD)
 		return 0;
@@ -393,9 +402,9 @@ txq_uar_init_secondary(struct mlx5_txq_ctrl *txq_ctrl, int fd)
 	 */
 	uar_va = (uintptr_t)txq_ctrl->bf_reg;
 	offset = uar_va & (page_size - 1); /* Offset in page. */
-	addr = mmap(NULL, page_size, PROT_WRITE, MAP_SHARED, fd,
-			txq_ctrl->uar_mmap_offset);
-	if (addr == MAP_FAILED) {
+	addr = rte_mem_map(NULL, page_size, RTE_PROT_WRITE, RTE_MAP_SHARED,
+			    fd, txq_ctrl->uar_mmap_offset);
+	if (!addr) {
 		DRV_LOG(ERR,
 			"port %u mmap failed for BF reg of txq %u",
 			txq->port_id, txq->idx);
@@ -418,13 +427,17 @@ static void
 txq_uar_uninit_secondary(struct mlx5_txq_ctrl *txq_ctrl)
 {
 	struct mlx5_proc_priv *ppriv = MLX5_PROC_PRIV(PORT_ID(txq_ctrl->priv));
-	const size_t page_size = sysconf(_SC_PAGESIZE);
 	void *addr;
+	const size_t page_size = rte_mem_page_size();
+	if (page_size == (size_t)-1) {
+		DRV_LOG(ERR, "Failed to get mem page size");
+		rte_errno = ENOMEM;
+	}
 
 	if (txq_ctrl->type != MLX5_TXQ_TYPE_STANDARD)
 		return;
 	addr = ppriv->uar_table[txq_ctrl->txq.idx];
-	munmap(RTE_PTR_ALIGN_FLOOR(addr, page_size), page_size);
+	rte_mem_unmap(RTE_PTR_ALIGN_FLOOR(addr, page_size), page_size);
 }
 
 /**
