@@ -50,7 +50,7 @@ Runtime Config Options
   But if user intend to use the device without OS package, user can take ``devargs``
   parameter ``safe-mode-support``, for example::
 
-    -w 80:00.0,safe-mode-support=1
+    -i 80:00.0,safe-mode-support=1
 
   Then the driver will be initialized successfully and the device will enter Safe Mode.
   NOTE: In Safe mode, only very limited features are available, features like RSS,
@@ -73,7 +73,7 @@ Runtime Config Options
   use pipeline mode by setting ``devargs`` parameter ``pipeline-mode-support``,
   for example::
 
-    -w 80:00.0,pipeline-mode-support=1
+    -i 80:00.0,pipeline-mode-support=1
 
 - ``Flow Mark Support`` (default ``0``)
 
@@ -85,7 +85,7 @@ Runtime Config Options
   2) a new offload like RTE_DEV_RX_OFFLOAD_FLOW_MARK be introduced as a standard way to hint.
   Example::
 
-    -w 80:00.0,flow-mark-support=1
+    -i 80:00.0,flow-mark-support=1
 
 - ``Protocol extraction for per queue``
 
@@ -94,8 +94,8 @@ Runtime Config Options
 
   The argument format is::
 
-      -w 18:00.0,proto_xtr=<queues:protocol>[<queues:protocol>...]
-      -w 18:00.0,proto_xtr=<protocol>
+      -i 18:00.0,proto_xtr=<queues:protocol>[<queues:protocol>...]
+      -i 18:00.0,proto_xtr=<protocol>
 
   Queues are grouped by ``(`` and ``)`` within the group. The ``-`` character
   is used as a range separator and ``,`` is used as a single number separator.
@@ -106,14 +106,14 @@ Runtime Config Options
 
   .. code-block:: console
 
-    testpmd -w 18:00.0,proto_xtr='[(1,2-3,8-9):tcp,10-13:vlan]'
+    testpmd -i 18:00.0,proto_xtr='[(1,2-3,8-9):tcp,10-13:vlan]'
 
   This setting means queues 1, 2-3, 8-9 are TCP extraction, queues 10-13 are
   VLAN extraction, other queues run with no protocol extraction.
 
   .. code-block:: console
 
-    testpmd -w 18:00.0,proto_xtr=vlan,proto_xtr='[(1,2-3,8-9):tcp,10-23:ipv6]'
+    testpmd -i 18:00.0,proto_xtr=vlan,proto_xtr='[(1,2-3,8-9):tcp,10-23:ipv6]'
 
   This setting means queues 1, 2-3, 8-9 are TCP extraction, queues 10-23 are
   IPv6 extraction, other queues use the default VLAN extraction.
@@ -253,7 +253,7 @@ responses for the same from PF.
 
 #. Bind the VF0,  and run testpmd with 'cap=dcf' devarg::
 
-      testpmd -l 22-25 -n 4 -w 18:01.0,cap=dcf -- -i
+      testpmd -l 22-25 -n 4 -i 18:01.0,cap=dcf -- -i
 
 #. Monitor the VF2 interface network traffic::
 

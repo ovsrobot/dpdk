@@ -178,7 +178,7 @@ This section provides instructions to configure SR-IOV with Linux OS.
 
    .. code-block:: console
 
-      ./arm64-thunderx-linux-gcc/app/testpmd -l 0-3 -n 4 -w 0002:01:00.2 \
+      ./arm64-thunderx-linux-gcc/app/testpmd -l 0-3 -n 4 -i 0002:01:00.2 \
         -- -i --no-flush-rx \
         --port-topology=loop
 
@@ -398,7 +398,7 @@ This scheme is useful when application would like to insert vlan header without 
 Example:
    .. code-block:: console
 
-      -w 0002:01:00.2,skip_data_bytes=8
+      -i 0002:01:00.2,skip_data_bytes=8
 
 Limitations
 -----------

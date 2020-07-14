@@ -299,7 +299,7 @@ return 0 (thereby avoiding an MMIO) if the device is congested and number of pac
 possible to enqueue is smaller.
 To use this feature the user must set the parameter on process start as a device additional parameter::
 
-  -w 03:01.1,qat_sym_enq_threshold=32,qat_comp_enq_threshold=16
+  -i 03:01.1,qat_sym_enq_threshold=32,qat_comp_enq_threshold=16
 
 All parameters can be used with the same device regardless of order. Parameters are separated
 by comma. When the same parameter is used more than once first occurrence of the parameter

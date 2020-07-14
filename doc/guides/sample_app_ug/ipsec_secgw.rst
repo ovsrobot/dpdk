@@ -337,7 +337,7 @@ For example, something like the following command line:
 .. code-block:: console
 
     ./build/ipsec-secgw -l 20,21 -n 4 --socket-mem 0,2048 \
-            -w 81:00.0 -w 81:00.1 -w 81:00.2 -w 81:00.3 \
+            -i 81:00.0 -i 81:00.1 -i 81:00.2 -i 81:00.3 \
             --vdev "crypto_aesni_mb" --vdev "crypto_null" \
 	    -- \
             -p 0xf -P -u 0x3 --config="(0,0,20),(1,0,20),(2,0,21),(3,0,21)" \
