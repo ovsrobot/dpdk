@@ -45,7 +45,8 @@ The tool has a number of command line options:
                                     tx-dev=<iface or pcap file>),
                                    [ring-size=<ring size>],
                                    [mbuf-size=<mbuf data size>],
-                                   [total-num-mbufs=<number of mbufs>]'
+                                   [total-num-mbufs=<number of mbufs>],
+                                   [snaplen=<snap length>]'
 
 The ``--multi`` command line option is optional argument. If passed, capture
 will be running on unique cores for all ``--pdump`` options. If ignored,
@@ -114,6 +115,8 @@ default size 2176.
 Total number mbufs in mempool. This is used internally for mempool creation. This is an optional parameter with default
 value 65535.
 
+``snaplen``:
+Truncate snaplen bytes of data from each packet. This is an optional parameter with default value 0, meaning no truncation.
 
 Example
 -------

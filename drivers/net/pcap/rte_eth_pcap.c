@@ -40,6 +40,7 @@
 #define ETH_PCAP_IFACE_ARG    "iface"
 #define ETH_PCAP_PHY_MAC_ARG  "phy_mac"
 #define ETH_PCAP_INFINITE_RX_ARG  "infinite_rx"
+#define ETH_PCAP_SNAPLEN_ARG  "snaplen"
 
 #define ETH_PCAP_ARG_MAXLEN	64
 
@@ -86,6 +87,7 @@ struct pmd_internals {
 	int single_iface;
 	int phy_mac;
 	unsigned int infinite_rx;
+	unsigned int snaplen;
 };
 
 struct pmd_process_private {
@@ -114,6 +116,7 @@ struct pmd_devargs_all {
 	unsigned int is_rx_pcap;
 	unsigned int is_rx_iface;
 	unsigned int infinite_rx;
+	unsigned int snaplen;
 };
 
 static const char *valid_arguments[] = {
@@ -125,6 +128,7 @@ static const char *valid_arguments[] = {
 	ETH_PCAP_IFACE_ARG,
 	ETH_PCAP_PHY_MAC_ARG,
 	ETH_PCAP_INFINITE_RX_ARG,
+	ETH_PCAP_SNAPLEN_ARG,
 	NULL
 };
 
@@ -322,11 +326,13 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	pcap_dumper_t *dumper;
 	unsigned char temp_data[RTE_ETH_PCAP_SNAPLEN];
 	size_t len, caplen;
+	struct pmd_internals *internal;
 
 	pp = rte_eth_devices[dumper_q->port_id].process_private;
 	dumper = pp->tx_dumper[dumper_q->queue_id];
+	internal = rte_eth_devices[dumper_q->port_id].data->dev_private;
 
-	if (dumper == NULL || nb_pkts == 0)
+	if (dumper == NULL || nb_pkts == 0 || internal == NULL)
 		return 0;
 
 	/* writes the nb_pkts packets to the previously opened pcap file
@@ -338,6 +344,9 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 				len > sizeof(temp_data))) {
 			caplen = sizeof(temp_data);
 		}
+
+		if (caplen > internal->snaplen)
+			caplen = internal->snaplen;
 
 		calculate_timestamp(&header.ts);
 		header.len = len;
@@ -1083,6 +1092,21 @@ get_infinite_rx_arg(const char *key __rte_unused,
 }
 
 static int
+get_snaplen_arg(const char *key __rte_unused,
+		const char *value, void *extra_args)
+{
+	if (extra_args) {
+		unsigned int snaplen = (unsigned int)atoi(value);
+		unsigned int *snaplen_p = extra_args;
+
+		if (snaplen == 0)
+			snaplen = RTE_ETH_PCAP_SNAPLEN;
+		*snaplen_p = snaplen;
+	}
+	return 0;
+}
+
+static int
 pmd_init_internals(struct rte_vdev_device *vdev,
 		const unsigned int nb_rx_queues,
 		const unsigned int nb_tx_queues,
@@ -1291,6 +1315,9 @@ eth_from_pcaps(struct rte_vdev_device *vdev,
 	/* store weather we are using a single interface for rx/tx or not */
 	internals->single_iface = single_iface;
 
+	if (devargs_all->is_tx_pcap)
+		internals->snaplen = devargs_all->snaplen;
+
 	if (single_iface) {
 		internals->if_index = if_nametoindex(rx_queues->queue[0].name);
 
@@ -1341,6 +1368,7 @@ pmd_pcap_probe(struct rte_vdev_device *dev)
 		.is_tx_pcap = 0,
 		.is_tx_iface = 0,
 		.infinite_rx = 0,
+		.snaplen = RTE_ETH_PCAP_SNAPLEN,
 	};
 
 	name = rte_vdev_device_name(dev);
@@ -1463,6 +1491,13 @@ pmd_pcap_probe(struct rte_vdev_device *dev)
 	}
 	if (ret < 0)
 		goto free_kvlist;
+
+	if (devargs_all.is_tx_pcap) {
+		ret = rte_kvargs_process(kvlist, ETH_PCAP_SNAPLEN_ARG,
+				&get_snaplen_arg, &devargs_all.snaplen);
+		if (ret < 0)
+			goto free_kvlist;
+	}
 
 	/*
 	 * We check whether we want to open a TX stream to a real NIC,
@@ -1587,4 +1622,5 @@ RTE_PMD_REGISTER_PARAM_STRING(net_pcap,
 	ETH_PCAP_TX_IFACE_ARG "=<ifc> "
 	ETH_PCAP_IFACE_ARG "=<ifc> "
 	ETH_PCAP_PHY_MAC_ARG "=<int>"
-	ETH_PCAP_INFINITE_RX_ARG "=<0|1>");
+	ETH_PCAP_INFINITE_RX_ARG "=<0|1>"
+	ETH_PCAP_SNAPLEN_ARG "=<int>");

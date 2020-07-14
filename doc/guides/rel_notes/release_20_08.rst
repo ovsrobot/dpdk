@@ -225,6 +225,10 @@ New Features
   See the :doc:`../sample_app_ug/l2_forward_real_virtual` for more
   details of this parameter usage.
 
+* **Added a devarg to truncate the dumped packets for PCAP vdev.**
+
+  A new devarg ``snaplen`` was introduced to allow users to truncate the
+  dumped packets, and is convenient for capturing with large packet size.
 
 Removed Items
 -------------
