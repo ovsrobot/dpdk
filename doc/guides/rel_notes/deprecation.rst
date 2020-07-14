@@ -142,3 +142,6 @@ Deprecation Notices
   Python 2 support will be completely removed in 20.11.
   In 20.08, explicit deprecation warnings will be displayed when running
   scripts with Python 2.
+
+* pmd_dpaa: The API ``rte_pmd_dpaa_set_tx_loopback`` will have extended ``port_id``
+  definition from uint8_t to uint16_t.
