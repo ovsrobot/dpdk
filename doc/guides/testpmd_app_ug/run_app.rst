@@ -494,4 +494,6 @@ The command line options are:
 
     Enable measurement of CPU cycles per packet.
 
+*   ``--record-burst-stats``
 
+    Enable display of RX and TX burst stats.
