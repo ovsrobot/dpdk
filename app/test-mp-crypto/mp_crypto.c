@@ -24,3 +24,22 @@ struct mp_app_process_data *mp_shared_data;
 
 int mp_crypto_exit_flag;
 /* Global exit flag */
+
+struct rte_mempool *mp_crypto_session_mempool;
+/* Global crypto mempool used by all processes */
+struct rte_mempool *mp_crypto_session_mempool_local;
+/* Local crypto mempool used by this process */
+struct rte_mempool *mp_crypto_priv_session_mp;
+/* Global crypto private session mempool used by all processes */
+struct rte_mempool *mp_crypto_priv_session_mp_local;
+/* Local crypto private session mempool used by this process */
+struct rte_mempool *mp_crypto_op_pool;
+/* Per process op pool */
+struct rte_mempool *mp_crypto_mbuf_pool;
+/* Per process mbuf pool */
+struct rte_crypto_op *mp_crypto_ops[MP_CRYPTO_OPS_NUM];
+/* Per process set of rte crypto ops */
+struct rte_crypto_op *mp_crypto_ops_ret[MP_CRYPTO_OPS_NUM];
+/* Per process set of return rte crypto ops */
+struct rte_mbuf *mp_crypto_mbufs[MP_CRYPTO_OPS_NUM];
+/* Per process set of rte mbufs */

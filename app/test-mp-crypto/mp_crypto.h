@@ -70,6 +70,18 @@ extern struct rte_crypto_op *mp_crypto_ops_ret[];
 /* Per process set of return rte crypto ops */
 extern struct rte_mbuf *mp_crypto_mbufs[];
 /* Per process set of rte mbufs */
+extern struct rte_mempool *mp_crypto_session_mempool;
+/* Global crypto session mempool used by all processes */
+extern struct rte_mempool *mp_crypto_session_mempool_local;
+/* Local crypto mempool used by this process */
+extern struct rte_mempool *mp_crypto_priv_session_mp;
+/* Global crypto private session mempool used by all processes */
+extern struct rte_mempool *mp_crypto_priv_session_mp_local;
+/* Local crypto private session mempool used by this process */
+extern struct rte_mempool *mp_crypto_op_pool;
+/* Per process op pool */
+extern struct rte_mempool *mp_crypto_mbuf_pool;
+/* Per process mbuf pool */
 
 /* Name of the device */
 struct mp_app_dev_name {
@@ -173,6 +185,9 @@ int mp_crypto_setup_qps(void);
 
 int mp_crypto_init_devs(void);
 /* Function to setup devices according to mask */
+
+int mp_crypto_setup_mpool(void);
+/* Function to set or lookup for mempools */
 
 #define IV_OFFSET			(sizeof(struct rte_crypto_op) + \
 		sizeof(struct rte_crypto_sym_op) + DEFAULT_NUM_XFORMS * \

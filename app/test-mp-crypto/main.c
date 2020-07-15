@@ -117,6 +117,12 @@ void mp_crypto_exit_app(void)
 	if (mp_shared_data == NULL)
 		return;
 
+/*	rte_mempool_free(mp_crypto_op_pool);
+ *	rte_mempool_free(mp_crypto_mbuf_pool);
+ */
+	rte_mempool_free(mp_crypto_session_mempool_local);
+	rte_mempool_free(mp_crypto_priv_session_mp_local);
+
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		/* Inform of exit intention,
 		 * wait until all processes finish
@@ -145,6 +151,9 @@ void mp_crypto_exit_app(void)
 			MP_APP_LOG_2(ERR, COL_RED,
 			"One or more processes did not exit normally");
 		}
+
+		rte_mempool_free(mp_crypto_session_mempool);
+		rte_mempool_free(mp_crypto_priv_session_mp);
 
 		mp_shared_data->proc_counter = 0;
 	} else {
@@ -366,8 +375,198 @@ mp_crypto_setup_qps(void)
 	return 0;
 }
 
+int mp_crypto_setup_mpool(void)
+{
+	int i;
+	char crypto_op_mpool_name[RTE_MEMZONE_NAMESIZE];
+	char mbuf_pool_name[RTE_MEMZONE_NAMESIZE];
+	char session_mpool_name_local[RTE_MEMZONE_NAMESIZE];
+	char session_priv_name_local[RTE_MEMZONE_NAMESIZE];
+
+	/* Op pool */
+	int n = snprintf(crypto_op_mpool_name, sizeof(crypto_op_mpool_name),
+				"%s_%hu", MP_APP_CRYPTO_OP_POOL_NAME,
+					mp_shared_data->proc_counter_total);
+
+	if (n >= (int)sizeof(crypto_op_mpool_name)) {
+		MP_APP_LOG_2(ERR, COL_RED, "Failed to create mpool name");
+		return -1;
+	}
+
+	/* mbuf pool */
+	n = snprintf(mbuf_pool_name, sizeof(mbuf_pool_name),
+				"%s_%hu", MP_APP_MBUFPOOL_NAME,
+				mp_shared_data->proc_counter_total);
+
+	if (n >= (int)sizeof(mbuf_pool_name)) {
+		RTE_LOG(ERR, USER1, "Failed to create mbuf pool name");
+		return -1;
+	}
+
+	/* Local session pool */
+	n = snprintf(session_mpool_name_local,
+			sizeof(session_mpool_name_local),
+			"%s_%hu", MP_APP_SESSION_POOL_NAME_LOC,
+			mp_shared_data->proc_counter_total);
+
+	if (n >= (int)sizeof(session_mpool_name_local)) {
+		MP_APP_LOG_2(ERR, COL_RED,
+			"Failed to local session mpool name");
+		return -1;
+	}
+
+	/* Local priv session pool */
+	n = snprintf(session_priv_name_local, sizeof(session_priv_name_local),
+				"%s_%hu", MP_APP_PRIV_SESSION_POOL_NAME_LOC,
+				mp_shared_data->proc_counter_total);
+
+	if (n >= (int)sizeof(session_priv_name_local)) {
+		MP_APP_LOG_2(ERR, COL_RED,
+		"Failed to local session private mpool name");
+		return -1;
+	}
+
+	/* Op pool */
+	mp_crypto_op_pool =
+		rte_mempool_lookup(crypto_op_mpool_name);
+
+	if (!mp_crypto_op_pool) {
+		mp_crypto_op_pool = rte_crypto_op_pool_create(
+			crypto_op_mpool_name,
+			RTE_CRYPTO_OP_TYPE_SYMMETRIC,
+			MP_APP_NUM_MBUFS, MP_APP_MBUF_CACHE_SIZE,
+			MP_APP_DEFAULT_NUM_XFORMS *
+			sizeof(struct rte_crypto_sym_xform) +
+			MP_APP_MAXIMUM_IV_LENGTH,
+			rte_socket_id());
+	}
+
+	if (mp_crypto_op_pool == NULL) {
+		MP_APP_LOG_2(ERR, COL_RED, "Error in mempool creation for ops");
+		return -1;
+	}
+
+	/* Set session pools for this process */
+	mp_crypto_session_mempool_local =
+		rte_cryptodev_sym_session_pool_create(
+		session_mpool_name_local, MAX_NUM_OF_SESSIONS,
+		sizeof(struct rte_cryptodev_sym_session), 0, 0,
+		SOCKET_ID_ANY);
+
+	if (!mp_crypto_session_mempool_local) {
+		MP_APP_LOG_2(ERR, COL_RED,
+		"Failed to create local session mpool");
+		return -1;
+	}
+
+	/* Set private session pool for this process */
+	mp_crypto_priv_session_mp_local = rte_mempool_create(
+			session_priv_name_local,
+			MAX_NUM_OF_SESSIONS,
+			rte_cryptodev_sym_get_private_session_size(
+				mp_app_device_id),
+			0, 0, NULL, NULL, NULL,
+			NULL, SOCKET_ID_ANY,
+			0);
+	if (!mp_crypto_priv_session_mp_local) {
+		MP_APP_LOG_2(ERR, COL_RED,
+			"Failed to create local session priv mpool");
+		return -1;
+	}
+
+	int dev_id = mp_app_devs[0].id;
+	/* All devices use same driver so the same size of private data */
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		/* Set mempools for sessions */
+		mp_crypto_session_mempool =
+			rte_cryptodev_sym_session_pool_create(
+			MP_APP_SESSION_POOL_NAME, MAX_NUM_OF_SESSIONS,
+			sizeof(struct rte_cryptodev_sym_session), 0, 0,
+			SOCKET_ID_ANY);
+
+		if (!mp_crypto_session_mempool) {
+			MP_APP_LOG_2(ERR, COL_RED,
+				"Failed to create session mpool");
+			return -1;
+		}
+
+		mp_crypto_priv_session_mp = rte_mempool_create(
+			MP_APP_PRIV_SESSION_POOL_NAME,
+			MAX_NUM_OF_SESSIONS,
+			rte_cryptodev_sym_get_private_session_size(dev_id),
+			0, 0, NULL, NULL, NULL,
+			NULL, SOCKET_ID_ANY,
+			0);
+		if (!mp_crypto_priv_session_mp) {
+			MP_APP_LOG_2(ERR, COL_RED,
+			"Failed to create priv mpool");
+			return -1;
+		}
+		/* Set mempools for ops */
+
+	} else {
+		mp_crypto_session_mempool =
+			rte_mempool_lookup(MP_APP_SESSION_POOL_NAME);
+		if (!mp_crypto_session_mempool) {
+			MP_APP_LOG_2(ERR, COL_RED,
+			"Failed to get sess mpool, was it allocated?");
+			return -1;
+		}
+		mp_crypto_priv_session_mp =
+			rte_mempool_lookup(MP_APP_PRIV_SESSION_POOL_NAME);
+		if (!mp_crypto_session_mempool) {
+			MP_APP_LOG_2(ERR, COL_RED,
+			"Failed to get priv session mpool, was it allocated?");
+			return -1;
+		}
+	}
+
+	/* Mbuf pool */
+	mp_crypto_mbuf_pool =
+		rte_mempool_lookup(mbuf_pool_name);
+	if (mp_crypto_mbuf_pool == NULL) {
+		mp_crypto_mbuf_pool = rte_pktmbuf_pool_create(
+				mbuf_pool_name,
+				MP_APP_NUM_MBUFS, MP_APP_MBUF_CACHE_SIZE, 0,
+				MP_APP_MBUF_SIZE,
+				rte_socket_id());
+	}
+	if (mp_crypto_mbuf_pool == NULL) {
+		MP_APP_LOG_2(ERR, COL_RED,
+			"Error in pool creation for mbuf data");
+		return -1;
+	}
+
+	/* Create ops and mbufs */
+	for (i = 0; i < MP_CRYPTO_QP_DESC_NUM; i++)	{
+		mp_crypto_mbufs[i] = rte_pktmbuf_alloc(mp_crypto_mbuf_pool);
+		if (mp_crypto_mbufs[i] == NULL)	{
+			MP_APP_LOG_2(ERR, COL_RED, "Error allocating mbufs");
+			return -1;
+		}
+		memset(rte_pktmbuf_mtod(mp_crypto_mbufs[i], uint8_t *), 0,
+			rte_pktmbuf_data_len(mp_crypto_mbufs[i]));
+	}
+
+	for (i = 0; i < MP_CRYPTO_QP_DESC_NUM; i++) {
+		mp_crypto_ops[i] = rte_crypto_op_alloc(mp_crypto_op_pool,
+			RTE_CRYPTO_OP_TYPE_SYMMETRIC);
+		if (mp_crypto_ops[i] == NULL) {
+			MP_APP_LOG_2(ERR, COL_RED,
+				"Error allocating crypto op");
+			return -1;
+		}
+		mp_crypto_ops[i]->sym->m_src = mp_crypto_mbufs[i];
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
+
+	int ret = 0;
+
 	if (mp_app_init(argc, argv) < 0) {
 		MP_APP_LOG_2(ERR, COL_RED, "Error when initializing");
 		goto err;
@@ -382,6 +581,12 @@ int main(int argc, char *argv[])
 		MP_APP_LOG_2(ERR, COL_RED, "Setup qps returned an error");
 		goto err;
 	};
+
+	ret = mp_crypto_setup_mpool();
+	if (ret < 0) {
+		MP_APP_LOG_2(ERR, COL_RED, "Cannot create mempools");
+		goto err;
+	}
 
 	mp_crypto_exit_app();
 	return 0;
