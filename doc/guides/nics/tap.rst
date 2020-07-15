@@ -183,15 +183,15 @@ following::
 
     sudo ./app/app/x86_64-native-linux-gcc/app/pktgen -l 1-5 -n 4        \
      --proc-type auto --log-level debug --socket-mem 512,512 --file-prefix pg   \
-     --vdev=net_tap0 --vdev=net_tap1 -b 05:00.0 -b 05:00.1                  \
-     -b 04:00.0 -b 04:00.1 -b 04:00.2 -b 04:00.3                            \
-     -b 81:00.0 -b 81:00.1 -b 81:00.2 -b 81:00.3                            \
-     -b 82:00.0 -b 83:00.0 -- -T -P -m [2:3].0 -m [4:5].1                   \
+     --vdev=net_tap0 --vdev=net_tap1 -x 05:00.0 -x 05:00.1                  \
+     -x 04:00.0 -x 04:00.1 -x 04:00.2 -x 04:00.3                            \
+     -x 81:00.0 -x 81:00.1 -x 81:00.2 -x 81:00.3                            \
+     -x 82:00.0 -x 83:00.0 -- -T -P -m [2:3].0 -m [4:5].1                   \
      -f themes/black-yellow.theme
 
 .. Note:
 
-   Change the ``-b`` options to blacklist all of your physical ports. The
+   Change the ``-x`` options to exclude all of your physical ports. The
    following command line is all one line.
 
    Also, ``-f themes/black-yellow.theme`` is optional if the default colors

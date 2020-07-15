@@ -79,7 +79,7 @@ This means that HW baseband device/s must be bound to a DPDK driver or
 a SW baseband device/s (virtual BBdev) must be created (using --vdev).
 
 To run the application in linux environment with the turbo_sw baseband device
-using the whitelisted port running on 1 encoding lcore and 1 decoding lcore
+using the allowlisted port running on 1 encoding lcore and 1 decoding lcore
 issue the command:
 
 .. code-block:: console
@@ -90,7 +90,7 @@ issue the command:
 where, NIC0PCIADDR is the PCI address of the Rx port
 
 This command creates one virtual bbdev devices ``baseband_turbo_sw`` where the
-device gets linked to a corresponding ethernet port as whitelisted by
+device gets linked to a corresponding ethernet port as allowlisted by
 the parameter -w.
 3 cores are allocated to the application, and assigned as:
 
@@ -111,7 +111,7 @@ Using Packet Generator with baseband device sample application
 To allow the bbdev sample app to do the loopback, an influx of traffic is required.
 This can be done by using DPDK Pktgen to burst traffic on two ethernet ports, and
 it will print the transmitted along with the looped-back traffic on Rx ports.
-Executing the command below will generate traffic on the two whitelisted ethernet
+Executing the command below will generate traffic on the two allowlisted ethernet
 ports.
 
 .. code-block:: console

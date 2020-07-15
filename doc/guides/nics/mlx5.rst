@@ -1454,7 +1454,7 @@ ConnectX-4/ConnectX-5/ConnectX-6/BlueField devices managed by librte_pmd_mlx5.
       eth32
       eth33
 
-#. Optionally, retrieve their PCI bus addresses for whitelisting::
+#. Optionally, retrieve their PCI bus addresses for allowlisting::
 
       {
           for intf in eth2 eth3 eth4 eth5;
@@ -1466,10 +1466,10 @@ ConnectX-4/ConnectX-5/ConnectX-6/BlueField devices managed by librte_pmd_mlx5.
 
    Example output::
 
-      -w 0000:05:00.1
-      -w 0000:06:00.0
-      -w 0000:06:00.1
-      -w 0000:05:00.0
+      -i 0000:05:00.1
+      -i 0000:06:00.0
+      -i 0000:06:00.1
+      -i 0000:05:00.0
 
 #. Request huge pages::
 
@@ -1477,7 +1477,7 @@ ConnectX-4/ConnectX-5/ConnectX-6/BlueField devices managed by librte_pmd_mlx5.
 
 #. Start testpmd with basic parameters::
 
-      testpmd -l 8-15 -n 4 -w 05:00.0 -w 05:00.1 -w 06:00.0 -w 06:00.1 -- --rxq=2 --txq=2 -i
+      testpmd -l 8-15 -n 4 -i 05:00.0 -i 05:00.1 -i 06:00.0 -i 06:00.1 -- --rxq=2 --txq=2 -i
 
    Example output::
 

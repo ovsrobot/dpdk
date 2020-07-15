@@ -82,10 +82,10 @@ Supported DPAA SoCs
 * LS1046A/LS1026A
 * LS1043A/LS1023A
 
-Whitelisting & Blacklisting
+Allowlisting & Blocklisting
 ---------------------------
 
-For blacklisting a DPAA device, following commands can be used.
+For blocking a DPAA device, following commands can be used.
 
  .. code-block:: console
 

@@ -61,7 +61,7 @@ with a ``--`` separator:
 
 .. code-block:: console
 
-	sudo ./dpdk-test-flow_perf -n 4 -w 08:00.0 -- --ingress --ether --ipv4 --queue --flows-count=1000000
+	sudo ./dpdk-test-flow_perf -n 4 -i 08:00.0 -- --ingress --ether --ipv4 --queue --flows-count=1000000
 
 The command line options are:
 

@@ -329,15 +329,15 @@ This means that if the application is using a single core and both hardware
 and software crypto devices are detected, hardware devices will be used.
 
 A way to achieve the case where you want to force the use of virtual crypto
-devices is to whitelist the Ethernet devices needed and therefore implicitly
-blacklisting all hardware crypto devices.
+devices is to allowlist the Ethernet devices needed and therefore implicitly
+blocklisting all hardware crypto devices.
 
 For example, something like the following command line:
 
 .. code-block:: console
 
     ./build/ipsec-secgw -l 20,21 -n 4 --socket-mem 0,2048 \
-            -w 81:00.0 -w 81:00.1 -w 81:00.2 -w 81:00.3 \
+            -i 81:00.0 -i 81:00.1 -i 81:00.2 -i 81:00.3 \
             --vdev "crypto_aesni_mb" --vdev "crypto_null" \
 	    -- \
             -p 0xf -P -u 0x3 --config="(0,0,20),(1,0,20),(2,0,21),(3,0,21)" \

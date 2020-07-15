@@ -148,7 +148,7 @@ or
 
 In this command:
 
-*   -w option whitelist the event device supported by platform. Way to pass this device may vary based on platform.
+*   -w option allowlist the event device supported by platform. Way to pass this device may vary based on platform.
 
 *   The --mode option defines PMD to be used for packet I/O.
 
