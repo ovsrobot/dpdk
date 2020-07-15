@@ -61,10 +61,6 @@ malloc_socket(const char *type, size_t size, unsigned int align,
 {
 	void *ptr;
 
-	/* return NULL if size is 0 or alignment is not power-of-2 */
-	if (size == 0 || (align && !rte_is_power_of_2(align)))
-		return NULL;
-
 	/* if there are no hugepages and if we are not allocating from an
 	 * external heap, use memory from any socket available. checking for
 	 * socket being external may return -1 in case of invalid socket, but
