@@ -8,6 +8,7 @@ endif
 apps = [
 	'pdump',
 	'proc-info',
+	'l2reflect',
 	'test-acl',
 	'test-bbdev',
 	'test-cmdline',
