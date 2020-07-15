@@ -10,6 +10,6 @@ CFLAGS += $(WERROR_FLAGS)
 CFLAGS += -O3
 
 # all source are stored in SRCS-y
-SRCS-y := main.c mp_crypto.c mp_crypto_parser.c mp_crypto_ipc.c
+SRCS-y := main.c mp_crypto.c mp_crypto_parser.c mp_crypto_ipc.c mp_crypto_vectors.c
 
 include $(RTE_SDK)/mk/rte.app.mk

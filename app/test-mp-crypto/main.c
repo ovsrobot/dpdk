@@ -562,6 +562,533 @@ int mp_crypto_setup_mpool(void)
 	return 0;
 }
 
+static int check_capabilities(int dev_id,
+			const struct mp_crypto_session_vector *vector)
+{
+	struct rte_cryptodev_sym_capability_idx cap_idx;
+
+	cap_idx.type = vector->x_type;
+	if (vector->x_type == RTE_CRYPTO_SYM_XFORM_AEAD)
+		cap_idx.algo.aead = vector->aead_algo;
+
+	/* For now rescricted only to AEAD */
+
+	if (rte_cryptodev_sym_capability_get(dev_id, &cap_idx) == NULL)
+		return -ENOTSUP;
+
+	return 0;
+}
+
+int
+mp_crypto_init_sessions(void)
+{
+	uint64_t session_mask_id;
+	uint64_t session_id;
+	int i;
+	int capabiliy_checked = 1;
+	/* Check if all devices support vector 0 */
+	for (i = 0; i < MP_APP_MAX_VECTORS; i++) {
+		int dev_id = mp_app_devs[i].id;
+		/* TODO use proper vector(s), not hardcoded one */
+		if (dev_id < 0)
+			continue;
+
+		int k = 0;
+
+		while (mp_app_params->enq_param.vector_number[k] >= 0 &&
+				k < MP_APP_MAX_VECTORS) {
+			int vector_number =
+				mp_app_params->enq_param.vector_number[k];
+
+			if (vector_number >= (int)mp_app_numof_ops) {
+				MP_APP_LOG(ERR, COL_RED,
+					"Not recognized test vector %d",
+					vector_number);
+				return -1;
+			}
+			if (check_capabilities(dev_id,
+					&session_vectors[vectors[
+					vector_number].session])) {
+				MP_APP_LOG(ERR, COL_RED,
+					"Algorithm unsupported on dev %d",
+					dev_id);
+				capabiliy_checked = 0;
+			}
+			k++;
+		}
+	}
+	if (capabiliy_checked == 0)
+		return -1;
+
+	for (session_mask_id = 1, session_id = 0;
+			session_id <= mp_app_numof_sessions;
+			session_mask_id <<= 1, session_id++) {
+
+		if (session_mask_id & mp_app_params->session_mask) {
+			struct rte_cryptodev_sym_session *sess =
+				mp_app_create_session(mp_app_device_id,
+				&session_vectors[session_id]);
+			if (sess == NULL) {
+				MP_APP_LOG(ERR, COL_RED,
+					"Error when creating session = %p",
+					sess);
+				return -1;
+			}
+			rte_spinlock_lock(&mp_shared_data->sessions.lock);
+			int clear_session = 1;
+
+			if (mp_shared_data->sessions.sym_sessions[
+					session_id].session
+						== NULL) {
+				mp_shared_data->sessions.sym_sessions[
+					session_id].session
+					= sess;
+				clear_session = 0;
+				MP_APP_LOG(INFO, COL_BLUE,
+					"Initialized session = %"PRIu64,
+					session_id);
+			} else {
+				/* Actually refcnt should be incremented
+				 * on demand mp_shared_data->sessions.
+				 * sym_sessions [session_id].refcnt++;
+				 */
+			}
+			rte_spinlock_unlock(&mp_shared_data->sessions.lock);
+			if (clear_session)
+				rte_cryptodev_sym_session_free(sess);
+		}
+	}
+	return 0;
+}
+
+static void
+setup_ops_main_loop(int session_id, int vector_number)
+{
+	while (1) {
+		rte_spinlock_lock(&mp_shared_data->sessions.lock);
+		if (mp_shared_data->sessions.sym_sessions[
+				session_id].session
+					!= NULL) {
+			mp_shared_data->sessions.sym_sessions[
+				session_id].refcnt++;
+			rte_spinlock_unlock(&mp_shared_data->sessions.lock);
+			return;
+		}
+		rte_spinlock_unlock(&mp_shared_data->sessions.lock);
+
+		MP_APP_LOG(WARNING, COL_YEL,
+			"Session %d was not yet created, vector %d",
+			session_id, vector_number);
+		char c;
+
+		MP_APP_LOG(INFO, COL_NORM,
+			"Session %d not yet created.\n - Press 'w' to wait until other process will create it\n - Press 'n' to create local session",
+			vectors[session_id].session);
+		int __rte_unused r = scanf("%c", &c);
+
+		if (c == 'n') {
+			struct rte_cryptodev_sym_session *sess =
+				mp_app_create_session(
+					mp_app_device_id,
+				&session_vectors[session_id]);
+			mp_crypto_local_sessions[session_id] =
+				sess;
+			return;
+		} else if (c == 'w') {
+			int timeout = 3;
+			int counter = 1;
+
+			while (counter <= timeout) {
+				rte_delay_ms(1000);
+				MP_APP_LOG(INFO, COL_NORM,
+				"Waiting for %d out of %d seconds",
+				counter++, timeout);
+			}
+		}
+	}
+}
+
+int mp_crypto_setup_ops(void)
+{
+	int i;
+	int used_vectors = 0;
+	int selected_vectors[MP_APP_MAX_VECTORS];
+
+	for (i = 0; i < MP_APP_MAX_VECTORS; i++)
+		selected_vectors[i] = -1;
+
+	i = 0;
+	while (mp_app_params->enq_param.vector_number[i] >= 0 &&
+			i < MP_APP_MAX_VECTORS)	{
+		int vector_number = mp_app_params->enq_param.vector_number[i];
+
+		if (mp_app_params->enq_param.vector_number[i] >=
+			(int)mp_app_numof_ops) {
+			MP_APP_LOG(ERR, COL_RED,
+			"Crypto vector %d not defined, skipping",
+			mp_app_params->enq_param.vector_number[i]);
+			i++;
+			continue;
+		}
+		/* Aquire session */
+		int session_id = vectors[vector_number].session;
+
+		setup_ops_main_loop(vectors[vector_number].session,
+				vector_number);
+		MP_APP_LOG(INFO, COL_BLUE,
+				"Configuring vector %d, using session %d",
+				vector_number, session_id);
+
+		selected_vectors[used_vectors++] = vector_number;
+		i++;
+	}
+
+	if (used_vectors == 0)
+		return 0;
+
+	int curr_vector = 0;
+	/* Create vectors and attach to sessions */
+
+	for (i = 0; i < MP_CRYPTO_QP_DESC_NUM; i++)	{
+		int session_id =
+			vectors[selected_vectors[curr_vector]].session;
+		if (mp_crypto_local_sessions[session_id] != NULL) {
+			mp_crypto_create_op(mp_crypto_ops[i],
+					mp_crypto_mbufs[i],
+					selected_vectors[curr_vector],
+					mp_crypto_local_sessions[session_id]);
+		} else {
+			mp_crypto_create_op(mp_crypto_ops[i],
+					mp_crypto_mbufs[i],
+					selected_vectors[curr_vector],
+					mp_shared_data->sessions.sym_sessions
+					[session_id].session);
+		}
+	}
+	return 0;
+}
+
+static int check_for_queue(int dev_id, int qp_id)
+{
+	int ret = rte_cryptodev_get_qp_status(dev_id, qp_id);
+
+	if (ret <= 0) {
+		MP_APP_LOG(WARNING, COL_YEL,
+			"Queue %d on dev %d not initialized",
+			qp_id, dev_id);
+		printf(
+		"\n - Press 'w' to wait until other process will initialize it");
+		printf("\n - Press 'x' to exit");
+		char c;
+		int __rte_unused r = scanf("%s", &c);
+
+		if (c == 'w') {
+			int timeout = 3;
+			int counter = 1;
+
+			while (counter <= timeout) {
+				rte_delay_ms(1000);
+				MP_APP_LOG(INFO, COL_NORM,
+				"Waiting for %d out of %d seconds",
+					counter++, 3);
+			}
+			return -1;
+		} else if (c == 'x')
+			return -2;
+		else
+			return -2;
+	}
+	return 0;
+}
+
+static void enqueue(int enq_dev_id, int enq_qp_id, uint64_t *enqueued,
+			uint64_t pcks_to_enq, uint64_t *curr_offset_enq,
+			int *enq_livesign, int process_enq, int process_deq,
+			int *livesign_print_idx, int *livesign_deq_print_idx)
+{
+	if (*enqueued < pcks_to_enq || pcks_to_enq == 0) {
+		/* Consider clearing param above */
+		uint64_t enq;
+		uint64_t to_enq = (MP_CRYPTO_QP_DESC_NUM -
+			*curr_offset_enq) > MP_CRYPTO_BURST_NUM ?
+			MP_CRYPTO_BURST_NUM : MP_CRYPTO_QP_DESC_NUM
+			- *curr_offset_enq;
+
+		if (pcks_to_enq && to_enq > pcks_to_enq - *enqueued)
+			to_enq = pcks_to_enq - *enqueued;
+		enq = rte_cryptodev_enqueue_burst(enq_dev_id,
+			enq_qp_id, &mp_crypto_ops[*curr_offset_enq],
+			to_enq);
+
+		*enqueued += enq;
+		*enq_livesign += enq;
+		*curr_offset_enq = *enqueued % MP_CRYPTO_QP_DESC_NUM;
+		if (*enq_livesign > mp_app_params->enq_param.checkpoint) {
+
+			if (process_enq && !process_deq) {
+				MP_APP_LOG_NO_RET(INFO, COL_NORM,
+				"Enqueuing %c",
+				livesign_print_char[*livesign_print_idx]);
+			}
+			if (process_enq && process_deq) {
+				MP_APP_LOG_NO_RET(INFO, COL_NORM,
+				"Enqueuing %c Dequeueing %c",
+				livesign_print_char[*livesign_print_idx],
+				livesign_print_char[*livesign_deq_print_idx]);
+			}
+
+			(*livesign_print_idx)++;
+			*livesign_print_idx = *livesign_print_idx % 4;
+			*enq_livesign = 0;
+		}
+	}
+}
+
+static int dequeue(int deq_dev_id, int deq_qp_id, uint64_t *dequeued,
+			uint64_t pcks_to_deq, uint64_t *curr_offset_deq,
+			int *deq_livesign, int process_enq, int process_deq,
+			int *livesign_print_idx, int *livesign_deq_print_idx,
+			int64_t *deq_stall_counter, uint64_t *deq_threshold)
+{
+	if (*dequeued < pcks_to_deq || pcks_to_deq == 0) {
+		uint64_t deq;
+		uint64_t to_deq = (MP_CRYPTO_QP_DESC_NUM -
+			*curr_offset_deq)
+			> MP_CRYPTO_BURST_NUM ?	MP_CRYPTO_BURST_NUM :
+			MP_CRYPTO_QP_DESC_NUM - *curr_offset_deq;
+
+		if (pcks_to_deq && to_deq > pcks_to_deq - *dequeued)
+			to_deq = pcks_to_deq - *dequeued;
+		deq = rte_cryptodev_dequeue_burst(deq_dev_id,
+			deq_qp_id, &mp_crypto_ops_ret[*curr_offset_deq],
+			to_deq);
+		*dequeued += deq;
+		*deq_livesign += deq;
+		*curr_offset_deq = *dequeued % MP_CRYPTO_QP_DESC_NUM;
+		if (*deq_livesign > mp_app_params->deq_param.checkpoint) {
+			if (process_deq && !process_enq) {
+				MP_APP_LOG_NO_RET(INFO, COL_NORM,
+				"Dequeueing %c",
+				livesign_print_char[*livesign_deq_print_idx]);
+			}
+			if (process_enq && process_deq) {
+				MP_APP_LOG_NO_RET(INFO, COL_NORM,
+				"Enqueuing %c Dequeueing %c",
+				livesign_print_char[*livesign_print_idx],
+				livesign_print_char[*livesign_deq_print_idx]);
+			}
+			(*livesign_deq_print_idx)++;
+			*livesign_deq_print_idx %= 4;
+			*deq_livesign = 0;
+		}
+		if (deq == 0)
+			(*deq_stall_counter)++;
+		else
+			*deq_stall_counter = 0;
+		if (mp_crypto_exit_flag) {
+			*deq_threshold += deq;
+			if (*deq_threshold > DEQ_THRESHOLD)
+				return -1;
+			if (*deq_stall_counter > DEQ_THRESHOLD)
+				return -1;
+		}
+	}
+	return 0;
+}
+
+int mp_crypto_flow(void)
+{
+	int process_enq = 0, process_deq = 0;
+	uint64_t curr_offset_enq = 0;
+	uint64_t curr_offset_deq = 0;
+	uint64_t enqueued = 0;
+	uint64_t dequeued = 0;
+	uint64_t deq_threshold = 0;
+	char c = 0;
+	uint64_t pcks_to_enq = 0, pcks_to_deq = 0;
+
+	int enq_dev_id = mp_app_devs[mp_app_params->enq_param.dev_id].id;
+	int deq_dev_id = mp_app_devs[mp_app_params->deq_param.dev_id].id;
+	int enq_qp_id = mp_app_params->enq_param.qp_id;
+	int deq_qp_id = mp_app_params->deq_param.qp_id;
+	int enq_livesign = 0, deq_livesign = 0;
+	int64_t deq_stall_counter = 0;
+	int livesign_print_idx = 0;
+	int livesign_deq_print_idx = 0;
+
+	if (mp_app_params->enq_param.dev_id >= 0 &&
+			!mp_app_devs[mp_app_params->enq_param.dev_id].probed) {
+		MP_APP_LOG(ERR, COL_RED, "Incorrect enq device provided %d",
+				mp_app_params->enq_param.dev_id);
+	} else if (mp_app_params->enq_param.dev_id >= 0) {
+		MP_APP_LOG(INFO, COL_BLUE,
+			"Start enqueuing packets on dev %d qp %d",
+			mp_app_params->enq_param.dev_id,
+			mp_app_params->enq_param.qp_id);
+		pcks_to_enq = mp_app_params->enq_param.ops_no;
+		process_enq = 1;
+	}
+	if (mp_app_params->deq_param.dev_id >= 0 &&
+			!mp_app_devs[mp_app_params->deq_param.dev_id].probed) {
+		MP_APP_LOG(ERR, COL_RED, "Incorrect deq device provided %d",
+				mp_app_params->deq_param.dev_id);
+	} else if (mp_app_params->deq_param.dev_id >= 0) {
+		MP_APP_LOG(INFO, COL_BLUE,
+			"Start dequeuing packets on dev %d qp %d",
+			mp_app_params->deq_param.dev_id,
+			mp_app_params->deq_param.qp_id);
+		pcks_to_deq = mp_app_params->deq_param.ops_no;
+		process_deq = 1;
+	}
+
+	if (process_enq == 0 && process_deq == 0) {
+		MP_APP_LOG_2(WARNING, COL_YEL, "Nothing to process");
+		if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+			while (c != 'k') {
+				printf("\nPress 'k' to exit: ");
+				int __rte_unused r = scanf("%c", &c);
+			}
+		}
+		return 0;
+	}
+
+	/* Check if enq queue was configured */
+	while (process_enq) {
+		int v = check_for_queue(enq_dev_id, enq_qp_id);
+
+		if (v == -1)
+			continue;
+		else if (v == 0)
+			break;
+		else
+			return -1;
+	}
+
+	/* Check if deq queue was configured */
+	while (process_deq) {
+		int v = check_for_queue(deq_dev_id, deq_qp_id);
+
+		if (v == -1)
+			continue;
+		else if (v == 0)
+			break;
+		else
+			return -1;
+	}
+
+	if (process_enq && !process_deq) {
+		MP_APP_LOG_NO_RET(INFO, COL_NORM, "Enqueuing %c",
+			livesign_print_char[livesign_print_idx]);
+	} else if (process_deq && !process_enq) {
+		MP_APP_LOG_NO_RET(INFO, COL_NORM, "Dequeuing %c",
+			livesign_print_char[livesign_deq_print_idx]);
+	} else if (process_enq && process_deq) {
+		MP_APP_LOG_NO_RET(INFO, COL_NORM, "Enqueuing %c Dequeueing %c",
+			livesign_print_char[livesign_print_idx],
+			livesign_print_char[livesign_deq_print_idx]);
+	}
+	while (1) {
+		if (process_enq && !mp_crypto_exit_flag) {
+			enqueue(enq_dev_id, enq_qp_id, &enqueued,
+				pcks_to_enq, &curr_offset_enq,
+				&enq_livesign, process_enq, process_deq,
+				&livesign_print_idx, &livesign_deq_print_idx);
+		}
+
+		if (process_deq) {
+			int ret = dequeue(deq_dev_id, deq_qp_id, &dequeued,
+				pcks_to_deq, &curr_offset_deq,
+				&deq_livesign, process_enq, process_deq,
+				&livesign_print_idx, &livesign_deq_print_idx,
+				&deq_stall_counter, &deq_threshold);
+
+			if (ret < 0)
+				break;
+		}
+
+		if (((dequeued == pcks_to_deq && process_deq)) &&
+			 ((enqueued == pcks_to_enq && process_enq))) {
+			MP_APP_LOG(INFO, COL_GREEN,
+					"\nEnqueued %"PRIu64", dequeued %"PRIu64" packets",
+					enqueued, dequeued);
+			break;
+		} else if (dequeued == pcks_to_deq && process_deq &&
+				!process_enq && pcks_to_deq)  {
+			MP_APP_LOG(INFO, COL_GREEN, "\nDequeued %"PRIu64" packets",
+				dequeued);
+			break;
+		} else if (enqueued == pcks_to_enq && process_enq &&
+				!process_deq && process_enq)  {
+			MP_APP_LOG(INFO, COL_GREEN, "\nEnqueued %"PRIu64" packets",
+				enqueued);
+			break;
+		}
+		if (mp_crypto_exit_flag && !process_deq)
+			break;
+	}
+
+	/* Verify if all packets are correct */
+	if (process_deq) {
+		uint64_t last_packet = pcks_to_deq > MP_CRYPTO_QP_DESC_NUM ?
+			MP_CRYPTO_QP_DESC_NUM : pcks_to_deq;
+		if (pcks_to_deq == 0)
+			last_packet = MP_CRYPTO_QP_DESC_NUM;
+		if (last_packet >= dequeued)
+			last_packet = dequeued;
+		uint64_t k;
+		int err = 0;
+
+		for (k = 0; k < last_packet; k++) {
+			if (mp_crypto_ops_ret[k]->status !=
+				RTE_CRYPTO_OP_STATUS_SUCCESS) {
+				MP_APP_LOG(ERR, COL_RED,
+					"error when checking status of %"PRIu64" packet out of last %"PRIu64" packets",
+					k, last_packet);
+					err = 1;
+					break;
+			}
+		}
+		if (err == 0) {
+			MP_APP_LOG(INFO, COL_GREEN,
+				"\nAll %"PRIu64" last packets verified correctly",
+				last_packet);
+		}
+	}
+
+	if (mp_app_params->print_stats) {
+		struct rte_cryptodev_stats stats;
+
+		if (enq_qp_id >= 0) {
+			rte_cryptodev_stats_get(enq_dev_id, &stats);
+			MP_APP_LOG(INFO, COL_BLUE,
+				"STATS: Enqueued on dev %d = %"PRIu64,
+				enq_dev_id, stats.enqueued_count);
+			MP_APP_LOG(INFO, COL_BLUE,
+				"STATS: Enqueue err count on dev %d = %"PRIu64,
+				enq_dev_id,
+				stats.enqueue_err_count);
+		}
+		if (deq_qp_id >= 0) {
+			rte_cryptodev_stats_get(deq_dev_id, &stats);
+			MP_APP_LOG(INFO, COL_BLUE,
+				"STATS: Dequeued on dev %d = %"PRIu64,
+				deq_dev_id, stats.dequeued_count);
+			MP_APP_LOG(INFO, COL_BLUE,
+				"STATS: Dequeue err count on dev %d = %"PRIu64,
+				deq_dev_id, stats.dequeue_err_count);
+		}
+
+		if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+			while (c != 'k') {
+				printf("\nPress 'k' to exit: ");
+				int __rte_unused r = scanf("%c", &c);
+			}
+		}
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 
@@ -585,6 +1112,23 @@ int main(int argc, char *argv[])
 	ret = mp_crypto_setup_mpool();
 	if (ret < 0) {
 		MP_APP_LOG_2(ERR, COL_RED, "Cannot create mempools");
+		goto err;
+	}
+	ret = mp_crypto_init_sessions();
+	if (ret < 0) {
+		MP_APP_LOG_2(ERR, COL_RED, "Cannot initialize sessions");
+		goto err;
+	}
+
+	ret = mp_crypto_setup_ops();
+	if (ret < 0) {
+		MP_APP_LOG_2(ERR, COL_RED, "Cannot setup ops");
+		goto err;
+	}
+
+	ret = mp_crypto_flow();
+	if (ret < 0) {
+		MP_APP_LOG_2(ERR, COL_RED, "Cannot enq/deq");
 		goto err;
 	}
 

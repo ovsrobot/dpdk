@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <rte_hexdump.h>
 #include <rte_cryptodev.h>
+#include "mp_crypto_vectors.h"
 
 /* Intel QuickAssist Technology Symmetric service PMD name */
 #define CRYPTODEV_NAME_QAT_SYM_PMD	"crypto_qat"
@@ -32,6 +33,8 @@
 #define MP_APP_CRYPTO_OP_POOL_NAME	"MP_APP_OP_NAME"
 /* Mbuf information */
 #define MP_APP_MBUFPOOL_NAME		"MP_APP_MBUF_NAME"
+/* How long to weit before quit when exit flag set */
+#define DEQ_THRESHOLD			100000
 
 extern int mp_crypto_exit_flag;
 /* Global exit flag */
@@ -188,6 +191,30 @@ int mp_crypto_init_devs(void);
 
 int mp_crypto_setup_mpool(void);
 /* Function to set or lookup for mempools */
+
+int mp_crypto_init_sessions(void);
+/* Function to setup session according to mask */
+
+int mp_crypto_setup_ops(void);
+/* Function to setup opse according to input string enq=[] */
+
+/* Create and init symmetric session */
+struct rte_cryptodev_sym_session *mp_app_create_session
+		(int dev_id, const struct mp_crypto_session_vector *vector);
+
+/* Create AEAD session */
+struct rte_cryptodev_sym_session*
+		mp_app_create_aead_session(int dev_id,
+		const struct mp_crypto_session_vector *vector);
+
+/* Create op */
+int
+mp_crypto_create_op(struct rte_crypto_op *op, struct rte_mbuf *mbuf,
+					uint16_t vector_number,
+					struct rte_cryptodev_sym_session *sess);
+
+int mp_crypto_flow(void);
+/* Flow function for enqueue dequeue */
 
 #define IV_OFFSET			(sizeof(struct rte_crypto_op) + \
 		sizeof(struct rte_crypto_sym_op) + DEFAULT_NUM_XFORMS * \
