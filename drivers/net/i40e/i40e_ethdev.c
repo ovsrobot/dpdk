@@ -13070,6 +13070,49 @@ i40e_rss_conf_init(struct i40e_rte_flow_rss_conf *out,
 	return 0;
 }
 
+static int
+i40e_rss_init_lut(struct i40e_pf *pf)
+{
+	struct i40e_hw *hw = I40E_PF_TO_HW(pf);
+	uint32_t lut = 0;
+	uint16_t j, num;
+	uint32_t i;
+
+	/*
+	 * If both VMDQ and RSS enabled, not all of PF queues are configured.
+	 * It's necessary to calculate the actual PF queues that are configured.
+	 */
+	if (pf->dev_data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_VMDQ_FLAG)
+		num = i40e_pf_calc_configured_queues_num(pf);
+	else
+		num = pf->dev_data->nb_rx_queues;
+
+	num = RTE_MIN(num, I40E_MAX_Q_PER_TC);
+	PMD_INIT_LOG(INFO, "Max of contiguous %u PF queues are configured",
+		     num);
+
+	if (num == 0) {
+		PMD_INIT_LOG(ERR,
+			"No PF queues are configured to enable RSS for port %u",
+			pf->dev_data->port_id);
+		return -ENOTSUP;
+	}
+
+	if (pf->adapter->rss_reta_updated == 0) {
+		for (i = 0, j = 0; i < hw->func_caps.rss_table_size; i++, j++) {
+			if (j == num)
+				j = 0;
+			lut = (lut << 8) | (j & ((0x1 <<
+				hw->func_caps.rss_table_entry_width) - 1));
+			if ((i & 3) == 3)
+				I40E_WRITE_REG(hw, I40E_PFQF_HLUT(i >> 2),
+					       rte_bswap32(lut));
+		}
+	}
+
+	return 0;
+}
+
 /* Write HENA register to enable hash */
 static int
 i40e_rss_hash_set(struct i40e_pf *pf, struct i40e_rte_flow_rss_conf *rss_conf)
@@ -13318,11 +13361,20 @@ static int
 i40e_rss_enable_hash(struct i40e_pf *pf,
 		struct i40e_rte_flow_rss_conf *conf)
 {
+	enum rte_eth_rx_mq_mode mq_mode = pf->dev_data->dev_conf.rxmode.mq_mode;
 	struct i40e_rte_flow_rss_conf *rss_info = &pf->rss_info;
 	struct i40e_rte_flow_rss_conf rss_conf;
 
 	if (!(conf->conf.types & pf->adapter->flow_types_mask))
 		return -ENOTSUP;
+
+	/*
+	 * If the RSS is disabled before this, the LUT is uninitialized. 
+	 * So it is necessary to initialize it here.
+	 */
+	if (!(mq_mode & ETH_MQ_RX_RSS_FLAG) && !pf->rss_info.conf.queue_num)
+		if (i40e_rss_init_lut(pf))
+			return -ENOTSUP;
 
 	memset(&rss_conf, 0, sizeof(rss_conf));
 	rte_memcpy(&rss_conf, conf, sizeof(rss_conf));
