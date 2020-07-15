@@ -1652,12 +1652,14 @@ uint16_t rte_vhost_poll_enqueue_completed(int vid, uint16_t queue_id,
 	start_idx = virtio_dev_rx_async_get_info_idx(pkts_idx,
 		vq_size, vq->async_pkts_inflight_n);
 
-	n_pkts_cpl =
-		vq->async_ops.check_completed_copies(vid, queue_id, 0, count);
+	n_pkts_cpl = vq->async_ops.check_completed_copies(vid, queue_id,
+		0, ASYNC_MAX_POLL_SEG - vq->async_last_seg_n) +
+		vq->async_last_seg_n;
 
 	rte_smp_wmb();
 
-	while (likely(((start_idx + n_pkts_put) & (vq_size - 1)) != pkts_idx)) {
+	while (likely((n_pkts_put < count) &&
+		(((start_idx + n_pkts_put) & (vq_size - 1)) != pkts_idx))) {
 		uint64_t info = async_pending_info[
 			(start_idx + n_pkts_put) & (vq_size - 1)];
 		uint64_t n_segs;
@@ -1666,7 +1668,7 @@ uint16_t rte_vhost_poll_enqueue_completed(int vid, uint16_t queue_id,
 		n_segs = info >> ASYNC_PENDING_INFO_N_SFT;
 
 		if (n_segs) {
-			if (!n_pkts_cpl || n_pkts_cpl < n_segs) {
+			if (unlikely(n_pkts_cpl < n_segs)) {
 				n_pkts_put--;
 				n_descs -= info & ASYNC_PENDING_INFO_N_MSK;
 				if (n_pkts_cpl) {
@@ -1683,6 +1685,8 @@ uint16_t rte_vhost_poll_enqueue_completed(int vid, uint16_t queue_id,
 			n_pkts_cpl -= n_segs;
 		}
 	}
+
+	vq->async_last_seg_n = n_pkts_cpl;
 
 	if (n_pkts_put) {
 		vq->async_pkts_inflight_n -= n_pkts_put;
