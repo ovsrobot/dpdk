@@ -467,6 +467,8 @@ mlx5_devx_cmd_query_hca_attr(void *ctx,
 	attr->vdpa.queue_counters_valid = !!(MLX5_GET64(cmd_hca_cap, hcattr,
 							general_obj_types) &
 				  MLX5_GENERAL_OBJ_TYPES_CAP_VIRTIO_Q_COUNTERS);
+	attr->scatter_fcs_w_decap_disable =
+		MLX5_GET(cmd_hca_cap, hcattr, scatter_fcs_w_decap_disable);
 	if (attr->qos.sup) {
 		MLX5_SET(query_hca_cap_in, in, op_mod,
 			 MLX5_GET_HCA_CAP_OP_MOD_QOS_CAP |
