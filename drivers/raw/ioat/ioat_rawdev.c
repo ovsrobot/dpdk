@@ -57,6 +57,7 @@ ioat_dev_configure(const struct rte_rawdev *dev, rte_rawdev_obj_t config)
 		return -EINVAL;
 
 	ioat->ring_size = params->ring_size;
+	ioat->hdls_disable = params->hdls_disable;
 	if (ioat->desc_ring != NULL) {
 		rte_memzone_free(ioat->desc_mz);
 		ioat->desc_ring = NULL;

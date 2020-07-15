@@ -31,10 +31,13 @@
  *
  * This structure is to be passed as the ".dev_private" parameter when
  * calling the rte_rawdev_get_info() and rte_rawdev_configure() APIs on
- * an ioat rawdev instance.
+ * an ioat rawdev instance. The member hdls_disable controls if handles
+ * need to be copied when calling the rte_ioat_enqueue_copy() and
+ * rte_ioat_completed_copies() APIs.
  */
 struct rte_ioat_rawdev_config {
 	unsigned short ring_size;
+	bool hdls_disable;
 };
 
 /**
@@ -52,6 +55,7 @@ struct rte_ioat_rawdev {
 
 	unsigned short ring_size;
 	struct rte_ioat_generic_hw_desc *desc_ring;
+	bool hdls_disable;
 	__m128i *hdls; /* completion handles for returning to user */
 
 
@@ -84,10 +88,12 @@ struct rte_ioat_rawdev {
  *   The length of the data to be copied
  * @param src_hdl
  *   An opaque handle for the source data, to be returned when this operation
- *   has been completed and the user polls for the completion details
+ *   has been completed and the user polls for the completion details if
+ *   hdls_disable is false
  * @param dst_hdl
  *   An opaque handle for the destination data, to be returned when this
  *   operation has been completed and the user polls for the completion details
+ *   if hdls_disable is false
  * @param fence
  *   A flag parameter indicating that hardware should not begin to perform any
  *   subsequently enqueued copy operations until after this operation has
@@ -121,8 +127,10 @@ rte_ioat_enqueue_copy(int dev_id, phys_addr_t src, phys_addr_t dst,
 	desc->u.control_raw = (uint32_t)((!!fence << 4) | (!(write & 0xF)) << 3);
 	desc->src_addr = src;
 	desc->dest_addr = dst;
+	if (!ioat->hdls_disable)
+		ioat->hdls[write] = _mm_set_epi64x((int64_t)dst_hdl,
+					(int64_t)src_hdl);
 
-	ioat->hdls[write] = _mm_set_epi64x((int64_t)dst_hdl, (int64_t)src_hdl);
 	rte_prefetch0(&ioat->desc_ring[ioat->next_write & mask]);
 
 	ioat->enqueued++;
@@ -168,9 +176,11 @@ rte_ioat_get_last_completed(struct rte_ioat_rawdev *ioat, int *error)
 /**
  * Returns details of copy operations that have been completed
  *
- * Returns to the caller the user-provided "handles" for the copy operations
- * which have been completed by the hardware, and not already returned by
- * a previous call to this API.
+ * If the hdls_disable is false, the function will return to the caller the
+ * user-provided "handles" for the copy operations which have been completed
+ * by the hardware, and not already returned by a previous call to this API.
+ * If the hdls_disable is true, the max_copies will be ignored, and that the
+ * src_hdls and dst_hdls can be NULL when calling the function.
  *
  * @param dev_id
  *   The rawdev device id of the ioat instance
@@ -205,6 +215,11 @@ rte_ioat_completed_copies(int dev_id, uint8_t max_copies,
 		return -1;
 	}
 
+	if (ioat->hdls_disable) {
+		read += count;
+		goto end;
+	}
+
 	if (count > max_copies)
 		count = max_copies;
 
@@ -222,7 +237,7 @@ rte_ioat_completed_copies(int dev_id, uint8_t max_copies,
 		src_hdls[i] = hdls[0];
 		dst_hdls[i] = hdls[1];
 	}
-
+end:
 	ioat->next_read = read;
 	ioat->completed += count;
 	return count;
