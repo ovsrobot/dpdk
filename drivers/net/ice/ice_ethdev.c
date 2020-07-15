@@ -4144,6 +4144,7 @@ ice_update_vsi_stats(struct ice_vsi *vsi)
 	struct ice_hw *hw = ICE_VSI_TO_HW(vsi);
 	int idx = rte_le_to_cpu_16(vsi->vsi_id);
 	uint64_t old_rx_bytes = nes->rx_bytes;
+	uint64_t old_tx_bytes = nes->tx_bytes;
 
 	old_rx_bytes += (nes->rx_unicast + nes->rx_multicast +
 			 nes->rx_broadcast) * RTE_ETHER_CRC_LEN;
@@ -4189,6 +4190,9 @@ ice_update_vsi_stats(struct ice_vsi *vsi)
 	/* GLV_TDPC not supported */
 	ice_stat_update_32(hw, GLV_TEPC(idx), vsi->offset_loaded,
 			   &oes->tx_errors, &nes->tx_errors);
+	/* enlarge the limitation when tx_bytes overflowed */
+	if (old_tx_bytes > nes->tx_bytes && vsi->offset_loaded)
+		nes->tx_bytes += (uint64_t)1 << ICE_40_BIT_WIDTH;
 	vsi->offset_loaded = true;
 
 	PMD_DRV_LOG(DEBUG, "************** VSI[%u] stats start **************",
@@ -4216,9 +4220,12 @@ ice_read_stats_registers(struct ice_pf *pf, struct ice_hw *hw)
 	struct ice_hw_port_stats *ns = &pf->stats; /* new stats */
 	struct ice_hw_port_stats *os = &pf->stats_offset; /* old stats */
 	uint64_t old_rx_bytes = ns->eth.rx_bytes;
+	uint64_t old_tx_bytes = ns->eth.tx_bytes;
 
 	old_rx_bytes += (ns->eth.rx_unicast + ns->eth.rx_multicast +
 			 ns->eth.rx_broadcast) * RTE_ETHER_CRC_LEN;
+	old_tx_bytes += (ns->eth.tx_unicast + ns->eth.tx_multicast +
+			 ns->eth.tx_broadcast) * RTE_ETHER_CRC_LEN;
 
 	/* Get statistics of struct ice_eth_stats */
 	ice_stat_update_40(hw, GLPRT_GORCH(hw->port_info->lport),
@@ -4273,6 +4280,9 @@ ice_read_stats_registers(struct ice_pf *pf, struct ice_hw *hw)
 			   GLPRT_BPTCL(hw->port_info->lport),
 			   pf->offset_loaded, &os->eth.tx_broadcast,
 			   &ns->eth.tx_broadcast);
+	/* enlarge the limitation when tx_bytes overflowed */
+	if (old_tx_bytes > ns->eth.tx_bytes && pf->offset_loaded)
+		ns->eth.tx_bytes += (uint64_t)1 << ICE_40_BIT_WIDTH;
 	ns->eth.tx_bytes -= (ns->eth.tx_unicast + ns->eth.tx_multicast +
 			     ns->eth.tx_broadcast) * RTE_ETHER_CRC_LEN;
 
