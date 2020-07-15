@@ -1010,5 +1010,6 @@ void mlx5_os_set_reg_mr_cb(mlx5_reg_mr_t *reg_mr_cb,
 
 int mlx5_txpp_start(struct rte_eth_dev *dev);
 void mlx5_txpp_stop(struct rte_eth_dev *dev);
+int mlx5_txpp_read_clock(struct rte_eth_dev *dev, uint64_t *timestamp);
 
 #endif /* RTE_PMD_MLX5_H_ */
