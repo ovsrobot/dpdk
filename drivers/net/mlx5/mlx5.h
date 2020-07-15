@@ -216,6 +216,7 @@ struct mlx5_dev_config {
 	unsigned int devx:1; /* Whether devx interface is available or not. */
 	unsigned int dest_tir:1; /* Whether advanced DR API is available. */
 	unsigned int reclaim_mode:2; /* Memory reclaim mode. */
+	unsigned int decap_en:1; /* Whether decap will be used or not. */
 	struct {
 		unsigned int enabled:1; /* Whether MPRQ is enabled. */
 		unsigned int stride_num_n; /* Number of strides. */
