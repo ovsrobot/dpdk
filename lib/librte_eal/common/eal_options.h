@@ -13,6 +13,12 @@ enum {
 	/* long options mapped to a short option */
 #define OPT_HELP              "help"
 	OPT_HELP_NUM            = 'h',
+#define OPT_DEV_INCLUDE       "include"
+	OPT_DEV_INCLUDE_NUM    = 'i',
+#define OPT_DEV_EXCLUDE       "exclude"
+	OPT_DEV_EXCLUDE_NUM    = 'x',
+
+	/* legacy options that will be removed in next LTS */
 #define OPT_PCI_BLACKLIST     "pci-blacklist"
 	OPT_PCI_BLACKLIST_NUM   = 'b',
 #define OPT_PCI_WHITELIST     "pci-whitelist"
