@@ -18,7 +18,8 @@ apps = [
 	'test-flow-perf',
 	'test-pipeline',
 	'test-pmd',
-	'test-sad']
+	'test-sad',
+	'test-mp-crypto']
 
 # for BSD only
 lib_execinfo = cc.find_library('execinfo', required: false)
