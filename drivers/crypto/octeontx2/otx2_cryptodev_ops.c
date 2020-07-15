@@ -13,8 +13,10 @@
 #include "otx2_cryptodev_hw_access.h"
 #include "otx2_cryptodev_mbox.h"
 #include "otx2_cryptodev_ops.h"
+#include "otx2_ipsec_po_ops.h"
 #include "otx2_mbox.h"
 #include "otx2_sec_idev.h"
+#include "otx2_security.h"
 
 #include "cpt_hw_types.h"
 #include "cpt_pmd_logs.h"
@@ -607,6 +609,36 @@ otx2_cpt_enqueue_sym(struct otx2_cpt_qp *qp, struct rte_crypto_op *op,
 }
 
 static __rte_always_inline int __rte_hot
+otx2_cpt_enqueue_sec(struct otx2_cpt_qp *qp, struct rte_crypto_op *op,
+		     struct pending_queue *pend_q)
+{
+	struct otx2_sec_session_ipsec_lp *sess;
+	struct otx2_ipsec_po_sa_ctl *ctl_wrd;
+	struct otx2_sec_session *priv;
+	struct cpt_request_info *req;
+	int ret;
+
+	priv = get_sec_session_private_data(op->sym->sec_session);
+	sess = &priv->ipsec.lp;
+
+	ctl_wrd = &sess->in_sa.ctl;
+
+	if (ctl_wrd->direction == OTX2_IPSEC_PO_SA_DIRECTION_OUTBOUND)
+		ret = process_outb_sa(op, sess, &qp->meta_info, (void **)&req);
+	else
+		ret = process_inb_sa(op, sess, &qp->meta_info, (void **)&req);
+
+	if (unlikely(ret)) {
+		otx2_err("Crypto req : op %p, ret 0x%x", op, ret);
+		return ret;
+	}
+
+	ret = otx2_cpt_enqueue_req(qp, pend_q, req);
+
+	return ret;
+}
+
+static __rte_always_inline int __rte_hot
 otx2_cpt_enqueue_sym_sessless(struct otx2_cpt_qp *qp, struct rte_crypto_op *op,
 			      struct pending_queue *pend_q)
 {
@@ -659,7 +691,9 @@ otx2_cpt_enqueue_burst(void *qptr, struct rte_crypto_op **ops, uint16_t nb_ops)
 	for (count = 0; count < nb_ops; count++) {
 		op = ops[count];
 		if (op->type == RTE_CRYPTO_OP_TYPE_SYMMETRIC) {
-			if (op->sess_type == RTE_CRYPTO_OP_WITH_SESSION)
+			if (op->sess_type == RTE_CRYPTO_OP_SECURITY_SESSION)
+				ret = otx2_cpt_enqueue_sec(qp, op, pend_q);
+			else if (op->sess_type == RTE_CRYPTO_OP_WITH_SESSION)
 				ret = otx2_cpt_enqueue_sym(qp, op, pend_q);
 			else
 				ret = otx2_cpt_enqueue_sym_sessless(qp, op,

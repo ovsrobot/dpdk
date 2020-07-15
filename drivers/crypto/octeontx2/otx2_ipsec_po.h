@@ -86,6 +86,12 @@ enum {
 	OTX2_IPSEC_PO_SA_ENCAP_UDP = 1,
 };
 
+struct otx2_ipsec_po_out_hdr {
+	uint32_t ip_id;
+	uint32_t seq;
+	uint8_t iv[16];
+};
+
 union otx2_ipsec_po_bit_perfect_iv {
 	uint8_t aes_iv[16];
 	uint8_t des_iv[8];
