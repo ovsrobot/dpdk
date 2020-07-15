@@ -835,11 +835,48 @@ otx2_cpt_asym_post_process(struct rte_crypto_op *cop,
 	}
 }
 
+static void
+otx2_cpt_sec_post_process(struct rte_crypto_op *cop, uintptr_t *rsp)
+{
+	struct cpt_request_info *req = (struct cpt_request_info *)rsp[2];
+	vq_cmd_word0_t *word0 = (vq_cmd_word0_t *)&req->ist.ei0;
+	struct rte_crypto_sym_op *sym_op = cop->sym;
+	struct rte_mbuf *m = sym_op->m_src;
+	struct rte_ipv4_hdr *ip;
+	uint16_t m_len;
+	int mdata_len;
+	char *data;
+
+	mdata_len = (int)rsp[3];
+	rte_pktmbuf_trim(m, mdata_len);
+
+	if ((word0->s.opcode & 0xff) == OTX2_IPSEC_PO_PROCESS_IPSEC_INB) {
+		data = rte_pktmbuf_mtod(m, char *);
+		ip = (struct rte_ipv4_hdr *)(data + OTX2_IPSEC_PO_INB_RPTR_HDR);
+
+		m_len = rte_be_to_cpu_16(ip->total_length);
+
+		m->data_len = m_len;
+		m->pkt_len = m_len;
+		m->data_off += OTX2_IPSEC_PO_INB_RPTR_HDR;
+	}
+}
+
 static inline void
 otx2_cpt_dequeue_post_process(struct otx2_cpt_qp *qp, struct rte_crypto_op *cop,
 			      uintptr_t *rsp, uint8_t cc)
 {
 	if (cop->type == RTE_CRYPTO_OP_TYPE_SYMMETRIC) {
+		if (cop->sess_type == RTE_CRYPTO_OP_SECURITY_SESSION) {
+			if (likely(cc == OTX2_IPSEC_PO_CC_SUCCESS)) {
+				otx2_cpt_sec_post_process(cop, rsp);
+				cop->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
+			} else
+				cop->status = RTE_CRYPTO_OP_STATUS_ERROR;
+
+			return;
+		}
+
 		if (likely(cc == NO_ERR)) {
 			/* Verify authentication data if required */
 			if (unlikely(rsp[2]))

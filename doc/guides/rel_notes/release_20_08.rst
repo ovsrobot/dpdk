@@ -225,6 +225,11 @@ New Features
   See the :doc:`../sample_app_ug/l2_forward_real_virtual` for more
   details of this parameter usage.
 
+* **Added lookaside IPsec support to OCTEON TX2 crypto PMD.**
+
+  Added lookaside IPsec support to OCTEON TX2 crypto PMD. With this feature,
+  applications will be able to offload lookaside IPsec to the hardware.
+
 
 Removed Items
 -------------
