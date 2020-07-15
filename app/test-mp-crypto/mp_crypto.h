@@ -168,6 +168,12 @@ int
 mp_crypto_secondary_handler(const struct rte_mp_msg *mp_msg,
 		  const void *peer);
 
+int mp_crypto_setup_qps(void);
+/* Function to setup queues according to input string */
+
+int mp_crypto_init_devs(void);
+/* Function to setup devices according to mask */
+
 #define IV_OFFSET			(sizeof(struct rte_crypto_op) + \
 		sizeof(struct rte_crypto_sym_op) + DEFAULT_NUM_XFORMS * \
 		sizeof(struct rte_crypto_sym_xform))
