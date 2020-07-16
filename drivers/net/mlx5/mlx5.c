@@ -595,6 +595,59 @@ mlx5_flow_ipool_destroy(struct mlx5_dev_ctx_shared *sh)
 		mlx5_ipool_destroy(sh->ipool[i]);
 }
 
+/*
+ * Check if dynamic flex parser for eCPRI already exists.
+ *
+ * @param dev
+ *   Pointer to Ethernet device structure.
+ *
+ * @return
+ *   true on exists, false on not.
+ */
+bool
+mlx5_flex_parser_ecpri_exist(struct rte_eth_dev *dev)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+	struct mlx5_flex_parser_profiles *prf =
+				&priv->sh->fp[MLX5_FLEX_PARSER_ECPRI_0];
+
+	return !!prf->obj;
+}
+
+/*
+ * Allocation of a flex parser for eCPRI. Once created, this parser related
+ * resources will be held until the device is closed.
+ *
+ * @param dev
+ *   Pointer to Ethernet device structure.
+ *
+ * @return
+ *   0 on success, a negative errno value otherwise and rte_errno is set.
+ */
+int
+mlx5_flex_parser_ecpri_alloc(struct rte_eth_dev *dev)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+	struct mlx5_flex_parser_profiles *prf =
+				&priv->sh->fp[MLX5_FLEX_PARSER_ECPRI_0];
+
+	(void)prf;
+	return 0;
+}
+
+/*
+ * Destroy the flex parser node, including the parser itself, input / output
+ * arcs and DW samples. Resources could be reused then.
+ *
+ * @param dev
+ *   Pointer to Ethernet device structure.
+ */
+static void
+flow_dv_flex_parser_ecpri_release(struct rte_eth_dev *dev)
+{
+	(void)dev;
+}
+
 /**
  * Allocate shared device context. If there is multiport device the
  * master and representors will share this context, if there is single
