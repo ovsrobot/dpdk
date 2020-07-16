@@ -24,13 +24,13 @@ extern "C" {
 struct rte_mpls_hdr {
 	uint16_t tag_msb;   /**< Label(msb). */
 #if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
-	uint8_t tag_lsb:4;  /**< Label(lsb). */
-	uint8_t tc:3;       /**< Traffic class. */
-	uint8_t bs:1;       /**< Bottom of stack. */
+	uint32_t tag_lsb:4;  /**< Label(lsb). */
+	uint32_t tc:3;       /**< Traffic class. */
+	uint32_t bs:1;       /**< Bottom of stack. */
 #else
-	uint8_t bs:1;       /**< Bottom of stack. */
-	uint8_t tc:3;       /**< Traffic class. */
-	uint8_t tag_lsb:4;  /**< label(lsb) */
+	uint32_t bs:1;       /**< Bottom of stack. */
+	uint32_t tc:3;       /**< Traffic class. */
+	uint32_t tag_lsb:4;  /**< label(lsb) */
 #endif
 	uint8_t  ttl;       /**< Time to live. */
 } __rte_packed;
