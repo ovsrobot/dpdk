@@ -636,6 +636,11 @@ mlx5_flex_parser_ecpri_alloc(struct rte_eth_dev *dev)
 	uint32_t ids[8];
 	int ret;
 
+	if (!priv->caps.parse_graph_flex_node) {
+		DRV_LOG(ERR, "Dynamic flex parser is not supported "
+			"for device %s.", priv->dev_data->name);
+		return -ENOTSUP;
+	}
 	node.header_length_mode = MLX5_GRAPH_NODE_LEN_FIXED;
 	/* 8 bytes now: 4B common header + 4B message body header. */
 	node.header_length_base_value = 0x8;
