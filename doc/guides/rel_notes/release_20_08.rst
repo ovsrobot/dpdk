@@ -185,7 +185,7 @@ New Features
   Added support for lookaside protocol offload for DOCSIS through the
   ``rte_security`` API.
 
-* **Updated the QuickAssist Technology (QAT) PMD.**
+* **Updated the QuickAssist Technology (QAT) Symmetric Crypto PMD.**
 
   * Added support for lookaside protocol offload for DOCSIS through the
     ``rte_security`` API.
@@ -193,6 +193,14 @@ New Features
   * Improved handling of multi process in QAT crypto and compression PMDs.
   * Added support for Intel GEN2 QuickAssist device 200xx
   (PF Did 0x18ee, VF Did 0x18ef).
+
+* **Updated the QuickAssist Technology (QAT) Asymmetric Crypto PMD.**
+
+  * Improved handling of multi process in QAT crypto and compression PMDs.
+
+* **Updated the QuickAssist Technology (QAT) Compression PMD.**
+
+  * Improved handling of multi process in QAT crypto and compression PMDs.
 
 * **Updated the OCTEON TX2 crypto PMD.**
 
