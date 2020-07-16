@@ -8462,8 +8462,7 @@ __flow_dv_translate(struct rte_eth_dev *dev,
 		case RTE_FLOW_ITEM_TYPE_GRE:
 			flow_dv_translate_item_gre(match_mask, match_value,
 						   items, tunnel);
-			matcher.priority = rss_desc->level >= 2 ?
-				    MLX5_PRIORITY_MAP_L2 : MLX5_PRIORITY_MAP_L4;
+			matcher.priority = MLX5_TUNNEL_PRIO_GET(rss_desc);
 			last_item = MLX5_FLOW_LAYER_GRE;
 			break;
 		case RTE_FLOW_ITEM_TYPE_GRE_KEY:
@@ -8474,37 +8473,32 @@ __flow_dv_translate(struct rte_eth_dev *dev,
 		case RTE_FLOW_ITEM_TYPE_NVGRE:
 			flow_dv_translate_item_nvgre(match_mask, match_value,
 						     items, tunnel);
-			matcher.priority = rss_desc->level >= 2 ?
-				    MLX5_PRIORITY_MAP_L2 : MLX5_PRIORITY_MAP_L4;
+			matcher.priority = MLX5_TUNNEL_PRIO_GET(rss_desc);
 			last_item = MLX5_FLOW_LAYER_GRE;
 			break;
 		case RTE_FLOW_ITEM_TYPE_VXLAN:
 			flow_dv_translate_item_vxlan(match_mask, match_value,
 						     items, tunnel);
-			matcher.priority = rss_desc->level >= 2 ?
-				    MLX5_PRIORITY_MAP_L2 : MLX5_PRIORITY_MAP_L4;
+			matcher.priority = MLX5_TUNNEL_PRIO_GET(rss_desc);
 			last_item = MLX5_FLOW_LAYER_VXLAN;
 			break;
 		case RTE_FLOW_ITEM_TYPE_VXLAN_GPE:
 			flow_dv_translate_item_vxlan_gpe(match_mask,
 							 match_value, items,
 							 tunnel);
-			matcher.priority = rss_desc->level >= 2 ?
-				    MLX5_PRIORITY_MAP_L2 : MLX5_PRIORITY_MAP_L4;
+			matcher.priority = MLX5_TUNNEL_PRIO_GET(rss_desc);
 			last_item = MLX5_FLOW_LAYER_VXLAN_GPE;
 			break;
 		case RTE_FLOW_ITEM_TYPE_GENEVE:
 			flow_dv_translate_item_geneve(match_mask, match_value,
 						      items, tunnel);
-			matcher.priority = rss_desc->level >= 2 ?
-				    MLX5_PRIORITY_MAP_L2 : MLX5_PRIORITY_MAP_L4;
+			matcher.priority = MLX5_TUNNEL_PRIO_GET(rss_desc);
 			last_item = MLX5_FLOW_LAYER_GENEVE;
 			break;
 		case RTE_FLOW_ITEM_TYPE_MPLS:
 			flow_dv_translate_item_mpls(match_mask, match_value,
 						    items, last_item, tunnel);
-			matcher.priority = rss_desc->level >= 2 ?
-				    MLX5_PRIORITY_MAP_L2 : MLX5_PRIORITY_MAP_L4;
+			matcher.priority = MLX5_TUNNEL_PRIO_GET(rss_desc);
 			last_item = MLX5_FLOW_LAYER_MPLS;
 			break;
 		case RTE_FLOW_ITEM_TYPE_MARK:
@@ -8546,8 +8540,7 @@ __flow_dv_translate(struct rte_eth_dev *dev,
 		case RTE_FLOW_ITEM_TYPE_GTP:
 			flow_dv_translate_item_gtp(match_mask, match_value,
 						   items, tunnel);
-			matcher.priority = rss_desc->level >= 2 ?
-				    MLX5_PRIORITY_MAP_L2 : MLX5_PRIORITY_MAP_L4;
+			matcher.priority = MLX5_TUNNEL_PRIO_GET(rss_desc);
 			last_item = MLX5_FLOW_LAYER_GTP;
 			break;
 		default:
