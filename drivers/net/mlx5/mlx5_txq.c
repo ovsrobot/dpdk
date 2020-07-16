@@ -31,6 +31,7 @@
 #include <mlx5_devx_cmds.h>
 #include <mlx5_common.h>
 #include <mlx5_common_mr.h>
+#include <mlx5_malloc.h>
 
 #include "mlx5_defs.h"
 #include "mlx5_utils.h"
@@ -521,8 +522,8 @@ mlx5_txq_obj_hairpin_new(struct rte_eth_dev *dev, uint16_t idx)
 
 	MLX5_ASSERT(txq_data);
 	MLX5_ASSERT(!txq_ctrl->obj);
-	tmpl = rte_calloc_socket(__func__, 1, sizeof(*tmpl), 0,
-				 txq_ctrl->socket);
+	tmpl = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO, sizeof(*tmpl), 0,
+			   txq_ctrl->socket);
 	if (!tmpl) {
 		DRV_LOG(ERR,
 			"port %u Tx queue %u cannot allocate memory resources",
@@ -541,7 +542,7 @@ mlx5_txq_obj_hairpin_new(struct rte_eth_dev *dev, uint16_t idx)
 			DRV_LOG(ERR, "total data size %u power of 2 is "
 				"too large for hairpin",
 				priv->config.log_hp_size);
-			rte_free(tmpl);
+			mlx5_free(tmpl);
 			rte_errno = ERANGE;
 			return NULL;
 		}
@@ -561,7 +562,7 @@ mlx5_txq_obj_hairpin_new(struct rte_eth_dev *dev, uint16_t idx)
 		DRV_LOG(ERR,
 			"port %u tx hairpin queue %u can't create sq object",
 			dev->data->port_id, idx);
-		rte_free(tmpl);
+		mlx5_free(tmpl);
 		rte_errno = errno;
 		return NULL;
 	}
@@ -715,8 +716,9 @@ mlx5_txq_obj_new(struct rte_eth_dev *dev, uint16_t idx,
 		rte_errno = errno;
 		goto error;
 	}
-	txq_obj = rte_calloc_socket(__func__, 1, sizeof(struct mlx5_txq_obj), 0,
-				    txq_ctrl->socket);
+	txq_obj = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO,
+			      sizeof(struct mlx5_txq_obj), 0,
+			      txq_ctrl->socket);
 	if (!txq_obj) {
 		DRV_LOG(ERR, "port %u Tx queue %u cannot allocate memory",
 			dev->data->port_id, idx);
@@ -758,11 +760,9 @@ mlx5_txq_obj_new(struct rte_eth_dev *dev, uint16_t idx,
 	txq_data->wqe_pi = 0;
 	txq_data->wqe_comp = 0;
 	txq_data->wqe_thres = txq_data->wqe_s / MLX5_TX_COMP_THRESH_INLINE_DIV;
-	txq_data->fcqs = rte_calloc_socket(__func__,
-					   txq_data->cqe_s,
-					   sizeof(*txq_data->fcqs),
-					   RTE_CACHE_LINE_SIZE,
-					   txq_ctrl->socket);
+	txq_data->fcqs = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO,
+				     txq_data->cqe_s * sizeof(*txq_data->fcqs),
+				     RTE_CACHE_LINE_SIZE, txq_ctrl->socket);
 	if (!txq_data->fcqs) {
 		DRV_LOG(ERR, "port %u Tx queue %u cannot allocate memory (FCQ)",
 			dev->data->port_id, idx);
@@ -818,9 +818,9 @@ error:
 	if (tmpl.qp)
 		claim_zero(mlx5_glue->destroy_qp(tmpl.qp));
 	if (txq_data->fcqs)
-		rte_free(txq_data->fcqs);
+		mlx5_free(txq_data->fcqs);
 	if (txq_obj)
-		rte_free(txq_obj);
+		mlx5_free(txq_obj);
 	priv->verbs_alloc_ctx.type = MLX5_VERBS_ALLOC_TYPE_NONE;
 	rte_errno = ret; /* Restore rte_errno. */
 	return NULL;
@@ -874,10 +874,10 @@ mlx5_txq_obj_release(struct mlx5_txq_obj *txq_obj)
 			claim_zero(mlx5_glue->destroy_qp(txq_obj->qp));
 			claim_zero(mlx5_glue->destroy_cq(txq_obj->cq));
 				if (txq_obj->txq_ctrl->txq.fcqs)
-					rte_free(txq_obj->txq_ctrl->txq.fcqs);
+					mlx5_free(txq_obj->txq_ctrl->txq.fcqs);
 		}
 		LIST_REMOVE(txq_obj, next);
-		rte_free(txq_obj);
+		mlx5_free(txq_obj);
 		return 0;
 	}
 	return 1;
@@ -1293,10 +1293,8 @@ mlx5_txq_new(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 	struct mlx5_priv *priv = dev->data->dev_private;
 	struct mlx5_txq_ctrl *tmpl;
 
-	tmpl = rte_calloc_socket("TXQ", 1,
-				 sizeof(*tmpl) +
-				 desc * sizeof(struct rte_mbuf *),
-				 0, socket);
+	tmpl = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO, sizeof(*tmpl) +
+			   desc * sizeof(struct rte_mbuf *), 0, socket);
 	if (!tmpl) {
 		rte_errno = ENOMEM;
 		return NULL;
@@ -1336,7 +1334,7 @@ mlx5_txq_new(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 	LIST_INSERT_HEAD(&priv->txqsctrl, tmpl, next);
 	return tmpl;
 error:
-	rte_free(tmpl);
+	mlx5_free(tmpl);
 	return NULL;
 }
 
@@ -1362,8 +1360,8 @@ mlx5_txq_hairpin_new(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 	struct mlx5_priv *priv = dev->data->dev_private;
 	struct mlx5_txq_ctrl *tmpl;
 
-	tmpl = rte_calloc_socket("TXQ", 1,
-				 sizeof(*tmpl), 0, SOCKET_ID_ANY);
+	tmpl = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO, sizeof(*tmpl), 0,
+			   SOCKET_ID_ANY);
 	if (!tmpl) {
 		rte_errno = ENOMEM;
 		return NULL;
@@ -1432,7 +1430,7 @@ mlx5_txq_release(struct rte_eth_dev *dev, uint16_t idx)
 		txq_free_elts(txq);
 		mlx5_mr_btree_free(&txq->txq.mr_ctrl.cache_bh);
 		LIST_REMOVE(txq, next);
-		rte_free(txq);
+		mlx5_free(txq);
 		(*priv->txqs)[idx] = NULL;
 		return 0;
 	}
