@@ -936,7 +936,14 @@ mlx5_rx_intr_disable(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 	}
 	ret = mlx5_glue->get_cq_event(rxq_obj->channel, &ev_cq, &ev_ctx);
 	if (ret || ev_cq != rxq_obj->cq) {
-		rte_errno = EINVAL;
+		/**
+		 * For non-zero 'ret' - save the errno (may be EAGAIN which
+		 * means this function was called before receiving an event).
+		 */
+		if (ret)
+			rte_errno = errno;
+		else
+			rte_errno = EINVAL;
 		goto exit;
 	}
 	rxq_data->cq_arm_sn++;
@@ -947,8 +954,9 @@ exit:
 	ret = rte_errno; /* Save rte_errno before cleanup. */
 	if (rxq_obj)
 		mlx5_rxq_obj_release(rxq_obj);
-	DRV_LOG(WARNING, "port %u unable to disable interrupt on Rx queue %d",
-		dev->data->port_id, rx_queue_id);
+	if (ret != EAGAIN)
+		DRV_LOG(WARNING, "port %u unable to disable interrupt on Rx queue %d",
+			dev->data->port_id, rx_queue_id);
 	rte_errno = ret; /* Restore rte_errno. */
 	return -rte_errno;
 }
