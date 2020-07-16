@@ -346,10 +346,6 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 		}
 	}
 
-#ifdef RTE_LIBRTE_SECURITY
-	struct rte_security_ctx *security_instance;
-#endif
-
 	snprintf(name, RTE_CRYPTODEV_NAME_MAX_LEN, "%s_%s",
 			qat_pci_dev->name, "sym");
 	QAT_LOG(DEBUG, "Creating QAT SYM device %s", name);
@@ -381,8 +377,7 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 			RTE_CRYPTODEV_FF_OOP_SGL_IN_LB_OUT |
 			RTE_CRYPTODEV_FF_OOP_LB_IN_SGL_OUT |
 			RTE_CRYPTODEV_FF_OOP_LB_IN_LB_OUT |
-			RTE_CRYPTODEV_FF_DIGEST_ENCRYPTED |
-			RTE_CRYPTODEV_FF_SECURITY;
+			RTE_CRYPTODEV_FF_DIGEST_ENCRYPTED;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
@@ -392,6 +387,7 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 			qat_pci_dev->qat_dev_gen);
 
 #ifdef RTE_LIBRTE_SECURITY
+	struct rte_security_ctx *security_instance;
 	security_instance = rte_malloc("qat_sec",
 				sizeof(struct rte_security_ctx),
 				RTE_CACHE_LINE_SIZE);
@@ -405,6 +401,7 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 	security_instance->ops = &security_qat_ops;
 	security_instance->sess_cnt = 0;
 	cryptodev->security_ctx = security_instance;
+	cryptodev->feature_flags |= RTE_CRYPTODEV_FF_SECURITY;
 #endif
 
 	internals = cryptodev->data->dev_private;
