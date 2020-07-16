@@ -5976,6 +5976,9 @@ next_container:
 		goto set_alarm;
 	dcs = (struct mlx5_devx_obj *)(uintptr_t)rte_atomic64_read
 							      (&pool->a64_dcs);
+	if (dcs->id & 3)
+		/* Pool without valid counter. */
+		goto set_alarm;
 	offset = batch ? 0 : dcs->id % MLX5_COUNTERS_PER_POOL;
 	/*
 	 * Identify the counters released between query trigger and query

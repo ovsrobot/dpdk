@@ -19,6 +19,7 @@
 #endif
 
 #include <rte_common.h>
+#include <rte_tailq.h>
 #include <rte_ether.h>
 #include <rte_ethdev_driver.h>
 #include <rte_flow.h>
@@ -4384,6 +4385,7 @@ flow_dv_pool_create(struct rte_eth_dev *dev, struct mlx5_devx_obj *dcs,
 	rte_spinlock_init(&pool->sl);
 	TAILQ_INIT(&pool->counters[0]);
 	TAILQ_INIT(&pool->counters[1]);
+	TAILQ_INIT(&pool->skip_counters);
 	TAILQ_INSERT_HEAD(&cont->pool_list, pool, next);
 	pool->index = n_valid;
 	cont->pools[n_valid] = pool;
@@ -4400,6 +4402,67 @@ flow_dv_pool_create(struct rte_eth_dev *dev, struct mlx5_devx_obj *dcs,
 	rte_cio_wmb();
 	rte_atomic16_add(&cont->n_valid, 1);
 	return pool;
+}
+
+/**
+ * Check counter pool min_dcs.
+ *
+ * If counter pool starts with min_dcs id not aligned with 4,
+ * the pool query will be invalid. The pool should retry to
+ * allocate a new min_dcs, the current dcs will be skipped.
+ *
+ * @param[in] pool
+ *   Current counter pool.
+ * @param[in] dcs
+ *   The devX counter handle.
+ *
+ * @return
+ *   0 on valid, -1 otherwise.
+ */
+static int
+flow_dv_counter_check_dcs_id(struct mlx5_flow_counter_pool *pool,
+			     struct mlx5_devx_obj *dcs)
+{
+	struct mlx5_flow_counter *cnt;
+	uint32_t idx;
+
+	if (!(pool->min_dcs->id & 0x3) && dcs->id >= pool->min_dcs->id)
+		return 0;
+	idx = dcs->id % MLX5_COUNTERS_PER_POOL;
+	cnt = MLX5_POOL_GET_CNT(pool, idx);
+	MLX5_GET_POOL_CNT_EXT(pool, idx)->dcs = dcs;
+	TAILQ_INSERT_HEAD(&pool->skip_counters, cnt, next);
+	return -1;
+}
+
+/**
+ * Check skipped counters in the pool.
+ *
+ * As counter pool query requires the first counter dcs
+ * id start with 4 alinged, if the pool counters with
+ * min_dcs id are not aligned with 4, the counters will
+ * be skipped.
+ * Once other min_dcs id less than these skipped counter
+ * dcs id appears, the skipped counters will be safe to
+ * use.
+ *
+ * @param[in] pool
+ *   Current counter pool.
+ */
+static void
+flow_dv_counter_check_skip_counter(struct mlx5_flow_counter_pool *pool)
+{
+	struct mlx5_flow_counter *cnt;
+	void *tmp;
+
+	TAILQ_FOREACH_SAFE(cnt, &pool->skip_counters, next, tmp) {
+		if (MLX5_CNT_TO_CNT_EXT(pool, cnt)->dcs->id >
+		    pool->min_dcs->id) {
+			TAILQ_REMOVE(&pool->skip_counters, cnt, next);
+			TAILQ_INSERT_TAIL(&pool->counters[pool->query_gen],
+					  cnt, next);
+		}
+	}
 }
 
 /**
@@ -4427,12 +4490,15 @@ flow_dv_counter_update_min_dcs(struct rte_eth_dev *dev,
 	other = flow_dv_find_pool_by_id(cont, pool->min_dcs->id);
 	if (!other)
 		return;
-	if (pool->min_dcs->id < other->min_dcs->id) {
+	if (!(pool->min_dcs->id & 0x3) &&
+	    pool->min_dcs->id < other->min_dcs->id) {
 		rte_atomic64_set(&other->a64_dcs,
 			rte_atomic64_read(&pool->a64_dcs));
+		flow_dv_counter_check_skip_counter(other);
 	} else {
 		rte_atomic64_set(&pool->a64_dcs,
 			rte_atomic64_read(&other->a64_dcs));
+		flow_dv_counter_check_skip_counter(pool);
 	}
 }
 /**
@@ -4477,12 +4543,15 @@ flow_dv_counter_pool_prepare(struct rte_eth_dev *dev,
 				mlx5_devx_cmd_destroy(dcs);
 				return NULL;
 			}
-		} else if (dcs->id < pool->min_dcs->id) {
+		} else if (dcs->id < pool->min_dcs->id ||
+			  (pool->min_dcs->id & 0x3 && !(dcs->id & 0x3))) {
 			rte_atomic64_set(&pool->a64_dcs,
 					 (int64_t)(uintptr_t)dcs);
+			flow_dv_counter_check_skip_counter(pool);
 		}
 		flow_dv_counter_update_min_dcs(dev,
 						pool, batch, age);
+		flow_dv_counter_check_dcs_id(pool, dcs);
 		i = dcs->id % MLX5_COUNTERS_PER_POOL;
 		cnt = MLX5_POOL_GET_CNT(pool, i);
 		cnt->pool = pool;

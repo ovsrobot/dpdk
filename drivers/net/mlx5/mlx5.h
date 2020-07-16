@@ -391,6 +391,7 @@ TAILQ_HEAD(mlx5_counters, mlx5_flow_counter);
 struct mlx5_flow_counter_pool {
 	TAILQ_ENTRY(mlx5_flow_counter_pool) next;
 	struct mlx5_counters counters[2]; /* Free counter list. */
+	struct mlx5_counters skip_counters; /* Skipped counter list. */
 	union {
 		struct mlx5_devx_obj *min_dcs;
 		rte_atomic64_t a64_dcs;
