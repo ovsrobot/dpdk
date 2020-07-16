@@ -532,11 +532,12 @@ tbl8_alloc(struct rte_lpm *lpm)
 	return group_idx;
 }
 
-static void
+static int
 tbl8_free(struct rte_lpm *lpm, uint32_t tbl8_group_start)
 {
 	struct rte_lpm_tbl_entry zero_tbl8_entry = {0};
 	struct __rte_lpm *internal_lpm;
+	int rc = 0;
 
 	internal_lpm = container_of(lpm, struct __rte_lpm, lpm);
 	if (internal_lpm->v == NULL) {
@@ -552,9 +553,13 @@ tbl8_free(struct rte_lpm *lpm, uint32_t tbl8_group_start)
 				__ATOMIC_RELAXED);
 	} else if (internal_lpm->rcu_mode == RTE_LPM_QSBR_MODE_DQ) {
 		/* Push into QSBR defer queue. */
-		rte_rcu_qsbr_dq_enqueue(internal_lpm->dq,
+		rc = rte_rcu_qsbr_dq_enqueue(internal_lpm->dq,
 				(void *)&tbl8_group_start);
+		if (rc != 0)
+			RTE_LOG(ERR, LPM, "Failed to push QSBR FIFO\n");
 	}
+
+	return rc;
 }
 
 static __rte_noinline int32_t
@@ -1041,6 +1046,7 @@ delete_depth_big(struct rte_lpm *lpm, uint32_t ip_masked,
 	uint32_t tbl24_index, tbl8_group_index, tbl8_group_start, tbl8_index,
 			tbl8_range, i;
 	int32_t tbl8_recycle_index;
+	int rc = 0;
 
 	/*
 	 * Calculate the index into tbl24 and range. Note: All depths larger
@@ -1097,7 +1103,7 @@ delete_depth_big(struct rte_lpm *lpm, uint32_t ip_masked,
 		 */
 		lpm->tbl24[tbl24_index].valid = 0;
 		__atomic_thread_fence(__ATOMIC_RELEASE);
-		tbl8_free(lpm, tbl8_group_start);
+		rc = tbl8_free(lpm, tbl8_group_start);
 	} else if (tbl8_recycle_index > -1) {
 		/* Update tbl24 entry. */
 		struct rte_lpm_tbl_entry new_tbl24_entry = {
@@ -1113,10 +1119,10 @@ delete_depth_big(struct rte_lpm *lpm, uint32_t ip_masked,
 		__atomic_store(&lpm->tbl24[tbl24_index], &new_tbl24_entry,
 				__ATOMIC_RELAXED);
 		__atomic_thread_fence(__ATOMIC_RELEASE);
-		tbl8_free(lpm, tbl8_group_start);
+		rc = tbl8_free(lpm, tbl8_group_start);
 	}
 #undef group_idx
-	return 0;
+	return (int32_t)rc;
 }
 
 /*
