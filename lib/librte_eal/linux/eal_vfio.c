@@ -1844,6 +1844,13 @@ container_dma_map(struct vfio_config *vfio_cfg, uint64_t vaddr, uint64_t iova,
 		ret = -1;
 		goto out;
 	}
+
+	/* we don't need create new user mem map entry
+	 * for the same memory segment.
+	 */
+	if (errno == EBUSY || errno == EEXIST)
+		goto out;
+
 	/* create new user mem map entry */
 	new_map = &user_mem_maps->maps[user_mem_maps->n_maps++];
 	new_map->addr = vaddr;
