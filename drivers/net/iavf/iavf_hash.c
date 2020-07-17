@@ -3803,7 +3803,8 @@ iavf_hash_parse_pattern(struct iavf_pattern_match_item *pattern_match_item,
 }
 
 static int
-iavf_hash_parse_action(const struct rte_flow_action actions[],
+iavf_hash_parse_action(struct iavf_pattern_match_item *pattern_match_item,
+		       const struct rte_flow_action actions[],
 		       uint64_t pattern_hint, void **meta,
 		       struct rte_flow_error *error)
 {
@@ -3826,19 +3827,6 @@ iavf_hash_parse_action(const struct rte_flow_action actions[],
 			rss = action->conf;
 			rss_type = rss->types;
 
-			if (rss->func ==
-			    RTE_ETH_HASH_FUNCTION_SIMPLE_XOR){
-				rss_meta->rss_algorithm =
-					VIRTCHNL_RSS_ALG_XOR_ASYMMETRIC;
-			} else if (rss->func ==
-				   RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ) {
-				rss_meta->rss_algorithm =
-					VIRTCHNL_RSS_ALG_TOEPLITZ_SYMMETRIC;
-			} else {
-				rss_meta->rss_algorithm =
-					VIRTCHNL_RSS_ALG_TOEPLITZ_ASYMMETRIC;
-			}
-
 			if (rss->level)
 				return rte_flow_error_set(error, ENOTSUP,
 					RTE_FLOW_ERROR_TYPE_ACTION, action,
@@ -3853,6 +3841,29 @@ iavf_hash_parse_action(const struct rte_flow_action actions[],
 				return rte_flow_error_set(error, ENOTSUP,
 					RTE_FLOW_ERROR_TYPE_ACTION, action,
 					"a non-NULL RSS queue is not supported");
+
+			/* Check hash function and save it to rss_meta,
+			 * the pattern should be empty for simple_xor.
+			 */
+			if (pattern_match_item->pattern_list !=
+			    iavf_pattern_empty && rss->func ==
+			    RTE_ETH_HASH_FUNCTION_SIMPLE_XOR) {
+				return rte_flow_error_set(error, ENOTSUP,
+					RTE_FLOW_ERROR_TYPE_ACTION, action,
+					"Not supported flow");
+			} else if (rss->func ==
+			    RTE_ETH_HASH_FUNCTION_SIMPLE_XOR){
+				rss_meta->rss_algorithm =
+					VIRTCHNL_RSS_ALG_XOR_ASYMMETRIC;
+				break;
+			} else if (rss->func ==
+				   RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ) {
+				rss_meta->rss_algorithm =
+					VIRTCHNL_RSS_ALG_TOEPLITZ_SYMMETRIC;
+			} else {
+				rss_meta->rss_algorithm =
+					VIRTCHNL_RSS_ALG_TOEPLITZ_ASYMMETRIC;
+			}
 
 			/**
 			 * Check simultaneous use of SRC_ONLY and DST_ONLY
@@ -3944,7 +3955,7 @@ iavf_hash_parse_pattern_action(__rte_unused struct iavf_adapter *ad,
 	if (ret)
 		goto error;
 
-	ret = iavf_hash_parse_action(actions, phint,
+	ret = iavf_hash_parse_action(pattern_match_item, actions, phint,
 				     (void **)&rss_meta_ptr, error);
 
 error:
@@ -3976,7 +3987,10 @@ iavf_hash_create(__rte_unused struct iavf_adapter *ad,
 		return -ENOMEM;
 	}
 
-	rss_cfg->proto_hdrs = *rss_meta->proto_hdrs;
+	/* Simle_xor is globle configured, no need to set protocol hdrs */
+	if (rss_meta->rss_algorithm != VIRTCHNL_RSS_ALG_XOR_ASYMMETRIC)
+		rss_cfg->proto_hdrs = *rss_meta->proto_hdrs;
+
 	rss_cfg->rss_algorithm = rss_meta->rss_algorithm;
 
 	ret = iavf_add_del_rss_cfg(ad, rss_cfg, true);
