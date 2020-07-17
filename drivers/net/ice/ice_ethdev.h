@@ -248,6 +248,8 @@ struct ice_vsi {
 	struct ice_eth_stats eth_stats_offset;
 	struct ice_eth_stats eth_stats;
 	bool offset_loaded;
+	uint64_t old_rx_bytes;
+	uint64_t old_tx_bytes;
 };
 
 enum proto_xtr_type {
@@ -391,6 +393,8 @@ struct ice_pf {
 	struct ice_parser_list perm_parser_list;
 	struct ice_parser_list dist_parser_list;
 	bool init_link_up;
+	uint64_t old_rx_bytes;
+	uint64_t old_tx_bytes;
 };
 
 #define ICE_MAX_QUEUE_NUM  2048

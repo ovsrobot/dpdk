@@ -4139,6 +4139,10 @@ ice_stat_update_40(struct ice_hw *hw,
 static void
 ice_update_vsi_stats(struct ice_vsi *vsi)
 {
+	uint64_t old_rx_bytes_h = vsi->old_rx_bytes & ~ICE_40_BIT_MASK;
+	uint64_t old_rx_bytes_l = vsi->old_rx_bytes & ICE_40_BIT_MASK;
+	uint64_t old_tx_bytes_h = vsi->old_tx_bytes & ~ICE_40_BIT_MASK;
+	uint64_t old_tx_bytes_l = vsi->old_tx_bytes & ICE_40_BIT_MASK;
 	struct ice_eth_stats *oes = &vsi->eth_stats_offset;
 	struct ice_eth_stats *nes = &vsi->eth_stats;
 	struct ice_hw *hw = ICE_VSI_TO_HW(vsi);
@@ -4156,6 +4160,13 @@ ice_update_vsi_stats(struct ice_vsi *vsi)
 	ice_stat_update_40(hw, GLV_BPRCH(idx), GLV_BPRCL(idx),
 			   vsi->offset_loaded, &oes->rx_broadcast,
 			   &nes->rx_broadcast);
+	/* enlarge the limitation when rx_bytes overflowed */
+	if (vsi->offset_loaded) {
+		if (old_rx_bytes_l > nes->rx_bytes)
+			old_rx_bytes_h += (uint64_t)1 << ICE_40_BIT_WIDTH;
+		nes->rx_bytes += old_rx_bytes_h;
+	}
+	vsi->old_rx_bytes = nes->rx_bytes;
 	/* exclude CRC bytes */
 	nes->rx_bytes -= (nes->rx_unicast + nes->rx_multicast +
 			  nes->rx_broadcast) * RTE_ETHER_CRC_LEN;
@@ -4182,6 +4193,13 @@ ice_update_vsi_stats(struct ice_vsi *vsi)
 	/* GLV_TDPC not supported */
 	ice_stat_update_32(hw, GLV_TEPC(idx), vsi->offset_loaded,
 			   &oes->tx_errors, &nes->tx_errors);
+	/* enlarge the limitation when tx_bytes overflowed */
+	if (vsi->offset_loaded) {
+		if (old_tx_bytes_l > nes->tx_bytes)
+			old_tx_bytes_h += (uint64_t)1 << ICE_40_BIT_WIDTH;
+		nes->tx_bytes += old_tx_bytes_h;
+	}
+	vsi->old_tx_bytes = nes->tx_bytes;
 	vsi->offset_loaded = true;
 
 	PMD_DRV_LOG(DEBUG, "************** VSI[%u] stats start **************",
@@ -4206,6 +4224,10 @@ ice_update_vsi_stats(struct ice_vsi *vsi)
 static void
 ice_read_stats_registers(struct ice_pf *pf, struct ice_hw *hw)
 {
+	uint64_t old_rx_bytes_h = pf->old_rx_bytes & ~ICE_40_BIT_MASK;
+	uint64_t old_rx_bytes_l = pf->old_rx_bytes & ICE_40_BIT_MASK;
+	uint64_t old_tx_bytes_h = pf->old_tx_bytes & ~ICE_40_BIT_MASK;
+	uint64_t old_tx_bytes_l = pf->old_tx_bytes & ICE_40_BIT_MASK;
 	struct ice_hw_port_stats *ns = &pf->stats; /* new stats */
 	struct ice_hw_port_stats *os = &pf->stats_offset; /* old stats */
 
@@ -4229,6 +4251,13 @@ ice_read_stats_registers(struct ice_pf *pf, struct ice_hw *hw)
 	ice_stat_update_32(hw, PRTRPB_RDPC,
 			   pf->offset_loaded, &os->eth.rx_discards,
 			   &ns->eth.rx_discards);
+	/* enlarge the limitation when rx_bytes overflowed */
+	if (pf->offset_loaded) {
+		if (old_rx_bytes_l > ns->eth.rx_bytes)
+			old_rx_bytes_h += (uint64_t)1 << ICE_40_BIT_WIDTH;
+		ns->eth.rx_bytes += old_rx_bytes_h;
+	}
+	pf->old_rx_bytes = ns->eth.rx_bytes;
 
 	/* Workaround: CRC size should not be included in byte statistics,
 	 * so subtract RTE_ETHER_CRC_LEN from the byte counter for each rx
@@ -4259,6 +4288,13 @@ ice_read_stats_registers(struct ice_pf *pf, struct ice_hw *hw)
 			   GLPRT_BPTCL(hw->port_info->lport),
 			   pf->offset_loaded, &os->eth.tx_broadcast,
 			   &ns->eth.tx_broadcast);
+	/* enlarge the limitation when tx_bytes overflowed */
+	if (pf->offset_loaded) {
+		if (old_tx_bytes_l > ns->eth.tx_bytes)
+			old_tx_bytes_h += (uint64_t)1 << ICE_40_BIT_WIDTH;
+		ns->eth.tx_bytes += old_tx_bytes_h;
+	}
+	pf->old_tx_bytes = ns->eth.tx_bytes;
 	ns->eth.tx_bytes -= (ns->eth.tx_unicast + ns->eth.tx_multicast +
 			     ns->eth.tx_broadcast) * RTE_ETHER_CRC_LEN;
 
