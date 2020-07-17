@@ -41,6 +41,12 @@ extern "C" {
 
 #define rte_cio_rmb() rte_rmb()
 
+static __rte_always_inline void
+rte_atomic_thread_fence(int mo)
+{
+	__atomic_thread_fence(mo);
+}
+
 /*------------------------ 128 bit atomic operations -------------------------*/
 
 #if defined(__ARM_FEATURE_ATOMICS) || defined(RTE_ARM_FEATURE_ATOMICS)
