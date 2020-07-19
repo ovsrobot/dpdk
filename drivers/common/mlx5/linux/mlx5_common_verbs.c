@@ -55,7 +55,7 @@ mlx5_common_verbs_reg_mr(void *pd, void *addr, size_t length,
 	memset(pmd_mr, 0, sizeof(*pmd_mr));
 	ibv_mr = mlx5_glue->reg_mr(pd, addr, length,
 				   IBV_ACCESS_LOCAL_WRITE |
-				   (haswell_broadwell_cpu ? 0 :
+				   (mlx5_cpu_is_haswell_broadwell() ? 0 :
 				   IBV_ACCESS_RELAXED_ORDERING));
 	if (!ibv_mr)
 		return -1;

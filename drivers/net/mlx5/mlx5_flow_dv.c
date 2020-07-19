@@ -4201,7 +4201,7 @@ flow_dv_create_counter_stat_mem_mng(struct rte_eth_dev *dev, int raws_n)
 	mkey_attr.klm_num = 0;
 	if (priv->config.hca_attr.relaxed_ordering_write &&
 		priv->config.hca_attr.relaxed_ordering_read  &&
-		!haswell_broadwell_cpu)
+		!mlx5_cpu_is_haswell_broadwell())
 		mkey_attr.relaxed_ordering = 1;
 	mem_mng->dm = mlx5_devx_cmd_mkey_create(sh->ctx, &mkey_attr);
 	if (!mem_mng->dm) {

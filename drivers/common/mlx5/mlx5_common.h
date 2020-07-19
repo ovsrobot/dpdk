@@ -244,6 +244,9 @@ struct mlx5_klm {
 LIST_HEAD(mlx5_dbr_page_list, mlx5_devx_dbr_page);
 
 __rte_internal
+bool mlx5_cpu_is_haswell_broadwell(void);
+
+__rte_internal
 enum mlx5_class mlx5_class_get(struct rte_devargs *devargs);
 __rte_internal
 void mlx5_translate_port_name(const char *port_name_in,
@@ -255,6 +258,5 @@ int64_t mlx5_get_dbr(void *ctx,  struct mlx5_dbr_page_list *head,
 __rte_internal
 int32_t mlx5_release_dbr(struct mlx5_dbr_page_list *head, uint32_t umem_id,
 			 uint64_t offset);
-extern uint8_t haswell_broadwell_cpu;
 
 #endif /* RTE_PMD_MLX5_COMMON_H_ */
