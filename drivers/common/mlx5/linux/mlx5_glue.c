@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <rte_memory.h>
 /*
  * Not needed by this file; included to work around the lack of off_t
  * definition for mlx5dv.h with unpatched rdma-core versions.
@@ -15,6 +16,7 @@
 #include <sys/types.h>
 
 #include "mlx5_glue.h"
+#include "../mlx5_malloc.h"
 
 static int
 mlx5_glue_fork_init(void)
