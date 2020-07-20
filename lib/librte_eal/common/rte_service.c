@@ -65,6 +65,7 @@ struct core_state {
 	/* map of services IDs are run on this core */
 	uint64_t service_mask;
 	uint8_t runstate; /* running or stopped */
+	uint8_t thread_active; /* indicates when the thread is in service_run() */
 	uint8_t is_service_core; /* set if core is currently a service core */
 	uint8_t service_active_on_lcore[RTE_SERVICE_NUM_MAX];
 	uint64_t loops;
@@ -457,6 +458,8 @@ service_runner_func(void *arg)
 	const int lcore = rte_lcore_id();
 	struct core_state *cs = &lcore_states[lcore];
 
+	__atomic_store_n(&cs->thread_active, 1, __ATOMIC_RELAXED);
+
 	/* runstate act as the guard variable. Use load-acquire
 	 * memory order here to synchronize with store-release
 	 * in runstate update functions.
@@ -475,6 +478,7 @@ service_runner_func(void *arg)
 		cs->loops++;
 	}
 
+	__atomic_store_n(&cs->thread_active, 0, __ATOMIC_RELAXED);
 	return 0;
 }
 
@@ -764,6 +768,26 @@ rte_service_lcore_stop(uint32_t lcore)
 	 */
 	__atomic_store_n(&lcore_states[lcore].runstate, RUNSTATE_STOPPED,
 		__ATOMIC_RELEASE);
+
+	/* wait for service lcore to return */
+	i = 0;
+	uint8_t active;
+	uint64_t start = rte_rdtsc();
+	do {
+		active = __atomic_load_n(&lcore_states[lcore].thread_active,
+					 __ATOMIC_RELAXED);
+		if (active == 0)
+			break;
+		rte_delay_ms(1);
+		i++;
+	} while (i < 1000);
+
+	if (active != 0) {
+		uint64_t end = rte_rdtsc();
+		RTE_LOG(WARNING, EAL,
+			"service lcore stop() failed, waited for %ld cycles\n",
+			end - start);
+	}
 
 	return 0;
 }
