@@ -1071,16 +1071,10 @@ async_mbuf_to_desc(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		}
 
 		cpy_len = RTE_MIN(buf_avail, mbuf_avail);
+		hpa = (void *)(uintptr_t)gpa_to_hpa(dev,
+				buf_iova + buf_offset, cpy_len);
 
-		if (unlikely(cpy_len >= cpy_threshold)) {
-			hpa = (void *)(uintptr_t)gpa_to_hpa(dev,
-					buf_iova + buf_offset, cpy_len);
-
-			if (unlikely(!hpa)) {
-				error = -1;
-				goto out;
-			}
-
+		if (unlikely(cpy_len >= cpy_threshold && hpa)) {
 			async_fill_vec(src_iovec + tvec_idx,
 				(void *)(uintptr_t)rte_pktmbuf_iova_offset(m,
 						mbuf_offset), cpy_len);
