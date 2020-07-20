@@ -627,6 +627,8 @@ qat_enqueue_op_burst(void *qp, void **ops, uint16_t nb_ops)
 		}
 	}
 
+	if (tmp_qp->service_type == QAT_SERVICE_SYMMETRIC)
+		qat_sym_preprocess_requests(ops, nb_ops_possible);
 
 	while (nb_ops_sent != nb_ops_possible) {
 		if (tmp_qp->service_type == QAT_SERVICE_SYMMETRIC) {
