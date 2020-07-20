@@ -1647,7 +1647,8 @@ igb_get_rx_port_offloads_capa(struct rte_eth_dev *dev)
 			  DEV_RX_OFFLOAD_JUMBO_FRAME |
 			  DEV_RX_OFFLOAD_KEEP_CRC    |
 			  DEV_RX_OFFLOAD_SCATTER     |
-			  DEV_RX_OFFLOAD_RSS_HASH;
+			  DEV_RX_OFFLOAD_RSS_HASH    |
+			  DEV_RX_OFFLOAD_VLAN_EXTEND;
 
 	return rx_offload_capa;
 }
