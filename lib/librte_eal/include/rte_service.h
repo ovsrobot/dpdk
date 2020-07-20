@@ -262,6 +262,15 @@ int32_t rte_service_lcore_start(uint32_t lcore_id);
 int32_t rte_service_lcore_stop(uint32_t lcore_id);
 
 /**
+ * Reports if a service lcore is currently running.
+ * @retval 0 Service thread is not active, and has been returned to EAL.
+ * @retval 1 Service thread is in the service core polling loop.
+ * @retval -EINVAL Invalid *lcore_id* provided.
+ */
+__rte_experimental
+int32_t rte_service_lcore_active(uint32_t lcore_id);
+
+/**
  * Adds lcore to the list of service cores.
  *
  * This functions can be used at runtime in order to modify the service core
