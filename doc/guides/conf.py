@@ -2,7 +2,6 @@
 # Copyright(c) 2010-2015 Intel Corporation
 
 from __future__ import print_function
-import subprocess
 from docutils import nodes
 from distutils.version import LooseVersion
 from sphinx import __version__ as sphinx_version
@@ -38,10 +37,8 @@ html_add_permalinks = ""
 html_show_copyright = False
 highlight_language = 'none'
 
-# If MAKEFLAGS is exported by the user, garbage text might end up in version
-version = subprocess.check_output(['make', '-sRrC', '../../', 'showversion'],
-                                  env=dict(environ, MAKEFLAGS=""))
-version = version.decode('utf-8').rstrip()
+with open('../../VERSION') as verfile:
+    version = verfile.readline().rstrip()
 release = version
 
 master_doc = 'index'
