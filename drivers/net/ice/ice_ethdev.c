@@ -2628,11 +2628,20 @@ static int ice_init_rss(struct ice_pf *pf)
 		vsi->rss_lut = rte_zmalloc(NULL,
 					   vsi->rss_lut_size, 0);
 
+#define RSS_KEY_SIZE ICE_AQC_GET_SET_RSS_KEY_DATA_RSS_KEY_SIZE
+	static uint8_t rss_intel_key[RSS_KEY_SIZE] = {
+		0x6D, 0x5A, 0x56, 0xDA, 0x25, 0x5B, 0x0E, 0xC2,
+		0x41, 0x67, 0x25, 0x3D, 0x43, 0xA3, 0x8F, 0xB0,
+		0xD0, 0xCA, 0x2B, 0xCB, 0xAE, 0x7B, 0x30, 0xB4,
+		0x77, 0xCB, 0x2D, 0xA3, 0x80, 0x30, 0xF2, 0x0C,
+		0x6A, 0x42, 0xB7, 0x3B, 0xBE, 0xAC, 0x01, 0xFA,
+	};
+
 	/* configure RSS key */
 	if (!rss_conf->rss_key) {
 		/* Calculate the default hash key */
 		for (i = 0; i <= vsi->rss_key_size; i++)
-			vsi->rss_key[i] = (uint8_t)rte_rand();
+			vsi->rss_key[i] = rss_intel_key[i];
 	} else {
 		rte_memcpy(vsi->rss_key, rss_conf->rss_key,
 			   RTE_MIN(rss_conf->rss_key_len,
