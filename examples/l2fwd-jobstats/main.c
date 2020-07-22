@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <ctype.h>
 #include <getopt.h>
+#include <signal.h>
 
 #include <rte_common.h>
 #include <rte_log.h>
@@ -35,6 +36,8 @@
 #include <rte_timer.h>
 #include <rte_alarm.h>
 #include <rte_pause.h>
+
+static volatile bool force_quit;
 
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
 
@@ -493,7 +496,7 @@ l2fwd_main_loop(void)
 
 	rte_jobstats_init(&qconf->idle_job, "idle", 0, 0, 0, 0);
 
-	for (;;) {
+	while (!force_quit) {
 		rte_spinlock_lock(&qconf->lock);
 
 		do {
@@ -508,6 +511,9 @@ l2fwd_main_loop(void)
 			uint64_t repeats = 0;
 
 			do {
+				if (force_quit)
+					break;
+
 				uint8_t i;
 				uint64_t now = rte_get_timer_cycles();
 
@@ -522,6 +528,9 @@ l2fwd_main_loop(void)
 					need_manage = qconf->rx_timers[i].expire < now;
 
 			} while (!need_manage);
+
+			if (force_quit)
+				break;
 
 			if (likely(repeats != 1))
 				rte_jobstats_finish(&qconf->idle_job, qconf->idle_job.target);
@@ -693,8 +702,12 @@ check_all_ports_link_status(uint32_t port_mask)
 	printf("\nChecking link status");
 	fflush(stdout);
 	for (count = 0; count <= MAX_CHECK_TIME; count++) {
+		if (force_quit)
+			return;
 		all_ports_up = 1;
 		RTE_ETH_FOREACH_DEV(portid) {
+			if (force_quit)
+				return;
 			if ((port_mask & (1 << portid)) == 0)
 				continue;
 			memset(&link, 0, sizeof(link));
@@ -742,6 +755,27 @@ check_all_ports_link_status(uint32_t port_mask)
 	}
 }
 
+static void
+stop_and_close_eth_dev(uint16_t port_id)
+{
+	RTE_ETH_FOREACH_DEV(port_id) {
+		printf("Closing port %d...", port_id);
+		rte_eth_dev_stop(port_id);
+		rte_eth_dev_close(port_id);
+		printf(" Done\n");
+	}
+}
+
+static void
+signal_handler(int signum)
+{
+	if (signum == SIGINT || signum == SIGTERM) {
+		printf("\n\nSignal %d received, preparing to exit...\n",
+				signum);
+		force_quit = true;
+	}
+}
+
 int
 main(int argc, char **argv)
 {
@@ -761,6 +795,10 @@ main(int argc, char **argv)
 		rte_exit(EXIT_FAILURE, "Invalid EAL arguments\n");
 	argc -= ret;
 	argv += ret;
+
+	force_quit = false;
+	signal(SIGINT, signal_handler);
+	signal(SIGTERM, signal_handler);
 
 	/* parse application arguments (after the EAL ones) */
 	ret = l2fwd_parse_args(argc, argv);
@@ -960,6 +998,12 @@ main(int argc, char **argv)
 	}
 
 	check_all_ports_link_status(l2fwd_enabled_port_mask);
+	if (force_quit) {
+		stop_and_close_eth_dev(portid);
+		rte_eal_cleanup();
+		printf("Bye...\n");
+		return 0;
+	}
 
 	drain_tsc = (hz + US_PER_S - 1) / US_PER_S * BURST_TX_DRAIN_US;
 
@@ -1028,5 +1072,8 @@ main(int argc, char **argv)
 			return -1;
 	}
 
+	stop_and_close_eth_dev(portid);
+	rte_eal_cleanup();
+	printf("Bye...\n");
 	return 0;
 }
