@@ -243,6 +243,12 @@ New Features
   of ingress packets to specific NIC queues.
   See the :doc:`../sample_app_ug/ipsec_secgw` for more details.
 
+* **Added vhost async data path APIs.**
+
+  4 new APIs have been added to enable vhost async data path, including:
+
+  * Async device channel register/unregister APIs
+  * Async packets enqueue/completion APIs (only split ring was implemented)
 
 Removed Items
 -------------
