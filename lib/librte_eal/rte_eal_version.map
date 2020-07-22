@@ -401,6 +401,7 @@ EXPERIMENTAL {
 	rte_lcore_dump;
 	rte_lcore_iterate;
 	rte_mp_disable;
+	rte_service_lcore_active;
 	rte_thread_register;
 	rte_thread_unregister;
 };
