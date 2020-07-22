@@ -18,6 +18,7 @@
 #include <getopt.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <rte_string_fns.h>
 #include <rte_atomic.h>
@@ -46,6 +47,8 @@
 #ifdef RTE_LIBRTE_PMD_CRYPTO_SCHEDULER
 #include <rte_cryptodev_scheduler.h>
 #endif
+
+static volatile bool force_quit;
 
 enum cdev_type {
 	CDEV_TYPE_ANY,
@@ -838,7 +841,7 @@ l2fwd_main_loop(struct l2fwd_crypto_options *options)
 	 * so user can see the crypto information.
 	 */
 	prev_tsc = rte_rdtsc();
-	while (1) {
+	while (!force_quit) {
 
 		cur_tsc = rte_rdtsc();
 
@@ -1738,8 +1741,12 @@ check_all_ports_link_status(uint32_t port_mask)
 	printf("\nChecking link status");
 	fflush(stdout);
 	for (count = 0; count <= MAX_CHECK_TIME; count++) {
+		if (force_quit)
+			return;
 		all_ports_up = 1;
 		RTE_ETH_FOREACH_DEV(portid) {
+			if (force_quit)
+				return;
 			if ((port_mask & (1 << portid)) == 0)
 				continue;
 			memset(&link, 0, sizeof(link));
@@ -2662,6 +2669,16 @@ reserve_key_memory(struct l2fwd_crypto_options *options)
 	options->aad.phys_addr = rte_malloc_virt2iova(options->aad.data);
 }
 
+static void
+signal_handler(int signum)
+{
+	if (signum == SIGINT || signum == SIGTERM) {
+		printf("\n\nSignal %d received, preparing to exit...\n",
+				signum);
+		force_quit = true;
+	}
+}
+
 int
 main(int argc, char **argv)
 {
@@ -2680,6 +2697,10 @@ main(int argc, char **argv)
 		rte_exit(EXIT_FAILURE, "Invalid EAL arguments\n");
 	argc -= ret;
 	argv += ret;
+
+	force_quit = false;
+	signal(SIGINT, signal_handler);
+	signal(SIGTERM, signal_handler);
 
 	/* reserve memory for Cipher/Auth key and IV */
 	reserve_key_memory(&options);
@@ -2807,6 +2828,14 @@ main(int argc, char **argv)
 		if (rte_eal_wait_lcore(lcore_id) < 0)
 			return -1;
 	}
+	RTE_ETH_FOREACH_DEV(portid) {
+		printf("Closing port %d...", portid);
+		rte_eth_dev_stop(portid);
+		rte_eth_dev_close(portid);
+		printf(" Done\n");
+	}
+	rte_eal_cleanup();
+	printf("Bye...\n");
 
 	return 0;
 }
