@@ -8984,42 +8984,7 @@ i40e_pf_calc_configured_queues_num(struct i40e_pf *pf)
 static int
 i40e_pf_config_rss(struct i40e_pf *pf)
 {
-	struct i40e_hw *hw = I40E_PF_TO_HW(pf);
 	struct rte_eth_rss_conf rss_conf;
-	uint32_t i, lut = 0;
-	uint16_t j, num;
-
-	/*
-	 * If both VMDQ and RSS enabled, not all of PF queues are configured.
-	 * It's necessary to calculate the actual PF queues that are configured.
-	 */
-	if (pf->dev_data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_VMDQ_FLAG)
-		num = i40e_pf_calc_configured_queues_num(pf);
-	else
-		num = pf->dev_data->nb_rx_queues;
-
-	num = RTE_MIN(num, I40E_MAX_Q_PER_TC);
-	PMD_INIT_LOG(INFO, "Max of contiguous %u PF queues are configured",
-			num);
-
-	if (num == 0) {
-		PMD_INIT_LOG(ERR,
-			"No PF queues are configured to enable RSS for port %u",
-			pf->dev_data->port_id);
-		return -ENOTSUP;
-	}
-
-	if (pf->adapter->rss_reta_updated == 0) {
-		for (i = 0, j = 0; i < hw->func_caps.rss_table_size; i++, j++) {
-			if (j == num)
-				j = 0;
-			lut = (lut << 8) | (j & ((0x1 <<
-				hw->func_caps.rss_table_entry_width) - 1));
-			if ((i & 3) == 3)
-				I40E_WRITE_REG(hw, I40E_PFQF_HLUT(i >> 2),
-					       rte_bswap32(lut));
-		}
-	}
 
 	rss_conf = pf->dev_data->dev_conf.rx_adv_conf.rss_conf;
 	if ((rss_conf.rss_hf & pf->adapter->flow_types_mask) == 0) {
@@ -9195,11 +9160,59 @@ i40e_tunnel_filter_handle(struct rte_eth_dev *dev,
 	return ret;
 }
 
+/* Initialize the hash look up table */
+static int
+i40e_pf_init_rss_lut(struct i40e_pf *pf)
+{
+	struct i40e_hw *hw = I40E_PF_TO_HW(pf);
+	uint32_t lut = 0;
+	uint16_t j, num;
+	uint32_t i;
+
+	/* If both VMDQ and RSS enabled, not all of PF queues are configured.
+	 * It's necessary to calculate the actual PF queues that are configured.
+	 */
+	if (pf->dev_data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_VMDQ_FLAG)
+		num = i40e_pf_calc_configured_queues_num(pf);
+	else
+		num = pf->dev_data->nb_rx_queues;
+
+	num = RTE_MIN(num, I40E_MAX_Q_PER_TC);
+	PMD_INIT_LOG(INFO, "Max of contiguous %u PF queues are configured",
+		     num);
+
+	if (num == 0) {
+		PMD_INIT_LOG(ERR,
+			"No PF queues are configured to enable RSS for port %u",
+			pf->dev_data->port_id);
+		return -ENOTSUP;
+	}
+
+	if (pf->adapter->rss_reta_updated == 0) {
+		for (i = 0, j = 0; i < hw->func_caps.rss_table_size; i++, j++) {
+			if (j == num)
+				j = 0;
+			lut = (lut << 8) | (j & ((0x1 <<
+				hw->func_caps.rss_table_entry_width) - 1));
+			if ((i & 3) == 3)
+				I40E_WRITE_REG(hw, I40E_PFQF_HLUT(i >> 2),
+					       rte_bswap32(lut));
+		}
+	}
+
+	return 0;
+}
+
 static int
 i40e_pf_config_mq_rx(struct i40e_pf *pf)
 {
-	int ret = 0;
+	int ret;
 	enum rte_eth_rx_mq_mode mq_mode = pf->dev_data->dev_conf.rxmode.mq_mode;
+
+	/* Initialize hash look up table */
+	ret = i40e_pf_init_rss_lut(pf);
+	if (ret)
+		return ret;
 
 	/* RSS setup */
 	if (mq_mode & ETH_MQ_RX_RSS_FLAG)
