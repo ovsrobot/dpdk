@@ -23,6 +23,15 @@ extern "C" {
 #include <rte_mbuf.h>
 #include <rte_byteorder.h>
 
+/*
+ * s_addr in windows is defined in winsock2.h which is included by windows.h
+ * it is undefined here to be defined as part of rte_ether_hdr
+ */
+#ifdef RTE_EXEC_ENV_WINDOWS
+#undef s_addr
+#endif
+
+
 #define RTE_ETHER_ADDR_LEN  6 /**< Length of Ethernet address. */
 #define RTE_ETHER_TYPE_LEN  2 /**< Length of Ethernet type field. */
 #define RTE_ETHER_CRC_LEN   4 /**< Length of Ethernet CRC. */
