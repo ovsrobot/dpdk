@@ -687,8 +687,6 @@ tf_shadow_tbl_insert(struct tf_shadow_tbl_insert_parms *parms)
 	if (!TF_SHADOW_HB_HANDLE_IS_VALID(sr_entry->hb_handle))
 		return 0;
 
-	sr_entry->refcnt = 1;
-
 	return 0;
 }
 
