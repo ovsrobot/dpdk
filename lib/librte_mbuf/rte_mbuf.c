@@ -66,7 +66,7 @@ rte_pktmbuf_pool_init(struct rte_mempool *mp, void *opaque_arg)
 		    ~RTE_PKTMBUF_POOL_F_PINNED_EXT_BUF) == 0);
 
 	mbp_priv = rte_mempool_get_priv(mp);
-	memcpy(mbp_priv, user_mbp_priv, sizeof(*mbp_priv));
+	rte_memcpy(mbp_priv, user_mbp_priv, sizeof(*mbp_priv));
 }
 
 /*

@@ -42,6 +42,7 @@
 #include <rte_byteorder.h>
 #include <rte_mbuf_ptype.h>
 #include <rte_mbuf_core.h>
+#include <rte_memcpy.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -1109,7 +1110,7 @@ rte_pktmbuf_attach_extbuf(struct rte_mbuf *m, void *buf_addr,
 static inline void
 rte_mbuf_dynfield_copy(struct rte_mbuf *mdst, const struct rte_mbuf *msrc)
 {
-	memcpy(&mdst->dynfield1, msrc->dynfield1, sizeof(mdst->dynfield1));
+	rte_memcpy(&mdst->dynfield1, msrc->dynfield1, sizeof(mdst->dynfield1));
 }
 
 /* internal */

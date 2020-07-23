@@ -15,6 +15,7 @@
 #include <rte_string_fns.h>
 #include <rte_mbuf.h>
 #include <rte_mbuf_dyn.h>
+#include <rte_memcpy.h>
 
 #define RTE_MBUF_DYN_MZNAME "rte_mbuf_dyn"
 
@@ -200,7 +201,7 @@ rte_mbuf_dynfield_lookup(const char *name, struct rte_mbuf_dynfield *params)
 	}
 
 	if (params != NULL)
-		memcpy(params, &mbuf_dynfield->params, sizeof(*params));
+		rte_memcpy(params, &mbuf_dynfield->params, sizeof(*params));
 
 	return mbuf_dynfield->offset;
 }
@@ -303,7 +304,8 @@ __rte_mbuf_dynfield_register_offset(const struct rte_mbuf_dynfield *params,
 		rte_free(te);
 		return -1;
 	}
-	memcpy(&mbuf_dynfield->params, params, sizeof(mbuf_dynfield->params));
+	rte_memcpy(&mbuf_dynfield->params, params,
+				sizeof(mbuf_dynfield->params));
 	mbuf_dynfield->offset = offset;
 	te->data = mbuf_dynfield;
 
@@ -399,7 +401,7 @@ rte_mbuf_dynflag_lookup(const char *name,
 	}
 
 	if (params != NULL)
-		memcpy(params, &mbuf_dynflag->params, sizeof(*params));
+		rte_memcpy(params, &mbuf_dynflag->params, sizeof(*params));
 
 	return mbuf_dynflag->bitnum;
 }
