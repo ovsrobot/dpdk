@@ -709,8 +709,17 @@ ulp_rte_vlan_hdr_handler(const struct rte_flow_item *item,
 			vlan_tag |= ~ULP_VLAN_TAG_MASK;
 		vlan_tag = htons(vlan_tag);
 
+#ifdef ULP_DONT_IGNORE_TOS
 		ulp_rte_prsr_mask_copy(params, &idx, &priority,
 				       sizeof(priority));
+#else
+		/*
+		 * The priority field is ignored since OVS is setting it as
+		 * wild card match and it is not supported. This is a work
+		 * around and shall be addressed in the future.
+		 */
+		idx += 1;
+#endif
 		ulp_rte_prsr_mask_copy(params, &idx, &vlan_tag,
 				       sizeof(vlan_tag));
 		ulp_rte_prsr_mask_copy(params, &idx, &vlan_mask->inner_type,
