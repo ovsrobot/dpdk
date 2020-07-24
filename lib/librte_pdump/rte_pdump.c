@@ -71,21 +71,6 @@ static struct pdump_rxtx_cbs {
 } rx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT],
 tx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
 
-static uint64_t hz;
-static uint64_t start_time;
-static uint64_t start_cycles;
-
-static inline void
-pdump_ts_to_ns(struct rte_mbuf **pkts, uint16_t nb_pkts)
-{
-	unsigned int i;
-
-	for (i = 0; i < nb_pkts; i++) {
-		if ((pkts[i]->ol_flags & PKT_RX_TIMESTAMP) && hz)
-			pkts[i]->timestamp = start_time +
-				 (pkts[i]->timestamp - start_cycles) * NS_PER_S / hz;
-	}
-}
 
 static inline void
 pdump_copy(struct rte_mbuf **pkts, uint16_t nb_pkts, void *user_params)
@@ -115,6 +100,23 @@ pdump_copy(struct rte_mbuf **pkts, uint16_t nb_pkts, void *user_params)
 		do {
 			rte_pktmbuf_free(dup_bufs[ring_enq]);
 		} while (++ring_enq < d_pkts);
+	}
+}
+
+#define NSEC_PER_SEC 1000000000L
+static uint64_t hz;
+static uint64_t start_time;
+static uint64_t start_cycles;
+
+static inline void
+pdump_ts_to_ns(struct rte_mbuf **pkts, uint16_t nb_pkts)
+{
+	unsigned int i;
+
+	for (i = 0; i < nb_pkts; i++) {
+		if ((pkts[i]->ol_flags & PKT_RX_TIMESTAMP) && hz)
+			pkts[i]->timestamp = start_time +
+				 (pkts[i]->timestamp - start_cycles) * NSEC_PER_SEC / hz;
 	}
 }
 
@@ -154,7 +156,7 @@ pdump_register_rx_callbacks(uint16_t end_q, uint16_t port, uint16_t queue,
 			rte_eth_read_clock(port, &start_cycles);
 			rte_eth_get_clock_freq(port, &hz);
 			gettimeofday(&now, NULL);
-			start_time = now.tv_sec * NS_PER_S + now.tv_usec * 1000;
+			start_time = now.tv_sec * NSEC_PER_SEC + now.tv_usec * 1000;
 
 			if (cbs->cb) {
 				PDUMP_LOG(ERR,
