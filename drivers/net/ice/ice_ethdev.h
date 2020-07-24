@@ -353,6 +353,20 @@ struct ice_fdir_info {
 	struct ice_fdir_counter_pool_container counter;
 };
 
+struct ice_gtpu_eh {
+	uint32_t pkt_hdr;
+	uint64_t hash_fld;
+};
+
+struct ice_hash_gtpu_eh {
+	struct ice_gtpu_eh ipv4;
+	struct ice_gtpu_eh ipv6;
+	struct ice_gtpu_eh ipv4_udp;
+	struct ice_gtpu_eh ipv6_udp;
+	struct ice_gtpu_eh ipv4_tcp;
+	struct ice_gtpu_eh ipv6_tcp;
+};
+
 struct ice_pf {
 	struct ice_adapter *adapter; /* The adapter this PF associate to */
 	struct ice_vsi *main_vsi; /* pointer to main VSI structure */
@@ -376,6 +390,7 @@ struct ice_pf {
 	uint16_t fdir_nb_qps; /* The number of queue pairs of Flow Director */
 	uint16_t fdir_qp_offset;
 	struct ice_fdir_info fdir; /* flow director info */
+	struct ice_hash_gtpu_eh gtpu_eh;
 	uint16_t hw_prof_cnt[ICE_FLTR_PTYPE_MAX][ICE_FD_HW_SEG_MAX];
 	uint16_t fdir_fltr_cnt[ICE_FLTR_PTYPE_MAX][ICE_FD_HW_SEG_MAX];
 	struct ice_hw_port_stats stats_offset;
