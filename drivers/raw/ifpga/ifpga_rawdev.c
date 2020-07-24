@@ -41,12 +41,6 @@
 #include "ifpga_rawdev.h"
 #include "ipn3ke_rawdev_api.h"
 
-#define RTE_PCI_EXT_CAP_ID_ERR           0x01	/* Advanced Error Reporting */
-#define RTE_PCI_CFG_SPACE_SIZE           256
-#define RTE_PCI_CFG_SPACE_EXP_SIZE       4096
-#define RTE_PCI_EXT_CAP_ID(header)       (int)(header & 0x0000ffff)
-#define RTE_PCI_EXT_CAP_NEXT(header)     ((header >> 20) & 0xffc)
-
 #define PCI_VENDOR_ID_INTEL          0x8086
 /* PCI Device ID */
 #define PCIE_DEVICE_ID_PF_INT_5_X    0xBCBD
