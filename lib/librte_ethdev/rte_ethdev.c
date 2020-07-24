@@ -4883,6 +4883,18 @@ rte_eth_read_clock(uint16_t port_id, uint64_t *clock)
 }
 
 int
+rte_eth_get_clock_freq(uint16_t port_id, uint64_t *freq)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->get_clock_freq, -ENOTSUP);
+	return eth_err(port_id, (*dev->dev_ops->get_clock_freq)(dev, freq));
+}
+
+int
 rte_eth_dev_get_reg_info(uint16_t port_id, struct rte_dev_reg_info *info)
 {
 	struct rte_eth_dev *dev;

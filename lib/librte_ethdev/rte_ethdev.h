@@ -4265,6 +4265,23 @@ int
 rte_eth_read_clock(uint16_t port_id, uint64_t *clock);
 
 /**
+ * Get the clock frequency of ethernet device, in Hz
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param[out] freq
+ *   Pointer to the device clock frequency.
+ *
+ * @return
+ *   - 0: Success.
+ *   - -ENODEV: The port ID is invalid.
+ *   - -ENOTSUP: The function is not supported by the Ethernet driver.
+ */
+__rte_experimental
+int
+rte_eth_get_clock_freq(uint16_t port_id, uint64_t *freq);
+
+/**
  * Config l2 tunnel ether type of an Ethernet device for filtering specific
  * tunnel packets by ether type.
  *

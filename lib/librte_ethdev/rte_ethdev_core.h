@@ -468,6 +468,10 @@ typedef int (*eth_read_clock)(struct rte_eth_dev *dev,
 				      uint64_t *timestamp);
 /**< @internal Function used to get the current value of the device clock. */
 
+typedef int (*eth_get_clock_freq)(struct rte_eth_dev *dev,
+				      uint64_t *freq);
+/**< @internal Function used to frequency from device clock */
+
 typedef int (*eth_get_reg_t)(struct rte_eth_dev *dev,
 				struct rte_dev_reg_info *info);
 /**< @internal Retrieve registers  */
@@ -731,6 +735,7 @@ struct eth_dev_ops {
 	eth_timesync_write_time    timesync_write_time; /** Set the device clock time. */
 
 	eth_read_clock             read_clock;
+	eth_get_clock_freq         get_clock_freq;
 
 	eth_xstats_get_by_id_t     xstats_get_by_id;
 	/**< Get extended device statistic values by ID. */
