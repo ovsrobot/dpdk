@@ -673,6 +673,8 @@ mlx5_devx_cmd_query_hca_attr(void *ctx,
 			MLX5_GET(cmd_hca_cap, hcattr, flow_counter_bulk_alloc);
 	attr->flow_counters_dump = MLX5_GET(cmd_hca_cap, hcattr,
 					    flow_counters_dump);
+	attr->device_frequency_khz = MLX5_GET(cmd_hca_cap, hcattr,
+					    device_frequency_khz);
 	attr->log_max_rqt_size = MLX5_GET(cmd_hca_cap, hcattr,
 					  log_max_rqt_size);
 	attr->eswitch_manager = MLX5_GET(cmd_hca_cap, hcattr, eswitch_manager);

@@ -302,6 +302,28 @@ mlx5_read_clock(struct rte_eth_dev *dev, uint64_t *clock)
 }
 
 /**
+ * Get the clock frequency of ethernet device, in Hz
+ *
+ * @param dev
+ *   Pointer to Ethernet device structure.
+ * @param[out] freq
+ *   Pointer to the device clock frequency.
+ *
+ * @return
+ *   0 if the clock has correctly been read
+ *   The value of errno in case of error
+ */
+int
+mlx5_get_clock_freq(struct rte_eth_dev *dev, uint64_t *freq)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+
+	*freq = priv->config.hca_attr.device_frequency_khz * 1000;
+
+	return 0;
+}
+
+/**
  * Retrieve the master device for representor in the same switch domain.
  *
  * @param dev
