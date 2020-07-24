@@ -8985,6 +8985,7 @@ static int
 i40e_pf_config_rss(struct i40e_pf *pf)
 {
 	struct i40e_hw *hw = I40E_PF_TO_HW(pf);
+	enum rte_eth_rx_mq_mode mq_mode = pf->dev_data->dev_conf.rxmode.mq_mode;
 	struct rte_eth_rss_conf rss_conf;
 	uint32_t i, lut = 0;
 	uint16_t j, num;
@@ -9022,7 +9023,8 @@ i40e_pf_config_rss(struct i40e_pf *pf)
 	}
 
 	rss_conf = pf->dev_data->dev_conf.rx_adv_conf.rss_conf;
-	if ((rss_conf.rss_hf & pf->adapter->flow_types_mask) == 0) {
+	if ((rss_conf.rss_hf & pf->adapter->flow_types_mask) == 0 ||
+	    !(mq_mode & ETH_MQ_RX_RSS_FLAG)) {
 		i40e_pf_disable_rss(pf);
 		return 0;
 	}
@@ -9198,16 +9200,7 @@ i40e_tunnel_filter_handle(struct rte_eth_dev *dev,
 static int
 i40e_pf_config_mq_rx(struct i40e_pf *pf)
 {
-	int ret = 0;
-	enum rte_eth_rx_mq_mode mq_mode = pf->dev_data->dev_conf.rxmode.mq_mode;
-
-	/* RSS setup */
-	if (mq_mode & ETH_MQ_RX_RSS_FLAG)
-		ret = i40e_pf_config_rss(pf);
-	else
-		i40e_pf_disable_rss(pf);
-
-	return ret;
+	return i40e_pf_config_rss(pf);
 }
 
 /* Get the symmetric hash enable configurations per port */
