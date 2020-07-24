@@ -2,6 +2,8 @@
  * Copyright(c) 2016-2018 Intel Corporation
  */
 
+#include <sys/time.h>
+
 #include <rte_memcpy.h>
 #include <rte_mbuf.h>
 #include <rte_ethdev.h>
@@ -69,6 +71,21 @@ static struct pdump_rxtx_cbs {
 } rx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT],
 tx_cbs[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
 
+static uint64_t hz;
+static uint64_t start_time;
+static uint64_t start_cycles;
+
+static inline void
+pdump_ts_to_ns(struct rte_mbuf **pkts, uint16_t nb_pkts)
+{
+	unsigned int i;
+
+	for (i = 0; i < nb_pkts; i++) {
+		if ((pkts[i]->ol_flags & PKT_RX_TIMESTAMP) && hz)
+			pkts[i]->timestamp = start_time +
+				 (pkts[i]->timestamp - start_cycles) * NS_PER_S / hz;
+	}
+}
 
 static inline void
 pdump_copy(struct rte_mbuf **pkts, uint16_t nb_pkts, void *user_params)
@@ -107,6 +124,7 @@ pdump_rx(uint16_t port __rte_unused, uint16_t qidx __rte_unused,
 	uint16_t max_pkts __rte_unused,
 	void *user_params)
 {
+	pdump_ts_to_ns(pkts, nb_pkts);
 	pdump_copy(pkts, nb_pkts, user_params);
 	return nb_pkts;
 }
@@ -131,6 +149,13 @@ pdump_register_rx_callbacks(uint16_t end_q, uint16_t port, uint16_t queue,
 	for (; qid < end_q; qid++) {
 		cbs = &rx_cbs[port][qid];
 		if (cbs && operation == ENABLE) {
+			struct timeval now;
+
+			rte_eth_read_clock(port, &start_cycles);
+			rte_eth_get_clock_freq(port, &hz);
+			gettimeofday(&now, NULL);
+			start_time = now.tv_sec * NS_PER_S + now.tv_usec * 1000;
+
 			if (cbs->cb) {
 				PDUMP_LOG(ERR,
 					"failed to add rx callback for port=%d "
