@@ -596,8 +596,8 @@ rte_intr_callback_unregister_pending(const struct rte_intr_handle *intr_handle,
 	return ret;
 }
 
-int
-rte_intr_callback_unregister(const struct rte_intr_handle *intr_handle,
+static int
+__rte_intr_callback_unregister(const struct rte_intr_handle *intr_handle,
 			rte_intr_callback_fn cb_fn, void *cb_arg)
 {
 	int ret;
@@ -659,6 +659,18 @@ rte_intr_callback_unregister(const struct rte_intr_handle *intr_handle,
 
 	rte_eal_trace_intr_callback_unregister(intr_handle, cb_fn, cb_arg,
 		ret);
+	return ret;
+}
+
+int
+rte_intr_callback_unregister(const struct rte_intr_handle *intr_handle,
+			rte_intr_callback_fn cb_fn, void *cb_arg)
+{
+	int ret = 0;
+
+	while ((ret = __rte_intr_callback_unregister(intr_handle, cb_fn, cb_arg)) == -EAGAIN)
+		rte_pause();
+
 	return ret;
 }
 
