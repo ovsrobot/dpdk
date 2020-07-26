@@ -12,6 +12,7 @@ apps = [
 	'test-bbdev',
 	'test-cmdline',
 	'test-compress-perf',
+	'test-regex',
 	'test-crypto-perf',
 	'test-eventdev',
 	'test-fib',
