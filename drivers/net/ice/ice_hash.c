@@ -1232,6 +1232,161 @@ error:
 }
 
 static int
+ice_add_rss_cfg_pre(struct ice_pf *pf, uint32_t hdr, uint64_t fld)
+{
+	struct ice_hw *hw = ICE_PF_TO_HW(pf);
+	struct ice_vsi *vsi = pf->main_vsi;
+	int ret;
+
+	/**
+	 * If header field contains GTPU_EH, store gtpu_eh context.
+	 * If header field contains GTPU_DWN/UP, remove existed gtpu_eh.
+	 */
+	if (hdr & ICE_FLOW_SEG_HDR_GTPU_EH) {
+		if ((hdr & ICE_FLOW_SEG_HDR_IPV4) &&
+			(hdr & ICE_FLOW_SEG_HDR_UDP)) {
+				pf->gtpu_ctx.ipv4_udp.pkt_hdr = hdr;
+				pf->gtpu_ctx.ipv4_udp.hash_fld = fld;
+		} else if ((hdr & ICE_FLOW_SEG_HDR_IPV6) &&
+			(hdr & ICE_FLOW_SEG_HDR_UDP)) {
+				pf->gtpu_ctx.ipv6_udp.pkt_hdr = hdr;
+				pf->gtpu_ctx.ipv6_udp.hash_fld = fld;
+		} else if ((hdr & ICE_FLOW_SEG_HDR_IPV4) &&
+			(hdr & ICE_FLOW_SEG_HDR_TCP)) {
+				pf->gtpu_ctx.ipv4_tcp.pkt_hdr = hdr;
+				pf->gtpu_ctx.ipv4_tcp.hash_fld = fld;
+		} else if ((hdr & ICE_FLOW_SEG_HDR_IPV6) &&
+			(hdr & ICE_FLOW_SEG_HDR_TCP)) {
+				pf->gtpu_ctx.ipv6_tcp.pkt_hdr = hdr;
+				pf->gtpu_ctx.ipv6_tcp.hash_fld = fld;
+		} else if ((hdr & ICE_FLOW_SEG_HDR_IPV4) &&
+			(hdr & (ICE_FLOW_SEG_HDR_UDP |
+				ICE_FLOW_SEG_HDR_TCP)) == 0) {
+				pf->gtpu_ctx.ipv4.pkt_hdr = hdr;
+				pf->gtpu_ctx.ipv4.hash_fld = fld;
+		} else if ((hdr & ICE_FLOW_SEG_HDR_IPV6) &&
+			(hdr & (ICE_FLOW_SEG_HDR_UDP |
+				ICE_FLOW_SEG_HDR_TCP)) == 0) {
+				pf->gtpu_ctx.ipv6.pkt_hdr = hdr;
+				pf->gtpu_ctx.ipv6.hash_fld = fld;
+		}
+	} else if (hdr & (ICE_FLOW_SEG_HDR_GTPU_DWN |
+			ICE_FLOW_SEG_HDR_GTPU_UP)) {
+		if ((hdr & ICE_FLOW_SEG_HDR_IPV4) &&
+			(hdr & ICE_FLOW_SEG_HDR_UDP)) {
+			if (ICE_HASH_CFG_VALID(&pf->gtpu_ctx.ipv4_udp)) {
+				ret = ice_rem_rss_cfg(hw, vsi->idx,
+					pf->gtpu_ctx.ipv4_udp.hash_fld,
+					pf->gtpu_ctx.ipv4_udp.pkt_hdr);
+				if (ret)
+					return -rte_errno;
+
+				ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv4_udp);
+			}
+
+			if (ICE_HASH_CFG_VALID(&pf->gtpu_ctx.ipv4)) {
+				ret = ice_rem_rss_cfg(hw, vsi->idx,
+					pf->gtpu_ctx.ipv4.hash_fld,
+					pf->gtpu_ctx.ipv4.pkt_hdr);
+				if (ret)
+					return -rte_errno;
+
+				ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv4);
+			}
+		} else if ((hdr & ICE_FLOW_SEG_HDR_IPV6) &&
+			(hdr & ICE_FLOW_SEG_HDR_UDP)) {
+			if (ICE_HASH_CFG_VALID(&pf->gtpu_ctx.ipv6_udp)) {
+				ret = ice_rem_rss_cfg(hw, vsi->idx,
+					pf->gtpu_ctx.ipv6_udp.hash_fld,
+					pf->gtpu_ctx.ipv6_udp.pkt_hdr);
+				if (ret)
+					return -rte_errno;
+
+				ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv6_udp);
+			}
+
+			if (ICE_HASH_CFG_VALID(&pf->gtpu_ctx.ipv6)) {
+				ret = ice_rem_rss_cfg(hw, vsi->idx,
+					pf->gtpu_ctx.ipv6.hash_fld,
+					pf->gtpu_ctx.ipv6.pkt_hdr);
+				if (ret)
+					return -rte_errno;
+
+				ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv6);
+			}
+		} else if ((hdr & ICE_FLOW_SEG_HDR_IPV4) &&
+			(hdr & ICE_FLOW_SEG_HDR_TCP)) {
+			if (ICE_HASH_CFG_VALID(&pf->gtpu_ctx.ipv4_tcp)) {
+				ret = ice_rem_rss_cfg(hw, vsi->idx,
+					pf->gtpu_ctx.ipv4_tcp.hash_fld,
+					pf->gtpu_ctx.ipv4_tcp.pkt_hdr);
+				if (ret)
+					return -rte_errno;
+
+				ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv4_tcp);
+			}
+
+			if (ICE_HASH_CFG_VALID(&pf->gtpu_ctx.ipv4)) {
+				ret = ice_rem_rss_cfg(hw, vsi->idx,
+					pf->gtpu_ctx.ipv4.hash_fld,
+					pf->gtpu_ctx.ipv4.pkt_hdr);
+				if (ret)
+					return -rte_errno;
+
+				ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv4);
+			}
+		} else if ((hdr & ICE_FLOW_SEG_HDR_IPV6) &&
+			(hdr & ICE_FLOW_SEG_HDR_TCP)) {
+			if (ICE_HASH_CFG_VALID(&pf->gtpu_ctx.ipv6_tcp)) {
+				ret = ice_rem_rss_cfg(hw, vsi->idx,
+					pf->gtpu_ctx.ipv6_tcp.hash_fld,
+					pf->gtpu_ctx.ipv6_tcp.pkt_hdr);
+				if (ret)
+					return -rte_errno;
+
+				ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv6_tcp);
+			}
+
+			if (ICE_HASH_CFG_VALID(&pf->gtpu_ctx.ipv6)) {
+				ret = ice_rem_rss_cfg(hw, vsi->idx,
+					pf->gtpu_ctx.ipv6.hash_fld,
+					pf->gtpu_ctx.ipv6.pkt_hdr);
+				if (ret)
+					return -rte_errno;
+
+				ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv6);
+			}
+		} else if ((hdr & ICE_FLOW_SEG_HDR_IPV4) &&
+			(hdr & (ICE_FLOW_SEG_HDR_UDP |
+				ICE_FLOW_SEG_HDR_TCP)) == 0) {
+			if (ICE_HASH_CFG_VALID(&pf->gtpu_ctx.ipv4)) {
+				ret = ice_rem_rss_cfg(hw, vsi->idx,
+					pf->gtpu_ctx.ipv4.hash_fld,
+					pf->gtpu_ctx.ipv4.pkt_hdr);
+				if (ret)
+					return -rte_errno;
+
+				ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv4);
+			}
+		} else if ((hdr & ICE_FLOW_SEG_HDR_IPV6) &&
+			(hdr & (ICE_FLOW_SEG_HDR_UDP |
+				ICE_FLOW_SEG_HDR_TCP)) == 0) {
+			if (ICE_HASH_CFG_VALID(&pf->gtpu_ctx.ipv6)) {
+				ret = ice_rem_rss_cfg(hw, vsi->idx,
+					pf->gtpu_ctx.ipv6.hash_fld,
+					pf->gtpu_ctx.ipv6.pkt_hdr);
+				if (ret)
+					return -rte_errno;
+
+				ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv6);
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int
 ice_hash_create(struct ice_adapter *ad,
 		struct rte_flow *flow,
 		void *meta,
@@ -1247,6 +1402,10 @@ ice_hash_create(struct ice_adapter *ad,
 	uint32_t headermask = ((struct rss_meta *)meta)->pkt_hdr;
 	uint64_t hash_field = ((struct rss_meta *)meta)->hash_flds;
 	uint8_t hash_function = ((struct rss_meta *)meta)->hash_function;
+
+	ret = ice_add_rss_cfg_pre(pf, headermask, hash_field);
+	if (ret)
+		return -rte_errno;
 
 	filter_ptr = rte_zmalloc("ice_rss_filter",
 				sizeof(struct ice_hash_flow_cfg), 0);
@@ -1297,6 +1456,19 @@ error:
 	return -rte_errno;
 }
 
+static void
+ice_rem_rss_cfg_post(struct ice_pf *pf)
+{
+	ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv4);
+	ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv6);
+
+	ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv4_udp);
+	ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv6_udp);
+
+	ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv4_tcp);
+	ICE_HASH_CFG_RESET(&pf->gtpu_ctx.ipv6_tcp);
+}
+
 static int
 ice_hash_destroy(struct ice_adapter *ad,
 		struct rte_flow *flow,
@@ -1333,6 +1505,8 @@ ice_hash_destroy(struct ice_adapter *ad,
 			goto error;
 		}
 	}
+
+	ice_rem_rss_cfg_post(pf);
 
 	rte_free(filter_ptr);
 	return 0;
