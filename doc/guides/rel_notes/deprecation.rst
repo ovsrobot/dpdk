@@ -148,3 +148,10 @@ Deprecation Notices
   Python 2 support will be completely removed in 20.11.
   In 20.08, explicit deprecation warnings will be displayed when running
   scripts with Python 2.
+
+* scheduler: The functions ``rte_cryptodev_scheduler_slave_attach``,
+  ``rte_cryptodev_scheduler_slave_detach`` and
+  ``rte_cryptodev_scheduler_slaves_get`` will be replaced in 20.11 by
+  ``rte_cryptodev_scheduler_worker_attach``,
+  ``rte_cryptodev_scheduler_worker_detach`` and
+  ``rte_cryptodev_scheduler_workers_get`` accordingly.
