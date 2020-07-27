@@ -12,25 +12,25 @@
 
 #define ARMV8_CRYPTO_LOG_ERR(fmt, args...) \
 	RTE_LOG(ERR, CRYPTODEV, "[%s] %s() line %u: " fmt "\n",  \
-			RTE_STR(CRYPTODEV_NAME_ARMV8_CRYPTO_PMD), \
+			RTE_STR(CRYPTODEV_NAME_ARMV8_PMD), \
 			__func__, __LINE__, ## args)
 
-#ifdef RTE_LIBRTE_ARMV8_CRYPTO_DEBUG
+#ifdef RTE_LIBRTE_PMD_ARMV8_CRYPTO_DEBUG
 #define ARMV8_CRYPTO_LOG_INFO(fmt, args...) \
 	RTE_LOG(INFO, CRYPTODEV, "[%s] %s() line %u: " fmt "\n", \
-			RTE_STR(CRYPTODEV_NAME_ARMV8_CRYPTO_PMD), \
+			RTE_STR(CRYPTODEV_NAME_ARMV8_PMD), \
 			__func__, __LINE__, ## args)
 
 #define ARMV8_CRYPTO_LOG_DBG(fmt, args...) \
 	RTE_LOG(DEBUG, CRYPTODEV, "[%s] %s() line %u: " fmt "\n", \
-			RTE_STR(CRYPTODEV_NAME_ARMV8_CRYPTO_PMD), \
+			RTE_STR(CRYPTODEV_NAME_ARMV8_PMD), \
 			__func__, __LINE__, ## args)
 
 #define ARMV8_CRYPTO_ASSERT(con)				\
 do {								\
 	if (!(con)) {						\
-		rte_panic("%s(): "				\
-		    con "condition failed, line %u", __func__);	\
+		rte_panic("condition failed, line %u",		\
+			__LINE__);				\
 	}							\
 } while (0)
 
