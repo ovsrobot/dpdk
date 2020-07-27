@@ -148,3 +148,20 @@ Deprecation Notices
   Python 2 support will be completely removed in 20.11.
   In 20.08, explicit deprecation warnings will be displayed when running
   scripts with Python 2.
+
+* eal: To be more inclusive in choice of naming, the DPDK project
+  will replace uses of master/slave in  the API's and command line arguments.
+
+  References to master/slave in relation to lcore will be renamed
+  to initial/worker.  The function ``rte_get_master_lcore()``
+  will be renamed to ``rte_get_initial_lcore()``.
+  For the 20.11, release both names will be present and the
+  old function will be marked with the deprecated tag.
+  The old function will be removed in 21.11 version.
+
+  The macros related to primary and secondary lcore will also
+  be change:  ``RTE_LCORE_FOREACH_SLAVE`` will be replaced
+  with ``RTE_LCORE_FOREACH_WORKER``.
+
+  The ``master-lcore`` argument to testpmd will be replaced
+  with ``initial-lcore``.
