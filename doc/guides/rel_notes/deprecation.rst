@@ -165,3 +165,19 @@ Deprecation Notices
 
   The ``master-lcore`` argument to testpmd will be replaced
   with ``initial-lcore``.
+
+* eal: The terms blacklist and whitelist to describe devices used
+  by DPDK will be replaced by blocked and allowed in the 20.11 relase.
+  This will apply to command line arguments and macros.
+
+  The macros ``RTE_DEV_BLACKLISTED`` will be replaced with ``RTE_DEV_BLOCKED``
+  and ``RTE_DEV_WHITELISTED`` will be replaced with ``RTE_DEV_ALLOWED``
+
+  The old macros will be marked as deprecated in 20.11 and removed
+  in the 21.11 release.
+
+  The command line arguments to ``rte_eal_init`` will change from
+  ``-b, --pci-blacklist`` to ``-x, --exclude`` and
+  ``-w, --pci-whitelist`` to ``-i, --include``.
+  The old command line arguments will continue to be accepted in 20.11
+  but will cause a runtime error message.
