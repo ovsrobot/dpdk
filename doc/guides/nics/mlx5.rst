@@ -253,6 +253,13 @@ Limitations
   reported via device xstats to assist applications to detect the
   time-related problems.
 
+  The timestamp upper "too-distant-future" limit at the moment of invoking
+  the tx_burst routine can be estimated as ``tx_pp`` devarog (in nanoseconds)
+  multiplied by 2^23. Please note, for the testpmd txonly testcase the limit
+  is deduced from the expression::
+
+        (n_tx_descriptors / burst_size + 1) * inter_burst_gap
+
   There is no any packet reordering according timestamps is supposed,
   neither within packet burst, nor between packets, it is an entirely
   application responsibility to generate packets and its timestamps
