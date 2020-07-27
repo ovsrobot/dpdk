@@ -105,5 +105,6 @@ SRCS-$(CONFIG_RTE_LIBRTE_QEDE_PMD) += qede_rxtx.c
 SRCS-$(CONFIG_RTE_LIBRTE_QEDE_PMD) += qede_filter.c
 SRCS-$(CONFIG_RTE_LIBRTE_QEDE_PMD) += qede_debug.c
 SRCS-$(CONFIG_RTE_LIBRTE_QEDE_PMD) += qede_regs.c
+SRCS-$(CONFIG_RTE_LIBRTE_QEDE_PMD) += qede_sriov.c
 
 include $(RTE_SDK)/mk/rte.lib.mk
