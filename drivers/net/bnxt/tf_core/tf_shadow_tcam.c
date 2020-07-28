@@ -472,6 +472,7 @@ tf_shadow_tcam_bind_index(struct tf_shadow_tcam_bind_index_parms *parms)
 	/* Write the result table */
 	sr_entry->key_size = parms->key_size;
 	sr_entry->hb_handle = parms->hb_handle;
+	sr_entry->refcnt = 1;
 
 	return 0;
 }
@@ -738,7 +739,6 @@ tf_shadow_tcam_insert(struct tf_shadow_tcam_insert_parms *parms)
 
 	memcpy(sr_entry->result, sparms->result, sparms->result_size);
 	sr_entry->result_size = sparms->result_size;
-	sr_entry->refcnt = 1;
 
 	return 0;
 }
