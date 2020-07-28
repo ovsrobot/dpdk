@@ -55,7 +55,7 @@ mlx5_vdpa_event_qp_global_prepare(struct mlx5_vdpa_priv *priv)
 
 	if (priv->eventc)
 		return 0;
-	lcore = (uint32_t)rte_lcore_to_cpu_id(-1);
+	lcore = (uint32_t)rte_get_master_lcore();
 	if (mlx5_glue->devx_query_eqn(priv->ctx, lcore, &priv->eqn)) {
 		rte_errno = errno;
 		DRV_LOG(ERR, "Failed to query EQ number %d.", rte_errno);
