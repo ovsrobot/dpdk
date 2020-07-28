@@ -86,6 +86,7 @@ test_sources = files('commands.c',
 	'test_meter.c',
 	'test_metrics.c',
 	'test_mcslock.c',
+	'test_mcslock_perf.c',
 	'test_mp_secondary.c',
 	'test_per_lcore.c',
 	'test_pmd_perf.c',
@@ -297,7 +298,8 @@ perf_test_names = [
         'hash_readwrite_perf_autotest',
         'hash_readwrite_lf_perf_autotest',
         'trace_perf_autotest',
-	'ipsec_perf_autotest',
+        'ipsec_perf_autotest',
+        'mcslock_perf_autotest',
 ]
 
 driver_test_names = [
