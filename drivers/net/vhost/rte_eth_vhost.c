@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <sys/epoll.h>
 
 #include <rte_mbuf.h>
 #include <rte_ethdev_driver.h>
@@ -593,7 +594,6 @@ eth_vhost_install_intr(struct rte_eth_dev *dev)
 {
 	struct rte_vhost_vring vring;
 	struct vhost_queue *vq;
-	int count = 0;
 	int nb_rxq = dev->data->nb_rx_queues;
 	int i;
 	int ret;
@@ -623,6 +623,8 @@ eth_vhost_install_intr(struct rte_eth_dev *dev)
 
 	VHOST_LOG(INFO, "Prepare intr vec\n");
 	for (i = 0; i < nb_rxq; i++) {
+		dev->intr_handle->intr_vec[i] = RTE_INTR_VEC_RXTX_OFFSET + i;
+		dev->intr_handle->efds[i] = -1;
 		vq = dev->data->rx_queues[i];
 		if (!vq) {
 			VHOST_LOG(INFO, "rxq-%d not setup yet, skip!\n", i);
@@ -641,14 +643,12 @@ eth_vhost_install_intr(struct rte_eth_dev *dev)
 				"rxq-%d's kickfd is invalid, skip!\n", i);
 			continue;
 		}
-		dev->intr_handle->intr_vec[i] = RTE_INTR_VEC_RXTX_OFFSET + i;
 		dev->intr_handle->efds[i] = vring.kickfd;
-		count++;
 		VHOST_LOG(INFO, "Installed intr vec for rxq-%d\n", i);
 	}
 
-	dev->intr_handle->nb_efd = count;
-	dev->intr_handle->max_intr = count + 1;
+	dev->intr_handle->nb_efd = nb_rxq;
+	dev->intr_handle->max_intr = nb_rxq + 1;
 	dev->intr_handle->type = RTE_INTR_HANDLE_VDEV;
 
 	return 0;
@@ -836,8 +836,11 @@ vring_conf_update(int vid, struct rte_eth_dev *eth_dev, uint16_t vring_id)
 	struct rte_eth_conf *dev_conf = &eth_dev->data->dev_conf;
 	struct pmd_internal *internal = eth_dev->data->dev_private;
 	struct rte_vhost_vring vring;
+	struct rte_intr_handle *handle;
+	struct rte_epoll_event rev;
 	int rx_idx = vring_id % 2 ? (vring_id - 1) >> 1 : -1;
 	int ret = 0;
+	int epfd;
 
 	/*
 	 * The vring kickfd may be changed after the new device notification.
@@ -857,7 +860,31 @@ vring_conf_update(int vid, struct rte_eth_dev *eth_dev, uint16_t vring_id)
 		if (vring.kickfd != eth_dev->intr_handle->efds[rx_idx]) {
 			VHOST_LOG(INFO, "kickfd for rxq-%d was changed.\n",
 					  rx_idx);
-			eth_dev->intr_handle->efds[rx_idx] = vring.kickfd;
+
+			/*
+			 * First remove invalid epoll event, and then isntall
+			 * the new one. May be solved with a proper API in the
+			 * future.
+			 */
+			handle = eth_dev->intr_handle;
+			handle->efds[rx_idx] = vring.kickfd;
+			epfd = handle->elist[rx_idx].epfd;
+			rev = handle->elist[rx_idx];
+			ret = rte_epoll_ctl(epfd, EPOLL_CTL_DEL, rev.fd,
+					&handle->elist[rx_idx]);
+			if (ret) {
+				VHOST_LOG(ERR, "Delete epoll event failed.\n");
+				return ret;
+			}
+
+			rev.fd = vring.kickfd;
+			handle->elist[rx_idx] = rev;
+			ret = rte_epoll_ctl(epfd, EPOLL_CTL_ADD, rev.fd,
+					&handle->elist[rx_idx]);
+			if (ret) {
+				VHOST_LOG(ERR, "Add epoll event failed.\n");
+				return ret;
+			}
 		}
 	}
 
