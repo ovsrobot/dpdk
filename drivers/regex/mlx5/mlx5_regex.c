@@ -267,6 +267,6 @@ RTE_INIT(rte_mlx5_regex_init)
 }
 
 RTE_LOG_REGISTER(mlx5_regex_logtype, pmd.regex.mlx5, NOTICE)
-RTE_PMD_EXPORT_NAME(net_mlx5_regex, __COUNTER__);
-RTE_PMD_REGISTER_PCI_TABLE(net_mlx5_regex, mlx5_regex_pci_id_map);
-RTE_PMD_REGISTER_KMOD_DEP(net_mlx5_regex, "* ib_uverbs & mlx5_core & mlx5_ib");
+RTE_PMD_EXPORT_NAME(regex_mlx5, __COUNTER__);
+RTE_PMD_REGISTER_PCI_TABLE(regex_mlx5, mlx5_regex_pci_id_map);
+RTE_PMD_REGISTER_KMOD_DEP(regex_mlx5, "* ib_uverbs & mlx5_core & mlx5_ib");
