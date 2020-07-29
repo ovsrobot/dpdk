@@ -276,7 +276,7 @@ rte_ring_enqueue_bulk(struct rte_ring *r, void * const *obj_table,
  * @param r
  *   A pointer to the ring structure.
  * @param obj
- *   A pointer to the object to be added.
+ *   A pointer (object) to be added.
  * @return
  *   - 0: Success; objects enqueued.
  *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
@@ -293,7 +293,7 @@ rte_ring_mp_enqueue(struct rte_ring *r, void *obj)
  * @param r
  *   A pointer to the ring structure.
  * @param obj
- *   A pointer to the object to be added.
+ *   A pointer (object) to be added.
  * @return
  *   - 0: Success; objects enqueued.
  *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
@@ -314,7 +314,7 @@ rte_ring_sp_enqueue(struct rte_ring *r, void *obj)
  * @param r
  *   A pointer to the ring structure.
  * @param obj
- *   A pointer to the object to be added.
+ *   A pointer (object) to be added.
  * @return
  *   - 0: Success; objects enqueued.
  *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
