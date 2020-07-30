@@ -2375,18 +2375,12 @@ ice_calc_pkt_desc(struct rte_mbuf *tx_pkt)
 static inline uint16_t
 ice_calc_pkt_tcp_hdr(struct rte_mbuf *tx_pkt, union ice_tx_offload tx_offload)
 {
-	uint16_t tcpoff = tx_offload.l2_len + tx_offload.l3_len;
 	const struct rte_tcp_hdr *tcp_hdr;
-	struct rte_tcp_hdr _tcp_hdr;
+	struct rte_tcp_hdr tcp_hdr_buf;
 
-	if (tcpoff + sizeof(struct rte_tcp_hdr) < tx_pkt->data_len) {
-		tcp_hdr = rte_pktmbuf_mtod_offset(tx_pkt, struct rte_tcp_hdr *,
-						  tcpoff);
-
-		return (tcp_hdr->data_off & 0xf0) >> 2;
-	}
-
-	tcp_hdr = rte_pktmbuf_read(tx_pkt, tcpoff, sizeof(_tcp_hdr), &_tcp_hdr);
+	tcp_hdr = rte_pktmbuf_read(tx_pkt,
+				   tx_offload.l2_len + tx_offload.l3_len,
+				   sizeof(tcp_hdr_buf), &tcp_hdr_buf);
 	if (tcp_hdr)
 		return (tcp_hdr->data_off & 0xf0) >> 2;
 	else
