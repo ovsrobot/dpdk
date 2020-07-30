@@ -320,6 +320,10 @@ i40e_pf_host_process_cmd_get_vf_resource(struct i40e_pf_vf *vf, uint8_t *msg,
 	else
 		vf->request_caps = *(uint32_t *)msg;
 
+#ifdef VIRTCHNL_VF_CAP_ADV_LINK_SPEED
+	vf_res->vf_cap_flags |= VIRTCHNL_VF_CAP_ADV_LINK_SPEED;
+#endif /* VIRTCHNL_VF_CAP_ADV_LINK_SPEED */
+
 	/* enable all RSS by default,
 	 * doesn't support hena setting by virtchnnl yet.
 	 */
