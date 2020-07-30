@@ -126,6 +126,13 @@ Deprecation Notices
   to one it means it represents IV, when is set to zero it means J0 is used
   directly, in this case 16 bytes of J0 need to be passed.
 
+* security: The API ``rte_security_session_create`` takes only single mempool
+  for session and session private data. So the application need to create
+  mempool for twice the number of sessions needed and will also lead to
+  wastage of memory as session private data need more memory compared to session.
+  Hence the API will be modified to take two mempool pointers - one for session
+  and one for private data.
+
 * sched: To allow more traffic classes, flexible mapping of pipe queues to
   traffic classes, and subport level configuration of pipes and queues
   changes will be made to macros, data structures and API functions defined
