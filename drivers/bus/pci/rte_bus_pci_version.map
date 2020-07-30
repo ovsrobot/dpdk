@@ -16,3 +16,9 @@ DPDK_20.0 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	rte_pci_find_next_ext_capability;
+};
