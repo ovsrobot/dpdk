@@ -135,6 +135,14 @@ Deprecation Notices
   will be removed in 20.11. It will be replaced with ``refcnt`` of type
   ``uint16_t``.
 
+* rte_mbuf_ext_shared_info: typedef of ``free_cb`` member in structure
+  ``rte_mbuf_ext_shared_info`` ``rte_mbuf_extbuf_free_callback_t`` will be
+  changed to adapt to GSO case, new typedef will be
+  ``void (*rte_mbuf_extbuf_free_callback_t)(struct rte_mbuf *, void *)``,
+  it is impossible to free original owner mbuf of shinfo by ``free_cb`` and
+  keep compatible with non-GSO case at the same time without this change.
+  It will be deprecated in 20.08.
+
 * metrics: The function ``rte_metrics_init`` will have a non-void return
   in order to notify errors instead of calling ``rte_exit``.
 
