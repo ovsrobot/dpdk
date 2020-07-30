@@ -1386,8 +1386,46 @@ i40evf_handle_pf_event(struct rte_eth_dev *dev, uint8_t *msg,
 		break;
 	case VIRTCHNL_EVENT_LINK_CHANGE:
 		PMD_DRV_LOG(DEBUG, "VIRTCHNL_EVENT_LINK_CHANGE event");
-		vf->link_up = pf_msg->event_data.link_event.link_status;
-		vf->link_speed = pf_msg->event_data.link_event.link_speed;
+
+		if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_CAP_ADV_LINK_SPEED) {
+			vf->link_up =
+				pf_msg->event_data.link_event_adv.link_status;
+
+			switch (pf_msg->event_data.link_event_adv.link_speed) {
+			case ETH_SPEED_NUM_100M:
+				vf->link_speed = I40E_LINK_SPEED_100MB;
+				break;
+			case ETH_SPEED_NUM_1G:
+				vf->link_speed = I40E_LINK_SPEED_1GB;
+				break;
+			case ETH_SPEED_NUM_2_5G:
+				vf->link_speed = I40E_LINK_SPEED_2_5GB;
+				break;
+			case ETH_SPEED_NUM_5G:
+				vf->link_speed = I40E_LINK_SPEED_5GB;
+				break;
+			case ETH_SPEED_NUM_10G:
+				vf->link_speed = I40E_LINK_SPEED_10GB;
+				break;
+			case ETH_SPEED_NUM_20G:
+				vf->link_speed = I40E_LINK_SPEED_20GB;
+				break;
+			case ETH_SPEED_NUM_25G:
+				vf->link_speed = I40E_LINK_SPEED_25GB;
+				break;
+			case ETH_SPEED_NUM_40G:
+				vf->link_speed = I40E_LINK_SPEED_40GB;
+				break;
+			default:
+				vf->link_speed = I40E_LINK_SPEED_UNKNOWN;
+				break;
+			}
+		} else {
+			vf->link_up =
+				pf_msg->event_data.link_event.link_status;
+			vf->link_speed =
+				pf_msg->event_data.link_event.link_speed;
+		}
 		break;
 	case VIRTCHNL_EVENT_PF_DRIVER_CLOSE:
 		PMD_DRV_LOG(DEBUG, "VIRTCHNL_EVENT_PF_DRIVER_CLOSE event");
