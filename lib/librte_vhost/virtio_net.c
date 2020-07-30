@@ -2137,7 +2137,7 @@ again:
 }
 
 static void
-virtio_dev_extbuf_free(void *addr __rte_unused, void *opaque)
+virtio_dev_extbuf_free(struct rte_mbuf * caller_m __rte_unused, void *opaque)
 {
 	rte_free(opaque);
 }

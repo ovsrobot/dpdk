@@ -778,7 +778,7 @@ prepare_sgl_bufs(const char *test_buf, struct rte_mbuf *head_buf,
 }
 
 static void
-extbuf_free_callback(void *addr __rte_unused, void *opaque __rte_unused)
+extbuf_free_callback(struct rte_mbuf *m __rte_unused, void *opaque __rte_unused)
 {
 }
 

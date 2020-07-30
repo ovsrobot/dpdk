@@ -519,7 +519,8 @@ next:
 	return 0;
 }
 
-static void hn_rx_buf_free_cb(void *buf __rte_unused, void *opaque)
+static void hn_rx_buf_free_cb(struct rte_mbuf *caller_m __rte_unused,
+			      void *opaque)
 {
 	struct hn_rx_bufinfo *rxb = opaque;
 	struct hn_data *hv = rxb->hv;

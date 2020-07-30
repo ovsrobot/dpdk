@@ -2300,7 +2300,7 @@ fail:
 
 /* Define a free call back function to be used for external buffer */
 static void
-ext_buf_free_callback_fn(void *addr __rte_unused, void *opaque)
+ext_buf_free_callback_fn(struct rte_mbuf *caller_m __rte_unused, void *opaque)
 {
 	void *ext_buf_addr = opaque;
 
