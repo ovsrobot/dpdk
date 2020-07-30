@@ -83,7 +83,10 @@ rte_gso_segment(struct rte_mbuf *pkt,
 	if (ret > 1) {
 		pkt_seg = pkt;
 		while (pkt_seg) {
-			rte_mbuf_refcnt_update(pkt_seg, -1);
+			if (RTE_MBUF_HAS_EXTBUF(pkt_seg))
+				rte_mbuf_ext_refcnt_update(pkt_seg->shinfo, -1);
+			else
+				rte_mbuf_refcnt_update(pkt_seg, -1);
 			pkt_seg = pkt_seg->next;
 		}
 	} else if (ret < 0) {
