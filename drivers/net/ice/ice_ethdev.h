@@ -41,6 +41,8 @@
 #define ICE_RX_VEC_ID            RTE_INTR_VEC_RXTX_OFFSET
 
 #define ICE_MAX_PKT_TYPE  1024
+#define ICE_GTPU_EH_DWNLINK	0
+#define ICE_GTPU_EH_UPLINK	1
 
 /* DDP package search path */
 #define ICE_PKG_FILE_DEFAULT "/lib/firmware/intel/ice/ddp/ice.pkg"
@@ -264,6 +266,8 @@ enum ice_fdir_tunnel_type {
 	ICE_FDIR_TUNNEL_TYPE_VXLAN,
 	ICE_FDIR_TUNNEL_TYPE_GTPU,
 	ICE_FDIR_TUNNEL_TYPE_GTPU_EH,
+	ICE_FDIR_TUNNEL_TYPE_GTPU_UP,
+	ICE_FDIR_TUNNEL_TYPE_GTPU_DOWN,
 };
 
 struct rte_flow;

@@ -25,9 +25,6 @@
 #include "ice_ethdev.h"
 #include "ice_generic_flow.h"
 
-#define ICE_GTPU_EH_DWNLINK	0
-#define ICE_GTPU_EH_UPLINK	1
-
 struct rss_type_match_hdr {
 	uint32_t hdr_mask;
 	uint64_t eth_rss_hint;
