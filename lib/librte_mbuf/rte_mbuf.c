@@ -118,11 +118,11 @@ rte_pktmbuf_init(struct rte_mempool *mp,
  * buffer.
  */
 static void
-rte_pktmbuf_free_pinned_extmem(void *addr, void *opaque)
+rte_pktmbuf_free_pinned_extmem(struct rte_mbuf *caller_m, void *opaque)
 {
 	struct rte_mbuf *m = opaque;
 
-	RTE_SET_USED(addr);
+	RTE_SET_USED(caller_m);
 	RTE_ASSERT(RTE_MBUF_HAS_EXTBUF(m));
 	RTE_ASSERT(RTE_MBUF_HAS_PINNED_EXTBUF(m));
 	RTE_ASSERT(m->shinfo->fcb_opaque == m);

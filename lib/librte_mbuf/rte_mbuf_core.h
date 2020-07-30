@@ -671,7 +671,7 @@ struct rte_mbuf {
 /**
  * Function typedef of callback to free externally attached buffer.
  */
-typedef void (*rte_mbuf_extbuf_free_callback_t)(void *addr, void *opaque);
+typedef void (*rte_mbuf_extbuf_free_callback_t)(struct rte_mbuf *, void *);
 
 /**
  * Shared data at the end of an external buffer.

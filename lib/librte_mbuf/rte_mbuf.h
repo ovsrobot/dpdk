@@ -1193,7 +1193,7 @@ __rte_pktmbuf_free_extbuf(struct rte_mbuf *m)
 	RTE_ASSERT(m->shinfo != NULL);
 
 	if (rte_mbuf_ext_refcnt_update(m->shinfo, -1) == 0)
-		m->shinfo->free_cb(m->buf_addr, m->shinfo->fcb_opaque);
+		m->shinfo->free_cb(m, m->shinfo->fcb_opaque);
 }
 
 /**

@@ -115,7 +115,7 @@ comp_perf_free_memory(struct comp_test_data *test_data,
 }
 
 static void
-comp_perf_extbuf_free_cb(void *addr __rte_unused, void *opaque __rte_unused)
+comp_perf_extbuf_free_cb(struct rte_mbuf *m __rte_unused, void *opaque __rte_unused)
 {
 }
 

@@ -1622,7 +1622,7 @@ mlx5_lro_update_hdr(uint8_t *__rte_restrict padd,
 }
 
 void
-mlx5_mprq_buf_free_cb(void *addr __rte_unused, void *opaque)
+mlx5_mprq_buf_free_cb(struct rte_mbuf *caller_m __rte_unused, void *opaque)
 {
 	struct mlx5_mprq_buf *buf = opaque;
 
