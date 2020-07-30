@@ -2136,10 +2136,20 @@ again:
 	return NULL;
 }
 
+struct shinfo_arg {
+	void *buf;
+	struct rte_mbuf *mbuf;
+};
+
 static void
-virtio_dev_extbuf_free(struct rte_mbuf * caller_m __rte_unused, void *opaque)
+virtio_dev_extbuf_free(struct rte_mbuf *caller_m, void *opaque)
 {
-	rte_free(opaque);
+	struct shinfo_arg *arg = (struct shinfo_arg *)opaque;
+
+	rte_free(arg->buf);
+	if (caller_m != arg->mbuf)
+		rte_pktmbuf_free(arg->mbuf);
+	rte_free(arg);
 }
 
 static int
@@ -2172,8 +2182,14 @@ virtio_dev_extbuf_alloc(struct rte_mbuf *pkt, uint32_t size)
 
 	/* Initialize shinfo */
 	if (shinfo) {
+		struct shinfo_arg *arg = (struct shinfo_arg *)
+			rte_malloc(NULL, sizeof(struct shinfo_arg),
+				   RTE_CACHE_LINE_SIZE);
+
+		arg->buf = buf;
+		arg->mbuf = pkt;
 		shinfo->free_cb = virtio_dev_extbuf_free;
-		shinfo->fcb_opaque = buf;
+		shinfo->fcb_opaque = arg;
 		rte_mbuf_ext_refcnt_set(shinfo, 1);
 	} else {
 		shinfo = rte_pktmbuf_ext_shinfo_init_helper(buf, &buf_len,
