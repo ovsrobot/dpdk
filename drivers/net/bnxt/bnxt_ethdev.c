@@ -5833,8 +5833,10 @@ bnxt_uninit_locks(struct bnxt *bp)
 {
 	pthread_mutex_destroy(&bp->flow_lock);
 	pthread_mutex_destroy(&bp->def_cp_lock);
-	if (bp->rep_info)
+	if (bp->rep_info) {
 		pthread_mutex_destroy(&bp->rep_info->vfr_lock);
+		pthread_mutex_destroy(&bp->rep_info->vfr_start_lock);
+	}
 }
 
 static int
@@ -5937,6 +5939,14 @@ static int bnxt_init_rep_info(struct bnxt *bp)
 		bnxt_free_rep_info(bp);
 		return rc;
 	}
+
+	rc = pthread_mutex_init(&bp->rep_info->vfr_start_lock, NULL);
+	if (rc) {
+		PMD_DRV_LOG(ERR, "Unable to initialize vfr_start_lock\n");
+		bnxt_free_rep_info(bp);
+		return rc;
+	}
+
 	return rc;
 }
 
