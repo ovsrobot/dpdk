@@ -167,9 +167,15 @@ rte_metrics_tel_format_port(uint32_t pid, json_t *ports,
 	}
 
 	metrics = malloc(sizeof(struct rte_metric_value) * num_metrics);
-	names = malloc(sizeof(struct rte_metric_name) * num_metrics);
-	if (metrics == NULL || names == NULL) {
+	if (metrics == NULL) {
 		METRICS_LOG_ERR("Cannot allocate memory");
+		return -ENOMEM;
+	}
+
+	names = malloc(sizeof(struct rte_metric_name) * num_metrics);
+	if (names == NULL) {
+		METRICS_LOG_ERR("Cannot allocate memory");
+		free(metrics);
 		return -ENOMEM;
 	}
 
