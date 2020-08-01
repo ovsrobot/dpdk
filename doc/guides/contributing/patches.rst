@@ -329,6 +329,7 @@ In the commit message body the Cc: stable@dpdk.org should be inserted as follows
      Update the docs, fixing description of some parameter.
 
      Fixes: abcdefgh1234 ("doc: add some parameter")
+     Cc: author@example.com
      Cc: stable@dpdk.org
 
      Signed-off-by: Alex Smith <alex.smith@example.com>
