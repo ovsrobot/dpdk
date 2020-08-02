@@ -151,3 +151,12 @@ Deprecation Notices
   Python 2 support will be completely removed in 20.11.
   In 20.08, explicit deprecation warnings will be displayed when running
   scripts with Python 2.
+
+* eventdev: A 64 byte padding is added at the end of the following structures
+  in event device library to support future extensions:
+  ``rte_event_crypto_adapter_conf``, ``rte_event_eth_rx_adapter_conf``,
+  ``rte_event_eth_rx_adapter_queue_conf``, ``rte_event_eth_tx_adapter_conf``,
+  ``rte_event_timer_adapter_conf``, ``rte_event_timer_adapter_info``,
+  ``rte_event_dev_info``, ``rte_event_dev_config``, ``rte_event_queue_conf``,
+  ``rte_event_port_conf``, ``rte_event_timer_adapter``,
+  ``rte_event_timer_adapter_data``.
