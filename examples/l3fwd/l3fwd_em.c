@@ -99,33 +99,64 @@ struct ipv6_l3fwd_em_route {
 	uint8_t if_out;
 };
 
-static struct ipv4_l3fwd_em_route ipv4_l3fwd_em_route_array[] = {
-	{{RTE_IPV4(101, 0, 0, 0), RTE_IPV4(100, 10, 0, 1),  101, 11, IPPROTO_TCP}, 0},
-	{{RTE_IPV4(201, 0, 0, 0), RTE_IPV4(200, 20, 0, 1),  102, 12, IPPROTO_TCP}, 1},
-	{{RTE_IPV4(111, 0, 0, 0), RTE_IPV4(100, 30, 0, 1),  101, 11, IPPROTO_TCP}, 2},
-	{{RTE_IPV4(211, 0, 0, 0), RTE_IPV4(200, 40, 0, 1),  102, 12, IPPROTO_TCP}, 3},
+/* 198.18.0.0/16 are set aside for RFC2544 benchmarking (RFC5735).
+ * Use RFC863 Discard Protocol.
+ */
+static const struct ipv4_l3fwd_em_route ipv4_l3fwd_em_route_array[] = {
+	{{RTE_IPV4(198, 18, 0, 0), RTE_IPV4(198, 18, 0, 1),  9, 9, IPPROTO_TCP}, 0},
+	{{RTE_IPV4(198, 18, 1, 0), RTE_IPV4(198, 18, 1, 1),  9, 9, IPPROTO_TCP}, 1},
+	{{RTE_IPV4(198, 18, 2, 0), RTE_IPV4(198, 18, 2, 1),  9, 9, IPPROTO_TCP}, 2},
+	{{RTE_IPV4(198, 18, 3, 0), RTE_IPV4(198, 18, 3, 1),  9, 9, IPPROTO_TCP}, 3},
+	{{RTE_IPV4(198, 18, 4, 0), RTE_IPV4(198, 18, 4, 1),  9, 9, IPPROTO_TCP}, 4},
+	{{RTE_IPV4(198, 18, 5, 0), RTE_IPV4(198, 18, 5, 1),  9, 9, IPPROTO_TCP}, 5},
+	{{RTE_IPV4(198, 18, 6, 0), RTE_IPV4(198, 18, 6, 1),  9, 9, IPPROTO_TCP}, 6},
+	{{RTE_IPV4(198, 18, 7, 0), RTE_IPV4(198, 18, 7, 1),  9, 9, IPPROTO_TCP}, 7},
+	{{RTE_IPV4(198, 18, 8, 0), RTE_IPV4(198, 18, 8, 1),  9, 9, IPPROTO_TCP}, 8},
+	{{RTE_IPV4(198, 18, 9, 0), RTE_IPV4(198, 18, 9, 1),  9, 9, IPPROTO_TCP}, 9},
+	{{RTE_IPV4(198, 18, 10, 0), RTE_IPV4(198, 18, 10, 1),  9, 9, IPPROTO_TCP}, 10},
+	{{RTE_IPV4(198, 18, 11, 0), RTE_IPV4(198, 18, 11, 1),  9, 9, IPPROTO_TCP}, 11},
+	{{RTE_IPV4(198, 18, 12, 0), RTE_IPV4(198, 18, 12, 1),  9, 9, IPPROTO_TCP}, 12},
+	{{RTE_IPV4(198, 18, 13, 0), RTE_IPV4(198, 18, 13, 1),  9, 9, IPPROTO_TCP}, 13},
+	{{RTE_IPV4(198, 18, 14, 0), RTE_IPV4(198, 18, 14, 1),  9, 9, IPPROTO_TCP}, 14},
+	{{RTE_IPV4(198, 18, 15, 0), RTE_IPV4(198, 18, 15, 1),  9, 9, IPPROTO_TCP}, 15},
 };
 
-static struct ipv6_l3fwd_em_route ipv6_l3fwd_em_route_array[] = {
-	{{
-	{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x1e, 0x67, 0xff, 0xfe, 0, 0, 0},
-	{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x1b, 0x21, 0xff, 0xfe, 0x91, 0x38, 0x05},
-	101, 11, IPPROTO_TCP}, 0},
-
-	{{
-	{0xfe, 0x90, 0, 0, 0, 0, 0, 0, 0x02, 0x1e, 0x67, 0xff, 0xfe, 0, 0, 0},
-	{0xfe, 0x90, 0, 0, 0, 0, 0, 0, 0x02, 0x1b, 0x21, 0xff, 0xfe, 0x91, 0x38, 0x05},
-	102, 12, IPPROTO_TCP}, 1},
-
-	{{
-	{0xfe, 0xa0, 0, 0, 0, 0, 0, 0, 0x02, 0x1e, 0x67, 0xff, 0xfe, 0, 0, 0},
-	{0xfe, 0xa0, 0, 0, 0, 0, 0, 0, 0x02, 0x1b, 0x21, 0xff, 0xfe, 0x91, 0x38, 0x05},
-	101, 11, IPPROTO_TCP}, 2},
-
-	{{
-	{0xfe, 0xb0, 0, 0, 0, 0, 0, 0, 0x02, 0x1e, 0x67, 0xff, 0xfe, 0, 0, 0},
-	{0xfe, 0xb0, 0, 0, 0, 0, 0, 0, 0x02, 0x1b, 0x21, 0xff, 0xfe, 0x91, 0x38, 0x05},
-	102, 12, IPPROTO_TCP}, 3},
+/* 2001:0200::/48 is IANA reserved range for IPv6 benchmarking (RFC5180).
+ * Use RFC863 Discard Protocol.
+ */
+static const struct ipv6_l3fwd_em_route ipv6_l3fwd_em_route_array[] = {
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 0},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 1},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 2},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 3},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 4},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 5},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 6},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 7},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 8},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 9},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 10},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 11},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 12},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 13},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 14},
+	{{{32, 1, 2, 0, 0, 0, 0, 0, 0, 15, 0, 0, 0, 0, 0, 0},
+	  {32, 1, 2, 0, 0, 0, 0, 0, 0, 15, 0, 0, 0, 0, 0, 1}, 9, 9, IPPROTO_TCP}, 15},
 };
 
 struct rte_hash *ipv4_l3fwd_em_lookup_struct[NB_SOCKETS];
@@ -429,7 +460,7 @@ populate_ipv4_many_flow_into_table(const struct rte_hash *h,
 		switch (i & (NUMBER_PORT_USED - 1)) {
 		case 0:
 			entry = ipv4_l3fwd_em_route_array[0];
-			entry.key.ip_dst = RTE_IPV4(101, c, b, a);
+			entry.key.ip_dst = RTE_IPV4(9, c, b, a);
 			break;
 		case 1:
 			entry = ipv4_l3fwd_em_route_array[1];
@@ -437,11 +468,11 @@ populate_ipv4_many_flow_into_table(const struct rte_hash *h,
 			break;
 		case 2:
 			entry = ipv4_l3fwd_em_route_array[2];
-			entry.key.ip_dst = RTE_IPV4(111, c, b, a);
+			entry.key.ip_dst = RTE_IPV4(91, c, b, a);
 			break;
 		case 3:
 			entry = ipv4_l3fwd_em_route_array[3];
-			entry.key.ip_dst = RTE_IPV4(211, c, b, a);
+			entry.key.ip_dst = RTE_IPV4(29, c, b, a);
 			break;
 		};
 		convert_ipv4_5tuple(&entry.key, &newkey);
