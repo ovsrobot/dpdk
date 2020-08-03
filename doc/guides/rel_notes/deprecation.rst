@@ -84,6 +84,10 @@ Deprecation Notices
   Target release for removal of the legacy API will be defined once most
   PMDs have switched to rte_flow.
 
+* ethdev: The flow director API, including ``rte_eth_conf.fdir_conf`` field,
+  and the related structures (``rte_fdir_*`` and ``rte_eth_fdir_*``),
+  will be removed in DPDK 20.11.
+
 * ethdev: Update API functions returning ``void`` to return ``int`` with
   negative errno values to indicate various error conditions (e.g.
   invalid port ID, unsupported operation, failed operation):
