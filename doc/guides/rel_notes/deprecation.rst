@@ -104,6 +104,10 @@ Deprecation Notices
   Existing ``rte_eth_rx_descriptor_status`` and ``rte_eth_tx_descriptor_status``
   APIs can be used as replacement.
 
+* ethdev: in order to provide support of the GENEVE header variable length
+  options in rte_flow API the rte_flow_item_geneve_option item will be
+  introduced.
+
 * ethdev: Some internal APIs for driver usage are exported in the .map file.
   Now DPDK has ``__rte_internal`` marker so we can mark internal APIs and move
   them to the INTERNAL block in .map. Although these APIs are internal it will
