@@ -151,3 +151,9 @@ Deprecation Notices
   Python 2 support will be completely removed in 20.11.
   In 20.08, explicit deprecation warnings will be displayed when running
   scripts with Python 2.
+
+* timer: Since timer can get stuck in an infinite loop if the application tries to
+  reset/stop some other timer in it's callback function, which is also about to
+  expire. The function ``rte_timer_stop_sync`` and ``rte_timer_stop_sync``  will
+  have a int return type in order to return with -1 in when this condition
+  occures.
