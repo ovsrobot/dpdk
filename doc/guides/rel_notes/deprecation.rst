@@ -151,3 +151,8 @@ Deprecation Notices
   Python 2 support will be completely removed in 20.11.
   In 20.08, explicit deprecation warnings will be displayed when running
   scripts with Python 2.
+
+* vhost: Vhost-user dequeue zero-copy support will be removed in 20.11. The
+  only known user is OVS where the feature is still experimental, and has not
+  received any update for 2.5 years. This feature faces reliability issues and
+  is often conflicting with new features being implemented.
