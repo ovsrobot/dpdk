@@ -1735,6 +1735,16 @@ unspecified "best-effort" settings from the underlying PMD, which depending
 on the flow rule, may result in anything ranging from empty (single queue)
 to all-inclusive RSS.
 
+Best effort will be used, in case there is a conflict inside the rule.
+The conflict can be the result of:
+
+- Conflicting RSS types, for example setting both UDP and TCP.
+
+- Conflicting between RSS types and the requested pattern to match,
+  for example matching on UDP and hashing RSS on TCP.
+
+- Hashing on types that are not supported by the PMD.
+
 Note: RSS hash result is stored in the ``hash.rss`` mbuf field which
 overlaps ``hash.fdir.lo``. Since `Action: MARK`_ sets the ``hash.fdir.hi``
 field only, both can be requested simultaneously.
