@@ -151,3 +151,14 @@ Deprecation Notices
   Python 2 support will be completely removed in 20.11.
   In 20.08, explicit deprecation warnings will be displayed when running
   scripts with Python 2.
+
+* eventdev: ABI changes to support DLB PMD and future extensions:
+  ``rte_event_dev_info``, ``rte_event_dev_config``, ``rte_event_port_conf`` will
+  be modified to support DLB PMD and future extensions in the eventdev library.
+  Patches containing justification, documentation, and proposed modifications
+  can be found at:
+
+  - https://patches.dpdk.org/patch/71457/
+  - https://patches.dpdk.org/patch/71456/
+
+
