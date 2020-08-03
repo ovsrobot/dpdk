@@ -84,6 +84,12 @@ Deprecation Notices
   Target release for removal of the legacy API will be defined once most
   PMDs have switched to rte_flow.
 
+* ethdev: the legacy L2 tunnel filtering API is deprecated as the rest of
+  the legacy filtering API.
+  The functions ``rte_eth_dev_l2_tunnel_eth_type_conf`` and
+  ``rte_eth_dev_l2_tunnel_offload_set`` which were not marked as deprecated,
+  will be removed in DPDK 20.11.
+
 * ethdev: Update API functions returning ``void`` to return ``int`` with
   negative errno values to indicate various error conditions (e.g.
   invalid port ID, unsupported operation, failed operation):
