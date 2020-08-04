@@ -293,7 +293,7 @@ struct __rte_trace_header {
 	uint8_t mem[];
 };
 
-RTE_DECLARE_PER_LCORE(void *, trace_mem);
+RTE_DECLARE_PER_LCORE(struct __rte_trace_header *, trace_mem);
 
 static __rte_always_inline void *
 __rte_trace_mem_get(uint64_t in)

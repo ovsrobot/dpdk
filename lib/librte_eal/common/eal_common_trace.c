@@ -16,7 +16,7 @@
 #include "eal_trace.h"
 
 RTE_DEFINE_PER_LCORE(volatile int, trace_point_sz);
-RTE_DEFINE_PER_LCORE(void *, trace_mem);
+RTE_DEFINE_PER_LCORE(struct __rte_trace_header *, trace_mem);
 static RTE_DEFINE_PER_LCORE(char, ctf_field[TRACE_CTF_FIELD_SIZE]);
 static RTE_DEFINE_PER_LCORE(int, ctf_count);
 
