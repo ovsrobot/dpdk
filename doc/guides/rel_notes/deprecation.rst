@@ -67,6 +67,17 @@ Deprecation Notices
   us extending existing enum/define.
   One solution can be using a fixed size array instead of ``.*MAX.*`` value.
 
+* pci: The PCI resources map API (``pci_map_resource`` and
+  ``pci_unmap_resource``) was not abstracting the Unix mmap flags (see the
+  workaround for Windows support implemented in the commit
+  9d2b24593724 ("pci: keep API compatibility with mmap values")).
+  This API will be removed from the public API in 20.11 and moved to the PCI
+  bus driver along with the PCI resources lists and associated structures
+  (``pci_map``, ``pci_msix_table``, ``mapped_pci_resource`` and
+  ``mapped_pci_res_list``).
+  With this removal, there won't be a need for the mentioned workaround which
+  will be reverted.
+
 * ethdev: Split the ``struct eth_dev_ops`` struct to hide it as much as possible
   will be done in 20.11.
   Currently the ``struct eth_dev_ops`` struct is accessible by the application
