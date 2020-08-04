@@ -1,9 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2010-2014 Intel Corporation
 
 # Script that runs cmdline_test app and feeds keystrokes into it.
-from __future__ import print_function
 import cmdline_test_data
 import os
 import pexpect
@@ -18,10 +17,6 @@ def runTest(child, test):
     if test["Result"] is None:
         return 0
     child.expect(test["Result"], 1)
-
-if sys.version_info.major < 3:
-    print("WARNING: Python 2 is deprecated for use in DPDK, and will not work in future releases.", file=sys.stderr)
-    print("Please use Python 3 instead", file=sys.stderr)
 
 #
 # history test is a special case
