@@ -445,6 +445,41 @@ static struct iavf_pattern_match_item iavf_hash_pattern_list[] = {
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_DST) | \
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PROT), {BUFF_NOUSED } }
 
+/* IPV6 Prefix 64 for L3 */
+#define proto_hint_ipv6_pre64 { \
+	VIRTCHNL_PROTO_HDR_IPV6, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PREFIX64_SRC) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PREFIX64_DST), {BUFF_NOUSED } }
+
+#define proto_hint_ipv6_pre64_src { \
+	VIRTCHNL_PROTO_HDR_IPV6, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PREFIX64_SRC), {BUFF_NOUSED } }
+
+#define proto_hint_ipv6_pre64_dst { \
+	VIRTCHNL_PROTO_HDR_IPV6, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PREFIX64_DST), {BUFF_NOUSED } }
+
+/* IPV6 Prefix 64 for L4 */
+#define proto_hint_ipv6_pre64_prot { \
+	VIRTCHNL_PROTO_HDR_IPV6, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PREFIX64_SRC) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PREFIX64_DST) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PROT), {BUFF_NOUSED } }
+
+#define proto_hint_ipv6_pre64_src_prot { \
+	VIRTCHNL_PROTO_HDR_IPV6, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PREFIX64_SRC) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PROT), {BUFF_NOUSED } }
+
+#define proto_hint_ipv6_pre64_dst_prot { \
+	VIRTCHNL_PROTO_HDR_IPV6, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PREFIX64_DST) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PROT), {BUFF_NOUSED } }
+
+#define proto_hint_ipv6_pre64_only_prot { \
+	VIRTCHNL_PROTO_HDR_IPV6, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PROT), {BUFF_NOUSED } }
+
 #define proto_hint_gtpu_ip_teid { \
 	VIRTCHNL_PROTO_HDR_GTPU_IP, \
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_GTPU_IP_TEID), {BUFF_NOUSED } }
@@ -1999,6 +2034,139 @@ struct virtchnl_proto_hdrs hdrs_hint_ipv6_udp_esp = {
 	proto_hint_udp_only, proto_hint_esp }
 };
 
+/* IPV6 Prefix 64 */
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64 = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_ipv6_pre64 }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_src = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_ipv6_pre64_src }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_dst = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_ipv6_pre64_dst }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_prot = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_ipv6_pre64_prot }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_src_prot = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_ipv6_pre64_src_prot }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_dst_prot = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_ONE, {proto_hint_ipv6_pre64_dst_prot }
+};
+
+/* IPV6 Prefix 64 UDP */
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_udp = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_prot,
+	proto_hint_udp }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_src_udp_src_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_src_prot,
+	proto_hint_udp_src_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_src_udp_dst_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_src_prot,
+	proto_hint_udp_dst_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_dst_udp_src_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_dst_prot,
+	proto_hint_udp_src_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_dst_udp_dst_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_dst_prot,
+	proto_hint_udp_dst_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_udp_src_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_only_prot,
+	proto_hint_udp_src_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_udp_dst_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_only_prot,
+	proto_hint_udp_dst_port }
+};
+
+/* IPV6 Prefix 64 TCP */
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_tcp = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_prot,
+	proto_hint_tcp }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_src_tcp_src_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_src_prot,
+	proto_hint_tcp_src_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_src_tcp_dst_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_src_prot,
+	proto_hint_tcp_dst_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_dst_tcp_src_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_dst_prot,
+	proto_hint_tcp_src_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_dst_tcp_dst_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_dst_prot,
+	proto_hint_tcp_dst_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_tcp_src_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_only_prot,
+	proto_hint_tcp_src_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_tcp_dst_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_only_prot,
+	proto_hint_tcp_dst_port }
+};
+
+/* IPV6 Prefix 64 SCTP */
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_sctp = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_prot,
+	proto_hint_sctp }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_src_sctp_src_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_src_prot,
+	proto_hint_sctp_src_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_src_sctp_dst_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_src_prot,
+	proto_hint_sctp_dst_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_dst_sctp_src_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_dst_prot,
+	proto_hint_sctp_src_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_dst_sctp_dst_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_dst_prot,
+	proto_hint_sctp_dst_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_sctp_src_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_only_prot,
+	proto_hint_sctp_src_port }
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_pre64_sctp_dst_port = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_TWO, {proto_hint_ipv6_pre64_only_prot,
+	proto_hint_sctp_dst_port }
+};
+
 struct iavf_hash_match_type iavf_hash_map_list[] = {
 	/* IPV4 */
 	{ETH_RSS_L2_SRC_ONLY,
@@ -2151,6 +2319,13 @@ struct iavf_hash_match_type iavf_hash_map_list[] = {
 		&hdrs_hint_ipv6_ah, IAVF_PHINT_IPV6},
 	{ETH_RSS_L2TPV3,
 		&hdrs_hint_ipv6_l2tpv3, IAVF_PHINT_IPV6},
+	/* IPV6 Prefix 64 */
+	{ETH_RSS_IPV6_PRE64,
+		&hdrs_hint_ipv6_pre64, IAVF_PHINT_IPV6},
+	{ETH_RSS_IPV6_PRE64 | ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv6_pre64_src, IAVF_PHINT_IPV6},
+	{ETH_RSS_IPV6_PRE64 | ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv6_pre64_dst, IAVF_PHINT_IPV6},
 	/* IPV6 UDP */
 	{ETH_RSS_L2_SRC_ONLY,
 		&hdrs_hint_eth_src_ipv6_udp, IAVF_PHINT_IPV6_UDP},
@@ -2186,6 +2361,25 @@ struct iavf_hash_match_type iavf_hash_map_list[] = {
 		&hdrs_hint_ipv6_udp_esp, IAVF_PHINT_IPV6_UDP},
 	{ETH_RSS_NONFRAG_IPV6_UDP,
 		&hdrs_hint_ipv6_udp, IAVF_PHINT_IPV6_UDP},
+	/* IPV6 Prefix 64 UDP */
+	{ETH_RSS_IPV6_PRE64_UDP,
+		&hdrs_hint_ipv6_pre64_udp, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_IPV6_PRE64_UDP | ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv6_pre64_src_udp_src_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_IPV6_PRE64_UDP | ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv6_pre64_src_udp_dst_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_IPV6_PRE64_UDP | ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv6_pre64_dst_udp_src_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_IPV6_PRE64_UDP | ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv6_pre64_dst_udp_dst_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_IPV6_PRE64_UDP | ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv6_pre64_src_prot, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_IPV6_PRE64_UDP | ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv6_pre64_dst_prot, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_IPV6_PRE64_UDP | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv6_pre64_udp_src_port, IAVF_PHINT_IPV6_UDP},
+	{ETH_RSS_IPV6_PRE64_UDP | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv6_pre64_udp_dst_port, IAVF_PHINT_IPV6_UDP},
 	/* IPV6 TCP */
 	{ETH_RSS_L2_SRC_ONLY,
 		&hdrs_hint_eth_src_ipv6_tcp, IAVF_PHINT_IPV6_TCP},
@@ -2217,6 +2411,25 @@ struct iavf_hash_match_type iavf_hash_map_list[] = {
 		&hdrs_hint_ipv6_tcp_dst_port, IAVF_PHINT_IPV6_TCP},
 	{ETH_RSS_NONFRAG_IPV6_TCP,
 		&hdrs_hint_ipv6_tcp, IAVF_PHINT_IPV6_TCP},
+	/* IPV6 Prefix 64 TCP */
+	{ETH_RSS_IPV6_PRE64_TCP,
+		&hdrs_hint_ipv6_pre64_tcp, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_IPV6_PRE64_TCP | ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv6_pre64_src_tcp_src_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_IPV6_PRE64_TCP | ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv6_pre64_src_tcp_dst_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_IPV6_PRE64_TCP | ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv6_pre64_dst_tcp_src_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_IPV6_PRE64_TCP | ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv6_pre64_dst_tcp_dst_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_IPV6_PRE64_TCP | ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv6_pre64_src_prot, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_IPV6_PRE64_TCP | ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv6_pre64_dst_prot, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_IPV6_PRE64_TCP | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv6_pre64_tcp_src_port, IAVF_PHINT_IPV6_TCP},
+	{ETH_RSS_IPV6_PRE64_TCP | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv6_pre64_tcp_dst_port, IAVF_PHINT_IPV6_TCP},
 	/* IPV6 SCTP */
 	{ETH_RSS_L2_SRC_ONLY,
 		&hdrs_hint_eth_src_ipv6_sctp, IAVF_PHINT_IPV6_SCTP},
@@ -2264,6 +2477,25 @@ struct iavf_hash_match_type iavf_hash_map_list[] = {
 		&hdrs_hint_cvlan_ipv6_tcp, IAVF_PHINT_IPV6_TCP},
 	{ETH_RSS_C_VLAN,
 		&hdrs_hint_cvlan_ipv6_sctp, IAVF_PHINT_IPV6_SCTP},
+	/* IPV6 Prefix 64 SCTP */
+	{ETH_RSS_IPV6_PRE64_SCTP,
+		&hdrs_hint_ipv6_pre64_sctp, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_IPV6_PRE64_SCTP | ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv6_pre64_src_sctp_src_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_IPV6_PRE64_SCTP | ETH_RSS_L3_SRC_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv6_pre64_src_sctp_dst_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_IPV6_PRE64_SCTP | ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv6_pre64_dst_sctp_src_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_IPV6_PRE64_SCTP | ETH_RSS_L3_DST_ONLY | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv6_pre64_dst_sctp_dst_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_IPV6_PRE64_SCTP | ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv6_pre64_src_prot, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_IPV6_PRE64_SCTP | ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv6_pre64_dst_prot, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_IPV6_PRE64_SCTP | ETH_RSS_L4_SRC_ONLY,
+		&hdrs_hint_ipv6_pre64_sctp_src_port, IAVF_PHINT_IPV6_SCTP},
+	{ETH_RSS_IPV6_PRE64_SCTP | ETH_RSS_L4_DST_ONLY,
+		&hdrs_hint_ipv6_pre64_sctp_dst_port, IAVF_PHINT_IPV6_SCTP},
 };
 
 struct iavf_hash_match_type iavf_gtpu_hash_map_list[] = {
