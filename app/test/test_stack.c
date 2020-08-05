@@ -322,7 +322,6 @@ static int
 test_stack_multithreaded(uint32_t flags)
 {
 	struct test_args args;
-	unsigned int lcore_id;
 	struct rte_stack *s;
 	rte_atomic64_t size;
 
@@ -345,14 +344,8 @@ test_stack_multithreaded(uint32_t flags)
 	args.s = s;
 	args.sz = &size;
 
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
-		if (rte_eal_remote_launch(stack_thread_push_pop,
-					  &args, lcore_id))
-			rte_panic("Failed to launch lcore %d\n", lcore_id);
-	}
-
-	stack_thread_push_pop(&args);
-
+	if (rte_eal_mp_remote_launch(stack_thread_push_pop, &args, CALL_MASTER))
+		rte_panic("Failed to launch tests\n");
 	rte_eal_mp_wait_lcore();
 
 	rte_stack_free(s);
