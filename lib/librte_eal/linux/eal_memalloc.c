@@ -610,17 +610,23 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 	}
 
 #ifdef RTE_EAL_NUMA_AWARE_HUGEPAGES
-	ret = get_mempolicy(&cur_socket_id, NULL, 0, addr,
-			    MPOL_F_NODE | MPOL_F_ADDR);
-	if (ret < 0) {
-		RTE_LOG(DEBUG, EAL, "%s(): get_mempolicy: %s\n",
-			__func__, strerror(errno));
-		goto mapped;
-	} else if (cur_socket_id != socket_id) {
-		RTE_LOG(DEBUG, EAL,
-				"%s(): allocation happened on wrong socket (wanted %d, got %d)\n",
-			__func__, socket_id, cur_socket_id);
-		goto mapped;
+	if (check_numa()) {
+		ret = get_mempolicy(&cur_socket_id, NULL, 0, addr,
+					MPOL_F_NODE | MPOL_F_ADDR);
+		if (ret < 0) {
+			RTE_LOG(DEBUG, EAL, "%s(): get_mempolicy: %s\n",
+				__func__, strerror(errno));
+			goto mapped;
+		} else if (cur_socket_id != socket_id) {
+			RTE_LOG(DEBUG, EAL,
+					"%s(): allocation happened on wrong socket (wanted %d, got %d)\n",
+				__func__, socket_id, cur_socket_id);
+			goto mapped;
+		}
+	} else {
+		if (rte_socket_count() > 1)
+			RTE_LOG(DEBUG, EAL, "%s(): not checking socket for allocation (wanted %d)\n",
+					__func__, socket_id);
 	}
 #else
 	if (rte_socket_count() > 1)
