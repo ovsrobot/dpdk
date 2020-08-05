@@ -110,6 +110,15 @@ Deprecation Notices
   break the ABI checks, that is why change is planned for 20.11.
   The list of internal APIs are mainly ones listed in ``rte_ethdev_driver.h``.
 
+* ethdev: A new field named rx_buf_size will be added to the public data
+  structure ``rte_eth_rxq_info`` to indicate the buffer size used in receiving
+  pkts for hw. when receive packets, hw DMA won't exceed this size. And it will
+  affect the number of fragments in receiving packets when scatter is enabled.
+  So, add this field to ``rte_eth_rxq_info`` to expose relevant information to
+  upper layer user/application.
+  This change is planed for 20.11. For more details:
+  https://mails.dpdk.org/archives/dev/2020-July/176135.html
+
 * traffic manager: All traffic manager API's in ``rte_tm.h`` were mistakenly made
   ABI stable in the v19.11 release. The TM maintainer and other contributors have
   agreed to keep the TM APIs as experimental in expectation of additional spec
