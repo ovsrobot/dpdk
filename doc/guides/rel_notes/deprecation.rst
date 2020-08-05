@@ -151,3 +151,7 @@ Deprecation Notices
   Python 2 support will be completely removed in 20.11.
   In 20.08, explicit deprecation warnings will be displayed when running
   scripts with Python 2.
+
+* cryptodev: ``RTE_CRYPTO_AUTH_AES_GMAC`` will no longer be included in
+  ``enum rte_crypto_auth_algorithm``. It will be included in
+  ``enum rte_crypto_aead_algorithm`` as ``RTE_CRYPTO_AEAD_AES_GMAC``.
