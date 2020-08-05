@@ -280,15 +280,8 @@ static int
 stack_thread_push_pop(void *args)
 {
 	struct test_args *t = args;
-	void **obj_table;
+	void *obj_table[MAX_BULK];
 	int i;
-
-	obj_table = rte_calloc(NULL, STACK_SIZE, sizeof(void *), 0);
-	if (obj_table == NULL) {
-		printf("[%s():%u] failed to calloc %zu bytes\n",
-		       __func__, __LINE__, STACK_SIZE * sizeof(void *));
-		return -1;
-	}
 
 	for (i = 0; i < NUM_ITERS_PER_THREAD; i++) {
 		unsigned int success, num;
@@ -310,28 +303,25 @@ stack_thread_push_pop(void *args)
 		if (rte_stack_push(t->s, obj_table, num) != num) {
 			printf("[%s():%u] Failed to push %u pointers\n",
 			       __func__, __LINE__, num);
-			rte_free(obj_table);
 			return -1;
 		}
 
 		if (rte_stack_pop(t->s, obj_table, num) != num) {
 			printf("[%s():%u] Failed to pop %u pointers\n",
 			       __func__, __LINE__, num);
-			rte_free(obj_table);
 			return -1;
 		}
 
 		rte_atomic64_sub(t->sz, num);
 	}
 
-	rte_free(obj_table);
 	return 0;
 }
 
 static int
 test_stack_multithreaded(uint32_t flags)
 {
-	struct test_args *args;
+	struct test_args args;
 	unsigned int lcore_id;
 	struct rte_stack *s;
 	rte_atomic64_t size;
@@ -344,45 +334,28 @@ test_stack_multithreaded(uint32_t flags)
 	printf("[%s():%u] Running with %u lcores\n",
 	       __func__, __LINE__, rte_lcore_count());
 
-	args = rte_malloc(NULL, sizeof(struct test_args) * RTE_MAX_LCORE, 0);
-	if (args == NULL) {
-		printf("[%s():%u] failed to malloc %zu bytes\n",
-		       __func__, __LINE__,
-		       sizeof(struct test_args) * RTE_MAX_LCORE);
-		return -1;
-	}
-
 	s = rte_stack_create("test", STACK_SIZE, rte_socket_id(), flags);
 	if (s == NULL) {
 		printf("[%s():%u] Failed to create a stack\n",
 		       __func__, __LINE__);
-		rte_free(args);
 		return -1;
 	}
 
 	rte_atomic64_init(&size);
+	args.s = s;
+	args.sz = &size;
 
 	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
-		args[lcore_id].s = s;
-		args[lcore_id].sz = &size;
-
 		if (rte_eal_remote_launch(stack_thread_push_pop,
-					  &args[lcore_id], lcore_id))
+					  &args, lcore_id))
 			rte_panic("Failed to launch lcore %d\n", lcore_id);
 	}
 
-	lcore_id = rte_lcore_id();
-
-	args[lcore_id].s = s;
-	args[lcore_id].sz = &size;
-
-	stack_thread_push_pop(&args[lcore_id]);
+	stack_thread_push_pop(&args);
 
 	rte_eal_mp_wait_lcore();
 
 	rte_stack_free(s);
-	rte_free(args);
-
 	return 0;
 }
 
