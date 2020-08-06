@@ -232,3 +232,7 @@ Deprecation Notices
   Python 2 support will be completely removed in 20.11.
   In 20.08, explicit deprecation warnings will be displayed when running
   scripts with Python 2.
+
+* acl: ``RTE_ACL_CLASSIFY_NUM`` enum value will be removed. This enum
+  value is not used inside DPDK, while it prevents to add new classify
+  algorithms without causing an ABI breakage.
