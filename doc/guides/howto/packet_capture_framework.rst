@@ -52,11 +52,7 @@ Some things to note:
   initialization code. Refer to the ``app/test-pmd/testpmd.c`` code and look
   for ``pdump`` keyword to see how this is done.
 
-* The ``dpdk-pdump`` tool depends on the libpcap based PMD which is disabled
-  by default in the build configuration files, owing to an external dependency
-  on the libpcap development files. Once the libpcap development files are
-  installed, the libpcap based PMD can be enabled by setting
-  ``CONFIG_RTE_LIBRTE_PMD_PCAP=y`` and recompiling the DPDK.
+* The ``dpdk-pdump`` tool depends on the libpcap based PMD.
 
 
 Test Environment
@@ -71,17 +67,6 @@ for packet capturing on the DPDK port in
 .. figure:: img/packet_capture_framework.*
 
    Packet capturing on a DPDK port using the dpdk-pdump tool.
-
-
-Configuration
--------------
-
-Modify the DPDK primary application to initialize the packet capture framework
-as mentioned in the above notes and enable the following config options and
-build DPDK::
-
-     CONFIG_RTE_LIBRTE_PMD_PCAP=y
-     CONFIG_RTE_LIBRTE_PDUMP=y
 
 
 Running the Application

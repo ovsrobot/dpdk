@@ -96,19 +96,6 @@ Build Qemu:
        make
 
 
-DPDK build
-~~~~~~~~~~
-
-Build DPDK:
-
-   .. code-block:: console
-
-      git clone git://dpdk.org/dpdk
-      cd dpdk
-      export RTE_SDK=$PWD
-      make install T=x86_64-native-linux-gcc DESTDIR=install
-
-
 Testpmd launch
 ~~~~~~~~~~~~~~
 
@@ -308,19 +295,6 @@ Guest tuning
       do
         echo "obase=16;$(( 0x$(cat $i) & ~$clear_mask ))" | bc > $i
       done
-
-
-DPDK build
-~~~~~~~~~~
-
-Build DPDK:
-
-   .. code-block:: console
-
-      git clone git://dpdk.org/dpdk
-      cd dpdk
-      export RTE_SDK=$PWD
-      make install T=x86_64-native-linux-gcc DESTDIR=install
 
 
 Testpmd launch
