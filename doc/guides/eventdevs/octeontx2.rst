@@ -47,14 +47,6 @@ Prerequisites and Compilation procedure
 Pre-Installation Configuration
 ------------------------------
 
-Compile time Config Options
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The following option can be modified in the ``config`` file.
-
-- ``CONFIG_RTE_LIBRTE_PMD_OCTEONTX2_EVENTDEV`` (default ``y``)
-
-  Toggle compilation of the ``librte_pmd_octeontx2_event`` driver.
 
 Runtime Config Options
 ~~~~~~~~~~~~~~~~~~~~~~
