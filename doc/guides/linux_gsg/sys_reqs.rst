@@ -85,10 +85,6 @@ A number of DPDK components, such as libraries and poll-mode drivers (PMDs) have
 For DPDK builds using meson, the presence or absence of these dependencies will be
 automatically detected enabling or disabling the relevant components appropriately.
 
-For builds using make, these components are disabled in the default configuration and
-need to be enabled manually by changing the relevant setting to "y" in the build configuration file
-i.e. the ``.config`` file in the build folder.
-
 In each case, the relevant library development package (``-devel`` or ``-dev``) is needed to build the DPDK components.
 
 For libraries the additional dependencies include:

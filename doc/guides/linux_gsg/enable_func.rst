@@ -40,9 +40,6 @@ requires that the ``HPET_MMAP`` kernel configuration option be enabled.
 Enabling HPET in the DPDK
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-By default, HPET support is disabled in the DPDK build configuration files.
-To use HPET, the ``CONFIG_RTE_LIBEAL_USE_HPET`` setting should be changed to ``y``, which will enable the HPET settings at compile time.
-
 For an application to use the ``rte_get_hpet_cycles()`` and ``rte_get_hpet_hz()`` API calls,
 and optionally to make the HPET the default time source for the rte_timer library,
 the new ``rte_eal_hpet_init()`` API call should be called at application initialization.
