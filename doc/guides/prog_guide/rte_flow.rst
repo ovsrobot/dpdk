@@ -1735,6 +1735,18 @@ unspecified "best-effort" settings from the underlying PMD, which depending
 on the flow rule, may result in anything ranging from empty (single queue)
 to all-inclusive RSS.
 
+In case there are Non-applicable RSS types in the rule,
+Best effort will be used.
+This may be the result of:
+
+- Setting both UDP and TCP on the same rule.
+
+- Setting RSS types that don't match the requested pattern,
+  for example, matching on UDP and hashing RSS on TCP.
+
+If requested RSS hash type is not supported in ``dev_info``.
+The flow creation will fail.
+
 Note: RSS hash result is stored in the ``hash.rss`` mbuf field which
 overlaps ``hash.fdir.lo``. Since `Action: MARK`_ sets the ``hash.fdir.hi``
 field only, both can be requested simultaneously.
