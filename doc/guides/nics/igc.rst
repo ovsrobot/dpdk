@@ -11,20 +11,6 @@ I225 Series Network Adapters.
   `https://ark.intel.com/content/www/us/en/ark/products/series/184686/
   intel-ethernet-controller-i225-series.html`
 
-Config File Options
-~~~~~~~~~~~~~~~~~~~
-
-The following options can be modified in the ``config`` file.
-Please note that enabling debugging options may affect system performance.
-
-- ``CONFIG_RTE_LIBRTE_IGC_PMD`` (default ``y``)
-
-  Toggle compilation of the ``librte_pmd_igc`` driver.
-
-- ``CONFIG_RTE_LIBRTE_IGC_DEBUG_*`` (default ``n``)
-
-  Toggle display of generic debugging messages.
-
 
 Driver compilation and testing
 ------------------------------

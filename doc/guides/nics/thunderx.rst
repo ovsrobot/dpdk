@@ -43,26 +43,6 @@ Prerequisites
 -------------
 - Follow the DPDK :ref:`Getting Started Guide for Linux <linux_gsg>` to setup the basic DPDK environment.
 
-Pre-Installation Configuration
-------------------------------
-
-Config File Options
-~~~~~~~~~~~~~~~~~~~
-
-The following options can be modified in the ``config`` file.
-Please note that enabling debugging options may affect system performance.
-
-- ``CONFIG_RTE_LIBRTE_THUNDERX_NICVF_PMD`` (default ``y``)
-
-  Toggle compilation of the ``librte_pmd_thunderx_nicvf`` driver.
-
-- ``CONFIG_RTE_LIBRTE_THUNDERX_NICVF_DEBUG_RX`` (default ``n``)
-
-  Toggle asserts of receive fast path.
-
-- ``CONFIG_RTE_LIBRTE_THUNDERX_NICVF_DEBUG_TX`` (default ``n``)
-
-  Toggle asserts of transmit fast path.
 
 Driver compilation and testing
 ------------------------------

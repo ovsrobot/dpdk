@@ -15,12 +15,6 @@ Detailed information about SoCs that use PPv2 can be obtained here:
 * https://www.marvell.com/embedded-processors/armada-70xx/
 * https://www.marvell.com/embedded-processors/armada-80xx/
 
-.. Note::
-
-   Due to external dependencies, this driver is disabled by default. It must
-   be enabled manually by setting relevant configuration option manually.
-   Please refer to `Config File Options`_ section for further details.
-
 
 Features
 --------
@@ -114,20 +108,6 @@ Prerequisites
   DPDK environment.
 
 
-Config File Options
--------------------
-
-The following options can be modified in the ``config`` file.
-
-- ``CONFIG_RTE_LIBRTE_MVPP2_PMD`` (default ``n``)
-
-    Toggle compilation of the librte mvpp2 driver.
-
-    .. Note::
-
-       When MVPP2 PMD is enabled ``CONFIG_RTE_LIBRTE_MVNETA_PMD`` must be disabled
-
-
 Building DPDK
 -------------
 
@@ -151,14 +131,7 @@ For additional instructions regarding DPDK cross compilation please refer to :do
 .. code-block:: console
 
    export LIBMUSDK_PATH=<musdk>/usr/local
-   export CROSS=<toolchain>/bin/aarch64-linux-gnu-
-   export RTE_KERNELDIR=<kernel-dir>
-   export RTE_TARGET=arm64-armv8a-linux-gcc
 
-   make config T=arm64-armv8a-linux-gcc
-   sed -i "s/MVNETA_PMD=y/MVNETA_PMD=n/" build/.config
-   sed -i "s/MVPP2_PMD=n/MVPP2_PMD=y/" build/.config
-   make
 
 Usage Example
 -------------

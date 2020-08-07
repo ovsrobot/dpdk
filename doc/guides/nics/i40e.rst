@@ -156,34 +156,12 @@ Config File Options
 ~~~~~~~~~~~~~~~~~~~
 
 The following options can be modified in the ``config`` file.
-Please note that enabling debugging options may affect system performance.
 
-- ``CONFIG_RTE_LIBRTE_I40E_PMD`` (default ``y``)
-
-  Toggle compilation of the ``librte_pmd_i40e`` driver.
-
-- ``CONFIG_RTE_LIBRTE_I40E_DEBUG_*`` (default ``n``)
-
-  Toggle display of generic debugging messages.
-
-- ``CONFIG_RTE_LIBRTE_I40E_RX_ALLOW_BULK_ALLOC`` (default ``y``)
-
-  Toggle bulk allocation for RX.
-
-- ``CONFIG_RTE_LIBRTE_I40E_INC_VECTOR`` (default ``n``)
-
-  Toggle the use of Vector PMD instead of normal RX/TX path.
-  To enable vPMD for RX, bulk allocation for Rx must be allowed.
-
-- ``CONFIG_RTE_LIBRTE_I40E_16BYTE_RX_DESC`` (default ``n``)
-
-  Toggle to use a 16-byte RX descriptor, by default the RX descriptor is 32 byte.
-
-- ``CONFIG_RTE_LIBRTE_I40E_QUEUE_NUM_PER_PF`` (default ``64``)
+- ``RTE_LIBRTE_I40E_QUEUE_NUM_PER_PF`` (default ``64``)
 
   Number of queues reserved for PF.
 
-- ``CONFIG_RTE_LIBRTE_I40E_QUEUE_NUM_PER_VM`` (default ``4``)
+- ``RTE_LIBRTE_I40E_QUEUE_NUM_PER_VM`` (default ``4``)
 
   Number of queues reserved for each VMDQ Pool.
 
@@ -760,7 +738,7 @@ Use 16 Bytes RX Descriptor Size
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As i40e PMD supports both 16 and 32 bytes RX descriptor sizes, and 16 bytes size can provide helps to high performance of small packets.
-Configuration of ``CONFIG_RTE_LIBRTE_I40E_16BYTE_RX_DESC`` in config files can be changed to use 16 bytes size RX descriptors.
+Configuration of ``RTE_LIBRTE_I40E_16BYTE_RX_DESC`` in config files can be changed to use 16 bytes size RX descriptors.
 
 Input set requirement of each pctype for FDIR
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -195,31 +195,6 @@ See :doc:`../platform/dpaa` for setup information
 Pre-Installation Configuration
 ------------------------------
 
-Config File Options
-~~~~~~~~~~~~~~~~~~~
-
-The following options can be modified in the ``config`` file.
-Please note that enabling debugging options may affect system performance.
-
-- ``CONFIG_RTE_LIBRTE_DPAA_BUS`` (default ``y``)
-
-  Toggle compilation of the ``librte_bus_dpaa`` driver.
-
-- ``CONFIG_RTE_LIBRTE_DPAA_PMD`` (default ``y``)
-
-  Toggle compilation of the ``librte_pmd_dpaa`` driver.
-
-- ``CONFIG_RTE_LIBRTE_DPAA_DEBUG_DRIVER`` (default ``n``)
-
-  Toggles display of bus configurations and enables a debugging queue
-  to fetch error (Rx/Tx) packets to driver. By default, packets with errors
-  (like wrong checksum) are dropped by the hardware.
-
-- ``CONFIG_RTE_LIBRTE_DPAA_HWDEBUG`` (default ``n``)
-
-  Enables debugging of the Queue and Buffer Manager layer which interacts
-  with the DPAA hardware.
-
 
 Environment Variables
 ~~~~~~~~~~~~~~~~~~~~~

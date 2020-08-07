@@ -13,12 +13,6 @@ Detailed information about SoCs that use PPv2 can be obtained here:
 
 * https://www.marvell.com/embedded-processors/armada-3700/
 
-.. Note::
-
-   Due to external dependencies, this driver is disabled by default. It must
-   be enabled manually by setting relevant configuration option manually.
-   Please refer to `Config File Options`_ section for further details.
-
 
 Features
 --------
@@ -84,14 +78,6 @@ Prerequisites
 Pre-Installation Configuration
 ------------------------------
 
-Config File Options
-~~~~~~~~~~~~~~~~~~~
-
-The following options can be modified in the ``config`` file.
-
-- ``CONFIG_RTE_LIBRTE_MVNETA_PMD`` (default ``n``)
-
-    Toggle compilation of the librte_pmd_mvneta driver.
 
 Runtime options
 ~~~~~~~~~~~~~~~
@@ -132,10 +118,7 @@ the path to the MUSDK installation directory needs to be exported.
 .. code-block:: console
 
    export LIBMUSDK_PATH=<musdk>/usr/local
-   export CROSS=aarch64-linux-gnu-
-   make config T=arm64-armv8a-linux-gcc
-   sed -ri 's,(MVNETA_PMD=)n,\1y,' build/.config
-   make
+
 
 Usage Example
 -------------

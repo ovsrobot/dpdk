@@ -90,19 +90,6 @@ Prerequisites
 Pre-Installation Configuration
 ------------------------------
 
-Config File Options
-~~~~~~~~~~~~~~~~~~~
-
-The following options can be modified in the ``.config`` file. Please note that
-enabling debugging options may affect system performance.
-
-- ``CONFIG_RTE_LIBRTE_CXGBE_PMD`` (default **y**)
-
-  Toggle compilation of librte_pmd_cxgbe driver.
-
-  .. note::
-
-     This controls compilation of both CXGBE and CXGBEVF PMD.
 
 Runtime Options
 ~~~~~~~~~~~~~~~

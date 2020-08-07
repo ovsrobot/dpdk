@@ -565,9 +565,6 @@ The BNXT PMD supports a PTP client application to communicate with a PTP master
 clock using DPDK IEEE1588 APIs. Note that the PTP client application needs to
 run on PF and vector mode needs to be disabled.
 
-For the PTP time synchronization support, the BNXT PMD must be compiled with
-``CONFIG_RTE_LIBRTE_IEEE1588=y`` (this compilation flag is currently pending).
-
 .. code-block:: console
 
     testpmd> set fwd ieee1588 // enable IEEE 1588 mode

@@ -46,23 +46,12 @@ Prerequisites
 
 See :doc:`../platform/octeontx2` for setup information.
 
-Compile time Config Options
----------------------------
-
-The following options may be modified in the ``config`` file.
-
-- ``CONFIG_RTE_LIBRTE_OCTEONTX2_PMD`` (default ``y``)
-
-  Toggle compilation of the ``librte_pmd_octeontx2`` driver.
 
 Driver compilation and testing
 ------------------------------
 
 Refer to the document :ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>`
 for details.
-
-To compile the OCTEON TX2 PMD for Linux arm64 gcc,
-use arm64-octeontx2-linux-gcc as target.
 
 #. Running testpmd:
 

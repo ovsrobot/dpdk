@@ -51,15 +51,6 @@ Any Linux distribution fulfilling the conditions described in ``System Requireme
 section of :ref:`the DPDK documentation <linux_gsg>` or refer to *DPDK
 Release Notes*.
 
-Build options
--------------
-
-The default PMD configuration available in the common_linux configuration file:
-
-CONFIG_RTE_LIBRTE_PMD_SOFTNIC=y
-
-Once the DPDK is built, all the DPDK applications include support for the
-Soft NIC PMD.
 
 Soft NIC PMD arguments
 ----------------------

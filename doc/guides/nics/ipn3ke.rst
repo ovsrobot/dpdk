@@ -31,14 +31,6 @@ Prerequisites
 Pre-Installation Configuration
 ------------------------------
 
-Config File Options
-~~~~~~~~~~~~~~~~~~~
-
-The following options can be modified in the ``config`` file.
-
-- ``CONFIG_RTE_LIBRTE_IPN3KE_PMD`` (default ``y``)
-
-  Toggle compilation of the ``librte_pmd_ipn3ke`` driver.
 
 Runtime Config Options
 ~~~~~~~~~~~~~~~~~~~~~~

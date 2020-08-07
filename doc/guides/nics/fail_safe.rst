@@ -14,10 +14,6 @@ Additionally to the Seamless Hotplug feature, the Fail-safe PMD offers the
 ability to redirect operations to a secondary device when the primary has been
 removed from the system.
 
-.. note::
-
-   The library is enabled by default. You can enable it or disable it manually
-   by setting the ``CONFIG_RTE_LIBRTE_PMD_FAILSAFE`` configuration option.
 
 Features
 --------
@@ -33,14 +29,6 @@ automatically by detecting capable devices and registering the relevant handler.
 
 Check the feature matrix for the complete set of supported features.
 
-Compilation option
-------------------
-
-Available options within the ``$RTE_TARGET/build/.config`` file:
-
-- ``CONFIG_RTE_LIBRTE_PMD_FAILSAFE`` (default **y**)
-
-  This option enables or disables compiling librte_pmd_failsafe.
 
 Using the Fail-safe PMD from the EAL command line
 -------------------------------------------------

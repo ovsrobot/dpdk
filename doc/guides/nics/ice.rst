@@ -23,23 +23,6 @@ Prerequisites
 Pre-Installation Configuration
 ------------------------------
 
-Config File Options
-~~~~~~~~~~~~~~~~~~~
-
-The following options can be modified in the ``config`` file.
-Please note that enabling debugging options may affect system performance.
-
-- ``CONFIG_RTE_LIBRTE_ICE_PMD`` (default ``y``)
-
-  Toggle compilation of the ``librte_pmd_ice`` driver.
-
-- ``CONFIG_RTE_LIBRTE_ICE_DEBUG_*`` (default ``n``)
-
-  Toggle display of generic debugging messages.
-
-- ``CONFIG_RTE_LIBRTE_ICE_16BYTE_RX_DESC`` (default ``n``)
-
-  Toggle to use a 16-byte RX descriptor, by default the RX descriptor is 32 byte.
 
 Runtime Config Options
 ~~~~~~~~~~~~~~~~~~~~~~
