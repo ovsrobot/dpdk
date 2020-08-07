@@ -12,14 +12,6 @@ Note that the driver can also be built without any dependency with reduced
 functionality for maintenance purpose.
 
 To enable linking to the SDK libraries see detailed installation section below.
-Two flags can be enabled depending on whether the target machine can support
-AVX2 and AVX512 instructions sets and the related SDK libraries for vectorized
-signal processing functions are installed :
-- CONFIG_RTE_BBDEV_SDK_AVX2
-- CONFIG_RTE_BBDEV_SDK_AVX512
-By default these 2 flags are disabled by default. For AVX2 machine and SDK
-library installed then the first flag can be enabled. For AVX512 machine and
-SDK library installed then both flags can be enabled for full real time capability.
 
 This PMD supports the functions: FEC, Rate Matching and CRC functions detailed
 in the Features section.
@@ -151,13 +143,6 @@ Example:
     export FLEXRAN_SDK=<path-to-workspace>/FlexRAN-FEC-SDK-19-04/sdk/build-avx2-icc/install
     export DIR_WIRELESS_SDK=<path-to-workspace>/FlexRAN-FEC-SDK-19-04/sdk/build-avx2-icc/
 
-* Set ``CONFIG_RTE_BBDEV_SDK_AVX2=y`` and ``CONFIG_RTE_BBDEV_SDK_AVX512=y``
-  in DPDK common configuration file ``config/common_base`` to be able to use
-  the SDK libraries as mentioned above.
-  For AVX2 machine it is possible to only enable CONFIG_RTE_BBDEV_SDK_AVX2
-  for limited 4G functionality.
-  If no flag are set the PMD driver will still build but its capabilities
-  will be limited accordingly.
 
 To use the PMD in an application, user must:
 
