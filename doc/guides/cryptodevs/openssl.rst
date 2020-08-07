@@ -58,8 +58,8 @@ Supported Asymmetric Crypto algorithms:
 Installation
 ------------
 
-To compile openssl PMD, it has to be enabled in the config/common_base file
-and appropriate openssl packages have to be installed in the build environment.
+To compile openssl PMD, appropriate openssl packages have to be installed
+in the build environment.
 
 The newest openssl library version is supported:
 

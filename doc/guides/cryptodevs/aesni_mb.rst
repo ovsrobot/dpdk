@@ -131,8 +131,6 @@ In order to enable this virtual crypto PMD, user must:
 
 * Build the multi buffer library (explained in Installation section).
 
-* Set CONFIG_RTE_LIBRTE_PMD_AESNI_MB=y in config/common_base.
-
 To use the PMD in an application, user must:
 
 * Call rte_vdev_init("crypto_aesni_mb") within the application.

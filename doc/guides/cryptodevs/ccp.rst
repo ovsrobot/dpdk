@@ -56,10 +56,8 @@ AEAD algorithms:
 Installation
 ------------
 
-To compile ccp PMD, it has to be enabled in the config/common_base file and openssl
-packages have to be installed in the build environment.
-
-* ``CONFIG_RTE_LIBRTE_PMD_CCP=y``
+To compile ccp PMD, openssl packages have to be installed in the build
+environment.
 
 For Ubuntu 16.04 LTS use below to install openssl in the build system:
 
@@ -85,8 +83,6 @@ The following command assumes ``BFD`` as ``0000:09:00.2``::
 
 	cd to the top-level DPDK directory
 	./usertools/dpdk-devbind.py -b igb_uio 0000:09:00.2
-
-In order to enable the ccp crypto PMD, user must set CONFIG_RTE_LIBRTE_PMD_CCP=y in config/common_base.
 
 To use the PMD in an application, user must:
 

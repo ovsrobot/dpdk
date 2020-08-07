@@ -59,14 +59,6 @@ Supported Asymmetric Crypto Algorithms
 * ``RTE_CRYPTO_ASYM_XFORM_RSA``
 * ``RTE_CRYPTO_ASYM_XFORM_MODEX``
 
-Config flags
-------------
-
-For compiling the OCTEON TX crypto poll mode driver, please check if the
-CONFIG_RTE_LIBRTE_PMD_OCTEONTX_CRYPTO setting is set to `y` in
-config/common_base file.
-
-* ``CONFIG_RTE_LIBRTE_PMD_OCTEONTX_CRYPTO=y``
 
 Compilation
 -----------

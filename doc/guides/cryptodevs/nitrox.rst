@@ -33,13 +33,6 @@ Limitations
 * 3DES Cipher Only combination is not supported.
 * Session-less APIs are not supported.
 
-Installation
-------------
-
-For compiling the Nitrox crypto PMD, please check if the
-CONFIG_RTE_LIBRTE_PMD_NITROX setting is set to `y` in config/common_base file.
-
-* ``CONFIG_RTE_LIBRTE_PMD_NITROX=y``
 
 Initialization
 --------------

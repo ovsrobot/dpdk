@@ -88,14 +88,6 @@ In order to enable this virtual crypto PMD, user must:
 
 * Build the multi buffer library (explained in Installation section).
 
-* Build DPDK as follows:
-
-.. code-block:: console
-
-	make config T=x86_64-native-linux-gcc
-	sed -i 's,\(CONFIG_RTE_LIBRTE_PMD_SNOW3G\)=n,\1=y,' build/.config
-	make
-
 To use the PMD in an application, user must:
 
 * Call rte_vdev_init("crypto_snow3g") within the application.

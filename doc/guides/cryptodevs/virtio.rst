@@ -83,11 +83,7 @@ The unit test cases can be tested as below:
 .. code-block:: console
 
     reserve enough huge pages
-    cd to the top-level DPDK directory
-    export RTE_TARGET=x86_64-native-linux-gcc
-    export RTE_SDK=`pwd`
     cd to app/test
-    type the command "make" to compile
     run the tests with "./test"
     type the command "cryptodev_virtio_autotest" to test
 
@@ -96,11 +92,7 @@ The performance can be tested as below:
 .. code-block:: console
 
     reserve enough huge pages
-    cd to the top-level DPDK directory
-    export RTE_TARGET=x86_64-native-linux-gcc
-    export RTE_SDK=`pwd`
     cd to app/test-crypto-perf
-    type the command "make" to compile
     run the tests with the following command:
 
     ./dpdk-test-crypto-perf -l 0,1 -- --devtype crypto_virtio \
