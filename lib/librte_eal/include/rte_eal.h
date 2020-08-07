@@ -43,6 +43,13 @@ enum rte_proc_type_t {
 	RTE_PROC_INVALID
 };
 
+enum rte_max_simd_t {
+	RTE_NO_SIMD = 64,
+	RTE_MAX_128_SIMD = 128,
+	RTE_MAX_256_SIMD = 256,
+	RTE_MAX_512_SIMD = 512
+};
+
 /**
  * Get the process type in a multi-process setup
  *
@@ -50,6 +57,30 @@ enum rte_proc_type_t {
  *   The process type
  */
 enum rte_proc_type_t rte_eal_process_type(void);
+
+/**
+ * Get the supported SIMD bitwidth.
+ *
+ * @return
+ *   uint16_t bitwidth.
+ */
+__rte_experimental
+uint16_t rte_get_max_simd_bitwidth(void);
+
+/**
+ * Set the supported SIMD bitwidth.
+ *
+ * @param bitwidth
+ *   uint16_t bitwidth.
+ * @return
+ *   0 on success.
+ * @return
+ *   -EINVAL on invalid bitwidth parameter.
+ * @return
+ *   -EPERM if bitwidth is locked.
+ */
+__rte_experimental
+int rte_set_max_simd_bitwidth(uint16_t bitwidth);
 
 /**
  * Request iopl privilege for all RPL.
