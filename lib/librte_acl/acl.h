@@ -202,6 +202,10 @@ rte_acl_classify_avx2(const struct rte_acl_ctx *ctx, const uint8_t **data,
 	uint32_t *results, uint32_t num, uint32_t categories);
 
 int
+rte_acl_classify_avx512(const struct rte_acl_ctx *ctx, const uint8_t **data,
+	uint32_t *results, uint32_t num, uint32_t categories);
+
+int
 rte_acl_classify_neon(const struct rte_acl_ctx *ctx, const uint8_t **data,
 	uint32_t *results, uint32_t num, uint32_t categories);
 

@@ -58,6 +58,32 @@ ifeq ($(CC_AVX2_SUPPORT), 1)
 	CFLAGS_rte_acl.o += -DCC_AVX2_SUPPORT
 endif
 
+# compile AVX512 version if:
+# we are building 64-bit binary AND binutils can generate proper code
+ifeq ($(CONFIG_RTE_ARCH_X86_64),y)
+
+	BINUTIL_OK=$(shell AS=as; \
+		$(RTE_SDK)/buildtools/binutils-avx512-check.sh && \
+		echo 1)
+	ifeq ($(BINUTIL_OK), 1)
+
+		# If the compiler supports AVX512 instructions,
+		# then add support for AVX512 classify method.
+
+		CC_AVX512_FLAGS=$(shell $(CC) \
+		-mavx512f -mavx512vl -mavx512cd -mavx512bw \
+		-dM -E - </dev/null 2>&1 | grep AVX512 | wc -l)
+		ifeq ($(CC_AVX512_FLAGS), 4)
+			CFLAGS_acl_run_avx512.o += -mavx512f
+			CFLAGS_acl_run_avx512.o += -mavx512vl
+			CFLAGS_acl_run_avx512.o += -mavx512cd
+			CFLAGS_acl_run_avx512.o += -mavx512bw
+			SRCS-$(CONFIG_RTE_LIBRTE_ACL) += acl_run_avx512.c
+			CFLAGS_rte_acl.o += -DCC_AVX512_SUPPORT
+		endif
+	endif
+endif
+
 # install this header file
 SYMLINK-$(CONFIG_RTE_LIBRTE_ACL)-include := rte_acl_osdep.h
 SYMLINK-$(CONFIG_RTE_LIBRTE_ACL)-include += rte_acl.h

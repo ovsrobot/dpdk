@@ -27,6 +27,45 @@ if dpdk_conf.has('RTE_ARCH_X86')
 		cflags += '-DCC_AVX2_SUPPORT'
 	endif
 
+	# compile AVX512 version if:
+	# we are building 64-bit binary AND binutils can generate proper code
+
+	if dpdk_conf.has('RTE_ARCH_X86_64') and binutils_ok.returncode() == 0
+
+		# compile AVX512 version if either:
+		# a. we have AVX512 supported in minimum instruction set
+		#    baseline
+		# b. it's not minimum instruction set, but supported by
+		#    compiler
+		#
+		# in former case, just add avx512 C file to files list
+		# in latter case, compile c file to static lib, using correct
+		# compiler flags, and then have the .o file from static lib
+		# linked into main lib.
+
+		if dpdk_conf.has('RTE_MACHINE_CPUFLAG_AVX512F') and \
+			dpdk_conf.has('RTE_MACHINE_CPUFLAG_AVX512VL') and \
+			dpdk_conf.has('RTE_MACHINE_CPUFLAG_AVX512CD') and \
+			dpdk_conf.has('RTE_MACHINE_CPUFLAG_AVX512BW')
+
+			sources += files('acl_run_avx512.c')
+			cflags += '-DCC_AVX512_SUPPORT'
+
+		elif cc.has_multi_arguments('-mavx512f', '-mavx512vl',
+					'-mavx512cd', '-mavx512bw')
+
+			avx512_tmplib = static_library('avx512_tmp',
+				'acl_run_avx512.c',
+				dependencies: static_rte_eal,
+				c_args: cflags +
+					['-mavx512f', '-mavx512vl',
+					 '-mavx512cd', '-mavx512bw'])
+			objs += avx512_tmplib.extract_objects(
+					'acl_run_avx512.c')
+			cflags += '-DCC_AVX512_SUPPORT'
+		endif
+	endif
+
 elif dpdk_conf.has('RTE_ARCH_ARM') or dpdk_conf.has('RTE_ARCH_ARM64')
 	cflags += '-flax-vector-conversions'
 	sources += files('acl_run_neon.c')

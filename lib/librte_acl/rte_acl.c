@@ -16,6 +16,22 @@ static struct rte_tailq_elem rte_acl_tailq = {
 };
 EAL_REGISTER_TAILQ(rte_acl_tailq)
 
+#ifndef CC_AVX512_SUPPORT
+/*
+ * If the compiler doesn't support AVX512 instructions,
+ * then the dummy one would be used instead for AVX512 classify method.
+ */
+int
+rte_acl_classify_avx512(__rte_unused const struct rte_acl_ctx *ctx,
+	__rte_unused const uint8_t **data,
+	__rte_unused uint32_t *results,
+	__rte_unused uint32_t num,
+	__rte_unused uint32_t categories)
+{
+	return -ENOTSUP;
+}
+#endif
+
 #ifndef CC_AVX2_SUPPORT
 /*
  * If the compiler doesn't support AVX2 instructions,
@@ -77,6 +93,7 @@ static const rte_acl_classify_t classify_fns[] = {
 	[RTE_ACL_CLASSIFY_AVX2] = rte_acl_classify_avx2,
 	[RTE_ACL_CLASSIFY_NEON] = rte_acl_classify_neon,
 	[RTE_ACL_CLASSIFY_ALTIVEC] = rte_acl_classify_altivec,
+	[RTE_ACL_CLASSIFY_AVX512] = rte_acl_classify_avx512,
 };
 
 /* by default, use always available scalar code path. */
