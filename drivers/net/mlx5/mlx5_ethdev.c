@@ -479,7 +479,8 @@ mlx5_select_rx_function(struct rte_eth_dev *dev)
 	eth_rx_burst_t rx_pkt_burst = mlx5_rx_burst;
 
 	MLX5_ASSERT(dev != NULL);
-	if (mlx5_check_vec_rx_support(dev) > 0) {
+	if (mlx5_check_vec_rx_support(dev) > 0 &&
+			rte_get_max_simd_bitwidth() >= RTE_MAX_128_SIMD) {
 		rx_pkt_burst = mlx5_rx_burst_vec;
 		DRV_LOG(DEBUG, "port %u selected Rx vectorized function",
 			dev->data->port_id);
