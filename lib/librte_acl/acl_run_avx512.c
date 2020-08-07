@@ -121,11 +121,14 @@ resolve_mcgt8_avx512x1(uint32_t result[],
 }
 
 #include "acl_run_avx512x8.h"
+#include "acl_run_avx512x16.h"
 
 int
 rte_acl_classify_avx512(const struct rte_acl_ctx *ctx, const uint8_t **data,
 	uint32_t *results, uint32_t num, uint32_t categories)
 {
+	if (num >= 2 * MAX_SEARCHES_AVX16)
+		return search_avx512x16x2(ctx, data, results, num, categories);
 	if (num >= MAX_SEARCHES_AVX16)
 		return search_avx512x8x2(ctx, data, results, num, categories);
 	if (num >= MAX_SEARCHES_SSE8)
