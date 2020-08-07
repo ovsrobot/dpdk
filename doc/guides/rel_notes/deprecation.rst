@@ -195,6 +195,11 @@ Deprecation Notices
   following the IPv6 header, as proposed in RFC
   https://mails.dpdk.org/archives/dev/2020-August/177257.html.
 
+* ethdev: The ``struct rte_eth_rxq_info`` struct will be modified to include
+  a new optional field, indicating the buffer size used in receiving packets
+  for HW. This change is planned for 20.11. For more details:
+  https://mails.dpdk.org/archives/dev/2020-July/176135.html.
+
 * traffic manager: All traffic manager API's in ``rte_tm.h`` were mistakenly made
   ABI stable in the v19.11 release. The TM maintainer and other contributors have
   agreed to keep the TM APIs as experimental in expectation of additional spec
