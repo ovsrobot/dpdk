@@ -222,25 +222,8 @@ Build commands
 ~~~~~~~~~~~~~~
 
 The documentation is built using the standard DPDK build system.
-Some examples are shown below:
 
-* Generate all the documentation targets::
-
-     make doc
-
-* Generate the Doxygen API documentation in Html::
-
-     make doc-api-html
-
-* Generate the guides documentation in Html::
-
-     make doc-guides-html
-
-* Generate the guides documentation in Pdf::
-
-     make doc-guides-pdf
-
-The output of these commands is generated in the ``build`` directory::
+The output is generated in the ``build`` directory::
 
    build/doc
          |-- html
@@ -254,10 +237,6 @@ The output of these commands is generated in the ``build`` directory::
 .. Note::
 
    Make sure to fix any Sphinx or Doxygen warnings when adding or updating documentation.
-
-The documentation output files can be removed as follows::
-
-   make doc-clean
 
 
 Document Guidelines
@@ -742,10 +721,6 @@ The following are some guidelines for use of Doxygen in the DPDK API documentati
      uintptr_t   elt_va_end;
      /** Array of physical page addresses for the mempool buffer. */
      phys_addr_t elt_pa[MEMPOOL_PG_NUM_DEFAULT];
-
-* Check for Doxygen warnings in new code by checking the API documentation build::
-
-     make doc-api-html >/dev/null
 
 * Read the rendered section of the documentation that you have added for correctness, clarity and consistency
   with the surrounding text.
