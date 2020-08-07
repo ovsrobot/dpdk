@@ -24,8 +24,8 @@ multiple queues. When run with 8 threads, that is, with the -c FF option, each t
 As supplied, the sample application configures the VMDq feature to have 32 pools with 4 queues each.
 The Intel® 82599 10 Gigabit Ethernet Controller NIC also supports the splitting of traffic into 16 pools of 2 queues.
 While the Intel® X710 or XL710 Ethernet Controller NICs support many configurations of VMDq pools of 4 or 8 queues each.
-And queues numbers for each VMDq pool can be changed by setting CONFIG_RTE_LIBRTE_I40E_QUEUE_NUM_PER_VM
-in config/common_* file.
+And queues numbers for each VMDq pool can be changed by setting RTE_LIBRTE_I40E_QUEUE_NUM_PER_VM
+in config/rte_config.h file.
 The nb-pools and enable-rss parameters can be passed on the command line, after the EAL parameters:
 
 .. code-block:: console

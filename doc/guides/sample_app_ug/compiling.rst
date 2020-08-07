@@ -9,17 +9,11 @@ This section explains how to compile the DPDK sample applications.
 To compile all the sample applications
 --------------------------------------
 
-Set the path to DPDK source code if its not set:
-
-    .. code-block:: console
-
-        export RTE_SDK=/path/to/rte_sdk
-
 Go to DPDK source:
 
     .. code-block:: console
 
-        cd $RTE_SDK
+        cd dpdk
 
 Build DPDK:
 
@@ -32,15 +26,13 @@ Build the sample applications:
 
    .. code-block:: console
 
-       export RTE_TARGET=build
        make -C examples
 
-For other possible ``RTE_TARGET`` values and additional information on
-compiling see
+For additional information on compiling see
 :ref:`Compiling DPDK on Linux <linux_gsg_compiling_dpdk>` or
 :ref:`Compiling DPDK on FreeBSD <building_from_source>`.
-Applications are output to: ``$RTE_SDK/examples/app-dir/build`` or
-``$RTE_SDK/examples/app-dir/$RTE_TARGET``.
+Applications are output to: ``dpdk/examples/app-dir/build`` or
+``dpdk/examples/app-dir/{build_dir}``.
 
 
 In the example above the compiled application is written to the ``build`` subdirectory.
@@ -63,17 +55,11 @@ sets verbose output.
 To compile a single application
 -------------------------------
 
-Set the path to DPDK source code:
-
-    .. code-block:: console
-
-        export RTE_SDK=/path/to/rte_sdk
-
 Go to DPDK source:
 
     .. code-block:: console
 
-       cd $RTE_SDK
+       cd dpdk
 
 Build DPDK:
 
@@ -83,14 +69,13 @@ Build DPDK:
         make
 
 Go to the sample application directory. Unless otherwise specified the sample
-applications are located in ``$RTE_SDK/examples/``.
+applications are located in ``dpdk/examples/``.
 
 
 Build the application:
 
     .. code-block:: console
 
-        export RTE_TARGET=build
         make
 
 To cross compile the sample application(s)
@@ -101,8 +86,6 @@ In example of AARCH64 cross compiling:
 
     .. code-block:: console
 
-        export RTE_TARGET=build
-        export RTE_SDK=/path/to/rte_sdk
         make -C examples CROSS=aarch64-linux-gnu-
                or
         make CROSS=aarch64-linux-gnu-

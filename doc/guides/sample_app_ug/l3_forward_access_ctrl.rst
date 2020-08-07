@@ -184,7 +184,7 @@ Packet 2 matches Rule 2 and is forwarded to port 1.
 Packet 3 matches Rule 3 and is forwarded to port 0.
 
 For more details on the rule file format,
-please refer to rule_ipv4.db and rule_ipv6.db files (inside <RTE_SDK>/examples/l3fwd-acl/).
+please refer to rule_ipv4.db and rule_ipv6.db files (inside dpdk/examples/l3fwd-acl/).
 
 Application Phases
 ~~~~~~~~~~~~~~~~~~

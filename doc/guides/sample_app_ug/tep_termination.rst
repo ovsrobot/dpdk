@@ -90,18 +90,6 @@ The example in this section have been validated with the following distributions
 
 *   Fedora* 20
 
-Compiling the Sample Code
--------------------------
-
-To enable vhost, turn on vhost library in the configure file
-``config/common_linux``.
-
-    .. code-block:: console
-
-        CONFIG_RTE_LIBRTE_VHOST=y
-
-Then following the to compile the sample application shown in
-:doc:`compiling`.
 
 Running the Sample Code
 -----------------------
@@ -110,8 +98,7 @@ Running the Sample Code
 
     .. code-block:: console
 
-        export RTE_SDK=/path/to/rte_sdk
-        cd ${RTE_SDK}/examples/tep_termination
+        cd dpdk/examples/tep_termination
 
 #.  Run the tep_termination sample code:
 

@@ -25,13 +25,6 @@ To compile the sample application see :doc:`compiling`.
 
 The application is located in the ``rxtx_callbacks`` sub-directory.
 
-The callbacks feature requires that the ``CONFIG_RTE_ETHDEV_RXTX_CALLBACKS``
-setting is on in the ``config/common_`` config file that applies to the
-target. This is generally on by default:
-
-.. code-block:: console
-
-    CONFIG_RTE_ETHDEV_RXTX_CALLBACKS=y
 
 Running the Application
 -----------------------

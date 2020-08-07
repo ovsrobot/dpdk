@@ -1150,8 +1150,7 @@ To build and run the pthread shim example
 
    .. code-block:: console
 
-       export RTE_SDK=/path/to/rte_sdk
-       cd ${RTE_SDK}/examples/performance-thread/pthread_shim
+       cd dpdk/examples/performance-thread/pthread_shim
 
 
 #. Set the target (a default target is used if not specified). For example:

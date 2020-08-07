@@ -245,26 +245,23 @@ To build just the ``vm_power_manager`` application using ``make``:
 
 .. code-block:: console
 
-   export RTE_SDK=/path/to/rte_sdk
-   export RTE_TARGET=build
-   cd ${RTE_SDK}/examples/vm_power_manager/
+   cd dpdk/examples/vm_power_manager/
    make
 
-The resulting binary is ``${RTE_SDK}/build/examples/vm_power_manager``.
+The resulting binary is ``dpdk/build/examples/vm_power_manager``.
 
 To build just the ``vm_power_manager`` application using ``meson``/``ninja``:
 
 .. code-block:: console
 
-   export RTE_SDK=/path/to/rte_sdk
-   cd ${RTE_SDK}
+   cd dpdk
    meson build
    cd build
    ninja
    meson configure -Dexamples=vm_power_manager
    ninja
 
-The resulting binary is ``${RTE_SDK}/build/examples/dpdk-vm_power_manager``.
+The resulting binary is ``dpdk/build/examples/dpdk-vm_power_manager``.
 
 Running the Host Application
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -462,12 +459,10 @@ the following commands:
 
 .. code-block:: console
 
-   export RTE_SDK=/path/to/rte_sdk
-   export RTE_TARGET=build
-   cd ${RTE_SDK}/examples/vm_power_manager/guest_cli/
+   cd dpdk/examples/vm_power_manager/guest_cli/
    make
 
-The resulting binary is ``${RTE_SDK}/build/examples/guest_cli``.
+The resulting binary is ``dpdk/build/examples/guest_cli``.
 
 **Note**: This sample application conditionally links in the Jansson JSON
 library. Consequently, if you are using a multilib or cross-compile
@@ -498,15 +493,14 @@ To build just the ``vm_power_manager`` application using ``meson``/``ninja``:
 
 .. code-block:: console
 
-   export RTE_SDK=/path/to/rte_sdk
-   cd ${RTE_SDK}
+   cd dpdk
    meson build
    cd build
    ninja
    meson configure -Dexamples=vm_power_manager/guest_cli
    ninja
 
-The resulting binary is ``${RTE_SDK}/build/examples/guest_cli``.
+The resulting binary is ``dpdk/build/examples/guest_cli``.
 
 Running the Guest Application
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
