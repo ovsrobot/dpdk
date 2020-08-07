@@ -29,14 +29,6 @@ Prerequisites and Compilation procedure
 Pre-Installation Configuration
 ------------------------------
 
-Compile time Config Options
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The following option can be modified in the ``config`` file.
-
-- ``CONFIG_RTE_LIBRTE_OCTEONTX2_MEMPOOL`` (default ``y``)
-
-  Toggle compilation of the ``librte_mempool_octeontx2`` driver.
 
 Runtime Config Options
 ~~~~~~~~~~~~~~~~~~~~~~
