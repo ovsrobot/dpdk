@@ -2105,14 +2105,16 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 	int i;
 	bool use_avx2 = false;
 
-	if (!iavf_rx_vec_dev_check(dev)) {
+	if (!iavf_rx_vec_dev_check(dev) &&
+			rte_get_max_simd_bitwidth() >= RTE_MAX_128_SIMD) {
 		for (i = 0; i < dev->data->nb_rx_queues; i++) {
 			rxq = dev->data->rx_queues[i];
 			(void)iavf_rxq_vec_setup(rxq);
 		}
 
-		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2) == 1 ||
-		    rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) == 1)
+		if ((rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2) == 1 ||
+		    rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) == 1) &&
+				rte_get_max_simd_bitwidth() >= RTE_MAX_256_SIMD)
 			use_avx2 = true;
 
 		if (dev->data->scattered_rx) {
@@ -2178,7 +2180,8 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 	int i;
 	bool use_avx2 = false;
 
-	if (!iavf_tx_vec_dev_check(dev)) {
+	if (!iavf_tx_vec_dev_check(dev) &&
+			rte_get_max_simd_bitwidth() >= RTE_MAX_128_SIMD) {
 		for (i = 0; i < dev->data->nb_tx_queues; i++) {
 			txq = dev->data->tx_queues[i];
 			if (!txq)
@@ -2186,8 +2189,9 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 			iavf_txq_vec_setup(txq);
 		}
 
-		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2) == 1 ||
-		    rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) == 1)
+		if ((rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2) == 1 ||
+		    rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) == 1) &&
+				rte_get_max_simd_bitwidth() >= RTE_MAX_256_SIMD)
 			use_avx2 = true;
 
 		PMD_DRV_LOG(DEBUG, "Using %sVector Tx (port %d).",
