@@ -25,11 +25,6 @@ The librte_pmd_bond library exports a C API which provides an API for the
 creation of bonded devices as well as the configuration and management of the
 bonded device and its slave devices.
 
-.. note::
-
-    The Link Bonding PMD Library is enabled by default in the build
-    configuration files, the library can be disabled by setting
-    ``CONFIG_RTE_LIBRTE_PMD_BOND=n`` and recompiling the DPDK.
 
 Link Bonding Modes Overview
 ---------------------------
