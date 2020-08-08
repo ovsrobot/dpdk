@@ -41,12 +41,17 @@ rte_metrics_tel_reg_port_ethdev_to_metrics(uint16_t port_id)
 	}
 
 	xstats_names = malloc(sizeof(*xstats_names) * num_xstats);
+	if (xstats_names == NULL) {
+		METRICS_LOG_ERR("Failed to malloc memory for xstats_names");
+		return -ENOMEM;
+	}
+
 	eth_xstats_names = malloc(sizeof(struct rte_eth_xstat_name)
 			* num_xstats);
-	if (eth_xstats_names == NULL || xstats_names == NULL) {
-		METRICS_LOG_ERR("Failed to malloc memory for xstats_names");
-		ret = -ENOMEM;
-		goto free_xstats;
+	if (eth_xstats_names == NULL) {
+		METRICS_LOG_ERR("Failed to malloc memory for eth_xstats_names");
+		free(xstats_names);
+		return -ENOMEM;
 	}
 
 	if (rte_eth_xstats_get_names(port_id,
@@ -167,9 +172,15 @@ rte_metrics_tel_format_port(uint32_t pid, json_t *ports,
 	}
 
 	metrics = malloc(sizeof(struct rte_metric_value) * num_metrics);
-	names = malloc(sizeof(struct rte_metric_name) * num_metrics);
-	if (metrics == NULL || names == NULL) {
+	if (metrics == NULL) {
 		METRICS_LOG_ERR("Cannot allocate memory");
+		return -ENOMEM;
+	}
+
+	names = malloc(sizeof(struct rte_metric_name) * num_metrics);
+	if (names == NULL) {
+		METRICS_LOG_ERR("Cannot allocate memory");
+		free(metrics);
 		return -ENOMEM;
 	}
 
