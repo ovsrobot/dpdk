@@ -1405,6 +1405,16 @@ ice_switch_parse_dcf_action(struct ice_dcf_adapter *ad,
 		case RTE_FLOW_ACTION_TYPE_VF:
 			rule_info->sw_act.fltr_act = ICE_FWD_TO_VSI;
 			act_vf = action->conf;
+
+			if (act_vf->id >= ad->real_hw.num_vfs &&
+				!act_vf->original) {
+				rte_flow_error_set(error,
+					EINVAL, RTE_FLOW_ERROR_TYPE_ACTION,
+					actions,
+					"Invalid vf id");
+				return -rte_errno;
+			}
+
 			if (act_vf->original)
 				rule_info->sw_act.vsi_handle =
 					ad->real_hw.avf.bus.func;
@@ -1667,12 +1677,8 @@ ice_switch_parse_pattern_action(struct ice_adapter *ad,
 	else
 		ret = ice_switch_parse_action(pf, actions, error, &rule_info);
 
-	if (ret) {
-		rte_flow_error_set(error, EINVAL,
-				   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
-				   "Invalid input action");
+	if (ret)
 		goto error;
-	}
 
 	if (meta) {
 		*meta = sw_meta_ptr;
