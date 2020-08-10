@@ -2251,6 +2251,8 @@ ixgbe_parse_fdir_filter_normal(struct rte_eth_dev *dev,
 			(((uint16_t)raw_spec->pattern[1]) << 8) |
 			raw_spec->pattern[0];
 		rule->flex_bytes_offset = raw_spec->offset;
+
+		item = next_no_fuzzy_pattern(pattern, item);
 	}
 
 	if (item->type != RTE_FLOW_ITEM_TYPE_END) {
