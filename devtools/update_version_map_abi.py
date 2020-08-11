@@ -171,7 +171,7 @@ def __main():
                             help='path to linker version script file '
                                  '(pattern: *version.map)')
     arg_parser.add_argument("abi_version", type=str,
-                            help='target ABI version (pattern: MAJOR.MINOR)')
+                            help='target ABI version (only MAJOR number)')
 
     parsed = arg_parser.parse_args()
 
@@ -181,7 +181,7 @@ def __main():
         arg_parser.print_help()
         sys.exit(1)
 
-    if not re.match(r"\d{1,2}\.\d{1,2}", parsed.abi_version):
+    if not re.match(r"\d{2}", parsed.abi_version):
         print("Invalid ABI version: {}".format(parsed.abi_version),
               file=sys.stderr)
         arg_parser.print_help()

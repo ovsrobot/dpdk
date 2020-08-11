@@ -8,7 +8,7 @@ update_path="lib drivers"
 
 # check ABI version format string
 check_abi_version() {
-      echo $1 | grep -q -e "^[[:digit:]]\{1,2\}\.[[:digit:]]\{1,2\}$"
+      echo $1 | grep -q -e "^[[:digit:]]\{2\}$"
 }
 
 if [ -z "$1" ]; then
@@ -20,7 +20,7 @@ fi
 # check version string format
 if ! check_abi_version $abi_version ; then
       # output to stderr
-      >&2 echo "ABI version must be formatted as MAJOR.MINOR version"
+      >&2 echo "ABI version must be formatted as MAJOR version only"
       exit 1
 fi
 
