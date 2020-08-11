@@ -1367,6 +1367,7 @@ iavf_dev_init(struct rte_eth_dev *eth_dev)
 	hw->back = IAVF_DEV_PRIVATE_TO_ADAPTER(eth_dev->data->dev_private);
 	adapter->eth_dev = eth_dev;
 	adapter->stopped = 1;
+	adapter->closed = 0;
 
 	if (iavf_init_vf(eth_dev) != 0) {
 		PMD_INIT_LOG(ERR, "Init vf failed");
@@ -1423,6 +1424,9 @@ iavf_dev_close(struct rte_eth_dev *dev)
 	struct iavf_adapter *adapter =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 
+	if (adapter->closed == 1)
+		return;
+
 	iavf_dev_stop(dev);
 	iavf_flow_flush(dev, NULL);
 	iavf_flow_uninit(adapter);
@@ -1434,6 +1438,8 @@ iavf_dev_close(struct rte_eth_dev *dev)
 	rte_intr_callback_unregister(intr_handle,
 				     iavf_dev_interrupt_handler, dev);
 	iavf_disable_irq0(hw);
+
+	adapter->closed = 1;
 }
 
 static int

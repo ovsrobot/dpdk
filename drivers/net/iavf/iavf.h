@@ -161,6 +161,7 @@ struct iavf_adapter {
 	bool tx_vec_allowed;
 	const uint32_t *ptype_tbl;
 	bool stopped;
+	bool closed;
 	uint16_t fdir_ref_cnt;
 };
 
