@@ -88,6 +88,8 @@
 #define TMPL_PRI_3      0x0f0e0d0c
 #define QUEUE_ENABLE    0x80000000  /* Bit to mark Queue as Enabled */
 #define WORDS_IN_ARAM_SIZE (128 * 1024 / 4)
+#define ACC100_FDONE    0x80000000
+#define ACC100_SDONE    0x40000000
 
 #define ACC100_NUM_TMPL  32
 #define VF_OFFSET_QOS 16 /* offset in Memory Space specific to QoS Mon */
@@ -398,6 +400,7 @@ struct __attribute__((__packed__)) acc100_dma_req_desc {
 union acc100_dma_desc {
 	struct acc100_dma_req_desc req;
 	union acc100_dma_rsp_desc rsp;
+	uint64_t atom_hdr;
 };
 
 
