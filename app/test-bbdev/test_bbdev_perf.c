@@ -3928,12 +3928,14 @@ latency_test_dec(struct rte_mempool *mempool,
 	return i;
 }
 
+/* Test case for latency/validation for LDPC Decoder */
 static int
 latency_test_ldpc_dec(struct rte_mempool *mempool,
 		struct test_buffers *bufs, struct rte_bbdev_dec_op *ref_op,
 		int vector_mask, uint16_t dev_id, uint16_t queue_id,
 		const uint16_t num_to_process, uint16_t burst_sz,
-		uint64_t *total_time, uint64_t *min_time, uint64_t *max_time)
+		uint64_t *total_time, uint64_t *min_time, uint64_t *max_time,
+		bool disable_et)
 {
 	int ret = TEST_SUCCESS;
 	uint16_t i, j, dequeued;
@@ -3955,7 +3957,7 @@ latency_test_ldpc_dec(struct rte_mempool *mempool,
 				"rte_bbdev_dec_op_alloc_bulk() failed");
 
 		/* For latency tests we need to disable early termination */
-		if (check_bit(ref_op->ldpc_dec.op_flags,
+		if (disable_et && check_bit(ref_op->ldpc_dec.op_flags,
 				RTE_BBDEV_LDPC_ITERATION_STOP_ENABLE))
 			ref_op->ldpc_dec.op_flags -=
 					RTE_BBDEV_LDPC_ITERATION_STOP_ENABLE;
@@ -4177,7 +4179,7 @@ latency_test(struct active_device *ad,
 	TEST_ASSERT_NOT_NULL(op_type_str, "Invalid op type: %u", op_type);
 
 	printf("+ ------------------------------------------------------- +\n");
-	printf("== test: validation/latency\ndev: %s, burst size: %u, num ops: %u, op type: %s\n",
+	printf("== test: latency\ndev: %s, burst size: %u, num ops: %u, op type: %s\n",
 			info.dev_name, burst_sz, num_to_process, op_type_str);
 
 	if (op_type == RTE_BBDEV_OP_TURBO_DEC)
@@ -4199,7 +4201,83 @@ latency_test(struct active_device *ad,
 		iter = latency_test_ldpc_dec(op_params->mp, bufs,
 				op_params->ref_dec_op, op_params->vector_mask,
 				ad->dev_id, queue_id, num_to_process,
+				burst_sz, &total_time, &min_time, &max_time,
+				true);
+	else
+		iter = latency_test_enc(op_params->mp, bufs,
+					op_params->ref_enc_op,
+					ad->dev_id, queue_id,
+					num_to_process, burst_sz, &total_time,
+					&min_time, &max_time);
+
+	if (iter <= 0)
+		return TEST_FAILED;
+
+	printf("Operation latency:\n"
+			"\tavg: %lg cycles, %lg us\n"
+			"\tmin: %lg cycles, %lg us\n"
+			"\tmax: %lg cycles, %lg us\n",
+			(double)total_time / (double)iter,
+			(double)(total_time * 1000000) / (double)iter /
+			(double)rte_get_tsc_hz(), (double)min_time,
+			(double)(min_time * 1000000) / (double)rte_get_tsc_hz(),
+			(double)max_time, (double)(max_time * 1000000) /
+			(double)rte_get_tsc_hz());
+
+	return TEST_SUCCESS;
+}
+
+static int
+validation_test(struct active_device *ad,
+		struct test_op_params *op_params)
+{
+	int iter;
+	uint16_t burst_sz = op_params->burst_sz;
+	const uint16_t num_to_process = op_params->num_to_process;
+	const enum rte_bbdev_op_type op_type = test_vector.op_type;
+	const uint16_t queue_id = ad->queue_ids[0];
+	struct test_buffers *bufs = NULL;
+	struct rte_bbdev_info info;
+	uint64_t total_time, min_time, max_time;
+	const char *op_type_str;
+
+	total_time = max_time = 0;
+	min_time = UINT64_MAX;
+
+	TEST_ASSERT_SUCCESS((burst_sz > MAX_BURST),
+			"BURST_SIZE should be <= %u", MAX_BURST);
+
+	rte_bbdev_info_get(ad->dev_id, &info);
+	bufs = &op_params->q_bufs[GET_SOCKET(info.socket_id)][queue_id];
+
+	op_type_str = rte_bbdev_op_type_str(op_type);
+	TEST_ASSERT_NOT_NULL(op_type_str, "Invalid op type: %u", op_type);
+
+	printf("+ ------------------------------------------------------- +\n");
+	printf("== test: validation\ndev: %s, burst size: %u, num ops: %u, op type: %s\n",
+			info.dev_name, burst_sz, num_to_process, op_type_str);
+
+	if (op_type == RTE_BBDEV_OP_TURBO_DEC)
+		iter = latency_test_dec(op_params->mp, bufs,
+				op_params->ref_dec_op, op_params->vector_mask,
+				ad->dev_id, queue_id, num_to_process,
 				burst_sz, &total_time, &min_time, &max_time);
+	else if (op_type == RTE_BBDEV_OP_TURBO_ENC)
+		iter = latency_test_enc(op_params->mp, bufs,
+				op_params->ref_enc_op, ad->dev_id, queue_id,
+				num_to_process, burst_sz, &total_time,
+				&min_time, &max_time);
+	else if (op_type == RTE_BBDEV_OP_LDPC_ENC)
+		iter = latency_test_ldpc_enc(op_params->mp, bufs,
+				op_params->ref_enc_op, ad->dev_id, queue_id,
+				num_to_process, burst_sz, &total_time,
+				&min_time, &max_time);
+	else if (op_type == RTE_BBDEV_OP_LDPC_DEC)
+		iter = latency_test_ldpc_dec(op_params->mp, bufs,
+				op_params->ref_dec_op, op_params->vector_mask,
+				ad->dev_id, queue_id, num_to_process,
+				burst_sz, &total_time, &min_time, &max_time,
+				false);
 	else
 		iter = latency_test_enc(op_params->mp, bufs,
 					op_params->ref_enc_op,
@@ -4859,6 +4937,12 @@ latency_tc(void)
 }
 
 static int
+validation_tc(void)
+{
+	return run_test_case(validation_test);
+}
+
+static int
 interrupt_tc(void)
 {
 	return run_test_case(throughput_test);
@@ -4889,7 +4973,7 @@ static struct unit_test_suite bbdev_validation_testsuite = {
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
 	.unit_test_cases = {
-		TEST_CASE_ST(ut_setup, ut_teardown, latency_tc),
+		TEST_CASE_ST(ut_setup, ut_teardown, validation_tc),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
