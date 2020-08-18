@@ -4392,8 +4392,8 @@ offload_latency_test_dec(struct rte_mempool *mempool, struct test_buffers *bufs,
 		/* Dequeue one operation */
 		do {
 			deq += rte_bbdev_dequeue_dec_ops(dev_id, queue_id,
-					&ops_deq[deq], 1);
-		} while (unlikely(deq != 1));
+					&ops_deq[deq], enq);
+		} while (unlikely(deq == 0));
 
 		deq_last_time = rte_rdtsc_precise() - deq_start_time;
 		time_st->deq_max_time = RTE_MAX(time_st->deq_max_time,
@@ -4483,8 +4483,8 @@ offload_latency_test_ldpc_dec(struct rte_mempool *mempool,
 		/* Dequeue one operation */
 		do {
 			deq += rte_bbdev_dequeue_ldpc_dec_ops(dev_id, queue_id,
-					&ops_deq[deq], 1);
-		} while (unlikely(deq != 1));
+					&ops_deq[deq], enq);
+		} while (unlikely(deq == 0));
 
 		deq_last_time = rte_rdtsc_precise() - deq_start_time;
 		time_st->deq_max_time = RTE_MAX(time_st->deq_max_time,
@@ -4571,8 +4571,8 @@ offload_latency_test_enc(struct rte_mempool *mempool, struct test_buffers *bufs,
 		/* Dequeue one operation */
 		do {
 			deq += rte_bbdev_dequeue_enc_ops(dev_id, queue_id,
-					&ops_deq[deq], 1);
-		} while (unlikely(deq != 1));
+					&ops_deq[deq], enq);
+		} while (unlikely(deq == 0));
 
 		deq_last_time = rte_rdtsc_precise() - deq_start_time;
 		time_st->deq_max_time = RTE_MAX(time_st->deq_max_time,
@@ -4654,8 +4654,8 @@ offload_latency_test_ldpc_enc(struct rte_mempool *mempool,
 		/* Dequeue one operation */
 		do {
 			deq += rte_bbdev_dequeue_ldpc_enc_ops(dev_id, queue_id,
-					&ops_deq[deq], 1);
-		} while (unlikely(deq != 1));
+					&ops_deq[deq], enq);
+		} while (unlikely(deq == 0));
 
 		deq_last_time = rte_rdtsc_precise() - deq_start_time;
 		time_st->deq_max_time = RTE_MAX(time_st->deq_max_time,
