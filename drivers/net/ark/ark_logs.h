@@ -6,14 +6,12 @@
 #define _ARK_DEBUG_H_
 
 #include <inttypes.h>
-#include <rte_log.h>
-
 
 /* Configuration option to pad TX packets to 60 bytes */
-#ifdef RTE_LIBRTE_ARK_PAD_TX
-#define ARK_TX_PAD_TO_60   1
-#else
+#ifdef ARK_NOPAD_TX
 #define ARK_TX_PAD_TO_60   0
+#else
+#define ARK_TX_PAD_TO_60   1
 #endif
 
 /* system camel case definition changed to upper case */
@@ -55,7 +53,7 @@ extern int ark_logtype;
 
 
 /* Debug macro for tracing full behavior, function tracing and messages*/
-#ifdef RTE_LIBRTE_ARK_DEBUG_TRACE
+#ifdef ARK_DEBUG_TRACE
 #define PMD_FUNC_LOG(level, fmt, ...) ARK_FUNC_ON(level, fmt, ##__VA_ARGS__)
 #define PMD_DEBUG_LOG(level, fmt, ...) ARK_TRACE_ON(level, fmt, ##__VA_ARGS__)
 #else
@@ -65,7 +63,7 @@ extern int ark_logtype;
 
 
 /* Debug macro for reporting FPGA statistics */
-#ifdef RTE_LIBRTE_ARK_DEBUG_STATS
+#ifdef ARK_DEBUG_STATS
 #define PMD_STATS_LOG(level, fmt, ...) ARK_TRACE_ON(level, fmt, ##__VA_ARGS__)
 #else
 #define PMD_STATS_LOG(level, fmt, ...)  ARK_TRACE_OFF(level, fmt, ##__VA_ARGS__)
@@ -73,7 +71,7 @@ extern int ark_logtype;
 
 
 /* Debug macro for RX path */
-#ifdef RTE_LIBRTE_ARK_DEBUG_RX
+#ifdef ARK_DEBUG_RX
 #define ARK_RX_DEBUG 1
 #define PMD_RX_LOG(level, fmt, ...)  ARK_TRACE_ON(level, fmt, ##__VA_ARGS__)
 #else
@@ -82,7 +80,7 @@ extern int ark_logtype;
 #endif
 
 /* Debug macro for TX path */
-#ifdef RTE_LIBRTE_ARK_DEBUG_TX
+#ifdef ARK_DEBUG_TX
 #define ARK_TX_DEBUG       1
 #define PMD_TX_LOG(level, fmt, ...)  ARK_TRACE_ON(level, fmt, ##__VA_ARGS__)
 #else

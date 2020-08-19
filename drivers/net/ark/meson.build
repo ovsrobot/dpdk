@@ -11,3 +11,5 @@ sources = files('ark_ddm.c',
 	'ark_pktgen.c',
 	'ark_rqp.c',
 	'ark_udm.c')
+
+install_headers('ark_ext.h')
