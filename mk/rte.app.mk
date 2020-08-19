@@ -254,6 +254,7 @@ _LDLIBS-$(CONFIG_RTE_LIBRTE_NETVSC_PMD)     += -lrte_pmd_netvsc
 
 ifeq ($(CONFIG_RTE_LIBRTE_BBDEV),y)
 _LDLIBS-$(CONFIG_RTE_LIBRTE_PMD_BBDEV_NULL)     += -lrte_pmd_bbdev_null
+_LDLIBS-$(CONFIG_RTE_LIBRTE_PMD_BBDEV_ACC100)    += -lrte_pmd_bbdev_acc100
 _LDLIBS-$(CONFIG_RTE_LIBRTE_PMD_BBDEV_FPGA_LTE_FEC) += -lrte_pmd_bbdev_fpga_lte_fec
 _LDLIBS-$(CONFIG_RTE_LIBRTE_PMD_BBDEV_FPGA_5GNR_FEC) += -lrte_pmd_bbdev_fpga_5gnr_fec
 

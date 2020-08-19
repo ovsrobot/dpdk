@@ -584,6 +584,10 @@ CONFIG_RTE_LIBRTE_PMD_BBDEV_NULL=y
 #
 CONFIG_RTE_LIBRTE_PMD_BBDEV_TURBO_SW=y
 
+# Compile PMD for ACC100 bbdev device
+#
+CONFIG_RTE_LIBRTE_PMD_BBDEV_ACC100=y
+
 #
 # Compile PMD for Intel FPGA LTE FEC bbdev device
 #
