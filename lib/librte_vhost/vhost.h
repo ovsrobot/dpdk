@@ -383,6 +383,7 @@ struct virtio_net {
 	int			async_copy;
 	int			extbuf;
 	int			linearbuf;
+	int                     vectorized;
 	struct vhost_virtqueue	*virtqueue[VHOST_MAX_QUEUE_PAIRS * 2];
 	struct inflight_mem_info *inflight_info;
 #define IF_NAME_SZ (PATH_MAX > IFNAMSIZ ? PATH_MAX : IFNAMSIZ)
@@ -721,6 +722,7 @@ void vhost_enable_dequeue_zero_copy(int vid);
 void vhost_set_builtin_virtio_net(int vid, bool enable);
 void vhost_enable_extbuf(int vid);
 void vhost_enable_linearbuf(int vid);
+void vhost_enable_vectorized(int vid);
 int vhost_enable_guest_notification(struct virtio_net *dev,
 		struct vhost_virtqueue *vq, int enable);
 

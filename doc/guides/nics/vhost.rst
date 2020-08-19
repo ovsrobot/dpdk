@@ -64,6 +64,11 @@ The user can specify below arguments in `--vdev` option.
     It is used to enable external buffer support in vhost library.
     (Default: 0 (disabled))
 
+#.  ``vectorized``:
+
+    It is used to enable vectorized data path support in vhost library.
+    (Default: 0 (disabled))
+
 Vhost PMD event handling
 ------------------------
 
