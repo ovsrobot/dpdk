@@ -22,4 +22,7 @@ LIBABIVER := 1
 # library source files
 SRCS-$(CONFIG_RTE_LIBRTE_PMD_BBDEV_ACC100) += rte_acc100_pmd.c
 
+# export include files
+SYMLINK-$(CONFIG_RTE_LIBRTE_PMD_BBDEV_ACC100)-include += rte_acc100_cfg.h
+
 include $(RTE_SDK)/mk/rte.lib.mk
