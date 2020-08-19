@@ -118,6 +118,45 @@ test_cpuflags(void)
 
 	printf("Check for ATOMICS:\t");
 	CHECK_FOR_FLAG(RTE_CPUFLAG_ATOMICS);
+
+	printf("Check for SVE:\t\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_SVE);
+
+	printf("Check for SVE2:\t\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_SVE2);
+
+	printf("Check for SVEAES:\t\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_SVEAES);
+
+	printf("Check for SVEPMULL:\t\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_SVEPMULL);
+
+	printf("Check for SVEBITPERM:\t\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_SVEBITPERM);
+
+	printf("Check for SVESHA3:\t\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_SVESHA3);
+
+	printf("Check for SVESM4:\t\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_SVESM4);
+
+	printf("Check for FLAGM2:\t\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_FLAGM2);
+
+	printf("Check for FRINT:\t\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_FRINT);
+
+	printf("Check for SVEI8MM:\t\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_SVEI8MM);
+
+	printf("Check for SVEF32MM:\t\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_SVEF32MM);
+
+	printf("Check for SVEF64MM:\t\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_SVEF64MM);
+
+	printf("Check for SVEBF16:\t\t");
+	CHECK_FOR_FLAG(RTE_CPUFLAG_SVEBF16);
 #endif
 
 #if defined(RTE_ARCH_X86_64) || defined(RTE_ARCH_I686)
