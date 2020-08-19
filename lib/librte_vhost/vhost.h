@@ -1132,4 +1132,10 @@ vhost_reserve_avail_batch_packed_avx(struct virtio_net *dev,
 				 uint16_t avail_idx,
 				 uintptr_t *desc_addrs,
 				 uint16_t *ids);
+
+int
+virtio_dev_rx_batch_packed_avx(struct virtio_net *dev,
+			       struct vhost_virtqueue *vq,
+			       struct rte_mbuf **pkts);
+
 #endif /* _VHOST_NET_CDEV_H_ */
