@@ -2334,7 +2334,16 @@ cmd_config_rss_parsed(void *parsed_result,
 		rss_conf.rss_hf = ETH_RSS_GTPU;
 	else if (!strcmp(res->value, "none"))
 		rss_conf.rss_hf = 0;
-	else if (!strcmp(res->value, "default"))
+	else if (!strcmp(res->value, "level-inner")) {
+		rss_hf &= (~ETH_RSS_LEVEL_MASK);
+		rss_conf.rss_hf = (rss_hf | ETH_RSS_LEVEL_INNER);
+	} else if (!strcmp(res->value, "level-outer")) {
+		rss_hf &= (~ETH_RSS_LEVEL_MASK);
+		rss_conf.rss_hf = (rss_hf | ETH_RSS_LEVEL_OUTER);
+	} else if (!strcmp(res->value, "level-inner-outer")) {
+		rss_hf &= (~ETH_RSS_LEVEL_MASK);
+		rss_conf.rss_hf = (rss_hf | ETH_RSS_LEVEL_INNER_OUTER);
+	} else if (!strcmp(res->value, "default"))
 		use_default = 1;
 	else if (isdigit(res->value[0]) && atoi(res->value) > 0 &&
 						atoi(res->value) < 64)
