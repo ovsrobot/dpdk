@@ -26,5 +26,8 @@ endif
 ifeq ($(CONFIG_RTE_LIBRTE_PMD_BBDEV_FPGA_5GNR_FEC),y)
 LDLIBS += -lrte_pmd_bbdev_fpga_5gnr_fec
 endif
+ifeq ($(CONFIG_RTE_LIBRTE_PMD_BBDEV_ACC100),y)
+LDLIBS += -lrte_pmd_bbdev_acc100
+endif
 
 include $(RTE_SDK)/mk/rte.app.mk

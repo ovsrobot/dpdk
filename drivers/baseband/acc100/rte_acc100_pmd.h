@@ -7,6 +7,7 @@
 
 #include "acc100_pf_enum.h"
 #include "acc100_vf_enum.h"
+#include "rte_acc100_cfg.h"
 
 /* Helper macro for logging */
 #define rte_bbdev_log(level, fmt, ...) \
@@ -520,6 +521,8 @@ static const struct acc100_registry_addr vf_reg_addr = {
 /* Private data structure for each ACC100 device */
 struct acc100_device {
 	void *mmio_base;  /**< Base address of MMIO registers (BAR0) */
+	uint32_t ddr_size; /* Size in kB */
+	struct acc100_conf acc100_conf; /* ACC100 Initial configuration */
 	bool pf_device; /**< True if this is a PF ACC100 device */
 	bool configured; /**< True if this ACC100 device is configured */
 };
