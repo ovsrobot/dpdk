@@ -1124,4 +1124,12 @@ virtio_dev_pktmbuf_alloc(struct virtio_net *dev, struct rte_mempool *mp,
 	return NULL;
 }
 
+int
+vhost_reserve_avail_batch_packed_avx(struct virtio_net *dev,
+				 struct vhost_virtqueue *vq,
+				 struct rte_mempool *mbuf_pool,
+				 struct rte_mbuf **pkts,
+				 uint16_t avail_idx,
+				 uintptr_t *desc_addrs,
+				 uint16_t *ids);
 #endif /* _VHOST_NET_CDEV_H_ */

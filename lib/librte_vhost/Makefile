@@ -31,6 +31,13 @@ CFLAGS += -DVHOST_ICC_UNROLL_PRAGMA
 endif
 endif
 
+ifneq ($(FORCE_DISABLE_AVX512), y)
+        CC_AVX512_SUPPORT=\
+        $(shell $(CC) -march=native -dM -E - </dev/null 2>&1 | \
+        sed '/./{H;$$!d} ; x ; /AVX512F/!d; /AVX512BW/!d; /AVX512VL/!d' | \
+        grep -q AVX512 && echo 1)
+endif
+
 ifeq ($(CONFIG_RTE_LIBRTE_VHOST_NUMA),y)
 LDLIBS += -lnuma
 endif
@@ -39,6 +46,12 @@ LDLIBS += -lrte_eal -lrte_mempool -lrte_mbuf -lrte_ethdev -lrte_net
 # all source are stored in SRCS-y
 SRCS-$(CONFIG_RTE_LIBRTE_VHOST) := fd_man.c iotlb.c socket.c vhost.c \
 					vhost_user.c virtio_net.c vdpa.c
+
+ifeq ($(CC_AVX512_SUPPORT), 1)
+CFLAGS += -DCC_AVX512_SUPPORT
+SRCS-$(CONFIG_RTE_LIBRTE_VHOST) += vhost_vec_avx.c
+CFLAGS_vhost_vec_avx.o += -mavx512f -mavx512bw -mavx512vl
+endif
 
 # install includes
 SYMLINK-$(CONFIG_RTE_LIBRTE_VHOST)-include += rte_vhost.h rte_vdpa.h \

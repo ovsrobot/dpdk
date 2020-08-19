@@ -2250,6 +2250,28 @@ free_buf:
 }
 
 static __rte_always_inline int
+vhost_handle_avail_batch_packed(struct virtio_net *dev,
+				 struct vhost_virtqueue *vq,
+				 struct rte_mempool *mbuf_pool,
+				 struct rte_mbuf **pkts,
+				 uint16_t avail_idx,
+				 uintptr_t *desc_addrs,
+				 uint16_t *ids)
+{
+	if (unlikely(dev->vectorized))
+#ifdef CC_AVX512_SUPPORT
+		return vhost_reserve_avail_batch_packed_avx(dev, vq, mbuf_pool,
+				pkts, avail_idx, desc_addrs, ids);
+#else
+		return vhost_reserve_avail_batch_packed(dev, vq, mbuf_pool,
+				pkts, avail_idx, desc_addrs, ids);
+
+#endif
+	return vhost_reserve_avail_batch_packed(dev, vq, mbuf_pool, pkts,
+			avail_idx, desc_addrs, ids);
+}
+
+static __rte_always_inline int
 virtio_dev_tx_batch_packed(struct virtio_net *dev,
 			   struct vhost_virtqueue *vq,
 			   struct rte_mempool *mbuf_pool,
@@ -2261,8 +2283,9 @@ virtio_dev_tx_batch_packed(struct virtio_net *dev,
 	uint16_t ids[PACKED_BATCH_SIZE];
 	uint16_t i;
 
-	if (vhost_reserve_avail_batch_packed(dev, vq, mbuf_pool, pkts,
-					     avail_idx, desc_addrs, ids))
+
+	if (vhost_handle_avail_batch_packed(dev, vq, mbuf_pool, pkts,
+		avail_idx, desc_addrs, ids))
 		return -1;
 
 	vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE)
