@@ -129,9 +129,6 @@ Configuration Information
    * **CONFIG_RTE_LIBRTE_ARK_PMD** (default y): Enables or disables inclusion
      of the ARK PMD driver in the DPDK compilation.
 
-   * **CONFIG_RTE_LIBRTE_ARK_PAD_TX** (default y):  When enabled TX
-     packets are padded to 60 bytes to support downstream MACS.
-
 
 Building DPDK
 -------------

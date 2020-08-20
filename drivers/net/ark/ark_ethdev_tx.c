@@ -15,6 +15,11 @@
 #define ARK_TX_MAX_NOCHAIN (RTE_MBUF_DEFAULT_DATAROOM)
 
 
+#ifndef ARK_MIN_TX_PKTLEN
+#define ARK_MIN_TX_PKTLEN 0
+#endif
+
+
 /* ************************************************************************* */
 struct ark_tx_queue {
 	struct ark_tx_meta *meta_q;
@@ -91,6 +96,7 @@ eth_ark_xmit_pkts(void *vtxq, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 	uint32_t prod_index_limit;
 	int stat;
 	uint16_t nb;
+	const uint32_t min_pkt_len = ARK_MIN_TX_PKTLEN;
 
 	queue = (struct ark_tx_queue *)vtxq;
 
@@ -104,27 +110,25 @@ eth_ark_xmit_pkts(void *vtxq, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 	     ++nb) {
 		mbuf = tx_pkts[nb];
 
-		if (ARK_TX_PAD_TO_60) {
-			if (unlikely(rte_pktmbuf_pkt_len(mbuf) < 60)) {
-				/* this packet even if it is small can be split,
-				 * be sure to add to the end mbuf
-				 */
-				uint16_t to_add =
-					60 - rte_pktmbuf_pkt_len(mbuf);
-				char *appended =
-					rte_pktmbuf_append(mbuf, to_add);
+		if (unlikely(rte_pktmbuf_pkt_len(mbuf) < min_pkt_len)) {
+			/* this packet even if it is small can be split,
+			 * be sure to add to the end mbuf
+			 */
+			uint16_t to_add = min_pkt_len -
+				rte_pktmbuf_pkt_len(mbuf);
+			char *appended =
+				rte_pktmbuf_append(mbuf, to_add);
 
-				if (appended == 0) {
-					/* This packet is in error,
-					 * we cannot send it so just
-					 * count it and delete it.
-					 */
-					queue->tx_errors += 1;
-					rte_pktmbuf_free(mbuf);
-					continue;
-				}
-				memset(appended, 0, to_add);
+			if (appended == 0) {
+				/* This packet is in error,
+				 * we cannot send it so just
+				 * count it and delete it.
+				 */
+				queue->tx_errors += 1;
+				rte_pktmbuf_free(mbuf);
+				continue;
 			}
+			memset(appended, 0, to_add);
 		}
 
 		if (unlikely(mbuf->nb_segs != 1)) {
