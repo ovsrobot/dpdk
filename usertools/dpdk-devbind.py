@@ -8,6 +8,7 @@ import sys
 import os
 import getopt
 import subprocess
+from glob import glob
 from os.path import exists, abspath, dirname, basename
 
 if sys.version_info.major < 3:
@@ -89,6 +90,8 @@ Usage:
 where DEVICE1, DEVICE2 etc, are specified via PCI "domain:bus:slot.func" syntax
 or "bus:slot.func" syntax. For devices bound to Linux kernel drivers, they may
 also be referred to by Linux interface name e.g. eth0, eth1, em0, em1, etc.
+If devices are specified using PCI <domain:>bus:device:func format, then
+shell wildcards and ranges may be used, e.g. 80:04.*, 80:04.[0-3]
 
 Options:
     --help, --usage:
@@ -144,6 +147,9 @@ To unbind 0000:01:00.0 from using any driver
 
 To bind 0000:02:00.0 and 0000:02:00.1 to the ixgbe kernel driver
         %(argv0)s -b ixgbe 02:00.0 02:00.1
+
+To bind all functions on device 0000:02:00 to ixgbe kernel driver
+        %(argv0)s -b ixgbe 02:00.*
 
     """ % locals())  # replace items from local variables
 
@@ -689,6 +695,16 @@ def parse_args():
             else:
                 b_flag = arg
 
+    # resolve any PCI globs in the args
+    new_args = []
+    sysfs_path = "/sys/bus/pci/devices/"
+    for arg in args:
+        globbed_arg = glob(sysfs_path + arg) + glob(sysfs_path + "0000:" + arg)
+        if globbed_arg:
+            new_args.extend([a[len(sysfs_path):] for a in globbed_arg])
+        else:
+            new_args.append(arg)
+    args = new_args
 
 def do_arg_actions():
     '''do the actual action requested by the user'''
