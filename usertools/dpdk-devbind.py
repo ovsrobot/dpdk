@@ -8,6 +8,7 @@ import sys
 import os
 import getopt
 import subprocess
+from glob import glob
 from os.path import exists, abspath, dirname, basename
 
 if sys.version_info.major < 3:
@@ -689,6 +690,16 @@ def parse_args():
             else:
                 b_flag = arg
 
+    # resolve any PCI globs in the args
+    new_args = []
+    sysfs_path = "/sys/bus/pci/devices/"
+    for arg in args:
+        globbed_arg = glob(sysfs_path + arg) + glob(sysfs_path + "0000:" + arg)
+        if globbed_arg:
+            new_args.extend([a[len(sysfs_path):] for a in globbed_arg])
+        else:
+            new_args.append(arg)
+    args = new_args
 
 def do_arg_actions():
     '''do the actual action requested by the user'''
