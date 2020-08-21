@@ -14,6 +14,7 @@
 #include <rte_eal.h>
 #include <rte_log.h>
 
+#include "rte_power_channel_commands.h"
 #include "vm_power_cli_guest.h"
 #include "parse.h"
 

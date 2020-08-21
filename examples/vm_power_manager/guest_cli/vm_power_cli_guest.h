@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-#include "channel_commands.h"
+struct channel_packet;
 
 struct channel_packet *get_policy(void);
 
