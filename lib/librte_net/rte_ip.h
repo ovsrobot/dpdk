@@ -269,7 +269,7 @@ static inline uint16_t
 rte_ipv4_cksum(const struct rte_ipv4_hdr *ipv4_hdr)
 {
 	uint16_t cksum;
-	cksum = rte_raw_cksum(ipv4_hdr, sizeof(struct rte_ipv4_hdr));
+	cksum = rte_raw_cksum(ipv4_hdr, (ipv4_hdr->version_ihl & 0xf) * 4);
 	return (uint16_t)~cksum;
 }
 
@@ -311,7 +311,7 @@ rte_ipv4_phdr_cksum(const struct rte_ipv4_hdr *ipv4_hdr, uint64_t ol_flags)
 	} else {
 		psd_hdr.len = rte_cpu_to_be_16(
 			(uint16_t)(rte_be_to_cpu_16(ipv4_hdr->total_length)
-				- sizeof(struct rte_ipv4_hdr)));
+				- ((ipv4_hdr->version_ihl & 0xf) * 4)));
 	}
 	return rte_raw_cksum(&psd_hdr, sizeof(psd_hdr));
 }
@@ -319,8 +319,8 @@ rte_ipv4_phdr_cksum(const struct rte_ipv4_hdr *ipv4_hdr, uint64_t ol_flags)
 /**
  * Process the IPv4 UDP or TCP checksum.
  *
- * The IPv4 header should not contains options. The IP and layer 4
- * checksum must be set to 0 in the packet by the caller.
+ * The IP and layer 4 checksum must be set to 0 in the packet by
+ * the caller.
  *
  * @param ipv4_hdr
  *   The pointer to the contiguous IPv4 header.
@@ -339,7 +339,7 @@ rte_ipv4_udptcp_cksum(const struct rte_ipv4_hdr *ipv4_hdr, const void *l4_hdr)
 	if (l3_len < sizeof(struct rte_ipv4_hdr))
 		return 0;
 
-	l4_len = l3_len - sizeof(struct rte_ipv4_hdr);
+	l4_len = l3_len - ((ipv4_hdr->version_ihl & 0xf) * 4);
 
 	cksum = rte_raw_cksum(l4_hdr, l4_len);
 	cksum += rte_ipv4_phdr_cksum(ipv4_hdr, 0);
