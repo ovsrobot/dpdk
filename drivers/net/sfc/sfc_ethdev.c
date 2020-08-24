@@ -1804,9 +1804,6 @@ static const struct eth_dev_ops sfc_eth_dev_ops = {
 	.tx_queue_stop			= sfc_tx_queue_stop,
 	.rx_queue_setup			= sfc_rx_queue_setup,
 	.rx_queue_release		= sfc_rx_queue_release,
-	.rx_queue_count			= sfc_rx_queue_count,
-	.rx_descriptor_status		= sfc_rx_descriptor_status,
-	.tx_descriptor_status		= sfc_tx_descriptor_status,
 	.rx_queue_intr_enable		= sfc_rx_queue_intr_enable,
 	.rx_queue_intr_disable		= sfc_rx_queue_intr_disable,
 	.tx_queue_setup			= sfc_tx_queue_setup,
@@ -1962,6 +1959,9 @@ sfc_eth_dev_set_ops(struct rte_eth_dev *dev)
 	dev->tx_pkt_burst = dp_tx->pkt_burst;
 
 	dev->dev_ops = &sfc_eth_dev_ops;
+	dev->rx_queue_count = sfc_rx_queue_count;
+	dev->rx_descriptor_status = sfc_rx_descriptor_status;
+	dev->tx_descriptor_status = sfc_tx_descriptor_status;
 
 	return 0;
 
@@ -2001,9 +2001,6 @@ sfc_eth_dev_clear_ops(struct rte_eth_dev *dev)
 
 static const struct eth_dev_ops sfc_eth_dev_secondary_ops = {
 	.dev_supported_ptypes_get	= sfc_dev_supported_ptypes_get,
-	.rx_queue_count			= sfc_rx_queue_count,
-	.rx_descriptor_status		= sfc_rx_descriptor_status,
-	.tx_descriptor_status		= sfc_tx_descriptor_status,
 	.reta_query			= sfc_dev_rss_reta_query,
 	.rss_hash_conf_get		= sfc_dev_rss_hash_conf_get,
 	.rxq_info_get			= sfc_rx_queue_info_get,
@@ -2069,6 +2066,9 @@ sfc_eth_dev_secondary_init(struct rte_eth_dev *dev, uint32_t logtype_main)
 	dev->tx_pkt_prepare = dp_tx->pkt_prepare;
 	dev->tx_pkt_burst = dp_tx->pkt_burst;
 	dev->dev_ops = &sfc_eth_dev_secondary_ops;
+	dev->rx_queue_count = sfc_rx_queue_count;
+	dev->rx_descriptor_status = sfc_rx_descriptor_status;
+	dev->tx_descriptor_status = sfc_tx_descriptor_status;
 
 	return 0;
 
