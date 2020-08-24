@@ -1142,7 +1142,6 @@ static const struct eth_dev_ops enicpmd_eth_dev_ops = {
 	.rx_queue_setup       = enicpmd_dev_rx_queue_setup,
 	.rx_queue_release     = enicpmd_dev_rx_queue_release,
 	.rx_queue_count       = enicpmd_dev_rx_queue_count,
-	.rx_descriptor_done   = NULL,
 	.tx_queue_setup       = enicpmd_dev_tx_queue_setup,
 	.tx_queue_release     = enicpmd_dev_tx_queue_release,
 	.rx_queue_intr_enable = enicpmd_dev_rx_queue_intr_enable,

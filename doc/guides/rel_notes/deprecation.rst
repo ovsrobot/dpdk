@@ -220,11 +220,6 @@ Deprecation Notices
   for HW. This change is planned for 20.11. For more details:
   https://mails.dpdk.org/archives/dev/2020-July/176135.html.
 
-* ethdev: ``rx_descriptor_done`` dev_ops and ``rte_eth_rx_descriptor_done``
-  will be deprecated in 20.11 and will be removed in 21.11.
-  Existing ``rte_eth_rx_descriptor_status`` and ``rte_eth_tx_descriptor_status``
-  APIs can be used as replacement.
-
 * ethdev: The port mirroring API can be replaced with a more fine grain flow API.
   The structs ``rte_eth_mirror_conf``, ``rte_eth_vlan_mirror`` and the functions
   ``rte_eth_mirror_rule_set``, ``rte_eth_mirror_rule_reset`` will be marked

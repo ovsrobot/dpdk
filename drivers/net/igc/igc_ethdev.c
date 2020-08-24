@@ -273,7 +273,6 @@ static const struct eth_dev_ops eth_igc_ops = {
 	.rx_queue_setup		= eth_igc_rx_queue_setup,
 	.rx_queue_release	= eth_igc_rx_queue_release,
 	.rx_queue_count		= eth_igc_rx_queue_count,
-	.rx_descriptor_done	= eth_igc_rx_descriptor_done,
 	.rx_descriptor_status	= eth_igc_rx_descriptor_status,
 	.tx_descriptor_status	= eth_igc_tx_descriptor_status,
 	.tx_queue_setup		= eth_igc_tx_queue_setup,

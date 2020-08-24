@@ -287,9 +287,6 @@ typedef uint32_t (*eth_rx_queue_count_t)(struct rte_eth_dev *dev,
 					 uint16_t rx_queue_id);
 /**< @internal Get number of used descriptors on a receive queue. */
 
-typedef int (*eth_rx_descriptor_done_t)(void *rxq, uint16_t offset);
-/**< @internal Check DD bit of specific RX descriptor */
-
 typedef int (*eth_rx_descriptor_status_t)(void *rxq, uint16_t offset);
 /**< @internal Check the status of a Rx descriptor */
 
@@ -662,7 +659,6 @@ struct eth_dev_ops {
 	eth_queue_release_t        rx_queue_release; /**< Release RX queue. */
 	eth_rx_queue_count_t       rx_queue_count;
 	/**< Get the number of used RX descriptors. */
-	eth_rx_descriptor_done_t   rx_descriptor_done; /**< Check rxd DD bit. */
 	eth_rx_descriptor_status_t rx_descriptor_status;
 	/**< Check the status of a Rx descriptor. */
 	eth_tx_descriptor_status_t tx_descriptor_status;
