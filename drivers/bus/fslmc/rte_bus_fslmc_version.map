@@ -30,6 +30,7 @@ INTERNAL {
 	dpci_get_opr;
 	dpci_set_opr;
 	dpci_set_rx_queue;
+	dpcon_close;
 	dpcon_get_attributes;
 	dpcon_open;
 	dpdmai_close;
