@@ -227,12 +227,6 @@ Deprecation Notices
   following the IPv6 header, as proposed in RFC
   https://mails.dpdk.org/archives/dev/2020-August/177257.html.
 
-* ethdev: Some internal APIs for driver usage are exported in the .map file.
-  Now DPDK has ``__rte_internal`` marker so we can mark internal APIs and move
-  them to the INTERNAL block in .map. Although these APIs are internal it will
-  break the ABI checks, that is why change is planned for 20.11.
-  The list of internal APIs are mainly ones listed in ``rte_ethdev_driver.h``.
-
 * traffic manager: All traffic manager API's in ``rte_tm.h`` were mistakenly made
   ABI stable in the v19.11 release. The TM maintainer and other contributors have
   agreed to keep the TM APIs as experimental in expectation of additional spec
