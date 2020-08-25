@@ -254,9 +254,6 @@ Deprecation Notices
   experimental in v20.11 DPDK release. For more details, please see `the thread
   <https://mails.dpdk.org/archives/dev/2020-April/164970.html>`_.
 
-* pmd_dpaa: The API ``rte_pmd_dpaa_set_tx_loopback`` will have extended
-  ``port_id`` definition from ``uint8_t`` to ``uint16_t``.
-
 * vhost: Vhost-user dequeue zero-copy support will be removed in 20.11.
   The only known user is OVS where the feature is still experimental,
   and has not received any update for 2.5 years.
