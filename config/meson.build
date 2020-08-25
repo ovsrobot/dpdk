@@ -237,10 +237,21 @@ else # for 32-bit we need smaller reserved memory areas
 	dpdk_conf.set('RTE_MAX_MEM_MB', 2048)
 endif
 
-
 compile_time_cpuflags = []
 subdir(arch_subdir)
 dpdk_conf.set('RTE_COMPILE_TIME_CPUFLAGS', ','.join(compile_time_cpuflags))
+
+# set max lcores
+if machine != 'default' and not meson.is_cross_build()
+	# The script returns max lcores
+	params = files('get_max_lcores.py')
+	cmd_out = run_command(params)
+	if cmd_out.returncode() == 0
+		cmd_lcore = cmd_out.stdout().to_lower().strip().split(' ')
+	endif
+	max_lcore = cmd_lcore[0].to_int()
+	dpdk_conf.set('RTE_MAX_LCORE', max_lcore)
+endif
 
 # set the install path for the drivers
 dpdk_conf.set_quoted('RTE_EAL_PMD_PATH', eal_pmd_path)
