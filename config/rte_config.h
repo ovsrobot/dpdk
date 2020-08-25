@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2017 Intel Corporation
+ * Copyright(c) 2017-2020 Intel Corporation
  */
 
 /**
@@ -20,10 +20,10 @@
 
 /* legacy defines */
 #ifdef RTE_EXEC_ENV_LINUX
-#define RTE_EXEC_ENV_LINUXAPP 1
+#define RTE_EXEC_ENV_LINUXAPP
 #endif
 #ifdef RTE_EXEC_ENV_FREEBSD
-#define RTE_EXEC_ENV_BSDAPP 1
+#define RTE_EXEC_ENV_BSDAPP
 #endif
 
 /* String that appears before the version number */
@@ -32,107 +32,195 @@
 /****** library defines ********/
 
 /* EAL defines */
+#define RTE_BACKTRACE
+#ifndef RTE_MAX_HEAPS
 #define RTE_MAX_HEAPS 32
+#endif
+#ifndef RTE_MAX_MEMSEG_LISTS
 #define RTE_MAX_MEMSEG_LISTS 128
+#endif
+#ifndef RTE_MAX_MEMSEG_PER_LIST
 #define RTE_MAX_MEMSEG_PER_LIST 8192
+#endif
+#ifndef RTE_MAX_MEM_MB_PER_LIST
 #define RTE_MAX_MEM_MB_PER_LIST 32768
+#endif
+#ifndef RTE_MAX_MEMSEG_PER_TYPE
 #define RTE_MAX_MEMSEG_PER_TYPE 32768
+#endif
+#ifndef RTE_MAX_MEM_MB_PER_TYPE
 #define RTE_MAX_MEM_MB_PER_TYPE 65536
+#endif
+#ifndef RTE_MAX_MEMZONE
 #define RTE_MAX_MEMZONE 2560
+#endif
+#ifndef RTE_MAX_TAILQ
 #define RTE_MAX_TAILQ 32
+#endif
+#ifndef RTE_LOG_DP_LEVEL
 #define RTE_LOG_DP_LEVEL RTE_LOG_INFO
-#define RTE_BACKTRACE 1
+#endif
+#ifndef RTE_MAX_VFIO_CONTAINERS
 #define RTE_MAX_VFIO_CONTAINERS 64
+#endif
 
 /* bsd module defines */
+#ifndef RTE_CONTIGMEM_MAX_NUM_BUFS
 #define RTE_CONTIGMEM_MAX_NUM_BUFS 64
+#endif
+#ifndef RTE_CONTIGMEM_DEFAULT_NUM_BUFS
 #define RTE_CONTIGMEM_DEFAULT_NUM_BUFS 1
+#endif
+#ifndef RTE_CONTIGMEM_DEFAULT_BUF_SIZE
 #define RTE_CONTIGMEM_DEFAULT_BUF_SIZE (512*1024*1024)
+#endif
 
 /* mempool defines */
+#ifndef RTE_MEMPOOL_CACHE_MAX_SIZE
 #define RTE_MEMPOOL_CACHE_MAX_SIZE 512
+#endif
 
 /* mbuf defines */
+#define RTE_MBUF_REFCNT_ATOMIC
+#ifndef RTE_MBUF_DEFAULT_MEMPOOL_OPS
 #define RTE_MBUF_DEFAULT_MEMPOOL_OPS "ring_mp_mc"
-#define RTE_MBUF_REFCNT_ATOMIC 1
+#endif
+#ifndef RTE_PKTMBUF_HEADROOM
 #define RTE_PKTMBUF_HEADROOM 128
+#endif
 
 /* ether defines */
+#define RTE_ETHDEV_RXTX_CALLBACKS
+#ifndef RTE_MAX_QUEUES_PER_PORT
 #define RTE_MAX_QUEUES_PER_PORT 1024
+#endif
+#ifndef RTE_ETHDEV_QUEUE_STAT_CNTRS
 #define RTE_ETHDEV_QUEUE_STAT_CNTRS 16
-#define RTE_ETHDEV_RXTX_CALLBACKS 1
+#endif
 
 /* cryptodev defines */
+#ifndef RTE_CRYPTO_MAX_DEVS
 #define RTE_CRYPTO_MAX_DEVS 64
+#endif
+#ifndef RTE_CRYPTODEV_NAME_LEN
 #define RTE_CRYPTODEV_NAME_LEN 64
+#endif
 
 /* compressdev defines */
+#ifndef RTE_COMPRESS_MAX_DEVS
 #define RTE_COMPRESS_MAX_DEVS 64
+#endif
 
 /* regexdev defines */
+#ifndef RTE_MAX_REGEXDEV_DEVS
 #define RTE_MAX_REGEXDEV_DEVS 32
+#endif
 
 /* eventdev defines */
+#ifndef RTE_EVENT_MAX_DEVS
 #define RTE_EVENT_MAX_DEVS 16
+#endif
+#ifndef RTE_EVENT_MAX_QUEUES_PER_DEV
 #define RTE_EVENT_MAX_QUEUES_PER_DEV 64
+#endif
+#ifndef RTE_EVENT_TIMER_ADAPTER_NUM_MAX
 #define RTE_EVENT_TIMER_ADAPTER_NUM_MAX 32
+#endif
+#ifndef RTE_EVENT_ETH_INTR_RING_SIZE
 #define RTE_EVENT_ETH_INTR_RING_SIZE 1024
+#endif
+#ifndef RTE_EVENT_CRYPTO_ADAPTER_MAX_INSTANCE
 #define RTE_EVENT_CRYPTO_ADAPTER_MAX_INSTANCE 32
+#endif
+#ifndef RTE_EVENT_ETH_TX_ADAPTER_MAX_INSTANCE
 #define RTE_EVENT_ETH_TX_ADAPTER_MAX_INSTANCE 32
+#endif
 
 /* rawdev defines */
+#ifndef RTE_RAWDEV_MAX_DEVS
 #define RTE_RAWDEV_MAX_DEVS 64
+#endif
 
 /* ip_fragmentation defines */
+#ifndef RTE_LIBRTE_IP_FRAG_MAX_FRAG
 #define RTE_LIBRTE_IP_FRAG_MAX_FRAG 4
+#endif
 // RTE_LIBRTE_IP_FRAG_TBL_STAT is not set
 
 /* rte_power defines */
+#ifndef RTE_MAX_LCORE_FREQS
 #define RTE_MAX_LCORE_FREQS 64
+#endif
 
 /* rte_sched defines */
 // RTE_SCHED_RED is not set
 // RTE_SCHED_COLLECT_STATS is not set
 // RTE_SCHED_SUBPORT_TC_OV is not set
+#ifndef RTE_SCHED_PORT_N_GRINDERS
 #define RTE_SCHED_PORT_N_GRINDERS 8
+#endif
 // RTE_SCHED_VECTOR is not set
 
 /* KNI defines */
-#define RTE_KNI_PREEMPT_DEFAULT 1
+#define RTE_KNI_PREEMPT_DEFAULT
 
 /* rte_graph defines */
-#define RTE_GRAPH_BURST_SIZE 256
 #define RTE_LIBRTE_GRAPH_STATS 1
+#ifndef RTE_GRAPH_BURST_SIZE
+#define RTE_GRAPH_BURST_SIZE 256
+#endif
 
 /****** driver defines ********/
 
 /* QuickAssist device */
 /* Max. number of QuickAssist devices which can be attached */
+#ifndef RTE_PMD_QAT_MAX_PCI_DEVICES
 #define RTE_PMD_QAT_MAX_PCI_DEVICES 48
+#endif
+#ifndef RTE_PMD_QAT_COMP_SGL_MAX_SEGMENTS
 #define RTE_PMD_QAT_COMP_SGL_MAX_SEGMENTS 16
+#endif
+#ifndef RTE_PMD_QAT_COMP_IM_BUFFER_SIZE
 #define RTE_PMD_QAT_COMP_IM_BUFFER_SIZE 65536
+#endif
 
 /* virtio crypto defines */
+#ifndef RTE_MAX_VIRTIO_CRYPTO
 #define RTE_MAX_VIRTIO_CRYPTO 32
+#endif
 
 /* DPAA SEC max cryptodev devices*/
-#define RTE_LIBRTE_DPAA_MAX_CRYPTODEV	4
+#ifndef RTE_LIBRTE_DPAA_MAX_CRYPTODEV
+#define RTE_LIBRTE_DPAA_MAX_CRYPTODEV 4
+#endif
 
 /* fm10k defines */
-#define RTE_LIBRTE_FM10K_RX_OLFLAGS_ENABLE 1
+#define RTE_LIBRTE_FM10K_RX_OLFLAGS_ENABLE
 
 /* i40e defines */
-#define RTE_LIBRTE_I40E_RX_ALLOW_BULK_ALLOC 1
+#define RTE_LIBRTE_I40E_RX_ALLOW_BULK_ALLOC
 // RTE_LIBRTE_I40E_16BYTE_RX_DESC is not set
+#ifndef RTE_LIBRTE_I40E_QUEUE_NUM_PER_PF
 #define RTE_LIBRTE_I40E_QUEUE_NUM_PER_PF 64
+#endif
+#ifndef RTE_LIBRTE_I40E_QUEUE_NUM_PER_VF
 #define RTE_LIBRTE_I40E_QUEUE_NUM_PER_VF 4
+#endif
+#ifndef RTE_LIBRTE_I40E_QUEUE_NUM_PER_VM
 #define RTE_LIBRTE_I40E_QUEUE_NUM_PER_VM 4
+#endif
 
 /* Ring net PMD settings */
+#ifndef RTE_PMD_RING_MAX_RX_RINGS
 #define RTE_PMD_RING_MAX_RX_RINGS 16
+#endif
+#ifndef RTE_PMD_RING_MAX_TX_RINGS
 #define RTE_PMD_RING_MAX_TX_RINGS 16
+#endif
 
 /* QEDE PMD defines */
+#ifndef RTE_LIBRTE_QEDE_FW
 #define RTE_LIBRTE_QEDE_FW ""
+#endif
 
 #endif /* _RTE_CONFIG_H_ */
