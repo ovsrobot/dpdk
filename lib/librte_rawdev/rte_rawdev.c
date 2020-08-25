@@ -565,11 +565,14 @@ handle_dev_xstats(const char *cmd __rte_unused,
 	struct rte_rawdev_xstats_name *xstat_names;
 	int dev_id, num_xstats, i, ret;
 	unsigned int *ids;
+	char *end_param;
 
 	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
 		return -1;
 
-	dev_id = atoi(params);
+	dev_id = strtoul(params, &end_param, 0);
+	if (*end_param != '\0')
+		RTE_RDEV_LOG(NOTICE, "Extra params passed to telemetry command for rawdev xstats, first param in use");
 	if (!rte_rawdev_pmd_is_valid_dev(dev_id))
 		return -1;
 
