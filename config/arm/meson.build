@@ -141,12 +141,12 @@ else
 	dpdk_conf.set('RTE_CACHE_LINE_SIZE', 128)
 	dpdk_conf.set('RTE_ARCH_ARM64', 1)
 
-	machine = []
+	machine_properties = []
 	cmd_generic = ['generic', '', '', 'default', '']
 	cmd_output = cmd_generic # Set generic by default
 	machine_args = [] # Clear previous machine args
 	if arm_force_default_march and not meson.is_cross_build()
-		machine = impl_generic
+		machine_properties = impl_generic
 		impl_pn = 'default'
 	elif not meson.is_cross_build()
 		# The script returns ['Implementer', 'Variant', 'Architecture',
@@ -158,9 +158,9 @@ else
 			cmd_output = cmd.stdout().to_lower().strip().split(' ')
 		endif
 		# Set to generic if variable is not found
-		machine = get_variable('impl_' + cmd_output[0], ['generic'])
-		if machine[0] == 'generic'
-			machine = impl_generic
+		machine_properties = get_variable('impl_' + cmd_output[0], ['generic'])
+		if machine_properties[0] == 'generic'
+			machine_properties = impl_generic
 			cmd_output = cmd_generic
 		endif
 		impl_pn = cmd_output[3]
@@ -170,7 +170,7 @@ else
 	else
 		impl_id = meson.get_cross_property('implementor_id', 'generic')
 		impl_pn = meson.get_cross_property('implementor_pn', 'default')
-		machine = get_variable('impl_' + impl_id)
+		machine_properties = get_variable('impl_' + impl_id)
 	endif
 
 	# Apply Common Defaults. These settings may be overwritten by machine
@@ -181,14 +181,14 @@ else
 		endif
 	endforeach
 
-	message('Implementer : ' + machine[0])
-	foreach flag: machine[1]
+	message('Implementer : ' + machine_properties[0])
+	foreach flag: machine_properties[1]
 		if flag.length() > 0
 			dpdk_conf.set(flag[0], flag[1])
 		endif
 	endforeach
 
-	foreach marg: machine[2]
+	foreach marg: machine_properties[2]
 		if marg[0] == impl_pn
 			foreach flag: marg[1]
 				if cc.has_argument(flag)
