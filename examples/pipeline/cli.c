@@ -731,6 +731,8 @@ static const char cmd_pipeline_build_help[] =
 "pipeline <pipeline_name> build <app>\n";
 
 int pipeline_setup_l2fwd(struct rte_swx_pipeline *p);
+int pipeline_setup_l2fwd_macswp(struct rte_swx_pipeline *p);
+
 static void
 cmd_pipeline_build(char **tokens,
 	uint32_t n_tokens,
@@ -757,6 +759,8 @@ cmd_pipeline_build(char **tokens,
 	app = tokens[3];
 	if (!strcmp(app, "l2fwd"))
 		status = pipeline_setup_l2fwd(p->p);
+	else if (!strcmp(app, "l2fwd_macswp"))
+		status = pipeline_setup_l2fwd_macswp(p->p);
 	else {
 		snprintf(out, out_size, MSG_ARG_INVALID, tokens[0]);
 		return;

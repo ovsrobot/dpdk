@@ -16,4 +16,5 @@ sources = files(
 	'obj.c',
 	'thread.c',
 	'example_l2fwd.c',
+	'example_l2fwd_macswp.c',
 )
