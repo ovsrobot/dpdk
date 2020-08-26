@@ -732,6 +732,7 @@ static const char cmd_pipeline_build_help[] =
 
 int pipeline_setup_l2fwd(struct rte_swx_pipeline *p);
 int pipeline_setup_l2fwd_macswp(struct rte_swx_pipeline *p);
+int pipeline_setup_vxlan(struct rte_swx_pipeline *p);
 
 static void
 cmd_pipeline_build(char **tokens,
@@ -761,6 +762,8 @@ cmd_pipeline_build(char **tokens,
 		status = pipeline_setup_l2fwd(p->p);
 	else if (!strcmp(app, "l2fwd_macswp"))
 		status = pipeline_setup_l2fwd_macswp(p->p);
+	else if (!strcmp(app, "vxlan"))
+		status = pipeline_setup_vxlan(p->p);
 	else {
 		snprintf(out, out_size, MSG_ARG_INVALID, tokens[0]);
 		return;

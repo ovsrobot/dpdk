@@ -17,4 +17,5 @@ sources = files(
 	'thread.c',
 	'example_l2fwd.c',
 	'example_l2fwd_macswp.c',
+	'example_vxlan.c',
 )
