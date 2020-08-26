@@ -61,6 +61,7 @@ DIRS-$(CONFIG_RTE_LIBRTE_REORDER) += packet_ordering
 ifeq ($(CONFIG_RTE_ARCH_X86_64),y)
 DIRS-y += performance-thread
 endif
+DIRS-$(CONFIG_RTE_LIBRTE_PIPELINE) += pipeline
 DIRS-$(CONFIG_RTE_LIBRTE_IEEE1588) += ptpclient
 DIRS-$(CONFIG_RTE_LIBRTE_METER) += qos_meter
 DIRS-$(CONFIG_RTE_LIBRTE_SCHED) += qos_sched
