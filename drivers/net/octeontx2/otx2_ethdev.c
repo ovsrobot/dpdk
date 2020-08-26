@@ -1355,8 +1355,6 @@ nix_store_queue_cfg_and_then_release(struct rte_eth_dev *eth_dev)
 fail:
 	if (tx_qconf)
 		free(tx_qconf);
-	if (rx_qconf)
-		free(rx_qconf);
 
 	return -ENOMEM;
 }
