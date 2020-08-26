@@ -11,6 +11,7 @@
 #include <rte_launch.h>
 #include <rte_eal.h>
 
+#include "cli.h"
 #include "conn.h"
 #include "obj.h"
 #include "thread.h"
@@ -30,7 +31,7 @@ static struct app_params {
 		.buf_size = 1024 * 1024,
 		.msg_in_len_max = 1024,
 		.msg_out_len_max = 1024 * 1024,
-		.msg_handle = NULL,
+		.msg_handle = cli_process,
 		.msg_handle_arg = NULL, /* set later. */
 	},
 	.script_name = NULL,
@@ -167,6 +168,13 @@ main(int argc, char **argv)
 		NULL,
 		SKIP_MASTER);
 
+	/* Script */
+	if (app.script_name)
+		cli_script_process(app.script_name,
+			app.conn.msg_in_len_max,
+			app.conn.msg_out_len_max,
+			obj);
+
 	/* Connectivity */
 	app.conn.msg_handle_arg = obj;
 	conn = conn_init(&app.conn);
@@ -175,6 +183,7 @@ main(int argc, char **argv)
 			status);
 		return status;
 	};
+
 	/* Dispatch loop */
 	for ( ; ; ) {
 		conn_poll_for_conn(conn);
