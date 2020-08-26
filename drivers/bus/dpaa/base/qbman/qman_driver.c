@@ -142,7 +142,7 @@ struct qman_portal *fsl_qman_fq_portal_create(int *fd)
 	struct qm_portal_config *q_pcfg;
 	struct dpaa_ioctl_irq_map irq_map;
 	struct dpaa_ioctl_portal_map q_map = {0};
-	int q_fd = 0, ret;
+	int q_fd = -1, ret;
 
 	q_pcfg = kzalloc((sizeof(struct qm_portal_config)), 0);
 	if (!q_pcfg) {
@@ -191,7 +191,7 @@ struct qman_portal *fsl_qman_fq_portal_create(int *fd)
 err:
 	if (portal)
 		qman_free_global_portal(portal);
-	if (q_fd)
+	if (q_fd != -1)
 		close(q_fd);
 	process_portal_unmap(&q_map.addr);
 	kfree(q_pcfg);
