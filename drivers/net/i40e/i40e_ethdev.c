@@ -13211,6 +13211,8 @@ i40e_rss_conf_init(struct i40e_rte_flow_rss_conf *out,
 		return -EINVAL;
 	if (!in->key && in->key_len)
 		return -EINVAL;
+	if (&out->conf == in)
+		return 0;
 	out->conf = (struct rte_flow_action_rss){
 		.func = in->func,
 		.level = in->level,
