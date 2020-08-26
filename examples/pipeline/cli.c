@@ -730,6 +730,7 @@ cmd_pipeline_port_out(char **tokens,
 static const char cmd_pipeline_build_help[] =
 "pipeline <pipeline_name> build <app>\n";
 
+int pipeline_setup_l2fwd(struct rte_swx_pipeline *p);
 static void
 cmd_pipeline_build(char **tokens,
 	uint32_t n_tokens,
@@ -738,7 +739,7 @@ cmd_pipeline_build(char **tokens,
 	void *obj)
 {
 	struct pipeline *p;
-	char *name;
+	char *name, *app;
 	int status;
 
 	if (n_tokens != 4) {
@@ -750,6 +751,19 @@ cmd_pipeline_build(char **tokens,
 	p = pipeline_find(obj, name);
 	if (!p) {
 		snprintf(out, out_size, MSG_ARG_INVALID, tokens[0]);
+		return;
+	}
+
+	app = tokens[3];
+	if (!strcmp(app, "l2fwd"))
+		status = pipeline_setup_l2fwd(p->p);
+	else {
+		snprintf(out, out_size, MSG_ARG_INVALID, tokens[0]);
+		return;
+	}
+
+	if (status) {
+		snprintf(out, out_size, "Pipeline build: app setup error.");
 		return;
 	}
 

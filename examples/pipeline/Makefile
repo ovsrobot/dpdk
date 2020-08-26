@@ -10,6 +10,7 @@ SRCS-y += conn.c
 SRCS-y += main.c
 SRCS-y += obj.c
 SRCS-y += thread.c
+SRCS-y += example_l2fwd.c
 
 # Build using pkg-config variables if possible
 ifeq ($(shell pkg-config --exists libdpdk && echo 0),0)

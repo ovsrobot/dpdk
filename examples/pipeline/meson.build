@@ -15,4 +15,5 @@ sources = files(
 	'main.c',
 	'obj.c',
 	'thread.c',
+	'example_l2fwd.c',
 )
