@@ -645,7 +645,9 @@ rte_efd_create(const char *name, uint32_t max_num_rules, uint32_t key_len,
 	 * For less than 4 bits, scalar function performs better
 	 * than vectorised version
 	 */
-	if (RTE_EFD_VALUE_NUM_BITS > 3 && rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2))
+	if (RTE_EFD_VALUE_NUM_BITS > 3
+			&& rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2)
+			&& rte_get_max_simd_bitwidth() >= RTE_MAX_256_SIMD)
 		table->lookup_fn = EFD_LOOKUP_AVX2;
 	else
 #endif
@@ -655,7 +657,8 @@ rte_efd_create(const char *name, uint32_t max_num_rules, uint32_t key_len,
 	 * than vectorised version
 	 */
 	if (RTE_EFD_VALUE_NUM_BITS > 16 &&
-	    rte_cpu_get_flag_enabled(RTE_CPUFLAG_NEON))
+	    rte_cpu_get_flag_enabled(RTE_CPUFLAG_NEON) &&
+			rte_get_max_simd_bitwidth() >= RTE_MAX_128_SIMD)
 		table->lookup_fn = EFD_LOOKUP_NEON;
 	else
 #endif
