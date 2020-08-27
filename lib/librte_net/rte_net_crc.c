@@ -9,6 +9,7 @@
 #include <rte_cpuflags.h>
 #include <rte_common.h>
 #include <rte_net_crc.h>
+#include <rte_eal.h>
 
 #if defined(RTE_ARCH_X86_64) && defined(RTE_MACHINE_CPUFLAG_PCLMULQDQ)
 #define X86_64_SSE42_PCLMULQDQ     1
@@ -59,6 +60,8 @@ static rte_net_crc_handler handlers_neon[] = {
 	[RTE_NET_CRC32_ETH] = rte_crc32_eth_neon_handler,
 };
 #endif
+
+static uint16_t max_simd_bitwidth;
 
 /**
  * Reflect the bits about the middle
@@ -175,6 +178,11 @@ rte_net_crc_calc(const void *data,
 	uint32_t ret;
 	rte_net_crc_handler f_handle;
 
+	if (max_simd_bitwidth == 0)
+		max_simd_bitwidth = rte_get_max_simd_bitwidth();
+	if (max_simd_bitwidth < RTE_MAX_128_SIMD &&
+			handlers != handlers_scalar)
+		rte_net_crc_set_alg(RTE_NET_CRC_SCALAR);
 	f_handle = handlers[type];
 	ret = f_handle(data, data_len);
 
