@@ -182,9 +182,17 @@ extern enum rte_flow_item_type iavf_pattern_eth_ipv6_icmp6[];
 extern enum rte_flow_item_type iavf_pattern_eth_vlan_ipv6_icmp6[];
 extern enum rte_flow_item_type iavf_pattern_eth_qinq_ipv6_icmp6[];
 
+/* IPV4 GTPC */
+extern enum rte_flow_item_type iavf_pattern_eth_ipv4_gtpc[];
+extern enum rte_flow_item_type iavf_pattern_eth_vlan_ipv4_gtpc[];
+
 /* IPv4 GTPU (EH) */
 extern enum rte_flow_item_type iavf_pattern_eth_ipv4_gtpu[];
 extern enum rte_flow_item_type iavf_pattern_eth_ipv4_gtpu_eh[];
+
+/* IPV4 GTPC */
+extern enum rte_flow_item_type iavf_pattern_eth_ipv6_gtpc[];
+extern enum rte_flow_item_type iavf_pattern_eth_vlan_ipv6_gtpc[];
 
 /* IPv6 GTPU (EH) */
 extern enum rte_flow_item_type iavf_pattern_eth_ipv6_gtpu[];

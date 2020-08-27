@@ -41,6 +41,8 @@ enum iavf_pattern_hint_type {
 	IAVF_PHINT_IPV6_GTPU_EH			= 0x00002000,
 	IAVF_PHINT_IPV6_GTPU_EH_DWNLINK		= 0x00004000,
 	IAVF_PHINT_IPV6_GTPU_EH_UPLINK		= 0x00008000,
+	IAVF_PHINT_IPV4_GTPC			= 0x00010000,
+	IAVF_PHINT_IPV6_GTPC			= 0x00020000,
 };
 
 #define IAVF_GTPU_EH_DWNLINK	0
@@ -189,6 +191,10 @@ static struct iavf_pattern_match_type phint_eth_vlan_ipv6_tcp = {
 	IAVF_PHINT_IPV6_TCP};
 static struct iavf_pattern_match_type phint_eth_vlan_ipv6_sctp = {
 	IAVF_PHINT_IPV6_SCTP};
+static struct iavf_pattern_match_type phint_eth_ipv4_gtpc = {
+	IAVF_PHINT_IPV4_GTPC };
+static struct iavf_pattern_match_type phint_eth_ipv6_gtpc = {
+	IAVF_PHINT_IPV6_GTPC };
 
 /**
  * Supported pattern for hash.
@@ -281,6 +287,12 @@ static struct iavf_pattern_match_item iavf_hash_pattern_list[] = {
 					&phint_eth_vlan_ipv6_tcp},
 	{iavf_pattern_eth_vlan_ipv6_sctp, IAVF_INSET_NONE,
 					&phint_eth_vlan_ipv6_sctp},
+	{iavf_pattern_eth_ipv4_gtpc, IAVF_INSET_NONE, &phint_eth_ipv4_gtpc},
+	{iavf_pattern_eth_ipv6_gtpc, IAVF_INSET_NONE, &phint_eth_ipv6_gtpc},
+	{iavf_pattern_eth_vlan_ipv4_gtpc, IAVF_INSET_NONE,
+					&phint_eth_ipv4_gtpc},
+	{iavf_pattern_eth_vlan_ipv6_gtpc, IAVF_INSET_NONE,
+					&phint_eth_ipv6_gtpc},
 	{iavf_pattern_empty, IAVF_INSET_NONE, &phint_empty},
 };
 
@@ -290,6 +302,7 @@ static struct iavf_pattern_match_item iavf_hash_pattern_list[] = {
 #define PROTO_COUNT_ONE			1
 #define PROTO_COUNT_TWO			2
 #define PROTO_COUNT_THREE		3
+#define PROTO_COUNT_FOUR		4
 
 #define BUFF_NOUSED			0
 #define FIELD_FOR_PROTO_ONLY		0
@@ -444,6 +457,10 @@ static struct iavf_pattern_match_item iavf_hash_pattern_list[] = {
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_SRC) | \
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_DST) | \
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PROT), {BUFF_NOUSED } }
+
+#define proto_hint_gtpc_only { \
+	VIRTCHNL_PROTO_HDR_GTPC, \
+	FIELD_FOR_PROTO_ONLY, {BUFF_NOUSED } }
 
 #define proto_hint_gtpu_ip_teid { \
 	VIRTCHNL_PROTO_HDR_GTPU_IP, \
@@ -770,6 +787,37 @@ struct virtchnl_proto_hdrs hdrs_hint_ipv4_udp_esp = {
 	proto_hint_udp_only, proto_hint_esp }
 };
 
+/* IPv4 GTPC */
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_gtpc = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_THREE, {proto_hint_ipv4,
+	proto_hint_udp_only, proto_hint_gtpc_only}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_dst_gtpc = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_THREE, {proto_hint_ipv4_dst,
+	proto_hint_udp_only, proto_hint_gtpc_only}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_gtpc = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_THREE, {proto_hint_ipv4_src,
+	proto_hint_udp_only, proto_hint_gtpc_only}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_cvlan_ipv4_gtpc = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_FOUR, {proto_hint_cvlan,
+	proto_hint_ipv4, proto_hint_udp_only, proto_hint_gtpc_only}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_cvlan_ipv4_dst_gtpc = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_FOUR, {proto_hint_cvlan,
+	proto_hint_ipv4_dst, proto_hint_udp_only, proto_hint_gtpc_only}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_cvlan_ipv4_src_gtpc = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_FOUR, {proto_hint_cvlan,
+	proto_hint_ipv4_src, proto_hint_udp_only, proto_hint_gtpc_only}
+};
+
 /* IPv4 GTPU IP */
 
 struct virtchnl_proto_hdrs hdrs_hint_ipv4_src_gtpu_ip = {
@@ -889,6 +937,37 @@ struct virtchnl_proto_hdrs hdrs_hint_ipv4_tcp_gtpu_ip = {
 
 struct virtchnl_proto_hdrs hdrs_hint_teid_gtpu_ip = {
 	TUNNEL_LEVEL_FIRST_INNER, PROTO_COUNT_TWO, {proto_hint_gtpu_ip_teid}
+};
+
+/* IPv6 GTPC */
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_gtpc = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_THREE, {proto_hint_ipv6,
+	proto_hint_udp_only, proto_hint_gtpc_only}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_dst_gtpc = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_THREE, {proto_hint_ipv6_dst,
+	proto_hint_udp_only, proto_hint_gtpc_only}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_ipv6_src_gtpc = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_THREE, {proto_hint_ipv6_src,
+	proto_hint_udp_only, proto_hint_gtpc_only}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_cvlan_ipv6_gtpc = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_FOUR, {proto_hint_cvlan,
+	proto_hint_ipv6, proto_hint_udp_only, proto_hint_gtpc_only}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_cvlan_ipv6_dst_gtpc = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_FOUR, {proto_hint_cvlan,
+	proto_hint_ipv6_dst, proto_hint_udp_only, proto_hint_gtpc_only}
+};
+
+struct virtchnl_proto_hdrs hdrs_hint_cvlan_ipv6_src_gtpc = {
+	TUNNEL_LEVEL_OUTER, PROTO_COUNT_FOUR, {proto_hint_cvlan,
+	proto_hint_ipv6_src, proto_hint_udp_only, proto_hint_gtpc_only}
 };
 
 /* IPv6 GTPU IP */
@@ -2267,7 +2346,44 @@ struct iavf_hash_match_type iavf_hash_map_list[] = {
 };
 
 struct iavf_hash_match_type iavf_gtpu_hash_map_list[] = {
-	/* GTPU */
+	/* IPv4 GTPC */
+	{ETH_RSS_IPV4,
+		&hdrs_hint_ipv4_gtpc, IAVF_PHINT_IPV4_GTPC},
+	{ETH_RSS_IPV4 |
+		ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv4_dst_gtpc, IAVF_PHINT_IPV4_GTPC},
+	{ETH_RSS_IPV4 |
+		ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv4_src_gtpc, IAVF_PHINT_IPV4_GTPC},
+	{ETH_RSS_C_VLAN |
+		ETH_RSS_IPV4,
+		&hdrs_hint_cvlan_ipv4_gtpc, IAVF_PHINT_IPV4_GTPC},
+	{ETH_RSS_C_VLAN |
+		ETH_RSS_IPV4 | ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_cvlan_ipv4_dst_gtpc, IAVF_PHINT_IPV4_GTPC},
+	{ETH_RSS_C_VLAN |
+		ETH_RSS_IPV4 | ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_cvlan_ipv4_src_gtpc, IAVF_PHINT_IPV4_GTPC},
+
+	/* IPv6 GTPC */
+	{ETH_RSS_IPV6,
+		&hdrs_hint_ipv6_gtpc, IAVF_PHINT_IPV6_GTPC},
+	{ETH_RSS_IPV6 |
+		ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_ipv6_dst_gtpc, IAVF_PHINT_IPV6_GTPC},
+	{ETH_RSS_IPV6 |
+		ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_ipv6_src_gtpc, IAVF_PHINT_IPV6_GTPC},
+	{ETH_RSS_C_VLAN |
+		ETH_RSS_IPV6,
+		&hdrs_hint_cvlan_ipv6_gtpc, IAVF_PHINT_IPV6_GTPC},
+	{ETH_RSS_C_VLAN |
+		ETH_RSS_IPV6 | ETH_RSS_L3_DST_ONLY,
+		&hdrs_hint_cvlan_ipv6_dst_gtpc, IAVF_PHINT_IPV6_GTPC},
+	{ETH_RSS_C_VLAN |
+		ETH_RSS_IPV6 | ETH_RSS_L3_SRC_ONLY,
+		&hdrs_hint_cvlan_ipv6_src_gtpc, IAVF_PHINT_IPV6_GTPC},
+
 	/* GTPU IP */
 	/* IPv4 GTPU IP IPv4*/
 	{ETH_RSS_IPV4 |
@@ -3841,7 +3957,9 @@ iavf_hash_parse_action(const struct rte_flow_action actions[],
 			    (pattern_hint & IAVF_PHINT_IPV6_GTPU_IP) ||
 			    (pattern_hint & IAVF_PHINT_IPV6_GTPU_EH) ||
 			    (pattern_hint & IAVF_PHINT_IPV6_GTPU_EH_UPLINK) ||
-			    (pattern_hint & IAVF_PHINT_IPV6_GTPU_EH_DWNLINK)) {
+			    (pattern_hint & IAVF_PHINT_IPV6_GTPU_EH_DWNLINK) ||
+			    (pattern_hint & IAVF_PHINT_IPV4_GTPC) ||
+			    (pattern_hint & IAVF_PHINT_IPV6_GTPC)) {
 				hash_map_list = iavf_gtpu_hash_map_list;
 				mlist_len = RTE_DIM(iavf_gtpu_hash_map_list);
 			} else {
