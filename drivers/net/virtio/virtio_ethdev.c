@@ -1517,9 +1517,11 @@ set_rxtx_funcs(struct rte_eth_dev *eth_dev)
 	if (vtpci_packed_queue(hw)) {
 		PMD_INIT_LOG(INFO,
 			"virtio: using packed ring %s Tx path on port %u",
-			hw->use_vec_tx ? "vectorized" : "standard",
+			(hw->use_vec_tx && rte_get_max_simd_bitwidth()
+			> RTE_MAX_256_SIMD) ? "vectorized" : "standard",
 			eth_dev->data->port_id);
-		if (hw->use_vec_tx)
+		if (hw->use_vec_tx && rte_get_max_simd_bitwidth()
+				> RTE_MAX_256_SIMD)
 			eth_dev->tx_pkt_burst = virtio_xmit_pkts_packed_vec;
 		else
 			eth_dev->tx_pkt_burst = virtio_xmit_pkts_packed;
@@ -1536,7 +1538,8 @@ set_rxtx_funcs(struct rte_eth_dev *eth_dev)
 	}
 
 	if (vtpci_packed_queue(hw)) {
-		if (hw->use_vec_rx) {
+		if (hw->use_vec_rx && rte_get_max_simd_bitwidth()
+				> RTE_MAX_256_SIMD) {
 			PMD_INIT_LOG(INFO,
 				"virtio: using packed ring vectorized Rx path on port %u",
 				eth_dev->data->port_id);
@@ -1555,7 +1558,8 @@ set_rxtx_funcs(struct rte_eth_dev *eth_dev)
 			eth_dev->rx_pkt_burst = &virtio_recv_pkts_packed;
 		}
 	} else {
-		if (hw->use_vec_rx) {
+		if (hw->use_vec_rx && rte_get_max_simd_bitwidth()
+				>= RTE_MAX_128_SIMD) {
 			PMD_INIT_LOG(INFO, "virtio: using vectorized Rx path on port %u",
 				eth_dev->data->port_id);
 			eth_dev->rx_pkt_burst = virtio_recv_pkts_vec;
