@@ -148,6 +148,8 @@ mlx5_check_vec_rx_support(struct rte_eth_dev *dev)
 	struct mlx5_priv *priv = dev->data->dev_private;
 	uint32_t i;
 
+	if (rte_get_max_simd_bitwidth() < RTE_MAX_128_SIMD)
+		return -ENOTSUP;
 	if (!priv->config.rx_vec_en)
 		return -ENOTSUP;
 	if (mlx5_mprq_enabled(dev))
