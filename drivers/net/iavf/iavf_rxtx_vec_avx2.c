@@ -1224,10 +1224,6 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 	return received;
 }
 
-/**
- * Notice:
- * - nb_pkts < IAVF_DESCS_PER_LOOP, just return no packet
- */
 uint16_t
 iavf_recv_pkts_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
 			uint16_t nb_pkts)
@@ -1235,10 +1231,6 @@ iavf_recv_pkts_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
 	return _iavf_recv_raw_pkts_vec_avx2(rx_queue, rx_pkts, nb_pkts, NULL);
 }
 
-/**
- * Notice:
- * - nb_pkts < IAVF_DESCS_PER_LOOP, just return no packet
- */
 uint16_t
 iavf_recv_pkts_vec_avx2_flex_rxd(void *rx_queue, struct rte_mbuf **rx_pkts,
 				 uint16_t nb_pkts)
@@ -1249,8 +1241,6 @@ iavf_recv_pkts_vec_avx2_flex_rxd(void *rx_queue, struct rte_mbuf **rx_pkts,
 
 /**
  * vPMD receive routine that reassembles single burst of 32 scattered packets
- * Notice:
- * - nb_pkts < IAVF_DESCS_PER_LOOP, just return no packet
  */
 static uint16_t
 iavf_recv_scattered_burst_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
@@ -1290,9 +1280,6 @@ iavf_recv_scattered_burst_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
 
 /**
  * vPMD receive routine that reassembles scattered packets.
- * Main receive routine that can handle arbitrary burst sizes
- * Notice:
- * - nb_pkts < IAVF_DESCS_PER_LOOP, just return no packet
  */
 uint16_t
 iavf_recv_scattered_pkts_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
@@ -1313,10 +1300,7 @@ iavf_recv_scattered_pkts_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
 }
 
 /**
- * vPMD receive routine that reassembles single burst of
- * 32 scattered packets for flex RxD
- * Notice:
- * - nb_pkts < IAVF_DESCS_PER_LOOP, just return no packet
+ * vPMD receive routine that reassembles scattered packets for flex RxD
  */
 static uint16_t
 iavf_recv_scattered_burst_vec_avx2_flex_rxd(void *rx_queue,
@@ -1357,9 +1341,6 @@ iavf_recv_scattered_burst_vec_avx2_flex_rxd(void *rx_queue,
 
 /**
  * vPMD receive routine that reassembles scattered packets for flex RxD.
- * Main receive routine that can handle arbitrary burst sizes
- * Notice:
- * - nb_pkts < IAVF_DESCS_PER_LOOP, just return no packet
  */
 uint16_t
 iavf_recv_scattered_pkts_vec_avx2_flex_rxd(void *rx_queue,
