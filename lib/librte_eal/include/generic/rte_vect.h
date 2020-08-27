@@ -14,6 +14,8 @@
 
 #include <stdint.h>
 
+#define RTE_DEFAULT_SIMD_BITWIDTH 256
+
 /* Unsigned vector types */
 
 /**
