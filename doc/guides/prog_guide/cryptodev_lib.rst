@@ -631,6 +631,96 @@ a call argument. Status different than zero must be treated as error.
 For more details, e.g. how to convert an mbuf to an SGL, please refer to an
 example usage in the IPsec library implementation.
 
+Cryptodev Direct Data-plane Service API
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Direct crypto data-path service are a set of APIs that especially provided for
+the external libraries/applications who want to take advantage of the rich
+features provided by cryptodev, but not necessarily depend on cryptodev
+operations, mempools, or mbufs in the their data-path implementations.
+
+The direct crypto data-path service has the following advantages:
+- Supports raw data pointer and physical addresses as input.
+- Do not require specific data structure allocated from heap, such as
+  cryptodev operation.
+- Enqueue in a burst or single operation. The service allow enqueuing in
+  a burst similar to ``rte_cryptodev_enqueue_burst`` operation, or only
+  enqueue one job at a time but maintaining necessary context data locally for
+  next single job enqueue operation. The latter method is especially helpful
+  when the user application's crypto operations are clustered into a burst.
+  Allowing enqueue one operation at a time helps reducing one additional loop
+  and also reduced the cache misses during the double "looping" situation.
+- Customerizable dequeue count. Instead of dequeue maximum possible operations
+  as same as ``rte_cryptodev_dequeue_burst`` operation, the service allows the
+  user to provide a callback function to decide how many operations to be
+  dequeued. This is especially helpful when the expected dequeue count is
+  hidden inside the opaque data stored during enqueue. The user can provide
+  the callback function to parse the opaque data structure.
+- Abandon enqueue and dequeue anytime. One of the drawbacks of
+  ``rte_cryptodev_enqueue_burst`` and ``rte_cryptodev_dequeue_burst``
+  operations are: once an operation is enqueued/dequeued there is no way to
+  undo the operation. The service make the operation abandon possible by
+  creating a local copy of the queue operation data in the service context
+  data. The data will be written back to driver maintained operation data
+  when enqueue or dequeue done function is called.
+
+The cryptodev data-path service uses
+
+Cryptodev PMDs who supports this feature will have
+``RTE_CRYPTODEV_FF_SYM_HW_DIRECT_API`` feature flag presented. To use this
+feature the function ``rte_cryptodev_get_dp_service_ctx_data_size`` should
+be called to get the data path service context data size. The user should
+creates a local buffer at least this size long and initialize it using
+``rte_cryptodev_dp_configure_service`` function call.
+
+The ``rte_cryptodev_dp_configure_service`` function call initialize or
+updates the ``struct rte_crypto_dp_service_ctx`` buffer, in which contains the
+driver specific queue pair data pointer and service context buffer, and a
+set of function pointers to enqueue and dequeue different algorithms'
+operations. The ``rte_cryptodev_dp_configure_service`` should be called when:
+
+- Before enqueuing or dequeuing starts (set ``is_update`` parameter to 0).
+- When different cryptodev session, security session, or session-less xform
+  is used (set ``is_update`` parameter to 1).
+
+Two different enqueue functions are provided.
+
+- ``rte_cryptodev_dp_sym_submit_vec``: submit a burst of operations stored in
+  the ``rte_crypto_sym_vec`` structure.
+- ``rte_cryptodev_dp_submit_single_job``: submit single operation.
+
+Either enqueue functions will not command the crypto device to start processing
+until ``rte_cryptodev_dp_submit_done`` function is called. Before then the user
+shall expect the driver only stores the necessory context data in the
+``rte_crypto_dp_service_ctx`` buffer for the next enqueue operation. If the user
+wants to abandon the submitted operations, simply call
+``rte_cryptodev_dp_configure_service`` function instead with the parameter
+``is_update`` set to 0. The driver will recover the service context data to
+the previous state.
+
+To dequeue the operations the user also have two operations:
+
+- ``rte_cryptodev_dp_sym_dequeue``: fully customizable deuqueue operation. The
+  user needs to provide the callback function for the driver to get the
+  dequeue count and perform post processing such as write the status field.
+- ``rte_cryptodev_dp_sym_dequeue_single_job``: dequeue single job.
+
+Same as enqueue, the function ``rte_cryptodev_dp_dequeue_done`` is used to
+merge user's local service context data with the driver's queue operation
+data. Also to abandon the dequeue operation (still keep the operations in the
+queue), the user shall avoid ``rte_cryptodev_dp_dequeue_done`` function call
+but calling ``rte_cryptodev_dp_configure_service`` function with the parameter
+``is_update`` set to 0.
+
+There are a few limitations to the data path service:
+
+* Only support in-place operations.
+* APIs are NOT thread-safe.
+* CANNOT mix the direct API's enqueue with rte_cryptodev_enqueue_burst, or
+  vice versa.
+
+See *DPDK API Reference* for details on each API definitions.
+
 Sample code
 -----------
 
