@@ -71,6 +71,8 @@
 #define CRYPTODEV_NAME_CAAM_JR_PMD	crypto_caam_jr
 #define CRYPTODEV_NAME_NITROX_PMD	crypto_nitrox_sym
 
+extern int hw_dp_test;
+
 /**
  * Write (spread) data from buffer to mbuf data
  *
@@ -208,5 +210,9 @@ fail:
 		rte_pktmbuf_free(mbuf);
 	return NULL;
 }
+
+void
+process_sym_hw_api_op(uint8_t dev_id, uint16_t qp_id, struct rte_crypto_op *op,
+		uint8_t is_cipher, uint8_t is_auth, uint8_t len_in_bits);
 
 #endif /* TEST_CRYPTODEV_H_ */
