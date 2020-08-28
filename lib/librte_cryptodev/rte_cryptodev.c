@@ -1914,6 +1914,51 @@ rte_cryptodev_sym_cpu_crypto_process(uint8_t dev_id,
 	return dev->dev_ops->sym_cpu_process(dev, sess, ofs, vec);
 }
 
+int
+rte_cryptodev_get_dp_service_ctx_data_size(uint8_t dev_id)
+{
+	struct rte_cryptodev *dev;
+	int32_t size = sizeof(struct rte_crypto_dp_service_ctx);
+	int32_t priv_size;
+
+	if (!rte_cryptodev_pmd_is_valid_dev(dev_id))
+		return -1;
+
+	dev = rte_cryptodev_pmd_get_dev(dev_id);
+
+	if (*dev->dev_ops->get_drv_ctx_size == NULL ||
+		!(dev->feature_flags & RTE_CRYPTODEV_FF_DATA_PLANE_SERVICE)) {
+		return -1;
+	}
+
+	priv_size = (*dev->dev_ops->get_drv_ctx_size)(dev);
+	if (priv_size < 0)
+		return -1;
+
+	return RTE_ALIGN_CEIL((size + priv_size), 8);
+}
+
+int
+rte_cryptodev_dp_configure_service(uint8_t dev_id, uint16_t qp_id,
+	enum rte_crypto_dp_service service_type,
+	enum rte_crypto_op_sess_type sess_type,
+	union rte_cryptodev_session_ctx session_ctx,
+	struct rte_crypto_dp_service_ctx *ctx, uint8_t is_update)
+{
+	struct rte_cryptodev *dev;
+
+	if (!rte_cryptodev_get_qp_status(dev_id, qp_id))
+		return -1;
+
+	dev = rte_cryptodev_pmd_get_dev(dev_id);
+	if (!(dev->feature_flags & RTE_CRYPTODEV_FF_DATA_PLANE_SERVICE)
+			|| dev->dev_ops->configure_service == NULL)
+		return -1;
+
+	return (*dev->dev_ops->configure_service)(dev, qp_id, ctx,
+		service_type, sess_type, session_ctx, is_update);
+}
+
 /** Initialise rte_crypto_op mempool element */
 static void
 rte_crypto_op_init(struct rte_mempool *mempool,

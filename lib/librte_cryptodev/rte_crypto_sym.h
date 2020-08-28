@@ -51,18 +51,50 @@ struct rte_crypto_sgl {
 };
 
 /**
+ * Crypto IO Data without length info.
+ * Supposed to be used to pass input/output data buffers with lengths
+ * defined when creating crypto session.
+ */
+struct rte_crypto_data {
+	/** virtual address of the data buffer */
+	void *base;
+	/** IOVA of the data buffer */
+	rte_iova_t iova;
+};
+
+/**
  * Synchronous operation descriptor.
  * Supposed to be used with CPU crypto API call.
  */
 struct rte_crypto_sym_vec {
 	/** array of SGL vectors */
 	struct rte_crypto_sgl *sgl;
-	/** array of pointers to IV */
-	void **iv;
-	/** array of pointers to AAD */
-	void **aad;
-	/** array of pointers to digest */
-	void **digest;
+
+	union {
+
+		/* Supposed to be used with CPU crypto API call. */
+		struct {
+			/** array of pointers to IV */
+			void **iv;
+			/** array of pointers to AAD */
+			void **aad;
+			/** array of pointers to digest */
+			void **digest;
+		};
+
+		/* Supposed to be used with rte_cryptodev_dp_sym_submit_vec()
+		 * call.
+		 */
+		struct {
+			/** vector to IV */
+			struct rte_crypto_data *iv_vec;
+			/** vecor to AAD */
+			struct rte_crypto_data *aad_vec;
+			/** vector to Digest */
+			struct rte_crypto_data *digest_vec;
+		};
+	};
+
 	/**
 	 * array of statuses for each operation:
 	 *  - 0 on success
