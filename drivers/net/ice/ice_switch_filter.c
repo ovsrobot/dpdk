@@ -1806,7 +1806,8 @@ ice_switch_init(struct ice_adapter *ad)
 	else
 		return -EINVAL;
 
-	if (ad->devargs.pipe_mode_support)
+	if (ad->devargs.pipe_mode_support &&
+	    ad->active_pkg_type != ICE_PKG_TYPE_OS_DEFAULT)
 		ret = ice_register_parser(perm_parser, ad);
 	else
 		ret = ice_register_parser(dist_parser, ad);
@@ -1824,7 +1825,8 @@ ice_switch_uninit(struct ice_adapter *ad)
 	else
 		dist_parser = &ice_switch_dist_parser_os;
 
-	if (ad->devargs.pipe_mode_support)
+	if (ad->devargs.pipe_mode_support &&
+	    ad->active_pkg_type != ICE_PKG_TYPE_OS_DEFAULT)
 		ice_unregister_parser(perm_parser, ad);
 	else
 		ice_unregister_parser(dist_parser, ad);
