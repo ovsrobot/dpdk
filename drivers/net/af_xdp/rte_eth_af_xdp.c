@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2019 Intel Corporation.
+ * Copyright(c) 2020 Intel Corporation.
  */
 #include <unistd.h>
 #include <errno.h>
@@ -118,6 +118,8 @@ struct pmd_internals {
 	int queue_cnt;
 	int max_queue_cnt;
 	int combined_queue_cnt;
+	char prog_path[PATH_MAX];
+	bool custom_prog_configured;
 
 	struct rte_ether_addr eth_addr;
 
@@ -128,11 +130,13 @@ struct pmd_internals {
 #define ETH_AF_XDP_IFACE_ARG			"iface"
 #define ETH_AF_XDP_START_QUEUE_ARG		"start_queue"
 #define ETH_AF_XDP_QUEUE_COUNT_ARG		"queue_count"
+#define ETH_AF_XDP_PROG_ARG			"xdp_prog"
 
 static const char * const valid_arguments[] = {
 	ETH_AF_XDP_IFACE_ARG,
 	ETH_AF_XDP_START_QUEUE_ARG,
 	ETH_AF_XDP_QUEUE_COUNT_ARG,
+	ETH_AF_XDP_PROG_ARG,
 	NULL
 };
 
@@ -864,6 +868,45 @@ err:
 }
 
 static int
+load_custom_xdp_prog(const char *prog_path, int if_index)
+{
+	int ret, prog_fd = -1;
+	struct bpf_object *obj;
+	struct bpf_map *map;
+
+	ret = bpf_prog_load(prog_path, BPF_PROG_TYPE_XDP, &obj, &prog_fd);
+	if (ret) {
+		AF_XDP_LOG(ERR, "Failed to load program %s\n", prog_path);
+		return ret;
+	}
+
+	/*
+	 * The loaded program must provision for a map of xsks, such that some
+	 * traffic can be redirected to userspace. When the xsk is created,
+	 * libbpf inserts it into the map.
+	 */
+	map = bpf_object__find_map_by_name(obj, "xsks_map");
+	if (!map) {
+		AF_XDP_LOG(ERR, "Failed to find xsks_map in %s\n", prog_path);
+		return -1;
+	}
+
+	/* Link the program with the given network device */
+	ret = bpf_set_link_xdp_fd(if_index, prog_fd,
+					XDP_FLAGS_UPDATE_IF_NOEXIST);
+	if (ret) {
+		AF_XDP_LOG(ERR, "Failed to set prog fd %d on interface\n",
+				prog_fd);
+		return -1;
+	}
+
+	AF_XDP_LOG(INFO, "Successfully loaded XDP program %s with fd %d\n",
+				prog_path, prog_fd);
+
+	return 0;
+}
+
+static int
 xsk_configure(struct pmd_internals *internals, struct pkt_rx_queue *rxq,
 	      int ring_size)
 {
@@ -887,6 +930,18 @@ xsk_configure(struct pmd_internals *internals, struct pkt_rx_queue *rxq,
 #if defined(XDP_USE_NEED_WAKEUP)
 	cfg.bind_flags |= XDP_USE_NEED_WAKEUP;
 #endif
+
+	if (strnlen(internals->prog_path, PATH_MAX) &&
+				!internals->custom_prog_configured) {
+		ret = load_custom_xdp_prog(internals->prog_path,
+					   internals->if_index);
+		if (ret) {
+			AF_XDP_LOG(ERR, "Failed to load custom XDP program %s\n",
+					internals->prog_path);
+			goto err;
+		}
+		internals->custom_prog_configured = 1;
+	}
 
 	ret = xsk_socket__create(&rxq->xsk, internals->if_name,
 			rxq->xsk_queue_idx, rxq->umem->umem, &rxq->rx,
@@ -1099,6 +1154,30 @@ parse_name_arg(const char *key __rte_unused,
 	return 0;
 }
 
+/** parse xdp prog argument */
+static int
+parse_prog_arg(const char *key __rte_unused,
+	       const char *value, void *extra_args)
+{
+	char *path = extra_args;
+
+	if (strnlen(value, PATH_MAX) > PATH_MAX - 1) {
+		AF_XDP_LOG(ERR, "Invalid path %s, should be less than %u bytes.\n",
+			   value, PATH_MAX);
+		return -EINVAL;
+	}
+
+	if (access(value, F_OK) != 0) {
+		AF_XDP_LOG(ERR, "Error accessing %s: %s\n",
+			   value, strerror(errno));
+		return -EINVAL;
+	}
+
+	strlcpy(path, value, PATH_MAX);
+
+	return 0;
+}
+
 static int
 xdp_get_channels_info(const char *if_name, int *max_queues,
 				int *combined_queues)
@@ -1142,7 +1221,7 @@ xdp_get_channels_info(const char *if_name, int *max_queues,
 
 static int
 parse_parameters(struct rte_kvargs *kvlist, char *if_name, int *start_queue,
-			int *queue_cnt)
+			int *queue_cnt, char *prog_path)
 {
 	int ret;
 
@@ -1162,6 +1241,11 @@ parse_parameters(struct rte_kvargs *kvlist, char *if_name, int *start_queue,
 		ret = -EINVAL;
 		goto free_kvlist;
 	}
+
+	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_PROG_ARG,
+				 &parse_prog_arg, prog_path);
+	if (ret < 0)
+		goto free_kvlist;
 
 free_kvlist:
 	rte_kvargs_free(kvlist);
@@ -1200,7 +1284,7 @@ error:
 
 static struct rte_eth_dev *
 init_internals(struct rte_vdev_device *dev, const char *if_name,
-			int start_queue_idx, int queue_cnt)
+		int start_queue_idx, int queue_cnt, const char *prog_path)
 {
 	const char *name = rte_vdev_device_name(dev);
 	const unsigned int numa_node = dev->device.numa_node;
@@ -1216,6 +1300,8 @@ init_internals(struct rte_vdev_device *dev, const char *if_name,
 	internals->start_queue_idx = start_queue_idx;
 	internals->queue_cnt = queue_cnt;
 	strlcpy(internals->if_name, if_name, IFNAMSIZ);
+	strlcpy(internals->prog_path, prog_path, PATH_MAX);
+	internals->custom_prog_configured = 0;
 
 	if (xdp_get_channels_info(if_name, &internals->max_queue_cnt,
 				  &internals->combined_queue_cnt)) {
@@ -1292,6 +1378,7 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 	char if_name[IFNAMSIZ] = {'\0'};
 	int xsk_start_queue_idx = ETH_AF_XDP_DFLT_START_QUEUE_IDX;
 	int xsk_queue_cnt = ETH_AF_XDP_DFLT_QUEUE_COUNT;
+	char prog_path[PATH_MAX] = {'\0'};
 	struct rte_eth_dev *eth_dev = NULL;
 	const char *name;
 
@@ -1321,7 +1408,7 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 		dev->device.numa_node = rte_socket_id();
 
 	if (parse_parameters(kvlist, if_name, &xsk_start_queue_idx,
-			     &xsk_queue_cnt) < 0) {
+			     &xsk_queue_cnt, prog_path) < 0) {
 		AF_XDP_LOG(ERR, "Invalid kvargs value\n");
 		return -EINVAL;
 	}
@@ -1332,7 +1419,7 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 	}
 
 	eth_dev = init_internals(dev, if_name, xsk_start_queue_idx,
-					xsk_queue_cnt);
+					xsk_queue_cnt, prog_path);
 	if (eth_dev == NULL) {
 		AF_XDP_LOG(ERR, "Failed to init internals\n");
 		return -1;
@@ -1375,4 +1462,5 @@ RTE_PMD_REGISTER_VDEV(net_af_xdp, pmd_af_xdp_drv);
 RTE_PMD_REGISTER_PARAM_STRING(net_af_xdp,
 			      "iface=<string> "
 			      "start_queue=<int> "
-			      "queue_count=<int> ");
+			      "queue_count=<int> "
+			      "xdp_prog=<string> ");
