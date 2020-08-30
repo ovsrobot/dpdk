@@ -280,6 +280,8 @@ New Features
     moreover the app also now starts to support inner
     items matching as well.
 
+  * Start supporting header modify actions.
+
 
 Removed Items
 -------------
