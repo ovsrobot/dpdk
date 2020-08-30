@@ -287,6 +287,8 @@ New Features
   * Add new option to set portmask for insertion/deletion:
     ``--portmask=N`` Where N represent the hexadecimal
     bitmask of ports used.
+  * Start supporting icmp and icmp6 matching items.
+
 
 Removed Items
 -------------
