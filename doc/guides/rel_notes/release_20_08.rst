@@ -272,6 +272,14 @@ New Features
   of ingress packets to specific NIC queues.
   See the :doc:`../sample_app_ug/ipsec_secgw` for more details.
 
+* **Add more support for flow-perf application.**
+
+  * Start supporting user order instead of bit mask:
+    Now the user can create any structure of rte_flow
+    using flow performance application with any order,
+    moreover the app also now starts to support inner
+    items matching as well.
+
 
 Removed Items
 -------------
