@@ -283,6 +283,7 @@ New Features
   * Start supporting header modify actions.
   * Start supporting flag action.
   * Start supporting raw-encap and raw-decap actions.
+  * Start supporting vxlan-encap and vxlan-decap actions.
 
 
 Removed Items
