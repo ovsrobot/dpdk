@@ -284,7 +284,9 @@ New Features
   * Start supporting flag action.
   * Start supporting raw-encap and raw-decap actions.
   * Start supporting vxlan-encap and vxlan-decap actions.
-
+  * Add new option to set portmask for insertion/deletion:
+    ``--portmask=N`` Where N represent the hexadecimal
+    bitmask of ports used.
 
 Removed Items
 -------------
