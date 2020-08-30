@@ -281,6 +281,7 @@ New Features
     items matching as well.
 
   * Start supporting header modify actions.
+  * Start supporting flag action.
 
 
 Removed Items
