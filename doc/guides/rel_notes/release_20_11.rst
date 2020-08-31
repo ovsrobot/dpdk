@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added Icelake (Gen4) support for Intel NTB.**
+
+  Added NTB device support (4th generation) for Intel Icelake platform.
 
 Removed Items
 -------------

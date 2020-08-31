@@ -25,6 +25,7 @@
 
 static const struct rte_pci_id pci_id_ntb_map[] = {
 	{ RTE_PCI_DEVICE(NTB_INTEL_VENDOR_ID, NTB_INTEL_DEV_ID_B2B_SKX) },
+	{ RTE_PCI_DEVICE(NTB_INTEL_VENDOR_ID, NTB_INTEL_DEV_ID_B2B_ICX) },
 	{ .vendor_id = 0, /* sentinel */ },
 };
 
@@ -1333,6 +1334,7 @@ ntb_init_hw(struct rte_rawdev *dev, struct rte_pci_device *pci_dev)
 
 	switch (pci_dev->id.device_id) {
 	case NTB_INTEL_DEV_ID_B2B_SKX:
+	case NTB_INTEL_DEV_ID_B2B_ICX:
 		hw->ntb_ops = &intel_ntb_ops;
 		break;
 	default:
