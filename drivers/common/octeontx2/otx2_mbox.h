@@ -90,7 +90,7 @@ struct mbox_msghdr {
 #define OTX2_MBOX_RSP_SIG (0xbeef)
 	/* Signature, for validating corrupted msgs */
 	uint16_t __otx2_io sig;
-#define OTX2_MBOX_VERSION (0x0007)
+#define OTX2_MBOX_VERSION (0x0008)
 	/* Version of msg's structure for this ID */
 	uint16_t __otx2_io ver;
 	/* Offset of next msg within mailbox region */
@@ -767,6 +767,7 @@ struct nix_lf_alloc_rsp {
 	uint8_t __otx2_io cgx_links;  /* No. of CGX links present in HW */
 	uint8_t __otx2_io lbk_links;  /* No. of LBK links present in HW */
 	uint8_t __otx2_io sdp_links;  /* No. of SDP links present in HW */
+	uint8_t __otx2_io tx_link;    /* Transmit channel link number */
 };
 
 struct nix_lf_free_req {
