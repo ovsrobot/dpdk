@@ -44,6 +44,7 @@ doxy_conf = configure_file(input: 'doxy-api.conf.in',
 
 doxy_build = custom_target('doxygen',
 	depends: example,
+	depend_files: 'doxy-api-index.md',
 	input: doxy_conf,
 	output: 'api',
 	depfile: 'api.d',
