@@ -335,6 +335,14 @@ FMLIB
    as well. This helps in overcoming the main limitaiton of FMC - i.e. lack
    of dynamic configuration.
 
+VSP (Virtual Storage Profile)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   The storage profiled are means to provide virtualized interface. A ranges of
+   storage profiles cab be associated to Ethernet ports.
+   They are selected during classification. Specify how the frame should be
+   written to memory and which buffer pool to select for packet storange in
+   queues. Start and End margin of buffer can also be configured.
+
 Limitations
 -----------
 
