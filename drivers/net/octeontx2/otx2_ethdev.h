@@ -476,7 +476,7 @@ int otx2_nix_dev_stats_get(struct rte_eth_dev *eth_dev,
 int otx2_nix_dev_stats_reset(struct rte_eth_dev *eth_dev);
 
 int otx2_nix_queue_stats_mapping(struct rte_eth_dev *dev,
-				 uint16_t queue_id, uint8_t stat_idx,
+				 uint16_t queue_id, uint16_t stat_idx,
 				 uint8_t is_rx);
 int otx2_nix_xstats_get(struct rte_eth_dev *eth_dev,
 			struct rte_eth_xstat *xstats, unsigned int n);
