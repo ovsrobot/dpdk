@@ -84,6 +84,10 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* ethdev: Modified field type of stat_idx, from uint8_t to uint16_t  in
+  ``set_queue_stats_mapping``, ``rte_eth_dev_set_tx_queue_stats_mapping``,
+  ``rte_eth_dev_set_rx_queue_stats_mapping`` for meeting the needs use 256
+  or more than 256 queues and display all statistics of rx/tx queue.
 
 ABI Changes
 -----------
