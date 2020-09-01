@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added Marvell OCTEON TX2 regex PMD.**
+
+  Added a new PMD driver for hardware regex offload block for OCTEON TX2 SoC.
+
+  See the :doc:`../regexdevs/octeontx2` for more details.
 
 Removed Items
 -------------
