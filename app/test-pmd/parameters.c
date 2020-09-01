@@ -66,7 +66,7 @@ usage(char* progname)
 	       "--tx-ip=SRC,DST | --tx-udp=PORT | "
 #endif
 	       "--pkt-filter-mode= |"
-	       "--rss-ip | --rss-udp | "
+	       "--rss-ip | --rss-udp | --rss-level-1 | --rss-level-2 |"
 	       "--rxpt= | --rxht= | --rxwt= | --rxfreet= | "
 	       "--txpt= | --txht= | --txwt= | --txfreet= | "
 	       "--txrst= | --tx-offloads= | | --rx-offloads= | "
@@ -151,6 +151,8 @@ usage(char* progname)
 			"swap L2,L3,L4 for MAC, IPv4/IPv6 and TCP/UDP only.\n");
 	printf("  --rss-ip: set RSS functions to IPv4/IPv6 only .\n");
 	printf("  --rss-udp: set RSS functions to IPv4/IPv6 + UDP.\n");
+	printf("  --rss-level-1: set RSS hash level to 1\n");
+	printf("  --rss-level-2: set RSS hash level to 2\n");
 	printf("  --rxq=N: set the number of RX queues per port to N.\n");
 	printf("  --rxd=N: set the number of descriptors in RX rings to N.\n");
 	printf("  --txq=N: set the number of TX queues per port to N.\n");
@@ -632,6 +634,8 @@ launch_args_parse(int argc, char** argv)
 		{ "forward-mode",               1, 0, 0 },
 		{ "rss-ip",			0, 0, 0 },
 		{ "rss-udp",			0, 0, 0 },
+		{ "rss-level-1",		0, 0, 0 },
+		{ "rss-level-2",		0, 0, 0 },
 		{ "rxq",			1, 0, 0 },
 		{ "txq",			1, 0, 0 },
 		{ "rxd",			1, 0, 0 },
@@ -1051,6 +1055,10 @@ launch_args_parse(int argc, char** argv)
 				rss_hf = ETH_RSS_IP;
 			if (!strcmp(lgopts[opt_idx].name, "rss-udp"))
 				rss_hf = ETH_RSS_UDP;
+			if (!strcmp(lgopts[opt_idx].name, "rss-level-1"))
+				rss_hf |= ETH_RSS_LEVEL_1;
+			if (!strcmp(lgopts[opt_idx].name, "rss-level-2"))
+				rss_hf |= ETH_RSS_LEVEL_2;
 			if (!strcmp(lgopts[opt_idx].name, "rxq")) {
 				n = atoi(optarg);
 				if (n >= 0 && check_nb_rxq((queueid_t)n) == 0)
