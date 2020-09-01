@@ -218,6 +218,20 @@ For example:
      nvgre
      vxlan-gpe
 
+show port eeprom
+~~~~~~~~~~~~~~~~
+
+Display the EEPROM informatioon for given port_id::
+
+   testpmd> show port (port_id) eeprom
+
+show port module eeprom
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Display the module EEPROM informatioon for given port_id::
+
+   testpmd> show port (port_id) module_eeprom
+
 show port rss reta
 ~~~~~~~~~~~~~~~~~~
 
