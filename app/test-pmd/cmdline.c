@@ -166,6 +166,12 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"show port (info|stats|summary|xstats|fdir|stat_qmap|dcb_tc|cap) (port_id|all)\n"
 			"    Display information for port_id, or all.\n\n"
 
+			"show port (port_id) eeprom \n"
+			"    Display the EEPROM infomation for port x.\n\n"
+
+			"show port (port_id) module_eeprom \n"
+			"    Display the port moudle EEPROM infomation for port x.\n\n"
+
 			"show port X rss reta (size) (mask0,mask1,...)\n"
 			"    Display the rss redirection table entry indicated"
 			" by masks on port X. size is used to indicate the"
@@ -7682,6 +7688,85 @@ cmdline_parse_inst_t cmd_showdevice = {
 		NULL,
 	},
 };
+
+/* ** SHOW EEPROM INFO *** */
+struct cmd_showeeprom_result {
+       cmdline_fixed_string_t show;
+       cmdline_fixed_string_t port;
+       cmdline_fixed_string_t type;
+        uint16_t portnum;
+};
+
+static void cmd_showeeprom_parsed(void *parsed_result,
+               __rte_unused struct cmdline *cl,
+               __rte_unused void *data)
+{
+       struct cmd_showeeprom_result *res = parsed_result;
+
+       port_eeprom_display(res->portnum);
+}
+
+cmdline_parse_token_string_t cmd_showeeprom_show =
+       TOKEN_STRING_INITIALIZER(struct cmd_showeeprom_result, show, "show");
+cmdline_parse_token_string_t cmd_showeeprom_port =
+       TOKEN_STRING_INITIALIZER(struct cmd_showeeprom_result, port, "port");
+cmdline_parse_token_num_t cmd_showeeprom_portnum =
+       TOKEN_NUM_INITIALIZER(struct cmd_showeeprom_result, portnum, UINT16);
+cmdline_parse_token_string_t cmd_showeeprom_type =
+       TOKEN_STRING_INITIALIZER(struct cmd_showeeprom_result, type, "eeprom");
+
+cmdline_parse_inst_t cmd_showeeprom = {
+       .f = cmd_showeeprom_parsed,
+       .data = NULL,
+       .help_str = "show port <port_id> eeprom",
+       .tokens = {
+               (void *)&cmd_showeeprom_show,
+               (void *)&cmd_showeeprom_port,
+               (void *)&cmd_showeeprom_portnum,
+               (void *)&cmd_showeeprom_type,
+               NULL,
+       },
+};
+
+/* ** SHOW module EEPROM INFO *** */
+struct cmd_showmoduleeeprom_result {
+       cmdline_fixed_string_t show;
+       cmdline_fixed_string_t port;
+       cmdline_fixed_string_t type;
+        uint16_t portnum;
+};
+
+static void cmd_showmoduleeeprom_parsed(void *parsed_result,
+               __rte_unused struct cmdline *cl,
+               __rte_unused void *data)
+{
+       struct cmd_showmoduleeeprom_result *res = parsed_result;
+
+       port_module_eeprom_display(res->portnum);
+}
+
+cmdline_parse_token_string_t cmd_showmoduleeeprom_show =
+       TOKEN_STRING_INITIALIZER(struct cmd_showmoduleeeprom_result, show, "show");
+cmdline_parse_token_string_t cmd_showmoduleeeprom_port =
+       TOKEN_STRING_INITIALIZER(struct cmd_showmoduleeeprom_result, port, "port");
+cmdline_parse_token_num_t cmd_showmoduleeeprom_portnum =
+	TOKEN_NUM_INITIALIZER(struct cmd_showmoduleeeprom_result, portnum, UINT16);
+cmdline_parse_token_string_t cmd_showmoduleeeprom_type =
+	TOKEN_STRING_INITIALIZER(struct cmd_showmoduleeeprom_result, type, "module_eeprom");
+
+cmdline_parse_inst_t cmd_showmoduleeeprom = {
+	.f = cmd_showmoduleeeprom_parsed,
+	.data = NULL,
+	.help_str = "show port <port_id> module_eeprom",
+	.tokens = {
+		(void *)&cmd_showmoduleeeprom_show,
+		(void *)&cmd_showmoduleeeprom_port,
+		(void *)&cmd_showmoduleeeprom_portnum,
+		(void *)&cmd_showmoduleeeprom_type,
+		NULL,
+	},
+};
+
 /* *** SHOW QUEUE INFO *** */
 struct cmd_showqueue_result {
 	cmdline_fixed_string_t show;
@@ -19400,6 +19485,8 @@ cmdline_parse_ctx_t main_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_load_from_file,
 	(cmdline_parse_inst_t *)&cmd_showport,
 	(cmdline_parse_inst_t *)&cmd_showqueue,
+        (cmdline_parse_inst_t *)&cmd_showeeprom,
+	(cmdline_parse_inst_t *)&cmd_showmoduleeeprom,
 	(cmdline_parse_inst_t *)&cmd_showportall,
 	(cmdline_parse_inst_t *)&cmd_showdevice,
 	(cmdline_parse_inst_t *)&cmd_showcfg,
