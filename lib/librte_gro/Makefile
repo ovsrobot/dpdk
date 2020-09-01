@@ -15,6 +15,7 @@ EXPORT_MAP := rte_gro_version.map
 # source files
 SRCS-$(CONFIG_RTE_LIBRTE_GRO) += rte_gro.c
 SRCS-$(CONFIG_RTE_LIBRTE_GRO) += gro_tcp4.c
+SRCS-$(CONFIG_RTE_LIBRTE_GRO) += gro_udp4.c
 SRCS-$(CONFIG_RTE_LIBRTE_GRO) += gro_vxlan_tcp4.c
 
 # install this header file
