@@ -273,5 +273,5 @@ main() function and checks if the current machine is suitable for running the bi
 Along with compiler optimizations,
 a set of preprocessor defines are automatically added to the build process (regardless of the compiler version).
 These defines correspond to the instruction sets that the target CPU should be able to support.
-For example, a binary compiled for any SSE4.2-capable processor will have RTE_MACHINE_CPUFLAG_SSE4_2 defined,
+For example, a binary compiled for any SSE4.2-capable processor will have a pre-defined compiler macro,
 thus enabling compile-time code path selection for different platforms.
