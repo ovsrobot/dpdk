@@ -4312,6 +4312,7 @@ parse_vc_action_rss(struct context *ctx, const struct token *token,
 		action_rss_data->queue[i] = i;
 	if (!port_id_is_invalid(ctx->port, DISABLED_WARN) &&
 	    ctx->port != (portid_t)RTE_PORT_ALL) {
+		struct rte_eth_rss_conf rss_conf = {0};
 		struct rte_eth_dev_info info;
 		int ret2;
 
@@ -4322,6 +4323,13 @@ parse_vc_action_rss(struct context *ctx, const struct token *token,
 		action_rss_data->conf.key_len =
 			RTE_MIN(sizeof(action_rss_data->key),
 				info.hash_key_size);
+
+		rss_conf.rss_key_len = sizeof(action_rss_data->key);
+		rss_conf.rss_key = action_rss_data->key;
+		ret2 = rte_eth_dev_rss_hash_conf_get(ctx->port, &rss_conf);
+		if (ret2 != 0)
+			return ret2;
+		action_rss_data->conf.key = rss_conf.rss_key;
 	}
 	action->conf = &action_rss_data->conf;
 	return ret;
