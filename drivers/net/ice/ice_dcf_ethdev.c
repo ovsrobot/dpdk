@@ -973,17 +973,79 @@ exit:
 static int eth_ice_dcf_pci_probe(__rte_unused struct rte_pci_driver *pci_drv,
 			     struct rte_pci_device *pci_dev)
 {
+	struct rte_eth_devargs eth_da = { .nb_representor_ports = 0 };
+	char name[RTE_ETH_NAME_MAX_LEN];
+	int i, retval;
+
 	if (!ice_dcf_cap_selected(pci_dev->device.devargs))
 		return 1;
 
-	return rte_eth_dev_pci_generic_probe(pci_dev,
+	if (pci_dev->device.devargs) {
+		retval = rte_eth_devargs_parse(pci_dev->device.devargs->args,
+					       &eth_da);
+		if (retval)
+			return retval;
+	}
+
+	retval =  rte_eth_dev_pci_generic_probe(pci_dev,
 					     sizeof(struct ice_dcf_adapter),
 					     ice_dcf_dev_init);
+	if (retval)
+		return retval;
+
+	/* probe VF representor ports */
+	struct rte_eth_dev *dcf_ethdev =
+		rte_eth_dev_allocated(pci_dev->device.name);
+
+	if (dcf_ethdev == NULL) {
+		PMD_DRV_LOG(ERR, "failed to allocate ethdev.\n");
+		return -ENODEV;
+	}
+
+	for (i = 0; i < eth_da.nb_representor_ports; i++) {
+		if (eth_da.representor_ports[i] == 0) {
+			PMD_DRV_LOG(ERR, "vf 0 can't be a vf representor.\n");
+			continue;
+		}
+
+		struct ice_dcf_vf_representor representor = {
+			.vf_id = eth_da.representor_ports[i],
+			.switch_domain_id = 0,
+			.adapter = (struct ice_dcf_adapter *)
+				   dcf_ethdev->data->dev_private
+		};
+
+		snprintf(name, sizeof(name), "net_%s_representor_%d",
+			pci_dev->device.name, eth_da.representor_ports[i]);
+
+		retval = rte_eth_dev_create(&pci_dev->device, name,
+				sizeof(struct ice_dcf_vf_representor),
+				NULL, NULL, ice_dcf_vf_representor_init,
+				&representor);
+
+		if (retval)
+			PMD_DRV_LOG(ERR,
+			"failed to create dcf vf representor %s.\n",
+			name);
+	}
+
+	return 0;
 }
 
 static int eth_ice_dcf_pci_remove(struct rte_pci_device *pci_dev)
 {
-	return rte_eth_dev_pci_generic_remove(pci_dev, ice_dcf_dev_uninit);
+	struct rte_eth_dev *ethdev;
+
+	ethdev = rte_eth_dev_allocated(pci_dev->device.name);
+	if (!ethdev)
+		return 0;
+
+	if (ethdev->data->dev_flags & RTE_ETH_DEV_REPRESENTOR)
+		return rte_eth_dev_pci_generic_remove(pci_dev,
+						ice_dcf_dev_uninit);
+	else
+		return rte_eth_dev_pci_generic_remove(pci_dev,
+						ice_dcf_vf_representor_uninit);
 }
 
 static const struct rte_pci_id pci_id_ice_dcf_map[] = {
