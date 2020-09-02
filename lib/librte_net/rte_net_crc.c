@@ -12,7 +12,7 @@
 
 #if defined(RTE_ARCH_X86_64) && defined(__PCLMUL__)
 #define X86_64_SSE42_PCLMULQDQ     1
-#elif defined(RTE_ARCH_ARM64) && defined(RTE_MACHINE_CPUFLAG_PMULL)
+#elif defined(RTE_ARCH_ARM64) && defined(__ARM_FEATURE_CRYPTO)
 #define ARM64_NEON_PMULL           1
 #endif
 
