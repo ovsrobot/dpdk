@@ -31,7 +31,7 @@ SRCS-$(CONFIG_RTE_LIBRTE_IAVF_PMD) += iavf_rxtx_vec_sse.c
 endif
 
 ifeq ($(CONFIG_RTE_LIBRTE_IAVF_PMD), y)
-	ifeq ($(findstring RTE_MACHINE_CPUFLAG_AVX2,$(CFLAGS)),RTE_MACHINE_CPUFLAG_AVX2)
+	ifneq ($(filter $(AUTO_CPUFLAGS),__AVX2__),)
 		CC_AVX2_SUPPORT=1
 	else
 		CC_AVX2_SUPPORT=\

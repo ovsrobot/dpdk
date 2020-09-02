@@ -45,7 +45,7 @@ ifeq ($(CONFIG_RTE_ARCH_X86_64),y)
 # 'default' machine (corei7 which has no avx2) and run the binary on
 # newer CPUs that have avx2.
 # This part is verbatim from i40e makefile.
-ifeq ($(findstring RTE_MACHINE_CPUFLAG_AVX2,$(CFLAGS)),RTE_MACHINE_CPUFLAG_AVX2)
+ifneq ($(filter $(AUTO_CPUFLAGS),__AVX2__),)
 	CC_AVX2_SUPPORT=1
 else
 	CC_AVX2_SUPPORT=\

@@ -1691,7 +1691,7 @@ compare_signatures(uint32_t *prim_hash_matches, uint32_t *sec_hash_matches,
 
 	/* For match mask the first bit of every two bits indicates the match */
 	switch (sig_cmp_fn) {
-#if defined(RTE_MACHINE_CPUFLAG_SSE2)
+#if defined(__SSE2__)
 	case RTE_HASH_COMPARE_SSE:
 		/* Compare all signatures in the bucket */
 		*prim_hash_matches = _mm_movemask_epi8(_mm_cmpeq_epi16(

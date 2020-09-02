@@ -38,7 +38,7 @@ endif
 #
 
 #check if flag for AVX2 is already on, if not set it up manually
-ifeq ($(findstring RTE_MACHINE_CPUFLAG_AVX2,$(CFLAGS)),RTE_MACHINE_CPUFLAG_AVX2)
+ifneq ($(filter $(AUTO_CPUFLAGS),__AVX2__),)
 	CC_AVX2_SUPPORT=1
 else
 	CC_AVX2_SUPPORT=\

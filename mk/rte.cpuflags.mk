@@ -113,7 +113,6 @@ CPUFLAGS += SHA1
 CPUFLAGS += SHA2
 endif
 
-MACHINE_CFLAGS += $(addprefix -DRTE_MACHINE_CPUFLAG_,$(CPUFLAGS))
 
 # To strip whitespace
 comma:= ,

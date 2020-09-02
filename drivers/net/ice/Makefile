@@ -66,7 +66,7 @@ endif
 SRCS-$(CONFIG_RTE_LIBRTE_ICE_PMD) += ice_switch_filter.c
 SRCS-$(CONFIG_RTE_LIBRTE_ICE_PMD) += ice_fdir_filter.c
 SRCS-$(CONFIG_RTE_LIBRTE_ICE_PMD) += ice_hash.c
-ifeq ($(findstring RTE_MACHINE_CPUFLAG_AVX2,$(CFLAGS)),RTE_MACHINE_CPUFLAG_AVX2)
+ifneq ($(filter $(AUTO_CPUFLAGS),__AVX2__),)
 	CC_AVX2_SUPPORT=1
 else
 	CC_AVX2_SUPPORT=\
