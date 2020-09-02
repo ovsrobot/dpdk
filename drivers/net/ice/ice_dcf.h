@@ -59,6 +59,7 @@ struct ice_dcf_hw {
 	uint16_t nb_msix;
 	uint16_t rxq_map[16];
 	struct virtchnl_eth_stats eth_stats_offset;
+	struct virtchnl_dcf_vlan_offload vlan_config;
 };
 
 int ice_dcf_execute_virtchnl_cmd(struct ice_dcf_hw *hw,

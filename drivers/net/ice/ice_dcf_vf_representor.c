@@ -185,6 +185,123 @@ ice_dcf_representor_dev_info_get(struct rte_eth_dev *dev,
 	return 0;
 }
 
+static int
+ice_dcf_config_vlan_offload(struct ice_dcf_hw *hw,
+		struct virtchnl_dcf_vlan_offload *vlan_config)
+{
+	struct dcf_virtchnl_cmd args;
+	int err;
+
+	memset(&args, 0, sizeof(args));
+	args.v_op = VIRTCHNL_OP_DCF_VLAN_OFFLOAD;
+	args.req_msg = (uint8_t *)vlan_config;
+	args.req_msglen = sizeof(vlan_config);
+	err = ice_dcf_execute_virtchnl_cmd(hw, &args);
+	if (err)
+		PMD_DRV_LOG(ERR, "fail to execute command %s",
+				 "VIRTCHNL_OP_DCF_VLAN_OFFLOAD");
+	return err;
+}
+
+static int
+ice_dcf_representor_vlan_offload_set(struct rte_eth_dev *dev, int mask)
+{
+	struct ice_dcf_vf_representor *representor = dev->data->dev_private;
+	struct ice_dcf_hw *hw = &representor->adapter->real_hw;
+	struct virtchnl_dcf_vlan_offload vlan_config;
+	int ret = 0;
+
+	vlan_config.vf_id = representor->vf_id;
+
+	if (hw->vlan_config.tx_flags == VIRTCHNL_VLAN_TX_INSERT) {
+		PMD_DRV_LOG(ERR, "Please clear pvid before set vlan offload.");
+		return -EINVAL;
+	}
+
+	if (mask & ETH_VLAN_STRIP_MASK) {
+		if (hw->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN) {
+			vlan_config.type = VIRTCHNL_VLAN_OUTER_TYPE;
+			vlan_config.rx_flags = VIRTCHNL_VLAN_RX_STRIP_IN_DESC;
+			vlan_config.tx_flags = VIRTCHNL_VLAN_TX_INSERT_BY_DESC;
+		} else {
+			vlan_config.type = VIRTCHNL_VLAN_OUTER_TYPE;
+			vlan_config.rx_flags = VIRTCHNL_VLAN_RX_NO_STRIP;
+			vlan_config.tx_flags = VIRTCHNL_VLAN_TX_INSERT_BY_DESC;
+		}
+		ret = ice_dcf_config_vlan_offload(hw, &vlan_config);
+		if (ret < 0) {
+			PMD_DRV_LOG(ERR, "Failed to set vlan offload.");
+			return -EINVAL;
+		}
+	}
+
+	rte_memcpy(&hw->vlan_config, &vlan_config, sizeof(vlan_config));
+
+	return ret;
+}
+
+static int
+ice_dcf_representor_vlan_pvid_set(struct rte_eth_dev *dev,
+				  uint16_t pvid, int on)
+{
+	struct ice_dcf_vf_representor *representor = dev->data->dev_private;
+	struct ice_dcf_hw *hw = &representor->adapter->real_hw;
+	struct virtchnl_dcf_vlan_offload vlan_config;
+	int ret;
+
+	vlan_config.vf_id = representor->vf_id;
+	vlan_config.type = VIRTCHNL_VLAN_OUTER_TYPE;
+	vlan_config.vlan_id = pvid;
+	if (on) {
+		vlan_config.rx_flags = VIRTCHNL_VLAN_RX_STRIP_ONLY;
+		vlan_config.tx_flags = VIRTCHNL_VLAN_TX_INSERT;
+	} else {
+		vlan_config.rx_flags = VIRTCHNL_VLAN_RX_NO_STRIP;
+		vlan_config.tx_flags = VIRTCHNL_VLAN_TX_INSERT_BY_DESC;
+	}
+
+	ret = ice_dcf_config_vlan_offload(hw, &vlan_config);
+	if (ret < 0) {
+		PMD_DRV_LOG(ERR, "Failed to set pvid.");
+		return -EINVAL;
+	}
+
+	rte_memcpy(&hw->vlan_config, &vlan_config, sizeof(vlan_config));
+
+	return 0;
+}
+
+static int
+ice_dcf_representor_vlan_tpid_set(struct rte_eth_dev *dev,
+				  enum rte_vlan_type vlan_type,
+				  uint16_t tpid)
+{
+	struct ice_dcf_vf_representor *representor = dev->data->dev_private;
+	struct ice_dcf_hw *hw = &representor->adapter->real_hw;
+	struct virtchnl_dcf_vlan_offload vlan_config;
+	int ret;
+
+	if (vlan_type != ETH_VLAN_TYPE_INNER &&
+	    vlan_type != ETH_VLAN_TYPE_OUTER) {
+		PMD_DRV_LOG(ERR,
+			    "Unsupported vlan type.");
+		return -EINVAL;
+	}
+
+	vlan_config.vf_id = representor->vf_id;
+	vlan_config.ether_type = tpid;
+	ret = ice_dcf_config_vlan_offload(hw, &vlan_config);
+	if (ret < 0) {
+		PMD_DRV_LOG(ERR,
+			    "Set tpid fail\n");
+		return ret;
+	}
+
+	rte_memcpy(&hw->vlan_config, &vlan_config, sizeof(vlan_config));
+
+	return ret;
+}
+
 static const struct eth_dev_ops ice_dcf_representor_dev_ops = {
 	.dev_configure        = ice_dcf_representor_dev_configure,
 	.dev_start            = ice_dcf_representor_dev_start,
@@ -195,6 +312,9 @@ static const struct eth_dev_ops ice_dcf_representor_dev_ops = {
 	.promiscuous_enable   = ice_dcf_representor_promiscuous_enable,
 	.promiscuous_disable  = ice_dcf_representor_promiscuous_disable,
 	.link_update          = ice_dcf_representor_link_update,
+	.vlan_offload_set     = ice_dcf_representor_vlan_offload_set,
+	.vlan_pvid_set        = ice_dcf_representor_vlan_pvid_set,
+	.vlan_tpid_set        = ice_dcf_representor_vlan_tpid_set,
 };
 
 int
