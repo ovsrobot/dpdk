@@ -406,7 +406,8 @@ cmd_tmgr_subport_profile(char **tokens,
 	char *out,
 	size_t out_size)
 {
-	struct rte_sched_subport_params p;
+	struct rte_sched_subport_params params;
+	struct rte_sched_subport_profile_params p;
 	int status, i;
 
 	if (n_tokens != 35) {
@@ -440,7 +441,8 @@ cmd_tmgr_subport_profile(char **tokens,
 		return;
 	}
 
-	if (parser_read_uint32(&p.n_pipes_per_subport_enabled, tokens[20]) != 0) {
+	if (parser_read_uint32(&params.n_pipes_per_subport_enabled,
+		tokens[20]) != 0) {
 		snprintf(out, out_size, MSG_ARG_INVALID, "n_pipes_per_subport");
 		return;
 	}
@@ -451,12 +453,12 @@ cmd_tmgr_subport_profile(char **tokens,
 	}
 
 	for (i = 0; i < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; i++)
-		if (parser_read_uint16(&p.qsize[i], tokens[22 + i]) != 0) {
+		if (parser_read_uint16(&params.qsize[i], tokens[22 + i]) != 0) {
 			snprintf(out, out_size, MSG_ARG_INVALID, "qsize");
 			return;
 		}
 
-	status = tmgr_subport_profile_add(&p);
+	status = tmgr_subport_profile_add(&p, &params);
 	if (status != 0) {
 		snprintf(out, out_size, MSG_CMD_FAIL, tokens[0]);
 		return;

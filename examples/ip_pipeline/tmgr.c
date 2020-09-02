@@ -11,6 +11,9 @@
 static struct rte_sched_subport_params
 	subport_profile[TMGR_SUBPORT_PROFILE_MAX];
 
+static struct rte_sched_subport_profile_params
+		profile_params[TMGR_SUBPORT_PROFILE_MAX];
+
 static uint32_t n_subport_profiles;
 
 static struct rte_sched_pipe_params
@@ -44,15 +47,20 @@ tmgr_port_find(const char *name)
 }
 
 int
-tmgr_subport_profile_add(struct rte_sched_subport_params *p)
+tmgr_subport_profile_add(struct rte_sched_subport_profile_params *p,
+			 struct rte_sched_subport_params *params)
 {
 	/* Check input params */
-	if (p == NULL ||
-		p->n_pipes_per_subport_enabled == 0)
+	if (p == NULL || params == NULL ||
+		params->n_pipes_per_subport_enabled == 0)
 		return -1;
 
 	/* Save profile */
 	memcpy(&subport_profile[n_subport_profiles],
+		params,
+		sizeof(*params));
+
+	memcpy(&profile_params[n_subport_profiles],
 		p,
 		sizeof(*p));
 
@@ -103,6 +111,9 @@ tmgr_port_create(const char *name, struct tmgr_port_params *params)
 	p.mtu = params->mtu;
 	p.frame_overhead = params->frame_overhead;
 	p.n_subports_per_port = params->n_subports_per_port;
+	p.n_subport_profiles = n_subport_profiles;
+	p.subport_profiles = profile_params;
+	p.n_max_subport_profiles = TMGR_SUBPORT_PROFILE_MAX;
 	p.n_pipes_per_subport = TMGR_PIPE_SUBPORT_MAX;
 
 	s = rte_sched_port_config(&p);
@@ -120,6 +131,13 @@ tmgr_port_create(const char *name, struct tmgr_port_params *params)
 			s,
 			i,
 			&subport_profile[0]);
+
+		if (status) {
+			rte_sched_port_free(s);
+			return NULL;
+		}
+
+		status = rte_sched_subport_profile_config(s, i, 0);
 
 		if (status) {
 			rte_sched_port_free(s);
@@ -181,6 +199,10 @@ tmgr_subport_config(const char *port_name,
 		port->s,
 		subport_id,
 		&subport_profile[subport_profile_id]);
+
+	if (!status)
+		status = rte_sched_subport_profile_config(port->s, subport_id,
+							subport_profile_id);
 
 	return status;
 }
