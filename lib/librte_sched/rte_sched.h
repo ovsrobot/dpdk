@@ -325,6 +325,29 @@ rte_sched_subport_pipe_profile_add(struct rte_sched_port *port,
 	uint32_t *pipe_profile_id);
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Hierarchical scheduler subport bandwidth profile add
+ * Note that this function is safe to use in runtime for adding new
+ * subport bandwidth profile as it doesn't have any impact on hiearchical
+ * structure of the scheduler.
+ * @param port
+ *   Handle to port scheduler instance
+ * @param struct rte_sched_subport_profile
+ *   Subport bandwidth profile
+ * @param subport_profile_d
+ *   Subport profile id
+ * @return
+ *   0 upon success, error code otherwise
+ */
+__rte_experimental
+int
+rte_sched_port_subport_profile_add(struct rte_sched_port *port,
+	struct rte_sched_subport_profile_params *profile,
+	uint32_t *subport_profile_id);
+
+/**
  * Hierarchical scheduler subport configuration
  *
  * @param port
@@ -341,6 +364,28 @@ rte_sched_subport_config(struct rte_sched_port *port,
 	uint32_t subport_id,
 	struct rte_sched_subport_params *params);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Hierarchical scheduler subport profile configuration
+ * Note that this function is safe to use in runtime for applying any specific
+ * subport bandwidth profile as it doesn't have any impact on hiearchical
+ * structure of the scheduler.
+ * @param port
+ *   Handle to port scheduler instance
+ * @param subport_id
+ *   Subport ID
+ * @param profile_d
+ *   Subport profile id
+ * @return
+ *   0 upon success, error code otherwise
+ */
+__rte_experimental
+int
+rte_sched_subport_profile_config(struct rte_sched_port *port,
+	uint32_t subport_id,
+	uint32_t profile_id);
 /**
  * Hierarchical scheduler pipe configuration
  *
