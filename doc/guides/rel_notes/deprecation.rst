@@ -263,13 +263,6 @@ Deprecation Notices
   This feature faces reliability issues and is often conflicting with
   new features being implemented.
 
-* security: The API ``rte_security_session_create`` takes only single mempool
-  for session and session private data. So the application need to create
-  mempool for twice the number of sessions needed and will also lead to
-  wastage of memory as session private data need more memory compared to session.
-  Hence the API will be modified to take two mempool pointers - one for session
-  and one for private data.
-
 * cryptodev: ``RTE_CRYPTO_AEAD_LIST_END`` from ``enum rte_crypto_aead_algorithm``,
   ``RTE_CRYPTO_CIPHER_LIST_END`` from ``enum rte_crypto_cipher_algorithm`` and
   ``RTE_CRYPTO_AUTH_LIST_END`` from ``enum rte_crypto_auth_algorithm``

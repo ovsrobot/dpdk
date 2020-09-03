@@ -7219,7 +7219,8 @@ test_pdcp_proto(int i, int oop,
 
 	/* Create security session */
 	ut_params->sec_session = rte_security_session_create(ctx,
-				&sess_conf, ts_params->session_priv_mpool);
+				&sess_conf, ts_params->session_mpool,
+				ts_params->session_priv_mpool);
 
 	if (!ut_params->sec_session) {
 		printf("TestCase %s()-%d line %d failed %s: ",
@@ -7479,7 +7480,8 @@ test_pdcp_proto_SGL(int i, int oop,
 
 	/* Create security session */
 	ut_params->sec_session = rte_security_session_create(ctx,
-				&sess_conf, ts_params->session_priv_mpool);
+				&sess_conf, ts_params->session_mpool,
+				ts_params->session_priv_mpool);
 
 	if (!ut_params->sec_session) {
 		printf("TestCase %s()-%d line %d failed %s: ",
@@ -7836,6 +7838,7 @@ test_docsis_proto_uplink(int i, struct docsis_test_data *d_td)
 
 	/* Create security session */
 	ut_params->sec_session = rte_security_session_create(ctx, &sess_conf,
+					ts_params->session_mpool,
 					ts_params->session_priv_mpool);
 
 	if (!ut_params->sec_session) {
@@ -8011,6 +8014,7 @@ test_docsis_proto_downlink(int i, struct docsis_test_data *d_td)
 
 	/* Create security session */
 	ut_params->sec_session = rte_security_session_create(ctx, &sess_conf,
+					ts_params->session_mpool,
 					ts_params->session_priv_mpool);
 
 	if (!ut_params->sec_session) {

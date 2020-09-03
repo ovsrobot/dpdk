@@ -26,7 +26,8 @@
 struct rte_security_session *
 rte_security_session_create(struct rte_security_ctx *instance,
 			    struct rte_security_session_conf *conf,
-			    struct rte_mempool *mp)
+			    struct rte_mempool *mp,
+			    struct rte_mempool *priv_mp)
 {
 	struct rte_security_session *sess = NULL;
 
@@ -37,7 +38,8 @@ rte_security_session_create(struct rte_security_ctx *instance,
 	if (rte_mempool_get(mp, (void **)&sess))
 		return NULL;
 
-	if (instance->ops->session_create(instance->device, conf, sess, mp)) {
+	if (instance->ops->session_create(instance->device, conf,
+				sess, priv_mp)) {
 		rte_mempool_put(mp, (void *)sess);
 		return NULL;
 	}

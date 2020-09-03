@@ -84,6 +84,12 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* security: The API ``rte_security_session_create`` is updated to take two
+  mempool objects one for session and other for session private data.
+  So the application need to create two mempools and get the size of session
+  private data using API ``rte_security_session_get_size`` for private session
+  mempool.
+
 
 ABI Changes
 -----------
