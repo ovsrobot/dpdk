@@ -20,15 +20,8 @@ if sys.version_info.major < 3:
     print("WARNING: Python 2 is deprecated for use in DPDK, and will not work in future releases.", file=sys.stderr)
     print("Please use Python 3 instead", file=sys.stderr)
 
-if "RTE_SDK" in os.environ:
-    dpdk_path = os.environ["RTE_SDK"]
-else:
-    dpdk_path = "../.."
-
-if "RTE_TARGET" in os.environ:
-    dpdk_target = os.environ["RTE_TARGET"]
-else:
-    dpdk_target = "x86_64-native-linux-gcc"
+dpdk_path = "../.."
+dpdk_target = "build"
 
 parser = argparse.ArgumentParser(
                     description='BBdev Unit Test Application',
