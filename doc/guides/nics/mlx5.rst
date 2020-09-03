@@ -20,11 +20,6 @@ Information and documentation about these adapters can be found on the
 There is also a `section dedicated to this poll mode driver
 <http://www.mellanox.com/page/products_dyn?product_family=209&mtag=pmd_for_dpdk>`__.
 
-.. note::
-
-   Due to external dependencies, this driver is disabled in default configuration
-   of the "make" build. It can be enabled with ``CONFIG_RTE_LIBRTE_MLX5_PMD=y``
-   or by using "meson" build system which will detect dependencies.
 
 Design
 ------
@@ -328,50 +323,9 @@ Configuration
 Compilation options
 ~~~~~~~~~~~~~~~~~~~
 
-These options can be modified in the ``.config`` file.
-
-- ``CONFIG_RTE_LIBRTE_MLX5_PMD`` (default **n**)
-
-  Toggle compilation of librte_pmd_mlx5 itself.
-
-- ``CONFIG_RTE_IBVERBS_LINK_DLOPEN`` (default **n**)
-
-  Build PMD with additional code to make it loadable without hard
-  dependencies on **libibverbs** nor **libmlx5**, which may not be installed
-  on the target system.
-
-  In this mode, their presence is still required for it to run properly,
-  however their absence won't prevent a DPDK application from starting (with
-  ``CONFIG_RTE_BUILD_SHARED_LIB`` disabled) and they won't show up as
-  missing with ``ldd(1)``.
-
-  It works by moving these dependencies to a purpose-built rdma-core "glue"
-  plug-in which must either be installed in a directory whose name is based
-  on ``CONFIG_RTE_EAL_PMD_PATH`` suffixed with ``-glue`` if set, or in a
-  standard location for the dynamic linker (e.g. ``/lib``) if left to the
-  default empty string (``""``).
-
-  This option has no performance impact.
-
-- ``CONFIG_RTE_IBVERBS_LINK_STATIC`` (default **n**)
-
-  Embed static flavor of the dependencies **libibverbs** and **libmlx5**
-  in the PMD shared library or the executable static binary.
-
-- ``CONFIG_RTE_LIBRTE_MLX5_DEBUG`` (default **n**)
-
-  Toggle debugging code and stricter compilation flags. Enabling this option
-  adds additional run-time checks and debugging messages at the cost of
-  lower performance.
-
-.. note::
-
-   For BlueField, target should be set to ``arm64-bluefield-linux-gcc``. This
-   will enable ``CONFIG_RTE_LIBRTE_MLX5_PMD`` and set ``RTE_CACHE_LINE_SIZE`` to
-   64. Default armv8a configuration of make build and meson build set it to 128
-   then brings performance degradation.
-
-This option is available in meson:
+The ibverbs libraries can be linked with this PMD in a number of ways,
+configured by the "ibverbs_link" build option. This can take on the
+following values:
 
 - ``ibverbs_link`` can be ``static``, ``shared``, or ``dlopen``.
 
@@ -382,10 +336,6 @@ Environment variables
 
   A list of directories in which to search for the rdma-core "glue" plug-in,
   separated by colons or semi-colons.
-
-  Only matters when compiled with ``CONFIG_RTE_IBVERBS_LINK_DLOPEN``
-  enabled and most useful when ``CONFIG_RTE_EAL_PMD_PATH`` is also set,
-  since ``LD_LIBRARY_PATH`` has no effect in this case.
 
 - ``MLX5_SHUT_UP_BF``
 
@@ -1109,12 +1059,6 @@ RDMA Core with Linux Kernel
 .. _`Linux installation documentation`: https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/plain/Documentation/admin-guide/README.rst
 .. _`RDMA Core installation documentation`: https://raw.githubusercontent.com/linux-rdma/rdma-core/master/README.md
 
-If rdma-core libraries are built but not installed, DPDK makefile can link them,
-thanks to these environment variables:
-
-   - ``EXTRA_CFLAGS=-I/path/to/rdma-core/build/include``
-   - ``EXTRA_LDFLAGS=-L/path/to/rdma-core/build/lib``
-   - ``PKG_CONFIG_PATH=/path/to/rdma-core/build/lib/pkgconfig``
 
 Mellanox OFED/EN
 ^^^^^^^^^^^^^^^^

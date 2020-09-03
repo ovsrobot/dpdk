@@ -111,22 +111,9 @@ Performance note
 Config File Options
 ~~~~~~~~~~~~~~~~~~~
 
-The following options can be modified in the ``.config`` file. Please note that
-enabling debugging options may affect system performance.
+The following option can be modified in the ``config/rte_config.h`` file.
 
-- ``CONFIG_RTE_LIBRTE_QEDE_PMD`` (default **y**)
-
-  Toggle compilation of QEDE PMD driver.
-
-- ``CONFIG_RTE_LIBRTE_QEDE_DEBUG_TX`` (default **n**)
-
-  Toggle display of transmit fast path run-time messages.
-
-- ``CONFIG_RTE_LIBRTE_QEDE_DEBUG_RX`` (default **n**)
-
-  Toggle display of receive fast path run-time messages.
-
-- ``CONFIG_RTE_LIBRTE_QEDE_FW`` (default **""**)
+- ``RTE_LIBRTE_QEDE_FW`` (default **""**)
 
   Gives absolute path of firmware file.
   ``Eg: "/lib/firmware/qed/qed_init_values-8.40.33.0.bin"``
