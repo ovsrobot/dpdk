@@ -130,6 +130,13 @@ struct rte_security_ipsec_sa_options {
 	 */
 	uint32_t udp_encap : 1;
 
+	/** Verify tunnel header and UDP encapsulation ports in inbound
+	 *
+	 * * 1: Match outer header source, destination addresses and UDP ports
+	 * * 0: Do not match outer IP addresses and UDP ports
+	 */
+	uint32_t encap_hdr_verify : 1;
+
 	/** Copy DSCP bits
 	 *
 	 * * 1: Copy IPv4 or IPv6 DSCP bits from inner IP header to
@@ -191,6 +198,16 @@ enum rte_security_ipsec_sa_direction {
 };
 
 /**
+ * UDP encapsulation ports
+ */
+struct rte_security_ipsec_udp_encapsulation {
+	uint16_t src_port;
+	/**< UDP source port */
+	uint16_t dst_port;
+	/**< UDP destination port */
+};
+
+/**
  * IPsec security association configuration data.
  *
  * This structure contains data required to create an IPsec SA security session.
@@ -216,6 +233,8 @@ struct rte_security_ipsec_xform {
 	/**< Anti replay window size to enable sequence replay attack handling.
 	 * replay checking is disabled if the window size is 0.
 	 */
+	struct rte_security_ipsec_udp_encapsulation udp_encap;
+	/**< UDP encapsulation ports */
 };
 
 /**
