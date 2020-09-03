@@ -1,28 +1,11 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
     Copyright(c) 2010-2014 Intel Corporation.
 
-.. _External_Application/Library_Makefile_help:
+.. _External_Application_Makefile_help:
 
-External Application/Library Makefile help
+External Application Makefile help
 ==========================================
 
-External applications or libraries should include specific Makefiles from RTE_SDK, located in mk directory.
-These Makefiles are:
-
-*   ${RTE_SDK}/mk/rte.extapp.mk: Build an application
-
-*   ${RTE_SDK}/mk/rte.extlib.mk: Build a static library
-
-*   ${RTE_SDK}/mk/rte.extobj.mk: Build objects (.o)
-
-Prerequisites
--------------
-
-The following variables must be defined:
-
-*   ${RTE_SDK}: Points to the root directory of the DPDK.
-
-*   ${RTE_TARGET}: Reference the target to be used for compilation (for example, x86_64-native-linux-gcc).
 
 Build Targets
 -------------
@@ -32,7 +15,7 @@ This is optional; the default output directory is build.
 
 *   all, "nothing" (meaning just make)
 
-    Build the application or the library in the specified output directory.
+    Build the application in the specified output directory.
 
     Example:
 
@@ -93,6 +76,4 @@ It is possible to run the Makefile from another directory, by specifying the out
 
 .. code-block:: console
 
-    export RTE_SDK=/path/to/DPDK
-    export RTE_TARGET=x86_64-native-linux-icc
     make -f /path/to/my_app/Makefile S=/path/to/my_app O=/path/to/build_dir
