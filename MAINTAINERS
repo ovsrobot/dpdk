@@ -100,10 +100,8 @@ F: .editorconfig
 Build System
 ------------
 M: Thomas Monjalon <thomas@monjalon.net>
-F: GNUmakefile
 F: Makefile
 F: config/
-F: mk/
 F: buildtools/auto-config-h.sh
 F: buildtools/gen-build-mk.sh
 F: buildtools/gen-config-h.sh
@@ -354,7 +352,6 @@ Memory pool
 M: Olivier Matz <olivier.matz@6wind.com>
 M: Andrew Rybchenko <arybchenko@solarflare.com>
 F: lib/librte_mempool/
-F: drivers/mempool/Makefile
 F: drivers/mempool/ring/
 F: doc/guides/prog_guide/mempool_lib.rst
 F: app/test/test_mempool*
@@ -1519,7 +1516,6 @@ Test Applications
 -----------------
 
 Unit tests framework
-F: app/test/Makefile
 F: app/test/autotest*
 F: app/test/commands.c
 F: app/test/get-coremask.sh
