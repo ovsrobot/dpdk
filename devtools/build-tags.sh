@@ -19,8 +19,8 @@ arm_64=true
 print_usage()
 {
 	echo "Usage: $(basename $0) [-h] [-v] tags|cscope|gtags|etags [config]"
-	echo "Valid configs are:"
-	make showconfigs | sed 's,^,\t,'
+	echo "Examples of valid configs are: "
+	echo "x86_64-native-linux-gcc, arm64-armv8a-linux-gcc, ppc_64-power8-linux-gcc"
 }
 
 # Move to the root of the git tree
@@ -125,17 +125,7 @@ ppc_64_sources()
 	find_sources "$source_dirs" '*altivec*.[chS]'
 }
 
-check_valid_target()
-{
-	if [ ! -f "config/defconfig_$1" ] ; then
-		echo "Invalid config: $1"
-		print_usage
-		exit 0
-	fi
-}
-
 if [ -n "$2" ]; then
-	check_valid_target $2
 
 	echo $2 | grep -q "linux" || linux=false
 	echo $2 | grep -q "bsd" || bsd=false

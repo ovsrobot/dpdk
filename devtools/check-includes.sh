@@ -17,8 +17,7 @@
 #
 # SUMMARY=1 is the same as -s.
 #
-# CC, CPPFLAGS, CFLAGS, EXTRA_CPPFLAGS, EXTRA_CFLAGS, CXX, CXXFLAGS and
-# EXTRA_CXXFLAGS are taken into account.
+# CC, CPPFLAGS, CFLAGS, CXX, CXXFLAGS are taken into account.
 #
 # PEDANTIC_CFLAGS, PEDANTIC_CXXFLAGS and PEDANTIC_CPPFLAGS provide strict
 # C/C++ compilation flags.
