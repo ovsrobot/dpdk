@@ -117,6 +117,14 @@ dependencies are met on the current system are built.
 When `-Dexamples=all` is set as a meson option, meson will check each example application to see if it can be built,
 and add all which can be built to the list of tasks in the ninja build configuration file.
 
+.. note::
+
+    A number of buildtime constants are present in DPDK, listed in file ``config/rte_config.h``.
+    While these should not normally need to be changed,
+    they can be overridden by setting the new value of the constant in the ``CFLAGS`` environment variable,
+    or via ``c_args`` meson parameter.
+    For example: ``meson configure -Dc_args="-DRTE_PKTMBUF_HEADROOM=256"``
+
 Building Applications Using Installed DPDK
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

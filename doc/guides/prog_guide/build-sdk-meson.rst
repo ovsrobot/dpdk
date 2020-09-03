@@ -68,6 +68,14 @@ built into meson, while others, such as ``max_lcores``, or the list of
 examples to build, are DPDK-specific. To have a list of all options
 available run ``meson configure`` in the build directory.
 
+.. note::
+
+    A number of buildtime constants are present in DPDK, listed in file ``config/rte_config.h``.
+    While these should not normally need to be changed,
+    they can be overridden by setting the new value of the constant in the ``CFLAGS`` environment variable,
+    or via ``c_args`` meson parameter.
+    For example: ``meson configure -Dc_args="-DRTE_PKTMBUF_HEADROOM=256"``
+
 Examples of adjusting the defaults when doing initial meson configuration.
 Project-specific options are passed used -Doption=value::
 
