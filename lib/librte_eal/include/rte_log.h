@@ -112,7 +112,6 @@ int rte_openlog_stream(FILE *f);
  * @return
  *   Pointer to the stream.
  */
-__rte_experimental
 FILE *rte_log_get_stream(void);
 
 /**
