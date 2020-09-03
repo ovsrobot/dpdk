@@ -85,17 +85,17 @@
 
 /* ip_fragmentation defines */
 #define RTE_LIBRTE_IP_FRAG_MAX_FRAG 4
-#undef RTE_LIBRTE_IP_FRAG_TBL_STAT
+// RTE_LIBRTE_IP_FRAG_TBL_STAT is not set
 
 /* rte_power defines */
 #define RTE_MAX_LCORE_FREQS 64
 
 /* rte_sched defines */
-#undef RTE_SCHED_RED
-#undef RTE_SCHED_COLLECT_STATS
-#undef RTE_SCHED_SUBPORT_TC_OV
+// RTE_SCHED_RED is not set
+// RTE_SCHED_COLLECT_STATS is not set
+// RTE_SCHED_SUBPORT_TC_OV is not set
 #define RTE_SCHED_PORT_N_GRINDERS 8
-#undef RTE_SCHED_VECTOR
+// RTE_SCHED_VECTOR is not set
 
 /* KNI defines */
 #define RTE_KNI_PREEMPT_DEFAULT 1
@@ -123,7 +123,7 @@
 
 /* i40e defines */
 #define RTE_LIBRTE_I40E_RX_ALLOW_BULK_ALLOC 1
-#undef RTE_LIBRTE_I40E_16BYTE_RX_DESC
+// RTE_LIBRTE_I40E_16BYTE_RX_DESC is not set
 #define RTE_LIBRTE_I40E_QUEUE_NUM_PER_PF 64
 #define RTE_LIBRTE_I40E_QUEUE_NUM_PER_VF 4
 #define RTE_LIBRTE_I40E_QUEUE_NUM_PER_VM 4
