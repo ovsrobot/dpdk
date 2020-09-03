@@ -84,6 +84,8 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* eal: The ``rte_logs`` struct and global symbol was made private
+  and is no longer part of the API.
 
 ABI Changes
 -----------
