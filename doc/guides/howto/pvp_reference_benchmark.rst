@@ -99,14 +99,7 @@ Build Qemu:
 DPDK build
 ~~~~~~~~~~
 
-Build DPDK:
-
-   .. code-block:: console
-
-      git clone git://dpdk.org/dpdk
-      cd dpdk
-      export RTE_SDK=$PWD
-      make install T=x86_64-native-linux-gcc DESTDIR=install
+See :doc:`../linux_gsg/build_dpdk` for details.
 
 
 Testpmd launch
@@ -117,7 +110,7 @@ Testpmd launch
    .. code-block:: console
 
       modprobe vfio-pci
-      $RTE_SDK/install/sbin/dpdk-devbind -b vfio-pci 0000:11:00.0 0000:11:00.1
+      ./dpdk/usertools/dpdk-devbind -b vfio-pci 0000:11:00.0 0000:11:00.1
 
    .. Note::
 
@@ -129,7 +122,7 @@ Testpmd launch
 
    .. code-block:: console
 
-      $RTE_SDK/install/bin/testpmd -l 0,2,3,4,5 --socket-mem=1024 -n 4 \
+      ./dpdk/<build_dir>/app/dpdk-testpmd -l 0,2,3,4,5 --socket-mem=1024 -n 4 \
           --vdev 'net_vhost0,iface=/tmp/vhost-user1' \
           --vdev 'net_vhost1,iface=/tmp/vhost-user2' -- \
           --portmask=f -i --rxq=1 --txq=1 \
@@ -309,18 +302,10 @@ Guest tuning
         echo "obase=16;$(( 0x$(cat $i) & ~$clear_mask ))" | bc > $i
       done
 
-
 DPDK build
 ~~~~~~~~~~
 
-Build DPDK:
-
-   .. code-block:: console
-
-      git clone git://dpdk.org/dpdk
-      cd dpdk
-      export RTE_SDK=$PWD
-      make install T=x86_64-native-linux-gcc DESTDIR=install
+See :doc:`../linux_gsg/build_dpdk` for details.
 
 
 Testpmd launch
@@ -340,13 +325,13 @@ Bind the virtio-net devices to DPDK:
 
    .. code-block:: console
 
-      $RTE_SDK/usertools/dpdk-devbind.py -b vfio-pci 0000:00:10.0 0000:00:11.0
+      ./dpdk/usertools/dpdk-devbind.py -b vfio-pci 0000:00:10.0 0000:00:11.0
 
 Start testpmd:
 
    .. code-block:: console
 
-      $RTE_SDK/install/bin/testpmd -l 0,1,2 --socket-mem 1024 -n 4 \
+      ./dpdk/<build_dir>/app/dpdk-testpmd -l 0,1,2 --socket-mem 1024 -n 4 \
           --proc-type auto --file-prefix pg -- \
           --portmask=3 --forward-mode=macswap --port-topology=chained \
           --disable-rss -i --rxq=1 --txq=1 \
