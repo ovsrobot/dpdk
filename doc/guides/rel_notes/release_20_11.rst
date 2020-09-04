@@ -100,6 +100,9 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* ethdev: Modified field type of base and nb_queue, from uint8_t to uint16_t  in
+  struct ``rte_eth_dcb_tc_queue_mapping``.As the data of uint8_t will be truncated when
+  queue number under a TC is greater than 256.
 
 Known Issues
 ------------
