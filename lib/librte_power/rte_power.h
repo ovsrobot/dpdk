@@ -14,6 +14,7 @@
 #include <rte_byteorder.h>
 #include <rte_log.h>
 #include <rte_string_fns.h>
+#include <rte_ethdev.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,6 +97,43 @@ int rte_power_init(unsigned int lcore_id);
  *  - Negative on error.
  */
 int rte_power_exit(unsigned int lcore_id);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Enable device power management.
+ * @param lcore_id
+ *   lcore id.
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param mode
+ *   The power management callback function mode.
+ * @return
+ *   0 on success
+ *   <0 on error
+ */
+__rte_experimental
+int rte_power_pmd_mgmt_enable(unsigned int lcore_id,
+				  uint16_t port_id,
+				  enum rte_eth_dev_power_mgmt_cb_mode mode);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Disable device power management.
+ * @param lcore_id
+ *   lcore id.
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ *
+ * @return
+ *   0 on success
+ *   <0 on error
+ */
+__rte_experimental
+int rte_power_pmd_mgmt_disable(unsigned int lcore_id, uint16_t port_id);
 
 /**
  * Get the available frequencies of a specific lcore.
