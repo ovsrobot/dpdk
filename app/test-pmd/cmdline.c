@@ -8244,7 +8244,7 @@ struct cmd_set_qmap_result {
 	cmdline_fixed_string_t what;
 	portid_t port_id;
 	uint16_t queue_id;
-	uint8_t map_value;
+	uint16_t map_value;
 };
 
 static void

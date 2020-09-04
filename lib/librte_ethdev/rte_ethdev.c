@@ -2905,7 +2905,7 @@ rte_eth_xstats_reset(uint16_t port_id)
 }
 
 static int
-set_queue_stats_mapping(uint16_t port_id, uint16_t queue_id, uint8_t stat_idx,
+set_queue_stats_mapping(uint16_t port_id, uint16_t queue_id, uint16_t stat_idx,
 		uint8_t is_rx)
 {
 	struct rte_eth_dev *dev;
@@ -2932,7 +2932,7 @@ set_queue_stats_mapping(uint16_t port_id, uint16_t queue_id, uint8_t stat_idx,
 
 int
 rte_eth_dev_set_tx_queue_stats_mapping(uint16_t port_id, uint16_t tx_queue_id,
-		uint8_t stat_idx)
+		uint16_t stat_idx)
 {
 	return eth_err(port_id, set_queue_stats_mapping(port_id, tx_queue_id,
 						stat_idx, STAT_QMAP_TX));
@@ -2941,7 +2941,7 @@ rte_eth_dev_set_tx_queue_stats_mapping(uint16_t port_id, uint16_t tx_queue_id,
 
 int
 rte_eth_dev_set_rx_queue_stats_mapping(uint16_t port_id, uint16_t rx_queue_id,
-		uint8_t stat_idx)
+		uint16_t stat_idx)
 {
 	return eth_err(port_id, set_queue_stats_mapping(port_id, rx_queue_id,
 						stat_idx, STAT_QMAP_RX));
