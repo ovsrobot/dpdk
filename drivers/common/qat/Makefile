@@ -42,6 +42,7 @@ endif
 	SRCS-y += qat_sym.c
 	SRCS-y += qat_sym_session.c
 	SRCS-y += qat_sym_pmd.c
+	SRCS-y += qat_sym_hw_dp.c
 	build_qat = yes
 endif
 endif
