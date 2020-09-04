@@ -212,6 +212,7 @@ static const struct eth_dev_ops ice_eth_dev_ops = {
 	.udp_tunnel_port_add          = ice_dev_udp_tunnel_port_add,
 	.udp_tunnel_port_del          = ice_dev_udp_tunnel_port_del,
 	.tx_done_cleanup              = ice_tx_done_cleanup,
+	.next_rx_desc	              = ice_next_rx_desc,
 };
 
 /* store statistics names and its offset in stats structure */

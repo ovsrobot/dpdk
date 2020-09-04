@@ -24,6 +24,29 @@ uint64_t rte_net_ice_dynflag_proto_xtr_ipv6_mask;
 uint64_t rte_net_ice_dynflag_proto_xtr_ipv6_flow_mask;
 uint64_t rte_net_ice_dynflag_proto_xtr_tcp_mask;
 
+int ice_next_rx_desc(void *rx_queue, volatile void **tail_desc_addr,
+		uint64_t *expected, uint64_t *mask)
+{
+	volatile union ice_rx_flex_desc *rxdp;
+	struct ice_rx_queue *rxq = rx_queue;
+	uint16_t desc;
+
+	desc = rxq->rx_tail;
+	rxdp = &rxq->rx_ring[desc];
+	/* watch for changes in status bit */
+	*tail_desc_addr = &rxdp->wb.status_error0;
+
+	/*
+	 * we expect the DD bit to be set to 1 if this descriptor was already
+	 * written to.
+	 */
+	*expected = rte_cpu_to_le_16(1 << ICE_RX_FLEX_DESC_STATUS0_DD_S);
+	*mask = rte_cpu_to_le_16(1 << ICE_RX_FLEX_DESC_STATUS0_DD_S);
+
+	return 0;
+}
+
+
 static inline uint64_t
 ice_rxdid_to_proto_xtr_ol_flag(uint8_t rxdid)
 {
