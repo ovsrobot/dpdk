@@ -648,6 +648,8 @@ iavf_dev_promiscuous_enable(struct rte_eth_dev *dev)
 	ret = iavf_config_promisc(adapter, true, vf->promisc_multicast_enabled);
 	if (!ret)
 		vf->promisc_unicast_enabled = true;
+	else if (ret == IAVF_NOT_SUPPORTED)
+		ret = -ENOTSUP;
 	else
 		ret = -EAGAIN;
 
@@ -669,6 +671,8 @@ iavf_dev_promiscuous_disable(struct rte_eth_dev *dev)
 				  vf->promisc_multicast_enabled);
 	if (!ret)
 		vf->promisc_unicast_enabled = false;
+	else if (ret == IAVF_NOT_SUPPORTED)
+		ret = -ENOTSUP;
 	else
 		ret = -EAGAIN;
 
@@ -689,6 +693,8 @@ iavf_dev_allmulticast_enable(struct rte_eth_dev *dev)
 	ret = iavf_config_promisc(adapter, vf->promisc_unicast_enabled, true);
 	if (!ret)
 		vf->promisc_multicast_enabled = true;
+	else if (ret == IAVF_NOT_SUPPORTED)
+		ret = -ENOTSUP;
 	else
 		ret = -EAGAIN;
 
@@ -709,6 +715,8 @@ iavf_dev_allmulticast_disable(struct rte_eth_dev *dev)
 	ret = iavf_config_promisc(adapter, vf->promisc_unicast_enabled, false);
 	if (!ret)
 		vf->promisc_multicast_enabled = false;
+	else if (ret == IAVF_NOT_SUPPORTED)
+		ret = -ENOTSUP;
 	else
 		ret = -EAGAIN;
 
