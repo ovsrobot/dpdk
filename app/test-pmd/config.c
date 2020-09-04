@@ -518,6 +518,7 @@ device_infos_display(const char *identifier)
 	struct rte_device *dev;
 	struct rte_devargs da;
 	portid_t port_id;
+	struct rte_eth_dev_info dev_info;
 	char devstr[128];
 
 	memset(&da, 0, sizeof(da));
@@ -569,6 +570,90 @@ skip_parse:
 						      &mac_addr);
 				rte_eth_dev_get_name_by_port(port_id, name);
 				printf("\n\tDevice name: %s", name);
+				rte_eth_dev_info_get(port_id, &dev_info);
+				switch (dev_info.speed_capa) {
+				case ETH_LINK_SPEED_AUTONEG:
+					printf("\n\tDevice speed capability: %s",
+							"Autonegotiate (all speeds)");
+					break;
+				case ETH_LINK_SPEED_FIXED:
+					printf("\n\tDevice speed capability: %s",
+							"Disable autonegotiate (fixed speed)");
+					break;
+				case ETH_LINK_SPEED_10M_HD ...
+						ETH_LINK_SPEED_10M-1:
+					printf("\n\tDevice speed capability: %s",
+							"10 Mbps half-duplex");
+					break;
+				case ETH_LINK_SPEED_10M ...
+						ETH_LINK_SPEED_100M_HD-1:
+					printf("\n\tDevice speed capability: %s",
+							"10 Mbps full-duplex");
+					break;
+				case ETH_LINK_SPEED_100M_HD ...
+						ETH_LINK_SPEED_100M-1:
+					printf("\n\tDevice speed capability: %s",
+							"100 Mbps half-duplex");
+					break;
+				case ETH_LINK_SPEED_100M ...
+						ETH_LINK_SPEED_1G-1:
+					printf("\n\tDevice speed capability: %s",
+							"100 Mbps full-duplex");
+					break;
+				case ETH_LINK_SPEED_1G ...
+						ETH_LINK_SPEED_2_5G-1:
+					printf("\n\tDevice speed capability: %s",
+							"1 Gbps");
+					break;
+				case ETH_LINK_SPEED_2_5G ...
+						ETH_LINK_SPEED_5G-1:
+					printf("\n\tDevice speed capability: %s",
+							"2.5 Gbps");
+					break;
+				case ETH_LINK_SPEED_5G ...
+						ETH_LINK_SPEED_10G-1:
+					printf("\n\tDevice speed capability: %s",
+							"5 Gbps");
+					break;
+				case ETH_LINK_SPEED_10G ...
+						ETH_LINK_SPEED_20G-1:
+					printf("\n\tDevice speed capability: %s",
+							"10 Gbps");
+					break;
+				case ETH_LINK_SPEED_20G ...
+						ETH_LINK_SPEED_25G-1:
+					printf("\n\tDevice speed capability: %s",
+							"20 Gbps");
+					break;
+				case ETH_LINK_SPEED_25G ...
+						ETH_LINK_SPEED_50G-1:
+					printf("\n\tDevice speed capability: %s",
+							"25 Gbps");
+					break;
+				case ETH_LINK_SPEED_50G ...
+						ETH_LINK_SPEED_56G-1:
+					printf("\n\tDevice speed capability: %s",
+							"50 Gbps");
+					break;
+				case ETH_LINK_SPEED_56G ...
+						ETH_LINK_SPEED_100G-1:
+					printf("\n\tDevice speed capability: %s",
+							"56 Gbps");
+					break;
+				case ETH_LINK_SPEED_100G ...
+						ETH_LINK_SPEED_200G-1:
+					printf("\n\tDevice speed capability: %s",
+							"100 Gbps");
+					break;
+				case ETH_LINK_SPEED_200G:
+					printf("\n\tDevice speed capability: %s",
+							"200 Gbps");
+					break;
+				default:
+					printf("\n\tDevice speed capability: %s",
+							"not available");
+					break;
+				}
 				printf("\n");
 			}
 		}
