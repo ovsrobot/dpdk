@@ -104,6 +104,9 @@
 #define RTE_GRAPH_BURST_SIZE 256
 #define RTE_LIBRTE_GRAPH_STATS 1
 
+/* rte_metrics defines */
+#define RTE_METRICS_MAX_METRICS 256
+
 /****** driver defines ********/
 
 /* QuickAssist device */
