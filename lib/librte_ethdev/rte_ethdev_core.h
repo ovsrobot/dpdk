@@ -604,6 +604,30 @@ typedef int (*eth_tx_hairpin_queue_setup_t)
 	 const struct rte_eth_hairpin_conf *hairpin_conf);
 
 /**
+ * @internal
+ * Get the next RX ring descriptor address.
+ *
+ * @param rxq
+ *   ethdev queue pointer.
+ * @param tail_desc_addr
+ *   the pointer point to descriptor address var.
+ * @param expected
+ *   the pointer point to value to be expected when descriptor is set.
+ * @param mask
+ *   the pointer point to comparison bitmask for the expected value.
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success.
+ * @retval -EINVAL
+ *   Failed to get descriptor address.
+ */
+typedef int (*eth_next_rx_desc_t)
+	(void *rxq, volatile void **tail_desc_addr,
+	 uint64_t *expected, uint64_t *mask);
+
+/**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
 struct eth_dev_ops {
@@ -752,6 +776,8 @@ struct eth_dev_ops {
 	/**< Set up device RX hairpin queue. */
 	eth_tx_hairpin_queue_setup_t tx_hairpin_queue_setup;
 	/**< Set up device TX hairpin queue. */
+	eth_next_rx_desc_t next_rx_desc;
+	/**< Get next RX ring descriptor address. */
 };
 
 /**
@@ -767,6 +793,14 @@ struct rte_eth_rxtx_callback {
 	} fn;
 	void *param;
 };
+
+/**
+ * @internal
+ * Structure used to hold counters for empty poll
+ */
+struct rte_eth_ep_stat {
+	uint64_t num;
+} __rte_cache_aligned;
 
 /**
  * @internal
@@ -807,8 +841,16 @@ struct rte_eth_dev {
 	enum rte_eth_dev_state state; /**< Flag indicating the port state */
 	void *security_ctx; /**< Context for security ops */
 
-	uint64_t reserved_64s[4]; /**< Reserved for future fields */
-	void *reserved_ptrs[4];   /**< Reserved for future fields */
+	/**< Empty poll number */
+	enum rte_eth_dev_power_mgmt_state pwr_mgmt_state;
+	/**< Power mgmt Callback mode */
+	enum rte_eth_dev_power_mgmt_cb_mode cb_mode;
+	uint64_t reserved_64s[3]; /**< Reserved for future fields */
+
+	/**< Flag indicating the port power state */
+	struct rte_eth_ep_stat *empty_poll_stats;
+	const struct rte_eth_rxtx_callback *cur_pwr_cb;
+	void *reserved_ptrs[2];   /**< Reserved for future fields */
 } __rte_cache_aligned;
 
 struct rte_eth_dev_sriov;

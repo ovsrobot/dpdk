@@ -157,6 +157,7 @@ extern "C" {
 #include <rte_common.h>
 #include <rte_config.h>
 #include <rte_ether.h>
+#include <rte_power_intrinsics.h>
 
 #include "rte_ethdev_trace_fp.h"
 #include "rte_dev_info.h"
@@ -775,6 +776,7 @@ rte_eth_rss_hf_refine(uint64_t rss_hf)
 /** Maximum nb. of vlan per mirror rule */
 #define ETH_MIRROR_MAX_VLANS       64
 
+#define ETH_EMPTYPOLL_MAX          512 /**< Empty poll number threshlold */
 #define ETH_MIRROR_VIRTUAL_POOL_UP     0x01  /**< Virtual Pool uplink Mirroring. */
 #define ETH_MIRROR_UPLINK_PORT         0x02  /**< Uplink Port Mirroring. */
 #define ETH_MIRROR_DOWNLINK_PORT       0x04  /**< Downlink Port Mirroring. */
@@ -1600,6 +1602,26 @@ enum rte_eth_dev_state {
 	RTE_ETH_DEV_ATTACHED,
 	/** Device is in removed state when plug-out is detected. */
 	RTE_ETH_DEV_REMOVED,
+};
+
+#define  RTE_ETH_PAUSE_NUM  64    /* How many times to pause */
+/**
+ * Possible power management states of an ethdev port.
+ */
+enum rte_eth_dev_power_mgmt_state {
+	/** Device power management is disabled. */
+	RTE_ETH_DEV_POWER_MGMT_DISABLED = 0,
+	/** Device power management is enabled. */
+	RTE_ETH_DEV_POWER_MGMT_ENABLED,
+};
+
+enum rte_eth_dev_power_mgmt_cb_mode {
+	/** WAIT callback mode. */
+	RTE_ETH_DEV_POWER_MGMT_CB_WAIT = 1,
+	/** PAUSE callback mode. */
+	RTE_ETH_DEV_POWER_MGMT_CB_PAUSE,
+	/** Freq Scaling callback mode. */
+	RTE_ETH_DEV_POWER_MGMT_CB_SCALE,
 };
 
 struct rte_eth_dev_sriov {
