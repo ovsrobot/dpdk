@@ -438,6 +438,15 @@ rte_crypto_op_attach_asym_session(struct rte_crypto_op *op,
 	return 0;
 }
 
+/** Crypto data-path service types */
+enum rte_crypto_dp_service {
+	RTE_CRYPTO_DP_SYM_CIPHER_ONLY = 0,
+	RTE_CRYPTO_DP_SYM_AUTH_ONLY,
+	RTE_CRYPTO_DP_SYM_CHAIN,
+	RTE_CRYPTO_DP_SYM_AEAD,
+	RTE_CRYPTO_DP_N_SERVICE
+};
+
 #ifdef __cplusplus
 }
 #endif

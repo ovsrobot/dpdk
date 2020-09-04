@@ -466,7 +466,8 @@ rte_cryptodev_asym_get_xform_enum(enum rte_crypto_asym_xform_type *xform_enum,
 /**< Support symmetric session-less operations */
 #define RTE_CRYPTODEV_FF_NON_BYTE_ALIGNED_DATA		(1ULL << 23)
 /**< Support operations on data which is not byte aligned */
-
+#define RTE_CRYPTODEV_FF_DATA_PATH_SERVICE		(1ULL << 24)
+/**< Support accelerated specific raw data as input */
 
 /**
  * Get the name of a crypto device feature flag
@@ -1350,6 +1351,335 @@ uint32_t
 rte_cryptodev_sym_cpu_crypto_process(uint8_t dev_id,
 	struct rte_cryptodev_sym_session *sess, union rte_crypto_sym_ofs ofs,
 	struct rte_crypto_sym_vec *vec);
+
+/**
+ * Get the size of the data-path service context for all registered drivers.
+ *
+ * @param	dev_id		The device identifier.
+ *
+ * @return
+ *   - If the device supports data-path service, return the context size.
+ *   - If the device does not support the data-dath service, return -1.
+ */
+__rte_experimental
+int
+rte_cryptodev_dp_get_service_ctx_data_size(uint8_t dev_id);
+
+/**
+ * Union of different crypto session types, including session-less xform
+ * pointer.
+ */
+union rte_cryptodev_session_ctx {
+	struct rte_cryptodev_sym_session *crypto_sess;
+	struct rte_crypto_sym_xform *xform;
+	struct rte_security_session *sec_sess;
+};
+
+/**
+ * Submit a data vector into device queue but the driver will not start
+ * processing until rte_cryptodev_dp_sym_submit_vec() is called.
+ *
+ * @param	qp		Driver specific queue pair data.
+ * @param	service_data	Driver specific service data.
+ * @param	vec		The array of job vectors.
+ * @param	ofs		Start and stop offsets for auth and cipher
+ *				operations.
+ * @param	opaque		The array of opaque data for dequeue.
+ * @return
+ *   - The number of jobs successfully submitted.
+ */
+typedef uint32_t (*cryptodev_dp_sym_submit_vec_t)(
+	void *qp, uint8_t *service_data, struct rte_crypto_sym_vec *vec,
+	union rte_crypto_sym_ofs ofs, void **opaque);
+
+/**
+ * Submit single job into device queue but the driver will not start
+ * processing until rte_cryptodev_dp_sym_submit_vec() is called.
+ *
+ * @param	qp		Driver specific queue pair data.
+ * @param	service_data	Driver specific service data.
+ * @param	data		The buffer vector.
+ * @param	n_data_vecs	Number of buffer vectors.
+ * @param	ofs		Start and stop offsets for auth and cipher
+ *				operations.
+ * @param	additional_data	IV, digest, and aad data.
+ * @param	opaque		The opaque data for dequeue.
+ * @return
+ *   - On success return 0.
+ *   - On failure return negative integer.
+ */
+typedef int (*cryptodev_dp_submit_single_job_t)(
+	void *qp, uint8_t *service_data, struct rte_crypto_vec *data,
+	uint16_t n_data_vecs, union rte_crypto_sym_ofs ofs,
+	union rte_crypto_sym_additional_data *additional_data,
+	void *opaque);
+
+/**
+ * Inform the queue pair to start processing or finish dequeuing all
+ * submitted/dequeued jobs.
+ *
+ * @param	qp		Driver specific queue pair data.
+ * @param	service_data	Driver specific service data.
+ * @param	n		The total number of submitted jobs.
+ */
+typedef void (*cryptodev_dp_sym_operation_done_t)(void *qp,
+		uint8_t *service_data, uint32_t n);
+
+/**
+ * Typedef that the user provided for the driver to get the dequeue count.
+ * The function may return a fixed number or the number parsed from the opaque
+ * data stored in the first processed job.
+ *
+ * @param	opaque		Dequeued opaque data.
+ **/
+typedef uint32_t (*rte_cryptodev_get_dequeue_count_t)(void *opaque);
+
+/**
+ * Typedef that the user provided to deal with post dequeue operation, such
+ * as filling status.
+ *
+ * @param	opaque		Dequeued opaque data. In case
+ *				RTE_CRYPTO_HW_DP_FF_GET_OPAQUE_ARRAY bit is
+ *				set, this value will be the opaque data stored
+ *				in the specific processed jobs referenced by
+ *				index, otherwise it will be the opaque data
+ *				stored in the first processed job in the burst.
+ * @param	index		Index number of the processed job.
+ * @param	is_op_success	Driver filled operation status.
+ **/
+typedef void (*rte_cryptodev_post_dequeue_t)(void *opaque, uint32_t index,
+		uint8_t is_op_success);
+
+/**
+ * Dequeue symmetric crypto processing of user provided data.
+ *
+ * @param	qp			Driver specific queue pair data.
+ * @param	service_data		Driver specific service data.
+ * @param	get_dequeue_count	User provided callback function to
+ *					obtain dequeue count.
+ * @param	post_dequeue		User provided callback function to
+ *					post-process a dequeued operation.
+ * @param	out_opaque		Opaque pointer array to be retrieve from
+ *					device queue. In case of
+ *					*is_opaque_array* is set there should
+ *					be enough room to store all opaque data.
+ * @param	is_opaque_array		Set 1 if every dequeued job will be
+ *					written the opaque data into
+ *					*out_opaque* array.
+ * @param	n_success_jobs		Driver written value to specific the
+ *					total successful operations count.
+ *
+ * @return
+ *  - Returns number of dequeued packets.
+ */
+typedef uint32_t (*cryptodev_dp_sym_dequeue_t)(void *qp, uint8_t *service_data,
+	rte_cryptodev_get_dequeue_count_t get_dequeue_count,
+	rte_cryptodev_post_dequeue_t post_dequeue,
+	void **out_opaque, uint8_t is_opaque_array,
+	uint32_t *n_success_jobs);
+
+/**
+ * Dequeue symmetric crypto processing of user provided data.
+ *
+ * @param	qp			Driver specific queue pair data.
+ * @param	service_data		Driver specific service data.
+ * @param	out_opaque		Opaque pointer to be retrieve from
+ *					device queue.
+ *
+ * @return
+ *   - 1 if the job is dequeued and the operation is a success.
+ *   - 0 if the job is dequeued but the operation is failed.
+ *   - -1 if no job is dequeued.
+ */
+typedef int (*cryptodev_dp_sym_dequeue_single_job_t)(
+		void *qp, uint8_t *service_data, void **out_opaque);
+
+/**
+ * Context data for asynchronous crypto process.
+ */
+struct rte_crypto_dp_service_ctx {
+	void *qp_data;
+
+	struct {
+		cryptodev_dp_submit_single_job_t submit_single_job;
+		cryptodev_dp_sym_submit_vec_t submit_vec;
+		cryptodev_dp_sym_operation_done_t submit_done;
+		cryptodev_dp_sym_dequeue_t dequeue_opaque;
+		cryptodev_dp_sym_dequeue_single_job_t dequeue_single;
+		cryptodev_dp_sym_operation_done_t dequeue_done;
+	};
+
+	/* Driver specific service data */
+	__extension__ uint8_t drv_service_data[];
+};
+
+/**
+ * Configure one DP service context data. Calling this function for the first
+ * time the user should unset the *is_update* parameter and the driver will
+ * fill necessary operation data into ctx buffer. Only when
+ * rte_cryptodev_dp_submit_done() is called the data stored in the ctx buffer
+ * will not be effective.
+ *
+ * @param	dev_id		The device identifier.
+ * @param	qp_id		The index of the queue pair from which to
+ *				retrieve processed packets. The value must be
+ *				in the range [0, nb_queue_pair - 1] previously
+ *				supplied to rte_cryptodev_configure().
+ * @param	service_type	Type of the service requested.
+ * @param	sess_type	session type.
+ * @param	session_ctx	Session context data.
+ * @param	ctx		The data-path service context data.
+ * @param	is_update	Set 1 if ctx is pre-initialized but need
+ *				update to different service type or session,
+ *				but the rest driver data remains the same.
+ *				Since service context data buffer is provided
+ *				by user, the driver will not check the
+ *				validity of the buffer nor its content. It is
+ *				the user's obligation to initialize and
+ *				uses the buffer properly by setting this field.
+ * @return
+ *   - On success return 0.
+ *   - On failure return negative integer.
+ */
+__rte_experimental
+int
+rte_cryptodev_dp_configure_service(uint8_t dev_id, uint16_t qp_id,
+	enum rte_crypto_dp_service service_type,
+	enum rte_crypto_op_sess_type sess_type,
+	union rte_cryptodev_session_ctx session_ctx,
+	struct rte_crypto_dp_service_ctx *ctx, uint8_t is_update);
+
+static __rte_always_inline int
+_cryptodev_dp_submit_single_job(struct rte_crypto_dp_service_ctx *ctx,
+		struct rte_crypto_vec *data, uint16_t n_data_vecs,
+		union rte_crypto_sym_ofs ofs,
+		union rte_crypto_sym_additional_data *additional_data,
+		void *opaque)
+{
+	return (*ctx->submit_single_job)(ctx->qp_data, ctx->drv_service_data,
+		data, n_data_vecs, ofs, additional_data, opaque);
+}
+
+static __rte_always_inline int
+_cryptodev_dp_sym_dequeue_single_job(struct rte_crypto_dp_service_ctx *ctx,
+		void **out_opaque)
+{
+	return (*ctx->dequeue_single)(ctx->qp_data, ctx->drv_service_data,
+		out_opaque);
+}
+
+/**
+ * Submit single job into device queue but the driver will not start
+ * processing until rte_cryptodev_dp_submit_done() is called. This is a
+ * simplified
+ *
+ * @param	ctx		The initialized data-path service context data.
+ * @param	data		The buffer vector.
+ * @param	n_data_vecs	Number of buffer vectors.
+ * @param	ofs		Start and stop offsets for auth and cipher
+ *				operations.
+ * @param	additional_data	IV, digest, and aad
+ * @param	opaque		The array of opaque data for dequeue.
+ * @return
+ *   - On success return 0.
+ *   - On failure return negative integer.
+ */
+__rte_experimental
+int
+rte_cryptodev_dp_sym_submit_single_job(struct rte_crypto_dp_service_ctx *ctx,
+		struct rte_crypto_vec *data, uint16_t n_data_vecs,
+		union rte_crypto_sym_ofs ofs,
+		union rte_crypto_sym_additional_data *additional_data,
+		void *opaque);
+
+/**
+ * Submit a data vector into device queue but the driver will not start
+ * processing until rte_cryptodev_dp_submit_done() is called.
+ *
+ * @param	ctx	The initialized data-path service context data.
+ * @param	vec	The array of job vectors.
+ * @param	ofs	Start and stop offsets for auth and cipher operations.
+ * @param	opaque	The array of opaque data for dequeue.
+ * @return
+ *   - The number of jobs successfully submitted.
+ */
+__rte_experimental
+uint32_t
+rte_cryptodev_dp_sym_submit_vec(struct rte_crypto_dp_service_ctx *ctx,
+	struct rte_crypto_sym_vec *vec, union rte_crypto_sym_ofs ofs,
+	void **opaque);
+
+/**
+ * Command the queue pair to start processing all submitted jobs from last
+ * rte_cryptodev_init_dp_service() call.
+ *
+ * @param	ctx	The initialized data-path service context data.
+ * @param	n		The total number of submitted jobs.
+ */
+__rte_experimental
+void
+rte_cryptodev_dp_sym_submit_done(struct rte_crypto_dp_service_ctx *ctx,
+		uint32_t n);
+
+/**
+ * Dequeue symmetric crypto processing of user provided data.
+ *
+ * @param	ctx			The initialized data-path service
+ *					context data.
+ * @param	get_dequeue_count	User provided callback function to
+ *					obtain dequeue count.
+ * @param	post_dequeue		User provided callback function to
+ *					post-process a dequeued operation.
+ * @param	out_opaque		Opaque pointer array to be retrieve from
+ *					device queue. In case of
+ *					*is_opaque_array* is set there should
+ *					be enough room to store all opaque data.
+ * @param	is_opaque_array		Set 1 if every dequeued job will be
+ *					written the opaque data into
+ *					*out_opaque* array.
+ * @param	n_success_jobs		Driver written value to specific the
+ *					total successful operations count.
+ *
+ * @return
+ *   - Returns number of dequeued packets.
+ */
+__rte_experimental
+uint32_t
+rte_cryptodev_dp_sym_dequeue(struct rte_crypto_dp_service_ctx *ctx,
+	rte_cryptodev_get_dequeue_count_t get_dequeue_count,
+	rte_cryptodev_post_dequeue_t post_dequeue,
+	void **out_opaque, uint8_t is_opaque_array,
+	uint32_t *n_success_jobs);
+
+/**
+ * Dequeue Single symmetric crypto processing of user provided data.
+ *
+ * @param	ctx			The initialized data-path service
+ *					context data.
+ * @param	out_opaque		Opaque pointer to be retrieve from
+ *					device queue. The driver shall support
+ *					NULL input of this parameter.
+ *
+ * @return
+ *   - 1 if the job is dequeued and the operation is a success.
+ *   - 0 if the job is dequeued but the operation is failed.
+ *   - -1 if no job is dequeued.
+ */
+__rte_experimental
+int
+rte_cryptodev_dp_sym_dequeue_single_job(struct rte_crypto_dp_service_ctx *ctx,
+		void **out_opaque);
+
+/**
+ * Inform the queue pair dequeue jobs finished.
+ *
+ * @param	ctx	The initialized data-path service context data.
+ * @param	n	The total number of jobs already dequeued.
+ */
+__rte_experimental
+void
+rte_cryptodev_dp_sym_dequeue_done(struct rte_crypto_dp_service_ctx *ctx,
+		uint32_t n);
 
 #ifdef __cplusplus
 }

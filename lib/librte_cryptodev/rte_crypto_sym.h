@@ -51,18 +51,55 @@ struct rte_crypto_sgl {
 };
 
 /**
+ * Symmetri Crypto Addtional Data other than src and destination data.
+ * Supposed to be used to pass IV/digest/aad data buffers with lengths
+ * defined when creating crypto session.
+ */
+union rte_crypto_sym_additional_data {
+	struct {
+		void *cipher_iv_ptr;
+		rte_iova_t cipher_iv_iova;
+		void *auth_iv_ptr;
+		rte_iova_t auth_iv_iova;
+		void *digest_ptr;
+		rte_iova_t digest_iova;
+	} cipher_auth;
+	struct {
+		void *iv_ptr;
+		rte_iova_t iv_iova;
+		void *digest_ptr;
+		rte_iova_t digest_iova;
+		void *aad_ptr;
+		rte_iova_t aad_iova;
+	} aead;
+};
+
+/**
  * Synchronous operation descriptor.
  * Supposed to be used with CPU crypto API call.
  */
 struct rte_crypto_sym_vec {
 	/** array of SGL vectors */
 	struct rte_crypto_sgl *sgl;
-	/** array of pointers to IV */
-	void **iv;
-	/** array of pointers to AAD */
-	void **aad;
-	/** array of pointers to digest */
-	void **digest;
+
+	union {
+
+		/* Supposed to be used with CPU crypto API call. */
+		struct {
+			/** array of pointers to IV */
+			void **iv;
+			/** array of pointers to AAD */
+			void **aad;
+			/** array of pointers to digest */
+			void **digest;
+		};
+
+		/* Supposed to be used with rte_cryptodev_dp_sym_submit_vec()
+		 * call.
+		 */
+		union rte_crypto_sym_additional_data *additional_data;
+	};
+
 	/**
 	 * array of statuses for each operation:
 	 *  - 0 on success

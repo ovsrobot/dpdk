@@ -1914,6 +1914,104 @@ rte_cryptodev_sym_cpu_crypto_process(uint8_t dev_id,
 	return dev->dev_ops->sym_cpu_process(dev, sess, ofs, vec);
 }
 
+int
+rte_cryptodev_dp_get_service_ctx_data_size(uint8_t dev_id)
+{
+	struct rte_cryptodev *dev;
+	int32_t size = sizeof(struct rte_crypto_dp_service_ctx);
+	int32_t priv_size;
+
+	if (!rte_cryptodev_pmd_is_valid_dev(dev_id))
+		return -1;
+
+	dev = rte_cryptodev_pmd_get_dev(dev_id);
+
+	if (*dev->dev_ops->get_drv_ctx_size == NULL ||
+		!(dev->feature_flags & RTE_CRYPTODEV_FF_DATA_PATH_SERVICE)) {
+		return -1;
+	}
+
+	priv_size = (*dev->dev_ops->get_drv_ctx_size)(dev);
+	if (priv_size < 0)
+		return -1;
+
+	return RTE_ALIGN_CEIL((size + priv_size), 8);
+}
+
+int
+rte_cryptodev_dp_configure_service(uint8_t dev_id, uint16_t qp_id,
+	enum rte_crypto_dp_service service_type,
+	enum rte_crypto_op_sess_type sess_type,
+	union rte_cryptodev_session_ctx session_ctx,
+	struct rte_crypto_dp_service_ctx *ctx, uint8_t is_update)
+{
+	struct rte_cryptodev *dev;
+
+	if (!rte_cryptodev_get_qp_status(dev_id, qp_id))
+		return -1;
+
+	dev = rte_cryptodev_pmd_get_dev(dev_id);
+	if (!(dev->feature_flags & RTE_CRYPTODEV_FF_DATA_PATH_SERVICE)
+			|| dev->dev_ops->configure_service == NULL)
+		return -1;
+
+	return (*dev->dev_ops->configure_service)(dev, qp_id, service_type,
+			sess_type, session_ctx, ctx, is_update);
+}
+
+int
+rte_cryptodev_dp_sym_submit_single_job(struct rte_crypto_dp_service_ctx *ctx,
+		struct rte_crypto_vec *data, uint16_t n_data_vecs,
+		union rte_crypto_sym_ofs ofs,
+		union rte_crypto_sym_additional_data *additional_data,
+		void *opaque)
+{
+	return _cryptodev_dp_submit_single_job(ctx, data, n_data_vecs, ofs,
+			additional_data, opaque);
+}
+
+uint32_t
+rte_cryptodev_dp_sym_submit_vec(struct rte_crypto_dp_service_ctx *ctx,
+	struct rte_crypto_sym_vec *vec, union rte_crypto_sym_ofs ofs,
+	void **opaque)
+{
+	return (*ctx->submit_vec)(ctx->qp_data, ctx->drv_service_data, vec,
+			ofs, opaque);
+}
+
+int
+rte_cryptodev_dp_sym_dequeue_single_job(struct rte_crypto_dp_service_ctx *ctx,
+		void **out_opaque)
+{
+	return _cryptodev_dp_sym_dequeue_single_job(ctx, out_opaque);
+}
+
+void
+rte_cryptodev_dp_sym_submit_done(struct rte_crypto_dp_service_ctx *ctx,
+		uint32_t n)
+{
+	(*ctx->submit_done)(ctx->qp_data, ctx->drv_service_data, n);
+}
+
+void
+rte_cryptodev_dp_sym_dequeue_done(struct rte_crypto_dp_service_ctx *ctx,
+		uint32_t n)
+{
+	(*ctx->dequeue_done)(ctx->qp_data, ctx->drv_service_data, n);
+}
+
+uint32_t
+rte_cryptodev_dp_sym_dequeue(struct rte_crypto_dp_service_ctx *ctx,
+	rte_cryptodev_get_dequeue_count_t get_dequeue_count,
+	rte_cryptodev_post_dequeue_t post_dequeue,
+	void **out_opaque, uint8_t is_opaque_array,
+	uint32_t *n_success_jobs)
+{
+	return (*ctx->dequeue_opaque)(ctx->qp_data, ctx->drv_service_data,
+		get_dequeue_count, post_dequeue, out_opaque, is_opaque_array,
+		n_success_jobs);
+}
+
 /** Initialise rte_crypto_op mempool element */
 static void
 rte_crypto_op_init(struct rte_mempool *mempool,

@@ -316,6 +316,42 @@ typedef uint32_t (*cryptodev_sym_cpu_crypto_process_t)
 	(struct rte_cryptodev *dev, struct rte_cryptodev_sym_session *sess,
 	union rte_crypto_sym_ofs ofs, struct rte_crypto_sym_vec *vec);
 
+/**
+ * Typedef that the driver provided to get service context private date size.
+ *
+ * @param	dev	Crypto device pointer.
+ *
+ * @return
+ *   - On success return the size of the device's service context private data.
+ *   - On failure return negative integer.
+ */
+typedef int (*cryptodev_dp_get_service_ctx_size_t)(
+	struct rte_cryptodev *dev);
+
+/**
+ * Typedef that the driver provided to configure data-path service.
+ *
+ * @param	dev		Crypto device pointer.
+ * @param	qp_id		Crypto device queue pair index.
+ * @param	service_type	Type of the service requested.
+ * @param	sess_type	session type.
+ * @param	session_ctx	Session context data.
+ * @param	ctx		The data-path service context data.
+ * @param	is_update	Set 1 if ctx is pre-initialized but need
+ *				update to different service type or session,
+ *				but the rest driver data remains the same.
+ *				buffer will always be one.
+ * @return
+ *   - On success return 0.
+ *   - On failure return negative integer.
+ */
+typedef int (*cryptodev_dp_configure_service_t)(
+	struct rte_cryptodev *dev, uint16_t qp_id,
+	enum rte_crypto_dp_service service_type,
+	enum rte_crypto_op_sess_type sess_type,
+	union rte_cryptodev_session_ctx session_ctx,
+	struct rte_crypto_dp_service_ctx *ctx,
+	uint8_t is_update);
 
 /** Crypto device operations function pointer table */
 struct rte_cryptodev_ops {
@@ -348,8 +384,16 @@ struct rte_cryptodev_ops {
 	/**< Clear a Crypto sessions private data. */
 	cryptodev_asym_free_session_t asym_session_clear;
 	/**< Clear a Crypto sessions private data. */
-	cryptodev_sym_cpu_crypto_process_t sym_cpu_process;
-	/**< process input data synchronously (cpu-crypto). */
+	union {
+		cryptodev_sym_cpu_crypto_process_t sym_cpu_process;
+		/**< process input data synchronously (cpu-crypto). */
+		struct {
+			cryptodev_dp_get_service_ctx_size_t get_drv_ctx_size;
+			/**< Get data path service context data size. */
+			cryptodev_dp_configure_service_t configure_service;
+			/**< Initialize crypto service ctx data. */
+		};
+	};
 };
 
 
