@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+     ** fips_validation enhancement.**
+
+     fips_vadation sample application is added SGL and NIST GCMVS complaint
+     GMAC test method support.
+
 
 Removed Items
 -------------
