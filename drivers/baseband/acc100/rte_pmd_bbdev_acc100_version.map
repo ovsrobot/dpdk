@@ -1,3 +1,10 @@
 DPDK_21 {
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	acc100_configure;
+
+};
