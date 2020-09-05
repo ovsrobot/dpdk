@@ -18,14 +18,15 @@ extern "C" {
  * Structure containing header lengths associated to a packet, filled
  * by rte_net_get_ptype().
  */
+__extension__
 struct rte_net_hdr_lens {
-	uint8_t l2_len;
-	uint8_t l3_len;
-	uint8_t l4_len;
-	uint8_t tunnel_len;
-	uint8_t inner_l2_len;
-	uint8_t inner_l3_len;
-	uint8_t inner_l4_len;
+	uint64_t l2_len:7;
+	uint64_t l3_len:9;
+	uint64_t l4_len:8;
+	uint64_t tunnel_len:8;
+	uint64_t inner_l2_len:7;
+	uint64_t inner_l3_len:9;
+	uint64_t inner_l4_len:8;
 };
 
 /**
