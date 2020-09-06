@@ -11,6 +11,7 @@ DPDK Tools User Guides
     proc_info
     pdump
     pmdinfo
+    hugepagesetup
     devbind
     flow-perf
     testbbdev
