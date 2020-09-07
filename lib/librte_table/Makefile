@@ -34,6 +34,7 @@ SRCS-$(CONFIG_RTE_LIBRTE_TABLE) += rte_table_hash_ext.c
 SRCS-$(CONFIG_RTE_LIBRTE_TABLE) += rte_table_hash_lru.c
 SRCS-$(CONFIG_RTE_LIBRTE_TABLE) += rte_table_array.c
 SRCS-$(CONFIG_RTE_LIBRTE_TABLE) += rte_table_stub.c
+SRCS-$(CONFIG_RTE_LIBRTE_TABLE) += rte_swx_table_em.c
 
 # install includes
 SYMLINK-$(CONFIG_RTE_LIBRTE_TABLE)-include += rte_table.h
@@ -56,5 +57,6 @@ endif
 SYMLINK-$(CONFIG_RTE_LIBRTE_TABLE)-include += rte_table_array.h
 SYMLINK-$(CONFIG_RTE_LIBRTE_TABLE)-include += rte_table_stub.h
 SYMLINK-$(CONFIG_RTE_LIBRTE_TABLE)-include += rte_swx_table.h
+SYMLINK-$(CONFIG_RTE_LIBRTE_TABLE)-include += rte_swx_table_em.h
 
 include $(RTE_SDK)/mk/rte.lib.mk
