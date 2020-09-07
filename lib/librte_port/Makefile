@@ -55,5 +55,6 @@ endif
 SYMLINK-$(CONFIG_RTE_LIBRTE_PORT)-include += rte_port_source_sink.h
 SYMLINK-$(CONFIG_RTE_LIBRTE_PORT)-include += rte_port_sym_crypto.h
 SYMLINK-$(CONFIG_RTE_LIBRTE_PORT)-include += rte_port_eventdev.h
+SYMLINK-$(CONFIG_RTE_LIBRTE_PORT)-include += rte_swx_port.h
 
 include $(RTE_SDK)/mk/rte.lib.mk
