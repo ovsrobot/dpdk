@@ -239,6 +239,10 @@ struct mlx5_dev_config {
 #ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
 	unsigned int mprq_tstore_memcpy:1;
 #endif
+#ifdef RTE_LIBRTE_MLX5_NT_STORE
+	unsigned int tx_wqe_field_ntstore:1;
+	unsigned int vec_rx_wqe_field_ntstore:1;
+#endif
 };
 
 
