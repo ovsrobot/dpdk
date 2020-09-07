@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Add new command-line parameter for l3wfd-acl sample application.**
+
+  Added new optional parameter ``--eth-dest`` for the ``l3fwd-acl`` to allow
+  the user to specify the destination mac address for each ethernet port used.
+
 
 Removed Items
 -------------
