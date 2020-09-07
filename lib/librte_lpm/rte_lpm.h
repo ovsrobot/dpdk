@@ -132,17 +132,10 @@ struct rte_lpm_rule_info {
 
 /** @internal LPM structure. */
 struct rte_lpm {
-	/* LPM metadata. */
-	char name[RTE_LPM_NAMESIZE];        /**< Name of the lpm. */
-	uint32_t max_rules; /**< Max. balanced rules per lpm. */
-	uint32_t number_tbl8s; /**< Number of tbl8s. */
-	struct rte_lpm_rule_info rule_info[RTE_LPM_MAX_DEPTH]; /**< Rule info table. */
-
 	/* LPM Tables. */
 	struct rte_lpm_tbl_entry tbl24[RTE_LPM_TBL24_NUM_ENTRIES]
 			__rte_cache_aligned; /**< LPM tbl24 table. */
 	struct rte_lpm_tbl_entry *tbl8; /**< LPM tbl8 table. */
-	struct rte_lpm_rule *rules_tbl; /**< LPM rules. */
 };
 
 /** LPM RCU QSBR configuration structure. */
