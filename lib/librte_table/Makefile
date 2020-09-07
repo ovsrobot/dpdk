@@ -55,5 +55,6 @@ SYMLINK-$(CONFIG_RTE_LIBRTE_TABLE)-include += rte_lru_arm64.h
 endif
 SYMLINK-$(CONFIG_RTE_LIBRTE_TABLE)-include += rte_table_array.h
 SYMLINK-$(CONFIG_RTE_LIBRTE_TABLE)-include += rte_table_stub.h
+SYMLINK-$(CONFIG_RTE_LIBRTE_TABLE)-include += rte_swx_table.h
 
 include $(RTE_SDK)/mk/rte.lib.mk
