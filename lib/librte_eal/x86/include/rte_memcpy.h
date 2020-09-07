@@ -874,6 +874,98 @@ rte_memcpy(void *dst, const void *src, size_t n)
 		return rte_memcpy_generic(dst, src, n);
 }
 
+#ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
+static __rte_always_inline
+void copy16B_ts(void *dst, void *src)
+{
+	__m128i var128;
+
+	var128 = _mm_stream_load_si128((__m128i *)src);
+	_mm_storeu_si128((__m128i *)dst, var128);
+}
+
+static __rte_always_inline
+void copy32B_ts(void *dst, void *src)
+{
+	__m256i ymm0;
+
+	ymm0 = _mm256_stream_load_si256((const __m256i *)src);
+	_mm256_storeu_si256((__m256i *)dst, ymm0);
+}
+
+static __rte_always_inline
+void copy64B_ts(void *dst, void *src)
+{
+	__m256i ymm0, ymm1;
+
+	ymm0 = _mm256_stream_load_si256((const __m256i *)src);
+	ymm1 = _mm256_stream_load_si256((const __m256i *)((uint8_t *)src + 32));
+	_mm256_storeu_si256((__m256i *)dst, ymm0);
+	_mm256_storeu_si256((__m256i *)((uint8_t *)dst + 32), ymm1);
+}
+
+static __rte_always_inline
+void copy128B_ts(void *dst, void *src)
+{
+	__m256i ymm0, ymm1, ymm2, ymm3;
+
+	ymm0 = _mm256_stream_load_si256((const __m256i *)src);
+	ymm1 = _mm256_stream_load_si256((const __m256i *)((uint8_t *)src + 32));
+	ymm2 = _mm256_stream_load_si256((const __m256i *)((uint8_t *)src + 64));
+	ymm3 = _mm256_stream_load_si256((const __m256i *)((uint8_t *)src + 96));
+	_mm256_storeu_si256((__m256i *)dst, ymm0);
+	_mm256_storeu_si256((__m256i *)((uint8_t *)dst + 32), ymm1);
+	_mm256_storeu_si256((__m256i *)((uint8_t *)dst + 64), ymm2);
+	_mm256_storeu_si256((__m256i *)((uint8_t *)dst + 96), ymm3);
+}
+
+static __rte_always_inline
+void memcpy_aligned_rx_tstore_16B(void *dst, void *src, int len)
+{
+	while (len >= 128) {
+		copy128B_ts(dst, src);
+		dst = (uint8_t *)dst + 128;
+		src = (uint8_t *)src + 128;
+		len -= 128;
+	}
+	while (len >= 64) {
+		copy64B_ts(dst, src);
+		dst = (uint8_t *)dst + 64;
+		src = (uint8_t *)src + 64;
+		len -= 64;
+	}
+	while (len >= 32) {
+		copy32B_ts(dst, src);
+		dst = (uint8_t *)dst + 32;
+		src = (uint8_t *)src + 32;
+		len -= 32;
+	}
+	if (len >= 16) {
+		copy16B_ts(dst, src);
+		dst = (uint8_t *)dst + 16;
+		src = (uint8_t *)src + 16;
+		len -= 16;
+	}
+	if (len >= 8) {
+		*(uint64_t *)dst = *(const uint64_t *)src;
+		dst = (uint8_t *)dst + 8;
+		src = (uint8_t *)src + 8;
+		len -= 8;
+	}
+	if (len >= 4) {
+		*(uint32_t *)dst = *(const uint32_t *)src;
+		dst = (uint8_t *)dst + 4;
+		src = (uint8_t *)src + 4;
+		len -= 4;
+	}
+	if (len != 0) {
+		dst = (uint8_t *)dst - (4 - len);
+		src = (uint8_t *)src - (4 - len);
+		*(uint32_t *)dst = *(const uint32_t *)src;
+	}
+}
+#endif
+
 #if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
 #pragma GCC diagnostic pop
 #endif

@@ -1774,8 +1774,21 @@ mlx5_rx_burst_mprq(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 		    rxq->mprq_repl == NULL ||
 		    (hdrm_overlap > 0 && !rxq->strd_scatter_en)) {
 			if (likely(rte_pktmbuf_tailroom(pkt) >= len)) {
-				rte_memcpy(rte_pktmbuf_mtod(pkt, void *),
-					   addr, len);
+#ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
+				if ((rxq->mprq_tstore_memcpy) &&
+				    (!(((uintptr_t)(rte_pktmbuf_mtod(pkt,
+								     void *)) |
+					(uintptr_t)addr) & ALIGNMENT_MASK))) {
+					memcpy_aligned_rx_tstore_16B(
+						rte_pktmbuf_mtod(pkt, void *),
+						addr, len);
+				} else {
+#endif
+					rte_memcpy(rte_pktmbuf_mtod(pkt, void *),
+							addr, len);
+#ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
+				}
+#endif
 				DATA_LEN(pkt) = len;
 			} else if (rxq->strd_scatter_en) {
 				struct rte_mbuf *prev = pkt;
