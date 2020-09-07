@@ -22,6 +22,7 @@ SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) := rte_pipeline.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += rte_port_in_action.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += rte_table_action.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += rte_swx_pipeline.c
+SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += rte_swx_pipeline_spec.c
 SRCS-$(CONFIG_RTE_LIBRTE_PIPELINE) += rte_swx_ctl.c
 
 # install includes

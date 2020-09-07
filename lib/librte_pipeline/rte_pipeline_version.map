@@ -72,6 +72,7 @@ EXPERIMENTAL {
 	rte_swx_pipeline_table_config;
 	rte_swx_pipeline_instructions_config;
 	rte_swx_pipeline_build;
+	rte_swx_pipeline_build_from_spec;
 	rte_swx_pipeline_free;
 	rte_swx_pipeline_run;
 	rte_swx_pipeline_flush;
