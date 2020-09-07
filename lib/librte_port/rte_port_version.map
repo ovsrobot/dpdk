@@ -39,4 +39,6 @@ EXPERIMENTAL {
 	rte_port_eventdev_writer_nodrop_ops;
 	rte_swx_port_ethdev_reader_ops;
 	rte_swx_port_ethdev_writer_ops;
+	rte_swx_port_source_ops;
+	rte_swx_port_sink_ops;
 };
