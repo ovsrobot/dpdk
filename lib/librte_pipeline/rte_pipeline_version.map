@@ -67,6 +67,7 @@ EXPERIMENTAL {
 	rte_swx_pipeline_struct_type_register;
 	rte_swx_pipeline_packet_header_register;
 	rte_swx_pipeline_packet_metadata_register;
+	rte_swx_pipeline_action_config;
 	rte_swx_pipeline_build;
 	rte_swx_pipeline_free;
 };
