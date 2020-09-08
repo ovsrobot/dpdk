@@ -29,7 +29,13 @@
 /* report dequeue burst sizes in buckets */
 #define SW_DEQ_STAT_BUCKET_SHIFT 2
 /* how many packets pulled from port by sched */
-#define SCHED_DEQUEUE_BURST_SIZE 32
+#define SCHED_DEQUEUE_BURST_SIZE 64
+
+#define SCHED_MIN_BURST_SIZE 8
+#define SCHED_NO_ENQ_CYCLE_FLUSH 256
+/* set SCHED_DEQUEUE_BURST_SIZE to 64 or 128 when setting this to 1*/
+#define SCHED_REFILL_ONCE_PER_CALL 1
+
 
 #define SW_PORT_HIST_LIST (MAX_SW_PROD_Q_DEPTH) /* size of our history list */
 #define NUM_SAMPLES 64 /* how many data points use for average stats */
@@ -213,6 +219,9 @@ struct sw_evdev {
 	uint32_t xstats_count_mode_dev;
 	uint32_t xstats_count_mode_port;
 	uint32_t xstats_count_mode_queue;
+
+	uint16_t sched_flush_count;
+	uint16_t sched_min_burst;
 
 	/* Contains all ports - load balanced and directed */
 	struct sw_port ports[SW_PORTS_MAX] __rte_cache_aligned;
