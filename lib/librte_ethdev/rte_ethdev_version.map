@@ -241,6 +241,11 @@ EXPERIMENTAL {
 	__rte_ethdev_trace_rx_burst;
 	__rte_ethdev_trace_tx_burst;
 	rte_flow_get_aged_flows;
+	rte_flow_tunnel_decap_set;
+	rte_flow_tunnel_match;
+	rte_flow_tunnel_get_restore_info;
+	rte_flow_tunnel_action_decap_release;
+	rte_flow_tunnel_item_release;
 };
 
 INTERNAL {
