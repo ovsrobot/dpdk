@@ -12,6 +12,7 @@
 #include <rte_mbuf_pool_ops.h>
 #include <rte_pci.h>
 
+#include "otx2_crypto_adapter.h"
 #include "otx2_evdev_stats.h"
 #include "otx2_evdev.h"
 #include "otx2_irq.h"
@@ -1586,6 +1587,10 @@ static struct rte_eventdev_ops otx2_sso_ops = {
 	.eth_tx_adapter_queue_del = otx2_sso_tx_adapter_queue_del,
 
 	.timer_adapter_caps_get = otx2_tim_caps_get,
+
+	.crypto_adapter_caps_get = otx2_ca_caps_get,
+	.crypto_adapter_queue_pair_add = otx2_ca_qp_add,
+	.crypto_adapter_queue_pair_del = otx2_ca_qp_del,
 
 	.xstats_get       = otx2_sso_xstats_get,
 	.xstats_reset     = otx2_sso_xstats_reset,
