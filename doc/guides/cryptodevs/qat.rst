@@ -462,7 +462,7 @@ Check that the VFs are available for use. For example ``lspci -d:37c9`` should
 list 48 VF devices available for a ``C62x`` device.
 
 To complete the installation follow the instructions in
-`Binding the available VFs to the DPDK UIO driver`_.
+`Binding the available VFs to the vfio-pci driver`_.
 
 .. Note::
 
@@ -534,7 +534,7 @@ Confirm the presence of 48 VF devices - 16 per PF::
     lspci -d:37c9
 
 
-To complete the installation - follow instructions in `Binding the available VFs to the DPDK UIO driver`_.
+To complete the installation - follow instructions in `Binding the available VFs to the vfio-pci driver`_.
 
 .. Note::
 
@@ -584,10 +584,21 @@ To complete the installation - follow instructions in `Binding the available VFs
       sudo yum install kernel-devel-`uname -r`
 
 
-Binding the available VFs to the DPDK UIO driver
+Binding the available VFs to the vfio-pci driver
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Unbind the VFs from the stock driver so they can be bound to the uio driver.
+Notice:
+
+* Please note that due to security issues, the usage of older DPDK igb-uio
+  driver is not recommended. This document shows how to use the more secure
+  vfio-pci driver.
+* If QAT fails to bind to vfio-pci on Linux kernel 5.9+, please see the
+  QATE-39220 and QATE-7495 issues in
+  `01.org doc <https://01.org/sites/default/files/downloads/336211-015-qatsoftwareforlinux-rn-hwv1.7-final.pdf>`_
+  which details the constraint about trusted guests and add `disable_denylist=1`
+  to the vfio-pci params to use QAT. See also `this patch description <https://lkml.org/lkml/2020/7/23/1155>`_.
+
+Unbind the VFs from the stock driver so they can be bound to the vfio-pci driver.
 
 For an Intel(R) QuickAssist Technology DH895xCC device
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -635,25 +646,28 @@ VFs are different adjust the unbind command below::
         done; \
     done
 
-Bind to the DPDK uio driver
+Bind to the vfio-pci driver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Install the DPDK igb_uio driver, bind the VF PCI Device id to it and use lspci
-to confirm the VF devices are now in use by igb_uio kernel driver,
+Load the vfio-pci driver, bind the VF PCI Device id to it and use lspci
+to confirm the VF devices are now in use by vfio-pci kernel driver,
 e.g. for the C62x device::
 
     cd to the top-level DPDK directory
     modprobe uio
-    insmod ./build/kmod/igb_uio.ko
-    echo "8086 37c9" > /sys/bus/pci/drivers/igb_uio/new_id
+    modprobe vfio-pci
+    echo "8086 37c9" > /sys/bus/pci/drivers/vfio-pci/new_id
     lspci -vvd:37c9
 
+Use ``modprobe vfio-pci disable_denylist=1`` from kernel 5.9 onwards.
+See note in the section `Binding the available VFs to the vfio-pci driver`_
+above.
 
-Another way to bind the VFs to the DPDK UIO driver is by using the
+Another way to bind the VFs to the vfio-pci driver is by using the
 ``dpdk-devbind.py`` script::
 
     cd to the top-level DPDK directory
-    ./usertools/dpdk-devbind.py -b igb_uio 0000:03:01.1
+    ./usertools/dpdk-devbind.py -b vfio-pci 0000:03:01.1
 
 Testing
 ~~~~~~~
