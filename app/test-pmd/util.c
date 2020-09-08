@@ -22,6 +22,12 @@ print_ether_addr(const char *what, const struct rte_ether_addr *eth_addr)
 	printf("%s%s", what, buf);
 }
 
+static bool tunnel_missed_packet(struct rte_mbuf  *mb)
+{
+	uint64_t mask = PKT_RX_FDIR | PKT_RX_FDIR_ID;
+	return (mb->ol_flags & mask) == mask;
+}
+
 static inline void
 dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 	      uint16_t nb_pkts, int is_rx)
@@ -51,15 +57,37 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 		mb = pkts[i];
 		eth_hdr = rte_pktmbuf_read(mb, 0, sizeof(_eth_hdr), &_eth_hdr);
 		eth_type = RTE_BE_TO_CPU_16(eth_hdr->ether_type);
-		ol_flags = mb->ol_flags;
 		packet_type = mb->packet_type;
 		is_encapsulation = RTE_ETH_IS_TUNNEL_PKT(packet_type);
 
+		if (tunnel_missed_packet(mb)) {
+			int ret;
+			struct rte_flow_error error;
+			struct rte_flow_restore_info info = { 0, };
+
+			ret = rte_flow_tunnel_get_restore_info(port_id, mb,
+							       &info, &error);
+			if (!ret) {
+				printf("tunnel restore info:");
+				if (info.flags & RTE_FLOW_RESTORE_INFO_TUNNEL)
+					if (info.tunnel.type ==
+					    RTE_FLOW_ITEM_TYPE_VXLAN)
+						printf(" - vxlan tunnel");
+				if (info.flags &
+				    RTE_FLOW_RESTORE_INFO_ENCAPSULATED)
+					printf(" - outer header present");
+				if (info.flags & RTE_FLOW_RESTORE_INFO_GROUP_ID)
+					printf(" - miss group %u",
+						info.group_id);
+			}
+			printf("\n");
+		}
 		print_ether_addr("  src=", &eth_hdr->s_addr);
 		print_ether_addr(" - dst=", &eth_hdr->d_addr);
 		printf(" - type=0x%04x - length=%u - nb_segs=%d",
 		       eth_type, (unsigned int) mb->pkt_len,
 		       (int)mb->nb_segs);
+		ol_flags = mb->ol_flags;
 		if (ol_flags & PKT_RX_RSS_HASH) {
 			printf(" - RSS hash=0x%x", (unsigned int) mb->hash.rss);
 			printf(" - RSS queue=0x%x", (unsigned int) queue);
