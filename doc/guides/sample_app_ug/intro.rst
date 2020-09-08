@@ -58,6 +58,10 @@ examples are highlighted below.
   forwarding Graph, or ``l3fwd_graph`` application does forwarding based on IPv4
   like a simple router with DPDK Graph framework.
 
+* :doc:`Network Layer 3 forwarding Regex<l3_forward_regex>`: The Network Layer3
+  forwarding Regex, or ``l3fwd-regex`` application does forwarding based on IPv4
+  like a simple router with DPDK Regex framework.
+
 * :doc:`Hardware packet copying<ioat>`: The Hardware packet copying,
   or ``ioatfwd`` application demonstrates how to use IOAT rawdev driver for
   copying packets between two threads.
