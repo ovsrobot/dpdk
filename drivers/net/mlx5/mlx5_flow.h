@@ -26,6 +26,7 @@ enum mlx5_rte_flow_item_type {
 	MLX5_RTE_FLOW_ITEM_TYPE_TAG,
 	MLX5_RTE_FLOW_ITEM_TYPE_TX_QUEUE,
 	MLX5_RTE_FLOW_ITEM_TYPE_VLAN,
+	MLX5_RTE_FLOW_ITEM_TYPE_TUNNEL,
 };
 
 /* Private (internal) rte flow actions. */
@@ -35,6 +36,7 @@ enum mlx5_rte_flow_action_type {
 	MLX5_RTE_FLOW_ACTION_TYPE_MARK,
 	MLX5_RTE_FLOW_ACTION_TYPE_COPY_MREG,
 	MLX5_RTE_FLOW_ACTION_TYPE_DEFAULT_MISS,
+	MLX5_RTE_FLOW_ACTION_TYPE_TUNNEL_SET,
 };
 
 /* Matches on selected register. */
@@ -196,6 +198,7 @@ enum mlx5_feature_name {
 #define MLX5_FLOW_ACTION_SET_IPV6_DSCP (1ull << 33)
 #define MLX5_FLOW_ACTION_AGE (1ull << 34)
 #define MLX5_FLOW_ACTION_DEFAULT_MISS (1ull << 35)
+#define MLX5_FLOW_ACTION_TUNNEL_TYPE1 (1ull << 36)
 
 #define MLX5_FLOW_FATE_ACTIONS \
 	(MLX5_FLOW_ACTION_DROP | MLX5_FLOW_ACTION_QUEUE | \
@@ -816,6 +819,45 @@ struct mlx5_fdir_flow {
 
 #define HAIRPIN_FLOW_ID_BITS 28
 
+#define MLX5_MAX_TUNNELS 63
+#define MLX5_TUNNEL_MARK_MASK 0x3F0000u
+#define TUNNEL_STEER_GROUP(grp) ((grp) | (1u << 31))
+
+struct mlx5_flow_tunnel {
+	LIST_ENTRY(mlx5_flow_tunnel) chain;
+	struct rte_flow_tunnel app_tunnel;	/** app tunnel copy */
+	uint32_t tunnel_id;		/** unique tunnel ID */
+	rte_atomic32_t refctn;
+	struct rte_flow_action action;
+	struct rte_flow_item item;
+};
+
+/** PMD tunnel related context */
+struct mlx5_flow_tunnel_hub {
+	LIST_HEAD(, mlx5_flow_tunnel) tunnels;
+	struct mlx5_flow_id_pool *tunnel_ids;
+};
+
+static inline bool
+is_flow_tunnel_match_rule(__rte_unused struct rte_eth_dev *dev,
+			  __rte_unused const struct rte_flow_attr *attr,
+			  __rte_unused const struct rte_flow_item items[],
+			  __rte_unused const struct rte_flow_action actions[])
+{
+	return (items[0].type == (typeof(items[0].type))
+			MLX5_RTE_FLOW_ITEM_TYPE_TUNNEL);
+}
+
+static inline bool
+is_flow_tunnel_steer_rule(__rte_unused struct rte_eth_dev *dev,
+			  __rte_unused const struct rte_flow_attr *attr,
+			  __rte_unused const struct rte_flow_item items[],
+			  __rte_unused const struct rte_flow_action actions[])
+{
+	return (actions[0].type == (typeof(actions[0].type))
+			MLX5_RTE_FLOW_ACTION_TYPE_TUNNEL_SET);
+}
+
 /* Flow structure. */
 struct rte_flow {
 	ILIST_ENTRY(uint32_t)next; /**< Index to the next flow structure. */
@@ -823,12 +865,14 @@ struct rte_flow {
 	/**< Device flow handles that are part of the flow. */
 	uint32_t drv_type:2; /**< Driver type. */
 	uint32_t fdir:1; /**< Identifier of associated FDIR if any. */
+	uint32_t tunnel:1;
 	uint32_t hairpin_flow_id:HAIRPIN_FLOW_ID_BITS;
 	/**< The flow id used for hairpin. */
 	uint32_t copy_applied:1; /**< The MARK copy Flow os applied. */
 	uint32_t rix_mreg_copy;
 	/**< Index to metadata register copy table resource. */
 	uint32_t counter; /**< Holds flow counter. */
+	uint32_t tunnel_id;  /**< Tunnel id */
 	uint16_t meter; /**< Holds flow meter id. */
 } __rte_packed;
 
@@ -1045,4 +1089,9 @@ int mlx5_flow_destroy_policer_rules(struct rte_eth_dev *dev,
 				    const struct rte_flow_attr *attr);
 int mlx5_flow_meter_flush(struct rte_eth_dev *dev,
 			  struct rte_mtr_error *error);
+int mlx5_get_flow_tunnel(struct rte_eth_dev *dev,
+			 const struct rte_flow_tunnel *app_tunnel,
+			 struct mlx5_flow_tunnel **tunnel);
+void mlx5_release_tunnel_hub(struct mlx5_dev_ctx_shared *sh);
+int mlx5_alloc_tunnel_hub(struct mlx5_dev_ctx_shared *sh);
 #endif /* RTE_PMD_MLX5_FLOW_H_ */

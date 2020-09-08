@@ -18,6 +18,7 @@
 #include <rte_flow_driver.h>
 #include <rte_malloc.h>
 #include <rte_ip.h>
+#include <rte_hash.h>
 
 #include <mlx5_glue.h>
 #include <mlx5_devx_cmds.h>
@@ -29,6 +30,13 @@
 #include "mlx5_flow.h"
 #include "mlx5_flow_os.h"
 #include "mlx5_rxtx.h"
+
+static struct mlx5_flow_tunnel *
+mlx5_find_tunnel_id(struct rte_eth_dev *dev, uint32_t id);
+static void
+mlx5_flow_tunnel_free(struct rte_eth_dev *dev, struct mlx5_flow_tunnel *tunnel);
+static uint32_t
+mlx5_mark_to_tunnel_id(uint32_t mark);
 
 /** Device flow drivers. */
 extern const struct mlx5_flow_driver_ops mlx5_flow_verbs_drv_ops;
@@ -220,6 +228,169 @@ static const struct rte_flow_expand_node mlx5_support_expansion[] = {
 	},
 };
 
+static inline bool
+mlx5_flow_tunnel_validate(__rte_unused struct rte_eth_dev *dev,
+			  struct rte_flow_tunnel *tunnel)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+
+	if (!priv->config.tunnel_offload || !tunnel)
+		goto err;
+
+	switch (tunnel->type) {
+	default:
+		goto err;
+	case RTE_FLOW_ITEM_TYPE_VXLAN:
+		break;
+	}
+
+	return true;
+
+err:
+	return false;
+}
+
+static int
+mlx5_flow_tunnel_set(struct rte_eth_dev *dev,
+		    struct rte_flow_tunnel *app_tunnel,
+		    struct rte_flow_action **actions,
+		    uint32_t *num_of_actions,
+		    struct rte_flow_error *error)
+{
+	int ret;
+	struct mlx5_flow_tunnel *tunnel;
+	if (!mlx5_flow_tunnel_validate(dev, app_tunnel))
+		return rte_flow_error_set(error, EINVAL,
+					  RTE_FLOW_ERROR_TYPE_ACTION_CONF, NULL,
+					  "invalid argument");
+
+	ret = mlx5_get_flow_tunnel(dev, app_tunnel, &tunnel);
+	if (ret < 0) {
+		return rte_flow_error_set(error, ret,
+					  RTE_FLOW_ERROR_TYPE_ACTION_CONF, NULL,
+					  "failed to match pmd tunnel");
+	}
+	rte_atomic32_inc(&tunnel->refctn);
+	*actions = &tunnel->action;
+	*num_of_actions = 1;
+	return 0;
+}
+
+static int
+mlx5_flow_tunnel_match(struct rte_eth_dev *dev,
+		       struct rte_flow_tunnel *app_tunnel,
+		       struct rte_flow_item **items,
+		       uint32_t *num_of_items,
+		       struct rte_flow_error *error)
+{
+	int ret;
+	struct mlx5_flow_tunnel *tunnel;
+	if (!mlx5_flow_tunnel_validate(dev, app_tunnel))
+		return rte_flow_error_set(error, EINVAL,
+					  RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
+					  "invalid argument");
+
+	ret = mlx5_get_flow_tunnel(dev, app_tunnel, &tunnel);
+	if (ret < 0) {
+		return rte_flow_error_set(error, ret,
+					  RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
+					  "failed to match pmd tunnel");
+	}
+
+	rte_atomic32_inc(&tunnel->refctn);
+	*items = &tunnel->item;
+	*num_of_items = 1;
+	return 0;
+}
+
+static int
+mlx5_flow_item_release(struct rte_eth_dev *dev,
+		       struct rte_flow_item *pmd_items,
+		       uint32_t num_items, struct rte_flow_error *err)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+	struct mlx5_dev_ctx_shared *sh = priv->sh;
+	struct mlx5_flow_tunnel_hub *thub = sh->tunnel_hub;
+	struct mlx5_flow_tunnel *tun;
+
+	LIST_FOREACH(tun, &thub->tunnels, chain) {
+		if (&tun->item == pmd_items)
+			break;
+	}
+	if (!tun || num_items != 1)
+		return rte_flow_error_set(err, EINVAL,
+					  RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
+					  "invalid argument");
+	if (rte_atomic32_dec_and_test(&tun->refctn))
+		mlx5_flow_tunnel_free(dev, tun);
+	return 0;
+}
+
+static int
+mlx5_flow_action_release(struct rte_eth_dev *dev,
+			 struct rte_flow_action *pmd_actions,
+			 uint32_t num_actions, struct rte_flow_error *err)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+	struct mlx5_dev_ctx_shared *sh = priv->sh;
+	struct mlx5_flow_tunnel_hub *thub = sh->tunnel_hub;
+	struct mlx5_flow_tunnel *tun;
+
+	LIST_FOREACH(tun, &thub->tunnels, chain) {
+		if (&tun->action == pmd_actions)
+			break;
+	}
+	if (!tun || num_actions != 1)
+		return rte_flow_error_set(err, EINVAL,
+					  RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
+					  "invalid argument");
+	if (rte_atomic32_dec_and_test(&tun->refctn))
+		mlx5_flow_tunnel_free(dev, tun);
+
+	return 0;
+}
+
+static void
+mlx5_restore_packet_outer(struct rte_eth_dev *dev __rte_unused,
+			  struct mlx5_flow_tunnel *tunnel __rte_unused,
+			  struct rte_mbuf *m __rte_unused)
+{
+}
+
+static int
+mlx5_flow_tunnel_get_restore_info(struct rte_eth_dev *dev,
+				  struct rte_mbuf *m,
+				  struct rte_flow_restore_info *info,
+				  struct rte_flow_error *err)
+{
+	uint32_t id;
+	uint64_t ol_flags = m->ol_flags;
+	struct mlx5_flow_tunnel *tunnel;
+	const uint64_t mask = PKT_RX_FDIR | PKT_RX_FDIR_ID;
+
+	if ((ol_flags & mask) != mask)
+		goto err;
+	id = mlx5_mark_to_tunnel_id(m->hash.fdir.hi);
+	if (!id)
+		goto err;
+	tunnel = mlx5_find_tunnel_id(dev, id);
+	if (!tunnel)
+		goto err;
+	mlx5_restore_packet_outer(dev, tunnel, m);
+	memcpy(&info->tunnel, &tunnel->app_tunnel, sizeof(info->tunnel));
+	m->ol_flags &= ~PKT_RX_FDIR;
+	info->group_id = -1u;
+	info->flags = RTE_FLOW_RESTORE_INFO_TUNNEL |
+		      RTE_FLOW_RESTORE_INFO_ENCAPSULATED;
+
+	return 0;
+
+err:
+	return rte_flow_error_set(err, EINVAL,
+				  RTE_FLOW_ERROR_TYPE_UNSPECIFIED, NULL,
+				  "failed to get restore info");
+}
+
 static const struct rte_flow_ops mlx5_flow_ops = {
 	.validate = mlx5_flow_validate,
 	.create = mlx5_flow_create,
@@ -229,6 +400,11 @@ static const struct rte_flow_ops mlx5_flow_ops = {
 	.query = mlx5_flow_query,
 	.dev_dump = mlx5_flow_dev_dump,
 	.get_aged_flows = mlx5_flow_get_aged_flows,
+	.tunnel_decap_set = mlx5_flow_tunnel_set,
+	.tunnel_match = mlx5_flow_tunnel_match,
+	.action_release = mlx5_flow_action_release,
+	.item_release = mlx5_flow_item_release,
+	.get_restore_info = mlx5_flow_tunnel_get_restore_info,
 };
 
 /* Convert FDIR request to Generic flow. */
@@ -3524,6 +3700,104 @@ flow_hairpin_split(struct rte_eth_dev *dev,
 	return 0;
 }
 
+static uint32_t
+mlx5_tunnel_id_to_mark(uint32_t id)
+{
+	return (!id || id >= MLX5_MAX_TUNNELS) ?
+		0 : (id << 16);
+}
+
+static uint32_t
+mlx5_mark_to_tunnel_id(uint32_t mark)
+{
+	return mark & MLX5_TUNNEL_MARK_MASK ?
+		mark >> 16 : 0;
+}
+
+static int
+flow_tunnel_add_default_miss(struct rte_eth_dev *dev,
+			     struct rte_flow *flow,
+			     const struct rte_flow_attr *attr,
+			     const struct rte_flow_action *app_actions,
+			     uint32_t flow_idx,
+			     struct rte_flow_error *error)
+{
+	struct mlx5_flow *dev_flow;
+	struct rte_flow_attr miss_attr = *attr;
+	const struct mlx5_flow_tunnel *tunnel = app_actions[0].conf;
+	struct mlx5_priv *priv = dev->data->dev_private;
+	uint16_t queue[priv->reta_idx_n];
+	struct rte_flow_action_rss action_rss = {
+		.func = RTE_ETH_HASH_FUNCTION_DEFAULT,
+		.level = 0,
+		.types = priv->rss_conf.rss_hf,
+		.key_len = priv->rss_conf.rss_key_len,
+		.queue_num = priv->reta_idx_n,
+		.key = priv->rss_conf.rss_key,
+		.queue = queue,
+	};
+	const struct rte_flow_action_mark miss_mark = {
+		.id = mlx5_tunnel_id_to_mark(tunnel->tunnel_id)
+	};
+	const struct rte_flow_item *items, miss_items[2] = {
+		{
+			.type = RTE_FLOW_ITEM_TYPE_ETH,
+			.spec = NULL,
+			.last = NULL,
+			.mask = NULL
+		},
+		{
+			.type = RTE_FLOW_ITEM_TYPE_END,
+			.spec = NULL,
+			.last = NULL,
+			.mask = NULL
+		}
+	};
+	const struct rte_flow_action *actions, miss_actions[3] = {
+		{ .type = RTE_FLOW_ACTION_TYPE_MARK, .conf = &miss_mark },
+		{ .type = RTE_FLOW_ACTION_TYPE_RSS, .conf = &action_rss },
+		{ .type = RTE_FLOW_ACTION_TYPE_END, .conf = NULL }
+	};
+	const struct rte_flow_action_jump *jump_data;
+	uint32_t i;
+
+	if (!priv->reta_idx_n || !priv->rxqs_n)
+		return rte_flow_error_set(error, EINVAL,
+				   RTE_FLOW_ERROR_TYPE_ACTION_CONF,
+				   NULL, "invalid port configuration");
+	if (!(dev->data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG))
+		action_rss.types = 0;
+	for (i = 0; i != priv->reta_idx_n; ++i)
+		queue[i] = (*priv->reta_idx)[i];
+
+	if (!miss_mark.id)
+		rte_flow_error_set(error, EINVAL,
+				   RTE_FLOW_ERROR_TYPE_ACTION_CONF,
+				   NULL, "invalid tunnel id");
+	items = (typeof(items))miss_items;
+	actions = (typeof(actions))miss_actions;
+	for (; app_actions->type != RTE_FLOW_ACTION_TYPE_JUMP; app_actions++);
+	jump_data = app_actions->conf;
+	miss_attr.priority = 3;
+	miss_attr.group = TUNNEL_STEER_GROUP(jump_data->group);
+	dev_flow = flow_drv_prepare(dev, flow, &miss_attr,
+				    items, actions, flow_idx, error);
+	if (!dev_flow)
+		return -rte_errno;
+	dev_flow->flow = flow;
+	dev_flow->external = true;
+	/* Subflow object was created, we must include one in the list. */
+	SILIST_INSERT(&flow->dev_handles, dev_flow->handle_idx,
+		      dev_flow->handle, next);
+
+	DRV_LOG(DEBUG,
+		"port %u tunnel type=%d id=%u miss rule priority=%u group=%u",
+		dev->data->port_id, tunnel->app_tunnel.type,
+		tunnel->tunnel_id, miss_attr.priority, miss_attr.group);
+	return flow_drv_translate(dev, dev_flow, &miss_attr, items,
+				  actions, error);
+}
+
 /**
  * The last stage of splitting chain, just creates the subflow
  * without any modification.
@@ -4296,6 +4570,27 @@ flow_create_split_outer(struct rte_eth_dev *dev,
 	return ret;
 }
 
+static struct mlx5_flow_tunnel *
+flow_tunnel_from_rule(struct rte_eth_dev *dev,
+		      const struct rte_flow_attr *attr,
+		      const struct rte_flow_item items[],
+		      const struct rte_flow_action actions[])
+{
+	struct mlx5_flow_tunnel *tunnel;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+	if (is_flow_tunnel_match_rule(dev, attr, items, actions))
+		tunnel = (struct mlx5_flow_tunnel *)items[0].spec;
+	else if (is_flow_tunnel_steer_rule(dev, attr, items, actions))
+		tunnel = (struct mlx5_flow_tunnel *)actions[0].conf;
+	else
+		tunnel = NULL;
+#pragma GCC diagnostic pop
+
+	return tunnel;
+}
+
 /**
  * Create a flow and add it to @p list.
  *
@@ -4356,6 +4651,7 @@ flow_list_create(struct rte_eth_dev *dev, uint32_t *list,
 	int hairpin_flow;
 	uint32_t hairpin_id = 0;
 	struct rte_flow_attr attr_tx = { .priority = 0 };
+	struct mlx5_flow_tunnel *tunnel;
 	int ret;
 
 	hairpin_flow = flow_check_hairpin_split(dev, attr, actions);
@@ -4430,6 +4726,15 @@ flow_list_create(struct rte_eth_dev *dev, uint32_t *list,
 					      error);
 		if (ret < 0)
 			goto error;
+		if (is_flow_tunnel_steer_rule(dev, attr,
+					      buf->entry[i].pattern,
+					      p_actions_rx)) {
+			ret = flow_tunnel_add_default_miss(dev, flow, attr,
+							   p_actions_rx,
+							   idx, error);
+			if (ret < 0)
+				goto error;
+		}
 	}
 	/* Create the tx flow. */
 	if (hairpin_flow) {
@@ -4484,6 +4789,12 @@ flow_list_create(struct rte_eth_dev *dev, uint32_t *list,
 	priv->flow_idx = priv->flow_nested_idx;
 	if (priv->flow_nested_idx)
 		priv->flow_nested_idx = 0;
+	tunnel = flow_tunnel_from_rule(dev, attr, items, actions);
+	if (tunnel) {
+		flow->tunnel = 1;
+		flow->tunnel_id = tunnel->tunnel_id;
+		rte_atomic32_inc(&tunnel->refctn);
+	}
 	return idx;
 error:
 	MLX5_ASSERT(flow);
@@ -4657,6 +4968,13 @@ flow_list_destroy(struct rte_eth_dev *dev, uint32_t *list,
 		}
 	}
 	mlx5_ipool_free(priv->sh->ipool[MLX5_IPOOL_RTE_FLOW], flow_idx);
+	if (flow->tunnel) {
+		struct mlx5_flow_tunnel *tunnel;
+		tunnel = mlx5_find_tunnel_id(dev, flow->tunnel_id);
+		RTE_VERIFY(tunnel);
+		if (rte_atomic32_dec_and_test(&tunnel->refctn))
+			mlx5_flow_tunnel_free(dev, tunnel);
+	}
 }
 
 /**
@@ -6300,4 +6618,139 @@ mlx5_flow_get_aged_flows(struct rte_eth_dev *dev, void **contexts,
 		"port %u get aged flows is not supported.",
 		 dev->data->port_id);
 	return -ENOTSUP;
+}
+
+static void
+mlx5_flow_tunnel_free(struct rte_eth_dev *dev,
+		      struct mlx5_flow_tunnel *tunnel)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+	struct mlx5_dev_ctx_shared *sh = priv->sh;
+	struct mlx5_flow_tunnel_hub *thub = sh->tunnel_hub;
+	struct mlx5_flow_id_pool *id_pool = thub->tunnel_ids;
+
+	DRV_LOG(DEBUG, "port %u release pmd tunnel id=0x%x",
+		dev->data->port_id, tunnel->tunnel_id);
+	RTE_VERIFY(!rte_atomic32_read(&tunnel->refctn));
+	LIST_REMOVE(tunnel, chain);
+	mlx5_flow_id_release(id_pool, tunnel->tunnel_id);
+	free(tunnel);
+}
+
+static struct mlx5_flow_tunnel *
+mlx5_find_tunnel_id(struct rte_eth_dev *dev, uint32_t id)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+	struct mlx5_dev_ctx_shared *sh = priv->sh;
+	struct mlx5_flow_tunnel_hub *thub = sh->tunnel_hub;
+	struct mlx5_flow_tunnel *tun;
+
+	LIST_FOREACH(tun, &thub->tunnels, chain) {
+		if (tun->tunnel_id == id)
+			break;
+	}
+
+	return tun;
+}
+
+static struct mlx5_flow_tunnel *
+mlx5_flow_tunnel_allocate(struct rte_eth_dev *dev,
+			  const struct rte_flow_tunnel *app_tunnel)
+{
+	int ret;
+	struct mlx5_flow_tunnel *tunnel;
+	struct mlx5_priv *priv = dev->data->dev_private;
+	struct mlx5_dev_ctx_shared *sh = priv->sh;
+	struct mlx5_flow_tunnel_hub *thub = sh->tunnel_hub;
+	struct mlx5_flow_id_pool *id_pool = thub->tunnel_ids;
+	uint32_t id;
+
+	ret = mlx5_flow_id_get(id_pool, &id);
+	if (ret)
+		return NULL;
+	/**
+	 * mlx5 flow tunnel is an auxlilary data structure
+	 * It's not part of IO. No need to allocate it from
+	 * huge pages pools dedicated for IO
+	 */
+	tunnel = calloc(1, sizeof(*tunnel));
+	if (!tunnel) {
+		mlx5_flow_id_release(id_pool, id);
+		return NULL;
+	}
+	/* initiate new PMD tunnel */
+	memcpy(&tunnel->app_tunnel, app_tunnel, sizeof(*app_tunnel));
+	rte_atomic32_init(&tunnel->refctn);
+	tunnel->tunnel_id = id;
+	tunnel->action.type = MLX5_RTE_FLOW_ACTION_TYPE_TUNNEL_SET;
+	tunnel->action.conf = tunnel;
+	tunnel->item.type = MLX5_RTE_FLOW_ITEM_TYPE_TUNNEL;
+	tunnel->item.spec = tunnel;
+	tunnel->item.last = NULL;
+	tunnel->item.mask = NULL;
+	DRV_LOG(DEBUG, "port %u new pmd tunnel id=0x%x",
+		dev->data->port_id, tunnel->tunnel_id);
+
+	return tunnel;
+}
+
+int
+mlx5_get_flow_tunnel(struct rte_eth_dev *dev,
+		     const struct rte_flow_tunnel *app_tunnel,
+		     struct mlx5_flow_tunnel **tunnel)
+{
+	int ret;
+	struct mlx5_priv *priv = dev->data->dev_private;
+	struct mlx5_dev_ctx_shared *sh = priv->sh;
+	struct mlx5_flow_tunnel_hub *thub = sh->tunnel_hub;
+	struct mlx5_flow_tunnel *tun;
+
+	LIST_FOREACH(tun, &thub->tunnels, chain) {
+		if (!memcmp(app_tunnel, &tun->app_tunnel,
+			    sizeof(*app_tunnel))) {
+			*tunnel = tun;
+			ret = 0;
+			break;
+		}
+	}
+	if (!tun) {
+		tun = mlx5_flow_tunnel_allocate(dev, app_tunnel);
+		if (tun) {
+			LIST_INSERT_HEAD(&thub->tunnels, tun, chain);
+			*tunnel = tun;
+		} else {
+			ret = -ENOMEM;
+		}
+	}
+
+	return ret;
+}
+
+void mlx5_release_tunnel_hub(struct mlx5_dev_ctx_shared *sh)
+{
+	if (sh->tunnel_hub)
+		return;
+	RTE_VERIFY(LIST_EMPTY(&sh->tunnel_hub->tunnels));
+	mlx5_flow_id_pool_release(sh->tunnel_hub->tunnel_ids);
+	free(sh->tunnel_hub);
+}
+
+int mlx5_alloc_tunnel_hub(struct mlx5_dev_ctx_shared *sh)
+{
+	int err;
+
+	sh->tunnel_hub = calloc(1, sizeof(*sh->tunnel_hub));
+	if (!sh->tunnel_hub)
+		return -ENOMEM;
+	LIST_INIT(&sh->tunnel_hub->tunnels);
+	sh->tunnel_hub->tunnel_ids = mlx5_flow_id_pool_alloc(MLX5_MAX_TUNNELS);
+	if (!sh->tunnel_hub->tunnel_ids) {
+		free(sh->tunnel_hub);
+		err = -rte_errno;
+		goto out;
+	}
+	err = 0;
+
+out:
+	return err;
 }

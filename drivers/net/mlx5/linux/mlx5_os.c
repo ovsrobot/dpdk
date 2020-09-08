@@ -281,6 +281,12 @@ mlx5_alloc_shared_dr(struct mlx5_priv *priv)
 		sh->esw_drop_action = mlx5_glue->dr_create_flow_action_drop();
 	}
 #endif
+	if (!sh->tunnel_hub)
+		err = mlx5_alloc_tunnel_hub(sh);
+	if (err) {
+		DRV_LOG(ERR, "mlx5_alloc_tunnel_hub failed err=%d", err);
+		goto error;
+	}
 	if (priv->config.reclaim_mode == MLX5_RCM_AGGR) {
 		mlx5_glue->dr_reclaim_domain_memory(sh->rx_domain, 1);
 		mlx5_glue->dr_reclaim_domain_memory(sh->tx_domain, 1);
@@ -318,6 +324,10 @@ error:
 		/* tags should be destroyed with flow before. */
 		mlx5_hlist_destroy(sh->tag_table, NULL, NULL);
 		sh->tag_table = NULL;
+	}
+	if (sh->tunnel_hub) {
+		mlx5_release_tunnel_hub(sh);
+		sh->tunnel_hub = NULL;
 	}
 	mlx5_free_table_hash_list(priv);
 	return err;
@@ -371,6 +381,10 @@ mlx5_os_free_shared_dr(struct mlx5_priv *priv)
 		/* tags should be destroyed with flow before. */
 		mlx5_hlist_destroy(sh->tag_table, NULL, NULL);
 		sh->tag_table = NULL;
+	}
+	if (sh->tunnel_hub) {
+		mlx5_release_tunnel_hub(sh);
+		sh->tunnel_hub = NULL;
 	}
 	mlx5_free_table_hash_list(priv);
 }

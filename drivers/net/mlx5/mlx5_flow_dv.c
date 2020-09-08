@@ -3676,6 +3676,8 @@ flow_dv_validate_action_jump(const struct rte_flow_action *action,
 					  NULL, "action configuration not set");
 	target_group =
 		((const struct rte_flow_action_jump *)action->conf)->group;
+	if (action_flags & MLX5_FLOW_ACTION_TUNNEL_TYPE1)
+		target_group = TUNNEL_STEER_GROUP(target_group);
 	ret = mlx5_flow_group_to_table(attributes, external, target_group,
 				       true, &table, error);
 	if (ret)
@@ -5035,6 +5037,15 @@ flow_dv_validate(struct rte_eth_dev *dev, const struct rte_flow_attr *attr,
 						  RTE_FLOW_ERROR_TYPE_ITEM,
 						  NULL, "item not supported");
 		switch (type) {
+		case MLX5_RTE_FLOW_ITEM_TYPE_TUNNEL:
+			if (items[0].type != (typeof(items[0].type))
+						MLX5_RTE_FLOW_ITEM_TYPE_TUNNEL)
+				return rte_flow_error_set
+						(error, EINVAL,
+						RTE_FLOW_ERROR_TYPE_ITEM,
+						NULL, "MLX5 private items "
+						"must be the first");
+			break;
 		case RTE_FLOW_ITEM_TYPE_VOID:
 			break;
 		case RTE_FLOW_ITEM_TYPE_PORT_ID:
@@ -5699,12 +5710,48 @@ flow_dv_validate(struct rte_eth_dev *dev, const struct rte_flow_attr *attr,
 			action_flags |= MLX5_FLOW_ACTION_SET_IPV6_DSCP;
 			rw_act_num += MLX5_ACT_NUM_SET_DSCP;
 			break;
+		case MLX5_RTE_FLOW_ACTION_TYPE_TUNNEL_SET:
+			if (actions[0].type != (typeof(actions[0].type))
+				MLX5_RTE_FLOW_ACTION_TYPE_TUNNEL_SET)
+				return rte_flow_error_set
+						(error, EINVAL,
+						RTE_FLOW_ERROR_TYPE_ACTION,
+						NULL, "MLX5 private action "
+						"must be the first");
+
+			action_flags |= MLX5_FLOW_ACTION_TUNNEL_TYPE1;
+			break;
 		default:
 			return rte_flow_error_set(error, ENOTSUP,
 						  RTE_FLOW_ERROR_TYPE_ACTION,
 						  actions,
 						  "action not supported");
 		}
+	}
+	/*
+	 * Validate flow tunnel decap_set rule
+	 */
+	if (action_flags & MLX5_FLOW_ACTION_TUNNEL_TYPE1) {
+		uint64_t bad_actions_mask = MLX5_FLOW_ACTION_DECAP |
+						MLX5_FLOW_ACTION_MARK;
+
+		if (action_flags & bad_actions_mask)
+			return rte_flow_error_set
+					(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ACTION, NULL,
+					"Invalid RTE action in tunnel "
+					"set decap rule");
+		if (!(action_flags & MLX5_FLOW_ACTION_JUMP))
+			return rte_flow_error_set
+					(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ACTION, NULL,
+					"tunnel set decap rule must terminate "
+					"with JUMP");
+		if (!attr->ingress)
+			return rte_flow_error_set
+					(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ACTION, NULL,
+					"tunnel flows for ingress traffic only");
 	}
 	/*
 	 * Validate the drop action mutual exclusion with other actions.
@@ -8110,11 +8157,14 @@ __flow_dv_translate(struct rte_eth_dev *dev,
 	uint8_t next_protocol = 0xff;
 	struct rte_vlan_hdr vlan = { 0 };
 	uint32_t table;
+	uint32_t attr_group;
 	int ret = 0;
 
+	attr_group = !is_flow_tunnel_match_rule(dev, attr, items, actions) ?
+			attr->group : TUNNEL_STEER_GROUP(attr->group);
 	mhdr_res->ft_type = attr->egress ? MLX5DV_FLOW_TABLE_TYPE_NIC_TX :
 					   MLX5DV_FLOW_TABLE_TYPE_NIC_RX;
-	ret = mlx5_flow_group_to_table(attr, dev_flow->external, attr->group,
+	ret = mlx5_flow_group_to_table(attr, dev_flow->external, attr_group,
 				       !!priv->fdb_def_rule, &table, error);
 	if (ret)
 		return ret;
@@ -8125,6 +8175,15 @@ __flow_dv_translate(struct rte_eth_dev *dev,
 		priority = dev_conf->flow_prio - 1;
 	/* number of actions must be set to 0 in case of dirty stack. */
 	mhdr_res->actions_num = 0;
+	if (is_flow_tunnel_match_rule(dev, attr, items, actions)) {
+		if (flow_dv_create_action_l2_decap(dev, dev_flow,
+						   attr->transfer,
+						   error))
+			return -rte_errno;
+		dev_flow->dv.actions[actions_n++] =
+				dev_flow->dv.encap_decap->action;
+		action_flags |= MLX5_FLOW_ACTION_DECAP;
+	}
 	for (; !actions_end ; actions++) {
 		const struct rte_flow_action_queue *queue;
 		const struct rte_flow_action_rss *rss;
@@ -8134,6 +8193,7 @@ __flow_dv_translate(struct rte_eth_dev *dev,
 		const struct rte_flow_action_meter *mtr;
 		struct mlx5_flow_tbl_resource *tbl;
 		uint32_t port_id = 0;
+		uint32_t jump_group;
 		struct mlx5_flow_dv_port_id_action_resource port_id_resource;
 		int action_type = actions->type;
 		const struct rte_flow_action *found_action = NULL;
@@ -8145,6 +8205,9 @@ __flow_dv_translate(struct rte_eth_dev *dev,
 						  actions,
 						  "action not supported");
 		switch (action_type) {
+		case MLX5_RTE_FLOW_ACTION_TYPE_TUNNEL_SET:
+			action_flags |= MLX5_FLOW_ACTION_TUNNEL_TYPE1;
+			break;
 		case RTE_FLOW_ACTION_TYPE_VOID:
 			break;
 		case RTE_FLOW_ACTION_TYPE_PORT_ID:
@@ -8377,8 +8440,12 @@ __flow_dv_translate(struct rte_eth_dev *dev,
 			break;
 		case RTE_FLOW_ACTION_TYPE_JUMP:
 			jump_data = action->conf;
+			jump_group = !(action_flags &
+					MLX5_FLOW_ACTION_TUNNEL_TYPE1) ?
+					jump_data->group :
+					TUNNEL_STEER_GROUP(jump_data->group);
 			ret = mlx5_flow_group_to_table(attr, dev_flow->external,
-						       jump_data->group,
+						       jump_group,
 						       !!priv->fdb_def_rule,
 						       &table, error);
 			if (ret)
