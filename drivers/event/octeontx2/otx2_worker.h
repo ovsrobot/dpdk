@@ -9,6 +9,7 @@
 #include <rte_branch_prediction.h>
 
 #include <otx2_common.h>
+#include "otx2_ca_helper.h"
 #include "otx2_evdev.h"
 #include "otx2_ethdev_sec_tx.h"
 
@@ -66,8 +67,10 @@ otx2_ssogws_get_work(struct otx2_ssogws *ws, struct rte_event *ev,
 	ws->cur_tt = event.sched_type;
 	ws->cur_grp = event.queue_id;
 
-	if (event.sched_type != SSO_TT_EMPTY &&
-	    event.event_type == RTE_EVENT_TYPE_ETHDEV) {
+	if (event.sched_type == SSO_TT_EMPTY)
+		goto setev_and_return;
+
+	if (event.event_type == RTE_EVENT_TYPE_ETHDEV) {
 		otx2_wqe_to_mbuf(get_work1, mbuf, event.sub_event_type,
 				 (uint32_t) event.get_work0, flags, lookup_mem);
 		/* Extracting tstamp, if PTP enabled*/
@@ -76,8 +79,11 @@ otx2_ssogws_get_work(struct otx2_ssogws *ws, struct rte_event *ev,
 		otx2_nix_mbuf_to_tstamp((struct rte_mbuf *)mbuf, ws->tstamp,
 					flags, (uint64_t *)tstamp_ptr);
 		get_work1 = mbuf;
+	} else if (event.event_type == RTE_EVENT_TYPE_CRYPTODEV) {
+		get_work1 = otx2_handle_crypto_event(get_work1);
 	}
 
+setev_and_return:
 	ev->event = event.get_work0;
 	ev->u64 = get_work1;
 
