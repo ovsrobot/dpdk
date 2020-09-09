@@ -302,7 +302,7 @@ One additional enhancement in this sample application is that the server process
 This eliminates the need for the client processes to have the portmask parameter passed into them on the command line,
 as is done for the symmetric multi-process application, and therefore eliminates mismatched parameters as a potential source of errors.
 
-In the same way that the server process is designed to be run as a primary process instance only,
+In the same way, the server process is designed to be run as a primary process instance only,
 the client processes are designed to be run as secondary instances only.
 They have no code to attempt to create shared memory objects.
 Instead, handles to all needed rings and memory pools are obtained via calls to rte_ring_lookup() and rte_mempool_lookup().

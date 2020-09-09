@@ -136,7 +136,7 @@ can use).
 Running Multiple Independent Groups of DPDK Applications
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In the same way that it is possible to run independent DPDK applications side- by-side on a single system,
+In the same way, it is possible to run independent DPDK applications side- by-side on a single system,
 this can be trivially extended to multi-process groups of DPDK applications running side-by-side.
 In this case, the secondary processes must use the same ``--file-prefix`` parameter
 as the primary process whose shared memory they are connecting to.
