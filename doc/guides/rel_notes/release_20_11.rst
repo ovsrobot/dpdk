@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added new l3fwd-regex sample application.**
+
+  Added an example application ``l3fwd-regex``. This demonstrates the usage of
+  packet processing using DPDK Regex libraries.
 
 Removed Items
 -------------
