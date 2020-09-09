@@ -101,8 +101,13 @@ static inline phys_addr_t iova_to_phys(struct task_struct *tsk,
 	offset = iova & (PAGE_SIZE - 1);
 
 	/* Read one page struct info */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
+	ret = get_user_pages_remote(tsk->mm, iova, 1,
+				    FOLL_TOUCH, &page, NULL, NULL);
+#else
 	ret = get_user_pages_remote(tsk, tsk->mm, iova, 1,
 				    FOLL_TOUCH, &page, NULL, NULL);
+#endif /* >= 5.9.0 */
 	if (ret < 0)
 		return 0;
 
