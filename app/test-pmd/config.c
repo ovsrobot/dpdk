@@ -138,6 +138,28 @@ const struct rss_type_info rss_type_table[] = {
 	{ NULL, 0 },
 };
 
+static const struct {
+	enum rte_fec_mode mode;
+	const char *name;
+} fec_mode_name[] = {
+	{
+		.mode = ETH_FEC_NOFEC,
+		.name = "off",
+	},
+	{
+		.mode = ETH_FEC_BASER,
+		.name = "baser",
+	},
+	{
+		.mode = ETH_FEC_RS,
+		.name = "rs",
+	},
+	{
+		.mode = ETH_FEC_AUTO,
+		.name = "auto",
+	},
+};
+
 static void
 print_ethaddr(const char *name, struct rte_ether_addr *eth_addr)
 {
@@ -2965,6 +2987,38 @@ set_tx_pkt_split(const char *name)
 		}
 	}
 	printf("unknown value: \"%s\"\n", name);
+}
+
+int
+parse_fec_mode(const char *name, enum rte_fec_mode *mode)
+{
+	uint8_t i;
+
+	for (i = 0; i < RTE_DIM(fec_mode_name); i++) {
+		if (strcmp(fec_mode_name[i].name, name) == 0) {
+			*mode = fec_mode_name[i].mode;
+			return 0;
+		}
+	}
+	return -1;
+}
+
+void
+show_fec_capability(uint8_t fec_cap)
+{
+	uint8_t i;
+
+	if (fec_cap == 0) {
+		printf("FEC is not supported\n");
+		return;
+	}
+
+	printf("FEC capabilities: ");
+	for (i = ETH_FEC_BASER; i <= ETH_FEC_AUTO; i++) {
+		if (fec_cap & 1U << i)
+			printf("%s ", fec_mode_name[i].name);
+	}
+	printf("\n");
 }
 
 void
