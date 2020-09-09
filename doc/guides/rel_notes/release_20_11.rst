@@ -134,3 +134,7 @@ Tested Platforms
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+
+* **Updated Cisco enic driver.**
+
+  * Added support for VF representors with single-queue Tx/Rx and flow API
