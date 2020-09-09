@@ -29,7 +29,7 @@ iavf_rxq_rearm(struct iavf_rx_queue *rxq)
 			__m128i dma_addr0;
 
 			dma_addr0 = _mm_setzero_si128();
-			for (i = 0; i < IAVF_VPMD_DESCS_PER_LOOP; i++) {
+			for (i = 0; i < IAVF_VPMD_DESCS_PER_LOOP_AVX; i++) {
 				rxp[i] = &rxq->fake_mbuf;
 				_mm_store_si128((__m128i *)&rxdp[i].read,
 						dma_addr0);
@@ -134,13 +134,19 @@ iavf_rxq_rearm(struct iavf_rx_queue *rxq)
 
 #define PKTLEN_SHIFT     10
 
+/**
+ * vPMD raw receive routine for flex RxD,
+ * only accept(nb_pkts >= IAVF_VPMD_DESCS_PER_LOOP_AVX)
+ *
+ * Notice:
+ * - nb_pkts < IAVF_VPMD_DESCS_PER_LOOP_AVX, just return no packet
+ * - floor align nb_pkts to a IAVF_VPMD_DESCS_PER_LOOP_AVX power-of-two
+ */
 static inline uint16_t
 _iavf_recv_raw_pkts_vec_avx2(struct iavf_rx_queue *rxq,
 			     struct rte_mbuf **rx_pkts,
 			     uint16_t nb_pkts, uint8_t *split_packet)
 {
-#define IAVF_DESCS_PER_LOOP_AVX 8
-
 	/* const uint32_t *ptype_tbl = rxq->vsi->adapter->ptype_tbl; */
 	const uint32_t *type_table = rxq->vsi->adapter->ptype_tbl;
 
@@ -153,8 +159,8 @@ _iavf_recv_raw_pkts_vec_avx2(struct iavf_rx_queue *rxq,
 
 	rte_prefetch0(rxdp);
 
-	/* nb_pkts has to be floor-aligned to IAVF_DESCS_PER_LOOP_AVX */
-	nb_pkts = RTE_ALIGN_FLOOR(nb_pkts, IAVF_DESCS_PER_LOOP_AVX);
+	/* nb_pkts has to be floor-aligned to IAVF_VPMD_DESCS_PER_LOOP_AVX */
+	nb_pkts = RTE_ALIGN_FLOOR(nb_pkts, IAVF_VPMD_DESCS_PER_LOOP_AVX);
 
 	/* See if we need to rearm the RX queue - gives the prefetch a bit
 	 * of time to act
@@ -297,8 +303,8 @@ _iavf_recv_raw_pkts_vec_avx2(struct iavf_rx_queue *rxq,
 	uint16_t i, received;
 
 	for (i = 0, received = 0; i < nb_pkts;
-	     i += IAVF_DESCS_PER_LOOP_AVX,
-	     rxdp += IAVF_DESCS_PER_LOOP_AVX) {
+	     i += IAVF_VPMD_DESCS_PER_LOOP_AVX,
+	     rxdp += IAVF_VPMD_DESCS_PER_LOOP_AVX) {
 		/* step 1, copy over 8 mbuf pointers to rx_pkts array */
 		_mm256_storeu_si256((void *)&rx_pkts[i],
 				    _mm256_loadu_si256((void *)&sw_ring[i]));
@@ -368,7 +374,7 @@ _iavf_recv_raw_pkts_vec_avx2(struct iavf_rx_queue *rxq,
 		if (split_packet) {
 			int j;
 
-			for (j = 0; j < IAVF_DESCS_PER_LOOP_AVX; j++)
+			for (j = 0; j < IAVF_VPMD_DESCS_PER_LOOP_AVX; j++)
 				rte_mbuf_prefetch_part2(rx_pkts[i + j]);
 		}
 
@@ -583,7 +589,7 @@ _iavf_recv_raw_pkts_vec_avx2(struct iavf_rx_queue *rxq,
 			split_bits = _mm_shuffle_epi8(split_bits, eop_shuffle);
 			*(uint64_t *)split_packet =
 				_mm_cvtsi128_si64(split_bits);
-			split_packet += IAVF_DESCS_PER_LOOP_AVX;
+			split_packet += IAVF_VPMD_DESCS_PER_LOOP_AVX;
 		}
 
 		/* perform dd_check */
@@ -599,7 +605,7 @@ _iavf_recv_raw_pkts_vec_avx2(struct iavf_rx_queue *rxq,
 				(_mm_cvtsi128_si64
 					(_mm256_castsi256_si128(status0_7)));
 		received += burst;
-		if (burst != IAVF_DESCS_PER_LOOP_AVX)
+		if (burst != IAVF_VPMD_DESCS_PER_LOOP_AVX)
 			break;
 	}
 
@@ -633,13 +639,19 @@ flex_rxd_to_fdir_flags_vec_avx2(const __m256i fdir_id0_7)
 	return fdir_flags;
 }
 
+/**
+ * vPMD raw receive routine,
+ * only accept(nb_pkts >= IAVF_VPMD_DESCS_PER_LOOP_AVX)
+ *
+ * Notice:
+ * - nb_pkts < IAVF_VPMD_DESCS_PER_LOOP_AVX, just return no packet
+ * - floor align nb_pkts to a IAVF_VPMD_DESCS_PER_LOOP_AVX power-of-two
+ */
 static inline uint16_t
 _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 				      struct rte_mbuf **rx_pkts,
 				      uint16_t nb_pkts, uint8_t *split_packet)
 {
-#define IAVF_DESCS_PER_LOOP_AVX 8
-
 	const uint32_t *type_table = rxq->vsi->adapter->ptype_tbl;
 
 	const __m256i mbuf_init = _mm256_set_epi64x(0, 0,
@@ -650,8 +662,8 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 
 	rte_prefetch0(rxdp);
 
-	/* nb_pkts has to be floor-aligned to IAVF_DESCS_PER_LOOP_AVX */
-	nb_pkts = RTE_ALIGN_FLOOR(nb_pkts, IAVF_DESCS_PER_LOOP_AVX);
+	/* nb_pkts has to be floor-aligned to IAVF_VPMD_DESCS_PER_LOOP_AVX */
+	nb_pkts = RTE_ALIGN_FLOOR(nb_pkts, IAVF_VPMD_DESCS_PER_LOOP_AVX);
 
 	/* See if we need to rearm the RX queue - gives the prefetch a bit
 	 * of time to act
@@ -794,8 +806,8 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 	uint16_t i, received;
 
 	for (i = 0, received = 0; i < nb_pkts;
-	     i += IAVF_DESCS_PER_LOOP_AVX,
-	     rxdp += IAVF_DESCS_PER_LOOP_AVX) {
+	     i += IAVF_VPMD_DESCS_PER_LOOP_AVX,
+	     rxdp += IAVF_VPMD_DESCS_PER_LOOP_AVX) {
 		/* step 1, copy over 8 mbuf pointers to rx_pkts array */
 		_mm256_storeu_si256((void *)&rx_pkts[i],
 				    _mm256_loadu_si256((void *)&sw_ring[i]));
@@ -851,7 +863,7 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 		if (split_packet) {
 			int j;
 
-			for (j = 0; j < IAVF_DESCS_PER_LOOP_AVX; j++)
+			for (j = 0; j < IAVF_VPMD_DESCS_PER_LOOP_AVX; j++)
 				rte_mbuf_prefetch_part2(rx_pkts[i + j]);
 		}
 
@@ -1193,7 +1205,7 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 			split_bits = _mm_shuffle_epi8(split_bits, eop_shuffle);
 			*(uint64_t *)split_packet =
 				_mm_cvtsi128_si64(split_bits);
-			split_packet += IAVF_DESCS_PER_LOOP_AVX;
+			split_packet += IAVF_VPMD_DESCS_PER_LOOP_AVX;
 		}
 
 		/* perform dd_check */
@@ -1209,7 +1221,7 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 				(_mm_cvtsi128_si64
 					(_mm256_castsi256_si128(status0_7)));
 		received += burst;
-		if (burst != IAVF_DESCS_PER_LOOP_AVX)
+		if (burst != IAVF_VPMD_DESCS_PER_LOOP_AVX)
 			break;
 	}
 
@@ -1224,10 +1236,6 @@ _iavf_recv_raw_pkts_vec_avx2_flex_rxd(struct iavf_rx_queue *rxq,
 	return received;
 }
 
-/**
- * Notice:
- * - nb_pkts < IAVF_DESCS_PER_LOOP, just return no packet
- */
 uint16_t
 iavf_recv_pkts_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
 			uint16_t nb_pkts)
@@ -1235,10 +1243,6 @@ iavf_recv_pkts_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
 	return _iavf_recv_raw_pkts_vec_avx2(rx_queue, rx_pkts, nb_pkts, NULL);
 }
 
-/**
- * Notice:
- * - nb_pkts < IAVF_DESCS_PER_LOOP, just return no packet
- */
 uint16_t
 iavf_recv_pkts_vec_avx2_flex_rxd(void *rx_queue, struct rte_mbuf **rx_pkts,
 				 uint16_t nb_pkts)
@@ -1249,8 +1253,6 @@ iavf_recv_pkts_vec_avx2_flex_rxd(void *rx_queue, struct rte_mbuf **rx_pkts,
 
 /**
  * vPMD receive routine that reassembles single burst of 32 scattered packets
- * Notice:
- * - nb_pkts < IAVF_DESCS_PER_LOOP, just return no packet
  */
 static uint16_t
 iavf_recv_scattered_burst_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
@@ -1258,6 +1260,9 @@ iavf_recv_scattered_burst_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
 {
 	struct iavf_rx_queue *rxq = rx_queue;
 	uint8_t split_flags[IAVF_VPMD_RX_MAX_BURST] = {0};
+
+	/* split_flags only can support max of IAVF_VPMD_RX_MAX_BURST */
+	nb_pkts = RTE_MIN(nb_pkts, IAVF_VPMD_RX_MAX_BURST);
 
 	/* get some new buffers */
 	uint16_t nb_bufs = _iavf_recv_raw_pkts_vec_avx2(rxq, rx_pkts, nb_pkts,
@@ -1290,9 +1295,6 @@ iavf_recv_scattered_burst_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
 
 /**
  * vPMD receive routine that reassembles scattered packets.
- * Main receive routine that can handle arbitrary burst sizes
- * Notice:
- * - nb_pkts < IAVF_DESCS_PER_LOOP, just return no packet
  */
 uint16_t
 iavf_recv_scattered_pkts_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
@@ -1313,10 +1315,8 @@ iavf_recv_scattered_pkts_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
 }
 
 /**
- * vPMD receive routine that reassembles single burst of
- * 32 scattered packets for flex RxD
- * Notice:
- * - nb_pkts < IAVF_DESCS_PER_LOOP, just return no packet
+ * vPMD receive routine that reassembles single burst of 32 scattered packets
+ * for flex RxD
  */
 static uint16_t
 iavf_recv_scattered_burst_vec_avx2_flex_rxd(void *rx_queue,
@@ -1325,6 +1325,9 @@ iavf_recv_scattered_burst_vec_avx2_flex_rxd(void *rx_queue,
 {
 	struct iavf_rx_queue *rxq = rx_queue;
 	uint8_t split_flags[IAVF_VPMD_RX_MAX_BURST] = {0};
+
+	/* split_flags only can support max of IAVF_VPMD_RX_MAX_BURST */
+	nb_pkts = RTE_MIN(nb_pkts, IAVF_VPMD_RX_MAX_BURST);
 
 	/* get some new buffers */
 	uint16_t nb_bufs = _iavf_recv_raw_pkts_vec_avx2_flex_rxd(rxq,
@@ -1357,9 +1360,6 @@ iavf_recv_scattered_burst_vec_avx2_flex_rxd(void *rx_queue,
 
 /**
  * vPMD receive routine that reassembles scattered packets for flex RxD.
- * Main receive routine that can handle arbitrary burst sizes
- * Notice:
- * - nb_pkts < IAVF_DESCS_PER_LOOP, just return no packet
  */
 uint16_t
 iavf_recv_scattered_pkts_vec_avx2_flex_rxd(void *rx_queue,
