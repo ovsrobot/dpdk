@@ -712,6 +712,31 @@ action sets metadata for a packet and the metadata will be reported via
    | ``mask`` | ``data`` | bit-mask applies to "spec" and "last" |
    +----------+----------+---------------------------------------+
 
+Item: ``SECURITY``
+^^^^^^^^^^^^^^^^^^
+
+Matches packets that were security processed. It can be used to identify
+packets after inline security processing. For example, in case of inline IPsec,
+the packet headers would change after IPsec decapsulation and this item would
+allow application to differentiate non-IPsec packets from packets after
+inline IPsec processing.
+
+- ``spec``, ``last`` and ``mask`` are ignored.
+
+.. _table_rte_flow_item_security:
+
+.. table:: SECURITY
+
+   +----------+---------+
+   | Field    | Value   |
+   +==========+=========+
+   | ``spec`` | ignored |
+   +----------+---------+
+   | ``last`` | ignored |
+   +----------+---------+
+   | ``mask`` | ignored |
+   +----------+---------+
+
 Data matching item types
 ~~~~~~~~~~~~~~~~~~~~~~~~
 

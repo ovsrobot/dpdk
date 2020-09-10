@@ -537,6 +537,15 @@ enum rte_flow_item_type {
 	 */
 	RTE_FLOW_ITEM_TYPE_ECPRI,
 
+	/**
+	 * [META]
+	 *
+	 * Matches security processed packets.
+	 *
+	 * No associated specification structure.
+	 */
+	RTE_FLOW_ITEM_TYPE_SECURITY,
+
 };
 
 /**
