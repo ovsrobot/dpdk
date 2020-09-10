@@ -47,6 +47,15 @@ else
 	dpdk_conf.set('RTE_VER_RELEASE', 99)
 endif
 
+# abi checks cannot be run on windows
+if is_windows and abi_checks!=''
+	error('ABI checks cannot be run on windows')
+endif
+# abi checks can only be run on a debug build
+if not get_option('debug') and abi_checks!=''
+  error('Build type must have debug symbols when abi_checks=enabled')
+endif
+
 pmd_subdir_opt = get_option('drivers_install_subdir')
 if pmd_subdir_opt.contains('<VERSION>')
 	pmd_subdir_opt = abi_version.join(pmd_subdir_opt.split('<VERSION>'))
