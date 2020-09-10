@@ -24,6 +24,9 @@
 #include <rte_ip.h>
 #include <rte_tcp.h>
 #include <rte_pause.h>
+#include <rte_rawdev.h>
+#include <rte_ioat_rawdev.h>
+#include <rte_pci.h>
 
 #include "main.h"
 
@@ -57,6 +60,12 @@
 
 /* Maximum long option length for option parsing. */
 #define MAX_LONG_OPT_SZ 64
+
+#define IOAT_RING_SIZE 4096
+
+#define MAX_ENQUEUED_SIZE 2048
+
+#define MAX_VHOST_DEVICE 1024
 
 /* mask of enabled ports */
 static uint32_t enabled_port_mask = 0;
@@ -95,6 +104,21 @@ static int client_mode;
 static int dequeue_zero_copy;
 
 static int builtin_net_driver;
+
+static int async_vhost_driver;
+
+struct dma_info {
+	struct rte_pci_addr addr;
+	uint16_t dev_id;
+	bool is_valid;
+};
+
+struct dma_for_vhost {
+	struct dma_info dmas[RTE_MAX_QUEUES_PER_PORT * 2];
+	uint16_t nr;
+};
+
+static struct dma_for_vhost dma_bind[MAX_VHOST_DEVICE];
 
 /* Specify timeout (in useconds) between retries on RX. */
 static uint32_t burst_rx_delay_time = BURST_RX_WAIT_US;
@@ -181,6 +205,97 @@ struct mbuf_table lcore_tx_queue[RTE_MAX_LCORE];
 #define MBUF_TABLE_DRAIN_TSC	((rte_get_tsc_hz() + US_PER_S - 1) \
 				 / US_PER_S * BURST_TX_DRAIN_US)
 #define VLAN_HLEN       4
+
+static inline int
+open_dma(const char *value, void *dma_bind_info)
+{
+	struct dma_for_vhost *dma_info = dma_bind_info;
+	char *input = strndup(value, strlen(value) + 1);
+	char *addrs = input;
+	char *ptrs[2];
+	char *start, *end, *substr;
+	int64_t vid, vring_id;
+	struct rte_ioat_rawdev_config config;
+	struct rte_rawdev_info info = { .dev_private = &config };
+	char name[32];
+	int dev_id;
+	int ret = 0;
+	uint16_t i = 0;
+
+	while (isblank(*addrs))
+		addrs++;
+	if (*addrs == '\0') {
+		ret = -1;
+		goto out;
+	}
+
+	/* process DMA devices within bracket. */
+	addrs++;
+	substr = strtok(addrs, ";]");
+	if (!substr) {
+		ret = -1;
+		goto out;
+	}
+	char *dma_arg[MAX_VHOST_DEVICE];
+	rte_strsplit(substr, strlen(substr), dma_arg, MAX_VHOST_DEVICE, ',');
+	do {
+		char *arg_temp = dma_arg[i];
+		rte_strsplit(arg_temp, strlen(arg_temp), ptrs, 2, '@');
+
+		start = strstr(ptrs[0], "txd");
+		if (start == NULL) {
+			ret = -1;
+			goto out;
+		}
+
+		start += 3;
+		vid = strtol(start, &end, 0);
+		if (end == start) {
+			ret = -1;
+			goto out;
+		}
+
+		vring_id = 0 + VIRTIO_RXQ;
+		if (rte_pci_addr_parse(ptrs[1],
+				&(dma_info + vid)->dmas[vring_id].addr) < 0) {
+			ret = -1;
+			goto out;
+		}
+
+		rte_pci_device_name(&(dma_info + vid)->dmas[vring_id].addr,
+				    name, sizeof(name));
+		dev_id = rte_rawdev_get_dev_id(name);
+		if (dev_id == (uint16_t)(-ENODEV) ||
+		    dev_id == (uint16_t)(-EINVAL)) {
+			ret = -1;
+			goto out;
+		}
+
+		if (rte_rawdev_info_get(dev_id, &info) < 0 ||
+		    strstr(info.driver_name, "ioat") == NULL) {
+			ret = -1;
+			goto out;
+		}
+
+		(dma_info + vid)->dmas[vring_id].dev_id = dev_id;
+		(dma_info + vid)->dmas[vring_id].is_valid = true;
+		config.ring_size = IOAT_RING_SIZE;
+		if (rte_rawdev_configure(dev_id, &info) < 0) {
+			ret = -1;
+			goto out;
+		}
+		rte_rawdev_start(dev_id);
+
+		dma_info->nr++;
+
+		arg_temp = strtok(NULL, ";]");
+		i++;
+	} while (dma_arg[i]);
+
+out:
+	free(input);
+	return ret;
+}
 
 /*
  * Builds up the correct configuration for VMDQ VLAN pool map
@@ -485,6 +600,8 @@ us_vhost_parse_args(int argc, char **argv)
 		{"client", no_argument, &client_mode, 1},
 		{"dequeue-zero-copy", no_argument, &dequeue_zero_copy, 1},
 		{"builtin-net-driver", no_argument, &builtin_net_driver, 1},
+		{"async_vhost_driver", no_argument, &async_vhost_driver, 1},
+		{"dmas", required_argument, NULL, 0},
 		{NULL, 0, 0, 0},
 	};
 
@@ -620,10 +737,22 @@ us_vhost_parse_args(int argc, char **argv)
 						"socket-file", MAX_LONG_OPT_SZ)) {
 				if (us_vhost_parse_socket_path(optarg) == -1) {
 					RTE_LOG(INFO, VHOST_CONFIG,
-					"Invalid argument for socket name (Max %d characters)\n",
-					PATH_MAX);
+						"Invalid argument for socket name (Max %d characters)\n",
+						PATH_MAX);
 					us_vhost_usage(prgname);
 					return -1;
+				}
+			}
+
+			if (!strncmp(long_option[option_index].name,
+						"dmas", MAX_LONG_OPT_SZ)) {
+				if (open_dma(optarg, &dma_bind) == -1) {
+					if (*optarg == -1) {
+						RTE_LOG(INFO, VHOST_CONFIG,
+							"Wrong DMA args\n");
+						us_vhost_usage(prgname);
+						return -1;
+					}
 				}
 			}
 
