@@ -51,4 +51,11 @@ static inline void rte_prefetch2(const volatile void *p);
  */
 static inline void rte_prefetch_non_temporal(const volatile void *p);
 
+/**
+ * Demote a cache line into the last shared cache level.
+ * @param p
+ *   Address to demote
+ */
+static inline void rte_cldemote(const volatile void *p);
+
 #endif /* _RTE_PREFETCH_H_ */

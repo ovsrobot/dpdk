@@ -27,29 +27,11 @@ New Features
 .. This section should contain new features added in this release.
    Sample format:
 
-   * **Add a title in the past tense with a full stop.**
+Added new instruction CLDEMOTE in rte_prefetch.h.
 
-     Add a short 1-2 sentence description in the past tense.
-     The description should be enough to allow someone scanning
-     the release notes to understand the new feature.
-
-     If the feature adds a lot of sub-features you can use a bullet list
-     like this:
-
-     * Added feature foo to do something.
-     * Enhanced feature bar to do something else.
-
-     Refer to the previous release notes for examples.
-
-     Suggested order in release notes items:
-     * Core libs (EAL, mempool, ring, mbuf, buses)
-     * Device abstraction libs and PMDs
-       - ethdev (lib, PMDs)
-       - cryptodev (lib, PMDs)
-       - eventdev (lib, PMDs)
-       - etc
-     * Other libs
-     * Apps, Examples, Tools (if significant)
+     Added a hardware hint CLDEMOTE which is similar to prefetch in reverse.
+     CLDEMOTES moves the cache line to the last shared cache, where it expects
+     sharing to be efficient.
 
      This section is a comment. Do not overwrite or remove it.
      Also, make sure to start the actual text at the margin.
