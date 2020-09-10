@@ -1403,6 +1403,7 @@ rte_sched_pipe_config(struct rte_sched_port *port,
 	int32_t pipe_profile)
 {
 	struct rte_sched_subport *s;
+	struct rte_sched_subport_profile *sp;
 	struct rte_sched_pipe *p;
 	struct rte_sched_pipe_profile *params;
 	uint32_t n_subports = subport_id + 1;
@@ -1443,14 +1444,15 @@ rte_sched_pipe_config(struct rte_sched_port *port,
 		return -EINVAL;
 	}
 
+	sp = port->subport_profiles + s->profile;
 	/* Handle the case when pipe already has a valid configuration */
 	p = s->pipe + pipe_id;
 	if (p->tb_time) {
 		params = s->pipe_profiles + p->profile;
 
 		double subport_tc_be_rate =
-			(double) s->tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASS_BE]
-			/ (double) s->tc_period;
+		(double)sp->tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASS_BE]
+			/ (double) sp->tc_period;
 		double pipe_tc_be_rate =
 			(double) params->tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASS_BE]
 			/ (double) params->tc_period;
@@ -1492,8 +1494,8 @@ rte_sched_pipe_config(struct rte_sched_port *port,
 	{
 		/* Subport best effort tc oversubscription */
 		double subport_tc_be_rate =
-			(double) s->tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASS_BE]
-			/ (double) s->tc_period;
+		(double)sp->tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASS_BE]
+			/ (double) sp->tc_period;
 		double pipe_tc_be_rate =
 			(double) params->tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASS_BE]
 			/ (double) params->tc_period;
@@ -2286,11 +2288,11 @@ grinder_credits_update(struct rte_sched_port *port,
 	uint32_t i;
 
 	/* Subport TB */
-	n_periods = (port->time - subport->tb_time) / sp_params->sp_tb_period;
-	subport->tb_credits += n_periods * sp_params->sp_tb_credits_per_period;
+	n_periods = (port->time - subport->tb_time) / sp_params->tb_period;
+	subport->tb_credits += n_periods * sp_params->tb_credits_per_period;
 	subport->tb_credits = RTE_MIN(subport->tb_credits,
-				sp_params->sp_tb_size);
-	subport->tb_time += n_periods * sp_params->sp_tb_period;
+				sp_params->tb_size);
+	subport->tb_time += n_periods * sp_params->tb_period;
 
 	/* Pipe TB */
 	n_periods = (port->time - pipe->tb_time) / params->tb_period;
@@ -2302,9 +2304,9 @@ grinder_credits_update(struct rte_sched_port *port,
 	if (unlikely(port->time >= subport->tc_time)) {
 		for (i = 0; i < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; i++)
 			subport->tc_credits[i] =
-					sp_params->sp_tc_credits_per_period[i];
+					sp_params->tc_credits_per_period[i];
 
-		subport->tc_time = port->time + sp_params->sp_tc_period;
+		subport->tc_time = port->time + sp_params->tc_period;
 	}
 
 	/* Pipe TCs */
@@ -2333,17 +2335,17 @@ grinder_tc_ov_credits_update(struct rte_sched_port *port,
 		return subport->tc_ov_wm_max;
 
 	for (i = 0; i < RTE_SCHED_TRAFFIC_CLASS_BE; i++) {
-		tc_ov_consumption[i] = sp_params->sp_tc_credits_per_period[i]
+		tc_ov_consumption[i] = sp_params->tc_credits_per_period[i]
 					-  subport->tc_credits[i];
 		tc_consumption += tc_ov_consumption[i];
 	}
 
 	tc_ov_consumption[RTE_SCHED_TRAFFIC_CLASS_BE] =
-	sp_params->sp_tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASS_BE] -
+	sp_params->tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASS_BE] -
 		subport->tc_credits[RTE_SCHED_TRAFFIC_CLASS_BE];
 
 	tc_ov_consumption_max =
-	sp_params->sp_tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASS_BE] -
+	sp_params->tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASS_BE] -
 			tc_consumption;
 
 	if (tc_ov_consumption[RTE_SCHED_TRAFFIC_CLASS_BE] >
@@ -2374,11 +2376,11 @@ grinder_credits_update(struct rte_sched_port *port,
 	uint32_t i;
 
 	/* Subport TB */
-	n_periods = (port->time - subport->tb_time) / sp_params->sp_tb_period;
-	subport->tb_credits += n_periods * sp_params->sp_tb_credits_per_period;
+	n_periods = (port->time - subport->tb_time) / sp_params->tb_period;
+	subport->tb_credits += n_periods * sp_params->tb_credits_per_period;
 	subport->tb_credits = RTE_MIN(subport->tb_credits,
-				sp_params->sp_tb_size);
-	subport->tb_time += n_periods * sp_params->sp_tb_period;
+				sp_params->tb_size);
+	subport->tb_time += n_periods * sp_params->tb_period;
 
 	/* Pipe TB */
 	n_periods = (port->time - pipe->tb_time) / params->tb_period;
@@ -2393,9 +2395,9 @@ grinder_credits_update(struct rte_sched_port *port,
 
 		for (i = 0; i < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; i++)
 			subport->tc_credits[i] =
-				sp_params->sp_tc_credits_per_period[i];
+				sp_params->tc_credits_per_period[i];
 
-		subport->tc_time = port->time + sp_params->sp_tc_period;
+		subport->tc_time = port->time + sp_params->tc_period;
 		subport->tc_ov_period_id++;
 	}
 
