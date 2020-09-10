@@ -2,6 +2,7 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -99,6 +100,16 @@ enum grinder_state {
 	e_GRINDER_PREFETCH_TC_QUEUE_ARRAYS,
 	e_GRINDER_PREFETCH_MBUF,
 	e_GRINDER_READ_MBUF
+};
+
+struct rte_sched_subport_profile {
+	/* Token bucket (TB) */
+	uint64_t tb_period;
+	uint64_t tb_credits_per_period;
+	uint64_t tb_size;
+
+	uint64_t tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE];
+	uint64_t tc_period;
 };
 
 struct rte_sched_grinder {
