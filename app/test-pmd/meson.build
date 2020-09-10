@@ -4,6 +4,11 @@
 # override default name to drop the hyphen
 name = 'testpmd'
 cflags += '-Wno-deprecated-declarations'
+
+if dpdk_conf.has('RTE_LIBRTE_BOND_PMD')
+	cflags += '-I' + meson.source_root() + '/drivers/net/bonding'
+endif
+
 sources = files('5tswap.c',
 	'cmdline.c',
 	'cmdline_flow.c',
@@ -25,6 +30,11 @@ sources = files('5tswap.c',
 	'util.c')
 
 deps += ['ethdev', 'gro', 'gso', 'cmdline', 'metrics', 'meter', 'bus_pci']
+
+if dpdk_conf.has('RTE_LIBRTE_BOND_PMD')
+	deps += 'pmd_bond'
+endif
+
 if dpdk_conf.has('RTE_LIBRTE_PDUMP')
 	deps += 'pdump'
 endif
