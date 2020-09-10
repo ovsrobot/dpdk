@@ -26,7 +26,6 @@
 #define DATA_REQ_LABEL "\"data\":"
 #define TELEMETRY_LEGACY_MAX_CALLBACKS 4
 
-
 static int
 register_client(const char *cmd __rte_unused,
 		const char *params __rte_unused,
