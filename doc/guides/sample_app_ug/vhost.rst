@@ -162,6 +162,16 @@ enabled and cannot be disabled.
 A very simple vhost-user net driver which demonstrates how to use the generic
 vhost APIs will be used when this option is given. It is disabled by default.
 
+**--async_vhost_driver**
+Async vhost-user net driver which demonstrates how to use the async vhost APIs
+will be used when this option is given. It is disabled by default.
+
+**--dmas**
+This parameter is used to specify the assigned DMA device of a vhost device.
+For example --dmas [txd0@00:04.0,txd1@00:04.1] means use CBDMA channel 00:04.0
+for vhost device 0 enqueue operation and use CBDMA channel 00:04.1 for vhost
+device 1 enqueue operation.
+
 Common Issues
 -------------
 
