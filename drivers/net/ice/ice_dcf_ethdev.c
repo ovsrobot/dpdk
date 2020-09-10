@@ -26,6 +26,16 @@
 #include "ice_dcf_ethdev.h"
 #include "ice_rxtx.h"
 
+/* devargs */
+#define ICE_DCF_CAP  "cap"
+#define ICE_DCF_ACL_IPV4_RULES_NUM "acl_ipv4_nums"
+
+static const char * const ice_dcf_valid_args[] = {
+	ICE_DCF_CAP,
+	ICE_DCF_ACL_IPV4_RULES_NUM,
+	NULL,
+};
+
 static uint16_t
 ice_dcf_recv_pkts(__rte_unused void *rx_queue,
 		  __rte_unused struct rte_mbuf **bufs,
@@ -895,9 +905,51 @@ static const struct eth_dev_ops ice_dcf_eth_dev_ops = {
 };
 
 static int
+parse_int(__rte_unused const char *key, const char *value, void *args)
+{
+	int *i = (int *)args;
+	char *end;
+	int num;
+
+	num = strtoul(value, &end, 10);
+	*i = num;
+
+	return 0;
+}
+
+static int ice_dcf_parse_devargs(struct rte_eth_dev *dev)
+{
+	struct ice_dcf_adapter *adapter = dev->data->dev_private;
+	struct ice_adapter *parent_adapter = &adapter->parent;
+
+	struct rte_devargs *devargs = dev->device->devargs;
+	struct rte_kvargs *kvlist;
+	int ret;
+
+	if (devargs == NULL)
+		return 0;
+
+	kvlist = rte_kvargs_parse(devargs->args, ice_dcf_valid_args);
+	if (kvlist == NULL) {
+		PMD_INIT_LOG(ERR, "Invalid kvargs key\n");
+		return -EINVAL;
+	}
+
+	ret = rte_kvargs_process(kvlist, ICE_DCF_ACL_IPV4_RULES_NUM,
+		&parse_int, &parent_adapter->devargs.acl_ipv4_rules_num);
+	if (ret)
+		goto bail;
+
+bail:
+	rte_kvargs_free(kvlist);
+	return ret;
+}
+
+static int
 ice_dcf_dev_init(struct rte_eth_dev *eth_dev)
 {
 	struct ice_dcf_adapter *adapter = eth_dev->data->dev_private;
+	int ret;
 
 	eth_dev->dev_ops = &ice_dcf_eth_dev_ops;
 	eth_dev->rx_pkt_burst = ice_dcf_recv_pkts;
@@ -907,6 +959,12 @@ ice_dcf_dev_init(struct rte_eth_dev *eth_dev)
 		return 0;
 
 	eth_dev->data->dev_flags |= RTE_ETH_DEV_CLOSE_REMOVE;
+
+	ret = ice_dcf_parse_devargs(eth_dev);
+	if (ret) {
+		PMD_INIT_LOG(ERR, "Failed to parse devargs");
+		return -EINVAL;
+	}
 
 	adapter->real_hw.vc_event_msg_cb = ice_dcf_handle_pf_event_msg;
 	if (ice_dcf_init_hw(eth_dev, &adapter->real_hw) != 0) {
@@ -932,49 +990,47 @@ ice_dcf_dev_uninit(struct rte_eth_dev *eth_dev)
 }
 
 static int
-ice_dcf_cap_check_handler(__rte_unused const char *key,
-			  const char *value, __rte_unused void *opaque)
+handle_dcf_arg(__rte_unused const char *key, const char *value,
+		 __rte_unused void *arg)
 {
-	if (strcmp(value, "dcf"))
-		return -1;
+	bool *dcf = arg;
+
+	if (arg == NULL || value == NULL)
+		return -EINVAL;
+
+	if (strcmp(value, "dcf") == 0)
+		*dcf = true;
+	else
+		*dcf = false;
 
 	return 0;
 }
 
-static int
-ice_dcf_cap_selected(struct rte_devargs *devargs)
+static bool
+check_cap_dcf_enable(struct rte_devargs *devargs)
 {
 	struct rte_kvargs *kvlist;
-	const char *key = "cap";
-	int ret = 0;
+	bool enable = false;
 
 	if (devargs == NULL)
-		return 0;
+		return false;
 
 	kvlist = rte_kvargs_parse(devargs->args, NULL);
 	if (kvlist == NULL)
-		return 0;
+		return false;
 
-	if (!rte_kvargs_count(kvlist, key))
-		goto exit;
+	rte_kvargs_process(kvlist, ICE_DCF_CAP, handle_dcf_arg, &enable);
 
-	/* dcf capability selected when there's a key-value pair: cap=dcf */
-	if (rte_kvargs_process(kvlist, key,
-			       ice_dcf_cap_check_handler, NULL) < 0)
-		goto exit;
-
-	ret = 1;
-
-exit:
 	rte_kvargs_free(kvlist);
-	return ret;
+
+	return enable;
 }
 
 static int eth_ice_dcf_pci_probe(__rte_unused struct rte_pci_driver *pci_drv,
 			     struct rte_pci_device *pci_dev)
 {
-	if (!ice_dcf_cap_selected(pci_dev->device.devargs))
-		return 1;
+	if (!check_cap_dcf_enable(pci_dev->device.devargs))
+		return 1;  /* continue to probe */
 
 	return rte_eth_dev_pci_generic_probe(pci_dev,
 					     sizeof(struct ice_dcf_adapter),

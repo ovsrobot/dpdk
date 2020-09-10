@@ -445,6 +445,7 @@ struct ice_devargs {
 	int pipe_mode_support;
 	int flow_mark_support;
 	uint8_t proto_xtr[ICE_MAX_QUEUE_NUM];
+	int acl_ipv4_rules_num;
 };
 
 /**
