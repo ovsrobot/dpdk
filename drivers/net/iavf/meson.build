@@ -34,4 +34,11 @@ if arch_subdir == 'x86'
 				c_args: [cflags, '-mavx2'])
 		objs += iavf_avx2_lib.extract_objects('iavf_rxtx_vec_avx2.c')
 	endif
+
+	if dpdk_conf.has('RTE_MACHINE_CPUFLAG_AVX512F')
+		cflags += ['-DCC_AVX512_SUPPORT']
+		cflags += ['-mavx512f']
+		cflags += ['-march=skylake-avx512']
+		sources += files('iavf_rxtx_vec_avx512.c')
+	endif
 endif
