@@ -16,11 +16,7 @@ fi
 dumpdir=$installdir/dump
 rm -rf $dumpdir
 mkdir -p $dumpdir
-for f in $(find $installdir -name "*.so.*"); do
-	if test -L $f; then
-		continue
-	fi
-
+for f in $(find $installdir -name "*.so"); do
 	libname=$(basename $f)
 	abidw --out-file $dumpdir/${libname%.so*}.dump $f
 done
