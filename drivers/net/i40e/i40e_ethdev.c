@@ -3070,6 +3070,13 @@ i40e_update_vsi_stats(struct i40e_vsi *vsi)
 	i40e_stat_update_48(hw, I40E_GLV_BPRCH(idx), I40E_GLV_BPRCL(idx),
 			    vsi->offset_loaded, &oes->rx_broadcast,
 			    &nes->rx_broadcast);
+	/* enlarge the limitation when rx_bytes overflowed */
+	if (vsi->offset_loaded) {
+		if (I40E_RXTX_BYTES_LOW(vsi->old_rx_bytes) > nes->rx_bytes)
+			nes->rx_bytes += (uint64_t)1 << I40E_48_BIT_WIDTH;
+		nes->rx_bytes += I40E_RXTX_BYTES_HIGH(vsi->old_rx_bytes);
+	}
+	vsi->old_rx_bytes = nes->rx_bytes;
 	/* exclude CRC bytes */
 	nes->rx_bytes -= (nes->rx_unicast + nes->rx_multicast +
 		nes->rx_broadcast) * RTE_ETHER_CRC_LEN;
@@ -3096,6 +3103,13 @@ i40e_update_vsi_stats(struct i40e_vsi *vsi)
 	/* GLV_TDPC not supported */
 	i40e_stat_update_32(hw, I40E_GLV_TEPC(idx), vsi->offset_loaded,
 			    &oes->tx_errors, &nes->tx_errors);
+	/* enlarge the limitation when tx_bytes overflowed */
+	if (vsi->offset_loaded) {
+		if (I40E_RXTX_BYTES_LOW(vsi->old_tx_bytes) > nes->tx_bytes)
+			nes->tx_bytes += (uint64_t)1 << I40E_48_BIT_WIDTH;
+		nes->tx_bytes += I40E_RXTX_BYTES_HIGH(vsi->old_tx_bytes);
+	}
+	vsi->old_rx_bytes = nes->rx_bytes;
 	vsi->offset_loaded = true;
 
 	PMD_DRV_LOG(DEBUG, "***************** VSI[%u] stats start *******************",
@@ -3168,6 +3182,24 @@ i40e_read_stats_registers(struct i40e_pf *pf, struct i40e_hw *hw)
 			    pf->offset_loaded,
 			    &pf->internal_stats_offset.tx_broadcast,
 			    &pf->internal_stats.tx_broadcast);
+	/* enlarge the limitation when internal rx/tx bytes overflowed */
+	if (pf->offset_loaded) {
+		if (I40E_RXTX_BYTES_LOW(pf->internal_old_rx_bytes) >
+		    pf->internal_stats.rx_bytes)
+			pf->internal_stats.rx_bytes +=
+				(uint64_t)1 << I40E_48_BIT_WIDTH;
+		pf->internal_stats.rx_bytes +=
+			I40E_RXTX_BYTES_HIGH(pf->internal_old_rx_bytes);
+
+		if (I40E_RXTX_BYTES_LOW(pf->internal_old_tx_bytes) >
+		    pf->internal_stats.tx_bytes)
+			pf->internal_stats.tx_bytes +=
+				(uint64_t)1 << I40E_48_BIT_WIDTH;
+		pf->internal_stats.tx_bytes +=
+			I40E_RXTX_BYTES_HIGH(pf->internal_old_tx_bytes);
+	}
+	pf->internal_old_rx_bytes = pf->internal_stats.rx_bytes;
+	pf->internal_old_tx_bytes = pf->internal_stats.tx_bytes;
 
 	/* exclude CRC size */
 	pf->internal_stats.rx_bytes -= (pf->internal_stats.rx_unicast +
@@ -3191,6 +3223,14 @@ i40e_read_stats_registers(struct i40e_pf *pf, struct i40e_hw *hw)
 			    I40E_GLPRT_BPRCL(hw->port),
 			    pf->offset_loaded, &os->eth.rx_broadcast,
 			    &ns->eth.rx_broadcast);
+	/* enlarge the limitation when rx_bytes overflowed */
+	if (pf->offset_loaded) {
+		if (I40E_RXTX_BYTES_LOW(pf->old_rx_bytes) > ns->eth.rx_bytes)
+			ns->eth.rx_bytes += (uint64_t)1 << I40E_48_BIT_WIDTH;
+		ns->eth.rx_bytes += I40E_RXTX_BYTES_HIGH(pf->old_rx_bytes);
+	}
+	pf->old_rx_bytes = ns->eth.rx_bytes;
+
 	/* Workaround: CRC size should not be included in byte statistics,
 	 * so subtract RTE_ETHER_CRC_LEN from the byte counter for each rx
 	 * packet.
@@ -3249,6 +3289,13 @@ i40e_read_stats_registers(struct i40e_pf *pf, struct i40e_hw *hw)
 			    I40E_GLPRT_BPTCL(hw->port),
 			    pf->offset_loaded, &os->eth.tx_broadcast,
 			    &ns->eth.tx_broadcast);
+	/* enlarge the limitation when tx_bytes overflowed */
+	if (pf->offset_loaded) {
+		if (I40E_RXTX_BYTES_LOW(pf->old_tx_bytes) > ns->eth.tx_bytes)
+			ns->eth.tx_bytes += (uint64_t)1 << I40E_48_BIT_WIDTH;
+		ns->eth.tx_bytes += I40E_RXTX_BYTES_HIGH(pf->old_tx_bytes);
+	}
+	pf->old_tx_bytes = ns->eth.tx_bytes;
 	ns->eth.tx_bytes -= (ns->eth.tx_unicast + ns->eth.tx_multicast +
 		ns->eth.tx_broadcast) * RTE_ETHER_CRC_LEN;
 
