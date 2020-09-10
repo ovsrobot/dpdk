@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added support for AVX512 in rte_net CRC calculations.**
+
+  Added new CRC32 calculation code using AVX512 instruction set
+  Added new CRC16-CCITT calculation code using AVX512 instruction set
 
 Removed Items
 -------------

@@ -10,12 +10,18 @@
 #include <rte_common.h>
 #include <rte_net_crc.h>
 
-#if defined(RTE_ARCH_X86_64) && defined(RTE_MACHINE_CPUFLAG_PCLMULQDQ)
+#if defined(RTE_ARCH_X86_64) && defined(RTE_MACHINE_CPUFLAG_PCLMULQDQ) \
+	&& defined(RTE_MACHINE_CPUFLAG_AVX512F)
+#define X86_64_AVX512F_PCLMULQDQ     1
+#elif defined(RTE_ARCH_X86_64) && defined(RTE_MACHINE_CPUFLAG_PCLMULQDQ)
 #define X86_64_SSE42_PCLMULQDQ     1
 #elif defined(RTE_ARCH_ARM64) && defined(RTE_MACHINE_CPUFLAG_PMULL)
 #define ARM64_NEON_PMULL           1
 #endif
 
+#ifdef X86_64_AVX512F_PCLMULQDQ
+#include <net_crc_avx.h>
+#endif
 #ifdef X86_64_SSE42_PCLMULQDQ
 #include <net_crc_sse.h>
 #elif defined ARM64_NEON_PMULL
@@ -47,6 +53,12 @@ static rte_net_crc_handler handlers_scalar[] = {
 	[RTE_NET_CRC16_CCITT] = rte_crc16_ccitt_handler,
 	[RTE_NET_CRC32_ETH] = rte_crc32_eth_handler,
 };
+
+#ifdef X86_64_AVX512F_PCLMULQDQ
+static rte_net_crc_handler handlers_avx512[] = {
+	[RTE_NET_CRC32_ETH] = rte_crc32_eth_avx512_handler,
+};
+#endif
 
 #ifdef X86_64_SSE42_PCLMULQDQ
 static rte_net_crc_handler handlers_sse42[] = {
@@ -157,6 +169,11 @@ rte_net_crc_set_alg(enum rte_net_crc_alg alg)
 			handlers = handlers_neon;
 			break;
 		}
+#elif defined X86_64_AVX512F_PCLMULQDQ
+		/* fall-through */
+	case RTE_NET_CRC_AVX512:
+			handlers = handlers_avx512;
+			break;
 #endif
 		/* fall-through */
 	case RTE_NET_CRC_SCALAR:
@@ -196,6 +213,10 @@ RTE_INIT(rte_net_crc_init)
 		alg = RTE_NET_CRC_NEON;
 		rte_net_crc_neon_init();
 	}
+#endif
+#ifdef X86_64_AVX512F_PCLMULQDQ
+	alg = RTE_NET_CRC_AVX512;
+	rte_net_crc_avx512_init();
 #endif
 
 	rte_net_crc_set_alg(alg);

@@ -23,6 +23,7 @@ enum rte_net_crc_alg {
 	RTE_NET_CRC_SCALAR = 0,
 	RTE_NET_CRC_SSE42,
 	RTE_NET_CRC_NEON,
+	RTE_NET_CRC_AVX512,
 };
 
 /**
