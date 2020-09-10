@@ -391,6 +391,14 @@ struct ice_hash_gtpu_ctx {
 	struct ice_hash_cfg ipv6_tcp;
 };
 
+/**
+ * A structure used to define fields of ACL related info.
+ */
+struct ice_acl_info {
+	struct ice_fdir_fltr input;
+	uint64_t input_set;
+};
+
 struct ice_pf {
 	struct ice_adapter *adapter; /* The adapter this PF associate to */
 	struct ice_vsi *main_vsi; /* pointer to main VSI structure */
@@ -414,6 +422,7 @@ struct ice_pf {
 	uint16_t fdir_nb_qps; /* The number of queue pairs of Flow Director */
 	uint16_t fdir_qp_offset;
 	struct ice_fdir_info fdir; /* flow director info */
+	struct ice_acl_info acl; /* ACL info */
 	struct ice_hash_gtpu_ctx gtpu_hash_ctx;
 	uint16_t hw_prof_cnt[ICE_FLTR_PTYPE_MAX][ICE_FD_HW_SEG_MAX];
 	uint16_t fdir_fltr_cnt[ICE_FLTR_PTYPE_MAX][ICE_FD_HW_SEG_MAX];
