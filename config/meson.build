@@ -47,6 +47,21 @@ else
 	dpdk_conf.set('RTE_VER_RELEASE', 99)
 endif
 
+# abi checks cannot be run on windows
+if is_windows and check_abi
+	error('ABI checks cannot be run on windows')
+endif
+# abi checks can only be run on a debug build
+# meson <0.48 does not support get_option('debug')
+if meson.version().version_compare('>=0.48')
+	debug_enabled = get_option('debug')
+else
+	debug_enabled = get_option('buildtype').startswith('debug')
+endif
+if check_abi and not debug_enabled
+	error('Build type must have debug symbols when abi_checks are enabled')
+endif
+
 pmd_subdir_opt = get_option('drivers_install_subdir')
 if pmd_subdir_opt.contains('<VERSION>')
 	pmd_subdir_opt = abi_version.join(pmd_subdir_opt.split('<VERSION>'))

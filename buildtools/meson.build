@@ -17,3 +17,21 @@ else
 endif
 map_to_win_cmd = py3 + files('map_to_win.py')
 sphinx_wrapper = py3 + files('call-sphinx-build.py')
+
+abi_check_version = get_option('abi_checks')
+check_abi = (abi_check_version != '')
+
+abi_dir = ''
+# If abi checks enabled setup abi dump directory
+if check_abi
+	message('ABI checks are being setup. This could take several minutes')
+	setup_run = run_command('abi-setup.py', '-t', abi_check_version, '-d', meson.source_root())
+	# Check if error returned from script
+	if setup_run.returncode() != 0
+		setup_err = setup_run.stderr().strip()
+		error('ABI checks setup script returned an error: ' + setup_err)
+	endif
+	abi_dir = setup_run.stdout().strip()
+endif
+abidiff = find_program('abidiff', required: check_abi)
+abignore = files('../devtools/libabigail.abignore')
