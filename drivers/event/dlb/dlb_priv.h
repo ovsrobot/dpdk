@@ -527,17 +527,13 @@ int test_dlb_eventdev(void);
 
 int dlb_primary_eventdev_probe(struct rte_eventdev *dev,
 			       const char *name,
-			       struct dlb_devargs *dlb_args,
-			       bool is_vdev);
+			       struct dlb_devargs *dlb_args);
 
 int dlb_secondary_eventdev_probe(struct rte_eventdev *dev,
-				 const char *name,
-				 bool is_vdev);
+				 const char *name);
+
 uint32_t dlb_get_queue_depth(struct dlb_eventdev *dlb,
 			     struct dlb_eventdev_queue *queue);
-
-int set_numa_node(const char *key __rte_unused, const char *value,
-		  void *opaque);
 
 int set_dir_ports(const char *key __rte_unused,
 		  const char *value __rte_unused,
@@ -547,20 +543,12 @@ int set_dir_queues(const char *key __rte_unused,
 		   const char *value __rte_unused,
 		   void *opaque __rte_unused);
 
-int set_max_num_events(const char *key __rte_unused, const char *value,
-		       void *opaque);
-
-int set_num_dir_credits(const char *key __rte_unused, const char *value,
-			void *opaque);
-
 void dlb_drain(struct rte_eventdev *dev);
-
-void dlb_entry_points_init(struct rte_eventdev *dev);
 
 int dlb_parse_params(const char *params,
 		     const char *name,
 		     struct dlb_devargs *dlb_args);
 
-int dlb_string_to_int(int *result, const char *str);
+void dlb_entry_points_init(struct rte_eventdev *dev);
 
 #endif	/* _DLB_PRIV_H_ */
