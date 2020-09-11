@@ -668,7 +668,7 @@ assign_stream_to_lcores(void)
 	uint8_t lcore_num, nb_extra;
 
 	lcore_num = rte_lcore_count();
-	/* Exclude master core */
+	/* Exclude main core */
 	lcore_num--;
 
 	nb_streams = (fwd_mode == IOFWD) ? num_queues * 2 : num_queues;
@@ -1074,7 +1074,7 @@ cmdline_parse_ctx_t main_ctx[] = {
 	NULL,
 };
 
-/* prompt function, called from main on MASTER lcore */
+/* prompt function, called from main on MAIN lcore */
 static void
 prompt(void)
 {

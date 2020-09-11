@@ -176,7 +176,7 @@ static void process_frame(struct app_port *ptr_port,
 	rte_ether_addr_copy(&ptr_port->mac_addr, &ptr_mac_hdr->s_addr);
 }
 
-static int slave_main(__rte_unused void *ptr_data)
+static int worker_main(__rte_unused void *ptr_data)
 {
 	struct app_port *ptr_port;
 	struct rte_mbuf *ptr_frame;
@@ -284,11 +284,11 @@ int main(int argc, char **argv)
 	app_cfg.cnt_ports = cnt_ports;
 
 	if (rte_lcore_count() < 2)
-		rte_exit(EXIT_FAILURE, "No available slave core!\n");
+		rte_exit(EXIT_FAILURE, "No available worker core!\n");
 	/* Assume there is an available slave.. */
 	id_core = rte_lcore_id();
 	id_core = rte_get_next_lcore(id_core, 1, 1);
-	rte_eal_remote_launch(slave_main, NULL, id_core);
+	rte_eal_remote_launch(worker_main, NULL, id_core);
 
 	ethapp_main();
 
