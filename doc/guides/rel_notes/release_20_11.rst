@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added support for AES-ECB in aesni_mb PMD.**
+
+  * Added support for AES-ECB 128, 192 and 256 in aesni_mb PMD.
+
 
 Removed Items
 -------------
