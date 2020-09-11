@@ -39,7 +39,7 @@
 #include <rte_ether.h>
 #include <rte_ethdev.h>
 #include <rte_string_fns.h>
-#ifdef RTE_LIBRTE_PMD_BOND
+#ifdef RTE_LIBRTE_BOND_PMD
 #include <rte_eth_bond.h>
 #endif
 #include <rte_flow.h>
