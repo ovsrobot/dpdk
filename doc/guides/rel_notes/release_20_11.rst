@@ -100,8 +100,8 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
-* mbuf: The field ``refcnt_atomic`` has been removed from structure
-  ``rte_mbuf``.
+* mbuf: The field ``refcnt_atomic`` has been removed from structures
+  ``rte_mbuf`` and ``rte_mbuf_ext_shared_info``.
 
 Known Issues
 ------------
