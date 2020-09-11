@@ -59,6 +59,7 @@ New Features
 
   * Added support for ZUC-EEA3/EIA3 algorithms.
   * Added support for SNOW3G-UEA2/UIA2 algorithms.
+  * Added support for KASUMI-F8/F9 algorithms.
 
 
 Removed Items
