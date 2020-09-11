@@ -465,11 +465,11 @@ rxq_sync_cq(struct mlx5_rxq_data *rxq)
 		cqe->op_own = MLX5_CQE_INVALIDATE;
 	}
 	/* Resync CQE and WQE (WQ in RESET state). */
-	rte_cio_wmb();
+	rte_io_wmb();
 	*rxq->cq_db = rte_cpu_to_be_32(rxq->cq_ci);
-	rte_cio_wmb();
+	rte_io_wmb();
 	*rxq->rq_db = rte_cpu_to_be_32(0);
-	rte_cio_wmb();
+	rte_io_wmb();
 }
 
 /**
@@ -601,12 +601,12 @@ mlx5_rx_queue_start_primary(struct rte_eth_dev *dev, uint16_t idx)
 		rte_errno = errno;
 		return ret;
 	}
-	rte_cio_wmb();
+	rte_io_wmb();
 	*rxq->cq_db = rte_cpu_to_be_32(rxq->cq_ci);
-	rte_cio_wmb();
+	rte_io_wmb();
 	/* Reset RQ consumer before moving queue ro READY state. */
 	*rxq->rq_db = rte_cpu_to_be_32(0);
-	rte_cio_wmb();
+	rte_io_wmb();
 	if (rxq_ctrl->obj->type == MLX5_RXQ_OBJ_TYPE_IBV) {
 		struct ibv_wq_attr mod = {
 			.attr_mask = IBV_WQ_ATTR_STATE,
