@@ -84,6 +84,9 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* eal: The ``rte_cio_rmb()`` and ``rte_cio_wmb()`` were deprecated since
+  20.08 and are removed in this release.
+
 
 ABI Changes
 -----------
