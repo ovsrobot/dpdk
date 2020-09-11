@@ -141,7 +141,7 @@ test_timer_secondary(void)
 		unsigned int *mgr_lcorep = &test_info->mgr_lcore;
 		unsigned int *sec_lcorep = &test_info->sec_lcore;
 
-		*mstr_lcorep = rte_get_master_lcore();
+		*mstr_lcorep = rte_get_main_lcore();
 		*mgr_lcorep = rte_get_next_lcore(*mstr_lcorep, 1, 1);
 		*sec_lcorep = rte_get_next_lcore(*mgr_lcorep, 1, 1);
 

@@ -58,7 +58,7 @@ static rte_atomic32_t obj_count = RTE_ATOMIC32_INIT(0);
 static rte_atomic32_t synchro = RTE_ATOMIC32_INIT(0);
 
 #define WAIT_SYNCHRO_FOR_SLAVES()   do{ \
-	if (lcore_self != rte_get_master_lcore())                  \
+	if (lcore_self != rte_get_main_lcore())                  \
 		while (rte_atomic32_read(&synchro) == 0);        \
 } while(0)
 
@@ -430,7 +430,7 @@ launch_test(struct test_case *pt_case)
 	rte_atomic32_set(&obj_count, 0);
 	rte_atomic32_set(&synchro, 0);
 
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		if (cores == 1)
 			break;
 		cores--;
@@ -443,7 +443,7 @@ launch_test(struct test_case *pt_case)
 		ret = -1;
 
 	cores = cores_save;
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		if (cores == 1)
 			break;
 		cores--;
