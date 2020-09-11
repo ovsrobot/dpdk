@@ -495,12 +495,7 @@ struct rte_mbuf {
 	 * or non-atomic) is controlled by the CONFIG_RTE_MBUF_REFCNT_ATOMIC
 	 * config option.
 	 */
-	RTE_STD_C11
-	union {
-		rte_atomic16_t refcnt_atomic; /**< Atomically accessed refcnt */
-		/** Non-atomically accessed refcnt */
-		uint16_t refcnt;
-	};
+	uint16_t refcnt;
 	uint16_t nb_segs;         /**< Number of segments. */
 
 	/** Input port (16 bits to support more than 256 virtual ports).
