@@ -556,7 +556,7 @@ set_default_fwd_lcores_config(void)
 			}
 			socket_ids[num_sockets++] = sock_num;
 		}
-		if (i == rte_get_master_lcore())
+		if (i == rte_get_main_lcore())
 			continue;
 		fwd_lcores_cpuids[nb_lc++] = i;
 	}
