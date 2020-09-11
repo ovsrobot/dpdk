@@ -960,7 +960,8 @@ rte_eal_init(int argc, char **argv)
 {
 	int i, fctret, ret;
 	pthread_t thread_id;
-	static rte_atomic32_t run_once = RTE_ATOMIC32_INIT(0);
+	static uint32_t run_once;
+	uint32_t has_run = 0;
 	const char *p;
 	static char logid[PATH_MAX];
 	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
@@ -977,7 +978,8 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
-	if (!rte_atomic32_test_and_set(&run_once)) {
+	if (!__atomic_compare_exchange_n(&run_once, &has_run, 1, 0,
+					__ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
 		rte_eal_init_alert("already called initialization.");
 		rte_errno = EALREADY;
 		return -1;
@@ -1005,14 +1007,14 @@ rte_eal_init(int argc, char **argv)
 	if (fctret < 0) {
 		rte_eal_init_alert("Invalid 'command line' arguments.");
 		rte_errno = EINVAL;
-		rte_atomic32_clear(&run_once);
+		__atomic_store_n(&run_once, 0, __ATOMIC_RELAXED);
 		return -1;
 	}
 
 	if (eal_plugins_init() < 0) {
 		rte_eal_init_alert("Cannot init plugins");
 		rte_errno = EINVAL;
-		rte_atomic32_clear(&run_once);
+		__atomic_store_n(&run_once, 0, __ATOMIC_RELAXED);
 		return -1;
 	}
 
@@ -1024,7 +1026,7 @@ rte_eal_init(int argc, char **argv)
 
 	if (eal_option_device_parse()) {
 		rte_errno = ENODEV;
-		rte_atomic32_clear(&run_once);
+		__atomic_store_n(&run_once, 0, __ATOMIC_RELAXED);
 		return -1;
 	}
 
@@ -1064,7 +1066,7 @@ rte_eal_init(int argc, char **argv)
 	if (rte_bus_scan()) {
 		rte_eal_init_alert("Cannot scan the buses for devices");
 		rte_errno = ENODEV;
-		rte_atomic32_clear(&run_once);
+		__atomic_store_n(&run_once, 0, __ATOMIC_RELAXED);
 		return -1;
 	}
 
@@ -1138,7 +1140,7 @@ rte_eal_init(int argc, char **argv)
 		if (ret < 0) {
 			rte_eal_init_alert("Cannot get hugepage information.");
 			rte_errno = EACCES;
-			rte_atomic32_clear(&run_once);
+			__atomic_store_n(&run_once, 0, __ATOMIC_RELAXED);
 			return -1;
 		}
 	}
@@ -1162,7 +1164,7 @@ rte_eal_init(int argc, char **argv)
 	if (rte_eal_log_init(logid, internal_conf->syslog_facility) < 0) {
 		rte_eal_init_alert("Cannot init logging.");
 		rte_errno = ENOMEM;
-		rte_atomic32_clear(&run_once);
+		__atomic_store_n(&run_once, 0, __ATOMIC_RELAXED);
 		return -1;
 	}
 
@@ -1170,7 +1172,7 @@ rte_eal_init(int argc, char **argv)
 	if (rte_eal_vfio_setup() < 0) {
 		rte_eal_init_alert("Cannot init VFIO");
 		rte_errno = EAGAIN;
-		rte_atomic32_clear(&run_once);
+		__atomic_store_n(&run_once, 0, __ATOMIC_RELAXED);
 		return -1;
 	}
 #endif
