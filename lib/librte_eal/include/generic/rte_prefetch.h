@@ -51,4 +51,20 @@ static inline void rte_prefetch2(const volatile void *p);
  */
 static inline void rte_prefetch_non_temporal(const volatile void *p);
 
+/**
+ * Prefetch a cache line into all cache levels, with intention to write. This
+ * prefetch variant hints to the CPU that the program is expecting to write to
+ * the cache line being prefetched.
+ *
+ * @param p Address to prefetch
+ */
+static inline void rte_prefetch0_write(const void *p)
+{
+	/* 1 indicates intention to write, 3 sets target cache level to L1. See
+	 * GCC docs where these integer constants are described in more detail:
+	 *  https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
+	 */
+	__builtin_prefetch(p, 1, 3);
+}
+
 #endif /* _RTE_PREFETCH_H_ */
