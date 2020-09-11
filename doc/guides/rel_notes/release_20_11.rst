@@ -58,6 +58,7 @@ New Features
 * **Updated the AESNI MB crypto PMD.**
 
   * Added support for ZUC-EEA3/EIA3 algorithms.
+  * Added support for SNOW3G-UEA2/UIA2 algorithms.
 
 
 Removed Items
