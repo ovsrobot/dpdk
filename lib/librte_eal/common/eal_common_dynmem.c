@@ -434,12 +434,12 @@ eal_dynmem_calc_num_pages_per_socket(
 		for (socket = 0; socket < RTE_MAX_NUMA_NODES && total_size != 0;
 				socket++) {
 			struct rte_config *cfg = rte_eal_get_configuration();
-			unsigned int master_lcore_socket;
+			unsigned int main_lcore_socket;
 
-			master_lcore_socket =
-				rte_lcore_to_socket_id(cfg->master_lcore);
+			main_lcore_socket =
+				rte_lcore_to_socket_id(cfg->main_lcore);
 
-			if (master_lcore_socket != socket)
+			if (main_lcore_socket != socket)
 				continue;
 
 			/* Update sizes */
