@@ -51,4 +51,17 @@ static inline void rte_prefetch2(const volatile void *p);
  */
 static inline void rte_prefetch_non_temporal(const volatile void *p);
 
+/**
+ * Demote a cache line to a more distant level of cache from the processor.
+ *
+ * CLDEMOTE hints to hardware to move (demote) a cache line from the closest to
+ * the processor to a level more distant from the processor. It is a hint and
+ * not guarantee. rte_cldemote is intended to speed up things at the producer,
+ * in the producer-consumer case.
+ *
+ * @param p
+ *   Address to demote
+ */
+static inline void rte_cldemote(const volatile void *p);
+
 #endif /* _RTE_PREFETCH_H_ */
