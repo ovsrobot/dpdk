@@ -324,6 +324,24 @@ cleanup_device(struct virtio_net *dev, int destroy)
 	}
 }
 
+static void
+vhost_free_async_mem(struct vhost_virtqueue *vq)
+{
+	if (vq->async_pkts_pending)
+		rte_free(vq->async_pkts_pending);
+	if (vq->async_pkts_info)
+		rte_free(vq->async_pkts_info);
+	if (vq->it_pool)
+		rte_free(vq->it_pool);
+	if (vq->vec_pool)
+		rte_free(vq->vec_pool);
+
+	vq->async_pkts_pending = NULL;
+	vq->async_pkts_info = NULL;
+	vq->it_pool = NULL;
+	vq->vec_pool = NULL;
+}
+
 void
 free_vq(struct virtio_net *dev, struct vhost_virtqueue *vq)
 {
@@ -331,10 +349,7 @@ free_vq(struct virtio_net *dev, struct vhost_virtqueue *vq)
 		rte_free(vq->shadow_used_packed);
 	else {
 		rte_free(vq->shadow_used_split);
-		if (vq->async_pkts_pending)
-			rte_free(vq->async_pkts_pending);
-		if (vq->async_pkts_info)
-			rte_free(vq->async_pkts_info);
+		vhost_free_async_mem(vq);
 	}
 	rte_free(vq->batch_copy_elems);
 	rte_mempool_free(vq->iotlb_pool);
@@ -1576,13 +1591,15 @@ int rte_vhost_async_channel_register(int vid, uint16_t queue_id,
 	vq->async_pkts_info = rte_malloc(NULL,
 			vq->size * sizeof(struct async_inflight_info),
 			RTE_CACHE_LINE_SIZE);
-	if (!vq->async_pkts_pending || !vq->async_pkts_info) {
-		if (vq->async_pkts_pending)
-			rte_free(vq->async_pkts_pending);
-
-		if (vq->async_pkts_info)
-			rte_free(vq->async_pkts_info);
-
+	vq->it_pool = rte_malloc(NULL,
+			VHOST_MAX_ASYNC_IT * sizeof(struct rte_vhost_iov_iter),
+			RTE_CACHE_LINE_SIZE);
+	vq->vec_pool = rte_malloc(NULL,
+			VHOST_MAX_ASYNC_VEC * sizeof(struct iovec),
+			RTE_CACHE_LINE_SIZE);
+	if (!vq->async_pkts_pending || !vq->async_pkts_info ||
+		!vq->it_pool || !vq->vec_pool) {
+		vhost_free_async_mem(vq);
 		VHOST_LOG_CONFIG(ERR,
 				"async register failed: cannot allocate memory for vq data "
 				"(vid %d, qid: %d)\n", vid, queue_id);
@@ -1630,15 +1647,7 @@ int rte_vhost_async_channel_unregister(int vid, uint16_t queue_id)
 		goto out;
 	}
 
-	if (vq->async_pkts_pending) {
-		rte_free(vq->async_pkts_pending);
-		vq->async_pkts_pending = NULL;
-	}
-
-	if (vq->async_pkts_info) {
-		rte_free(vq->async_pkts_info);
-		vq->async_pkts_info = NULL;
-	}
+	vhost_free_async_mem(vq);
 
 	vq->async_ops.transfer_data = NULL;
 	vq->async_ops.check_completed_copies = NULL;
