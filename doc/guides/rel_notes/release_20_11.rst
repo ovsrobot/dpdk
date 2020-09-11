@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated the AESNI MB crypto PMD.**
+
+  * Added support for ZUC-EEA3/EIA3 algorithms.
+
 
 Removed Items
 -------------
