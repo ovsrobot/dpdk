@@ -52,9 +52,15 @@ extern int (*dlb2_iface_dir_port_create)(struct dlb2_hw_dev *handle,
 					 enum dlb2_cq_poll_modes poll_mode);
 
 extern int (*dlb2_iface_dir_queue_create)(struct dlb2_hw_dev *handle,
-					struct dlb2_create_dir_queue_args *cfg);
+				  struct dlb2_create_dir_queue_args *cfg);
 
 extern int (*dlb2_iface_map_qid)(struct dlb2_hw_dev *handle,
 				 struct dlb2_map_qid_args *cfg);
+
+extern int (*dlb2_iface_unmap_qid)(struct dlb2_hw_dev *handle,
+				   struct dlb2_unmap_qid_args *cfg);
+
+extern int (*dlb2_iface_pending_port_unmaps)(struct dlb2_hw_dev *handle,
+				struct dlb2_pending_port_unmaps_args *args);
 
 #endif /* _DLB2_IFACE_H_ */
