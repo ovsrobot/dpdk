@@ -3872,6 +3872,29 @@ dlb_eventdev_close(struct rte_eventdev *dev)
 	return 0;
 }
 
+static void
+dlb_eventdev_port_release(void *port)
+{
+	RTE_SET_USED(port);
+
+	/* This function intentionally left blank. dlb does not support
+	 * reconfiguring individual queues or ports -- the entire device
+	 * must be reconfigured.
+	 */
+}
+
+static void
+dlb_eventdev_queue_release(struct rte_eventdev *dev, uint8_t id)
+{
+	RTE_SET_USED(dev);
+	RTE_SET_USED(id);
+
+	/* This function intentionally left blank. dlb does not support
+	 * reconfiguring individual queues or ports -- the entire device
+	 * must be reconfigured.
+	 */
+}
+
 void
 dlb_entry_points_init(struct rte_eventdev *dev)
 {
@@ -3886,7 +3909,9 @@ dlb_entry_points_init(struct rte_eventdev *dev)
 		.queue_def_conf   = dlb_eventdev_queue_default_conf_get,
 		.port_def_conf    = dlb_eventdev_port_default_conf_get,
 		.queue_setup      = dlb_eventdev_queue_setup,
+		.queue_release    = dlb_eventdev_queue_release,
 		.port_setup       = dlb_eventdev_port_setup,
+		.port_release     = dlb_eventdev_port_release,
 		.port_link        = dlb_eventdev_port_link,
 		.port_unlink      = dlb_eventdev_port_unlink,
 		.port_unlinks_in_progress =
