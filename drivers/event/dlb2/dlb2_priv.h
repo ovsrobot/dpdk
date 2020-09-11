@@ -611,4 +611,9 @@ int dlb2_parse_params(const char *params,
 		      struct dlb2_devargs *dlb2_args);
 
 int dlb2_string_to_int(int *result, const char *str);
+
+/* Extern globals */
+
+extern struct process_local_port_data dlb2_port[][DLB2_NUM_PORT_TYPES];
+
 #endif	/* _DLB2_PRIV_H_ */
