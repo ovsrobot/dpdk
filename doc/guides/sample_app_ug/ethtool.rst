@@ -65,7 +65,7 @@ Explanation
 
 The sample program has two parts: A background `packet reflector`_
 that runs on a slave core, and a foreground `Ethtool Shell`_ that
-runs on the master core. These are described below.
+runs on the main core. These are described below.
 
 Packet Reflector
 ~~~~~~~~~~~~~~~~

@@ -124,10 +124,13 @@ LAN
 LPM
    Longest Prefix Match
 
-master lcore
+main lcore
    The execution unit that executes the main() function and that launches
    other lcores.
 
+master lcore
+   Deprecated name for *main lcore*. No longer used.
+   
 mbuf
    An mbuf is a data structure used internally to carry messages (mainly
    network packets).  The name is derived from BSD stacks.  To understand the
@@ -185,7 +188,7 @@ Rx
    Reception
 
 Slave lcore
-   Any *lcore* that is not the *master lcore*.
+   Deprecated name for *worker lcore*. No longer used.
 
 Socket
    A physical CPU, that includes several *cores*.
@@ -236,6 +239,9 @@ VLAN
 
 Wr
    Write
+
+Worker lcore
+   Any *lcore* that is not the *main lcore*.
 
 WRED
    Weighted Random Early Detection

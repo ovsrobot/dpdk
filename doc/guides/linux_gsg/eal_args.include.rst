@@ -33,7 +33,7 @@ Lcore-related options
     At a given instance only one core option ``--lcores``, ``-l`` or ``-c`` can
     be used.
 
-*   ``--master-lcore <core ID>``
+*   ``--main-lcore <core ID>``
 
     Core ID that is used as master.
 

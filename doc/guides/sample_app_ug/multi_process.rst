@@ -273,7 +273,7 @@ In addition to the EAL parameters, the application- specific parameters are:
 
 .. note::
 
-    In the server process, a single thread, the master thread, that is, the lowest numbered lcore in the coremask/corelist, performs all packet I/O.
+    In the server process, a single thread, the main thread, that is, the lowest numbered lcore in the coremask/corelist, performs all packet I/O.
     If a coremask/corelist is specified with more than a single lcore bit set in it,
     an additional lcore will be used for a thread to periodically print packet count statistics.
 

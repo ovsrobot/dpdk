@@ -48,7 +48,7 @@ therefore all the hugepages are allocated on the wrong socket.
 To avoid this scenario, either lower the amount of hugepage memory available to 1 GB size (or less), or run the application with taskset
 affinitizing the application to a would-be master core.
 
-For example, if your EAL coremask is 0xff0, the master core will usually be the first core in the coremask (0x10); this is what you have to supply to taskset::
+For example, if your EAL coremask is 0xff0, the main core will usually be the first core in the coremask (0x10); this is what you have to supply to taskset::
 
    taskset 0x10 ./l2fwd -l 4-11 -n 2
 

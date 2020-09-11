@@ -403,7 +403,7 @@ However, it improves performance:
             if (unlikely(timer_tsc >= (uint64_t) timer_period)) {
                 /* do this only on master core */
 
-                if (lcore_id == rte_get_master_lcore()) {
+                if (lcore_id == rte_get_main_lcore()) {
                     print_stats();
 
                     /* reset the timer */

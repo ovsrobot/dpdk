@@ -81,7 +81,7 @@ The code that launches the function on each lcore is as follows:
        rte_eal_remote_launch(lcore_hello, NULL, lcore_id);
     }
 
-    /* call it on master lcore too */
+    /* call it on main lcore too */
 
     lcore_hello(NULL);
 

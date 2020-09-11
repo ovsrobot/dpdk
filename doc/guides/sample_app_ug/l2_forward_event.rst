@@ -631,7 +631,7 @@ not many packets to send, however it improves performance:
                         /* if timer has reached its timeout */
                         if (unlikely(timer_tsc >= timer_period)) {
                                 /* do this only on master core */
-                                if (lcore_id == rte_get_master_lcore()) {
+                                if (lcore_id == rte_get_main_lcore()) {
                                         print_stats();
                                         /* reset the timer */
                                         timer_tsc = 0;
