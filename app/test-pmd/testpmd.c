@@ -2694,8 +2694,7 @@ close_port(portid_t pid)
 			continue;
 		}
 
-		if (port->flow_list)
-			port_flow_flush(pi);
+		port_flow_flush(pi);
 		rte_eth_dev_close(pi);
 	}
 
@@ -2825,15 +2824,20 @@ detach_device(struct rte_device *dev)
 
 	printf("Removing a device...\n");
 
+	RTE_ETH_FOREACH_DEV_OF(sibling, dev) {
+		if (ports[sibling].port_status != RTE_PORT_CLOSED) {
+			if (ports[sibling].port_status != RTE_PORT_STOPPED) {
+				printf("Port %u not stopped\n", sibling);
+				return;
+			}
+			port_flow_flush(sibling);
+		}
+	}
+
 	if (rte_dev_remove(dev) < 0) {
 		TESTPMD_LOG(ERR, "Failed to detach device %s\n", dev->name);
 		return;
 	}
-	RTE_ETH_FOREACH_DEV_OF(sibling, dev) {
-		if (ports[sibling].port_status != RTE_PORT_CLOSED) {
-		}
-	}
-
 	remove_invalid_ports();
 
 	printf("Device is detached\n");
@@ -2854,8 +2858,6 @@ detach_port_device(portid_t port_id)
 			return;
 		}
 		printf("Port was not closed\n");
-		if (ports[port_id].flow_list)
-			port_flow_flush(port_id);
 	}
 
 	detach_device(rte_eth_devices[port_id].device);
@@ -2885,9 +2887,7 @@ detach_devargs(char *identifier)
 				rte_eth_iterator_cleanup(&iterator);
 				return;
 			}
-
-			if (ports[port_id].flow_list)
-				port_flow_flush(port_id);
+			port_flow_flush(port_id);
 		}
 	}
 
