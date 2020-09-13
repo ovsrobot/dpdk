@@ -72,6 +72,10 @@
 
 static int tap_devices_count;
 
+static const char *tuntap_types[ETH_TUNTAP_TYPE_MAX] = {
+	"UNKNOWN", "TUN", "TAP"
+};
+
 static const char *valid_arguments[] = {
 	ETH_TAP_IFACE_ARG,
 	ETH_TAP_REMOTE_ARG,
@@ -1040,6 +1044,9 @@ tap_dev_close(struct rte_eth_dev *dev)
 	struct pmd_process_private *process_private = dev->process_private;
 	struct rx_queue *rxq;
 
+	if (process_private == NULL)
+		return 0;
+
 	tap_link_set_down(dev);
 	if (internals->nlsk_fd != -1) {
 		tap_flow_flush(dev, NULL);
@@ -1078,6 +1085,23 @@ tap_dev_close(struct rte_eth_dev *dev)
 	 * Since TUN device has no more opened file descriptors
 	 * it will be removed from kernel
 	 */
+
+	/* mac_addrs must not be freed alone because part of dev_private */
+	dev->data->mac_addrs = NULL;
+
+	internals = dev->data->dev_private;
+	TAP_LOG(DEBUG, "Closing %s Ethernet device on NUMA %u",
+		tuntap_types[internals->type], rte_socket_id());
+
+	if (internals->ioctl_sock != -1) {
+		close(internals->ioctl_sock);
+		internals->ioctl_sock = -1;
+	}
+	rte_free(dev->process_private);
+	dev->process_private = NULL;
+	if (tap_devices_count == 1)
+		rte_mp_action_unregister(TAP_MP_KEY);
+	tap_devices_count--;
 
 	return 0;
 }
@@ -1802,10 +1826,6 @@ static const struct eth_dev_ops ops = {
 	.filter_ctrl            = tap_dev_filter_ctrl,
 };
 
-static const char *tuntap_types[ETH_TUNTAP_TYPE_MAX] = {
-	"UNKNOWN", "TUN", "TAP"
-};
-
 static int
 eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 		   char *remote_iface, struct rte_ether_addr *mac_addr,
@@ -1856,7 +1876,7 @@ eth_dev_tap_create(struct rte_vdev_device *vdev, const char *tap_name,
 	/* Setup some default values */
 	data = dev->data;
 	data->dev_private = pmd;
-	data->dev_flags = RTE_ETH_DEV_INTR_LSC;
+	data->dev_flags = RTE_ETH_DEV_INTR_LSC | RTE_ETH_DEV_CLOSE_REMOVE;
 	data->numa_node = numa_node;
 
 	data->dev_link = pmd_link;
@@ -2448,30 +2468,16 @@ static int
 rte_pmd_tap_remove(struct rte_vdev_device *dev)
 {
 	struct rte_eth_dev *eth_dev = NULL;
-	struct pmd_internals *internals;
 
 	/* find the ethdev entry */
 	eth_dev = rte_eth_dev_allocated(rte_vdev_device_name(dev));
 	if (!eth_dev)
-		return -ENODEV;
-
-	/* mac_addrs must not be freed alone because part of dev_private */
-	eth_dev->data->mac_addrs = NULL;
+		return 0;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return rte_eth_dev_release_port(eth_dev);
 
 	tap_dev_close(eth_dev);
-
-	internals = eth_dev->data->dev_private;
-	TAP_LOG(DEBUG, "Closing %s Ethernet device on numa %u",
-		tuntap_types[internals->type], rte_socket_id());
-
-	close(internals->ioctl_sock);
-	rte_free(eth_dev->process_private);
-	if (tap_devices_count == 1)
-		rte_mp_action_unregister(TAP_MP_KEY);
-	tap_devices_count--;
 	rte_eth_dev_release_port(eth_dev);
 
 	return 0;
