@@ -1623,7 +1623,6 @@ eth_axgbe_dev_init(struct rte_eth_dev *eth_dev)
 	int ret;
 
 	eth_dev->dev_ops = &axgbe_eth_dev_ops;
-	eth_dev->data->dev_flags |= RTE_ETH_DEV_CLOSE_REMOVE;
 
 	/*
 	 * For secondary processes, we don't initialise any further as primary

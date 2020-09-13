@@ -605,7 +605,7 @@ F: drivers/net/thunderx/
 F: doc/guides/nics/thunderx.rst
 F: doc/guides/nics/features/thunderx.ini
 
-Cavium LiquidIO
+Cavium LiquidIO - UNMAINTAINED
 M: Shijith Thotton <sthotton@marvell.com>
 M: Srisivasubramanian Srinivasan <srinivasan@marvell.com>
 T: git://dpdk.org/next/dpdk-next-net-mrvl
@@ -622,7 +622,7 @@ F: drivers/net/octeontx/
 F: doc/guides/nics/octeontx.rst
 F: doc/guides/nics/features/octeontx.ini
 
-Chelsio cxgbe
+Chelsio cxgbe - UNMAINTAINED
 M: Rahul Lakkireddy <rahul.lakkireddy@chelsio.com>
 F: drivers/net/cxgbe/
 F: doc/guides/nics/cxgbe.rst
@@ -711,7 +711,7 @@ F: drivers/net/igc/
 F: doc/guides/nics/igc.rst
 F: doc/guides/nics/features/igc.ini
 
-Intel ipn3ke
+Intel ipn3ke - UNMAINTAINED
 M: Rosen Xu <rosen.xu@intel.com>
 T: git://dpdk.org/next/dpdk-next-net-intel
 F: drivers/net/ipn3ke/
@@ -794,13 +794,13 @@ F: drivers/net/nfb/
 F: doc/guides/nics/nfb.rst
 F: doc/guides/nics/features/nfb.ini
 
-Netronome nfp
+Netronome nfp - UNMAINTAINED
 M: Heinrich Kuhn <heinrich.kuhn@netronome.com>
 F: drivers/net/nfp/
 F: doc/guides/nics/nfp.rst
 F: doc/guides/nics/features/nfp*.ini
 
-NXP dpaa
+NXP dpaa - UNMAINTAINED
 M: Hemant Agrawal <hemant.agrawal@nxp.com>
 M: Sachin Saxena <sachin.saxena@nxp.com>
 F: drivers/mempool/dpaa/
@@ -808,7 +808,7 @@ F: drivers/net/dpaa/
 F: doc/guides/nics/dpaa.rst
 F: doc/guides/nics/features/dpaa.ini
 
-NXP dpaa2
+NXP dpaa2 - UNMAINTAINED
 M: Hemant Agrawal <hemant.agrawal@nxp.com>
 M: Sachin Saxena <sachin.saxena@nxp.com>
 F: drivers/mempool/dpaa2/
@@ -816,27 +816,27 @@ F: drivers/net/dpaa2/
 F: doc/guides/nics/dpaa2.rst
 F: doc/guides/nics/features/dpaa2.ini
 
-NXP enetc
+NXP enetc - UNMAINTAINED
 M: Gagandeep Singh <g.singh@nxp.com>
 M: Sachin Saxena <sachin.saxena@nxp.com>
 F: drivers/net/enetc/
 F: doc/guides/nics/enetc.rst
 F: doc/guides/nics/features/enetc.ini
 
-NXP pfe
+NXP pfe - UNMAINTAINED
 M: Gagandeep Singh <g.singh@nxp.com>
 M: Akhil Goyal <akhil.goyal@nxp.com>
 F: doc/guides/nics/pfe.rst
 F: drivers/net/pfe/
 F: doc/guides/nics/features/pfe.ini
 
-Pensando ionic
+Pensando ionic - UNMAINTAINED
 M: Alfredo Cardigliano <cardigliano@ntop.org>
 F: drivers/net/ionic/
 F: doc/guides/nics/ionic.rst
 F: doc/guides/nics/features/ionic.ini
 
-QLogic bnx2x
+QLogic bnx2x - UNMAINTAINED
 M: Rasesh Mody <rmody@marvell.com>
 M: Shahed Shaikh <shshaikh@marvell.com>
 T: git://dpdk.org/next/dpdk-next-net-mrvl
@@ -844,7 +844,7 @@ F: drivers/net/bnx2x/
 F: doc/guides/nics/bnx2x.rst
 F: doc/guides/nics/features/bnx2x*.ini
 
-QLogic qede PMD
+QLogic qede PMD - UNMAINTAINED
 M: Rasesh Mody <rmody@marvell.com>
 M: Shahed Shaikh <shshaikh@marvell.com>
 T: git://dpdk.org/next/dpdk-next-net-mrvl
