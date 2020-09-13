@@ -1239,7 +1239,7 @@ dpaa2_dev_stop(struct rte_eth_dev *dev)
 	rte_eth_linkstatus_set(dev, &link);
 }
 
-static void
+static int
 dpaa2_dev_close(struct rte_eth_dev *dev)
 {
 	struct dpaa2_dev_priv *priv = dev->data->dev_private;
@@ -1255,11 +1255,13 @@ dpaa2_dev_close(struct rte_eth_dev *dev)
 	ret = dpni_reset(dpni, CMD_PRI_LOW, priv->token);
 	if (ret) {
 		DPAA2_PMD_ERR("Failure cleaning dpni device: err=%d", ret);
-		return;
+		return -1;
 	}
 
 	memset(&link, 0, sizeof(link));
 	rte_eth_linkstatus_set(dev, &link);
+
+	return 0;
 }
 
 static int

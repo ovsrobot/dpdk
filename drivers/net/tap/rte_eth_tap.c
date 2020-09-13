@@ -1032,7 +1032,7 @@ tap_stats_reset(struct rte_eth_dev *dev)
 	return 0;
 }
 
-static void
+static int
 tap_dev_close(struct rte_eth_dev *dev)
 {
 	int i;
@@ -1078,6 +1078,8 @@ tap_dev_close(struct rte_eth_dev *dev)
 	 * Since TUN device has no more opened file descriptors
 	 * it will be removed from kernel
 	 */
+
+	return 0;
 }
 
 static void

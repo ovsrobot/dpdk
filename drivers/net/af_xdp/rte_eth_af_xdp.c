@@ -701,7 +701,7 @@ xdp_umem_destroy(struct xsk_umem_info *umem)
 	umem = NULL;
 }
 
-static void
+static int
 eth_dev_close(struct rte_eth_dev *dev)
 {
 	struct pmd_internals *internals = dev->data->dev_private;
@@ -731,6 +731,8 @@ eth_dev_close(struct rte_eth_dev *dev)
 	dev->data->mac_addrs = NULL;
 
 	remove_xdp_program(internals);
+
+	return 0;
 }
 
 static void

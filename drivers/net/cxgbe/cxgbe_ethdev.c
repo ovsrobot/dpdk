@@ -315,7 +315,7 @@ int cxgbe_dev_mtu_set(struct rte_eth_dev *eth_dev, uint16_t mtu)
 /*
  * Stop device.
  */
-void cxgbe_dev_close(struct rte_eth_dev *eth_dev)
+int cxgbe_dev_close(struct rte_eth_dev *eth_dev)
 {
 	struct port_info *pi = eth_dev->data->dev_private;
 	struct adapter *adapter = pi->adapter;
@@ -323,7 +323,7 @@ void cxgbe_dev_close(struct rte_eth_dev *eth_dev)
 	CXGBE_FUNC_TRACE();
 
 	if (!(adapter->flags & FULL_INIT_DONE))
-		return;
+		return 0;
 
 	cxgbe_down(pi);
 
@@ -332,6 +332,8 @@ void cxgbe_dev_close(struct rte_eth_dev *eth_dev)
 	 *  have been disabled
 	 */
 	t4_sge_eth_clear_queues(pi);
+
+	return 0;
 }
 
 /* Start the device.
