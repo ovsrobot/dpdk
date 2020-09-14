@@ -479,29 +479,29 @@ testsuite_setup(void)
 	char vdev_args[VDEV_ARGS_SIZE] = {""};
 	char temp_str[VDEV_ARGS_SIZE] = {"mode=multi-core,"
 		"ordering=enable,name=cryptodev_test_scheduler,corelist="};
-	uint16_t slave_core_count = 0;
+	uint16_t worker_core_count = 0;
 	uint16_t socket_id = 0;
 
 	if (gbl_driver_id == rte_cryptodev_driver_id_get(
 			RTE_STR(CRYPTODEV_NAME_SCHEDULER_PMD))) {
 
-		/* Identify the Slave Cores
-		 * Use 2 slave cores for the device args
+		/* Identify the Worker Cores
+		 * Use 2 worker cores for the device args
 		 */
-		RTE_LCORE_FOREACH_SLAVE(i) {
-			if (slave_core_count > 1)
+		RTE_LCORE_FOREACH_WORKER(i) {
+			if (worker_core_count > 1)
 				break;
 			snprintf(vdev_args, sizeof(vdev_args),
 					"%s%d", temp_str, i);
 			strcpy(temp_str, vdev_args);
 			strlcat(temp_str, ";", sizeof(temp_str));
-			slave_core_count++;
+			worker_core_count++;
 			socket_id = rte_lcore_to_socket_id(i);
 		}
-		if (slave_core_count != 2) {
+		if (worker_core_count != 2) {
 			RTE_LOG(ERR, USER1,
 				"Cryptodev scheduler test require at least "
-				"two slave cores to run. "
+				"two worker cores to run. "
 				"Please use the correct coremask.\n");
 			return TEST_FAILED;
 		}
