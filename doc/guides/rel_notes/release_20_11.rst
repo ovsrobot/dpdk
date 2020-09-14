@@ -113,6 +113,7 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* ipsec: ``RTE_SATP_LOG2_NUM`` has been dropped from ``enum``
 
 Known Issues
 ------------
