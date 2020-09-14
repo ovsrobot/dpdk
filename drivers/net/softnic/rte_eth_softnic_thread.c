@@ -25,7 +25,7 @@ softnic_thread_free(struct pmd_internals *softnic)
 {
 	uint32_t i;
 
-	RTE_LCORE_FOREACH_SLAVE(i) {
+	RTE_LCORE_FOREACH_WORKER(i) {
 		struct softnic_thread *t = &softnic->thread[i];
 
 		/* MSGQs */
@@ -99,7 +99,7 @@ softnic_thread_init(struct pmd_internals *softnic)
 static inline int
 thread_is_valid(struct pmd_internals *softnic, uint32_t thread_id)
 {
-	if (thread_id == rte_get_master_lcore())
+	if (thread_id == rte_get_main_lcore())
 		return 0; /* FALSE */
 
 	if (softnic->params.sc && rte_lcore_has_role(thread_id, ROLE_SERVICE))
