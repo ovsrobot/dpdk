@@ -88,6 +88,9 @@ API Changes
   the structures ``rte_mbuf`` and ``rte_mbuf_ext_shared_info``.
   The field ``refcnt`` is remaining from the old unions.
 
+* mbuf: Removed the unioned field ``buf_physaddr`` from ``rte_mbuf``.
+  The field ``buf_iova`` is remaining from the old union.
+
 * rawdev: Added a structure size parameter to the functions
   ``rte_rawdev_queue_setup()``, ``rte_rawdev_queue_conf_get()``,
   ``rte_rawdev_info_get()`` and ``rte_rawdev_configure()``,
