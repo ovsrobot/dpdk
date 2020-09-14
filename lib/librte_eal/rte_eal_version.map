@@ -397,6 +397,9 @@ EXPERIMENTAL {
 	rte_mp_disable;
 	rte_thread_register;
 	rte_thread_unregister;
+
+	# added in 20.11
+	rte_service_component_attr_set;
 };
 
 INTERNAL {
