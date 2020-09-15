@@ -97,6 +97,17 @@ API Changes
   and the function ``rte_rawdev_queue_conf_get()``
   from ``void`` to ``int`` allowing the return of error codes from drivers.
 
+* eal: Changed the function ``rte_get_master_lcore()`` is
+  replaced to ``rte_get_main_lcore()``. The old function is deprecated.
+
+  The iterator for worker lcores will also change:
+  ``RTE_LCORE_FOREACH_SLAVE`` will be replaced with
+  ``RTE_LCORE_FOREACH_WORKER``.
+
+  The ``master-lcore`` argument to testpmd will be replaced
+  with ``main-lcore``. The old ``master-lcore`` argument
+  will produce a runtime notification in 20.11 release, and
+  be removed completely in a future release.
 
 ABI Changes
 -----------
