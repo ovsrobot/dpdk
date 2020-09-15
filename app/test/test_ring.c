@@ -46,15 +46,25 @@
 #define RING_SIZE 4096
 #define MAX_BULK 32
 
-#define	TEST_RING_VERIFY(exp)						\
+/*
+ * Validate the return value of test cases and print details of the
+ * ring if validation fails
+ *
+ * @param exp
+ *   Expression to validate return value.
+ * @param r
+ *   A pointer to the ring structure.
+ */
+#define TEST_RING_VERIFY(exp, r) do {					\
 	if (!(exp)) {							\
 		printf("error at %s:%d\tcondition " #exp " failed\n",	\
 		    __func__, __LINE__);				\
-		rte_ring_dump(stdout, r);				\
-		return -1;						\
-	}
+		rte_ring_dump(stdout, (r));				\
+		goto fail;						\
+	}								\
+} while (0)
 
-#define	TEST_RING_FULL_EMTPY_ITER	8
+#define TEST_RING_FULL_EMPTY_ITER	8
 
 static const int esize[] = {-1, 4, 8, 16, 20};
 
@@ -316,7 +326,7 @@ test_ring_negative_tests(void)
 				RING_SIZE + 1, SOCKET_ID_ANY, 0);
 	if (rp != NULL) {
 		printf("Test failed to detect invalid element size\n");
-		goto test_fail;
+		goto fail;
 	}
 
 
@@ -326,7 +336,7 @@ test_ring_negative_tests(void)
 					RING_SIZE + 1, SOCKET_ID_ANY, 0);
 		if (rp != NULL) {
 			printf("Test failed to detect odd count\n");
-			goto test_fail;
+			goto fail;
 		}
 
 		/* Test if ring size is exceeding the limit */
@@ -334,14 +344,14 @@ test_ring_negative_tests(void)
 					RTE_RING_SZ_MASK + 1, SOCKET_ID_ANY, 0);
 		if (rp != NULL) {
 			printf("Test failed to detect limits\n");
-			goto test_fail;
+			goto fail;
 		}
 
 		/* Tests if lookup returns NULL on non-existing ring */
 		rp = rte_ring_lookup("ring_not_found");
 		if (rp != NULL && rte_errno != ENOENT) {
 			printf("Test failed to detect NULL ring lookup\n");
-			goto test_fail;
+			goto fail;
 		}
 
 		/* Test to if a non-power of 2 count causes the create
@@ -350,23 +360,19 @@ test_ring_negative_tests(void)
 		rp = test_ring_create("test_ring_count", esize[i], 4097,
 					SOCKET_ID_ANY, 0);
 		if (rp != NULL)
-			goto test_fail;
+			goto fail;
 
 		rp = test_ring_create("test_ring_negative", esize[i], RING_SIZE,
 					SOCKET_ID_ANY,
 					RING_F_SP_ENQ | RING_F_SC_DEQ);
 		if (rp == NULL) {
 			printf("test_ring_negative fail to create ring\n");
-			goto test_fail;
+			goto fail;
 		}
 
-		if (rte_ring_lookup("test_ring_negative") != rp)
-			goto test_fail;
+		TEST_RING_VERIFY(rte_ring_lookup("test_ring_negative") == rp, rp);
 
-		if (rte_ring_empty(rp) != 1) {
-			printf("test_ring_nagative ring is not empty but it should be\n");
-			goto test_fail;
-		}
+		TEST_RING_VERIFY(rte_ring_empty(rp) == 1, rp);
 
 		/* Tests if it would always fail to create ring with an used
 		 * ring name.
@@ -374,7 +380,7 @@ test_ring_negative_tests(void)
 		rt = test_ring_create("test_ring_negative", esize[i], RING_SIZE,
 					SOCKET_ID_ANY, 0);
 		if (rt != NULL)
-			goto test_fail;
+			goto fail;
 
 		rte_ring_free(rp);
 		rp = NULL;
@@ -382,7 +388,7 @@ test_ring_negative_tests(void)
 
 	return 0;
 
-test_fail:
+fail:
 
 	rte_ring_free(rp);
 	return -1;
@@ -426,44 +432,45 @@ test_ring_burst_bulk_tests1(unsigned int test_idx)
 
 		printf("Random full/empty test\n");
 
-		for (j = 0; j != TEST_RING_FULL_EMTPY_ITER; j++) {
+		for (j = 0; j != TEST_RING_FULL_EMPTY_ITER; j++) {
 			/* random shift in the ring */
 			rand = RTE_MAX(rte_rand() % RING_SIZE, 1UL);
 			printf("%s: iteration %u, random shift: %u;\n",
 			    __func__, i, rand);
 			ret = test_ring_enq_impl(r, cur_src, esize[i], rand,
 							test_idx);
-			TEST_RING_VERIFY(ret != 0);
+			TEST_RING_VERIFY(ret != 0, r);
 
 			ret = test_ring_deq_impl(r, cur_dst, esize[i], rand,
 							test_idx);
-			TEST_RING_VERIFY(ret == rand);
+			TEST_RING_VERIFY(ret == rand, r);
 
 			/* fill the ring */
 			ret = test_ring_enq_impl(r, cur_src, esize[i], rsz,
 							test_idx);
-			TEST_RING_VERIFY(ret != 0);
+			TEST_RING_VERIFY(ret != 0, r);
 
-			TEST_RING_VERIFY(rte_ring_free_count(r) == 0);
-			TEST_RING_VERIFY(rsz == rte_ring_count(r));
-			TEST_RING_VERIFY(rte_ring_full(r));
-			TEST_RING_VERIFY(rte_ring_empty(r) == 0);
+			TEST_RING_VERIFY(rte_ring_free_count(r) == 0, r);
+			TEST_RING_VERIFY(rsz == rte_ring_count(r), r);
+			TEST_RING_VERIFY(rte_ring_full(r), r);
+			TEST_RING_VERIFY(rte_ring_empty(r) == 0, r);
 
 			/* empty the ring */
 			ret = test_ring_deq_impl(r, cur_dst, esize[i], rsz,
 							test_idx);
-			TEST_RING_VERIFY(ret == (int)rsz);
-			TEST_RING_VERIFY(rsz == rte_ring_free_count(r));
-			TEST_RING_VERIFY(rte_ring_count(r) == 0);
-			TEST_RING_VERIFY(rte_ring_full(r) == 0);
-			TEST_RING_VERIFY(rte_ring_empty(r));
+			TEST_RING_VERIFY(ret == (int)rsz, r);
+
+			TEST_RING_VERIFY(rsz == rte_ring_free_count(r), r);
+			TEST_RING_VERIFY(rte_ring_count(r) == 0, r);
+			TEST_RING_VERIFY(rte_ring_full(r) == 0, r);
+			TEST_RING_VERIFY(rte_ring_empty(r), r);
 
 			/* check data */
 			temp_sz = rsz * sizeof(void *);
 			if (esize[i] != -1)
 				temp_sz = rsz * esize[i];
 			TEST_RING_VERIFY(test_ring_mem_cmp(src, dst,
-						temp_sz) == 0);
+						temp_sz) == 0, r);
 		}
 
 		/* Free memory before test completed */
@@ -520,45 +527,39 @@ test_ring_burst_bulk_tests2(unsigned int test_idx)
 
 		printf("enqueue 1 obj\n");
 		ret = test_ring_enq_impl(r, cur_src, esize[i], 1, test_idx);
-		if (ret != 1)
-			goto fail;
+		TEST_RING_VERIFY(ret == 1, r);
 		cur_src = test_ring_inc_ptr(cur_src, esize[i], 1);
 
 		printf("enqueue 2 objs\n");
 		ret = test_ring_enq_impl(r, cur_src, esize[i], 2, test_idx);
-		if (ret != 2)
-			goto fail;
+		TEST_RING_VERIFY(ret == 2, r);
 		cur_src = test_ring_inc_ptr(cur_src, esize[i], 2);
 
 		printf("enqueue MAX_BULK objs\n");
 		ret = test_ring_enq_impl(r, cur_src, esize[i], MAX_BULK,
 						test_idx);
-		if (ret != MAX_BULK)
-			goto fail;
+		TEST_RING_VERIFY(ret == MAX_BULK, r);
 		cur_src = test_ring_inc_ptr(cur_src, esize[i], MAX_BULK);
 
 		printf("dequeue 1 obj\n");
 		ret = test_ring_deq_impl(r, cur_dst, esize[i], 1, test_idx);
-		if (ret != 1)
-			goto fail;
+		TEST_RING_VERIFY(ret == 1, r);
 		cur_dst = test_ring_inc_ptr(cur_dst, esize[i], 1);
 
 		printf("dequeue 2 objs\n");
 		ret = test_ring_deq_impl(r, cur_dst, esize[i], 2, test_idx);
-		if (ret != 2)
-			goto fail;
+		TEST_RING_VERIFY(ret == 2, r);
 		cur_dst = test_ring_inc_ptr(cur_dst, esize[i], 2);
 
 		printf("dequeue MAX_BULK objs\n");
 		ret = test_ring_deq_impl(r, cur_dst, esize[i], MAX_BULK,
 						test_idx);
-		if (ret != MAX_BULK)
-			goto fail;
+		TEST_RING_VERIFY(ret == MAX_BULK, r);
 		cur_dst = test_ring_inc_ptr(cur_dst, esize[i], MAX_BULK);
 
 		/* check data */
-		if (test_ring_mem_cmp(src, dst, RTE_PTR_DIFF(cur_dst, dst)))
-			goto fail;
+		TEST_RING_VERIFY(test_ring_mem_cmp(src, dst,
+					RTE_PTR_DIFF(cur_dst, dst)) == 0, r);
 
 		/* Free memory before test completed */
 		rte_ring_free(r);
@@ -615,22 +616,20 @@ test_ring_burst_bulk_tests3(unsigned int test_idx)
 		for (j = 0; j < RING_SIZE / MAX_BULK; j++) {
 			ret = test_ring_enq_impl(r, cur_src, esize[i], MAX_BULK,
 							test_idx);
-			if (ret != MAX_BULK)
-				goto fail;
+			TEST_RING_VERIFY(ret == MAX_BULK, r);
 			cur_src = test_ring_inc_ptr(cur_src, esize[i],
 								MAX_BULK);
 
 			ret = test_ring_deq_impl(r, cur_dst, esize[i], MAX_BULK,
 							test_idx);
-			if (ret != MAX_BULK)
-				goto fail;
+			TEST_RING_VERIFY(ret == MAX_BULK, r);
 			cur_dst = test_ring_inc_ptr(cur_dst, esize[i],
 								MAX_BULK);
 		}
 
 		/* check data */
-		if (test_ring_mem_cmp(src, dst, RTE_PTR_DIFF(cur_dst, dst)))
-			goto fail;
+		TEST_RING_VERIFY(test_ring_mem_cmp(src, dst,
+					RTE_PTR_DIFF(cur_dst, dst)) == 0, r);
 
 		/* Free memory before test completed */
 		rte_ring_free(r);
@@ -690,16 +689,14 @@ test_ring_burst_bulk_tests4(unsigned int test_idx)
 		for (j = 0; j < (RING_SIZE/MAX_BULK - 1); j++) {
 			ret = test_ring_enq_impl(r, cur_src, esize[i], MAX_BULK,
 							test_idx);
-			if (ret != MAX_BULK)
-				goto fail;
+			TEST_RING_VERIFY(ret == MAX_BULK, r);
 			cur_src = test_ring_inc_ptr(cur_src, esize[i],
 								MAX_BULK);
 		}
 
 		printf("Enqueue 2 objects, free entries = MAX_BULK - 2\n");
 		ret = test_ring_enq_impl(r, cur_src, esize[i], 2, test_idx);
-		if (ret != 2)
-			goto fail;
+		TEST_RING_VERIFY(ret == 2, r);
 		cur_src = test_ring_inc_ptr(cur_src, esize[i], 2);
 
 		printf("Enqueue the remaining entries = MAX_BULK - 3\n");
@@ -711,34 +708,29 @@ test_ring_burst_bulk_tests4(unsigned int test_idx)
 		/* Always one free entry left */
 		ret = test_ring_enq_impl(r, cur_src, esize[i], num_elems,
 						test_idx);
-		if (ret != MAX_BULK - 3)
-			goto fail;
+		TEST_RING_VERIFY(ret == MAX_BULK - 3, r);
 		cur_src = test_ring_inc_ptr(cur_src, esize[i], MAX_BULK - 3);
 
 		printf("Test if ring is full\n");
-		if (rte_ring_full(r) != 1)
-			goto fail;
+		TEST_RING_VERIFY(rte_ring_full(r) == 1, r);
 
 		printf("Test enqueue for a full entry\n");
 		ret = test_ring_enq_impl(r, cur_src, esize[i], MAX_BULK,
 						test_idx);
-		if (ret != 0)
-			goto fail;
+		TEST_RING_VERIFY(ret == 0, r);
 
 		printf("Test dequeue without enough objects\n");
 		for (j = 0; j < RING_SIZE / MAX_BULK - 1; j++) {
 			ret = test_ring_deq_impl(r, cur_dst, esize[i], MAX_BULK,
 							test_idx);
-			if (ret != MAX_BULK)
-				goto fail;
+			TEST_RING_VERIFY(ret == MAX_BULK, r);
 			cur_dst = test_ring_inc_ptr(cur_dst, esize[i],
 								MAX_BULK);
 		}
 
 		/* Available memory space for the exact MAX_BULK entries */
 		ret = test_ring_deq_impl(r, cur_dst, esize[i], 2, test_idx);
-		if (ret != 2)
-			goto fail;
+		TEST_RING_VERIFY(ret == 2, r);
 		cur_dst = test_ring_inc_ptr(cur_dst, esize[i], 2);
 
 		/* Bulk APIs enqueue exact number of elements */
@@ -748,18 +740,16 @@ test_ring_burst_bulk_tests4(unsigned int test_idx)
 			num_elems = MAX_BULK;
 		ret = test_ring_deq_impl(r, cur_dst, esize[i], num_elems,
 						test_idx);
-		if (ret != MAX_BULK - 3)
-			goto fail;
+		TEST_RING_VERIFY(ret == MAX_BULK - 3, r);
 		cur_dst = test_ring_inc_ptr(cur_dst, esize[i], MAX_BULK - 3);
 
 		printf("Test if ring is empty\n");
 		/* Check if ring is empty */
-		if (rte_ring_empty(r) != 1)
-			goto fail;
+		TEST_RING_VERIFY(rte_ring_empty(r) == 1, r);
 
 		/* check data */
-		if (test_ring_mem_cmp(src, dst, RTE_PTR_DIFF(cur_dst, dst)))
-			goto fail;
+		TEST_RING_VERIFY(test_ring_mem_cmp(src, dst,
+					RTE_PTR_DIFF(cur_dst, dst)) == 0, r);
 
 		/* Free memory before test completed */
 		rte_ring_free(r);
@@ -795,14 +785,14 @@ test_ring_basic_ex(void)
 					RING_F_SP_ENQ | RING_F_SC_DEQ);
 		if (rp == NULL) {
 			printf("%s: failed to create ring\n", __func__);
-			goto fail_test;
+			goto fail;
 		}
 
 		/* alloc dummy object pointers */
 		src = test_ring_calloc(RING_SIZE, esize[i]);
 		if (src == NULL) {
 			printf("%s: failed to alloc src memory\n", __func__);
-			goto fail_test;
+			goto fail;
 		}
 		test_ring_mem_init(src, RING_SIZE, esize[i]);
 		cur_src = src;
@@ -811,20 +801,13 @@ test_ring_basic_ex(void)
 		dst = test_ring_calloc(RING_SIZE, esize[i]);
 		if (dst == NULL) {
 			printf("%s: failed to alloc dst memory\n", __func__);
-			goto fail_test;
+			goto fail;
 		}
 		cur_dst = dst;
 
-		if (rte_ring_lookup("test_ring_basic_ex") != rp) {
-			printf("%s: failed to find ring\n", __func__);
-			goto fail_test;
-		}
+		TEST_RING_VERIFY(rte_ring_lookup("test_ring_basic_ex") == rp, rp);
 
-		if (rte_ring_empty(rp) != 1) {
-			printf("%s: ring is not empty but it should be\n",
-				__func__);
-			goto fail_test;
-		}
+		TEST_RING_VERIFY(rte_ring_empty(rp) == 1, rp);
 
 		printf("%u ring entries are now free\n",
 			rte_ring_free_count(rp));
@@ -832,40 +815,24 @@ test_ring_basic_ex(void)
 		for (j = 0; j < RING_SIZE - 1; j++) {
 			ret = test_ring_enqueue(rp, cur_src, esize[i], 1,
 				TEST_RING_THREAD_DEF | TEST_RING_ELEM_SINGLE);
-			if (ret != 0) {
-				printf("%s: rte_ring_enqueue fails\n",
-					__func__);
-				goto fail_test;
-			}
+			TEST_RING_VERIFY(ret == 0, rp);
 			cur_src = test_ring_inc_ptr(cur_src, esize[i], 1);
 		}
 
-		if (rte_ring_full(rp) != 1) {
-			printf("%s: ring is not full but it should be\n",
-				__func__);
-			goto fail_test;
-		}
+		TEST_RING_VERIFY(rte_ring_full(rp) == 1, rp);
 
 		for (j = 0; j < RING_SIZE - 1; j++) {
 			ret = test_ring_dequeue(rp, cur_dst, esize[i], 1,
 				TEST_RING_THREAD_DEF | TEST_RING_ELEM_SINGLE);
-			if (ret != 0) {
-				printf("%s: rte_ring_dequeue fails\n",
-					__func__);
-				goto fail_test;
-			}
+			TEST_RING_VERIFY(ret == 0, rp);
 			cur_dst = test_ring_inc_ptr(cur_dst, esize[i], 1);
 		}
 
-		if (rte_ring_empty(rp) != 1) {
-			printf("%s: ring is not empty but it should be\n",
-				__func__);
-			goto fail_test;
-		}
+		TEST_RING_VERIFY(rte_ring_empty(rp) == 1, rp);
 
 		/* check data */
-		if (test_ring_mem_cmp(src, dst, RTE_PTR_DIFF(cur_dst, dst)))
-			goto fail_test;
+		TEST_RING_VERIFY(test_ring_mem_cmp(src, dst,
+					RTE_PTR_DIFF(cur_dst, dst)) == 0, rp);
 
 		/* Following tests use the configured flags to decide
 		 * SP/SC or MP/MC.
@@ -880,40 +847,28 @@ test_ring_basic_ex(void)
 		/* Covering the ring burst operation */
 		ret = test_ring_enqueue(rp, cur_src, esize[i], 2,
 				TEST_RING_THREAD_DEF | TEST_RING_ELEM_BURST);
-		if (ret != 2) {
-			printf("%s: rte_ring_enqueue_burst fails\n", __func__);
-			goto fail_test;
-		}
+		TEST_RING_VERIFY(ret == 2, rp);
 		cur_src = test_ring_inc_ptr(cur_src, esize[i], 2);
 
 		ret = test_ring_dequeue(rp, cur_dst, esize[i], 2,
 				TEST_RING_THREAD_DEF | TEST_RING_ELEM_BURST);
-		if (ret != 2) {
-			printf("%s: rte_ring_dequeue_burst fails\n", __func__);
-			goto fail_test;
-		}
+		TEST_RING_VERIFY(ret == 2, rp);
 		cur_dst = test_ring_inc_ptr(cur_dst, esize[i], 2);
 
 		/* Covering the ring bulk operation */
 		ret = test_ring_enqueue(rp, cur_src, esize[i], 2,
 				TEST_RING_THREAD_DEF | TEST_RING_ELEM_BULK);
-		if (ret != 2) {
-			printf("%s: rte_ring_enqueue_bulk fails\n", __func__);
-			goto fail_test;
-		}
+		TEST_RING_VERIFY(ret == 2, rp);
 		cur_src = test_ring_inc_ptr(cur_src, esize[i], 2);
 
 		ret = test_ring_dequeue(rp, cur_dst, esize[i], 2,
 				TEST_RING_THREAD_DEF | TEST_RING_ELEM_BULK);
-		if (ret != 2) {
-			printf("%s: rte_ring_dequeue_bulk fails\n", __func__);
-			goto fail_test;
-		}
+		TEST_RING_VERIFY(ret == 2, rp);
 		cur_dst = test_ring_inc_ptr(cur_dst, esize[i], 2);
 
 		/* check data */
-		if (test_ring_mem_cmp(src, dst, RTE_PTR_DIFF(cur_dst, dst)))
-			goto fail_test;
+		TEST_RING_VERIFY(test_ring_mem_cmp(src, dst,
+					RTE_PTR_DIFF(cur_dst, dst)) == 0, rp);
 
 		rte_ring_free(rp);
 		rte_free(src);
@@ -925,7 +880,7 @@ test_ring_basic_ex(void)
 
 	return 0;
 
-fail_test:
+fail:
 	rte_ring_free(rp);
 	rte_free(src);
 	rte_free(dst);
@@ -955,7 +910,7 @@ test_ring_with_exact_size(void)
 					RING_F_SP_ENQ | RING_F_SC_DEQ);
 		if (std_r == NULL) {
 			printf("%s: error, can't create std ring\n", __func__);
-			goto test_fail;
+			goto fail;
 		}
 		exact_sz_r = test_ring_create("exact sz", esize[i], ring_sz,
 				rte_socket_id(),
@@ -964,7 +919,7 @@ test_ring_with_exact_size(void)
 		if (exact_sz_r == NULL) {
 			printf("%s: error, can't create exact size ring\n",
 					__func__);
-			goto test_fail;
+			goto fail;
 		}
 
 		/* alloc object pointers. Allocate one extra object
@@ -972,14 +927,14 @@ test_ring_with_exact_size(void)
 		 */
 		src_orig = test_ring_calloc(17, esize[i]);
 		if (src_orig == NULL)
-			goto test_fail;
+			goto fail;
 		test_ring_mem_init(src_orig, 17, esize[i]);
 		src = (void **)((uintptr_t)src_orig + 1);
 		cur_src = src;
 
 		dst_orig = test_ring_calloc(17, esize[i]);
 		if (dst_orig == NULL)
-			goto test_fail;
+			goto fail;
 		dst = (void **)((uintptr_t)dst_orig + 1);
 		cur_dst = dst;
 
@@ -987,13 +942,9 @@ test_ring_with_exact_size(void)
 		 * Check that the exact size ring is bigger than the
 		 * standard ring
 		 */
-		if (rte_ring_get_size(std_r) >= rte_ring_get_size(exact_sz_r)) {
-			printf("%s: error, std ring (size: %u) is not smaller than exact size one (size %u)\n",
-					__func__,
-					rte_ring_get_size(std_r),
-					rte_ring_get_size(exact_sz_r));
-			goto test_fail;
-		}
+		TEST_RING_VERIFY(rte_ring_get_size(std_r) <=
+				rte_ring_get_size(exact_sz_r), std_r);
+
 		/*
 		 * check that the exact_sz_ring can hold one more element
 		 * than the standard ring. (16 vs 15 elements)
@@ -1001,53 +952,34 @@ test_ring_with_exact_size(void)
 		for (j = 0; j < ring_sz - 1; j++) {
 			ret = test_ring_enqueue(std_r, cur_src, esize[i], 1,
 				TEST_RING_THREAD_DEF | TEST_RING_ELEM_SINGLE);
-			if (ret != 0) {
-				printf("%s: error, enqueue failed\n", __func__);
-				goto test_fail;
-			}
+			TEST_RING_VERIFY(ret == 0, std_r);
 			ret = test_ring_enqueue(exact_sz_r, cur_src, esize[i], 1,
 				TEST_RING_THREAD_DEF | TEST_RING_ELEM_SINGLE);
-			if (ret != 0) {
-				printf("%s: error, enqueue failed\n", __func__);
-				goto test_fail;
-			}
+			TEST_RING_VERIFY(ret == 0, exact_sz_r);
 			cur_src = test_ring_inc_ptr(cur_src, esize[i], 1);
 		}
 		ret = test_ring_enqueue(std_r, cur_src, esize[i], 1,
 				TEST_RING_THREAD_DEF | TEST_RING_ELEM_SINGLE);
-		if (ret != -ENOBUFS) {
-			printf("%s: error, unexpected successful enqueue\n",
-				__func__);
-			goto test_fail;
-		}
+		TEST_RING_VERIFY(ret == -ENOBUFS, std_r);
 		ret = test_ring_enqueue(exact_sz_r, cur_src, esize[i], 1,
 				TEST_RING_THREAD_DEF | TEST_RING_ELEM_SINGLE);
-		if (ret == -ENOBUFS) {
-			printf("%s: error, enqueue failed\n", __func__);
-			goto test_fail;
-		}
+		TEST_RING_VERIFY(ret != -ENOBUFS, exact_sz_r);
 		cur_src = test_ring_inc_ptr(cur_src, esize[i], 1);
 
 		/* check that dequeue returns the expected number of elements */
 		ret = test_ring_dequeue(exact_sz_r, cur_dst, esize[i], ring_sz,
 				TEST_RING_THREAD_DEF | TEST_RING_ELEM_BURST);
-		if (ret != (int)ring_sz) {
-			printf("%s: error, failed to dequeue expected nb of elements\n",
-				__func__);
-			goto test_fail;
-		}
+		TEST_RING_VERIFY(ret == (int)ring_sz, exact_sz_r);
 		cur_dst = test_ring_inc_ptr(cur_dst, esize[i], ring_sz);
 
 		/* check that the capacity function returns expected value */
-		if (rte_ring_get_capacity(exact_sz_r) != ring_sz) {
-			printf("%s: error, incorrect ring capacity reported\n",
-					__func__);
-			goto test_fail;
-		}
+		TEST_RING_VERIFY(rte_ring_get_capacity(exact_sz_r) == ring_sz,
+					exact_sz_r);
 
 		/* check data */
-		if (test_ring_mem_cmp(src, dst, RTE_PTR_DIFF(cur_dst, dst)))
-			goto test_fail;
+		TEST_RING_VERIFY(test_ring_mem_cmp(src, dst,
+					RTE_PTR_DIFF(cur_dst, dst)) == 0,
+					exact_sz_r);
 
 		rte_free(src_orig);
 		rte_free(dst_orig);
@@ -1061,7 +993,7 @@ test_ring_with_exact_size(void)
 
 	return 0;
 
-test_fail:
+fail:
 	rte_free(src_orig);
 	rte_free(dst_orig);
 	rte_ring_free(std_r);
