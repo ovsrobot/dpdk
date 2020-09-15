@@ -109,7 +109,7 @@ main(int argc, char **argv)
 	RTE_LOG(INFO, APP, "Finished Process Init.\n");
 
 	/* call lcore_recv() on every worker lcore */
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		rte_eal_remote_launch(lcore_recv, NULL, lcore_id);
 	}
 
