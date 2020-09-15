@@ -25,6 +25,9 @@ sources = files('5tswap.c',
 	'util.c')
 
 deps += ['ethdev', 'gro', 'gso', 'cmdline', 'metrics', 'meter', 'bus_pci']
+if dpdk_conf.has('RTE_LIBRTE_LATENCYSTATS')
+	deps += 'latencystats'
+endif
 if dpdk_conf.has('RTE_LIBRTE_PDUMP')
 	deps += 'pdump'
 endif
