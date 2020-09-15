@@ -97,6 +97,10 @@ API Changes
   and the function ``rte_rawdev_queue_conf_get()``
   from ``void`` to ``int`` allowing the return of error codes from drivers.
 
+* acl: ``RTE_ACL_CLASSIFY_NUM`` enum value has been removed.
+  This enum value was not used inside DPDK, while it prevented to add new
+  classify algorithms without causing an ABI breakage.
+
 
 ABI Changes
 -----------
