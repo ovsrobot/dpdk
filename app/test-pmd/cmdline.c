@@ -50,7 +50,7 @@
 #include <cmdline_parse_etheraddr.h>
 #include <cmdline_socket.h>
 #include <cmdline.h>
-#ifdef RTE_LIBRTE_PMD_BOND
+#ifdef RTE_LIBRTE_BOND_PMD
 #include <rte_eth_bond.h>
 #include <rte_eth_bond_8023ad.h>
 #endif
@@ -597,7 +597,7 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"   Show the bypass configuration for a bypass enabled NIC"
 			" using the lowest port on the NIC.\n\n"
 
-#ifdef RTE_LIBRTE_PMD_BOND
+#ifdef RTE_LIBRTE_BOND_PMD
 			"create bonded device (mode) (socket)\n"
 			"	Create a new bonded device with specific bonding mode and socket.\n\n"
 
@@ -5732,7 +5732,7 @@ cmdline_parse_inst_t cmd_show_bypass_config = {
 	},
 };
 
-#ifdef RTE_LIBRTE_PMD_BOND
+#ifdef RTE_LIBRTE_BOND_PMD
 /* *** SET BONDING MODE *** */
 struct cmd_set_bonding_mode_result {
 	cmdline_fixed_string_t set;
@@ -6502,7 +6502,7 @@ cmdline_parse_inst_t cmd_set_bonding_agg_mode_policy = {
 };
 
 
-#endif /* RTE_LIBRTE_PMD_BOND */
+#endif /* RTE_LIBRTE_BOND_PMD */
 
 /* *** SET FORWARDING MODE *** */
 struct cmd_set_fwd_mode_result {
@@ -19430,7 +19430,7 @@ cmdline_parse_ctx_t main_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_set_bypass_event,
 	(cmdline_parse_inst_t *)&cmd_set_bypass_timeout,
 	(cmdline_parse_inst_t *)&cmd_show_bypass_config,
-#ifdef RTE_LIBRTE_PMD_BOND
+#ifdef RTE_LIBRTE_BOND_PMD
 	(cmdline_parse_inst_t *) &cmd_set_bonding_mode,
 	(cmdline_parse_inst_t *) &cmd_show_bonding_config,
 	(cmdline_parse_inst_t *) &cmd_set_bonding_primary,
