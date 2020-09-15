@@ -768,7 +768,7 @@ F: buildtools/options-ibverbs-static.sh
 F: doc/guides/nics/mlx5.rst
 F: doc/guides/nics/features/mlx5.ini
 
-Microsoft vdev_netvsc - EXPERIMENTAL
+Microsoft vdev_netvsc
 M: Matan Azrad <matan@mellanox.com>
 F: drivers/net/vdev_netvsc/
 F: doc/guides/nics/vdev_netvsc.rst
