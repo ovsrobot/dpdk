@@ -773,7 +773,7 @@ M: Matan Azrad <matan@mellanox.com>
 F: drivers/net/vdev_netvsc/
 F: doc/guides/nics/vdev_netvsc.rst
 
-Microsoft Hyper-V netvsc - EXPERIMENTAL
+Microsoft Hyper-V netvsc
 M: Stephen Hemminger <sthemmin@microsoft.com>
 M: Long Li <longli@microsoft.com>
 F: drivers/net/netvsc/
