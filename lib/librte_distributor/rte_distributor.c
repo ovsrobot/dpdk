@@ -160,6 +160,7 @@ rte_distributor_return_pkt(struct rte_distributor *d,
 {
 	struct rte_distributor_buffer *buf = &d->bufs[worker_id];
 	unsigned int i;
+	volatile int64_t *retptr64;
 
 	if (unlikely(d->alg_type == RTE_DIST_ALG_SINGLE)) {
 		if (num == 1)
@@ -167,6 +168,19 @@ rte_distributor_return_pkt(struct rte_distributor *d,
 				worker_id, oldpkt[0]);
 		else
 			return -EINVAL;
+	}
+
+	retptr64 = &(buf->retptr64[0]);
+	/* Spin while handshake bits are set (scheduler clears it).
+	 * Sync with worker on GET_BUF flag.
+	 */
+	while (unlikely(__atomic_load_n(retptr64, __ATOMIC_ACQUIRE)
+			& RTE_DISTRIB_GET_BUF)) {
+		rte_pause();
+		uint64_t t = rte_rdtsc()+100;
+
+		while (rte_rdtsc() < t)
+			rte_pause();
 	}
 
 	/* Sync with distributor to acquire retptrs */
