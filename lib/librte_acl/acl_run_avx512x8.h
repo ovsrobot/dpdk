@@ -261,36 +261,6 @@ start_flow8(struct acl_flow_avx512 *flow, uint32_t num, uint32_t msk,
 }
 
 /*
- * Update flow and result masks based on the number of unprocessed flows.
- */
-static inline uint32_t
-update_flow_mask8(const struct acl_flow_avx512 *flow, __mmask8 *fmsk,
-	__mmask8 *rmsk)
-{
-	uint32_t i, j, k, m, n;
-
-	fmsk[0] ^= rmsk[0];
-	m = rmsk[0];
-
-	k = __builtin_popcount(m);
-	n = flow->total_packets - flow->num_packets;
-
-	if (n < k) {
-		/* reduce mask */
-		for (i = k - n; i != 0; i--) {
-			j = sizeof(m) * CHAR_BIT - 1 - __builtin_clz(m);
-			m ^= 1 << j;
-		}
-	} else
-		n = k;
-
-	rmsk[0] = m;
-	fmsk[0] |= rmsk[0];
-
-	return n;
-}
-
-/*
  * Process found matches for up to 8 flows.
  * fmsk - mask of active flows
  * rmsk - mask of found matches
@@ -301,8 +271,8 @@ update_flow_mask8(const struct acl_flow_avx512 *flow, __mmask8 *fmsk,
  * tr_hi contains high 32 bits for up to 8 transitions.
  */
 static inline uint32_t
-match_process_avx512x8(struct acl_flow_avx512 *flow, __mmask8 *fmsk,
-	__mmask8 *rmsk,	__m512i *pdata, ymm_t *di, ymm_t *idx,
+match_process_avx512x8(struct acl_flow_avx512 *flow, uint32_t *fmsk,
+	uint32_t *rmsk,	__m512i *pdata, ymm_t *di, ymm_t *idx,
 	ymm_t *tr_lo, ymm_t *tr_hi)
 {
 	uint32_t n;
@@ -323,7 +293,7 @@ match_process_avx512x8(struct acl_flow_avx512 *flow, __mmask8 *fmsk,
 		idx[0], res, sizeof(flow->matches[0]));
 
 	/* update masks and start new flows for matches */
-	n = update_flow_mask8(flow, fmsk, rmsk);
+	n = update_flow_mask(flow, fmsk, rmsk);
 	start_flow8(flow, n, rmsk[0], pdata, idx, di);
 
 	return n;
@@ -331,12 +301,12 @@ match_process_avx512x8(struct acl_flow_avx512 *flow, __mmask8 *fmsk,
 
 
 static inline void
-match_check_process_avx512x8x2(struct acl_flow_avx512 *flow, __mmask8 fm[2],
+match_check_process_avx512x8x2(struct acl_flow_avx512 *flow, uint32_t fm[2],
 	__m512i pdata[2], ymm_t di[2], ymm_t idx[2], ymm_t inp[2],
 	ymm_t tr_lo[2], ymm_t tr_hi[2])
 {
 	uint32_t n[2];
-	__mmask8 rm[2];
+	uint32_t rm[2];
 
 	/* check for matches */
 	rm[0] = _mm256_test_epi32_mask(tr_lo[0], ymm_match_mask.y);
@@ -381,7 +351,7 @@ match_check_process_avx512x8x2(struct acl_flow_avx512 *flow, __mmask8 fm[2],
 static inline void
 search_trie_avx512x8x2(struct acl_flow_avx512 *flow)
 {
-	__mmask8 fm[2];
+	uint32_t fm[2];
 	__m512i pdata[2];
 	ymm_t di[2], idx[2], inp[2], tr_lo[2], tr_hi[2];
 
@@ -433,157 +403,6 @@ search_trie_avx512x8x2(struct acl_flow_avx512 *flow)
 	}
 }
 
-/*
- * resolve match index to actual result/priority offset.
- */
-static inline ymm_t
-resolve_match_idx_avx512x8(ymm_t mi)
-{
-	RTE_BUILD_BUG_ON(sizeof(struct rte_acl_match_results) !=
-		1 << (match_log + 2));
-	return _mm256_slli_epi32(mi, match_log);
-}
-
-
-/*
- * Resolve multiple matches for the same flow based on priority.
- */
-static inline ymm_t
-resolve_pri_avx512x8(const int32_t res[], const int32_t pri[],
-	const uint32_t match[], __mmask8 msk, uint32_t nb_trie,
-	uint32_t nb_skip)
-{
-	uint32_t i;
-	const uint32_t *pm;
-	__mmask8 m;
-	ymm_t cp, cr, np, nr, mch;
-
-	const ymm_t zero = _mm256_set1_epi32(0);
-
-	mch = _mm256_maskz_loadu_epi32(msk, match);
-	mch = resolve_match_idx_avx512x8(mch);
-
-	cr = _mm256_mmask_i32gather_epi32(zero, msk, mch, res, sizeof(res[0]));
-	cp = _mm256_mmask_i32gather_epi32(zero, msk, mch, pri, sizeof(pri[0]));
-
-	for (i = 1, pm = match + nb_skip; i != nb_trie;
-			i++, pm += nb_skip) {
-
-		mch = _mm256_maskz_loadu_epi32(msk, pm);
-		mch = resolve_match_idx_avx512x8(mch);
-
-		nr = _mm256_mmask_i32gather_epi32(zero, msk, mch, res,
-			sizeof(res[0]));
-		np = _mm256_mmask_i32gather_epi32(zero, msk, mch, pri,
-			sizeof(pri[0]));
-
-		m = _mm256_cmpgt_epi32_mask(cp, np);
-		cr = _mm256_mask_mov_epi32(nr, m, cr);
-		cp = _mm256_mask_mov_epi32(np, m, cp);
-	}
-
-	return cr;
-}
-
-/*
- * Resolve num (<= 8) matches for single category
- */
-static inline void
-resolve_sc_avx512x8(uint32_t result[], const int32_t res[], const int32_t pri[],
-	const uint32_t match[], uint32_t nb_pkt, uint32_t nb_trie,
-	uint32_t nb_skip)
-{
-	__mmask8 msk;
-	ymm_t cr;
-
-	msk = (1 << nb_pkt) - 1;
-	cr = resolve_pri_avx512x8(res, pri, match, msk, nb_trie, nb_skip);
-	_mm256_mask_storeu_epi32(result, msk, cr);
-}
-
-/*
- * Resolve matches for single category
- */
-static inline void
-resolve_sc_avx512x8x2(uint32_t result[],
-	const struct rte_acl_match_results pr[], const uint32_t match[],
-	uint32_t nb_pkt, uint32_t nb_trie)
-{
-	uint32_t i, j, k, n;
-	const uint32_t *pm;
-	const int32_t *res, *pri;
-	__mmask8 m[2];
-	ymm_t cp[2], cr[2], np[2], nr[2], mch[2];
-
-	res = (const int32_t *)pr->results;
-	pri = pr->priority;
-
-	for (k = 0; k != (nb_pkt & ~MSK_AVX512X8X2); k += NUM_AVX512X8X2) {
-
-		j = k + CHAR_BIT;
-
-		/* load match indexes for first trie */
-		mch[0] = _mm256_loadu_si256((const ymm_t *)(match + k));
-		mch[1] = _mm256_loadu_si256((const ymm_t *)(match + j));
-
-		mch[0] = resolve_match_idx_avx512x8(mch[0]);
-		mch[1] = resolve_match_idx_avx512x8(mch[1]);
-
-		/* load matches and their priorities for first trie */
-
-		cr[0] = _mm256_i32gather_epi32(res, mch[0], sizeof(res[0]));
-		cr[1] = _mm256_i32gather_epi32(res, mch[1], sizeof(res[0]));
-
-		cp[0] = _mm256_i32gather_epi32(pri, mch[0], sizeof(pri[0]));
-		cp[1] = _mm256_i32gather_epi32(pri, mch[1], sizeof(pri[0]));
-
-		/* select match with highest priority */
-		for (i = 1, pm = match + nb_pkt; i != nb_trie;
-				i++, pm += nb_pkt) {
-
-			mch[0] = _mm256_loadu_si256((const ymm_t *)(pm + k));
-			mch[1] = _mm256_loadu_si256((const ymm_t *)(pm + j));
-
-			mch[0] = resolve_match_idx_avx512x8(mch[0]);
-			mch[1] = resolve_match_idx_avx512x8(mch[1]);
-
-			nr[0] = _mm256_i32gather_epi32(res, mch[0],
-				sizeof(res[0]));
-			nr[1] = _mm256_i32gather_epi32(res, mch[1],
-				sizeof(res[0]));
-
-			np[0] = _mm256_i32gather_epi32(pri, mch[0],
-				sizeof(pri[0]));
-			np[1] = _mm256_i32gather_epi32(pri, mch[1],
-				sizeof(pri[0]));
-
-			m[0] = _mm256_cmpgt_epi32_mask(cp[0], np[0]);
-			m[1] = _mm256_cmpgt_epi32_mask(cp[1], np[1]);
-
-			cr[0] = _mm256_mask_mov_epi32(nr[0], m[0], cr[0]);
-			cr[1] = _mm256_mask_mov_epi32(nr[1], m[1], cr[1]);
-
-			cp[0] = _mm256_mask_mov_epi32(np[0], m[0], cp[0]);
-			cp[1] = _mm256_mask_mov_epi32(np[1], m[1], cp[1]);
-		}
-
-		_mm256_storeu_si256((ymm_t *)(result + k), cr[0]);
-		_mm256_storeu_si256((ymm_t *)(result + j), cr[1]);
-	}
-
-	n = nb_pkt - k;
-	if (n != 0) {
-		if (n > CHAR_BIT) {
-			resolve_sc_avx512x8(result + k, res, pri, match + k,
-				CHAR_BIT, nb_trie, nb_pkt);
-			k += CHAR_BIT;
-			n -= CHAR_BIT;
-		}
-		resolve_sc_avx512x8(result + k, res, pri, match + k, n,
-				nb_trie, nb_pkt);
-	}
-}
-
 static inline int
 search_avx512x8x2(const struct rte_acl_ctx *ctx, const uint8_t **data,
 	uint32_t *results, uint32_t total_packets, uint32_t categories)
@@ -607,7 +426,7 @@ search_avx512x8x2(const struct rte_acl_ctx *ctx, const uint8_t **data,
 		(ctx->trans_table + ctx->match_index);
 
 	if (categories == 1)
-		resolve_sc_avx512x8x2(results, pr, match, total_packets,
+		resolve_sc_avx512x16x2(results, pr, match, total_packets,
 			ctx->num_tries);
 	else if (categories <= RTE_ACL_MAX_CATEGORIES / 2)
 		resolve_mcle8_avx512x1(results, pr, match, total_packets,

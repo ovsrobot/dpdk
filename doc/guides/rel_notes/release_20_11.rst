@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Add new AVX512 specific classify algorithm for ACL library.**
+
+  Added new ``RTE_ACL_CLASSIFY_AVX512`` vector implementation,
+  which can processup to 32 flows in parallel. Requires AVX512 support.
+
 
 Removed Items
 -------------
