@@ -379,7 +379,6 @@ struct virtio_net {
 	/* to tell if we need broadcast rarp packet */
 	int16_t			broadcast_rarp;
 	uint32_t		nr_vring;
-	int			dequeue_zero_copy;
 	int			async_copy;
 	int			extbuf;
 	int			linearbuf;
@@ -895,12 +894,6 @@ mbuf_is_consumed(struct rte_mbuf *m)
 	}
 
 	return true;
-}
-
-static __rte_always_inline void
-put_zmbuf(struct zcopy_mbuf *zmbuf)
-{
-	zmbuf->in_use = 0;
 }
 
 #endif /* _VHOST_NET_CDEV_H_ */
