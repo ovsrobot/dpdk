@@ -775,8 +775,6 @@ F: doc/guides/nics/vdev_netvsc.rst
 
 Microsoft Hyper-V netvsc - EXPERIMENTAL
 M: Stephen Hemminger <sthemmin@microsoft.com>
-M: K. Y. Srinivasan <kys@microsoft.com>
-M: Haiyang Zhang <haiyangz@microsoft.com>
 M: Long Li <longli@microsoft.com>
 F: drivers/net/netvsc/
 F: doc/guides/nics/netvsc.rst
