@@ -17,6 +17,10 @@ sources = files('base/dpaa2_hw_dpni.c',
 		'mc/dpdmux.c',
 		'mc/dpni.c')
 
+if '-DRTE_LIBRTE_IEEE1588=1' in get_option('c_args')
+	dpdk_conf.set('RTE_LIBRTE_IEEE1588', 1)
+endif
+
 if dpdk_conf.has('RTE_LIBRTE_IEEE1588')
 	sources += files('mc/dprtc.c')
 	sources += files('dpaa2_ptp.c')
