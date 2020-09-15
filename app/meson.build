@@ -6,6 +6,7 @@ if is_windows
 endif
 
 apps = [
+	'l2reflect',
 	'pdump',
 	'proc-info',
 	'test-acl',
