@@ -362,7 +362,7 @@ test_stack_multithreaded(uint32_t flags)
 
 	rte_atomic64_init(&size);
 
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		args[lcore_id].s = s;
 		args[lcore_id].sz = &size;
 
