@@ -1,15 +1,16 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
     Copyright(c) 2018 ARM Corporation.
 
-Cross compile DPDK for ARM64
-============================
-This chapter describes how to cross compile DPDK for ARM64 from x86 build hosts.
+Cross compile DPDK for aarch64 and aarch32
+==========================================
+This chapter describes how to cross compile DPDK for aarch64 from x86 build hosts and compile
+32-bit aarch32 DPDK from aarch64 build hosts.
 
 .. note::
 
-   Whilst it is recommended to natively build DPDK on ARM64 (just
-   like with x86), it is also possible to cross-build DPDK for ARM64. An
-   ARM64 cross compile GNU toolchain is used for this.
+   Whilst it is recommended to natively build DPDK on aarch64 (just
+   like with x86), it is also possible to cross-build DPDK for aarch64.
+   An aarch64 cross compile GNU toolchain is used for this.
 
 Obtain the cross tool chain
 ---------------------------
@@ -88,14 +89,27 @@ To install it in Ubuntu::
 
    sudo apt-get install pkg-config-aarch64-linux-gnu
 
-To cross-compile DPDK on a desired target machine we can use the following
-command::
+.. note::
+
+    Some aarch64 platforms support EL0 aarch32 mode, which means the 32-bit aarch32 applications
+    can run on aarch64. The armhf architecture toolchain ``gcc-arm-linux-gnueabihf`` is required
+    for aarch32 on aarch64. To install it in Ubuntu::
+
+       sudo dpkg --add-architecture armhf
+       sudo apt-get update
+       sudo apt-get install -y gcc-arm-linux-gnueabihf libc6:armhf binutils
+
+To cross-compile DPDK on a desired target machine use the following command::
 
 	meson cross-build --cross-file <target_machine_configuration>
 	ninja -C cross-build
 
-For example if the target machine is arm64 we can use the following
-command::
+For example if the target machine is aarch64 use the following command::
 
 	meson arm64-build --cross-file config/arm/arm64_armv8_linux_gcc
 	ninja -C arm64-build
+
+If the target machine is aarch32 use the following command::
+
+	meson arm32-build --cross-file config/arm/arm32_armv8a_linux_gcc
+	ninja -C arm32-build
