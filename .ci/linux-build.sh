@@ -33,6 +33,11 @@ if [ "$AARCH64" = "1" ]; then
     OPTS="$OPTS --cross-file config/arm/arm64_armv8_linux_gcc"
 fi
 
+if [ "$AARCH32" = "1" ]; then
+    # convert the arch specifier
+    OPTS="$OPTS --cross-file config/arm/arm32_armv8a_linux_gcc"
+fi
+
 if [ "$BUILD_DOCS" = "1" ]; then
     OPTS="$OPTS -Denable_docs=true"
 fi
@@ -53,7 +58,7 @@ OPTS="$OPTS --buildtype=debugoptimized"
 meson build --werror $OPTS
 ninja -C build
 
-if [ "$AARCH64" != "1" ]; then
+if [ "$AARCH64" != "1" ] && [ "$AARCH32" != "1" ]; then
     devtools/test-null.sh
 fi
 
