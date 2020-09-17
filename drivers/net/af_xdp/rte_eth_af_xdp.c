@@ -229,8 +229,20 @@ af_xdp_rx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	struct xsk_umem_info *umem = rxq->umem;
 	uint32_t idx_rx = 0;
 	unsigned long rx_bytes = 0;
-	int rcvd, i;
+	int i;
 	struct rte_mbuf *fq_bufs[ETH_AF_XDP_RX_BATCH_SIZE];
+
+
+	nb_pkts = xsk_ring_cons__peek(rx, nb_pkts, &idx_rx);
+
+	if (nb_pkts == 0) {
+#if defined(XDP_USE_NEED_WAKEUP)
+		if (xsk_ring_prod__needs_wakeup(&umem->fq))
+			(void)poll(rxq->fds, 1, 1000);
+#endif
+
+		return 0;
+	}
 
 	/* allocate bufs for fill queue replenishment after rx */
 	if (rte_pktmbuf_alloc_bulk(umem->mb_pool, fq_bufs, nb_pkts)) {
@@ -239,18 +251,7 @@ af_xdp_rx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		return 0;
 	}
 
-	rcvd = xsk_ring_cons__peek(rx, nb_pkts, &idx_rx);
-
-	if (rcvd == 0) {
-#if defined(XDP_USE_NEED_WAKEUP)
-		if (xsk_ring_prod__needs_wakeup(&umem->fq))
-			(void)poll(rxq->fds, 1, 1000);
-#endif
-
-		goto out;
-	}
-
-	for (i = 0; i < rcvd; i++) {
+	for (i = 0; i < nb_pkts; i++) {
 		const struct xdp_desc *desc;
 		uint64_t addr;
 		uint32_t len;
@@ -275,20 +276,15 @@ af_xdp_rx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		rx_bytes += len;
 	}
 
-	xsk_ring_cons__release(rx, rcvd);
+	xsk_ring_cons__release(rx, nb_pkts);
 
-	(void)reserve_fill_queue(umem, rcvd, fq_bufs);
+	(void)reserve_fill_queue(umem, nb_pkts, fq_bufs);
 
 	/* statistics */
-	rxq->stats.rx_pkts += rcvd;
+	rxq->stats.rx_pkts += nb_pkts;
 	rxq->stats.rx_bytes += rx_bytes;
 
-out:
-	if (rcvd != nb_pkts)
-		rte_mempool_put_bulk(umem->mb_pool, (void **)&fq_bufs[rcvd],
-				     nb_pkts - rcvd);
-
-	return rcvd;
+	return nb_pkts;
 }
 #else
 static uint16_t
@@ -300,27 +296,26 @@ af_xdp_rx_cp(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	struct xsk_ring_prod *fq = &umem->fq;
 	uint32_t idx_rx = 0;
 	unsigned long rx_bytes = 0;
-	int rcvd, i;
+	int i;
 	uint32_t free_thresh = fq->size >> 1;
 	struct rte_mbuf *mbufs[ETH_AF_XDP_RX_BATCH_SIZE];
 
-	if (unlikely(rte_pktmbuf_alloc_bulk(rxq->mb_pool, mbufs, nb_pkts) != 0))
-		return 0;
-
-	rcvd = xsk_ring_cons__peek(rx, nb_pkts, &idx_rx);
-	if (rcvd == 0) {
+	nb_pkts = xsk_ring_cons__peek(rx, nb_pkts, &idx_rx);
+	if (nb_pkts == 0) {
 #if defined(XDP_USE_NEED_WAKEUP)
 		if (xsk_ring_prod__needs_wakeup(fq))
 			(void)poll(rxq->fds, 1, 1000);
 #endif
-
-		goto out;
+		return 0;
 	}
+
+	if (unlikely(rte_pktmbuf_alloc_bulk(rxq->mb_pool, mbufs, nb_pkts) != 0))
+		return 0;
 
 	if (xsk_prod_nb_free(fq, free_thresh) >= free_thresh)
 		(void)reserve_fill_queue(umem, ETH_AF_XDP_RX_BATCH_SIZE, NULL);
 
-	for (i = 0; i < rcvd; i++) {
+	for (i = 0; i < nb_pkts; i++) {
 		const struct xdp_desc *desc;
 		uint64_t addr;
 		uint32_t len;
@@ -339,18 +334,13 @@ af_xdp_rx_cp(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		bufs[i] = mbufs[i];
 	}
 
-	xsk_ring_cons__release(rx, rcvd);
+	xsk_ring_cons__release(rx, nb_pkts);
 
 	/* statistics */
-	rxq->stats.rx_pkts += rcvd;
+	rxq->stats.rx_pkts += nb_pkts;
 	rxq->stats.rx_bytes += rx_bytes;
 
-out:
-	if (rcvd != nb_pkts)
-		rte_mempool_put_bulk(rxq->mb_pool, (void **)&mbufs[rcvd],
-				     nb_pkts - rcvd);
-
-	return rcvd;
+	return nb_pkts;
 }
 #endif
 
