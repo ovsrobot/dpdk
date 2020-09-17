@@ -35,6 +35,7 @@
 #define ICE_MAX_RX_BURST            ICE_RXQ_REARM_THRESH
 #define ICE_TX_MAX_FREE_BUF_SZ      64
 #define ICE_DESCS_PER_LOOP          4
+#define ICE_DESCS_PER_LOOP_AVX	    8
 
 #define ICE_FDIR_PKT_LEN	512
 
