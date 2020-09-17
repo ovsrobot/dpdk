@@ -55,6 +55,19 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added the FEC Library, a generic FEC query and config library.**
+
+  Added the FEC library which provides an API for query FEC capabilities and
+  FEC mode from device. Also, API for configuring FEC mode is also provided.
+
+  Added hns3 FEC PMD, for supporting query and config FEC mode.
+
+* **Updated testpmd with a command for FEC.**
+
+  Added a FEC command to testpmd app,
+  ``show port <port_id> fec capabilities`` which queries FEC capabilities device supports.
+  ``show port <port_id> fec_mode`` which queries FEC mode from device.
+  ``set port <port_id> fec_mode <auto|off|rs|baser>`` which configures FEC mode to device.
 
 Removed Items
 -------------
