@@ -87,6 +87,9 @@ API Changes
 * eal: The ``rte_logs`` struct and global symbol was made private
   and is no longer part of the API.
 
+* eal: Made the ``rte_dev_event`` structure private to the EAL as no public API
+  used it.
+
 * pci: Removed the ``rte_kernel_driver`` enum defined in rte_dev.h and
   replaced with a private enum in the PCI subsystem.
 
