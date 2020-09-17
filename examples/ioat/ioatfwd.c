@@ -168,7 +168,7 @@ print_stats(char *prgname)
 	struct rte_rawdev_xstats_name *names_xstats;
 	uint64_t *xstats;
 	unsigned int *ids_xstats, nb_xstats;
-	char status_string[120]; /* to print at the top of the output */
+	char status_string[140]; /* to print at the top of the output */
 	int status_strlen;
 	int ret;
 
