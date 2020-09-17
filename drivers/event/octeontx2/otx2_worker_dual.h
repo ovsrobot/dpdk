@@ -9,6 +9,8 @@
 #include <rte_common.h>
 
 #include <otx2_common.h>
+
+#include "otx2_ca_helper.h"
 #include "otx2_evdev.h"
 
 /* SSO Operations */
@@ -63,8 +65,10 @@ otx2_ssogws_dual_get_work(struct otx2_ssogws_state *ws,
 	ws->cur_tt = event.sched_type;
 	ws->cur_grp = event.queue_id;
 
-	if (event.sched_type != SSO_TT_EMPTY &&
-	    event.event_type == RTE_EVENT_TYPE_ETHDEV) {
+	if (event.sched_type == SSO_TT_EMPTY)
+		goto setev_and_return;
+
+	if (event.event_type == RTE_EVENT_TYPE_ETHDEV) {
 		uint8_t port = event.sub_event_type;
 
 		event.sub_event_type = 0;
@@ -82,8 +86,11 @@ otx2_ssogws_dual_get_work(struct otx2_ssogws_state *ws,
 		otx2_nix_mbuf_to_tstamp((struct rte_mbuf *)mbuf, tstamp, flags,
 					(uint64_t *)tstamp_ptr);
 		get_work1 = mbuf;
+	} else if (event.event_type == RTE_EVENT_TYPE_CRYPTODEV) {
+		get_work1 = otx2_handle_crypto_event(get_work1);
 	}
 
+setev_and_return:
 	ev->event = event.get_work0;
 	ev->u64 = get_work1;
 

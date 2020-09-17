@@ -5,6 +5,7 @@ DPDK_21 {
 INTERNAL {
 	global:
 
+	otx2_cryptodev_driver_id;
 	otx2_ca_caps_get;
 	otx2_ca_qp_add;
 	otx2_ca_qp_del;
