@@ -239,6 +239,11 @@ EXPERIMENTAL {
 	__rte_ethdev_trace_rx_burst;
 	__rte_ethdev_trace_tx_burst;
 	rte_flow_get_aged_flows;
+
+	# added in 20.11
+	rte_eth_fec_get_capability;
+	rte_eth_fec_get;
+	rte_eth_fec_set;
 };
 
 INTERNAL {
