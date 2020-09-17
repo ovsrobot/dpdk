@@ -36,7 +36,7 @@ i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 		    rxq->nb_rx_desc) {
 			__m128i dma_addr0;
 			dma_addr0 = _mm_setzero_si128();
-			for (i = 0; i < RTE_I40E_DESCS_PER_LOOP; i++) {
+			for (i = 0; i < RTE_I40E_DESCS_PER_LOOP_AVX; i++) {
 				rxep[i].mbuf = &rxq->fake_mbuf;
 				_mm_store_si128((__m128i *)&rxdp[i].read,
 						dma_addr0);
@@ -219,13 +219,18 @@ desc_fdir_processing_32b(volatile union i40e_rx_desc *rxdp,
 
 #define PKTLEN_SHIFT     10
 
-/* Force inline as some compilers will not inline by default. */
+/**
+ * vPMD raw receive routine, only accept(nb_pkts >= RTE_I40E_DESCS_PER_LOOP_AVX)
+ *
+ * Notice:
+ * - nb_pkts < RTE_I40E_DESCS_PER_LOOP_AVX, just return no packet
+ * - floor align nb_pkts to a RTE_I40E_DESCS_PER_LOOP_AVX power-of-two
+ * - force inline as some compilers will not inline by default
+ */
 static __rte_always_inline uint16_t
 _recv_raw_pkts_vec_avx2(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		uint16_t nb_pkts, uint8_t *split_packet)
 {
-#define RTE_I40E_DESCS_PER_LOOP_AVX 8
-
 	const uint32_t *ptype_tbl = rxq->vsi->adapter->ptype_tbl;
 	const __m256i mbuf_init = _mm256_set_epi64x(0, 0,
 			0, rxq->mbuf_initializer);
@@ -729,10 +734,6 @@ _recv_raw_pkts_vec_avx2(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	return received;
 }
 
-/*
- * Notice:
- * - nb_pkts < RTE_I40E_DESCS_PER_LOOP, just return no packet
- */
 uint16_t
 i40e_recv_pkts_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
 		   uint16_t nb_pkts)
@@ -740,10 +741,8 @@ i40e_recv_pkts_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
 	return _recv_raw_pkts_vec_avx2(rx_queue, rx_pkts, nb_pkts, NULL);
 }
 
-/*
+/**
  * vPMD receive routine that reassembles single burst of 32 scattered packets
- * Notice:
- * - nb_pkts < RTE_I40E_DESCS_PER_LOOP, just return no packet
  */
 static uint16_t
 i40e_recv_scattered_burst_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
@@ -751,6 +750,9 @@ i40e_recv_scattered_burst_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
 {
 	struct i40e_rx_queue *rxq = rx_queue;
 	uint8_t split_flags[RTE_I40E_VPMD_RX_BURST] = {0};
+
+	/* split_flags only can support max of RTE_I40E_VPMD_RX_BURST */
+	nb_pkts = RTE_MIN(nb_pkts, RTE_I40E_VPMD_RX_BURST);
 
 	/* get some new buffers */
 	uint16_t nb_bufs = _recv_raw_pkts_vec_avx2(rxq, rx_pkts, nb_pkts,
@@ -781,11 +783,8 @@ i40e_recv_scattered_burst_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
 		&split_flags[i]);
 }
 
-/*
+/**
  * vPMD receive routine that reassembles scattered packets.
- * Main receive routine that can handle arbitrary burst sizes
- * Notice:
- * - nb_pkts < RTE_I40E_DESCS_PER_LOOP, just return no packet
  */
 uint16_t
 i40e_recv_scattered_pkts_vec_avx2(void *rx_queue, struct rte_mbuf **rx_pkts,
