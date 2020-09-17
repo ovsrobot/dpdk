@@ -174,6 +174,8 @@ struct rte_sched_subport {
 	/* Statistics */
 	struct rte_sched_subport_stats stats __rte_cache_aligned;
 
+	/* subport profile */
+	uint32_t profile;
 	/* Subport pipes */
 	uint32_t n_pipes_per_subport_enabled;
 	uint32_t n_pipe_profiles;
@@ -1343,6 +1345,56 @@ rte_sched_subport_config(struct rte_sched_port *port,
 }
 
 int
+rte_sched_subport_profile_config(struct rte_sched_port *port,
+	uint32_t subport_id,
+	uint32_t profile_id)
+{
+	int i;
+	struct rte_sched_subport_profile *params;
+	uint32_t n_subports = subport_id + 1;
+	struct rte_sched_subport *s;
+
+	if (port == NULL) {
+		RTE_LOG(ERR, SCHED,
+			"%s: Incorrect value for parameter port\n", __func__);
+		return -EINVAL;
+	}
+
+	if (subport_id >= port->n_subports_per_port) {
+		RTE_LOG(ERR, SCHED, "%s: "
+		"Incorrect value for parameter subport id\n", __func__);
+
+		rte_sched_free_memory(port, n_subports);
+		return -EINVAL;
+	}
+
+	params =  port->subport_profiles + profile_id;
+
+	s = port->subports[subport_id];
+
+	s->tb_credits = params->tb_size / 2;
+
+	s->tc_time = port->time + params->tc_period;
+
+	for (i = 0; i < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; i++)
+		if (s->qsize[i])
+			s->tc_credits[i] =
+				params->tc_credits_per_period[i];
+		else
+			params->tc_credits_per_period[i] = 0;
+
+#ifdef RTE_SCHED_SUBPORT_TC_OV
+	s->tc_ov_wm_max = rte_sched_time_ms_to_bytes(params->tc_period,
+						     s->pipe_tc_be_rate_max);
+#endif
+	s->profile = profile_id;
+
+	rte_sched_port_log_subport_profile(port, profile_id);
+
+	return 0;
+}
+
+int
 rte_sched_pipe_config(struct rte_sched_port *port,
 	uint32_t subport_id,
 	uint32_t pipe_id,
@@ -1522,6 +1574,72 @@ rte_sched_subport_pipe_profile_add(struct rte_sched_port *port,
 		s->pipe_tc_be_rate_max = params->tc_rate[RTE_SCHED_TRAFFIC_CLASS_BE];
 
 	rte_sched_port_log_pipe_profile(s, *pipe_profile_id);
+
+	return 0;
+}
+
+int
+rte_sched_port_subport_profile_add(struct rte_sched_port *port,
+	struct rte_sched_subport_profile_params *params,
+	uint32_t *subport_profile_id)
+{
+	int status;
+	uint32_t i;
+	struct rte_sched_subport_profile *dst;
+
+	/* Port */
+	if (port == NULL) {
+		RTE_LOG(ERR, SCHED, "%s: "
+		"Incorrect value for parameter port\n", __func__);
+		return -EINVAL;
+	}
+
+	if (params == NULL) {
+		RTE_LOG(ERR, SCHED, "%s: "
+		"Incorrect value for parameter profile\n", __func__);
+		return -EINVAL;
+	}
+
+	if (subport_profile_id == NULL) {
+		RTE_LOG(ERR, SCHED, "%s: "
+		"Incorrect value for parameter subport_profile_id\n",
+		__func__);
+		return -EINVAL;
+	}
+
+	dst = port->subport_profiles + port->n_subport_profiles;
+
+	/* Subport profiles exceeds the max limit */
+	if (port->n_subport_profiles >= port->n_max_subport_profiles) {
+		RTE_LOG(ERR, SCHED, "%s: "
+		"Number of subport profiles exceeds the max limit\n",
+		 __func__);
+		return -EINVAL;
+	}
+
+	status = subport_profile_check(params, port->rate);
+	if (status != 0) {
+		RTE_LOG(ERR, SCHED,
+		"%s: subport profile check failed(%d)\n", __func__, status);
+		return -EINVAL;
+	}
+
+	rte_sched_subport_profile_convert(params, dst, port->rate);
+
+	/* Subport profile should not exists */
+	for (i = 0; i < port->n_subport_profiles; i++)
+		if (memcmp(port->subport_profiles + i,
+		    dst, sizeof(*dst)) == 0) {
+			RTE_LOG(ERR, SCHED,
+			"%s: subport profile exists\n", __func__);
+			return -EINVAL;
+		}
+
+	/* Subport profile commit */
+	*subport_profile_id = port->n_subport_profiles;
+	port->n_subport_profiles++;
+
+	rte_sched_port_log_subport_profile(port, *subport_profile_id);
 
 	return 0;
 }
