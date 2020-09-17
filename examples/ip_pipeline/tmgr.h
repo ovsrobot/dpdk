@@ -48,7 +48,8 @@ struct tmgr_port_params {
 };
 
 int
-tmgr_subport_profile_add(struct rte_sched_subport_params *p);
+tmgr_subport_profile_add(struct rte_sched_subport_params *p,
+			 struct rte_sched_subport_profile_params *pp);
 
 int
 tmgr_pipe_profile_add(struct rte_sched_pipe_params *p);
