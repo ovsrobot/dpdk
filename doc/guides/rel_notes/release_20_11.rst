@@ -87,6 +87,9 @@ API Changes
 * eal: The ``rte_logs`` struct and global symbol was made private
   and is no longer part of the API.
 
+* pci: Removed the ``rte_kernel_driver`` enum defined in rte_dev.h and
+  replaced with a private enum in the PCI subsystem.
+
 * mbuf: Removed the unioned field ``refcnt_atomic`` from
   the structures ``rte_mbuf`` and ``rte_mbuf_ext_shared_info``.
   The field ``refcnt`` is remaining from the old unions.
