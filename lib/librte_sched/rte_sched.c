@@ -101,6 +101,16 @@ enum grinder_state {
 	e_GRINDER_READ_MBUF
 };
 
+struct rte_sched_subport_profile {
+	/* Token bucket (TB) */
+	uint64_t tb_period;
+	uint64_t tb_credits_per_period;
+	uint64_t tb_size;
+
+	uint64_t tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE];
+	uint64_t tc_period;
+};
+
 struct rte_sched_grinder {
 	/* Pipe cache */
 	uint16_t pcache_qmask[RTE_SCHED_GRINDER_PCACHE_SIZE];
