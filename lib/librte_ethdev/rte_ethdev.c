@@ -3642,6 +3642,55 @@ rte_eth_led_off(uint16_t port_id)
 	return eth_err(port_id, (*dev->dev_ops->dev_led_off)(dev));
 }
 
+int
+rte_eth_fec_get_capability(uint16_t port_id, uint32_t *fec_cap)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->fec_get_capability, -ENOTSUP);
+	return eth_err(port_id, (*dev->dev_ops->fec_get_capability)(dev,
+								fec_cap));
+}
+
+int
+rte_eth_fec_get(uint16_t port_id, enum rte_eth_fec_mode *mode)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->fec_get, -ENOTSUP);
+	return eth_err(port_id, (*dev->dev_ops->fec_get)(dev, mode));
+}
+
+int
+rte_eth_fec_set(uint16_t port_id, enum rte_eth_fec_mode mode)
+{
+	struct rte_eth_dev *dev;
+	uint32_t fec_mode_mask;
+	int ret;
+
+	ret = rte_eth_fec_get_capability(port_id, &fec_mode_mask);
+	if (ret != 0)
+		return ret;
+
+	/*
+	 * Check whether the configured mode is within the FEC capability.
+	 * If not, the configured mode will not be supported.
+	 */
+	if (!(fec_mode_mask & RTE_ETH_FEC_MODE_TO_CAPA(mode))) {
+		RTE_ETHDEV_LOG(ERR, "unsupported FEC mode = %d, port_id = %u\n",
+			       mode, port_id);
+		return -EINVAL;
+	}
+
+	dev = &rte_eth_devices[port_id];
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->fec_set, -ENOTSUP);
+	return eth_err(port_id, (*dev->dev_ops->fec_set)(dev, mode));
+}
+
 /*
  * Returns index into MAC address array of addr. Use 00:00:00:00:00:00 to find
  * an empty spot.
