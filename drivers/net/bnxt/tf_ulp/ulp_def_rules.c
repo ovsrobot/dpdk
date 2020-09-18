@@ -397,7 +397,7 @@ void
 bnxt_ulp_destroy_df_rules(struct bnxt *bp, bool global)
 {
 	struct bnxt_ulp_df_rule_info *info;
-	uint8_t port_id;
+	uint16_t port_id;
 
 	if (!BNXT_TRUFLOW_EN(bp) ||
 	    BNXT_ETH_DEV_IS_REPRESENTOR(bp->eth_dev))
