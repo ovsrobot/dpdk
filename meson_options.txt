@@ -1,5 +1,7 @@
 # Please keep these options sorted alphabetically.
 
+option('abi_checks', type: 'string', value: '',
+    description: 'Enable abi compatibility checks to run during the build. This requires debug build to be enabled. Input is latest or git tag e.g. v20.11')
 option('armv8_crypto_dir', type: 'string', value: '',
 	description: 'path to the armv8_crypto library installation directory')
 option('disable_drivers', type: 'string', value: '',

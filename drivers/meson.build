@@ -208,6 +208,20 @@ foreach subpath:subdirs
 					include_directories: includes,
 					dependencies: static_deps)
 
+			# If abidiff found, abi checks are enabled and the abi dump files for the library are available run abi check
+			dump_name = abi_dir+'/lib' + lib_name + '.dump'
+			if check_abi and run_command('[', '-f', dump_name, ']').returncode() == 0
+				custom_target('lib' + lib_name + '.abi_chk',
+					      command: [abidiff, '--no-added-syms',
+							'--suppr', abignore,
+							'@INPUT@'],
+					      input: [dump_name, shared_lib],
+					      output: 'lib' + lib_name + '.abi_chk',
+					      capture: true,
+					      install: false,
+					      build_by_default: true)
+			endif
+
 			dpdk_drivers += static_lib
 
 			set_variable('shared_@0@'.format(lib_name), shared_dep)
