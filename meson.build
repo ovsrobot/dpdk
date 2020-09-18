@@ -21,6 +21,7 @@ dpdk_drivers = []
 dpdk_extra_ldflags = []
 dpdk_libs_disabled = []
 dpdk_drvs_disabled = []
+dpdk_apps_disabled = []
 abi_version_file = files('ABI_VERSION')
 
 if host_machine.cpu_family().startswith('x86')
@@ -104,6 +105,14 @@ foreach class:dpdk_driver_classes
 		endif
 	endforeach
 endforeach
+message(output_message + '\n')
+
+output_message = '\n===============\nApplications Disabled\n===============\n'
+foreach app:dpdk_apps_disabled
+	reason = get_variable(app.underscorify() + '_disable_reason')
+	output_message += app + ':\t' + reason + '\n\t'
+endforeach
+
 message(output_message + '\n')
 
 output_message = '\n=================\nContent Skipped\n=================\n'

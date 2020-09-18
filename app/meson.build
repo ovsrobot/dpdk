@@ -42,7 +42,17 @@ foreach app:apps
 
 	subdir(name)
 
-	if build
+	foreach d:deps
+		if dpdk_libs_disabled.contains(d)
+			build = false
+			reason = 'missing dependency, "@0@" '.format (d)
+		endif
+	endforeach
+
+	if not build
+		dpdk_apps_disabled += name
+		set_variable(name.underscorify() + '_disable_reason', reason)
+	else
 		dep_objs = []
 		foreach d:deps
 			dep_objs += get_variable(get_option('default_library')

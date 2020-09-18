@@ -45,6 +45,8 @@ if is_windows
 	] # only supported libraries for windows
 endif
 
+disabled_libs = get_option('disable_libs').split(',')
+
 default_cflags = machine_args
 default_cflags += ['-DALLOW_EXPERIMENTAL_API']
 default_cflags += ['-DALLOW_INTERNAL_API']
@@ -78,6 +80,11 @@ foreach l:libraries
 
 	dir_name = 'librte_' + l
 	subdir(dir_name)
+
+	if disabled_libs.contains(l)
+		build = false
+		reason = 'Explicitly disabled via build config'
+	endif
 
 	if build
 		shared_deps = ext_deps
