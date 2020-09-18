@@ -1,5 +1,5 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
-    Copyright(c) 2019 Intel Corporation.
+    Copyright(c) 2019-2020 Intel Corporation.
 
 AF_XDP Poll Mode Driver
 ==========================
@@ -32,6 +32,7 @@ The following options can be provided to set up an af_xdp port in DPDK.
 *   ``iface`` - name of the Kernel interface to attach to (required);
 *   ``start_queue`` - starting netdev queue id (optional, default 0);
 *   ``queue_count`` - total netdev queue number (optional, default 1);
+*   ``xdp_prog`` - path to custom xdp program (optional, default none);
 
 Prerequisites
 -------------
