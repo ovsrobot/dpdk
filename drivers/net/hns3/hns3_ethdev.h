@@ -510,6 +510,7 @@ struct hns3_pf {
 	struct hns3_err_msix_intr_stats abn_int_stats;
 
 	bool support_sfp_query;
+	enum rte_eth_fec_mode fec_mode; /* current FEC mode for ethdev */
 
 	struct hns3_vtag_cfg vtag_config;
 	LIST_HEAD(vlan_tbl, hns3_user_vlan_table) vlan_list;
