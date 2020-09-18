@@ -55,6 +55,16 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added the FEC API, for a generic FEC query and config.**
+
+  Added the FEC API which provides functions for query FEC capabilities and
+  current FEC mode from device. Also, API for configuring FEC mode is also provided.
+
+* **Added hns3 FEC PMD, for supporting query and config FEC mode.**
+
+  Added the FEC PMD which provides functions for query FEC capabilities and
+  current FEC mode from device. Also, PMD for configuring FEC mode is also provided.
+
 
 Removed Items
 -------------
