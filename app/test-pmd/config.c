@@ -2984,17 +2984,51 @@ show_tx_pkt_segments(void)
 	printf("Split packet: %s\n", split);
 }
 
+static bool
+nb_segs_is_invalid(unsigned int nb_segs)
+{
+	uint16_t port_id;
+
+	RTE_ETH_FOREACH_DEV(port_id) {
+		struct rte_port *port = &ports[port_id];
+		uint16_t ring_size;
+		uint16_t queue_id;
+
+		/*
+		 * When configure the txq by rte_eth_tx_queue_setup with
+		 * nb_tx_desc being 0, it will use a default value provided by
+		 * PMDs to setup this txq. If the default value is 0, it will
+		 * use the RTE_ETH_DEV_FALLBACK_TX_RINGSIZE to setup this txq.
+		 */
+		for (queue_id = 0; queue_id < nb_txq; queue_id++) {
+			if (port->nb_tx_desc[queue_id])
+				ring_size = port->nb_tx_desc[queue_id];
+			else if (port->dev_info.default_txportconf.ring_size)
+				ring_size =
+				    port->dev_info.default_txportconf.ring_size;
+			else
+				ring_size = RTE_ETH_DEV_FALLBACK_TX_RINGSIZE;
+
+			if (ring_size < nb_segs) {
+				printf("nb segments per TX packets=%u >= TX "
+				       "queue(%u) ring_size=%u - ignored\n",
+					nb_segs, queue_id, ring_size);
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 void
 set_tx_pkt_segments(unsigned *seg_lengths, unsigned nb_segs)
 {
 	uint16_t tx_pkt_len;
 	unsigned i;
 
-	if (nb_segs >= (unsigned) nb_txd) {
-		printf("nb segments per TX packets=%u >= nb_txd=%u - ignored\n",
-		       nb_segs, (unsigned int) nb_txd);
+	if (nb_segs_is_invalid(nb_segs))
 		return;
-	}
 
 	/*
 	 * Check that each segment length is greater or equal than
