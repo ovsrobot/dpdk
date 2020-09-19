@@ -380,7 +380,8 @@ rte_intr_enable(const struct rte_intr_handle *intr_handle)
 	}
 
 out:
-	rte_eal_trace_intr_enable(intr_handle, rc);
+	if (intr_handle)
+		rte_eal_trace_intr_enable(intr_handle, rc);
 	return rc;
 }
 
@@ -418,7 +419,8 @@ rte_intr_disable(const struct rte_intr_handle *intr_handle)
 		break;
 	}
 out:
-	rte_eal_trace_intr_disable(intr_handle, rc);
+	if (intr_handle)
+		rte_eal_trace_intr_disable(intr_handle, rc);
 	return rc;
 }
 
