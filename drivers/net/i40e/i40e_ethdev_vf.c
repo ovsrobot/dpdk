@@ -326,8 +326,11 @@ i40evf_execute_vf_cmd(struct rte_eth_dev *dev, struct vf_cmd_info *args)
 	enum i40evf_aq_result ret;
 	int err, i = 0;
 
-	if (_atomic_set_cmd(vf, args->ops))
+	rte_spinlock_lock(&vf->cmd_send_lock);
+	if (_atomic_set_cmd(vf, args->ops)) {
+		rte_spinlock_unlock(&vf->cmd_send_lock);
 		return -1;
+	}
 
 	info.msg = args->out_buffer;
 	info.buf_len = args->out_size;
@@ -339,6 +342,7 @@ i40evf_execute_vf_cmd(struct rte_eth_dev *dev, struct vf_cmd_info *args)
 	if (err) {
 		PMD_DRV_LOG(ERR, "fail to send cmd %d", args->ops);
 		_clear_cmd(vf);
+		rte_spinlock_unlock(&vf->cmd_send_lock);
 		return err;
 	}
 
@@ -406,6 +410,7 @@ i40evf_execute_vf_cmd(struct rte_eth_dev *dev, struct vf_cmd_info *args)
 		break;
 	}
 
+	rte_spinlock_unlock(&vf->cmd_send_lock);
 	return err | vf->cmd_retval;
 }
 
@@ -1249,6 +1254,7 @@ i40evf_init_vf(struct rte_eth_dev *dev)
 
 	vf->adapter = I40E_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	vf->dev_data = dev->data;
+	rte_spinlock_init(&vf->cmd_send_lock);
 	err = i40e_set_mac_type(hw);
 	if (err) {
 		PMD_INIT_LOG(ERR, "set_mac_type failed: %d", err);
