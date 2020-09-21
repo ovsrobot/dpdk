@@ -2104,6 +2104,9 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 	struct iavf_rx_queue *rxq;
 	int i;
 	bool use_avx2 = false;
+#ifdef CC_AVX512_SUPPORT
+	bool use_avx512 = false;
+#endif
 
 	if (!iavf_rx_vec_dev_check(dev)) {
 		for (i = 0; i < dev->data->nb_rx_queues; i++) {
@@ -2114,6 +2117,10 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2) == 1 ||
 		    rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) == 1)
 			use_avx2 = true;
+#ifdef CC_AVX512_SUPPORT
+		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) == 1)
+			use_avx512 = true;
+#endif
 
 		if (dev->data->scattered_rx) {
 			PMD_DRV_LOG(DEBUG,
@@ -2121,27 +2128,39 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 				    use_avx2 ? "avx2 " : "",
 				    dev->data->port_id);
 			if (vf->vf_res->vf_cap_flags &
-				VIRTCHNL_VF_OFFLOAD_RX_FLEX_DESC)
+				VIRTCHNL_VF_OFFLOAD_RX_FLEX_DESC) {
 				dev->rx_pkt_burst = use_avx2 ?
 					iavf_recv_scattered_pkts_vec_avx2_flex_rxd :
 					iavf_recv_scattered_pkts_vec_flex_rxd;
-			else
+			} else {
 				dev->rx_pkt_burst = use_avx2 ?
 					iavf_recv_scattered_pkts_vec_avx2 :
 					iavf_recv_scattered_pkts_vec;
+#ifdef CC_AVX512_SUPPORT
+				if (use_avx512)
+					dev->rx_pkt_burst =
+						iavf_recv_scattered_pkts_vec_avx512;
+#endif
+			}
 		} else {
 			PMD_DRV_LOG(DEBUG, "Using %sVector Rx (port %d).",
 				    use_avx2 ? "avx2 " : "",
 				    dev->data->port_id);
 			if (vf->vf_res->vf_cap_flags &
-				VIRTCHNL_VF_OFFLOAD_RX_FLEX_DESC)
+				VIRTCHNL_VF_OFFLOAD_RX_FLEX_DESC) {
 				dev->rx_pkt_burst = use_avx2 ?
 					iavf_recv_pkts_vec_avx2_flex_rxd :
 					iavf_recv_pkts_vec_flex_rxd;
-			else
+			} else {
 				dev->rx_pkt_burst = use_avx2 ?
 					iavf_recv_pkts_vec_avx2 :
 					iavf_recv_pkts_vec;
+#ifdef CC_AVX512_SUPPORT
+				if (use_avx512)
+					dev->rx_pkt_burst =
+						iavf_recv_pkts_vec_avx512;
+#endif
+			}
 		}
 
 		return;
