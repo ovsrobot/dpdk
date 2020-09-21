@@ -60,6 +60,11 @@
 #define HNS3_RESET_WAIT_MS	100
 #define HNS3_RESET_WAIT_CNT	200
 
+/* FEC mode order defined in HNS3 hardware */
+#define HNS3_HW_FEC_MODE_NOFEC  0
+#define HNS3_HW_FEC_MODE_BASER  1
+#define HNS3_HW_FEC_MODE_RS     2
+
 enum hns3_evt_cause {
 	HNS3_VECTOR0_EVENT_RST,
 	HNS3_VECTOR0_EVENT_MBX,
@@ -78,6 +83,8 @@ static int hns3_add_mc_addr(struct hns3_hw *hw,
 			    struct rte_ether_addr *mac_addr);
 static int hns3_remove_mc_addr(struct hns3_hw *hw,
 			    struct rte_ether_addr *mac_addr);
+static int hns3_restore_fec(struct hns3_hw *hw);
+static int hns3_query_dev_fec_info(struct rte_eth_dev *dev);
 
 static void
 hns3_pf_disable_irq0(struct hns3_hw *hw)
@@ -2819,6 +2826,13 @@ hns3_get_capability(struct hns3_hw *hw)
 	    device_id == HNS3_DEV_ID_200G_RDMA)
 		hns3_set_bit(hw->capability, HNS3_DEV_SUPPORT_DCB_B, 1);
 
+	ret = hns3_query_dev_fec_info(eth_dev);
+	if (ret) {
+		PMD_INIT_LOG(ERR,
+			     "failed to query FEC information, ret = %d", ret);
+		return ret;
+	}
+
 	/* Get PCI revision id */
 	ret = rte_pci_read_config(pci_dev, &revision, HNS3_PCI_REVISION_ID_LEN,
 				  HNS3_PCI_REVISION_ID);
@@ -5311,6 +5325,10 @@ hns3_restore_conf(struct hns3_adapter *hns)
 	if (ret)
 		goto err_promisc;
 
+	ret = hns3_restore_fec(hw);
+	if (ret)
+		goto err_promisc;
+
 	if (hns->hw.adapter_state == HNS3_NIC_STARTED) {
 		ret = hns3_do_start(hns, false);
 		if (ret)
@@ -5389,6 +5407,168 @@ hns3_reset_service(void *param)
 		hns3_msix_process(hns, reset_level);
 }
 
+static int
+hns3_fec_get_capability(struct rte_eth_dev *dev, uint32_t *fec_cap)
+{
+	struct hns3_hw *hw = HNS3_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct hns3_mac *mac = &hw->mac;
+	uint32_t mode;
+
+	switch (mac->link_speed) {
+	case ETH_SPEED_NUM_10G:
+	case ETH_SPEED_NUM_40G:
+		mode = RTE_ETH_FEC_CAPA_NOFEC | RTE_ETH_FEC_CAPA_BASER |
+			RTE_ETH_FEC_CAPA_AUTO;
+		break;
+	case ETH_SPEED_NUM_25G:
+	case ETH_SPEED_NUM_50G:
+		mode = RTE_ETH_FEC_CAPA_NOFEC | RTE_ETH_FEC_CAPA_BASER |
+			RTE_ETH_FEC_CAPA_RS | RTE_ETH_FEC_CAPA_AUTO;
+		break;
+	case ETH_SPEED_NUM_100G:
+	case ETH_SPEED_NUM_200G:
+		mode = RTE_ETH_FEC_CAPA_NOFEC | RTE_ETH_FEC_CAPA_RS |
+			RTE_ETH_FEC_CAPA_AUTO;
+		break;
+	default:
+		mode = 0;
+		break;
+	}
+
+	*fec_cap = mode;
+	return 0;
+}
+
+static int
+hns3_fec_get(struct rte_eth_dev *dev, enum rte_eth_fec_mode *mode)
+{
+#define QUERY_ACTIVE_SPEED	1
+	struct hns3_hw *hw = HNS3_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct hns3_sfp_speed_cmd *resp;
+	enum rte_eth_fec_mode tmp_mode;
+	struct hns3_cmd_desc desc;
+	int ret;
+
+	hns3_cmd_setup_basic_desc(&desc, HNS3_OPC_SFP_GET_SPEED, true);
+	resp = (struct hns3_sfp_speed_cmd *)desc.data;
+	resp->query_type = QUERY_ACTIVE_SPEED;
+
+	ret = hns3_cmd_send(hw, &desc, 1);
+	if (ret == -EOPNOTSUPP) {
+		hns3_err(hw, "IMP do not support get FEC, ret = %d", ret);
+		return ret;
+	} else if (ret) {
+		hns3_err(hw, "get FEC failed, ret = %d", ret);
+		return ret;
+	}
+
+	/*
+	 * FEC mode order defined in hns3 hardware is inconsistend with
+	 * that defined in the ethdev library. So the sequence needs
+	 * to be converted.
+	 */
+	switch (resp->active_fec) {
+	case HNS3_HW_FEC_MODE_NOFEC:
+		tmp_mode = RTE_ETH_FEC_NOFEC;
+		break;
+	case HNS3_HW_FEC_MODE_BASER:
+		tmp_mode = RTE_ETH_FEC_BASER;
+		break;
+	case HNS3_HW_FEC_MODE_RS:
+		tmp_mode = RTE_ETH_FEC_RS;
+		break;
+	default:
+		tmp_mode = RTE_ETH_FEC_NOFEC;
+		break;
+	}
+
+	*mode = tmp_mode;
+	return 0;
+}
+
+static int
+hns3_set_fec_hw(struct hns3_hw *hw, enum rte_eth_fec_mode mode)
+{
+	struct hns3_config_fec_cmd *req;
+	struct hns3_cmd_desc desc;
+	int ret;
+
+	hns3_cmd_setup_basic_desc(&desc, HNS3_OPC_CONFIG_FEC_MODE, false);
+
+	req = (struct hns3_config_fec_cmd *)desc.data;
+	switch (mode) {
+	case RTE_ETH_FEC_NOFEC:
+		hns3_set_field(req->fec_mode, HNS3_MAC_CFG_FEC_MODE_M,
+				HNS3_MAC_CFG_FEC_MODE_S, HNS3_MAC_FEC_OFF);
+		break;
+	case RTE_ETH_FEC_BASER:
+		hns3_set_field(req->fec_mode, HNS3_MAC_CFG_FEC_MODE_M,
+				HNS3_MAC_CFG_FEC_MODE_S, HNS3_MAC_FEC_BASER);
+		break;
+	case RTE_ETH_FEC_RS:
+		hns3_set_field(req->fec_mode, HNS3_MAC_CFG_FEC_MODE_M,
+				HNS3_MAC_CFG_FEC_MODE_S, HNS3_MAC_FEC_RS);
+		break;
+	case RTE_ETH_FEC_AUTO:
+		hns3_set_bit(req->fec_mode, HNS3_MAC_CFG_FEC_AUTO_EN_B, 1);
+		break;
+	default:
+		return 0;
+	}
+	ret = hns3_cmd_send(hw, &desc, 1);
+	if (ret)
+		hns3_err(hw, "set fec mode failed, ret = %d", ret);
+
+	return ret;
+}
+
+static int
+hns3_fec_set(struct rte_eth_dev *dev, enum rte_eth_fec_mode mode)
+{
+	struct hns3_adapter *hns = dev->data->dev_private;
+	struct hns3_hw *hw = HNS3_DEV_PRIVATE_TO_HW(hns);
+	struct hns3_pf *pf = &hns->pf;
+	int ret;
+
+	ret = hns3_set_fec_hw(hw, mode);
+	if (ret)
+		return ret;
+
+	pf->fec_mode = mode;
+	return 0;
+}
+
+static int
+hns3_restore_fec(struct hns3_hw *hw)
+{
+	struct hns3_adapter *hns = HNS3_DEV_HW_TO_ADAPTER(hw);
+	struct hns3_pf *pf = &hns->pf;
+	enum rte_eth_fec_mode mode = pf->fec_mode;
+	int ret;
+
+	ret = hns3_set_fec_hw(hw, mode);
+	if (ret)
+		hns3_err(hw, "restore fec mode(%d) failed, ret = %d",
+			 mode, ret);
+
+	return ret;
+}
+
+static int
+hns3_query_dev_fec_info(struct rte_eth_dev *dev)
+{
+	struct hns3_adapter *hns = dev->data->dev_private;
+	struct hns3_hw *hw = HNS3_DEV_PRIVATE_TO_HW(hns);
+	struct hns3_pf *pf = &hns->pf;
+	int ret;
+
+	ret = hns3_fec_get(dev, &pf->fec_mode);
+	if (ret)
+		hns3_err(hw, "query device FEC info failed, ret = %d", ret);
+
+	return ret;
+}
+
 static const struct eth_dev_ops hns3_eth_dev_ops = {
 	.dev_start          = hns3_dev_start,
 	.dev_stop           = hns3_dev_stop,
@@ -5434,6 +5614,9 @@ static const struct eth_dev_ops hns3_eth_dev_ops = {
 	.get_reg                = hns3_get_regs,
 	.get_dcb_info           = hns3_get_dcb_info,
 	.dev_supported_ptypes_get = hns3_dev_supported_ptypes_get,
+	.fec_get_capability     = hns3_fec_get_capability,
+	.fec_get                = hns3_fec_get,
+	.fec_set                = hns3_fec_set,
 };
 
 static const struct hns3_reset_ops hns3_reset_ops = {
