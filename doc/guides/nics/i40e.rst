@@ -830,3 +830,10 @@ Tx bytes affected by the link status change
 
 For firmware versions prior to 6.01 for X710 series and 3.33 for X722 series, the tx_bytes statistics data is affected by
 the link down event. Each time the link status changes to down, the tx_bytes decreases 110 bytes.
+
+RX/TX statistics may be incorrect when register overflowed
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The rx_bytes/tx_bytes statistics register is 48 bit length. Although this limitation is enlarged to 64 bit length
+on the software side, but there is no way to detect if the overflow occurred more than once. So rx_bytes/tx_bytes
+statistics data is correct when statistics are updated at least once between two overflows.
