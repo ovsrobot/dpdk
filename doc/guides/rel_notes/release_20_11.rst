@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+   * **Added support of vector instructions on IAVF.**
+
+     Added support of AVX512 instructions in IAVF RX and TX path.
 
 Removed Items
 -------------
