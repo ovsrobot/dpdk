@@ -752,6 +752,17 @@ vhost_enable_linearbuf(int vid)
 	dev->linearbuf = 1;
 }
 
+void
+vhost_enable_vectorized(int vid)
+{
+	struct virtio_net *dev = get_device(vid);
+
+	if (dev == NULL)
+		return;
+
+	dev->vectorized = 1;
+}
+
 int
 rte_vhost_get_mtu(int vid, uint16_t *mtu)
 {

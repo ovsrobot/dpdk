@@ -43,6 +43,7 @@ struct vhost_user_socket {
 	bool extbuf;
 	bool linearbuf;
 	bool async_copy;
+	bool vectorized;
 
 	/*
 	 * The "supported_features" indicates the feature bits the
@@ -244,6 +245,9 @@ vhost_user_add_connection(int fd, struct vhost_user_socket *vsocket)
 		if (dev)
 			dev->async_copy = 1;
 	}
+
+	if (vsocket->vectorized)
+		vhost_enable_vectorized(vid);
 
 	VHOST_LOG_CONFIG(INFO, "new device, handle is %d\n", vid);
 
@@ -881,6 +885,7 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 	vsocket->dequeue_zero_copy = flags & RTE_VHOST_USER_DEQUEUE_ZERO_COPY;
 	vsocket->extbuf = flags & RTE_VHOST_USER_EXTBUF_SUPPORT;
 	vsocket->linearbuf = flags & RTE_VHOST_USER_LINEARBUF_SUPPORT;
+	vsocket->vectorized = flags & RTE_VHOST_USER_VECTORIZED;
 
 	if (vsocket->dequeue_zero_copy &&
 	    (flags & RTE_VHOST_USER_IOMMU_SUPPORT)) {
