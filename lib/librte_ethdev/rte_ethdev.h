@@ -1310,6 +1310,9 @@ struct rte_eth_conf {
 #define RTE_ETH_DEV_FALLBACK_RX_NBQUEUES 1
 #define RTE_ETH_DEV_FALLBACK_TX_NBQUEUES 1
 
+/* Translate from FEC mode to FEC capa */
+#define RTE_ETH_FEC_MODE_TO_CAPA(x)	(1U << (x))
+
 /**
  * Preferred Rx/Tx port parameters.
  * There are separate instances of this structure for transmission
@@ -1510,6 +1513,24 @@ struct rte_eth_dcb_info {
 	/** rx queues assigned to tc */
 	struct rte_eth_dcb_tc_queue_mapping tc_queue;
 };
+
+/**
+ * This enum indicates the possible (forward error correction)FEC modes
+ * of an ethdev port.
+ */
+enum rte_eth_fec_mode {
+	RTE_ETH_FEC_NOFEC = 0,      /**< FEC is off */
+	RTE_ETH_FEC_AUTO,	    /**< FEC autonegotiation modes */
+	RTE_ETH_FEC_BASER,          /**< FEC using common algorithm */
+	RTE_ETH_FEC_RS,             /**< FEC using RS algorithm */
+};
+
+/* This indicates FEC capabilities */
+#define RTE_ETH_FEC_CAPA_NOFEC  (1U << RTE_ETH_FEC_NOFEC)
+#define RTE_ETH_FEC_CAPA_AUTO   (1U << RTE_ETH_FEC_AUTO)
+#define RTE_ETH_FEC_CAPA_BASER  (1U << RTE_ETH_FEC_BASER)
+#define RTE_ETH_FEC_CAPA_RS     (1U << RTE_ETH_FEC_RS)
+
 
 #define RTE_ETH_ALL RTE_MAX_ETHPORTS
 
@@ -3326,6 +3347,70 @@ int  rte_eth_led_on(uint16_t port_id);
  *   - (-EIO) if device is removed.
  */
 int  rte_eth_led_off(uint16_t port_id);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Get Forward Error Correction(FEC) capability.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param fec_cap
+ *   returns the FEC capability from the device, as follows:
+ *   RTE_ETH_FEC_CAPA_NOFEC
+ *   RTE_ETH_FEC_CAPA_AUTO
+ *   RTE_ETH_FEC_CAPA_BASER
+ *   RTE_ETH_FEC_CAPA_RS
+ * @return
+ *   - (0) if successful.
+ *   - (-ENOTSUP) if underlying hardware OR driver doesn't support.
+ *     that operation.
+ *   - (-EIO) if device is removed.
+ *   - (-ENODEV)  if *port_id* invalid.
+ */
+__rte_experimental
+int rte_eth_fec_get_capability(uint16_t port_id, uint32_t *fec_cap);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Get current Forward Error Correction(FEC) mode.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param mode
+ *   returns the FEC mode from the device.
+ * @return
+ *   - (0) if successful.
+ *   - (-ENOTSUP) if underlying hardware OR driver doesn't support.
+ *     that operation.
+ *   - (-EIO) if device is removed.
+ *   - (-ENODEV)  if *port_id* invalid.
+ */
+__rte_experimental
+int rte_eth_fec_get(uint16_t port_id, enum rte_eth_fec_mode *mode);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Set Forward Error Correction(FEC) mode.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param mode
+ *   the FEC mode.
+ * @return
+ *   - (0) if successful.
+ *   - (-EINVAL) if the FEC mode is not valid.
+ *   - (-ENOTSUP) if underlying hardware OR driver doesn't support.
+ *   - (-EIO) if device is removed.
+ *   - (-ENODEV)  if *port_id* invalid.
+ */
+__rte_experimental
+int rte_eth_fec_set(uint16_t port_id, enum rte_eth_fec_mode mode);
 
 /**
  * Get current status of the Ethernet link flow control for Ethernet device
