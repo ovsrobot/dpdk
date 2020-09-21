@@ -20,6 +20,10 @@
 #include <rte_rwlock.h>
 #include <rte_malloc.h>
 
+#include <rte_ip.h>
+#include <rte_tcp.h>
+#include <rte_udp.h>
+#include <rte_sctp.h>
 #include "rte_vhost.h"
 #include "rte_vdpa.h"
 #include "rte_vdpa_dev.h"
@@ -903,6 +907,217 @@ static __rte_always_inline void
 put_zmbuf(struct zcopy_mbuf *zmbuf)
 {
 	zmbuf->in_use = 0;
+}
+
+static  __rte_always_inline bool
+virtio_net_is_inorder(struct virtio_net *dev)
+{
+	return dev->features & (1ULL << VIRTIO_F_IN_ORDER);
+}
+
+static __rte_always_inline void
+parse_ethernet(struct rte_mbuf *m, uint16_t *l4_proto, void **l4_hdr)
+{
+	struct rte_ipv4_hdr *ipv4_hdr;
+	struct rte_ipv6_hdr *ipv6_hdr;
+	void *l3_hdr = NULL;
+	struct rte_ether_hdr *eth_hdr;
+	uint16_t ethertype;
+
+	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
+
+	m->l2_len = sizeof(struct rte_ether_hdr);
+	ethertype = rte_be_to_cpu_16(eth_hdr->ether_type);
+
+	if (ethertype == RTE_ETHER_TYPE_VLAN) {
+		struct rte_vlan_hdr *vlan_hdr =
+			(struct rte_vlan_hdr *)(eth_hdr + 1);
+
+		m->l2_len += sizeof(struct rte_vlan_hdr);
+		ethertype = rte_be_to_cpu_16(vlan_hdr->eth_proto);
+	}
+
+	l3_hdr = (char *)eth_hdr + m->l2_len;
+
+	switch (ethertype) {
+	case RTE_ETHER_TYPE_IPV4:
+		ipv4_hdr = l3_hdr;
+		*l4_proto = ipv4_hdr->next_proto_id;
+		m->l3_len = (ipv4_hdr->version_ihl & 0x0f) * 4;
+		*l4_hdr = (char *)l3_hdr + m->l3_len;
+		m->ol_flags |= PKT_TX_IPV4;
+		break;
+	case RTE_ETHER_TYPE_IPV6:
+		ipv6_hdr = l3_hdr;
+		*l4_proto = ipv6_hdr->proto;
+		m->l3_len = sizeof(struct rte_ipv6_hdr);
+		*l4_hdr = (char *)l3_hdr + m->l3_len;
+		m->ol_flags |= PKT_TX_IPV6;
+		break;
+	default:
+		m->l3_len = 0;
+		*l4_proto = 0;
+		*l4_hdr = NULL;
+		break;
+	}
+}
+
+static __rte_always_inline bool
+virtio_net_with_host_offload(struct virtio_net *dev)
+{
+	if (dev->features &
+			((1ULL << VIRTIO_NET_F_CSUM) |
+			 (1ULL << VIRTIO_NET_F_HOST_ECN) |
+			 (1ULL << VIRTIO_NET_F_HOST_TSO4) |
+			 (1ULL << VIRTIO_NET_F_HOST_TSO6) |
+			 (1ULL << VIRTIO_NET_F_HOST_UFO)))
+		return true;
+
+	return false;
+}
+
+static __rte_always_inline void
+vhost_dequeue_offload(struct virtio_net_hdr *hdr, struct rte_mbuf *m)
+{
+	uint16_t l4_proto = 0;
+	void *l4_hdr = NULL;
+	struct rte_tcp_hdr *tcp_hdr = NULL;
+
+	if (hdr->flags == 0 && hdr->gso_type == VIRTIO_NET_HDR_GSO_NONE)
+		return;
+
+	parse_ethernet(m, &l4_proto, &l4_hdr);
+	if (hdr->flags == VIRTIO_NET_HDR_F_NEEDS_CSUM) {
+		if (hdr->csum_start == (m->l2_len + m->l3_len)) {
+			switch (hdr->csum_offset) {
+			case (offsetof(struct rte_tcp_hdr, cksum)):
+				if (l4_proto == IPPROTO_TCP)
+					m->ol_flags |= PKT_TX_TCP_CKSUM;
+				break;
+			case (offsetof(struct rte_udp_hdr, dgram_cksum)):
+				if (l4_proto == IPPROTO_UDP)
+					m->ol_flags |= PKT_TX_UDP_CKSUM;
+				break;
+			case (offsetof(struct rte_sctp_hdr, cksum)):
+				if (l4_proto == IPPROTO_SCTP)
+					m->ol_flags |= PKT_TX_SCTP_CKSUM;
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	if (l4_hdr && hdr->gso_type != VIRTIO_NET_HDR_GSO_NONE) {
+		switch (hdr->gso_type & ~VIRTIO_NET_HDR_GSO_ECN) {
+		case VIRTIO_NET_HDR_GSO_TCPV4:
+		case VIRTIO_NET_HDR_GSO_TCPV6:
+			tcp_hdr = l4_hdr;
+			m->ol_flags |= PKT_TX_TCP_SEG;
+			m->tso_segsz = hdr->gso_size;
+			m->l4_len = (tcp_hdr->data_off & 0xf0) >> 2;
+			break;
+		case VIRTIO_NET_HDR_GSO_UDP:
+			m->ol_flags |= PKT_TX_UDP_SEG;
+			m->tso_segsz = hdr->gso_size;
+			m->l4_len = sizeof(struct rte_udp_hdr);
+			break;
+		default:
+			VHOST_LOG_DATA(WARNING,
+				"unsupported gso type %u.\n", hdr->gso_type);
+			break;
+		}
+	}
+}
+
+static void
+virtio_dev_extbuf_free(void *addr __rte_unused, void *opaque)
+{
+	rte_free(opaque);
+}
+
+static int
+virtio_dev_extbuf_alloc(struct rte_mbuf *pkt, uint32_t size)
+{
+	struct rte_mbuf_ext_shared_info *shinfo = NULL;
+	uint32_t total_len = RTE_PKTMBUF_HEADROOM + size;
+	uint16_t buf_len;
+	rte_iova_t iova;
+	void *buf;
+
+	/* Try to use pkt buffer to store shinfo to reduce the amount of memory
+	 * required, otherwise store shinfo in the new buffer.
+	 */
+	if (rte_pktmbuf_tailroom(pkt) >= sizeof(*shinfo))
+		shinfo = rte_pktmbuf_mtod(pkt,
+					  struct rte_mbuf_ext_shared_info *);
+	else {
+		total_len += sizeof(*shinfo) + sizeof(uintptr_t);
+		total_len = RTE_ALIGN_CEIL(total_len, sizeof(uintptr_t));
+	}
+
+	if (unlikely(total_len > UINT16_MAX))
+		return -ENOSPC;
+
+	buf_len = total_len;
+	buf = rte_malloc(NULL, buf_len, RTE_CACHE_LINE_SIZE);
+	if (unlikely(buf == NULL))
+		return -ENOMEM;
+
+	/* Initialize shinfo */
+	if (shinfo) {
+		shinfo->free_cb = virtio_dev_extbuf_free;
+		shinfo->fcb_opaque = buf;
+		rte_mbuf_ext_refcnt_set(shinfo, 1);
+	} else {
+		shinfo = rte_pktmbuf_ext_shinfo_init_helper(buf, &buf_len,
+					      virtio_dev_extbuf_free, buf);
+		if (unlikely(shinfo == NULL)) {
+			rte_free(buf);
+			VHOST_LOG_DATA(ERR, "Failed to init shinfo\n");
+			return -1;
+		}
+	}
+
+	iova = rte_malloc_virt2iova(buf);
+	rte_pktmbuf_attach_extbuf(pkt, buf, iova, buf_len, shinfo);
+	rte_pktmbuf_reset_headroom(pkt);
+
+	return 0;
+}
+
+/*
+ * Allocate a host supported pktmbuf.
+ */
+static __rte_always_inline struct rte_mbuf *
+virtio_dev_pktmbuf_alloc(struct virtio_net *dev, struct rte_mempool *mp,
+			 uint32_t data_len)
+{
+	struct rte_mbuf *pkt = rte_pktmbuf_alloc(mp);
+
+	if (unlikely(pkt == NULL)) {
+		VHOST_LOG_DATA(ERR,
+			"Failed to allocate memory for mbuf.\n");
+		return NULL;
+	}
+
+	if (rte_pktmbuf_tailroom(pkt) >= data_len)
+		return pkt;
+
+	/* attach an external buffer if supported */
+	if (dev->extbuf && !virtio_dev_extbuf_alloc(pkt, data_len))
+		return pkt;
+
+	/* check if chained buffers are allowed */
+	if (!dev->linearbuf)
+		return pkt;
+
+	/* Data doesn't fit into the buffer and the host supports
+	 * only linear buffers
+	 */
+	rte_pktmbuf_free(pkt);
+
+	return NULL;
 }
 
 #endif /* _VHOST_NET_CDEV_H_ */
