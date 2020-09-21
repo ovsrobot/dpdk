@@ -72,33 +72,6 @@ Prerequisites
   `linux-firmware git repository <https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/plain/bnx2x/bnx2x-e2-7.13.11.0.fw>`_
   to get the required firmware.
 
-Pre-Installation Configuration
-------------------------------
-
-Config File Options
-~~~~~~~~~~~~~~~~~~~
-
-The following options can be modified in the ``.config`` file. Please note that
-enabling debugging options may affect system performance.
-
-- ``CONFIG_RTE_LIBRTE_BNX2X_PMD`` (default **n**)
-
-  Toggle compilation of bnx2x driver. To use bnx2x PMD set this config parameter
-  to 'y'. Also, in order for firmware binary to load user will need zlib devel
-  package installed.
-
-- ``CONFIG_RTE_LIBRTE_BNX2X_DEBUG_TX`` (default **n**)
-
-  Toggle display of transmit fast path run-time messages.
-
-- ``CONFIG_RTE_LIBRTE_BNX2X_DEBUG_RX`` (default **n**)
-
-  Toggle display of receive fast path run-time messages.
-
-- ``CONFIG_RTE_LIBRTE_BNX2X_DEBUG_PERIODIC`` (default **n**)
-
-  Toggle display of register reads and writes.
-
 
 .. _bnx2x_driver-compilation:
 

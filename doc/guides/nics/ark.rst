@@ -119,32 +119,6 @@ Data Path Interface
 Ingress RX and Egress TX operation is by the nominal DPDK API .
 The driver supports single-port, multi-queue for both RX and TX.
 
-Configuration Information
--------------------------
-
-**DPDK Configuration Parameters**
-
-  The following configuration options are available for the ARK PMD:
-
-   * **CONFIG_RTE_LIBRTE_ARK_PMD** (default y): Enables or disables inclusion
-     of the ARK PMD driver in the DPDK compilation.
-
-   * **CONFIG_RTE_LIBRTE_ARK_PAD_TX** (default y):  When enabled TX
-     packets are padded to 60 bytes to support downstream MACS.
-
-   * **CONFIG_RTE_LIBRTE_ARK_DEBUG_RX** (default n): Enables or disables debug
-     logging and internal checking of RX ingress logic within the ARK PMD driver.
-
-   * **CONFIG_RTE_LIBRTE_ARK_DEBUG_TX** (default n): Enables or disables debug
-     logging and internal checking of TX egress logic within the ARK PMD driver.
-
-   * **CONFIG_RTE_LIBRTE_ARK_DEBUG_STATS** (default n): Enables or disables debug
-     logging of detailed packet and performance statistics gathered in
-     the PMD and FPGA.
-
-   * **CONFIG_RTE_LIBRTE_ARK_DEBUG_TRACE** (default n): Enables or disables debug
-     logging of detailed PMD events and status.
-
 
 Building DPDK
 -------------

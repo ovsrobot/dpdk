@@ -66,10 +66,14 @@ This section demonstrates how to setup and run ``testpmd`` in Linux.
 
 #. Load ``igb_uio`` or ``vfio-pci`` driver:
 
+   Before compiling, make sure to enable kmods for the meson build::
+
+      meson configure -Denable_kmods=true
+
    .. code-block:: console
 
       modprobe uio
-      insmod ./x86_64-native-linux-gcc/kmod/igb_uio.ko
+      insmod ./<build_dir>/kernel/linux/igb_uio/igb_uio.ko
 
    or
 
@@ -106,7 +110,7 @@ This section demonstrates how to setup and run ``testpmd`` in Linux.
 
    .. code-block:: console
 
-      ./x86_64-native-linux-gcc/app/testpmd -l 0-3 -n 4 -- -i
+      ./<build_dir>/app/dpdk-testpmd -l 0-3 -n 4 -- -i
 
    Successful execution will show initialization messages from EAL, PMD and
    testpmd application. A prompt will be displayed at the end for user commands
