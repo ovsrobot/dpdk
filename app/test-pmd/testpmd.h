@@ -778,6 +778,8 @@ void show_tx_pkt_segments(void);
 void set_tx_pkt_times(unsigned int *tx_times);
 void show_tx_pkt_times(void);
 void set_tx_pkt_split(const char *name);
+int parse_fec_mode(const char *name, enum rte_eth_fec_mode *mode);
+void show_fec_capability(uint32_t fec_cap);
 void set_nb_pkt_per_burst(uint16_t pkt_burst);
 char *list_pkt_forwarding_modes(void);
 char *list_pkt_forwarding_retry_modes(void);
