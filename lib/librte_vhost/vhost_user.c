@@ -1291,6 +1291,17 @@ vhost_user_set_mem_table(struct virtio_net **pdev, struct VhostUserMsg *msg,
 		}
 	}
 
+	RTE_BUILD_BUG_ON(VHOST_MEMORY_MAX_NREGIONS != 8);
+	if (dev->vectorized) {
+		for (i = 0; i < memory->nregions; i++) {
+			dev->regions_low_addrs[i] =
+				memory->regions[i].guest_phys_addr;
+			dev->regions_high_addrs[i] =
+				memory->regions[i].guest_phys_addr +
+				memory->regions[i].memory_size;
+		}
+	}
+
 	for (i = 0; i < dev->nr_vring; i++) {
 		struct vhost_virtqueue *vq = dev->virtqueue[i];
 
