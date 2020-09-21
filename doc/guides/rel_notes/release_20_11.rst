@@ -68,6 +68,9 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* build: Support for the Make build system was removed for compiling DPDK, Meson
+  is now the primary build system. Sample applications can still be built with
+  Make standalone, using pkg-config.
 
 API Changes
 -----------
