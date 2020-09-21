@@ -50,10 +50,7 @@ FPGA LTE FEC does not support the following:
 Installation
 --------------
 
-Section 3 of the DPDK manual provides instructions on installing and compiling DPDK. The
-default set of bbdev compile flags may be found in config/common_base, where for example
-the flag to build the FPGA LTE FEC device, ``CONFIG_RTE_LIBRTE_PMD_BBDEV_FPGA_LTE_FEC``, is already
-set.
+Section 3 of the DPDK manual provides instructions on installing and compiling DPDK.
 
 DPDK requires hugepages to be configured as detailed in section 2 of the DPDK manual.
 The bbdev test application has been tested with a configuration 40 x 1GB hugepages. The
@@ -93,7 +90,7 @@ the UIO driver by repeating this command for every function.
 .. code-block:: console
 
   cd <dpdk-top-level-directory>
-  insmod ./build/kmod/igb_uio.ko
+  insmod ./<build_dir>/kernel/linux/igb_uio/igb_uio.ko
   echo "1172 5052" > /sys/bus/pci/drivers/igb_uio/new_id
   lspci -vd1172:
 
