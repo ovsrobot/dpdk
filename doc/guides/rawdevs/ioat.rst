@@ -54,13 +54,7 @@ shows:
 Compilation
 ------------
 
-For builds done with ``make``, the driver compilation is enabled by the
-``CONFIG_RTE_LIBRTE_PMD_IOAT_RAWDEV`` build configuration option. This is
-enabled by default in builds for x86 platforms, and disabled in other
-configurations.
-
-For builds using ``meson`` and ``ninja``, the driver will be built when the
-target platform is x86-based.
+The driver will be built when the target platform is x86-based.
 
 Device Setup
 -------------
