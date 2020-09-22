@@ -87,6 +87,17 @@ typedef uint16_t unaligned_uint16_t;
 #define __rte_deprecated	__attribute__((__deprecated__))
 
 /**
+ *  Macro to mark macros and defines scheduled for removal
+ */
+#if defined(RTE_CC_GCC) || defined(RTE_CC_CLANG)
+#define RTE_PRAGMA(x)  _Pragma(#x)
+#define RTE_PRAGMA_WARNING(w) RTE_PRAGMA(GCC warning #w)
+#define RTE_DEPRECATED(x)  RTE_PRAGMA_WARNING(#x is deprecated)
+#else
+#define RTE_DEPRECATED(x)
+#endif
+
+/**
  * Mark a function or variable to a weak reference.
  */
 #define __rte_weak __attribute__((__weak__))
