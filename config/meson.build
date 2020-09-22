@@ -109,6 +109,9 @@ if not is_windows
 	add_project_link_arguments('-Wl,--no-as-needed', language: 'c')
 endif
 
+# do prefetch of packet data
+dpdk_conf.set('RTE_PMD_PACKET_PREFETCH', 1)
+
 # use pthreads if available for the platform
 if not is_windows
 	add_project_link_arguments('-pthread', language: 'c')
