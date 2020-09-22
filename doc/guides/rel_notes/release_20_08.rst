@@ -308,6 +308,12 @@ API Changes
 * vhost: The API of ``rte_vhost_host_notifier_ctrl`` was changed to be per
   queue and not per device, a qid parameter was added to the arguments list.
 
+* eal: The definitions related to including and excluding devices
+  has been changed from blacklist/whitelist to include/exclude.
+  There are compatibility macros and command line mapping to accept
+  the old values but applications and scripts are strongly encouraged
+  to migrate to the new names.
+
 
 ABI Changes
 -----------

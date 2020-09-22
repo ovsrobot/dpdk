@@ -50,7 +50,7 @@ Runtime Config Options
   for the application.
   For example::
 
-    -w 0002:02:00.0,max_pools=512
+    -i 0002:02:00.0,max_pools=512
 
   With the above configuration, the driver will set up only 512 mempools for
   the given application to save HW resources.
@@ -69,7 +69,7 @@ Runtime Config Options
 
    For example::
 
-      -w 0002:02:00.0,npa_lock_mask=0xf
+      -i 0002:02:00.0,npa_lock_mask=0xf
 
 Debugging Options
 ~~~~~~~~~~~~~~~~~

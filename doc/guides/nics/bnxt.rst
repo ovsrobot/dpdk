@@ -259,7 +259,7 @@ Unicast MAC Filter
 ^^^^^^^^^^^^^^^^^^
 
 The application adds (or removes) MAC addresses to enable (or disable)
-whitelist filtering to accept packets.
+allowlist filtering to accept packets.
 
 .. code-block:: console
 
@@ -270,7 +270,7 @@ Multicast MAC Filter
 ^^^^^^^^^^^^^^^^^^^^
 
 Application adds (or removes) Multicast addresses to enable (or disable)
-whitelist filtering to accept packets.
+allowlist filtering to accept packets.
 
 .. code-block:: console
 
@@ -278,7 +278,7 @@ whitelist filtering to accept packets.
     testpmd> mcast_addr (add|remove) (port_id) (XX:XX:XX:XX:XX:XX)
 
 Application adds (or removes) Multicast addresses to enable (or disable)
-whitelist filtering to accept packets.
+allowlist filtering to accept packets.
 
 Note that the BNXT PMD supports up to 16 MC MAC filters. if the user adds more
 than 16 MC MACs, the BNXT PMD puts the port into the Allmulticast mode.

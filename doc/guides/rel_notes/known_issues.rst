@@ -523,8 +523,8 @@ Devices bound to igb_uio with VT-d enabled do not work on Linux kernel 3.15-3.17
       DMAR:[fault reason 02] Present bit in context entry is clear
 
 **Resolution/Workaround**:
-   Use earlier or later kernel versions, or avoid driver binding on boot by blacklisting the driver modules.
-   I.e., in the case of ``ixgbe``, we can pass the kernel command line option: ``modprobe.blacklist=ixgbe``.
+   Use earlier or later kernel versions, or avoid driver binding on boot by blocklisting the driver modules.
+   I.e., in the case of ``ixgbe``, we can pass the kernel command line option: ``modprobe.blocklist=ixgbe``.
    This way we do not need to unbind the device to bind it to igb_uio.
 
 **Affected Environment/Platform**:

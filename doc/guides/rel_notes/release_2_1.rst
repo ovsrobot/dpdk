@@ -472,7 +472,7 @@ Resolved Issues
 
 * **devargs: Fix crash on failure.**
 
-  This problem occurred when passing an invalid PCI id to the blacklist API in
+  This problem occurred when passing an invalid PCI id to the blocklist API in
   devargs.
 
 
