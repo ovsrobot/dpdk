@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated the AESNI GCM crypto PMD.**
+
+  * Added SGL support AES-GMAC.
+
 
 Removed Items
 -------------
