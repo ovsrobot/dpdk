@@ -258,8 +258,8 @@ The BNXT PMD supports hardware-based packet filtering:
 Unicast MAC Filter
 ^^^^^^^^^^^^^^^^^^
 
-The application adds (or removes) MAC addresses to enable (or disable)
-allowlist filtering to accept packets.
+The application adds (or removes) MAC addresses that enable (or disable)
+filtering on MAC address used to accept packets.
 
 .. code-block:: console
 
@@ -269,16 +269,13 @@ allowlist filtering to accept packets.
 Multicast MAC Filter
 ^^^^^^^^^^^^^^^^^^^^
 
-Application adds (or removes) Multicast addresses to enable (or disable)
-allowlist filtering to accept packets.
+Application adds (or removes) Multicast addresses that enable (or disable)
+filtering on multicast MAC address used to accept packets.
 
 .. code-block:: console
 
     testpmd> show port (port_id) mcast_macs
     testpmd> mcast_addr (add|remove) (port_id) (XX:XX:XX:XX:XX:XX)
-
-Application adds (or removes) Multicast addresses to enable (or disable)
-allowlist filtering to accept packets.
 
 Note that the BNXT PMD supports up to 16 MC MAC filters. if the user adds more
 than 16 MC MACs, the BNXT PMD puts the port into the Allmulticast mode.

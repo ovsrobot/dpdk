@@ -422,7 +422,7 @@ devices managed by librte_pmd_mlx4.
       eth4
       eth5
 
-#. Optionally, retrieve their PCI bus addresses for allowlisting::
+#. Optionally, retrieve their PCI bus addresses for use in allow argument::
 
       {
           for intf in eth2 eth3 eth4 eth5;

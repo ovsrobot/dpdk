@@ -1526,7 +1526,7 @@ ConnectX-4/ConnectX-5/ConnectX-6/BlueField devices managed by librte_pmd_mlx5.
       eth32
       eth33
 
-#. Optionally, retrieve their PCI bus addresses for allowlisting::
+#. Optionally, retrieve their PCI bus addresses for use in allow list::
 
       {
           for intf in eth2 eth3 eth4 eth5;
