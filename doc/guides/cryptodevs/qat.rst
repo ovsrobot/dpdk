@@ -663,7 +663,7 @@ QAT SYM crypto PMD can be tested by running the test application::
     make defconfig
     make -j
     cd ./build/app
-    ./test -l1 -n1 -w <your qat bdf>
+    ./test -l1 -n1 -i <your qat bdf>
     RTE>>cryptodev_qat_autotest
 
 QAT ASYM crypto PMD can be tested by running the test application::
@@ -671,7 +671,7 @@ QAT ASYM crypto PMD can be tested by running the test application::
     make defconfig
     make -j
     cd ./build/app
-    ./test -l1 -n1 -w <your qat bdf>
+    ./test -l1 -n1 -i <your qat bdf>
     RTE>>cryptodev_qat_asym_autotest
 
 QAT compression PMD can be tested by running the test application::
@@ -680,7 +680,7 @@ QAT compression PMD can be tested by running the test application::
     sed -i 's,\(CONFIG_RTE_COMPRESSDEV_TEST\)=n,\1=y,' build/.config
     make -j
     cd ./build/app
-    ./test -l1 -n1 -w <your qat bdf>
+    ./test -l1 -n1 -i <your qat bdf>
     RTE>>compressdev_autotest
 
 

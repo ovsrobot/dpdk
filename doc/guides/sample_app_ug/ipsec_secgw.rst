@@ -131,7 +131,7 @@ The application has a number of command line options::
 
    ./build/ipsec-secgw [EAL options] --
                         -p PORTMASK -P -u PORTMASK -j FRAMESIZE
-                        -l -w REPLAY_WINOW_SIZE -e -a
+                        -l -i REPLAY_WINOW_SIZE -e -a
                         -c SAD_CACHE_SIZE
                         -s NUMBER_OF_MBUFS_IN_PACKET_POOL
                         -f CONFIG_FILE_PATH

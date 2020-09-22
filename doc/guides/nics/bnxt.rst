@@ -725,7 +725,7 @@ when the PMD is initialized on a PF or trusted-VF. The user can specify the list
 of VF IDs of the VFs for which the representors are needed by using the
 ``devargs`` option ``representor``.::
 
-  -w DBDF,representor=[0,1,4]
+  -i DBDF,representor=[0,1,4]
 
 Note that currently hot-plugging of representor ports is not supported so all
 the required representors must be specified on the creation of the PF or the

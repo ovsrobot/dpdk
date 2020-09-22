@@ -78,7 +78,7 @@ products) and the device argument `timestamp=1` must be used.
 
 .. code-block:: console
 
-    $RTE_TARGET/app/testpmd -w b3:00.0,timestamp=1 <other EAL params> -- <testpmd params>
+    $RTE_TARGET/app/testpmd -i b3:00.0,timestamp=1 <other EAL params> -- <testpmd params>
 
 When the timestamps are enabled with the *devarg*, a timestamp validity flag is set in the MBUFs
 containing received frames and timestamp is inserted into the `rte_mbuf` struct.

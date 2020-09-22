@@ -378,7 +378,7 @@ See :doc:`Power Management<../prog_guide/power_man>` chapter in the DPDK Program
 
 .. code-block:: console
 
-    ./l3fwd-power -l xxx   -n 4   -w 0000:xx:00.0 -w 0000:xx:00.1 -- -p 0x3 -P --config="(0,0,xx),(1,0,xx)" --empty-poll="0,0,0" -l 14 -m 9 -h 1
+    ./l3fwd-power -l xxx   -n 4   -i 0000:xx:00.0 -w 0000:xx:00.1 -- -p 0x3 -P --config="(0,0,xx),(1,0,xx)" --empty-poll="0,0,0" -l 14 -m 9 -h 1
 
 Where,
 

@@ -144,13 +144,13 @@ This section shows some example of using **testpmd** with a fail-safe PMD.
 
       $RTE_TARGET/build/app/testpmd -c 0xff -n 4 \
          --vdev 'net_failsafe0,mac=de:ad:be:ef:01:02,dev(84:00.0),dev(net_ring0)' \
-         -w 81:00.0 -- -i
+         -i 81:00.0 -- -i
 
 #. Start testpmd using a flexible device definition
 
    .. code-block:: console
 
-      $RTE_TARGET/build/app/testpmd -c 0xff -n 4 -w ff:ff.f \
+      $RTE_TARGET/build/app/testpmd -c 0xff -n 4 -i ff:ff.f \
          --vdev='net_failsafe0,exec(echo 84:00.0)' -- -i
 
 #. Start testpmd, automatically probing the device 84:00.0 and using it with
