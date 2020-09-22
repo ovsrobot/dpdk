@@ -539,7 +539,8 @@ parse_internal_args(const char *key __rte_unused, const char *value,
 	struct ring_internal_args **internal_args = data;
 	void *args;
 
-	sscanf(value, "%p", &args);
+	if (sscanf(value, "%p", &args) != 1)
+		return -1;
 
 	*internal_args = args;
 
