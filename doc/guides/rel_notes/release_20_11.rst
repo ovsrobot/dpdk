@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added new function rte_cldemote in rte_prefetch.h.**
+
+  Added a hardware hint CLDEMOTE, which is similar to prefetch in reverse.
+  CLDEMOTE moves the cache line to the more remote cache, where it expects
+  sharing to be efficient. Moving the cache line to a level more distant from
+  the processor helps to accelerate core-to-core communication.
 
 Removed Items
 -------------
