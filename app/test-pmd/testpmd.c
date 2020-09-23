@@ -3353,11 +3353,15 @@ init_port_config(void)
 		}
 
 		if (port->dcb_flag == 0) {
-			if( port->dev_conf.rx_adv_conf.rss_conf.rss_hf != 0)
+			if (port->dev_conf.rx_adv_conf.rss_conf.rss_hf != 0) {
 				port->dev_conf.rxmode.mq_mode =
 					(enum rte_eth_rx_mq_mode)
 						(rx_mq_mode & ETH_MQ_RX_RSS);
-			else
+				if (port->dev_info.rx_offload_capa &
+				    DEV_RX_OFFLOAD_RSS_HASH)
+					port->dev_conf.rxmode.offloads |=
+							DEV_RX_OFFLOAD_RSS_HASH;
+			} else
 				port->dev_conf.rxmode.mq_mode = ETH_MQ_RX_NONE;
 		}
 
