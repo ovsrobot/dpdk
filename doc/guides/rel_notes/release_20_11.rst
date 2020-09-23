@@ -165,6 +165,9 @@ API Changes
 
 * bpf: ``RTE_BPF_XTYPE_NUM`` has been dropped from ``rte_bpf_xtype``.
 
+* eal: ``rte_cio_rmb()`` and ``rte_cio_wmb()`` were deprecated since 20.08
+  and are removed in this release.
+
 
 ABI Changes
 -----------
