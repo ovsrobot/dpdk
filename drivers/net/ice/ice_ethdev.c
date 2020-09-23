@@ -3157,6 +3157,11 @@ ice_dev_configure(struct rte_eth_dev *dev)
 	if (dev->data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG)
 		dev->data->dev_conf.rxmode.offloads |= DEV_RX_OFFLOAD_RSS_HASH;
 
+	/* Considering QinQ packet, max frame size should be MTU and
+	 * corresponding ether overhead.
+	 */
+	ice_mtu_set(dev, dev->data->mtu);
+
 	ret = ice_init_rss(pf);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Failed to enable rss for PF");
