@@ -101,6 +101,7 @@
 #define RTE_LIBRTE_GRAPH_STATS 1
 
 /****** driver defines ********/
+#define RTE_PMD_PACKET_PREFETCH 1
 
 /* QuickAssist device */
 /* Max. number of QuickAssist devices which can be attached */
