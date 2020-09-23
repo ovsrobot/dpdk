@@ -341,7 +341,12 @@ eth_igc_configure(struct rte_eth_dev *dev)
 
 	PMD_INIT_FUNC_TRACE();
 
-	ret  = igc_check_mq_mode(dev);
+	/* Considering vlan tag packet, max frame size should be MTU and
+	 * corresponding ether overhead.
+	 */
+	eth_igc_mtu_set(dev, dev->data->mtu);
+
+	ret = igc_check_mq_mode(dev);
 	if (ret != 0)
 		return ret;
 
