@@ -1303,6 +1303,7 @@ mlx5_flow_validate_item_icmp(const struct rte_flow_item *item,
 			     struct rte_flow_error *error)
 {
 	const struct rte_flow_item_icmp *mask = item->mask;
+	struct rte_flow_item_icmp default_mask;
 	const int tunnel = !!(item_flags & MLX5_FLOW_LAYER_TUNNEL);
 	const uint64_t l3m = tunnel ? MLX5_FLOW_LAYER_INNER_L3_IPV4 :
 				      MLX5_FLOW_LAYER_OUTER_L3_IPV4;
@@ -1324,11 +1325,15 @@ mlx5_flow_validate_item_icmp(const struct rte_flow_item *item,
 		return rte_flow_error_set(error, EINVAL,
 					  RTE_FLOW_ERROR_TYPE_ITEM, item,
 					  "multiple L4 layers not supported");
+	memcpy(&default_mask, &rte_flow_item_icmp_mask,
+	       sizeof(struct rte_flow_item_icmp));
+	default_mask.hdr.icmp_ident = RTE_BE16(0xFFFF);
+	default_mask.hdr.icmp_seq_nb = RTE_BE16(0xFFFF);
 	if (!mask)
-		mask = &rte_flow_item_icmp_mask;
+		mask = &default_mask;
 	ret = mlx5_flow_item_acceptable
 		(item, (const uint8_t *)mask,
-		 (const uint8_t *)&rte_flow_item_icmp_mask,
+		 (const uint8_t *)&default_mask,
 		 sizeof(struct rte_flow_item_icmp), error);
 	if (ret < 0)
 		return ret;
