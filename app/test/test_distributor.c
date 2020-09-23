@@ -277,24 +277,23 @@ handle_work_with_free_mbufs(void *arg)
 	struct rte_mbuf *buf[8] __rte_cache_aligned;
 	struct worker_params *wp = arg;
 	struct rte_distributor *d = wp->dist;
-	unsigned int count = 0;
 	unsigned int i;
 	unsigned int num = 0;
 	unsigned int id = __atomic_fetch_add(&worker_idx, 1, __ATOMIC_RELAXED);
 
 	for (i = 0; i < 8; i++)
 		buf[i] = NULL;
-	num = rte_distributor_get_pkt(d, id, buf, buf, num);
+	num = rte_distributor_get_pkt(d, id, buf, buf, 0);
 	while (!quit) {
-		count += num;
 		__atomic_fetch_add(&worker_stats[id].handled_packets, num,
 				__ATOMIC_ACQ_REL);
-		for (i = 0; i < num; i++)
+		for (i = 0; i < num; i++) {
 			rte_pktmbuf_free(buf[i]);
+			buf[i] = NULL;
+		}
 		num = rte_distributor_get_pkt(d,
-				id, buf, buf, num);
+				id, buf, buf, 0);
 	}
-	count += num;
 	__atomic_fetch_add(&worker_stats[id].handled_packets, num,
 			__ATOMIC_ACQ_REL);
 	rte_distributor_return_pkt(d, id, buf, num);
@@ -322,7 +321,6 @@ sanity_test_with_mbuf_alloc(struct worker_params *wp, struct rte_mempool *p)
 			rte_distributor_process(d, NULL, 0);
 		for (j = 0; j < BURST; j++) {
 			bufs[j]->hash.usr = (i+j) << 1;
-			rte_mbuf_refcnt_set(bufs[j], 1);
 		}
 
 		rte_distributor_process(d, bufs, BURST);
@@ -346,20 +344,18 @@ sanity_test_with_mbuf_alloc(struct worker_params *wp, struct rte_mempool *p)
 static int
 handle_work_for_shutdown_test(void *arg)
 {
-	struct rte_mbuf *pkt = NULL;
 	struct rte_mbuf *buf[8] __rte_cache_aligned;
 	struct worker_params *wp = arg;
 	struct rte_distributor *d = wp->dist;
-	unsigned int count = 0;
 	unsigned int num = 0;
-	unsigned int total = 0;
 	unsigned int i;
-	unsigned int returned = 0;
 	unsigned int zero_id = 0;
 	const unsigned int id = __atomic_fetch_add(&worker_idx, 1,
 			__ATOMIC_RELAXED);
+	for (i = 0; i < 8; i++)
+		buf[i] = NULL;
 
-	num = rte_distributor_get_pkt(d, id, buf, buf, num);
+	num = rte_distributor_get_pkt(d, id, buf, buf, 0);
 
 	zero_id = __atomic_load_n(&zero_idx, __ATOMIC_ACQUIRE);
 	if (id == zero_id && num > 0) {
@@ -371,13 +367,14 @@ handle_work_for_shutdown_test(void *arg)
 	/* wait for quit single globally, or for worker zero, wait
 	 * for zero_quit */
 	while (!quit && !(id == zero_id && zero_quit)) {
-		count += num;
 		__atomic_fetch_add(&worker_stats[id].handled_packets, num,
 				__ATOMIC_ACQ_REL);
-		for (i = 0; i < num; i++)
+		for (i = 0; i < num; i++) {
 			rte_pktmbuf_free(buf[i]);
+			buf[i] = NULL;
+		}
 		num = rte_distributor_get_pkt(d,
-				id, buf, buf, num);
+				id, buf, buf, 0);
 
 		zero_id = __atomic_load_n(&zero_idx, __ATOMIC_ACQUIRE);
 		if (id == zero_id && num > 0) {
@@ -385,12 +382,7 @@ handle_work_for_shutdown_test(void *arg)
 				__ATOMIC_ACQUIRE);
 			__atomic_store_n(&zero_idx, zero_id, __ATOMIC_RELEASE);
 		}
-
-		total += num;
 	}
-	count += num;
-	returned = rte_distributor_return_pkt(d, id, buf, num);
-
 	__atomic_fetch_add(&worker_stats[id].handled_packets, num,
 			__ATOMIC_ACQ_REL);
 	if (id == zero_id) {
@@ -400,20 +392,24 @@ handle_work_for_shutdown_test(void *arg)
 		while (zero_quit)
 			usleep(100);
 
+		for (i = 0; i < num; i++) {
+			rte_pktmbuf_free(buf[i]);
+			buf[i] = NULL;
+		}
 		num = rte_distributor_get_pkt(d,
-				id, buf, buf, num);
+				id, buf, buf, 0);
 
 		while (!quit) {
-			count += num;
-			rte_pktmbuf_free(pkt);
-			num = rte_distributor_get_pkt(d, id, buf, buf, num);
 			__atomic_fetch_add(&worker_stats[id].handled_packets,
 					num, __ATOMIC_ACQ_REL);
+			for (i = 0; i < num; i++) {
+				rte_pktmbuf_free(buf[i]);
+				buf[i] = NULL;
+			}
+			num = rte_distributor_get_pkt(d, id, buf, buf, 0);
 		}
-		returned = rte_distributor_return_pkt(d,
-				id, buf, num);
-		printf("Num returned = %d\n", returned);
 	}
+	rte_distributor_return_pkt(d, id, buf, num);
 	return 0;
 }
 
