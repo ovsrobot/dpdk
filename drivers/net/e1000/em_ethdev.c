@@ -441,6 +441,12 @@ eth_em_configure(struct rte_eth_dev *dev)
 	PMD_INIT_FUNC_TRACE();
 	intr->flags |= E1000_FLAG_NEED_LINK_UPDATE;
 
+	/**
+	 * Considering vlan tag packet, max frame size should be MTU and
+	 * corresponding ether overhead.
+	 */
+	eth_em_mtu_set(dev, dev->data->mtu);
+
 	PMD_INIT_FUNC_TRACE();
 
 	return 0;
