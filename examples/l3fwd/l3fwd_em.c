@@ -215,7 +215,7 @@ static rte_xmm_t mask0;
 static rte_xmm_t mask1;
 static rte_xmm_t mask2;
 
-#if defined(RTE_MACHINE_CPUFLAG_SSE2)
+#if defined(__SSE2__)
 static inline xmm_t
 em_mask_key(void *key, xmm_t mask)
 {
@@ -231,7 +231,7 @@ em_mask_key(void *key, xmm_t mask)
 
 	return vandq_s32(data, mask);
 }
-#elif defined(RTE_MACHINE_CPUFLAG_ALTIVEC)
+#elif defined(__ALTIVEC__)
 static inline xmm_t
 em_mask_key(void *key, xmm_t mask)
 {
