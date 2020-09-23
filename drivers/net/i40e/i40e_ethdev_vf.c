@@ -1681,6 +1681,11 @@ i40evf_dev_configure(struct rte_eth_dev *dev)
 	dev->data->dev_conf.intr_conf.lsc =
 		!!(dev->data->dev_flags & RTE_ETH_DEV_INTR_LSC);
 
+	/* Considering QinQ packet, max frame size should be MTU and
+	 * corresponding ether overhead.
+	 */
+	i40evf_dev_mtu_set(dev, dev->data->mtu);
+
 	if (num_queue_pairs > vf->vsi_res->num_queue_pairs) {
 		struct i40e_hw *hw;
 		int ret;

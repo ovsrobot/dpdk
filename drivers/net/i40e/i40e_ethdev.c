@@ -1930,6 +1930,11 @@ i40e_dev_configure(struct rte_eth_dev *dev)
 	ad->tx_simple_allowed = true;
 	ad->tx_vec_allowed = true;
 
+	/* Considering QinQ packet, max frame size should be MTU and
+	 * corresponding ether overhead.
+	 */
+	i40e_dev_mtu_set(dev, dev->data->mtu);
+
 	if (dev->data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG)
 		dev->data->dev_conf.rxmode.offloads |= DEV_RX_OFFLOAD_RSS_HASH;
 
