@@ -16,7 +16,7 @@ srcdir=$(dirname $(readlink -f $0))/..
 
 MESON=${MESON:-meson}
 use_shared="--default-library=shared"
-builds_dir=${DPDK_BUILD_TEST_DIR:-.}
+builds_dir=$(readlink -f ${DPDK_BUILD_TEST_DIR:-.})
 
 if command -v gmake >/dev/null 2>&1 ; then
 	MAKE=gmake
@@ -168,11 +168,11 @@ build () # <directory> <target compiler | cross file> <meson options>
 		fi
 
 		install_target $builds_dir/$targetdir \
-			$(readlink -f $builds_dir/$targetdir/install)
+			$builds_dir/$targetdir/install
 		$srcdir/devtools/gen-abi.sh \
-			$(readlink -f $builds_dir/$targetdir/install)
+			$builds_dir/$targetdir/install
 		$srcdir/devtools/check-abi.sh $abirefdir/$targetdir \
-			$(readlink -f $builds_dir/$targetdir/install)
+			$builds_dir/$targetdir/install
 	fi
 }
 
