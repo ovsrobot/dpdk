@@ -78,6 +78,12 @@ New Features
     ``--portmask=N``
     where N represents the hexadecimal bitmask of ports used.
 
+* **Add UDP/IPv4 GRO support for VxLAN and non-VxLAN packets.**
+
+  Add UDP/IPv4 GRO support for VxLAN and non-VxLAN packets. For
+  VxLAN packets, this adds inner UDP/IPv4 support, for non-VxLAN
+  packets, this adds UDP/IPv4 support.
+
 
 Removed Items
 -------------
