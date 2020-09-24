@@ -1704,7 +1704,7 @@ compare_signatures(uint32_t *prim_hash_matches, uint32_t *sec_hash_matches,
 					(__m128i const *)sec_bkt->sig_current),
 				_mm_set1_epi16(sig)));
 		break;
-#elif defined(RTE_MACHINE_CPUFLAG_NEON)
+#elif defined(__ARM_NEON)
 	case RTE_HASH_COMPARE_NEON: {
 		uint16x8_t vmat, vsig, x;
 		int16x8_t shift = {-15, -13, -11, -9, -7, -5, -3, -1};
