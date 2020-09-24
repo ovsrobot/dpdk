@@ -575,6 +575,81 @@ typedef int (*eth_tx_hairpin_queue_setup_t)
 	 const struct rte_eth_hairpin_conf *hairpin_conf);
 
 /**
+ * @internal
+ * Get Forward Error Correction(FEC) capability.
+ *
+ * @param dev
+ *   ethdev handle of port.
+ * @param num
+ *   the num is in/out with a number of elements in an array.
+ * @param speed_fec_capa
+ *   speed_fec_capa is out only with per-speed capabilities.
+ *
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success, get FEC success.
+ * @retval -ENOTSUP
+ *   operation is not supported.
+ * @retval -EIO
+ *   device is removed.
+ * @retval -ENODEV
+ *   Device is gone.
+ * @retval -EINVAL
+ *   *num* or *speed_fec_capa* invalid.
+ */
+typedef int (*eth_fec_get_capability_t)(struct rte_eth_dev *dev, uint32_t *num,
+				struct rte_eth_fec_capa *speed_fec_capa);
+
+/**
+ * @internal
+ * Get Forward Error Correction(FEC) mode.
+ *
+ * @param dev
+ *   ethdev handle of port.
+ * @param mode
+ *   returns the FEC mode from the device.
+ *
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success, get FEC success.
+ * @retval -ENOTSUP
+ *   operation is not supported.
+ * @retval -EIO
+ *   device is removed.
+ * @retval -ENODEV
+ *   Device is gone.
+ */
+typedef int (*eth_fec_get_t)(struct rte_eth_dev *dev,
+			     uint32_t *mode);
+
+/**
+ * @internal
+ *   Set Forward Error Correction(FEC) mode.
+ *
+ * @param dev
+ *   ethdev handle of port.
+ * @param mode
+ *   the FEC mode.
+ *
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success, set FEC success.
+ * @retval -ENOTSUP
+ *   operation is not supported.
+ * @retval -EIO
+ *   device is removed.
+ * @retval -ENODEV
+ *   Device is gone.
+ */
+typedef int (*eth_fec_set_t)(struct rte_eth_dev *dev, uint32_t mode);
+
+/**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
 struct eth_dev_ops {
@@ -713,6 +788,13 @@ struct eth_dev_ops {
 	/**< Set up device RX hairpin queue. */
 	eth_tx_hairpin_queue_setup_t tx_hairpin_queue_setup;
 	/**< Set up device TX hairpin queue. */
+
+	eth_fec_get_capability_t fec_get_capability;
+	/**< Get Forward Error Correction(FEC) capability; */
+	eth_fec_get_t fec_get;
+	/**< Get Forward Error Correction(FEC) mode; */
+	eth_fec_set_t fec_set;
+	/**< Set Forward Error Correction(FEC) mode; */
 };
 
 /**
