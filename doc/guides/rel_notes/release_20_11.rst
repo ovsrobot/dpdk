@@ -91,6 +91,7 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* Removed ``RTE_MACHINE_CPUFLAG`` macros.
 
 API Changes
 -----------
