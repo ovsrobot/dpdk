@@ -231,7 +231,7 @@ em_mask_key(void *key, xmm_t mask)
 
 	return vandq_s32(data, mask);
 }
-#elif defined(RTE_MACHINE_CPUFLAG_ALTIVEC)
+#elif defined(__ALTIVEC__)
 static inline xmm_t
 em_mask_key(void *key, xmm_t mask)
 {
