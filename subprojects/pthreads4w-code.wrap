@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright 2020 Datapath Limited
+
+[wrap-git]
+directory=pthreads4w
+url=git://git.code.sf.net/p/pthreads4w/code
+revision=Version-3-0-0-release
+patch_directory=pthreads4w-meson

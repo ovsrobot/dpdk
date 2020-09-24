@@ -18,6 +18,7 @@ sources += files(
 	'eal_timer.c',
 	'fnmatch.c',
 	'getopt.c',
+	'windows_eal_impl.c'
 )
 
 dpdk_conf.set10('RTE_EAL_NUMA_AWARE_HUGEPAGES', true)

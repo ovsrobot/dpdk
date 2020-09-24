@@ -33,3 +33,9 @@ build-*
 # ignore other build directory patterns
 *-gcc*
 *-clang*
+
+# ignore sub-directories of the subprojects directory excluding wrap files and the packagefiles directory
+subprojects/**/*
+!subprojects/*.wrap
+!subprojects/packagefiles/
+!subprojects/packagefiles/**

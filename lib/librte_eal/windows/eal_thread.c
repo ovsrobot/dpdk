@@ -3,6 +3,7 @@
  */
 
 #include <io.h>
+#include <pthread.h>
 
 #include <rte_atomic.h>
 #include <rte_debug.h>
@@ -66,9 +67,11 @@ eal_thread_loop(void *arg __rte_unused)
 
 	thread_id = pthread_self();
 
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+
 	/* retrieve our lcore_id from the configuration structure */
 	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
-		if (thread_id == lcore_config[lcore_id].thread_id)
+		if (pthread_equal(thread_id, lcore_config[lcore_id].thread_id))
 			break;
 	}
 	if (lcore_id == RTE_MAX_LCORE)
@@ -79,8 +82,8 @@ eal_thread_loop(void *arg __rte_unused)
 
 	__rte_thread_init(lcore_id, &lcore_config[lcore_id].cpuset);
 
-	RTE_LOG(DEBUG, EAL, "lcore %u is ready (tid=%zx;cpuset=[%s])\n",
-		lcore_id, (uintptr_t)thread_id, cpuset);
+	RTE_LOG(DEBUG, EAL, "lcore %u is ready (tid=%p;cpuset=[%s])\n",
+		lcore_id, thread_id, cpuset);
 
 	/* read on our pipe to get commands */
 	while (1) {
@@ -120,24 +123,6 @@ eal_thread_loop(void *arg __rte_unused)
 		else
 			lcore_config[lcore_id].state = FINISHED;
 	}
-}
-
-/* function to create threads */
-int
-eal_thread_create(pthread_t *thread)
-{
-	HANDLE th;
-
-	th = CreateThread(NULL, 0,
-		(LPTHREAD_START_ROUTINE)(ULONG_PTR)eal_thread_loop,
-						NULL, 0, (LPDWORD)thread);
-	if (!th)
-		return -1;
-
-	SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
-	SetThreadPriority(th, THREAD_PRIORITY_TIME_CRITICAL);
-
-	return 0;
 }
 
 /* get current thread ID */
