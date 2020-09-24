@@ -241,18 +241,7 @@ see :doc:`compiling`.
 
 The application is located in the ``vm_power_manager`` subdirectory.
 
-To build just the ``vm_power_manager`` application using ``make``:
-
-.. code-block:: console
-
-   export RTE_SDK=/path/to/rte_sdk
-   export RTE_TARGET=build
-   cd ${RTE_SDK}/examples/vm_power_manager/
-   make
-
-The resulting binary is ``${RTE_SDK}/build/examples/vm_power_manager``.
-
-To build just the ``vm_power_manager`` application using ``meson``/``ninja``:
+To build the ``vm_power_manager`` application:
 
 .. code-block:: console
 
@@ -274,7 +263,7 @@ than the EAL options:
 
 .. code-block:: console
 
-   ./build/vm_power_mgr [EAL options]
+   ./examples/dpdk-vm_power_mgr [EAL options]
 
 The application requires exactly two cores to run. One core for the CLI
 and the other for the channel endpoint monitor. For example, to run on
@@ -282,7 +271,7 @@ cores 0 and 1 on a system with four memory channels, issue the command:
 
 .. code-block:: console
 
-   ./build/vm_power_mgr -l 0-1 -n 4
+   ./examples/dpdk-vm_power_mgr -l 0-1 -n 4
 
 After successful initialization, the VM Power Manager CLI prompt appears:
 
@@ -457,44 +446,7 @@ For compiling and running the ``l3fwd-power`` sample application, see
 
 The application is in the ``guest_cli`` subdirectory under ``vm_power_manager``.
 
-To build just the ``guest_vm_power_manager`` application using ``make``, issue
-the following commands:
-
-.. code-block:: console
-
-   export RTE_SDK=/path/to/rte_sdk
-   export RTE_TARGET=build
-   cd ${RTE_SDK}/examples/vm_power_manager/guest_cli/
-   make
-
-The resulting binary is ``${RTE_SDK}/build/examples/guest_cli``.
-
-**Note**: This sample application conditionally links in the Jansson JSON
-library. Consequently, if you are using a multilib or cross-compile
-environment, you may need to set the ``PKG_CONFIG_LIBDIR`` environmental
-variable to point to the relevant ``pkgconfig`` folder so that the correct
-library is linked in.
-
-For example, if you are building for a 32-bit target, you could find the
-correct directory using the following find command:
-
-.. code-block:: console
-
-   # find /usr -type d -name pkgconfig
-   /usr/lib/i386-linux-gnu/pkgconfig
-   /usr/lib/x86_64-linux-gnu/pkgconfig
-
-Then use:
-
-.. code-block:: console
-
-   export PKG_CONFIG_LIBDIR=/usr/lib/i386-linux-gnu/pkgconfig
-
-You then use the ``make`` command as normal, which should find the 32-bit
-version of the library, if it installed. If not, the application builds
-without the JSON interface functionality.
-
-To build just the ``vm_power_manager`` application using ``meson``/``ninja``:
+To build the ``dpdk-guest_cli`` application:
 
 .. code-block:: console
 
@@ -506,7 +458,7 @@ To build just the ``vm_power_manager`` application using ``meson``/``ninja``:
    meson configure -Dexamples=vm_power_manager/guest_cli
    ninja
 
-The resulting binary is ``${RTE_SDK}/build/examples/guest_cli``.
+The resulting binary is ``${RTE_SDK}/build/examples/dpdk-guest_cli``.
 
 Running the Guest Application
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -515,14 +467,14 @@ The standard EAL command line parameters are necessary:
 
 .. code-block:: console
 
-   ./build/vm_power_mgr [EAL options] -- [guest options]
+   ./examples/dpdk-guest_cli [EAL options] -- [guest options]
 
 The guest example uses a channel for each lcore enabled. For example, to
 run on cores 0, 1, 2 and 3:
 
 .. code-block:: console
 
-   ./build/guest_vm_power_mgr -l 0-3
+   ./examples/dpdk-guest_cli -l 0-3
 
 .. _sending_policy:
 
@@ -593,7 +545,7 @@ host, use a command like the following:
 
 .. code-block:: console
 
-   ./build/guest_vm_power_mgr -l 0-3 -n 4 -- --vm-name=ubuntu --policy=BRANCH_RATIO --vcpu-list=2-4
+   ./examples/dpdk-guest_cli -l 0-3 -n 4 -- --vm-name=ubuntu --policy=BRANCH_RATIO --vcpu-list=2-4
 
 Once the VM Power Manager Guest CLI appears, issuing the 'send_policy now' command
 will send the policy to the host:
@@ -707,7 +659,7 @@ To start the application and configure the power policy, and send it to the host
 
 .. code-block:: console
 
- ./build/guest_vm_power_mgr -l 0-3 -n 4 -- --vm-name=ubuntu --policy=BRANCH_RATIO --vcpu-list=2-4
+ ./examples/dpdk-guest_cli -l 0-3 -n 4 -- --vm-name=ubuntu --policy=BRANCH_RATIO --vcpu-list=2-4
 
 Once the VM Power Manager Guest CLI appears, issuing the 'send_policy now' command
 will send the policy to the host:
