@@ -8,7 +8,7 @@ project('DPDK', 'C',
 		files('VERSION')).stdout().strip(),
 	license: 'BSD',
 	default_options: ['buildtype=release', 'default_library=static'],
-	meson_version: '>= 0.47.1'
+	meson_version: '>= 0.55.0'
 )
 
 # set up some global vars for compiler, platform, configuration, etc.
@@ -43,6 +43,11 @@ global_inc = include_directories('.', 'config',
 # do configuration and get tool paths
 subdir('buildtools')
 subdir('config')
+
+if is_windows
+	# Windows builds do not define this but it is required so we define it globally here.
+	add_global_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
+endif
 
 # build libs and drivers
 subdir('buildtools/pmdinfogen')

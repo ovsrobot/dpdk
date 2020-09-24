@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sched.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,10 +44,22 @@ extern "C" {
 #define unlink _unlink
 
 /* cpu_set macros implementation */
+typedef cpu_set_t rte_cpuset_t;
 #define RTE_CPU_AND(dst, src1, src2) CPU_AND(dst, src1, src2)
 #define RTE_CPU_OR(dst, src1, src2) CPU_OR(dst, src1, src2)
 #define RTE_CPU_FILL(set) CPU_FILL(set)
-#define RTE_CPU_NOT(dst, src) CPU_NOT(dst, src)
+void RTE_CPU_ANDNOT(cpu_set_t *dst, cpu_set_t *src);
+void RTE_CPU_COPY(cpu_set_t *from, cpu_set_t *to);
+void RTE_CPU_FILL(cpu_set_t *pdestset);
+#define RTE_CPU_NOT(dst, src) do \
+{ \
+	cpu_set_t tmp; \
+	RTE_CPU_FILL(&tmp); \
+	RTE_CPU_ANDNOT(&tmp, src); \
+	RTE_CPU_COPY(&tmp, dst); \
+} while (0)
+
+
 
 /* as in <windows.h> */
 typedef long long ssize_t;

@@ -43,6 +43,11 @@ if is_windows
 		'ring',
 		'mempool', 'mbuf', 'net', 'meter', 'ethdev', 'pci',
 	] # only supported libraries for windows
+
+	# Windows doesn't natively support pthreads so we pull down an external project
+	#   using the meson subproject feature.
+	pthreads4w_proj = subproject('pthreads4w-code')
+	pthreads4w_shared_dep = pthreads4w_proj.get_variable('pthreads4w_shared_dep')
 endif
 
 default_cflags = machine_args
@@ -82,6 +87,12 @@ foreach l:libraries
 	if build
 		shared_deps = ext_deps
 		static_deps = ext_deps
+		if is_windows
+			# Initialisation issues with the external pthreads library when linked with
+			#  DPDK require us to always use the shared build of the pthreads4w library.
+			shared_deps += pthreads4w_shared_dep
+			static_deps += pthreads4w_shared_dep
+		endif
 		foreach d:deps
 			if not is_variable('shared_rte_' + d)
 				error('Missing internal dependency "@0@" for @1@ [@2@]'
@@ -153,8 +164,7 @@ foreach l:libraries
 				output: '@0@_mingw.map'.format(libname))
 
 			if is_ms_linker
-				lk_args = ['-Wl,/def:' + def_file.full_path(),
-					'-Wl,/implib:lib\\' + implib]
+				lk_args = ['-Wl,/def:' + def_file.full_path()]
 			else
 				if is_windows
 					lk_args = ['-Wl,--version-script=' + mingw_map.full_path()]

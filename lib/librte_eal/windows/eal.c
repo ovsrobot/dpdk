@@ -260,7 +260,7 @@ rte_eal_cleanup(void)
 int
 rte_eal_init(int argc, char **argv)
 {
-	int i, fctret, bscan;
+	int i, fctret, bscan, ret;
 	const struct rte_config *config = rte_eal_get_configuration();
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
@@ -360,6 +360,15 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
+	/*
+	 * We require real-time priority threads.  To achieve this on Windows we must
+	 * set the current process class to real-time.  Setting the process class to
+	 * real-time requires elevated privileges (admin user) otherwise the maximum
+	 * achievable thread priority will still only be 15 (out of 31) even with
+	 * real-time thread priority and real-time process class set.
+	 */
+	SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
+
 	RTE_LCORE_FOREACH_SLAVE(i) {
 
 		/*
@@ -376,8 +385,16 @@ rte_eal_init(int argc, char **argv)
 		lcore_config[i].state = WAIT;
 
 		/* create a thread for each lcore */
-		if (eal_thread_create(&lcore_config[i].thread_id) != 0)
+		/* create a thread for each lcore */
+		ret = pthread_create(&lcore_config[i].thread_id, NULL,
+					eal_thread_loop, NULL);
+		if (ret != 0)
 			rte_panic("Cannot create thread\n");
+
+		ret = pthread_setaffinity_np(lcore_config[i].thread_id,
+		sizeof(rte_cpuset_t), &lcore_config[i].cpuset);
+		if (ret != 0)
+			rte_panic("Cannot set affinity\n");
 	}
 
 	/* Initialize services so drivers can register services during probe. */
