@@ -19,7 +19,7 @@
 struct ark_rx_meta {
 	uint64_t timestamp;
 	uint64_t user_data;
-	uint8_t port;
+	uint16_t port;
 	uint8_t dst_queue;
 	uint16_t pkt_len;
 };
