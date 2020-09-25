@@ -348,7 +348,7 @@ static void
 nic_stats_display(uint16_t port_id)
 {
 	struct rte_eth_stats stats;
-	uint8_t i;
+	uint16_t i;
 
 	static const char *nic_stats_border = "########################";
 

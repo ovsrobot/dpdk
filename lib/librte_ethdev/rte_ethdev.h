@@ -2679,7 +2679,7 @@ int rte_eth_xstats_reset(uint16_t port_id);
  *   Zero if successful. Non-zero otherwise.
  */
 int rte_eth_dev_set_tx_queue_stats_mapping(uint16_t port_id,
-		uint16_t tx_queue_id, uint8_t stat_idx);
+		uint16_t tx_queue_id, uint16_t stat_idx);
 
 /**
  *  Set a mapping for the specified receive queue to the specified per-queue
@@ -2700,7 +2700,7 @@ int rte_eth_dev_set_tx_queue_stats_mapping(uint16_t port_id,
  */
 int rte_eth_dev_set_rx_queue_stats_mapping(uint16_t port_id,
 					   uint16_t rx_queue_id,
-					   uint8_t stat_idx);
+					   uint16_t stat_idx);
 
 /**
  * Retrieve the Ethernet address of an Ethernet device.

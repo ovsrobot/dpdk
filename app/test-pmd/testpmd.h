@@ -279,7 +279,7 @@ enum dcb_mode_enable
 struct queue_stats_mappings {
 	portid_t port_id;
 	uint16_t queue_id;
-	uint8_t stats_counter_id;
+	uint16_t stats_counter_id;
 } __rte_cache_aligned;
 
 extern struct queue_stats_mappings tx_queue_stats_mappings_array[];
@@ -792,7 +792,8 @@ void tx_qinq_set(portid_t port_id, uint16_t vlan_id, uint16_t vlan_id_outer);
 void tx_vlan_reset(portid_t port_id);
 void tx_vlan_pvid_set(portid_t port_id, uint16_t vlan_id, int on);
 
-void set_qmap(portid_t port_id, uint8_t is_rx, uint16_t queue_id, uint8_t map_value);
+void set_qmap(portid_t port_id, uint8_t is_rx, uint16_t queue_id,
+	      uint16_t map_value);
 
 void set_xstats_hide_zero(uint8_t on_off);
 

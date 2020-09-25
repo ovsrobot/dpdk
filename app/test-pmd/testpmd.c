@@ -1840,7 +1840,7 @@ fwd_stats_display(void)
 			fwd_cycles += fs->core_cycles;
 	}
 	for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
-		uint8_t j;
+		uint16_t j;
 
 		pt_id = fwd_ports_ids[i];
 		port = &ports[pt_id];

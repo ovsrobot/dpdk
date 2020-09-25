@@ -221,7 +221,7 @@ static int eth_igc_xstats_get_names_by_id(struct rte_eth_dev *dev,
 static int eth_igc_xstats_reset(struct rte_eth_dev *dev);
 static int
 eth_igc_queue_stats_mapping_set(struct rte_eth_dev *dev,
-	uint16_t queue_id, uint8_t stat_idx, uint8_t is_rx);
+	uint16_t queue_id, uint16_t stat_idx, uint8_t is_rx);
 static int
 eth_igc_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id);
 static int
@@ -2075,7 +2075,7 @@ eth_igc_xstats_get_by_id(struct rte_eth_dev *dev, const uint64_t *ids,
 
 static int
 eth_igc_queue_stats_mapping_set(struct rte_eth_dev *dev,
-		uint16_t queue_id, uint8_t stat_idx, uint8_t is_rx)
+		uint16_t queue_id, uint16_t stat_idx, uint8_t is_rx)
 {
 	struct igc_adapter *igc = IGC_DEV_PRIVATE(dev);
 

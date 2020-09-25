@@ -82,7 +82,7 @@ static int virtio_intr_disable(struct rte_eth_dev *dev);
 static int virtio_dev_queue_stats_mapping_set(
 	struct rte_eth_dev *eth_dev,
 	uint16_t queue_id,
-	uint8_t stat_idx,
+	uint16_t stat_idx,
 	uint8_t is_rx);
 
 static void virtio_notify_peers(struct rte_eth_dev *dev);
@@ -2648,7 +2648,7 @@ virtio_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
  */
 static int
 virtio_dev_queue_stats_mapping_set(__rte_unused struct rte_eth_dev *eth_dev,
-__rte_unused uint16_t queue_id, __rte_unused uint8_t stat_idx,
+__rte_unused uint16_t queue_id, __rte_unused uint16_t stat_idx,
 __rte_unused uint8_t is_rx)
 {
 	return 0;
