@@ -123,6 +123,98 @@ uint8_t mlx5_swp_types_table[1 << 10] __rte_cache_aligned;
 uint64_t rte_net_mlx5_dynf_inline_mask;
 #define PKT_TX_DYNF_NOINLINE rte_net_mlx5_dynf_inline_mask
 
+#ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
+static __rte_always_inline
+void copy16B_ts(void *dst, void *src)
+{
+	__m128i var128;
+
+	var128 = _mm_stream_load_si128((__m128i *)src);
+	_mm_storeu_si128((__m128i *)dst, var128);
+}
+
+static __rte_always_inline
+void copy32B_ts(void *dst, void *src)
+{
+	__m256i ymm0;
+
+	ymm0 = _mm256_stream_load_si256((const __m256i *)src);
+	_mm256_storeu_si256((__m256i *)dst, ymm0);
+}
+
+static __rte_always_inline
+void copy64B_ts(void *dst, void *src)
+{
+	__m256i ymm0, ymm1;
+
+	ymm0 = _mm256_stream_load_si256((const __m256i *)src);
+	ymm1 = _mm256_stream_load_si256((const __m256i *)((uint8_t *)src + 32));
+	_mm256_storeu_si256((__m256i *)dst, ymm0);
+	_mm256_storeu_si256((__m256i *)((uint8_t *)dst + 32), ymm1);
+}
+
+static __rte_always_inline
+void copy128B_ts(void *dst, void *src)
+{
+	__m256i ymm0, ymm1, ymm2, ymm3;
+
+	ymm0 = _mm256_stream_load_si256((const __m256i *)src);
+	ymm1 = _mm256_stream_load_si256((const __m256i *)((uint8_t *)src + 32));
+	ymm2 = _mm256_stream_load_si256((const __m256i *)((uint8_t *)src + 64));
+	ymm3 = _mm256_stream_load_si256((const __m256i *)((uint8_t *)src + 96));
+	_mm256_storeu_si256((__m256i *)dst, ymm0);
+	_mm256_storeu_si256((__m256i *)((uint8_t *)dst + 32), ymm1);
+	_mm256_storeu_si256((__m256i *)((uint8_t *)dst + 64), ymm2);
+	_mm256_storeu_si256((__m256i *)((uint8_t *)dst + 96), ymm3);
+}
+
+static __rte_always_inline
+void memcpy_aligned_rx_tstore_16B(void *dst, void *src, int len)
+{
+	while (len >= 128) {
+		copy128B_ts(dst, src);
+		dst = (uint8_t *)dst + 128;
+		src = (uint8_t *)src + 128;
+		len -= 128;
+	}
+	while (len >= 64) {
+		copy64B_ts(dst, src);
+		dst = (uint8_t *)dst + 64;
+		src = (uint8_t *)src + 64;
+		len -= 64;
+	}
+	while (len >= 32) {
+		copy32B_ts(dst, src);
+		dst = (uint8_t *)dst + 32;
+		src = (uint8_t *)src + 32;
+		len -= 32;
+	}
+	if (len >= 16) {
+		copy16B_ts(dst, src);
+		dst = (uint8_t *)dst + 16;
+		src = (uint8_t *)src + 16;
+		len -= 16;
+	}
+	if (len >= 8) {
+		*(uint64_t *)dst = *(const uint64_t *)src;
+		dst = (uint8_t *)dst + 8;
+		src = (uint8_t *)src + 8;
+		len -= 8;
+	}
+	if (len >= 4) {
+		*(uint32_t *)dst = *(const uint32_t *)src;
+		dst = (uint8_t *)dst + 4;
+		src = (uint8_t *)src + 4;
+		len -= 4;
+	}
+	if (len != 0) {
+		dst = (uint8_t *)dst - (4 - len);
+		src = (uint8_t *)src - (4 - len);
+		*(uint32_t *)dst = *(const uint32_t *)src;
+	}
+}
+#endif
+
 /**
  * Build a table to translate Rx completion flags to packet type.
  *
@@ -1706,6 +1798,9 @@ mlx5_rx_burst_mprq(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 		int32_t hdrm_overlap;
 		volatile struct mlx5_mini_cqe8 *mcqe = NULL;
 		uint32_t rss_hash_res = 0;
+#ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
+		uintptr_t data_addr;
+#endif
 
 		if (consumed_strd == strd_n) {
 			/* Replace WQE only if the buffer is still in use. */
@@ -1774,8 +1869,18 @@ mlx5_rx_burst_mprq(void *dpdk_rxq, struct rte_mbuf **pkts, uint16_t pkts_n)
 		    rxq->mprq_repl == NULL ||
 		    (hdrm_overlap > 0 && !rxq->strd_scatter_en)) {
 			if (likely(rte_pktmbuf_tailroom(pkt) >= len)) {
-				rte_memcpy(rte_pktmbuf_mtod(pkt, void *),
-					   addr, len);
+#ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
+				data_addr = (uintptr_t)rte_pktmbuf_mtod(pkt, void *);
+				if (!(rxq->mprq_tstore_memcpy))
+					rte_memcpy((void *)data_addr, addr, len);
+				else if ((rxq->mprq_tstore_memcpy) &&
+					   !((data_addr | (uintptr_t)addr) & ALIGNMENT_MASK))
+					memcpy_aligned_rx_tstore_16B((void *)data_addr,
+							addr, len);
+				else
+#endif
+					rte_memcpy(rte_pktmbuf_mtod(pkt, void *),
+							addr, len);
 				DATA_LEN(pkt) = len;
 			} else if (rxq->strd_scatter_en) {
 				struct rte_mbuf *prev = pkt;

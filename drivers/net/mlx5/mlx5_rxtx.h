@@ -153,6 +153,9 @@ struct mlx5_rxq_data {
 	uint32_t tunnel; /* Tunnel information. */
 	uint64_t flow_meta_mask;
 	int32_t flow_meta_offset;
+#ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
+	unsigned int mprq_tstore_memcpy:1;
+#endif
 } __rte_cache_aligned;
 
 enum mlx5_rxq_type {
