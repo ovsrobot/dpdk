@@ -78,6 +78,12 @@ New Features
     ``--portmask=N``
     where N represents the hexadecimal bitmask of ports used.
 
+* **Updated Intel iavf driver.**
+
+  Updated iavf PMD with new features and improvements, including:
+
+  * Added support for flexible descriptor metadata extraction.
+
 
 Removed Items
 -------------

@@ -35,3 +35,5 @@ if arch_subdir == 'x86'
 		objs += iavf_avx2_lib.extract_objects('iavf_rxtx_vec_avx2.c')
 	endif
 endif
+
+install_headers('rte_pmd_iavf.h')
