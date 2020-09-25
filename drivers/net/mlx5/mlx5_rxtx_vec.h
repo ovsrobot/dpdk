@@ -86,6 +86,10 @@ mlx5_rx_replenish_bulk_mbuf(struct mlx5_rxq_data *rxq, uint16_t n)
 	volatile struct mlx5_wqe_data_seg *wq =
 		&((volatile struct mlx5_wqe_data_seg *)rxq->wqes)[elts_idx];
 	unsigned int i;
+#ifdef RTE_LIBRTE_MLX5_NT_STORE
+	register uint64_t buf_addr2;
+	register uint32_t lkey_t;
+#endif
 
 	MLX5_ASSERT(n >= MLX5_VPMD_RXQ_RPLNSH_THRESH(q_n));
 	MLX5_ASSERT(n <= (uint16_t)(q_n - (rxq->rq_ci - rxq->rq_pi)));
@@ -107,11 +111,26 @@ mlx5_rx_replenish_bulk_mbuf(struct mlx5_rxq_data *rxq, uint16_t n)
 		 * impact the performance.
 		 */
 		buf_addr = elts[i]->buf_addr;
-		wq[i].addr = rte_cpu_to_be_64((uintptr_t)buf_addr +
-					      RTE_PKTMBUF_HEADROOM);
-		/* If there's only one MR, no need to replace LKey in WQE. */
-		if (unlikely(mlx5_mr_btree_len(&rxq->mr_ctrl.cache_bh) > 1))
-			wq[i].lkey = mlx5_rx_mb2mr(rxq, elts[i]);
+#ifdef RTE_LIBRTE_MLX5_NT_STORE
+		if (rxq->vec_rx_wqe_field_ntstore) {
+			buf_addr2 = (uint64_t)rte_cpu_to_be_64((uintptr_t)buf_addr +
+							       RTE_PKTMBUF_HEADROOM);
+			_mm_stream_si64(((void *)(uintptr_t)&wq[i].addr), buf_addr2);
+			/* If there's only one MR, no need to replace LKey in WQE. */
+			if (unlikely(mlx5_mr_btree_len(&rxq->mr_ctrl.cache_bh) > 1)) {
+				lkey_t = (uint32_t)mlx5_rx_mb2mr(rxq, elts[i]);
+				_mm_stream_si32(((void *)(uintptr_t)&wq[i].lkey), lkey_t);
+			}
+		} else {
+#endif
+			wq[i].addr = rte_cpu_to_be_64((uintptr_t)buf_addr +
+					RTE_PKTMBUF_HEADROOM);
+			/* If there's only one MR, no need to replace LKey in WQE. */
+			if (unlikely(mlx5_mr_btree_len(&rxq->mr_ctrl.cache_bh) > 1))
+				wq[i].lkey = mlx5_rx_mb2mr(rxq, elts[i]);
+#ifdef RTE_LIBRTE_MLX5_NT_STORE
+		}
+#endif
 	}
 	rxq->rq_ci += n;
 	/* Prevent overflowing into consumed mbufs. */

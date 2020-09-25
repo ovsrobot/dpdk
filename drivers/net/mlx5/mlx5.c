@@ -164,6 +164,13 @@
 /* mprq_tstore_memcpy */
 #define MLX5_MPRQ_TSTORE_MEMCPY "mprq_tstore_memcpy"
 #endif
+#ifdef RTE_LIBRTE_MLX5_NT_STORE
+/* tx_wqe_field_ntstore */
+#define MLX5_TX_WQE_FIELD_NTSTORE "tx_wqe_field_ntstore"
+
+/* vec_rx_wqe_field_ntstore */
+#define MLX5_VEC_RX_WQE_FIELD_NTSTORE "vec_rx_wqe_field_ntstore"
+#endif
 
 /*
  * Device parameter to configure the total data buffer size for a single
@@ -1631,6 +1638,12 @@ mlx5_args_check(const char *key, const char *val, void *opaque)
 	} else if (strcmp(MLX5_MPRQ_TSTORE_MEMCPY, key) == 0) {
 		config->mprq_tstore_memcpy = tmp;
 #endif
+#ifdef RTE_LIBRTE_MLX5_NT_STORE
+	} else if (strcmp(MLX5_TX_WQE_FIELD_NTSTORE, key) == 0) {
+		config->tx_wqe_field_ntstore = tmp;
+	} else if (strcmp(MLX5_VEC_RX_WQE_FIELD_NTSTORE, key) == 0) {
+		config->vec_rx_wqe_field_ntstore = tmp;
+#endif
 	} else {
 		DRV_LOG(WARNING, "%s: unknown parameter", key);
 		rte_errno = EINVAL;
@@ -1693,6 +1706,10 @@ mlx5_args(struct mlx5_dev_config *config, struct rte_devargs *devargs)
 		MLX5_DECAP_EN,
 #ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
 		MLX5_MPRQ_TSTORE_MEMCPY,
+#endif
+#ifdef RTE_LIBRTE_MLX5_NT_STORE
+		MLX5_TX_WQE_FIELD_NTSTORE,
+		MLX5_VEC_RX_WQE_FIELD_NTSTORE,
 #endif
 		NULL,
 	};

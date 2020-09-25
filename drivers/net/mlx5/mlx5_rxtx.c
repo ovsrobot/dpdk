@@ -2410,6 +2410,9 @@ mlx5_tx_request_completion(struct mlx5_txq_data *__rte_restrict txq,
 {
 	uint16_t head = txq->elts_head;
 	unsigned int part;
+#ifdef RTE_LIBRTE_MLX5_NT_STORE
+	register uint32_t flags;
+#endif
 
 	part = MLX5_TXOFF_CONFIG(INLINE) ?
 	       0 : loc->pkts_sent - loc->pkts_copy;
@@ -2423,9 +2426,20 @@ mlx5_tx_request_completion(struct mlx5_txq_data *__rte_restrict txq,
 		txq->elts_comp = head;
 		if (MLX5_TXOFF_CONFIG(INLINE))
 			txq->wqe_comp = txq->wqe_ci;
-		/* Request unconditional completion on last WQE. */
-		last->cseg.flags = RTE_BE32(MLX5_COMP_ALWAYS <<
-					    MLX5_COMP_MODE_OFFSET);
+#ifdef RTE_LIBRTE_MLX5_NT_STORE
+		if (txq->tx_wqe_field_ntstore) {
+			flags = RTE_BE32(MLX5_COMP_ALWAYS <<
+					MLX5_COMP_MODE_OFFSET);
+			_mm_stream_si32(((void *)(uintptr_t)&last->cseg.flags),
+					flags);
+		} else {
+#endif
+			/* Request unconditional completion on last WQE. */
+			last->cseg.flags = RTE_BE32(MLX5_COMP_ALWAYS <<
+					MLX5_COMP_MODE_OFFSET);
+#ifdef RTE_LIBRTE_MLX5_NT_STORE
+		}
+#endif
 		/* Save elts_head in dedicated free on completion queue. */
 #ifdef RTE_LIBRTE_MLX5_DEBUG
 		txq->fcqs[txq->cq_pi++ & txq->cqe_m] = head |
