@@ -1586,6 +1586,10 @@ static void qede_dev_close(struct rte_eth_dev *eth_dev)
 
 	if (ECORE_IS_CMT(edev))
 		rte_eal_alarm_cancel(qede_poll_sp_sb_cb, (void *)eth_dev);
+
+	eth_dev->dev_ops = NULL;
+	eth_dev->rx_pkt_burst = NULL;
+	eth_dev->tx_pkt_burst = NULL;
 }
 
 static int
@@ -2701,6 +2705,11 @@ static int qede_common_dev_init(struct rte_eth_dev *eth_dev, bool is_vf)
 		adapter->ipgre.enable = false;
 	}
 
+	/* Pass the information to the rte_eth_dev_close() that it should also
+	 * release the private port resources.
+	 */
+	eth_dev->data->dev_flags |= RTE_ETH_DEV_CLOSE_REMOVE;
+
 	DP_INFO(edev, "MAC address : %02x:%02x:%02x:%02x:%02x:%02x\n",
 		adapter->primary_mac.addr_bytes[0],
 		adapter->primary_mac.addr_bytes[1],
@@ -2744,10 +2753,6 @@ static int qede_dev_common_uninit(struct rte_eth_dev *eth_dev)
 
 	/* safe to close dev here */
 	qede_dev_close(eth_dev);
-
-	eth_dev->dev_ops = NULL;
-	eth_dev->rx_pkt_burst = NULL;
-	eth_dev->tx_pkt_burst = NULL;
 
 	return 0;
 }
