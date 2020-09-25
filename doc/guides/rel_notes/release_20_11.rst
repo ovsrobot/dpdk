@@ -83,6 +83,11 @@ New Features
   The ioat rawdev driver has been updated and enhanced. Changes include:
 
   * Added a per-device configuration flag to disable management of user-provided completion handles
+  * Renamed the ``rte_ioat_do_copies()`` API to ``rte_ioat_perform_ops()``,
+    and renamed the ``rte_ioat_completed_copies()`` API to ``rte_ioat_completed_ops()``
+    to better reflect the APIs' purposes, and remove the implication that
+    they are limited to copy operations only.
+    [Note: The old API is still provided but marked as deprecated in the code]
 
 
 Removed Items
@@ -177,6 +182,10 @@ API Changes
   from ``void`` to ``int`` allowing the return of error codes from drivers.
 
 * bpf: ``RTE_BPF_XTYPE_NUM`` has been dropped from ``rte_bpf_xtype``.
+
+* raw/ioat: As noted above, the ``rte_ioat_do_copies()`` and
+  ``rte_ioat_completed_copies()`` functions have been renamed to
+  ``rte_ioat_perform_ops()`` and ``rte_ioat_completed_ops()`` respectively.
 
 
 ABI Changes

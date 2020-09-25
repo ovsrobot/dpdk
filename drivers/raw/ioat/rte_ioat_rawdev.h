@@ -74,19 +74,19 @@ rte_ioat_enqueue_copy(int dev_id, phys_addr_t src, phys_addr_t dst,
 		int fence);
 
 /**
- * Trigger hardware to begin performing enqueued copy operations
+ * Trigger hardware to begin performing enqueued operations
  *
  * This API is used to write the "doorbell" to the hardware to trigger it
- * to begin the copy operations previously enqueued by rte_ioat_enqueue_copy()
+ * to begin the operations previously enqueued by rte_ioat_enqueue_copy()
  *
  * @param dev_id
  *   The rawdev device id of the ioat instance
  */
 static inline void
-rte_ioat_do_copies(int dev_id);
+rte_ioat_perform_ops(int dev_id);
 
 /**
- * Returns details of copy operations that have been completed
+ * Returns details of operations that have been completed
  *
  * If the hdls_disable option was not set when the device was configured,
  * the function will return to the caller the user-provided "handles" for
@@ -104,11 +104,11 @@ rte_ioat_do_copies(int dev_id);
  *   NOTE: If hdls_disable configuration option for the device is set, this
  *   parameter is ignored.
  * @param src_hdls
- *   Array to hold the source handle parameters of the completed copies.
+ *   Array to hold the source handle parameters of the completed ops.
  *   NOTE: If hdls_disable configuration option for the device is set, this
  *   parameter is ignored.
  * @param dst_hdls
- *   Array to hold the destination handle parameters of the completed copies.
+ *   Array to hold the destination handle parameters of the completed ops.
  *   NOTE: If hdls_disable configuration option for the device is set, this
  *   parameter is ignored.
  * @return
@@ -117,7 +117,7 @@ rte_ioat_do_copies(int dev_id);
  *   to the src_hdls and dst_hdls array parameters.
  */
 static inline int
-rte_ioat_completed_copies(int dev_id, uint8_t max_copies,
+rte_ioat_completed_ops(int dev_id, uint8_t max_copies,
 		uintptr_t *src_hdls, uintptr_t *dst_hdls);
 
 /* include the implementation details from a separate file */
