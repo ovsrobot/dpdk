@@ -590,6 +590,10 @@ quit_workers(struct worker_params *wp, struct rte_mempool *p)
 	rte_distributor_process(d, NULL, 0);
 	rte_distributor_flush(d);
 	rte_eal_mp_wait_lcore();
+
+	while (rte_distributor_returned_pkts(d, bufs, RTE_MAX_LCORE))
+		;
+
 	quit = 0;
 	worker_idx = 0;
 	zero_idx = 0;
