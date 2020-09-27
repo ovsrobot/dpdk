@@ -514,6 +514,8 @@ struct mlx5_flow_sub_actions_list {
 	void *dr_queue_action;
 	void *dr_tag_action;
 	void *dr_cnt_action;
+	void *dr_port_id_action;
+	void *dr_encap_action;
 };
 
 /* Sample sub-actions resource list. */
@@ -521,6 +523,8 @@ struct mlx5_flow_sub_actions_idx {
 	uint32_t rix_hrxq; /**< Hash Rx queue object index. */
 	uint32_t rix_tag; /**< Index to the tag action. */
 	uint32_t cnt;
+	uint32_t rix_port_id_action; /**< Index to port ID action resource. */
+	uint32_t rix_encap_decap; /**< Index to encap/decap resource. */
 };
 
 /* Sample action resource structure. */
@@ -537,6 +541,21 @@ struct mlx5_flow_dv_sample_resource {
 	struct mlx5_flow_sub_actions_idx sample_idx;
 	/**< Action index resources. */
 	struct mlx5_flow_sub_actions_list sample_act;
+	/**< Action resources. */
+};
+
+#define MLX5_MAX_DEST_NUM	2
+
+/* Destination array action resource structure. */
+struct mlx5_flow_dv_dest_array_resource {
+	ILIST_ENTRY(uint32_t)next; /**< Pointer to next element. */
+	rte_atomic32_t refcnt; /**< Reference counter. */
+	uint8_t ft_type; /** Flow Table Type */
+	uint8_t num_of_dest; /**< Number of destination actions. */
+	void *action; /**< Pointer to the rdma core action. */
+	struct mlx5_flow_sub_actions_idx sample_idx[MLX5_MAX_DEST_NUM];
+	/**< Action index resources. */
+	struct mlx5_flow_sub_actions_list sample_act[MLX5_MAX_DEST_NUM];
 	/**< Action resources. */
 };
 
@@ -574,6 +593,8 @@ struct mlx5_flow_handle_dv {
 	/**< Index to the tag action. */
 	uint32_t rix_sample;
 	/**< Index to sample action resource in cache. */
+	uint32_t rix_dest_array;
+	/**< Index to destination array resource in cache. */
 } __rte_packed;
 
 /** Device flow handle structure: used both for creating & destroying. */
@@ -641,6 +662,8 @@ struct mlx5_flow_dv_workspace {
 	/**< Holds the value that the packet is compared to. */
 	struct mlx5_flow_dv_sample_resource *sample_res;
 	/**< Pointer to the sample action resource. */
+	struct mlx5_flow_dv_dest_array_resource *dest_array_res;
+	/**< Pointer to the destination array resource. */
 };
 
 /*
