@@ -78,6 +78,12 @@ New Features
     ``--portmask=N``
     where N represents the hexadecimal bitmask of ports used.
 
+* **Added flow-based traffic sampling support.**
+
+  Added new action: ``RTE_FLOW_ACTION_TYPE_SAMPLE`` to duplicate the matching
+  packets with specified ratio, and apply with own set of actions with a fate
+  action. When the ratio is set to 1 then the packets will be 100% mirrored.
+
 
 Removed Items
 -------------
