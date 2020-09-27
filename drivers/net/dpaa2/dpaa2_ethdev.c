@@ -1246,6 +1246,9 @@ dpaa2_dev_close(struct rte_eth_dev *dev)
 
 	PMD_INIT_FUNC_TRACE();
 
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return 0;
+
 	dpaa2_flow_clean(dev);
 
 	/* Clean the device first */

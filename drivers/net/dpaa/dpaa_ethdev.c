@@ -379,6 +379,9 @@ static int dpaa_eth_dev_close(struct rte_eth_dev *dev)
 
 	PMD_INIT_FUNC_TRACE();
 
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return 0;
+
 	dpaa_dev = container_of(rdev, struct rte_dpaa_device, device);
 	intr_handle = &dpaa_dev->intr_handle;
 	__fif = container_of(fif, struct __fman_if, __if);

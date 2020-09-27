@@ -407,6 +407,9 @@ pfe_eth_close(struct rte_eth_dev *dev)
 	if (!g_pfe)
 		return -1;
 
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return 0;
+
 	pfe_eth_exit(dev, g_pfe);
 
 	if (g_pfe->nb_devs == 0) {
