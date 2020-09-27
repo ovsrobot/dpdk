@@ -1705,19 +1705,22 @@ rte_eth_dev_set_link_down(uint16_t port_id)
 	return eth_err(port_id, (*dev->dev_ops->dev_set_link_down)(dev));
 }
 
-void
+int
 rte_eth_dev_close(uint16_t port_id)
 {
 	struct rte_eth_dev *dev;
+	int ret;
 
-	RTE_ETH_VALID_PORTID_OR_RET(port_id);
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -EINVAL);
 	dev = &rte_eth_devices[port_id];
 
-	RTE_FUNC_PTR_OR_RET(*dev->dev_ops->dev_close);
-	(*dev->dev_ops->dev_close)(dev);
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->dev_close, -ENOTSUP);
+	ret = (*dev->dev_ops->dev_close)(dev);
 
 	rte_ethdev_trace_close(port_id);
-	rte_eth_dev_release_port(dev);
+	ret = rte_eth_dev_release_port(dev);
+
+	return ret;
 }
 
 int

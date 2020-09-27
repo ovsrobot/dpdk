@@ -813,9 +813,7 @@ virtio_user_pmd_remove(struct rte_vdev_device *vdev)
 		return rte_eth_dev_release_port(eth_dev);
 
 	/* make sure the device is stopped, queues freed */
-	rte_eth_dev_close(eth_dev->data->port_id);
-
-	return 0;
+	return rte_eth_dev_close(eth_dev->data->port_id);
 }
 
 static struct rte_vdev_driver virtio_user_driver = {
