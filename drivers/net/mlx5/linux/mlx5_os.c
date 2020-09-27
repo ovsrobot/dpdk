@@ -1337,6 +1337,8 @@ err_secondary:
 			goto error;
 		}
 	}
+	if (priv->config.dv_flow_en)
+		eth_dev->data->dev_flags = RTE_ETH_DEV_FLOW_OPS_THREAD_SAFE;
 	return eth_dev;
 error:
 	if (priv) {
