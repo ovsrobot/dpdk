@@ -1357,7 +1357,7 @@ static void bnxt_dev_stop_op(struct rte_eth_dev *eth_dev)
 		bp->flow_stat->flow_count = 0;
 }
 
-static void bnxt_dev_close_op(struct rte_eth_dev *eth_dev)
+static int bnxt_dev_close_op(struct rte_eth_dev *eth_dev)
 {
 	struct bnxt *bp = eth_dev->data->dev_private;
 
@@ -1392,6 +1392,8 @@ static void bnxt_dev_close_op(struct rte_eth_dev *eth_dev)
 
 	rte_free(bp->grp_info);
 	bp->grp_info = NULL;
+
+	return 0;
 }
 
 static void bnxt_mac_addr_remove_op(struct rte_eth_dev *eth_dev,

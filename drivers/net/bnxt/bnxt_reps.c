@@ -457,10 +457,11 @@ void bnxt_vf_rep_dev_stop_op(struct rte_eth_dev *eth_dev)
 	bnxt_vf_rep_free_rx_mbufs(vfr_bp);
 }
 
-void bnxt_vf_rep_dev_close_op(struct rte_eth_dev *eth_dev)
+int bnxt_vf_rep_dev_close_op(struct rte_eth_dev *eth_dev)
 {
 	BNXT_TF_DBG(DEBUG, "BNXT Port:%d VFR close\n", eth_dev->data->port_id);
 	bnxt_vf_representor_uninit(eth_dev);
+	return 0;
 }
 
 int bnxt_vf_rep_dev_info_get_op(struct rte_eth_dev *eth_dev,
