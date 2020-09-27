@@ -133,7 +133,7 @@ F: lib/*/*.map
 
 Driver information
 M: Neil Horman <nhorman@tuxdriver.com>
-F: buildtools/pmdinfogen/
+F: buildtools/pmdinfogen.py
 F: usertools/dpdk-pmdinfo.py
 F: doc/guides/tools/pmdinfo.rst
 
