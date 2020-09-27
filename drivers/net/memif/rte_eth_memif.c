@@ -1356,7 +1356,7 @@ memif_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 	struct pmd_internals *pmd = dev->data->dev_private;
 	struct memif_queue *mq;
 	int i;
-	uint8_t tmp, nq;
+	uint16_t tmp, nq;
 
 	stats->ipackets = 0;
 	stats->ibytes = 0;

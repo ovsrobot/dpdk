@@ -160,7 +160,7 @@ nic_stats_display(portid_t port_id)
 	uint64_t mpps_rx, mpps_tx, mbps_rx, mbps_tx;
 	struct rte_eth_stats stats;
 	struct rte_port *port = &ports[port_id];
-	uint8_t i;
+	uint16_t i;
 
 	static const char *nic_stats_border = "########################";
 
@@ -3625,7 +3625,7 @@ tx_vlan_pvid_set(portid_t port_id, uint16_t vlan_id, int on)
 }
 
 void
-set_qmap(portid_t port_id, uint8_t is_rx, uint16_t queue_id, uint8_t map_value)
+set_qmap(portid_t port_id, uint8_t is_rx, uint16_t queue_id, uint16_t map_value)
 {
 	uint16_t i;
 	uint8_t existing_mapping_found = 0;

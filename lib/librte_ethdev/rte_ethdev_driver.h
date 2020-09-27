@@ -222,7 +222,7 @@ typedef int (*eth_xstats_get_names_by_id_t)(struct rte_eth_dev *dev,
 
 typedef int (*eth_queue_stats_mapping_set_t)(struct rte_eth_dev *dev,
 					     uint16_t queue_id,
-					     uint8_t stat_idx,
+					     uint16_t stat_idx,
 					     uint8_t is_rx);
 /**< @internal Set a queue statistics mapping for a tx/rx queue of an Ethernet device. */
 

@@ -145,7 +145,7 @@ otx2_nix_dev_stats_reset(struct rte_eth_dev *eth_dev)
 
 int
 otx2_nix_queue_stats_mapping(struct rte_eth_dev *eth_dev, uint16_t queue_id,
-			     uint8_t stat_idx, uint8_t is_rx)
+			     uint16_t stat_idx, uint8_t is_rx)
 {
 	struct otx2_eth_dev *dev = otx2_eth_pmd_priv(eth_dev);
 

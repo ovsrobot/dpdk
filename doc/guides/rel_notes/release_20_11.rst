@@ -172,6 +172,11 @@ API Changes
 
 * bpf: ``RTE_BPF_XTYPE_NUM`` has been dropped from ``rte_bpf_xtype``.
 
+* ethdev: Data type of input parameter ``stat_idx`` in ``set_queue_stats_mapping``,
+  ``rte_eth_dev_set_tx_queue_stats_mapping`` and ``rte_eth_dev_set_rx_queue_stats_mapping``
+  function will be changed from ``uint8_t`` to ``uint16_t``, which supports for
+  using 256 or more than 256 queues and displaying all statistics of rx/tx queue.
+
 
 ABI Changes
 -----------

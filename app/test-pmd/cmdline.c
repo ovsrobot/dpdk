@@ -8267,7 +8267,7 @@ struct cmd_set_qmap_result {
 	cmdline_fixed_string_t what;
 	portid_t port_id;
 	uint16_t queue_id;
-	uint8_t map_value;
+	uint16_t map_value;
 };
 
 static void
@@ -8298,7 +8298,7 @@ cmdline_parse_token_num_t cmd_setqmap_queueid =
 			      queue_id, UINT16);
 cmdline_parse_token_num_t cmd_setqmap_mapvalue =
 	TOKEN_NUM_INITIALIZER(struct cmd_set_qmap_result,
-			      map_value, UINT8);
+			      map_value, UINT16);
 
 cmdline_parse_inst_t cmd_set_qmap = {
 	.f = cmd_set_qmap_parsed,

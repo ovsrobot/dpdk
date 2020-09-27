@@ -178,7 +178,7 @@ static int ixgbe_dev_xstats_get_names_by_id(
 	unsigned int limit);
 static int ixgbe_dev_queue_stats_mapping_set(struct rte_eth_dev *eth_dev,
 					     uint16_t queue_id,
-					     uint8_t stat_idx,
+					     uint16_t stat_idx,
 					     uint8_t is_rx);
 static int ixgbe_fw_version_get(struct rte_eth_dev *dev, char *fw_version,
 				 size_t fw_size);
@@ -890,7 +890,7 @@ ixgbe_reset_qstat_mappings(struct ixgbe_hw *hw)
 static int
 ixgbe_dev_queue_stats_mapping_set(struct rte_eth_dev *eth_dev,
 				  uint16_t queue_id,
-				  uint8_t stat_idx,
+				  uint16_t stat_idx,
 				  uint8_t is_rx)
 {
 #define QSM_REG_NB_BITS_PER_QMAP_FIELD 8
