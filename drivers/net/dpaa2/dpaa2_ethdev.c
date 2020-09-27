@@ -2756,10 +2756,6 @@ dpaa2_dev_uninit(struct rte_eth_dev *eth_dev)
 	if (priv->extract.qos_extract_param)
 		rte_free((void *)(size_t)priv->extract.qos_extract_param);
 
-	eth_dev->dev_ops = NULL;
-	eth_dev->rx_pkt_burst = NULL;
-	eth_dev->tx_pkt_burst = NULL;
-
 	DPAA2_PMD_INFO("%s: netdev deleted", eth_dev->data->name);
 	return 0;
 }
