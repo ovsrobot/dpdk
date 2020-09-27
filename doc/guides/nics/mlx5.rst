@@ -1458,6 +1458,11 @@ Supported hardware offloads
    |                       | |  rdma-core 26 | | rdma-core 26  |
    |                       | |  ConnectX-5   | | ConnectX-5    |
    +-----------------------+-----------------+-----------------+
+   | Sampling              | |  DPDK 20.11   | | DPDK 20.11    |
+   |                       | |  OFED 5.2     | | OFED 5.2      |
+   |                       | |  rdma-core 32 | | rdma-core 32  |
+   |                       | |  ConnectX-5   | | ConnectX-5    |
+   +-----------------------+-----------------+-----------------+
 
 Notes for metadata
 ------------------
