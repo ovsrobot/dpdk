@@ -1417,6 +1417,7 @@ iavf_dev_init(struct rte_eth_dev *eth_dev)
 	/* assign ops func pointer */
 	eth_dev->dev_ops = &iavf_eth_dev_ops;
 	eth_dev->rx_queue_count = iavf_dev_rxq_count;
+	eth_dev->rx_descriptor_done = iavf_dev_rx_desc_done;
 	eth_dev->rx_descriptor_status = iavf_dev_rx_desc_status;
 	eth_dev->tx_descriptor_status = iavf_dev_tx_desc_status;
 	eth_dev->rx_pkt_burst = &iavf_recv_pkts;
