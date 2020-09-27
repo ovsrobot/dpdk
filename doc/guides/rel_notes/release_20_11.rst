@@ -177,6 +177,11 @@ API Changes
   function will be changed from ``uint8_t`` to ``uint16_t``, which supports for
   using 256 or more than 256 queues and displaying all statistics of rx/tx queue.
 
+* ethdev: Modified field type of base and nb_queue in struct
+  ``rte_eth_dcb_tc_queue_mapping`` from ``uint8_t`` to ``uint16_t``.
+  As the data of uint8_t will be truncated when queue number under
+  a TC is greater than 256.
+
 
 ABI Changes
 -----------
