@@ -162,7 +162,7 @@ iavf_init_rss(struct iavf_adapter *adapter)
 
 	rss_conf = &adapter->eth_dev->data->dev_conf.rx_adv_conf.rss_conf;
 	nb_q = RTE_MIN(adapter->eth_dev->data->nb_rx_queues,
-		       IAVF_MAX_NUM_QUEUES);
+		       vf->max_rss_qregion);
 
 	if (!(vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_RSS_PF)) {
 		PMD_DRV_LOG(DEBUG, "RSS is not supported");
@@ -215,6 +215,9 @@ iavf_dev_configure(struct rte_eth_dev *dev)
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct iavf_info *vf =  IAVF_DEV_PRIVATE_TO_VF(ad);
 	struct rte_eth_conf *dev_conf = &dev->data->dev_conf;
+	uint16_t num_queue_pairs = RTE_MAX(dev->data->nb_rx_queues,
+		dev->data->nb_tx_queues);
+	int ret = 0;
 
 	ad->rx_bulk_alloc_allowed = true;
 	/* Initialize to TRUE. If any of Rx queues doesn't meet the
@@ -225,6 +228,45 @@ iavf_dev_configure(struct rte_eth_dev *dev)
 
 	if (dev->data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG)
 		dev->data->dev_conf.rxmode.offloads |= DEV_RX_OFFLOAD_RSS_HASH;
+
+	/* Large VF setting */
+	if (num_queue_pairs > IAVF_MAX_NUM_QUEUES_DFLT) {
+		if (!(vf->vf_res->vf_cap_flags &
+				VIRTCHNL_VF_LARGE_NUM_QPAIRS)) {
+			PMD_DRV_LOG(ERR, "large VF is not supported");
+			return -1;
+		}
+
+		if (num_queue_pairs > IAVF_MAX_NUM_QUEUES_LV) {
+			PMD_DRV_LOG(ERR, "queue pairs number cannot be larger "
+				"than %u", IAVF_MAX_NUM_QUEUES_LV);
+			return -1;
+		}
+
+		ret = iavf_request_queues(dev, num_queue_pairs);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR, "request queues from PF failed");
+			return ret;
+		}
+		PMD_DRV_LOG(INFO, "change queue pairs from %u to %u",
+				vf->vsi_res->num_queue_pairs, num_queue_pairs);
+
+		ret = iavf_dev_reset(dev);
+		if (ret != 0)
+			return ret;
+
+		vf->lv_enabled = true;
+	}
+
+	/* Set max RSS queue region */
+	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_LARGE_NUM_QPAIRS) {
+		if (iavf_get_max_rss_queue_region(ad) != 0) {
+			PMD_INIT_LOG(ERR, "get max rss queue region failed");
+			return -1;
+		}
+	} else {
+		vf->max_rss_qregion = IAVF_MAX_NUM_QUEUES_DFLT;
+	}
 
 	/* Vlan stripping setting */
 	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN) {
@@ -240,6 +282,7 @@ iavf_dev_configure(struct rte_eth_dev *dev)
 			return -1;
 		}
 	}
+
 	return 0;
 }
 
@@ -322,6 +365,7 @@ static int iavf_config_rx_queues_irqs(struct rte_eth_dev *dev,
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
 	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(adapter);
+	struct iavf_qv_map *qv_map;
 	uint16_t interval, i;
 	int vec;
 
@@ -340,6 +384,14 @@ static int iavf_config_rx_queues_irqs(struct rte_eth_dev *dev,
 				    dev->data->nb_rx_queues);
 			return -1;
 		}
+	}
+
+	qv_map = rte_zmalloc("qv_map",
+		dev->data->nb_rx_queues * sizeof(struct iavf_qv_map), 0);
+	if (!qv_map) {
+		PMD_DRV_LOG(ERR, "Failed to allocate %d queue-vector map",
+				dev->data->nb_rx_queues);
+		return -1;
 	}
 
 	if (!dev->data->dev_conf.intr_conf.rxq ||
@@ -372,16 +424,21 @@ static int iavf_config_rx_queues_irqs(struct rte_eth_dev *dev,
 		}
 		IAVF_WRITE_FLUSH(hw);
 		/* map all queues to the same interrupt */
-		for (i = 0; i < dev->data->nb_rx_queues; i++)
-			vf->rxq_map[vf->msix_base] |= 1 << i;
+		for (i = 0; i < dev->data->nb_rx_queues; i++) {
+			qv_map[i].queue_id = i;
+			qv_map[i].vector_id = vf->msix_base;
+		}
+		vf->qv_map = qv_map;
 	} else {
 		if (!rte_intr_allow_others(intr_handle)) {
 			vf->nb_msix = 1;
 			vf->msix_base = IAVF_MISC_VEC_ID;
 			for (i = 0; i < dev->data->nb_rx_queues; i++) {
-				vf->rxq_map[vf->msix_base] |= 1 << i;
+				qv_map[i].queue_id = i;
+				qv_map[i].vector_id = vf->msix_base;
 				intr_handle->intr_vec[i] = IAVF_MISC_VEC_ID;
 			}
+			vf->qv_map = qv_map;
 			PMD_DRV_LOG(DEBUG,
 				    "vector %u are mapping to all Rx queues",
 				    vf->msix_base);
@@ -394,21 +451,32 @@ static int iavf_config_rx_queues_irqs(struct rte_eth_dev *dev,
 			vf->msix_base = IAVF_RX_VEC_START;
 			vec = IAVF_RX_VEC_START;
 			for (i = 0; i < dev->data->nb_rx_queues; i++) {
-				vf->rxq_map[vec] |= 1 << i;
+				qv_map[i].queue_id = i;
+				qv_map[i].vector_id = vec;
 				intr_handle->intr_vec[i] = vec++;
 				if (vec >= vf->nb_msix)
 					vec = IAVF_RX_VEC_START;
 			}
+			vf->qv_map = qv_map;
 			PMD_DRV_LOG(DEBUG,
 				    "%u vectors are mapping to %u Rx queues",
 				    vf->nb_msix, dev->data->nb_rx_queues);
 		}
 	}
 
-	if (iavf_config_irq_map(adapter)) {
-		PMD_DRV_LOG(ERR, "config interrupt mapping failed");
-		return -1;
+	if (!vf->lv_enabled) {
+		if (iavf_config_irq_map(adapter)) {
+			PMD_DRV_LOG(ERR, "config interrupt mapping failed");
+			return -1;
+		}
+	} else {
+		if (iavf_config_irq_map_lv(adapter)) {
+			PMD_DRV_LOG(ERR, "config interrupt mapping "
+				"for large VF failed");
+			return -1;
+		}
 	}
+
 	return 0;
 }
 
@@ -472,6 +540,7 @@ iavf_dev_start(struct rte_eth_dev *dev)
 		PMD_DRV_LOG(ERR, "configure irq failed");
 		goto err_queue;
 	}
+
 	/* re-enable intr again, because efd assign may change */
 	if (dev->data->dev_conf.intr_conf.rxq != 0) {
 		rte_intr_disable(intr_handle);
@@ -536,8 +605,8 @@ iavf_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 {
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
 
-	dev_info->max_rx_queues = vf->vsi_res->num_queue_pairs;
-	dev_info->max_tx_queues = vf->vsi_res->num_queue_pairs;
+	dev_info->max_rx_queues = IAVF_MAX_NUM_QUEUES_LV;
+	dev_info->max_tx_queues = IAVF_MAX_NUM_QUEUES_LV;
 	dev_info->min_rx_bufsize = IAVF_BUF_SIZE_MIN;
 	dev_info->max_rx_pktlen = IAVF_FRAME_SIZE_MAX;
 	dev_info->hash_key_size = vf->vf_res->rss_key_size;
@@ -1266,6 +1335,7 @@ iavf_init_vf(struct rte_eth_dev *dev)
 		PMD_INIT_LOG(ERR, "iavf_get_vf_config failed");
 		goto err_alloc;
 	}
+
 	/* Allocate memort for RSS info */
 	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_RSS_PF) {
 		vf->rss_key = rte_zmalloc("rss_key",
