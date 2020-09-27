@@ -107,6 +107,21 @@ struct iavf_fdir_info {
 /* TODO: is that correct to assume the max number to be 16 ?*/
 #define IAVF_MAX_MSIX_VECTORS   16
 
+/* Event status from PF */
+enum pending_msg {
+	PFMSG_LINK_CHANGE = 0x1,
+	PFMSG_RESET_IMPENDING = 0x2,
+	PFMSG_DRIVER_CLOSE = 0x4,
+};
+
+/* Message type read in admin queue from PF */
+enum iavf_aq_result {
+	IAVF_MSG_ERR = -1, /* Meet error when accessing admin queue */
+	IAVF_MSG_NON,      /* Read nothing from admin queue */
+	IAVF_MSG_SYS,      /* Read system msg from admin queue */
+	IAVF_MSG_CMD,      /* Read async command result */
+};
+
 /* Structure to store private data specific for VF instance. */
 struct iavf_info {
 	uint16_t num_queue_pairs;
@@ -123,6 +138,7 @@ struct iavf_info {
 	volatile enum virtchnl_ops pend_cmd; /* pending command not finished */
 	uint32_t cmd_retval; /* return value of the cmd response from PF */
 	uint8_t *aq_resp; /* buffer to store the adminq response from PF */
+	uint16_t pend_msg; /* flags indicates events from pf not handled yet */
 
 	/* Event from pf */
 	bool dev_closed;
@@ -279,4 +295,5 @@ int iavf_add_del_rss_cfg(struct iavf_adapter *adapter,
 int iavf_add_del_mc_addr_list(struct iavf_adapter *adapter,
 			struct rte_ether_addr *mc_addrs,
 			uint32_t mc_addrs_num, bool add);
+int iavf_request_queues(struct rte_eth_dev *dev, uint16_t num);
 #endif /* _IAVF_ETHDEV_H_ */

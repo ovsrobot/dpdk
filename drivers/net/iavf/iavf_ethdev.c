@@ -1193,7 +1193,7 @@ iavf_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
 }
 
 static int
-iavf_check_vf_reset_done(struct iavf_hw *hw)
+iavf_check_vf_reset_done(struct iavf_hw *hw, struct iavf_info *vf)
 {
 	int i, reset;
 
@@ -1209,6 +1209,10 @@ iavf_check_vf_reset_done(struct iavf_hw *hw)
 
 	if (i >= IAVF_RESET_WAIT_CNT)
 		return -1;
+
+	/* VF is not in reset or reset is completed */
+	vf->vf_reset = false;
+	vf->pend_msg &= ~PFMSG_RESET_IMPENDING;
 
 	return 0;
 }
@@ -1228,7 +1232,7 @@ iavf_init_vf(struct rte_eth_dev *dev)
 		goto err;
 	}
 
-	err = iavf_check_vf_reset_done(hw);
+	err = iavf_check_vf_reset_done(hw, vf);
 	if (err) {
 		PMD_INIT_LOG(ERR, "VF is still resetting");
 		goto err;
@@ -1475,7 +1479,9 @@ iavf_dev_close(struct rte_eth_dev *dev)
 
 	iavf_dev_stop(dev);
 	iavf_flow_flush(dev, NULL);
-	iavf_flow_uninit(adapter);
+	/* if VF is in reset, adminq is disabled, skip the process via adminq */
+	if (!vf->vf_reset)
+		iavf_flow_uninit(adapter);
 	iavf_shutdown_adminq(hw);
 	/* disable uio intr before callback unregister */
 	rte_intr_disable(intr_handle);
