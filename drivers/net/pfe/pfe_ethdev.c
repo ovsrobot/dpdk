@@ -1155,10 +1155,8 @@ pmd_pfe_remove(struct rte_vdev_device *vdev)
 		return 0;
 
 	eth_dev = rte_eth_dev_allocated(name);
-	if (eth_dev == NULL)
-		return -ENODEV;
-
-	pfe_eth_exit(eth_dev, g_pfe);
+	if (eth_dev != NULL)
+		pfe_eth_exit(eth_dev, g_pfe);
 	munmap(g_pfe->cbus_baseaddr, g_pfe->cbus_size);
 
 	if (g_pfe->nb_devs == 0) {
