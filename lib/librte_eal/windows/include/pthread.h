@@ -28,6 +28,10 @@ typedef uintptr_t pthread_t;
 /* defining pthread_attr_t type on Windows since there is no in Microsoft libc*/
 typedef void *pthread_attr_t;
 
+typedef void *pthread_mutexattr_t;
+
+typedef HANDLE pthread_mutex_t;
+
 typedef SYNCHRONIZATION_BARRIER pthread_barrier_t;
 
 #define pthread_barrier_init(barrier, attr, count) \
@@ -136,6 +140,48 @@ static inline int
 pthread_join(__rte_unused pthread_t thread,
 	__rte_unused void **value_ptr)
 {
+	return 0;
+}
+
+static inline int
+pthread_mutex_init(pthread_mutex_t *mutex,
+		   __rte_unused pthread_mutexattr_t *attr)
+{
+	*mutex = CreateMutex(NULL, FALSE, NULL);
+	if (*mutex == NULL) {
+		RTE_LOG_WIN32_ERR("CreateMutex()");
+		return -1;
+	}
+	return 0;
+}
+
+static inline int
+pthread_mutex_lock(pthread_mutex_t *mutex)
+{
+	if (WaitForSingleObject(*mutex, INFINITE) != WAIT_OBJECT_0) {
+		RTE_LOG_WIN32_ERR("WaitForSingleObject()");
+		return -1;
+	}
+	return 0;
+}
+
+static inline int
+pthread_mutex_unlock(pthread_mutex_t *mutex)
+{
+	if (!ReleaseMutex(*mutex)) {
+		RTE_LOG_WIN32_ERR("ReleaseMutex()");
+		return -1;
+	}
+	return 0;
+}
+
+static inline int
+pthread_mutex_destroy(pthread_mutex_t *mutex)
+{
+	if (!CloseHandle(*mutex)) {
+		RTE_LOG_WIN32_ERR("CloseHandle()");
+		return -1;
+	}
 	return 0;
 }
 
