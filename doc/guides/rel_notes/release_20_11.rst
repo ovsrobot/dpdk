@@ -78,6 +78,10 @@ New Features
     ``--portmask=N``
     where N represents the hexadecimal bitmask of ports used.
 
+* **Updated Software Eventdev driver.**
+
+  Added performance tuning arguments to allow tuning the scheduler for
+  better throughtput in high core count use cases.
 
 Removed Items
 -------------

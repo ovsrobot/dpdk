@@ -19,6 +19,9 @@
 #define NUMA_NODE_ARG "numa_node"
 #define SCHED_QUANTA_ARG "sched_quanta"
 #define CREDIT_QUANTA_ARG "credit_quanta"
+#define MIN_BURST_SIZE_ARG "min_burst"
+#define DEQ_BURST_SIZE_ARG "deq_burst"
+#define REFIL_ONCE_ARG "refill_once"
 
 static void
 sw_info_get(struct rte_eventdev *dev, struct rte_event_dev_info *info);
@@ -910,6 +913,35 @@ set_credit_quanta(const char *key __rte_unused, const char *value, void *opaque)
 	return 0;
 }
 
+static int
+set_deq_burst_sz(const char *key __rte_unused, const char *value, void *opaque)
+{
+	int *deq_burst_sz = opaque;
+	*deq_burst_sz = atoi(value);
+	if (*deq_burst_sz < 0 || *deq_burst_sz > SCHED_DEQUEUE_MAX_BURST_SIZE)
+		return -1;
+	return 0;
+}
+
+static int
+set_min_burst_sz(const char *key __rte_unused, const char *value, void *opaque)
+{
+	int *min_burst_sz = opaque;
+	*min_burst_sz = atoi(value);
+	if (*min_burst_sz < 0 || *min_burst_sz > SCHED_DEQUEUE_MAX_BURST_SIZE)
+		return -1;
+	return 0;
+}
+
+static int
+set_refill_once(const char *key __rte_unused, const char *value, void *opaque)
+{
+	int *refill_once_per_call = opaque;
+	*refill_once_per_call = atoi(value);
+	if (*refill_once_per_call < 0 || *refill_once_per_call > 1)
+		return -1;
+	return 0;
+}
 
 static int32_t sw_sched_service_func(void *args)
 {
@@ -957,6 +989,9 @@ sw_probe(struct rte_vdev_device *vdev)
 		NUMA_NODE_ARG,
 		SCHED_QUANTA_ARG,
 		CREDIT_QUANTA_ARG,
+		MIN_BURST_SIZE_ARG,
+		DEQ_BURST_SIZE_ARG,
+		REFIL_ONCE_ARG,
 		NULL
 	};
 	const char *name;
@@ -966,6 +1001,9 @@ sw_probe(struct rte_vdev_device *vdev)
 	int socket_id = rte_socket_id();
 	int sched_quanta  = SW_DEFAULT_SCHED_QUANTA;
 	int credit_quanta = SW_DEFAULT_CREDIT_QUANTA;
+	int min_burst_size = 1;
+	int deq_burst_size = SCHED_DEQUEUE_DEFAULT_BURST_SIZE;
+	int refill_once = 0;
 
 	name = rte_vdev_device_name(vdev);
 	params = rte_vdev_device_args(vdev);
@@ -1007,13 +1045,46 @@ sw_probe(struct rte_vdev_device *vdev)
 				return ret;
 			}
 
+			ret = rte_kvargs_process(kvlist, MIN_BURST_SIZE_ARG,
+					set_min_burst_sz, &min_burst_size);
+			if (ret != 0) {
+				SW_LOG_ERR(
+					"%s: Error parsing minimum burst size parameter",
+					name);
+				rte_kvargs_free(kvlist);
+				return ret;
+			}
+
+			ret = rte_kvargs_process(kvlist, DEQ_BURST_SIZE_ARG,
+					set_deq_burst_sz, &deq_burst_size);
+			if (ret != 0) {
+				SW_LOG_ERR(
+					"%s: Error parsing dequeue burst size parameter",
+					name);
+				rte_kvargs_free(kvlist);
+				return ret;
+			}
+
+			ret = rte_kvargs_process(kvlist, REFIL_ONCE_ARG,
+					set_refill_once, &refill_once);
+			if (ret != 0) {
+				SW_LOG_ERR(
+					"%s: Error parsing refill once per call switch",
+					name);
+				rte_kvargs_free(kvlist);
+				return ret;
+			}
+
 			rte_kvargs_free(kvlist);
 		}
 	}
 
 	SW_LOG_INFO(
-			"Creating eventdev sw device %s, numa_node=%d, sched_quanta=%d, credit_quanta=%d\n",
-			name, socket_id, sched_quanta, credit_quanta);
+			"Creating eventdev sw device %s, numa_node=%d, "
+			"sched_quanta=%d, credit_quanta=%d "
+			"min_burst=%d, deq_burst=%d, refill_once=%d\n",
+			name, socket_id, sched_quanta, credit_quanta,
+			min_burst_size, deq_burst_size, refill_once);
 
 	dev = rte_event_pmd_vdev_init(name,
 			sizeof(struct sw_evdev), socket_id);
@@ -1038,6 +1109,9 @@ sw_probe(struct rte_vdev_device *vdev)
 	/* copy values passed from vdev command line to instance */
 	sw->credit_update_quanta = credit_quanta;
 	sw->sched_quanta = sched_quanta;
+	sw->sched_min_burst_size = min_burst_size;
+	sw->sched_deq_burst_size = deq_burst_size;
+	sw->refill_once_per_iter = refill_once;
 
 	/* register service with EAL */
 	struct rte_service_spec service;
@@ -1082,5 +1156,7 @@ static struct rte_vdev_driver evdev_sw_pmd_drv = {
 
 RTE_PMD_REGISTER_VDEV(EVENTDEV_NAME_SW_PMD, evdev_sw_pmd_drv);
 RTE_PMD_REGISTER_PARAM_STRING(event_sw, NUMA_NODE_ARG "=<int> "
-		SCHED_QUANTA_ARG "=<int>" CREDIT_QUANTA_ARG "=<int>");
+		SCHED_QUANTA_ARG "=<int>" CREDIT_QUANTA_ARG "=<int>"
+		MIN_BURST_SIZE_ARG "=<int>" DEQ_BURST_SIZE_ARG "=<int>"
+		REFIL_ONCE_ARG "=<int>");
 RTE_LOG_REGISTER(eventdev_sw_log_level, pmd.event.sw, NOTICE);
