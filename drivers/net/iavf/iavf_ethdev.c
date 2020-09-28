@@ -215,6 +215,8 @@ iavf_dev_configure(struct rte_eth_dev *dev)
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct iavf_info *vf =  IAVF_DEV_PRIVATE_TO_VF(ad);
 	struct rte_eth_conf *dev_conf = &dev->data->dev_conf;
+	uint32_t frame_size = dev->data->mtu + IAVF_ETH_OVERHEAD;
+	int ret;
 
 	ad->rx_bulk_alloc_allowed = true;
 	/* Initialize to TRUE. If any of Rx queues doesn't meet the
@@ -225,6 +227,16 @@ iavf_dev_configure(struct rte_eth_dev *dev)
 
 	if (dev->data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG)
 		dev->data->dev_conf.rxmode.offloads |= DEV_RX_OFFLOAD_RSS_HASH;
+
+	/**
+	 * Considering QinQ packet, max frame size should be equal or
+	 * larger than total size of MTU and Ether overhead.
+	 */
+	if (frame_size > dev->data->dev_conf.rxmode.max_rx_pkt_len) {
+		ret = iavf_dev_mtu_set(dev, dev->data->mtu);
+		if (ret != 0)
+			return ret;
+	}
 
 	/* Vlan stripping setting */
 	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN) {
