@@ -225,6 +225,7 @@ rte_raw_cksum_mbuf(const struct rte_mbuf *m, uint32_t off, uint32_t len,
 			break;
 		off -= seglen;
 	}
+	RTE_ASSERT(seg != NULL);
 	seglen -= off;
 	buf = rte_pktmbuf_mtod_offset(seg, const char *, off);
 	if (seglen >= len) {
