@@ -19,7 +19,10 @@
 #define IAVF_FRAME_SIZE_MAX       9728
 #define IAVF_QUEUE_BASE_ADDR_UNIT 128
 
-#define IAVF_MAX_NUM_QUEUES       16
+#define IAVF_MAX_NUM_QUEUES_DFLT	 16
+#define IAVF_MAX_NUM_QUEUES_LV		 256
+#define IAVF_RXTX_QUEUE_CHUNKS_NUM	 2
+#define IAVF_CFG_Q_NUM_PER_BUF		 32
 
 #define IAVF_NUM_MACADDR_MAX      64
 
@@ -104,8 +107,10 @@ struct iavf_fdir_info {
 	struct iavf_fdir_conf conf;
 };
 
-/* TODO: is that correct to assume the max number to be 16 ?*/
-#define IAVF_MAX_MSIX_VECTORS   16
+struct iavf_qv_map {
+	uint16_t queue_id;
+	uint16_t vector_id;
+};
 
 /* Event status from PF */
 enum pending_msg {
@@ -157,14 +162,16 @@ struct iavf_info {
 	uint8_t *rss_key;
 	uint16_t nb_msix;   /* number of MSI-X interrupts on Rx */
 	uint16_t msix_base; /* msix vector base from */
-	/* queue bitmask for each vector */
-	uint16_t rxq_map[IAVF_MAX_MSIX_VECTORS];
+	uint16_t max_rss_qregion; /* max RSS queue region supported by PF */
+	struct iavf_qv_map *qv_map; /* queue vector mapping */
 	struct iavf_flow_list flow_list;
 	rte_spinlock_t flow_ops_lock;
 	struct iavf_parser_list rss_parser_list;
 	struct iavf_parser_list dist_parser_list;
 
 	struct iavf_fdir_info fdir; /* flow director info */
+	/* indicate large VF support enabled or not */
+	bool lv_enabled;
 };
 
 #define IAVF_MAX_PKT_TYPE 1024
@@ -269,13 +276,18 @@ int iavf_enable_vlan_strip(struct iavf_adapter *adapter);
 int iavf_disable_vlan_strip(struct iavf_adapter *adapter);
 int iavf_switch_queue(struct iavf_adapter *adapter, uint16_t qid,
 		     bool rx, bool on);
+int iavf_switch_queue_lv(struct iavf_adapter *adapter, uint16_t qid,
+		     bool rx, bool on);
 int iavf_enable_queues(struct iavf_adapter *adapter);
+int iavf_enable_queues_lv(struct iavf_adapter *adapter);
 int iavf_disable_queues(struct iavf_adapter *adapter);
+int iavf_disable_queues_lv(struct iavf_adapter *adapter);
 int iavf_configure_rss_lut(struct iavf_adapter *adapter);
 int iavf_configure_rss_key(struct iavf_adapter *adapter);
 int iavf_configure_queues(struct iavf_adapter *adapter);
 int iavf_get_supported_rxdid(struct iavf_adapter *adapter);
 int iavf_config_irq_map(struct iavf_adapter *adapter);
+int iavf_config_irq_map_lv(struct iavf_adapter *adapter);
 void iavf_add_del_all_mac_addr(struct iavf_adapter *adapter, bool add);
 int iavf_dev_link_update(struct rte_eth_dev *dev,
 			__rte_unused int wait_to_complete);
@@ -296,4 +308,5 @@ int iavf_add_del_mc_addr_list(struct iavf_adapter *adapter,
 			struct rte_ether_addr *mc_addrs,
 			uint32_t mc_addrs_num, bool add);
 int iavf_request_queues(struct rte_eth_dev *dev, uint16_t num);
+int iavf_get_max_rss_queue_region(struct iavf_adapter *adapter);
 #endif /* _IAVF_ETHDEV_H_ */
