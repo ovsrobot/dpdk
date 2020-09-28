@@ -1609,6 +1609,26 @@ RTE_PMD_REGISTER_PCI_TABLE(ifpga_rawdev_pci_driver, rte_ifpga_rawdev_pmd);
 RTE_PMD_REGISTER_KMOD_DEP(ifpga_rawdev_pci_driver, "* igb_uio | uio_pci_generic | vfio-pci");
 RTE_LOG_REGISTER(ifpga_rawdev_logtype, driver.raw.init, NOTICE);
 
+RTE_FINI(ifpga_rawdev_cleanup)
+{
+	struct ifpga_rawdev *dev;
+	struct opae_adapter *adapter;
+	unsigned int i;
+
+	for (i = 0; i < IFPGA_RAWDEV_NUM; i++) {
+		dev = &ifpga_rawdevices[i];
+		if (dev->rawdev) {
+			adapter = ifpga_rawdev_get_priv(dev->rawdev);
+			if (adapter) {
+				opae_adapter_destroy(adapter);
+				opae_adapter_data_free(adapter->data);
+			}
+			rte_rawdev_pmd_release(dev->rawdev);
+			dev->rawdev = NULL;
+		}
+	}
+}
+
 static const char * const valid_args[] = {
 #define IFPGA_ARG_NAME         "ifpga"
 	IFPGA_ARG_NAME,
