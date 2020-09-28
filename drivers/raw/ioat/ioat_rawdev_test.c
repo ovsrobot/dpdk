@@ -7,6 +7,7 @@
 #include <rte_mbuf.h>
 #include "rte_rawdev.h"
 #include "rte_ioat_rawdev.h"
+#include "ioat_private.h"
 
 int ioat_rawdev_test(uint16_t dev_id); /* pre-define to keep compiler happy */
 
@@ -257,4 +258,10 @@ err:
 	free(stats);
 	free(ids);
 	return -1;
+}
+
+int
+idxd_rawdev_test(uint16_t dev_id __rte_unused)
+{
+	return 0;
 }
