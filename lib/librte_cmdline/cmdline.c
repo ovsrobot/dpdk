@@ -13,10 +13,15 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <netinet/in.h>
+#include <unistd.h>
 
 #include <rte_string_fns.h>
 
 #include "cmdline_private.h"
+
+#ifdef RTE_EXEC_ENV_WINDOWS
+#define write _write
+#endif
 
 static void
 cmdline_valid_buffer(struct rdline *rdl, const char *buf,
