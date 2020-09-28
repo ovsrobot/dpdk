@@ -170,6 +170,17 @@ API Changes
   and the function ``rte_rawdev_queue_conf_get()``
   from ``void`` to ``int`` allowing the return of error codes from drivers.
 
+* scheduler: Renamed functions ``rte_cryptodev_scheduler_slave_attach``,
+  ``rte_cryptodev_scheduler_slave_detach`` and
+  ``rte_cryptodev_scheduler_slaves_get`` to
+  ``rte_cryptodev_scheduler_worker_attach``,
+  ``rte_cryptodev_scheduler_worker_detach`` and
+  ``rte_cryptodev_scheduler_workers_get`` accordingly.
+
+* scheduler: Renamed the configuration value
+  ``RTE_CRYPTODEV_SCHEDULER_MAX_NB_SLAVES`` to
+  ``RTE_CRYPTODEV_SCHEDULER_MAX_NB_WORKERS``.
+
 * bpf: ``RTE_BPF_XTYPE_NUM`` has been dropped from ``rte_bpf_xtype``.
 
 
