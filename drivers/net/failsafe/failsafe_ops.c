@@ -648,7 +648,10 @@ failsafe_eth_dev_close(struct rte_eth_dev *dev)
 	FOREACH_SUBDEV_STATE(sdev, i, dev, DEV_ACTIVE) {
 		DEBUG("Closing sub_device %d", i);
 		failsafe_eth_dev_unregister_callbacks(sdev);
-		rte_eth_dev_close(PORT_ID(sdev));
+		ret = rte_eth_dev_close(PORT_ID(sdev));
+		if (ret)
+			ERROR("Error while closing sub-device %u",
+					PORT_ID(sdev));
 		sdev->state = DEV_ACTIVE - 1;
 	}
 	rte_eth_dev_callback_unregister(RTE_ETH_ALL, RTE_ETH_EVENT_NEW,
