@@ -1669,6 +1669,8 @@ i40evf_dev_configure(struct rte_eth_dev *dev)
 		I40E_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	uint16_t num_queue_pairs = RTE_MAX(dev->data->nb_rx_queues,
 				dev->data->nb_tx_queues);
+	uint32_t frame_size = dev->data->mtu + I40E_ETH_OVERHEAD;
+	int ret;
 
 	/* Initialize to TRUE. If any of Rx queues doesn't meet the bulk
 	 * allocation or vector Rx preconditions we will reset it.
@@ -1681,9 +1683,18 @@ i40evf_dev_configure(struct rte_eth_dev *dev)
 	dev->data->dev_conf.intr_conf.lsc =
 		!!(dev->data->dev_flags & RTE_ETH_DEV_INTR_LSC);
 
+	/**
+	 * Considering QinQ packet, max frame size should be equal or
+	 * larger than total size of MTU and Ether overhead.
+	 */
+	if (frame_size > dev->data->dev_conf.rxmode.max_rx_pkt_len) {
+		ret = i40evf_dev_mtu_set(dev, dev->data->mtu);
+		if (ret != 0)
+			return ret;
+	}
+
 	if (num_queue_pairs > vf->vsi_res->num_queue_pairs) {
 		struct i40e_hw *hw;
-		int ret;
 
 		if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
 			PMD_DRV_LOG(ERR,
