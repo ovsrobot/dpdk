@@ -554,10 +554,6 @@ rte_eth_dev_release_port(struct rte_eth_dev *eth_dev)
 
 	rte_spinlock_lock(&rte_eth_dev_shared_data->ownership_lock);
 
-	eth_dev->state = RTE_ETH_DEV_UNUSED;
-	eth_dev->device = NULL;
-	eth_dev->intr_handle = NULL;
-
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		rte_free(eth_dev->data->rx_queues);
 		rte_free(eth_dev->data->tx_queues);
@@ -566,6 +562,7 @@ rte_eth_dev_release_port(struct rte_eth_dev *eth_dev)
 		rte_free(eth_dev->data->dev_private);
 		memset(eth_dev->data, 0, sizeof(struct rte_eth_dev_data));
 	}
+	memset(eth_dev, 0, sizeof(struct rte_eth_dev));
 
 	rte_spinlock_unlock(&rte_eth_dev_shared_data->ownership_lock);
 
