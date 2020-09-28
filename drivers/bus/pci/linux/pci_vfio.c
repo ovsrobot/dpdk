@@ -565,7 +565,7 @@ pci_vfio_mmap_bar(int vfio_dev_fd, struct mapped_pci_resource *vfio_res,
 		}
 
 		/* if there's a second part, try to map it */
-		if (map_addr != NULL
+		if ((map_addr != NULL || memreg[0].size == 0)
 			&& memreg[1].offset && memreg[1].size) {
 			void *second_addr = RTE_PTR_ADD(bar_addr,
 						(uintptr_t)(memreg[1].offset -
