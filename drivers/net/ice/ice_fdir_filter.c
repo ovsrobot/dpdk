@@ -56,6 +56,11 @@
 	ICE_INSET_SCTP_SRC_PORT | ICE_INSET_SCTP_DST_PORT)
 
 #define ICE_FDIR_INSET_VXLAN_IPV4 (\
+	ICE_FDIR_INSET_ETH | \
+	ICE_INSET_IPV4_SRC | ICE_INSET_IPV4_DST | \
+	ICE_INSET_IPV4_TOS | \
+	ICE_INSET_UDP_DST_PORT | \
+	ICE_INSET_TUN_DMAC | ICE_INSET_TUN_SMAC | \
 	ICE_INSET_TUN_IPV4_SRC | ICE_INSET_TUN_IPV4_DST)
 
 #define ICE_FDIR_INSET_VXLAN_IPV4_TCP (\
@@ -907,6 +912,7 @@ ice_fdir_input_set_parse(uint64_t inset, enum ice_flow_field *field)
 	};
 	static const struct ice_inset_map ice_inset_map[] = {
 		{ICE_INSET_DMAC, ICE_FLOW_FIELD_IDX_ETH_DA},
+		{ICE_INSET_SMAC, ICE_FLOW_FIELD_IDX_ETH_SA},
 		{ICE_INSET_ETHERTYPE, ICE_FLOW_FIELD_IDX_ETH_TYPE},
 		{ICE_INSET_IPV4_SRC, ICE_FLOW_FIELD_IDX_IPV4_SA},
 		{ICE_INSET_IPV4_DST, ICE_FLOW_FIELD_IDX_IPV4_DA},
@@ -1655,6 +1661,14 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 	uint32_t vtc_flow_cpu;
 	uint16_t ether_type;
 	enum rte_flow_item_type next_type;
+	bool is_outer_part = true;
+
+	for (item = pattern; item->type != RTE_FLOW_ITEM_TYPE_END; item++) {
+		if (item->type == RTE_FLOW_ITEM_TYPE_VXLAN) {
+			tunnel_type = ICE_FDIR_TUNNEL_TYPE_VXLAN;
+			break;
+		}
+	}
 
 	for (item = pattern; item->type != RTE_FLOW_ITEM_TYPE_END; item++) {
 		if (item->last) {
@@ -1672,7 +1686,25 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 			eth_mask = item->mask;
 			next_type = (item + 1)->type;
 
-			if (eth_spec && eth_mask) {
+			if (!(eth_spec && eth_mask))
+				break;
+
+			/* handle outer L2 fields */
+			if (is_outer_part && tunnel_type == ICE_FDIR_TUNNEL_TYPE_VXLAN) {
+				if (!rte_is_zero_ether_addr(&eth_mask->dst)) {
+					filter->outer_input_set |= ICE_INSET_DMAC;
+					rte_memcpy(&filter->input.ext_data_outer.dst_mac,
+						   &eth_spec->dst,
+						   RTE_ETHER_ADDR_LEN);
+				}
+
+				if (!rte_is_zero_ether_addr(&eth_mask->src)) {
+					filter->outer_input_set |= ICE_INSET_SMAC;
+					rte_memcpy(&filter->input.ext_data_outer.src_mac,
+						   &eth_spec->src,
+						   RTE_ETHER_ADDR_LEN);
+				}
+			} else {
 				if (!rte_is_zero_ether_addr(&eth_mask->dst)) {
 					input_set |= ICE_INSET_DMAC;
 					rte_memcpy(&filter->input.ext_data.dst_mac,
@@ -1714,7 +1746,27 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 			ipv4_spec = item->spec;
 			ipv4_mask = item->mask;
 
-			if (ipv4_spec && ipv4_mask) {
+			if (!(ipv4_spec && ipv4_mask))
+				break;
+
+			/* handle outer L3 fields */
+			if (is_outer_part && tunnel_type == ICE_FDIR_TUNNEL_TYPE_VXLAN) {
+				if (ipv4_mask->hdr.dst_addr == UINT32_MAX) {
+					filter->outer_input_set |= ICE_INSET_IPV4_DST;
+					filter->input.ip_outer.v4.dst_ip =
+						ipv4_spec->hdr.dst_addr;
+				}
+				if (ipv4_mask->hdr.src_addr == UINT32_MAX) {
+					filter->outer_input_set |= ICE_INSET_IPV4_SRC;
+					filter->input.ip_outer.v4.src_ip =
+						ipv4_spec->hdr.src_addr;
+				}
+				if (ipv4_mask->hdr.type_of_service == UINT8_MAX) {
+					input_set |= ICE_INSET_IPV4_TOS;
+					filter->input.ip_outer.v4.tos =
+						ipv4_spec->hdr.type_of_service;
+				}
+			} else {
 				/* Check IPv4 mask and update input set */
 				if (ipv4_mask->hdr.version_ihl ||
 				    ipv4_mask->hdr.total_length ||
@@ -1944,6 +1996,8 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 			break;
 		case RTE_FLOW_ITEM_TYPE_VXLAN:
 			l3 = RTE_FLOW_ITEM_TYPE_END;
+			is_outer_part = false;
+
 			vxlan_spec = item->spec;
 			vxlan_mask = item->mask;
 
@@ -1955,7 +2009,6 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 				return -rte_errno;
 			}
 
-			tunnel_type = ICE_FDIR_TUNNEL_TYPE_VXLAN;
 			break;
 		case RTE_FLOW_ITEM_TYPE_GTPU:
 			l3 = RTE_FLOW_ITEM_TYPE_END;
