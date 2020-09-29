@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated CRC modules of rte_net library.**
+
+  * Added run-time selection of the optimal architecture-specific CRC path.
+
 * **Updated Cisco enic driver.**
 
   * Added support for VF representors with single-queue Tx/Rx and flow API

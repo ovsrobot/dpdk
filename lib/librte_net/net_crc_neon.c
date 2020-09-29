@@ -1,18 +1,17 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2017 Cavium, Inc
+ * Copyright(c) 2020 Intel Corporation
  */
 
-#ifndef _NET_CRC_NEON_H_
-#define _NET_CRC_NEON_H_
+#include <string.h>
 
+#include <rte_common.h>
 #include <rte_branch_prediction.h>
 #include <rte_net_crc.h>
 #include <rte_vect.h>
 #include <rte_cpuflags.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "net_crc.h"
 
 /** PMULL CRC computation context structure */
 struct crc_pmull_ctx {
@@ -218,7 +217,7 @@ barret_reduction:
 	return n;
 }
 
-static inline void
+void
 rte_net_crc_neon_init(void)
 {
 	/* Initialize CRC16 data */
@@ -242,9 +241,8 @@ rte_net_crc_neon_init(void)
 	crc32_eth_pmull.rk7_rk8 = vld1q_u64(eth_k7_k8);
 }
 
-static inline uint32_t
-rte_crc16_ccitt_neon_handler(const uint8_t *data,
-	uint32_t data_len)
+uint32_t
+rte_crc16_ccitt_neon_handler(const uint8_t *data, uint32_t data_len)
 {
 	return (uint16_t)~crc32_eth_calc_pmull(data,
 		data_len,
@@ -252,18 +250,11 @@ rte_crc16_ccitt_neon_handler(const uint8_t *data,
 		&crc16_ccitt_pmull);
 }
 
-static inline uint32_t
-rte_crc32_eth_neon_handler(const uint8_t *data,
-	uint32_t data_len)
+uint32_t
+rte_crc32_eth_neon_handler(const uint8_t *data, uint32_t data_len)
 {
 	return ~crc32_eth_calc_pmull(data,
 		data_len,
 		0xffffffffUL,
 		&crc32_eth_pmull);
 }
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* _NET_CRC_NEON_H_ */
