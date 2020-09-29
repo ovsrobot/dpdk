@@ -78,6 +78,11 @@ New Features
     ``--portmask=N``
     where N represents the hexadecimal bitmask of ports used.
 
+* **Added the FEC API, for a generic FEC query and config.**
+
+  Added the FEC API which provides functions for query FEC capabilities and
+  current FEC mode from device. Also, API for configuring FEC mode is also provided.
+
 
 Removed Items
 -------------
