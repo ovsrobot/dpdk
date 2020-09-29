@@ -1577,8 +1577,6 @@ int rte_vhost_async_channel_register(int vid, uint16_t queue_id,
 		ops->transfer_data == NULL))
 		return -1;
 
-	rte_spinlock_lock(&vq->access_lock);
-
 	if (unlikely(vq->async_registered)) {
 		VHOST_LOG_CONFIG(ERR,
 			"async register failed: channel already registered "
@@ -1623,8 +1621,6 @@ int rte_vhost_async_channel_register(int vid, uint16_t queue_id,
 	vq->async_registered = true;
 
 reg_out:
-	rte_spinlock_unlock(&vq->access_lock);
-
 	return 0;
 }
 
@@ -1643,10 +1639,15 @@ int rte_vhost_async_channel_unregister(int vid, uint16_t queue_id)
 		return ret;
 
 	ret = 0;
-	rte_spinlock_lock(&vq->access_lock);
 
 	if (!vq->async_registered)
-		goto out;
+		return ret;
+
+	if (!rte_spinlock_trylock(&vq->access_lock)) {
+		VHOST_LOG_CONFIG(ERR, "Failed to unregister async channel. "
+			"virt queue busy.\n");
+		return -1;
+	}
 
 	if (vq->async_pkts_inflight_n) {
 		VHOST_LOG_CONFIG(ERR, "Failed to unregister async channel. "
