@@ -37,6 +37,12 @@ static rte_net_crc_handler handlers_scalar[] = {
 	[RTE_NET_CRC16_CCITT] = rte_crc16_ccitt_handler,
 	[RTE_NET_CRC32_ETH] = rte_crc32_eth_handler,
 };
+#ifdef CC_X86_64_AVX512_VPCLMULQDQ_SUPPORT
+static rte_net_crc_handler handlers_avx512[] = {
+	[RTE_NET_CRC16_CCITT] = rte_crc16_ccitt_avx512_handler,
+	[RTE_NET_CRC32_ETH] = rte_crc32_eth_avx512_handler,
+};
+#endif
 #ifdef CC_X86_64_SSE42_PCLMULQDQ_SUPPORT
 static rte_net_crc_handler handlers_sse42[] = {
 	[RTE_NET_CRC16_CCITT] = rte_crc16_ccitt_sse42_handler,
@@ -132,6 +138,19 @@ rte_crc32_eth_handler(const uint8_t *data, uint32_t data_len)
 		crc32_eth_lut);
 }
 
+#ifdef CC_X86_64_AVX512_VPCLMULQDQ_SUPPORT
+static uint8_t
+avx512_vpclmulqdq_cpu_supported(void)
+{
+	return rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) &&
+		rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512BW) &&
+		rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512DQ) &&
+		rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512VL) &&
+		rte_cpu_get_flag_enabled(RTE_CPUFLAG_PCLMULQDQ) &&
+		rte_cpu_get_flag_enabled(RTE_CPUFLAG_VPCLMULQDQ);
+}
+#endif
+
 #ifdef CC_X86_64_SSE42_PCLMULQDQ_SUPPORT
 static uint8_t
 sse42_pclmulqdq_cpu_supported(void)
@@ -153,6 +172,14 @@ rte_net_crc_set_alg(enum rte_net_crc_alg alg)
 {
 	switch (alg) {
 #ifdef RTE_ARCH_X86_64
+	case RTE_NET_CRC_AVX512:
+#ifdef CC_X86_64_AVX512_VPCLMULQDQ_SUPPORT
+		if (avx512_vpclmulqdq_cpu_supported()) {
+			handlers = handlers_avx512;
+			break;
+		}
+#endif
+		/* fall-through */
 	case RTE_NET_CRC_SSE42:
 #ifdef CC_X86_64_SSE42_PCLMULQDQ_SUPPORT
 		if (sse42_pclmulqdq_cpu_supported()) {
@@ -204,6 +231,12 @@ RTE_INIT(rte_net_crc_init)
 	if (sse42_pclmulqdq_cpu_supported()) {
 		alg = RTE_NET_CRC_SSE42;
 		rte_net_crc_sse42_init();
+	}
+#endif
+#ifdef CC_X86_64_AVX512_VPCLMULQDQ_SUPPORT
+	if (avx512_vpclmulqdq_cpu_supported()) {
+		alg = RTE_NET_CRC_AVX512;
+		rte_net_crc_avx512_init();
 	}
 #endif
 #ifdef CC_ARM64_NEON_PMULL_SUPPORT
