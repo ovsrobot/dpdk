@@ -273,6 +273,7 @@ hn_dev_tx_queue_setup(struct rte_eth_dev *dev,
 			     " (tx_free_thresh=%u port=%u queue=%u)\n",
 			     nb_desc - 3,
 			     tx_free_thresh, dev->data->port_id, queue_idx);
+		rte_free(txq);
 		return -EINVAL;
 	}
 
