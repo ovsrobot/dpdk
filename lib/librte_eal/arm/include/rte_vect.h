@@ -14,6 +14,8 @@
 extern "C" {
 #endif
 
+#define RTE_DEFAULT_SIMD_BITWIDTH UINT16_MAX
+
 typedef int32x4_t xmm_t;
 
 #define	XMM_SIZE	(sizeof(xmm_t))

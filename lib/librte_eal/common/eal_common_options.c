@@ -35,6 +35,7 @@
 #ifndef RTE_EXEC_ENV_WINDOWS
 #include <rte_telemetry.h>
 #endif
+#include <rte_vect.h>
 
 #include "eal_internal_cfg.h"
 #include "eal_options.h"
@@ -344,6 +345,8 @@ eal_reset_internal_config(struct internal_config *internal_cfg)
 	internal_cfg->user_mbuf_pool_ops_name = NULL;
 	CPU_ZERO(&internal_cfg->ctrl_cpuset);
 	internal_cfg->init_complete = 0;
+	internal_cfg->max_simd_bitwidth.bitwidth = RTE_DEFAULT_SIMD_BITWIDTH;
+	internal_cfg->max_simd_bitwidth.locked = 0;
 }
 
 static int
