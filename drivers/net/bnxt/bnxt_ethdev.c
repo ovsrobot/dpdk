@@ -1122,7 +1122,8 @@ bnxt_receive_function(struct rte_eth_dev *eth_dev)
 		DEV_RX_OFFLOAD_OUTER_IPV4_CKSUM |
 		DEV_RX_OFFLOAD_RSS_HASH |
 		DEV_RX_OFFLOAD_VLAN_FILTER)) &&
-	    !BNXT_TRUFLOW_EN(bp) && BNXT_NUM_ASYNC_CPR(bp)) {
+	    !BNXT_TRUFLOW_EN(bp) && BNXT_NUM_ASYNC_CPR(bp) &&
+		rte_get_max_simd_bitwidth() >= RTE_MAX_128_SIMD) {
 		PMD_DRV_LOG(INFO, "Using vector mode receive for port %d\n",
 			    eth_dev->data->port_id);
 		bp->flags |= BNXT_FLAG_RX_VECTOR_PKT_MODE;
@@ -1154,7 +1155,8 @@ bnxt_transmit_function(__rte_unused struct rte_eth_dev *eth_dev)
 	 */
 	if (!eth_dev->data->scattered_rx &&
 	    !eth_dev->data->dev_conf.txmode.offloads &&
-	    !BNXT_TRUFLOW_EN(bp)) {
+	    !BNXT_TRUFLOW_EN(bp) &&
+	    rte_get_max_simd_bitwidth() >= RTE_MAX_128_SIMD) {
 		PMD_DRV_LOG(INFO, "Using vector mode transmit for port %d\n",
 			    eth_dev->data->port_id);
 		return bnxt_xmit_pkts_vec;
