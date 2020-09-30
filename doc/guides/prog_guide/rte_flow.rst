@@ -2666,6 +2666,23 @@ timeout passed without any matching on the flow.
    | ``context``  | user input flow context         |
    +--------------+---------------------------------+
 
+Query structure to retrieve ageing status information of a
+shared AGE action, or a flow rule using the AGE action:
+
+.. _table_rte_flow_query_age:
+
+.. table:: AGE query
+
+   +-------------------------+-----+-----------------------------------+
+   | Field                   | I/O | Value                             |
+   +=========================+=====+===================================+
+   | ``aged``                | out | Aging timeout expired             |
+   +-------------------------+-----+-----------------------------------+
+   | ``last_hit_time_valid`` | out | ``last_hit_time`` field is valid  |
+   +-------------------------+-----+-----------------------------------+
+   | ``last_hit_time``       | out | Seconds since last traffic hit    |
+   +-------------------------+-----+-----------------------------------+
+
 Negative types
 ~~~~~~~~~~~~~~
 
