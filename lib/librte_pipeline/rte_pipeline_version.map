@@ -1,4 +1,4 @@
-DPDK_21 {
+DPDK_20.0 {
 	global:
 
 	rte_pipeline_ah_packet_drop;
@@ -75,8 +75,6 @@ EXPERIMENTAL {
 	rte_swx_pipeline_free;
 	rte_swx_pipeline_run;
 	rte_swx_pipeline_flush;
-	rte_swx_pipeline_table_state_get;
-	rte_swx_pipeline_table_state_set;
 	rte_swx_ctl_pipeline_info_get;
 	rte_swx_ctl_pipeline_numa_node_get;
 	rte_swx_ctl_pipeline_port_in_stats_read;
@@ -87,4 +85,15 @@ EXPERIMENTAL {
 	rte_swx_ctl_table_match_field_info_get;
 	rte_swx_ctl_table_action_info_get;
 	rte_swx_ctl_table_ops_get;
+	rte_swx_pipeline_table_state_get;
+	rte_swx_pipeline_table_state_set;
+	rte_swx_ctl_pipeline_create;
+	rte_swx_ctl_pipeline_free;
+	rte_swx_ctl_pipeline_table_entry_add;
+	rte_swx_ctl_pipeline_table_default_entry_add;
+	rte_swx_ctl_pipeline_table_entry_delete;
+	rte_swx_ctl_pipeline_commit;
+	rte_swx_ctl_pipeline_abort;
+	rte_swx_ctl_pipeline_table_entry_read;
+	rte_swx_ctl_pipeline_table_fprintf;
 };
