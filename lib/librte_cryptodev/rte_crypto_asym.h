@@ -92,10 +92,8 @@ enum rte_crypto_asym_xform_type {
 	/**< Elliptic Curve Digital Signature Algorithm
 	 * Perform Signature Generation and Verification.
 	 */
-	RTE_CRYPTO_ASYM_XFORM_ECPM,
+	RTE_CRYPTO_ASYM_XFORM_ECPM
 	/**< Elliptic Curve Point Multiplication */
-	RTE_CRYPTO_ASYM_XFORM_TYPE_LIST_END
-	/**< End of list */
 };
 
 /**
@@ -114,9 +112,8 @@ enum rte_crypto_asym_op_type {
 	/**< DH Private Key generation operation */
 	RTE_CRYPTO_ASYM_OP_PUBLIC_KEY_GENERATE,
 	/**< DH Public Key generation operation */
-	RTE_CRYPTO_ASYM_OP_SHARED_SECRET_COMPUTE,
+	RTE_CRYPTO_ASYM_OP_SHARED_SECRET_COMPUTE
 	/**< DH Shared Secret compute operation */
-	RTE_CRYPTO_ASYM_OP_LIST_END
 };
 
 /**
@@ -131,9 +128,8 @@ enum rte_crypto_rsa_padding_type {
 	 */
 	RTE_CRYPTO_RSA_PADDING_OAEP,
 	/**< RSA PKCS#1 OAEP padding scheme */
-	RTE_CRYPTO_RSA_PADDING_PSS,
+	RTE_CRYPTO_RSA_PADDING_PSS
 	/**< RSA PKCS#1 PSS padding scheme */
-	RTE_CRYPTO_RSA_PADDING_TYPE_LIST_END
 };
 
 /**
