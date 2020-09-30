@@ -28,7 +28,8 @@ enum rte_net_crc_alg {
 /**
  * This API set the CRC computation algorithm (i.e. scalar version,
  * x86 64-bit sse4.2 intrinsic version, etc.) and internal data
- * structure.
+ * structure. This should be called before any other functions, to
+ * choose the algorithm for best performance.
  *
  * @param alg
  *   This parameter is used to select the CRC implementation version.
