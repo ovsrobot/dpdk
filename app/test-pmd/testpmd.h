@@ -12,6 +12,7 @@
 #include <rte_gro.h>
 #include <rte_gso.h>
 #include <cmdline.h>
+#include <sys/queue.h>
 
 #define RTE_PORT_ALL            (~(portid_t)0x0)
 
@@ -142,6 +143,26 @@ struct port_flow {
 	uint8_t data[]; /**< Storage for flow rule description */
 };
 
+struct port_flow_tunnel {
+	LIST_ENTRY(port_flow_tunnel) chain;
+	struct rte_flow_action *pmd_actions;
+	struct rte_flow_item   *pmd_items;
+	uint32_t id;
+	uint32_t num_pmd_actions;
+	uint32_t num_pmd_items;
+	struct rte_flow_tunnel tunnel;
+	struct rte_flow_action *actions;
+	struct rte_flow_item *items;
+};
+
+struct tunnel_ops {
+	uint32_t id;
+	char type[16];
+	uint32_t enabled:1;
+	uint32_t actions:1;
+	uint32_t items:1;
+};
+
 /**
  * The data structure associated with each port.
  */
@@ -172,6 +193,7 @@ struct rte_port {
 	uint32_t                mc_addr_nb; /**< nb. of addr. in mc_addr_pool */
 	uint8_t                 slave_flag; /**< bonding slave port */
 	struct port_flow        *flow_list; /**< Associated flows. */
+	LIST_HEAD(, port_flow_tunnel) flow_tunnel_list;
 	const struct rte_eth_rxtx_callback *rx_dump_cb[RTE_MAX_QUEUES_PER_PORT+1];
 	const struct rte_eth_rxtx_callback *tx_dump_cb[RTE_MAX_QUEUES_PER_PORT+1];
 	/**< metadata value to insert in Tx packets. */
@@ -749,11 +771,13 @@ void port_reg_set(portid_t port_id, uint32_t reg_off, uint32_t value);
 int port_flow_validate(portid_t port_id,
 		       const struct rte_flow_attr *attr,
 		       const struct rte_flow_item *pattern,
-		       const struct rte_flow_action *actions);
+		       const struct rte_flow_action *actions,
+		       const struct tunnel_ops *tunnel_ops);
 int port_flow_create(portid_t port_id,
 		     const struct rte_flow_attr *attr,
 		     const struct rte_flow_item *pattern,
-		     const struct rte_flow_action *actions);
+		     const struct rte_flow_action *actions,
+		     const struct tunnel_ops *tunnel_ops);
 void update_age_action_context(const struct rte_flow_action *actions,
 		     struct port_flow *pf);
 int port_flow_destroy(portid_t port_id, uint32_t n, const uint32_t *rule);
@@ -763,6 +787,12 @@ int port_flow_query(portid_t port_id, uint32_t rule,
 		    const struct rte_flow_action *action);
 void port_flow_list(portid_t port_id, uint32_t n, const uint32_t *group);
 void port_flow_aged(portid_t port_id, uint8_t destroy);
+const char *port_flow_tunnel_type(struct rte_flow_tunnel *tunnel);
+struct port_flow_tunnel *
+port_flow_locate_tunnel(uint16_t port_id, struct rte_flow_tunnel *tun);
+void port_flow_tunnel_list(portid_t port_id);
+void port_flow_tunnel_destroy(portid_t port_id, uint32_t tunnel_id);
+void port_flow_tunnel_create(portid_t port_id, const struct tunnel_ops *ops);
 int port_flow_isolate(portid_t port_id, int set);
 
 void rx_ring_desc_display(portid_t port_id, queueid_t rxq_id, uint16_t rxd_id);
