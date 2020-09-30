@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 static inline void
-rte_lpm_lookupx4(const struct rte_lpm *lpm, xmm_t ip, uint32_t hop[4],
+rte_lpm_lookupx4_vec(const struct rte_lpm *lpm, xmm_t ip, uint32_t hop[4],
 	uint32_t defv)
 {
 	__m128i i24;

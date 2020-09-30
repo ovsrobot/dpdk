@@ -397,6 +397,45 @@ rte_lpm_lookup_bulk_func(const struct rte_lpm *lpm, const uint32_t *ips,
 /* Mask four results. */
 #define	 RTE_LPM_MASKX4_RES	UINT64_C(0x00ffffff00ffffff)
 
+#if defined(RTE_ARCH_ARM) || defined(RTE_ARCH_ARM64)
+#include "rte_lpm_neon.h"
+#elif defined(RTE_ARCH_PPC_64)
+#include "rte_lpm_altivec.h"
+#else
+#include "rte_lpm_sse.h"
+#endif
+
+/**
+ * Lookup four IP addresses in an LPM table individually by calling the
+ * lookup function for each ip. This is used when lookupx4 is called but
+ * the vector path is not suitable.
+ *
+ * @param lpm
+ *   LPM object handle
+ * @param ip
+ *   Four IPs to be looked up in the LPM table
+ * @param hop
+ *   Next hop of the most specific rule found for IP (valid on lookup hit only).
+ *   This is an 4 elements array of two byte values.
+ *   If the lookup was successful for the given IP, then least significant byte
+ *   of the corresponding element is the  actual next hop and the most
+ *   significant byte is zero.
+ *   If the lookup for the given IP failed, then corresponding element would
+ *   contain default value, see description of then next parameter.
+ * @param defv
+ *   Default value to populate into corresponding element of hop[] array,
+ *   if lookup would fail.
+ */
+static inline void
+rte_lpm_lookupx4_scalar(struct rte_lpm *lpm, xmm_t ip, uint32_t hop[4],
+	uint32_t defv)
+{
+	int i;
+	for (i = 0; i < 4; i++)
+		if (rte_lpm_lookup(lpm, ((uint32_t *) &ip)[i], &hop[i]) < 0)
+			hop[i] = defv; /* lookupx4 expected to set on failure */
+}
+
 /**
  * Lookup four IP addresses in an LPM table.
  *
@@ -417,16 +456,14 @@ rte_lpm_lookup_bulk_func(const struct rte_lpm *lpm, const uint32_t *ips,
  *   if lookup would fail.
  */
 static inline void
-rte_lpm_lookupx4(const struct rte_lpm *lpm, xmm_t ip, uint32_t hop[4],
-	uint32_t defv);
-
-#if defined(RTE_ARCH_ARM) || defined(RTE_ARCH_ARM64)
-#include "rte_lpm_neon.h"
-#elif defined(RTE_ARCH_PPC_64)
-#include "rte_lpm_altivec.h"
-#else
-#include "rte_lpm_sse.h"
-#endif
+rte_lpm_lookupx4(struct rte_lpm *lpm, xmm_t ip, uint32_t hop[4],
+	uint32_t defv)
+{
+	if (rte_get_max_simd_bitwidth() >= RTE_MAX_128_SIMD)
+		rte_lpm_lookupx4_vec(lpm, ip, hop, defv);
+	else
+		rte_lpm_lookupx4_scalar(lpm, ip, hop, defv);
+}
 
 #ifdef __cplusplus
 }
