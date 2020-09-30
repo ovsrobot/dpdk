@@ -377,6 +377,29 @@ rte_sched_subport_config(struct rte_sched_port *port,
 	struct rte_sched_subport_params *params);
 
 /**
+ * Hierarchical scheduler subport configuration.
+ * Note that this function is also used at runtime
+ * to configure subport bandwidth profile.
+ * @param port
+ *   Handle to port scheduler instance
+ * @param subport_id
+ *   Subport ID
+ * @param params
+ *   Subport configuration parameters.
+ *   This parameter should be set to NULL, to
+ *   configure the subport bandwidth profile
+ *   at runtime.
+ * @param subport_profile_id
+ *   ID of profile configured for subport
+ * @return
+ *   0 upon success, error code otherwise
+ */
+int
+rte_dynamic_sched_subport_config(struct rte_sched_port *port,
+	uint32_t subport_id,
+	struct rte_sched_subport_params *params,
+	uint32_t subport_profile_id);
+/**
  * Hierarchical scheduler pipe configuration
  *
  * @param port
