@@ -33,6 +33,12 @@ struct hugepage_info {
 	int lock_descriptor;    /**< file descriptor for hugepage dir */
 };
 
+struct simd_bitwidth {
+	/**< flag indicating if bitwidth is locked from further modification */
+	bool locked;
+	uint16_t bitwidth; /**< bitwidth value */
+};
+
 /**
  * internal configuration
  */
@@ -85,6 +91,8 @@ struct internal_config {
 	volatile unsigned int init_complete;
 	/**< indicates whether EAL has completed initialization */
 	unsigned int no_telemetry; /**< true to disable Telemetry */
+	/** max simd bitwidth path to use */
+	struct simd_bitwidth max_simd_bitwidth;
 };
 
 void eal_reset_internal_config(struct internal_config *internal_cfg);
