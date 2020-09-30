@@ -31,6 +31,11 @@ struct tmgr_port {
 	uint32_t n_subports_per_port;
 };
 
+struct tmgr_subport {
+	struct rte_sched_subport_params  p;
+	struct rte_sched_subport_profile_params pp;
+};
+
 TAILQ_HEAD(tmgr_port_list, tmgr_port);
 
 int
@@ -48,7 +53,7 @@ struct tmgr_port_params {
 };
 
 int
-tmgr_subport_profile_add(struct rte_sched_subport_params *p);
+tmgr_subport_profile_add(struct tmgr_subport *sp);
 
 int
 tmgr_pipe_profile_add(struct rte_sched_pipe_params *p);
