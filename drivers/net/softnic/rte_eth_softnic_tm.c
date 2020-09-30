@@ -90,7 +90,7 @@ softnic_tmgr_port_create(struct pmd_internals *p,
 		uint32_t pipe_id;
 		int status;
 
-		status = rte_dynamic_sched_subport_config(sched,
+		status = rte_sched_subport_config(sched,
 			subport_id,
 			&t->subport_profile.params[subport_id],
 			t->subport_to_profile[subport_id]);
@@ -1162,7 +1162,7 @@ update_subport_tc_rate(struct rte_eth_dev *dev,
 		return -1;
 
 	/* Update the subport configuration. */
-	if (rte_dynamic_sched_subport_config(SCHED(p),
+	if (rte_sched_subport_config(SCHED(p),
 		subport_id, NULL, subport_profile_id))
 		return -1;
 

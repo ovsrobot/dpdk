@@ -322,7 +322,7 @@ app_init_sched_port(uint32_t portid, uint32_t socketid)
 	}
 
 	for (subport = 0; subport < port_params.n_subports_per_port; subport ++) {
-		err = rte_dynamic_sched_subport_config(port, subport,
+		err = rte_sched_subport_config(port, subport,
 						&subport_params[subport],
 						0);
 		if (err) {

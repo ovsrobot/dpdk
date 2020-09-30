@@ -148,7 +148,7 @@ test_sched(void)
 	port = rte_sched_port_config(&port_param);
 	TEST_ASSERT_NOT_NULL(port, "Error config sched port\n");
 
-	err = rte_dynamic_sched_subport_config(port, SUBPORT, subport_param,
+	err = rte_sched_subport_config(port, SUBPORT, subport_param,
 						DEFAULT_PROFILE);
 	TEST_ASSERT_SUCCESS(err, "Error config sched, err=%d\n", err);
 

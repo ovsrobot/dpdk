@@ -152,16 +152,11 @@ struct rte_sched_grinder {
 struct rte_sched_subport {
 	/* Token bucket (TB) */
 	uint64_t tb_time; /* time of last update */
-	uint64_t tb_period;
-	uint64_t tb_credits_per_period;
-	uint64_t tb_size;
 	uint64_t tb_credits;
 
 	/* Traffic classes (TCs) */
 	uint64_t tc_time; /* time of next update */
-	uint64_t tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE];
 	uint64_t tc_credits[RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE];
-	uint64_t tc_period;
 
 	/* TC oversubscription */
 	uint64_t tc_ov_wm;
@@ -837,18 +832,6 @@ rte_sched_subport_check_params(struct rte_sched_subport_params *params,
 		return -EINVAL;
 	}
 
-	if (params->tb_rate == 0 || params->tb_rate > rate) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for tb rate\n", __func__);
-		return -EINVAL;
-	}
-
-	if (params->tb_size == 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for tb size\n", __func__);
-		return -EINVAL;
-	}
-
 	/* qsize: if non-zero, power of 2,
 	 * no bigger than 32K (due to 16-bit read/write pointers)
 	 */
@@ -862,29 +845,8 @@ rte_sched_subport_check_params(struct rte_sched_subport_params *params,
 		}
 	}
 
-	for (i = 0; i < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; i++) {
-		uint64_t tc_rate = params->tc_rate[i];
-		uint16_t qsize = params->qsize[i];
-
-		if ((qsize == 0 && tc_rate != 0) ||
-			(qsize != 0 && tc_rate == 0) ||
-			(tc_rate > params->tb_rate)) {
-			RTE_LOG(ERR, SCHED,
-				"%s: Incorrect value for tc rate\n", __func__);
-			return -EINVAL;
-		}
-	}
-
-	if (params->qsize[RTE_SCHED_TRAFFIC_CLASS_BE] == 0 ||
-		params->tc_rate[RTE_SCHED_TRAFFIC_CLASS_BE] == 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect qsize or tc rate(best effort)\n", __func__);
-		return -EINVAL;
-	}
-
-	if (params->tc_period == 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for tc period\n", __func__);
+	if (params->qsize[RTE_SCHED_TRAFFIC_CLASS_BE] == 0) {
+		RTE_LOG(ERR, SCHED, "%s: Incorrect qsize\n", __func__);
 		return -EINVAL;
 	}
 
@@ -1102,48 +1064,6 @@ rte_sched_port_free(struct rte_sched_port *port)
 }
 
 static void
-rte_sched_port_log_subport_config(struct rte_sched_port *port, uint32_t i)
-{
-	struct rte_sched_subport *s = port->subports[i];
-
-	RTE_LOG(DEBUG, SCHED, "Low level config for subport %u:\n"
-		"	Token bucket: period = %"PRIu64", credits per period = %"PRIu64
-		", size = %"PRIu64"\n"
-		"	Traffic classes: period = %"PRIu64"\n"
-		"	credits per period = [%"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64
-		", %"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64
-		", %"PRIu64", %"PRIu64", %"PRIu64"]\n"
-		"	Best effort traffic class oversubscription: wm min = %"PRIu64
-		", wm max = %"PRIu64"\n",
-		i,
-
-		/* Token bucket */
-		s->tb_period,
-		s->tb_credits_per_period,
-		s->tb_size,
-
-		/* Traffic classes */
-		s->tc_period,
-		s->tc_credits_per_period[0],
-		s->tc_credits_per_period[1],
-		s->tc_credits_per_period[2],
-		s->tc_credits_per_period[3],
-		s->tc_credits_per_period[4],
-		s->tc_credits_per_period[5],
-		s->tc_credits_per_period[6],
-		s->tc_credits_per_period[7],
-		s->tc_credits_per_period[8],
-		s->tc_credits_per_period[9],
-		s->tc_credits_per_period[10],
-		s->tc_credits_per_period[11],
-		s->tc_credits_per_period[12],
-
-		/* Best effort traffic class oversubscription */
-		s->tc_ov_wm_min,
-		s->tc_ov_wm_max);
-}
-
-static void
 rte_sched_free_memory(struct rte_sched_port *port, uint32_t n_subports)
 {
 	uint32_t i;
@@ -1203,195 +1123,6 @@ rte_sched_subport_profile_config(struct rte_sched_port *port,
 
 int
 rte_sched_subport_config(struct rte_sched_port *port,
-	uint32_t subport_id,
-	struct rte_sched_subport_params *params)
-{
-	struct rte_sched_subport *s = NULL;
-	uint32_t n_subports = subport_id;
-	uint32_t n_subport_pipe_queues, i;
-	uint32_t size0, size1, bmp_mem_size;
-	int status;
-
-	/* Check user parameters */
-	if (port == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter port\n", __func__);
-		return 0;
-	}
-
-	if (subport_id >= port->n_subports_per_port) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for subport id\n", __func__);
-
-		rte_sched_free_memory(port, n_subports);
-		return -EINVAL;
-	}
-
-	status = rte_sched_subport_check_params(params,
-		port->n_pipes_per_subport,
-		port->rate);
-	if (status != 0) {
-		RTE_LOG(NOTICE, SCHED,
-			"%s: Port scheduler params check failed (%d)\n",
-			__func__, status);
-
-		rte_sched_free_memory(port, n_subports);
-		return -EINVAL;
-	}
-
-	/* Determine the amount of memory to allocate */
-	size0 = sizeof(struct rte_sched_subport);
-	size1 = rte_sched_subport_get_array_base(params,
-				e_RTE_SCHED_SUBPORT_ARRAY_TOTAL);
-
-	/* Allocate memory to store the data structures */
-	s = rte_zmalloc_socket("subport_params", size0 + size1,
-		RTE_CACHE_LINE_SIZE, port->socket);
-	if (s == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Memory allocation fails\n", __func__);
-
-		rte_sched_free_memory(port, n_subports);
-		return -ENOMEM;
-	}
-
-	n_subports++;
-
-	/* Port */
-	port->subports[subport_id] = s;
-
-	/* Token Bucket (TB) */
-	if (params->tb_rate == port->rate) {
-		s->tb_credits_per_period = 1;
-		s->tb_period = 1;
-	} else {
-		double tb_rate = ((double) params->tb_rate) / ((double) port->rate);
-		double d = RTE_SCHED_TB_RATE_CONFIG_ERR;
-
-		rte_approx_64(tb_rate, d, &s->tb_credits_per_period, &s->tb_period);
-	}
-
-	s->tb_size = params->tb_size;
-	s->tb_time = port->time;
-	s->tb_credits = s->tb_size / 2;
-
-	/* Traffic Classes (TCs) */
-	s->tc_period = rte_sched_time_ms_to_bytes(params->tc_period, port->rate);
-	for (i = 0; i < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; i++) {
-		if (params->qsize[i])
-			s->tc_credits_per_period[i]
-				= rte_sched_time_ms_to_bytes(params->tc_period,
-					params->tc_rate[i]);
-	}
-	s->tc_time = port->time + s->tc_period;
-	for (i = 0; i < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; i++)
-		if (params->qsize[i])
-			s->tc_credits[i] = s->tc_credits_per_period[i];
-
-	/* compile time checks */
-	RTE_BUILD_BUG_ON(RTE_SCHED_PORT_N_GRINDERS == 0);
-	RTE_BUILD_BUG_ON(RTE_SCHED_PORT_N_GRINDERS &
-		(RTE_SCHED_PORT_N_GRINDERS - 1));
-
-	/* User parameters */
-	s->n_pipes_per_subport_enabled = params->n_pipes_per_subport_enabled;
-	memcpy(s->qsize, params->qsize, sizeof(params->qsize));
-	s->n_pipe_profiles = params->n_pipe_profiles;
-	s->n_max_pipe_profiles = params->n_max_pipe_profiles;
-
-#ifdef RTE_SCHED_RED
-	for (i = 0; i < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; i++) {
-		uint32_t j;
-
-		for (j = 0; j < RTE_COLORS; j++) {
-			/* if min/max are both zero, then RED is disabled */
-			if ((params->red_params[i][j].min_th |
-			     params->red_params[i][j].max_th) == 0) {
-				continue;
-			}
-
-			if (rte_red_config_init(&s->red_config[i][j],
-				params->red_params[i][j].wq_log2,
-				params->red_params[i][j].min_th,
-				params->red_params[i][j].max_th,
-				params->red_params[i][j].maxp_inv) != 0) {
-				rte_sched_free_memory(port, n_subports);
-
-				RTE_LOG(NOTICE, SCHED,
-				"%s: RED configuration init fails\n", __func__);
-				return -EINVAL;
-			}
-		}
-	}
-#endif
-
-	/* Scheduling loop detection */
-	s->pipe_loop = RTE_SCHED_PIPE_INVALID;
-	s->pipe_exhaustion = 0;
-
-	/* Grinders */
-	s->busy_grinders = 0;
-
-	/* Queue base calculation */
-	rte_sched_subport_config_qsize(s);
-
-	/* Large data structures */
-	s->pipe = (struct rte_sched_pipe *)
-		(s->memory + rte_sched_subport_get_array_base(params,
-		e_RTE_SCHED_SUBPORT_ARRAY_PIPE));
-	s->queue = (struct rte_sched_queue *)
-		(s->memory + rte_sched_subport_get_array_base(params,
-		e_RTE_SCHED_SUBPORT_ARRAY_QUEUE));
-	s->queue_extra = (struct rte_sched_queue_extra *)
-		(s->memory + rte_sched_subport_get_array_base(params,
-		e_RTE_SCHED_SUBPORT_ARRAY_QUEUE_EXTRA));
-	s->pipe_profiles = (struct rte_sched_pipe_profile *)
-		(s->memory + rte_sched_subport_get_array_base(params,
-		e_RTE_SCHED_SUBPORT_ARRAY_PIPE_PROFILES));
-	s->bmp_array =  s->memory + rte_sched_subport_get_array_base(params,
-		e_RTE_SCHED_SUBPORT_ARRAY_BMP_ARRAY);
-	s->queue_array = (struct rte_mbuf **)
-		(s->memory + rte_sched_subport_get_array_base(params,
-		e_RTE_SCHED_SUBPORT_ARRAY_QUEUE_ARRAY));
-
-	/* Pipe profile table */
-	rte_sched_subport_config_pipe_profile_table(s, params, port->rate);
-
-	/* Bitmap */
-	n_subport_pipe_queues = rte_sched_subport_pipe_queues(s);
-	bmp_mem_size = rte_bitmap_get_memory_footprint(n_subport_pipe_queues);
-	s->bmp = rte_bitmap_init(n_subport_pipe_queues, s->bmp_array,
-				bmp_mem_size);
-	if (s->bmp == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Subport bitmap init error\n", __func__);
-
-		rte_sched_free_memory(port, n_subports);
-		return -EINVAL;
-	}
-
-	for (i = 0; i < RTE_SCHED_PORT_N_GRINDERS; i++)
-		s->grinder_base_bmp_pos[i] = RTE_SCHED_PIPE_INVALID;
-
-#ifdef RTE_SCHED_SUBPORT_TC_OV
-	/* TC oversubscription */
-	s->tc_ov_wm_min = port->mtu;
-	s->tc_ov_wm_max = rte_sched_time_ms_to_bytes(params->tc_period,
-						     s->pipe_tc_be_rate_max);
-	s->tc_ov_wm = s->tc_ov_wm_max;
-	s->tc_ov_period_id = 0;
-	s->tc_ov = 0;
-	s->tc_ov_n = 0;
-	s->tc_ov_rate = 0;
-#endif
-
-	rte_sched_port_log_subport_config(port, subport_id);
-
-	return 0;
-}
-
-int
-rte_dynamic_sched_subport_config(struct rte_sched_port *port,
 	uint32_t subport_id,
 	struct rte_sched_subport_params *params,
 	uint32_t subport_profile_id)

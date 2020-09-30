@@ -149,18 +149,6 @@ struct rte_sched_pipe_params {
  * byte.
  */
 struct rte_sched_subport_params {
-	/** Token bucket rate (measured in bytes per second) */
-	uint64_t tb_rate;
-
-	/** Token bucket size (measured in credits) */
-	uint64_t tb_size;
-
-	/** Traffic class rates (measured in bytes per second) */
-	uint64_t tc_rate[RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE];
-
-	/** Enforcement period for rates (measured in milliseconds) */
-	uint64_t tc_period;
-
 	/** Number of subport pipes.
 	 * The subport can enable/allocate fewer pipes than the maximum
 	 * number set through struct port_params::n_max_pipes_per_subport,
@@ -360,23 +348,6 @@ rte_sched_port_subport_profile_add(struct rte_sched_port *port,
 	uint32_t *subport_profile_id);
 
 /**
- * Hierarchical scheduler subport configuration
- *
- * @param port
- *   Handle to port scheduler instance
- * @param subport_id
- *   Subport ID
- * @param params
- *   Subport configuration parameters
- * @return
- *   0 upon success, error code otherwise
- */
-int
-rte_sched_subport_config(struct rte_sched_port *port,
-	uint32_t subport_id,
-	struct rte_sched_subport_params *params);
-
-/**
  * Hierarchical scheduler subport configuration.
  * Note that this function is also used at runtime
  * to configure subport bandwidth profile.
@@ -395,7 +366,7 @@ rte_sched_subport_config(struct rte_sched_port *port,
  *   0 upon success, error code otherwise
  */
 int
-rte_dynamic_sched_subport_config(struct rte_sched_port *port,
+rte_sched_subport_config(struct rte_sched_port *port,
 	uint32_t subport_id,
 	struct rte_sched_subport_params *params,
 	uint32_t subport_profile_id);

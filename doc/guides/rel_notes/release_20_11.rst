@@ -91,6 +91,10 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* sched: The subport bandwidth configuration parameters such as tb_rate,
+  tc_rate, tc_period etc., are moved from subport level data structure to
+  new a data structure. This allows to configure a subport with different
+  subport bandwidth configuration dynamically.
 
 API Changes
 -----------

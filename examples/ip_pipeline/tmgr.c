@@ -130,7 +130,7 @@ tmgr_port_create(const char *name, struct tmgr_port_params *params)
 	for (i = 0; i < params->n_subports_per_port; i++) {
 		int status;
 
-		status = rte_dynamic_sched_subport_config(
+		status = rte_sched_subport_config(
 			s,
 			i,
 			&subport_profile.params[0], 0);
@@ -193,7 +193,7 @@ tmgr_subport_config(const char *port_name,
 		return -1;
 
 	/* Resource config */
-	status = rte_dynamic_sched_subport_config(
+	status = rte_sched_subport_config(
 		port->s,
 		subport_id,
 		NULL,
