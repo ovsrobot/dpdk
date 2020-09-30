@@ -70,6 +70,7 @@ EXPERIMENTAL {
 	rte_swx_pipeline_action_config;
 	rte_swx_pipeline_table_type_register;
 	rte_swx_pipeline_table_config;
+	rte_swx_pipeline_instructions_config;
 	rte_swx_pipeline_build;
 	rte_swx_pipeline_free;
 	rte_swx_pipeline_table_state_get;
