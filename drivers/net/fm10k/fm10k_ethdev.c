@@ -2930,7 +2930,9 @@ fm10k_set_tx_function(struct rte_eth_dev *dev)
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
 		/* primary process has set the ftag flag and offloads */
 		txq = dev->data->tx_queues[0];
-		if (fm10k_tx_vec_condition_check(txq)) {
+		if (fm10k_tx_vec_condition_check(txq) ||
+				rte_get_max_simd_bitwidth()
+				< RTE_MAX_128_SIMD) {
 			dev->tx_pkt_burst = fm10k_xmit_pkts;
 			dev->tx_pkt_prepare = fm10k_prep_pkts;
 			PMD_INIT_LOG(DEBUG, "Use regular Tx func");
@@ -2949,7 +2951,8 @@ fm10k_set_tx_function(struct rte_eth_dev *dev)
 		txq = dev->data->tx_queues[i];
 		txq->tx_ftag_en = tx_ftag_en;
 		/* Check if Vector Tx is satisfied */
-		if (fm10k_tx_vec_condition_check(txq))
+		if (fm10k_tx_vec_condition_check(txq) ||
+				rte_get_max_simd_bitwidth() < RTE_MAX_128_SIMD)
 			use_sse = 0;
 	}
 
@@ -2983,7 +2986,9 @@ fm10k_set_rx_function(struct rte_eth_dev *dev)
 	 * conditions to be met.
 	 */
 	if (!fm10k_rx_vec_condition_check(dev) &&
-			dev_info->rx_vec_allowed && !rx_ftag_en) {
+			dev_info->rx_vec_allowed && !rx_ftag_en &&
+				rte_get_max_simd_bitwidth()
+				>= RTE_MAX_128_SIMD) {
 		if (dev->data->scattered_rx)
 			dev->rx_pkt_burst = fm10k_recv_scattered_pkts_vec;
 		else
