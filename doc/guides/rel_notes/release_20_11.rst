@@ -55,6 +55,16 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Flow rules allowed to use private PMD items / actions.**
+
+  * Flow rule verification was updated to accept private PMD
+    items and actions.
+
+* **Added generic API to offload tunneled traffic and restore missed packet.**
+
+  * Added a new hardware independent helper API to RTE flow library that
+    offloads tunneled traffic and restores missed packets.
+
 * **Updated Cisco enic driver.**
 
   * Added support for VF representors with single-queue Tx/Rx and flow API

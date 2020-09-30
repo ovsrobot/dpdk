@@ -108,6 +108,38 @@ struct rte_flow_ops {
 		 void **context,
 		 uint32_t nb_contexts,
 		 struct rte_flow_error *err);
+	/** See rte_flow_tunnel_decap_set() */
+	int (*tunnel_decap_set)
+		(struct rte_eth_dev *dev,
+		 struct rte_flow_tunnel *tunnel,
+		 struct rte_flow_action **pmd_actions,
+		 uint32_t *num_of_actions,
+		 struct rte_flow_error *err);
+	/** See rte_flow_tunnel_match() */
+	int (*tunnel_match)
+		(struct rte_eth_dev *dev,
+		 struct rte_flow_tunnel *tunnel,
+		 struct rte_flow_item **pmd_items,
+		 uint32_t *num_of_items,
+		 struct rte_flow_error *err);
+	/** See rte_flow_get_rte_flow_restore_info() */
+	int (*get_restore_info)
+		(struct rte_eth_dev *dev,
+		 struct rte_mbuf *m,
+		 struct rte_flow_restore_info *info,
+		 struct rte_flow_error *err);
+	/** See rte_flow_action_tunnel_decap_release() */
+	int (*action_release)
+		(struct rte_eth_dev *dev,
+		 struct rte_flow_action *pmd_actions,
+		 uint32_t num_of_actions,
+		 struct rte_flow_error *err);
+	/** See rte_flow_item_release() */
+	int (*item_release)
+		(struct rte_eth_dev *dev,
+		 struct rte_flow_item *pmd_items,
+		 uint32_t num_of_items,
+		 struct rte_flow_error *err);
 };
 
 /**

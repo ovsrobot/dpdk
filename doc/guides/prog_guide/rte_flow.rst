@@ -3031,6 +3031,111 @@ operations include:
 - Duplication of a complete flow rule description.
 - Pattern item or action name retrieval.
 
+Tunneled traffic offload
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Provide software application with unified rules model for tunneled traffic
+regardless underlying hardware.
+
+ - The model introduces a concept of a virtual tunnel port (VTP).
+ - The model uses VTP to offload ingress tunneled network traffic 
+   with RTE flow rules.
+ - The model is implemented as set of helper functions. Each PMD
+   implements VTP offload according to underlying hardware offload
+   capabilities.  Applications must query PMD for VTP flow
+   items / actions before using in creation of a VTP flow rule.
+
+The model components:
+
+- Virtual Tunnel Port (VTP) is a stateless software object that
+  describes tunneled network traffic.  VTP object usually contains
+  descriptions of outer headers, tunnel headers and inner headers.
+- Tunnel Steering flow Rule (TSR) detects tunneled packets and
+  delegates them to tunnel processing infrastructure, implemented
+  in PMD for optimal hardware utilization, for further processing.
+- Tunnel Matching flow Rule (TMR) verifies packet configuration and
+  runs offload actions in case of a match.
+
+Application actions:
+
+1 Initialize VTP object according to tunnel network parameters.
+
+2 Create TSR flow rule.
+
+2.1 Query PMD for VTP actions. Application can query for VTP actions more than once.
+
+  .. code-block:: c
+
+    int
+    rte_flow_tunnel_decap_set(uint16_t port_id,
+                              struct rte_flow_tunnel *tunnel,
+                              struct rte_flow_action **pmd_actions,
+                              uint32_t *num_of_pmd_actions,
+                              struct rte_flow_error *error);
+
+2.2 Integrate PMD actions into TSR actions list.
+
+2.3 Create TSR flow rule.
+
+    .. code-block:: console
+
+      flow create <port> group 0 match {tunnel items} / end actions {PMD actions} / {App actions} / end
+
+3 Create TMR flow rule.
+
+3.1 Query PMD for VTP items. Application can query for VTP items more than once.
+
+    .. code-block:: c
+
+      int
+      rte_flow_tunnel_match(uint16_t port_id,
+                            struct rte_flow_tunnel *tunnel,
+                            struct rte_flow_item **pmd_items,
+                            uint32_t *num_of_pmd_items,
+                            struct rte_flow_error *error);
+
+3.2 Integrate PMD items into TMR items list.
+
+3.3 Create TMR flow rule.
+
+    .. code-block:: console
+
+      flow create <port> group 0 match {PMD items} / {APP items} / end actions {offload actions} / end
+
+The model provides helper function call to restore packets that miss
+tunnel TMR rules to its original state:
+
+.. code-block:: c
+
+  int
+  rte_flow_get_restore_info(uint16_t port_id,
+                            struct rte_mbuf *mbuf,
+                            struct rte_flow_restore_info *info,
+                            struct rte_flow_error *error);
+
+rte_tunnel object filled by the call inside
+``rte_flow_restore_info *info parameter`` can be used by the application
+to create new TMR rule for that tunnel.
+
+The model requirements:
+
+Software application must initialize
+rte_tunnel object with tunnel parameters before calling
+rte_flow_tunnel_decap_set() & rte_flow_tunnel_match().
+
+PMD actions array obtained in rte_flow_tunnel_decap_set() must be
+released by application with rte_flow_action_release() call.
+Application can release the actionsfter TSR rule was created.
+
+PMD items array obtained with rte_flow_tunnel_match() must be released
+by application with rte_flow_item_release() call.  Application can
+release the items after rule was created. However, if the application
+needs to create additional TMR rule for the same tunnel it will need
+to obtain PMD items again.
+
+Application cannot destroy rte_tunnel object before it releases all
+PMD actions & PMD items referencing that tunnel.
+
 Caveats
 -------
 
