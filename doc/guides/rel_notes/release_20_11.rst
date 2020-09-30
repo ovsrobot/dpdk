@@ -78,6 +78,9 @@ New Features
     ``--portmask=N``
     where N represents the hexadecimal bitmask of ports used.
 
+* **Added AVX512 lookup implementation for FIB.**
+
+  Added a AVX512 lookup functions implementation into FIB library.
 
 Removed Items
 -------------
