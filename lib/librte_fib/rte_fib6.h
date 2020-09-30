@@ -62,7 +62,8 @@ enum rte_fib_trie_nh_sz {
 
 /** Type of lookup function implementation */
 enum rte_fib_trie_lookup_type {
-	RTE_FIB6_TRIE_SCALAR
+	RTE_FIB6_TRIE_SCALAR,
+	RTE_FIB6_TRIE_VECTOR_AVX512
 };
 
 /** FIB configuration structure */
