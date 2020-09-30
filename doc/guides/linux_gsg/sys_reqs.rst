@@ -47,7 +47,7 @@ Compilation of the DPDK
 
     * Python v3.5+ is needed to build DPDK using meson and ninja
 
-    * Python 2.7+ or 3.2+, to use various helper scripts included in the DPDK package.
+    * Python 3.2+, to use various helper scripts included in the DPDK package.
 
 *   Meson (version 0.47.1+) and ninja
 

@@ -91,6 +91,8 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* Removed python 2 support since it was EOL'd in January 2020.
+
 
 API Changes
 -----------
