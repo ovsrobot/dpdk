@@ -28,9 +28,14 @@ install_libabigail() {
     rm ${version}.tar.gz
 }
 
-if [ "$AARCH64" = "1" ]; then
+if [ "$AARCH64_GCC" = "1" ]; then
     # convert the arch specifier
     OPTS="$OPTS --cross-file config/arm/arm64_armv8_linux_gcc"
+fi
+
+if [ "$AARCH64_CLANG" = "1" ]; then
+    # convert the arch specifier
+    OPTS="$OPTS --cross-file config/arm/arm64_armv8_linux_clang_ubuntu1804"
 fi
 
 if [ "$BUILD_DOCS" = "1" ]; then
@@ -53,7 +58,7 @@ OPTS="$OPTS --buildtype=debugoptimized"
 meson build --werror $OPTS
 ninja -C build
 
-if [ "$AARCH64" != "1" ]; then
+if [ "$AARCH64_GCC" != "1" ] && [ "$AARCH64_CLANG" != 1 ]; then
     devtools/test-null.sh
 fi
 
