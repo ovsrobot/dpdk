@@ -538,8 +538,13 @@ parse_internal_args(const char *key __rte_unused, const char *value,
 {
 	struct ring_internal_args **internal_args = data;
 	void *args;
+	int n;
 
-	sscanf(value, "%p", &args);
+	if (sscanf(value, "%p%n", &args, &n) != 1 || (size_t)n != strlen(value)) {
+		PMD_LOG(ERR, "Error parsing internal args");
+
+		return -1;
+	}
 
 	*internal_args = args;
 
