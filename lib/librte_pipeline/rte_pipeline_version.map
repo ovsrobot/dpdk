@@ -56,6 +56,8 @@ EXPERIMENTAL {
 	rte_table_action_ttl_read;
 	rte_table_action_crypto_sym_session_get;
 	rte_swx_pipeline_config;
+	rte_swx_pipeline_port_in_type_register;
+	rte_swx_pipeline_port_in_config;
 	rte_swx_pipeline_build;
 	rte_swx_pipeline_free;
 };
