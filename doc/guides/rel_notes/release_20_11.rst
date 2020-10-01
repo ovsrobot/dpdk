@@ -167,6 +167,9 @@ API Changes
 
 * ethdev: ``rte_eth_rx_descriptor_done()`` API has been deprecated.
 
+* ethdev: Added struct ``rte_flow_query_age`` for use in response to query
+  of AGE action.
+
 * Renamed internal ethdev APIs:
 
   * ``_rte_eth_dev_callback_process()`` -> ``rte_eth_dev_callback_process()``
