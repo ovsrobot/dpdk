@@ -367,6 +367,9 @@ bool setup_on_probe_event = true;
 /* Clear ptypes on port initialization. */
 uint8_t clear_ptypes = true;
 
+/* Hairpin ports configuration mode. */
+uint16_t hairpin_mode;
+
 /* Pretty printing of ethdev events */
 static const char * const eth_event_desc[] = {
 	[RTE_ETH_EVENT_UNKNOWN] = "unknown",
@@ -2345,7 +2348,7 @@ port_is_started(portid_t port_id)
 
 /* Configure the Rx and Tx hairpin queues for the selected port. */
 static int
-setup_hairpin_queues(portid_t pi)
+setup_hairpin_queues(portid_t pi, portid_t p_pi, uint16_t cnt_pi)
 {
 	queueid_t qi;
 	struct rte_eth_hairpin_conf hairpin_conf = {
@@ -2354,10 +2357,48 @@ setup_hairpin_queues(portid_t pi)
 	int i;
 	int diag;
 	struct rte_port *port = &ports[pi];
+	uint16_t peer_rx_port = pi;
+	uint16_t peer_tx_port = pi;
+	uint32_t manual = 1;
+	uint32_t tx_exp = hairpin_mode & 0x10;
+
+	if (!(hairpin_mode & 0xf)) {
+		peer_rx_port = pi;
+		peer_tx_port = pi;
+		manual = 0;
+	} else if (hairpin_mode & 0x1) {
+		peer_tx_port = rte_eth_find_next_owned_by(pi + 1,
+						       RTE_ETH_DEV_NO_OWNER);
+		if (peer_tx_port >= RTE_MAX_ETHPORTS)
+			peer_tx_port = rte_eth_find_next_owned_by(0,
+						RTE_ETH_DEV_NO_OWNER);
+		if (p_pi != RTE_MAX_ETHPORTS) {
+			peer_rx_port = p_pi;
+		} else {
+			uint16_t next_pi;
+
+			RTE_ETH_FOREACH_DEV(next_pi)
+				peer_rx_port = next_pi;
+		}
+		manual = 1;
+	} else if (hairpin_mode & 0x2) {
+		if (cnt_pi & 0x1) {
+			peer_rx_port = p_pi;
+		} else {
+			peer_rx_port = rte_eth_find_next_owned_by(pi + 1,
+						RTE_ETH_DEV_NO_OWNER);
+			if (peer_rx_port >= RTE_MAX_ETHPORTS)
+				peer_rx_port = pi;
+		}
+		peer_tx_port = peer_rx_port;
+		manual = 1;
+	}
 
 	for (qi = nb_txq, i = 0; qi < nb_hairpinq + nb_txq; qi++) {
-		hairpin_conf.peers[0].port = pi;
+		hairpin_conf.peers[0].port = peer_rx_port;
 		hairpin_conf.peers[0].queue = i + nb_rxq;
+		hairpin_conf.manual_bind = !!manual;
+		hairpin_conf.tx_explicit = !!tx_exp;
 		diag = rte_eth_tx_hairpin_queue_setup
 			(pi, qi, nb_txd, &hairpin_conf);
 		i++;
@@ -2377,8 +2418,10 @@ setup_hairpin_queues(portid_t pi)
 		return -1;
 	}
 	for (qi = nb_rxq, i = 0; qi < nb_hairpinq + nb_rxq; qi++) {
-		hairpin_conf.peers[0].port = pi;
+		hairpin_conf.peers[0].port = peer_tx_port;
 		hairpin_conf.peers[0].queue = i + nb_txq;
+		hairpin_conf.manual_bind = !!manual;
+		hairpin_conf.tx_explicit = !!tx_exp;
 		diag = rte_eth_rx_hairpin_queue_setup
 			(pi, qi, nb_rxd, &hairpin_conf);
 		i++;
@@ -2405,6 +2448,8 @@ start_port(portid_t pid)
 {
 	int diag, need_check_link_status = -1;
 	portid_t pi;
+	portid_t p_pi = RTE_MAX_ETHPORTS;
+	uint16_t cnt_pi = 0;
 	queueid_t qi;
 	struct rte_port *port;
 	struct rte_ether_addr mac_addr;
@@ -2544,8 +2589,10 @@ start_port(portid_t pid)
 				return -1;
 			}
 			/* setup hairpin queues */
-			if (setup_hairpin_queues(pi) != 0)
+			if (setup_hairpin_queues(pi, p_pi, cnt_pi) != 0)
 				return -1;
+			p_pi = pi;
+			cnt_pi++;
 		}
 		configure_rxtx_dump_callbacks(verbose_level);
 		if (clear_ptypes) {
@@ -3773,6 +3820,19 @@ main(int argc, char** argv)
 
 	if (!no_device_start && start_port(RTE_PORT_ALL) != 0)
 		rte_exit(EXIT_FAILURE, "Start ports failed\n");
+
+	/* set all ports to promiscuous mode by default */
+	if (hairpin_mode & 0x3) {
+		RTE_ETH_FOREACH_DEV(port_id) {
+			ret = rte_eth_hairpin_bind(port_id, RTE_MAX_ETHPORTS);
+			if (ret != 0) {
+				RTE_LOG(ERR, EAL, "Error during binding "
+					"hairpin tx port %u: %s",
+					port_id, rte_strerror(-ret));
+				return -1;
+			}
+		}
+	}
 
 	/* set all ports to promiscuous mode by default */
 	RTE_ETH_FOREACH_DEV(port_id) {
