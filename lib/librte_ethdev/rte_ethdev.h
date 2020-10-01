@@ -1027,6 +1027,21 @@ struct rte_eth_hairpin_cap {
 
 #define RTE_ETH_MAX_HAIRPIN_PEERS 32
 
+/*
+ * Hairpin queue attribute parameters.
+ * Each TX queue and peer RX queue should have the same value.
+ * Default value 0 is for backward-compatibility, the same behaviors should
+ * remain if the value is not set (0).
+ */
+/**< Hairpin queues will be bound automatically */
+#define RTE_ETH_HAIRPIN_BIND_AUTO		(0)
+/**< Hairpin queues will be bound manually with bind API */
+#define RTE_ETH_HAIRPIN_BIND_MANUAL		(1)
+/**< Hairpin TX part flow rule will be inserted implicitly by PMD */
+#define RTE_ETH_HAIRPIN_TXRULE_IMPLICIT		(0)
+/**< Hairpin TX part flow rule will be inserted explicitly by APP */
+#define RTE_ETH_HAIRPIN_TXRULE_EXPLICIT		(1)
+
 /**
  * @warning
  * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
@@ -1046,6 +1061,9 @@ struct rte_eth_hairpin_peer {
  */
 struct rte_eth_hairpin_conf {
 	uint16_t peer_count; /**< The number of peers. */
+	uint32_t reserved : 30; /**< Reserved bits. */
+	uint32_t tx_explicit : 1; /**< Explicit TX flow rule mode. */
+	uint32_t manual_bind : 1; /**< Manually bind hairpin queues. */
 	struct rte_eth_hairpin_peer peers[RTE_ETH_MAX_HAIRPIN_PEERS];
 };
 
