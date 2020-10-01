@@ -575,6 +575,54 @@ typedef int (*eth_tx_hairpin_queue_setup_t)
 	 const struct rte_eth_hairpin_conf *hairpin_conf);
 
 /**
+ * @internal
+ * Bind all hairpin TX queues of one port to the RX queues of the peer port.
+ *
+ * @param dev
+ *   ethdev handle of port.
+ * @param rx_port
+ *   the peer RX port.
+ *
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success, bind successfully.
+ * @retval -ENOTSUP
+ *   Bind API is not supported.
+ * @retval -EINVAL
+ *   One of the parameters is invalid.
+ * @retval -EBUSY
+ *   Device is not started.
+ */
+typedef int (*eth_hairpin_bind_t)(struct rte_eth_dev *dev,
+				uint16_t rx_port);
+
+/**
+ * @internal
+ * Unbind all hairpin TX queues of one port from the RX queues of the peer port.
+ *
+ * @param dev
+ *   ethdev handle of port.
+ * @param rx_port
+ *   the peer RX port.
+ *
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success, bind successfully.
+ * @retval -ENOTSUP
+ *   Bind API is not supported.
+ * @retval -EINVAL
+ *   One of the parameters is invalid.
+ * @retval -EBUSY
+ *   Device is already stopped.
+ */
+typedef int (*eth_hairpin_unbind_t)(struct rte_eth_dev *dev,
+				  uint16_t rx_port);
+
+/**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
 struct eth_dev_ops {
@@ -713,6 +761,10 @@ struct eth_dev_ops {
 	/**< Set up device RX hairpin queue. */
 	eth_tx_hairpin_queue_setup_t tx_hairpin_queue_setup;
 	/**< Set up device TX hairpin queue. */
+	eth_hairpin_bind_t hairpin_bind;
+	/**< Bind all hairpin TX queues of device to the peer port RX queues. */
+	eth_hairpin_unbind_t hairpin_unbind;
+	/**< Unbind all hairpin TX queues from the peer port RX queues. */
 };
 
 /**
