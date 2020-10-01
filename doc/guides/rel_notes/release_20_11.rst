@@ -78,6 +78,12 @@ New Features
     ``--portmask=N``
     where N represents the hexadecimal bitmask of ports used.
 
+* ** Updated Virtio driver.**
+
+  * Added support for Vhost-vDPA backend to Virtio-user PMD.
+  * Changed Virtio device default link speed to unknown and added support for
+    200G link speed.
+
 
 Removed Items
 -------------
@@ -90,6 +96,8 @@ Removed Items
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+
+* vhost: Dequeue zero-copy support has been removed.
 
 
 API Changes
@@ -171,6 +179,8 @@ API Changes
   from ``void`` to ``int`` allowing the return of error codes from drivers.
 
 * bpf: ``RTE_BPF_XTYPE_NUM`` has been dropped from ``rte_bpf_xtype``.
+
+* vhost: moved vDPA APIs from experimental to stable.
 
 
 ABI Changes
