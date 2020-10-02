@@ -495,6 +495,38 @@ struct node_action_list {
 	struct node_action_pair *list;
 };
 
+static int
+eth_dev_ring_create_nodeaction(const char *name,
+		struct rte_vdev_device *vdev,
+		const unsigned int numa_node,
+		enum dev_action action,
+		struct rte_eth_dev **eth_dev,
+		struct node_action_list *info)
+{
+	struct rte_ring *rxtx[RTE_PMD_RING_MAX_RX_RINGS];
+	unsigned int num_rings;
+	unsigned int i;
+
+	num_rings = info->total;
+
+	for (i = 0; i < num_rings; i++) {
+		if (action == DEV_CREATE)
+			rxtx[i] = rte_ring_create(info->list[i].name, 1024,
+					numa_node,
+					RING_F_SP_ENQ|RING_F_SC_DEQ);
+		else
+			rxtx[i] = rte_ring_lookup(info->list[i].name);
+		if (rxtx[i] == NULL)
+			return -1;
+	}
+
+	if (do_eth_dev_ring_create(name, vdev, rxtx, num_rings, rxtx,
+			num_rings, numa_node, action, eth_dev) < 0)
+		return -1;
+
+	return 0;
+}
+
 static int parse_kvlist(const char *key __rte_unused,
 			const char *value, void *data)
 {
@@ -657,22 +689,17 @@ rte_pmd_ring_probe(struct rte_vdev_device *dev)
 
 	ret = rte_kvargs_process(kvlist, ETH_RING_NUMA_NODE_ACTION_ARG,
 				 parse_kvlist, info);
-
 	if (ret < 0)
 		goto out_free;
 
-	for (info->count = 0; info->count < info->total; info->count++) {
-		ret = eth_dev_ring_create(info->list[info->count].name, dev,
-				info->list[info->count].node,
-				info->list[info->count].action,
-				&eth_dev);
-		if ((ret == -1) && (info->list[info->count].action == DEV_CREATE)) {
-			PMD_LOG(INFO, "Attach to pmd_ring for %s", name);
-			ret = eth_dev_ring_create(name, dev,
-					info->list[info->count].node,
-					DEV_ATTACH,
-					&eth_dev);
-		}
+	ret = eth_dev_ring_create_nodeaction(name, dev,
+			info->list[0].node,
+			info->list[0].action, &eth_dev, info);
+	if ((ret == -1) && (info->list[0].action == DEV_CREATE)) {
+		PMD_LOG(INFO, "Attach to pmd_ring for %s", name);
+		ret = eth_dev_ring_create_nodeaction(name, dev,
+				info->list[0].node,
+				DEV_ATTACH, &eth_dev, info);
 	}
 
 out_free:
