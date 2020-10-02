@@ -598,85 +598,80 @@ rte_pmd_ring_probe(struct rte_vdev_device *dev)
 	PMD_LOG(INFO, "Initializing pmd_ring for %s", name);
 
 	if (params == NULL || params[0] == '\0') {
-		ret = eth_dev_ring_create(name, dev, rte_socket_id(), DEV_CREATE,
-				&eth_dev);
+		ret = eth_dev_ring_create(name, dev, rte_socket_id(),
+				DEV_CREATE, &eth_dev);
 		if (ret == -1) {
-			PMD_LOG(INFO,
-				"Attach to pmd_ring for %s", name);
+			PMD_LOG(INFO, "Attach to pmd_ring for %s", name);
 			ret = eth_dev_ring_create(name, dev, rte_socket_id(),
-						  DEV_ATTACH, &eth_dev);
-		}
-	} else {
-		kvlist = rte_kvargs_parse(params, valid_arguments);
-
-		if (!kvlist) {
-			PMD_LOG(INFO,
-				"Ignoring unsupported parameters when creatingrings-backed ethernet device");
-			ret = eth_dev_ring_create(name, dev, rte_socket_id(),
-						  DEV_CREATE, &eth_dev);
-			if (ret == -1) {
-				PMD_LOG(INFO,
-					"Attach to pmd_ring for %s",
-					name);
-				ret = eth_dev_ring_create(name, dev, rte_socket_id(),
-							  DEV_ATTACH, &eth_dev);
-			}
-
-			return ret;
+					DEV_ATTACH, &eth_dev);
 		}
 
-		if (rte_kvargs_count(kvlist, ETH_RING_INTERNAL_ARG) == 1) {
-			ret = rte_kvargs_process(kvlist, ETH_RING_INTERNAL_ARG,
-						 parse_internal_args,
-						 &internal_args);
-			if (ret < 0)
-				goto out_free;
+		return ret;
+	}
 
-			ret = do_eth_dev_ring_create(name, dev,
-				internal_args->rx_queues,
-				internal_args->nb_rx_queues,
-				internal_args->tx_queues,
-				internal_args->nb_tx_queues,
-				internal_args->numa_node,
-				DEV_ATTACH,
+	kvlist = rte_kvargs_parse(params, valid_arguments);
+	if (!kvlist) {
+		PMD_LOG(INFO,
+			"Ignoring unsupported parameters when creatingrings-backed ethernet device");
+		ret = eth_dev_ring_create(name, dev, rte_socket_id(),
+				DEV_CREATE, &eth_dev);
+		if (ret == -1) {
+			PMD_LOG(INFO, "Attach to pmd_ring for %s", name);
+			ret = eth_dev_ring_create(name, dev, rte_socket_id(),
+					DEV_ATTACH, &eth_dev);
+		}
+
+		return ret;
+	}
+
+	if (rte_kvargs_count(kvlist, ETH_RING_INTERNAL_ARG) == 1) {
+		ret = rte_kvargs_process(kvlist, ETH_RING_INTERNAL_ARG,
+					 parse_internal_args,
+					 &internal_args);
+		if (ret < 0)
+			goto out_free;
+
+		ret = do_eth_dev_ring_create(name, dev,
+			internal_args->rx_queues,
+			internal_args->nb_rx_queues,
+			internal_args->tx_queues,
+			internal_args->nb_tx_queues,
+			internal_args->numa_node,
+			DEV_ATTACH,
+			&eth_dev);
+		if (ret >= 0)
+			ret = 0;
+		goto out_free;
+	}
+
+	ret = rte_kvargs_count(kvlist, ETH_RING_NUMA_NODE_ACTION_ARG);
+	info = rte_zmalloc("struct node_action_list",
+			   sizeof(struct node_action_list) +
+			   (sizeof(struct node_action_pair) * ret),
+			   0);
+	if (!info)
+		goto out_free;
+
+	info->total = ret;
+	info->list = (struct node_action_pair *)(info + 1);
+
+	ret = rte_kvargs_process(kvlist, ETH_RING_NUMA_NODE_ACTION_ARG,
+				 parse_kvlist, info);
+
+	if (ret < 0)
+		goto out_free;
+
+	for (info->count = 0; info->count < info->total; info->count++) {
+		ret = eth_dev_ring_create(info->list[info->count].name, dev,
+				info->list[info->count].node,
+				info->list[info->count].action,
 				&eth_dev);
-			if (ret >= 0)
-				ret = 0;
-		} else {
-			ret = rte_kvargs_count(kvlist, ETH_RING_NUMA_NODE_ACTION_ARG);
-			info = rte_zmalloc("struct node_action_list",
-					   sizeof(struct node_action_list) +
-					   (sizeof(struct node_action_pair) * ret),
-					   0);
-			if (!info)
-				goto out_free;
-
-			info->total = ret;
-			info->list = (struct node_action_pair *)(info + 1);
-
-			ret = rte_kvargs_process(kvlist, ETH_RING_NUMA_NODE_ACTION_ARG,
-						 parse_kvlist, info);
-
-			if (ret < 0)
-				goto out_free;
-
-			for (info->count = 0; info->count < info->total; info->count++) {
-				ret = eth_dev_ring_create(info->list[info->count].name,
-							  dev,
-							  info->list[info->count].node,
-							  info->list[info->count].action,
-							  &eth_dev);
-				if ((ret == -1) &&
-				    (info->list[info->count].action == DEV_CREATE)) {
-					PMD_LOG(INFO,
-						"Attach to pmd_ring for %s",
-						name);
-					ret = eth_dev_ring_create(name, dev,
-							info->list[info->count].node,
-							DEV_ATTACH,
-							&eth_dev);
-				}
-			}
+		if ((ret == -1) && (info->list[info->count].action == DEV_CREATE)) {
+			PMD_LOG(INFO, "Attach to pmd_ring for %s", name);
+			ret = eth_dev_ring_create(name, dev,
+					info->list[info->count].node,
+					DEV_ATTACH,
+					&eth_dev);
 		}
 	}
 
