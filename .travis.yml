@@ -18,6 +18,10 @@ _aarch64_packages: &aarch64_packages
   - *required_packages
   - [gcc-aarch64-linux-gnu, libc6-dev-arm64-cross, pkg-config-aarch64-linux-gnu]
 
+_aarch64_clang_packages: &aarch64_clang_packages
+  - *required_packages
+  - [libgcc-8-dev-arm64-cross, libatomic1-arm64-cross, libc6-dev-arm64-cross, pkg-config-aarch64-linux-gnu]
+
 _build_32b_packages: &build_32b_packages
   - *required_packages
   - [gcc-multilib]
@@ -83,6 +87,20 @@ jobs:
       apt:
         packages:
           - *aarch64_packages
+  - env: DEF_LIB="static" AARCH64=1
+    arch: amd64
+    compiler: clang
+    addons:
+      apt:
+        packages:
+          - *aarch64_clang_packages
+  - env: DEF_LIB="shared" AARCH64=1
+    arch: amd64
+    compiler: clang
+    addons:
+      apt:
+        packages:
+          - *aarch64_clang_packages
   # aarch64 gcc jobs
   - env: DEF_LIB="static"
     arch: arm64
