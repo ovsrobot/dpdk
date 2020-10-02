@@ -248,6 +248,8 @@ uint16_t i40e_recv_scattered_pkts_vec_avx2(void *rx_queue,
 	struct rte_mbuf **rx_pkts, uint16_t nb_pkts);
 uint16_t i40e_xmit_pkts_vec_avx2(void *tx_queue, struct rte_mbuf **tx_pkts,
 	uint16_t nb_pkts);
+int i40e_get_wake_addr(void *rx_queue, volatile void **tail_desc_addr,
+		uint64_t *expected, uint64_t *value);
 
 /* For each value it means, datasheet of hardware can tell more details
  *
