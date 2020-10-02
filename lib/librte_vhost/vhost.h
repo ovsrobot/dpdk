@@ -332,7 +332,6 @@ struct vring_packed_desc_event {
 				(1ULL << VIRTIO_F_IOMMU_PLATFORM) | \
 				(1ULL << VIRTIO_F_RING_PACKED))
 
-
 struct guest_page {
 	uint64_t guest_phys_addr;
 	uint64_t host_phys_addr;

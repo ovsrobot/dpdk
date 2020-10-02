@@ -38,7 +38,7 @@ struct vhost_user_socket {
 	bool is_server;
 	bool reconnect;
 	bool iommu_support;
-	bool use_builtin_virtio_net;
+	enum virtio_backend_type backend_type;
 	bool extbuf;
 	bool linearbuf;
 	bool async_copy;
@@ -224,7 +224,15 @@ vhost_user_add_connection(int fd, struct vhost_user_socket *vsocket)
 	size = strnlen(vsocket->path, PATH_MAX);
 	vhost_set_ifname(vid, vsocket->path, size);
 
-	vhost_set_builtin_virtio_net(vid, vsocket->use_builtin_virtio_net);
+	vhost_set_builtin_virtio_net(vid,
+			vsocket->backend_type == VIRTIO_DEV_BUILTIN_NET ?
+					true : false);
+
+	if (vsocket->backend_type == VIRTIO_DEV_BUILTIN_CRYPTO) {
+		vhost_crypto_set_feature_flags(&vsocket->supported_features,
+				&vsocket->protocol_features);
+		vsocket->features = vsocket->supported_features;
+	}
 
 	vhost_attach_vdpa_device(vid, vsocket->vdpa_dev);
 
@@ -632,7 +640,7 @@ rte_vhost_driver_disable_features(const char *path, uint64_t features)
 	pthread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
 
-	/* Note that use_builtin_virtio_net is not affected by this function
+	/* Note that backend type is not affected by this function
 	 * since callers may want to selectively disable features of the
 	 * built-in vhost net device backend.
 	 */
@@ -681,7 +689,7 @@ rte_vhost_driver_set_features(const char *path, uint64_t features)
 		/* Anyone setting feature bits is implementing their own vhost
 		 * device backend.
 		 */
-		vsocket->use_builtin_virtio_net = false;
+		vsocket->backend_type = VIRTIO_DEV_UNKNOWN;
 	}
 	pthread_mutex_unlock(&vhost_user.mutex);
 
@@ -899,7 +907,7 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 	 * rte_vhost_driver_set_features(), which will overwrite following
 	 * two values.
 	 */
-	vsocket->use_builtin_virtio_net = true;
+	vsocket->backend_type = VIRTIO_DEV_BUILTIN_NET;
 	vsocket->supported_features = VIRTIO_NET_SUPPORTED_FEATURES;
 	vsocket->features           = VIRTIO_NET_SUPPORTED_FEATURES;
 	vsocket->protocol_features  = VHOST_USER_PROTOCOL_FEATURES;
@@ -1117,10 +1125,17 @@ vhost_driver_callback_get(const char *path)
 }
 
 int
-rte_vhost_driver_start(const char *path)
+vhost_driver_start(const char *path, enum virtio_backend_type backend_type)
 {
 	struct vhost_user_socket *vsocket;
 	static pthread_t fdset_tid;
+	int ret;
+
+	if (backend_type <= VIRTIO_DEV_UNKNOWN ||
+			backend_type > VIRTIO_DEV_BUILTIN_CRYPTO) {
+		VHOST_LOG_CONFIG(ERR, "Wrong backend type\n");
+		return -1;
+	}
 
 	pthread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
@@ -1153,7 +1168,20 @@ rte_vhost_driver_start(const char *path)
 	}
 
 	if (vsocket->is_server)
-		return vhost_user_start_server(vsocket);
+		ret = vhost_user_start_server(vsocket);
 	else
-		return vhost_user_start_client(vsocket);
+		ret = vhost_user_start_client(vsocket);
+
+	if (ret < 0)
+		return ret;
+
+	vsocket->backend_type = backend_type;
+
+	return 0;
+}
+
+int
+rte_vhost_driver_start(const char *path)
+{
+	return vhost_driver_start(path, VIRTIO_DEV_BUILTIN_NET);
 }
