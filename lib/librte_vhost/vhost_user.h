@@ -158,6 +158,12 @@ typedef struct VhostUserMsg {
 /* The version of the protocol we support */
 #define VHOST_USER_VERSION    0x1
 
+/* virtio backend types */
+enum virtio_backend_type {
+	VIRTIO_DEV_UNKNOWN = 0, /* Likely external */
+	VIRTIO_DEV_BUILTIN_NET, /* Virtio-net device */
+	VIRTIO_DEV_BUILTIN_CRYPTO, /* Virtio-crypto device */
+};
 
 /* vhost_user.c */
 int vhost_user_msg_handler(int vid, int fd);
@@ -167,5 +173,7 @@ int vhost_user_iotlb_miss(struct virtio_net *dev, uint64_t iova, uint8_t perm);
 int read_fd_message(int sockfd, char *buf, int buflen, int *fds, int max_fds,
 		int *fd_num);
 int send_fd_message(int sockfd, char *buf, int buflen, int *fds, int fd_num);
+int vhost_driver_start(const char *path,
+		enum virtio_backend_type backend_type);
 
 #endif
