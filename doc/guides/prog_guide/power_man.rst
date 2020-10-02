@@ -188,6 +188,43 @@ API Overview for Empty Poll Power Management
 
 * **Detect empty poll state change**: empty poll state change detection algorithm then take action.
 
+PMD Power Management API
+------------------------
+
+Abstract
+~~~~~~~~
+Given existing power management mechanism, developer need change application design or code to use it.
+In order to solve the problem, it's very helpful to make the design transparent to application.
+The proposed solution is to leverage RX_CALLBACK mechanism which allow three different power management
+methodology co exist. The trigger condition is empty poll number beyond defined threshold.
+
+  * umwait/umonitor
+
+   The new umwait/umonitor instruction monitoring the wake address then transfer processor to sub-state.
+   Once the content of address is changed, the processor will be wake up from the sub-state. Timeout is
+   setup as well, in case, there is no wake event happen, processor still will wake up after timeout
+   timer expired.
+
+  * Pause instruction
+
+   Instead of move the core into deeper C state, this lightweight method use Pause instruction
+   to relief the processor from busy polling.
+
+  * Frequency Scaling
+
+   Reuse exist rte power library to scale up/down core frequency
+   depend on traffic volume.
+
+The proposed solution support multiple port and each port can map to multiple core. But 1 core only can map
+1 queue(regardless which port). In theory, each queue belongs to same port can apply different power scheme.
+It's strongly recommend to use same power scheme for all queues belong to same port.
+
+API Overview for PMD Power Management
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* **Queue Enable**: Enable specific power scheme for certain queue/port/core
+
+* **Queue Disable**: Disable power scheme for certain queue/port/core
+
 User Cases
 ----------
 The mechanism can applied to any device which is based on polling. e.g. NIC, FPGA.
@@ -199,4 +236,7 @@ References
     chapter in the :doc:`../sample_app_ug/index` section.
 
 *   The :doc:`../sample_app_ug/vm_power_management`
+    chapter in the :doc:`../sample_app_ug/index` section.
+
+*   The :doc:`../sample_app_ug/rxtx_callbacks`
     chapter in the :doc:`../sample_app_ug/index` section.
