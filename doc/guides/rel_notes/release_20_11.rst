@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **ethdev: add 1 new EXPERIMENTAL API for PMD power management.**
+
+  * ``rte_eth_get_wake_addr()``
+  * add new eth_dev_ops ``get_wake_addr``
+
 * **Updated Broadcom bnxt driver.**
 
   Updated the Broadcom bnxt driver with new features and improvements, including:
@@ -106,6 +111,17 @@ New Features
   * The actions and the pipeline are defined with instructions.
   * Extern objects and functions can be plugged into the pipeline.
   * Transaction-oriented table updates.
+
+* **Add PMD power management mechanism**
+
+  3 new PMD power managmeent mechanism is added through existing
+  RX_ETH_CALLBACK infrastructure.
+
+  * Add umwait power saving scheme
+  * Add pause power saving scheme
+  * Add frequency scaling power saving scheme
+  * Add new EXPERIMENTAL API ``rte_power_pmd_mgmt_queue_enable()``
+  * Add new EXPERIMENTAL API ``rte_power_pmd_mgmt_queue_disable()``
 
 
 Removed Items
