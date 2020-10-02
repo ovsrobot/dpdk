@@ -4015,6 +4015,30 @@ int rte_eth_tx_burst_mode_get(uint16_t port_id, uint16_t queue_id,
 	struct rte_eth_burst_mode *mode);
 
 /**
+ * Retrieve the wake up address from specific queue
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param queue_id
+ *   The Tx queue on the Ethernet device for which information
+ *   will be retrieved.
+ * @param wake_addr
+ *   The pointer point to the address which is used for monitoring.
+ * @param expected
+ *   The pointer point to value to be expected when descriptor is set.
+ * @param mask
+ *   The pointer point to comparison bitmask for the expected value.
+ *
+ * @return
+ *   - 0: Success.
+ *   -EINVAL: Failed to get wake address.
+ */
+__rte_experimental
+int rte_eth_get_wake_addr(uint16_t port_id, uint16_t queue_id,
+			  volatile void **wake_addr,
+			  uint64_t *expected, uint64_t *mask);
+
+/**
  * Retrieve device registers and register attributes (number of registers and
  * register size)
  *

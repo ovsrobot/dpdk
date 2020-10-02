@@ -575,6 +575,31 @@ typedef int (*eth_tx_hairpin_queue_setup_t)
 	 const struct rte_eth_hairpin_conf *hairpin_conf);
 
 /**
+ * @internal
+ * Get the Wake up address.
+ *
+ * @param rxq
+ *   Ethdev queue pointer.
+ * @param tail_desc_addr
+ *   The pointer point to descriptor address var.
+ * @param expected
+ *   The pointer point to value to be expected when descriptor is set.
+ * @param mask
+ *   The pointer point to comparison bitmask for the expected value.
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success.
+ * @retval -EINVAL
+ *   Failed to get descriptor address.
+ */
+typedef int (*eth_get_wake_addr_t)
+	(void *rxq, volatile void **tail_desc_addr,
+	 uint64_t *expected, uint64_t *mask);
+
+
+/**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
 struct eth_dev_ops {
@@ -713,6 +738,9 @@ struct eth_dev_ops {
 	/**< Set up device RX hairpin queue. */
 	eth_tx_hairpin_queue_setup_t tx_hairpin_queue_setup;
 	/**< Set up device TX hairpin queue. */
+	eth_get_wake_addr_t get_wake_addr;
+	/**< Get wake up address. */
+
 };
 
 /**

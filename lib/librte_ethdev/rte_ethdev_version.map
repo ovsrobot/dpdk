@@ -229,6 +229,7 @@ EXPERIMENTAL {
 	# added in 20.11
 	rte_eth_link_speed_to_str;
 	rte_eth_link_to_str;
+	rte_eth_get_wake_addr;
 };
 
 INTERNAL {
