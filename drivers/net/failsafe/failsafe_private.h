@@ -498,7 +498,7 @@ static inline int
 fs_err(struct sub_device *sdev, int err)
 {
 	/* A device removal shouldn't be reported as an error. */
-	if (sdev->remove == 1 || err == -EIO)
+	if (sdev->remove == 1 && err == -EIO)
 		return rte_errno = 0;
 	return err;
 }
