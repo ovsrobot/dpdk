@@ -1664,6 +1664,8 @@ struct rte_eth_dev_owner {
 #define RTE_ETH_DEV_REPRESENTOR  0x0010
 /** Device does not support MAC change after started */
 #define RTE_ETH_DEV_NOLIVE_MAC_ADDR  0x0020
+/** Device PMD supports thread safety flow operation */
+#define RTE_ETH_DEV_FLOW_OPS_THREAD_SAFE  0x0040
 
 /**
  * Iterates over valid ethdev ports owned by a specific owner.

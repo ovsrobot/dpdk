@@ -3046,10 +3046,6 @@ Caveats
 - API operations are synchronous and blocking (``EAGAIN`` cannot be
   returned).
 
-- There is no provision for re-entrancy/multi-thread safety, although nothing
-  should prevent different devices from being configured at the same
-  time. PMDs may protect their control path functions accordingly.
-
 - Stopping the data path (TX/RX) should not be necessary when managing flow
   rules. If this cannot be achieved naturally or with workarounds (such as
   temporarily replacing the burst function pointers), an appropriate error
@@ -3100,6 +3096,11 @@ This interface additionally defines the following helper function:
 
 - ``rte_flow_ops_get()``: get generic flow operations structure from a
   port.
+
+If PMD interfaces do not support re-entrancy/multi-thread safety, rte_flow
+level functions will do it by mutex. The application can test the dev_flags
+with RTE_ETH_DEV_FLOW_OPS_THREAD_SAFE in struct rte_eth_dev_data to know
+if the rte_flow thread-safe works under rte_flow level or PMD level.
 
 More will be added over time.
 
