@@ -18,7 +18,6 @@ Descriptions of section entries:
 	K: Keyword regex pattern to match content.
 	   One regex pattern per line. Multiple K: lines acceptable.
 
-
 General Project Administration
 ------------------------------
 
@@ -391,6 +390,7 @@ F: lib/librte_ethdev/rte_mtr*
 
 Baseband API - EXPERIMENTAL
 M: Nicolas Chautru <nicolas.chautru@intel.com>
+M: Tom Rix <trix@redhat.com>
 T: git://dpdk.org/next/dpdk-next-crypto
 F: lib/librte_bbdev/
 F: doc/guides/prog_guide/bbdev.rst
