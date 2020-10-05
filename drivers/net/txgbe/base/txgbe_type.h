@@ -587,6 +587,15 @@ struct txgbe_phy_info {
 	u32 link_mode;
 };
 
+struct txgbe_mbx_stats {
+	u32 msgs_tx;
+	u32 msgs_rx;
+
+	u32 acks;
+	u32 reqs;
+	u32 rsts;
+};
+
 struct txgbe_mbx_info {
 	void (*init_params)(struct txgbe_hw *hw);
 	s32  (*read)(struct txgbe_hw *, u32 *, u16,  u16);
@@ -596,6 +605,11 @@ struct txgbe_mbx_info {
 	s32  (*check_for_msg)(struct txgbe_hw *, u16);
 	s32  (*check_for_ack)(struct txgbe_hw *, u16);
 	s32  (*check_for_rst)(struct txgbe_hw *, u16);
+
+	struct txgbe_mbx_stats stats;
+	u32 timeout;
+	u32 usec_delay;
+	u16 size;
 };
 
 enum txgbe_isb_idx {
