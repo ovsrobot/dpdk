@@ -142,6 +142,7 @@ usage(char* progname)
 	printf("  --enable-hw-vlan-strip: enable hardware vlan strip.\n");
 	printf("  --enable-hw-vlan-extend: enable hardware vlan extend.\n");
 	printf("  --enable-hw-qinq-strip: enable hardware qinq strip.\n");
+	printf("  --enable-hw-drop-err: enable hardware packet drop for error packets.\n");
 	printf("  --enable-drop-en: enable per queue packet drop.\n");
 	printf("  --disable-rss: disable rss.\n");
 	printf("  --port-topology=<paired|chained|loop>: set port topology (paired "
@@ -631,6 +632,7 @@ launch_args_parse(int argc, char** argv)
 		{ "enable-hw-vlan-strip",       0, 0, 0 },
 		{ "enable-hw-vlan-extend",      0, 0, 0 },
 		{ "enable-hw-qinq-strip",       0, 0, 0 },
+		{ "enable-hw-drop-err",         0, 0, 0 },
 		{ "enable-drop-en",            0, 0, 0 },
 		{ "disable-rss",                0, 0, 0 },
 		{ "port-topology",              1, 0, 0 },
@@ -1036,6 +1038,9 @@ launch_args_parse(int argc, char** argv)
 			if (!strcmp(lgopts[opt_idx].name,
 					"enable-hw-qinq-strip"))
 				rx_offloads |= DEV_RX_OFFLOAD_QINQ_STRIP;
+
+			if (!strcmp(lgopts[opt_idx].name, "enable-hw-drop-err"))
+				rx_offloads |= DEV_RX_OFFLOAD_ERR_PKT_DROP;
 
 			if (!strcmp(lgopts[opt_idx].name, "enable-drop-en"))
 				rx_drop_en = 1;
