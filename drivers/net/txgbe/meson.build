@@ -9,6 +9,9 @@ sources = files(
 	'txgbe_ptypes.c',
 	'txgbe_pf.c',
 	'txgbe_rxtx.c',
+	'rte_pmd_txgbe.c'
 )
 
 includes += include_directories('base')
+
+install_headers('rte_pmd_txgbe.h')
