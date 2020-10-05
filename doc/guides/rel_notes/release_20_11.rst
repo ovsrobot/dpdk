@@ -189,7 +189,9 @@ API Changes
 
 * ethdev: ``rte_eth_rx_descriptor_done()`` API has been deprecated.
 
-* Renamed internal ethdev APIs:
+* ethdev: Added ``int`` return type to ``rte_eth_dev_close()``.
+
+* ethdev: Renamed internal functions:
 
   * ``_rte_eth_dev_callback_process()`` -> ``rte_eth_dev_callback_process()``
   * ``_rte_eth_dev_reset`` -> ``rte_eth_dev_internal_reset()``
