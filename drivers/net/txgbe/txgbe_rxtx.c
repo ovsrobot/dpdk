@@ -1962,6 +1962,97 @@ txgbe_tx_queue_release_mbufs(struct txgbe_tx_queue *txq)
 	}
 }
 
+static int
+txgbe_tx_done_cleanup_full(struct txgbe_tx_queue *txq, uint32_t free_cnt)
+{
+	struct txgbe_tx_entry *swr_ring = txq->sw_ring;
+	uint16_t i, tx_last, tx_id;
+	uint16_t nb_tx_free_last;
+	uint16_t nb_tx_to_clean;
+	uint32_t pkt_cnt;
+
+	/* Start free mbuf from the next of tx_tail */
+	tx_last = txq->tx_tail;
+	tx_id  = swr_ring[tx_last].next_id;
+
+	if (txq->nb_tx_free == 0 && txgbe_xmit_cleanup(txq))
+		return 0;
+
+	nb_tx_to_clean = txq->nb_tx_free;
+	nb_tx_free_last = txq->nb_tx_free;
+	if (!free_cnt)
+		free_cnt = txq->nb_tx_desc;
+
+	/* Loop through swr_ring to count the amount of
+	 * freeable mubfs and packets.
+	 */
+	for (pkt_cnt = 0; pkt_cnt < free_cnt; ) {
+		for (i = 0; i < nb_tx_to_clean &&
+			pkt_cnt < free_cnt &&
+			tx_id != tx_last; i++) {
+			if (swr_ring[tx_id].mbuf != NULL) {
+				rte_pktmbuf_free_seg(swr_ring[tx_id].mbuf);
+				swr_ring[tx_id].mbuf = NULL;
+
+				/*
+				 * last segment in the packet,
+				 * increment packet count
+				 */
+				pkt_cnt += (swr_ring[tx_id].last_id == tx_id);
+			}
+
+			tx_id = swr_ring[tx_id].next_id;
+		}
+
+		if (pkt_cnt < free_cnt) {
+			if (txgbe_xmit_cleanup(txq))
+				break;
+
+			nb_tx_to_clean = txq->nb_tx_free - nb_tx_free_last;
+			nb_tx_free_last = txq->nb_tx_free;
+		}
+	}
+
+	return (int)pkt_cnt;
+}
+
+static int
+txgbe_tx_done_cleanup_simple(struct txgbe_tx_queue *txq,
+			uint32_t free_cnt)
+{
+	int i, n, cnt;
+
+	if (free_cnt == 0 || free_cnt > txq->nb_tx_desc)
+		free_cnt = txq->nb_tx_desc;
+
+	cnt = free_cnt - free_cnt % txq->tx_free_thresh;
+
+	for (i = 0; i < cnt; i += n) {
+		if (txq->nb_tx_desc - txq->nb_tx_free < txq->tx_free_thresh)
+			break;
+
+		n = txgbe_tx_free_bufs(txq);
+
+		if (n == 0)
+			break;
+	}
+
+	return i;
+}
+
+int
+txgbe_dev_tx_done_cleanup(void *tx_queue, uint32_t free_cnt)
+{
+	struct txgbe_tx_queue *txq = (struct txgbe_tx_queue *)tx_queue;
+	if (txq->offloads == 0 &&
+		txq->tx_free_thresh >= RTE_PMD_TXGBE_TX_MAX_BURST) {
+
+		return txgbe_tx_done_cleanup_simple(txq, free_cnt);
+	}
+
+	return txgbe_tx_done_cleanup_full(txq, free_cnt);
+}
+
 static void __rte_cold
 txgbe_tx_free_swring(struct txgbe_tx_queue *txq)
 {
@@ -2544,6 +2635,97 @@ txgbe_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	txgbe_reset_rx_queue(adapter, rxq);
 
 	return 0;
+}
+
+uint32_t
+txgbe_dev_rx_queue_count(struct rte_eth_dev *dev, uint16_t rx_queue_id)
+{
+#define TXGBE_RXQ_SCAN_INTERVAL 4
+	volatile struct txgbe_rx_desc *rxdp;
+	struct txgbe_rx_queue *rxq;
+	uint32_t desc = 0;
+
+	rxq = dev->data->rx_queues[rx_queue_id];
+	rxdp = &(rxq->rx_ring[rxq->rx_tail]);
+
+	while ((desc < rxq->nb_rx_desc) &&
+		(rxdp->qw1.lo.status &
+			rte_cpu_to_le_32(TXGBE_RXD_STAT_DD))) {
+		desc += TXGBE_RXQ_SCAN_INTERVAL;
+		rxdp += TXGBE_RXQ_SCAN_INTERVAL;
+		if (rxq->rx_tail + desc >= rxq->nb_rx_desc)
+			rxdp = &(rxq->rx_ring[rxq->rx_tail +
+				desc - rxq->nb_rx_desc]);
+	}
+
+	return desc;
+}
+
+int
+txgbe_dev_rx_descriptor_done(void *rx_queue, uint16_t offset)
+{
+	volatile struct txgbe_rx_desc *rxdp;
+	struct txgbe_rx_queue *rxq = rx_queue;
+	uint32_t desc;
+
+	if (unlikely(offset >= rxq->nb_rx_desc))
+		return 0;
+	desc = rxq->rx_tail + offset;
+	if (desc >= rxq->nb_rx_desc)
+		desc -= rxq->nb_rx_desc;
+
+	rxdp = &rxq->rx_ring[desc];
+	return !!(rxdp->qw1.lo.status &
+			rte_cpu_to_le_32(TXGBE_RXD_STAT_DD));
+}
+
+int
+txgbe_dev_rx_descriptor_status(void *rx_queue, uint16_t offset)
+{
+	struct txgbe_rx_queue *rxq = rx_queue;
+	volatile uint32_t *status;
+	uint32_t nb_hold, desc;
+
+	if (unlikely(offset >= rxq->nb_rx_desc))
+		return -EINVAL;
+
+	nb_hold = rxq->nb_rx_hold;
+	if (offset >= rxq->nb_rx_desc - nb_hold)
+		return RTE_ETH_RX_DESC_UNAVAIL;
+
+	desc = rxq->rx_tail + offset;
+	if (desc >= rxq->nb_rx_desc)
+		desc -= rxq->nb_rx_desc;
+
+	status = &rxq->rx_ring[desc].qw1.lo.status;
+	if (*status & rte_cpu_to_le_32(TXGBE_RXD_STAT_DD))
+		return RTE_ETH_RX_DESC_DONE;
+
+	return RTE_ETH_RX_DESC_AVAIL;
+}
+
+int
+txgbe_dev_tx_descriptor_status(void *tx_queue, uint16_t offset)
+{
+	struct txgbe_tx_queue *txq = tx_queue;
+	volatile uint32_t *status;
+	uint32_t desc;
+
+	if (unlikely(offset >= txq->nb_tx_desc))
+		return -EINVAL;
+
+	desc = txq->tx_tail + offset;
+	if (desc >= txq->nb_tx_desc) {
+		desc -= txq->nb_tx_desc;
+		if (desc >= txq->nb_tx_desc)
+			desc -= txq->nb_tx_desc;
+	}
+
+	status = &txq->tx_ring[desc].dw3;
+	if (*status & rte_cpu_to_le_32(TXGBE_TXD_DD))
+		return RTE_ETH_TX_DESC_DONE;
+
+	return RTE_ETH_TX_DESC_FULL;
 }
 
 void __rte_cold

@@ -4211,6 +4211,10 @@ static const struct eth_dev_ops txgbe_eth_dev_ops = {
 	.rx_queue_intr_enable       = txgbe_dev_rx_queue_intr_enable,
 	.rx_queue_intr_disable      = txgbe_dev_rx_queue_intr_disable,
 	.rx_queue_release           = txgbe_dev_rx_queue_release,
+	.rx_queue_count             = txgbe_dev_rx_queue_count,
+	.rx_descriptor_done         = txgbe_dev_rx_descriptor_done,
+	.rx_descriptor_status       = txgbe_dev_rx_descriptor_status,
+	.tx_descriptor_status       = txgbe_dev_tx_descriptor_status,
 	.tx_queue_setup             = txgbe_dev_tx_queue_setup,
 	.tx_queue_release           = txgbe_dev_tx_queue_release,
 	.dev_led_on                 = txgbe_dev_led_on,
@@ -4247,6 +4251,7 @@ static const struct eth_dev_ops txgbe_eth_dev_ops = {
 	.timesync_adjust_time       = txgbe_timesync_adjust_time,
 	.timesync_read_time         = txgbe_timesync_read_time,
 	.timesync_write_time        = txgbe_timesync_write_time,
+	.tx_done_cleanup            = txgbe_dev_tx_done_cleanup,
 };
 
 RTE_PMD_REGISTER_PCI(net_txgbe, rte_txgbe_pmd);
