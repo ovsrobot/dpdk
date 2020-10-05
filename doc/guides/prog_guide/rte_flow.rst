@@ -947,8 +947,8 @@ Item: ``IPV6``
 Matches an IPv6 header.
 
 Dedicated flags indicate existence of specific extension headers.
-Every type of extension header can use a dedicated pattern item, or
-the generic `Item: IPV6_EXT`_.
+Every type of extension header can use a dedicated pattern item,
+for example `Item: IPV6_FRAG_EXT`_, or the generic `Item: IPV6_EXT`_.
 
 - ``hdr``: IPv6 header definition (``rte_ip.h``).
 - ``hop_ext_exist``: Hop-by-Hop Options extension header exists.
@@ -1181,6 +1181,18 @@ Matches the presence of any IPv6 extension header.
 
 - ``next_hdr``: next header.
 - Default ``mask`` matches ``next_hdr``.
+
+Normally preceded by any of:
+
+- `Item: IPV6`_
+- `Item: IPV6_EXT`_
+
+Item: ``IPV6_FRAG_EXT``
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Matches the presence of IPv6 fragment extension header.
+
+- ``hdr``: IPv6 fragment extension header definition (``rte_ip.h``).
 
 Normally preceded by any of:
 
