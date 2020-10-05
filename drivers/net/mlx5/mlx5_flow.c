@@ -474,6 +474,8 @@ mlx5_flow_ext_mreg_supported(struct rte_eth_dev *dev)
  *   Bit-masks covering supported fields by the NIC to compare with user mask.
  * @param[in] size
  *   Bit-masks size in bytes.
+ * @param[in] range_accepted
+ *   True if range of values is accepted for specific fields, false otherwise.
  * @param[out] error
  *   Pointer to error structure.
  *
@@ -485,6 +487,7 @@ mlx5_flow_item_acceptable(const struct rte_flow_item *item,
 			  const uint8_t *mask,
 			  const uint8_t *nic_mask,
 			  unsigned int size,
+			  bool range_accepted,
 			  struct rte_flow_error *error)
 {
 	unsigned int i;
@@ -502,7 +505,7 @@ mlx5_flow_item_acceptable(const struct rte_flow_item *item,
 					  RTE_FLOW_ERROR_TYPE_ITEM, item,
 					  "mask/last without a spec is not"
 					  " supported");
-	if (item->spec && item->last) {
+	if (item->spec && item->last && !range_accepted) {
 		uint8_t spec[size];
 		uint8_t last[size];
 		unsigned int i;
@@ -1277,7 +1280,8 @@ mlx5_flow_validate_item_icmp6(const struct rte_flow_item *item,
 	ret = mlx5_flow_item_acceptable
 		(item, (const uint8_t *)mask,
 		 (const uint8_t *)&rte_flow_item_icmp6_mask,
-		 sizeof(struct rte_flow_item_icmp6), error);
+		 sizeof(struct rte_flow_item_icmp6),
+		 MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 	if (ret < 0)
 		return ret;
 	return 0;
@@ -1329,7 +1333,8 @@ mlx5_flow_validate_item_icmp(const struct rte_flow_item *item,
 	ret = mlx5_flow_item_acceptable
 		(item, (const uint8_t *)mask,
 		 (const uint8_t *)&rte_flow_item_icmp_mask,
-		 sizeof(struct rte_flow_item_icmp), error);
+		 sizeof(struct rte_flow_item_icmp),
+		 MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 	if (ret < 0)
 		return ret;
 	return 0;
@@ -1384,7 +1389,7 @@ mlx5_flow_validate_item_eth(const struct rte_flow_item *item,
 	ret = mlx5_flow_item_acceptable(item, (const uint8_t *)mask,
 					(const uint8_t *)&nic_mask,
 					sizeof(struct rte_flow_item_eth),
-					error);
+					MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 	return ret;
 }
 
@@ -1438,7 +1443,7 @@ mlx5_flow_validate_item_vlan(const struct rte_flow_item *item,
 	ret = mlx5_flow_item_acceptable(item, (const uint8_t *)mask,
 					(const uint8_t *)&nic_mask,
 					sizeof(struct rte_flow_item_vlan),
-					error);
+					MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 	if (ret)
 		return ret;
 	if (!tunnel && mask->tci != RTE_BE16(0x0fff)) {
@@ -1502,6 +1507,7 @@ mlx5_flow_validate_item_ipv4(const struct rte_flow_item *item,
 			     uint64_t last_item,
 			     uint16_t ether_type,
 			     const struct rte_flow_item_ipv4 *acc_mask,
+			     bool range_accepted,
 			     struct rte_flow_error *error)
 {
 	const struct rte_flow_item_ipv4 *mask = item->mask;
@@ -1572,7 +1578,7 @@ mlx5_flow_validate_item_ipv4(const struct rte_flow_item *item,
 					acc_mask ? (const uint8_t *)acc_mask
 						 : (const uint8_t *)&nic_mask,
 					sizeof(struct rte_flow_item_ipv4),
-					error);
+					range_accepted, error);
 	if (ret < 0)
 		return ret;
 	return 0;
@@ -1592,6 +1598,8 @@ mlx5_flow_validate_item_ipv4(const struct rte_flow_item *item,
  * @param[in] acc_mask
  *   Acceptable mask, if NULL default internal default mask
  *   will be used to check whether item fields are supported.
+ * @param[in] range_accepted
+ *   True if range of values is accepted for specific fields, false otherwise.
  * @param[out] error
  *   Pointer to error structure.
  *
@@ -1671,7 +1679,7 @@ mlx5_flow_validate_item_ipv6(const struct rte_flow_item *item,
 					acc_mask ? (const uint8_t *)acc_mask
 						 : (const uint8_t *)&nic_mask,
 					sizeof(struct rte_flow_item_ipv6),
-					error);
+					MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 	if (ret < 0)
 		return ret;
 	return 0;
@@ -1726,7 +1734,8 @@ mlx5_flow_validate_item_udp(const struct rte_flow_item *item,
 	ret = mlx5_flow_item_acceptable
 		(item, (const uint8_t *)mask,
 		 (const uint8_t *)&rte_flow_item_udp_mask,
-		 sizeof(struct rte_flow_item_udp), error);
+		 sizeof(struct rte_flow_item_udp), MLX5_ITEM_RANGE_NOT_ACCEPTED,
+		 error);
 	if (ret < 0)
 		return ret;
 	return 0;
@@ -1781,7 +1790,8 @@ mlx5_flow_validate_item_tcp(const struct rte_flow_item *item,
 	ret = mlx5_flow_item_acceptable
 		(item, (const uint8_t *)mask,
 		 (const uint8_t *)flow_mask,
-		 sizeof(struct rte_flow_item_tcp), error);
+		 sizeof(struct rte_flow_item_tcp), MLX5_ITEM_RANGE_NOT_ACCEPTED,
+		 error);
 	if (ret < 0)
 		return ret;
 	return 0;
@@ -1835,7 +1845,7 @@ mlx5_flow_validate_item_vxlan(const struct rte_flow_item *item,
 		(item, (const uint8_t *)mask,
 		 (const uint8_t *)&rte_flow_item_vxlan_mask,
 		 sizeof(struct rte_flow_item_vxlan),
-		 error);
+		 MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 	if (ret < 0)
 		return ret;
 	if (spec) {
@@ -1906,7 +1916,7 @@ mlx5_flow_validate_item_vxlan_gpe(const struct rte_flow_item *item,
 		(item, (const uint8_t *)mask,
 		 (const uint8_t *)&rte_flow_item_vxlan_gpe_mask,
 		 sizeof(struct rte_flow_item_vxlan_gpe),
-		 error);
+		 MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 	if (ret < 0)
 		return ret;
 	if (spec) {
@@ -1980,7 +1990,7 @@ mlx5_flow_validate_item_gre_key(const struct rte_flow_item *item,
 	ret = mlx5_flow_item_acceptable
 		(item, (const uint8_t *)mask,
 		 (const uint8_t *)&gre_key_default_mask,
-		 sizeof(rte_be32_t), error);
+		 sizeof(rte_be32_t), MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 	return ret;
 }
 
@@ -2032,7 +2042,8 @@ mlx5_flow_validate_item_gre(const struct rte_flow_item *item,
 	ret = mlx5_flow_item_acceptable
 		(item, (const uint8_t *)mask,
 		 (const uint8_t *)&nic_mask,
-		 sizeof(struct rte_flow_item_gre), error);
+		 sizeof(struct rte_flow_item_gre), MLX5_ITEM_RANGE_NOT_ACCEPTED,
+		 error);
 	if (ret < 0)
 		return ret;
 #ifndef HAVE_MLX5DV_DR
@@ -2107,7 +2118,8 @@ mlx5_flow_validate_item_geneve(const struct rte_flow_item *item,
 	ret = mlx5_flow_item_acceptable
 				  (item, (const uint8_t *)mask,
 				   (const uint8_t *)&nic_mask,
-				   sizeof(struct rte_flow_item_geneve), error);
+				   sizeof(struct rte_flow_item_geneve),
+				   MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 	if (ret)
 		return ret;
 	if (spec) {
@@ -2190,7 +2202,8 @@ mlx5_flow_validate_item_mpls(struct rte_eth_dev *dev __rte_unused,
 	ret = mlx5_flow_item_acceptable
 		(item, (const uint8_t *)mask,
 		 (const uint8_t *)&rte_flow_item_mpls_mask,
-		 sizeof(struct rte_flow_item_mpls), error);
+		 sizeof(struct rte_flow_item_mpls),
+		 MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 	if (ret < 0)
 		return ret;
 	return 0;
@@ -2245,7 +2258,8 @@ mlx5_flow_validate_item_nvgre(const struct rte_flow_item *item,
 	ret = mlx5_flow_item_acceptable
 		(item, (const uint8_t *)mask,
 		 (const uint8_t *)&rte_flow_item_nvgre_mask,
-		 sizeof(struct rte_flow_item_nvgre), error);
+		 sizeof(struct rte_flow_item_nvgre),
+		 MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 	if (ret < 0)
 		return ret;
 	return 0;
@@ -2339,7 +2353,7 @@ mlx5_flow_validate_item_ecpri(const struct rte_flow_item *item,
 					 acc_mask ? (const uint8_t *)acc_mask
 						  : (const uint8_t *)&nic_mask,
 					 sizeof(struct rte_flow_item_ecpri),
-					 error);
+					 MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 }
 
 /* Allocate unique ID for the split Q/RSS subflows. */
