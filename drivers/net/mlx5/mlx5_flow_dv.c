@@ -5211,6 +5211,7 @@ flow_dv_validate(struct rte_eth_dev *dev, const struct rte_flow_attr *attr,
 			.proto = 0xff,
 			.hop_limits = 0xff,
 		},
+		.frag_ext_exist = 1,
 	};
 	const struct rte_flow_item_ecpri nic_ecpri_mask = {
 		.hdr = {
@@ -6519,6 +6520,10 @@ flow_dv_translate_item_ipv6(void *matcher, void *key,
 		 ipv6_m->hdr.hop_limits);
 	MLX5_SET(fte_match_set_lyr_2_4, headers_v, ip_ttl_hoplimit,
 		 ipv6_v->hdr.hop_limits & ipv6_m->hdr.hop_limits);
+	MLX5_SET(fte_match_set_lyr_2_4, headers_m, frag,
+		 !!(ipv6_m->frag_ext_exist));
+	MLX5_SET(fte_match_set_lyr_2_4, headers_v, frag,
+		 !!(ipv6_v->frag_ext_exist & ipv6_m->frag_ext_exist));
 }
 
 /**
