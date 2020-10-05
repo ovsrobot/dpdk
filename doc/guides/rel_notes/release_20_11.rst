@@ -107,6 +107,11 @@ New Features
   * Extern objects and functions can be plugged into the pipeline.
   * Transaction-oriented table updates.
 
+* **Updated Mellanox mlx5 driver.**
+
+  Updated Mellanox mlx5 driver with new features and improvements, including:
+
+  * Added support for matching on fragmented/non-fragmented IPv4/IPv6 packets.
 
 Removed Items
 -------------
@@ -238,6 +243,11 @@ ABI Changes
 
   * ``ethdev`` internal functions are marked with ``__rte_internal`` tag.
 
+  * Added extensions' attributes to struct ``rte_flow_item_ipv6``.
+    A set of additional values added to struct, indicating the existence of
+    every defined extension header type.
+    Applications should use the new values for identification of existing
+    extensions in the packet header.
 
 Known Issues
 ------------
