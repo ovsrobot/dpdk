@@ -382,6 +382,14 @@ struct txgbe_mbx_info {
 	s32  (*check_for_rst)(struct txgbe_hw *, u16);
 };
 
+enum txgbe_isb_idx {
+	TXGBE_ISB_HEADER,
+	TXGBE_ISB_MISC,
+	TXGBE_ISB_VEC0,
+	TXGBE_ISB_VEC1,
+	TXGBE_ISB_MAX
+};
+
 struct txgbe_hw {
 	void IOMEM *hw_addr;
 	void *back;
