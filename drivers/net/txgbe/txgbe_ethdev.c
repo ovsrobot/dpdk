@@ -335,6 +335,29 @@ txgbe_dev_queue_stats_mapping_set(struct rte_eth_dev *eth_dev,
 	return 0;
 }
 
+/*
+ * Ensure that all locks are released before first NVM or PHY access
+ */
+static void
+txgbe_swfw_lock_reset(struct txgbe_hw *hw)
+{
+	uint16_t mask;
+
+	/*
+	 * These ones are more tricky since they are common to all ports; but
+	 * swfw_sync retries last long enough (1s) to be almost sure that if
+	 * lock can not be taken it is due to an improper lock of the
+	 * semaphore.
+	 */
+	mask = TXGBE_MNGSEM_SWPHY |
+	       TXGBE_MNGSEM_SWMBX |
+	       TXGBE_MNGSEM_SWFLASH;
+	if (hw->mac.acquire_swfw_sync(hw, mask) < 0) {
+		PMD_DRV_LOG(DEBUG, "SWFW common locks released");
+	}
+	hw->mac.release_swfw_sync(hw, mask);
+}
+
 static int
 eth_txgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 {
@@ -401,6 +424,9 @@ eth_txgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 		PMD_INIT_LOG(ERR, "Shared code init failed: %d", err);
 		return -EIO;
 	}
+
+	/* Unlock any pending hardware semaphore */
+	txgbe_swfw_lock_reset(hw);
 
 	err = hw->rom.init_params(hw);
 	if (err != 0) {
@@ -1130,6 +1156,7 @@ txgbe_dev_start(struct rte_eth_dev *dev)
 	bool link_up = false, negotiate = 0;
 	uint32_t speed = 0;
 	uint32_t allowed_speeds = 0;
+	int mask = 0;
 	int status;
 	uint32_t *link_speeds;
 
@@ -1453,6 +1480,9 @@ txgbe_dev_close(struct rte_eth_dev *dev)
 	dev->dev_ops = NULL;
 	dev->rx_pkt_burst = NULL;
 	dev->tx_pkt_burst = NULL;
+
+	/* Unlock any pending hardware semaphore */
+	txgbe_swfw_lock_reset(hw);
 
 	/* disable uio intr before callback unregister */
 	rte_intr_disable(intr_handle);
