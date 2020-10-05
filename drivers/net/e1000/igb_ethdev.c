@@ -1497,6 +1497,7 @@ eth_igb_stop(struct rte_eth_dev *dev)
 	}
 
 	adapter->stopped = true;
+	dev->data->dev_started = 0;
 }
 
 static int
