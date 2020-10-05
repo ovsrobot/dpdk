@@ -311,6 +311,13 @@ Limitations
     for some NICs (such as ConnectX-6 Dx and BlueField 2).
     The capability bit ``scatter_fcs_w_decap_disable`` shows NIC support.
 
+- IPv6 header item 'proto' field, indicating the next header protocol, should
+  not be set as extension header.
+  In case the next header is an extension header, it should not be specified in
+  IPv6 header item 'proto' field.
+  The last extension header item 'next header' field can specify the following
+  header protocol type.
+
 Statistics
 ----------
 
