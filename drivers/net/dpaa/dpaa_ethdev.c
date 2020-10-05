@@ -51,7 +51,8 @@
 /* Supported Rx offloads */
 static uint64_t dev_rx_offloads_sup =
 		DEV_RX_OFFLOAD_JUMBO_FRAME |
-		DEV_RX_OFFLOAD_SCATTER;
+		DEV_RX_OFFLOAD_SCATTER |
+		DEV_RX_OFFLOAD_ERR_PKT_DROP;
 
 /* Rx offloads which cannot be disabled */
 static uint64_t dev_rx_offloads_nodis =
@@ -257,6 +258,18 @@ dpaa_eth_dev_configure(struct rte_eth_dev *dev)
 		DPAA_PMD_DEBUG("enabling scatter mode");
 		fman_if_set_sg(dev->process_private, 1);
 		dev->data->scattered_rx = 1;
+	}
+
+	if (!(rx_offloads & DEV_RX_OFFLOAD_ERR_PKT_DROP)) {
+		struct dpaa_if *dpaa_intf = dev->data->dev_private;
+		struct qman_fq *rxq = &dpaa_intf->rx_queues[0];
+
+		DPAA_PMD_DEBUG("error packets will not be droppped on hw");
+		fman_if_receive_rx_errors(fif, FM_FD_RX_STATUS_ERR_MASK);
+		fman_if_set_err_fqid(fif, rxq->fqid);
+	} else {
+		DPAA_PMD_DEBUG("error packets will be droppped on hw");
+		fman_if_discard_rx_errors(fif);
 	}
 
 	if (!(default_q || fmc_q)) {

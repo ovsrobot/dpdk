@@ -597,7 +597,12 @@ void
 fman_if_discard_rx_errors(struct fman_if *fm_if)
 {
 	struct __fman_if *__if = container_of(fm_if, struct __fman_if, __if);
-	unsigned int *fmbm_rfsdm, *fmbm_rfsem;
+	unsigned int *fmbm_rcfg, *fmbm_rfsdm, *fmbm_rfsem;
+	unsigned int val;
+
+	fmbm_rcfg = &((struct rx_bmi_regs *)__if->bmi_map)->fmbm_rcfg;
+	val = in_be32(fmbm_rcfg);
+	out_be32(fmbm_rcfg, val & ~BMI_PORT_CFG_FDOVR);
 
 	fmbm_rfsem = &((struct rx_bmi_regs *)__if->bmi_map)->fmbm_rfsem;
 	out_be32(fmbm_rfsem, 0);
