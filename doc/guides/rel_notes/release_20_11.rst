@@ -221,6 +221,10 @@ API Changes
 
 * bpf: ``RTE_BPF_XTYPE_NUM`` has been dropped from ``rte_bpf_xtype``.
 
+* **Updated the AESNI MB crypto PMD.**
+
+  * Updated the AESNI MB PMD with AES-256 CCM algorithm.
+
 
 ABI Changes
 -----------
