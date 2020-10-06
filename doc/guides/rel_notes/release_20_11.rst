@@ -221,6 +221,9 @@ API Changes
 
 * bpf: ``RTE_BPF_XTYPE_NUM`` has been dropped from ``rte_bpf_xtype``.
 
+* **Updated the AESNI MB crypto PMD.**
+
+  * Added support for Chacha20-Poly1305.
 
 ABI Changes
 -----------
