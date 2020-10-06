@@ -22,7 +22,8 @@ foreach f:base_flags
 endforeach
 
 optional_flags = ['AES', 'PCLMUL',
-		'AVX', 'AVX2', 'AVX512F',
+		'AVX', 'AVX2',
+		'AVX512F', 'AVX512VL', 'AVX512CD', 'AVX512BW',
 		'RDRND', 'RDSEED']
 foreach f:optional_flags
 	if cc.get_define('__@0@__'.format(f), args: machine_args) == '1'
