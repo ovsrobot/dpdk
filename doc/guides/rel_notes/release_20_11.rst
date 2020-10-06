@@ -58,6 +58,8 @@ New Features
 * **Updated CRC modules of rte_net library.**
 
   * Added run-time selection of the optimal architecture-specific CRC path.
+  * Added optimized implementations of CRC32-Ethernet and CRC16-CCITT
+    using the AVX512 and VPCLMULQDQ instruction sets.
 
 * **Updated Broadcom bnxt driver.**
 
