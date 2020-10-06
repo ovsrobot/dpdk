@@ -131,6 +131,8 @@ Removed Items
 
 * Removed Python 2 support since it was EOL'd in January 2020.
 
+* sched: Add support to update subport bandwidth dynamically.
+
 API Changes
 -----------
 
