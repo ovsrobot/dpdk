@@ -280,8 +280,10 @@ struct mlx5_drop {
 #define MLX5_AGING_TIME_DELAY	7
 #define CNT_POOL_TYPE_EXT	(1 << 0)
 #define CNT_POOL_TYPE_AGE	(1 << 1)
+
 #define IS_EXT_POOL(pool) (((pool)->type) & CNT_POOL_TYPE_EXT)
 #define IS_AGE_POOL(pool) (((pool)->type) & CNT_POOL_TYPE_AGE)
+
 #define MLX5_CNT_LEN(pool) \
 	(CNT_SIZE + \
 	(IS_AGE_POOL(pool) ? AGE_SIZE : 0) + \
@@ -322,14 +324,6 @@ enum {
 	AGE_FREE, /* Initialized state. */
 	AGE_CANDIDATE, /* Counter assigned to flows. */
 	AGE_TMOUT, /* Timeout, wait for rte_flow_get_aged_flows and destroy. */
-};
-
-#define MLX5_CNT_CONTAINER(sh, batch) (&(sh)->cmng.ccont[batch])
-
-enum {
-	MLX5_CCONT_TYPE_SINGLE,
-	MLX5_CCONT_TYPE_BATCH,
-	MLX5_CCONT_TYPE_MAX,
 };
 
 enum mlx5_counter_type {
@@ -377,7 +371,6 @@ struct mlx5_flow_counter {
 
 /* Extend counters information for none batch fallback counters. */
 struct mlx5_flow_counter_ext {
-	uint32_t skipped:1; /* This counter is skipped or not. */
 #if defined(HAVE_IBV_DEVICE_COUNTERS_SET_V42)
 	struct ibv_counter_set *cs;
 #elif defined(HAVE_IBV_DEVICE_COUNTERS_SET_V45)
@@ -397,9 +390,8 @@ struct mlx5_flow_counter_pool {
 		rte_atomic64_t a64_dcs;
 	};
 	/* The devx object of the minimum counter ID. */
-	uint32_t index:28; /* Pool index in container. */
+	uint32_t index:29; /* Pool index in container. */
 	uint32_t type:2; /* Memory type behind the counter array. */
-	uint32_t skip_cnt:1; /* Pool contains skipped counter. */
 	volatile uint32_t query_gen:1; /* Query round. */
 	rte_spinlock_t sl; /* The pool lock. */
 	struct mlx5_counter_stats_raw *raw;
@@ -419,15 +411,14 @@ struct mlx5_counter_stats_mem_mng {
 /* Raw memory structure for the counter statistics values of a pool. */
 struct mlx5_counter_stats_raw {
 	LIST_ENTRY(mlx5_counter_stats_raw) next;
-	int min_dcs_id;
 	struct mlx5_counter_stats_mem_mng *mem_mng;
 	volatile struct flow_counter_stats *data;
 };
 
 TAILQ_HEAD(mlx5_counter_pools, mlx5_flow_counter_pool);
 
-/* Container structure for counter pools. */
-struct mlx5_pools_container {
+/* Counter global management structure. */
+struct mlx5_flow_counter_mng {
 	rte_atomic16_t n_valid; /* Number of valid pools. */
 	uint16_t n; /* Number of pools. */
 	uint16_t last_pool_idx; /* Last used pool index */
@@ -441,14 +432,8 @@ struct mlx5_pools_container {
 	struct mlx5_flow_counter_pool **pools; /* Counter pool array. */
 	struct mlx5_counter_stats_mem_mng *mem_mng;
 	/* Hold the memory management for the next allocated pools raws. */
-};
-
-/* Counter global management structure. */
-struct mlx5_flow_counter_mng {
-	struct mlx5_pools_container ccont[MLX5_CCONT_TYPE_MAX];
 	struct mlx5_counters flow_counters; /* Legacy flow counter list. */
 	uint8_t pending_queries;
-	uint8_t batch;
 	uint16_t pool_index;
 	uint8_t query_thread_on;
 	LIST_HEAD(mem_mngs, mlx5_counter_stats_mem_mng) mem_mngs;
@@ -838,6 +823,8 @@ struct mlx5_priv {
 	struct mlx5_flow_meters flow_meters; /* MTR list. */
 	uint8_t skip_default_rss_reta; /* Skip configuration of default reta. */
 	uint8_t fdb_def_rule; /* Whether fdb jump to table 1 is configured. */
+	void *cnt_action; /* Counter action to validate invalid offset. */
+	struct mlx5_devx_obj *cnt_dcs; /* Counter validate devx object. */
 	struct mlx5_mp_id mp_id; /* ID of a multi-process process */
 	LIST_HEAD(fdir, mlx5_fdir_flow) fdir_flows; /* fdir flows. */
 };

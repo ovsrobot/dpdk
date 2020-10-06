@@ -512,6 +512,32 @@ out:
 }
 
 /**
+ * DV flow counter mode detect and config.
+ *
+ * @param dev
+ *   Pointer to rte_eth_dev structure.
+ *
+ */
+static void
+mlx5_flow_counter_mode_config(struct rte_eth_dev *dev)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+
+	/* If devx is not supported, counters are not working. */
+	if (!priv->config.devx)
+		return;
+	priv->counter_fallback = 0;
+	if (!priv->config.hca_attr.flow_counters_dump ||
+	    (mlx5_flow_discover_counter_offset_support(dev) == -ENOTSUP))
+		priv->counter_fallback = 1;
+#ifndef HAVE_IBV_DEVX_ASYNC
+	priv->counter_fallback = 1;
+#endif
+	if (priv->counter_fallback)
+		DRV_LOG(INFO, "Use fall-back DV counter management");
+}
+
+/**
  * Spawn an Ethernet device from Verbs information.
  *
  * @param dpdk_dev
@@ -979,19 +1005,11 @@ err_secondary:
 		DRV_LOG(INFO, "Rx CQE padding is enabled");
 	}
 	if (config->devx) {
-		priv->counter_fallback = 0;
 		err = mlx5_devx_cmd_query_hca_attr(sh->ctx, &config->hca_attr);
 		if (err) {
 			err = -err;
 			goto error;
 		}
-		if (!config->hca_attr.flow_counters_dump)
-			priv->counter_fallback = 1;
-#ifndef HAVE_IBV_DEVX_ASYNC
-		priv->counter_fallback = 1;
-#endif
-		if (priv->counter_fallback)
-			DRV_LOG(INFO, "Use fall-back DV counter management");
 		/* Check for LRO support. */
 		if (config->dest_tir && config->hca_attr.lro_cap &&
 		    config->dv_flow_en) {
@@ -1364,6 +1382,8 @@ err_secondary:
 			goto error;
 		}
 	}
+	if (priv->config.dv_flow_en)
+		mlx5_flow_counter_mode_config(eth_dev);
 	return eth_dev;
 error:
 	if (priv) {
