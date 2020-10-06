@@ -118,29 +118,41 @@ struct mlx5_l3t_level_tbl {
 struct mlx5_l3t_entry_word {
 	uint32_t idx; /* Table index. */
 	uint64_t ref_cnt; /* Table ref_cnt. */
-	uint16_t entry[]; /* Entry array. */
-};
+	struct {
+		uint16_t data;
+		uint32_t ref_cnt;
+	} entry[MLX5_L3T_ET_SIZE]; /* Entry array */
+} __rte_packed;
 
 /* L3 double word entry table data structure. */
 struct mlx5_l3t_entry_dword {
 	uint32_t idx; /* Table index. */
 	uint64_t ref_cnt; /* Table ref_cnt. */
-	uint32_t entry[]; /* Entry array. */
-};
+	struct {
+		uint32_t data;
+		int32_t ref_cnt;
+	} entry[MLX5_L3T_ET_SIZE]; /* Entry array */
+} __rte_packed;
 
 /* L3 quad word entry table data structure. */
 struct mlx5_l3t_entry_qword {
 	uint32_t idx; /* Table index. */
 	uint64_t ref_cnt; /* Table ref_cnt. */
-	uint64_t entry[]; /* Entry array. */
-};
+	struct {
+		uint64_t data;
+		uint32_t ref_cnt;
+	} entry[MLX5_L3T_ET_SIZE]; /* Entry array */
+} __rte_packed;
 
 /* L3 pointer entry table data structure. */
 struct mlx5_l3t_entry_ptr {
 	uint32_t idx; /* Table index. */
 	uint64_t ref_cnt; /* Table ref_cnt. */
-	void *entry[]; /* Entry array. */
-};
+	struct {
+		void *data;
+		uint32_t ref_cnt;
+	} entry[MLX5_L3T_ET_SIZE]; /* Entry array */
+} __rte_packed;
 
 /* L3 table data structure. */
 struct mlx5_l3t_tbl {
@@ -148,6 +160,7 @@ struct mlx5_l3t_tbl {
 	struct mlx5_indexed_pool *eip;
 	/* Table index pool handles. */
 	struct mlx5_l3t_level_tbl *tbl; /* Global table index. */
+	rte_spinlock_t sl; /* The table lock. */
 };
 
 /*
@@ -535,32 +548,39 @@ void mlx5_l3t_destroy(struct mlx5_l3t_tbl *tbl);
  *   0 if success, -1 on error.
  */
 
-uint32_t mlx5_l3t_get_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx,
+int32_t mlx5_l3t_get_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx,
 			    union mlx5_l3t_data *data);
 /**
- * This function clears the index entry from Three-level table.
+ * This function decreases and clear index entry if reference
+ * counter is 0 from Three-level table.
  *
  * @param tbl
  *   Pointer to the l3t.
  * @param idx
  *   Index to the entry.
+ *
+ * @return
+ *   The remaining reference count, 0 means entry be cleared, -1 on error.
  */
-void mlx5_l3t_clear_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx);
+int32_t mlx5_l3t_clear_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx);
 
 /**
- * This function gets the index entry from Three-level table.
+ * This function sets the index entry to Three-level table.
+ * If the entry is already set, the EEXIST errno will be given, and
+ * the set data will be filled to the data.
  *
- * @param tbl
+ * @param tbl[in]
  *   Pointer to the l3t.
- * @param idx
+ * @param idx[in]
  *   Index to the entry.
- * @param data
+ * @param data[in/out]
  *   Pointer to the memory which contains the entry data save to l3t.
+ *   If the entry is already set, the set data will be filled.
  *
  * @return
  *   0 if success, -1 on error.
  */
-uint32_t mlx5_l3t_set_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx,
+int32_t mlx5_l3t_set_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx,
 			    union mlx5_l3t_data *data);
 
 /*

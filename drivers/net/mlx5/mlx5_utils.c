@@ -551,26 +551,23 @@ mlx5_l3t_create(enum mlx5_l3t_type type)
 	tbl->type = type;
 	switch (type) {
 	case MLX5_L3T_TYPE_WORD:
-		l3t_ip_cfg.size = sizeof(struct mlx5_l3t_entry_word) +
-				  sizeof(uint16_t) * MLX5_L3T_ET_SIZE;
+		l3t_ip_cfg.size = sizeof(struct mlx5_l3t_entry_word);
 		l3t_ip_cfg.type = "mlx5_l3t_e_tbl_w";
 		break;
 	case MLX5_L3T_TYPE_DWORD:
-		l3t_ip_cfg.size = sizeof(struct mlx5_l3t_entry_dword) +
-				  sizeof(uint32_t) * MLX5_L3T_ET_SIZE;
+		l3t_ip_cfg.size = sizeof(struct mlx5_l3t_entry_dword);
 		l3t_ip_cfg.type = "mlx5_l3t_e_tbl_dw";
 		break;
 	case MLX5_L3T_TYPE_QWORD:
-		l3t_ip_cfg.size = sizeof(struct mlx5_l3t_entry_qword) +
-				  sizeof(uint64_t) * MLX5_L3T_ET_SIZE;
+		l3t_ip_cfg.size = sizeof(struct mlx5_l3t_entry_qword);
 		l3t_ip_cfg.type = "mlx5_l3t_e_tbl_qw";
 		break;
 	default:
-		l3t_ip_cfg.size = sizeof(struct mlx5_l3t_entry_ptr) +
-				  sizeof(void *) * MLX5_L3T_ET_SIZE;
+		l3t_ip_cfg.size = sizeof(struct mlx5_l3t_entry_ptr);
 		l3t_ip_cfg.type = "mlx5_l3t_e_tbl_tpr";
 		break;
 	}
+	rte_spinlock_init(&tbl->sl);
 	tbl->eip = mlx5_ipool_create(&l3t_ip_cfg);
 	if (!tbl->eip) {
 		rte_errno = ENOMEM;
@@ -620,46 +617,63 @@ mlx5_l3t_destroy(struct mlx5_l3t_tbl *tbl)
 	mlx5_free(tbl);
 }
 
-uint32_t
+int32_t
 mlx5_l3t_get_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx,
 		   union mlx5_l3t_data *data)
 {
 	struct mlx5_l3t_level_tbl *g_tbl, *m_tbl;
+	struct mlx5_l3t_entry_word *w_e_tbl;
+	struct mlx5_l3t_entry_dword *dw_e_tbl;
+	struct mlx5_l3t_entry_qword *qw_e_tbl;
+	struct mlx5_l3t_entry_ptr *ptr_e_tbl;
 	void *e_tbl;
 	uint32_t entry_idx;
+	int32_t ret = -1;
 
+	rte_spinlock_lock(&tbl->sl);
 	g_tbl = tbl->tbl;
 	if (!g_tbl)
-		return -1;
+		goto out;
 	m_tbl = g_tbl->tbl[(idx >> MLX5_L3T_GT_OFFSET) & MLX5_L3T_GT_MASK];
 	if (!m_tbl)
-		return -1;
+		goto out;
 	e_tbl = m_tbl->tbl[(idx >> MLX5_L3T_MT_OFFSET) & MLX5_L3T_MT_MASK];
 	if (!e_tbl)
-		return -1;
+		goto out;
+	ret = 0;
 	entry_idx = idx & MLX5_L3T_ET_MASK;
 	switch (tbl->type) {
 	case MLX5_L3T_TYPE_WORD:
-		data->word = ((struct mlx5_l3t_entry_word *)e_tbl)->entry
-			     [entry_idx];
+		w_e_tbl = (struct mlx5_l3t_entry_word *)e_tbl;
+		data->word = w_e_tbl->entry[entry_idx].data;
+		if (w_e_tbl->entry[entry_idx].data)
+			w_e_tbl->entry[entry_idx].ref_cnt++;
 		break;
 	case MLX5_L3T_TYPE_DWORD:
-		data->dword = ((struct mlx5_l3t_entry_dword *)e_tbl)->entry
-			     [entry_idx];
+		dw_e_tbl = (struct mlx5_l3t_entry_dword *)e_tbl;
+		data->dword = dw_e_tbl->entry[entry_idx].data;
+		if (dw_e_tbl->entry[entry_idx].data)
+			dw_e_tbl->entry[entry_idx].ref_cnt++;
 		break;
 	case MLX5_L3T_TYPE_QWORD:
-		data->qword = ((struct mlx5_l3t_entry_qword *)e_tbl)->entry
-			      [entry_idx];
+		qw_e_tbl = (struct mlx5_l3t_entry_qword *)e_tbl;
+		data->qword = qw_e_tbl->entry[entry_idx].data;
+		if (qw_e_tbl->entry[entry_idx].data)
+			qw_e_tbl->entry[entry_idx].ref_cnt++;
 		break;
 	default:
-		data->ptr = ((struct mlx5_l3t_entry_ptr *)e_tbl)->entry
-			    [entry_idx];
+		ptr_e_tbl = (struct mlx5_l3t_entry_ptr *)e_tbl;
+		data->ptr = ptr_e_tbl->entry[entry_idx].data;
+		if (ptr_e_tbl->entry[entry_idx].data)
+			ptr_e_tbl->entry[entry_idx].ref_cnt++;
 		break;
 	}
-	return 0;
+out:
+	rte_spinlock_unlock(&tbl->sl);
+	return ret;
 }
 
-void
+int32_t
 mlx5_l3t_clear_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx)
 {
 	struct mlx5_l3t_level_tbl *g_tbl, *m_tbl;
@@ -670,36 +684,54 @@ mlx5_l3t_clear_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx)
 	void *e_tbl;
 	uint32_t entry_idx;
 	uint64_t ref_cnt;
+	int32_t ret = -1;
 
+	rte_spinlock_lock(&tbl->sl);
 	g_tbl = tbl->tbl;
 	if (!g_tbl)
-		return;
+		goto out;
 	m_tbl = g_tbl->tbl[(idx >> MLX5_L3T_GT_OFFSET) & MLX5_L3T_GT_MASK];
 	if (!m_tbl)
-		return;
+		goto out;
 	e_tbl = m_tbl->tbl[(idx >> MLX5_L3T_MT_OFFSET) & MLX5_L3T_MT_MASK];
 	if (!e_tbl)
-		return;
+		goto out;
 	entry_idx = idx & MLX5_L3T_ET_MASK;
 	switch (tbl->type) {
 	case MLX5_L3T_TYPE_WORD:
 		w_e_tbl = (struct mlx5_l3t_entry_word *)e_tbl;
-		w_e_tbl->entry[entry_idx] = 0;
+		MLX5_ASSERT(w_e_tbl->entry[entry_idx].ref_cnt);
+		ret = --w_e_tbl->entry[entry_idx].ref_cnt;
+		if (ret)
+			goto out;
+		w_e_tbl->entry[entry_idx].data = 0;
 		ref_cnt = --w_e_tbl->ref_cnt;
 		break;
 	case MLX5_L3T_TYPE_DWORD:
 		dw_e_tbl = (struct mlx5_l3t_entry_dword *)e_tbl;
-		dw_e_tbl->entry[entry_idx] = 0;
+		MLX5_ASSERT(dw_e_tbl->entry[entry_idx].ref_cnt);
+		ret = --dw_e_tbl->entry[entry_idx].ref_cnt;
+		if (ret)
+			goto out;
+		dw_e_tbl->entry[entry_idx].data = 0;
 		ref_cnt = --dw_e_tbl->ref_cnt;
 		break;
 	case MLX5_L3T_TYPE_QWORD:
 		qw_e_tbl = (struct mlx5_l3t_entry_qword *)e_tbl;
-		qw_e_tbl->entry[entry_idx] = 0;
+		MLX5_ASSERT(qw_e_tbl->entry[entry_idx].ref_cnt);
+		ret = --qw_e_tbl->entry[entry_idx].ref_cnt;
+		if (ret)
+			goto out;
+		qw_e_tbl->entry[entry_idx].data = 0;
 		ref_cnt = --qw_e_tbl->ref_cnt;
 		break;
 	default:
 		ptr_e_tbl = (struct mlx5_l3t_entry_ptr *)e_tbl;
-		ptr_e_tbl->entry[entry_idx] = NULL;
+		MLX5_ASSERT(ptr_e_tbl->entry[entry_idx].ref_cnt);
+		ret = --ptr_e_tbl->entry[entry_idx].ref_cnt;
+		if (ret)
+			goto out;
+		ptr_e_tbl->entry[entry_idx].data = NULL;
 		ref_cnt = --ptr_e_tbl->ref_cnt;
 		break;
 	}
@@ -718,9 +750,12 @@ mlx5_l3t_clear_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx)
 			}
 		}
 	}
+out:
+	rte_spinlock_unlock(&tbl->sl);
+	return ret;
 }
 
-uint32_t
+int32_t
 mlx5_l3t_set_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx,
 		   union mlx5_l3t_data *data)
 {
@@ -731,8 +766,10 @@ mlx5_l3t_set_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx,
 	struct mlx5_l3t_entry_ptr *ptr_e_tbl;
 	void *e_tbl;
 	uint32_t entry_idx, tbl_idx = 0;
+	int32_t ret = -1;
 
 	/* Check the global table, create it if empty. */
+	rte_spinlock_lock(&tbl->sl);
 	g_tbl = tbl->tbl;
 	if (!g_tbl) {
 		g_tbl = mlx5_malloc(MLX5_MEM_ZERO,
@@ -741,7 +778,7 @@ mlx5_l3t_set_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx,
 				    SOCKET_ID_ANY);
 		if (!g_tbl) {
 			rte_errno = ENOMEM;
-			return -1;
+			goto out;
 		}
 		tbl->tbl = g_tbl;
 	}
@@ -757,7 +794,7 @@ mlx5_l3t_set_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx,
 				    SOCKET_ID_ANY);
 		if (!m_tbl) {
 			rte_errno = ENOMEM;
-			return -1;
+			goto out;
 		}
 		g_tbl->tbl[(idx >> MLX5_L3T_GT_OFFSET) & MLX5_L3T_GT_MASK] =
 									m_tbl;
@@ -772,7 +809,7 @@ mlx5_l3t_set_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx,
 		e_tbl = mlx5_ipool_zmalloc(tbl->eip, &tbl_idx);
 		if (!e_tbl) {
 			rte_errno = ENOMEM;
-			return -1;
+			goto out;
 		}
 		((struct mlx5_l3t_entry_word *)e_tbl)->idx = tbl_idx;
 		m_tbl->tbl[(idx >> MLX5_L3T_MT_OFFSET) & MLX5_L3T_MT_MASK] =
@@ -783,24 +820,55 @@ mlx5_l3t_set_entry(struct mlx5_l3t_tbl *tbl, uint32_t idx,
 	switch (tbl->type) {
 	case MLX5_L3T_TYPE_WORD:
 		w_e_tbl = (struct mlx5_l3t_entry_word *)e_tbl;
-		w_e_tbl->entry[entry_idx] = data->word;
+		if (w_e_tbl->entry[entry_idx].data) {
+			data->word = w_e_tbl->entry[entry_idx].data;
+			w_e_tbl->entry[entry_idx].ref_cnt++;
+			rte_errno = EEXIST;
+			goto out;
+		}
+		w_e_tbl->entry[entry_idx].data = data->word;
+		w_e_tbl->entry[entry_idx].ref_cnt = 1;
 		w_e_tbl->ref_cnt++;
 		break;
 	case MLX5_L3T_TYPE_DWORD:
 		dw_e_tbl = (struct mlx5_l3t_entry_dword *)e_tbl;
-		dw_e_tbl->entry[entry_idx] = data->dword;
+		if (dw_e_tbl->entry[entry_idx].data) {
+			data->dword = dw_e_tbl->entry[entry_idx].data;
+			dw_e_tbl->entry[entry_idx].ref_cnt++;
+			rte_errno = EEXIST;
+			goto out;
+		}
+		dw_e_tbl->entry[entry_idx].data = data->dword;
+		dw_e_tbl->entry[entry_idx].ref_cnt = 1;
 		dw_e_tbl->ref_cnt++;
 		break;
 	case MLX5_L3T_TYPE_QWORD:
 		qw_e_tbl = (struct mlx5_l3t_entry_qword *)e_tbl;
-		qw_e_tbl->entry[entry_idx] = data->qword;
+		if (qw_e_tbl->entry[entry_idx].data) {
+			data->qword = qw_e_tbl->entry[entry_idx].data;
+			qw_e_tbl->entry[entry_idx].ref_cnt++;
+			rte_errno = EEXIST;
+			goto out;
+		}
+		qw_e_tbl->entry[entry_idx].data = data->qword;
+		qw_e_tbl->entry[entry_idx].ref_cnt = 1;
 		qw_e_tbl->ref_cnt++;
 		break;
 	default:
 		ptr_e_tbl = (struct mlx5_l3t_entry_ptr *)e_tbl;
-		ptr_e_tbl->entry[entry_idx] = data->ptr;
+		if (ptr_e_tbl->entry[entry_idx].data) {
+			data->ptr = ptr_e_tbl->entry[entry_idx].data;
+			ptr_e_tbl->entry[entry_idx].ref_cnt++;
+			rte_errno = EEXIST;
+			goto out;
+		}
+		ptr_e_tbl->entry[entry_idx].data = data->ptr;
+		ptr_e_tbl->entry[entry_idx].ref_cnt = 1;
 		ptr_e_tbl->ref_cnt++;
 		break;
 	}
-	return 0;
+	ret = 0;
+out:
+	rte_spinlock_unlock(&tbl->sl);
+	return ret;
 }
