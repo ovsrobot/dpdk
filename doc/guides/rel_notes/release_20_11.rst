@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated CRC modules of rte_net library.**
+
+  * Added run-time selection of the optimal architecture-specific CRC path.
+
 * **Updated Broadcom bnxt driver.**
 
   Updated the Broadcom bnxt driver with new features and improvements, including:
