@@ -4461,28 +4461,6 @@ flow_dv_counter_pool_prepare(struct rte_eth_dev *dev,
 }
 
 /**
- * Search for existed shared counter.
- *
- * @param[in] dev
- *   Pointer to the Ethernet device structure.
- * @param[in] id
- *   The shared counter ID to search.
- *
- * @return
- *   0 if not existed, otherwise shared counter index.
- */
-static uint32_t
-flow_dv_counter_shared_search(struct rte_eth_dev *dev, uint32_t id)
-{
-	struct mlx5_priv *priv = dev->data->dev_private;
-	union mlx5_l3t_data data;
-
-	if (mlx5_l3t_get_entry(priv->sh->cnt_id_tbl, id, &data))
-		return 0;
-	return data.dword;
-}
-
-/**
  * Allocate a flow counter.
  *
  * @param[in] dev
@@ -4510,24 +4488,15 @@ flow_dv_counter_alloc(struct rte_eth_dev *dev, uint32_t shared, uint32_t id,
 	enum mlx5_counter_type cnt_type =
 			age ? MLX5_COUNTER_TYPE_AGE : MLX5_COUNTER_TYPE_ORIGIN;
 	uint32_t cnt_idx;
+	union mlx5_l3t_data data;
 
 	if (!priv->config.devx) {
 		rte_errno = ENOTSUP;
 		return 0;
 	}
-	if (shared) {
-		cnt_idx = flow_dv_counter_shared_search(dev, id);
-		if (cnt_idx) {
-			cnt_free = flow_dv_counter_get_by_idx(dev, cnt_idx,
-							      NULL);
-			if (cnt_free->shared_info.ref_cnt + 1 == 0) {
-				rte_errno = E2BIG;
-				return 0;
-			}
-			cnt_free->shared_info.ref_cnt++;
-			return cnt_idx;
-		}
-	}
+	if (shared && !mlx5_l3t_get_entry(priv->sh->cnt_id_tbl, id, &data) &&
+	    data.dword)
+		return data.dword;
 	/* Get free counters from container. */
 	rte_spinlock_lock(&cmng->csl);
 	cnt_free = TAILQ_FIRST(&cmng->counters[cnt_type]);
@@ -4566,12 +4535,18 @@ flow_dv_counter_alloc(struct rte_eth_dev *dev, uint32_t shared, uint32_t id,
 				 &cnt_free->bytes))
 		goto err;
 	if (shared) {
-		union mlx5_l3t_data data;
-
 		data.dword = cnt_idx;
-		if (mlx5_l3t_set_entry(priv->sh->cnt_id_tbl, id, &data))
+		if (mlx5_l3t_set_entry(priv->sh->cnt_id_tbl, id, &data)) {
+			if (rte_errno == EEXIST) {
+				cnt_free->pool = pool;
+				rte_spinlock_lock(&cmng->csl);
+				TAILQ_INSERT_TAIL(&cmng->counters[cnt_type],
+						  cnt_free, next);
+				rte_spinlock_unlock(&cmng->csl);
+				return data.dword;
+			}
 			goto err;
-		cnt_free->shared_info.ref_cnt = 1;
+		}
 		cnt_free->shared_info.id = id;
 		cnt_idx |= MLX5_CNT_SHARED_OFFSET;
 	}
@@ -4667,12 +4642,9 @@ flow_dv_counter_release(struct rte_eth_dev *dev, uint32_t counter)
 		return;
 	cnt = flow_dv_counter_get_by_idx(dev, counter, &pool);
 	MLX5_ASSERT(pool);
-	if (IS_SHARED_CNT(counter)) {
-		if (--cnt->shared_info.ref_cnt)
-			return;
-		mlx5_l3t_clear_entry(priv->sh->cnt_id_tbl,
-				     cnt->shared_info.id);
-	}
+	if (IS_SHARED_CNT(counter) &&
+	    mlx5_l3t_clear_entry(priv->sh->cnt_id_tbl, cnt->shared_info.id))
+		return;
 	if (IS_AGE_POOL(pool))
 		flow_dv_counter_remove_from_age(dev, counter, cnt);
 	cnt->pool = pool;
