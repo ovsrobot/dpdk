@@ -2130,6 +2130,7 @@ enum rte_flow_action_type {
 	 * See struct rte_flow_action_age.
 	 * See function rte_flow_get_aged_flows
 	 * see enum RTE_ETH_EVENT_FLOW_AGED
+	 * See struct rte_flow_query_age
 	 */
 	RTE_FLOW_ACTION_TYPE_AGE,
 };
@@ -2191,6 +2192,19 @@ struct rte_flow_action_age {
 	uint32_t reserved:8; /**< Reserved, must be zero. */
 	void *context;
 		/**< The user flow context, NULL means the rte_flow pointer. */
+};
+
+/**
+ * RTE_FLOW_ACTION_TYPE_AGE (query)
+ *
+ * Query structure to retrieve the aging status information of a
+ * shared AGE action, or a flow rule using the AGE action.
+ */
+struct rte_flow_query_age {
+	uint32_t reserved:6; /**< Reserved, must be zero. */
+	uint32_t aged:1; /**< 1 if aging timeout expired, 0 otherwise. */
+	uint32_t last_hit_time_valid:1; /**< sec_since_last_hit value valid. */
+	uint32_t sec_since_last_hit:24; /**< Seconds since last traffic hit. */
 };
 
 /**
