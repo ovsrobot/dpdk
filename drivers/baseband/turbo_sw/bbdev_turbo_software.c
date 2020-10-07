@@ -302,7 +302,7 @@ q_setup(struct rte_bbdev *dev, uint16_t q_id,
 		rte_bbdev_log(ERR,
 				"Creating queue name for device %u queue %u failed",
 				dev->data->dev_id, q_id);
-		return -ENAMETOOLONG;
+		goto free_q;
 	}
 	q->enc_out = rte_zmalloc_socket(name,
 			((RTE_BBDEV_TURBO_MAX_TB_SIZE >> 3) + 3) *
@@ -322,7 +322,7 @@ q_setup(struct rte_bbdev *dev, uint16_t q_id,
 		rte_bbdev_log(ERR,
 				"Creating queue name for device %u queue %u failed",
 				dev->data->dev_id, q_id);
-		return -ENAMETOOLONG;
+		goto free_q;
 	}
 	q->enc_in = rte_zmalloc_socket(name,
 			(RTE_BBDEV_LDPC_MAX_CB_SIZE >> 3) * sizeof(*q->enc_in),
@@ -340,7 +340,7 @@ q_setup(struct rte_bbdev *dev, uint16_t q_id,
 		rte_bbdev_log(ERR,
 				"Creating queue name for device %u queue %u failed",
 				dev->data->dev_id, q_id);
-		return -ENAMETOOLONG;
+		goto free_q;
 	}
 	q->ag = rte_zmalloc_socket(name,
 			RTE_BBDEV_TURBO_MAX_CB_SIZE * 10 * sizeof(*q->ag),
@@ -358,7 +358,7 @@ q_setup(struct rte_bbdev *dev, uint16_t q_id,
 		rte_bbdev_log(ERR,
 				"Creating queue name for device %u queue %u failed",
 				dev->data->dev_id, q_id);
-		return -ENAMETOOLONG;
+		goto free_q;
 	}
 	q->code_block = rte_zmalloc_socket(name,
 			RTE_BBDEV_TURBO_MAX_CB_SIZE * sizeof(*q->code_block),
@@ -377,7 +377,7 @@ q_setup(struct rte_bbdev *dev, uint16_t q_id,
 		rte_bbdev_log(ERR,
 				"Creating queue name for device %u queue %u failed",
 				dev->data->dev_id, q_id);
-		return -ENAMETOOLONG;
+		goto free_q;
 	}
 	q->deint_input = rte_zmalloc_socket(name,
 			DEINT_INPUT_BUF_SIZE * sizeof(*q->deint_input),
@@ -396,7 +396,7 @@ q_setup(struct rte_bbdev *dev, uint16_t q_id,
 		rte_bbdev_log(ERR,
 				"Creating queue name for device %u queue %u failed",
 				dev->data->dev_id, q_id);
-		return -ENAMETOOLONG;
+		goto free_q;
 	}
 	q->deint_output = rte_zmalloc_socket(NULL,
 			DEINT_OUTPUT_BUF_SIZE * sizeof(*q->deint_output),
@@ -415,7 +415,7 @@ q_setup(struct rte_bbdev *dev, uint16_t q_id,
 		rte_bbdev_log(ERR,
 				"Creating queue name for device %u queue %u failed",
 				dev->data->dev_id, q_id);
-		return -ENAMETOOLONG;
+		goto free_q;
 	}
 	q->adapter_output = rte_zmalloc_socket(NULL,
 			ADAPTER_OUTPUT_BUF_SIZE * sizeof(*q->adapter_output),
@@ -433,7 +433,7 @@ q_setup(struct rte_bbdev *dev, uint16_t q_id,
 		rte_bbdev_log(ERR,
 				"Creating queue name for device %u queue %u failed",
 				dev->data->dev_id, q_id);
-		return -ENAMETOOLONG;
+		goto free_q;
 	}
 	q->processed_pkts = rte_ring_create(name, queue_conf->queue_size,
 			queue_conf->socket, RING_F_SP_ENQ | RING_F_SC_DEQ);
