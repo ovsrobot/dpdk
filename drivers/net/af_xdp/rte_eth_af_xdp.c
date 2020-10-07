@@ -1362,7 +1362,7 @@ xdp_get_channels_info(const char *if_name, int *max_queues,
 
 	channels.cmd = ETHTOOL_GCHANNELS;
 	ifr.ifr_data = (void *)&channels;
-	strncpy(ifr.ifr_name, if_name, IFNAMSIZ);
+	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", if_name);
 	ret = ioctl(fd, SIOCETHTOOL, &ifr);
 	if (ret) {
 		if (errno == EOPNOTSUPP) {
