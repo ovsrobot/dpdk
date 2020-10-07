@@ -174,6 +174,7 @@ static const struct rte_flow_desc_data rte_flow_desc_action[] = {
 	MK_FLOW_ACTION(SET_IPV4_DSCP, sizeof(struct rte_flow_action_set_dscp)),
 	MK_FLOW_ACTION(SET_IPV6_DSCP, sizeof(struct rte_flow_action_set_dscp)),
 	MK_FLOW_ACTION(AGE, sizeof(struct rte_flow_action_age)),
+	MK_FLOW_ACTION(SHARED, 0),
 };
 
 int
@@ -1250,4 +1251,87 @@ rte_flow_get_aged_flows(uint16_t port_id, void **contexts,
 	return rte_flow_error_set(error, ENOTSUP,
 				  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
 				  NULL, rte_strerror(ENOTSUP));
+}
+
+struct rte_flow_shared_action *
+rte_flow_shared_action_create(uint16_t port_id,
+			      const struct rte_flow_shared_action_conf *conf,
+			      const struct rte_flow_action *action,
+			      struct rte_flow_error *error)
+{
+	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	struct rte_flow_shared_action *shared_action;
+	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
+
+	if (unlikely(!ops))
+		return NULL;
+	if (likely(!!ops->shared_action_create)) {
+		shared_action = ops->shared_action_create(dev, conf, action,
+							  error);
+		if (shared_action == NULL)
+			flow_err(port_id, -rte_errno, error);
+		return shared_action;
+	}
+	rte_flow_error_set(error, ENOSYS, RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
+			   NULL, rte_strerror(ENOSYS));
+	return NULL;
+}
+
+int
+rte_flow_shared_action_destroy(uint16_t port_id,
+			      struct rte_flow_shared_action *action,
+			      struct rte_flow_error *error)
+{
+	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
+
+	if (unlikely(!ops))
+		return -rte_errno;
+	if (likely(!!ops->shared_action_destroy))
+		return flow_err(port_id,
+				ops->shared_action_destroy(dev, action, error),
+				error);
+	return rte_flow_error_set(error, ENOSYS,
+				  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
+				  NULL, rte_strerror(ENOSYS));
+}
+
+int
+rte_flow_shared_action_update(uint16_t port_id,
+			      struct rte_flow_shared_action *action,
+			      const struct rte_flow_action *update,
+			      struct rte_flow_error *error)
+{
+	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
+
+	if (unlikely(!ops))
+		return -rte_errno;
+	if (likely(!!ops->shared_action_update))
+		return flow_err(port_id, ops->shared_action_update(dev, action,
+				update, error),
+			error);
+	return rte_flow_error_set(error, ENOSYS,
+				  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
+				  NULL, rte_strerror(ENOSYS));
+}
+
+int
+rte_flow_shared_action_query(uint16_t port_id,
+			     const struct rte_flow_shared_action *action,
+			     void *data,
+			     struct rte_flow_error *error)
+{
+	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
+
+	if (unlikely(!ops))
+		return -rte_errno;
+	if (likely(!!ops->shared_action_query))
+		return flow_err(port_id, ops->shared_action_query(dev, action,
+				data, error),
+			error);
+	return rte_flow_error_set(error, ENOSYS,
+				  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
+				  NULL, rte_strerror(ENOSYS));
 }

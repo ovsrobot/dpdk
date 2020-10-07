@@ -2666,6 +2666,25 @@ timeout passed without any matching on the flow.
    | ``context``  | user input flow context         |
    +--------------+---------------------------------+
 
+Action: ``SHARED``
+^^^^^^^^^^^^^^^^^^
+
+Flow Utilize shared action by handle as returned from
+``rte_flow_shared_action_create()``.
+
+The behaviour of the shared action defined by ``action`` argument of type
+``struct rte_flow_action`` passed to ``rte_flow_shared_action_create()``.
+
+.. _table_rte_flow_shared_action:
+
+.. table:: SHARED
+
+   +---------------+
+   | Field         |
+   +===============+
+   | no properties |
+   +---------------+
+
 Negative types
 ~~~~~~~~~~~~~~
 
