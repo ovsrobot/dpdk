@@ -105,6 +105,11 @@ New Features
     ``--portmask=N``
     where N represents the hexadecimal bitmask of ports used.
 
+* **Updated Software Eventdev driver.**
+
+  Added performance tuning arguments to allow tuning the scheduler for
+  better throughtput in high core count use cases.
+
 * **Updated the pipeline library for alignment with the P4 language.**
 
   Added new Software Switch (SWX) pipeline type that provides more
