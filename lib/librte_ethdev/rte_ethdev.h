@@ -3201,6 +3201,23 @@ enum rte_eth_event_type {
 	RTE_ETH_EVENT_DESTROY,  /**< port is released */
 	RTE_ETH_EVENT_IPSEC,    /**< IPsec offload related event */
 	RTE_ETH_EVENT_FLOW_AGED,/**< New aged-out flows is detected */
+	RTE_ETH_EVENT_ERR_RECOVERING,
+			/**< port recovering from an error
+			 *
+			 * PMD detected a FW reset or error condition.
+			 * PMD will try to recover from the error.
+			 * Data path will be halted and Control path operations
+			 * would fail at this time.
+			 */
+	RTE_ETH_EVENT_RECOVERED,
+			/**< port recovered from an error
+			 *
+			 * PMD has recovered from the error condition.
+			 * Control path and Data path are up now.
+			 * Since the device undergone a reset, flow rules
+			 * offloaded prior to the reset will be lost and
+			 * the application has to recreate the rules again.
+			 */
 	RTE_ETH_EVENT_MAX       /**< max value of this enum */
 };
 
