@@ -207,6 +207,13 @@ API Changes
 
 * vhost: Moved vDPA APIs from experimental to stable.
 
+* ethdev: Added new field ``vlan_exist`` to structure ``rte_flow_item_eth``,
+  indicating that at least one VLAN exists in the packet header.
+
+* ethdev: Added new field ``more_vlans_exist`` to structure
+  ``rte_flow_item_vlan``, indicating that at least one more VLAN exists in
+  packet header, following this VLAN.
+
 * rawdev: Added a structure size parameter to the functions
   ``rte_rawdev_queue_setup()``, ``rte_rawdev_queue_conf_get()``,
   ``rte_rawdev_info_get()`` and ``rte_rawdev_configure()``,

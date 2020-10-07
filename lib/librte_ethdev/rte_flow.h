@@ -723,14 +723,18 @@ static const struct rte_flow_item_raw rte_flow_item_raw_mask = {
  * If the @p type field contains a TPID value, then only tagged packets with the
  * specified TPID will match the pattern.
  * Otherwise, only untagged packets will match the pattern.
- * If the @p ETH item is the only item in the pattern, and the @p type field
- * is not specified, then both tagged and untagged packets will match the
- * pattern.
+ * The field @p vlan_exist can be used to match specific packet types, instead
+ * of using the @p type field.
+ * This can be used to match any type of tagged packets.
+ * If the @p type and @p vlan_exist fields are not specified, then both tagged
+ * and untagged packets will match the pattern.
  */
 struct rte_flow_item_eth {
 	struct rte_ether_addr dst; /**< Destination MAC. */
 	struct rte_ether_addr src; /**< Source MAC. */
 	rte_be16_t type; /**< EtherType or TPID. */
+	uint32_t vlan_exist:1; /**< At least one VLAN exist in packet header. */
+	uint32_t reserved:31; /**< Reserved, must be zero. */
 };
 
 /** Default mask for RTE_FLOW_ITEM_TYPE_ETH. */
@@ -752,10 +756,18 @@ static const struct rte_flow_item_eth rte_flow_item_eth_mask = {
  * the preceding pattern item.
  * If a @p VLAN item is present in the pattern, then only tagged packets will
  * match the pattern.
+ * The field @p more_vlans_exist can be used to match specific packet types,
+ * instead of using the @p inner_type field.
+ * This can be used to match any type of tagged packets.
+ * If the @p inner_type and @p more_vlans_exist fields are not specified,
+ * then any tagged packets will match the pattern.
  */
 struct rte_flow_item_vlan {
 	rte_be16_t tci; /**< Tag control information. */
 	rte_be16_t inner_type; /**< Inner EtherType or TPID. */
+	uint32_t more_vlans_exist:1;
+	/**< At least one more VLAN exist in packet header, after this VLAN. */
+	uint32_t reserved:31; /**< Reserved, must be zero. */
 };
 
 /** Default mask for RTE_FLOW_ITEM_TYPE_VLAN. */
