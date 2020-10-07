@@ -116,6 +116,7 @@ New Features
   * Extern objects and functions can be plugged into the pipeline.
   * Transaction-oriented table updates.
 
+* sched: Add support to update subport bandwidth dynamically.
 
 Removed Items
 -------------

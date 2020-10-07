@@ -152,16 +152,11 @@ struct rte_sched_grinder {
 struct rte_sched_subport {
 	/* Token bucket (TB) */
 	uint64_t tb_time; /* time of last update */
-	uint64_t tb_period;
-	uint64_t tb_credits_per_period;
-	uint64_t tb_size;
 	uint64_t tb_credits;
 
 	/* Traffic classes (TCs) */
 	uint64_t tc_time; /* time of next update */
-	uint64_t tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE];
 	uint64_t tc_credits[RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE];
-	uint64_t tc_period;
 
 	/* TC oversubscription */
 	uint64_t tc_ov_wm;
@@ -837,18 +832,6 @@ rte_sched_subport_check_params(struct rte_sched_subport_params *params,
 		return -EINVAL;
 	}
 
-	if (params->tb_rate == 0 || params->tb_rate > rate) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for tb rate\n", __func__);
-		return -EINVAL;
-	}
-
-	if (params->tb_size == 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for tb size\n", __func__);
-		return -EINVAL;
-	}
-
 	/* qsize: if non-zero, power of 2,
 	 * no bigger than 32K (due to 16-bit read/write pointers)
 	 */
@@ -862,29 +845,8 @@ rte_sched_subport_check_params(struct rte_sched_subport_params *params,
 		}
 	}
 
-	for (i = 0; i < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; i++) {
-		uint64_t tc_rate = params->tc_rate[i];
-		uint16_t qsize = params->qsize[i];
-
-		if ((qsize == 0 && tc_rate != 0) ||
-			(qsize != 0 && tc_rate == 0) ||
-			(tc_rate > params->tb_rate)) {
-			RTE_LOG(ERR, SCHED,
-				"%s: Incorrect value for tc rate\n", __func__);
-			return -EINVAL;
-		}
-	}
-
-	if (params->qsize[RTE_SCHED_TRAFFIC_CLASS_BE] == 0 ||
-		params->tc_rate[RTE_SCHED_TRAFFIC_CLASS_BE] == 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect qsize or tc rate(best effort)\n", __func__);
-		return -EINVAL;
-	}
-
-	if (params->tc_period == 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for tc period\n", __func__);
+	if (params->qsize[RTE_SCHED_TRAFFIC_CLASS_BE] == 0) {
+		RTE_LOG(ERR, SCHED, "%s: Incorrect qsize\n", __func__);
 		return -EINVAL;
 	}
 
