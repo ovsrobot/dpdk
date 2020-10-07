@@ -8015,21 +8015,17 @@ flow_dv_translate_create_counter(struct rte_eth_dev *dev,
 	if (!counter || age == NULL)
 		return counter;
 	age_param  = flow_dv_counter_idx_get_age(dev, counter);
-	/*
-	 * The counter age accuracy may have a bit delay. Have 3/4
-	 * second bias on the timeount in order to let it age in time.
-	 */
 	age_param->context = age->context ? age->context :
 		(void *)(uintptr_t)(dev_flow->flow_idx);
 	/*
 	 * The counter age accuracy may have a bit delay. Have 3/4
-	 * second bias on the timeount in order to let it age in time.
+	 * second bias on the timeout in order to let it age in time.
 	 */
 	age_param->timeout = age->timeout * 10 - MLX5_AGING_TIME_DELAY;
-	/* Set expire time in unit of 0.1 sec. */
 	age_param->port_id = dev->data->port_id;
-	age_param->expire = age_param->timeout +
-			rte_rdtsc() / (rte_get_tsc_hz() / 10);
+	/* Set expire time in unit of 0.1 sec. */
+	age_param->expire = age_param->timeout + MLX5_AGE_CURR_TIME;
+	age_param->last_hit_time = MLX5_CURR_TIME_SEC;
 	rte_atomic16_set(&age_param->state, AGE_CANDIDATE);
 	return counter;
 }
@@ -9529,6 +9525,50 @@ flow_dv_query_count(struct rte_eth_dev *dev, struct rte_flow *flow,
 }
 
 /**
+ * Query a flow rule AGE action for aging information.
+ *
+ * @param[in] dev
+ *   Pointer to Ethernet device.
+ * @param[in] flow
+ *   Pointer to the sub flow.
+ * @param[out] data
+ *   data retrieved by the query.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL.
+ *
+ * @return
+ *   0 on success, a negative errno value otherwise and rte_errno is set.
+ */
+static int
+flow_dv_query_age(struct rte_eth_dev *dev, struct rte_flow *flow,
+		  void *data, struct rte_flow_error *error)
+{
+	struct rte_flow_query_age *resp = data;
+
+	if (flow->counter) {
+		struct mlx5_age_param *age_param =
+				flow_dv_counter_idx_get_age(dev, flow->counter);
+
+		if (!age_param || !age_param->timeout)
+			return rte_flow_error_set
+					(error, EINVAL,
+					 RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
+					 NULL, "cannot read age data");
+		resp->aged = rte_atomic16_read(&age_param->state) ==
+				AGE_TMOUT ? 1 : 0;
+		resp->sec_since_last_hit_valid = !resp->aged;
+		if (resp->sec_since_last_hit_valid)
+			resp->sec_since_last_hit =
+				MLX5_CURR_TIME_SEC - age_param->last_hit_time;
+		return 0;
+	}
+	return rte_flow_error_set(error, EINVAL,
+				  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
+				  NULL,
+				  "age data not available");
+}
+
+/**
  * Query a flow.
  *
  * @see rte_flow_query()
@@ -9549,6 +9589,9 @@ flow_dv_query(struct rte_eth_dev *dev,
 			break;
 		case RTE_FLOW_ACTION_TYPE_COUNT:
 			ret = flow_dv_query_count(dev, flow, data, error);
+			break;
+		case RTE_FLOW_ACTION_TYPE_AGE:
+			ret = flow_dv_query_age(dev, flow, data, error);
 			break;
 		default:
 			return rte_flow_error_set(error, ENOTSUP,

@@ -6039,7 +6039,7 @@ mlx5_flow_aging_check(struct mlx5_dev_ctx_shared *sh,
 	struct mlx5_age_param *age_param;
 	struct mlx5_counter_stats_raw *cur = pool->raw_hw;
 	struct mlx5_counter_stats_raw *prev = pool->raw;
-	uint16_t curr = rte_rdtsc() / (rte_get_tsc_hz() / 10);
+	uint16_t curr = MLX5_AGE_CURR_TIME;
 	uint32_t i;
 
 	for (i = 0; i < MLX5_COUNTERS_PER_POOL; ++i) {
@@ -6049,6 +6049,7 @@ mlx5_flow_aging_check(struct mlx5_dev_ctx_shared *sh,
 			continue;
 		if (cur->data[i].hits != prev->data[i].hits) {
 			age_param->expire = curr + age_param->timeout;
+			age_param->last_hit_time = MLX5_CURR_TIME_SEC;
 			continue;
 		}
 		if ((uint16_t)(curr - age_param->expire) >= (UINT16_MAX / 2))

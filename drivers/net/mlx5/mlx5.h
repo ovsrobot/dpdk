@@ -339,6 +339,7 @@ struct mlx5_age_param {
 	uint16_t port_id; /**< Port id of the counter. */
 	uint32_t timeout:15; /**< Age timeout in unit of 0.1sec. */
 	uint32_t expire:16; /**< Expire time(0.1sec) in the future. */
+	uint32_t last_hit_time; /**< Last hit time in seconds. */
 	void *context; /**< Flow counter age context. */
 };
 
@@ -461,6 +462,12 @@ struct mlx5_flow_default_miss_resource {
 	((age_info)->flags & (1 << (BIT)))
 #define GET_PORT_AGE_INFO(priv) \
 	(&((priv)->sh->port[(priv)->dev_port - 1].age_info))
+/* Current time in seconds. */
+#define MLX5_CURR_TIME_SEC	(rte_rdtsc() / rte_get_tsc_hz())
+#define MLX5_AGE_UNITS_PER_SEC	10 /* Aging is calculated in 0.1 sec units. */
+/* Current time in defined units. */
+#define MLX5_AGE_CURR_TIME \
+	(rte_rdtsc() / (rte_get_tsc_hz() / MLX5_AGE_UNITS_PER_SEC))
 
 /* Aging information for per port. */
 struct mlx5_age_info {
