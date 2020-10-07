@@ -293,3 +293,8 @@ Tested Platforms
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+
+* **Added Broadcom BCMFS symmetric crypto PMD.**
+
+  Added a symmetric crypto PMD for Broadcom FlexSparc crypto units.
+  See :doc:`../cryptodevs/bcmfs` guide for more details on this new PMD.

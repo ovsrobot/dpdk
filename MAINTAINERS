@@ -1080,6 +1080,13 @@ F: drivers/crypto/zuc/
 F: doc/guides/cryptodevs/zuc.rst
 F: doc/guides/cryptodevs/features/zuc.ini
 
+Broadcom FlexSparc
+M: Ajit Khaparde <ajit.khaparde@broadcom.com>
+M: Raveendra Padasalagi <raveendra.padasalagi@broadcom.com>
+M: Vikas Gupta <vikas.gupta@@broadcom.com>
+F: drivers/crypto/bcmfs/
+F: doc/guides/cryptodevs/bcmfs.rst
+F: doc/guides/cryptodevs/features/bcmfs.ini
 
 Compression Drivers
 -------------------
