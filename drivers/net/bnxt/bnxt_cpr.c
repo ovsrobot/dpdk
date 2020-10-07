@@ -129,6 +129,9 @@ void bnxt_handle_async_event(struct bnxt *bp,
 			bp->flags |= BNXT_FLAG_FATAL_ERROR;
 			return;
 		}
+		rte_eth_dev_callback_process(bp->eth_dev,
+					     RTE_ETH_EVENT_ERR_RECOVERING,
+					     NULL);
 
 		event_data = rte_le_to_cpu_32(async_cmp->event_data1);
 		/* timestamp_lo/hi values are in units of 100ms */

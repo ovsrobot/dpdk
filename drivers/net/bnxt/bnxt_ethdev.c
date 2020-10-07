@@ -4571,6 +4571,9 @@ static void bnxt_dev_recover(void *arg)
 		goto err_start;
 
 	PMD_DRV_LOG(INFO, "Recovered from FW reset\n");
+	rte_eth_dev_callback_process(bp->eth_dev,
+				     RTE_ETH_EVENT_RECOVERED,
+				     NULL);
 	return;
 err_start:
 	bnxt_dev_stop_op(bp->eth_dev);
@@ -4578,6 +4581,9 @@ err:
 	bp->flags |= BNXT_FLAG_FATAL_ERROR;
 	bnxt_uninit_resources(bp, false);
 	PMD_DRV_LOG(ERR, "Failed to recover from FW reset\n");
+	rte_eth_dev_callback_process(bp->eth_dev,
+				     RTE_ETH_EVENT_INTR_RMV,
+				     NULL);
 }
 
 void bnxt_dev_reset_and_resume(void *arg)
@@ -4713,6 +4719,9 @@ reset:
 	bp->flags |= BNXT_FLAG_FW_RESET;
 
 	PMD_DRV_LOG(ERR, "Detected FW dead condition\n");
+	rte_eth_dev_callback_process(bp->eth_dev,
+				     RTE_ETH_EVENT_ERR_RECOVERING,
+				     NULL);
 
 	if (bnxt_is_master_func(bp))
 		wait_msec = info->master_func_wait_period;
