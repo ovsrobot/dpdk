@@ -68,6 +68,11 @@ New Features
   * Added support for non-zero priorities for group 0 flows
   * Added support for VXLAN decap combined with VLAN pop
 
+* **Updated Nvidia mlx5 driver.**
+
+  * Added support for hairpin between two ports and hairpin explicit
+    TX flow rules insertion.
+
 * **Updated Solarflare network PMD.**
 
   Updated the Solarflare ``sfc_efx`` driver with changes including:
