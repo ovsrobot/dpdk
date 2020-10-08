@@ -116,6 +116,15 @@ New Features
   * Extern objects and functions can be plugged into the pipeline.
   * Transaction-oriented table updates.
 
+* **Add shared action support for rte flow.**
+
+  Added shared action support to utilize single rte flow action in multiple
+  rte flow rules. An update of shared action configuration alters the behavior
+  of all rte flow rules using it.
+
+  * Added new action: ``RTE_FLOW_ACTION_TYPE_SHARED`` to use shared action
+    as rte flow action.
+  * Added new rte flow APIs to create/update/destroy/query shared action.
 
 Removed Items
 -------------
