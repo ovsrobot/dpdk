@@ -45,12 +45,22 @@ otx2_lmt_submit(uint64_t io_address)
 	return 0;
 }
 
+static inline int64_t
+otx2_lmt_submit_release(uint64_t io_address)
+{
+	RTE_SET_USED(io_address);
+
+	return 0;
+}
+
 static __rte_always_inline void
 otx2_lmt_mov(void *out, const void *in, const uint32_t lmtext)
 {
-	RTE_SET_USED(out);
-	RTE_SET_USED(in);
-	RTE_SET_USED(lmtext);
+	/* Copy four words if lmtext = 0
+	 *      six words if lmtext = 1
+	 *      eight words if lmtext =2
+	 */
+	memcpy(out, in, (4 + (2 * lmtext)) * sizeof(uint64_t));
 }
 
 static __rte_always_inline void
