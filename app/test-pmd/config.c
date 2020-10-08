@@ -511,6 +511,46 @@ static int bus_match_all(const struct rte_bus *bus, const void *data)
 }
 
 void
+device_infos_display_speeds(uint32_t speed_capa)
+{
+	printf("\n\tDevice speed capability:");
+	if (speed_capa == ETH_LINK_SPEED_AUTONEG)
+		printf(" Autonegotiate (all speeds)");
+	if (speed_capa & ETH_LINK_SPEED_FIXED)
+		printf(" Disable autonegotiate (fixed speed)  ");
+	if (speed_capa & ETH_LINK_SPEED_10M_HD)
+		printf(" 10 Mbps half-duplex  ");
+	if (speed_capa & ETH_LINK_SPEED_10M)
+		printf(" 10 Mbps full-duplex  ");
+	if (speed_capa & ETH_LINK_SPEED_100M_HD)
+		printf(" 100 Mbps half-duplex  ");
+	if (speed_capa & ETH_LINK_SPEED_100M)
+		printf(" 100 Mbps full-duplex  ");
+	if (speed_capa & ETH_LINK_SPEED_1G)
+		printf(" 1 Gbps  ");
+	if (speed_capa & ETH_LINK_SPEED_2_5G)
+		printf(" 2.5 Gbps  ");
+	if (speed_capa & ETH_LINK_SPEED_5G)
+		printf(" 5 Gbps  ");
+	if (speed_capa & ETH_LINK_SPEED_10G)
+		printf(" 10 Gbps  ");
+	if (speed_capa & ETH_LINK_SPEED_20G)
+		printf(" 20 Gbps  ");
+	if (speed_capa & ETH_LINK_SPEED_25G)
+		printf(" 25 Gbps  ");
+	if (speed_capa & ETH_LINK_SPEED_40G)
+		printf(" 40 Gbps  ");
+	if (speed_capa & ETH_LINK_SPEED_50G)
+		printf(" 50 Gbps  ");
+	if (speed_capa & ETH_LINK_SPEED_56G)
+		printf(" 56 Gbps  ");
+	if (speed_capa & ETH_LINK_SPEED_100G)
+		printf(" 100 Gbps  ");
+	if (speed_capa & ETH_LINK_SPEED_200G)
+		printf(" 200 Gbps  ");
+}
+
+void
 device_infos_display(const char *identifier)
 {
 	static const char *info_border = "*********************";
@@ -521,7 +561,9 @@ device_infos_display(const char *identifier)
 	struct rte_device *dev;
 	struct rte_devargs da;
 	portid_t port_id;
+	struct rte_eth_dev_info dev_info;
 	char devstr[128];
+	uint32_t speed_capa;
 
 	memset(&da, 0, sizeof(da));
 	if (!identifier)
@@ -572,6 +614,9 @@ skip_parse:
 						      &mac_addr);
 				rte_eth_dev_get_name_by_port(port_id, name);
 				printf("\n\tDevice name: %s", name);
+				rte_eth_dev_info_get(port_id, &dev_info);
+				speed_capa = dev_info.speed_capa;
+				device_infos_display_speeds(speed_capa);
 				printf("\n");
 			}
 		}
