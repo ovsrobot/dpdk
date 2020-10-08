@@ -2128,6 +2128,57 @@ int rte_eth_tx_hairpin_queue_setup
 	 const struct rte_eth_hairpin_conf *conf);
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Bind all hairpin TX queues of one port to the RX queues of the peer port.
+ * It is only allowed to call this API after all hairpin queues are configured
+ * properly and the devices of TX and peer RX are in started state.
+ *
+ * @param tx_port
+ *   The TX port identifier of the Ethernet device.
+ * @param rx_port
+ *   The peer RX port identifier of the Ethernet device.
+ *   RTE_MAX_ETHPORTS is allowed for the traversal of all devices.
+ *   RX port ID could have the same value with TX port ID.
+ *
+ * @return
+ *   - (0) if successful.
+ *   - (-EINVAL) if bad parameter.
+ *   - (-EBUSY) if device is not in started state.
+ *   - (-ENOTSUP) if hardware doesn't support.
+ *   - Others detailed errors from PMD drivers.
+ */
+__rte_experimental
+int rte_eth_hairpin_bind(uint16_t tx_port, uint16_t rx_port);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Unbind all hairpin TX queues of one port from the RX queues of the peer port.
+ * This should be called before closing the TX or RX devices (optional). After
+ * unbind the hairpin ports pair, it is allowed to bind them again.
+ * Changing queues configuration should be after stopping the device.
+ *
+ * @param tx_port
+ *   The TX port identifier of the Ethernet device.
+ * @param rx_port
+ *   The peer RX port identifier of the Ethernet device.
+ *   RTE_MAX_ETHPORTS is allowed for traversal of all devices.
+ *   RX port ID could have the same value with TX port ID.
+ *
+ * @return
+ *   - (0) if successful.
+ *   - (-EINVAL) if bad parameter.
+ *   - (-EBUSY) if device is in stopped state.
+ *   - (-ENOTSUP) if hardware doesn't support.
+ *   - Others detailed errors from PMD drivers.
+ */
+__rte_experimental
+int rte_eth_hairpin_unbind(uint16_t tx_port, uint16_t rx_port);
+
+/**
  * Return the NUMA socket to which an Ethernet device is connected
  *
  * @param port_id
