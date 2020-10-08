@@ -21,6 +21,9 @@
 extern "C" {
 #endif
 
+/**< @internal Declaration of the hairpin peer queue information structure. */
+struct rte_hairpin_peer_info;
+
 /*
  * Definitions of all functions exported by an Ethernet driver through the
  * generic structure of type *eth_dev_ops* supplied in the *rte_eth_dev*
@@ -650,6 +653,21 @@ typedef int (*eth_hairpin_bind_t)(struct rte_eth_dev *dev,
 typedef int (*eth_hairpin_unbind_t)(struct rte_eth_dev *dev,
 				  uint16_t rx_port);
 
+typedef int (*eth_hairpin_queue_peer_update_t)
+	(struct rte_eth_dev *dev, uint16_t peer_queue,
+	 struct rte_hairpin_peer_info *current_info,
+	 struct rte_hairpin_peer_info *peer_info, bool direction);
+/**< @internal Update and fetch peer queue information. */
+
+typedef int (*eth_hairpin_queue_peer_bind_t)
+	(struct rte_eth_dev *dev, uint16_t cur_queue,
+	 struct rte_hairpin_peer_info *peer_info, bool direction);
+/**< @internal Bind peer queue to the current queue with fetched information. */
+
+typedef int (*eth_hairpin_queue_peer_unbind_t)
+	(struct rte_eth_dev *dev, uint16_t cur_queue, bool direction);
+/**< @internal Unbind peer queue from the current queue. */
+
 /**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
@@ -795,6 +813,12 @@ struct eth_dev_ops {
 	/**< Bind all hairpin TX queues of device to the peer port RX queues. */
 	eth_hairpin_unbind_t hairpin_unbind;
 	/**< Unbind all hairpin TX queues from the peer port RX queues. */
+	eth_hairpin_queue_peer_update_t hairpin_queue_peer_update;
+	/**< Pass the current queue info and get the peer queue info. */
+	eth_hairpin_queue_peer_bind_t hairpin_queue_peer_bind;
+	/**< Set up the connection between the pair of hairpin queues. */
+	eth_hairpin_queue_peer_unbind_t hairpin_queue_peer_unbind;
+	/**< Disconnect the hairpin queues of a pair from each other. */
 };
 
 /**
@@ -1149,6 +1173,84 @@ typedef int (*ethdev_uninit_t)(struct rte_eth_dev *ethdev);
 __rte_internal
 int
 rte_eth_dev_destroy(struct rte_eth_dev *ethdev, ethdev_uninit_t ethdev_uninit);
+
+/**
+ * @internal
+ * Pass the current hairpin queue HW and/or SW information to the peer queue
+ * and fetch back the information of the peer queue.
+ *
+ * @param peer_port
+ *  Peer port identifier of the Ethernet device.
+ * @param peer_queue
+ *  Peer queue index of the port.
+ * @param cur_info
+ *  Pointer to the current information structure.
+ * @param peer_info
+ *  Pointer to the peer information, output.
+ * @param direction
+ *  Direction to pass the information.
+ *  true - pass TX queue information and get peer RX queue information
+ *  false - pass RX queue information and get peer TX queue information
+ *
+ * @return
+ *  Negative errno value on error, 0 on success.
+ */
+__rte_internal
+int
+rte_eth_hairpin_queue_peer_update(uint16_t peer_port, uint16_t peer_queue,
+				  struct rte_hairpin_peer_info *cur_info,
+				  struct rte_hairpin_peer_info *peer_info,
+				  bool direction);
+
+/**
+ * @internal
+ * Configure current hairpin queue with the peer information fetched to create
+ * the connection (bind) with peer queue in the specified direction.
+ * This function might need to be called twice to fully create the connection.
+ *
+ * @param cur_port
+ *  Current port identifier of the Ethernet device.
+ * @param cur_queue
+ *  Current queue index of the port.
+ * @param peer_info
+ *  Pointer to the peer information, input.
+ * @param direction
+ *  Direction to create the connection.
+ *  true - bind current TX queue to peer RX queue
+ *  false - bind current RX queue to peer TX queue
+ *
+ * @return
+ *  Negative errno value on error, 0 on success.
+ */
+__rte_internal
+int
+rte_eth_hairpin_queue_peer_bind(uint16_t cur_port, uint16_t cur_queue,
+				struct rte_hairpin_peer_info *peer_info,
+				bool direction);
+
+/**
+ * @internal
+ * Reset the current queue state and configuration to disconnect (unbind) it
+ * from the peer queue.
+ * This function might need to be called twice to disconnect each other.
+ *
+ * @param cur_port
+ *  Current port identifier of the Ethernet device.
+ * @param cur_queue
+ *  Current queue index of the port.
+ * @param direction
+ *  Direction to create the connection.
+ *  true - unbind current TX queue from peer RX queue
+ *  false - unbind current RX queue from peer TX queue
+ *
+ * @return
+ *  Negative errno value on error, 0 on success.
+ */
+__rte_internal
+int
+rte_eth_hairpin_queue_peer_unbind(uint16_t cur_port, uint16_t cur_queue,
+				  bool direction);
+
 
 #ifdef __cplusplus
 }
