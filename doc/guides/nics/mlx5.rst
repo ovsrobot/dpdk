@@ -302,8 +302,10 @@ Limitations
     it with size limited to max LRO size, not to max RX packet length.
   - LRO can be used with outer header of TCP packets of the standard format:
         eth (with or without vlan) / ipv4 or ipv6 / tcp / payload
-
     Other TCP packets (e.g. with MPLS label) received on Rx queue with LRO enabled, will be received with bad checksum.
+  - LRO packet aggregation is performed by HW only for packet size larger than
+    ``lro_min_mss_size``. This value is reported on device start, when debug
+    mode is enabled.
 
 - CRC:
 
