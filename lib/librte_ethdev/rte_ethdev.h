@@ -1045,7 +1045,10 @@ struct rte_eth_hairpin_peer {
  * A structure used to configure hairpin binding.
  */
 struct rte_eth_hairpin_conf {
-	uint16_t peer_count; /**< The number of peers. */
+	uint32_t peer_count:16; /**< The number of peers. */
+	uint32_t tx_explicit:1; /**< Explicit TX flow rule mode. */
+	uint32_t manual_bind:1; /**< Manually bind hairpin queues. */
+	uint32_t reserved:14; /**< Reserved bits. */
 	struct rte_eth_hairpin_peer peers[RTE_ETH_MAX_HAIRPIN_PEERS];
 };
 
