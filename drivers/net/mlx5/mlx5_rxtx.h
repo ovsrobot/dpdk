@@ -184,6 +184,7 @@ struct mlx5_rxq_ctrl {
 	void *wq_umem; /* WQ buffer registration info. */
 	void *cq_umem; /* CQ buffer registration info. */
 	struct rte_eth_hairpin_conf hairpin_conf; /* Hairpin configuration. */
+	uint32_t hairpin_status;
 };
 
 /* TX queue send local data. */
@@ -319,6 +320,7 @@ struct mlx5_txq_ctrl {
 	off_t uar_mmap_offset; /* UAR mmap offset for non-primary process. */
 	void *bf_reg; /* BlueFlame register from Verbs. */
 	uint16_t dump_file_n; /* Number of dump files. */
+	uint32_t hairpin_status;
 	struct rte_eth_hairpin_conf hairpin_conf; /* Hairpin configuration. */
 	struct mlx5_txq_data txq; /* Data path structure. */
 	/* Must be the last field in the structure, contains elts[]. */
