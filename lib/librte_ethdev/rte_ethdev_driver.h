@@ -576,6 +576,37 @@ typedef int (*eth_tx_hairpin_queue_setup_t)
 
 /**
  * @internal
+ * Get all hairpin TX/RX peer ports of the current device, if any.
+ *
+ * @param dev
+ *   ethdev handle of port.
+ * @param peer_ports
+ *   array to save the ports list.
+ * @param len
+ *   array length.
+ * @param direction
+ *   value to decide the current to peer direction
+ *   positive - used as TX to get all peer RX ports.
+ *   zero - used as RX to get all peer TX ports.
+ *
+ * @return
+ *   Negative errno value on error, 0 or positive on success.
+ *
+ * @retval 0
+ *   Success, no peer ports.
+ * @retval >0
+ *   Actual number of the peer ports.
+ * @retval -ENOTSUP
+ *   Get peer ports API is not supported.
+ * @retval -EINVAL
+ *   One of the parameters is invalid.
+ */
+typedef int (*hairpin_get_peer_ports_t)(struct rte_eth_dev *dev,
+					uint16_t *peer_ports, size_t len,
+					uint32_t direction);
+
+/**
+ * @internal
  * Bind all hairpin TX queues of one port to the RX queues of the peer port.
  *
  * @param dev
@@ -761,6 +792,8 @@ struct eth_dev_ops {
 	/**< Set up device RX hairpin queue. */
 	eth_tx_hairpin_queue_setup_t tx_hairpin_queue_setup;
 	/**< Set up device TX hairpin queue. */
+	hairpin_get_peer_ports_t hairpin_get_peer_ports;
+	/**< Get hairpin peer ports list. */
 	eth_hairpin_bind_t hairpin_bind;
 	/**< Bind all hairpin TX queues of device to the peer port RX queues. */
 	eth_hairpin_unbind_t hairpin_unbind;
