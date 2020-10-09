@@ -252,6 +252,17 @@ API Changes
 
 * bpf: ``RTE_BPF_XTYPE_NUM`` has been dropped from ``rte_bpf_xtype``.
 
+* eal: Changed the function ``rte_get_master_lcore()`` is
+  replaced to ``rte_get_main_lcore()``. The old function is deprecated.
+
+  The iterator for worker lcores will also change:
+  ``RTE_LCORE_FOREACH_SLAVE`` will be replaced with
+  ``RTE_LCORE_FOREACH_WORKER``.
+
+  The ``master-lcore`` argument to testpmd will be replaced
+  with ``main-lcore``. The old ``master-lcore`` argument
+  will produce a runtime notification in 20.11 release, and
+  be removed completely in a future release.
 
 ABI Changes
 -----------
