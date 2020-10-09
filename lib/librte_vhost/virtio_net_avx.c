@@ -35,9 +35,15 @@
 #define PACKED_AVAIL_FLAG ((0ULL | VRING_DESC_F_AVAIL) << FLAGS_BITS_OFFSET)
 #define PACKED_AVAIL_FLAG_WRAP ((0ULL | VRING_DESC_F_USED) << \
 	FLAGS_BITS_OFFSET)
+#define PACKED_WRITE_AVAIL_FLAG (PACKED_AVAIL_FLAG | \
+	((0ULL | VRING_DESC_F_WRITE) << FLAGS_BITS_OFFSET))
+#define PACKED_WRITE_AVAIL_FLAG_WRAP (PACKED_AVAIL_FLAG_WRAP | \
+	((0ULL | VRING_DESC_F_WRITE) << FLAGS_BITS_OFFSET))
 
 #define DESC_FLAGS_POS 0xaa
 #define MBUF_LENS_POS 0x6666
+#define DESC_LENS_POS 0x4444
+#define DESC_LENS_FLAGS_POS 0xB0B0B0B0
 
 int
 vhost_reserve_avail_batch_packed_avx(struct virtio_net *dev,
@@ -181,4 +187,158 @@ free_buf:
 		rte_pktmbuf_free(pkts[i]);
 
 	return -1;
+}
+
+int
+virtio_dev_rx_batch_packed_avx(struct virtio_net *dev,
+			       struct vhost_virtqueue *vq,
+			       struct rte_mbuf **pkts)
+{
+	struct vring_packed_desc *descs = vq->desc_packed;
+	uint16_t avail_idx = vq->last_avail_idx;
+	uint64_t desc_addrs[PACKED_BATCH_SIZE];
+	uint32_t buf_offset = dev->vhost_hlen;
+	uint32_t desc_status;
+	uint64_t lens[PACKED_BATCH_SIZE];
+	uint16_t i;
+	void *desc_addr;
+	uint8_t cmp_low, cmp_high, cmp_result;
+
+	if (unlikely(avail_idx & PACKED_BATCH_MASK))
+		return -1;
+	if (unlikely((avail_idx + PACKED_BATCH_SIZE) > vq->size))
+		return -1;
+
+	/* check refcnt and nb_segs */
+	__m256i mbuf_ref = _mm256_set1_epi64x(DEFAULT_REARM_DATA);
+
+	/* load four mbufs rearm data */
+	__m256i mbufs = _mm256_set_epi64x(
+				*pkts[3]->rearm_data,
+				*pkts[2]->rearm_data,
+				*pkts[1]->rearm_data,
+				*pkts[0]->rearm_data);
+
+	uint16_t cmp = _mm256_cmpneq_epu16_mask(mbufs, mbuf_ref);
+	if (cmp & MBUF_LENS_POS)
+		return -1;
+
+	/* check desc status */
+	desc_addr = &vq->desc_packed[avail_idx];
+	__m512i desc_vec = _mm512_loadu_si512(desc_addr);
+
+	__m512i avail_flag_vec;
+	__m512i used_flag_vec;
+	if (vq->avail_wrap_counter) {
+#if defined(RTE_ARCH_I686)
+		avail_flag_vec = _mm512_set4_epi64(PACKED_WRITE_AVAIL_FLAG,
+					0x0, PACKED_WRITE_AVAIL_FLAG, 0x0);
+		used_flag_vec = _mm512_set4_epi64(PACKED_FLAGS_MASK, 0x0,
+					PACKED_FLAGS_MASK, 0x0);
+#else
+		avail_flag_vec = _mm512_maskz_set1_epi64(DESC_FLAGS_POS,
+					PACKED_WRITE_AVAIL_FLAG);
+		used_flag_vec = _mm512_maskz_set1_epi64(DESC_FLAGS_POS,
+					PACKED_FLAGS_MASK);
+#endif
+	} else {
+#if defined(RTE_ARCH_I686)
+		avail_flag_vec = _mm512_set4_epi64(
+					PACKED_WRITE_AVAIL_FLAG_WRAP, 0x0,
+					PACKED_WRITE_AVAIL_FLAG, 0x0);
+		used_flag_vec = _mm512_set4_epi64(0x0, 0x0, 0x0, 0x0);
+#else
+		avail_flag_vec = _mm512_maskz_set1_epi64(DESC_FLAGS_POS,
+					PACKED_WRITE_AVAIL_FLAG_WRAP);
+		used_flag_vec = _mm512_setzero_epi32();
+#endif
+	}
+
+	desc_status = _mm512_mask_cmp_epu16_mask(BATCH_FLAGS_MASK, desc_vec,
+				avail_flag_vec, _MM_CMPINT_NE);
+	if (desc_status)
+		return -1;
+
+	if (dev->features & (1ULL << VIRTIO_F_IOMMU_PLATFORM)) {
+		vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE) {
+			uint64_t size = (uint64_t)descs[avail_idx + i].len;
+			desc_addrs[i] = __vhost_iova_to_vva(dev, vq,
+				descs[avail_idx + i].addr, &size,
+				VHOST_ACCESS_RW);
+
+			if (!desc_addrs[i])
+				return -1;
+
+			rte_prefetch0(rte_pktmbuf_mtod_offset(pkts[i], void *,
+					0));
+		}
+	} else {
+		/* check buffer fit into one region & translate address */
+		struct mem_regions_range *range = dev->regions_range;
+		__m512i regions_low_addrs =
+			_mm512_loadu_si512((void *)&range->regions_low_addrs);
+		__m512i regions_high_addrs =
+			_mm512_loadu_si512((void *)&range->regions_high_addrs);
+		vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE) {
+			uint64_t addr_low = descs[avail_idx + i].addr;
+			uint64_t addr_high = addr_low +
+						descs[avail_idx + i].len;
+			__m512i low_addr_vec = _mm512_set1_epi64(addr_low);
+			__m512i high_addr_vec = _mm512_set1_epi64(addr_high);
+
+			cmp_low = _mm512_cmp_epi64_mask(low_addr_vec,
+					regions_low_addrs, _MM_CMPINT_NLT);
+			cmp_high = _mm512_cmp_epi64_mask(high_addr_vec,
+					regions_high_addrs, _MM_CMPINT_LT);
+			cmp_result = cmp_low & cmp_high;
+			int index = __builtin_ctz(cmp_result);
+			if (unlikely((uint32_t)index >= dev->mem->nregions))
+				return -1;
+
+			desc_addrs[i] = addr_low +
+				dev->mem->regions[index].host_user_addr -
+				dev->mem->regions[index].guest_phys_addr;
+			rte_prefetch0(rte_pktmbuf_mtod_offset(pkts[i], void *,
+					0));
+		}
+	}
+
+	/* check length is enough */
+	__m512i pkt_lens = _mm512_set_epi32(
+			0, pkts[3]->pkt_len, 0, 0,
+			0, pkts[2]->pkt_len, 0, 0,
+			0, pkts[1]->pkt_len, 0, 0,
+			0, pkts[0]->pkt_len, 0, 0);
+
+	__m512i mbuf_len_offset = _mm512_maskz_set1_epi32(DESC_LENS_POS,
+					dev->vhost_hlen);
+	__m512i buf_len_vec = _mm512_add_epi32(pkt_lens, mbuf_len_offset);
+	uint16_t lens_cmp = _mm512_mask_cmp_epu32_mask(DESC_LENS_POS,
+				desc_vec, buf_len_vec, _MM_CMPINT_LT);
+	if (lens_cmp)
+		return -1;
+
+	vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE) {
+		rte_memcpy((void *)(uintptr_t)(desc_addrs[i] + buf_offset),
+			   rte_pktmbuf_mtod_offset(pkts[i], void *, 0),
+			   pkts[i]->pkt_len);
+	}
+
+	if (unlikely((dev->features & (1ULL << VHOST_F_LOG_ALL)))) {
+		vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE) {
+			lens[i] = descs[avail_idx + i].len;
+			vhost_log_cache_write_iova(dev, vq,
+				descs[avail_idx + i].addr, lens[i]);
+		}
+	}
+
+	vq_inc_last_avail_packed(vq, PACKED_BATCH_SIZE);
+	vq_inc_last_used_packed(vq, PACKED_BATCH_SIZE);
+	/* save len and flags, skip addr and id */
+	__m512i desc_updated = _mm512_mask_add_epi16(desc_vec,
+					DESC_LENS_FLAGS_POS, buf_len_vec,
+					used_flag_vec);
+	_mm512_storeu_si512(desc_addr, desc_updated);
+
+	return 0;
 }

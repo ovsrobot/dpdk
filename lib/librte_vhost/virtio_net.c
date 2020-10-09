@@ -1354,6 +1354,22 @@ virtio_dev_rx_single_packed(struct virtio_net *dev,
 	return 0;
 }
 
+static __rte_always_inline int
+virtio_dev_rx_handle_batch_packed(struct virtio_net *dev,
+			   struct vhost_virtqueue *vq,
+			   struct rte_mbuf **pkts)
+
+{
+#ifdef CC_AVX512_SUPPORT
+	if (unlikely(dev->vectorized))
+		return virtio_dev_rx_batch_packed_avx(dev, vq, pkts);
+	else
+		return virtio_dev_rx_batch_packed(dev, vq, pkts);
+#else
+	return virtio_dev_rx_batch_packed(dev, vq, pkts);
+#endif
+}
+
 static __rte_noinline uint32_t
 virtio_dev_rx_packed(struct virtio_net *dev,
 		     struct vhost_virtqueue *__rte_restrict vq,
@@ -1367,8 +1383,8 @@ virtio_dev_rx_packed(struct virtio_net *dev,
 		rte_prefetch0(&vq->desc_packed[vq->last_avail_idx]);
 
 		if (remained >= PACKED_BATCH_SIZE) {
-			if (!virtio_dev_rx_batch_packed(dev, vq,
-							&pkts[pkt_idx])) {
+			if (!virtio_dev_rx_handle_batch_packed(dev, vq,
+				&pkts[pkt_idx])) {
 				pkt_idx += PACKED_BATCH_SIZE;
 				remained -= PACKED_BATCH_SIZE;
 				continue;
