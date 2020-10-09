@@ -90,23 +90,8 @@ native architecture, the linux sources need to be compiled once natively.
 
 The above steps would rebuild the modules and the required intermediate binaries.
 Once the target is ready for native compilation, the OCTEON TX platform
-drivers can be compiled with the following steps,
+drivers can be compiled, see :doc:`../linux_gsg/build_dpdk` for details.
 
-.. code-block:: console
-
-        cd <dpdk directory>
-        make config T=arm64-thunderx-linux-gcc
-        make
-
-The example applications can be compiled using the following:
-
-.. code-block:: console
-
-        cd <dpdk directory>
-        export RTE_SDK=$PWD
-        export RTE_TARGET=build
-        cd examples/<application>
-        make
 
 Cross Compilation
 ~~~~~~~~~~~~~~~~~
@@ -139,23 +124,7 @@ SDK 6.2.0 patch 3:
 The above steps will prepare build system with numa additions. Now this build system can be used
 to build applications for **OCTEON TX** :sup:`®` platforms.
 
-.. code-block:: console
-
-        cd <dpdk directory>
-        export RTE_SDK=$PWD
-        export RTE_KERNELDIR=$THUNDER_ROOT/linux/kernel/linux
-        make config T=arm64-thunderx-linux-gcc
-        make -j CROSS=aarch64-thunderx-linux-gnu- CONFIG_RTE_KNI_KMOD=n CONFIG_RTE_EAL_IGB_UIO=n EXTRA_CFLAGS="-isystem <numa_install_dir>/include" EXTRA_LDFLAGS="-L<numa_install_dir>/lib -lnuma"
-
 If NUMA support is not required, it can be disabled as explained in
 :doc:`../linux_gsg/cross_build_dpdk_for_arm64`.
-
-Following steps could be used in that case.
-
-.. code-block:: console
-
-        make config T=arm64-thunderx-linux-gcc
-        make CROSS=aarch64-thunderx-linux-gnu-
-
 
 SDK and related information can be obtained from: `Cavium support site <https://support.cavium.com/>`_.
