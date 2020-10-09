@@ -273,21 +273,6 @@ Pre-Installation Configuration
 ------------------------------
 
 
-Config File Options
-~~~~~~~~~~~~~~~~~~~
-
-The following options can be modified in the ``.config`` file.
-Please note that enabling debugging options may affect system performance.
-
-- ``CONFIG_RTE_LIBRTE_SFC_EFX_PMD`` (default **y**)
-
-  Enable compilation of Solarflare libefx-based poll-mode driver.
-
-- ``CONFIG_RTE_LIBRTE_SFC_EFX_DEBUG`` (default **n**)
-
-  Enable compilation of the extra run-time consistency checks.
-
-
 Per-Device Parameters
 ~~~~~~~~~~~~~~~~~~~~~
 
