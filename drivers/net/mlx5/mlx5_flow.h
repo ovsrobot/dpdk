@@ -910,6 +910,10 @@ typedef int (*mlx5_flow_get_aged_flows_t)
 					 void **context,
 					 uint32_t nb_contexts,
 					 struct rte_flow_error *error);
+typedef int (*mlx5_flow_sync_memory_t)
+					(struct rte_eth_dev *dev,
+					 uint32_t domains,
+					 uint32_t flags);
 struct mlx5_flow_driver_ops {
 	mlx5_flow_validate_t validate;
 	mlx5_flow_prepare_t prepare;
@@ -926,6 +930,7 @@ struct mlx5_flow_driver_ops {
 	mlx5_flow_counter_free_t counter_free;
 	mlx5_flow_counter_query_t counter_query;
 	mlx5_flow_get_aged_flows_t get_aged_flows;
+	mlx5_flow_sync_memory_t sync_memory;
 };
 
 /* mlx5_flow.c */

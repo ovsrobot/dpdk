@@ -29,6 +29,7 @@
 #include "mlx5_flow.h"
 #include "mlx5_flow_os.h"
 #include "mlx5_rxtx.h"
+#include "rte_pmd_mlx5.h"
 
 /** Device flow drivers. */
 extern const struct mlx5_flow_driver_ops mlx5_flow_verbs_drv_ops;
@@ -6304,4 +6305,25 @@ mlx5_flow_get_aged_flows(struct rte_eth_dev *dev, void **contexts,
 		"port %u get aged flows is not supported.",
 		 dev->data->port_id);
 	return -ENOTSUP;
+}
+
+static int
+mlx5_flow_sync_memory(struct rte_eth_dev *dev, uint32_t domains, uint32_t flags)
+{
+	const struct mlx5_flow_driver_ops *fops;
+	struct rte_flow_attr attr = { .transfer = 0 };
+
+	if (flow_get_drv_type(dev, &attr) == MLX5_FLOW_TYPE_DV) {
+		fops = flow_get_drv_ops(MLX5_FLOW_TYPE_DV);
+		return fops->sync_memory(dev, domains, flags);
+	}
+	return -ENOTSUP;
+}
+
+int rte_pmd_mlx5_sync_flow(uint16_t port_id, uint32_t domains)
+{
+	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+
+	return mlx5_flow_sync_memory(dev, domains,
+				     MLX5DV_DR_DOMAIN_SYNC_FLAGS_HW);
 }

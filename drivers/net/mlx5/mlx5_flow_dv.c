@@ -10150,6 +10150,30 @@ flow_dv_counter_free(struct rte_eth_dev *dev, uint32_t cnt)
 	flow_dv_shared_unlock(dev);
 }
 
+static int
+flow_dv_sync_domain(struct rte_eth_dev *dev, uint32_t domains, uint32_t flags)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+	int ret = 0;
+
+	if (domains & (1 << MLX5DV_FLOW_TABLE_TYPE_NIC_RX)) {
+		ret = mlx5_glue->dr_sync_domain(priv->sh->rx_domain, flags);
+		if (ret)
+			return ret;
+	}
+	if (domains & (1 << MLX5DV_FLOW_TABLE_TYPE_NIC_TX)) {
+		ret = mlx5_glue->dr_sync_domain(priv->sh->tx_domain, flags);
+		if (ret)
+			return ret;
+	}
+	if (domains & (1 << MLX5DV_FLOW_TABLE_TYPE_FDB)) {
+		ret = mlx5_glue->dr_sync_domain(priv->sh->fdb_domain, flags);
+		if (ret)
+			return ret;
+	}
+	return 0;
+}
+
 const struct mlx5_flow_driver_ops mlx5_flow_dv_drv_ops = {
 	.validate = flow_dv_validate,
 	.prepare = flow_dv_prepare,
@@ -10166,6 +10190,7 @@ const struct mlx5_flow_driver_ops mlx5_flow_dv_drv_ops = {
 	.counter_free = flow_dv_counter_free,
 	.counter_query = flow_dv_counter_query,
 	.get_aged_flows = flow_get_aged_flows,
+	.sync_memory = flow_dv_sync_domain,
 };
 
 #endif /* HAVE_IBV_FLOW_DV_SUPPORT */
