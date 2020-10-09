@@ -52,6 +52,8 @@
 
 #define ASYNC_MAX_POLL_SEG 255
 
+#define MAX_NREGIONS 8
+
 #define VHOST_MAX_ASYNC_IT (MAX_PKT_BURST * 2)
 #define VHOST_MAX_ASYNC_VEC (BUF_VECTOR_MAX * 2)
 
@@ -349,6 +351,11 @@ struct inflight_mem_info {
 	uint64_t	size;
 };
 
+struct mem_regions_range {
+	uint64_t regions_low_addrs[MAX_NREGIONS];
+	uint64_t regions_high_addrs[MAX_NREGIONS];
+};
+
 /**
  * Device structure contains all configuration information relating
  * to the device.
@@ -356,6 +363,7 @@ struct inflight_mem_info {
 struct virtio_net {
 	/* Frontend (QEMU) memory and memory region information */
 	struct rte_vhost_memory	*mem;
+	struct mem_regions_range *regions_range;
 	uint64_t		features;
 	uint64_t		protocol_features;
 	int			vid;

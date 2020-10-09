@@ -185,6 +185,11 @@ vhost_backend_cleanup(struct virtio_net *dev)
 		dev->inflight_info = NULL;
 	}
 
+	if (dev->regions_range) {
+		free(dev->regions_range);
+		dev->regions_range = NULL;
+	}
+
 	if (dev->slave_req_fd >= 0) {
 		close(dev->slave_req_fd);
 		dev->slave_req_fd = -1;
@@ -1227,6 +1232,27 @@ vhost_user_set_mem_table(struct virtio_net **pdev, struct VhostUserMsg *msg,
 #else
 			goto err_mmap;
 #endif
+		}
+	}
+
+	RTE_BUILD_BUG_ON(VHOST_MEMORY_MAX_NREGIONS != 8);
+	if (dev->vectorized) {
+		if (dev->regions_range == NULL) {
+			dev->regions_range = calloc(1,
+					sizeof(struct mem_regions_range));
+			if (!dev->regions_range) {
+				VHOST_LOG_CONFIG(ERR,
+					"failed to alloc dev vectorized area\n");
+				return RTE_VHOST_MSG_RESULT_ERR;
+			}
+		}
+
+		for (i = 0; i < memory->nregions; i++) {
+			dev->regions_range->regions_low_addrs[i] =
+				memory->regions[i].guest_phys_addr;
+			dev->regions_range->regions_high_addrs[i] =
+				memory->regions[i].guest_phys_addr +
+				memory->regions[i].memory_size;
 		}
 	}
 
