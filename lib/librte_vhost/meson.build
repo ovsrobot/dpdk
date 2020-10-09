@@ -8,6 +8,22 @@ endif
 if has_libnuma == 1
 	dpdk_conf.set10('RTE_LIBRTE_VHOST_NUMA', true)
 endif
+
+if arch_subdir == 'x86'
+        if not machine_args.contains('-mno-avx512f')
+                if cc.has_argument('-mavx512f') and cc.has_argument('-mavx512vl') and cc.has_argument('-mavx512bw')
+                        cflags += ['-DCC_AVX512_SUPPORT']
+                        vhost_avx512_lib = static_library('vhost_avx512_lib',
+                                              'virtio_net_avx.c',
+                                              dependencies: [static_rte_eal, static_rte_mempool,
+                                                  static_rte_mbuf, static_rte_ethdev, static_rte_net],
+                                              include_directories: includes,
+                                              c_args: [cflags, '-mavx512f', '-mavx512bw', '-mavx512vl'])
+                        objs += vhost_avx512_lib.extract_objects('virtio_net_avx.c')
+                endif
+        endif
+endif
+
 if (toolchain == 'gcc' and cc.version().version_compare('>=8.3.0'))
 	cflags += '-DVHOST_GCC_UNROLL_PRAGMA'
 elif (toolchain == 'clang' and cc.version().version_compare('>=3.7.0'))
