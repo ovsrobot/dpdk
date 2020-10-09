@@ -156,6 +156,10 @@ Removed Items
 
 * Removed Python 2 support since it was EOL'd in January 2020.
 
+* build: Support for the Make build system was removed for compiling DPDK,
+  Meson is now the primary build system.
+  Sample applications can still be built with Make standalone, using pkg-config.
+
 API Changes
 -----------
 
