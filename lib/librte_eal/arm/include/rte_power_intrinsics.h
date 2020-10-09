@@ -17,6 +17,10 @@ extern "C" {
 /**
  * This function is not supported on ARM.
  *
+ * @warning It is responsibility of the user to check if this function is
+ *   supported at runtime using `rte_cpu_get_features()` API call. Failing to do
+ *   so may result in an illegal CPU instruction error.
+ *
  * @param p
  *   Address to monitor for changes. Must be aligned on an 64-byte boundary.
  * @param expected_value
@@ -42,6 +46,10 @@ static inline void rte_power_monitor(const volatile void *p,
 
 /**
  * This function is not supported on ARM.
+ *
+ * @warning It is responsibility of the user to check if this function is
+ *   supported at runtime using `rte_cpu_get_features()` API call. Failing to do
+ *   so may result in an illegal CPU instruction error.
  *
  * @param tsc_timestamp
  *   Maximum TSC timestamp to wait for.

@@ -29,6 +29,10 @@ extern "C" {
  * For more information about usage of these instructions, please refer to
  * Intel(R) 64 and IA-32 Architectures Software Developer's Manual.
  *
+ * @warning It is responsibility of the user to check if this function is
+ *   supported at runtime using `rte_cpu_get_features()` API call. Failing to do
+ *   so may result in an illegal CPU instruction error.
+ *
  * @param p
  *   Address to monitor for changes. Must be aligned on an 64-byte boundary.
  * @param expected_value
@@ -79,6 +83,10 @@ static inline void rte_power_monitor(const volatile void *p,
  * This function uses TPAUSE instruction  and will enter C0.2 state. For more
  * information about usage of this instruction, please refer to Intel(R) 64 and
  * IA-32 Architectures Software Developer's Manual.
+ *
+ * @warning It is responsibility of the user to check if this function is
+ *   supported at runtime using `rte_cpu_get_features()` API call. Failing to do
+ *   so may result in an illegal CPU instruction error.
  *
  * @param tsc_timestamp
  *   Maximum TSC timestamp to wait for.
