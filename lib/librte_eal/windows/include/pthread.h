@@ -28,6 +28,12 @@ typedef uintptr_t pthread_t;
 /* defining pthread_attr_t type on Windows since there is no in Microsoft libc*/
 typedef void *pthread_attr_t;
 
+typedef void *pthread_mutexattr_t;
+
+typedef CRITICAL_SECTION pthread_mutex_t;
+
+#define PTHREAD_MUTEX_INITIALIZER {(void *)-1, -1, 0, 0, 0, 0}
+
 typedef SYNCHRONIZATION_BARRIER pthread_barrier_t;
 
 #define pthread_barrier_init(barrier, attr, count) \
@@ -136,6 +142,35 @@ static inline int
 pthread_join(__rte_unused pthread_t thread,
 	__rte_unused void **value_ptr)
 {
+	return 0;
+}
+
+static inline int
+pthread_mutex_init(pthread_mutex_t *mutex,
+		   __rte_unused pthread_mutexattr_t *attr)
+{
+	InitializeCriticalSection(mutex);
+	return 0;
+}
+
+static inline int
+pthread_mutex_lock(pthread_mutex_t *mutex)
+{
+	EnterCriticalSection(mutex);
+	return 0;
+}
+
+static inline int
+pthread_mutex_unlock(pthread_mutex_t *mutex)
+{
+	LeaveCriticalSection(mutex);
+	return 0;
+}
+
+static inline int
+pthread_mutex_destroy(pthread_mutex_t *mutex)
+{
+	DeleteCriticalSection(mutex);
 	return 0;
 }
 
