@@ -136,6 +136,12 @@ New Features
   * Extern objects and functions can be plugged into the pipeline.
   * Transaction-oriented table updates.
 
+* **Add UDP/IPv4 GRO support for VxLAN and non-VxLAN packets.**
+
+  Add UDP/IPv4 GRO support for VxLAN and non-VxLAN packets. For
+  VxLAN packets, this adds inner UDP/IPv4 support, for non-VxLAN
+  packets, this adds UDP/IPv4 support.
+
 
 Removed Items
 -------------
