@@ -13,25 +13,10 @@ parameters passed to a python running script.
 Compiling the Application
 -------------------------
 
-**Step 1: PMD setting**
+**Build the application**
 
-The ``dpdk-test-bbdev`` tool depends on crypto device drivers PMD which
-are disabled by default in the build configuration file ``common_base``.
-The bbdevice drivers PMD which should be tested can be enabled by setting
+See :doc:`../linux_gsg/build_dpdk` for compilation steps.
 
-   ``CONFIG_RTE_LIBRTE_PMD_<name>=y``
-
-Setting example for (*baseband_turbo_sw*) PMD
-
-   ``CONFIG_RTE_LIBRTE_PMD_BBDEV_TURBO_SW=y``
-
-**Step 2: Build the application**
-
-Execute the ``dpdk-setup.sh`` script to build the DPDK library together with the
-``dpdk-test-bbdev`` application.
-
-Initially, the user must select a DPDK target to choose the correct target type
-and compiler options to use when building the libraries.
 The user must have all libraries, modules, updates and compilers installed
 in the system prior to this, as described in the earlier chapters in this
 Getting Started Guide.
@@ -60,7 +45,7 @@ The following are the command-line options:
 
 ``-p TESTAPP_PATH, --testapp_path TESTAPP_PATH``
  Indicates the path to the bbdev test app. If not specified path is set based
- on *$RTE_SDK* environment variable concatenated with "*/build/app/testbbdev*".
+ on "../.." concatenated with "*/build/app/dpdk-test-bbdev*".
 
 ``-e EAL_PARAMS, --eal_params EAL_PARAMS``
  Specifies EAL arguments which are passed to the test app. For more details,
@@ -82,9 +67,8 @@ The following are the command-line options:
 
 ``-v TEST_VECTOR [TEST_VECTOR ...], --test_vector TEST_VECTOR [TEST_VECTOR ...]``
  Specifies paths to the test vector files. If not specified path is set based
- on *$RTE_SDK* environment variable concatenated with
- "*/app/test-bbdev/test_vectors/bbdev_null.data*" and indicates default
- data file.
+ on "../.." concatenated with "*/app/test-bbdev/test_vectors/bbdev_null.data*"
+ and indicates default data file.
 
  **Example usage:**
 
@@ -259,8 +243,8 @@ They are chosen to have a good coverage across sizes and processing
 parameters while still keeping their number limited as part of sanity
 regression.
 
-Shortened tree of isg_cid-wireless_dpdk_ae with dpdk compiled for
-x86_64-native-linux-icc target:
+Shortened tree of isg_cid-wireless_dpdk_ae with dpdk compiled and output
+to the build directory:
 
 ::
 
@@ -268,16 +252,16 @@ x86_64-native-linux-icc target:
      |-- test-bbdev
          |-- test_vectors
 
- |-- x86_64-native-linux-icc
+ |-- build
      |-- app
-         |-- testbbdev
+         |-- dpdk-test-bbdev
 
 All bbdev devices
 ~~~~~~~~~~~~~~~~~
 
 .. code-block:: console
 
-  ./test-bbdev.py -p ../../x86_64-native-linux-icc/app/testbbdev
+  ./test-bbdev.py -p ../../build/app/dpdk-test-bbdev
   -v turbo_dec_default.data
 
 It runs all available tests using the test vector filled based on
@@ -291,7 +275,7 @@ baseband turbo_sw device
 
 .. code-block:: console
 
-  ./test-bbdev.py -p ../../x86_64-native-linux-icc/app/testbbdev
+  ./test-bbdev.py -p ../../build/app/dpdk-test-bbdev
   -e="--vdev=baseband_turbo_sw" -t 120 -c validation
   -v ./test_vectors/* -n 64 -b 8 32
 

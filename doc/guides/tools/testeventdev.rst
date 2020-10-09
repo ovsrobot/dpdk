@@ -15,11 +15,8 @@ Compiling the Application
 
 **Build the application**
 
-Execute the ``dpdk-setup.sh`` script to build the DPDK library together with the
-``dpdk-test-eventdev`` application.
+See :doc:`../linux_gsg/build_dpdk` for compilation steps.
 
-Initially, the user must select a DPDK target to choose the correct target type
-and compiler options to use when building the libraries.
 The user must have all libraries, modules, updates and compilers installed
 in the system prior to this,
 as described in the earlier chapters in this Getting Started Guide.
@@ -251,7 +248,7 @@ Example command to run order queue test:
 
 .. code-block:: console
 
-   sudo build/app/dpdk-test-eventdev --vdev=event_sw0 -- \
+   sudo <build_dir>/app/dpdk-test-eventdev --vdev=event_sw0 -- \
                 --test=order_queue --plcores 1 --wlcores 2,3
 
 
@@ -314,7 +311,7 @@ Example command to run order ``all types queue`` test:
 
 .. code-block:: console
 
-   sudo build/app/dpdk-test-eventdev --vdev=event_octeontx -- \
+   sudo <build_dir>/app/dpdk-test-eventdev --vdev=event_octeontx -- \
                         --test=order_atq --plcores 1 --wlcores 2,3
 
 
@@ -414,7 +411,7 @@ Example command to run perf queue test:
 
 .. code-block:: console
 
-   sudo build/app/dpdk-test-eventdev -c 0xf -s 0x1 --vdev=event_sw0 -- \
+   sudo <build_dir>/app/dpdk-test-eventdev -c 0xf -s 0x1 --vdev=event_sw0 -- \
         --test=perf_queue --plcores=2 --wlcore=3 --stlist=p --nb_pkts=0
 
 Example command to run perf queue test with ethernet ports:
@@ -428,7 +425,7 @@ Example command to run perf queue test with event timer adapter:
 
 .. code-block:: console
 
-   sudo  build/app/dpdk-test-eventdev --vdev="event_octeontx" -- \
+   sudo  <build_dir>/app/dpdk-test-eventdev --vdev="event_octeontx" -- \
                 --wlcores 4 --plcores 12 --test perf_queue --stlist=a \
                 --prod_type_timerdev --fwd_latency
 
@@ -514,14 +511,14 @@ Example command to run perf ``all types queue`` test:
 
 .. code-block:: console
 
-   sudo build/app/dpdk-test-eventdev --vdev=event_octeontx -- \
+   sudo <build_dir>/app/dpdk-test-eventdev --vdev=event_octeontx -- \
                 --test=perf_atq --plcores=2 --wlcore=3 --stlist=p --nb_pkts=0
 
 Example command to run perf ``all types queue`` test with event timer adapter:
 
 .. code-block:: console
 
-   sudo  build/app/dpdk-test-eventdev --vdev="event_octeontx" -- \
+   sudo  <build_dir>/app/dpdk-test-eventdev --vdev="event_octeontx" -- \
                 --wlcores 4 --plcores 12 --test perf_atq --verbose 20 \
                 --stlist=a --prod_type_timerdev --fwd_latency
 
@@ -633,7 +630,7 @@ Example command to run pipeline queue test:
 
 .. code-block:: console
 
-    sudo build/app/dpdk-test-eventdev -c 0xf -s 0x8 --vdev=event_sw0 -- \
+    sudo <build_dir>/app/dpdk-test-eventdev -c 0xf -s 0x8 --vdev=event_sw0 -- \
         --test=pipeline_queue --wlcore=1 --prod_type_ethdev --stlist=a
 
 
@@ -725,5 +722,5 @@ Example command to run pipeline queue test:
 
 .. code-block:: console
 
-    sudo build/app/dpdk-test-eventdev -c 0xf -s 0x8 --vdev=event_sw0 -- \
+    sudo <build_dir>/app/dpdk-test-eventdev -c 0xf -s 0x8 --vdev=event_sw0 -- \
         --test=pipeline_atq --wlcore=1 --prod_type_ethdev --stlist=a
