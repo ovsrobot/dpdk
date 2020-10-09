@@ -1195,6 +1195,16 @@ struct rte_intr_conf {
 };
 
 /**
+ * A structure used to enable/disable error packet drop on RX.
+ */
+struct rte_rx_err_pkt_drop_conf {
+	/** enable/disable all RX error packet drop.
+	 * 0 (default) - disable, 1 enable
+	 */
+	uint32_t all:1;
+};
+
+/**
  * A structure used to configure an Ethernet port.
  * Depending upon the RX multi-queue mode, extra advanced
  * configuration settings may be needed.
@@ -1236,6 +1246,8 @@ struct rte_eth_conf {
 	uint32_t dcb_capability_en;
 	struct rte_fdir_conf fdir_conf; /**< FDIR configuration. DEPRECATED */
 	struct rte_intr_conf intr_conf; /**< Interrupt mode configuration. */
+	struct rte_rx_err_pkt_drop_conf err_pkt_drop_conf;
+	/**< RX error packet drop configuration. */
 };
 
 /**
@@ -1260,6 +1272,7 @@ struct rte_eth_conf {
 #define DEV_RX_OFFLOAD_SCTP_CKSUM	0x00020000
 #define DEV_RX_OFFLOAD_OUTER_UDP_CKSUM  0x00040000
 #define DEV_RX_OFFLOAD_RSS_HASH		0x00080000
+#define DEV_RX_OFFLOAD_ERR_PKT_DROP	0x00100000
 
 #define DEV_RX_OFFLOAD_CHECKSUM (DEV_RX_OFFLOAD_IPV4_CKSUM | \
 				 DEV_RX_OFFLOAD_UDP_CKSUM | \
@@ -1273,6 +1286,13 @@ struct rte_eth_conf {
  * If new Rx offload capabilities are defined, they also must be
  * mentioned in rte_rx_offload_names in rte_ethdev.c file.
  */
+
+/**
+ * RX Error Drop offload config/capabilities of a device. These
+ * are valid only when RX capability DEV_RX_OFFLOAD_ERR_PKT_DROP
+ * is supported by the device.
+ */
+#define DEV_RX_ERR_PKT_DROP_OFFLOAD_ALL		0x00000001
 
 /**
  * TX offload capabilities of a device.
@@ -1411,6 +1431,8 @@ struct rte_eth_dev_info {
 	/**< Device per-queue RX offload capabilities. */
 	uint64_t tx_queue_offload_capa;
 	/**< Device per-queue TX offload capabilities. */
+	uint64_t rx_err_drop_offload_capa;
+	/**< RX error packet drop offload capabilities. */
 	uint16_t reta_size;
 	/**< Device redirection table size, the total number of entries. */
 	uint8_t hash_key_size; /**< Hash key size in bytes */
