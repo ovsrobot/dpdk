@@ -132,6 +132,8 @@ enum rte_cpu_flag_t {
 	RTE_CPUFLAG_MOVDIR64B,              /**< Direct Store Instructions 64B */
 	RTE_CPUFLAG_AVX512VP2INTERSECT,     /**< AVX512 Two Register Intersection */
 
+	/**< UMWAIT/TPAUSE Instructions */
+	RTE_CPUFLAG_WAITPKG,                /**< UMINITOR/UMWAIT/TPAUSE */
 	/* The last item */
 	RTE_CPUFLAG_NUMFLAGS,               /**< This should always be the last! */
 };
