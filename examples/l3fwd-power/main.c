@@ -2283,7 +2283,7 @@ get_current_stat_values(uint64_t *values)
 	uint64_t app_eps = 0, app_fps = 0, app_br = 0;
 	uint64_t count = 0;
 
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		qconf = &lcore_conf[lcore_id];
 		if (qconf->n_rx_queue == 0)
 			continue;
@@ -2779,7 +2779,7 @@ main(int argc, char **argv)
 		else
 			rte_exit(EXIT_FAILURE, "failed to register metrics names");
 
-		RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+		RTE_LCORE_FOREACH_WORKER(lcore_id) {
 			rte_spinlock_init(&stats[lcore_id].telemetry_lock);
 		}
 		rte_timer_init(&telemetry_timer);
@@ -2795,7 +2795,7 @@ main(int argc, char **argv)
 	if (app_mode == APP_MODE_EMPTY_POLL || app_mode == APP_MODE_TELEMETRY)
 		launch_timer(rte_lcore_id());
 
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		if (rte_eal_wait_lcore(lcore_id) < 0)
 			return -1;
 	}
