@@ -136,6 +136,12 @@ New Features
   * Extern objects and functions can be plugged into the pipeline.
   * Transaction-oriented table updates.
 
+* **Added support to update subport bandwidth dynamically.**
+
+   * Added new API ``rte_sched_port_subport_profile_add`` to add new
+     subport bandwidth profile to subport porfile table at runtime.
+
+   * Added support to update subport rate dynamically.
 
 Removed Items
 -------------
@@ -286,6 +292,9 @@ ABI Changes
 * ``sched`` changes
 
   * Added new fields to ``struct rte_sched_subport_port_params``.
+
+  * Added ``subport_profile_id`` as a argument to function
+    ``rte_sched_subport_config``.
 
 Known Issues
 ------------
