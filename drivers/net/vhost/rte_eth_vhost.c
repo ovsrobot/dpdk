@@ -34,6 +34,7 @@ enum {VIRTIO_RXQ, VIRTIO_TXQ, VIRTIO_QNUM};
 #define ETH_VHOST_VIRTIO_NET_F_HOST_TSO "tso"
 #define ETH_VHOST_LINEAR_BUF  "linear-buffer"
 #define ETH_VHOST_EXT_BUF  "ext-buffer"
+#define ETH_VHOST_VECTORIZED "vectorized"
 #define VHOST_MAX_PKT_BURST 32
 
 static const char *valid_arguments[] = {
@@ -45,6 +46,7 @@ static const char *valid_arguments[] = {
 	ETH_VHOST_VIRTIO_NET_F_HOST_TSO,
 	ETH_VHOST_LINEAR_BUF,
 	ETH_VHOST_EXT_BUF,
+	ETH_VHOST_VECTORIZED,
 	NULL
 };
 
@@ -1509,6 +1511,7 @@ rte_pmd_vhost_probe(struct rte_vdev_device *dev)
 	int tso = 0;
 	int linear_buf = 0;
 	int ext_buf = 0;
+	int vectorized = 0;
 	struct rte_eth_dev *eth_dev;
 	const char *name = rte_vdev_device_name(dev);
 
@@ -1618,6 +1621,17 @@ rte_pmd_vhost_probe(struct rte_vdev_device *dev)
 			flags |= RTE_VHOST_USER_EXTBUF_SUPPORT;
 	}
 
+	if (rte_kvargs_count(kvlist, ETH_VHOST_VECTORIZED) == 1) {
+		ret = rte_kvargs_process(kvlist,
+				ETH_VHOST_VECTORIZED,
+				&open_int, &vectorized);
+		if (ret < 0)
+			goto out_free;
+
+		if (vectorized == 1)
+			flags |= RTE_VHOST_USER_VECTORIZED;
+	}
+
 	if (dev->device.numa_node == SOCKET_ID_ANY)
 		dev->device.numa_node = rte_socket_id();
 
@@ -1666,4 +1680,5 @@ RTE_PMD_REGISTER_PARAM_STRING(net_vhost,
 	"postcopy-support=<0|1> "
 	"tso=<0|1> "
 	"linear-buffer=<0|1> "
-	"ext-buffer=<0|1>");
+	"ext-buffer=<0|1> "
+	"vectorized=<0|1>");

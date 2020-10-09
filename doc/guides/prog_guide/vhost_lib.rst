@@ -118,6 +118,18 @@ The following is an overview of some key Vhost API functions:
 
     It is disabled by default.
 
+ - ``RTE_VHOST_USER_VECTORIZED``
+    Vectorized data path will used when this flag is set. When packed ring
+    enabled, available descriptors are stored from frontend driver in sequence.
+    SIMD instructions like AVX can be used to handle multiple descriptors
+    simultaneously. Thus can accelerate the throughput of ring operations.
+
+    * Only packed ring has vectorized data path.
+
+    * Will fallback to normal datapath if no vectorization support.
+
+    It is disabled by default.
+
 * ``rte_vhost_driver_set_features(path, features)``
 
   This function sets the feature bits the vhost-user driver supports. The
