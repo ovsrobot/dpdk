@@ -136,6 +136,12 @@ New Features
   * Extern objects and functions can be plugged into the pipeline.
   * Transaction-oriented table updates.
 
+* **Added thread safe support to rte_flow functions.**
+
+  Added ``RTE_ETH_DEV_FLOW_OPS_THREAD_SAFE`` device flag to indicate
+  if PMD support thread safe operations. If PMD doesn't set the flag,
+  rte_flow level functions will protect the flow operations with mutex.
+
 
 Removed Items
 -------------
