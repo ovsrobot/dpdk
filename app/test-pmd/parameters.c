@@ -142,6 +142,7 @@ usage(char* progname)
 	printf("  --enable-hw-vlan-strip: enable hardware vlan strip.\n");
 	printf("  --enable-hw-vlan-extend: enable hardware vlan extend.\n");
 	printf("  --enable-hw-qinq-strip: enable hardware qinq strip.\n");
+	printf("  --enable-hw-drop-err-all: enable hardware packet drop for all error packets.\n");
 	printf("  --enable-drop-en: enable per queue packet drop.\n");
 	printf("  --disable-rss: disable rss.\n");
 	printf("  --port-topology=<paired|chained|loop>: set port topology (paired "
@@ -631,6 +632,7 @@ launch_args_parse(int argc, char** argv)
 		{ "enable-hw-vlan-strip",       0, 0, 0 },
 		{ "enable-hw-vlan-extend",      0, 0, 0 },
 		{ "enable-hw-qinq-strip",       0, 0, 0 },
+		{ "enable-hw-drop-err-all",     0, 0, 0 },
 		{ "enable-drop-en",            0, 0, 0 },
 		{ "disable-rss",                0, 0, 0 },
 		{ "port-topology",              1, 0, 0 },
@@ -1283,6 +1285,11 @@ launch_args_parse(int argc, char** argv)
 				rmv_interrupt = 0;
 			if (!strcmp(lgopts[opt_idx].name, "flow-isolate-all"))
 				flow_isolate_all = 1;
+			if (!strcmp(lgopts[opt_idx].name,
+					"enable-hw-drop-err-all")) {
+				rx_err_pkt_drop_all = 1;
+			}
+
 			if (!strcmp(lgopts[opt_idx].name, "tx-offloads")) {
 				char *end = NULL;
 				n = strtoull(optarg, &end, 16);
