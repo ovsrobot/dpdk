@@ -52,7 +52,8 @@
 /* Supported Rx offloads */
 static uint64_t dev_rx_offloads_sup =
 		DEV_RX_OFFLOAD_JUMBO_FRAME |
-		DEV_RX_OFFLOAD_SCATTER;
+		DEV_RX_OFFLOAD_SCATTER |
+		DEV_RX_OFFLOAD_ERR_PKT_DROP;
 
 /* Rx offloads which cannot be disabled */
 static uint64_t dev_rx_offloads_nodis =
@@ -61,6 +62,10 @@ static uint64_t dev_rx_offloads_nodis =
 		DEV_RX_OFFLOAD_TCP_CKSUM |
 		DEV_RX_OFFLOAD_OUTER_IPV4_CKSUM |
 		DEV_RX_OFFLOAD_RSS_HASH;
+
+/* Supported Rx Error packet drop offload */
+static uint64_t dev_rx_err_drop_offloads_sup =
+		DEV_RX_ERR_PKT_DROP_OFFLOAD_ALL;
 
 /* Supported Tx offloads */
 static uint64_t dev_tx_offloads_sup =
@@ -260,6 +265,18 @@ dpaa_eth_dev_configure(struct rte_eth_dev *dev)
 		DPAA_PMD_DEBUG("enabling scatter mode");
 		fman_if_set_sg(dev->process_private, 1);
 		dev->data->scattered_rx = 1;
+	}
+
+	if (eth_conf->err_pkt_drop_conf.all) {
+		DPAA_PMD_DEBUG("error packets will be dropped on hw");
+		fman_if_discard_rx_errors(fif);
+	} else {
+		struct dpaa_if *dpaa_intf = dev->data->dev_private;
+		struct qman_fq *rxq = &dpaa_intf->rx_queues[0];
+
+		DPAA_PMD_DEBUG("error packets will not be dropped on hw");
+		fman_if_receive_rx_errors(fif, FM_FD_RX_STATUS_ERR_MASK);
+		fman_if_set_err_fqid(fif, rxq->fqid);
 	}
 
 	if (!(default_q || fmc_q)) {
@@ -591,6 +608,7 @@ static int dpaa_eth_dev_info(struct rte_eth_dev *dev,
 					dev_rx_offloads_nodis;
 	dev_info->tx_offload_capa = dev_tx_offloads_sup |
 					dev_tx_offloads_nodis;
+	dev_info->rx_err_drop_offload_capa = dev_rx_err_drop_offloads_sup;
 	dev_info->default_rxportconf.burst_size = DPAA_DEF_RX_BURST_SIZE;
 	dev_info->default_txportconf.burst_size = DPAA_DEF_TX_BURST_SIZE;
 	dev_info->default_rxportconf.nb_queues = 1;
@@ -2085,9 +2103,6 @@ dpaa_dev_init(struct rte_eth_dev *eth_dev)
 		fman_intf->mac_addr.addr_bytes[5]);
 
 	if (!fman_intf->is_shared_mac) {
-		/* Configure error packet handling */
-		fman_if_receive_rx_errors(fman_intf,
-			FM_FD_RX_STATUS_ERR_MASK);
 		/* Disable RX mode */
 		fman_if_disable_rx(fman_intf);
 		/* Disable promiscuous mode */
