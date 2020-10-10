@@ -897,6 +897,13 @@ rte_eth_dev_rx_queue_start(uint16_t port_id, uint16_t rx_queue_id)
 		return -EINVAL;
 	}
 
+	if (dev->data->rx_queues[rx_queue_id] == NULL) {
+		RTE_ETHDEV_LOG(ERR, "Rx queue %"PRIu16" of device with port_id=%"
+				    PRIu16" has not been setupped\n",
+				    rx_queue_id, port_id);
+		return -EINVAL;
+	}
+
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->rx_queue_start, -ENOTSUP);
 
 	if (rte_eth_dev_is_rx_hairpin_queue(dev, rx_queue_id)) {
@@ -928,6 +935,13 @@ rte_eth_dev_rx_queue_stop(uint16_t port_id, uint16_t rx_queue_id)
 	dev = &rte_eth_devices[port_id];
 	if (rx_queue_id >= dev->data->nb_rx_queues) {
 		RTE_ETHDEV_LOG(ERR, "Invalid RX queue_id=%u\n", rx_queue_id);
+		return -EINVAL;
+	}
+
+	if (dev->data->rx_queues[rx_queue_id] == NULL) {
+		RTE_ETHDEV_LOG(ERR, "Rx queue %"PRIu16" of device with port_id=%"
+				    PRIu16" has not been setupped\n",
+				    rx_queue_id, port_id);
 		return -EINVAL;
 	}
 
@@ -971,6 +985,13 @@ rte_eth_dev_tx_queue_start(uint16_t port_id, uint16_t tx_queue_id)
 		return -EINVAL;
 	}
 
+	if (dev->data->rx_queues[tx_queue_id] == NULL) {
+		RTE_ETHDEV_LOG(ERR, "Tx queue %"PRIu16" of device with port_id=%"
+				    PRIu16" has not been setupped\n",
+				    tx_queue_id, port_id);
+		return -EINVAL;
+	}
+
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->tx_queue_start, -ENOTSUP);
 
 	if (rte_eth_dev_is_tx_hairpin_queue(dev, tx_queue_id)) {
@@ -1000,6 +1021,13 @@ rte_eth_dev_tx_queue_stop(uint16_t port_id, uint16_t tx_queue_id)
 	dev = &rte_eth_devices[port_id];
 	if (tx_queue_id >= dev->data->nb_tx_queues) {
 		RTE_ETHDEV_LOG(ERR, "Invalid TX queue_id=%u\n", tx_queue_id);
+		return -EINVAL;
+	}
+
+	if (dev->data->rx_queues[tx_queue_id] == NULL) {
+		RTE_ETHDEV_LOG(ERR, "Tx queue %"PRIu16" of device with port_id=%"
+				    PRIu16" has not been setupped\n",
+				    tx_queue_id, port_id);
 		return -EINVAL;
 	}
 
@@ -4425,6 +4453,20 @@ rte_eth_dev_rx_intr_enable(uint16_t port_id,
 
 	dev = &rte_eth_devices[port_id];
 
+	if (queue_id >= dev->data->nb_rx_queues) {
+		RTE_ETHDEV_LOG(ERR, "Invalid RX queue_id=%"PRIu16"\n",
+			       queue_id);
+		return -EINVAL;
+	}
+
+	if (dev->data->rx_queues[queue_id] == NULL) {
+		RTE_ETHDEV_LOG(ERR,
+			       "Rx queue %"PRIu16" of device with port_id=%"
+			       PRIu16" has not been setupped\n",
+			       queue_id, port_id);
+		return -EINVAL;
+	}
+
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->rx_queue_intr_enable, -ENOTSUP);
 	return eth_err(port_id, (*dev->dev_ops->rx_queue_intr_enable)(dev,
 								queue_id));
@@ -4439,6 +4481,20 @@ rte_eth_dev_rx_intr_disable(uint16_t port_id,
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 
 	dev = &rte_eth_devices[port_id];
+
+	if (queue_id >= dev->data->nb_rx_queues) {
+		RTE_ETHDEV_LOG(ERR, "Invalid Rx queue_id=%"PRIu16"\n",
+			       queue_id);
+		return -EINVAL;
+	}
+
+	if (dev->data->rx_queues[queue_id] == NULL) {
+		RTE_ETHDEV_LOG(ERR,
+			       "Rx queue %"PRIu16" of device with port_id=%"
+			       PRIu16" has not been setupped\n",
+			       queue_id, port_id);
+		return -EINVAL;
+	}
 
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->rx_queue_intr_disable, -ENOTSUP);
 	return eth_err(port_id, (*dev->dev_ops->rx_queue_intr_disable)(dev,
