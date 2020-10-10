@@ -48,6 +48,7 @@ foreach option:cflags_options
 	endif
 endforeach
 dpdk_conf.set('RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY', get_option('mlx5_ntload_tstore'))
+dpdk_conf.set('RTE_LIBRTE_MLX5_NT_STORE', get_option('mlx5_ntstore'))
 if get_option('buildtype').contains('debug')
 	cflags += [ '-pedantic', '-DPEDANTIC' ]
 else
