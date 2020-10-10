@@ -30,7 +30,6 @@ rte_gso_segment(struct rte_mbuf *pkt,
 		uint16_t nb_pkts_out)
 {
 	struct rte_mempool *direct_pool, *indirect_pool;
-	struct rte_mbuf *pkt_seg;
 	uint64_t ol_flags;
 	uint16_t gso_size;
 	uint8_t ipid_delta;
@@ -80,13 +79,7 @@ rte_gso_segment(struct rte_mbuf *pkt,
 		return 1;
 	}
 
-	if (ret > 1) {
-		pkt_seg = pkt;
-		while (pkt_seg) {
-			rte_mbuf_refcnt_update(pkt_seg, -1);
-			pkt_seg = pkt_seg->next;
-		}
-	} else if (ret < 0) {
+	if (ret < 0) {
 		/* Revert the ol_flags in the event of failure. */
 		pkt->ol_flags = ol_flags;
 	}
