@@ -1118,6 +1118,9 @@ F: drivers/regex/mlx5/
 F: doc/guides/regexdevs/mlx5.rst
 F: doc/guides/regexdevs/features/mlx5.ini
 
+Marvell OCTEON TX2 regex
+M: Guy Kaneti <guyk@marvell.com>
+F: drivers/regex/octeontx2/
 
 vDPA Drivers
 ------------
