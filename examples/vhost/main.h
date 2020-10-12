@@ -8,6 +8,7 @@
 #include <sys/queue.h>
 
 #include <rte_ether.h>
+#include <rte_vhost_async.h>
 
 /* Macros for printing using RTE_LOG */
 #define RTE_LOGTYPE_VHOST_CONFIG RTE_LOGTYPE_USER1
@@ -51,6 +52,7 @@ struct vhost_dev {
 	uint64_t features;
 	size_t hdr_len;
 	uint16_t nr_vrings;
+	uint16_t nr_async_pkts;
 	struct rte_vhost_memory *mem;
 	struct device_statistics stats;
 	TAILQ_ENTRY(vhost_dev) global_vdev_entry;
@@ -92,3 +94,13 @@ uint16_t vs_dequeue_pkts(struct vhost_dev *dev, uint16_t queue_id,
 #endif /* _MAIN_H_ */
 
 int open_ioat(const char *value);
+
+uint32_t
+ioat_transfer_data_cb(int vid, uint16_t queue_id,
+		struct rte_vhost_async_desc *descs,
+		struct rte_vhost_async_status *opaque_data, uint16_t count);
+
+uint32_t
+ioat_check_completed_copies_cb(int vid, uint16_t queue_id,
+		struct rte_vhost_async_status *opaque_data,
+		uint16_t max_packets);
