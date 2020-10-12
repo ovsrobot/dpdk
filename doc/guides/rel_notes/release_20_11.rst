@@ -92,6 +92,11 @@ New Features
   * Changed default link speed to unknown.
   * Added support for 200G link speed.
 
+* **Updated Memif PMD.**
+
+  * Added support for abstract socket address.
+  * Changed default socket address type to abstract.
+
 * **Added Ice Lake (Gen4) support for Intel NTB.**
 
   Added NTB device support (4th generation) for Intel Ice Lake platform.
