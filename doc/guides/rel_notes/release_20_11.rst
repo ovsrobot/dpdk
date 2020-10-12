@@ -60,6 +60,12 @@ New Features
   Added the FEC API which provides functions for query FEC capabilities and
   current FEC mode from device. Also, API for configuring FEC mode is also provided.
 
+* **Introduced extended buffer description for receiving.**
+
+  Added the extended Rx queue setup routine providing the individual
+  descriptions for each Rx segment with maximal size, buffer offset and memory
+  pool to allocate data buffers from.
+
 * **Updated Broadcom bnxt driver.**
 
   Updated the Broadcom bnxt driver with new features and improvements, including:

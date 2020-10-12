@@ -970,6 +970,16 @@ struct rte_eth_txmode {
 };
 
 /**
+ * A structure used to configure an RX packet segment to split.
+ */
+struct rte_eth_rxseg {
+	struct rte_mempool *mp; /**< Memory pools to allocate segment from */
+	uint16_t length; /**< Segment data length, configures split point. */
+	uint16_t offset; /**< Data offset from beginning of mbuf data buffer */
+	uint32_t reserved; /**< Reserved field */
+};
+
+/**
  * A structure used to configure an RX ring of an Ethernet port.
  */
 struct rte_eth_rxconf {
@@ -1260,6 +1270,7 @@ struct rte_eth_conf {
 #define DEV_RX_OFFLOAD_SCTP_CKSUM	0x00020000
 #define DEV_RX_OFFLOAD_OUTER_UDP_CKSUM  0x00040000
 #define DEV_RX_OFFLOAD_RSS_HASH		0x00080000
+#define RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT 0x00100000
 
 #define DEV_RX_OFFLOAD_CHECKSUM (DEV_RX_OFFLOAD_IPV4_CKSUM | \
 				 DEV_RX_OFFLOAD_UDP_CKSUM | \
@@ -2037,6 +2048,102 @@ int rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		uint16_t nb_rx_desc, unsigned int socket_id,
 		const struct rte_eth_rxconf *rx_conf,
 		struct rte_mempool *mb_pool);
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Allocate and set up a receive queue for an Ethernet device
+ * with specifying receiving segments parameters.
+ *
+ * The function allocates a contiguous block of memory for *nb_rx_desc*
+ * receive descriptors from a memory zone associated with *socket_id*.
+ * The descriptors might be divided into groups by PMD to receive the data
+ * into multi-segment packet presented by the chain of mbufs.
+ *
+ * Each descriptor within the group is initialized accordingly with
+ * the network buffers allocated from the specified memory pool and with
+ * specified buffer offset and maximal segment length.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param rx_queue_id
+ *   The index of the receive queue to set up.
+ *   The value must be in the range [0, nb_rx_queue - 1] previously supplied
+ *   to rte_eth_dev_configure().
+ * @param nb_rx_desc
+ *   The number of receive descriptors to allocate for the receive ring.
+ * @param socket_id
+ *   The *socket_id* argument is the socket identifier in case of NUMA.
+ *   The value can be *SOCKET_ID_ANY* if there is no NUMA constraint for
+ *   the DMA memory allocated for the receive descriptors of the ring.
+ * @param rx_conf
+ *   The pointer to the configuration data to be used for the receive queue.
+ *   NULL value is allowed, in which case default RX configuration
+ *   will be used.
+ *   The *rx_conf* structure contains an *rx_thresh* structure with the values
+ *   of the Prefetch, Host, and Write-Back threshold registers of the receive
+ *   ring.
+ *   In addition it contains the hardware offloads features to activate using
+ *   the DEV_RX_OFFLOAD_* flags.
+ *   If an offloading set in rx_conf->offloads
+ *   hasn't been set in the input argument eth_conf->rxmode.offloads
+ *   to rte_eth_dev_configure(), it is a new added offloading, it must be
+ *   per-queue type and it is enabled for the queue.
+ *   No need to repeat any bit in rx_conf->offloads which has already been
+ *   enabled in rte_eth_dev_configure() at port level. An offloading enabled
+ *   at port level can't be disabled at queue level.
+ * @param rx_seg
+ *   The pointer to the array of segment descriptions, each element describes
+ *   the memory pool, maximal segment data length, initial data offset from
+ *   the beginning of data buffer in mbuf. This allow to specify the dedicated
+ *   properties for each segment in the receiving buffer - pool, buffer
+ *   offset, maximal segment size. If RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT offload
+ *   flag is configured the PMD will split the received packets into multiple
+ *   segments according to the specification in the description array:
+ *   - the first network buffer will be allocated from the memory pool,
+ *     specified in the first segment description element, the second
+ *     network buffer - from the pool in the second segment description
+ *     element and so on. If there is no enough elements to describe
+ *     the buffer for entire packet of maximal length the pool from the last
+ *     valid element will be used to allocate the buffers from for the rest
+ *     of segments.
+ *   - the offsets from the segment description elements will provide the
+ *     data offset from the buffer beginning except the first mbuf - for this
+ *     one the offset is added to the RTE_PKTMBUF_HEADROOM to get actual
+ *     offset from the buffer beginning. If there is no enough elements
+ *     to describe the buffer for entire packet of maximal length the offsets
+ *     for the rest of segment will be supposed to be zero.
+ *   - the data length being received to each segment is limited by the
+ *     length specified in the segment description element. The data receiving
+ *     starts with filling up the first mbuf data buffer, if the specified
+ *     maximal segment length is reached and there are data remaining
+ *     (packet is longer than buffer in the first mbuf) the following data
+ *     will be pushed to the next segment up to its own length. If the first
+ *     two segments is not enough to store all the packet data the next
+ *     (third) segment will be engaged and so on. If the length in the segment
+ *     description element is zero the actual buffer size will be deduced
+ *     from the appropriate memory pool properties. If there is no enough
+ *     elements to describe the buffer for entire packet of maximal length
+ *     the buffer size will be deduced from the pool of the last valid
+ *     element for the all remaining segments.
+ * @param n_seg
+ *   The number of elements in the segment description array.
+ * @return
+ *   - 0: Success, receive queue correctly set up.
+ *   - -EIO: if device is removed.
+ *   - -EINVAL: The segment descriptors array is empty (pointer to is null or
+ *      zero number of elements) or the size of network buffers which can be
+ *      allocated from this memory pool does not fit the various buffer sizes
+ *      allowed by the device controller.
+ *   - -ENOMEM: Unable to allocate the receive ring descriptors or to
+ *      allocate network memory buffers from the memory pool when
+ *      initializing receive descriptors.
+ */
+__rte_experimental
+int rte_eth_rxseg_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
+		uint16_t nb_rx_desc, unsigned int socket_id,
+		const struct rte_eth_rxconf *rx_conf,
+		const struct rte_eth_rxseg *rx_seg, uint16_t n_seg);
 
 /**
  * @warning

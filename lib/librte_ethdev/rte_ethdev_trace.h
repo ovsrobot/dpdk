@@ -55,6 +55,25 @@ RTE_TRACE_POINT(
 )
 
 RTE_TRACE_POINT(
+	rte_ethdev_trace_rxq_seg_setup,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint16_t rx_queue_id,
+		uint16_t nb_rx_desc, const struct rte_eth_rxconf *rx_conf,
+		const struct rte_eth_rxseg *rx_seg, uint16_t n_seg, int rc),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u16(rx_queue_id);
+	rte_trace_point_emit_u16(nb_rx_desc);
+	rte_trace_point_emit_u8(rx_conf->rx_thresh.pthresh);
+	rte_trace_point_emit_u8(rx_conf->rx_thresh.hthresh);
+	rte_trace_point_emit_u8(rx_conf->rx_thresh.wthresh);
+	rte_trace_point_emit_u8(rx_conf->rx_drop_en);
+	rte_trace_point_emit_u8(rx_conf->rx_deferred_start);
+	rte_trace_point_emit_u64(rx_conf->offloads);
+	rte_trace_point_emit_ptr(rx_seg);
+	rte_trace_point_emit_u16(n_seg);
+	rte_trace_point_emit_int(rc);
+)
+
+RTE_TRACE_POINT(
 	rte_ethdev_trace_txq_setup,
 	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint16_t tx_queue_id,
 		uint16_t nb_tx_desc, const struct rte_eth_txconf *tx_conf),

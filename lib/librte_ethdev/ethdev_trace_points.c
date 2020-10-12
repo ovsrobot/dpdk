@@ -12,6 +12,9 @@ RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_configure,
 RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_rxq_setup,
 	lib.ethdev.rxq.setup)
 
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_rxq_seg_setup,
+	lib.ethdev.rxq.setup)
+
 RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_txq_setup,
 	lib.ethdev.txq.setup)
 
