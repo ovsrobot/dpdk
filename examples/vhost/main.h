@@ -90,3 +90,5 @@ uint16_t vs_dequeue_pkts(struct vhost_dev *dev, uint16_t queue_id,
 			 struct rte_mempool *mbuf_pool,
 			 struct rte_mbuf **pkts, uint16_t count);
 #endif /* _MAIN_H_ */
+
+int open_ioat(const char *value);

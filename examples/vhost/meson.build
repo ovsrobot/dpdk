@@ -9,8 +9,8 @@
 if not is_linux
 	build = false
 endif
-deps += 'vhost'
+deps += ['vhost', 'rawdev_ioat']
 allow_experimental_apis = true
 sources = files(
-	'main.c', 'virtio_net.c'
+	'main.c', 'virtio_net.c', 'ioat.c'
 )
