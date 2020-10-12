@@ -57,6 +57,7 @@ DPDK_21 {
 	rte_event_eth_tx_adapter_stop;
 	rte_event_pmd_allocate;
 	rte_event_pmd_pci_probe;
+	rte_event_pmd_pci_probe_named;
 	rte_event_pmd_pci_remove;
 	rte_event_pmd_release;
 	rte_event_pmd_vdev_init;
