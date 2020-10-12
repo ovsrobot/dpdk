@@ -4,11 +4,16 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 #include <rte_eal.h>
+#include <rte_errno.h>
 #include <rte_memory.h>
 #include <rte_common.h>
 #include <rte_memzone.h>
+#include <rte_vfio.h>
 
 #include "test.h"
 
@@ -70,6 +75,71 @@ check_seg_fds(const struct rte_memseg_list *msl, const struct rte_memseg *ms,
 }
 
 static int
+test_memory_vfio_dma_map(void)
+{
+	uint64_t sz = 2 * sysconf(_SC_PAGESIZE), sz1, sz2;
+	uint64_t unmap1, unmap2;
+	uint8_t *mem;
+	int ret;
+
+	/* Check if vfio is enabled in both kernel and eal */
+	ret = rte_vfio_is_enabled("vfio");
+	if (!ret)
+		return 1;
+
+	/* Allocate twice size of page */
+	mem = mmap(NULL, sz, PROT_READ | PROT_WRITE,
+		   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+	if (mem == MAP_FAILED) {
+		printf("Failed to allocate memory for external heap\n");
+		return -1;
+	}
+
+	/* Force page allocation */
+	memset(mem, 0, sz);
+
+	/* map the whole region */
+	ret = rte_vfio_container_dma_map(RTE_VFIO_DEFAULT_CONTAINER_FD,
+					 (uint64_t)mem, (rte_iova_t)mem, sz);
+	if (ret) {
+		printf("Failed to dma map whole region, ret=%d\n", ret);
+		goto fail;
+	}
+
+	unmap1 = (uint64_t)mem + (sz / 2);
+	sz1 = sz / 2;
+	unmap2 = (uint64_t)mem;
+	sz2 = sz / 2;
+	/* unmap the partial region */
+	ret = rte_vfio_container_dma_unmap(RTE_VFIO_DEFAULT_CONTAINER_FD,
+					   unmap1, (rte_iova_t)unmap1, sz1);
+	if (ret) {
+		if (rte_errno == ENOTSUP) {
+			printf("Partial dma unmap not supported\n");
+			unmap2 = (uint64_t)mem;
+			sz2 = sz;
+		} else {
+			printf("Failed to unmap send half region, ret=%d(%d)\n",
+			       ret, rte_errno);
+			goto fail;
+		}
+	}
+
+	/* unmap the remaining region */
+	ret = rte_vfio_container_dma_unmap(RTE_VFIO_DEFAULT_CONTAINER_FD,
+					   unmap2, (rte_iova_t)unmap2, sz2);
+	if (ret) {
+		printf("Failed to unmap remaining region, ret=%d(%d)\n", ret,
+		       rte_errno);
+		goto fail;
+	}
+
+fail:
+	munmap(mem, sz);
+	return ret;
+}
+
+static int
 test_memory(void)
 {
 	uint64_t s;
@@ -98,6 +168,15 @@ test_memory(void)
 		printf("Segment fd API is unsupported\n");
 	} else if (ret == -1) {
 		printf("Error getting segment fd's\n");
+		return -1;
+	}
+
+	/* test for vfio dma map/unmap */
+	ret = test_memory_vfio_dma_map();
+	if (ret == 1) {
+		printf("VFIO dma map/unmap unsupported\n");
+	} else if (ret < 0) {
+		printf("Error vfio dma map/unmap, ret=%d\n", ret);
 		return -1;
 	}
 
