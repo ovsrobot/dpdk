@@ -970,6 +970,16 @@ struct rte_eth_txmode {
 };
 
 /**
+ * A structure used to configure an RX packet segment to split.
+ */
+struct rte_eth_rxseg {
+	struct rte_mempool *mp; /**< Memory pools to allocate segment from */
+	uint16_t length; /**< Segment data length, configures split point. */
+	uint16_t offset; /**< Data offset from beginning of mbuf data buffer */
+	uint32_t reserved; /**< Reserved field */
+};
+
+/**
  * A structure used to configure an RX ring of an Ethernet port.
  */
 struct rte_eth_rxconf {
@@ -977,13 +987,23 @@ struct rte_eth_rxconf {
 	uint16_t rx_free_thresh; /**< Drives the freeing of RX descriptors. */
 	uint8_t rx_drop_en; /**< Drop packets if no descriptors are available. */
 	uint8_t rx_deferred_start; /**< Do not start queue with rte_eth_dev_start(). */
+	uint16_t rx_nseg; /**< Number of descriptions in rx_seg array. */
+	/**
+	 * The pointer to the array of segment descriptions, each element
+	 * describes the memory pool, maximal segment data length, initial
+	 * data offset from the beginning of data buffer in mbuf. This allow
+	 * to specify the dedicated properties for each segment in the receiving
+	 * buffer - pool, buffer offset, maximal segment size. The number of
+	 * segment descriptions in the array is specified by the rx_nseg
+	 * field.
+	 */
+	struct rte_eth_rxseg *rx_seg;
 	/**
 	 * Per-queue Rx offloads to be set using DEV_RX_OFFLOAD_* flags.
 	 * Only offloads set on rx_queue_offload_capa or rx_offload_capa
 	 * fields on rte_eth_dev_info structure are allowed to be set.
 	 */
 	uint64_t offloads;
-
 	uint64_t reserved_64s[2]; /**< Reserved for future fields */
 	void *reserved_ptrs[2];   /**< Reserved for future fields */
 };
@@ -1260,6 +1280,7 @@ struct rte_eth_conf {
 #define DEV_RX_OFFLOAD_SCTP_CKSUM	0x00020000
 #define DEV_RX_OFFLOAD_OUTER_UDP_CKSUM  0x00040000
 #define DEV_RX_OFFLOAD_RSS_HASH		0x00080000
+#define RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT 0x00100000
 
 #define DEV_RX_OFFLOAD_CHECKSUM (DEV_RX_OFFLOAD_IPV4_CKSUM | \
 				 DEV_RX_OFFLOAD_UDP_CKSUM | \
@@ -2020,6 +2041,41 @@ rte_eth_dev_is_removed(uint16_t port_id);
  *   No need to repeat any bit in rx_conf->offloads which has already been
  *   enabled in rte_eth_dev_configure() at port level. An offloading enabled
  *   at port level can't be disabled at queue level.
+ *   The configuration structure also contains the pointer to the array
+ *   of the receiving buffer segment descriptions, each element describes
+ *   the memory pool, maximal segment data length, initial data offset from
+ *   the beginning of data buffer in mbuf. This allow to specify the dedicated
+ *   properties for each segment in the receiving buffer - pool, buffer
+ *   offset, maximal segment size. If RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT offload
+ *   flag is configured the PMD will split the received packets into multiple
+ *   segments according to the specification in the description array:
+ *   - the first network buffer will be allocated from the memory pool,
+ *     specified in the first segment description element, the second
+ *     network buffer - from the pool in the second segment description
+ *     element and so on. If there is no enough elements to describe
+ *     the buffer for entire packet of maximal length the pool from the last
+ *     valid element will be used to allocate the buffers from for the rest
+ *     of segments.
+ *   - the offsets from the segment description elements will provide the
+ *     data offset from the buffer beginning except the first mbuf - for this
+ *     one the offset is added to the RTE_PKTMBUF_HEADROOM to get actual
+ *     offset from the buffer beginning. If there is no enough elements
+ *     to describe the buffer for entire packet of maximal length the offsets
+ *     for the rest of segment will be supposed to be zero.
+ *   - the data length being received to each segment is limited by the
+ *     length specified in the segment description element. The data receiving
+ *     starts with filling up the first mbuf data buffer, if the specified
+ *     maximal segment length is reached and there are data remaining
+ *     (packet is longer than buffer in the first mbuf) the following data
+ *     will be pushed to the next segment up to its own length. If the first
+ *     two segments is not enough to store all the packet data the next
+ *     (third) segment will be engaged and so on. If the length in the segment
+ *     description element is zero the actual buffer size will be deduced
+ *     from the appropriate memory pool properties. If there is no enough
+ *     elements to describe the buffer for entire packet of maximal length
+ *     the buffer size will be deduced from the pool of the last valid
+ *     element for the all remaining segments.
+ *
  * @param mb_pool
  *   The pointer to the memory pool from which to allocate *rte_mbuf* network
  *   memory buffers to populate each descriptor of the receive ring.
