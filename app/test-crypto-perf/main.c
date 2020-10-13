@@ -594,7 +594,7 @@ main(int argc, char **argv)
 
 	i = 0;
 	uint8_t qp_id = 0, cdev_index = 0;
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 
 		if (i == total_nb_qps)
 			break;
@@ -658,7 +658,7 @@ main(int argc, char **argv)
 				distribution_total[buffer_size_count - 1];
 
 		i = 0;
-		RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+		RTE_LCORE_FOREACH_WORKER(lcore_id) {
 
 			if (i == total_nb_qps)
 				break;
@@ -668,7 +668,7 @@ main(int argc, char **argv)
 			i++;
 		}
 		i = 0;
-		RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+		RTE_LCORE_FOREACH_WORKER(lcore_id) {
 
 			if (i == total_nb_qps)
 				break;
@@ -688,7 +688,7 @@ main(int argc, char **argv)
 
 		while (opts.test_buffer_size <= opts.max_buffer_size) {
 			i = 0;
-			RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+			RTE_LCORE_FOREACH_WORKER(lcore_id) {
 
 				if (i == total_nb_qps)
 					break;
@@ -698,7 +698,7 @@ main(int argc, char **argv)
 				i++;
 			}
 			i = 0;
-			RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+			RTE_LCORE_FOREACH_WORKER(lcore_id) {
 
 				if (i == total_nb_qps)
 					break;
@@ -722,7 +722,7 @@ main(int argc, char **argv)
 	}
 
 	i = 0;
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 
 		if (i == total_nb_qps)
 			break;
@@ -742,7 +742,7 @@ main(int argc, char **argv)
 
 err:
 	i = 0;
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		if (i == total_nb_qps)
 			break;
 
