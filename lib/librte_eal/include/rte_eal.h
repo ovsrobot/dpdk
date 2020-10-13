@@ -44,12 +44,52 @@ enum rte_proc_type_t {
 };
 
 /**
+ * The max SIMD bitwidth value to limit vector path selection.
+ */
+enum rte_max_simd {
+	RTE_SIMD_DISABLED = 64,
+	/**< Limits path selection to scalar, disables all vector paths. */
+	RTE_SIMD_128 = 128,
+	/**< Limits path selection to SSE/NEON/Altivec or below. */
+	RTE_SIMD_256 = 256, /**< Limits path selection to AVX2 or below. */
+	RTE_SIMD_512 = 512, /**< Limits path selection to AVX512 or below. */
+	RTE_SIMD_MAX = INT16_MAX + 1,
+	/**<
+	 * Disables limiting by max SIMD bitwidth, allows all suitable paths.
+	 * This value is used as it is a large number and a power of 2.
+	 */
+};
+
+/**
  * Get the process type in a multi-process setup
  *
  * @return
  *   The process type
  */
 enum rte_proc_type_t rte_eal_process_type(void);
+
+/**
+ * Get the supported SIMD bitwidth.
+ *
+ * @return
+ *   uint16_t bitwidth.
+ */
+__rte_experimental
+uint16_t rte_get_max_simd_bitwidth(void);
+
+/**
+ * Set the supported SIMD bitwidth.
+ * This API should only be called once at initialization, before EAL init.
+ *
+ * @param bitwidth
+ *   uint16_t bitwidth.
+ * @return
+ *   - 0 on success.
+ *   - -EINVAL on invalid bitwidth parameter.
+ *   - -EPERM if bitwidth is forced.
+ */
+__rte_experimental
+int rte_set_max_simd_bitwidth(uint16_t bitwidth);
 
 /**
  * Request iopl privilege for all RPL.

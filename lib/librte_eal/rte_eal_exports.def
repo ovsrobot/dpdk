@@ -26,6 +26,7 @@ EXPORTS
 	rte_eal_tailq_register
 	rte_eal_using_phys_addrs
 	rte_free
+	rte_get_max_simd_bitwidth
 	rte_get_tsc_hz
 	rte_hexdump
 	rte_intr_rx_ctl
@@ -62,6 +63,7 @@ EXPORTS
 	rte_memzone_reserve_aligned
 	rte_memzone_reserve_bounded
 	rte_memzone_walk
+	rte_set_max_simd_bitwidth
 	rte_socket_id
 	rte_strerror
 	rte_strsplit
