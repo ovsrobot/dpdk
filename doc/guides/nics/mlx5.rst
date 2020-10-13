@@ -311,6 +311,12 @@ Limitations
     for some NICs (such as ConnectX-6 Dx and BlueField 2).
     The capability bit ``scatter_fcs_w_decap_disable`` shows NIC support.
 
+- Sample flow:
+
+  - Supports ``RTE_FLOW_ACTION_TYPE_SAMPLE`` action only within NIC Rx and E-Switch steering domain.
+  - The E-Switch Sample flow must have the eswitch_manager VPORT destination (PF or ECPF) and no additional actions.
+  - For ConnectX-5, the ``RTE_FLOW_ACTION_TYPE_SAMPLE`` is typically used as first action in the E-Switch egress flow if with header modify or encapsulation actions.
+
 Statistics
 ----------
 
