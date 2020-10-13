@@ -2162,6 +2162,52 @@ rte_eth_tx_hairpin_queue_setup(uint16_t port_id, uint16_t tx_queue_id,
 	return eth_err(port_id, ret);
 }
 
+int
+rte_eth_hairpin_bind(uint16_t tx_port, uint16_t rx_port)
+{
+	struct rte_eth_dev *dev;
+	int ret;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(tx_port, -EINVAL);
+	dev = &rte_eth_devices[tx_port];
+	if (!dev->data->dev_started) {
+		RTE_ETHDEV_LOG(ERR, "TX port %d is not started", tx_port);
+		return -EBUSY;
+	}
+
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->hairpin_bind, -ENOTSUP);
+	ret = (*dev->dev_ops->hairpin_bind)(dev, rx_port);
+	if (ret)
+		RTE_ETHDEV_LOG(ERR, "Failed to bind hairpin TX %d "
+			       "to RX %d (%d - all ports)", tx_port,
+			       rx_port, RTE_MAX_ETHPORTS);
+
+	return ret;
+}
+
+int
+rte_eth_hairpin_unbind(uint16_t tx_port, uint16_t rx_port)
+{
+	struct rte_eth_dev *dev;
+	int ret;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(tx_port, -EINVAL);
+	dev = &rte_eth_devices[tx_port];
+	if (!dev->data->dev_started) {
+		RTE_ETHDEV_LOG(ERR, "TX port %d is already stopped", tx_port);
+		return -EBUSY;
+	}
+
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->hairpin_unbind, -ENOTSUP);
+	ret = (*dev->dev_ops->hairpin_unbind)(dev, rx_port);
+	if (ret)
+		RTE_ETHDEV_LOG(ERR, "Failed to unbind hairpin "
+			       "TX %d from RX %d (%d - all ports)", tx_port,
+			       rx_port, RTE_MAX_ETHPORTS);
+
+	return ret;
+}
+
 void
 rte_eth_tx_buffer_drop_callback(struct rte_mbuf **pkts, uint16_t unsent,
 		void *userdata __rte_unused)
