@@ -34,10 +34,10 @@ static struct ip4_lookup_node_main ip4_lookup_nm;
 #include "ip4_lookup_neon.h"
 #elif defined(RTE_ARCH_X86)
 #include "ip4_lookup_sse.h"
-#else
+#endif
 
 static uint16_t
-ip4_lookup_node_process(struct rte_graph *graph, struct rte_node *node,
+ip4_lookup_node_process_scalar(struct rte_graph *graph, struct rte_node *node,
 			void **objs, uint16_t nb_objs)
 {
 	struct rte_ipv4_hdr *ipv4_hdr;
@@ -109,7 +109,16 @@ ip4_lookup_node_process(struct rte_graph *graph, struct rte_node *node,
 	return nb_objs;
 }
 
+static uint16_t
+ip4_lookup_node_process(struct rte_graph *graph, struct rte_node *node,
+			void **objs, uint16_t nb_objs)
+{
+#if defined(RTE_MACHINE_CPUFLAG_NEON) || defined(RTE_ARCH_X86)
+	if (rte_get_max_simd_bitwidth() >= RTE_SIMD_128)
+		return ip4_lookup_node_process_vec(graph, node, objs, nb_objs);
 #endif
+	return ip4_lookup_node_process_scalar(graph, node, objs, nb_objs);
+}
 
 int
 rte_node_ip4_route_add(uint32_t ip, uint8_t depth, uint16_t next_hop,
