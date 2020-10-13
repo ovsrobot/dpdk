@@ -9,6 +9,7 @@
 #include <rte_cpuflags.h>
 #include <rte_common.h>
 #include <rte_net_crc.h>
+#include <rte_eal.h>
 
 #if defined(RTE_ARCH_X86_64) && defined(__PCLMUL__)
 #define X86_64_SSE42_PCLMULQDQ     1
@@ -33,6 +34,12 @@ static uint32_t crc32_eth_lut[CRC_LUT_SIZE];
 static uint32_t crc16_ccitt_lut[CRC_LUT_SIZE];
 
 static uint32_t
+rte_crc16_ccitt_default_handler(const uint8_t *data, uint32_t data_len);
+
+static uint32_t
+rte_crc32_eth_default_handler(const uint8_t *data, uint32_t data_len);
+
+static uint32_t
 rte_crc16_ccitt_handler(const uint8_t *data, uint32_t data_len);
 
 static uint32_t
@@ -41,7 +48,12 @@ rte_crc32_eth_handler(const uint8_t *data, uint32_t data_len);
 typedef uint32_t
 (*rte_net_crc_handler)(const uint8_t *data, uint32_t data_len);
 
-static rte_net_crc_handler *handlers;
+static rte_net_crc_handler handlers_default[] = {
+	[RTE_NET_CRC16_CCITT] = rte_crc16_ccitt_default_handler,
+	[RTE_NET_CRC32_ETH] = rte_crc32_eth_default_handler,
+};
+
+static rte_net_crc_handler *handlers = handlers_default;
 
 static rte_net_crc_handler handlers_scalar[] = {
 	[RTE_NET_CRC16_CCITT] = rte_crc16_ccitt_handler,
@@ -59,6 +71,9 @@ static rte_net_crc_handler handlers_neon[] = {
 	[RTE_NET_CRC32_ETH] = rte_crc32_eth_neon_handler,
 };
 #endif
+
+static uint16_t max_simd_bitwidth;
+RTE_LOG_REGISTER(libnet_logtype, lib.net, INFO);
 
 /**
  * Reflect the bits about the middle
@@ -112,6 +127,42 @@ crc32_eth_calc_lut(const uint8_t *data,
 	return crc;
 }
 
+static uint32_t
+rte_crc16_ccitt_default_handler(const uint8_t *data, uint32_t data_len)
+{
+	if (max_simd_bitwidth == 0)
+		max_simd_bitwidth = rte_get_max_simd_bitwidth();
+	handlers = handlers_scalar;
+#ifdef X86_64_SSE42_PCLMULQDQ
+	if (max_simd_bitwidth >= RTE_SIMD_128)
+		handlers = handlers_sse42;
+#endif
+#ifdef ARM64_NEON_PMULL
+	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_PMULL) &&
+			max_simd_bitwidth >= RTE_SIMD_128) {
+		handlers = handlers_neon;
+#endif
+	return handlers[RTE_NET_CRC16_CCITT](data, data_len);
+}
+
+static uint32_t
+rte_crc32_eth_default_handler(const uint8_t *data, uint32_t data_len)
+{
+	if (max_simd_bitwidth == 0)
+		max_simd_bitwidth = rte_get_max_simd_bitwidth();
+	handlers = handlers_scalar;
+#ifdef X86_64_SSE42_PCLMULQDQ
+	if (max_simd_bitwidth >= RTE_SIMD_128)
+		handlers = handlers_sse42;
+#endif
+#ifdef ARM64_NEON_PMULL
+	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_PMULL) &&
+			max_simd_bitwidth >= RTE_SIMD_128) {
+		handlers = handlers_neon;
+#endif
+	return handlers[RTE_NET_CRC32_ETH](data, data_len);
+}
+
 static void
 rte_net_crc_scalar_init(void)
 {
@@ -145,18 +196,26 @@ rte_crc32_eth_handler(const uint8_t *data, uint32_t data_len)
 void
 rte_net_crc_set_alg(enum rte_net_crc_alg alg)
 {
+	if (max_simd_bitwidth == 0)
+		max_simd_bitwidth = rte_get_max_simd_bitwidth();
+
 	switch (alg) {
 #ifdef X86_64_SSE42_PCLMULQDQ
 	case RTE_NET_CRC_SSE42:
-		handlers = handlers_sse42;
-		break;
+		if (max_simd_bitwidth >= RTE_SIMD_128) {
+			handlers = handlers_sse42;
+			return;
+		}
+		NET_LOG(INFO, "Max SIMD Bitwidth too low, can't use SSE\n");
 #elif defined ARM64_NEON_PMULL
 		/* fall-through */
 	case RTE_NET_CRC_NEON:
-		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_PMULL)) {
+		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_PMULL) &&
+				max_simd_bitwidth >= RTE_SIMD_128) {
 			handlers = handlers_neon;
-			break;
+			return;
 		}
+		NET_LOG(INFO, "Max SIMD Bitwidth too low or CPU flag not enabled, can't use NEON\n");
 #endif
 		/* fall-through */
 	case RTE_NET_CRC_SCALAR:
@@ -184,19 +243,13 @@ rte_net_crc_calc(const void *data,
 /* Select highest available crc algorithm as default one */
 RTE_INIT(rte_net_crc_init)
 {
-	enum rte_net_crc_alg alg = RTE_NET_CRC_SCALAR;
-
 	rte_net_crc_scalar_init();
 
 #ifdef X86_64_SSE42_PCLMULQDQ
-	alg = RTE_NET_CRC_SSE42;
 	rte_net_crc_sse42_init();
 #elif defined ARM64_NEON_PMULL
 	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_PMULL)) {
-		alg = RTE_NET_CRC_NEON;
 		rte_net_crc_neon_init();
 	}
 #endif
-
-	rte_net_crc_set_alg(alg);
 }

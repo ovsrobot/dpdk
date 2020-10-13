@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include <rte_log.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -24,6 +26,12 @@ enum rte_net_crc_alg {
 	RTE_NET_CRC_SSE42,
 	RTE_NET_CRC_NEON,
 };
+
+extern int libnet_logtype;
+
+#define NET_LOG(level, fmt, args...)					\
+	rte_log(RTE_LOG_ ## level, libnet_logtype, "%s(): " fmt "\n",	\
+		__func__, ## args)
 
 /**
  * This API set the CRC computation algorithm (i.e. scalar version,
