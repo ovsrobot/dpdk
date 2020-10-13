@@ -20109,7 +20109,7 @@ cmdline_read_from_file(const char *filename)
 	printf("Read CLI commands from %s\n", filename);
 }
 
-/* prompt function, called from main on MASTER lcore */
+/* prompt function, called from main on MAIN lcore */
 void
 prompt(void)
 {
