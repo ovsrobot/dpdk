@@ -171,6 +171,9 @@ New Features
   * Extern objects and functions can be plugged into the pipeline.
   * Transaction-oriented table updates.
 
+* **Added AVX512 lookup implementation for FIB.**
+
+  Added a AVX512 lookup functions implementation into FIB library.
 
 Removed Items
 -------------
