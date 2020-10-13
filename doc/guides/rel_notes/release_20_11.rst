@@ -70,6 +70,7 @@ New Features
 * **Updated the ethdev library to support hairpin between two ports.**
 
   New APIs are introduced to support binding / unbinding 2 ports hairpin.
+  Hairpin TX part flow rules can be inserted explicitly.
 
 * **Updated Broadcom bnxt driver.**
 
@@ -326,6 +327,11 @@ ABI Changes
     which was already internal data structure.
 
   * ``ethdev`` internal functions are marked with ``__rte_internal`` tag.
+
+  * ``struct rte_eth_hairpin_conf`` has two new members:
+
+    * ``uint32_t tx_explicit:1;``
+    * ``uint32_t manual_bind:1;``
 
 
 Known Issues

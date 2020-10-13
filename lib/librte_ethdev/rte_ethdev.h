@@ -1045,7 +1045,32 @@ struct rte_eth_hairpin_peer {
  * A structure used to configure hairpin binding.
  */
 struct rte_eth_hairpin_conf {
-	uint16_t peer_count; /**< The number of peers. */
+	uint32_t peer_count:16; /**< The number of peers. */
+
+	/**
+	 * Explicit TX flow rule mode. One hairpin pair of queues should have
+	 * the same attribute. The actual support depends on the PMD.
+	 *
+	 * - When set, the user should be responsible for inserting the hairpin
+	 *   TX part flows and removing them.
+	 * - When clear, the PMD will try to handle the TX part of the flows,
+	 *   e.g., by splitting one flow into two parts.
+	 */
+	uint32_t tx_explicit:1;
+
+	/**
+	 * Manually bind hairpin queues. One hairpin pair of queues should have
+	 * the same attribute. The actual support depends on the PMD.
+	 *
+	 * - When set, to enable hairpin, the user should call the hairpin bind
+	 *   API after all the queues are set up properly and the ports are
+	 *   started. Also, the hairpin unbind API should be called accordingly
+	 *   before stopping a port that with hairpin configured.
+	 * - When clear, the PMD will try to enable the hairpin with the queues
+	 *   configured automatically during port start.
+	 */
+	uint32_t manual_bind:1;
+	uint32_t reserved:14; /**< Reserved bits. */
 	struct rte_eth_hairpin_peer peers[RTE_ETH_MAX_HAIRPIN_PEERS];
 };
 
