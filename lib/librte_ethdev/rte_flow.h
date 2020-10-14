@@ -1731,6 +1731,13 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_RSS,
 
 	/**
+	 * Mirror traffic to a given virtual function or physical function
+	 *
+	 * See struct rte_flow_action_mirror.
+	 */
+	RTE_FLOW_ACTION_TYPE_MIRROR,
+
+	/**
 	 * Directs matching traffic to the physical function (PF) of the
 	 * current device.
 	 *
