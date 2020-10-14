@@ -5744,14 +5744,6 @@ ixgbe_convert_vm_rx_mask_to_val(uint16_t rx_mask, uint32_t orig_val)
 	return new_val;
 }
 
-#define IXGBE_MRCTL_VPME  0x01 /* Virtual Pool Mirroring. */
-#define IXGBE_MRCTL_UPME  0x02 /* Uplink Port Mirroring. */
-#define IXGBE_MRCTL_DPME  0x04 /* Downlink Port Mirroring. */
-#define IXGBE_MRCTL_VLME  0x08 /* VLAN Mirroring. */
-#define IXGBE_INVALID_MIRROR_TYPE(mirror_type) \
-	((mirror_type) & ~(uint8_t)(ETH_MIRROR_VIRTUAL_POOL_UP | \
-	ETH_MIRROR_UPLINK_PORT | ETH_MIRROR_DOWNLINK_PORT | ETH_MIRROR_VLAN))
-
 static int
 ixgbe_mirror_rule_set(struct rte_eth_dev *dev,
 		      struct rte_eth_mirror_conf *mirror_conf,

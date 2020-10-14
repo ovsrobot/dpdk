@@ -216,6 +216,27 @@ struct ixgbe_rte_flow_rss_conf {
 	uint16_t queue[IXGBE_MAX_RX_QUEUE_NUM]; /**< Queues indices to use. */
 };
 
+#define IXGBE_MAX_MIRROR_RULES 4  /* Maximum nb. of mirror rules. */
+#define IXGBE_MRCTL_VPME  0x01 /* Virtual Pool Mirroring. */
+#define IXGBE_MRCTL_UPME  0x02 /* Uplink Port Mirroring. */
+#define IXGBE_MRCTL_DPME  0x04 /* Downlink Port Mirroring. */
+#define IXGBE_MRCTL_VLME  0x08 /* VLAN Mirroring. */
+#define IXGBE_INVALID_MIRROR_TYPE(mirror_type)			\
+	((mirror_type) & ~(uint8_t)(ETH_MIRROR_VIRTUAL_POOL_UP |\
+				    ETH_MIRROR_UPLINK_PORT |	\
+				    ETH_MIRROR_DOWNLINK_PORT |	\
+				    ETH_MIRROR_VLAN))
+
+struct ixgbe_flow_mirror_conf {
+	uint8_t  rule_type;
+	uint16_t rule_id;
+	uint8_t  dst_pool;  /* Destination pool for this mirror rule. */
+	uint64_t pool_mask; /* Bitmap of pool for virtual pool mirroring */
+	uint64_t vlan_mask; /* mask for valid VLAN ID. */
+	/* VLAN ID list for vlan mirroring. */
+	uint16_t vlan_id[ETH_MIRROR_MAX_VLANS];
+};
+
 /* structure for interrupt relative data */
 struct ixgbe_interrupt {
 	uint32_t flags;
@@ -249,8 +270,6 @@ struct ixgbe_uta_info {
 	uint16_t uta_in_use;
 	uint32_t uta_shadow[IXGBE_MAX_UTA];
 };
-
-#define IXGBE_MAX_MIRROR_RULES 4  /* Maximum nb. of mirror rules. */
 
 struct ixgbe_mirror_info {
 	struct rte_eth_mirror_conf mr_conf[IXGBE_MAX_MIRROR_RULES];
@@ -337,6 +356,8 @@ struct ixgbe_filter_info {
 	uint32_t syn_info;
 	/* store the rss filter info */
 	struct ixgbe_rte_flow_rss_conf rss_info;
+	uint8_t mirror_mask;  /* Bit mask for every used mirror filter */
+	struct ixgbe_flow_mirror_conf mirror_filters[IXGBE_MAX_MIRROR_RULES];
 };
 
 struct ixgbe_l2_tn_key {
@@ -820,4 +841,32 @@ ixgbe_ethertype_filter_remove(struct ixgbe_filter_info *filter_info,
 	return idx;
 }
 
+static inline int8_t
+ixgbe_mirror_filter_insert(struct ixgbe_filter_info *filter_info,
+			   struct ixgbe_flow_mirror_conf *mirror_conf)
+{
+	int i;
+
+	for (i = 0; i < IXGBE_MAX_MIRROR_RULES; i++) {
+		if (!(filter_info->mirror_mask & (1 << i))) {
+			filter_info->mirror_mask |= 1 << i;
+			mirror_conf->rule_id = i;
+			filter_info->mirror_filters[i] = *mirror_conf;
+			return i;
+		}
+	}
+	return -1;
+}
+
+static inline int
+ixgbe_mirror_filter_remove(struct ixgbe_filter_info *filter_info,
+			      uint8_t idx)
+{
+	if (idx >= IXGBE_MAX_MIRROR_RULES)
+		return -1;
+	filter_info->mirror_mask &= ~(1 << idx);
+	memset(&filter_info->mirror_filters[idx], 0,
+	       sizeof(filter_info->mirror_filters[0]));
+	return idx;
+}
 #endif /* _IXGBE_ETHDEV_H_ */
