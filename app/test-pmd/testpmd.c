@@ -2414,6 +2414,50 @@ setup_hairpin_queues(portid_t pi)
 	return 0;
 }
 
+/* Configure the Rx with optional split. */
+int
+rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
+	       uint16_t nb_rx_desc, unsigned int socket_id,
+	       struct rte_eth_rxconf *rx_conf, struct rte_mempool *mp)
+{
+	struct rte_eth_rxseg rx_seg[MAX_SEGS_BUFFER_SPLIT] = {};
+	unsigned int i, mp_n;
+	int ret;
+
+	if (rx_pkt_nb_segs <= 1 ||
+	    (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) == 0) {
+		rx_conf->rx_seg = NULL;
+		rx_conf->rx_nseg = 0;
+		ret = rte_eth_rx_queue_setup(port_id, rx_queue_id,
+					     nb_rx_desc, socket_id,
+					     rx_conf, mp);
+		return ret;
+	}
+	for (i = 0; i < rx_pkt_nb_segs; i++) {
+		struct rte_mempool *mpx;
+		/*
+		 * Use last valid pool for the segments with number
+		 * exceeding the pool index.
+		 */
+		mp_n = (i > mbuf_data_size_n) ? mbuf_data_size_n - 1 : i;
+		mpx = mbuf_pool_find(socket_id, mp_n);
+		/* Handle zero as mbuf data buffer size. */
+		rx_seg[i].length = rx_pkt_seg_lengths[i] ?
+				   rx_pkt_seg_lengths[i] :
+				   mbuf_data_size[mp_n];
+		rx_seg[i].offset = i < rx_pkt_nb_offs ?
+				   rx_pkt_seg_offsets[i] : 0;
+		rx_seg[i].mp = mpx ? mpx : mp;
+	}
+	rx_conf->rx_nseg = rx_pkt_nb_segs;
+	rx_conf->rx_seg = rx_seg;
+	ret = rte_eth_rx_queue_setup(port_id, rx_queue_id, nb_rx_desc,
+				    socket_id, rx_conf, NULL);
+	rx_conf->rx_seg = NULL;
+	rx_conf->rx_nseg = 0;
+	return ret;
+}
+
 int
 start_port(portid_t pid)
 {
@@ -2522,7 +2566,7 @@ start_port(portid_t pid)
 						return -1;
 					}
 
-					diag = rte_eth_rx_queue_setup(pi, qi,
+					diag = rx_queue_setup(pi, qi,
 					     port->nb_rx_desc[qi],
 					     rxring_numa[pi],
 					     &(port->rx_conf[qi]),
@@ -2538,7 +2582,7 @@ start_port(portid_t pid)
 							port->socket_id);
 						return -1;
 					}
-					diag = rte_eth_rx_queue_setup(pi, qi,
+					diag = rx_queue_setup(pi, qi,
 					     port->nb_rx_desc[qi],
 					     port->socket_id,
 					     &(port->rx_conf[qi]),
