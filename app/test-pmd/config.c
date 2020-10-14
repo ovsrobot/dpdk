@@ -1732,16 +1732,17 @@ port_flow_flush(portid_t port_id)
 	struct rte_port *port = &ports[port_id];
 	int ret = 0;
 
+	if (port_id_is_invalid(port_id, ENABLED_WARN) ||
+		port_id == (portid_t)RTE_PORT_ALL)
+		return -EINVAL;
+
 	if (port->flow_list == NULL)
 		return ret;
 
 	/* Poisoning to make sure PMDs update it in case of error. */
 	memset(&error, 0x44, sizeof(error));
 	if (rte_flow_flush(port_id, &error)) {
-		ret = port_flow_complain(&error);
-		if (port_id_is_invalid(port_id, DISABLED_WARN) ||
-		    port_id == (portid_t)RTE_PORT_ALL)
-			return ret;
+		port_flow_complain(&error);
 	}
 
 	while (port->flow_list) {
