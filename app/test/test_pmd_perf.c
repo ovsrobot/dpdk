@@ -802,7 +802,11 @@ test_pmd_perf(void)
 		if (socketid != rte_eth_dev_socket_id(portid))
 			continue;
 
-		rte_eth_dev_stop(portid);
+		ret = rte_eth_dev_stop(portid);
+		if (ret != 0)
+			rte_exit(EXIT_FAILURE,
+				 "rte_eth_dev_stop: err=%s, port=%d\n",
+				 rte_strerror(-ret), portid);
 	}
 
 	return 0;

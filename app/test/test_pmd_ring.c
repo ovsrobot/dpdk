@@ -412,8 +412,14 @@ test_pmd_ring_pair_create_attach(void)
 		return TEST_FAILED;
 	}
 
-	rte_eth_dev_stop(rxtx_portd);
-	rte_eth_dev_stop(rxtx_porte);
+	if (rte_eth_dev_stop(rxtx_portd) != 0) {
+		printf("Error: failed to stop port %u\n", rxtx_portd);
+		return TEST_FAILED;
+	}
+	if (rte_eth_dev_stop(rxtx_porte) != 0) {
+		printf("Error: failed to stop port %u\n", rxtx_porte);
+		return TEST_FAILED;
+	}
 
 	return TEST_SUCCESS;
 }
@@ -522,7 +528,8 @@ test_command_line_ring_port(void)
 				"test stats reset cmdl_port0 is failed");
 		TEST_ASSERT((test_get_stats(cmdl_port0) < 0),
 				"test get stats cmdl_port0 is failed");
-		rte_eth_dev_stop(cmdl_port0);
+		TEST_ASSERT((rte_eth_dev_stop(cmdl_port0) == 0),
+				"test stop cmdl_port0 is failed");
 	}
 	return TEST_SUCCESS;
 }
