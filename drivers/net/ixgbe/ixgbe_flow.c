@@ -49,6 +49,18 @@
 #define IXGBE_MAX_N_TUPLE_PRIO 7
 #define IXGBE_MAX_FLX_SOURCE_OFF 62
 
+#define NEXT_ITEM_OF_ACTION(act, actions, index)			\
+	do {								\
+		act = (actions) + (index);				\
+		while (act->type == RTE_FLOW_ACTION_TYPE_VOID) {	\
+			(index)++;					\
+			act = (actions) + (index);			\
+		}							\
+	} while (0)
+
+#define GET_VLAN_ID_FROM_TCI(vlan_item, default_vid) \
+	((vlan_item) ? ntohs((vlan_item)->tci) & 0x0fff : (default_vid))
+
 /* ntuple filter list structure */
 struct ixgbe_ntuple_filter_ele {
 	TAILQ_ENTRY(ixgbe_ntuple_filter_ele) entries;
@@ -79,6 +91,11 @@ struct ixgbe_rss_conf_ele {
 	TAILQ_ENTRY(ixgbe_rss_conf_ele) entries;
 	struct ixgbe_rte_flow_rss_conf filter_info;
 };
+/* rss filter list structure */
+struct ixgbe_mirror_conf_ele {
+	TAILQ_ENTRY(ixgbe_mirror_conf_ele) entries;
+	struct ixgbe_flow_mirror_conf filter_info;
+};
 /* ixgbe_flow memory list structure */
 struct ixgbe_flow_mem {
 	TAILQ_ENTRY(ixgbe_flow_mem) entries;
@@ -91,6 +108,7 @@ TAILQ_HEAD(ixgbe_syn_filter_list, ixgbe_eth_syn_filter_ele);
 TAILQ_HEAD(ixgbe_fdir_rule_filter_list, ixgbe_fdir_rule_ele);
 TAILQ_HEAD(ixgbe_l2_tunnel_filter_list, ixgbe_eth_l2_tunnel_conf_ele);
 TAILQ_HEAD(ixgbe_rss_filter_list, ixgbe_rss_conf_ele);
+TAILQ_HEAD(ixgbe_mirror_filter_list, ixgbe_mirror_conf_ele);
 TAILQ_HEAD(ixgbe_flow_mem_list, ixgbe_flow_mem);
 
 static struct ixgbe_ntuple_filter_list filter_ntuple_list;
@@ -2929,6 +2947,227 @@ ixgbe_clear_rss_filter(struct rte_eth_dev *dev)
 
 	if (filter_info->rss_info.conf.queue_num)
 		ixgbe_config_rss_filter(dev, &filter_info->rss_info, FALSE);
+}
+
+static int
+ixgbe_flow_parse_mirror_attr_pattern(struct rte_eth_dev *dev,
+				    const struct rte_flow_attr *attr,
+				    const struct rte_flow_item pattern[],
+				    struct rte_flow_error *error,
+				    struct ixgbe_flow_mirror_conf *conf)
+{
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	const struct rte_flow_item *item = pattern;
+	const struct rte_flow_item *next_item = pattern + 1;
+	enum rte_flow_item_type item_type, next_item_type;
+	const struct rte_flow_item_vf *vf_spec, *vf_mask, *vf_last;
+	const struct rte_flow_item_vlan *vlan_spec, *vlan_mask, *vlan_last;
+	struct ixgbe_flow_mirror_conf *mirror_config = conf;
+	uint16_t vf_id, vf_id_last;
+	uint16_t vlan_id, vlan_id_mask, vlan_id_last;
+	uint16_t i, j = 0, k = 0;
+
+	if (attr->priority) {
+		rte_flow_error_set(error, EINVAL,
+				   RTE_FLOW_ERROR_TYPE_ATTR_PRIORITY,
+				   attr, "Not support priority.");
+		return -rte_errno;
+	}
+	if (attr->group) {
+		rte_flow_error_set(error, EINVAL,
+				   RTE_FLOW_ERROR_TYPE_ATTR_GROUP,
+				   attr, "Not support group.");
+		return -rte_errno;
+	}
+	if (attr->transfer) {
+		rte_flow_error_set(error, EINVAL,
+				   RTE_FLOW_ERROR_TYPE_ATTR_TRANSFER,
+				   attr, "Not support group.");
+		return -rte_errno;
+	}
+
+	item_type = item->type;
+	next_item_type = next_item->type;
+	if (!(next_item_type == RTE_FLOW_ITEM_TYPE_END &&
+	      (item_type == RTE_FLOW_ITEM_TYPE_PF ||
+	       item_type == RTE_FLOW_ITEM_TYPE_VF ||
+	       item_type == RTE_FLOW_ITEM_TYPE_VLAN))) {
+		rte_flow_error_set(error, EINVAL,
+				   RTE_FLOW_ERROR_TYPE_ITEM,
+				   item,
+				   "Only support pf or vf or vlan pattern.");
+		return -rte_errno;
+	}
+	if (item_type == RTE_FLOW_ITEM_TYPE_PF) {
+		if (!attr->ingress && attr->egress) {
+			mirror_config->rule_type = IXGBE_MRCTL_DPME;
+		} else if (attr->ingress && !attr->egress) {
+			mirror_config->rule_type = IXGBE_MRCTL_UPME;
+		} else {
+			rte_flow_error_set(error, EINVAL,
+					   RTE_FLOW_ERROR_TYPE_ATTR,
+					   attr,
+					   "Only support ingress or egress attribute PF mirror.");
+			return -rte_errno;
+		}
+	} else if (item_type == RTE_FLOW_ITEM_TYPE_VF) {
+		if (attr->ingress && !attr->egress) {
+			mirror_config->rule_type = IXGBE_MRCTL_VPME;
+		} else {
+			rte_flow_error_set(error, EINVAL,
+					   RTE_FLOW_ERROR_TYPE_ATTR,
+					   attr,
+					   "Only support ingress attribute for VF mirror.");
+			return -rte_errno;
+		}
+
+		vf_spec = item->spec;
+		vf_last = item->last;
+		vf_mask = item->mask;
+		if (item->spec || item->last) {
+			vf_id = (vf_spec ? vf_spec->id : 0);
+			vf_id_last = (vf_last ? vf_last->id : vf_id);
+			if (vf_id >= pci_dev->max_vfs ||
+			    vf_id_last >= pci_dev->max_vfs ||
+			    vf_id_last < vf_id) {
+				rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ITEM_SPEC,
+					item,
+					"VF ID is out of range.");
+				return -rte_errno;
+			}
+			mirror_config->pool_mask = 0;
+			for (i = vf_id, k = 0; i <= vf_id_last; i++, k++)
+				if (!vf_mask || (vf_mask->id & (1 << k)))
+					mirror_config->pool_mask |= (1ULL << i);
+		} else if (item->mask) {
+			if (vf_mask->id >= (uint32_t)(1 << pci_dev->max_vfs)) {
+				rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ITEM_MASK,
+					item,
+					"VF ID mask is out of range.");
+				return -rte_errno;
+			}
+			mirror_config->pool_mask = vf_mask->id;
+		}
+	} else if (item_type == RTE_FLOW_ITEM_TYPE_VLAN) {
+		if (attr->ingress && !attr->egress) {
+			mirror_config->rule_type = IXGBE_MRCTL_VLME;
+		} else {
+			rte_flow_error_set(error, EINVAL,
+					   RTE_FLOW_ERROR_TYPE_ATTR,
+					   attr,
+					   "Only support ingress attribute for VLAN mirror.");
+			return -rte_errno;
+		}
+
+		vlan_spec = item->spec;
+		vlan_last = item->last;
+		vlan_mask = item->mask;
+		if (item->spec || item->last) {
+			vlan_id =  GET_VLAN_ID_FROM_TCI(vlan_spec, 0);
+			vlan_id_last = GET_VLAN_ID_FROM_TCI(vlan_last, vlan_id);
+			vlan_id_mask = GET_VLAN_ID_FROM_TCI(vlan_mask, 0x0fff);
+
+			if (vlan_id >= ETH_MIRROR_MAX_VLANS ||
+			    vlan_id_last >= ETH_MIRROR_MAX_VLANS ||
+			    vlan_id_last < vlan_id) {
+				rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ITEM_SPEC,
+					item,
+					"VLAN ID is out of range.");
+				return -rte_errno;
+			}
+			for (i = vlan_id; i <= vlan_id_last; i++, k++)
+				if (vlan_id_mask & (1 << k))
+					mirror_config->vlan_id[j++] = i;
+
+			mirror_config->vlan_mask = (1 << j) - 1;
+		} else if (item->mask) {
+			vlan_id_mask = GET_VLAN_ID_FROM_TCI(vlan_mask, 0);
+			for (i = 0; i < ETH_MIRROR_MAX_VLANS; i++) {
+				if (vlan_id_mask & (1 << i))
+					mirror_config->vlan_id[j++] = i;
+			}
+			mirror_config->vlan_mask = (1 << j) - 1;
+		}
+	}
+
+	return 0;
+}
+
+static int
+ixgbe_flow_parse_mirror_action(struct rte_eth_dev *dev,
+			      const struct rte_flow_action *actions,
+			      struct rte_flow_error *error,
+			      struct ixgbe_flow_mirror_conf *conf)
+{
+	const struct rte_flow_action *act;
+	const struct rte_flow_action_vf *act_q;
+	struct ixgbe_flow_mirror_conf *mirror_config = conf;
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	uint32_t index = 0;
+
+	NEXT_ITEM_OF_ACTION(act, actions, index);
+	if (act->type != RTE_FLOW_ACTION_TYPE_MIRROR) {
+		rte_flow_error_set(error, EINVAL,
+			RTE_FLOW_ERROR_TYPE_ACTION, act,
+			"Not supported parameter.");
+		return -rte_errno;
+	}
+
+	index++;
+	NEXT_ITEM_OF_ACTION(act, actions, index);
+	if (act->type == RTE_FLOW_ACTION_TYPE_PF) {
+		mirror_config->dst_pool = pci_dev->max_vfs;
+	} else if (act->type == RTE_FLOW_ACTION_TYPE_VF) {
+		act_q = act->conf;
+		if (act_q->id >= pci_dev->max_vfs) {
+			rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ACTION_CONF, act,
+				"Invalid VF ID for mirror action");
+			return -rte_errno;
+		}
+		mirror_config->dst_pool = act_q->id;
+	} else {
+		rte_flow_error_set(error, EINVAL,
+			RTE_FLOW_ERROR_TYPE_ACTION, act,
+			"Only support a parameter that is pf or vf.");
+		return -rte_errno;
+	}
+
+	/* Check if the next non-void item is END */
+	index++;
+	NEXT_ITEM_OF_ACTION(act, actions, index);
+	if (act->type != RTE_FLOW_ACTION_TYPE_END) {
+		rte_flow_error_set(error, EINVAL,
+			RTE_FLOW_ERROR_TYPE_ACTION, act,
+			"Only support a action item that is pf or vf.");
+		return -rte_errno;
+	}
+
+	return 0;
+}
+
+static int
+ixgbe_parse_mirror_filter(struct rte_eth_dev *dev,
+			  const struct rte_flow_attr *attr,
+			  const struct rte_flow_item pattern[],
+			  const struct rte_flow_action actions[],
+			  struct ixgbe_flow_mirror_conf *conf,
+			  struct rte_flow_error *error)
+{
+	int ret;
+
+	ret = ixgbe_flow_parse_mirror_attr_pattern(dev,
+						   attr,
+						   pattern,
+						   error,
+						   conf);
+	if (ret)
+		return ret;
+
+	return ixgbe_flow_parse_mirror_action(dev, actions, error, conf);
 }
 
 void
