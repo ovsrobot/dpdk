@@ -1911,6 +1911,7 @@ i40e_dev_configure(struct rte_eth_dev *dev)
 	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	enum rte_eth_rx_mq_mode mq_mode = dev->data->dev_conf.rxmode.mq_mode;
+	uint32_t frame_size = dev->data->mtu + I40E_ETH_OVERHEAD;
 	int i, ret;
 
 	ret = i40e_dev_sync_phy_type(hw);
@@ -1924,6 +1925,16 @@ i40e_dev_configure(struct rte_eth_dev *dev)
 	ad->rx_vec_allowed = true;
 	ad->tx_simple_allowed = true;
 	ad->tx_vec_allowed = true;
+
+	/**
+	 * Reset the max frame size via mtu_set ops if preset max frame
+	 * cannot hold MTU data and Ether overhead.
+	 */
+	if (frame_size > dev->data->dev_conf.rxmode.max_rx_pkt_len) {
+		ret = i40e_dev_mtu_set(dev, dev->data->mtu);
+		if (ret != 0)
+			return ret;
+	}
 
 	if (dev->data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG)
 		dev->data->dev_conf.rxmode.offloads |= DEV_RX_OFFLOAD_RSS_HASH;
