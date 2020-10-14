@@ -2271,7 +2271,7 @@ int rte_eth_dev_start(uint16_t port_id);
  * @param port_id
  *   The port identifier of the Ethernet device.
  */
-void rte_eth_dev_stop(uint16_t port_id);
+int rte_eth_dev_stop(uint16_t port_id);
 
 /**
  * Link up an Ethernet device.
