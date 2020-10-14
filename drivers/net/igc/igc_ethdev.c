@@ -337,11 +337,22 @@ static int
 eth_igc_configure(struct rte_eth_dev *dev)
 {
 	struct igc_interrupt *intr = IGC_DEV_PRIVATE_INTR(dev);
+	uint32_t frame_size = dev->data->mtu + IGC_ETH_OVERHEAD;
 	int ret;
 
 	PMD_INIT_FUNC_TRACE();
 
-	ret  = igc_check_mq_mode(dev);
+	/**
+	 * Reset the max frame size via mtu_set ops if preset max frame
+	 * cannot hold MTU data and Ether overhead.
+	 */
+	if (frame_size > dev->data->dev_conf.rxmode.max_rx_pkt_len) {
+		ret = eth_igc_mtu_set(dev, dev->data->mtu);
+		if (ret != 0)
+			return ret;
+	}
+
+	ret = igc_check_mq_mode(dev);
 	if (ret != 0)
 		return ret;
 
