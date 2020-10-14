@@ -232,6 +232,7 @@ EXPERIMENTAL {
 	rte_eth_fec_get_capability;
 	rte_eth_fec_get;
 	rte_eth_fec_set;
+	rte_eth_get_wake_addr;
 };
 
 INTERNAL {

@@ -4845,6 +4845,29 @@ rte_eth_tx_burst_mode_get(uint16_t port_id, uint16_t queue_id,
 }
 
 int
+rte_eth_get_wake_addr(uint16_t port_id, uint16_t queue_id,
+		volatile void **wake_addr, uint64_t *expected, uint64_t *mask,
+		uint8_t *data_sz)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+
+	dev = &rte_eth_devices[port_id];
+
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->get_wake_addr, -ENOTSUP);
+
+	if (queue_id >= dev->data->nb_tx_queues) {
+		RTE_ETHDEV_LOG(ERR, "Invalid TX queue_id=%u\n", queue_id);
+		return -EINVAL;
+	}
+
+	return eth_err(port_id,
+		dev->dev_ops->get_wake_addr(dev->data->rx_queues[queue_id],
+			wake_addr, expected, mask, data_sz));
+}
+
+int
 rte_eth_dev_set_mc_addr_list(uint16_t port_id,
 			     struct rte_ether_addr *mc_addr_set,
 			     uint32_t nb_mc_addr)

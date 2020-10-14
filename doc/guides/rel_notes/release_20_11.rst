@@ -71,7 +71,13 @@ New Features
 * **Added the FEC API, for a generic FEC query and config.**
 
   Added the FEC API which provides functions for query FEC capabilities and
-  current FEC mode from device. Also, API for configuring FEC mode is also provided.
+  current FEC mode from device. Also, API for configuring FEC mode is also
+  provided.
+
+* **ethdev: add 1 new EXPERIMENTAL API for PMD power management.**
+
+  * ``rte_eth_get_wake_addr()``
+  * add new eth_dev_ops ``get_wake_addr``
 
 * **Updated Broadcom bnxt driver.**
 
