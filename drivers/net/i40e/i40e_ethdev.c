@@ -332,12 +332,6 @@ static int i40e_dev_sync_phy_type(struct i40e_hw *hw);
 static void i40e_configure_registers(struct i40e_hw *hw);
 static void i40e_hw_init(struct rte_eth_dev *dev);
 static int i40e_config_qinq(struct i40e_hw *hw, struct i40e_vsi *vsi);
-static enum i40e_status_code i40e_aq_del_mirror_rule(struct i40e_hw *hw,
-						     uint16_t seid,
-						     uint16_t rule_type,
-						     uint16_t *entries,
-						     uint16_t count,
-						     uint16_t rule_id);
 static int i40e_mirror_rule_set(struct rte_eth_dev *dev,
 			struct rte_eth_mirror_conf *mirror_conf,
 			uint8_t sw_id, uint8_t on);
@@ -1743,6 +1737,9 @@ eth_i40e_dev_init(struct rte_eth_dev *dev, void *init_params __rte_unused)
 
 	/* initialize RSS rule list */
 	TAILQ_INIT(&pf->rss_config_list);
+
+	/* initialize mirror filter list */
+	TAILQ_INIT(&pf->mirror_filter_list);
 
 	/* initialize Traffic Manager configuration */
 	i40e_tm_conf_init(dev);
@@ -10993,7 +10990,7 @@ i40e_config_qinq(struct i40e_hw *hw, struct i40e_vsi *vsi)
  * Add a mirror rule for a given veb.
  *
  **/
-static enum i40e_status_code
+enum i40e_status_code
 i40e_aq_add_mirror_rule(struct i40e_hw *hw,
 			uint16_t seid, uint16_t dst_id,
 			uint16_t rule_type, uint16_t *entries,
@@ -11044,7 +11041,7 @@ i40e_aq_add_mirror_rule(struct i40e_hw *hw,
  * Delete a mirror rule for a given veb.
  *
  **/
-static enum i40e_status_code
+enum i40e_status_code
 i40e_aq_del_mirror_rule(struct i40e_hw *hw,
 		uint16_t seid, uint16_t rule_type, uint16_t *entries,
 		uint16_t count, uint16_t rule_id)

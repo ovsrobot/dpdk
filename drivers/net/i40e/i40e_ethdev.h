@@ -1065,6 +1065,30 @@ struct i40e_rss_filter {
 	struct i40e_rte_flow_rss_conf rss_filter_info;
 };
 
+/**
+ * Mirror rule configuration
+ */
+struct i40e_mirror_rule_conf {
+	uint8_t  rule_type;
+	uint16_t rule_id;       /* the rule id assigned by firmware */
+	uint16_t dst_vsi_seid;  /* destination vsi for this mirror rule. */
+	uint16_t num_entries;
+	/**
+	 * the info stores depend on the rule type.
+	 * If type is I40E_MIRROR_TYPE_VLAN, vlan ids are stored here.
+	 *  If type is I40E_MIRROR_TYPE_VPORT_*, vsi's seid are stored.
+	 */
+	uint16_t entries[I40E_MIRROR_MAX_ENTRIES_PER_RULE];
+};
+
+TAILQ_HEAD(i40e_mirror_filter_list, i40e_mirror_filter);
+
+/* Mirror rule list structure */
+struct i40e_mirror_filter {
+	TAILQ_ENTRY(i40e_mirror_filter) next;
+	struct i40e_mirror_rule_conf conf;
+};
+
 struct i40e_vf_msg_cfg {
 	/* maximal VF message during a statistic period */
 	uint32_t max_msg;
@@ -1135,6 +1159,7 @@ struct i40e_pf {
 	struct i40e_tunnel_rule tunnel; /* Tunnel filter rule */
 	struct i40e_rte_flow_rss_conf rss_info; /* RSS info */
 	struct i40e_rss_conf_list rss_config_list; /* RSS rule list */
+	struct i40e_mirror_filter_list mirror_filter_list;
 	struct i40e_queue_regions queue_region; /* queue region info */
 	struct i40e_fc_conf fc_conf; /* Flow control conf */
 	struct i40e_mirror_rule_list mirror_list;
@@ -1299,6 +1324,7 @@ union i40e_filter_t {
 	struct rte_eth_tunnel_filter_conf tunnel_filter;
 	struct i40e_tunnel_filter_conf consistent_tunnel_filter;
 	struct i40e_rte_flow_rss_conf rss_conf;
+	struct i40e_mirror_rule_conf mirror_conf;
 };
 
 typedef int (*parse_filter_t)(struct rte_eth_dev *dev,
@@ -1456,6 +1482,14 @@ int i40e_config_rss_filter(struct i40e_pf *pf,
 		struct i40e_rte_flow_rss_conf *conf, bool add);
 int i40e_vf_representor_init(struct rte_eth_dev *ethdev, void *init_params);
 int i40e_vf_representor_uninit(struct rte_eth_dev *ethdev);
+
+enum i40e_status_code i40e_aq_add_mirror_rule(struct i40e_hw *hw,
+		uint16_t seid, uint16_t dst_id,
+		uint16_t rule_type, uint16_t *entries,
+		uint16_t count, uint16_t *rule_id);
+enum i40e_status_code i40e_aq_del_mirror_rule(struct i40e_hw *hw,
+		uint16_t seid, uint16_t rule_type, uint16_t *entries,
+		uint16_t count, uint16_t rule_id);
 
 #define I40E_DEV_TO_PCI(eth_dev) \
 	RTE_DEV_TO_PCI((eth_dev)->device)
