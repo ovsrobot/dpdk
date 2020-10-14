@@ -3096,6 +3096,7 @@ ice_dev_configure(struct rte_eth_dev *dev)
 	struct ice_adapter *ad =
 		ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct ice_pf *pf = ICE_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	uint32_t frame_size = dev->data->mtu + ICE_ETH_OVERHEAD;
 	int ret;
 
 	/* Initialize to TRUE. If any of Rx queues doesn't meet the
@@ -3106,6 +3107,16 @@ ice_dev_configure(struct rte_eth_dev *dev)
 
 	if (dev->data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG)
 		dev->data->dev_conf.rxmode.offloads |= DEV_RX_OFFLOAD_RSS_HASH;
+
+	/**
+	 * Reset the max frame size via mtu_set ops if preset max frame
+	 * cannot hold MTU data and Ether overhead.
+	 */
+	if (frame_size > dev->data->dev_conf.rxmode.max_rx_pkt_len) {
+		ret = ice_mtu_set(dev, dev->data->mtu);
+		if (ret != 0)
+			return ret;
+	}
 
 	ret = ice_init_rss(pf);
 	if (ret) {
