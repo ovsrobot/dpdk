@@ -46,8 +46,7 @@ for dump in $(find $refdir -name "*.dump"); do
 	fi
 	dump2=$(find $newdir -name $name)
 	if [ -z "$dump2" ] || [ ! -e "$dump2" ]; then
-		echo "Error: can't find $name in $newdir"
-		error=1
+		echo "WARNING: can't find $name in $newdir, are you building with all dependencies?"
 		continue
 	fi
 	abidiff $ABIDIFF_OPTIONS $dump $dump2 || {
