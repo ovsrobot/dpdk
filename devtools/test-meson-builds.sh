@@ -1,11 +1,73 @@
 #! /bin/sh -e
 # SPDX-License-Identifier: BSD-3-Clause
-# Copyright(c) 2018 Intel Corporation
+# Copyright(c) 2018-2020 Intel Corporation
 
 # Run meson to auto-configure the various builds.
 # * all builds get put in a directory whose name starts with "build-"
 # * if a build-directory already exists we assume it was properly configured
 # Run ninja after configuration is done.
+
+# Get arguments
+usage()
+{
+	echo "Usage: $0
+	      [-b <build directory>]
+	      [-a <dpdk tag or latest for abi check>]
+	      [-u <uri for abi references>]
+	      [-d <directory for abi references>]" 1>&2; exit 1;
+}
+
+# Placeholder default uri
+DPDK_ABI_DEFAULT_URI="http://abi-ref.dpdk.org"
+
+while getopts "a:u:d:b:h" arg; do
+	case $arg in
+	a)
+		if [ -n "$DPDK_ABI_REF_VERSION" ]; then
+			echo "DPDK_ABI_REF_VERSION and -a cannot both be set"
+			exit 1
+		fi
+		DPDK_ABI_REF_VERSION=${OPTARG} ;;
+	u)
+		if [ -n "$DPDK_ABI_TAR_URI" ]; then
+			echo "DPDK_ABI_TAR_URI and -u cannot both be set"
+			exit 1
+		fi
+		DPDK_ABI_TAR_URI=${OPTARG} ;;
+	d)
+		if [ -n "$DPDK_ABI_REF_DIR" ]; then
+			echo "DPDK_ABI_REF_DIR and -d cannot both be set"
+			exit 1
+		fi
+		DPDK_ABI_REF_DIR=${OPTARG} ;;
+	b)
+		if [ -n "$DPDK_BUILD_TEST_DIR" ]; then
+			echo "DPDK_BUILD_TEST_DIR and -a cannot both be set"
+			exit 1
+		fi
+		DPDK_BUILD_TEST_DIR=${OPTARG} ;;
+	h)
+		usage ;;
+	*)
+		usage ;;
+	esac
+done
+
+if [ -n "$DPDK_ABI_REF_VERSION" ] ; then
+	if [ "$DPDK_ABI_REF_VERSION" = "latest" ] ; then
+		DPDK_ABI_REF_VERSION=$(git ls-remote --tags http://dpdk.org/git/dpdk |
+	        	sed "s/.*\///" | grep -v "r\|{}" |
+			grep '^[^.]*.[^.]*$' | tail -n 1)
+	elif [ -z "$(git ls-remote http://dpdk.org/git/dpdk refs/tags/$DPDK_ABI_REF_VERSION)" ] ; then
+		echo "$DPDK_ABI_REF_VERSION is not a valid DPDK tag"
+		exit 1
+	fi
+fi
+if [ -z $DPDK_ABI_TAR_URI ] ; then
+	DPDK_ABI_TAR_URI=$DPDK_ABI_DEFAULT_URI
+fi
+# allow the generation script to override value with env var
+abi_checks_done=${DPDK_ABI_GEN_REF:-0}
 
 # set pipefail option if possible
 PIPEFAIL=""
@@ -16,7 +78,11 @@ srcdir=$(dirname $(readlink -f $0))/..
 
 MESON=${MESON:-meson}
 use_shared="--default-library=shared"
-builds_dir=${DPDK_BUILD_TEST_DIR:-.}
+builds_dir=${DPDK_BUILD_TEST_DIR:-$srcdir/builds}
+# ensure path is absolute meson returns error when some paths are relative
+if echo "$builds_dir" | grep -qv '^/'; then
+        builds_dir=$srcdir/$builds_dir
+fi
 
 if command -v gmake >/dev/null 2>&1 ; then
 	MAKE=gmake
@@ -123,6 +189,72 @@ install_target () # <builddir> <installdir>
 	fi
 }
 
+abi_gen_check () # no options
+{
+	abirefdir=${DPDK_ABI_REF_DIR:-$builds_dir/__reference}/$DPDK_ABI_REF_VERSION
+	mkdir -p $abirefdir
+	# ensure path is absolute meson returns error when some are relative
+	if echo "$abirefdir" | grep -qv '^/'; then
+		abirefdir=$srcdir/$abirefdir
+	fi
+	if [ ! -d $abirefdir/$targetdir ]; then
+
+		# try to get abi reference
+		if echo "$DPDK_ABI_TAR_URI" | grep -q '^http'; then
+			if [ $abi_checks_done -gt -1 ]; then
+				if curl --head --fail --silent \
+					"$DPDK_ABI_TAR_URI/$DPDK_ABI_REF_VERSION/$targetdir.tar.gz" \
+					>/dev/null; then
+					curl -o $abirefdir/$targetdir.tar.gz \
+					$DPDK_ABI_TAR_URI/$DPDK_ABI_REF_VERSION/$targetdir.tar.gz
+				fi
+			fi
+		elif [ $abi_checks_done -gt -1 ]; then
+			if [ -f "$DPDK_ABI_TAR_URI/$targetdir.tar.gz" ]; then
+				cp $DPDK_ABI_TAR_URI/$targetdir.tar.gz \
+					$abirefdir/
+			fi
+		fi
+		if [ -f "$abirefdir/$targetdir.tar.gz" ]; then
+			tar -xf $abirefdir/$targetdir.tar.gz \
+				-C $abirefdir >/dev/null
+			rm -rf $abirefdir/$targetdir.tar.gz
+		# if no reference can be found then generate one
+		else
+			# clone current sources
+			if [ ! -d $abirefdir/src ]; then
+				git clone --local --no-hardlinks \
+					  --single-branch \
+					  -b $DPDK_ABI_REF_VERSION \
+					  $srcdir $abirefdir/src
+			fi
+
+			rm -rf $abirefdir/build
+			config $abirefdir/src $abirefdir/build $cross \
+			       -Dexamples= $*
+			compile $abirefdir/build
+			install_target $abirefdir/build $abirefdir/$targetdir
+			$srcdir/devtools/gen-abi.sh $abirefdir/$targetdir
+
+			# save disk space by removing static libs and apps
+			find $abirefdir/$targetdir/usr/local -name '*.a' -delete
+			rm -rf $abirefdir/$targetdir/usr/local/bin
+			rm -rf $abirefdir/$targetdir/usr/local/share
+			rm -rf $abirefdir/$targetdir/usr/local/lib
+		fi
+	fi
+
+	install_target $builds_dir/$targetdir \
+		$(readlink -f $builds_dir/$targetdir/install)
+	$srcdir/devtools/gen-abi.sh \
+		$(readlink -f $builds_dir/$targetdir/install)
+	# check abi if not generating references
+	if [ -z $DPDK_ABI_GEN_REF ] ; then
+		$srcdir/devtools/check-abi.sh $abirefdir/$targetdir \
+			$(readlink -f $builds_dir/$targetdir/install)
+	fi
+}
+
 build () # <directory> <target compiler | cross file> <meson options>
 {
 	targetdir=$1
@@ -142,36 +274,9 @@ build () # <directory> <target compiler | cross file> <meson options>
 	load_env $targetcc || return 0
 	config $srcdir $builds_dir/$targetdir $cross --werror $*
 	compile $builds_dir/$targetdir
-	if [ -n "$DPDK_ABI_REF_VERSION" ]; then
-		abirefdir=${DPDK_ABI_REF_DIR:-reference}/$DPDK_ABI_REF_VERSION
-		if [ ! -d $abirefdir/$targetdir ]; then
-			# clone current sources
-			if [ ! -d $abirefdir/src ]; then
-				git clone --local --no-hardlinks \
-					--single-branch \
-					-b $DPDK_ABI_REF_VERSION \
-					$srcdir $abirefdir/src
-			fi
-
-			rm -rf $abirefdir/build
-			config $abirefdir/src $abirefdir/build $cross \
-				-Dexamples= $*
-			compile $abirefdir/build
-			install_target $abirefdir/build $abirefdir/$targetdir
-			$srcdir/devtools/gen-abi.sh $abirefdir/$targetdir
-
-			# save disk space by removing static libs and apps
-			find $abirefdir/$targetdir/usr/local -name '*.a' -delete
-			rm -rf $abirefdir/$targetdir/usr/local/bin
-			rm -rf $abirefdir/$targetdir/usr/local/share
-		fi
-
-		install_target $builds_dir/$targetdir \
-			$(readlink -f $builds_dir/$targetdir/install)
-		$srcdir/devtools/gen-abi.sh \
-			$(readlink -f $builds_dir/$targetdir/install)
-		$srcdir/devtools/check-abi.sh $abirefdir/$targetdir \
-			$(readlink -f $builds_dir/$targetdir/install)
+	if [ -n "$DPDK_ABI_REF_VERSION" ] && [ $abi_checks_done -lt 1 ] ; then
+		abi_gen_check
+		abi_checks_done=$((abi_checks_done+1))
 	fi
 }
 
@@ -189,7 +294,7 @@ fi
 # shared and static linked builds with gcc and clang
 for c in gcc clang ; do
 	command -v $c >/dev/null 2>&1 || continue
-	for s in static shared ; do
+	for s in shared static ; do
 		export CC="$CCACHE $c"
 		build build-$c-$s $c --default-library=$s
 		unset CC
@@ -211,6 +316,8 @@ build build-x86-mingw $srcdir/config/x86/cross-mingw -Dexamples=helloworld
 
 # generic armv8a with clang as host compiler
 f=$srcdir/config/arm/arm64_armv8_linux_gcc
+# run abi checks with 1 arm build
+abi_checks_done=$((abi_checks_done-1))
 export CC="clang"
 build build-arm64-host-clang $f $use_shared
 unset CC
@@ -231,7 +338,7 @@ done
 build_path=$(readlink -f $builds_dir/build-x86-default)
 export DESTDIR=$build_path/install
 # No need to reinstall if ABI checks are enabled
-if [ -z "$DPDK_ABI_REF_VERSION" ]; then
+if [ -z "$DPDK_ABI_REF_VERSION" ] ; then
 	install_target $build_path $DESTDIR
 fi
 
