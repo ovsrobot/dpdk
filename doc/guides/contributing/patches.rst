@@ -470,10 +470,9 @@ The script internally checks for dependencies, then builds for several
 combinations of compilation configuration.
 By default, each build will be put in a subfolder of the current working directory.
 However, if it is preferred to place the builds in a different location,
-the environment variable ``DPDK_BUILD_TEST_DIR`` can be set to that desired location.
-For example, setting ``DPDK_BUILD_TEST_DIR=__builds`` will put all builds
-in a single subfolder called "__builds" created in the current directory.
-Setting ``DPDK_BUILD_TEST_DIR`` to an absolute directory path e.g. ``/tmp`` is also supported.
+the environment variable ``DPDK_BUILD_TEST_DIR`` or the command line argument ``-b``
+can be set to that desired location.
+Environmental variables can also be specified in ``.config/dpdk/devel.config``.
 
 
 .. _integrated_abi_check:
@@ -483,14 +482,17 @@ Checking ABI compatibility
 
 By default, ABI compatibility checks are disabled.
 
-To enable them, a reference version must be selected via the environment
-variable ``DPDK_ABI_REF_VERSION``.
+To enable ABI checks the required reference version must be set using either the
+environment variable ``DPDK_ABI_REF_VERSION`` or the command line argument ``-a``.
+The tag ``latest`` is supported, which will select the latest quarterly release.
+e.g. ``./devtools/test-meson-builds.sh -a latest``.
 
-The ``devtools/test-build.sh`` and ``devtools/test-meson-builds.sh`` scripts
-then build this reference version in a temporary directory and store the
-results in a subfolder of the current working directory.
-The environment variable ``DPDK_ABI_REF_DIR`` can be set so that the results go
-to a different location.
+The ``devtools/test-meson-builds.sh`` script will then either build this reference version
+or download a cached version when available in a temporary directory and store the results
+in a subfolder of the current working directory.
+The environment variable ``DPDK_ABI_REF_DIR`` or the argument ``-d`` can be set so that
+the results go to a different location.
+Environmental variables can also be specified in ``.config/dpdk/devel.config``.
 
 
 Sending Patches
