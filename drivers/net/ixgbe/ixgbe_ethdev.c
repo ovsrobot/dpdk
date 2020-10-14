@@ -142,13 +142,13 @@ static int ixgbe_fdir_filter_uninit(struct rte_eth_dev *eth_dev);
 static int ixgbe_l2_tn_filter_init(struct rte_eth_dev *eth_dev);
 static int ixgbe_l2_tn_filter_uninit(struct rte_eth_dev *eth_dev);
 static int ixgbe_ntuple_filter_uninit(struct rte_eth_dev *eth_dev);
-static int  ixgbe_dev_configure(struct rte_eth_dev *dev);
-static int  ixgbe_dev_start(struct rte_eth_dev *dev);
-static void ixgbe_dev_stop(struct rte_eth_dev *dev);
-static int  ixgbe_dev_set_link_up(struct rte_eth_dev *dev);
-static int  ixgbe_dev_set_link_down(struct rte_eth_dev *dev);
-static int  ixgbe_dev_close(struct rte_eth_dev *dev);
-static int  ixgbe_dev_reset(struct rte_eth_dev *dev);
+static int ixgbe_dev_configure(struct rte_eth_dev *dev);
+static int ixgbe_dev_start(struct rte_eth_dev *dev);
+static int ixgbe_dev_stop(struct rte_eth_dev *dev);
+static int ixgbe_dev_set_link_up(struct rte_eth_dev *dev);
+static int ixgbe_dev_set_link_down(struct rte_eth_dev *dev);
+static int ixgbe_dev_close(struct rte_eth_dev *dev);
+static int ixgbe_dev_reset(struct rte_eth_dev *dev);
 static int ixgbe_dev_promiscuous_enable(struct rte_eth_dev *dev);
 static int ixgbe_dev_promiscuous_disable(struct rte_eth_dev *dev);
 static int ixgbe_dev_allmulticast_enable(struct rte_eth_dev *dev);
@@ -250,7 +250,7 @@ static int  ixgbevf_dev_configure(struct rte_eth_dev *dev);
 static int  ixgbevf_dev_start(struct rte_eth_dev *dev);
 static int ixgbevf_dev_link_update(struct rte_eth_dev *dev,
 				   int wait_to_complete);
-static void ixgbevf_dev_stop(struct rte_eth_dev *dev);
+static int ixgbevf_dev_stop(struct rte_eth_dev *dev);
 static int ixgbevf_dev_close(struct rte_eth_dev *dev);
 static int  ixgbevf_dev_reset(struct rte_eth_dev *dev);
 static void ixgbevf_intr_disable(struct rte_eth_dev *dev);
@@ -2845,7 +2845,7 @@ error:
 /*
  * Stop device: disable rx and tx functions to allow for reconfiguring.
  */
-static void
+static int
 ixgbe_dev_stop(struct rte_eth_dev *dev)
 {
 	struct rte_eth_link link;
@@ -2861,7 +2861,7 @@ ixgbe_dev_stop(struct rte_eth_dev *dev)
 		IXGBE_DEV_PRIVATE_TO_TM_CONF(dev->data->dev_private);
 
 	if (hw->adapter_stopped)
-		return;
+		return 0;
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -2917,6 +2917,8 @@ ixgbe_dev_stop(struct rte_eth_dev *dev)
 	adapter->rss_reta_updated = 0;
 
 	hw->adapter_stopped = true;
+
+	return 0;
 }
 
 /*
@@ -3000,7 +3002,9 @@ ixgbe_dev_close(struct rte_eth_dev *dev)
 
 	ixgbe_pf_reset_hw(hw);
 
-	ixgbe_dev_stop(dev);
+	ret = ixgbe_dev_stop(dev);
+	if (ret != 0)
+		return ret;
 
 	ixgbe_dev_free_queues(dev);
 
@@ -5401,7 +5405,7 @@ ixgbevf_dev_start(struct rte_eth_dev *dev)
 	return 0;
 }
 
-static void
+static int
 ixgbevf_dev_stop(struct rte_eth_dev *dev)
 {
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
@@ -5410,7 +5414,7 @@ ixgbevf_dev_stop(struct rte_eth_dev *dev)
 	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
 
 	if (hw->adapter_stopped)
-		return;
+		return 0;
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -5440,6 +5444,8 @@ ixgbevf_dev_stop(struct rte_eth_dev *dev)
 	}
 
 	adapter->rss_reta_updated = 0;
+
+	return 0;
 }
 
 static int
@@ -5448,6 +5454,7 @@ ixgbevf_dev_close(struct rte_eth_dev *dev)
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	int ret;
 
 	PMD_INIT_FUNC_TRACE();
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
@@ -5455,7 +5462,9 @@ ixgbevf_dev_close(struct rte_eth_dev *dev)
 
 	ixgbe_reset_hw(hw);
 
-	ixgbevf_dev_stop(dev);
+	ret = ixgbevf_dev_stop(dev);
+	if (ret != 0)
+		return ret;
 
 	ixgbe_dev_free_queues(dev);
 

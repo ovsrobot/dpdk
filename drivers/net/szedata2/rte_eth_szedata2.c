@@ -1013,18 +1013,27 @@ err_rx:
 	return ret;
 }
 
-static void
+static int
 eth_dev_stop(struct rte_eth_dev *dev)
 {
 	uint16_t i;
 	uint16_t nb_rx = dev->data->nb_rx_queues;
 	uint16_t nb_tx = dev->data->nb_tx_queues;
+	int ret;
 
-	for (i = 0; i < nb_tx; i++)
-		eth_tx_queue_stop(dev, i);
+	for (i = 0; i < nb_tx; i++) {
+		ret = eth_tx_queue_stop(dev, i);
+		if (ret != 0)
+			return ret;
+	}
 
-	for (i = 0; i < nb_rx; i++)
-		eth_rx_queue_stop(dev, i);
+	for (i = 0; i < nb_rx; i++) {
+		ret = eth_rx_queue_stop(dev, i);
+		if (ret != 0)
+			return ret;
+	}
+
+	return 0;
 }
 
 static int
@@ -1162,11 +1171,14 @@ eth_dev_close(struct rte_eth_dev *dev)
 	uint16_t i;
 	uint16_t nb_rx = dev->data->nb_rx_queues;
 	uint16_t nb_tx = dev->data->nb_tx_queues;
+	int ret;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
-	eth_dev_stop(dev);
+	ret = eth_dev_stop(dev);
+	if (ret != 0)
+		return ret;
 
 	free(internals->sze_dev_path);
 

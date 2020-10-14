@@ -408,19 +408,21 @@ out:
  * @param dev
  *   Pointer to Ethernet device structure.
  */
-static void
+static int
 mvneta_dev_stop(struct rte_eth_dev *dev)
 {
 	struct mvneta_priv *priv = dev->data->dev_private;
 
 	if (!priv->ppio)
-		return;
+		return 0;
 
 	mvneta_dev_set_link_down(dev);
 	mvneta_flush_queues(dev);
 	neta_ppio_deinit(priv->ppio);
 
 	priv->ppio = NULL;
+
+	return 0;
 }
 
 /**
@@ -433,13 +435,16 @@ static int
 mvneta_dev_close(struct rte_eth_dev *dev)
 {
 	struct mvneta_priv *priv = dev->data->dev_private;
-	int i;
+	int i, ret;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
-	if (priv->ppio)
-		mvneta_dev_stop(dev);
+	if (priv->ppio) {
+		ret = mvneta_dev_stop(dev);
+		if (ret != 0)
+			return ret;
+	}
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		mvneta_rx_queue_release(dev->data->rx_queues[i]);

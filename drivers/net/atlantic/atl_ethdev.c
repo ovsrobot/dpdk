@@ -17,7 +17,7 @@
 static int eth_atl_dev_init(struct rte_eth_dev *eth_dev);
 static int  atl_dev_configure(struct rte_eth_dev *dev);
 static int  atl_dev_start(struct rte_eth_dev *dev);
-static void atl_dev_stop(struct rte_eth_dev *dev);
+static int atl_dev_stop(struct rte_eth_dev *dev);
 static int  atl_dev_set_link_up(struct rte_eth_dev *dev);
 static int  atl_dev_set_link_down(struct rte_eth_dev *dev);
 static int  atl_dev_close(struct rte_eth_dev *dev);
@@ -599,7 +599,7 @@ error:
 /*
  * Stop device: disable rx and tx functions to allow for reconfiguring.
  */
-static void
+static int
 atl_dev_stop(struct rte_eth_dev *dev)
 {
 	struct rte_eth_link link;
@@ -639,6 +639,8 @@ atl_dev_stop(struct rte_eth_dev *dev)
 		rte_free(intr_handle->intr_vec);
 		intr_handle->intr_vec = NULL;
 	}
+
+	return 0;
 }
 
 /*
@@ -689,6 +691,7 @@ atl_dev_close(struct rte_eth_dev *dev)
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
 	struct aq_hw_s *hw;
+	int ret;
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -697,7 +700,9 @@ atl_dev_close(struct rte_eth_dev *dev)
 
 	hw = ATL_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
-	atl_dev_stop(dev);
+	ret = atl_dev_stop(dev);
+	if (ret != 0)
+		return ret;
 
 	atl_free_queues(dev);
 

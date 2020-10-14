@@ -31,7 +31,7 @@
 
 static int iavf_dev_configure(struct rte_eth_dev *dev);
 static int iavf_dev_start(struct rte_eth_dev *dev);
-static void iavf_dev_stop(struct rte_eth_dev *dev);
+static int iavf_dev_stop(struct rte_eth_dev *dev);
 static int iavf_dev_close(struct rte_eth_dev *dev);
 static int iavf_dev_reset(struct rte_eth_dev *dev);
 static int iavf_dev_info_get(struct rte_eth_dev *dev,
@@ -531,7 +531,7 @@ err_queue:
 	return -1;
 }
 
-static void
+static int
 iavf_dev_stop(struct rte_eth_dev *dev)
 {
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
@@ -542,7 +542,7 @@ iavf_dev_stop(struct rte_eth_dev *dev)
 	PMD_INIT_FUNC_TRACE();
 
 	if (adapter->stopped == 1)
-		return;
+		return 0;
 
 	iavf_stop_queues(dev);
 
@@ -562,6 +562,8 @@ iavf_dev_stop(struct rte_eth_dev *dev)
 				  false);
 
 	adapter->stopped = 1;
+
+	return 0;
 }
 
 static int
@@ -1499,11 +1501,16 @@ iavf_dev_close(struct rte_eth_dev *dev)
 	struct iavf_adapter *adapter =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+	int ret;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
 	iavf_dev_stop(dev);
+	ret = iavf_dev_stop(dev);
+	if (ret != 0)
+		return ret;
+
 	iavf_flow_flush(dev, NULL);
 	iavf_flow_uninit(adapter);
 

@@ -45,7 +45,7 @@ enetc_dev_start(struct rte_eth_dev *dev)
 	return 0;
 }
 
-static void
+static int
 enetc_dev_stop(struct rte_eth_dev *dev)
 {
 	struct enetc_eth_hw *hw =
@@ -61,6 +61,8 @@ enetc_dev_stop(struct rte_eth_dev *dev)
 	val = enetc_port_rd(enetc_hw, ENETC_PM0_CMD_CFG);
 	enetc_port_wr(enetc_hw, ENETC_PM0_CMD_CFG,
 		      val & (~(ENETC_PM0_TX_EN | ENETC_PM0_RX_EN)));
+
+	return 0;
 }
 
 static const uint32_t *
@@ -549,12 +551,15 @@ static int
 enetc_dev_close(struct rte_eth_dev *dev)
 {
 	uint16_t i;
+	int ret;
 
 	PMD_INIT_FUNC_TRACE();
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
-	enetc_dev_stop(dev);
+	ret = enetc_dev_stop(dev);
+	if (ret != 0)
+		return ret;
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		enetc_rx_queue_release(dev->data->rx_queues[i]);

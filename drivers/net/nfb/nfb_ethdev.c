@@ -151,7 +151,7 @@ err_rx:
  * @param dev
  *   Pointer to Ethernet device structure.
  */
-static void
+static int
 nfb_eth_dev_stop(struct rte_eth_dev *dev)
 {
 	uint16_t i;
@@ -163,6 +163,8 @@ nfb_eth_dev_stop(struct rte_eth_dev *dev)
 
 	for (i = 0; i < nb_rx; i++)
 		nfb_eth_rx_queue_stop(dev, i);
+
+	return 0;
 }
 
 /**
@@ -216,11 +218,14 @@ nfb_eth_dev_close(struct rte_eth_dev *dev)
 	uint16_t i;
 	uint16_t nb_rx = dev->data->nb_rx_queues;
 	uint16_t nb_tx = dev->data->nb_tx_queues;
+	int ret;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
-	nfb_eth_dev_stop(dev);
+	ret = nfb_eth_dev_stop(dev);
+	if (ret != 0)
+		return ret;
 
 	nfb_nc_rxmac_deinit(internals->rxmac, internals->max_rxmac);
 	nfb_nc_txmac_deinit(internals->txmac, internals->max_txmac);

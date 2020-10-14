@@ -1163,7 +1163,7 @@ err:
 	return -1; /* common error code is < 0 */
 }
 
-static void qede_dev_stop(struct rte_eth_dev *eth_dev)
+static int qede_dev_stop(struct rte_eth_dev *eth_dev)
 {
 	struct qede_dev *qdev = QEDE_INIT_QDEV(eth_dev);
 	struct ecore_dev *edev = QEDE_INIT_EDEV(qdev);
@@ -1183,7 +1183,7 @@ static void qede_dev_stop(struct rte_eth_dev *eth_dev)
 
 	/* Disable vport */
 	if (qede_activate_vport(eth_dev, false))
-		return;
+		return 0;
 
 	if (qdev->enable_lro)
 		qede_enable_tpa(eth_dev, false);
@@ -1195,6 +1195,8 @@ static void qede_dev_stop(struct rte_eth_dev *eth_dev)
 	ecore_hw_stop_fastpath(edev); /* TBD - loop */
 
 	DP_INFO(edev, "Device is stopped\n");
+
+	return 0;
 }
 
 static const char * const valid_args[] = {
@@ -1549,6 +1551,7 @@ static int qede_dev_close(struct rte_eth_dev *eth_dev)
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
 	struct qede_dev *qdev = QEDE_INIT_QDEV(eth_dev);
 	struct ecore_dev *edev = QEDE_INIT_EDEV(qdev);
+	int ret;
 
 	PMD_INIT_FUNC_TRACE(edev);
 
@@ -1561,8 +1564,11 @@ static int qede_dev_close(struct rte_eth_dev *eth_dev)
 	 * by the app without reconfiguration. However, in dev_close() we
 	 * can release all the resources and device can be brought up newly
 	 */
-	if (eth_dev->data->dev_started)
-		qede_dev_stop(eth_dev);
+	if (eth_dev->data->dev_started) {
+		ret = qede_dev_stop(eth_dev);
+		if (ret != 0)
+			return ret;
+	}
 
 	if (qdev->vport_started)
 		qede_stop_vport(edev);

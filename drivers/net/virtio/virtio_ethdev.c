@@ -40,7 +40,7 @@
 static int eth_virtio_dev_uninit(struct rte_eth_dev *eth_dev);
 static int  virtio_dev_configure(struct rte_eth_dev *dev);
 static int  virtio_dev_start(struct rte_eth_dev *dev);
-static void virtio_dev_stop(struct rte_eth_dev *dev);
+static int  virtio_dev_stop(struct rte_eth_dev *dev);
 static int virtio_dev_promiscuous_enable(struct rte_eth_dev *dev);
 static int virtio_dev_promiscuous_disable(struct rte_eth_dev *dev);
 static int virtio_dev_allmulticast_enable(struct rte_eth_dev *dev);
@@ -1993,12 +1993,15 @@ err_vtpci_init:
 static int
 eth_virtio_dev_uninit(struct rte_eth_dev *eth_dev)
 {
+	int ret;
 	PMD_INIT_FUNC_TRACE();
 
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
 		return 0;
 
-	virtio_dev_stop(eth_dev);
+	ret = virtio_dev_stop(eth_dev);
+	if (ret != 0)
+		return ret;
 	virtio_dev_close(eth_dev);
 
 	eth_dev->dev_ops = NULL;
@@ -2515,7 +2518,7 @@ static void virtio_dev_free_mbufs(struct rte_eth_dev *dev)
 /*
  * Stop device: disable interrupt and mark link down
  */
-static void
+static int
 virtio_dev_stop(struct rte_eth_dev *dev)
 {
 	struct virtio_hw *hw = dev->data->dev_private;
@@ -2544,6 +2547,8 @@ virtio_dev_stop(struct rte_eth_dev *dev)
 	rte_eth_linkstatus_set(dev, &link);
 out_unlock:
 	rte_spinlock_unlock(&hw->state_lock);
+
+	return 0;
 }
 
 static int

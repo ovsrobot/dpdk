@@ -74,7 +74,7 @@
 
 static int  eth_igb_configure(struct rte_eth_dev *dev);
 static int  eth_igb_start(struct rte_eth_dev *dev);
-static void eth_igb_stop(struct rte_eth_dev *dev);
+static int  eth_igb_stop(struct rte_eth_dev *dev);
 static int  eth_igb_dev_set_link_up(struct rte_eth_dev *dev);
 static int  eth_igb_dev_set_link_down(struct rte_eth_dev *dev);
 static int eth_igb_close(struct rte_eth_dev *dev);
@@ -154,7 +154,7 @@ static int eth_igb_default_mac_addr_set(struct rte_eth_dev *dev,
 static void igbvf_intr_disable(struct e1000_hw *hw);
 static int igbvf_dev_configure(struct rte_eth_dev *dev);
 static int igbvf_dev_start(struct rte_eth_dev *dev);
-static void igbvf_dev_stop(struct rte_eth_dev *dev);
+static int igbvf_dev_stop(struct rte_eth_dev *dev);
 static int igbvf_dev_close(struct rte_eth_dev *dev);
 static int igbvf_promiscuous_enable(struct rte_eth_dev *dev);
 static int igbvf_promiscuous_disable(struct rte_eth_dev *dev);
@@ -1441,7 +1441,7 @@ error_invalid_config:
  *  global reset on the MAC.
  *
  **********************************************************************/
-static void
+static int
 eth_igb_stop(struct rte_eth_dev *dev)
 {
 	struct e1000_hw *hw = E1000_DEV_PRIVATE_TO_HW(dev->data->dev_private);
@@ -1452,7 +1452,7 @@ eth_igb_stop(struct rte_eth_dev *dev)
 		E1000_DEV_PRIVATE(dev->data->dev_private);
 
 	if (adapter->stopped)
-		return;
+		return 0;
 
 	eth_igb_rxtx_control(dev, false);
 
@@ -1497,6 +1497,8 @@ eth_igb_stop(struct rte_eth_dev *dev)
 	}
 
 	adapter->stopped = true;
+
+	return 0;
 }
 
 static int
@@ -1534,11 +1536,14 @@ eth_igb_close(struct rte_eth_dev *dev)
 	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
 	struct e1000_filter_info *filter_info =
 		E1000_DEV_PRIVATE_TO_FILTER_INFO(dev->data->dev_private);
+	int ret;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
-	eth_igb_stop(dev);
+	ret = eth_igb_stop(dev);
+	if (ret != 0)
+		return ret;
 
 	e1000_phy_hw_reset(hw);
 	igb_release_manageability(hw);
@@ -3340,7 +3345,7 @@ igbvf_dev_start(struct rte_eth_dev *dev)
 	return 0;
 }
 
-static void
+static int
 igbvf_dev_stop(struct rte_eth_dev *dev)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
@@ -3349,7 +3354,7 @@ igbvf_dev_stop(struct rte_eth_dev *dev)
 		E1000_DEV_PRIVATE(dev->data->dev_private);
 
 	if (adapter->stopped)
-		return;
+		return 0;
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -3374,6 +3379,8 @@ igbvf_dev_stop(struct rte_eth_dev *dev)
 	}
 
 	adapter->stopped = true;
+
+	return 0;
 }
 
 static int
@@ -3382,6 +3389,7 @@ igbvf_dev_close(struct rte_eth_dev *dev)
 	struct e1000_hw *hw = E1000_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct rte_ether_addr addr;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	int ret;
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -3390,7 +3398,9 @@ igbvf_dev_close(struct rte_eth_dev *dev)
 
 	e1000_reset_hw(hw);
 
-	igbvf_dev_stop(dev);
+	ret = igbvf_dev_stop(dev);
+	if (ret != 0)
+		return ret;
 
 	igb_dev_free_queues(dev);
 

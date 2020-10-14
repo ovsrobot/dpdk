@@ -827,7 +827,7 @@ hn_dev_start(struct rte_eth_dev *dev)
 	return error;
 }
 
-static void
+static int
 hn_dev_stop(struct rte_eth_dev *dev)
 {
 	struct hn_data *hv = dev->data->dev_private;
@@ -835,7 +835,7 @@ hn_dev_stop(struct rte_eth_dev *dev)
 	PMD_INIT_FUNC_TRACE();
 
 	hn_rndis_set_rxfilter(hv, 0);
-	hn_vf_stop(dev);
+	return hn_vf_stop(dev);
 }
 
 static int
@@ -1046,7 +1046,9 @@ eth_hn_dev_uninit(struct rte_eth_dev *eth_dev)
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
-	hn_dev_stop(eth_dev);
+	ret = hn_dev_stop(eth_dev);
+	if (ret != 0)
+		return ret;
 	hn_dev_close(eth_dev);
 
 	eth_dev->dev_ops = NULL;

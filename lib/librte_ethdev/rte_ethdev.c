@@ -1669,6 +1669,7 @@ int
 rte_eth_dev_stop(uint16_t port_id)
 {
 	struct rte_eth_dev *dev;
+	int ret;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
@@ -1683,10 +1684,10 @@ rte_eth_dev_stop(uint16_t port_id)
 	}
 
 	dev->data->dev_started = 0;
-	(*dev->dev_ops->dev_stop)(dev);
-	rte_ethdev_trace_stop(port_id);
+	ret = (*dev->dev_ops->dev_stop)(dev);
+	rte_ethdev_trace_stop(port_id, ret);
 
-	return 0;
+	return ret;
 }
 
 int

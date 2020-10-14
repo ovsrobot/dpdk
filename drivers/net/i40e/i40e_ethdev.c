@@ -224,7 +224,7 @@ static int eth_i40e_dev_init(struct rte_eth_dev *eth_dev, void *init_params);
 static int eth_i40e_dev_uninit(struct rte_eth_dev *eth_dev);
 static int i40e_dev_configure(struct rte_eth_dev *dev);
 static int i40e_dev_start(struct rte_eth_dev *dev);
-static void i40e_dev_stop(struct rte_eth_dev *dev);
+static int i40e_dev_stop(struct rte_eth_dev *dev);
 static int i40e_dev_close(struct rte_eth_dev *dev);
 static int  i40e_dev_reset(struct rte_eth_dev *dev);
 static int i40e_dev_promiscuous_enable(struct rte_eth_dev *dev);
@@ -2542,7 +2542,7 @@ rx_err:
 	return ret;
 }
 
-static void
+static int
 i40e_dev_stop(struct rte_eth_dev *dev)
 {
 	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
@@ -2553,7 +2553,7 @@ i40e_dev_stop(struct rte_eth_dev *dev)
 	int i;
 
 	if (hw->adapter_stopped == 1)
-		return;
+		return 0;
 
 	if (dev->data->dev_conf.intr_conf.rxq == 0) {
 		rte_eal_alarm_cancel(i40e_dev_alarm_handler, dev);
@@ -2601,6 +2601,8 @@ i40e_dev_stop(struct rte_eth_dev *dev)
 	hw->adapter_stopped = 1;
 
 	pf->adapter->rss_reta_updated = 0;
+
+	return 0;
 }
 
 static int
@@ -2628,7 +2630,9 @@ i40e_dev_close(struct rte_eth_dev *dev)
 		PMD_INIT_LOG(WARNING, "failed to free switch domain: %d", ret);
 
 
-	i40e_dev_stop(dev);
+	ret = i40e_dev_stop(dev);
+	if (ret != 0)
+		return ret;
 
 	/* Remove all mirror rules */
 	while ((p_mirror = TAILQ_FIRST(&pf->mirror_list))) {
