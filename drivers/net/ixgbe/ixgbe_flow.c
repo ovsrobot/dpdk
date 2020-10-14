@@ -117,6 +117,7 @@ static struct ixgbe_syn_filter_list filter_syn_list;
 static struct ixgbe_fdir_rule_filter_list filter_fdir_list;
 static struct ixgbe_l2_tunnel_filter_list filter_l2_tunnel_list;
 static struct ixgbe_rss_filter_list filter_rss_list;
+static struct ixgbe_mirror_filter_list filter_mirror_list;
 static struct ixgbe_flow_mem_list ixgbe_flow_list;
 
 /**
@@ -3170,6 +3171,172 @@ ixgbe_parse_mirror_filter(struct rte_eth_dev *dev,
 	return ixgbe_flow_parse_mirror_action(dev, actions, error, conf);
 }
 
+static int
+ixgbe_config_mirror_filter_add(struct rte_eth_dev *dev,
+			       struct ixgbe_flow_mirror_conf *mirror_conf)
+{
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	uint32_t mr_ctl, vlvf;
+	uint32_t mp_lsb = 0;
+	uint32_t mv_msb = 0;
+	uint32_t mv_lsb = 0;
+	uint32_t mp_msb = 0;
+	uint8_t i = 0;
+	int reg_index = 0;
+	uint64_t vlan_mask = 0;
+
+	const uint8_t pool_mask_offset = 32;
+	const uint8_t vlan_mask_offset = 32;
+	const uint8_t dst_pool_offset = 8;
+	const uint8_t rule_mr_offset  = 4;
+	const uint8_t mirror_rule_mask = 0x0F;
+
+	struct ixgbe_hw *hw =
+		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ixgbe_filter_info *filter_info =
+		IXGBE_DEV_PRIVATE_TO_FILTER_INFO(dev->data->dev_private);
+	int8_t rule_id;
+	uint8_t mirror_type = 0;
+
+	if (ixgbe_vt_check(hw) < 0)
+		return -ENOTSUP;
+
+	if (IXGBE_INVALID_MIRROR_TYPE(mirror_conf->rule_type)) {
+		PMD_DRV_LOG(ERR, "unsupported mirror type 0x%x.",
+			    mirror_conf->rule_type);
+		return -EINVAL;
+	}
+
+	rule_id = ixgbe_mirror_filter_insert(filter_info, mirror_conf);
+	if (rule_id < 0) {
+		PMD_DRV_LOG(ERR, "more than maximum mirror count(%d).",
+			    IXGBE_MAX_MIRROR_RULES);
+		return -EINVAL;
+	}
+
+
+	if (mirror_conf->rule_type & ETH_MIRROR_VLAN) {
+		mirror_type |= IXGBE_MRCTL_VLME;
+		/* Check if vlan id is valid and find conresponding VLAN ID
+		 * index in VLVF
+		 */
+		for (i = 0; i < pci_dev->max_vfs; i++)
+			if (mirror_conf->vlan_mask & (1ULL << i)) {
+				/* search vlan id related pool vlan filter
+				 * index
+				 */
+				reg_index = ixgbe_find_vlvf_slot(hw,
+						mirror_conf->vlan_id[i],
+						false);
+				if (reg_index < 0)
+					return -EINVAL;
+				vlvf = IXGBE_READ_REG(hw,
+						      IXGBE_VLVF(reg_index));
+				if ((vlvf & IXGBE_VLVF_VIEN) &&
+				    ((vlvf & IXGBE_VLVF_VLANID_MASK) ==
+				     mirror_conf->vlan_id[i])) {
+					vlan_mask |= (1ULL << reg_index);
+				} else {
+					ixgbe_mirror_filter_remove(filter_info,
+						mirror_conf->rule_id);
+					return -EINVAL;
+				}
+			}
+
+		mv_lsb = vlan_mask & 0xFFFFFFFF;
+		mv_msb = vlan_mask >> vlan_mask_offset;
+	}
+
+	/**
+	 * if enable pool mirror, write related pool mask register,if disable
+	 * pool mirror, clear PFMRVM register
+	 */
+	if (mirror_conf->rule_type & ETH_MIRROR_VIRTUAL_POOL_UP) {
+		mirror_type |= IXGBE_MRCTL_VPME;
+		mp_lsb = mirror_conf->pool_mask & 0xFFFFFFFF;
+		mp_msb = mirror_conf->pool_mask >> pool_mask_offset;
+	}
+	if (mirror_conf->rule_type & ETH_MIRROR_UPLINK_PORT)
+		mirror_type |= IXGBE_MRCTL_UPME;
+	if (mirror_conf->rule_type & ETH_MIRROR_DOWNLINK_PORT)
+		mirror_type |= IXGBE_MRCTL_DPME;
+
+	/* read  mirror control register and recalculate it */
+	mr_ctl = IXGBE_READ_REG(hw, IXGBE_MRCTL(rule_id));
+	mr_ctl |= mirror_type;
+	mr_ctl &= mirror_rule_mask;
+	mr_ctl |= mirror_conf->dst_pool << dst_pool_offset;
+
+	/* write mirrror control  register */
+	IXGBE_WRITE_REG(hw, IXGBE_MRCTL(rule_id), mr_ctl);
+
+	/* write pool mirrror control  register */
+	if (mirror_conf->rule_type & ETH_MIRROR_VIRTUAL_POOL_UP) {
+		IXGBE_WRITE_REG(hw, IXGBE_VMRVM(rule_id), mp_lsb);
+		IXGBE_WRITE_REG(hw, IXGBE_VMRVM(rule_id + rule_mr_offset),
+				mp_msb);
+	}
+	/* write VLAN mirrror control  register */
+	if (mirror_conf->rule_type & ETH_MIRROR_VLAN) {
+		IXGBE_WRITE_REG(hw, IXGBE_VMRVLAN(rule_id), mv_lsb);
+		IXGBE_WRITE_REG(hw, IXGBE_VMRVLAN(rule_id + rule_mr_offset),
+				mv_msb);
+	}
+
+	return 0;
+}
+
+/* remove the mirror filter */
+static int
+ixgbe_config_mirror_filter_del(struct rte_eth_dev *dev,
+			       struct ixgbe_flow_mirror_conf *conf)
+{
+	struct ixgbe_hw *hw =
+		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ixgbe_filter_info *filter_info =
+		IXGBE_DEV_PRIVATE_TO_FILTER_INFO(dev->data->dev_private);
+	uint8_t rule_id = conf->rule_id;
+	int mr_ctl = 0;
+	uint32_t lsb_val = 0;
+	uint32_t msb_val = 0;
+	const uint8_t rule_mr_offset = 4;
+
+	if (ixgbe_vt_check(hw) < 0)
+		return -ENOTSUP;
+
+	if (rule_id >= IXGBE_MAX_MIRROR_RULES)
+		return -EINVAL;
+
+	/* clear PFVMCTL register */
+	IXGBE_WRITE_REG(hw, IXGBE_MRCTL(rule_id), mr_ctl);
+
+	/* clear pool mask register */
+	IXGBE_WRITE_REG(hw, IXGBE_VMRVM(rule_id), lsb_val);
+	IXGBE_WRITE_REG(hw, IXGBE_VMRVM(rule_id + rule_mr_offset), msb_val);
+
+	/* clear vlan mask register */
+	IXGBE_WRITE_REG(hw, IXGBE_VMRVLAN(rule_id), lsb_val);
+	IXGBE_WRITE_REG(hw, IXGBE_VMRVLAN(rule_id + rule_mr_offset), msb_val);
+
+	ixgbe_mirror_filter_remove(filter_info, rule_id);
+	return 0;
+}
+
+static void
+ixgbe_clear_all_mirror_filter(struct rte_eth_dev *dev)
+{
+	struct ixgbe_filter_info *filter_info =
+		IXGBE_DEV_PRIVATE_TO_FILTER_INFO(dev->data->dev_private);
+	int i;
+
+	for (i = 0; i < IXGBE_MAX_MIRROR_RULES; i++) {
+		if (filter_info->mirror_mask & (1 << i)) {
+			ixgbe_config_mirror_filter_del(dev,
+				&filter_info->mirror_filters[i]);
+		}
+	}
+}
+
 void
 ixgbe_filterlist_init(void)
 {
@@ -3179,6 +3346,7 @@ ixgbe_filterlist_init(void)
 	TAILQ_INIT(&filter_fdir_list);
 	TAILQ_INIT(&filter_l2_tunnel_list);
 	TAILQ_INIT(&filter_rss_list);
+	TAILQ_INIT(&filter_mirror_list);
 	TAILQ_INIT(&ixgbe_flow_list);
 }
 
@@ -3192,6 +3360,7 @@ ixgbe_filterlist_flush(void)
 	struct ixgbe_fdir_rule_ele *fdir_rule_ptr;
 	struct ixgbe_flow_mem *ixgbe_flow_mem_ptr;
 	struct ixgbe_rss_conf_ele *rss_filter_ptr;
+	struct ixgbe_mirror_conf_ele *mirror_filter_ptr;
 
 	while ((ntuple_filter_ptr = TAILQ_FIRST(&filter_ntuple_list))) {
 		TAILQ_REMOVE(&filter_ntuple_list,
@@ -3235,6 +3404,13 @@ ixgbe_filterlist_flush(void)
 		rte_free(rss_filter_ptr);
 	}
 
+	while ((mirror_filter_ptr = TAILQ_FIRST(&filter_mirror_list))) {
+		TAILQ_REMOVE(&filter_mirror_list,
+			     mirror_filter_ptr,
+			     entries);
+		rte_free(mirror_filter_ptr);
+	}
+
 	while ((ixgbe_flow_mem_ptr = TAILQ_FIRST(&ixgbe_flow_list))) {
 		TAILQ_REMOVE(&ixgbe_flow_list,
 				 ixgbe_flow_mem_ptr,
@@ -3266,6 +3442,7 @@ ixgbe_flow_create(struct rte_eth_dev *dev,
 	struct ixgbe_hw_fdir_info *fdir_info =
 		IXGBE_DEV_PRIVATE_TO_FDIR_INFO(dev->data->dev_private);
 	struct ixgbe_rte_flow_rss_conf rss_conf;
+	struct ixgbe_flow_mirror_conf mirror_conf;
 	struct rte_flow *flow = NULL;
 	struct ixgbe_ntuple_filter_ele *ntuple_filter_ptr;
 	struct ixgbe_ethertype_filter_ele *ethertype_filter_ptr;
@@ -3273,6 +3450,7 @@ ixgbe_flow_create(struct rte_eth_dev *dev,
 	struct ixgbe_eth_l2_tunnel_conf_ele *l2_tn_filter_ptr;
 	struct ixgbe_fdir_rule_ele *fdir_rule_ptr;
 	struct ixgbe_rss_conf_ele *rss_filter_ptr;
+	struct ixgbe_mirror_conf_ele *mirror_filter_ptr;
 	struct ixgbe_flow_mem *ixgbe_flow_mem_ptr;
 	uint8_t first_mask = FALSE;
 
@@ -3495,6 +3673,32 @@ ixgbe_flow_create(struct rte_eth_dev *dev,
 		}
 	}
 
+	memset(&mirror_conf, 0, sizeof(struct ixgbe_flow_mirror_conf));
+	ret = ixgbe_parse_mirror_filter(dev, attr, pattern,
+				     actions, &mirror_conf, error);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "failed to parse mirror filter");
+		goto out;
+	}
+
+	ret = ixgbe_config_mirror_filter_add(dev, &mirror_conf);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "failed to add mirror filter");
+		goto out;
+	}
+
+	mirror_filter_ptr = rte_zmalloc("ixgbe_mirror_filter",
+				sizeof(struct ixgbe_mirror_conf_ele), 0);
+	if (!mirror_filter_ptr) {
+		PMD_DRV_LOG(ERR, "failed to allocate memory");
+		goto out;
+	}
+	mirror_filter_ptr->filter_info = mirror_conf;
+	TAILQ_INSERT_TAIL(&filter_mirror_list,
+			  mirror_filter_ptr, entries);
+	flow->rule = mirror_filter_ptr;
+	flow->filter_type = RTE_ETH_FILTER_MIRROR;
+	return flow;
 out:
 	TAILQ_REMOVE(&ixgbe_flow_list,
 		ixgbe_flow_mem_ptr, entries);
@@ -3586,6 +3790,7 @@ ixgbe_flow_destroy(struct rte_eth_dev *dev,
 	struct ixgbe_hw_fdir_info *fdir_info =
 		IXGBE_DEV_PRIVATE_TO_FDIR_INFO(dev->data->dev_private);
 	struct ixgbe_rss_conf_ele *rss_filter_ptr;
+	struct ixgbe_mirror_conf_ele *mirror_filter_ptr;
 
 	switch (filter_type) {
 	case RTE_ETH_FILTER_NTUPLE:
@@ -3665,6 +3870,17 @@ ixgbe_flow_destroy(struct rte_eth_dev *dev,
 			rte_free(rss_filter_ptr);
 		}
 		break;
+	case RTE_ETH_FILTER_MIRROR:
+		mirror_filter_ptr = (struct ixgbe_mirror_conf_ele *)
+			pmd_flow->rule;
+		ret = ixgbe_config_mirror_filter_del(dev,
+					&mirror_filter_ptr->filter_info);
+		if (!ret) {
+			TAILQ_REMOVE(&filter_mirror_list,
+				mirror_filter_ptr, entries);
+			rte_free(mirror_filter_ptr);
+		}
+		break;
 	default:
 		PMD_DRV_LOG(WARNING, "Filter type (%d) not supported",
 			    filter_type);
@@ -3717,6 +3933,7 @@ ixgbe_flow_flush(struct rte_eth_dev *dev,
 	}
 
 	ixgbe_clear_rss_filter(dev);
+	ixgbe_clear_all_mirror_filter(dev);
 
 	ixgbe_filterlist_flush();
 
