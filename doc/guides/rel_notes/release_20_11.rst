@@ -73,6 +73,12 @@ New Features
   Added the FEC API which provides functions for query FEC capabilities and
   current FEC mode from device. Also, API for configuring FEC mode is also provided.
 
+* **Introduced extended buffer description for receiving.**
+
+  Added the extended Rx buffer description for Rx queue setup routine
+  providing the individual settings for each Rx segment with maximal size,
+  buffer offset and memory pool to allocate data buffers from.
+
 * **Updated Broadcom bnxt driver.**
 
   Updated the Broadcom bnxt driver with new features and improvements, including:
@@ -284,6 +290,9 @@ API Changes
   ``rte_eth_dcb_tc_queue_mapping`` from ``uint8_t`` to ``uint16_t``.
   As the data of ``uint8_t`` will be truncated when queue number under
   a TC is greater than 256.
+
+* ethdev: Added fields rx_seg and rx_nseg to rte_eth_rxconf structure
+  to provide extended description of the receiving buffer.
 
 * vhost: Moved vDPA APIs from experimental to stable.
 

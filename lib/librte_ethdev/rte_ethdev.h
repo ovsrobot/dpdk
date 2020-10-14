@@ -970,6 +970,16 @@ struct rte_eth_txmode {
 };
 
 /**
+ * A structure used to configure an RX packet segment to split.
+ */
+struct rte_eth_rxseg {
+	struct rte_mempool *mp; /**< Memory pool to allocate segment from. */
+	uint16_t length; /**< Segment data length, configures split point. */
+	uint16_t offset; /**< Data offset from beginning of mbuf data buffer. */
+	uint32_t reserved; /**< Reserved field. */
+};
+
+/**
  * A structure used to configure an RX ring of an Ethernet port.
  */
 struct rte_eth_rxconf {
@@ -977,6 +987,43 @@ struct rte_eth_rxconf {
 	uint16_t rx_free_thresh; /**< Drives the freeing of RX descriptors. */
 	uint8_t rx_drop_en; /**< Drop packets if no descriptors are available. */
 	uint8_t rx_deferred_start; /**< Do not start queue with rte_eth_dev_start(). */
+	uint16_t rx_nseg; /**< Number of descriptions in rx_seg array. */
+	/**
+	 * Points to the array of segment descriptions. Each array element
+	 * describes the properties for each segment in the receiving
+	 * buffer.
+	 *
+	 * If RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT flag is set in offloads field,
+	 * the PMD will split the received packets into multiple segments
+	 * according to the specification in the description array:
+	 *
+	 * - the first network buffer will be allocated from the memory pool,
+	 *   specified in the first array element, the second buffer, from the
+	 *   pool in the second element, and so on.
+	 *
+	 * - the offsets from the segment description elements specify
+	 *   the data offset from the buffer beginning except the first mbuf.
+	 *   For this one the offset is added with RTE_PKTMBUF_HEADROOM.
+	 *
+	 * - the lengthes in the elements define the maximal data amount
+	 *   being received to each segment. The receiving starts with filling
+	 *   up the first mbuf data buffer up to specified length. If the
+	 *   there are data remaining (packet is longer than buffer in the first
+	 *   mbuf) the following data will be pushed to the next segment
+	 *   up to its own length, and so on.
+	 *
+	 * - If the length in the segment description element is zero
+	 *   the actual buffer size will be deduced from the appropriate
+	 *   memory pool properties.
+	 *
+	 * - if there is not enough elements to describe the buffer for entire
+	 *   packet of maximal length the following parameters will be used
+	 *   for the all remaining segments:
+	 *     - pool from the last valid element
+	 *     - the buffer size from this pool
+	 *     - zero offset
+	 */
+	struct rte_eth_rxseg *rx_seg;
 	/**
 	 * Per-queue Rx offloads to be set using DEV_RX_OFFLOAD_* flags.
 	 * Only offloads set on rx_queue_offload_capa or rx_offload_capa
@@ -1260,6 +1307,7 @@ struct rte_eth_conf {
 #define DEV_RX_OFFLOAD_SCTP_CKSUM	0x00020000
 #define DEV_RX_OFFLOAD_OUTER_UDP_CKSUM  0x00040000
 #define DEV_RX_OFFLOAD_RSS_HASH		0x00080000
+#define RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT 0x00100000
 
 #define DEV_RX_OFFLOAD_CHECKSUM (DEV_RX_OFFLOAD_IPV4_CKSUM | \
 				 DEV_RX_OFFLOAD_UDP_CKSUM | \
@@ -2020,9 +2068,21 @@ rte_eth_dev_is_removed(uint16_t port_id);
  *   No need to repeat any bit in rx_conf->offloads which has already been
  *   enabled in rte_eth_dev_configure() at port level. An offloading enabled
  *   at port level can't be disabled at queue level.
+ *   The configuration structure also contains the pointer to the array
+ *   of the receiving buffer segment descriptions, see rx_seg and rx_nseg
+ *   fields, this extended configuration might be used by split offloads like
+ *   RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT. If mp_pool is not NULL,
+ *   the extended configuration fields must be set to NULL and zero.
  * @param mb_pool
  *   The pointer to the memory pool from which to allocate *rte_mbuf* network
- *   memory buffers to populate each descriptor of the receive ring.
+ *   memory buffers to populate each descriptor of the receive ring. There are
+ *   two options to provide Rx buffer configuration:
+ *   - single pool:
+ *     mb_pool is not NULL, rx_conf.rx_seg is NULL, rx_conf.rx_nseg is 0.
+ *   - multiple segments description:
+ *     mb_pool is NULL, rx_conf.rx_seg is not NULL, rx_conf.rx_nseg is not 0.
+ *     Taken only if flag RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT is set in offloads.
+ *
  * @return
  *   - 0: Success, receive queue correctly set up.
  *   - -EIO: if device is removed.

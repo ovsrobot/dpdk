@@ -105,6 +105,9 @@ static const struct rte_eth_xstats_name_off rte_txq_stats_strings[] = {
 #define RTE_RX_OFFLOAD_BIT2STR(_name)	\
 	{ DEV_RX_OFFLOAD_##_name, #_name }
 
+#define RTE_ETH_RX_OFFLOAD_BIT2STR(_name)	\
+	{ RTE_ETH_RX_OFFLOAD_##_name, #_name }
+
 static const struct {
 	uint64_t offload;
 	const char *name;
@@ -128,9 +131,11 @@ static const struct {
 	RTE_RX_OFFLOAD_BIT2STR(SCTP_CKSUM),
 	RTE_RX_OFFLOAD_BIT2STR(OUTER_UDP_CKSUM),
 	RTE_RX_OFFLOAD_BIT2STR(RSS_HASH),
+	RTE_ETH_RX_OFFLOAD_BIT2STR(BUFFER_SPLIT),
 };
 
 #undef RTE_RX_OFFLOAD_BIT2STR
+#undef RTE_ETH_RX_OFFLOAD_BIT2STR
 
 #define RTE_TX_OFFLOAD_BIT2STR(_name)	\
 	{ DEV_TX_OFFLOAD_##_name, #_name }
@@ -1784,38 +1789,94 @@ rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		return -EINVAL;
 	}
 
-	if (mp == NULL) {
-		RTE_ETHDEV_LOG(ERR, "Invalid null mempool pointer\n");
-		return -EINVAL;
-	}
-
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->rx_queue_setup, -ENOTSUP);
 
-	/*
-	 * Check the size of the mbuf data buffer.
-	 * This value must be provided in the private data of the memory pool.
-	 * First check that the memory pool has a valid private data.
-	 */
 	ret = rte_eth_dev_info_get(port_id, &dev_info);
 	if (ret != 0)
 		return ret;
 
-	if (mp->private_data_size < sizeof(struct rte_pktmbuf_pool_private)) {
-		RTE_ETHDEV_LOG(ERR, "%s private_data_size %d < %d\n",
-			mp->name, (int)mp->private_data_size,
-			(int)sizeof(struct rte_pktmbuf_pool_private));
-		return -ENOSPC;
-	}
-	mbp_buf_size = rte_pktmbuf_data_room_size(mp);
+	if (mp) {
+		/* Single pool configuration check. */
+		if (rx_conf->rx_seg || rx_conf->rx_nseg) {
+			RTE_ETHDEV_LOG(ERR,
+				       "Ambiguous segment configuration\n");
+			return -EINVAL;
+		}
+		/*
+		 * Check the size of the mbuf data buffer, this value
+		 * must be provided in the private data of the memory pool.
+		 * First check that the memory pool(s) has a valid private data.
+		 */
+		if (mp->private_data_size <
+				sizeof(struct rte_pktmbuf_pool_private)) {
+			RTE_ETHDEV_LOG(ERR, "%s private_data_size %u < %u\n",
+				mp->name, mp->private_data_size,
+				(unsigned int)
+				sizeof(struct rte_pktmbuf_pool_private));
+			return -ENOSPC;
+		}
+		mbp_buf_size = rte_pktmbuf_data_room_size(mp);
+		if (mbp_buf_size < dev_info.min_rx_bufsize +
+				   RTE_PKTMBUF_HEADROOM) {
+			RTE_ETHDEV_LOG(ERR,
+				       "%s mbuf_data_room_size %u < %u"
+				       " (RTE_PKTMBUF_HEADROOM=%u +"
+				       " min_rx_bufsize(dev)=%u)\n",
+				       mp->name, mbp_buf_size,
+				       RTE_PKTMBUF_HEADROOM +
+				       dev_info.min_rx_bufsize,
+				       RTE_PKTMBUF_HEADROOM,
+				       dev_info.min_rx_bufsize);
+			return -EINVAL;
+		}
+	} else {
+		const struct rte_eth_rxseg *rx_seg = rx_conf->rx_seg;
+		uint16_t n_seg = rx_conf->rx_nseg;
+		uint16_t seg_idx;
 
-	if (mbp_buf_size < dev_info.min_rx_bufsize + RTE_PKTMBUF_HEADROOM) {
-		RTE_ETHDEV_LOG(ERR,
-			"%s mbuf_data_room_size %d < %d (RTE_PKTMBUF_HEADROOM=%d + min_rx_bufsize(dev)=%d)\n",
-			mp->name, (int)mbp_buf_size,
-			(int)(RTE_PKTMBUF_HEADROOM + dev_info.min_rx_bufsize),
-			(int)RTE_PKTMBUF_HEADROOM,
-			(int)dev_info.min_rx_bufsize);
-		return -EINVAL;
+		/* Extended multi-segment configuration check. */
+		if (!rx_conf->rx_seg || !rx_conf->rx_nseg) {
+			RTE_ETHDEV_LOG(ERR,
+				       "Memory pool is null and no"
+				       " extended configuration provided\n");
+			return -EINVAL;
+		}
+		/*
+		 * Check the sizes and offsets against buffer sizes
+		 * for each segment specified in extended configuration.
+		 */
+		for (seg_idx = 0; seg_idx < n_seg; seg_idx++) {
+			struct rte_mempool *mpl = rx_seg[seg_idx].mp;
+			uint32_t length = rx_seg[seg_idx].length;
+			uint32_t offset = rx_seg[seg_idx].offset;
+			uint32_t head_room = seg_idx ? 0 : RTE_PKTMBUF_HEADROOM;
+
+			if (mpl == NULL) {
+				RTE_ETHDEV_LOG(ERR, "null mempool pointer\n");
+				return -EINVAL;
+			}
+			if (mpl->private_data_size <
+				sizeof(struct rte_pktmbuf_pool_private)) {
+				RTE_ETHDEV_LOG(ERR,
+					       "%s private_data_size %u < %u\n",
+					       mpl->name,
+					       mpl->private_data_size,
+					       (unsigned int)sizeof(struct
+					       rte_pktmbuf_pool_private));
+				return -ENOSPC;
+			}
+			mbp_buf_size = rte_pktmbuf_data_room_size(mpl);
+			length = length ? length : (mbp_buf_size - head_room);
+			if (mbp_buf_size < length + offset + head_room) {
+				RTE_ETHDEV_LOG(ERR,
+					"%s mbuf_data_room_size %u < %u"
+					" (segment length=%u +"
+					" segment offset=%u)\n",
+					mpl->name, mbp_buf_size,
+					length + offset, length, offset);
+				return -EINVAL;
+			}
+		}
 	}
 
 	/* Use default specified by driver, if nb_rx_desc is zero */
