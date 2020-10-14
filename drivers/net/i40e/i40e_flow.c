@@ -1868,14 +1868,17 @@ static struct i40e_valid_pattern i40e_supported_patterns[] = {
 	{ pattern_fdir_ipv6_sctp, i40e_flow_parse_l4_cloud_filter },
 };
 
-#define NEXT_ITEM_OF_ACTION(act, actions, index)                        \
-	do {                                                            \
-		act = actions + index;                                  \
-		while (act->type == RTE_FLOW_ACTION_TYPE_VOID) {        \
-			index++;                                        \
-			act = actions + index;                          \
-		}                                                       \
+#define NEXT_ITEM_OF_ACTION(act, actions, index)			\
+	do {								\
+		act = (actions) + (index);				\
+		while (act->type == RTE_FLOW_ACTION_TYPE_VOID) {	\
+			(index)++;					\
+			act = (actions) + (index);			\
+		}							\
 	} while (0)
+
+#define GET_VLAN_ID_FROM_TCI(vlan_item, default_vid) \
+	((vlan_item) ? ntohs(vlan_item->tci) & 0x0fff : (default_vid))
 
 /* Find the first VOID or non-VOID item pointer */
 static const struct rte_flow_item *
@@ -5256,6 +5259,252 @@ i40e_config_rss_filter_del(struct rte_eth_dev *dev,
 			rte_free(rss_filter);
 		}
 	}
+	return 0;
+}
+
+static int
+i40e_flow_parse_mirror_attr_pattern(struct rte_eth_dev *dev,
+				    const struct rte_flow_attr *attr,
+				    const struct rte_flow_item pattern[],
+				    struct rte_flow_error *error,
+				    union i40e_filter_t *filter)
+{
+	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	const struct rte_flow_item *item = pattern;
+	const struct rte_flow_item *next_item = pattern + 1;
+	enum rte_flow_item_type item_type, next_item_type;
+	const struct rte_flow_item_vf *vf_spec, *vf_mask, *vf_last;
+	const struct rte_flow_item_vlan *vlan_spec, *vlan_mask, *vlan_last;
+	struct i40e_mirror_rule_conf *mirror_config = &filter->mirror_conf;
+	uint16_t *entries = mirror_config->entries;
+	uint8_t *rule_type = &mirror_config->rule_type;
+	uint16_t vf_id, vf_id_last, vlan_id, vlan_id_mask, vlan_id_last;
+	uint16_t i, j = 0, k = 0;
+
+	if (attr->priority) {
+		rte_flow_error_set(error, EINVAL,
+				   RTE_FLOW_ERROR_TYPE_ATTR_PRIORITY,
+				   attr, "Not support priority.");
+		return -rte_errno;
+	}
+	if (attr->group) {
+		rte_flow_error_set(error, EINVAL,
+				   RTE_FLOW_ERROR_TYPE_ATTR_GROUP,
+				   attr, "Not support group.");
+		return -rte_errno;
+	}
+	if (attr->transfer) {
+		rte_flow_error_set(error, EINVAL,
+				   RTE_FLOW_ERROR_TYPE_ATTR_TRANSFER,
+				   attr, "Not support group.");
+		return -rte_errno;
+	}
+
+	item_type = item->type;
+	next_item_type = next_item->type;
+	if (!(next_item_type == RTE_FLOW_ITEM_TYPE_END &&
+	      (item_type == RTE_FLOW_ITEM_TYPE_PF ||
+	       item_type == RTE_FLOW_ITEM_TYPE_VF ||
+	       item_type == RTE_FLOW_ITEM_TYPE_VLAN))) {
+		rte_flow_error_set(error, EINVAL,
+			RTE_FLOW_ERROR_TYPE_ITEM,
+			item,
+			"Only support a pattern item that is pf or vf or vlan.");
+		return -rte_errno;
+	}
+
+	if (item_type == RTE_FLOW_ITEM_TYPE_PF) {
+		if (!attr->ingress && attr->egress) {
+			*rule_type = I40E_AQC_MIRROR_RULE_TYPE_ALL_INGRESS;
+		} else if (attr->ingress && !attr->egress) {
+			*rule_type = I40E_AQC_MIRROR_RULE_TYPE_ALL_EGRESS;
+		} else {
+			rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ATTR,
+				attr,
+				"Only support ingress or egress attribute for PF mirror.");
+			return -rte_errno;
+		}
+	} else if (item_type == RTE_FLOW_ITEM_TYPE_VF) {
+		if (!attr->ingress && attr->egress) {
+			*rule_type = I40E_AQC_MIRROR_RULE_TYPE_VPORT_INGRESS;
+		} else if (attr->ingress && !attr->egress) {
+			*rule_type = I40E_AQC_MIRROR_RULE_TYPE_VPORT_EGRESS;
+		} else {
+			rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ATTR,
+				attr,
+				"Only support ingress or egress attribute for VF mirror.");
+			return -rte_errno;
+		}
+
+		vf_spec = item->spec;
+		vf_last = item->last;
+		vf_mask = item->mask;
+		if (item->spec || item->last) {
+			vf_id = (vf_spec ? vf_spec->id : 0);
+			vf_id_last = (vf_last ? vf_last->id : vf_id);
+			if (vf_id >= pf->vf_num ||
+			    vf_id_last >= pf->vf_num ||
+			    vf_id_last < vf_id) {
+				rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ITEM_SPEC,
+					item,
+					"VF ID is out of range.");
+				return -rte_errno;
+			}
+			for (i = vf_id; i <= vf_id_last; i++, k++)
+				if (!vf_mask || (vf_mask->id & (1 << k)))
+					entries[j++] = pf->vfs[i].vsi->seid;
+			mirror_config->num_entries = j;
+		} else if (item->mask) {
+			if (vf_mask->id >= (uint32_t)(1 << pf->vf_num)) {
+				rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ITEM_MASK,
+					item,
+					"VF ID mask is out of range.");
+				return -rte_errno;
+			}
+			for (i = 0; i < pf->vf_num; i++) {
+				if (vf_mask->id & (1 << i))
+					entries[j++] = pf->vfs[i].vsi->seid;
+			}
+			mirror_config->num_entries = j;
+		}
+		if (mirror_config->num_entries == 0) {
+			rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM,
+				item,
+				"Not valid VF ID.");
+			return -rte_errno;
+		}
+	} else if (item_type == RTE_FLOW_ITEM_TYPE_VLAN) {
+		if (attr->ingress && !attr->egress) {
+			*rule_type = I40E_AQC_MIRROR_RULE_TYPE_VLAN;
+		} else {
+			rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ATTR, attr,
+				"Only support ingress attribute for VLAN mirror.");
+			return -rte_errno;
+		}
+
+		vlan_spec = item->spec;
+		vlan_last = item->last;
+		vlan_mask = item->mask;
+		if (item->spec || item->last) {
+			vlan_id = GET_VLAN_ID_FROM_TCI(vlan_spec, 0);
+			vlan_id_last = GET_VLAN_ID_FROM_TCI(vlan_last, vlan_id);
+			vlan_id_mask = GET_VLAN_ID_FROM_TCI(vlan_mask, 0x0fff);
+			if (vlan_id >= ETH_MIRROR_MAX_VLANS ||
+			    vlan_id_last >= ETH_MIRROR_MAX_VLANS ||
+			    vlan_id_last < vlan_id) {
+				rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ITEM_SPEC, item,
+					"VLAN ID is out of range.");
+				return -rte_errno;
+			}
+			for (i = vlan_id; i <= vlan_id_last; i++, k++)
+				if (vlan_id_mask & (1 << k))
+					entries[j++] = i;
+			mirror_config->num_entries = j;
+		} else if (item->mask) {
+			vlan_id_mask = GET_VLAN_ID_FROM_TCI(vlan_mask, 0x0fff);
+			for (i = 0, j = 0; i < ETH_MIRROR_MAX_VLANS; i++) {
+				if (vlan_id_mask & (1 << i))
+					entries[j++] = i;
+				mirror_config->num_entries = j;
+			}
+		}
+		if (mirror_config->num_entries == 0) {
+			rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ITEM, item,
+				"Not valid VLAN ID.");
+			return -rte_errno;
+		}
+	}
+
+	return 0;
+}
+
+static int
+i40e_flow_parse_mirror_action(struct rte_eth_dev *dev,
+			      const struct rte_flow_action *actions,
+			      struct rte_flow_error *error,
+			      union i40e_filter_t *filter)
+{
+	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	const struct rte_flow_action *act;
+	const struct rte_flow_action_vf *act_q;
+	struct i40e_mirror_rule_conf *mirror_config =	&filter->mirror_conf;
+	uint16_t *dst_vsi_seid = &mirror_config->dst_vsi_seid;
+	uint32_t index = 0;
+
+	NEXT_ITEM_OF_ACTION(act, actions, index);
+	if (act->type != RTE_FLOW_ACTION_TYPE_MIRROR) {
+		rte_flow_error_set(error, EINVAL,
+			RTE_FLOW_ERROR_TYPE_ACTION, act,
+			"Not supported action.");
+		return -rte_errno;
+	}
+
+	index++;
+	NEXT_ITEM_OF_ACTION(act, actions, index);
+	if (act->type == RTE_FLOW_ACTION_TYPE_PF) {
+		*dst_vsi_seid = pf->main_vsi_seid;
+	} else if (act->type == RTE_FLOW_ACTION_TYPE_VF) {
+		act_q = act->conf;
+		if (act_q->id >= pf->vf_num) {
+			rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ACTION_CONF, act,
+				"Invalid VF ID for mirror action");
+			return -rte_errno;
+		}
+		/* If the dst_pool is equal to vf_num, consider it as PF */
+		if (act_q->id == pf->vf_num)
+			*dst_vsi_seid = pf->main_vsi_seid;
+		else
+			*dst_vsi_seid = pf->vfs[act_q->id].vsi->seid;
+	} else {
+		rte_flow_error_set(error, EINVAL,
+			RTE_FLOW_ERROR_TYPE_ACTION, act,
+			"Only support pf or vf parameter item.");
+		return -rte_errno;
+	}
+
+	/* Check if the next non-void item is END */
+	index++;
+	NEXT_ITEM_OF_ACTION(act, actions, index);
+	if (act->type != RTE_FLOW_ACTION_TYPE_END) {
+		rte_flow_error_set(error, EINVAL,
+			RTE_FLOW_ERROR_TYPE_ACTION, act,
+			"Only support pf or vf parameter item.");
+		return -rte_errno;
+	}
+
+	return 0;
+}
+
+static int
+i40e_parse_mirror_filter(struct rte_eth_dev *dev,
+		      const struct rte_flow_attr *attr,
+		      const struct rte_flow_item pattern[],
+		      const struct rte_flow_action actions[],
+		      union i40e_filter_t *filter,
+		      struct rte_flow_error *error)
+{
+	int ret;
+
+	ret = i40e_flow_parse_mirror_attr_pattern(dev, attr, pattern,
+						  error, filter);
+	if (ret)
+		return ret;
+
+	ret = i40e_flow_parse_mirror_action(dev, actions, error, filter);
+	if (ret)
+		return ret;
+
+	cons_filter_type = RTE_ETH_FILTER_MIRROR;
+
 	return 0;
 }
 
