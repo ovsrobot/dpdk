@@ -176,12 +176,6 @@ Deprecation Notices
   ``RTE_CRYPTO_AUTH_LIST_END`` from ``enum rte_crypto_auth_algorithm``
   will be removed.
 
-* cryptodev: support for using IV with all sizes is added, J0 still can
-  be used but only when IV length in following structs ``rte_crypto_auth_xform``,
-  ``rte_crypto_aead_xform`` is set to zero. When IV length is greater or equal
-  to one it means it represents IV, when is set to zero it means J0 is used
-  directly, in this case 16 bytes of J0 need to be passed.
-
 * scheduler: The functions ``rte_cryptodev_scheduler_slave_attach``,
   ``rte_cryptodev_scheduler_slave_detach`` and
   ``rte_cryptodev_scheduler_slaves_get`` will be replaced in 20.11 by
