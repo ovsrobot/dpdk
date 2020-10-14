@@ -197,6 +197,17 @@ New Features
   * Added new ``RTE_ACL_CLASSIFY_AVX512X32`` vector implementation,
     which can process up to 32 flows in parallel. Requires AVX512 support.
 
+* **Add PMD power management mechanism**
+
+  3 new Ethernet PMD power management mechanism is added through existing
+  RX callback infrastructure.
+
+  * Add power saving scheme based on UMWAIT instruction (x86 only)
+  * Add power saving scheme based on ``rte_pause()``
+  * Add power saving scheme based on frequency scaling through the power library
+  * Add new EXPERIMENTAL API ``rte_power_pmd_mgmt_queue_enable()``
+  * Add new EXPERIMENTAL API ``rte_power_pmd_mgmt_queue_disable()``
+
 
 Removed Items
 -------------
