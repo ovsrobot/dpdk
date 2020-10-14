@@ -3032,7 +3032,11 @@ main(int32_t argc, char **argv)
 					" for port %u, err msg: %s\n", portid,
 					err.message);
 		}
-		rte_eth_dev_stop(portid);
+		ret = rte_eth_dev_stop(portid);
+		if (ret != 0)
+			rte_exit(EXIT_FAILURE, "rte_eth_dev_stop: err=%s, port=%d\n",
+					rte_strerror(-ret), portid);
+
 		rte_eth_dev_close(portid);
 		printf(" Done\n");
 	}

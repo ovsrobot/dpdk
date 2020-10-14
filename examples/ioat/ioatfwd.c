@@ -995,7 +995,10 @@ main(int argc, char **argv)
 	uint32_t j;
 	for (i = 0; i < cfg.nb_ports; i++) {
 		printf("Closing port %d\n", cfg.ports[i].rxtx_port);
-		rte_eth_dev_stop(cfg.ports[i].rxtx_port);
+		ret = rte_eth_dev_stop(cfg.ports[i].rxtx_port);
+		if (ret != 0)
+			rte_exit(EXIT_FAILURE, "rte_eth_dev_stop: err=%s, port=%d\n",
+				rte_strerror(-ret), cfg.ports[i].rxtx_port);
 		rte_eth_dev_close(cfg.ports[i].rxtx_port);
 		if (copy_mode == COPY_MODE_IOAT_NUM) {
 			for (j = 0; j < cfg.ports[i].nb_queues; j++) {

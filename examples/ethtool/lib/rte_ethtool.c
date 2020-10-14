@@ -297,7 +297,11 @@ rte_ethtool_set_pauseparam(uint16_t port_id,
 int
 rte_ethtool_net_open(uint16_t port_id)
 {
-	rte_eth_dev_stop(port_id);
+	int ret;
+
+	ret = rte_eth_dev_stop(port_id);
+	if (ret != 0)
+		return ret;
 
 	return rte_eth_dev_start(port_id);
 }
@@ -305,10 +309,7 @@ rte_ethtool_net_open(uint16_t port_id)
 int
 rte_ethtool_net_stop(uint16_t port_id)
 {
-	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
-	rte_eth_dev_stop(port_id);
-
-	return 0;
+	return rte_eth_dev_stop(port_id);
 }
 
 int
@@ -450,7 +451,7 @@ rte_ethtool_set_ringparam(uint16_t port_id,
 	struct ethtool_ringparam *ring_param)
 {
 	struct rte_eth_rxq_info rx_qinfo;
-	int stat;
+	int stat, ret;
 
 	if (ring_param == NULL)
 		return -EINVAL;
@@ -459,7 +460,9 @@ rte_ethtool_set_ringparam(uint16_t port_id,
 	if (stat != 0)
 		return stat;
 
-	rte_eth_dev_stop(port_id);
+	ret = rte_eth_dev_stop(port_id);
+	if (ret != 0)
+		return ret;
 
 	stat = rte_eth_tx_queue_setup(port_id, 0, ring_param->tx_pending,
 		rte_socket_id(), NULL);
