@@ -276,6 +276,9 @@ enum index {
 	ACTION_VF,
 	ACTION_VF_ORIGINAL,
 	ACTION_VF_ID,
+	ACTION_MIRROR,
+	ACTION_MIRROR_VF,
+	ACTION_MIRROR_VF_ID,
 	ACTION_PHY_PORT,
 	ACTION_PHY_PORT_ORIGINAL,
 	ACTION_PHY_PORT_INDEX,
@@ -1144,6 +1147,7 @@ static const enum index next_action[] = {
 	ACTION_DROP,
 	ACTION_COUNT,
 	ACTION_RSS,
+	ACTION_MIRROR,
 	ACTION_PF,
 	ACTION_VF,
 	ACTION_PHY_PORT,
@@ -1230,6 +1234,17 @@ static const enum index action_vf[] = {
 	ACTION_VF_ORIGINAL,
 	ACTION_VF_ID,
 	ACTION_NEXT,
+	ZERO,
+};
+
+static const enum index action_mirror[] = {
+	ACTION_PF,
+	ACTION_MIRROR_VF,
+	ZERO,
+};
+
+static const enum index action_mirror_vf[] = {
+	ACTION_MIRROR_VF_ID,
 	ZERO,
 };
 
@@ -3115,6 +3130,27 @@ static const struct token token_list[] = {
 		.help = "queue index",
 		.call = parse_vc_action_rss_queue,
 		.comp = comp_vc_action_rss_queue,
+	},
+	[ACTION_MIRROR] = {
+		.name = "mirror",
+		.help = "mirror",
+		.priv = PRIV_ACTION(MIRROR, 0),
+		.next = NEXT(action_mirror),
+		.call = parse_vc,
+	},
+	[ACTION_MIRROR_VF] = {
+		.name = "vf",
+		.help = "direct traffic to a virtual function ID",
+		.priv = PRIV_ACTION(VF, sizeof(struct rte_flow_action_vf)),
+		.next = NEXT(action_mirror_vf),
+		.call = parse_vc,
+	},
+	[ACTION_MIRROR_VF_ID] = {
+		.name = "id",
+		.help = "VF ID",
+		.next = NEXT(NEXT_ENTRY(ACTION_NEXT), NEXT_ENTRY(UNSIGNED)),
+		.args = ARGS(ARGS_ENTRY(struct rte_flow_action_vf, id)),
+		.call = parse_vc_conf,
 	},
 	[ACTION_PF] = {
 		.name = "pf",
