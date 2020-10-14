@@ -116,6 +116,7 @@ static int i40e_flow_flush_fdir_filter(struct i40e_pf *pf);
 static int i40e_flow_flush_ethertype_filter(struct i40e_pf *pf);
 static int i40e_flow_flush_tunnel_filter(struct i40e_pf *pf);
 static int i40e_flow_flush_rss_filter(struct rte_eth_dev *dev);
+static int i40e_flow_flush_mirror_filter(struct rte_eth_dev *dev);
 static int
 i40e_flow_parse_qinq_filter(struct rte_eth_dev *dev,
 			      const struct rte_flow_attr *attr,
@@ -5509,6 +5510,104 @@ i40e_parse_mirror_filter(struct rte_eth_dev *dev,
 }
 
 static int
+i40e_config_mirror_filter_set(struct rte_eth_dev *dev,
+			      struct i40e_mirror_rule_conf *conf)
+{
+	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct i40e_mirror_filter *it;
+	struct i40e_mirror_filter *mirror_filter;
+	uint16_t rule_id;
+	int ret;
+
+	if (pf->main_vsi->veb == NULL || pf->vfs == NULL) {
+		PMD_DRV_LOG(ERR,
+			"mirror rule can not be configured without veb or vfs.");
+		return -ENOSYS;
+	}
+	if (pf->nb_mirror_rule > I40E_MAX_MIRROR_RULES) {
+		PMD_DRV_LOG(ERR, "mirror table is full.");
+		return -ENOSPC;
+	}
+
+	TAILQ_FOREACH(it, &pf->mirror_filter_list, next) {
+		if (it->conf.dst_vsi_seid == conf->dst_vsi_seid &&
+		    it->conf.rule_type == conf->rule_type &&
+		    it->conf.num_entries == conf->num_entries &&
+		    !memcmp(it->conf.entries, conf->entries,
+			    conf->num_entries * sizeof(conf->entries[0]))) {
+			PMD_DRV_LOG(ERR, "mirror rule exists.");
+			return -EEXIST;
+		}
+	}
+
+	mirror_filter = rte_zmalloc("i40e_mirror_filter",
+				    sizeof(*mirror_filter), 0);
+	if (mirror_filter == NULL) {
+		PMD_DRV_LOG(ERR, "Failed to alloc memory.");
+		return -ENOMEM;
+	}
+	mirror_filter->conf = *conf;
+
+	ret = i40e_aq_add_mirror_rule(hw,
+				      pf->main_vsi->veb->seid,
+				      mirror_filter->conf.dst_vsi_seid,
+				      mirror_filter->conf.rule_type,
+				      mirror_filter->conf.entries,
+				      mirror_filter->conf.num_entries,
+				      &rule_id);
+	if (ret < 0) {
+		PMD_DRV_LOG(ERR,
+			"failed to add mirror rule: ret = %d, aq_err = %d.",
+			ret, hw->aq.asq_last_status);
+		rte_free(mirror_filter);
+		return -ENOSYS;
+	}
+
+	mirror_filter->conf.rule_id = rule_id;
+
+	pf->nb_mirror_rule++;
+
+	TAILQ_INSERT_TAIL(&pf->mirror_filter_list, mirror_filter, next);
+
+	return 0;
+}
+
+static int
+i40e_config_mirror_filter_del(struct rte_eth_dev *dev,
+			      struct i40e_mirror_rule_conf *conf)
+{
+	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct i40e_mirror_filter *mirror_filter;
+	void *temp;
+	int ret;
+
+	ret = i40e_aq_del_mirror_rule(hw,
+				      pf->main_vsi->veb->seid,
+				      conf->rule_type,
+				      conf->entries,
+				      conf->num_entries,
+				      conf->rule_id);
+	if (ret < 0) {
+		PMD_DRV_LOG(ERR,
+			    "failed to remove mirror rule: ret = %d, aq_err = %d.",
+			    ret, hw->aq.asq_last_status);
+		return -ENOSYS;
+	}
+
+	TAILQ_FOREACH_SAFE(mirror_filter, &pf->mirror_filter_list, next, temp) {
+		if (!memcmp(&mirror_filter->conf, conf,
+			    sizeof(struct i40e_mirror_rule_conf))) {
+			TAILQ_REMOVE(&pf->mirror_filter_list,
+				     mirror_filter, next);
+			rte_free(mirror_filter);
+		}
+	}
+	return 0;
+}
+
+static int
 i40e_flow_validate(struct rte_eth_dev *dev,
 		   const struct rte_flow_attr *attr,
 		   const struct rte_flow_item pattern[],
@@ -5550,6 +5649,12 @@ i40e_flow_validate(struct rte_eth_dev *dev,
 	if ((actions + i)->type == RTE_FLOW_ACTION_TYPE_RSS) {
 		ret = i40e_parse_rss_filter(dev, attr, pattern,
 					actions, &cons_filter, error);
+		return ret;
+	}
+
+	if ((actions + i)->type == RTE_FLOW_ACTION_TYPE_MIRROR) {
+		ret = i40e_parse_mirror_filter(dev, attr, pattern,
+					    actions, &cons_filter, error);
 		return ret;
 	}
 
@@ -5672,6 +5777,14 @@ i40e_flow_create(struct rte_eth_dev *dev,
 		flow->rule = TAILQ_LAST(&pf->rss_config_list,
 				i40e_rss_conf_list);
 		break;
+	case RTE_ETH_FILTER_MIRROR:
+		ret = i40e_config_mirror_filter_set(dev,
+						    &cons_filter.mirror_conf);
+		if (ret)
+			goto free_flow;
+		flow->rule = TAILQ_LAST(&pf->mirror_filter_list,
+					i40e_mirror_filter_list);
+		break;
 	default:
 		goto free_flow;
 	}
@@ -5725,6 +5838,10 @@ i40e_flow_destroy(struct rte_eth_dev *dev,
 	case RTE_ETH_FILTER_HASH:
 		ret = i40e_config_rss_filter_del(dev,
 			&((struct i40e_rss_filter *)flow->rule)->rss_filter_info);
+		break;
+	case RTE_ETH_FILTER_MIRROR:
+		ret = i40e_config_mirror_filter_del(dev,
+			&((struct i40e_mirror_filter *)flow->rule)->conf);
 		break;
 	default:
 		PMD_DRV_LOG(WARNING, "Filter type (%d) not supported",
@@ -5880,6 +5997,14 @@ i40e_flow_flush(struct rte_eth_dev *dev, struct rte_flow_error *error)
 		return -rte_errno;
 	}
 
+	ret = i40e_flow_flush_mirror_filter(dev);
+	if (ret) {
+		rte_flow_error_set(error, -ret,
+				   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
+				   "Failed to flush mirror flows.");
+		return -rte_errno;
+	}
+
 	return ret;
 }
 
@@ -6016,6 +6141,34 @@ i40e_flow_flush_rss_filter(struct rte_eth_dev *dev)
 		if (flow->rule) {
 			ret = i40e_config_rss_filter_del(dev,
 				&((struct i40e_rss_filter *)flow->rule)->rss_filter_info);
+			if (ret)
+				return ret;
+		}
+		TAILQ_REMOVE(&pf->flow_list, flow, node);
+		rte_free(flow);
+	}
+
+	return ret;
+}
+
+/* remove the mirror filter */
+static int
+i40e_flow_flush_mirror_filter(struct rte_eth_dev *dev)
+{
+	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct rte_flow *flow;
+	void *temp;
+	int32_t ret = -EINVAL;
+
+	/* Delete mirror flows in flow list. */
+	TAILQ_FOREACH_SAFE(flow, &pf->flow_list, node, temp) {
+		struct i40e_mirror_filter *rule = flow->rule;
+
+		if (flow->filter_type != RTE_ETH_FILTER_MIRROR)
+			continue;
+
+		if (rule) {
+			ret = i40e_config_mirror_filter_del(dev, &rule->conf);
 			if (ret)
 				return ret;
 		}
