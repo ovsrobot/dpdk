@@ -432,9 +432,21 @@ eth_em_configure(struct rte_eth_dev *dev)
 {
 	struct e1000_interrupt *intr =
 		E1000_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
+	uint16_t frame_size = dev->data->mtu + E1000_ETH_OVERHEAD;
+	int rc = 0;
 
 	PMD_INIT_FUNC_TRACE();
 	intr->flags |= E1000_FLAG_NEED_LINK_UPDATE;
+
+	/**
+	 * Reset the max frame size via mtu_set ops if preset max frame
+	 * cannot hold MTU data and Ether overhead.
+	 */
+	if (frame_size > dev->data->dev_conf.rxmode.max_rx_pkt_len) {
+		rc = eth_em_mtu_set(dev, dev->data->mtu);
+		if (rc != 0)
+			return rc;
+	}
 
 	PMD_INIT_FUNC_TRACE();
 
