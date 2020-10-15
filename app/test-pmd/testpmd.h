@@ -398,12 +398,12 @@ extern uint32_t param_total_num_mbufs;
 
 extern uint16_t stats_period;
 
-#ifdef RTE_LIBRTE_LATENCY_STATS
+#ifdef RTE_LIB_LATENCYSTATS
 extern uint8_t latencystats_enabled;
 extern lcoreid_t latencystats_lcore_id;
 #endif
 
-#ifdef RTE_LIBRTE_BITRATESTATS
+#ifdef RTE_LIB_BITRATESTATS
 extern lcoreid_t bitrate_lcore_id;
 extern uint8_t bitrate_enabled;
 #endif

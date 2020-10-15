@@ -9,7 +9,7 @@
 #include <rte_random.h>
 #include <rte_eal.h>
 #include <rte_cryptodev.h>
-#ifdef RTE_LIBRTE_PMD_CRYPTO_SCHEDULER
+#ifdef RTE_CRYPTO_SCHEDULER
 #include <rte_cryptodev_scheduler.h>
 #endif
 
@@ -170,7 +170,7 @@ cperf_initialize_cryptodev(struct cperf_options *opts, uint8_t *enabled_cdevs)
 	for (i = 0; i < enabled_cdev_count &&
 			i < RTE_CRYPTO_MAX_DEVS; i++) {
 		cdev_id = enabled_cdevs[i];
-#ifdef RTE_LIBRTE_PMD_CRYPTO_SCHEDULER
+#ifdef RTE_CRYPTO_SCHEDULER
 		/*
 		 * If multi-core scheduler is used, limit the number
 		 * of queue pairs to 1, as there is no way to know
@@ -238,7 +238,7 @@ cperf_initialize_cryptodev(struct cperf_options *opts, uint8_t *enabled_cdevs)
 		 */
 		if (!strcmp((const char *)opts->device_type,
 					"crypto_scheduler")) {
-#ifdef RTE_LIBRTE_PMD_CRYPTO_SCHEDULER
+#ifdef RTE_CRYPTO_SCHEDULER
 			uint32_t nb_slaves =
 				rte_cryptodev_scheduler_slaves_get(cdev_id,
 								NULL);
