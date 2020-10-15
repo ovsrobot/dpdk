@@ -1195,6 +1195,28 @@ struct rte_intr_conf {
 };
 
 /**
+ * A structure used to enable/disable error packet drop on Rx.
+ */
+struct rte_eth_rx_err_pkt_drop_conf {
+	/** enable/disable L1 FSC error packet drop on Rx.
+	 * 0 (default) - disable, 1 enable
+	 */
+	uint32_t l1_fcs:1;
+	/** enable/disable L3 Checksum error packet drop on Rx.
+	 * 0 (default) - disable, 1 enable
+	 */
+	uint32_t l3_csum:1;
+	/** enable/disable L4 Checksum error packet drop on Rx.
+	 * 0 (default) - disable, 1 enable
+	 */
+	uint32_t l4_csum:1;
+	/** enable/disable all Rx error packet drop.
+	 * 0 (default) - disable, 1 enable
+	 */
+	uint32_t all:1;
+};
+
+/**
  * A structure used to configure an Ethernet port.
  * Depending upon the RX multi-queue mode, extra advanced
  * configuration settings may be needed.
@@ -1236,10 +1258,12 @@ struct rte_eth_conf {
 	uint32_t dcb_capability_en;
 	struct rte_fdir_conf fdir_conf; /**< FDIR configuration. DEPRECATED */
 	struct rte_intr_conf intr_conf; /**< Interrupt mode configuration. */
+	struct rte_eth_rx_err_pkt_drop_conf err_pkt_drop_conf;
+	/**< Rx error packet drop configuration. */
 };
 
 /**
- * RX offload capabilities of a device.
+ * Rx offload capabilities of a device.
  */
 #define DEV_RX_OFFLOAD_VLAN_STRIP  0x00000001
 #define DEV_RX_OFFLOAD_IPV4_CKSUM  0x00000002
@@ -1260,6 +1284,7 @@ struct rte_eth_conf {
 #define DEV_RX_OFFLOAD_SCTP_CKSUM	0x00020000
 #define DEV_RX_OFFLOAD_OUTER_UDP_CKSUM  0x00040000
 #define DEV_RX_OFFLOAD_RSS_HASH		0x00080000
+#define DEV_RX_OFFLOAD_ERR_PKT_DROP	0x00100000
 
 #define DEV_RX_OFFLOAD_CHECKSUM (DEV_RX_OFFLOAD_IPV4_CKSUM | \
 				 DEV_RX_OFFLOAD_UDP_CKSUM | \
@@ -1273,6 +1298,16 @@ struct rte_eth_conf {
  * If new Rx offload capabilities are defined, they also must be
  * mentioned in rte_rx_offload_names in rte_ethdev.c file.
  */
+
+/**
+ * Rx Error Drop offload config/capabilities of a device. These
+ * are valid only when Rx capability RTE_DEV_RX_OFFLOAD_ERR_PKT_DROP
+ * is supported by the device.
+ */
+#define RTE_DEV_RX_ERR_PKT_DROP_OFFLOAD_L1_FCS		0x00000001
+#define RTE_DEV_RX_ERR_PKT_DROP_OFFLOAD_L3_CSUM		0x00000002
+#define RTE_DEV_RX_ERR_PKT_DROP_OFFLOAD_L4_CSUM		0x00000004
+#define RTE_DEV_RX_ERR_PKT_DROP_OFFLOAD_ALL		0x80000000
 
 /**
  * TX offload capabilities of a device.
@@ -1411,6 +1446,8 @@ struct rte_eth_dev_info {
 	/**< Device per-queue RX offload capabilities. */
 	uint64_t tx_queue_offload_capa;
 	/**< Device per-queue TX offload capabilities. */
+	uint64_t rx_err_drop_offload_capa;
+	/**< RX error packet drop offload capabilities. */
 	uint16_t reta_size;
 	/**< Device redirection table size, the total number of entries. */
 	uint8_t hash_key_size; /**< Hash key size in bytes */
