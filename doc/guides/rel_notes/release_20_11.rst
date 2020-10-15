@@ -436,6 +436,17 @@ API Changes
 * sched: Removed ``tb_rate``, ``tc_rate``, ``tc_period`` and ``tb_size``
   from ``struct rte_sched_subport_params``.
 
+* eal: Changed the function ``rte_get_master_lcore()`` is
+  replaced to ``rte_get_main_lcore()``. The old function is deprecated.
+
+  The iterator for worker lcores will also change:
+  ``RTE_LCORE_FOREACH_SLAVE`` will be replaced with
+  ``RTE_LCORE_FOREACH_WORKER``.
+
+  The ``master-lcore`` argument to testpmd will be replaced
+  with ``main-lcore``. The old ``master-lcore`` argument
+  will produce a runtime notification in 20.11 release, and
+  be removed completely in a future release.
 
 ABI Changes
 -----------
