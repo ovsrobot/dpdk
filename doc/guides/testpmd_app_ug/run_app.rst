@@ -213,6 +213,10 @@ The command line options are:
 
     Enable hardware QINQ strip.
 
+*  ``--enable-hw-drop-err-all``
+
+    Enable hardware packet drop for any error packets
+
 *   ``--enable-drop-en``
 
     Enable per-queue packet drop for packets with no descriptors.

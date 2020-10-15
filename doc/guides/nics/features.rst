@@ -606,6 +606,50 @@ Supports inner packet L4 checksum.
   ``tx_offload_capa,tx_queue_offload_capa:DEV_TX_OFFLOAD_OUTER_UDP_CKSUM``.
 
 
+.. _nic_features_l1_fcs_rx_error_packet_drop:
+
+L1 FCS Error Packet drop on Rx
+------------------------------
+
+Supports dropping of packets having L1 FCS error on Rx.
+
+* **[uses]     user config**: ``dev_conf.err_pkt_drop_conf.l1_fcs``.
+* **[provides] rte_eth_dev_info**: ``rx_err_drop_offload_capa:RTE_DEV_RX_ERR_PKT_DROP_OFFLOAD_L1_FCS``.
+
+
+.. _nic_features_l3_csum_rx_error_packet_drop:
+
+L3 checksum Error Packet drop on Rx
+-----------------------------------
+
+Supports dropping of packets having L3 Checksum error on Rx.
+
+* **[uses]     user config**: ``dev_conf.err_pkt_drop_conf.l3_csum``.
+* **[provides] rte_eth_dev_info**: ``rx_err_drop_offload_capa:RTE_DEV_RX_ERR_PKT_DROP_OFFLOAD_L3_CSUM``.
+
+
+.. _nic_features_l4_csum_rx_error_packet_drop:
+
+L4 Checksum Error Packet drop on Rx
+-----------------------------------
+
+Supports dropping of packets having L1 FCS error on Rx.
+
+* **[uses]     user config**: ``dev_conf.err_pkt_drop_conf.l4_csum``.
+* **[provides] rte_eth_dev_info**: ``rx_err_drop_offload_capa:RTE_DEV_RX_ERR_PKT_DROP_OFFLOAD_L4_CSUM``.
+
+
+.. _nic_features_all_rx_error_packet_drop:
+
+All/any Error Packet drop on Rx
+-------------------------------
+
+Supports dropping of packets having any of the errors like L1 FSC, L3/L4 Checksum on Rx.
+
+* **[uses]     user config**: ``dev_conf.err_pkt_drop_conf.all``.
+* **[provides] rte_eth_dev_info**: ``rx_err_drop_offload_capa:RTE_DEV_RX_ERR_PKT_DROP_OFFLOAD_ALL``.
+
+
 .. _nic_features_packet_type_parsing:
 
 Packet type parsing

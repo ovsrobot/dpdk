@@ -1049,6 +1049,41 @@ port_offload_cap_display(portid_t port_id)
 			printf("off\n");
 	}
 
+	if (dev_info.rx_offload_capa & DEV_RX_OFFLOAD_ERR_PKT_DROP) {
+		if (dev_info.rx_err_drop_offload_capa &
+			RTE_DEV_RX_ERR_PKT_DROP_OFFLOAD_L1_FCS) {
+			printf("RX L1 FCS Error pkt drop:      ");
+			if (ports[port_id].dev_conf.err_pkt_drop_conf.l1_fcs)
+				printf("on\n");
+			else
+				printf("off\n");
+		}
+		if (dev_info.rx_err_drop_offload_capa &
+			RTE_DEV_RX_ERR_PKT_DROP_OFFLOAD_L3_CSUM) {
+			printf("RX L3 Csum Error pkt drop:     ");
+			if (ports[port_id].dev_conf.err_pkt_drop_conf.l3_csum)
+				printf("on\n");
+			else
+				printf("off\n");
+		}
+		if (dev_info.rx_err_drop_offload_capa &
+			RTE_DEV_RX_ERR_PKT_DROP_OFFLOAD_L4_CSUM) {
+			printf("RX L4 Csum Error pkt drop:     ");
+			if (ports[port_id].dev_conf.err_pkt_drop_conf.l4_csum)
+				printf("on\n");
+			else
+				printf("off\n");
+		}
+		if (dev_info.rx_err_drop_offload_capa &
+			RTE_DEV_RX_ERR_PKT_DROP_OFFLOAD_ALL) {
+			printf("RX all Error pkt drop:         ");
+			if (ports[port_id].dev_conf.err_pkt_drop_conf.all)
+				printf("on\n");
+			else
+				printf("off\n");
+		}
+	}
+
 	if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_VLAN_INSERT) {
 		printf("VLAN insert:                   ");
 		if (ports[port_id].dev_conf.txmode.offloads &

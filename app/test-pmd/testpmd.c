@@ -359,6 +359,11 @@ uint8_t lsc_interrupt = 1; /* enabled by default */
  */
 uint8_t rmv_interrupt = 1; /* enabled by default */
 
+/*
+ * Drop all RX error packets on HW itself.
+ */
+uint8_t rx_err_pkt_drop_all = 0; /* disabled by default */
+
 uint8_t hot_plug = 0; /**< hotplug disabled by default. */
 
 /* After attach, port setup is called on event or by iterator */
@@ -3359,6 +3364,9 @@ init_port_config(void)
 		    (rte_eth_devices[pid].data->dev_flags &
 		     RTE_ETH_DEV_INTR_RMV))
 			port->dev_conf.intr_conf.rmv = 1;
+
+		if (rx_err_pkt_drop_all)
+			port->dev_conf.err_pkt_drop_conf.all = 1;
 	}
 }
 
