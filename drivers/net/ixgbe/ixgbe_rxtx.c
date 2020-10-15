@@ -2405,6 +2405,7 @@ ixgbe_dev_tx_done_cleanup(void *tx_queue, uint32_t free_cnt)
 #endif
 			txq->tx_rs_thresh >= RTE_PMD_IXGBE_TX_MAX_BURST) {
 		if (txq->tx_rs_thresh <= RTE_IXGBE_TX_MAX_FREE_BUF_SZ &&
+				rte_get_max_simd_bitwidth() >= RTE_SIMD_128 &&
 				(rte_eal_process_type() != RTE_PROC_PRIMARY ||
 					txq->sw_ring_v != NULL)) {
 			return ixgbe_tx_done_cleanup_vec(txq, free_cnt);
@@ -2503,6 +2504,7 @@ ixgbe_set_tx_function(struct rte_eth_dev *dev, struct ixgbe_tx_queue *txq)
 		PMD_INIT_LOG(DEBUG, "Using simple tx code path");
 		dev->tx_pkt_prepare = NULL;
 		if (txq->tx_rs_thresh <= RTE_IXGBE_TX_MAX_FREE_BUF_SZ &&
+				rte_get_max_simd_bitwidth() >= RTE_SIMD_128 &&
 				(rte_eal_process_type() != RTE_PROC_PRIMARY ||
 					ixgbe_txq_vec_setup(txq) == 0)) {
 			PMD_INIT_LOG(DEBUG, "Vector tx enabled.");
@@ -4744,7 +4746,8 @@ ixgbe_set_rx_function(struct rte_eth_dev *dev)
 	 * conditions to be met and Rx Bulk Allocation should be allowed.
 	 */
 	if (ixgbe_rx_vec_dev_conf_condition_check(dev) ||
-	    !adapter->rx_bulk_alloc_allowed) {
+	    !adapter->rx_bulk_alloc_allowed ||
+			rte_get_max_simd_bitwidth() < RTE_SIMD_128) {
 		PMD_INIT_LOG(DEBUG, "Port[%d] doesn't meet Vector Rx "
 				    "preconditions",
 			     dev->data->port_id);
