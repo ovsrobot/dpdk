@@ -523,94 +523,35 @@ _ice_recv_raw_pkts_vec_avx2(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 				_mm256_extract_epi32(fdir_id0_7, 4);
 		} /* if() on fdir_enabled */
 
+		const __m256i dd_status = _mm256_and_si256(status0_7, dd_check);
+
 #ifndef RTE_LIBRTE_ICE_16BYTE_RX_DESC
-		/**
-		 * needs to load 2nd 16B of each desc for RSS hash parsing,
-		 * will cause performance drop to get into this context.
+
+		/* bit12 is for RSS indication.
+		 * Extract hash value will cause performance drop.
 		 */
-		if (rxq->vsi->adapter->eth_dev->data->dev_conf.rxmode.offloads &
-				DEV_RX_OFFLOAD_RSS_HASH) {
-			/* load bottom half of every 32B desc */
-			const __m128i raw_desc_bh7 =
-				_mm_load_si128
-					((void *)(&rxdp[7].wb.status_error1));
-			rte_compiler_barrier();
-			const __m128i raw_desc_bh6 =
-				_mm_load_si128
-					((void *)(&rxdp[6].wb.status_error1));
-			rte_compiler_barrier();
-			const __m128i raw_desc_bh5 =
-				_mm_load_si128
-					((void *)(&rxdp[5].wb.status_error1));
-			rte_compiler_barrier();
-			const __m128i raw_desc_bh4 =
-				_mm_load_si128
-					((void *)(&rxdp[4].wb.status_error1));
-			rte_compiler_barrier();
-			const __m128i raw_desc_bh3 =
-				_mm_load_si128
-					((void *)(&rxdp[3].wb.status_error1));
-			rte_compiler_barrier();
-			const __m128i raw_desc_bh2 =
-				_mm_load_si128
-					((void *)(&rxdp[2].wb.status_error1));
-			rte_compiler_barrier();
-			const __m128i raw_desc_bh1 =
-				_mm_load_si128
-					((void *)(&rxdp[1].wb.status_error1));
-			rte_compiler_barrier();
-			const __m128i raw_desc_bh0 =
-				_mm_load_si128
-					((void *)(&rxdp[0].wb.status_error1));
+		if (!_mm256_testz_si256(status0_7,
+					_mm256_slli_epi32(dd_status, 12))) {
+			uint32_t hash_val[8];
 
-			__m256i raw_desc_bh6_7 =
-				_mm256_inserti128_si256
-					(_mm256_castsi128_si256(raw_desc_bh6),
-					raw_desc_bh7, 1);
-			__m256i raw_desc_bh4_5 =
-				_mm256_inserti128_si256
-					(_mm256_castsi128_si256(raw_desc_bh4),
-					raw_desc_bh5, 1);
-			__m256i raw_desc_bh2_3 =
-				_mm256_inserti128_si256
-					(_mm256_castsi128_si256(raw_desc_bh2),
-					raw_desc_bh3, 1);
-			__m256i raw_desc_bh0_1 =
-				_mm256_inserti128_si256
-					(_mm256_castsi128_si256(raw_desc_bh0),
-					raw_desc_bh1, 1);
+			hash_val[0] = *(uint32_t *)&rxdp[0].wb.flex_meta2;
+			hash_val[1] = *(uint32_t *)&rxdp[1].wb.flex_meta2;
+			hash_val[2] = *(uint32_t *)&rxdp[2].wb.flex_meta2;
+			hash_val[3] = *(uint32_t *)&rxdp[3].wb.flex_meta2;
+			hash_val[4] = *(uint32_t *)&rxdp[4].wb.flex_meta2;
+			hash_val[5] = *(uint32_t *)&rxdp[5].wb.flex_meta2;
+			hash_val[6] = *(uint32_t *)&rxdp[6].wb.flex_meta2;
+			hash_val[7] = *(uint32_t *)&rxdp[7].wb.flex_meta2;
 
-			/**
-			 * to shift the 32b RSS hash value to the
-			 * highest 32b of each 128b before mask
-			 */
-			__m256i rss_hash6_7 =
-				_mm256_slli_epi64(raw_desc_bh6_7, 32);
-			__m256i rss_hash4_5 =
-				_mm256_slli_epi64(raw_desc_bh4_5, 32);
-			__m256i rss_hash2_3 =
-				_mm256_slli_epi64(raw_desc_bh2_3, 32);
-			__m256i rss_hash0_1 =
-				_mm256_slli_epi64(raw_desc_bh0_1, 32);
-
-			__m256i rss_hash_msk =
-				_mm256_set_epi32(0xFFFFFFFF, 0, 0, 0,
-						 0xFFFFFFFF, 0, 0, 0);
-
-			rss_hash6_7 = _mm256_and_si256
-					(rss_hash6_7, rss_hash_msk);
-			rss_hash4_5 = _mm256_and_si256
-					(rss_hash4_5, rss_hash_msk);
-			rss_hash2_3 = _mm256_and_si256
-					(rss_hash2_3, rss_hash_msk);
-			rss_hash0_1 = _mm256_and_si256
-					(rss_hash0_1, rss_hash_msk);
-
-			mb6_7 = _mm256_or_si256(mb6_7, rss_hash6_7);
-			mb4_5 = _mm256_or_si256(mb4_5, rss_hash4_5);
-			mb2_3 = _mm256_or_si256(mb2_3, rss_hash2_3);
-			mb0_1 = _mm256_or_si256(mb0_1, rss_hash0_1);
-		} /* if() on RSS hash parsing */
+			mb0_1 = _mm256_insert_epi32(mb0_1, hash_val[0], 3);
+			mb0_1 = _mm256_insert_epi32(mb0_1, hash_val[1], 7);
+			mb2_3 = _mm256_insert_epi32(mb2_3, hash_val[2], 3);
+			mb2_3 = _mm256_insert_epi32(mb2_3, hash_val[3], 7);
+			mb4_5 = _mm256_insert_epi32(mb4_5, hash_val[4], 3);
+			mb4_5 = _mm256_insert_epi32(mb4_5, hash_val[5], 7);
+			mb6_7 = _mm256_insert_epi32(mb6_7, hash_val[6], 3);
+			mb6_7 = _mm256_insert_epi32(mb6_7, hash_val[7], 7);
+		}
 #endif
 
 		/**
@@ -728,8 +669,7 @@ _ice_recv_raw_pkts_vec_avx2(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		}
 
 		/* perform dd_check */
-		status0_7 = _mm256_and_si256(status0_7, dd_check);
-		status0_7 = _mm256_packs_epi32(status0_7,
+		status0_7 = _mm256_packs_epi32(dd_status,
 					       _mm256_setzero_si256());
 
 		uint64_t burst = __builtin_popcountll

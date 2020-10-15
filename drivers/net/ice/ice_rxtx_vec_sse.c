@@ -439,64 +439,30 @@ _ice_recv_raw_pkts_vec(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		pkt_mb1 = _mm_add_epi16(pkt_mb1, crc_adjust);
 		pkt_mb0 = _mm_add_epi16(pkt_mb0, crc_adjust);
 
-#ifndef RTE_LIBRTE_ICE_16BYTE_RX_DESC
-		/**
-		 * needs to load 2nd 16B of each desc for RSS hash parsing,
-		 * will cause performance drop to get into this context.
-		 */
-		if (rxq->vsi->adapter->eth_dev->data->dev_conf.rxmode.offloads &
-				DEV_RX_OFFLOAD_RSS_HASH) {
-			/* load bottom half of every 32B desc */
-			const __m128i raw_desc_bh3 =
-				_mm_load_si128
-					((void *)(&rxdp[3].wb.status_error1));
-			rte_compiler_barrier();
-			const __m128i raw_desc_bh2 =
-				_mm_load_si128
-					((void *)(&rxdp[2].wb.status_error1));
-			rte_compiler_barrier();
-			const __m128i raw_desc_bh1 =
-				_mm_load_si128
-					((void *)(&rxdp[1].wb.status_error1));
-			rte_compiler_barrier();
-			const __m128i raw_desc_bh0 =
-				_mm_load_si128
-					((void *)(&rxdp[0].wb.status_error1));
-
-			/**
-			 * to shift the 32b RSS hash value to the
-			 * highest 32b of each 128b before mask
-			 */
-			__m128i rss_hash3 =
-				_mm_slli_epi64(raw_desc_bh3, 32);
-			__m128i rss_hash2 =
-				_mm_slli_epi64(raw_desc_bh2, 32);
-			__m128i rss_hash1 =
-				_mm_slli_epi64(raw_desc_bh1, 32);
-			__m128i rss_hash0 =
-				_mm_slli_epi64(raw_desc_bh0, 32);
-
-			__m128i rss_hash_msk =
-				_mm_set_epi32(0xFFFFFFFF, 0, 0, 0);
-
-			rss_hash3 = _mm_and_si128
-					(rss_hash3, rss_hash_msk);
-			rss_hash2 = _mm_and_si128
-					(rss_hash2, rss_hash_msk);
-			rss_hash1 = _mm_and_si128
-					(rss_hash1, rss_hash_msk);
-			rss_hash0 = _mm_and_si128
-					(rss_hash0, rss_hash_msk);
-
-			pkt_mb3 = _mm_or_si128(pkt_mb3, rss_hash3);
-			pkt_mb2 = _mm_or_si128(pkt_mb2, rss_hash2);
-			pkt_mb1 = _mm_or_si128(pkt_mb1, rss_hash1);
-			pkt_mb0 = _mm_or_si128(pkt_mb0, rss_hash0);
-		} /* if() on RSS hash parsing */
-#endif
-
 		/* C.2 get 4 pkts staterr value  */
 		staterr = _mm_unpacklo_epi32(sterr_tmp1, sterr_tmp2);
+
+		const __m128i dd_status = _mm_and_si128(staterr, dd_check);
+
+#ifndef RTE_LIBRTE_ICE_16BYTE_RX_DESC
+
+		/* bit12 is for RSS indication.
+		 * Extract hash value will cause performance drop.
+		 */
+		if (!_mm_testz_si128(staterr, _mm_slli_epi32(dd_status, 12))) {
+			uint32_t hash_val[4];
+
+			hash_val[0] = *(uint32_t *)&rxdp[0].wb.flex_meta2;
+			hash_val[1] = *(uint32_t *)&rxdp[1].wb.flex_meta2;
+			hash_val[2] = *(uint32_t *)&rxdp[2].wb.flex_meta2;
+			hash_val[3] = *(uint32_t *)&rxdp[3].wb.flex_meta2;
+
+			pkt_mb0 = _mm_insert_epi32(pkt_mb0, hash_val[0], 3);
+			pkt_mb1 = _mm_insert_epi32(pkt_mb0, hash_val[1], 3);
+			pkt_mb2 = _mm_insert_epi32(pkt_mb0, hash_val[2], 3);
+			pkt_mb3 = _mm_insert_epi32(pkt_mb0, hash_val[3], 3);
+		}
+#endif
 
 		/* D.3 copy final 3,4 data to rx_pkts */
 		_mm_storeu_si128
@@ -522,8 +488,7 @@ _ice_recv_raw_pkts_vec(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		}
 
 		/* C.3 calc available number of desc */
-		staterr = _mm_and_si128(staterr, dd_check);
-		staterr = _mm_packs_epi32(staterr, zero);
+		staterr = _mm_packs_epi32(dd_status, zero);
 
 		/* D.3 copy final 1,2 data to rx_pkts */
 		_mm_storeu_si128
