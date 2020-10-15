@@ -132,7 +132,7 @@ memif_mp_request_regions(struct rte_eth_dev *dev)
 	struct memif_region *r;
 	struct pmd_process_private *proc_private = dev->process_private;
 	struct pmd_internals *pmd = dev->data->dev_private;
-	/* in case of zero-copy slave, only request region 0 */
+	/* in case of zero-copy client, only request region 0 */
 	uint16_t max_region_num = (pmd->flags & ETH_MEMIF_FLAG_ZERO_COPY) ?
 				   1 : ETH_MEMIF_MAX_REGION_NUM;
 
@@ -210,7 +210,7 @@ memif_get_ring(struct pmd_internals *pmd, struct pmd_process_private *proc_priva
 	int ring_size = sizeof(memif_ring_t) + sizeof(memif_desc_t) *
 	    (1 << pmd->run.log2_ring_size);
 
-	p = (uint8_t *)p + (ring_num + type * pmd->run.num_s2m_rings) * ring_size;
+	p = (uint8_t *)p + (ring_num + type * pmd->run.num_c2s_rings) * ring_size;
 
 	return (memif_ring_t *)p;
 }
@@ -245,7 +245,7 @@ memif_get_buffer(struct pmd_process_private *proc_private, memif_desc_t *d)
 	return ((uint8_t *)proc_private->regions[d->region]->addr + d->offset);
 }
 
-/* Free mbufs received by master */
+/* Free mbufs received by server */
 static void
 memif_free_stored_mbufs(struct pmd_process_private *proc_private, struct memif_queue *mq)
 {
@@ -327,7 +327,7 @@ eth_memif_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	ring_size = 1 << mq->log2_ring_size;
 	mask = ring_size - 1;
 
-	if (type == MEMIF_RING_S2M) {
+	if (type == MEMIF_RING_C2S) {
 		cur_slot = mq->last_head;
 		last_slot = __atomic_load_n(&ring->head, __ATOMIC_ACQUIRE);
 	} else {
@@ -401,7 +401,7 @@ next_slot:
 	}
 
 no_free_bufs:
-	if (type == MEMIF_RING_S2M) {
+	if (type == MEMIF_RING_C2S) {
 		__atomic_store_n(&ring->tail, cur_slot, __ATOMIC_RELEASE);
 		mq->last_head = cur_slot;
 	} else {
@@ -409,7 +409,7 @@ no_free_bufs:
 	}
 
 refill:
-	if (type == MEMIF_RING_M2S) {
+	if (type == MEMIF_RING_S2C) {
 		head = __atomic_load_n(&ring->head, __ATOMIC_ACQUIRE);
 		n_slots = ring_size - head + mq->last_tail;
 
@@ -508,7 +508,7 @@ next_slot:
 
 	mq->last_tail = cur_slot;
 
-/* Supply master with new buffers */
+/* Supply server with new buffers */
 refill:
 	/* The ring->head acts as a guard variable between Tx and Rx
 	 * threads, so using load-acquire pairs with store-release
@@ -583,7 +583,7 @@ eth_memif_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	n_free = __atomic_load_n(&ring->tail, __ATOMIC_ACQUIRE) - mq->last_tail;
 	mq->last_tail += n_free;
 
-	if (type == MEMIF_RING_S2M) {
+	if (type == MEMIF_RING_C2S) {
 		slot = __atomic_load_n(&ring->head, __ATOMIC_ACQUIRE);
 		n_free = ring_size - slot + mq->last_tail;
 	} else {
@@ -598,7 +598,7 @@ eth_memif_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		saved_slot = slot;
 		d0 = &ring->desc[slot & mask];
 		dst_off = 0;
-		dst_len = (type == MEMIF_RING_S2M) ?
+		dst_len = (type == MEMIF_RING_C2S) ?
 			pmd->run.pkt_buffer_size : d0->length;
 
 next_in_chain:
@@ -613,7 +613,7 @@ next_in_chain:
 					d0->flags |= MEMIF_DESC_FLAG_NEXT;
 					d0 = &ring->desc[slot & mask];
 					dst_off = 0;
-					dst_len = (type == MEMIF_RING_S2M) ?
+					dst_len = (type == MEMIF_RING_C2S) ?
 					    pmd->run.pkt_buffer_size : d0->length;
 					d0->flags = 0;
 				} else {
@@ -648,7 +648,7 @@ next_in_chain:
 	}
 
 no_free_slots:
-	if (type == MEMIF_RING_S2M)
+	if (type == MEMIF_RING_C2S)
 		__atomic_store_n(&ring->head, slot, __ATOMIC_RELEASE);
 	else
 		__atomic_store_n(&ring->tail, slot, __ATOMIC_RELEASE);
@@ -678,7 +678,7 @@ memif_tx_one_zc(struct pmd_process_private *proc_private, struct memif_queue *mq
 next_in_chain:
 	/* store pointer to mbuf to free it later */
 	mq->buffers[slot & mask] = mbuf;
-	/* Increment refcnt to make sure the buffer is not freed before master
+	/* Increment refcnt to make sure the buffer is not freed before server
 	 * receives it. (current segment)
 	 */
 	rte_mbuf_refcnt_update(mbuf, 1);
@@ -731,14 +731,10 @@ eth_memif_tx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	ring_size = 1 << mq->log2_ring_size;
 	mask = ring_size - 1;
 
-	/* free mbufs received by master */
+	/* free mbufs received by server */
 	memif_free_stored_mbufs(proc_private, mq);
 
-	/* ring type always MEMIF_RING_S2M */
-	/* The ring->head acts as a guard variable between Tx and Rx
-	 * threads, so using load-acquire pairs with store-release
-	 * to synchronize it between threads.
-	 */
+	/* ring type always MEMIF_RING_C2S */
 	slot = __atomic_load_n(&ring->head, __ATOMIC_ACQUIRE);
 	n_free = ring_size - slot + mq->last_tail;
 
@@ -795,7 +791,7 @@ eth_memif_tx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 no_free_slots:
 	/* update ring pointers */
-	if (type == MEMIF_RING_S2M)
+	if (type == MEMIF_RING_C2S)
 		__atomic_store_n(&ring->head, slot, __ATOMIC_RELEASE);
 	else
 		__atomic_store_n(&ring->tail, slot, __ATOMIC_RELEASE);
@@ -910,7 +906,7 @@ memif_region_init_shm(struct rte_eth_dev *dev, uint8_t has_buffers)
 	}
 
 	/* calculate buffer offset */
-	r->pkt_buffer_offset = (pmd->run.num_s2m_rings + pmd->run.num_m2s_rings) *
+	r->pkt_buffer_offset = (pmd->run.num_c2s_rings + pmd->run.num_s2c_rings) *
 	    (sizeof(memif_ring_t) + sizeof(memif_desc_t) *
 	    (1 << pmd->run.log2_ring_size));
 
@@ -919,8 +915,8 @@ memif_region_init_shm(struct rte_eth_dev *dev, uint8_t has_buffers)
 	if (has_buffers == 1)
 		r->region_size += (uint32_t)(pmd->run.pkt_buffer_size *
 			(1 << pmd->run.log2_ring_size) *
-			(pmd->run.num_s2m_rings +
-			 pmd->run.num_m2s_rings));
+			(pmd->run.num_c2s_rings +
+			 pmd->run.num_s2c_rings));
 
 	memset(shm_name, 0, sizeof(char) * ETH_MEMIF_SHM_NAME_SIZE);
 	snprintf(shm_name, ETH_MEMIF_SHM_NAME_SIZE, "memif_region_%d",
@@ -1005,8 +1001,8 @@ memif_init_rings(struct rte_eth_dev *dev)
 	int i, j;
 	uint16_t slot;
 
-	for (i = 0; i < pmd->run.num_s2m_rings; i++) {
-		ring = memif_get_ring(pmd, proc_private, MEMIF_RING_S2M, i);
+	for (i = 0; i < pmd->run.num_c2s_rings; i++) {
+		ring = memif_get_ring(pmd, proc_private, MEMIF_RING_C2S, i);
 		__atomic_store_n(&ring->head, 0, __ATOMIC_RELAXED);
 		__atomic_store_n(&ring->tail, 0, __ATOMIC_RELAXED);
 		ring->cookie = MEMIF_COOKIE;
@@ -1025,8 +1021,8 @@ memif_init_rings(struct rte_eth_dev *dev)
 		}
 	}
 
-	for (i = 0; i < pmd->run.num_m2s_rings; i++) {
-		ring = memif_get_ring(pmd, proc_private, MEMIF_RING_M2S, i);
+	for (i = 0; i < pmd->run.num_s2c_rings; i++) {
+		ring = memif_get_ring(pmd, proc_private, MEMIF_RING_S2C, i);
 		__atomic_store_n(&ring->head, 0, __ATOMIC_RELAXED);
 		__atomic_store_n(&ring->tail, 0, __ATOMIC_RELAXED);
 		ring->cookie = MEMIF_COOKIE;
@@ -1036,7 +1032,7 @@ memif_init_rings(struct rte_eth_dev *dev)
 			continue;
 
 		for (j = 0; j < (1 << pmd->run.log2_ring_size); j++) {
-			slot = (i + pmd->run.num_s2m_rings) *
+			slot = (i + pmd->run.num_c2s_rings) *
 			    (1 << pmd->run.log2_ring_size) + j;
 			ring->desc[j].region = 0;
 			ring->desc[j].offset =
@@ -1047,7 +1043,7 @@ memif_init_rings(struct rte_eth_dev *dev)
 	}
 }
 
-/* called only by slave */
+/* called only by client */
 static int
 memif_init_queues(struct rte_eth_dev *dev)
 {
@@ -1055,12 +1051,12 @@ memif_init_queues(struct rte_eth_dev *dev)
 	struct memif_queue *mq;
 	int i;
 
-	for (i = 0; i < pmd->run.num_s2m_rings; i++) {
+	for (i = 0; i < pmd->run.num_c2s_rings; i++) {
 		mq = dev->data->tx_queues[i];
 		mq->log2_ring_size = pmd->run.log2_ring_size;
 		/* queues located only in region 0 */
 		mq->region = 0;
-		mq->ring_offset = memif_get_ring_offset(dev, mq, MEMIF_RING_S2M, i);
+		mq->ring_offset = memif_get_ring_offset(dev, mq, MEMIF_RING_C2S, i);
 		mq->last_head = 0;
 		mq->last_tail = 0;
 		mq->intr_handle.fd = eventfd(0, EFD_NONBLOCK);
@@ -1078,12 +1074,12 @@ memif_init_queues(struct rte_eth_dev *dev)
 		}
 	}
 
-	for (i = 0; i < pmd->run.num_m2s_rings; i++) {
+	for (i = 0; i < pmd->run.num_s2c_rings; i++) {
 		mq = dev->data->rx_queues[i];
 		mq->log2_ring_size = pmd->run.log2_ring_size;
 		/* queues located only in region 0 */
 		mq->region = 0;
-		mq->ring_offset = memif_get_ring_offset(dev, mq, MEMIF_RING_M2S, i);
+		mq->ring_offset = memif_get_ring_offset(dev, mq, MEMIF_RING_S2C, i);
 		mq->last_head = 0;
 		mq->last_tail = 0;
 		mq->intr_handle.fd = eventfd(0, EFD_NONBLOCK);
@@ -1155,8 +1151,8 @@ memif_connect(struct rte_eth_dev *dev)
 	}
 
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
-		for (i = 0; i < pmd->run.num_s2m_rings; i++) {
-			mq = (pmd->role == MEMIF_ROLE_SLAVE) ?
+		for (i = 0; i < pmd->run.num_c2s_rings; i++) {
+			mq = (pmd->role == MEMIF_ROLE_CLIENT) ?
 			    dev->data->tx_queues[i] : dev->data->rx_queues[i];
 			ring = memif_get_ring_from_queue(proc_private, mq);
 			if (ring == NULL || ring->cookie != MEMIF_COOKIE) {
@@ -1168,11 +1164,11 @@ memif_connect(struct rte_eth_dev *dev)
 			mq->last_head = 0;
 			mq->last_tail = 0;
 			/* enable polling mode */
-			if (pmd->role == MEMIF_ROLE_MASTER)
+			if (pmd->role == MEMIF_ROLE_SERVER)
 				ring->flags = MEMIF_RING_FLAG_MASK_INT;
 		}
-		for (i = 0; i < pmd->run.num_m2s_rings; i++) {
-			mq = (pmd->role == MEMIF_ROLE_SLAVE) ?
+		for (i = 0; i < pmd->run.num_s2c_rings; i++) {
+			mq = (pmd->role == MEMIF_ROLE_CLIENT) ?
 			    dev->data->rx_queues[i] : dev->data->tx_queues[i];
 			ring = memif_get_ring_from_queue(proc_private, mq);
 			if (ring == NULL || ring->cookie != MEMIF_COOKIE) {
@@ -1184,7 +1180,7 @@ memif_connect(struct rte_eth_dev *dev)
 			mq->last_head = 0;
 			mq->last_tail = 0;
 			/* enable polling mode */
-			if (pmd->role == MEMIF_ROLE_SLAVE)
+			if (pmd->role == MEMIF_ROLE_CLIENT)
 				ring->flags = MEMIF_RING_FLAG_MASK_INT;
 		}
 
@@ -1203,11 +1199,11 @@ memif_dev_start(struct rte_eth_dev *dev)
 	int ret = 0;
 
 	switch (pmd->role) {
-	case MEMIF_ROLE_SLAVE:
-		ret = memif_connect_slave(dev);
+	case MEMIF_ROLE_CLIENT:
+		ret = memif_connect_client(dev);
 		break;
-	case MEMIF_ROLE_MASTER:
-		ret = memif_connect_master(dev);
+	case MEMIF_ROLE_SERVER:
+		ret = memif_connect_server(dev);
 		break;
 	default:
 		MIF_LOG(ERR, "Unknown role: %d.", pmd->role);
@@ -1249,17 +1245,17 @@ memif_dev_configure(struct rte_eth_dev *dev)
 	struct pmd_internals *pmd = dev->data->dev_private;
 
 	/*
-	 * SLAVE - TXQ
-	 * MASTER - RXQ
+	 * CLIENT - TXQ
+	 * SERVER - RXQ
 	 */
-	pmd->cfg.num_s2m_rings = (pmd->role == MEMIF_ROLE_SLAVE) ?
+	pmd->cfg.num_c2s_rings = (pmd->role == MEMIF_ROLE_CLIENT) ?
 				  dev->data->nb_tx_queues : dev->data->nb_rx_queues;
 
 	/*
-	 * SLAVE - RXQ
-	 * MASTER - TXQ
+	 * CLIENT - RXQ
+	 * SERVER - TXQ
 	 */
-	pmd->cfg.num_m2s_rings = (pmd->role == MEMIF_ROLE_SLAVE) ?
+	pmd->cfg.num_s2c_rings = (pmd->role == MEMIF_ROLE_CLIENT) ?
 				  dev->data->nb_rx_queues : dev->data->nb_tx_queues;
 
 	return 0;
@@ -1282,7 +1278,7 @@ memif_tx_queue_setup(struct rte_eth_dev *dev,
 	}
 
 	mq->type =
-	    (pmd->role == MEMIF_ROLE_SLAVE) ? MEMIF_RING_S2M : MEMIF_RING_M2S;
+	    (pmd->role == MEMIF_ROLE_CLIENT) ? MEMIF_RING_C2S : MEMIF_RING_S2C;
 	mq->n_pkts = 0;
 	mq->n_bytes = 0;
 	mq->intr_handle.fd = -1;
@@ -1310,7 +1306,7 @@ memif_rx_queue_setup(struct rte_eth_dev *dev,
 		return -ENOMEM;
 	}
 
-	mq->type = (pmd->role == MEMIF_ROLE_SLAVE) ? MEMIF_RING_M2S : MEMIF_RING_S2M;
+	mq->type = (pmd->role == MEMIF_ROLE_CLIENT) ? MEMIF_RING_S2C : MEMIF_RING_C2S;
 	mq->n_pkts = 0;
 	mq->n_bytes = 0;
 	mq->intr_handle.fd = -1;
@@ -1365,8 +1361,8 @@ memif_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 	stats->opackets = 0;
 	stats->obytes = 0;
 
-	tmp = (pmd->role == MEMIF_ROLE_SLAVE) ? pmd->run.num_s2m_rings :
-	    pmd->run.num_m2s_rings;
+	tmp = (pmd->role == MEMIF_ROLE_CLIENT) ? pmd->run.num_c2s_rings :
+	    pmd->run.num_s2c_rings;
 	nq = (tmp < RTE_ETHDEV_QUEUE_STAT_CNTRS) ? tmp :
 	    RTE_ETHDEV_QUEUE_STAT_CNTRS;
 
@@ -1379,8 +1375,8 @@ memif_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		stats->ibytes += mq->n_bytes;
 	}
 
-	tmp = (pmd->role == MEMIF_ROLE_SLAVE) ? pmd->run.num_m2s_rings :
-	    pmd->run.num_s2m_rings;
+	tmp = (pmd->role == MEMIF_ROLE_CLIENT) ? pmd->run.num_s2c_rings :
+	    pmd->run.num_c2s_rings;
 	nq = (tmp < RTE_ETHDEV_QUEUE_STAT_CNTRS) ? tmp :
 	    RTE_ETHDEV_QUEUE_STAT_CNTRS;
 
@@ -1402,14 +1398,14 @@ memif_stats_reset(struct rte_eth_dev *dev)
 	int i;
 	struct memif_queue *mq;
 
-	for (i = 0; i < pmd->run.num_s2m_rings; i++) {
-		mq = (pmd->role == MEMIF_ROLE_SLAVE) ? dev->data->tx_queues[i] :
+	for (i = 0; i < pmd->run.num_c2s_rings; i++) {
+		mq = (pmd->role == MEMIF_ROLE_CLIENT) ? dev->data->tx_queues[i] :
 		    dev->data->rx_queues[i];
 		mq->n_pkts = 0;
 		mq->n_bytes = 0;
 	}
-	for (i = 0; i < pmd->run.num_m2s_rings; i++) {
-		mq = (pmd->role == MEMIF_ROLE_SLAVE) ? dev->data->rx_queues[i] :
+	for (i = 0; i < pmd->run.num_s2c_rings; i++) {
+		mq = (pmd->role == MEMIF_ROLE_CLIENT) ? dev->data->rx_queues[i] :
 		    dev->data->tx_queues[i];
 		mq->n_pkts = 0;
 		mq->n_bytes = 0;
@@ -1490,8 +1486,8 @@ memif_create(struct rte_vdev_device *vdev, enum memif_role_t role,
 	pmd->flags = flags;
 	pmd->flags |= ETH_MEMIF_FLAG_DISABLED;
 	pmd->role = role;
-	/* Zero-copy flag irelevant to master. */
-	if (pmd->role == MEMIF_ROLE_MASTER)
+	/* Zero-copy flag irelevant to server. */
+	if (pmd->role == MEMIF_ROLE_SERVER)
 		pmd->flags &= ~ETH_MEMIF_FLAG_ZERO_COPY;
 
 	ret = memif_socket_init(eth_dev, socket_filename);
@@ -1504,8 +1500,8 @@ memif_create(struct rte_vdev_device *vdev, enum memif_role_t role,
 
 	pmd->cfg.log2_ring_size = log2_ring_size;
 	/* set in .dev_configure() */
-	pmd->cfg.num_s2m_rings = 0;
-	pmd->cfg.num_m2s_rings = 0;
+	pmd->cfg.num_c2s_rings = 0;
+	pmd->cfg.num_s2c_rings = 0;
 
 	pmd->cfg.pkt_buffer_size = pkt_buffer_size;
 	rte_spinlock_init(&pmd->cc_lock);
@@ -1538,10 +1534,16 @@ memif_set_role(const char *key __rte_unused, const char *value,
 {
 	enum memif_role_t *role = (enum memif_role_t *)extra_args;
 
-	if (strstr(value, "master") != NULL) {
-		*role = MEMIF_ROLE_MASTER;
+	if (strstr(value, "server") != NULL) {
+		*role = MEMIF_ROLE_SERVER;
+	} else if (strstr(value, "client") != NULL) {
+		*role = MEMIF_ROLE_CLIENT;
+	} else if (strstr(value, "master") != NULL) {
+		MIF_LOG(NOTICE, "Role argument \"master\" is deprecated, use \"server\"");
+		*role = MEMIF_ROLE_SERVER;
 	} else if (strstr(value, "slave") != NULL) {
-		*role = MEMIF_ROLE_SLAVE;
+		MIF_LOG(NOTICE, "Role argument \"slave\" is deprecated, use \"client\"");
+		*role = MEMIF_ROLE_CLIENT;
 	} else {
 		MIF_LOG(ERR, "Unknown role: %s.", value);
 		return -EINVAL;
@@ -1684,7 +1686,7 @@ rte_pmd_memif_probe(struct rte_vdev_device *vdev)
 	int ret = 0;
 	struct rte_kvargs *kvlist;
 	const char *name = rte_vdev_device_name(vdev);
-	enum memif_role_t role = MEMIF_ROLE_SLAVE;
+	enum memif_role_t role = MEMIF_ROLE_CLIENT;
 	memif_interface_id_t id = 0;
 	uint16_t pkt_buffer_size = ETH_MEMIF_DEFAULT_PKT_BUFFER_SIZE;
 	memif_log2_ring_size_t log2_ring_size = ETH_MEMIF_DEFAULT_RING_SIZE;
@@ -1812,7 +1814,7 @@ RTE_PMD_REGISTER_VDEV(net_memif, pmd_memif_drv);
 
 RTE_PMD_REGISTER_PARAM_STRING(net_memif,
 			      ETH_MEMIF_ID_ARG "=<int>"
-			      ETH_MEMIF_ROLE_ARG "=master|slave"
+			      ETH_MEMIF_ROLE_ARG "=server|client"
 			      ETH_MEMIF_PKT_BUFFER_SIZE_ARG "=<int>"
 			      ETH_MEMIF_RING_SIZE_ARG "=<int>"
 			      ETH_MEMIF_SOCKET_ARG "=<string>"
