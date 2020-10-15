@@ -60,6 +60,7 @@ EXPORTS
 	rte_exit
 	rte_free
 	rte_get_master_lcore
+	rte_get_max_simd_bitwidth
 	rte_get_next_lcore
 	rte_get_tsc_hz
 	rte_hexdump
@@ -148,6 +149,7 @@ EXPORTS
 	rte_service_set_stats_enable
 	rte_service_start_with_defaults
 	rte_set_application_usage_hook
+	rte_set_max_simd_bitwidth
 	rte_socket_count
 	rte_socket_id
 	rte_socket_id_by_idx
