@@ -16,6 +16,8 @@ static struct rte_tailq_elem rte_acl_tailq = {
 };
 EAL_REGISTER_TAILQ(rte_acl_tailq)
 
+uint16_t max_simd_bitwidth;
+
 #ifndef CC_AVX512_SUPPORT
 /*
  * If the compiler doesn't support AVX512 instructions,
@@ -114,9 +116,13 @@ acl_check_alg_arm(enum rte_acl_classify_alg alg)
 {
 	if (alg == RTE_ACL_CLASSIFY_NEON) {
 #if defined(RTE_ARCH_ARM64)
-		return 0;
+		if (max_simd_bitwidth >= RTE_SIMD_128)
+			return 0;
+		else
+			return -ENOTSUP;
 #elif defined(RTE_ARCH_ARM)
-		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_NEON))
+		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_NEON) &&
+				max_simd_bitwidth >= RTE_SIMD_128)
 			return 0;
 		return -ENOTSUP;
 #else
@@ -136,7 +142,10 @@ acl_check_alg_ppc(enum rte_acl_classify_alg alg)
 {
 	if (alg == RTE_ACL_CLASSIFY_ALTIVEC) {
 #if defined(RTE_ARCH_PPC_64)
-		return 0;
+		if (max_simd_bitwidth >= RTE_SIMD_128)
+			return 0;
+		else
+			return -ENOTSUP;
 #else
 		return -ENOTSUP;
 #endif
@@ -158,7 +167,8 @@ acl_check_alg_x86(enum rte_acl_classify_alg alg)
 		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) &&
 			rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512VL) &&
 			rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512CD) &&
-			rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512BW))
+			rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512BW) &&
+			max_simd_bitwidth >= RTE_SIMD_512)
 			return 0;
 #endif
 		return -ENOTSUP;
@@ -166,7 +176,8 @@ acl_check_alg_x86(enum rte_acl_classify_alg alg)
 
 	if (alg == RTE_ACL_CLASSIFY_AVX2) {
 #ifdef CC_AVX2_SUPPORT
-		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2))
+		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2) &&
+				max_simd_bitwidth >= RTE_SIMD_256)
 			return 0;
 #endif
 		return -ENOTSUP;
@@ -174,7 +185,8 @@ acl_check_alg_x86(enum rte_acl_classify_alg alg)
 
 	if (alg == RTE_ACL_CLASSIFY_SSE) {
 #ifdef RTE_ARCH_X86
-		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_SSE4_1))
+		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_SSE4_1) &&
+				max_simd_bitwidth >= RTE_SIMD_128)
 			return 0;
 #endif
 		return -ENOTSUP;
@@ -405,6 +417,9 @@ rte_acl_create(const struct rte_acl_param *param)
 
 		TAILQ_INSERT_TAIL(acl_list, te, next);
 	}
+
+	if (max_simd_bitwidth == 0)
+		max_simd_bitwidth = rte_get_max_simd_bitwidth();
 
 exit:
 	rte_mcfg_tailq_write_unlock();
