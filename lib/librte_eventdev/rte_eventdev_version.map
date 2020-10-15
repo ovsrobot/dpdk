@@ -134,4 +134,7 @@ EXPERIMENTAL {
 	__rte_eventdev_trace_crypto_adapter_queue_pair_del;
 	__rte_eventdev_trace_crypto_adapter_start;
 	__rte_eventdev_trace_crypto_adapter_stop;
+
+	# added in 20.11
+	rte_event_pmd_pci_probe_named;
 };
