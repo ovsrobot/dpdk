@@ -2989,7 +2989,9 @@ ice_set_rx_function(struct rte_eth_dev *dev)
 	bool use_avx2 = false;
 
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
-		if (!ice_rx_vec_dev_check(dev) && ad->rx_bulk_alloc_allowed) {
+		if (!ice_rx_vec_dev_check(dev) && ad->rx_bulk_alloc_allowed &&
+				rte_get_max_simd_bitwidth()
+				>= RTE_SIMD_128) {
 			ad->rx_vec_allowed = true;
 			for (i = 0; i < dev->data->nb_rx_queues; i++) {
 				rxq = dev->data->rx_queues[i];
@@ -2999,8 +3001,10 @@ ice_set_rx_function(struct rte_eth_dev *dev)
 				}
 			}
 
-			if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2) == 1 ||
-			rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) == 1)
+			if ((rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2) == 1 ||
+			rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) == 1) &&
+					rte_get_max_simd_bitwidth()
+					>= RTE_SIMD_256)
 				use_avx2 = true;
 
 		} else {
@@ -3167,7 +3171,9 @@ ice_set_tx_function(struct rte_eth_dev *dev)
 	bool use_avx2 = false;
 
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
-		if (!ice_tx_vec_dev_check(dev)) {
+		if (!ice_tx_vec_dev_check(dev) &&
+				rte_get_max_simd_bitwidth()
+				>= RTE_SIMD_128) {
 			ad->tx_vec_allowed = true;
 			for (i = 0; i < dev->data->nb_tx_queues; i++) {
 				txq = dev->data->tx_queues[i];
@@ -3177,8 +3183,10 @@ ice_set_tx_function(struct rte_eth_dev *dev)
 				}
 			}
 
-			if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2) == 1 ||
-			rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) == 1)
+			if ((rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2) == 1 ||
+			rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) == 1) &&
+					rte_get_max_simd_bitwidth()
+					>= RTE_SIMD_256)
 				use_avx2 = true;
 
 		} else {
