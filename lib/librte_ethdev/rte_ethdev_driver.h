@@ -656,6 +656,32 @@ typedef int (*eth_fec_get_t)(struct rte_eth_dev *dev,
 typedef int (*eth_fec_set_t)(struct rte_eth_dev *dev, uint32_t fec_capa);
 
 /**
+ * @internal
+ * Get address of memory location whose contents will change whenever there is
+ * new data to be received on an RX queue.
+ *
+ * @param rxq
+ *   Ethdev queue pointer.
+ * @param tail_desc_addr
+ *   The pointer point to where the address will be stored.
+ * @param expected
+ *   The pointer point to value to be expected when descriptor is set.
+ * @param mask
+ *   The pointer point to comparison bitmask for the expected value.
+ * @param data_sz
+ *   Data size for the expected value (can be 1, 2, 4, or 8 bytes)
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success
+ * @retval -EINVAL
+ *   Invalid parameters
+ */
+typedef int (*eth_get_wake_addr_t)(void *rxq, volatile void **tail_desc_addr,
+		uint64_t *expected, uint64_t *mask, uint8_t *data_sz);
+
+/**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
 struct eth_dev_ops {
@@ -801,6 +827,8 @@ struct eth_dev_ops {
 	/**< Get Forward Error Correction(FEC) mode. */
 	eth_fec_set_t fec_set;
 	/**< Set Forward Error Correction(FEC) mode. */
+	eth_get_wake_addr_t get_wake_addr;
+	/**< Get next RX queue ring entry address. */
 };
 
 /**
