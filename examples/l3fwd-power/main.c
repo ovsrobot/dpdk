@@ -47,6 +47,7 @@
 #include <rte_power_empty_poll.h>
 #include <rte_metrics.h>
 #include <rte_telemetry.h>
+#include <rte_power_pmd_mgmt.h>
 
 #include "perf_core.h"
 #include "main.h"
@@ -199,7 +200,8 @@ enum appmode {
 	APP_MODE_LEGACY,
 	APP_MODE_EMPTY_POLL,
 	APP_MODE_TELEMETRY,
-	APP_MODE_INTERRUPT
+	APP_MODE_INTERRUPT,
+	APP_MODE_PMD_MGMT
 };
 
 enum appmode app_mode;
@@ -1750,6 +1752,7 @@ parse_ep_config(const char *q_arg)
 #define CMD_LINE_OPT_EMPTY_POLL "empty-poll"
 #define CMD_LINE_OPT_INTERRUPT_ONLY "interrupt-only"
 #define CMD_LINE_OPT_TELEMETRY "telemetry"
+#define CMD_LINE_OPT_PMD_MGMT "pmd-mgmt"
 
 /* Parse the argument given in the command line of the application */
 static int
@@ -1771,6 +1774,7 @@ parse_args(int argc, char **argv)
 		{CMD_LINE_OPT_LEGACY, 0, 0, 0},
 		{CMD_LINE_OPT_TELEMETRY, 0, 0, 0},
 		{CMD_LINE_OPT_INTERRUPT_ONLY, 0, 0, 0},
+		{CMD_LINE_OPT_PMD_MGMT, 0, 0, 0},
 		{NULL, 0, 0, 0}
 	};
 
@@ -1881,6 +1885,16 @@ parse_args(int argc, char **argv)
 				printf("telemetry mode is enabled\n");
 			}
 
+			if (!strncmp(lgopts[option_index].name,
+					CMD_LINE_OPT_PMD_MGMT,
+					sizeof(CMD_LINE_OPT_PMD_MGMT))) {
+				if (app_mode != APP_MODE_DEFAULT) {
+					printf(" power mgmt mode is mutually exclusive with other modes\n");
+					return -1;
+				}
+				app_mode = APP_MODE_PMD_MGMT;
+				printf("PMD power mgmt  mode is enabled\n");
+			}
 			if (!strncmp(lgopts[option_index].name,
 					CMD_LINE_OPT_INTERRUPT_ONLY,
 					sizeof(CMD_LINE_OPT_INTERRUPT_ONLY))) {
@@ -2437,6 +2451,8 @@ mode_to_str(enum appmode mode)
 		return "telemetry";
 	case APP_MODE_INTERRUPT:
 		return "interrupt-only";
+	case APP_MODE_PMD_MGMT:
+		return "pmd mgmt";
 	default:
 		return "invalid";
 	}
@@ -2705,6 +2721,12 @@ main(int argc, char **argv)
 			} else if (!check_ptype(portid))
 				rte_exit(EXIT_FAILURE,
 					 "PMD can not provide needed ptypes\n");
+			if (app_mode == APP_MODE_PMD_MGMT) {
+				rte_power_pmd_mgmt_queue_enable(lcore_id,
+							portid, queueid,
+						RTE_POWER_MGMT_TYPE_SCALE);
+
+			}
 		}
 	}
 
@@ -2790,6 +2812,9 @@ main(int argc, char **argv)
 						SKIP_MASTER);
 	} else if (app_mode == APP_MODE_INTERRUPT) {
 		rte_eal_mp_remote_launch(main_intr_loop, NULL, CALL_MASTER);
+	} else if (app_mode == APP_MODE_PMD_MGMT) {
+		rte_eal_mp_remote_launch(main_telemetry_loop, NULL,
+					 CALL_MASTER);
 	}
 
 	if (app_mode == APP_MODE_EMPTY_POLL || app_mode == APP_MODE_TELEMETRY)
@@ -2811,6 +2836,20 @@ main(int argc, char **argv)
 
 	if (app_mode == APP_MODE_EMPTY_POLL)
 		rte_power_empty_poll_stat_free();
+
+	if (app_mode == APP_MODE_PMD_MGMT) {
+		for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
+			if (rte_lcore_is_enabled(lcore_id) == 0)
+				continue;
+			qconf = &lcore_conf[lcore_id];
+			for (queue = 0; queue < qconf->n_rx_queue; ++queue) {
+				portid = qconf->rx_queue_list[queue].port_id;
+				queueid = qconf->rx_queue_list[queue].queue_id;
+				rte_power_pmd_mgmt_queue_disable(lcore_id,
+							portid, queueid);
+			}
+		}
+	}
 
 	if ((app_mode == APP_MODE_LEGACY || app_mode == APP_MODE_EMPTY_POLL) &&
 			deinit_power_library())
