@@ -185,7 +185,7 @@ rte_mbuf_dynfield_lookup(const char *name, struct rte_mbuf_dynfield *params)
 {
 	struct mbuf_dynfield_elt *mbuf_dynfield;
 
-	if (shm == NULL) {
+	if (shm == NULL && init_shared_mem() < 0) {
 		rte_errno = ENOENT;
 		return -1;
 	}
@@ -384,7 +384,7 @@ rte_mbuf_dynflag_lookup(const char *name,
 {
 	struct mbuf_dynflag_elt *mbuf_dynflag;
 
-	if (shm == NULL) {
+	if (shm == NULL && init_shared_mem() < 0) {
 		rte_errno = ENOENT;
 		return -1;
 	}
