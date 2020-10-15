@@ -786,7 +786,7 @@ main(int argc, char **argv)
 				) != 0 )
 			rte_exit(EXIT_FAILURE, "Stats setup failure.\n");
 	}
-	/* launch per-lcore init on every slave lcore */
+	/* launch per-lcore init on every worker lcore */
 	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
 		struct lcore_queue_conf *qconf = &lcore_queue_conf[lcore_id];
 
