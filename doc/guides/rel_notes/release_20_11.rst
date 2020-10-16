@@ -290,6 +290,11 @@ New Features
   Added new optional parameter ``--eth-dest`` for the ``l3fwd-acl`` to allow
   the user to specify the destination mac address for each ethernet port used.
 
+* **Allow explicitly select classify method for l3fwd-acl sample application.**
+
+  Replace ``--scalar`` command-line option with ``--alg=<value>``, to
+  to allow user explicitly select desired classify method.
+
 
 Removed Items
 -------------
