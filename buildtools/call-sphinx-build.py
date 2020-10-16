@@ -14,6 +14,9 @@ from distutils.version import StrictVersion
 
 # set the version in environment for sphinx to pick up
 os.environ['DPDK_VERSION'] = version
+# forward error policy to conf.py
+if '-W' in extra_args:
+    os.environ['SPHINX_STOP_ON_ERROR'] = 'true'
 
 # for sphinx version >= 1.7 add parallelism using "-j auto"
 ver = run([sphinx, '--version'], stdout=PIPE,
