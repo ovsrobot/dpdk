@@ -431,6 +431,8 @@ F: lib/librte_regexdev/
 F: app/test-regex/
 F: doc/guides/prog_guide/regexdev.rst
 F: doc/guides/regexdevs/features/default.ini
+M: Guy Kaneti <guyk@marvell.com>
+F: examples/l3fwd-regex/
 
 Eventdev API
 M: Jerin Jacob <jerinj@marvell.com>
