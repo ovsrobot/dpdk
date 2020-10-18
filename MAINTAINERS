@@ -433,6 +433,7 @@ F: doc/guides/prog_guide/regexdev.rst
 F: doc/guides/regexdevs/features/default.ini
 M: Guy Kaneti <guyk@marvell.com>
 F: examples/l3fwd-regex/
+F: doc/guides/sample_app_ug/l3_forward_regex.rst
 
 Eventdev API
 M: Jerin Jacob <jerinj@marvell.com>

@@ -285,6 +285,11 @@ New Features
   * Added scatter gather support.
   * Added NIST GCMVS complaint GMAC test method support.
 
+* **Added new l3fwd-regex sample application.**
+
+  Added an example application ``l3fwd-regex``. This demonstrates the usage of
+  packet processing using DPDK Regex libraries.
+
 
 Removed Items
 -------------
