@@ -33,6 +33,7 @@ enum app_args {
 	ARG_NUM_OF_JOBS,
 	ARG_PERF_MODE,
 	ARG_NUM_OF_ITERATIONS,
+	ARG_CFG_OOS,
 };
 
 static void
@@ -43,13 +44,15 @@ usage(const char *prog_name)
 		" --data NAME: data file to use\n"
 		" --nb_jobs: number of jobs to use\n"
 		" --perf N: only outputs the performance data\n"
-		" --nb_iter N: number of iteration to run\n",
+		" --nb_iter N: number of iteration to run\n"
+		" --cfg_oos: configure regexdev queue flag out of order scan\n",
 		prog_name);
 }
 
 static void
 args_parse(int argc, char **argv, char *rules_file, char *data_file,
-	   uint32_t *nb_jobs, bool *perf_mode, uint32_t *nb_iterations)
+	   uint32_t *nb_jobs, bool *perf_mode, uint32_t *nb_iterations,
+	   uint32_t *qp_conf_flags)
 {
 	char **argvopt;
 	int opt;
@@ -66,7 +69,9 @@ args_parse(int argc, char **argv, char *rules_file, char *data_file,
 		/* Perf test only */
 		{ "perf", 0, 0, ARG_PERF_MODE},
 		/* Number of iterations to run with perf test */
-		{ "nb_iter", 1, 0, ARG_NUM_OF_ITERATIONS}
+		{ "nb_iter", 1, 0, ARG_NUM_OF_ITERATIONS},
+		/* configure out of order scan */
+		{ "cfg_oos", 0, 0, ARG_CFG_OOS}
 	};
 
 	argvopt = argv;
@@ -97,6 +102,9 @@ args_parse(int argc, char **argv, char *rules_file, char *data_file,
 			break;
 		case ARG_NUM_OF_ITERATIONS:
 			*nb_iterations = atoi(optarg);
+			break;
+		case ARG_CFG_OOS:
+			*qp_conf_flags = RTE_REGEX_QUEUE_PAIR_CFG_OOS_F;
 			break;
 		case ARG_HELP:
 			usage("RegEx test app");
@@ -158,7 +166,8 @@ error:
 
 static int
 init_port(struct rte_mempool **mbuf_mp, uint32_t nb_jobs,
-	  uint16_t *nb_max_payload, char *rules_file, uint8_t *nb_max_matches)
+	  uint16_t *nb_max_payload, char *rules_file, uint8_t *nb_max_matches,
+	  uint32_t qp_conf_flags)
 {
 	uint16_t id;
 	uint16_t num_devs;
@@ -171,7 +180,7 @@ init_port(struct rte_mempool **mbuf_mp, uint32_t nb_jobs,
 	};
 	struct rte_regexdev_qp_conf qp_conf = {
 		.nb_desc = 1024,
-		.qp_conf_flags = RTE_REGEX_QUEUE_PAIR_CFG_OOS_F,
+		.qp_conf_flags = qp_conf_flags,
 	};
 	int res = 0;
 
@@ -407,6 +416,7 @@ main(int argc, char **argv)
 	bool perf_mode = 0;
 	uint32_t nb_iterations = 0;
 	uint8_t nb_max_matches = 0;
+	uint32_t qp_conf_flags = 0;
 	int ret;
 
 	ret = rte_eal_init(argc, argv);
@@ -416,10 +426,10 @@ main(int argc, char **argv)
 	argv += ret;
 	if (argc > 1)
 		args_parse(argc, argv, rules_file, data_file, &nb_jobs,
-			   &perf_mode, &nb_iterations);
+			   &perf_mode, &nb_iterations, &qp_conf_flags);
 
 	ret = init_port(&mbuf_mp, nb_jobs, &nb_max_payload, rules_file,
-			&nb_max_matches);
+			&nb_max_matches, qp_conf_flags);
 	if (ret < 0)
 		rte_exit(EXIT_FAILURE, "init port failed\n");
 	ret = run_regex(mbuf_mp, nb_jobs, nb_max_payload, perf_mode,
