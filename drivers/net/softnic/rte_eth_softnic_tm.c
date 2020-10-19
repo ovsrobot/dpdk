@@ -1147,9 +1147,14 @@ update_subport_tc_rate(struct rte_eth_dev *dev,
 	struct tm_node *ns = np->parent_node;
 	uint32_t subport_id = tm_node_subport_id(dev, ns);
 	struct tm_params *t = &p->soft.tm.params;
-	uint32_t subport_profile_id = t->subport_to_profile[subport_id];
+	uint32_t subport_profile_id;
 	struct tm_shaper_profile *sp_old = tm_shaper_profile_search(dev,
 		ss->shaper_profile_id);
+
+	if (subport_id < TM_MAX_SUBPORT_PROFILE)
+		subport_profile_id = t->subport_to_profile[subport_id];
+	else
+		return -1;
 
 	/* Derive new subport configuration. */
 	memcpy(&subport_profile,
@@ -2370,7 +2375,10 @@ subport_profile_get(struct rte_eth_dev *dev, struct tm_node *np)
 	struct tm_params *t = &p->soft.tm.params;
 	uint32_t subport_id = tm_node_subport_id(dev, np->parent_node);
 
-	return &t->subport_profile[subport_id];
+	if (subport_id < TM_MAX_SUBPORT_PROFILE)
+		return &t->subport_profile[subport_id];
+	else
+		return NULL;
 }
 
 static void
@@ -3023,6 +3031,9 @@ update_subport_rate(struct rte_eth_dev *dev,
 					subport_profile_get(dev, ns);
 	struct rte_sched_subport_profile_params profile1;
 	uint32_t subport_profile_id;
+
+	if (profile0 == NULL)
+		return -1;
 
 	/* Derive new pipe profile. */
 	memcpy(&profile1, profile0, sizeof(profile1));
