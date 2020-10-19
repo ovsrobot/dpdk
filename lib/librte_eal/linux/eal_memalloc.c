@@ -651,6 +651,12 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 				__func__);
 #endif
 
+	/*
+	 * reference count is held by mmap() now
+	 * don't need to hold file open to keep it locked
+	 */
+	close(fd);
+
 	ms->addr = addr;
 	ms->hugepage_sz = alloc_sz;
 	ms->len = alloc_sz;
