@@ -338,6 +338,9 @@ New Features
   * Replaced ``--scalar`` command-line option with ``--alg=<value>``, to allow
     the user to select the desired classify method.
 
+* **Added AVX512 lookup implementation for FIB.**
+
+  Added a AVX512 lookup functions implementation into FIB library.
 
 Removed Items
 -------------

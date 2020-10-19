@@ -18,6 +18,12 @@
 #include <rte_fib.h>
 #include "dir24_8.h"
 
+#ifdef CC_DIR24_8_AVX512_SUPPORT
+
+#include "dir24_8_avx512.h"
+
+#endif /* CC_DIR24_8_AVX512_SUPPORT */
+
 #define DIR24_8_NAMESIZE	64
 
 #define ROUNDUP(x, y)	 RTE_ALIGN_CEIL(x, (1 << (32 - y)))
@@ -56,11 +62,38 @@ get_scalar_fn_inlined(enum rte_fib_dir24_8_nh_sz nh_sz)
 	}
 }
 
+static inline rte_fib_lookup_fn_t
+get_vector_fn(enum rte_fib_dir24_8_nh_sz nh_sz)
+{
+#ifdef CC_DIR24_8_AVX512_SUPPORT
+	if ((rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX512F) <= 0) ||
+			(rte_get_max_simd_bitwidth() < RTE_SIMD_512))
+		return NULL;
+
+	switch (nh_sz) {
+	case RTE_FIB_DIR24_8_1B:
+		return rte_dir24_8_vec_lookup_bulk_1b;
+	case RTE_FIB_DIR24_8_2B:
+		return rte_dir24_8_vec_lookup_bulk_2b;
+	case RTE_FIB_DIR24_8_4B:
+		return rte_dir24_8_vec_lookup_bulk_4b;
+	case RTE_FIB_DIR24_8_8B:
+		return rte_dir24_8_vec_lookup_bulk_8b;
+	default:
+		return NULL;
+	}
+#else
+	RTE_SET_USED(nh_sz);
+#endif
+	return NULL;
+}
+
 rte_fib_lookup_fn_t
 dir24_8_get_lookup_fn(void *p, enum rte_fib_dir24_8_lookup_type type)
 {
 	enum rte_fib_dir24_8_nh_sz nh_sz;
 	struct dir24_8_tbl *dp = p;
+	rte_fib_lookup_fn_t ret_fn = NULL;
 
 	if (dp == NULL)
 		return NULL;
@@ -74,6 +107,11 @@ dir24_8_get_lookup_fn(void *p, enum rte_fib_dir24_8_lookup_type type)
 		return get_scalar_fn_inlined(nh_sz);
 	case RTE_FIB_DIR24_8_SCALAR_UNI:
 		return dir24_8_lookup_bulk_uni;
+	case RTE_FIB_DIR24_8_VECTOR_AVX512:
+		return get_vector_fn(nh_sz);
+	case RTE_FIB_DIR24_8_ANY:
+		ret_fn = get_vector_fn(nh_sz);
+		return (ret_fn) ? ret_fn : get_scalar_fn(nh_sz);
 	default:
 		return NULL;
 	}
