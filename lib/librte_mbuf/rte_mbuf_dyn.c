@@ -185,13 +185,11 @@ rte_mbuf_dynfield_lookup(const char *name, struct rte_mbuf_dynfield *params)
 {
 	struct mbuf_dynfield_elt *mbuf_dynfield;
 
-	if (shm == NULL) {
-		rte_errno = ENOENT;
-		return -1;
-	}
-
 	rte_mcfg_tailq_read_lock();
-	mbuf_dynfield = __mbuf_dynfield_lookup(name);
+	if (shm == NULL && init_shared_mem() < 0)
+		mbuf_dynfield = NULL;
+	else
+		mbuf_dynfield = __mbuf_dynfield_lookup(name);
 	rte_mcfg_tailq_read_unlock();
 
 	if (mbuf_dynfield == NULL) {
@@ -384,13 +382,11 @@ rte_mbuf_dynflag_lookup(const char *name,
 {
 	struct mbuf_dynflag_elt *mbuf_dynflag;
 
-	if (shm == NULL) {
-		rte_errno = ENOENT;
-		return -1;
-	}
-
 	rte_mcfg_tailq_read_lock();
-	mbuf_dynflag = __mbuf_dynflag_lookup(name);
+	if (shm == NULL && init_shared_mem() < 0)
+		mbuf_dynflag = NULL;
+	else 
+		mbuf_dynflag = __mbuf_dynflag_lookup(name);
 	rte_mcfg_tailq_read_unlock();
 
 	if (mbuf_dynflag == NULL) {
