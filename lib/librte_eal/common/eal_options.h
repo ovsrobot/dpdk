@@ -13,8 +13,15 @@ enum {
 	/* long options mapped to a short option */
 #define OPT_HELP              "help"
 	OPT_HELP_NUM            = 'h',
+#define OPT_DEV_ALLOW	      "allow"
+	OPT_DEV_ALLOW_NUM       = 'a',
+#define OPT_DEV_BLOCK         "block"
+	OPT_DEV_BLOCK_NUM      = 'b',
+
+	/* legacy options that will be removed in next LTS */
 #define OPT_PCI_BLACKLIST     "pci-blacklist"
-	OPT_PCI_BLACKLIST_NUM   = 'b',
+	OPT_PCI_BLACKLIST_NUM  = 'B',
+
 #define OPT_PCI_WHITELIST     "pci-whitelist"
 	OPT_PCI_WHITELIST_NUM   = 'w',
 
