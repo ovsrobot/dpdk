@@ -78,6 +78,13 @@ virtio_user_server_reconnect(struct virtio_user_dev *dev)
 		return -1;
 
 	dev->vhostfd = connectfd;
+
+	vtpci_reset(hw);
+
+	vtpci_set_status(hw, VIRTIO_CONFIG_STATUS_ACK);
+
+	vtpci_set_status(hw, VIRTIO_CONFIG_STATUS_DRIVER);
+
 	if (dev->ops->send_request(dev, VHOST_USER_GET_FEATURES,
 				   &dev->device_features) < 0) {
 		PMD_INIT_LOG(ERR, "get_features failed: %s",
@@ -111,6 +118,8 @@ virtio_user_server_reconnect(struct virtio_user_dev *dev)
 
 	dev->features &= dev->device_features;
 
+	vtpci_set_status(hw, VIRTIO_CONFIG_STATUS_FEATURES_OK);
+
 	/* For packed ring, resetting queues is required in reconnection. */
 	if (vtpci_packed_queue(hw) &&
 	   (vtpci_get_status(hw) & VIRTIO_CONFIG_STATUS_DRIVER_OK)) {
@@ -119,8 +128,9 @@ virtio_user_server_reconnect(struct virtio_user_dev *dev)
 		virtio_user_reset_queues_packed(eth_dev);
 	}
 
-	ret = virtio_user_start_device(dev);
-	if (ret < 0)
+	/*  Start the device */
+	vtpci_set_status(hw, VIRTIO_CONFIG_STATUS_DRIVER_OK);
+	if (!dev->started)
 		return -1;
 
 	if (dev->queue_pairs > 1) {
