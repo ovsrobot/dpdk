@@ -560,9 +560,10 @@ virtio_user_backend_type(const char *path)
 	struct stat sb;
 
 	if (stat(path, &sb) == -1) {
-		PMD_INIT_LOG(ERR, "Stat fails: %s (%s)\n", path,
+		PMD_INIT_LOG(INFO, "Stat fails: %s (%s)\n", path,
 			     strerror(errno));
-		return VIRTIO_USER_BACKEND_UNKNOWN;
+		/* Must be vhost-user in server mode */
+		return VIRTIO_USER_BACKEND_VHOST_USER;
 	}
 
 	if (S_ISSOCK(sb.st_mode)) {
