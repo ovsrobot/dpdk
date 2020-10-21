@@ -89,4 +89,18 @@ uint16_t vs_enqueue_pkts(struct vhost_dev *dev, uint16_t queue_id,
 uint16_t vs_dequeue_pkts(struct vhost_dev *dev, uint16_t queue_id,
 			 struct rte_mempool *mbuf_pool,
 			 struct rte_mbuf **pkts, uint16_t count);
+
+#ifdef RTE_ARCH_X86
+
+int open_ioat(const char *value);
+
+#else
+
+static int open_ioat(const char *value __rte_unused)
+{
+	return -1;
+}
+
+#endif
+
 #endif /* _MAIN_H_ */
