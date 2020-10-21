@@ -1,0 +1,89 @@
+Alan Dewar <alan.dewar@att.com> <adewar@brocade.com>
+Alexander Kozyrev <akozyrev@nvidia.com> <akozyrev@mellanox.com>
+Anatoly Burakov <anatoly.burakov@intel.com>
+Andriy Berestovskyy <aber@semihalf.com> <andriy.berestovskyy@caviumnetworks.com>
+Andy Moreton <amoreton@xilinx.com> <amoreton@solarflare.com>
+Ankur Dwivedi <adwivedi@marvell.com> <ankur.dwivedi@caviumnetworks.com>
+Anoob Joseph <anoobj@marvell.com> <anoob.joseph@caviumnetworks.com>
+Ashish Gupta <ashishg@marvell.com> <ashish.gupta@caviumnetworks.com>
+Bing Zhao <bingz@nvidia.com> <bingz@mellanox.com>
+Bruce Richardson <bruce.richardson@intel.com>
+Chao Zhu <chaozhu@linux.vnet.ibm.com> <bjzhuc@cn.ibm.com>
+Chas Williams <3chas3@gmail.com> <chas3@att.com> <ciwillia@brocade.com>
+Chengchang Tang <tangchengchang@huawei.com> <tangchengchang@hisilicon.com>
+Cyril Chemparathy <cchemparathy@ezchip.com> <cchemparathy@tilera.com>
+David Marchand <david.marchand@redhat.com> <david.marchand@6wind.com>
+Dekel Peled <dekelp@nvidia.com> <dekelp@mellanox.com>
+Dumitru Ceara <dceara@redhat.com> <dumitru.ceara@gmail.com>
+Eli Britstein <elibr@mellanox.com> <elibr@nvidia.com>
+Eric Kinzie <ekinzie@brocade.com> <ehkinzie@gmail.com>
+Feifei Wang <feifei.wang2@arm.com> <feifei.wang@arm.com>
+Ferruh Yigit <ferruh.yigit@intel.com> <ferruhy@gmail.com>
+Gaetan Rivet <grive@u256.net> <gaetan.rivet@6wind.com>
+Gavin Hu <gavin.hu@arm.com> <gavin.hu@linaro.org>
+George Wilkie <george.wilkie@intl.att.com> <gwilkie@brocade.com>
+Gregory Etelson <getelson@nvidia.com> <getelson@mellanox.com> <gregory@weka.io>
+Harish Patil <harish.patil@cavium.com> <harish.patil@qlogic.com>
+Hemant Agrawal <hemant.agrawal@nxp.com> <Hemant@freescale.com>
+Ilya Maximets <i.maximets@ovn.org> <i.maximets@samsung.com>
+Jens Freimann <jfreimann@redhat.com> <jfreiman@redhat.com>
+Jerin Jacob <jerinj@marvell.com> <jerin.jacob@caviumnetworks.com>
+Jianbo Liu <jianbo.liu@arm.com> <jianbo.liu@linaro.org>
+Jiawei Wang <jiaweiw@nvidia.com> <jiaweiw@mellanox.com>
+Jincheng Miao <jincheng.miao@gmail.com> <jmiao@redhat.com>
+Jingjing Wu <jingjing.wu@intel.com>
+Julien Meunier <julien.meunier@nokia.com> <julien.meunier@6wind.com>
+Keith Wiles <keith.wiles@intel.com> <keith.wiles@windriver.com>
+Kiran Kumar <kirankumark@marvell.com> <kkokkilagadda@caviumnetworks.com> <kiran.kokkilagadda@caviumnetworks.com>
+Krzysztof Kanas <kkanas@marvell.com> <krzysztof.kanas@caviumnetworks.com>
+Luca Boccassi <luca.boccassi@microsoft.com> <bluca@debian.org> <luca.boccassi@gmail.com> <lboccass@brocade.com>
+Marc Sune <marcdevel@gmail.com> <marc.sune@bisdn.de>
+Matan Azrad <matan@nvidia.com> <matan@mellanox.com>
+Matej Vido <matejvido@gmail.com> <vido@cesnet.cz>
+Mattias Rönnblom <mattias.ronnblom@ericsson.com> <hofors@lysator.liu.se>
+Mauricio Vasquez B <mauricio.vasquez@polito.it> <mauricio.vasquezbernal@studenti.polito.it>
+Michael Baum <michaelba@nvidia.com> <michaelba@mellanox.com>
+Michael Qiu <qiudayu@chinac.com> <michael.qiu@intel.com>
+Michał Mirosław <michal.miroslaw@atendesoftware.pl> <mirq-linux@rere.qmqm.pl>
+Nachiketa Prachanda <nprachan@vyatta.att-mail.com> <nprachan@brocade.com>
+Nicolás Pernas Maradei <nico@emutex.com> <nicolas.pernas.maradei@emutex.com>
+Nithin Dabilpuram <ndabilpuram@marvell.com> <nithin.dabilpuram@caviumnetworks.com>
+Ophir Munk <ophirmu@nvidia.com> <ophirmu@mellanox.com>
+Ori Kam <orika@nvidia.com> <orika@mellanox.com>
+Pablo De Lara <pablo.de.lara.guarch@intel.com>
+Pavan Nikhilesh <pbhagavatula@marvell.com> <pbhagavatula@caviumnetworks.com>
+Pawel Wodkowski <pawelwod@gmail.com> <pawelx.wodkowski@intel.com> <pawelx.wdkowski@intel.com>
+Rahul Shah <rahul.r.shah@intel.com>
+Rami Rosen <ramirose@gmail.com> <rami.rosen@intel.com>
+Rasesh Mody <rmody@marvell.com> <rasesh.mody@cavium.com> <rasesh.mody@qlogic.com>
+Raslan Darawsheh <rasland@mellanox.com> <rdarawsheh@asaltech.com>
+Robert Sanford <rsanford2@gmail.com> <rsanford@akamai.com> <rsanford@prolexic.com>
+Sachin Saxena <sachin.saxena@oss.nxp.com> <sachin.saxena@nxp.com>
+Santosh Shukla <santosh.shukla@caviumnetworks.com> <sshukla@mvista.com>
+Shahed Shaikh <shshaikh@marvell.com> <shahed.shaikh@cavium.com>
+Souvik Dey <sodey@rbbn.com> <sodey@sonusnet.com>
+Stephen Hemminger <stephen@networkplumber.org> <sthemmin@microsoft.com> <shemming@brocade.com> <shemminger@vyatta.com>
+Suanming Mou <suanmingm@nvidia.com> <suanmingm@mellanox.com> <mousuanming@huawei.com>
+Subrahmanyam Nilla <snilla@marvell.com> <snilla@caviumnetworks.com>
+Sunila Sahu <ssahu@marvell.com> <sunila.sahu@caviumnetworks.com>
+Sunil Kumar Kori <skori@marvell.com> <sunil.kori@nxp.com>
+Takeshi Yoshimura <tyos@jp.ibm.com> <t.yoshimura8869@gmail.com>
+Tal Shnaiderman <talshn@nvidia.com> <talshn@mellanox.com>
+Tejasree Kondoj <ktejasree@marvell.com> <kondoj.tejasree@caviumnetworks.com>
+Tetsuya Mukawa <mtetsuyah@gmail.com> <mukawa@igel.co.jp>
+Thomas Monjalon <thomas@monjalon.net> <thomas.monjalon@6wind.com>
+Tiwei Bie <tiwei.bie@intel.com> <btw@mail.ustc.edu.cn>
+Tomasz Jozwiak <tomaszx.jozwiak@intel.com> <tjozwiakgm@gmail.com>
+Tom Barbette <barbette@kth.se> <tom.barbette@ulg.ac.be>
+Tonghao Zhang <xiangxia.m.yue@gmail.com> <nic@opencloud.tech>
+Viacheslav Ovsiienko <viacheslavo@nvidia.com> <viacheslavo@mellanox.com>
+Vivek Sharma <viveksharma@marvell.com> <vivek.sharma@caviumnetworks.com>
+Vladimir Medvedkin <vladimir.medvedkin@intel.com> <medvedkinv@gmail.com>
+Xueming Li <xuemingl@nvidia.com> <xuemingl@mellanox.com>
+Yi Yang <yangyi01@inspur.com> <yi.y.yang@intel.com>
+Yong Wang <wang.yong19@zte.com.cn> <yongwang@vmware.com>
+Yuanhan Liu <yliu@fridaylinux.org> <yuanhan.liu@linux.intel.com>
+Yuval Avnery <yuvalav@nvidia.com> <yuvalav@mellanox.com>
+Zhike Wang <wangzhike@jd.com> <wangzk320@163.com>
+Zoltan Kiss <zoltan.kiss@schaman.hu> <zoltan.kiss@linaro.org>
+Zyta Szpak <zr@semihalf.com> <zyta.szpak@semihalf.com>
