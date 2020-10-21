@@ -34,4 +34,21 @@ if arch_subdir == 'x86'
 				c_args: [cflags, '-mavx2'])
 		objs += iavf_avx2_lib.extract_objects('iavf_rxtx_vec_avx2.c')
 	endif
+
+	if not machine_args.contains('-mno-avx512f')
+		if dpdk_conf.has('RTE_MACHINE_CPUFLAG_AVX512F')
+			cflags += ['-DCC_AVX512_SUPPORT']
+			cflags += ['-march=skylake-avx512']
+			sources += files('iavf_rxtx_vec_avx512.c')
+		elif cc.has_argument('-mavx512f')
+			cflags += ['-DCC_AVX512_SUPPORT']
+			iavf_avx512_lib = static_library('iavf_avx512_lib',
+					'iavf_rxtx_vec_avx512.c',
+					dependencies: [static_rte_ethdev,
+						static_rte_kvargs, static_rte_hash],
+					include_directories: includes,
+					c_args: [cflags, '-mavx512f', '-march=skylake-avx512'])
+			objs += iavf_avx512_lib.extract_objects('iavf_rxtx_vec_avx512.c')
+		endif
+	endif
 endif
