@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <io.h>
 #include <share.h>
+#include <direct.h>
 #include <sys/stat.h>
 
 #include <rte_debug.h>
@@ -33,6 +34,55 @@ static int mem_cfg_fd = -1;
 
 /* internal configuration (per-core) */
 struct lcore_config lcore_config[RTE_MAX_LCORE];
+
+int
+eal_create_runtime_dir(void)
+{
+	char temp_dir[PATH_MAX];
+	char runtime_dir[PATH_MAX];
+	int ret;
+
+	/* get user-writable temp path */
+	if (GetTempPathA(sizeof(temp_dir), temp_dir) == 0) {
+		RTE_LOG_WIN32_ERR("GetTempPath");
+		return -1;
+	}
+
+	/* create DPDK runtime subdirectory under temp dir */
+	ret = strcat_s(temp_dir, sizeof(temp_dir), "dpdk");
+	if (ret != 0) {
+		RTE_LOG(ERR, EAL, "Error creating DPDK runtime path name\n");
+		return -1;
+	}
+
+	/* create prefix-specific subdirectory under DPDK runtime dir */
+	ret = snprintf(runtime_dir, sizeof(runtime_dir), "%s\\%s",
+		temp_dir, eal_get_hugefile_prefix());
+	if (ret < 0 || ret == sizeof(runtime_dir)) {
+		RTE_LOG(ERR, EAL, "Error creating prefix-specific runtime path\n");
+		return -1;
+	}
+
+	/* create the path if it doesn't exist - step by step */
+	ret = _mkdir(temp_dir);
+	if (ret < 0 && errno != EEXIST) {
+		RTE_LOG(ERR, EAL, "Error creating '%s': %s\n",
+			temp_dir, strerror(errno));
+		return -1;
+	}
+
+	ret = _mkdir(runtime_dir);
+	if (ret < 0 && errno != EEXIST) {
+		RTE_LOG(ERR, EAL, "Error creating '%s': %s\n",
+			runtime_dir, strerror(errno));
+		return -1;
+	}
+
+	if (eal_set_runtime_dir(runtime_dir, sizeof(runtime_dir)))
+		return -1;
+
+	return 0;
+}
 
 /* Detect if we are a primary or a secondary process */
 enum rte_proc_type_t
@@ -179,6 +229,13 @@ eal_parse_args(int argc, char **argv)
 			eal_usage(prgname);
 			return -1;
 		}
+	}
+
+	/* create runtime data directory */
+	if (internal_conf->no_shconf == 0 &&
+			eal_create_runtime_dir() < 0) {
+		RTE_LOG(ERR, EAL, "Cannot create runtime directory\n");
+		return -1;
 	}
 
 	if (eal_adjust_config(internal_conf) != 0)
