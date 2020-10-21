@@ -6285,7 +6285,7 @@ static int bnxt_rep_port_probe(struct rte_pci_device *pci_dev,
 	struct bnxt *backing_bp;
 	uint16_t num_rep;
 	int i, ret = 0;
-	struct rte_kvargs *kvlist;
+	struct rte_kvargs *kvlist = NULL;
 
 	num_rep = eth_da.nb_representor_ports;
 	if (num_rep > BNXT_MAX_VF_REPS) {
@@ -6339,49 +6339,79 @@ static int bnxt_rep_port_probe(struct rte_pci_device *pci_dev,
 			 * Invoked as for ex: "-w 000:00:0d.0,
 			 * rep-based-pf=<pf index> rep-is-pf=<VF=0 or PF=1>"
 			 */
+			ret =
 			rte_kvargs_process(kvlist, BNXT_DEVARG_REP_IS_PF,
 					   bnxt_parse_devarg_rep_is_pf,
 					   (void *)&representor);
+			if (ret) {
+				ret = -EINVAL;
+				goto err;
+			}
 			/*
 			 * Handler for "rep_based_pf" devarg.
 			 * Invoked as for ex: "-w 000:00:0d.0,
 			 * rep-based-pf=<pf index> rep-is-pf=<VF=0 or PF=1>"
 			 */
+			ret =
 			rte_kvargs_process(kvlist, BNXT_DEVARG_REP_BASED_PF,
 					   bnxt_parse_devarg_rep_based_pf,
 					   (void *)&representor);
+			if (ret) {
+				ret = -EINVAL;
+				goto err;
+			}
 			/*
 			 * Handler for "rep_based_pf" devarg.
 			 * Invoked as for ex: "-w 000:00:0d.0,
 			 * rep-based-pf=<pf index> rep-is-pf=<VF=0 or PF=1>"
 			 */
+			ret =
 			rte_kvargs_process(kvlist, BNXT_DEVARG_REP_Q_R2F,
 					   bnxt_parse_devarg_rep_q_r2f,
 					   (void *)&representor);
+			if (ret) {
+				ret = -EINVAL;
+				goto err;
+			}
 			/*
 			 * Handler for "rep_based_pf" devarg.
 			 * Invoked as for ex: "-w 000:00:0d.0,
 			 * rep-based-pf=<pf index> rep-is-pf=<VF=0 or PF=1>"
 			 */
+			ret =
 			rte_kvargs_process(kvlist, BNXT_DEVARG_REP_Q_F2R,
 					   bnxt_parse_devarg_rep_q_f2r,
 					   (void *)&representor);
+			if (ret) {
+				ret = -EINVAL;
+				goto err;
+			}
 			/*
 			 * Handler for "rep_based_pf" devarg.
 			 * Invoked as for ex: "-w 000:00:0d.0,
 			 * rep-based-pf=<pf index> rep-is-pf=<VF=0 or PF=1>"
 			 */
+			ret =
 			rte_kvargs_process(kvlist, BNXT_DEVARG_REP_FC_R2F,
 					   bnxt_parse_devarg_rep_fc_r2f,
 					   (void *)&representor);
+			if (ret) {
+				ret = -EINVAL;
+				goto err;
+			}
 			/*
 			 * Handler for "rep_based_pf" devarg.
 			 * Invoked as for ex: "-w 000:00:0d.0,
 			 * rep-based-pf=<pf index> rep-is-pf=<VF=0 or PF=1>"
 			 */
+			ret =
 			rte_kvargs_process(kvlist, BNXT_DEVARG_REP_FC_F2R,
 					   bnxt_parse_devarg_rep_fc_f2r,
 					   (void *)&representor);
+			if (ret) {
+				ret = -EINVAL;
+				goto err;
+			}
 		}
 
 		ret = rte_eth_dev_create(&pci_dev->device, name,
@@ -6411,6 +6441,7 @@ static int bnxt_rep_port_probe(struct rte_pci_device *pci_dev,
 
 	}
 
+	rte_kvargs_free(kvlist);
 	return 0;
 
 err:
@@ -6419,6 +6450,8 @@ err:
 	 */
 	if (num_rep > 1)
 		bnxt_pci_remove_dev_with_reps(backing_eth_dev);
+	rte_errno = -ret;
+	rte_kvargs_free(kvlist);
 
 	return ret;
 }
