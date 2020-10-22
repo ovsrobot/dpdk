@@ -687,7 +687,7 @@ rte_pci_ioport_map(struct rte_pci_device *dev, int bar,
 #ifdef VFIO_PRESENT
 	case RTE_PCI_KDRV_VFIO:
 		if (pci_vfio_is_enabled())
-			ret = pci_vfio_ioport_map(dev, bar, p);
+			ret = pci_uio_ioport_map(dev, bar, p);
 		break;
 #endif
 	case RTE_PCI_KDRV_IGB_UIO:
@@ -711,7 +711,7 @@ rte_pci_ioport_read(struct rte_pci_ioport *p,
 	switch (p->dev->kdrv) {
 #ifdef VFIO_PRESENT
 	case RTE_PCI_KDRV_VFIO:
-		pci_vfio_ioport_read(p, data, len, offset);
+		pci_uio_ioport_read(p, data, len, offset);
 		break;
 #endif
 	case RTE_PCI_KDRV_IGB_UIO:
@@ -730,7 +730,7 @@ rte_pci_ioport_write(struct rte_pci_ioport *p,
 	switch (p->dev->kdrv) {
 #ifdef VFIO_PRESENT
 	case RTE_PCI_KDRV_VFIO:
-		pci_vfio_ioport_write(p, data, len, offset);
+		pci_uio_ioport_write(p, data, len, offset);
 		break;
 #endif
 	case RTE_PCI_KDRV_IGB_UIO:
@@ -751,7 +751,7 @@ rte_pci_ioport_unmap(struct rte_pci_ioport *p)
 #ifdef VFIO_PRESENT
 	case RTE_PCI_KDRV_VFIO:
 		if (pci_vfio_is_enabled())
-			ret = pci_vfio_ioport_unmap(p);
+			ret = pci_uio_ioport_unmap(p);
 		break;
 #endif
 	case RTE_PCI_KDRV_IGB_UIO:

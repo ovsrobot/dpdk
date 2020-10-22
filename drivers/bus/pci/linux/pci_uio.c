@@ -429,7 +429,9 @@ pci_uio_ioport_map(struct rte_pci_device *dev, int bar,
 	}
 
 	/* FIXME only for primary process ? */
-	if (dev->intr_handle.type == RTE_INTR_HANDLE_UNKNOWN) {
+	if (dev->intr_handle.type == RTE_INTR_HANDLE_UNKNOWN &&
+		(dev->kdrv == RTE_PCI_KDRV_IGB_UIO ||
+		 dev->kdrv == RTE_PCI_KDRV_UIO_GENERIC)) {
 		int uio_num = pci_get_uio_dev(dev, dirname, sizeof(dirname), 0);
 		if (uio_num < 0) {
 			RTE_LOG(ERR, EAL, "cannot open %s: %s\n",
