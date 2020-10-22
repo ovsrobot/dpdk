@@ -1418,9 +1418,13 @@ init_config(void)
 	unsigned int nb_mbuf_per_pool;
 	lcoreid_t  lc_id;
 	uint8_t port_per_socket[RTE_MAX_NUMA_NODES];
+	struct rte_eth_dev_info *dev_info;
+	struct rte_eth_conf *dev_conf;
 	struct rte_gro_param gro_param;
 	uint32_t gso_types;
 	uint16_t data_size;
+	uint16_t overhead_len;
+	uint16_t frame_size;
 	bool warning = 0;
 	int k;
 	int ret;
@@ -1448,18 +1452,40 @@ init_config(void)
 
 	RTE_ETH_FOREACH_DEV(pid) {
 		port = &ports[pid];
-		/* Apply default TxRx configuration for all ports */
-		port->dev_conf.txmode = tx_mode;
-		port->dev_conf.rxmode = rx_mode;
 
-		ret = eth_dev_info_get_print_err(pid, &port->dev_info);
+		dev_info = &port->dev_info;
+		dev_conf = &port->dev_conf;
+
+		/* Apply default TxRx configuration for all ports */
+		dev_conf->txmode = tx_mode;
+		dev_conf->rxmode = rx_mode;
+
+		ret = eth_dev_info_get_print_err(pid, dev_info);
 		if (ret != 0)
 			rte_exit(EXIT_FAILURE,
 				 "rte_eth_dev_info_get() failed\n");
 
-		if (!(port->dev_info.tx_offload_capa &
+		/*
+		 * Update the max_rx_pkt_len to ensure that its size equals the
+		 * sum of default mtu size and ether overhead length at least.
+		 */
+		if (dev_info->max_rx_pktlen && dev_info->max_mtu)
+			overhead_len =
+				dev_info->max_rx_pktlen - dev_info->max_mtu;
+		else
+			overhead_len =
+				RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN;
+
+		frame_size = RTE_ETHER_MTU + overhead_len;
+		if (frame_size > RTE_ETHER_MAX_LEN) {
+			dev_conf->rxmode.max_rx_pkt_len = frame_size;
+			dev_conf->rxmode.offloads |=
+				DEV_RX_OFFLOAD_JUMBO_FRAME;
+		}
+
+		if (!(dev_info->tx_offload_capa &
 		      DEV_TX_OFFLOAD_MBUF_FAST_FREE))
-			port->dev_conf.txmode.offloads &=
+			dev_conf->txmode.offloads &=
 				~DEV_TX_OFFLOAD_MBUF_FAST_FREE;
 		if (numa_support) {
 			if (port_numa[pid] != NUMA_NO_CONFIG)
@@ -1478,13 +1504,11 @@ init_config(void)
 		}
 
 		/* Apply Rx offloads configuration */
-		for (k = 0; k < port->dev_info.max_rx_queues; k++)
-			port->rx_conf[k].offloads =
-				port->dev_conf.rxmode.offloads;
+		for (k = 0; k < dev_info->max_rx_queues; k++)
+			port->rx_conf[k].offloads = dev_conf->rxmode.offloads;
 		/* Apply Tx offloads configuration */
-		for (k = 0; k < port->dev_info.max_tx_queues; k++)
-			port->tx_conf[k].offloads =
-				port->dev_conf.txmode.offloads;
+		for (k = 0; k < dev_info->max_tx_queues; k++)
+			port->tx_conf[k].offloads = dev_conf->txmode.offloads;
 
 		/* set flag to initialize port/queue */
 		port->need_reconfig = 1;
@@ -1494,10 +1518,10 @@ init_config(void)
 		/* Check for maximum number of segments per MTU. Accordingly
 		 * update the mbuf data size.
 		 */
-		if (port->dev_info.rx_desc_lim.nb_mtu_seg_max != UINT16_MAX &&
-				port->dev_info.rx_desc_lim.nb_mtu_seg_max != 0) {
+		if (dev_info->rx_desc_lim.nb_mtu_seg_max != UINT16_MAX &&
+				dev_info->rx_desc_lim.nb_mtu_seg_max != 0) {
 			data_size = rx_mode.max_rx_pkt_len /
-				port->dev_info.rx_desc_lim.nb_mtu_seg_max;
+				dev_info->rx_desc_lim.nb_mtu_seg_max;
 
 			if ((data_size + RTE_PKTMBUF_HEADROOM) >
 							mbuf_data_size[0]) {
