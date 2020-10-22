@@ -892,13 +892,6 @@ struct mlx5_flow_meter_profile {
 	uint32_t ref_cnt; /**< Use count. */
 };
 
-/* Fdir flow structure */
-struct mlx5_fdir_flow {
-	LIST_ENTRY(mlx5_fdir_flow) next; /* Pointer to the next element. */
-	struct mlx5_fdir *fdir; /* Pointer to fdir. */
-	uint32_t rix_flow; /* Index to flow. */
-};
-
 #define HAIRPIN_FLOW_ID_BITS 28
 
 /* Flow structure. */
@@ -907,7 +900,6 @@ struct rte_flow {
 	uint32_t dev_handles;
 	/**< Device flow handles that are part of the flow. */
 	uint32_t drv_type:2; /**< Driver type. */
-	uint32_t fdir:1; /**< Identifier of associated FDIR if any. */
 	uint32_t hairpin_flow_id:HAIRPIN_FLOW_ID_BITS;
 	/**< The flow id used for hairpin. */
 	uint32_t copy_applied:1; /**< The MARK copy Flow os applied. */

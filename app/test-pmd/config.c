@@ -4711,6 +4711,8 @@ flowtype_to_str(uint16_t flow_type)
 	return NULL;
 }
 
+#if defined(RTE_NET_I40E) || defined(RTE_NET_IXGBE)
+
 static inline void
 print_fdir_flex_mask(struct rte_eth_fdir_flex_conf *flex_conf, uint32_t num)
 {
@@ -4750,16 +4752,7 @@ static int
 get_fdir_info(portid_t port_id, struct rte_eth_fdir_info *fdir_info,
 		    struct rte_eth_fdir_stats *fdir_stat)
 {
-	int ret;
-
-	ret = rte_eth_dev_filter_supported(port_id, RTE_ETH_FILTER_FDIR);
-	if (!ret) {
-		rte_eth_dev_filter_ctrl(port_id, RTE_ETH_FILTER_FDIR,
-			       RTE_ETH_FILTER_INFO, fdir_info);
-		rte_eth_dev_filter_ctrl(port_id, RTE_ETH_FILTER_FDIR,
-			       RTE_ETH_FILTER_STATS, fdir_stat);
-		return 0;
-	}
+	int ret = -ENOTSUP;
 
 #ifdef RTE_NET_I40E
 	if (ret == -ENOTSUP) {
@@ -4856,6 +4849,8 @@ fdir_get_infos(portid_t port_id)
 	printf("  %s############################%s\n",
 	       fdir_stats_border, fdir_stats_border);
 }
+
+#endif /* RTE_NET_I40E || RTE_NET_IXGBE */
 
 void
 fdir_set_flex_mask(portid_t port_id, struct rte_eth_fdir_flex_mask *cfg)
