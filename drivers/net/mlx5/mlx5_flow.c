@@ -3235,6 +3235,7 @@ flow_check_hairpin_split(struct rte_eth_dev *dev,
 	const struct rte_flow_action_queue *queue;
 	const struct rte_flow_action_rss *rss;
 	const struct rte_flow_action_raw_encap *raw_encap;
+	const struct rte_eth_hairpin_conf *conf;
 
 	if (!attr->ingress)
 		return 0;
@@ -3247,6 +3248,9 @@ flow_check_hairpin_split(struct rte_eth_dev *dev,
 			if (mlx5_rxq_get_type(dev, queue->index) !=
 			    MLX5_RXQ_TYPE_HAIRPIN)
 				return 0;
+			conf = mlx5_rxq_get_hairpin_conf(dev, queue->index);
+			if (!!conf->tx_explicit)
+				return 0;
 			queue_action = 1;
 			action_n++;
 			break;
@@ -3256,6 +3260,9 @@ flow_check_hairpin_split(struct rte_eth_dev *dev,
 				return 0;
 			if (mlx5_rxq_get_type(dev, rss->queue[0]) !=
 			    MLX5_RXQ_TYPE_HAIRPIN)
+				return 0;
+			conf = mlx5_rxq_get_hairpin_conf(dev, rss->queue[0]);
+			if (conf != NULL && !!conf->tx_explicit)
 				return 0;
 			queue_action = 1;
 			action_n++;
