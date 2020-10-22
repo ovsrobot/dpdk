@@ -47,7 +47,7 @@ Runtime Config Options
   But if user intend to use the device without OS package, user can take ``devargs``
   parameter ``safe-mode-support``, for example::
 
-    -w 80:00.0,safe-mode-support=1
+    -a 80:00.0,safe-mode-support=1
 
   Then the driver will be initialized successfully and the device will enter Safe Mode.
   NOTE: In Safe mode, only very limited features are available, features like RSS,
@@ -58,7 +58,7 @@ Runtime Config Options
   In pipeline mode, a flow can be set at one specific stage by setting parameter
   ``priority``. Currently, we support two stages: priority = 0 or !0. Flows with
   priority 0 located at the first pipeline stage which typically be used as a firewall
-  to drop the packet on a blacklist(we called it permission stage). At this stage,
+  to drop the packet on a blocklist(we called it permission stage). At this stage,
   flow rules are created for the device's exact match engine: switch. Flows with priority
   !0 located at the second stage, typically packets are classified here and be steered to
   specific queue or queue group (we called it distribution stage), At this stage, flow
@@ -70,7 +70,19 @@ Runtime Config Options
   use pipeline mode by setting ``devargs`` parameter ``pipeline-mode-support``,
   for example::
 
-    -w 80:00.0,pipeline-mode-support=1
+    -a 80:00.0,pipeline-mode-support=1
+
+- ``Flow Mark Support`` (default ``0``)
+
+  This is a hint to the driver to select the data path that supports flow mark extraction
+  by default.
+  NOTE: This is an experimental devarg, it will be removed when any of below conditions
+  is ready.
+  1) all data paths support flow mark (currently vPMD does not)
+  2) a new offload like RTE_DEV_RX_OFFLOAD_FLOW_MARK be introduced as a standard way to hint.
+  Example::
+
+    -a 80:00.0,flow-mark-support=1
 
 - ``Protocol extraction for per queue``
 
@@ -79,8 +91,8 @@ Runtime Config Options
 
   The argument format is::
 
-      -w 18:00.0,proto_xtr=<queues:protocol>[<queues:protocol>...]
-      -w 18:00.0,proto_xtr=<protocol>
+      -a 18:00.0,proto_xtr=<queues:protocol>[<queues:protocol>...]
+      -a 18:00.0,proto_xtr=<protocol>
 
   Queues are grouped by ``(`` and ``)`` within the group. The ``-`` character
   is used as a range separator and ``,`` is used as a single number separator.
@@ -91,14 +103,14 @@ Runtime Config Options
 
   .. code-block:: console
 
-    testpmd -w 18:00.0,proto_xtr='[(1,2-3,8-9):tcp,10-13:vlan]'
+    testpmd -a 18:00.0,proto_xtr='[(1,2-3,8-9):tcp,10-13:vlan]'
 
   This setting means queues 1, 2-3, 8-9 are TCP extraction, queues 10-13 are
   VLAN extraction, other queues run with no protocol extraction.
 
   .. code-block:: console
 
-    testpmd -w 18:00.0,proto_xtr=vlan,proto_xtr='[(1,2-3,8-9):tcp,10-23:ipv6]'
+    testpmd -a 18:00.0,proto_xtr=vlan,proto_xtr='[(1,2-3,8-9):tcp,10-23:ipv6]'
 
   This setting means queues 1, 2-3, 8-9 are TCP extraction, queues 10-23 are
   IPv6 extraction, other queues use the default VLAN extraction.
@@ -250,7 +262,7 @@ responses for the same from PF.
 
 #. Bind the VF0,  and run testpmd with 'cap=dcf' devarg::
 
-      testpmd -l 22-25 -n 4 -w 18:01.0,cap=dcf -- -i
+      testpmd -l 22-25 -n 4 -a 18:01.0,cap=dcf -- -i
 
 #. Monitor the VF2 interface network traffic::
 

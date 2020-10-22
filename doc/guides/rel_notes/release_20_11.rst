@@ -539,6 +539,11 @@ API Changes
 * sched: Removed ``tb_rate``, ``tc_rate``, ``tc_period`` and ``tb_size``
   from ``struct rte_sched_subport_params``.
 
+* eal: The definitions related to including and excluding devices
+  has been changed from blacklist/whitelist to include/exclude.
+  There are compatibility macros and command line mapping to accept
+  the old values but applications and scripts are strongly encouraged
+  to migrate to the new names.
 
 ABI Changes
 -----------

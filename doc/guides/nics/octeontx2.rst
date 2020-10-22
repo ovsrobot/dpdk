@@ -74,7 +74,7 @@ use arm64-octeontx2-linux-gcc as target.
 
    .. code-block:: console
 
-      ./build/app/testpmd -c 0x300 -w 0002:02:00.0 -- --portmask=0x1 --nb-cores=1 --port-topology=loop --rxq=1 --txq=1
+      ./build/app/testpmd -c 0x300 -a 0002:02:00.0 -- --portmask=0x1 --nb-cores=1 --port-topology=loop --rxq=1 --txq=1
       EAL: Detected 24 lcore(s)
       EAL: Detected 1 NUMA nodes
       EAL: Multi-process socket /var/run/dpdk/rte/mp_socket
@@ -127,7 +127,7 @@ Runtime Config Options
 
    For example::
 
-      -w 0002:02:00.0,reta_size=256
+      -a 0002:02:00.0,reta_size=256
 
    With the above configuration, reta table of size 256 is populated.
 
@@ -138,7 +138,7 @@ Runtime Config Options
 
    For example::
 
-      -w 0002:02:00.0,flow_max_priority=10
+      -a 0002:02:00.0,flow_max_priority=10
 
    With the above configuration, priority level was set to 10 (0-9). Max
    priority level supported is 32.
@@ -150,7 +150,7 @@ Runtime Config Options
 
    For example::
 
-      -w 0002:02:00.0,flow_prealloc_size=4
+      -a 0002:02:00.0,flow_prealloc_size=4
 
    With the above configuration, pre alloc size was set to 4. Max pre alloc
    size supported is 32.
@@ -162,7 +162,7 @@ Runtime Config Options
 
    For example::
 
-      -w 0002:02:00.0,max_sqb_count=64
+      -a 0002:02:00.0,max_sqb_count=64
 
    With the above configuration, each send queue's decscriptor buffer count is
    limited to a maximum of 64 buffers.
@@ -174,7 +174,7 @@ Runtime Config Options
 
    For example::
 
-      -w 0002:02:00.0,switch_header="higig2"
+      -a 0002:02:00.0,switch_header="higig2"
 
    With the above configuration, higig2 will be enabled on that port and the
    traffic on this port should be higig2 traffic only. Supported switch header
@@ -196,7 +196,7 @@ Runtime Config Options
 
    For example to select the legacy mode(RSS tag adder as XOR)::
 
-      -w 0002:02:00.0,tag_as_xor=1
+      -a 0002:02:00.0,tag_as_xor=1
 
 - ``Max SPI for inbound inline IPsec`` (default ``1``)
 
@@ -205,7 +205,7 @@ Runtime Config Options
 
    For example::
 
-      -w 0002:02:00.0,ipsec_in_max_spi=128
+      -a 0002:02:00.0,ipsec_in_max_spi=128
 
    With the above configuration, application can enable inline IPsec processing
    on 128 SAs (SPI 0-127).
@@ -216,7 +216,7 @@ Runtime Config Options
 
    For example::
 
-      -w 0002:02:00.0,lock_rx_ctx=1
+      -a 0002:02:00.0,lock_rx_ctx=1
 
 - ``Lock Tx contexts in NDC cache``
 
@@ -224,7 +224,7 @@ Runtime Config Options
 
    For example::
 
-      -w 0002:02:00.0,lock_tx_ctx=1
+      -a 0002:02:00.0,lock_tx_ctx=1
 
 .. note::
 
@@ -240,7 +240,7 @@ Runtime Config Options
 
    For example::
 
-      -w 0002:02:00.0,npa_lock_mask=0xf
+      -a 0002:02:00.0,npa_lock_mask=0xf
 
 .. _otx2_tmapi:
 

@@ -40,8 +40,8 @@ expose a single PCI bus address, thus, librte_pmd_cxgbe registers
 itself as a PCI driver that allocates one Ethernet device per detected
 port.
 
-For this reason, one cannot whitelist/blacklist a single port without
-whitelisting/blacklisting the other ports on the same device.
+For this reason, one cannot allow/block a single port without
+allowing/blocking the other ports on the same device.
 
 .. _t5-nics:
 
@@ -112,7 +112,7 @@ be passed as part of EAL arguments. For example,
 
 .. code-block:: console
 
-   testpmd -w 02:00.4,keep_ovlan=1 -- -i
+   testpmd -a 02:00.4,keep_ovlan=1 -- -i
 
 Common Runtime Options
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -317,7 +317,7 @@ CXGBE PF Only Runtime Options
 
   .. code-block:: console
 
-     testpmd -w 02:00.4,filtermode=0x88 -- -i
+     testpmd -a 02:00.4,filtermode=0x88 -- -i
 
 - ``filtermask`` (default **0**)
 
@@ -344,7 +344,7 @@ CXGBE PF Only Runtime Options
 
   .. code-block:: console
 
-     testpmd -w 02:00.4,filtermode=0x88,filtermask=0x80 -- -i
+     testpmd -a 02:00.4,filtermode=0x88,filtermask=0x80 -- -i
 
 .. _driver-compilation:
 
@@ -776,7 +776,7 @@ devices managed by librte_pmd_cxgbe in FreeBSD operating system.
 
    .. code-block:: console
 
-      ./x86_64-native-freebsd-clang/app/testpmd -l 0-3 -n 4 -w 0000:02:00.4 -- -i
+      ./x86_64-native-freebsd-clang/app/testpmd -l 0-3 -n 4 -a 0000:02:00.4 -- -i
 
    Example output:
 

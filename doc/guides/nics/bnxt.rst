@@ -258,8 +258,8 @@ The BNXT PMD supports hardware-based packet filtering:
 Unicast MAC Filter
 ^^^^^^^^^^^^^^^^^^
 
-The application adds (or removes) MAC addresses to enable (or disable)
-whitelist filtering to accept packets.
+The application can add (or remove) MAC addresses to enable (or disable)
+filtering on MAC address used to accept packets.
 
 .. code-block:: console
 
@@ -269,8 +269,8 @@ whitelist filtering to accept packets.
 Multicast MAC Filter
 ^^^^^^^^^^^^^^^^^^^^
 
-Application adds (or removes) Multicast addresses to enable (or disable)
-whitelist filtering to accept packets.
+The application can add (or remove) Multicast addresses that enable (or disable)
+filtering on multicast MAC address used to accept packets.
 
 .. code-block:: console
 
@@ -278,7 +278,7 @@ whitelist filtering to accept packets.
     testpmd> mcast_addr (add|remove) (port_id) (XX:XX:XX:XX:XX:XX)
 
 Application adds (or removes) Multicast addresses to enable (or disable)
-whitelist filtering to accept packets.
+allowlist filtering to accept packets.
 
 Note that the BNXT PMD supports up to 16 MC MAC filters. if the user adds more
 than 16 MC MACs, the BNXT PMD puts the port into the Allmulticast mode.
@@ -728,7 +728,7 @@ when the PMD is initialized on a PF or trusted-VF. The user can specify the list
 of VF IDs of the VFs for which the representors are needed by using the
 ``devargs`` option ``representor``.::
 
-  -w DBDF,representor=[0,1,4]
+  -a DBDF,representor=[0,1,4]
 
 Note that currently hot-plugging of representor ports is not supported so all
 the required representors must be specified on the creation of the PF or the

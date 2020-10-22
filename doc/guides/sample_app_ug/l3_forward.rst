@@ -138,17 +138,17 @@ Following is the sample command:
 
 .. code-block:: console
 
-    ./build/l3fwd -l 0-3 -n 4 -w <event device> -- -p 0x3 --eventq-sched=ordered
+    ./build/l3fwd -l 0-3 -n 4 -a <event device> -- -p 0x3 --eventq-sched=ordered
 
 or
 
 .. code-block:: console
 
-    ./build/l3fwd -l 0-3 -n 4 -w <event device> -- -p 0x03 --mode=eventdev --eventq-sched=ordered
+    ./build/l3fwd -l 0-3 -n 4 -a <event device> -- -p 0x03 --mode=eventdev --eventq-sched=ordered
 
 In this command:
 
-*   -w option whitelist the event device supported by platform. Way to pass this device may vary based on platform.
+*   -a option adds the event device supported by platform. Way to pass this device may vary based on platform.
 
 *   The --mode option defines PMD to be used for packet I/O.
 
