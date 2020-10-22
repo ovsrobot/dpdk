@@ -1290,6 +1290,8 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 	struct rte_eth_dev *dev;
 	struct rte_eth_dev_info dev_info;
 	struct rte_eth_conf orig_conf;
+	uint16_t overhead_len;
+	uint16_t max_rx_pktlen;
 	int diag;
 	int ret;
 
@@ -1414,6 +1416,18 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 			dev->data->dev_conf.rxmode.max_rx_pkt_len =
 							RTE_ETHER_MAX_LEN;
 	}
+
+	/*
+	 * Update MTU value if MTU + OVERHEAD exceeds the max_rx_pkt_len
+	 */
+	max_rx_pktlen = dev->data->dev_conf.rxmode.max_rx_pkt_len;
+	if (dev_info.max_rx_pktlen && dev_info.max_mtu)
+		overhead_len = dev_info.max_rx_pktlen - dev_info.max_mtu;
+	else
+		overhead_len = RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN;
+
+	if (max_rx_pktlen < dev->data->mtu + overhead_len)
+		dev->data->mtu = max_rx_pktlen - overhead_len;
 
 	/*
 	 * If LRO is enabled, check that the maximum aggregated packet
