@@ -47,7 +47,7 @@ Per Architecture Sources
 The following config options can be used:
 
 * ``CONFIG_RTE_ARCH`` is a string that contains the name of the architecture.
-* ``CONFIG_RTE_ARCH_I686``, ``CONFIG_RTE_ARCH_X86_64``, ``CONFIG_RTE_ARCH_X86_64_32`` or ``CONFIG_RTE_ARCH_PPC_64`` are defined only if we are building for those architectures.
+* ``CONFIG_RTE_ARCH_I686``, ``CONFIG_RTE_ARCH_X86_64``, ``CONFIG_RTE_ARCH_X86_X32`` or ``CONFIG_RTE_ARCH_PPC_64`` are defined only if we are building for those architectures.
 
 Per Execution Environment Sources
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
