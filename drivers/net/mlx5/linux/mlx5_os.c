@@ -2545,6 +2545,11 @@ const struct eth_dev_ops mlx5_os_dev_ops = {
 	.get_module_eeprom = mlx5_get_module_eeprom,
 	.hairpin_cap_get = mlx5_hairpin_cap_get,
 	.mtr_ops_get = mlx5_flow_meter_ops_get,
+	.hairpin_bind = mlx5_hairpin_bind,
+	.hairpin_unbind = mlx5_hairpin_unbind,
+	.hairpin_queue_peer_update = mlx5_hairpin_queue_peer_update,
+	.hairpin_queue_peer_bind = mlx5_hairpin_queue_peer_bind,
+	.hairpin_queue_peer_unbind = mlx5_hairpin_queue_peer_unbind,
 };
 
 /* Available operations from secondary process. */
@@ -2623,4 +2628,9 @@ const struct eth_dev_ops mlx5_os_dev_ops_isolate = {
 	.get_module_eeprom = mlx5_get_module_eeprom,
 	.hairpin_cap_get = mlx5_hairpin_cap_get,
 	.mtr_ops_get = mlx5_flow_meter_ops_get,
+	.hairpin_bind = mlx5_hairpin_bind,
+	.hairpin_unbind = mlx5_hairpin_unbind,
+	.hairpin_queue_peer_update = mlx5_hairpin_queue_peer_update,
+	.hairpin_queue_peer_bind = mlx5_hairpin_queue_peer_bind,
+	.hairpin_queue_peer_unbind = mlx5_hairpin_queue_peer_unbind,
 };
