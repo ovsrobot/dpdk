@@ -17,3 +17,4 @@ endian = 'little'
 implementer_id = 'dpaa'
 max_numa_nodes = 1
 max_lcores = 16
+has_libnuma = 0

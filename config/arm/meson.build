@@ -103,7 +103,6 @@ flags_octeontx2_extra = [
 	['RTE_MAX_NUMA_NODES', 1],
 	['RTE_MAX_LCORE', 36],
 	['RTE_ARM_FEATURE_ATOMICS', true],
-	['RTE_EAL_IGB_UIO', false],
 	['RTE_USE_C11_MEM_MODEL', true]
 ]
 # arm config (implementer 0x41) is the default config
@@ -232,6 +231,10 @@ else
 			dpdk_flags += [
 				['RTE_MAX_LCORE', cross_max_lcores]
 			]
+		endif
+		cross_has_libnuma = meson.get_cross_property('has_libnuma', '')
+		if cross_has_libnuma != ''
+			has_libnuma = cross_has_libnuma
 		endif
 	endif
 

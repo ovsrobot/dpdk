@@ -28,7 +28,11 @@ implementer_id = 'generic'
 part_number = 'generic'
 
 # Supported extra configuration
-# max_numa_nodes = n  # will set RTE_MAX_NUMA_NODES
-# max_lcores = n      # will set RTE_MAX_LCORE
+# max_numa_nodes = n   # will set RTE_MAX_NUMA_NODES
+# max_lcores = n        # will set RTE_MAX_LCORE
 max_lcores = 256
 max_numa_nodes = 4
+
+# has_libnuma = 0      # set to 0 if the SoC is not a NUMA system
+# disabled_drivers += ['bus/dpaa', 'crypto']
+    # add to the set of disabled libraries
