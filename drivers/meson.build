@@ -18,7 +18,7 @@ subdirs = [
 	'baseband', # depends on common and bus.
 ]
 
-disabled_drivers = run_command(list_dir_globs, get_option('disable_drivers'),
+disabled_drivers += run_command(list_dir_globs, get_option('disable_drivers'),
 		).stdout().split()
 
 default_cflags = machine_args

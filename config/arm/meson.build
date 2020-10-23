@@ -8,6 +8,11 @@
 arm_force_native_march = false
 native_machine_args = ['-march=native', '-mtune=native']
 
+# RFC: do we want these drivers to be disabled by default on arm?
+# The previous way to disable these drivers never worked
+# RTE_NET_AVP and the rest would be overwritten to true if the necessary deps were found
+disabled_drivers += ['net/avp', 'net/fm10k', 'net/sfc']
+
 # common flags to all aarch64 builds, with lowest priority
 flags_common_default = [
 	# Accelarate rte_memcpy. Be sure to run unit test (memcpy_perf_autotest)
@@ -22,10 +27,6 @@ flags_common_default = [
 	#	['RTE_ARM64_MEMCPY_SKIP_GCC_VER_CHECK', false],
 	#	['RTE_ARM64_MEMCPY_ALIGN_MASK', 0xF],
 	#	['RTE_ARM64_MEMCPY_STRICT_ALIGN', false],
-
-	['RTE_NET_FM10K', false],
-	['RTE_NET_SFC_EFX', false],
-	['RTE_NET_AVP', false],
 
 	['RTE_SCHED_VECTOR', false],
 	['RTE_ARM_USE_WFE', false],
