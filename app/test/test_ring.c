@@ -243,17 +243,6 @@ test_ring_deq_impl(struct rte_ring *r, void **obj, int esize, unsigned int n,
 			NULL);
 }
 
-static void**
-test_ring_inc_ptr(void **obj, int esize, unsigned int n)
-{
-	/* Legacy queue APIs? */
-	if ((esize) == -1)
-		return ((void **)obj) + n;
-	else
-		return (void **)(((uint32_t *)obj) +
-					(n * esize / sizeof(uint32_t)));
-}
-
 static void
 test_ring_mem_init(void *obj, unsigned int count, int esize)
 {

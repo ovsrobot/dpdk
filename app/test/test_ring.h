@@ -42,6 +42,17 @@ test_ring_create(const char *name, int esize, unsigned int count,
 						(socket_id), (flags));
 }
 
+static inline void**
+test_ring_inc_ptr(void **obj, int esize, unsigned int n)
+{
+	/* Legacy queue APIs? */
+	if ((esize) == -1)
+		return ((void **)obj) + n;
+	else
+		return (void **)(((uint32_t *)obj) +
+					(n * esize / sizeof(uint32_t)));
+}
+
 static __rte_always_inline unsigned int
 test_ring_enqueue(struct rte_ring *r, void **obj, int esize, unsigned int n,
 			unsigned int api_type)
