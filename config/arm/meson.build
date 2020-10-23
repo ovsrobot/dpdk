@@ -1,12 +1,13 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2017 Intel Corporation.
 # Copyright(c) 2017 Cavium, Inc
+# Copyright(c) 2020 PANTHEON.tech s.r.o.
 
 # for checking defines we need to use the correct compiler flags
 march_opt = '-march=@0@'.format(machine)
 
 arm_force_native_march = false
-arm_force_default_march = (machine == 'default')
+arm_force_generic_march = (machine == 'generic')
 
 flags_common_default = [
 	# Accelarate rte_memcpy. Be sure to run unit test (memcpy_perf_autotest)
@@ -87,7 +88,7 @@ flags_octeontx2_extra = [
 	['RTE_EAL_IGB_UIO', false],
 	['RTE_USE_C11_MEM_MODEL', true]]
 
-machine_args_generic = [
+machine_args_default = [
 	['default', ['-march=armv8-a+crc', '-moutline-atomics']],
 	['native', ['-march=native']],
 	['0xd03', ['-mcpu=cortex-a53']],
@@ -113,20 +114,20 @@ machine_args_emag = [
 	['native', ['-march=native']]]
 
 ## Arm implementer ID (ARM DDI 0487C.a, Section G7.2.106, Page G7-5321)
-impl_generic = ['Generic armv8', flags_generic, machine_args_generic]
-impl_0x41 = ['Arm', flags_arm, machine_args_generic]
-impl_0x42 = ['Broadcom', flags_generic, machine_args_generic]
+impl_generic = ['Generic armv8', flags_generic, machine_args_default]
+impl_0x41 = ['Arm', flags_arm, machine_args_default]
+impl_0x42 = ['Broadcom', flags_generic, machine_args_default]
 impl_0x43 = ['Cavium', flags_cavium, machine_args_cavium]
-impl_0x44 = ['DEC', flags_generic, machine_args_generic]
-impl_0x49 = ['Infineon', flags_generic, machine_args_generic]
-impl_0x4d = ['Motorola', flags_generic, machine_args_generic]
-impl_0x4e = ['NVIDIA', flags_generic, machine_args_generic]
+impl_0x44 = ['DEC', flags_generic, machine_args_default]
+impl_0x49 = ['Infineon', flags_generic, machine_args_default]
+impl_0x4d = ['Motorola', flags_generic, machine_args_default]
+impl_0x4e = ['NVIDIA', flags_generic, machine_args_default]
 impl_0x50 = ['Ampere Computing', flags_emag, machine_args_emag]
-impl_0x51 = ['Qualcomm', flags_generic, machine_args_generic]
-impl_0x53 = ['Samsung', flags_generic, machine_args_generic]
-impl_0x56 = ['Marvell ARMADA', flags_armada, machine_args_generic]
-impl_0x69 = ['Intel', flags_generic, machine_args_generic]
-impl_dpaa = ['NXP DPAA', flags_dpaa, machine_args_generic]
+impl_0x51 = ['Qualcomm', flags_generic, machine_args_default]
+impl_0x53 = ['Samsung', flags_generic, machine_args_default]
+impl_0x56 = ['Marvell ARMADA', flags_armada, machine_args_default]
+impl_0x69 = ['Intel', flags_generic, machine_args_default]
+impl_dpaa = ['NXP DPAA', flags_dpaa, machine_args_default]
 
 dpdk_conf.set('RTE_ARCH_ARM', 1)
 dpdk_conf.set('RTE_FORCE_INTRINSICS', 1)
@@ -145,7 +146,7 @@ else
 	cmd_generic = ['generic', '', '', 'default', '']
 	cmd_output = cmd_generic # Set generic by default
 	machine_args = [] # Clear previous machine args
-	if arm_force_default_march and not meson.is_cross_build()
+	if arm_force_generic_march and not meson.is_cross_build()
 		machine = impl_generic
 		impl_pn = 'default'
 	elif not meson.is_cross_build()
