@@ -230,8 +230,14 @@ foreach arg: warning_flags
 endforeach
 
 # set other values pulled from the build options
-dpdk_conf.set('RTE_MAX_LCORE', get_option('max_lcores'))
-dpdk_conf.set('RTE_MAX_NUMA_NODES', get_option('max_numa_nodes'))
+if not meson.is_cross_build()
+	# set default values
+	# these defaults may be overwritten by meson.build in an arch subdir
+	# or later overwritten if a user specifies a value on the command line
+	# or the user chooses to use values discovered from the build machine
+	dpdk_conf.set('RTE_MAX_LCORE', 128)
+	dpdk_conf.set('RTE_MAX_NUMA_NODES', 4)
+endif
 dpdk_conf.set('RTE_MAX_ETHPORTS', get_option('max_ethports'))
 dpdk_conf.set('RTE_LIBEAL_USE_HPET', get_option('use_hpet'))
 dpdk_conf.set('RTE_ENABLE_TRACE_FP', get_option('enable_trace_fp'))
@@ -249,6 +255,44 @@ endif
 compile_time_cpuflags = []
 subdir(arch_subdir)
 dpdk_conf.set('RTE_COMPILE_TIME_CPUFLAGS', ','.join(compile_time_cpuflags))
+
+max_lcores = get_option('max_lcores')
+max_numa_nodes = get_option('max_numa_nodes')
+if max_lcores > 0
+	dpdk_conf.set('RTE_MAX_LCORE', max_lcores)
+elif max_lcores == -1
+	if not meson.is_cross_build()
+		max_lcores = run_command(get_cpu_count_cmd).stdout().to_int()
+		min_lcores = 2
+		if max_lcores < min_lcores
+			message('Found less than @0@ cores, building for @0@ cores'.format(min_lcores))
+			max_lcores = min_lcores
+		else
+			message('Found @0@ cores'.format(max_lcores))
+		endif
+		dpdk_conf.set('RTE_MAX_LCORE', max_lcores)
+	endif
+endif
+
+if max_numa_nodes > 0
+	dpdk_conf.set('RTE_MAX_NUMA_NODES', max_numa_nodes)
+elif max_numa_nodes == -1
+	if not meson.is_cross_build()
+		max_numa_nodes = run_command(get_numa_count_cmd).stdout().to_int()
+		message('Found @0@ numa nodes'.format(max_numa_nodes))
+		dpdk_conf.set('RTE_MAX_NUMA_NODES', max_numa_nodes)
+	endif
+endif
+
+# check that cpu and numa count is set in cross builds
+if meson.is_cross_build()
+	if not dpdk_conf.has('RTE_MAX_LCORE')
+		error('Number of cores for cross build not specified in @0@ subdir (e.g. in a cross-file) nor on the cmdline'.format(arch_subdir))
+	endif
+	if not dpdk_conf.has('RTE_MAX_NUMA_NODES')
+		error('Number of numa nodes for cross build not specified in @0@ subdir (e.g. in a cross-file) nor on the cmdline'.format(arch_subdir))
+	endif
+endif
 
 # set the install path for the drivers
 dpdk_conf.set_quoted('RTE_EAL_PMD_PATH', eal_pmd_path)
