@@ -38,12 +38,14 @@ flags_common_default = [
 flags_generic = [
 	['RTE_MACHINE', '"armv8a"'],
 	['RTE_MAX_LCORE', 256],
+	['RTE_MAX_NUMA_NODES', 4],
 	['RTE_USE_C11_MEM_MODEL', true],
 	['RTE_CACHE_LINE_SIZE', 128]
 ]
 flags_arm = [
 	['RTE_MACHINE', '"armv8a"'],
 	['RTE_MAX_LCORE', 16],
+	['RTE_MAX_NUMA_NODES', 1],
 	['RTE_USE_C11_MEM_MODEL', true],
 	['RTE_CACHE_LINE_SIZE', 64]
 ]
@@ -212,6 +214,24 @@ else
 
 	if part_number_config.length() > 1
 		dpdk_flags += part_number_config[1]
+	endif
+
+	# apply cross-specific options
+	if meson.is_cross_build()
+		# configure RTE_MAX_NUMA_NODES and RTE_MAX_LCORE from cross file
+		cross_max_numa_nodes = meson.get_cross_property('max_numa_nodes', 0)
+		if cross_max_numa_nodes != 0
+			dpdk_flags += [
+				['RTE_MAX_NUMA_NODES', cross_max_numa_nodes]
+			]
+		endif
+		cross_max_lcores = meson.get_cross_property('max_lcores', 0)
+		if cross_max_lcores != 0
+			message('Setting RTE_MAX_LCORE from cross file')
+			dpdk_flags += [
+				['RTE_MAX_LCORE', cross_max_lcores]
+			]
+		endif
 	endif
 
 	machine_args = [] # Clear previous machine args
