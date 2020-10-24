@@ -55,6 +55,15 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added zero copy APIs for rte_ring.**
+
+  For rings with producer/consumer in ``RTE_RING_SYNC_ST``, ``RTE_RING_SYNC_MT_HTS``
+  modes, these APIs split enqueue/dequeue operation into three phases
+  (enqueue/dequeue start, copy data to/from ring, enqueue/dequeue finish).
+  Along with the advantages of the peek APIs, these provide the ability to
+  copy the data to the ring memory directly without the need for temporary
+  storage.
+
 * **Added write combining store APIs.**
 
   Added ``rte_write32_wc`` and ``rte_write32_wc_relaxed`` APIs
