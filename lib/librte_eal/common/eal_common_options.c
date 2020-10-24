@@ -52,7 +52,8 @@
 
 const char
 eal_short_options[] =
-	"b:" /* pci-blacklist */
+	"a:" /* allow */
+	"b:" /* block */
 	"c:" /* coremask */
 	"s:" /* service coremask */
 	"d:" /* driver */
@@ -63,7 +64,8 @@ eal_short_options[] =
 	"n:" /* memory channels */
 	"r:" /* memory ranks */
 	"v"  /* version */
-	"w:" /* pci-whitelist */
+	"w:" /* whitelist (deprecated) */
+	"B:" /* blacklist (deprecated) */
 	;
 
 const struct option
@@ -89,8 +91,8 @@ eal_long_options[] = {
 	{OPT_NO_PCI,            0, NULL, OPT_NO_PCI_NUM           },
 	{OPT_NO_SHCONF,         0, NULL, OPT_NO_SHCONF_NUM        },
 	{OPT_IN_MEMORY,         0, NULL, OPT_IN_MEMORY_NUM        },
-	{OPT_PCI_BLACKLIST,     1, NULL, OPT_PCI_BLACKLIST_NUM    },
-	{OPT_PCI_WHITELIST,     1, NULL, OPT_PCI_WHITELIST_NUM    },
+	{OPT_DEV_BLOCK,         1, NULL, OPT_DEV_BLOCK_NUM        },
+	{OPT_DEV_ALLOW,		1, NULL, OPT_DEV_ALLOW_NUM	  },
 	{OPT_PROC_TYPE,         1, NULL, OPT_PROC_TYPE_NUM        },
 	{OPT_SOCKET_MEM,        1, NULL, OPT_SOCKET_MEM_NUM       },
 	{OPT_SOCKET_LIMIT,      1, NULL, OPT_SOCKET_LIMIT_NUM     },
@@ -105,6 +107,11 @@ eal_long_options[] = {
 	{OPT_TELEMETRY,         0, NULL, OPT_TELEMETRY_NUM        },
 	{OPT_NO_TELEMETRY,      0, NULL, OPT_NO_TELEMETRY_NUM     },
 	{OPT_FORCE_MAX_SIMD_BITWIDTH, 1, NULL, OPT_FORCE_MAX_SIMD_BITWIDTH_NUM},
+
+	/* legacy options that will be removed in next LTS */
+	{OPT_PCI_BLACKLIST,     1, NULL, OPT_PCI_BLACKLIST_NUM    },
+	{OPT_PCI_WHITELIST,     1, NULL, OPT_PCI_WHITELIST_NUM    },
+
 	{0,                     0, NULL, 0                        }
 };
 
@@ -1447,29 +1454,37 @@ int
 eal_parse_common_option(int opt, const char *optarg,
 			struct internal_config *conf)
 {
-	static int b_used;
-	static int w_used;
+	static bool x_used, i_used;
 
 	switch (opt) {
-	/* blacklist */
+	case 'B':
+		fprintf(stderr,
+			"Option --pci-blacklist is deprecated, use -b, --block instead\n");
+		/* fallthrough */
 	case 'b':
-		if (w_used)
-			goto bw_used;
-		if (eal_option_device_add(RTE_DEVTYPE_BLACKLISTED_PCI,
+		/* excluded list */
+		if (i_used)
+			goto include_exclude;
+		if (eal_option_device_add(RTE_DEVTYPE_BLOCKED,
 				optarg) < 0) {
 			return -1;
 		}
-		b_used = 1;
+		x_used = true;
 		break;
-	/* whitelist */
+
 	case 'w':
-		if (b_used)
-			goto bw_used;
-		if (eal_option_device_add(RTE_DEVTYPE_WHITELISTED_PCI,
+		fprintf(stderr,
+			"Option -w, --pci-whitelist is deprecated, use -a, --allow option instead\n");
+		/* fallthrough */
+	case 'i':
+		/* include device list */
+		if (x_used)
+			goto include_exclude;
+		if (eal_option_device_add(RTE_DEVTYPE_ALLOWED,
 				optarg) < 0) {
 			return -1;
 		}
-		w_used = 1;
+		i_used = true;
 		break;
 	/* coremask */
 	case 'c': {
@@ -1760,9 +1775,10 @@ eal_parse_common_option(int opt, const char *optarg,
 	}
 
 	return 0;
-bw_used:
-	RTE_LOG(ERR, EAL, "Options blacklist (-b) and whitelist (-w) "
-		"cannot be used at the same time\n");
+
+include_exclude:
+	RTE_LOG(ERR, EAL,
+		"Options include (-i) and exclude (-x) can't be used at the same time\n");
 	return -1;
 }
 
@@ -1997,14 +2013,14 @@ eal_common_usage(void)
 	       "  -n CHANNELS         Number of memory channels\n"
 	       "  -m MB               Memory to allocate (see also --"OPT_SOCKET_MEM")\n"
 	       "  -r RANKS            Force number of memory ranks (don't detect)\n"
-	       "  -b, --"OPT_PCI_BLACKLIST" Add a PCI device in black list.\n"
-	       "                      Prevent EAL from using this PCI device. The argument\n"
-	       "                      format is <domain:bus:devid.func>.\n"
-	       "  -w, --"OPT_PCI_WHITELIST" Add a PCI device in white list.\n"
-	       "                      Only use the specified PCI devices. The argument format\n"
-	       "                      is <[domain:]bus:devid.func>. This option can be present\n"
-	       "                      several times (once per device).\n"
-	       "                      [NOTE: PCI whitelist cannot be used with -b option]\n"
+	       "  -b, --"OPT_DEV_BLOCK"         Add a device to the excluded list.\n"
+	       "                      Prevent EAL from using this device. The argument\n"
+	       "                      format for PCI devices is <domain:bus:devid.func>.\n"
+	       "  -a, --"OPT_DEV_ALLOW"         Add a device to the included list.\n"
+	       "                      Only use the specified devices. The argument format\n"
+	       "                      for PCI devices is <[domain:]bus:devid.func>.\n"
+	       "                      This option can be present several times.\n"
+	       "                      [NOTE: " OPT_DEV_ALLOW " cannot be used with "OPT_DEV_BLOCK" option]\n"
 	       "  --"OPT_VDEV"              Add a virtual device.\n"
 	       "                      The argument format is <driver><id>[,key=val,...]\n"
 	       "                      (ex: --vdev=net_pcap0,iface=eth2).\n"
