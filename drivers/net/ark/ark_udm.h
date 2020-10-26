@@ -18,7 +18,7 @@
 /* Meta data structure apssed from FPGA, must match layout in FPGA */
 struct ark_rx_meta {
 	uint64_t timestamp;
-	uint64_t user_data;
+	uint64_t user_data; /* ignored */
 	uint8_t port;
 	uint8_t dst_queue;
 	uint16_t pkt_len;
