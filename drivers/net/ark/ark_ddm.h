@@ -19,7 +19,7 @@
 /* struct defining Tx meta data --  fixed in FPGA -- 16 bytes */
 struct ark_tx_meta {
 	uint64_t physaddr;
-	uint32_t user1;
+	uint32_t user1;		/* ignored */
 	uint16_t data_len;		/* of this MBUF */
 #define   ARK_DDM_EOP   0x01
 #define   ARK_DDM_SOP   0x02

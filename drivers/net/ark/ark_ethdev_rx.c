@@ -272,7 +272,6 @@ eth_ark_recv_pkts(void *rx_queue,
 		mbuf->pkt_len = meta->pkt_len;
 		mbuf->data_len = meta->pkt_len;
 		mbuf->timestamp = meta->timestamp;
-		mbuf->udata64 = meta->user_data;
 
 		if (ARK_DEBUG_CORE) {	/* debug sanity checks */
 			if ((meta->pkt_len > (1024 * 16)) ||
