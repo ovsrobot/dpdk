@@ -166,3 +166,9 @@ Deprecation Notices
   ``make``. Given environments are too much variables for such a simple script,
   it will be removed in DPDK 20.11.
   Some useful parts may be converted into specific scripts.
+
+* Broadcom bnxt PMD: NetXtreme devices belonging to the ``BCM573xx and
+  BCM5740x`` families will no longer be supported as of DPDK 21.02.
+  Specifically the support for the following Broadcom PCI ids will be removed
+  from the release: ``0x16c8, 0x16c9, 0x16ca, 0x16ce, 0x16cf, 0x16df,``
+  ``0x16d0, 0x16d1, 0x16d2, 0x16d4, 0x16d5, 0x16e7, 0x16e8, 0x16e9``.
