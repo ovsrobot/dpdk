@@ -35,7 +35,7 @@ order_queue_worker(void *arg, const bool flow_id_cap)
 		}
 
 		if (!flow_id_cap)
-			ev.flow_id = ev.mbuf->udata64;
+			ev.flow_id = FLOW_ID(ev.mbuf);
 
 		if (ev.queue_id == 0) { /* from ordered queue */
 			order_queue_process_stage_0(&ev);
@@ -73,7 +73,7 @@ order_queue_worker_burst(void *arg, const bool flow_id_cap)
 		for (i = 0; i < nb_rx; i++) {
 
 			if (!flow_id_cap)
-				ev[i].flow_id = ev[i].mbuf->udata64;
+				ev[i].flow_id = FLOW_ID(ev[i].mbuf);
 
 			if (ev[i].queue_id == 0) { /* from ordered queue */
 				order_queue_process_stage_0(&ev[i]);

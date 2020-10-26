@@ -13,12 +13,18 @@
 #include <rte_lcore.h>
 #include <rte_malloc.h>
 #include <rte_mbuf.h>
+#include <rte_mbuf_dyn.h>
 
 #include "evt_common.h"
 #include "evt_options.h"
 #include "evt_test.h"
 
 #define BURST_SIZE 16
+
+extern int flow_id_dynfield_offset;
+#define FLOW_ID_TYPE uint32_t
+#define FLOW_ID(mbuf) (*RTE_MBUF_DYNFIELD(mbuf, \
+		flow_id_dynfield_offset, FLOW_ID_TYPE *))
 
 struct test_order;
 
