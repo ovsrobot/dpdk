@@ -543,6 +543,13 @@ API Changes
 * sched: Removed ``tb_rate``, ``tc_rate``, ``tc_period`` and ``tb_size``
   from ``struct rte_sched_subport_params``.
 
+* **Changed ``rte_gso_segment`` in functional behavior and return value.**
+
+  * Don't save pkt to pkts_out[0] if it isn't GSOed in case of ret == 1.
+  * Return 0 instead of 1 for the above case.
+  * ``rte_gso_segment`` won't free pkt no matter whether it is GSOed, the
+    application has responsibility to free it after call ``rte_gso_segment``.
+
 
 ABI Changes
 -----------
