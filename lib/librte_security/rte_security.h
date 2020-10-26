@@ -27,6 +27,7 @@ extern "C" {
 #include <rte_common.h>
 #include <rte_crypto.h>
 #include <rte_mbuf.h>
+#include <rte_mbuf_dyn.h>
 #include <rte_memory.h>
 #include <rte_mempool.h>
 
@@ -450,6 +451,37 @@ rte_security_session_get_size(struct rte_security_ctx *instance);
 int
 rte_security_session_destroy(struct rte_security_ctx *instance,
 			     struct rte_security_session *sess);
+
+/** Device-specific metadata field type */
+#define RTE_SECURITY_DYNFIELD_TYPE uint64_t
+/** Dynamic mbuf field for device-specific metadata */
+extern int rte_security_dynfield_offset;
+
+/**
+ * Get pointer to mbuf field for device-specific metadata.
+ *
+ * For performance reason, no check is done,
+ * the dynamic field may not be registered.
+ * @see rte_security_dynfield_is_registered
+ *
+ * @param	mbuf	packet to access
+ * @return pointer to mbuf field
+ */
+static inline RTE_SECURITY_DYNFIELD_TYPE *
+rte_security_dynfield(struct rte_mbuf *mbuf)
+{
+	return RTE_MBUF_DYNFIELD(mbuf,
+		rte_security_dynfield_offset,
+		RTE_SECURITY_DYNFIELD_TYPE *);
+}
+
+/**
+ * Check whether the dynamic field is registered.
+ *
+ * @return true if rte_security_dynfield_register() has been called.
+ */
+__rte_experimental
+bool rte_security_dynfield_is_registered(void);
 
 /**
  *  Updates the buffer with device-specific defined metadata
