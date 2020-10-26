@@ -94,6 +94,13 @@ enum mlx5_rxq_err_state {
 	MLX5_RXQ_ERR_STATE_NEED_READY,
 };
 
+struct mlx5_eth_rxseg {
+	struct rte_mempool *mp; /**< Memory pool to allocate segment from. */
+	uint16_t length; /**< Segment data length, configures split point. */
+	uint16_t offset; /**< Data offset from beginning of mbuf data buffer. */
+	uint32_t reserved; /**< Reserved field. */
+};
+
 /* RX queue descriptor. */
 struct mlx5_rxq_data {
 	unsigned int csum:1; /* Enable checksum offloading. */
@@ -153,6 +160,9 @@ struct mlx5_rxq_data {
 	uint32_t tunnel; /* Tunnel information. */
 	uint64_t flow_meta_mask;
 	int32_t flow_meta_offset;
+	uint32_t rxseg_n; /* Number of split segment descriptions. */
+	struct mlx5_eth_rxseg rxseg[MLX5_MAX_RXQ_NSEG];
+	/* Buffer split segment descriptions - sizes, offsets, pools. */
 } __rte_cache_aligned;
 
 enum mlx5_rxq_type {
@@ -316,7 +326,8 @@ int mlx5_rxq_obj_verify(struct rte_eth_dev *dev);
 struct mlx5_rxq_ctrl *mlx5_rxq_new(struct rte_eth_dev *dev, uint16_t idx,
 				   uint16_t desc, unsigned int socket,
 				   const struct rte_eth_rxconf *conf,
-				   struct rte_mempool *mp);
+				   const struct rte_eth_rxseg_split *rx_seg,
+				   uint16_t n_seg);
 struct mlx5_rxq_ctrl *mlx5_rxq_hairpin_new
 	(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 	 const struct rte_eth_hairpin_conf *hairpin_conf);
