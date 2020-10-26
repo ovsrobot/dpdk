@@ -193,4 +193,10 @@ uint16_t vmxnet3_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 uint16_t vmxnet3_prep_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 			uint16_t nb_pkts);
 
+extern int vmxnet3_segs_dynfield_offset;
+#define VMXNET3_SEGS_DYNFIELD_NAME "rte_net_vmxnet3_dynfield_segs"
+#define VMXNET3_SEGS_DYNFIELD_TYPE uint8_t
+#define VMXNET3_SEGS_DYNFIELD(mbuf) (*RTE_MBUF_DYNFIELD(rxm, \
+		vmxnet3_segs_dynfield_offset, VMXNET3_SEGS_DYNFIELD_TYPE *))
+
 #endif /* _VMXNET3_ETHDEV_H_ */
