@@ -15,16 +15,8 @@
 		PKT_TX_TCP_SEG |		 \
 		PKT_TX_OUTER_IP_CKSUM)
 
-/* Offset of mbuf dynamic field for protocol extraction data */
-int rte_net_ice_dynfield_proto_xtr_metadata_offs = -1;
-
-/* Mask of mbuf dynamic flags for protocol extraction type */
-uint64_t rte_net_ice_dynflag_proto_xtr_vlan_mask;
-uint64_t rte_net_ice_dynflag_proto_xtr_ipv4_mask;
-uint64_t rte_net_ice_dynflag_proto_xtr_ipv6_mask;
-uint64_t rte_net_ice_dynflag_proto_xtr_ipv6_flow_mask;
-uint64_t rte_net_ice_dynflag_proto_xtr_tcp_mask;
-uint64_t rte_net_ice_dynflag_proto_xtr_ip_offset_mask;
+#define ICE_DYNF_PROTO_XTR_METADATA(m) \
+	RTE_MBUF_DYNFIELD((m), rxq->xtr_metadata_off, uint32_t *)
 
 static inline uint8_t
 ice_proto_xtr_type_to_rxdid(uint8_t xtr_type)
@@ -104,7 +96,7 @@ ice_rxd_to_pkt_fields_by_comms_aux_v1(struct ice_rx_queue *rxq,
 		if (metadata) {
 			mb->ol_flags |= rxq->xtr_ol_flag;
 
-			*RTE_NET_ICE_DYNF_PROTO_XTR_METADATA(mb) = metadata;
+			*ICE_DYNF_PROTO_XTR_METADATA(mb) = metadata;
 		}
 	}
 #endif
@@ -142,7 +134,7 @@ ice_rxd_to_pkt_fields_by_comms_aux_v2(struct ice_rx_queue *rxq,
 		if (metadata) {
 			mb->ol_flags |= rxq->xtr_ol_flag;
 
-			*RTE_NET_ICE_DYNF_PROTO_XTR_METADATA(mb) = metadata;
+			*ICE_DYNF_PROTO_XTR_METADATA(mb) = metadata;
 		}
 	}
 #endif
@@ -151,34 +143,38 @@ ice_rxd_to_pkt_fields_by_comms_aux_v2(struct ice_rx_queue *rxq,
 static void
 ice_select_rxd_to_pkt_fields_handler(struct ice_rx_queue *rxq, uint32_t rxdid)
 {
+	struct rte_mbuf_dynfield metadata_param;
+	const char *flag_name = NULL;
+	int flag_off, metadata_off;
+
 	switch (rxdid) {
 	case ICE_RXDID_COMMS_AUX_VLAN:
-		rxq->xtr_ol_flag = rte_net_ice_dynflag_proto_xtr_vlan_mask;
+		flag_name = RTE_PMD_DYNFLAG_PROTO_XTR_VLAN_NAME;
 		rxq->rxd_to_pkt_fields = ice_rxd_to_pkt_fields_by_comms_aux_v1;
 		break;
 
 	case ICE_RXDID_COMMS_AUX_IPV4:
-		rxq->xtr_ol_flag = rte_net_ice_dynflag_proto_xtr_ipv4_mask;
+		flag_name = RTE_PMD_DYNFLAG_PROTO_XTR_IPV4_NAME;
 		rxq->rxd_to_pkt_fields = ice_rxd_to_pkt_fields_by_comms_aux_v1;
 		break;
 
 	case ICE_RXDID_COMMS_AUX_IPV6:
-		rxq->xtr_ol_flag = rte_net_ice_dynflag_proto_xtr_ipv6_mask;
+		flag_name = RTE_PMD_DYNFLAG_PROTO_XTR_IPV6_NAME;
 		rxq->rxd_to_pkt_fields = ice_rxd_to_pkt_fields_by_comms_aux_v1;
 		break;
 
 	case ICE_RXDID_COMMS_AUX_IPV6_FLOW:
-		rxq->xtr_ol_flag = rte_net_ice_dynflag_proto_xtr_ipv6_flow_mask;
+		flag_name = RTE_PMD_DYNFLAG_PROTO_XTR_IPV6_FLOW_NAME;
 		rxq->rxd_to_pkt_fields = ice_rxd_to_pkt_fields_by_comms_aux_v1;
 		break;
 
 	case ICE_RXDID_COMMS_AUX_TCP:
-		rxq->xtr_ol_flag = rte_net_ice_dynflag_proto_xtr_tcp_mask;
+		flag_name = RTE_PMD_DYNFLAG_PROTO_XTR_TCP_NAME;
 		rxq->rxd_to_pkt_fields = ice_rxd_to_pkt_fields_by_comms_aux_v1;
 		break;
 
 	case ICE_RXDID_COMMS_AUX_IP_OFFSET:
-		rxq->xtr_ol_flag = rte_net_ice_dynflag_proto_xtr_ip_offset_mask;
+		flag_name = RTE_PMD_DYNFLAG_PROTO_XTR_IP_OFFSET_NAME;
 		rxq->rxd_to_pkt_fields = ice_rxd_to_pkt_fields_by_comms_aux_v2;
 		break;
 
@@ -192,8 +188,34 @@ ice_select_rxd_to_pkt_fields_handler(struct ice_rx_queue *rxq, uint32_t rxdid)
 		break;
 	}
 
-	if (!rte_net_ice_dynf_proto_xtr_metadata_avail())
-		rxq->xtr_ol_flag = 0;
+	if (!flag_name)
+		return;
+
+	flag_off = rte_mbuf_dynflag_lookup(flag_name, NULL);
+	if (flag_off == -1) {
+		PMD_DRV_LOG(WARNING, "failed to lookup the dynamic flag '%s' for Rx queue %u : %d",
+			    flag_name, rxq->queue_id, -rte_errno);
+		return;
+	}
+
+	metadata_off = rte_mbuf_dynfield_lookup
+				(RTE_PMD_DYNFIELD_PROTO_XTR_METADATA_NAME,
+				 &metadata_param);
+	if (metadata_off == -1) {
+		PMD_DRV_LOG(WARNING, "failed to lookup the dynamic field '%s' for Rx queue %u : %d",
+			    RTE_PMD_DYNFIELD_PROTO_XTR_METADATA_NAME,
+			    rxq->queue_id, -rte_errno);
+		return;
+	}
+	if (metadata_param.size != sizeof(uint32_t)) {
+		PMD_DRV_LOG(WARNING, "the dynamic field '%s' data size is not matched for Rx queue %u",
+			    RTE_PMD_DYNFIELD_PROTO_XTR_METADATA_NAME,
+			    rxq->queue_id);
+		return;
+	}
+
+	rxq->xtr_metadata_off = metadata_off;
+	rxq->xtr_ol_flag = 1ULL << flag_off;
 }
 
 static enum ice_status
