@@ -95,6 +95,11 @@ void bnxt_set_mark_in_mbuf(struct bnxt *bp,
 			   struct rx_pkt_cmpl_hi *rxcmp1,
 			   struct rte_mbuf *mbuf);
 
+extern int bnxt_cfa_code_dynfield_offset;
+#define BNXT_CFA_CODE_DYNFIELD_TYPE uint32_t
+#define BNXT_CFA_CODE_DYNFIELD(mbuf) (*RTE_MBUF_DYNFIELD(mbuf, \
+		bnxt_cfa_code_dynfield_offset, BNXT_CFA_CODE_DYNFIELD_TYPE *))
+
 #define BNXT_RX_META_CFA_CODE_SHIFT		19
 #define BNXT_CFA_CODE_META_SHIFT		16
 #define BNXT_RX_META_CFA_CODE_INT_ACT_REC_BIT	0x8000000
