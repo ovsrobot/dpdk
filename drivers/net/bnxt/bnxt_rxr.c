@@ -28,6 +28,8 @@
  * RX Ring handling
  */
 
+int cfa_code_dynfield_offset;
+
 static inline struct rte_mbuf *__bnxt_alloc_rx_data(struct rte_mempool *mb)
 {
 	struct rte_mbuf *data;
@@ -606,7 +608,8 @@ bnxt_ulp_set_mark_in_mbuf(struct bnxt *bp, struct rx_pkt_cmpl_hi *rxcmp1,
 			return mark_id;
 		/* Got the mark, write it to the mbuf and return */
 		mbuf->hash.fdir.hi = mark_id;
-		mbuf->udata64 = (cfa_code & 0xffffffffull) << 32;
+		*RTE_MBUF_DYNFIELD(mbuf, bnxt_cfa_code_dynfield_offset,
+			uint32_t *) = cfa_code & 0xffffffffull;
 		mbuf->hash.fdir.id = rxcmp1->cfa_code;
 		mbuf->ol_flags |= PKT_RX_FDIR | PKT_RX_FDIR_ID;
 		return mark_id;
