@@ -248,9 +248,19 @@ ip4_rewrite_node_process(struct rte_graph *graph, struct rte_node *node,
 static int
 ip4_rewrite_node_init(const struct rte_graph *graph, struct rte_node *node)
 {
+	static bool init_once;
 
 	RTE_SET_USED(graph);
 	RTE_SET_USED(node);
+
+	if (!init_once) {
+		node_mbuf_priv1_dynfield_offset = rte_mbuf_dynfield_register(
+				&node_mbuf_priv1_dynfield_desc);
+		if (node_mbuf_priv1_dynfield_offset < 0)
+			return -1;
+		init_once = true;
+	}
+
 	node_dbg("ip4_rewrite", "Initialized ip4_rewrite node initialized");
 
 	return 0;

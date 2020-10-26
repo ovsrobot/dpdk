@@ -21,6 +21,8 @@
 
 #include "node_private.h"
 
+int node_mbuf_priv1_dynfield_offset;
+
 #define IPV4_L3FWD_LPM_MAX_RULES 1024
 #define IPV4_L3FWD_LPM_NUMBER_TBL8S (1 << 8)
 
@@ -178,6 +180,11 @@ ip4_lookup_node_init(const struct rte_graph *graph, struct rte_node *node)
 	RTE_SET_USED(node);
 
 	if (!init_once) {
+		node_mbuf_priv1_dynfield_offset = rte_mbuf_dynfield_register(
+				&node_mbuf_priv1_dynfield_desc);
+		if (node_mbuf_priv1_dynfield_offset < 0)
+			return -1;
+
 		/* Setup LPM tables for all sockets */
 		RTE_LCORE_FOREACH(lcore_id)
 		{
