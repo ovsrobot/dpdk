@@ -156,19 +156,17 @@ Runtime Config Options
    +----------------------------+----------------------------+
    |           IPHDR2           |           IPHDR1           |
    +============================+============================+
-   |       IPv6 HDR Offset      |       IPv4 HDR Offset      |
+   |         Reserved           |       IP Header Offset     |
    +----------------------------+----------------------------+
 
-  IPHDR1 - Outer/Single IPv4 Header offset.
+  IPHDR1 - Outer/Single IPv4/IPv6 Header offset.
 
-  IPHDR2 - Outer/Single IPv6 Header offset.
+  IPHDR2 - Reserved.
 
-  Use ``rte_net_ice_dynf_proto_xtr_metadata_get`` to access the protocol
-  extraction metadata, and use ``RTE_PKT_RX_DYNF_PROTO_XTR_*`` to get the
-  metadata type of ``struct rte_mbuf::ol_flags``.
-
-  The ``rte_net_ice_dump_proto_xtr_metadata`` routine shows how to
-  access the protocol extraction result in ``struct rte_mbuf``.
+  The dynamic mbuf field for metadata uses "rte_pmd_dynfield_proto_xtr_metadata"
+  name with 4 byte size. And the related dynamic mbuf flag uses the name format
+  "rte_pmd_dynflag_proto_xtr_*" which ends with the protocol extraction devargs
+  name such as "ip_offset".
 
 Driver compilation and testing
 ------------------------------
