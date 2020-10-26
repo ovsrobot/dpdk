@@ -165,6 +165,8 @@ static uint32_t nb_lcores;
 static uint32_t single_sa;
 static uint32_t nb_bufs_in_pool;
 
+int security_dynfield_offset;
+
 /*
  * RX/TX HW offload capabilities to enable/use on ethernet ports.
  * By default all capabilities are enabled.
@@ -426,7 +428,8 @@ prepare_one_packet(struct rte_mbuf *pkt, struct ipsec_traffic *t)
 	 * with the security session.
 	 */
 
-	if (pkt->ol_flags & PKT_RX_SEC_OFFLOAD) {
+	if (pkt->ol_flags & PKT_RX_SEC_OFFLOAD &&
+			security_dynfield_offset >= 0) {
 		struct ipsec_sa *sa;
 		struct ipsec_mbuf_metadata *priv;
 		struct rte_security_ctx *ctx = (struct rte_security_ctx *)
@@ -436,10 +439,9 @@ prepare_one_packet(struct rte_mbuf *pkt, struct ipsec_traffic *t)
 		/* Retrieve the userdata registered. Here, the userdata
 		 * registered is the SA pointer.
 		 */
-
-		sa = (struct ipsec_sa *)
-				rte_security_get_userdata(ctx, pkt->udata64);
-
+		sa = (struct ipsec_sa *) rte_security_get_userdata(ctx,
+			*RTE_MBUF_DYNFIELD(pkt, security_dynfield_offset,
+				RTE_SECURITY_DYNFIELD_TYPE *));
 		if (sa == NULL) {
 			/* userdata could not be retrieved */
 			return;
@@ -2897,6 +2899,9 @@ main(int32_t argc, char **argv)
 			sess_sz);
 	}
 	printf("Number of mbufs in packet pool %d\n", nb_bufs_in_pool);
+
+	security_dynfield_offset =
+		rte_mbuf_dynfield_lookup(RTE_SECURITY_DYNFIELD_NAME, NULL);
 
 	RTE_ETH_FOREACH_DEV(portid) {
 		if ((enabled_port_mask & (1 << portid)) == 0)

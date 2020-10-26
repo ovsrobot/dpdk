@@ -208,7 +208,8 @@ process_ipsec_ev_inbound(struct ipsec_ctx *ctx, struct route_table *rt,
 					"Inbound security offload failed\n");
 				goto drop_pkt_and_exit;
 			}
-			sa = pkt->userdata;
+			sa = RTE_MBUF_DYNFIELD(pkt, security_dynfield_offset,
+					struct ipsec_sa *);
 		}
 
 		/* Check if we have a match */
@@ -226,7 +227,8 @@ process_ipsec_ev_inbound(struct ipsec_ctx *ctx, struct route_table *rt,
 					"Inbound security offload failed\n");
 				goto drop_pkt_and_exit;
 			}
-			sa = pkt->userdata;
+			sa = RTE_MBUF_DYNFIELD(pkt, security_dynfield_offset,
+					struct ipsec_sa *);
 		}
 
 		/* Check if we have a match */
@@ -357,7 +359,8 @@ process_ipsec_ev_outbound(struct ipsec_ctx *ctx, struct route_table *rt,
 	}
 
 	if (sess->security.ol_flags & RTE_SECURITY_TX_OLOAD_NEED_MDATA)
-		pkt->userdata = sess->security.ses;
+		*RTE_MBUF_DYNFIELD(pkt, security_dynfield_offset,
+			struct rte_security_session **) = sess->security.ses;
 
 	/* Mark the packet for Tx security offload */
 	pkt->ol_flags |= PKT_TX_SEC_OFFLOAD;
@@ -465,7 +468,9 @@ ipsec_wrkr_non_burst_int_port_drv_mode(struct eh_event_link_info *links,
 			}
 
 			/* Save security session */
-			pkt->userdata = sess_tbl[port_id];
+			*RTE_MBUF_DYNFIELD(pkt, security_dynfield_offset,
+					struct rte_security_session **) =
+				sess_tbl[port_id];
 
 			/* Mark the packet for Tx security offload */
 			pkt->ol_flags |= PKT_TX_SEC_OFFLOAD;

@@ -23,6 +23,16 @@
 	RTE_PTR_OR_ERR_RET(p1->p2->p3, last_retval);			\
 } while (0)
 
+int rte_security_dynfield_offset;
+
+int
+rte_security_dynfield_register(void)
+{
+	rte_security_dynfield_offset =
+		rte_mbuf_dynfield_register(&rte_security_dynfield_desc);
+	return rte_security_dynfield_offset;
+}
+
 struct rte_security_session *
 rte_security_session_create(struct rte_security_ctx *instance,
 			    struct rte_security_session_conf *conf,

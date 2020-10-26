@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <rte_mbuf_dyn.h>
+
 #include "rte_security.h"
 
 /**
@@ -88,6 +90,24 @@ typedef unsigned int (*security_session_get_size)(void *device);
 typedef int (*security_session_stats_get_t)(void *device,
 		struct rte_security_session *sess,
 		struct rte_security_stats *stats);
+
+/* Dynamic mbuf field for device-specific metadata */
+static const struct rte_mbuf_dynfield rte_security_dynfield_desc = {
+	.name = RTE_SECURITY_DYNFIELD_NAME,
+	.size = sizeof(RTE_SECURITY_DYNFIELD_TYPE),
+	.align = __alignof__(RTE_SECURITY_DYNFIELD_TYPE),
+};
+extern int rte_security_dynfield_offset;
+
+__rte_experimental
+int rte_security_dynfield_register(void);
+
+static inline RTE_SECURITY_DYNFIELD_TYPE *
+rte_security_dynfield(struct rte_mbuf *mbuf)
+{
+	return RTE_MBUF_DYNFIELD(mbuf,
+	rte_security_dynfield_offset, RTE_SECURITY_DYNFIELD_TYPE *);
+}
 
 /**
  * Update the mbuf with provided metadata.

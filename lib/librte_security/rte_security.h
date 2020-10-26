@@ -451,6 +451,11 @@ int
 rte_security_session_destroy(struct rte_security_ctx *instance,
 			     struct rte_security_session *sess);
 
+/** Device-specific metadata field name (for mbuf dynfield lookup) */
+#define RTE_SECURITY_DYNFIELD_NAME "rte_security_dynfield_metadata"
+/** Device-specific metadata field type */
+#define RTE_SECURITY_DYNFIELD_TYPE uint64_t
+
 /**
  *  Updates the buffer with device-specific defined metadata
  *

@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <rte_byteorder.h>
+#include <rte_mbuf_dyn.h>
 #include <rte_crypto.h>
 #include <rte_security.h>
 #include <rte_flow.h>
@@ -66,6 +67,8 @@ struct ip_addr {
 };
 
 #define MAX_KEY_SIZE		36
+
+extern int security_dynfield_offset;
 
 /*
  * application wide SA parameters
