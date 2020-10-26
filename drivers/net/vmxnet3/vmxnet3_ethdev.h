@@ -193,4 +193,6 @@ uint16_t vmxnet3_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 uint16_t vmxnet3_prep_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 			uint16_t nb_pkts);
 
+extern int vmxnet3_segs_dynfield_offset;
+
 #endif /* _VMXNET3_ETHDEV_H_ */
