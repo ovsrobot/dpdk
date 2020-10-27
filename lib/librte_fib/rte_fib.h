@@ -60,6 +60,8 @@ enum rte_fib_dir24_8_nh_sz {
 
 /** Type of lookup function implementation */
 enum rte_fib_lookup_type {
+	RTE_FIB_LOOKUP_DEFAULT,
+	/**< Selects the best implementation based on the max simd bitwidth */
 	RTE_FIB_LOOKUP_DIR24_8_SCALAR_MACRO,
 	/**< Macro based lookup function */
 	RTE_FIB_LOOKUP_DIR24_8_SCALAR_INLINE,
@@ -67,10 +69,12 @@ enum rte_fib_lookup_type {
 	 * Lookup implementation using inlined functions
 	 * for different next hop sizes
 	 */
-	RTE_FIB_LOOKUP_DIR24_8_SCALAR_UNI
+	RTE_FIB_LOOKUP_DIR24_8_SCALAR_UNI,
 	/**<
 	 * Unified lookup function for all next hop sizes
 	 */
+	RTE_FIB_LOOKUP_DIR24_8_VECTOR_AVX512
+	/**< Vector implementation using AVX512 */
 };
 
 /** FIB configuration structure */
