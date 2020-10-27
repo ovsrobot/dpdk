@@ -26,6 +26,32 @@ uint64_t rte_net_ice_dynflag_proto_xtr_ipv6_flow_mask;
 uint64_t rte_net_ice_dynflag_proto_xtr_tcp_mask;
 uint64_t rte_net_ice_dynflag_proto_xtr_ip_offset_mask;
 
+int ice_get_wake_addr(void *rx_queue, volatile void **tail_desc_addr,
+		uint64_t *expected, uint64_t *mask, uint8_t *data_sz)
+{
+	volatile union ice_rx_flex_desc *rxdp;
+	struct ice_rx_queue *rxq = rx_queue;
+	uint16_t desc;
+
+	desc = rxq->rx_tail;
+	rxdp = &rxq->rx_ring[desc];
+	/* watch for changes in status bit */
+	*tail_desc_addr = &rxdp->wb.status_error0;
+
+	/*
+	 * we expect the DD bit to be set to 1 if this descriptor was already
+	 * written to.
+	 */
+	*expected = rte_cpu_to_le_16(1 << ICE_RX_FLEX_DESC_STATUS0_DD_S);
+	*mask = rte_cpu_to_le_16(1 << ICE_RX_FLEX_DESC_STATUS0_DD_S);
+
+	/* register is 16-bit */
+	*data_sz = 2;
+
+	return 0;
+}
+
+
 static inline uint8_t
 ice_proto_xtr_type_to_rxdid(uint8_t xtr_type)
 {
