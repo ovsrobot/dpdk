@@ -816,7 +816,7 @@ rte_eth_dev_get_name_by_port(uint16_t port_id, char *name)
 int
 rte_eth_dev_get_port_by_name(const char *name, uint16_t *port_id)
 {
-	uint32_t pid;
+	uint16_t pid;
 
 	if (name == NULL) {
 		RTE_ETHDEV_LOG(ERR, "Null pointer is specified\n");
@@ -4291,6 +4291,8 @@ rte_eth_mirror_rule_reset(uint16_t port_id, uint8_t rule_id)
 RTE_INIT(eth_dev_init_cb_lists)
 {
 	int i;
+
+	RTE_BUILD_BUG_ON(RTE_MAX_ETHPORTS > UINT16_MAX);
 
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++)
 		TAILQ_INIT(&rte_eth_devices[i].link_intr_cbs);
