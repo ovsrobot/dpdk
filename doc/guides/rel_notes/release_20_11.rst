@@ -139,6 +139,10 @@ New Features
   Hairpin Tx part flow rules can be inserted explicitly.
   New API is added to get the hairpin peer ports list.
 
+* **ethdev: added 1 new API for PMD power management.**
+
+  * ``rte_eth_get_wake_addr()`` is added to get the wake up address from device.
+
 * **Updated Broadcom bnxt driver.**
 
   Updated the Broadcom bnxt driver with new features and improvements, including:
