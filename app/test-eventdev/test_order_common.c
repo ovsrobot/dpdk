@@ -4,6 +4,8 @@
 
 #include "test_order_common.h"
 
+int flow_id_dynfield_offset = -1;
+
 int
 order_test_result(struct evt_test *test, struct evt_options *opt)
 {
@@ -46,13 +48,10 @@ order_producer(void *arg)
 		if (m == NULL)
 			continue;
 
-		const uint32_t flow = (uintptr_t)m % nb_flows;
+		const flow_id_t flow = (uintptr_t)m % nb_flows;
 		/* Maintain seq number per flow */
 		m->seqn = producer_flow_seq[flow]++;
-		m->udata64 = flow;
-
-		ev.flow_id = flow;
-		ev.mbuf = m;
+		flow_id_save(flow, m, &ev);
 
 		while (rte_event_enqueue_burst(dev_id, port, &ev, 1) != 1) {
 			if (t->err)
@@ -138,6 +137,18 @@ int
 order_test_setup(struct evt_test *test, struct evt_options *opt)
 {
 	void *test_order;
+
+	static const struct rte_mbuf_dynfield flow_id_dynfield_desc = {
+		.name = "test_event_dynfield_flow_id",
+		.size = sizeof(flow_id_t),
+		.align = __alignof__(flow_id_t),
+	};
+	flow_id_dynfield_offset =
+		rte_mbuf_dynfield_register(&flow_id_dynfield_desc);
+	if (flow_id_dynfield_offset < 0) {
+		evt_err("failed to register mbuf field");
+		return -rte_errno;
+	}
 
 	test_order = rte_zmalloc_socket(test->name, sizeof(struct test_order),
 				RTE_CACHE_LINE_SIZE, opt->socket_id);

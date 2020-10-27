@@ -13,12 +13,31 @@
 #include <rte_lcore.h>
 #include <rte_malloc.h>
 #include <rte_mbuf.h>
+#include <rte_mbuf_dyn.h>
 
 #include "evt_common.h"
 #include "evt_options.h"
 #include "evt_test.h"
 
 #define BURST_SIZE 16
+
+typedef uint32_t flow_id_t;
+extern int flow_id_dynfield_offset;
+
+static inline void
+flow_id_copy_from_mbuf(struct rte_event *event)
+{
+	event->flow_id = *RTE_MBUF_DYNFIELD(event->mbuf,
+			flow_id_dynfield_offset, flow_id_t *);
+}
+
+static inline void
+flow_id_save(flow_id_t flow, struct rte_mbuf *mbuf, struct rte_event *event)
+{
+	*RTE_MBUF_DYNFIELD(mbuf, flow_id_dynfield_offset, flow_id_t *) = flow;
+	event->flow_id = flow;
+	event->mbuf = mbuf;
+}
 
 struct test_order;
 
