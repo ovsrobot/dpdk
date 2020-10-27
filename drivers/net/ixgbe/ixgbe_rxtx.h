@@ -299,5 +299,7 @@ uint64_t ixgbe_get_tx_port_offloads(struct rte_eth_dev *dev);
 uint64_t ixgbe_get_rx_queue_offloads(struct rte_eth_dev *dev);
 uint64_t ixgbe_get_rx_port_offloads(struct rte_eth_dev *dev);
 uint64_t ixgbe_get_tx_queue_offloads(struct rte_eth_dev *dev);
+int ixgbe_get_wake_addr(void *rx_queue, volatile void **tail_desc_addr,
+		uint64_t *expected, uint64_t *mask, uint8_t *data_sz);
 
 #endif /* _IXGBE_RXTX_H_ */
