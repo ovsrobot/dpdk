@@ -347,7 +347,7 @@ New Features
 
 * **Added AVX512 lookup implementation for FIB.**
 
-  Added a AVX512 lookup functions implementation into FIB library.
+  Added a AVX512 lookup functions implementation into FIB and FIB6 libraries.
 
 Removed Items
 -------------
