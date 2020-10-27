@@ -18,9 +18,9 @@
 #include <rte_ip.h>
 #include <rte_udp.h>
 #include <rte_tcp.h>
+#include <rte_vhost.h>
 
 #include "main.h"
-#include "rte_vhost.h"
 #include "vxlan.h"
 #include "vxlan_setup.h"
 
