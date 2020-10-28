@@ -3,7 +3,10 @@
 # Copyright(c) 2017 Cavium, Inc
 # Copyright(c) 2020 PANTHEON.tech s.r.o.
 
+# set arm_force_native_march if you want to use machine args below
+# instead of discovered values in native builds
 arm_force_native_march = false
+native_machine_args = ['-march=native', '-mtune=native']
 
 # common flags to all aarch64 builds, with lowest priority
 flags_common_default = [
@@ -103,7 +106,6 @@ flags_octeontx2_extra = [
 # arm config (implementer 0x41) is the default config
 part_number_config_default = {
 	'generic': [['-march=armv8-a+crc', '-moutline-atomics']],
-	'native': [['-march=native']],
 	'0xd03': [['-mcpu=cortex-a53']],
 	'0xd04': [['-mcpu=cortex-a35']],
 	'0xd07': [['-mcpu=cortex-a57']],
@@ -115,7 +117,6 @@ part_number_config_default = {
 }
 part_number_config_cavium = {
 	'generic': [['-march=armv8-a+crc+crypto', '-mcpu=thunderx']],
-	'native': [['-march=native']],
 	'0xa1': [['-mcpu=thunderxt88'], flags_thunderx_extra],
 	'0xa2': [['-mcpu=thunderxt81'], flags_thunderx_extra],
 	'0xa3': [['-mcpu=thunderxt83'], flags_thunderx_extra],
@@ -123,8 +124,7 @@ part_number_config_cavium = {
 	'0xb2': [['-march=armv8.2-a+crc+crypto+lse','-mcpu=octeontx2'], flags_octeontx2_extra],
 }
 part_number_config_emag = {
-	'generic': [['-march=armv8-a+crc+crypto', '-mtune=emag']],
-	'native': [['-march=native']]
+	'generic': [['-march=armv8-a+crc+crypto', '-mtune=emag']]
 }
 
 ## Arm implementer ID (ARM DDI 0487C.a, Section G7.2.106, Page G7-5321)
@@ -155,32 +155,35 @@ if dpdk_conf.get('RTE_ARCH_32')
 	machine_args += '-mfpu=neon'
 else
 	# aarch64 build
-	implementer_id = 'generic'
 	machine_args = [] # Clear previous machine args
-	if machine == 'generic' and not meson.is_cross_build()
-		implementer_config = implementer_generic
-		part_number = 'generic'
-	elif not meson.is_cross_build()
-		# The script returns ['Implementer', 'Variant', 'Architecture',
-		# 'Primary Part number', 'Revision']
-		detect_vendor = find_program(join_paths(
-				meson.current_source_dir(), 'armv8_machine.py'))
-		cmd = run_command(detect_vendor.path())
-		if cmd.returncode() == 0
-			cmd_output = cmd.stdout().to_lower().strip().split(' ')
-			implementer_id = cmd_output[0]
-			part_number = cmd_output[3]
-		endif
-		# Set to generic if variable is not found
-		implementer_config = get_variable('implementer_' + implementer_id, ['generic'])
-		if implementer_config[0] == 'generic'
+	if not meson.is_cross_build()
+		if machine == 'generic'
+			# generic native build
 			implementer_config = implementer_generic
 			part_number = 'generic'
-		endif
-		if arm_force_native_march == true
-			part_number = 'native'
+		else
+			# native build
+			# The script returns ['Implementer', 'Variant', 'Architecture',
+			# 'Primary Part number', 'Revision']
+			detect_vendor = find_program(join_paths(
+					meson.current_source_dir(), 'armv8_machine.py'))
+			cmd = run_command(detect_vendor.path())
+			if cmd.returncode() == 0
+				cmd_output = cmd.stdout().to_lower().strip().split(' ')
+				implementer_id = cmd_output[0]
+				part_number = cmd_output[3]
+			else
+				implementer_id = 'generic'
+				part_number = 'generic'
+			endif
+			# Set to generic if implementer is not found
+			implementer_config = get_variable('implementer_' + implementer_id, implementer_generic)
+			if arm_force_native_march == true
+				part_number = 'native'
+			endif
 		endif
 	else
+		# cross build
 		implementer_id = meson.get_cross_property('implementer_id', 'generic')
 		part_number = meson.get_cross_property('part_number', 'generic')
 		implementer_config = get_variable('implementer_' + implementer_id)
@@ -193,6 +196,9 @@ else
 	if part_number_config.has_key(part_number)
 		# use the specified part_number machine args if found
 		part_number_config = part_number_config[part_number]
+	elif part_number == 'native'
+		# use native machine args
+		part_number_config = [[native_machine_args]]
 	elif not meson.is_cross_build()
 		# default to generic machine args if part_number is not found
 		# and not forcing native machine args
