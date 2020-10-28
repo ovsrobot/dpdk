@@ -21,6 +21,10 @@ subdirs = [
 disabled_drivers += run_command(list_dir_globs, get_option('disable_drivers'),
 		).stdout().split()
 
+if meson.is_cross_build()
+	disabled_drivers += meson.get_cross_property('disabled_drivers', [])
+endif
+
 default_cflags = machine_args
 default_cflags += ['-DALLOW_EXPERIMENTAL_API']
 default_cflags += ['-DALLOW_INTERNAL_API']

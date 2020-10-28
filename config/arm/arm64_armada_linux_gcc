@@ -17,3 +17,5 @@ endian = 'little'
 implementer_id = '0x56'
 max_numa_nodes = 1
 max_lcores = 16
+has_libnuma = 0
+disabled_drivers = ['bus/dpaa', 'bus/fslmc', 'common/dpaax']
