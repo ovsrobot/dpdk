@@ -101,31 +101,31 @@ flags_octeontx2_extra = [
 ]
 
 # arm config (implementer 0x41) is the default config
-part_number_config_default = [
-	['generic', ['-march=armv8-a+crc', '-moutline-atomics']],
-	['native', ['-march=native']],
-	['0xd03', ['-mcpu=cortex-a53']],
-	['0xd04', ['-mcpu=cortex-a35']],
-	['0xd07', ['-mcpu=cortex-a57']],
-	['0xd08', ['-mcpu=cortex-a72']],
-	['0xd09', ['-mcpu=cortex-a73']],
-	['0xd0a', ['-mcpu=cortex-a75']],
-	['0xd0b', ['-mcpu=cortex-a76']],
-	['0xd0c', ['-march=armv8.2-a+crc+crypto', '-mcpu=neoverse-n1'], flags_n1sdp_extra]
-]
-part_number_config_cavium = [
-	['generic', ['-march=armv8-a+crc+crypto','-mcpu=thunderx']],
-	['native', ['-march=native']],
-	['0xa1', ['-mcpu=thunderxt88'], flags_thunderx_extra],
-	['0xa2', ['-mcpu=thunderxt81'], flags_thunderx_extra],
-	['0xa3', ['-mcpu=thunderxt83'], flags_thunderx_extra],
-	['0xaf', ['-march=armv8.1-a+crc+crypto','-mcpu=thunderx2t99'], flags_thunderx2_extra],
-	['0xb2', ['-march=armv8.2-a+crc+crypto+lse','-mcpu=octeontx2'], flags_octeontx2_extra]
-]
-part_number_config_emag = [
-	['generic', ['-march=armv8-a+crc+crypto', '-mtune=emag']],
-	['native', ['-march=native']]
-]
+part_number_config_default = {
+	'generic': [['-march=armv8-a+crc', '-moutline-atomics']],
+	'native': [['-march=native']],
+	'0xd03': [['-mcpu=cortex-a53']],
+	'0xd04': [['-mcpu=cortex-a35']],
+	'0xd07': [['-mcpu=cortex-a57']],
+	'0xd08': [['-mcpu=cortex-a72']],
+	'0xd09': [['-mcpu=cortex-a73']],
+	'0xd0a': [['-mcpu=cortex-a75']],
+	'0xd0b': [['-mcpu=cortex-a76']],
+	'0xd0c': [['-march=armv8.2-a+crc+crypto', '-mcpu=neoverse-n1'], flags_n1sdp_extra]
+}
+part_number_config_cavium = {
+	'generic': [['-march=armv8-a+crc+crypto', '-mcpu=thunderx']],
+	'native': [['-march=native']],
+	'0xa1': [['-mcpu=thunderxt88'], flags_thunderx_extra],
+	'0xa2': [['-mcpu=thunderxt81'], flags_thunderx_extra],
+	'0xa3': [['-mcpu=thunderxt83'], flags_thunderx_extra],
+	'0xaf': [['-march=armv8.1-a+crc+crypto','-mcpu=thunderx2t99'], flags_thunderx2_extra],
+	'0xb2': [['-march=armv8.2-a+crc+crypto+lse','-mcpu=octeontx2'], flags_octeontx2_extra],
+}
+part_number_config_emag = {
+	'generic': [['-march=armv8-a+crc+crypto', '-mtune=emag']],
+	'native': [['-march=native']]
+}
 
 ## Arm implementer ID (ARM DDI 0487C.a, Section G7.2.106, Page G7-5321)
 implementer_generic = ['Generic armv8', flags_generic, part_number_config_default]
@@ -189,22 +189,33 @@ else
 	message('Arm implementer: ' + implementer_config[0])
 	message('Arm part number: ' + part_number)
 
+	part_number_config = implementer_config[2]
+	if part_number_config.has_key(part_number)
+		# use the specified part_number machine args if found
+		part_number_config = part_number_config[part_number]
+	elif not meson.is_cross_build()
+		# default to generic machine args if part_number is not found
+		# and not forcing native machine args
+		# but don't default in cross-builds; if part_number is specified
+		# incorrectly in a cross-file, it needs to be fixed there
+		part_number_config = part_number_config['generic']
+	else
+		# doing cross build and part number is not in part_number_config
+		error('Cross build part number 0@0 not found.'.format(part_number))
+	endif
+
 	# use default flags with implementer flags
 	dpdk_flags = flags_common_default + implementer_config[1]
+	if part_number_config.length() > 1
+		# add extra flags from the part number
+		dpdk_flags += part_number_config[1]
+	endif
 
+	# apply supported machine args
 	machine_args = [] # Clear previous machine args
-	foreach marg: implementer_config[2]
-		if marg[0] == part_number
-			# apply supported machine args
-			foreach flag: marg[1]
-				if cc.has_argument(flag)
-					machine_args += flag
-				endif
-			endforeach
-			if marg.length() > 2
-				# add extra flags for the part
-				dpdk_flags += marg[2]
-			endif
+	foreach flag: part_number_config[0]
+		if cc.has_argument(flag)
+			machine_args += flag
 		endif
 	endforeach
 
