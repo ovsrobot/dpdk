@@ -148,7 +148,7 @@ ice_rxd_to_pkt_fields_by_comms_aux_v2(struct ice_rx_queue *rxq,
 #endif
 }
 
-static void
+void
 ice_select_rxd_to_pkt_fields_handler(struct ice_rx_queue *rxq, uint32_t rxdid)
 {
 	switch (rxdid) {
