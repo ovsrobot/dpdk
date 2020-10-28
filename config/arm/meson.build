@@ -3,11 +3,7 @@
 # Copyright(c) 2017 Cavium, Inc
 # Copyright(c) 2020 PANTHEON.tech s.r.o.
 
-# for checking defines we need to use the correct compiler flags
-march_opt = '-march=@0@'.format(machine)
-
 arm_force_native_march = false
-arm_force_generic_march = (machine == 'generic')
 
 flags_common_default = [
 	# Accelarate rte_memcpy. Be sure to run unit test (memcpy_perf_autotest)
@@ -63,7 +59,6 @@ flags_armada = [
 	['RTE_MAX_NUMA_NODES', 1],
 	['RTE_MAX_LCORE', 16]]
 
-flags_default_extra = []
 flags_n1sdp_extra = [
 	['RTE_MACHINE', '"n1sdp"'],
 	['RTE_MAX_NUMA_NODES', 1],
@@ -142,11 +137,9 @@ else
 	dpdk_conf.set('RTE_CACHE_LINE_SIZE', 128)
 	dpdk_conf.set('RTE_ARCH_ARM64', 1)
 
-	implementer_config = []
-	cmd_generic = ['generic', '', '', 'generic', '']
-	cmd_output = cmd_generic # Set generic by default
+	implementer_id = 'generic'
 	machine_args = [] # Clear previous machine args
-	if arm_force_generic_march and not meson.is_cross_build()
+	if machine == 'generic' and not meson.is_cross_build()
 		implementer_config = implementer_generic
 		part_number = 'generic'
 	elif not meson.is_cross_build()
@@ -157,14 +150,15 @@ else
 		cmd = run_command(detect_vendor.path())
 		if cmd.returncode() == 0
 			cmd_output = cmd.stdout().to_lower().strip().split(' ')
+			implementer_id = cmd_output[0]
+			part_number = cmd_output[3]
 		endif
 		# Set to generic if variable is not found
-		implementer_config = get_variable('implementer_' + cmd_output[0], ['generic'])
+		implementer_config = get_variable('implementer_' + implementer_id, ['generic'])
 		if implementer_config[0] == 'generic'
 			implementer_config = implementer_generic
-			cmd_output = cmd_generic
+			part_number = 'generic'
 		endif
-		part_number = cmd_output[3]
 		if arm_force_native_march == true
 			part_number = 'native'
 		endif
@@ -197,7 +191,7 @@ else
 				endif
 			endforeach
 			# Apply any extra machine specific flags.
-			foreach flag: marg.get(2, flags_default_extra)
+			foreach flag: marg.get(2, [])
 				if flag.length() > 0
 					dpdk_conf.set(flag[0], flag[1])
 				endif
