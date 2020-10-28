@@ -88,8 +88,8 @@ flags_octeontx2_extra = [
 	['RTE_EAL_IGB_UIO', false],
 	['RTE_USE_C11_MEM_MODEL', true]]
 
-machine_args_generic = [
-	['default', ['-march=armv8-a+crc', '-moutline-atomics']],
+part_number_config_default = [
+	['generic', ['-march=armv8-a+crc', '-moutline-atomics']],
 	['native', ['-march=native']],
 	['0xd03', ['-mcpu=cortex-a53']],
 	['0xd04', ['-mcpu=cortex-a35']],
@@ -100,8 +100,8 @@ machine_args_generic = [
 	['0xd0b', ['-mcpu=cortex-a76']],
 	['0xd0c', ['-march=armv8.2-a+crc+crypto', '-mcpu=neoverse-n1'], flags_n1sdp_extra]]
 
-machine_args_cavium = [
-	['default', ['-march=armv8-a+crc+crypto','-mcpu=thunderx']],
+part_number_config_cavium = [
+	['generic', ['-march=armv8-a+crc+crypto','-mcpu=thunderx']],
 	['native', ['-march=native']],
 	['0xa1', ['-mcpu=thunderxt88'], flags_thunderx_extra],
 	['0xa2', ['-mcpu=thunderxt81'], flags_thunderx_extra],
@@ -109,25 +109,25 @@ machine_args_cavium = [
 	['0xaf', ['-march=armv8.1-a+crc+crypto','-mcpu=thunderx2t99'], flags_thunderx2_extra],
 	['0xb2', ['-march=armv8.2-a+crc+crypto+lse','-mcpu=octeontx2'], flags_octeontx2_extra]]
 
-machine_args_emag = [
-	['default', ['-march=armv8-a+crc+crypto', '-mtune=emag']],
+part_number_config_emag = [
+	['generic', ['-march=armv8-a+crc+crypto', '-mtune=emag']],
 	['native', ['-march=native']]]
 
 ## Arm implementer ID (ARM DDI 0487C.a, Section G7.2.106, Page G7-5321)
-impl_generic = ['Generic armv8', flags_generic, machine_args_generic]
-impl_0x41 = ['Arm', flags_arm, machine_args_generic]
-impl_0x42 = ['Broadcom', flags_generic, machine_args_generic]
-impl_0x43 = ['Cavium', flags_cavium, machine_args_cavium]
-impl_0x44 = ['DEC', flags_generic, machine_args_generic]
-impl_0x49 = ['Infineon', flags_generic, machine_args_generic]
-impl_0x4d = ['Motorola', flags_generic, machine_args_generic]
-impl_0x4e = ['NVIDIA', flags_generic, machine_args_generic]
-impl_0x50 = ['Ampere Computing', flags_emag, machine_args_emag]
-impl_0x51 = ['Qualcomm', flags_generic, machine_args_generic]
-impl_0x53 = ['Samsung', flags_generic, machine_args_generic]
-impl_0x56 = ['Marvell ARMADA', flags_armada, machine_args_generic]
-impl_0x69 = ['Intel', flags_generic, machine_args_generic]
-impl_dpaa = ['NXP DPAA', flags_dpaa, machine_args_generic]
+implementer_generic = ['Generic armv8', flags_generic, part_number_config_default]
+implementer_0x41 = ['Arm', flags_arm, part_number_config_default]
+implementer_0x42 = ['Broadcom', flags_generic, part_number_config_default]
+implementer_0x43 = ['Cavium', flags_cavium, part_number_config_cavium]
+implementer_0x44 = ['DEC', flags_generic, part_number_config_default]
+implementer_0x49 = ['Infineon', flags_generic, part_number_config_default]
+implementer_0x4d = ['Motorola', flags_generic, part_number_config_default]
+implementer_0x4e = ['NVIDIA', flags_generic, part_number_config_default]
+implementer_0x50 = ['Ampere Computing', flags_emag, part_number_config_emag]
+implementer_0x51 = ['Qualcomm', flags_generic, part_number_config_default]
+implementer_0x53 = ['Samsung', flags_generic, part_number_config_default]
+implementer_0x56 = ['Marvell ARMADA', flags_armada, part_number_config_default]
+implementer_0x69 = ['Intel', flags_generic, part_number_config_default]
+implementer_dpaa = ['NXP DPAA', flags_dpaa, part_number_config_default]
 
 dpdk_conf.set('RTE_ARCH_ARM', 1)
 dpdk_conf.set('RTE_FORCE_INTRINSICS', 1)
@@ -142,13 +142,13 @@ else
 	dpdk_conf.set('RTE_CACHE_LINE_SIZE', 128)
 	dpdk_conf.set('RTE_ARCH_ARM64', 1)
 
-	machine = []
-	cmd_generic = ['generic', '', '', 'default', '']
+	implementer_config = []
+	cmd_generic = ['generic', '', '', 'generic', '']
 	cmd_output = cmd_generic # Set generic by default
 	machine_args = [] # Clear previous machine args
 	if arm_force_generic_march and not meson.is_cross_build()
-		machine = impl_generic
-		impl_pn = 'default'
+		implementer_config = implementer_generic
+		part_number = 'generic'
 	elif not meson.is_cross_build()
 		# The script returns ['Implementer', 'Variant', 'Architecture',
 		# 'Primary Part number', 'Revision']
@@ -159,19 +159,19 @@ else
 			cmd_output = cmd.stdout().to_lower().strip().split(' ')
 		endif
 		# Set to generic if variable is not found
-		machine = get_variable('impl_' + cmd_output[0], ['generic'])
-		if machine[0] == 'generic'
-			machine = impl_generic
+		implementer_config = get_variable('implementer_' + cmd_output[0], ['generic'])
+		if implementer_config[0] == 'generic'
+			implementer_config = implementer_generic
 			cmd_output = cmd_generic
 		endif
-		impl_pn = cmd_output[3]
+		part_number = cmd_output[3]
 		if arm_force_native_march == true
-			impl_pn = 'native'
+			part_number = 'native'
 		endif
 	else
-		impl_id = meson.get_cross_property('implementor_id', 'generic')
-		impl_pn = meson.get_cross_property('implementor_pn', 'default')
-		machine = get_variable('impl_' + impl_id)
+		implementer_id = meson.get_cross_property('implementer_id', 'generic')
+		part_number = meson.get_cross_property('part_number', 'generic')
+		implementer_config = get_variable('implementer_' + implementer_id)
 	endif
 
 	# Apply Common Defaults. These settings may be overwritten by machine
@@ -182,15 +182,15 @@ else
 		endif
 	endforeach
 
-	message('Implementer : ' + machine[0])
-	foreach flag: machine[1]
+	message('Implementer : ' + implementer_config[0])
+	foreach flag: implementer_config[1]
 		if flag.length() > 0
 			dpdk_conf.set(flag[0], flag[1])
 		endif
 	endforeach
 
-	foreach marg: machine[2]
-		if marg[0] == impl_pn
+	foreach marg: implementer_config[2]
+		if marg[0] == part_number
 			foreach flag: marg[1]
 				if cc.has_argument(flag)
 					machine_args += flag
