@@ -20,6 +20,9 @@ DPDK Release 20.11
       make doc-guides-html
       xdg-open build/doc/html/guides/rel_notes/release_20_11.html
 
+   * **Added support of vector instructions on IAVF.**
+
+     Added support of AVX512 instructions in IAVF RX and TX path.
 
 New Features
 ------------
