@@ -26,3 +26,9 @@ implementer_id = 'generic'
 # '0xd0a':   cortex-a75
 # '0xd0b':   cortex-a76
 part_number = 'generic'
+
+# Supported extra configuration
+# max_numa_nodes = n  # will set RTE_MAX_NUMA_NODES
+# max_lcores = n      # will set RTE_MAX_LCORE
+max_lcores = 256
+max_numa_nodes = 4
