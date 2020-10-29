@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added a new driver for the Intel Dynamic Load Balancer v2.0 device.**
+
+  Added the new ``dlb2`` eventdev driver for the Intel DLB V2.0 device. See the
+  :doc:`../eventdevs/dlb2` eventdev guide for more details on this new driver.
+
 * **Added write combining store APIs.**
 
   Added ``rte_write32_wc`` and ``rte_write32_wc_relaxed`` APIs
