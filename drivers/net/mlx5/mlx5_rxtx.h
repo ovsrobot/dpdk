@@ -156,6 +156,9 @@ struct mlx5_rxq_data {
 #ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
 	unsigned int mprq_tstore_memcpy:1;
 #endif
+#ifdef RTE_LIBRTE_MLX5_NT_STORE
+	unsigned int vec_rx_wqe_field_ntstore:1;
+#endif
 } __rte_cache_aligned;
 
 enum mlx5_rxq_type {
@@ -256,6 +259,9 @@ struct mlx5_txq_data {
 	int32_t ts_offset; /* Timestamp field dynamic offset. */
 	struct mlx5_dev_ctx_shared *sh; /* Shared context. */
 	struct mlx5_txq_stats stats; /* TX queue counters. */
+#ifdef RTE_LIBRTE_MLX5_NT_STORE
+	unsigned int tx_wqe_field_ntstore:1;
+#endif
 #ifndef RTE_ARCH_64
 	rte_spinlock_t *uar_lock;
 	/* UAR access lock required for 32bit implementations */

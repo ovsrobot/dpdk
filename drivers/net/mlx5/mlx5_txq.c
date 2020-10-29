@@ -779,6 +779,9 @@ txq_set_params(struct mlx5_txq_ctrl *txq_ctrl)
 					    DEV_TX_OFFLOAD_UDP_TNL_TSO);
 	bool vlan_inline;
 	unsigned int temp;
+#ifdef RTE_LIBRTE_MLX5_NT_STORE
+	txq_ctrl->txq.tx_wqe_field_ntstore = config->tx_wqe_field_ntstore;
+#endif
 
 	if (config->txqs_inline == MLX5_ARG_UNSET)
 		txqs_inline =
