@@ -7,6 +7,9 @@ if not is_linux or not dpdk_conf.has('RTE_ARCH_X86_64')
         subdir_done()
 endif
 
-sources = files('dlb2.c')
+sources = files('dlb2.c',
+		'pf/dlb2_main.c',
+		'pf/dlb2_pf.c'
+)
 
 deps += ['mbuf', 'mempool', 'ring', 'pci', 'bus_pci']
