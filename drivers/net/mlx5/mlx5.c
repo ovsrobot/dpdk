@@ -160,6 +160,11 @@
 /* Configure timeout of LRO session (in microseconds). */
 #define MLX5_LRO_TIMEOUT_USEC "lro_timeout_usec"
 
+#ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
+/* mprq_tstore_memcpy */
+#define MLX5_MPRQ_TSTORE_MEMCPY "mprq_tstore_memcpy"
+#endif
+
 /*
  * Device parameter to configure the total data buffer size for a single
  * hairpin queue (logarithm value).
@@ -1655,6 +1660,10 @@ mlx5_args_check(const char *key, const char *val, void *opaque)
 		config->sys_mem_en = !!tmp;
 	} else if (strcmp(MLX5_DECAP_EN, key) == 0) {
 		config->decap_en = !!tmp;
+#ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
+	} else if (strcmp(MLX5_MPRQ_TSTORE_MEMCPY, key) == 0) {
+		config->mprq_tstore_memcpy = tmp;
+#endif
 	} else {
 		DRV_LOG(WARNING, "%s: unknown parameter", key);
 		rte_errno = EINVAL;
@@ -1715,6 +1724,9 @@ mlx5_args(struct mlx5_dev_config *config, struct rte_devargs *devargs)
 		MLX5_RECLAIM_MEM,
 		MLX5_SYS_MEM_EN,
 		MLX5_DECAP_EN,
+#ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
+		MLX5_MPRQ_TSTORE_MEMCPY,
+#endif
 		NULL,
 	};
 	struct rte_kvargs *kvlist;

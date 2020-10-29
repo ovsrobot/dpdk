@@ -1380,6 +1380,9 @@ mlx5_rxq_new(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 	tmpl->socket = socket;
 	if (dev->data->dev_conf.intr_conf.rxq)
 		tmpl->irq = 1;
+#ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
+	tmpl->rxq.mprq_tstore_memcpy = config->mprq_tstore_memcpy;
+#endif
 	mprq_stride_nums = config->mprq.stride_num_n ?
 		config->mprq.stride_num_n : MLX5_MPRQ_STRIDE_NUM_N;
 	mprq_stride_size = non_scatter_min_mbuf_size <=
