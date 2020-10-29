@@ -16,6 +16,7 @@ INPUT                   = @TOPDIR@/doc/api/doxy-api-index.md \
                           @TOPDIR@/drivers/net/ice \
                           @TOPDIR@/drivers/net/ixgbe \
                           @TOPDIR@/drivers/net/softnic \
+                          @TOPDIR@/drivers/net/mlx5 \
                           @TOPDIR@/drivers/raw/dpaa2_cmdif \
                           @TOPDIR@/drivers/raw/dpaa2_qdma \
                           @TOPDIR@/drivers/raw/ioat \
