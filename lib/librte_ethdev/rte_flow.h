@@ -3487,6 +3487,13 @@ struct rte_flow_shared_action_conf {
 	/**< Action valid for rules applied to ingress traffic. */
 	uint32_t egress:1;
 	/**< Action valid for rules applied to egress traffic. */
+
+	/**
+	 * This attribute matches that of the flow rules which
+	 * are supposed to comprise the given shared action.
+	 * See struct rte_flow_attr.
+	 */
+	uint32_t transfer:1;
 };
 
 /**
