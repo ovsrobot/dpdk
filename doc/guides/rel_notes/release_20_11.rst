@@ -349,6 +349,10 @@ New Features
   * Replaced ``--scalar`` command-line option with ``--alg=<value>``, to allow
     the user to select the desired classify method.
 
+* **Added VxLAN UDP/IPv4 GSO support.**
+
+  Added inner UDP/IPv4 support for VxLAN IPv4 GSO.
+
 
 Removed Items
 -------------
