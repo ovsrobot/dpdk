@@ -1196,7 +1196,7 @@ dlb2_hw_create_ldb_port(struct dlb2_eventdev *dlb2,
 	qm_port->qid_mappings = &dlb2->qm_ldb_to_ev_queue_id[0];
 
 	qm_port->dequeue_depth = dequeue_depth;
-
+	qm_port->token_pop_thresh = dequeue_depth;
 	qm_port->owed_tokens = 0;
 	qm_port->issued_releases = 0;
 
@@ -1364,6 +1364,8 @@ dlb2_hw_create_dir_port(struct dlb2_eventdev *dlb2,
 
 	qm_port->dequeue_depth = dequeue_depth;
 
+	/* Directed ports are auto-pop, by default. */
+	qm_port->token_pop_mode = AUTO_POP;
 	qm_port->owed_tokens = 0;
 	qm_port->issued_releases = 0;
 
@@ -2611,6 +2613,14 @@ dlb2_event_enqueue_burst(void *event_port,
 		dlb2_event_build_hcws(qm_port, &events[i], j,
 				      sched_types, queue_ids);
 
+		if (qm_port->token_pop_mode == DELAYED_POP && j < 4 &&
+		    qm_port->issued_releases >= qm_port->token_pop_thresh - 1) {
+			dlb2_construct_token_pop_qe(qm_port, j);
+
+			/* Reset the releases counter for the next QE batch */
+			qm_port->issued_releases -= qm_port->token_pop_thresh;
+		}
+
 		dlb2_hw_do_enqueue(qm_port, i == 0, port_data);
 
 		cnt += j;
@@ -2619,6 +2629,11 @@ dlb2_event_enqueue_burst(void *event_port,
 			break;
 	}
 
+	if (qm_port->token_pop_mode == DELAYED_POP &&
+	    qm_port->issued_releases >= qm_port->token_pop_thresh - 1) {
+		dlb2_consume_qe_immediate(qm_port, qm_port->owed_tokens);
+		qm_port->issued_releases -= qm_port->token_pop_thresh;
+	}
 	return cnt;
 }
 
@@ -3101,9 +3116,23 @@ dlb2_event_release(struct dlb2_eventdev *dlb2,
 		if (j == 0)
 			break;
 
+		if (qm_port->token_pop_mode == DELAYED_POP && j < 4 &&
+		    qm_port->issued_releases >= qm_port->token_pop_thresh - 1) {
+			dlb2_construct_token_pop_qe(qm_port, j);
+
+			/* Reset the releases counter for the next QE batch */
+			qm_port->issued_releases -= qm_port->token_pop_thresh;
+		}
+
 		dlb2_hw_do_enqueue(qm_port, i == 0, port_data);
 
 		cnt += j;
+	}
+
+	if (qm_port->token_pop_mode == DELAYED_POP &&
+	    qm_port->issued_releases >= qm_port->token_pop_thresh - 1) {
+		dlb2_consume_qe_immediate(qm_port, qm_port->owed_tokens);
+		qm_port->issued_releases -= qm_port->token_pop_thresh;
 	}
 
 sw_credit_update:
@@ -3189,8 +3218,8 @@ dlb2_hw_dequeue_sparse(struct dlb2_eventdev *dlb2,
 	qm_port->owed_tokens += num;
 
 	if (num) {
-
-		dlb2_consume_qe_immediate(qm_port, num);
+		if (qm_port->token_pop_mode == AUTO_POP)
+			dlb2_consume_qe_immediate(qm_port, num);
 
 		ev_port->outstanding_releases += num;
 
@@ -3316,8 +3345,8 @@ dlb2_hw_dequeue(struct dlb2_eventdev *dlb2,
 	qm_port->owed_tokens += num;
 
 	if (num) {
-
-		dlb2_consume_qe_immediate(qm_port, num);
+		if (qm_port->token_pop_mode == AUTO_POP)
+			dlb2_consume_qe_immediate(qm_port, num);
 
 		ev_port->outstanding_releases += num;
 
@@ -3332,6 +3361,7 @@ dlb2_event_dequeue_burst(void *event_port, struct rte_event *ev, uint16_t num,
 			 uint64_t wait)
 {
 	struct dlb2_eventdev_port *ev_port = event_port;
+	struct dlb2_port *qm_port = &ev_port->qm_port;
 	struct dlb2_eventdev *dlb2 = ev_port->dlb2;
 	uint16_t cnt;
 
@@ -3346,6 +3376,9 @@ dlb2_event_dequeue_burst(void *event_port, struct rte_event *ev, uint16_t num,
 
 		DLB2_INC_STAT(ev_port->stats.tx_implicit_rel, out_rels);
 	}
+
+	if (qm_port->token_pop_mode == DEFERRED_POP && qm_port->owed_tokens)
+		dlb2_consume_qe_immediate(qm_port, qm_port->owed_tokens);
 
 	cnt = dlb2_hw_dequeue(dlb2, ev_port, ev, num, wait);
 
@@ -3366,6 +3399,7 @@ dlb2_event_dequeue_burst_sparse(void *event_port, struct rte_event *ev,
 				uint16_t num, uint64_t wait)
 {
 	struct dlb2_eventdev_port *ev_port = event_port;
+	struct dlb2_port *qm_port = &ev_port->qm_port;
 	struct dlb2_eventdev *dlb2 = ev_port->dlb2;
 	uint16_t cnt;
 
@@ -3380,6 +3414,9 @@ dlb2_event_dequeue_burst_sparse(void *event_port, struct rte_event *ev,
 
 		DLB2_INC_STAT(ev_port->stats.tx_implicit_rel, out_rels);
 	}
+
+	if (qm_port->token_pop_mode == DEFERRED_POP && qm_port->owed_tokens)
+		dlb2_consume_qe_immediate(qm_port, qm_port->owed_tokens);
 
 	cnt = dlb2_hw_dequeue_sparse(dlb2, ev_port, ev, num, wait);
 
@@ -3685,7 +3722,7 @@ dlb2_primary_eventdev_probe(struct rte_eventdev *dev,
 			    struct dlb2_devargs *dlb2_args)
 {
 	struct dlb2_eventdev *dlb2;
-	int err;
+	int err, i;
 
 	dlb2 = dev->data->dev_private;
 
@@ -3734,6 +3771,10 @@ dlb2_primary_eventdev_probe(struct rte_eventdev *dev,
 		DLB2_LOG_ERR("dlb2: failed to init xstats, err=%d\n", err);
 		return err;
 	}
+
+	/* Initialize each port's token pop mode */
+	for (i = 0; i < DLB2_MAX_NUM_PORTS; i++)
+		dlb2->ev_ports[i].qm_port.token_pop_mode = AUTO_POP;
 
 	rte_spinlock_init(&dlb2->qm_instance.resource_lock);
 
