@@ -1990,33 +1990,62 @@ aesni_mb_cpu_crypto_process_bulk(struct rte_cryptodev *dev,
 		RTE_PER_LCORE(sync_mb_mgr) = mb_mgr;
 	}
 
-	for (i = 0, j = 0, k = 0; i != vec->num; i++) {
+	if (is_aead_algo(s->auth.algo, s->cipher.mode)) {
+		for (i = 0, j = 0, k = 0; i != vec->num; i++) {
+			ret = check_crypto_sgl(sofs, vec->sgl + i);
+			if (ret != 0) {
+				vec->status[i] = ret;
+				continue;
+			}
 
+			buf = vec->sgl[i].vec[0].base;
+			len = vec->sgl[i].vec[0].len;
 
-		ret = check_crypto_sgl(sofs, vec->sgl + i);
-		if (ret != 0) {
-			vec->status[i] = ret;
-			continue;
-		}
-
-		buf = vec->sgl[i].vec[0].base;
-		len = vec->sgl[i].vec[0].len;
-
-		job = IMB_GET_NEXT_JOB(mb_mgr);
-		if (job == NULL) {
-			k += flush_mb_sync_mgr(mb_mgr);
 			job = IMB_GET_NEXT_JOB(mb_mgr);
-			RTE_ASSERT(job != NULL);
+			if (job == NULL) {
+				k += flush_mb_sync_mgr(mb_mgr);
+				job = IMB_GET_NEXT_JOB(mb_mgr);
+				RTE_ASSERT(job != NULL);
+			}
+
+			/* Submit job for processing */
+			set_cpu_mb_job_params(job, s, sofs, buf, len,
+				vec->iv[i].va, vec->aad[i].va, tmp_dgst[i],
+				&vec->status[i]);
+			job = submit_sync_job(mb_mgr);
+			j++;
+
+			/* handle completed jobs */
+			k += handle_completed_sync_jobs(job, mb_mgr);
 		}
+	} else {
+		for (i = 0, j = 0, k = 0; i != vec->num; i++) {
+			ret = check_crypto_sgl(sofs, vec->sgl + i);
+			if (ret != 0) {
+				vec->status[i] = ret;
+				continue;
+			}
 
-		/* Submit job for processing */
-		set_cpu_mb_job_params(job, s, sofs, buf, len, vec->iv[i].va,
-			vec->aad[i].va, tmp_dgst[i], &vec->status[i]);
-		job = submit_sync_job(mb_mgr);
-		j++;
+			buf = vec->sgl[i].vec[0].base;
+			len = vec->sgl[i].vec[0].len;
 
-		/* handle completed jobs */
-		k += handle_completed_sync_jobs(job, mb_mgr);
+			job = IMB_GET_NEXT_JOB(mb_mgr);
+			if (job == NULL) {
+				k += flush_mb_sync_mgr(mb_mgr);
+				job = IMB_GET_NEXT_JOB(mb_mgr);
+				RTE_ASSERT(job != NULL);
+			}
+
+			/* Submit job for processing */
+			set_cpu_mb_job_params(job, s, sofs, buf, len,
+				vec->iv[i].va, NULL, tmp_dgst[i],
+				&vec->status[i]);
+			job = submit_sync_job(mb_mgr);
+			j++;
+
+			/* handle completed jobs */
+			k += handle_completed_sync_jobs(job, mb_mgr);
+		}
 	}
 
 	/* flush remaining jobs */
