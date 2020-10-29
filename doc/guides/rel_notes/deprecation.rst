@@ -138,6 +138,10 @@ Deprecation Notices
   will be limited to maximum 256 queues.
   Also compile time flag ``RTE_ETHDEV_QUEUE_STAT_CNTRS`` will be removed.
 
+* ethdev: Attribute ``shared`` of the ``struct rte_flow_action_count``
+  is deprecated and will be removed in DPDK 21.11. Shared counters should
+  be managed using shared actions API (``rte_flow_shared_action_create`` etc).
+
 * cryptodev: support for using IV with all sizes is added, J0 still can
   be used but only when IV length in following structs ``rte_crypto_auth_xform``,
   ``rte_crypto_aead_xform`` is set to zero. When IV length is greater or equal
