@@ -917,6 +917,22 @@ iavf_hash_parse_action(struct iavf_pattern_match_item *match_item,
 			 */
 			rss_type = rte_eth_rss_hf_refine(rss_type);
 
+			/**
+			 * Check if SRC/DST_ONLY is set for SYMMETRIC_TOEPLITZ
+			 * hash function.
+			 */
+			if (rss->func ==
+			    RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ) {
+				if (rss_type & ((VALID_RSS_ATTR &
+				    ~RTE_ETH_RSS_L3_PRE64) |
+				    ~(VALID_RSS_IPV4 | VALID_RSS_IPV6)))
+					return rte_flow_error_set(error,
+						ENOTSUP,
+						RTE_FLOW_ERROR_TYPE_ACTION,
+						action,
+						"invalid rss types");
+			}
+
 			if (iavf_any_invalid_rss_type(rss_type,
 					match_item->input_set_mask))
 				return rte_flow_error_set(error, ENOTSUP,
