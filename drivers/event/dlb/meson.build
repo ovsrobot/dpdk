@@ -14,6 +14,7 @@ sources = files('dlb.c',
 		'pf/dlb_pf.c',
 		'pf/base/dlb_resource.c',
 		'rte_pmd_dlb.c',
+		'dlb_selftest.c'
 )
 
 deps += ['mbuf', 'mempool', 'ring', 'pci', 'bus_pci']
