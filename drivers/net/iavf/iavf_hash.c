@@ -99,12 +99,14 @@ iavf_hash_parse_pattern_action(struct iavf_adapter *ad,
 #define proto_hdr_ipv4 { \
 	VIRTCHNL_PROTO_HDR_IPV4, \
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_SRC) | \
-	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_DST), {BUFF_NOUSED} }
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_DST) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_PROT), {BUFF_NOUSED} }
 
 #define proto_hdr_ipv6 { \
 	VIRTCHNL_PROTO_HDR_IPV6, \
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_SRC) | \
-	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_DST), {BUFF_NOUSED} }
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_DST) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PROT), {BUFF_NOUSED} }
 
 #define proto_hdr_udp { \
 	VIRTCHNL_PROTO_HDR_UDP, \
@@ -581,14 +583,17 @@ iavf_refine_proto_hdrs_l234(struct virtchnl_proto_hdrs *proto_hdrs,
 			     ETH_RSS_NONFRAG_IPV4_UDP |
 			     ETH_RSS_NONFRAG_IPV4_TCP |
 			     ETH_RSS_NONFRAG_IPV4_SCTP)) {
-				if (rss_type & ETH_RSS_L3_SRC_ONLY)
+				if (rss_type & ETH_RSS_L3_SRC_ONLY) {
 					REFINE_PROTO_FLD(DEL, IPV4_DST);
-				else if (rss_type & ETH_RSS_L3_DST_ONLY)
+					REFINE_PROTO_FLD(DEL, IPV4_PROT);
+				} else if (rss_type & ETH_RSS_L3_DST_ONLY) {
 					REFINE_PROTO_FLD(DEL, IPV4_SRC);
-				else if (rss_type &
-					 (ETH_RSS_L4_SRC_ONLY |
-					  ETH_RSS_L4_DST_ONLY))
+					REFINE_PROTO_FLD(DEL, IPV4_PROT);
+				} else if (rss_type &
+					   (ETH_RSS_L4_SRC_ONLY |
+					    ETH_RSS_L4_DST_ONLY)) {
 					hdr->field_selector = 0;
+				}
 			} else {
 				hdr->field_selector = 0;
 			}
@@ -599,14 +604,17 @@ iavf_refine_proto_hdrs_l234(struct virtchnl_proto_hdrs *proto_hdrs,
 			     ETH_RSS_NONFRAG_IPV6_UDP |
 			     ETH_RSS_NONFRAG_IPV6_TCP |
 			     ETH_RSS_NONFRAG_IPV6_SCTP)) {
-				if (rss_type & ETH_RSS_L3_SRC_ONLY)
+				if (rss_type & ETH_RSS_L3_SRC_ONLY) {
 					REFINE_PROTO_FLD(DEL, IPV6_DST);
-				else if (rss_type & ETH_RSS_L3_DST_ONLY)
+					REFINE_PROTO_FLD(DEL, IPV6_PROT);
+				} else if (rss_type & ETH_RSS_L3_DST_ONLY) {
 					REFINE_PROTO_FLD(DEL, IPV6_SRC);
-				else if (rss_type &
-					 (ETH_RSS_L4_SRC_ONLY |
-					  ETH_RSS_L4_DST_ONLY))
+					REFINE_PROTO_FLD(DEL, IPV6_PROT);
+				} else if (rss_type &
+					   (ETH_RSS_L4_SRC_ONLY |
+					    ETH_RSS_L4_DST_ONLY)) {
 					hdr->field_selector = 0;
+				}
 			} else {
 				hdr->field_selector = 0;
 			}
