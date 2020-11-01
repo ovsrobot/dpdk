@@ -143,8 +143,14 @@ struct fwd_stream {
 	struct pkt_burst_stats tx_burst_stats;
 };
 
+enum testpmd_context_type {
+	CONTEXT_TYPE_FLOW,
+	CONTEXT_TYPE_SHARED_ACTION,
+};
+
 /** Descriptor for a single flow. */
 struct port_flow {
+	enum testpmd_context_type ctype; /**< Context type. */
 	struct port_flow *next; /**< Next flow in list. */
 	struct port_flow *tmp; /**< Temporary linking. */
 	uint32_t id; /**< Flow rule ID. */
@@ -155,6 +161,7 @@ struct port_flow {
 
 /* Descriptor for shared action */
 struct port_shared_action {
+	enum testpmd_context_type ctype; /**< Context type. */
 	struct port_shared_action *next; /**< Next flow in list. */
 	uint32_t id; /**< Shared action ID. */
 	enum rte_flow_action_type type; /**< Action type. */
