@@ -243,7 +243,7 @@ lpm_main_loop(__rte_unused void *dummy)
 #if defined RTE_ARCH_X86 || defined __ARM_NEON \
 			 || defined RTE_ARCH_PPC_64
 			l3fwd_lpm_send_packets(nb_rx, pkts_burst,
-						portid, qconf);
+						portid, queueid, qconf);
 #else
 			l3fwd_lpm_no_opt_send_packets(nb_rx, pkts_burst,
 							portid, qconf);

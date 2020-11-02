@@ -83,7 +83,8 @@ processx4_step2(const struct lcore_conf *qconf,
  */
 static inline void
 l3fwd_lpm_send_packets(int nb_rx, struct rte_mbuf **pkts_burst,
-			uint16_t portid, struct lcore_conf *qconf)
+		       uint16_t portid, uint16_t queueid,
+		       struct lcore_conf *qconf)
 {
 	int32_t j;
 	uint16_t dst_port[MAX_PKT_BURST];
@@ -114,7 +115,7 @@ l3fwd_lpm_send_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 		j++;
 	}
 
-	send_packets_multi(qconf, pkts_burst, dst_port, nb_rx);
+	send_packets_multi(qconf, pkts_burst, dst_port, queueid, nb_rx);
 }
 
 #endif /* __L3FWD_LPM_SSE_H__ */
