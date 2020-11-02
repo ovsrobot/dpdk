@@ -834,9 +834,21 @@ static struct rss_attr_type rss_attr_to_valid_type[] = {
 };
 
 static bool
-iavf_any_invalid_rss_type(uint64_t rss_type, uint64_t allow_rss_type)
+iavf_any_invalid_rss_type(enum rte_eth_hash_function func,
+			  uint64_t rss_type, uint64_t allow_rss_type)
 {
 	uint32_t i;
+
+	/**
+	 * Check if SRC/DST_ONLY is set for SYMMETRIC_TOEPLITZ
+	 * hash function.
+	 */
+	if (func == RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ) {
+		if (rss_type & ((VALID_RSS_ATTR &
+		    ~RTE_ETH_RSS_L3_PRE64) |
+		    ~(VALID_RSS_IPV4 | VALID_RSS_IPV6)))
+			return true;
+	}
 
 	/* check invalid combination */
 	for (i = 0; i < RTE_DIM(invalid_rss_comb); i++) {
@@ -917,7 +929,7 @@ iavf_hash_parse_action(struct iavf_pattern_match_item *match_item,
 			 */
 			rss_type = rte_eth_rss_hf_refine(rss_type);
 
-			if (iavf_any_invalid_rss_type(rss_type,
+			if (iavf_any_invalid_rss_type(rss->func, rss_type,
 					match_item->input_set_mask))
 				return rte_flow_error_set(error, ENOTSUP,
 						RTE_FLOW_ERROR_TYPE_ACTION,
