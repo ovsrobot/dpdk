@@ -686,7 +686,7 @@ em_main_loop(__rte_unused void *dummy)
 
 #if defined RTE_ARCH_X86 || defined __ARM_NEON
 			l3fwd_em_send_packets(nb_rx, pkts_burst,
-							portid, qconf);
+							portid, queueid, qconf);
 #else
 			l3fwd_em_no_opt_send_packets(nb_rx, pkts_burst,
 							portid, qconf);
