@@ -753,6 +753,32 @@ typedef int (*eth_hairpin_queue_peer_unbind_t)
 /**< @internal Unbind peer queue from the current queue. */
 
 /**
+ * @internal
+ * Get address of memory location whose contents will change whenever there is
+ * new data to be received.
+ *
+ * @param rxq
+ *   Ethdev queue pointer.
+ * @param tail_desc_addr
+ *   The pointer point to where the address will be stored.
+ * @param expected
+ *   The pointer point to value to be expected when descriptor is set.
+ * @param mask
+ *   The pointer point to comparison bitmask for the expected value.
+ * @param data_sz
+ *   Data size for the expected value (can be 1, 2, 4, or 8 bytes)
+ * @return
+ *   Negative errno value on error, 0 on success.
+ *
+ * @retval 0
+ *   Success
+ * @retval -EINVAL
+ *   Invalid parameters
+ */
+typedef int (*eth_get_wake_addr_t)(void *rxq, volatile void **tail_desc_addr,
+		uint64_t *expected, uint64_t *mask, uint8_t *data_sz);
+
+/**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
 struct eth_dev_ops {
@@ -910,6 +936,8 @@ struct eth_dev_ops {
 	/**< Set up the connection between the pair of hairpin queues. */
 	eth_hairpin_queue_peer_unbind_t hairpin_queue_peer_unbind;
 	/**< Disconnect the hairpin queues of a pair from each other. */
+	eth_get_wake_addr_t get_wake_addr;
+	/**< Get next RX queue ring entry address. */
 };
 
 /**

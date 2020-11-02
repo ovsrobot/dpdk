@@ -4365,6 +4365,47 @@ int rte_eth_tx_burst_mode_get(uint16_t port_id, uint16_t queue_id,
 	struct rte_eth_burst_mode *mode);
 
 /**
+ * In order to make use of some PMD Power Management schemes, the user might
+ * want to wait (sleep/poll) until new packets arrive. This function
+ * retrieves the necessary information from the PMD to enter that wait/sleep
+ * state. The main parameter provided is the address to monitor while waiting
+ * to wake up. In addition to this wake address, the function also provides
+ * extra information including expected value, selection mask and data size to
+ * monitor. The user is expected to use this information to enter low power
+ * mode using the rte_power_monitor API, and the core will exit low power mode
+ * upon reaching the expected condition:
+ * (((uint64_t)read_mem(wake_addr, data_sz)) & mask) == expected).
+ * @note The low power mode can also exit in other cases, e.g. interrupt.
+ *
+ * @param[in] port_id
+ *  The port identifier of the Ethernet device.
+ * @param[in] queue_id
+ *  The Rx queue on the Ethernet device for which information will be
+ *  retrieved.
+ * @param[out] wake_addr
+ *  The pointer to the address which will be monitored.
+ * @param[out] expected
+ *  The pointer to the expected value to allow wakeup condition.
+ * @param[out] mask
+ *  The pointer to comparison bitmask for the expected value.
+ * @note a mask value of zero should be treated as:
+ *  “no special wakeup values for provided address from the driver”.
+ * @param[out] data_sz
+ *  The pointer to data size for the expected value (in bytes)
+ * @note valid values are 1,2,4,8
+ *
+ * @return
+ *  - 0: Success.
+ *  -ENOTSUP: Operation not supported.
+ *  -EINVAL: Invalid parameters.
+ *  -ENODEV: Invalid port ID.
+ */
+__rte_experimental
+int rte_eth_get_wake_addr(uint16_t port_id, uint16_t queue_id,
+		volatile void **wake_addr, uint64_t *expected, uint64_t *mask,
+		uint8_t *data_sz);
+
+/**
  * Retrieve device registers and register attributes (number of registers and
  * register size)
  *
