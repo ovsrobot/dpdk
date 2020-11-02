@@ -181,15 +181,13 @@ ionic_adminq_post_wait(struct ionic_lif *lif, struct ionic_admin_ctx *ctx)
 	if (err) {
 		IONIC_PRINT(ERR, "Failure posting to the admin queue %d (%d)",
 			ctx->cmd.cmd.opcode, err);
-
 		return err;
 	}
 
 	done = ionic_wait_ctx_for_completion(lif, qcq, ctx,
 		IONIC_DEVCMD_TIMEOUT);
 
-	err = ionic_adminq_check_err(ctx, !done /* timed out */);
-	return err;
+	return ionic_adminq_check_err(ctx, !done /* timed out */);
 }
 
 static int

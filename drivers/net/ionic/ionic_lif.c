@@ -85,7 +85,8 @@ ionic_lif_reset(struct ionic_lif *lif)
 }
 
 static void
-ionic_lif_get_abs_stats(const struct ionic_lif *lif, struct rte_eth_stats *stats)
+ionic_lif_get_abs_stats(const struct ionic_lif *lif,
+		struct rte_eth_stats *stats)
 {
 	struct ionic_lif_stats *ls = &lif->info->stats;
 	uint32_t i;
@@ -305,10 +306,11 @@ ionic_dev_add_mac(struct rte_eth_dev *eth_dev,
 }
 
 void
-ionic_dev_remove_mac(struct rte_eth_dev *eth_dev, uint32_t index __rte_unused)
+ionic_dev_remove_mac(struct rte_eth_dev *eth_dev, uint32_t index)
 {
 	struct ionic_lif *lif = IONIC_ETH_DEV_TO_LIF(eth_dev);
 	struct ionic_adapter *adapter = lif->adapter;
+	struct rte_ether_addr *mac_addr;
 
 	IONIC_PRINT_CALL();
 
@@ -319,11 +321,12 @@ ionic_dev_remove_mac(struct rte_eth_dev *eth_dev, uint32_t index __rte_unused)
 		return;
 	}
 
-	if (!rte_is_valid_assigned_ether_addr(&eth_dev->data->mac_addrs[index]))
+	mac_addr = &eth_dev->data->mac_addrs[index];
+
+	if (!rte_is_valid_assigned_ether_addr(mac_addr))
 		return;
 
-	ionic_lif_addr_del(lif, (const uint8_t *)
-		&eth_dev->data->mac_addrs[index]);
+	ionic_lif_addr_del(lif, (const uint8_t *)mac_addr);
 }
 
 int
@@ -658,7 +661,6 @@ ionic_qcq_alloc(struct ionic_lif *lif, uint8_t type,
 	new->base_z = rte_eth_dma_zone_reserve(lif->eth_dev,
 		base /* name */, index /* queue_idx */,
 		total_size, IONIC_ALIGN, socket_id);
-
 	if (!new->base_z) {
 		IONIC_PRINT(ERR, "Cannot reserve queue DMA memory");
 		err = -ENOMEM;
@@ -682,8 +684,8 @@ ionic_qcq_alloc(struct ionic_lif *lif, uint8_t type,
 		ionic_q_sg_map(&new->q, sg_base, sg_base_pa);
 	}
 
-	IONIC_PRINT(DEBUG, "Q-Base-PA = %ju CQ-Base-PA = %ju "
-		"SG-base-PA = %ju",
+	IONIC_PRINT(DEBUG, "Q-Base-PA = %#lx CQ-Base-PA = %#lx "
+		"SG-base-PA = %#lx",
 		q_base_pa, cq_base_pa, sg_base_pa);
 
 	ionic_q_map(&new->q, q_base, q_base_pa);
@@ -839,7 +841,6 @@ ionic_lif_alloc(struct ionic_lif *lif)
 
 	lif->txqcqs = rte_zmalloc("ionic", sizeof(*lif->txqcqs) *
 		adapter->max_ntxqs_per_lif, 0);
-
 	if (!lif->txqcqs) {
 		IONIC_PRINT(ERR, "Cannot allocate tx queues array");
 		return -ENOMEM;
@@ -847,7 +848,6 @@ ionic_lif_alloc(struct ionic_lif *lif)
 
 	lif->rxqcqs = rte_zmalloc("ionic", sizeof(*lif->rxqcqs) *
 		adapter->max_nrxqs_per_lif, 0);
-
 	if (!lif->rxqcqs) {
 		IONIC_PRINT(ERR, "Cannot allocate rx queues array");
 		return -ENOMEM;
@@ -860,8 +860,6 @@ ionic_lif_alloc(struct ionic_lif *lif)
 		IONIC_PRINT(ERR, "Cannot allocate notify queue");
 		return err;
 	}
-
-	IONIC_PRINT(DEBUG, "Allocating Admin Queue");
 
 	IONIC_PRINT(DEBUG, "Allocating Admin Queue");
 
