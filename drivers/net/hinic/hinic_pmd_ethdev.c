@@ -3100,14 +3100,6 @@ static int hinic_func_init(struct rte_eth_dev *eth_dev)
 
 	pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
 
-	/* EAL is SECONDARY and eth_dev is already created */
-	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
-		PMD_DRV_LOG(INFO, "Initialize %s in secondary process",
-			    eth_dev->data->name);
-
-		return 0;
-	}
-
 	eth_dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
 
 	nic_dev = HINIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
@@ -3240,6 +3232,20 @@ static int hinic_dev_init(struct rte_eth_dev *eth_dev)
 	/* rte_eth_dev rx_burst and tx_burst */
 	eth_dev->rx_pkt_burst = hinic_recv_pkts;
 	eth_dev->tx_pkt_burst = hinic_xmit_pkts;
+
+	/* EAL is SECONDARY and eth_dev is already created */
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		PMD_DRV_LOG(INFO, "Initialize %s in secondary process",
+			    eth_dev->data->name);
+
+		struct hinic_nic_dev *nic_dev =
+			HINIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
+		if (HINIC_IS_VF(nic_dev->hwdev))
+			eth_dev->dev_ops = &hinic_pmd_vf_ops;
+		else
+			eth_dev->dev_ops = &hinic_pmd_ops;
+		return 0;
+	}
 
 	return hinic_func_init(eth_dev);
 }
