@@ -842,8 +842,9 @@ F: doc/guides/nics/pfe.rst
 F: drivers/net/pfe/
 F: doc/guides/nics/features/pfe.ini
 
-Pensando ionic - UNMAINTAINED
-M: Alfredo Cardigliano <cardigliano@ntop.org>
+Pensando ionic
+M: Andrew Boyer <aboyer@pensando.io>
+M: Pensando Drivers <drivers@pensando.io>
 F: drivers/net/ionic/
 F: doc/guides/nics/ionic.rst
 F: doc/guides/nics/features/ionic.ini
