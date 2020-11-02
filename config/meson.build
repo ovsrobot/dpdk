@@ -262,6 +262,10 @@ if meson.is_cross_build()
 		message('Setting RTE_MAX_LCORE from cross file')
 		dpdk_conf.set('RTE_MAX_LCORE', cross_max_lcores)
 	endif
+	cross_has_libnuma = meson.get_cross_property('has_libnuma', '')
+	if cross_has_libnuma != ''
+		has_libnuma = cross_has_libnuma
+	endif
 endif
 
 max_lcores = get_option('max_lcores')

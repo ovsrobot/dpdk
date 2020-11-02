@@ -33,5 +33,6 @@ part_number = 'generic'
 max_lcores = 256
 max_numa_nodes = 4
 
+# has_libnuma = 0      # set to 0 if the SoC is not a NUMA system
 # disabled_drivers = ['bus/dpaa', 'crypto']
     # add to the set of disabled libraries
