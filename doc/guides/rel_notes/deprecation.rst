@@ -136,6 +136,18 @@ Deprecation Notices
   will be limited to maximum 256 queues.
   Also compile time flag ``RTE_ETHDEV_QUEUE_STAT_CNTRS`` will be removed.
 
+* ethdev: Offload flag ``DEV_RX_OFFLOAD_JUMBO_FRAME`` will be set according to
+  ``RTE_ETHER_MTU`` in next release. Currently, the jumbo frame uses the
+  ``RTE_ETHER_MAX_LEN`` as boundary condition. When the MTU (1500) set, the
+  frame type of rx packet will be different if used different overhead, it will
+  cause the consistency issue. Hence, using fixed value ``RTE_ETHER_MTU`` can
+  avoid this issue.
+  Following scopes will be changed:
+  - ``rte_ethdev``
+  - ``app``, e.g.: ``test-pmd``, ``test-eventdev``;
+  - ``examples``, e.g.: ``ipsec-secgw``, ``l3fwd``, ``vhost``;
+  - net PMDs which support VLAN tag(s) within overhead, e.g.: ``i40e``;
+
 * cryptodev: support for using IV with all sizes is added, J0 still can
   be used but only when IV length in following structs ``rte_crypto_auth_xform``,
   ``rte_crypto_aead_xform`` is set to zero. When IV length is greater or equal
