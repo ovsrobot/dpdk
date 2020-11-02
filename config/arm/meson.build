@@ -3,8 +3,6 @@
 # Copyright(c) 2017 Cavium, Inc
 # Copyright(c) 2020 PANTHEON.tech s.r.o.
 
-arm_force_native_march = false
-
 # common flags to all aarch64 builds, with lowest priority
 flags_common_default = [
 	# Accelarate rte_memcpy. Be sure to run unit test (memcpy_perf_autotest)
@@ -28,6 +26,8 @@ flags_common_default = [
 	['RTE_ARCH_ARM64', true],
 	['RTE_CACHE_LINE_SIZE', 128]
 ]
+generic_machine_args = ['-march=armv8-a+crc', '-moutline-atomics']
+native_machine_args = ['-march=native', '-mtune=native']
 
 # implementer specific aarch64 flags, with middle priority
 # (will overwrite common flags)
@@ -101,47 +101,46 @@ flags_part_number_octeontx2 = [
 ]
 
 # arm config (implementer 0x41) is the default config
-part_number_config_arm = {
-	'generic': [['-march=armv8-a+crc', '-moutline-atomics']],
-	'native': [['-march=native']],
-	'0xd03': [['-mcpu=cortex-a53']],
-	'0xd04': [['-mcpu=cortex-a35']],
-	'0xd07': [['-mcpu=cortex-a57']],
-	'0xd08': [['-mcpu=cortex-a72']],
-	'0xd09': [['-mcpu=cortex-a73']],
-	'0xd0a': [['-mcpu=cortex-a75']],
-	'0xd0b': [['-mcpu=cortex-a76']],
-	'0xd0c': [['-march=armv8.2-a+crc+crypto', '-mcpu=neoverse-n1'], flags_part_number_n1generic]
+part_number_machine_args = {
+	'0xd03': ['-mcpu=cortex-a53'],
+	'0xd04': ['-mcpu=cortex-a35'],
+	'0xd07': ['-mcpu=cortex-a57'],
+	'0xd08': ['-mcpu=cortex-a72'],
+	'0xd09': ['-mcpu=cortex-a73'],
+	'0xd0a': ['-mcpu=cortex-a75'],
+	'0xd0b': ['-mcpu=cortex-a76'],
+	'0xd0c': ['-march=armv8.2-a+crc+crypto', '-mcpu=neoverse-n1'],
+	'0xa1': ['-mcpu=thunderxt88'],
+	'0xa2': ['-mcpu=thunderxt81'],
+	'0xa3': ['-mcpu=thunderxt83'],
+	'0xaf': ['-march=armv8.1-a+crc+crypto','-mcpu=thunderx2t99'],
+	'0xb2': ['-march=armv8.2-a+crc+crypto+lse','-mcpu=octeontx2']
 }
-part_number_config_cavium = {
-	'generic': [['-march=armv8-a+crc+crypto', '-mcpu=thunderx']],
-	'native': [['-march=native']],
-	'0xa1': [['-mcpu=thunderxt88'], flags_part_number_thunderx],
-	'0xa2': [['-mcpu=thunderxt81'], flags_part_number_thunderx],
-	'0xa3': [['-mcpu=thunderxt83'], flags_part_number_thunderx],
-	'0xaf': [['-march=armv8.1-a+crc+crypto','-mcpu=thunderx2t99'], flags_part_number_thunderx2],
-	'0xb2': [['-march=armv8.2-a+crc+crypto+lse','-mcpu=octeontx2'], flags_part_number_octeontx2]
-}
-part_number_config_emag = {
-	'generic': [['-march=armv8-a+crc+crypto', '-mtune=emag']],
-	'native': [['-march=native']]
+
+part_number_flags = {
+	'0xd0c': flags_part_number_n1generic,
+	'0xa1': flags_part_number_thunderx,
+	'0xa2': flags_part_number_thunderx,
+	'0xa3': flags_part_number_thunderx,
+	'0xaf': flags_part_number_thunderx2,
+	'0xb2': flags_part_number_octeontx2
 }
 
 ## Arm implementer ID (MIDR in Arm Architecture Reference Manual)
-implementer_generic = ['Generic armv8', flags_implementer_generic, part_number_config_arm]
-implementer_0x41 = ['Arm', flags_implementer_arm, part_number_config_arm]
-implementer_0x42 = ['Broadcom', flags_implementer_generic, part_number_config_arm]
-implementer_0x43 = ['Cavium', flags_implementer_cavium, part_number_config_cavium]
-implementer_0x44 = ['DEC', flags_implementer_generic, part_number_config_arm]
-implementer_0x49 = ['Infineon', flags_implementer_generic, part_number_config_arm]
-implementer_0x4d = ['Motorola', flags_implementer_generic, part_number_config_arm]
-implementer_0x4e = ['NVIDIA', flags_implementer_generic, part_number_config_arm]
-implementer_0x50 = ['Ampere Computing', flags_implementer_emag, part_number_config_emag]
-implementer_0x51 = ['Qualcomm', flags_implementer_generic, part_number_config_arm]
-implementer_0x53 = ['Samsung', flags_implementer_generic, part_number_config_arm]
-implementer_0x56 = ['Marvell ARMADA', flags_implementer_armada, part_number_config_arm]
-implementer_0x69 = ['Intel', flags_implementer_generic, part_number_config_arm]
-implementer_dpaa = ['NXP DPAA', flags_implementer_dpaa, part_number_config_arm]
+implementer_generic = ['Generic armv8', flags_implementer_generic]
+implementer_0x41 = ['Arm', flags_implementer_arm]
+implementer_0x42 = ['Broadcom', flags_implementer_generic]
+implementer_0x43 = ['Cavium', flags_implementer_cavium]
+implementer_0x44 = ['DEC', flags_implementer_generic]
+implementer_0x49 = ['Infineon', flags_implementer_generic]
+implementer_0x4d = ['Motorola', flags_implementer_generic]
+implementer_0x4e = ['NVIDIA', flags_implementer_generic]
+implementer_0x50 = ['Ampere Computing', flags_implementer_emag]
+implementer_0x51 = ['Qualcomm', flags_implementer_generic]
+implementer_0x53 = ['Samsung', flags_implementer_generic]
+implementer_0x56 = ['Marvell ARMADA', flags_implementer_armada]
+implementer_0x69 = ['Intel', flags_implementer_generic]
+implementer_dpaa = ['NXP DPAA', flags_implementer_dpaa]
 
 dpdk_conf.set('RTE_ARCH_ARM', 1)
 dpdk_conf.set('RTE_FORCE_INTRINSICS', 1)
@@ -154,69 +153,64 @@ if dpdk_conf.get('RTE_ARCH_32')
 	machine_args += '-mfpu=neon'
 else
 	# aarch64 build
-	implementer_id = 'generic'
-	if machine == 'generic' and not meson.is_cross_build()
-		implementer_config = implementer_generic
-		part_number = 'generic'
-	elif not meson.is_cross_build()
-		# The script returns ['Implementer', 'Variant', 'Architecture',
-		# 'Primary Part number', 'Revision']
-		detect_vendor = find_program(join_paths(
-				meson.current_source_dir(), 'armv8_machine.py'))
-		cmd = run_command(detect_vendor.path())
-		if cmd.returncode() == 0
-			cmd_output = cmd.stdout().to_lower().strip().split(' ')
-			implementer_id = cmd_output[0]
-			part_number = cmd_output[3]
-		endif
-		# Set to generic if variable is not found
-		implementer_config = get_variable('implementer_' + implementer_id, ['generic'])
-		if implementer_config[0] == 'generic'
+	if not meson.is_cross_build()
+		if machine == 'generic'
+			# generic native build
 			implementer_config = implementer_generic
 			part_number = 'generic'
-		endif
-		if arm_force_native_march == true
-			part_number = 'native'
+			target_machine_args = generic_machine_args
+		else
+			# native build
+			# The script returns ['Implementer', 'Variant', 'Architecture',
+			# 'Primary Part number', 'Revision']
+			detect_vendor = find_program(join_paths(
+					meson.current_source_dir(), 'armv8_machine.py'))
+			cmd = run_command(detect_vendor.path())
+			if cmd.returncode() == 0
+				cmd_output = cmd.stdout().to_lower().strip().split(' ')
+				implementer_id = cmd_output[0]
+				part_number = cmd_output[3]
+			else
+				error('Failed to get Arm MIDR information.')
+			endif
+			# Set to generic if implementer is not found
+			implementer_config = get_variable('implementer_' + implementer_id, implementer_generic)
+			target_machine_args = native_machine_args
 		endif
 	else
-		implementer_id = meson.get_cross_property('implementer_id', 'generic')
-		part_number = meson.get_cross_property('part_number', 'generic')
+		# cross build
+		implementer_id = meson.get_cross_property('implementer_id', '')
+		if implementer_id == ''
+			error('Arm implementer ID must be specified in the cross file.')
+		endif
 		implementer_config = get_variable('implementer_' + implementer_id)
+		part_number = meson.get_cross_property('part_number', '')
+		if part_number == ''
+			error('Arm part number must be specified in the cross file.')
+		elif part_number == 'generic'
+			target_machine_args = generic_machine_args
+		else
+			target_machine_args = part_number_machine_args[part_number]
+		endif
 	endif
 
 	message('Arm implementer: ' + implementer_config[0])
 	message('Arm part number: ' + part_number)
 
-	part_number_config = implementer_config[2]
-	if part_number_config.has_key(part_number)
-		# use the specified part_number machine args if found
-		part_number_config = part_number_config[part_number]
-	elif not meson.is_cross_build()
-		# default to generic machine args if part_number is not found
-		# and not forcing native machine args
-		# but don't default in cross-builds; if part_number is specified
-		# incorrectly in a cross-file, it needs to be fixed there
-		part_number_config = part_number_config['generic']
-	else
-		# doing cross build and part number is not in part_number_config
-		error('Cross build part number 0@0 not found.'.format(part_number))
-	endif
-
-	# use default flags with implementer flags
 	dpdk_flags = flags_common_default + implementer_config[1]
-	if part_number_config.length() > 1
-		# add extra flags from the part number
-		dpdk_flags += part_number_config[1]
+	if part_number_flags.has_key(part_number)
+		dpdk_flags += part_number_flags[part_number]
 	endif
 
 	# apply supported machine args
 	machine_args = [] # Clear previous machine args
-	foreach flag: part_number_config[0]
+	foreach flag: target_machine_args
 		if cc.has_argument(flag)
 			machine_args += flag
 		endif
 	endforeach
 
+	# use default flags with implementer flags and part number flags
 	# apply flags
 	foreach flag: dpdk_flags
 		if flag.length() > 0
