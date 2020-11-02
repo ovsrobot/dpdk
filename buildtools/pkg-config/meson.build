@@ -53,3 +53,14 @@ This is required for a number of static inline functions in the public headers.'
 # For static linking with dependencies as shared libraries,
 # the internal static libraries must be flagged explicitly.
 run_command(py3, 'set-static-linker-flags.py', check: true)
+
+pkgconf = find_program('pkg-config', 'pkgconf', required: false)
+if (pkgconf.found())
+	cmd = run_command('./pkgconfig-validate.sh', pkgconf.path(),
+			   check:false)
+	if cmd.returncode() != 0
+		version = run_command(pkgconf, '--version')
+		warning('invalid pkg-config version @0@'.format(
+			version.stdout().strip()))
+	endif
+endif
