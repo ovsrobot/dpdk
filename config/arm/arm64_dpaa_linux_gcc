@@ -16,3 +16,5 @@ endian = 'little'
 [properties]
 implementer_id = 'dpaa'
 part_number = 'generic'
+max_numa_nodes = 1
+max_lcores = 16

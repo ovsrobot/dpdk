@@ -35,13 +35,15 @@ flags_implementer_generic = [
 	['RTE_MACHINE', '"armv8a"'],
 	['RTE_USE_C11_MEM_MODEL', true],
 	['RTE_CACHE_LINE_SIZE', 128],
-	['RTE_MAX_LCORE', 256]
+	['RTE_MAX_LCORE', 256],
+	['RTE_MAX_NUMA_NODES', 4]
 ]
 flags_implementer_arm = [
 	['RTE_MACHINE', '"armv8a"'],
 	['RTE_USE_C11_MEM_MODEL', true],
 	['RTE_CACHE_LINE_SIZE', 64],
-	['RTE_MAX_LCORE', 16]
+	['RTE_MAX_LCORE', 16],
+	['RTE_MAX_NUMA_NODES', 1]
 ]
 flags_implementer_cavium = [
 	['RTE_MAX_VFIO_GROUPS', 128],
