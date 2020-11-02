@@ -332,6 +332,8 @@ rte_eth_iterator_cleanup(struct rte_dev_iterator *iter)
 uint16_t
 rte_eth_find_next(uint16_t port_id)
 {
+	RTE_BUILD_BUG_ON(RTE_MAX_ETHPORTS >= UINT16_MAX);
+
 	while (port_id < RTE_MAX_ETHPORTS &&
 			rte_eth_devices[port_id].state == RTE_ETH_DEV_UNUSED)
 		port_id++;
@@ -354,6 +356,8 @@ rte_eth_find_next(uint16_t port_id)
 uint16_t
 rte_eth_find_next_of(uint16_t port_id, const struct rte_device *parent)
 {
+	RTE_BUILD_BUG_ON(RTE_MAX_ETHPORTS >= UINT16_MAX);
+
 	port_id = rte_eth_find_next(port_id);
 	while (port_id < RTE_MAX_ETHPORTS &&
 			rte_eth_devices[port_id].device != parent)
@@ -411,7 +415,9 @@ eth_dev_is_allocated(const struct rte_eth_dev *ethdev)
 static struct rte_eth_dev *
 eth_dev_allocated(const char *name)
 {
-	unsigned i;
+	uint16_t i;
+
+	RTE_BUILD_BUG_ON(RTE_MAX_ETHPORTS >= UINT16_MAX);
 
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++) {
 		if (rte_eth_devices[i].data != NULL &&
@@ -440,7 +446,9 @@ rte_eth_dev_allocated(const char *name)
 static uint16_t
 eth_dev_find_free_port(void)
 {
-	unsigned i;
+	uint16_t i;
+
+	RTE_BUILD_BUG_ON(RTE_MAX_ETHPORTS >= UINT16_MAX);
 
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++) {
 		/* Using shared name field to find a free port. */
@@ -528,6 +536,8 @@ rte_eth_dev_attach_secondary(const char *name)
 	/* Synchronize port attachment to primary port creation and release. */
 	rte_spinlock_lock(&eth_dev_shared_data->ownership_lock);
 
+	RTE_BUILD_BUG_ON(RTE_MAX_ETHPORTS >= UINT16_MAX);
+
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++) {
 		if (strcmp(eth_dev_shared_data->data[i].name, name) == 0)
 			break;
@@ -609,6 +619,8 @@ eth_is_valid_owner_id(uint64_t owner_id)
 uint64_t
 rte_eth_find_next_owned_by(uint16_t port_id, const uint64_t owner_id)
 {
+	RTE_BUILD_BUG_ON(RTE_MAX_ETHPORTS >= UINT16_MAX);
+
 	port_id = rte_eth_find_next(port_id);
 	while (port_id < RTE_MAX_ETHPORTS &&
 			rte_eth_devices[port_id].data->owner.id != owner_id)
@@ -713,6 +725,8 @@ rte_eth_dev_owner_delete(const uint64_t owner_id)
 
 	rte_spinlock_lock(&eth_dev_shared_data->ownership_lock);
 
+	RTE_BUILD_BUG_ON(RTE_MAX_ETHPORTS >= UINT16_MAX);
+
 	if (eth_is_valid_owner_id(owner_id)) {
 		for (port_id = 0; port_id < RTE_MAX_ETHPORTS; port_id++)
 			if (rte_eth_devices[port_id].data->owner.id == owner_id)
@@ -816,7 +830,7 @@ rte_eth_dev_get_name_by_port(uint16_t port_id, char *name)
 int
 rte_eth_dev_get_port_by_name(const char *name, uint16_t *port_id)
 {
-	uint32_t pid;
+	uint16_t pid;
 
 	if (name == NULL) {
 		RTE_ETHDEV_LOG(ERR, "Null pointer is specified\n");
@@ -4290,7 +4304,9 @@ rte_eth_mirror_rule_reset(uint16_t port_id, uint8_t rule_id)
 
 RTE_INIT(eth_dev_init_cb_lists)
 {
-	int i;
+	uint16_t i;
+
+	RTE_BUILD_BUG_ON(RTE_MAX_ETHPORTS >= UINT16_MAX);
 
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++)
 		TAILQ_INIT(&rte_eth_devices[i].link_intr_cbs);
@@ -4303,8 +4319,10 @@ rte_eth_dev_callback_register(uint16_t port_id,
 {
 	struct rte_eth_dev *dev;
 	struct rte_eth_dev_callback *user_cb;
-	uint32_t next_port; /* size is 32-bit to prevent loop wrap-around */
+	uint16_t next_port;
 	uint16_t last_port;
+
+	RTE_BUILD_BUG_ON(RTE_MAX_ETHPORTS >= UINT16_MAX);
 
 	if (!cb_fn)
 		return -EINVAL;
@@ -4366,8 +4384,10 @@ rte_eth_dev_callback_unregister(uint16_t port_id,
 	int ret;
 	struct rte_eth_dev *dev;
 	struct rte_eth_dev_callback *cb, *next;
-	uint32_t next_port; /* size is 32-bit to prevent loop wrap-around */
+	uint16_t next_port;
 	uint16_t last_port;
+
+	RTE_BUILD_BUG_ON(RTE_MAX_ETHPORTS >= UINT16_MAX);
 
 	if (!cb_fn)
 		return -EINVAL;
@@ -5507,9 +5527,11 @@ static struct rte_eth_dev_switch {
 int
 rte_eth_switch_domain_alloc(uint16_t *domain_id)
 {
-	unsigned int i;
+	uint16_t i;
 
 	*domain_id = RTE_ETH_DEV_SWITCH_DOMAIN_ID_INVALID;
+
+	RTE_BUILD_BUG_ON(RTE_MAX_ETHPORTS >= UINT16_MAX);
 
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++) {
 		if (eth_dev_switch_domains[i].state ==
