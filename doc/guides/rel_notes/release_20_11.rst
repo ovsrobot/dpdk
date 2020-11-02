@@ -150,7 +150,9 @@ New Features
 
 * **ethdev: added 1 new API for PMD power management.**
 
-  * ``rte_eth_get_wake_addr()`` is added to get the wake up address from device.
+  * ``rte_eth_get_wake_addr()`` function has been added to allow applications to
+    fetch the wake up information from the device. Processor need that information
+    to wake up from the low power state.
 
 * **Updated Broadcom bnxt driver.**
 
@@ -361,6 +363,17 @@ New Features
     used.
   * Replaced ``--scalar`` command-line option with ``--alg=<value>``, to allow
     the user to select the desired classify method.
+
+* **Added PMD power management mechanism**
+
+  The new Ethernet PMD Power Management mechanisms have been added through the
+  existing RX callback infrastructure.
+
+  * Added power saving scheme based on UMWAIT instruction (x86 only)
+  * Added power saving scheme based on ``rte_pause()``
+  * Added power saving scheme based on frequency scaling through the power library
+  * Added new EXPERIMENTAL API ``rte_power_pmd_mgmt_queue_enable()``
+  * Added new EXPERIMENTAL API ``rte_power_pmd_mgmt_queue_disable()``
 
 
 Removed Items

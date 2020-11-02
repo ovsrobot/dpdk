@@ -192,6 +192,54 @@ User Cases
 ----------
 The mechanism can applied to any device which is based on polling. e.g. NIC, FPGA.
 
+PMD Power Management API
+------------------------
+
+Abstract
+~~~~~~~~
+
+Existing Power Management mechanisms require developers to change the design of
+an application or change code to make use of it. The PMD Power Management API
+provides a convenient alternative by use Ethernet PMD RX callbacks, and
+triggering power saving whenever the empty poll count reaches a certain number.
+
+There are multiple power saving schemes available for the developer to choose.
+Although the developer can configure each queue with different scheme, It's
+strongly recommended to configure the queue within the same port with the same
+scheme.
+
+The following are the available schemes:
+
+  * UMWAIT/UMONITOR
+
+   This power saving scheme will put the core into an  optimized power state and
+   use the UMWAIT/UMONITOR instructions to monitor the Ethernet PMD RX
+   descriptor address, and wake the CPU up whenever there's new traffic.
+
+  * Pause
+
+   This power saving scheme will use the "rte_pause" function to reduce the impact
+   of busy polling.
+
+  * Frequency scaling
+
+   This power saving scheme will use existing power library functionality to
+   scale the core frequency up/down depending on traffic volume.
+
+
+.. note::
+
+   Currently, this Power Management API is limited to  mapping of 1 queue to 1
+   core (multiple queues are supported, but they must be polled from different
+   cores).
+
+API Overview for PMD Power Management
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* **Queue Enable**: Enable a specific power scheme for a certain queue/port/core
+
+* **Queue Disable**: Disable power scheme for certain queue/port/core
+
 References
 ----------
 
@@ -199,4 +247,7 @@ References
     chapter in the :doc:`../sample_app_ug/index` section.
 
 *   The :doc:`../sample_app_ug/vm_power_management`
+    chapter in the :doc:`../sample_app_ug/index` section.
+
+*   The :doc:`../sample_app_ug/rxtx_callbacks`
     chapter in the :doc:`../sample_app_ug/index` section.
