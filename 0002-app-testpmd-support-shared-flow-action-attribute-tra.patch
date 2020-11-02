@@ -1,0 +1,82 @@
+From 9732bc93169af1040731a4a66bd6ef44a878576b Mon Sep 17 00:00:00 2001
+From: Ivan Malov <ivan.malov@oktetlabs.ru>
+Date: Thu, 29 Oct 2020 12:42:11 +0300
+Subject: [PATCH 2/2] app/testpmd: support shared flow action attribute
+ transfer
+
+This attribute helps PMDs to tell actions supposed to work
+on the so-called hardware e-switch level from regular ones.
+
+Signed-off-by: Ivan Malov <ivan.malov@oktetlabs.ru>
+---
+ app/test-pmd/cmdline_flow.c                 | 12 ++++++++++++
+ doc/guides/testpmd_app_ug/testpmd_funcs.rst |  2 +-
+ 2 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/app/test-pmd/cmdline_flow.c b/app/test-pmd/cmdline_flow.c
+index c68d22fda..fe18cca27 100644
+--- a/app/test-pmd/cmdline_flow.c
++++ b/app/test-pmd/cmdline_flow.c
+@@ -114,6 +114,7 @@ enum index {
+ 	SHARED_ACTION_CREATE_ID,
+ 	SHARED_ACTION_INGRESS,
+ 	SHARED_ACTION_EGRESS,
++	SHARED_ACTION_TRANSFER,
+ 	SHARED_ACTION_SPEC,
+ 
+ 	/* Shared action destroy arguments */
+@@ -782,6 +783,7 @@ static const enum index next_sa_create_attr[] = {
+ 	SHARED_ACTION_CREATE_ID,
+ 	SHARED_ACTION_INGRESS,
+ 	SHARED_ACTION_EGRESS,
++	SHARED_ACTION_TRANSFER,
+ 	SHARED_ACTION_SPEC,
+ 	ZERO,
+ };
+@@ -4286,6 +4288,12 @@ static const struct token token_list[] = {
+ 		.next = NEXT(next_sa_create_attr),
+ 		.call = parse_sa,
+ 	},
++	[SHARED_ACTION_TRANSFER] = {
++		.name = "transfer",
++		.help = "affect rule to transfer",
++		.next = NEXT(next_sa_create_attr),
++		.call = parse_sa,
++	},
+ 	[SHARED_ACTION_SPEC] = {
+ 		.name = "action",
+ 		.help = "specify action to share",
+@@ -4521,6 +4529,9 @@ parse_sa(struct context *ctx, const struct token *token,
+ 	case SHARED_ACTION_INGRESS:
+ 		out->args.vc.attr.ingress = 1;
+ 		return len;
++	case SHARED_ACTION_TRANSFER:
++		out->args.vc.attr.transfer = 1;
++		return len;
+ 	default:
+ 		return -1;
+ 	}
+@@ -7273,6 +7284,7 @@ cmd_flow_parsed(const struct buffer *in)
+ 				&((const struct rte_flow_shared_action_conf) {
+ 					.ingress = in->args.vc.attr.ingress,
+ 					.egress = in->args.vc.attr.egress,
++					.transfer = in->args.vc.attr.transfer,
+ 				}),
+ 				in->args.vc.actions);
+ 		break;
+diff --git a/doc/guides/testpmd_app_ug/testpmd_funcs.rst b/doc/guides/testpmd_app_ug/testpmd_funcs.rst
+index 289df193b..ebf7e68f8 100644
+--- a/doc/guides/testpmd_app_ug/testpmd_funcs.rst
++++ b/doc/guides/testpmd_app_ug/testpmd_funcs.rst
+@@ -4318,7 +4318,7 @@ Creating shared actions
+ shared action ID. It is bound to ``rte_flow_shared_action_create()``::
+ 
+    flow shared_action {port_id} create [action_id {shared_action_id}]
+-      [ingress] [egress] action {action} / end
++      [ingress] [egress] [transfer] action {action} / end
+ 
+ If successful, it will show::
+ 
+-- 
+2.20.1
+

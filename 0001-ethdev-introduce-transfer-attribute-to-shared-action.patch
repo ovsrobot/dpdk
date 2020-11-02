@@ -1,0 +1,42 @@
+From 802259bb546259663f979fb7695b8a9fd15bed31 Mon Sep 17 00:00:00 2001
+From: Ivan Malov <ivan.malov@oktetlabs.ru>
+Date: Thu, 29 Oct 2020 06:54:46 +0300
+Subject: [PATCH 1/2] ethdev: introduce transfer attribute to shared action
+ conf
+
+In a flow rule, attribute "transfer" means operation level
+at which both traffic is matched and actions are conducted.
+
+Add the very same attribute to shared action configuration.
+If a driver needs to prepare HW resources in two different
+ways, depending on the operation level, in order to set up
+an action, then this new attribute will indicate the level.
+Also, when handling a flow rule insertion, the driver will
+be able to turn down a shared action if its level is unfit.
+
+Signed-off-by: Ivan Malov <ivan.malov@oktetlabs.ru>
+---
+ lib/librte_ethdev/rte_flow.h | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/lib/librte_ethdev/rte_flow.h b/lib/librte_ethdev/rte_flow.h
+index a8eac4deb..0b993d8eb 100644
+--- a/lib/librte_ethdev/rte_flow.h
++++ b/lib/librte_ethdev/rte_flow.h
+@@ -3487,6 +3487,13 @@ struct rte_flow_shared_action_conf {
+ 	/**< Action valid for rules applied to ingress traffic. */
+ 	uint32_t egress:1;
+ 	/**< Action valid for rules applied to egress traffic. */
++
++	/**
++	 * This attribute matches that of the flow rules which
++	 * are supposed to comprise the given shared action.
++	 * See struct rte_flow_attr.
++	 */
++	uint32_t transfer:1;
+ };
+ 
+ /**
+-- 
+2.20.1
+
