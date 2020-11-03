@@ -450,7 +450,10 @@ class ReadElf(object):
         for tag in dynsec.iter_tags():
             # pyelftools may return byte-strings, force decode them
             if force_unicode(tag.entry.d_tag) == 'DT_NEEDED':
-                if 'librte_pmd' in force_unicode(tag.needed):
+                words = force_unicode(tag.needed).split('_')
+                if words and len(words) >= 3 and words[0] == 'librte' and \
+                   words[1] in ['baseband', 'compress', 'crypto', 'event',
+                                'net', 'raw', 'regex', 'vdpa']:
                     library = search_file(force_unicode(tag.needed),
                                           runpath + ":" + ldlibpath +
                                           ":/usr/lib64:/lib64:/usr/lib:/lib")
