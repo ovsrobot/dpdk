@@ -1978,16 +1978,17 @@ rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 			return -EINVAL;
 		}
 	} else {
-		const struct rte_eth_rxseg_split *rx_seg =
-			(const struct rte_eth_rxseg_split *)rx_conf->rx_seg;
-		uint16_t n_seg = rx_conf->rx_nseg;
-
 		/* Extended multi-segment configuration check. */
 		if (rx_conf == NULL || rx_conf->rx_seg == NULL || rx_conf->rx_nseg == 0) {
 			RTE_ETHDEV_LOG(ERR,
 				       "Memory pool is null and no extended configuration provided\n");
 			return -EINVAL;
 		}
+
+		const struct rte_eth_rxseg_split *rx_seg =
+			(const struct rte_eth_rxseg_split *)rx_conf->rx_seg;
+		uint16_t n_seg = rx_conf->rx_nseg;
+
 		if (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) {
 			ret = rte_eth_rx_queue_check_split(rx_seg, n_seg,
 							   &mbp_buf_size,
