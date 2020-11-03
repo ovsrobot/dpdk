@@ -101,10 +101,22 @@ iavf_hash_parse_pattern_action(struct iavf_adapter *ad,
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_SRC) | \
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_DST), {BUFF_NOUSED} }
 
+#define proto_hdr_ipv4_with_prot { \
+	VIRTCHNL_PROTO_HDR_IPV4, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_SRC) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_DST) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV4_PROT), {BUFF_NOUSED} }
+
 #define proto_hdr_ipv6 { \
 	VIRTCHNL_PROTO_HDR_IPV6, \
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_SRC) | \
 	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_DST), {BUFF_NOUSED} }
+
+#define proto_hdr_ipv6_with_prot { \
+	VIRTCHNL_PROTO_HDR_IPV6, \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_SRC) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_DST) | \
+	FIELD_SELECTOR(VIRTCHNL_PROTO_HDR_IPV6_PROT), {BUFF_NOUSED} }
 
 #define proto_hdr_udp { \
 	VIRTCHNL_PROTO_HDR_UDP, \
@@ -151,13 +163,15 @@ struct virtchnl_proto_hdrs outer_ipv4_tmplt = {
 
 struct virtchnl_proto_hdrs outer_ipv4_udp_tmplt = {
 	TUNNEL_LEVEL_OUTER, 5,
-	{proto_hdr_eth, proto_hdr_svlan, proto_hdr_cvlan, proto_hdr_ipv4,
+	{proto_hdr_eth, proto_hdr_svlan, proto_hdr_cvlan,
+	 proto_hdr_ipv4_with_prot,
 	 proto_hdr_udp}
 };
 
 struct virtchnl_proto_hdrs outer_ipv4_tcp_tmplt = {
 	TUNNEL_LEVEL_OUTER, 5,
-	{proto_hdr_eth, proto_hdr_svlan, proto_hdr_cvlan, proto_hdr_ipv4,
+	{proto_hdr_eth, proto_hdr_svlan, proto_hdr_cvlan,
+	 proto_hdr_ipv4_with_prot,
 	 proto_hdr_tcp}
 };
 
@@ -174,13 +188,15 @@ struct virtchnl_proto_hdrs outer_ipv6_tmplt = {
 
 struct virtchnl_proto_hdrs outer_ipv6_udp_tmplt = {
 	TUNNEL_LEVEL_OUTER, 5,
-	{proto_hdr_eth, proto_hdr_svlan, proto_hdr_cvlan, proto_hdr_ipv6,
+	{proto_hdr_eth, proto_hdr_svlan, proto_hdr_cvlan,
+	 proto_hdr_ipv6_with_prot,
 	 proto_hdr_udp}
 };
 
 struct virtchnl_proto_hdrs outer_ipv6_tcp_tmplt = {
 	TUNNEL_LEVEL_OUTER, 5,
-	{proto_hdr_eth, proto_hdr_svlan, proto_hdr_cvlan, proto_hdr_ipv6,
+	{proto_hdr_eth, proto_hdr_svlan, proto_hdr_cvlan,
+	 proto_hdr_ipv6_with_prot,
 	 proto_hdr_tcp}
 };
 
@@ -195,11 +211,11 @@ struct virtchnl_proto_hdrs inner_ipv4_tmplt = {
 };
 
 struct virtchnl_proto_hdrs inner_ipv4_udp_tmplt = {
-	TUNNEL_LEVEL_INNER, 2, {proto_hdr_ipv4, proto_hdr_udp}
+	TUNNEL_LEVEL_INNER, 2, {proto_hdr_ipv4_with_prot, proto_hdr_udp}
 };
 
 struct virtchnl_proto_hdrs inner_ipv4_tcp_tmplt = {
-	TUNNEL_LEVEL_INNER, 2, {proto_hdr_ipv4, proto_hdr_tcp}
+	TUNNEL_LEVEL_INNER, 2, {proto_hdr_ipv4_with_prot, proto_hdr_tcp}
 };
 
 struct virtchnl_proto_hdrs inner_ipv4_sctp_tmplt = {
@@ -211,11 +227,11 @@ struct virtchnl_proto_hdrs inner_ipv6_tmplt = {
 };
 
 struct virtchnl_proto_hdrs inner_ipv6_udp_tmplt = {
-	TUNNEL_LEVEL_INNER, 2, {proto_hdr_ipv6, proto_hdr_udp}
+	TUNNEL_LEVEL_INNER, 2, {proto_hdr_ipv6_with_prot, proto_hdr_udp}
 };
 
 struct virtchnl_proto_hdrs inner_ipv6_tcp_tmplt = {
-	TUNNEL_LEVEL_INNER, 2, {proto_hdr_ipv6, proto_hdr_tcp}
+	TUNNEL_LEVEL_INNER, 2, {proto_hdr_ipv6_with_prot, proto_hdr_tcp}
 };
 
 struct virtchnl_proto_hdrs inner_ipv6_sctp_tmplt = {
