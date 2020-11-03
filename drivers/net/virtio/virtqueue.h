@@ -106,7 +106,7 @@ virtqueue_store_flags_packed(struct vring_packed_desc *dp,
 		dp->flags = flags;
 	}
 }
-#ifdef RTE_PMD_PACKET_PREFETCH
+#if defined(RTE_ARCH_X86)
 #define rte_packet_prefetch(p)  rte_prefetch1(p)
 #else
 #define rte_packet_prefetch(p)  do {} while(0)

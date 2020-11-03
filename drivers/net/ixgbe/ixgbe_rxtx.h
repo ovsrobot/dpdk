@@ -41,7 +41,7 @@
 #define RX_RING_SZ ((IXGBE_MAX_RING_DESC + RTE_PMD_IXGBE_RX_MAX_BURST) * \
 		    sizeof(union ixgbe_adv_rx_desc))
 
-#ifdef RTE_PMD_PACKET_PREFETCH
+#if defined(RTE_ARCH_X86)
 #define rte_packet_prefetch(p)  rte_prefetch1(p)
 #else
 #define rte_packet_prefetch(p)  do {} while(0)
