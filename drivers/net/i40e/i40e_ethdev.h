@@ -604,6 +604,7 @@ struct i40e_fdir_flow_ext {
 	uint16_t vlan_tci;
 	uint8_t flexbytes[RTE_ETH_FDIR_MAX_FLEXLEN];
 	/* It is filled by the flexible payload to match. */
+	uint8_t flex_mask[I40E_FDIR_MAX_FLEX_LEN];
 	uint8_t is_vf;   /* 1 for VF, 0 for port dev */
 	uint16_t dst_id; /* VF ID, available when is_vf is 1*/
 	bool inner_ip;   /* If there is inner ip */

@@ -1765,6 +1765,78 @@ i40e_add_del_fdir_filter(struct rte_eth_dev *dev,
 	return ret;
 }
 
+static int
+i40e_flow_store_flex_mask(struct i40e_pf *pf,
+			  enum i40e_filter_pctype pctype,
+			  uint8_t *mask)
+{
+	struct i40e_fdir_flex_mask flex_mask;
+	uint8_t nb_bitmask = 0;
+	uint16_t mask_tmp;
+	uint8_t i;
+
+	memset(&flex_mask, 0, sizeof(struct i40e_fdir_flex_mask));
+	for (i = 0; i < I40E_FDIR_MAX_FLEX_LEN; i += sizeof(uint16_t)) {
+		mask_tmp = I40E_WORD(mask[i], mask[i + 1]);
+		if (mask_tmp) {
+			flex_mask.word_mask |=
+				I40E_FLEX_WORD_MASK(i / sizeof(uint16_t));
+			if (mask_tmp != UINT16_MAX) {
+				flex_mask.bitmask[nb_bitmask].mask = ~mask_tmp;
+				flex_mask.bitmask[nb_bitmask].offset =
+					i / sizeof(uint16_t);
+				nb_bitmask++;
+				if (nb_bitmask > I40E_FDIR_BITMASK_NUM_WORD)
+					return -1;
+			}
+		}
+	}
+	flex_mask.nb_bitmask = nb_bitmask;
+
+	if (pf->fdir.flex_mask_flag[pctype] &&
+	    (memcmp(&flex_mask, &pf->fdir.flex_mask[pctype],
+		    sizeof(struct i40e_fdir_flex_mask))))
+		return -2;
+	else if (pf->fdir.flex_mask_flag[pctype] &&
+		 !(memcmp(&flex_mask, &pf->fdir.flex_mask[pctype],
+			  sizeof(struct i40e_fdir_flex_mask))))
+		return 1;
+
+	memcpy(&pf->fdir.flex_mask[pctype], &flex_mask,
+	       sizeof(struct i40e_fdir_flex_mask));
+	return 0;
+}
+
+static void
+i40e_flow_set_fdir_flex_msk(struct i40e_pf *pf,
+			    enum i40e_filter_pctype pctype)
+{
+	struct i40e_hw *hw = I40E_PF_TO_HW(pf);
+	struct i40e_fdir_flex_mask *flex_mask;
+	uint32_t flxinset, fd_mask;
+	uint8_t i;
+
+	/* Set flex mask */
+	flex_mask = &pf->fdir.flex_mask[pctype];
+	flxinset = (flex_mask->word_mask <<
+		    I40E_PRTQF_FD_FLXINSET_INSET_SHIFT) &
+		I40E_PRTQF_FD_FLXINSET_INSET_MASK;
+	i40e_write_rx_ctl(hw, I40E_PRTQF_FD_FLXINSET(pctype), flxinset);
+
+	for (i = 0; i < flex_mask->nb_bitmask; i++) {
+		fd_mask = (flex_mask->bitmask[i].mask <<
+			   I40E_PRTQF_FD_MSK_MASK_SHIFT) &
+			   I40E_PRTQF_FD_MSK_MASK_MASK;
+		fd_mask |= ((flex_mask->bitmask[i].offset +
+			     I40E_FLX_OFFSET_IN_FIELD_VECTOR) <<
+			    I40E_PRTQF_FD_MSK_OFFSET_SHIFT) &
+				I40E_PRTQF_FD_MSK_OFFSET_MASK;
+		i40e_write_rx_ctl(hw, I40E_PRTQF_FD_MSK(pctype, i), fd_mask);
+	}
+
+	pf->fdir.flex_mask_flag[pctype] = 1;
+}
+
 static inline unsigned char *
 i40e_find_available_buffer(struct rte_eth_dev *dev)
 {
@@ -1820,10 +1892,12 @@ i40e_flow_add_del_fdir_filter(struct rte_eth_dev *dev,
 	unsigned char *pkt = NULL;
 	enum i40e_filter_pctype pctype;
 	struct i40e_fdir_info *fdir_info = &pf->fdir;
+	uint8_t flex_mask[I40E_FDIR_MAX_FLEX_LEN];
 	struct i40e_fdir_filter *node;
 	struct i40e_fdir_filter check_filter; /* Check if the filter exists */
 	bool wait_status = true;
 	int ret = 0;
+	int i;
 
 	if (pf->fdir.fdir_vsi == NULL) {
 		PMD_DRV_LOG(ERR, "FDIR is not enabled");
@@ -1856,6 +1930,26 @@ i40e_flow_add_del_fdir_filter(struct rte_eth_dev *dev,
 	i40e_fdir_filter_convert(filter, &check_filter);
 
 	if (add) {
+		if (!filter->input.flow_ext.customized_pctype) {
+			/* Store flex mask to SW */
+			for (i = 0; i < I40E_FDIR_MAX_FLEX_LEN; i++)
+				flex_mask[i] =
+					filter->input.flow_ext.flex_mask[i];
+
+			ret = i40e_flow_store_flex_mask(pf, pctype, flex_mask);
+			if (ret == -1) {
+				PMD_DRV_LOG(ERR, "Exceed maximal"
+					    " number of bitmasks");
+				return -EINVAL;
+			} else if (ret == -2) {
+				PMD_DRV_LOG(ERR, "Conflict with the"
+					    " first flexible rule");
+				return -EINVAL;
+			} else if (ret == 0) {
+				i40e_flow_set_fdir_flex_msk(pf, pctype);
+			}
+		}
+
 		ret = i40e_sw_fdir_filter_insert(pf, &check_filter);
 		if (ret < 0) {
 			PMD_DRV_LOG(ERR,
