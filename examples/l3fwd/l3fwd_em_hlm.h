@@ -183,7 +183,7 @@ em_get_dst_port(const struct lcore_conf *qconf, struct rte_mbuf *pkt,
  */
 static inline void
 l3fwd_em_send_packets(int nb_rx, struct rte_mbuf **pkts_burst,
-		uint16_t portid, struct lcore_conf *qconf)
+		uint16_t portid, uint16_t queueid, struct lcore_conf *qconf)
 {
 	int32_t i, j, pos;
 	uint16_t dst_port[MAX_PKT_BURST];
@@ -238,7 +238,7 @@ l3fwd_em_send_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 	for (; j < nb_rx; j++)
 		dst_port[j] = em_get_dst_port(qconf, pkts_burst[j], portid);
 
-	send_packets_multi(qconf, pkts_burst, dst_port, nb_rx);
+	send_packets_multi(qconf, pkts_burst, dst_port, queueid, nb_rx);
 
 }
 

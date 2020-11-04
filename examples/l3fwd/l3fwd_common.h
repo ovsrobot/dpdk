@@ -178,8 +178,8 @@ static const struct {
 };
 
 static __rte_always_inline void
-send_packetsx4(struct lcore_conf *qconf, uint16_t port, struct rte_mbuf *m[],
-		uint32_t num)
+send_packetsx4(struct lcore_conf *qconf, uint16_t port, uint16_t queueid,
+	       struct rte_mbuf *m[], uint32_t num)
 {
 	uint32_t len, j, n;
 
@@ -190,7 +190,7 @@ send_packetsx4(struct lcore_conf *qconf, uint16_t port, struct rte_mbuf *m[],
 	 * then send them straightway.
 	 */
 	if (num >= MAX_TX_BURST && len == 0) {
-		n = rte_eth_tx_burst(port, qconf->tx_queue_id[port], m, num);
+		n = rte_eth_tx_burst(port, queueid, m, num);
 		if (unlikely(n < num)) {
 			do {
 				rte_pktmbuf_free(m[n]);

@@ -125,7 +125,7 @@ process_packet(struct rte_mbuf *pkt, uint16_t *dst_port)
  */
 static __rte_always_inline void
 send_packets_multi(struct lcore_conf *qconf, struct rte_mbuf **pkts_burst,
-		uint16_t dst_port[MAX_PKT_BURST], int nb_rx)
+		uint16_t dst_port[MAX_PKT_BURST], uint16_t queueid, int nb_rx)
 {
 	int32_t k;
 	int j = 0;
@@ -220,7 +220,7 @@ send_packets_multi(struct lcore_conf *qconf, struct rte_mbuf **pkts_burst,
 		k = pnum[j];
 
 		if (likely(pn != BAD_PORT))
-			send_packetsx4(qconf, pn, pkts_burst + j, k);
+			send_packetsx4(qconf, pn, queueid, pkts_burst + j, k);
 		else
 			for (m = j; m != j + k; m++)
 				rte_pktmbuf_free(pkts_burst[m]);

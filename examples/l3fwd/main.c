@@ -935,7 +935,7 @@ l3fwd_poll_resource_setup(void)
 		fflush(stdout);
 
 		nb_rx_queue = get_port_n_rx_queues(portid);
-		n_tx_queue = nb_lcores;
+		n_tx_queue = nb_rx_queue;
 		if (n_tx_queue > MAX_TX_QUEUE_PER_PORT)
 			n_tx_queue = MAX_TX_QUEUE_PER_PORT;
 		printf("Creating queues: nb_rxq=%d nb_txq=%u... ",
@@ -1006,11 +1006,12 @@ l3fwd_poll_resource_setup(void)
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE, "init_mem failed\n");
 
-		/* init one TX queue per couple (lcore,port) */
+		/* init TX queues per couple (lcore,port) */
 		queueid = 0;
 		for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
 			if (rte_lcore_is_enabled(lcore_id) == 0)
 				continue;
+			qconf = &lcore_conf[lcore_id];
 
 			if (numa_on)
 				socketid =
@@ -1018,21 +1019,25 @@ l3fwd_poll_resource_setup(void)
 			else
 				socketid = 0;
 
-			printf("txq=%u,%d,%d ", lcore_id, queueid, socketid);
-			fflush(stdout);
+			for (queue = 0; queue < qconf->n_rx_queue; queue++) {
+				queueid = qconf->rx_queue_list[queue].queue_id;
+				printf("txq=%u,%d,%d ",
+					lcore_id, queueid, socketid);
+				fflush(stdout);
 
-			txconf = &dev_info.default_txconf;
-			txconf->offloads = local_port_conf.txmode.offloads;
-			ret = rte_eth_tx_queue_setup(portid, queueid, nb_txd,
-						     socketid, txconf);
-			if (ret < 0)
-				rte_exit(EXIT_FAILURE,
-					"rte_eth_tx_queue_setup: err=%d, "
-					"port=%d\n", ret, portid);
+				txconf = &dev_info.default_txconf;
+				txconf->offloads =
+					local_port_conf.txmode.offloads;
+				ret = rte_eth_tx_queue_setup
+					(portid, queueid, nb_txd,
+					 socketid, txconf);
+				if (ret < 0)
+					rte_exit(EXIT_FAILURE,
+						"rte_eth_tx_queue_setup: err=%d, "
+						"port=%d\n", ret, portid);
+			}
 
-			qconf = &lcore_conf[lcore_id];
 			qconf->tx_queue_id[portid] = queueid;
-			queueid++;
 
 			qconf->tx_port_id[qconf->n_tx_port] = portid;
 			qconf->n_tx_port++;
