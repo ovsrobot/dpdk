@@ -11,7 +11,7 @@ _st_ring_dequeue_bulk(struct rte_ring *r, void **obj, uint32_t n,
 	uint32_t *avail)
 {
 	uint32_t m;
-	struct rte_ring_zc_data zcd;
+	struct rte_ring_zc_data zcd = {0};
 
 	m = rte_ring_dequeue_zc_bulk_start(r, n, &zcd, avail);
 	n = (m == n) ? n : 0;
@@ -29,7 +29,7 @@ _st_ring_enqueue_bulk(struct rte_ring *r, void * const *obj, uint32_t n,
 	uint32_t *free)
 {
 	uint32_t m;
-	struct rte_ring_zc_data zcd;
+	struct rte_ring_zc_data zcd = {0};
 
 	m = rte_ring_enqueue_zc_bulk_start(r, n, &zcd, free);
 	n = (m == n) ? n : 0;
