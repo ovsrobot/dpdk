@@ -16,7 +16,7 @@ GLOBAL_METRICS_REQ = "{\"action\":0,\"command\":\"global_stat_values\",\"data\":
 DEFAULT_FP = "/var/run/dpdk/default_client"
 
 class Socket:
-
+    ''' Opens AF_UNIX sockets to telemetry server '''
     def __init__(self):
         self.send_fd = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
         self.recv_fd = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
@@ -31,8 +31,9 @@ class Socket:
             print("Error - Sockets could not be closed")
 
 class Client:
-
-    def __init__(self): # Creates a client instance
+    ''' Calls for communication with telemetry server '''
+    def __init__(self):
+        ''' Creates a client instance '''
         self.socket = Socket()
         self.file_path = None
         self.choice = None
@@ -41,20 +42,22 @@ class Client:
     def __del__(self):
         try:
             if self.unregistered == 0:
-                self.unregister();
+                self.unregister()
         except:
             print("Error - Client could not be destroyed")
 
-    def getFilepath(self, file_path): # Gets arguments from Command-Line and assigns to instance of client
+    def getFilepath(self, file_path):
+        '''Gets arguments from Command-Line and assigns to instance of client'''
         self.file_path = file_path
 
-    def register(self): # Connects a client to DPDK-instance
+    def register(self):
+        '''Connects a client to DPDK-instance'''
         if os.path.exists(self.file_path):
             os.unlink(self.file_path)
         try:
             self.socket.recv_fd.bind(self.file_path)
         except socket.error as msg:
-            print ("Error - Socket binding error: " + str(msg) + "\n")
+            print("Error - Socket binding error: " + str(msg) + "\n")
         self.socket.recv_fd.settimeout(2)
         self.socket.send_fd.connect("/var/run/dpdk/rte/telemetry")
         JSON = (API_REG + self.file_path + "\"}}")
@@ -63,16 +66,19 @@ class Client:
         self.socket.recv_fd.listen(1)
         self.socket.client_fd = self.socket.recv_fd.accept()[0]
 
-    def unregister(self): # Unregister a given client
+    def unregister(self):
+        ''' Unregister a given client '''
         self.socket.client_fd.send((API_UNREG + self.file_path + "\"}}").encode())
         self.socket.client_fd.close()
 
-    def requestMetrics(self): # Requests metrics for given client
+    def requestMetrics(self):
+        ''' Requests metrics for given client '''
         self.socket.client_fd.send(METRICS_REQ.encode())
         data = self.socket.client_fd.recv(BUFFER_SIZE).decode()
         print("\nResponse: \n", data)
 
-    def repeatedlyRequestMetrics(self, sleep_time): # Recursively requests metrics for given client
+    def repeatedlyRequestMetrics(self, sleep_time):
+        ''' Recursively requests metrics for given client '''
         print("\nPlease enter the number of times you'd like to continuously request Metrics:")
         n_requests = int(input("\n:"))
         print("\033[F") #Removes the user input from screen, cleans it up
@@ -81,12 +87,14 @@ class Client:
             self.requestMetrics()
             time.sleep(sleep_time)
 
-    def requestGlobalMetrics(self): #Requests global metrics for given client
+    def requestGlobalMetrics(self):
+        ''' Requests global metrics for given client '''
         self.socket.client_fd.send(GLOBAL_METRICS_REQ.encode())
         data = self.socket.client_fd.recv(BUFFER_SIZE).decode()
         print("\nResponse: \n", data)
 
-    def interactiveMenu(self, sleep_time): # Creates Interactive menu within the script
+    def interactiveMenu(self, sleep_time):
+        ''' Creates Interactive menu within the script '''
         while self.choice != 4:
             print("\nOptions Menu")
             print("[1] Send for Metrics for all ports")
@@ -116,7 +124,7 @@ if __name__ == "__main__":
 
     sleep_time = 1
     file_path = ""
-    if (len(sys.argv) == 2):
+    if len(sys.argv) == 2:
         file_path = sys.argv[1]
     else:
         print("Warning - No filepath passed, using default (" + DEFAULT_FP + ").")
