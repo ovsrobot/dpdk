@@ -430,6 +430,20 @@ class ReadElf(object):
                 return force_unicode(tag.runpath)
         return ""
 
+    dpdk_driver_classes = (
+        'baseband',
+        'bus',
+        'common',
+        'compress',
+        'crypto',
+        'event',
+        'mempool',
+        'net',
+        'raw',
+        'regex',
+        'vdpa',
+    )
+
     def process_dt_needed_entries(self):
         """ Look to see if there are any DT_NEEDED entries in the binary
             And process those if there are
@@ -450,7 +464,11 @@ class ReadElf(object):
         for tag in dynsec.iter_tags():
             # pyelftools may return byte-strings, force decode them
             if force_unicode(tag.entry.d_tag) == 'DT_NEEDED':
-                if 'librte_pmd' in force_unicode(tag.needed):
+                words = force_unicode(tag.needed).split('_')
+                if len(words) < 3:
+                    continue
+                prefix, drv_class = words[:2]
+                if prefix == 'librte' and drv_class in self.dpdk_driver_classes:
                     library = search_file(force_unicode(tag.needed),
                                           runpath + ":" + ldlibpath +
                                           ":/usr/lib64:/lib64:/usr/lib:/lib")
