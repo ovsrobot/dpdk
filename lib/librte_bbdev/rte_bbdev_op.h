@@ -186,7 +186,9 @@ enum rte_bbdev_op_ldpcdec_flag_bitmasks {
 	 *  for HARQ memory. If not set, it is assumed the filler bits are not
 	 *  in HARQ memory and handled directly by the LDPC decoder.
 	 */
-	RTE_BBDEV_LDPC_INTERNAL_HARQ_MEMORY_FILLERS = (1ULL << 18)
+	RTE_BBDEV_LDPC_INTERNAL_HARQ_MEMORY_FILLERS = (1ULL << 18),
+	/** Set if a device supports CB group transmission. */
+	RTE_BBDEV_LDPC_DEC_CBGT = (1ULL << 19)
 };
 
 /** Flags for LDPC encoder operation and capability structure */
@@ -206,7 +208,9 @@ enum rte_bbdev_op_ldpcenc_flag_bitmasks {
 	/** Set if a device supports scatter-gather functionality. */
 	RTE_BBDEV_LDPC_ENC_SCATTER_GATHER = (1ULL << 6),
 	/** Set if a device supports concatenation of non byte aligned output */
-	RTE_BBDEV_LDPC_ENC_CONCATENATION = (1ULL << 7)
+	RTE_BBDEV_LDPC_ENC_CONCATENATION = (1ULL << 7),
+	/** Set if a device supports CB group transmission. */
+	RTE_BBDEV_LDPC_ENC_CBGT = (1ULL << 8)
 };
 
 /** Data input and output buffer for BBDEV operations */
@@ -334,6 +338,56 @@ struct rte_bbdev_op_dec_ldpc_tb_params {
 	uint8_t r;
 	/** The number of CBs that use Ea before switching to Eb, [0:63] */
 	uint8_t cab;
+	/** If the RTE_BBDEV_LDPC_DEC_CBGT capability is not asserted, then
+	 *  the value of max_cbg is ignored. Otherwise, a max_cbg value of
+	 *  0 or 1 indicates that codeBlockGroupTransmission is disabled,
+	 *  as defined in 3GPP TS 38.214.
+	 *
+	 *  A max_cbg value of 2, 4, 6, or 8 sets the value of
+	 *  maxCodeBlockGroupsPerTransportBlock and indicates that
+	 *  codeBlockGroupTransmission is enabled, as defined in 3GPP TS 38.214.
+	 */
+	uint8_t max_cbg;
+	/** If codeBlockGroupTransmission is disabled, then the value of cbgti
+	 *  is ignored. Otherwise, cbgti represents the Code Block Group
+	 *  Transmission Information (CBGTI), as defined in 3GPP TS 38.214.
+	 *  In this case, the M = min(C, max_cbg) number of Most Significant
+	 *  Bits (MSBs) of the uint8_t cbgti have an in-order one-to-one mapping
+	 *  with the M code block groups (CBGs) of the transport block, with the
+	 *  MSB mapped to CBG#0, as detailed in 3GPP TS 38.214.
+	 *
+	 *  Here, C is the total number of code blocks in the full transport block,
+	 *  as defined in 3GPP TS 38.212.
+	 */
+	uint8_t cbgti;
+	/** If codeBlockGroupTransmission is disabled, then the value of cbgfi
+	 * should be ignored. Otherwise, cbgfi represents the Code Block Group
+	 * Flushing out Information (CBGFI), as defined in 3GPP TS 38.214. In this
+	 * case, if the LSB of the uint8_t cbgfi is set to 0, this indicates that
+	 * the earlier received instances of the same CBGs being decoded may be
+	 * corrupted and that the corresponding contents of the HARQ memory should
+	 * be flushed and not combined with the present CBGs being decoded. If the
+	 * LSB of the uint8_t cbgfi is set to 1, this indicates that the earlier
+	 * received instances of the same CBGs being decoded should be combined with
+	 * the present CBGs being decoded.
+	 */
+	uint8_t cbgfi;
+
+	/** If codeBlockGroupTransmission is disabled or if
+	 *  RTE_BBDEV_LDPC_CRC_TYPE_24B_CHECK is not asserted, then the value of
+	 *  cbg_crc_err should be ignored. Otherwise, cbg_crc_err reports whether
+	 *  any CRC24B failures have been encountered in each of the code block
+	 *  groups (CBGs). In this case, the M = min(C, max_cbg) number of Most
+	 *  Significant Bits (MSBs) of the uint8_t cbg_crc_error have an in-order
+	 *  one-to-one mapping with the M CBGs of the transport block, with the MSB
+	 *  mapped to CBG#0, as detailed in 3GPP TS 38.214. An asserted bit
+	 *  indicates that a CRC24B failure was encountered among the code blocks
+	 *  of the corresponding CBG.
+	 *
+	 *  Here, C is the total number of code blocks in the full transport block,
+	 *  as defined in 3GPP TS 38.212.
+	 */
+	uint8_t cbg_crc_err;
 };
 
 /** Operation structure for Turbo decode.
@@ -584,6 +638,28 @@ struct rte_bbdev_op_enc_ldpc_tb_params {
 	uint8_t r;
 	/** The number of CBs that use Ea before switching to Eb, [0:63] */
 	uint8_t cab;
+	/** If the RTE_BBDEV_LDPC_ENC_CBGT capability is not asserted, then
+	 *  the value of max_cbg is ignored. Otherwise, a max_cbg value of
+	 *  0 or 1 indicates that codeBlockGroupTransmission is disabled,
+	 *  as defined in 3GPP TS 38.214.
+	 *
+	 *  A max_cbg value of 2, 4, 6, or 8 sets the value of
+	 *  maxCodeBlockGroupsPerTransportBlock and indicates that
+	 *  codeBlockGroupTransmission is enabled, as defined in 3GPP TS 38.214.
+	 */
+	uint8_t max_cbg;
+	/** If codeBlockGroupTransmission is disabled, then the value of cbgti
+	 *  is ignored. Otherwise, cbgti represents the Code Block Group
+	 *  Transmission Information (CBGTI), as defined in 3GPP TS 38.214.
+	 *  In this case, the M = min(C, max_cbg) number of Most Significant
+	 *  Bits (MSBs) of the uint8_t cbgti have an in-order one-to-one mapping
+	 *  with the M code block groups (CBGs) of the transport block, with the
+	 *  MSB mapped to CBG#0, as detailed in 3GPP TS 38.214.
+	 *
+	 *  Here, C is the total number of code blocks in the full transport block,
+	 *  as defined in 3GPP TS 38.212.
+	 */
+	uint8_t cbgti;
 };
 
 /** Operation structure for Turbo encode.
