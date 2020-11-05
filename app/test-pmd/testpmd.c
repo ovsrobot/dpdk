@@ -1459,7 +1459,10 @@ init_config(void)
 				 "rte_eth_dev_info_get() failed\n");
 
 		/* Update the max_rx_pkt_len to have MTU as RTE_ETHER_MTU */
-		if (port->dev_info.max_rx_pktlen && port->dev_info.max_mtu)
+		if (port->dev_info.max_mtu &&
+		    port->dev_info.max_mtu != UINT16_MAX &&
+		    port->dev_info.max_rx_pktlen &&
+		    port->dev_info.max_rx_pktlen > port->dev_info.max_mtu)
 			overhead_len = port->dev_info.max_rx_pktlen -
 				port->dev_info.max_mtu;
 		else
