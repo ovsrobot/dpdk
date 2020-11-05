@@ -644,6 +644,17 @@ API Changes
 * sched: Removed ``tb_rate``, ``tc_rate``, ``tc_period`` and ``tb_size``
   from ``struct rte_sched_subport_params``.
 
+* eal: The selection of devices on the EAL command line has been
+  changed from ``--pci-blacklist`` and ``--pci-whitelist``
+  to ``--block`` and ``--allow``. The short form option for
+  using a device is now ``-a`` instead of ``-w``.
+
+  The internal macros for ``RTE_DEV_BLACKLISTED`` and ``RTE_DEV_WHITELISTED``
+  have been replaced with ``RTE_DEV_BLOCKED`` and ``RTE_DEV_ALLOWED``.
+
+  There are compatibility macros and command line mappings to accept
+  the old values but applications and scripts are strongly encouraged
+  to migrate to the new names.
 
 ABI Changes
 -----------
