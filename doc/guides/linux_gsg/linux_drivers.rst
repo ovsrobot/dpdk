@@ -67,6 +67,16 @@ Note that in order to use VFIO, your kernel must support it.
 VFIO kernel modules have been included in the Linux kernel since version 3.6.0 and are usually present by default,
 however please consult your distributions documentation to make sure that is the case.
 
+For DMA mapping of either external memory or hugepages, VFIO interface is used.
+VFIO does not support partial unmap of once mapped memory. Hence DPDK's memory is
+mapped in hugepage granularity or system page granularity. Number of DMA
+mappings is limited by kernel with user locked memory limit of a process(rlimit)
+for system/hugepage memory. Another per-container overall limit applicable both
+for external memory and system memory was added in kernel 5.1 defined by
+VFIO module parameter ``dma_entry_limit`` with a default value of 64K.
+When application is out of DMA entries, these limits need to be adjusted to
+increase the allowed limit.
+
 The ``vfio-pci`` module since Linux version 5.7 supports the creation of virtual
 functions. After the PF is bound to vfio-pci module, the user can create the VFs
 by sysfs interface, and these VFs are bound to vfio-pci module automatically.
