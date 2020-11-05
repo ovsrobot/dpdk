@@ -270,9 +270,11 @@ rte_mempool_free_memchunks(struct rte_mempool *mp)
 {
 	struct rte_mempool_memhdr *memhdr;
 	void *elt;
+	int ret;
 
 	while (!STAILQ_EMPTY(&mp->elt_list)) {
-		rte_mempool_ops_dequeue_bulk(mp, &elt, 1);
+		ret = rte_mempool_ops_dequeue_bulk(mp, &elt, 1);
+		RTE_SET_USED(ret); /* Intentionally ignored */
 		(void)elt;
 		STAILQ_REMOVE_HEAD(&mp->elt_list, next);
 		mp->populated_size--;
