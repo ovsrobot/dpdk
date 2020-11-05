@@ -226,6 +226,19 @@ for f in $srcdir/config/ppc/ppc* ; do
 	build build-$(basename $f | cut -d'-' -f-2) $f $use_shared
 done
 
+# test a 32-bit build
+if echo "int main(void) { return 0; }" | cc -m32 -x c - -o /dev/null 2> /dev/null ; then
+	if [ -d "/usr/lib/i386-linux-gnu" ] ; then
+		# 32-bit pkgconfig on debian/ubuntu
+		export PKG_CONFIG_LIBDIR="/usr/lib/i386-linux-gnu/pkgconfig"
+	else
+		# 32-bit pkgconfig on RHEL/fedora (lib vs lib64)
+		export PKG_CONFIG_LIBDIR="/usr/lib/pkgconfig"
+	fi
+	build build-32-bit cc -Dc_args='-m32' -Dc_link_args='-m32'
+	unset PKG_CONFIG_LIBDIR
+fi
+
 # Test installation of the x86-default target, to be used for checking
 # the sample apps build using the pkg-config file for cflags and libs
 build_path=$(readlink -f $builds_dir/build-x86-default)
