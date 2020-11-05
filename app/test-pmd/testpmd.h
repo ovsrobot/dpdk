@@ -143,6 +143,11 @@ struct fwd_stream {
 	struct pkt_burst_stats tx_burst_stats;
 };
 
+enum action_age_context_type {
+	ACTION_AGE_CONTEXT_TYPE_FLOW,
+	ACTION_AGE_CONTEXT_TYPE_SHARED_ACTION,
+};
+
 /** Descriptor for a single flow. */
 struct port_flow {
 	struct port_flow *next; /**< Next flow in list. */
