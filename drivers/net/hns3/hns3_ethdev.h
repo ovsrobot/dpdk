@@ -831,7 +831,6 @@ struct hns3_adapter {
 
 #define roundup(x, y) ((((x) + ((y) - 1)) / (y)) * (y))
 #define rounddown(x, y) ((x) - ((x) % (y)))
-
 #define DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
 
 /*
