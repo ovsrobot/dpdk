@@ -43,6 +43,11 @@ default_cppflags=$CPPFLAGS
 default_cflags=$CFLAGS
 default_ldflags=$LDFLAGS
 
+check_cc_flags () # <flag to check> <flag2> ...
+{
+	echo "int main(void) { return 0; }" | cc $@ -x c - -o /dev/null 2> /dev/null
+}
+
 load_env () # <target compiler>
 {
 	targetcc=$1
@@ -57,6 +62,10 @@ load_env () # <target compiler>
 	else # toolchain not yet in PATH: its name should be enough
 		DPDK_TARGET=$targetcc
 	fi
+	if [ -n "$DPDK_TARGET_OVERRIDE" ] ; then
+		DPDK_TARGET=$DPDK_TARGET_OVERRIDE
+	fi
+	echo "Using DPDK_TARGET $DPDK_TARGET"
 	# config input: $DPDK_TARGET
 	. $srcdir/devtools/load-devel-config
 	# config output: $DPDK_MESON_OPTIONS, $PATH, $PKG_CONFIG_PATH, etc
@@ -225,6 +234,23 @@ done
 for f in $srcdir/config/ppc/ppc* ; do
 	build build-$(basename $f | cut -d'-' -f-2) $f $use_shared
 done
+
+# test a 32-bit build
+if check_cc_flags '-m32' ; then
+	if [ -d "/usr/lib/i386-linux-gnu" ] ; then
+		# 32-bit pkgconfig on debian/ubuntu
+		export PKG_CONFIG_LIBDIR="/usr/lib/i386-linux-gnu/pkgconfig"
+	elif [ -d "/usr/lib32" ] ; then
+		# 32-bit pkgconfig on arch
+		export PKG_CONFIG_LIBDIR="/usr/lib32/pkgconfig"
+	else
+		# 32-bit pkgconfig on RHEL/fedora (lib vs lib64)
+		export PKG_CONFIG_LIBDIR="/usr/lib/pkgconfig"
+	fi
+	DPDK_TARGET_OVERRIDE="i386-pc-linux-gnu" \
+		build build-32b cc -Dc_args='-m32' -Dc_link_args='-m32'
+	unset PKG_CONFIG_LIBDIR
+fi
 
 # Test installation of the x86-default target, to be used for checking
 # the sample apps build using the pkg-config file for cflags and libs
