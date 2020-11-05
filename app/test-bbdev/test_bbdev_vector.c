@@ -200,6 +200,8 @@ op_ldpc_decoder_flag_strtoul(char *token, uint32_t *op_flag_value)
 	else if (!strcmp(token,
 			"RTE_BBDEV_LDPC_INTERNAL_HARQ_MEMORY_LOOPBACK"))
 		*op_flag_value = RTE_BBDEV_LDPC_INTERNAL_HARQ_MEMORY_LOOPBACK;
+	else if (!strcmp(token, "RTE_BBDEV_LDPC_DEC_CBGT"))
+		*op_flag_value = RTE_BBDEV_LDPC_DEC_CBGT;
 	else {
 		printf("The given value is not a LDPC decoder flag\n");
 		return -1;
@@ -248,8 +250,10 @@ op_ldpc_encoder_flag_strtoul(char *token, uint32_t *op_flag_value)
 		*op_flag_value = RTE_BBDEV_LDPC_ENC_INTERRUPTS;
 	else if (!strcmp(token, "RTE_BBDEV_LDPC_ENC_SCATTER_GATHER"))
 		*op_flag_value = RTE_BBDEV_LDPC_ENC_SCATTER_GATHER;
+	else if (!strcmp(token, "RTE_BBDEV_LDPC_ENC_CBGT"))
+		*op_flag_value = RTE_BBDEV_LDPC_ENC_CBGT;
 	else {
-		printf("The given value is not a turbo encoder flag\n");
+		printf("The given value is not a LDPC encoder flag\n");
 		return -1;
 	}
 
@@ -718,6 +722,14 @@ parse_ldpc_encoder_params(const char *key_token, char *token,
 		vector->mask |= TEST_BBDEV_VF_CODE_BLOCK_MODE;
 		ldpc_enc->code_block_mode = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
+	} else if (!strcmp(key_token, "max_cbg")) {
+		vector->mask |= TEST_BBDEV_VF_MAX_CBG_PER_TB;
+		ldpc_enc->tb_params.max_cbg = (uint8_t) strtoul(token, &err, 0);
+		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
+	} else if (!strcmp(key_token, "cbgti")) {
+		vector->mask |= TEST_BBDEV_VF_CBGTI;
+		ldpc_enc->tb_params.cbgti = (uint8_t) strtoul(token, &err, 0);
+		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "op_flags")) {
 		vector->mask |= TEST_BBDEV_VF_OP_FLAGS;
 		ret = parse_turbo_flags(token, &op_flags, vector->op_type);
@@ -827,6 +839,18 @@ parse_ldpc_decoder_params(const char *key_token, char *token,
 	} else if (!strcmp(key_token, "code_block_mode")) {
 		vector->mask |= TEST_BBDEV_VF_CODE_BLOCK_MODE;
 		ldpc_dec->code_block_mode = (uint8_t) strtoul(token, &err, 0);
+		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
+	} else if (!strcmp(key_token, "max_cbg")) {
+		vector->mask |= TEST_BBDEV_VF_MAX_CBG_PER_TB;
+		ldpc_dec->tb_params.max_cbg = (uint8_t) strtoul(token, &err, 0);
+		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
+	} else if (!strcmp(key_token, "cbgti")) {
+		vector->mask |= TEST_BBDEV_VF_CBGTI;
+		ldpc_dec->tb_params.cbgti = (uint8_t) strtoul(token, &err, 0);
+		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
+	} else if (!strcmp(key_token, "cbgfi")) {
+		vector->mask |= TEST_BBDEV_VF_CBGFI;
+		ldpc_dec->tb_params.cbgfi = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "op_flags")) {
 		vector->mask |= TEST_BBDEV_VF_OP_FLAGS;
@@ -1162,6 +1186,12 @@ check_ldpc_decoder(struct test_bbdev_vector *vector)
 		if (!(mask & TEST_BBDEV_VF_R))
 			printf(
 				"WARNING: r was not specified in vector file and will be set to 0\n");
+		if (!(mask & TEST_BBDEV_VF_MAX_CBG_PER_TB) && (ldpc_dec->op_flags &
+				RTE_BBDEV_LDPC_DEC_CBGT)) {
+			printf(
+				"WARNING: max_cbg was not specified in vector file and will be set to 1\n");
+			ldpc_dec->tb_params.max_cbg = 1;
+		}
 	} else {
 		if (!(mask & TEST_BBDEV_VF_E))
 			printf(
@@ -1298,12 +1328,18 @@ check_ldpc_encoder(struct test_bbdev_vector *vector)
 	if (!(mask & TEST_BBDEV_VF_CODE_BLOCK_MODE)) {
 		printf(
 			"WARNING: code_block_mode was not specified in vector file and will be set to 1\n");
-		vector->turbo_enc.code_block_mode = 1;
+		vector->ldpc_enc.code_block_mode = 1;
 	}
-	if (vector->turbo_enc.code_block_mode == 0) {
+	if (vector->ldpc_enc.code_block_mode == 0) {
+		if (!(mask & TEST_BBDEV_VF_MAX_CBG_PER_TB) && (vector->ldpc_enc.op_flags &
+				RTE_BBDEV_LDPC_ENC_CBGT)) {
+			printf(
+				"WARNING: max_cbg was not specified in vector file and will be set to 1\n");
+			vector->ldpc_enc.tb_params.max_cbg = 1;
+		}
 	} else {
-		if (!(mask & TEST_BBDEV_VF_E) && (vector->turbo_enc.op_flags &
-				RTE_BBDEV_TURBO_RATE_MATCH))
+		if (!(mask & TEST_BBDEV_VF_E) && (vector->ldpc_enc.op_flags &
+				RTE_BBDEV_LDPC_RATE_MATCH))
 			printf(
 				"WARNING: e was not specified in vector file and will be set to 0\n");
 		if (!(mask & TEST_BBDEV_VF_NCB))
