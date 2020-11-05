@@ -747,6 +747,9 @@ given below.
 |RTE_BBDEV_LDPC_ENC_CONCATENATION                                    |
 | Set if a device supports concatenation of non byte aligned output  |
 +--------------------------------------------------------------------+
+|RTE_BBDEV_LDPC_ENC_CBGT                                             |
+| Set if a device supports CB group transmission                     |
++--------------------------------------------------------------------+
 
 The structure passed for each LDPC encode operation is given below,
 with the operation flags forming a bitmask in the ``op_flags`` field.
@@ -815,6 +818,10 @@ The LDPC encode parameters are set out in the table below.
 +----------------+------------+-------------------------------------------------------+
 |                |eb          |Eb, length of the RM output sequence in bits, r >= cab |
 +----------------+------------+-------------------------------------------------------+
+|                |max_cbg     |maximum number of CB groups per TB: 1-8                |
++----------------+------------+-------------------------------------------------------+
+|                |cbgti       |CB group transmission information bitfield             |
++----------------+------------+-------------------------------------------------------+
 
 The mbuf input ``input`` is mandatory for all BBDEV PMDs and is the
 incoming code block or transport block data.
@@ -868,6 +875,11 @@ total number of CBs in the full TB (``C`` as per 3GPP TS 38.212 section 5.2.2)
 Figure :numref:`figure_turbo_tb_encode` above
 showing the Turbo encoding of CBs using BBDEV interface in TB-mode
 is also valid for LDPC encode.
+
+In TB-mode, If the ``RTE_BBDEV_LDPC_ENC_CBGT`` flag is specified the
+``max_cbg`` and ``cbgti`` parameters are used for CB group transmission. If
+the ``RTE_BBDEV_LDPC_ENC_CBGT`` flag is not specified, these parameters
+are ignored.
 
 BBDEV LDPC Decode Operation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -941,6 +953,9 @@ given below.
 +--------------------------------------------------------------------+
 |RTE_BBDEV_LDPC_INTERNAL_HARQ_MEMORY_LOOPBACK                        |
 | Set if a device supports loopback access to HARQ internal memory   |
++--------------------------------------------------------------------+
+|RTE_BBDEV_LDPC_DEC_CBGT                                             |
+| Set if a device supports CB group transmission                     |
 +--------------------------------------------------------------------+
 
 The structure passed for each LDPC decode operation is given below,
@@ -1027,6 +1042,14 @@ The LDPC decode parameters are set out in the table below.
 +----------------+------------+-------------------------------------------------------+
 |                |eb          |Eb, length of the RM output sequence in bits  r >= cab |
 +----------------+------------+-------------------------------------------------------+
+|                |max_cbg     |maximum number of CB groups per TB: 1-8                |
++----------------+------------+-------------------------------------------------------+
+|                |cbgti       |CB group transmission information bitfield             |
++----------------+------------+-------------------------------------------------------+
+|                |cbgfi       |CB group Flushing out Information (CBGFI)              |
++----------------+------------+-------------------------------------------------------+
+|                |cbg_crc_err |CB group CRC failure bitfield (output)                 |
++----------------+------------+-------------------------------------------------------+
 
 The mbuf input ``input`` encoded CB data is mandatory for all BBDEV PMDs
 and is the Virtual Circular Buffer data stream with null padding.
@@ -1083,6 +1106,12 @@ case they were appended by the application.
 Figure :numref:`figure_turbo_tb_decode` above
 showing the Turbo decoding of CBs using BBDEV interface in TB-mode
 is also valid for LDPC decode.
+
+In TB-mode, If the ``RTE_BBDEV_LDPC_DEC_CBGT`` flag is specified the
+``max_cbg`` and ``cbgti`` parameters are used for CB group transmission. The
+``cbg_crc_err`` output parameter is a bitfield used to indicate crc failures
+in the respective CB groups. If the ``RTE_BBDEV_LDPC_DEC_CBGT`` flag is not
+specified, these parameters are ignored.
 
 
 Sample code
