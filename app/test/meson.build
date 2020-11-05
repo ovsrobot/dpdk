@@ -139,6 +139,7 @@ test_sources = files('commands.c',
 	'test_trace_register.c',
 	'test_trace_perf.c',
 	'test_version.c',
+	'test_vfio.c',
 	'virtual_pmd.c'
 )
 
