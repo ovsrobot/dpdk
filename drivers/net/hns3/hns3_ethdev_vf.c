@@ -139,7 +139,7 @@ hns3vf_enable_msix(const struct rte_pci_device *device, bool op)
 		ret = rte_pci_read_config(device, &control, sizeof(control),
 				    (pos + PCI_MSIX_FLAGS));
 		if (ret < 0) {
-			PMD_INIT_LOG(ERR, "Failed to read PCI offset 0x%x",
+			PMD_INIT_LOG(ERR, "failed to read PCI offset 0x%x",
 				     (pos + PCI_MSIX_FLAGS));
 			return -ENXIO;
 		}
@@ -148,8 +148,12 @@ hns3vf_enable_msix(const struct rte_pci_device *device, bool op)
 			control |= PCI_MSIX_FLAGS_ENABLE;
 		else
 			control &= ~PCI_MSIX_FLAGS_ENABLE;
-		rte_pci_write_config(device, &control, sizeof(control),
-				     (pos + PCI_MSIX_FLAGS));
+		ret = rte_pci_write_config(device, &control, sizeof(control),
+					  (pos + PCI_MSIX_FLAGS));
+		if (ret < 0) {
+			PMD_INIT_LOG(ERR, "failed to write PCI offset 0x%x",
+				    (pos + PCI_MSIX_FLAGS));
+		}
 		return 0;
 	}
 	return -ENXIO;
