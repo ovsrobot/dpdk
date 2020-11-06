@@ -33,6 +33,10 @@ if [ "$AARCH64" = "1" ]; then
     OPTS="$OPTS --cross-file config/arm/arm64_armv8_linux_gcc"
 fi
 
+if [ "$(uname -m)" = "aarch64" ]; then
+    OPTS="$OPTS -Dmachine=generic"
+fi
+
 if [ "$BUILD_DOCS" = "1" ]; then
     OPTS="$OPTS -Denable_docs=true"
 fi
