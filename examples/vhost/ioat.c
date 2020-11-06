@@ -54,9 +54,14 @@ open_ioat(const char *value)
 	}
 	args_nr = rte_strsplit(substr, strlen(substr),
 			dma_arg, MAX_VHOST_DEVICE, ',');
-	do {
+	while (i < args_nr) {
 		char *arg_temp = dma_arg[i];
-		rte_strsplit(arg_temp, strlen(arg_temp), ptrs, 2, '@');
+		uint8_t sub_nr;
+		sub_nr = rte_strsplit(arg_temp, strlen(arg_temp), ptrs, 2, '@');
+		if (sub_nr != 2) {
+			ret = -1;
+			goto out;
+		}
 
 		start = strstr(ptrs[0], "txd");
 		if (start == NULL) {
@@ -105,7 +110,7 @@ open_ioat(const char *value)
 
 		dma_info->nr++;
 		i++;
-	} while (i < args_nr);
+	}
 out:
 	free(input);
 	return ret;
