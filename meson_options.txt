@@ -1,5 +1,7 @@
 # Please keep these options sorted alphabetically.
 
+option('arm_soc', type: 'string', value: '',
+	description: 'Specify if you want to build for a particular Arm SoC when building on an aarch64 machine.')
 option('armv8_crypto_dir', type: 'string', value: '',
 	description: 'path to the armv8_crypto library installation directory')
 option('disable_drivers', type: 'string', value: '',

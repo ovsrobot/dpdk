@@ -57,7 +57,7 @@ part_number_config_arm = {
 ## Part numbers are specific to Arm implementers
 # implementer specific aarch64 flags have middle priority
 #     (will overwrite common flags)
-# part number specific aarch64 flags have the highest priority
+# part number specific aarch64 flags have higher priority
 #     (will overwrite both common and implementer specific flags)
 implementers = {
 	'generic': {
@@ -164,6 +164,102 @@ implementers = {
 	}
 }
 
+# soc specific aarch64 flags have the highest priority
+#     (will overwrite all other flags)
+socs = {
+	'generic': {
+		'implementer': 'generic',
+		'part_number': 'generic',
+		'flags': []
+	},
+	'armada': {
+		'implementer': '0x56',
+		'flags': [
+			['RTE_MAX_LCORE', 16],
+			['RTE_MAX_NUMA_NODES', 1]
+		],
+		'numa': false,
+		'disabled_drivers': ['bus/dpaa', 'bus/fslmc', 'common/dpaax']
+	},
+	'bluefield': {
+		'implementer': '0x41',
+		'part_number': '0xd08',
+		'flags': [
+			['RTE_MAX_LCORE', 16],
+			['RTE_MAX_NUMA_NODES', 1]
+		],
+		'numa': false
+	},
+	'dpaa': {
+		'implementer': 'dpaa',
+		'flags': [
+			['RTE_MAX_LCORE', 16],
+			['RTE_MAX_NUMA_NODES', 1]
+		],
+		'numa': false
+	},
+	'emag': {
+		'implementer': '0x50',
+		'part_number': '0x0',
+		'flags': [
+			['RTE_MAX_LCORE', 32],
+			['RTE_MAX_NUMA_NODES', 1]
+		]
+	},
+	'graviton2': {
+		'implementer': '0x41',
+		'part_number': '0xd0c',
+		'flags': [
+			['RTE_MAX_LCORE', 64],
+			['RTE_MAX_NUMA_NODES', 1]
+		],
+		'numa': false
+	},
+	'n1sdp': {
+		'implementer': '0x41',
+		'part_number': '0xd0c',
+		'flags': [
+			['RTE_MAX_LCORE', 4],
+			['RTE_MAX_NUMA_NODES', 1]
+		],
+		'numa': false
+	},
+	'octeontx2': {
+		'implementer': '0x43',
+		'part_number': '0xb2',
+		'flags': [
+			['RTE_MAX_LCORE', 32],
+			['RTE_MAX_NUMA_NODES', 1]
+		],
+		'numa': false
+	},
+	'stingray': {
+		'implementer': '0x41',
+		'part_number': '0xd08',
+		'flags': [
+			['RTE_MAX_LCORE', 16],
+			['RTE_MAX_NUMA_NODES', 1]
+		],
+		'numa': false
+	},
+	'thunderx2': {
+		'implementer': '0x43',
+		'part_number': '0xaf',
+		'flags': [
+			['RTE_MAX_LCORE', 256],
+			['RTE_MAX_NUMA_NODES', 2]
+		]
+	},
+	'thunderxt88': {
+		'implementer': '0x43',
+		'part_number': '0xa1',
+		'flags': [
+			['RTE_MAX_LCORE', 96],
+			['RTE_MAX_NUMA_NODES', 1]
+		]
+	}
+}
+
 dpdk_conf.set('RTE_ARCH_ARM', 1)
 dpdk_conf.set('RTE_FORCE_INTRINSICS', 1)
 
@@ -176,11 +272,18 @@ if dpdk_conf.get('RTE_ARCH_32')
 else
 	# aarch64 build
 	use_native_machine_args = false
+	arm_soc = get_option('arm_soc')
+	soc_config = {}
 	if not meson.is_cross_build()
 		if machine == 'generic'
 			# generic build
+			if arm_soc != ''
+				error('Arm SoC is unsupported with generic build.')
+			endif
 			implementer_id = 'generic'
 			part_number = 'generic'
+		elif arm_soc != ''
+			soc_config = socs.get(arm_soc, {'not_supported': true})
 		else
 			# native build
 			# The script returns ['Implementer', 'Variant', 'Architecture',
@@ -199,8 +302,27 @@ else
 		endif
 	else
 		# cross build
-		implementer_id = meson.get_cross_property('implementer_id')
-		part_number = meson.get_cross_property('part_number')
+		arm_soc = meson.get_cross_property('soc', '')
+		if arm_soc == ''
+			error('Arm SoC must be specified in the cross file.')
+		endif
+		soc_config = socs.get(arm_soc, {'not_supported': true})
+	endif
+
+	soc_flags = []
+	if soc_config.has_key('not_supported')
+		error('SoC @0@ not supported.'.format(arm_soc))
+	elif soc_config != {}
+		implementer_id = soc_config['implementer']
+		implementer_config = implementers[implementer_id]
+		part_number = soc_config['part_number']
+		soc_flags = soc_config['flags']
+		if not soc_config.get('numa', true)
+			has_libnuma = 0
+		endif
+		if soc_config.has_key('disabled_drivers')
+			disabled_drivers += soc_config['disabled_drivers']
+		endif
 	endif
 
 	if implementers.has_key(implementer_id)
@@ -226,8 +348,8 @@ else
 		      '(-Dmachine=generic) build.')
 	endif
 
-	# use default flags with implementer flags
-	dpdk_flags = flags_common_default + implementer_config['flags'] + part_number_config.get('flags', [])
+	# add flags in the proper order
+	dpdk_flags = flags_common_default + implementer_config['flags'] + part_number_config.get('flags', []) + soc_flags
 
 	# apply supported machine args
 	machine_args = [] # Clear previous machine args

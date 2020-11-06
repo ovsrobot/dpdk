@@ -13,46 +13,18 @@ cpu = 'armv8-a'
 endian = 'little'
 
 [properties]
-# Supported implementers:
-# 'generic': Generic armv8
-# '0x41':    Arm
-# '0x43':    Cavium
-# '0x50':    Ampere Computing
-# '0x56':    Marvell ARMADA
-# 'dpaa':    NXP DPAA
-implementer_id = 'generic'
+# Supported SoCs:
+# generic
+# armada
+# bluefield
+# dpaa
+# emag
+# graviton2
+# n1sdp
+# octeontx2
+# stingray
+# thunderx2
+# thunderxt88
+# thunderx2t99
 
-# Supported part_numbers for generic:
-# 'generic': valid for all armv8-a architectures (unoptimized portable build)
-part_number = 'generic'
-
-# Supported part_numbers for 0x41, 0x56, dpaa:
-# '0xd03':   cortex-a53
-# '0xd04':   cortex-a35
-# '0xd05':   cortex-a55
-# '0xd07':   cortex-a57
-# '0xd08':   cortex-a72
-# '0xd09':   cortex-a73
-# '0xd0a':   cortex-a75
-# '0xd0b':   cortex-a76
-# '0xd0c':   neoverse-n1
-
-# Supported part_numbers for 0x43:
-# '0xa1':    thunderxt88
-# '0xa2':    thunderxt81
-# '0xa3':    thunderxt83
-# '0xaf':    thunderx2t99
-# '0xb2':    octeontx2
-
-# Supported part_numbers for 0x50:
-# '0x0':     emag
-
-# Supported extra configuration
-# max_numa_nodes = n  # will set RTE_MAX_NUMA_NODES
-# max_lcores = n      # will set RTE_MAX_LCORE
-max_lcores = 256
-max_numa_nodes = 4
-
-# numa = false        # set to false if the target is not a NUMA system
-# disabled_drivers = ['bus/dpaa', 'crypto']
-    # add to the set of disabled libraries
+soc = 'generic'
