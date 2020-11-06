@@ -22,8 +22,11 @@ endian = 'little'
 # 'dpaa':    NXP DPAA
 implementer_id = 'generic'
 
-# Supported part_numbers for generic, 0x41, 0x56, dpaa:
-# 'generic': valid for all armv8-a architectures (default value)
+# Supported part_numbers for generic:
+# 'generic': valid for all armv8-a architectures (unoptimized portable build)
+part_number = 'generic'
+
+# Supported part_numbers for 0x41, 0x56, dpaa:
 # '0xd03':   cortex-a53
 # '0xd04':   cortex-a35
 # '0xd05':   cortex-a55
@@ -33,10 +36,8 @@ implementer_id = 'generic'
 # '0xd0a':   cortex-a75
 # '0xd0b':   cortex-a76
 # '0xd0c':   neoverse-n1
-part_number = 'generic'
 
 # Supported part_numbers for 0x43:
-# 'generic': valid for all Cavium builds
 # '0xa1':    thunderxt88
 # '0xa2':    thunderxt81
 # '0xa3':    thunderxt83
@@ -44,4 +45,4 @@ part_number = 'generic'
 # '0xb2':    octeontx2
 
 # Supported part_numbers for 0x50:
-# 'generic': valid for all Ampere builds
+# '0x0':     emag
