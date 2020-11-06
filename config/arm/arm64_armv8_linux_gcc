@@ -53,5 +53,6 @@ part_number = 'generic'
 max_lcores = 256
 max_numa_nodes = 4
 
+# numa = false        # set to false if the target is not a NUMA system
 # disabled_drivers = ['bus/dpaa', 'crypto']
     # add to the set of disabled libraries
