@@ -5570,6 +5570,7 @@ flow_list_create(struct rte_eth_dev *dev, uint32_t *list,
 				external, hairpin_flow, error);
 	if (ret < 0)
 		goto error_before_hairpin_split;
+	rte_spinlock_lock(&priv->flow_lock);
 	flow = mlx5_ipool_zmalloc(priv->sh->ipool[MLX5_IPOOL_RTE_FLOW], &idx);
 	if (!flow) {
 		rte_errno = ENOMEM;
@@ -5591,8 +5592,10 @@ flow_list_create(struct rte_eth_dev *dev, uint32_t *list,
 	memset(rss_desc, 0, offsetof(struct mlx5_flow_rss_desc, queue));
 	rss = flow_get_rss_action(p_actions_rx);
 	if (rss) {
-		if (flow_rss_workspace_adjust(wks, rss_desc, rss->queue_num))
+		if (flow_rss_workspace_adjust(wks, rss_desc, rss->queue_num)) {
+			rte_spinlock_unlock(&priv->flow_lock);
 			return 0;
+		}
 		/*
 		 * The following information is required by
 		 * mlx5_flow_hashfields_adjust() in advance.
@@ -5716,6 +5719,7 @@ flow_list_create(struct rte_eth_dev *dev, uint32_t *list,
 		__atomic_add_fetch(&tunnel->refctn, 1, __ATOMIC_RELAXED);
 		mlx5_free(default_miss_ctx.queue);
 	}
+	rte_spinlock_unlock(&priv->flow_lock);
 	return idx;
 error:
 	MLX5_ASSERT(flow);
@@ -5731,6 +5735,7 @@ error:
 		wks->flow_nested_idx = 0;
 error_before_hairpin_split:
 	rte_free(translated_actions);
+	rte_spinlock_unlock(&priv->flow_lock);
 	return 0;
 }
 
@@ -5870,11 +5875,14 @@ flow_list_destroy(struct rte_eth_dev *dev, uint32_t *list,
 		  uint32_t flow_idx)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
+	rte_spinlock_lock(&priv->flow_lock);
 	struct rte_flow *flow = mlx5_ipool_get(priv->sh->ipool
 					       [MLX5_IPOOL_RTE_FLOW], flow_idx);
 
-	if (!flow)
+	if (!flow) {
+		rte_spinlock_unlock(&priv->flow_lock);
 		return;
+	}
 	/*
 	 * Update RX queue flags only if port is started, otherwise it is
 	 * already clean.
@@ -5901,6 +5909,7 @@ flow_list_destroy(struct rte_eth_dev *dev, uint32_t *list,
 	}
 	flow_mreg_del_copy_action(dev, flow);
 	mlx5_ipool_free(priv->sh->ipool[MLX5_IPOOL_RTE_FLOW], flow_idx);
+	rte_spinlock_unlock(&priv->flow_lock);
 }
 
 /**
