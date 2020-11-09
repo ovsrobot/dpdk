@@ -53,7 +53,11 @@ load_env () # <target compiler>
 {
 	targetcc=$1
 	export PATH=$default_path
-	export PKG_CONFIG_PATH=$default_pkgpath
+	if [ -n "$CUSTOM_PKG_CONFIG_PATH" ]; then
+		export PKG_CONFIG_PATH=$CUSTOM_PKG_CONFIG_PATH
+	else
+		export PKG_CONFIG_PATH=$default_pkgpath
+	fi
 	export CPPFLAGS=$default_cppflags
 	export CFLAGS=$default_cflags
 	export LDFLAGS=$default_ldflags
@@ -226,10 +230,12 @@ if check_cc_flags '-m32' ; then
 		# 32-bit pkgconfig on RHEL/Fedora (lib vs lib64)
 		export PKG_CONFIG_LIBDIR='/usr/lib/pkgconfig'
 	fi
+	export CUSTOM_PKG_CONFIG_PATH=$PKG_CONFIG_LIBDIR
 	target_override='i386-pc-linux-gnu'
 	build build-32b cc -Dc_args='-m32' -Dc_link_args='-m32'
 	target_override=
 	unset PKG_CONFIG_LIBDIR
+	unset CUSTOM_PKG_CONFIG_PATH
 fi
 
 # x86 MinGW
