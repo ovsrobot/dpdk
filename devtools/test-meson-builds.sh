@@ -38,10 +38,10 @@ else
 fi
 
 default_path=$PATH
-default_pkgpath=$PKG_CONFIG_PATH
 default_cppflags=$CPPFLAGS
 default_cflags=$CFLAGS
 default_ldflags=$LDFLAGS
+default_meson_options=$DPDK_MESON_OPTIONS
 
 check_cc_flags () # <flag to check> <flag2> ...
 {
@@ -53,11 +53,11 @@ load_env () # <target compiler>
 {
 	targetcc=$1
 	export PATH=$default_path
-	export PKG_CONFIG_PATH=$default_pkgpath
+	export PKG_CONFIG_PATH= # global default makes no sense
 	export CPPFLAGS=$default_cppflags
 	export CFLAGS=$default_cflags
 	export LDFLAGS=$default_ldflags
-	unset DPDK_MESON_OPTIONS
+	export DPDK_MESON_OPTIONS=$default_meson_options
 	if [ -n "$target_override" ] ; then
 		DPDK_TARGET=$target_override
 	elif command -v $targetcc >/dev/null 2>&1 ; then
