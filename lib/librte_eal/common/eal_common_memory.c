@@ -139,7 +139,8 @@ eal_get_virtual_area(void *requested_addr, size_t *size,
 		rte_errno = EADDRNOTAVAIL;
 		return NULL;
 	} else if (requested_addr != NULL && addr_is_hint &&
-			aligned_addr != requested_addr) {
+			aligned_addr != requested_addr &&
+			internal_conf->base_virtaddr != 0) {
 		RTE_LOG(WARNING, EAL, "WARNING! Base virtual address hint (%p != %p) not respected!\n",
 			requested_addr, aligned_addr);
 		RTE_LOG(WARNING, EAL, "   This may cause issues with mapping memory into secondary processes\n");
