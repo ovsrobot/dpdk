@@ -279,7 +279,7 @@ class AutotestRunner:
         if "_autotest" in test_id:
             test_id = test_id[:-len("_autotest")]
 
-        # filter out blocklisted/allowlisted tests
+        # filter out blocked/allowed tests
         if self.blocklist and test_id in self.blocklist:
             return False
         if self.allowlist and test_id not in self.allowlist:
