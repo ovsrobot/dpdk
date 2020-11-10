@@ -75,9 +75,30 @@ To make use of full VFIO functionality, both kernel and BIOS must support and be
 For proper operation of VFIO when running DPDK applications as a non-privileged user, correct permissions should also be set up.
 This can be done by using the DPDK setup script (called ``dpdk-setup.sh`` and located in the usertools directory).
 
+VFIO no-IOMMU mode
+------------------
+
+If there is no IOMMU available on the system, VFIO can still be used, but it has
+to be loaded with an additional module parameter:
+
+.. code-block:: console
+
+    # modprobe vfio enable_unsafe_noiomu_mode=1
+
+Alternatively, one can also enable this option in an already loaded kernel module:
+
+.. code-block:: console
+
+    # echo 1 > /sys/module/vfio/parameters/enable_unsafe_noiomu_mode
+
+After that, VFIO can be used with hardware devices as usual.
+
 .. note::
 
-    VFIO can be used without IOMMU. While this is unsafe, it does make it possible for the user to keep the degree of device access and programming that VFIO has, in situations where IOMMU is not available.
+    Since no-IOMMU mode forgoes IOMMU protection, it is inherently unsafe. That
+    said, it does make it possible for the user to keep the degree of device
+    access and programming that VFIO has, in situations where IOMMU is not
+    available.
 
 UIO
 ---
