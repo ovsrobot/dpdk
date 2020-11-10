@@ -464,13 +464,15 @@ rx_queue_count(struct mlx5_rxq_data *rxq)
 	volatile struct mlx5_cqe *cqe;
 	const unsigned int cqe_n = (1 << rxq->cqe_n);
 	const unsigned int cqe_cnt = cqe_n - 1;
-	unsigned int cq_ci;
+	unsigned int cq_ci, cq_end, cq_cur;
 	unsigned int used;
 
 	/* if we are processing a compressed cqe */
 	if (zip->ai) {
-		used = zip->cqe_cnt - zip->ca;
 		cq_ci = zip->cq_ci;
+		cq_end = cq_ci + zip->cqe_cnt;
+		cq_cur = zip->ca + zip->ai;
+		used = cq_end - cq_cur;
 	} else {
 		used = 0;
 		cq_ci = rxq->cq_ci;
