@@ -57,8 +57,10 @@ enum rte_dev_policy {
 };
 
 /* Backwards compatibility will be removed */
-#define RTE_DEV_WHITELISTED RTE_DEV_ALLOWED
-#define RTE_DEV_BLACKLISTED RTE_DEV_BLOCKED
+#define RTE_DEV_WHITELISTED \
+	RTE_DEPRECATED(RTE_DEV_WHITELISTED) RTE_DEV_ALLOWED
+#define RTE_DEV_BLACKLISTED \
+	RTE_DEPRECATED(RTE_DEV_BLACKLISTED) RTE_DEV_BLOCKED
 
 /**
  * A generic memory resource representation.

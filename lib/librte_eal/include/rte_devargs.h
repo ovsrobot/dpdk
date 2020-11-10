@@ -35,8 +35,10 @@ enum rte_devtype {
 };
 
 /* Backwards compatibility will be removed later */
-#define RTE_DEVTYPE_WHITELISTED_PCI RTE_DEVTYPE_ALLOWED
-#define RTE_DEVTYPE_BLACKLISTED_PCI RTE_DEVTYPE_BLOCKED
+#define RTE_DEVTYPE_WHITELISTED_PCI \
+	RTE_DEPRECATED(RTE_DEVTYPE_WHITELISTED_PCI) RTE_DEVTYPE_ALLOWED
+#define RTE_DEVTYPE_BLACKLISTED_PCI \
+	RTE_DEPRECATED(RTE_DEVTYPE_BLACKLISTED_PCI) RTE_DEVTYPE_BLOCKED
 
 /**
  * Structure that stores a device given by the user with its arguments
