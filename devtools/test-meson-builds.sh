@@ -268,7 +268,33 @@ export PKG_CONFIG_PATH=$(dirname $pc_file):$PKG_CONFIG_PATH
 # if pkg-config defines the necessary flags, test building some examples
 if pkg-config --define-prefix libdpdk >/dev/null 2>&1; then
 	export PKGCONF="pkg-config --define-prefix"
-	for example in cmdline helloworld l2fwd l3fwd skeleton timer; do
+	export LD_LIBRARY_PATH=$(dirname $(find $DESTDIR -name librte_eal.so)):$LD_LIBRARY_PATH
+	examples_to_test=${DPDK_BUILD_TEST_EXAMPLES:-}
+	if [ -z "$examples_to_test" ]; then
+		##################
+		# FIXME examples #
+		##################
+		skipped=""
+		# Relies on librte_power internal header
+		skipped="$skipped guest_cli vm_power_manager"
+		# Expects libqos
+		skipped="$skipped l2fwd-cat"
+		# performance-thread/{l3fwd-thread,pthread_shim} expect common .mk
+		skipped="$skipped l3fwd-thread pthread_shim"
+		# client_server_mp/{mp_server,mp_client} expect common headers
+		skipped="$skipped mp_client mp_server"
+		# server_node_efd/{node,server} expect common headers
+		skipped="$skipped node server"
+		# waiting for fixes
+		skipped="$skipped vhost"
+		for mk in $DESTDIR/usr/local/share/dpdk/examples/*/Makefile; do
+			name=$(basename $(dirname $mk))
+			[ "$skipped" = "${skipped/ $name}" ] ||
+				continue
+			examples_to_test="$examples_to_test $name"
+		done
+	fi
+	for example in $examples_to_test; do
 		echo "## Building $example"
 		$MAKE -C $DESTDIR/usr/local/share/dpdk/examples/$example clean shared static
 	done
