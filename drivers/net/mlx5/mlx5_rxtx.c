@@ -492,7 +492,7 @@ rx_queue_count(struct mlx5_rxq_data *rxq)
 		used += n;
 		cqe = &(*rxq->cqes)[cq_ci & cqe_cnt];
 	}
-	used = RTE_MIN(used * sges_n, 1U << rxq->elts_n);
+	used = RTE_MIN(used * sges_n, cqe_cnt);
 	return used;
 }
 
@@ -515,7 +515,8 @@ mlx5_rx_descriptor_status(void *rx_queue, uint16_t offset)
 			container_of(rxq, struct mlx5_rxq_ctrl, rxq);
 	struct rte_eth_dev *dev = ETH_DEV(rxq_ctrl->priv);
 
-	if (dev->rx_pkt_burst != mlx5_rx_burst) {
+	if (dev->rx_pkt_burst == NULL ||
+	    dev->rx_pkt_burst == removed_rx_burst) {
 		rte_errno = ENOTSUP;
 		return -rte_errno;
 	}
