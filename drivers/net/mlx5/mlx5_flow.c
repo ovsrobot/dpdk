@@ -7026,7 +7026,15 @@ tunnel_flow_group_to_flow_table(struct rte_eth_dev *dev,
 	struct mlx5_hlist *group_hash;
 
 	group_hash = tunnel ? tunnel->groups : thub->groups;
-	he = mlx5_hlist_register(group_hash, key.val, NULL);
+	he = mlx5_hlist_lookup(group_hash, key.val, NULL);
+	if (!he) {
+		DRV_LOG(DEBUG, "port %u tunnel %u group=%u - generate table id",
+		dev->data->port_id, key.tunnel_id, group);
+		he = mlx5_hlist_register(group_hash, key.val, NULL);
+	} else {
+		DRV_LOG(DEBUG, "port %u tunnel %u group=%u - skip table id",
+		dev->data->port_id, key.tunnel_id, group);
+	}
 	if (!he)
 		return rte_flow_error_set(error, EINVAL,
 					  RTE_FLOW_ERROR_TYPE_ATTR_GROUP,
@@ -7034,8 +7042,8 @@ tunnel_flow_group_to_flow_table(struct rte_eth_dev *dev,
 					  "tunnel group index not supported");
 	tte = container_of(he, typeof(*tte), hash);
 	*table = tte->flow_table;
-	DRV_LOG(DEBUG, "port %u tunnel %u group=%#x table=%#x",
-		dev->data->port_id, key.tunnel_id, group, *table);
+	DRV_LOG(DEBUG, "port %u tunnel %u group=%u table=%u",
+	dev->data->port_id, key.tunnel_id, group, *table);
 	return 0;
 }
 
@@ -7115,7 +7123,7 @@ mlx5_flow_group_to_table(struct rte_eth_dev *dev,
 		standard_translation = true;
 	}
 	DRV_LOG(DEBUG,
-		"port %u group=%#x transfer=%d external=%d fdb_def_rule=%d translate=%s",
+		"port %u group=%u transfer=%d external=%d fdb_def_rule=%d translate=%s",
 		dev->data->port_id, group, grp_info.transfer,
 		grp_info.external, grp_info.fdb_def_rule,
 		standard_translation ? "STANDARD" : "TUNNEL");
