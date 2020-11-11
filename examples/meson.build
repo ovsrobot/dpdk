@@ -48,15 +48,11 @@ all_examples = [
 	'vmdq', 'vmdq_dcb',
 ]
 
-if get_option('examples') == ''
-	subdir_done()
-endif
-
 if get_option('examples').to_lower() == 'all'
-	examples = all_examples
+	requested_examples = all_examples
 	allow_skips = true # don't flag an error if we can't build an app
 else
-	examples = get_option('examples').split(',')
+	requested_examples = get_option('examples').split(',')
 	allow_skips = false # error out if we can't build a requested app
 endif
 default_cflags = machine_args
@@ -64,7 +60,9 @@ if cc.has_argument('-Wno-format-truncation')
 	default_cflags += '-Wno-format-truncation'
 endif
 
-foreach example: examples
+# iterate through all examples to see what we need to install
+# only actually build requested ones
+foreach example: all_examples
 	name = example.split('/')[-1]
 	build = true
 	sources = []
@@ -81,22 +79,36 @@ foreach example: examples
 		foreach d:deps
 			var_name = get_option('default_library') + '_rte_' + d
 			if not is_variable(var_name)
-				error('Missing dependency "@0@" for example "@1@"'.format(d, name))
+				message('Missing dependency "@0@" for example "@1@"'.format(d, name))
+				build = false
+			else
+				dep_objs += [get_variable(var_name)]
 			endif
-			dep_objs += [get_variable(var_name)]
 		endforeach
-		if allow_experimental_apis
-			cflags += '-DALLOW_EXPERIMENTAL_API'
+	endif # build
+
+	if not build
+		# exclude based on top-level directory only
+		dir = example.split('/')[0]
+		dpdk_examples_exclude += dir
+		message('Excluding example directory "@0@" from install'.format(dir))
+	endif
+
+	if requested_examples.contains(example)
+		if build
+			if allow_experimental_apis
+				cflags += '-DALLOW_EXPERIMENTAL_API'
+			endif
+			executable('dpdk-' + name, sources,
+				include_directories: includes,
+				link_whole: link_whole_libs,
+				link_args: dpdk_extra_ldflags,
+				c_args: cflags,
+				dependencies: dep_objs)
+		elif not allow_skips
+			error('Cannot build requested example "' + name + '"')
+		else
+			message('Skipping example "' + name + '"')
 		endif
-		executable('dpdk-' + name, sources,
-			include_directories: includes,
-			link_whole: link_whole_libs,
-			link_args: dpdk_extra_ldflags,
-			c_args: cflags,
-			dependencies: dep_objs)
-	elif not allow_skips
-		error('Cannot build requested example "' + name + '"')
-	else
-		message('Skipping example "' + name + '"')
 	endif
 endforeach
