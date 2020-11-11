@@ -14,7 +14,4 @@ cpu = 'armv8-a'
 endian = 'little'
 
 [properties]
-implementer_id = 'dpaa'
-max_lcores = 16
-max_numa_nodes = 1
-numa = false
+soc = 'dpaa'
