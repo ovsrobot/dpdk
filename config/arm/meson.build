@@ -3,8 +3,6 @@
 # Copyright(c) 2017 Cavium, Inc
 # Copyright(c) 2020 PANTHEON.tech s.r.o.
 
-arm_force_native_march = false
-
 # common flags to all aarch64 builds, with lowest priority
 flags_common = [
 	# Accelerate rte_memcpy. Be sure to run unit test (memcpy_perf_autotest)
@@ -27,6 +25,7 @@ flags_common = [
 	['RTE_ARCH_ARM64', true],
 	['RTE_CACHE_LINE_SIZE', 128]
 ]
+native_machine_args = ['-march=native', '-mtune=native']
 
 ## Part numbers are specific to Arm implementers
 # implementer specific aarch64 flags have middle priority
@@ -48,7 +47,6 @@ implementer_generic = {
 }
 
 part_number_config_arm = {
-	'native': {'machine_args':  ['-march=native']},
 	'0xd03': {'machine_args':  ['-mcpu=cortex-a53']},
 	'0xd04': {'machine_args':  ['-mcpu=cortex-a35']},
 	'0xd07': {'machine_args':  ['-mcpu=cortex-a57']},
@@ -96,7 +94,6 @@ implementer_cavium = {
 		['RTE_MAX_NUMA_NODES', 2]
 	],
 	'part_number_config': {
-		'native': {'machine_args': ['-march=native']},
 		'0xa1': {
 			'machine_args': ['-mcpu=thunderxt88'],
 			'flags': flags_part_number_thunderx
@@ -146,8 +143,7 @@ implementer_ampere = {
 	],
 	'part_number_config': {
 		'0x0': {'machine_args':  ['-march=armv8-a+crc+crypto',
-					  '-mtune=emag']},
-		'native': {'machine_args':  ['-march=native']}
+					  '-mtune=emag']}
 	}
 }
 
@@ -196,26 +192,27 @@ if dpdk_conf.get('RTE_ARCH_32')
 	machine_args += '-mfpu=neon'
 else
 	# aarch64 build
-	if machine == 'generic' and not meson.is_cross_build()
-		# generic build
-		implementer_id = 'generic'
-		part_number = 'generic'
-	elif not meson.is_cross_build()
-		# native build
-		# The script returns ['Implementer', 'Variant', 'Architecture',
-		# 'Primary Part number', 'Revision']
-		detect_vendor = find_program(join_paths(
-				meson.current_source_dir(), 'armv8_machine.py'))
-		cmd = run_command(detect_vendor.path())
-		if cmd.returncode() == 0
-			cmd_output = cmd.stdout().to_lower().strip().split(' ')
-			implementer_id = cmd_output[0]
-			part_number = cmd_output[3]
+	use_native_machine_args = false
+	if not meson.is_cross_build()
+		if machine == 'generic'
+			# generic build
+			implementer_id = 'generic'
+			part_number = 'generic'
 		else
-			error('Error when getting Arm Implementer ID and part number.')
-		endif
-		if arm_force_native_march == true
-			part_number = 'native'
+			# native build
+			# The script returns ['Implementer', 'Variant', 'Architecture',
+			# 'Primary Part number', 'Revision']
+			detect_vendor = find_program(join_paths(
+					meson.current_source_dir(), 'armv8_machine.py'))
+			cmd = run_command(detect_vendor.path())
+			if cmd.returncode() == 0
+				cmd_output = cmd.stdout().to_lower().strip().split(' ')
+				implementer_id = cmd_output[0]
+				part_number = cmd_output[3]
+			else
+				error('Error when getting Arm Implementer ID and part number.')
+			endif
+			use_native_machine_args = true
 		endif
 	else
 		# cross build
@@ -251,7 +248,12 @@ else
 
 	# apply supported machine args
 	machine_args = [] # Clear previous machine args
-	foreach flag: part_number_config['machine_args']
+	if use_native_machine_args
+		candidate_machine_args = native_machine_args
+	else
+		candidate_machine_args = part_number_config['machine_args']
+	endif
+	foreach flag: candidate_machine_args
 		if cc.has_argument(flag)
 			machine_args += flag
 		endif
