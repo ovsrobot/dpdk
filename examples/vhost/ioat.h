@@ -24,7 +24,7 @@ struct dma_for_vhost {
 	uint16_t nr;
 };
 
-#ifdef RTE_ARCH_X86
+#ifdef RTE_RAW_IOAT
 int open_ioat(const char *value);
 #else
 static int open_ioat(const char *value __rte_unused)

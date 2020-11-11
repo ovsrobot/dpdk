@@ -5,7 +5,12 @@
 APP = vhost-switch
 
 # all source are stored in SRCS-y
+IOAT_PATH = $(shell pkg-config --cflags-only-I libdpdk | sed -e "s/^..//")/rte_ioat_rawdev.h
+ifeq ($(IOAT_PATH), $(wildcard $(IOAT_PATH)))
+SRCS-y := main.c virtio_net.c ioat.c
+else
 SRCS-y := main.c virtio_net.c
+endif
 
 # Build using pkg-config variables if possible
 ifneq ($(shell pkg-config --exists libdpdk && echo 0),0)
