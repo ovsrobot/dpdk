@@ -2247,7 +2247,7 @@ txgbe_dev_xstats_get_(struct rte_eth_dev *dev, uint64_t *values,
 
 	/* Extended stats from txgbe_hw_stats */
 	for (i = 0; i < limit; i++) {
-		uint32_t offset;
+		uint32_t offset = 0;
 
 		if (txgbe_get_offset_by_id(i, &offset)) {
 			PMD_INIT_LOG(WARNING, "id value %d isn't valid", i);
@@ -2270,7 +2270,7 @@ txgbe_dev_xstats_get_by_id(struct rte_eth_dev *dev, const uint64_t *ids,
 		return txgbe_dev_xstats_get_(dev, values, limit);
 
 	for (i = 0; i < limit; i++) {
-		uint32_t offset;
+		uint32_t offset = 0;
 
 		if (txgbe_get_offset_by_id(ids[i], &offset)) {
 			PMD_INIT_LOG(WARNING, "id value %d isn't valid", i);
