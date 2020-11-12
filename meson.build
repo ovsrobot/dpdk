@@ -58,9 +58,11 @@ subdir('doc')
 
 # build any examples explicitly requested - useful for developers - and
 # install any example code into the appropriate install path
+dpdk_examples_exclude = []
 subdir('examples')
 install_subdir('examples',
 	install_dir: get_option('datadir') + '/dpdk',
+	exclude_directories: dpdk_examples_exclude,
 	exclude_files: 'meson.build')
 
 # build kernel modules if enabled
