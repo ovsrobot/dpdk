@@ -4918,6 +4918,18 @@ i40e_flow_parse_rss_action(struct rte_eth_dev *dev,
 	rss = act->conf;
 
 	/**
+	 * Check if Queue number is specified
+	 * in argument else throw an error.
+	 */
+	if (!rss->queue || !rss->queue_num) {
+		rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ACTION,
+				act,
+			   "no valid queues");
+		return -rte_errno;
+	}
+
+	/**
 	 * RSS only supports forwarding,
 	 * check if the first not void action is RSS.
 	 */
