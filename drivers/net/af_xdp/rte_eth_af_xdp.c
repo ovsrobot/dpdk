@@ -349,7 +349,7 @@ af_xdp_rx_cp(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 	for (i = 0; i < rcvd; i++) {
 		const struct xdp_desc *desc;
-		uint64_t addr;
+		uintptr_t addr;
 		uint32_t len;
 		void *pkt;
 
@@ -402,7 +402,7 @@ pull_umem_cq(struct xsk_umem_info *umem, int size, struct xsk_ring_cons *cq)
 	n = xsk_ring_cons__peek(cq, size, &idx_cq);
 
 	for (i = 0; i < n; i++) {
-		uint64_t addr;
+		uintptr_t addr;
 		addr = *xsk_ring_cons__comp_addr(cq, idx_cq++);
 #if defined(XDP_UMEM_UNALIGNED_CHUNK_FLAG)
 		addr = xsk_umem__extract_addr(addr);
@@ -1005,7 +1005,7 @@ xsk_umem_info *xdp_umem_configure(struct pmd_internals *internals,
 	char ring_name[RTE_RING_NAMESIZE];
 	char mz_name[RTE_MEMZONE_NAMESIZE];
 	int ret;
-	uint64_t i;
+	uintptr_t i;
 
 	umem = rte_zmalloc_socket("umem", sizeof(*umem), 0, rte_socket_id());
 	if (umem == NULL) {
