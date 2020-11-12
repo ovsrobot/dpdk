@@ -2863,24 +2863,13 @@ flow_dv_encap_decap_resource_register
 	struct mlx5_priv *priv = dev->data->dev_private;
 	struct mlx5_dev_ctx_shared *sh = priv->sh;
 	struct mlx5_hlist_entry *entry;
-	union mlx5_flow_encap_decap_key encap_decap_key = {
-		{
-			.ft_type = resource->ft_type,
-			.refmt_type = resource->reformat_type,
-			.buf_size = resource->size,
-			.table_level = !!dev_flow->dv.group,
-			.cksum = 0,
-		}
-	};
 	struct mlx5_flow_cb_ctx ctx = {
 		.error = error,
 		.data = resource,
 	};
 
 	resource->flags = dev_flow->dv.group ? 0 : 1;
-	encap_decap_key.cksum = __rte_raw_cksum(resource->buf,
-						resource->size, 0);
-	resource->entry.key = encap_decap_key.v64;
+	resource->entry.key = __rte_raw_cksum(resource->buf, resource->size, 0);
 	entry = mlx5_hlist_register(sh->encaps_decaps, resource->entry.key,
 				    &ctx);
 	if (!entry)
