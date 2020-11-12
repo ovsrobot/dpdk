@@ -28,6 +28,11 @@ CFLAGS += -O3 $(shell $(PKGCONF) --cflags libdpdk)
 LDFLAGS_SHARED = $(shell $(PKGCONF) --libs libdpdk)
 LDFLAGS_STATIC = $(shell $(PKGCONF) --static --libs libdpdk)
 
+HAS_RAW_IOAT=$(shell echo RTE_RAW_IOAT | $(CPP) $(CFLAGS) -P - | tail -1)
+ifeq ($(HAS_RAW_IOAT), 1)
+SRCS-y += ioat.c
+endif
+
 CFLAGS += -DALLOW_EXPERIMENTAL_API
 
 build/$(APP)-shared: $(SRCS-y) Makefile $(PC_FILE) | build
