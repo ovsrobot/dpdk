@@ -1,12 +1,16 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2020 Intel Corporation
  */
+#ifdef RTE_RAW_IOAT
 #include <rte_rawdev.h>
 #include <rte_ioat_rawdev.h>
+#endif /* RTE_RAW_IOAT */
 #include <sys/uio.h>
 
 #include "ioat.h"
 #include "main.h"
+
+#ifdef RTE_RAW_IOAT
 
 struct dma_for_vhost dma_bind[MAX_VHOST_DEVICE];
 
@@ -199,3 +203,5 @@ ioat_check_completed_copies_cb(int vid, uint16_t queue_id,
 	/* Opaque data is not supported */
 	return -1;
 }
+
+#endif /* RTE_RAW_IOAT */
