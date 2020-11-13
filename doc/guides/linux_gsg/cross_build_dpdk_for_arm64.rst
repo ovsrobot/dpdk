@@ -143,3 +143,7 @@ There are other options you may specify in a cross file to tailor the build::
    Supported extra configuration
       max_numa_nodes = n  # will set RTE_MAX_NUMA_NODES
       max_lcores = n      # will set RTE_MAX_LCORE
+
+      disabled_drivers = ['bus/dpaa', 'crypto']  # add disabled drivers
+         # valid values are directories (optionally with their subdirs)
+         # in the drivers directory
