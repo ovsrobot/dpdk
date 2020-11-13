@@ -251,6 +251,21 @@ compile_time_cpuflags = []
 subdir(arch_subdir)
 dpdk_conf.set('RTE_COMPILE_TIME_CPUFLAGS', ','.join(compile_time_cpuflags))
 
+# apply cross-specific options
+if meson.is_cross_build()
+	# configure RTE_MAX_LCORE and RTE_MAX_NUMA_NODES from cross file
+	cross_max_lcores = meson.get_cross_property('max_lcores', 0)
+	if cross_max_lcores != 0
+		message('Setting RTE_MAX_LCORE from cross file')
+		dpdk_conf.set('RTE_MAX_LCORE', cross_max_lcores)
+	endif
+	cross_max_numa_nodes = meson.get_cross_property('max_numa_nodes', 0)
+	if cross_max_numa_nodes != 0
+		message('Setting RTE_MAX_NUMA_NODES from cross file')
+		dpdk_conf.set('RTE_MAX_NUMA_NODES', cross_max_numa_nodes)
+	endif
+endif
+
 max_lcores = get_option('max_lcores')
 if max_lcores > 0
 	# Overwrite the default value from arch_subdir with user input
