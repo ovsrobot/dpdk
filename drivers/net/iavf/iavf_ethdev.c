@@ -1417,8 +1417,10 @@ iavf_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
 }
 
 static int
-iavf_check_vf_reset_done(struct iavf_hw *hw)
+iavf_check_vf_reset_done(struct rte_eth_dev *dev)
 {
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	int i, reset;
 
 	for (i = 0; i < IAVF_RESET_WAIT_CNT; i++) {
@@ -1434,6 +1436,7 @@ iavf_check_vf_reset_done(struct iavf_hw *hw)
 	if (i >= IAVF_RESET_WAIT_CNT)
 		return -1;
 
+	vf->vf_reset = false;
 	return 0;
 }
 
@@ -1781,6 +1784,36 @@ iavf_init_proto_xtr(struct rte_eth_dev *dev)
 }
 
 static int
+iavf_reset_vf(struct rte_eth_dev *dev)
+{
+	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	int ret;
+
+	if (iavf_vf_reset(hw) != IAVF_SUCCESS) {
+		PMD_INIT_LOG(ERR, "Reset VF NIC failed");
+		return -1;
+	}
+	/**
+	 * After issuing vf reset command to pf, pf won't necessarily
+	 * reset vf, it depends on what state it exactly is. If it's not
+	 * initialized yet, it won't have vf reset since it's in a certain
+	 * state. If not, it will try to reset. Even vf is reset, pf will
+	 * set I40E_VFGEN_RSTAT to COMPLETE first, then wait 10ms and set
+	 * it to ACTIVE. In this duration, vf may not catch the moment that
+	 * COMPLETE is set. So, for vf, we'll try to wait a long time.
+	 */
+	rte_delay_ms(200);
+
+	ret = iavf_check_vf_reset_done(dev);
+	if (ret) {
+		PMD_INIT_LOG(ERR, "VF is still resetting");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int
 iavf_init_vf(struct rte_eth_dev *dev)
 {
 	int err, bufsz;
@@ -1801,7 +1834,7 @@ iavf_init_vf(struct rte_eth_dev *dev)
 		goto err;
 	}
 
-	err = iavf_check_vf_reset_done(hw);
+	err = iavf_check_vf_reset_done(dev);
 	if (err) {
 		PMD_INIT_LOG(ERR, "VF is still resetting");
 		goto err;
@@ -1811,6 +1844,24 @@ iavf_init_vf(struct rte_eth_dev *dev)
 	err = iavf_init_adminq(hw);
 	if (err) {
 		PMD_INIT_LOG(ERR, "init_adminq failed: %d", err);
+		goto err;
+	}
+
+	/* Reset VF and wait until it's complete */
+	if (iavf_reset_vf(dev)) {
+		PMD_INIT_LOG(ERR, "reset NIC failed");
+		goto err_aq;
+	}
+
+	/* VF reset, shutdown admin queue and initialize again */
+	if (iavf_shutdown_adminq(hw) != IAVF_SUCCESS) {
+		PMD_INIT_LOG(ERR, "iavf_shutdown_adminq failed");
+		goto err;
+	}
+
+	iavf_init_adminq_parameter(hw);
+	if (iavf_init_adminq(hw) != IAVF_SUCCESS) {
+		PMD_INIT_LOG(ERR, "init_adminq failed");
 		goto err;
 	}
 
@@ -2050,7 +2101,7 @@ iavf_dev_close(struct rte_eth_dev *dev)
 
 	iavf_flow_flush(dev, NULL);
 	iavf_flow_uninit(adapter);
-
+	iavf_reset_vf(dev);
 	/*
 	 * disable promiscuous mode before reset vf
 	 * it is a workaround solution when work with kernel driver
