@@ -55,9 +55,18 @@ endif
 if get_option('examples').to_lower() == 'all'
 	examples = all_examples
 	allow_skips = true # don't flag an error if we can't build an app
+	install_buildable = false
+elif get_option('examples').to_lower() == 'buildable'
+	examples = all_examples
+	allow_skips = true
+	install_buildable = true # only install examples that can be built
+	# FIXME: vm_power_manager relies on an internal header and can't build
+	# outside dpdk tree.
+	dpdk_examples_exclude += ['vm_power_manager']
 else
 	examples = get_option('examples').split(',')
 	allow_skips = false # error out if we can't build a requested app
+	install_buildable = false
 endif
 default_cflags = machine_args
 if cc.has_argument('-Wno-format-truncation')
@@ -81,10 +90,15 @@ foreach example: examples
 		foreach d:deps
 			var_name = get_option('default_library') + '_rte_' + d
 			if not is_variable(var_name)
-				error('Missing dependency "@0@" for example "@1@"'.format(d, name))
+				message('Missing dependency "@0@" for example "@1@"'.format(d, name))
+				build = false
+			else
+				dep_objs += [get_variable(var_name)]
 			endif
-			dep_objs += [get_variable(var_name)]
 		endforeach
+	endif
+
+	if build
 		if allow_experimental_apis
 			cflags += '-DALLOW_EXPERIMENTAL_API'
 		endif
@@ -98,5 +112,11 @@ foreach example: examples
 		error('Cannot build requested example "' + name + '"')
 	else
 		message('Skipping example "' + name + '"')
+		if install_buildable
+			# exclude based on top-level directory only
+			dir = example.split('/')[0]
+			dpdk_examples_exclude += dir
+			message('Excluding example directory "@0@" from install'.format(dir))
+		endif
 	endif
 endforeach

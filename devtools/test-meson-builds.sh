@@ -213,7 +213,8 @@ default_machine='nehalem'
 if ! check_cc_flags "-march=$default_machine" ; then
 	default_machine='corei7'
 fi
-build build-x86-default cc -Dlibdir=lib -Dmachine=$default_machine $use_shared
+build build-x86-default cc -Dlibdir=lib -Dmachine=$default_machine \
+	-Dexamples=buildable $use_shared
 
 # 32-bit with default compiler
 if check_cc_flags '-m32' ; then
@@ -266,10 +267,16 @@ pc_file=$(find $DESTDIR -name libdpdk.pc)
 export PKG_CONFIG_PATH=$(dirname $pc_file):$PKG_CONFIG_PATH
 libdir=$(dirname $(find $DESTDIR -name librte_eal.so))
 export LD_LIBRARY_PATH=$libdir:$LD_LIBRARY_PATH
-examples=${DPDK_BUILD_TEST_EXAMPLES:-"cmdline helloworld l2fwd l3fwd skeleton timer"}
 # if pkg-config defines the necessary flags, test building some examples
 if pkg-config --define-prefix libdpdk >/dev/null 2>&1; then
 	export PKGCONF="pkg-config --define-prefix"
+	examples=${DPDK_BUILD_TEST_EXAMPLES:-}
+	if [ -z "$examples" ]; then
+		for mk in $DESTDIR/usr/local/share/dpdk/examples/*/Makefile; do
+			name=$(basename $(dirname $mk))
+			examples="$examples $name"
+		done
+	fi
 	for example in $examples; do
 		echo "## Building $example"
 		$MAKE -C $DESTDIR/usr/local/share/dpdk/examples/$example \
