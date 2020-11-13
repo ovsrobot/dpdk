@@ -100,54 +100,32 @@ command::
 	meson arm64-build --cross-file config/arm/arm64_armv8_linux_gcc
 	ninja -C arm64-build
 
-Supported cross-compilation targets
------------------------------------
+Building for an aarch64 SoC on an aarch64 build machine
+-------------------------------------------------------
 
-If you wish to build for a target which is not among the current cross-files,
-you may use various combinations of implementer/part number::
+If you wish to build on an aarch64 build machine for a different aarch64 SoC,
+you don't need a separate cross toolchain, just a different set of
+configuration options. To build for an aarch64 SoC, use the -Darm_soc meson
+option::
 
-   Supported implementers:
-      'generic': Generic armv8
-      '0x41':    Arm
-      '0x43':    Cavium
-      '0x50':    Ampere Computing
-      '0x56':    Marvell ARMADA
-      'dpaa':    NXP DPAA
+   meson soc_build -Darm_soc=<target_soc>
 
-   Supported part_numbers for generic:
-      'generic': valid for all armv8-a architectures (unoptimized portable build)
+Substitute <target_soc> with one of the supported SoCs::
 
-   Supported part_numbers for 0x41, 0x56, dpaa:
-      '0xd03':   cortex-a53
-      '0xd04':   cortex-a35
-      '0xd09':   cortex-a73
-      '0xd0a':   cortex-a75
-      '0xd0b':   cortex-a76
-      '0xd0c':   neoverse-n1
+   generic:     Generic un-optimized build for all aarch64 machines.
+   armada:      Marvell ARMADA
+   bluefield:   NVIDIA BlueField
+   dpaa:        NXP DPAA
+   emag:        Ampere eMAG
+   graviton2:   AWS Graviton2
+   n1sdp:       Arm Neoverse N1SDP
+   octeontx2:   Marvell OCTEON TX2
+   stingray:    Broadcom Stingray
+   thunderx2:   Marvell ThunderX2 T99
+   thunderxt88: Marvell ThunderX T88
 
-   Supported part_numbers for 0x43:
-      '0xa1':    thunderxt88
-      '0xa2':    thunderxt81
-      '0xa3':    thunderxt83
-      '0xaf':    thunderx2t99
-      '0xb2':    octeontx2
+These SoCs are also used in cross files, e.g.::
 
-   Supported part_numbers for 0x50:
-      '0x0':     emag
-
-Other cross file options
-------------------------
-
-There are other options you may specify in a cross file to tailor the build::
-
-   Supported extra configuration
-      max_numa_nodes = n  # will set RTE_MAX_NUMA_NODES
-      max_lcores = n      # will set RTE_MAX_LCORE
-
-      disabled_drivers = ['bus/dpaa', 'crypto']  # add disabled drivers
-         # valid values are directories (optionally with their subdirs)
-         # in the drivers directory
-
-      numa = false        # set to false to force building for a non-NUMA system
-         # if not set or set to true, the build system will build for a NUMA
-         # system only if libnuma is installed
+   [properties]
+   # Generate binaries that are portable across all Armv8 machines
+   soc = 'generic'
