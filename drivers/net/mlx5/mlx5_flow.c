@@ -715,9 +715,9 @@ tunnel_element_release_miss(struct rte_eth_dev *dev, void *x)
 }
 
 static int
-mlx5_flow_item_release(struct rte_eth_dev *dev,
-		       struct rte_flow_item *pmd_items,
-		       uint32_t num_items, struct rte_flow_error *err)
+mlx5_flow_tunnel_item_release(struct rte_eth_dev *dev,
+			      struct rte_flow_item *pmd_items,
+			      uint32_t num_items, struct rte_flow_error *err)
 {
 	struct tunnel_db_element_release_ctx ctx = {
 		.items = pmd_items,
@@ -734,9 +734,10 @@ mlx5_flow_item_release(struct rte_eth_dev *dev,
 }
 
 static int
-mlx5_flow_action_release(struct rte_eth_dev *dev,
-			 struct rte_flow_action *pmd_actions,
-			 uint32_t num_actions, struct rte_flow_error *err)
+mlx5_flow_tunnel_action_release(struct rte_eth_dev *dev,
+				struct rte_flow_action *pmd_actions,
+				uint32_t num_actions,
+				struct rte_flow_error *err)
 {
 	struct tunnel_db_element_release_ctx ctx = {
 		.items = NULL,
@@ -800,8 +801,8 @@ static const struct rte_flow_ops mlx5_flow_ops = {
 	.shared_action_query = mlx5_shared_action_query,
 	.tunnel_decap_set = mlx5_flow_tunnel_decap_set,
 	.tunnel_match = mlx5_flow_tunnel_match,
-	.tunnel_action_decap_release = mlx5_flow_action_release,
-	.tunnel_item_release = mlx5_flow_item_release,
+	.tunnel_action_decap_release = mlx5_flow_tunnel_action_release,
+	.tunnel_item_release = mlx5_flow_tunnel_item_release,
 	.get_restore_info = mlx5_flow_tunnel_get_restore_info,
 };
 
