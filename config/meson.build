@@ -70,13 +70,14 @@ else
 	machine = get_option('machine')
 endif
 
-# machine type 'default' is special, it defaults to the per arch agreed common
-# minimal baseline needed for DPDK.
+# machine type 'generic' is special, it defaults to the per arch agreed common
+# minimal baseline needed for DPDK. Machine type 'default' is also supported
+# with the same meaning for backwards compatibility.
 # That might not be the most optimized, but the most portable version while
 # still being able to support the CPU features required for DPDK.
 # This can be bumped up by the DPDK project, but it can never be an
 # invariant like 'native'
-if machine == 'default'
+if machine == 'default' or machine == 'generic'
 	if host_machine.cpu_family().startswith('x86')
 		# matches the old pre-meson build systems default
 		machine = 'corei7'
@@ -84,7 +85,7 @@ if machine == 'default'
 		machine = 'armv7-a'
 	elif host_machine.cpu_family().startswith('aarch')
 		# arm64 manages defaults in config/arm/meson.build
-		machine = 'default'
+		machine = 'generic'
 	elif host_machine.cpu_family().startswith('ppc')
 		machine = 'power8'
 	endif
