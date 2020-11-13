@@ -18,8 +18,12 @@ subdirs = [
 	'baseband', # depends on common and bus.
 ]
 
-disabled_drivers = run_command(list_dir_globs, get_option('disable_drivers'),
+disabled_drivers += run_command(list_dir_globs, get_option('disable_drivers'),
 		).stdout().split()
+
+if meson.is_cross_build()
+	disabled_drivers += meson.get_cross_property('disabled_drivers', [])
+endif
 
 default_cflags = machine_args
 default_cflags += ['-DALLOW_EXPERIMENTAL_API']
