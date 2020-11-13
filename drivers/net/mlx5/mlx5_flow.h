@@ -959,18 +959,6 @@ struct tunnel_tbl_entry {
 	uint32_t flow_table;
 };
 
-static inline uint32_t
-tunnel_id_to_flow_tbl(uint32_t id)
-{
-	return id | (1u << 16);
-}
-
-static inline uint32_t
-tunnel_flow_tbl_to_id(uint32_t flow_tbl)
-{
-	return flow_tbl & ~(1u << 16);
-}
-
 union tunnel_tbl_key {
 	uint64_t val;
 	struct {
@@ -989,8 +977,13 @@ mlx5_tunnel_hub(struct rte_eth_dev *dev)
 static inline bool
 is_tunnel_offload_active(struct rte_eth_dev *dev)
 {
+#ifdef HAVE_IBV_FLOW_DV_SUPPORT
 	struct mlx5_priv *priv = dev->data->dev_private;
 	return !!priv->config.dv_miss_info;
+#else
+	RTE_SET_USED(dev);
+	return false;
+#endif
 }
 
 static inline bool
