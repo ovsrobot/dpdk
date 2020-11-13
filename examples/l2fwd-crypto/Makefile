@@ -24,7 +24,13 @@ PKGCONF ?= pkg-config
 PC_FILE := $(shell $(PKGCONF) --path libdpdk 2>/dev/null)
 CFLAGS += -O3 $(shell $(PKGCONF) --cflags libdpdk)
 LDFLAGS_SHARED = $(shell $(PKGCONF) --libs libdpdk)
+NEED_CRYPTO_SCHEDULER = $(shell echo RTE_CRYPTO_SCHEDULER | $(CPP) $(CFLAGS) -P - | tail -1)
+ifeq ($(NEED_CRYPTO_SCHEDULER), 1)
+LDFLAGS_SHARED += -lrte_crypto_scheduler
+endif
 LDFLAGS_STATIC = $(shell $(PKGCONF) --static --libs libdpdk)
+
+CFLAGS += -DALLOW_EXPERIMENTAL_API
 
 build/$(APP)-shared: $(SRCS-y) Makefile $(PC_FILE) | build
 	$(CC) $(CFLAGS) $(SRCS-y) -o $@ $(LDFLAGS) $(LDFLAGS_SHARED)
