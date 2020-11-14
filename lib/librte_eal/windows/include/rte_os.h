@@ -90,6 +90,7 @@ eal_strerror(int code)
 }
 
 #define strerror eal_strerror
+#define ETOOMANYREFS WSAETOOMANYREFS
 
 #endif /* RTE_TOOLCHAIN_GCC */
 
