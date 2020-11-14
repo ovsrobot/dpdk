@@ -12,15 +12,20 @@
 #include <rte_vxlan.h>
 #include <rte_ethdev.h>
 #include <rte_flow.h>
+#include <rte_log.h>
 
 #include "testpmd.h"
 
-static inline void
-print_ether_addr(const char *what, const struct rte_ether_addr *eth_addr)
+#define MAX_STRING_LEN 8192
+
+static inline int
+print_ether_addr(const char *what, const struct rte_ether_addr *eth_addr,
+		 char print_buf[], int buf_size)
 {
 	char buf[RTE_ETHER_ADDR_FMT_SIZE];
+
 	rte_ether_format_addr(buf, RTE_ETHER_ADDR_FMT_SIZE, eth_addr);
-	printf("%s%s", what, buf);
+	return snprintf(print_buf, buf_size, "%s%s", what, buf);
 }
 
 static inline bool
@@ -74,13 +79,18 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 	uint32_t vx_vni;
 	const char *reason;
 	int dynf_index;
+	int buf_size = MAX_STRING_LEN;
+	char print_buf[buf_size];
+	int cur_len = 0;
 
+	memset(print_buf, 0, sizeof(print_buf));
 	if (!nb_pkts)
 		return;
-	printf("port %u/queue %u: %s %u packets\n",
-		port_id, queue,
-	       is_rx ? "received" : "sent",
-	       (unsigned int) nb_pkts);
+	cur_len += snprintf(print_buf + cur_len, buf_size - cur_len,
+			    "port %u/queue %u: %s %u packets\n",
+			    port_id, queue,
+			    is_rx ? "received" : "sent",
+			    (unsigned int) nb_pkts);
 	for (i = 0; i < nb_pkts; i++) {
 		int ret;
 		struct rte_flow_error error;
@@ -93,95 +103,269 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 		is_encapsulation = RTE_ETH_IS_TUNNEL_PKT(packet_type);
 		ret = rte_flow_get_restore_info(port_id, mb, &info, &error);
 		if (!ret) {
-			printf("restore info:");
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    "restore info:");
+			if (cur_len >= buf_size)
+				goto error;
 			if (info.flags & RTE_FLOW_RESTORE_INFO_TUNNEL) {
 				struct port_flow_tunnel *port_tunnel;
 
 				port_tunnel = port_flow_locate_tunnel
 					      (port_id, &info.tunnel);
-				printf(" - tunnel");
-				if (port_tunnel)
-					printf(" #%u", port_tunnel->id);
-				else
-					printf(" %s", "-none-");
-				printf(" type %s",
-					port_flow_tunnel_type(&info.tunnel));
+				cur_len += snprintf(print_buf + cur_len,
+						    buf_size - cur_len,
+						    " - tunnel");
+				if (cur_len >= buf_size)
+					goto error;
+				if (port_tunnel) {
+					cur_len += snprintf(print_buf + cur_len,
+							    buf_size-cur_len,
+							    " #%u",
+							    port_tunnel->id);
+					if (cur_len >= buf_size)
+						goto error;
+				} else {
+					cur_len += snprintf(print_buf + cur_len,
+							    buf_size - cur_len,
+							    " %s",
+							    "-none-");
+					if (cur_len >= buf_size)
+						goto error;
+				}
+				cur_len += snprintf(print_buf + cur_len,
+						    buf_size - cur_len,
+						    " type %s",
+						    port_flow_tunnel_type
+						    (&info.tunnel));
+				if (cur_len >= buf_size)
+					goto error;
 			} else {
-				printf(" - no tunnel info");
+				cur_len += snprintf(print_buf + cur_len,
+						    buf_size - cur_len,
+						    " - no tunnel info");
+				if (cur_len >= buf_size)
+					goto error;
 			}
-			if (info.flags & RTE_FLOW_RESTORE_INFO_ENCAPSULATED)
-				printf(" - outer header present");
-			else
-				printf(" - no outer header");
-			if (info.flags & RTE_FLOW_RESTORE_INFO_GROUP_ID)
-				printf(" - miss group %u", info.group_id);
-			else
-				printf(" - no miss group");
-			printf("\n");
+			if (info.flags & RTE_FLOW_RESTORE_INFO_ENCAPSULATED) {
+				cur_len += snprintf(print_buf + cur_len,
+						    buf_size - cur_len,
+						    " - outer header present");
+				if (cur_len >= buf_size)
+					goto error;
+			} else {
+				cur_len += snprintf(print_buf + cur_len,
+						    buf_size - cur_len,
+						    " - no outer header");
+				if (cur_len >= buf_size)
+					goto error;
+			}
+			if (info.flags & RTE_FLOW_RESTORE_INFO_GROUP_ID) {
+				cur_len += snprintf(print_buf + cur_len,
+						    buf_size - cur_len,
+						    " - miss group %u",
+						    info.group_id);
+				if (cur_len >= buf_size)
+					goto error;
+			} else {
+				cur_len += snprintf(print_buf + cur_len,
+						    buf_size - cur_len,
+						    " - no miss group");
+				if (cur_len >= buf_size)
+					goto error;
+			}
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len, "\n");
+			if (cur_len >= buf_size)
+				goto error;
 		}
-		print_ether_addr("  src=", &eth_hdr->s_addr);
-		print_ether_addr(" - dst=", &eth_hdr->d_addr);
-		printf(" - type=0x%04x - length=%u - nb_segs=%d",
-		       eth_type, (unsigned int) mb->pkt_len,
-		       (int)mb->nb_segs);
+		cur_len += print_ether_addr("  src=", &eth_hdr->s_addr,
+					    print_buf + cur_len,
+					    buf_size);
+		if (cur_len >= buf_size)
+			goto error;
+		cur_len += print_ether_addr(" - dst=", &eth_hdr->d_addr,
+					    print_buf + cur_len,
+					    buf_size);
+		if (cur_len >= buf_size)
+			goto error;
+		cur_len += snprintf(print_buf + cur_len, buf_size - cur_len,
+				    " - type=0x%04x - length=%u - nb_segs=%d",
+				    eth_type, (unsigned int) mb->pkt_len,
+				    (int)mb->nb_segs);
+		if (cur_len >= buf_size)
+			goto error;
 		ol_flags = mb->ol_flags;
 		if (ol_flags & PKT_RX_RSS_HASH) {
-			printf(" - RSS hash=0x%x", (unsigned int) mb->hash.rss);
-			printf(" - RSS queue=0x%x", (unsigned int) queue);
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - RSS hash=0x%x",
+					    (unsigned int) mb->hash.rss);
+			if (cur_len >= buf_size)
+				goto error;
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - RSS queue=0x%x",
+					    (unsigned int) queue);
+			if (cur_len >= buf_size)
+				goto error;
 		}
 		if (ol_flags & PKT_RX_FDIR) {
-			printf(" - FDIR matched ");
-			if (ol_flags & PKT_RX_FDIR_ID)
-				printf("ID=0x%x",
-				       mb->hash.fdir.hi);
-			else if (ol_flags & PKT_RX_FDIR_FLX)
-				printf("flex bytes=0x%08x %08x",
-				       mb->hash.fdir.hi, mb->hash.fdir.lo);
-			else
-				printf("hash=0x%x ID=0x%x ",
-				       mb->hash.fdir.hash, mb->hash.fdir.id);
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - FDIR matched ");
+			if (cur_len >= buf_size)
+				goto error;
+			if (ol_flags & PKT_RX_FDIR_ID) {
+				cur_len += snprintf(print_buf + cur_len,
+						    buf_size - cur_len,
+						    "ID=0x%x",
+						    mb->hash.fdir.hi);
+				if (cur_len >= buf_size)
+					goto error;
+			} else if (ol_flags & PKT_RX_FDIR_FLX) {
+				cur_len += snprintf(print_buf + cur_len,
+						    buf_size - cur_len,
+						    "flex bytes=0x%08x %08x",
+						    mb->hash.fdir.hi,
+						    mb->hash.fdir.lo);
+				if (cur_len >= buf_size)
+					goto error;
+			} else {
+				cur_len += snprintf(print_buf + cur_len,
+						    buf_size - cur_len,
+						    "hash=0x%x ID=0x%x ",
+						    mb->hash.fdir.hash,
+						    mb->hash.fdir.id);
+				if (cur_len >= buf_size)
+					goto error;
+			}
 		}
-		if (is_timestamp_enabled(mb))
-			printf(" - timestamp %"PRIu64" ", get_timestamp(mb));
-		if (ol_flags & PKT_RX_QINQ)
-			printf(" - QinQ VLAN tci=0x%x, VLAN tci outer=0x%x",
-			       mb->vlan_tci, mb->vlan_tci_outer);
-		else if (ol_flags & PKT_RX_VLAN)
-			printf(" - VLAN tci=0x%x", mb->vlan_tci);
-		if (!is_rx && (ol_flags & PKT_TX_DYNF_METADATA))
-			printf(" - Tx metadata: 0x%x",
-			       *RTE_FLOW_DYNF_METADATA(mb));
-		if (is_rx && (ol_flags & PKT_RX_DYNF_METADATA))
-			printf(" - Rx metadata: 0x%x",
-			       *RTE_FLOW_DYNF_METADATA(mb));
+		if (is_timestamp_enabled(mb)) {
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - timestamp %"PRIu64" ",
+					    get_timestamp(mb));
+			if (cur_len >= buf_size)
+				goto error;
+		}
+		if (ol_flags & PKT_RX_QINQ) {
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - QinQ VLAN tci=0x%x, "
+					    "VLAN tci outer=0x%x",
+					    mb->vlan_tci,
+					    mb->vlan_tci_outer);
+			if (cur_len >= buf_size)
+				goto error;
+		} else if (ol_flags & PKT_RX_VLAN) {
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - VLAN tci=0x%x",
+					    mb->vlan_tci);
+			if (cur_len >= buf_size)
+				goto error;
+		}
+		if (!is_rx && (ol_flags & PKT_TX_DYNF_METADATA)) {
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - Tx metadata: 0x%x",
+					    *RTE_FLOW_DYNF_METADATA(mb));
+			if (cur_len >= buf_size)
+				goto error;
+		}
+		if (is_rx && (ol_flags & PKT_RX_DYNF_METADATA)) {
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - Rx metadata: 0x%x",
+					    *RTE_FLOW_DYNF_METADATA(mb));
+			if (cur_len >= buf_size)
+				goto error;
+		}
 		for (dynf_index = 0; dynf_index < 64; dynf_index++) {
-			if (dynf_names[dynf_index][0] != '\0')
-				printf(" - dynf %s: %d",
-				       dynf_names[dynf_index],
-				       !!(ol_flags & (1UL << dynf_index)));
+			if (dynf_names[dynf_index][0] != '\0') {
+				cur_len += snprintf(print_buf + cur_len,
+						    buf_size - cur_len,
+						    " - dynf %s: %d",
+						    dynf_names[dynf_index],
+						    !!(ol_flags &
+						    (1UL << dynf_index)));
+				if (cur_len >= buf_size)
+					goto error;
+			}
 		}
 		if (mb->packet_type) {
 			rte_get_ptype_name(mb->packet_type, buf, sizeof(buf));
-			printf(" - hw ptype: %s", buf);
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - hw ptype: %s", buf);
+			if (cur_len >= buf_size)
+				goto error;
 		}
 		sw_packet_type = rte_net_get_ptype(mb, &hdr_lens,
 					RTE_PTYPE_ALL_MASK);
 		rte_get_ptype_name(sw_packet_type, buf, sizeof(buf));
-		printf(" - sw ptype: %s", buf);
-		if (sw_packet_type & RTE_PTYPE_L2_MASK)
-			printf(" - l2_len=%d", hdr_lens.l2_len);
-		if (sw_packet_type & RTE_PTYPE_L3_MASK)
-			printf(" - l3_len=%d", hdr_lens.l3_len);
-		if (sw_packet_type & RTE_PTYPE_L4_MASK)
-			printf(" - l4_len=%d", hdr_lens.l4_len);
-		if (sw_packet_type & RTE_PTYPE_TUNNEL_MASK)
-			printf(" - tunnel_len=%d", hdr_lens.tunnel_len);
-		if (sw_packet_type & RTE_PTYPE_INNER_L2_MASK)
-			printf(" - inner_l2_len=%d", hdr_lens.inner_l2_len);
-		if (sw_packet_type & RTE_PTYPE_INNER_L3_MASK)
-			printf(" - inner_l3_len=%d", hdr_lens.inner_l3_len);
-		if (sw_packet_type & RTE_PTYPE_INNER_L4_MASK)
-			printf(" - inner_l4_len=%d", hdr_lens.inner_l4_len);
+		cur_len += snprintf(print_buf + cur_len,
+				    buf_size - cur_len,
+				    " - sw ptype: %s", buf);
+		if (cur_len >= buf_size)
+			goto error;
+		if (sw_packet_type & RTE_PTYPE_L2_MASK) {
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - l2_len=%d",
+					    hdr_lens.l2_len);
+			if (cur_len >= buf_size)
+				goto error;
+		}
+		if (sw_packet_type & RTE_PTYPE_L3_MASK) {
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - l3_len=%d",
+					    hdr_lens.l3_len);
+			if (cur_len >= buf_size)
+				goto error;
+		}
+		if (sw_packet_type & RTE_PTYPE_L4_MASK) {
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - l4_len=%d",
+					    hdr_lens.l4_len);
+			if (cur_len >= buf_size)
+				goto error;
+		}
+		if (sw_packet_type & RTE_PTYPE_TUNNEL_MASK) {
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - tunnel_len=%d",
+					    hdr_lens.tunnel_len);
+			if (cur_len >= buf_size)
+				goto error;
+		}
+		if (sw_packet_type & RTE_PTYPE_INNER_L2_MASK) {
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - inner_l2_len=%d",
+					    hdr_lens.inner_l2_len);
+			if (cur_len >= buf_size)
+				goto error;
+		}
+		if (sw_packet_type & RTE_PTYPE_INNER_L3_MASK) {
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - inner_l3_len=%d",
+					    hdr_lens.inner_l3_len);
+			if (cur_len >= buf_size)
+				goto error;
+		}
+		if (sw_packet_type & RTE_PTYPE_INNER_L4_MASK) {
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    " - inner_l4_len=%d",
+					    hdr_lens.inner_l4_len);
+			if (cur_len >= buf_size)
+				goto error;
+		}
 		if (is_encapsulation) {
 			struct rte_ipv4_hdr *ipv4_hdr;
 			struct rte_ipv6_hdr *ipv6_hdr;
@@ -218,19 +402,47 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 				l2_len + l3_len + l4_len);
 				udp_port = RTE_BE_TO_CPU_16(udp_hdr->dst_port);
 				vx_vni = rte_be_to_cpu_32(vxlan_hdr->vx_vni);
-				printf(" - VXLAN packet: packet type =%d, "
-				       "Destination UDP port =%d, VNI = %d",
-				       packet_type, udp_port, vx_vni >> 8);
+				cur_len += snprintf(print_buf + cur_len,
+						    buf_size - cur_len,
+						    " - VXLAN packet: packet "
+						    "type =%d, Destination UDP "
+						    "port =%d, VNI = %d",
+						    packet_type, udp_port,
+						    vx_vni >> 8);
+				if (cur_len >= buf_size)
+					goto error;
 			}
 		}
-		printf(" - %s queue=0x%x", is_rx ? "Receive" : "Send",
-			(unsigned int) queue);
-		printf("\n");
+		cur_len += snprintf(print_buf + cur_len,
+				    buf_size - cur_len,
+				    " - %s queue=0x%x",
+				    is_rx ? "Receive" : "Send",
+				    (unsigned int) queue);
+		if (cur_len >= buf_size)
+			goto error;
+		cur_len += snprintf(print_buf + cur_len,
+				    buf_size - cur_len, "\n");
+		if (cur_len >= buf_size)
+			goto error;
 		rte_get_rx_ol_flag_list(mb->ol_flags, buf, sizeof(buf));
-		printf("  ol_flags: %s\n", buf);
+		cur_len += snprintf(print_buf + cur_len,
+				    buf_size - cur_len,
+				    "  ol_flags: %s\n", buf);
+		if (cur_len >= buf_size)
+			goto error;
 		if (rte_mbuf_check(mb, 1, &reason) < 0)
-			printf("INVALID mbuf: %s\n", reason);
+			cur_len += snprintf(print_buf + cur_len,
+					    buf_size - cur_len,
+					    "INVALID mbuf: %s\n",
+					    reason);
+		if (cur_len >= buf_size)
+			goto error;
+		TESTPMD_LOG(INFO, "%s", print_buf);
+		cur_len = 0;
 	}
+	return;
+error:
+	TESTPMD_LOG(INFO, "%s the output was truncated ...\n", print_buf);
 }
 
 uint16_t
