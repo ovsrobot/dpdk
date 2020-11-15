@@ -812,8 +812,7 @@ static const enum index next_vc_attr[] = {
 	ZERO,
 };
 
-static const enum index tunnel_create_attr[] = {
-	TUNNEL_CREATE,
+static const enum index tunnel_create_type_attr[] = {
 	TUNNEL_CREATE_TYPE,
 	END,
 	ZERO,
@@ -2009,14 +2008,15 @@ static const struct token token_list[] = {
 	[TUNNEL_CREATE] = {
 		.name = "create",
 		.help = "create new tunnel object",
-		.next = NEXT(tunnel_create_attr, NEXT_ENTRY(PORT_ID)),
+		.next = NEXT(NEXT_ENTRY(TUNNEL_CREATE_TYPE),
+			     NEXT_ENTRY(PORT_ID)),
 		.args = ARGS(ARGS_ENTRY(struct buffer, port)),
 		.call = parse_tunnel,
 	},
 	[TUNNEL_CREATE_TYPE] = {
 		.name = "type",
 		.help = "create new tunnel",
-		.next = NEXT(tunnel_create_attr, NEXT_ENTRY(FILE_PATH)),
+		.next = NEXT(tunnel_create_type_attr, NEXT_ENTRY(FILE_PATH)),
 		.args = ARGS(ARGS_ENTRY(struct tunnel_ops, type)),
 		.call = parse_tunnel,
 	},
