@@ -3655,8 +3655,8 @@ flow_check_hairpin_split(struct rte_eth_dev *dev,
 		case RTE_FLOW_ACTION_TYPE_RAW_ENCAP:
 			raw_encap = actions->conf;
 			if (raw_encap->size >
-			    (sizeof(struct rte_flow_item_eth) +
-			     sizeof(struct rte_flow_item_ipv4)))
+			    (sizeof(struct rte_ether_hdr) +
+			     sizeof(struct rte_ipv4_hdr)))
 				split++;
 			action_n++;
 			break;
@@ -4092,8 +4092,8 @@ flow_hairpin_split(struct rte_eth_dev *dev,
 		case RTE_FLOW_ACTION_TYPE_RAW_ENCAP:
 			raw_encap = actions->conf;
 			if (raw_encap->size >
-			    (sizeof(struct rte_flow_item_eth) +
-			     sizeof(struct rte_flow_item_ipv4))) {
+			    (sizeof(struct rte_ether_hdr) +
+			     sizeof(struct rte_ipv4_hdr))) {
 				memcpy(actions_tx, actions,
 				       sizeof(struct rte_flow_action));
 				actions_tx++;
@@ -4107,8 +4107,8 @@ flow_hairpin_split(struct rte_eth_dev *dev,
 		case RTE_FLOW_ACTION_TYPE_RAW_DECAP:
 			raw_decap = actions->conf;
 			if (raw_decap->size <
-			    (sizeof(struct rte_flow_item_eth) +
-			     sizeof(struct rte_flow_item_ipv4))) {
+			    (sizeof(struct rte_ether_hdr) +
+			     sizeof(struct rte_ipv4_hdr))) {
 				memcpy(actions_tx, actions,
 				       sizeof(struct rte_flow_action));
 				actions_tx++;
