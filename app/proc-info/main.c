@@ -1264,7 +1264,7 @@ show_ring(char *name)
 static void
 show_mempool(char *name)
 {
-	uint64_t flags = 0;
+	uint64_t flags;
 
 	snprintf(bdr_str, MAX_STRING_LEN, " show - MEMPOOL ");
 	STATS_BDR_STR(10, bdr_str);
