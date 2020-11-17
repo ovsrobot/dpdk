@@ -157,6 +157,8 @@ otx2_ssogws_dual_deq_ ##name(void *port, struct rte_event *ev,		\
 		return 1;						\
 	}								\
 									\
+	otx2_ssogws_swtag_flush((struct otx2_ssogws *)			\
+				&ws->ws_state[!ws->vws]);		\
 	gw = otx2_ssogws_dual_get_work(&ws->ws_state[ws->vws],		\
 				       &ws->ws_state[!ws->vws], ev,	\
 				       flags, ws->lookup_mem,		\
@@ -191,6 +193,8 @@ otx2_ssogws_dual_deq_timeout_ ##name(void *port, struct rte_event *ev,	\
 		return 1;						\
 	}								\
 									\
+	otx2_ssogws_swtag_flush((struct otx2_ssogws *)			\
+				&ws->ws_state[!ws->vws]);		\
 	gw = otx2_ssogws_dual_get_work(&ws->ws_state[ws->vws],		\
 				       &ws->ws_state[!ws->vws], ev,	\
 				       flags, ws->lookup_mem,		\
@@ -235,6 +239,8 @@ otx2_ssogws_dual_deq_seg_ ##name(void *port, struct rte_event *ev,	\
 		return 1;						\
 	}								\
 									\
+	otx2_ssogws_swtag_flush((struct otx2_ssogws *)			\
+				&ws->ws_state[!ws->vws]);		\
 	gw = otx2_ssogws_dual_get_work(&ws->ws_state[ws->vws],		\
 				       &ws->ws_state[!ws->vws], ev,	\
 				       flags | NIX_RX_MULTI_SEG_F,	\
@@ -273,6 +279,8 @@ otx2_ssogws_dual_deq_seg_timeout_ ##name(void *port,			\
 		return 1;						\
 	}								\
 									\
+	otx2_ssogws_swtag_flush((struct otx2_ssogws *)			\
+				&ws->ws_state[!ws->vws]);		\
 	gw = otx2_ssogws_dual_get_work(&ws->ws_state[ws->vws],		\
 				       &ws->ws_state[!ws->vws], ev,	\
 				       flags | NIX_RX_MULTI_SEG_F,	\

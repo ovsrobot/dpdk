@@ -198,6 +198,10 @@ otx2_ssogws_swtag_untag(struct otx2_ssogws *ws)
 static __rte_always_inline void
 otx2_ssogws_swtag_flush(struct otx2_ssogws *ws)
 {
+	if (OTX2_SSOW_TT_FROM_TAG(otx2_read64(ws->tag_op)) == SSO_TT_EMPTY) {
+		ws->cur_tt = SSO_SYNC_EMPTY;
+		return;
+	}
 	otx2_write64(0, ws->swtag_flush_op);
 	ws->cur_tt = SSO_SYNC_EMPTY;
 }
@@ -328,8 +332,6 @@ otx2_ssogws_event_tx(struct otx2_ssogws *ws, struct rte_event ev[],
 					  flags);
 		}
 	}
-
-	otx2_write64(0, ws->swtag_flush_op);
 
 	return 1;
 }
