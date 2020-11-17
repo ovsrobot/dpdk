@@ -60,6 +60,11 @@ Compilation of the DPDK
 
 *   Linux kernel headers or sources required to build kernel modules.
 
+
+**Known Issues:**
+
+*   pkg-config v0.27 supplied with RHEL-7 does not process correctly libdpdk.pc Libs.private section.
+
 .. note::
 
    Please ensure that the latest patches are applied to third party libraries
