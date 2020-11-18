@@ -530,10 +530,6 @@ def bind_all(dev_list, driver, force=False):
         # driver generated error - it's not a valid device ID, so all is well
         pass
 
-    # check if we're attempting to bind to a driver that isn't loaded
-    if not module_is_loaded(driver.replace('-','_')):
-        sys.exit("Error: Driver '%s' is not loaded." % driver)
-
     try:
         dev_list = map(dev_id_from_dev_name, dev_list)
     except ValueError as ex:
