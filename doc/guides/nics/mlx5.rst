@@ -1352,15 +1352,16 @@ Supported hardware offloads
 
 .. table:: Minimal SW/HW versions for queue offloads
 
-   ============== ===== ===== ========= ===== ========== ==========
+   ============== ===== ===== ========= ===== ========== =============
    Offload        DPDK  Linux rdma-core OFED   firmware   hardware
-   ============== ===== ===== ========= ===== ========== ==========
+   ============== ===== ===== ========= ===== ========== =============
    common base    17.11  4.14    16     4.2-1 12.21.1000 ConnectX-4
    checksums      17.11  4.14    16     4.2-1 12.21.1000 ConnectX-4
    Rx timestamp   17.11  4.14    16     4.2-1 12.21.1000 ConnectX-4
    TSO            17.11  4.14    16     4.2-1 12.21.1000 ConnectX-4
    LRO            19.08  N/A     N/A    4.6-4 16.25.6406 ConnectX-5
-   ============== ===== ===== ========= ===== ========== ==========
+   Buffer Split   20.11  N/A     N/A    5.1-2 22.28.2006 ConnectX-6 Dx
+   ============== ===== ===== ========= ===== ========== =============
 
 .. table:: Minimal SW/HW versions for rte_flow offloads
 
@@ -1446,9 +1447,24 @@ Supported hardware offloads
    |                       | |  ConnectX-5   | | ConnectX-5    |
    +-----------------------+-----------------+-----------------+
    | Sampling              | |  DPDK 20.11   | | DPDK 20.11    |
-   |                       | |  OFED 5.2     | | OFED 5.2      |
-   |                       | |  rdma-core 32 | | rdma-core 32  |
+   |                       | |  OFED 5.1-2   | | OFED 5.1-2    |
+   |                       | |  rdma-core 32 | | N/A           |
    |                       | |  ConnectX-5   | | ConnectX-5    |
+   +-----------------------+-----------------+-----------------+
+   | Tunnel Offload        | |  DPDK 20.11   | | DPDK 20.11    |
+   |                       | |  OFED 5.1-2   | | OFED 5.1-2    |
+   |                       | |  rdma-core 32 | | N/A           |
+   |                       | |  ConnectX-5   | | ConnectX-5    |
+   +-----------------------+-----------------+-----------------+
+   | 2-port Hairpin        | |               | | DPDK 20.11    |
+   |                       | |     N/A       | | OFED 5.1-2    |
+   |                       | |               | | N/A           |
+   |                       | |               | | ConnectX-5    |
+   +-----------------------+-----------------+-----------------+
+   | RSS shared action     | |               | | DPDK 20.11    |
+   |                       | |     N/A       | | OFED 5.2      |
+   |                       | |               | | rdma-core 33  |
+   |                       | |               | | ConnectX-5    |
    +-----------------------+-----------------+-----------------+
 
 Notes for metadata
