@@ -63,6 +63,7 @@ EXPORTS
 	rte_get_tsc_hz
 	rte_hexdump
 	rte_hypervisor_get
+	rte_intr_free_epoll_fd
 	rte_intr_rx_ctl
 	rte_lcore_count
 	rte_lcore_has_role
