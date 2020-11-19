@@ -181,7 +181,13 @@ def module_is_loaded(module):
 
     loaded_modules = sysfs_mods
 
-    return module in sysfs_mods
+    # add built-in modules as loaded
+    builtin_mods = subprocess.check_output(["cat /lib/modules/$(uname -r)/modules.builtin"], shell=True).splitlines()
+    for mod in builtin_mods:
+        mod_name = os.path.basename(mod.decode("utf8")).split(".ko", 1)
+        loaded_modules.append(mod_name[0])
+
+    return module in loaded_modules
 
 
 def check_modules():
