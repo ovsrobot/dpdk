@@ -418,7 +418,7 @@ max10_sensor_init(struct intel_max10_device *dev, int parent)
 	int i, ret = 0, offset = 0;
 	const fdt32_t *num;
 	const char *ptr;
-	u64 start, size;
+	u64 start = 0, size = 0;
 	struct raw_sensor_info *raw;
 	struct opae_sensor_info *sensor;
 	char *fdt_root = dev->fdt_root;
