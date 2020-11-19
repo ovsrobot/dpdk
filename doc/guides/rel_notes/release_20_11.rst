@@ -422,6 +422,10 @@ New Features
   leverage IOAT DMA channel with vhost asynchronous APIs.
   See the :doc:`../sample_app_ug/vhost` for more details.
 
+* **Added VXLAN UDP/IPv4 GSO support.**
+
+  Added inner UDP/IPv4 support for VXLAN IPv4 GSO.
+
 
 Removed Items
 -------------
