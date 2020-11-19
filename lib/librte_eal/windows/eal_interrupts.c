@@ -105,3 +105,9 @@ eal_intr_thread_schedule(void (*func)(void *arg), void *arg)
 
 	return 0;
 }
+
+void
+rte_intr_free_epoll_fd(struct rte_intr_handle *intr_handle)
+{
+	RTE_SET_USED(intr_handle);
+}
