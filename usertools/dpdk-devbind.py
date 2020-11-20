@@ -7,6 +7,7 @@ import sys
 import os
 import getopt
 import subprocess
+import platform
 from glob import glob
 from os.path import exists, abspath, dirname, basename
 from os.path import join as path_join
@@ -181,7 +182,23 @@ def module_is_loaded(module):
 
     loaded_modules = sysfs_mods
 
-    return module in sysfs_mods
+    # add built-in modules as loaded
+    release = platform.uname().release
+    filename = os.path.join("/lib/modules/", release, "modules.builtin")
+    if os.path.exists(filename):
+        try:
+            f = open(filename, "r")
+        except:
+            print("Error: cannot open %s" % filename)
+            return
+
+        builtin_mods = f.readlines()
+
+        for mod in builtin_mods:
+            mod_name = os.path.splitext(os.path.basename(mod))
+            loaded_modules.append(mod_name[0])
+
+    return module in loaded_modules
 
 
 def check_modules():
