@@ -1,0 +1,5 @@
+Installing DPDK Kernel Drivers
+==============================
+
+For instructions on how to install kernel drivers for each OS, please refer to
+the respective subdirectories' ``README`` files.
