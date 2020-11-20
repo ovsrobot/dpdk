@@ -1,12 +1,13 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2017 Intel Corporation.
 # Copyright(c) 2017 Cavium, Inc
+# Copyright(c) 2020 PANTHEON.tech s.r.o.
 
 # for checking defines we need to use the correct compiler flags
 march_opt = '-march=@0@'.format(machine)
 
 arm_force_native_march = false
-arm_force_default_march = (machine == 'default')
+arm_force_generic_march = (machine == 'generic')
 
 flags_common_default = [
 	# Accelarate rte_memcpy. Be sure to run unit test (memcpy_perf_autotest)
@@ -148,7 +149,7 @@ else
 	cmd_generic = ['generic', '', '', 'default', '']
 	cmd_output = cmd_generic # Set generic by default
 	machine_args = [] # Clear previous machine args
-	if arm_force_default_march and not meson.is_cross_build()
+	if arm_force_generic_march and not meson.is_cross_build()
 		machine = impl_generic
 		impl_pn = 'default'
 	elif not meson.is_cross_build()
