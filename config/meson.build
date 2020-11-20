@@ -232,8 +232,6 @@ foreach arg: warning_flags
 endforeach
 
 # set other values pulled from the build options
-dpdk_conf.set('RTE_MAX_LCORE', get_option('max_lcores'))
-dpdk_conf.set('RTE_MAX_NUMA_NODES', get_option('max_numa_nodes'))
 dpdk_conf.set('RTE_MAX_ETHPORTS', get_option('max_ethports'))
 dpdk_conf.set('RTE_LIBEAL_USE_HPET', get_option('use_hpet'))
 dpdk_conf.set('RTE_ENABLE_TRACE_FP', get_option('enable_trace_fp'))
@@ -251,6 +249,51 @@ endif
 compile_time_cpuflags = []
 subdir(arch_subdir)
 dpdk_conf.set('RTE_COMPILE_TIME_CPUFLAGS', ','.join(compile_time_cpuflags))
+
+max_lcores = get_option('max_lcores')
+if max_lcores > 0
+	# Overwrite the default value from arch_subdir with user input
+	dpdk_conf.set('RTE_MAX_LCORE', max_lcores)
+elif max_lcores == -1
+	# Overwrite the default value with discovered values
+	if meson.is_cross_build()
+		error('Discovery of max_lcores is not supported for cross-compilation.')
+	endif
+	# Discovery makes sense only for non-cross builds
+	max_lcores = run_command(get_cpu_count_cmd).stdout().to_int()
+	min_lcores = 2
+	# DPDK must be build for at least 2 cores
+	if max_lcores < min_lcores
+		message('Found less than @0@ cores, building for @0@ cores'.format(min_lcores))
+		max_lcores = min_lcores
+	else
+		message('Found @0@ cores'.format(max_lcores))
+	endif
+	dpdk_conf.set('RTE_MAX_LCORE', max_lcores)
+endif
+
+max_numa_nodes = get_option('max_numa_nodes')
+if max_numa_nodes > 0
+	# Overwrite the default value from arch_subdir with user input
+	dpdk_conf.set('RTE_MAX_NUMA_NODES', max_numa_nodes)
+elif max_numa_nodes == -1
+	# Overwrite the default value with discovered values
+	if meson.is_cross_build()
+		error('Discovery of max_numa_nodes not supported for cross-compilation.')
+	endif
+	# Discovery makes sense only for non-cross builds
+	max_numa_nodes = run_command(get_numa_count_cmd).stdout().to_int()
+	message('Found @0@ numa nodes'.format(max_numa_nodes))
+	dpdk_conf.set('RTE_MAX_NUMA_NODES', max_numa_nodes)
+endif
+
+# check that cpu and numa count is set and error out if it's not set
+if not dpdk_conf.has('RTE_MAX_LCORE')
+	error('Number of cores not specified.')
+endif
+if not dpdk_conf.has('RTE_MAX_NUMA_NODES')
+	error('Number of numa nodes not specified.')
+endif
 
 # set the install path for the drivers
 dpdk_conf.set_quoted('RTE_EAL_PMD_PATH', eal_pmd_path)

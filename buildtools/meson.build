@@ -17,3 +17,5 @@ else
 endif
 map_to_win_cmd = py3 + files('map_to_win.py')
 sphinx_wrapper = py3 + files('call-sphinx-build.py')
+get_cpu_count_cmd = py3 + files('get-cpu-count.py')
+get_numa_count_cmd = py3 + files('get-numa-count.py')
