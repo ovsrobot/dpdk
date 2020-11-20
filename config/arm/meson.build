@@ -37,7 +37,8 @@ implementer_generic = {
 		['RTE_MACHINE', '"armv8a"'],
 		['RTE_USE_C11_MEM_MODEL', true],
 		['RTE_CACHE_LINE_SIZE', 128],
-		['RTE_MAX_LCORE', 256]
+		['RTE_MAX_LCORE', 256],
+		['RTE_MAX_NUMA_NODES', 4]
 	],
 	'part_number_config': {
 		'generic': {'machine_args': ['-march=armv8-a+crc',
@@ -75,7 +76,8 @@ implementer_arm = {
 		['RTE_MACHINE', '"armv8a"'],
 		['RTE_USE_C11_MEM_MODEL', true],
 		['RTE_CACHE_LINE_SIZE', 64],
-		['RTE_MAX_LCORE', 16]
+		['RTE_MAX_LCORE', 16],
+		['RTE_MAX_NUMA_NODES', 1]
 	],
 	'part_number_config': part_number_config_arm
 }
