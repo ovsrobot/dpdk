@@ -215,11 +215,23 @@ idxd_rawdev_create(const char *name, struct rte_device *dev,
 		goto cleanup;
 	}
 
+	/*
+	* Check for primary than allocate memory
+	* else return the memory from primary
+	* memzone.
+	*/
 	snprintf(mz_name, sizeof(mz_name), "rawdev%u_private", rawdev->dev_id);
-	mz = rte_memzone_reserve(mz_name, sizeof(struct idxd_rawdev),
-			dev->numa_node, RTE_MEMZONE_IOVA_CONTIG);
+	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
+		mz = rte_memzone_lookup(mz_name);
+		rawdev->dev_private = mz->addr;
+		return 0;
+	}
+	mz = rte_memzone_reserve(mz_name,
+			sizeof(struct rte_ioat_rawdev),
+			dev->numa_node,
+			RTE_MEMZONE_IOVA_CONTIG);
 	if (mz == NULL) {
-		IOAT_PMD_ERR("Unable to reserve memzone for private data\n");
+		IOAT_PMD_ERR("Unable to reserve memzone\n");
 		ret = -ENOMEM;
 		goto cleanup;
 	}
