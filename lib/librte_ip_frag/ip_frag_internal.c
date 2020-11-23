@@ -155,6 +155,7 @@ ip_frag_process(struct ip_frag_pkt *fp, struct rte_ip_frag_death_row *dr,
 
 	fp->frags[idx].ofs = ofs;
 	fp->frags[idx].len = len;
+	mb->data_len = mb->l2_len + mb->l3_len + len;
 	fp->frags[idx].mb = mb;
 
 	mb = NULL;
