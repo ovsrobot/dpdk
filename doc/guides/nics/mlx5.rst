@@ -1624,3 +1624,60 @@ all flows with assistance of external tools.
    .. code-block:: console
 
        mlx_steering_dump.py -f <output_file>
+
+RX burst functions
+------------------
+
+This section describes the different rx_burst functions and provides an
+elaborated information.
+
+#. Function name             - rx_burst
+   How to enable             - rx_vec_en=0
+   Scatter support           - Yes
+   RX error recovery support - Yes
+   CQE compression support   - Yes
+   Large MTU support         - The maximal packet size should be set to be the
+                               same as the MTU size. The mbuf size can be
+                               according to the application needs since the
+                               pmd can perform the scatter.
+
+#. Function name             - rx_burst_vec
+   How to enable             - rx_vec_en=1 (default value)
+   Scatter support           - No
+   RX error recovery support - Supported only in case CQE compression is off
+   CQE compression support   - Yes
+   Large MTU support         - No. Scatter is not supported, so it means
+                               that the mbuf must be with the same size of
+                               the MTU. In this case, maximal packet size ==
+                               mbuf size == MTU size
+   Fallback                  - In scatter or LRO fallback to rx_burst
+   Notes                     - Improves CPU utilization for single-core and
+                               improves performance
+
+#. Function name             - rx_burst_mprq
+   How to enable             - mprq_en=1
+                             - RX queues number should be >= rxqs_min_mprq
+   Scatter support           - No
+   RX error recovery support - Yes
+   CQE compression support   - Yes
+   Large MTU support         - Yes. Needs to be turned on by specifying the
+                               stride size
+   Notes                     - Saving PCI bandwidth and getting higher
+                               performance, especially for small packets.
+                               Used mainly for multi-core use cases.
+                               Uses externally attached buffers only.
+
+#. Function name             - rx_burst_mprq_vec
+   How to enable             - rx_vec_en=1 (default mode) and mprq_en=1
+                             - RX queues number should be >= rxqs_min_mprq
+   Scatter support           - No
+   RX error recovery support - Supported only in case CQE compression is off
+   CQE compression support   - Yes
+   Large MTU support         - Yes. Needs to be turned on by specifying the
+                               stride size
+   Fallback                  - In scatter or LRO fallback to rx_burst_mprq
+   Notes                     - Improves CPU utilization of regular
+                               rx_burst_mprq for multi-core and improves
+                               performance.
+                               Used mainly for multi-core use cases.
+                               Uses externally attached buffers only.
