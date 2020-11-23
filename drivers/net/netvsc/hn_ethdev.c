@@ -438,6 +438,52 @@ static int hn_rss_hash_conf_get(struct rte_eth_dev *dev,
 	return 0;
 }
 
+static const uint32_t*
+hn_dev_supported_ptypes(struct rte_eth_dev *dev)
+{
+	struct hn_data *hv = dev->data->dev_private;
+	struct rte_eth_dev *vf_dev;
+	const uint32_t *ptypes = NULL;
+
+	/* List of possible ptypes comes from rte_net_get_ptype. */
+	static const uint32_t net_ptypes[] = {
+		RTE_PTYPE_INNER_L2_ETHER,
+		RTE_PTYPE_INNER_L2_ETHER_VLAN,
+		RTE_PTYPE_INNER_L2_ETHER_QINQ,
+		RTE_PTYPE_INNER_L3_IPV4,
+		RTE_PTYPE_INNER_L3_IPV4_EXT,
+		RTE_PTYPE_INNER_L3_IPV6,
+		RTE_PTYPE_INNER_L3_IPV6_EXT,
+		RTE_PTYPE_INNER_L4_FRAG,
+		RTE_PTYPE_INNER_L4_UDP,
+		RTE_PTYPE_INNER_L4_TCP,
+		RTE_PTYPE_INNER_L4_SCTP,
+		RTE_PTYPE_L2_ETHER,
+		RTE_PTYPE_L2_ETHER_VLAN,
+		RTE_PTYPE_L2_ETHER_QINQ,
+		RTE_PTYPE_L3_IPV4,
+		RTE_PTYPE_L3_IPV4_EXT,
+		RTE_PTYPE_L3_IPV6_EXT,
+		RTE_PTYPE_L3_IPV6,
+		RTE_PTYPE_L4_FRAG,
+		RTE_PTYPE_L4_UDP,
+		RTE_PTYPE_L4_TCP,
+		RTE_PTYPE_L4_SCTP,
+	};
+
+	rte_rwlock_read_lock(&hv->vf_lock);
+	vf_dev = hn_get_vf_dev(hv);
+	if (vf_dev) {
+		if (vf_dev->dev_ops->dev_supported_ptypes_get)
+			ptypes = (*vf_dev->dev_ops->dev_supported_ptypes_get)(vf_dev);
+	} else {
+		ptypes = net_ptypes;
+	}
+	rte_rwlock_read_unlock(&hv->vf_lock);
+
+	return ptypes;
+}
+
 static int
 hn_dev_promiscuous_enable(struct rte_eth_dev *dev)
 {
@@ -880,7 +926,7 @@ static const struct eth_dev_ops hn_eth_dev_ops = {
 	.dev_infos_get		= hn_dev_info_get,
 	.txq_info_get		= hn_dev_tx_queue_info,
 	.rxq_info_get		= hn_dev_rx_queue_info,
-	.dev_supported_ptypes_get = hn_vf_supported_ptypes,
+	.dev_supported_ptypes_get = hn_dev_supported_ptypes,
 	.promiscuous_enable     = hn_dev_promiscuous_enable,
 	.promiscuous_disable    = hn_dev_promiscuous_disable,
 	.allmulticast_enable    = hn_dev_allmulticast_enable,

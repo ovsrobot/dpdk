@@ -223,7 +223,6 @@ int	hn_vf_info_get(struct hn_data *hv,
 int	hn_vf_add(struct rte_eth_dev *dev, struct hn_data *hv);
 int	hn_vf_configure(struct rte_eth_dev *dev,
 			const struct rte_eth_conf *dev_conf);
-const uint32_t *hn_vf_supported_ptypes(struct rte_eth_dev *dev);
 int	hn_vf_start(struct rte_eth_dev *dev);
 void	hn_vf_reset(struct rte_eth_dev *dev);
 int	hn_vf_close(struct rte_eth_dev *dev);

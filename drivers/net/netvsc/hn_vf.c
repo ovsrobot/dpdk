@@ -244,21 +244,6 @@ int hn_vf_configure(struct rte_eth_dev *dev,
 	return ret;
 }
 
-const uint32_t *hn_vf_supported_ptypes(struct rte_eth_dev *dev)
-{
-	struct hn_data *hv = dev->data->dev_private;
-	struct rte_eth_dev *vf_dev;
-	const uint32_t *ptypes = NULL;
-
-	rte_rwlock_read_lock(&hv->vf_lock);
-	vf_dev = hn_get_vf_dev(hv);
-	if (vf_dev && vf_dev->dev_ops->dev_supported_ptypes_get)
-		ptypes = (*vf_dev->dev_ops->dev_supported_ptypes_get)(vf_dev);
-	rte_rwlock_read_unlock(&hv->vf_lock);
-
-	return ptypes;
-}
-
 int hn_vf_start(struct rte_eth_dev *dev)
 {
 	struct hn_data *hv = dev->data->dev_private;
