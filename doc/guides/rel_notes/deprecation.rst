@@ -88,6 +88,16 @@ Deprecation Notices
   will be limited to maximum 256 queues.
   Also compile time flag ``RTE_ETHDEV_QUEUE_STAT_CNTRS`` will be removed.
 
+* ethdev: The flow API matching pattern structures, ``struct rte_flow_item_*``,
+  should start with relevant protocol header.
+  Some matching pattern structures implements this by duplicating protocol header
+  fields in the struct. To clarify the intention and to be sure protocol header
+  is intact, will replace those fields with relevant protocol header struct.
+  In v21.02 both individual protocol header fields and the protocol header struct
+  will be added as union, target is switch usage to the protocol header by time.
+  In v21.11 LTS, protocol header fields will be cleaned and only protocol header
+  struct will remain.
+
 * sched: To allow more traffic classes, flexible mapping of pipe queues to
   traffic classes, and subport level configuration of pipes and queues
   changes will be made to macros, data structures and API functions defined
