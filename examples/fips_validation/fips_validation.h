@@ -258,6 +258,9 @@ int
 parser_read_uint32_val(const char *key, char *src, struct fips_val *val);
 
 int
+parser_read_uint16(uint16_t *value, const char *p);
+
+int
 writeback_hex_str(const char *key, char *dst, struct fips_val *val);
 
 void
