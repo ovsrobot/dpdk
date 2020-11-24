@@ -1,0 +1,98 @@
+name: build
+
+on: push
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -exo pipefail {0}
+
+jobs:
+  build:
+    name: ${{ join(matrix.config.*, '-') }}
+    runs-on: ${{ matrix.config.os }}
+    env:
+      PKGS: |
+        ccache libnuma-dev python3-setuptools python3-wheel python3-pip \
+        ninja-build libbsd-dev libpcap-dev libibverbs-dev libcrypto++-dev \
+        libfdt-dev libjansson-dev doxygen graphviz python3-sphinx \
+        python3-sphinx-rtd-theme
+      CC: ccache ${{ matrix.config.compiler }}
+      JOBNAME: ${{ join(matrix.config.*, '-') }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - os: ubuntu-18.04
+            compiler: gcc
+            library: static
+          - os: ubuntu-18.04
+            compiler: gcc
+            library: shared
+          - os: ubuntu-18.04
+            compiler: clang
+            library: static
+          - os: ubuntu-18.04
+            compiler: clang
+            library: shared
+          - os: ubuntu-18.04
+            compiler: gcc
+            library: static
+            cross: i386
+          - os: ubuntu-18.04
+            compiler: gcc
+            library: static
+            cross: aarch64
+          - os: ubuntu-18.04
+            compiler: gcc
+            library: shared
+            cross: aarch64
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/cache@v2
+      with:
+        path: ~/.ccache
+        key: ${{ env.JOBNAME }}-${{ github.ref }}
+        restore-keys: |
+          ${{ env.JOBNAME }}-refs/heads/main
+    - name: Install packages
+      run: sudo apt install -y ${{ env.PKGS }}
+    - name: Install i386 cross compiling packages
+      if: matrix.config.cross == 'i386'
+      run: sudo apt install -y gcc-multilib
+    - name: Install aarch64 cross compiling packages
+      if: matrix.config.cross == 'aarch64'
+      run: |
+        sudo apt install -y gcc-aarch64-linux-gnu libc6-dev-arm64-cross \
+          pkg-config-aarch64-linux-gnu
+    - name: Prepare environment
+      run: |
+         .ci/linux-setup.sh
+         # Workaround on $HOME permissions as EAL checks them for plugin loading
+         chmod o-w $HOME
+    - name: Build and test
+      run: |
+        export DEF_LIB=${{ matrix.config.library }}
+        export BUILD_DOCS=1
+        case '${{ matrix.config.cross }}' in
+        'i386')
+            export BUILD_32BIT=1
+        ;;
+        'aarch64')
+            export AARCH64=1
+        ;;
+        '')
+            export RUN_TESTS=1
+        ;;
+        esac
+        .ci/linux-build.sh
+    - name: Upload logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v2
+      with:
+        name: meson-logs-${{ env.JOBNAME }}
+        path: |
+          build/meson-logs/testlog.txt
+          build/.ninja_log
+          build/meson-logs/meson-log.txt

@@ -12,7 +12,9 @@ on_error() {
         fi
     done
 }
-trap on_error EXIT
+# We capture the error logs as artifacts in Github Actions, no need to dump
+# them via a EXIT handler.
+[ -n "$GITHUB_WORKFLOW" ] || trap on_error EXIT
 
 install_libabigail() {
     version=$1
