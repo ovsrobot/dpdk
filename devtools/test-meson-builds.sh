@@ -211,11 +211,11 @@ done
 # test compilation with minimal x86 instruction set
 # Set the install path for libraries to "lib" explicitly to prevent problems
 # with pkg-config prefixes if installed in "lib/x86_64-linux-gnu" later.
-default_machine='nehalem'
-if ! check_cc_flags "-march=$default_machine" ; then
-	default_machine='corei7'
+generic_machine='nehalem'
+if ! check_cc_flags "-march=$generic_machine" ; then
+	generic_machine='corei7'
 fi
-build build-x86-default cc -Dlibdir=lib -Dmachine=$default_machine $use_shared
+build build-x86-generic cc -Dlibdir=lib -Dmachine=$generic_machine $use_shared
 
 # 32-bit with default compiler
 if check_cc_flags '-m32' ; then
@@ -255,10 +255,10 @@ for f in $srcdir/config/ppc/ppc* ; do
 	build build-$(basename $f | cut -d'-' -f-2) $f $use_shared
 done
 
-# Test installation of the x86-default target, to be used for checking
+# Test installation of the x86-generic target, to be used for checking
 # the sample apps build using the pkg-config file for cflags and libs
 load_env cc
-build_path=$(readlink -f $builds_dir/build-x86-default)
+build_path=$(readlink -f $builds_dir/build-x86-generic)
 export DESTDIR=$build_path/install
 # No need to reinstall if ABI checks are enabled
 if [ -z "$DPDK_ABI_REF_VERSION" ]; then
