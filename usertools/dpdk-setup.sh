@@ -15,8 +15,6 @@ echo "--------------------------------------------------------------------------
 echo " RTE_SDK exported as $RTE_SDK"
 echo "------------------------------------------------------------------------------"
 
-HUGEPGSZ=`cat /proc/meminfo  | grep Hugepagesize | cut -d : -f 2 | tr -d ' '`
-
 #
 # Sets QUIT variable so script will finish.
 #
@@ -29,36 +27,6 @@ quit()
 q()
 {
 	quit
-}
-
-#
-# Creates hugepage filesystem.
-#
-create_mnt_huge()
-{
-	echo "Creating /mnt/huge and mounting as hugetlbfs"
-	sudo mkdir -p /mnt/huge
-
-	grep -s '/mnt/huge' /proc/mounts > /dev/null
-	if [ $? -ne 0 ] ; then
-		sudo mount -t hugetlbfs nodev /mnt/huge
-	fi
-}
-
-#
-# Removes hugepage filesystem.
-#
-remove_mnt_huge()
-{
-	echo "Unmounting /mnt/huge and removing directory"
-	grep -s '/mnt/huge' /proc/mounts > /dev/null
-	if [ $? -eq 0 ] ; then
-		sudo umount /mnt/huge
-	fi
-
-	if [ -d /mnt/huge ] ; then
-		sudo rm -R /mnt/huge
-	fi
 }
 
 #
@@ -183,79 +151,6 @@ set_vfio_permissions()
 }
 
 #
-# Removes all reserved hugepages.
-#
-clear_huge_pages()
-{
-	echo > .echo_tmp
-	for d in /sys/devices/system/node/node? ; do
-		echo "echo 0 > $d/hugepages/hugepages-${HUGEPGSZ}/nr_hugepages" >> .echo_tmp
-	done
-	echo "Removing currently reserved hugepages"
-	sudo sh .echo_tmp
-	rm -f .echo_tmp
-
-	remove_mnt_huge
-}
-
-#
-# Creates hugepages.
-#
-set_non_numa_pages()
-{
-	clear_huge_pages
-
-	echo ""
-	echo "  Input the number of ${HUGEPGSZ} hugepages"
-	echo "  Example: to have 128MB of hugepages available in a 2MB huge page system,"
-	echo "  enter '64' to reserve 64 * 2MB pages"
-	echo -n "Number of pages: "
-	read Pages
-
-	echo "echo $Pages > /sys/kernel/mm/hugepages/hugepages-${HUGEPGSZ}/nr_hugepages" > .echo_tmp
-
-	echo "Reserving hugepages"
-	sudo sh .echo_tmp
-	rm -f .echo_tmp
-
-	create_mnt_huge
-}
-
-#
-# Creates hugepages on specific NUMA nodes.
-#
-set_numa_pages()
-{
-	clear_huge_pages
-
-	echo ""
-	echo "  Input the number of ${HUGEPGSZ} hugepages for each node"
-	echo "  Example: to have 128MB of hugepages available per node in a 2MB huge page system,"
-	echo "  enter '64' to reserve 64 * 2MB pages on each node"
-
-	echo > .echo_tmp
-	for d in /sys/devices/system/node/node? ; do
-		node=$(basename $d)
-		echo -n "Number of pages for $node: "
-		read Pages
-		echo "echo $Pages > $d/hugepages/hugepages-${HUGEPGSZ}/nr_hugepages" >> .echo_tmp
-	done
-	echo "Reserving hugepages"
-	sudo sh .echo_tmp
-	rm -f .echo_tmp
-
-	create_mnt_huge
-}
-
-#
-# Print hugepage information.
-#
-grep_meminfo()
-{
-	grep -i huge /proc/meminfo
-}
-
-#
 # Calls dpdk-devbind.py --status to show the devices and what they
 # are all bound to, in terms of drivers.
 #
@@ -329,41 +224,23 @@ step1_func()
 	TEXT[1]="Insert VFIO module"
 	FUNC[1]="load_vfio_module"
 
-	TEXT[2]="Setup hugepage mappings for non-NUMA systems"
-	FUNC[2]="set_non_numa_pages"
+	TEXT[2]="Display current Ethernet/Baseband/Crypto device settings"
+	FUNC[2]="show_devices"
 
-	TEXT[3]="Setup hugepage mappings for NUMA systems"
-	FUNC[3]="set_numa_pages"
+	TEXT[3]="Bind Ethernet/Baseband/Crypto device to IGB UIO module"
+	FUNC[3]="bind_devices_to_igb_uio"
 
-	TEXT[4]="Display current Ethernet/Baseband/Crypto device settings"
-	FUNC[4]="show_devices"
+	TEXT[4]="Bind Ethernet/Baseband/Crypto device to VFIO module"
+	FUNC[4]="bind_devices_to_vfio"
 
-	TEXT[5]="Bind Ethernet/Baseband/Crypto device to IGB UIO module"
-	FUNC[5]="bind_devices_to_igb_uio"
-
-	TEXT[6]="Bind Ethernet/Baseband/Crypto device to VFIO module"
-	FUNC[6]="bind_devices_to_vfio"
-
-	TEXT[7]="Setup VFIO permissions"
-	FUNC[7]="set_vfio_permissions"
-}
-
-#
-# Other options
-#
-step2_func()
-{
-	TITLE="Other tools"
-
-	TEXT[1]="List hugepage info from /proc/meminfo"
-	FUNC[1]="grep_meminfo"
-
+	TEXT[5]="Setup VFIO permissions"
+	FUNC[5]="set_vfio_permissions"
 }
 
 #
 # Options for cleaning up the system
 #
-step3_func()
+step2_func()
 {
 	TITLE="Uninstall and system cleanup"
 
@@ -378,14 +255,10 @@ step3_func()
 
 	TEXT[4]="Remove KNI module"
 	FUNC[4]="remove_kni_module"
-
-	TEXT[5]="Remove hugepage mappings"
-	FUNC[5]="clear_huge_pages"
 }
 
 STEPS[1]="step1_func"
 STEPS[2]="step2_func"
-STEPS[3]="step3_func"
 
 QUIT=0
 
