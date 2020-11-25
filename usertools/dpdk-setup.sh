@@ -37,53 +37,6 @@ q()
 }
 
 #
-# Sets up environmental variables for ICC.
-#
-setup_icc()
-{
-	DEFAULT_PATH=/opt/intel/bin/iccvars.sh
-	param=$1
-	shpath=`which iccvars.sh 2> /dev/null`
-	if [ $? -eq 0 ] ; then
-		echo "Loading iccvars.sh from $shpath for $param"
-		source $shpath $param
-	elif [ -f $DEFAULT_PATH ] ; then
-		echo "Loading iccvars.sh from $DEFAULT_PATH for $param"
-		source $DEFAULT_PATH $param
-	else
-		echo "## ERROR: cannot find 'iccvars.sh' script to set up ICC."
-		echo "##     To fix, please add the directory that contains"
-		echo "##     iccvars.sh  to your 'PATH' environment variable."
-		quit
-	fi
-}
-
-#
-# Sets RTE_TARGET and does a "make install".
-#
-setup_target()
-{
-	option=$1
-	export RTE_TARGET=${TARGETS[option]}
-
-	compiler=${RTE_TARGET##*-}
-	if [ "$compiler" == "icc" ] ; then
-		platform=${RTE_TARGET%%-*}
-		if [ "$platform" == "x86_64" ] ; then
-			setup_icc intel64
-		else
-			setup_icc ia32
-		fi
-	fi
-	if [ "$QUIT" == "0" ] ; then
-		make install T=${RTE_TARGET}
-	fi
-	echo "------------------------------------------------------------------------------"
-	echo " RTE_TARGET exported as $RTE_TARGET"
-	echo "------------------------------------------------------------------------------"
-}
-
-#
 # Creates hugepage filesystem.
 #
 create_mnt_huge()
@@ -457,27 +410,9 @@ unbind_devices()
 }
 
 #
-# Options for building a target. Note that this step MUST be first as it sets
-# up TARGETS[] starting from 1, and this is accessed in setup_target using the
-# user entered option.
-#
-step1_func()
-{
-	TITLE="Select the DPDK environment to build"
-	CONFIG_NUM=1
-	for cfg in config/defconfig_* ; do
-		cfg=${cfg/config\/defconfig_/}
-		TEXT[$CONFIG_NUM]="$cfg"
-		TARGETS[$CONFIG_NUM]=$cfg
-		FUNC[$CONFIG_NUM]="setup_target"
-		let "CONFIG_NUM+=1"
-	done
-}
-
-#
 # Options for setting up environment.
 #
-step2_func()
+step1_func()
 {
 	TITLE="Setup linux environment"
 
@@ -512,7 +447,7 @@ step2_func()
 #
 # Options for running applications.
 #
-step3_func()
+step2_func()
 {
 	TITLE="Run test application for linux environment"
 
@@ -526,7 +461,7 @@ step3_func()
 #
 # Other options
 #
-step4_func()
+step3_func()
 {
 	TITLE="Other tools"
 
@@ -538,7 +473,7 @@ step4_func()
 #
 # Options for cleaning up the system
 #
-step5_func()
+step4_func()
 {
 	TITLE="Uninstall and system cleanup"
 
@@ -562,7 +497,6 @@ STEPS[1]="step1_func"
 STEPS[2]="step2_func"
 STEPS[3]="step3_func"
 STEPS[4]="step4_func"
-STEPS[5]="step5_func"
 
 QUIT=0
 
