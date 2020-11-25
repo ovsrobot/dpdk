@@ -218,14 +218,32 @@ parse_gtp(struct rte_udp_hdr *udp_hdr,
 	gtp_hdr = (struct rte_gtp_hdr *)((char *)udp_hdr +
 		  sizeof(struct rte_udp_hdr));
 
+	/* Calculate the gtp_len*/
+	if (gtp_hdr->gtp_hdr_info & 0x7)
+		gtp_len = gtp_len + 4;
+
+	if (gtp_hdr->gtp_hdr_info & 0x4) {
+		/*Assuming one extension gtp header*/
+		uint16_t gtp_extension_len = 0;
+		uint8_t *gtp_extension_hdr = NULL;
+		uint8_t gtp_NEHT = 0;
+		do {
+			gtp_extension_hdr = (uint8_t *)((uint8_t *)gtp_hdr +
+					     gtp_len);
+			gtp_extension_len = *gtp_extension_hdr * 4;
+			gtp_len = gtp_len + gtp_extension_len;
+			gtp_NEHT = *(gtp_extension_hdr +
+				      gtp_extension_len - 1);
+		} while (gtp_NEHT);
+	}
+
 	/*
 	 * Check message type. If message type is 0xff, it is
 	 * a GTP data packet. If not, it is a GTP control packet
 	 */
 	if (gtp_hdr->msg_type == 0xff) {
 		ip_ver = *(uint8_t *)((char *)udp_hdr +
-			 sizeof(struct rte_udp_hdr) +
-			 sizeof(struct rte_gtp_hdr));
+			 sizeof(struct rte_udp_hdr) +  gtp_len);
 		ip_ver = (ip_ver) & 0xf0;
 
 		if (ip_ver == RTE_GTP_TYPE_IPV4) {
@@ -233,20 +251,22 @@ parse_gtp(struct rte_udp_hdr *udp_hdr,
 				   gtp_len);
 			info->ethertype = _htons(RTE_ETHER_TYPE_IPV4);
 			parse_ipv4(ipv4_hdr, info);
+			info->l2_len = (uint8_t *)ipv4_hdr - (uint8_t *)udp_hdr;
 		} else if (ip_ver == RTE_GTP_TYPE_IPV6) {
 			ipv6_hdr = (struct rte_ipv6_hdr *)((char *)gtp_hdr +
 				   gtp_len);
 			info->ethertype = _htons(RTE_ETHER_TYPE_IPV6);
 			parse_ipv6(ipv6_hdr, info);
+			info->l2_len = (uint8_t *)ipv6_hdr - (uint8_t *)udp_hdr;
 		}
 	} else {
 		info->ethertype = 0;
 		info->l4_len = 0;
 		info->l3_len = 0;
 		info->l4_proto = 0;
+		info->l2_len += RTE_ETHER_GTP_HLEN;
 	}
 
-	info->l2_len += RTE_ETHER_GTP_HLEN;
 }
 
 /* Parse a vxlan header */
