@@ -85,7 +85,7 @@ int rte_pmd_bnxt_set_all_queues_drop_en(uint16_t port, uint8_t on)
 	struct rte_eth_dev *eth_dev;
 	struct bnxt *bp;
 	uint32_t i;
-	int rc = -EINVAL;
+	int rc;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port, -ENODEV);
 
@@ -118,6 +118,7 @@ int rte_pmd_bnxt_set_all_queues_drop_en(uint16_t port, uint8_t on)
 	}
 
 	/* Stall all active VFs */
+	rc = 0;
 	for (i = 0; i < bp->pf->active_vfs; i++) {
 		rc = bnxt_hwrm_func_vf_vnic_query_and_config(bp, i,
 				rte_pmd_bnxt_set_all_queues_drop_en_cb, &on,
