@@ -14,17 +14,13 @@ The dpdk-setup.sh script, found in the usertools subdirectory, allows the user t
 
 *   Remove the DPDK KNI kernel module
 
-*   Create and delete hugepages for NUMA and non-NUMA cases
-
 *   View network port status and reserve ports for DPDK application use
 
 *   Set up permissions for using VFIO as a non-privileged user
 
-*   Look at hugepages in the meminfo
-
-*   List hugepages in ``/mnt/huge``
-
 Please refer to :doc:`../prog_guide/build-sdk-meson` for building DPDK.
+
+Please refer to :doc:`../tools/hugepages` for setting up hugepages for DPDK.
 
 Script Organization
 -------------------
@@ -36,14 +32,9 @@ The following is a brief synopsis of each step.
 **Step 1: Setup Environment**
 
 The user configures the Linux* environment to support the running of DPDK applications.
-Hugepages can be set up for NUMA or non-NUMA systems. Any existing hugepages will be removed.
 Network ports may be bound to DPDK kernel module for DPDK application use.
 
-**Step 2: Examining the System**
-
-This step provides some tools for examining the status of hugepage mappings.
-
-**Step 3: System Cleanup**
+**Step 2: System Cleanup**
 
 The final step has options for restoring the system to its original state.
 
@@ -74,43 +65,29 @@ Some options in the script prompt the user for further data before proceeding.
 
     [1] Insert VFIO module
 
-    [2] Setup hugepage mappings for non-NUMA systems
+    [2] Display current Ethernet device settings
 
-    [3] Setup hugepage mappings for NUMA systems
+    [3] Bind Ethernet device to IGB UIO module
 
-    [4] Display current Ethernet device settings
+    [4] Bind Ethernet device to VFIO module
 
-    [5] Bind Ethernet device to IGB UIO module
-
-    [6] Bind Ethernet device to VFIO module
-
-    [7] Setup VFIO permissions
+    [5] Setup VFIO permissions
 
     ------------------------------------------------------------------------
 
-    Step 2: Other tools
+    Step 2: Uninstall and system cleanup
 
     ------------------------------------------------------------------------
 
-    [8] List hugepage info from /proc/meminfo
+    [6] Unbind NICs from IGB UIO driver
 
-    ------------------------------------------------------------------------
+    [7] Remove IGB UIO module
 
-    Step 3: Uninstall and system cleanup
+    [8] Remove VFIO module
 
-    ------------------------------------------------------------------------
+    [9] Remove KNI module
 
-    [9] Unbind NICs from IGB UIO driver
-
-    [10] Remove IGB UIO module
-
-    [11] Remove VFIO module
-
-    [12] Remove KNI module
-
-    [13] Remove hugepage mappings
-
-    [14] Exit Script
+    [10] Exit Script
 
     Option:
 
@@ -118,46 +95,7 @@ The following selection demonstrates the starting of the DPDK UIO driver.
 
 .. code-block:: console
 
-    Option: 10
+    Option: 7
 
     Unloading any existing DPDK UIO module
     Loading DPDK UIO module
-
-The following selection demonstrates the creation of hugepages in a NUMA system.
-1024 2 MByte pages are assigned to each node.
-The result is that the application should use -m 4096 for starting the application to access both memory areas
-(this is done automatically if the -m option is not provided).
-
-.. note::
-
-    If prompts are displayed to remove temporary files, type 'y'.
-
-.. code-block:: console
-
-    Option: 3
-
-    Removing currently reserved hugepages
-    mounting /mnt/huge and removing directory
-    Input the number of 2MB pages for each node
-    Example: to have 128MB of hugepages available per node,
-    enter '64' to reserve 64 * 2MB pages on each node
-    Number of pages for node0: 1024
-    Number of pages for node1: 1024
-    Reserving hugepages
-    Creating /mnt/huge and mounting as hugetlbfs
-
-The following selection demonstrates the launch of the test application to run on a single core.
-
-.. code-block:: console
-
-    Option: 8
-
-    Enter hex bitmask of cores to execute test app on
-    Example: to execute app on cores 0 to 7, enter 0xff
-    bitmask: 0x01
-    Launching app
-    EAL: coremask set to 1
-    EAL: Detected lcore 0 on socket 0
-    ...
-    EAL: Main core 0 is ready (tid=1b2ad720)
-    RTE>>
