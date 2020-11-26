@@ -63,6 +63,7 @@ default_cflags = machine_args
 if cc.has_argument('-Wno-format-truncation')
 	default_cflags += '-Wno-format-truncation'
 endif
+default_ldflags = ['-Wl,--export-dynamic'] + dpdk_extra_ldflags
 
 foreach example: examples
 	name = example.split('/')[-1]
@@ -70,6 +71,7 @@ foreach example: examples
 	sources = []
 	allow_experimental_apis = false
 	cflags = default_cflags
+	ldflags = default_ldflags
 
 	ext_deps = [execinfo]
 	includes = [include_directories(example)]
@@ -91,7 +93,7 @@ foreach example: examples
 		executable('dpdk-' + name, sources,
 			include_directories: includes,
 			link_whole: link_whole_libs,
-			link_args: dpdk_extra_ldflags,
+			link_args: ldflags,
 			c_args: cflags,
 			dependencies: dep_objs)
 	elif not allow_skips
