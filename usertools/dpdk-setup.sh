@@ -289,7 +289,7 @@ while [ "$QUIT" == "0" ]; do
 	OPTIONS[$OPTION_NUM]="quit"
 	echo ""
 	echo '--------------------------------------------------'
-	echo 'WARNING: This tool will be removed from DPDK 20.11'
+	echo 'WARNING: This tool will be removed from DPDK 21.11'
 	echo '--------------------------------------------------'
 	echo
 	echo -n "Option: "

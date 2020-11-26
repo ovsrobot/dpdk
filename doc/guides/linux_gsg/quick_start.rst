@@ -6,6 +6,10 @@
 Quick Start Setup Script
 ========================
 
+.. warning::
+
+    The dpdk-setup.sh script is deprecated and will be removed in v21.11 release.
+
 The dpdk-setup.sh script, found in the usertools subdirectory, allows the user to perform the following tasks:
 
 *   Insert and remove VFIO kernel modules
