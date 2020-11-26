@@ -17,6 +17,7 @@
 #include <linux/skbuff.h>
 #include <linux/kthread.h>
 #include <linux/delay.h>
+#include <linux/rtnetlink.h>
 
 #include <rte_kni_common.h>
 #include <kni_fifo.h>
@@ -102,16 +103,24 @@ get_data_kva(struct kni_dev *kni, void *pkt_kva)
  * It can be called to process the request.
  */
 static int
-kni_net_process_request(struct kni_dev *kni, struct rte_kni_request *req)
+kni_net_process_request(struct net_device *dev, struct rte_kni_request *req)
 {
+	struct kni_dev *kni = netdev_priv(dev);
 	int ret = -1;
 	void *resp_va;
 	uint32_t num;
 	int ret_val;
+	int req_is_dev_stop = 0;
 
-	if (!kni || !req) {
-		pr_err("No kni instance or request\n");
-		return -EINVAL;
+	if (req->req_id == RTE_KNI_REQ_CFG_NETWORK_IF &&
+			req->if_up == 0)
+		req_is_dev_stop = 1;
+
+	ASSERT_RTNL();
+
+	if (!req_is_dev_stop) {
+		dev_hold(dev);
+		rtnl_unlock();
 	}
 
 	mutex_lock(&kni->sync_lock);
@@ -125,8 +134,13 @@ kni_net_process_request(struct kni_dev *kni, struct rte_kni_request *req)
 		goto fail;
 	}
 
+	/* Since we need to wait and RTNL mutex is held
+	 * drop the mutex and hold refernce to keep device
+	 */
+
 	ret_val = wait_event_interruptible_timeout(kni->wq,
 			kni_fifo_count(kni->resp_q), 3 * HZ);
+
 	if (signal_pending(current) || ret_val <= 0) {
 		ret = -ETIME;
 		goto fail;
@@ -144,6 +158,13 @@ kni_net_process_request(struct kni_dev *kni, struct rte_kni_request *req)
 
 fail:
 	mutex_unlock(&kni->sync_lock);
+
+
+	if (!req_is_dev_stop) {
+		rtnl_lock();
+		dev_put(dev);
+	}
+
 	return ret;
 }
 
@@ -155,7 +176,6 @@ kni_net_open(struct net_device *dev)
 {
 	int ret;
 	struct rte_kni_request req;
-	struct kni_dev *kni = netdev_priv(dev);
 
 	netif_start_queue(dev);
 	if (kni_dflt_carrier == 1)
@@ -168,7 +188,7 @@ kni_net_open(struct net_device *dev)
 
 	/* Setting if_up to non-zero means up */
 	req.if_up = 1;
-	ret = kni_net_process_request(kni, &req);
+	ret = kni_net_process_request(dev, &req);
 
 	return (ret == 0) ? req.result : ret;
 }
@@ -178,7 +198,6 @@ kni_net_release(struct net_device *dev)
 {
 	int ret;
 	struct rte_kni_request req;
-	struct kni_dev *kni = netdev_priv(dev);
 
 	netif_stop_queue(dev); /* can't transmit any more */
 	netif_carrier_off(dev);
@@ -188,7 +207,7 @@ kni_net_release(struct net_device *dev)
 
 	/* Setting if_up to 0 means down */
 	req.if_up = 0;
-	ret = kni_net_process_request(kni, &req);
+	ret = kni_net_process_request(dev, &req);
 
 	return (ret == 0) ? req.result : ret;
 }
@@ -643,14 +662,13 @@ kni_net_change_mtu(struct net_device *dev, int new_mtu)
 {
 	int ret;
 	struct rte_kni_request req;
-	struct kni_dev *kni = netdev_priv(dev);
 
 	pr_debug("kni_net_change_mtu new mtu %d to be set\n", new_mtu);
 
 	memset(&req, 0, sizeof(req));
 	req.req_id = RTE_KNI_REQ_CHANGE_MTU;
 	req.new_mtu = new_mtu;
-	ret = kni_net_process_request(kni, &req);
+	ret = kni_net_process_request(dev, &req);
 	if (ret == 0 && req.result == 0)
 		dev->mtu = new_mtu;
 
@@ -661,7 +679,6 @@ static void
 kni_net_change_rx_flags(struct net_device *netdev, int flags)
 {
 	struct rte_kni_request req;
-	struct kni_dev *kni = netdev_priv(netdev);
 
 	memset(&req, 0, sizeof(req));
 
@@ -683,7 +700,7 @@ kni_net_change_rx_flags(struct net_device *netdev, int flags)
 			req.promiscusity = 0;
 	}
 
-	kni_net_process_request(kni, &req);
+	kni_net_process_request(netdev, &req);
 }
 
 /*
@@ -742,7 +759,6 @@ kni_net_set_mac(struct net_device *netdev, void *p)
 {
 	int ret;
 	struct rte_kni_request req;
-	struct kni_dev *kni;
 	struct sockaddr *addr = p;
 
 	memset(&req, 0, sizeof(req));
@@ -754,8 +770,7 @@ kni_net_set_mac(struct net_device *netdev, void *p)
 	memcpy(req.mac_addr, addr->sa_data, netdev->addr_len);
 	memcpy(netdev->dev_addr, addr->sa_data, netdev->addr_len);
 
-	kni = netdev_priv(netdev);
-	ret = kni_net_process_request(kni, &req);
+	ret = kni_net_process_request(netdev, &req);
 
 	return (ret == 0 ? req.result : ret);
 }
