@@ -62,7 +62,7 @@ load_vfio_module()
 {
 	remove_vfio_module
 
-	VFIO_PATH="kernel/drivers/vfio/pci/vfio-pci.ko"
+	VFIO_PATH="kernel/drivers/vfio/pci/vfio-pci.ko*"
 
 	echo "Loading VFIO module"
 	/sbin/lsmod | grep -s vfio_pci > /dev/null
