@@ -18,11 +18,6 @@ echo "--------------------------------------------------------------------------
 HUGEPGSZ=`cat /proc/meminfo  | grep Hugepagesize | cut -d : -f 2 | tr -d ' '`
 
 #
-# Application EAL parameters for setting memory options (amount/channels/ranks).
-#
-EAL_PARAMS='-n 4'
-
-#
 # Sets QUIT variable so script will finish.
 #
 quit()
@@ -253,34 +248,6 @@ set_numa_pages()
 }
 
 #
-# Run unit test application.
-#
-run_test_app()
-{
-	echo ""
-	echo "  Enter hex bitmask of cores to execute test app on"
-	echo "  Example: to execute app on cores 0 to 7, enter 0xff"
-	echo -n "bitmask: "
-	read Bitmask
-	echo "Launching app"
-	sudo ${RTE_TARGET}/app/test -c $Bitmask $EAL_PARAMS
-}
-
-#
-# Run unit testpmd application.
-#
-run_testpmd_app()
-{
-	echo ""
-	echo "  Enter hex bitmask of cores to execute testpmd app on"
-	echo "  Example: to execute app on cores 0 to 7, enter 0xff"
-	echo -n "bitmask: "
-	read Bitmask
-	echo "Launching app"
-	sudo ${RTE_TARGET}/app/testpmd -c $Bitmask $EAL_PARAMS -- -i
-}
-
-#
 # Print hugepage information.
 #
 grep_meminfo()
@@ -382,23 +349,9 @@ step1_func()
 }
 
 #
-# Options for running applications.
-#
-step2_func()
-{
-	TITLE="Run test application for linux environment"
-
-	TEXT[1]="Run test application (\$RTE_TARGET/app/test)"
-	FUNC[1]="run_test_app"
-
-	TEXT[2]="Run testpmd application in interactive mode (\$RTE_TARGET/app/testpmd)"
-	FUNC[2]="run_testpmd_app"
-}
-
-#
 # Other options
 #
-step3_func()
+step2_func()
 {
 	TITLE="Other tools"
 
@@ -410,7 +363,7 @@ step3_func()
 #
 # Options for cleaning up the system
 #
-step4_func()
+step3_func()
 {
 	TITLE="Uninstall and system cleanup"
 
@@ -433,7 +386,6 @@ step4_func()
 STEPS[1]="step1_func"
 STEPS[2]="step2_func"
 STEPS[3]="step3_func"
-STEPS[4]="step4_func"
 
 QUIT=0
 

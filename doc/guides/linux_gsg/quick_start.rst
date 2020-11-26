@@ -20,8 +20,6 @@ The dpdk-setup.sh script, found in the usertools subdirectory, allows the user t
 
 *   Set up permissions for using VFIO as a non-privileged user
 
-*   Run the test and testpmd applications
-
 *   Look at hugepages in the meminfo
 
 *   List hugepages in ``/mnt/huge``
@@ -41,17 +39,11 @@ The user configures the Linux* environment to support the running of DPDK applic
 Hugepages can be set up for NUMA or non-NUMA systems. Any existing hugepages will be removed.
 Network ports may be bound to DPDK kernel module for DPDK application use.
 
-**Step 2: Run an Application**
-
-The user may run the test application once the other steps have been performed.
-The test application allows the user to run a series of functional tests for the DPDK.
-The testpmd application, which supports the receiving and sending of packets, can also be run.
-
-**Step 3: Examining the System**
+**Step 2: Examining the System**
 
 This step provides some tools for examining the status of hugepage mappings.
 
-**Step 4: System Cleanup**
+**Step 3: System Cleanup**
 
 The final step has options for restoring the system to its original state.
 
@@ -96,39 +88,29 @@ Some options in the script prompt the user for further data before proceeding.
 
     ------------------------------------------------------------------------
 
-    Step 2: Run test application for linux environment
+    Step 2: Other tools
 
     ------------------------------------------------------------------------
 
-    [8] Run test application ($RTE_TARGET/app/test)
-
-    [9] Run testpmd application in interactive mode ($RTE_TARGET/app/testpmd)
+    [8] List hugepage info from /proc/meminfo
 
     ------------------------------------------------------------------------
 
-    Step 3: Other tools
+    Step 3: Uninstall and system cleanup
 
     ------------------------------------------------------------------------
 
-    [10] List hugepage info from /proc/meminfo
+    [9] Unbind NICs from IGB UIO driver
 
-    ------------------------------------------------------------------------
+    [10] Remove IGB UIO module
 
-    Step 4: Uninstall and system cleanup
+    [11] Remove VFIO module
 
-    ------------------------------------------------------------------------
+    [12] Remove KNI module
 
-    [11] Unbind NICs from IGB UIO driver
+    [13] Remove hugepage mappings
 
-    [12] Remove IGB UIO module
-
-    [13] Remove VFIO module
-
-    [14] Remove KNI module
-
-    [15] Remove hugepage mappings
-
-    [16] Exit Script
+    [14] Exit Script
 
     Option:
 
@@ -136,7 +118,7 @@ The following selection demonstrates the starting of the DPDK UIO driver.
 
 .. code-block:: console
 
-    Option: 12
+    Option: 10
 
     Unloading any existing DPDK UIO module
     Loading DPDK UIO module
