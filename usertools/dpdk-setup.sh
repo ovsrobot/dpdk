@@ -79,39 +79,6 @@ remove_igb_uio_module()
 }
 
 #
-# Loads new igb_uio.ko (and uio module if needed).
-#
-load_igb_uio_module()
-{
-	if [ ! -f $RTE_SDK/$RTE_TARGET/kmod/igb_uio.ko ];then
-		echo "## ERROR: Target does not have the DPDK UIO Kernel Module."
-		echo "       To fix, please try to rebuild target."
-		return
-	fi
-
-	remove_igb_uio_module
-
-	/sbin/lsmod | grep -s uio > /dev/null
-	if [ $? -ne 0 ] ; then
-		modinfo uio > /dev/null
-		if [ $? -eq 0 ]; then
-			echo "Loading uio module"
-			sudo /sbin/modprobe uio
-		fi
-	fi
-
-	# UIO may be compiled into kernel, so it may not be an error if it can't
-	# be loaded.
-
-	echo "Loading DPDK UIO module"
-	sudo /sbin/insmod $RTE_SDK/$RTE_TARGET/kmod/igb_uio.ko
-	if [ $? -ne 0 ] ; then
-		echo "## ERROR: Could not load kmod/igb_uio.ko."
-		quit
-	fi
-}
-
-#
 # Unloads VFIO modules.
 #
 remove_vfio_module()
@@ -168,30 +135,6 @@ remove_kni_module()
 	/sbin/lsmod | grep -s rte_kni > /dev/null
 	if [ $? -eq 0 ] ; then
 		sudo /sbin/rmmod rte_kni
-	fi
-}
-
-#
-# Loads the rte_kni.ko module.
-#
-load_kni_module()
-{
-    # Check that the KNI module is already built.
-	if [ ! -f $RTE_SDK/$RTE_TARGET/kmod/rte_kni.ko ];then
-		echo "## ERROR: Target does not have the DPDK KNI Module."
-		echo "       To fix, please try to rebuild target."
-		return
-	fi
-
-    # Unload existing version if present.
-	remove_kni_module
-
-    # Now try load the KNI module.
-	echo "Loading DPDK KNI module"
-	sudo /sbin/insmod $RTE_SDK/$RTE_TARGET/kmod/rte_kni.ko
-	if [ $? -ne 0 ] ; then
-		echo "## ERROR: Could not load kmod/rte_kni.ko."
-		quit
 	fi
 }
 
@@ -416,32 +359,26 @@ step1_func()
 {
 	TITLE="Setup linux environment"
 
-	TEXT[1]="Insert IGB UIO module"
-	FUNC[1]="load_igb_uio_module"
+	TEXT[1]="Insert VFIO module"
+	FUNC[1]="load_vfio_module"
 
-	TEXT[2]="Insert VFIO module"
-	FUNC[2]="load_vfio_module"
+	TEXT[2]="Setup hugepage mappings for non-NUMA systems"
+	FUNC[2]="set_non_numa_pages"
 
-	TEXT[3]="Insert KNI module"
-	FUNC[3]="load_kni_module"
+	TEXT[3]="Setup hugepage mappings for NUMA systems"
+	FUNC[3]="set_numa_pages"
 
-	TEXT[4]="Setup hugepage mappings for non-NUMA systems"
-	FUNC[4]="set_non_numa_pages"
+	TEXT[4]="Display current Ethernet/Baseband/Crypto device settings"
+	FUNC[4]="show_devices"
 
-	TEXT[5]="Setup hugepage mappings for NUMA systems"
-	FUNC[5]="set_numa_pages"
+	TEXT[5]="Bind Ethernet/Baseband/Crypto device to IGB UIO module"
+	FUNC[5]="bind_devices_to_igb_uio"
 
-	TEXT[6]="Display current Ethernet/Baseband/Crypto device settings"
-	FUNC[6]="show_devices"
+	TEXT[6]="Bind Ethernet/Baseband/Crypto device to VFIO module"
+	FUNC[6]="bind_devices_to_vfio"
 
-	TEXT[7]="Bind Ethernet/Baseband/Crypto device to IGB UIO module"
-	FUNC[7]="bind_devices_to_igb_uio"
-
-	TEXT[8]="Bind Ethernet/Baseband/Crypto device to VFIO module"
-	FUNC[8]="bind_devices_to_vfio"
-
-	TEXT[9]="Setup VFIO permissions"
-	FUNC[9]="set_vfio_permissions"
+	TEXT[7]="Setup VFIO permissions"
+	FUNC[7]="set_vfio_permissions"
 }
 
 #

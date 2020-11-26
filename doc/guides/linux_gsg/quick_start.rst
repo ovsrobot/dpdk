@@ -8,11 +8,11 @@ Quick Start Setup Script
 
 The dpdk-setup.sh script, found in the usertools subdirectory, allows the user to perform the following tasks:
 
-*   Insert and remove the DPDK IGB_UIO kernel module
-
 *   Insert and remove VFIO kernel modules
 
-*   Insert and remove the DPDK KNI kernel module
+*   Remove the DPDK IGB_UIO kernel module
+
+*   Remove the DPDK KNI kernel module
 
 *   Create and delete hugepages for NUMA and non-NUMA cases
 
@@ -39,8 +39,7 @@ The following is a brief synopsis of each step.
 
 The user configures the Linux* environment to support the running of DPDK applications.
 Hugepages can be set up for NUMA or non-NUMA systems. Any existing hugepages will be removed.
-The DPDK kernel module that is needed can also be inserted in this step,
-and network ports may be bound to this module for DPDK application use.
+Network ports may be bound to DPDK kernel module for DPDK application use.
 
 **Step 2: Run an Application**
 
@@ -81,23 +80,19 @@ Some options in the script prompt the user for further data before proceeding.
 
     ------------------------------------------------------------------------
 
-    [1] Insert IGB UIO module
+    [1] Insert VFIO module
 
-    [2] Insert VFIO module
+    [2] Setup hugepage mappings for non-NUMA systems
 
-    [3] Insert KNI module
+    [3] Setup hugepage mappings for NUMA systems
 
-    [4] Setup hugepage mappings for non-NUMA systems
+    [4] Display current Ethernet device settings
 
-    [5] Setup hugepage mappings for NUMA systems
+    [5] Bind Ethernet device to IGB UIO module
 
-    [6] Display current Ethernet device settings
+    [6] Bind Ethernet device to VFIO module
 
-    [7] Bind Ethernet device to IGB UIO module
-
-    [8] Bind Ethernet device to VFIO module
-
-    [9] Setup VFIO permissions
+    [7] Setup VFIO permissions
 
     ------------------------------------------------------------------------
 
@@ -105,9 +100,9 @@ Some options in the script prompt the user for further data before proceeding.
 
     ------------------------------------------------------------------------
 
-    [10] Run test application ($RTE_TARGET/app/test)
+    [8] Run test application ($RTE_TARGET/app/test)
 
-    [11] Run testpmd application in interactive mode ($RTE_TARGET/app/testpmd)
+    [9] Run testpmd application in interactive mode ($RTE_TARGET/app/testpmd)
 
     ------------------------------------------------------------------------
 
@@ -115,7 +110,7 @@ Some options in the script prompt the user for further data before proceeding.
 
     ------------------------------------------------------------------------
 
-    [12] List hugepage info from /proc/meminfo
+    [10] List hugepage info from /proc/meminfo
 
     ------------------------------------------------------------------------
 
@@ -123,17 +118,17 @@ Some options in the script prompt the user for further data before proceeding.
 
     ------------------------------------------------------------------------
 
-    [13] Unbind NICs from IGB UIO driver
+    [11] Unbind NICs from IGB UIO driver
 
-    [14] Remove IGB UIO module
+    [12] Remove IGB UIO module
 
-    [15] Remove VFIO module
+    [13] Remove VFIO module
 
-    [16] Remove KNI module
+    [14] Remove KNI module
 
-    [17] Remove hugepage mappings
+    [15] Remove hugepage mappings
 
-    [18] Exit Script
+    [16] Exit Script
 
     Option:
 
@@ -141,7 +136,7 @@ The following selection demonstrates the starting of the DPDK UIO driver.
 
 .. code-block:: console
 
-    Option: 14
+    Option: 12
 
     Unloading any existing DPDK UIO module
     Loading DPDK UIO module
@@ -157,7 +152,7 @@ The result is that the application should use -m 4096 for starting the applicati
 
 .. code-block:: console
 
-    Option: 5
+    Option: 3
 
     Removing currently reserved hugepages
     mounting /mnt/huge and removing directory
@@ -173,7 +168,7 @@ The following selection demonstrates the launch of the test application to run o
 
 .. code-block:: console
 
-    Option: 10
+    Option: 8
 
     Enter hex bitmask of cores to execute test app on
     Example: to execute app on cores 0 to 7, enter 0xff
