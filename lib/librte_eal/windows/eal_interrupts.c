@@ -105,3 +105,12 @@ eal_intr_thread_schedule(void (*func)(void *arg), void *arg)
 
 	return 0;
 }
+
+int
+rte_intr_callback_register(
+			__rte_unused const struct rte_intr_handle *intr_handle,
+			__rte_unused rte_intr_callback_fn cb,
+			__rte_unused void *cb_arg)
+{
+	return -ENOTSUP;
+}
