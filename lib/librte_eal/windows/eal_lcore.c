@@ -36,6 +36,11 @@ struct cpu_map {
 
 static struct cpu_map cpu_map = { 0 };
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#endif
+
 /* eal_create_cpu_map() is called before logging is initialized */
 static void
 log_early(const char *format, ...)
@@ -46,6 +51,10 @@ log_early(const char *format, ...)
 	vfprintf(stderr, format, va);
 	va_end(va);
 }
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 int
 eal_create_cpu_map(void)
