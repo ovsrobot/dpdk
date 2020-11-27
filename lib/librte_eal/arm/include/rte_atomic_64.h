@@ -46,7 +46,7 @@ rte_atomic_thread_fence(int memorder)
 /*------------------------ 128 bit atomic operations -------------------------*/
 
 #if defined(__ARM_FEATURE_ATOMICS) || defined(RTE_ARM_FEATURE_ATOMICS)
-#define __LSE_PREAMBLE	".arch armv8-a+lse\n"
+#define __LSE_PREAMBLE	".arch_extension lse\n"
 
 #define __ATOMIC128_CAS_OP(cas_op_name, op_string)                          \
 static __rte_noinline rte_int128_t                                          \
