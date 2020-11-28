@@ -284,7 +284,7 @@ virtio_user_dev_init_notify(struct virtio_user_dev *dev)
 	}
 
 	if (i < VIRTIO_MAX_VIRTQUEUES) {
-		for (j = 0; j <= i; ++j) {
+		for (j = 0; j < i; ++j) {
 			close(dev->callfds[j]);
 			close(dev->kickfds[j]);
 		}
