@@ -62,7 +62,10 @@ def set_hugepages(path, pages):
         filename = os.path.basename(path)
         size = filename[10:]
         sys.exit('{} is not a valid system huge page size'.format(size))
-
+    if get_hugepages(path) != pages:
+        print("Unable to reserve required pages. The pages reserved are:")
+        show_pages()
+        args.show = False
 
 def show_numa_pages():
     '''Show huge page reservations on Numa system'''
@@ -232,6 +235,8 @@ To a complete setup of with 2 Gigabyte of 1G huge pages:
         '--setup',
         metavar='SIZE',
         help='setup huge pages by doing clear, unmount, reserve and mount')
+
+    global args
     args = parser.parse_args()
 
     if args.setup:
