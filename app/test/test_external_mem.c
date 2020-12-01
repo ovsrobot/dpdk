@@ -532,8 +532,8 @@ fail:
 static int
 test_external_mem(void)
 {
+	size_t pgsz = rte_mem_page_size();
 	size_t len = EXTERNAL_MEM_SZ;
-	size_t pgsz = RTE_PGSIZE_4K;
 	rte_iova_t iova[len / pgsz];
 	void *addr;
 	int ret, n_pages;
