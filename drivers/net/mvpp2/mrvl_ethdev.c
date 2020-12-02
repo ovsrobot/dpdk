@@ -2171,7 +2171,6 @@ mrvl_desc_to_packet_type_and_offset(struct pp2_ppio_desc *desc,
 		*l4_offset = *l3_offset + MRVL_ARP_LENGTH;
 		break;
 	default:
-		MRVL_LOG(DEBUG, "Failed to recognise l3 packet type");
 		break;
 	}
 
@@ -2183,7 +2182,6 @@ mrvl_desc_to_packet_type_and_offset(struct pp2_ppio_desc *desc,
 		packet_type |= RTE_PTYPE_L4_UDP;
 		break;
 	default:
-		MRVL_LOG(DEBUG, "Failed to recognise l4 packet type");
 		break;
 	}
 
