@@ -2320,7 +2320,7 @@ mrvl_rx_pkt_burst(void *rxq, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 			     (!rx_done && num < q->priv->bpool_init_size))) {
 			ret = mrvl_fill_bpool(q, MRVL_BURST_SIZE);
 			if (ret)
-				MRVL_LOG(ERR, "Failed to fill bpool");
+				MRVL_LOG(DEBUG, "Failed to fill bpool");
 		} else if (unlikely(num > q->priv->bpool_max_size)) {
 			int i;
 			int pkt_to_remove = num - q->priv->bpool_init_size;
