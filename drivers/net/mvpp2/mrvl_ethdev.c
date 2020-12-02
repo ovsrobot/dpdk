@@ -90,6 +90,8 @@ static int used_bpools[PP2_NUM_PKT_PROC] = {
 static struct pp2_bpool *mrvl_port_to_bpool_lookup[RTE_MAX_ETHPORTS];
 static int mrvl_port_bpool_size[PP2_NUM_PKT_PROC][PP2_BPOOL_NUM_POOLS][RTE_MAX_LCORE];
 static uint64_t cookie_addr_high = MRVL_COOKIE_ADDR_INVALID;
+static int dummy_pool_id[PP2_NUM_PKT_PROC];
+struct pp2_bpool *dummy_pool[PP2_NUM_PKT_PROC] = {0};
 
 struct mrvl_ifnames {
 	const char *names[PP2_NUM_ETH_PPIO * PP2_NUM_PKT_PROC];
@@ -189,6 +191,19 @@ static struct {
 	MRVL_XSTATS_TBL_ENTRY(tx_errors)
 };
 
+static inline int
+mrvl_reserve_bit(int *bitmap, int max)
+{
+	int n = sizeof(*bitmap) * 8 - __builtin_clz(*bitmap);
+
+	if (n >= max)
+		return -1;
+
+	*bitmap |= 1 << n;
+
+	return n;
+}
+
 /**
  * Initialize packet processor.
  *
@@ -199,6 +214,9 @@ static int
 mrvl_init_pp2(void)
 {
 	struct pp2_init_params init_params;
+	struct pp2_bpool_params bpool_params;
+	char			name[15];
+	int			err, i;
 
 	memset(&init_params, 0, sizeof(init_params));
 	init_params.hif_reserved_map = MRVL_MUSDK_HIFS_RESERVED;
@@ -207,7 +225,36 @@ mrvl_init_pp2(void)
 	if (mrvl_cfg && mrvl_cfg->pp2_cfg.prs_udfs.num_udfs)
 		memcpy(&init_params.prs_udfs, &mrvl_cfg->pp2_cfg.prs_udfs,
 		       sizeof(struct pp2_parse_udfs));
-	return pp2_init(&init_params);
+	err = pp2_init(&init_params);
+	if (err != 0) {
+		MRVL_LOG(ERR, "PP2 init failed");
+		return -1;
+	}
+
+	memset(dummy_pool, 0, sizeof(dummy_pool));
+	for (i = 0; i < pp2_get_num_inst(); i++) {
+		dummy_pool_id[i] = mrvl_reserve_bit(&used_bpools[i],
+					     PP2_BPOOL_NUM_POOLS);
+		if (dummy_pool_id[i] < 0) {
+			MRVL_LOG(ERR, "Can't find free pool\n");
+			return -1;
+		}
+
+		memset(name, 0, sizeof(name));
+		snprintf(name, sizeof(name), "pool-%d:%d", i, dummy_pool_id[i]);
+		memset(&bpool_params, 0, sizeof(bpool_params));
+		bpool_params.match = name;
+		bpool_params.buff_len = MRVL_PKT_OFFS;
+		bpool_params.dummy_short_pool = 1;
+		err = pp2_bpool_init(&bpool_params, &dummy_pool[i]);
+		if (err != 0 || !dummy_pool[i]) {
+			MRVL_LOG(ERR, "BPool init failed!\n");
+			used_bpools[i] &= ~(1 << dummy_pool_id[i]);
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
 /**
@@ -219,6 +266,15 @@ mrvl_init_pp2(void)
 static void
 mrvl_deinit_pp2(void)
 {
+	int i;
+
+	for (i = 0; i < PP2_NUM_PKT_PROC; i++) {
+		if (!dummy_pool[i])
+			continue;
+		pp2_bpool_deinit(dummy_pool[i]);
+		used_bpools[i] &= ~(1 << dummy_pool_id[i]);
+	}
+
 	pp2_deinit();
 }
 
@@ -257,19 +313,6 @@ mrvl_get_bpool_size(int pp2_id, int pool_id)
 		size += mrvl_port_bpool_size[pp2_id][pool_id][i];
 
 	return size;
-}
-
-static inline int
-mrvl_reserve_bit(int *bitmap, int max)
-{
-	int n = sizeof(*bitmap) * 8 - __builtin_clz(*bitmap);
-
-	if (n >= max)
-		return -1;
-
-	*bitmap |= 1 << n;
-
-	return n;
 }
 
 static int
