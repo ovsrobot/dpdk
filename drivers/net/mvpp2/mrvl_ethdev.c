@@ -672,15 +672,15 @@ mrvl_dev_start(struct rte_eth_dev *dev)
 	}
 
 	if (!priv->vlan_flushed) {
-		ret = pp2_ppio_flush_vlan(priv->ppio);
-		if (ret) {
-			MRVL_LOG(ERR, "Failed to flush vlan list");
-			/*
-			 * TODO
-			 * once pp2_ppio_flush_vlan() is supported jump to out
-			 * goto out;
-			 */
-		}
+		/*
+		 * TODO
+		 * once pp2_ppio_flush_vlan() is supported call it
+		 * ret = pp2_ppio_flush_vlan(priv->ppio);
+		 * if (ret) {
+		 *	MRVL_LOG(ERR, "Failed to flush vlan list");
+		 *	goto out;
+		 * }
+		 */
 		priv->vlan_flushed = 1;
 	}
 	ret = mrvl_mtu_set(dev, dev->data->mtu);
