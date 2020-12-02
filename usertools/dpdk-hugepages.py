@@ -70,13 +70,14 @@ def show_numa_pages():
     for numa_path in glob.glob('/sys/devices/system/node/node*'):
         node = numa_path[29:]  # slice after /sys/devices/system/node/node
         path = numa_path + '/hugepages'
-        for hdir in os.listdir(path):
-            pages = get_hugepages(path + '/' + hdir)
-            if pages > 0:
-                kb = int(hdir[10:-2])  # slice out of hugepages-NNNkB
-                print('{:<4} {:<5} {:<6} {}'.format(node, pages,
-                                                    fmt_memsize(kb),
-                                                    fmt_memsize(pages * kb)))
+        if os.path.exists(path):
+            for hdir in os.listdir(path):
+                pages = get_hugepages(path + '/' + hdir)
+                if pages > 0:
+                    kb = int(hdir[10:-2])  # slice out of hugepages-NNNkB
+                    print('{:<4} {:<5} {:<6} {}'.format(node, pages,
+                                                        fmt_memsize(kb),
+                                                        fmt_memsize(pages * kb)))
 
 
 def show_non_numa_pages():
