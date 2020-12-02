@@ -1278,7 +1278,6 @@ mrvl_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 				       rx_stats.drop_fullq +
 				       rx_stats.drop_bm +
 				       rxq->drop_mac;
-		stats->ibytes += rxq->bytes_recv;
 		drop_mac += rxq->drop_mac;
 	}
 
@@ -1306,7 +1305,6 @@ mrvl_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 
 		stats->q_opackets[idx] = tx_stats.deq_desc;
 		stats->q_obytes[idx] = txq->bytes_sent;
-		stats->obytes += txq->bytes_sent;
 	}
 
 	ret = pp2_ppio_get_statistics(priv->ppio, &ppio_stats, 0);
@@ -1315,6 +1313,8 @@ mrvl_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		return ret;
 	}
 
+	stats->ibytes += ppio_stats.rx_bytes;
+	stats->obytes += ppio_stats.tx_bytes;
 	stats->ipackets += ppio_stats.rx_packets - drop_mac;
 	stats->opackets += ppio_stats.tx_packets;
 	stats->imissed += ppio_stats.rx_fullq_dropped +
