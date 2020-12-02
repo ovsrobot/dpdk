@@ -3,6 +3,8 @@
     Copyright(c) 2018 Semihalf.
     All rights reserved.
 
+.. _mvneta_poll_mode_driver:
+
 MVNETA Poll Mode Driver
 =======================
 
@@ -25,6 +27,7 @@ Features of the MVNETA PMD are:
 - Speed capabilities
 - Jumbo frame
 - MTU update
+- Jumbo frame
 - Promiscuous mode
 - Unicast MAC filter
 - Link status
@@ -33,6 +36,8 @@ Features of the MVNETA PMD are:
 - L4 checksum offload
 - Packet type parsing
 - Basic stats
+- Multicast MAC filter
+- Scattered TX frames
 
 
 Limitations
@@ -41,6 +46,11 @@ Limitations
 - Flushing vlans added for filtering is not possible due to MUSDK missing
   functionality. Current workaround is to reset board so that NETA has a
   chance to start in a sane state.
+
+- MUSDK architecture does not support changing configuration in run time.
+  All nessesary configurations should be done before first dev_start().
+
+- Running more than one DPDK-MUSDK application simultaneously is not supported.
 
 Prerequisites
 -------------
@@ -56,7 +66,7 @@ Prerequisites
 
   .. code-block:: console
 
-     git clone https://github.com/MarvellEmbeddedProcessors/musdk-marvell.git -b musdk-armada-18.09
+     git clone https://github.com/MarvellEmbeddedProcessors/musdk-marvell.git -b musdk-release-SDK-10.3.5.0-PR2
 
   MUSDK is a light-weight library that provides direct access to Marvell's
   NETA. Alternatively prebuilt MUSDK library can be
@@ -64,11 +74,8 @@ Prerequisites
   approval has been granted, library can be found by typing ``musdk`` in
   the search box.
 
-  MUSDK must be configured with the following features:
-
-  .. code-block:: console
-
-     --enable-pp2=no --enable-neta
+  To better understand the library, please consult documentation
+  available in the ``doc`` top level directory of the MUSDK sources.
 
 - DPDK environment
 
@@ -98,36 +105,28 @@ Building DPDK
 -------------
 
 Driver needs precompiled MUSDK library during compilation.
-
-.. code-block:: console
-
-   export CROSS_COMPILE=<toolchain>/bin/aarch64-linux-gnu-
-   ./bootstrap
-   ./configure --host=aarch64-linux-gnu --enable-pp2=no --enable-neta
-   make install
-
 MUSDK will be installed to `usr/local` under current directory.
 For the detailed build instructions please consult ``doc/musdk_get_started.txt``.
 
-The path to the MUSDK installation directory needs to set in meson, shown in the
-following command:
+Add path to libmusdk.pc in PKG_CONFIG_PATH environment variable:
 
 .. code-block:: console
 
-   meson -Dlib_musdk_dir=/path/to/musdk build ninja -C build
+   export PKG_CONFIG_PATH=$<musdk_install_dir>/lib/pkgconfig/:$PKG_CONFIG_PATH
+
+Build DPDK:
+
+.. code-block:: console
+
+   meson build --cross-file config/arm/arm64_armada_linux_gcc
+   ninja -C build
 
 
 Usage Example
 -------------
 
 MVNETA PMD requires extra out of tree kernel modules to function properly.
-`musdk_uio` and `mv_neta_uio` sources are part of the MUSDK. Please consult
-``doc/musdk_get_started.txt`` for the detailed build instructions.
-
-.. code-block:: console
-
-   insmod musdk_uio.ko
-   insmod mv_neta_uio.ko
+Please consult ``doc/musdk_get_started.txt`` for the detailed build instructions.
 
 Additionally interfaces used by DPDK application need to be put up:
 

@@ -1,6 +1,7 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
-    Copyright(c) 2017 Marvell International Ltd.
-    Copyright(c) 2017 Semihalf.
+    Copyright(c) 2018 Marvell International Ltd.
+    Copyright(c) 2018 Semihalf.
+    All rights reserved.
 
 .. _mvpp2_poll_mode_driver:
 
@@ -91,7 +92,7 @@ Prerequisites
 
   .. code-block:: console
 
-     git clone https://github.com/MarvellEmbeddedProcessors/musdk-marvell.git -b musdk-armada-18.09
+     git clone https://github.com/MarvellEmbeddedProcessors/musdk-marvell.git -b musdk-release-SDK-10.3.5.0-PR2
 
   MUSDK is a light-weight library that provides direct access to Marvell's
   PPv2 (Packet Processor v2). Alternatively prebuilt MUSDK library can be
@@ -112,47 +113,29 @@ Building DPDK
 -------------
 
 Driver needs precompiled MUSDK library during compilation.
-
-.. code-block:: console
-
-   export CROSS_COMPILE=<toolchain>/bin/aarch64-linux-gnu-
-   ./bootstrap
-   ./configure --host=aarch64-linux-gnu
-   make install
-
 MUSDK will be installed to `usr/local` under current directory.
 For the detailed build instructions please consult ``doc/musdk_get_started.txt``.
 
-The path to the MUSDK installation directory needs to set in meson, shown in the
-command below.
-
-For additional instructions regarding DPDK cross compilation please refer to :doc:`Cross compile DPDK for ARM64 <../linux_gsg/cross_build_dpdk_for_arm64>`.
+Add path to libmusdk.pc in PKG_CONFIG_PATH environment variable:
 
 .. code-block:: console
 
-   meson -Dlib_musdk_dir=/path/to/musdk build ninja -C build
+   export PKG_CONFIG_PATH=$<musdk_install_dir>/lib/pkgconfig/:$PKG_CONFIG_PATH
+
+Build DPDK:
+
+.. code-block:: console
+
+   meson build --cross-file config/arm/arm64_armada_linux_gcc
+   ninja -C build
 
 
 Usage Example
 -------------
 
 MVPP2 PMD requires extra out of tree kernel modules to function properly.
-`musdk_cma` sources are part of the MUSDK. Please consult
-``doc/musdk_get_started.txt`` for the detailed build instructions.
-For `mvpp2x_sysfs` please consult ``Documentation/pp22_sysfs.txt`` for the
-detailed build instructions.
+Please consult ``doc/musdk_get_started.txt`` for the detailed build instructions.
 
-.. code-block:: console
-
-   insmod musdk_cma.ko
-   insmod mvpp2x_sysfs.ko
-
-Additionally interfaces used by DPDK application need to be put up:
-
-.. code-block:: console
-
-   ip link set eth0 up
-   ip link set eth2 up
 
 In order to run testpmd example application following command can be used:
 

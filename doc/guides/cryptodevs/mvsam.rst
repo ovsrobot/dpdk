@@ -1,6 +1,7 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
-    Copyright(c) 2017 Marvell International Ltd.
-    Copyright(c) 2017 Semihalf.
+    Copyright(c) 2018 Marvell International Ltd.
+    Copyright(c) 2018 Semihalf.
+    All rights reserved.
 
 MVSAM Crypto Poll Mode Driver
 =============================
@@ -21,6 +22,12 @@ Features
 --------
 
 MVSAM CRYPTO PMD has support for:
+
+* Symmetric crypto operations: encryption/description and authentication
+* Symmetric chaining crypto operations
+* HW Accelerated using EIP97/EIP197b/EIP197d
+* Out-of-place Scatter-gather list Input, Linear Buffers Output
+* Out-of-place Linear Buffers Input, Linear Buffers Output
 
 Cipher algorithms:
 
@@ -61,6 +68,27 @@ Limitations
 * Hardware only supports scenarios where ICV (digest buffer) is placed just
   after the authenticated data. Other placement will result in error.
 
+Prerequisites
+-------------
+
+- Custom Linux Kernel sources
+
+  .. code-block:: console
+
+     git clone https://github.com/MarvellEmbeddedProcessors/linux-marvell.git -b linux-4.4.120-armada-18.09
+
+- Out of tree `mvpp2x_sysfs` kernel module sources
+
+  .. code-block:: console
+
+     git clone https://github.com/MarvellEmbeddedProcessors/mvpp2x-marvell.git -b mvpp2x-armada-18.09
+
+- MUSDK (Marvell User-Space SDK) sources
+
+  .. code-block:: console
+
+     git clone https://github.com/MarvellEmbeddedProcessors/musdk-marvell.git -b musdk-release-SDK-10.3.5.0-PR2
+
 Installation
 ------------
 
@@ -74,23 +102,30 @@ extra option must be passed to the library configuration script:
 For instructions how to build required kernel modules please refer
 to `doc/musdk_get_started.txt`.
 
-Initialization
---------------
+Building DPDK
+-------------
 
-After successfully building MVSAM CRYPTO PMD, the following modules need to be
-loaded:
+Driver needs precompiled MUSDK library during compilation.
+MUSDK will be installed to `usr/local` under current directory.
+For the detailed build instructions please consult ``doc/musdk_get_started.txt``.
+
+Add path to libmusdk.pc in PKG_CONFIG_PATH environment variable:
 
 .. code-block:: console
 
-   insmod musdk_cma.ko
-   insmod crypto_safexcel.ko rings=0,0
-   insmod mv_sam_uio.ko
+   export PKG_CONFIG_PATH=$<musdk_install_dir>/lib/pkgconfig/:$PKG_CONFIG_PATH
 
-The following parameters (all optional) are exported by the driver:
+Build DPDK:
 
-- ``max_nb_queue_pairs``: maximum number of queue pairs in the device (default: 8 - A8K, 4 - A7K/A3K).
-- ``max_nb_sessions``: maximum number of sessions that can be created (default: 2048).
-- ``socket_id``: socket on which to allocate the device resources on.
+.. code-block:: console
+
+   meson build --cross-file config/arm/arm64_armada_linux_gcc
+   ninja -C build
+
+
+
+Usage Example
+-------------
 
 l2fwd-crypto example application can be used to verify MVSAM CRYPTO PMD
 operation:
