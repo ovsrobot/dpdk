@@ -2693,6 +2693,7 @@ mrvl_rx_pkt_burst(void *rxq, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 		mbuf->l2_len = l3_offset;
 		mbuf->l3_len = l4_offset - l3_offset;
 
+		mbuf->udata64 = q->port_id;
 		if (likely(q->cksum_enabled))
 			mbuf->ol_flags = mrvl_desc_to_ol_flags(&descs[i]);
 
