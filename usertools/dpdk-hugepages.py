@@ -49,6 +49,14 @@ def get_hugepages(path):
         return int(nr_hugepages.read())
     return 0
 
+def get_valid_page_sizes(path):
+    valid_page_sizes = ""
+    hugepage_dir_path = os.path.split(path)[0]
+    hugepage_dirs = os.listdir(hugepage_dir_path)
+    for each_dir in hugepage_dirs:
+        hugepage_size = each_dir.split("-")[1]
+        valid_page_sizes = valid_page_sizes + " " + hugepage_size
+    return valid_page_sizes
 
 def set_hugepages(path, pages):
     '''Write the number of reserved huge pages'''
@@ -59,10 +67,8 @@ def set_hugepages(path, pages):
     except PermissionError:
         sys.exit('Permission denied: need to be root!')
     except FileNotFoundError:
-        filename = os.path.basename(path)
-        size = filename[10:]
-        sys.exit('{} is not a valid system huge page size'.format(size))
-
+        sys.exit("Invalid page size. Valid page sizes: {}".format(
+                                        get_valid_page_sizes(path)))
 
 def show_numa_pages():
     '''Show huge page reservations on Numa system'''
