@@ -117,6 +117,7 @@ rte_ipv4_frag_reassemble_packet(struct rte_ip_frag_tbl *tbl,
 
 	ip_ofs *= RTE_IPV4_HDR_OFFSET_UNITS;
 	ip_len = rte_be_to_cpu_16(ip_hdr->total_length) - mb->l3_len;
+	mb->data_len = ip_len + mb->l3_len + mb->l2_len;
 
 	IP_FRAG_LOG(DEBUG, "%s:%d:\n"
 		"mbuf: %p, tms: %" PRIu64
