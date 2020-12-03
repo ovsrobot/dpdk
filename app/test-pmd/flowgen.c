@@ -150,6 +150,7 @@ pkt_burst_flow_gen(struct fwd_stream *fs)
 							   next_flow);
 		ip_hdr->total_length	= RTE_CPU_TO_BE_16(pkt_size -
 							   sizeof(*eth_hdr));
+		rte_compiler_barrier();
 		ip_hdr->hdr_checksum	= ip_sum((unaligned_uint16_t *)ip_hdr,
 						 sizeof(*ip_hdr));
 
