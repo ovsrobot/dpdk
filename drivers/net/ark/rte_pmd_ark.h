@@ -27,6 +27,9 @@ typedef uint64_t rte_pmd_ark_rx_userdata_t;
 extern int rte_pmd_ark_tx_userdata_dynfield_offset;
 extern int rte_pmd_ark_rx_userdata_dynfield_offset;
 
+extern int rte_pmd_ark_timestamp_dynfield_offset;
+extern uint64_t rte_pmd_ark_timestamp_rx_dynflag;
+
 /** mbuf dynamic field for custom Tx ARK data */
 #define RTE_PMD_ARK_TX_USERDATA_DYNFIELD_NAME "rte_net_ark_dynfield_tx_userdata"
 /** mbuf dynamic field for custom Rx ARK data */
@@ -46,7 +49,8 @@ static inline rte_pmd_ark_tx_userdata_t
 rte_pmd_ark_mbuf_tx_userdata_get(const struct rte_mbuf *mbuf)
 {
 #if RTE_PMD_ARK_TX_USERDATA_ENABLE
-	return *RTE_MBUF_DYNFIELD(mbuf, rte_pmd_ark_tx_userdata_dynfield_offset,
+	return *RTE_MBUF_DYNFIELD(mbuf,
+				  rte_pmd_ark_tx_userdata_dynfield_offset,
 				  rte_pmd_ark_tx_userdata_t *);
 #else
 	RTE_SET_USED(mbuf);

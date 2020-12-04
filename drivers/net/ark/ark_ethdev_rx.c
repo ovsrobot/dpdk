@@ -273,10 +273,11 @@ eth_ark_recv_pkts(void *rx_queue,
 		mbuf->pkt_len = meta->pkt_len;
 		mbuf->data_len = meta->pkt_len;
 		/* set timestamp if enabled at least on one device */
-		if (ark_timestamp_rx_dynflag > 0) {
-			*RTE_MBUF_DYNFIELD(mbuf, ark_timestamp_dynfield_offset,
+		if (rte_pmd_ark_timestamp_rx_dynflag > 0) {
+			*RTE_MBUF_DYNFIELD(mbuf,
+				rte_pmd_ark_timestamp_dynfield_offset,
 				rte_mbuf_timestamp_t *) = meta->timestamp;
-			mbuf->ol_flags |= ark_timestamp_rx_dynflag;
+			mbuf->ol_flags |= rte_pmd_ark_timestamp_rx_dynflag;
 		}
 		rte_pmd_ark_mbuf_rx_userdata_set(mbuf, meta->user_data);
 
