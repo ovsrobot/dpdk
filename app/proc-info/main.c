@@ -37,6 +37,7 @@
 #include <rte_cryptodev.h>
 #include <rte_tm.h>
 #include <rte_hexdump.h>
+#include <rte_apistats.h>
 
 /* Maximum long option length for option parsing. */
 #define MAX_LONG_OPT_SZ 64
@@ -93,6 +94,8 @@ static char *mempool_name;
 /**< Enable iter mempool. */
 static uint32_t enable_iter_mempool;
 static char *mempool_iter_name;
+/**< Enable api stats. */
+static uint32_t enable_apistats;
 
 /**< display usage */
 static void
@@ -109,6 +112,7 @@ proc_info_usage(const char *prgname)
 		"  --xstats-name NAME: to display single xstat id by NAME\n"
 		"  --xstats-ids IDLIST: to display xstat values by id. "
 			"The argument is comma-separated list of xstat ids to print out.\n"
+		"  --apistats: to display api statistics, disabled by default\n"
 		"  --stats-reset: to reset port statistics\n"
 		"  --xstats-reset: to reset port extended statistics\n"
 		"  --collectd-format: to print statistics to STDOUT in expected by collectd format\n"
@@ -218,6 +222,7 @@ proc_info_parse_args(int argc, char **argv)
 		{"xstats-name", required_argument, NULL, 1},
 		{"collectd-format", 0, NULL, 0},
 		{"xstats-ids", 1, NULL, 1},
+		{"apistats", 0, NULL, 0},
 		{"host-id", 0, NULL, 0},
 		{"show-port", 0, NULL, 0},
 		{"show-tm", 0, NULL, 0},
@@ -266,6 +271,9 @@ proc_info_parse_args(int argc, char **argv)
 			else if (!strncmp(long_option[option_index].name, "xstats-reset",
 					MAX_LONG_OPT_SZ))
 				reset_xstats = 1;
+			else if (!strncmp(long_option[option_index].name, "apistats",
+					MAX_LONG_OPT_SZ))
+				enable_apistats = 1;
 			else if (!strncmp(long_option[option_index].name,
 					"show-port", MAX_LONG_OPT_SZ))
 				enable_shw_port = 1;
@@ -1349,6 +1357,40 @@ iter_mempool(char *name)
 	}
 }
 
+static void
+display_apistats(void)
+{
+	static const char *api_stats_border = "########################";
+	uint16_t i;
+	struct rte_apistats t0_count, t1_count;
+	memcpy(&t0_count, rte_apicounts, sizeof(struct rte_apistats));
+	sleep(1);
+	memcpy(&t1_count, rte_apicounts, sizeof(struct rte_apistats));
+	for (i = 0; i < RTE_MAX_LCORE; i++) {
+		if (t1_count.lcoreid_list[i] != 0) {
+			uint64_t rx_count_delta = t1_count.rx_burst_counts[i]
+				- t0_count.rx_burst_counts[i];
+			uint64_t tx_count_delta = t1_count.tx_burst_counts[i]
+				- t0_count.tx_burst_counts[i];
+			printf("\n  %s api statistics for lcoreid: %d %s\n",
+				api_stats_border, i, api_stats_border);
+			printf("  rx_burst_count: %13"PRIu64""
+				" rx_burst_count_delta: %13"PRIu64"\n",
+				t1_count.rx_burst_counts[i],
+				rx_count_delta);
+			printf("  tx_burst_count: %13"PRIu64""
+				" tx_burst_count_delta: %13"PRIu64"\n",
+				t1_count.tx_burst_counts[i],
+				tx_count_delta);
+			printf("  tx/rx_rate: %3.2f\n",
+				(rx_count_delta) ? (double)tx_count_delta
+				/ rx_count_delta : 0.0);
+			printf("  %s################################%s\n",
+				api_stats_border, api_stats_border);
+		}
+	}
+}
+
 int
 main(int argc, char **argv)
 {
@@ -1388,6 +1430,8 @@ main(int argc, char **argv)
 
 	if (!rte_eal_primary_proc_alive(NULL))
 		rte_exit(EXIT_FAILURE, "No primary DPDK process is running.\n");
+
+	rte_apistats_init();
 
 	/* parse app arguments */
 	ret = proc_info_parse_args(argc, argv);
@@ -1454,6 +1498,8 @@ main(int argc, char **argv)
 		show_mempool(mempool_name);
 	if (enable_iter_mempool)
 		iter_mempool(mempool_iter_name);
+	if (enable_apistats)
+		display_apistats();
 
 	RTE_ETH_FOREACH_DEV(i)
 		rte_eth_dev_close(i);
