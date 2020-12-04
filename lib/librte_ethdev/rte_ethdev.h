@@ -160,6 +160,7 @@ extern "C" {
 
 #include "rte_ethdev_trace_fp.h"
 #include "rte_dev_info.h"
+#include <rte_apistats.h>
 
 extern int rte_eth_dev_logtype;
 
@@ -4849,6 +4850,9 @@ rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id,
 	nb_rx = (*dev->rx_pkt_burst)(dev->data->rx_queues[queue_id],
 				     rx_pkts, nb_pkts);
 
+	int lcore_id = rte_lcore_id();
+	rte_apicounts->rx_burst_counts[lcore_id]++;
+
 #ifdef RTE_ETHDEV_RXTX_CALLBACKS
 	struct rte_eth_rxtx_callback *cb;
 
@@ -5123,6 +5127,9 @@ rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id,
 		return 0;
 	}
 #endif
+
+	int lcore_id = rte_lcore_id();
+	rte_apicounts->tx_burst_counts[lcore_id]++;
 
 #ifdef RTE_ETHDEV_RXTX_CALLBACKS
 	struct rte_eth_rxtx_callback *cb;

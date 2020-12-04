@@ -240,6 +240,11 @@ EXPERIMENTAL {
 	rte_flow_get_restore_info;
 	rte_flow_tunnel_action_decap_release;
 	rte_flow_tunnel_item_release;
+
+        # added in 21.02
+        rte_apistats_init;
+        rte_apistats_uninit;
+        rte_apicounts;
 };
 
 INTERNAL {
