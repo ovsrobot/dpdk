@@ -901,7 +901,7 @@ ionic_dev_start(struct rte_eth_dev *eth_dev)
 	struct ionic_lif *lif = IONIC_ETH_DEV_TO_LIF(eth_dev);
 	struct ionic_adapter *adapter = lif->adapter;
 	struct ionic_dev *idev = &adapter->idev;
-	uint32_t allowed_speeds;
+	uint32_t speed, allowed_speeds;
 	int err;
 
 	IONIC_PRINT_CALL();
@@ -929,8 +929,7 @@ ionic_dev_start(struct rte_eth_dev *eth_dev)
 	}
 
 	if (eth_dev->data->dev_conf.link_speeds & ETH_LINK_SPEED_FIXED) {
-		uint32_t speed = ionic_parse_link_speeds(dev_conf->link_speeds);
-
+		speed = ionic_parse_link_speeds(dev_conf->link_speeds);
 		if (speed)
 			ionic_dev_cmd_port_speed(idev, speed);
 	}
