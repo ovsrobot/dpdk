@@ -489,6 +489,9 @@ F: drivers/raw/skeleton/
 F: app/test/test_rawdev.c
 F: doc/guides/prog_guide/rawdev.rst
 
+API stats API -EXPERIMENTAL
+M: Hideyuki Yamashita <yamashita.hideyuki@ntt-tx.co.jp>
+F: lib/librte_ethdev/rte_apistats.*
 
 Memory Pool Drivers
 -------------------
