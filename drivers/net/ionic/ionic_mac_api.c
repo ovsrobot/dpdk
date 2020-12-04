@@ -37,7 +37,7 @@ ionic_set_mac_type(struct ionic_hw *hw)
 	IONIC_PRINT_CALL();
 
 	if (hw->vendor_id != IONIC_PENSANDO_VENDOR_ID) {
-		IONIC_PRINT(ERR, "Unsupported vendor id: %" PRIx32 "",
+		IONIC_PRINT(ERR, "Unsupported vendor id: %#x",
 			hw->vendor_id);
 		return -EINVAL;
 	}
@@ -50,7 +50,7 @@ ionic_set_mac_type(struct ionic_hw *hw)
 		break;
 	default:
 		err = -EINVAL;
-		IONIC_PRINT(ERR, "Unsupported device id: %" PRIx32 "",
+		IONIC_PRINT(ERR, "Unsupported device id: %#x",
 			hw->device_id);
 		break;
 	}
