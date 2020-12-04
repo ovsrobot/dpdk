@@ -22,12 +22,8 @@ signal_handler(int signum)
 {
 	int i;
 	static uint8_t once;
-
 	if ((signum == SIGINT || signum == SIGTERM) && !once) {
 		once = true;
-		printf("\nSignal %d received, preparing to exit...\n",
-				signum);
-
 		if (test != NULL) {
 			/* request all lcores to exit from the main loop */
 			*(int *)test->test_priv = true;

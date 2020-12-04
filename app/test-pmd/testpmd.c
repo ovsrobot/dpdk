@@ -3794,8 +3794,6 @@ static void
 signal_handler(int signum)
 {
 	if (signum == SIGINT || signum == SIGTERM) {
-		printf("\nSignal %d received, preparing to exit...\n",
-				signum);
 #ifdef RTE_LIB_PDUMP
 		/* uninitialize packet capture framework */
 		rte_pdump_uninit();

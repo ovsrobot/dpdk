@@ -319,7 +319,6 @@ signal_handler(int signum)
 {
 	/*  USR1 signal, stop testing */
 	if (signum == SIGUSR1) {
-		printf("Force Stop!\n");
 		stop = 1;
 	}
 
