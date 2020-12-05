@@ -4,6 +4,7 @@
 # override default name to drop the hyphen
 name = 'testpmd'
 cflags += '-Wno-deprecated-declarations'
+cflags += '-fno-strict-aliasing'
 sources = files('5tswap.c',
 	'cmdline.c',
 	'cmdline_flow.c',
