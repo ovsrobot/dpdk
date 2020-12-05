@@ -12,7 +12,9 @@
 #include "i40e_rxtx.h"
 #include "i40e_rxtx_vec_common.h"
 
+#ifndef RTE_EXEC_ENV_WINDOWS
 #include <x86intrin.h>
+#endif
 
 #ifndef __INTEL_COMPILER
 #pragma GCC diagnostic ignored "-Wcast-qual"

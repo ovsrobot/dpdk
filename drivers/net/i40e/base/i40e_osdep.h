@@ -67,8 +67,11 @@ typedef enum i40e_status_code i40e_status;
 #define false           0
 #define true            1
 
+/* Avoid macro redifinition warning on Windows */
+#ifndef RTE_EXEC_ENV_WINDOWS
 #define min(a,b) RTE_MIN(a,b)
 #define max(a,b) RTE_MAX(a,b)
+#endif
 
 #define FIELD_SIZEOF(t, f) (sizeof(((t*)0)->f))
 

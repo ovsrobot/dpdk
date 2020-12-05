@@ -1,9 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2017 Intel Corporation
 
-if is_windows
-	subdir_done()
-endif
 
 drivers = ['af_packet',
 	'af_xdp',
@@ -56,6 +53,12 @@ drivers = ['af_packet',
 	'virtio',
 	'vmxnet3',
 ]
+
+if is_windows
+	drivers = ['i40e',
+	]
+endif
+
 std_deps = ['ethdev', 'kvargs'] # 'ethdev' also pulls in mbuf, net, eal etc
 std_deps += ['bus_pci']         # very many PMDs depend on PCI, so make std
 std_deps += ['bus_vdev']        # same with vdev bus

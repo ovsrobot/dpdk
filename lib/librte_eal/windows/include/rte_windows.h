@@ -18,6 +18,11 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 
+#ifdef __clang__
+#undef _m_prefetchw
+#define _m_prefetchw __m_prefetchw
+#endif
+
 /* Must come first. */
 #include <windows.h>
 
