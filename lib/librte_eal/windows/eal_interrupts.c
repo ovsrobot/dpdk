@@ -105,3 +105,73 @@ eal_intr_thread_schedule(void (*func)(void *arg), void *arg)
 
 	return 0;
 }
+
+int
+rte_intr_callback_register(
+	__rte_unused const struct rte_intr_handle *intr_handle,
+	__rte_unused rte_intr_callback_fn cb, __rte_unused void *cb_arg)
+{
+	return -ENOTSUP;
+}
+
+int
+rte_intr_callback_unregister(
+	__rte_unused const struct rte_intr_handle *intr_handle,
+	__rte_unused rte_intr_callback_fn cb_fn, __rte_unused void *cb_arg)
+{
+	return 0;
+}
+
+int
+rte_intr_enable(__rte_unused const struct rte_intr_handle *intr_handle)
+{
+	return -ENOTSUP;
+}
+
+int
+rte_intr_ack(__rte_unused const struct rte_intr_handle *intr_handle)
+{
+	return -ENOTSUP;
+}
+
+int
+rte_intr_disable(__rte_unused const struct rte_intr_handle *intr_handle)
+{
+	return -ENOTSUP;
+}
+
+int
+rte_intr_efd_enable(struct rte_intr_handle *intr_handle, uint32_t nb_efd)
+{
+	RTE_SET_USED(intr_handle);
+	RTE_SET_USED(nb_efd);
+
+	return 0;
+}
+
+void
+rte_intr_efd_disable(struct rte_intr_handle *intr_handle)
+{
+	RTE_SET_USED(intr_handle);
+}
+
+int
+rte_intr_dp_is_en(struct rte_intr_handle *intr_handle)
+{
+	RTE_SET_USED(intr_handle);
+	return 0;
+}
+
+int
+rte_intr_allow_others(struct rte_intr_handle *intr_handle)
+{
+	RTE_SET_USED(intr_handle);
+	return 1;
+}
+
+int
+rte_intr_cap_multiple(struct rte_intr_handle *intr_handle)
+{
+	RTE_SET_USED(intr_handle);
+	return 0;
+}
