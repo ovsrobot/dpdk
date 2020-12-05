@@ -212,6 +212,9 @@ warning_flags = [
 	'-Wno-packed-not-aligned',
 	'-Wno-missing-field-initializers'
 ]
+if is_windows
+	warning_flags += '-Wno-microsoft-enum-forward-reference'
+endif
 if cc.get_id() == 'gcc' and cc.version().version_compare('>=10.0')
 # FIXME: Bugzilla 396
 	warning_flags += '-Wno-zero-length-bounds'
