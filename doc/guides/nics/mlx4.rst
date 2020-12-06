@@ -405,7 +405,7 @@ devices managed by librte_net_mlx4.
 
 #. Request huge pages::
 
-      echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages/nr_hugepages
+      echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 
 #. Start testpmd with basic parameters::
 
