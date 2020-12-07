@@ -166,6 +166,9 @@ build () # <directory> <target compiler | cross file> <meson options>
 	config $srcdir $builds_dir/$targetdir $cross --werror $*
 	compile $builds_dir/$targetdir
 	if [ -n "$DPDK_ABI_REF_VERSION" ]; then
+		if echo $* | grep -qw -- '--default-library=static' ; then
+			return # skip ABI check for static build
+		fi
 		abirefdir=${DPDK_ABI_REF_DIR:-reference}/$DPDK_ABI_REF_VERSION
 		if [ ! -d $abirefdir/$targetdir ]; then
 			# clone current sources
@@ -230,7 +233,7 @@ if check_cc_flags '-m32' ; then
 		export PKG_CONFIG_LIBDIR='/usr/lib/pkgconfig'
 	fi
 	target_override='i386-pc-linux-gnu'
-	build build-32b cc -Dc_args='-m32' -Dc_link_args='-m32'
+	build build-32b cc -Dc_args='-m32' -Dc_link_args='-m32' $use_shared
 	target_override=
 	unset PKG_CONFIG_LIBDIR
 fi
@@ -274,7 +277,8 @@ if pkg-config --define-prefix libdpdk >/dev/null 2>&1; then
 	export PKGCONF="pkg-config --define-prefix"
 	for example in $examples; do
 		echo "## Building $example"
+		[ $example = helloworld ] && static=static || static= # save disk space
 		$MAKE -C $DESTDIR/usr/local/share/dpdk/examples/$example \
-			clean shared static >&$veryverbose
+			clean shared $static >&$veryverbose
 	done
 fi
