@@ -62,6 +62,11 @@ flags_armada = [
 	['RTE_MAX_LCORE', 16]]
 
 flags_default_extra = []
+flags_aarch32_extra = [
+        ['RTE_ARCH_ARM_NEON_MEMCPY', false],
+        ['RTE_ARCH_STRICT_ALIGN', true],
+        ['RTE_EAL_NUMA_AWARE_HUGEPAGES', false],
+        ['RTE_MAX_LCORE', 256]]
 flags_thunderx_extra = [
 	['RTE_MACHINE', '"thunderx"'],
 	['RTE_USE_C11_MEM_MODEL', false]]
@@ -93,6 +98,7 @@ flags_n1generic_extra = [
 machine_args_generic = [
 	['default', ['-march=armv8-a+crc', '-moutline-atomics']],
 	['native', ['-march=native']],
+	['aarch32', ['-march=armv8-a', '-mfpu=neon'], flags_aarch32_extra],
 	['0xd03', ['-mcpu=cortex-a53']],
 	['0xd04', ['-mcpu=cortex-a35']],
 	['0xd07', ['-mcpu=cortex-a57']],
@@ -133,21 +139,28 @@ impl_dpaa = ['NXP DPAA', flags_dpaa, machine_args_generic]
 
 dpdk_conf.set('RTE_ARCH_ARM', 1)
 dpdk_conf.set('RTE_FORCE_INTRINSICS', 1)
-
+update_flags = false
 if dpdk_conf.get('RTE_ARCH_32')
 	dpdk_conf.set('RTE_CACHE_LINE_SIZE', 64)
 	dpdk_conf.set('RTE_ARCH_ARMv7', 1)
 	# the minimum architecture supported, armv7-a, needs the following,
 	# mk/machine/armv7a/rte.vars.mk sets it too
-	machine_args += '-mfpu=neon'
+	if meson.is_cross_build()
+		update_flags = true
+		impl_id = meson.get_cross_property('implementor_id', 'aarch32')
+		impl_pn = meson.get_cross_property('implementor_pn', 'default')
+		machine = get_variable('impl_' + impl_id)
+	else
+		machine_args += '-mfpu=neon'
+	endif
 else
+	update_flags = true
 	dpdk_conf.set('RTE_CACHE_LINE_SIZE', 128)
 	dpdk_conf.set('RTE_ARCH_ARM64', 1)
 
 	machine = []
 	cmd_generic = ['generic', '', '', 'default', '']
 	cmd_output = cmd_generic # Set generic by default
-	machine_args = [] # Clear previous machine args
 	if arm_force_default_march and not meson.is_cross_build()
 		machine = impl_generic
 		impl_pn = 'default'
@@ -175,7 +188,10 @@ else
 		impl_pn = meson.get_cross_property('implementor_pn', 'default')
 		machine = get_variable('impl_' + impl_id)
 	endif
+endif
 
+if update_flags == true
+	machine_args = [] # Clear previous machine args
 	# Apply Common Defaults. These settings may be overwritten by machine
 	# settings later.
 	foreach flag: flags_common_default
