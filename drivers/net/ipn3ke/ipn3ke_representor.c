@@ -2801,7 +2801,7 @@ ipn3ke_rpst_mtu_set(struct rte_eth_dev *ethdev, uint16_t mtu)
 		return -EBUSY;
 	}
 
-	if (frame_size > RTE_ETHER_MAX_LEN)
+	if (mtu > RTE_ETHER_MTU)
 		dev_data->dev_conf.rxmode.offloads |=
 			(uint64_t)(DEV_RX_OFFLOAD_JUMBO_FRAME);
 	else
