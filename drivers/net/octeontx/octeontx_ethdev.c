@@ -552,7 +552,7 @@ octeontx_dev_mtu_set(struct rte_eth_dev *eth_dev, uint16_t mtu)
 	if (rc)
 		return rc;
 
-	if (frame_size > RTE_ETHER_MAX_LEN)
+	if (mtu > RTE_ETHER_MTU)
 		nic->rx_offloads |= DEV_RX_OFFLOAD_JUMBO_FRAME;
 	else
 		nic->rx_offloads &= ~DEV_RX_OFFLOAD_JUMBO_FRAME;
