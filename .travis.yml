@@ -18,6 +18,10 @@ _aarch64_packages: &aarch64_packages
   - *required_packages
   - [gcc-aarch64-linux-gnu, libc6-dev-arm64-cross, pkg-config-aarch64-linux-gnu]
 
+_arm_32b_packages: &arm_32b_packages
+  - *required_packages
+  - [gcc-arm-linux-gnueabihf, libc6-dev-armhf-cross, pkg-config-arm-linux-gnueabihf]
+
 _build_32b_packages: &build_32b_packages
   - *required_packages
   - [gcc-multilib]
@@ -104,6 +108,21 @@ jobs:
         packages:
           - *required_packages
           - *doc_packages
+  # aarch64 cross-compiling aarch32 jobs
+  - env: DEF_LIB="shared" AARCH32=1
+    arch: arm64
+    compiler: gcc
+    addons:
+      apt:
+        packages:
+          - *arm_32b_packages
+  - env: DEF_LIB="static" AARCH32=1
+    arch: arm64
+    compiler: gcc
+    addons:
+      apt:
+        packages:
+          - *arm_32b_packages
   # aarch64 clang jobs
   - env: DEF_LIB="static"
     arch: arm64
