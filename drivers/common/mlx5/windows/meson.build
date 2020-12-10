@@ -41,3 +41,6 @@ else
 	cflags += [ '-UPEDANTIC' ]
 endif
 
+# Generate an empty mlx5_autoconf.h file for compatibility with Linux
+config = configuration_data()
+configure_file(output : 'mlx5_autoconf.h', configuration : config)
