@@ -294,13 +294,13 @@ cperf_throughput_test_runner(void *test_ctx)
 					cycles_per_packet);
 		} else {
 			if (rte_atomic16_test_and_set(&display_once))
-				printf("#lcore id,Buffer Size(B),"
-					"Burst Size,Enqueued,Dequeued,Failed Enq,"
-					"Failed Deq,Ops(Millions),Throughput(Gbps),"
-					"Cycles/Buf\n\n");
+				printf("#lcore_id,buffer_size(b),"
+					"burst_size,enqueued,dequeued,failed_enq,"
+					"failed_deq,ops(millions),throughput(gbps),"
+					"cycles_per_buf\n\n");
 
-			printf("%u;%u;%u;%"PRIu64";%"PRIu64";%"PRIu64";%"PRIu64";"
-					"%.3f;%.3f;%.3f\n",
+			printf("%u,%u,%u,%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64","
+					"%.3f,%.3f,%.3f\n",
 					ctx->lcore_id,
 					ctx->options->test_buffer_size,
 					test_burst_size,

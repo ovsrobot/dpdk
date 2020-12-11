@@ -309,18 +309,15 @@ cperf_latency_test_runner(void *arg)
 
 		if (ctx->options->csv) {
 			if (rte_atomic16_test_and_set(&display_once))
-				printf("\n# lcore, Buffer Size, Burst Size, Pakt Seq #, "
-						"cycles, time (us)");
+				printf("\n#buffer_size(b),burst_size,time(us)");
 
 			for (i = 0; i < ctx->options->total_ops; i++) {
 
-				printf("\n%u;%u;%u;%"PRIu64";%"PRIu64";%.3f",
-					ctx->lcore_id, ctx->options->test_buffer_size,
-					test_burst_size, i + 1,
-					ctx->res[i].tsc_end - ctx->res[i].tsc_start,
+				printf("\n%u,%u,%.3f",
+					ctx->options->test_buffer_size,
+					test_burst_size,
 					tunit * (double) (ctx->res[i].tsc_end
-							- ctx->res[i].tsc_start)
-						/ tsc_hz);
+					- ctx->res[i].tsc_start) / tsc_hz);
 
 			}
 		} else {
