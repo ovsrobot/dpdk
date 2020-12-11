@@ -3911,12 +3911,18 @@ nb_segs_is_invalid(unsigned int nb_segs)
 		for (queue_id = 0; queue_id < nb_txq; queue_id++) {
 			ret = get_tx_ring_size(port_id, queue_id, &ring_size);
 
-			if (ret)
+			/* Do the check only for the active/configured ports. */
+			if (ret == -EINVAL)
+				continue;
+			if (ret) {
+				printf("failed to get ring size for TX "
+				       "queue(%u) Port(%u) - txpkts ignored\n",
+				       port_id, queue_id);
 				return true;
-
+			}
 			if (ring_size < nb_segs) {
-				printf("nb segments per TX packets=%u >= "
-				       "TX queue(%u) ring_size=%u - ignored\n",
+				printf("nb segments per TX packets=%u >= TX "
+				       "queue(%u) ring_size=%u - txpkts ignored\n",
 				       nb_segs, queue_id, ring_size);
 				return true;
 			}
@@ -3932,7 +3938,12 @@ set_tx_pkt_segments(unsigned int *seg_lengths, unsigned int nb_segs)
 	uint16_t tx_pkt_len;
 	unsigned int i;
 
-	if (nb_segs_is_invalid(nb_segs))
+	/*
+	 * For single sengment settings failed check is ignored.
+	 * It is a very basic capability to send the single segment
+	 * packets, suppose it is always supported.
+	 */
+	if (nb_segs > 1 && nb_segs_is_invalid(nb_segs))
 		return;
 
 	/*

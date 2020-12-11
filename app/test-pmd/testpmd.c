@@ -2575,6 +2575,11 @@ start_port(portid_t pid)
 			port->need_reconfig_queues = 0;
 			/* setup tx queues */
 			for (qi = 0; qi < nb_txq; qi++) {
+				if (port->nb_tx_desc[qi] < tx_pkt_nb_segs) {
+					printf("Failed to setup TX queue: "
+					       "not enough descriptors\n");
+					goto fail;
+				}
 				if ((numa_support) &&
 					(txring_numa[pi] != NUMA_NO_CONFIG))
 					diag = rte_eth_tx_queue_setup(pi, qi,
@@ -2589,7 +2594,7 @@ start_port(portid_t pid)
 
 				if (diag == 0)
 					continue;
-
+fail:
 				/* Fail to setup tx queue, return */
 				if (rte_atomic16_cmpset(&(port->port_status),
 							RTE_PORT_HANDLING,
