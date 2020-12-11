@@ -453,3 +453,96 @@ Test vector file for cipher algorithm aes cbc 256 with authorization sha::
    digest =
    0x1C, 0xB2, 0x3D, 0xD1, 0xF9, 0xC7, 0x6C, 0x49, 0x2E, 0xDA, 0x94, 0x8B, 0xF1, 0xCF, 0x96, 0x43,
    0x67, 0x50, 0x39, 0x76, 0xB5, 0xA1, 0xCE, 0xA1, 0xD7, 0x77, 0x10, 0x07, 0x43, 0x37, 0x05, 0xB4
+
+
+Graph Crypto Perf Results
+-------------------------
+
+The ``dpdk_graph_crypto_perf.py`` usertool is a simple script to automate
+running crypto performance tests, and graphing the results.
+The output graphs include various grouped barcharts for throughput
+tests, and histogram and boxplot graphs for latency tests.
+These are output to PDF files, with one PDF per test suite.
+
+
+Test Configuration
+~~~~~~~~~~~~~~~~~~
+
+The test cases run by the script are outlined in the ``graph_crypto_perf_config.json`` file.
+An example of this configuration is shown below for one test suite,
+showing the default config for the test suite, and one test case.
+The test case has additional app config that will be combined with
+the default config when running the test case.
+
+.. code-block:: c
+
+   "crypto_aesni_mb_throughput": {
+       "default": {
+           "eal": {
+               "l": "1,2",
+               "log-level": "1",
+               "vdev": "crypto_aesni_mb"
+           },
+           "app": {
+               "csv-friendly": true,
+               "silent": true,
+               "buffer-sz": "64,128,256,512,768,1024,1408,2048",
+               "burst-sz": "1,4,8,16,32",
+               "ptest": "throughput",
+               "devtype": "crypto_aesni_mb"
+           }
+        },
+       "AES-CBC-128 SHA1-HMAC auth-then-cipher decrypt": {
+               "cipher-algo": "aes-cbc",
+               "cipher-key-sz": "16",
+               "auth-algo": "sha1-hmac",
+               "optype": "auth-then-cipher",
+               "cipher-op": "decrypt"
+        }
+   }
+
+Currently, crypto_qat, crypto_aesni_mb, and crypto_aesni_gcm devices for
+both throughput and latency ptests are supported.
+
+
+Usage
+~~~~~
+
+.. code-block:: console
+
+   ./dpdk_graph_crypto_perf
+
+The following are the application command-line options:
+
+* ``-f file_path``
+
+  Provide path to ``dpdk-test-crypto-perf`` application.
+  The script uses the installed app by default.
+
+  .. code-block:: console
+
+     ./dpdk_graph_crypto_perf -f <build_dir>/app/dpdk-test-crypto-perf
+
+
+* ``-t test_suite_list``
+
+  Specify test suites to run. All test suites are run by default.
+
+  To run all test suites
+
+  .. code-block:: console
+
+     ./dpdk_graph_crypto_perf -t all
+
+  To run crypto_qat latency test suite only
+
+  .. code-block:: console
+
+     ./dpdk_graph_crypto_perf -t crypto_qat_latency
+
+  To run both crypto_aesni_mb throughput and crypto_aesni_gcm latency test suites
+
+  .. code-block:: console
+
+     ./dpdk_graph_crypto_perf -t crypto_aesni_mb_throughput \
+         crypto_aesni_gcm_latency
