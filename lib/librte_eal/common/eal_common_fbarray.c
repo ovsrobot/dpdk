@@ -83,11 +83,10 @@ get_used_mask(void *data, unsigned int elt_sz, unsigned int len)
 static int
 resize_and_map(int fd, void *addr, size_t len)
 {
-	char path[PATH_MAX];
 	void *map_addr;
 
 	if (eal_file_truncate(fd, len)) {
-		RTE_LOG(ERR, EAL, "Cannot truncate %s\n", path);
+		RTE_LOG(ERR, EAL, "Cannot truncate fd %d\n", fd);
 		return -1;
 	}
 
