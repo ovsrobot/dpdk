@@ -234,6 +234,15 @@ get_device_resource_info(HDEVINFO dev_info,
 		&DEVPKEY_Device_Numa_Node, &property_type,
 		(BYTE *)&numa_node, sizeof(numa_node), NULL, 0);
 	if (!res) {
+		DWORD error = GetLastError();
+		if (error == ERROR_NOT_FOUND) {
+			/* On older CPUs, NUMA isn't bound to PCIe locality
+			 * We do not want to fail the probing process
+			 * Setting 0 for numa_node and returnng ERROR_SUCCESS.
+			 */
+			dev->device.numa_node = 0;
+			return ERROR_SUCCESS;
+		}
 		RTE_LOG_WIN32_ERR("SetupDiGetDevicePropertyW"
 			"(DEVPKEY_Device_Numa_Node)");
 		return -1;
