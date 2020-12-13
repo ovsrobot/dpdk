@@ -34,6 +34,8 @@ typedef CRITICAL_SECTION pthread_mutex_t;
 
 typedef SYNCHRONIZATION_BARRIER pthread_barrier_t;
 
+typedef DWORD pthread_key_t;
+
 #define pthread_barrier_init(barrier, attr, count) \
 	InitializeSynchronizationBarrier(barrier, count, -1)
 #define pthread_barrier_wait(barrier) EnterSynchronizationBarrier(barrier, \
@@ -176,6 +178,46 @@ static inline int
 pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
 	DeleteCriticalSection(mutex);
+	return 0;
+}
+
+static inline int
+pthread_key_create(pthread_key_t *key,
+		    __rte_unused void (*destructor)(void*))
+{
+	if (((*key) = TlsAlloc()) == TLS_OUT_OF_INDEXES) {
+		RTE_LOG_WIN32_ERR("TlsAlloc()");
+		return ENOMEM;
+	}
+	return 0;
+}
+
+static inline int
+pthread_key_delete(pthread_key_t key)
+{
+	if (!TlsFree(key)) {
+		RTE_LOG_WIN32_ERR("TlsFree()");
+		return -1;
+	}
+	return 0;
+}
+
+static inline void *
+pthread_getspecific(pthread_key_t key)
+{
+	return TlsGetValue(key);
+}
+
+static inline int
+pthread_setspecific(pthread_key_t key, const void *value)
+{
+	/* discard const qualifier */
+	char *p = (char *) (uintptr_t) value;
+
+	if (!TlsSetValue(key, p)) {
+		RTE_LOG_WIN32_ERR("TlsSetValue()");
+		return -1;
+	}
 	return 0;
 }
 
