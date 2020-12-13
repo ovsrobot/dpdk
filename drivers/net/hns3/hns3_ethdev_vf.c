@@ -1180,12 +1180,11 @@ hns3vf_query_dev_specifications(struct hns3_hw *hw)
 static int
 hns3vf_get_capability(struct hns3_hw *hw)
 {
+	struct rte_eth_dev *eth_dev = HNS3_DEV_HW_TO_ETH_DEV(hw);
 	struct rte_pci_device *pci_dev;
-	struct rte_eth_dev *eth_dev;
 	uint8_t revision;
 	int ret;
 
-	eth_dev = &rte_eth_devices[hw->data->port_id];
 	pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
 
 	/* Get PCI revision id */
@@ -2152,7 +2151,7 @@ vf_alloc_intr_vec_error:
 static int
 hns3vf_restore_rx_interrupt(struct hns3_hw *hw)
 {
-	struct rte_eth_dev *dev = &rte_eth_devices[hw->data->port_id];
+	struct rte_eth_dev *dev = HNS3_DEV_HW_TO_ETH_DEV(hw);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
 	uint16_t q_id;
@@ -2377,7 +2376,7 @@ hns3vf_stop_service(struct hns3_adapter *hns)
 	struct hns3_hw *hw = &hns->hw;
 	struct rte_eth_dev *eth_dev;
 
-	eth_dev = &rte_eth_devices[hw->data->port_id];
+	eth_dev = hns->eth_dev;
 	if (hw->adapter_state == HNS3_NIC_STARTED)
 		rte_eal_alarm_cancel(hns3vf_service_handler, eth_dev);
 	hw->mac.link_status = ETH_LINK_DOWN;
@@ -2415,7 +2414,7 @@ hns3vf_start_service(struct hns3_adapter *hns)
 	struct hns3_hw *hw = &hns->hw;
 	struct rte_eth_dev *eth_dev;
 
-	eth_dev = &rte_eth_devices[hw->data->port_id];
+	eth_dev = hns->eth_dev;
 	hns3_set_rxtx_function(eth_dev);
 	hns3_mp_req_start_rxtx(eth_dev);
 	if (hw->adapter_state == HNS3_NIC_STARTED) {
@@ -2577,7 +2576,7 @@ hns3vf_reset_service(void *param)
 	if (rte_atomic16_read(&hns->hw.reset.schedule) == SCHEDULE_DEFERRED) {
 		rte_atomic16_set(&hns->hw.reset.schedule, SCHEDULE_REQUESTED);
 		hns3_err(hw, "Handling interrupts in delayed tasks");
-		hns3vf_interrupt_handler(&rte_eth_devices[hw->data->port_id]);
+		hns3vf_interrupt_handler(hns->eth_dev);
 		reset_level = hns3vf_get_reset_level(hw, &hw->reset.pending);
 		if (reset_level == HNS3_NONE_RESET) {
 			hns3_err(hw, "No reset level is set, try global reset");
@@ -2608,7 +2607,7 @@ hns3vf_reset_service(void *param)
 static int
 hns3vf_reinit_dev(struct hns3_adapter *hns)
 {
-	struct rte_eth_dev *eth_dev = &rte_eth_devices[hns->hw.data->port_id];
+	struct rte_eth_dev *eth_dev = hns->eth_dev;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
 	struct hns3_hw *hw = &hns->hw;
 	int ret;

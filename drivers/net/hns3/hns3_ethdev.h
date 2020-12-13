@@ -796,6 +796,12 @@ struct hns3_adapter {
 #define HNS3_DEV_HW_TO_ADAPTER(hw) \
 	container_of(hw, struct hns3_adapter, hw)
 
+static inline struct rte_eth_dev *HNS3_DEV_HW_TO_ETH_DEV(struct hns3_hw *hw)
+{
+	struct hns3_adapter *adapter = HNS3_DEV_HW_TO_ADAPTER(hw);
+	return adapter->eth_dev;
+}
+
 #define hns3_set_field(origin, mask, shift, val) \
 	do { \
 		(origin) &= (~(mask)); \

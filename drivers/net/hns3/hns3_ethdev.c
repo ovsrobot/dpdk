@@ -2983,15 +2983,14 @@ hns3_query_dev_specifications(struct hns3_hw *hw)
 static int
 hns3_get_capability(struct hns3_hw *hw)
 {
+	struct rte_eth_dev *eth_dev = HNS3_DEV_HW_TO_ETH_DEV(hw);
 	struct hns3_adapter *hns = HNS3_DEV_HW_TO_ADAPTER(hw);
 	struct rte_pci_device *pci_dev;
 	struct hns3_pf *pf = &hns->pf;
-	struct rte_eth_dev *eth_dev;
 	uint16_t device_id;
 	uint8_t revision;
 	int ret;
 
-	eth_dev = &rte_eth_devices[hw->data->port_id];
 	pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
 	device_id = pci_dev->id.device_id;
 
@@ -4827,7 +4826,7 @@ alloc_intr_vec_error:
 static int
 hns3_restore_rx_interrupt(struct hns3_hw *hw)
 {
-	struct rte_eth_dev *dev = &rte_eth_devices[hw->data->port_id];
+	struct rte_eth_dev *dev = HNS3_DEV_HW_TO_ETH_DEV(hw);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
 	uint16_t q_id;
@@ -5517,7 +5516,7 @@ hns3_stop_service(struct hns3_adapter *hns)
 	struct hns3_hw *hw = &hns->hw;
 	struct rte_eth_dev *eth_dev;
 
-	eth_dev = &rte_eth_devices[hw->data->port_id];
+	eth_dev = hns->eth_dev;
 	if (hw->adapter_state == HNS3_NIC_STARTED)
 		rte_eal_alarm_cancel(hns3_service_handler, eth_dev);
 	hw->mac.link_status = ETH_LINK_DOWN;
@@ -5558,7 +5557,7 @@ hns3_start_service(struct hns3_adapter *hns)
 	if (hw->reset.level == HNS3_IMP_RESET ||
 	    hw->reset.level == HNS3_GLOBAL_RESET)
 		hns3_set_rst_done(hw);
-	eth_dev = &rte_eth_devices[hw->data->port_id];
+	eth_dev = hns->eth_dev;
 	hns3_set_rxtx_function(eth_dev);
 	hns3_mp_req_start_rxtx(eth_dev);
 	if (hw->adapter_state == HNS3_NIC_STARTED) {
@@ -5659,7 +5658,7 @@ hns3_reset_service(void *param)
 	if (rte_atomic16_read(&hns->hw.reset.schedule) == SCHEDULE_DEFERRED) {
 		rte_atomic16_set(&hns->hw.reset.schedule, SCHEDULE_REQUESTED);
 		hns3_err(hw, "Handling interrupts in delayed tasks");
-		hns3_interrupt_handler(&rte_eth_devices[hw->data->port_id]);
+		hns3_interrupt_handler(hns->eth_dev);
 		reset_level = hns3_get_reset_level(hns, &hw->reset.pending);
 		if (reset_level == HNS3_NONE_RESET) {
 			hns3_err(hw, "No reset level is set, try IMP reset");

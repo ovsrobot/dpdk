@@ -52,12 +52,14 @@ hns3_rxq_rearm_mbuf(struct hns3_rx_queue *rxq)
 #define REARM_LOOP_STEP_NUM	4
 	struct hns3_entry *rxep = &rxq->sw_ring[rxq->rx_rearm_start];
 	struct hns3_desc *rxdp = rxq->rx_ring + rxq->rx_rearm_start;
+	struct rte_eth_dev *dev;
 	uint64_t dma_addr;
 	int i;
 
 	if (unlikely(rte_mempool_get_bulk(rxq->mb_pool, (void *)rxep,
 					  HNS3_DEFAULT_RXQ_REARM_THRESH) < 0)) {
-		rte_eth_devices[rxq->port_id].data->rx_mbuf_alloc_failed++;
+		dev = rxq->hns->eth_dev;
+		dev->data->rx_mbuf_alloc_failed++;
 		return;
 	}
 

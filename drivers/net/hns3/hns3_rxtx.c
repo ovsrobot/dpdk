@@ -912,7 +912,7 @@ hns3_queue_intr_enable(struct hns3_hw *hw, uint16_t queue_id, bool en)
 void
 hns3_dev_all_rx_queue_intr_enable(struct hns3_hw *hw, bool en)
 {
-	struct rte_eth_dev *dev = &rte_eth_devices[hw->data->port_id];
+	struct rte_eth_dev *dev = HNS3_DEV_HW_TO_ETH_DEV(hw);
 	uint16_t nb_rx_q = hw->data->nb_rx_queues;
 	int i;
 
@@ -1620,7 +1620,7 @@ static int
 hns3_rxq_conf_runtime_check(struct hns3_hw *hw, uint16_t buf_size,
 				uint16_t nb_desc)
 {
-	struct rte_eth_dev *dev = &rte_eth_devices[hw->data->port_id];
+	struct rte_eth_dev *dev = HNS3_DEV_HW_TO_ETH_DEV(hw);
 	struct rte_eth_rxmode *rxmode = &hw->data->dev_conf.rxmode;
 	eth_rx_burst_t pkt_burst = dev->rx_pkt_burst;
 	uint16_t min_vec_bds;
@@ -2078,6 +2078,7 @@ hns3_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 	volatile struct hns3_desc *rxdp;     /* pointer of the current desc */
 	struct hns3_rx_queue *rxq;      /* RX queue */
 	struct hns3_entry *sw_ring;
+	struct rte_eth_dev *dev;
 	struct hns3_entry *rxe;
 	struct hns3_desc rxd;
 	struct rte_mbuf *nmb;           /* pointer of the new mbuf */
@@ -2110,10 +2111,8 @@ hns3_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 
 		nmb = hns3_rx_alloc_buffer(rxq);
 		if (unlikely(nmb == NULL)) {
-			uint16_t port_id;
-
-			port_id = rxq->port_id;
-			rte_eth_devices[port_id].data->rx_mbuf_alloc_failed++;
+			dev = rxq->hns->eth_dev;
+			dev->data->rx_mbuf_alloc_failed++;
 			break;
 		}
 
@@ -2289,7 +2288,7 @@ hns3_recv_scattered_pkts(void *rx_queue,
 
 		nmb = hns3_rx_alloc_buffer(rxq);
 		if (unlikely(nmb == NULL)) {
-			dev = &rte_eth_devices[rxq->port_id];
+			dev = rxq->hns->eth_dev;
 			dev->data->rx_mbuf_alloc_failed++;
 			break;
 		}
