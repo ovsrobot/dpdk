@@ -933,9 +933,6 @@ hns3_dev_xstats_get_by_id(struct rte_eth_dev *dev, const uint64_t *ids,
 	uint32_t i;
 	int ret;
 
-	if (ids == NULL || size < cnt_stats)
-		return cnt_stats;
-
 	/* Update tqp stats by read register */
 	ret = hns3_update_tqp_stats(hw);
 	if (ret) {
