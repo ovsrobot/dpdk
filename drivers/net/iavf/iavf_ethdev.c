@@ -384,6 +384,14 @@ iavf_dev_configure(struct rte_eth_dev *dev)
 		vf->max_rss_qregion = IAVF_MAX_NUM_QUEUES_DFLT;
 	}
 
+	/* Vlan stripping setting v2 */
+	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN_V2) {
+		if (dev_conf->rxmode.offloads & DEV_RX_OFFLOAD_VLAN_STRIP)
+			iavf_enable_vlan_strip_v2(ad);
+		else
+			iavf_disable_vlan_strip_v2(ad);
+	}
+
 	/* Vlan stripping setting */
 	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN) {
 		if (dev_conf->rxmode.offloads & DEV_RX_OFFLOAD_VLAN_STRIP)
@@ -992,12 +1000,40 @@ iavf_dev_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
 	int err;
 
+	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN_V2) {
+		err = iavf_add_del_vlan_v2(adapter, vlan_id, on);
+		if (err)
+			return -EIO;
+		return 0;
+	}
+
 	if (!(vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN))
 		return -ENOTSUP;
 
 	err = iavf_add_del_vlan(adapter, vlan_id, on);
 	if (err)
 		return -EIO;
+	return 0;
+}
+
+static int
+iavf_dev_vlan_offload_set_v2(struct rte_eth_dev *dev, int mask)
+{
+	struct iavf_adapter *adapter =
+		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	struct rte_eth_conf *dev_conf = &dev->data->dev_conf;
+	int err;
+
+	if (mask & ETH_VLAN_STRIP_MASK) {
+		if (dev_conf->rxmode.offloads & DEV_RX_OFFLOAD_VLAN_STRIP)
+			err = iavf_enable_vlan_strip_v2(adapter);
+		else
+			err = iavf_disable_vlan_strip_v2(adapter);
+
+		if (err)
+			return -EIO;
+	}
+
 	return 0;
 }
 
@@ -1009,6 +1045,9 @@ iavf_dev_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
 	struct rte_eth_conf *dev_conf = &dev->data->dev_conf;
 	int err;
+
+	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN_V2)
+		return iavf_dev_vlan_offload_set_v2(dev, mask);
 
 	if (!(vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN))
 		return -ENOTSUP;
@@ -1857,6 +1896,13 @@ iavf_init_vf(struct rte_eth_dev *dev)
 	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_RX_FLEX_DESC) {
 		if (iavf_get_supported_rxdid(adapter) != 0) {
 			PMD_INIT_LOG(ERR, "failed to do get supported rxdid");
+			goto err_rss;
+		}
+	}
+
+	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN_V2) {
+		if (iavf_get_vlan_offload_caps_v2(adapter) != 0) {
+			PMD_INIT_LOG(ERR, "failed to do get VLAN offload v2 capabilities");
 			goto err_rss;
 		}
 	}
