@@ -21,6 +21,7 @@
 #undef container_of
 #endif
 
+#include <env/mv_autogen_comp_flags.h>
 #include <drivers/mv_neta.h>
 #include <drivers/mv_neta_ppio.h>
 
