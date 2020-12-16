@@ -9180,6 +9180,8 @@ cmd_cfg_tunnel_udp_port_parsed(void *parsed_result,
 		tunnel_udp.prot_type = RTE_TUNNEL_TYPE_GENEVE;
 	} else if (!strcmp(res->tunnel_type, "vxlan-gpe")) {
 		tunnel_udp.prot_type = RTE_TUNNEL_TYPE_VXLAN_GPE;
+	} else if (!strcmp(res->tunnel_type, "ecpri")) {
+		tunnel_udp.prot_type = RTE_TUNNEL_TYPE_ECPRI;
 	} else {
 		printf("Invalid tunnel type\n");
 		return;
@@ -9214,7 +9216,7 @@ cmdline_parse_token_string_t cmd_config_tunnel_udp_port_action =
 				 "add#rm");
 cmdline_parse_token_string_t cmd_config_tunnel_udp_port_tunnel_type =
 	TOKEN_STRING_INITIALIZER(struct cmd_config_tunnel_udp_port, tunnel_type,
-				 "vxlan#geneve#vxlan-gpe");
+				 "vxlan#geneve#vxlan-gpe#ecpri");
 cmdline_parse_token_num_t cmd_config_tunnel_udp_port_value =
 	TOKEN_NUM_INITIALIZER(struct cmd_config_tunnel_udp_port, udp_port,
 			      RTE_UINT16);
@@ -9222,7 +9224,8 @@ cmdline_parse_token_num_t cmd_config_tunnel_udp_port_value =
 cmdline_parse_inst_t cmd_cfg_tunnel_udp_port = {
 	.f = cmd_cfg_tunnel_udp_port_parsed,
 	.data = NULL,
-	.help_str = "port config <port_id> udp_tunnel_port add|rm vxlan|geneve|vxlan-gpe <udp_port>",
+	.help_str = "port config <port_id> udp_tunnel_port add|rm vxlan|"
+		"geneve|vxlan-gpe|ecpri <udp_port>",
 	.tokens = {
 		(void *)&cmd_config_tunnel_udp_port_port,
 		(void *)&cmd_config_tunnel_udp_port_config,
