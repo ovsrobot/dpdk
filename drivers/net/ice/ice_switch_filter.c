@@ -1863,11 +1863,15 @@ ice_switch_init(struct ice_adapter *ad)
 		dist_parser = &ice_switch_dist_parser_comms;
 	else if (ad->active_pkg_type == ICE_PKG_TYPE_OS_DEFAULT)
 		dist_parser = &ice_switch_dist_parser_os;
+	else if (ad->active_pkg_type == ICE_PKG_TYPE_GTP_OVER_GRE)
+		dist_parser = &ice_switch_dist_parser_comms;
 	else
 		return -EINVAL;
 
 	if (ad->devargs.pipe_mode_support) {
 		if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
+			perm_parser = &ice_switch_perm_parser_comms;
+		else if (ad->active_pkg_type == ICE_PKG_TYPE_GTP_OVER_GRE)
 			perm_parser = &ice_switch_perm_parser_comms;
 		else
 			perm_parser = &ice_switch_perm_parser_os;
@@ -1889,11 +1893,15 @@ ice_switch_uninit(struct ice_adapter *ad)
 		dist_parser = &ice_switch_dist_parser_comms;
 	else if (ad->active_pkg_type == ICE_PKG_TYPE_OS_DEFAULT)
 		dist_parser = &ice_switch_dist_parser_os;
+	else if (ad->active_pkg_type == ICE_PKG_TYPE_GTP_OVER_GRE)
+		dist_parser = &ice_switch_dist_parser_comms;
 	else
 		return;
 
 	if (ad->devargs.pipe_mode_support) {
 		if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
+			perm_parser = &ice_switch_perm_parser_comms;
+		else if (ad->active_pkg_type == ICE_PKG_TYPE_GTP_OVER_GRE)
 			perm_parser = &ice_switch_perm_parser_comms;
 		else
 			perm_parser = &ice_switch_perm_parser_os;

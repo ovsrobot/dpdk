@@ -147,6 +147,7 @@ enum ice_pkg_type {
 	ICE_PKG_TYPE_UNKNOWN,
 	ICE_PKG_TYPE_OS_DEFAULT,
 	ICE_PKG_TYPE_COMMS,
+	ICE_PKG_TYPE_GTP_OVER_GRE,
 };
 
 struct ice_adapter;

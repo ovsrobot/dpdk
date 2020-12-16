@@ -1115,6 +1115,8 @@ ice_fdir_init(struct ice_adapter *ad)
 		parser = &ice_fdir_parser_comms;
 	else if (ad->active_pkg_type == ICE_PKG_TYPE_OS_DEFAULT)
 		parser = &ice_fdir_parser_os;
+	else if (ad->active_pkg_type == ICE_PKG_TYPE_GTP_OVER_GRE)
+		parser = &ice_fdir_parser_comms;
 	else
 		return -EINVAL;
 
@@ -1131,6 +1133,8 @@ ice_fdir_uninit(struct ice_adapter *ad)
 		return;
 
 	if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
+		parser = &ice_fdir_parser_comms;
+	else if (ad->active_pkg_type == ICE_PKG_TYPE_GTP_OVER_GRE)
 		parser = &ice_fdir_parser_comms;
 	else
 		parser = &ice_fdir_parser_os;

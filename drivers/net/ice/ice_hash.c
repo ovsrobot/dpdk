@@ -950,6 +950,8 @@ ice_hash_init(struct ice_adapter *ad)
 		parser = &ice_hash_parser_os;
 	else if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
 		parser = &ice_hash_parser_comms;
+	else if (ad->active_pkg_type == ICE_PKG_TYPE_GTP_OVER_GRE)
+		parser = &ice_hash_parser_comms;
 	else
 		return -EINVAL;
 
@@ -1355,6 +1357,8 @@ ice_hash_uninit(struct ice_adapter *ad)
 	if (ad->active_pkg_type == ICE_PKG_TYPE_OS_DEFAULT)
 		ice_unregister_parser(&ice_hash_parser_os, ad);
 	else if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
+		ice_unregister_parser(&ice_hash_parser_comms, ad);
+	else if (ad->active_pkg_type == ICE_PKG_TYPE_GTP_OVER_GRE)
 		ice_unregister_parser(&ice_hash_parser_comms, ad);
 }
 
