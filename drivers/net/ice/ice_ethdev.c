@@ -71,7 +71,8 @@ static struct proto_xtr_ol_flag ice_proto_xtr_ol_flag_params[] = {
 #define ICE_DFLT_OUTER_TAG_TYPE ICE_AQ_VSI_OUTER_TAG_VLAN_9100
 
 #define ICE_OS_DEFAULT_PKG_NAME		"ICE OS Default Package"
-#define ICE_COMMS_PKG_NAME			"ICE COMMS Package"
+#define ICE_COMMS_PKG_NAME		"ICE COMMS Package"
+#define ICE_WIRELESS_EDGE_PKG_NAME	"ICE Wireless Edge Package"
 #define ICE_MAX_RES_DESC_NUM        1024
 
 static int ice_dev_configure(struct rte_eth_dev *dev);
@@ -1807,6 +1808,10 @@ ice_load_pkg_type(struct ice_hw *hw)
 	else if (!strncmp((char *)hw->active_pkg_name, ICE_COMMS_PKG_NAME,
 		ICE_PKG_NAME_SIZE))
 		package_type = ICE_PKG_TYPE_COMMS;
+	else if (!strncmp((char *)hw->active_pkg_name,
+			  ICE_WIRELESS_EDGE_PKG_NAME,
+			  ICE_PKG_NAME_SIZE))
+		package_type = ICE_PKG_TYPE_WIRELESS_EDGE;
 	else
 		package_type = ICE_PKG_TYPE_UNKNOWN;
 

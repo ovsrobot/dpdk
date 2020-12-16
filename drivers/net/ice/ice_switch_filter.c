@@ -139,8 +139,10 @@ struct sw_meta {
 
 static struct ice_flow_parser ice_switch_dist_parser_os;
 static struct ice_flow_parser ice_switch_dist_parser_comms;
+static struct ice_flow_parser ice_switch_dist_parser_wireless_edge;
 static struct ice_flow_parser ice_switch_perm_parser_os;
 static struct ice_flow_parser ice_switch_perm_parser_comms;
+static struct ice_flow_parser ice_switch_perm_parser_wireless_edge;
 
 static struct
 ice_pattern_match_item ice_switch_pattern_dist_os[] = {
@@ -265,6 +267,54 @@ ice_pattern_match_item ice_switch_pattern_dist_comms[] = {
 };
 
 static struct
+ice_pattern_match_item ice_switch_pattern_dist_wireless_edge[] = {
+	{pattern_ethertype,
+			ICE_SW_INSET_ETHER, ICE_INSET_NONE},
+	{pattern_ethertype_vlan,
+			ICE_SW_INSET_MAC_VLAN, ICE_INSET_NONE},
+	{pattern_eth_arp,
+			ICE_INSET_NONE, ICE_INSET_NONE},
+	{pattern_eth_ipv4,
+			ICE_SW_INSET_MAC_IPV4, ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp,
+			ICE_SW_INSET_MAC_IPV4_UDP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_tcp,
+			ICE_SW_INSET_MAC_IPV4_TCP, ICE_INSET_NONE},
+	{pattern_eth_ipv6,
+			ICE_SW_INSET_MAC_IPV6, ICE_INSET_NONE},
+	{pattern_eth_ipv6_udp,
+			ICE_SW_INSET_MAC_IPV6_UDP, ICE_INSET_NONE},
+	{pattern_eth_ipv6_tcp,
+			ICE_SW_INSET_MAC_IPV6_TCP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4,
+			ICE_SW_INSET_DIST_VXLAN_IPV4, ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_udp,
+			ICE_SW_INSET_DIST_VXLAN_IPV4_UDP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_tcp,
+			ICE_SW_INSET_DIST_VXLAN_IPV4_TCP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_nvgre_eth_ipv4,
+			ICE_SW_INSET_DIST_NVGRE_IPV4, ICE_INSET_NONE},
+	{pattern_eth_ipv4_nvgre_eth_ipv4_udp,
+			ICE_SW_INSET_DIST_NVGRE_IPV4_UDP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_nvgre_eth_ipv4_tcp,
+			ICE_SW_INSET_DIST_NVGRE_IPV4_TCP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_esp,
+			ICE_SW_INSET_MAC_IPV4_ESP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_esp,
+			ICE_SW_INSET_MAC_IPV4_ESP, ICE_INSET_NONE},
+	{pattern_eth_ipv6_esp,
+			ICE_SW_INSET_MAC_IPV6_ESP, ICE_INSET_NONE},
+	{pattern_eth_ipv6_udp_esp,
+			ICE_SW_INSET_MAC_IPV6_ESP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_ah,
+			ICE_SW_INSET_MAC_IPV4_AH, ICE_INSET_NONE},
+	{pattern_eth_ipv6_ah,
+			ICE_SW_INSET_MAC_IPV6_AH, ICE_INSET_NONE},
+	{pattern_eth_ipv6_udp_ah,
+			ICE_INSET_NONE, ICE_INSET_NONE},
+};
+
+static struct
 ice_pattern_match_item ice_switch_pattern_perm_os[] = {
 	{pattern_ethertype,
 			ICE_SW_INSET_ETHER, ICE_INSET_NONE},
@@ -383,6 +433,54 @@ ice_pattern_match_item ice_switch_pattern_perm_comms[] = {
 	{pattern_eth_ipv4_pfcp,
 			ICE_INSET_NONE, ICE_INSET_NONE},
 	{pattern_eth_ipv6_pfcp,
+			ICE_INSET_NONE, ICE_INSET_NONE},
+};
+
+static struct
+ice_pattern_match_item ice_switch_pattern_perm_wireless_edge[] = {
+	{pattern_ethertype,
+			ICE_SW_INSET_ETHER, ICE_INSET_NONE},
+	{pattern_ethertype_vlan,
+			ICE_SW_INSET_MAC_VLAN, ICE_INSET_NONE},
+	{pattern_eth_arp,
+		ICE_INSET_NONE, ICE_INSET_NONE},
+	{pattern_eth_ipv4,
+			ICE_SW_INSET_MAC_IPV4, ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp,
+			ICE_SW_INSET_MAC_IPV4_UDP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_tcp,
+			ICE_SW_INSET_MAC_IPV4_TCP, ICE_INSET_NONE},
+	{pattern_eth_ipv6,
+			ICE_SW_INSET_MAC_IPV6, ICE_INSET_NONE},
+	{pattern_eth_ipv6_udp,
+			ICE_SW_INSET_MAC_IPV6_UDP, ICE_INSET_NONE},
+	{pattern_eth_ipv6_tcp,
+			ICE_SW_INSET_MAC_IPV6_TCP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4,
+			ICE_SW_INSET_PERM_TUNNEL_IPV4, ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_udp,
+			ICE_SW_INSET_PERM_TUNNEL_IPV4_UDP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_tcp,
+			ICE_SW_INSET_PERM_TUNNEL_IPV4_TCP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_nvgre_eth_ipv4,
+			ICE_SW_INSET_PERM_TUNNEL_IPV4, ICE_INSET_NONE},
+	{pattern_eth_ipv4_nvgre_eth_ipv4_udp,
+			ICE_SW_INSET_PERM_TUNNEL_IPV4_UDP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_nvgre_eth_ipv4_tcp,
+			ICE_SW_INSET_PERM_TUNNEL_IPV4_TCP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_esp,
+			ICE_SW_INSET_MAC_IPV4_ESP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_esp,
+			ICE_SW_INSET_MAC_IPV4_ESP, ICE_INSET_NONE},
+	{pattern_eth_ipv6_esp,
+			ICE_SW_INSET_MAC_IPV6_ESP, ICE_INSET_NONE},
+	{pattern_eth_ipv6_udp_esp,
+			ICE_SW_INSET_MAC_IPV6_ESP, ICE_INSET_NONE},
+	{pattern_eth_ipv4_ah,
+			ICE_SW_INSET_MAC_IPV4_AH, ICE_INSET_NONE},
+	{pattern_eth_ipv6_ah,
+			ICE_SW_INSET_MAC_IPV6_AH, ICE_INSET_NONE},
+	{pattern_eth_ipv6_udp_ah,
 			ICE_INSET_NONE, ICE_INSET_NONE},
 };
 
@@ -1861,6 +1959,8 @@ ice_switch_init(struct ice_adapter *ad)
 
 	if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
 		dist_parser = &ice_switch_dist_parser_comms;
+	else if (ad->active_pkg_type == ICE_PKG_TYPE_WIRELESS_EDGE)
+		dist_parser = &ice_switch_dist_parser_wireless_edge;
 	else if (ad->active_pkg_type == ICE_PKG_TYPE_OS_DEFAULT)
 		dist_parser = &ice_switch_dist_parser_os;
 	else
@@ -1869,6 +1969,8 @@ ice_switch_init(struct ice_adapter *ad)
 	if (ad->devargs.pipe_mode_support) {
 		if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
 			perm_parser = &ice_switch_perm_parser_comms;
+		else if (ad->active_pkg_type == ICE_PKG_TYPE_WIRELESS_EDGE)
+			perm_parser = &ice_switch_perm_parser_wireless_edge;
 		else
 			perm_parser = &ice_switch_perm_parser_os;
 
@@ -1887,6 +1989,8 @@ ice_switch_uninit(struct ice_adapter *ad)
 
 	if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
 		dist_parser = &ice_switch_dist_parser_comms;
+	else if (ad->active_pkg_type == ICE_PKG_TYPE_WIRELESS_EDGE)
+		dist_parser = &ice_switch_dist_parser_wireless_edge;
 	else if (ad->active_pkg_type == ICE_PKG_TYPE_OS_DEFAULT)
 		dist_parser = &ice_switch_dist_parser_os;
 	else
@@ -1895,6 +1999,8 @@ ice_switch_uninit(struct ice_adapter *ad)
 	if (ad->devargs.pipe_mode_support) {
 		if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
 			perm_parser = &ice_switch_perm_parser_comms;
+		else if (ad->active_pkg_type == ICE_PKG_TYPE_WIRELESS_EDGE)
+			perm_parser = &ice_switch_perm_parser_wireless_edge;
 		else
 			perm_parser = &ice_switch_perm_parser_os;
 
@@ -1935,6 +2041,15 @@ ice_flow_parser ice_switch_dist_parser_comms = {
 };
 
 static struct
+ice_flow_parser ice_switch_dist_parser_wireless_edge = {
+	.engine = &ice_switch_engine,
+	.array = ice_switch_pattern_dist_wireless_edge,
+	.array_len = RTE_DIM(ice_switch_pattern_dist_wireless_edge),
+	.parse_pattern_action = ice_switch_parse_pattern_action,
+	.stage = ICE_FLOW_STAGE_DISTRIBUTOR,
+};
+
+static struct
 ice_flow_parser ice_switch_perm_parser_os = {
 	.engine = &ice_switch_engine,
 	.array = ice_switch_pattern_perm_os,
@@ -1948,6 +2063,15 @@ ice_flow_parser ice_switch_perm_parser_comms = {
 	.engine = &ice_switch_engine,
 	.array = ice_switch_pattern_perm_comms,
 	.array_len = RTE_DIM(ice_switch_pattern_perm_comms),
+	.parse_pattern_action = ice_switch_parse_pattern_action,
+	.stage = ICE_FLOW_STAGE_PERMISSION,
+};
+
+static struct
+ice_flow_parser ice_switch_perm_parser_wireless_edge = {
+	.engine = &ice_switch_engine,
+	.array = ice_switch_pattern_perm_wireless_edge,
+	.array_len = RTE_DIM(ice_switch_pattern_perm_wireless_edge),
 	.parse_pattern_action = ice_switch_parse_pattern_action,
 	.stage = ICE_FLOW_STAGE_PERMISSION,
 };

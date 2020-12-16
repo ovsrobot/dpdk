@@ -143,8 +143,62 @@ static struct ice_pattern_match_item ice_fdir_pattern_comms[] = {
 	{pattern_eth_ipv6_gtpu_eh,     ICE_FDIR_INSET_IPV6_GTPU_EH,          ICE_INSET_NONE},
 };
 
+static struct ice_pattern_match_item ice_fdir_pattern_wireless_edge[] = {
+	{pattern_ethertype,		ICE_FDIR_INSET_ETH,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4,		ICE_FDIR_INSET_ETH_IPV4,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp,		ICE_FDIR_INSET_ETH_IPV4_UDP,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4_tcp,		ICE_FDIR_INSET_ETH_IPV4_TCP,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4_sctp,		ICE_FDIR_INSET_ETH_IPV4_SCTP,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv6,		ICE_FDIR_INSET_ETH_IPV6,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv6_udp,		ICE_FDIR_INSET_ETH_IPV6_UDP,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv6_tcp,		ICE_FDIR_INSET_ETH_IPV6_TCP,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv6_sctp,		ICE_FDIR_INSET_ETH_IPV6_SCTP,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_ipv4,
+					ICE_FDIR_INSET_VXLAN_IPV4,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_ipv4_udp,
+					ICE_FDIR_INSET_VXLAN_IPV4_UDP,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_ipv4_tcp,
+					ICE_FDIR_INSET_VXLAN_IPV4_TCP,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_ipv4_sctp,
+					ICE_FDIR_INSET_VXLAN_IPV4_SCTP,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4,
+					ICE_FDIR_INSET_VXLAN_IPV4,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_udp,
+					ICE_FDIR_INSET_VXLAN_IPV4_UDP,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_tcp,
+					ICE_FDIR_INSET_VXLAN_IPV4_TCP,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_sctp,
+					ICE_FDIR_INSET_VXLAN_IPV4_SCTP,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4_gtpu,		ICE_FDIR_INSET_IPV4_GTPU,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv4_gtpu_eh,	ICE_FDIR_INSET_IPV4_GTPU_EH,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv6_gtpu,		ICE_FDIR_INSET_IPV6_GTPU,
+					ICE_INSET_NONE},
+	{pattern_eth_ipv6_gtpu_eh,	ICE_FDIR_INSET_IPV6_GTPU_EH,
+					ICE_INSET_NONE},
+};
+
 static struct ice_flow_parser ice_fdir_parser_os;
 static struct ice_flow_parser ice_fdir_parser_comms;
+static struct ice_flow_parser ice_fdir_parser_wireless_edge;
 
 static int
 ice_fdir_is_tunnel_profile(enum ice_fdir_tunnel_type tunnel_type);
@@ -1113,6 +1167,8 @@ ice_fdir_init(struct ice_adapter *ad)
 
 	if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
 		parser = &ice_fdir_parser_comms;
+	else if (ad->active_pkg_type == ICE_PKG_TYPE_WIRELESS_EDGE)
+		parser = &ice_fdir_parser_wireless_edge;
 	else if (ad->active_pkg_type == ICE_PKG_TYPE_OS_DEFAULT)
 		parser = &ice_fdir_parser_os;
 	else
@@ -1132,6 +1188,8 @@ ice_fdir_uninit(struct ice_adapter *ad)
 
 	if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
 		parser = &ice_fdir_parser_comms;
+	else if (ad->active_pkg_type == ICE_PKG_TYPE_WIRELESS_EDGE)
+		parser = &ice_fdir_parser_wireless_edge;
 	else
 		parser = &ice_fdir_parser_os;
 
@@ -2079,6 +2137,14 @@ static struct ice_flow_parser ice_fdir_parser_comms = {
 	.engine = &ice_fdir_engine,
 	.array = ice_fdir_pattern_comms,
 	.array_len = RTE_DIM(ice_fdir_pattern_comms),
+	.parse_pattern_action = ice_fdir_parse,
+	.stage = ICE_FLOW_STAGE_DISTRIBUTOR,
+};
+
+static struct ice_flow_parser ice_fdir_parser_wireless_edge = {
+	.engine = &ice_fdir_engine,
+	.array = ice_fdir_pattern_wireless_edge,
+	.array_len = RTE_DIM(ice_fdir_pattern_wireless_edge),
 	.parse_pattern_action = ice_fdir_parse,
 	.stage = ICE_FLOW_STAGE_DISTRIBUTOR,
 };

@@ -446,6 +446,104 @@ static struct ice_pattern_match_item ice_hash_pattern_list_comms[] = {
 		&hint_eth_pppoes},
 };
 
+/* Supported pattern for wireless edge package. */
+static struct ice_pattern_match_item ice_hash_pattern_list_wireless_edge[] = {
+	{pattern_empty,			    ICE_INSET_NONE,
+		&hint_empty},
+	{pattern_eth_ipv4,		    ICE_INSET_NONE,
+		&hint_eth_ipv4},
+	{pattern_eth_ipv4_udp,		    ICE_INSET_NONE,
+		&hint_eth_ipv4_udp},
+	{pattern_eth_ipv4_tcp,		    ICE_INSET_NONE,
+		&hint_eth_ipv4_tcp},
+	{pattern_eth_ipv4_sctp,		    ICE_INSET_NONE,
+		&hint_eth_ipv4_sctp},
+	{pattern_eth_ipv4_gtpu_ipv4,	    ICE_INSET_NONE,
+		&hint_eth_ipv4_gtpu_ipv4},
+	{pattern_eth_ipv4_gtpu_ipv4_udp,    ICE_INSET_NONE,
+		&hint_eth_ipv4_gtpu_ipv4_udp},
+	{pattern_eth_ipv4_gtpu_ipv4_tcp,    ICE_INSET_NONE,
+		&hint_eth_ipv4_gtpu_ipv4_tcp},
+	{pattern_eth_ipv4_gtpu_ipv6,	    ICE_INSET_NONE,
+		&hint_eth_ipv4_gtpu_ipv6},
+	{pattern_eth_ipv4_gtpu_ipv6_udp,    ICE_INSET_NONE,
+		&hint_eth_ipv4_gtpu_ipv6_udp},
+	{pattern_eth_ipv4_gtpu_ipv6_tcp,    ICE_INSET_NONE,
+		&hint_eth_ipv4_gtpu_ipv6_tcp},
+	{pattern_eth_ipv6_gtpu_ipv4,	    ICE_INSET_NONE,
+		&hint_eth_ipv6_gtpu_ipv4},
+	{pattern_eth_ipv6_gtpu_ipv4_udp,    ICE_INSET_NONE,
+		&hint_eth_ipv6_gtpu_ipv4_udp},
+	{pattern_eth_ipv6_gtpu_ipv4_tcp,    ICE_INSET_NONE,
+		&hint_eth_ipv6_gtpu_ipv4_tcp},
+	{pattern_eth_ipv6_gtpu_ipv6,	    ICE_INSET_NONE,
+		&hint_eth_ipv6_gtpu_ipv6},
+	{pattern_eth_ipv6_gtpu_ipv6_udp,    ICE_INSET_NONE,
+		&hint_eth_ipv6_gtpu_ipv6_udp},
+	{pattern_eth_ipv6_gtpu_ipv6_tcp,    ICE_INSET_NONE,
+		&hint_eth_ipv6_gtpu_ipv6_tcp},
+	{pattern_eth_ipv4_gtpu_eh_ipv4,	    ICE_INSET_NONE,
+		&hint_eth_ipv4_gtpu_eh_ipv4},
+	{pattern_eth_ipv4_gtpu_eh_ipv4_udp, ICE_INSET_NONE,
+		&hint_eth_ipv4_gtpu_eh_ipv4_udp},
+	{pattern_eth_ipv4_gtpu_eh_ipv4_tcp, ICE_INSET_NONE,
+		&hint_eth_ipv4_gtpu_eh_ipv4_tcp},
+	{pattern_eth_ipv4_gtpu_eh_ipv6,	    ICE_INSET_NONE,
+		&hint_eth_ipv4_gtpu_eh_ipv6},
+	{pattern_eth_ipv4_gtpu_eh_ipv6_udp, ICE_INSET_NONE,
+		&hint_eth_ipv4_gtpu_eh_ipv6_udp},
+	{pattern_eth_ipv4_gtpu_eh_ipv6_tcp, ICE_INSET_NONE,
+		&hint_eth_ipv4_gtpu_eh_ipv6_tcp},
+	{pattern_eth_ipv6_gtpu_eh_ipv4,	    ICE_INSET_NONE,
+		&hint_eth_ipv6_gtpu_eh_ipv4},
+	{pattern_eth_ipv6_gtpu_eh_ipv4_udp, ICE_INSET_NONE,
+		&hint_eth_ipv6_gtpu_eh_ipv4_udp},
+	{pattern_eth_ipv6_gtpu_eh_ipv4_tcp, ICE_INSET_NONE,
+		&hint_eth_ipv6_gtpu_eh_ipv4_tcp},
+	{pattern_eth_ipv6_gtpu_eh_ipv6,	    ICE_INSET_NONE,
+		&hint_eth_ipv6_gtpu_eh_ipv6},
+	{pattern_eth_ipv6_gtpu_eh_ipv6_udp, ICE_INSET_NONE,
+		&hint_eth_ipv6_gtpu_eh_ipv6_udp},
+	{pattern_eth_ipv6_gtpu_eh_ipv6_tcp, ICE_INSET_NONE,
+		&hint_eth_ipv6_gtpu_eh_ipv6_tcp},
+	{pattern_eth_ipv4_esp,		    ICE_INSET_NONE,
+		&hint_eth_ipv4_esp},
+	{pattern_eth_ipv4_udp_esp,	    ICE_INSET_NONE,
+		&hint_eth_ipv4_udp_esp},
+	{pattern_eth_ipv4_ah,		    ICE_INSET_NONE,
+		&hint_eth_ipv4_ah},
+	{pattern_eth_vlan_ipv4,		    ICE_INSET_NONE,
+		&hint_eth_vlan_ipv4},
+	{pattern_eth_vlan_ipv4_udp,	    ICE_INSET_NONE,
+		&hint_eth_vlan_ipv4_udp},
+	{pattern_eth_vlan_ipv4_tcp,	    ICE_INSET_NONE,
+		&hint_eth_vlan_ipv4_tcp},
+	{pattern_eth_vlan_ipv4_sctp,	    ICE_INSET_NONE,
+		&hint_eth_vlan_ipv4_sctp},
+	{pattern_eth_ipv6,		    ICE_INSET_NONE,
+		&hint_eth_ipv6},
+	{pattern_eth_ipv6_udp,		    ICE_INSET_NONE,
+		&hint_eth_ipv6_udp},
+	{pattern_eth_ipv6_tcp,		    ICE_INSET_NONE,
+		&hint_eth_ipv6_tcp},
+	{pattern_eth_ipv6_sctp,		    ICE_INSET_NONE,
+		&hint_eth_ipv6_sctp},
+	{pattern_eth_ipv6_esp,		    ICE_INSET_NONE,
+		&hint_eth_ipv6_esp},
+	{pattern_eth_ipv6_udp_esp,	    ICE_INSET_NONE,
+		&hint_eth_ipv6_udp_esp},
+	{pattern_eth_ipv6_ah,		    ICE_INSET_NONE,
+		&hint_eth_ipv6_ah},
+	{pattern_eth_vlan_ipv6,		    ICE_INSET_NONE,
+		&hint_eth_vlan_ipv6},
+	{pattern_eth_vlan_ipv6_udp,	    ICE_INSET_NONE,
+		&hint_eth_vlan_ipv6_udp},
+	{pattern_eth_vlan_ipv6_tcp,	    ICE_INSET_NONE,
+		&hint_eth_vlan_ipv6_tcp},
+	{pattern_eth_vlan_ipv6_sctp,	    ICE_INSET_NONE,
+		&hint_eth_vlan_ipv6_sctp},
+};
+
 /**
  * The first member is input set combination,
  * the second member is hash fields.
@@ -932,6 +1030,15 @@ static struct ice_flow_parser ice_hash_parser_comms = {
 	.stage = ICE_FLOW_STAGE_RSS,
 };
 
+/* Register parser for wireless edge package. */
+static struct ice_flow_parser ice_hash_parser_wireless_edge = {
+	.engine = &ice_hash_engine,
+	.array = ice_hash_pattern_list_wireless_edge,
+	.array_len = RTE_DIM(ice_hash_pattern_list_wireless_edge),
+	.parse_pattern_action = ice_hash_parse_pattern_action,
+	.stage = ICE_FLOW_STAGE_RSS,
+};
+
 RTE_INIT(ice_hash_engine_init)
 {
 	struct ice_flow_engine *engine = &ice_hash_engine;
@@ -950,6 +1057,8 @@ ice_hash_init(struct ice_adapter *ad)
 		parser = &ice_hash_parser_os;
 	else if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
 		parser = &ice_hash_parser_comms;
+	else if (ad->active_pkg_type == ICE_PKG_TYPE_WIRELESS_EDGE)
+		parser = &ice_hash_parser_wireless_edge;
 	else
 		return -EINVAL;
 
@@ -1356,6 +1465,8 @@ ice_hash_uninit(struct ice_adapter *ad)
 		ice_unregister_parser(&ice_hash_parser_os, ad);
 	else if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
 		ice_unregister_parser(&ice_hash_parser_comms, ad);
+	else if (ad->active_pkg_type == ICE_PKG_TYPE_WIRELESS_EDGE)
+		ice_unregister_parser(&ice_hash_parser_wireless_edge, ad);
 }
 
 static void
