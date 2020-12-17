@@ -16,6 +16,8 @@ BINARY_PREFIX = "KMG"
 # systemd mount point for huge pages
 HUGE_MOUNT = "/dev/hugepages"
 
+# show hugepages flag
+SHOW_HUGEPAGES = False
 
 def fmt_memsize(kb):
     '''Format memory size in kB into conventional format'''
@@ -62,6 +64,10 @@ def set_hugepages(path, pages):
         filename = os.path.basename(path)
         size = filename[10:]
         sys.exit('{} is not a valid system huge page size'.format(size))
+    if get_hugepages(path) != pages:
+        print("Unable to reserve required pages. The pages reserved are:")
+        global SHOW_HUGEPAGES
+        SHOW_HUGEPAGES = True
 
 
 def show_numa_pages():
@@ -234,6 +240,9 @@ To a complete setup of with 2 Gigabyte of 1G huge pages:
         help='setup huge pages by doing clear, unmount, reserve and mount')
     args = parser.parse_args()
 
+    global SHOW_HUGEPAGES
+    SHOW_HUGEPAGES = args.show
+
     if args.setup:
         args.clear = True
         args.unmount = True
@@ -260,7 +269,7 @@ To a complete setup of with 2 Gigabyte of 1G huge pages:
             int(reserve_kb / pagesize_kb), pagesize_kb, node=args.node)
     if args.mount:
         mount_huge(pagesize_kb, HUGE_MOUNT)
-    if args.show:
+    if SHOW_HUGEPAGES:
         show_pages()
         print()
         show_mount()
