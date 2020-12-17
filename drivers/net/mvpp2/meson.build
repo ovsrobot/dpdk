@@ -3,6 +3,12 @@
 # Copyright(c) 2018 Semihalf.
 # All rights reserved.
 
+if is_windows
+	build = false
+	reason = 'Not supported on Windows'
+	subdir_done()
+endif
+
 path = get_option('lib_musdk_dir')
 lib_dir = path + '/lib'
 inc_dir = path + '/include'
