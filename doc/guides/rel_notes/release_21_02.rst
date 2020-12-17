@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **ethdev: added 1 new API for PMD power management**
+
+  * ``rte_eth_get_monitor_addr()``, to be used in conjunction with
+    ``rte_power_monitor()`` to enable automatic power management for PMD's.
 
 Removed Items
 -------------
