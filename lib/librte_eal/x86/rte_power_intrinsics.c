@@ -4,6 +4,8 @@
 
 #include "rte_power_intrinsics.h"
 
+static uint8_t wait_supported;
+
 static inline uint64_t
 __get_umwait_val(const volatile void *p, const uint8_t sz)
 {
@@ -35,6 +37,11 @@ rte_power_monitor(const volatile void *p, const uint64_t expected_value,
 {
 	const uint32_t tsc_l = (uint32_t)tsc_timestamp;
 	const uint32_t tsc_h = (uint32_t)(tsc_timestamp >> 32);
+
+	/* prevent user from running this instruction if it's not supported */
+	if (!wait_supported)
+		return;
+
 	/*
 	 * we're using raw byte codes for now as only the newest compiler
 	 * versions support this instruction natively.
@@ -72,6 +79,11 @@ rte_power_monitor_sync(const volatile void *p, const uint64_t expected_value,
 {
 	const uint32_t tsc_l = (uint32_t)tsc_timestamp;
 	const uint32_t tsc_h = (uint32_t)(tsc_timestamp >> 32);
+
+	/* prevent user from running this instruction if it's not supported */
+	if (!wait_supported)
+		return;
+
 	/*
 	 * we're using raw byte codes for now as only the newest compiler
 	 * versions support this instruction natively.
@@ -112,9 +124,22 @@ rte_power_pause(const uint64_t tsc_timestamp)
 	const uint32_t tsc_l = (uint32_t)tsc_timestamp;
 	const uint32_t tsc_h = (uint32_t)(tsc_timestamp >> 32);
 
+	/* prevent user from running this instruction if it's not supported */
+	if (!wait_supported)
+		return;
+
 	/* execute TPAUSE */
 	asm volatile(".byte 0x66, 0x0f, 0xae, 0xf7;"
-			: /* ignore rflags */
-			: "D"(0), /* enter C0.2 */
-			"a"(tsc_l), "d"(tsc_h));
+		: /* ignore rflags */
+		: "D"(0), /* enter C0.2 */
+		  "a"(tsc_l), "d"(tsc_h));
+}
+
+RTE_INIT(rte_power_intrinsics_init) {
+	struct rte_cpu_intrinsics i;
+
+	rte_cpu_get_intrinsics_support(&i);
+
+	if (i.power_monitor && i.power_pause)
+		wait_supported = 1;
 }
