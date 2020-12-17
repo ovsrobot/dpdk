@@ -18,6 +18,18 @@
  * which are architecture-dependent.
  */
 
+struct rte_power_monitor_cond {
+	volatile void *addr;  /**< Address to monitor for changes */
+	uint64_t val;         /**< Before attempting the monitoring, the address
+	                       *   may be read and compared against this value.
+	                       **/
+	uint64_t mask;   /**< 64-bit mask to extract current value from addr */
+	uint8_t data_sz; /**< Data size (in bytes) that will be used to compare
+	                  *   expected value with the memory address. Can be 1,
+	                  *   2, 4, or 8. Supplying any other value will lead to
+	                  *   undefined result. */
+};
+
 /**
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice
@@ -35,25 +47,15 @@
  * @warning It is responsibility of the user to check if this function is
  *   supported at runtime using `rte_cpu_get_intrinsics_support()` API call.
  *
- * @param p
- *   Address to monitor for changes.
- * @param expected_value
- *   Before attempting the monitoring, the `p` address may be read and compared
- *   against this value. If `value_mask` is zero, this step will be skipped.
- * @param value_mask
- *   The 64-bit mask to use to extract current value from `p`.
+ * @param pmc
+ *   The monitoring condition structure.
  * @param tsc_timestamp
  *   Maximum TSC timestamp to wait for. Note that the wait behavior is
  *   architecture-dependent.
- * @param data_sz
- *   Data size (in bytes) that will be used to compare expected value with the
- *   memory address. Can be 1, 2, 4 or 8. Supplying any other value will lead
- *   to undefined result.
  */
 __rte_experimental
-void rte_power_monitor(const volatile void *p,
-		const uint64_t expected_value, const uint64_t value_mask,
-		const uint64_t tsc_timestamp, const uint8_t data_sz);
+void rte_power_monitor(const struct rte_power_monitor_cond *pmc,
+		const uint64_t tsc_timestamp);
 
 /**
  * @warning
@@ -75,30 +77,19 @@ void rte_power_monitor(const volatile void *p,
  * @warning It is responsibility of the user to check if this function is
  *   supported at runtime using `rte_cpu_get_intrinsics_support()` API call.
  *
- * @param p
- *   Address to monitor for changes.
- * @param expected_value
- *   Before attempting the monitoring, the `p` address may be read and compared
- *   against this value. If `value_mask` is zero, this step will be skipped.
- * @param value_mask
- *   The 64-bit mask to use to extract current value from `p`.
+ * @param pmc
+ *   The monitoring condition structure.
  * @param tsc_timestamp
  *   Maximum TSC timestamp to wait for. Note that the wait behavior is
  *   architecture-dependent.
- * @param data_sz
- *   Data size (in bytes) that will be used to compare expected value with the
- *   memory address. Can be 1, 2, 4 or 8. Supplying any other value will lead
- *   to undefined result.
  * @param lck
  *   A spinlock that must be locked before entering the function, will be
  *   unlocked while the CPU is sleeping, and will be locked again once the CPU
  *   wakes up.
  */
 __rte_experimental
-void rte_power_monitor_sync(const volatile void *p,
-		const uint64_t expected_value, const uint64_t value_mask,
-		const uint64_t tsc_timestamp, const uint8_t data_sz,
-		rte_spinlock_t *lck);
+void rte_power_monitor_sync(const struct rte_power_monitor_cond *pmc,
+		const uint64_t tsc_timestamp, rte_spinlock_t *lck);
 
 /**
  * @warning
