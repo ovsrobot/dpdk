@@ -320,7 +320,13 @@ mlx5_rxq_create_devx_rq_resources(struct rte_eth_dev *dev, uint16_t idx)
 	uint32_t log_wqe_size = 0;
 	void *buf = NULL;
 	struct mlx5_devx_obj *rq;
+	size_t alignment = MLX5_WQE_BUF_ALIGNMENT;
 
+	if (alignment == (size_t)-1) {
+		DRV_LOG(ERR, "Failed to get mem page size");
+		rte_errno = ENOMEM;
+		return NULL;
+	}
 	/* Fill RQ attributes. */
 	rq_attr.mem_rq_type = MLX5_RQC_MEM_RQ_TYPE_MEMORY_RQ_INLINE;
 	rq_attr.flush_in_error_en = 1;
@@ -347,15 +353,10 @@ mlx5_rxq_create_devx_rq_resources(struct rte_eth_dev *dev, uint16_t idx)
 	log_wqe_size = log2above(wqe_size) + rxq_data->sges_n;
 	rq_attr.wq_attr.log_wq_stride = log_wqe_size;
 	rq_attr.wq_attr.log_wq_sz = rxq_data->elts_n - rxq_data->sges_n;
+	rq_attr.wq_attr.log_wq_pg_sz = log2above(alignment);
 	/* Calculate and allocate WQ memory space. */
 	wqe_size = 1 << log_wqe_size; /* round up power of two.*/
 	wq_size = wqe_n * wqe_size;
-	size_t alignment = MLX5_WQE_BUF_ALIGNMENT;
-	if (alignment == (size_t)-1) {
-		DRV_LOG(ERR, "Failed to get mem page size");
-		rte_errno = ENOMEM;
-		return NULL;
-	}
 	buf = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO, wq_size,
 			  alignment, rxq_ctrl->socket);
 	if (!buf)
