@@ -817,26 +817,26 @@ free_pkts(struct rte_mbuf **pkts, uint16_t n)
 }
 
 static __rte_always_inline void
-virtio_xmit(struct vhost_dev *dst_vdev, struct vhost_dev *src_vdev,
+complete_async_pkts(struct vhost_dev *vdev)
+{
+	struct rte_mbuf *p_cpl[MAX_PKT_BURST];
+	uint16_t complete_count;
+
+	complete_count = rte_vhost_poll_enqueue_completed(vdev->vid,
+					VIRTIO_RXQ, p_cpl, MAX_PKT_BURST);
+	rte_atomic16_sub(&vdev->nr_async_pkts, complete_count);
+	if (complete_count)
+		free_pkts(p_cpl, complete_count);
+}
+
+static __rte_always_inline void
+sync_virtio_xmit(struct vhost_dev *dst_vdev, struct vhost_dev *src_vdev,
 	    struct rte_mbuf *m)
 {
 	uint16_t ret;
-	struct rte_mbuf *m_cpl[1];
 
 	if (builtin_net_driver) {
 		ret = vs_enqueue_pkts(dst_vdev, VIRTIO_RXQ, &m, 1);
-	} else if (async_vhost_driver) {
-		ret = rte_vhost_submit_enqueue_burst(dst_vdev->vid, VIRTIO_RXQ,
-						&m, 1);
-
-		if (likely(ret))
-			dst_vdev->nr_async_pkts++;
-
-		while (likely(dst_vdev->nr_async_pkts)) {
-			if (rte_vhost_poll_enqueue_completed(dst_vdev->vid,
-					VIRTIO_RXQ, m_cpl, 1))
-				dst_vdev->nr_async_pkts--;
-		}
 	} else {
 		ret = rte_vhost_enqueue_burst(dst_vdev->vid, VIRTIO_RXQ, &m, 1);
 	}
@@ -850,25 +850,25 @@ virtio_xmit(struct vhost_dev *dst_vdev, struct vhost_dev *src_vdev,
 }
 
 static __rte_always_inline void
-drain_vhost(struct vhost_dev *dst_vdev, struct rte_mbuf **m, uint16_t nr_xmit)
+drain_vhost(struct vhost_dev *dst_vdev)
 {
-	uint16_t ret, nr_cpl;
-	struct rte_mbuf *m_cpl[MAX_PKT_BURST];
+	uint16_t ret;
+	uint16_t nr_xmit = vhost_m_table[dst_vdev->vid].len;
+	struct rte_mbuf **m = vhost_m_table[dst_vdev->vid].m_table;
 
 	if (builtin_net_driver) {
 		ret = vs_enqueue_pkts(dst_vdev, VIRTIO_RXQ, m, nr_xmit);
 	} else if (async_vhost_driver) {
-		ret = rte_vhost_submit_enqueue_burst(dst_vdev->vid, VIRTIO_RXQ,
-						m, nr_xmit);
-		dst_vdev->nr_async_pkts += ret;
-		free_pkts(&m[ret], nr_xmit - ret);
+		uint32_t cpu_cpl_nr;
+		struct rte_mbuf *m_cpu_cpl[nr_xmit];
+		complete_async_pkts(dst_vdev);
+		while (rte_atomic16_read(&dst_vdev->nr_async_pkts) >= 128)
+			complete_async_pkts(dst_vdev);
 
-		while (likely(dst_vdev->nr_async_pkts)) {
-			nr_cpl = rte_vhost_poll_enqueue_completed(dst_vdev->vid,
-					VIRTIO_RXQ, m_cpl, MAX_PKT_BURST);
-			dst_vdev->nr_async_pkts -= nr_cpl;
-			free_pkts(m_cpl, nr_cpl);
-		}
+		ret = rte_vhost_submit_enqueue_burst(dst_vdev->vid, VIRTIO_RXQ,
+					m, nr_xmit, m_cpu_cpl, &cpu_cpl_nr);
+		rte_atomic16_add(&dst_vdev->nr_async_pkts, ret - cpu_cpl_nr);
+		free_pkts(&m[ret], nr_xmit - ret);
 	} else {
 		ret = rte_vhost_enqueue_burst(dst_vdev->vid, VIRTIO_RXQ,
 						m, nr_xmit);
@@ -925,7 +925,7 @@ virtio_tx_local(struct vhost_dev *vdev, struct rte_mbuf *m)
 	}
 
 	if (unlikely(vhost_txq->len == MAX_PKT_BURST)) {
-		drain_vhost(dst_vdev, vhost_txq->m_table, MAX_PKT_BURST);
+		drain_vhost(dst_vdev);
 		vhost_txq->len = 0;
 		vhost_tsc[dst_vdev->vid] = rte_rdtsc();
 	}
@@ -1031,7 +1031,7 @@ virtio_tx_route(struct vhost_dev *vdev, struct rte_mbuf *m, uint16_t vlan_tag)
 
 		TAILQ_FOREACH(vdev2, &vhost_dev_list, global_vdev_entry) {
 			if (vdev2 != vdev)
-				virtio_xmit(vdev2, vdev, m);
+				sync_virtio_xmit(vdev2, vdev, m);
 		}
 		goto queue2nic;
 	}
@@ -1125,29 +1125,15 @@ drain_mbuf_table(struct mbuf_table *tx_q)
 }
 
 static __rte_always_inline void
-complete_async_pkts(struct vhost_dev *vdev, uint16_t qid)
-{
-	struct rte_mbuf *p_cpl[MAX_PKT_BURST];
-	uint16_t complete_count;
-
-	complete_count = rte_vhost_poll_enqueue_completed(vdev->vid,
-						qid, p_cpl, MAX_PKT_BURST);
-	vdev->nr_async_pkts -= complete_count;
-	if (complete_count)
-		free_pkts(p_cpl, complete_count);
-}
-
-static __rte_always_inline void
 drain_eth_rx(struct vhost_dev *vdev)
 {
 	uint16_t rx_count, enqueue_count;
+	uint32_t cpu_cpl_nr;
 	struct rte_mbuf *pkts[MAX_PKT_BURST];
+	struct rte_mbuf *m_cpu_cpl[MAX_PKT_BURST];
 
 	rx_count = rte_eth_rx_burst(ports[0], vdev->vmdq_rx_q,
 				    pkts, MAX_PKT_BURST);
-
-	while (likely(vdev->nr_async_pkts))
-		complete_async_pkts(vdev, VIRTIO_RXQ);
 
 	if (!rx_count)
 		return;
@@ -1170,13 +1156,21 @@ drain_eth_rx(struct vhost_dev *vdev)
 		}
 	}
 
+	complete_async_pkts(vdev);
+	while (rte_atomic16_read(&vdev->nr_async_pkts) >= 128)
+		complete_async_pkts(vdev);
+
 	if (builtin_net_driver) {
 		enqueue_count = vs_enqueue_pkts(vdev, VIRTIO_RXQ,
 						pkts, rx_count);
 	} else if (async_vhost_driver) {
 		enqueue_count = rte_vhost_submit_enqueue_burst(vdev->vid,
-					VIRTIO_RXQ, pkts, rx_count);
-		vdev->nr_async_pkts += enqueue_count;
+					VIRTIO_RXQ, pkts, rx_count,
+					m_cpu_cpl, &cpu_cpl_nr);
+		rte_atomic16_add(&vdev->nr_async_pkts,
+					enqueue_count - cpu_cpl_nr);
+		if (cpu_cpl_nr)
+			free_pkts(m_cpu_cpl, cpu_cpl_nr);
 	} else {
 		enqueue_count = rte_vhost_enqueue_burst(vdev->vid, VIRTIO_RXQ,
 						pkts, rx_count);
@@ -1224,7 +1218,7 @@ drain_virtio_tx(struct vhost_dev *vdev)
 			RTE_LOG_DP(DEBUG, VHOST_DATA,
 				"Vhost tX queue drained after timeout with burst size %u\n",
 				vhost_txq->len);
-			drain_vhost(vdev, vhost_txq->m_table, vhost_txq->len);
+			drain_vhost(vdev);
 			vhost_txq->len = 0;
 			vhost_tsc[vdev->vid] = cur_tsc;
 		}
