@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated OCTEON TX and OCTEON TX2 crypto PMDs.**
+
+  * Added SSL/TLS way of cipher-auth operations support i.e. auth generation
+    followed by encryption and decryption followed by auth verify in OCTEONT TX
+    and OCTEON TX2 crypto PMDs.
+
 
 Removed Items
 -------------
