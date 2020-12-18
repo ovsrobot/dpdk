@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated the OCTEON TX2 crypto PMD.**
+
+  * Updated the OCTEON TX2 crypto PMD lookaside protocol offload for IPsec with
+    ESN and anti-replay support.
+
 
 Removed Items
 -------------
