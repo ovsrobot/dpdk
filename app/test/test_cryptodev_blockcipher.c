@@ -94,6 +94,7 @@ test_blockcipher_one_case(const struct blockcipher_test_case *t,
 	uint8_t dst_pattern = 0xb6;
 	uint8_t tmp_src_buf[MBUF_SIZE];
 	uint8_t tmp_dst_buf[MBUF_SIZE];
+	uint32_t pad_len;
 
 	int nb_segs = 1;
 	uint32_t nb_iterates = 0;
@@ -185,6 +186,22 @@ test_blockcipher_one_case(const struct blockcipher_test_case *t,
 	if (t->op_mask & BLOCKCIPHER_TEST_OP_AUTH)
 		buf_len += digest_len;
 
+	/* only aes-cbc cipher is supported for
+	 * auth followed by encryption case
+	 */
+	if ((t->op_mask & BLOCKCIPHER_TEST_OP_SSL_ORDER) &&
+		(t->test_data->crypto_algo != RTE_CRYPTO_CIPHER_AES_CBC)) {
+		snprintf(test_msg, BLOCKCIPHER_TEST_MSG_LEN,
+			"line %u FAILED: %s",
+			__LINE__, "Unsupported cipher algorithm");
+		status = TEST_FAILED;
+		goto error_exit;
+	}
+
+	pad_len = RTE_ALIGN(buf_len, 16) - buf_len;
+	if (t->op_mask & BLOCKCIPHER_TEST_OP_SSL_ORDER)
+		buf_len += pad_len;
+
 	/* for contiguous mbuf, nb_segs is 1 */
 	ibuf = create_segmented_mbuf(mbuf_pool,
 			tdata->ciphertext.len, nb_segs, src_pattern);
@@ -209,9 +226,31 @@ test_blockcipher_one_case(const struct blockcipher_test_case *t,
 
 	buf_p = rte_pktmbuf_append(ibuf, digest_len);
 	if (t->op_mask & BLOCKCIPHER_TEST_OP_AUTH_VERIFY)
-		rte_memcpy(buf_p, tdata->digest.data, digest_len);
+		if (t->op_mask & BLOCKCIPHER_TEST_OP_SSL_ORDER)
+			rte_memcpy(buf_p,
+				tdata->ciphertext.data + tdata->ciphertext.len,
+				 digest_len);
+		else
+			rte_memcpy(buf_p, tdata->digest.data, digest_len);
 	else
 		memset(buf_p, 0, digest_len);
+	if (t->op_mask & BLOCKCIPHER_TEST_OP_SSL_ORDER) {
+		buf_p = rte_pktmbuf_append(ibuf, pad_len);
+		if (!buf_p) {
+			snprintf(test_msg, BLOCKCIPHER_TEST_MSG_LEN, "line %u "
+				"FAILED: %s", __LINE__,
+				"No room to append mbuf");
+			status = TEST_FAILED;
+			goto error_exit;
+		}
+		if (t->op_mask & BLOCKCIPHER_TEST_OP_AUTH_VERIFY) {
+			const uint8_t *temp_p = tdata->ciphertext.data +
+					tdata->ciphertext.len +
+					digest_len;
+			rte_memcpy(buf_p, temp_p, pad_len);
+		} else
+			memset(buf_p, 0xa5, pad_len);
+	}
 
 	if (t->feature_mask & BLOCKCIPHER_TEST_FEATURE_OOP) {
 		obuf = rte_pktmbuf_alloc(mbuf_pool);
@@ -224,7 +263,7 @@ test_blockcipher_one_case(const struct blockcipher_test_case *t,
 		}
 		memset(obuf->buf_addr, dst_pattern, obuf->buf_len);
 
-		buf_p = rte_pktmbuf_append(obuf, buf_len);
+		buf_p = rte_pktmbuf_append(obuf, buf_len + pad_len);
 		if (!buf_p) {
 			snprintf(test_msg, BLOCKCIPHER_TEST_MSG_LEN, "line %u "
 				"FAILED: %s", __LINE__,
@@ -359,6 +398,26 @@ iterate:
 			cipher_xform->next = NULL;
 			init_xform = auth_xform;
 		}
+	} else if (t->op_mask == BLOCKCIPHER_TEST_OP_AUTH_GEN_ENC) {
+		if (t->feature_mask & BLOCKCIPHER_TEST_FEATURE_SESSIONLESS) {
+			auth_xform = op->sym->xform;
+			cipher_xform = auth_xform->next;
+			cipher_xform->next = NULL;
+		} else {
+			auth_xform->next = cipher_xform;
+			cipher_xform->next = NULL;
+			init_xform = auth_xform;
+		}
+	} else if (t->op_mask == BLOCKCIPHER_TEST_OP_DEC_AUTH_VERIFY) {
+		if (t->feature_mask & BLOCKCIPHER_TEST_FEATURE_SESSIONLESS) {
+			cipher_xform = op->sym->xform;
+			auth_xform = cipher_xform->next;
+			auth_xform->next = NULL;
+		} else {
+			cipher_xform->next = auth_xform;
+			auth_xform->next = NULL;
+			init_xform = cipher_xform;
+		}
 	} else if ((t->op_mask == BLOCKCIPHER_TEST_OP_ENCRYPT) ||
 			(t->op_mask == BLOCKCIPHER_TEST_OP_DECRYPT)) {
 		if (t->feature_mask & BLOCKCIPHER_TEST_FEATURE_SESSIONLESS)
@@ -403,6 +462,10 @@ iterate:
 		sym_op->cipher.data.offset = tdata->cipher_offset;
 		sym_op->cipher.data.length = tdata->ciphertext.len -
 				tdata->cipher_offset;
+		if (t->op_mask & BLOCKCIPHER_TEST_OP_SSL_ORDER) {
+			sym_op->cipher.data.length += tdata->digest.len;
+			sym_op->cipher.data.length += pad_len;
+		}
 		rte_memcpy(rte_crypto_op_ctod_offset(op, uint8_t *, IV_OFFSET),
 				tdata->iv.data,
 				tdata->iv.len);
@@ -540,6 +603,8 @@ iterate:
 					tdata->cipher_offset;
 			compare_len = tdata->ciphertext.len -
 					tdata->cipher_offset;
+			if (t->op_mask & BLOCKCIPHER_TEST_OP_SSL_ORDER)
+				compare_len += tdata->digest.len;
 		} else {
 			compare_ref = tdata->plaintext.data +
 					tdata->cipher_offset;
@@ -558,18 +623,20 @@ iterate:
 		}
 	}
 
-	if (t->op_mask & BLOCKCIPHER_TEST_OP_AUTH_GEN) {
-		uint8_t *auth_res = pktmbuf_mtod_offset(iobuf,
-					tdata->ciphertext.len);
+	/* Check digest data only in enc-then-auth_gen case */
+	if (!(t->op_mask & BLOCKCIPHER_TEST_OP_SSL_ORDER))
+		if (t->op_mask & BLOCKCIPHER_TEST_OP_AUTH_GEN) {
+			uint8_t *auth_res = pktmbuf_mtod_offset(iobuf,
+						tdata->ciphertext.len);
 
-		if (memcmp(auth_res, tdata->digest.data, digest_len)) {
-			snprintf(test_msg, BLOCKCIPHER_TEST_MSG_LEN, "line %u "
-				"FAILED: %s", __LINE__, "Generated "
-				"digest data not as expected");
-			status = TEST_FAILED;
-			goto error_exit;
+			if (memcmp(auth_res, tdata->digest.data, digest_len)) {
+				snprintf(test_msg, BLOCKCIPHER_TEST_MSG_LEN, "line %u "
+					"FAILED: %s", __LINE__, "Generated "
+					"digest data not as expected");
+				status = TEST_FAILED;
+				goto error_exit;
+			}
 		}
-	}
 
 	/* The only parts that should have changed in the buffer are
 	 * plaintext/ciphertext and digest.
@@ -631,6 +698,10 @@ iterate:
 			changed_len = sym_op->cipher.data.length;
 		}
 
+		if (t->op_mask & BLOCKCIPHER_TEST_OP_SSL_ORDER)
+			changed_len = sym_op->cipher.data.length +
+				digest_len + pad_len;
+
 		for (i = 0; i < mbuf->buf_len; i++) {
 			if (i == head_unchanged_len)
 				i += changed_len;
@@ -686,6 +757,9 @@ iterate:
 
 		if (t->op_mask & BLOCKCIPHER_TEST_OP_AUTH_GEN)
 			changed_len += digest_len;
+
+		if (t->op_mask & BLOCKCIPHER_TEST_OP_SSL_ORDER)
+			changed_len = sym_op->cipher.data.length;
 
 		for (i = 0; i < mbuf->buf_len; i++) {
 

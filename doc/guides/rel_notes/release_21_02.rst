@@ -61,6 +61,12 @@ New Features
     followed by encryption and decryption followed by auth verify in OCTEONT TX
     and OCTEON TX2 crypto PMDs.
 
+* **Updated unit test sample application.**
+
+  * Added SSL/TLS way of cipher-auth operations support i.e. auth generation
+    followed by encryption and decryption followed by auth verify in sample
+    unit test application.
+
 
 Removed Items
 -------------
