@@ -182,6 +182,11 @@ struct mbuf_table {
 /* TX queue for each data core. */
 struct mbuf_table lcore_tx_queue[RTE_MAX_LCORE];
 
+static uint64_t vhost_tsc[MAX_VHOST_DEVICE];
+
+/* TX queue for each vhost device. */
+struct mbuf_table vhost_m_table[MAX_VHOST_DEVICE];
+
 #define MBUF_TABLE_DRAIN_TSC	((rte_get_tsc_hz() + US_PER_S - 1) \
 				 / US_PER_S * BURST_TX_DRAIN_US)
 #define VLAN_HLEN       4
@@ -804,6 +809,13 @@ unlink_vmdq(struct vhost_dev *vdev)
 	}
 }
 
+static inline void
+free_pkts(struct rte_mbuf **pkts, uint16_t n)
+{
+	while (n--)
+		rte_pktmbuf_free(pkts[n]);
+}
+
 static __rte_always_inline void
 virtio_xmit(struct vhost_dev *dst_vdev, struct vhost_dev *src_vdev,
 	    struct rte_mbuf *m)
@@ -837,6 +849,40 @@ virtio_xmit(struct vhost_dev *dst_vdev, struct vhost_dev *src_vdev,
 	}
 }
 
+static __rte_always_inline void
+drain_vhost(struct vhost_dev *dst_vdev, struct rte_mbuf **m, uint16_t nr_xmit)
+{
+	uint16_t ret, nr_cpl;
+	struct rte_mbuf *m_cpl[MAX_PKT_BURST];
+
+	if (builtin_net_driver) {
+		ret = vs_enqueue_pkts(dst_vdev, VIRTIO_RXQ, m, nr_xmit);
+	} else if (async_vhost_driver) {
+		ret = rte_vhost_submit_enqueue_burst(dst_vdev->vid, VIRTIO_RXQ,
+						m, nr_xmit);
+		dst_vdev->nr_async_pkts += ret;
+		free_pkts(&m[ret], nr_xmit - ret);
+
+		while (likely(dst_vdev->nr_async_pkts)) {
+			nr_cpl = rte_vhost_poll_enqueue_completed(dst_vdev->vid,
+					VIRTIO_RXQ, m_cpl, MAX_PKT_BURST);
+			dst_vdev->nr_async_pkts -= nr_cpl;
+			free_pkts(m_cpl, nr_cpl);
+		}
+	} else {
+		ret = rte_vhost_enqueue_burst(dst_vdev->vid, VIRTIO_RXQ,
+						m, nr_xmit);
+	}
+
+	if (enable_stats) {
+		rte_atomic64_add(&dst_vdev->stats.rx_total_atomic, nr_xmit);
+		rte_atomic64_add(&dst_vdev->stats.rx_atomic, ret);
+	}
+
+	if (!async_vhost_driver)
+		free_pkts(m, nr_xmit);
+}
+
 /*
  * Check if the packet destination MAC address is for a local device. If so then put
  * the packet on that devices RX queue. If not then return.
@@ -846,6 +892,7 @@ virtio_tx_local(struct vhost_dev *vdev, struct rte_mbuf *m)
 {
 	struct rte_ether_hdr *pkt_hdr;
 	struct vhost_dev *dst_vdev;
+	struct mbuf_table *vhost_txq;
 
 	pkt_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
 
@@ -869,7 +916,19 @@ virtio_tx_local(struct vhost_dev *vdev, struct rte_mbuf *m)
 		return 0;
 	}
 
-	virtio_xmit(dst_vdev, vdev, m);
+	vhost_txq = &vhost_m_table[dst_vdev->vid];
+	vhost_txq->m_table[vhost_txq->len++] = m;
+
+	if (enable_stats) {
+		vdev->stats.tx_total++;
+		vdev->stats.tx++;
+	}
+
+	if (unlikely(vhost_txq->len == MAX_PKT_BURST)) {
+		drain_vhost(dst_vdev, vhost_txq->m_table, MAX_PKT_BURST);
+		vhost_txq->len = 0;
+		vhost_tsc[dst_vdev->vid] = rte_rdtsc();
+	}
 	return 0;
 }
 
@@ -940,13 +999,6 @@ static void virtio_tx_offload(struct rte_mbuf *m)
 	tcp_hdr->cksum = get_psd_sum(l3_hdr, m->ol_flags);
 }
 
-static inline void
-free_pkts(struct rte_mbuf **pkts, uint16_t n)
-{
-	while (n--)
-		rte_pktmbuf_free(pkts[n]);
-}
-
 static __rte_always_inline void
 do_drain_mbuf_table(struct mbuf_table *tx_q)
 {
@@ -986,7 +1038,6 @@ virtio_tx_route(struct vhost_dev *vdev, struct rte_mbuf *m, uint16_t vlan_tag)
 
 	/*check if destination is local VM*/
 	if ((vm2vm_mode == VM2VM_SOFTWARE) && (virtio_tx_local(vdev, m) == 0)) {
-		rte_pktmbuf_free(m);
 		return;
 	}
 
@@ -1144,8 +1195,10 @@ static __rte_always_inline void
 drain_virtio_tx(struct vhost_dev *vdev)
 {
 	struct rte_mbuf *pkts[MAX_PKT_BURST];
+	struct mbuf_table *vhost_txq;
 	uint16_t count;
 	uint16_t i;
+	uint64_t cur_tsc;
 
 	if (builtin_net_driver) {
 		count = vs_dequeue_pkts(vdev, VIRTIO_TXQ, mbuf_pool,
@@ -1163,6 +1216,19 @@ drain_virtio_tx(struct vhost_dev *vdev)
 
 	for (i = 0; i < count; ++i)
 		virtio_tx_route(vdev, pkts[i], vlan_tags[vdev->vid]);
+
+	vhost_txq = &vhost_m_table[vdev->vid];
+	cur_tsc = rte_rdtsc();
+	if (unlikely(cur_tsc - vhost_tsc[vdev->vid] > MBUF_TABLE_DRAIN_TSC)) {
+		if (vhost_txq->len) {
+			RTE_LOG_DP(DEBUG, VHOST_DATA,
+				"Vhost tX queue drained after timeout with burst size %u\n",
+				vhost_txq->len);
+			drain_vhost(vdev, vhost_txq->m_table, vhost_txq->len);
+			vhost_txq->len = 0;
+			vhost_tsc[vdev->vid] = cur_tsc;
+		}
+	}
 }
 
 /*
