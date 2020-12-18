@@ -566,6 +566,7 @@ void txgbe_clear_all_ntuple_filter(struct rte_eth_dev *dev);
 void txgbe_clear_syn_filter(struct rte_eth_dev *dev);
 int txgbe_clear_all_l2_tn_filter(struct rte_eth_dev *dev);
 
+int txgbe_vt_check(struct txgbe_hw *hw);
 int txgbe_set_vf_rate_limit(struct rte_eth_dev *dev, uint16_t vf,
 			    uint16_t tx_rate, uint64_t q_msk);
 int txgbe_tm_ops_get(struct rte_eth_dev *dev, void *ops);

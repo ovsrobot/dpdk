@@ -3369,6 +3369,21 @@ txgbe_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 	return 0;
 }
 
+int
+txgbe_vt_check(struct txgbe_hw *hw)
+{
+	uint32_t reg_val;
+
+	/* if Virtualization Technology is enabled */
+	reg_val = rd32(hw, TXGBE_PORTCTL);
+	if (!(reg_val & TXGBE_PORTCTL_NUMVT_MASK)) {
+		PMD_INIT_LOG(ERR, "VT must be enabled for this setting");
+		return -1;
+	}
+
+	return 0;
+}
+
 static uint32_t
 txgbe_uta_vector(struct txgbe_hw *hw, struct rte_ether_addr *uc_addr)
 {
@@ -3504,6 +3519,175 @@ txgbe_convert_vm_rx_mask_to_val(uint16_t rx_mask, uint32_t orig_val)
 		new_val |= TXGBE_POOLETHCTL_MCP;
 
 	return new_val;
+}
+
+#define TXGBE_INVALID_MIRROR_TYPE(mirror_type) \
+	((mirror_type) & ~(uint8_t)(ETH_MIRROR_VIRTUAL_POOL_UP | \
+	ETH_MIRROR_UPLINK_PORT | ETH_MIRROR_DOWNLINK_PORT | ETH_MIRROR_VLAN))
+
+static int
+txgbe_mirror_rule_set(struct rte_eth_dev *dev,
+		      struct rte_eth_mirror_conf *mirror_conf,
+		      uint8_t rule_id, uint8_t on)
+{
+	uint32_t mr_ctl, vlvf;
+	uint32_t mp_lsb = 0;
+	uint32_t mv_msb = 0;
+	uint32_t mv_lsb = 0;
+	uint32_t mp_msb = 0;
+	uint8_t i = 0;
+	int reg_index = 0;
+	uint64_t vlan_mask = 0;
+
+	const uint8_t pool_mask_offset = 32;
+	const uint8_t vlan_mask_offset = 32;
+	const uint8_t dst_pool_offset = 8;
+	const uint8_t rule_mr_offset  = 4;
+	const uint8_t mirror_rule_mask = 0x0F;
+
+	struct txgbe_mirror_info *mr_info = TXGBE_DEV_MR_INFO(dev);
+	struct rte_eth_mirror_conf *mr_conf = &mr_info->mr_conf[rule_id];
+	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
+	uint8_t mirror_type = 0;
+
+	if (txgbe_vt_check(hw) < 0)
+		return -ENOTSUP;
+
+	if (rule_id >= TXGBE_MAX_MIRROR_RULES)
+		return -EINVAL;
+
+	if (TXGBE_INVALID_MIRROR_TYPE(mirror_conf->rule_type)) {
+		PMD_DRV_LOG(ERR, "unsupported mirror type 0x%x.",
+			    mirror_conf->rule_type);
+		return -EINVAL;
+	}
+
+	if (mirror_conf->rule_type & ETH_MIRROR_VLAN) {
+		mirror_type |= TXGBE_MIRRCTL_VLAN;
+		/* Check if vlan id is valid and find conresponding VLAN ID
+		 * index in PSRVLAN
+		 */
+		for (i = 0; i < TXGBE_NUM_POOL; i++) {
+			if (mirror_conf->vlan.vlan_mask & (1ULL << i)) {
+				/* search vlan id related pool vlan filter
+				 * index
+				 */
+				reg_index = txgbe_find_vlvf_slot(hw,
+						mirror_conf->vlan.vlan_id[i],
+						false);
+				if (reg_index < 0)
+					return -EINVAL;
+				wr32(hw, TXGBE_PSRVLANIDX, reg_index);
+				vlvf = rd32(hw, TXGBE_PSRVLAN);
+				if ((TXGBE_PSRVLAN_VID(vlvf) ==
+				      mirror_conf->vlan.vlan_id[i]))
+					vlan_mask |= (1ULL << reg_index);
+				else
+					return -EINVAL;
+			}
+		}
+
+		if (on) {
+			mv_lsb = vlan_mask & BIT_MASK32;
+			mv_msb = vlan_mask >> vlan_mask_offset;
+
+			mr_conf->vlan.vlan_mask = mirror_conf->vlan.vlan_mask;
+			for (i = 0; i < ETH_VMDQ_MAX_VLAN_FILTERS; i++) {
+				if (mirror_conf->vlan.vlan_mask & (1ULL << i))
+					mr_conf->vlan.vlan_id[i] =
+						mirror_conf->vlan.vlan_id[i];
+			}
+		} else {
+			mv_lsb = 0;
+			mv_msb = 0;
+			mr_conf->vlan.vlan_mask = 0;
+			for (i = 0; i < ETH_VMDQ_MAX_VLAN_FILTERS; i++)
+				mr_conf->vlan.vlan_id[i] = 0;
+		}
+	}
+
+	if (mirror_conf->rule_type & ETH_MIRROR_VIRTUAL_POOL_UP) {
+		mirror_type |= TXGBE_MIRRCTL_POOL;
+		if (on) {
+			mp_lsb = mirror_conf->pool_mask & BIT_MASK32;
+			mp_msb = mirror_conf->pool_mask >> pool_mask_offset;
+			mr_conf->pool_mask = mirror_conf->pool_mask;
+		} else {
+			mp_lsb = 0;
+			mp_msb = 0;
+			mr_conf->pool_mask = 0;
+		}
+	}
+	if (mirror_conf->rule_type & ETH_MIRROR_UPLINK_PORT)
+		mirror_type |= TXGBE_MIRRCTL_UPLINK;
+	if (mirror_conf->rule_type & ETH_MIRROR_DOWNLINK_PORT)
+		mirror_type |= TXGBE_MIRRCTL_DNLINK;
+
+	/* read  mirror control register and recalculate it */
+	mr_ctl = rd32(hw, TXGBE_MIRRCTL(rule_id));
+
+	if (on) {
+		mr_ctl |= mirror_type;
+		mr_ctl &= mirror_rule_mask;
+		mr_ctl |= mirror_conf->dst_pool << dst_pool_offset;
+	} else {
+		mr_ctl &= ~(mirror_conf->rule_type & mirror_rule_mask);
+	}
+
+	mr_conf->rule_type = mirror_conf->rule_type;
+	mr_conf->dst_pool = mirror_conf->dst_pool;
+
+	/* write mirrror control  register */
+	wr32(hw, TXGBE_MIRRCTL(rule_id), mr_ctl);
+
+	/* write pool mirrror control  register */
+	if (mirror_conf->rule_type & ETH_MIRROR_VIRTUAL_POOL_UP) {
+		wr32(hw, TXGBE_MIRRPOOLL(rule_id), mp_lsb);
+		wr32(hw, TXGBE_MIRRPOOLH(rule_id + rule_mr_offset),
+				mp_msb);
+	}
+	/* write VLAN mirrror control  register */
+	if (mirror_conf->rule_type & ETH_MIRROR_VLAN) {
+		wr32(hw, TXGBE_MIRRVLANL(rule_id), mv_lsb);
+		wr32(hw, TXGBE_MIRRVLANH(rule_id + rule_mr_offset),
+				mv_msb);
+	}
+
+	return 0;
+}
+
+static int
+txgbe_mirror_rule_reset(struct rte_eth_dev *dev, uint8_t rule_id)
+{
+	int mr_ctl = 0;
+	uint32_t lsb_val = 0;
+	uint32_t msb_val = 0;
+	const uint8_t rule_mr_offset = 4;
+
+	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
+	struct txgbe_mirror_info *mr_info = TXGBE_DEV_MR_INFO(dev);
+
+	if (txgbe_vt_check(hw) < 0)
+		return -ENOTSUP;
+
+	if (rule_id >= TXGBE_MAX_MIRROR_RULES)
+		return -EINVAL;
+
+	memset(&mr_info->mr_conf[rule_id], 0,
+	       sizeof(struct rte_eth_mirror_conf));
+
+	/* clear MIRRCTL register */
+	wr32(hw, TXGBE_MIRRCTL(rule_id), mr_ctl);
+
+	/* clear pool mask register */
+	wr32(hw, TXGBE_MIRRPOOLL(rule_id), lsb_val);
+	wr32(hw, TXGBE_MIRRPOOLH(rule_id + rule_mr_offset), msb_val);
+
+	/* clear vlan mask register */
+	wr32(hw, TXGBE_MIRRVLANL(rule_id), lsb_val);
+	wr32(hw, TXGBE_MIRRVLANH(rule_id + rule_mr_offset), msb_val);
+
+	return 0;
 }
 
 static int
@@ -5190,6 +5374,8 @@ static const struct eth_dev_ops txgbe_eth_dev_ops = {
 	.mac_addr_set               = txgbe_set_default_mac_addr,
 	.uc_hash_table_set          = txgbe_uc_hash_table_set,
 	.uc_all_hash_table_set      = txgbe_uc_all_hash_table_set,
+	.mirror_rule_set            = txgbe_mirror_rule_set,
+	.mirror_rule_reset          = txgbe_mirror_rule_reset,
 	.set_queue_rate_limit       = txgbe_set_queue_rate_limit,
 	.reta_update                = txgbe_dev_rss_reta_update,
 	.reta_query                 = txgbe_dev_rss_reta_query,
