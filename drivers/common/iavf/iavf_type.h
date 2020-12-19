@@ -264,6 +264,9 @@ enum iavf_bus_type {
 	iavf_bus_type_pci,
 	iavf_bus_type_pcix,
 	iavf_bus_type_pci_express,
+#ifdef RTE_LIBRTE_IAVF_CLIENT
+	iavf_bus_type_vfio_user,
+#endif
 	iavf_bus_type_reserved
 };
 

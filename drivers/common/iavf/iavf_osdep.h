@@ -107,8 +107,22 @@ writeq(uint64_t value, volatile void *addr)
 	rte_write64(rte_cpu_to_le_64(value), addr);
 }
 
+#ifdef RTE_LIBRTE_IAVF_CLIENT
+struct iavf_hw;
+
+__rte_internal
+uint32_t iavf_read_addr(struct iavf_hw *hw, uint32_t offset);
+__rte_internal
+void iavf_write_addr(struct iavf_hw *hw, uint32_t offset, uint32_t value);
+
+#define wr32(a, reg, value)  iavf_write_addr((a), (reg), (value))
+#define rd32(a, reg)         iavf_read_addr((a), (reg))
+
+#else
 #define wr32(a, reg, value) writel((value), (a)->hw_addr + (reg))
 #define rd32(a, reg)        readl((a)->hw_addr + (reg))
+#endif /* RTE_LIBRTE_IAVF_CLIENT */
+
 #define wr64(a, reg, value) writeq((value), (a)->hw_addr + (reg))
 #define rd64(a, reg)        readq((a)->hw_addr + (reg))
 

@@ -20,6 +20,13 @@ enum iavf_status iavf_set_mac_type(struct iavf_hw *hw)
 
 	DEBUGFUNC("iavf_set_mac_type\n");
 
+#ifdef RTE_LIBRTE_IAVF_CLIENT
+	if (hw->bus.type == iavf_bus_type_vfio_user) {
+		hw->mac.type = IAVF_MAC_VF;
+		return status;
+	}
+#endif
+
 	if (hw->vendor_id == IAVF_INTEL_VENDOR_ID) {
 		switch (hw->device_id) {
 		case IAVF_DEV_ID_X722_VF:

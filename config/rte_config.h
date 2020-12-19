@@ -151,4 +151,7 @@
 #define RTE_LIBRTE_PMD_DLB2_SW_CREDIT_QUANTA 32
 #define RTE_PMD_DLB2_DEFAULT_DEPTH_THRESH 256
 
+/* IAVF bsed on vfio_user client */
+#define RTE_LIBRTE_IAVF_CLIENT 1
+
 #endif /* _RTE_CONFIG_H_ */
