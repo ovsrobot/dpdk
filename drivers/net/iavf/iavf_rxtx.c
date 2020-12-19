@@ -24,6 +24,9 @@
 #include <rte_ip.h>
 #include <rte_net.h>
 #include <rte_vect.h>
+#ifdef RTE_LIBRTE_IAVF_CLIENT
+#include <vfio_user/vfio_user_pci.h>
+#endif
 
 #include "iavf.h"
 #include "iavf_rxtx.h"
@@ -595,7 +598,15 @@ iavf_dev_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	reset_rx_queue(rxq);
 	rxq->q_set = true;
 	dev->data->rx_queues[queue_idx] = rxq;
-	rxq->qrx_tail = hw->hw_addr + IAVF_QRX_TAIL1(rxq->queue_id);
+
+#ifdef RTE_LIBRTE_IAVF_CLIENT
+	if (hw->bus.type == iavf_bus_type_vfio_user)
+		rxq->qrx_tail = client_vfio_user_get_bar_addr(
+				(struct vfio_device *)hw->hw_addr, 0,
+				IAVF_QRX_TAIL1(rxq->queue_id), 4);
+	else
+#endif
+		rxq->qrx_tail = hw->hw_addr + IAVF_QRX_TAIL1(rxq->queue_id);
 	rxq->ops = &def_rxq_ops;
 
 	if (check_rx_bulk_allow(rxq) == true) {
@@ -705,7 +716,15 @@ iavf_dev_tx_queue_setup(struct rte_eth_dev *dev,
 	reset_tx_queue(txq);
 	txq->q_set = true;
 	dev->data->tx_queues[queue_idx] = txq;
-	txq->qtx_tail = hw->hw_addr + IAVF_QTX_TAIL1(queue_idx);
+#ifdef RTE_LIBRTE_IAVF_CLIENT
+	if (hw->bus.type == iavf_bus_type_vfio_user)
+		txq->qtx_tail = client_vfio_user_get_bar_addr(
+			(struct vfio_device *)hw->hw_addr, 0,
+			IAVF_QTX_TAIL1(queue_idx), 4);
+	else
+#endif
+		txq->qtx_tail = hw->hw_addr + IAVF_QTX_TAIL1(queue_idx);
+
 	txq->ops = &def_txq_ops;
 
 	if (check_tx_vec_allow(txq) == false) {

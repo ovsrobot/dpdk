@@ -195,7 +195,10 @@ struct iavf_adapter {
 	struct iavf_hw hw;
 	struct rte_eth_dev *eth_dev;
 	struct iavf_info vf;
-
+#ifdef RTE_LIBRTE_IAVF_CLIENT
+	/* used for avf_client driver */
+	struct vfio_device *user_dev;
+#endif
 	bool rx_bulk_alloc_allowed;
 	/* For vector PMD */
 	bool rx_vec_allowed;
@@ -229,6 +232,16 @@ iavf_init_adminq_parameter(struct iavf_hw *hw)
 	hw->aq.num_asq_entries = IAVF_AQ_LEN;
 	hw->aq.arq_buf_size = IAVF_AQ_BUF_SZ;
 	hw->aq.asq_buf_size = IAVF_AQ_BUF_SZ;
+}
+
+static inline void
+iavf_disable_irq0(struct iavf_hw *hw)
+{
+	/* Disable all interrupt types */
+	IAVF_WRITE_REG(hw, IAVF_VFINT_ICR0_ENA1, 0);
+	IAVF_WRITE_REG(hw, IAVF_VFINT_DYN_CTL01,
+		       IAVF_VFINT_DYN_CTL01_ITR_INDX_MASK);
+	IAVF_WRITE_FLUSH(hw);
 }
 
 static inline uint16_t
@@ -284,6 +297,9 @@ _atomic_set_cmd(struct iavf_info *vf, enum virtchnl_ops ops)
 	return !ret;
 }
 
+extern const struct eth_dev_ops iavf_eth_dev_ops;
+
+int iavf_init_vf(struct rte_eth_dev *dev);
 int iavf_check_api_version(struct iavf_adapter *adapter);
 int iavf_get_vf_resource(struct iavf_adapter *adapter);
 void iavf_handle_virtchnl_msg(struct rte_eth_dev *dev);
