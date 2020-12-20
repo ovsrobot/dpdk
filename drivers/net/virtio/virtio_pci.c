@@ -28,8 +28,8 @@
  * The remaining space is defined by each driver as the per-driver
  * configuration space.
  */
-#define VIRTIO_PCI_CONFIG(hw) \
-		(((hw)->use_msix == VIRTIO_MSIX_ENABLED) ? 24 : 20)
+#define VIRTIO_PCI_CONFIG(dev) \
+		(((dev)->msix_status == VIRTIO_MSIX_ENABLED) ? 24 : 20)
 
 
 struct virtio_pci_internal {
@@ -71,6 +71,7 @@ static void
 legacy_read_dev_config(struct virtio_hw *hw, size_t offset,
 		       void *dst, int length)
 {
+	struct virtio_pci_dev *dev = virtio_pci_get_dev(hw);
 #ifdef RTE_ARCH_PPC_64
 	int size;
 
@@ -78,17 +79,17 @@ legacy_read_dev_config(struct virtio_hw *hw, size_t offset,
 		if (length >= 4) {
 			size = 4;
 			rte_pci_ioport_read(VTPCI_IO(hw), dst, size,
-				VIRTIO_PCI_CONFIG(hw) + offset);
+				VIRTIO_PCI_CONFIG(dev) + offset);
 			*(uint32_t *)dst = rte_be_to_cpu_32(*(uint32_t *)dst);
 		} else if (length >= 2) {
 			size = 2;
 			rte_pci_ioport_read(VTPCI_IO(hw), dst, size,
-				VIRTIO_PCI_CONFIG(hw) + offset);
+				VIRTIO_PCI_CONFIG(dev) + offset);
 			*(uint16_t *)dst = rte_be_to_cpu_16(*(uint16_t *)dst);
 		} else {
 			size = 1;
 			rte_pci_ioport_read(VTPCI_IO(hw), dst, size,
-				VIRTIO_PCI_CONFIG(hw) + offset);
+				VIRTIO_PCI_CONFIG(dev) + offset);
 		}
 
 		dst = (char *)dst + size;
@@ -97,7 +98,7 @@ legacy_read_dev_config(struct virtio_hw *hw, size_t offset,
 	}
 #else
 	rte_pci_ioport_read(VTPCI_IO(hw), dst, length,
-		VIRTIO_PCI_CONFIG(hw) + offset);
+		VIRTIO_PCI_CONFIG(dev) + offset);
 #endif
 }
 
@@ -105,6 +106,7 @@ static void
 legacy_write_dev_config(struct virtio_hw *hw, size_t offset,
 			const void *src, int length)
 {
+	struct virtio_pci_dev *dev = virtio_pci_get_dev(hw);
 #ifdef RTE_ARCH_PPC_64
 	union {
 		uint32_t u32;
@@ -117,16 +119,16 @@ legacy_write_dev_config(struct virtio_hw *hw, size_t offset,
 			size = 4;
 			tmp.u32 = rte_cpu_to_be_32(*(const uint32_t *)src);
 			rte_pci_ioport_write(VTPCI_IO(hw), &tmp.u32, size,
-				VIRTIO_PCI_CONFIG(hw) + offset);
+				VIRTIO_PCI_CONFIG(dev) + offset);
 		} else if (length >= 2) {
 			size = 2;
 			tmp.u16 = rte_cpu_to_be_16(*(const uint16_t *)src);
 			rte_pci_ioport_write(VTPCI_IO(hw), &tmp.u16, size,
-				VIRTIO_PCI_CONFIG(hw) + offset);
+				VIRTIO_PCI_CONFIG(dev) + offset);
 		} else {
 			size = 1;
 			rte_pci_ioport_write(VTPCI_IO(hw), src, size,
-				VIRTIO_PCI_CONFIG(hw) + offset);
+				VIRTIO_PCI_CONFIG(dev) + offset);
 		}
 
 		src = (const char *)src + size;
@@ -135,7 +137,7 @@ legacy_write_dev_config(struct virtio_hw *hw, size_t offset,
 	}
 #else
 	rte_pci_ioport_write(VTPCI_IO(hw), src, length,
-		VIRTIO_PCI_CONFIG(hw) + offset);
+		VIRTIO_PCI_CONFIG(dev) + offset);
 #endif
 }
 
@@ -533,12 +535,6 @@ const struct virtio_ops modern_ops = {
 	.dev_close	= modern_dev_close,
 };
 
-uint8_t
-vtpci_isr(struct virtio_hw *hw)
-{
-	return VIRTIO_OPS(hw)->get_isr(hw);
-}
-
 static void *
 get_cfg_addr(struct rte_pci_device *dev, struct virtio_pci_cap *cap)
 {
@@ -623,9 +619,9 @@ virtio_read_caps(struct rte_pci_device *pci_dev, struct virtio_hw *hw)
 			}
 
 			if (flags & PCI_MSIX_ENABLE)
-				hw->use_msix = VIRTIO_MSIX_ENABLED;
+				dev->msix_status = VIRTIO_MSIX_ENABLED;
 			else
-				hw->use_msix = VIRTIO_MSIX_DISABLED;
+				dev->msix_status = VIRTIO_MSIX_DISABLED;
 		}
 
 		if (cap.cap_vndr != PCI_CAP_ID_VNDR) {
@@ -691,57 +687,7 @@ next:
 	return 0;
 }
 
-/*
- * Return -1:
- *   if there is error mapping with VFIO/UIO.
- *   if port map error when driver type is KDRV_NONE.
- *   if marked as allowed but driver type is KDRV_UNKNOWN.
- * Return 1 if kernel driver is managing the device.
- * Return 0 on success.
- */
-int
-vtpci_init(struct rte_pci_device *pci_dev, struct virtio_pci_dev *dev)
-{
-	struct virtio_hw *hw = &dev->hw;
-
-	dev->pci_dev = pci_dev;
-
-	/*
-	 * Try if we can succeed reading virtio pci caps, which exists
-	 * only on modern pci device. If failed, we fallback to legacy
-	 * virtio handling.
-	 */
-	if (virtio_read_caps(pci_dev, hw) == 0) {
-		PMD_INIT_LOG(INFO, "modern virtio pci detected.");
-		VIRTIO_OPS(hw) = &modern_ops;
-		dev->modern = true;
-		goto msix_detect;
-	}
-
-	PMD_INIT_LOG(INFO, "trying with legacy virtio pci.");
-	if (rte_pci_ioport_map(pci_dev, 0, VTPCI_IO(hw)) < 0) {
-		rte_pci_unmap_device(pci_dev);
-		if (pci_dev->kdrv == RTE_PCI_KDRV_UNKNOWN &&
-		    (!pci_dev->device.devargs ||
-		     pci_dev->device.devargs->bus !=
-		     rte_bus_find_by_name("pci"))) {
-			PMD_INIT_LOG(INFO,
-				"skip kernel managed virtio device.");
-			return 1;
-		}
-		return -1;
-	}
-
-	VIRTIO_OPS(hw) = &legacy_ops;
-	dev->modern = false;
-
-msix_detect:
-	hw->use_msix = vtpci_msix_detect(pci_dev);
-
-	return 0;
-}
-
-enum virtio_msix_status
+static enum virtio_msix_status
 vtpci_msix_detect(struct rte_pci_device *dev)
 {
 	uint8_t pos;
@@ -787,6 +733,57 @@ vtpci_msix_detect(struct rte_pci_device *dev)
 	}
 
 	return VIRTIO_MSIX_NONE;
+}
+
+/*
+ * Return -1:
+ *   if there is error mapping with VFIO/UIO.
+ *   if port map error when driver type is KDRV_NONE.
+ *   if marked as allowed but driver type is KDRV_UNKNOWN.
+ * Return 1 if kernel driver is managing the device.
+ * Return 0 on success.
+ */
+int
+vtpci_init(struct rte_pci_device *pci_dev, struct virtio_pci_dev *dev)
+{
+	struct virtio_hw *hw = &dev->hw;
+
+	dev->pci_dev = pci_dev;
+
+	/*
+	 * Try if we can succeed reading virtio pci caps, which exists
+	 * only on modern pci device. If failed, we fallback to legacy
+	 * virtio handling.
+	 */
+	if (virtio_read_caps(pci_dev, hw) == 0) {
+		PMD_INIT_LOG(INFO, "modern virtio pci detected.");
+		VIRTIO_OPS(hw) = &modern_ops;
+		dev->modern = true;
+		goto msix_detect;
+	}
+
+	PMD_INIT_LOG(INFO, "trying with legacy virtio pci.");
+	if (rte_pci_ioport_map(pci_dev, 0, VTPCI_IO(hw)) < 0) {
+		rte_pci_unmap_device(pci_dev);
+		if (pci_dev->kdrv == RTE_PCI_KDRV_UNKNOWN &&
+		    (!pci_dev->device.devargs ||
+		     pci_dev->device.devargs->bus !=
+		     rte_bus_find_by_name("pci"))) {
+			PMD_INIT_LOG(INFO,
+				"skip kernel managed virtio device.");
+			return 1;
+		}
+		return -1;
+	}
+
+	VIRTIO_OPS(hw) = &legacy_ops;
+	dev->modern = false;
+
+msix_detect:
+	dev->msix_status = vtpci_msix_detect(pci_dev);
+	hw->intr_lsc = !!dev->msix_status;
+
+	return 0;
 }
 
 void vtpci_legacy_ioport_unmap(struct virtio_hw *hw)
