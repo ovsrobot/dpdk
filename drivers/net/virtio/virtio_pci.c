@@ -31,6 +31,15 @@
 #define VIRTIO_PCI_CONFIG(hw) \
 		(((hw)->use_msix == VIRTIO_MSIX_ENABLED) ? 24 : 20)
 
+
+struct virtio_pci_internal {
+	struct rte_pci_ioport io;
+};
+
+#define VTPCI_IO(hw) (&virtio_pci_internal[(hw)->port_id].io)
+
+struct virtio_pci_internal virtio_pci_internal[RTE_MAX_ETHPORTS];
+
 static inline int
 check_vq_phys_addr_ok(struct virtqueue *vq)
 {
@@ -837,4 +846,16 @@ vtpci_msix_detect(struct rte_pci_device *dev)
 	}
 
 	return VIRTIO_MSIX_NONE;
+}
+
+void vtpci_legacy_ioport_unmap(struct virtio_hw *hw)
+{
+	rte_pci_ioport_unmap(VTPCI_IO(hw));
+}
+
+int vtpci_legacy_ioport_map(struct virtio_hw *hw)
+{
+	struct virtio_pci_dev *dev = virtio_pci_get_dev(hw);
+
+	return rte_pci_ioport_map(dev->pci_dev, 0, VTPCI_IO(hw));
 }
