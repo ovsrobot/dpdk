@@ -239,6 +239,7 @@ struct virtio_pci_ops {
 	int (*setup_queue)(struct virtio_hw *hw, struct virtqueue *vq);
 	void (*del_queue)(struct virtio_hw *hw, struct virtqueue *vq);
 	void (*notify_queue)(struct virtio_hw *hw, struct virtqueue *vq);
+	int (*dev_close)(struct virtio_hw *hw);
 };
 
 struct virtio_net_config;
@@ -291,6 +292,7 @@ struct virtio_hw {
 
 struct virtio_pci_dev {
 	struct virtio_hw hw;
+	struct rte_pci_device *pci_dev;
 	bool modern;
 };
 
