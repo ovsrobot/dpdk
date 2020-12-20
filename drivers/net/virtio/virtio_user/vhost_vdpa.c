@@ -312,8 +312,17 @@ vhost_vdpa_enable_queue_pair(struct virtio_user_dev *dev,
 	return 0;
 }
 
+static int
+vhost_vdpa_get_backend_features(uint64_t *features)
+{
+	*features = 0;
+
+	return 0;
+}
+
 struct virtio_user_backend_ops virtio_ops_vdpa = {
 	.setup = vhost_vdpa_setup,
+	.get_backend_features = vhost_vdpa_get_backend_features,
 	.set_owner = vhost_vdpa_set_owner,
 	.get_features = vhost_vdpa_get_features,
 	.set_features = vhost_vdpa_set_features,

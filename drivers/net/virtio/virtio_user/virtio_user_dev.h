@@ -30,6 +30,7 @@ struct virtio_user_dev {
 	int		vhostfd;
 	int		listenfd;   /* listening fd */
 	bool		is_server;  /* server or client mode */
+	uint64_t	protocol_features; /* negotiated protocol features*/
 
 	/* for vhost_kernel backend */
 	char		*ifname;
@@ -49,9 +50,7 @@ struct virtio_user_dev {
 	uint64_t	device_features; /* supported features by device */
 	uint64_t	frontend_features; /* enabled frontend features */
 	uint64_t	unsupported_features; /* unsupported features mask */
-	uint64_t	protocol_features; /* negotiated protocol features
-					    * (Vhost-user only)
-					    */
+
 	uint8_t		status;
 	uint16_t	net_status;
 	uint16_t	port_id;

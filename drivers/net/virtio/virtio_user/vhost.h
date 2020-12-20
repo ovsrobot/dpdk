@@ -46,23 +46,6 @@ struct vhost_vring_addr {
 	uint64_t log_guest_addr;
 };
 
-#ifndef VHOST_USER_F_PROTOCOL_FEATURES
-#define VHOST_USER_F_PROTOCOL_FEATURES 30
-#endif
-
-/** Protocol features. */
-#ifndef VHOST_USER_PROTOCOL_F_MQ
-#define VHOST_USER_PROTOCOL_F_MQ 0
-#endif
-
-#ifndef VHOST_USER_PROTOCOL_F_REPLY_ACK
-#define VHOST_USER_PROTOCOL_F_REPLY_ACK 3
-#endif
-
-#ifndef VHOST_USER_PROTOCOL_F_STATUS
-#define VHOST_USER_PROTOCOL_F_STATUS 16
-#endif
-
 struct vhost_memory_region {
 	uint64_t guest_phys_addr;
 	uint64_t memory_size; /* bytes */
@@ -74,11 +57,10 @@ struct virtio_user_dev;
 
 struct virtio_user_backend_ops {
 	int (*setup)(struct virtio_user_dev *dev);
+	int (*get_backend_features)(uint64_t *features);
 	int (*set_owner)(struct virtio_user_dev *dev);
 	int (*get_features)(struct virtio_user_dev *dev, uint64_t *features);
 	int (*set_features)(struct virtio_user_dev *dev, uint64_t features);
-	int (*get_protocol_features)(struct virtio_user_dev *dev, uint64_t *features);
-	int (*set_protocol_features)(struct virtio_user_dev *dev, uint64_t features);
 	int (*set_memory_table)(struct virtio_user_dev *dev);
 	int (*set_vring_enable)(struct virtio_user_dev *dev, struct vhost_vring_state *state);
 	int (*set_vring_num)(struct virtio_user_dev *dev, struct vhost_vring_state *state);
