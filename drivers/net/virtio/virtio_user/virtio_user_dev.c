@@ -495,24 +495,17 @@ virtio_user_dev_init(struct virtio_user_dev *dev, char *path, int queues,
 		}
 
 
-		if (dev->device_features &
-				(1ULL << VHOST_USER_F_PROTOCOL_FEATURES)) {
-			if (dev->ops->send_request(dev,
-					VHOST_USER_GET_PROTOCOL_FEATURES,
-					&protocol_features))
+		if (dev->device_features & (1ULL << VHOST_USER_F_PROTOCOL_FEATURES)) {
+			if (dev->ops->get_protocol_features(dev, &protocol_features))
 				return -1;
 
 			dev->protocol_features &= protocol_features;
 
-			if (dev->ops->send_request(dev,
-					VHOST_USER_SET_PROTOCOL_FEATURES,
-					&dev->protocol_features))
+			if (dev->ops->set_protocol_features(dev, dev->protocol_features))
 				return -1;
 
-			if (!(dev->protocol_features &
-					(1ULL << VHOST_USER_PROTOCOL_F_MQ)))
-				dev->unsupported_features |=
-					(1ull << VIRTIO_NET_F_MQ);
+			if (!(dev->protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_MQ)))
+				dev->unsupported_features |= (1ull << VIRTIO_NET_F_MQ);
 		}
 	} else {
 		/* We just pretend vhost-user can support all these features.
