@@ -663,6 +663,17 @@ virtio_user_pmd_probe(struct rte_vdev_device *vdev)
 	char *mac_addr = NULL;
 	int ret = -1;
 
+	/*
+	 * ToDo 1: Implement detection mechanism at vdev bus level as PCI, but
+	 * it implies API breakage.
+	 * ToDo 2: Check if all backends have this requirement. Likely
+	 * Vhost-vDPA and Vhost-Kernel are fine with PA IOVA mode.
+	 */
+	if (rte_eal_iova_mode() != RTE_IOVA_VA) {
+		PMD_INIT_LOG(ERR, "Probing failed, only VA IOVA mode supported\n");
+		return -1;
+	}
+
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
 		const char *name = rte_vdev_device_name(vdev);
 		eth_dev = rte_eth_dev_attach_secondary(name);

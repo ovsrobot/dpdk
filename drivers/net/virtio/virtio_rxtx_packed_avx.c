@@ -133,13 +133,13 @@ virtqueue_enqueue_batch_packed_vec(struct virtnet_tx *txvq,
 	}
 
 	__m512i descs_base = _mm512_set_epi64(tx_pkts[3]->data_len,
-			VIRTIO_MBUF_ADDR(tx_pkts[3], vq),
+			tx_pkts[3]->buf_iova,
 			tx_pkts[2]->data_len,
-			VIRTIO_MBUF_ADDR(tx_pkts[2], vq),
+			tx_pkts[2]->buf_iova,
 			tx_pkts[1]->data_len,
-			VIRTIO_MBUF_ADDR(tx_pkts[1], vq),
+			tx_pkts[1]->buf_iova,
 			tx_pkts[0]->data_len,
-			VIRTIO_MBUF_ADDR(tx_pkts[0], vq));
+			tx_pkts[0]->buf_iova);
 
 	/* id offset and data offset */
 	__m512i data_offsets = _mm512_set_epi64((uint64_t)3 << ID_BITS_OFFSET,
@@ -536,7 +536,7 @@ virtio_recv_refill_packed_vec(struct virtnet_rx *rxvq,
 			dxp = &vq->vq_descx[idx + i];
 			dxp->cookie = (void *)cookie[total_num + i];
 
-			addr = VIRTIO_MBUF_ADDR(cookie[total_num + i], vq) +
+			addr = cookie[total_num + i]->buf_iova +
 				RTE_PKTMBUF_HEADROOM - hw->vtnet_hdr_size;
 			start_dp[idx + i].addr = addr;
 			start_dp[idx + i].len = cookie[total_num + i]->buf_len
