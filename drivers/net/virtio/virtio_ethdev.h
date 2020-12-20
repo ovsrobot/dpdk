@@ -7,7 +7,8 @@
 
 #include <stdint.h>
 
-#include "virtio_pci.h"
+#include "virtio.h"
+#include <rte_ethdev_driver.h>
 
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
