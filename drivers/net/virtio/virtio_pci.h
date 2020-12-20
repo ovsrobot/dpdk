@@ -291,6 +291,7 @@ struct virtio_hw {
 
 struct virtio_pci_dev {
 	struct virtio_hw hw;
+	bool modern;
 };
 
 #define virtio_pci_get_dev(hw) container_of(hw, struct virtio_pci_dev, hw)
@@ -367,7 +368,7 @@ vtpci_packed_queue(struct virtio_hw *hw)
 /*
  * Function declaration from virtio_pci.c
  */
-int vtpci_init(struct rte_pci_device *dev, struct virtio_hw *hw);
+int vtpci_init(struct rte_pci_device *pci_dev, struct virtio_pci_dev *dev);
 void vtpci_reset(struct virtio_hw *);
 
 void vtpci_reinit_complete(struct virtio_hw *);

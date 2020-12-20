@@ -687,26 +687,29 @@ next:
  * Return 0 on success.
  */
 int
-vtpci_init(struct rte_pci_device *dev, struct virtio_hw *hw)
+vtpci_init(struct rte_pci_device *pci_dev, struct virtio_pci_dev *dev)
 {
+	struct virtio_hw *hw = &dev->hw;
+
 	/*
 	 * Try if we can succeed reading virtio pci caps, which exists
 	 * only on modern pci device. If failed, we fallback to legacy
 	 * virtio handling.
 	 */
-	if (virtio_read_caps(dev, hw) == 0) {
+	if (virtio_read_caps(pci_dev, hw) == 0) {
 		PMD_INIT_LOG(INFO, "modern virtio pci detected.");
 		virtio_hw_internal[hw->port_id].vtpci_ops = &modern_ops;
 		hw->bus_type = VIRTIO_BUS_PCI_MODERN;
+		dev->modern = true;
 		goto msix_detect;
 	}
 
 	PMD_INIT_LOG(INFO, "trying with legacy virtio pci.");
-	if (rte_pci_ioport_map(dev, 0, VTPCI_IO(hw)) < 0) {
-		rte_pci_unmap_device(dev);
-		if (dev->kdrv == RTE_PCI_KDRV_UNKNOWN &&
-		    (!dev->device.devargs ||
-		     dev->device.devargs->bus !=
+	if (rte_pci_ioport_map(pci_dev, 0, VTPCI_IO(hw)) < 0) {
+		rte_pci_unmap_device(pci_dev);
+		if (pci_dev->kdrv == RTE_PCI_KDRV_UNKNOWN &&
+		    (!pci_dev->device.devargs ||
+		     pci_dev->device.devargs->bus !=
 		     rte_bus_find_by_name("pci"))) {
 			PMD_INIT_LOG(INFO,
 				"skip kernel managed virtio device.");
@@ -717,9 +720,10 @@ vtpci_init(struct rte_pci_device *dev, struct virtio_hw *hw)
 
 	virtio_hw_internal[hw->port_id].vtpci_ops = &legacy_ops;
 	hw->bus_type = VIRTIO_BUS_PCI_LEGACY;
+	dev->modern = false;
 
 msix_detect:
-	hw->use_msix = vtpci_msix_detect(dev);
+	hw->use_msix = vtpci_msix_detect(pci_dev);
 
 	return 0;
 }
