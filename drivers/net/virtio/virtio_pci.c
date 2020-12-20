@@ -267,7 +267,7 @@ legacy_dev_close(struct virtio_hw *hw)
 	return 0;
 }
 
-const struct virtio_pci_ops legacy_ops = {
+const struct virtio_ops legacy_ops = {
 	.read_dev_cfg	= legacy_read_dev_config,
 	.write_dev_cfg	= legacy_write_dev_config,
 	.get_status	= legacy_get_status,
@@ -515,7 +515,7 @@ modern_dev_close(struct virtio_hw *hw)
 	return 0;
 }
 
-const struct virtio_pci_ops modern_ops = {
+const struct virtio_ops modern_ops = {
 	.read_dev_cfg	= modern_read_dev_config,
 	.write_dev_cfg	= modern_write_dev_config,
 	.get_status	= modern_get_status,
@@ -538,14 +538,14 @@ void
 vtpci_read_dev_config(struct virtio_hw *hw, size_t offset,
 		      void *dst, int length)
 {
-	VTPCI_OPS(hw)->read_dev_cfg(hw, offset, dst, length);
+	VIRTIO_OPS(hw)->read_dev_cfg(hw, offset, dst, length);
 }
 
 void
 vtpci_write_dev_config(struct virtio_hw *hw, size_t offset,
 		       const void *src, int length)
 {
-	VTPCI_OPS(hw)->write_dev_cfg(hw, offset, src, length);
+	VIRTIO_OPS(hw)->write_dev_cfg(hw, offset, src, length);
 }
 
 uint64_t
@@ -558,7 +558,7 @@ vtpci_negotiate_features(struct virtio_hw *hw, uint64_t host_features)
 	 * host all support.
 	 */
 	features = host_features & hw->guest_features;
-	VTPCI_OPS(hw)->set_features(hw, features);
+	VIRTIO_OPS(hw)->set_features(hw, features);
 
 	return features;
 }
@@ -566,9 +566,9 @@ vtpci_negotiate_features(struct virtio_hw *hw, uint64_t host_features)
 void
 vtpci_reset(struct virtio_hw *hw)
 {
-	VTPCI_OPS(hw)->set_status(hw, VIRTIO_CONFIG_STATUS_RESET);
+	VIRTIO_OPS(hw)->set_status(hw, VIRTIO_CONFIG_STATUS_RESET);
 	/* flush status write */
-	VTPCI_OPS(hw)->get_status(hw);
+	VIRTIO_OPS(hw)->get_status(hw);
 }
 
 void
@@ -581,21 +581,21 @@ void
 vtpci_set_status(struct virtio_hw *hw, uint8_t status)
 {
 	if (status != VIRTIO_CONFIG_STATUS_RESET)
-		status |= VTPCI_OPS(hw)->get_status(hw);
+		status |= VIRTIO_OPS(hw)->get_status(hw);
 
-	VTPCI_OPS(hw)->set_status(hw, status);
+	VIRTIO_OPS(hw)->set_status(hw, status);
 }
 
 uint8_t
 vtpci_get_status(struct virtio_hw *hw)
 {
-	return VTPCI_OPS(hw)->get_status(hw);
+	return VIRTIO_OPS(hw)->get_status(hw);
 }
 
 uint8_t
 vtpci_isr(struct virtio_hw *hw)
 {
-	return VTPCI_OPS(hw)->get_isr(hw);
+	return VIRTIO_OPS(hw)->get_isr(hw);
 }
 
 static void *
@@ -772,7 +772,7 @@ vtpci_init(struct rte_pci_device *pci_dev, struct virtio_pci_dev *dev)
 	 */
 	if (virtio_read_caps(pci_dev, hw) == 0) {
 		PMD_INIT_LOG(INFO, "modern virtio pci detected.");
-		virtio_hw_internal[hw->port_id].vtpci_ops = &modern_ops;
+		VIRTIO_OPS(hw) = &modern_ops;
 		dev->modern = true;
 		goto msix_detect;
 	}
@@ -791,7 +791,7 @@ vtpci_init(struct rte_pci_device *pci_dev, struct virtio_pci_dev *dev)
 		return -1;
 	}
 
-	virtio_hw_internal[hw->port_id].vtpci_ops = &legacy_ops;
+	VIRTIO_OPS(hw) = &legacy_ops;
 	dev->modern = false;
 
 msix_detect:
