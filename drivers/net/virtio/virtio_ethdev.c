@@ -1282,13 +1282,8 @@ virtio_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
 static int
 virtio_intr_unmask(struct rte_eth_dev *dev)
 {
-	struct virtio_hw *hw = dev->data->dev_private;
-
 	if (rte_intr_ack(dev->intr_handle) < 0)
 		return -1;
-
-	if (hw->bus_type == VIRTIO_BUS_PCI_LEGACY || hw->bus_type == VIRTIO_BUS_PCI_MODERN)
-		hw->use_msix = vtpci_msix_detect(RTE_ETH_DEV_TO_PCI(dev));
 
 	return 0;
 }
@@ -1296,13 +1291,8 @@ virtio_intr_unmask(struct rte_eth_dev *dev)
 static int
 virtio_intr_enable(struct rte_eth_dev *dev)
 {
-	struct virtio_hw *hw = dev->data->dev_private;
-
 	if (rte_intr_enable(dev->intr_handle) < 0)
 		return -1;
-
-	if (hw->bus_type == VIRTIO_BUS_PCI_LEGACY || hw->bus_type == VIRTIO_BUS_PCI_MODERN)
-		hw->use_msix = vtpci_msix_detect(RTE_ETH_DEV_TO_PCI(dev));
 
 	return 0;
 }
@@ -1310,13 +1300,8 @@ virtio_intr_enable(struct rte_eth_dev *dev)
 static int
 virtio_intr_disable(struct rte_eth_dev *dev)
 {
-	struct virtio_hw *hw = dev->data->dev_private;
-
 	if (rte_intr_disable(dev->intr_handle) < 0)
 		return -1;
-
-	if (hw->bus_type == VIRTIO_BUS_PCI_LEGACY || hw->bus_type == VIRTIO_BUS_PCI_MODERN)
-		hw->use_msix = vtpci_msix_detect(RTE_ETH_DEV_TO_PCI(dev));
 
 	return 0;
 }
