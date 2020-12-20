@@ -11,6 +11,7 @@
 #include <string.h>
 #include <errno.h>
 
+#include <rte_alarm.h>
 #include <rte_string_fns.h>
 #include <rte_fbarray.h>
 
@@ -18,6 +19,8 @@
 #include "virtio_user_dev.h"
 
 struct vhost_user_data {
+	int vhostfd;
+	int listenfd;
 	uint64_t protocol_features;
 };
 
@@ -179,13 +182,14 @@ fail:
 static int
 vhost_user_check_reply_ack(struct virtio_user_dev *dev, struct vhost_user_msg *msg)
 {
+	struct vhost_user_data *data = dev->backend_data;
 	enum vhost_user_request req = msg->request;
 	int ret;
 
 	if (!(msg->flags & VHOST_USER_NEED_REPLY_MASK))
 		return 0;
 
-	ret = vhost_user_read(dev->vhostfd, msg);
+	ret = vhost_user_read(data->vhostfd, msg);
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "Failed to read reply-ack");
 		return -1;
@@ -203,12 +207,13 @@ static int
 vhost_user_set_owner(struct virtio_user_dev *dev)
 {
 	int ret;
+	struct vhost_user_data *data = dev->backend_data;
 	struct vhost_user_msg msg = {
 		.request = VHOST_USER_SET_OWNER,
 		.flags = VHOST_USER_VERSION,
 	};
 
-	ret = vhost_user_write(dev->vhostfd, &msg, NULL, 0);
+	ret = vhost_user_write(data->vhostfd, &msg, NULL, 0);
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "Failed to set owner");
 		return -1;
@@ -221,16 +226,17 @@ static int
 vhost_user_get_protocol_features(struct virtio_user_dev *dev, uint64_t *features)
 {
 	int ret;
+	struct vhost_user_data *data = dev->backend_data;
 	struct vhost_user_msg msg = {
 		.request = VHOST_USER_GET_PROTOCOL_FEATURES,
 		.flags = VHOST_USER_VERSION,
 	};
 
-	ret = vhost_user_write(dev->vhostfd, &msg, NULL, 0);
+	ret = vhost_user_write(data->vhostfd, &msg, NULL, 0);
 	if (ret < 0)
 		goto err;
 
-	ret = vhost_user_read(dev->vhostfd, &msg);
+	ret = vhost_user_read(data->vhostfd, &msg);
 	if (ret < 0)
 		goto err;
 
@@ -257,6 +263,7 @@ static int
 vhost_user_set_protocol_features(struct virtio_user_dev *dev, uint64_t features)
 {
 	int ret;
+	struct vhost_user_data *data = dev->backend_data;
 	struct vhost_user_msg msg = {
 		.request = VHOST_USER_SET_PROTOCOL_FEATURES,
 		.flags = VHOST_USER_VERSION,
@@ -264,7 +271,7 @@ vhost_user_set_protocol_features(struct virtio_user_dev *dev, uint64_t features)
 		.payload.u64 = features,
 	};
 
-	ret = vhost_user_write(dev->vhostfd, &msg, NULL, 0);
+	ret = vhost_user_write(data->vhostfd, &msg, NULL, 0);
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "Failed to set protocol features");
 		return -1;
@@ -283,11 +290,11 @@ vhost_user_get_features(struct virtio_user_dev *dev, uint64_t *features)
 		.flags = VHOST_USER_VERSION,
 	};
 
-	ret = vhost_user_write(dev->vhostfd, &msg, NULL, 0);
+	ret = vhost_user_write(data->vhostfd, &msg, NULL, 0);
 	if (ret < 0)
 		goto err;
 
-	ret = vhost_user_read(dev->vhostfd, &msg);
+	ret = vhost_user_read(data->vhostfd, &msg);
 	if (ret < 0)
 		goto err;
 
@@ -331,6 +338,7 @@ static int
 vhost_user_set_features(struct virtio_user_dev *dev, uint64_t features)
 {
 	int ret;
+	struct vhost_user_data *data = dev->backend_data;
 	struct vhost_user_msg msg = {
 		.request = VHOST_USER_SET_FEATURES,
 		.flags = VHOST_USER_VERSION,
@@ -338,7 +346,7 @@ vhost_user_set_features(struct virtio_user_dev *dev, uint64_t features)
 		.payload.u64 = features,
 	};
 
-	ret = vhost_user_write(dev->vhostfd, &msg, NULL, 0);
+	ret = vhost_user_write(data->vhostfd, &msg, NULL, 0);
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "Failed to set features");
 		return -1;
@@ -462,7 +470,7 @@ vhost_user_set_memory_table(struct virtio_user_dev *dev)
 	msg.size += sizeof(msg.payload.memory.padding);
 	msg.size += fd_num * sizeof(struct vhost_memory_region);
 
-	ret = vhost_user_write(dev->vhostfd, &msg, fds, fd_num);
+	ret = vhost_user_write(data->vhostfd, &msg, fds, fd_num);
 	if (ret < 0)
 		goto err;
 
@@ -477,6 +485,7 @@ vhost_user_set_vring(struct virtio_user_dev *dev, enum vhost_user_request req,
 		struct vhost_vring_state *state)
 {
 	int ret;
+	struct vhost_user_data *data = dev->backend_data;
 	struct vhost_user_msg msg = {
 		.request = req,
 		.flags = VHOST_USER_VERSION,
@@ -484,7 +493,7 @@ vhost_user_set_vring(struct virtio_user_dev *dev, enum vhost_user_request req,
 		.payload.state = *state,
 	};
 
-	ret = vhost_user_write(dev->vhostfd, &msg, NULL, 0);
+	ret = vhost_user_write(data->vhostfd, &msg, NULL, 0);
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "Failed to set vring state (request %d)", req);
 		return -1;
@@ -516,6 +525,7 @@ vhost_user_get_vring_base(struct virtio_user_dev *dev, struct vhost_vring_state 
 {
 	int ret;
 	struct vhost_user_msg msg;
+	struct vhost_user_data *data = dev->backend_data;
 	unsigned int index = state->index;
 
 	ret = vhost_user_set_vring(dev, VHOST_USER_GET_VRING_BASE, state);
@@ -524,7 +534,7 @@ vhost_user_get_vring_base(struct virtio_user_dev *dev, struct vhost_vring_state 
 		goto err;
 	}
 
-	ret = vhost_user_read(dev->vhostfd, &msg);
+	ret = vhost_user_read(data->vhostfd, &msg);
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "Failed to read reply");
 		goto err;
@@ -560,6 +570,7 @@ vhost_user_set_vring_file(struct virtio_user_dev *dev, enum vhost_user_request r
 	int ret;
 	int fd = file->fd;
 	int num_fd = 0;
+	struct vhost_user_data *data = dev->backend_data;
 	struct vhost_user_msg msg = {
 		.request = req,
 		.flags = VHOST_USER_VERSION,
@@ -572,7 +583,7 @@ vhost_user_set_vring_file(struct virtio_user_dev *dev, enum vhost_user_request r
 	else
 		msg.payload.u64 |= VHOST_USER_VRING_NOFD_MASK;
 
-	ret = vhost_user_write(dev->vhostfd, &msg, &fd, num_fd);
+	ret = vhost_user_write(data->vhostfd, &msg, &fd, num_fd);
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "Failed to set vring file (request %d)", req);
 		return -1;
@@ -598,6 +609,7 @@ static int
 vhost_user_set_vring_addr(struct virtio_user_dev *dev, struct vhost_vring_addr *addr)
 {
 	int ret;
+	struct vhost_user_data *data = dev->backend_data;
 	struct vhost_user_msg msg = {
 		.request = VHOST_USER_SET_VRING_ADDR,
 		.flags = VHOST_USER_VERSION,
@@ -605,7 +617,7 @@ vhost_user_set_vring_addr(struct virtio_user_dev *dev, struct vhost_vring_addr *
 		.payload.addr = *addr,
 	};
 
-	ret = vhost_user_write(dev->vhostfd, &msg, NULL, 0);
+	ret = vhost_user_write(data->vhostfd, &msg, NULL, 0);
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "Failed to send vring addresses");
 		return -1;
@@ -638,13 +650,13 @@ vhost_user_get_status(struct virtio_user_dev *dev, uint8_t *status)
 	if (!(data->protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_STATUS)))
 		return -ENOTSUP;
 
-	ret = vhost_user_write(dev->vhostfd, &msg, NULL, 0);
+	ret = vhost_user_write(data->vhostfd, &msg, NULL, 0);
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "Failed to send request");
 		goto err;
 	}
 
-	ret = vhost_user_read(dev->vhostfd, &msg);
+	ret = vhost_user_read(data->vhostfd, &msg);
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "Failed to recv request");
 		goto err;
@@ -697,7 +709,7 @@ vhost_user_set_status(struct virtio_user_dev *dev, uint8_t status)
 	if (!(data->protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_STATUS)))
 		return -ENOTSUP;
 
-	ret = vhost_user_write(dev->vhostfd, &msg, NULL, 0);
+	ret = vhost_user_write(data->vhostfd, &msg, NULL, 0);
 	if (ret < 0) {
 		PMD_DRV_LOG(ERR, "Failed to send get status request");
 		return -1;
@@ -708,11 +720,12 @@ vhost_user_set_status(struct virtio_user_dev *dev, uint8_t status)
 
 #define MAX_VIRTIO_USER_BACKLOG 1
 static int
-virtio_user_start_server(struct virtio_user_dev *dev, struct sockaddr_un *un)
+vhost_user_start_server(struct virtio_user_dev *dev, struct sockaddr_un *un)
 {
 	int ret;
 	int flag;
-	int fd = dev->listenfd;
+	struct vhost_user_data *data = dev->backend_data;
+	int fd = data->listenfd;
 
 	ret = bind(fd, (struct sockaddr *)un, sizeof(*un));
 	if (ret < 0) {
@@ -725,8 +738,8 @@ virtio_user_start_server(struct virtio_user_dev *dev, struct sockaddr_un *un)
 		return -1;
 
 	PMD_DRV_LOG(NOTICE, "(%s) waiting for client connection...", dev->path);
-	dev->vhostfd = accept(fd, NULL, NULL);
-	if (dev->vhostfd < 0) {
+	data->vhostfd = accept(fd, NULL, NULL);
+	if (data->vhostfd < 0) {
 		PMD_DRV_LOG(ERR, "Failed to accept initial client connection (%s)",
 				strerror(errno));
 		return -1;
@@ -737,6 +750,37 @@ virtio_user_start_server(struct virtio_user_dev *dev, struct sockaddr_un *un)
 		PMD_DRV_LOG(ERR, "fcntl failed, %s", strerror(errno));
 		return -1;
 	}
+
+	return 0;
+}
+
+static int
+vhost_user_server_disconnect(struct virtio_user_dev *dev)
+{
+	struct vhost_user_data *data = dev->backend_data;
+
+	if (data->vhostfd < 0) {
+		PMD_DRV_LOG(ERR, "(%s) Expected valid Vhost FD", dev->path);
+		return -1;
+	}
+
+	close(data->vhostfd);
+	data->vhostfd = -1;
+
+	return 0;
+}
+
+static int
+vhost_user_server_reconnect(struct virtio_user_dev *dev)
+{
+	struct vhost_user_data *data = dev->backend_data;
+	int fd;
+
+	fd = accept(data->listenfd, NULL, NULL);
+	if (fd < 0)
+		return -1;
+
+	data->vhostfd = fd;
 
 	return 0;
 }
@@ -766,6 +810,8 @@ vhost_user_setup(struct virtio_user_dev *dev)
 
 	dev->backend_data = data;
 
+	data->vhostfd = -1;
+
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd < 0) {
 		PMD_DRV_LOG(ERR, "socket() error, %s", strerror(errno));
@@ -781,8 +827,8 @@ vhost_user_setup(struct virtio_user_dev *dev)
 	strlcpy(un.sun_path, dev->path, sizeof(un.sun_path));
 
 	if (dev->is_server) {
-		dev->listenfd = fd;
-		if (virtio_user_start_server(dev, &un) < 0) {
+		data->listenfd = fd;
+		if (vhost_user_start_server(dev, &un) < 0) {
 			PMD_DRV_LOG(ERR, "virtio-user startup fails in server mode");
 			close(fd);
 			return -1;
@@ -793,7 +839,7 @@ vhost_user_setup(struct virtio_user_dev *dev)
 			close(fd);
 			return -1;
 		}
-		dev->vhostfd = fd;
+		data->vhostfd = fd;
 	}
 
 	return 0;
@@ -802,6 +848,18 @@ vhost_user_setup(struct virtio_user_dev *dev)
 static int
 vhost_user_destroy(struct virtio_user_dev *dev)
 {
+	struct vhost_user_data *data = dev->backend_data;
+
+	if (data->vhostfd >= 0) {
+		close(data->vhostfd);
+		data->vhostfd = -1;
+	}
+
+	if (data->listenfd >= 0) {
+		close(data->listenfd);
+		data->listenfd = -1;
+	}
+
 	if (dev->backend_data) {
 		free(dev->backend_data);
 		dev->backend_data = NULL;
@@ -815,7 +873,11 @@ vhost_user_enable_queue_pair(struct virtio_user_dev *dev,
 			     uint16_t pair_idx,
 			     int enable)
 {
+	struct vhost_user_data *data = dev->backend_data;
 	int i;
+
+	if (data->vhostfd < 0)
+		return 0;
 
 	if (dev->qp_enabled[pair_idx] == enable)
 		return 0;
@@ -842,6 +904,61 @@ vhost_user_get_backend_features(uint64_t *features)
 	return 0;
 }
 
+static int
+vhost_user_update_link_state(struct virtio_user_dev *dev)
+{
+	struct vhost_user_data *data = dev->backend_data;
+	char buf[128];
+
+	if (data->vhostfd >= 0) {
+		int r;
+		int flags;
+
+		flags = fcntl(data->vhostfd, F_GETFL);
+		if (fcntl(data->vhostfd, F_SETFL, flags | O_NONBLOCK) == -1) {
+			PMD_DRV_LOG(ERR, "error setting O_NONBLOCK flag");
+			return -1;
+		}
+
+		r = recv(data->vhostfd, buf, 128, MSG_PEEK);
+		if (r == 0 || (r < 0 && errno != EAGAIN)) {
+			dev->net_status &= (~VIRTIO_NET_S_LINK_UP);
+			PMD_DRV_LOG(ERR, "virtio-user port %u is down", dev->port_id);
+
+			/* This function could be called in the process
+			 * of interrupt handling, callback cannot be
+			 * unregistered here, set an alarm to do it.
+			 */
+			rte_eal_alarm_set(1, virtio_user_dev_delayed_handler, (void *)dev);
+		} else {
+			dev->net_status |= VIRTIO_NET_S_LINK_UP;
+		}
+
+		if (fcntl(data->vhostfd, F_SETFL,
+					flags & ~O_NONBLOCK) == -1) {
+			PMD_DRV_LOG(ERR, "error clearing O_NONBLOCK flag");
+			return -1;
+		}
+	} else if (dev->is_server) {
+		dev->net_status &= (~VIRTIO_NET_S_LINK_UP);
+		if (virtio_user_dev_server_reconnect(dev) >= 0)
+			dev->net_status |= VIRTIO_NET_S_LINK_UP;
+	}
+
+	return 0;
+}
+
+static int
+vhost_user_get_intr_fd(struct virtio_user_dev *dev)
+{
+	struct vhost_user_data *data = dev->backend_data;
+
+	if (dev->is_server && data->vhostfd == -1)
+		return data->listenfd;
+
+	return data->vhostfd;
+}
+
 struct virtio_user_backend_ops virtio_ops_user = {
 	.setup = vhost_user_setup,
 	.destroy = vhost_user_destroy,
@@ -859,5 +976,9 @@ struct virtio_user_backend_ops virtio_ops_user = {
 	.set_vring_addr = vhost_user_set_vring_addr,
 	.get_status = vhost_user_get_status,
 	.set_status = vhost_user_set_status,
-	.enable_qp = vhost_user_enable_queue_pair
+	.enable_qp = vhost_user_enable_queue_pair,
+	.update_link_state = vhost_user_update_link_state,
+	.server_disconnect = vhost_user_server_disconnect,
+	.server_reconnect = vhost_user_server_reconnect,
+	.get_intr_fd = vhost_user_get_intr_fd,
 };
