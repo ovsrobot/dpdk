@@ -28,9 +28,6 @@ struct virtio_user_dev {
 	enum virtio_user_backend_type backend_type;
 	bool		is_server;  /* server or client mode */
 
-	/* for vhost_vdpa backend */
-	int		vhostfd;
-
 	/* for both vhost_user and vhost_kernel */
 	int		callfds[VIRTIO_MAX_VIRTQUEUES];
 	int		kickfds[VIRTIO_MAX_VIRTQUEUES];

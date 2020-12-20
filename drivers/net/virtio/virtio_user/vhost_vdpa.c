@@ -13,6 +13,10 @@
 #include "vhost.h"
 #include "virtio_user_dev.h"
 
+struct vhost_vdpa_data {
+	int vhostfd;
+};
+
 /* vhost kernel & vdpa ioctls */
 #define VHOST_VIRTIO 0xAF
 #define VHOST_GET_FEATURES _IOR(VHOST_VIRTIO, 0x00, __u64)
@@ -80,15 +84,18 @@ vhost_vdpa_ioctl(int fd, uint64_t request, void *arg)
 static int
 vhost_vdpa_set_owner(struct virtio_user_dev *dev)
 {
-	return vhost_vdpa_ioctl(dev->vhostfd, VHOST_SET_OWNER, NULL);
+	struct vhost_vdpa_data *data = dev->backend_data;
+
+	return vhost_vdpa_ioctl(data->vhostfd, VHOST_SET_OWNER, NULL);
 }
 
 static int
 vhost_vdpa_get_features(struct virtio_user_dev *dev, uint64_t *features)
 {
+	struct vhost_vdpa_data *data = dev->backend_data;
 	int ret;
 
-	ret = vhost_vdpa_ioctl(dev->vhostfd, VHOST_GET_FEATURES, features);
+	ret = vhost_vdpa_ioctl(data->vhostfd, VHOST_GET_FEATURES, features);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Failed to get features");
 		return -1;
@@ -103,16 +110,19 @@ vhost_vdpa_get_features(struct virtio_user_dev *dev, uint64_t *features)
 static int
 vhost_vdpa_set_features(struct virtio_user_dev *dev, uint64_t features)
 {
+	struct vhost_vdpa_data *data = dev->backend_data;
+
 	/* WORKAROUND */
 	features |= 1ULL << VIRTIO_F_IOMMU_PLATFORM;
 
-	return vhost_vdpa_ioctl(dev->vhostfd, VHOST_SET_FEATURES, &features);
+	return vhost_vdpa_ioctl(data->vhostfd, VHOST_SET_FEATURES, &features);
 }
 
 static int
 vhost_vdpa_dma_map(struct virtio_user_dev *dev, void *addr,
 				  uint64_t iova, size_t len)
 {
+	struct vhost_vdpa_data *data = dev->backend_data;
 	struct vhost_msg msg = {};
 
 	msg.type = VHOST_IOTLB_MSG_V2;
@@ -122,7 +132,7 @@ vhost_vdpa_dma_map(struct virtio_user_dev *dev, void *addr,
 	msg.iotlb.size = len;
 	msg.iotlb.perm = VHOST_ACCESS_RW;
 
-	if (write(dev->vhostfd, &msg, sizeof(msg)) != sizeof(msg)) {
+	if (write(data->vhostfd, &msg, sizeof(msg)) != sizeof(msg)) {
 		PMD_DRV_LOG(ERR, "Failed to send IOTLB update (%s)",
 				strerror(errno));
 		return -1;
@@ -135,6 +145,7 @@ static int
 vhost_vdpa_dma_unmap(struct virtio_user_dev *dev, __rte_unused void *addr,
 				  uint64_t iova, size_t len)
 {
+	struct vhost_vdpa_data *data = dev->backend_data;
 	struct vhost_msg msg = {};
 
 	msg.type = VHOST_IOTLB_MSG_V2;
@@ -142,7 +153,7 @@ vhost_vdpa_dma_unmap(struct virtio_user_dev *dev, __rte_unused void *addr,
 	msg.iotlb.iova = iova;
 	msg.iotlb.size = len;
 
-	if (write(dev->vhostfd, &msg, sizeof(msg)) != sizeof(msg)) {
+	if (write(data->vhostfd, &msg, sizeof(msg)) != sizeof(msg)) {
 		PMD_DRV_LOG(ERR, "Failed to send IOTLB invalidate (%s)",
 				strerror(errno));
 		return -1;
@@ -208,55 +219,73 @@ vhost_vdpa_set_memory_table(struct virtio_user_dev *dev)
 static int
 vhost_vdpa_set_vring_enable(struct virtio_user_dev *dev, struct vhost_vring_state *state)
 {
-	return vhost_vdpa_ioctl(dev->vhostfd, VHOST_VDPA_SET_VRING_ENABLE, state);
+	struct vhost_vdpa_data *data = dev->backend_data;
+
+	return vhost_vdpa_ioctl(data->vhostfd, VHOST_VDPA_SET_VRING_ENABLE, state);
 }
 
 static int
 vhost_vdpa_set_vring_num(struct virtio_user_dev *dev, struct vhost_vring_state *state)
 {
-	return vhost_vdpa_ioctl(dev->vhostfd, VHOST_SET_VRING_NUM, state);
+	struct vhost_vdpa_data *data = dev->backend_data;
+
+	return vhost_vdpa_ioctl(data->vhostfd, VHOST_SET_VRING_NUM, state);
 }
 
 static int
 vhost_vdpa_set_vring_base(struct virtio_user_dev *dev, struct vhost_vring_state *state)
 {
-	return vhost_vdpa_ioctl(dev->vhostfd, VHOST_SET_VRING_BASE, state);
+	struct vhost_vdpa_data *data = dev->backend_data;
+
+	return vhost_vdpa_ioctl(data->vhostfd, VHOST_SET_VRING_BASE, state);
 }
 
 static int
 vhost_vdpa_get_vring_base(struct virtio_user_dev *dev, struct vhost_vring_state *state)
 {
-	return vhost_vdpa_ioctl(dev->vhostfd, VHOST_GET_VRING_BASE, state);
+	struct vhost_vdpa_data *data = dev->backend_data;
+
+	return vhost_vdpa_ioctl(data->vhostfd, VHOST_GET_VRING_BASE, state);
 }
 
 static int
 vhost_vdpa_set_vring_call(struct virtio_user_dev *dev, struct vhost_vring_file *file)
 {
-	return vhost_vdpa_ioctl(dev->vhostfd, VHOST_SET_VRING_CALL, file);
+	struct vhost_vdpa_data *data = dev->backend_data;
+
+	return vhost_vdpa_ioctl(data->vhostfd, VHOST_SET_VRING_CALL, file);
 }
 
 static int
 vhost_vdpa_set_vring_kick(struct virtio_user_dev *dev, struct vhost_vring_file *file)
 {
-	return vhost_vdpa_ioctl(dev->vhostfd, VHOST_SET_VRING_KICK, file);
+	struct vhost_vdpa_data *data = dev->backend_data;
+
+	return vhost_vdpa_ioctl(data->vhostfd, VHOST_SET_VRING_KICK, file);
 }
 
 static int
 vhost_vdpa_set_vring_addr(struct virtio_user_dev *dev, struct vhost_vring_addr *addr)
 {
-	return vhost_vdpa_ioctl(dev->vhostfd, VHOST_SET_VRING_ADDR, addr);
+	struct vhost_vdpa_data *data = dev->backend_data;
+
+	return vhost_vdpa_ioctl(data->vhostfd, VHOST_SET_VRING_ADDR, addr);
 }
 
 static int
 vhost_vdpa_get_status(struct virtio_user_dev *dev, uint8_t *status)
 {
-	return vhost_vdpa_ioctl(dev->vhostfd, VHOST_VDPA_GET_STATUS, status);
+	struct vhost_vdpa_data *data = dev->backend_data;
+
+	return vhost_vdpa_ioctl(data->vhostfd, VHOST_VDPA_GET_STATUS, status);
 }
 
 static int
 vhost_vdpa_set_status(struct virtio_user_dev *dev, uint8_t status)
 {
-	return vhost_vdpa_ioctl(dev->vhostfd, VHOST_VDPA_SET_STATUS, &status);
+	struct vhost_vdpa_data *data = dev->backend_data;
+
+	return vhost_vdpa_ioctl(data->vhostfd, VHOST_VDPA_SET_STATUS, &status);
 }
 
 /**
@@ -269,16 +298,23 @@ vhost_vdpa_set_status(struct virtio_user_dev *dev, uint8_t status)
 static int
 vhost_vdpa_setup(struct virtio_user_dev *dev)
 {
+	struct vhost_vdpa_data *data;
 	uint32_t did = (uint32_t)-1;
 
-	dev->vhostfd = open(dev->path, O_RDWR);
-	if (dev->vhostfd < 0) {
+	data = malloc(sizeof(*data));
+	if (!data) {
+		PMD_DRV_LOG(ERR, "(%s) Faidle to allocate backend data", dev->path);
+		return -1;
+	}
+
+	data->vhostfd = open(dev->path, O_RDWR);
+	if (data->vhostfd < 0) {
 		PMD_DRV_LOG(ERR, "Failed to open %s: %s\n",
 				dev->path, strerror(errno));
 		return -1;
 	}
 
-	if (ioctl(dev->vhostfd, VHOST_VDPA_GET_DEVICE_ID, &did) < 0 ||
+	if (ioctl(data->vhostfd, VHOST_VDPA_GET_DEVICE_ID, &did) < 0 ||
 			did != VIRTIO_ID_NETWORK) {
 		PMD_DRV_LOG(ERR, "Invalid vdpa device ID: %u\n", did);
 		return -1;
@@ -288,9 +324,12 @@ vhost_vdpa_setup(struct virtio_user_dev *dev)
 }
 
 static int
-vhost_vdpa_destroy(struct virtio_user_dev *dev __rte_unused)
+vhost_vdpa_destroy(struct virtio_user_dev *dev )
 {
-	return;
+	struct vhost_vdpa_data *data = dev->backend_data;
+
+	close(data->vhostfd);
+
 	return 0;
 }
 
