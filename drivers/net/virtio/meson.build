@@ -2,6 +2,7 @@
 # Copyright(c) 2018 Intel Corporation
 
 sources += files('virtio_ethdev.c',
+	'virtio_pci_ethdev.c',
 	'virtio_pci.c',
 	'virtio_rxtx.c',
 	'virtio_rxtx_simple.c',
