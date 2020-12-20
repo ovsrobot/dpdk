@@ -77,13 +77,13 @@ virtio_user_server_reconnect(struct virtio_user_dev *dev)
 		return -1;
 
 	dev->vhostfd = connectfd;
-	old_status = vtpci_get_status(hw);
+	old_status = virtio_get_status(hw);
 
-	vtpci_reset(hw);
+	virtio_reset(hw);
 
-	vtpci_set_status(hw, VIRTIO_CONFIG_STATUS_ACK);
+	virtio_set_status(hw, VIRTIO_CONFIG_STATUS_ACK);
 
-	vtpci_set_status(hw, VIRTIO_CONFIG_STATUS_DRIVER);
+	virtio_set_status(hw, VIRTIO_CONFIG_STATUS_DRIVER);
 
 	if (dev->ops->send_request(dev, VHOST_USER_GET_FEATURES,
 				   &dev->device_features) < 0) {
@@ -129,10 +129,10 @@ virtio_user_server_reconnect(struct virtio_user_dev *dev)
 		virtio_user_reset_queues_packed(eth_dev);
 	}
 
-	vtpci_set_status(hw, VIRTIO_CONFIG_STATUS_FEATURES_OK);
+	virtio_set_status(hw, VIRTIO_CONFIG_STATUS_FEATURES_OK);
 
 	/* Start the device */
-	vtpci_set_status(hw, VIRTIO_CONFIG_STATUS_DRIVER_OK);
+	virtio_set_status(hw, VIRTIO_CONFIG_STATUS_DRIVER_OK);
 	if (!dev->started)
 		return -1;
 
