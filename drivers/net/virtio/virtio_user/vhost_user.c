@@ -17,6 +17,9 @@
 #include "vhost.h"
 #include "virtio_user_dev.h"
 
+struct vhost_user_data {
+	uint64_t protocol_features;
+};
 
 #ifndef VHOST_USER_F_PROTOCOL_FEATURES
 #define VHOST_USER_F_PROTOCOL_FEATURES 30
@@ -274,6 +277,7 @@ static int
 vhost_user_get_features(struct virtio_user_dev *dev, uint64_t *features)
 {
 	int ret;
+	struct vhost_user_data *data = dev->backend_data;
 	struct vhost_user_msg msg = {
 		.request = VHOST_USER_GET_FEATURES,
 		.flags = VHOST_USER_VERSION,
@@ -303,17 +307,17 @@ vhost_user_get_features(struct virtio_user_dev *dev, uint64_t *features)
 		return 0;
 
 	/* Negotiate protocol features */
-	ret = vhost_user_get_protocol_features(dev, &dev->protocol_features);
+	ret = vhost_user_get_protocol_features(dev, &data->protocol_features);
 	if (ret < 0)
 		goto err;
 
-	dev->protocol_features &= VHOST_USER_SUPPORTED_PROTOCOL_FEATURES;
+	data->protocol_features &= VHOST_USER_SUPPORTED_PROTOCOL_FEATURES;
 
-	ret = vhost_user_set_protocol_features(dev, dev->protocol_features);
+	ret = vhost_user_set_protocol_features(dev, data->protocol_features);
 	if (ret < 0)
 		goto err;
 
-	if (!(dev->protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_MQ)))
+	if (!(data->protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_MQ)))
 		dev->unsupported_features |= (1ull << VIRTIO_NET_F_MQ);
 
 	return 0;
@@ -429,12 +433,13 @@ vhost_user_set_memory_table(struct virtio_user_dev *dev)
 	struct walk_arg wa;
 	int fds[VHOST_MEMORY_MAX_NREGIONS];
 	int ret, fd_num;
+	struct vhost_user_data *data = dev->backend_data;
 	struct vhost_user_msg msg = {
 		.request = VHOST_USER_SET_MEM_TABLE,
 		.flags = VHOST_USER_VERSION,
 	};
 
-	if (dev->protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_REPLY_ACK))
+	if (data->protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_REPLY_ACK))
 		msg.flags |= VHOST_USER_NEED_REPLY_MASK;
 
 	wa.region_nr = 0;
@@ -613,6 +618,7 @@ static int
 vhost_user_get_status(struct virtio_user_dev *dev, uint8_t *status)
 {
 	int ret;
+	struct vhost_user_data *data = dev->backend_data;
 	struct vhost_user_msg msg = {
 		.request = VHOST_USER_GET_STATUS,
 		.flags = VHOST_USER_VERSION,
@@ -629,7 +635,7 @@ vhost_user_get_status(struct virtio_user_dev *dev, uint8_t *status)
 	if (!(dev->device_features & (1ULL << VHOST_USER_F_PROTOCOL_FEATURES)))
 		return -ENOTSUP;
 
-	if (!(dev->protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_STATUS)))
+	if (!(data->protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_STATUS)))
 		return -ENOTSUP;
 
 	ret = vhost_user_write(dev->vhostfd, &msg, NULL, 0);
@@ -666,6 +672,7 @@ static int
 vhost_user_set_status(struct virtio_user_dev *dev, uint8_t status)
 {
 	int ret;
+	struct vhost_user_data *data = dev->backend_data;
 	struct vhost_user_msg msg = {
 		.request = VHOST_USER_SET_STATUS,
 		.flags = VHOST_USER_VERSION,
@@ -673,7 +680,7 @@ vhost_user_set_status(struct virtio_user_dev *dev, uint8_t status)
 		.payload.u64 = status,
 	};
 
-	if (dev->protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_REPLY_ACK))
+	if (data->protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_REPLY_ACK))
 		msg.flags |= VHOST_USER_NEED_REPLY_MASK;
 
 	/*
@@ -687,7 +694,7 @@ vhost_user_set_status(struct virtio_user_dev *dev, uint8_t status)
 	if (!(dev->device_features & (1ULL << VHOST_USER_F_PROTOCOL_FEATURES)))
 		return -ENOTSUP;
 
-	if (!(dev->protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_STATUS)))
+	if (!(data->protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_STATUS)))
 		return -ENOTSUP;
 
 	ret = vhost_user_write(dev->vhostfd, &msg, NULL, 0);
@@ -747,6 +754,17 @@ vhost_user_setup(struct virtio_user_dev *dev)
 	int fd;
 	int flag;
 	struct sockaddr_un un;
+	struct vhost_user_data *data;
+
+	data = malloc(sizeof(*data));
+	if (!data) {
+		PMD_DRV_LOG(ERR, "(%s) Failed to allocate Vhost-user data\n", dev->path);
+		return -1;
+	}
+
+	memset(data, 0, sizeof(*data));
+
+	dev->backend_data = data;
 
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd < 0) {
@@ -776,6 +794,17 @@ vhost_user_setup(struct virtio_user_dev *dev)
 			return -1;
 		}
 		dev->vhostfd = fd;
+	}
+
+	return 0;
+}
+
+static int
+vhost_user_destroy(struct virtio_user_dev *dev)
+{
+	if (dev->backend_data) {
+		free(dev->backend_data);
+		dev->backend_data = NULL;
 	}
 
 	return 0;
@@ -815,6 +844,7 @@ vhost_user_get_backend_features(uint64_t *features)
 
 struct virtio_user_backend_ops virtio_ops_user = {
 	.setup = vhost_user_setup,
+	.destroy = vhost_user_destroy,
 	.get_backend_features = vhost_user_get_backend_features,
 	.set_owner = vhost_user_set_owner,
 	.get_features = vhost_user_get_features,
