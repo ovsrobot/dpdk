@@ -449,11 +449,11 @@ virtqueue_full(const struct virtqueue *vq)
 }
 
 static inline int
-virtio_get_queue_type(struct virtio_hw *hw, uint16_t vtpci_queue_idx)
+virtio_get_queue_type(struct virtio_hw *hw, uint16_t vq_idx)
 {
-	if (vtpci_queue_idx == hw->max_queue_pairs * 2)
+	if (vq_idx == hw->max_queue_pairs * 2)
 		return VTNET_CQ;
-	else if (vtpci_queue_idx % 2 == 0)
+	else if (vq_idx % 2 == 0)
 		return VTNET_RQ;
 	else
 		return VTNET_TQ;
