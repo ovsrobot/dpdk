@@ -560,6 +560,7 @@ struct rte_flow_action_queue sample_queue[RAW_SAMPLE_CONFS_MAX_NUM];
 struct rte_flow_action_count sample_count[RAW_SAMPLE_CONFS_MAX_NUM];
 struct rte_flow_action_port_id sample_port_id[RAW_SAMPLE_CONFS_MAX_NUM];
 struct rte_flow_action_raw_encap sample_encap[RAW_SAMPLE_CONFS_MAX_NUM];
+struct rte_flow_action_vf sample_vf[RAW_SAMPLE_CONFS_MAX_NUM];
 
 /** Maximum number of subsequent tokens and arguments on the stack. */
 #define CTX_STACK_SIZE 16
@@ -7557,6 +7558,14 @@ cmd_set_raw_parsed_sample(const struct buffer *in)
 			rte_memcpy(&sample_port_id[idx],
 				(const void *)action->conf, size);
 			action->conf = &sample_port_id[idx];
+			break;
+		case RTE_FLOW_ACTION_TYPE_PF:
+			break;
+		case RTE_FLOW_ACTION_TYPE_VF:
+			size = sizeof(struct rte_flow_action_vf);
+			rte_memcpy(&sample_vf[idx],
+			(const void *)action->conf, size);
+			action->conf = &sample_vf[idx];
 			break;
 		default:
 			printf("Error - Not supported action\n");
