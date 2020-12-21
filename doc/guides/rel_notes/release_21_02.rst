@@ -80,6 +80,11 @@ New Features
    Added UDP/IPv6 GRO support for non-VXLAN packets, this enabled UDP/IPv6
    GRO support for IPv6 VLAN use case.
 
+* **Added UDP/IPv6 GRO support for IPv4 VXLAN packets.**
+
+   Added UDP/IPv6 GRO support for IPv4 VXLAN packets, this enabled UDP/IPv6
+   GRO support for IPv4 VXLAN use case.
+
 Removed Items
 -------------
 
