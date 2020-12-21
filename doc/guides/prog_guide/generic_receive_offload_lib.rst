@@ -30,9 +30,9 @@ assumes the packets are complete (i.e., MF==0 && frag_off==0), when IP
 fragmentation is possible (i.e., DF==0). Additionally, it complies RFC
 6864 to process the IPv4 ID field.
 
-Currently, the GRO library provides GRO supports for TCP/IPv4 and UDP/IPv4
-packets as well as VxLAN packets which contain an outer IPv4 header and an
-inner TCP/IPv4 or UDP/IPv4 packet.
+Currently, the GRO library provides GRO supports for TCP/IPv4, UDP/IPv4,
+and TCP/IPv6 packets as well as VxLAN packets which contain an outer IPv4
+header and an inner TCP/IPv4 or UDP/IPv4 packet.
 
 Two Sets of API
 ---------------
@@ -83,8 +83,8 @@ Reassembly Algorithm
 
 The reassembly algorithm is used for reassembling packets. In the GRO
 library, different GRO types can use different algorithms. In this
-section, we will introduce an algorithm, which is used by TCP/IPv4 GRO
-and VxLAN GRO.
+section, we will introduce an algorithm, which is used by TCP/IPv4 GRO,
+TCP/IPv6 GRO and VxLAN GRO.
 
 Challenges
 ~~~~~~~~~~

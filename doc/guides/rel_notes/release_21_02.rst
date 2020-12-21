@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added TCP/IPv6 GRO support for non-VXLAN packets.**
+
+   Added TCP/IPv6 GRO support for non-VXLAN packets, this enabled TCP/IPv6
+   GRO support for VLAN use case.
+
 
 Removed Items
 -------------
