@@ -50,6 +50,9 @@ extern "C" {
 #define RTE_GRO_IPV6_VXLAN_TCP_IPV6_INDEX 7
 #define RTE_GRO_IPV6_VXLAN_TCP_IPV6 (1ULL << RTE_GRO_IPV6_VXLAN_TCP_IPV6_INDEX)
 /**< IPv6 VxLAN TCP/IPv6 GRO flag. */
+#define RTE_GRO_UDP_IPV6_INDEX 8
+#define RTE_GRO_UDP_IPV6 (1ULL << RTE_GRO_UDP_IPV6_INDEX)
+/**< UDP/IPv6 GRO flag */
 
 /**
  * Structure used to create GRO context objects or used to pass

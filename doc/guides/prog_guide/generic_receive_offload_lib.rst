@@ -31,9 +31,9 @@ fragmentation is possible (i.e., DF==0). Additionally, it complies RFC
 6864 to process the IPv4 ID field.
 
 Currently, the GRO library provides GRO supports for TCP/IPv4, UDP/IPv4,
-and TCP/IPv6 packets as well as VxLAN packets which contain an outer IPv4
-header and an inner TCP/IPv4, UDP/IPv4 or TCP/IPv6 packet or an outer IPv6
-header and an inner TCP/IPv4 or TCP/IPv6 packet.
+UDP/IPv6, and TCP/IPv6 packets as well as VxLAN packets which contain an
+outer IPv4 header and an inner TCP/IPv4, UDP/IPv4 or TCP/IPv6 packet or
+an outer IPv6 header and an inner TCP/IPv4 or TCP/IPv6 packet.
 
 Two Sets of API
 ---------------

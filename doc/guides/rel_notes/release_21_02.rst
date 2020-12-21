@@ -75,6 +75,11 @@ New Features
    Added TCP/IPv6 GRO support for IPv6 VXLAN packets, this enabled TCP/IPv6
    GRO support for IPv6 VXLAN use case.
 
+* **Added UDP/IPv6 GRO support for non-VXLAN packets.**
+
+   Added UDP/IPv6 GRO support for non-VXLAN packets, this enabled UDP/IPv6
+   GRO support for IPv6 VLAN use case.
+
 Removed Items
 -------------
 
