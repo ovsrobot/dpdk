@@ -55,7 +55,12 @@
 	ICE_FDIR_INSET_ETH_IPV6 | \
 	ICE_INSET_SCTP_SRC_PORT | ICE_INSET_SCTP_DST_PORT)
 
+#define ICE_FDIR_INSET_VXLAN_IPV4_F (\
+	ICE_FDIR_INSET_ETH | \
+	ICE_INSET_IPV4_SRC | ICE_INSET_IPV4_DST)
+
 #define ICE_FDIR_INSET_VXLAN_IPV4_L (\
+	ICE_FDIR_INSET_ETH | \
 	ICE_INSET_IPV4_SRC | ICE_INSET_IPV4_DST)
 
 #define ICE_FDIR_INSET_VXLAN_IPV4_TCP_L (\
@@ -93,14 +98,14 @@ static struct ice_pattern_match_item ice_fdir_pattern_os[] = {
 	{pattern_eth_ipv6_udp,				ICE_INSET_NONE,			ICE_FDIR_INSET_ETH_IPV6_UDP,		ICE_INSET_NONE},
 	{pattern_eth_ipv6_tcp,				ICE_INSET_NONE,			ICE_FDIR_INSET_ETH_IPV6_TCP,		ICE_INSET_NONE},
 	{pattern_eth_ipv6_sctp,				ICE_INSET_NONE,			ICE_FDIR_INSET_ETH_IPV6_SCTP,		ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_ipv4,		ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_L,		ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_ipv4_udp,		ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_UDP_L,	ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_ipv4_tcp,		ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_TCP_L,	ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_ipv4_sctp,		ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_SCTP_L,	ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_eth_ipv4,		ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_L,		ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_udp,	ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_UDP_L,	ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_tcp,	ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_TCP_L,	ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_sctp,	ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_SCTP_L,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_ipv4,		ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_L,		ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_ipv4_udp,		ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_UDP_L,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_ipv4_tcp,		ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_TCP_L,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_ipv4_sctp,		ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_SCTP_L,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4,		ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_L,		ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_udp,	ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_UDP_L,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_tcp,	ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_TCP_L,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_sctp,	ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_SCTP_L,	ICE_INSET_NONE},
 };
 
 static struct ice_pattern_match_item ice_fdir_pattern_comms[] = {
@@ -111,14 +116,14 @@ static struct ice_pattern_match_item ice_fdir_pattern_comms[] = {
 	{pattern_eth_ipv4_sctp,				ICE_INSET_NONE,			ICE_FDIR_INSET_ETH_IPV4_SCTP,		ICE_INSET_NONE},
 	{pattern_eth_ipv6,				ICE_INSET_NONE,			ICE_FDIR_INSET_ETH_IPV6,		ICE_INSET_NONE},
 	{pattern_eth_ipv6_udp,				ICE_INSET_NONE,			ICE_FDIR_INSET_ETH_IPV6_UDP,		ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_ipv4,		ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_L,		ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_ipv4_udp,		ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_UDP_L,	ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_ipv4_tcp,		ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_TCP_L,	ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_ipv4_sctp,		ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_SCTP_L,	ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_eth_ipv4,		ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_L,		ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_udp,	ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_UDP_L,	ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_tcp,	ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_TCP_L,	ICE_INSET_NONE},
-	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_sctp,	ICE_INSET_NONE,			ICE_FDIR_INSET_VXLAN_IPV4_SCTP_L,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_ipv4,		ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_L,		ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_ipv4_udp,		ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_UDP_L,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_ipv4_tcp,		ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_TCP_L,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_ipv4_sctp,		ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_SCTP_L,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4,		ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_L,		ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_udp,	ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_UDP_L,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_tcp,	ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_TCP_L,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_sctp,	ICE_FDIR_INSET_VXLAN_IPV4_F,	ICE_FDIR_INSET_VXLAN_IPV4_SCTP_L,	ICE_INSET_NONE},
 	{pattern_eth_ipv4_gtpu,				ICE_FDIR_INSET_IPV4_GTPU_F,	ICE_INSET_NONE,				ICE_INSET_NONE},
 	{pattern_eth_ipv4_gtpu_eh,			ICE_FDIR_INSET_IPV4_GTPU_EH_F,	ICE_INSET_NONE,				ICE_INSET_NONE},
 	{pattern_eth_ipv6_gtpu,				ICE_FDIR_INSET_IPV6_GTPU_F,	ICE_INSET_NONE,				ICE_INSET_NONE},
