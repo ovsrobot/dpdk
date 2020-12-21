@@ -2088,6 +2088,8 @@ ice_search_pattern_match_item(const struct rte_flow_item pattern[],
 					items)) {
 			pattern_match_item->input_set_mask =
 				array[i].input_set_mask;
+			pattern_match_item->input_set_mask_f =
+				array[i].input_set_mask_f;
 			pattern_match_item->pattern_list =
 				array[i].pattern_list;
 			pattern_match_item->meta = array[i].meta;

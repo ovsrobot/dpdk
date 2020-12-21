@@ -2020,7 +2020,8 @@ ice_fdir_parse(struct ice_adapter *ad,
 	if (ret)
 		goto error;
 	input_set = filter->input_set | filter->outer_input_set;
-	if (!input_set || input_set & ~item->input_set_mask) {
+	if (!input_set || filter->input_set & ~item->input_set_mask ||
+	    filter->outer_input_set & ~item->input_set_mask_f) {
 		rte_flow_error_set(error, EINVAL,
 				   RTE_FLOW_ERROR_TYPE_ITEM_SPEC,
 				   pattern,
