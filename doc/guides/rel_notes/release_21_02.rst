@@ -60,6 +60,11 @@ New Features
    Added TCP/IPv6 GRO support for non-VXLAN packets, this enabled TCP/IPv6
    GRO support for VLAN use case.
 
+* **Added TCP/IPv6 GRO support for IPv4 VXLAN packets.**
+
+   Added TCP/IPv6 GRO support for IPv4 VXLAN packets, this enabled TCP/IPv6
+   GRO support for IPv4 VXLAN use case.
+
 
 Removed Items
 -------------

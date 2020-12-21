@@ -32,7 +32,7 @@ fragmentation is possible (i.e., DF==0). Additionally, it complies RFC
 
 Currently, the GRO library provides GRO supports for TCP/IPv4, UDP/IPv4,
 and TCP/IPv6 packets as well as VxLAN packets which contain an outer IPv4
-header and an inner TCP/IPv4 or UDP/IPv4 packet.
+header and an inner TCP/IPv4, UDP/IPv4 or TCP/IPv6 packet.
 
 Two Sets of API
 ---------------
@@ -161,8 +161,8 @@ Header fields deciding if two packets are neighbors include:
 - IPv4 ID. The IPv4 ID fields of the packets, whose DF bit is 0, should
   be increased by 1.
 
-VxLAN GRO
----------
+IPv4 VxLAN TCP/IPv4 GRO
+-----------------------
 
 The table structure used by VxLAN GRO, which is in charge of processing
 VxLAN packets with an outer IPv4 header and inner TCP/IPv4 packet, is
