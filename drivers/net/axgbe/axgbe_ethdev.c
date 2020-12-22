@@ -257,6 +257,8 @@ static const struct eth_dev_ops axgbe_eth_dev_ops = {
 	.timesync_adjust_time         = axgbe_timesync_adjust_time,
 	.timesync_read_time           = axgbe_timesync_read_time,
 	.timesync_write_time          = axgbe_timesync_write_time,
+	.get_module_info              = axgbe_get_module_info,
+	.get_module_eeprom            = axgbe_get_module_eeprom,
 };
 
 static int axgbe_phy_reset(struct axgbe_port *pdata)
