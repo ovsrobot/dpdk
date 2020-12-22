@@ -1902,7 +1902,23 @@ cmd_config_max_pkt_len_parsed(void *parsed_result,
 				rx_offloads |= DEV_RX_OFFLOAD_JUMBO_FRAME;
 			else
 				rx_offloads &= ~DEV_RX_OFFLOAD_JUMBO_FRAME;
-			port->dev_conf.rxmode.offloads = rx_offloads;
+
+			if (rx_offloads != port->dev_conf.rxmode.offloads) {
+				uint16_t k;
+				int ret;
+
+				port->dev_conf.rxmode.offloads = rx_offloads;
+				/* Apply Rx offloads configuration */
+				ret = eth_dev_info_get_print_err(pid,
+							&port->dev_info);
+				if (ret != 0)
+					rte_exit(EXIT_FAILURE,
+					    "rte_eth_dev_info_get() failed\n");
+
+				for (k = 0;
+				     k < port->dev_info.nb_rx_queues; k++)
+					port->rx_conf[k].offloads = rx_offloads;
+			}
 		} else {
 			printf("Unknown parameter\n");
 			return;
