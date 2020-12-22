@@ -87,13 +87,8 @@ struct rte_vhost_async_channel_ops {
  * inflight async packet information
  */
 struct async_inflight_info {
-	union {
-		uint32_t info;
-		struct {
-			uint16_t descs; /* num of descs inflight */
-			uint16_t segs; /* iov segs inflight */
-		};
-	};
+	struct rte_mbuf *mbuf;
+	uint16_t descs; /* num of descs inflight */
 };
 
 /**
@@ -159,12 +154,17 @@ int rte_vhost_async_channel_unregister(int vid, uint16_t queue_id);
  *  array of packets to be enqueued
  * @param count
  *  packets num to be enqueued
+ * @param comp_pkts
+ *  array of transfer completed packets
+ * @param comp_count
+ *  num of transfer completed packets
  * @return
- *  num of packets enqueued
+ *  num of packets enqueued, including in-flight and transfer completed
  */
 __rte_experimental
 uint16_t rte_vhost_submit_enqueue_burst(int vid, uint16_t queue_id,
-		struct rte_mbuf **pkts, uint16_t count);
+		struct rte_mbuf **pkts, uint16_t count,
+		struct rte_mbuf **comp_pkts, uint32_t *comp_count);
 
 /**
  * This function checks async completion status for a specific vhost

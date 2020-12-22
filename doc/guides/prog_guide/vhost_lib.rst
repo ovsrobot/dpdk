@@ -245,11 +245,12 @@ The following is an overview of some key Vhost API functions:
 
   Unregister the async copy device channel from a vhost queue.
 
-* ``rte_vhost_submit_enqueue_burst(vid, queue_id, pkts, count)``
+* ``rte_vhost_submit_enqueue_burst(vid, queue_id, pkts, count, comp_pkts, comp_count)``
 
   Submit an enqueue request to transmit ``count`` packets from host to guest
-  by async data path. Enqueue is not guaranteed to finish upon the return of
-  this API call.
+  by async data path. Enqueue completed packets are returned in
+  ``comp_pkts``, and others are not guaranteed to finish, when this API
+  call returns.
 
   Applications must not free the packets submitted for enqueue until the
   packets are completed.
