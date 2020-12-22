@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added enqueue & dequeue callback APIs for cryptodev library.**
+
+  Cryptodev library is added with enqueue & dequeue callback APIs to
+  enable applications to add/remove user callbacks which gets called
+  for every enqueue/dequeue operation.
+
+
 
 Removed Items
 -------------
@@ -84,6 +91,8 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* cryptodev: The structure ``rte_cryptodev`` has been updated with pointers
+  for adding enqueue and dequeue callbacks.
 
 ABI Changes
 -----------
