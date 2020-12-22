@@ -198,7 +198,6 @@ test_worker(void *arg, const char *fname, int32_t prcs)
 	fill_ring_elm(&loc_elm, lc);
 
 	while (wrk_cmd != WRK_CMD_RUN) {
-		rte_smp_rmb();
 		rte_pause();
 	}
 
@@ -357,13 +356,11 @@ test_mt1(int (*test)(void *))
 
 	/* signal worker to start test */
 	wrk_cmd = WRK_CMD_RUN;
-	rte_smp_wmb();
 
 	usleep(run_time * US_PER_S);
 
-	/* signal worker to start test */
+	/* signal worker to stop test */
 	wrk_cmd = WRK_CMD_STOP;
-	rte_smp_wmb();
 
 	/* wait for workers and collect stats. */
 	mc = rte_lcore_id();
