@@ -144,6 +144,10 @@ __vhost_log_cache_sync(struct virtio_net *dev, struct vhost_virtqueue *vq)
 	if (unlikely(!dev->log_base))
 		return;
 
+	/* No cache, nothing to sync */
+	if (unlikely(!vq->log_cache))
+		return;
+
 	rte_smp_wmb();
 
 	log_base = (unsigned long *)(uintptr_t)dev->log_base;
@@ -175,6 +179,14 @@ vhost_log_cache_page(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	uint32_t bit_nr = page % (sizeof(unsigned long) << 3);
 	uint32_t offset = page / (sizeof(unsigned long) << 3);
 	int i;
+
+	if (unlikely(!vq->log_cache)) {
+		/* No logging cache allocated, write dirty log map directly */
+		rte_smp_wmb();
+		vhost_log_page((uint8_t *)(uintptr_t)dev->log_base, page);
+
+		return;
+	}
 
 	for (i = 0; i < vq->log_cache_nb_elem; i++) {
 		struct log_cache_entry *elem = vq->log_cache + i;
