@@ -61,8 +61,6 @@ part_number_config_arm = {
 			['RTE_MACHINE', '"neoverse-n1"'],
 			['RTE_ARM_FEATURE_ATOMICS', true],
 			['RTE_USE_C11_MEM_MODEL', true],
-			['RTE_EAL_NUMA_AWARE_HUGEPAGES', false],
-			['RTE_LIBRTE_VHOST_NUMA', false],
 			['RTE_MAX_MEM_MB', 1048576],
 			['RTE_CACHE_LINE_SIZE', 64],
 			['RTE_MAX_LCORE', 64],
