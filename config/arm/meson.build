@@ -2,6 +2,9 @@
 # Copyright(c) 2017 Intel Corporation.
 # Copyright(c) 2017 Cavium, Inc
 
+# disable Arm drivers for all builds
+disabled_drivers += ['net/avp', 'net/fm10k']
+
 # common flags to all aarch64 builds, with lowest priority
 flags_common = [
 	# Accelerate rte_memcpy. Be sure to run unit test (memcpy_perf_autotest)
@@ -15,9 +18,6 @@ flags_common = [
 	#	['RTE_ARM64_MEMCPY_SKIP_GCC_VER_CHECK', false],
 	#	['RTE_ARM64_MEMCPY_ALIGN_MASK', 0xF],
 	#	['RTE_ARM64_MEMCPY_STRICT_ALIGN', false],
-
-	['RTE_NET_FM10K', false],
-	['RTE_NET_AVP', false],
 
 	['RTE_SCHED_VECTOR', false],
 	['RTE_ARM_USE_WFE', false],
@@ -126,7 +126,6 @@ implementer_cavium = {
 				['RTE_MACHINE', '"octeontx2"'],
 				['RTE_ARM_FEATURE_ATOMICS', true],
 				['RTE_USE_C11_MEM_MODEL', true],
-				['RTE_EAL_IGB_UIO', false],
 				['RTE_MAX_LCORE', 36],
 				['RTE_MAX_NUMA_NODES', 1]
 			]
