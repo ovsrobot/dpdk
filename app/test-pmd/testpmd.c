@@ -2194,10 +2194,18 @@ start_packet_forwarding(int with_tx_first)
 
 	if ((strcmp(cur_fwd_eng->fwd_mode_name, "rxonly") != 0 &&
 		strcmp(cur_fwd_eng->fwd_mode_name, "txonly") != 0) &&
-		(!nb_rxq || !nb_txq))
+		(!nb_rxq || !nb_txq)) {
+#ifdef RTE_LIB_CMDLINE
+		if (interactive == 1) {
+			printf("Either rxq or txq are 0, cannot use %s fwd mode\n",
+				cur_fwd_eng->fwd_mode_name);
+			return;
+		}
+#endif
 		rte_exit(EXIT_FAILURE,
 			"Either rxq or txq are 0, cannot use %s fwd mode\n",
 			cur_fwd_eng->fwd_mode_name);
+	}
 
 	if (all_ports_started() == 0) {
 		printf("Not all ports were started\n");
