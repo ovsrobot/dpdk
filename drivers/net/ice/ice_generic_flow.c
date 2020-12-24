@@ -2029,6 +2029,21 @@ ice_pattern_skip_void_item(struct rte_flow_item *items,
 	rte_memcpy(items, pe, sizeof(struct rte_flow_item));
 }
 
+static bool
+ice_pattern_is_support(__rte_unused struct ice_adapter *ad,
+		       const struct rte_flow_item *pattern)
+{
+	const struct rte_flow_item *pb = pattern;
+
+	while (pb != RTE_FLOW_ITEM_TYPE_END) {
+		if (!ice_hw_ptype_ena(&ad->hw, pb->type))
+			return false;
+		pb++;
+	}
+
+	return true;
+}
+
 /* Check if the pattern matches a supported item type array */
 static bool
 ice_match_pattern(enum rte_flow_item_type *item_array,
@@ -2047,10 +2062,11 @@ ice_match_pattern(enum rte_flow_item_type *item_array,
 }
 
 struct ice_pattern_match_item *
-ice_search_pattern_match_item(const struct rte_flow_item pattern[],
-		struct ice_pattern_match_item *array,
-		uint32_t array_len,
-		struct rte_flow_error *error)
+ice_search_pattern_match_item(struct ice_adapter *ad,
+			      const struct rte_flow_item pattern[],
+			      struct ice_pattern_match_item *array,
+			      uint32_t array_len,
+			      struct rte_flow_error *error)
 {
 	uint16_t i = 0;
 	struct ice_pattern_match_item *pattern_match_item;
@@ -2082,6 +2098,9 @@ ice_search_pattern_match_item(const struct rte_flow_item pattern[],
 	}
 
 	ice_pattern_skip_void_item(items, pattern);
+
+	if (!ice_pattern_is_support(ad, pattern))
+		return NULL;
 
 	for (i = 0; i < array_len; i++)
 		if (ice_match_pattern(array[i].pattern_list,

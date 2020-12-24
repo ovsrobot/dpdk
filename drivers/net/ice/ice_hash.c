@@ -313,21 +313,7 @@ struct rss_type_match_hdr hint_eth_pppoes = {
 	ICE_FLOW_SEG_HDR_PPPOE,
 	ETH_RSS_ETH | ETH_RSS_PPPOE};
 
-/* Supported pattern for os default package. */
-static struct ice_pattern_match_item ice_hash_pattern_list_os[] = {
-	{pattern_eth_ipv4,	ICE_INSET_NONE,	&hint_eth_ipv4},
-	{pattern_eth_ipv4_udp,	ICE_INSET_NONE,	&hint_eth_ipv4_udp},
-	{pattern_eth_ipv4_tcp,	ICE_INSET_NONE,	&hint_eth_ipv4_tcp},
-	{pattern_eth_ipv4_sctp,	ICE_INSET_NONE,	&hint_eth_ipv4_sctp},
-	{pattern_eth_ipv6,	ICE_INSET_NONE,	&hint_eth_ipv6},
-	{pattern_eth_ipv6_udp,	ICE_INSET_NONE,	&hint_eth_ipv6_udp},
-	{pattern_eth_ipv6_tcp,	ICE_INSET_NONE,	&hint_eth_ipv6_tcp},
-	{pattern_eth_ipv6_sctp,	ICE_INSET_NONE,	&hint_eth_ipv6_sctp},
-	{pattern_empty,		ICE_INSET_NONE,	&hint_empty},
-};
-
-/* Supported pattern for comms package. */
-static struct ice_pattern_match_item ice_hash_pattern_list_comms[] = {
+static struct ice_pattern_match_item ice_hash_pattern_list[] = {
 	{pattern_empty,			    ICE_INSET_NONE,
 		&hint_empty},
 	{pattern_eth_ipv4,		    ICE_INSET_NONE,
@@ -915,19 +901,10 @@ static struct ice_flow_engine ice_hash_engine = {
 };
 
 /* Register parser for os package. */
-static struct ice_flow_parser ice_hash_parser_os = {
+static struct ice_flow_parser ice_hash_parser = {
 	.engine = &ice_hash_engine,
-	.array = ice_hash_pattern_list_os,
-	.array_len = RTE_DIM(ice_hash_pattern_list_os),
-	.parse_pattern_action = ice_hash_parse_pattern_action,
-	.stage = ICE_FLOW_STAGE_RSS,
-};
-
-/* Register parser for comms package. */
-static struct ice_flow_parser ice_hash_parser_comms = {
-	.engine = &ice_hash_engine,
-	.array = ice_hash_pattern_list_comms,
-	.array_len = RTE_DIM(ice_hash_pattern_list_comms),
+	.array = ice_hash_pattern_list,
+	.array_len = RTE_DIM(ice_hash_pattern_list),
 	.parse_pattern_action = ice_hash_parse_pattern_action,
 	.stage = ICE_FLOW_STAGE_RSS,
 };
@@ -946,12 +923,7 @@ ice_hash_init(struct ice_adapter *ad)
 	if (ad->hw.dcf_enabled)
 		return 0;
 
-	if (ad->active_pkg_type == ICE_PKG_TYPE_OS_DEFAULT)
-		parser = &ice_hash_parser_os;
-	else if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
-		parser = &ice_hash_parser_comms;
-	else
-		return -EINVAL;
+	parser = &ice_hash_parser;
 
 	return ice_register_parser(parser, ad);
 }
@@ -1211,8 +1183,8 @@ ice_hash_parse_pattern_action(__rte_unused struct ice_adapter *ad,
 	}
 
 	/* Check rss supported pattern and find matched pattern. */
-	pattern_match_item = ice_search_pattern_match_item(pattern,
-					array, array_len, error);
+	pattern_match_item = ice_search_pattern_match_item(ad, pattern, array,
+							   array_len, error);
 	if (!pattern_match_item) {
 		ret = -rte_errno;
 		goto error;
@@ -1352,10 +1324,7 @@ ice_hash_uninit(struct ice_adapter *ad)
 	if (ad->hw.dcf_enabled)
 		return;
 
-	if (ad->active_pkg_type == ICE_PKG_TYPE_OS_DEFAULT)
-		ice_unregister_parser(&ice_hash_parser_os, ad);
-	else if (ad->active_pkg_type == ICE_PKG_TYPE_COMMS)
-		ice_unregister_parser(&ice_hash_parser_comms, ad);
+	ice_unregister_parser(&ice_hash_parser, ad);
 }
 
 static void
