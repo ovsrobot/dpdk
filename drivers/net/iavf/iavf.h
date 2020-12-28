@@ -132,6 +132,7 @@ struct iavf_info {
 	struct virtchnl_version_info virtchnl_version;
 	struct virtchnl_vf_resource *vf_res; /* VF resource */
 	struct virtchnl_vsi_resource *vsi_res; /* LAN VSI */
+	struct virtchnl_vlan_caps vlan_v2_caps;
 	uint64_t supported_rxdid;
 	uint8_t *proto_xtr; /* proto xtr type for all queues */
 	volatile enum virtchnl_ops pend_cmd; /* pending command not finished */
@@ -165,6 +166,10 @@ struct iavf_info {
 	struct iavf_fdir_info fdir; /* flow director info */
 	/* indicate large VF support enabled or not */
 	bool lv_enabled;
+
+	/* used to set the VLAN Ethernet type for virtchnl VLAN V2 */
+	uint16_t outer_vlan_tpid;
+	uint16_t inner_vlan_tpid;
 };
 
 #define IAVF_MAX_PKT_TYPE 1024
@@ -289,6 +294,8 @@ int iavf_get_vf_resource(struct iavf_adapter *adapter);
 void iavf_handle_virtchnl_msg(struct rte_eth_dev *dev);
 int iavf_enable_vlan_strip(struct iavf_adapter *adapter);
 int iavf_disable_vlan_strip(struct iavf_adapter *adapter);
+int iavf_config_vlan_strip_v2(struct iavf_adapter *adapter, uint16_t tpid,
+			      bool enable);
 int iavf_switch_queue(struct iavf_adapter *adapter, uint16_t qid,
 		     bool rx, bool on);
 int iavf_switch_queue_lv(struct iavf_adapter *adapter, uint16_t qid,
@@ -302,6 +309,7 @@ int iavf_configure_rss_key(struct iavf_adapter *adapter);
 int iavf_configure_queues(struct iavf_adapter *adapter,
 			uint16_t num_queue_pairs, uint16_t index);
 int iavf_get_supported_rxdid(struct iavf_adapter *adapter);
+int iavf_get_vlan_offload_caps_v2(struct iavf_adapter *adapter);
 int iavf_config_irq_map(struct iavf_adapter *adapter);
 int iavf_config_irq_map_lv(struct iavf_adapter *adapter, uint16_t num,
 			uint16_t index);
@@ -315,6 +323,8 @@ int iavf_config_promisc(struct iavf_adapter *adapter, bool enable_unicast,
 int iavf_add_del_eth_addr(struct iavf_adapter *adapter,
 			 struct rte_ether_addr *addr, bool add);
 int iavf_add_del_vlan(struct iavf_adapter *adapter, uint16_t vlanid, bool add);
+int iavf_add_del_vlan_v2(struct iavf_adapter *adapter, uint16_t tpid,
+			 uint16_t vlanid, bool add);
 int iavf_fdir_add(struct iavf_adapter *adapter, struct iavf_fdir_conf *filter);
 int iavf_fdir_del(struct iavf_adapter *adapter, struct iavf_fdir_conf *filter);
 int iavf_fdir_check(struct iavf_adapter *adapter,

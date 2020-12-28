@@ -100,6 +100,8 @@ static void iavf_dev_del_mac_addr(struct rte_eth_dev *dev, uint32_t index);
 static int iavf_dev_vlan_filter_set(struct rte_eth_dev *dev,
 				   uint16_t vlan_id, int on);
 static int iavf_dev_vlan_offload_set(struct rte_eth_dev *dev, int mask);
+static int iavf_dev_vlan_tpid_set(struct rte_eth_dev *dev,
+				  enum rte_vlan_type vlan_type, uint16_t tpid);
 static int iavf_dev_rss_reta_update(struct rte_eth_dev *dev,
 				   struct rte_eth_rss_reta_entry64 *reta_conf,
 				   uint16_t reta_size);
@@ -176,6 +178,7 @@ static const struct eth_dev_ops iavf_eth_dev_ops = {
 	.mac_addr_remove            = iavf_dev_del_mac_addr,
 	.set_mc_addr_list			= iavf_set_mc_addr_list,
 	.vlan_filter_set            = iavf_dev_vlan_filter_set,
+	.vlan_tpid_set              = iavf_dev_vlan_tpid_set,
 	.vlan_offload_set           = iavf_dev_vlan_offload_set,
 	.rx_queue_start             = iavf_dev_rx_queue_start,
 	.rx_queue_stop              = iavf_dev_rx_queue_stop,
@@ -323,6 +326,18 @@ iavf_queues_req_reset(struct rte_eth_dev *dev, uint16_t num)
 	return 0;
 }
 
+static inline uint16_t
+iavf_curr_vlan_tpid(struct rte_eth_dev *dev)
+{
+	struct iavf_adapter *adapter =
+		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
+	bool qinq = !!(dev->data->dev_conf.rxmode.offloads &
+		       DEV_RX_OFFLOAD_VLAN_EXTEND);
+
+	return qinq ? vf->outer_vlan_tpid : vf->inner_vlan_tpid;
+}
+
 static int
 iavf_dev_configure(struct rte_eth_dev *dev)
 {
@@ -383,6 +398,12 @@ iavf_dev_configure(struct rte_eth_dev *dev)
 		/* if large VF is not required, use default rss queue region */
 		vf->max_rss_qregion = IAVF_MAX_NUM_QUEUES_DFLT;
 	}
+
+	/* Vlan v2 stripping setting */
+	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN_V2)
+		iavf_config_vlan_strip_v2(ad, iavf_curr_vlan_tpid(dev),
+					  !!(dev_conf->rxmode.offloads &
+					     DEV_RX_OFFLOAD_VLAN_STRIP));
 
 	/* Vlan stripping setting */
 	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN) {
@@ -779,6 +800,9 @@ iavf_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 		DEV_RX_OFFLOAD_JUMBO_FRAME |
 		DEV_RX_OFFLOAD_VLAN_FILTER |
 		DEV_RX_OFFLOAD_RSS_HASH;
+	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN_V2)
+		dev_info->rx_offload_capa |= DEV_RX_OFFLOAD_VLAN_EXTEND;
+
 	dev_info->tx_offload_capa =
 		DEV_TX_OFFLOAD_VLAN_INSERT |
 		DEV_TX_OFFLOAD_QINQ_INSERT |
@@ -985,12 +1009,62 @@ iavf_dev_del_mac_addr(struct rte_eth_dev *dev, uint32_t index)
 }
 
 static int
+iavf_dev_vlan_tpid_set(struct rte_eth_dev *dev, enum rte_vlan_type vlan_type,
+		       uint16_t tpid)
+{
+	struct iavf_adapter *adapter =
+		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
+	bool qinq = !!(dev->data->dev_conf.rxmode.offloads &
+		       DEV_RX_OFFLOAD_VLAN_EXTEND);
+
+	if (vlan_type != ETH_VLAN_TYPE_INNER &&
+	    vlan_type != ETH_VLAN_TYPE_OUTER) {
+		PMD_DRV_LOG(ERR, "Unsupported vlan type");
+		return -EINVAL;
+	}
+
+	if (!qinq) {
+		PMD_DRV_LOG(ERR, "QinQ not enabled");
+		return -EINVAL;
+	}
+
+	if (vlan_type == ETH_VLAN_TYPE_OUTER) {
+		switch (tpid) {
+		case RTE_ETHER_TYPE_QINQ:
+		case RTE_ETHER_TYPE_VLAN:
+		case RTE_ETHER_TYPE_QINQ1:
+			vf->outer_vlan_tpid = tpid;
+			break;
+		default:
+			PMD_DRV_LOG(ERR, "Invalid TPID: %x", tpid);
+			return -EINVAL;
+		}
+	} else {
+		PMD_DRV_LOG(ERR,
+			    "Can accelerate only outer vlan in QinQ");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int
 iavf_dev_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
 {
 	struct iavf_adapter *adapter =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
 	int err;
+
+	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN_V2) {
+		uint16_t tpid = iavf_curr_vlan_tpid(dev);
+
+		err = iavf_add_del_vlan_v2(adapter, tpid, vlan_id, on);
+		if (err)
+			return -EIO;
+		return 0;
+	}
 
 	if (!(vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN))
 		return -ENOTSUP;
@@ -1002,6 +1076,26 @@ iavf_dev_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
 }
 
 static int
+iavf_dev_vlan_offload_set_v2(struct rte_eth_dev *dev, int mask)
+{
+	struct iavf_adapter *adapter =
+		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	struct rte_eth_conf *dev_conf = &dev->data->dev_conf;
+	uint16_t tpid = iavf_curr_vlan_tpid(dev);
+	int err;
+
+	if (mask & ETH_VLAN_STRIP_MASK) {
+		err = iavf_config_vlan_strip_v2(adapter, tpid,
+						!!(dev_conf->rxmode.offloads &
+						   DEV_RX_OFFLOAD_VLAN_STRIP));
+		if (err)
+			return -EIO;
+	}
+
+	return 0;
+}
+
+static int
 iavf_dev_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 {
 	struct iavf_adapter *adapter =
@@ -1009,6 +1103,9 @@ iavf_dev_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
 	struct rte_eth_conf *dev_conf = &dev->data->dev_conf;
 	int err;
+
+	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN_V2)
+		return iavf_dev_vlan_offload_set_v2(dev, mask);
 
 	if (!(vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN))
 		return -ENOTSUP;
@@ -1859,6 +1956,16 @@ iavf_init_vf(struct rte_eth_dev *dev)
 			PMD_INIT_LOG(ERR, "failed to do get supported rxdid");
 			goto err_rss;
 		}
+	}
+
+	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN_V2) {
+		if (iavf_get_vlan_offload_caps_v2(adapter) != 0) {
+			PMD_INIT_LOG(ERR, "failed to do get VLAN offload v2 capabilities");
+			goto err_rss;
+		}
+
+		vf->outer_vlan_tpid = RTE_ETHER_TYPE_VLAN;
+		vf->inner_vlan_tpid = RTE_ETHER_TYPE_VLAN;
 	}
 
 	iavf_init_proto_xtr(dev);
