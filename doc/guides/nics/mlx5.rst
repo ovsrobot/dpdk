@@ -98,6 +98,7 @@ Features
 - Hardware LRO.
 - Hairpin.
 - Multiple-thread flow insertion.
+- Matching on GTP extension header with raw encap/decap action.
 
 Limitations
 -----------
@@ -185,6 +186,10 @@ Limitations
      - v_pt_rsv_flags: E flag, S flag, PN flag
      - msg_type
      - teid
+
+- Match on GTP extension header only for GTP PDU session container (next
+  extension header type = 0x85).
+- Match on GTP extension header is not supported in group 0.
 
 - No Tx metadata go to the E-Switch steering domain for the Flow group 0.
   The flows within group 0 and set metadata action are rejected by hardware.
