@@ -5284,6 +5284,7 @@ i40e_flow_destroy(struct rte_eth_dev *dev,
 	enum rte_filter_type filter_type = flow->filter_type;
 	struct i40e_fdir_info *fdir_info = &pf->fdir;
 	int ret = 0;
+	int i;
 
 	switch (filter_type) {
 	case RTE_ETH_FILTER_ETHERTYPE:
@@ -5299,9 +5300,10 @@ i40e_flow_destroy(struct rte_eth_dev *dev,
 				&((struct i40e_fdir_filter *)flow->rule)->fdir,
 				0);
 
-		/* If the last flow is destroyed, disable fdir. */
 		if (!ret && TAILQ_EMPTY(&pf->fdir.fdir_list)) {
 			i40e_fdir_rx_proc_enable(dev, 0);
+			for (i = 0; i < I40E_MAX_FLXPLD_LAYER; i++)
+				pf->fdir.flex_pit_flag[i] = 0;
 		}
 		break;
 	case RTE_ETH_FILTER_HASH:
@@ -5514,6 +5516,9 @@ i40e_flow_flush_fdir_filter(struct i40e_pf *pf)
 			pf->fdir.inset_flag[pctype] = 0;
 			pf->fdir.flex_mask_flag[pctype] = 0;
 		}
+
+		for (i = 0; i < I40E_MAX_FLXPLD_LAYER; i++)
+			pf->fdir.flex_pit_flag[i] = 0;
 
 		/* Disable FDIR processing as all FDIR rules are now flushed */
 		i40e_fdir_rx_proc_enable(dev, 0);
