@@ -578,7 +578,7 @@ static int iavf_config_rx_queues_irqs(struct rte_eth_dev *dev,
 				qv_map[i].queue_id = i;
 				qv_map[i].vector_id = vec;
 				intr_handle->intr_vec[i] = vec++;
-				if (vec >= vf->nb_msix)
+				if (vec > vf->nb_msix)
 					vec = IAVF_RX_VEC_START;
 			}
 			vf->qv_map = qv_map;
