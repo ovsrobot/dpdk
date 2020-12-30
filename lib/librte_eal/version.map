@@ -403,6 +403,12 @@ EXPERIMENTAL {
 	rte_service_lcore_may_be_active;
 	rte_vect_get_max_simd_bitwidth;
 	rte_vect_set_max_simd_bitwidth;
+
+	# added in 21.02
+	rte_thread_tls_create_key;
+	rte_thread_tls_delete_key;
+	rte_thread_tls_set_value;
+	rte_thread_tls_get_value;
 };
 
 INTERNAL {
