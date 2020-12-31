@@ -7,6 +7,96 @@
 #include "otx_ep_common.h"
 #include "otx2_ep_vf.h"
 
+static int
+otx2_vf_reset_iq(struct otx_ep_device *otx_ep, int q_no)
+{
+	uint64_t loop = SDP_VF_BUSY_LOOP_COUNT;
+	volatile uint64_t d64 = 0ull;
+
+	/* There is no RST for a ring.
+	 * Clear all registers one by one after disabling the ring
+	 */
+
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_IN_ENABLE(q_no));
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_IN_INSTR_BADDR(q_no));
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_IN_INSTR_RSIZE(q_no));
+
+	d64 = 0xFFFFFFFF; /* ~0ull */
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_IN_INSTR_DBELL(q_no));
+	d64 = otx2_read64(otx_ep->hw_addr + SDP_VF_R_IN_INSTR_DBELL(q_no));
+
+	while ((d64 != 0) && loop--) {
+		otx2_write64(d64, otx_ep->hw_addr +
+			     SDP_VF_R_IN_INSTR_DBELL(q_no));
+
+		rte_delay_ms(1);
+
+		d64 = otx2_read64(otx_ep->hw_addr +
+				  SDP_VF_R_IN_INSTR_DBELL(q_no));
+	}
+
+	loop = SDP_VF_BUSY_LOOP_COUNT;
+	d64 = otx2_read64(otx_ep->hw_addr + SDP_VF_R_IN_CNTS(q_no));
+	while ((d64 != 0) && loop--) {
+		otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_IN_CNTS(q_no));
+
+		rte_delay_ms(1);
+
+		d64 = otx2_read64(otx_ep->hw_addr + SDP_VF_R_IN_CNTS(q_no));
+	}
+
+	d64 = 0ull;
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_IN_INT_LEVELS(q_no));
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_IN_PKT_CNT(q_no));
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_IN_BYTE_CNT(q_no));
+
+	return 0;
+}
+
+static int
+otx2_vf_reset_oq(struct otx_ep_device *otx_ep, int q_no)
+{
+	uint64_t loop = SDP_VF_BUSY_LOOP_COUNT;
+	volatile uint64_t d64 = 0ull;
+
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_OUT_ENABLE(q_no));
+
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_OUT_SLIST_BADDR(q_no));
+
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_OUT_SLIST_RSIZE(q_no));
+
+	d64 = 0xFFFFFFFF;
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_OUT_SLIST_DBELL(q_no));
+	d64 = otx2_read64(otx_ep->hw_addr + SDP_VF_R_OUT_SLIST_DBELL(q_no));
+
+	while ((d64 != 0) && loop--) {
+		otx2_write64(d64, otx_ep->hw_addr +
+			     SDP_VF_R_OUT_SLIST_DBELL(q_no));
+
+		rte_delay_ms(1);
+
+		d64 = otx2_read64(otx_ep->hw_addr +
+				  SDP_VF_R_OUT_SLIST_DBELL(q_no));
+	}
+
+	loop = SDP_VF_BUSY_LOOP_COUNT;
+	d64 = otx2_read64(otx_ep->hw_addr + SDP_VF_R_OUT_CNTS(q_no));
+	while ((d64 != 0) && (loop--)) {
+		otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_OUT_CNTS(q_no));
+
+		rte_delay_ms(1);
+
+		d64 = otx2_read64(otx_ep->hw_addr + SDP_VF_R_OUT_CNTS(q_no));
+	}
+
+	d64 = 0ull;
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_OUT_INT_LEVELS(q_no));
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_OUT_PKT_CNT(q_no));
+	otx2_write64(d64, otx_ep->hw_addr + SDP_VF_R_OUT_BYTE_CNT(q_no));
+
+	return 0;
+}
+
 static void
 otx2_vf_setup_global_iq_reg(struct otx_ep_device *otx_ep, int q_no)
 {
@@ -52,10 +142,38 @@ otx2_vf_setup_global_oq_reg(struct otx_ep_device *otx_ep, int q_no)
 	otx2_write64(reg_val, otx_ep->hw_addr + SDP_VF_R_OUT_CONTROL(q_no));
 }
 
+static int
+otx2_vf_reset_input_queues(struct otx_ep_device *otx_ep)
+{
+	uint32_t q_no = 0;
+
+	otx_ep_dbg("%s :", __func__);
+
+	for (q_no = 0; q_no < otx_ep->sriov_info.rings_per_vf; q_no++)
+		otx2_vf_reset_iq(otx_ep, q_no);
+
+	return 0;
+}
+
+static int
+otx2_vf_reset_output_queues(struct otx_ep_device *otx_ep)
+{
+	uint64_t q_no = 0ull;
+
+	otx_ep_dbg(" %s :", __func__);
+
+	for (q_no = 0; q_no < otx_ep->sriov_info.rings_per_vf; q_no++)
+		otx2_vf_reset_oq(otx_ep, q_no);
+
+	return 0;
+}
+
 static void
 otx2_vf_setup_global_input_regs(struct otx_ep_device *otx_ep)
 {
 	uint64_t q_no = 0ull;
+
+	otx2_vf_reset_input_queues(otx_ep);
 
 	for (q_no = 0; q_no < (otx_ep->sriov_info.rings_per_vf); q_no++)
 		otx2_vf_setup_global_iq_reg(otx_ep, q_no);
@@ -65,6 +183,8 @@ static void
 otx2_vf_setup_global_output_regs(struct otx_ep_device *otx_ep)
 {
 	uint32_t q_no;
+
+	otx2_vf_reset_output_queues(otx_ep);
 
 	for (q_no = 0; q_no < (otx_ep->sriov_info.rings_per_vf); q_no++)
 		otx2_vf_setup_global_oq_reg(otx_ep, q_no);

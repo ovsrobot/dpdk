@@ -11,6 +11,114 @@
 #include "otx_ep_common.h"
 #include "otx_ep_vf.h"
 
+#ifdef OTX_EP_RESET_IOQ
+static int
+otx_ep_reset_iq(struct otx_ep_device *otx_ep, int q_no)
+{
+	uint64_t loop = OTX_EP_BUSY_LOOP_COUNT;
+	volatile uint64_t d64 = 0ull;
+
+	/* There is no RST for a ring.
+	 * Clear all registers one by one after disabling the ring
+	 */
+
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_IN_ENABLE(q_no));
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_IN_INSTR_BADDR(q_no));
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_IN_INSTR_RSIZE(q_no));
+
+	d64 = 0xFFFFFFFF; /* ~0ull */
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_IN_INSTR_DBELL(q_no));
+	d64 = rte_read64(otx_ep->hw_addr + OTX_EP_R_IN_INSTR_DBELL(q_no));
+
+	while ((d64 != 0) && loop--) {
+		otx_ep_write64(d64, otx_ep->hw_addr,
+			       OTX_EP_R_IN_INSTR_DBELL(q_no));
+
+		rte_delay_ms(1);
+
+		d64 = rte_read64(otx_ep->hw_addr +
+				  OTX_EP_R_IN_INSTR_DBELL(q_no));
+	}
+	if (loop == 0) {
+		otx_ep_err("dbell reset failed\n");
+		return -1;
+	}
+
+	loop = OTX_EP_BUSY_LOOP_COUNT;
+	d64 = rte_read64(otx_ep->hw_addr + OTX_EP_R_IN_CNTS(q_no));
+	while ((d64 != 0) && loop--) {
+		otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_IN_CNTS(q_no));
+
+		rte_delay_ms(1);
+
+		d64 = rte_read64(otx_ep->hw_addr + OTX_EP_R_IN_CNTS(q_no));
+	}
+	if (loop == 0) {
+		otx_ep_err("cnt reset failed\n");
+		return -1;
+	}
+
+	d64 = 0ull;
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_IN_INT_LEVELS(q_no));
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_IN_PKT_CNT(q_no));
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_IN_BYTE_CNT(q_no));
+
+	return 0;
+}
+
+static int
+otx_ep_reset_oq(struct otx_ep_device *otx_ep, int q_no)
+{
+	uint64_t loop = OTX_EP_BUSY_LOOP_COUNT;
+	volatile uint64_t d64 = 0ull;
+
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_OUT_ENABLE(q_no));
+
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_OUT_SLIST_BADDR(q_no));
+
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_OUT_SLIST_RSIZE(q_no));
+
+	d64 = 0xFFFFFFFF;
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_OUT_SLIST_DBELL(q_no));
+	d64 = rte_read64(otx_ep->hw_addr + OTX_EP_R_OUT_SLIST_DBELL(q_no));
+
+	while ((d64 != 0) && loop--) {
+		otx_ep_write64(d64, otx_ep->hw_addr,
+			       OTX_EP_R_OUT_SLIST_DBELL(q_no));
+
+		rte_delay_ms(1);
+
+		d64 = rte_read64(otx_ep->hw_addr +
+				  OTX_EP_R_OUT_SLIST_DBELL(q_no));
+	}
+	if (loop == 0) {
+		otx_ep_err("dbell reset failed\n");
+		return -1;
+	}
+
+	loop = OTX_EP_BUSY_LOOP_COUNT;
+	d64 = rte_read64(otx_ep->hw_addr + OTX_EP_R_OUT_CNTS(q_no));
+	while ((d64 != 0) && (loop--)) {
+		otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_OUT_CNTS(q_no));
+
+		rte_delay_ms(1);
+
+		d64 = rte_read64(otx_ep->hw_addr + OTX_EP_R_OUT_CNTS(q_no));
+	}
+	if (loop == 0) {
+		otx_ep_err("cnt reset failed\n");
+		return -1;
+	}
+
+
+	d64 = 0ull;
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_OUT_INT_LEVELS(q_no));
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_OUT_PKT_CNT(q_no));
+	otx_ep_write64(d64, otx_ep->hw_addr, OTX_EP_R_OUT_BYTE_CNT(q_no));
+
+	return 0;
+}
+#endif
 
 static void
 otx_ep_setup_global_iq_reg(struct otx_ep_device *otx_ep, int q_no)
@@ -64,11 +172,42 @@ otx_ep_setup_global_oq_reg(struct otx_ep_device *otx_ep, int q_no)
 	otx_ep_write64(reg_val, otx_ep->hw_addr, OTX_EP_R_OUT_CONTROL(q_no));
 }
 
+#ifdef OTX_EP_RESET_IOQ
+static int
+otx_ep_reset_input_queues(struct otx_ep_device *otx_ep)
+{
+	uint32_t q_no = 0;
+
+	otx_ep_dbg("%s :\n", __func__);
+
+	for (q_no = 0; q_no < otx_ep->sriov_info.rings_per_vf; q_no++)
+		otx_ep_reset_iq(otx_ep, q_no);
+
+	return 0;
+}
+
+static int
+otx_ep_reset_output_queues(struct otx_ep_device *otx_ep)
+{
+	uint64_t q_no = 0ull;
+
+	otx_ep_dbg(" %s :\n", __func__);
+
+	for (q_no = 0; q_no < otx_ep->sriov_info.rings_per_vf; q_no++)
+		otx_ep_reset_oq(otx_ep, q_no);
+
+	return 0;
+}
+#endif
+
 static void
 otx_ep_setup_global_input_regs(struct otx_ep_device *otx_ep)
 {
 	uint64_t q_no = 0ull;
 
+#ifdef OTX_EP_RESET_IOQ
+	otx_ep_reset_input_queues(otx_ep);
+#endif
 	for (q_no = 0; q_no < (otx_ep->sriov_info.rings_per_vf); q_no++)
 		otx_ep_setup_global_iq_reg(otx_ep, q_no);
 }
@@ -78,8 +217,12 @@ otx_ep_setup_global_output_regs(struct otx_ep_device *otx_ep)
 {
 	uint32_t q_no;
 
+#ifdef OTX_EP_RESET_IOQ
+	otx_ep_reset_output_queues(otx_ep);
+#endif
 	for (q_no = 0; q_no < (otx_ep->sriov_info.rings_per_vf); q_no++)
 		otx_ep_setup_global_oq_reg(otx_ep, q_no);
+
 }
 
 static int
