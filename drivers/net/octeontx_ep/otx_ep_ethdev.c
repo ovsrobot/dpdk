@@ -61,6 +61,27 @@ otx_ep_dev_info_get(struct rte_eth_dev *eth_dev,
 }
 
 static int
+otx_ep_dev_link_update(struct rte_eth_dev *eth_dev,
+		    int wait_to_complete __rte_unused)
+{
+	struct otx_ep_device *otx_epvf;
+	struct rte_eth_link link;
+
+	otx_epvf = (struct otx_ep_device *)OTX_EP_DEV(eth_dev);
+	memset(&link, 0, sizeof(link));
+	link.link_status = ETH_LINK_DOWN;
+	link.link_speed = ETH_SPEED_NUM_NONE;
+	link.link_duplex = ETH_LINK_HALF_DUPLEX;
+	link.link_autoneg = ETH_LINK_AUTONEG;
+	if (otx_epvf->linkup) {
+		link.link_status = ETH_LINK_UP;
+		link.link_speed = ETH_SPEED_NUM_10G;
+		link.link_duplex = ETH_LINK_FULL_DUPLEX;
+	}
+	return rte_eth_linkstatus_set(eth_dev, &link);
+}
+
+static int
 otx_ep_dev_start(struct rte_eth_dev *eth_dev)
 {
 	struct otx_ep_device *otx_epvf;
@@ -348,6 +369,66 @@ otx_ep_tx_queue_release(void *txq)
 	otx_ep_delete_iqs(tq->otx_ep_dev, tq->q_no);
 }
 
+static int
+otx_ep_dev_stats_get(struct rte_eth_dev *eth_dev,
+		  struct rte_eth_stats *stats)
+{
+	struct otx_ep_device *otx_epvf = OTX_EP_DEV(eth_dev);
+	struct otx_ep_instr_queue *iq;
+	struct otx_ep_droq *droq;
+	int i;
+	uint64_t bytes = 0;
+	uint64_t pkts = 0;
+	uint64_t drop = 0;
+
+	for (i = 0; i < eth_dev->data->nb_tx_queues; i++) {
+		iq = otx_epvf->instr_queue[i];
+		pkts += iq->stats.tx_pkts;
+		bytes += iq->stats.tx_bytes;
+		drop +=  iq->stats.instr_dropped;
+	}
+	stats->opackets = pkts;
+	stats->obytes = bytes;
+	stats->oerrors = drop;
+
+	pkts = 0;
+	drop = 0;
+	bytes = 0;
+
+	for (i = 0; i < eth_dev->data->nb_rx_queues; i++) {
+		droq = otx_epvf->droq[i];
+		pkts += droq->stats.pkts_received;
+		bytes += droq->stats.bytes_received;
+		drop +=  droq->stats.rx_alloc_failure + droq->stats.rx_err;
+	}
+	stats->ibytes = bytes;
+	stats->ipackets = pkts;
+	stats->ierrors = drop;
+
+	return 0;
+}
+
+static int
+otx_ep_dev_stats_reset(struct rte_eth_dev *eth_dev)
+{
+	struct otx_ep_device *otx_epvf = OTX_EP_DEV(eth_dev);
+	struct otx_ep_instr_queue *iq;
+	struct otx_ep_droq *droq;
+	int i;
+
+	for (i = 0; i < eth_dev->data->nb_tx_queues; i++) {
+		iq = otx_epvf->instr_queue[i];
+		iq->stats.tx_pkts = 0;
+		iq->stats.tx_bytes = 0;
+	}
+	for (i = 0; i < eth_dev->data->nb_rx_queues; i++) {
+		droq = otx_epvf->droq[i];
+		droq->stats.pkts_received = 0;
+		droq->stats.bytes_received = 0;
+	}
+	return 0;
+}
+
 /* Define our ethernet definitions */
 static const struct eth_dev_ops otx_ep_eth_dev_ops = {
 	.dev_configure		= otx_ep_dev_configure,
@@ -357,6 +438,9 @@ static const struct eth_dev_ops otx_ep_eth_dev_ops = {
 	.rx_queue_release	= otx_ep_rx_queue_release,
 	.tx_queue_setup	        = otx_ep_tx_queue_setup,
 	.tx_queue_release	= otx_ep_tx_queue_release,
+	.link_update		= otx_ep_dev_link_update,
+	.stats_get		= otx_ep_dev_stats_get,
+	.stats_reset		= otx_ep_dev_stats_reset,
 	.dev_infos_get		= otx_ep_dev_info_get,
 };
 
