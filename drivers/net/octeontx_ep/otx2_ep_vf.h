@@ -26,5 +26,31 @@ struct otx2_ep_instr_64B {
 	uint64_t exhdr[4];
 };
 
+union out_int_lvl_t {
+	uint64_t d64;
+	struct {
+		uint64_t cnt:32;
+		uint64_t timet:22;
+		uint64_t max_len:7;
+		uint64_t max_len_en:1;
+		uint64_t time_cnt_en:1;
+		uint64_t bmode:1;
+	} s;
+};
+
+union out_cnts_t {
+	uint64_t d64;
+	struct {
+		uint64_t cnt:32;
+		uint64_t timer:22;
+		uint64_t rsvd:5;
+		uint64_t resend:1;
+		uint64_t mbox_int:1;
+		uint64_t in_int:1;
+		uint64_t out_int:1;
+		uint64_t send_ism:1;
+	} s;
+};
+
 #endif /*_OTX2_EP_VF_H_ */
 

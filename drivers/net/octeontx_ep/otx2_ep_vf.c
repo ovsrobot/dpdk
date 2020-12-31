@@ -2,6 +2,7 @@
  * Copyright(C) 2019 Marvell International Ltd.
  */
 
+#include <rte_ethdev_driver.h>
 #include "otx2_common.h"
 #include "otx_ep_common.h"
 #include "otx2_ep_vf.h"
@@ -282,6 +283,33 @@ otx2_vf_disable_io_queues(struct otx_ep_device *otx_ep)
 	}
 }
 
+static uint32_t
+otx2_vf_update_read_index(struct otx_ep_instr_queue *iq)
+{
+	uint32_t new_idx = rte_read32(iq->inst_cnt_reg);
+
+	if (new_idx == 0xFFFFFFFF) {
+		otx_ep_dbg("%s Going to reset IQ index\n", __func__);
+		rte_write32(new_idx, iq->inst_cnt_reg);
+	}
+
+	/* The new instr cnt reg is a 32-bit counter that can roll over.
+	 * We have noted the counter's initial value at init time into
+	 * reset_instr_cnt
+	 */
+	if (iq->reset_instr_cnt < new_idx)
+		new_idx -= iq->reset_instr_cnt;
+	else
+		new_idx += (0xffffffff - iq->reset_instr_cnt) + 1;
+
+	/* Modulo of the new index with the IQ size will give us
+	 * the new index.
+	 */
+	new_idx %= iq->nb_desc;
+
+	return new_idx;
+}
+
 static const struct otx_ep_config default_otx2_ep_conf = {
 	/* IQ attributes */
 	.iq                        = {
@@ -313,6 +341,38 @@ otx2_ep_get_defconf(struct otx_ep_device *otx_ep_dev __rte_unused)
 	return default_conf;
 }
 
+static int otx2_vf_enable_rxq_intr(struct otx_ep_device *otx_epvf,
+				   uint16_t q_no)
+{
+	union out_int_lvl_t out_int_lvl;
+	union out_cnts_t out_cnts;
+
+	out_int_lvl.s.time_cnt_en = 1;
+	out_int_lvl.s.cnt = 0;
+	otx2_write64(out_int_lvl.d64, otx_epvf->hw_addr +
+			SDP_VF_R_OUT_INT_LEVELS(q_no));
+	out_cnts.d64 = 0;
+	out_cnts.s.resend = 1;
+	otx2_write64(out_cnts.d64, otx_epvf->hw_addr + SDP_VF_R_OUT_CNTS(q_no));
+	return 0;
+}
+
+static int otx2_vf_disable_rxq_intr(struct otx_ep_device *otx_epvf,
+				    uint16_t q_no)
+{
+	union out_int_lvl_t out_int_lvl;
+
+	/* Disable the interrupt for this queue */
+	out_int_lvl.d64 = otx2_read64(otx_epvf->hw_addr +
+				SDP_VF_R_OUT_INT_LEVELS(q_no));
+	out_int_lvl.s.time_cnt_en = 0;
+	out_int_lvl.s.cnt = 0;
+	otx2_write64(out_int_lvl.d64, otx_epvf->hw_addr +
+			SDP_VF_R_OUT_INT_LEVELS(q_no));
+
+	return 0;
+}
+
 int
 otx2_ep_vf_setup_device(struct otx_ep_device *otx_ep)
 {
@@ -340,6 +400,7 @@ otx2_ep_vf_setup_device(struct otx_ep_device *otx_ep)
 	otx_ep->fn_list.setup_oq_regs       = otx2_vf_setup_oq_regs;
 
 	otx_ep->fn_list.setup_device_regs   = otx2_vf_setup_device_regs;
+	otx_ep->fn_list.update_iq_read_idx  = otx2_vf_update_read_index;
 
 	otx_ep->fn_list.enable_io_queues    = otx2_vf_enable_io_queues;
 	otx_ep->fn_list.disable_io_queues   = otx2_vf_disable_io_queues;
@@ -349,6 +410,8 @@ otx2_ep_vf_setup_device(struct otx_ep_device *otx_ep)
 
 	otx_ep->fn_list.enable_oq           = otx2_vf_enable_oq;
 	otx_ep->fn_list.disable_oq          = otx2_vf_disable_oq;
+	otx_ep->fn_list.enable_rxq_intr     = otx2_vf_enable_rxq_intr;
+	otx_ep->fn_list.disable_rxq_intr    = otx2_vf_disable_rxq_intr;
 
 	return 0;
 }

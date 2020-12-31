@@ -122,6 +122,37 @@ typedef union otx_ep_instr_ih {
 	} s;
 } otx_ep_instr_ih_t;
 
+
+
+typedef union otx_ep_resp_hdr {
+	uint64_t u64;
+	struct {
+	    /** The request id for a packet thats in response
+	     *  to pkt sent by host.
+	     */
+		uint64_t request_id:16;
+
+	    /** Reserved. */
+		uint64_t reserved:2;
+
+	    /** checksum verified. */
+		uint64_t csum_verified:2;
+
+	    /** The destination Queue port. */
+		uint64_t dest_qport:22;
+
+	    /** The source port for a packet thats in response
+	     *  to pkt sent by host.
+	     */
+		uint64_t src_port:6;
+
+	    /** Opcode for this packet. */
+		uint64_t opcode:16;
+	} s;
+} otx_ep_resp_hdr_t;
+
+#define  OTX_EP_RESP_HDR_SIZE   (sizeof(otx_ep_resp_hdr_t))
+
 /* OTX_EP IQ request list */
 struct otx_ep_instr_list {
 	void *buf;
@@ -208,6 +239,17 @@ struct otx_ep_instr_queue {
 
 	/* Memory zone */
 	const struct rte_memzone *iq_mz;
+};
+
+/* DROQ packet format for application i/f. */
+struct otx_ep_droq_pkt {
+	/* DROQ packet data buffer pointer. */
+	uint8_t	 *data;
+
+	/* DROQ packet data length */
+	uint32_t len;
+
+	uint32_t misc;
 };
 
 /** Descriptor format.
@@ -395,6 +437,7 @@ struct otx_ep_fn_list {
 	void (*setup_oq_regs)(struct otx_ep_device *otx_ep, uint32_t q_no);
 
 	int (*setup_device_regs)(struct otx_ep_device *otx_ep);
+	uint32_t (*update_iq_read_idx)(struct otx_ep_instr_queue *iq);
 
 	void (*enable_io_queues)(struct otx_ep_device *otx_ep);
 	void (*disable_io_queues)(struct otx_ep_device *otx_ep);
@@ -404,6 +447,8 @@ struct otx_ep_fn_list {
 
 	void (*enable_oq)(struct otx_ep_device *otx_ep, uint32_t q_no);
 	void (*disable_oq)(struct otx_ep_device *otx_ep, uint32_t q_no);
+	int (*enable_rxq_intr)(struct otx_ep_device *otx_epvf, uint16_t q_no);
+	int (*disable_rxq_intr)(struct otx_ep_device *otx_epvf, uint16_t q_no);
 };
 
 /* SRIOV information */
@@ -508,8 +553,16 @@ struct otx_ep_buf_free_info {
 	struct otx_ep_gather g;
 };
 
+int
+otx_ep_register_irq(struct rte_intr_handle *intr_handle, unsigned int vec);
+
+void
+otx_ep_unregister_irq(struct rte_intr_handle *intr_handle, unsigned int vec);
+
 #define OTX_EP_MAX_PKT_SZ 64000U
 #define OTX_EP_MAX_MAC_ADDRS 1
 #define OTX_EP_SG_ALIGN 8
 
+#define SDP_VF_R_MSIX_START          (0x0)
+#define SDP_VF_R_MSIX(ring)          (SDP_VF_R_MSIX_START + (ring))
 #endif  /* _OTX_EP_COMMON_H_ */

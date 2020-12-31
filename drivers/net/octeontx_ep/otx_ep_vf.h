@@ -170,4 +170,29 @@ struct otx_ep_instr_64B {
 
 int
 otx_ep_vf_setup_device(struct otx_ep_device *otx_ep);
+
+union otx_out_int_lvl_t {
+	uint64_t d64;
+	struct {
+		uint64_t cnt:32;
+		uint64_t timet:22;
+		uint64_t raz:9;
+		uint64_t bmode:1;
+	} s;
+};
+
+union otx_out_cnts_t {
+	uint64_t d64;
+	struct {
+		uint64_t cnt:32;
+		uint64_t timer:22;
+		uint64_t rsvd0:5;
+		uint64_t resend:1;
+		uint64_t mbox_int:1;
+		uint64_t in_int:1;
+		uint64_t out_int:1;
+		uint64_t rsvd1:1;
+	} s;
+};
+
 #endif /*_OTX_EP_VF_H_ */

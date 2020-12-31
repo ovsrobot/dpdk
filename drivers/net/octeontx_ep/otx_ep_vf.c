@@ -324,6 +324,33 @@ otx_ep_disable_io_queues(struct otx_ep_device *otx_ep)
 	}
 }
 
+static uint32_t
+otx_ep_update_read_index(struct otx_ep_instr_queue *iq)
+{
+	uint32_t new_idx = rte_read32(iq->inst_cnt_reg);
+
+	if (new_idx == 0xFFFFFFFF) {
+		otx_ep_dbg("%s Going to reset IQ index\n", __func__);
+		rte_write32(new_idx, iq->inst_cnt_reg);
+	}
+
+	/* The new instr cnt reg is a 32-bit counter that can roll over.
+	 * We have noted the counter's initial value at init time into
+	 * reset_instr_cnt
+	 */
+	if (iq->reset_instr_cnt < new_idx)
+		new_idx -= iq->reset_instr_cnt;
+	else
+		new_idx += (0xffffffff - iq->reset_instr_cnt) + 1;
+
+	/* Modulo of the new index with the IQ size will give us
+	 * the new index.
+	 */
+	new_idx %= iq->nb_desc;
+
+	return new_idx;
+}
+
 /* OTX_EP default configuration */
 static const struct otx_ep_config default_otx_ep_conf = {
 	/* IQ attributes */
@@ -358,6 +385,41 @@ otx_ep_get_defconf(struct otx_ep_device *otx_ep_dev __rte_unused)
 	return default_conf;
 }
 
+static int otx_vf_enable_rxq_intr(struct otx_ep_device *otx_epvf __rte_unused,
+				   uint16_t q_no __rte_unused)
+{
+	union otx_out_int_lvl_t out_int_lvl;
+	union otx_out_cnts_t out_cnts;
+
+	out_int_lvl.d64 = rte_read64(otx_epvf->hw_addr +
+				OTX_EP_R_OUT_INT_LEVELS(q_no));
+	out_int_lvl.s.cnt = 0;
+	otx_ep_write64(out_int_lvl.d64, otx_epvf->hw_addr,
+			OTX_EP_R_OUT_INT_LEVELS(q_no));
+
+	out_cnts.d64 = 0;
+	out_cnts.s.resend = 1;
+	otx_ep_write64(out_cnts.d64, otx_epvf->hw_addr,
+		       OTX_EP_R_OUT_CNTS(q_no));
+
+	return 0;
+}
+
+static int otx_vf_disable_rxq_intr(struct otx_ep_device *otx_epvf __rte_unused,
+				   uint16_t q_no __rte_unused)
+{
+	union otx_out_int_lvl_t out_int_lvl;
+
+	/* Increase the int level so that you get no more interrupts */
+	out_int_lvl.d64 = rte_read64(otx_epvf->hw_addr +
+				OTX_EP_R_OUT_INT_LEVELS(q_no));
+	out_int_lvl.s.cnt = 0xFFFFFFFF;
+	otx_ep_write64(out_int_lvl.d64, otx_epvf->hw_addr,
+			OTX_EP_R_OUT_INT_LEVELS(q_no));
+
+	return 0;
+}
+
 int
 otx_ep_vf_setup_device(struct otx_ep_device *otx_ep)
 {
@@ -385,6 +447,7 @@ otx_ep_vf_setup_device(struct otx_ep_device *otx_ep)
 	otx_ep->fn_list.setup_oq_regs       = otx_ep_setup_oq_regs;
 
 	otx_ep->fn_list.setup_device_regs   = otx_ep_setup_device_regs;
+	otx_ep->fn_list.update_iq_read_idx  = otx_ep_update_read_index;
 
 	otx_ep->fn_list.enable_io_queues    = otx_ep_enable_io_queues;
 	otx_ep->fn_list.disable_io_queues   = otx_ep_disable_io_queues;
@@ -394,7 +457,10 @@ otx_ep_vf_setup_device(struct otx_ep_device *otx_ep)
 
 	otx_ep->fn_list.enable_oq           = otx_ep_enable_oq;
 	otx_ep->fn_list.disable_oq          = otx_ep_disable_oq;
+	otx_ep->fn_list.enable_rxq_intr     = otx_vf_enable_rxq_intr;
+	otx_ep->fn_list.disable_rxq_intr    = otx_vf_disable_rxq_intr;
 
 
 	return 0;
 }
+

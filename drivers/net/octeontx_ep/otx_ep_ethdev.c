@@ -2,6 +2,7 @@
  * Copyright(C) 2019 Marvell International Ltd.
  */
 
+#include <rte_ethdev_driver.h>
 #include <rte_ethdev_pci.h>
 #include <rte_malloc.h>
 #include <rte_io.h>
@@ -12,6 +13,14 @@
 #include "otx2_ep_vf.h"
 #include "otx_ep_rxtx.h"
 
+#include <linux/vfio.h>
+#include <sys/eventfd.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+
+#define MAX_INTR_VEC_ID RTE_MAX_RXTX_INTR_VEC_ID
+#define MSIX_IRQ_SET_BUF_LEN (sizeof(struct vfio_irq_set) + \
+		sizeof(int) * (MAX_INTR_VEC_ID))
 #define OTX_EP_DEV(_eth_dev)            ((_eth_dev)->data->dev_private)
 
 static const struct rte_eth_desc_lim otx_ep_rx_desc_lim = {
@@ -186,6 +195,55 @@ setup_fail:
 	return -ENOMEM;
 }
 
+static int otx_epvf_setup_rxq_intr(struct otx_ep_device *otx_epvf,
+				   uint16_t q_no)
+{
+	struct rte_eth_dev *eth_dev = otx_epvf->eth_dev;
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
+	struct rte_intr_handle *handle = &pci_dev->intr_handle;
+	int rc, vec;
+
+	vec = SDP_VF_R_MSIX(q_no);
+
+	rc = otx_ep_register_irq(handle, vec);
+	if (rc) {
+		otx_ep_err("Fail to register Rx irq, rc=%d", rc);
+		return rc;
+	}
+
+	if (!handle->intr_vec) {
+		handle->intr_vec = rte_zmalloc("intr_vec",
+				    otx_epvf->max_rx_queues *
+				    sizeof(int), 0);
+		if (!handle->intr_vec) {
+			otx_ep_err("Failed to allocate %d rx intr_vec",
+				 otx_epvf->max_rx_queues);
+			return -ENOMEM;
+		}
+	}
+
+	/* VFIO vector zero is resereved for misc interrupt so
+	 * doing required adjustment.
+	 */
+	handle->intr_vec[q_no] = RTE_INTR_VEC_RXTX_OFFSET + vec;
+
+	return rc;
+}
+
+static void otx_epvf_unset_rxq_intr(struct otx_ep_device *otx_epvf,
+				    uint16_t q_no)
+{
+	/* Not yet implemented */
+	struct rte_eth_dev *eth_dev = otx_epvf->eth_dev;
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
+	struct rte_intr_handle *handle = &pci_dev->intr_handle;
+	int vec;
+
+	vec = SDP_VF_R_MSIX(q_no);
+	otx_epvf->fn_list.disable_rxq_intr(otx_epvf, q_no);
+	otx_ep_unregister_irq(handle, vec);
+}
+
 static int
 otx_ep_dev_configure(struct rte_eth_dev *eth_dev)
 {
@@ -195,6 +253,7 @@ otx_ep_dev_configure(struct rte_eth_dev *eth_dev)
 	struct rte_eth_rxmode *rxmode = &conf->rxmode;
 	struct rte_eth_txmode *txmode = &conf->txmode;
 	uint32_t ethdev_queues;
+	uint16_t q;
 
 	ethdev_queues = (uint32_t)(otx_epvf->sriov_info.rings_per_vf);
 	if (eth_dev->data->nb_rx_queues > ethdev_queues ||
@@ -209,9 +268,177 @@ otx_ep_dev_configure(struct rte_eth_dev *eth_dev)
 	otx_epvf->rx_offloads = rxmode->offloads;
 	otx_epvf->tx_offloads = txmode->offloads;
 
+	if (eth_dev->data->dev_conf.intr_conf.rxq) {
+		for (q = 0; q < eth_dev->data->nb_rx_queues; q++)
+			otx_epvf_setup_rxq_intr(otx_epvf, q);
+	}
 	return 0;
 }
 
+static int
+irq_get_info(struct rte_intr_handle *intr_handle)
+{
+	struct vfio_irq_info irq = { .argsz = sizeof(irq) };
+	int rc;
+
+	irq.index = VFIO_PCI_MSIX_IRQ_INDEX;
+
+	rc = ioctl(intr_handle->vfio_dev_fd, VFIO_DEVICE_GET_IRQ_INFO, &irq);
+	if (rc < 0) {
+		otx_ep_err("Failed to get IRQ info rc=%d errno=%d", rc, errno);
+		return rc;
+	}
+
+	otx_ep_dbg("Flags=0x%x index=0x%x count=0x%x max_intr_vec_id=0x%x",
+		   irq.flags, irq.index, irq.count, MAX_INTR_VEC_ID);
+
+	if (irq.count > MAX_INTR_VEC_ID) {
+		otx_ep_err("HW max=%d > MAX_INTR_VEC_ID: %d",
+			   intr_handle->max_intr, MAX_INTR_VEC_ID);
+		intr_handle->max_intr = MAX_INTR_VEC_ID;
+	} else {
+		intr_handle->max_intr = irq.count;
+	}
+
+	return 0;
+}
+
+static int
+irq_init(struct rte_intr_handle *intr_handle)
+{
+	char irq_set_buf[MSIX_IRQ_SET_BUF_LEN];
+	struct vfio_irq_set *irq_set;
+	int32_t *fd_ptr;
+	int len, rc;
+	uint32_t i;
+
+	if (intr_handle->max_intr > MAX_INTR_VEC_ID) {
+		otx_ep_err("Max_intr=%d greater than MAX_INTR_VEC_ID=%d",
+			   intr_handle->max_intr, MAX_INTR_VEC_ID);
+		return -ERANGE;
+	}
+
+	len = sizeof(struct vfio_irq_set) +
+		sizeof(int32_t) * intr_handle->max_intr;
+
+	irq_set = (struct vfio_irq_set *)irq_set_buf;
+	irq_set->argsz = len;
+	irq_set->start = 0;
+	irq_set->count = intr_handle->max_intr;
+	irq_set->flags = VFIO_IRQ_SET_DATA_EVENTFD |
+			 VFIO_IRQ_SET_ACTION_TRIGGER;
+	irq_set->index = VFIO_PCI_MSIX_IRQ_INDEX;
+
+	fd_ptr = (int32_t *)&irq_set->data[0];
+	for (i = 0; i < irq_set->count; i++)
+		fd_ptr[i] = -1;
+
+	rc = ioctl(intr_handle->vfio_dev_fd, VFIO_DEVICE_SET_IRQS, irq_set);
+	if (rc)
+		otx_ep_err("Failed to set irqs vector rc=%d", rc);
+
+	return rc;
+}
+
+static int
+irq_config(struct rte_intr_handle *intr_handle, unsigned int vec)
+{
+	char irq_set_buf[MSIX_IRQ_SET_BUF_LEN];
+	struct vfio_irq_set *irq_set;
+	int32_t *fd_ptr;
+	int len, rc;
+
+	if (vec > intr_handle->max_intr) {
+		otx_ep_err("vector=%d greater than max_intr=%d", vec,
+			   intr_handle->max_intr);
+		return -EINVAL;
+	}
+
+	len = sizeof(struct vfio_irq_set) + sizeof(int32_t);
+	irq_set = (struct vfio_irq_set *)irq_set_buf;
+	irq_set->argsz = len;
+	irq_set->start = vec;
+	irq_set->count = 1;
+	irq_set->flags = VFIO_IRQ_SET_DATA_EVENTFD |
+			 VFIO_IRQ_SET_ACTION_TRIGGER;
+	irq_set->index = VFIO_PCI_MSIX_IRQ_INDEX;
+
+	/* Use vec fd to set interrupt vectors */
+	fd_ptr = (int32_t *)&irq_set->data[0];
+	fd_ptr[0] = intr_handle->efds[vec];
+
+	rc = ioctl(intr_handle->vfio_dev_fd, VFIO_DEVICE_SET_IRQS, irq_set);
+	if (rc)
+		otx_ep_err("Failed to set_irqs vector=0x%x rc=%d", vec, rc);
+
+	return rc;
+}
+
+int
+otx_ep_register_irq(struct rte_intr_handle *intr_handle, unsigned int vec)
+{
+	struct rte_intr_handle tmp_handle;
+
+	/* If no max_intr read from VFIO */
+	if (intr_handle->max_intr == 0) {
+		irq_get_info(intr_handle);
+		irq_init(intr_handle);
+	}
+
+	if (vec > intr_handle->max_intr) {
+		otx_ep_err("Vector=%d greater than max_intr=%d", vec,
+			   intr_handle->max_intr);
+		return -EINVAL;
+	}
+
+	tmp_handle = *intr_handle;
+	/* Create new eventfd for interrupt vector */
+	tmp_handle.fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+	if (tmp_handle.fd == -1)
+		return -ENODEV;
+
+	intr_handle->efds[vec] = tmp_handle.fd;
+	intr_handle->nb_efd = ((vec + 1) > intr_handle->nb_efd) ?
+			       (vec + 1) : intr_handle->nb_efd;
+	intr_handle->max_intr = RTE_MAX(intr_handle->nb_efd + 1,
+					intr_handle->max_intr);
+
+	otx_ep_dbg("Enable vector:0x%x for vfio (efds: %d, max:%d)",
+		   vec, intr_handle->nb_efd, intr_handle->max_intr);
+
+	/* Enable MSIX vectors to VFIO */
+	return irq_config(intr_handle, vec);
+}
+
+/**
+ * @internal
+ * Unregister IRQ
+ */
+void
+otx_ep_unregister_irq(struct rte_intr_handle *intr_handle, unsigned int vec)
+{
+	struct rte_intr_handle tmp_handle;
+
+	if (vec > intr_handle->max_intr) {
+		otx_ep_err("Error unregistering MSI-X interrupts vec:%d > %d",
+			vec, intr_handle->max_intr);
+		return;
+	}
+
+	tmp_handle = *intr_handle;
+	tmp_handle.fd = intr_handle->efds[vec];
+	if (tmp_handle.fd == -1)
+		return;
+
+	otx_ep_dbg("Disable vector:0x%x for vfio (efds: %d, max:%d)",
+			vec, intr_handle->nb_efd, intr_handle->max_intr);
+
+	if (intr_handle->efds[vec] != -1)
+		close(intr_handle->efds[vec]);
+	/* Disable MSIX vectors from VFIO */
+	intr_handle->efds[vec] = -1;
+	irq_config(intr_handle, vec);
+}
 /**
  * Setup our receive queue/ringbuffer. This is the
  * queue the Octeon uses to send us packets and
@@ -429,6 +656,26 @@ otx_ep_dev_stats_reset(struct rte_eth_dev *eth_dev)
 	return 0;
 }
 
+static int otx_ep_dev_rxq_irq_enable(struct rte_eth_dev *dev,
+				     uint16_t rx_queue_id)
+{
+	struct otx_ep_device *otx_epvf = OTX_EP_DEV(dev);
+	int rc;
+
+	rc = otx_epvf->fn_list.enable_rxq_intr(otx_epvf, rx_queue_id);
+	return rc;
+}
+
+static int otx_ep_dev_rxq_irq_disable(struct rte_eth_dev *dev,
+				      uint16_t rx_queue_id)
+{
+	struct otx_ep_device *otx_epvf = OTX_EP_DEV(dev);
+	int rc;
+
+	rc = otx_epvf->fn_list.disable_rxq_intr(otx_epvf, rx_queue_id);
+	return rc;
+}
+
 /* Define our ethernet definitions */
 static const struct eth_dev_ops otx_ep_eth_dev_ops = {
 	.dev_configure		= otx_ep_dev_configure,
@@ -442,6 +689,8 @@ static const struct eth_dev_ops otx_ep_eth_dev_ops = {
 	.stats_get		= otx_ep_dev_stats_get,
 	.stats_reset		= otx_ep_dev_stats_reset,
 	.dev_infos_get		= otx_ep_dev_info_get,
+	.rx_queue_intr_enable   = otx_ep_dev_rxq_irq_enable,
+	.rx_queue_intr_disable  = otx_ep_dev_rxq_irq_disable,
 };
 
 
@@ -483,10 +732,16 @@ static int
 otx_ep_eth_dev_uninit(struct rte_eth_dev *eth_dev)
 {
 	struct otx_ep_device *otx_epvf = OTX_EP_DEV(eth_dev);
+	uint16_t q;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 	otx_epdev_exit(eth_dev);
+
+	if (eth_dev->data->dev_conf.intr_conf.rxq) {
+		for (q = 0; q < eth_dev->data->nb_rx_queues; q++)
+			otx_epvf_unset_rxq_intr(otx_epvf, q);
+	}
 
 	otx_epvf->port_configured = 0;
 
