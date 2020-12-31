@@ -9,6 +9,7 @@
 #include "otx2_common.h"
 #include "otx_ep_common.h"
 #include "otx_ep_vf.h"
+#include "otx2_ep_vf.h"
 
 #define OTX_EP_DEV(_eth_dev)            ((_eth_dev)->data->dev_private)
 static int
@@ -21,10 +22,12 @@ otx_ep_chip_specific_setup(struct otx_ep_device *otx_epvf)
 	switch (dev_id) {
 	case PCI_DEVID_OCTEONTX_EP_VF:
 		otx_epvf->chip_id = PCI_DEVID_OCTEONTX_EP_VF;
+		ret = otx_ep_vf_setup_device(otx_epvf);
 		break;
 	case PCI_DEVID_OCTEONTX2_EP_NET_VF:
 	case PCI_DEVID_98XX_EP_NET_VF:
 		otx_epvf->chip_id = dev_id;
+		ret = otx2_ep_vf_setup_device(otx_epvf);
 		break;
 	default:
 		otx_ep_err("Unsupported device\n");
@@ -45,6 +48,13 @@ otx_epdev_init(struct otx_ep_device *otx_epvf)
 		otx_ep_err("Chip specific setup failed\n");
 		goto setup_fail;
 	}
+
+	if (otx_epvf->fn_list.setup_device_regs(otx_epvf)) {
+		otx_ep_err("Failed to configure device registers\n");
+		goto setup_fail;
+	}
+
+	otx_ep_info("OTX_EP Device is Ready\n");
 
 	return 0;
 
