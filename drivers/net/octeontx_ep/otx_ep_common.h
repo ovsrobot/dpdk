@@ -239,11 +239,19 @@ union otx_ep_rh {
  *  about the packet.
  */
 struct otx_ep_droq_info {
+#ifndef BUFPTR_ONLY_MODE
+	/* The Output Receive Header. */
+	union otx_ep_rh rh;
+
+	/* The Length of the packet. */
+	uint64_t length;
+#else
 	/* The Length of the packet. */
 	uint64_t length;
 
 	/* The Output Receive Header. */
 	union otx_ep_rh rh;
+#endif
 };
 #define OTX_EP_DROQ_INFO_SIZE	(sizeof(struct otx_ep_droq_info))
 

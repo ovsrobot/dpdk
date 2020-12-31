@@ -215,6 +215,13 @@ otx_ep_delete_oqs(struct otx_ep_device *otx_ep, uint32_t oq_no)
 	rte_free(droq->recv_buf_list);
 	droq->recv_buf_list = NULL;
 
+#ifndef BUFPTR_ONLY_MODE
+	if (droq->info_mz) {
+		otx_ep_dmazone_free(droq->info_mz);
+		droq->info_mz = NULL;
+	}
+#endif
+
 	if (droq->desc_ring_mz) {
 		otx_ep_dmazone_free(droq->desc_ring_mz);
 		droq->desc_ring_mz = NULL;
@@ -249,6 +256,13 @@ otx_ep_droq_setup_ring_buffers(struct otx_ep_droq *droq)
 		}
 
 		droq->recv_buf_list[idx] = buf;
+#ifndef BUFPTR_ONLY_MODE
+		droq->info_list[idx].length = 0;
+
+		/* Map ring buffers into memory */
+		desc_ring[idx].info_ptr = (uint64_t)(droq->info_list_dma +
+			(idx * OTX_EP_DROQ_INFO_SIZE));
+#endif
 		info = rte_pktmbuf_mtod(buf, struct otx_ep_droq_info *);
 		memset(info, 0, sizeof(*info));
 		desc_ring[idx].buffer_ptr = rte_mbuf_data_iova_default(buf);
@@ -258,6 +272,28 @@ otx_ep_droq_setup_ring_buffers(struct otx_ep_droq *droq)
 
 	return 0;
 }
+
+#ifndef BUFPTR_ONLY_MODE
+static void *
+otx_ep_alloc_info_buffer(struct otx_ep_device *otx_ep __rte_unused,
+	struct otx_ep_droq *droq, unsigned int socket_id)
+{
+	droq->info_mz = rte_memzone_reserve_aligned("OQ_info_list",
+				(droq->nb_desc * OTX_EP_DROQ_INFO_SIZE),
+				socket_id,
+				RTE_MEMZONE_IOVA_CONTIG,
+				OTX_EP_PCI_RING_ALIGN);
+
+	if (droq->info_mz == NULL)
+		return NULL;
+
+	droq->info_list_dma = droq->info_mz->iova;
+	droq->info_alloc_size = droq->info_mz->len;
+	droq->info_base_addr = (size_t)droq->info_mz->addr;
+
+	return droq->info_mz->addr;
+}
+#endif
 
 /* OQ initialization */
 static int
@@ -301,6 +337,16 @@ otx_ep_init_droq(struct otx_ep_device *otx_ep, uint32_t q_no,
 		    q_no, droq->desc_ring, (unsigned long)droq->desc_ring_dma);
 	otx_ep_dbg("OQ[%d]: num_desc: %d\n", q_no, droq->nb_desc);
 
+#ifndef BUFPTR_ONLY_MODE
+	/* OQ info_list set up */
+	droq->info_list = otx_ep_alloc_info_buffer(otx_ep, droq, socket_id);
+	if (droq->info_list == NULL) {
+		otx_ep_err("memory allocation failed for OQ[%d] info_list\n",
+			   q_no);
+		goto init_droq_fail;
+	}
+
+#endif
 	/* OQ buf_list set up */
 	droq->recv_buf_list = rte_zmalloc_socket("recv_buf_list",
 				(droq->nb_desc * sizeof(struct rte_mbuf *)),
@@ -836,7 +882,10 @@ otx_ep_droq_refill(struct otx_ep_droq *droq)
 		desc_ring[droq->refill_idx].buffer_ptr =
 					rte_mbuf_data_iova_default(buf);
 
-
+#ifndef BUFPTR_ONLY_MODE
+		/* Reset any previous values in the length field. */
+		droq->info_list[droq->refill_idx].length = 0;
+#endif
 		droq->refill_idx = otx_ep_incr_index(droq->refill_idx, 1,
 				droq->nb_desc);
 
@@ -862,6 +911,9 @@ otx_ep_droq_read_packet(struct otx_ep_device *otx_ep,
 
 	droq_pkt  = droq->recv_buf_list[droq->read_idx];
 	droq_pkt2  = droq->recv_buf_list[droq->read_idx];
+#ifndef BUFPTR_ONLY_MODE
+	info = &droq->info_list[droq->read_idx];
+#else
 	info = rte_pktmbuf_mtod(droq_pkt, struct otx_ep_droq_info *);
 	/* make sure info is available */
 	rte_rmb();
@@ -893,6 +945,7 @@ otx_ep_droq_read_packet(struct otx_ep_device *otx_ep,
 		info2 = rte_pktmbuf_mtod(droq_pkt2, struct otx_ep_droq_info *);
 		rte_prefetch_non_temporal((const void *)info2);
 	}
+#endif
 
 	info->length = rte_bswap64(info->length);
 	/* Deduce the actual data size */

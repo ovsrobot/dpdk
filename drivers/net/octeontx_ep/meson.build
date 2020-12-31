@@ -9,7 +9,7 @@ sources = files(
                'otx_ep_rxtx.c',
                )
 
-extra_flags = []
+extra_flags = ['-DBUFPTR_ONLY_MODE']
 # This integrated controller runs only on a arm64 machine, remove 32bit warnings
 if not dpdk_conf.get('RTE_ARCH_64')
         extra_flags += ['-Wno-int-to-pointer-cast', '-Wno-pointer-to-int-cast']
