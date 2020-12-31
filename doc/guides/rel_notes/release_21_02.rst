@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Marvell OCTEON TX2 crypto PMD.**
+
+  * Updated the OCTEON TX2 crypto PMD with CN98xx support.
+
 
 Removed Items
 -------------
