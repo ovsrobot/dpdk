@@ -147,6 +147,7 @@ otx_epdev_init(struct otx_ep_device *otx_epvf)
 		goto setup_fail;
 	}
 
+	otx_epvf->eth_dev->rx_pkt_burst = &otx_ep_recv_pkts;
 	ethdev_queues = (uint32_t)(otx_epvf->sriov_info.rings_per_vf);
 	otx_epvf->max_rx_queues = ethdev_queues;
 	otx_epvf->max_tx_queues = ethdev_queues;
@@ -404,6 +405,8 @@ otx_ep_eth_dev_uninit(struct rte_eth_dev *eth_dev)
 		rte_free(eth_dev->data->mac_addrs);
 
 	eth_dev->dev_ops = NULL;
+	eth_dev->rx_pkt_burst = NULL;
+	eth_dev->tx_pkt_burst = NULL;
 
 	return 0;
 }

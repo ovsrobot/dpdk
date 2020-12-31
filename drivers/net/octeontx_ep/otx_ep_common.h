@@ -22,6 +22,11 @@
 #define OTX_EP_BUSY_LOOP_COUNT      (10000)
 
 #define OTX_EP_MAX_IOQS_PER_VF 8
+
+#define OTX_CUST_META_DATA	64
+#define OTX_CUST_PRIV_TAG	2
+#define OTX_CUST_DATA_LEN (OTX_CUST_META_DATA + OTX_CUST_PRIV_TAG)
+
 #define otx_ep_printf(level, fmt, args...)		\
 	rte_log(RTE_LOG_ ## level, RTE_LOGTYPE_PMD,		\
 		 fmt, ##args)
