@@ -61,6 +61,47 @@ otx_ep_dev_info_get(struct rte_eth_dev *eth_dev,
 }
 
 static int
+otx_ep_dev_start(struct rte_eth_dev *eth_dev)
+{
+	struct otx_ep_device *otx_epvf;
+	unsigned int q;
+
+	otx_epvf = (struct otx_ep_device *)OTX_EP_DEV(eth_dev);
+	/* Enable IQ/OQ for this device */
+	otx_epvf->fn_list.enable_io_queues(otx_epvf);
+
+	for (q = 0; q < otx_epvf->nb_rx_queues; q++) {
+		rte_write32(otx_epvf->droq[q]->nb_desc,
+			    otx_epvf->droq[q]->pkts_credit_reg);
+
+		rte_wmb();
+		otx_ep_info("OQ[%d] dbells [%d]\n", q,
+		rte_read32(otx_epvf->droq[q]->pkts_credit_reg));
+	}
+
+	otx_epvf->started = 1;
+	otx_epvf->linkup = 1;
+
+	rte_wmb();
+	otx_ep_info("dev started\n");
+
+	return 0;
+}
+
+/* Stop device and disable input/output functions */
+static int
+otx_ep_dev_stop(struct rte_eth_dev *eth_dev)
+{
+	struct otx_ep_device *otx_epvf = OTX_EP_DEV(eth_dev);
+
+	otx_epvf->fn_list.disable_io_queues(otx_epvf);
+	otx_epvf->started = 0;
+	otx_epvf->linkup = 0;
+
+	return 0;
+}
+
+static int
 otx_ep_chip_specific_setup(struct otx_ep_device *otx_epvf)
 {
 	struct rte_pci_device *pdev = otx_epvf->pdev;
@@ -304,6 +345,8 @@ otx_ep_tx_queue_release(void *txq)
 /* Define our ethernet definitions */
 static const struct eth_dev_ops otx_ep_eth_dev_ops = {
 	.dev_configure		= otx_ep_dev_configure,
+	.dev_start		= otx_ep_dev_start,
+	.dev_stop		= otx_ep_dev_stop,
 	.rx_queue_setup	        = otx_ep_rx_queue_setup,
 	.rx_queue_release	= otx_ep_rx_queue_release,
 	.tx_queue_setup	        = otx_ep_tx_queue_setup,
@@ -322,6 +365,8 @@ otx_epdev_exit(struct rte_eth_dev *eth_dev)
 	otx_ep_info("%s:\n", __func__);
 
 	otx_epvf = OTX_EP_DEV(eth_dev);
+
+	otx_epvf->fn_list.disable_io_queues(otx_epvf);
 
 	num_queues = otx_epvf->nb_rx_queues;
 	for (q = 0; q < num_queues; q++) {
