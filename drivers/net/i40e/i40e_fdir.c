@@ -355,6 +355,7 @@ i40e_init_flx_pld(struct i40e_pf *pf)
 			I40E_PRTQF_FLX_PIT(index + 1), 0x0000FC29);/*non-used*/
 		I40E_WRITE_REG(hw,
 			I40E_PRTQF_FLX_PIT(index + 2), 0x0000FC2A);/*non-used*/
+		pf->fdir.flex_pit_flag[i] = 0;
 	}
 
 	/* initialize the masks */
@@ -1513,8 +1514,6 @@ i40e_flow_set_fdir_flex_pit(struct i40e_pf *pf,
 		I40E_WRITE_REG(hw, I40E_PRTQF_FLX_PIT(field_idx), flx_pit);
 		min_next_off++;
 	}
-
-	pf->fdir.flex_pit_flag[layer_idx] = 1;
 }
 
 static int
@@ -1738,6 +1737,8 @@ i40e_flow_add_del_fdir_filter(struct rte_eth_dev *dev,
 				fdir_info->fdir_guarantee_free_space > 0)
 			wait_status = false;
 	} else {
+		layer_idx = filter->input.flow_ext.layer_idx;
+
 		node = i40e_sw_fdir_filter_lookup(fdir_info,
 				&check_filter.fdir.input);
 		if (!node) {
@@ -1783,6 +1784,17 @@ i40e_flow_add_del_fdir_filter(struct rte_eth_dev *dev,
 		PMD_DRV_LOG(ERR, "fdir programming fails for PCTYPE(%u).",
 			    pctype);
 		goto error_op;
+	}
+
+	if (filter->input.flow_ext.is_flex_flow) {
+		if (add) {
+			fdir_info->flex_flow_count[layer_idx]++;
+			pf->fdir.flex_pit_flag[layer_idx] = 1;
+		} else {
+			fdir_info->flex_flow_count[layer_idx]--;
+			if (!fdir_info->flex_flow_count[layer_idx])
+				pf->fdir.flex_pit_flag[layer_idx] = 0;
+		}
 	}
 
 	if (add) {
