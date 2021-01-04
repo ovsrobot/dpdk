@@ -165,15 +165,24 @@ ioat_rawdev_create(const char *name, struct rte_pci_device *dev)
 		goto cleanup;
 	}
 
+	/* Allocate memory for the primary process or else return the memory
+	 * of primary memzone for the secondary process.
+	 */
 	snprintf(mz_name, sizeof(mz_name), "rawdev%u_private", rawdev->dev_id);
-	mz = rte_memzone_reserve(mz_name, sizeof(struct rte_ioat_rawdev),
-			dev->device.numa_node, RTE_MEMZONE_IOVA_CONTIG);
+	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
+		mz = rte_memzone_lookup(mz_name);
+		rawdev->dev_private = mz->addr;
+		return 0;
+	}
+	mz = rte_memzone_reserve(mz_name,
+			sizeof(struct rte_ioat_rawdev),
+			dev->device.numa_node,
+			RTE_MEMZONE_IOVA_CONTIG);
 	if (mz == NULL) {
-		IOAT_PMD_ERR("Unable to reserve memzone for private data\n");
+		IOAT_PMD_ERR("Unable to reserve memzone\n");
 		ret = -ENOMEM;
 		goto cleanup;
 	}
-
 	rawdev->dev_private = mz->addr;
 	rawdev->dev_ops = &ioat_rawdev_ops;
 	rawdev->device = &dev->device;
