@@ -89,6 +89,12 @@ typedef struct {
 	uint32_t fw_version;
 } ifpga_bmc_property;
 
+typedef struct {
+	uint32_t num_retimers;
+	uint32_t link_speed;
+	uint32_t link_status;
+} ifpga_phy_info;
+
 int
 ifpga_register_msix_irq(struct rte_rawdev *dev, int port_id,
 		enum ifpga_irq_type type, int vec_start, int count,
@@ -98,15 +104,24 @@ int
 ifpga_unregister_msix_irq(enum ifpga_irq_type type,
 		int vec_start, rte_intr_callback_fn handler, void *arg);
 
+struct rte_pci_bus *ifpga_get_pci_bus(void);
+int ifpga_rawdev_lock(struct rte_rawdev *dev);
+int ifpga_rawdev_unlock(struct rte_rawdev *dev);
+uint32_t ifpga_rawdev_get_rsu_stat(struct rte_rawdev *dev);
+void ifpga_rawdev_set_rsu_stat(struct rte_rawdev *dev, uint32_t value);
 int ifpga_rawdev_get_fme_property(struct rte_rawdev *dev,
 	ifpga_fme_property *prop);
 int ifpga_rawdev_get_port_property(struct rte_rawdev *dev, uint32_t port,
 	ifpga_port_property *prop);
 int ifpga_rawdev_get_bmc_property(struct rte_rawdev *dev,
 	ifpga_bmc_property *prop);
+int ifpga_rawdev_get_phy_info(struct rte_rawdev *dev, ifpga_phy_info *info);
 int ifpga_rawdev_update_flash(struct rte_rawdev *dev, const char *image,
 	uint64_t *status);
 int ifpga_rawdev_stop_flash_update(struct rte_rawdev *dev, int force);
 int ifpga_rawdev_reload(struct rte_rawdev *dev, int type, int page);
+int ifpga_rawdev_partial_reconfigure(struct rte_rawdev *dev, int port,
+	const char *file);
+void ifpga_rawdev_cleanup(void);
 
 #endif /* _IFPGA_RAWDEV_H_ */

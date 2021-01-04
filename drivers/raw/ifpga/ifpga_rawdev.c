@@ -1738,6 +1738,79 @@ RTE_PMD_REGISTER_PARAM_STRING(ifpga_rawdev_cfg,
 	"port=<int> "
 	"afu_bts=<path>");
 
+struct rte_pci_bus *ifpga_get_pci_bus(void)
+{
+	return rte_ifpga_rawdev_pmd.bus;
+}
+
+int ifpga_rawdev_lock(struct rte_rawdev *dev)
+{
+	if (!dev) {
+		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+		return -EINVAL;
+	}
+	return opae_adapter_lock(ifpga_rawdev_get_priv(dev), -1);
+}
+
+int ifpga_rawdev_unlock(struct rte_rawdev *dev)
+{
+	if (!dev) {
+		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+		return -EINVAL;
+	}
+	return opae_adapter_unlock(ifpga_rawdev_get_priv(dev));
+}
+
+uint32_t ifpga_rawdev_get_rsu_stat(struct rte_rawdev *dev)
+{
+	struct opae_adapter *adapter = NULL;
+	opae_share_data *sd = NULL;
+
+	if (!dev) {
+		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+		return 0;
+	}
+
+	adapter = ifpga_rawdev_get_priv(dev);
+	if (!adapter) {
+		IFPGA_RAWDEV_PMD_ERR("adapter is invalid");
+		return 0;
+	}
+
+	sd = (opae_share_data *)adapter->shm.ptr;
+	if (!sd) {
+		IFPGA_RAWDEV_PMD_ERR("shared memory is invalid");
+		return 0;
+	}
+
+	return sd->rsu_stat;
+}
+
+void ifpga_rawdev_set_rsu_stat(struct rte_rawdev *dev, uint32_t value)
+{
+	struct opae_adapter *adapter = NULL;
+	opae_share_data *sd = NULL;
+
+	if (!dev) {
+		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+		return;
+	}
+
+	adapter = ifpga_rawdev_get_priv(dev);
+	if (!adapter) {
+		IFPGA_RAWDEV_PMD_ERR("adapter is invalid");
+		return;
+	}
+
+	sd = (opae_share_data *)adapter->shm.ptr;
+	if (!sd) {
+		IFPGA_RAWDEV_PMD_ERR("shared memory is invalid");
+		return;
+	}
+
+	sd->rsu_stat = value;
+}
+
 int ifpga_rawdev_get_fme_property(struct rte_rawdev *dev,
 	ifpga_fme_property *prop)
 {
@@ -1748,8 +1821,8 @@ int ifpga_rawdev_get_fme_property(struct rte_rawdev *dev,
 	struct uuid pr_id;
 	int ret = 0;
 
-	if (!dev) {
-		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+	if (!dev || !prop) {
+		IFPGA_RAWDEV_PMD_ERR("Input parameter is invalid");
 		return -EINVAL;
 	}
 
@@ -1820,8 +1893,8 @@ int ifpga_rawdev_get_port_property(struct rte_rawdev *dev, uint32_t port,
 	struct uuid afu_id;
 	int ret = 0;
 
-	if (!dev) {
-		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+	if (!dev || !prop) {
+		IFPGA_RAWDEV_PMD_ERR("Input parameter is invalid");
 		return -EINVAL;
 	}
 
@@ -1867,8 +1940,8 @@ int ifpga_rawdev_get_bmc_property(struct rte_rawdev *dev,
 	struct opae_board_info *info = NULL;
 	int ret = 0;
 
-	if (!dev) {
-		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+	if (!dev || !prop) {
+		IFPGA_RAWDEV_PMD_ERR("Input parameter is invalid");
 		return -EINVAL;
 	}
 
@@ -1891,6 +1964,48 @@ int ifpga_rawdev_get_bmc_property(struct rte_rawdev *dev,
 
 	prop->bmc_version = info->max10_version;
 	prop->fw_version = info->nios_fw_version;
+
+	return 0;
+}
+
+int ifpga_rawdev_get_phy_info(struct rte_rawdev *dev, ifpga_phy_info *info)
+{
+	struct opae_adapter *adapter = NULL;
+	struct opae_retimer_info rtm_info;
+	struct opae_retimer_status rtm_status;
+	int ret = 0;
+
+	if (!dev || !info) {
+		IFPGA_RAWDEV_PMD_ERR("Input parameter is invalid");
+		return -EINVAL;
+	}
+
+	adapter = ifpga_rawdev_get_priv(dev);
+	if (!adapter) {
+		IFPGA_RAWDEV_PMD_ERR("adapter is invalid");
+		return -ENODEV;
+	}
+
+	if (!adapter->mgr) {
+		IFPGA_RAWDEV_PMD_ERR("manager is invalid");
+		return -ENODEV;
+	}
+
+	ret = opae_manager_get_retimer_info(adapter->mgr, &rtm_info);
+	if (ret) {
+		IFPGA_RAWDEV_PMD_ERR("Failed to get retimer info");
+		return ret;
+	}
+
+	ret = opae_manager_get_retimer_status(adapter->mgr, &rtm_status);
+	if (ret) {
+		IFPGA_RAWDEV_PMD_ERR("Failed to get retimer status");
+		return ret;
+	}
+
+	info->num_retimers = rtm_info.nums_retimer;
+	info->link_speed = rtm_status.speed;
+	info->link_status = rtm_status.line_link_bitmap;
 
 	return 0;
 }
@@ -1948,4 +2063,29 @@ int ifpga_rawdev_reload(struct rte_rawdev *dev, int type, int page)
 	}
 
 	return opae_mgr_reload(adapter->mgr, type, page);
+}
+
+int ifpga_rawdev_partial_reconfigure(struct rte_rawdev *dev, int port,
+	const char *file)
+{
+	if (!dev) {
+		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+		return -EINVAL;
+	}
+
+	return rte_fpga_do_pr(dev, port, file);
+}
+
+void ifpga_rawdev_cleanup(void)
+{
+	struct ifpga_rawdev *dev;
+	unsigned int i;
+
+	for (i = 0; i < IFPGA_RAWDEV_NUM; i++) {
+		dev = &ifpga_rawdevices[i];
+		if (dev->rawdev) {
+			rte_rawdev_pmd_release(dev->rawdev);
+			dev->rawdev = NULL;
+		}
+	}
 }
