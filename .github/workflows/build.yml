@@ -67,13 +67,15 @@ jobs:
         echo 'libabigail-${{ matrix.config.os }}'
         echo -n '::set-output name=abi::'
         echo 'abi-${{ matrix.config.os }}-${{ matrix.config.compiler }}-${{ matrix.config.cross }}-${{ env.LIBABIGAIL_VERSION }}-${{ env.REF_GIT_TAG }}'
+        echo -n '::set-output name=default_branch::'
+        git ls-remote --symref origin HEAD |awk '/^ref:/ {print $2}'
     - name: Retrieve ccache cache
       uses: actions/cache@v2
       with:
         path: ~/.ccache
         key: ${{ steps.get_ref_keys.outputs.ccache }}-${{ github.ref }}
         restore-keys: |
-          ${{ steps.get_ref_keys.outputs.ccache }}-refs/heads/main
+          ${{ steps.get_ref_keys.outputs.ccache }}-${{ steps.get_ref_keys.outputs.default_branch }}
     - name: Retrieve libabigail cache
       id: libabigail-cache
       uses: actions/cache@v2
