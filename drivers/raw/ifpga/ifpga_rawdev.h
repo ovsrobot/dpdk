@@ -43,7 +43,7 @@ enum ifpga_rawdev_device_state {
 static inline struct opae_adapter *
 ifpga_rawdev_get_priv(const struct rte_rawdev *rawdev)
 {
-	return rawdev->dev_private;
+	return (struct opae_adapter *)rawdev->dev_private;
 }
 
 #define IFPGA_RAWDEV_MSIX_IRQ_NUM 7
@@ -75,5 +75,10 @@ ifpga_register_msix_irq(struct rte_rawdev *dev, int port_id,
 int
 ifpga_unregister_msix_irq(enum ifpga_irq_type type,
 		int vec_start, rte_intr_callback_fn handler, void *arg);
+
+int ifpga_rawdev_update_flash(struct rte_rawdev *dev, const char *image,
+	uint64_t *status);
+int ifpga_rawdev_stop_flash_update(struct rte_rawdev *dev, int force);
+int ifpga_rawdev_reload(struct rte_rawdev *dev, int type, int page);
 
 #endif /* _IFPGA_RAWDEV_H_ */
