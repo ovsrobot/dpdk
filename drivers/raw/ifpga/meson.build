@@ -13,8 +13,10 @@ objs = [base_objs]
 deps += ['ethdev', 'rawdev', 'pci', 'bus_pci', 'kvargs',
 	'bus_vdev', 'bus_ifpga', 'net', 'net_i40e', 'net_ipn3ke']
 
-sources = files('ifpga_rawdev.c')
+sources = files('ifpga_rawdev.c', 'ifpga_opae_api.c')
 
 includes += include_directories('base')
 includes += include_directories('../../net/ipn3ke')
 includes += include_directories('../../net/i40e')
+
+install_headers('ifpga_opae_api.h')
