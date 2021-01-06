@@ -63,11 +63,14 @@ Co-existence considerations
 - When SR-IOV is enabled on the adapter,
   Linux kernel drivers (qed, qede, qedr, qedi and qedf) can be bound
   to the PFs of a given adapter and either qede PMD or Linux drivers
-  (qed and qede) can be bound to the VFs of the adapter.
+  (qed and qede) can be bound to the VFs of the adapter provided that
+  ecore version of Linux kernel driver and qede PMD driver is same.
 
 - For sharing an adapter between DPDK and Linux drivers, SRIOV needs
   to be enabled. Bind all the PFs to Linux Drivers(qed/qede). Create
   a VF on PFs where DPDK is desired and bind these VFs to qede_pmd.
+  Make sure that ecore version of Linux Driver and qede PMD driver
+  is same.
   Binding of PFs simultaneously to DPDK and Linux drivers on a given
   adapter is not supported.
 
