@@ -1197,6 +1197,7 @@ rte_eth_switch_domain_free(uint16_t domain_id);
 enum rte_eth_representor_type {
 	RTE_ETH_REPRESENTOR_NONE, /* not a representor */
 	RTE_ETH_REPRESENTOR_VF,   /* representor of VF */
+	RTE_ETH_REPRESENTOR_SF,   /* representor of SF */
 };
 
 /** Generic Ethernet device arguments  */
