@@ -257,6 +257,8 @@ INTERNAL {
 	rte_eth_dev_release_port;
 	rte_eth_dev_internal_reset;
 	rte_eth_devargs_parse;
+	rte_eth_representor_id_encode;
+	rte_eth_representor_id_parse;
 	rte_eth_dma_zone_free;
 	rte_eth_dma_zone_reserve;
 	rte_eth_hairpin_queue_peer_bind;

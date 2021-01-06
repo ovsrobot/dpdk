@@ -93,10 +93,13 @@ rte_eth_devargs_process_list(char *str, uint16_t *list, uint16_t *len_list,
 }
 
 /*
- * representor format:
+ * Parse representor ports, expand and update representor port ID.
+ * Representor format:
  *   #: range or single number of VF representor - legacy
  *   [[c#]pf#]vf#: VF port representor/s
  *   [[c#]pf#]sf#: SF port representor/s
+ *
+ * See RTE_ETH_REPR() for representor ID format.
  */
 int
 rte_eth_devargs_parse_representor_ports(char *str, void *data)
