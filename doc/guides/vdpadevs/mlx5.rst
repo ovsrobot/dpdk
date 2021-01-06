@@ -135,6 +135,30 @@ Driver options
   interrupts are configured to the device in order to notify traffic for the
   driver. Default value is 2s.
 
+- ``hw_latency_mode`` parameter [int]
+
+  The completion queue moderation mode:
+
+  - 0, HW default.
+
+  - 1, Latency is counted from the first packet completion report.
+
+  - 2, Latency is counted from the last packet completion.
+
+- ``hw_max_latency_us`` parameter [int]
+
+  - 1 - 4095, The maximum time in microseconds that packet completion report
+    can be delayed.
+
+  - 0, HW default.
+
+- ``hw_max_pending_comp`` parameter [int]
+
+  - 1 - 65535, The maximum number of pending packets completions in an HW queue.
+
+  - 0, HW default.
+
+
 Error handling
 ^^^^^^^^^^^^^^
 

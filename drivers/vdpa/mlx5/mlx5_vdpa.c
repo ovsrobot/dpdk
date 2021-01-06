@@ -630,6 +630,12 @@ mlx5_vdpa_args_check_handler(const char *key, const char *val, void *opaque)
 		priv->event_us = (uint32_t)tmp;
 	} else if (strcmp(key, "no_traffic_time") == 0) {
 		priv->no_traffic_time_s = (uint32_t)tmp;
+	} else if (strcmp(key, "hw_latency_mode") == 0) {
+		priv->hw_latency_mode = (uint32_t)tmp;
+	} else if (strcmp(key, "hw_max_latency_us") == 0) {
+		priv->hw_max_latency_us = (uint32_t)tmp;
+	} else if (strcmp(key, "hw_max_pending_comp") == 0) {
+		priv->hw_max_pending_comp = (uint32_t)tmp;
 	} else {
 		DRV_LOG(WARNING, "Invalid key %s.", key);
 	}
