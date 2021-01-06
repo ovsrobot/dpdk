@@ -27,7 +27,7 @@ New Features
 .. This section should contain new features added in this release.
    Sample format:
 
-   * **Add a title in the past tense with a full stop.**
+   * **Added support for the Tx mbuf fast free offload.**
 
      Add a short 1-2 sentence description in the past tense.
      The description should be enough to allow someone scanning
@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Mellanox mlx5 driver.**
+
+  Updated the Mellanox mlx5 driver with new features and improvements, including:
+
+  * Added vectorized Multi-Packet Rx Queue burst.
 
 Removed Items
 -------------
