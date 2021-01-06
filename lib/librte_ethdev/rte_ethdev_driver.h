@@ -1198,6 +1198,7 @@ enum rte_eth_representor_type {
 	RTE_ETH_REPRESENTOR_NONE, /* not a representor */
 	RTE_ETH_REPRESENTOR_VF,   /* representor of VF */
 	RTE_ETH_REPRESENTOR_SF,   /* representor of SF */
+	RTE_ETH_REPRESENTOR_PF,   /* representor of host PF */
 };
 
 /** Generic Ethernet device arguments  */

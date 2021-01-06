@@ -95,8 +95,8 @@ rte_eth_devargs_process_list(char *str, uint16_t *list, uint16_t *len_list,
 /*
  * representor format:
  *   #: range or single number of VF representor - legacy
- *   vf#: VF port representor/s
- *   sf#: SF port representor/s
+ *   [pf#]vf#: VF port representor/s
+ *   [pf#]sf#: SF port representor/s
  */
 int
 rte_eth_devargs_parse_representor_ports(char *str, void *data)
@@ -105,6 +105,16 @@ rte_eth_devargs_parse_representor_ports(char *str, void *data)
 	int ret;
 
 	eth_da->type = RTE_ETH_REPRESENTOR_NONE;
+	/* Parse pf# */
+	if (str[0] == 'p' && str[1] == 'f') {
+		eth_da->type = RTE_ETH_REPRESENTOR_PF;
+		str += 2;
+		ret = rte_eth_devargs_process_list(str, eth_da->ports,
+				&eth_da->nb_ports, RTE_MAX_ETHPORTS);
+		if (ret < 0)
+			goto err;
+		str += ret;
+	}
 	/* Parse vf# and sf#, number # alone implies VF */
 	if (str[0] == 'v'  && str[1] == 'f') {
 		eth_da->type = RTE_ETH_REPRESENTOR_VF;
@@ -117,6 +127,7 @@ rte_eth_devargs_parse_representor_ports(char *str, void *data)
 	}
 	ret = rte_eth_devargs_process_list(str, eth_da->representor_ports,
 		&eth_da->nb_representor_ports, RTE_MAX_ETHPORTS);
+err:
 	if (ret < 0)
 		RTE_LOG(ERR, EAL, "wrong representor format: %s\n", str);
 	return ret < 0 ? ret : 0;
