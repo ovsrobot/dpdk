@@ -59,6 +59,7 @@ iavf_client_vfio_user_setup(struct rte_eth_dev *dev, const char *path)
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(adapter);
 	struct vfio_device *vfio_dev;
+	uint32_t max_fds, i;
 
 	vfio_dev = client_vfio_user_setup(path, dev->device->numa_node);
 	if (vfio_dev == NULL) {
@@ -87,11 +88,21 @@ iavf_client_vfio_user_setup(struct rte_eth_dev *dev, const char *path)
 		}
 
 	}
-
 	dev->intr_handle->fd = vfio_dev->irqfds[0];
 	dev->intr_handle->type = RTE_INTR_HANDLE_VDEV;
 	dev->intr_handle->max_intr = 1;
 
+	/* Assign rxq fds */
+	if (vfio_dev->nb_irqs > 1) {
+		max_fds = RTE_MIN((uint32_t)RTE_MAX_RXTX_INTR_VEC_ID,
+				  vfio_dev->nb_irqs - 1);
+		dev->intr_handle->nb_efd = max_fds;
+		for (i = 0; i < max_fds; ++i)
+			dev->intr_handle->efds[i] =
+				vfio_dev->irqfds[i + RTE_INTR_VEC_RXTX_OFFSET];
+		dev->intr_handle->efd_counter_size = 0;
+		dev->intr_handle->max_intr += max_fds;
+	}
 	return 0;
 }
 
@@ -108,8 +119,6 @@ avf_client_init_eth_ops(void)
 	iavf_client_eth_dev_ops.reta_query                 = NULL;
 	iavf_client_eth_dev_ops.rss_hash_update            = NULL;
 	iavf_client_eth_dev_ops.rss_hash_conf_get          = NULL;
-	iavf_client_eth_dev_ops.rx_queue_intr_enable       = NULL;
-	iavf_client_eth_dev_ops.rx_queue_intr_disable      = NULL;
 }
 
 #define IAVF_CLIENT_ALARM_INTERVAL 50000 /* us */
@@ -227,11 +236,12 @@ iavf_client_dev_close(struct rte_eth_dev *dev)
 	struct iavf_adapter *adapter =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct rte_intr_handle *intr_handle = dev->intr_handle;
 
 	if (adapter->intr_mode) {
 		iavf_disable_irq0(hw);
 		/* unregister callback func from eal lib */
-		rte_intr_callback_unregister(dev->intr_handle,
+		rte_intr_callback_unregister(intr_handle,
 					     iavf_client_event_handler, dev);
 	} else {
 		rte_eal_alarm_cancel(iavf_client_dev_alarm_handler, dev);
@@ -240,8 +250,15 @@ iavf_client_dev_close(struct rte_eth_dev *dev)
 	if (!adapter->stopped) {
 		iavf_stop_queues(dev);
 
-		if (dev->intr_handle) {
-			rte_free(dev->intr_handle);
+		if (intr_handle) {
+			/* Disable the interrupt for Rx */
+			rte_intr_efd_disable(intr_handle);
+			/* Rx interrupt vector mapping free */
+			if (intr_handle->intr_vec) {
+				rte_free(intr_handle->intr_vec);
+				intr_handle->intr_vec = NULL;
+			}
+			rte_free(intr_handle);
 			dev->intr_handle = NULL;
 		}
 

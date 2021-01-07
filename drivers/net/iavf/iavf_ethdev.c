@@ -1368,11 +1368,10 @@ iavf_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 {
 	struct iavf_adapter *adapter =
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(adapter);
 	uint16_t msix_intr;
 
-	msix_intr = pci_dev->intr_handle.intr_vec[queue_id];
+	msix_intr = dev->intr_handle->intr_vec[queue_id];
 	if (msix_intr == IAVF_MISC_VEC_ID) {
 		PMD_DRV_LOG(INFO, "MISC is also enabled for control");
 		IAVF_WRITE_REG(hw, IAVF_VFINT_DYN_CTL01,
@@ -1387,10 +1386,9 @@ iavf_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 			       IAVF_VFINT_DYN_CTL01_CLEARPBA_MASK |
 			       IAVF_VFINT_DYN_CTLN1_ITR_INDX_MASK);
 	}
-
 	IAVF_WRITE_FLUSH(hw);
 
-	rte_intr_ack(&pci_dev->intr_handle);
+	rte_intr_ack(dev->intr_handle);
 
 	return 0;
 }
@@ -1398,11 +1396,10 @@ iavf_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 static int
 iavf_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
 {
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint16_t msix_intr;
 
-	msix_intr = pci_dev->intr_handle.intr_vec[queue_id];
+	msix_intr = dev->intr_handle->intr_vec[queue_id];
 	if (msix_intr == IAVF_MISC_VEC_ID) {
 		PMD_DRV_LOG(ERR, "MISC is used for control, cannot disable it");
 		return -EIO;
