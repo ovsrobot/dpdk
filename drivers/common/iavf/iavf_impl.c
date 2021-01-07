@@ -10,8 +10,13 @@
 #include <rte_malloc.h>
 #include <rte_memzone.h>
 
+#ifdef RTE_LIBRTE_IAVF_CLIENT
+#include "vfio_user/vfio_user_pci.h"
+#endif
 #include "iavf_type.h"
 #include "iavf_prototype.h"
+
+int iavf_common_logger;
 
 enum iavf_status
 iavf_allocate_dma_mem_d(__rte_unused struct iavf_hw *hw,
@@ -85,4 +90,42 @@ iavf_free_virt_mem_d(__rte_unused struct iavf_hw *hw,
 	return IAVF_SUCCESS;
 }
 
-RTE_LOG_REGISTER(iavf_common_logger, pmd.common.iavf, NOTICE);
+#ifdef RTE_LIBRTE_IAVF_CLIENT
+uint32_t
+iavf_read_addr(struct iavf_hw *hw, uint32_t offset)
+{
+	uint32_t value = 0;
+
+	if (!hw || !hw->hw_addr)
+		return 0;
+
+	if (hw->bus.type == iavf_bus_type_vfio_user)
+		client_vfio_user_pci_bar_access(
+				(struct vfio_device *)hw->hw_addr,
+				0, offset, 4, &value, false);
+	else
+		value = readl(hw->hw_addr + offset);
+
+	return value;
+}
+
+void
+iavf_write_addr(struct iavf_hw *hw, uint32_t offset, uint32_t value)
+{
+	if (!hw || !hw->hw_addr)
+		return;
+	if (hw->bus.type == iavf_bus_type_vfio_user)
+		client_vfio_user_pci_bar_access(
+				(struct vfio_device *)hw->hw_addr,
+				0, offset, 4, &value, true);
+	else
+		writel(value, hw->hw_addr + offset);
+}
+#endif
+
+RTE_INIT(iavf_common_init_log)
+{
+	iavf_common_logger = rte_log_register("pmd.common.iavf");
+	if (iavf_common_logger >= 0)
+		rte_log_set_level(iavf_common_logger, RTE_LOG_NOTICE);
+}
