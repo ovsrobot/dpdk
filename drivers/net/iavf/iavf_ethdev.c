@@ -154,7 +154,7 @@ static const struct rte_iavf_xstats_name_off rte_iavf_stats_strings[] = {
 #define IAVF_NB_XSTATS (sizeof(rte_iavf_stats_strings) / \
 		sizeof(rte_iavf_stats_strings[0]))
 
-static const struct eth_dev_ops iavf_eth_dev_ops = {
+const struct eth_dev_ops iavf_eth_dev_ops = {
 	.dev_configure              = iavf_dev_configure,
 	.dev_start                  = iavf_dev_start,
 	.dev_stop                   = iavf_dev_stop,
@@ -1780,7 +1780,7 @@ iavf_init_proto_xtr(struct rte_eth_dev *dev)
 	}
 }
 
-static int
+int
 iavf_init_vf(struct rte_eth_dev *dev)
 {
 	int err, bufsz;
@@ -1788,12 +1788,6 @@ iavf_init_vf(struct rte_eth_dev *dev)
 		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
-
-	err = iavf_parse_devargs(dev);
-	if (err) {
-		PMD_INIT_LOG(ERR, "Failed to parse devargs");
-		goto err;
-	}
 
 	err = iavf_set_mac_type(hw);
 	if (err) {
@@ -1891,16 +1885,6 @@ iavf_enable_irq0(struct iavf_hw *hw)
 	IAVF_WRITE_FLUSH(hw);
 }
 
-static inline void
-iavf_disable_irq0(struct iavf_hw *hw)
-{
-	/* Disable all interrupt types */
-	IAVF_WRITE_REG(hw, IAVF_VFINT_ICR0_ENA1, 0);
-	IAVF_WRITE_REG(hw, IAVF_VFINT_DYN_CTL01,
-		       IAVF_VFINT_DYN_CTL01_ITR_INDX_MASK);
-	IAVF_WRITE_FLUSH(hw);
-}
-
 static void
 iavf_dev_interrupt_handler(void *param)
 {
@@ -1985,6 +1969,12 @@ iavf_dev_init(struct rte_eth_dev *eth_dev)
 	hw->back = IAVF_DEV_PRIVATE_TO_ADAPTER(eth_dev->data->dev_private);
 	adapter->eth_dev = eth_dev;
 	adapter->stopped = 1;
+
+	ret  = iavf_parse_devargs(eth_dev);
+	if (ret) {
+		PMD_INIT_LOG(ERR, "Failed to parse devargs");
+		return ret;
+	}
 
 	if (iavf_init_vf(eth_dev) != 0) {
 		PMD_INIT_LOG(ERR, "Init vf failed");
