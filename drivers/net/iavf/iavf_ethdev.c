@@ -1869,23 +1869,7 @@ err:
 	return -1;
 }
 
-/* Enable default admin queue interrupt setting */
-static inline void
-iavf_enable_irq0(struct iavf_hw *hw)
-{
-	/* Enable admin queue interrupt trigger */
-	IAVF_WRITE_REG(hw, IAVF_VFINT_ICR0_ENA1,
-		       IAVF_VFINT_ICR0_ENA1_ADMINQ_MASK);
-
-	IAVF_WRITE_REG(hw, IAVF_VFINT_DYN_CTL01,
-		       IAVF_VFINT_DYN_CTL01_INTENA_MASK |
-		       IAVF_VFINT_DYN_CTL01_CLEARPBA_MASK |
-		       IAVF_VFINT_DYN_CTL01_ITR_INDX_MASK);
-
-	IAVF_WRITE_FLUSH(hw);
-}
-
-static void
+void
 iavf_dev_interrupt_handler(void *param)
 {
 	struct rte_eth_dev *dev = (struct rte_eth_dev *)param;

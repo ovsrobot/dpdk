@@ -198,6 +198,7 @@ struct iavf_adapter {
 #ifdef RTE_LIBRTE_IAVF_CLIENT
 	/* used for avf_client driver */
 	struct vfio_device *user_dev;
+	int intr_mode; /* interrupt mode if true */
 #endif
 	bool rx_bulk_alloc_allowed;
 	/* For vector PMD */
@@ -232,6 +233,22 @@ iavf_init_adminq_parameter(struct iavf_hw *hw)
 	hw->aq.num_asq_entries = IAVF_AQ_LEN;
 	hw->aq.arq_buf_size = IAVF_AQ_BUF_SZ;
 	hw->aq.asq_buf_size = IAVF_AQ_BUF_SZ;
+}
+
+/* Enable default admin queue interrupt setting */
+static inline void
+iavf_enable_irq0(struct iavf_hw *hw)
+{
+	/* Enable admin queue interrupt trigger */
+	IAVF_WRITE_REG(hw, IAVF_VFINT_ICR0_ENA1,
+		       IAVF_VFINT_ICR0_ENA1_ADMINQ_MASK);
+
+	IAVF_WRITE_REG(hw, IAVF_VFINT_DYN_CTL01,
+		       IAVF_VFINT_DYN_CTL01_INTENA_MASK |
+		       IAVF_VFINT_DYN_CTL01_CLEARPBA_MASK |
+		       IAVF_VFINT_DYN_CTL01_ITR_INDX_MASK);
+
+	IAVF_WRITE_FLUSH(hw);
 }
 
 static inline void
@@ -342,4 +359,6 @@ int iavf_add_del_mc_addr_list(struct iavf_adapter *adapter,
 			uint32_t mc_addrs_num, bool add);
 int iavf_request_queues(struct iavf_adapter *adapter, uint16_t num);
 int iavf_get_max_rss_queue_region(struct iavf_adapter *adapter);
+void iavf_dev_interrupt_handler(void *param);
+
 #endif /* _IAVF_ETHDEV_H_ */
