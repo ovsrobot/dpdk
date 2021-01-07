@@ -1285,9 +1285,6 @@ struct i40e_adapter {
 	uint64_t flow_types_mask;
 	uint64_t pctypes_mask;
 
-	/* For devargs */
-	uint8_t use_latest_vec;
-
 	/* For RSS reta table update */
 	uint8_t rss_reta_updated;
 };
