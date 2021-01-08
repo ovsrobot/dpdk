@@ -483,6 +483,7 @@ static int iavf_config_rx_queues_irqs(struct rte_eth_dev *dev,
 	struct iavf_qv_map *qv_map;
 	uint16_t interval, i;
 	int vec;
+	uint16_t max_vectors;
 
 	if (rte_intr_cap_multiple(intr_handle) &&
 	    dev->data->dev_conf.intr_conf.rxq) {
@@ -570,15 +571,16 @@ static int iavf_config_rx_queues_irqs(struct rte_eth_dev *dev,
 			/* If Rx interrupt is reuquired, and we can use
 			 * multi interrupts, then the vec is from 1
 			 */
-			vf->nb_msix = RTE_MIN(vf->vf_res->max_vectors,
-					      intr_handle->nb_efd);
+			max_vectors =
+				vf->vf_res->max_vectors - IAVF_RX_VEC_START;
+			vf->nb_msix = RTE_MIN(max_vectors, intr_handle->nb_efd);
 			vf->msix_base = IAVF_RX_VEC_START;
 			vec = IAVF_RX_VEC_START;
 			for (i = 0; i < dev->data->nb_rx_queues; i++) {
 				qv_map[i].queue_id = i;
 				qv_map[i].vector_id = vec;
 				intr_handle->intr_vec[i] = vec++;
-				if (vec >= vf->nb_msix)
+				if (vec >= vf->vf_res->max_vectors)
 					vec = IAVF_RX_VEC_START;
 			}
 			vf->qv_map = qv_map;
