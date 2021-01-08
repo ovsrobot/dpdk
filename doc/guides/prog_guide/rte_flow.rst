@@ -2766,6 +2766,41 @@ The behaviour of the shared action defined by ``action`` argument of type
    | no properties |
    +---------------+
 
+Action: ``COPY_ITEM``
+^^^^^^^^^^^^^^^^^^^^^
+
+Copy ``width`` bits from ``src`` item to ``dst`` item.
+
+An arbitrary header field (as well as mark, metadata or tag values)
+can be used as both source and destination items as set by ``item``.
+
+Inner packet header fields can be accessed using the ``index`` and
+it is possible to start the copy from the ``offset`` bits in an item.
+
+.. _table_rte_flow_action_copy_item:
+
+.. table:: COPY_ITEM
+
+   +-----------------------------------------+
+   | Field         | Value                   |
+   +===============+=========================+
+   | ``dst``       | destination item        |
+   | ``src``       | source item             |
+   | ``width``     | number of bits to copy  |
+   +---------------+-------------------------+
+
+.. _table_rte_flow_action_copy_data:
+
+.. table:: destination/source item definition
+
+   +----------------------------------------------------------+
+   | Field         | Value                                    |
+   +===============+==========================================+
+   | ``item``      | ID of a packet field/mark/metadata/tag   |
+   | ``index``     | index of outer/inner header or tag array |
+   | ``offset``    | number of bits to skip during the copy   |
+   +---------------+------------------------------------------+
+
 Negative types
 ~~~~~~~~~~~~~~
 
