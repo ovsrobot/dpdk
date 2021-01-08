@@ -24,55 +24,26 @@
 static __rte_always_inline uint64_t
 otx2_atomic64_add_nosync(int64_t incr, int64_t *ptr)
 {
-	uint64_t result;
-
 	/* Atomic add with no ordering */
-	asm volatile (
-		".cpu  generic+lse\n"
-		"ldadd %x[i], %x[r], [%[b]]"
-		: [r] "=r" (result), "+m" (*ptr)
-		: [i] "r" (incr), [b] "r" (ptr)
-		: "memory");
-	return result;
+	return (uint64_t)__atomic_fetch_add(ptr, incr, __ATOMIC_RELAXED);
 }
 
 static __rte_always_inline uint64_t
 otx2_atomic64_add_sync(int64_t incr, int64_t *ptr)
 {
-	uint64_t result;
-
-	/* Atomic add with ordering */
-	asm volatile (
-		".cpu  generic+lse\n"
-		"ldadda %x[i], %x[r], [%[b]]"
-		: [r] "=r" (result), "+m" (*ptr)
-		: [i] "r" (incr), [b] "r" (ptr)
-		: "memory");
-	return result;
+	return (uint64_t)__atomic_fetch_add(ptr, incr, __ATOMIC_ACQUIRE);
 }
 
 static __rte_always_inline uint64_t
 otx2_lmt_submit(rte_iova_t io_address)
 {
-	uint64_t result;
-
-	asm volatile (
-		".cpu  generic+lse\n"
-		"ldeor xzr,%x[rf],[%[rs]]" :
-		 [rf] "=r"(result): [rs] "r"(io_address));
-	return result;
+	return __atomic_fetch_xor((uint64_t *)io_address, 0, __ATOMIC_RELAXED);
 }
 
 static __rte_always_inline uint64_t
 otx2_lmt_submit_release(rte_iova_t io_address)
 {
-	uint64_t result;
-
-	asm volatile (
-		".cpu  generic+lse\n"
-		"ldeorl xzr,%x[rf],[%[rs]]" :
-		 [rf] "=r"(result) : [rs] "r"(io_address));
-	return result;
+	return __atomic_fetch_xor((uint64_t *)io_address, 0, __ATOMIC_RELEASE);
 }
 
 static __rte_always_inline void
