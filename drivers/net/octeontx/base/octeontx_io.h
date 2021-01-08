@@ -58,14 +58,8 @@ do {							\
 static inline uint64_t
 octeontx_reg_ldadd_u64(void *addr, int64_t off)
 {
-	uint64_t old_val;
-
-	__asm__ volatile(
-		" .cpu		generic+lse\n"
-		" ldadd	%1, %0, [%2]\n"
-		: "=r" (old_val) : "r" (off), "r" (addr) : "memory");
-
-	return old_val;
+	return (uint64_t)__atomic_fetch_add((int64_t *)addr, off,
+						__ATOMIC_RELAXED);
 }
 
 /**
@@ -97,10 +91,8 @@ octeontx_reg_lmtst(void *lmtline_va, void *ioreg_va, const uint64_t cmdbuf[],
 		}
 
 		/* LDEOR initiates atomic transfer to I/O device */
-		__asm__ volatile(
-			" .cpu		generic+lse\n"
-			" ldeor	xzr, %0, [%1]\n"
-			: "=r" (result) : "r" (ioreg_va) : "memory");
+		result = __atomic_fetch_xor((uint64_t *)ioreg_va, 0,
+						__ATOMIC_RELAXED);
 	} while (!result);
 }
 
