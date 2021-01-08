@@ -67,6 +67,28 @@ enum ifpga_irq_type {
 	IFPGA_AFU_IRQ = 1,
 };
 
+typedef struct {
+	uint8_t b[16];
+} ifpga_uuid;
+
+typedef struct {
+	uint32_t boot_page;
+	uint32_t num_ports;
+	uint64_t bitstream_id;
+	uint64_t bitstream_metadata;
+	ifpga_uuid pr_id;
+} ifpga_fme_property;
+
+typedef struct {
+	ifpga_uuid afu_id;
+	uint32_t type;   /* AFU memory access control type */
+} ifpga_port_property;
+
+typedef struct {
+	uint32_t bmc_version;
+	uint32_t fw_version;
+} ifpga_bmc_property;
+
 int
 ifpga_register_msix_irq(struct rte_rawdev *dev, int port_id,
 		enum ifpga_irq_type type, int vec_start, int count,
@@ -76,6 +98,12 @@ int
 ifpga_unregister_msix_irq(enum ifpga_irq_type type,
 		int vec_start, rte_intr_callback_fn handler, void *arg);
 
+int ifpga_rawdev_get_fme_property(struct rte_rawdev *dev,
+	ifpga_fme_property *prop);
+int ifpga_rawdev_get_port_property(struct rte_rawdev *dev, uint32_t port,
+	ifpga_port_property *prop);
+int ifpga_rawdev_get_bmc_property(struct rte_rawdev *dev,
+	ifpga_bmc_property *prop);
 int ifpga_rawdev_update_flash(struct rte_rawdev *dev, const char *image,
 	uint64_t *status);
 int ifpga_rawdev_stop_flash_update(struct rte_rawdev *dev, int force);
