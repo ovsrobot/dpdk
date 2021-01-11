@@ -128,6 +128,8 @@ EXPORTS
 	rte_memzone_walk
 	rte_openlog_stream
 	rte_realloc
+	rte_reciprocal_value
+	rte_reciprocal_value_u64
 	rte_rtm_supported
 	rte_service_attr_get
 	rte_service_attr_reset_all
