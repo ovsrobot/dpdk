@@ -34,7 +34,6 @@
  *
  * @warning It is responsibility of the user to check if this function is
  *   supported at runtime using `rte_cpu_get_intrinsics_support()` API call.
- *   Failing to do so may result in an illegal CPU instruction error.
  *
  * @param p
  *   Address to monitor for changes.
@@ -75,7 +74,6 @@ void rte_power_monitor(const volatile void *p,
  *
  * @warning It is responsibility of the user to check if this function is
  *   supported at runtime using `rte_cpu_get_intrinsics_support()` API call.
- *   Failing to do so may result in an illegal CPU instruction error.
  *
  * @param p
  *   Address to monitor for changes.
@@ -111,7 +109,6 @@ void rte_power_monitor_sync(const volatile void *p,
  *
  * @warning It is responsibility of the user to check if this function is
  *   supported at runtime using `rte_cpu_get_intrinsics_support()` API call.
- *   Failing to do so may result in an illegal CPU instruction error.
  *
  * @param tsc_timestamp
  *   Maximum TSC timestamp to wait for. Note that the wait behavior is
