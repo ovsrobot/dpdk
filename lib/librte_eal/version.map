@@ -403,6 +403,11 @@ EXPERIMENTAL {
 	rte_service_lcore_may_be_active;
 	rte_vect_get_max_simd_bitwidth;
 	rte_vect_set_max_simd_bitwidth;
+
+	# added in 21.02
+	rte_power_monitor;
+	rte_power_monitor_sync;
+	rte_power_pause;
 };
 
 INTERNAL {
