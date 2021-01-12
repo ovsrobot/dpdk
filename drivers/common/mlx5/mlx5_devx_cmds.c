@@ -728,6 +728,8 @@ mlx5_devx_cmd_query_hca_attr(void *ctx,
 	attr->log_max_pd = MLX5_GET(cmd_hca_cap, hcattr, log_max_pd);
 	attr->log_max_srq = MLX5_GET(cmd_hca_cap, hcattr, log_max_srq);
 	attr->log_max_srq_sz = MLX5_GET(cmd_hca_cap, hcattr, log_max_srq_sz);
+	attr->reg_c_preserve =
+		MLX5_GET(cmd_hca_cap, hcattr, reg_c_preserve);
 	if (attr->qos.sup) {
 		MLX5_SET(query_hca_cap_in, in, op_mod,
 			 MLX5_GET_HCA_CAP_OP_MOD_QOS_CAP |
