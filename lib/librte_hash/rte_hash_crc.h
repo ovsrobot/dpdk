@@ -358,7 +358,7 @@ crc32c_2words(uint64_t data, uint32_t init_val)
 	return crc;
 }
 
-#if defined(RTE_ARCH_X86)
+#if defined(RTE_ARCH_X86) && defined(__SSE42__)
 static inline uint32_t
 crc32c_sse42_u8(uint8_t data, uint32_t init_val)
 {
@@ -404,7 +404,7 @@ crc32c_sse42_u64_mimic(uint64_t data, uint64_t init_val)
 }
 #endif
 
-#ifdef RTE_ARCH_X86_64
+#if defined(RTE_ARCH_X86_64) && defined(__SSE42__)
 static inline uint32_t
 crc32c_sse42_u64(uint64_t data, uint64_t init_val)
 {
@@ -442,7 +442,7 @@ static uint8_t crc32_alg = CRC32_SW;
 static inline void
 rte_hash_crc_set_alg(uint8_t alg)
 {
-#if defined(RTE_ARCH_X86)
+#if defined(RTE_ARCH_X86) && defined(__SSE42__)
 	if (alg == CRC32_SSE42_x64 &&
 			!rte_cpu_get_flag_enabled(RTE_CPUFLAG_EM64T))
 		alg = CRC32_SSE42;
@@ -471,7 +471,7 @@ RTE_INIT(rte_hash_crc_init_alg)
 static inline uint32_t
 rte_hash_crc_1byte(uint8_t data, uint32_t init_val)
 {
-#if defined RTE_ARCH_X86
+#if defined(RTE_ARCH_X86) && defined(__SSE42__)
 	if (likely(crc32_alg & CRC32_SSE42))
 		return crc32c_sse42_u8(data, init_val);
 #endif
@@ -494,7 +494,7 @@ rte_hash_crc_1byte(uint8_t data, uint32_t init_val)
 static inline uint32_t
 rte_hash_crc_2byte(uint16_t data, uint32_t init_val)
 {
-#if defined RTE_ARCH_X86
+#if defined(RTE_ARCH_X86) && defined(__SSE42__)
 	if (likely(crc32_alg & CRC32_SSE42))
 		return crc32c_sse42_u16(data, init_val);
 #endif
@@ -517,7 +517,7 @@ rte_hash_crc_2byte(uint16_t data, uint32_t init_val)
 static inline uint32_t
 rte_hash_crc_4byte(uint32_t data, uint32_t init_val)
 {
-#if defined RTE_ARCH_X86
+#if defined(RTE_ARCH_X86) && defined(__SSE42__)
 	if (likely(crc32_alg & CRC32_SSE42))
 		return crc32c_sse42_u32(data, init_val);
 #endif
@@ -540,12 +540,12 @@ rte_hash_crc_4byte(uint32_t data, uint32_t init_val)
 static inline uint32_t
 rte_hash_crc_8byte(uint64_t data, uint32_t init_val)
 {
-#ifdef RTE_ARCH_X86_64
+#if defined(RTE_ARCH_X86) && defined(__SSE42__)
 	if (likely(crc32_alg == CRC32_SSE42_x64))
 		return crc32c_sse42_u64(data, init_val);
 #endif
 
-#if defined RTE_ARCH_X86
+#if defined(RTE_ARCH_X86) && defined(__SSE42__)
 	if (likely(crc32_alg & CRC32_SSE42))
 		return crc32c_sse42_u64_mimic(data, init_val);
 #endif
