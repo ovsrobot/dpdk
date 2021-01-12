@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Mellanox mlx5 driver.**
+
+  Updated the Mellanox mlx5 driver with new features and improvements, including:
+
+  * Add support for E-Switch mirroring and jump action in the same flow.
+  * Add support to handle modify action in correct order regarding the
+    mirroring action on E-Switch.
 
 Removed Items
 -------------

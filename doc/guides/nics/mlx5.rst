@@ -98,6 +98,8 @@ Features
 - Hardware LRO.
 - Hairpin.
 - Multiple-thread flow insertion.
+- E-Switch mirroring and jump.
+- E-Switch mirroring and modify.
 
 Limitations
 -----------
