@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Mellanox mlx5 driver.**
+
+  Updated the Mellanox mlx5 driver with new features and improvements, including:
+
+  * Enlarge the number of flow priorities to 21844(0 - 21843) for ingress or egress
+    flow groups greater than 0 and for any transfer flow group.
+
 
 Removed Items
 -------------

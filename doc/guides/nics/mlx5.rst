@@ -98,6 +98,8 @@ Features
 - Hardware LRO.
 - Hairpin.
 - Multiple-thread flow insertion.
+- 21844 flow priorities for ingress or egress flow groups greater than 0 and for any transfer
+  flow group.
 
 Limitations
 -----------
