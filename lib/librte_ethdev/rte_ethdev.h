@@ -4030,6 +4030,16 @@ rte_eth_dev_rss_hash_conf_get(uint16_t port_id,
  * to change or add more UDP port for the tunnel. So the offloading function
  * can take effect on the packets with the specific UDP port.
  *
+ * Due to different requirements from different use cases, NICs may have a
+ * different way to identify a UDP port as a tunnel type. Some NIC takes this
+ * as a device (or port) level configure while some NIC takes this as a flow
+ * based configure.
+ *
+ * This API is for the first case and typically it will only be implemented
+ * on a PF driver or a VF driver which have privilege right to configure for
+ * other VFs. For the second case, a tunnel configure could be embedded in a
+ * rte_flow rule.
+ *
  * @param port_id
  *   The port identifier of the Ethernet device.
  * @param tunnel_udp
