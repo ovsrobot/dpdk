@@ -657,3 +657,69 @@ patch accepted. The general cycle for patch review and acceptance is:
      than rework of the original.
    * Trivial patches may be merged sooner than described above at the tree committer's
      discretion.
+
+
+Milestones definition
+---------------------
+
+Each DPDK release has a couple of milestones that help everyone to converge to the release date.
+The following is a list of these milestones together with concrete definitions and expectations.
+
+Roadmap
+~~~~~~~
+
+* Content - new features in libs, drivers, apps, and examples
+* Timeframe - to be published until the first day of the release
+
+RFC
+~~~
+
+* Content - public design review for the features, explaining the need, and the design
+* It should include the API changes, in libs and apps
+* RFCs are not mandatory but are strongly advised to start early discussions
+* Nice to have - driver implementation (full or draft), example code, and documentation
+
+Proposal Deadline
+~~~~~~~~~~~~~~~~~
+
+* Content - either an RFC as stated above or a v1 patch
+* Nice to have - code complete for libs
+
+rc1
+~~~
+
+* Content - new or updated API
+* New API should be defined and implemented in shared libraries
+* The API should include DoxyGen documentation and be part of the relevant .rst files (lib, release_notes)
+* Code and related documentation must be updated atomically in the same patch
+* It should be used in a test application (/apps) and also documented in the relevant .rst files
+* At least one pmd should implement this API. It can be in a draft mode but must be sent as a separate series
+* At least 2 weeks before -rc1 the above should be sent to the ML for review
+* Nice to have: example code (/examples)
+
+rc2
+~~~
+
+* Content - drivers
+* All features should be implemented in drivers
+* The drivers should include documentation and be part of the relevant .rst files (driver, release_notes)
+* Code and related documentation must be updated atomically in the same patch
+* At least 2 weeks before -rc2 the above should be sent to the ML for review
+
+rc3
+~~~
+
+* Content - test apps
+* New functionality that doesn’t depend on libs update can be integrated as part of -rc3
+* The app should include documentation and be part of the relevant .rst files (app, release_notes if significant)
+* Code and related documentation must be updated atomically in the same patch
+* Last opportunity for Misc changes
+* Small driver rework
+* libs and driver cleanup
+* Big bug fixes
+
+rc4
+~~~
+
+* Content - documentation updates
+* Critical bug fixes
