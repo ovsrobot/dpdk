@@ -1737,3 +1737,58 @@ RTE_PMD_REGISTER_PARAM_STRING(ifpga_rawdev_cfg,
 	"ifpga=<string> "
 	"port=<int> "
 	"afu_bts=<path>");
+
+int ifpga_rawdev_update_flash(struct rte_rawdev *dev, const char *image,
+	uint64_t *status)
+{
+	struct opae_adapter *adapter = NULL;
+
+	if (!dev) {
+		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+		return -EINVAL;
+	}
+
+	adapter = ifpga_rawdev_get_priv(dev);
+	if (!adapter) {
+		IFPGA_RAWDEV_PMD_ERR("adapter is invalid");
+		return -ENODEV;
+	}
+
+	return opae_mgr_update_flash(adapter->mgr, image, status);
+}
+
+int ifpga_rawdev_stop_flash_update(struct rte_rawdev *dev, int force)
+{
+	struct opae_adapter *adapter = NULL;
+
+	if (!dev) {
+		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+		return -EINVAL;
+	}
+
+	adapter = ifpga_rawdev_get_priv(dev);
+	if (!adapter) {
+		IFPGA_RAWDEV_PMD_ERR("adapter is invalid");
+		return -ENODEV;
+	}
+
+	return opae_mgr_stop_flash_update(adapter->mgr, force);
+}
+
+int ifpga_rawdev_reload(struct rte_rawdev *dev, int type, int page)
+{
+	struct opae_adapter *adapter = NULL;
+
+	if (!dev) {
+		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+		return -EINVAL;
+	}
+
+	adapter = ifpga_rawdev_get_priv(dev);
+	if (!adapter) {
+		IFPGA_RAWDEV_PMD_ERR("adapter is invalid");
+		return -ENODEV;
+	}
+
+	return opae_mgr_reload(adapter->mgr, type, page);
+}
