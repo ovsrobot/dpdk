@@ -330,6 +330,7 @@ M: Dmitry Kozlyuk <dmitry.kozliuk@gmail.com>
 M: Narcisa Ana Maria Vasile <navasile@linux.microsoft.com>
 M: Dmitry Malloy <dmitrym@microsoft.com>
 M: Pallavi Kadam <pallavi.kadam@intel.com>
+M: Tyler Retzlaff <roretzla@linux.microsoft.com>
 F: lib/librte_eal/windows/
 F: lib/librte_eal/rte_eal_exports.def
 F: buildtools/map_to_win.py
