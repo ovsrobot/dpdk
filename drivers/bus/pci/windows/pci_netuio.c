@@ -7,6 +7,8 @@
 #include <rte_log.h>
 #include <rte_eal.h>
 
+#include <ndisguid.h>
+
 #include "private.h"
 #include "pci_netuio.h"
 
