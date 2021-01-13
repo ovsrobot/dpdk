@@ -408,6 +408,16 @@ enum index {
 	ACTION_SAMPLE_INDEX_VALUE,
 	ACTION_SHARED,
 	SHARED_ACTION_ID2PTR,
+	ACTION_COPY_FIELD,
+	ACTION_COPY_FIELD_DST_TYPE,
+	ACTION_COPY_FIELD_DST_TYPE_VALUE,
+	ACTION_COPY_FIELD_DST_LEVEL,
+	ACTION_COPY_FIELD_DST_OFFSET,
+	ACTION_COPY_FIELD_SRC_TYPE,
+	ACTION_COPY_FIELD_SRC_TYPE_VALUE,
+	ACTION_COPY_FIELD_SRC_LEVEL,
+	ACTION_COPY_FIELD_SRC_OFFSET,
+	ACTION_COPY_FIELD_WIDTH,
 };
 
 /** Maximum size for pattern in struct rte_flow_item_raw. */
@@ -560,6 +570,18 @@ struct rte_flow_action_queue sample_queue[RAW_SAMPLE_CONFS_MAX_NUM];
 struct rte_flow_action_count sample_count[RAW_SAMPLE_CONFS_MAX_NUM];
 struct rte_flow_action_port_id sample_port_id[RAW_SAMPLE_CONFS_MAX_NUM];
 struct rte_flow_action_raw_encap sample_encap[RAW_SAMPLE_CONFS_MAX_NUM];
+
+static const char *const copy_field_table[] = {
+	"start", "mac_dst", "mac_src",
+	"vlan_type", "vlan_id", "mac_type",
+	"ipv4_dscp", "ipv4_ttl", "ipv4_src", "ipv4_dst",
+	"ipv6_hoplimit", "ipv6_src", "ipv6_dst",
+	"tcp_port_src", "tcp_port_dst",
+	"tcp_seq_num", "tcp_ack_num", "tcp_flags",
+	"udp_port_src", "udp_port_dst",
+	"vxlan_vni", "geneve_vni", "gtp_teid",
+	"tag", "mark", "meta", NULL
+};
 
 /** Maximum number of subsequent tokens and arguments on the stack. */
 #define CTX_STACK_SIZE 16
@@ -1306,6 +1328,7 @@ static const enum index next_action[] = {
 	ACTION_AGE,
 	ACTION_SAMPLE,
 	ACTION_SHARED,
+	ACTION_COPY_FIELD,
 	ZERO,
 };
 
@@ -1556,6 +1579,20 @@ static const enum index next_action_sample[] = {
 	ZERO,
 };
 
+static const enum index action_copy_field_dst[] = {
+	ACTION_COPY_FIELD_DST_LEVEL,
+	ACTION_COPY_FIELD_DST_OFFSET,
+	ACTION_COPY_FIELD_SRC_TYPE,
+	ZERO,
+};
+
+static const enum index action_copy_field_src[] = {
+	ACTION_COPY_FIELD_SRC_LEVEL,
+	ACTION_COPY_FIELD_SRC_OFFSET,
+	ACTION_COPY_FIELD_WIDTH,
+	ZERO,
+};
+
 static int parse_set_raw_encap_decap(struct context *, const struct token *,
 				     const char *, unsigned int,
 				     void *, unsigned int);
@@ -1636,6 +1673,10 @@ static int parse_vc_action_sample(struct context *ctx,
 				    unsigned int size);
 static int
 parse_vc_action_sample_index(struct context *ctx, const struct token *token,
+				const char *str, unsigned int len, void *buf,
+				unsigned int size);
+static int
+parse_vc_copy_field(struct context *ctx, const struct token *token,
 				const char *str, unsigned int len, void *buf,
 				unsigned int size);
 static int parse_destroy(struct context *, const struct token *,
@@ -1721,6 +1762,8 @@ static int comp_vc_action_rss_queue(struct context *, const struct token *,
 static int comp_set_raw_index(struct context *, const struct token *,
 			      unsigned int, char *, unsigned int);
 static int comp_set_sample_index(struct context *, const struct token *,
+			      unsigned int, char *, unsigned int);
+static int comp_set_copy_field(struct context *, const struct token *,
 			      unsigned int, char *, unsigned int);
 
 /** Token definitions. */
@@ -4037,6 +4080,81 @@ static const struct token token_list[] = {
 		.call = parse_vc_action_raw_decap_index,
 		.comp = comp_set_raw_index,
 	},
+	[ACTION_COPY_FIELD] = {
+		.name = "copy_field",
+		.help = "copy data from destination field to source field",
+		.priv = PRIV_ACTION(COPY_FIELD,
+			sizeof(struct rte_flow_action_copy_field)),
+		.next = NEXT(NEXT_ENTRY(ACTION_COPY_FIELD_DST_TYPE)),
+		.call = parse_vc,
+	},
+	[ACTION_COPY_FIELD_DST_TYPE] = {
+		.name = "dst_type",
+		.help = "destination field type",
+		.next = NEXT(action_copy_field_dst,
+			NEXT_ENTRY(ACTION_COPY_FIELD_DST_TYPE_VALUE)),
+		.call = parse_vc_conf,
+	},
+	[ACTION_COPY_FIELD_DST_TYPE_VALUE] = {
+		.name = "{type}",
+		.help = "destination field type value",
+		.call = parse_vc_copy_field,
+		.comp = comp_set_copy_field,
+	},
+	[ACTION_COPY_FIELD_DST_LEVEL] = {
+		.name = "dst_level",
+		.help = "destination field level",
+		.next = NEXT(action_copy_field_dst, NEXT_ENTRY(UNSIGNED)),
+		.args = ARGS(ARGS_ENTRY(struct rte_flow_action_copy_field,
+					dst.level)),
+		.call = parse_vc_conf,
+	},
+	[ACTION_COPY_FIELD_DST_OFFSET] = {
+		.name = "dst_offset",
+		.help = "destination field bit offset",
+		.next = NEXT(action_copy_field_dst, NEXT_ENTRY(UNSIGNED)),
+		.args = ARGS(ARGS_ENTRY(struct rte_flow_action_copy_field,
+					dst.offset)),
+		.call = parse_vc_conf,
+	},
+	[ACTION_COPY_FIELD_SRC_TYPE] = {
+		.name = "src_type",
+		.help = "source field type",
+		.next = NEXT(action_copy_field_src,
+			NEXT_ENTRY(ACTION_COPY_FIELD_SRC_TYPE_VALUE)),
+		.call = parse_vc_conf,
+	},
+	[ACTION_COPY_FIELD_SRC_TYPE_VALUE] = {
+		.name = "{type}",
+		.help = "source field type value",
+		.call = parse_vc_copy_field,
+		.comp = comp_set_copy_field,
+	},
+	[ACTION_COPY_FIELD_SRC_LEVEL] = {
+		.name = "src_level",
+		.help = "source field level",
+		.next = NEXT(action_copy_field_src, NEXT_ENTRY(UNSIGNED)),
+		.args = ARGS(ARGS_ENTRY(struct rte_flow_action_copy_field,
+					src.level)),
+		.call = parse_vc_conf,
+	},
+	[ACTION_COPY_FIELD_SRC_OFFSET] = {
+		.name = "src_offset",
+		.help = "source field bit offset",
+		.next = NEXT(action_copy_field_src, NEXT_ENTRY(UNSIGNED)),
+		.args = ARGS(ARGS_ENTRY(struct rte_flow_action_copy_field,
+					src.offset)),
+		.call = parse_vc_conf,
+	},
+	[ACTION_COPY_FIELD_WIDTH] = {
+		.name = "width",
+		.help = "number of bits to copy",
+		.next = NEXT(NEXT_ENTRY(ACTION_NEXT),
+			NEXT_ENTRY(UNSIGNED)),
+		.args = ARGS(ARGS_ENTRY(struct rte_flow_action_copy_field,
+					width)),
+		.call = parse_vc_conf,
+	},
 	/* Top level command. */
 	[SET] = {
 		.name = "set",
@@ -5960,6 +6078,36 @@ parse_vc_action_sample_index(struct context *ctx, const struct token *token,
 	return len;
 }
 
+/** Parse tokens for copy_field command. */
+static int
+parse_vc_copy_field(struct context *ctx, const struct token *token,
+			 const char *str, unsigned int len, void *buf,
+			 unsigned int size)
+{
+	struct rte_flow_action_copy_field *action_copy_field;
+	unsigned int i;
+
+	(void)token;
+	(void)buf;
+	(void)size;
+	if (ctx->curr != ACTION_COPY_FIELD_DST_TYPE_VALUE &&
+		ctx->curr != ACTION_COPY_FIELD_SRC_TYPE_VALUE)
+		return -1;
+	for (i = 0; copy_field_table[i]; ++i)
+		if (!strcmp_partial(copy_field_table[i], str, len))
+			break;
+	if (!copy_field_table[i])
+		return -1;
+	if (!ctx->object)
+		return len;
+	action_copy_field = ctx->object;
+	if (ctx->curr == ACTION_COPY_FIELD_DST_TYPE_VALUE)
+		action_copy_field->dst.field = (enum rte_flow_field_id)i;
+	else
+		action_copy_field->src.field = (enum rte_flow_field_id)i;
+	return len;
+}
+
 /** Parse tokens for destroy command. */
 static int
 parse_destroy(struct context *ctx, const struct token *token,
@@ -7027,6 +7175,24 @@ comp_set_sample_index(struct context *ctx, const struct token *token,
 		++nb;
 	}
 	return nb;
+}
+
+/** Complete field type for copy_field command. */
+static int
+comp_set_copy_field(struct context *ctx, const struct token *token,
+		   unsigned int ent, char *buf, unsigned int size)
+{
+	uint16_t idx = 0;
+
+	RTE_SET_USED(ctx);
+	RTE_SET_USED(token);
+	for (idx = 0; copy_field_table[idx]; ++idx)
+		;
+	if (!buf)
+		return idx + 1;
+	if (ent < idx)
+		return strlcpy(buf, copy_field_table[ent], size);
+	return -1;
 }
 
 /** Internal context. */
