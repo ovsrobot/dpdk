@@ -14,3 +14,4 @@ Compression Device Drivers
     octeontx
     qat_comp
     zlib
+    mlx5
