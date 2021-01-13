@@ -2766,6 +2766,63 @@ The behaviour of the shared action defined by ``action`` argument of type
    | no properties |
    +---------------+
 
+Action: ``COPY_FIELD``
+^^^^^^^^^^^^^^^^^^^^^^
+
+Copy ``width`` bits from ``src`` field to ``dst`` field.
+
+Any arbitrary header field (as well as mark, metadata or tag values)
+can be used as both source and destination fields as set by ``field``.
+``RTE_FLOW_FIELD_START`` is used to point to the beginning of a packet.
+The copy is ignored in case the field specified is not present in a packet.
+
+ ``width`` defines a number of bits to copy. A user is responsible for
+ supplying the appropriate length to copy. The width that exceeds the
+ hardware capabilities is rejected.
+
+ ``level`` is used to access any packet field on any encapsulation level
+ as well as any tag element in the tag array.
+
+- ``0`` means the default behaviour. Depending on the packet type, it can
+  mean outermost, innermost or anything in between.
+
+- ``1`` requests access to the outermost packet encapsulation level.
+
+- ``2`` and subsequent values requests access to the specified packet
+  encapsulation level, from outermost to innermost (lower to higher values).
+  For the tag array ``level`` translates directly into the array index.
+
+``offset`` specifies the number of bits to skip from an field's start.
+That allows performing a partial copy of the needed part or to divide a big
+packet field into multiple smaller fields. Alternatively, ``offset`` allows
+going past the specified packet field boundary to copy an field to an
+arbitrary place in a packet essentially providing a way to copy any part of
+a packet to any other part of it if supported by a underlying PMD driver.
+
+.. _table_rte_flow_action_copy_field:
+
+.. table:: COPY_FIELD
+
+   +-----------------------------------------+
+   | Field         | Value                   |
+   +===============+=========================+
+   | ``dst``       | destination field       |
+   | ``src``       | source field            |
+   | ``width``     | number of bits to copy  |
+   +---------------+-------------------------+
+
+.. _table_rte_flow_action_copy_data:
+
+.. table:: destination/source field definition
+
+   +--------------------------------------------------------------------------+
+   | Field         | Value                                                    |
+   +===============+==========================================================+
+   | ``field``     | field ID of a packet field or mark/metadata/tag          |
+   | ``level``     | encapsulation level of a packet field or tag array index |
+   | ``offset``    | number of bits to skip at the beginning during the copy  |
+   +---------------+----------------------------------------------------------+
+
 Negative types
 ~~~~~~~~~~~~~~
 

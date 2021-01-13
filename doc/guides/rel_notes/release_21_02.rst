@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added support of copy action in the flow API.**
+
+  Added copy action support to copy any arbitrary header field
+  (as well as mark, metadata or tag values) to another one:
+  ``RTE_FLOW_ACTION_TYPE_COPY_FIELD``.
 
 Removed Items
 -------------

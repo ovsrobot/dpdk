@@ -2198,6 +2198,16 @@ enum rte_flow_action_type {
 	 * struct rte_flow_shared_action).
 	 */
 	RTE_FLOW_ACTION_TYPE_SHARED,
+
+	/**
+	 * Copy a packet header field, tag, mark or metadata.
+	 *
+	 * Allow saving an arbitrary header field by copying its value
+	 * to a tag/mark/metadata or copy it into another header field.
+	 *
+	 * See struct rte_flow_action_copy_field.
+	 */
+	RTE_FLOW_ACTION_TYPE_COPY_FIELD,
 };
 
 /**
@@ -2790,6 +2800,55 @@ struct rte_flow_action_set_dscp {
  * - destroy action
  */
 struct rte_flow_shared_action;
+
+enum rte_flow_field_id {
+	RTE_FLOW_FIELD_START = 0,
+	RTE_FLOW_FIELD_MAC_DST,
+	RTE_FLOW_FIELD_MAC_SRC,
+	RTE_FLOW_FIELD_VLAN_TYPE,
+	RTE_FLOW_FIELD_VLAN_ID,
+	RTE_FLOW_FIELD_MAC_TYPE,
+	RTE_FLOW_FIELD_IPV4_DSCP,
+	RTE_FLOW_FIELD_IPV4_TTL,
+	RTE_FLOW_FIELD_IPV4_SRC,
+	RTE_FLOW_FIELD_IPV4_DST,
+	RTE_FLOW_FIELD_IPV6_HOPLIMIT,
+	RTE_FLOW_FIELD_IPV6_SRC,
+	RTE_FLOW_FIELD_IPV6_DST,
+	RTE_FLOW_FIELD_TCP_PORT_SRC,
+	RTE_FLOW_FIELD_TCP_PORT_DST,
+	RTE_FLOW_FIELD_TCP_SEQ_NUM,
+	RTE_FLOW_FIELD_TCP_ACK_NUM,
+	RTE_FLOW_FIELD_TCP_FLAGS,
+	RTE_FLOW_FIELD_UDP_PORT_SRC,
+	RTE_FLOW_FIELD_UDP_PORT_DST,
+	RTE_FLOW_FIELD_VXLAN_VNI,
+	RTE_FLOW_FIELD_GENEVE_VNI,
+	RTE_FLOW_FIELD_GTP_TEID,
+	RTE_FLOW_FIELD_TAG,
+	RTE_FLOW_FIELD_MARK,
+	RTE_FLOW_FIELD_META,
+};
+
+struct rte_flow_action_copy_data {
+	enum rte_flow_field_id field;
+	uint32_t level;
+	uint32_t offset;
+};
+
+/**
+ * RTE_FLOW_ACTION_TYPE_COPY_FIELD
+ *
+ * Copies a specified number of bits from a source header field
+ * to a destination header field. Tag, mark or metadata can also
+ * be used as a source/destination to allow saving/overwriting
+ * an arbitrary header field with a user-specified value.
+ */
+struct rte_flow_action_copy_field {
+	struct rte_flow_action_copy_data dst;
+	struct rte_flow_action_copy_data src;
+	uint32_t width;
+};
 
 /* Mbuf dynamic field offset for metadata. */
 extern int32_t rte_flow_dynf_metadata_offs;
