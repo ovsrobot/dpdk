@@ -28,6 +28,7 @@ libraries = [
 	'rib', 'reorder', 'sched', 'security', 'stack', 'vhost',
 	# ipsec lib depends on net, crypto and security
 	'ipsec',
+	'vfio_user',
 	#fib lib depends on rib
 	'fib',
 	# add pkt framework libs which use other libs from above

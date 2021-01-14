@@ -1541,6 +1541,10 @@ M: Nithin Dabilpuram <ndabilpuram@marvell.com>
 M: Pavan Nikhilesh <pbhagavatula@marvell.com>
 F: lib/librte_node/
 
+Vfio-user - EXPERIMENTAL
+M: Chenbo Xia <chenbo.xia@intel.com>
+M: Xiuchun Lu <xiuchun.lu@intel.com>
+F: lib/librte_vfio_user/
 
 Test Applications
 -----------------
