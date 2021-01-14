@@ -138,6 +138,7 @@ test_sources = files('commands.c',
 	'test_trace.c',
 	'test_trace_register.c',
 	'test_trace_perf.c',
+	'test_vfio_user.c',
 	'test_version.c',
 	'virtual_pmd.c'
 )
@@ -173,6 +174,7 @@ test_deps = ['acl',
 	'ring',
 	'security',
 	'stack',
+	'vfio_user',
 	'telemetry',
 	'timer'
 ]
@@ -266,6 +268,8 @@ fast_tests = [
         ['service_autotest', true],
         ['thash_autotest', true],
         ['trace_autotest', true],
+        ['vfio_user_autotest_client', false],
+        ['vfio_user_autotest_server', false],
 ]
 
 perf_test_names = [
