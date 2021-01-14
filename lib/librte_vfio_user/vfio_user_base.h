@@ -7,6 +7,10 @@
 
 #include <rte_log.h>
 
+#include "rte_vfio_user.h"
+
+#define VFIO_USER_VERSION_MAJOR 1
+#define VFIO_USER_VERSION_MINOR 0
 #define VFIO_USER_MAX_FD 1024
 #define VFIO_USER_MAX_VERSION_DATA 512
 

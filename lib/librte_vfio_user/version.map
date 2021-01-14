@@ -1,3 +1,9 @@
 EXPERIMENTAL {
+	global:
+
+	rte_vfio_user_register;
+	rte_vfio_user_unregister;
+	rte_vfio_user_start;
+
 	local: *;
 };

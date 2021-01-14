@@ -6,4 +6,5 @@ if not is_linux
 	reason = 'only supported on Linux'
 endif
 
-sources = files('vfio_user_base.c')
+sources = files('vfio_user_base.c', 'vfio_user_server.c')
+headers = files('rte_vfio_user.h')
