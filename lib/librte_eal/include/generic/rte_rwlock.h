@@ -15,6 +15,12 @@
  * one writer. All readers are blocked until the writer is finished
  * writing.
  *
+ * Note: This version of reader/writer locks is not fair because
+ * readers do not block for pending writers. A stream of readers can
+ * subsequently lock out all potential writers and starve them.
+ * This is because after the first reader locks the resource,
+ * no writer can lock it. The writer will only be able to get the lock
+ * when it will only be released by the last reader.
  */
 
 #ifdef __cplusplus
