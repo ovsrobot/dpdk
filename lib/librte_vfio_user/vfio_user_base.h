@@ -61,6 +61,12 @@ struct vfio_user_reg {
 	uint8_t rsvd[VFIO_USER_MAX_RSVD];
 };
 
+struct vfio_user_irq_set {
+	struct vfio_irq_set set;
+	/* Reserved for data of irq set */
+	uint8_t rsvd[VFIO_USER_MAX_RSVD];
+};
+
 struct vfio_user_reg_rw {
 	uint64_t reg_offset;
 	uint32_t reg_idx;
@@ -83,6 +89,8 @@ struct vfio_user_msg {
 		struct rte_vfio_user_mem_reg memory[VFIO_USER_MSG_MAX_NREG];
 		struct vfio_device_info dev_info;
 		struct vfio_user_reg reg_info;
+		struct vfio_irq_info irq_info;
+		struct vfio_user_irq_set irq_set;
 		struct vfio_user_reg_rw reg_rw;
 	} payload;
 	int fds[VFIO_USER_MAX_FD];

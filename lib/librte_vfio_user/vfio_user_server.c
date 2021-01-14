@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <sys/mman.h>
 #include <sys/un.h>
+#include <sys/eventfd.h>
 
 #include "vfio_user_server.h"
 
@@ -311,6 +312,150 @@ vfio_user_device_get_reg_info(struct vfio_user_server *dev,
 }
 
 static int
+vfio_user_device_get_irq_info(struct vfio_user_server *dev,
+	struct vfio_user_msg *msg)
+{
+	struct vfio_irq_info *irq_info = &msg->payload.irq_info;
+	struct rte_vfio_user_irq_info *info = dev->irqs.info;
+	uint32_t i;
+
+	if (vfio_user_check_msg_fdnum(msg, 0) != 0)
+		return -EINVAL;
+
+	for (i = 0; i < info->irq_num; i++) {
+		if (irq_info->index == info->irq_info[i].index) {
+			irq_info->count = info->irq_info[i].count;
+			irq_info->flags |= info->irq_info[i].flags;
+			break;
+		}
+	}
+	if (i == info->irq_num)
+		return -EINVAL;
+
+	VFIO_USER_LOG(DEBUG, "IRQ info: argsz(0x%x), flags(0x%x), index(0x%x),"
+		" count(0x%x)\n", irq_info->argsz, irq_info->flags,
+		irq_info->index, irq_info->count);
+
+	return 0;
+}
+
+static inline int
+irq_set_trigger(struct vfio_user_irqs *irqs,
+	struct vfio_irq_set *irq_set, struct vfio_user_msg *msg)
+{
+	uint32_t i = irq_set->start;
+	int eventfd;
+
+	switch (irq_set->flags & VFIO_IRQ_SET_DATA_TYPE_MASK) {
+	case VFIO_IRQ_SET_DATA_NONE:
+		if (vfio_user_check_msg_fdnum(msg, 0) != 0)
+			return -EINVAL;
+
+		for (; i < irq_set->start + irq_set->count; i++) {
+			eventfd = irqs->fds[irq_set->index][i];
+			if (eventfd >= 0) {
+				if (eventfd_write(eventfd, (eventfd_t)1))
+					return -errno;
+			}
+		}
+		break;
+	case VFIO_IRQ_SET_DATA_BOOL:
+		if (vfio_user_check_msg_fdnum(msg, 0) != 0)
+			return -EINVAL;
+
+		uint8_t *idx = irq_set->data;
+		for (; i < irq_set->start + irq_set->count; i++, idx++) {
+			eventfd = irqs->fds[irq_set->index][i];
+			if (eventfd >= 0 && *idx == 1) {
+				if (eventfd_write(eventfd, (eventfd_t)1))
+					return -errno;
+			}
+		}
+		break;
+	case VFIO_IRQ_SET_DATA_EVENTFD:
+		if (vfio_user_check_msg_fdnum(msg, irq_set->count) != 0)
+			return -EINVAL;
+
+		int32_t *fds = msg->fds;
+		for (; i < irq_set->start + irq_set->count; i++, fds++) {
+			eventfd = irqs->fds[irq_set->index][i];
+			if (eventfd >= 0)
+				close(eventfd); /* Clear original irqfd*/
+			if (*fds >= 0)
+				irqs->fds[irq_set->index][i] = *fds;
+		}
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static void
+vfio_user_disable_irqs(struct vfio_user_irqs *irqs)
+{
+	struct rte_vfio_user_irq_info *info = irqs->info;
+	uint32_t i, j;
+
+	for (i = 0; i < info->irq_num; i++) {
+		for (j = 0; j < info->irq_info[i].count; j++) {
+			if (irqs->fds[i][j] != -1) {
+				close(irqs->fds[i][j]);
+				irqs->fds[i][j] = -1;
+			}
+		}
+	}
+}
+
+static int
+vfio_user_device_set_irqs(struct vfio_user_server *dev,
+	struct vfio_user_msg *msg)
+{
+	struct vfio_user_irq_set *irq = &msg->payload.irq_set;
+	struct vfio_irq_set *irq_set = &irq->set;
+	struct rte_vfio_user_irq_info *info = dev->irqs.info;
+	int ret = 0;
+
+	if (info->irq_num <= irq_set->index
+		|| info->irq_info[irq_set->index].count <
+		irq_set->start + irq_set->count) {
+		vfio_user_close_msg_fds(msg);
+		return -EINVAL;
+	}
+
+	if (irq_set->count == 0) {
+		if (irq_set->flags & VFIO_IRQ_SET_DATA_NONE) {
+			vfio_user_disable_irqs(&dev->irqs);
+			return 0;
+		}
+		vfio_user_close_msg_fds(msg);
+		return -EINVAL;
+	}
+
+	switch (irq_set->flags & VFIO_IRQ_SET_ACTION_TYPE_MASK) {
+	/* Mask/Unmask not supported for now */
+	case VFIO_IRQ_SET_ACTION_MASK:
+		/* FALLTHROUGH */
+	case VFIO_IRQ_SET_ACTION_UNMASK:
+		return 0;
+	case VFIO_IRQ_SET_ACTION_TRIGGER:
+		ret = irq_set_trigger(&dev->irqs, irq_set, msg);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	VFIO_USER_LOG(DEBUG, "Set IRQ: argsz(0x%x), flags(0x%x), index(0x%x), "
+		"start(0x%x), count(0x%x)\n", irq_set->argsz, irq_set->flags,
+		irq_set->index, irq_set->start, irq_set->count);
+
+	/* Do not reply fds back */
+	msg->fd_num = 0;
+	return ret;
+}
+
+static int
 vfio_user_region_read(struct vfio_user_server *dev,
 	struct vfio_user_msg *msg)
 {
@@ -421,6 +566,50 @@ vfio_user_destroy_mem(struct vfio_user_server *dev)
 	dev->mem = NULL;
 }
 
+static inline void
+vfio_user_destroy_irq(struct vfio_user_server *dev)
+{
+	struct vfio_user_irqs *irq = &dev->irqs;
+	int *fd;
+	uint32_t i, j;
+
+	if (!irq->info)
+		return;
+
+	for (i = 0; i < irq->info->irq_num; i++) {
+		fd = irq->fds[i];
+
+		for (j = 0; j < irq->info->irq_info[i].count; j++) {
+			if (fd[j] != -1)
+				close(fd[j]);
+		}
+
+		free(fd);
+	}
+
+	free(irq->fds);
+}
+
+static inline void
+vfio_user_clean_irqfd(struct vfio_user_server *dev)
+{
+	struct vfio_user_irqs *irq = &dev->irqs;
+	int *fd;
+	uint32_t i, j;
+
+	if (!irq->info)
+		return;
+
+	for (i = 0; i < irq->info->irq_num; i++) {
+		fd = irq->fds[i];
+
+		for (j = 0; j < irq->info->irq_info[i].count; j++) {
+			close(fd[j]);
+			fd[j] = -1;
+		}
+	}
+}
+
 static int
 vfio_user_device_reset(struct vfio_user_server *dev,
 	struct vfio_user_msg *msg)
@@ -436,6 +625,7 @@ vfio_user_device_reset(struct vfio_user_server *dev,
 		return -ENOTSUP;
 
 	vfio_user_destroy_mem_entries(dev->mem);
+	vfio_user_clean_irqfd(dev);
 	dev->is_ready = 0;
 
 	if (dev->ops->reset_device)
@@ -451,8 +641,8 @@ static vfio_user_msg_handler_t vfio_user_msg_handlers[VFIO_USER_MAX] = {
 	[VFIO_USER_DMA_UNMAP] = vfio_user_dma_unmap,
 	[VFIO_USER_DEVICE_GET_INFO] = vfio_user_device_get_info,
 	[VFIO_USER_DEVICE_GET_REGION_INFO] = vfio_user_device_get_reg_info,
-	[VFIO_USER_DEVICE_GET_IRQ_INFO] = NULL,
-	[VFIO_USER_DEVICE_SET_IRQS] = NULL,
+	[VFIO_USER_DEVICE_GET_IRQ_INFO] = vfio_user_device_get_irq_info,
+	[VFIO_USER_DEVICE_SET_IRQS] = vfio_user_device_set_irqs,
 	[VFIO_USER_REGION_READ] = vfio_user_region_read,
 	[VFIO_USER_REGION_WRITE] = vfio_user_region_write,
 	[VFIO_USER_DMA_READ] = NULL,
@@ -856,6 +1046,7 @@ vfio_user_message_handler(int dev_id, int fd)
 	 * to avoid errors in data path handling
 	 */
 	if ((cmd == VFIO_USER_DMA_MAP || cmd == VFIO_USER_DMA_UNMAP ||
+		cmd == VFIO_USER_DEVICE_SET_IRQS ||
 		cmd == VFIO_USER_DEVICE_RESET)
 		&& dev->ops->lock_dp) {
 		dev->ops->lock_dp(dev_id, 1);
@@ -898,7 +1089,8 @@ vfio_user_message_handler(int dev_id, int fd)
 		if (vfio_user_is_ready(dev) && dev->ops->new_device)
 			dev->ops->new_device(dev_id);
 	} else {
-		if ((cmd == VFIO_USER_DMA_MAP || cmd == VFIO_USER_DMA_UNMAP)
+		if ((cmd == VFIO_USER_DMA_MAP || cmd == VFIO_USER_DMA_UNMAP
+			|| cmd == VFIO_USER_DEVICE_SET_IRQS)
 			&& dev->ops->update_status)
 			dev->ops->update_status(dev_id);
 	}
@@ -926,6 +1118,7 @@ vfio_user_sock_read(int fd, void *data)
 		if (dev) {
 			dev->ops->destroy_device(dev_id);
 			vfio_user_destroy_mem_entries(dev->mem);
+			vfio_user_clean_irqfd(dev);
 			dev->is_ready = 0;
 			dev->msg_id = 0;
 		}
@@ -1023,9 +1216,9 @@ vfio_user_start_server(struct vfio_user_server_socket *sk)
 	}
 
 	/* All the info must be set before start */
-	if (!dev->dev_info || !dev->reg) {
+	if (!dev->dev_info || !dev->reg || !dev->irqs.info) {
 		VFIO_USER_LOG(ERR, "Failed to start, "
-			"dev/reg info must be set before start\n");
+			"dev/reg/irq info must be set before start\n");
 		return -1;
 	}
 
@@ -1139,6 +1332,7 @@ rte_vfio_user_unregister(const char *sock_addr)
 		return -1;
 	}
 	vfio_user_destroy_mem(dev);
+	vfio_user_destroy_irq(dev);
 	vfio_user_del_device(dev);
 
 	return 0;
@@ -1300,4 +1494,100 @@ rte_vfio_user_get_mem_table(int dev_id)
 	}
 
 	return dev->mem;
+}
+
+int
+rte_vfio_user_get_irq(int dev_id, uint32_t index, uint32_t count, int *fds)
+{
+	struct vfio_user_server *dev;
+	struct vfio_user_irqs *irqs;
+	uint32_t irq_max;
+
+	dev = vfio_user_get_device(dev_id);
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to get irq info:"
+			"device %d not found.\n", dev_id);
+		return -1;
+	}
+
+	if (!fds)
+		return -1;
+
+	irqs = &dev->irqs;
+	if (index >= irqs->info->irq_num)
+		return -1;
+
+	irq_max = irqs->info->irq_info[index].count;
+	if (count > irq_max)
+		return -1;
+
+	memcpy(fds, dev->irqs.fds[index], count * sizeof(int));
+	return 0;
+}
+
+int
+rte_vfio_user_set_irq_info(const char *sock_addr,
+	struct rte_vfio_user_irq_info *irq)
+{
+	struct vfio_user_server *dev;
+	struct vfio_user_server_socket *sk;
+	uint32_t i;
+	int dev_id, ret;
+
+	if (!irq)
+		return -1;
+
+	pthread_mutex_lock(&vfio_ep_sock.mutex);
+	sk = vfio_user_find_socket(sock_addr);
+	pthread_mutex_unlock(&vfio_ep_sock.mutex);
+
+	if (!sk) {
+		VFIO_USER_LOG(ERR, "Failed to set irq info with sock_addr:"
+			"%s: addr not registered.\n", sock_addr);
+		return -1;
+	}
+
+	dev_id = sk->sock.dev_id;
+	dev = vfio_user_get_device(dev_id);
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to set irq info:"
+			"device %d not found.\n", dev_id);
+		return -1;
+	}
+
+	if (dev->started) {
+		VFIO_USER_LOG(ERR, "Failed to set irq info for device %d\n"
+			 ", device already started\n", dev_id);
+		return -1;
+	}
+
+	if (dev->irqs.info)
+		vfio_user_destroy_irq(dev);
+
+	dev->irqs.info = irq;
+
+	dev->irqs.fds = malloc(irq->irq_num * sizeof(int *));
+	if (!dev->irqs.fds)
+		return -1;
+
+	for (i = 0; i < irq->irq_num; i++) {
+		uint32_t sz = irq->irq_info[i].count * sizeof(int);
+		dev->irqs.fds[i] = malloc(sz);
+		if (!dev->irqs.fds[i]) {
+			ret = -1;
+			goto exit;
+		}
+
+		memset(dev->irqs.fds[i], 0xFF, sz);
+	}
+
+	return 0;
+exit:
+	for (--i;; i--) {
+		free(dev->irqs.fds[i]);
+		if (i == 0)
+			break;
+	}
+	free(dev->irqs.fds);
+	return ret;
 }

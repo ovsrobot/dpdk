@@ -6,8 +6,10 @@ EXPERIMENTAL {
 	rte_vfio_user_start;
 	rte_vfio_get_sock_addr;
 	rte_vfio_user_get_mem_table;
+	rte_vfio_user_get_irq;
 	rte_vfio_user_set_dev_info;
 	rte_vfio_user_set_reg_info;
+	rte_vfio_user_set_irq_info;
 
 	local: *;
 };

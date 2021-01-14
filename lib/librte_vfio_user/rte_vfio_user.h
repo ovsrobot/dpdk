@@ -69,6 +69,11 @@ struct rte_vfio_user_regions {
 	struct rte_vfio_user_reg_info reg_info[];
 };
 
+struct rte_vfio_user_irq_info {
+	uint32_t irq_num;
+	struct vfio_irq_info irq_info[];
+};
+
 /**
  *  Below APIs are for vfio-user server (device provider) to use:
  *	*rte_vfio_user_register
@@ -76,8 +81,10 @@ struct rte_vfio_user_regions {
  *	*rte_vfio_user_start
  *	*rte_vfio_get_sock_addr
  *	*rte_vfio_user_get_mem_table
+ *	*rte_vfio_user_get_irq
  *	*rte_vfio_user_set_dev_info
  *	*rte_vfio_user_set_reg_info
+ *	*rte_vfio_user_set_irq_info
  */
 
 /**
@@ -187,5 +194,44 @@ rte_vfio_user_set_reg_info(const char *sock_addr,
 __rte_experimental
 int
 rte_vfio_get_sock_addr(int dev_id, char *buf, size_t len);
+
+/**
+ * Get the irqfds of a vfio-user device.
+ *
+ * @param dev_id
+ *   Vfio-user device ID
+ * @param index
+ *   irq index
+ * @param count
+ *   irq count
+ * @param[out] fds
+ *   Pointer to the irqfds
+ * @return
+ *   0 on success, -1 on failure
+ */
+__rte_experimental
+int
+rte_vfio_user_get_irq(int dev_id, uint32_t index, uint32_t count,
+	int *fds);
+
+/**
+ * Set the irq information for a vfio-user device.
+ *
+ * This information must be set before calling rte_vfio_user_start, and should
+ * not be updated after start. Update after start can be done by unregistration
+ * and re-registration, and then the device-level change can be detected by
+ * vfio-user client.
+ *
+ * @param sock_addr
+ *   Unix domain socket address
+ * @param irq
+ *   IRQ information for the vfio-user device
+ * @return
+ *   0 on success, -1 on failure
+ */
+__rte_experimental
+int
+rte_vfio_user_set_irq_info(const char *sock_addr,
+	struct rte_vfio_user_irq_info *irq);
 
 #endif

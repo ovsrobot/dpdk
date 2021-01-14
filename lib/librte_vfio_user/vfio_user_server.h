@@ -9,6 +9,11 @@
 
 #include "vfio_user_base.h"
 
+struct vfio_user_irqs {
+	struct rte_vfio_user_irq_info *info;
+	int **fds;
+};
+
 struct vfio_user_server {
 	int dev_id;
 	int is_ready;
@@ -21,6 +26,7 @@ struct vfio_user_server {
 	struct rte_vfio_user_mem *mem;
 	struct vfio_device_info *dev_info;
 	struct rte_vfio_user_regions *reg;
+	struct vfio_user_irqs irqs;
 };
 
 typedef int (*event_handler)(int fd, void *data);
