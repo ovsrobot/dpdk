@@ -245,6 +245,7 @@ fast_tests = [
         ['string_autotest', true],
         ['table_autotest', true],
         ['tailq_autotest', true],
+        ['ticketlock_autotest', true],
         ['timer_autotest', false],
         ['user_delay_us', true],
         ['version_autotest', true],
