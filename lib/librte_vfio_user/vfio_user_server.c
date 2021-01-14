@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <inttypes.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
@@ -39,9 +40,159 @@ vfio_user_negotiate_version(struct vfio_user_server *dev,
 		return -ENOTSUP;
 }
 
+static int
+vfio_user_device_get_info(struct vfio_user_server *dev,
+	struct vfio_user_msg *msg)
+{
+	struct vfio_device_info *dev_info = &msg->payload.dev_info;
+
+	if (vfio_user_check_msg_fdnum(msg, 0) != 0)
+		return -EINVAL;
+
+	if (msg->size != sizeof(*dev_info) + VFIO_USER_MSG_HDR_SIZE) {
+		VFIO_USER_LOG(ERR, "Invalid message for get dev info\n");
+		return -EINVAL;
+	}
+
+	memcpy(dev_info, dev->dev_info, sizeof(*dev_info));
+
+	VFIO_USER_LOG(DEBUG, "Device info: argsz(0x%x), flags(0x%x), "
+		"regions(%u), irqs(%u)\n", dev_info->argsz, dev_info->flags,
+		dev_info->num_regions, dev_info->num_irqs);
+
+	return 0;
+}
+
+static int
+vfio_user_device_get_reg_info(struct vfio_user_server *dev,
+	struct vfio_user_msg *msg)
+{
+	struct vfio_user_reg *reg = &msg->payload.reg_info;
+	struct rte_vfio_user_reg_info *reg_info;
+	struct vfio_region_info *vinfo;
+
+	if (vfio_user_check_msg_fdnum(msg, 0) != 0)
+		return -EINVAL;
+
+	if (msg->size > sizeof(*reg) + VFIO_USER_MSG_HDR_SIZE ||
+		dev->reg->reg_num <= reg->reg_info.index) {
+		VFIO_USER_LOG(ERR, "Invalid message for get region info\n");
+		return -EINVAL;
+	}
+
+	reg_info = &dev->reg->reg_info[reg->reg_info.index];
+	vinfo = reg_info->info;
+	memcpy(reg, vinfo, vinfo->argsz);
+
+	if (reg_info->fd != -1) {
+		msg->fd_num = 1;
+		msg->fds[0] = reg_info->fd;
+	}
+
+	VFIO_USER_LOG(DEBUG, "Region(%u) info: addr(0x%" PRIx64 "), fd(%d), "
+		"sz(0x%llx), argsz(0x%x), c_off(0x%x), flags(0x%x) "
+		"off(0x%llx)\n", vinfo->index, (uint64_t)reg_info->base,
+		reg_info->fd, vinfo->size, vinfo->argsz, vinfo->cap_offset,
+		vinfo->flags, vinfo->offset);
+
+	return 0;
+}
+
+static int
+vfio_user_region_read(struct vfio_user_server *dev,
+	struct vfio_user_msg *msg)
+{
+	struct vfio_user_reg_rw *rw = &msg->payload.reg_rw;
+	struct rte_vfio_user_regions *reg = dev->reg;
+	struct rte_vfio_user_reg_info *reg_info;
+	size_t count;
+
+	if (vfio_user_check_msg_fdnum(msg, 0) != 0)
+		return -EINVAL;
+
+	reg_info = &reg->reg_info[rw->reg_idx];
+
+	if (rw->reg_idx >= reg->reg_num ||
+		rw->size > VFIO_USER_MAX_RW_DATA ||
+		rw->reg_offset >= reg_info->info->size ||
+		rw->reg_offset + rw->size > reg_info->info->size) {
+		VFIO_USER_LOG(ERR, "Invalid read region request\n");
+		rw->size = 0;
+		return 0;
+	}
+
+	VFIO_USER_LOG(DEBUG, "Read Region(%u): offset(0x%" PRIx64 "),"
+		"size(0x%x)\n", rw->reg_idx, rw->reg_offset, rw->size);
+
+	if (reg_info->rw) {
+		count = reg_info->rw(reg_info, msg->payload.reg_rw.data,
+				rw->size, rw->reg_offset, 0);
+		rw->size = count;
+		msg->size += count;
+		return 0;
+	}
+
+	memcpy(&msg->payload.reg_rw.data,
+		(uint8_t *)reg_info->base + rw->reg_offset, rw->size);
+	msg->size += rw->size;
+	return 0;
+}
+
+static int
+vfio_user_region_write(struct vfio_user_server *dev,
+	struct vfio_user_msg *msg)
+{
+	struct vfio_user_reg_rw *rw = &msg->payload.reg_rw;
+	struct rte_vfio_user_regions *reg = dev->reg;
+	struct rte_vfio_user_reg_info *reg_info;
+	size_t count;
+
+	if (vfio_user_check_msg_fdnum(msg, 0) != 0)
+		return -EINVAL;
+
+	if (rw->reg_idx >= reg->reg_num) {
+		VFIO_USER_LOG(ERR, "Write a non-existed region\n");
+		return -EINVAL;
+	}
+
+	reg_info = &reg->reg_info[rw->reg_idx];
+
+	VFIO_USER_LOG(DEBUG, "Write Region(%u): offset(0x%" PRIx64 "),"
+		"size(0x%x)\n", rw->reg_idx, rw->reg_offset, rw->size);
+
+	if (reg_info->rw) {
+		count = reg_info->rw(reg_info, msg->payload.reg_rw.data,
+				rw->size, rw->reg_offset, 1);
+		if (count < rw->size) {
+			VFIO_USER_LOG(ERR, "Write region %d failed\n",
+				rw->reg_idx);
+			return -EIO;
+		}
+		rw->size = 0;
+		return 0;
+	}
+
+	memcpy((uint8_t *)reg_info->base + rw->reg_offset,
+		&msg->payload.reg_rw.data, rw->size);
+	rw->size = 0;
+	return 0;
+}
+
 static vfio_user_msg_handler_t vfio_user_msg_handlers[VFIO_USER_MAX] = {
 	[VFIO_USER_NONE] = NULL,
 	[VFIO_USER_VERSION] = vfio_user_negotiate_version,
+	[VFIO_USER_DMA_MAP] = NULL,
+	[VFIO_USER_DMA_UNMAP] = NULL,
+	[VFIO_USER_DEVICE_GET_INFO] = vfio_user_device_get_info,
+	[VFIO_USER_DEVICE_GET_REGION_INFO] = vfio_user_device_get_reg_info,
+	[VFIO_USER_DEVICE_GET_IRQ_INFO] = NULL,
+	[VFIO_USER_DEVICE_SET_IRQS] = NULL,
+	[VFIO_USER_REGION_READ] = vfio_user_region_read,
+	[VFIO_USER_REGION_WRITE] = vfio_user_region_write,
+	[VFIO_USER_DMA_READ] = NULL,
+	[VFIO_USER_DMA_WRITE] = NULL,
+	[VFIO_USER_VM_INTERRUPT] = NULL,
+	[VFIO_USER_DEVICE_RESET] = NULL,
 };
 
 static struct vfio_user_server_socket *
@@ -563,6 +714,13 @@ vfio_user_start_server(struct vfio_user_server_socket *sk)
 		return 0;
 	}
 
+	/* All the info must be set before start */
+	if (!dev->dev_info || !dev->reg) {
+		VFIO_USER_LOG(ERR, "Failed to start, "
+			"dev/reg info must be set before start\n");
+		return -1;
+	}
+
 	unlink(path);
 	ret = bind(fd, (struct sockaddr *)&sk->un, sizeof(sk->un));
 	if (ret < 0) {
@@ -704,4 +862,81 @@ rte_vfio_user_start(const char *sock_addr)
 exit:
 	pthread_mutex_unlock(&vfio_ep_sock.mutex);
 	return -1;
+}
+
+static struct vfio_user_server *
+vfio_user_find_stopped_server(const char *sock_addr)
+{
+	struct vfio_user_server *dev;
+	struct vfio_user_server_socket *sk;
+	int dev_id;
+
+	pthread_mutex_lock(&vfio_ep_sock.mutex);
+	sk = vfio_user_find_socket(sock_addr);
+	pthread_mutex_unlock(&vfio_ep_sock.mutex);
+
+	if (!sk) {
+		VFIO_USER_LOG(ERR, "Failed to find server with sock_addr "
+			"%s: addr not registered.\n", sock_addr);
+		return NULL;
+	}
+
+	dev_id = sk->sock.dev_id;
+	dev = vfio_user_get_device(dev_id);
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to find server: "
+			"device %d not found.\n", dev_id);
+		return NULL;
+	}
+
+	if (dev->started) {
+		VFIO_USER_LOG(ERR, "Failed to find stopped server: "
+			 "device %d already started\n", dev_id);
+		return NULL;
+	}
+
+	return dev;
+}
+
+int
+rte_vfio_user_set_dev_info(const char *sock_addr,
+	struct vfio_device_info *dev_info)
+{
+	struct vfio_user_server *dev;
+
+	if (!dev_info)
+		return -1;
+
+	dev = vfio_user_find_stopped_server(sock_addr);
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to set device(%s) information: "
+			"cannot find stopped server\n", sock_addr);
+		return -1;
+	}
+
+	dev->dev_info = dev_info;
+
+	return 0;
+}
+
+int
+rte_vfio_user_set_reg_info(const char *sock_addr,
+	struct rte_vfio_user_regions *reg)
+{
+	struct vfio_user_server *dev;
+
+	if (!reg)
+		return -1;
+
+	dev = vfio_user_find_stopped_server(sock_addr);
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to set region information for "
+			"device with sock(%s): cannot find stopped server\n",
+			sock_addr);
+		return -1;
+	}
+
+	dev->reg = reg;
+
+	return 0;
 }

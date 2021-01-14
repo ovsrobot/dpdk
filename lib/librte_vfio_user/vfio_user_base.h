@@ -11,6 +11,8 @@
 
 #define VFIO_USER_VERSION_MAJOR 1
 #define VFIO_USER_VERSION_MINOR 0
+#define VFIO_USER_MAX_RSVD 512
+#define VFIO_USER_MAX_RW_DATA 512
 #define VFIO_USER_MAX_FD 1024
 #define VFIO_USER_MAX_VERSION_DATA 512
 
@@ -30,7 +32,19 @@ struct vfio_user_socket {
 typedef enum VFIO_USER_CMD_TYPE {
 	VFIO_USER_NONE = 0,
 	VFIO_USER_VERSION = 1,
-	VFIO_USER_MAX = 2,
+	VFIO_USER_DMA_MAP = 2,
+	VFIO_USER_DMA_UNMAP = 3,
+	VFIO_USER_DEVICE_GET_INFO = 4,
+	VFIO_USER_DEVICE_GET_REGION_INFO = 5,
+	VFIO_USER_DEVICE_GET_IRQ_INFO = 6,
+	VFIO_USER_DEVICE_SET_IRQS = 7,
+	VFIO_USER_REGION_READ = 8,
+	VFIO_USER_REGION_WRITE = 9,
+	VFIO_USER_DMA_READ = 10,
+	VFIO_USER_DMA_WRITE = 11,
+	VFIO_USER_VM_INTERRUPT = 12,
+	VFIO_USER_DEVICE_RESET = 13,
+	VFIO_USER_MAX = 14,
 } VFIO_USER_CMD_TYPE;
 
 struct vfio_user_version {
@@ -38,6 +52,19 @@ struct vfio_user_version {
 	uint16_t minor;
 	/* Version data (JSON), for now not supported */
 	uint8_t ver_data[VFIO_USER_MAX_VERSION_DATA];
+};
+
+struct vfio_user_reg {
+	struct vfio_region_info reg_info;
+	/* Reserved for region capability list */
+	uint8_t rsvd[VFIO_USER_MAX_RSVD];
+};
+
+struct vfio_user_reg_rw {
+	uint64_t reg_offset;
+	uint32_t reg_idx;
+	uint32_t size;
+	char data[VFIO_USER_MAX_RW_DATA];
 };
 
 struct vfio_user_msg {
@@ -52,6 +79,9 @@ struct vfio_user_msg {
 	uint32_t err;				/* Valid in reply, optional */
 	union {
 		struct vfio_user_version ver;
+		struct vfio_device_info dev_info;
+		struct vfio_user_reg reg_info;
+		struct vfio_user_reg_rw reg_rw;
 	} payload;
 	int fds[VFIO_USER_MAX_FD];
 	int fd_num;

@@ -16,6 +16,8 @@ struct vfio_user_server {
 	uint32_t msg_id;
 	char sock_addr[PATH_MAX];
 	struct vfio_user_version ver;
+	struct vfio_device_info *dev_info;
+	struct rte_vfio_user_regions *reg;
 };
 
 typedef int (*event_handler)(int fd, void *data);
