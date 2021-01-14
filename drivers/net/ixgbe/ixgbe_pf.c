@@ -555,27 +555,30 @@ static int
 ixgbe_set_vf_lpe(struct rte_eth_dev *dev, __rte_unused uint32_t vf, uint32_t *msgbuf)
 {
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	uint32_t new_mtu = msgbuf[1];
-	uint32_t max_frs;
+	uint32_t max_frame = msgbuf[1];
+	uint32_t cur_frame_size;
 	uint32_t hlreg0;
-	int max_frame = new_mtu + RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN;
 
 	/* X540 and X550 support jumbo frames in IOV mode */
 	if (hw->mac.type != ixgbe_mac_X540 &&
 		hw->mac.type != ixgbe_mac_X550 &&
 		hw->mac.type != ixgbe_mac_X550EM_x &&
-		hw->mac.type != ixgbe_mac_X550EM_a)
-		return -1;
+		hw->mac.type != ixgbe_mac_X550EM_a) {
+		if (max_frame > RTE_ETHER_MAX_LEN)
+			return -1;
+
+		return 0;
+	}
 
 	if (max_frame < RTE_ETHER_MIN_LEN ||
 			max_frame > RTE_ETHER_MAX_JUMBO_FRAME_LEN)
 		return -1;
 
-	max_frs = (IXGBE_READ_REG(hw, IXGBE_MAXFRS) &
-		   IXGBE_MHADD_MFS_MASK) >> IXGBE_MHADD_MFS_SHIFT;
-	if (max_frs < new_mtu) {
+	cur_frame_size = (IXGBE_READ_REG(hw, IXGBE_MAXFRS) &
+			 IXGBE_MHADD_MFS_MASK) >> IXGBE_MHADD_MFS_SHIFT;
+	if (cur_frame_size < max_frame) {
 		hlreg0 = IXGBE_READ_REG(hw, IXGBE_HLREG0);
-		if (new_mtu > RTE_ETHER_MAX_LEN) {
+		if (max_frame > RTE_ETHER_MAX_LEN) {
 			dev->data->dev_conf.rxmode.offloads |=
 				DEV_RX_OFFLOAD_JUMBO_FRAME;
 			hlreg0 |= IXGBE_HLREG0_JUMBOEN;
@@ -586,8 +589,8 @@ ixgbe_set_vf_lpe(struct rte_eth_dev *dev, __rte_unused uint32_t vf, uint32_t *ms
 		}
 		IXGBE_WRITE_REG(hw, IXGBE_HLREG0, hlreg0);
 
-		max_frs = new_mtu << IXGBE_MHADD_MFS_SHIFT;
-		IXGBE_WRITE_REG(hw, IXGBE_MAXFRS, max_frs);
+		IXGBE_WRITE_REG(hw, IXGBE_MAXFRS,
+				max_frame << IXGBE_MHADD_MFS_SHIFT);
 	}
 
 	return 0;
