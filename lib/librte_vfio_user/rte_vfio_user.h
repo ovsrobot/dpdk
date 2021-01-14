@@ -238,6 +238,15 @@ rte_vfio_user_set_irq_info(const char *sock_addr,
  *  Below APIs are for vfio-user client (device consumer) to use:
  *	*rte_vfio_user_attach_dev
  *	*rte_vfio_user_detach_dev
+ *	*rte_vfio_user_get_dev_info
+ *	*rte_vfio_user_get_reg_info
+ *	*rte_vfio_user_get_irq_info
+ *	*rte_vfio_user_dma_map
+ *	*rte_vfio_user_dma_unmap
+ *	*rte_vfio_user_set_irqs
+ *	*rte_vfio_user_region_read
+ *	*rte_vfio_user_region_write
+ *	*rte_vfio_user_reset
  */
 
 /**
@@ -265,5 +274,173 @@ rte_vfio_user_attach_dev(const char *sock_addr);
 __rte_experimental
 int
 rte_vfio_user_detach_dev(int dev_id);
+
+/**
+ * Get device information of a vfio-user device.
+ *
+ * @param dev_id
+ *   Device ID of the vfio-user device
+ * @param[out] info
+ *   A pointer to a structure of type *vfio_device_info* to be filled with the
+ *   information of the device.
+ * @return
+ *   - 0: Success, device information updated
+ *   - <0: Failure on get device information
+ */
+__rte_experimental
+int
+rte_vfio_user_get_dev_info(int dev_id, struct vfio_device_info *info);
+
+/**
+ * Get region information of a vfio-user device.
+ *
+ * @param dev_id
+ *   Device ID of the vfio-user device
+ * @param[out] info
+ *   A pointer to a structure of type *vfio_region_info* to be filled with the
+ *   information of the device region.
+ * @param[out] fd
+ *   A pointer to the file descriptor of the region
+ * @return
+ *   - 0: Success, region information and file descriptor updated. If the region
+ *        can not be mmaped, the file descriptor should be -1.
+ *   - <0: Failure on get region information
+ */
+__rte_experimental
+int
+rte_vfio_user_get_reg_info(int dev_id, struct vfio_region_info *info,
+	int *fd);
+
+/**
+ * Get IRQ information of a vfio-user device.
+ *
+ * @param dev_id
+ *   Device ID of the vfio-user device
+ * @param[out] info
+ *   A pointer to a structure of type *vfio_irq_info* to be filled with the
+ *   information of the IRQ.
+ * @return
+ *   - 0: Success, IRQ information updated
+ *   - <0: Failure on get IRQ information
+ */
+__rte_experimental
+int
+rte_vfio_user_get_irq_info(int dev_id, struct vfio_irq_info *info);
+
+/**
+ * Map DMA regions for the vfio-user device.
+ *
+ * @param dev_id
+ *   Device ID of the vfio-user device
+ * @param mem
+ *   A pointer to a structure of type *vfio_user_mem_reg* that identifies
+ *   one or several DMA regions.
+ * @param fds
+ *   A pointer to a list of file descriptors. One file descriptor maps to
+ *   one DMA region.
+ * @param num
+ *   Number of DMA regions (or file descriptors)
+ * @return
+ *   - 0: Success, all DMA regions are mapped.
+ *   - <0: Failure on DMA map. It should be assumed that all DMA regions
+ *         are not mapped.
+ */
+__rte_experimental
+int
+rte_vfio_user_dma_map(int dev_id, struct rte_vfio_user_mem_reg *mem,
+	int *fds, uint32_t num);
+
+/**
+ * Unmap DMA regions for the vfio-user device.
+ *
+ * @param dev_id
+ *   Device ID of the vfio-user device
+ * @param mem
+ *   A pointer to a structure of type *vfio_user_mem_reg* that identifies
+ *   one or several DMA regions.
+ * @param num
+ *   Number of DMA regions
+ * @return
+ *   - 0: Success, all DMA regions are unmapped.
+ *   - <0: Failure on DMA unmap. It should be assumed that all DMA regions
+ *         are not unmapped.
+ */
+__rte_experimental
+int
+rte_vfio_user_dma_unmap(int dev_id, struct rte_vfio_user_mem_reg *mem,
+	uint32_t num);
+
+/**
+ * Set interrupt signaling, masking, and unmasking for the vfio-user device.
+ *
+ * @param dev_id
+ *   Device ID of the vfio-user device
+ * @param set
+ *   A pointer to a structure of type *vfio_irq_set* that specifies the set
+ *   data and action
+ * @return
+ *   - 0: Success, IRQs are set successfully.
+ *   - <0: Failure on IRQ set.
+ */
+__rte_experimental
+int
+rte_vfio_user_set_irqs(int dev_id, struct vfio_irq_set *set);
+
+/**
+ * Read region of the vfio-user device.
+ *
+ * @param dev_id
+ *   Device ID of the vfio-user device
+ * @param idx
+ *   The region index
+ * @param offset
+ *   The region offset
+ * @param size
+ *   Size of the read data
+ * @param[out] data
+ *   The pointer to data to be filled with correct region data
+ * @return
+ *   - 0: Success on region read
+ *   - <0: Failure on region read
+ */
+__rte_experimental
+int
+rte_vfio_user_region_read(int dev_id, uint32_t idx, uint64_t offset,
+	uint32_t size, void *data);
+
+/**
+ * Write region of the vfio-user device.
+ *
+ * @param dev_id
+ *   Device ID of the vfio-user device
+ * @param idx
+ *   The region index
+ * @param offset
+ *   The region offset
+ * @param size
+ *   Size of the read data
+ * @param data
+ *   The pointer to data that will be written to the region
+ * @return
+ *   - 0: Success on region write
+ *   - <0: Failure on region write
+ */
+__rte_experimental
+int
+rte_vfio_user_region_write(int dev_id, uint32_t idx, uint64_t offset,
+	uint32_t size, const void *data);
+
+/**
+ * Reset the vfio-user device
+ *
+ * @param dev_id
+ *   Device ID of the vfio-user device
+ * @return
+ *   - 0: Success on device reset
+ *   - <0: Failure on device reset
+ */
+__rte_experimental
+int
+rte_vfio_user_reset(int dev_id);
 
 #endif

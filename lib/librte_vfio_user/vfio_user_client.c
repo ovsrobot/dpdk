@@ -279,3 +279,422 @@ rte_vfio_user_detach_dev(int dev_id)
 
 	return ret;
 }
+
+int
+rte_vfio_user_get_dev_info(int dev_id, struct vfio_device_info *info)
+{
+	struct vfio_user_msg msg = { 0 };
+	struct vfio_user_client *dev;
+	int ret;
+	uint32_t sz = VFIO_USER_MSG_HDR_SIZE + sizeof(struct vfio_device_info);
+
+	if (!info)
+		return -EINVAL;
+
+	dev = vfio_client_devs.cl[dev_id];
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to get device info: "
+			"wrong device ID\n");
+		return -EINVAL;
+	}
+
+	vfio_user_client_fill_hdr(&msg, VFIO_USER_DEVICE_GET_INFO,
+		sz, dev->msg_id++);
+
+	ret = vfio_user_client_send_recv(dev->sock.sock_fd, &msg);
+	if (ret)
+		return ret;
+
+	if (msg.flags & VFIO_USER_ERROR) {
+		VFIO_USER_LOG(ERR, "Failed to get device info: %s\n",
+				msg.err ? strerror(msg.err) : "Unknown error");
+		return msg.err ? -(int)msg.err : -1;
+	}
+
+	if (vfio_user_check_msg_fdnum(&msg, 0) != 0)
+		return -1;
+
+	memcpy(info, &msg.payload.dev_info, sizeof(*info));
+	return ret;
+}
+
+int
+rte_vfio_user_get_reg_info(int dev_id, struct vfio_region_info *info,
+	int *fd)
+{
+	struct vfio_user_msg msg = { 0 };
+	int ret, fd_num = 0;
+	struct vfio_user_client *dev;
+	uint32_t sz = VFIO_USER_MSG_HDR_SIZE + info->argsz;
+	struct vfio_user_reg *reg = &msg.payload.reg_info;
+
+	if (!info || !fd)
+		return -EINVAL;
+
+	dev = vfio_client_devs.cl[dev_id];
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to get region info: "
+			"wrong device ID\n");
+		return -EINVAL;
+	}
+
+	vfio_user_client_fill_hdr(&msg, VFIO_USER_DEVICE_GET_REGION_INFO,
+		sz, dev->msg_id++);
+	reg->reg_info.index = info->index;
+
+	ret = vfio_user_client_send_recv(dev->sock.sock_fd, &msg);
+	if (ret)
+		return ret;
+
+	if (msg.flags & VFIO_USER_ERROR) {
+		VFIO_USER_LOG(ERR, "Failed to get region(%u) info: %s\n",
+				info->index, msg.err ? strerror(msg.err) :
+				"Unknown error");
+		return msg.err ? -(int)msg.err : -1;
+	}
+
+	if (reg->reg_info.flags & VFIO_REGION_INFO_FLAG_MMAP)
+		fd_num = 1;
+
+	if (vfio_user_check_msg_fdnum(&msg, fd_num) != 0)
+		return -1;
+
+	if (reg->reg_info.index != info->index ||
+		msg.size - VFIO_USER_MSG_HDR_SIZE > sizeof(*reg)) {
+		VFIO_USER_LOG(ERR,
+			"Incorrect reply message for region info\n");
+		return -1;
+	}
+
+	memcpy(info, &msg.payload.reg_info, info->argsz);
+	*fd = fd_num == 1 ? msg.fds[0] : -1;
+
+	return 0;
+}
+
+int
+rte_vfio_user_get_irq_info(int dev_id, struct vfio_irq_info *info)
+{
+	struct vfio_user_msg msg = { 0 };
+	int ret;
+	struct vfio_user_client *dev;
+	uint32_t sz = VFIO_USER_MSG_HDR_SIZE + sizeof(struct vfio_irq_info);
+	struct vfio_irq_info *irq_info = &msg.payload.irq_info;
+
+	if (!info)
+		return -EINVAL;
+
+	dev = vfio_client_devs.cl[dev_id];
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to get region info: "
+			"wrong device ID\n");
+		return -EINVAL;
+	}
+
+	vfio_user_client_fill_hdr(&msg, VFIO_USER_DEVICE_GET_IRQ_INFO,
+		sz, dev->msg_id++);
+	irq_info->index = info->index;
+
+	ret = vfio_user_client_send_recv(dev->sock.sock_fd, &msg);
+	if (ret)
+		return ret;
+
+	if (msg.flags & VFIO_USER_ERROR) {
+		VFIO_USER_LOG(ERR, "Failed to get irq(%u) info: %s\n",
+				info->index, msg.err ? strerror(msg.err) :
+				"Unknown error");
+		return msg.err ? -(int)msg.err : -1;
+	}
+
+	if (vfio_user_check_msg_fdnum(&msg, 0) != 0)
+		return -1;
+
+	if (irq_info->index != info->index ||
+		msg.size - VFIO_USER_MSG_HDR_SIZE != sizeof(*irq_info)) {
+		VFIO_USER_LOG(ERR,
+			"Incorrect reply message for IRQ info\n");
+		return -1;
+	}
+
+	memcpy(info, irq_info, sizeof(*info));
+	return 0;
+}
+
+static int
+vfio_user_client_dma_map_unmap(struct vfio_user_client *dev,
+	struct rte_vfio_user_mem_reg *mem, int *fds, uint32_t num, bool ismap)
+{
+	struct vfio_user_msg msg = { 0 };
+	int ret;
+	uint32_t i, mem_sz, map;
+	uint16_t cmd = VFIO_USER_DMA_UNMAP;
+
+	if (num > VFIO_USER_MSG_MAX_NREG) {
+		VFIO_USER_LOG(ERR,
+			"Too many memory regions to %s (MAX: %u)\n",
+			ismap ? "map" : "unmap", VFIO_USER_MSG_MAX_NREG);
+		return -EINVAL;
+	}
+
+	if (ismap) {
+		cmd = VFIO_USER_DMA_MAP;
+
+		for (i = 0; i < num; i++) {
+			map = mem->flags & RTE_VUSER_MEM_MAPPABLE;
+			if ((map && (fds[i] == -1)) ||
+				(!map && (fds[i] != -1))) {
+				VFIO_USER_LOG(ERR, "%spable memory region "
+					"should%s have valid fd\n",
+					ismap ? "Map" : "Unmap",
+					ismap ? "" : " not");
+				return -EINVAL;
+			}
+
+			if (fds[i] != -1)
+				msg.fds[msg.fd_num++] = fds[i];
+		}
+	}
+
+	mem_sz = sizeof(struct rte_vfio_user_mem_reg) * num;
+	memcpy(&msg.payload, mem, mem_sz);
+
+	vfio_user_client_fill_hdr(&msg, cmd, mem_sz + VFIO_USER_MSG_HDR_SIZE,
+		dev->msg_id++);
+
+	ret = vfio_user_client_send_recv(dev->sock.sock_fd, &msg);
+	if (ret)
+		return ret;
+
+	if (msg.flags & VFIO_USER_ERROR) {
+		VFIO_USER_LOG(ERR, "Failed to %smap memory regions: "
+				"%s\n", ismap ? "" : "un",
+				msg.err ? strerror(msg.err) : "Unknown error");
+		return msg.err ? -(int)msg.err : -1;
+	}
+
+	if (vfio_user_check_msg_fdnum(&msg, 0) != 0)
+		return -1;
+
+	return 0;
+}
+
+int
+rte_vfio_user_dma_map(int dev_id, struct rte_vfio_user_mem_reg *mem,
+	int *fds, uint32_t num)
+{
+	struct vfio_user_client *dev;
+
+	if (!mem || !fds)
+		return -EINVAL;
+
+	dev = vfio_client_devs.cl[dev_id];
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to dma map: "
+			"wrong device ID\n");
+		return -EINVAL;
+	}
+
+	return vfio_user_client_dma_map_unmap(dev, mem, fds, num, true);
+}
+
+int
+rte_vfio_user_dma_unmap(int dev_id, struct rte_vfio_user_mem_reg *mem,
+	uint32_t num)
+{
+	struct vfio_user_client *dev;
+
+	if (!mem)
+		return -EINVAL;
+
+	dev = vfio_client_devs.cl[dev_id];
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to dma unmap: "
+			"wrong device ID\n");
+		return -EINVAL;
+	}
+
+	return vfio_user_client_dma_map_unmap(dev, mem, NULL, num, false);
+}
+
+int
+rte_vfio_user_set_irqs(int dev_id, struct vfio_irq_set *set)
+{
+	struct vfio_user_msg msg = { 0 };
+	int ret;
+	struct vfio_user_client *dev;
+	uint32_t set_sz = set->argsz;
+	struct vfio_user_irq_set *irq_set = &msg.payload.irq_set;
+
+	if (!set)
+		return -EINVAL;
+
+	dev = vfio_client_devs.cl[dev_id];
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to set irqs: "
+			"wrong device ID\n");
+		return -EINVAL;
+	}
+
+	if (set->flags & VFIO_IRQ_SET_DATA_EVENTFD) {
+		msg.fd_num = set->count;
+		memcpy(msg.fds, set->data, sizeof(int) * set->count);
+		set_sz -= sizeof(int) * set->count;
+	}
+	memcpy(irq_set, set, set_sz);
+	irq_set->set.argsz = set_sz;
+	vfio_user_client_fill_hdr(&msg, VFIO_USER_DEVICE_SET_IRQS,
+		VFIO_USER_MSG_HDR_SIZE + set_sz, dev->msg_id++);
+
+	ret = vfio_user_client_send_recv(dev->sock.sock_fd, &msg);
+	if (ret)
+		return ret;
+
+	if (msg.flags & VFIO_USER_ERROR) {
+		VFIO_USER_LOG(ERR, "Failed to set irq(%u): %s\n",
+				set->index, msg.err ? strerror(msg.err) :
+				"Unknown error");
+		return msg.err ? -(int)msg.err : -1;
+	}
+
+	if (vfio_user_check_msg_fdnum(&msg, 0) != 0)
+		return -1;
+
+	return 0;
+}
+
+int
+rte_vfio_user_region_read(int dev_id, uint32_t idx, uint64_t offset,
+	uint32_t size, void *data)
+{
+	struct vfio_user_msg msg = { 0 };
+	int ret;
+	struct vfio_user_client *dev;
+	uint32_t sz = VFIO_USER_MSG_HDR_SIZE + sizeof(struct vfio_user_reg_rw)
+		- VFIO_USER_MAX_RW_DATA;
+	struct vfio_user_reg_rw *rw = &msg.payload.reg_rw;
+
+	if (!data)
+		return -EINVAL;
+
+	dev = vfio_client_devs.cl[dev_id];
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to read region: "
+			"wrong device ID\n");
+		return -EINVAL;
+	}
+
+	if (sz > VFIO_USER_MAX_RW_DATA) {
+		VFIO_USER_LOG(ERR, "Region read size exceeds max\n");
+		return -1;
+	}
+
+	vfio_user_client_fill_hdr(&msg, VFIO_USER_REGION_READ,
+		sz, dev->msg_id++);
+
+	rw->reg_idx = idx;
+	rw->reg_offset = offset;
+	rw->size = size;
+
+	ret = vfio_user_client_send_recv(dev->sock.sock_fd, &msg);
+	if (ret)
+		return ret;
+
+	if (msg.flags & VFIO_USER_ERROR) {
+		VFIO_USER_LOG(ERR, "Failed to read region(%u): %s\n",
+				idx, msg.err ? strerror(msg.err) :
+				"Unknown error");
+		return msg.err ? -(int)msg.err : -1;
+	}
+
+	if (vfio_user_check_msg_fdnum(&msg, 0) != 0)
+		return -1;
+
+	memcpy(data, rw->data, size);
+	return 0;
+}
+
+int
+rte_vfio_user_region_write(int dev_id, uint32_t idx, uint64_t offset,
+	uint32_t size, const void *data)
+{
+	struct vfio_user_msg msg = { 0 };
+	int ret;
+	struct vfio_user_client *dev;
+	uint32_t sz = VFIO_USER_MSG_HDR_SIZE + sizeof(struct vfio_user_reg_rw)
+		- VFIO_USER_MAX_RW_DATA + size;
+	struct vfio_user_reg_rw *rw = &msg.payload.reg_rw;
+
+	if (!data)
+		return -EINVAL;
+
+	dev = vfio_client_devs.cl[dev_id];
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to write region: "
+			"wrong device ID\n");
+		return -EINVAL;
+	}
+
+	if (sz > VFIO_USER_MAX_RW_DATA) {
+		VFIO_USER_LOG(ERR, "Region write size exceeds max\n");
+		return -EINVAL;
+	}
+
+	vfio_user_client_fill_hdr(&msg, VFIO_USER_REGION_WRITE,
+		sz, dev->msg_id++);
+
+	rw->reg_idx = idx;
+	rw->reg_offset = offset;
+	rw->size = size;
+	memcpy(rw->data, data, size);
+
+	ret = vfio_user_client_send_recv(dev->sock.sock_fd, &msg);
+	if (ret)
+		return ret;
+
+	if (msg.flags & VFIO_USER_ERROR) {
+		VFIO_USER_LOG(ERR, "Failed to write region(%u): %s\n",
+				idx, msg.err ? strerror(msg.err) :
+				"Unknown error");
+		return msg.err ? -(int)msg.err : -1;
+	}
+
+	if (vfio_user_check_msg_fdnum(&msg, 0) != 0)
+		return -1;
+
+	return 0;
+}
+
+int
+rte_vfio_user_reset(int dev_id)
+{
+	struct vfio_user_msg msg = { 0 };
+	int ret;
+	struct vfio_user_client *dev;
+	uint32_t sz = VFIO_USER_MSG_HDR_SIZE;
+
+	dev = vfio_client_devs.cl[dev_id];
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to write region: "
+			"wrong device ID\n");
+		return -EINVAL;
+	}
+
+	vfio_user_client_fill_hdr(&msg, VFIO_USER_DEVICE_RESET,
+		sz, dev->msg_id++);
+
+	ret = vfio_user_client_send_recv(dev->sock.sock_fd, &msg);
+	if (ret)
+		return ret;
+
+	if (msg.flags & VFIO_USER_ERROR) {
+		VFIO_USER_LOG(ERR, "Failed to reset device: %s\n",
+				msg.err ? strerror(msg.err) :
+				"Unknown error");
+		return msg.err ? -(int)msg.err : -1;
+	}
+
+	if (vfio_user_check_msg_fdnum(&msg, 0) != 0)
+		return -1;
+
+	return ret;
+}

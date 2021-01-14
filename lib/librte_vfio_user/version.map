@@ -12,6 +12,15 @@ EXPERIMENTAL {
 	rte_vfio_user_set_irq_info;
 	rte_vfio_user_attach_dev;
 	rte_vfio_user_detach_dev;
+	rte_vfio_user_get_dev_info;
+	rte_vfio_user_get_reg_info;
+	rte_vfio_user_get_irq_info;
+	rte_vfio_user_dma_map;
+	rte_vfio_user_dma_unmap;
+	rte_vfio_user_set_irqs;
+	rte_vfio_user_region_read;
+	rte_vfio_user_region_write;
+	rte_vfio_user_reset;
 
 	local: *;
 };
