@@ -70,3 +70,4 @@ Programmer's Guide
     lto
     profile_app
     glossary
+    vfio_user_lib

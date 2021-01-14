@@ -55,6 +55,17 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added vfio-user Library.**
+
+  Added an experimental library ``librte_vfio_user`` to provide device
+  emulation support.
+
+  The library is an implementation of vfio-user protocol. It includes two main
+  parts: client and server. Server implementation is for device provider to
+  abstract its device. Client implementation is for device consumer to
+  manipulate the emulated device.
+
+  See :doc:`../prog_guide/vfio_user_lib` for more information.
 
 Removed Items
 -------------
