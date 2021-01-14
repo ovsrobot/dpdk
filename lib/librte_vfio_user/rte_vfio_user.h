@@ -234,4 +234,36 @@ int
 rte_vfio_user_set_irq_info(const char *sock_addr,
 	struct rte_vfio_user_irq_info *irq);
 
+/**
+ *  Below APIs are for vfio-user client (device consumer) to use:
+ *	*rte_vfio_user_attach_dev
+ *	*rte_vfio_user_detach_dev
+ */
+
+/**
+ * Attach to a vfio-user device.
+ *
+ * @param sock_addr
+ *   Unix domain socket address
+ * @return
+ *   - >=0: Success, device attached. Returned value is the device ID.
+ *   - <0: Failure on device attach
+ */
+__rte_experimental
+int
+rte_vfio_user_attach_dev(const char *sock_addr);
+
+/**
+ * Detach from a vfio-user device.
+ *
+ * @param dev_id
+ *   Device ID of the vfio-user device
+ * @return
+ *   - 0: Success, device detached
+ *   - <0: Failure on device detach
+ */
+__rte_experimental
+int
+rte_vfio_user_detach_dev(int dev_id);
+
 #endif

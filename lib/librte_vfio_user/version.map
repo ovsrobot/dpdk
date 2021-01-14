@@ -10,6 +10,8 @@ EXPERIMENTAL {
 	rte_vfio_user_set_dev_info;
 	rte_vfio_user_set_reg_info;
 	rte_vfio_user_set_irq_info;
+	rte_vfio_user_attach_dev;
+	rte_vfio_user_detach_dev;
 
 	local: *;
 };
