@@ -76,6 +76,7 @@ The public API headers are grouped by topics:
   [rwlock]             (@ref rte_rwlock.h),
   [spinlock]           (@ref rte_spinlock.h),
   [ticketlock]         (@ref rte_ticketlock.h),
+  [ticketrwlock]       (@ref rte_ticket_rwlock.h),
   [RCU]                (@ref rte_rcu_qsbr.h)
 
 - **CPU arch**:

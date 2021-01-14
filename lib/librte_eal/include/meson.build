@@ -65,6 +65,7 @@ generic_headers = files(
 	'generic/rte_rwlock.h',
 	'generic/rte_spinlock.h',
 	'generic/rte_ticketlock.h',
+	'generic/rte_ticket_rwlock.h',
 	'generic/rte_vect.h',
 )
 install_headers(generic_headers, subdir: 'generic')

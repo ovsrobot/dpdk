@@ -232,6 +232,12 @@ parallel_test_list = [
         "Report":  None,
     },
     {
+        "Name":    "Ticket rwlock autotest",
+        "Command": "ticket_rwlock_autotest",
+        "Func":    ticketrwlock_autotest,
+        "Report":  None,
+    },
+    {
         "Name":    "MCSlock autotest",
         "Command": "mcslock_autotest",
         "Func":    mcslock_autotest,
