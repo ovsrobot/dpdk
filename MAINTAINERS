@@ -1589,6 +1589,8 @@ M: Declan Doherty <declan.doherty@intel.com>
 T: git://dpdk.org/next/dpdk-next-crypto
 F: app/test-crypto-perf/
 F: doc/guides/tools/cryptoperf.rst
+F: usertools/dpdk-graph-crypto-perf.py
+F: usertools/configs
 
 Eventdev test application
 M: Jerin Jacob <jerinj@marvell.com>
