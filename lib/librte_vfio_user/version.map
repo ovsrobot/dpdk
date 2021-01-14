@@ -4,6 +4,8 @@ EXPERIMENTAL {
 	rte_vfio_user_register;
 	rte_vfio_user_unregister;
 	rte_vfio_user_start;
+	rte_vfio_get_sock_addr;
+	rte_vfio_user_get_mem_table;
 	rte_vfio_user_set_dev_info;
 	rte_vfio_user_set_reg_info;
 

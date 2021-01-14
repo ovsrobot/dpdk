@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <inttypes.h>
 #include <sys/socket.h>
+#include <sys/mman.h>
 #include <sys/un.h>
 
 #include "vfio_user_server.h"
@@ -38,6 +39,217 @@ vfio_user_negotiate_version(struct vfio_user_server *dev,
 		return 0;
 	else
 		return -ENOTSUP;
+}
+
+static int
+mmap_one_region(struct rte_vfio_user_mtb_entry *entry,
+	struct rte_vfio_user_mem_reg *memory, int fd)
+{
+	if (fd != -1) {
+		if (memory->fd_offset >= -memory->size) {
+			VFIO_USER_LOG(ERR, "memory fd_offset and size overflow\n");
+			return -EINVAL;
+		}
+		entry->mmap_size = memory->fd_offset + memory->size;
+		entry->mmap_addr = mmap(NULL,
+			entry->mmap_size,
+			memory->protection, MAP_SHARED,
+			fd, 0);
+		if (entry->mmap_addr == MAP_FAILED) {
+			VFIO_USER_LOG(ERR, "Failed to mmap dma region\n");
+			return -EINVAL;
+		}
+
+		entry->host_user_addr =
+			(uint64_t)entry->mmap_addr + memory->fd_offset;
+		entry->fd = fd;
+	} else {
+		entry->mmap_size = 0;
+		entry->mmap_addr = NULL;
+		entry->host_user_addr = 0;
+		entry->fd = -1;
+	}
+
+	entry->gpa = memory->gpa;
+	entry->size = memory->size;
+
+	return 0;
+}
+
+static uint32_t
+add_one_region(struct rte_vfio_user_mem *mem,
+	struct rte_vfio_user_mem_reg *memory, int fd)
+{
+	struct rte_vfio_user_mtb_entry *entry = &mem->entry[0];
+	uint32_t num = mem->entry_num, i, j;
+	uint32_t sz = sizeof(struct rte_vfio_user_mtb_entry);
+	struct rte_vfio_user_mtb_entry ent;
+	int err = 0;
+
+	if (mem->entry_num == RTE_VUSER_MAX_DMA) {
+		VFIO_USER_LOG(ERR, "Add mem region failed, reach max!\n");
+		return -EBUSY;
+	}
+
+	for (i = 0; i < num; i++) {
+		entry = &mem->entry[i];
+
+		if (memory->gpa == entry->gpa &&
+			memory->size == entry->size)
+			return -EEXIST;
+
+		if (memory->gpa > entry->gpa &&
+			memory->gpa >= entry->gpa + entry->size)
+			continue;
+
+		if (memory->gpa < entry->gpa &&
+			memory->gpa + memory->size <= entry->gpa)
+			break;
+
+		return -EINVAL;
+	}
+
+	err = mmap_one_region(&ent, memory, fd);
+	if (err)
+		return err;
+
+	for (j = num; j > i; j--)
+		memcpy(&mem->entry[j], &mem->entry[j - 1], sz);
+	memcpy(&mem->entry[i], &ent, sz);
+	mem->entry_num++;
+
+	VFIO_USER_LOG(DEBUG, "DMA MAP(gpa: 0x%" PRIx64 ", sz: 0x%" PRIx64
+			", hva: 0x%" PRIx64 ", ma: 0x%" PRIx64
+			", msz: 0x%" PRIx64 ", fd: %d)\n", ent.gpa,
+			ent.size, ent.host_user_addr, (uint64_t)ent.mmap_addr,
+			ent.mmap_size, ent.fd);
+	return 0;
+}
+
+static void
+del_one_region(struct rte_vfio_user_mem *mem,
+	struct rte_vfio_user_mem_reg *memory)
+{
+	struct rte_vfio_user_mtb_entry *entry;
+	uint32_t num = mem->entry_num, i, j;
+	uint32_t sz = sizeof(struct rte_vfio_user_mtb_entry);
+
+	if (mem->entry_num == 0) {
+		VFIO_USER_LOG(ERR, "Delete mem region failed (No region exists)!\n");
+		return;
+	}
+
+	for (i = 0; i < num; i++) {
+		entry = &mem->entry[i];
+
+		if (memory->gpa == entry->gpa &&
+			memory->size == entry->size) {
+			if (entry->mmap_addr != NULL) {
+				munmap(entry->mmap_addr, entry->mmap_size);
+				mem->entry[i].mmap_size = 0;
+				mem->entry[i].mmap_addr = NULL;
+				mem->entry[i].host_user_addr = 0;
+				mem->entry[i].fd = -1;
+			}
+
+			mem->entry[i].gpa = 0;
+			mem->entry[i].size = 0;
+
+			for (j = i; j < num - 1; j++) {
+				memcpy(&mem->entry[j], &mem->entry[j + 1],
+					sz);
+			}
+			mem->entry_num--;
+
+			VFIO_USER_LOG(DEBUG, "DMA UNMAP(gpa: 0x%" PRIx64
+				", sz: 0x%" PRIx64 ", hva: 0x%" PRIx64
+				", ma: 0x%" PRIx64", msz: 0x%" PRIx64
+				", fd: %d)\n", entry->gpa, entry->size,
+				entry->host_user_addr,
+				(uint64_t)entry->mmap_addr, entry->mmap_size,
+				entry->fd);
+
+			return;
+		}
+	}
+
+	VFIO_USER_LOG(ERR, "Failed to find the region for dma unmap!\n");
+}
+
+static int
+vfio_user_dma_map(struct vfio_user_server *dev, struct vfio_user_msg *msg)
+{
+	struct rte_vfio_user_mem_reg *memory = msg->payload.memory;
+	uint32_t region_num, expected_fd = 0;
+	uint32_t i, j, fd, fd_idx = 0;
+	int ret = 0;
+
+	if ((msg->size - VFIO_USER_MSG_HDR_SIZE) % sizeof(*memory) != 0) {
+		VFIO_USER_LOG(ERR, "Invalid msg size for dma map\n");
+		vfio_user_close_msg_fds(msg);
+		ret = -EINVAL;
+		goto err;
+	}
+
+	region_num = (msg->size - VFIO_USER_MSG_HDR_SIZE)
+		/ sizeof(struct rte_vfio_user_mem_reg);
+
+	for (i = 0; i < region_num; i++) {
+		if (memory[i].flags & RTE_VUSER_MEM_MAPPABLE)
+			expected_fd++;
+	}
+
+	if (vfio_user_check_msg_fdnum(msg, expected_fd) != 0) {
+		ret = -EINVAL;
+		goto err;
+	}
+
+	for (i = 0; i < region_num; i++) {
+		fd = (memory[i].flags & RTE_VUSER_MEM_MAPPABLE) ?
+			msg->fds[fd_idx++] : -1;
+
+		ret = add_one_region(dev->mem, memory + i, fd);
+		if (ret < 0) {
+			VFIO_USER_LOG(ERR, "Failed to add dma map\n");
+			break;
+		}
+	}
+
+	if (i != region_num) {
+		/* Clear all mmaped region and fds */
+		for (j = 0; j < region_num; j++) {
+			if (j < i)
+				del_one_region(dev->mem, memory + j);
+			else
+				close(msg->fds[j]);
+		}
+	}
+err:
+	/* Do not reply fds back */
+	msg->fd_num = 0;
+	return ret;
+}
+
+static int
+vfio_user_dma_unmap(struct vfio_user_server *dev, struct vfio_user_msg *msg)
+{
+	struct rte_vfio_user_mem_reg *memory = msg->payload.memory;
+	uint32_t region_num = (msg->size - VFIO_USER_MSG_HDR_SIZE)
+		/ sizeof(struct rte_vfio_user_mem_reg);
+	uint32_t i;
+
+	if (vfio_user_check_msg_fdnum(msg, 0) != 0)
+		return -EINVAL;
+
+	if ((msg->size - VFIO_USER_MSG_HDR_SIZE) % sizeof(*memory) != 0) {
+		VFIO_USER_LOG(ERR, "Invalid msg size for dma unmap\n");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < region_num; i++)
+		del_one_region(dev->mem, memory);
+
+	return 0;
 }
 
 static int
@@ -178,11 +390,65 @@ vfio_user_region_write(struct vfio_user_server *dev,
 	return 0;
 }
 
+static inline void
+vfio_user_destroy_mem_entries(struct rte_vfio_user_mem *mem)
+{
+	struct rte_vfio_user_mtb_entry *ent;
+	uint32_t i;
+
+	for (i = 0; i < mem->entry_num; i++) {
+		ent = &mem->entry[i];
+		if (ent->host_user_addr) {
+			munmap(ent->mmap_addr, ent->mmap_size);
+			close(ent->fd);
+		}
+	}
+
+	memset(mem, 0, sizeof(*mem));
+}
+
+static inline void
+vfio_user_destroy_mem(struct vfio_user_server *dev)
+{
+	struct rte_vfio_user_mem *mem = dev->mem;
+
+	if (!mem)
+		return;
+
+	vfio_user_destroy_mem_entries(mem);
+
+	free(mem);
+	dev->mem = NULL;
+}
+
+static int
+vfio_user_device_reset(struct vfio_user_server *dev,
+	struct vfio_user_msg *msg)
+{
+	struct vfio_device_info *dev_info;
+
+	if (vfio_user_check_msg_fdnum(msg, 0) != 0)
+		return -EINVAL;
+
+	dev_info = dev->dev_info;
+
+	if (!(dev_info->flags & VFIO_DEVICE_FLAGS_RESET))
+		return -ENOTSUP;
+
+	vfio_user_destroy_mem_entries(dev->mem);
+	dev->is_ready = 0;
+
+	if (dev->ops->reset_device)
+		dev->ops->reset_device(dev->dev_id);
+
+	return 0;
+}
+
 static vfio_user_msg_handler_t vfio_user_msg_handlers[VFIO_USER_MAX] = {
 	[VFIO_USER_NONE] = NULL,
 	[VFIO_USER_VERSION] = vfio_user_negotiate_version,
-	[VFIO_USER_DMA_MAP] = NULL,
-	[VFIO_USER_DMA_UNMAP] = NULL,
+	[VFIO_USER_DMA_MAP] = vfio_user_dma_map,
+	[VFIO_USER_DMA_UNMAP] = vfio_user_dma_unmap,
 	[VFIO_USER_DEVICE_GET_INFO] = vfio_user_device_get_info,
 	[VFIO_USER_DEVICE_GET_REGION_INFO] = vfio_user_device_get_reg_info,
 	[VFIO_USER_DEVICE_GET_IRQ_INFO] = NULL,
@@ -192,7 +458,7 @@ static vfio_user_msg_handler_t vfio_user_msg_handlers[VFIO_USER_MAX] = {
 	[VFIO_USER_DMA_READ] = NULL,
 	[VFIO_USER_DMA_WRITE] = NULL,
 	[VFIO_USER_VM_INTERRUPT] = NULL,
-	[VFIO_USER_DEVICE_RESET] = NULL,
+	[VFIO_USER_DEVICE_RESET] = vfio_user_device_reset,
 };
 
 static struct vfio_user_server_socket *
@@ -534,6 +800,21 @@ vfio_user_get_device(int dev_id)
 	return dev;
 }
 
+static inline int
+vfio_user_is_ready(struct vfio_user_server *dev)
+{
+	/* vfio-user currently has no definition of when the device is ready.
+	 * For now, we define it as when the device has at least one dma
+	 * memory table entry.
+	 */
+	if (dev->mem->entry_num > 0) {
+		dev->is_ready = 1;
+		return 1;
+	}
+
+	return 0;
+}
+
 static int
 vfio_user_message_handler(int dev_id, int fd)
 {
@@ -541,6 +822,7 @@ vfio_user_message_handler(int dev_id, int fd)
 	struct vfio_user_msg msg;
 	uint32_t cmd;
 	int ret = 0;
+	int dev_locked = 0;
 
 	dev = vfio_user_get_device(dev_id);
 	if (!dev)
@@ -567,6 +849,17 @@ vfio_user_message_handler(int dev_id, int fd)
 	} else {
 		VFIO_USER_LOG(ERR, "Read unknown message\n");
 		return -1;
+	}
+
+	/*
+	 * Below messages should lock the data path upon receiving
+	 * to avoid errors in data path handling
+	 */
+	if ((cmd == VFIO_USER_DMA_MAP || cmd == VFIO_USER_DMA_UNMAP ||
+		cmd == VFIO_USER_DEVICE_RESET)
+		&& dev->ops->lock_dp) {
+		dev->ops->lock_dp(dev_id, 1);
+		dev_locked = 1;
 	}
 
 	if (vfio_user_msg_handlers[cmd])
@@ -601,7 +894,18 @@ vfio_user_message_handler(int dev_id, int fd)
 		}
 	}
 
+	if (!dev->is_ready) {
+		if (vfio_user_is_ready(dev) && dev->ops->new_device)
+			dev->ops->new_device(dev_id);
+	} else {
+		if ((cmd == VFIO_USER_DMA_MAP || cmd == VFIO_USER_DMA_UNMAP)
+			&& dev->ops->update_status)
+			dev->ops->update_status(dev_id);
+	}
+
 handle_end:
+	if (dev_locked)
+		dev->ops->lock_dp(dev_id, 0);
 	return ret;
 }
 
@@ -619,8 +923,12 @@ vfio_user_sock_read(int fd, void *data)
 		close(fd);
 		sk->conn_fd = -1;
 		dev = vfio_user_get_device(dev_id);
-		if (dev)
+		if (dev) {
+			dev->ops->destroy_device(dev_id);
+			vfio_user_destroy_mem_entries(dev->mem);
+			dev->is_ready = 0;
 			dev->msg_id = 0;
+		}
 	}
 
 	return ret;
@@ -752,13 +1060,14 @@ err:
 }
 
 int
-rte_vfio_user_register(const char *sock_addr)
+rte_vfio_user_register(const char *sock_addr,
+	const struct rte_vfio_user_notify_ops *ops)
 {
 	struct vfio_user_server_socket *sk;
 	struct vfio_user_server *dev;
 	int dev_id;
 
-	if (!sock_addr)
+	if (!sock_addr || !ops)
 		return -1;
 
 	sk = vfio_user_create_sock(sock_addr);
@@ -776,11 +1085,22 @@ rte_vfio_user_register(const char *sock_addr)
 
 	dev = vfio_user_get_device(dev_id);
 
+	dev->mem = malloc(sizeof(struct rte_vfio_user_mem));
+	if (!dev->mem) {
+		VFIO_USER_LOG(ERR, "Failed to alloc vfio_user_mem\n");
+		goto err_mem;
+	}
+	memset(dev->mem, 0, sizeof(struct rte_vfio_user_mem));
+
 	dev->ver.major = VFIO_USER_VERSION_MAJOR;
 	dev->ver.minor = VFIO_USER_VERSION_MINOR;
+	dev->ops = ops;
+	dev->is_ready = 0;
 
 	return 0;
 
+err_mem:
+	vfio_user_del_device(dev);
 err_add_dev:
 	vfio_user_delete_sock(sk);
 exit:
@@ -818,7 +1138,7 @@ rte_vfio_user_unregister(const char *sock_addr)
 			"device not found.\n");
 		return -1;
 	}
-
+	vfio_user_destroy_mem(dev);
 	vfio_user_del_device(dev);
 
 	return 0;
@@ -939,4 +1259,45 @@ rte_vfio_user_set_reg_info(const char *sock_addr,
 	dev->reg = reg;
 
 	return 0;
+}
+
+int
+rte_vfio_get_sock_addr(int dev_id, char *buf, size_t len)
+{
+	struct vfio_user_server *dev;
+
+	dev = vfio_user_get_device(dev_id);
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to get sock address:"
+			"device %d not found.\n", dev_id);
+		return -1;
+	}
+
+	len = len > sizeof(dev->sock_addr) ?
+		sizeof(dev->sock_addr) : len;
+	strncpy(buf, dev->sock_addr, len);
+	buf[len - 1] = '\0';
+
+	return 0;
+}
+
+const struct rte_vfio_user_mem *
+rte_vfio_user_get_mem_table(int dev_id)
+{
+	struct vfio_user_server *dev;
+
+	dev = vfio_user_get_device(dev_id);
+	if (!dev) {
+		VFIO_USER_LOG(ERR, "Failed to get memory table:"
+			"device %d not found.\n", dev_id);
+		return NULL;
+	}
+
+	if (!dev->mem) {
+		VFIO_USER_LOG(ERR, "Failed to get memory table for device %d:"
+			"memory table not allocated.\n", dev_id);
+		return NULL;
+	}
+
+	return dev->mem;
 }

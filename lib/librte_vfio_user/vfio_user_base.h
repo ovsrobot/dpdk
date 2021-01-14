@@ -9,6 +9,7 @@
 
 #include "rte_vfio_user.h"
 
+#define VFIO_USER_MSG_MAX_NREG 8
 #define VFIO_USER_VERSION_MAJOR 1
 #define VFIO_USER_VERSION_MINOR 0
 #define VFIO_USER_MAX_RSVD 512
@@ -79,6 +80,7 @@ struct vfio_user_msg {
 	uint32_t err;				/* Valid in reply, optional */
 	union {
 		struct vfio_user_version ver;
+		struct rte_vfio_user_mem_reg memory[VFIO_USER_MSG_MAX_NREG];
 		struct vfio_device_info dev_info;
 		struct vfio_user_reg reg_info;
 		struct vfio_user_reg_rw reg_rw;

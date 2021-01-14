@@ -11,11 +11,14 @@
 
 struct vfio_user_server {
 	int dev_id;
+	int is_ready;
 	int started;
 	int conn_fd;
 	uint32_t msg_id;
 	char sock_addr[PATH_MAX];
+	const struct rte_vfio_user_notify_ops *ops;
 	struct vfio_user_version ver;
+	struct rte_vfio_user_mem *mem;
 	struct vfio_device_info *dev_info;
 	struct rte_vfio_user_regions *reg;
 };
