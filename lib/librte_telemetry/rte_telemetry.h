@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <sched.h>
 #include <rte_compat.h>
+#include <rte_os.h>
 
 #ifndef _RTE_TELEMETRY_H_
 #define _RTE_TELEMETRY_H_
