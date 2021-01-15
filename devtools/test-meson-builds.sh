@@ -220,7 +220,7 @@ default_machine='nehalem'
 if ! check_cc_flags "-march=$default_machine" ; then
 	default_machine='corei7'
 fi
-build build-x86-default cc -Dlibdir=lib -Dmachine=$default_machine $use_shared
+build build-x86-default cc -Dlibdir=lib -Dmachine=$default_machine -Dtest_includes=true $use_shared
 
 # 32-bit with default compiler
 if check_cc_flags '-m32' ; then
