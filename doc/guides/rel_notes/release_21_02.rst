@@ -116,7 +116,8 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
-* No ABI change that would break compatibility with 20.11.
+* ethdev: the structure ``rte_eth_tunnel_type`` has added one parameter
+  ``RTE_TUNNEL_TYPE_ECPRI`` for ecpri UDP port configuration.
 
 
 Known Issues
