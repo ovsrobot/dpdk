@@ -26,6 +26,7 @@
 #define _RTE_RECIPROCAL_H_
 
 #include <stdint.h>
+#include <rte_common.h>
 
 struct rte_reciprocal {
 	uint32_t m;
