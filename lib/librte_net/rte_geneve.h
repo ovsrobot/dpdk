@@ -11,6 +11,7 @@
  * GENEVE-related definitions
  */
 #include <stdint.h>
+#include <rte_byteorder.h>
 
 #ifdef __cplusplus
 extern "C" {
