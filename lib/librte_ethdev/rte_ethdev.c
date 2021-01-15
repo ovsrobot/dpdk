@@ -3948,28 +3948,28 @@ rte_eth_fec_get_capability(uint16_t port_id,
 }
 
 int
-rte_eth_fec_get(uint16_t port_id, uint32_t *fec_capa)
+rte_eth_fec_get(uint16_t port_id, uint32_t *fec_mode)
 {
 	struct rte_eth_dev *dev;
 
-	if (fec_capa == NULL)
+	if (fec_mode == NULL)
 		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->fec_get, -ENOTSUP);
-	return eth_err(port_id, (*dev->dev_ops->fec_get)(dev, fec_capa));
+	return eth_err(port_id, (*dev->dev_ops->fec_get)(dev, fec_mode));
 }
 
 int
-rte_eth_fec_set(uint16_t port_id, uint32_t fec_capa)
+rte_eth_fec_set(uint16_t port_id, uint32_t fec_mode)
 {
 	struct rte_eth_dev *dev;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->fec_set, -ENOTSUP);
-	return eth_err(port_id, (*dev->dev_ops->fec_set)(dev, fec_capa));
+	return eth_err(port_id, (*dev->dev_ops->fec_set)(dev, fec_mode));
 }
 
 /*

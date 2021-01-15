@@ -625,7 +625,7 @@ typedef int (*eth_fec_get_capability_t)(struct rte_eth_dev *dev,
  *
  * @param dev
  *   ethdev handle of port.
- * @param fec_capa
+ * @param fec_mode
  *   a bitmask of enabled FEC modes. If AUTO bit is set, other
  *   bits specify FEC modes which may be negotiated. If AUTO
  *   bit is clear, specify FEC modes to be used (only one valid
@@ -642,7 +642,7 @@ typedef int (*eth_fec_get_capability_t)(struct rte_eth_dev *dev,
  *   Device is removed.
  */
 typedef int (*eth_fec_get_t)(struct rte_eth_dev *dev,
-			     uint32_t *fec_capa);
+			     uint32_t *fec_mode);
 
 /**
  * @internal
@@ -650,7 +650,7 @@ typedef int (*eth_fec_get_t)(struct rte_eth_dev *dev,
  *
  * @param dev
  *   ethdev handle of port.
- * @param fec_capa
+ * @param fec_mode
  *   bitmask of allowed FEC modes. It must be only one
  *   if AUTO is disabled. If AUTO is enabled, other
  *   bits specify FEC modes which may be negotiated.
@@ -667,7 +667,7 @@ typedef int (*eth_fec_get_t)(struct rte_eth_dev *dev,
  * @retval -EIO
  *   Device is removed.
  */
-typedef int (*eth_fec_set_t)(struct rte_eth_dev *dev, uint32_t fec_capa);
+typedef int (*eth_fec_set_t)(struct rte_eth_dev *dev, uint32_t fec_mode);
 
 /**
  * @internal

@@ -3698,7 +3698,7 @@ int rte_eth_fec_get_capability(uint16_t port_id,
  *
  * @param port_id
  *   The port identifier of the Ethernet device.
- * @param fec_capa
+ * @param fec_mode
  *   A bitmask of enabled FEC modes. If AUTO bit is set, other
  *   bits specify FEC modes which may be negotiated. If AUTO
  *   bit is clear, specify FEC modes to be used (only one valid
@@ -3711,7 +3711,7 @@ int rte_eth_fec_get_capability(uint16_t port_id,
  *   - (-ENODEV)  if *port_id* invalid.
  */
 __rte_experimental
-int rte_eth_fec_get(uint16_t port_id, uint32_t *fec_capa);
+int rte_eth_fec_get(uint16_t port_id, uint32_t *fec_mode);
 
 /**
  * @warning
@@ -3721,7 +3721,7 @@ int rte_eth_fec_get(uint16_t port_id, uint32_t *fec_capa);
  *
  * @param port_id
  *   The port identifier of the Ethernet device.
- * @param fec_capa
+ * @param fec_mode
  *   A bitmask of allowed FEC modes. If AUTO bit is set, other
  *   bits specify FEC modes which may be negotiated. If AUTO
  *   bit is clear, specify FEC modes to be used (only one valid
@@ -3734,7 +3734,7 @@ int rte_eth_fec_get(uint16_t port_id, uint32_t *fec_capa);
  *   - (-ENODEV)  if *port_id* invalid.
  */
 __rte_experimental
-int rte_eth_fec_set(uint16_t port_id, uint32_t fec_capa);
+int rte_eth_fec_set(uint16_t port_id, uint32_t fec_mode);
 
 /**
  * Get current status of the Ethernet link flow control for Ethernet device
