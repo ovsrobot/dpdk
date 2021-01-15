@@ -7,6 +7,7 @@
 #define _RTE_IPSEC_SAD_H_
 
 #include <rte_compat.h>
+#include <stdint.h>
 
 /**
  * @file rte_ipsec_sad.h
