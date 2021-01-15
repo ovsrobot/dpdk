@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include <rte_compat.h>
+#include <rte_byteorder.h>
 #include <generic/rte_atomic.h>
 
 #ifdef __cplusplus
