@@ -16,6 +16,7 @@ cc = meson.get_compiler('c')
 dpdk_conf = configuration_data()
 dpdk_libraries = []
 dpdk_static_libraries = []
+dpdk_chkinc_headers = []
 dpdk_driver_classes = []
 dpdk_drivers = []
 dpdk_extra_ldflags = []

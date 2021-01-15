@@ -6,6 +6,7 @@ if is_windows
 endif
 
 apps = [
+	'chkincs',
 	'pdump',
 	'proc-info',
 	'test-acl',

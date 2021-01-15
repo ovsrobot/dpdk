@@ -65,6 +65,7 @@ foreach l:libraries
 	use_function_versioning = false
 	sources = []
 	headers = []
+	headers_no_chkincs = [] # public headers not directly included by apps
 	includes = []
 	cflags = default_cflags
 	objs = [] # other object files to link against, used e.g. for
@@ -103,6 +104,8 @@ foreach l:libraries
 		dpdk_conf.set('RTE_LIBRTE_' + name.to_upper(), 1) #old macro
 		dpdk_conf.set('RTE_LIB_' + name.to_upper(), 1) # new macro
 		install_headers(headers)
+		install_headers(headers_no_chkincs)
+		dpdk_chkinc_headers += headers
 
 		libname = 'rte_' + name
 		includes += include_directories(dir_name)

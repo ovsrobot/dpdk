@@ -891,6 +891,18 @@ headers
 	installed to $PREFIX/include when ``ninja install`` is run. As with
 	source files, these should be specified using the meson ``files()``
 	function.
+	When ``test_headers`` build option is set to ``true``, each header file
+	has additional checks performed on it, for example to ensure that it is
+	not missing any include statements for dependent headers. These build
+	checks are done by the build of the ``dpdk-chkincs`` application, and
+	for header files which are public, but only included indirectly in
+	applications, these checks can be skipped by using the ``headers_no_chkincs``
+	variable rather than ``headers``.
+
+headers_no_chkincs
+	**Default Value = []**.
+	As with ``headers`` option above, except that the files are not checked
+	as part of the build of the ``dpdk-chkincs`` binary.
 
 includes:
 	**Default Value = []**.

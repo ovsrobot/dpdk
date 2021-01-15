@@ -30,5 +30,7 @@ option('enable_trace_fp', type: 'boolean', value: false,
 	description: 'enable fast path trace points.')
 option('tests', type: 'boolean', value: true,
 	description: 'build unit tests')
+option('test_includes', type: 'boolean', value: false,
+	description: 'build "chkincs" to verify each header file can compile alone')
 option('use_hpet', type: 'boolean', value: false,
 	description: 'use HPET timer in EAL')
