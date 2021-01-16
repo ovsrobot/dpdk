@@ -2198,6 +2198,17 @@ enum rte_flow_action_type {
 	 * struct rte_flow_shared_action).
 	 */
 	RTE_FLOW_ACTION_TYPE_SHARED,
+
+	/**
+	 * Modify a packet header field, tag, mark or metadata.
+	 *
+	 * Allow the modification of an arbitrary header field via
+	 * set, add and sub operations or copying its content into
+	 * tag, meta or mark for future processing.
+	 *
+	 * See struct rte_flow_action_modify_field.
+	 */
+	RTE_FLOW_ACTION_TYPE_MODIFY_FIELD,
 };
 
 /**
@@ -2777,7 +2788,6 @@ struct rte_flow_action_set_dscp {
 	uint8_t dscp;
 };
 
-
 /**
  * RTE_FLOW_ACTION_TYPE_SHARED
  *
@@ -2790,6 +2800,73 @@ struct rte_flow_action_set_dscp {
  * - destroy action
  */
 struct rte_flow_shared_action;
+
+enum rte_flow_field_id {
+	RTE_FLOW_FIELD_START = 0,
+	RTE_FLOW_FIELD_MAC_DST,
+	RTE_FLOW_FIELD_MAC_SRC,
+	RTE_FLOW_FIELD_VLAN_TYPE,
+	RTE_FLOW_FIELD_VLAN_ID,
+	RTE_FLOW_FIELD_MAC_TYPE,
+	RTE_FLOW_FIELD_IPV4_DSCP,
+	RTE_FLOW_FIELD_IPV4_TTL,
+	RTE_FLOW_FIELD_IPV4_SRC,
+	RTE_FLOW_FIELD_IPV4_DST,
+	RTE_FLOW_FIELD_IPV6_HOPLIMIT,
+	RTE_FLOW_FIELD_IPV6_SRC,
+	RTE_FLOW_FIELD_IPV6_DST,
+	RTE_FLOW_FIELD_TCP_PORT_SRC,
+	RTE_FLOW_FIELD_TCP_PORT_DST,
+	RTE_FLOW_FIELD_TCP_SEQ_NUM,
+	RTE_FLOW_FIELD_TCP_ACK_NUM,
+	RTE_FLOW_FIELD_TCP_FLAGS,
+	RTE_FLOW_FIELD_UDP_PORT_SRC,
+	RTE_FLOW_FIELD_UDP_PORT_DST,
+	RTE_FLOW_FIELD_VXLAN_VNI,
+	RTE_FLOW_FIELD_GENEVE_VNI,
+	RTE_FLOW_FIELD_GTP_TEID,
+	RTE_FLOW_FIELD_TAG,
+	RTE_FLOW_FIELD_MARK,
+	RTE_FLOW_FIELD_META,
+	RTE_FLOW_FIELD_POINTER,
+	RTE_FLOW_FIELD_VALUE,
+};
+
+struct rte_flow_action_modify_data {
+	enum rte_flow_field_id field;
+	RTE_STD_C11
+	union {
+		struct {
+			uint32_t level;
+			uint32_t offset;
+		};
+		uint64_t value;
+	};
+};
+
+enum rte_flow_modify_op {
+	RTE_FLOW_MODIFY_SET = 0,
+	RTE_FLOW_MODIFY_ADD,
+	RTE_FLOW_MODIFY_SUB,
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
+ * RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+ *
+ * Modifies a destination header field according to the specified
+ * operation. Another packet field can be used as a source as well
+ * as tag, mark, metadata or an immediate value or a pointer to it.
+ * Width is the number of bits used from the source item.
+ */
+struct rte_flow_action_modify_field {
+	enum rte_flow_modify_op operation;
+	struct rte_flow_action_modify_data dst;
+	struct rte_flow_action_modify_data src;
+	uint32_t width;
+};
 
 /* Mbuf dynamic field offset for metadata. */
 extern int32_t rte_flow_dynf_metadata_offs;

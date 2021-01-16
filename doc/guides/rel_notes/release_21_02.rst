@@ -55,6 +55,14 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added support of modify field action in the flow API.**
+
+  Added modify action support to perform various operations on
+  any arbitrary header field (as well as mark, metadata or tag values):
+  ``RTE_FLOW_ACTION_TYPE_MODIFY_FIELD``.
+  supported operations are: overwriting a field with the content from
+  another field, addition and subtraction using an immediate value.
+
 * **Updated Broadcom bnxt driver.**
 
   Updated the Broadcom bnxt driver with fixes and improvements, including:
