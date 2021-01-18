@@ -163,8 +163,14 @@ get_out:
 		if (layers[i].kvlist)
 			rte_kvargs_free(layers[i].kvlist);
 	}
-	if (ret != 0)
+	if (ret != 0) {
+		if (devargs->data && devargs->data != devstr) {
+			/* Free duplicated data. */
+			free(devargs->data);
+			devargs->data = NULL;
+		}
 		rte_errno = -ret;
+	}
 	return ret;
 }
 
