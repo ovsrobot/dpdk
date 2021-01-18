@@ -378,6 +378,10 @@ parameters to those ports.
    -a DBDF,representor=vf[0,4,6,9]
    -a DBDF,representor=vf[0-31]
    -a DBDF,representor=vf[0,2-4,7,9-11]
+   -a DBDF,representor=sf0
+   -a DBDF,representor=sf[1,3,5]
+   -a DBDF,representor=sf[0-1023]
+   -a DBDF,representor=sf[0,2-4,7,9-11]
 
 Note: PMDs are not required to support the standard device arguments and users
 should consult the relevant PMD documentation to see support devargs.
