@@ -10,8 +10,57 @@
 #include "otx_ep_common.h"
 #include "otx_ep_vf.h"
 #include "otx2_ep_vf.h"
+#include "otx_ep_rxtx.h"
 
-#define OTX_EP_DEV(_eth_dev)            ((_eth_dev)->data->dev_private)
+#define OTX_EP_DEV(_eth_dev) \
+	((struct otx_ep_device *)(_eth_dev)->data->dev_private)
+
+static const struct rte_eth_desc_lim otx_ep_rx_desc_lim = {
+	.nb_max		= OTX_EP_MAX_OQ_DESCRIPTORS,
+	.nb_min		= OTX_EP_MIN_OQ_DESCRIPTORS,
+	.nb_align	= OTX_EP_RXD_ALIGN,
+};
+
+static const struct rte_eth_desc_lim otx_ep_tx_desc_lim = {
+	.nb_max		= OTX_EP_MAX_IQ_DESCRIPTORS,
+	.nb_min		= OTX_EP_MIN_IQ_DESCRIPTORS,
+	.nb_align	= OTX_EP_TXD_ALIGN,
+};
+
+static int
+otx_ep_dev_info_get(struct rte_eth_dev *eth_dev,
+		    struct rte_eth_dev_info *devinfo)
+{
+	struct otx_ep_device *otx_epvf;
+	struct rte_pci_device *pdev;
+	uint32_t dev_id;
+
+	otx_epvf = OTX_EP_DEV(eth_dev);
+	pdev = otx_epvf->pdev;
+	dev_id = pdev->id.device_id;
+
+	devinfo->speed_capa = ETH_LINK_SPEED_10G;
+	devinfo->max_rx_queues = otx_epvf->max_rx_queues;
+	devinfo->max_tx_queues = otx_epvf->max_tx_queues;
+
+	devinfo->min_rx_bufsize = OTX_EP_MIN_RX_BUF_SIZE;
+	if (dev_id == PCI_DEVID_OCTEONTX_EP_VF ||
+	    dev_id == PCI_DEVID_OCTEONTX2_EP_NET_VF ||
+	    dev_id == PCI_DEVID_CN98XX_EP_NET_VF) {
+		devinfo->max_rx_pktlen = OTX_EP_MAX_PKT_SZ;
+		devinfo->rx_offload_capa = DEV_RX_OFFLOAD_JUMBO_FRAME;
+		devinfo->rx_offload_capa |= DEV_RX_OFFLOAD_SCATTER;
+		devinfo->tx_offload_capa = DEV_TX_OFFLOAD_MULTI_SEGS;
+	}
+
+	devinfo->max_mac_addrs = OTX_EP_MAX_MAC_ADDRS;
+
+	devinfo->rx_desc_lim = otx_ep_rx_desc_lim;
+	devinfo->tx_desc_lim = otx_ep_tx_desc_lim;
+
+	return 0;
+}
+
 static int
 otx_ep_chip_specific_setup(struct otx_ep_device *otx_epvf)
 {
@@ -63,6 +112,41 @@ setup_fail:
 }
 
 static int
+otx_ep_dev_configure(struct rte_eth_dev *eth_dev)
+{
+	struct otx_ep_device *otx_epvf = OTX_EP_DEV(eth_dev);
+	struct rte_eth_dev_data *data = eth_dev->data;
+	struct rte_eth_rxmode *rxmode;
+	struct rte_eth_txmode *txmode;
+	struct rte_eth_conf *conf;
+	uint32_t ethdev_queues;
+
+	conf = &data->dev_conf;
+	rxmode = &conf->rxmode;
+	txmode = &conf->txmode;
+	ethdev_queues = (uint32_t)(otx_epvf->sriov_info.rings_per_vf);
+	if (eth_dev->data->nb_rx_queues > ethdev_queues ||
+	    eth_dev->data->nb_tx_queues > ethdev_queues) {
+		otx_ep_err("invalid num queues\n");
+		return -ENOMEM;
+	}
+	otx_ep_info("OTX_EP Device is configured with num_txq %d num_rxq %d\n",
+		    eth_dev->data->nb_rx_queues, eth_dev->data->nb_tx_queues);
+
+	otx_epvf->port_configured = 1;
+	otx_epvf->rx_offloads = rxmode->offloads;
+	otx_epvf->tx_offloads = txmode->offloads;
+
+	return 0;
+}
+
+/* Define our ethernet definitions */
+static const struct eth_dev_ops otx_ep_eth_dev_ops = {
+	.dev_configure		= otx_ep_dev_configure,
+	.dev_infos_get		= otx_ep_dev_info_get,
+};
+
+static int
 otx_ep_eth_dev_uninit(struct rte_eth_dev *eth_dev)
 {
 	struct otx_ep_device *otx_epvf = OTX_EP_DEV(eth_dev);
@@ -99,6 +183,7 @@ otx_ep_eth_dev_init(struct rte_eth_dev *eth_dev)
 	}
 	otx_epvf->eth_dev = eth_dev;
 	otx_epvf->port_id = eth_dev->data->port_id;
+	eth_dev->dev_ops = &otx_ep_eth_dev_ops;
 	eth_dev->data->mac_addrs = rte_zmalloc("otx_ep", RTE_ETHER_ADDR_LEN, 0);
 	if (eth_dev->data->mac_addrs == NULL) {
 		otx_ep_err("MAC addresses memory allocation failed\n");
@@ -138,8 +223,6 @@ static const struct rte_pci_id pci_id_otx_ep_map[] = {
 	{ RTE_PCI_DEVICE(PCI_VENDOR_ID_CAVIUM, PCI_DEVID_CN98XX_EP_NET_VF) },
 	{ .vendor_id = 0, /* sentinel */ }
 };
-
-
 
 static struct rte_pci_driver rte_otx_ep_pmd = {
 	.id_table	= pci_id_otx_ep_map,
