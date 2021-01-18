@@ -3403,7 +3403,10 @@ static const struct token token_list[] = {
 		.name = "key",
 		.help = "RSS hash key",
 		.next = NEXT(action_rss, NEXT_ENTRY(HEX)),
-		.args = ARGS(ARGS_ENTRY_ARB(0, 0),
+		.args = ARGS(ARGS_ENTRY_ARB
+			     (offsetof(struct action_rss_data, conf) +
+			      offsetof(struct rte_flow_action_rss, key),
+			      sizeof(((struct rte_flow_action_rss *)0)->key)),
 			     ARGS_ENTRY_ARB
 			     (offsetof(struct action_rss_data, conf) +
 			      offsetof(struct rte_flow_action_rss, key_len),
@@ -6495,19 +6498,18 @@ parse_hex(struct context *ctx, const struct token *token,
 	if (ctx->objmask)
 		memset((uint8_t *)ctx->objmask + arg_data->offset,
 					0xff, hexlen);
+
 	/* Save address if requested. */
 	if (arg_addr->size) {
-		memcpy((uint8_t *)ctx->object + arg_addr->offset,
-		       (void *[]){
-			(uint8_t *)ctx->object + arg_data->offset
-		       },
-		       arg_addr->size);
+		if (arg_addr->size < sizeof(void *))
+			goto error;
+
+		*(void **)((uint8_t *)ctx->object + arg_addr->offset) =
+				(uint8_t *)ctx->object + arg_data->offset;
+
 		if (ctx->objmask)
-			memcpy((uint8_t *)ctx->objmask + arg_addr->offset,
-			       (void *[]){
-				(uint8_t *)ctx->objmask + arg_data->offset
-			       },
-			       arg_addr->size);
+			*(void **)((uint8_t *)ctx->objmask + arg_addr->offset) =
+				(uint8_t *)ctx->objmask + arg_data->offset;
 	}
 	return len;
 error:
