@@ -1321,6 +1321,52 @@ flow_dv_convert_action_modify_ipv6_dscp
 }
 
 /**
+ * Convert modify_field action to DV specification.
+ *
+ * @param[in,out] resource
+ *   Pointer to the modify-header resource.
+ * @param[in] action
+ *   Pointer to action specification.
+ * @param[out] error
+ *   Pointer to the error structure.
+ *
+ * @return
+ *   0 on success, a negative errno value otherwise and rte_errno is set.
+ */
+static int
+flow_dv_convert_action_modify_field
+			(struct mlx5_flow_dv_modify_hdr_resource *resource,
+			 const struct rte_flow_action *action,
+			 struct rte_flow_error *error)
+{
+	const struct rte_flow_action_modify_field *conf =
+		(const struct rte_flow_action_modify_field *)(action->conf);
+	struct rte_flow_item item = { .type = RTE_FLOW_ITEM_TYPE_ETH };
+	struct rte_flow_item_eth eth;
+	struct rte_flow_item_eth eth_mask;
+
+	memset(&eth, 0, sizeof(eth));
+	memset(&eth_mask, 0, sizeof(eth_mask));
+	if (conf->dst.field == RTE_FLOW_FIELD_MAC_SRC) {
+		memcpy(&eth.src.addr_bytes, &conf->src.value,
+		       sizeof(eth.src.addr_bytes));
+		memcpy(&eth_mask.src.addr_bytes,
+		       &rte_flow_item_eth_mask.src.addr_bytes,
+		       sizeof(eth_mask.src.addr_bytes));
+	} else {
+		memcpy(&eth.dst.addr_bytes, &conf->src.value,
+		       sizeof(eth.dst.addr_bytes));
+		memcpy(&eth_mask.dst.addr_bytes,
+		       &rte_flow_item_eth_mask.dst.addr_bytes,
+		       sizeof(eth_mask.dst.addr_bytes));
+	}
+	item.spec = &eth;
+	item.mask = &eth_mask;
+	return flow_dv_convert_modify_action(&item, modify_eth, NULL, resource,
+					     MLX5_MODIFICATION_TYPE_SET, error);
+}
+
+/**
  * Validate MARK item.
  *
  * @param[in] dev
@@ -3919,6 +3965,61 @@ flow_dv_validate_action_modify_ttl(const uint64_t action_flags,
 }
 
 /**
+ * Validate the generic modify field actions.
+ *
+ * @param[in] action_flags
+ *   Holds the actions detected until now.
+ * @param[in] action
+ *   Pointer to the modify action.
+ * @param[in] item_flags
+ *   Holds the items detected.
+ * @param[out] error
+ *   Pointer to error structure.
+ *
+ * @return
+ *   0 on success, a negative errno value otherwise and rte_errno is set.
+ */
+static int
+flow_dv_validate_action_modify_field(const uint64_t action_flags,
+				   const struct rte_flow_action *action,
+				   const uint64_t item_flags,
+				   struct rte_flow_error *error)
+{
+	int ret = 0;
+	const struct rte_flow_action_modify_field *action_modify_field =
+		action->conf;
+
+	ret = flow_dv_validate_action_modify_hdr(action_flags, action, error);
+	if (!ret) {
+		if (!(item_flags & MLX5_FLOW_LAYER_L2))
+			return rte_flow_error_set(error, EINVAL,
+						  RTE_FLOW_ERROR_TYPE_ACTION,
+						  NULL,
+						  "no L2 item in pattern");
+		if (action_modify_field->operation != RTE_FLOW_MODIFY_SET)
+			return rte_flow_error_set(error, EINVAL,
+						  RTE_FLOW_ERROR_TYPE_ACTION,
+						  NULL,
+						  "add and sub opearation are"
+						  " not supported");
+		if (action_modify_field->dst.field != RTE_FLOW_FIELD_MAC_DST &&
+		    action_modify_field->dst.field != RTE_FLOW_FIELD_MAC_SRC)
+			return rte_flow_error_set(error, EINVAL,
+						  RTE_FLOW_ERROR_TYPE_ACTION,
+						  NULL,
+						  "cannot modify requested"
+						  " header field");
+		if (action_modify_field->src.field != RTE_FLOW_FIELD_VALUE)
+			return rte_flow_error_set(error, EINVAL,
+						  RTE_FLOW_ERROR_TYPE_ACTION,
+						  NULL,
+						  "copy form another packet"
+						  " field is not suported");
+	}
+	return ret;
+}
+
+/**
  * Validate jump action.
  *
  * @param[in] action
@@ -6043,6 +6144,19 @@ flow_dv_validate(struct rte_eth_dev *dev, const struct rte_flow_attr *attr,
 						"must be the first");
 
 			action_flags |= MLX5_FLOW_ACTION_TUNNEL_SET;
+			break;
+		case RTE_FLOW_ACTION_TYPE_MODIFY_FIELD:
+			ret = flow_dv_validate_action_modify_field(action_flags,
+								 actions,
+								 item_flags,
+								 error);
+			if (ret < 0)
+				return ret;
+			/* Count all modify-header actions as one action. */
+			if (!(action_flags & MLX5_FLOW_ACTION_MODIFY_FIELD))
+				++actions_n;
+			action_flags |= MLX5_FLOW_ACTION_MODIFY_FIELD;
+			rw_act_num += MLX5_ACT_NUM_MDF_MAC;
 			break;
 		default:
 			return rte_flow_error_set(error, ENOTSUP,
@@ -10251,6 +10365,12 @@ flow_dv_translate(struct rte_eth_dev *dev,
 			    (action_flags & MLX5_FLOW_ACTION_PORT_ID))
 				sample_act->action_flags |=
 							MLX5_FLOW_ACTION_ENCAP;
+			break;
+		case RTE_FLOW_ACTION_TYPE_MODIFY_FIELD:
+			if (flow_dv_convert_action_modify_field
+					(mhdr_res, actions, error))
+				return -rte_errno;
+			action_flags |= MLX5_FLOW_ACTION_MODIFY_FIELD;
 			break;
 		case RTE_FLOW_ACTION_TYPE_END:
 			actions_end = true;
