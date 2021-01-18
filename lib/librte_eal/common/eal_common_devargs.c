@@ -144,13 +144,14 @@ next_layer:
 	devargs->drv_str = layers[2].str;
 	devargs->bus = bus;
 	devargs->cls = cls;
+	devargs->src = devstr;
 
 	/* If we own the data, clean up a bit
 	 * the several layers string, to ease
 	 * their parsing afterward.
 	 */
 	if (devargs->data != devstr) {
-		char *s = (void *)(intptr_t)(devargs->data);
+		char *s = devargs->data;
 
 		while ((s = strchr(s, '/'))) {
 			*s = '\0';
@@ -164,12 +165,8 @@ get_out:
 			rte_kvargs_free(layers[i].kvlist);
 	}
 	if (ret != 0) {
-		if (devargs->data && devargs->data != devstr) {
-			/* Free duplicated data. */
-			free(devargs->data);
-			devargs->data = NULL;
-		}
 		rte_errno = -ret;
+		rte_devargs_free(devargs);
 	}
 	return ret;
 }
@@ -225,13 +222,17 @@ rte_devargs_parse(struct rte_devargs *da, const char *dev)
 	da->bus = bus;
 	/* Parse eventual device arguments */
 	if (devname[i] == ',')
-		da->args = strdup(&devname[i + 1]);
+		da->data = strdup(&devname[i + 1]);
 	else
-		da->args = strdup("");
-	if (da->args == NULL) {
+		da->data = strdup("");
+	if (da->data == NULL) {
 		RTE_LOG(ERR, EAL, "not enough memory to parse arguments\n");
 		return -ENOMEM;
 	}
+	da->drv_str = da->data;
+
+	da->src = dev;
+
 	return 0;
 }
 
@@ -266,6 +267,15 @@ rte_devargs_parsef(struct rte_devargs *da, const char *format, ...)
 	return ret;
 }
 
+void
+rte_devargs_free(struct rte_devargs *da)
+{
+	if (da && da->data && da->data != da->src)
+		free(da->data);
+	da->data = NULL;
+	da->src = NULL;
+}
+
 int
 rte_devargs_insert(struct rte_devargs **da)
 {
@@ -282,15 +292,8 @@ rte_devargs_insert(struct rte_devargs **da)
 		if (strcmp(listed_da->bus->name, (*da)->bus->name) == 0 &&
 				strcmp(listed_da->name, (*da)->name) == 0) {
 			/* device already in devargs list, must be updated */
-			listed_da->type = (*da)->type;
-			listed_da->policy = (*da)->policy;
-			free(listed_da->args);
-			listed_da->args = (*da)->args;
-			listed_da->bus = (*da)->bus;
-			listed_da->cls = (*da)->cls;
-			listed_da->bus_str = (*da)->bus_str;
-			listed_da->cls_str = (*da)->cls_str;
-			listed_da->data = (*da)->data;
+			rte_devargs_free(listed_da);
+			*listed_da = **da;
 			/* replace provided devargs with found one */
 			free(*da);
 			*da = listed_da;
@@ -332,7 +335,7 @@ rte_devargs_add(enum rte_devtype devtype, const char *devargs_str)
 
 fail:
 	if (devargs) {
-		free(devargs->args);
+		rte_devargs_free(devargs);
 		free(devargs);
 	}
 
@@ -352,7 +355,7 @@ rte_devargs_remove(struct rte_devargs *devargs)
 		if (strcmp(d->bus->name, devargs->bus->name) == 0 &&
 		    strcmp(d->name, devargs->name) == 0) {
 			TAILQ_REMOVE(&devargs_list, d, next);
-			free(d->args);
+			rte_devargs_free(d);
 			free(d);
 			return 0;
 		}

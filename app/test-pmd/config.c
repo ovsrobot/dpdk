@@ -509,8 +509,6 @@ device_infos_display(const char *identifier)
 
 	if (rte_devargs_parsef(&da, "%s", identifier)) {
 		printf("cannot parse identifier\n");
-		if (da.args)
-			free(da.args);
 		return;
 	}
 
@@ -558,6 +556,7 @@ skip_parse:
 			}
 		}
 	};
+	rte_devargs_free(&da);
 }
 
 void
@@ -602,8 +601,8 @@ port_infos_display(portid_t port_id)
 	else
 		printf("\nFirmware-version: %s", "not available");
 
-	if (dev_info.device->devargs && dev_info.device->devargs->args)
-		printf("\nDevargs: %s", dev_info.device->devargs->args);
+	if (dev_info.device->devargs && dev_info.device->devargs->src)
+		printf("\nDevargs: %s", dev_info.device->devargs->src);
 	printf("\nConnect to socket: %u", port->socket_id);
 
 	if (port_numa[port_id] != NUMA_NO_CONFIG) {
