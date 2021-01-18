@@ -115,6 +115,20 @@ struct rte_kvargs *rte_kvargs_parse_delim(const char *args,
 void rte_kvargs_free(struct rte_kvargs *kvlist);
 
 /**
+ * Get the value matching the given key
+ *
+ * @param kvlist
+ *   The rte_kvargs structure
+ * @param key
+ *   The key that should match
+
+ * @return
+ *   The value that match, NULL if not found.
+ */
+__rte_experimental
+const char *rte_kvargs_get(struct rte_kvargs *kvlist, const char *key);
+
+/**
  * Call a handler function for each key/value matching the key
  *
  * For each key/value association that matches the given key, calls the
