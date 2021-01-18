@@ -57,6 +57,7 @@ rte_devargs_layers_parse(struct rte_devargs *devargs,
 	struct rte_class *cls = NULL;
 	struct rte_bus *bus = NULL;
 	const char *s = devstr;
+	const char *name = NULL;
 	size_t nblayer;
 	size_t i = 0;
 	int ret = 0;
@@ -116,6 +117,8 @@ next_layer:
 		if (layers[i].kvlist == NULL)
 			continue;
 		kv = &layers[i].kvlist->pairs[0];
+		if (!kv->key)
+			continue;
 		if (strcmp(kv->key, "bus") == 0) {
 			bus = rte_bus_find_by_name(kv->value);
 			if (bus == NULL) {
@@ -145,6 +148,16 @@ next_layer:
 	devargs->bus = bus;
 	devargs->cls = cls;
 	devargs->src = devstr;
+
+	/* Parse device name. */
+	if (bus) {
+		if (strcmp(bus->name, "vdev") == 0)
+			name = rte_kvargs_get(layers[0].kvlist, "name");
+		else if (strcmp(bus->name, "pci") == 0)
+			name = rte_kvargs_get(layers[0].kvlist, "addr");
+		if (name != NULL)
+			strncpy(devargs->name, name, sizeof(devargs->name) - 1);
+	}
 
 	/* If we own the data, clean up a bit
 	 * the several layers string, to ease
