@@ -66,8 +66,8 @@ eth_representor_cmp(const char *key __rte_unused,
 	int ret;
 	char *values;
 	const struct rte_eth_dev_data *data = opaque;
-	struct rte_eth_devargs representors;
-	uint16_t index;
+	struct rte_eth_devargs eth_da;
+	uint16_t index, c, p, f;
 
 	if ((data->dev_flags & RTE_ETH_DEV_REPRESENTOR) == 0)
 		return -1; /* not a representor port */
@@ -76,17 +76,39 @@ eth_representor_cmp(const char *key __rte_unused,
 	values = strdup(value);
 	if (values == NULL)
 		return -1;
-	memset(&representors, 0, sizeof(representors));
-	ret = rte_eth_devargs_parse_representor_ports(values, &representors);
+	memset(&eth_da, 0, sizeof(eth_da));
+	ret = rte_eth_devargs_parse_representor_ports(values, &eth_da);
 	free(values);
 	if (ret != 0)
 		return -1; /* invalid devargs value */
 
+	/* Set default values. */
+	if (eth_da.nb_mh_controllers == 0) {
+		eth_da.nb_mh_controllers = 1;
+		eth_da.mh_controllers[0] = 0;
+	}
+	if (eth_da.nb_ports == 0) {
+		eth_da.nb_ports = 1;
+		eth_da.ports[0] = 0;
+	}
+	if (eth_da.nb_representor_ports == 0) {
+		eth_da.nb_representor_ports = 1;
+		eth_da.representor_ports[0] = 0;
+	}
 	/* Return 0 if representor id is matching one of the values. */
-	for (index = 0; index < representors.nb_representor_ports; index++)
-		if (data->representor_id ==
-				representors.representor_ports[index])
-			return 0;
+	for (c = 0; c < eth_da.nb_mh_controllers; ++c) {
+		for (p = 0; p < eth_da.nb_ports; ++p) {
+			for (f = 0; f < eth_da.nb_representor_ports; ++f) {
+				index = rte_eth_representor_id_encode(
+					eth_da.mh_controllers[c],
+					eth_da.ports[p],
+					eth_da.type,
+					eth_da.representor_ports[f]);
+				if (data->representor_id == index)
+					return 0;
+			}
+		}
+	}
 	return -1; /* no match */
 }
 
