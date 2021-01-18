@@ -201,6 +201,12 @@ rte_devargs_parse(struct rte_devargs *da, const char *dev)
 	if (da == NULL)
 		return -EINVAL;
 
+	/* First parse according new global syntax */
+	if (rte_devargs_layers_parse(da, dev) == 0 && da->bus && da->cls)
+		return 0;
+
+	/* Legacy syntax check: */
+
 	/* Retrieve eventual bus info */
 	do {
 		devname = dev;
