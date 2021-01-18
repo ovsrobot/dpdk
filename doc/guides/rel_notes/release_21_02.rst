@@ -71,6 +71,10 @@ New Features
 
   * Added inner UDP/IPv4 support for VXLAN IPv4 GSO.
 
+* **Updated Intel ice driver.**
+
+  * Added Double VLAN support for DCF switch QinQ filtering.
+
 
 Removed Items
 -------------
