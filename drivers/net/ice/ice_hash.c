@@ -803,8 +803,8 @@ ice_any_invalid_rss_type(enum rte_eth_hash_function rss_func,
 	 * hash function.
 	 */
 	if (rss_func == RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ) {
-		if (rss_type & (ETH_RSS_L3_SRC_ONLY | ETH_RSS_L3_DST_ONLY |
-		    ETH_RSS_L4_SRC_ONLY | ETH_RSS_L4_DST_ONLY))
+		if (!(rss_type & (ETH_RSS_L3_SRC_ONLY | ETH_RSS_L3_DST_ONLY |
+		    ETH_RSS_L4_SRC_ONLY | ETH_RSS_L4_DST_ONLY)))
 			return true;
 	}
 
