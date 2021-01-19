@@ -4031,6 +4031,17 @@ rte_eth_dev_rss_hash_conf_get(uint16_t port_id,
  * to change or add more UDP port for the tunnel. So the offloading function
  * can take effect on the packets with the specific UDP port.
  *
+ * The impacted offloading functions include:
+ *
+ * - A specific tunnel type in mbuf->packet_type
+ *
+ * - A rte_flow rule that matches on specific tunnel header
+ *
+ * NOTE: If a packet only has a matched UDP port but don't have a legal tunnel
+ *       header, the packet may still not be recognized as a tunnel packet by
+ *       the device parser, then the related offloading function will not take
+ *       effect.
+ *
  * @param port_id
  *   The port identifier of the Ethernet device.
  * @param tunnel_udp
