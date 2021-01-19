@@ -76,6 +76,18 @@ New Features
 
   * Added inner UDP/IPv4 support for VXLAN IPv4 GSO.
 
+* **Updated the Intel ice driver.**
+
+  Updated the Intel ice driver with new features and improvements, including:
+
+  * Added support for UDP dynamic port assignment for eCPRI protocol feature.
+
+* **Updated Intel iavf driver.**
+
+  Updated iavf PMD with new features and improvements, including:
+
+  * Added support for FDIR/RSS packet steering for flow type eCPRI protocol features.
+
 
 Removed Items
 -------------
