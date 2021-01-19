@@ -1611,6 +1611,7 @@ static const u8 dummy_ipv6_l2tpv3_pkt[] = {
 
 static const struct ice_dummy_pkt_offsets dummy_qinq_ipv4_packet_offsets[] = {
 	{ ICE_MAC_OFOS,		0 },
+	{ ICE_ETYPE_OL,         12 },
 	{ ICE_VLAN_EX,		14 },
 	{ ICE_VLAN_OFOS,	18 },
 	{ ICE_IPV4_OFOS,	22 },
@@ -1621,7 +1622,8 @@ static const u8 dummy_qinq_ipv4_pkt[] = {
 	0x00, 0x00, 0x00, 0x00, /* ICE_MAC_OFOS 0 */
 	0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00,
-	0x91, 0x00,
+
+	0x91, 0x00,		/* ICE_ETYPE_OL 12 */
 
 	0x00, 0x00, 0x81, 0x00, /* ICE_VLAN_EX 14 */
 	0x00, 0x00, 0x08, 0x00, /* ICE_VLAN_OFOS 18 */
@@ -1640,6 +1642,7 @@ static const u8 dummy_qinq_ipv4_pkt[] = {
 
 static const struct ice_dummy_pkt_offsets dummy_qinq_ipv6_packet_offsets[] = {
 	{ ICE_MAC_OFOS,		0 },
+	{ ICE_ETYPE_OL,         12 },
 	{ ICE_VLAN_EX,		14 },
 	{ ICE_VLAN_OFOS,	18 },
 	{ ICE_IPV6_OFOS,	22 },
@@ -1650,7 +1653,8 @@ static const u8 dummy_qinq_ipv6_pkt[] = {
 	0x00, 0x00, 0x00, 0x00, /* ICE_MAC_OFOS 0 */
 	0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00,
-	0x91, 0x00,
+
+	0x91, 0x00,		/* ICE_ETYPE_OL 12 */
 
 	0x00, 0x00, 0x81, 0x00, /* ICE_VLAN_EX 14 */
 	0x00, 0x00, 0x86, 0xDD, /* ICE_VLAN_OFOS 18 */
@@ -1677,6 +1681,7 @@ static const u8 dummy_qinq_ipv6_pkt[] = {
 
 static const struct ice_dummy_pkt_offsets dummy_qinq_pppoe_packet_offsets[] = {
 	{ ICE_MAC_OFOS,		0 },
+	{ ICE_ETYPE_OL,         12 },
 	{ ICE_VLAN_EX,		14 },
 	{ ICE_VLAN_OFOS,	18 },
 	{ ICE_PPPOE,		22 },
@@ -1686,6 +1691,7 @@ static const struct ice_dummy_pkt_offsets dummy_qinq_pppoe_packet_offsets[] = {
 static const
 struct ice_dummy_pkt_offsets dummy_qinq_pppoe_ipv4_packet_offsets[] = {
 	{ ICE_MAC_OFOS,		0 },
+	{ ICE_ETYPE_OL,         12 },
 	{ ICE_VLAN_EX,		14 },
 	{ ICE_VLAN_OFOS,	18 },
 	{ ICE_PPPOE,		22 },
@@ -1697,7 +1703,8 @@ static const u8 dummy_qinq_pppoe_ipv4_pkt[] = {
 	0x00, 0x00, 0x00, 0x00, /* ICE_MAC_OFOS 0 */
 	0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00,
-	0x91, 0x00,
+
+	0x91, 0x00,		/* ICE_ETYPE_OL 12 */
 
 	0x00, 0x00, 0x81, 0x00, /* ICE_VLAN_EX 14 */
 	0x00, 0x00, 0x88, 0x64, /* ICE_VLAN_OFOS 18 */
