@@ -1025,7 +1025,9 @@ err_secondary:
 #endif
 	/* representor_id field keeps the unmodified VF index. */
 	priv->representor_id = switch_info->representor ?
-			       switch_info->port_name : -1;
+		rte_eth_representor_id_encode(0, 0, RTE_ETH_REPRESENTOR_VF,
+					      switch_info->port_name) :
+		-1;
 	/*
 	 * Look for sibling devices in order to reuse their switch domain
 	 * if any, otherwise allocate one.

@@ -1241,6 +1241,59 @@ struct rte_eth_devargs {
 	enum rte_eth_representor_type type; /* type of representor */
 };
 
+#define RTE_NO_REPRESENTOR_ID UINT16_MAX /**< No representor ID. */
+
+/**
+ * PMD helper function to encode representor ID
+ *
+ * The compact format is used for device iterator that comparing
+ * ethdev representor ID with target devargs.
+ *
+ * xxxx xxxx xxxx xxxx
+ * |||| |LLL LLLL LLLL vf/sf id
+ * |||| L 1:sf, 0:vf
+ * ||LL pf id
+ * LL controller(host) id
+ *
+ * @param controller
+ *  Controller ID.
+ * @param pf
+ *  PF port ID.
+ * @param type
+ *  Representor type.
+ * @param representor_port
+ *  Representor port ID.
+ *
+ * @return
+ *   Encoded representor ID.
+ */
+__rte_internal
+uint16_t
+rte_eth_representor_id_encode(uint16_t controller, uint16_t pf,
+			      enum rte_eth_representor_type type,
+			      uint16_t representor_port);
+
+/**
+ * PMD helper function to parse representor ID
+ *
+ * @param representor_id
+ *  Representor ID.
+ * @param controller
+ *  Parsed controller ID.
+ * @param pf
+ *  Parsed PF port ID.
+ * @param type
+ *  Parsed representor type.
+ *
+ * @return
+ *   Parsed representor port ID.
+ */
+__rte_internal
+uint16_t
+rte_eth_representor_id_parse(const uint16_t representor_id,
+			     uint16_t *controller, uint16_t *pf,
+			     enum rte_eth_representor_type *type);
+
 /**
  * PMD helper function to parse ethdev arguments
  *

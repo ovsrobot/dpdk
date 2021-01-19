@@ -5584,6 +5584,32 @@ parse_cleanup:
 	return result;
 }
 
+uint16_t
+rte_eth_representor_id_encode(uint16_t controller, uint16_t pf,
+			      enum rte_eth_representor_type type,
+			      uint16_t representor_port)
+{
+	return (((controller & 3) << 14) |
+		((pf & 3) << 12) |
+		(!!(type == RTE_ETH_REPRESENTOR_SF) << 11) |
+		(representor_port & 0x7ff));
+}
+
+uint16_t
+rte_eth_representor_id_parse(const uint16_t representor_id,
+			     uint16_t *controller, uint16_t *pf,
+			     enum rte_eth_representor_type *type)
+{
+	if (controller)
+		*controller = (representor_id >> 14) & 3;
+	if (pf)
+		*pf = (representor_id >> 12) & 3;
+	if (type)
+		*type = ((representor_id >> 11) & 1) ?
+			RTE_ETH_REPRESENTOR_SF : RTE_ETH_REPRESENTOR_VF;
+	return representor_id & 0x7ff;
+}
+
 static int
 eth_dev_handle_port_list(const char *cmd __rte_unused,
 		const char *params __rte_unused,
