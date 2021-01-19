@@ -427,15 +427,22 @@ virtio_user_dev_setup(struct virtio_user_dev *dev)
 
 	if (virtio_user_dev_init_notify(dev) < 0) {
 		PMD_INIT_LOG(ERR, "(%s) Failed to init notifiers\n", dev->path);
-		return -1;
+		goto destroy;
 	}
 
 	if (virtio_user_fill_intr_handle(dev) < 0) {
 		PMD_INIT_LOG(ERR, "(%s) Failed to init interrupt handler\n", dev->path);
-		return -1;
+		goto uninit;
 	}
 
 	return 0;
+
+uninit:
+	virtio_user_dev_uninit(dev);
+destroy:
+	dev->ops->destroy(dev);
+
+	return -1;
 }
 
 /* Use below macro to filter features from vhost backend */
