@@ -645,10 +645,15 @@ metrics_display(int port_id)
 }
 
 static void
-show_security_context(uint16_t portid)
+show_security_context(uint16_t portid, bool inline_offload)
 {
-	void *p_ctx = rte_eth_dev_get_sec_ctx(portid);
+	void *p_ctx;
 	const struct rte_security_capability *s_cap;
+
+	if (inline_offload)
+		p_ctx = rte_eth_dev_get_sec_ctx(portid);
+	else
+		p_ctx = rte_cryptodev_get_sec_ctx(portid);
 
 	if (p_ctx == NULL)
 		return;
@@ -856,7 +861,7 @@ show_port(void)
 		}
 
 #ifdef RTE_LIB_SECURITY
-		show_security_context(i);
+		show_security_context(i, 1);
 #endif
 	}
 }
@@ -1220,7 +1225,7 @@ show_crypto(void)
 		}
 
 #ifdef RTE_LIB_SECURITY
-		show_security_context(i);
+		show_security_context(i, 0);
 #endif
 	}
 }
