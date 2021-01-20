@@ -1061,6 +1061,7 @@ dpaa2_dev_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	struct rte_eth_dev_data *eth_data = dpaa2_q->eth_data;
 	struct dpaa2_dev_priv *priv = eth_data->dev_private;
 	uint32_t flags[MAX_TX_RING_SLOTS] = {0};
+	struct rte_mbuf **orig_bufs = bufs;
 
 	if (unlikely(!DPAA2_PER_LCORE_DPIO)) {
 		ret = dpaa2_affine_qbman_swp();
@@ -1144,6 +1145,25 @@ dpaa2_dev_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 				mi = rte_mbuf_from_indirect(*bufs);
 				mp = mi->pool;
 			}
+
+			if (unlikely(RTE_MBUF_HAS_EXTBUF(*bufs))) {
+				rte_mbuf_refcnt_update(*bufs, 1);
+				if (unlikely((*bufs)->nb_segs > 1)) {
+					if (eth_mbuf_to_sg_fd(*bufs,
+							      &fd_arr[loop],
+							      mp, 0))
+						goto send_n_return;
+				} else {
+					eth_mbuf_to_fd(*bufs,
+						       &fd_arr[loop], 0);
+				}
+				bufs++;
+#ifdef RTE_LIBRTE_IEEE1588
+				enable_tx_tstamp(&fd_arr[loop]);
+#endif
+				continue;
+			}
+
 			/* Not a hw_pkt pool allocated frame */
 			if (unlikely(!mp || !priv->bp_list)) {
 				DPAA2_PMD_ERR("Err: No buffer pool attached");
@@ -1216,6 +1236,15 @@ dpaa2_dev_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		nb_pkts -= loop;
 	}
 	dpaa2_q->tx_pkts += num_tx;
+
+	loop = 0;
+	while (loop < num_tx) {
+		if (unlikely(RTE_MBUF_HAS_EXTBUF(*orig_bufs)))
+			rte_pktmbuf_free(*orig_bufs);
+		orig_bufs++;
+		loop++;
+	}
+
 	return num_tx;
 
 send_n_return:
@@ -1242,6 +1271,15 @@ send_n_return:
 	}
 skip_tx:
 	dpaa2_q->tx_pkts += num_tx;
+
+	loop = 0;
+	while (loop < num_tx) {
+		if (unlikely(RTE_MBUF_HAS_EXTBUF(*orig_bufs)))
+			rte_pktmbuf_free(*orig_bufs);
+		orig_bufs++;
+		loop++;
+	}
+
 	return num_tx;
 }
 
