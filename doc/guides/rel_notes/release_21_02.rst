@@ -82,6 +82,10 @@ New Features
 
   * Added support for 64B completion queue entries
 
+* **Updated hns3 driver.**
+  * Added support for traffic management
+    Support for configuring port's peak rate and TC's peak rate with PF
+
 * **Updated Intel ice driver.**
 
   * Added Double VLAN support for DCF switch QinQ filtering.
