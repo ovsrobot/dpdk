@@ -926,6 +926,20 @@ Supports to get Rx/Tx packet burst mode information.
 * **[implements] eth_dev_ops**: ``rx_burst_mode_get``, ``tx_burst_mode_get``.
 * **[related] API**: ``rte_eth_rx_burst_mode_get()``, ``rte_eth_tx_burst_mode_get()``.
 
+.. _nic_features_fec:
+
+FEC
+---
+
+Supports Forward error correction. Forward error correction (FEC) is a bit error correction mode.
+It adds error correction information to data packets at the transmit end, and uses the error correction
+information to correct the bit errors generated during data packet transmission at the receive end. This
+improves signal quality but also brings a delay to signals. This function can be enabled or disabled as required.
+
+* **[implements] eth_dev_ops**: ``fec_get_capability``, ``fec_get``, ``fec_set``.
+* **[provides]   rte_eth_fec_capa**: ``speed:ETH_SPEED_NUM_*``, ``capa:RTE_ETH_FEC_MODE_TO_CAPA()``.
+* **[related]    API**: ``rte_eth_fec_get_capability()``, ``rte_eth_fec_get()``, ``rte_eth_fec_set()``.
+
 .. _nic_features_other:
 
 Other dev ops not represented by a Feature
