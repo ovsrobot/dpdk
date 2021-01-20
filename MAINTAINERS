@@ -1132,6 +1132,10 @@ F: drivers/compress/zlib/
 F: doc/guides/compressdevs/zlib.rst
 F: doc/guides/compressdevs/features/zlib.ini
 
+Mellanox mlx5
+M: Matan Azrad <matan@nvidia.com>
+F: drivers/compress/mlx5/
+
 
 RegEx Drivers
 -------------
