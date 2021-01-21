@@ -506,7 +506,6 @@ ice_dcf_send_aq_cmd(void *dcf_hw, struct ice_aq_desc *desc,
 
 	do {
 		if ((!desc_cmd.pending && !buff_cmd.pending) ||
-		    (!desc_cmd.pending && desc_cmd.v_ret != IAVF_SUCCESS) ||
 		    (!buff_cmd.pending && buff_cmd.v_ret != IAVF_SUCCESS))
 			break;
 
