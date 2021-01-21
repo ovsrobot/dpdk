@@ -1237,6 +1237,7 @@ M: Tianfei zhang <tianfei.zhang@intel.com>
 T: git://dpdk.org/next/dpdk-next-net-intel
 F: drivers/raw/ifpga/
 F: doc/guides/rawdevs/ifpga.rst
+F: doc/guides/sample_app_ug/ifpga.rst
 
 IOAT Rawdev
 M: Bruce Richardson <bruce.richardson@intel.com>
