@@ -10,6 +10,30 @@
 #include "base/txgbe_vf.h"
 #include "txgbe_ethdev.h"
 #include "txgbe_rxtx.h"
+#include "rte_pmd_txgbe.h"
+
+static int
+txgbe_vf_representor_link_update(struct rte_eth_dev *ethdev,
+	int wait_to_complete)
+{
+	struct txgbe_vf_representor *representor =
+			TXGBE_DEV_REPRESENTOR(ethdev);
+
+	return txgbe_dev_link_update_share(representor->pf_ethdev,
+		wait_to_complete);
+}
+
+static int
+txgbe_vf_representor_mac_addr_set(struct rte_eth_dev *ethdev,
+	struct rte_ether_addr *mac_addr)
+{
+	struct txgbe_vf_representor *representor =
+			TXGBE_DEV_REPRESENTOR(ethdev);
+
+	return rte_pmd_txgbe_set_vf_mac_addr(
+		representor->pf_ethdev->data->port_id,
+		representor->vf_id, mac_addr);
+}
 
 static int
 txgbe_vf_representor_dev_infos_get(struct rte_eth_dev *ethdev,
@@ -59,6 +83,8 @@ txgbe_vf_representor_dev_infos_get(struct rte_eth_dev *ethdev,
 
 static const struct eth_dev_ops txgbe_vf_representor_dev_ops = {
 	.dev_infos_get		= txgbe_vf_representor_dev_infos_get,
+	.link_update		= txgbe_vf_representor_link_update,
+	.mac_addr_set		= txgbe_vf_representor_mac_addr_set,
 };
 
 static uint16_t

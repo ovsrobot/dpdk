@@ -21,6 +21,7 @@ sources = files(
 	'txgbe_rxtx.c',
 	'txgbe_tm.c',
 	'txgbe_vf_representor.c',
+	'rte_pmd_txgbe.c'
 )
 
 deps += ['hash', 'security']

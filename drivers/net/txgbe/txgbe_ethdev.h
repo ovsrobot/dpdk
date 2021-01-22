@@ -723,6 +723,8 @@ void txgbe_dev_setup_link_alarm_handler(void *param);
 void txgbe_read_stats_registers(struct txgbe_hw *hw,
 			   struct txgbe_hw_stats *hw_stats);
 
+bool is_txgbe_supported(struct rte_eth_dev *dev);
+
 void txgbe_vlan_hw_filter_enable(struct rte_eth_dev *dev);
 void txgbe_vlan_hw_filter_disable(struct rte_eth_dev *dev);
 void txgbe_vlan_hw_strip_config(struct rte_eth_dev *dev);

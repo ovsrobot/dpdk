@@ -16,6 +16,23 @@
 #include <rte_ether.h>
 
 /**
+ * Set the VF MAC address.
+ *
+ * @param port
+ *   The port identifier of the Ethernet device.
+ * @param vf
+ *   VF id.
+ * @param mac_addr
+ *   VF MAC address.
+ * @return
+ *   - (0) if successful.
+ *   - (-ENODEV) if *port* invalid.
+ *   - (-EINVAL) if *vf* or *mac_addr* is invalid.
+ */
+int rte_pmd_txgbe_set_vf_mac_addr(uint16_t port, uint16_t vf,
+		struct rte_ether_addr *mac_addr);
+
+/**
  * Response sent back to txgbe driver from user app after callback
  */
 enum rte_pmd_txgbe_mb_event_rsp {

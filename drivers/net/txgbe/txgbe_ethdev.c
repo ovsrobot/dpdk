@@ -5186,6 +5186,15 @@ txgbe_clear_all_l2_tn_filter(struct rte_eth_dev *dev)
 	return 0;
 }
 
+bool
+is_txgbe_supported(struct rte_eth_dev *dev)
+{
+	if (strcmp(dev->device->driver->name, rte_txgbe_pmd.driver.name))
+		return false;
+	else
+		return true;
+}
+
 static const struct eth_dev_ops txgbe_eth_dev_ops = {
 	.dev_configure              = txgbe_dev_configure,
 	.dev_infos_get              = txgbe_dev_info_get,
