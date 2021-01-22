@@ -833,6 +833,7 @@ launch_args_parse(int argc, char** argv)
 						 "total-num-mbufs should be > 1024\n");
 			}
 			if (!strcmp(lgopts[opt_idx].name, "max-pkt-len")) {
+				default_max_pktlen = false;
 				n = atoi(optarg);
 				if (n >= RTE_ETHER_MIN_LEN)
 					rx_mode.max_rx_pkt_len = (uint32_t) n;

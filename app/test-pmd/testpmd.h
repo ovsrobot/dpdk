@@ -304,6 +304,7 @@ extern cmdline_parse_inst_t cmd_show_set_raw_all;
 
 extern uint16_t mempool_flags;
 
+extern bool default_max_pktlen;
 /**
  * Forwarding Configuration
  *
@@ -1005,6 +1006,7 @@ uint16_t tx_pkt_set_dynf(uint16_t port_id, __rte_unused uint16_t queue,
 			 __rte_unused void *user_param);
 void add_tx_dynf_callback(portid_t portid);
 void remove_tx_dynf_callback(portid_t portid);
+void update_jumbo_frame_offload(struct rte_port *port, bool def_max_pktlen);
 
 /*
  * Work-around of a compilation error with ICC on invocations of the
