@@ -862,9 +862,10 @@ static int
 eth_txgbe_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 		struct rte_pci_device *pci_dev)
 {
+	char name[RTE_ETH_NAME_MAX_LEN];
 	struct rte_eth_dev *pf_ethdev;
 	struct rte_eth_devargs eth_da;
-	int retval;
+	int i, retval;
 
 	if (pci_dev->device.devargs) {
 		retval = rte_eth_devargs_parse(pci_dev->device.devargs->args,
@@ -887,6 +888,36 @@ eth_txgbe_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	if (pf_ethdev == NULL)
 		return -ENODEV;
 
+	/* probe VF representor ports */
+	for (i = 0; i < eth_da.nb_representor_ports; i++) {
+		struct txgbe_vf_info *vfinfo;
+		struct txgbe_vf_representor representor;
+
+		vfinfo = *TXGBE_DEV_VFDATA(pf_ethdev);
+		if (vfinfo == NULL) {
+			PMD_DRV_LOG(ERR,
+				"no virtual functions supported by PF");
+			break;
+		}
+
+		representor.vf_id = eth_da.representor_ports[i];
+		representor.switch_domain_id = vfinfo->switch_domain_id;
+		representor.pf_ethdev = pf_ethdev;
+
+		/* representor port net_bdf_port */
+		snprintf(name, sizeof(name), "net_%s_representor_%d",
+			pci_dev->device.name,
+			eth_da.representor_ports[i]);
+
+		retval = rte_eth_dev_create(&pci_dev->device, name,
+			sizeof(struct txgbe_vf_representor), NULL, NULL,
+			txgbe_vf_representor_init, &representor);
+
+		if (retval)
+			PMD_DRV_LOG(ERR, "failed to create txgbe vf "
+				"representor %s.", name);
+	}
+
 	return 0;
 }
 
@@ -898,7 +929,10 @@ static int eth_txgbe_pci_remove(struct rte_pci_device *pci_dev)
 	if (!ethdev)
 		return -ENODEV;
 
-	return rte_eth_dev_destroy(ethdev, eth_txgbe_dev_uninit);
+	if (ethdev->data->dev_flags & RTE_ETH_DEV_REPRESENTOR)
+		return rte_eth_dev_destroy(ethdev, txgbe_vf_representor_uninit);
+	else
+		return rte_eth_dev_destroy(ethdev, eth_txgbe_dev_uninit);
 }
 
 static struct rte_pci_driver rte_txgbe_pmd = {

@@ -373,6 +373,18 @@ struct txgbe_adapter {
 	uint8_t rss_reta_updated;
 };
 
+struct txgbe_vf_representor {
+	uint16_t vf_id;
+	uint16_t switch_domain_id;
+	struct rte_eth_dev *pf_ethdev;
+};
+
+int txgbe_vf_representor_init(struct rte_eth_dev *ethdev, void *init_params);
+int txgbe_vf_representor_uninit(struct rte_eth_dev *ethdev);
+
+#define TXGBE_DEV_REPRESENTOR(dev) \
+	((struct txgbe_vf_representor *)(dev)->data->dev_private)
+
 #define TXGBE_DEV_ADAPTER(dev) \
 	((struct txgbe_adapter *)(dev)->data->dev_private)
 
