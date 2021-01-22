@@ -3296,7 +3296,11 @@ rxtx_port_config(struct rte_port *port)
 	for (qid = 0; qid < nb_rxq; qid++) {
 		offloads = port->rx_conf[qid].offloads;
 		port->rx_conf[qid] = port->dev_info.default_rxconf;
-		if (offloads != 0)
+		if (port->dev_info.rx_queue_offload_capa == 0 &&
+		    offloads != port->dev_conf.rxmode.offloads)
+			port->rx_conf[qid].offloads =
+				port->dev_conf.rxmode.offloads;
+		else if (offloads != 0)
 			port->rx_conf[qid].offloads = offloads;
 
 		/* Check if any Rx parameters have been passed */
@@ -3321,7 +3325,11 @@ rxtx_port_config(struct rte_port *port)
 	for (qid = 0; qid < nb_txq; qid++) {
 		offloads = port->tx_conf[qid].offloads;
 		port->tx_conf[qid] = port->dev_info.default_txconf;
-		if (offloads != 0)
+		if (port->dev_info.tx_queue_offload_capa == 0 &&
+		    offloads != port->dev_conf.txmode.offloads)
+			port->tx_conf[qid].offloads =
+				port->dev_conf.txmode.offloads;
+		else if (offloads != 0)
 			port->tx_conf[qid].offloads = offloads;
 
 		/* Check if any Tx parameters have been passed */
