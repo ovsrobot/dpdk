@@ -997,10 +997,10 @@ mrvl_promiscuous_enable(struct rte_eth_dev *dev)
 	struct mrvl_priv *priv = dev->data->dev_private;
 	int ret;
 
-	if (!priv->ppio)
-		return 0;
-
 	if (priv->isolated)
+		return -ENOTSUP;
+
+	if (!priv->ppio)
 		return 0;
 
 	ret = pp2_ppio_set_promisc(priv->ppio, 1);
@@ -1027,10 +1027,10 @@ mrvl_allmulticast_enable(struct rte_eth_dev *dev)
 	struct mrvl_priv *priv = dev->data->dev_private;
 	int ret;
 
-	if (!priv->ppio)
-		return 0;
-
 	if (priv->isolated)
+		return -ENOTSUP;
+
+	if (!priv->ppio)
 		return 0;
 
 	ret = pp2_ppio_set_mc_promisc(priv->ppio, 1);
@@ -1056,6 +1056,9 @@ mrvl_promiscuous_disable(struct rte_eth_dev *dev)
 {
 	struct mrvl_priv *priv = dev->data->dev_private;
 	int ret;
+
+	if (priv->isolated)
+		return -ENOTSUP;
 
 	if (!priv->ppio)
 		return 0;
@@ -1084,6 +1087,9 @@ mrvl_allmulticast_disable(struct rte_eth_dev *dev)
 	struct mrvl_priv *priv = dev->data->dev_private;
 	int ret;
 
+	if (priv->isolated)
+		return -ENOTSUP;
+
 	if (!priv->ppio)
 		return 0;
 
@@ -1111,10 +1117,10 @@ mrvl_mac_addr_remove(struct rte_eth_dev *dev, uint32_t index)
 	char buf[RTE_ETHER_ADDR_FMT_SIZE];
 	int ret;
 
-	if (!priv->ppio)
+	if (priv->isolated)
 		return;
 
-	if (priv->isolated)
+	if (!priv->ppio)
 		return;
 
 	ret = pp2_ppio_remove_mac_addr(priv->ppio,
@@ -1152,12 +1158,12 @@ mrvl_mac_addr_add(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr,
 	if (priv->isolated)
 		return -ENOTSUP;
 
+	if (!priv->ppio)
+		return 0;
+
 	if (index == 0)
 		/* For setting index 0, mrvl_mac_addr_set() should be used.*/
 		return -1;
-
-	if (!priv->ppio)
-		return 0;
 
 	/*
 	 * Maximum number of uc addresses can be tuned via kernel module mvpp2x
@@ -1199,11 +1205,11 @@ mrvl_mac_addr_set(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr)
 	struct mrvl_priv *priv = dev->data->dev_private;
 	int ret;
 
-	if (!priv->ppio)
-		return 0;
-
 	if (priv->isolated)
 		return -ENOTSUP;
+
+	if (!priv->ppio)
+		return 0;
 
 	ret = pp2_ppio_set_mac_addr(priv->ppio, mac_addr->addr_bytes);
 	if (ret) {
@@ -1580,11 +1586,11 @@ mrvl_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
 {
 	struct mrvl_priv *priv = dev->data->dev_private;
 
-	if (!priv->ppio)
-		return -EPERM;
-
 	if (priv->isolated)
 		return -ENOTSUP;
+
+	if (!priv->ppio)
+		return 0;
 
 	return on ? pp2_ppio_add_vlan(priv->ppio, vlan_id) :
 		    pp2_ppio_remove_vlan(priv->ppio, vlan_id);
