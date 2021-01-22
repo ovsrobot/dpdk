@@ -122,6 +122,16 @@ New Features
   * Added support for aes-cbc sha256-128-hmac cipher combination in OCTEON TX2
     crypto PMD lookaside protocol offload for IPsec.
 
+* **Added Ethernet PMD power management helper API.**
+
+  A new helper API has been added to make using Ethernet PMD power management
+  easier for the user: ``rte_power_ethdev_pmgmt_queue_enable()``. Three power
+  management schemes are supported initially:
+
+  * Power saving based on UMWAIT instruction (x86 only)
+  * Power saving based on ``rte_pause()`` (generic) or TPAUSE instruction (x86 only)
+  * Power saving based on frequency scaling through the ``librte_power`` library
+
 
 Removed Items
 -------------
