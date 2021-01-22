@@ -3413,6 +3413,21 @@ txgbe_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 	return 0;
 }
 
+int
+txgbe_vt_check(struct txgbe_hw *hw)
+{
+	uint32_t reg_val;
+
+	/* if Virtualization Technology is enabled */
+	reg_val = rd32(hw, TXGBE_PORTCTL);
+	if (!(reg_val & TXGBE_PORTCTL_NUMVT_MASK)) {
+		PMD_INIT_LOG(ERR, "VT must be enabled for this setting");
+		return -1;
+	}
+
+	return 0;
+}
+
 static uint32_t
 txgbe_uta_vector(struct txgbe_hw *hw, struct rte_ether_addr *uc_addr)
 {

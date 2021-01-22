@@ -81,9 +81,34 @@ txgbe_vf_representor_dev_infos_get(struct rte_eth_dev *ethdev,
 	return 0;
 }
 
+static int
+txgbe_vf_representor_vlan_filter_set(struct rte_eth_dev *ethdev,
+	uint16_t vlan_id, int on)
+{
+	struct txgbe_vf_representor *representor =
+			TXGBE_DEV_REPRESENTOR(ethdev);
+	uint64_t vf_mask = 1ULL << representor->vf_id;
+
+	return rte_pmd_txgbe_set_vf_vlan_filter(
+		representor->pf_ethdev->data->port_id, vlan_id, vf_mask, on);
+}
+
+static void
+txgbe_vf_representor_vlan_strip_queue_set(struct rte_eth_dev *ethdev,
+	__rte_unused uint16_t rx_queue_id, int on)
+{
+	struct txgbe_vf_representor *representor =
+			TXGBE_DEV_REPRESENTOR(ethdev);
+
+	rte_pmd_txgbe_set_vf_vlan_stripq(representor->pf_ethdev->data->port_id,
+		representor->vf_id, on);
+}
+
 static const struct eth_dev_ops txgbe_vf_representor_dev_ops = {
 	.dev_infos_get		= txgbe_vf_representor_dev_infos_get,
 	.link_update		= txgbe_vf_representor_link_update,
+	.vlan_filter_set	= txgbe_vf_representor_vlan_filter_set,
+	.vlan_strip_queue_set	= txgbe_vf_representor_vlan_strip_queue_set,
 	.mac_addr_set		= txgbe_vf_representor_mac_addr_set,
 };
 

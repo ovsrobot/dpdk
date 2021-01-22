@@ -33,6 +33,49 @@ int rte_pmd_txgbe_set_vf_mac_addr(uint16_t port, uint16_t vf,
 		struct rte_ether_addr *mac_addr);
 
 /**
+ * Enable/Disable vf vlan strip for all queues in a pool
+ *
+ * @param port
+ *    The port identifier of the Ethernet device.
+ * @param vf
+ *    ID specifying VF.
+ * @param on
+ *    1 - Enable VF's vlan strip on RX queues.
+ *    0 - Disable VF's vlan strip on RX queues.
+ *
+ * @return
+ *   - (0) if successful.
+ *   - (-ENOTSUP) if hardware doesn't support this feature.
+ *   - (-ENODEV) if *port* invalid.
+ *   - (-EINVAL) if bad parameter.
+ */
+int
+rte_pmd_txgbe_set_vf_vlan_stripq(uint16_t port, uint16_t vf, uint8_t on);
+
+/**
+ * Enable/Disable hardware VF VLAN filtering by an Ethernet device of
+ * received VLAN packets tagged with a given VLAN Tag Identifier.
+ *
+ * @param port
+ *   The port identifier of the Ethernet device.
+ * @param vlan
+ *   The VLAN Tag Identifier whose filtering must be enabled or disabled.
+ * @param vf_mask
+ *    Bitmap listing which VFs participate in the VLAN filtering.
+ * @param vlan_on
+ *    1 - Enable VFs VLAN filtering.
+ *    0 - Disable VFs VLAN filtering.
+ * @return
+ *   - (0) if successful.
+ *   - (-ENOTSUP) if hardware doesn't support.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-EINVAL) if bad parameter.
+ */
+int
+rte_pmd_txgbe_set_vf_vlan_filter(uint16_t port, uint16_t vlan,
+				 uint64_t vf_mask, uint8_t vlan_on);
+
+/**
  * Response sent back to txgbe driver from user app after callback
  */
 enum rte_pmd_txgbe_mb_event_rsp {
