@@ -16,3 +16,7 @@
 [suppress_type]
         name = rte_cryptodev
         has_data_member_inserted_between = {0, 1023}
+
+; Ignore all changes in generated PMD information strings.
+[suppress_variable]
+        name_regex = _pmd_info$
