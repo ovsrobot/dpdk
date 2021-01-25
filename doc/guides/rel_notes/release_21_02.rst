@@ -128,6 +128,11 @@ New Features
     PMD lookaside protocol offload for IPsec.
   * Added support for aes-cbc sha256-128-hmac cipher combination in OCTEON TX2
     crypto PMD lookaside protocol offload for IPsec.
+  * Added SSL/TLS way of cipher-auth operations support in OCTEON TX2 crypto PMD.
+
+* **Updated the OCTEON TX crypto PMD.**
+
+  * Added SSL/TLS way of cipher-auth operations support in OCTEON TX crypto PMD.
 
 
 Removed Items
