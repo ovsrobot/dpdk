@@ -1421,10 +1421,6 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 			ret = -EINVAL;
 			goto rollback;
 		}
-
-		/* Scale the MTU size to adapt max_rx_pkt_len */
-		dev->data->mtu = dev->data->dev_conf.rxmode.max_rx_pkt_len -
-				overhead_len;
 	} else {
 		uint16_t pktlen = dev_conf->rxmode.max_rx_pkt_len;
 		if (pktlen < RTE_ETHER_MIN_MTU + overhead_len ||
@@ -1433,6 +1429,10 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 			dev->data->dev_conf.rxmode.max_rx_pkt_len =
 						RTE_ETHER_MTU + overhead_len;
 	}
+
+	/* Scale the MTU size to adapt max_rx_pkt_len */
+	dev->data->mtu = dev->data->dev_conf.rxmode.max_rx_pkt_len -
+				overhead_len;
 
 	/*
 	 * If LRO is enabled, check that the maximum aggregated packet
