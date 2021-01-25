@@ -1901,6 +1901,7 @@ cmd_config_max_pkt_len_parsed(void *parsed_result,
 			printf("Unknown parameter\n");
 			return;
 		}
+		update_jumbo_frame_offload(pid, false);
 	}
 
 	init_port_config();
