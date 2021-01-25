@@ -58,6 +58,7 @@ struct queue_stat {
 	volatile unsigned long pkts;
 	volatile unsigned long bytes;
 	volatile unsigned long err_pkts;
+	volatile unsigned long missed_reset;
 };
 
 struct pcap_rx_queue {
@@ -680,11 +681,23 @@ eth_dev_info(struct rte_eth_dev *dev,
 	return 0;
 }
 
+static unsigned long
+eth_stats_get_pcap_missed(struct rte_eth_dev *dev, unsigned int qid)
+{
+	const struct pmd_process_private *pp = dev->process_private;
+	pcap_t *pcap = pp->rx_pcap[qid];
+	struct pcap_stat stat;
+	if (pcap_stats(pcap, &stat) != 0)
+		return 0;
+	return stat.ps_drop;
+}
+
 static int
 eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
 	unsigned int i;
 	unsigned long rx_packets_total = 0, rx_bytes_total = 0;
+	unsigned long rx_missed_total = 0;
 	unsigned long tx_packets_total = 0, tx_bytes_total = 0;
 	unsigned long tx_packets_err_total = 0;
 	const struct pmd_internals *internal = dev->data->dev_private;
@@ -695,6 +708,10 @@ eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		stats->q_ibytes[i] = internal->rx_queue[i].rx_stat.bytes;
 		rx_packets_total += stats->q_ipackets[i];
 		rx_bytes_total += stats->q_ibytes[i];
+		unsigned long rx_missed = eth_stats_get_pcap_missed(dev, i);
+		if (rx_missed)
+			rx_missed_total = rx_missed -
+				internal->rx_queue[i].rx_stat.missed_reset;
 	}
 
 	for (i = 0; i < RTE_ETHDEV_QUEUE_STAT_CNTRS &&
@@ -708,6 +725,7 @@ eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 
 	stats->ipackets = rx_packets_total;
 	stats->ibytes = rx_bytes_total;
+	stats->imissed = rx_missed_total;
 	stats->opackets = tx_packets_total;
 	stats->obytes = tx_bytes_total;
 	stats->oerrors = tx_packets_err_total;
@@ -724,6 +742,8 @@ eth_stats_reset(struct rte_eth_dev *dev)
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		internal->rx_queue[i].rx_stat.pkts = 0;
 		internal->rx_queue[i].rx_stat.bytes = 0;
+		internal->rx_queue[i].rx_stat.missed_reset =
+				eth_stats_get_pcap_missed(dev, i);
 	}
 
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
