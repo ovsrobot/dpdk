@@ -1086,6 +1086,13 @@ iavf_dev_vlan_offload_set_v2(struct rte_eth_dev *dev, int mask)
 		enable = !!(rxmode->offloads & DEV_RX_OFFLOAD_VLAN_FILTER);
 
 		iavf_iterate_vlan_filters_v2(dev, enable);
+
+		err = iavf_config_vlan_filter_v2(adapter, enable);
+		/* If not support, the filtering is already disabled by PF */
+		if (err == -ENOTSUP && !enable)
+			err = 0;
+		if (err)
+			return -EIO;
 	}
 
 	if (mask & ETH_VLAN_STRIP_MASK) {
