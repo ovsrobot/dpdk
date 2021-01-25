@@ -112,6 +112,13 @@ New Features
   enable applications to add/remove user callbacks which gets called
   for every enqueue/dequeue operation.
 
+* **Added feature flag in cryptodev library.**
+
+  Added device feature flag for SSL/TLS way of cipher-auth operations support
+  i.e. auth generation followed by encryption and decryption followed by
+  auth verify in cryptodev library so that SSL/TLS tests are skipped if the
+  device doesn't support the feature.
+
 * **Updated the OCTEON TX2 crypto PMD.**
 
   * Updated the OCTEON TX2 crypto PMD lookaside protocol offload for IPsec with

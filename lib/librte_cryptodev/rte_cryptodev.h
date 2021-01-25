@@ -461,6 +461,8 @@ rte_cryptodev_asym_get_xform_enum(enum rte_crypto_asym_xform_type *xform_enum,
 /**< Support operations on data which is not byte aligned */
 #define RTE_CRYPTODEV_FF_SYM_RAW_DP			(1ULL << 24)
 /**< Support accelerator specific symmetric raw data-path APIs */
+#define RTE_CRYPTODEV_FF_SSL_ORDER			(1ULL << 25)
+/**< Support SSL order of cipher-auth xforms chaining */
 
 /**
  * Get the name of a crypto device feature flag
