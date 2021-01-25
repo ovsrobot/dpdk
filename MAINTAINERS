@@ -1561,6 +1561,10 @@ F: app/test/test_resource.c
 F: app/test/virtual_pmd.c
 F: app/test/virtual_pmd.h
 
+Header build sanity checking
+M: Bruce Richardson <bruce.richardson@intel.com>
+F: buildtools/chkincs/
+
 Sample packet helper functions for unit test
 M: Reshma Pattan <reshma.pattan@intel.com>
 F: app/test/sample_packet_forward.c
