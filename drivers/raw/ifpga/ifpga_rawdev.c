@@ -1738,6 +1738,163 @@ RTE_PMD_REGISTER_PARAM_STRING(ifpga_rawdev_cfg,
 	"port=<int> "
 	"afu_bts=<path>");
 
+int ifpga_rawdev_get_fme_property(struct rte_rawdev *dev,
+	ifpga_fme_property *prop)
+{
+	struct opae_adapter *adapter = NULL;
+	struct ifpga_fme_hw *fme = NULL;
+	struct opae_board_info *info = NULL;
+	struct feature_prop fp;
+	struct uuid pr_id;
+	int ret = 0;
+
+	if (!dev) {
+		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+		return -EINVAL;
+	}
+
+	adapter = ifpga_rawdev_get_priv(dev);
+	if (!adapter) {
+		IFPGA_RAWDEV_PMD_ERR("adapter is invalid");
+		return -ENODEV;
+	}
+
+	if (!adapter->mgr || !adapter->mgr->data) {
+		IFPGA_RAWDEV_PMD_ERR("manager is invalid");
+		return -ENODEV;
+	}
+
+	ret = opae_mgr_get_board_info(adapter->mgr, &info);
+	if (ret) {
+		IFPGA_RAWDEV_PMD_ERR("Failed to get board info");
+		return ret;
+	}
+	prop->boot_page = info->boot_page;
+
+	fme = adapter->mgr->data;
+	fp.feature_id = FME_FEATURE_ID_HEADER;
+	fp.prop_id = FME_HDR_PROP_PORTS_NUM;
+	ret = ifpga_get_prop(fme->parent, FEATURE_FIU_ID_FME, 0, &fp);
+	if (ret) {
+		IFPGA_RAWDEV_PMD_ERR("Failed to get property %u from FME",
+			FME_HDR_PROP_PORTS_NUM);
+		return ret;
+	}
+	prop->num_ports = fp.data;
+
+	fp.prop_id = FME_HDR_PROP_BITSTREAM_ID;
+	ret = ifpga_get_prop(fme->parent, FEATURE_FIU_ID_FME, 0, &fp);
+	if (ret) {
+		IFPGA_RAWDEV_PMD_ERR("Failed to get property %u from FME",
+			FME_HDR_PROP_BITSTREAM_ID);
+		return ret;
+	}
+	prop->bitstream_id = fp.data;
+
+	fp.prop_id = FME_HDR_PROP_BITSTREAM_METADATA;
+	ret = ifpga_get_prop(fme->parent, FEATURE_FIU_ID_FME, 0, &fp);
+	if (ret) {
+		IFPGA_RAWDEV_PMD_ERR("Failed to get property %u from FME",
+			FME_HDR_PROP_BITSTREAM_METADATA);
+		return ret;
+	}
+	prop->bitstream_metadata = fp.data;
+
+	ret = opae_mgr_get_uuid(adapter->mgr, &pr_id);
+	if (ret) {
+		IFPGA_RAWDEV_PMD_ERR("Failed to get PR ID from FME");
+		return ret;
+	}
+	memcpy(prop->pr_id.b, pr_id.b, sizeof(ifpga_uuid));
+
+	return 0;
+}
+
+int ifpga_rawdev_get_port_property(struct rte_rawdev *dev, uint32_t port,
+	ifpga_port_property *prop)
+{
+	struct opae_adapter *adapter = NULL;
+	struct ifpga_fme_hw *fme = NULL;
+	struct feature_prop fp;
+	struct opae_accelerator *acc = NULL;
+	struct uuid afu_id;
+	int ret = 0;
+
+	if (!dev) {
+		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+		return -EINVAL;
+	}
+
+	adapter = ifpga_rawdev_get_priv(dev);
+	if (!adapter) {
+		IFPGA_RAWDEV_PMD_ERR("adapter is invalid");
+		return -ENODEV;
+	}
+
+	if (!adapter->mgr || !adapter->mgr->data) {
+		IFPGA_RAWDEV_PMD_ERR("manager is invalid");
+		return -ENODEV;
+	}
+
+	fme = adapter->mgr->data;
+	fp.feature_id = FME_FEATURE_ID_HEADER;
+	fp.prop_id = FME_HDR_PROP_PORT_TYPE;
+	fp.data = port;
+	fp.data <<= 32;
+	ret = ifpga_get_prop(fme->parent, FEATURE_FIU_ID_FME, 0, &fp);
+	if (ret)
+		return ret;
+	prop->type = fp.data & 0xffffffff;
+
+	if (prop->type == 0) {
+		acc = opae_adapter_get_acc(adapter, port);
+		ret = opae_acc_get_uuid(acc, &afu_id);
+		if (ret) {
+			IFPGA_RAWDEV_PMD_ERR("Failed to get AFU ID from port %u",
+				port);
+			return ret;
+		}
+		memcpy(prop->afu_id.b, afu_id.b, sizeof(ifpga_uuid));
+	}
+
+	return 0;
+}
+
+int ifpga_rawdev_get_bmc_property(struct rte_rawdev *dev,
+	ifpga_bmc_property *prop)
+{
+	struct opae_adapter *adapter = NULL;
+	struct opae_board_info *info = NULL;
+	int ret = 0;
+
+	if (!dev) {
+		IFPGA_RAWDEV_PMD_ERR("rawdev is invalid");
+		return -EINVAL;
+	}
+
+	adapter = ifpga_rawdev_get_priv(dev);
+	if (!adapter) {
+		IFPGA_RAWDEV_PMD_ERR("adapter is invalid");
+		return -ENODEV;
+	}
+
+	if (!adapter->mgr) {
+		IFPGA_RAWDEV_PMD_ERR("manager is invalid");
+		return -ENODEV;
+	}
+
+	ret = opae_mgr_get_board_info(adapter->mgr, &info);
+	if (ret) {
+		IFPGA_RAWDEV_PMD_ERR("Failed to get board info");
+		return ret;
+	}
+
+	prop->bmc_version = info->max10_version;
+	prop->fw_version = info->nios_fw_version;
+
+	return 0;
+}
+
 int ifpga_rawdev_update_flash(struct rte_rawdev *dev, const char *image,
 	uint64_t *status)
 {
