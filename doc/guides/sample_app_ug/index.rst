@@ -23,6 +23,7 @@ Sample Applications User Guides
     kernel_nic_interface
     keep_alive
     ioat
+    ifpga
     l2_forward_crypto
     l2_forward_job_stats
     l2_forward_real_virtual
