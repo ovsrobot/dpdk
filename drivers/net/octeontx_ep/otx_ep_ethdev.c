@@ -10,20 +10,99 @@
 #include "otx_ep_common.h"
 #include "otx_ep_vf.h"
 
+#define OTX_EP_DEV(_eth_dev)            ((_eth_dev)->data->dev_private)
+static int
+otx_ep_chip_specific_setup(struct otx_ep_device *otx_epvf)
+{
+	struct rte_pci_device *pdev = otx_epvf->pdev;
+	uint32_t dev_id = pdev->id.device_id;
+	int ret;
+
+	switch (dev_id) {
+	case PCI_DEVID_OCTEONTX_EP_VF:
+		otx_epvf->chip_id = dev_id;
+		break;
+	case PCI_DEVID_OCTEONTX2_EP_NET_VF:
+	case PCI_DEVID_CN98XX_EP_NET_VF:
+		otx_epvf->chip_id = dev_id;
+		break;
+	default:
+		otx_ep_err("Unsupported device\n");
+		ret = -EINVAL;
+	}
+
+	if (!ret)
+		otx_ep_info("OTX_EP dev_id[%d]\n", dev_id);
+
+	return ret;
+}
+
+/* OTX_EP VF device initialization */
+static int
+otx_epdev_init(struct otx_ep_device *otx_epvf)
+{
+	if (otx_ep_chip_specific_setup(otx_epvf)) {
+		otx_ep_err("Chip specific setup failed\n");
+		goto setup_fail;
+	}
+
+	return 0;
+
+setup_fail:
+	return -ENOMEM;
+}
+
 static int
 otx_ep_eth_dev_uninit(struct rte_eth_dev *eth_dev)
 {
-	RTE_SET_USED(eth_dev);
+	struct otx_ep_device *otx_epvf = OTX_EP_DEV(eth_dev);
 
-	return -ENODEV;
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return 0;
+	otx_epvf->port_configured = 0;
+
+	if (eth_dev->data->mac_addrs != NULL)
+		rte_free(eth_dev->data->mac_addrs);
+
+	return 0;
 }
 
 static int
 otx_ep_eth_dev_init(struct rte_eth_dev *eth_dev)
 {
-	RTE_SET_USED(eth_dev);
+	struct rte_pci_device *pdev = RTE_ETH_DEV_TO_PCI(eth_dev);
+	struct otx_ep_device *otx_epvf = OTX_EP_DEV(eth_dev);
+	unsigned char vf_mac_addr[RTE_ETHER_ADDR_LEN];
 
-	return -ENODEV;
+	/* Single process support */
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return 0;
+
+	rte_eth_copy_pci_info(eth_dev, pdev);
+
+	if (pdev->mem_resource[0].addr) {
+		otx_ep_info("OTX_EP BAR0 is mapped:\n");
+	} else {
+		otx_ep_err("OTX_EP: Failed to map device BARs\n");
+		otx_ep_err("BAR0 %p\n", pdev->mem_resource[0].addr);
+		return -ENODEV;
+	}
+	otx_epvf->eth_dev = eth_dev;
+	otx_epvf->port_id = eth_dev->data->port_id;
+	eth_dev->data->mac_addrs = rte_zmalloc("otx_ep", RTE_ETHER_ADDR_LEN, 0);
+	if (eth_dev->data->mac_addrs == NULL) {
+		otx_ep_err("MAC addresses memory allocation failed\n");
+		return -ENOMEM;
+	}
+	rte_eth_random_addr(vf_mac_addr);
+	memcpy(eth_dev->data->mac_addrs, vf_mac_addr, RTE_ETHER_ADDR_LEN);
+	otx_epvf->hw_addr = pdev->mem_resource[0].addr;
+	otx_epvf->pdev = pdev;
+
+	otx_epdev_init(otx_epvf);
+	otx_epvf->port_configured = 0;
+
+	return 0;
 }
 
 static int
@@ -41,7 +120,6 @@ otx_ep_eth_dev_pci_remove(struct rte_pci_device *pci_dev)
 	return rte_eth_dev_pci_generic_remove(pci_dev,
 					      otx_ep_eth_dev_uninit);
 }
-
 
 /* Set of PCI devices this driver supports */
 static const struct rte_pci_id pci_id_otx_ep_map[] = {
