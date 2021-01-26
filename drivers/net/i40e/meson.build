@@ -54,7 +54,7 @@ if arch_subdir == 'x86'
 		cc.has_argument('-mavx512f') and
 		cc.has_argument('-mavx512bw'))
 
-	if i40e_avx512_cpu_support == true or i40e_avx512_cc_support == true
+	if not is_windows and (i40e_avx512_cpu_support == true or i40e_avx512_cc_support == true)
 		cflags += ['-DCC_AVX512_SUPPORT']
 		avx512_args = [cflags, '-mavx512f', '-mavx512bw']
 		if cc.has_argument('-march=skylake-avx512')
