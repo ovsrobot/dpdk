@@ -82,6 +82,10 @@ New Features
 
   * Added support for 64B completion queue entries
 
+* **Updated Intel i40e driver.**
+
+  * Added support on Windows.
+
 * **Updated Intel ice driver.**
 
   * Added Double VLAN support for DCF switch QinQ filtering.
