@@ -712,14 +712,18 @@ ice_refine_hash_cfg_l234(struct ice_rss_hash_cfg *hash_cfg,
 		if (rss_type &
 		   (ETH_RSS_NONFRAG_IPV4_UDP |
 		    ETH_RSS_NONFRAG_IPV6_UDP)) {
-			if (rss_type & ETH_RSS_L4_SRC_ONLY)
-				*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_UDP_DST_PORT));
-			else if (rss_type & ETH_RSS_L4_DST_ONLY)
-				*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_UDP_SRC_PORT));
-			else if (rss_type &
-				(ETH_RSS_L3_SRC_ONLY |
-				  ETH_RSS_L3_DST_ONLY))
-				*hash_flds &= ~ICE_FLOW_HASH_UDP_PORT;
+			if ((rss_type &
+			     (ETH_RSS_L4_SRC_ONLY | ETH_RSS_L4_DST_ONLY)) !=
+			    (ETH_RSS_L4_SRC_ONLY | ETH_RSS_L4_DST_ONLY)) {
+				if (rss_type & ETH_RSS_L4_SRC_ONLY)
+					*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_UDP_DST_PORT));
+				else if (rss_type & ETH_RSS_L4_DST_ONLY)
+					*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_UDP_SRC_PORT));
+				else if (rss_type &
+					 (ETH_RSS_L3_SRC_ONLY |
+					  ETH_RSS_L3_DST_ONLY))
+					*hash_flds &= ~ICE_FLOW_HASH_UDP_PORT;
+			}
 		} else {
 			*hash_flds &= ~ICE_FLOW_HASH_UDP_PORT;
 		}
@@ -729,14 +733,18 @@ ice_refine_hash_cfg_l234(struct ice_rss_hash_cfg *hash_cfg,
 		if (rss_type &
 		   (ETH_RSS_NONFRAG_IPV4_TCP |
 		    ETH_RSS_NONFRAG_IPV6_TCP)) {
-			if (rss_type & ETH_RSS_L4_SRC_ONLY)
-				*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_TCP_DST_PORT));
-			else if (rss_type & ETH_RSS_L4_DST_ONLY)
-				*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_TCP_SRC_PORT));
-			else if (rss_type &
-				(ETH_RSS_L3_SRC_ONLY |
-				  ETH_RSS_L3_DST_ONLY))
-				*hash_flds &= ~ICE_FLOW_HASH_TCP_PORT;
+			if ((rss_type &
+			     (ETH_RSS_L4_SRC_ONLY | ETH_RSS_L4_DST_ONLY)) !=
+			    (ETH_RSS_L4_SRC_ONLY | ETH_RSS_L4_DST_ONLY)) {
+				if (rss_type & ETH_RSS_L4_SRC_ONLY)
+					*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_TCP_DST_PORT));
+				else if (rss_type & ETH_RSS_L4_DST_ONLY)
+					*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_TCP_SRC_PORT));
+				else if (rss_type &
+					 (ETH_RSS_L3_SRC_ONLY |
+					  ETH_RSS_L3_DST_ONLY))
+					*hash_flds &= ~ICE_FLOW_HASH_TCP_PORT;
+			}
 		} else {
 			*hash_flds &= ~ICE_FLOW_HASH_TCP_PORT;
 		}
@@ -746,14 +754,18 @@ ice_refine_hash_cfg_l234(struct ice_rss_hash_cfg *hash_cfg,
 		if (rss_type &
 		   (ETH_RSS_NONFRAG_IPV4_SCTP |
 		    ETH_RSS_NONFRAG_IPV6_SCTP)) {
-			if (rss_type & ETH_RSS_L4_SRC_ONLY)
-				*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_SCTP_DST_PORT));
-			else if (rss_type & ETH_RSS_L4_DST_ONLY)
-				*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_SCTP_SRC_PORT));
-			else if (rss_type &
-				(ETH_RSS_L3_SRC_ONLY |
-				  ETH_RSS_L3_DST_ONLY))
-				*hash_flds &= ~ICE_FLOW_HASH_SCTP_PORT;
+			if ((rss_type &
+			     (ETH_RSS_L4_SRC_ONLY | ETH_RSS_L4_DST_ONLY)) !=
+			    (ETH_RSS_L4_SRC_ONLY | ETH_RSS_L4_DST_ONLY)) {
+				if (rss_type & ETH_RSS_L4_SRC_ONLY)
+					*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_SCTP_DST_PORT));
+				else if (rss_type & ETH_RSS_L4_DST_ONLY)
+					*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_SCTP_SRC_PORT));
+				else if (rss_type &
+					 (ETH_RSS_L3_SRC_ONLY |
+					  ETH_RSS_L3_DST_ONLY))
+					*hash_flds &= ~ICE_FLOW_HASH_SCTP_PORT;
+			}
 		} else {
 			*hash_flds &= ~ICE_FLOW_HASH_SCTP_PORT;
 		}
@@ -945,12 +957,6 @@ ice_hash_parse_action(struct ice_pattern_match_item *pattern_match_item,
 				return rte_flow_error_set(error, ENOTSUP,
 					RTE_FLOW_ERROR_TYPE_ACTION, action,
 					"a non-NULL RSS queue is not supported");
-
-			/**
-			 * Check simultaneous use of SRC_ONLY and DST_ONLY
-			 * of the same level.
-			 */
-			rss_type = rte_eth_rss_hf_refine(rss_type);
 
 			if (ice_any_invalid_rss_type(rss->func, rss_type,
 					pattern_match_item->input_set_mask))
