@@ -280,17 +280,29 @@ parse_pci_hardware_id(const char *buf, struct rte_pci_id *pci_id)
 {
 	int ids = 0;
 	uint16_t vendor_id, device_id;
-	uint32_t subvendor_id = 0;
+	uint32_t subvendor_id = 0, class_id = 0;
+	const char *cp;
 
 	ids = sscanf_s(buf, "PCI\\VEN_%" PRIx16 "&DEV_%" PRIx16 "&SUBSYS_%"
 		PRIx32, &vendor_id, &device_id, &subvendor_id);
 	if (ids != 3)
 		return -1;
 
+	/* Try and find PCI class ID */
+	for (cp = buf; !(cp[0] == 0 && cp[1] == 0); cp++)
+		if (*cp == '&' && sscanf_s(cp,
+				"&CC_%" PRIx32, &class_id) == 1) {
+			/* Convert 4-digit class IDs to 6-digit format */
+			if (strspn(cp + 4, "0123456789abcdefABCDEF") == 4)
+				class_id <<= 8;
+			break;
+		}
+
 	pci_id->vendor_id = vendor_id;
 	pci_id->device_id = device_id;
 	pci_id->subsystem_device_id = subvendor_id >> 16;
 	pci_id->subsystem_vendor_id = subvendor_id & 0xffff;
+	pci_id->class_id = class_id;
 	return 0;
 }
 
@@ -339,6 +351,7 @@ pci_scan_one(HDEVINFO dev_info, PSP_DEVINFO_DATA device_info_data)
 	if (ret != 0)
 		goto end;
 
+	dev->device.bus = &rte_pci_bus.bus;
 	dev->addr = addr;
 	dev->id = pci_id;
 	dev->max_vfs = 0; /* TODO: get max_vfs */
