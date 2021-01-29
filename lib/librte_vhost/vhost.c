@@ -352,7 +352,8 @@ free_vq(struct virtio_net *dev, struct vhost_virtqueue *vq)
 		vhost_free_async_mem(vq);
 	}
 	rte_free(vq->batch_copy_elems);
-	rte_mempool_free(vq->iotlb_pool);
+	if (dev->features & (1ULL << VIRTIO_F_IOMMU_PLATFORM))
+		rte_mempool_free(vq->iotlb_pool);
 	rte_free(vq);
 }
 
@@ -556,7 +557,8 @@ init_vring_queue(struct virtio_net *dev, uint32_t vring_idx)
 	vq->callfd = VIRTIO_UNINITIALIZED_EVENTFD;
 	vq->notif_enable = VIRTIO_UNINITIALIZED_NOTIF;
 
-	vhost_user_iotlb_init(dev, vring_idx);
+	if (dev->features & (1ULL << VIRTIO_F_IOMMU_PLATFORM))
+		vhost_user_iotlb_init(dev, vring_idx);
 	/* Backends are set to -1 indicating an inactive device. */
 	vq->backend = -1;
 }
