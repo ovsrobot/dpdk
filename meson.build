@@ -68,6 +68,11 @@ if get_option('enable_kmods')
 	subdir('kernel')
 endif
 
+# check header includes if requested
+if get_option('check_includes')
+	subdir('buildtools/chkincs')
+endif
+
 # write the build config
 build_cfg = 'rte_build_config.h'
 configure_file(output: build_cfg,
