@@ -7,8 +7,8 @@
  * Used as BSD-3 Licensed with permission from Kip Macy.
  */
 
-#ifndef _RTE_RING_GENERIC_H_
-#define _RTE_RING_GENERIC_H_
+#ifndef _RTE_RING_GENERIC_PVT_H_
+#define _RTE_RING_GENERIC_PVT_H_
 
 static __rte_always_inline void
 __rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
@@ -170,4 +170,4 @@ __rte_ring_move_cons_head(struct rte_ring *r, unsigned int is_sc,
 	return n;
 }
 
-#endif /* _RTE_RING_GENERIC_H_ */
+#endif /* _RTE_RING_GENERIC_PVT_H_ */
