@@ -11,8 +11,8 @@
 #define _RTE_RING_GENERIC_H_
 
 static __rte_always_inline void
-update_tail(struct rte_ring_headtail *ht, uint32_t old_val, uint32_t new_val,
-		uint32_t single, uint32_t enqueue)
+__rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
+		uint32_t new_val, uint32_t single, uint32_t enqueue)
 {
 	if (enqueue)
 		rte_smp_wmb();

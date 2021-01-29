@@ -11,8 +11,8 @@
 #define _RTE_RING_C11_MEM_H_
 
 static __rte_always_inline void
-update_tail(struct rte_ring_headtail *ht, uint32_t old_val, uint32_t new_val,
-		uint32_t single, uint32_t enqueue)
+__rte_ring_update_tail(struct rte_ring_headtail *ht, uint32_t old_val,
+		uint32_t new_val, uint32_t single, uint32_t enqueue)
 {
 	RTE_SET_USED(enqueue);
 
