@@ -76,6 +76,9 @@ eth_virtio_pci_init(struct rte_eth_dev *eth_dev)
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
 	int ret;
 
+	/* Required to assign Virtio ops */
+	hw->port_id = eth_dev->data->port_id;
+
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		ret = vtpci_init(RTE_ETH_DEV_TO_PCI(eth_dev), dev);
 		if (ret) {
