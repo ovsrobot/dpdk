@@ -660,3 +660,75 @@ patch accepted. The general cycle for patch review and acceptance is:
      than rework of the original.
    * Trivial patches may be merged sooner than described above at the tree committer's
      discretion.
+
+
+Milestones definition
+---------------------
+
+Each DPDK release has milestones that help everyone to converge to the release date.
+The following is a list of these milestones
+together with concrete definitions and expectations.
+
+Roadmap
+~~~~~~~
+
+* Content: new features in libraries, drivers, applications, and examples.
+* Timeframe: to be published before the first day of the release cycle.
+
+RFC
+~~~
+
+* Content: public design review for the feature, explaining the need and the design.
+* Should include the API changes, in libraries and applications.
+* RFC is not mandatory but strongly advised to start early discussion.
+* Nice to have: driver implementation (full or draft), example code, and documentation.
+
+Proposal Deadline
+~~~~~~~~~~~~~~~~~
+
+* Content: either an RFC as stated above or a v1 patch.
+* Nice to have: code complete for libraries.
+
+rc1
+~~~
+
+* Priority: new or updated API.
+* New API should be defined and implemented in libraries.
+* The API should include Doxygen documentation
+  and be part of the relevant .rst files (library, release notes).
+* Code and related documentation must be updated atomically in the same patch.
+* API should be used in a test application (``/app``).
+* At least one PMD should implement the API.
+  It can be a draft but must be sent as a separate series.
+* The above should be sent to the mailing list at least 2 weeks before -rc1.
+* Nice to have: example code (``/examples``)
+
+rc2
+~~~
+
+* Priority: drivers.
+* New features should be implemented in drivers.
+* A driver change should include documentation
+  in the relevant .rst files (driver, release notes).
+* Code and related documentation must be updated atomically in the same patch.
+* The above should be sent to the mailing list at least 2 weeks before -rc2.
+
+rc3
+~~~
+
+* Priority: applications.
+* New functionality that does not depend on libs update
+  can be integrated as part of -rc3.
+* The app should include documentation in the relevant .rst files
+  (app, release notes if significant).
+* Code and related documentation must be updated atomically in the same patch.
+* Last opportunity for miscellaneous changes.
+* Libs and drivers cleanup.
+* Small driver reworks.
+* Critical and minor bug fixes.
+
+rc4
+~~~
+
+* Documentation updates.
+* Critical bug fixes.
