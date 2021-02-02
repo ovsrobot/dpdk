@@ -56,6 +56,7 @@ if arch_subdir == 'x86'
 
 	if is_windows and cc.get_id() != 'clang'
 		i40e_avx512_cc_support = false
+		i40e_avx512_cpu_support = false
 	endif
 
 	if i40e_avx512_cpu_support == true or i40e_avx512_cc_support == true
