@@ -132,9 +132,9 @@ desc_to_olflags_v_ipsec(__m128i descs[4], struct rte_mbuf **rx_pkts)
 
 static inline void
 desc_to_olflags_v(__m128i descs[4], __m128i mbuf_init, uint8_t vlan_flags,
-	struct rte_mbuf **rx_pkts)
+		  uint16_t udp_p_flag, struct rte_mbuf **rx_pkts)
 {
-	__m128i ptype0, ptype1, vtag0, vtag1, csum;
+	__m128i ptype0, ptype1, vtag0, vtag1, csum, vlan_csum_msk;
 	__m128i rearm0, rearm1, rearm2, rearm3;
 
 	/* mask everything except rss type */
@@ -154,13 +154,29 @@ desc_to_olflags_v(__m128i descs[4], __m128i mbuf_init, uint8_t vlan_flags,
 			PKT_RX_RSS_HASH, PKT_RX_RSS_HASH, PKT_RX_RSS_HASH, 0);
 
 	/* mask everything except vlan present and l4/ip csum error */
-	const __m128i vlan_csum_msk = _mm_set_epi16(
-		(IXGBE_RXDADV_ERR_TCPE | IXGBE_RXDADV_ERR_IPE) >> 16,
-		(IXGBE_RXDADV_ERR_TCPE | IXGBE_RXDADV_ERR_IPE) >> 16,
-		(IXGBE_RXDADV_ERR_TCPE | IXGBE_RXDADV_ERR_IPE) >> 16,
-		(IXGBE_RXDADV_ERR_TCPE | IXGBE_RXDADV_ERR_IPE) >> 16,
-		IXGBE_RXD_STAT_VP, IXGBE_RXD_STAT_VP,
-		IXGBE_RXD_STAT_VP, IXGBE_RXD_STAT_VP);
+	const __m128i vlan_csum_all_msk = _mm_set_epi16
+		((IXGBE_RXDADV_ERR_TCPE | IXGBE_RXDADV_ERR_IPE) >> 16,
+		 (IXGBE_RXDADV_ERR_TCPE | IXGBE_RXDADV_ERR_IPE) >> 16,
+		 (IXGBE_RXDADV_ERR_TCPE | IXGBE_RXDADV_ERR_IPE) >> 16,
+		 (IXGBE_RXDADV_ERR_TCPE | IXGBE_RXDADV_ERR_IPE) >> 16,
+		 IXGBE_RXD_STAT_VP, IXGBE_RXD_STAT_VP,
+		 IXGBE_RXD_STAT_VP, IXGBE_RXD_STAT_VP);
+
+	/* mask everything except UDP header present */
+	const __m128i udptype_msk = _mm_set_epi16
+		(0, 0, 0, 0,
+		 udp_p_flag, udp_p_flag, udp_p_flag, udp_p_flag);
+
+	/* convert UDP header present 16 bits 0x0200 to 8 bits 0x02, then get
+	 * the TCP/UDP checksum error mask 8 bits ~0x40 from 32 bits value of
+	 * 0x40000000.
+	 */
+	const __m128i udp_csum_err_skip = _mm_set_epi8
+		(0, 0, 0, 0,
+		 0, 0, 0, 0,
+		 0, 0, 0, 0,
+		 0, ~(IXGBE_RXDADV_ERR_TCPE >> 24), 0, 0xFF);
+
 	/* map vlan present (0x8), IPE (0x2), L4E (0x1) to ol_flags */
 	const __m128i vlan_csum_map_lo = _mm_set_epi8(
 		0, 0, 0, 0,
@@ -188,9 +204,17 @@ desc_to_olflags_v(__m128i descs[4], __m128i mbuf_init, uint8_t vlan_flags,
 	vtag1 = _mm_unpackhi_epi16(descs[2], descs[3]);
 
 	ptype0 = _mm_unpacklo_epi32(ptype0, ptype1);
+	/* save the UDP header present information */
+	vlan_csum_msk = _mm_and_si128(ptype0, udptype_msk);
 	ptype0 = _mm_and_si128(ptype0, rsstype_msk);
 	ptype0 = _mm_shuffle_epi8(rss_flags, ptype0);
 
+	/* now the most significant 64 bits containing the UDP present */
+	vlan_csum_msk = _mm_slli_si128(vlan_csum_msk, 8);
+	/* use UDP present 0x02 index to get L4 checksum error mask ~0x40 */
+	vlan_csum_msk = _mm_shuffle_epi8(udp_csum_err_skip, vlan_csum_msk);
+	/* then mask out the L4 checksum error bit as needed */
+	vlan_csum_msk = _mm_and_si128(vlan_csum_all_msk, vlan_csum_msk);
 	vtag1 = _mm_unpacklo_epi32(vtag0, vtag1);
 	vtag1 = _mm_and_si128(vtag1, vlan_csum_msk);
 
@@ -341,6 +365,7 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	__m128i dd_check, eop_check;
 	__m128i mbuf_init;
 	uint8_t vlan_flags;
+	uint16_t udp_p_flag = 0; /* Rx Descriptor UDP header present */
 
 	/* nb_pkts has to be floor-aligned to RTE_IXGBE_DESCS_PER_LOOP */
 	nb_pkts = RTE_ALIGN_FLOOR(nb_pkts, RTE_IXGBE_DESCS_PER_LOOP);
@@ -364,6 +389,9 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	if (!(rxdp->wb.upper.status_error &
 				rte_cpu_to_le_32(IXGBE_RXDADV_STAT_DD)))
 		return 0;
+
+	if (rxq->rx_udp_csum_zero_err)
+		udp_p_flag = IXGBE_RXDADV_PKTTYPE_UDP;
 
 	/* 4 packets DD mask */
 	dd_check = _mm_set_epi64x(0x0000000100000001LL, 0x0000000100000001LL);
@@ -477,7 +505,8 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		sterr_tmp1 = _mm_unpackhi_epi32(descs[1], descs[0]);
 
 		/* set ol_flags with vlan packet type */
-		desc_to_olflags_v(descs, mbuf_init, vlan_flags, &rx_pkts[pos]);
+		desc_to_olflags_v(descs, mbuf_init, vlan_flags, udp_p_flag,
+				  &rx_pkts[pos]);
 
 #ifdef RTE_LIB_SECURITY
 		if (unlikely(use_ipsec))

@@ -287,6 +287,12 @@ the VFs which are required.::
 Currently hot-plugging of representor ports is not supported so all required
 representors must be specified on the creation of the PF.
 
+Limitations or Known issues
+---------------------------
+The 82599 hardware errata: UDP frames with a zero checksum can be marked as
+checksum errors. To support zero checksum, the UDP checksum is always marked
+as good.
+
 Supported Chipsets and NICs
 ---------------------------
 
