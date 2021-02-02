@@ -163,6 +163,13 @@ New Features
   intended for use by developers contributing to the DPDK SDK itself, and is
   integrated into the build scripts and automated CI for patch contributions.
 
+* **Added python script to run crypto perf tests and graph the results.**
+
+  A new python script was added to automate running crypto performance tests
+  and output graphed results to PDF files.
+  See the :doc:`../tools/cryptoperf` guide for more details.
+
+
 
 Removed Items
 -------------
