@@ -92,6 +92,10 @@ New Features
 
   * Added support for 64B completion queue entries
 
+* **Updated Intel i40e driver.**
+
+  * Added support on Windows.
+
 * **Updated Intel ice driver.**
 
   Updated the Intel ice driver with new features and improvements, including:
