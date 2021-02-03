@@ -148,6 +148,13 @@ implementer_hisilicon = {
 				 ['RTE_MAX_LCORE', 128],
 				 ['RTE_ARM_FEATURE_ATOMICS', true]
 			]
+		},
+		'0xd02': {
+			'machine_args': ['-march=armv8.2-a+crypto+sve'],
+			'flag': [['RTE_MACHINE', '"kunpeng930"'],
+				 ['RTE_MAX_LCORE', 256],
+				 ['RTE_ARM_FEATURE_ATOMICS', true]
+			]
 		}
 	}
 }
