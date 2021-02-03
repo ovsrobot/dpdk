@@ -431,11 +431,15 @@ updating the Linux kernel sources.
 The path to the original Linux script must be set in the environment variable ``DPDK_CHECKPATCH_PATH``.
 
 Spell checking of commonly misspelled words
-can be enabled by downloading the codespell dictionary::
+can be enabled with the codespell library::
 
-   https://raw.githubusercontent.com/codespell-project/codespell/master/codespell_lib/data/dictionary.txt
+   git clone https://github.com/codespell-project/codespell.git
 
-The path to the downloaded ``dictionary.txt`` must be set
+There is a DPDK script to build an adjusted dictionary::
+
+   devtools/build-dict.sh codespell/ > codespell-dpdk.txt
+
+The path to the dictionary must be set
 in the environment variable ``DPDK_CHECKPATCH_CODESPELL``.
 
 Environment variables required by the development tools,
