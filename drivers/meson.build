@@ -18,8 +18,36 @@ subdirs = [
 	'baseband', # depends on common and bus.
 ]
 
-disabled_drivers = run_command(list_dir_globs, get_option('disable_drivers'),
-		).stdout().split()
+if meson.is_cross_build()
+	disabled_drivers += meson.get_cross_property('disabled_drivers', [])
+	enabled_drivers += meson.get_cross_property('enabled_drivers', [])
+endif
+
+# add cmdline disabled drivers (comma separated string)
+# and meson disabled drivers (list)
+# together into a comma separated string
+disabled_drivers = ','.join([get_option('disable_drivers'), ','.join(disabled_drivers)]).strip(',')
+if disabled_drivers != ''
+	disabled_drivers = run_command(list_dir_globs,
+		disabled_drivers).stdout().split()
+else
+	disabled_drivers = []
+endif
+
+if enabled_drivers != []
+	enabled_drivers = run_command(list_dir_globs,
+		','.join(enabled_drivers)).stdout().split()
+endif
+
+if disabled_drivers != [] and enabled_drivers != []
+	# TODO/QUERY we could support both:
+	# first 'select' only drivers by enabled_drivers
+	# then 'deselect' those in disabled_drivers
+	# this would be useful if a directory is in enabled_drivers
+	# and a driver from that directory is in disabled_drivers
+	error('Simultaneous disabled drivers and enabled drivers ' +
+	      'configuration is not supported.')
+endif
 
 default_cflags = machine_args
 default_cflags += ['-DALLOW_EXPERIMENTAL_API']
@@ -48,7 +76,7 @@ foreach subpath:subdirs
 		dpdk_driver_classes += class
 	endif
 	# get already enabled drivers of the same class
-	enabled_drivers = get_variable(class + '_drivers', [])
+	enabled_class_drivers = get_variable(class + '_drivers', [])
 
 	foreach drv:drivers
 		drv_path = join_paths(class, drv)
@@ -76,6 +104,9 @@ foreach subpath:subdirs
 		if disabled_drivers.contains(drv_path)
 			build = false
 			reason = 'explicitly disabled via build config'
+		elif enabled_drivers.length() > 0 and not enabled_drivers.contains(drv_path)
+			build = false
+			reason = 'not in enabled drivers build config'
 		else
 			# pull in driver directory which should update all the local variables
 			subdir(drv_path)
@@ -108,7 +139,7 @@ foreach subpath:subdirs
 						'_disable_reason', reason)
 			endif
 		else
-			enabled_drivers += name
+			enabled_class_drivers += name
 			lib_name = '_'.join(['rte', class, name])
 			dpdk_conf.set(lib_name.to_upper(), 1)
 
@@ -213,5 +244,5 @@ foreach subpath:subdirs
 		endif # build
 	endforeach
 
-	set_variable(class + '_drivers', enabled_drivers)
+	set_variable(class + '_drivers', enabled_class_drivers)
 endforeach
