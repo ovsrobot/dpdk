@@ -265,6 +265,18 @@ struct rte_crypto_cipher_xform {
 		 * which can be in the range 7 to 13 inclusive.
 		 */
 	} iv;	/**< Initialisation vector parameters */
+
+	uint32_t block_size;
+	/**< When RTE_CRYPTODEV_FF_CIPHER_MULITPLE_BLOCKS is reported, this is
+	 * the block size of the algorithm, otherwise or when the value is 0,
+	 * use the default block size provided in the capability.
+	 * The value should be in the range defined by the bsf field in the
+	 * cipher capability.
+	 *
+	 * - For AES-XTS it is the size of data-unit, from IEEE Std 1619-2007.
+	 * For-each data-unit in the operation, the tweak(IV) value is
+	 * assigned consecutively starting from the operation assigned tweak.
+	 */
 };
 
 /** Symmetric Authentication / Hash Algorithms

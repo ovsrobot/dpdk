@@ -96,6 +96,19 @@ struct rte_crypto_param_range {
 };
 
 /**
+ * Crypto device supported block size flags for cipher algorithms
+ * Each flag represents single or range of supported block sizes
+ */
+#define RTE_CRYPTO_CIPHER_BSF_ALL 0x1
+/* All the sizes from the algorithm standard */
+#define RTE_CRYPTO_CIPHER_BSF_512_BYTES 0x2
+#define RTE_CRYPTO_CIPHER_BSF_520_BYTES 0x4
+#define RTE_CRYPTO_CIPHER_BSF_4048_BYTES 0x8
+#define RTE_CRYPTO_CIPHER_BSF_4096_BYTES 0x10
+#define RTE_CRYPTO_CIPHER_BSF_4160_BYTES 0x20
+#define RTE_CRYPTO_CIPHER_BSF_1M_BYTES 0x40
+
+/**
  * Symmetric Crypto Capability
  */
 struct rte_cryptodev_symmetric_capability {
@@ -122,11 +135,19 @@ struct rte_cryptodev_symmetric_capability {
 			enum rte_crypto_cipher_algorithm algo;
 			/**< cipher algorithm */
 			uint16_t block_size;
-			/**< algorithm block size */
+			/**<
+			 * algorithm block size
+			 * For algorithms support more than single block size,
+			 * this is the default block size supported by the
+			 * driver, all the supported sizes are reflected in the
+			 * bsf field.
+			 */
 			struct rte_crypto_param_range key_size;
 			/**< cipher key size range */
 			struct rte_crypto_param_range iv_size;
 			/**< Initialisation vector data size range */
+			uint32_t bsf;
+			/**< Block size flags */
 		} cipher;
 		/**< Symmetric Cipher transform capabilities */
 		struct {
