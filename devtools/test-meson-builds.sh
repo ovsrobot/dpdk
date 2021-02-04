@@ -92,6 +92,15 @@ load_env () # <target compiler>
 	command -v $targetcc >/dev/null 2>&1 || return 1
 }
 
+target_is_selected()
+{
+	if [ -z "${DPDK_BUILD_TEST_TARGETS:-}" ]; then
+		return 0
+	fi
+	target_filter=" $DPDK_BUILD_TEST_TARGETS "
+	! [ "${target_filter##* $1 }" = "${target_filter}" ]
+}
+
 config () # <dir> <builddir> <meson options>
 {
 	dir=$1
@@ -149,6 +158,7 @@ install_target () # <builddir> <installdir>
 build () # <directory> <target cc | cross file> <ABI check> [meson options]
 {
 	targetdir=$1
+	target_is_selected $targetdir || return 0
 	shift
 	crossfile=
 	[ -r $1 ] && crossfile=$1 || targetcc=$1
@@ -270,6 +280,8 @@ for f in $srcdir/config/ppc/ppc* ; do
 	targetdir=build-$(basename $f | cut -d'-' -f-2)
 	build $targetdir $f ABI $use_shared
 done
+
+target_is_selected build-x86-default || exit 0
 
 # Test installation of the x86-default target, to be used for checking
 # the sample apps build using the pkg-config file for cflags and libs
