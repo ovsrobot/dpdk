@@ -719,7 +719,7 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"set port meter profile (port_id) (mtr_id) (profile_id)\n"
 			"    meter update meter profile\n\n"
 
-			"set port meter dscp table (port_id) (mtr_id) [(dscp_tbl_entry0)\n"
+			"set port meter dscp table [(dscp_tbl_entry0)\n"
 			"(dscp_tbl_entry1)...(dscp_tbl_entry63)]\n"
 			"    update meter dscp table entries\n\n"
 
