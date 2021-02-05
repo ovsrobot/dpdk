@@ -60,3 +60,13 @@ rte_eal_log_init(const char *id, int facility)
 
 	return 0;
 }
+
+/*
+ * Set the customized logger, it will override the default action, which is
+ * writing to syslog and stdout.
+ */
+void
+rte_eal_set_log_func(rte_log_func_t *logf)
+{
+    console_log_func.write = logf;
+}

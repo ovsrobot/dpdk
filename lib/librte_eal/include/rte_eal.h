@@ -501,6 +501,22 @@ rte_eal_mbuf_user_pool_ops(void);
 const char *
 rte_eal_get_runtime_dir(void);
 
+/**
+ * Usage function typedef used by the application usage function.
+ *
+ * Use this function typedef to define a logger formatter.
+ */
+typedef cookie_write_function_t rte_log_func_t;
+
+/**
+ * Set a customized logger.
+ *
+ * @param logf
+ *   The customized logger function.
+ */
+void
+rte_eal_set_log_func(rte_log_func_t *logf);
+
 #ifdef __cplusplus
 }
 #endif
