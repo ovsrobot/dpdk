@@ -128,6 +128,7 @@ New Features
   * Add support for generic flow API.
   * Add support for traffic manager.
   * Add support for IPsec.
+  * Add support for txgbevf PMD.
 
 * **Updated GSO support.**
 
