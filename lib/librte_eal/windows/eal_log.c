@@ -6,7 +6,7 @@
 
 /* set the log to default function, called during eal init process. */
 int
-rte_eal_log_init(__rte_unused const char *id, __rte_unused int facility)
+rte_eal_log_init(__rte_unused const char *id, __rte_unused int facility, rte_log_func_t *logf)
 {
 	rte_openlog_stream(stderr);
 

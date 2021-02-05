@@ -144,16 +144,6 @@ int rte_eal_memory_init(void);
 int rte_eal_timer_init(void);
 
 /**
- * Init the default log stream
- *
- * This function is private to EAL.
- *
- * @return
- *   0 on success, negative on error
- */
-int rte_eal_log_init(const char *id, int facility);
-
-/**
  * Save the log regexp for later
  */
 int rte_log_save_regexp(const char *type, int priority);

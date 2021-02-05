@@ -1160,7 +1160,7 @@ rte_eal_init(int argc, char **argv)
 #endif
 	}
 
-	if (rte_eal_log_init(logid, internal_conf->syslog_facility) < 0) {
+	if (rte_eal_log_init(logid, internal_conf->syslog_facility, NULL) < 0) {
 		rte_eal_init_alert("Cannot init logging.");
 		rte_errno = ENOMEM;
 		__atomic_store_n(&run_once, 0, __ATOMIC_RELAXED);

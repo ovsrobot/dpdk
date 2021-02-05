@@ -37,18 +37,21 @@ console_log_write(__rte_unused void *c, const char *buf, size_t size)
 	return ret;
 }
 
-static cookie_io_functions_t console_log_func = {
-	.write = console_log_write,
-};
-
 /*
  * set the log to default function, called during eal init process,
  * once memzones are available.
  */
 int
-rte_eal_log_init(const char *id, int facility)
+rte_eal_log_init(const char *id, int facility, rte_log_func_t *logf)
 {
 	FILE *log_stream;
+	cookie_io_functions_t console_log_func;
+
+	if (logf) {
+		console_log_func.write = logf;
+	} else {
+		console_log_func.write = console_log_write;
+	}
 
 	log_stream = fopencookie(NULL, "w+", console_log_func);
 	if (log_stream == NULL)

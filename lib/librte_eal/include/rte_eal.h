@@ -115,6 +115,28 @@ int rte_eal_iopl_init(void);
 int rte_eal_init(int argc, char **argv);
 
 /**
+ * Usage function typedef used by the application usage function.
+ *
+ * Use this function typedef to define a logger formatter.
+ */
+typedef cookie_write_function_t rte_log_func_t;
+
+/**
+ * Init the default log stream
+ *
+ * @param id
+ *   The openlog's first argument.
+ * @param facility
+ *   The openlog's third argument.
+ * @param logf
+ *   The customized logger function, if it's set, the id and facility will
+ *   be ignored.
+ * @return
+ *   0 on success, negative on error
+ */
+int rte_eal_log_init(const char *id, int facility, rte_log_func_t *logf);
+
+/**
  * Clean up the Environment Abstraction Layer (EAL)
  *
  * This function must be called to release any internal resources that EAL has

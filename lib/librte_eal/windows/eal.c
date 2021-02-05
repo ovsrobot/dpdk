@@ -266,7 +266,7 @@ rte_eal_init(int argc, char **argv)
 		eal_get_internal_configuration();
 	int ret;
 
-	rte_eal_log_init(NULL, 0);
+	rte_eal_log_init(NULL, 0, NULL);
 
 	eal_log_level_parse(argc, argv);
 
