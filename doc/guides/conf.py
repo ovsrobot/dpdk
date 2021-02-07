@@ -217,14 +217,8 @@ def generate_overview_table(output_filename, table_id, section, table_name, titl
         # Initialize the dict with the default.ini value.
         ini_data[ini_filename] = valid_features.copy()
 
-        # Check for a valid ini section.
+        # Check for a section.
         if not config.has_section(section):
-            print("{}: File '{}' has no [{}] secton".format(warning,
-                                                            ini_filename,
-                                                            section),
-                                                            file=stderr)
-            if stop_on_error:
-                raise Exception('Warning is treated as a failure')
             continue
 
         # Check for valid features names.
@@ -380,6 +374,21 @@ def setup(app):
                             'Features',
                             'Features availability in networking drivers',
                             'Feature')
+    table_file = dirname(__file__) + '/nics/rte_flow_items_table.txt'
+    generate_overview_table(table_file, 2,
+                            'rte_flow items',
+                            'rte_flow items features availability in networking drivers',
+                            'Items')
+    table_file = dirname(__file__) + '/nics/rte_flow_actions_table.txt'
+    generate_overview_table(table_file, 3,
+                            'rte_flow actions',
+                            'rte_flow actions features availability in networking drivers',
+                            'Actions')
+    table_file = dirname(__file__) + '/nics/rte_flow_shared_actions_table.txt'
+    generate_overview_table(table_file, 4,
+                            'rte_flow shared actions',
+                            'rte_flow shared actions features availability in networking drivers',
+                            'Actions')
     table_file = dirname(__file__) + '/cryptodevs/overview_feature_table.txt'
     generate_overview_table(table_file, 1,
                             'Features',
