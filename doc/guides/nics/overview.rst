@@ -28,7 +28,17 @@ More details about features can be found in :doc:`features`.
 
 .. include:: overview_table.txt
 
+.. include:: rte_flow_items_table.txt
+
+.. include:: rte_flow_actions_table.txt
+
 .. Note::
 
    Features marked with "P" are partially supported. Refer to the appropriate
    NIC guide in the following sections for details.
+
+.. Note::
+
+   rte_flow action that is marked with "S" means it is supported as shared
+   and non-shared action.
+
