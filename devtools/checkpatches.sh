@@ -118,6 +118,14 @@ check_forbidden_additions() { # <patch>
 		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
 		"$1" || res=1
 
+	# check %llx usage
+	awk -v FOLDERS='lib drivers app examples' \
+		-v EXPRESSIONS='%ll*[xud]' \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Please check %llx usage which tends to be wrong most of the times' \
+		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		"$1" || res=1
+
 	# svg figures must be included with wildcard extension
 	# because of png conversion for pdf docs
 	awk -v FOLDERS='doc' \
