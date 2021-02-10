@@ -118,9 +118,8 @@ otx_ep_init_instr_queue(struct otx_ep_device *otx_ep, int iq_no, int num_descs,
 		goto iq_init_fail;
 	}
 
-	otx_ep_info("IQ[%d]: base: %p basedma: %lx count: %d\n",
-		     iq_no, iq->base_addr, (unsigned long)iq->base_addr_dma,
-		     iq->nb_desc);
+	otx_ep_info("IQ[%d]: base: %p basedma: %" PRIx64 "count: %d\n",
+		    iq_no, iq->base_addr, iq->base_addr_dma, iq->nb_desc);
 
 	iq->otx_ep_dev = otx_ep;
 	iq->q_no = iq_no;
@@ -298,8 +297,8 @@ otx_ep_init_droq(struct otx_ep_device *otx_ep, uint32_t q_no,
 	droq->desc_ring_dma = droq->desc_ring_mz->iova;
 	droq->desc_ring = (struct otx_ep_droq_desc *)droq->desc_ring_mz->addr;
 
-	otx_ep_dbg("OQ[%d]: desc_ring: virt: 0x%p, dma: %lx\n",
-		    q_no, droq->desc_ring, (unsigned long)droq->desc_ring_dma);
+	otx_ep_dbg("OQ[%d]: desc_ring: virt: 0x%p, dma: %" PRIx64 "\n",
+		    q_no, droq->desc_ring, droq->desc_ring_dma);
 	otx_ep_dbg("OQ[%d]: num_desc: %d\n", q_no, droq->nb_desc);
 
 	/* OQ buf_list set up */
@@ -621,16 +620,14 @@ otx_ep_xmit_pkts(void *tx_queue, struct rte_mbuf **pkts, uint16_t nb_pkts)
 
 #ifdef OTX_EP_IO_DEBUG
 		otx_ep_dbg("After swapping\n");
-		otx_ep_dbg("Word0 [dptr]: 0x%016lx\n",
-			   (unsigned long)iqcmd.dptr);
-		otx_ep_dbg("Word1 [ihtx]: 0x%016lx\n", (unsigned long)iqcmd.ih);
-		otx_ep_dbg("Word2 [pki_ih3]: 0x%016lx\n",
-			   (unsigned long)iqcmd.pki_ih3);
-		otx_ep_dbg("Word3 [rptr]: 0x%016lx\n",
-			   (unsigned long)iqcmd.rptr);
-		otx_ep_dbg("Word4 [irh]: 0x%016lx\n", (unsigned long)iqcmd.irh);
-		otx_ep_dbg("Word5 [exhdr[0]]: 0x%016lx\n",
-				(unsigned long)iqcmd.exhdr[0]);
+		otx_ep_dbg("Word0 [dptr]: 0x%016" PRIx64 "\n", iqcmd.dptr);
+		otx_ep_dbg("Word1 [ihtx]: 0x%016" PRIx64 "\n", iqcmd.ih.u64);
+		otx_ep_dbg("Word2 [pki_ih3]: 0x%016" PRIx64 "\n",
+			   iqcmd.pki_ih3.u64);
+		otx_ep_dbg("Word3 [rptr]: 0x%016" PRIx64 "\n", iqcmd.rptr);
+		otx_ep_dbg("Word4 [irh]: 0x%016" PRIx64 "\n", iqcmd.irh.u64);
+		otx_ep_dbg("Word5 [exhdr[0]]: 0x%016" PRIx64 "\n",
+			   iqcmd.exhdr[0]);
 		rte_pktmbuf_dump(stdout, m, rte_pktmbuf_pkt_len(m));
 #endif
 		dbell = (i == (unsigned int)(nb_pkts - 1)) ? 1 : 0;
@@ -754,16 +751,12 @@ otx2_ep_xmit_pkts(void *tx_queue, struct rte_mbuf **pkts, uint16_t nb_pkts)
 
 #ifdef OTX_EP_IO_DEBUG
 		otx_ep_dbg("After swapping\n");
-		otx_ep_dbg("Word0 [dptr]: 0x%016lx\n",
-			   (unsigned long)iqcmd.dptr);
-		otx_ep_dbg("Word1 [ihtx]: 0x%016lx\n", (unsigned long)iqcmd.ih);
-		otx_ep_dbg("Word2 [pki_ih3]: 0x%016lx\n",
-			   (unsigned long)iqcmd.pki_ih3);
-		otx_ep_dbg("Word3 [rptr]: 0x%016lx\n",
-			   (unsigned long)iqcmd.rptr);
-		otx_ep_dbg("Word4 [irh]: 0x%016lx\n", (unsigned long)iqcmd.irh);
-		otx_ep_dbg("Word5 [exhdr[0]]: 0x%016lx\n",
-			   (unsigned long)iqcmd.exhdr[0]);
+		otx_ep_dbg("Word0 [dptr]: 0x%016" PRIx64 "\n", iqcmd2.dptr);
+		otx_ep_dbg("Word1 [ihtx]: 0x%016" PRIx64 "\n", iqcmd2.ih.u64);
+		otx_ep_dbg("Word2 [rptr]: 0x%016" PRIx64 "\n", iqcmd2.rptr);
+		otx_ep_dbg("Word3 [irh]: 0x%016" PRIx64 "\n", iqcmd2.irh.u64);
+		otx_ep_dbg("Word4 [exhdr[0]]: 0x%016" PRIx64 "\n",
+			   iqcmd2.exhdr[0]);
 #endif
 		index = iq->host_write_index;
 		dbell = (i == (unsigned int)(nb_pkts - 1)) ? 1 : 0;
@@ -837,7 +830,7 @@ otx_ep_droq_read_packet(struct otx_ep_device *otx_ep,
 	struct otx_ep_droq_info *info2;
 	uint64_t total_pkt_len;
 	uint32_t pkt_len = 0;
-	int next_idx;
+	int next_idx, retry;
 
 	droq_pkt  = droq->recv_buf_list[droq->read_idx];
 	droq_pkt2  = droq->recv_buf_list[droq->read_idx];
@@ -845,11 +838,7 @@ otx_ep_droq_read_packet(struct otx_ep_device *otx_ep,
 	/* make sure info is available */
 	rte_rmb();
 	if (unlikely(!info->length)) {
-		int retry = OTX_EP_MAX_DELAYED_PKT_RETRIES;
-		/* otx_ep_dbg("OCTEON DROQ[%d]: read_idx: %d; Data not ready "
-		 * "yet, Retry; pending=%lu\n", droq->q_no, droq->read_idx,
-		 * droq->pkts_pending);
-		 */
+		retry = OTX_EP_MAX_DELAYED_PKT_RETRIES;
 		droq->stats.pkts_delayed_data++;
 		while (retry && !info->length)
 			retry--;
