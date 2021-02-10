@@ -16,7 +16,7 @@ all_examples = [
 	'eventdev_pipeline',
 	'fips_validation', 'flow_classify',
 	'flow_filtering', 'helloworld',
-	'ioat',
+	'ioat', 'ifpga',
 	'ip_fragmentation', 'ip_pipeline',
 	'ip_reassembly', 'ipsec-secgw',
 	'ipv4_multicast', 'kni',
