@@ -60,3 +60,24 @@ rte_eal_log_init(const char *id, int facility)
 
 	return 0;
 }
+
+/**
+ * Change the default stream's write action that will be used by the logging system.
+ *
+ * This should be done before the 'rte_eal_init' call. And the 'rte_openlog_stream'
+ * call will override this action.
+ */
+void
+rte_log_sink_set(rte_log_write_function* logf)
+{
+    console_log_func.write = logf;
+}
+
+/**
+ * Retrieve the log function used by the logging system (see rte_log_sink_set()
+ * to change it).
+ */
+rte_log_write_function*
+rte_log_sink_get(void) {
+    return console_log_func.write;
+}

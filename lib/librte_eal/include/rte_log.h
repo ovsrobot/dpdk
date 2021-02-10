@@ -98,6 +98,35 @@ int rte_openlog_stream(FILE *f);
 FILE *rte_log_get_stream(void);
 
 /**
+ * Define a logging write function.
+ */
+typedef ssize_t rte_log_write_function(void *cookie, const char *buf, size_t size);
+
+/**
+ * Change the default stream's write action that will be used by the logging system.
+ *
+ * This should be done before the 'rte_eal_init' call. And the 'rte_openlog_stream'
+ * call will override this action.
+ *
+ * @param logf
+ *   Pointer to the log write function.
+ */
+__rte_experimental
+void
+rte_log_sink_set(rte_log_write_function* logf);
+
+/**
+ * Retrieve the log function used by the logging system (see rte_log_sink_set()
+ * to change it).
+ *
+ * @return
+ *   Pointer to the log function.
+ */
+__rte_experimental
+rte_log_write_function*
+rte_log_sink_get(void);
+
+/**
  * Set the global log level.
  *
  * After this call, logs with a level lower or equal than the level

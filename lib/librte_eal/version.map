@@ -412,6 +412,8 @@ EXPERIMENTAL {
 	rte_thread_tls_key_delete;
 	rte_thread_tls_value_get;
 	rte_thread_tls_value_set;
+    rte_log_sink_set;
+    rte_log_sink_get;
 };
 
 INTERNAL {
