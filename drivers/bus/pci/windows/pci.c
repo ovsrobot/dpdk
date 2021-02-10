@@ -23,20 +23,19 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_Numa_Node, 0x540b947e, 0x8b40, 0x45bc,
  * the registry hive for PCI devices.
  */
 
-/* The functions below are not implemented on Windows,
+/* Some of the functions below are not implemented on Windows,
  * but need to be defined for compilation purposes
  */
 
 /* Map pci device */
 int
-rte_pci_map_device(struct rte_pci_device *dev __rte_unused)
+rte_pci_map_device(struct rte_pci_device *dev)
 {
-	/* This function is not implemented on Windows.
-	 * We really should short-circuit the call to these functions by
-	 * clearing the RTE_PCI_DRV_NEED_MAPPING flag
-	 * in the rte_pci_driver flags.
-	 */
-	return 0;
+	/* Only return success for devices bound to netuio */
+	if (dev->kdrv == RTE_PCI_KDRV_NIC_UIO)
+		return 0;
+	else
+		return -EINVAL;
 }
 
 /* Unmap pci device */
