@@ -14,6 +14,7 @@ Contributor's Guidelines
     abi_versioning
     documentation
     patches
+    testing
     vulnerability
     stable
     cheatsheet
