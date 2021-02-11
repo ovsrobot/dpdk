@@ -266,6 +266,12 @@ Display information for a given port's RX/TX descriptor status::
 
    testpmd> show port (port_id) (rxq|txq) (queue_id) desc (desc_id) status
 
+show rxq count
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Display the number of ready descriptors on a given RX queue::
+
+   testpmd> show port (port_id) rxq (queue_id) count
 
 show config
 ~~~~~~~~~~~
