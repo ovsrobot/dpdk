@@ -17,6 +17,7 @@ enum xstats_type {
 	/* device instance specific */
 	no_iq_enq,
 	no_cq_enq,
+	sched_last_iter_bitmask,
 	/* port_specific */
 	rx_used,
 	rx_free,
@@ -57,6 +58,8 @@ get_dev_stat(const struct sw_evdev *sw, uint16_t obj_idx __rte_unused,
 	case calls: return sw->sched_called;
 	case no_iq_enq: return sw->sched_no_iq_enqueues;
 	case no_cq_enq: return sw->sched_no_cq_enqueues;
+	case sched_last_iter_bitmask: return sw->sched_last_iter_bitmask;
+
 	default: return -1;
 	}
 }
@@ -177,9 +180,10 @@ sw_xstats_init(struct sw_evdev *sw)
 	 */
 	static const char * const dev_stats[] = { "rx", "tx", "drop",
 			"sched_calls", "sched_no_iq_enq", "sched_no_cq_enq",
+			"sched_last_iter_bitmask",
 	};
 	static const enum xstats_type dev_types[] = { rx, tx, dropped,
-			calls, no_iq_enq, no_cq_enq,
+			calls, no_iq_enq, no_cq_enq, sched_last_iter_bitmask,
 	};
 	/* all device stats are allowed to be reset */
 
