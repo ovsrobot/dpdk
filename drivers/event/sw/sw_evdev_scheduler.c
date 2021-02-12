@@ -5,6 +5,9 @@
 #include <rte_ring.h>
 #include <rte_hash_crc.h>
 #include <rte_event_ring.h>
+
+#include <rte_service_component.h>
+
 #include "sw_evdev.h"
 #include "iq_chunk.h"
 #include "event_ring.h"
@@ -558,6 +561,10 @@ sw_event_schedule(struct rte_eventdev *dev)
 
 	sw->sched_no_iq_enqueues += (in_pkts_total == 0);
 	sw->sched_no_cq_enqueues += (out_pkts_total == 0);
+
+	uint64_t work_done = (in_pkts_total + out_pkts_total) != 0;
+	rte_service_component_attr_set(sw->service_id,
+			RTE_SERVICE_ATTR_USEFUL_WORK_LAST_ITER, work_done);
 
 	/* push all the internal buffered QEs in port->cq_ring to the
 	 * worker cores: aka, do the ring transfers batched.
