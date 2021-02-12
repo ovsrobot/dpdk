@@ -88,6 +88,19 @@ int32_t rte_service_component_register(const struct rte_service_spec *spec,
 int32_t rte_service_component_unregister(uint32_t id);
 
 /**
+ * Set an attribute for this service.
+ *
+ * Note this API is to be called by the service implementation, to make the
+ * statistic available via the usual attr_get() service APIs.
+ *
+ * @retval 0 Success
+ * @retval -EINVAL Invalid service id or attribute provided
+ */
+__rte_experimental
+int32_t rte_service_component_attr_set(uint32_t id, uint32_t attr,
+		uint64_t value);
+
+/**
  * Private function to allow EAL to initialized default mappings.
  *
  * This function iterates all the services, and maps then to the available

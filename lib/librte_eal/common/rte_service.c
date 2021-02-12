@@ -58,6 +58,7 @@ struct rte_service_spec_impl {
 	uint32_t num_mapped_cores;
 	uint64_t calls;
 	uint64_t cycles_spent;
+	uint8_t useful_work_last_iter;
 } __rte_cache_aligned;
 
 /* the internal values of a service core */
@@ -292,6 +293,21 @@ rte_service_component_unregister(uint32_t id)
 	memset(&rte_services[id], 0, sizeof(struct rte_service_spec_impl));
 
 	return 0;
+}
+
+int32_t
+rte_service_component_attr_set(uint32_t id, uint32_t attr, uint64_t value)
+{
+	struct rte_service_spec_impl *s;
+	SERVICE_VALID_GET_OR_ERR_RET(id, s, -EINVAL);
+
+	switch (attr) {
+	case RTE_SERVICE_ATTR_USEFUL_WORK_LAST_ITER:
+		s->useful_work_last_iter = value;
+		return 0;
+	default:
+		return -EINVAL;
+	};
 }
 
 int32_t
@@ -799,6 +815,9 @@ rte_service_attr_get(uint32_t id, uint32_t attr_id, uint64_t *attr_value)
 		return -EINVAL;
 
 	switch (attr_id) {
+	case RTE_SERVICE_ATTR_USEFUL_WORK_LAST_ITER:
+		*attr_value = s->useful_work_last_iter;
+		return 0;
 	case RTE_SERVICE_ATTR_CYCLES:
 		*attr_value = s->cycles_spent;
 		return 0;

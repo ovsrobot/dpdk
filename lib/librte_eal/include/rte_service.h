@@ -391,6 +391,11 @@ int32_t rte_service_dump(FILE *f, uint32_t id);
 #define RTE_SERVICE_ATTR_CALL_COUNT 1
 
 /**
+ * Returns if the last iteration of the service resulted in useful work done.
+ */
+#define RTE_SERVICE_ATTR_USEFUL_WORK_LAST_ITER 2
+
+/**
  * Get an attribute from a service.
  *
  * @retval 0 Success, the attribute value has been written to *attr_value*.
