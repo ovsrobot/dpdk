@@ -5617,6 +5617,89 @@ parse_cleanup:
 	return result;
 }
 
+int
+rte_eth_representor_id_convert(const struct rte_eth_dev *ethdev,
+			       uint16_t *id,
+			       enum rte_eth_representor_type type,
+			       int controller, int pf, int representor_port)
+{
+	int ret, n, i, count;
+	struct rte_eth_representor_info *info = NULL;
+	size_t size;
+
+	if (type == RTE_ETH_REPRESENTOR_NONE)
+		return 0;
+	if (id == NULL)
+		return -EINVAL;
+
+	/* Get PMD representor range info. */
+	ret = rte_eth_representor_info_get(ethdev->data->port_id, NULL);
+	if (ret < 0) {
+		/* Fallback to direct mapping for compatibility. */
+		*id = representor_port;
+	}
+	n = ret;
+	size = sizeof(*info) + n * sizeof(info->ranges[0]);
+	info = calloc(1, size);
+	if (info == NULL)
+		return -ENOMEM;
+	ret = rte_eth_representor_info_get(ethdev->data->port_id, info);
+	if (ret < 0)
+		goto out;
+
+	/* Default controller and pf to caller. */
+	if (controller == -1)
+		controller = info->controller;
+	if (pf == -1)
+		pf = info->pf;
+
+	/* Locate representor ID. */
+	for (i = 0; i < n; ++i) {
+		if (info->ranges[i].type != type)
+			continue;
+		/* PMD hit: ignore controller if -1. */
+		if (info->ranges[i].controller != -1 &&
+		    info->ranges[i].controller != (uint16_t)controller)
+			continue;
+		count = info->ranges[i].id_end - info->ranges[i].id_base + 1;
+		if (info->ranges[i].type == RTE_ETH_REPRESENTOR_PF) {
+			/* PF. */
+			if (pf >= info->ranges[i].pf + count)
+				continue;
+			*id = info->ranges[i].id_base +
+			      (pf - info->ranges[i].pf);
+			goto out;
+		}
+		/* VF or SF. */
+		/* PMD hit: ignore pf if -1. */
+		if (info->ranges[i].pf != -1 &&
+		    info->ranges[i].pf != (uint16_t)pf)
+			continue;
+		if (info->ranges[i].type == RTE_ETH_REPRESENTOR_VF) {
+			/* VF. */
+			if (representor_port >= info->ranges[i].vf + count)
+				continue;
+			*id = info->ranges[i].id_base +
+			      (representor_port - info->ranges[i].vf);
+			goto out;
+		} else if (info->ranges[i].type == RTE_ETH_REPRESENTOR_SF) {
+			/* SF. */
+			if (representor_port >= info->ranges[i].sf + count)
+				continue;
+			*id = info->ranges[i].id_base +
+			      (representor_port - info->ranges[i].sf);
+			goto out;
+		}
+	}
+	/* Not matching representor ID range. */
+	ret = -ENOENT;
+
+out:
+	if (info != NULL)
+		free(info);
+	return ret;
+}
+
 static int
 eth_dev_handle_port_list(const char *cmd __rte_unused,
 		const char *params __rte_unused,
