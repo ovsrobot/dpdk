@@ -6,16 +6,6 @@
 
 #include <time.h>
 
-#include <net/if.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
-
-#if defined(RTE_EXEC_ENV_FREEBSD)
-#include <sys/sysctl.h>
-#include <net/if_dl.h>
-#endif
-
 #include <pcap.h>
 
 #include <rte_cycles.h>
@@ -25,7 +15,8 @@
 #include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_bus_vdev.h>
-#include <rte_string_fns.h>
+
+#include "pcap_osdep.h"
 
 #define RTE_ETH_PCAP_SNAPSHOT_LEN 65535
 #define RTE_ETH_PCAP_SNAPLEN RTE_ETHER_MAX_JUMBO_FRAME_LEN
@@ -1191,84 +1182,20 @@ static int
 eth_pcap_update_mac(const char *if_name, struct rte_eth_dev *eth_dev,
 		const unsigned int numa_node)
 {
-#if defined(RTE_EXEC_ENV_LINUX)
 	void *mac_addrs;
-	struct ifreq ifr;
-	int if_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	struct rte_ether_addr mac;
 
-	if (if_fd == -1)
+	if (osdep_iface_mac_get(if_name, &mac) < 0)
 		return -1;
-
-	rte_strscpy(ifr.ifr_name, if_name, sizeof(ifr.ifr_name));
-	if (ioctl(if_fd, SIOCGIFHWADDR, &ifr)) {
-		close(if_fd);
-		return -1;
-	}
 
 	mac_addrs = rte_zmalloc_socket(NULL, RTE_ETHER_ADDR_LEN, 0, numa_node);
-	if (!mac_addrs) {
-		close(if_fd);
+	if (mac_addrs == NULL)
 		return -1;
-	}
 
 	PMD_LOG(INFO, "Setting phy MAC for %s", if_name);
+	rte_memcpy(mac_addrs, mac.addr_bytes, RTE_ETHER_ADDR_LEN);
 	eth_dev->data->mac_addrs = mac_addrs;
-	rte_memcpy(eth_dev->data->mac_addrs[0].addr_bytes,
-			ifr.ifr_hwaddr.sa_data, RTE_ETHER_ADDR_LEN);
-
-	close(if_fd);
-
 	return 0;
-
-#elif defined(RTE_EXEC_ENV_FREEBSD)
-	void *mac_addrs;
-	struct if_msghdr *ifm;
-	struct sockaddr_dl *sdl;
-	int mib[6];
-	size_t len = 0;
-	char *buf;
-
-	mib[0] = CTL_NET;
-	mib[1] = AF_ROUTE;
-	mib[2] = 0;
-	mib[3] = AF_LINK;
-	mib[4] = NET_RT_IFLIST;
-	mib[5] = if_nametoindex(if_name);
-
-	if (sysctl(mib, 6, NULL, &len, NULL, 0) < 0)
-		return -1;
-
-	if (len == 0)
-		return -1;
-
-	buf = rte_malloc(NULL, len, 0);
-	if (!buf)
-		return -1;
-
-	if (sysctl(mib, 6, buf, &len, NULL, 0) < 0) {
-		rte_free(buf);
-		return -1;
-	}
-	ifm = (struct if_msghdr *)buf;
-	sdl = (struct sockaddr_dl *)(ifm + 1);
-
-	mac_addrs = rte_zmalloc_socket(NULL, RTE_ETHER_ADDR_LEN, 0, numa_node);
-	if (!mac_addrs) {
-		rte_free(buf);
-		return -1;
-	}
-
-	PMD_LOG(INFO, "Setting phy MAC for %s", if_name);
-	eth_dev->data->mac_addrs = mac_addrs;
-	rte_memcpy(eth_dev->data->mac_addrs[0].addr_bytes,
-			LLADDR(sdl), RTE_ETHER_ADDR_LEN);
-
-	rte_free(buf);
-
-	return 0;
-#else
-	return -1;
-#endif
 }
 
 static int
@@ -1330,7 +1257,8 @@ eth_from_pcaps(struct rte_vdev_device *vdev,
 	internals->single_iface = single_iface;
 
 	if (single_iface) {
-		internals->if_index = if_nametoindex(rx_queues->queue[0].name);
+		internals->if_index =
+			osdep_iface_index_get(rx_queues->queue[0].name);
 
 		/* phy_mac arg is applied only only if "iface" devarg is provided */
 		if (rx_queues->phy_mac) {
