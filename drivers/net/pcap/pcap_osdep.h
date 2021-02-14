@@ -8,6 +8,11 @@
 #include <rte_ether.h>
 #include <rte_time.h>
 
+#define PMD_LOG(level, fmt, args...) \
+	rte_log(RTE_LOG_ ## level, eth_pcap_logtype, \
+		"%s(): " fmt "\n", __func__, ##args)
+extern int eth_pcap_logtype;
+
 /*
  * Interface manipulation is always OS-specific.
  */

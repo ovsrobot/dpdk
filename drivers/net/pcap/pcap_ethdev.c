@@ -127,10 +127,6 @@ static struct rte_eth_link pmd_link = {
 
 RTE_LOG_REGISTER(eth_pcap_logtype, pmd.net.pcap, NOTICE);
 
-#define PMD_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, eth_pcap_logtype, \
-		"%s(): " fmt "\n", __func__, ##args)
-
 static int
 eth_pcap_rx_jumbo(struct rte_mempool *mb_pool, struct rte_mbuf *mbuf,
 		const uint8_t *data, uint16_t data_len)
