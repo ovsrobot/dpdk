@@ -178,9 +178,24 @@ if not pcap_dep.found()
 	# pcap got a pkg-config file only in 1.9.0
 	pcap_dep = cc.find_library('pcap', required: false)
 endif
-if pcap_dep.found() and cc.has_header('pcap.h', dependencies: pcap_dep)
-	dpdk_conf.set('RTE_PORT_PCAP', 1)
-	dpdk_extra_ldflags += '-lpcap'
+if is_windows
+	# npcap SDK can be installed anywhere
+	pcap_sdk = get_option('pcap_sdk')
+	if pcap_sdk != ''
+		pcap_ldflags = ['-L@0@/Lib/x64'.format(pcap_sdk), '-lwpcap']
+		pcap_dep = declare_dependency(
+			compile_args: ['-I@0@/Include'.format(pcap_sdk)],
+			link_args: pcap_ldflags)
+	endif
+	if pcap_dep.found()
+		dpdk_conf.set('RTE_PORT_PCAP', 1)
+		dpdk_extra_ldflags += pcap_ldflags
+	endif
+else
+	if pcap_dep.found() and cc.has_header('pcap.h', dependencies: pcap_dep)
+		dpdk_conf.set('RTE_PORT_PCAP', 1)
+		dpdk_extra_ldflags += '-lpcap'
+	endif
 endif
 
 # for clang 32-bit compiles we need libatomic for 64-bit atomic ops
