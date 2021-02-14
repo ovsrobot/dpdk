@@ -3266,6 +3266,20 @@ rte_eth_dev_fw_version_get(uint16_t port_id, char *fw_version, size_t fw_size)
 }
 
 int
+rte_eth_representor_info_get(uint16_t port_id,
+			     struct rte_eth_representor_info *info)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->fw_version_get, -ENOTSUP);
+	return eth_err(port_id, (*dev->dev_ops->representor_info_get)(dev,
+								      info));
+}
+
+int
 rte_eth_dev_info_get(uint16_t port_id, struct rte_eth_dev_info *dev_info)
 {
 	struct rte_eth_dev *dev;

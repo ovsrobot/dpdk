@@ -289,6 +289,10 @@ typedef int (*eth_fw_version_get_t)(struct rte_eth_dev *dev,
 				     char *fw_version, size_t fw_size);
 /**< @internal Get firmware information of an Ethernet device. */
 
+typedef int (*eth_representor_info_get_t)(struct rte_eth_dev *dev,
+	struct rte_eth_representor_info *info);
+/**< @internal Get representor type and ID range. */
+
 typedef int (*eth_tx_done_cleanup_t)(void *txq, uint32_t free_cnt);
 /**< @internal Force mbufs to be from TX ring. */
 
@@ -823,6 +827,8 @@ struct eth_dev_ops {
 	eth_burst_mode_get_t       rx_burst_mode_get; /**< Get RX burst mode */
 	eth_burst_mode_get_t       tx_burst_mode_get; /**< Get TX burst mode */
 	eth_fw_version_get_t       fw_version_get; /**< Get firmware version. */
+	eth_representor_info_get_t representor_info_get;
+	/**< Get representor info. */
 	eth_dev_supported_ptypes_get_t dev_supported_ptypes_get;
 	/**< Get packet types supported and identified by device. */
 	eth_dev_ptypes_set_t dev_ptypes_set;
