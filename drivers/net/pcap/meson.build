@@ -13,6 +13,7 @@ if not dpdk_conf.has('RTE_PORT_PCAP')
 endif
 sources = files(
 	'pcap_ethdev.c',
+	'pcap_osdep.c',
 	'pcap_osdep_@0@.c'.format(exec_env),
 )
 ext_deps += pcap_dep

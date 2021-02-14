@@ -4,17 +4,13 @@
  * All rights reserved.
  */
 
-#include <time.h>
-
-#include <pcap.h>
-
-#include <rte_cycles.h>
 #include <ethdev_driver.h>
 #include <ethdev_vdev.h>
+#include <rte_bus_vdev.h>
+#include <rte_cycles.h>
 #include <rte_kvargs.h>
 #include <rte_malloc.h>
 #include <rte_mbuf.h>
-#include <rte_bus_vdev.h>
 
 #include "pcap_osdep.h"
 
@@ -36,8 +32,8 @@
 
 #define RTE_PMD_PCAP_MAX_QUEUES 16
 
-static char errbuf[PCAP_ERRBUF_SIZE];
-static struct timeval start_time;
+static char errbuf[OSDEP_PCAP_ERRBUF_SIZE];
+static struct rte_time_us start_time;
 static uint64_t start_cycles;
 static uint64_t hz;
 static uint8_t iface_idx;
@@ -83,16 +79,16 @@ struct pmd_internals {
 };
 
 struct pmd_process_private {
-	pcap_t *rx_pcap[RTE_PMD_PCAP_MAX_QUEUES];
-	pcap_t *tx_pcap[RTE_PMD_PCAP_MAX_QUEUES];
-	pcap_dumper_t *tx_dumper[RTE_PMD_PCAP_MAX_QUEUES];
+	osdep_pcap * rx_pcap[RTE_PMD_PCAP_MAX_QUEUES];
+	osdep_pcap * tx_pcap[RTE_PMD_PCAP_MAX_QUEUES];
+	osdep_pcap_dumper * tx_dumper[RTE_PMD_PCAP_MAX_QUEUES];
 };
 
 struct pmd_devargs {
 	unsigned int num_of_queue;
 	struct devargs_queue {
-		pcap_dumper_t *dumper;
-		pcap_t *pcap;
+		osdep_pcap_dumper *dumper;
+		osdep_pcap *pcap;
 		const char *name;
 		const char *type;
 	} queue[RTE_PMD_PCAP_MAX_QUEUES];
@@ -137,7 +133,7 @@ RTE_LOG_REGISTER(eth_pcap_logtype, pmd.net.pcap, NOTICE);
 
 static int
 eth_pcap_rx_jumbo(struct rte_mempool *mb_pool, struct rte_mbuf *mbuf,
-		const u_char *data, uint16_t data_len)
+		const uint8_t *data, uint16_t data_len)
 {
 	/* Copy the first segment. */
 	uint16_t len = rte_pktmbuf_tailroom(mbuf);
@@ -214,14 +210,14 @@ static uint16_t
 eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 {
 	unsigned int i;
-	struct pcap_pkthdr header;
+	struct osdep_pcap_pkthdr header;
 	struct pmd_process_private *pp;
-	const u_char *packet;
+	const uint8_t *packet;
 	struct rte_mbuf *mbuf;
 	struct pcap_rx_queue *pcap_q = queue;
 	uint16_t num_rx = 0;
 	uint32_t rx_bytes = 0;
-	pcap_t *pcap;
+	osdep_pcap *pcap;
 
 	pp = rte_eth_devices[pcap_q->port_id].process_private;
 	pcap = pp->rx_pcap[pcap_q->queue_id];
@@ -234,7 +230,7 @@ eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	 */
 	for (i = 0; i < nb_pkts; i++) {
 		/* Get the next PCAP packet */
-		packet = pcap_next(pcap, &header);
+		packet = osdep_pcap_next(pcap, &header);
 		if (unlikely(packet == NULL))
 			break;
 
@@ -261,8 +257,8 @@ eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		mbuf->pkt_len = (uint16_t)header.caplen;
 		*RTE_MBUF_DYNFIELD(mbuf, timestamp_dynfield_offset,
 			rte_mbuf_timestamp_t *) =
-				(uint64_t)header.ts.tv_sec * 1000000 +
-				header.ts.tv_usec;
+				(uint64_t)header.ts.sec * 1000000 +
+				header.ts.usec;
 		mbuf->ol_flags |= timestamp_rx_dynflag;
 		mbuf->port = pcap_q->port_id;
 		bufs[num_rx] = mbuf;
@@ -285,20 +281,24 @@ eth_null_rx(void *queue __rte_unused,
 
 #define NSEC_PER_SEC	1000000000L
 
+/*
+ * This function stores nanoseconds in "usec" field of struct rte_time_us,
+ * because "ts" goes directly to nanosecond-precision dump.
+ */
 static inline void
-calculate_timestamp(struct timeval *ts) {
+calculate_timestamp(struct rte_time_us *ts) {
 	uint64_t cycles;
-	struct timeval cur_time;
+	struct rte_time_us cur_time;
 
 	cycles = rte_get_timer_cycles() - start_cycles;
-	cur_time.tv_sec = cycles / hz;
-	cur_time.tv_usec = (cycles % hz) * NSEC_PER_SEC / hz;
+	cur_time.sec = cycles / hz;
+	cur_time.usec = (cycles % hz) * NSEC_PER_SEC / hz;
 
-	ts->tv_sec = start_time.tv_sec + cur_time.tv_sec;
-	ts->tv_usec = start_time.tv_usec + cur_time.tv_usec;
-	if (ts->tv_usec >= NSEC_PER_SEC) {
-		ts->tv_usec -= NSEC_PER_SEC;
-		ts->tv_sec += 1;
+	ts->sec = start_time.sec + cur_time.sec;
+	ts->usec = start_time.usec + cur_time.usec;
+	if (ts->usec >= NSEC_PER_SEC) {
+		ts->usec -= NSEC_PER_SEC;
+		ts->sec += 1;
 	}
 }
 
@@ -314,8 +314,8 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	struct pcap_tx_queue *dumper_q = queue;
 	uint16_t num_tx = 0;
 	uint32_t tx_bytes = 0;
-	struct pcap_pkthdr header;
-	pcap_dumper_t *dumper;
+	struct osdep_pcap_pkthdr header;
+	osdep_pcap_dumper *dumper;
 	unsigned char temp_data[RTE_ETH_PCAP_SNAPLEN];
 	size_t len, caplen;
 
@@ -342,7 +342,7 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		 * in the mbuf (when the mbuf is contiguous) or, otherwise,
 		 * a pointer to temp_data after copying into it.
 		 */
-		pcap_dump((u_char *)dumper, &header,
+		osdep_pcap_dump((uint8_t *)dumper, &header,
 			rte_pktmbuf_read(mbuf, 0, caplen, temp_data));
 
 		num_tx++;
@@ -355,7 +355,7 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	 * process stops and to make sure the pcap file is actually written,
 	 * we flush the pcap dumper within each burst.
 	 */
-	pcap_dump_flush(dumper);
+	osdep_pcap_dump_flush(dumper);
 	dumper_q->tx_stat.pkts += num_tx;
 	dumper_q->tx_stat.bytes += tx_bytes;
 	dumper_q->tx_stat.err_pkts += nb_pkts - num_tx;
@@ -400,7 +400,7 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	struct pcap_tx_queue *tx_queue = queue;
 	uint16_t num_tx = 0;
 	uint32_t tx_bytes = 0;
-	pcap_t *pcap;
+	osdep_pcap *pcap;
 	unsigned char temp_data[RTE_ETH_PCAP_SNAPLEN];
 	size_t len;
 
@@ -426,7 +426,7 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		 * in the mbuf (when the mbuf is contiguous) or, otherwise,
 		 * a pointer to temp_data after copying into it.
 		 */
-		ret = pcap_sendpacket(pcap,
+		ret = osdep_pcap_sendpacket(pcap,
 			rte_pktmbuf_read(mbuf, 0, len, temp_data), len);
 		if (unlikely(ret != 0))
 			break;
@@ -443,11 +443,11 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 }
 
 /*
- * pcap_open_live wrapper function
+ * osdep_pcap_open_live wrapper function
  */
 static inline int
-open_iface_live(const char *iface, pcap_t **pcap) {
-	*pcap = pcap_open_live(iface, RTE_ETH_PCAP_SNAPLEN,
+open_iface_live(const char *iface, osdep_pcap **pcap) {
+	*pcap = osdep_pcap_open_live(iface, RTE_ETH_PCAP_SNAPLEN,
 			RTE_ETH_PCAP_PROMISC, RTE_ETH_PCAP_TIMEOUT, errbuf);
 
 	if (*pcap == NULL) {
@@ -459,7 +459,7 @@ open_iface_live(const char *iface, pcap_t **pcap) {
 }
 
 static int
-open_single_iface(const char *iface, pcap_t **pcap)
+open_single_iface(const char *iface, osdep_pcap **pcap)
 {
 	if (open_iface_live(iface, pcap) < 0) {
 		PMD_LOG(ERR, "Couldn't open interface %s", iface);
@@ -470,39 +470,39 @@ open_single_iface(const char *iface, pcap_t **pcap)
 }
 
 static int
-open_single_tx_pcap(const char *pcap_filename, pcap_dumper_t **dumper)
+open_single_tx_pcap(const char *pcap_filename, osdep_pcap_dumper **dumper)
 {
-	pcap_t *tx_pcap;
+	osdep_pcap *tx_pcap;
 
 	/*
-	 * We need to create a dummy empty pcap_t to use it
-	 * with pcap_dump_open(). We create big enough an Ethernet
+	 * We need to create a dummy empty osdep_pcap to use it
+	 * with osdep_pcap_dump_open(). We create big enough an Ethernet
 	 * pcap holder.
 	 */
-	tx_pcap = pcap_open_dead_with_tstamp_precision(DLT_EN10MB,
-			RTE_ETH_PCAP_SNAPSHOT_LEN, PCAP_TSTAMP_PRECISION_NANO);
+	tx_pcap = osdep_pcap_open_dead_with_tstamp_precision(OSDEP_DLT_EN10MB,
+		RTE_ETH_PCAP_SNAPSHOT_LEN, OSDEP_PCAP_TSTAMP_PRECISION_NANO);
 	if (tx_pcap == NULL) {
 		PMD_LOG(ERR, "Couldn't create dead pcap");
 		return -1;
 	}
 
-	/* The dumper is created using the previous pcap_t reference */
-	*dumper = pcap_dump_open(tx_pcap, pcap_filename);
+	/* The dumper is created using the previous osdep_pcap reference */
+	*dumper = osdep_pcap_dump_open(tx_pcap, pcap_filename);
 	if (*dumper == NULL) {
-		pcap_close(tx_pcap);
+		osdep_pcap_close(tx_pcap);
 		PMD_LOG(ERR, "Couldn't open %s for writing.",
 			pcap_filename);
 		return -1;
 	}
 
-	pcap_close(tx_pcap);
+	osdep_pcap_close(tx_pcap);
 	return 0;
 }
 
 static int
-open_single_rx_pcap(const char *pcap_filename, pcap_t **pcap)
+open_single_rx_pcap(const char *pcap_filename, osdep_pcap **pcap)
 {
-	*pcap = pcap_open_offline(pcap_filename, errbuf);
+	*pcap = osdep_pcap_open_offline(pcap_filename, errbuf);
 	if (*pcap == NULL) {
 		PMD_LOG(ERR, "Couldn't open %s: %s", pcap_filename,
 			errbuf);
@@ -513,17 +513,17 @@ open_single_rx_pcap(const char *pcap_filename, pcap_t **pcap)
 }
 
 static uint64_t
-count_packets_in_pcap(pcap_t **pcap, struct pcap_rx_queue *pcap_q)
+count_packets_in_pcap(osdep_pcap **pcap, struct pcap_rx_queue *pcap_q)
 {
-	const u_char *packet;
-	struct pcap_pkthdr header;
+	const uint8_t *packet;
+	struct osdep_pcap_pkthdr header;
 	uint64_t pcap_pkt_count = 0;
 
-	while ((packet = pcap_next(*pcap, &header)))
+	while ((packet = osdep_pcap_next(*pcap, &header)))
 		pcap_pkt_count++;
 
 	/* The pcap is reopened so it can be used as normal later. */
-	pcap_close(*pcap);
+	osdep_pcap_close(*pcap);
 	*pcap = NULL;
 	open_single_rx_pcap(pcap_q->name, pcap);
 
@@ -612,7 +612,7 @@ eth_dev_stop(struct rte_eth_dev *dev)
 
 	/* Special iface case. Single pcap is open and shared between tx/rx. */
 	if (internals->single_iface) {
-		pcap_close(pp->tx_pcap[0]);
+		osdep_pcap_close(pp->tx_pcap[0]);
 		pp->tx_pcap[0] = NULL;
 		pp->rx_pcap[0] = NULL;
 		goto status_down;
@@ -620,19 +620,19 @@ eth_dev_stop(struct rte_eth_dev *dev)
 
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		if (pp->tx_dumper[i] != NULL) {
-			pcap_dump_close(pp->tx_dumper[i]);
+			osdep_pcap_dump_close(pp->tx_dumper[i]);
 			pp->tx_dumper[i] = NULL;
 		}
 
 		if (pp->tx_pcap[i] != NULL) {
-			pcap_close(pp->tx_pcap[i]);
+			osdep_pcap_close(pp->tx_pcap[i]);
 			pp->tx_pcap[i] = NULL;
 		}
 	}
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		if (pp->rx_pcap[i] != NULL) {
-			pcap_close(pp->rx_pcap[i]);
+			osdep_pcap_close(pp->rx_pcap[i]);
 			pp->rx_pcap[i] = NULL;
 		}
 	}
@@ -804,11 +804,11 @@ eth_rx_queue_setup(struct rte_eth_dev *dev,
 
 	if (internals->infinite_rx) {
 		struct pmd_process_private *pp;
-		char ring_name[NAME_MAX];
+		char ring_name[RTE_RING_NAMESIZE];
 		static uint32_t ring_number;
 		uint64_t pcap_pkt_count = 0;
 		struct rte_mbuf *bufs[1];
-		pcap_t **pcap;
+		osdep_pcap **pcap;
 
 		pp = rte_eth_devices[pcap_q->port_id].process_private;
 		pcap = &pp->rx_pcap[pcap_q->queue_id];
@@ -932,7 +932,7 @@ static const struct eth_dev_ops ops = {
 
 static int
 add_queue(struct pmd_devargs *pmd, const char *name, const char *type,
-		pcap_t *pcap, pcap_dumper_t *dumper)
+		osdep_pcap *pcap, osdep_pcap_dumper *dumper)
 {
 	if (pmd->num_of_queue >= RTE_PMD_PCAP_MAX_QUEUES)
 		return -1;
@@ -955,13 +955,13 @@ open_rx_pcap(const char *key, const char *value, void *extra_args)
 {
 	const char *pcap_filename = value;
 	struct pmd_devargs *rx = extra_args;
-	pcap_t *pcap = NULL;
+	osdep_pcap *pcap = NULL;
 
 	if (open_single_rx_pcap(pcap_filename, &pcap) < 0)
 		return -1;
 
 	if (add_queue(rx, pcap_filename, key, pcap, NULL) < 0) {
-		pcap_close(pcap);
+		osdep_pcap_close(pcap);
 		return -1;
 	}
 
@@ -977,13 +977,13 @@ open_tx_pcap(const char *key, const char *value, void *extra_args)
 {
 	const char *pcap_filename = value;
 	struct pmd_devargs *dumpers = extra_args;
-	pcap_dumper_t *dumper;
+	osdep_pcap_dumper *dumper;
 
 	if (open_single_tx_pcap(pcap_filename, &dumper) < 0)
 		return -1;
 
 	if (add_queue(dumpers, pcap_filename, key, NULL, dumper) < 0) {
-		pcap_dump_close(dumper);
+		osdep_pcap_dump_close(dumper);
 		return -1;
 	}
 
@@ -998,7 +998,7 @@ open_rx_tx_iface(const char *key, const char *value, void *extra_args)
 {
 	const char *iface = value;
 	struct pmd_devargs *tx = extra_args;
-	pcap_t *pcap = NULL;
+	osdep_pcap *pcap = NULL;
 
 	if (open_single_iface(iface, &pcap) < 0)
 		return -1;
@@ -1011,13 +1011,14 @@ open_rx_tx_iface(const char *key, const char *value, void *extra_args)
 }
 
 static inline int
-set_iface_direction(const char *iface, pcap_t *pcap,
-		pcap_direction_t direction)
+set_iface_direction(const char *iface, osdep_pcap *pcap,
+		enum osdep_pcap_direction direction)
 {
-	const char *direction_str = (direction == PCAP_D_IN) ? "IN" : "OUT";
-	if (pcap_setdirection(pcap, direction) < 0) {
+	const char *direction_str =
+		(direction == OSDEP_PCAP_D_IN) ? "IN" : "OUT";
+	if (osdep_pcap_setdirection(pcap, direction) < 0) {
 		PMD_LOG(ERR, "Setting %s pcap direction %s failed - %s\n",
-				iface, direction_str, pcap_geterr(pcap));
+				iface, direction_str, osdep_pcap_geterr(pcap));
 		return -1;
 	}
 	PMD_LOG(INFO, "Setting %s pcap direction %s\n",
@@ -1030,12 +1031,12 @@ open_iface(const char *key, const char *value, void *extra_args)
 {
 	const char *iface = value;
 	struct pmd_devargs *pmd = extra_args;
-	pcap_t *pcap = NULL;
+	osdep_pcap *pcap = NULL;
 
 	if (open_single_iface(iface, &pcap) < 0)
 		return -1;
 	if (add_queue(pmd, iface, key, pcap, NULL) < 0) {
-		pcap_close(pcap);
+		osdep_pcap_close(pcap);
 		return -1;
 	}
 
@@ -1057,7 +1058,7 @@ open_rx_iface(const char *key, const char *value, void *extra_args)
 
 		set_iface_direction(pmd->queue[qid].name,
 				pmd->queue[qid].pcap,
-				PCAP_D_IN);
+				OSDEP_PCAP_D_IN);
 	}
 
 	return 0;
@@ -1311,7 +1312,7 @@ pmd_pcap_probe(struct rte_vdev_device *dev)
 	name = rte_vdev_device_name(dev);
 	PMD_LOG(INFO, "Initializing pmd_pcap for %s", name);
 
-	gettimeofday(&start_time, NULL);
+	rte_time_get_us(&start_time);
 	start_cycles = rte_get_timer_cycles();
 	hz = rte_get_timer_hz();
 
