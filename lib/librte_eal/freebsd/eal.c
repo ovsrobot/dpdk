@@ -850,8 +850,9 @@ rte_eal_init(int argc, char **argv)
 
 	eal_check_mem_on_local_socket();
 
-	if (pthread_setaffinity_np(pthread_self(), sizeof(rte_cpuset_t),
-			&lcore_config[config->main_lcore].cpuset) != 0) {
+	if (!internal_conf->no_main_affinity &&
+			pthread_setaffinity_np(pthread_self(), sizeof(rte_cpuset_t),
+				&lcore_config[config->main_lcore].cpuset) != 0) {
 		rte_eal_init_alert("Cannot set affinity");
 		rte_errno = EINVAL;
 		return -1;

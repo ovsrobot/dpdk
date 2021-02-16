@@ -50,6 +50,7 @@ struct internal_config {
 	unsigned hugepage_unlink;         /**< true to unlink backing files */
 	volatile unsigned no_pci;         /**< true to disable PCI */
 	volatile unsigned no_hpet;        /**< true to disable HPET */
+	volatile unsigned no_main_affinity; /**< disable main lcore CPU pinning */
 	volatile unsigned vmware_tsc_map; /**< true to use VMware TSC mapping
 										* instead of native TSC */
 	volatile unsigned no_shconf;      /**< true if there is no shared config */

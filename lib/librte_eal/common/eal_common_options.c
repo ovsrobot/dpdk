@@ -1522,9 +1522,21 @@ eal_parse_common_option(int opt, const char *optarg,
 		if (eal_service_cores_parsed())
 			RTE_LOG(WARNING, EAL,
 				"Service cores parsed before dataplane cores. Please ensure -c is before -s or -S\n");
-		if (eal_parse_coremask(optarg, lcore_indexes) < 0) {
-			RTE_LOG(ERR, EAL, "invalid coremask syntax\n");
-			return -1;
+
+		if (strcmp(optarg, "0") == 0 || strcmp(optarg, "0x0") == 0) {
+			/* if -c 0 passed, don't affinitize anything, so set
+			 * up a single core 0 as active, but mark it not to have
+			 * pthread_setaffinity called on it.
+			 */
+			memset(lcore_indexes, -1, sizeof(lcore_indexes));
+			conf->no_main_affinity = 1;
+			lcore_indexes[0] = 0;
+			RTE_CPU_FILL(&lcore_config[0].cpuset);
+		} else {
+			if (eal_parse_coremask(optarg, lcore_indexes) < 0) {
+				RTE_LOG(ERR, EAL, "invalid coremask syntax\n");
+				return -1;
+			}
 		}
 		if (update_lcore_config(lcore_indexes) < 0) {
 			char *available = available_cores();
