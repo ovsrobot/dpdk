@@ -45,6 +45,11 @@ def handle_socket(path):
         return
     json_reply = read_socket(sock, 1024)
     output_buf_len = json_reply["max_output_len"]
+    pid = json_reply["pid"]
+    if os.path.exists('/proc/' + str(pid) + '/cmdline'):
+        with open('/proc/' + str(pid) + '/cmdline') as f:
+            argv0 = f.read(1024).split('\0')[0]
+            print("Connected to application: '" + os.path.basename(argv0) + "'")
 
     # get list of commands for readline completion
     sock.send("/".encode())
