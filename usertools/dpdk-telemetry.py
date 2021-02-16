@@ -12,6 +12,7 @@ import os
 import glob
 import json
 import readline
+import argparse
 
 # global vars
 TELEMETRY_VERSION = "v2"
@@ -70,14 +71,21 @@ def readline_complete(text, state):
     return matches[state]
 
 
+def get_dpdk_runtime_dir(fp):
+    """ Using the same logic as in DPDK's EAL, get the DPDK runtime directory
+    based on the file-prefix and user """
+    if (os.getuid() == 0):
+        return "/var/run/dpdk/{}".format(fp)
+    return "{}/dpdk/{}".format(os.environ.get('XDG_RUNTIME_DIR', '/tmp'), fp)
+
+
 readline.parse_and_bind('tab: complete')
 readline.set_completer(readline_complete)
 readline.set_completer_delims(readline.get_completer_delims().replace('/', ''))
 
-# Path to sockets for processes run as a root user
-for f in glob.glob('/var/run/dpdk/*/dpdk_telemetry.%s' % TELEMETRY_VERSION):
-    handle_socket(f)
-# Path to sockets for processes run as a regular user
-for f in glob.glob('%s/dpdk/*/dpdk_telemetry.%s' %
-                   (os.environ.get('XDG_RUNTIME_DIR', '/tmp'), TELEMETRY_VERSION)):
-    handle_socket(f)
+parser = argparse.ArgumentParser()
+parser.add_argument("-f", "--file-prefix", \
+        help="Provide file-prefix for DPDK runtime directory", default="rte")
+args = parser.parse_args()
+rdir = get_dpdk_runtime_dir(args.file_prefix)
+handle_socket("{}/dpdk_telemetry.{}".format(rdir, TELEMETRY_VERSION))
