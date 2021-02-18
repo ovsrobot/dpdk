@@ -318,6 +318,7 @@ EXPERIMENTAL {
 	rte_fbarray_find_rev_biggest_free;
 	rte_fbarray_find_rev_biggest_used;
 	rte_intr_callback_unregister_pending;
+	rte_intr_callback_unregister_sync;
 	rte_realloc_socket;
 
 	# added in 19.08
