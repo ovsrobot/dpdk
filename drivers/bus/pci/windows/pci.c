@@ -396,6 +396,7 @@ rte_pci_scan(void)
 	DWORD device_index = 0, found_device = 0;
 	HDEVINFO dev_info;
 	SP_DEVINFO_DATA device_info_data;
+	struct rte_pci_addr addr;
 
 	/* for debug purposes, PCI can be disabled */
 	if (!rte_eal_has_pci())
@@ -420,6 +421,13 @@ rte_pci_scan(void)
 		    &GUID_DEVCLASS_NET) ||
 			IsEqualGUID(&(device_info_data.ClassGuid),
 			    &GUID_DEVCLASS_NETUIO)) {
+
+			if (get_device_pci_address(dev_info, &device_info_data, &addr) != 0)
+				continue;
+
+			if (rte_pci_ignore_device(&addr))
+				continue;
+
 			ret = pci_scan_one(dev_info, &device_info_data);
 			if (ret == ERROR_SUCCESS)
 				found_device++;
