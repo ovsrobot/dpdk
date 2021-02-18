@@ -14,3 +14,22 @@ rte_eal_log_init(__rte_unused const char *id, __rte_unused int facility)
 
 	return 0;
 }
+
+/*
+ * Set the customized logger, it will override the default stream write action,
+ * which is writing to syslog and stdout.
+ */
+void
+rte_log_sink_set(rte_log_write_function *logf)
+{
+	RTE_SET_USED(logf);
+}
+
+/*
+ * Retrieve the default log write function.
+ */
+rte_log_write_function*
+rte_log_sink_get(void)
+{
+	return NULL;
+}
