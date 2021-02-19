@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2010-2016 Intel Corporation
+ * Copyright(c) 2010-2021 Intel Corporation
  */
 
 #include <stdio.h>
@@ -60,9 +60,10 @@ static uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 /**< Ports set in promiscuous mode off by default. */
 static int promiscuous_on;
 
-/* Select Longest-Prefix or Exact match. */
+/* Select Longest-Prefix, Exact match or Forwarding Information Base. */
 static int l3fwd_lpm_on;
 static int l3fwd_em_on;
+static int l3fwd_fib_on;
 
 /* Global variables. */
 
@@ -162,10 +163,19 @@ static struct l3fwd_lkp_mode l3fwd_lpm_lkp = {
 	.get_ipv6_lookup_struct = lpm_get_ipv6_l3fwd_lookup_struct,
 };
 
+static struct l3fwd_lkp_mode l3fwd_fib_lkp = {
+	.setup                  = setup_fib,
+	.check_ptype            = lpm_check_ptype,
+	.cb_parse_ptype         = lpm_cb_parse_ptype,
+	.main_loop              = fib_main_loop,
+	.get_ipv4_lookup_struct = fib_get_ipv4_l3fwd_lookup_struct,
+	.get_ipv6_lookup_struct = fib_get_ipv6_l3fwd_lookup_struct,
+};
+
 /*
  * Setup lookup methods for forwarding.
- * Currently exact-match and longest-prefix-match
- * are supported ones.
+ * Currently exact-match, longest-prefix-match and forwarding information
+ * base are the supported ones.
  */
 static void
 setup_l3fwd_lookup_tables(void)
@@ -173,6 +183,9 @@ setup_l3fwd_lookup_tables(void)
 	/* Setup HASH lookup functions. */
 	if (l3fwd_em_on)
 		l3fwd_lkp = l3fwd_em_lkp;
+	/* Setup FIB lookup functions. */
+	else if (l3fwd_fib_on)
+		l3fwd_lkp = l3fwd_fib_lkp;
 	/* Setup LPM lookup functions. */
 	else
 		l3fwd_lkp = l3fwd_lpm_lkp;
@@ -292,6 +305,7 @@ print_usage(const char *prgname)
 		"  -P : Enable promiscuous mode\n"
 		"  -E : Enable exact match\n"
 		"  -L : Enable longest prefix match (default)\n"
+		"  -F : Enable forwarding information base\n"
 		"  --config (port,queue,lcore): Rx queue configuration\n"
 		"  --eth-dest=X,MM:MM:MM:MM:MM:MM: Ethernet destination for port X\n"
 		"  --enable-jumbo: Enable jumbo frames\n"
@@ -492,6 +506,7 @@ static const char short_options[] =
 	"P"   /* promiscuous */
 	"L"   /* enable long prefix match */
 	"E"   /* enable exact match */
+	"F"   /* forwarding information base */
 	;
 
 #define CMD_LINE_OPT_CONFIG "config"
@@ -596,6 +611,10 @@ parse_args(int argc, char **argv)
 			l3fwd_lpm_on = 1;
 			break;
 
+		case 'F':
+			l3fwd_fib_on = 1;
+			break;
+
 		/* long options */
 		case CMD_LINE_OPT_CONFIG_NUM:
 			ret = parse_config(optarg);
@@ -686,9 +705,9 @@ parse_args(int argc, char **argv)
 		}
 	}
 
-	/* If both LPM and EM are selected, return error. */
-	if (l3fwd_lpm_on && l3fwd_em_on) {
-		fprintf(stderr, "LPM and EM are mutually exclusive, select only one\n");
+	/* If more than 1 of LPM, EM and FIB are selected, return error. */
+	if ((l3fwd_lpm_on + l3fwd_em_on + l3fwd_fib_on) > 1) {
+		fprintf(stderr, "LPM, EM and FIB are mutually exclusive, select only one\n");
 		return -1;
 	}
 
@@ -711,14 +730,14 @@ parse_args(int argc, char **argv)
 	 * Nothing is selected, pick longest-prefix match
 	 * as default match.
 	 */
-	if (!l3fwd_lpm_on && !l3fwd_em_on) {
-		fprintf(stderr, "LPM or EM none selected, default LPM on\n");
+	if (!l3fwd_lpm_on && !l3fwd_em_on && !l3fwd_fib_on) {
+		fprintf(stderr, "Neither LPM, EM, or FIB selected, default LPM on\n");
 		l3fwd_lpm_on = 1;
 	}
 
 	/*
 	 * ipv6 and hash flags are valid only for
-	 * exact macth, reset them to default for
+	 * exact match, reset them to default for
 	 * longest-prefix match.
 	 */
 	if (l3fwd_lpm_on) {
@@ -780,7 +799,7 @@ init_mem(uint16_t portid, unsigned int nb_mbuf)
 				printf("Allocated mbuf pool on socket %d\n",
 					socketid);
 
-			/* Setup either LPM or EM(f.e Hash). But, only once per
+			/* Setup LPM, EM(f.e Hash) or FIB. But, only once per
 			 * available socket.
 			 */
 			if (!lkp_per_socket[socketid]) {
@@ -1221,6 +1240,8 @@ main(int argc, char **argv)
 		l3fwd_event_resource_setup(&port_conf);
 		if (l3fwd_em_on)
 			l3fwd_lkp.main_loop = evt_rsrc->ops.em_event_loop;
+		else if (l3fwd_fib_on)
+			l3fwd_lkp.main_loop = evt_rsrc->ops.fib_event_loop;
 		else
 			l3fwd_lkp.main_loop = evt_rsrc->ops.lpm_event_loop;
 		l3fwd_event_service_setup();
