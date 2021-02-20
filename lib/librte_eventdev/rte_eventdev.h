@@ -212,8 +212,10 @@ extern "C" {
 
 #include <rte_common.h>
 #include <rte_config.h>
-#include <rte_memory.h>
 #include <rte_errno.h>
+#include <rte_mbuf_pool_ops.h>
+#include <rte_memory.h>
+#include <rte_mempool.h>
 
 #include "rte_eventdev_trace_fp.h"
 
@@ -913,6 +915,25 @@ rte_event_dev_stop_flush_callback_register(uint8_t dev_id,
 int
 rte_event_dev_close(uint8_t dev_id);
 
+/**
+ * Event vector structure.
+ */
+struct rte_event_vector {
+	uint64_t nb_elem : 16;
+	/**< Number of elements in this event vector. */
+	uint64_t rsvd : 48;
+	uint64_t impl_opaque;
+	union {
+		struct rte_mbuf *mbufs[0];
+		void *ptrs[0];
+		uint64_t *u64s[0];
+	} __rte_aligned(16);
+	/**< Start of the vector array union. Depending upon the event type the
+	 * vector array can be an array of mbufs or pointers or opaque u64
+	 * values.
+	 */
+};
+
 /* Scheduler type definitions */
 #define RTE_SCHED_TYPE_ORDERED          0
 /**< Ordered scheduling
@@ -986,6 +1007,21 @@ rte_event_dev_close(uint8_t dev_id);
  */
 #define RTE_EVENT_TYPE_ETH_RX_ADAPTER   0x4
 /**< The event generated from event eth Rx adapter */
+#define RTE_EVENT_TYPE_VECTOR           0x8
+/**< Indicates that event is a vector.
+ * All vector event types should be an logical OR of EVENT_TYPE_VECTOR.
+ * This simplifies the pipeline design as we can split processing the events
+ * between vector events and normal event across event types.
+ * Example:
+ *	if (ev.event_type & RTE_EVENT_TYPE_VECTOR) {
+ *		// Classify and handle vector event.
+ *	} else {
+ *		// Classify and handle event.
+ *	}
+ */
+#define RTE_EVENT_TYPE_CPU_VECTOR (RTE_EVENT_TYPE_VECTOR | RTE_EVENT_TYPE_CPU)
+/**< The event vector generated from cpu for pipelining. */
+
 #define RTE_EVENT_TYPE_MAX              0x10
 /**< Maximum number of event types */
 
@@ -1108,6 +1144,8 @@ struct rte_event {
 		/**< Opaque event pointer */
 		struct rte_mbuf *mbuf;
 		/**< mbuf pointer if dequeued event is associated with mbuf */
+		struct rte_event_vector *vec;
+		/**< Event vector pointer. */
 	};
 };
 
@@ -2022,6 +2060,79 @@ rte_event_dev_xstats_reset(uint8_t dev_id,
  *   - other values < 0 on failure.
  */
 int rte_event_dev_selftest(uint8_t dev_id);
+
+/**
+ * Get the memory required per event vector based on number of elements per
+ * vector.
+ * This should be used to create the mempool that holds the event vectors.
+ *
+ * @param name
+ *   The name of the vector pool.
+ * @param n
+ *   The number of elements in the mbuf pool.
+ * @param cache_size
+ *   Size of the per-core object cache. See rte_mempool_create() for
+ *   details.
+ * @param nb_elem
+ *   The number of elements then a single event vector should be able to hold.
+ * @param socket_id
+ *   The socket identifier where the memory should be allocated. The
+ *   value can be *SOCKET_ID_ANY* if there is no NUMA constraint for the
+ *   reserved zone
+ *
+ * @return
+ *   The pointer to the new allocated mempool, on success. NULL on error
+ *   with rte_errno set appropriately. Possible rte_errno values include:
+ *    - E_RTE_NO_CONFIG - function could not get pointer to rte_config structure
+ *    - E_RTE_SECONDARY - function was called from a secondary process instance
+ *    - EINVAL - cache size provided is too large, or priv_size is not aligned.
+ *    - ENOSPC - the maximum number of memzones has already been allocated
+ *    - EEXIST - a memzone with the same name already exists
+ *    - ENOMEM - no appropriate memory area found in which to create memzone
+ */
+__rte_experimental
+static inline struct rte_mempool *
+rte_event_vector_pool_create(const char *name, unsigned int n,
+			     unsigned int cache_size, uint16_t nb_elem,
+			     int socket_id)
+{
+	const char *mp_ops_name;
+	struct rte_mempool *mp;
+	unsigned int elt_sz;
+	int ret;
+
+	if (!nb_elem) {
+		RTE_LOG(ERR, EVENTDEV,
+			"Invalid number of elements=%d requested\n", nb_elem);
+		rte_errno = -EINVAL;
+		return NULL;
+	}
+
+	elt_sz =
+		sizeof(struct rte_event_vector) + (nb_elem * sizeof(uintptr_t));
+	mp = rte_mempool_create_empty(name, n, elt_sz, cache_size, 0, socket_id,
+				      0);
+	if (mp == NULL)
+		return NULL;
+
+	mp_ops_name = rte_mbuf_best_mempool_ops();
+	ret = rte_mempool_set_ops_byname(mp, mp_ops_name, NULL);
+	if (ret != 0) {
+		RTE_LOG(ERR, EVENTDEV, "error setting mempool handler\n");
+		rte_mempool_free(mp);
+		rte_errno = -ret;
+		return NULL;
+	}
+
+	ret = rte_mempool_populate_default(mp);
+	if (ret < 0) {
+		rte_mempool_free(mp);
+		rte_errno = -ret;
+		return NULL;
+	}
+
+	return mp;
+}
 
 #ifdef __cplusplus
 }
