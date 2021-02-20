@@ -5515,7 +5515,7 @@ eth_dev_devargs_tokenise(struct rte_kvargs *arglist, const char *str_in)
 	struct rte_kvargs_pair *pair;
 	char *letter;
 
-	arglist->str = strdup(str_in);
+	arglist->str = rte_strdup(str_in);
 	if (arglist->str == NULL)
 		return -ENOMEM;
 
