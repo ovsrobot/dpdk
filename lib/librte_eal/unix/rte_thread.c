@@ -84,3 +84,9 @@ rte_thread_tls_value_get(rte_tls_key key)
 	}
 	return pthread_getspecific(key->thread_index);
 }
+
+void
+rte_thread_sleep(unsigned int sec)
+{
+	sleep(sec);
+}
