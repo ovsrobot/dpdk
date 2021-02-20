@@ -92,6 +92,10 @@ extern "C" {
 /**< This flag indicates the flow identifier is valid
  * @see rte_event_eth_rx_adapter_queue_conf::rx_queue_flags
  */
+#define RTE_EVENT_ETH_RX_ADAPTER_QUEUE_EVENT_VECTOR	0x2
+/**< This flag indicates that mbufs arriving on the queue need to be vectorized
+ * @see rte_event_eth_rx_adapter_queue_conf::rx_queue_flags
+ */
 
 /**
  * Adapter configuration structure that the adapter configuration callback
@@ -167,6 +171,33 @@ struct rte_event_eth_rx_adapter_queue_conf {
 	 * The event adapter sets ev.event_type to RTE_EVENT_TYPE_ETHDEV in the
 	 * enqueued event.
 	 */
+	uint16_t vector_sz;
+	/**<
+	 * Indicates the maximum number for mbufs to combine and form a vector.
+	 * Should be within
+	 * @see rte_event_eth_rx_adapter_vector_limits::min_vector_sz
+	 * @see rte_event_eth_rx_adapter_vector_limits::max_vector_sz
+	 * Valid when RTE_EVENT_ETH_RX_ADAPTER_QUEUE_EVENT_VECTOR flag is set in
+	 * @see rte_event_eth_rx_adapter_queue_conf::rx_queue_flags
+	 */
+	uint64_t vector_timeout_ns;
+	/**<
+	 * Indicates the maximum number of nanoseconds to wait for receiving
+	 * mbufs. Should be within vectorization limits of the
+	 * adapter
+	 * @see rte_event_eth_rx_adapter_vector_limits::min_vector_ns
+	 * @see rte_event_eth_rx_adapter_vector_limits::max_vector_ns
+	 * Valid when RTE_EVENT_ETH_RX_ADAPTER_QUEUE_EVENT_VECTOR flag is set in
+	 * @see rte_event_eth_rx_adapter_queue_conf::rx_queue_flags
+	 */
+	struct rte_mempool *vector_mp;
+	/**<
+	 * Indicates the mempool that should be used for allocating
+	 * rte_event_vector container.
+	 * Should be created by using `rte_event_vector_pool_create`.
+	 * Valid when RTE_EVENT_ETH_RX_ADAPTER_QUEUE_EVENT_VECTOR flag is set in
+	 * @see rte_event_eth_rx_adapter_queue_conf::rx_queue_flags.
+	 */
 };
 
 /**
@@ -197,6 +228,20 @@ struct rte_event_eth_rx_adapter_stats {
 	 */
 	uint64_t rx_intr_packets;
 	/**< Received packet count for interrupt mode Rx queues */
+};
+
+/**
+ * A structure used to retrieve eth rx adapter vector limits.
+ */
+struct rte_event_eth_rx_adapter_vector_limits {
+	uint16_t min_sz;
+	/**< Minimum vector limit configurable. */
+	uint16_t max_sz;
+	/**< Maximum vector limit configurable. */
+	uint64_t min_timeout_ns;
+	/**< Minimum vector timeout configurable. */
+	uint64_t max_timeout_ns;
+	/**< Maximum vector timeout configurable. */
 };
 
 /**
@@ -466,6 +511,27 @@ int rte_event_eth_rx_adapter_service_id_get(uint8_t id, uint32_t *service_id);
 int rte_event_eth_rx_adapter_cb_register(uint8_t id, uint16_t eth_dev_id,
 					 rte_event_eth_rx_adapter_cb_fn cb_fn,
 					 void *cb_arg);
+
+/**
+ * Retrieve vector limits for a given event dev and eth dev pair.
+ * @see rte_event_eth_rx_adapter_vector_limits
+ *
+ * @param dev_id
+ *  Event device identifier.
+ * @param eth_port_id
+ *  Port identifier of the ethernet device.
+ * @param [out] limits
+ *  A pointer to rte_event_eth_rx_adapter_vector_limits structure that has to
+ * be filled.
+ *
+ * @return
+ *  - 0: Success.
+ *  - <0: Error code on failure.
+ */
+__rte_experimental
+int rte_event_eth_rx_adapter_vector_limits_get(
+	uint8_t dev_id, uint16_t eth_port_id,
+	struct rte_event_eth_rx_adapter_vector_limits *limits);
 
 #ifdef __cplusplus
 }
