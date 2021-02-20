@@ -92,7 +92,7 @@ struct mapped_pci_resource {
 	TAILQ_ENTRY(mapped_pci_resource) next;
 
 	struct rte_pci_addr pci_addr;
-	char path[PATH_MAX];
+	char path[RTE_PATH_MAX];
 	int nb_maps;
 	struct pci_map maps[PCI_MAX_RESOURCE];
 	struct pci_msix_table msix_table;
