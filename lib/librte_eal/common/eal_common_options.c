@@ -228,7 +228,7 @@ eal_save_args(int argc, char **argv)
 		return -1;
 
 	for (i = 0; i < argc; i++) {
-		eal_args[i] = strdup(argv[i]);
+		eal_args[i] = rte_strdup(argv[i]);
 		if (strcmp(argv[i], "--") == 0)
 			break;
 	}
@@ -243,7 +243,7 @@ eal_save_args(int argc, char **argv)
 		return -1;
 
 	for (j = 0; i < argc; j++, i++)
-		eal_app_args[j] = strdup(argv[i]);
+		eal_app_args[j] = rte_strdup(argv[i]);
 	eal_app_args[j] = NULL;
 
 	return 0;
@@ -1273,7 +1273,7 @@ eal_parse_log_level(const char *arg)
 	char *str, *level;
 	int priority;
 
-	str = strdup(arg);
+	str = rte_strdup(arg);
 	if (str == NULL)
 		return -1;
 
@@ -1324,11 +1324,11 @@ fail:
 static enum rte_proc_type_t
 eal_parse_proc_type(const char *arg)
 {
-	if (strncasecmp(arg, "primary", sizeof("primary")) == 0)
+	if (rte_strncasecmp(arg, "primary", sizeof("primary")) == 0)
 		return RTE_PROC_PRIMARY;
-	if (strncasecmp(arg, "secondary", sizeof("secondary")) == 0)
+	if (rte_strncasecmp(arg, "secondary", sizeof("secondary")) == 0)
 		return RTE_PROC_SECONDARY;
-	if (strncasecmp(arg, "auto", sizeof("auto")) == 0)
+	if (rte_strncasecmp(arg, "auto", sizeof("auto")) == 0)
 		return RTE_PROC_AUTO;
 
 	return RTE_PROC_INVALID;

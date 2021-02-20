@@ -116,6 +116,48 @@ rte_strlcat(char *dst, const char *src, size_t size)
 ssize_t
 rte_strscpy(char *dst, const char *src, size_t dsize);
 
+/**
+ * @internal
+ * strncasecmp(3) replacement for systems that don't have it.
+ */
+static inline int
+rte_strncasecmp(const char *s1, const char *s2, size_t size)
+{
+#ifdef RTE_EXEC_ENV_WINDOWS
+	return _strnicmp(s1, s2, size);
+#else
+	return strncasecmp(s1, s2, size);
+#endif
+}
+
+/**
+ * @internal
+ * strtor_r(3) replacement for systems that don't have it.
+ */
+static inline char *
+rte_strtok(char *str, const char *delim, char **saveptr)
+{
+#ifdef RTE_EXEC_ENV_WINDOWS
+	return strtok_s(str, delim, saveptr);
+#else
+	return strtok_r(str, delim, saveptr);
+#endif
+}
+
+/**
+ * @internal
+ * strdup(3) replacement for systems that don't have it.
+ */
+static inline char *
+rte_strdup(const char *str)
+{
+#ifdef RTE_EXEC_ENV_WINDOWS
+	return _strdup(str);
+#else
+	return strdup(str);
+#endif
+}
+
 #ifdef __cplusplus
 }
 #endif
