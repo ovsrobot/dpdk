@@ -15,6 +15,10 @@
 #include <rte_errno.h>
 #include <rte_string_fns.h>
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+#define strerror_r(a, b, c) strerror_s(b, c, a)
+#endif
+
 RTE_DEFINE_PER_LCORE(int, _rte_errno);
 
 const char *

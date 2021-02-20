@@ -84,6 +84,15 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* eal/windows: Removed POSIX symbols from EAL headers. Exposing POSIX symbols
+  has been incorrect and could conflict with consumer POSIX implementations.
+  Wrappers are provided for
+  ``strtok_r(3p)`` (``rte_strtok``),
+  ``strncasecmp(3p)`` (``rte_strncasecmp``),
+  ``sleep(3p)`` (``rte_thread_sleep``),
+  ``PATH_MAX`` (``RTE_PATH_MAX``).
+  Removed are ``strerror_r(3p)`` and ``asprintf(3p)``.
+
 
 ABI Changes
 -----------
