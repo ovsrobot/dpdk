@@ -13,6 +13,8 @@
 
 #include <pthread_np.h>
 
+#define RTE_PATH_MAX PATH_MAX
+
 typedef cpuset_t rte_cpuset_t;
 #define RTE_CPU_AND(dst, src1, src2) do \
 { \

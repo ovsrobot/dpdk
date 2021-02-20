@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <limits.h>
 
-#define MAX_HUGEPAGE_PATH PATH_MAX
+#define MAX_HUGEPAGE_PATH RTE_PATH_MAX
 
 /**
  * Structure used to store information about hugepages that we mapped

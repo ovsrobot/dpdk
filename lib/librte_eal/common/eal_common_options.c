@@ -120,7 +120,7 @@ TAILQ_HEAD(shared_driver_list, shared_driver);
 struct shared_driver {
 	TAILQ_ENTRY(shared_driver) next;
 
-	char    name[PATH_MAX];
+	char    name[RTE_PATH_MAX];
 	void*   lib_handle;
 };
 
@@ -367,7 +367,7 @@ eal_plugin_add(const char *path)
 		return -1;
 	}
 	memset(solib, 0, sizeof(*solib));
-	strlcpy(solib->name, path, PATH_MAX);
+	strlcpy(solib->name, path, RTE_PATH_MAX);
 	TAILQ_INSERT_TAIL(&solib_list, solib, next);
 
 	return 0;
@@ -386,7 +386,7 @@ eal_plugindir_init(const char *path)
 {
 	DIR *d = NULL;
 	struct dirent *dent = NULL;
-	char sopath[PATH_MAX];
+	char sopath[RTE_PATH_MAX];
 
 	if (path == NULL || *path == '\0')
 		return 0;
@@ -430,16 +430,16 @@ verify_perms(const char *dirpath)
 
 	/* if not root, check down one level first */
 	if (strcmp(dirpath, "/") != 0) {
-		static __thread char last_dir_checked[PATH_MAX];
-		char copy[PATH_MAX];
+		static __thread char last_dir_checked[RTE_PATH_MAX];
+		char copy[RTE_PATH_MAX];
 		const char *dir;
 
-		strlcpy(copy, dirpath, PATH_MAX);
+		strlcpy(copy, dirpath, RTE_PATH_MAX);
 		dir = dirname(copy);
-		if (strncmp(dir, last_dir_checked, PATH_MAX) != 0) {
+		if (strncmp(dir, last_dir_checked, RTE_PATH_MAX) != 0) {
 			if (verify_perms(dir) != 0)
 				return -1;
-			strlcpy(last_dir_checked, dir, PATH_MAX);
+			strlcpy(last_dir_checked, dir, RTE_PATH_MAX);
 		}
 	}
 
@@ -477,8 +477,8 @@ eal_dlopen(const char *pathname)
 				pathname, strerror(errno));
 		goto out;
 	}
-	if (strnlen(realp, PATH_MAX) == PATH_MAX) {
-		RTE_LOG(ERR, EAL, "Error, driver path greater than PATH_MAX\n");
+	if (strnlen(realp, RTE_PATH_MAX) == RTE_PATH_MAX) {
+		RTE_LOG(ERR, EAL, "Error, driver path greater than RTE_PATH_MAX\n");
 		goto out;
 	}
 
