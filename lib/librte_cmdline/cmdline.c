@@ -19,6 +19,7 @@
 #include "cmdline_private.h"
 
 #ifdef RTE_EXEC_ENV_WINDOWS
+#define close _close
 #define write _write
 #endif
 
