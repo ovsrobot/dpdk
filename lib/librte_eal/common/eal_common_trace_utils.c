@@ -145,7 +145,7 @@ eal_trace_args_save(const char *val)
 		return -ENOMEM;
 	}
 
-	arg->val = strdup(val);
+	arg->val = rte_strdup(val);
 	if (arg->val == NULL) {
 		trace_err("failed to allocate memory for %s", val);
 		free(arg);

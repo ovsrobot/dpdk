@@ -462,7 +462,7 @@ rte_dev_event_callback_register(const char *device_name,
 			if (!device_name) {
 				event_cb->dev_name = NULL;
 			} else {
-				event_cb->dev_name = strdup(device_name);
+				event_cb->dev_name = rte_strdup(device_name);
 				if (event_cb->dev_name == NULL) {
 					ret = -ENOMEM;
 					goto error;
@@ -630,10 +630,10 @@ dev_str_sane_copy(const char *str)
 
 	end = strcspn(str, ",/");
 	if (str[end] == ',') {
-		copy = strdup(&str[end + 1]);
+		copy = rte_strdup(&str[end + 1]);
 	} else {
 		/* '/' or '\0' */
-		copy = strdup("");
+		copy = rte_strdup("");
 	}
 	if (copy == NULL) {
 		rte_errno = ENOMEM;

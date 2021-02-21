@@ -18,6 +18,7 @@
 #include <rte_errno.h>
 #include <rte_kvargs.h>
 #include <rte_log.h>
+#include <rte_string_fns.h>
 #include <rte_tailq.h>
 #include "eal_private.h"
 
@@ -75,7 +76,7 @@ rte_devargs_layers_parse(struct rte_devargs *devargs,
 	 * anything and keep referring only to it.
 	 */
 	if (devargs->data != devstr) {
-		devargs->data = strdup(devstr);
+		devargs->data = rte_strdup(devstr);
 		if (devargs->data == NULL) {
 			RTE_LOG(ERR, EAL, "OOM\n");
 			ret = -ENOMEM;
@@ -219,9 +220,9 @@ rte_devargs_parse(struct rte_devargs *da, const char *dev)
 	da->bus = bus;
 	/* Parse eventual device arguments */
 	if (devname[i] == ',')
-		da->args = strdup(&devname[i + 1]);
+		da->args = rte_strdup(&devname[i + 1]);
 	else
-		da->args = strdup("");
+		da->args = rte_strdup("");
 	if (da->args == NULL) {
 		RTE_LOG(ERR, EAL, "not enough memory to parse arguments\n");
 		return -ENOMEM;

@@ -398,7 +398,7 @@ char *trace_metadata_fixup_field(const char *field)
 	if (strstr(field, ".") == NULL && strstr(field, "->") == NULL)
 		return NULL;
 
-	out = strdup(field);
+	out = rte_strdup(field);
 	if (out == NULL)
 		return NULL;
 	p = out;
