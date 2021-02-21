@@ -8,6 +8,7 @@
 #include <rte_bus.h>
 #include <rte_kvargs.h>
 #include <rte_errno.h>
+#include <rte_string_fns.h>
 
 #include "vdev_logs.h"
 #include "vdev_private.h"
@@ -31,7 +32,7 @@ vdev_dev_match(const struct rte_device *dev,
 	char *name;
 
 	/* cannot pass const dev->name to rte_kvargs_process() */
-	name = strdup(dev->name);
+	name = rte_strdup(dev->name);
 	if (name == NULL)
 		return -1;
 	ret = rte_kvargs_process(kvlist,

@@ -12036,110 +12036,110 @@ i40e_update_customized_ptype(struct rte_eth_dev *dev, uint8_t *pkg,
 				memset(name, 0, sizeof(name));
 				strcpy(name, proto[n].name);
 				PMD_DRV_LOG(INFO, "name = %s\n", name);
-				if (!strncasecmp(name, "PPPOE", 5))
+				if (!rte_strncasecmp(name, "PPPOE", 5))
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_L2_ETHER_PPPOE;
-				else if (!strncasecmp(name, "IPV4FRAG", 8) &&
+				else if (!rte_strncasecmp(name, "IPV4FRAG", 8) &&
 					 !in_tunnel) {
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_L3_IPV4_EXT_UNKNOWN;
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_L4_FRAG;
-				} else if (!strncasecmp(name, "IPV4FRAG", 8) &&
+				} else if (!rte_strncasecmp(name, "IPV4FRAG", 8) &&
 					   in_tunnel) {
 					ptype_mapping[i].sw_ptype |=
 					    RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN;
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_INNER_L4_FRAG;
-				} else if (!strncasecmp(name, "OIPV4", 5)) {
+				} else if (!rte_strncasecmp(name, "OIPV4", 5)) {
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_L3_IPV4_EXT_UNKNOWN;
 					in_tunnel = true;
-				} else if (!strncasecmp(name, "IPV4", 4) &&
+				} else if (!rte_strncasecmp(name, "IPV4", 4) &&
 					   !in_tunnel)
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_L3_IPV4_EXT_UNKNOWN;
-				else if (!strncasecmp(name, "IPV4", 4) &&
+				else if (!rte_strncasecmp(name, "IPV4", 4) &&
 					 in_tunnel)
 					ptype_mapping[i].sw_ptype |=
 					    RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN;
-				else if (!strncasecmp(name, "IPV6FRAG", 8) &&
+				else if (!rte_strncasecmp(name, "IPV6FRAG", 8) &&
 					 !in_tunnel) {
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_L3_IPV6_EXT_UNKNOWN;
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_L4_FRAG;
-				} else if (!strncasecmp(name, "IPV6FRAG", 8) &&
+				} else if (!rte_strncasecmp(name, "IPV6FRAG", 8) &&
 					   in_tunnel) {
 					ptype_mapping[i].sw_ptype |=
 					    RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN;
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_INNER_L4_FRAG;
-				} else if (!strncasecmp(name, "OIPV6", 5)) {
+				} else if (!rte_strncasecmp(name, "OIPV6", 5)) {
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_L3_IPV6_EXT_UNKNOWN;
 					in_tunnel = true;
-				} else if (!strncasecmp(name, "IPV6", 4) &&
+				} else if (!rte_strncasecmp(name, "IPV6", 4) &&
 					   !in_tunnel)
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_L3_IPV6_EXT_UNKNOWN;
-				else if (!strncasecmp(name, "IPV6", 4) &&
+				else if (!rte_strncasecmp(name, "IPV6", 4) &&
 					 in_tunnel)
 					ptype_mapping[i].sw_ptype |=
 					    RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN;
-				else if (!strncasecmp(name, "UDP", 3) &&
+				else if (!rte_strncasecmp(name, "UDP", 3) &&
 					 !in_tunnel)
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_L4_UDP;
-				else if (!strncasecmp(name, "UDP", 3) &&
+				else if (!rte_strncasecmp(name, "UDP", 3) &&
 					 in_tunnel)
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_INNER_L4_UDP;
-				else if (!strncasecmp(name, "TCP", 3) &&
+				else if (!rte_strncasecmp(name, "TCP", 3) &&
 					 !in_tunnel)
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_L4_TCP;
-				else if (!strncasecmp(name, "TCP", 3) &&
+				else if (!rte_strncasecmp(name, "TCP", 3) &&
 					 in_tunnel)
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_INNER_L4_TCP;
-				else if (!strncasecmp(name, "SCTP", 4) &&
+				else if (!rte_strncasecmp(name, "SCTP", 4) &&
 					 !in_tunnel)
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_L4_SCTP;
-				else if (!strncasecmp(name, "SCTP", 4) &&
+				else if (!rte_strncasecmp(name, "SCTP", 4) &&
 					 in_tunnel)
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_INNER_L4_SCTP;
-				else if ((!strncasecmp(name, "ICMP", 4) ||
-					  !strncasecmp(name, "ICMPV6", 6)) &&
+				else if ((!rte_strncasecmp(name, "ICMP", 4) ||
+					  !rte_strncasecmp(name, "ICMPV6", 6)) &&
 					 !in_tunnel)
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_L4_ICMP;
-				else if ((!strncasecmp(name, "ICMP", 4) ||
-					  !strncasecmp(name, "ICMPV6", 6)) &&
+				else if ((!rte_strncasecmp(name, "ICMP", 4) ||
+					  !rte_strncasecmp(name, "ICMPV6", 6)) &&
 					 in_tunnel)
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_INNER_L4_ICMP;
-				else if (!strncasecmp(name, "GTPC", 4)) {
+				else if (!rte_strncasecmp(name, "GTPC", 4)) {
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_TUNNEL_GTPC;
 					in_tunnel = true;
-				} else if (!strncasecmp(name, "GTPU", 4)) {
+				} else if (!rte_strncasecmp(name, "GTPU", 4)) {
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_TUNNEL_GTPU;
 					in_tunnel = true;
-				} else if (!strncasecmp(name, "ESP", 3)) {
+				} else if (!rte_strncasecmp(name, "ESP", 3)) {
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_TUNNEL_ESP;
 					in_tunnel = true;
-				} else if (!strncasecmp(name, "GRENAT", 6)) {
+				} else if (!rte_strncasecmp(name, "GRENAT", 6)) {
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_TUNNEL_GRENAT;
 					in_tunnel = true;
-				} else if (!strncasecmp(name, "L2TPV2CTL", 9) ||
-					   !strncasecmp(name, "L2TPV2", 6) ||
-					   !strncasecmp(name, "L2TPV3", 6)) {
+				} else if (!rte_strncasecmp(name, "L2TPV2CTL", 9) ||
+					   !rte_strncasecmp(name, "L2TPV2", 6) ||
+					   !rte_strncasecmp(name, "L2TPV3", 6)) {
 					ptype_mapping[i].sw_ptype |=
 						RTE_PTYPE_TUNNEL_L2TP;
 					in_tunnel = true;
