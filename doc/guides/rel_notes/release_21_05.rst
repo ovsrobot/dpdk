@@ -55,6 +55,8 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Enabled vmxnet3 PMD on Windows.**
+
 
 Removed Items
 -------------
