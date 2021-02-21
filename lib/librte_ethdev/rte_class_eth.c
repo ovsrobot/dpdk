@@ -73,7 +73,7 @@ eth_representor_cmp(const char *key __rte_unused,
 		return -1; /* not a representor port */
 
 	/* Parse devargs representor values. */
-	values = strdup(value);
+	values = rte_strdup(value);
 	if (values == NULL)
 		return -1;
 	memset(&representors, 0, sizeof(representors));

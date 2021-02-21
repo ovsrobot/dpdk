@@ -26,20 +26,22 @@ rte_kvargs_tokenize(struct rte_kvargs *kvlist, const char *params)
 	/* Copy the const char *params to a modifiable string
 	 * to pass to rte_strsplit
 	 */
-	kvlist->str = strdup(params);
+	kvlist->str = rte_strdup(params);
 	if (kvlist->str == NULL)
 		return -1;
 
 	/* browse each key/value pair and add it in kvlist */
 	str = kvlist->str;
-	while ((str = strtok_r(str, RTE_KVARGS_PAIRS_DELIM, &ctx1)) != NULL) {
+	while ((str = rte_strtok(str, RTE_KVARGS_PAIRS_DELIM, &ctx1)) != NULL) {
 
 		i = kvlist->count;
 		if (i >= RTE_KVARGS_MAX)
 			return -1;
 
-		kvlist->pairs[i].key = strtok_r(str, RTE_KVARGS_KV_DELIM, &ctx2);
-		kvlist->pairs[i].value = strtok_r(NULL, RTE_KVARGS_KV_DELIM, &ctx2);
+		kvlist->pairs[i].key = rte_strtok(
+			str, RTE_KVARGS_KV_DELIM, &ctx2);
+		kvlist->pairs[i].value = rte_strtok(
+			NULL, RTE_KVARGS_KV_DELIM, &ctx2);
 		if (kvlist->pairs[i].key == NULL ||
 		    kvlist->pairs[i].value == NULL)
 			return -1;
@@ -49,12 +51,13 @@ rte_kvargs_tokenize(struct rte_kvargs *kvlist, const char *params)
 		if (str[0] == '[') {
 			/* Find the end of the list. */
 			while (str[strlen(str) - 1] != ']') {
-				/* Restore the comma erased by strtok_r(). */
+				/* Restore the comma erased by rte_strtok(). */
 				if (ctx1 == NULL || ctx1[0] == '\0')
 					return -1; /* no closing bracket */
 				str[strlen(str)] = ',';
 				/* Parse until next comma. */
-				str = strtok_r(NULL, RTE_KVARGS_PAIRS_DELIM, &ctx1);
+				str = rte_strtok(
+					NULL, RTE_KVARGS_PAIRS_DELIM, &ctx1);
 				if (str == NULL)
 					return -1; /* no closing bracket */
 			}
@@ -199,7 +202,7 @@ rte_kvargs_parse_delim(const char *args, const char * const valid_keys[],
 	if (valid_ends == NULL)
 		return rte_kvargs_parse(args, valid_keys);
 
-	copy = strdup(args);
+	copy = rte_strdup(args);
 	if (copy == NULL)
 		return NULL;
 
