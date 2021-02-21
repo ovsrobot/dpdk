@@ -6,9 +6,9 @@
 #define _RTE_OS_H_
 
 /**
- * This is header should contain any function/macro definition
+ * This header should contain any function/macro definition
  * which are not supported natively or named differently in the
- * freebsd OS. Functions will be added in future releases.
+ * freebsd OS. It must not define symbols without "rte_" prefix.
  */
 
 #include <pthread_np.h>
