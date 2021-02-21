@@ -82,13 +82,13 @@ bus_cmdline_options_handler(__rte_unused const char *key,
 	char *refstr = NULL;
 
 	*ret = 0;
-	nstr = strdup(class_names);
+	nstr = rte_strdup(class_names);
 	if (!nstr) {
 		*ret = -ENOMEM;
 		return *ret;
 	}
 	nstr_org = nstr;
-	found = strtok_r(nstr, ":", &refstr);
+	found = rte_strtok(nstr, ":", &refstr);
 	if (!found)
 		goto err;
 	do {
@@ -102,7 +102,7 @@ bus_cmdline_options_handler(__rte_unused const char *key,
 			goto err;
 		}
 		*ret |= class_val;
-		found = strtok_r(NULL, ":", &refstr);
+		found = rte_strtok(NULL, ":", &refstr);
 	} while (found);
 err:
 	free(nstr_org);

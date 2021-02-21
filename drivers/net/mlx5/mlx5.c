@@ -41,6 +41,10 @@
 #include "mlx5_flow_os.h"
 #include "rte_pmd_mlx5.h"
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+#define close _close
+#endif
+
 /* Device parameter to enable RX completion queue compression. */
 #define MLX5_RXQ_CQE_COMP_EN "rxq_cqe_comp_en"
 

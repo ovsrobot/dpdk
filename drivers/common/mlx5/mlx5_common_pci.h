@@ -45,6 +45,7 @@ extern "C" {
 
 #include <rte_pci.h>
 #include <rte_bus_pci.h>
+#include <rte_string_fns.h>
 
 #include <mlx5_common.h>
 
