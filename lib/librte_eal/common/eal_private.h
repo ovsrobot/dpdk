@@ -756,4 +756,9 @@ int eal_asprintf(char **buffer, const char *format, ...);
 #define eal_asprintf asprintf
 #endif
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+#define close _close
+#define unlink _unlink
+#endif
+
 #endif /* _EAL_PRIVATE_H_ */
