@@ -14,6 +14,7 @@
 #include <rte_eal.h>
 #include <rte_log.h>
 #include <rte_per_lcore.h>
+#include <rte_string_fns.h>
 
 #include "eal_private.h"
 
@@ -194,7 +195,7 @@ static int rte_log_save_level(int priority,
 		if (regcomp(&opt_ll->re_match, regex, 0) != 0)
 			goto fail;
 	} else if (pattern) {
-		opt_ll->pattern = strdup(pattern);
+		opt_ll->pattern = rte_strdup(pattern);
 		if (opt_ll->pattern == NULL)
 			goto fail;
 	} else
@@ -270,7 +271,7 @@ rte_log_lookup(const char *name)
 static int
 __rte_log_register(const char *name, int id)
 {
-	char *dup_name = strdup(name);
+	char *dup_name = rte_strdup(name);
 
 	if (dup_name == NULL)
 		return -ENOMEM;
