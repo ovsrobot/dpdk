@@ -369,11 +369,11 @@ trace_mkdir(void)
 static int
 trace_meta_save(struct trace *trace)
 {
-	char file_name[PATH_MAX];
+	char file_name[RTE_PATH_MAX];
 	FILE *f;
 	int rc;
 
-	rc = snprintf(file_name, PATH_MAX, "%s/metadata", trace->dir);
+	rc = snprintf(file_name, RTE_PATH_MAX, "%s/metadata", trace->dir);
 	if (rc < 0)
 		return rc;
 
@@ -400,11 +400,12 @@ static int
 trace_mem_save(struct trace *trace, struct __rte_trace_header *hdr,
 		uint32_t cnt)
 {
-	char file_name[PATH_MAX];
+	char file_name[RTE_PATH_MAX];
 	FILE *f;
 	int rc;
 
-	rc = snprintf(file_name, PATH_MAX, "%s/channel0_%d", trace->dir, cnt);
+	rc = snprintf(file_name, RTE_PATH_MAX, "%s/channel0_%d",
+		trace->dir, cnt);
 	if (rc < 0)
 		return rc;
 

@@ -20,6 +20,8 @@
 extern "C" {
 #endif
 
+#define RTE_PATH_MAX _MAX_PATH
+
 /* limits.h replacement, value as in <windows.h> */
 #ifndef PATH_MAX
 #define PATH_MAX _MAX_PATH

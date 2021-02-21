@@ -18,7 +18,7 @@ static struct rte_config rte_config = {
 };
 
 /* platform-specific runtime dir */
-static char runtime_dir[PATH_MAX];
+static char runtime_dir[RTE_PATH_MAX];
 
 /* internal configuration */
 static struct internal_config internal_config;
