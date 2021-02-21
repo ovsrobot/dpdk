@@ -13,6 +13,8 @@
 
 #include <sched.h>
 
+#define RTE_PATH_MAX PATH_MAX
+
 typedef cpu_set_t rte_cpuset_t;
 #define RTE_CPU_AND(dst, src1, src2) CPU_AND(dst, src1, src2)
 #define RTE_CPU_OR(dst, src1, src2) CPU_OR(dst, src1, src2)

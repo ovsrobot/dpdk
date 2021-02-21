@@ -36,7 +36,7 @@ eal_get_hugefile_prefix(void);
 static inline const char *
 eal_runtime_config_path(void)
 {
-	static char buffer[PATH_MAX]; /* static so auto-zeroed */
+	static char buffer[RTE_PATH_MAX]; /* static so auto-zeroed */
 
 	snprintf(buffer, sizeof(buffer), "%s/%s", rte_eal_get_runtime_dir(),
 			RUNTIME_CONFIG_FNAME);
@@ -48,7 +48,7 @@ eal_runtime_config_path(void)
 static inline const char *
 eal_mp_socket_path(void)
 {
-	static char buffer[PATH_MAX]; /* static so auto-zeroed */
+	static char buffer[RTE_PATH_MAX]; /* static so auto-zeroed */
 
 	snprintf(buffer, sizeof(buffer), "%s/%s", rte_eal_get_runtime_dir(),
 			MP_SOCKET_FNAME);
@@ -68,7 +68,7 @@ eal_get_fbarray_path(char *buffer, size_t buflen, const char *name) {
 static inline const char *
 eal_hugepage_info_path(void)
 {
-	static char buffer[PATH_MAX]; /* static so auto-zeroed */
+	static char buffer[RTE_PATH_MAX]; /* static so auto-zeroed */
 
 	snprintf(buffer, sizeof(buffer), "%s/%s", rte_eal_get_runtime_dir(),
 			HUGEPAGE_INFO_FNAME);
@@ -80,7 +80,7 @@ eal_hugepage_info_path(void)
 static inline const char *
 eal_hugepage_data_path(void)
 {
-	static char buffer[PATH_MAX]; /* static so auto-zeroed */
+	static char buffer[RTE_PATH_MAX]; /* static so auto-zeroed */
 
 	snprintf(buffer, sizeof(buffer), "%s/%s", rte_eal_get_runtime_dir(),
 			HUGEPAGE_DATA_FNAME);

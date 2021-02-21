@@ -51,7 +51,7 @@ struct trace_arg {
 };
 
 struct trace {
-	char dir[PATH_MAX];
+	char dir[RTE_PATH_MAX];
 	int dir_offset;
 	int register_errno;
 	bool status;
