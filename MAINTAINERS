@@ -1249,9 +1249,12 @@ Rawdev Drivers
 Intel FPGA
 M: Rosen Xu <rosen.xu@intel.com>
 M: Tianfei zhang <tianfei.zhang@intel.com>
+M: Wei Huang <wei.huang@intel.com>
 T: git://dpdk.org/next/dpdk-next-net-intel
 F: drivers/raw/ifpga/
 F: doc/guides/rawdevs/ifpga.rst
+F: examples/ifpga/
+F: doc/guides/sample_app_ug/ifpga.rst
 
 IOAT Rawdev
 M: Bruce Richardson <bruce.richardson@intel.com>
