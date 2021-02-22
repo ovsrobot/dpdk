@@ -535,6 +535,8 @@ uint16_t gso_max_segment_size = RTE_ETHER_MAX_LEN - RTE_ETHER_CRC_LEN;
 /* Holds the registered mbuf dynamic flags names. */
 char dynf_names[64][RTE_MBUF_DYN_NAMESIZE];
 
+uint32_t eth_link_speed;
+
 /*
  * Helper function to check if socket is already discovered.
  * If yes, return positive value. If not, return zero.
@@ -1483,6 +1485,8 @@ init_config(void)
 		for (k = 0; k < port->dev_info.max_tx_queues; k++)
 			port->tx_conf[k].offloads =
 				port->dev_conf.txmode.offloads;
+
+		port->dev_conf.link_speeds = eth_link_speed;
 
 		/* set flag to initialize port/queue */
 		port->need_reconfig = 1;
