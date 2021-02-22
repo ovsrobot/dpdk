@@ -2,7 +2,9 @@
  * Copyright(c) 2020 Intel Corporation
  */
 
+#ifdef RTE_HAVE_JANSSON
 #include <jansson.h>
+#endif
 
 #include <rte_ethdev.h>
 #include <rte_string_fns.h>
@@ -13,6 +15,7 @@
 #include "rte_metrics.h"
 #include "rte_metrics_telemetry.h"
 
+#ifdef RTE_HAVE_JANSSON
 struct telemetry_metrics_data tel_met_data;
 
 int metrics_log_level;
@@ -70,10 +73,12 @@ free_xstats:
 	free(xstats_names);
 	return ret;
 }
+#endif
 
 int32_t
 rte_metrics_tel_reg_all_ethdev(int *metrics_register_done, int *reg_index_list)
 {
+#ifdef JANSSON
 	struct driver_index {
 		const void *dev_ops;
 		int reg_index;
@@ -110,8 +115,15 @@ rte_metrics_tel_reg_all_ethdev(int *metrics_register_done, int *reg_index_list)
 	}
 	*metrics_register_done = 1;
 	return 0;
+#else
+	RTE_SET_USED(metrics_register_done);
+	RTE_SET_USED(reg_index_list);
+
+	return -ENOTSUP;
+#endif
 }
 
+#ifdef RTE_HAVE_JANSSON
 static int32_t
 rte_metrics_tel_update_metrics_ethdev(uint16_t port_id, int reg_start_index)
 {
@@ -224,11 +236,13 @@ fail:
 	free(names);
 	return ret;
 }
+#endif
 
 int32_t
 rte_metrics_tel_encode_json_format(struct telemetry_encode_param *ep,
 		char **json_buffer)
 {
+#ifdef JANSSON
 	json_t *root, *ports;
 	int ret, i;
 
@@ -276,12 +290,19 @@ rte_metrics_tel_encode_json_format(struct telemetry_encode_param *ep,
 	*json_buffer = json_dumps(root, JSON_INDENT(2));
 	json_decref(root);
 	return 0;
+#else
+	RTE_SET_USED(ep);
+	RTE_SET_USED(json_buffer);
+
+	return -ENOTSUP;
+#endif
 }
 
 int32_t
 rte_metrics_tel_get_ports_stats_json(struct telemetry_encode_param *ep,
 		int *reg_index, char **json_buffer)
 {
+#ifdef RTE_HAVE_JANSSON
 	int ret, i;
 	uint32_t port_id;
 
@@ -306,11 +327,19 @@ rte_metrics_tel_get_ports_stats_json(struct telemetry_encode_param *ep,
 		return ret;
 	}
 	return 0;
+#else
+	RTE_SET_USED(ep);
+	RTE_SET_USED(reg_index);
+	RTE_SET_USED(json_buffer);
+
+	return -ENOTSUP;
+#endif
 }
 
 int32_t
 rte_metrics_tel_get_port_stats_ids(struct telemetry_encode_param *ep)
 {
+#ifdef RTE_HAVE_JANSSON
 	int p, num_port_ids = 0;
 
 	RTE_ETH_FOREACH_DEV(p) {
@@ -327,8 +356,14 @@ rte_metrics_tel_get_port_stats_ids(struct telemetry_encode_param *ep)
 	ep->pp.num_metric_ids = 0;
 	ep->type = PORT_STATS;
 	return 0;
+#else
+	RTE_SET_USED(ep);
+
+	return -ENOTSUP;
+#endif
 }
 
+#ifdef RTE_HAVE_JANSSON
 static int32_t
 rte_metrics_tel_stat_names_to_ids(const char * const *stat_names,
 	uint32_t *stat_ids, int num_stat_names)
@@ -373,10 +408,12 @@ rte_metrics_tel_stat_names_to_ids(const char * const *stat_names,
 	free(names);
 	return 0;
 }
+#endif
 
 int32_t
 rte_metrics_tel_extract_data(struct telemetry_encode_param *ep, json_t *data)
 {
+#ifdef RTE_HAVE_JANSSON
 	int ret;
 	json_t *port_ids_json = json_object_get(data, "ports");
 	json_t *stat_names_json = json_object_get(data, "stats");
@@ -420,8 +457,23 @@ rte_metrics_tel_extract_data(struct telemetry_encode_param *ep, json_t *data)
 
 	ep->type = PORT_STATS;
 	return 0;
+#else
+	RTE_SET_USED(ep);
+	RTE_SET_USED(data);
+
+	return -ENOTSUP;
+#endif
 }
 
+int32_t
+rte_metrics_tel_get_global_stats(struct telemetry_encode_param* ep)
+{
+	RTE_SET_USED(ep);
+
+	return -ENOTSUP;
+}
+
+#ifdef RTE_HAVE_JANSSON
 static int
 rte_metrics_tel_initial_metrics_setup(void)
 {
@@ -541,3 +593,4 @@ RTE_INIT(metrics_ctor)
 			handle_ports_stats_values_by_name);
 #endif
 }
+#endif

@@ -292,6 +292,11 @@ if is_freebsd
 	add_project_arguments('-D__BSD_VISIBLE', language: 'c')
 endif
 
+jansson = dependency('jansson', required: false, method: 'pkg-config')
+if jansson.found()
+	dpdk_conf.set('RTE_HAVE_JANSSON', 1)
+endif
+
 if is_windows
 	# VirtualAlloc2() is available since Windows 10 / Server 2016.
 	add_project_arguments('-D_WIN32_WINNT=0x0A00', language: 'c')
