@@ -382,7 +382,7 @@ static int
 dlb_ldb_credit_pool_create(struct dlb_hw_dev *handle)
 {
 	struct dlb_create_ldb_pool_args cfg;
-	struct dlb_cmd_response response;
+	struct dlb_cmd_response response = {0};
 	int ret;
 
 	if (handle == NULL)
@@ -414,7 +414,7 @@ static int
 dlb_dir_credit_pool_create(struct dlb_hw_dev *handle)
 {
 	struct dlb_create_dir_pool_args cfg;
-	struct dlb_cmd_response response;
+	struct dlb_cmd_response response = {0};
 	int ret;
 
 	if (handle == NULL)
@@ -447,7 +447,7 @@ dlb_hw_create_sched_domain(struct dlb_hw_dev *handle,
 {
 	int ret = 0;
 	struct dlb_create_sched_domain_args *config_params;
-	struct dlb_cmd_response response;
+	struct dlb_cmd_response response = {0};
 
 	if (resources_asked == NULL) {
 		DLB_LOG_ERR("dlb: dlb_create NULL parameter\n");
@@ -711,7 +711,7 @@ dlb_hw_unmap_ldb_qid_from_port(struct dlb_hw_dev *handle,
 			       uint16_t qm_qid)
 {
 	struct dlb_unmap_qid_args cfg;
-	struct dlb_cmd_response response;
+	struct dlb_cmd_response response = {0};
 	int32_t ret;
 
 	if (handle == NULL)
@@ -841,7 +841,7 @@ dlb_eventdev_port_unlinks_in_progress(struct rte_eventdev *dev,
 	struct dlb_eventdev *dlb;
 	struct dlb_hw_dev *handle;
 	struct dlb_pending_port_unmaps_args cfg;
-	struct dlb_cmd_response response;
+	struct dlb_cmd_response response = {0};
 	int ret;
 
 	RTE_SET_USED(dev);
@@ -1253,7 +1253,7 @@ dlb_hw_create_ldb_queue(struct dlb_eventdev *dlb,
 {
 	struct dlb_hw_dev *handle = &dlb->qm_instance;
 	struct dlb_create_ldb_queue_args cfg;
-	struct dlb_cmd_response response;
+	struct dlb_cmd_response response = {0};
 	int32_t ret;
 	uint32_t qm_qid;
 	int sched_type = -1;
@@ -1309,7 +1309,7 @@ dlb_get_sn_allocation(struct dlb_eventdev *dlb, int group)
 {
 	struct dlb_hw_dev *handle = &dlb->qm_instance;
 	struct dlb_get_sn_allocation_args cfg;
-	struct dlb_cmd_response response;
+	struct dlb_cmd_response response = {0};
 	int ret;
 
 	cfg.group = group;
@@ -1330,7 +1330,7 @@ dlb_set_sn_allocation(struct dlb_eventdev *dlb, int group, int num)
 {
 	struct dlb_hw_dev *handle = &dlb->qm_instance;
 	struct dlb_set_sn_allocation_args cfg;
-	struct dlb_cmd_response response;
+	struct dlb_cmd_response response = {0};
 	int ret;
 
 	cfg.num = num;
@@ -1352,7 +1352,7 @@ dlb_get_sn_occupancy(struct dlb_eventdev *dlb, int group)
 {
 	struct dlb_hw_dev *handle = &dlb->qm_instance;
 	struct dlb_get_sn_occupancy_args cfg;
-	struct dlb_cmd_response response;
+	struct dlb_cmd_response response = {0};
 	int ret;
 
 	cfg.group = group;
@@ -1893,7 +1893,7 @@ dlb_hw_map_ldb_qid_to_port(struct dlb_hw_dev *handle,
 			   uint8_t priority)
 {
 	struct dlb_map_qid_args cfg;
-	struct dlb_cmd_response response;
+	struct dlb_cmd_response response = {0};
 	int32_t ret;
 
 	if (handle == NULL)
@@ -2121,7 +2121,7 @@ dlb_eventdev_start(struct rte_eventdev *dev)
 	struct dlb_eventdev *dlb = dlb_pmd_priv(dev);
 	struct dlb_hw_dev *handle = &dlb->qm_instance;
 	struct dlb_start_domain_args cfg;
-	struct dlb_cmd_response response;
+	struct dlb_cmd_response response = {0};
 	int ret, i;
 
 	rte_spinlock_lock(&dlb->qm_instance.resource_lock);
