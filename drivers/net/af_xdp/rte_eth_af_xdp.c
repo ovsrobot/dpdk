@@ -66,8 +66,8 @@ RTE_LOG_REGISTER(af_xdp_logtype, pmd.net.af_xdp, NOTICE);
 #define ETH_AF_XDP_DFLT_START_QUEUE_IDX	0
 #define ETH_AF_XDP_DFLT_QUEUE_COUNT	1
 
-#define ETH_AF_XDP_RX_BATCH_SIZE	32
-#define ETH_AF_XDP_TX_BATCH_SIZE	32
+#define ETH_AF_XDP_RX_BATCH_SIZE	512
+#define ETH_AF_XDP_TX_BATCH_SIZE	512
 
 
 struct xsk_umem_info {
@@ -535,8 +535,6 @@ af_xdp_tx_cp(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	uint32_t idx_tx;
 	struct xsk_ring_cons *cq = &txq->pair->cq;
 
-	nb_pkts = RTE_MIN(nb_pkts, ETH_AF_XDP_TX_BATCH_SIZE);
-
 	pull_umem_cq(umem, nb_pkts, cq);
 
 	nb_pkts = rte_ring_dequeue_bulk(umem->buf_ring, addrs,
@@ -580,6 +578,8 @@ af_xdp_tx_cp(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 static uint16_t
 eth_af_xdp_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 {
+	nb_pkts = RTE_MIN(nb_pkts, ETH_AF_XDP_TX_BATCH_SIZE);
+
 #if defined(XDP_UMEM_UNALIGNED_CHUNK_FLAG)
 	return af_xdp_tx_zc(queue, bufs, nb_pkts);
 #else
