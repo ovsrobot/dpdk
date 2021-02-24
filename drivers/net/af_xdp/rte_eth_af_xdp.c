@@ -65,6 +65,8 @@ RTE_LOG_REGISTER(af_xdp_logtype, pmd.net.af_xdp, NOTICE);
 #define ETH_AF_XDP_DFLT_NUM_DESCS	XSK_RING_CONS__DEFAULT_NUM_DESCS
 #define ETH_AF_XDP_DFLT_START_QUEUE_IDX	0
 #define ETH_AF_XDP_DFLT_QUEUE_COUNT	1
+#define ETH_AF_XDP_DFLT_BUSY_BUDGET	64
+#define ETH_AF_XDP_DFLT_BUSY_TIMEOUT	20
 
 #define ETH_AF_XDP_RX_BATCH_SIZE	512
 #define ETH_AF_XDP_TX_BATCH_SIZE	512
@@ -100,6 +102,7 @@ struct pkt_rx_queue {
 	struct pkt_tx_queue *pair;
 	struct pollfd fds[1];
 	int xsk_queue_idx;
+	uint32_t busy_budget;
 };
 
 struct tx_stats {
@@ -140,6 +143,7 @@ struct pmd_internals {
 #define ETH_AF_XDP_QUEUE_COUNT_ARG		"queue_count"
 #define ETH_AF_XDP_SHARED_UMEM_ARG		"shared_umem"
 #define ETH_AF_XDP_PROG_ARG			"xdp_prog"
+#define ETH_AF_XDP_BUDGET_ARG			"busy_budget"
 
 static const char * const valid_arguments[] = {
 	ETH_AF_XDP_IFACE_ARG,
@@ -147,6 +151,7 @@ static const char * const valid_arguments[] = {
 	ETH_AF_XDP_QUEUE_COUNT_ARG,
 	ETH_AF_XDP_SHARED_UMEM_ARG,
 	ETH_AF_XDP_PROG_ARG,
+	ETH_AF_XDP_BUDGET_ARG,
 	NULL
 };
 
@@ -261,11 +266,9 @@ af_xdp_rx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	nb_pkts = xsk_ring_cons__peek(rx, nb_pkts, &idx_rx);
 
 	if (nb_pkts == 0) {
-#if defined(XDP_USE_NEED_WAKEUP)
-		if (xsk_ring_prod__needs_wakeup(fq))
+		if (syscall_needed(&rxq->fq, rxq->busy_budget))
 			recvfrom(xsk_socket__fd(rxq->xsk), NULL, 0,
 				MSG_DONTWAIT, NULL, NULL);
-#endif
 		return 0;
 	}
 
@@ -334,11 +337,9 @@ af_xdp_rx_cp(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 	nb_pkts = xsk_ring_cons__peek(rx, nb_pkts, &idx_rx);
 	if (nb_pkts == 0) {
-#if defined(XDP_USE_NEED_WAKEUP)
-		if (xsk_ring_prod__needs_wakeup(fq))
+		if (syscall_needed(&rxq->fq, rxq->busy_budget))
 			recvfrom(xsk_socket__fd(rxq->xsk), NULL, 0,
 				MSG_DONTWAIT, NULL, NULL);
-#endif
 		return 0;
 	}
 
@@ -422,9 +423,7 @@ kick_tx(struct pkt_tx_queue *txq, struct xsk_ring_cons *cq)
 
 	pull_umem_cq(umem, XSK_RING_CONS__DEFAULT_NUM_DESCS, cq);
 
-#if defined(XDP_USE_NEED_WAKEUP)
-	if (xsk_ring_prod__needs_wakeup(&txq->tx))
-#endif
+	if (syscall_needed(&txq->tx, txq->pair->busy_budget)) {
 		while (send(xsk_socket__fd(txq->pair->xsk), NULL,
 			    0, MSG_DONTWAIT) < 0) {
 			/* some thing unexpected */
@@ -437,6 +436,7 @@ kick_tx(struct pkt_tx_queue *txq, struct xsk_ring_cons *cq)
 					     XSK_RING_CONS__DEFAULT_NUM_DESCS,
 					     cq);
 		}
+	}
 }
 
 #if defined(XDP_UMEM_UNALIGNED_CHUNK_FLAG)
@@ -1145,6 +1145,39 @@ xsk_configure(struct pmd_internals *internals, struct pkt_rx_queue *rxq,
 		goto err;
 	}
 
+#ifdef SO_PREFER_BUSY_POLL
+	if (rxq->busy_budget) {
+		int sock_opt = 1;
+		int fd = xsk_socket__fd(rxq->xsk);
+
+		ret = setsockopt(fd, SOL_SOCKET, SO_PREFER_BUSY_POLL,
+				(void *)&sock_opt, sizeof(sock_opt));
+		if (ret < 0) {
+			AF_XDP_LOG(ERR, "Failed to set SO_PREFER_BUSY_POLL\n");
+			goto err;
+		}
+
+		sock_opt = ETH_AF_XDP_DFLT_BUSY_TIMEOUT;
+		ret = setsockopt(fd, SOL_SOCKET, SO_BUSY_POLL, (void *)&sock_opt,
+				sizeof(sock_opt));
+		if (ret < 0) {
+			AF_XDP_LOG(ERR, "Failed to set SO_BUSY_POLL\n");
+			goto err;
+		}
+
+		sock_opt = rxq->busy_budget;
+		ret = setsockopt(fd, SOL_SOCKET, SO_BUSY_POLL_BUDGET,
+				(void *)&sock_opt, sizeof(sock_opt));
+		if (ret < 0) {
+			AF_XDP_LOG(ERR, "Failed to set SO_BUSY_POLL_BUDGET\n");
+			goto err;
+		} else {
+			AF_XDP_LOG(INFO, "Busy polling budget set to: %u\n",
+						rxq->busy_budget);
+		}
+	}
+#endif
+
 #if defined(XDP_UMEM_UNALIGNED_CHUNK_FLAG)
 	if (rte_pktmbuf_alloc_bulk(rxq->umem->mb_pool, fq_bufs, reserve_size)) {
 		AF_XDP_LOG(DEBUG, "Failed to get enough buffers for fq.\n");
@@ -1416,7 +1449,8 @@ xdp_get_channels_info(const char *if_name, int *max_queues,
 
 static int
 parse_parameters(struct rte_kvargs *kvlist, char *if_name, int *start_queue,
-			int *queue_cnt, int *shared_umem, char *prog_path)
+			int *queue_cnt, int *shared_umem, char *prog_path,
+			int *busy_budget)
 {
 	int ret;
 
@@ -1444,6 +1478,11 @@ parse_parameters(struct rte_kvargs *kvlist, char *if_name, int *start_queue,
 
 	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_PROG_ARG,
 				 &parse_prog_arg, prog_path);
+	if (ret < 0)
+		goto free_kvlist;
+
+	ret = rte_kvargs_process(kvlist, ETH_AF_XDP_BUDGET_ARG,
+				&parse_integer_arg, busy_budget);
 	if (ret < 0)
 		goto free_kvlist;
 
@@ -1485,7 +1524,7 @@ error:
 static struct rte_eth_dev *
 init_internals(struct rte_vdev_device *dev, const char *if_name,
 		int start_queue_idx, int queue_cnt, int shared_umem,
-		const char *prog_path)
+		const char *prog_path, int busy_budget)
 {
 	const char *name = rte_vdev_device_name(dev);
 	const unsigned int numa_node = dev->device.numa_node;
@@ -1546,6 +1585,7 @@ init_internals(struct rte_vdev_device *dev, const char *if_name,
 		internals->rx_queues[i].pair = &internals->tx_queues[i];
 		internals->rx_queues[i].xsk_queue_idx = start_queue_idx + i;
 		internals->tx_queues[i].xsk_queue_idx = start_queue_idx + i;
+		internals->rx_queues[i].busy_budget = busy_budget;
 	}
 
 	ret = get_iface_info(if_name, &internals->eth_addr,
@@ -1589,6 +1629,7 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 	int xsk_queue_cnt = ETH_AF_XDP_DFLT_QUEUE_COUNT;
 	int shared_umem = 0;
 	char prog_path[PATH_MAX] = {'\0'};
+	int busy_budget = -1;
 	struct rte_eth_dev *eth_dev = NULL;
 	const char *name;
 
@@ -1618,7 +1659,8 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 		dev->device.numa_node = rte_socket_id();
 
 	if (parse_parameters(kvlist, if_name, &xsk_start_queue_idx,
-			     &xsk_queue_cnt, &shared_umem, prog_path) < 0) {
+			     &xsk_queue_cnt, &shared_umem, prog_path,
+			     &busy_budget) < 0) {
 		AF_XDP_LOG(ERR, "Invalid kvargs value\n");
 		return -EINVAL;
 	}
@@ -1628,8 +1670,22 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 		return -EINVAL;
 	}
 
+#ifdef SO_PREFER_BUSY_POLL
+	busy_budget = busy_budget == -1 ? ETH_AF_XDP_DFLT_BUSY_BUDGET :
+					busy_budget;
+	if (!busy_budget)
+		AF_XDP_LOG(ERR, "Preferred busy polling disabled\n");
+#else
+	if (busy_budget > 0) {
+		AF_XDP_LOG(ERR, "Kernel does not support SO_PREFER_BUSY_POLL\n");
+		return -ENOTSUP;
+	}
+	busy_budget = 0;
+#endif
+
 	eth_dev = init_internals(dev, if_name, xsk_start_queue_idx,
-					xsk_queue_cnt, shared_umem, prog_path);
+					xsk_queue_cnt, shared_umem, prog_path,
+					busy_budget);
 	if (eth_dev == NULL) {
 		AF_XDP_LOG(ERR, "Failed to init internals\n");
 		return -1;
@@ -1674,4 +1730,5 @@ RTE_PMD_REGISTER_PARAM_STRING(net_af_xdp,
 			      "start_queue=<int> "
 			      "queue_count=<int> "
 			      "shared_umem=<int> "
-			      "xdp_prog=<string> ");
+			      "xdp_prog=<string> "
+			      "busy_budget=<int>");
