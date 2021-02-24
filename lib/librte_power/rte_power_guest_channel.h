@@ -119,8 +119,6 @@ struct rte_power_channel_packet_caps_list {
 };
 
 /**
- * @internal
- *
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice.
  *
@@ -141,8 +139,6 @@ int rte_power_guest_channel_send_msg(struct rte_power_channel_packet *pkt,
 			unsigned int lcore_id);
 
 /**
- * @internal
- *
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice.
  *
