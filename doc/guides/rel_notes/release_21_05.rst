@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Wangxun txgbe driver.**
+
+  * Add support for txgbevf PMD.
 
 Removed Items
 -------------
