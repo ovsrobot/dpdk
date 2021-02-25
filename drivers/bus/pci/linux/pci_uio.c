@@ -489,6 +489,16 @@ error:
 }
 #endif
 
+#ifdef RTE_ARCH_X86
+#define pci_uio_inl(reg) inl(reg)
+#define pci_uio_inw(reg) inw(reg)
+#define pci_uio_inb(reg) inb(reg)
+#else /* !RTE_ARCH_X86 */
+#define pci_uio_inl(reg) (*(volatile uint32_t *)(reg))
+#define pci_uio_inw(reg) (*(volatile uint16_t *)(reg))
+#define pci_uio_inb(reg) (*(volatile uint8_t *)(reg))
+#endif
+
 void
 pci_uio_ioport_read(struct rte_pci_ioport *p,
 		    void *data, size_t len, off_t offset)
@@ -500,28 +510,61 @@ pci_uio_ioport_read(struct rte_pci_ioport *p,
 	for (d = data; len > 0; d += size, reg += size, len -= size) {
 		if (len >= 4) {
 			size = 4;
-#if defined(RTE_ARCH_X86)
-			*(uint32_t *)d = inl(reg);
-#else
-			*(uint32_t *)d = *(volatile uint32_t *)reg;
-#endif
+			*(uint32_t *)d = pci_uio_inl(reg);
 		} else if (len >= 2) {
 			size = 2;
-#if defined(RTE_ARCH_X86)
-			*(uint16_t *)d = inw(reg);
-#else
-			*(uint16_t *)d = *(volatile uint16_t *)reg;
-#endif
+			*(uint16_t *)d = pci_uio_inw(reg);
 		} else {
 			size = 1;
-#if defined(RTE_ARCH_X86)
-			*d = inb(reg);
-#else
-			*d = *(volatile uint8_t *)reg;
-#endif
+			*d = pci_uio_inb(reg);
 		}
 	}
 }
+
+#ifdef RTE_ARCH_X86
+static inline void
+pci_uio_outl_p(unsigned int value, unsigned short int port)
+{
+#ifdef __GLIBC__
+	outl_p(value, port);
+#else
+	__asm__ __volatile__ ("outl %0,%w1\noutb %%al,$0x80" : : "a" (value),
+			      "Nd" (port));
+#endif
+}
+#else /* !RTE_ARCH_X86 */
+#define pci_uio_outl_p(value, reg) (*(volatile uint32_t *)(reg) = (value))
+#endif
+
+#ifdef RTE_ARCH_X86
+static inline void
+pci_uio_outw_p(unsigned short int value, unsigned short int port)
+{
+#ifdef __GLIBC__
+	outw_p(value, port);
+#else
+	__asm__ __volatile__ ("outw %w0,%w1\noutb %%al,$0x80" : : "a" (value),
+			      "Nd" (port));
+#endif
+}
+#else /* !RTE_ARCH_X86 */
+#define pci_uio_outw_p(value, reg) (*(volatile uint16_t *)(reg) = (value))
+#endif
+
+#ifdef RTE_ARCH_X86
+static inline void
+pci_uio_outb_p(unsigned char value, unsigned short int port)
+{
+#ifdef __GLIBC__
+	outb_p(value, port);
+#else
+	__asm__ __volatile__ ("outb %b0,%w1\noutb %%al,$0x80" : : "a" (value),
+			      "Nd" (port));
+#endif
+}
+#else /* !RTE_ARCH_X86 */
+#define pci_uio_outb_p(value, reg) (*(volatile uint8_t *)(reg) = (value))
+#endif
 
 void
 pci_uio_ioport_write(struct rte_pci_ioport *p,
@@ -534,25 +577,13 @@ pci_uio_ioport_write(struct rte_pci_ioport *p,
 	for (s = data; len > 0; s += size, reg += size, len -= size) {
 		if (len >= 4) {
 			size = 4;
-#if defined(RTE_ARCH_X86)
-			outl_p(*(const uint32_t *)s, reg);
-#else
-			*(volatile uint32_t *)reg = *(const uint32_t *)s;
-#endif
+			pci_uio_outl_p(*(const uint32_t *)s, reg);
 		} else if (len >= 2) {
 			size = 2;
-#if defined(RTE_ARCH_X86)
-			outw_p(*(const uint16_t *)s, reg);
-#else
-			*(volatile uint16_t *)reg = *(const uint16_t *)s;
-#endif
+			pci_uio_outw_p(*(const uint16_t *)s, reg);
 		} else {
 			size = 1;
-#if defined(RTE_ARCH_X86)
-			outb_p(*s, reg);
-#else
-			*(volatile uint8_t *)reg = *s;
-#endif
+			pci_uio_outb_p(*s, reg);
 		}
 	}
 }
