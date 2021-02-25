@@ -190,7 +190,6 @@ fast_tests = [
         ['common_autotest', true],
         ['cpuflags_autotest', true],
         ['cycles_autotest', true],
-        ['debug_autotest', true],
         ['eal_flags_c_opt_autotest', false],
         ['eal_flags_main_opt_autotest', false],
         ['eal_flags_n_opt_autotest', false],
@@ -305,6 +304,7 @@ perf_test_names = [
         'hash_readwrite_lf_perf_autotest',
         'trace_perf_autotest',
 	'ipsec_perf_autotest',
+        'debug_autotest',
 ]
 
 driver_test_names = [
