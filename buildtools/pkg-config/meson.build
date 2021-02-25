@@ -3,6 +3,7 @@
 
 pkg = import('pkgconfig')
 pkg_extra_cflags = ['-include', 'rte_config.h'] + machine_args
+pkg_extra_cflags += '-D_GNU_SOURCE'
 if is_freebsd
 	pkg_extra_cflags += ['-D__BSD_VISIBLE']
 endif

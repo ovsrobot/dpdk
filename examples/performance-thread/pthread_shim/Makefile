@@ -18,7 +18,6 @@ endif
 endif
 
 CFLAGS += -DALLOW_EXPERIMENTAL_API
-CFLAGS += -D_GNU_SOURCE
 LDFLAGS += "-Wl,--copy-dt-needed-entries"
 
 # Build using pkg-config variables if possible

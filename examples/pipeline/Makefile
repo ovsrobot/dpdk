@@ -38,7 +38,7 @@ $(error "Cannot generate statically-linked binaries with this version of pkg-con
 endif
 endif
 
-CFLAGS += -I. -DALLOW_EXPERIMENTAL_API -D_GNU_SOURCE
+CFLAGS += -I. -DALLOW_EXPERIMENTAL_API
 
 OBJS := $(patsubst %.c,build/%.o,$(SRCS-y))
 
