@@ -12,6 +12,7 @@
 
 #include <sched.h>
 
+#ifdef _GNU_SOURCE
 typedef cpu_set_t rte_cpuset_t;
 #define RTE_CPU_AND(dst, src1, src2) CPU_AND(dst, src1, src2)
 #define RTE_CPU_OR(dst, src1, src2) CPU_OR(dst, src1, src2)
@@ -28,5 +29,6 @@ typedef cpu_set_t rte_cpuset_t;
 	RTE_CPU_FILL(&tmp); \
 	CPU_XOR(dst, &tmp, src); \
 } while (0)
+#endif
 
 #endif /* _RTE_OS_H_ */
