@@ -176,6 +176,38 @@ tim_priv_get(void)
 	return mz->addr;
 }
 
+#ifdef RTE_ARCH_ARM64
+static inline uint64_t
+tim_cntvct(void)
+{
+	uint64_t tsc;
+
+	asm volatile("mrs %0, cntvct_el0" : "=r"(tsc));
+	return tsc;
+}
+
+static inline uint64_t
+tim_cntfrq(void)
+{
+	uint64_t freq;
+
+	asm volatile("mrs %0, cntfrq_el0" : "=r"(freq));
+	return freq;
+}
+#else
+static inline uint64_t
+tim_cntvct(void)
+{
+	return 0;
+}
+
+static inline uint64_t
+tim_cntfrq(void)
+{
+	return 0;
+}
+#endif
+
 #define TIM_ARM_FASTPATH_MODES                                                 \
 	FP(sp, 0, 0, 0, OTX2_TIM_ENA_DFB | OTX2_TIM_SP)                        \
 	FP(mp, 0, 0, 1, OTX2_TIM_ENA_DFB | OTX2_TIM_MP)                        \
