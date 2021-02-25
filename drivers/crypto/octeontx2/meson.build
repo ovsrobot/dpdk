@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (C) 2019 Marvell International Ltd.
 
-if not is_linux or not dpdk_conf.get('RTE_ARCH_64')
+if not dpdk_conf.get('RTE_ARCH_64')
 	build = false
-	reason = 'only supported on 64-bit Linux'
+	reason = 'only supported on 64-bit arch'
 	subdir_done()
 endif
 
