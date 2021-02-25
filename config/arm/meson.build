@@ -126,6 +126,7 @@ implementer_cavium = {
 				['RTE_ARM_FEATURE_ATOMICS', true],
 				['RTE_USE_C11_MEM_MODEL', true],
 				['RTE_EAL_IGB_UIO', false],
+				['RTE_MAX_RXTX_INTR_VEC_ID', 1024],
 				['RTE_MAX_LCORE', 36],
 				['RTE_MAX_NUMA_NODES', 1]
 			]
