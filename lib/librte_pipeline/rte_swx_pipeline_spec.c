@@ -941,6 +941,68 @@ table_block_parse(struct table_spec *s,
 }
 
 /*
+ * regarray.
+ *
+ * regarray NAME size SIZE
+ */
+struct regarray_spec {
+	char *name;
+	uint32_t size;
+};
+
+static void
+regarray_spec_free(struct regarray_spec *s)
+{
+	if (!s)
+		return;
+
+	free(s->name);
+	s->name = NULL;
+}
+
+static int
+regarray_statement_parse(struct regarray_spec *s,
+			 char **tokens,
+			 uint32_t n_tokens,
+			 uint32_t n_lines,
+			 uint32_t *err_line,
+			 const char **err_msg)
+{
+	char *p;
+
+	/* Check format. */
+	if ((n_tokens != 4) || strcmp(tokens[2], "size")) {
+		if (err_line)
+			*err_line = n_lines;
+		if (err_msg)
+			*err_msg = "Invalid regarray statement.";
+		return -EINVAL;
+	}
+
+	/* spec. */
+	s->name = strdup(tokens[1]);
+	if (!s->name) {
+		if (err_line)
+			*err_line = n_lines;
+		if (err_msg)
+			*err_msg = "Memory allocation failed.";
+		return -ENOMEM;
+	}
+
+	p = tokens[3];
+	s->size = strtoul(p, &p, 0);
+	if (p[0] || !s->size) {
+		if (err_line)
+			*err_line = n_lines;
+		if (err_msg)
+			*err_msg = "Invalid size argument.";
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+/*
  * apply.
  *
  * apply {
@@ -1066,6 +1128,7 @@ rte_swx_pipeline_build_from_spec(struct rte_swx_pipeline *p,
 	struct metadata_spec metadata_spec = {0};
 	struct action_spec action_spec = {0};
 	struct table_spec table_spec = {0};
+	struct regarray_spec regarray_spec = {0};
 	struct apply_spec apply_spec = {0};
 	uint32_t n_lines;
 	uint32_t block_mask = 0;
@@ -1405,6 +1468,33 @@ rte_swx_pipeline_build_from_spec(struct rte_swx_pipeline *p,
 			continue;
 		}
 
+		/* regarray. */
+		if (!strcmp(tokens[0], "regarray")) {
+			status = regarray_statement_parse(&regarray_spec,
+							  tokens,
+							  n_tokens,
+							  n_lines,
+							  err_line,
+							  err_msg);
+			if (status)
+				goto error;
+
+			status = rte_swx_pipeline_regarray_config(p,
+				regarray_spec.name,
+				regarray_spec.size);
+			if (status) {
+				if (err_line)
+					*err_line = n_lines;
+				if (err_msg)
+					*err_msg = "Register array configuration error.";
+				goto error;
+			}
+
+			regarray_spec_free(&regarray_spec);
+
+			continue;
+		}
+
 		/* apply. */
 		if (!strcmp(tokens[0], "apply")) {
 			status = apply_statement_parse(&block_mask,
@@ -1457,6 +1547,7 @@ error:
 	metadata_spec_free(&metadata_spec);
 	action_spec_free(&action_spec);
 	table_spec_free(&table_spec);
+	regarray_spec_free(&regarray_spec);
 	apply_spec_free(&apply_spec);
 	return status;
 }
