@@ -1597,6 +1597,7 @@ pmd_pcap_remove(struct rte_vdev_device *dev)
 	if (eth_dev == NULL)
 		return 0; /* port already released */
 
+	eth_dev_stop(eth_dev);
 	eth_dev_close(eth_dev);
 	rte_eth_dev_release_port(eth_dev);
 
