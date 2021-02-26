@@ -361,6 +361,53 @@ enum instruction_type {
 	INSTR_ALU_SHR_MI, /* dst = MEF, src = I */
 	INSTR_ALU_SHR_HI, /* dst = H, src = I */
 
+	/* regprefetch REGARRAY index
+	 * prefetch REGARRAY[index]
+	 * index = HMEFTI
+	 */
+	INSTR_REGPREFETCH_RH, /* index = H */
+	INSTR_REGPREFETCH_RM, /* index = MEFT */
+	INSTR_REGPREFETCH_RI, /* index = I */
+
+	/* regrd dst REGARRAY index
+	 * dst = REGARRAY[index]
+	 * dst = HMEF, index = HMEFTI
+	 */
+	INSTR_REGRD_HRH, /* dst = H, index = H */
+	INSTR_REGRD_HRM, /* dst = H, index = MEFT */
+	INSTR_REGRD_HRI, /* dst = H, index = I */
+	INSTR_REGRD_MRH, /* dst = MEF, index = H */
+	INSTR_REGRD_MRM, /* dst = MEF, index = MEFT */
+	INSTR_REGRD_MRI, /* dst = MEF, index = I */
+
+	/* regwr REGARRAY index src
+	 * REGARRAY[index] = src
+	 * index = HMEFTI, src = HMEFTI
+	 */
+	INSTR_REGWR_RHH, /* index = H, src = H */
+	INSTR_REGWR_RHM, /* index = H, src = MEFT */
+	INSTR_REGWR_RHI, /* index = H, src = I */
+	INSTR_REGWR_RMH, /* index = MEFT, src = H */
+	INSTR_REGWR_RMM, /* index = MEFT, src = MEFT */
+	INSTR_REGWR_RMI, /* index = MEFT, src = I */
+	INSTR_REGWR_RIH, /* index = I, src = H */
+	INSTR_REGWR_RIM, /* index = I, src = MEFT */
+	INSTR_REGWR_RII, /* index = I, src = I */
+
+	/* regadd REGARRAY index src
+	 * REGARRAY[index] += src
+	 * index = HMEFTI, src = HMEFTI
+	 */
+	INSTR_REGADD_RHH, /* index = H, src = H */
+	INSTR_REGADD_RHM, /* index = H, src = MEFT */
+	INSTR_REGADD_RHI, /* index = H, src = I */
+	INSTR_REGADD_RMH, /* index = MEFT, src = H */
+	INSTR_REGADD_RMM, /* index = MEFT, src = MEFT */
+	INSTR_REGADD_RMI, /* index = MEFT, src = I */
+	INSTR_REGADD_RIH, /* index = I, src = H */
+	INSTR_REGADD_RIM, /* index = I, src = MEFT */
+	INSTR_REGADD_RII, /* index = I, src = I */
+
 	/* table TABLE */
 	INSTR_TABLE,
 
@@ -495,6 +542,21 @@ struct instr_dst_src {
 	};
 };
 
+struct instr_regarray {
+	uint8_t regarray_id;
+	uint8_t pad[3];
+
+	union {
+		struct instr_operand idx;
+		uint32_t idx_val;
+	};
+
+	union {
+		struct instr_operand dstsrc;
+		uint64_t dstsrc_val;
+	};
+};
+
 struct instr_dma {
 	struct {
 		uint8_t header_id[8];
@@ -529,6 +591,7 @@ struct instruction {
 		struct instr_io io;
 		struct instr_hdr_validity valid;
 		struct instr_dst_src mov;
+		struct instr_regarray regarray;
 		struct instr_dma dma;
 		struct instr_dst_src alu;
 		struct instr_table table;
@@ -606,6 +669,23 @@ struct table_runtime {
 	rte_swx_table_lookup_t func;
 	void *mailbox;
 	uint8_t **key;
+};
+
+/*
+ * Register array.
+ */
+struct regarray {
+	TAILQ_ENTRY(regarray) node;
+	char name[RTE_SWX_NAME_SIZE];
+	uint32_t size;
+	uint32_t id;
+};
+
+TAILQ_HEAD(regarray_tailq, regarray);
+
+struct regarray_runtime {
+	uint64_t *regarray;
+	uint32_t size_mask;
 };
 
 /*
@@ -983,11 +1063,13 @@ struct rte_swx_pipeline {
 	struct action_tailq actions;
 	struct table_type_tailq table_types;
 	struct table_tailq tables;
+	struct regarray_tailq regarrays;
 
 	struct port_in_runtime *in;
 	struct port_out_runtime *out;
 	struct instruction **action_instructions;
 	struct rte_swx_table_state *table_state;
+	struct regarray_runtime *regarray_runtime;
 	struct instruction *instructions;
 	struct thread threads[RTE_SWX_PIPELINE_THREADS_MAX];
 
@@ -998,6 +1080,7 @@ struct rte_swx_pipeline {
 	uint32_t n_extern_funcs;
 	uint32_t n_actions;
 	uint32_t n_tables;
+	uint32_t n_regarrays;
 	uint32_t n_headers;
 	uint32_t thread_id;
 	uint32_t port_id;
@@ -4622,6 +4705,1032 @@ instr_alu_ckadd_struct_exec(struct rte_swx_pipeline *p)
 }
 
 /*
+ * regarray.
+ */
+static struct regarray *
+regarray_find(struct rte_swx_pipeline *p, const char *name);
+
+static int
+instr_regprefetch_translate(struct rte_swx_pipeline *p,
+		      struct action *action,
+		      char **tokens,
+		      int n_tokens,
+		      struct instruction *instr,
+		      struct instruction_data *data __rte_unused)
+{
+	char *regarray = tokens[1], *idx = tokens[2];
+	struct regarray *r;
+	struct field *fidx;
+	uint32_t idx_struct_id, idx_val;
+
+	CHECK(n_tokens == 3, EINVAL);
+
+	r = regarray_find(p, regarray);
+	CHECK(r, EINVAL);
+
+	/* REGPREFETCH_RH, REGPREFETCH_RM. */
+	fidx = struct_field_parse(p, action, idx, &idx_struct_id);
+	if (fidx) {
+		instr->type = INSTR_REGPREFETCH_RM;
+		if (idx[0] == 'h')
+			instr->type = INSTR_REGPREFETCH_RH;
+
+		instr->regarray.regarray_id = r->id;
+		instr->regarray.idx.struct_id = (uint8_t)idx_struct_id;
+		instr->regarray.idx.n_bits = fidx->n_bits;
+		instr->regarray.idx.offset = fidx->offset / 8;
+		instr->regarray.dstsrc_val = 0; /* Unused. */
+		return 0;
+	}
+
+	/* REGPREFETCH_RI. */
+	idx_val = strtoul(idx, &idx, 0);
+	CHECK(!idx[0], EINVAL);
+
+	instr->type = INSTR_REGPREFETCH_RI;
+	instr->regarray.regarray_id = r->id;
+	instr->regarray.idx_val = idx_val;
+	instr->regarray.dstsrc_val = 0; /* Unused. */
+	return 0;
+}
+
+static int
+instr_regrd_translate(struct rte_swx_pipeline *p,
+		      struct action *action,
+		      char **tokens,
+		      int n_tokens,
+		      struct instruction *instr,
+		      struct instruction_data *data __rte_unused)
+{
+	char *dst = tokens[1], *regarray = tokens[2], *idx = tokens[3];
+	struct regarray *r;
+	struct field *fdst, *fidx;
+	uint32_t dst_struct_id, idx_struct_id, idx_val;
+
+	CHECK(n_tokens == 4, EINVAL);
+
+	r = regarray_find(p, regarray);
+	CHECK(r, EINVAL);
+
+	fdst = struct_field_parse(p, NULL, dst, &dst_struct_id);
+	CHECK(fdst, EINVAL);
+
+	/* REGRD_HRH, REGRD_HRM, REGRD_MRH, REGRD_MRM. */
+	fidx = struct_field_parse(p, action, idx, &idx_struct_id);
+	if (fidx) {
+		instr->type = INSTR_REGRD_MRM;
+		if (dst[0] == 'h' && idx[0] == 'm')
+			instr->type = INSTR_REGRD_HRM;
+		if (dst[0] == 'm' && idx[0] == 'h')
+			instr->type = INSTR_REGRD_MRH;
+		if (dst[0] == 'h' && idx[0] == 'h')
+			instr->type = INSTR_REGRD_HRH;
+
+		instr->regarray.regarray_id = r->id;
+		instr->regarray.idx.struct_id = (uint8_t)idx_struct_id;
+		instr->regarray.idx.n_bits = fidx->n_bits;
+		instr->regarray.idx.offset = fidx->offset / 8;
+		instr->regarray.dstsrc.struct_id = (uint8_t)dst_struct_id;
+		instr->regarray.dstsrc.n_bits = fdst->n_bits;
+		instr->regarray.dstsrc.offset = fdst->offset / 8;
+		return 0;
+	}
+
+	/* REGRD_MRI, REGRD_HRI. */
+	idx_val = strtoul(idx, &idx, 0);
+	CHECK(!idx[0], EINVAL);
+
+	instr->type = INSTR_REGRD_MRI;
+	if (dst[0] == 'h')
+		instr->type = INSTR_REGRD_HRI;
+
+	instr->regarray.regarray_id = r->id;
+	instr->regarray.idx_val = idx_val;
+	instr->regarray.dstsrc.struct_id = (uint8_t)dst_struct_id;
+	instr->regarray.dstsrc.n_bits = fdst->n_bits;
+	instr->regarray.dstsrc.offset = fdst->offset / 8;
+	return 0;
+}
+
+static int
+instr_regwr_translate(struct rte_swx_pipeline *p,
+		      struct action *action,
+		      char **tokens,
+		      int n_tokens,
+		      struct instruction *instr,
+		      struct instruction_data *data __rte_unused)
+{
+	char *regarray = tokens[1], *idx = tokens[2], *src = tokens[3];
+	struct regarray *r;
+	struct field *fidx, *fsrc;
+	uint64_t src_val;
+	uint32_t idx_struct_id, idx_val, src_struct_id;
+
+	CHECK(n_tokens == 4, EINVAL);
+
+	r = regarray_find(p, regarray);
+	CHECK(r, EINVAL);
+
+	/* REGWR_RHH, REGWR_RHM, REGWR_RMH, REGWR_RMM. */
+	fidx = struct_field_parse(p, action, idx, &idx_struct_id);
+	fsrc = struct_field_parse(p, action, src, &src_struct_id);
+	if (fidx && fsrc) {
+		instr->type = INSTR_REGWR_RMM;
+		if (idx[0] == 'h' && src[0] == 'm')
+			instr->type = INSTR_REGWR_RHM;
+		if (idx[0] == 'm' && src[0] == 'h')
+			instr->type = INSTR_REGWR_RMH;
+		if (idx[0] == 'h' && src[0] == 'h')
+			instr->type = INSTR_REGWR_RHH;
+
+		instr->regarray.regarray_id = r->id;
+		instr->regarray.idx.struct_id = (uint8_t)idx_struct_id;
+		instr->regarray.idx.n_bits = fidx->n_bits;
+		instr->regarray.idx.offset = fidx->offset / 8;
+		instr->regarray.dstsrc.struct_id = (uint8_t)src_struct_id;
+		instr->regarray.dstsrc.n_bits = fsrc->n_bits;
+		instr->regarray.dstsrc.offset = fsrc->offset / 8;
+		return 0;
+	}
+
+	/* REGWR_RHI, REGWR_RMI. */
+	if (fidx && !fsrc) {
+		src_val = strtoull(src, &src, 0);
+		CHECK(!src[0], EINVAL);
+
+		instr->type = INSTR_REGWR_RMI;
+		if (idx[0] == 'h')
+			instr->type = INSTR_REGWR_RHI;
+
+		instr->regarray.regarray_id = r->id;
+		instr->regarray.idx.struct_id = (uint8_t)idx_struct_id;
+		instr->regarray.idx.n_bits = fidx->n_bits;
+		instr->regarray.idx.offset = fidx->offset / 8;
+		instr->regarray.dstsrc_val = src_val;
+		return 0;
+	}
+
+	/* REGWR_RIH, REGWR_RIM. */
+	if (!fidx && fsrc) {
+		idx_val = strtoul(idx, &idx, 0);
+		CHECK(!idx[0], EINVAL);
+
+		instr->type = INSTR_REGWR_RIM;
+		if (idx[0] == 'h')
+			instr->type = INSTR_REGWR_RIH;
+
+		instr->regarray.regarray_id = r->id;
+		instr->regarray.idx_val = idx_val;
+		instr->regarray.dstsrc.struct_id = (uint8_t)src_struct_id;
+		instr->regarray.dstsrc.n_bits = fsrc->n_bits;
+		instr->regarray.dstsrc.offset = fsrc->offset / 8;
+		return 0;
+	}
+
+	/* REGWR_RII. */
+	src_val = strtoull(src, &src, 0);
+	CHECK(!src[0], EINVAL);
+
+	idx_val = strtoul(idx, &idx, 0);
+	CHECK(!idx[0], EINVAL);
+
+	instr->type = INSTR_REGWR_RII;
+	instr->regarray.idx_val = idx_val;
+	instr->regarray.dstsrc_val = src_val;
+
+	return 0;
+}
+
+static int
+instr_regadd_translate(struct rte_swx_pipeline *p,
+		       struct action *action,
+		       char **tokens,
+		       int n_tokens,
+		       struct instruction *instr,
+		       struct instruction_data *data __rte_unused)
+{
+	char *regarray = tokens[1], *idx = tokens[2], *src = tokens[3];
+	struct regarray *r;
+	struct field *fidx, *fsrc;
+	uint64_t src_val;
+	uint32_t idx_struct_id, idx_val, src_struct_id;
+
+	CHECK(n_tokens == 4, EINVAL);
+
+	r = regarray_find(p, regarray);
+	CHECK(r, EINVAL);
+
+	/* REGADD_RHH, REGADD_RHM, REGADD_RMH, REGADD_RMM. */
+	fidx = struct_field_parse(p, action, idx, &idx_struct_id);
+	fsrc = struct_field_parse(p, action, src, &src_struct_id);
+	if (fidx && fsrc) {
+		instr->type = INSTR_REGADD_RMM;
+		if (idx[0] == 'h' && src[0] == 'm')
+			instr->type = INSTR_REGADD_RHM;
+		if (idx[0] == 'm' && src[0] == 'h')
+			instr->type = INSTR_REGADD_RMH;
+		if (idx[0] == 'h' && src[0] == 'h')
+			instr->type = INSTR_REGADD_RHH;
+
+		instr->regarray.regarray_id = r->id;
+		instr->regarray.idx.struct_id = (uint8_t)idx_struct_id;
+		instr->regarray.idx.n_bits = fidx->n_bits;
+		instr->regarray.idx.offset = fidx->offset / 8;
+		instr->regarray.dstsrc.struct_id = (uint8_t)src_struct_id;
+		instr->regarray.dstsrc.n_bits = fsrc->n_bits;
+		instr->regarray.dstsrc.offset = fsrc->offset / 8;
+		return 0;
+	}
+
+	/* REGADD_RHI, REGADD_RMI. */
+	if (fidx && !fsrc) {
+		src_val = strtoull(src, &src, 0);
+		CHECK(!src[0], EINVAL);
+
+		instr->type = INSTR_REGADD_RMI;
+		if (idx[0] == 'h')
+			instr->type = INSTR_REGADD_RHI;
+
+		instr->regarray.regarray_id = r->id;
+		instr->regarray.idx.struct_id = (uint8_t)idx_struct_id;
+		instr->regarray.idx.n_bits = fidx->n_bits;
+		instr->regarray.idx.offset = fidx->offset / 8;
+		instr->regarray.dstsrc_val = src_val;
+		return 0;
+	}
+
+	/* REGADD_RIH, REGADD_RIM. */
+	if (!fidx && fsrc) {
+		idx_val = strtoul(idx, &idx, 0);
+		CHECK(!idx[0], EINVAL);
+
+		instr->type = INSTR_REGADD_RIM;
+		if (idx[0] == 'h')
+			instr->type = INSTR_REGADD_RIH;
+
+		instr->regarray.regarray_id = r->id;
+		instr->regarray.idx_val = idx_val;
+		instr->regarray.dstsrc.struct_id = (uint8_t)src_struct_id;
+		instr->regarray.dstsrc.n_bits = fsrc->n_bits;
+		instr->regarray.dstsrc.offset = fsrc->offset / 8;
+		return 0;
+	}
+
+	/* REGADD_RII. */
+	src_val = strtoull(src, &src, 0);
+	CHECK(!src[0], EINVAL);
+
+	idx_val = strtoul(idx, &idx, 0);
+	CHECK(!idx[0], EINVAL);
+
+	instr->type = INSTR_REGADD_RII;
+	instr->regarray.idx_val = idx_val;
+	instr->regarray.dstsrc_val = src_val;
+	return 0;
+}
+
+#define REGPREFETCH_RM(pipeline, thread, ip)                                                    \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint8_t *idx_struct = (thread)->structs[(ip)->regarray.idx.struct_id];                  \
+	uint64_t *idx64_ptr = (uint64_t *)&idx_struct[(ip)->regarray.idx.offset];               \
+	uint64_t idx64 = *idx64_ptr;                                                            \
+	uint64_t idx64_mask = UINT64_MAX >> (64 - (ip)->regarray.idx.n_bits);                   \
+	uint64_t idx = idx64 & idx64_mask & r->size_mask;                                       \
+	                                                                                        \
+	rte_prefetch0(&regarray[idx]);                                                          \
+}
+
+#if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
+
+#define REGPREFETCH_RH(pipeline, thread, ip)                                                    \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint8_t *idx_struct = (thread)->structs[(ip)->regarray.idx.struct_id];                  \
+	uint64_t *idx64_ptr = (uint64_t *)&idx_struct[(ip)->regarray.idx.offset];               \
+	uint64_t idx64 = *idx64_ptr;                                                            \
+	uint64_t idx = (ntoh64(idx64) >> (64 - (ip)->regarray.idx.n_bits)) & r->size_mask;      \
+	                                                                                        \
+	rte_prefetch0(&regarray[idx]);                                                          \
+}
+
+#else
+
+#define REGPREFETCH_RH REGPREFETCH_RM
+
+#endif
+
+#define REGPREFETCH_RI(pipeline, thread, ip)                                                    \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint64_t idx = (ip)->regarray.idx_val & r->size_mask;                                   \
+	                                                                                        \
+	rte_prefetch0(&regarray[idx]);                                                          \
+}
+
+static inline void
+instr_regprefetch_rh_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regprefetch (r[h])\n", p->thread_id);
+
+	/* Structs. */
+	REGPREFETCH_RH(p, t, ip);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regprefetch_rm_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regprefetch (r[m])\n", p->thread_id);
+
+	/* Structs. */
+	REGPREFETCH_RM(p, t, ip);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regprefetch_ri_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regprefetch (r[i])\n", p->thread_id);
+
+	/* Structs. */
+	REGPREFETCH_RI(p, t, ip);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+#define REGRD_MRM(pipeline, thread, ip)                                                         \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint8_t *idx_struct = (thread)->structs[(ip)->regarray.idx.struct_id];                  \
+	uint64_t *idx64_ptr = (uint64_t *)&idx_struct[(ip)->regarray.idx.offset];               \
+	uint64_t idx64 = *idx64_ptr;                                                            \
+	uint64_t idx64_mask = UINT64_MAX >> (64 - (ip)->regarray.idx.n_bits);                   \
+	uint64_t idx = idx64 & idx64_mask & r->size_mask;                                       \
+	                                                                                        \
+	uint8_t *dstsrc_struct = (thread)->structs[(ip)->regarray.dstsrc.struct_id];            \
+	uint64_t *dstsrc64_ptr = (uint64_t *)&dstsrc_struct[(ip)->regarray.dstsrc.offset];      \
+	uint64_t dstsrc64 = *dstsrc64_ptr;                                                      \
+	uint64_t dstsrc64_mask = UINT64_MAX >> (64 - (ip)->regarray.dstsrc.n_bits);             \
+	                                                                                        \
+	*dstsrc64_ptr = (dstsrc64 & ~dstsrc64_mask) | (regarray[idx] & dstsrc64_mask);          \
+}
+
+#if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
+
+#define REGRD_MRH(pipeline, thread, ip)                                                         \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint8_t *idx_struct = (thread)->structs[(ip)->regarray.idx.struct_id];                  \
+	uint64_t *idx64_ptr = (uint64_t *)&idx_struct[(ip)->regarray.idx.offset];               \
+	uint64_t idx64 = *idx64_ptr;                                                            \
+	uint64_t idx = (ntoh64(idx64) >> (64 - (ip)->regarray.idx.n_bits)) & r->size_mask;      \
+	                                                                                        \
+	uint8_t *dstsrc_struct = (thread)->structs[(ip)->regarray.dstsrc.struct_id];            \
+	uint64_t *dstsrc64_ptr = (uint64_t *)&dstsrc_struct[(ip)->regarray.dstsrc.offset];      \
+	uint64_t dstsrc64 = *dstsrc64_ptr;                                                      \
+	uint64_t dstsrc64_mask = UINT64_MAX >> (64 - (ip)->regarray.dstsrc.n_bits);             \
+	                                                                                        \
+	*dstsrc64_ptr = (dstsrc64 & ~dstsrc64_mask) | (regarray[idx] & dstsrc64_mask);          \
+}
+
+#define REGRD_HRM(pipeline, thread, ip)                                                         \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint8_t *idx_struct = (thread)->structs[(ip)->regarray.idx.struct_id];                  \
+	uint64_t *idx64_ptr = (uint64_t *)&idx_struct[(ip)->regarray.idx.offset];               \
+	uint64_t idx64 = *idx64_ptr;                                                            \
+	uint64_t idx64_mask = UINT64_MAX >> (64 - (ip)->regarray.idx.n_bits);                   \
+	uint64_t idx = idx64 & idx64_mask & r->size_mask;                                       \
+	                                                                                        \
+	uint8_t *dstsrc_struct = (thread)->structs[(ip)->regarray.dstsrc.struct_id];            \
+	uint64_t *dstsrc64_ptr = (uint64_t *)&dstsrc_struct[(ip)->regarray.dstsrc.offset];      \
+	uint64_t dstsrc64 = *dstsrc64_ptr;                                                      \
+	uint64_t dstsrc64_mask = UINT64_MAX >> (64 - (ip)->regarray.dstsrc.n_bits);             \
+	                                                                                        \
+	*dstsrc64_ptr = (dstsrc64 & ~dstsrc64_mask) | (hton64(regarray[idx]) & dstsrc64_mask);  \
+}
+
+#define REGRD_HRH(pipeline, thread, ip)                                                         \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint8_t *idx_struct = (thread)->structs[(ip)->regarray.idx.struct_id];                  \
+	uint64_t *idx64_ptr = (uint64_t *)&idx_struct[(ip)->regarray.idx.offset];               \
+	uint64_t idx64 = *idx64_ptr;                                                            \
+	uint64_t idx = (ntoh64(idx64) >> (64 - (ip)->regarray.idx.n_bits)) & r->size_mask;      \
+	                                                                                        \
+	uint8_t *dstsrc_struct = (thread)->structs[(ip)->regarray.dstsrc.struct_id];            \
+	uint64_t *dstsrc64_ptr = (uint64_t *)&dstsrc_struct[(ip)->regarray.dstsrc.offset];      \
+	uint64_t dstsrc64 = *dstsrc64_ptr;                                                      \
+	uint64_t dstsrc64_mask = UINT64_MAX >> (64 - (ip)->regarray.dstsrc.n_bits);             \
+	                                                                                        \
+	*dstsrc64_ptr = (dstsrc64 & ~dstsrc64_mask) | (hton64(regarray[idx]) & dstsrc64_mask);  \
+}
+
+#else
+
+#define REGRD_MRH REGRD_MRM
+#define REGRD_HRM REGRD_MRM
+#define REGRD_HRH REGRD_MRM
+
+#endif
+
+#define REGRD_MRI(pipeline, thread, ip)                                                         \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint64_t idx = (ip)->regarray.idx_val & r->size_mask;                                   \
+	                                                                                        \
+	uint8_t *dstsrc_struct = (thread)->structs[(ip)->regarray.dstsrc.struct_id];            \
+	uint64_t *dstsrc64_ptr = (uint64_t *)&dstsrc_struct[(ip)->regarray.dstsrc.offset];      \
+	uint64_t dstsrc64 = *dstsrc64_ptr;                                                      \
+	uint64_t dstsrc64_mask = UINT64_MAX >> (64 - (ip)->regarray.dstsrc.n_bits);             \
+	                                                                                        \
+	*dstsrc64_ptr = (dstsrc64 & ~dstsrc64_mask) | (regarray[idx] & dstsrc64_mask);          \
+}
+
+#if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
+
+#define REGRD_HRI(pipeline, thread, ip)                                                         \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint64_t idx = (ip)->regarray.idx_val & r->size_mask;                                   \
+	                                                                                        \
+	uint8_t *dstsrc_struct = (thread)->structs[(ip)->regarray.dstsrc.struct_id];            \
+	uint64_t *dstsrc64_ptr = (uint64_t *)&dstsrc_struct[(ip)->regarray.dstsrc.offset];      \
+	uint64_t dstsrc64 = *dstsrc64_ptr;                                                      \
+	uint64_t dstsrc64_mask = UINT64_MAX >> (64 - (ip)->regarray.dstsrc.n_bits);             \
+	                                                                                        \
+	*dstsrc64_ptr = (dstsrc64 & ~dstsrc64_mask) | (hton64(regarray[idx]) & dstsrc64_mask);  \
+}
+
+#else
+
+#define REGRD_HRI REGRD_MRI
+
+#endif
+
+static inline void
+instr_regrd_hrh_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regrd (h = r[h])\n", p->thread_id);
+
+	/* Structs. */
+	REGRD_HRH(p, t, ip);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regrd_hrm_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regrd (h = r[m])\n", p->thread_id);
+
+	/* Structs. */
+	REGRD_HRM(p, t, ip);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regrd_mrh_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regrd (m = r[h])\n", p->thread_id);
+
+	/* Structs. */
+	REGRD_MRH(p, t, ip);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regrd_mrm_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regrd (m = r[m])\n", p->thread_id);
+
+	/* Structs. */
+	REGRD_MRM(p, t, ip);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regrd_hri_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regrd (h = r[i])\n", p->thread_id);
+
+	/* Structs. */
+	REGRD_HRI(p, t, ip);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regrd_mri_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regrd (m = r[i])\n", p->thread_id);
+
+	/* Structs. */
+	REGRD_MRI(p, t, ip);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+#define REGWR_RMM(pipeline, thread, ip, operator)                                               \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint8_t *idx_struct = (thread)->structs[(ip)->regarray.idx.struct_id];                  \
+	uint64_t *idx64_ptr = (uint64_t *)&idx_struct[(ip)->regarray.idx.offset];               \
+	uint64_t idx64 = *idx64_ptr;                                                            \
+	uint64_t idx64_mask = UINT64_MAX >> (64 - (ip)->regarray.idx.n_bits);                   \
+	uint64_t idx = idx64 & idx64_mask & r->size_mask;                                       \
+	                                                                                        \
+	uint8_t *dstsrc_struct = (thread)->structs[(ip)->regarray.dstsrc.struct_id];            \
+	uint64_t *dstsrc64_ptr = (uint64_t *)&dstsrc_struct[(ip)->regarray.dstsrc.offset];      \
+	uint64_t dstsrc64 = *dstsrc64_ptr;                                                      \
+	uint64_t dstsrc64_mask = UINT64_MAX >> (64 - (ip)->regarray.dstsrc.n_bits);             \
+	uint64_t dstsrc = dstsrc64 & dstsrc64_mask;                                             \
+	                                                                                        \
+	regarray[idx] operator dstsrc;                                                          \
+}
+
+#if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
+
+#define REGWR_RMH(pipeline, thread, ip, operator)                                               \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint8_t *idx_struct = (thread)->structs[(ip)->regarray.idx.struct_id];                  \
+	uint64_t *idx64_ptr = (uint64_t *)&idx_struct[(ip)->regarray.idx.offset];               \
+	uint64_t idx64 = *idx64_ptr;                                                            \
+	uint64_t idx64_mask = UINT64_MAX >> (64 - (ip)->regarray.idx.n_bits);                   \
+	uint64_t idx = idx64 & idx64_mask & r->size_mask;                                       \
+	                                                                                        \
+	uint8_t *dstsrc_struct = (thread)->structs[(ip)->regarray.dstsrc.struct_id];            \
+	uint64_t *dstsrc64_ptr = (uint64_t *)&dstsrc_struct[(ip)->regarray.dstsrc.offset];      \
+	uint64_t dstsrc64 = *dstsrc64_ptr;                                                      \
+	uint64_t dstsrc = ntoh64(dstsrc64) >> (64 - (ip)->regarray.dstsrc.n_bits);              \
+	                                                                                        \
+	regarray[idx] operator dstsrc;                                                          \
+}
+
+#define REGWR_RHM(pipeline, thread, ip, operator)                                               \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint8_t *idx_struct = (thread)->structs[(ip)->regarray.idx.struct_id];                  \
+	uint64_t *idx64_ptr = (uint64_t *)&idx_struct[(ip)->regarray.idx.offset];               \
+	uint64_t idx64 = *idx64_ptr;                                                            \
+	uint64_t idx = (ntoh64(idx64) >> (64 - (ip)->regarray.idx.n_bits)) & r->size_mask;      \
+	                                                                                        \
+	uint8_t *dstsrc_struct = (thread)->structs[(ip)->regarray.dstsrc.struct_id];            \
+	uint64_t *dstsrc64_ptr = (uint64_t *)&dstsrc_struct[(ip)->regarray.dstsrc.offset];      \
+	uint64_t dstsrc64 = *dstsrc64_ptr;                                                      \
+	uint64_t dstsrc64_mask = UINT64_MAX >> (64 - (ip)->regarray.dstsrc.n_bits);             \
+	uint64_t dstsrc = dstsrc64 & dstsrc64_mask;                                             \
+	                                                                                        \
+	regarray[idx] operator dstsrc;                                                          \
+}
+
+#define REGWR_RHH(pipeline, thread, ip, operator)                                               \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint8_t *idx_struct = (thread)->structs[(ip)->regarray.idx.struct_id];                  \
+	uint64_t *idx64_ptr = (uint64_t *)&idx_struct[(ip)->regarray.idx.offset];               \
+	uint64_t idx64 = *idx64_ptr;                                                            \
+	uint64_t idx = (ntoh64(idx64) >> (64 - (ip)->regarray.idx.n_bits)) & r->size_mask;      \
+	                                                                                        \
+	uint8_t *dstsrc_struct = (thread)->structs[(ip)->regarray.dstsrc.struct_id];            \
+	uint64_t *dstsrc64_ptr = (uint64_t *)&dstsrc_struct[(ip)->regarray.dstsrc.offset];      \
+	uint64_t dstsrc64 = *dstsrc64_ptr;                                                      \
+	uint64_t dstsrc = ntoh64(dstsrc64) >> (64 - (ip)->regarray.dstsrc.n_bits);              \
+	                                                                                        \
+	regarray[idx] operator dstsrc;                                                          \
+}
+
+#else
+
+#define REGWR_RMH REGWR_RMM
+#define REGWR_RHM REGWR_RMM
+#define REGWR_RHH REGWR_RMM
+
+#endif
+
+#define REGWR_RMI(pipeline, thread, ip, operator)                                               \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint8_t *idx_struct = (thread)->structs[(ip)->regarray.idx.struct_id];                  \
+	uint64_t *idx64_ptr = (uint64_t *)&idx_struct[(ip)->regarray.idx.offset];               \
+	uint64_t idx64 = *idx64_ptr;                                                            \
+	uint64_t idx64_mask = UINT64_MAX >> (64 - (ip)->regarray.idx.n_bits);                   \
+	uint64_t idx = idx64 & idx64_mask & r->size_mask;                                       \
+	                                                                                        \
+	uint64_t dstsrc = (ip)->regarray.dstsrc_val;                                            \
+	                                                                                        \
+	regarray[idx] operator dstsrc;                                                          \
+}
+
+#define REGWR_RIM(pipeline, thread, ip, operator)                                               \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint64_t idx = (ip)->regarray.idx_val & r->size_mask;                                   \
+	                                                                                        \
+	uint8_t *dstsrc_struct = (thread)->structs[(ip)->regarray.dstsrc.struct_id];            \
+	uint64_t *dstsrc64_ptr = (uint64_t *)&dstsrc_struct[(ip)->regarray.dstsrc.offset];      \
+	uint64_t dstsrc64 = *dstsrc64_ptr;                                                      \
+	uint64_t dstsrc64_mask = UINT64_MAX >> (64 - (ip)->regarray.dstsrc.n_bits);             \
+	uint64_t dstsrc = dstsrc64 & dstsrc64_mask;                                             \
+	                                                                                        \
+	regarray[idx] operator dstsrc;                                                          \
+}
+
+#if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
+
+#define REGWR_RHI(pipeline, thread, ip, operator)                                               \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint8_t *idx_struct = (thread)->structs[(ip)->regarray.idx.struct_id];                  \
+	uint64_t *idx64_ptr = (uint64_t *)&idx_struct[(ip)->regarray.idx.offset];               \
+	uint64_t idx64 = *idx64_ptr;                                                            \
+	uint64_t idx = (ntoh64(idx64) >> (64 - (ip)->regarray.idx.n_bits)) & r->size_mask;      \
+	                                                                                        \
+	uint64_t dstsrc = (ip)->regarray.dstsrc_val;                                            \
+	                                                                                        \
+	regarray[idx] operator dstsrc;                                                          \
+}
+
+#define REGWR_RIH(pipeline, thread, ip, operator)                                               \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint64_t idx = (ip)->regarray.idx_val & r->size_mask;                                   \
+	                                                                                        \
+	uint8_t *dstsrc_struct = (thread)->structs[(ip)->regarray.dstsrc.struct_id];            \
+	uint64_t *dstsrc64_ptr = (uint64_t *)&dstsrc_struct[(ip)->regarray.dstsrc.offset];      \
+	uint64_t dstsrc64 = *dstsrc64_ptr;                                                      \
+	uint64_t dstsrc = ntoh64(dstsrc64) >> (64 - (ip)->regarray.dstsrc.n_bits);              \
+	                                                                                        \
+	regarray[idx] operator dstsrc;                                                          \
+}
+
+#else
+
+#define REGWR_RHI REGWR_RMI
+#define REGWR_RIH REGWR_RIM
+
+#endif
+
+#define REGWR_RII(pipeline, thread, ip, operator)                                               \
+{                                                                                               \
+	struct regarray_runtime *r = &(pipeline)->regarray_runtime[(ip)->regarray.regarray_id]; \
+	uint64_t *regarray = r->regarray;                                                       \
+	                                                                                        \
+	uint64_t idx = (ip)->regarray.idx_val & r->size_mask;                                   \
+	                                                                                        \
+	uint64_t dstsrc = (ip)->regarray.dstsrc_val;                                            \
+	                                                                                        \
+	regarray[idx] operator dstsrc;                                                          \
+}
+
+static inline void
+instr_regwr_rhh_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regwr (r[h] = h)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RHH(p, t, ip, =);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regwr_rhm_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regwr (r[h] = m)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RHM(p, t, ip, =);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regwr_rmh_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regwr (r[m] = h)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RMH(p, t, ip, =);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regwr_rmm_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regwr (r[m] = m)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RMM(p, t, ip, =);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regwr_rhi_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regwr (r[h] = i)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RHI(p, t, ip, =);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regwr_rmi_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regwr (r[m] = i)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RMI(p, t, ip, =);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regwr_rih_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regwr (r[i] = h)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RIH(p, t, ip, =);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regwr_rim_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regwr (r[i] = m)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RIM(p, t, ip, =);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regwr_rii_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regwr (r[i] = i)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RII(p, t, ip, =);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regadd_rhh_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regadd (r[h] += h)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RHH(p, t, ip, +=);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regadd_rhm_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regadd (r[h] += m)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RHM(p, t, ip, +=);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regadd_rmh_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regadd (r[m] += h)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RMH(p, t, ip, +=);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regadd_rmm_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regadd (r[m] += m)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RMM(p, t, ip, +=);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regadd_rhi_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regadd (r[h] += i)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RHI(p, t, ip, +=);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regadd_rmi_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regadd (r[m] += i)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RMI(p, t, ip, +=);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regadd_rih_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regadd (r[i] += h)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RIH(p, t, ip, +=);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regadd_rim_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regadd (r[i] += m)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RIM(p, t, ip, +=);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_regadd_rii_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	TRACE("[Thread %2u] regadd (r[i] += i)\n", p->thread_id);
+
+	/* Structs. */
+	REGWR_RII(p, t, ip, +=);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+/*
  * jmp.
  */
 static struct action *
@@ -5475,6 +6584,38 @@ instr_translate(struct rte_swx_pipeline *p,
 					       instr,
 					       data);
 
+	if (!strcmp(tokens[tpos], "regprefetch"))
+		return instr_regprefetch_translate(p,
+						   action,
+						   &tokens[tpos],
+						   n_tokens - tpos,
+						   instr,
+						   data);
+
+	if (!strcmp(tokens[tpos], "regrd"))
+		return instr_regrd_translate(p,
+					     action,
+					     &tokens[tpos],
+					     n_tokens - tpos,
+					     instr,
+					     data);
+
+	if (!strcmp(tokens[tpos], "regwr"))
+		return instr_regwr_translate(p,
+					     action,
+					     &tokens[tpos],
+					     n_tokens - tpos,
+					     instr,
+					     data);
+
+	if (!strcmp(tokens[tpos], "regadd"))
+		return instr_regadd_translate(p,
+					      action,
+					      &tokens[tpos],
+					      n_tokens - tpos,
+					      instr,
+					      data);
+
 	if (!strcmp(tokens[tpos], "table"))
 		return instr_table_translate(p,
 					     action,
@@ -6110,6 +7251,37 @@ static instr_exec_t instruction_table[] = {
 	[INSTR_ALU_SHR_HH] = instr_alu_shr_hh_exec,
 	[INSTR_ALU_SHR_MI] = instr_alu_shr_mi_exec,
 	[INSTR_ALU_SHR_HI] = instr_alu_shr_hi_exec,
+
+	[INSTR_REGPREFETCH_RH] = instr_regprefetch_rh_exec,
+	[INSTR_REGPREFETCH_RM] = instr_regprefetch_rm_exec,
+	[INSTR_REGPREFETCH_RI] = instr_regprefetch_ri_exec,
+
+	[INSTR_REGRD_HRH] = instr_regrd_hrh_exec,
+	[INSTR_REGRD_HRM] = instr_regrd_hrm_exec,
+	[INSTR_REGRD_MRH] = instr_regrd_mrh_exec,
+	[INSTR_REGRD_MRM] = instr_regrd_mrm_exec,
+	[INSTR_REGRD_HRI] = instr_regrd_hri_exec,
+	[INSTR_REGRD_MRI] = instr_regrd_mri_exec,
+
+	[INSTR_REGWR_RHH] = instr_regwr_rhh_exec,
+	[INSTR_REGWR_RHM] = instr_regwr_rhm_exec,
+	[INSTR_REGWR_RMH] = instr_regwr_rmh_exec,
+	[INSTR_REGWR_RMM] = instr_regwr_rmm_exec,
+	[INSTR_REGWR_RHI] = instr_regwr_rhi_exec,
+	[INSTR_REGWR_RMI] = instr_regwr_rmi_exec,
+	[INSTR_REGWR_RIH] = instr_regwr_rih_exec,
+	[INSTR_REGWR_RIM] = instr_regwr_rim_exec,
+	[INSTR_REGWR_RII] = instr_regwr_rii_exec,
+
+	[INSTR_REGADD_RHH] = instr_regadd_rhh_exec,
+	[INSTR_REGADD_RHM] = instr_regadd_rhm_exec,
+	[INSTR_REGADD_RMH] = instr_regadd_rmh_exec,
+	[INSTR_REGADD_RMM] = instr_regadd_rmm_exec,
+	[INSTR_REGADD_RHI] = instr_regadd_rhi_exec,
+	[INSTR_REGADD_RMI] = instr_regadd_rmi_exec,
+	[INSTR_REGADD_RIH] = instr_regadd_rih_exec,
+	[INSTR_REGADD_RIM] = instr_regadd_rim_exec,
+	[INSTR_REGADD_RII] = instr_regadd_rii_exec,
 
 	[INSTR_TABLE] = instr_table_exec,
 	[INSTR_EXTERN_OBJ] = instr_extern_obj_exec,
@@ -6824,6 +7996,119 @@ table_free(struct rte_swx_pipeline *p)
 }
 
 /*
+ * Register array.
+ */
+static struct regarray *
+regarray_find(struct rte_swx_pipeline *p, const char *name)
+{
+	struct regarray *elem;
+
+	TAILQ_FOREACH(elem, &p->regarrays, node)
+		if (!strcmp(elem->name, name))
+			return elem;
+
+	return NULL;
+}
+
+static struct regarray *
+regarray_find_by_id(struct rte_swx_pipeline *p, uint32_t id)
+{
+	struct regarray *elem = NULL;
+
+	TAILQ_FOREACH(elem, &p->regarrays, node)
+		if (elem->id == id)
+			return elem;
+
+	return NULL;
+}
+
+int
+rte_swx_pipeline_regarray_config(struct rte_swx_pipeline *p,
+			      const char *name,
+			      uint32_t size)
+{
+	struct regarray *r;
+
+	CHECK(p, EINVAL);
+
+	CHECK_NAME(name, EINVAL);
+	CHECK(!regarray_find(p, name), EEXIST);
+
+	CHECK(size, EINVAL);
+	size = rte_align32pow2(size);
+
+	/* Memory allocation. */
+	r = calloc(1, sizeof(struct regarray));
+	CHECK(r, ENOMEM);
+
+	/* Node initialization. */
+	strcpy(r->name, name);
+	r->size = size;
+	r->id = p->n_regarrays;
+
+	/* Node add to tailq. */
+	TAILQ_INSERT_TAIL(&p->regarrays, r, node);
+	p->n_regarrays++;
+
+	return 0;
+}
+
+static int
+regarray_build(struct rte_swx_pipeline *p)
+{
+	struct regarray *regarray;
+
+	p->regarray_runtime = calloc(p->n_regarrays, sizeof(struct regarray_runtime));
+	CHECK(p->regarray_runtime, ENOMEM);
+
+	TAILQ_FOREACH(regarray, &p->regarrays, node) {
+		struct regarray_runtime *r = &p->regarray_runtime[regarray->id];
+
+		r->regarray = calloc(regarray->size, sizeof(uint64_t));
+		CHECK(r->regarray, ENOMEM);
+
+		r->size_mask = regarray->size - 1;
+	}
+
+	return 0;
+}
+
+static void
+regarray_build_free(struct rte_swx_pipeline *p)
+{
+	uint32_t i;
+
+	if (!p->regarray_runtime)
+		return;
+
+	for (i = 0; i < p->n_regarrays; i++) {
+		struct regarray_runtime *r = &p->regarray_runtime[i];
+
+		free(r->regarray);
+	}
+
+	free(p->regarray_runtime);
+	p->regarray_runtime = NULL;
+}
+
+static void
+regarray_free(struct rte_swx_pipeline *p)
+{
+	regarray_build_free(p);
+
+	for ( ; ; ) {
+		struct regarray *elem;
+
+		elem = TAILQ_FIRST(&p->regarrays);
+		if (!elem)
+			break;
+
+		TAILQ_REMOVE(&p->regarrays, elem, node);
+		free(elem);
+	}
+}
+
+/*
  * Pipeline.
  */
 int
@@ -6851,6 +8136,7 @@ rte_swx_pipeline_config(struct rte_swx_pipeline **p, int numa_node)
 	TAILQ_INIT(&pipeline->actions);
 	TAILQ_INIT(&pipeline->table_types);
 	TAILQ_INIT(&pipeline->tables);
+	TAILQ_INIT(&pipeline->regarrays);
 
 	pipeline->n_structs = 1; /* Struct 0 is reserved for action_data. */
 	pipeline->numa_node = numa_node;
@@ -6867,6 +8153,7 @@ rte_swx_pipeline_free(struct rte_swx_pipeline *p)
 
 	free(p->instructions);
 
+	regarray_free(p);
 	table_state_free(p);
 	table_free(p);
 	action_free(p);
@@ -6951,10 +8238,15 @@ rte_swx_pipeline_build(struct rte_swx_pipeline *p)
 	if (status)
 		goto error;
 
+	status = regarray_build(p);
+	if (status)
+		goto error;
+
 	p->build_done = 1;
 	return 0;
 
 error:
+	regarray_build_free(p);
 	table_state_build_free(p);
 	table_build_free(p);
 	action_build_free(p);
@@ -7015,6 +8307,7 @@ rte_swx_ctl_pipeline_info_get(struct rte_swx_pipeline *p,
 	pipeline->n_ports_out = p->n_ports_out;
 	pipeline->n_actions = n_actions;
 	pipeline->n_tables = n_tables;
+	pipeline->n_regarrays = p->n_regarrays;
 
 	return 0;
 }
@@ -7220,5 +8513,66 @@ rte_swx_ctl_pipeline_port_out_stats_read(struct rte_swx_pipeline *p,
 		return -EINVAL;
 
 	port->type->ops.stats_read(port->obj, stats);
+	return 0;
+}
+
+int
+rte_swx_ctl_regarray_info_get(struct rte_swx_pipeline *p,
+			      uint32_t regarray_id,
+			      struct rte_swx_ctl_regarray_info *regarray)
+{
+	struct regarray *r;
+
+	if (!p || !regarray)
+		return -EINVAL;
+
+	r = regarray_find_by_id(p, regarray_id);
+	if (!r)
+		return -EINVAL;
+
+	strcpy(regarray->name, r->name);
+	regarray->size = r->size;
+	return 0;
+}
+
+int
+rte_swx_ctl_pipeline_regarray_read(struct rte_swx_pipeline *p,
+				   const char *regarray_name,
+				   uint32_t regarray_index,
+				   uint64_t *value)
+{
+	struct regarray *regarray;
+	struct regarray_runtime *r;
+
+	if (!p || !regarray_name || !value)
+		return -EINVAL;
+
+	regarray = regarray_find(p, regarray_name);
+	if (!regarray || (regarray_index >= regarray->size))
+		return -EINVAL;
+
+	r = &p->regarray_runtime[regarray->id];
+	*value = r->regarray[regarray_index];
+	return 0;
+}
+
+int
+rte_swx_ctl_pipeline_regarray_write(struct rte_swx_pipeline *p,
+				   const char *regarray_name,
+				   uint32_t regarray_index,
+				   uint64_t value)
+{
+	struct regarray *regarray;
+	struct regarray_runtime *r;
+
+	if (!p || !regarray_name)
+		return -EINVAL;
+
+	regarray = regarray_find(p, regarray_name);
+	if (!regarray || (regarray_index >= regarray->size))
+		return -EINVAL;
+
+	r = &p->regarray_runtime[regarray->id];
+	r->regarray[regarray_index] = value;
 	return 0;
 }
