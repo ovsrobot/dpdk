@@ -1663,8 +1663,14 @@ ice_pkg_file_search_path(struct rte_pci_device *pci_dev, char *pkg_file)
 	pos = rte_pci_find_ext_capability(pci_dev, RTE_PCI_EXT_CAP_ID_DSN);
 
 	if (pos) {
-		rte_pci_read_config(pci_dev, &dsn_low, 4, pos + 4);
-		rte_pci_read_config(pci_dev, &dsn_high, 4, pos + 8);
+		if (rte_pci_read_config(pci_dev, &dsn_low, 4, pos + 4) < 0) {
+			PMD_INIT_LOG(ERR, "Failed to read pci config space");
+			return -1;
+		}
+		if (rte_pci_read_config(pci_dev, &dsn_high, 4, pos + 8) < 0) {
+			PMD_INIT_LOG(ERR, "Failed to read pci config space");
+			return -1;
+		}
 		snprintf(opt_ddp_filename, ICE_MAX_PKG_FILENAME_SIZE,
 			 "ice-%08x%08x.pkg", dsn_high, dsn_low);
 	} else {
