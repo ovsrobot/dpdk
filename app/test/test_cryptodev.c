@@ -976,8 +976,9 @@ ut_teardown(void)
 
 	rte_cryptodev_stats_get(ts_params->valid_devs[0], &stats);
 
-	/* Stop the device */
+	/* Stop and close the device */
 	rte_cryptodev_stop(ts_params->valid_devs[0]);
+	rte_cryptodev_close(ts_params->valid_devs[0]);
 }
 
 static int
