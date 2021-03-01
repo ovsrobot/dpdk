@@ -755,6 +755,8 @@ eth_dev_close(struct rte_eth_dev *dev)
 	PMD_LOG(INFO, "Closing pcap ethdev on NUMA socket %d",
 			rte_socket_id());
 
+	eth_dev_stop(dev);
+
 	rte_free(dev->process_private);
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
