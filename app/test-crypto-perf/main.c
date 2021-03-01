@@ -738,8 +738,10 @@ main(int argc, char **argv)
 	}
 
 	for (i = 0; i < nb_cryptodevs &&
-			i < RTE_CRYPTO_MAX_DEVS; i++)
+			i < RTE_CRYPTO_MAX_DEVS; i++) {
 		rte_cryptodev_stop(enabled_cdevs[i]);
+		rte_cryptodev_close(enabled_cdevs[i]);
+	}
 
 	free_test_vector(t_vec, &opts);
 
@@ -758,8 +760,10 @@ err:
 	}
 
 	for (i = 0; i < nb_cryptodevs &&
-			i < RTE_CRYPTO_MAX_DEVS; i++)
+			i < RTE_CRYPTO_MAX_DEVS; i++) {
 		rte_cryptodev_stop(enabled_cdevs[i]);
+		rte_cryptodev_close(enabled_cdevs[i]);
+	}
 	rte_free(opts.imix_buffer_sizes);
 	free_test_vector(t_vec, &opts);
 
