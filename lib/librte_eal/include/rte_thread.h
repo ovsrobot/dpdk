@@ -59,7 +59,7 @@ void rte_thread_get_affinity(rte_cpuset_t *cpusetp);
  *
  * @return
  *   On success, zero.
- *   On failure, a negative number.
+ *   On failure, a negative number and an error number is set in rte_errno.
  */
 
 __rte_experimental
@@ -73,7 +73,7 @@ int rte_thread_tls_key_create(rte_tls_key *key, void (*destructor)(void *));
  *
  * @return
  *   On success, zero.
- *   On failure, a negative number.
+ *   On failure, a negative number and an error number is set in rte_errno.
  */
 __rte_experimental
 int rte_thread_tls_key_delete(rte_tls_key key);
@@ -88,7 +88,7 @@ int rte_thread_tls_key_delete(rte_tls_key key);
  *
  * @return
  *   On success, zero.
- *   On failure, a negative number.
+ *   On failure, a negative number and an error number is set in rte_errno.
  */
 __rte_experimental
 int rte_thread_tls_value_set(rte_tls_key key, const void *value);
