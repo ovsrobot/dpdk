@@ -7,7 +7,7 @@
 #include <rte_thread.h>
 
 /* Key of thread specific flow workspace data. */
-static rte_tls_key key_workspace;
+static rte_thread_tls_key key_workspace;
 
 int
 mlx5_flow_os_init_workspace_once(void)

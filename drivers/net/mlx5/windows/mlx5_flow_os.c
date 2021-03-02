@@ -252,7 +252,7 @@ struct mlx5_workspace_thread {
  */
 static struct mlx5_workspace_thread *curr;
 static struct mlx5_workspace_thread *first;
-rte_tls_key ws_tls_index;
+rte_thread_tls_key ws_tls_index;
 static pthread_mutex_t lock_thread_list;
 
 static bool
