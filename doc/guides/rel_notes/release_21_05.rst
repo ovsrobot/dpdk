@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel ice driver.**
+
+  * Added Intel ice support on Windows.
+
 
 Removed Items
 -------------
