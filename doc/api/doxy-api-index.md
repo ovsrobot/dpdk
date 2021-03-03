@@ -86,6 +86,7 @@ The public API headers are grouped by topics:
   [CPU flags]          (@ref rte_cpuflags.h),
   [CPU pause]          (@ref rte_pause.h),
   [I/O access]         (@ref rte_io.h)
+  [power management]   (@ref rte_power_intrinsics.h)
 
 - **CPU multicore**:
   [interrupts]         (@ref rte_interrupts.h),
