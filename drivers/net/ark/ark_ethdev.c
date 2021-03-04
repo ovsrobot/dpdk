@@ -95,6 +95,8 @@ static const char * const valid_arguments[] = {
 static const struct rte_pci_id pci_id_ark_map[] = {
 	{RTE_PCI_DEVICE(0x1d6c, 0x100d)},
 	{RTE_PCI_DEVICE(0x1d6c, 0x100e)},
+	{RTE_PCI_DEVICE(0x1d6c, 0x1017)},
+	{RTE_PCI_DEVICE(0x1d6c, 0x1018)},
 	{.vendor_id = 0, /* sentinel */ },
 };
 
