@@ -13,6 +13,7 @@
 #include <rte_gso.h>
 #include <cmdline.h>
 #include <sys/queue.h>
+#include  "cmdline.h"
 
 #define RTE_PORT_ALL            (~(portid_t)0x0)
 
@@ -23,6 +24,10 @@
 #define RTE_PORT_STARTED        (uint16_t)1
 #define RTE_PORT_CLOSED         (uint16_t)2
 #define RTE_PORT_HANDLING       (uint16_t)3
+
+uint8_t f_quit;
+int testpmd_fd_copy;
+struct cmdline *testpmd_cl;
 
 /*
  * It is used to allocate the memory for hash key.
@@ -421,6 +426,8 @@ extern uint64_t noisy_lkup_mem_sz;
 extern uint64_t noisy_lkup_num_writes;
 extern uint64_t noisy_lkup_num_reads;
 extern uint64_t noisy_lkup_num_reads_writes;
+extern int proc_id;
+extern unsigned int num_procs;
 
 extern uint8_t dcb_config;
 extern uint8_t dcb_test;

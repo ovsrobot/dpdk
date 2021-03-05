@@ -3116,6 +3116,8 @@ rss_fwd_config_setup(void)
 	queueid_t  rxq;
 	queueid_t  nb_q;
 	streamid_t  sm_id;
+	int start;
+	int end;
 
 	nb_q = nb_rxq;
 	if (nb_q > nb_txq)
@@ -3133,7 +3135,10 @@ rss_fwd_config_setup(void)
 	init_fwd_streams();
 
 	setup_fwd_config_of_each_lcore(&cur_fwd_config);
-	rxp = 0; rxq = 0;
+	start = proc_id * nb_q / num_procs;
+	end = start + nb_q / num_procs;
+	rxp = 0;
+	rxq = start;
 	for (sm_id = 0; sm_id < cur_fwd_config.nb_fwd_streams; sm_id++) {
 		struct fwd_stream *fs;
 
@@ -3150,6 +3155,8 @@ rss_fwd_config_setup(void)
 			continue;
 		rxp = 0;
 		rxq++;
+		if (rxq >= end)
+			rxq = start;
 	}
 }
 

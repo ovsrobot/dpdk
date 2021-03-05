@@ -71,8 +71,6 @@
 #include "cmdline_tm.h"
 #include "bpf_cmd.h"
 
-static struct cmdline *testpmd_cl;
-
 static void cmd_reconfig_device_queue(portid_t id, uint8_t dev, uint8_t queue);
 
 /* *** Help command with introduction. *** */
@@ -5347,6 +5345,12 @@ cmd_set_flush_rx_parsed(void *parsed_result,
 		__rte_unused void *data)
 {
 	struct cmd_set_flush_rx *res = parsed_result;
+
+	if (num_procs > 1 && (strcmp(res->mode, "on") == 0)) {
+		printf("multi-process doesn't support to flush rx queues.\n");
+		return;
+	}
+
 	no_flush_rx = (uint8_t)((strcmp(res->mode, "on") == 0) ? 0 : 1);
 }
 
@@ -17147,6 +17151,10 @@ prompt(void)
 		printf("Cannot set exit function for cmdline\n");
 
 	cmdline_interact(testpmd_cl);
+	if (unlikely(f_quit == 1)) {
+		dup2(testpmd_fd_copy, testpmd_cl->s_in);
+		close(testpmd_fd_copy);
+	}
 	if (ret != 0)
 		cmdline_stdin_exit(testpmd_cl);
 }
