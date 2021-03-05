@@ -36,7 +36,6 @@
 /* 96-bit case of IV for CCP/GCM single pass algorithm */
 #define QAT_AES_GCM_SPC_IV_SIZE 12
 
-
 #define QAT_AES_HW_CONFIG_CBC_ENC(alg) \
 	ICP_QAT_HW_CIPHER_CONFIG_BUILD(ICP_QAT_HW_CIPHER_CBC_MODE, alg, \
 					ICP_QAT_HW_CIPHER_NO_CONVERT, \
@@ -76,6 +75,7 @@ struct qat_sym_session {
 	uint8_t *cd_cur_ptr;
 	phys_addr_t cd_paddr;
 	struct icp_qat_fw_la_bulk_req fw_req;
+	struct icp_qat_fw_la_bulk_req fw_req2;
 	uint8_t aad_len;
 	struct qat_crypto_instance *inst;
 	struct {
@@ -91,6 +91,7 @@ struct qat_sym_session {
 	enum qat_device_gen min_qat_dev_gen;
 	uint8_t aes_cmac;
 	uint8_t is_single_pass;
+	uint8_t is_single_pass_gmac;
 };
 
 int
