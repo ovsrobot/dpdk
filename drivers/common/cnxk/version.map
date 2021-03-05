@@ -6,6 +6,8 @@ INTERNAL {
 	plt_init;
 	roc_clk_freq_get;
 	roc_error_msg_get;
+	roc_idev_lmt_base_addr_get;
+	roc_idev_num_lmtlines_get;
 	roc_model;
 
 	local: *;
