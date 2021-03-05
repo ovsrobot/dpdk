@@ -532,11 +532,49 @@ qat_sym_session_handle_mixed(const struct rte_cryptodev *dev,
 	}
 }
 
+static void
+qat_sym_session_handle_single_pass_gmac(struct qat_sym_session *session,
+		struct rte_crypto_auth_xform *auth_xform)
+{
+	struct icp_qat_fw_la_cipher_req_params *cipher_param =
+			(void *) &session->fw_req2.serv_specif_rqpars;
+	struct icp_qat_fw_cipher_cd_ctrl_hdr *cipher_cd_ctrl =
+			(void *) &session->fw_req2.cd_ctrl;
+
+	session->is_single_pass_gmac = 1;
+	session->min_qat_dev_gen = QAT_GEN3;
+	rte_memcpy(&session->fw_req2, &session->fw_req,
+			sizeof(struct icp_qat_fw_la_bulk_req));
+	bzero(&cipher_param->spc_aad_addr, 28);
+	bzero(&cipher_cd_ctrl->resrvd1, 15);
+	session->fw_req2.comn_hdr.service_cmd_id = ICP_QAT_FW_LA_CMD_CIPHER;
+	session->fw_req2.cd_pars.u.s.content_desc_params_sz = RTE_ALIGN_CEIL(
+			sizeof(struct icp_qat_hw_cipher_config) +
+			auth_xform->key.length, 8) >> 3;
+	cipher_cd_ctrl->cipher_cfg_offset = 0;
+	ICP_QAT_FW_COMN_CURR_ID_SET(cipher_cd_ctrl, ICP_QAT_FW_SLICE_CIPHER);
+	ICP_QAT_FW_COMN_NEXT_ID_SET(cipher_cd_ctrl, ICP_QAT_FW_SLICE_DRAM_WR);
+	ICP_QAT_FW_LA_GCM_IV_LEN_FLAG_SET(
+			session->fw_req2.comn_hdr.serv_specif_flags,
+			ICP_QAT_FW_LA_GCM_IV_LEN_12_OCTETS);
+	ICP_QAT_FW_LA_SINGLE_PASS_PROTO_FLAG_SET(
+			session->fw_req2.comn_hdr.serv_specif_flags,
+			ICP_QAT_FW_LA_SINGLE_PASS_PROTO);
+	ICP_QAT_FW_LA_PROTO_SET(
+			session->fw_req2.comn_hdr.serv_specif_flags,
+			ICP_QAT_FW_LA_NO_PROTO);
+	cipher_param->cipher_offset = 0;
+	cipher_param->cipher_length = 0;
+	cipher_param->spc_auth_res_sz = auth_xform->digest_length;
+}
+
 int
 qat_sym_session_set_parameters(struct rte_cryptodev *dev,
 		struct rte_crypto_sym_xform *xform, void *session_private)
 {
 	struct qat_sym_session *session = session_private;
+	struct qat_sym_dev_private *internals = dev->data->dev_private;
+	enum qat_device_gen qat_dev_gen = internals->qat_dev->qat_dev_gen;
 	int ret;
 	int qat_cmd_id;
 
@@ -571,6 +609,13 @@ qat_sym_session_set_parameters(struct rte_cryptodev *dev,
 		ret = qat_sym_session_configure_auth(dev, xform, session);
 		if (ret < 0)
 			return ret;
+		session->is_single_pass_gmac =
+			       qat_dev_gen == QAT_GEN3 &&
+			       xform->auth.algo == RTE_CRYPTO_AUTH_AES_GMAC &&
+			       xform->auth.iv.length == QAT_AES_GCM_SPC_IV_SIZE;
+		if (session->is_single_pass_gmac)
+			qat_sym_session_handle_single_pass_gmac(session,
+					&xform->auth);
 		break;
 	case ICP_QAT_FW_LA_CMD_CIPHER_HASH:
 		if (xform->type == RTE_CRYPTO_SYM_XFORM_AEAD) {
@@ -706,8 +751,8 @@ qat_sym_session_configure_auth(struct rte_cryptodev *dev,
 	struct qat_sym_dev_private *internals = dev->data->dev_private;
 	const uint8_t *key_data = auth_xform->key.data;
 	uint8_t key_length = auth_xform->key.length;
-	session->aes_cmac = 0;
 
+	session->aes_cmac = 0;
 	session->auth_iv.offset = auth_xform->iv.offset;
 	session->auth_iv.length = auth_xform->iv.length;
 	session->auth_mode = ICP_QAT_HW_AUTH_MODE1;
@@ -765,7 +810,6 @@ qat_sym_session_configure_auth(struct rte_cryptodev *dev,
 		session->qat_hash_alg = ICP_QAT_HW_AUTH_ALGO_GALOIS_128;
 		if (session->auth_iv.length == 0)
 			session->auth_iv.length = AES_GCM_J0_LEN;
-
 		break;
 	case RTE_CRYPTO_AUTH_SNOW3G_UIA2:
 		session->qat_hash_alg = ICP_QAT_HW_AUTH_ALGO_SNOW_3G_UIA2;
