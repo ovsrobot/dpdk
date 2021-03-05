@@ -59,6 +59,12 @@ struct roc_nix_fc_cfg {
 	};
 };
 
+struct roc_nix_eeprom_info {
+#define ROC_NIX_EEPROM_SIZE 256
+	uint16_t sff_id;
+	uint8_t buf[ROC_NIX_EEPROM_SIZE];
+};
+
 /* NIX LF RX offload configuration flags.
  * These are input flags to roc_nix_lf_alloc:rx_cfg
  */
@@ -309,6 +315,14 @@ int __roc_api roc_nix_mac_max_rx_len_set(struct roc_nix *roc_nix,
 int __roc_api roc_nix_mac_link_cb_register(struct roc_nix *roc_nix,
 					   link_status_t link_update);
 void __roc_api roc_nix_mac_link_cb_unregister(struct roc_nix *roc_nix);
+
+/* Ops */
+int __roc_api roc_nix_switch_hdr_set(struct roc_nix *roc_nix,
+				     uint64_t switch_header_type);
+int __roc_api roc_nix_lso_fmt_setup(struct roc_nix *roc_nix);
+
+int __roc_api roc_nix_eeprom_info_get(struct roc_nix *roc_nix,
+				      struct roc_nix_eeprom_info *info);
 
 /* Flow control */
 int __roc_api roc_nix_fc_config_set(struct roc_nix *roc_nix,
