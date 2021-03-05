@@ -129,6 +129,7 @@ extern int cnxk_logtype_mbox;
 extern int cnxk_logtype_npa;
 extern int cnxk_logtype_nix;
 extern int cnxk_logtype_npc;
+extern int cnxk_logtype_sso;
 extern int cnxk_logtype_tm;
 
 #define plt_err(fmt, args...)                                                  \
@@ -150,6 +151,7 @@ extern int cnxk_logtype_tm;
 #define plt_npa_dbg(fmt, ...)	plt_dbg(npa, fmt, ##__VA_ARGS__)
 #define plt_nix_dbg(fmt, ...)	plt_dbg(nix, fmt, ##__VA_ARGS__)
 #define plt_npc_dbg(fmt, ...)	plt_dbg(npc, fmt, ##__VA_ARGS__)
+#define plt_sso_dbg(fmt, ...)	plt_dbg(sso, fmt, ##__VA_ARGS__)
 #define plt_tm_dbg(fmt, ...)	plt_dbg(tm, fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
