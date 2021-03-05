@@ -1,4 +1,9 @@
 INTERNAL {
+	global:
+
+	plt_init;
+	roc_error_msg_get;
+	roc_model;
 
 	local: *;
 };
