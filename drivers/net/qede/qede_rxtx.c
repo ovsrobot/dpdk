@@ -890,25 +890,20 @@ qede_free_tx_pkt(struct qede_tx_queue *txq)
 
 	idx = TX_CONS(txq);
 	mbuf = txq->sw_tx_ring[idx];
-	if (mbuf) {
-		nb_segs = mbuf->nb_segs;
-		PMD_TX_LOG(DEBUG, txq, "nb_segs to free %u\n", nb_segs);
+	RTE_ASSERT(mbuf);
+	nb_segs = mbuf->nb_segs;
+	PMD_TX_LOG(DEBUG, txq, "nb_segs to free %u\n", nb_segs);
 
-		ret = nb_segs;
-		while (nb_segs) {
-			/* It's like consuming rxbuf in recv() */
-			ecore_chain_consume(&txq->tx_pbl);
-			nb_segs--;
-		}
-
-		rte_pktmbuf_free(mbuf);
-		txq->sw_tx_ring[idx] = NULL;
-		txq->sw_tx_cons++;
-		PMD_TX_LOG(DEBUG, txq, "Freed tx packet\n");
-	} else {
+	ret = nb_segs;
+	while (nb_segs) {
+		/* It's like consuming rxbuf in recv() */
 		ecore_chain_consume(&txq->tx_pbl);
-		ret = 1;
+		nb_segs--;
 	}
+
+	rte_pktmbuf_free(mbuf);
+	txq->sw_tx_cons++;
+	PMD_TX_LOG(DEBUG, txq, "Freed tx packet\n");
 	return ret;
 }
 
