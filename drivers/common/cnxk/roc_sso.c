@@ -152,6 +152,94 @@ sso_rsrc_get(struct roc_sso *roc_sso)
 	return 0;
 }
 
+static void
+sso_hws_link_modify(uintptr_t hws_base, uint16_t hwgrp, uint8_t enable)
+{
+	uint64_t val;
+
+	val = hwgrp;
+	val |= 0ULL << 12;	       /* SET 0 */
+	val |= 0x8000800080000000;     /* Do not modify rest of the masks */
+	val |= (uint64_t)enable << 14; /* Enable/Disable Membership. */
+
+	plt_write64(val, hws_base + SSOW_LF_GWS_GRPMSK_CHG);
+}
+
+/* Public Functions. */
+uintptr_t
+roc_sso_hws_base_get(struct roc_sso *roc_sso, uint8_t hws)
+{
+	struct dev *dev = &roc_sso_to_sso_priv(roc_sso)->dev;
+
+	return dev->bar2 + (RVU_BLOCK_ADDR_SSOW << 20 | hws << 12);
+}
+
+uint64_t
+roc_sso_ns_to_gw(struct roc_sso *roc_sso, uint64_t ns)
+{
+	struct dev *dev = &roc_sso_to_sso_priv(roc_sso)->dev;
+	uint64_t current_us, current_ns, new_ns;
+	uintptr_t base;
+
+	base = dev->bar2 + (RVU_BLOCK_ADDR_SSOW << 20);
+	current_us = plt_read64(base + SSOW_LF_GWS_NW_TIM);
+	/* From HRM, table 14-19:
+	 * The SSOW_LF_GWS_NW_TIM[NW_TIM] period is specified in n-1 notation.
+	 */
+	current_us += 1;
+
+	/* From HRM, table 14-1:
+	 * SSOW_LF_GWS_NW_TIM[NW_TIM] specifies the minimum timeout. The SSO
+	 * hardware times out a GET_WORK request within 2 usec of the minimum
+	 * timeout specified by SSOW_LF_GWS_NW_TIM[NW_TIM].
+	 */
+	current_us += 2;
+	current_ns = current_us * 1E3;
+	new_ns = (ns - PLT_MIN(ns, current_ns));
+	new_ns = !new_ns ? 1 : new_ns;
+	return (new_ns * plt_tsc_hz()) / 1E9;
+}
+
+int
+roc_sso_hws_link(struct roc_sso *roc_sso, uint8_t hws, uint16_t hwgrp[],
+		 uint16_t nb_hwgrp)
+{
+	struct dev *dev = &roc_sso_to_sso_priv(roc_sso)->dev;
+	struct sso *sso;
+	uintptr_t base;
+	int i;
+
+	sso = roc_sso_to_sso_priv(roc_sso);
+	for (i = 0; i < nb_hwgrp; i++) {
+		base = dev->bar2 + (RVU_BLOCK_ADDR_SSOW << 20 | hws << 12);
+		sso_hws_link_modify(base, hwgrp[i], true);
+		plt_bitmap_set(sso->link_map[hws], hwgrp[i]);
+		plt_sso_dbg("HWS %d Linked to HWGRP %d", hws, hwgrp[i]);
+	}
+
+	return nb_hwgrp;
+}
+
+int
+roc_sso_hws_unlink(struct roc_sso *roc_sso, uint8_t hws, uint16_t hwgrp[],
+		   uint16_t nb_hwgrp)
+{
+	struct dev *dev = &roc_sso_to_sso_priv(roc_sso)->dev;
+	struct sso *sso;
+	uintptr_t base;
+	int i;
+
+	sso = roc_sso_to_sso_priv(roc_sso);
+	for (i = 0; i < nb_hwgrp; i++) {
+		base = dev->bar2 + (RVU_BLOCK_ADDR_SSOW << 20 | hws << 12);
+		sso_hws_link_modify(base, hwgrp[i], false);
+		plt_bitmap_clear(sso->link_map[hws], hwgrp[i]);
+		plt_sso_dbg("HWS %d Unlinked from HWGRP %d", hws, hwgrp[i]);
+	}
+
+	return nb_hwgrp;
+}
+
 int
 roc_sso_rsrc_init(struct roc_sso *roc_sso, uint8_t nb_hws, uint16_t nb_hwgrp)
 {
@@ -225,8 +313,10 @@ int
 roc_sso_dev_init(struct roc_sso *roc_sso)
 {
 	struct plt_pci_device *pci_dev;
+	uint32_t link_map_sz;
 	struct sso *sso;
-	int rc;
+	void *link_mem;
+	int i, rc;
 
 	if (roc_sso == NULL || roc_sso->pci_dev == NULL)
 		return SSO_ERR_PARAM;
@@ -249,12 +339,38 @@ roc_sso_dev_init(struct roc_sso *roc_sso)
 	}
 	rc = -ENOMEM;
 
+	sso->link_map =
+		plt_zmalloc(sizeof(struct plt_bitmap *) * roc_sso->max_hws, 0);
+	if (sso->link_map == NULL) {
+		plt_err("Failed to allocate memory for link_map array");
+		goto rsrc_fail;
+	}
+
+	link_map_sz = plt_bitmap_get_memory_footprint(roc_sso->max_hwgrp);
+	sso->link_map_mem = plt_zmalloc(link_map_sz * roc_sso->max_hws, 0);
+	if (sso->link_map_mem == NULL) {
+		plt_err("Failed to get link_map memory");
+		goto rsrc_fail;
+	}
+
+	link_mem = sso->link_map_mem;
+	for (i = 0; i < roc_sso->max_hws; i++) {
+		sso->link_map[i] = plt_bitmap_init(roc_sso->max_hwgrp, link_mem,
+						   link_map_sz);
+		if (sso->link_map[i] == NULL) {
+			plt_err("Failed to allocate link map");
+			goto link_mem_free;
+		}
+		link_mem = PLT_PTR_ADD(link_mem, link_map_sz);
+	}
 	idev_sso_pffunc_set(sso->dev.pf_func);
 	sso->pci_dev = pci_dev;
 	sso->dev.drv_inited = true;
 	roc_sso->lmt_base = sso->dev.lmt_base;
 
 	return 0;
+link_mem_free:
+	plt_free(sso->link_map_mem);
 rsrc_fail:
 	rc |= dev_fini(&sso->dev, pci_dev);
 fail:
