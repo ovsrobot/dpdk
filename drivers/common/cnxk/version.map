@@ -2,7 +2,9 @@ INTERNAL {
 	global:
 
 	cnxk_logtype_base;
+	cnxk_logtype_mbox;
 	plt_init;
+	roc_clk_freq_get;
 	roc_error_msg_get;
 	roc_model;
 

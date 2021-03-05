@@ -24,7 +24,9 @@ plt_init(void)
 		return -ENOMEM;
 	}
 	roc_model_init(mz->addr);
+
 	return 0;
 }
 
 RTE_LOG_REGISTER(cnxk_logtype_base, pmd.cnxk.base, NOTICE);
+RTE_LOG_REGISTER(cnxk_logtype_mbox, pmd.cnxk.mbox, NOTICE);
