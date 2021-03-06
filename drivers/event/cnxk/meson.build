@@ -8,7 +8,9 @@ if not is_linux or not dpdk_conf.get('RTE_ARCH_64')
 	subdir_done()
 endif
 
-sources = files('cn10k_eventdev.c',
+sources = files('cn10k_worker.c',
+		'cn10k_eventdev.c',
+		'cn9k_worker.c',
 		'cn9k_eventdev.c',
 		'cnxk_eventdev.c')
 
