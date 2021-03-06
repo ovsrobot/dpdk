@@ -15,6 +15,7 @@ sources = files('cn10k_worker.c',
 		'cnxk_eventdev_adptr.c',
 		'cnxk_eventdev.c',
 		'cnxk_sso_selftest.c',
+		'cnxk_tim_worker.c',
 		'cnxk_tim_evdev.c')
 
 deps += ['bus_pci', 'common_cnxk', 'net_cnxk']
