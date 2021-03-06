@@ -1211,6 +1211,12 @@ M: Jerin Jacob <jerinj@marvell.com>
 F: drivers/event/octeontx2/
 F: doc/guides/eventdevs/octeontx2.rst
 
+Marvell OCTEON CNXK
+M: Pavan Nikhilesh <pbhagavatula@marvell.com>
+M: Shijith Thotton <sthotton@marvell.com>
+F: drivers/event/cnxk/
+F: doc/guides/eventdevs/cnxk.rst
+
 NXP DPAA eventdev
 M: Hemant Agrawal <hemant.agrawal@nxp.com>
 M: Nipun Gupta <nipun.gupta@nxp.com>
