@@ -39,6 +39,10 @@ Features of the OCTEON CNXK SSO PMD are:
   time granularity of 2.5us on CN9K and 1us on CN10K.
 - Up to 256 TIM rings aka event timer adapters.
 - Up to 8 rings traversed in parallel.
+- HW managed packets enqueued from ethdev to eventdev exposed through event eth
+  RX adapter.
+- N:1 ethernet device Rx queue to Event queue mapping.
+- Full Rx offload support defined through ethdev queue configuration.
 
 Prerequisites and Compilation procedure
 ---------------------------------------

@@ -6,6 +6,8 @@
 #define __CNXK_EVENTDEV_H__
 
 #include <rte_devargs.h>
+#include <rte_ethdev.h>
+#include <rte_event_eth_rx_adapter.h>
 #include <rte_kvargs.h>
 #include <rte_mbuf_pool_ops.h>
 #include <rte_pci.h>
@@ -81,7 +83,10 @@ struct cnxk_sso_evdev {
 	uint64_t nb_xaq_cfg;
 	rte_iova_t fc_iova;
 	struct rte_mempool *xaq_pool;
+	uint64_t rx_offloads;
 	uint64_t adptr_xae_cnt;
+	uint16_t rx_adptr_pool_cnt;
+	uint64_t *rx_adptr_pools;
 	uint16_t tim_adptr_ring_cnt;
 	uint16_t *timer_adptr_rings;
 	uint64_t *timer_adptr_sz;
@@ -108,6 +113,7 @@ struct cnxk_sso_evdev {
 struct cn10k_sso_hws {
 	/* Get Work Fastpath data */
 	CN10K_SSO_HWS_OPS;
+	void *lookup_mem;
 	uint32_t gw_wdata;
 	uint8_t swtag_req;
 	uint8_t hws_id;
@@ -132,6 +138,7 @@ struct cn10k_sso_hws {
 struct cn9k_sso_hws {
 	/* Get Work Fastpath data */
 	CN9K_SSO_HWS_OPS;
+	void *lookup_mem;
 	uint8_t swtag_req;
 	uint8_t hws_id;
 	/* Add Work Fastpath data */
@@ -148,6 +155,7 @@ struct cn9k_sso_hws_state {
 struct cn9k_sso_hws_dual {
 	/* Get Work Fastpath data */
 	struct cn9k_sso_hws_state ws_state[2]; /* Ping and Pong */
+	void *lookup_mem;
 	uint8_t swtag_req;
 	uint8_t vws; /* Ping pong bit */
 	uint8_t hws_id;
@@ -234,5 +242,18 @@ void cnxk_sso_dump(struct rte_eventdev *event_dev, FILE *f);
 
 /* CN9K */
 void cn9k_sso_set_rsrc(void *arg);
+
+/* Common adapter ops */
+int cnxk_sso_rx_adapter_queue_add(
+	const struct rte_eventdev *event_dev, const struct rte_eth_dev *eth_dev,
+	int32_t rx_queue_id,
+	const struct rte_event_eth_rx_adapter_queue_conf *queue_conf);
+int cnxk_sso_rx_adapter_queue_del(const struct rte_eventdev *event_dev,
+				  const struct rte_eth_dev *eth_dev,
+				  int32_t rx_queue_id);
+int cnxk_sso_rx_adapter_start(const struct rte_eventdev *event_dev,
+			      const struct rte_eth_dev *eth_dev);
+int cnxk_sso_rx_adapter_stop(const struct rte_eventdev *event_dev,
+			     const struct rte_eth_dev *eth_dev);
 
 #endif /* __CNXK_EVENTDEV_H__ */
