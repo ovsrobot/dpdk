@@ -83,20 +83,40 @@ cn10k_sso_hws_forward_event(struct cn10k_sso_hws *ws,
 		cn10k_sso_hws_fwd_group(ws, ev, grp);
 }
 
+static __rte_always_inline void
+cn10k_wqe_to_mbuf(uint64_t wqe, const uint64_t mbuf, uint8_t port_id,
+		  const uint32_t tag, const uint32_t flags,
+		  const void *const lookup_mem)
+{
+	union mbuf_initializer mbuf_init = {
+		.fields = {.data_off = RTE_PKTMBUF_HEADROOM,
+			   .refcnt = 1,
+			   .nb_segs = 1,
+			   .port = port_id},
+	};
+
+	cn10k_nix_cqe_to_mbuf((struct nix_cqe_hdr_s *)wqe, tag,
+			      (struct rte_mbuf *)mbuf, lookup_mem,
+			      mbuf_init.value, flags);
+}
+
 static __rte_always_inline uint16_t
-cn10k_sso_hws_get_work(struct cn10k_sso_hws *ws, struct rte_event *ev)
+cn10k_sso_hws_get_work(struct cn10k_sso_hws *ws, struct rte_event *ev,
+		       const uint32_t flags, void *lookup_mem)
 {
 	union {
 		__uint128_t get_work;
 		uint64_t u64[2];
 	} gw;
+	uint64_t mbuf;
 
 	gw.get_work = ws->gw_wdata;
 #if defined(RTE_ARCH_ARM64) && !defined(__clang__)
 	asm volatile(
 		PLT_CPU_FEATURE_PREAMBLE
 		"caspl %[wdata], %H[wdata], %[wdata], %H[wdata], [%[gw_loc]]\n"
-		: [wdata] "+r"(gw.get_work)
+		"sub %[mbuf], %H[wdata], #0x80				\n"
+		: [wdata] "+r"(gw.get_work), [mbuf] "=&r"(mbuf)
 		: [gw_loc] "r"(ws->getwrk_op)
 		: "memory");
 #else
@@ -104,10 +124,24 @@ cn10k_sso_hws_get_work(struct cn10k_sso_hws *ws, struct rte_event *ev)
 	do {
 		roc_load_pair(gw.u64[0], gw.u64[1], ws->tag_wqe_op);
 	} while (gw.u64[0] & BIT_ULL(63));
+	mbuf = (uint64_t)((char *)gw.u64[1] - sizeof(struct rte_mbuf));
 #endif
 	gw.u64[0] = (gw.u64[0] & (0x3ull << 32)) << 6 |
 		    (gw.u64[0] & (0x3FFull << 36)) << 4 |
 		    (gw.u64[0] & 0xffffffff);
+
+	if (CNXK_TT_FROM_EVENT(gw.u64[0]) != SSO_TT_EMPTY) {
+		if (CNXK_EVENT_TYPE_FROM_TAG(gw.u64[0]) ==
+		    RTE_EVENT_TYPE_ETHDEV) {
+			uint8_t port = CNXK_SUB_EVENT_FROM_TAG(gw.u64[0]);
+
+			gw.u64[0] = CNXK_CLR_SUB_EVENT(gw.u64[0]);
+			cn10k_wqe_to_mbuf(gw.u64[1], mbuf, port,
+					  gw.u64[0] & 0xFFFFF, flags,
+					  lookup_mem);
+			gw.u64[1] = mbuf;
+		}
+	}
 
 	ev->event = gw.u64[0];
 	ev->u64 = gw.u64[1];
@@ -123,6 +157,7 @@ cn10k_sso_hws_get_work_empty(struct cn10k_sso_hws *ws, struct rte_event *ev)
 		__uint128_t get_work;
 		uint64_t u64[2];
 	} gw;
+	uint64_t mbuf;
 
 #ifdef RTE_ARCH_ARM64
 	asm volatile(PLT_CPU_FEATURE_PREAMBLE
@@ -133,18 +168,33 @@ cn10k_sso_hws_get_work_empty(struct cn10k_sso_hws *ws, struct rte_event *ev)
 		     "		ldp %[tag], %[wqp], [%[tag_loc]]	\n"
 		     "		tbnz %[tag], 63, rty%=			\n"
 		     "done%=:	dmb ld					\n"
-		     : [tag] "=&r"(gw.u64[0]), [wqp] "=&r"(gw.u64[1])
+		     "		sub %[mbuf], %[wqp], #0x80		\n"
+		     : [tag] "=&r"(gw.u64[0]), [wqp] "=&r"(gw.u64[1]),
+		       [mbuf] "=&r"(mbuf)
 		     : [tag_loc] "r"(ws->tag_wqe_op)
 		     : "memory");
 #else
 	do {
 		roc_load_pair(gw.u64[0], gw.u64[1], ws->tag_wqe_op);
 	} while (gw.u64[0] & BIT_ULL(63));
+	mbuf = (uint64_t)((char *)gw.u64[1] - sizeof(struct rte_mbuf));
 #endif
 
 	gw.u64[0] = (gw.u64[0] & (0x3ull << 32)) << 6 |
 		    (gw.u64[0] & (0x3FFull << 36)) << 4 |
 		    (gw.u64[0] & 0xffffffff);
+
+	if (CNXK_TT_FROM_EVENT(gw.u64[0]) != SSO_TT_EMPTY) {
+		if (CNXK_EVENT_TYPE_FROM_TAG(gw.u64[0]) ==
+		    RTE_EVENT_TYPE_ETHDEV) {
+			uint8_t port = CNXK_SUB_EVENT_FROM_TAG(gw.u64[0]);
+
+			gw.u64[0] = CNXK_CLR_SUB_EVENT(gw.u64[0]);
+			cn10k_wqe_to_mbuf(gw.u64[1], mbuf, port,
+					  gw.u64[0] & 0xFFFFF, 0, NULL);
+			gw.u64[1] = mbuf;
+		}
+	}
 
 	ev->event = gw.u64[0];
 	ev->u64 = gw.u64[1];
@@ -164,16 +214,29 @@ uint16_t __rte_hot cn10k_sso_hws_enq_fwd_burst(void *port,
 					       const struct rte_event ev[],
 					       uint16_t nb_events);
 
-uint16_t __rte_hot cn10k_sso_hws_deq(void *port, struct rte_event *ev,
-				     uint64_t timeout_ticks);
-uint16_t __rte_hot cn10k_sso_hws_deq_burst(void *port, struct rte_event ev[],
-					   uint16_t nb_events,
-					   uint64_t timeout_ticks);
-uint16_t __rte_hot cn10k_sso_hws_tmo_deq(void *port, struct rte_event *ev,
-					 uint64_t timeout_ticks);
-uint16_t __rte_hot cn10k_sso_hws_tmo_deq_burst(void *port,
-					       struct rte_event ev[],
-					       uint16_t nb_events,
-					       uint64_t timeout_ticks);
+#define R(name, f3, f2, f1, f0, flags)                                         \
+	uint16_t __rte_hot cn10k_sso_hws_deq_##name(                           \
+		void *port, struct rte_event *ev, uint64_t timeout_ticks);     \
+	uint16_t __rte_hot cn10k_sso_hws_deq_burst_##name(                     \
+		void *port, struct rte_event ev[], uint16_t nb_events,         \
+		uint64_t timeout_ticks);                                       \
+	uint16_t __rte_hot cn10k_sso_hws_tmo_deq_##name(                       \
+		void *port, struct rte_event *ev, uint64_t timeout_ticks);     \
+	uint16_t __rte_hot cn10k_sso_hws_tmo_deq_burst_##name(                 \
+		void *port, struct rte_event ev[], uint16_t nb_events,         \
+		uint64_t timeout_ticks);                                       \
+	uint16_t __rte_hot cn10k_sso_hws_deq_seg_##name(                       \
+		void *port, struct rte_event *ev, uint64_t timeout_ticks);     \
+	uint16_t __rte_hot cn10k_sso_hws_deq_seg_burst_##name(                 \
+		void *port, struct rte_event ev[], uint16_t nb_events,         \
+		uint64_t timeout_ticks);                                       \
+	uint16_t __rte_hot cn10k_sso_hws_tmo_deq_seg_##name(                   \
+		void *port, struct rte_event *ev, uint64_t timeout_ticks);     \
+	uint16_t __rte_hot cn10k_sso_hws_tmo_deq_seg_burst_##name(             \
+		void *port, struct rte_event ev[], uint16_t nb_events,         \
+		uint64_t timeout_ticks);
+
+NIX_RX_FASTPATH_MODES
+#undef R
 
 #endif
