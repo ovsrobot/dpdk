@@ -42,7 +42,9 @@ Features of the OCTEON CNXK SSO PMD are:
 - HW managed packets enqueued from ethdev to eventdev exposed through event eth
   RX adapter.
 - N:1 ethernet device Rx queue to Event queue mapping.
-- Full Rx offload support defined through ethdev queue configuration.
+- Lockfree Tx from event eth Tx adapter using ``DEV_TX_OFFLOAD_MT_LOCKFREE``
+  capability while maintaining receive packet order.
+- Full Rx/Tx offload support defined through ethdev queue configuration.
 
 Prerequisites and Compilation procedure
 ---------------------------------------
