@@ -142,7 +142,7 @@ This can be useful when using other processors to understand the mapping of the 
     On Fedora Linux, this may be installed and run using the following command::
 
         sudo yum install hwloc
-        ./lstopo
+        lstopo
 
 .. warning::
 
