@@ -1322,7 +1322,7 @@ rte_eal_init(int argc, char **argv)
 			return -1;
 		}
 		if (error_str != NULL)
-			RTE_LOG(NOTICE, EAL, "%s\n", error_str);
+			RTE_LOG(NOTICE, EAL, "telemetry: %s\n", error_str);
 	}
 
 	eal_mcfg_complete();
