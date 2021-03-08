@@ -151,6 +151,12 @@ enum rte_event_timer_adapter_clk_src {
  * @see struct rte_event_timer_adapter_conf::flags
  */
 
+#define RTE_EVENT_TIMER_ADAPTER_F_PERIODIC	(1ULL << 2)
+/**< Flag to configure event timer adapter in periodic mode.
+ *
+ * @see struct rte_event_timer_adapter_conf::flags
+ */
+
 /**
  * Timer adapter configuration structure
  */

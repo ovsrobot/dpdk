@@ -252,6 +252,39 @@ be canceled by calling ``rte_event_timer_cancel_burst()``:
          */
 	rte_event_timer_cancel_burst(adapter, &conn->timer, 1);
 
+Timer adapter in periodic mode
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A periodic timer is a timer, which expires at fixed time intervals continuously
+till it is cancelled.  A timer adapter can be configured to arm such timers by
+configuring it in periodic mode.  Capability flag
+``RTE_EVENT_TIMER_ADAPTER_CAP_PERIODIC`` can be used to check if an adapter
+supports periodic mode. An adapter in periodic mode can only be used to arm
+periodic timers.
+
+Example config to create an adapter in periodic mode with 100ms resolution:
+
+.. code-block:: c
+
+	#define NSECPERSEC 1E9 // No of ns in 1 sec
+	const struct rte_event_timer_adapter_conf adapter_config = {
+                .event_dev_id = event_dev_id,
+                .timer_adapter_id = 0,
+                .clk_src = RTE_EVENT_TIMER_ADAPTER_CPU_CLK,
+                .timer_tick_ns = NSECPERSEC / 10, // 100 milliseconds
+                .nb_timers = 100,
+                .timer_adapter_flags = RTE_EVENT_TIMER_ADAPTER_F_PERIODIC,
+	};
+
+``timer_adapter_flags`` is set to include periodic flag
+``RTE_EVENT_TIMER_ADAPTER_F_PERIODIC`` and ``timer_tick_ns`` to resolution.
+Maximum timeout (``max_tmo_nsec``) does not apply for periodic mode.
+
+After starting the adapter, event timer arm APIs can be used to arm periodic
+timers.  Timer events will be generated at configured ``timer_tick_ns``
+intervals.  Event generation can be stopped using cancel API
+``rte_event_timer_cancel_burst``.
+
 Processing Timer Expiry Events
 ------------------------------
 
