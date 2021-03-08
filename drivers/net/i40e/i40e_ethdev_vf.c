@@ -42,7 +42,8 @@
 /* busy wait delay in msec */
 #define I40EVF_BUSY_WAIT_DELAY 10
 #define I40EVF_BUSY_WAIT_COUNT 50
-#define MAX_RESET_WAIT_CNT     20
+#define I40EVF_AQ_MAX_ERR      20
+#define MAX_RESET_WAIT_CNT     500
 
 #define I40EVF_ALARM_INTERVAL 50000 /* us */
 
@@ -1217,7 +1218,7 @@ i40evf_check_vf_reset_done(struct rte_eth_dev *dev)
 		if (reset == VIRTCHNL_VFR_VFACTIVE ||
 		    reset == VIRTCHNL_VFR_COMPLETED)
 			break;
-		rte_delay_ms(50);
+		rte_delay_ms(10);
 	}
 
 	if (i >= MAX_RESET_WAIT_CNT)
@@ -1276,9 +1277,20 @@ i40evf_init_vf(struct rte_eth_dev *dev)
 		goto err;
 	}
 
-	err = i40evf_check_vf_reset_done(dev);
-	if (err)
+	for (i = 0; i < I40EVF_AQ_MAX_ERR; i++) {
+		err = i40evf_check_vf_reset_done(dev);
+		if (err) {
+			PMD_INIT_LOG(WARNING, "Device is still reset: %d %d", err, i);
+			continue;
+		} else {
+			break;
+		}
+	}
+
+	if (i == I40EVF_AQ_MAX_ERR) {
+		PMD_INIT_LOG(ERR, "Device check vf reset status failed");
 		goto err;
+	}
 
 	i40e_init_adminq_parameter(hw);
 	err = i40e_init_adminq(hw);
