@@ -928,6 +928,7 @@ ut_teardown(void)
 	struct crypto_testsuite_params *ts_params = &testsuite_params;
 	struct crypto_unittest_params *ut_params = &unittest_params;
 	struct rte_cryptodev_stats stats;
+	int res;
 
 	/* free crypto session structure */
 #ifdef RTE_LIB_SECURITY
@@ -976,8 +977,11 @@ ut_teardown(void)
 
 	rte_cryptodev_stats_get(ts_params->valid_devs[0], &stats);
 
-	/* Stop the device */
+	/* Stop and close the device */
 	rte_cryptodev_stop(ts_params->valid_devs[0]);
+	res = rte_cryptodev_close(ts_params->valid_devs[0]);
+	if (res)
+		RTE_LOG(ERR, USER1, "Crypto device close error %d\n", res);
 }
 
 static int
