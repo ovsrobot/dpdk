@@ -49,29 +49,7 @@
 void
 usage(const char *progname)
 {
-	printf("usage: %s [EAL options] -- "
-#ifdef RTE_LIB_CMDLINE
-	       "[--interactive|-i] "
-	       "[--cmdline-file=FILENAME] "
-#endif
-	       "[--help|-h] | [--auto-start|-a] | ["
-	       "--tx-first | --stats-period=PERIOD | "
-	       "--coremask=COREMASK --portmask=PORTMASK --numa "
-	       "--portlist=PORTLIST "
-	       "--mbuf-size= | --total-num-mbufs= | "
-	       "--nb-cores= | --nb-ports= | "
-#ifdef RTE_LIB_CMDLINE
-	       "--eth-peers-configfile= | "
-	       "--eth-peer=X,M:M:M:M:M:M | "
-	       "--tx-ip=SRC,DST | --tx-udp=PORT | "
-#endif
-	       "--pkt-filter-mode= |"
-	       "--rss-ip | --rss-udp | --rss-level-inner | --rss-level-outer |"
-	       "--rxpt= | --rxht= | --rxwt= |"
-	       " --rxfreet= | --txpt= | --txht= | --txwt= | --txfreet= | "
-	       "--txrst= | --tx-offloads= | | --rx-offloads= | "
-	       "--vxlan-gpe-port= | --geneve-parsed-port= | "
-	       "--record-core-cycles | --record-burst-stats]\n",
+	printf("\nUsage: %s [EAL options] -- [testpmd options]\n\n",
 	       progname);
 #ifdef RTE_LIB_CMDLINE
 	printf("  --interactive: run in interactive mode.\n");
@@ -221,7 +199,7 @@ usage(const char *progname)
 	       "enabled\n");
 	printf("  --record-core-cycles: enable measurement of CPU cycles.\n");
 	printf("  --record-burst-stats: enable display of RX and TX bursts.\n");
-	printf("  --hairpin-mode=0xXX: bitmask set the hairpin port mode.\n "
+	printf("  --hairpin-mode=0xXX: bitmask set the hairpin port mode.\n"
 	       "    0x10 - explicit Tx rule, 0x02 - hairpin ports paired\n"
 	       "    0x01 - hairpin ports loop, 0x00 - hairpin port self\n");
 }
