@@ -1080,6 +1080,8 @@ main(int argc, char **argv)
 	int ret;
 	uint32_t lcore;
 
+	rte_set_application_usage_hook(print_usage);
+
 	ret = rte_eal_init(argc, argv);
 	if (ret < 0)
 		rte_panic("Cannot init EAL\n");

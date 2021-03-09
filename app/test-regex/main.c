@@ -616,7 +616,8 @@ main(int argc, char **argv)
 	uint32_t i;
 	struct qps_per_lcore *qps_per_lcore;
 
-	/* Init EAL. */
+	rte_set_application_usage_hook(usage);
+
 	ret = rte_eal_init(argc, argv);
 	if (ret < 0)
 		rte_exit(EXIT_FAILURE, "EAL init failed\n");

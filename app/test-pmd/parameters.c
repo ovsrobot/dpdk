@@ -46,8 +46,8 @@
 
 #include "testpmd.h"
 
-static void
-usage(char* progname)
+void
+usage(const char *progname)
 {
 	printf("usage: %s [EAL options] -- "
 #ifdef RTE_LIB_CMDLINE

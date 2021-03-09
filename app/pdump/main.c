@@ -974,6 +974,8 @@ main(int argc, char **argv)
 	char mp_flag[] = "--proc-type=secondary";
 	char *argp[argc + 2];
 
+	rte_set_application_usage_hook(pdump_usage);
+
 	/* catch ctrl-c so we can print on exit */
 	signal(SIGINT, signal_handler);
 

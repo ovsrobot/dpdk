@@ -149,7 +149,12 @@ print_usage(void)
 		"[-p <parallel lookup on all available cores>]\n"
 		"[-c <init sad supporting read/write concurrency>]\n",
 		config.prgname);
+}
 
+static void
+usage_hook(const char *prgname __rte_unused)
+{
+	print_usage();
 }
 
 static int
@@ -619,6 +624,8 @@ main(int argc, char **argv)
 	struct rte_ipsec_sad *sad;
 	struct rte_ipsec_sad_conf conf = {0};
 	unsigned int lcore_id;
+
+	rte_set_application_usage_hook(usage_hook);
 
 	ret = rte_eal_init(argc, argv);
 	if (ret < 0)

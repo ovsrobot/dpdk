@@ -38,8 +38,8 @@ struct name_id_map {
 	uint32_t id;
 };
 
-static void
-usage(char *progname)
+void
+comp_perf_usage(const char *progname)
 {
 	printf("%s [EAL options] --\n"
 		" --ptest throughput / verify / pmd-cyclecount\n"
@@ -619,7 +619,7 @@ comp_perf_options_parse(struct comp_test_data *test_data, int argc, char **argv)
 	while ((opt = getopt_long(argc, argv, "h", lgopts, &opt_idx)) != EOF) {
 		switch (opt) {
 		case 'h':
-			usage(argv[0]);
+			comp_perf_usage(argv[0]);
 			exit(EXIT_SUCCESS);
 			break;
 		/* long options */
@@ -631,7 +631,7 @@ comp_perf_options_parse(struct comp_test_data *test_data, int argc, char **argv)
 			break;
 
 		default:
-			usage(argv[0]);
+			comp_perf_usage(argv[0]);
 			return -EINVAL;
 		}
 	}
