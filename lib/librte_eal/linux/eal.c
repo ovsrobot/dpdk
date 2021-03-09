@@ -534,7 +534,12 @@ eal_usage(const char *prgname)
 {
 	rte_usage_hook_t hook = eal_get_application_usage_hook();
 
-	printf("\nUsage: %s ", prgname);
+	if (hook) {
+		/* Print application usage through EAL options parsing. */
+		(hook)(prgname);
+		printf("\n");
+	}
+
 	eal_common_usage();
 	printf("EAL Linux options:\n"
 	       "  --"OPT_SOCKET_MEM"        Memory to allocate on sockets (comma separated values)\n"
@@ -548,11 +553,6 @@ eal_usage(const char *prgname)
 	       "  --"OPT_SINGLE_FILE_SEGMENTS" Put all hugepage memory in single files\n"
 	       "  --"OPT_MATCH_ALLOCATIONS" Free hugepages exactly as allocated\n"
 	       "\n");
-	/* Allow the application to print its usage message too if hook is set */
-	if (hook) {
-		printf("===== Application Usage =====\n\n");
-		(hook)(prgname);
-	}
 }
 
 static int

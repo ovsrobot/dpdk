@@ -2022,8 +2022,7 @@ rte_vect_set_max_simd_bitwidth(uint16_t bitwidth)
 void
 eal_common_usage(void)
 {
-	printf("[options]\n\n"
-	       "EAL common options:\n"
+	printf("EAL common options:\n"
 	       "  -c COREMASK         Hexadecimal bitmask of cores to run on\n"
 	       "  -l CORELIST         List of cores to run on\n"
 	       "                      The argument format is <c1>[-c2][,c3[-c4],...]\n"
@@ -2053,7 +2052,7 @@ eal_common_usage(void)
 	       "  --"OPT_VDEV"              Add a virtual device.\n"
 	       "                      The argument format is <driver><id>[,key=val,...]\n"
 	       "                      (ex: --vdev=net_pcap0,iface=eth2).\n"
-	       "  --"OPT_IOVA_MODE"   Set IOVA mode. 'pa' for IOVA_PA\n"
+	       "  --"OPT_IOVA_MODE"         Set IOVA mode. 'pa' for IOVA_PA\n"
 	       "                      'va' for IOVA_VA\n"
 	       "  -d LIB.so|DIR       Add a driver or driver directory\n"
 	       "                      (can be used multiple times)\n"
@@ -2092,11 +2091,11 @@ eal_common_usage(void)
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 	       "  -v                  Display version information on startup\n"
 	       "  -h, --help          This help\n"
-	       "  --"OPT_IN_MEMORY"   Operate entirely in memory. This will\n"
+	       "  --"OPT_IN_MEMORY"         Operate entirely in memory. This will\n"
 	       "                      disable secondary process support\n"
 	       "  --"OPT_BASE_VIRTADDR"     Base virtual address\n"
-	       "  --"OPT_TELEMETRY"   Enable telemetry support (on by default)\n"
-	       "  --"OPT_NO_TELEMETRY"   Disable telemetry support\n"
+	       "  --"OPT_TELEMETRY"         Enable telemetry support (on by default)\n"
+	       "  --"OPT_NO_TELEMETRY"      Disable telemetry support\n"
 	       "  --"OPT_FORCE_MAX_SIMD_BITWIDTH" Force the max SIMD bitwidth\n"
 	       "\nEAL options for DEBUG use only:\n"
 	       "  --"OPT_HUGE_UNLINK"       Unlink hugepage files after init\n"
