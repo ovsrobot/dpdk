@@ -397,12 +397,12 @@ RTE_INIT_PRIO(log_init, LOG)
 	rte_logs.dynamic_types_len = RTE_LOGTYPE_FIRST_EXT_ID;
 }
 
-static const char *
-loglevel_to_string(uint32_t level)
+const char *
+eal_log_level2str(uint32_t level)
 {
 	switch (level) {
 	case 0: return "disabled";
-	case RTE_LOG_EMERG: return "emerg";
+	case RTE_LOG_EMERG: return "emergency";
 	case RTE_LOG_ALERT: return "alert";
 	case RTE_LOG_CRIT: return "critical";
 	case RTE_LOG_ERR: return "error";
@@ -414,6 +414,20 @@ loglevel_to_string(uint32_t level)
 	}
 }
 
+/* Dump name of each logtype, one per line. */
+void
+rte_log_list_types(FILE *out, const char *prefix)
+{
+	size_t type;
+
+	for (type = 0; type < rte_logs.dynamic_types_len; ++type) {
+		if (rte_logs.dynamic_types[type].name == NULL)
+			continue;
+		fprintf(out, "%s%s\n",
+				prefix, rte_logs.dynamic_types[type].name);
+	}
+}
+
 /* dump global level and registered log types */
 void
 rte_log_dump(FILE *f)
@@ -421,14 +435,14 @@ rte_log_dump(FILE *f)
 	size_t i;
 
 	fprintf(f, "global log level is %s\n",
-		loglevel_to_string(rte_log_get_global_level()));
+		eal_log_level2str(rte_log_get_global_level()));
 
 	for (i = 0; i < rte_logs.dynamic_types_len; i++) {
 		if (rte_logs.dynamic_types[i].name == NULL)
 			continue;
 		fprintf(f, "id %zu: %s, level is %s\n",
 			i, rte_logs.dynamic_types[i].name,
-			loglevel_to_string(rte_logs.dynamic_types[i].loglevel));
+			eal_log_level2str(rte_logs.dynamic_types[i].loglevel));
 	}
 }
 
