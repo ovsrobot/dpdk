@@ -222,6 +222,7 @@ you may use various combinations of implementer/part number::
 
    Supported part_numbers for 0x48:
       '0xd01':    kunpeng920
+      '0xd02':    kunpeng930
 
    Supported part_numbers for 0x50:
       '0x0':     emag
