@@ -90,20 +90,26 @@ static const char *default_runtime_dir = "/var/run";
 int
 eal_create_runtime_dir(void)
 {
-	const char *directory = default_runtime_dir;
+	const char *directory;
 	const char *xdg_runtime_dir = getenv("XDG_RUNTIME_DIR");
 	const char *fallback = "/tmp";
 	char run_dir[PATH_MAX];
 	char tmp[PATH_MAX];
 	int ret;
 
-	if (getuid() != 0) {
+	directory = getenv("DPDK_RUNTIME_DIR");
+	if (directory != NULL) {
+		RTE_LOG(DEBUG, EAL, "Using DPDK runtime directory: %s\n", directory);
+	} else if (getuid() == 0) {
+		directory = default_runtime_dir;
+	} else {
 		/* try XDG path first, fall back to /tmp */
 		if (xdg_runtime_dir != NULL)
 			directory = xdg_runtime_dir;
 		else
 			directory = fallback;
 	}
+
 	/* create DPDK subdirectory under runtime dir */
 	ret = snprintf(tmp, sizeof(tmp), "%s/dpdk", directory);
 	if (ret < 0 || ret == sizeof(tmp)) {
