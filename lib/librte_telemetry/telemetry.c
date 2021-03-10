@@ -16,6 +16,7 @@
 #include <rte_common.h>
 #include <rte_spinlock.h>
 #include <rte_version.h>
+#include <rte_log.h>
 
 #include "rte_telemetry.h"
 #include "telemetry_json.h"
@@ -48,7 +49,15 @@ struct socket {
 static struct socket v2_socket; /* socket for v2 telemetry */
 static struct socket v1_socket; /* socket for v1 telemetry */
 #endif /* !RTE_EXEC_ENV_WINDOWS */
-static char telemetry_log_error[1024]; /* Will contain error on init failure */
+
+static const char *socket_dir;
+static rte_cpuset_t *thread_cpuset;
+static rte_log_fn rte_log_ptr;
+static uint32_t logtype;
+
+#define TMTY_LOG(l, ...) \
+	 rte_log_ptr(RTE_LOG_ ## l, logtype, "TELEMETRY: " __VA_ARGS__)
+
 /* list of command callbacks, with one command registered by default */
 static struct cmd_callback callbacks[TELEMETRY_MAX_CALLBACKS];
 static int num_callbacks; /* How many commands are registered */
@@ -344,9 +353,7 @@ socket_listener(void *socket)
 		struct socket *s = (struct socket *)socket;
 		int s_accepted = accept(s->sock, NULL, NULL);
 		if (s_accepted < 0) {
-			snprintf(telemetry_log_error,
-				sizeof(telemetry_log_error),
-				"Error with accept, telemetry thread quitting");
+			TMTY_LOG(ERR, "Error with accept, telemetry thread quitting\n");
 			return NULL;
 		}
 		if (s->num_clients != NULL) {
@@ -388,9 +395,7 @@ create_socket(char *path)
 {
 	int sock = socket(AF_UNIX, SOCK_SEQPACKET, 0);
 	if (sock < 0) {
-		snprintf(telemetry_log_error, sizeof(telemetry_log_error),
-				"Error with socket creation, %s",
-				strerror(errno));
+		TMTY_LOG(ERR, "Error with socket creation, %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -398,17 +403,13 @@ create_socket(char *path)
 	strlcpy(sun.sun_path, path, sizeof(sun.sun_path));
 	unlink(sun.sun_path);
 	if (bind(sock, (void *) &sun, sizeof(sun)) < 0) {
-		snprintf(telemetry_log_error, sizeof(telemetry_log_error),
-				"Error binding socket: %s",
-				strerror(errno));
+		TMTY_LOG(ERR, "Error binding socket: %s\n", strerror(errno));
 		sun.sun_path[0] = 0;
 		goto error;
 	}
 
 	if (listen(sock, 1) < 0) {
-		snprintf(telemetry_log_error, sizeof(telemetry_log_error),
-				"Error calling listen for socket: %s",
-				strerror(errno));
+		TMTY_LOG(ERR, "Error calling listen for socket: %s\n", strerror(errno));
 		goto error;
 	}
 
@@ -421,35 +422,33 @@ error:
 }
 
 static int
-telemetry_legacy_init(const char *runtime_dir, rte_cpuset_t *cpuset)
+telemetry_legacy_init(void)
 {
 	pthread_t t_old;
 
 	if (num_legacy_callbacks == 1) {
-		snprintf(telemetry_log_error, sizeof(telemetry_log_error),
-			 "No legacy callbacks, legacy socket not created");
+		TMTY_LOG(WARNING, "No legacy callbacks, legacy socket not created\n");
 		return -1;
 	}
 
 	v1_socket.fn = legacy_client_handler;
 	if ((size_t) snprintf(v1_socket.path, sizeof(v1_socket.path),
-			"%s/telemetry", runtime_dir)
-			>= sizeof(v1_socket.path)) {
-		snprintf(telemetry_log_error, sizeof(telemetry_log_error),
-				"Error with socket binding, path too long");
+			"%s/telemetry", socket_dir) >= sizeof(v1_socket.path)) {
+		TMTY_LOG(ERR, "Error with socket binding, path too long\n");
 		return -1;
 	}
 	v1_socket.sock = create_socket(v1_socket.path);
 	if (v1_socket.sock < 0)
 		return -1;
 	pthread_create(&t_old, NULL, socket_listener, &v1_socket);
-	pthread_setaffinity_np(t_old, sizeof(*cpuset), cpuset);
+	pthread_setaffinity_np(t_old, sizeof(*thread_cpuset), thread_cpuset);
 
+	TMTY_LOG(DEBUG, "Legacy telemetry socket initialized ok\n");
 	return 0;
 }
 
 static int
-telemetry_v2_init(const char *runtime_dir, rte_cpuset_t *cpuset)
+telemetry_v2_init(void)
 {
 	pthread_t t_new;
 
@@ -461,10 +460,9 @@ telemetry_v2_init(const char *runtime_dir, rte_cpuset_t *cpuset)
 	rte_telemetry_register_cmd("/help", command_help,
 			"Returns help text for a command. Parameters: string command");
 	v2_socket.fn = client_handler;
-	if (strlcpy(v2_socket.path, get_socket_path(runtime_dir, 2),
+	if (strlcpy(v2_socket.path, get_socket_path(socket_dir, 2),
 			sizeof(v2_socket.path)) >= sizeof(v2_socket.path)) {
-		snprintf(telemetry_log_error, sizeof(telemetry_log_error),
-				"Error with socket binding, path too long");
+		TMTY_LOG(ERR, "Error with socket binding, path too long\n");
 		return -1;
 	}
 
@@ -472,7 +470,7 @@ telemetry_v2_init(const char *runtime_dir, rte_cpuset_t *cpuset)
 	if (v2_socket.sock < 0)
 		return -1;
 	pthread_create(&t_new, NULL, socket_listener, &v2_socket);
-	pthread_setaffinity_np(t_new, sizeof(*cpuset), cpuset);
+	pthread_setaffinity_np(t_new, sizeof(*thread_cpuset), thread_cpuset);
 	atexit(unlink_sockets);
 
 	return 0;
@@ -482,23 +480,17 @@ telemetry_v2_init(const char *runtime_dir, rte_cpuset_t *cpuset)
 
 int32_t
 rte_telemetry_init(const char *runtime_dir, rte_cpuset_t *cpuset,
-		const char **err_str)
+		rte_log_fn log_fn, uint32_t registered_logtype)
 {
+	socket_dir = runtime_dir;
+	thread_cpuset = cpuset;
+	rte_log_ptr = log_fn;
+	logtype = registered_logtype;
 #ifndef RTE_EXEC_ENV_WINDOWS
-	if (telemetry_v2_init(runtime_dir, cpuset) != 0) {
-		*err_str = telemetry_log_error;
+	if (telemetry_v2_init() != 0)
 		return -1;
-	}
-	if (telemetry_legacy_init(runtime_dir, cpuset) != 0) {
-		*err_str = telemetry_log_error;
-	}
-#else /* RTE_EXEC_ENV_WINDOWS */
-	RTE_SET_USED(runtime_dir);
-	RTE_SET_USED(cpuset);
-	RTE_SET_USED(err_str);
-
-	snprintf(telemetry_log_error, sizeof(telemetry_log_error),
-		"DPDK Telemetry is not supported on Windows.");
+	TMTY_LOG(DEBUG, "Telemetry initialized ok\n");
+	telemetry_legacy_init();
 #endif /* RTE_EXEC_ENV_WINDOWS */
 
 	return 0;
