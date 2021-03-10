@@ -17,6 +17,9 @@ Deprecation Notices
 * eal: The function ``rte_eal_remote_launch`` will return new error codes
   after read or write error on the pipe, instead of calling ``rte_panic``.
 
+* eal: The inline function ``rte_bsf64`` will be changed to return ``uint32_t``
+  instead of ``int`` as originally intended.
+
 * rte_atomicNN_xxx: These APIs do not take memory order parameter. This does
   not allow for writing optimized code for all the CPU architectures supported
   in DPDK. DPDK will adopt C11 atomic operations semantics and provide wrappers
