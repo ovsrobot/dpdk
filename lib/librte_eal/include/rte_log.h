@@ -380,6 +380,7 @@ RTE_INIT(__##type)							\
 {									\
 	type = rte_log_register_type_and_pick_level(RTE_STR(name),	\
 						    RTE_LOG_##level);	\
+	type = RTE_MAX(0, type);                                        \
 }
 
 #ifdef __cplusplus
