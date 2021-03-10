@@ -153,6 +153,8 @@ struct cperf_options {
 	uint8_t imix_distribution_count;
 };
 
+void cperf_usage(const char *progname);
+
 void
 cperf_options_default(struct cperf_options *options);
 

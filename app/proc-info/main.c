@@ -1361,6 +1361,8 @@ main(int argc, char **argv)
 	char *argp[argc + 4];
 	uint16_t nb_ports;
 
+	rte_set_application_usage_hook(proc_info_usage);
+
 	/* preparse app arguments */
 	ret = proc_info_preparse_args(argc, argv);
 	if (ret < 0) {
