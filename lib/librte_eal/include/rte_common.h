@@ -679,7 +679,7 @@ rte_fls_u32(uint32_t x)
  * @return
  *     least significant set bit in the input parameter.
  */
-static inline int
+static inline uint32_t
 rte_bsf64(uint64_t v)
 {
 	return (uint32_t)__builtin_ctzll(v);
