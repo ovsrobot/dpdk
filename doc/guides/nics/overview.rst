@@ -32,3 +32,23 @@ More details about features can be found in :doc:`features`.
 
    Features marked with "P" are partially supported. Refer to the appropriate
    NIC guide in the following sections for details.
+
+The ethdev layer support below compile options for debug purpose:
+
+- ``RTE_LIBRTE_ETHDEV_DEBUG`` (default **disabled**)
+
+  Compile with debug code on data path.
+
+- ``RTE_LIBRTE_ETHDEV_DEBUG_RX`` (default **disabled**)
+
+  Compile with debug code on Rx data path.
+
+- ``RTE_LIBRTE_ETHDEV_DEBUG_TX`` (default **disabled**)
+
+  Compile with debug code on Tx data path.
+
+.. Note::
+
+   The lib_ethdev use above options to wrap debug code to trace invalid parameters on
+   data path APIs, so performance downgrade is expected when enable those options.
+   Each PMD can decide to reuse them to wrap their own debug code in the Rx/Tx path.
