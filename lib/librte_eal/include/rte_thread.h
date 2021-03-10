@@ -23,7 +23,7 @@ extern "C" {
 /**
  * TLS key type, an opaque pointer.
  */
-typedef struct eal_tls_key *rte_tls_key;
+typedef struct eal_tls_key *rte_thread_key;
 
 /**
  * Set core affinity of the current thread.
@@ -65,13 +65,14 @@ void rte_thread_get_affinity(rte_cpuset_t *cpusetp);
  */
 
 __rte_experimental
-int rte_thread_tls_key_create(rte_tls_key *key, void (*destructor)(void *));
+int rte_thread_key_create(rte_thread_key *key,
+			void (*destructor)(void *));
 
 /**
  * Delete a TLS data key visible to all threads in the process.
  *
  * @param key
- *   The key allocated by rte_thread_tls_key_create().
+ *   The key allocated by rte_thread_key_create().
  *
  * @return
  *   On success, zero.
@@ -80,15 +81,15 @@ int rte_thread_tls_key_create(rte_tls_key *key, void (*destructor)(void *));
  *                            EOTHER - Specific OS error.
  */
 __rte_experimental
-int rte_thread_tls_key_delete(rte_tls_key key);
+int rte_thread_key_delete(rte_thread_key key);
 
 /**
  * Set value bound to the TLS key on behalf of the calling thread.
  *
  * @param key
- *   The key allocated by rte_thread_tls_key_create().
+ *   The key allocated by rte_thread_key_create().
  * @param value
- *   The value bound to the rte_tls_key key for the calling thread.
+ *   The value bound to the rte_thread_key key for the calling thread.
  *
  * @return
  *   On success, zero.
@@ -97,13 +98,13 @@ int rte_thread_tls_key_delete(rte_tls_key key);
  *                            EOTHER - Specific OS error.
  */
 __rte_experimental
-int rte_thread_tls_value_set(rte_tls_key key, const void *value);
+int rte_thread_value_set(rte_thread_key key, const void *value);
 
 /**
  * Get value bound to the TLS key on behalf of the calling thread.
  *
  * @param key
- *   The key allocated by rte_thread_tls_key_create().
+ *   The key allocated by rte_thread_key_create().
  *
  * @return
  *   On success, value data pointer (can also be NULL).
@@ -112,7 +113,7 @@ int rte_thread_tls_value_set(rte_tls_key key, const void *value);
  *                            EOTHER - Specific OS error.
  */
 __rte_experimental
-void *rte_thread_tls_value_get(rte_tls_key key);
+void *rte_thread_value_get(rte_thread_key key);
 
 #ifdef __cplusplus
 }
