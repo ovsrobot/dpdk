@@ -45,6 +45,8 @@
 #include <rte_flow.h>
 
 #include "testpmd.h"
+#define PARAM_PROC_ID "proc-id"
+#define PARAM_NUM_PROCS "num-procs"
 
 static void
 usage(char* progname)
@@ -605,6 +607,8 @@ launch_args_parse(int argc, char** argv)
 		{ "rx-mq-mode",                 1, 0, 0 },
 		{ "record-core-cycles",         0, 0, 0 },
 		{ "record-burst-stats",         0, 0, 0 },
+		{ PARAM_NUM_PROCS,              1, 0, 0 },
+		{ PARAM_PROC_ID,                1, 0, 0 },
 		{ 0, 0, 0, 0 },
 	};
 
@@ -1366,6 +1370,13 @@ launch_args_parse(int argc, char** argv)
 				record_core_cycles = 1;
 			if (!strcmp(lgopts[opt_idx].name, "record-burst-stats"))
 				record_burst_stats = 1;
+
+			if (strncmp(lgopts[opt_idx].name,
+				    PARAM_NUM_PROCS, 8) == 0)
+				num_procs = atoi(optarg);
+			if (strncmp(lgopts[opt_idx].name,
+				    PARAM_PROC_ID, 7) == 0)
+				proc_id = atoi(optarg);
 			break;
 		case 'h':
 			usage(argv[0]);
