@@ -501,7 +501,7 @@ API Changes
 -----------
 
 * The deprecated flow director API is removed.
-  It was replaced by ``rte_eth_dev_filter_ctrl()``.
+  It was replaced by ``rte_eth_dev_flow_ops_get()``.
 
 * The ``dcb_queue`` is renamed to ``dcb_tc`` in following dcb configuration
   structures: ``rte_eth_dcb_rx_conf``, ``rte_eth_dcb_tx_conf``,

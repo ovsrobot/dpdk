@@ -255,12 +255,9 @@ rte_flow_ops_get(uint16_t port_id, struct rte_flow_error *error)
 
 	if (unlikely(!rte_eth_dev_is_valid_port(port_id)))
 		code = ENODEV;
-	else if (unlikely(!dev->dev_ops->filter_ctrl ||
-			  dev->dev_ops->filter_ctrl(dev,
-						    RTE_ETH_FILTER_GENERIC,
-						    RTE_ETH_FILTER_GET,
-						    &ops) ||
-			  !ops))
+	else if (unlikely(!dev->dev_ops->flow_ops_get ||
+			  dev->dev_ops->flow_ops_get(dev, &ops) ||
+			  ops == NULL))
 		code = ENOSYS;
 	else
 		return ops;

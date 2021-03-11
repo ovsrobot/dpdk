@@ -571,7 +571,7 @@ API Changes
   a TC is greater than 256.
 
 * ethdev: Removed the legacy filter API, including
-  ``rte_eth_dev_filter_supported()`` and ``rte_eth_dev_filter_ctrl()``.
+  ``rte_eth_dev_filter_supported()`` and ``rte_eth_dev_flow_ops_get()``.
 
 * ethdev: Removed the legacy L2 tunnel configuration API, including
   ``rte_eth_dev_l2_tunnel_eth_type_conf()`` and
