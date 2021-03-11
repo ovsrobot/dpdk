@@ -29,6 +29,10 @@ foreach flag: error_cflags
 	endif
 endforeach
 
+if is_windows and cc.get_id() != 'clang'
+	cflags += ['-fno-asynchronous-unwind-tables']
+endif
+
 base_lib = static_library('ice_base', sources,
 	dependencies: static_rte_eal,
 	c_args: c_args)
