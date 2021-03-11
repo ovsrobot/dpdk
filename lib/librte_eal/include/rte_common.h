@@ -345,9 +345,11 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
  */
 #define RTE_ALIGN_MUL_NEAR(v, mul)				\
 	({							\
-		typeof(v) ceil = RTE_ALIGN_MUL_CEIL(v, mul);	\
-		typeof(v) floor = RTE_ALIGN_MUL_FLOOR(v, mul);	\
-		(ceil - (v)) > ((v) - floor) ? floor : ceil;	\
+		typeof(v) _v = (v);				\
+		typeof(v) _m = (mul);				\
+		typeof(v) ceil = RTE_ALIGN_MUL_CEIL(_v, _m);	\
+		typeof(v) floor = RTE_ALIGN_MUL_FLOOR(_v, _m);	\
+		(ceil - (_v)) > ((_v) - floor) ? floor : ceil;	\
 	})
 
 /**
