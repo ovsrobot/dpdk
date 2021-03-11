@@ -70,6 +70,24 @@ New Features
   * Added command to display Rx queue used descriptor count.
     ``show port (port_id) rxq (queue_id) desc used count``
 
+* **Ethdev representor enhancement**
+
+    Enhanced ethdev representor to support SubFunction and multi-host::
+
+      representor=#            [0,2-4]      /* Legacy VF compatible.         */
+      representor=[[c#]pf#]vf# c1pf2vf3     /* VF 3 on PF 2 of controller 1. */
+      representor=[[c#]pf#]sf# sf[0,2-1023] /* 1023 SFs.                     */
+      representor=[c#]pf#      c2pf[0,1]    /* 2 PFs on controller 2.        */
+
+  * Introduced representor type of VF, SF and PF.
+  * Enhanced representor syntax parsing.
+  * Supported SF and PF type representor.
+  * Supported multi-host in representor.
+  * Added new PMD callback ``representor_info_get`` to get representor info.
+  * Added new helper function ``rte_eth_representor_id_get`` to calculate
+    unique representor ID from info.
+  * Updated representor iterator to match new enhanced syntax.
+
 
 Removed Items
 -------------
