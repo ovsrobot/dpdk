@@ -456,35 +456,16 @@ iavf_fdir_parse_action(struct iavf_adapter *ad,
 	return 0;
 }
 
-static bool
-iavf_fdir_refine_input_set(const uint64_t input_set,
-			   const uint64_t input_set_mask,
-			   struct iavf_fdir_conf *filter)
+#define	IAVF_IPPROTO_TCP 6
+#define	IAVF_IPPROTO_UDP 17
+
+static void
+iavf_fdir_refine_proto_hdr(struct virtchnl_proto_hdr *hdr,
+			   uint8_t proto_id)
 {
-	struct virtchnl_proto_hdr *hdr, *hdr_last;
 	struct rte_flow_item_ipv4 ipv4_spec;
 	struct rte_flow_item_ipv6 ipv6_spec;
-	int last_layer;
-	uint8_t proto_id;
 
-	if (input_set & ~input_set_mask)
-		return false;
-	else if (input_set)
-		return true;
-
-	last_layer = filter->add_fltr.rule_cfg.proto_hdrs.count - 1;
-	/* Last layer of TCP/UDP pattern isn't less than 2. */
-	if (last_layer < 2)
-		return false;
-	hdr_last = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[last_layer];
-	if (hdr_last->type == VIRTCHNL_PROTO_HDR_TCP)
-		proto_id = 6;
-	else if (hdr_last->type == VIRTCHNL_PROTO_HDR_UDP)
-		proto_id = 17;
-	else
-		return false;
-
-	hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[last_layer - 1];
 	switch (hdr->type) {
 	case VIRTCHNL_PROTO_HDR_IPV4:
 		VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV4, PROT);
@@ -492,17 +473,19 @@ iavf_fdir_refine_input_set(const uint64_t input_set,
 		ipv4_spec.hdr.next_proto_id = proto_id;
 		rte_memcpy(hdr->buffer, &ipv4_spec.hdr,
 			   sizeof(ipv4_spec.hdr));
-		return true;
+		break;
 	case VIRTCHNL_PROTO_HDR_IPV6:
 		VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV6, PROT);
 		memset(&ipv6_spec, 0, sizeof(ipv6_spec));
 		ipv6_spec.hdr.proto = proto_id;
 		rte_memcpy(hdr->buffer, &ipv6_spec.hdr,
 			   sizeof(ipv6_spec.hdr));
-		return true;
+		break;
 	default:
-		return false;
+		break;
 	}
+
+	return;
 }
 
 static int
@@ -530,6 +513,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 	const struct rte_flow_item_ecpri *ecpri_spec, *ecpri_mask;
 	struct rte_ecpri_common_hdr ecpri_common;
 	uint64_t input_set = IAVF_INSET_NONE;
+	uint8_t proto_id;
 
 	enum rte_flow_item_type next_type;
 	uint16_t ether_type;
@@ -746,6 +730,9 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 						sizeof(udp_spec->hdr));
 			}
 
+			proto_id = IAVF_IPPROTO_UDP;
+			iavf_fdir_refine_proto_hdr(&filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer - 1], proto_id);
+
 			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
 			break;
 
@@ -789,6 +776,9 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 						&tcp_spec->hdr,
 						sizeof(tcp_spec->hdr));
 			}
+
+			proto_id = IAVF_IPPROTO_TCP;
+			iavf_fdir_refine_proto_hdr(&filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer - 1], proto_id);
 
 			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
 			break;
@@ -1016,12 +1006,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 		return -rte_errno;
 	}
 
-	if (!iavf_fdir_refine_input_set(input_set, input_set_mask, filter)) {
-		rte_flow_error_set(error, EINVAL,
-				   RTE_FLOW_ERROR_TYPE_ITEM_SPEC, pattern,
-				   "Invalid input set");
-		return -rte_errno;
-	}
+	if (input_set & ~input_set_mask)
+		return -EINVAL;
 
 	filter->input_set = input_set;
 
