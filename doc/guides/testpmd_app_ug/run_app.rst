@@ -536,3 +536,72 @@ The command line options are:
     bit 1 - two hairpin ports paired
     bit 0 - two hairpin ports loop
     The default value is 0. Hairpin will use single port mode and implicit Tx flow mode.
+
+
+Testpmd Support Multi Process Command-line Options
+--------------------------------------------------
+
+The following are the command-line options for the testpmd applications(support multi process).
+They must be separated from the EAL options, shown in the previous section, with a ``--`` separator:
+
+.. code-block:: console
+
+	primary process:
+    sudo ./dpdk-testpmd -a xxx --proc-type=auto -l 0-1 -- -i --rxq=4 --txq=4 --num-procs=2 --proc-id=0
+
+	secondary process:
+	sudo ./dpdk-testpmd -a xxx --proc-type=auto -l 2-3 -- -i --rxq=4 --txq=4 --num-procs=2 --proc-id=1
+
+The command line options are:
+
+*   ``-a, --allow``
+
+	Add a device to the allow list. ``xxx`` means device used which should be the same in primary process
+	and secondary process.
+
+*   ``--proc-type``
+	Specify a given process instance as the primary or secondary DPDK instance. ``auto`` set here is ok.
+
+*   ``-l CORELIST``
+	List of cores to run on. the corelist should be different in primary process and secondary process.
+
+*   ``--rxq=N``
+
+    Set the number of RX queues per port to N, where 1 <= N <= 65535.
+    The default value is 1. N is the sum of queues used by primary and secondary process.
+
+*   ``--txq=N``
+
+    Set the number of TX queues per port to N, where 1 <= N <= 65535.
+    The default value is 1. N is the sum of queues used by primary and secondary process.
+
+*   ``--num-procs=N``
+
+	The number of processes which will be used.
+
+*   ``--proc-id=id``
+
+	The id of the current process (id < num-procs). id should be different in primary process and secondary process.
+
+Calculation rule for queue:
+All queues are allocated to different processes based on proc_num and proc_id.
+Calculation rule for the Testpmd to allocate queues to each process:
+start(queue start id) = proc_id * nb_q / num_procs；
+end(queue end id) = start + nb_q / num_procs；
+
+For example, if supports 4 txq and rxq
+the 0~1 for primary process
+the 2~3 for secondary process
+
+Most dev ops is supported in primary and secondary process. While secondary process is not permitted
+to allocate or release shared memory, so some ops are not supported as follows:
+``dev_start``
+``dev_stop``
+``rx_queue_setup``
+``tx_queue_setup``
+``rx_queue_release``
+``tx_queue_release``
+
+RTE_FLOW supported, it applies only on its own process on SW side, but all on HW size.
+stats supported, stats will not change when one quit and start, As they share the same buffer to store the stats.
+RSS supported, Primary process and secondary process has separate queues to use, RSS will work in their own queues whether primary and secondary process.
