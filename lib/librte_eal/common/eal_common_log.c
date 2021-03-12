@@ -15,7 +15,7 @@
 #include <rte_log.h>
 #include <rte_per_lcore.h>
 
-#include "eal_private.h"
+#include "eal_log.h"
 
 struct rte_log_dynamic_type {
 	const char *name;
@@ -178,8 +178,8 @@ rte_log_set_level_regexp(const char *regex, uint32_t level)
  * Save the type string and the loglevel for later dynamic
  * logtypes which may register later.
  */
-static int rte_log_save_level(int priority,
-			      const char *regex, const char *pattern)
+static int
+log_save_level(uint32_t priority, const char *regex, const char *pattern)
 {
 	struct rte_eal_opt_loglevel *opt_ll = NULL;
 
@@ -207,9 +207,10 @@ fail:
 	return -1;
 }
 
-int rte_log_save_regexp(const char *regex, int tmp)
+int
+eal_log_save_regexp(const char *regex, uint32_t level)
 {
-	return rte_log_save_level(tmp, regex, NULL);
+	return log_save_level(level, regex, NULL);
 }
 
 /* set log level based on globbing pattern */
@@ -232,9 +233,10 @@ rte_log_set_level_pattern(const char *pattern, uint32_t level)
 	return 0;
 }
 
-int rte_log_save_pattern(const char *pattern, int priority)
+int
+eal_log_save_pattern(const char *pattern, uint32_t level)
 {
-	return rte_log_save_level(priority, NULL, pattern);
+	return log_save_level(level, NULL, pattern);
 }
 
 /* get the current loglevel for the message being processed */
@@ -376,7 +378,7 @@ static const struct logtype logtype_strings[] = {
 };
 
 /* Logging should be first initializer (before drivers and bus) */
-RTE_INIT_PRIO(rte_log_init, LOG)
+RTE_INIT_PRIO(log_init, LOG)
 {
 	uint32_t i;
 
