@@ -4877,7 +4877,7 @@ rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	uint16_t nb_rx;
 
-#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+#if defined(RTE_LIBRTE_ETHDEV_DEBUG) || defined(RTE_LIBRTE_ETHDEV_DEBUG_RX)
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, 0);
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->rx_pkt_burst, 0);
 
@@ -5011,11 +5011,11 @@ rte_eth_rx_descriptor_status(uint16_t port_id, uint16_t queue_id,
 	struct rte_eth_dev *dev;
 	void *rxq;
 
-#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+#if defined(RTE_LIBRTE_ETHDEV_DEBUG) || defined(RTE_LIBRTE_ETHDEV_DEBUG_RX)
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 #endif
 	dev = &rte_eth_devices[port_id];
-#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+#if defined(RTE_LIBRTE_ETHDEV_DEBUG) || defined(RTE_LIBRTE_ETHDEV_DEBUG_RX)
 	if (queue_id >= dev->data->nb_rx_queues)
 		return -ENODEV;
 #endif
@@ -5068,11 +5068,11 @@ static inline int rte_eth_tx_descriptor_status(uint16_t port_id,
 	struct rte_eth_dev *dev;
 	void *txq;
 
-#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+#if defined(RTE_LIBRTE_ETHDEV_DEBUG) || defined(RTE_LIBRTE_ETHDEV_DEBUG_TX)
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 #endif
 	dev = &rte_eth_devices[port_id];
-#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+#if defined(RTE_LIBRTE_ETHDEV_DEBUG) || defined(RTE_LIBRTE_ETHDEV_DEBUG_TX)
 	if (queue_id >= dev->data->nb_tx_queues)
 		return -ENODEV;
 #endif
@@ -5154,7 +5154,7 @@ rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id,
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 
-#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+#if defined(RTE_LIBRTE_ETHDEV_DEBUG) || defined(RTE_LIBRTE_ETHDEV_DEBUG_TX)
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, 0);
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->tx_pkt_burst, 0);
 
@@ -5252,7 +5252,7 @@ rte_eth_tx_prepare(uint16_t port_id, uint16_t queue_id,
 {
 	struct rte_eth_dev *dev;
 
-#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+#if defined(RTE_LIBRTE_ETHDEV_DEBUG) || defined(RTE_LIBRTE_ETHDEV_DEBUG_TX)
 	if (!rte_eth_dev_is_valid_port(port_id)) {
 		RTE_ETHDEV_LOG(ERR, "Invalid TX port_id=%u\n", port_id);
 		rte_errno = ENODEV;
@@ -5262,7 +5262,7 @@ rte_eth_tx_prepare(uint16_t port_id, uint16_t queue_id,
 
 	dev = &rte_eth_devices[port_id];
 
-#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+#if defined(RTE_LIBRTE_ETHDEV_DEBUG) || defined(RTE_LIBRTE_ETHDEV_DEBUG_TX)
 	if (queue_id >= dev->data->nb_tx_queues) {
 		RTE_ETHDEV_LOG(ERR, "Invalid TX queue_id=%u\n", queue_id);
 		rte_errno = EINVAL;
