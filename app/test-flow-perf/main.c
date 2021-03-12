@@ -115,7 +115,7 @@ static struct multi_cores_pool mc_pool = {
 };
 
 static void
-usage(char *progname)
+usage(const char *progname)
 {
 	printf("\nusage: %s\n", progname);
 	printf("\nControl configurations:\n");
@@ -1848,6 +1848,8 @@ main(int argc, char **argv)
 	int ret;
 	uint16_t port;
 	struct rte_flow_error error;
+
+	rte_set_application_usage_hook(usage);
 
 	ret = rte_eal_init(argc, argv);
 	if (ret < 0)

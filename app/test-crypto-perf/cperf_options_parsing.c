@@ -19,8 +19,8 @@ struct name_id_map {
 	uint32_t id;
 };
 
-static void
-usage(char *progname)
+void
+cperf_usage(const char *progname)
 {
 	printf("%s [EAL options] --\n"
 		" --silent: disable options dump\n"
@@ -982,7 +982,7 @@ cperf_options_parse(struct cperf_options *options, int argc, char **argv)
 	while ((opt = getopt_long(argc, argv, "h", lgopts, &opt_idx)) != EOF) {
 		switch (opt) {
 		case 'h':
-			usage(argv[0]);
+			cperf_usage(argv[0]);
 			exit(EXIT_SUCCESS);
 			break;
 		/* long options */
@@ -994,7 +994,7 @@ cperf_options_parse(struct cperf_options *options, int argc, char **argv)
 			break;
 
 		default:
-			usage(argv[0]);
+			cperf_usage(argv[0]);
 			return -EINVAL;
 		}
 	}

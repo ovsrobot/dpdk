@@ -73,6 +73,8 @@ struct comp_test_data {
 	uint32_t cyclecount_delay;
 };
 
+void comp_perf_usage(const char *progname);
+
 int
 comp_perf_options_parse(struct comp_test_data *test_data, int argc,
 			char **argv);

@@ -648,6 +648,12 @@ print_usage(void)
 		config.prgname);
 }
 
+static void
+usage_hook(const char *prgname __rte_unused)
+{
+	print_usage();
+}
+
 static int
 check_config(void)
 {
@@ -1208,6 +1214,8 @@ main(int argc, char **argv)
 	FILE *fr = NULL;
 	FILE *fl = NULL;
 	uint8_t depth_lim;
+
+	rte_set_application_usage_hook(usage_hook);
 
 	ret = rte_eal_init(argc, argv);
 	if (ret < 0)

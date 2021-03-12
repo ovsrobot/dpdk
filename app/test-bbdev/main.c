@@ -340,7 +340,8 @@ main(int argc, char **argv)
 {
 	int ret;
 
-	/* Init EAL */
+	rte_set_application_usage_hook(print_usage);
+
 	ret = rte_eal_init(argc, argv);
 	if (ret < 0)
 		return 1;
