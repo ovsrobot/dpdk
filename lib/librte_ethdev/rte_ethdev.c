@@ -470,6 +470,7 @@ rte_eth_dev_allocate(const char *name)
 {
 	uint16_t port_id;
 	struct rte_eth_dev *eth_dev = NULL;
+	pthread_mutexattr_t attr;
 	size_t name_len;
 
 	name_len = strnlen(name, RTE_ETH_NAME_MAX_LEN);
@@ -506,7 +507,10 @@ rte_eth_dev_allocate(const char *name)
 	strlcpy(eth_dev->data->name, name, sizeof(eth_dev->data->name));
 	eth_dev->data->port_id = port_id;
 	eth_dev->data->mtu = RTE_ETHER_MTU;
-	pthread_mutex_init(&eth_dev->data->flow_ops_mutex, NULL);
+
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);	
+	pthread_mutex_init(&eth_dev->data->flow_ops_mutex, &attr);
 
 unlock:
 	rte_spinlock_unlock(&eth_dev_shared_data->ownership_lock);
