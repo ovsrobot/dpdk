@@ -139,6 +139,7 @@ The application has a number of command line options::
                         --reassemble NUM
                         --mtu MTU
                         --frag-ttl FRAG_TTL_NS
+                        --udp-encap
 
 Where:
 
@@ -233,6 +234,8 @@ Where:
     there is a high fragmented traffic loss in high bandwidth networks.
     Should be lower for low number of reassembly buckets.
     Valid values: from 1 ns to 10 s. Default value: 10000000 (10 s).
+
+*   ``--udp-encap``: enables IPsec UDP Encapsulation for NAT Traversal.
 
 
 The mapping of lcores to port/queues is similar to other l3fwd applications.

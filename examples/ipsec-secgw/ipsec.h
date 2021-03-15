@@ -75,6 +75,7 @@ struct app_sa_prm {
 	uint32_t window_size; /* replay window size */
 	uint32_t enable_esn;  /* enable/disable ESN support */
 	uint32_t cache_sz;	/* per lcore SA cache size */
+	uint32_t udp_encap;   /* enable/disable UDP Encapsulation */
 	uint64_t flags;       /* rte_ipsec_sa_prm.flags */
 };
 

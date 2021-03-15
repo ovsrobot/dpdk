@@ -47,6 +47,8 @@
 
 #define ETHADDR(a, b, c, d, e, f) (__BYTES_TO_UINT64(a, b, c, d, e, f, 0, 0))
 
+#define IPSEC_NAT_T_PORT 4500
+
 struct traffic_type {
 	const uint8_t *data[MAX_PKT_BURST * 2];
 	struct rte_mbuf *pkts[MAX_PKT_BURST * 2];

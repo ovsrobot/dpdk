@@ -115,6 +115,7 @@ struct flow_info flow_info_tbl[RTE_MAX_ETHPORTS];
 #define CMD_LINE_OPT_REASSEMBLE		"reassemble"
 #define CMD_LINE_OPT_MTU		"mtu"
 #define CMD_LINE_OPT_FRAG_TTL		"frag-ttl"
+#define CMD_LINE_OPT_UDP_ENCAP		"udp-encap"
 
 #define CMD_LINE_ARG_EVENT	"event"
 #define CMD_LINE_ARG_POLL	"poll"
@@ -139,6 +140,7 @@ enum {
 	CMD_LINE_OPT_REASSEMBLE_NUM,
 	CMD_LINE_OPT_MTU_NUM,
 	CMD_LINE_OPT_FRAG_TTL_NUM,
+	CMD_LINE_OPT_UDP_ENCAP_NUM,
 };
 
 static const struct option lgopts[] = {
@@ -152,6 +154,7 @@ static const struct option lgopts[] = {
 	{CMD_LINE_OPT_REASSEMBLE, 1, 0, CMD_LINE_OPT_REASSEMBLE_NUM},
 	{CMD_LINE_OPT_MTU, 1, 0, CMD_LINE_OPT_MTU_NUM},
 	{CMD_LINE_OPT_FRAG_TTL, 1, 0, CMD_LINE_OPT_FRAG_TTL_NUM},
+	{CMD_LINE_OPT_UDP_ENCAP, 0, 0, CMD_LINE_OPT_UDP_ENCAP_NUM},
 	{NULL, 0, 0, 0}
 };
 
@@ -360,6 +363,9 @@ prepare_one_packet(struct rte_mbuf *pkt, struct ipsec_traffic *t)
 	const struct rte_ether_hdr *eth;
 	const struct rte_ipv4_hdr *iph4;
 	const struct rte_ipv6_hdr *iph6;
+	const struct rte_udp_hdr *udp;
+	uint16_t nat_port;
+	uint16_t ip4_hdr_len;
 
 	eth = rte_pktmbuf_mtod(pkt, const struct rte_ether_hdr *);
 	if (eth->ether_type == rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4)) {
@@ -368,9 +374,26 @@ prepare_one_packet(struct rte_mbuf *pkt, struct ipsec_traffic *t)
 			RTE_ETHER_HDR_LEN);
 		adjust_ipv4_pktlen(pkt, iph4, 0);
 
-		if (iph4->next_proto_id == IPPROTO_ESP)
+		switch (iph4->next_proto_id) {
+		case IPPROTO_ESP:
 			t->ipsec.pkts[(t->ipsec.num)++] = pkt;
-		else {
+			break;
+		case IPPROTO_UDP:
+			if (app_sa_prm.udp_encap == 1) {
+				ip4_hdr_len = ((iph4->version_ihl &
+					RTE_IPV4_HDR_IHL_MASK) *
+					RTE_IPV4_IHL_MULTIPLIER);
+				udp = rte_pktmbuf_mtod_offset(pkt,
+					struct rte_udp_hdr *, ip4_hdr_len);
+				nat_port = rte_cpu_to_be_16(IPSEC_NAT_T_PORT);
+				if (udp->src_port == nat_port ||
+					udp->dst_port == nat_port){
+					t->ipsec.pkts[(t->ipsec.num)++] = pkt;
+					break;
+				}
+			}
+		/* Fall through */
+		default:
 			t->ip4.data[t->ip4.num] = &iph4->next_proto_id;
 			t->ip4.pkts[(t->ip4.num)++] = pkt;
 		}
@@ -1378,6 +1401,7 @@ print_usage(const char *prgname)
 		" [--" CMD_LINE_OPT_TX_OFFLOAD " TX_OFFLOAD_MASK]"
 		" [--" CMD_LINE_OPT_REASSEMBLE " REASSEMBLE_TABLE_SIZE]"
 		" [--" CMD_LINE_OPT_MTU " MTU]"
+		" [--" CMD_LINE_OPT_UDP_ENCAP "]"
 		"\n\n"
 		"  -p PORTMASK: Hexadecimal bitmask of ports to configure\n"
 		"  -P : Enable promiscuous mode\n"
@@ -1431,6 +1455,8 @@ print_usage(const char *prgname)
 		"  --" CMD_LINE_OPT_FRAG_TTL " FRAG_TTL_NS"
 		": fragments lifetime in nanoseconds, default\n"
 		"    and maximum value is 10.000.000.000 ns (10 s)\n"
+		"  --" CMD_LINE_OPT_UDP_ENCAP
+		": enables UDP Encapsulation for NAT Traversal\n"
 		"\n",
 		prgname);
 }
@@ -1779,6 +1805,9 @@ parse_args(int32_t argc, char **argv, struct eh_conf *eh_conf)
 				return -1;
 			}
 			frag_ttl_ns = ret;
+			break;
+		case CMD_LINE_OPT_UDP_ENCAP_NUM:
+			app_sa_prm.udp_encap = 1;
 			break;
 		default:
 			print_usage(prgname);
