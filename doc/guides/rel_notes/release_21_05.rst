@@ -76,6 +76,11 @@ New Features
 
   * Added support for txgbevf PMD.
 
+* **Updated the OCTEON TX2 crypto PMD.**
+
+  * Updated the OCTEON TX2 crypto PMD lookaside protocol offload for IPsec with
+    UDP encapsulation support for NAT Traversal.
+
 * **Updated testpmd.**
 
   * Added a command line option to configure forced speed for Ethernet port.
