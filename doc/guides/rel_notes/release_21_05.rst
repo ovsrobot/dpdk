@@ -61,6 +61,10 @@ New Features
   * Added support for freeing Tx mbuf on demand.
   * Added support for copper port in Kunpeng930.
 
+* **Updated Mellanox mlx5 driver.**
+
+  * Added support for the monitor policy of Power Management API.
+
 * **Updated NXP DPAA driver.**
 
   * Added support for shared ethernet interface.

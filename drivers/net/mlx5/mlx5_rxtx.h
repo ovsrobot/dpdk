@@ -441,6 +441,7 @@ int mlx5_rx_burst_mode_get(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 			   struct rte_eth_burst_mode *mode);
 int mlx5_tx_burst_mode_get(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 			   struct rte_eth_burst_mode *mode);
+int mlx5_get_monitor_addr(void *rx_queue, struct rte_power_monitor_cond *pmc);
 
 /* Vectorized version of mlx5_rxtx.c */
 int mlx5_rxq_check_vec_support(struct mlx5_rxq_data *rxq_data);
