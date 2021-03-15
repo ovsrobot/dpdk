@@ -1370,11 +1370,7 @@ the DPDK application.
 
         echo <num of vfs > /sys/class/net/<net device>/device/sriov_numvfs
 
-4. Unbind the device (can be rebind after the switchdev mode)::
-
-        echo -n "<device pci address>" > /sys/bus/pci/drivers/mlx5_core/unbind
-
-5. Enable switchdev mode::
+4. Enable switchdev mode::
 
         echo switchdev > /sys/class/net/<net device>/compat/devlink/mode
 
