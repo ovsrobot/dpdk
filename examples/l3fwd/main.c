@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2010-2016 Intel Corporation
+ * Copyright(c) 2010-2021 Intel Corporation
  */
 
 #include <stdio.h>
@@ -60,9 +60,14 @@ static uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 /**< Ports set in promiscuous mode off by default. */
 static int promiscuous_on;
 
-/* Select Longest-Prefix or Exact match. */
-static int l3fwd_lpm_on;
-static int l3fwd_em_on;
+/* Select Longest-Prefix, Exact match or Forwarding Information Base. */
+enum L3FWD_LOOKUP_MODE {
+	L3FWD_LOOKUP_DEFAULT,
+	L3FWD_LOOKUP_LPM,
+	L3FWD_LOOKUP_EM,
+	L3FWD_LOOKUP_FIB
+};
+static enum L3FWD_LOOKUP_MODE lookup_mode;
 
 /* Global variables. */
 
@@ -162,17 +167,29 @@ static struct l3fwd_lkp_mode l3fwd_lpm_lkp = {
 	.get_ipv6_lookup_struct = lpm_get_ipv6_l3fwd_lookup_struct,
 };
 
+static struct l3fwd_lkp_mode l3fwd_fib_lkp = {
+	.setup                  = setup_fib,
+	.check_ptype            = lpm_check_ptype,
+	.cb_parse_ptype         = lpm_cb_parse_ptype,
+	.main_loop              = fib_main_loop,
+	.get_ipv4_lookup_struct = fib_get_ipv4_l3fwd_lookup_struct,
+	.get_ipv6_lookup_struct = fib_get_ipv6_l3fwd_lookup_struct,
+};
+
 /*
  * Setup lookup methods for forwarding.
- * Currently exact-match and longest-prefix-match
- * are supported ones.
+ * Currently exact-match, longest-prefix-match and forwarding information
+ * base are the supported ones.
  */
 static void
 setup_l3fwd_lookup_tables(void)
 {
 	/* Setup HASH lookup functions. */
-	if (l3fwd_em_on)
+	if (lookup_mode == L3FWD_LOOKUP_EM)
 		l3fwd_lkp = l3fwd_em_lkp;
+	/* Setup FIB lookup functions. */
+	else if (lookup_mode == L3FWD_LOOKUP_FIB)
+		l3fwd_lkp = l3fwd_fib_lkp;
 	/* Setup LPM lookup functions. */
 	else
 		l3fwd_lkp = l3fwd_lpm_lkp;
@@ -286,12 +303,13 @@ print_usage(const char *prgname)
 		" [--parse-ptype]"
 		" [--per-port-pool]"
 		" [--mode]"
-		" [--eventq-sched]\n\n"
+		" [--eventq-sched]"
+		" [--lookup]\n\n"
 
 		"  -p PORTMASK: Hexadecimal bitmask of ports to configure\n"
 		"  -P : Enable promiscuous mode\n"
-		"  -E : Enable exact match\n"
-		"  -L : Enable longest prefix match (default)\n"
+		"  -E : Enable exact match, legacy flag please use --lookup=em instead\n"
+		"  -L : Enable longest prefix match, legacy flag please use --lookup=lpm instead\n"
 		"  --config (port,queue,lcore): Rx queue configuration\n"
 		"  --eth-dest=X,MM:MM:MM:MM:MM:MM: Ethernet destination for port X\n"
 		"  --enable-jumbo: Enable jumbo frames\n"
@@ -310,7 +328,10 @@ print_usage(const char *prgname)
 		"                  Valid only if --mode=eventdev\n"
 		"  --event-eth-rxqs: Number of ethernet RX queues per device.\n"
 		"                    Default: 1\n"
-		"                    Valid only if --mode=eventdev\n\n",
+		"                    Valid only if --mode=eventdev\n"
+		"  --lookup: Select the lookup method\n"
+		"            Default: lpm\n"
+		"            Accepted: em (Exact Match), lpm (Longest Prefix Match), fib (First Information Base)\n\n",
 		prgname);
 }
 
@@ -485,13 +506,32 @@ parse_event_eth_rx_queues(const char *eth_rx_queues)
 	evt_rsrc->eth_rx_queues = num_eth_rx_queues;
 }
 
+static void
+parse_lookup(const char *optarg)
+{
+	if (lookup_mode != L3FWD_LOOKUP_DEFAULT) {
+		rte_exit(EXIT_FAILURE,
+				"Only one lookup mode is allowed at a time!\n");
+	}
+	if (!strcmp(optarg, "em"))
+		lookup_mode = L3FWD_LOOKUP_EM;
+	else if (!strcmp(optarg, "lpm"))
+		lookup_mode = L3FWD_LOOKUP_LPM;
+	else if (!strcmp(optarg, "fib"))
+		lookup_mode = L3FWD_LOOKUP_FIB;
+	else {
+		rte_exit(EXIT_FAILURE,
+				"Invalid --lookup option! Accepted options: em, lpm, fib\n");
+	}
+}
+
 #define MAX_JUMBO_PKT_LEN  9600
 
 static const char short_options[] =
 	"p:"  /* portmask */
 	"P"   /* promiscuous */
-	"L"   /* enable long prefix match */
-	"E"   /* enable exact match */
+	"L"   /* legacy enable long prefix match */
+	"E"   /* legacy enable exact match */
 	;
 
 #define CMD_LINE_OPT_CONFIG "config"
@@ -505,6 +545,7 @@ static const char short_options[] =
 #define CMD_LINE_OPT_MODE "mode"
 #define CMD_LINE_OPT_EVENTQ_SYNC "eventq-sched"
 #define CMD_LINE_OPT_EVENT_ETH_RX_QUEUES "event-eth-rxqs"
+#define CMD_LINE_OPT_LOOKUP "lookup"
 enum {
 	/* long options mapped to a short option */
 
@@ -522,6 +563,7 @@ enum {
 	CMD_LINE_OPT_MODE_NUM,
 	CMD_LINE_OPT_EVENTQ_SYNC_NUM,
 	CMD_LINE_OPT_EVENT_ETH_RX_QUEUES_NUM,
+	CMD_LINE_OPT_LOOKUP_NUM,
 };
 
 static const struct option lgopts[] = {
@@ -537,6 +579,7 @@ static const struct option lgopts[] = {
 	{CMD_LINE_OPT_EVENTQ_SYNC, 1, 0, CMD_LINE_OPT_EVENTQ_SYNC_NUM},
 	{CMD_LINE_OPT_EVENT_ETH_RX_QUEUES, 1, 0,
 					CMD_LINE_OPT_EVENT_ETH_RX_QUEUES_NUM},
+	{CMD_LINE_OPT_LOOKUP, 1, 0, CMD_LINE_OPT_LOOKUP_NUM},
 	{NULL, 0, 0, 0}
 };
 
@@ -589,11 +632,19 @@ parse_args(int argc, char **argv)
 			break;
 
 		case 'E':
-			l3fwd_em_on = 1;
+			if (lookup_mode != L3FWD_LOOKUP_DEFAULT) {
+				fprintf(stderr, "Only one lookup mode is allowed at a time!\n");
+				return -1;
+			}
+			lookup_mode = L3FWD_LOOKUP_EM;
 			break;
 
 		case 'L':
-			l3fwd_lpm_on = 1;
+			if (lookup_mode != L3FWD_LOOKUP_DEFAULT) {
+				fprintf(stderr, "Only one lookup mode is allowed at a time!\n");
+				return -1;
+			}
+			lookup_mode = L3FWD_LOOKUP_LPM;
 			break;
 
 		/* long options */
@@ -680,16 +731,14 @@ parse_args(int argc, char **argv)
 			eth_rx_q = 1;
 			break;
 
+		case CMD_LINE_OPT_LOOKUP_NUM:
+			parse_lookup(optarg);
+			break;
+
 		default:
 			print_usage(prgname);
 			return -1;
 		}
-	}
-
-	/* If both LPM and EM are selected, return error. */
-	if (l3fwd_lpm_on && l3fwd_em_on) {
-		fprintf(stderr, "LPM and EM are mutually exclusive, select only one\n");
-		return -1;
 	}
 
 	if (evt_rsrc->enabled && lcore_params) {
@@ -711,17 +760,17 @@ parse_args(int argc, char **argv)
 	 * Nothing is selected, pick longest-prefix match
 	 * as default match.
 	 */
-	if (!l3fwd_lpm_on && !l3fwd_em_on) {
-		fprintf(stderr, "LPM or EM none selected, default LPM on\n");
-		l3fwd_lpm_on = 1;
+	if (lookup_mode == L3FWD_LOOKUP_DEFAULT) {
+		fprintf(stderr, "Neither LPM, EM, or FIB selected, defaulting to LPM\n");
+		lookup_mode = L3FWD_LOOKUP_LPM;
 	}
 
 	/*
 	 * ipv6 and hash flags are valid only for
-	 * exact macth, reset them to default for
+	 * exact match, reset them to default for
 	 * longest-prefix match.
 	 */
-	if (l3fwd_lpm_on) {
+	if (lookup_mode == L3FWD_LOOKUP_LPM) {
 		ipv6 = 0;
 		hash_entry_number = HASH_ENTRY_NUMBER_DEFAULT;
 	}
@@ -780,7 +829,7 @@ init_mem(uint16_t portid, unsigned int nb_mbuf)
 				printf("Allocated mbuf pool on socket %d\n",
 					socketid);
 
-			/* Setup either LPM or EM(f.e Hash). But, only once per
+			/* Setup LPM, EM(f.e Hash) or FIB. But, only once per
 			 * available socket.
 			 */
 			if (!lkp_per_socket[socketid]) {
@@ -1219,8 +1268,10 @@ main(int argc, char **argv)
 	/* Configure eventdev parameters if user has requested */
 	if (evt_rsrc->enabled) {
 		l3fwd_event_resource_setup(&port_conf);
-		if (l3fwd_em_on)
+		if (lookup_mode == L3FWD_LOOKUP_EM)
 			l3fwd_lkp.main_loop = evt_rsrc->ops.em_event_loop;
+		else if (lookup_mode == L3FWD_LOOKUP_FIB)
+			l3fwd_lkp.main_loop = evt_rsrc->ops.fib_event_loop;
 		else
 			l3fwd_lkp.main_loop = evt_rsrc->ops.lpm_event_loop;
 		l3fwd_event_service_setup();
