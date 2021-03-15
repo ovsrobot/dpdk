@@ -140,6 +140,11 @@ fs_mutex_init(struct fs_priv *priv)
 		ERROR("Cannot initiate mutex attributes - %s", strerror(ret));
 		return ret;
 	}
+	/* Allow mutex to protect primary/secondary */
+	ret = pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	if (ret)
+		ERROR("Cannot set mutex shared - %s", strerror(ret));
+
 	/* Allow mutex relocks for the thread holding the mutex. */
 	ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 	if (ret) {
