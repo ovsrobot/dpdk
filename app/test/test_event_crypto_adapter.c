@@ -959,7 +959,7 @@ static struct unit_test_suite functional_testsuite = {
 	.suite_name = "Event crypto adapter test suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 
 		TEST_CASE_ST(NULL, test_crypto_adapter_free,
 				test_crypto_adapter_create),
@@ -989,7 +989,7 @@ static struct unit_test_suite functional_testsuite = {
 				test_sessionless_with_op_new_mode),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

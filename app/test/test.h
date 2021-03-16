@@ -138,7 +138,11 @@ struct unit_test_suite {
 	const char *suite_name;
 	int (*setup)(void);
 	void (*teardown)(void);
-	struct unit_test_case unit_test_cases[];
+	bool parent_testsuite;
+	union {
+		struct unit_test_case *unit_test_cases;
+		struct unit_test_suite *unit_test_suites;
+	};
 };
 
 int unit_test_suite_runner(struct unit_test_suite *suite);

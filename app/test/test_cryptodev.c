@@ -13247,7 +13247,7 @@ static struct unit_test_suite cryptodev_scheduler_testsuite  = {
 	.suite_name = "Crypto Device Scheduler Unit Test Suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		/* Multi Core */
 		TEST_CASE_ST(NULL, NULL, test_scheduler_attach_slave_op),
 		TEST_CASE_ST(NULL, NULL, test_scheduler_mode_multicore_op),
@@ -13281,7 +13281,7 @@ static struct unit_test_suite cryptodev_scheduler_testsuite  = {
 		TEST_CASE_ST(NULL, NULL, test_scheduler_detach_slave_op),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 #endif /* RTE_CRYPTO_SCHEDULER */
@@ -13290,7 +13290,7 @@ static struct unit_test_suite cryptodev_testsuite  = {
 	.suite_name = "Crypto Unit Test Suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(ut_setup, ut_teardown,
 				test_device_configure_invalid_dev_id),
 		TEST_CASE_ST(ut_setup, ut_teardown,
@@ -13921,25 +13921,25 @@ static struct unit_test_suite cryptodev_testsuite  = {
 		TEST_CASE_ST(ut_setup, ut_teardown, test_enq_callback_setup),
 		TEST_CASE_ST(ut_setup, ut_teardown, test_deq_callback_setup),
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static struct unit_test_suite cryptodev_virtio_testsuite = {
 	.suite_name = "Crypto VIRTIO Unit Test Suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(ut_setup, ut_teardown, test_AES_cipheronly_all),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static struct unit_test_suite cryptodev_caam_jr_testsuite  = {
 	.suite_name = "Crypto CAAM JR Unit Test Suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(ut_setup, ut_teardown,
 			     test_device_configure_invalid_dev_id),
 		TEST_CASE_ST(ut_setup, ut_teardown,
@@ -13952,14 +13952,14 @@ static struct unit_test_suite cryptodev_caam_jr_testsuite  = {
 		TEST_CASE_ST(ut_setup, ut_teardown, test_authonly_all),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static struct unit_test_suite cryptodev_mrvl_testsuite  = {
 	.suite_name = "Crypto Device Marvell Component Test Suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(ut_setup, ut_teardown, test_multi_session),
 		TEST_CASE_ST(ut_setup, ut_teardown,
 				test_multi_session_random_usage),
@@ -13980,14 +13980,14 @@ static struct unit_test_suite cryptodev_mrvl_testsuite  = {
 			auth_decryption_AES128CBC_HMAC_SHA1_fail_tag_corrupt),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static struct unit_test_suite cryptodev_ccp_testsuite  = {
 	.suite_name = "Crypto Device CCP Unit Test Suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(ut_setup, ut_teardown, test_multi_session),
 		TEST_CASE_ST(ut_setup, ut_teardown,
 				test_multi_session_random_usage),
@@ -14008,7 +14008,7 @@ static struct unit_test_suite cryptodev_ccp_testsuite  = {
 			auth_decryption_AES128CBC_HMAC_SHA1_fail_tag_corrupt),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

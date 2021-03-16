@@ -680,7 +680,7 @@ static struct unit_test_suite event_eth_tx_tests = {
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
 	.suite_name = "tx event eth adapter test suite",
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(NULL, NULL, tx_adapter_create_free),
 		TEST_CASE_ST(tx_adapter_create, tx_adapter_free,
 					tx_adapter_queue_add_del),
@@ -690,7 +690,7 @@ static struct unit_test_suite event_eth_tx_tests = {
 					tx_adapter_service),
 		TEST_CASE_ST(NULL, NULL, tx_adapter_dynamic_device),
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

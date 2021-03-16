@@ -934,7 +934,7 @@ static struct unit_test_suite eventdev_common_testsuite  = {
 	.suite_name = "eventdev common code unit test suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(NULL, NULL,
 			test_eventdev_count),
 		TEST_CASE_ST(NULL, NULL,
@@ -984,7 +984,7 @@ static struct unit_test_suite eventdev_common_testsuite  = {
 		TEST_CASE_ST(eventdev_setup_device, NULL,
 			test_eventdev_close),
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

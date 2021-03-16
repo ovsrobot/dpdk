@@ -189,7 +189,7 @@ unit_test_suite bitratestats_testsuite  = {
 	.suite_name = "BitRate Stats Unit Test Suite",
 	.setup = test_bit_ring_setup,
 	.teardown = test_bit_ring_free,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		/* TEST CASE 1: Test to create bit rate data */
 		TEST_CASE(test_stats_bitrate_create),
 
@@ -231,7 +231,7 @@ unit_test_suite bitratestats_testsuite  = {
 		/* TEST CASE 9: Test to do the cleanup w.r.t create */
 		TEST_CASE(test_stats_bitrate_free),
 		TEST_CASES_END()
-	}
+	})
 };
 
 static int

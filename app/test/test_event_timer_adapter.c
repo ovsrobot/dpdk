@@ -1779,7 +1779,7 @@ static struct unit_test_suite event_timer_adptr_functional_testsuite  = {
 	.suite_name = "event timer functional test suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(timdev_setup_usec, timdev_teardown,
 				test_timer_state),
 		TEST_CASE_ST(timdev_setup_usec, timdev_teardown,
@@ -1832,7 +1832,7 @@ static struct unit_test_suite event_timer_adptr_functional_testsuite  = {
 				adapter_tick_resolution),
 		TEST_CASE(adapter_create_max),
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

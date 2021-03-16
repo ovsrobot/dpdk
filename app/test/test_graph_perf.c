@@ -1035,7 +1035,7 @@ static struct unit_test_suite graph_perf_testsuite = {
 	.suite_name = "Graph library performance test suite",
 	.setup = graph_perf_setup,
 	.teardown = graph_perf_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(graph_init_hr, graph_fini,
 			     graph_hr_4s_1n_1src_1snk),
 		TEST_CASE_ST(graph_init_hr_brst_one, graph_fini,
@@ -1051,7 +1051,7 @@ static struct unit_test_suite graph_perf_testsuite = {
 		TEST_CASE_ST(graph_init_parallel_tree, graph_fini,
 			     graph_parallel_tree_5s_4n_4src_4snk),
 		TEST_CASES_END(), /**< NULL terminate unit test array */
-	},
+	}),
 };
 
 static int

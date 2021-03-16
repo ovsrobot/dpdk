@@ -2484,7 +2484,7 @@ static struct unit_test_suite security_testsuite  = {
 	.suite_name = "generic security",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(ut_setup, ut_teardown,
 				test_session_create_inv_context),
 		TEST_CASE_ST(ut_setup, ut_teardown,
@@ -2627,7 +2627,7 @@ static struct unit_test_suite security_testsuite  = {
 				test_capability_get_docsis_match),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

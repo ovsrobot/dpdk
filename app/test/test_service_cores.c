@@ -996,7 +996,7 @@ static struct unit_test_suite service_tests  = {
 	.suite_name = "service core test suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(dummy_register, NULL, unregister_all),
 		TEST_CASE_ST(dummy_register, NULL, service_name),
 		TEST_CASE_ST(dummy_register, NULL, service_get_by_name),
@@ -1015,7 +1015,7 @@ static struct unit_test_suite service_tests  = {
 		TEST_CASE_ST(dummy_register, NULL, service_may_be_active),
 		TEST_CASE_ST(dummy_register, NULL, service_active_two_cores),
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

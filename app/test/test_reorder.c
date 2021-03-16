@@ -373,7 +373,7 @@ static struct unit_test_suite reorder_test_suite  = {
 	.setup = test_setup,
 	.teardown = test_teardown,
 	.suite_name = "Reorder Unit Test Suite",
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE(test_reorder_create),
 		TEST_CASE(test_reorder_init),
 		TEST_CASE(test_reorder_find_existing),
@@ -381,7 +381,7 @@ static struct unit_test_suite reorder_test_suite  = {
 		TEST_CASE(test_reorder_insert),
 		TEST_CASE(test_reorder_drain),
 		TEST_CASES_END()
-	}
+	})
 };
 
 static int

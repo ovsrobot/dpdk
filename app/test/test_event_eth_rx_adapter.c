@@ -754,7 +754,7 @@ static struct unit_test_suite event_eth_rx_tests = {
 	.suite_name = "rx event eth adapter test suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(NULL, NULL, adapter_create_free),
 		TEST_CASE_ST(adapter_create, adapter_free,
 					adapter_queue_add_del),
@@ -763,18 +763,18 @@ static struct unit_test_suite event_eth_rx_tests = {
 		TEST_CASE_ST(adapter_create, adapter_free, adapter_start_stop),
 		TEST_CASE_ST(adapter_create, adapter_free, adapter_stats),
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static struct unit_test_suite event_eth_rx_intr_tests = {
 	.suite_name = "rx event eth adapter test suite",
 	.setup = testsuite_setup_rx_intr,
 	.teardown = testsuite_teardown_rx_intr,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(adapter_create, adapter_free,
 			adapter_intr_queue_add_del),
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

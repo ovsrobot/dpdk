@@ -148,13 +148,13 @@ static struct unit_test_suite link_status_testsuite = {
 	.suite_name = "link status formatting",
 	.setup = NULL,
 	.teardown = NULL,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE(test_link_status_up_default),
 		TEST_CASE(test_link_status_down_default),
 		TEST_CASE(test_link_speed_all_values),
 		TEST_CASE(test_link_status_invalid),
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

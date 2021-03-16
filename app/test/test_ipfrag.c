@@ -242,12 +242,12 @@ static struct unit_test_suite ipfrag_testsuite  = {
 	.suite_name = "IP Frag Unit Test Suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(ut_setup, ut_teardown,
 			     test_ip_frag),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

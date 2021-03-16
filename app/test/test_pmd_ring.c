@@ -576,7 +576,7 @@ unit_test_suite test_pmd_ring_suite  = {
 	.setup = test_pmd_ringcreate_setup,
 	.teardown = test_cleanup_resources,
 	.suite_name = "Test Pmd Ring Unit Test Suite",
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE(test_ethdev_configure_ports),
 		TEST_CASE(test_send_basic_packets),
 		TEST_CASE(test_get_stats_for_port),
@@ -584,7 +584,7 @@ unit_test_suite test_pmd_ring_suite  = {
 		TEST_CASE(test_pmd_ring_pair_create_attach),
 		TEST_CASE(test_command_line_ring_port),
 		TEST_CASES_END()
-	}
+	})
 };
 
 static int

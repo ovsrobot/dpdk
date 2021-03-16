@@ -171,7 +171,7 @@ unit_test_suite latencystats_testsuite = {
 	.suite_name = "Latency Stats Unit Test Suite",
 	.setup = test_latency_ring_setup,
 	.teardown = test_latency_ring_free,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 
 		/* Test Case 1: To check latency init with
 		 * metrics init
@@ -198,7 +198,7 @@ unit_test_suite latencystats_testsuite = {
 		TEST_CASE_ST(NULL, NULL, test_latency_uninit),
 
 		TEST_CASES_END()
-	}
+	})
 };
 
 static int test_latencystats(void)

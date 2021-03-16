@@ -645,13 +645,13 @@ test_rss_lazy_wrapper(void)
 static struct unit_test_suite link_bonding_rssconf_test_suite  = {
 	.suite_name = "RSS Dynamic Configuration for Bonding Unit Test Suite",
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_NAMED("test_setup", test_setup_wrapper),
 		TEST_CASE_NAMED("test_rss", test_rss_wrapper),
 		TEST_CASE_NAMED("test_rss_lazy", test_rss_lazy_wrapper),
 
 		TEST_CASES_END()
-	}
+	})
 };
 
 static int

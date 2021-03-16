@@ -1653,7 +1653,7 @@ static struct unit_test_suite link_bonding_mode4_test_suite  = {
 	.suite_name = "Link Bonding mode 4 Unit Test Suite",
 	.setup = test_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_NAMED("test_mode4_agg_mode_selection",
 				test_mode4_agg_mode_selection_wrapper),
 		TEST_CASE_NAMED("test_mode4_lacp", test_mode4_lacp_wrapper),
@@ -1667,7 +1667,7 @@ static struct unit_test_suite link_bonding_mode4_test_suite  = {
 				test_mode4_ext_lacp_wrapper),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

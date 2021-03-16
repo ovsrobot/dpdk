@@ -176,7 +176,7 @@ static struct unit_test_suite trace_tests = {
 	.suite_name = "trace autotest",
 	.setup = NULL,
 	.teardown = NULL,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE(test_trace_mode),
 		TEST_CASE(test_generic_trace_points),
 		TEST_CASE(test_fp_trace_points),
@@ -185,7 +185,7 @@ static struct unit_test_suite trace_tests = {
 		TEST_CASE(test_trace_point_regex),
 		TEST_CASE(test_trace_points_lookup),
 		TEST_CASES_END()
-	}
+	})
 };
 
 static int

@@ -384,24 +384,24 @@ static struct unit_test_suite fib6_fast_tests = {
 	.suite_name = "fib6 autotest",
 	.setup = NULL,
 	.teardown = NULL,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 	TEST_CASE(test_create_invalid),
 	TEST_CASE(test_free_null),
 	TEST_CASE(test_add_del_invalid),
 	TEST_CASE(test_get_invalid),
 	TEST_CASE(test_lookup),
 	TEST_CASES_END()
-	}
+	})
 };
 
 static struct unit_test_suite fib6_slow_tests = {
 	.suite_name = "fib6 slow autotest",
 	.setup = NULL,
 	.teardown = NULL,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 	TEST_CASE(test_multiple_create),
 	TEST_CASES_END()
-	}
+	})
 };
 
 /*

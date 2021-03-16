@@ -2498,7 +2498,7 @@ static struct unit_test_suite ipsec_testsuite  = {
 	.suite_name = "IPsec NULL Unit Test Suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(ut_setup, ut_teardown,
 			test_ipsec_crypto_inb_burst_null_null_wrapper),
 		TEST_CASE_ST(ut_setup, ut_teardown,
@@ -2528,7 +2528,7 @@ static struct unit_test_suite ipsec_testsuite  = {
 		TEST_CASE_ST(ut_setup, ut_teardown,
 			test_ipsec_crypto_inb_burst_2sa_4grp_null_null_wrapper),
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

@@ -2288,7 +2288,7 @@ static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 	.suite_name = "Crypto Device OPENSSL ASYM Unit Test Suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(ut_setup, ut_teardown, test_capability),
 		TEST_CASE_ST(ut_setup, ut_teardown, test_dsa),
 		TEST_CASE_ST(ut_setup, ut_teardown, test_dh_keygenration),
@@ -2300,24 +2300,24 @@ static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 		TEST_CASE_ST(ut_setup, ut_teardown, test_mod_exp),
 		TEST_CASE_ST(ut_setup, ut_teardown, test_one_by_one),
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static struct unit_test_suite cryptodev_qat_asym_testsuite  = {
 	.suite_name = "Crypto Device QAT ASYM Unit Test Suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(ut_setup, ut_teardown, test_one_by_one),
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static struct unit_test_suite cryptodev_octeontx_asym_testsuite  = {
 	.suite_name = "Crypto Device OCTEONTX ASYM Unit Test Suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(ut_setup, ut_teardown, test_capability),
 		TEST_CASE_ST(ut_setup, ut_teardown, test_rsa_enc_dec_crt),
 		TEST_CASE_ST(ut_setup, ut_teardown, test_rsa_sign_verify_crt),
@@ -2326,7 +2326,7 @@ static struct unit_test_suite cryptodev_octeontx_asym_testsuite  = {
 			     test_ecdsa_sign_verify_all_curve),
 		TEST_CASE_ST(ut_setup, ut_teardown, test_ecpm_all_curve),
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

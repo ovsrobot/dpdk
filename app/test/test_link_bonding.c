@@ -5094,7 +5094,7 @@ static struct unit_test_suite link_bonding_test_suite  = {
 	.suite_name = "Link Bonding Unit Test Suite",
 	.setup = test_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE(test_create_bonded_device),
 		TEST_CASE(test_create_bonded_device_with_invalid_params),
 		TEST_CASE(test_add_slave_to_bonded_device),
@@ -5162,7 +5162,7 @@ static struct unit_test_suite link_bonding_test_suite  = {
 		TEST_CASE(test_close_bonded_device),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 

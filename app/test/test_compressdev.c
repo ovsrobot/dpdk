@@ -4183,7 +4183,7 @@ static struct unit_test_suite compressdev_testsuite  = {
 	.suite_name = "compressdev unit test suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE_ST(NULL, NULL,
 			test_compressdev_invalid_configuration),
 		TEST_CASE_ST(generic_ut_setup, generic_ut_teardown,
@@ -4261,7 +4261,7 @@ static struct unit_test_suite compressdev_testsuite  = {
 		      test_compressdev_deflate_im_buffers_SGL_over_2ops_second),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
-	}
+	})
 };
 
 static int

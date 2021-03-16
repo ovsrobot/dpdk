@@ -864,7 +864,7 @@ static struct unit_test_suite ipsec_sad_tests = {
 	.suite_name = "ipsec sad autotest",
 	.setup = NULL,
 	.teardown = NULL,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE(test_create_invalid),
 		TEST_CASE(test_find_existing),
 		TEST_CASE(test_multiple_create),
@@ -875,7 +875,7 @@ static struct unit_test_suite ipsec_sad_tests = {
 		TEST_CASE(test_lookup_adv),
 		TEST_CASE(test_lookup_order),
 		TEST_CASES_END()
-	}
+	})
 };
 
 static int

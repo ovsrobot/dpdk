@@ -275,7 +275,7 @@ static struct unit_test_suite metrics_testsuite  = {
 	.suite_name = "Metrics Unit Test Suite",
 	.setup = NULL,
 	.teardown = NULL,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		/* Test Case 1: Test to check all metric APIs without
 		 * metrics init
 		 */
@@ -317,7 +317,7 @@ static struct unit_test_suite metrics_testsuite  = {
 		TEST_CASE(test_metrics_deinitialize),
 
 		TEST_CASES_END()
-	}
+	})
 };
 
 static int

@@ -815,7 +815,7 @@ static struct unit_test_suite graph_testsuite = {
 	.suite_name = "Graph library test suite",
 	.setup = graph_setup,
 	.teardown = graph_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE(test_update_edges),
 		TEST_CASE(test_lookup_functions),
 		TEST_CASE(test_create_graph),
@@ -823,7 +823,7 @@ static struct unit_test_suite graph_testsuite = {
 		TEST_CASE(test_graph_walk),
 		TEST_CASE(test_print_stats),
 		TEST_CASES_END(), /**< NULL terminate unit test array */
-	},
+	}),
 };
 
 static int

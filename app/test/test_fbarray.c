@@ -714,7 +714,7 @@ static struct unit_test_suite fbarray_test_suite = {
 	.suite_name = "fbarray autotest",
 	.setup = autotest_setup,
 	.teardown = autotest_teardown,
-	.unit_test_cases = {
+	.unit_test_cases = ((struct unit_test_case []) {
 		TEST_CASE(test_invalid),
 		TEST_CASE(test_basic),
 		TEST_CASE_ST(first_msk_test_setup, reset_array, test_find),
@@ -724,7 +724,7 @@ static struct unit_test_suite fbarray_test_suite = {
 		TEST_CASE_ST(full_msk_test_setup, reset_array, test_find),
 		TEST_CASE_ST(empty_msk_test_setup, reset_array, test_empty),
 		TEST_CASES_END()
-	}
+	})
 };
 
 static int
