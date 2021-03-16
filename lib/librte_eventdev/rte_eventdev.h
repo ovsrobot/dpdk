@@ -212,8 +212,10 @@ extern "C" {
 
 #include <rte_common.h>
 #include <rte_config.h>
-#include <rte_memory.h>
 #include <rte_errno.h>
+#include <rte_mbuf_pool_ops.h>
+#include <rte_memory.h>
+#include <rte_mempool.h>
 
 #include "rte_eventdev_trace_fp.h"
 
@@ -221,20 +223,20 @@ struct rte_mbuf; /* we just use mbuf pointers; no need to include rte_mbuf.h */
 struct rte_event;
 
 /* Event device capability bitmap flags */
-#define RTE_EVENT_DEV_CAP_QUEUE_QOS           (1ULL << 0)
+#define RTE_EVENT_DEV_CAP_QUEUE_QOS (1ULL << 0)
 /**< Event scheduling prioritization is based on the priority associated with
  *  each event queue.
  *
  *  @see rte_event_queue_setup()
  */
-#define RTE_EVENT_DEV_CAP_EVENT_QOS           (1ULL << 1)
+#define RTE_EVENT_DEV_CAP_EVENT_QOS (1ULL << 1)
 /**< Event scheduling prioritization is based on the priority associated with
  *  each event. Priority of each event is supplied in *rte_event* structure
  *  on each enqueue operation.
  *
  *  @see rte_event_enqueue_burst()
  */
-#define RTE_EVENT_DEV_CAP_DISTRIBUTED_SCHED   (1ULL << 2)
+#define RTE_EVENT_DEV_CAP_DISTRIBUTED_SCHED (1ULL << 2)
 /**< Event device operates in distributed scheduling mode.
  * In distributed scheduling mode, event scheduling happens in HW or
  * rte_event_dequeue_burst() or the combination of these two.
@@ -243,14 +245,14 @@ struct rte_event;
  *
  * @see rte_event_dequeue_burst()
  */
-#define RTE_EVENT_DEV_CAP_QUEUE_ALL_TYPES     (1ULL << 3)
+#define RTE_EVENT_DEV_CAP_QUEUE_ALL_TYPES (1ULL << 3)
 /**< Event device is capable of enqueuing events of any type to any queue.
  * If this capability is not set, the queue only supports events of the
  *  *RTE_SCHED_TYPE_* type that it was created with.
  *
  * @see RTE_SCHED_TYPE_* values
  */
-#define RTE_EVENT_DEV_CAP_BURST_MODE          (1ULL << 4)
+#define RTE_EVENT_DEV_CAP_BURST_MODE (1ULL << 4)
 /**< Event device is capable of operating in burst mode for enqueue(forward,
  * release) and dequeue operation. If this capability is not set, application
  * still uses the rte_event_dequeue_burst() and rte_event_enqueue_burst() but
@@ -258,7 +260,7 @@ struct rte_event;
  *
  * @see rte_event_dequeue_burst() rte_event_enqueue_burst()
  */
-#define RTE_EVENT_DEV_CAP_IMPLICIT_RELEASE_DISABLE    (1ULL << 5)
+#define RTE_EVENT_DEV_CAP_IMPLICIT_RELEASE_DISABLE (1ULL << 5)
 /**< Event device ports support disabling the implicit release feature, in
  * which the port will release all unreleased events in its dequeue operation.
  * If this capability is set and the port is configured with implicit release
@@ -269,7 +271,7 @@ struct rte_event;
  * @see rte_event_dequeue_burst() rte_event_enqueue_burst()
  */
 
-#define RTE_EVENT_DEV_CAP_NONSEQ_MODE         (1ULL << 6)
+#define RTE_EVENT_DEV_CAP_NONSEQ_MODE (1ULL << 6)
 /**< Event device is capable of operating in none sequential mode. The path
  * of the event is not necessary to be sequential. Application can change
  * the path of event at runtime. If the flag is not set, then event each event
@@ -279,7 +281,7 @@ struct rte_event;
  * qid which is not the next in the sequence.
  */
 
-#define RTE_EVENT_DEV_CAP_RUNTIME_PORT_LINK   (1ULL << 7)
+#define RTE_EVENT_DEV_CAP_RUNTIME_PORT_LINK (1ULL << 7)
 /**< Event device is capable of configuring the queue/port link at runtime.
  * If the flag is not set, the eventdev queue/port link is only can be
  * configured during  initialization.
@@ -298,17 +300,17 @@ struct rte_event;
  */
 
 /* Event device priority levels */
-#define RTE_EVENT_DEV_PRIORITY_HIGHEST   0
+#define RTE_EVENT_DEV_PRIORITY_HIGHEST 0
 /**< Highest priority expressed across eventdev subsystem
  * @see rte_event_queue_setup(), rte_event_enqueue_burst()
  * @see rte_event_port_link()
  */
-#define RTE_EVENT_DEV_PRIORITY_NORMAL    128
+#define RTE_EVENT_DEV_PRIORITY_NORMAL 128
 /**< Normal priority expressed across eventdev subsystem
  * @see rte_event_queue_setup(), rte_event_enqueue_burst()
  * @see rte_event_port_link()
  */
-#define RTE_EVENT_DEV_PRIORITY_LOWEST    255
+#define RTE_EVENT_DEV_PRIORITY_LOWEST 255
 /**< Lowest priority expressed across eventdev subsystem
  * @see rte_event_queue_setup(), rte_event_enqueue_burst()
  * @see rte_event_port_link()
@@ -321,8 +323,7 @@ struct rte_event;
  * @return
  *   The total number of usable event devices.
  */
-uint8_t
-rte_event_dev_count(void);
+uint8_t rte_event_dev_count(void);
 
 /**
  * Get the device identifier for the named event device.
@@ -334,8 +335,7 @@ rte_event_dev_count(void);
  *   Returns event device identifier on success.
  *   - <0: Failure to find named event device.
  */
-int
-rte_event_dev_get_dev_id(const char *name);
+int rte_event_dev_get_dev_id(const char *name);
 
 /**
  * Return the NUMA socket to which a device is connected.
@@ -347,15 +347,14 @@ rte_event_dev_get_dev_id(const char *name);
  *   a default of zero if the socket could not be determined.
  *   -(-EINVAL)  dev_id value is out of range.
  */
-int
-rte_event_dev_socket_id(uint8_t dev_id);
+int rte_event_dev_socket_id(uint8_t dev_id);
 
 /**
  * Event device information
  */
 struct rte_event_dev_info {
-	const char *driver_name;	/**< Event driver name */
-	struct rte_device *dev;	/**< Device information */
+	const char *driver_name; /**< Event driver name */
+	struct rte_device *dev;	 /**< Device information */
 	uint32_t min_dequeue_timeout_ns;
 	/**< Minimum supported global dequeue timeout(ns) by this device */
 	uint32_t max_dequeue_timeout_ns;
@@ -420,8 +419,7 @@ struct rte_event_dev_info {
  *   - <0: Error code returned by the driver info get function.
  *
  */
-int
-rte_event_dev_info_get(uint8_t dev_id, struct rte_event_dev_info *dev_info);
+int rte_event_dev_info_get(uint8_t dev_id, struct rte_event_dev_info *dev_info);
 
 /**
  * The count of ports.
@@ -448,10 +446,8 @@ rte_event_dev_info_get(uint8_t dev_id, struct rte_event_dev_info *dev_info);
  *   - 0: Successfully retrieved attribute value
  *   - -EINVAL: Invalid device or  *attr_id* provided, or *attr_value* is NULL
  */
-int
-rte_event_dev_attr_get(uint8_t dev_id, uint32_t attr_id,
-		       uint32_t *attr_value);
-
+int rte_event_dev_attr_get(uint8_t dev_id, uint32_t attr_id,
+			   uint32_t *attr_value);
 
 /* Event device configuration bitmap flags */
 #define RTE_EVENT_DEV_CFG_PER_DEQUEUE_TIMEOUT (1ULL << 0)
@@ -539,20 +535,19 @@ struct rte_event_dev_config {
  *   - 0: Success, device configured.
  *   - <0: Error code returned by the driver configuration function.
  */
-int
-rte_event_dev_configure(uint8_t dev_id,
-			const struct rte_event_dev_config *dev_conf);
+int rte_event_dev_configure(uint8_t dev_id,
+			    const struct rte_event_dev_config *dev_conf);
 
 /* Event queue specific APIs */
 
 /* Event queue configuration bitmap flags */
-#define RTE_EVENT_QUEUE_CFG_ALL_TYPES          (1ULL << 0)
+#define RTE_EVENT_QUEUE_CFG_ALL_TYPES (1ULL << 0)
 /**< Allow ATOMIC,ORDERED,PARALLEL schedule type enqueue
  *
  * @see RTE_SCHED_TYPE_ORDERED, RTE_SCHED_TYPE_ATOMIC, RTE_SCHED_TYPE_PARALLEL
  * @see rte_event_enqueue_burst()
  */
-#define RTE_EVENT_QUEUE_CFG_SINGLE_LINK        (1ULL << 1)
+#define RTE_EVENT_QUEUE_CFG_SINGLE_LINK (1ULL << 1)
 /**< This event queue links only to a single event port.
  *
  *  @see rte_event_port_setup(), rte_event_port_link()
@@ -621,9 +616,8 @@ struct rte_event_queue_conf {
  * @see rte_event_queue_setup()
  *
  */
-int
-rte_event_queue_default_conf_get(uint8_t dev_id, uint8_t queue_id,
-				 struct rte_event_queue_conf *queue_conf);
+int rte_event_queue_default_conf_get(uint8_t dev_id, uint8_t queue_id,
+				     struct rte_event_queue_conf *queue_conf);
 
 /**
  * Allocate and set up an event queue for an event device.
@@ -643,9 +637,8 @@ rte_event_queue_default_conf_get(uint8_t dev_id, uint8_t queue_id,
  *   - 0: Success, event queue correctly set up.
  *   - <0: event queue configuration failed
  */
-int
-rte_event_queue_setup(uint8_t dev_id, uint8_t queue_id,
-		      const struct rte_event_queue_conf *queue_conf);
+int rte_event_queue_setup(uint8_t dev_id, uint8_t queue_id,
+			  const struct rte_event_queue_conf *queue_conf);
 
 /**
  * The priority of the queue.
@@ -688,21 +681,20 @@ rte_event_queue_setup(uint8_t dev_id, uint8_t queue_id,
  *   RTE_EVENT_QUEUE_ATTR_SCHEDULE_TYPE and event_queue_cfg is set to
  *   RTE_EVENT_QUEUE_CFG_ALL_TYPES
  */
-int
-rte_event_queue_attr_get(uint8_t dev_id, uint8_t queue_id, uint32_t attr_id,
-			uint32_t *attr_value);
+int rte_event_queue_attr_get(uint8_t dev_id, uint8_t queue_id, uint32_t attr_id,
+			     uint32_t *attr_value);
 
 /* Event port specific APIs */
 
 /* Event port configuration bitmap flags */
-#define RTE_EVENT_PORT_CFG_DISABLE_IMPL_REL    (1ULL << 0)
+#define RTE_EVENT_PORT_CFG_DISABLE_IMPL_REL (1ULL << 0)
 /**< Configure the port not to release outstanding events in
  * rte_event_dev_dequeue_burst(). If set, all events received through
  * the port must be explicitly released with RTE_EVENT_OP_RELEASE or
  * RTE_EVENT_OP_FORWARD. Must be unset if the device is not
  * RTE_EVENT_DEV_CAP_IMPLICIT_RELEASE_DISABLE capable.
  */
-#define RTE_EVENT_PORT_CFG_SINGLE_LINK         (1ULL << 1)
+#define RTE_EVENT_PORT_CFG_SINGLE_LINK (1ULL << 1)
 /**< This event port links only to a single event queue.
  *
  *  @see rte_event_port_setup(), rte_event_port_link()
@@ -760,9 +752,8 @@ struct rte_event_port_conf {
  * @see rte_event_port_setup()
  *
  */
-int
-rte_event_port_default_conf_get(uint8_t dev_id, uint8_t port_id,
-				struct rte_event_port_conf *port_conf);
+int rte_event_port_default_conf_get(uint8_t dev_id, uint8_t port_id,
+				    struct rte_event_port_conf *port_conf);
 
 /**
  * Allocate and set up an event port for an event device.
@@ -784,9 +775,8 @@ rte_event_port_default_conf_get(uint8_t dev_id, uint8_t port_id,
  *   - (-EDQUOT) Quota exceeded(Application tried to link the queue configured
  *   with RTE_EVENT_QUEUE_CFG_SINGLE_LINK to more than one event ports)
  */
-int
-rte_event_port_setup(uint8_t dev_id, uint8_t port_id,
-		     const struct rte_event_port_conf *port_conf);
+int rte_event_port_setup(uint8_t dev_id, uint8_t port_id,
+			 const struct rte_event_port_conf *port_conf);
 
 /**
  * The queue depth of the port on the enqueue side
@@ -821,9 +811,8 @@ rte_event_port_setup(uint8_t dev_id, uint8_t port_id,
  *   - 0: Successfully returned value
  *   - (-EINVAL) Invalid device, port or attr_id, or attr_value was NULL
  */
-int
-rte_event_port_attr_get(uint8_t dev_id, uint8_t port_id, uint32_t attr_id,
-			uint32_t *attr_value);
+int rte_event_port_attr_get(uint8_t dev_id, uint8_t port_id, uint32_t attr_id,
+			    uint32_t *attr_value);
 
 /**
  * Start an event device.
@@ -841,8 +830,7 @@ rte_event_port_attr_get(uint8_t dev_id, uint8_t port_id, uint32_t attr_id,
  *   - -ESTALE : Not all ports of the device are configured
  *   - -ENOLINK: Not all queues are linked, which could lead to deadlock.
  */
-int
-rte_event_dev_start(uint8_t dev_id);
+int rte_event_dev_start(uint8_t dev_id);
 
 /**
  * Stop an event device.
@@ -862,11 +850,10 @@ rte_event_dev_start(uint8_t dev_id);
  *
  * @see rte_event_dev_stop_flush_callback_register()
  */
-void
-rte_event_dev_stop(uint8_t dev_id);
+void rte_event_dev_stop(uint8_t dev_id);
 
 typedef void (*eventdev_stop_flush_t)(uint8_t dev_id, struct rte_event event,
-		void *arg);
+				      void *arg);
 /**< Callback function called during rte_event_dev_stop(), invoked once per
  * flushed event.
  */
@@ -895,9 +882,9 @@ typedef void (*eventdev_stop_flush_t)(uint8_t dev_id, struct rte_event event,
  *
  * @see rte_event_dev_stop()
  */
-int
-rte_event_dev_stop_flush_callback_register(uint8_t dev_id,
-		eventdev_stop_flush_t callback, void *userdata);
+int rte_event_dev_stop_flush_callback_register(uint8_t dev_id,
+					       eventdev_stop_flush_t callback,
+					       void *userdata);
 
 /**
  * Close an event device. The device cannot be restarted!
@@ -910,11 +897,29 @@ rte_event_dev_stop_flush_callback_register(uint8_t dev_id,
  *  - <0 on failure to close device
  *  - (-EAGAIN) if device is busy
  */
-int
-rte_event_dev_close(uint8_t dev_id);
+int rte_event_dev_close(uint8_t dev_id);
+
+/**
+ * Event vector structure.
+ */
+struct rte_event_vector {
+	uint64_t nb_elem : 16;
+	/**< Number of elements in this event vector. */
+	uint64_t rsvd : 48;
+	uint64_t impl_opaque;
+	union {
+		struct rte_mbuf *mbufs[0];
+		void *ptrs[0];
+		uint64_t *u64s[0];
+	} __rte_aligned(16);
+	/**< Start of the vector array union. Depending upon the event type the
+	 * vector array can be an array of mbufs or pointers or opaque u64
+	 * values.
+	 */
+};
 
 /* Scheduler type definitions */
-#define RTE_SCHED_TYPE_ORDERED          0
+#define RTE_SCHED_TYPE_ORDERED 0
 /**< Ordered scheduling
  *
  * Events from an ordered flow of an event queue can be scheduled to multiple
@@ -941,7 +946,7 @@ rte_event_dev_close(uint8_t dev_id);
  * @see rte_event_queue_setup(), rte_event_dequeue_burst(), RTE_EVENT_OP_RELEASE
  */
 
-#define RTE_SCHED_TYPE_ATOMIC           1
+#define RTE_SCHED_TYPE_ATOMIC 1
 /**< Atomic scheduling
  *
  * Events from an atomic flow of an event queue can be scheduled only to a
@@ -960,7 +965,7 @@ rte_event_dev_close(uint8_t dev_id);
  * @see rte_event_queue_setup(), rte_event_dequeue_burst(), RTE_EVENT_OP_RELEASE
  */
 
-#define RTE_SCHED_TYPE_PARALLEL         2
+#define RTE_SCHED_TYPE_PARALLEL 2
 /**< Parallel scheduling
  *
  * The scheduler performs priority scheduling, load balancing, etc. functions
@@ -974,27 +979,42 @@ rte_event_dev_close(uint8_t dev_id);
  */
 
 /* Event types to classify the event source */
-#define RTE_EVENT_TYPE_ETHDEV           0x0
+#define RTE_EVENT_TYPE_ETHDEV 0x0
 /**< The event generated from ethdev subsystem */
-#define RTE_EVENT_TYPE_CRYPTODEV        0x1
+#define RTE_EVENT_TYPE_CRYPTODEV 0x1
 /**< The event generated from crypodev subsystem */
-#define RTE_EVENT_TYPE_TIMER		0x2
+#define RTE_EVENT_TYPE_TIMER 0x2
 /**< The event generated from event timer adapter */
-#define RTE_EVENT_TYPE_CPU              0x3
+#define RTE_EVENT_TYPE_CPU 0x3
 /**< The event generated from cpu for pipelining.
  * Application may use *sub_event_type* to further classify the event
  */
-#define RTE_EVENT_TYPE_ETH_RX_ADAPTER   0x4
+#define RTE_EVENT_TYPE_ETH_RX_ADAPTER 0x4
 /**< The event generated from event eth Rx adapter */
-#define RTE_EVENT_TYPE_MAX              0x10
+#define RTE_EVENT_TYPE_VECTOR 0x8
+/**< Indicates that event is a vector.
+ * All vector event types should be an logical OR of EVENT_TYPE_VECTOR.
+ * This simplifies the pipeline design as we can split processing the events
+ * between vector events and normal event across event types.
+ * Example:
+ *	if (ev.event_type & RTE_EVENT_TYPE_VECTOR) {
+ *		// Classify and handle vector event.
+ *	} else {
+ *		// Classify and handle event.
+ *	}
+ */
+#define RTE_EVENT_TYPE_CPU_VECTOR (RTE_EVENT_TYPE_VECTOR | RTE_EVENT_TYPE_CPU)
+/**< The event vector generated from cpu for pipelining. */
+
+#define RTE_EVENT_TYPE_MAX 0x10
 /**< Maximum number of event types */
 
 /* Event enqueue operations */
-#define RTE_EVENT_OP_NEW                0
+#define RTE_EVENT_OP_NEW 0
 /**< The event producers use this operation to inject a new event to the
  * event device.
  */
-#define RTE_EVENT_OP_FORWARD            1
+#define RTE_EVENT_OP_FORWARD 1
 /**< The CPU use this operation to forward the event to different event queue or
  * change to new application specific flow or schedule type to enable
  * pipelining.
@@ -1002,7 +1022,7 @@ rte_event_dev_close(uint8_t dev_id);
  * This operation must only be enqueued to the same port that the
  * event to be forwarded was dequeued from.
  */
-#define RTE_EVENT_OP_RELEASE            2
+#define RTE_EVENT_OP_RELEASE 2
 /**< Release the flow context associated with the schedule type.
  *
  * If current flow's scheduler type method is *RTE_SCHED_TYPE_ATOMIC*
@@ -1046,30 +1066,30 @@ struct rte_event {
 		uint64_t event;
 		/** Event attributes for dequeue or enqueue operation */
 		struct {
-			uint32_t flow_id:20;
+			uint32_t flow_id : 20;
 			/**< Targeted flow identifier for the enqueue and
 			 * dequeue operation.
 			 * The value must be in the range of
 			 * [0, nb_event_queue_flows - 1] which
 			 * previously supplied to rte_event_dev_configure().
 			 */
-			uint32_t sub_event_type:8;
+			uint32_t sub_event_type : 8;
 			/**< Sub-event types based on the event source.
 			 * @see RTE_EVENT_TYPE_CPU
 			 */
-			uint32_t event_type:4;
+			uint32_t event_type : 4;
 			/**< Event type to classify the event source.
 			 * @see RTE_EVENT_TYPE_ETHDEV, (RTE_EVENT_TYPE_*)
 			 */
-			uint8_t op:2;
+			uint8_t op : 2;
 			/**< The type of event enqueue operation - new/forward/
 			 * etc.This field is not preserved across an instance
 			 * and is undefined on dequeue.
 			 * @see RTE_EVENT_OP_NEW, (RTE_EVENT_OP_*)
 			 */
-			uint8_t rsvd:4;
+			uint8_t rsvd : 4;
 			/**< Reserved for future use */
-			uint8_t sched_type:2;
+			uint8_t sched_type : 2;
 			/**< Scheduler synchronization type (RTE_SCHED_TYPE_*)
 			 * associated with flow id on a given event queue
 			 * for the enqueue and dequeue operation.
@@ -1108,19 +1128,21 @@ struct rte_event {
 		/**< Opaque event pointer */
 		struct rte_mbuf *mbuf;
 		/**< mbuf pointer if dequeued event is associated with mbuf */
+		struct rte_event_vector *vec;
+		/**< Event vector pointer. */
 	};
 };
 
 /* Ethdev Rx adapter capability bitmap flags */
-#define RTE_EVENT_ETH_RX_ADAPTER_CAP_INTERNAL_PORT	0x1
+#define RTE_EVENT_ETH_RX_ADAPTER_CAP_INTERNAL_PORT 0x1
 /**< This flag is sent when the packet transfer mechanism is in HW.
  * Ethdev can send packets to the event device using internal event port.
  */
-#define RTE_EVENT_ETH_RX_ADAPTER_CAP_MULTI_EVENTQ	0x2
+#define RTE_EVENT_ETH_RX_ADAPTER_CAP_MULTI_EVENTQ 0x2
 /**< Adapter supports multiple event queues per ethdev. Every ethdev
  * Rx queue can be connected to a unique event queue.
  */
-#define RTE_EVENT_ETH_RX_ADAPTER_CAP_OVERRIDE_FLOW_ID	0x4
+#define RTE_EVENT_ETH_RX_ADAPTER_CAP_OVERRIDE_FLOW_ID 0x4
 /**< The application can override the adapter generated flow ID in the
  * event. This flow ID can be specified when adding an ethdev Rx queue
  * to the adapter using the ev member of struct rte_event_eth_rx_adapter
@@ -1147,9 +1169,8 @@ struct rte_event {
  *   - <0: Error code returned by the driver function.
  *
  */
-int
-rte_event_eth_rx_adapter_caps_get(uint8_t dev_id, uint16_t eth_port_id,
-				uint32_t *caps);
+int rte_event_eth_rx_adapter_caps_get(uint8_t dev_id, uint16_t eth_port_id,
+				      uint32_t *caps);
 
 #define RTE_EVENT_TIMER_ADAPTER_CAP_INTERNAL_PORT (1ULL << 0)
 /**< This flag is set when the timer mechanism is in HW. */
@@ -1167,30 +1188,29 @@ rte_event_eth_rx_adapter_caps_get(uint8_t dev_id, uint16_t eth_port_id,
  *   - 0: Success, driver provided event timer adapter capabilities.
  *   - <0: Error code returned by the driver function.
  */
-int
-rte_event_timer_adapter_caps_get(uint8_t dev_id, uint32_t *caps);
+int rte_event_timer_adapter_caps_get(uint8_t dev_id, uint32_t *caps);
 
 /* Crypto adapter capability bitmap flag */
-#define RTE_EVENT_CRYPTO_ADAPTER_CAP_INTERNAL_PORT_OP_NEW   0x1
+#define RTE_EVENT_CRYPTO_ADAPTER_CAP_INTERNAL_PORT_OP_NEW 0x1
 /**< Flag indicates HW is capable of generating events in
  * RTE_EVENT_OP_NEW enqueue operation. Cryptodev will send
  * packets to the event device as new events using an internal
  * event port.
  */
 
-#define RTE_EVENT_CRYPTO_ADAPTER_CAP_INTERNAL_PORT_OP_FWD   0x2
+#define RTE_EVENT_CRYPTO_ADAPTER_CAP_INTERNAL_PORT_OP_FWD 0x2
 /**< Flag indicates HW is capable of generating events in
  * RTE_EVENT_OP_FORWARD enqueue operation. Cryptodev will send
  * packets to the event device as forwarded event using an
  * internal event port.
  */
 
-#define RTE_EVENT_CRYPTO_ADAPTER_CAP_INTERNAL_PORT_QP_EV_BIND  0x4
+#define RTE_EVENT_CRYPTO_ADAPTER_CAP_INTERNAL_PORT_QP_EV_BIND 0x4
 /**< Flag indicates HW is capable of mapping crypto queue pair to
  * event queue.
  */
 
-#define RTE_EVENT_CRYPTO_ADAPTER_CAP_SESSION_PRIVATE_DATA   0x8
+#define RTE_EVENT_CRYPTO_ADAPTER_CAP_SESSION_PRIVATE_DATA 0x8
 /**< Flag indicates HW/SW supports a mechanism to store and retrieve
  * the private data information along with the crypto session.
  */
@@ -1215,12 +1235,11 @@ rte_event_timer_adapter_caps_get(uint8_t dev_id, uint32_t *caps);
  *   - <0: Error code returned by the driver function.
  *
  */
-int
-rte_event_crypto_adapter_caps_get(uint8_t dev_id, uint8_t cdev_id,
-				  uint32_t *caps);
+int rte_event_crypto_adapter_caps_get(uint8_t dev_id, uint8_t cdev_id,
+				      uint32_t *caps);
 
 /* Ethdev Tx adapter capability bitmap flags */
-#define RTE_EVENT_ETH_TX_ADAPTER_CAP_INTERNAL_PORT	0x1
+#define RTE_EVENT_ETH_TX_ADAPTER_CAP_INTERNAL_PORT 0x1
 /**< This flag is sent when the PMD supports a packet transmit callback
  */
 
@@ -1241,9 +1260,8 @@ rte_event_crypto_adapter_caps_get(uint8_t dev_id, uint8_t cdev_id,
  *   - <0: Error code returned by the driver function.
  *
  */
-int
-rte_event_eth_tx_adapter_caps_get(uint8_t dev_id, uint16_t eth_port_id,
-				uint32_t *caps);
+int rte_event_eth_tx_adapter_caps_get(uint8_t dev_id, uint16_t eth_port_id,
+				      uint32_t *caps);
 
 struct rte_eventdev_ops;
 struct rte_eventdev;
@@ -1252,28 +1270,31 @@ typedef uint16_t (*event_enqueue_t)(void *port, const struct rte_event *ev);
 /**< @internal Enqueue event on port of a device */
 
 typedef uint16_t (*event_enqueue_burst_t)(void *port,
-			const struct rte_event ev[], uint16_t nb_events);
+					  const struct rte_event ev[],
+					  uint16_t nb_events);
 /**< @internal Enqueue burst of events on port of a device */
 
 typedef uint16_t (*event_dequeue_t)(void *port, struct rte_event *ev,
-		uint64_t timeout_ticks);
+				    uint64_t timeout_ticks);
 /**< @internal Dequeue event from port of a device */
 
 typedef uint16_t (*event_dequeue_burst_t)(void *port, struct rte_event ev[],
-		uint16_t nb_events, uint64_t timeout_ticks);
+					  uint16_t nb_events,
+					  uint64_t timeout_ticks);
 /**< @internal Dequeue burst of events from port of a device */
 
-typedef uint16_t (*event_tx_adapter_enqueue)(void *port,
-				struct rte_event ev[], uint16_t nb_events);
+typedef uint16_t (*event_tx_adapter_enqueue)(void *port, struct rte_event ev[],
+					     uint16_t nb_events);
 /**< @internal Enqueue burst of events on port of a device */
 
 typedef uint16_t (*event_tx_adapter_enqueue_same_dest)(void *port,
-		struct rte_event ev[], uint16_t nb_events);
+						       struct rte_event ev[],
+						       uint16_t nb_events);
 /**< @internal Enqueue burst of events on port of a device supporting
  * burst having same destination Ethernet port & Tx queue.
  */
 
-#define RTE_EVENTDEV_NAME_MAX_LEN	(64)
+#define RTE_EVENTDEV_NAME_MAX_LEN (64)
 /**< @internal Max length of name of event PMD */
 
 /**
@@ -1321,7 +1342,7 @@ struct rte_eventdev_data {
 	/**< Unique identifier name */
 
 	uint64_t reserved_64s[4]; /**< Reserved for future fields */
-	void *reserved_ptrs[4];   /**< Reserved for future fields */
+	void *reserved_ptrs[4];	  /**< Reserved for future fields */
 } __rte_cache_aligned;
 
 /** @internal The data structure associated with each event device. */
@@ -1356,7 +1377,7 @@ struct rte_eventdev {
 	/**< Flag indicating the device is attached */
 
 	uint64_t reserved_64s[4]; /**< Reserved for future fields */
-	void *reserved_ptrs[4];   /**< Reserved for future fields */
+	void *reserved_ptrs[4];	  /**< Reserved for future fields */
 } __rte_cache_aligned;
 
 extern struct rte_eventdev *rte_eventdevs;
@@ -1364,8 +1385,8 @@ extern struct rte_eventdev *rte_eventdevs;
 
 static __rte_always_inline uint16_t
 __rte_event_enqueue_burst(uint8_t dev_id, uint8_t port_id,
-			const struct rte_event ev[], uint16_t nb_events,
-			const event_enqueue_burst_t fn)
+			  const struct rte_event ev[], uint16_t nb_events,
+			  const event_enqueue_burst_t fn)
 {
 	const struct rte_eventdev *dev = &rte_eventdevs[dev_id];
 
@@ -1441,7 +1462,7 @@ rte_event_enqueue_burst(uint8_t dev_id, uint8_t port_id,
 	const struct rte_eventdev *dev = &rte_eventdevs[dev_id];
 
 	return __rte_event_enqueue_burst(dev_id, port_id, ev, nb_events,
-			dev->enqueue_burst);
+					 dev->enqueue_burst);
 }
 
 /**
@@ -1487,12 +1508,12 @@ rte_event_enqueue_burst(uint8_t dev_id, uint8_t port_id,
  */
 static inline uint16_t
 rte_event_enqueue_new_burst(uint8_t dev_id, uint8_t port_id,
-			const struct rte_event ev[], uint16_t nb_events)
+			    const struct rte_event ev[], uint16_t nb_events)
 {
 	const struct rte_eventdev *dev = &rte_eventdevs[dev_id];
 
 	return __rte_event_enqueue_burst(dev_id, port_id, ev, nb_events,
-			dev->enqueue_new_burst);
+					 dev->enqueue_new_burst);
 }
 
 /**
@@ -1538,12 +1559,12 @@ rte_event_enqueue_new_burst(uint8_t dev_id, uint8_t port_id,
  */
 static inline uint16_t
 rte_event_enqueue_forward_burst(uint8_t dev_id, uint8_t port_id,
-			const struct rte_event ev[], uint16_t nb_events)
+				const struct rte_event ev[], uint16_t nb_events)
 {
 	const struct rte_eventdev *dev = &rte_eventdevs[dev_id];
 
 	return __rte_event_enqueue_burst(dev_id, port_id, ev, nb_events,
-			dev->enqueue_forward_burst);
+					 dev->enqueue_forward_burst);
 }
 
 /**
@@ -1571,9 +1592,8 @@ rte_event_enqueue_forward_burst(uint8_t dev_id, uint8_t port_id,
  * @see rte_event_dev_configure()
  *
  */
-int
-rte_event_dequeue_timeout_ticks(uint8_t dev_id, uint64_t ns,
-					uint64_t *timeout_ticks);
+int rte_event_dequeue_timeout_ticks(uint8_t dev_id, uint64_t ns,
+				    uint64_t *timeout_ticks);
 
 /**
  * Dequeue a burst of events objects or an event object from the event port
@@ -1664,12 +1684,11 @@ rte_event_dequeue_burst(uint8_t dev_id, uint8_t port_id, struct rte_event ev[],
 	 * requests nb_events as const one
 	 */
 	if (nb_events == 1)
-		return (*dev->dequeue)(
-			dev->data->ports[port_id], ev, timeout_ticks);
+		return (*dev->dequeue)(dev->data->ports[port_id], ev,
+				       timeout_ticks);
 	else
-		return (*dev->dequeue_burst)(
-			dev->data->ports[port_id], ev, nb_events,
-				timeout_ticks);
+		return (*dev->dequeue_burst)(dev->data->ports[port_id], ev,
+					     nb_events, timeout_ticks);
 }
 
 /**
@@ -1732,10 +1751,8 @@ rte_event_dequeue_burst(uint8_t dev_id, uint8_t port_id, struct rte_event ev[],
  * (EINVAL) Invalid parameter
  *
  */
-int
-rte_event_port_link(uint8_t dev_id, uint8_t port_id,
-		    const uint8_t queues[], const uint8_t priorities[],
-		    uint16_t nb_links);
+int rte_event_port_link(uint8_t dev_id, uint8_t port_id, const uint8_t queues[],
+			const uint8_t priorities[], uint16_t nb_links);
 
 /**
  * Unlink multiple source event queues supplied in *queues* from the destination
@@ -1776,9 +1793,8 @@ rte_event_port_link(uint8_t dev_id, uint8_t port_id,
  * the rte_errno accordingly, Possible rte_errno values are
  * (EINVAL) Invalid parameter
  */
-int
-rte_event_port_unlink(uint8_t dev_id, uint8_t port_id,
-		      uint8_t queues[], uint16_t nb_unlinks);
+int rte_event_port_unlink(uint8_t dev_id, uint8_t port_id, uint8_t queues[],
+			  uint16_t nb_unlinks);
 
 /**
  * Returns the number of unlinks in progress.
@@ -1801,8 +1817,7 @@ rte_event_port_unlink(uint8_t dev_id, uint8_t port_id,
  * A negative return value indicates an error, -EINVAL indicates an invalid
  * parameter passed for *dev_id* or *port_id*.
  */
-int
-rte_event_port_unlinks_in_progress(uint8_t dev_id, uint8_t port_id);
+int rte_event_port_unlinks_in_progress(uint8_t dev_id, uint8_t port_id);
 
 /**
  * Retrieve the list of source event queues and its associated service priority
@@ -1831,9 +1846,8 @@ rte_event_port_unlinks_in_progress(uint8_t dev_id, uint8_t port_id);
  * - <0 on failure.
  *
  */
-int
-rte_event_port_links_get(uint8_t dev_id, uint8_t port_id,
-			 uint8_t queues[], uint8_t priorities[]);
+int rte_event_port_links_get(uint8_t dev_id, uint8_t port_id, uint8_t queues[],
+			     uint8_t priorities[]);
 
 /**
  * Retrieve the service ID of the event dev. If the adapter doesn't use
@@ -1850,8 +1864,7 @@ rte_event_port_links_get(uint8_t dev_id, uint8_t port_id,
  *   - <0: Error code on failure, if the event dev doesn't use a rte_service
  *   function, this function returns -ESRCH.
  */
-int
-rte_event_dev_service_id_get(uint8_t dev_id, uint32_t *service_id);
+int rte_event_dev_service_id_get(uint8_t dev_id, uint32_t *service_id);
 
 /**
  * Dump internal information about *dev_id* to the FILE* provided in *f*.
@@ -1866,8 +1879,7 @@ rte_event_dev_service_id_get(uint8_t dev_id, uint32_t *service_id);
  *   - 0: on success
  *   - <0: on failure.
  */
-int
-rte_event_dev_dump(uint8_t dev_id, FILE *f);
+int rte_event_dev_dump(uint8_t dev_id, FILE *f);
 
 /** Maximum name length for extended statistics counters */
 #define RTE_EVENT_DEV_XSTATS_NAME_SIZE 64
@@ -1923,13 +1935,10 @@ struct rte_event_dev_xstats_name {
  *        -EINVAL for invalid mode, queue port or id parameters
  *        -ENOTSUP if the device doesn't support this function.
  */
-int
-rte_event_dev_xstats_names_get(uint8_t dev_id,
-			       enum rte_event_dev_xstats_mode mode,
-			       uint8_t queue_port_id,
-			       struct rte_event_dev_xstats_name *xstats_names,
-			       unsigned int *ids,
-			       unsigned int size);
+int rte_event_dev_xstats_names_get(
+	uint8_t dev_id, enum rte_event_dev_xstats_mode mode,
+	uint8_t queue_port_id, struct rte_event_dev_xstats_name *xstats_names,
+	unsigned int *ids, unsigned int size);
 
 /**
  * Retrieve extended statistics of an event device.
@@ -1957,12 +1966,10 @@ rte_event_dev_xstats_names_get(uint8_t dev_id,
  *        -EINVAL for invalid mode, queue port or id parameters
  *        -ENOTSUP if the device doesn't support this function.
  */
-int
-rte_event_dev_xstats_get(uint8_t dev_id,
-			 enum rte_event_dev_xstats_mode mode,
-			 uint8_t queue_port_id,
-			 const unsigned int ids[],
-			 uint64_t values[], unsigned int n);
+int rte_event_dev_xstats_get(uint8_t dev_id,
+			     enum rte_event_dev_xstats_mode mode,
+			     uint8_t queue_port_id, const unsigned int ids[],
+			     uint64_t values[], unsigned int n);
 
 /**
  * Retrieve the value of a single stat by requesting it by name.
@@ -1980,9 +1987,8 @@ rte_event_dev_xstats_get(uint8_t dev_id,
  *   - positive value or zero: the stat value
  *   - negative value: -EINVAL if stat not found, -ENOTSUP if not supported.
  */
-uint64_t
-rte_event_dev_xstats_by_name_get(uint8_t dev_id, const char *name,
-				 unsigned int *id);
+uint64_t rte_event_dev_xstats_by_name_get(uint8_t dev_id, const char *name,
+					  unsigned int *id);
 
 /**
  * Reset the values of the xstats of the selected component in the device.
@@ -2004,12 +2010,10 @@ rte_event_dev_xstats_by_name_get(uint8_t dev_id, const char *name,
  *   - zero: successfully reset the statistics to zero
  *   - negative value: -EINVAL invalid parameters, -ENOTSUP if not supported.
  */
-int
-rte_event_dev_xstats_reset(uint8_t dev_id,
-			   enum rte_event_dev_xstats_mode mode,
-			   int16_t queue_port_id,
-			   const uint32_t ids[],
-			   uint32_t nb_ids);
+int rte_event_dev_xstats_reset(uint8_t dev_id,
+			       enum rte_event_dev_xstats_mode mode,
+			       int16_t queue_port_id, const uint32_t ids[],
+			       uint32_t nb_ids);
 
 /**
  * Trigger the eventdev self test.
@@ -2022,6 +2026,78 @@ rte_event_dev_xstats_reset(uint8_t dev_id,
  *   - other values < 0 on failure.
  */
 int rte_event_dev_selftest(uint8_t dev_id);
+
+/**
+ * Get the memory required per event vector based on the number of elements per
+ * vector.
+ * This should be used to create the mempool that holds the event vectors.
+ *
+ * @param name
+ *   The name of the vector pool.
+ * @param n
+ *   The number of elements in the mbuf pool.
+ * @param cache_size
+ *   Size of the per-core object cache. See rte_mempool_create() for
+ *   details.
+ * @param nb_elem
+ *   The number of elements then a single event vector should be able to hold.
+ * @param socket_id
+ *   The socket identifier where the memory should be allocated. The
+ *   value can be *SOCKET_ID_ANY* if there is no NUMA constraint for the
+ *   reserved zone
+ *
+ * @return
+ *   The pointer to the newly allocated mempool, on success. NULL on error
+ *   with rte_errno set appropriately. Possible rte_errno values include:
+ *    - E_RTE_NO_CONFIG - function could not get pointer to rte_config structure
+ *    - E_RTE_SECONDARY - function was called from a secondary process instance
+ *    - EINVAL - cache size provided is too large, or priv_size is not aligned.
+ *    - ENOSPC - the maximum number of memzones has already been allocated
+ *    - EEXIST - a memzone with the same name already exists
+ *    - ENOMEM - no appropriate memory area found in which to create memzone
+ */
+__rte_experimental
+static inline struct rte_mempool *
+rte_event_vector_pool_create(const char *name, unsigned int n,
+			     unsigned int cache_size, uint16_t nb_elem,
+			     int socket_id)
+{
+	const char *mp_ops_name;
+	struct rte_mempool *mp;
+	unsigned int elt_sz;
+	int ret;
+
+	if (!nb_elem) {
+		RTE_LOG(ERR, EVENTDEV,
+			"Invalid number of elements=%d requested\n", nb_elem);
+		rte_errno = -EINVAL;
+		return NULL;
+	}
+
+	elt_sz =
+		sizeof(struct rte_event_vector) + (nb_elem * sizeof(uintptr_t));
+	mp = rte_mempool_create_empty(name, n, elt_sz, cache_size, 0, socket_id,
+				      0);
+	if (mp == NULL)
+		return NULL;
+
+	mp_ops_name = rte_mbuf_best_mempool_ops();
+	ret = rte_mempool_set_ops_byname(mp, mp_ops_name, NULL);
+	if (ret != 0) {
+		RTE_LOG(ERR, EVENTDEV, "error setting mempool handler\n");
+		goto err;
+	}
+
+	ret = rte_mempool_populate_default(mp);
+	if (ret < 0)
+		goto err;
+
+	return mp;
+err:
+	rte_mempool_free(mp);
+	rte_errno = -ret;
+	return NULL;
+}
 
 #ifdef __cplusplus
 }
