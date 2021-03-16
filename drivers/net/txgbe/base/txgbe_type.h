@@ -617,9 +617,10 @@ struct txgbe_mac_info {
 	u32 rx_pb_size;
 	u32 max_tx_queues;
 	u32 max_rx_queues;
+	u64 autoc;
+	u64 orig_autoc;  /* cached value of AUTOC */
 	u8  san_mac_rar_index;
 	bool get_link_status;
-	u64 orig_autoc;  /* cached value of AUTOC */
 	bool orig_link_settings_stored;
 	bool autotry_restart;
 	u8 flags;
