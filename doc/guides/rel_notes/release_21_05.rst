@@ -83,6 +83,11 @@ New Features
   * Added command to display Rx queue used descriptor count.
     ``show port (port_id) rxq (queue_id) desc used count``
 
+* **Added sub-testsuite support.**
+
+  * The unit test suite struct now supports having either a nested
+    list of sub-testsuites, or a list of testcases as before.
+
 
 Removed Items
 -------------
