@@ -707,6 +707,7 @@ qat_sym_dp_enqueue_chain_jobs(void *qp_data, uint8_t *drv_ctx,
 static __rte_always_inline uint32_t
 qat_sym_dp_dequeue_burst(void *qp_data, uint8_t *drv_ctx,
 	rte_cryptodev_raw_get_dequeue_count_t get_dequeue_count,
+	uint32_t max_nb_to_dequeue,
 	rte_cryptodev_raw_post_dequeue_t post_dequeue,
 	void **out_user_data, uint8_t is_user_data_array,
 	uint32_t *n_success_jobs, int *return_status)
@@ -736,7 +737,8 @@ qat_sym_dp_dequeue_burst(void *qp_data, uint8_t *drv_ctx,
 
 	resp_opaque = (void *)(uintptr_t)resp->opaque_data;
 	/* get the dequeue count */
-	n = get_dequeue_count(resp_opaque);
+	n = get_dequeue_count != NULL ? get_dequeue_count(resp_opaque) :
+		max_nb_to_dequeue;
 	if (unlikely(n == 0))
 		return 0;
 

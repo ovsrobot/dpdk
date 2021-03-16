@@ -130,6 +130,8 @@ ABI Changes
 
 * No ABI change that would break compatibility with 20.11.
 
+* cryptodev: the function ``rte_cryptodev_raw_dequeue_burst`` is added a
+  parameter ``max_nb_to_dequeue`` to give user a more flexible dequeue control.
 
 Known Issues
 ------------
