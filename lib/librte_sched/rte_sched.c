@@ -1861,24 +1861,29 @@ debug_check_queue_slab(struct rte_sched_subport *subport, uint32_t bmp_pos,
 #endif /* RTE_SCHED_DEBUG */
 
 static inline struct rte_sched_subport *
-rte_sched_port_subport(struct rte_sched_port *port,
-	struct rte_mbuf *pkt)
+sched_port_subport(const struct rte_sched_port *port, struct rte_mbuf_sched sch)
 {
-	uint32_t queue_id = rte_mbuf_sched_queue_get(pkt);
+	uint32_t queue_id = sch.queue_id;
 	uint32_t subport_id = queue_id >> (port->n_pipes_per_subport_log2 + 4);
 
 	return port->subports[subport_id];
 }
 
+static inline struct rte_sched_subport *
+rte_sched_port_subport(const struct rte_sched_port *port, struct rte_mbuf *pkt)
+{
+	return sched_port_subport(port, pkt->hash.sched);
+}
+
 static inline uint32_t
-rte_sched_port_enqueue_qptrs_prefetch0(struct rte_sched_subport *subport,
-	struct rte_mbuf *pkt, uint32_t subport_qmask)
+sched_port_enqueue_qptrs_prefetch0(const struct rte_sched_subport *subport,
+	struct rte_mbuf_sched sch, uint32_t subport_qmask)
 {
 	struct rte_sched_queue *q;
 #ifdef RTE_SCHED_COLLECT_STATS
 	struct rte_sched_queue_extra *qe;
 #endif
-	uint32_t qindex = rte_mbuf_sched_queue_get(pkt);
+	uint32_t qindex = sch.queue_id;
 	uint32_t subport_queue_id = subport_qmask & qindex;
 
 	q = subport->queue + subport_queue_id;
@@ -1889,6 +1894,14 @@ rte_sched_port_enqueue_qptrs_prefetch0(struct rte_sched_subport *subport,
 #endif
 
 	return subport_queue_id;
+}
+
+static inline uint32_t
+rte_sched_port_enqueue_qptrs_prefetch0(const struct rte_sched_subport *subport,
+	struct rte_mbuf *pkt, uint32_t subport_qmask)
+{
+	return sched_port_enqueue_qptrs_prefetch0(subport, pkt->hash.sched,
+			subport_qmask);
 }
 
 static inline void
@@ -1971,197 +1984,41 @@ int
 rte_sched_port_enqueue(struct rte_sched_port *port, struct rte_mbuf **pkts,
 		       uint32_t n_pkts)
 {
-	struct rte_mbuf *pkt00, *pkt01, *pkt10, *pkt11, *pkt20, *pkt21,
-		*pkt30, *pkt31, *pkt_last;
-	struct rte_mbuf **q00_base, **q01_base, **q10_base, **q11_base,
-		**q20_base, **q21_base, **q30_base, **q31_base, **q_last_base;
-	struct rte_sched_subport *subport00, *subport01, *subport10, *subport11,
-		*subport20, *subport21, *subport30, *subport31, *subport_last;
-	uint32_t q00, q01, q10, q11, q20, q21, q30, q31, q_last;
-	uint32_t r00, r01, r10, r11, r20, r21, r30, r31, r_last;
-	uint32_t subport_qmask;
 	uint32_t result, i;
+	struct rte_mbuf_sched sch[n_pkts];
+	struct rte_sched_subport *subports[n_pkts];
+	struct rte_mbuf **q_base[n_pkts];
+	uint32_t q[n_pkts];
+
+	const uint32_t subport_qmask =
+		(1 << (port->n_pipes_per_subport_log2 + 4)) - 1;
 
 	result = 0;
-	subport_qmask = (1 << (port->n_pipes_per_subport_log2 + 4)) - 1;
 
-	/*
-	 * Less then 6 input packets available, which is not enough to
-	 * feed the pipeline
-	 */
-	if (unlikely(n_pkts < 6)) {
-		struct rte_sched_subport *subports[5];
-		struct rte_mbuf **q_base[5];
-		uint32_t q[5];
+	/* Prefetch the mbuf structure of each packet */
+	for (i = 0; i < n_pkts; i++)
+		sch[i] = pkts[i]->hash.sched;
 
-		/* Prefetch the mbuf structure of each packet */
-		for (i = 0; i < n_pkts; i++)
-			rte_prefetch0(pkts[i]);
+	/* Prefetch the subport structure for each packet */
+	for (i = 0; i < n_pkts; i++)
+		subports[i] = sched_port_subport(port, sch[i]);
 
-		/* Prefetch the subport structure for each packet */
-		for (i = 0; i < n_pkts; i++)
-			subports[i] = rte_sched_port_subport(port, pkts[i]);
+	/* Prefetch the queue structure for each queue */
+	for (i = 0; i < n_pkts; i++)
+		q[i] = sched_port_enqueue_qptrs_prefetch0(subports[i],
+				sch[i], subport_qmask);
 
-		/* Prefetch the queue structure for each queue */
-		for (i = 0; i < n_pkts; i++)
-			q[i] = rte_sched_port_enqueue_qptrs_prefetch0(subports[i],
-					pkts[i], subport_qmask);
-
-		/* Prefetch the write pointer location of each queue */
-		for (i = 0; i < n_pkts; i++) {
-			q_base[i] = rte_sched_subport_pipe_qbase(subports[i], q[i]);
-			rte_sched_port_enqueue_qwa_prefetch0(port, subports[i],
-				q[i], q_base[i]);
-		}
-
-		/* Write each packet to its queue */
-		for (i = 0; i < n_pkts; i++)
-			result += rte_sched_port_enqueue_qwa(port, subports[i],
-						q[i], q_base[i], pkts[i]);
-
-		return result;
+	/* Prefetch the write pointer location of each queue */
+	for (i = 0; i < n_pkts; i++) {
+		q_base[i] = rte_sched_subport_pipe_qbase(subports[i], q[i]);
+		rte_sched_port_enqueue_qwa_prefetch0(port, subports[i],
+			q[i], q_base[i]);
 	}
 
-	/* Feed the first 3 stages of the pipeline (6 packets needed) */
-	pkt20 = pkts[0];
-	pkt21 = pkts[1];
-	rte_prefetch0(pkt20);
-	rte_prefetch0(pkt21);
-
-	pkt10 = pkts[2];
-	pkt11 = pkts[3];
-	rte_prefetch0(pkt10);
-	rte_prefetch0(pkt11);
-
-	subport20 = rte_sched_port_subport(port, pkt20);
-	subport21 = rte_sched_port_subport(port, pkt21);
-	q20 = rte_sched_port_enqueue_qptrs_prefetch0(subport20,
-			pkt20, subport_qmask);
-	q21 = rte_sched_port_enqueue_qptrs_prefetch0(subport21,
-			pkt21, subport_qmask);
-
-	pkt00 = pkts[4];
-	pkt01 = pkts[5];
-	rte_prefetch0(pkt00);
-	rte_prefetch0(pkt01);
-
-	subport10 = rte_sched_port_subport(port, pkt10);
-	subport11 = rte_sched_port_subport(port, pkt11);
-	q10 = rte_sched_port_enqueue_qptrs_prefetch0(subport10,
-			pkt10, subport_qmask);
-	q11 = rte_sched_port_enqueue_qptrs_prefetch0(subport11,
-			pkt11, subport_qmask);
-
-	q20_base = rte_sched_subport_pipe_qbase(subport20, q20);
-	q21_base = rte_sched_subport_pipe_qbase(subport21, q21);
-	rte_sched_port_enqueue_qwa_prefetch0(port, subport20, q20, q20_base);
-	rte_sched_port_enqueue_qwa_prefetch0(port, subport21, q21, q21_base);
-
-	/* Run the pipeline */
-	for (i = 6; i < (n_pkts & (~1)); i += 2) {
-		/* Propagate stage inputs */
-		pkt30 = pkt20;
-		pkt31 = pkt21;
-		pkt20 = pkt10;
-		pkt21 = pkt11;
-		pkt10 = pkt00;
-		pkt11 = pkt01;
-		q30 = q20;
-		q31 = q21;
-		q20 = q10;
-		q21 = q11;
-		subport30 = subport20;
-		subport31 = subport21;
-		subport20 = subport10;
-		subport21 = subport11;
-		q30_base = q20_base;
-		q31_base = q21_base;
-
-		/* Stage 0: Get packets in */
-		pkt00 = pkts[i];
-		pkt01 = pkts[i + 1];
-		rte_prefetch0(pkt00);
-		rte_prefetch0(pkt01);
-
-		/* Stage 1: Prefetch subport and queue structure storing queue pointers */
-		subport10 = rte_sched_port_subport(port, pkt10);
-		subport11 = rte_sched_port_subport(port, pkt11);
-		q10 = rte_sched_port_enqueue_qptrs_prefetch0(subport10,
-				pkt10, subport_qmask);
-		q11 = rte_sched_port_enqueue_qptrs_prefetch0(subport11,
-				pkt11, subport_qmask);
-
-		/* Stage 2: Prefetch queue write location */
-		q20_base = rte_sched_subport_pipe_qbase(subport20, q20);
-		q21_base = rte_sched_subport_pipe_qbase(subport21, q21);
-		rte_sched_port_enqueue_qwa_prefetch0(port, subport20, q20, q20_base);
-		rte_sched_port_enqueue_qwa_prefetch0(port, subport21, q21, q21_base);
-
-		/* Stage 3: Write packet to queue and activate queue */
-		r30 = rte_sched_port_enqueue_qwa(port, subport30,
-				q30, q30_base, pkt30);
-		r31 = rte_sched_port_enqueue_qwa(port, subport31,
-				q31, q31_base, pkt31);
-		result += r30 + r31;
-	}
-
-	/*
-	 * Drain the pipeline (exactly 6 packets).
-	 * Handle the last packet in the case
-	 * of an odd number of input packets.
-	 */
-	pkt_last = pkts[n_pkts - 1];
-	rte_prefetch0(pkt_last);
-
-	subport00 = rte_sched_port_subport(port, pkt00);
-	subport01 = rte_sched_port_subport(port, pkt01);
-	q00 = rte_sched_port_enqueue_qptrs_prefetch0(subport00,
-			pkt00, subport_qmask);
-	q01 = rte_sched_port_enqueue_qptrs_prefetch0(subport01,
-			pkt01, subport_qmask);
-
-	q10_base = rte_sched_subport_pipe_qbase(subport10, q10);
-	q11_base = rte_sched_subport_pipe_qbase(subport11, q11);
-	rte_sched_port_enqueue_qwa_prefetch0(port, subport10, q10, q10_base);
-	rte_sched_port_enqueue_qwa_prefetch0(port, subport11, q11, q11_base);
-
-	r20 = rte_sched_port_enqueue_qwa(port, subport20,
-			q20, q20_base, pkt20);
-	r21 = rte_sched_port_enqueue_qwa(port, subport21,
-			q21, q21_base, pkt21);
-	result += r20 + r21;
-
-	subport_last = rte_sched_port_subport(port, pkt_last);
-	q_last = rte_sched_port_enqueue_qptrs_prefetch0(subport_last,
-				pkt_last, subport_qmask);
-
-	q00_base = rte_sched_subport_pipe_qbase(subport00, q00);
-	q01_base = rte_sched_subport_pipe_qbase(subport01, q01);
-	rte_sched_port_enqueue_qwa_prefetch0(port, subport00, q00, q00_base);
-	rte_sched_port_enqueue_qwa_prefetch0(port, subport01, q01, q01_base);
-
-	r10 = rte_sched_port_enqueue_qwa(port, subport10, q10,
-			q10_base, pkt10);
-	r11 = rte_sched_port_enqueue_qwa(port, subport11, q11,
-			q11_base, pkt11);
-	result += r10 + r11;
-
-	q_last_base = rte_sched_subport_pipe_qbase(subport_last, q_last);
-	rte_sched_port_enqueue_qwa_prefetch0(port, subport_last,
-		q_last, q_last_base);
-
-	r00 = rte_sched_port_enqueue_qwa(port, subport00, q00,
-			q00_base, pkt00);
-	r01 = rte_sched_port_enqueue_qwa(port, subport01, q01,
-			q01_base, pkt01);
-	result += r00 + r01;
-
-	if (n_pkts & 1) {
-		r_last = rte_sched_port_enqueue_qwa(port, subport_last,
-					q_last,	q_last_base, pkt_last);
-		result += r_last;
-	}
-
+	/* Write each packet to its queue */
+	for (i = 0; i < n_pkts; i++)
+		result += rte_sched_port_enqueue_qwa(port, subports[i],
+					q[i], q_base[i], pkts[i]);
 	return result;
 }
 
