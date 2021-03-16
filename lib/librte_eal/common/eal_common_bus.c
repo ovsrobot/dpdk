@@ -277,3 +277,19 @@ rte_bus_sigbus_handler(const void *failure_addr)
 
 	return ret;
 }
+
+static bool mode_set;
+
+void
+rte_bus_scan_mode_update(enum rte_bus_scan_mode mode)
+{
+	struct rte_bus *bus;
+
+	if (mode_set)
+		return;
+	TAILQ_FOREACH(bus, &rte_bus_list, next) {
+		if (bus->conf.scan_mode == RTE_BUS_SCAN_UNDEFINED)
+			bus->conf.scan_mode = mode;
+	}
+	mode_set = true;
+}

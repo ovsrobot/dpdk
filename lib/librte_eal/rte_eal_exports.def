@@ -11,6 +11,7 @@ EXPORTS
 	rte_bus_probe
 	rte_bus_register
 	rte_bus_scan
+	rte_bus_scan_mode_update
 	rte_bus_unregister
 	rte_calloc
 	rte_calloc_socket

@@ -424,6 +424,8 @@ EXPERIMENTAL {
 INTERNAL {
 	global:
 
+	rte_bus_scan_mode_update;
+
 	rte_mem_lock;
 	rte_mem_map;
 	rte_mem_page_size;
