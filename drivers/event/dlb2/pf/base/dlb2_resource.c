@@ -33,28 +33,6 @@
 #define DLB2_FUNC_LIST_FOR_SAFE(head, ptr, ptr_tmp, it, it_tmp) \
 	DLB2_LIST_FOR_EACH_SAFE((head), ptr, ptr_tmp, func_list, it, it_tmp)
 
-void dlb2_hw_enable_sparse_dir_cq_mode(struct dlb2_hw *hw)
-{
-	union dlb2_chp_cfg_chp_csr_ctrl r0;
-
-	r0.val = DLB2_CSR_RD(hw, DLB2_CHP_CFG_CHP_CSR_CTRL);
-
-	r0.field.cfg_64bytes_qe_dir_cq_mode = 1;
-
-	DLB2_CSR_WR(hw, DLB2_CHP_CFG_CHP_CSR_CTRL, r0.val);
-}
-
-void dlb2_hw_enable_sparse_ldb_cq_mode(struct dlb2_hw *hw)
-{
-	union dlb2_chp_cfg_chp_csr_ctrl r0;
-
-	r0.val = DLB2_CSR_RD(hw, DLB2_CHP_CFG_CHP_CSR_CTRL);
-
-	r0.field.cfg_64bytes_qe_ldb_cq_mode = 1;
-
-	DLB2_CSR_WR(hw, DLB2_CHP_CFG_CHP_CSR_CTRL, r0.val);
-}
-
 /*
  * The PF driver cannot assume that a register write will affect subsequent HCW
  * writes. To ensure a write completes, the driver must read back a CSR. This
