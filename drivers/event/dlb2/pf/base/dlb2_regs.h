@@ -2,8 +2,8 @@
  * Copyright(c) 2016-2020 Intel Corporation
  */
 
-#ifndef __DLB2_REGS_NEW_H
-#define __DLB2_REGS_NEW_H
+#ifndef __DLB2_REGS_H
+#define __DLB2_REGS_H
 
 #include "dlb2_osdep_types.h"
 
@@ -4409,4 +4409,4 @@
 #define DLB2_LSP_CFG_CQ_LDB_WU_LIMIT_V_LOC		15
 #define DLB2_LSP_CFG_CQ_LDB_WU_LIMIT_RSVD0_LOC	16
 
-#endif /* __DLB2_REGS_NEW_H */
+#endif /* __DLB2_REGS_H */
