@@ -242,3 +242,4 @@ int dlb2_hw_get_ldb_queue_depth(struct dlb2_hw *hw,
 
 	return 0;
 }
+
