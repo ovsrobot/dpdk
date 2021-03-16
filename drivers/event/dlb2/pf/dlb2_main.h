@@ -15,7 +15,7 @@
 #define PAGE_SIZE (sysconf(_SC_PAGESIZE))
 #endif
 
-#include "base/dlb2_hw_types_new.h"
+#include "base/dlb2_hw_types.h"
 #include "../dlb2_user.h"
 
 #define DLB2_DEFAULT_UNREGISTER_TIMEOUT_S 5

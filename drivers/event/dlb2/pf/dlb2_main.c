@@ -14,7 +14,7 @@
 #include <rte_errno.h>
 
 #include "base/dlb2_regs_new.h"
-#include "base/dlb2_hw_types_new.h"
+#include "base/dlb2_hw_types.h"
 #include "base/dlb2_resource.h"
 #include "base/dlb2_osdep.h"
 #include "dlb2_main.h"
