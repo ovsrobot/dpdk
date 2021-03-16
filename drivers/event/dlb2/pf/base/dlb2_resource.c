@@ -66,17 +66,6 @@ static inline void dlb2_flush_csr(struct dlb2_hw *hw)
 	DLB2_CSR_RD(hw, DLB2_SYS_TOTAL_VAS);
 }
 
-static u32 dlb2_dir_queue_depth(struct dlb2_hw *hw,
-				struct dlb2_dir_pq_pair *queue)
-{
-	union dlb2_lsp_qid_dir_enqueue_cnt r0;
-
-	r0.val = DLB2_CSR_RD(hw,
-			     DLB2_LSP_QID_DIR_ENQUEUE_CNT(queue->id.phys_id));
-
-	return r0.field.count;
-}
-
 static void dlb2_ldb_port_cq_enable(struct dlb2_hw *hw,
 				    struct dlb2_ldb_port *port)
 {
@@ -107,24 +96,6 @@ static void dlb2_ldb_port_cq_disable(struct dlb2_hw *hw,
 	DLB2_CSR_WR(hw, DLB2_LSP_CQ_LDB_DSBL(port->id.phys_id), reg.val);
 
 	dlb2_flush_csr(hw);
-}
-
-static u32 dlb2_ldb_queue_depth(struct dlb2_hw *hw,
-				struct dlb2_ldb_queue *queue)
-{
-	union dlb2_lsp_qid_aqed_active_cnt r0;
-	union dlb2_lsp_qid_atm_active r1;
-	union dlb2_lsp_qid_ldb_enqueue_cnt r2;
-
-	r0.val = DLB2_CSR_RD(hw,
-			     DLB2_LSP_QID_AQED_ACTIVE_CNT(queue->id.phys_id));
-	r1.val = DLB2_CSR_RD(hw,
-			     DLB2_LSP_QID_ATM_ACTIVE(queue->id.phys_id));
-
-	r2.val = DLB2_CSR_RD(hw,
-			     DLB2_LSP_QID_LDB_ENQUEUE_CNT(queue->id.phys_id));
-
-	return r0.field.count + r1.field.count + r2.field.count;
 }
 
 static struct dlb2_ldb_queue *
