@@ -59,7 +59,9 @@ void rte_thread_get_affinity(rte_cpuset_t *cpusetp);
  *
  * @return
  *   On success, zero.
- *   On failure, a negative number.
+ *   On failure, a negative number and an error number is set in rte_errno.
+ *   rte_errno can be: ENOMEM  - Memory allocation error.
+ *                     ENOEXEC - Specific OS error.
  */
 
 __rte_experimental
@@ -73,7 +75,9 @@ int rte_thread_tls_key_create(rte_tls_key *key, void (*destructor)(void *));
  *
  * @return
  *   On success, zero.
- *   On failure, a negative number.
+ *   On failure, a negative number and an error number is set in rte_errno.
+ *   rte_errno can be: EINVAL  - Invalid parameter passed.
+ *                     ENOEXEC - Specific OS error.
  */
 __rte_experimental
 int rte_thread_tls_key_delete(rte_tls_key key);
@@ -88,7 +92,9 @@ int rte_thread_tls_key_delete(rte_tls_key key);
  *
  * @return
  *   On success, zero.
- *   On failure, a negative number.
+ *   On failure, a negative number and an error number is set in rte_errno.
+ *   rte_errno can be: EINVAL  - Invalid parameter passed.
+ *                     ENOEXEC - Specific OS error.
  */
 __rte_experimental
 int rte_thread_tls_value_set(rte_tls_key key, const void *value);
@@ -102,6 +108,8 @@ int rte_thread_tls_value_set(rte_tls_key key, const void *value);
  * @return
  *   On success, value data pointer (can also be NULL).
  *   On failure, NULL and an error number is set in rte_errno.
+ *   rte_errno can be: EINVAL  - Invalid parameter passed.
+ *                     ENOEXEC - Specific OS error.
  */
 __rte_experimental
 void *rte_thread_tls_value_get(rte_tls_key key);
