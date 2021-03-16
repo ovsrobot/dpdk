@@ -200,6 +200,13 @@ struct rte_crypto_cipher_xform {
 		uint16_t length;	/**< key length in bytes */
 	} key;
 	/**< Cipher key
+	 * The original key data may be provided wrapped (encrypted) using a key
+	 * wrap algorithm such as AES key wrap (from rfc3394) or other. In such
+	 * case, the wrapping details is a secret between the key provider and
+	 * the device. Such key wrapping may increase the length of the provided
+	 * key beyond the advertised supported key size. Hence it is the
+	 * responsibility of the driver/device to validate the length of the
+	 * provided key.
 	 *
 	 * For the RTE_CRYPTO_CIPHER_AES_F8 mode of operation, key.data will
 	 * point to a concatenation of the AES encryption key followed by a
