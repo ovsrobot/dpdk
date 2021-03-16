@@ -2,8 +2,6 @@
  * Copyright(c) 2016-2020 Intel Corporation
  */
 
-#define DLB2_USE_NEW_HEADERS /* TEMPORARY FOR MERGE */
-
 #include "dlb2_user.h"
 
 #include "dlb2_hw_types_new.h"

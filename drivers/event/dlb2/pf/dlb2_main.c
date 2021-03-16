@@ -13,8 +13,6 @@
 #include <rte_malloc.h>
 #include <rte_errno.h>
 
-#define DLB2_USE_NEW_HEADERS /* TEMPORARY FOR MERGE */
-
 #include "base/dlb2_regs_new.h"
 #include "base/dlb2_hw_types_new.h"
 #include "base/dlb2_resource.h"
