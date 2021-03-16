@@ -738,82 +738,101 @@ error_exit:
 	return status;
 }
 
-int
-test_blockcipher_all_tests(struct rte_mempool *mbuf_pool,
-	struct rte_mempool *op_mpool,
-	struct rte_mempool *sess_mpool,
-	struct rte_mempool *sess_priv_mpool,
-	uint8_t dev_id,
-	enum blockcipher_test_type test_type)
+static int
+blockcipher_test_case_run(const void *data)
 {
-	int status, overall_status = TEST_SUCCESS;
-	uint32_t i, test_index = 0;
+	const struct blockcipher_test_case *tc_data = data;
+	int status;
 	char test_msg[BLOCKCIPHER_TEST_MSG_LEN + 1];
-	uint32_t n_test_cases = 0;
-	const struct blockcipher_test_case *tcs = NULL;
+
+	status = test_blockcipher_one_case(tc_data,
+			p_testsuite_params->mbuf_pool,
+			p_testsuite_params->op_mpool,
+			p_testsuite_params->session_mpool,
+			p_testsuite_params->session_priv_mpool,
+			p_testsuite_params->valid_devs[0],
+			test_msg);
+	return status;
+}
+
+struct unit_test_suite
+build_blockcipher_test_suite(enum blockcipher_test_type test_type)
+{
+	int i, n_test_cases = 0;
+	struct unit_test_suite ts = {0};
+	const struct blockcipher_test_case *blk_tcs;
+	struct unit_test_case *tcs;
 
 	switch (test_type) {
 	case BLKCIPHER_AES_CHAIN_TYPE:
-		n_test_cases = sizeof(aes_chain_test_cases) /
-		sizeof(aes_chain_test_cases[0]);
-		tcs = aes_chain_test_cases;
+		n_test_cases = RTE_DIM(aes_chain_test_cases);
+		blk_tcs = aes_chain_test_cases;
+		ts.suite_name = "AES Chain";
 		break;
 	case BLKCIPHER_AES_CIPHERONLY_TYPE:
-		n_test_cases = sizeof(aes_cipheronly_test_cases) /
-		sizeof(aes_cipheronly_test_cases[0]);
-		tcs = aes_cipheronly_test_cases;
+		n_test_cases = RTE_DIM(aes_cipheronly_test_cases);
+		blk_tcs = aes_cipheronly_test_cases;
+		ts.suite_name = "AES Cipher Only";
 		break;
 	case BLKCIPHER_AES_DOCSIS_TYPE:
-		n_test_cases = sizeof(aes_docsis_test_cases) /
-		sizeof(aes_docsis_test_cases[0]);
-		tcs = aes_docsis_test_cases;
+		n_test_cases = RTE_DIM(aes_docsis_test_cases);
+		blk_tcs = aes_docsis_test_cases;
+		ts.suite_name = "AES Docsis";
 		break;
 	case BLKCIPHER_3DES_CHAIN_TYPE:
-		n_test_cases = sizeof(triple_des_chain_test_cases) /
-		sizeof(triple_des_chain_test_cases[0]);
-		tcs = triple_des_chain_test_cases;
+		n_test_cases = RTE_DIM(triple_des_chain_test_cases);
+		blk_tcs = triple_des_chain_test_cases;
+		ts.suite_name = "3DES Chain";
 		break;
 	case BLKCIPHER_3DES_CIPHERONLY_TYPE:
-		n_test_cases = sizeof(triple_des_cipheronly_test_cases) /
-		sizeof(triple_des_cipheronly_test_cases[0]);
-		tcs = triple_des_cipheronly_test_cases;
+		n_test_cases = RTE_DIM(triple_des_cipheronly_test_cases);
+		blk_tcs = triple_des_cipheronly_test_cases;
+		ts.suite_name = "3DES Cipher Only";
 		break;
 	case BLKCIPHER_DES_CIPHERONLY_TYPE:
-		n_test_cases = sizeof(des_cipheronly_test_cases) /
-		sizeof(des_cipheronly_test_cases[0]);
-		tcs = des_cipheronly_test_cases;
+		n_test_cases = RTE_DIM(des_cipheronly_test_cases);
+		blk_tcs = des_cipheronly_test_cases;
+		ts.suite_name = "DES Cipher Only";
 		break;
 	case BLKCIPHER_DES_DOCSIS_TYPE:
-		n_test_cases = sizeof(des_docsis_test_cases) /
-		sizeof(des_docsis_test_cases[0]);
-		tcs = des_docsis_test_cases;
+		n_test_cases = RTE_DIM(des_docsis_test_cases);
+		blk_tcs = des_docsis_test_cases;
+		ts.suite_name = "DES Docsis";
 		break;
 	case BLKCIPHER_AUTHONLY_TYPE:
-		n_test_cases = sizeof(hash_test_cases) /
-		sizeof(hash_test_cases[0]);
-		tcs = hash_test_cases;
+		n_test_cases = RTE_DIM(hash_test_cases);
+		blk_tcs = hash_test_cases;
+		ts.suite_name = "Auth Only";
 		break;
 	default:
 		break;
 	}
 
+	tcs = malloc(sizeof(struct unit_test_case) * (n_test_cases + 1));
+
 	for (i = 0; i < n_test_cases; i++) {
-		const struct blockcipher_test_case *tc = &tcs[i];
-
-		status = test_blockcipher_one_case(tc, mbuf_pool, op_mpool,
-			sess_mpool, sess_priv_mpool, dev_id,
-			test_msg);
-
-		printf("  %u) TestCase %s %s\n", test_index ++,
-			tc->test_descr, test_msg);
-
-		if (status == TEST_FAILED) {
-			overall_status = status;
-
-			if (tc->feature_mask & BLOCKCIPHER_TEST_FEATURE_STOPPER)
-				break;
-		}
+		tcs[i].name = blk_tcs[i].test_descr;
+		tcs[i].enabled = 1;
+		tcs[i].setup = ut_setup;
+		tcs[i].teardown = ut_teardown;
+		tcs[i].testcase = NULL;
+		tcs[i].testcase_with_data = blockcipher_test_case_run;
+		tcs[i].data = &blk_tcs[i];
 	}
+	tcs[i].name = NULL;
+	tcs[i].enabled = 0;
+	tcs[i].setup = NULL;
+	tcs[i].teardown = NULL;
+	tcs[i].testcase = NULL;
+	tcs[i].testcase_with_data = NULL;
+	tcs[i].data = NULL;
+	ts.unit_test_cases = tcs;
 
-	return overall_status;
+	return ts;
+}
+
+void
+free_blockcipher_test_suite(struct unit_test_suite *ts)
+{
+	free(ts->unit_test_cases);
 }

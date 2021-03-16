@@ -223,7 +223,7 @@ unit_test_suite_count_tcs_on_setup_fail(struct unit_test_suite *suite,
 				skipped, failed);
 	} else {
 		tc = suite->unit_test_cases[tc_count];
-		while (tc.testcase) {
+		while (tc.testcase || tc.testcase_with_data) {
 			if (!tc.enabled ||
 			test_success == TEST_SKIPPED)
 				(*skipped)++;
@@ -281,7 +281,7 @@ unit_test_suite_runner(struct unit_test_suite *suite)
 		}
 	} else {
 		tc = suite->unit_test_cases[total];
-		while (tc.testcase) {
+		while (tc.testcase || tc.testcase_with_data) {
 			if (!tc.enabled) {
 				skipped++;
 				total++;
@@ -299,7 +299,13 @@ unit_test_suite_runner(struct unit_test_suite *suite)
 
 			if (test_success == TEST_SUCCESS) {
 				/* run the test case */
-				test_success = tc.testcase();
+				if (tc.testcase)
+					test_success = tc.testcase();
+				else if (tc.testcase_with_data)
+					test_success = tc.testcase_with_data(tc.data);
+				else
+					test_success = -ENOTSUP;
+
 				if (test_success == TEST_SUCCESS)
 					succeeded++;
 				else if (test_success == TEST_SKIPPED)
