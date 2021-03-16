@@ -106,6 +106,7 @@ static void txgbe_vlan_hw_strip_disable(struct rte_eth_dev *dev,
 static void txgbe_dev_link_status_print(struct rte_eth_dev *dev);
 static int txgbe_dev_lsc_interrupt_setup(struct rte_eth_dev *dev, uint8_t on);
 static int txgbe_dev_macsec_interrupt_setup(struct rte_eth_dev *dev);
+static int txgbe_dev_misc_interrupt_setup(struct rte_eth_dev *dev);
 static int txgbe_dev_rxq_interrupt_setup(struct rte_eth_dev *dev);
 static int txgbe_dev_interrupt_get_status(struct rte_eth_dev *dev);
 static int txgbe_dev_interrupt_action(struct rte_eth_dev *dev,
@@ -1521,6 +1522,7 @@ txgbe_dev_phy_intr_setup(struct rte_eth_dev *dev)
 	gpie |= TXGBE_GPIOBIT_6;
 	wr32(hw, TXGBE_GPIOINTEN, gpie);
 	intr->mask_misc |= TXGBE_ICRMISC_GPIO;
+	intr->mask_misc |= TXGBE_ICRMISC_ANDONE;
 }
 
 int
@@ -1754,7 +1756,8 @@ txgbe_dev_start(struct rte_eth_dev *dev)
 		hw->mac.enable_tx_laser(hw);
 	}
 
-	err = hw->mac.check_link(hw, &speed, &link_up, 0);
+	if ((hw->subsystem_device_id & 0xFF) != TXGBE_DEV_ID_KR_KX_KX4)
+		err = hw->mac.check_link(hw, &speed, &link_up, 0);
 	if (err)
 		goto error;
 	dev->data->dev_link.link_status = link_up;
@@ -1797,6 +1800,7 @@ txgbe_dev_start(struct rte_eth_dev *dev)
 skip_link_setup:
 
 	if (rte_intr_allow_others(intr_handle)) {
+		txgbe_dev_misc_interrupt_setup(dev);
 		/* check if lsc interrupt is enabled */
 		if (dev->data->dev_conf.intr_conf.lsc != 0)
 			txgbe_dev_lsc_interrupt_setup(dev, TRUE);
@@ -2714,7 +2718,10 @@ txgbe_dev_link_update_share(struct rte_eth_dev *dev,
 	}
 
 	if (link_up == 0) {
-		if (hw->phy.media_type == txgbe_media_type_fiber) {
+		if ((hw->subsystem_device_id & 0xFF) ==
+				TXGBE_DEV_ID_KR_KX_KX4) {
+			hw->mac.bp_down_event(hw);
+		} else if (hw->phy.media_type == txgbe_media_type_fiber) {
 			intr->flags |= TXGBE_FLAG_NEED_LINK_CONFIG;
 			rte_eal_alarm_set(10,
 				txgbe_dev_setup_link_alarm_handler, dev);
@@ -2849,6 +2856,20 @@ txgbe_dev_lsc_interrupt_setup(struct rte_eth_dev *dev, uint8_t on)
 	return 0;
 }
 
+static int
+txgbe_dev_misc_interrupt_setup(struct rte_eth_dev *dev)
+{
+	struct txgbe_interrupt *intr = TXGBE_DEV_INTR(dev);
+	u64 mask;
+
+	mask = TXGBE_ICR_MASK;
+	mask &= (1ULL << TXGBE_MISC_VEC_ID);
+	intr->mask |= mask;
+	intr->mask_misc |= TXGBE_ICRMISC_GPIO;
+	intr->mask_misc |= TXGBE_ICRMISC_ANDONE;
+	return 0;
+}
+
 /**
  * It clears the interrupt causes and enables the interrupt.
  * It will be called once only during nic initialized.
@@ -2864,9 +2885,11 @@ static int
 txgbe_dev_rxq_interrupt_setup(struct rte_eth_dev *dev)
 {
 	struct txgbe_interrupt *intr = TXGBE_DEV_INTR(dev);
+	u64 mask;
 
-	intr->mask[0] |= TXGBE_ICR_MASK;
-	intr->mask[1] |= TXGBE_ICR_MASK;
+	mask = TXGBE_ICR_MASK;
+	mask &= ~((1ULL << TXGBE_RX_VEC_START) - 1);
+	intr->mask |= mask;
 
 	return 0;
 }
@@ -2921,6 +2944,9 @@ txgbe_dev_interrupt_get_status(struct rte_eth_dev *dev)
 	/* set flag for async link update */
 	if (eicr & TXGBE_ICRMISC_LSC)
 		intr->flags |= TXGBE_FLAG_NEED_LINK_UPDATE;
+
+	if (eicr & TXGBE_ICRMISC_ANDONE)
+		intr->flags |= TXGBE_FLAG_NEED_AN_CONFIG;
 
 	if (eicr & TXGBE_ICRMISC_VFMBX)
 		intr->flags |= TXGBE_FLAG_MAILBOX;
@@ -2999,6 +3025,13 @@ txgbe_dev_interrupt_action(struct rte_eth_dev *dev,
 		intr->flags &= ~TXGBE_FLAG_PHY_INTERRUPT;
 	}
 
+	if (intr->flags & TXGBE_FLAG_NEED_AN_CONFIG) {
+		if (hw->devarg.auto_neg == 1 && hw->devarg.poll == 0) {
+			hw->mac.kr_handle(hw);
+			intr->flags &= ~TXGBE_FLAG_NEED_AN_CONFIG;
+		}
+	}
+
 	if (intr->flags & TXGBE_FLAG_NEED_LINK_UPDATE) {
 		struct rte_eth_link link;
 
@@ -3012,6 +3045,11 @@ txgbe_dev_interrupt_action(struct rte_eth_dev *dev,
 			/* handle it 1 sec later, wait it being stable */
 			timeout = TXGBE_LINK_UP_CHECK_TIMEOUT;
 		/* likely to down */
+		else if ((hw->subsystem_device_id & 0xFF) ==
+				TXGBE_DEV_ID_KR_KX_KX4 &&
+				hw->devarg.auto_neg == 1)
+			/* handle it 2 sec later for backplane AN73 */
+			timeout = 2000;
 		else
 			/* handle it 4 sec later, wait it being stable */
 			timeout = TXGBE_LINK_DOWN_CHECK_TIMEOUT;
@@ -3022,10 +3060,12 @@ txgbe_dev_interrupt_action(struct rte_eth_dev *dev,
 				      (void *)dev) < 0) {
 			PMD_DRV_LOG(ERR, "Error setting alarm");
 		} else {
-			/* remember original mask */
-			intr->mask_misc_orig = intr->mask_misc;
 			/* only disable lsc interrupt */
 			intr->mask_misc &= ~TXGBE_ICRMISC_LSC;
+
+			intr->mask_orig = intr->mask;
+			/* only disable all misc interrupts */
+			intr->mask &= ~(1ULL << TXGBE_MISC_VEC_ID);
 		}
 	}
 
@@ -3086,8 +3126,10 @@ txgbe_dev_interrupt_delayed_handler(void *param)
 	}
 
 	/* restore original mask */
-	intr->mask_misc = intr->mask_misc_orig;
-	intr->mask_misc_orig = 0;
+	intr->mask_misc |= TXGBE_ICRMISC_LSC;
+
+	intr->mask = intr->mask_orig;
+	intr->mask_orig = 0;
 
 	PMD_DRV_LOG(DEBUG, "enable intr in delayed handler S[%08x]", eicr);
 	txgbe_enable_intr(dev);
