@@ -158,6 +158,26 @@ The following are the application command-line options:
        Set max packet mbuf size. Can be used configure Rx/Tx scatter gather.
        Only applicable for `pipeline_atq` and `pipeline_queue` tests.
 
+* ``--nb_eth_queues``
+
+       Configure multiple Rx queues per each ethernet port.
+       Only applicable for `pipeline_atq` and `pipeline_queue` tests.
+
+* ``--enable_vector``
+
+       Enable event vector for Rx/Tx adapters.
+       Only applicable for `pipeline_atq` and `pipeline_queue` tests.
+
+* ``--vector_size``
+
+       Vector size to configure for the Rx adapter.
+       Only applicable for `pipeline_atq` and `pipeline_queue` tests.
+
+* ``--vector_tmo_ns``
+
+       Vector timeout nanoseconds to be configured for the Rx adapter.
+       Only applicable for `pipeline_atq` and `pipeline_queue` tests.
+
 
 Eventdev Tests
 --------------
@@ -607,6 +627,10 @@ Supported application command line options are following::
         --worker_deq_depth
         --prod_type_ethdev
         --deq_tmo_nsec
+        --nb_eth_queues
+        --enable_vector
+        --vector_size
+        --vector_tmo_ns
 
 
 .. Note::
@@ -699,6 +723,10 @@ Supported application command line options are following::
         --worker_deq_depth
         --prod_type_ethdev
         --deq_tmo_nsec
+        --nb_eth_queues
+        --enable_vector
+        --vector_size
+        --vector_tmo_ns
 
 
 .. Note::
