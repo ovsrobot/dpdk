@@ -682,6 +682,33 @@ struct txgbe_phy_info {
 	bool qsfp_shared_i2c_bus;
 	u32 nw_mng_if_sel;
 	u32 link_mode;
+
+	/* Some features need tri-state capability */
+	u16 ffe_set;
+	u16 ffe_main;
+	u16 ffe_pre;
+	u16 ffe_post;
+};
+
+#define TXGBE_DEVARG_BP_AUTO		"auto"
+#define TXGBE_DEVARG_KR_POLL		"poll"
+#define TXGBE_DEVARG_KR_PRESENT		"present"
+#define TXGBE_DEVARG_KX_SGMII		"sgmii"
+#define TXGBE_DEVARG_FFE_SET		"ffe_set"
+#define TXGBE_DEVARG_FFE_MAIN		"ffe_main"
+#define TXGBE_DEVARG_FFE_PRE		"ffe_pre"
+#define TXGBE_DEVARG_FFE_POST		"ffe_post"
+
+static const char * const txgbe_valid_arguments[] = {
+	TXGBE_DEVARG_BP_AUTO,
+	TXGBE_DEVARG_KR_POLL,
+	TXGBE_DEVARG_KR_PRESENT,
+	TXGBE_DEVARG_KX_SGMII,
+	TXGBE_DEVARG_FFE_SET,
+	TXGBE_DEVARG_FFE_MAIN,
+	TXGBE_DEVARG_FFE_PRE,
+	TXGBE_DEVARG_FFE_POST,
+	NULL
 };
 
 struct txgbe_mbx_stats {
@@ -720,6 +747,14 @@ enum txgbe_isb_idx {
 	TXGBE_ISB_MAX
 };
 
+struct txgbe_devargs {
+	u16 bp_log;
+	u16 auto_neg;
+	u16 poll;
+	u16 present;
+	u16 sgmii;
+};
+
 struct txgbe_hw {
 	void IOMEM *hw_addr;
 	void *back;
@@ -741,6 +776,7 @@ struct txgbe_hw {
 	int api_version;
 	bool allow_unsupported_sfp;
 	bool need_crosstalk_fix;
+	struct txgbe_devargs devarg;
 
 	uint64_t isb_dma;
 	void IOMEM *isb_mem;
