@@ -26,7 +26,7 @@ check_spdx() {
 	':^license/' ':^config/' ':^buildtools/' \
 	':^*.cocci' ':^*.abignore' \
 	':^*.def' ':^*.map' ':^*.ini' ':^*.data' ':^*.cfg' ':^*.txt' \
-	':^*.svg' ':^*.png'\
+	':^*.svg' ':^*.png' ':^*.json' \
 	> $tmpfile
 
     errors=$(wc -l < $tmpfile)
