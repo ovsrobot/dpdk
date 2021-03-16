@@ -6,7 +6,6 @@
 #define __DLB2_BASE_DLB2_MBOX_H
 
 #include "dlb2_osdep_types.h"
-#include "dlb2_regs.h"
 
 #define DLB2_MBOX_INTERFACE_VERSION 1
 
