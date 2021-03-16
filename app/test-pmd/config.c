@@ -4927,10 +4927,15 @@ show_macs(portid_t port_id)
 	struct rte_ether_addr *addr;
 	uint32_t i, num_macs = 0;
 	struct rte_eth_dev *dev;
+	int ret;
 
 	dev = &rte_eth_devices[port_id];
 
-	rte_eth_dev_info_get(port_id, &dev_info);
+	ret = rte_eth_dev_info_get(port_id, &dev_info);
+	if (ret != 0) {
+		printf("rte_eth_dev_info_get() failed for port %u\n", port_id);
+		return;
+	}
 
 	for (i = 0; i < dev_info.max_mac_addrs; i++) {
 		addr = &dev->data->mac_addrs[i];
