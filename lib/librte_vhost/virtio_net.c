@@ -1821,44 +1821,64 @@ virtio_net_with_host_offload(struct virtio_net *dev)
 	return false;
 }
 
-static void
-parse_ethernet(struct rte_mbuf *m, uint16_t *l4_proto, void **l4_hdr)
+static int
+parse_ethernet(struct rte_mbuf *m, uint16_t *l4_proto, void **l4_hdr,
+		uint16_t *len)
 {
 	struct rte_ipv4_hdr *ipv4_hdr;
 	struct rte_ipv6_hdr *ipv6_hdr;
 	void *l3_hdr = NULL;
 	struct rte_ether_hdr *eth_hdr;
 	uint16_t ethertype;
+	uint16_t data_len = m->data_len;
+
+	if (data_len <= sizeof(struct rte_ether_hdr))
+		return -EINVAL;
 
 	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
 
 	m->l2_len = sizeof(struct rte_ether_hdr);
 	ethertype = rte_be_to_cpu_16(eth_hdr->ether_type);
+	data_len -= sizeof(struct rte_ether_hdr);
 
 	if (ethertype == RTE_ETHER_TYPE_VLAN) {
+		if (data_len <= sizeof(struct rte_vlan_hdr))
+			return -EINVAL;
+
 		struct rte_vlan_hdr *vlan_hdr =
 			(struct rte_vlan_hdr *)(eth_hdr + 1);
 
 		m->l2_len += sizeof(struct rte_vlan_hdr);
 		ethertype = rte_be_to_cpu_16(vlan_hdr->eth_proto);
+		data_len -= sizeof(struct rte_vlan_hdr);
 	}
 
 	l3_hdr = (char *)eth_hdr + m->l2_len;
 
 	switch (ethertype) {
 	case RTE_ETHER_TYPE_IPV4:
+		if (data_len <= sizeof(struct rte_ipv4_hdr))
+			return -EINVAL;
 		ipv4_hdr = l3_hdr;
 		*l4_proto = ipv4_hdr->next_proto_id;
 		m->l3_len = rte_ipv4_hdr_len(ipv4_hdr);
+		if (data_len <= m->l3_len) {
+			m->l3_len = 0;
+			return -EINVAL;
+		}
 		*l4_hdr = (char *)l3_hdr + m->l3_len;
 		m->ol_flags |= PKT_TX_IPV4;
+		data_len -= m->l3_len;
 		break;
 	case RTE_ETHER_TYPE_IPV6:
+		if (data_len <= sizeof(struct rte_ipv6_hdr))
+			return -EINVAL;
 		ipv6_hdr = l3_hdr;
 		*l4_proto = ipv6_hdr->proto;
 		m->l3_len = sizeof(struct rte_ipv6_hdr);
 		*l4_hdr = (char *)l3_hdr + m->l3_len;
 		m->ol_flags |= PKT_TX_IPV6;
+		data_len -= m->l3_len;
 		break;
 	default:
 		m->l3_len = 0;
@@ -1866,6 +1886,9 @@ parse_ethernet(struct rte_mbuf *m, uint16_t *l4_proto, void **l4_hdr)
 		*l4_hdr = NULL;
 		break;
 	}
+
+	*len = data_len;
+	return 0;
 }
 
 static __rte_always_inline void
@@ -1874,24 +1897,30 @@ vhost_dequeue_offload(struct virtio_net_hdr *hdr, struct rte_mbuf *m)
 	uint16_t l4_proto = 0;
 	void *l4_hdr = NULL;
 	struct rte_tcp_hdr *tcp_hdr = NULL;
+	uint16_t len = 0;
 
 	if (hdr->flags == 0 && hdr->gso_type == VIRTIO_NET_HDR_GSO_NONE)
 		return;
 
-	parse_ethernet(m, &l4_proto, &l4_hdr);
+	if (parse_ethernet(m, &l4_proto, &l4_hdr, &len) < 0)
+		return;
+
 	if (hdr->flags == VIRTIO_NET_HDR_F_NEEDS_CSUM) {
 		if (hdr->csum_start == (m->l2_len + m->l3_len)) {
 			switch (hdr->csum_offset) {
 			case (offsetof(struct rte_tcp_hdr, cksum)):
-				if (l4_proto == IPPROTO_TCP)
+				if (l4_proto == IPPROTO_TCP &&
+					len >= sizeof(struct rte_tcp_hdr))
 					m->ol_flags |= PKT_TX_TCP_CKSUM;
 				break;
 			case (offsetof(struct rte_udp_hdr, dgram_cksum)):
-				if (l4_proto == IPPROTO_UDP)
+				if (l4_proto == IPPROTO_UDP &&
+					len >= sizeof(struct rte_udp_hdr))
 					m->ol_flags |= PKT_TX_UDP_CKSUM;
 				break;
 			case (offsetof(struct rte_sctp_hdr, cksum)):
-				if (l4_proto == IPPROTO_SCTP)
+				if (l4_proto == IPPROTO_SCTP &&
+					len >= sizeof(struct rte_sctp_hdr))
 					m->ol_flags |= PKT_TX_SCTP_CKSUM;
 				break;
 			default:
@@ -1904,12 +1933,20 @@ vhost_dequeue_offload(struct virtio_net_hdr *hdr, struct rte_mbuf *m)
 		switch (hdr->gso_type & ~VIRTIO_NET_HDR_GSO_ECN) {
 		case VIRTIO_NET_HDR_GSO_TCPV4:
 		case VIRTIO_NET_HDR_GSO_TCPV6:
+			if (l4_proto != IPPROTO_TCP ||
+					len <= sizeof(struct rte_tcp_hdr))
+				break;
 			tcp_hdr = l4_hdr;
+			if (len <= (tcp_hdr->data_off & 0xf0) >> 2)
+				break;
 			m->ol_flags |= PKT_TX_TCP_SEG;
 			m->tso_segsz = hdr->gso_size;
 			m->l4_len = (tcp_hdr->data_off & 0xf0) >> 2;
 			break;
 		case VIRTIO_NET_HDR_GSO_UDP:
+			if (l4_proto != IPPROTO_UDP ||
+					len <= sizeof(struct rte_udp_hdr))
+				break;
 			m->ol_flags |= PKT_TX_UDP_SEG;
 			m->tso_segsz = hdr->gso_size;
 			m->l4_len = sizeof(struct rte_udp_hdr);
