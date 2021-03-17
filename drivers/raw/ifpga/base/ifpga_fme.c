@@ -857,7 +857,8 @@ static int board_type_to_info(u32 type,
 	return 0;
 }
 
-static int fme_get_board_interface(struct ifpga_fme_hw *fme)
+static int fme_get_board_interface(struct ifpga_fme_hw *fme,
+	struct intel_max10_device *max10_dev)
 {
 	struct fme_bitstream_id id;
 	struct ifpga_hw *hw;
@@ -911,15 +912,15 @@ static int fme_get_board_interface(struct ifpga_fme_hw *fme)
 			fme->board_info.nums_of_fvl,
 			fme->board_info.ports_per_fvl);
 
-	if (max10_sys_read(fme->max10_dev, FPGA_PAGE_INFO, &val))
+	if (max10_sys_read(max10_dev, FPGA_PAGE_INFO, &val))
 		return -EINVAL;
 	fme->board_info.boot_page = val & 0x7;
 
-	if (max10_sys_read(fme->max10_dev, MAX10_BUILD_VER, &val))
+	if (max10_sys_read(max10_dev, MAX10_BUILD_VER, &val))
 		return -EINVAL;
 	fme->board_info.max10_version = val;
 
-	if (max10_sys_read(fme->max10_dev, NIOS2_FW_VERSION, &val))
+	if (max10_sys_read(max10_dev, NIOS2_FW_VERSION, &val))
 		return -EINVAL;
 	fme->board_info.nios_fw_version = val;
 
@@ -1169,7 +1170,7 @@ static int fme_nios_spi_init(struct ifpga_feature *feature)
 
 	max10->bus = hw->pci_data->bus;
 
-	fme_get_board_interface(fme);
+	fme_get_board_interface(fme, max10);
 
 	mgr->sensor_list = &max10->opae_sensor_list;
 
@@ -1186,7 +1187,7 @@ static int fme_nios_spi_init(struct ifpga_feature *feature)
 	return ret;
 
 spi_fail:
-	intel_max10_device_remove(fme->max10_dev);
+	intel_max10_device_remove(max10);
 release_dev:
 	altera_spi_release(spi_master);
 	return -ENODEV;
