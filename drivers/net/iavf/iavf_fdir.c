@@ -456,35 +456,16 @@ iavf_fdir_parse_action(struct iavf_adapter *ad,
 	return 0;
 }
 
-static bool
-iavf_fdir_refine_input_set(const uint64_t input_set,
-			   const uint64_t input_set_mask,
-			   struct iavf_fdir_conf *filter)
+#define	IAVF_IPPROTO_TCP 6
+#define	IAVF_IPPROTO_UDP 17
+
+static void
+iavf_fdir_refine_proto_hdr(struct virtchnl_proto_hdr *hdr,
+			   uint8_t proto_id)
 {
-	struct virtchnl_proto_hdr *hdr, *hdr_last;
 	struct rte_flow_item_ipv4 ipv4_spec;
 	struct rte_flow_item_ipv6 ipv6_spec;
-	int last_layer;
-	uint8_t proto_id;
 
-	if (input_set & ~input_set_mask)
-		return false;
-	else if (input_set)
-		return true;
-
-	last_layer = filter->add_fltr.rule_cfg.proto_hdrs.count - 1;
-	/* Last layer of TCP/UDP pattern isn't less than 2. */
-	if (last_layer < 2)
-		return false;
-	hdr_last = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[last_layer];
-	if (hdr_last->type == VIRTCHNL_PROTO_HDR_TCP)
-		proto_id = 6;
-	else if (hdr_last->type == VIRTCHNL_PROTO_HDR_UDP)
-		proto_id = 17;
-	else
-		return false;
-
-	hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[last_layer - 1];
 	switch (hdr->type) {
 	case VIRTCHNL_PROTO_HDR_IPV4:
 		VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV4, PROT);
@@ -492,17 +473,19 @@ iavf_fdir_refine_input_set(const uint64_t input_set,
 		ipv4_spec.hdr.next_proto_id = proto_id;
 		rte_memcpy(hdr->buffer, &ipv4_spec.hdr,
 			   sizeof(ipv4_spec.hdr));
-		return true;
+		break;
 	case VIRTCHNL_PROTO_HDR_IPV6:
 		VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, IPV6, PROT);
 		memset(&ipv6_spec, 0, sizeof(ipv6_spec));
 		ipv6_spec.hdr.proto = proto_id;
 		rte_memcpy(hdr->buffer, &ipv6_spec.hdr,
 			   sizeof(ipv6_spec.hdr));
-		return true;
+		break;
 	default:
-		return false;
+		break;
 	}
+
+	return;
 }
 
 static int
@@ -512,6 +495,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			struct rte_flow_error *error,
 			struct iavf_fdir_conf *filter)
 {
+	struct virtchnl_proto_hdrs hdrs = filter->add_fltr.rule_cfg.proto_hdrs;
 	const struct rte_flow_item *item = pattern;
 	enum rte_flow_item_type item_type;
 	enum rte_flow_item_type l3 = RTE_FLOW_ITEM_TYPE_END;
@@ -530,6 +514,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 	const struct rte_flow_item_ecpri *ecpri_spec, *ecpri_mask;
 	struct rte_ecpri_common_hdr ecpri_common;
 	uint64_t input_set = IAVF_INSET_NONE;
+	uint8_t proto_id;
 
 	enum rte_flow_item_type next_type;
 	uint16_t ether_type;
@@ -557,7 +542,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			eth_mask = item->mask;
 			next_type = (item + 1)->type;
 
-			hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer];
+			hdr = &hdrs.proto_hdr[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, ETH);
 
@@ -604,7 +589,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					eth_spec, sizeof(struct rte_ether_hdr));
 			}
 
-			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
+			hdrs.count = ++layer;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_IPV4:
@@ -612,7 +597,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			ipv4_spec = item->spec;
 			ipv4_mask = item->mask;
 
-			hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer];
+			hdr = &hdrs.proto_hdr[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, IPV4);
 
@@ -655,7 +640,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					sizeof(ipv4_spec->hdr));
 			}
 
-			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
+			hdrs.count = ++layer;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_IPV6:
@@ -663,7 +648,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 			ipv6_spec = item->spec;
 			ipv6_mask = item->mask;
 
-			hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer];
+			hdr = &hdrs.proto_hdr[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, IPV6);
 
@@ -707,14 +692,14 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					sizeof(ipv6_spec->hdr));
 			}
 
-			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
+			hdrs.count = ++layer;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_UDP:
 			udp_spec = item->spec;
 			udp_mask = item->mask;
 
-			hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer];
+			hdr = &hdrs.proto_hdr[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, UDP);
 
@@ -746,14 +731,18 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 						sizeof(udp_spec->hdr));
 			}
 
-			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
+			proto_id = IAVF_IPPROTO_UDP;
+			iavf_fdir_refine_proto_hdr(&hdrs.proto_hdr[layer - 1],
+						   proto_id);
+
+			hdrs.count = ++layer;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_TCP:
 			tcp_spec = item->spec;
 			tcp_mask = item->mask;
 
-			hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer];
+			hdr = &hdrs.proto_hdr[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, TCP);
 
@@ -790,14 +779,18 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 						sizeof(tcp_spec->hdr));
 			}
 
-			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
+			proto_id = IAVF_IPPROTO_TCP;
+			iavf_fdir_refine_proto_hdr(&hdrs.proto_hdr[layer - 1],
+						   proto_id);
+
+			hdrs.count = ++layer;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_SCTP:
 			sctp_spec = item->spec;
 			sctp_mask = item->mask;
 
-			hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer];
+			hdr = &hdrs.proto_hdr[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, SCTP);
 
@@ -828,14 +821,14 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 						sizeof(sctp_spec->hdr));
 			}
 
-			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
+			hdrs.count = ++layer;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_GTPU:
 			gtp_spec = item->spec;
 			gtp_mask = item->mask;
 
-			hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer];
+			hdr = &hdrs.proto_hdr[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, GTPU_IP);
 
@@ -858,14 +851,14 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					gtp_spec, sizeof(*gtp_spec));
 			}
 
-			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
+			hdrs.count = ++layer;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_GTP_PSC:
 			gtp_psc_spec = item->spec;
 			gtp_psc_mask = item->mask;
 
-			hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer];
+			hdr = &hdrs.proto_hdr[layer];
 
 			if (!gtp_psc_spec)
 				VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, GTPU_EH);
@@ -886,14 +879,14 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					sizeof(*gtp_psc_spec));
 			}
 
-			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
+			hdrs.count = ++layer;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_L2TPV3OIP:
 			l2tpv3oip_spec = item->spec;
 			l2tpv3oip_mask = item->mask;
 
-			hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer];
+			hdr = &hdrs.proto_hdr[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, L2TPV3);
 
@@ -907,14 +900,14 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					sizeof(*l2tpv3oip_spec));
 			}
 
-			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
+			hdrs.count = ++layer;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_ESP:
 			esp_spec = item->spec;
 			esp_mask = item->mask;
 
-			hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer];
+			hdr = &hdrs.proto_hdr[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, ESP);
 
@@ -928,14 +921,14 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					sizeof(esp_spec->hdr));
 			}
 
-			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
+			hdrs.count = ++layer;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_AH:
 			ah_spec = item->spec;
 			ah_mask = item->mask;
 
-			hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer];
+			hdr = &hdrs.proto_hdr[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, AH);
 
@@ -949,14 +942,14 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					sizeof(*ah_spec));
 			}
 
-			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
+			hdrs.count = ++layer;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_PFCP:
 			pfcp_spec = item->spec;
 			pfcp_mask = item->mask;
 
-			hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer];
+			hdr = &hdrs.proto_hdr[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, PFCP);
 
@@ -970,7 +963,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					sizeof(*pfcp_spec));
 			}
 
-			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
+			hdrs.count = ++layer;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_ECPRI:
@@ -979,7 +972,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 
 			ecpri_common.u32 = rte_be_to_cpu_32(ecpri_spec->hdr.common.u32);
 
-			hdr = &filter->add_fltr.rule_cfg.proto_hdrs.proto_hdr[layer];
+			hdr = &hdrs.proto_hdr[layer];
 
 			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, ECPRI);
 
@@ -995,7 +988,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 					sizeof(*ecpri_spec));
 			}
 
-			filter->add_fltr.rule_cfg.proto_hdrs.count = ++layer;
+			hdrs.count = ++layer;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_VOID:
@@ -1016,12 +1009,8 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 		return -rte_errno;
 	}
 
-	if (!iavf_fdir_refine_input_set(input_set, input_set_mask, filter)) {
-		rte_flow_error_set(error, EINVAL,
-				   RTE_FLOW_ERROR_TYPE_ITEM_SPEC, pattern,
-				   "Invalid input set");
-		return -rte_errno;
-	}
+	if (input_set & ~input_set_mask)
+		return -EINVAL;
 
 	filter->input_set = input_set;
 
