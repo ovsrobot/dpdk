@@ -1603,9 +1603,9 @@ int rte_vhost_async_channel_register(int vid, uint16_t queue_id,
 		return -1;
 
 	/* packed queue is not supported */
-	if (unlikely(vq_is_packed(dev) || !f.async_inorder)) {
+	if (unlikely(!f.async_inorder)) {
 		VHOST_LOG_CONFIG(ERR,
-			"async copy is not supported on packed queue or non-inorder mode "
+			"async copy is not supported on non-inorder mode "
 			"(vid %d, qid: %d)\n", vid, queue_id);
 		return -1;
 	}
@@ -1643,10 +1643,17 @@ int rte_vhost_async_channel_register(int vid, uint16_t queue_id,
 	vq->vec_pool = rte_malloc_socket(NULL,
 			VHOST_MAX_ASYNC_VEC * sizeof(struct iovec),
 			RTE_CACHE_LINE_SIZE, node);
-	vq->async_descs_split = rte_malloc_socket(NULL,
+	if (vq_is_packed(dev)) {
+		vq->async_buffers_packed = rte_malloc_socket(NULL,
+			vq->size * sizeof(struct vring_used_elem_packed),
+			RTE_CACHE_LINE_SIZE, node);
+	} else {
+		vq->async_descs_split = rte_malloc_socket(NULL,
 			vq->size * sizeof(struct vring_used_elem),
 			RTE_CACHE_LINE_SIZE, node);
-	if (!vq->async_descs_split || !vq->async_pkts_info ||
+	}
+
+	if (!vq->async_pkts_info ||
 		!vq->it_pool || !vq->vec_pool) {
 		vhost_free_async_mem(vq);
 		VHOST_LOG_CONFIG(ERR,
