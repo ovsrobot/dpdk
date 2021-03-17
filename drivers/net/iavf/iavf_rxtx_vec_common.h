@@ -227,7 +227,10 @@ iavf_rx_vec_queue_default(struct iavf_rx_queue *rxq)
 	if (rxq->proto_xtr != IAVF_PROTO_XTR_NONE)
 		return -1;
 
-	return 0;
+	if (rxq->offloads & IAVF_RX_VECTOR_OFFLOAD)
+		return IAVF_VECTOR_OFFLOAD_PATH;
+
+	return IAVF_VECTOR_PATH;
 }
 
 static inline int
@@ -254,14 +257,20 @@ iavf_rx_vec_dev_check_default(struct rte_eth_dev *dev)
 {
 	int i;
 	struct iavf_rx_queue *rxq;
+	int ret;
+	int result = 0;
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		rxq = dev->data->rx_queues[i];
-		if (iavf_rx_vec_queue_default(rxq))
+		ret = iavf_rx_vec_queue_default(rxq);
+
+		if (ret < 0)
 			return -1;
+		else if (ret > result)
+			result = ret;
 	}
 
-	return 0;
+	return result;
 }
 
 static inline int
