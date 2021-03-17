@@ -4599,6 +4599,7 @@ eth_igb_filter_ctrl(struct rte_eth_dev *dev __rte_unused,
 	default:
 		PMD_DRV_LOG(WARNING, "Filter type (%d) not supported",
 							filter_type);
+		ret = -EINVAL;
 		break;
 	}
 
