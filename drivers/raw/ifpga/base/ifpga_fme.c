@@ -1001,7 +1001,7 @@ static int fme_spi_init(struct ifpga_feature *feature)
 	return ret;
 
 max10_fail:
-	intel_max10_device_remove(fme->max10_dev);
+	intel_max10_device_remove(max10);
 spi_fail:
 	altera_spi_release(spi_master);
 	return ret;
