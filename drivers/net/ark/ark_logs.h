@@ -25,7 +25,7 @@ extern int ark_logtype;
 
 
 /* Debug macro to enable core debug code */
-#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+#ifdef RTE_ETHDEV_DEBUG
 #define ARK_DEBUG_CORE 1
 #else
 #define ARK_DEBUG_CORE 0

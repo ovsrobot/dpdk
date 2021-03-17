@@ -3439,7 +3439,7 @@ hns3_check_tso_pkt_valid(struct rte_mbuf *m)
 	return 0;
 }
 
-#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+#ifdef RTE_ETHDEV_DEBUG
 static inline int
 hns3_vld_vlan_chk(struct hns3_tx_queue *txq, struct rte_mbuf *m)
 {
@@ -3486,7 +3486,7 @@ hns3_prep_pkt_proc(struct hns3_tx_queue *tx_queue, struct rte_mbuf *m)
 {
 	int ret;
 
-#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+#ifdef RTE_ETHDEV_DEBUG
 	ret = rte_validate_tx_offload(m);
 	if (ret != 0) {
 		rte_errno = -ret;
