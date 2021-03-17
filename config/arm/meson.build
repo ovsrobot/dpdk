@@ -69,7 +69,14 @@ part_number_config_arm = {
 			['RTE_ARM_FEATURE_ATOMICS', true],
 			['RTE_MAX_LCORE', 64]
 		]
-	}
+	},
+	'aarch32': {
+		'machine_args': ['-march=armv8-a',
+				 '-mfpu=neon'],
+		'flags': [
+			['RTE_ARCH_ARM_NEON_MEMCPY', false],
+			['RTE_ARCH_STRICT_ALIGN', true]
+		]}
 }
 implementer_arm = {
 	'description': 'Arm',
@@ -199,14 +206,23 @@ implementers = {
 dpdk_conf.set('RTE_ARCH_ARM', 1)
 dpdk_conf.set('RTE_FORCE_INTRINSICS', 1)
 
+update_flags = false
 if dpdk_conf.get('RTE_ARCH_32')
 	# armv7 build
 	dpdk_conf.set('RTE_CACHE_LINE_SIZE', 64)
 	dpdk_conf.set('RTE_ARCH_ARMv7', 1)
-	# the minimum architecture supported, armv7-a, needs the following,
-	machine_args += '-mfpu=neon'
+	if meson.is_cross_build()
+		update_flags = true
+		implementer_id = meson.get_cross_property('implementer_id')
+		part_number = meson.get_cross_property('part_number')
+		flags_common = []
+	else
+		# the minimum architecture supported, armv7-a, needs the following,
+		machine_args += '-mfpu=neon'
+	endif
 else
 	# aarch64 build
+	update_flags = true
 	if not meson.is_cross_build()
 		if machine == 'default'
 			# default build
@@ -232,7 +248,9 @@ else
 		implementer_id = meson.get_cross_property('implementer_id')
 		part_number = meson.get_cross_property('part_number')
 	endif
+endif
 
+if update_flags
 	if implementers.has_key(implementer_id)
 		implementer_config = implementers[implementer_id]
 	else
