@@ -25,6 +25,10 @@ _aarch64_clang_packages: &aarch64_clang_packages
   - *required_packages
   - [libgcc-7-dev-arm64-cross, libatomic1-arm64-cross, libc6-dev-arm64-cross, pkg-config-aarch64-linux-gnu]
 
+_arm_32b_packages: &arm_32b_packages
+  - *required_packages
+  - [gcc-arm-linux-gnueabihf, libc6-dev-armhf-cross, pkg-config-arm-linux-gnueabihf]
+
 _libabigail_build_packages: &libabigail_build_packages
   - [autoconf, automake, libtool, pkg-config, libxml2-dev, libdw-dev]
 
@@ -168,3 +172,18 @@ jobs:
     virt: vm
     group: edge
     compiler: clang
+  # aarch64 cross-compiling aarch32 jobs
+  - env: DEF_LIB="shared" AARCH32=true
+    arch: arm64
+    compiler: gcc
+    addons:
+      apt:
+        packages:
+          - *arm_32b_packages
+  - env: DEF_LIB="static" AARCH32=true
+    arch: arm64
+    compiler: gcc
+    addons:
+      apt:
+        packages:
+          - *arm_32b_packages
