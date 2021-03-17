@@ -92,6 +92,7 @@ static int write_flash_image(struct ifpga_sec_mgr *smgr, const char *image,
 	uint32_t offset)
 {
 	void *buf = NULL;
+	void *buf_to_free = NULL;
 	int retry = 0;
 	uint32_t length = 0;
 	uint32_t to_transfer = 0;
@@ -122,6 +123,7 @@ static int write_flash_image(struct ifpga_sec_mgr *smgr, const char *image,
 		close(fd);
 		return -ENOMEM;
 	}
+	buf_to_free = buf;
 
 	length = smgr->rsu_length;
 	one_percent = length / 100;
@@ -177,7 +179,7 @@ static int write_flash_image(struct ifpga_sec_mgr *smgr, const char *image,
 	printf("\n");
 
 end:
-	free(buf);
+	free(buf_to_free);
 	close(fd);
 	return ret;
 }
