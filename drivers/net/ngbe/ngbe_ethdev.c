@@ -5,8 +5,10 @@
 #include <rte_common.h>
 #include <ethdev_pci.h>
 
-#include <base/ngbe_devids.h>
+#include "base/ngbe.h"
 #include "ngbe_ethdev.h"
+
+static int ngbe_dev_close(struct rte_eth_dev *dev);
 
 /*
  * The set of PCI devices this driver supports
@@ -31,11 +33,30 @@ static int
 eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
+	struct ngbe_hw *hw = NGBE_DEV_HW(eth_dev);
+	const struct rte_memzone *mz;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
 	rte_eth_copy_pci_info(eth_dev, pci_dev);
+
+	/* Vendor and Device ID need to be set before init of shared code */
+	hw->device_id = pci_dev->id.device_id;
+	hw->vendor_id = pci_dev->id.vendor_id;
+	hw->sub_system_id = pci_dev->id.subsystem_device_id;
+	ngbe_map_device_id(hw);
+	hw->hw_addr = (void *)pci_dev->mem_resource[0].addr;
+	hw->allow_unsupported_sfp = 1;
+
+	/* Reserve memory for interrupt status block */
+	mz = rte_eth_dma_zone_reserve(eth_dev, "ngbe_driver", -1,
+		16, NGBE_ALIGN, SOCKET_ID_ANY);
+	if (mz == NULL)
+		return -ENOMEM;
+
+	hw->isb_dma = TMZ_PADDR(mz);
+	hw->isb_mem = TMZ_VADDR(mz);
 
 	return 0;
 }
@@ -46,7 +67,7 @@ eth_ngbe_dev_uninit(struct rte_eth_dev *eth_dev)
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
-	RTE_SET_USED(eth_dev);
+	ngbe_dev_close(eth_dev);
 
 	return 0;
 }
@@ -101,6 +122,17 @@ static struct rte_pci_driver rte_ngbe_pmd = {
 	.probe = eth_ngbe_pci_probe,
 	.remove = eth_ngbe_pci_remove,
 };
+
+/*
+ * Reset and stop device.
+ */
+static int
+ngbe_dev_close(struct rte_eth_dev *dev)
+{
+	RTE_SET_USED(dev);
+
+	return 0;
+}
 
 RTE_PMD_REGISTER_PCI(net_ngbe, rte_ngbe_pmd);
 RTE_PMD_REGISTER_PCI_TABLE(net_ngbe, pci_id_ngbe_map);
