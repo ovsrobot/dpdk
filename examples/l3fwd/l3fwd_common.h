@@ -183,7 +183,7 @@ send_packetsx4(struct lcore_conf *qconf, uint16_t port, struct rte_mbuf *m[],
 {
 	uint32_t len, j, n;
 
-	len = qconf->tx_mbufs[port].len;
+	len = qconf->tx_mbuf_len[port];
 
 	/*
 	 * If TX buffer for that queue is empty, and we have enough packets,
@@ -258,7 +258,7 @@ send_packetsx4(struct lcore_conf *qconf, uint16_t port, struct rte_mbuf *m[],
 		}
 	}
 
-	qconf->tx_mbufs[port].len = len;
+	qconf->tx_mbuf_len[port] = len;
 }
 
 #endif /* _L3FWD_COMMON_H_ */

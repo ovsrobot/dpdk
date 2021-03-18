@@ -57,22 +57,22 @@
 #define HASH_ENTRY_NUMBER_DEFAULT	4
 
 struct mbuf_table {
-	uint16_t len;
 	struct rte_mbuf *m_table[MAX_PKT_BURST];
 };
 
 struct lcore_rx_queue {
 	uint16_t port_id;
 	uint8_t queue_id;
-} __rte_cache_aligned;
+};
 
 struct lcore_conf {
-	uint16_t n_rx_queue;
 	struct lcore_rx_queue rx_queue_list[MAX_RX_QUEUE_PER_LCORE];
-	uint16_t n_tx_port;
 	uint16_t tx_port_id[RTE_MAX_ETHPORTS];
 	uint16_t tx_queue_id[RTE_MAX_ETHPORTS];
+	uint16_t tx_mbuf_len[RTE_MAX_ETHPORTS];
 	struct mbuf_table tx_mbufs[RTE_MAX_ETHPORTS];
+	uint16_t n_rx_queue;
+	uint16_t n_tx_port;
 	void *ipv4_lookup_struct;
 	void *ipv6_lookup_struct;
 } __rte_cache_aligned;
@@ -122,7 +122,7 @@ send_single_packet(struct lcore_conf *qconf,
 {
 	uint16_t len;
 
-	len = qconf->tx_mbufs[port].len;
+	len = qconf->tx_mbuf_len[port];
 	qconf->tx_mbufs[port].m_table[len] = m;
 	len++;
 
@@ -132,7 +132,7 @@ send_single_packet(struct lcore_conf *qconf,
 		len = 0;
 	}
 
-	qconf->tx_mbufs[port].len = len;
+	qconf->tx_mbuf_len[port] = len;
 	return 0;
 }
 

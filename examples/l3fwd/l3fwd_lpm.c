@@ -220,12 +220,12 @@ lpm_main_loop(__rte_unused void *dummy)
 
 			for (i = 0; i < n_tx_p; ++i) {
 				portid = qconf->tx_port_id[i];
-				if (qconf->tx_mbufs[portid].len == 0)
+				if (qconf->tx_mbuf_len[portid] == 0)
 					continue;
 				send_burst(qconf,
-					qconf->tx_mbufs[portid].len,
+					qconf->tx_mbuf_len[portid],
 					portid);
-				qconf->tx_mbufs[portid].len = 0;
+				qconf->tx_mbuf_len[portid] = 0;
 			}
 
 			prev_tsc = cur_tsc;
