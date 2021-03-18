@@ -951,11 +951,11 @@ mlx4_mr_mem_event_free_cb(struct rte_eth_dev *dev, const void *addr, size_t len)
 			priv->mr.dev_gen);
 
 		/* Flush local caches by propagating invalidation across cores.
-		 * rte_smp_wmb is to keep the order that dev_gen updated before
+		 * release-fence is to keep the order that dev_gen updated before
 		 * rebuilding global cache. Therefore, other core can flush their
 		 * local cache on time.
 		 */
-		rte_smp_wmb();
+		rte_atomic_thread_fence(__ATOMIC_RELEASE);
 		mr_rebuild_dev_cache(dev);
 	}
 	rte_rwlock_write_unlock(&priv->mr.rwlock);
