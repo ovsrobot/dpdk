@@ -946,20 +946,17 @@ mlx4_mr_mem_event_free_cb(struct rte_eth_dev *dev, const void *addr, size_t len)
 		rebuild = 1;
 	}
 	if (rebuild) {
-		mr_rebuild_dev_cache(dev);
-		/*
-		 * Flush local caches by propagating invalidation across cores.
-		 * rte_smp_wmb() is enough to synchronize this event. If one of
-		 * freed memsegs is seen by other core, that means the memseg
-		 * has been allocated by allocator, which will come after this
-		 * free call. Therefore, this store instruction (incrementing
-		 * generation below) will be guaranteed to be seen by other core
-		 * before the core sees the newly allocated memory.
-		 */
 		++priv->mr.dev_gen;
 		DEBUG("broadcasting local cache flush, gen=%d",
-		      priv->mr.dev_gen);
+			priv->mr.dev_gen);
+
+		/* Flush local caches by propagating invalidation across cores.
+		 * rte_smp_wmb is to keep the order that dev_gen updated before
+		 * rebuilding global cache. Therefore, other core can flush their
+		 * local cache on time.
+		 */
 		rte_smp_wmb();
+		mr_rebuild_dev_cache(dev);
 	}
 	rte_rwlock_write_unlock(&priv->mr.rwlock);
 #ifdef RTE_LIBRTE_MLX4_DEBUG
