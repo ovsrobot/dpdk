@@ -53,7 +53,7 @@ get_pkt_sched(struct rte_mbuf *m, uint32_t *subport, uint32_t *pipe,
 	*queue = pipe_queue - *traffic_class;
 
 	/* Color (Destination IP) */
-	*color = pdata[COLOR_OFFSET] & 0x03;
+	*color = pdata[COLOR_OFFSET] % RTE_COLORS;
 
 	return 0;
 }
