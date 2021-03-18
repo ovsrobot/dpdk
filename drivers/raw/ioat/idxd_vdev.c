@@ -209,7 +209,8 @@ idxd_rawdev_remove_vdev(struct rte_vdev_device *vdev)
 			ret = -errno;
 		}
 
-		rte_free(idxd->public.batch_ring);
+		rte_free(idxd->public.batch_idx_ring);
+		rte_free(idxd->public.desc_ring);
 		rte_free(idxd->public.hdl_ring);
 
 		rte_memzone_free(idxd->mz);

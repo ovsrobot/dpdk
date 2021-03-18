@@ -124,6 +124,7 @@ test_enqueue_copies(int dev_id)
 		if (rte_ioat_completed_ops(dev_id, 64, (void *)completed_src,
 				(void *)completed_dst) != RTE_DIM(srcs)) {
 			PRINT_ERR("Error with rte_ioat_completed_ops\n");
+			rte_rawdev_dump(dev_id, stdout);
 			return -1;
 		}
 		for (i = 0; i < RTE_DIM(srcs); i++) {
