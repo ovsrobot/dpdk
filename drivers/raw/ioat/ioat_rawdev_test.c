@@ -202,6 +202,138 @@ test_enqueue_fill(int dev_id)
 	return 0;
 }
 
+static int
+test_burst_capacity(int dev_id, unsigned int ring_size)
+{
+	unsigned int i, j;
+	unsigned int length = 1024;
+
+	/* Test to make sure it does not enqueue if we cannot fit the entire burst */
+	do {
+#define BURST_SIZE			19
+#define EXPECTED_REJECTS	5
+		struct rte_mbuf *srcs[BURST_SIZE], *dsts[BURST_SIZE];
+		struct rte_mbuf *completed_src[BURST_SIZE];
+		struct rte_mbuf *completed_dst[BURST_SIZE];
+		unsigned int cnt_success = 0;
+		unsigned int cnt_rejected = 0;
+		unsigned int valid_iters = (ring_size - 1)/BURST_SIZE;
+
+		/* Enqueue burst until they won't fit + some extra iterations which should
+		* be rejected
+		*/
+		for (i = 0; i < valid_iters + EXPECTED_REJECTS; i++) {
+			if (rte_ioat_burst_capacity(dev_id) >= BURST_SIZE) {
+				for (j = 0; j < BURST_SIZE; j++) {
+
+					srcs[j] = rte_pktmbuf_alloc(pool);
+					dsts[j] = rte_pktmbuf_alloc(pool);
+					srcs[j]->data_len = srcs[j]->pkt_len = length;
+					dsts[j]->data_len = dsts[j]->pkt_len = length;
+
+					if (rte_ioat_enqueue_copy(dev_id,
+							srcs[j]->buf_iova + srcs[j]->data_off,
+							dsts[j]->buf_iova + dsts[j]->data_off,
+							length,
+							(uintptr_t)srcs[j],
+							(uintptr_t)dsts[j]) != 1) {
+						PRINT_ERR("Error with rte_ioat_enqueue_copy\n");
+						return -1;
+					}
+
+					rte_pktmbuf_free(srcs[j]);
+					rte_pktmbuf_free(dsts[j]);
+					cnt_success++;
+				}
+			} else {
+				cnt_rejected++;
+			}
+		}
+
+		/* do cleanup before next tests */
+		rte_ioat_perform_ops(dev_id);
+		usleep(100);
+		for (i = 0; i < valid_iters; i++) {
+			if (rte_ioat_completed_ops(dev_id, BURST_SIZE, (void *)completed_src,
+					(void *)completed_dst) != BURST_SIZE) {
+				PRINT_ERR("error with completions\n");
+				return -1;
+			}
+		}
+
+		printf("successful_enqueues: %u  expected_successful: %u  rejected_iters: %u  expected_rejects: %u\n",
+				cnt_success, valid_iters * BURST_SIZE, cnt_rejected,
+				EXPECTED_REJECTS);
+
+		if (!(cnt_success == (valid_iters * BURST_SIZE)) &&
+				!(cnt_rejected == EXPECTED_REJECTS)) {
+			PRINT_ERR("Burst Capacity test failed\n");
+			return -1;
+		}
+	} while (0);
+
+	/* Verify that space is taken and free'd as expected.
+	 * Repeat the test to verify wrap-around handling is correct in
+	 * rte_ioat_burst_capacity().
+	 */
+	for (i = 0; i < ring_size / 32; i++) {
+		struct rte_mbuf *srcs[64], *dsts[64];
+		struct rte_mbuf *completed_src[64];
+		struct rte_mbuf *completed_dst[64];
+
+		/* Make sure the ring is clean before we start */
+		if (rte_ioat_burst_capacity(dev_id) != ring_size - 1) {
+			PRINT_ERR("Error, ring should be empty\n");
+			return -1;
+		}
+
+		/* Enqueue 64 mbufs & verify that space is taken */
+		for (j = 0; j < 64; j++) {
+			srcs[j] = rte_pktmbuf_alloc(pool);
+			dsts[j] = rte_pktmbuf_alloc(pool);
+			srcs[j]->data_len = srcs[j]->pkt_len = length;
+			dsts[j]->data_len = dsts[j]->pkt_len = length;
+
+			if (rte_ioat_enqueue_copy(dev_id,
+					srcs[j]->buf_iova + srcs[j]->data_off,
+					dsts[j]->buf_iova + dsts[j]->data_off,
+					length,
+					(uintptr_t)srcs[j],
+					(uintptr_t)dsts[j]) != 1) {
+				PRINT_ERR("Error with rte_ioat_enqueue_copy\n");
+				return -1;
+			}
+
+			rte_pktmbuf_free(srcs[j]);
+			rte_pktmbuf_free(dsts[j]);
+		}
+
+		if (rte_ioat_burst_capacity(dev_id) != (ring_size - 1) - 64) {
+			PRINT_ERR("Error, space available not as expected\n");
+			return -1;
+		}
+
+		/* Copy, gather completions, and make sure the space is free'd again */
+		rte_ioat_perform_ops(dev_id);
+		usleep(100);
+		for (j = 0; j < 2; j++) {
+			if (rte_ioat_completed_ops(dev_id, 32, (void *)completed_src,
+					(void *)completed_dst) != 32) {
+				PRINT_ERR("error with completions\n");
+				return -1;	
+			}
+		}
+
+		if (rte_ioat_burst_capacity(dev_id) != ring_size - 1) {
+			PRINT_ERR("Error, space available not as expected\n");
+			return -1;
+		}
+
+	}
+
+	return 0;
+}
+
 int
 ioat_rawdev_test(uint16_t dev_id)
 {
@@ -309,6 +441,10 @@ ioat_rawdev_test(uint16_t dev_id)
 		printf("\r");
 	}
 	printf("\n");
+
+	printf("Running Burst Capacity Test\n");
+	if (test_burst_capacity(dev_id, expected_ring_size[dev_id]) != 0)
+		goto err;
 
 	rte_rawdev_stop(dev_id);
 	if (rte_rawdev_xstats_reset(dev_id, NULL, 0) != 0) {

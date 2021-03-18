@@ -199,6 +199,19 @@ struct rte_idxd_rawdev {
 	struct rte_idxd_user_hdl *hdl_ring;
 };
 
+static __rte_always_inline uint16_t
+__ioat_burst_capacity(int dev_id)
+{
+	struct rte_ioat_rawdev *ioat =
+			(struct rte_ioat_rawdev *)rte_rawdevs[dev_id].dev_private;
+	unsigned short size = ioat->ring_size - 1;
+	unsigned short read = ioat->next_read;
+	unsigned short write = ioat->next_write;
+	unsigned short space = size - (write - read);
+
+	return space;
+}
+
 static __rte_always_inline int
 __ioat_write_desc(int dev_id, uint32_t op, uint64_t src, phys_addr_t dst,
 		unsigned int length, uintptr_t src_hdl, uintptr_t dst_hdl)
@@ -355,6 +368,28 @@ end:
 	ioat->next_read = read;
 	ioat->xstats.completed += count;
 	return count;
+}
+
+static __rte_always_inline uint16_t
+__idxd_burst_capacity(int dev_id)
+{
+	struct rte_idxd_rawdev *idxd =
+			(struct rte_idxd_rawdev *)rte_rawdevs[dev_id].dev_private;
+	uint16_t write_idx = idxd->batch_start + idxd->batch_size;
+	uint16_t used_space;
+
+	/* Check for space in the batch ring */
+	if ((idxd->batch_idx_read == 0 && idxd->batch_idx_write == idxd->max_batches) ||
+			idxd->batch_idx_write + 1 == idxd->batch_idx_read)
+		return 0;
+
+	/* for descriptors, check for wrap-around on write but not read */
+	if (idxd->hdls_read > write_idx)
+		write_idx += idxd->desc_ring_mask + 1;
+	used_space = write_idx - idxd->hdls_read;
+
+	/* Return amount of free space in the descriptor ring */
+	return idxd->desc_ring_mask - used_space;
 }
 
 static __rte_always_inline int
@@ -536,6 +571,17 @@ __idxd_completed_ops(int dev_id, uint8_t max_ops,
 out:
 	idxd->xstats.completed += n;
 	return n;
+}
+
+static inline uint16_t
+rte_ioat_burst_capacity(int dev_id)
+{
+	enum rte_ioat_dev_type *type =
+		(enum rte_ioat_dev_type *)rte_rawdevs[dev_id].dev_private;
+	if (*type == RTE_IDXD_DEV)
+		return __idxd_burst_capacity(dev_id);
+	else
+		return __ioat_burst_capacity(dev_id);
 }
 
 static inline int
