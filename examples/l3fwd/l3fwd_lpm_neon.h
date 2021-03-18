@@ -97,13 +97,13 @@ l3fwd_lpm_send_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 
 	if (k) {
 		for (i = 0; i < FWDSTEP; i++) {
-			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[i],
+			rte_prefetch0_write(rte_pktmbuf_mtod(pkts_burst[i],
 						struct rte_ether_hdr *) + 1);
 		}
 
 		for (j = 0; j != k - FWDSTEP; j += FWDSTEP) {
 			for (i = 0; i < FWDSTEP; i++) {
-				rte_prefetch0(rte_pktmbuf_mtod(
+				rte_prefetch0_write(rte_pktmbuf_mtod(
 						pkts_burst[j + i + FWDSTEP],
 						struct rte_ether_hdr *) + 1);
 			}
@@ -124,17 +124,17 @@ l3fwd_lpm_send_packets(int nb_rx, struct rte_mbuf **pkts_burst,
 		/* Prefetch last up to 3 packets one by one */
 		switch (m) {
 		case 3:
-			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[j],
+			rte_prefetch0_write(rte_pktmbuf_mtod(pkts_burst[j],
 						struct rte_ether_hdr *) + 1);
 			j++;
 			/* fallthrough */
 		case 2:
-			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[j],
+			rte_prefetch0_write(rte_pktmbuf_mtod(pkts_burst[j],
 						struct rte_ether_hdr *) + 1);
 			j++;
 			/* fallthrough */
 		case 1:
-			rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[j],
+			rte_prefetch0_write(rte_pktmbuf_mtod(pkts_burst[j],
 						struct rte_ether_hdr *) + 1);
 			j++;
 		}
