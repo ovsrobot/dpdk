@@ -37,10 +37,10 @@ static int fsl_bman_portal_init(uint32_t idx, int is_shared)
 	struct dpaa_ioctl_irq_map irq_map;
 
 	/* Verify the thread's cpu-affinity */
-	ret = pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t),
+	ret = rte_thread_get_affinity(rte_thread_self(), sizeof(cpu_set_t),
 				     &cpuset);
 	if (ret) {
-		error(0, ret, "pthread_getaffinity_np()");
+		error(0, ret, "rte_thread_get_affinity()");
 		return ret;
 	}
 	pcfg.cpu = -1;

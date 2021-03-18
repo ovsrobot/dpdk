@@ -56,7 +56,7 @@ struct virtio_user_dev {
 	bool		qp_enabled[VIRTIO_MAX_VIRTQUEUE_PAIRS];
 
 	struct virtio_user_backend_ops *ops;
-	pthread_mutex_t	mutex;
+	rte_thread_mutex_t	mutex;
 	bool		started;
 
 	void *backend_data;

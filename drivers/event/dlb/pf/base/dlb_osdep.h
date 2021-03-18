@@ -208,7 +208,7 @@ static void *dlb_complete_queue_map_unmap(void *__args)
 static inline void os_schedule_work(struct dlb_hw *hw)
 {
 	struct dlb_dev *dlb_dev;
-	pthread_t complete_queue_map_unmap_thread;
+	rte_thread_t complete_queue_map_unmap_thread;
 	int ret;
 
 	dlb_dev = container_of(hw, struct dlb_dev, hw);

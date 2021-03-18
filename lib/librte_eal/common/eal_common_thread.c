@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <signal.h>
 #include <sched.h>
 #include <assert.h>
@@ -86,9 +85,9 @@ thread_update_affinity(rte_cpuset_t *cpusetp)
 int
 rte_thread_self_set_affinity(rte_cpuset_t *cpusetp)
 {
-	if (pthread_setaffinity_np(pthread_self(), sizeof(rte_cpuset_t),
+	if (rte_thread_set_affinity(rte_thread_self(), sizeof(rte_cpuset_t),
 			cpusetp) != 0) {
-		RTE_LOG(ERR, EAL, "pthread_setaffinity_np failed\n");
+		RTE_LOG(ERR, EAL, "rte_thread_set_affinity failed\n");
 		return -1;
 	}
 
@@ -169,7 +168,7 @@ __rte_thread_uninit(void)
 struct rte_thread_ctrl_params {
 	void *(*start_routine)(void *);
 	void *arg;
-	pthread_barrier_t configured;
+	rte_thread_barrier_t configured;
 };
 
 static void *ctrl_thread_init(void *arg)
@@ -184,9 +183,9 @@ static void *ctrl_thread_init(void *arg)
 
 	__rte_thread_init(rte_lcore_id(), cpuset);
 
-	ret = pthread_barrier_wait(&params->configured);
-	if (ret == PTHREAD_BARRIER_SERIAL_THREAD) {
-		pthread_barrier_destroy(&params->configured);
+	ret = rte_thread_barrier_wait(&params->configured);
+	if (ret == RTE_THREAD_BARRIER_SERIAL_THREAD) {
+		rte_thread_barrier_destroy(&params->configured);
 		free(params);
 	}
 
@@ -194,8 +193,8 @@ static void *ctrl_thread_init(void *arg)
 }
 
 int
-rte_ctrl_thread_create(pthread_t *thread, const char *name,
-		const pthread_attr_t *attr,
+rte_ctrl_thread_create(rte_thread_t *thread, const char *name,
+		const rte_thread_attr_t *attr,
 		void *(*start_routine)(void *), void *arg)
 {
 	struct internal_config *internal_conf =
@@ -211,9 +210,9 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 	params->start_routine = start_routine;
 	params->arg = arg;
 
-	pthread_barrier_init(&params->configured, NULL, 2);
+	rte_thread_barrier_init(&params->configured, 2);
 
-	ret = pthread_create(thread, attr, ctrl_thread_init, (void *)params);
+	ret = rte_thread_create(thread, attr, ctrl_thread_init, (void *)params);
 	if (ret != 0) {
 		free(params);
 		return -ret;
@@ -226,26 +225,26 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 				"Cannot set name for ctrl thread\n");
 	}
 
-	ret = pthread_setaffinity_np(*thread, sizeof(*cpuset), cpuset);
+	ret = rte_thread_set_affinity(*thread, sizeof(*cpuset), cpuset);
 	if (ret)
 		goto fail;
 
-	ret = pthread_barrier_wait(&params->configured);
-	if (ret == PTHREAD_BARRIER_SERIAL_THREAD) {
-		pthread_barrier_destroy(&params->configured);
+	ret = rte_thread_barrier_wait(&params->configured);
+	if (ret == RTE_THREAD_BARRIER_SERIAL_THREAD) {
+		rte_thread_barrier_destroy(&params->configured);
 		free(params);
 	}
 
 	return 0;
 
 fail:
-	if (PTHREAD_BARRIER_SERIAL_THREAD ==
-	    pthread_barrier_wait(&params->configured)) {
-		pthread_barrier_destroy(&params->configured);
+	if (RTE_THREAD_BARRIER_SERIAL_THREAD ==
+	    rte_thread_barrier_wait(&params->configured)) {
+		rte_thread_barrier_destroy(&params->configured);
 		free(params);
 	}
-	pthread_cancel(*thread);
-	pthread_join(*thread, NULL);
+	rte_thread_cancel(*thread);
+	rte_thread_join(*thread, NULL);
 	return -ret;
 }
 
@@ -266,7 +265,7 @@ rte_thread_register(void)
 		rte_errno = EINVAL;
 		return -1;
 	}
-	if (pthread_getaffinity_np(pthread_self(), sizeof(cpuset),
+	if (rte_thread_get_affinity(rte_thread_self(), sizeof(cpuset),
 			&cpuset) != 0)
 		CPU_ZERO(&cpuset);
 	lcore_id = eal_lcore_non_eal_allocate();

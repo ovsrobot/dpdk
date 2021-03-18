@@ -72,7 +72,7 @@ struct mlx5_compress_qp {
 
 TAILQ_HEAD(mlx5_compress_privs, mlx5_compress_priv) mlx5_compress_priv_list =
 				TAILQ_HEAD_INITIALIZER(mlx5_compress_priv_list);
-static pthread_mutex_t priv_list_lock = PTHREAD_MUTEX_INITIALIZER;
+static rte_thread_mutex_t priv_list_lock = RTE_THREAD_MUTEX_INITIALIZER;
 
 int mlx5_compress_logtype;
 
@@ -830,9 +830,9 @@ mlx5_compress_pci_probe(struct rte_pci_driver *pci_drv,
 	}
 	priv->mr_scache.reg_mr_cb = mlx5_common_verbs_reg_mr;
 	priv->mr_scache.dereg_mr_cb = mlx5_common_verbs_dereg_mr;
-	pthread_mutex_lock(&priv_list_lock);
+	rte_thread_mutex_lock(&priv_list_lock);
 	TAILQ_INSERT_TAIL(&mlx5_compress_priv_list, priv, next);
-	pthread_mutex_unlock(&priv_list_lock);
+	rte_thread_mutex_unlock(&priv_list_lock);
 	return 0;
 }
 
@@ -852,13 +852,13 @@ mlx5_compress_pci_remove(struct rte_pci_device *pdev)
 {
 	struct mlx5_compress_priv *priv = NULL;
 
-	pthread_mutex_lock(&priv_list_lock);
+	rte_thread_mutex_lock(&priv_list_lock);
 	TAILQ_FOREACH(priv, &mlx5_compress_priv_list, next)
 		if (rte_pci_addr_cmp(&priv->pci_dev->addr, &pdev->addr) != 0)
 			break;
 	if (priv)
 		TAILQ_REMOVE(&mlx5_compress_priv_list, priv, next);
-	pthread_mutex_unlock(&priv_list_lock);
+	rte_thread_mutex_unlock(&priv_list_lock);
 	if (priv) {
 		mlx5_mr_release_cache(&priv->mr_scache);
 		mlx5_compress_hw_global_release(priv);

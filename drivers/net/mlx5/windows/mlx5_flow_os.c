@@ -253,7 +253,7 @@ struct mlx5_workspace_thread {
 static struct mlx5_workspace_thread *curr;
 static struct mlx5_workspace_thread *first;
 rte_tls_key ws_tls_index;
-static pthread_mutex_t lock_thread_list;
+static rte_thread_mutex_t lock_thread_list;
 
 static bool
 mlx5_is_thread_alive(HANDLE thread_handle)
@@ -330,7 +330,7 @@ mlx5_flow_os_release_workspace(void)
 		free(first);
 	}
 	rte_thread_tls_key_delete(ws_tls_index);
-	pthread_mutex_destroy(&lock_thread_list);
+	rte_thread_mutex_destroy(&lock_thread_list);
 }
 
 static int
@@ -352,7 +352,7 @@ mlx5_add_workspace_to_list(struct mlx5_flow_workspace *data)
 	}
 	temp->mlx5_ws = data;
 	temp->thread_handle = curr_thread;
-	pthread_mutex_lock(&lock_thread_list);
+	rte_thread_mutex_lock(&lock_thread_list);
 	mlx5_clear_thread_list();
 	if (!first) {
 		first = temp;
@@ -361,7 +361,7 @@ mlx5_add_workspace_to_list(struct mlx5_flow_workspace *data)
 		curr->next = temp;
 		curr = curr->next;
 	}
-	pthread_mutex_unlock(&lock_thread_list);
+	rte_thread_mutex_unlock(&lock_thread_list);
 	return 0;
 }
 
@@ -374,7 +374,7 @@ mlx5_flow_os_init_workspace_once(void)
 		DRV_LOG(ERR, "Can't create flow workspace data thread key.");
 		return err;
 	}
-	pthread_mutex_init(&lock_thread_list, NULL);
+	rte_thread_mutex_init(&lock_thread_list);
 	return 0;
 }
 

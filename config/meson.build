@@ -255,6 +255,10 @@ else # for 32-bit we need smaller reserved memory areas
 	dpdk_conf.set('RTE_MAX_MEM_MB', 2048)
 endif
 
+if is_windows
+	dpdk_conf.set('RTE_USE_WINDOWS_THREAD_TYPES', not get_option('use_external_thread_lib'))
+endif
+
 
 compile_time_cpuflags = []
 subdir(arch_subdir)

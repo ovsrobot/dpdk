@@ -405,7 +405,7 @@ eth_atl_dev_init(struct rte_eth_dev *eth_dev)
 
 	hw->aq_nic_cfg = &adapter->hw_cfg;
 
-	pthread_mutex_init(&hw->mbox_mutex, NULL);
+	rte_thread_mutex_init(&hw->mbox_mutex);
 
 	/* disable interrupt */
 	atl_disable_intr(hw);
@@ -712,7 +712,7 @@ atl_dev_close(struct rte_eth_dev *dev)
 	rte_intr_callback_unregister(intr_handle,
 				     atl_dev_interrupt_handler, dev);
 
-	pthread_mutex_destroy(&hw->mbox_mutex);
+	rte_thread_mutex_destroy(&hw->mbox_mutex);
 
 	return ret;
 }

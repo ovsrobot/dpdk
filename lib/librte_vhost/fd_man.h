@@ -5,7 +5,7 @@
 #ifndef _FD_MAN_H_
 #define _FD_MAN_H_
 #include <stdint.h>
-#include <pthread.h>
+#include <rte_thread.h>
 #include <poll.h>
 
 #define MAX_FDS 1024
@@ -23,8 +23,8 @@ struct fdentry {
 struct fdset {
 	struct pollfd rwfds[MAX_FDS];
 	struct fdentry fd[MAX_FDS];
-	pthread_mutex_t fd_mutex;
-	pthread_mutex_t fd_pooling_mutex;
+	rte_thread_mutex_t fd_mutex;
+	rte_thread_mutex_t fd_pooling_mutex;
 	int num;	/* current fd number of this fdset */
 
 	union pipefds {

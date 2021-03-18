@@ -902,7 +902,7 @@ mlx5_txpp_start(struct rte_eth_dev *dev)
 		if (ret < 0)
 			return 0;
 	}
-	ret = pthread_mutex_lock(&sh->txpp.mutex);
+	ret = rte_thread_mutex_lock(&sh->txpp.mutex);
 	MLX5_ASSERT(!ret);
 	RTE_SET_USED(ret);
 	if (sh->txpp.refcnt) {
@@ -918,7 +918,7 @@ mlx5_txpp_start(struct rte_eth_dev *dev)
 			rte_errno = -err;
 		}
 	}
-	ret = pthread_mutex_unlock(&sh->txpp.mutex);
+	ret = rte_thread_mutex_unlock(&sh->txpp.mutex);
 	MLX5_ASSERT(!ret);
 	RTE_SET_USED(ret);
 	return err;
@@ -945,7 +945,7 @@ mlx5_txpp_stop(struct rte_eth_dev *dev)
 		return;
 	}
 	priv->txpp_en = 0;
-	ret = pthread_mutex_lock(&sh->txpp.mutex);
+	ret = rte_thread_mutex_lock(&sh->txpp.mutex);
 	MLX5_ASSERT(!ret);
 	RTE_SET_USED(ret);
 	MLX5_ASSERT(sh->txpp.refcnt);
@@ -953,7 +953,7 @@ mlx5_txpp_stop(struct rte_eth_dev *dev)
 		return;
 	/* No references any more, do actual destroy. */
 	mlx5_txpp_destroy(sh);
-	ret = pthread_mutex_unlock(&sh->txpp.mutex);
+	ret = rte_thread_mutex_unlock(&sh->txpp.mutex);
 	MLX5_ASSERT(!ret);
 	RTE_SET_USED(ret);
 }

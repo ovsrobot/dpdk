@@ -7,4 +7,5 @@ headers += files(
         'rte_os.h',
         'rte_virt2phys.h',
         'rte_windows.h',
+        'rte_windows_thread_types.h',
 )

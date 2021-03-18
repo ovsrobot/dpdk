@@ -48,7 +48,7 @@ struct alarm_entry {
 	rte_eal_alarm_callback cb_fn;
 	void *cb_arg;
 	volatile uint8_t executing;
-	volatile pthread_t executing_id;
+	volatile rte_thread_t executing_id;
 };
 
 static LIST_HEAD(alarm_list, alarm_entry) alarm_list = LIST_HEAD_INITIALIZER();
@@ -86,7 +86,7 @@ eal_alarm_callback(void *arg __rte_unused)
 			(ap->time.tv_sec < now.tv_sec || (ap->time.tv_sec == now.tv_sec &&
 						(ap->time.tv_usec * NS_PER_US) <= now.tv_nsec))) {
 		ap->executing = 1;
-		ap->executing_id = pthread_self();
+		ap->executing_id = rte_thread_self();
 		rte_spinlock_unlock(&alarm_list_lk);
 
 		ap->cb_fn(ap->cb_arg);
@@ -207,7 +207,7 @@ rte_eal_alarm_cancel(rte_eal_alarm_callback cb_fn, void *cb_arg)
 				/* If calling from other context, mark that alarm is executing
 				 * so loop can spin till it finish. Otherwise we are trying to
 				 * cancel our self - mark it by EINPROGRESS */
-				if (pthread_equal(ap->executing_id, pthread_self()) == 0)
+				if (rte_thread_equal(ap->executing_id, rte_thread_self()) == 0)
 					executing++;
 				else
 					err = EINPROGRESS;
@@ -228,7 +228,7 @@ rte_eal_alarm_cancel(rte_eal_alarm_callback cb_fn, void *cb_arg)
 					free(ap);
 					count++;
 					ap = ap_prev;
-				} else if (pthread_equal(ap->executing_id, pthread_self()) == 0)
+				} else if (rte_thread_equal(ap->executing_id, rte_thread_self()) == 0)
 					executing++;
 				else
 					err = EINPROGRESS;

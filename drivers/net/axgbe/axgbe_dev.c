@@ -167,12 +167,12 @@ static int axgbe_read_mmd_regs_v2(struct axgbe_port *pdata,
 	index = mmd_address & ~pdata->xpcs_window_mask;
 	offset = pdata->xpcs_window + (mmd_address & pdata->xpcs_window_mask);
 
-	pthread_mutex_lock(&pdata->xpcs_mutex);
+	rte_thread_mutex_lock(&pdata->xpcs_mutex);
 
 	XPCS32_IOWRITE(pdata, pdata->xpcs_window_sel_reg, index);
 	mmd_data = XPCS16_IOREAD(pdata, offset);
 
-	pthread_mutex_unlock(&pdata->xpcs_mutex);
+	rte_thread_mutex_unlock(&pdata->xpcs_mutex);
 
 	return mmd_data;
 }
@@ -201,12 +201,12 @@ static void axgbe_write_mmd_regs_v2(struct axgbe_port *pdata,
 	index = mmd_address & ~pdata->xpcs_window_mask;
 	offset = pdata->xpcs_window + (mmd_address & pdata->xpcs_window_mask);
 
-	pthread_mutex_lock(&pdata->xpcs_mutex);
+	rte_thread_mutex_lock(&pdata->xpcs_mutex);
 
 	XPCS32_IOWRITE(pdata, pdata->xpcs_window_sel_reg, index);
 	XPCS16_IOWRITE(pdata, offset, mmd_data);
 
-	pthread_mutex_unlock(&pdata->xpcs_mutex);
+	rte_thread_mutex_unlock(&pdata->xpcs_mutex);
 }
 
 static int axgbe_read_mmd_regs(struct axgbe_port *pdata, int prtad,

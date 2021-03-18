@@ -31,7 +31,7 @@ TAILQ_HEAD(vhost_user_connection_list, vhost_user_connection);
  */
 struct vhost_user_socket {
 	struct vhost_user_connection_list conn_list;
-	pthread_mutex_t conn_mutex;
+	rte_thread_mutex_t conn_mutex;
 	char *path;
 	int socket_fd;
 	struct sockaddr_un un;
@@ -73,7 +73,7 @@ struct vhost_user {
 	struct vhost_user_socket *vsockets[MAX_VHOST_SOCKET];
 	struct fdset fdset;
 	int vsocket_cnt;
-	pthread_mutex_t mutex;
+	rte_thread_mutex_t mutex;
 };
 
 #define MAX_VIRTIO_BACKLOG 128
@@ -86,12 +86,12 @@ static int vhost_user_start_client(struct vhost_user_socket *vsocket);
 static struct vhost_user vhost_user = {
 	.fdset = {
 		.fd = { [0 ... MAX_FDS - 1] = {-1, NULL, NULL, NULL, 0} },
-		.fd_mutex = PTHREAD_MUTEX_INITIALIZER,
-		.fd_pooling_mutex = PTHREAD_MUTEX_INITIALIZER,
+		.fd_mutex = RTE_THREAD_MUTEX_INITIALIZER,
+		.fd_pooling_mutex = RTE_THREAD_MUTEX_INITIALIZER,
 		.num = 0
 	},
 	.vsocket_cnt = 0,
-	.mutex = PTHREAD_MUTEX_INITIALIZER,
+	.mutex = RTE_THREAD_MUTEX_INITIALIZER,
 };
 
 /*
@@ -269,9 +269,9 @@ vhost_user_add_connection(int fd, struct vhost_user_socket *vsocket)
 		goto err_cleanup;
 	}
 
-	pthread_mutex_lock(&vsocket->conn_mutex);
+	rte_thread_mutex_lock(&vsocket->conn_mutex);
 	TAILQ_INSERT_TAIL(&vsocket->conn_list, conn, next);
-	pthread_mutex_unlock(&vsocket->conn_mutex);
+	rte_thread_mutex_unlock(&vsocket->conn_mutex);
 
 	fdset_pipe_notify(&vhost_user.fdset);
 	return;
@@ -324,9 +324,9 @@ vhost_user_read_cb(int connfd, void *dat, int *remove)
 			vhost_user_start_client(vsocket);
 		}
 
-		pthread_mutex_lock(&vsocket->conn_mutex);
+		rte_thread_mutex_lock(&vsocket->conn_mutex);
 		TAILQ_REMOVE(&vsocket->conn_list, conn, next);
-		pthread_mutex_unlock(&vsocket->conn_mutex);
+		rte_thread_mutex_unlock(&vsocket->conn_mutex);
 
 		free(conn);
 	}
@@ -418,11 +418,11 @@ struct vhost_user_reconnect {
 TAILQ_HEAD(vhost_user_reconnect_tailq_list, vhost_user_reconnect);
 struct vhost_user_reconnect_list {
 	struct vhost_user_reconnect_tailq_list head;
-	pthread_mutex_t mutex;
+	rte_thread_mutex_t mutex;
 };
 
 static struct vhost_user_reconnect_list reconn_list;
-static pthread_t reconn_tid;
+static rte_thread_t reconn_tid;
 
 static int
 vhost_user_connect_nonblock(int fd, struct sockaddr *un, size_t sz)
@@ -454,7 +454,7 @@ vhost_user_client_reconnect(void *arg __rte_unused)
 	struct vhost_user_reconnect *reconn, *next;
 
 	while (1) {
-		pthread_mutex_lock(&reconn_list.mutex);
+		rte_thread_mutex_lock(&reconn_list.mutex);
 
 		/*
 		 * An equal implementation of TAILQ_FOREACH_SAFE,
@@ -485,7 +485,7 @@ remove_fd:
 			free(reconn);
 		}
 
-		pthread_mutex_unlock(&reconn_list.mutex);
+		rte_thread_mutex_unlock(&reconn_list.mutex);
 		sleep(1);
 	}
 
@@ -497,7 +497,7 @@ vhost_user_reconnect_init(void)
 {
 	int ret;
 
-	ret = pthread_mutex_init(&reconn_list.mutex, NULL);
+	ret = rte_thread_mutex_init(&reconn_list.mutex);
 	if (ret < 0) {
 		VHOST_LOG_CONFIG(ERR, "failed to initialize mutex");
 		return ret;
@@ -508,7 +508,7 @@ vhost_user_reconnect_init(void)
 			     vhost_user_client_reconnect, NULL);
 	if (ret != 0) {
 		VHOST_LOG_CONFIG(ERR, "failed to create reconnect thread");
-		if (pthread_mutex_destroy(&reconn_list.mutex)) {
+		if (rte_thread_mutex_destroy(&reconn_list.mutex)) {
 			VHOST_LOG_CONFIG(ERR,
 				"failed to destroy reconnect mutex");
 		}
@@ -552,9 +552,9 @@ vhost_user_start_client(struct vhost_user_socket *vsocket)
 	reconn->un = vsocket->un;
 	reconn->fd = fd;
 	reconn->vsocket = vsocket;
-	pthread_mutex_lock(&reconn_list.mutex);
+	rte_thread_mutex_lock(&reconn_list.mutex);
 	TAILQ_INSERT_TAIL(&reconn_list.head, reconn, next);
-	pthread_mutex_unlock(&reconn_list.mutex);
+	rte_thread_mutex_unlock(&reconn_list.mutex);
 
 	return 0;
 }
@@ -586,11 +586,11 @@ rte_vhost_driver_attach_vdpa_device(const char *path,
 	if (dev == NULL || path == NULL)
 		return -1;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
 	if (vsocket)
 		vsocket->vdpa_dev = dev;
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 
 	return vsocket ? 0 : -1;
 }
@@ -600,11 +600,11 @@ rte_vhost_driver_detach_vdpa_device(const char *path)
 {
 	struct vhost_user_socket *vsocket;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
 	if (vsocket)
 		vsocket->vdpa_dev = NULL;
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 
 	return vsocket ? 0 : -1;
 }
@@ -615,11 +615,11 @@ rte_vhost_driver_get_vdpa_device(const char *path)
 	struct vhost_user_socket *vsocket;
 	struct rte_vdpa_device *dev = NULL;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
 	if (vsocket)
 		dev = vsocket->vdpa_dev;
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 
 	return dev;
 }
@@ -629,7 +629,7 @@ rte_vhost_driver_disable_features(const char *path, uint64_t features)
 {
 	struct vhost_user_socket *vsocket;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
 
 	/* Note that use_builtin_virtio_net is not affected by this function
@@ -639,7 +639,7 @@ rte_vhost_driver_disable_features(const char *path, uint64_t features)
 
 	if (vsocket)
 		vsocket->features &= ~features;
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 
 	return vsocket ? 0 : -1;
 }
@@ -649,7 +649,7 @@ rte_vhost_driver_enable_features(const char *path, uint64_t features)
 {
 	struct vhost_user_socket *vsocket;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
 	if (vsocket) {
 		if ((vsocket->supported_features & features) != features) {
@@ -657,12 +657,12 @@ rte_vhost_driver_enable_features(const char *path, uint64_t features)
 			 * trying to enable features the driver doesn't
 			 * support.
 			 */
-			pthread_mutex_unlock(&vhost_user.mutex);
+			rte_thread_mutex_unlock(&vhost_user.mutex);
 			return -1;
 		}
 		vsocket->features |= features;
 	}
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 
 	return vsocket ? 0 : -1;
 }
@@ -672,7 +672,7 @@ rte_vhost_driver_set_features(const char *path, uint64_t features)
 {
 	struct vhost_user_socket *vsocket;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
 	if (vsocket) {
 		vsocket->supported_features = features;
@@ -683,7 +683,7 @@ rte_vhost_driver_set_features(const char *path, uint64_t features)
 		 */
 		vsocket->use_builtin_virtio_net = false;
 	}
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 
 	return vsocket ? 0 : -1;
 }
@@ -696,7 +696,7 @@ rte_vhost_driver_get_features(const char *path, uint64_t *features)
 	struct rte_vdpa_device *vdpa_dev;
 	int ret = 0;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
 	if (!vsocket) {
 		VHOST_LOG_CONFIG(ERR,
@@ -722,7 +722,7 @@ rte_vhost_driver_get_features(const char *path, uint64_t *features)
 	*features = vsocket->features & vdpa_features;
 
 unlock_exit:
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 	return ret;
 }
 
@@ -732,11 +732,11 @@ rte_vhost_driver_set_protocol_features(const char *path,
 {
 	struct vhost_user_socket *vsocket;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
 	if (vsocket)
 		vsocket->protocol_features = protocol_features;
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 	return vsocket ? 0 : -1;
 }
 
@@ -749,7 +749,7 @@ rte_vhost_driver_get_protocol_features(const char *path,
 	struct rte_vdpa_device *vdpa_dev;
 	int ret = 0;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
 	if (!vsocket) {
 		VHOST_LOG_CONFIG(ERR,
@@ -777,7 +777,7 @@ rte_vhost_driver_get_protocol_features(const char *path,
 		& vdpa_protocol_features;
 
 unlock_exit:
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 	return ret;
 }
 
@@ -789,7 +789,7 @@ rte_vhost_driver_get_queue_num(const char *path, uint32_t *queue_num)
 	struct rte_vdpa_device *vdpa_dev;
 	int ret = 0;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
 	if (!vsocket) {
 		VHOST_LOG_CONFIG(ERR,
@@ -815,7 +815,7 @@ rte_vhost_driver_get_queue_num(const char *path, uint32_t *queue_num)
 	*queue_num = RTE_MIN((uint32_t)VHOST_MAX_QUEUE_PAIRS, vdpa_queue_num);
 
 unlock_exit:
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 	return ret;
 }
 
@@ -847,7 +847,7 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 	if (!path)
 		return -1;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 
 	if (vhost_user.vsocket_cnt == MAX_VHOST_SOCKET) {
 		VHOST_LOG_CONFIG(ERR,
@@ -867,7 +867,7 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 		goto out;
 	}
 	TAILQ_INIT(&vsocket->conn_list);
-	ret = pthread_mutex_init(&vsocket->conn_mutex, NULL);
+	ret = rte_thread_mutex_init(&vsocket->conn_mutex);
 	if (ret) {
 		VHOST_LOG_CONFIG(ERR,
 			"error: failed to init connection mutex\n");
@@ -962,18 +962,18 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 
 	vhost_user.vsockets[vhost_user.vsocket_cnt++] = vsocket;
 
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 	return ret;
 
 out_mutex:
-	if (pthread_mutex_destroy(&vsocket->conn_mutex)) {
+	if (rte_thread_mutex_destroy(&vsocket->conn_mutex)) {
 		VHOST_LOG_CONFIG(ERR,
 			"error: failed to destroy connection mutex\n");
 	}
 out_free:
 	vhost_user_socket_mem_free(vsocket);
 out:
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 
 	return ret;
 }
@@ -984,7 +984,7 @@ vhost_user_remove_reconnect(struct vhost_user_socket *vsocket)
 	int found = false;
 	struct vhost_user_reconnect *reconn, *next;
 
-	pthread_mutex_lock(&reconn_list.mutex);
+	rte_thread_mutex_lock(&reconn_list.mutex);
 
 	for (reconn = TAILQ_FIRST(&reconn_list.head);
 	     reconn != NULL; reconn = next) {
@@ -998,7 +998,7 @@ vhost_user_remove_reconnect(struct vhost_user_socket *vsocket)
 			break;
 		}
 	}
-	pthread_mutex_unlock(&reconn_list.mutex);
+	rte_thread_mutex_unlock(&reconn_list.mutex);
 	return found;
 }
 
@@ -1016,13 +1016,13 @@ rte_vhost_driver_unregister(const char *path)
 		return -1;
 
 again:
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 
 	for (i = 0; i < vhost_user.vsocket_cnt; i++) {
 		struct vhost_user_socket *vsocket = vhost_user.vsockets[i];
 
 		if (!strcmp(vsocket->path, path)) {
-			pthread_mutex_lock(&vsocket->conn_mutex);
+			rte_thread_mutex_lock(&vsocket->conn_mutex);
 			for (conn = TAILQ_FIRST(&vsocket->conn_list);
 			     conn != NULL;
 			     conn = next) {
@@ -1036,9 +1036,10 @@ again:
 				 */
 				if (fdset_try_del(&vhost_user.fdset,
 						  conn->connfd) == -1) {
-					pthread_mutex_unlock(
+					rte_thread_mutex_unlock(
 							&vsocket->conn_mutex);
-					pthread_mutex_unlock(&vhost_user.mutex);
+					rte_thread_mutex_unlock(
+							&vhost_user.mutex);
 					goto again;
 				}
 
@@ -1050,7 +1051,7 @@ again:
 				TAILQ_REMOVE(&vsocket->conn_list, conn, next);
 				free(conn);
 			}
-			pthread_mutex_unlock(&vsocket->conn_mutex);
+			rte_thread_mutex_unlock(&vsocket->conn_mutex);
 
 			if (vsocket->is_server) {
 				/*
@@ -1060,7 +1061,8 @@ again:
 				 */
 				if (fdset_try_del(&vhost_user.fdset,
 						vsocket->socket_fd) == -1) {
-					pthread_mutex_unlock(&vhost_user.mutex);
+					rte_thread_mutex_unlock(
+							&vhost_user.mutex);
 					goto again;
 				}
 
@@ -1070,18 +1072,18 @@ again:
 				vhost_user_remove_reconnect(vsocket);
 			}
 
-			pthread_mutex_destroy(&vsocket->conn_mutex);
+			rte_thread_mutex_destroy(&vsocket->conn_mutex);
 			vhost_user_socket_mem_free(vsocket);
 
 			count = --vhost_user.vsocket_cnt;
 			vhost_user.vsockets[i] = vhost_user.vsockets[count];
 			vhost_user.vsockets[count] = NULL;
-			pthread_mutex_unlock(&vhost_user.mutex);
+			rte_thread_mutex_unlock(&vhost_user.mutex);
 
 			return 0;
 		}
 	}
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 
 	return -1;
 }
@@ -1095,11 +1097,11 @@ rte_vhost_driver_callback_register(const char *path,
 {
 	struct vhost_user_socket *vsocket;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
 	if (vsocket)
 		vsocket->notify_ops = ops;
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 
 	return vsocket ? 0 : -1;
 }
@@ -1109,9 +1111,9 @@ vhost_driver_callback_get(const char *path)
 {
 	struct vhost_user_socket *vsocket;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 
 	return vsocket ? vsocket->notify_ops : NULL;
 }
@@ -1120,11 +1122,11 @@ int
 rte_vhost_driver_start(const char *path)
 {
 	struct vhost_user_socket *vsocket;
-	static pthread_t fdset_tid;
+	static rte_thread_t fdset_tid;
 
-	pthread_mutex_lock(&vhost_user.mutex);
+	rte_thread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
-	pthread_mutex_unlock(&vhost_user.mutex);
+	rte_thread_mutex_unlock(&vhost_user.mutex);
 
 	if (!vsocket)
 		return -1;

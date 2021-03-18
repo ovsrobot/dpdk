@@ -107,7 +107,7 @@ struct enic {
 	int iommu_groupid;
 	int eventfd;
 	uint8_t mac_addr[RTE_ETHER_ADDR_LEN];
-	pthread_t err_intr_thread;
+	rte_thread_t err_intr_thread;
 	int promisc;
 	int allmulti;
 	uint8_t ig_vlan_strip_en;

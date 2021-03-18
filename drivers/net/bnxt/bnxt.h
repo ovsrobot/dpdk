@@ -523,8 +523,8 @@ struct bnxt_mark_info {
 
 struct bnxt_rep_info {
 	struct rte_eth_dev	*vfr_eth_dev;
-	pthread_mutex_t		vfr_lock;
-	pthread_mutex_t		vfr_start_lock;
+	rte_thread_mutex_t		vfr_lock;
+	rte_thread_mutex_t		vfr_start_lock;
 	bool			conduit_valid;
 };
 
@@ -677,7 +677,7 @@ struct bnxt {
 #define BNXT_FW_CAP_ADV_FLOW_COUNTERS	BIT(6)
 #define BNXT_FW_CAP_LINK_ADMIN		BIT(7)
 
-	pthread_mutex_t         flow_lock;
+	rte_thread_mutex_t         flow_lock;
 
 	uint32_t		vnic_cap_flags;
 #define BNXT_VNIC_CAP_COS_CLASSIFY	BIT(0)
@@ -731,18 +731,18 @@ struct bnxt {
 	rte_iova_t			hwrm_short_cmd_req_dma_addr;
 	rte_spinlock_t			hwrm_lock;
 	/* synchronize between dev_configure_op and int handler */
-	pthread_mutex_t			def_cp_lock;
+	rte_thread_mutex_t			def_cp_lock;
 	/* synchronize between dev_start_op and async evt handler
 	 * Locking sequence in async evt handler will be
 	 * def_cp_lock
 	 * health_check_lock
 	 */
-	pthread_mutex_t			health_check_lock;
+	rte_thread_mutex_t			health_check_lock;
 	/* synchronize between dev_stop/dev_close_op and
 	 * error recovery thread triggered as part of
 	 * HWRM_ASYNC_EVENT_CMPL_EVENT_ID_RESET_NOTIFY
 	 */
-	pthread_mutex_t			err_recovery_lock;
+	rte_thread_mutex_t			err_recovery_lock;
 	uint16_t			max_req_len;
 	uint16_t			max_resp_len;
 	uint16_t                        hwrm_max_ext_req_len;
@@ -928,10 +928,10 @@ uint16_t bnxt_dummy_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 extern const struct rte_flow_ops bnxt_flow_ops;
 
 #define bnxt_acquire_flow_lock(bp) \
-	pthread_mutex_lock(&(bp)->flow_lock)
+	rte_thread_mutex_lock(&(bp)->flow_lock)
 
 #define bnxt_release_flow_lock(bp) \
-	pthread_mutex_unlock(&(bp)->flow_lock)
+	rte_thread_mutex_unlock(&(bp)->flow_lock)
 
 #define BNXT_VALID_VNIC_OR_RET(bp, vnic_id) do { \
 	if ((vnic_id) >= (bp)->max_vnics) { \

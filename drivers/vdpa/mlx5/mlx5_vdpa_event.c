@@ -246,17 +246,17 @@ mlx5_vdpa_poll_handle(void *arg)
 	uint32_t max;
 	uint64_t current_tic;
 
-	pthread_mutex_lock(&priv->timer_lock);
+	rte_thread_mutex_lock(&priv->timer_lock);
 	while (!priv->timer_on)
 		pthread_cond_wait(&priv->timer_cond, &priv->timer_lock);
-	pthread_mutex_unlock(&priv->timer_lock);
+	rte_thread_mutex_unlock(&priv->timer_lock);
 	priv->timer_delay_us = priv->event_mode ==
 					    MLX5_VDPA_EVENT_MODE_DYNAMIC_TIMER ?
 					      MLX5_VDPA_DEFAULT_TIMER_DELAY_US :
 								 priv->event_us;
 	while (1) {
 		max = 0;
-		pthread_mutex_lock(&priv->vq_config_lock);
+		rte_thread_mutex_lock(&priv->vq_config_lock);
 		for (i = 0; i < priv->nr_virtqs; i++) {
 			cq = &priv->virtqs[i].eqp.cq;
 			if (cq->cq_obj.cq && !cq->armed) {
@@ -280,13 +280,13 @@ mlx5_vdpa_poll_handle(void *arg)
 				DRV_LOG(DEBUG, "Device %s traffic was stopped.",
 					priv->vdev->device->name);
 				mlx5_vdpa_arm_all_cqs(priv);
-				pthread_mutex_unlock(&priv->vq_config_lock);
-				pthread_mutex_lock(&priv->timer_lock);
+				rte_thread_mutex_unlock(&priv->vq_config_lock);
+				rte_thread_mutex_lock(&priv->timer_lock);
 				priv->timer_on = 0;
 				while (!priv->timer_on)
 					pthread_cond_wait(&priv->timer_cond,
 							  &priv->timer_lock);
-				pthread_mutex_unlock(&priv->timer_lock);
+				rte_thread_mutex_unlock(&priv->timer_lock);
 				priv->timer_delay_us = priv->event_mode ==
 					    MLX5_VDPA_EVENT_MODE_DYNAMIC_TIMER ?
 					      MLX5_VDPA_DEFAULT_TIMER_DELAY_US :
@@ -296,7 +296,7 @@ mlx5_vdpa_poll_handle(void *arg)
 		} else {
 			priv->last_traffic_tic = current_tic;
 		}
-		pthread_mutex_unlock(&priv->vq_config_lock);
+		rte_thread_mutex_unlock(&priv->vq_config_lock);
 		mlx5_vdpa_timer_sleep(priv, max);
 	}
 	return NULL;
@@ -312,7 +312,7 @@ mlx5_vdpa_interrupt_handler(void *cb_arg)
 		uint8_t buf[sizeof(struct mlx5dv_devx_async_event_hdr) + 128];
 	} out;
 
-	pthread_mutex_lock(&priv->vq_config_lock);
+	rte_thread_mutex_lock(&priv->vq_config_lock);
 	while (mlx5_glue->devx_get_event(priv->eventc, &out.event_resp,
 					 sizeof(out.buf)) >=
 				       (ssize_t)sizeof(out.event_resp.cookie)) {
@@ -331,7 +331,7 @@ mlx5_vdpa_interrupt_handler(void *cb_arg)
 			eventfd_write(cq->callfd, (eventfd_t)1);
 		if (priv->event_mode == MLX5_VDPA_EVENT_MODE_ONLY_INTERRUPT) {
 			mlx5_vdpa_cq_arm(priv, cq);
-			pthread_mutex_unlock(&priv->vq_config_lock);
+			rte_thread_mutex_unlock(&priv->vq_config_lock);
 			return;
 		}
 		/* Don't arm again - timer will take control. */
@@ -346,13 +346,13 @@ mlx5_vdpa_interrupt_handler(void *cb_arg)
 
 	/* Traffic detected: make sure timer is on. */
 	priv->last_traffic_tic = rte_rdtsc();
-	pthread_mutex_lock(&priv->timer_lock);
+	rte_thread_mutex_lock(&priv->timer_lock);
 	if (!priv->timer_on) {
 		priv->timer_on = 1;
 		pthread_cond_signal(&priv->timer_cond);
 	}
-	pthread_mutex_unlock(&priv->timer_lock);
-	pthread_mutex_unlock(&priv->vq_config_lock);
+	rte_thread_mutex_unlock(&priv->timer_lock);
+	rte_thread_mutex_unlock(&priv->vq_config_lock);
 }
 
 static void
@@ -368,7 +368,7 @@ mlx5_vdpa_err_interrupt_handler(void *cb_arg __rte_unused)
 	struct mlx5_vdpa_virtq *virtq;
 	uint64_t sec;
 
-	pthread_mutex_lock(&priv->vq_config_lock);
+	rte_thread_mutex_lock(&priv->vq_config_lock);
 	while (mlx5_glue->devx_get_event(priv->err_chnl, &out.event_resp,
 					 sizeof(out.buf)) >=
 				       (ssize_t)sizeof(out.event_resp.cookie)) {
@@ -414,7 +414,7 @@ log:
 			virtq->err_time[i - 1] = virtq->err_time[i];
 		virtq->err_time[RTE_DIM(virtq->err_time) - 1] = rte_rdtsc();
 	}
-	pthread_mutex_unlock(&priv->vq_config_lock);
+	rte_thread_mutex_unlock(&priv->vq_config_lock);
 #endif
 }
 
@@ -501,42 +501,33 @@ mlx5_vdpa_cqe_event_setup(struct mlx5_vdpa_priv *priv)
 {
 	int ret;
 	rte_cpuset_t cpuset;
-	pthread_attr_t attr;
+	rte_thread_attr_t attr;
 	char name[16];
-	const struct sched_param sp = {
-		.sched_priority = sched_get_priority_max(SCHED_RR),
-	};
 
 	if (!priv->eventc)
 		/* All virtqs are in poll mode. */
 		return 0;
 	if (priv->event_mode != MLX5_VDPA_EVENT_MODE_ONLY_INTERRUPT) {
-		pthread_mutex_init(&priv->timer_lock, NULL);
+		rte_thread_mutex_init(&priv->timer_lock);
 		pthread_cond_init(&priv->timer_cond, NULL);
 		priv->timer_on = 0;
-		pthread_attr_init(&attr);
+		rte_thread_attr_init(&attr);
 		CPU_ZERO(&cpuset);
 		if (priv->event_core != -1)
 			CPU_SET(priv->event_core, &cpuset);
 		else
 			cpuset = rte_lcore_cpuset(rte_get_main_lcore());
-		ret = pthread_attr_setaffinity_np(&attr, sizeof(cpuset),
-						  &cpuset);
+		ret = rte_thread_attr_set_affinity(&attr, &cpuset);
 		if (ret) {
 			DRV_LOG(ERR, "Failed to set thread affinity.");
 			return -1;
 		}
-		ret = pthread_attr_setschedpolicy(&attr, SCHED_RR);
-		if (ret) {
-			DRV_LOG(ERR, "Failed to set thread sched policy = RR.");
-			return -1;
-		}
-		ret = pthread_attr_setschedparam(&attr, &sp);
+		ret = rte_thread_attr_set_priority(&attr, RTE_THREAD_PRIORITY_REALTIME_CRITICAL);
 		if (ret) {
 			DRV_LOG(ERR, "Failed to set thread priority.");
 			return -1;
 		}
-		ret = pthread_create(&priv->timer_tid, &attr,
+		ret = rte_thread_create(&priv->timer_tid, &attr,
 				     mlx5_vdpa_poll_handle, (void *)priv);
 		if (ret) {
 			DRV_LOG(ERR, "Failed to create timer thread.");
@@ -568,7 +559,6 @@ mlx5_vdpa_cqe_event_unset(struct mlx5_vdpa_priv *priv)
 {
 	int retries = MLX5_VDPA_INTR_RETRIES;
 	int ret = -EAGAIN;
-	void *status;
 
 	if (priv->intr_handle.fd) {
 		while (retries-- && ret == -EAGAIN) {
@@ -585,8 +575,8 @@ mlx5_vdpa_cqe_event_unset(struct mlx5_vdpa_priv *priv)
 		memset(&priv->intr_handle, 0, sizeof(priv->intr_handle));
 	}
 	if (priv->timer_tid) {
-		pthread_cancel(priv->timer_tid);
-		pthread_join(priv->timer_tid, &status);
+		rte_thread_cancel(priv->timer_tid);
+		rte_thread_join(priv->timer_tid, NULL);
 	}
 	priv->timer_tid = 0;
 }

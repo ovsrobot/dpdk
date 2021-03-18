@@ -53,7 +53,7 @@ struct ifcvf_internal {
 	int vfio_container_fd;
 	int vfio_group_fd;
 	int vfio_dev_fd;
-	pthread_t tid;	/* thread for notify relay */
+	rte_thread_t tid;	/* thread for notify relay */
 	int epfd;
 	int vid;
 	struct rte_vdpa_device *vdev;
@@ -80,7 +80,7 @@ TAILQ_HEAD(internal_list_head, internal_list);
 static struct internal_list_head internal_list =
 	TAILQ_HEAD_INITIALIZER(internal_list);
 
-static pthread_mutex_t internal_list_lock = PTHREAD_MUTEX_INITIALIZER;
+static rte_thread_mutex_t internal_list_lock = RTE_THREAD_MUTEX_INITIALIZER;
 
 static void update_used_ring(struct ifcvf_internal *internal, uint16_t qid);
 
@@ -90,7 +90,7 @@ find_internal_resource_by_vdev(struct rte_vdpa_device *vdev)
 	int found = 0;
 	struct internal_list *list;
 
-	pthread_mutex_lock(&internal_list_lock);
+	rte_thread_mutex_lock(&internal_list_lock);
 
 	TAILQ_FOREACH(list, &internal_list, next) {
 		if (vdev == list->internal->vdev) {
@@ -99,7 +99,7 @@ find_internal_resource_by_vdev(struct rte_vdpa_device *vdev)
 		}
 	}
 
-	pthread_mutex_unlock(&internal_list_lock);
+	rte_thread_mutex_unlock(&internal_list_lock);
 
 	if (!found)
 		return NULL;
@@ -113,7 +113,7 @@ find_internal_resource_by_dev(struct rte_pci_device *pdev)
 	int found = 0;
 	struct internal_list *list;
 
-	pthread_mutex_lock(&internal_list_lock);
+	rte_thread_mutex_lock(&internal_list_lock);
 
 	TAILQ_FOREACH(list, &internal_list, next) {
 		if (!rte_pci_addr_cmp(&pdev->addr,
@@ -123,7 +123,7 @@ find_internal_resource_by_dev(struct rte_pci_device *pdev)
 		}
 	}
 
-	pthread_mutex_unlock(&internal_list_lock);
+	rte_thread_mutex_unlock(&internal_list_lock);
 
 	if (!found)
 		return NULL;
@@ -499,7 +499,7 @@ setup_notify_relay(struct ifcvf_internal *internal)
 {
 	int ret;
 
-	ret = pthread_create(&internal->tid, NULL, notify_relay,
+	ret = rte_thread_create(&internal->tid, NULL, notify_relay,
 			(void *)internal);
 	if (ret) {
 		DRV_LOG(ERR, "failed to create notify relay pthread.");
@@ -511,11 +511,9 @@ setup_notify_relay(struct ifcvf_internal *internal)
 static int
 unset_notify_relay(struct ifcvf_internal *internal)
 {
-	void *status;
-
 	if (internal->tid) {
-		pthread_cancel(internal->tid);
-		pthread_join(internal->tid, &status);
+		rte_thread_cancel(internal->tid);
+		rte_thread_join(internal->tid, NULL);
 	}
 	internal->tid = 0;
 
@@ -802,7 +800,7 @@ setup_vring_relay(struct ifcvf_internal *internal)
 {
 	int ret;
 
-	ret = pthread_create(&internal->tid, NULL, vring_relay,
+	ret = rte_thread_create(&internal->tid, NULL, vring_relay,
 			(void *)internal);
 	if (ret) {
 		DRV_LOG(ERR, "failed to create ring relay pthread.");
@@ -814,11 +812,9 @@ setup_vring_relay(struct ifcvf_internal *internal)
 static int
 unset_vring_relay(struct ifcvf_internal *internal)
 {
-	void *status;
-
 	if (internal->tid) {
-		pthread_cancel(internal->tid);
-		pthread_join(internal->tid, &status);
+		rte_thread_cancel(internal->tid);
+		rte_thread_join(internal->tid, NULL);
 	}
 	internal->tid = 0;
 
@@ -1248,9 +1244,9 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 		goto error;
 	}
 
-	pthread_mutex_lock(&internal_list_lock);
+	rte_thread_mutex_lock(&internal_list_lock);
 	TAILQ_INSERT_TAIL(&internal_list, list, next);
-	pthread_mutex_unlock(&internal_list_lock);
+	rte_thread_mutex_unlock(&internal_list_lock);
 
 	rte_atomic32_set(&internal->started, 1);
 	update_datapath(internal);
@@ -1288,9 +1284,9 @@ ifcvf_pci_remove(struct rte_pci_device *pci_dev)
 	rte_vfio_container_destroy(internal->vfio_container_fd);
 	rte_vdpa_unregister_device(internal->vdev);
 
-	pthread_mutex_lock(&internal_list_lock);
+	rte_thread_mutex_lock(&internal_list_lock);
 	TAILQ_REMOVE(&internal_list, list, next);
-	pthread_mutex_unlock(&internal_list_lock);
+	rte_thread_mutex_unlock(&internal_list_lock);
 
 	rte_free(list);
 	rte_free(internal);
