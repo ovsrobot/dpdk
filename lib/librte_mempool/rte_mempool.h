@@ -66,12 +66,18 @@ extern "C" {
  * A structure that stores the mempool statistics (per-lcore).
  */
 struct rte_mempool_debug_stats {
-	uint64_t put_bulk;         /**< Number of puts. */
-	uint64_t put_objs;         /**< Number of objects successfully put. */
-	uint64_t get_success_bulk; /**< Successful allocation number. */
-	uint64_t get_success_objs; /**< Objects successfully allocated. */
-	uint64_t get_fail_bulk;    /**< Failed allocation number. */
-	uint64_t get_fail_objs;    /**< Objects that failed to be allocated. */
+	uint64_t put_bulk;		  /**< Number of puts. */
+	uint64_t put_objs;		  /**< Number of objects successfully put. */
+	uint64_t put_objs_cache;	  /**< Number of objects successfully put to cache. */
+	uint64_t put_objs_pool;		  /**< Number of objects successfully put to pool. */
+	uint64_t put_objs_flush;	  /**< Number of flushing objects from cache to pool. */
+	uint64_t get_success_bulk;	  /**< Successful allocation number. */
+	uint64_t get_success_objs;	  /**< Objects successfully allocated. */
+	uint64_t get_success_objs_cache;  /**< Objects successfully allocated from cache. */
+	uint64_t get_success_objs_pool;	  /**< Objects successfully allocated from pool. */
+	uint64_t get_success_objs_refill; /**< Number of refilling objects from pool to cache. */
+	uint64_t get_fail_bulk;		  /**< Failed allocation number. */
+	uint64_t get_fail_objs;		  /**< Objects that failed to be allocated. */
 	/** Successful allocation number of contiguous blocks. */
 	uint64_t get_success_blks;
 	/** Failed allocation number of contiguous blocks. */
@@ -270,22 +276,34 @@ struct rte_mempool {
  *   Number to add to the object-oriented statistics.
  */
 #ifdef RTE_LIBRTE_MEMPOOL_DEBUG
-#define __MEMPOOL_STAT_ADD(mp, name, n) do {                    \
-		unsigned __lcore_id = rte_lcore_id();           \
-		if (__lcore_id < RTE_MAX_LCORE) {               \
+#define __MEMPOOL_STAT_ADD(mp, name, n) do {			\
+		unsigned __lcore_id = rte_lcore_id();		\
+		if (__lcore_id < RTE_MAX_LCORE) {		\
 			mp->stats[__lcore_id].name##_objs += n;	\
-			mp->stats[__lcore_id].name##_bulk += 1;	\
-		}                                               \
-	} while(0)
-#define __MEMPOOL_CONTIG_BLOCKS_STAT_ADD(mp, name, n) do {                    \
-		unsigned int __lcore_id = rte_lcore_id();       \
-		if (__lcore_id < RTE_MAX_LCORE) {               \
+			mp->stats[__lcore_id].name##_bulk += 1; \
+		}						\
+	} while (0)
+#define __MEMPOOL_OBJS_STAT_ADD(mp, name1, name2, n) do {	\
+		unsigned __lcore_id = rte_lcore_id();		\
+		if (__lcore_id < RTE_MAX_LCORE)			\
+			mp->stats[__lcore_id].name1##_objs_##name2 += n;	\
+	} while (0)
+#define __MEMPOOL_OBJS_STAT_SUB(mp, name1, name2, n) do {	\
+		unsigned __lcore_id = rte_lcore_id();		\
+		if (__lcore_id < RTE_MAX_LCORE)			\
+			mp->stats[__lcore_id].name1##_objs_##name2 -= n;	\
+	} while (0)
+#define __MEMPOOL_CONTIG_BLOCKS_STAT_ADD(mp, name, n) do {	\
+		unsigned int __lcore_id = rte_lcore_id();	\
+		if (__lcore_id < RTE_MAX_LCORE) {		\
 			mp->stats[__lcore_id].name##_blks += n;	\
 			mp->stats[__lcore_id].name##_bulk += 1;	\
-		}                                               \
+		}						\
 	} while (0)
 #else
-#define __MEMPOOL_STAT_ADD(mp, name, n) do {} while(0)
+#define __MEMPOOL_STAT_ADD(mp, name, n) do {} while (0)
+#define __MEMPOOL_OBJS_STAT_ADD(mp, name1, name2, n) do {} while (0)
+#define __MEMPOOL_OBJS_STAT_SUB(mp, name1, nmae2, n) do {} while (0)
 #define __MEMPOOL_CONTIG_BLOCKS_STAT_ADD(mp, name, n) do {} while (0)
 #endif
 
@@ -1305,10 +1323,13 @@ __mempool_generic_put(struct rte_mempool *mp, void * const *obj_table,
 
 	/* Add elements back into the cache */
 	rte_memcpy(&cache_objs[0], obj_table, sizeof(void *) * n);
-
+	__MEMPOOL_OBJS_STAT_ADD(mp, put, cache, n);
 	cache->len += n;
 
 	if (cache->len >= cache->flushthresh) {
+		__MEMPOOL_OBJS_STAT_SUB(mp, put, cache, cache->len - cache->size);
+		__MEMPOOL_OBJS_STAT_ADD(mp, put, pool, cache->len - cache->size);
+		__MEMPOOL_OBJS_STAT_ADD(mp, put, flush, 1);
 		rte_mempool_ops_enqueue_bulk(mp, &cache->objs[cache->size],
 				cache->len - cache->size);
 		cache->len = cache->size;
@@ -1318,6 +1339,7 @@ __mempool_generic_put(struct rte_mempool *mp, void * const *obj_table,
 
 ring_enqueue:
 
+	__MEMPOOL_OBJS_STAT_ADD(mp, put, pool, n);
 	/* push remaining objects in ring */
 #ifdef RTE_LIBRTE_MEMPOOL_DEBUG
 	if (rte_mempool_ops_enqueue_bulk(mp, obj_table, n) < 0)
@@ -1437,6 +1459,7 @@ __mempool_generic_get(struct rte_mempool *mp, void **obj_table,
 			goto ring_dequeue;
 		}
 
+		__MEMPOOL_OBJS_STAT_ADD(mp, get_success, refill, 1);
 		cache->len += req;
 	}
 
@@ -1447,6 +1470,7 @@ __mempool_generic_get(struct rte_mempool *mp, void **obj_table,
 	cache->len -= n;
 
 	__MEMPOOL_STAT_ADD(mp, get_success, n);
+	__MEMPOOL_OBJS_STAT_ADD(mp, get_success, cache, n);
 
 	return 0;
 
@@ -1457,8 +1481,10 @@ ring_dequeue:
 
 	if (ret < 0)
 		__MEMPOOL_STAT_ADD(mp, get_fail, n);
-	else
+	else {
 		__MEMPOOL_STAT_ADD(mp, get_success, n);
+		__MEMPOOL_OBJS_STAT_ADD(mp, get_success, pool, n);
+	}
 
 	return ret;
 }

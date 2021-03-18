@@ -1244,8 +1244,14 @@ rte_mempool_dump(FILE *f, struct rte_mempool *mp)
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
 		sum.put_bulk += mp->stats[lcore_id].put_bulk;
 		sum.put_objs += mp->stats[lcore_id].put_objs;
+		sum.put_objs_cache += mp->stats[lcore_id].put_objs_cache;
+		sum.put_objs_pool += mp->stats[lcore_id].put_objs_pool;
+		sum.put_objs_flush += mp->stats[lcore_id].put_objs_flush;
 		sum.get_success_bulk += mp->stats[lcore_id].get_success_bulk;
 		sum.get_success_objs += mp->stats[lcore_id].get_success_objs;
+		sum.get_success_objs_cache += mp->stats[lcore_id].get_success_objs_cache;
+		sum.get_success_objs_pool += mp->stats[lcore_id].get_success_objs_pool;
+		sum.get_success_objs_refill += mp->stats[lcore_id].get_success_objs_refill;
 		sum.get_fail_bulk += mp->stats[lcore_id].get_fail_bulk;
 		sum.get_fail_objs += mp->stats[lcore_id].get_fail_objs;
 		sum.get_success_blks += mp->stats[lcore_id].get_success_blks;
@@ -1254,8 +1260,14 @@ rte_mempool_dump(FILE *f, struct rte_mempool *mp)
 	fprintf(f, "  stats:\n");
 	fprintf(f, "    put_bulk=%"PRIu64"\n", sum.put_bulk);
 	fprintf(f, "    put_objs=%"PRIu64"\n", sum.put_objs);
+	fprintf(f, "    put_objs_cache=%"PRIu64"\n", sum.put_objs_cache);
+	fprintf(f, "    put_objs_pool=%"PRIu64"\n", sum.put_objs_pool);
+	fprintf(f, "    put_objs_flush=%"PRIu64"\n", sum.put_objs_flush);
 	fprintf(f, "    get_success_bulk=%"PRIu64"\n", sum.get_success_bulk);
 	fprintf(f, "    get_success_objs=%"PRIu64"\n", sum.get_success_objs);
+	fprintf(f, "    get_success_objs_cache=%"PRIu64"\n", sum.get_success_objs_cache);
+	fprintf(f, "    get_success_objs_pool=%"PRIu64"\n", sum.get_success_objs_pool);
+	fprintf(f, "    get_success_objs_refill=%"PRIu64"\n", sum.get_success_objs_refill);
 	fprintf(f, "    get_fail_bulk=%"PRIu64"\n", sum.get_fail_bulk);
 	fprintf(f, "    get_fail_objs=%"PRIu64"\n", sum.get_fail_objs);
 	if (info.contig_block_size > 0) {
