@@ -130,6 +130,12 @@ ABI Changes
 
 * No ABI change that would break compatibility with 20.11.
 
+* Added new field ``queue_state`` to ``rte_eth_rxq_info`` structure
+  to provide indicated rxq queue state.
+
+* Added new field ``queue_state`` to ``rte_eth_txq_info`` structure
+  to provide indicated txq queue state.
+
 
 Known Issues
 ------------
