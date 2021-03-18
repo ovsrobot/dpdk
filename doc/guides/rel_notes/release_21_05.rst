@@ -83,6 +83,13 @@ New Features
   * Added command to display Rx queue used descriptor count.
     ``show port (port_id) rxq (queue_id) desc used count``
 
+* **Added the offload paths for IAVF AVX512.**
+
+  * Added the new RX and TX paths to use the HW offload features. When the HW
+    offload features are configured to be used, the offload paths are chosen
+    automatically.
+  * The code of HW offload features is removed from the legacy paths.
+
 
 Removed Items
 -------------
