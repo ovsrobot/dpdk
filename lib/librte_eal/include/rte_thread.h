@@ -20,10 +20,329 @@
 extern "C" {
 #endif
 
+#include <sched.h>
+#if defined(RTE_USE_WINDOWS_THREAD_TYPES)
+#include <rte_windows_thread_types.h>
+#else
+#include <rte_thread_types.h>
+#endif
+
+enum rte_thread_priority
+{
+	RTE_THREAD_PRIORITY_NORMAL            = EAL_THREAD_PRIORITY_NORMAL,
+	RTE_THREAD_PRIORITY_REALTIME_CRITICAL = EAL_THREAD_PRIORITY_REALTIME_CIRTICAL,
+	/*
+	 * This enum can be extended to allow more priority levels.
+	 */
+};
+
+typedef struct
+{
+	enum rte_thread_priority priority;
+	rte_cpuset_t cpuset;
+} rte_thread_attr_t;
+
 /**
  * TLS key type, an opaque pointer.
  */
 typedef struct eal_tls_key *rte_tls_key;
+
+/**
+ * Get the id of the calling thread.
+ *
+ * @return
+ *   Return the thread id of the calling thread.
+ */
+__rte_experimental
+rte_thread_t rte_thread_self(void);
+
+/**
+ * Check if 2 thread ids are equal.
+ *
+ * @param t1
+ *   First thread id.
+ *
+ * @param t2
+ *   Second thread id.
+ *
+ * @return
+ *   If the ids are equal, return nonzero.
+ *   Otherwise, return 0.
+ */
+__rte_experimental
+int rte_thread_equal(rte_thread_t t1, rte_thread_t t2);
+
+/**
+ * Set the affinity of thread 'thread_id' to the cpu set
+ * specified by 'cpuset'.
+ *
+ * @param thread_id
+ *    Id of the thread for which to set the affinity.
+ *
+ * @param cpuset_size
+ *
+ * @param cpuset
+ *   Pointer to CPU affinity to set.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return nonzero.
+ */
+__rte_experimental
+int rte_thread_set_affinity(rte_thread_t thread_id, size_t cpuset_size,
+			    const rte_cpuset_t *cpuset);
+
+/**
+ * Get the affinity of thread 'thread_id' and store it
+ * in 'cpuset'.
+ *
+ * @param thread_id
+ *    Id of the thread for which to get the affinity.
+ *
+ * @param cpuset_size
+ *    Size of the cpu set.
+ *
+ * @param cpuset
+ *   Pointer for storing the affinity value.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return nonzero.
+ */
+__rte_experimental
+int rte_thread_get_affinity(rte_thread_t thread_id, size_t cpuset_size,
+			    rte_cpuset_t *cpuset);
+
+/**
+ * Set the priority of a thread.
+ *
+ * @param thread_id
+ *    Id of the thread for which to set priority.
+ *
+ * @param priority
+ *   Priority value to be set.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return nonzero.
+ */
+__rte_experimental
+int rte_thread_set_priority(rte_thread_t thread_id, enum rte_thread_priority priority);
+
+/**
+ * Initialize the attributes of a thread.
+ * These attributes can be passed to the rte_thread_create() function
+ * that will create a new thread and set its attributes according to attr;
+ *
+ * @param attr
+ *   Thread attributes to initialize.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return nonzero.
+ */
+__rte_experimental
+int rte_thread_attr_init(rte_thread_attr_t *attr);
+
+/**
+ * Set the CPU affinity value in the thread attributes pointed to
+ * by 'thread_attr'.
+ *
+ * @param thread_attr
+ *   Points to the thread attributes in which affinity will be updated.
+ *
+ * @param cpuset
+ *   Points to the value of the affinity to be set.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return nonzero.
+ */
+__rte_experimental
+int rte_thread_attr_set_affinity(rte_thread_attr_t *thread_attr, rte_cpuset_t *cpuset);
+
+/**
+ * Get the value of CPU affinity that is set in the thread attributes pointed to
+ * by 'thread_attr'.
+ *
+ * @param thread_attr
+ *   Points to the thread attributes from which affinity will be retrieved.
+ *
+ * @param cpuset
+ *   Pointer to the memory that will store the affinity.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return nonzero.
+ */
+__rte_experimental
+int rte_thread_attr_get_affinity(rte_thread_attr_t *thread_attr, rte_cpuset_t *cpuset);
+
+/**
+ * Set the thread priority value in the thread attributes pointed to
+ * by 'thread_attr'.
+ *
+ * @param thread_attr
+ *   Points to the thread attributes in which priority will be updated.
+ *
+ * @param cpuset
+ *   Points to the value of the priority to be set.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return nonzero.
+ */
+__rte_experimental
+int rte_thread_attr_set_priority(rte_thread_attr_t *thread_attr, enum rte_thread_priority priority);
+
+/**
+ * Create a new thread that will invoke the 'thread_func' routine.
+ *
+ * @param thread_id
+ *    A pointer that will store the id of the newly created thread.
+ *
+ * @param thread_attr
+ *    Attributes that are used at the creation of the new thread.
+ *
+ * @param thread_func
+ *    The routine that the new thread will invoke when starting execution.
+ *
+ * @param args
+ *    Arguments to be passed to the 'thread_func' routine.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return an error number.
+ */
+__rte_experimental
+int rte_thread_create(rte_thread_t *thread_id,
+		      const rte_thread_attr_t *thread_attr,
+		      void *(*thread_func) (void*), void *args);
+
+/**
+ * Waits for the thread identified by 'thread_id' to terminate
+ *
+ * @param thread_id
+ *    The identifier of the thread.
+ *
+ * @param value_ptr
+ *    Stores the exit status of the thread.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return an error number.
+ */
+__rte_experimental
+int rte_thread_join(rte_thread_t thread_id, int *value_ptr);
+
+/**
+ * Initializes a mutex.
+ *
+ * @param mutex
+ *    The mutex to be initialized.
+ *
+ * @param attr
+ *    Attributes for initialization of the mutex.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return an error number.
+ */
+__rte_experimental
+int rte_thread_mutex_init(rte_thread_mutex_t *mutex);
+
+/**
+ * Locks a mutex.
+ *
+ * @param mutex
+ *    The mutex to be locked.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return an error number.
+ */
+__rte_experimental
+int rte_thread_mutex_lock(rte_thread_mutex_t *mutex);
+
+/**
+ * Unlocks a mutex.
+ *
+ * @param mutex
+ *    The mutex to be unlocked.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return an error number.
+ */
+__rte_experimental
+int rte_thread_mutex_unlock(rte_thread_mutex_t *mutex);
+
+/**
+ * Releases all resources associated with a mutex.
+ *
+ * @param mutex
+ *    The mutex to be uninitialized.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return an error number.
+ */
+__rte_experimental
+int rte_thread_mutex_destroy(rte_thread_mutex_t *mutex);
+
+/**
+ * Initializes a synchronization barrier.
+ *
+ * @param barrier
+ *    A pointer that references the newly created 'barrier' object.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return an error number.
+ */
+__rte_experimental
+int rte_thread_barrier_init(rte_thread_barrier_t *barrier, int count);
+
+/**
+ * Causes the calling thread to wait at the synchronization barrier 'barrier'.
+ *
+ * @param barrier
+ *    The barrier used for synchronizing the threads.
+ *
+ * @return
+ *   Return RTE_THREAD_BARRIER_SERIAL_THREAD for the thread synchronized at the barrier.
+ *   Return 0 for all other threads.
+ *   Return error number in case of error.
+ */
+__rte_experimental
+int rte_thread_barrier_wait(rte_thread_barrier_t *barrier);
+
+/**
+ * Releases all resources used by a synchronization barrier
+ * and uninitializes it.
+ *
+ * @param barrier
+ *    The barrier to be uninitialized.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return an error number.
+ */
+__rte_experimental
+int rte_thread_barrier_destroy(rte_thread_barrier_t *barrier);
+
+/**
+ * Terminates a thread.
+ *
+ * @param thread_id
+ *    The id of the thread to be terminated.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return nonzero.
+ */
+__rte_experimental
+int rte_thread_cancel(rte_thread_t thread_id);
 
 /**
  * Set core affinity of the current thread.
@@ -34,7 +353,7 @@ typedef struct eal_tls_key *rte_tls_key;
  * @return
  *   On success, return 0; otherwise return -1;
  */
-int rte_thread_set_affinity(rte_cpuset_t *cpusetp);
+int rte_thread_self_set_affinity(rte_cpuset_t *cpusetp);
 
 /**
  * Get core affinity of the current thread.
@@ -44,7 +363,7 @@ int rte_thread_set_affinity(rte_cpuset_t *cpusetp);
  *   It presumes input is not NULL, otherwise it causes panic.
  *
  */
-void rte_thread_get_affinity(rte_cpuset_t *cpusetp);
+void rte_thread_self_get_affinity(rte_cpuset_t *cpusetp);
 
 /**
  * Create a TLS data key visible to all threads in the process.

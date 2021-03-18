@@ -84,7 +84,7 @@ thread_update_affinity(rte_cpuset_t *cpusetp)
 }
 
 int
-rte_thread_set_affinity(rte_cpuset_t *cpusetp)
+rte_thread_self_set_affinity(rte_cpuset_t *cpusetp)
 {
 	if (pthread_setaffinity_np(pthread_self(), sizeof(rte_cpuset_t),
 			cpusetp) != 0) {
@@ -97,7 +97,7 @@ rte_thread_set_affinity(rte_cpuset_t *cpusetp)
 }
 
 void
-rte_thread_get_affinity(rte_cpuset_t *cpusetp)
+rte_thread_self_get_affinity(rte_cpuset_t *cpusetp)
 {
 	assert(cpusetp);
 	memmove(cpusetp, &RTE_PER_LCORE(_cpuset),
@@ -140,7 +140,7 @@ eal_thread_dump_current_affinity(char *str, unsigned int size)
 {
 	rte_cpuset_t cpuset;
 
-	rte_thread_get_affinity(&cpuset);
+	rte_thread_self_get_affinity(&cpuset);
 	return eal_thread_dump_affinity(&cpuset, str, size);
 }
 
