@@ -109,11 +109,11 @@ mlx5_mr_mem_event_free_cb(struct mlx5_dev_ctx_shared *sh,
 
 		/*
 		 * Flush local caches by propagating invalidation across cores.
-		 * rte_smp_wmb() is to keep the order that dev_gen updated before
+		 * release-fence is to keep the order that dev_gen updated before
 		 * rebuilding global cache. Therefore, other core can flush their
 		 * local cache on time.
 		 */
-		rte_smp_wmb();
+		rte_atomic_thread_fence(__ATOMIC_RELEASE);
 		mlx5_mr_rebuild_cache(&sh->share_cache);
 	}
 	rte_rwlock_write_unlock(&sh->share_cache.rwlock);
@@ -412,11 +412,11 @@ mlx5_dma_unmap(struct rte_pci_device *pdev, void *addr,
 
 	/*
 	 * Flush local caches by propagating invalidation across cores.
-	 * rte_smp_wmb() is to keep the order that dev_gen updated before
+	 * release-fence is to keep the order that dev_gen updated before
 	 * rebuilding global cache. Therefore, other core can flush their
 	 * local cache on time.
 	 */
-	rte_smp_wmb();
+	rte_atomic_thread_fence(__ATOMIC_RELEASE);
 	mlx5_mr_rebuild_cache(&sh->share_cache);
 	rte_rwlock_read_unlock(&sh->share_cache.rwlock);
 	return 0;
