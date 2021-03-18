@@ -93,6 +93,8 @@ struct internal_config {
 	unsigned int no_telemetry; /**< true to disable Telemetry */
 	struct simd_bitwidth max_simd_bitwidth;
 	/**< max simd bitwidth path to use */
+	enum rte_thread_priority thread_priority;
+	/**< thread priority to configure */
 };
 
 void eal_reset_internal_config(struct internal_config *internal_cfg);
