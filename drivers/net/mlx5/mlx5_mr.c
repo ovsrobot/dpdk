@@ -103,20 +103,18 @@ mlx5_mr_mem_event_free_cb(struct mlx5_dev_ctx_shared *sh,
 		rebuild = 1;
 	}
 	if (rebuild) {
-		mlx5_mr_rebuild_cache(&sh->share_cache);
-		/*
-		 * Flush local caches by propagating invalidation across cores.
-		 * rte_smp_wmb() is enough to synchronize this event. If one of
-		 * freed memsegs is seen by other core, that means the memseg
-		 * has been allocated by allocator, which will come after this
-		 * free call. Therefore, this store instruction (incrementing
-		 * generation below) will be guaranteed to be seen by other core
-		 * before the core sees the newly allocated memory.
-		 */
 		++sh->share_cache.dev_gen;
 		DEBUG("broadcasting local cache flush, gen=%d",
-		      sh->share_cache.dev_gen);
+			sh->share_cache.dev_gen);
+
+		/*
+		 * Flush local caches by propagating invalidation across cores.
+		 * rte_smp_wmb() is to keep the order that dev_gen updated before
+		 * rebuilding global cache. Therefore, other core can flush their
+		 * local cache on time.
+		 */
 		rte_smp_wmb();
+		mlx5_mr_rebuild_cache(&sh->share_cache);
 	}
 	rte_rwlock_write_unlock(&sh->share_cache.rwlock);
 }
@@ -407,20 +405,19 @@ mlx5_dma_unmap(struct rte_pci_device *pdev, void *addr,
 	mlx5_mr_free(mr, sh->share_cache.dereg_mr_cb);
 	DEBUG("port %u remove MR(%p) from list", dev->data->port_id,
 	      (void *)mr);
-	mlx5_mr_rebuild_cache(&sh->share_cache);
-	/*
-	 * Flush local caches by propagating invalidation across cores.
-	 * rte_smp_wmb() is enough to synchronize this event. If one of
-	 * freed memsegs is seen by other core, that means the memseg
-	 * has been allocated by allocator, which will come after this
-	 * free call. Therefore, this store instruction (incrementing
-	 * generation below) will be guaranteed to be seen by other core
-	 * before the core sees the newly allocated memory.
-	 */
+
 	++sh->share_cache.dev_gen;
 	DEBUG("broadcasting local cache flush, gen=%d",
-	      sh->share_cache.dev_gen);
+		sh->share_cache.dev_gen);
+
+	/*
+	 * Flush local caches by propagating invalidation across cores.
+	 * rte_smp_wmb() is to keep the order that dev_gen updated before
+	 * rebuilding global cache. Therefore, other core can flush their
+	 * local cache on time.
+	 */
 	rte_smp_wmb();
+	mlx5_mr_rebuild_cache(&sh->share_cache);
 	rte_rwlock_read_unlock(&sh->share_cache.rwlock);
 	return 0;
 }
