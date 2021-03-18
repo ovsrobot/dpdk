@@ -25,6 +25,14 @@ extern "C" {
 #define PATH_MAX _MAX_PATH
 #endif
 
+#define strcasecmp _stricmp
+#define open _open
+#define read _read
+
+#ifndef S_ISREG
+#define S_ISREG(mode)  (((mode)&S_IFMT) == S_IFREG)
+#endif
+
 #ifndef sleep
 #define sleep(x) Sleep(1000 * (x))
 #endif

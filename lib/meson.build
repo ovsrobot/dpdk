@@ -46,6 +46,13 @@ if is_windows
 		'cmdline',
 		'hash',
 		'cfgfile',
+		'metrics',
+		'timer',
+		'gro',
+		'gso',
+		'pdump',
+		'bitratestats',
+		'latencystats',
 	] # only supported libraries for windows
 endif
 
