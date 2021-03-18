@@ -886,6 +886,12 @@ F: drivers/net/txgbe/
 F: doc/guides/nics/txgbe.rst
 F: doc/guides/nics/features/txgbe.ini
 
+Wangxun txgbe
+M: Jiawen Wu <jiawenwu@trustnetic.com>
+F: drivers/net/ngbe/
+F: doc/guides/nics/ngbe.rst
+F: doc/guides/nics/features/ngbe.ini
+
 VMware vmxnet3
 M: Yong Wang <yongwang@vmware.com>
 F: drivers/net/vmxnet3/
