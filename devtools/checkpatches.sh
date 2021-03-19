@@ -199,6 +199,42 @@ check_internal_tags() { # <patch>
 	return $res
 }
 
+check_logtypes() { # <patch>
+	res=0
+
+	cat "$1" |awk '
+	BEGIN {
+		pattern = "";
+		ret = 0;
+	}
+	/^+++ b\// {
+		count = split($2, path, "/")
+		if (count >= 4 && path[2] == "lib") {
+			pattern = "lib\\." gensub(/librte_(.*)/, "\\1", "", path[3])
+		} else if (count >= 5 && path[2] == "drivers") {
+			pattern = "pmd\\." path[3] "\\." path[4]
+		} else {
+			pattern = "";
+		}
+	}
+	/^+.*RTE_LOG_REGISTER\([^,]+,[^,]+,/ {
+		if (pattern == "") {
+			next;
+		}
+		if (!($0 ~ "RTE_LOG_REGISTER\\([^,]+, " pattern "(|\\.[^,]+),")) {
+			print $0
+			print "Added logtype does not comply with pattern: " \
+				gensub(/\\/, "", "g", pattern)
+			ret = 1;
+		}
+	}
+	END {
+		exit ret;
+	}' || res=1
+
+	return $res
+}
+
 number=0
 range='origin/main..'
 quiet=false
@@ -284,6 +320,14 @@ check () { # <patch> <commit> <title>
 
 	! $verbose || printf '\nChecking __rte_internal tags:\n'
 	report=$(check_internal_tags "$tmpinput")
+	if [ $? -ne 0 ] ; then
+		$headline_printed || print_headline "$3"
+		printf '%s\n' "$report"
+		ret=1
+	fi
+
+	! $verbose || printf '\nChecking RTE_LOG_REGISTER:\n'
+	report=$(check_logtypes "$tmpinput")
 	if [ $? -ne 0 ] ; then
 		$headline_printed || print_headline "$3"
 		printf '%s\n' "$report"
