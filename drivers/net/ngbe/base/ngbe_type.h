@@ -7,6 +7,7 @@
 
 #define NGBE_ALIGN		128 /* as intel did */
 
+#include "ngbe_status.h"
 #include "ngbe_osdep.h"
 #include "ngbe_devids.h"
 
