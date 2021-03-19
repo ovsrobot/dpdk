@@ -24,6 +24,7 @@
 #define IPPROTO_NONE      59
 #define IPPROTO_DSTOPTS   60
 #define IPPROTO_SCTP     132
+#define IPPROTO_RAW      255
 
 #define INET6_ADDRSTRLEN 46
 

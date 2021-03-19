@@ -9,7 +9,9 @@
 #include <string.h>
 #include <time.h>
 #include <fcntl.h>
+#ifndef RTE_EXEC_ENV_WINDOWS
 #include <sys/mman.h>
+#endif
 #include <sys/types.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -59,6 +61,10 @@
 #endif
 #ifdef RTE_LIB_LATENCYSTATS
 #include <rte_latencystats.h>
+#endif
+
+#ifdef RTE_EXEC_ENV_WINDOWS
+#include <process.h>
 #endif
 
 #include "testpmd.h"
@@ -372,7 +378,9 @@ uint8_t lsc_interrupt = 1; /* enabled by default */
  */
 uint8_t rmv_interrupt = 1; /* enabled by default */
 
+#ifndef RTE_EXEC_ENV_WINDOWS
 uint8_t hot_plug = 0; /**< hotplug disabled by default. */
+#endif
 
 /* After attach, port setup is called on event or by iterator */
 bool setup_on_probe_event = true;
@@ -524,9 +532,11 @@ static void check_all_ports_link_status(uint32_t port_mask);
 static int eth_event_callback(portid_t port_id,
 			      enum rte_eth_event_type type,
 			      void *param, void *ret_param);
+#ifndef RTE_EXEC_ENV_WINDOWS
 static void dev_event_callback(const char *device_name,
 				enum rte_dev_event_type type,
 				void *param);
+#endif
 
 /*
  * Check if all the ports are started.
@@ -632,6 +642,7 @@ set_def_fwd_config(void)
 	set_default_fwd_ports_config();
 }
 
+#ifndef RTE_EXEC_ENV_WINDOWS
 /* extremely pessimistic estimation of memory required to create a mempool */
 static int
 calc_mem_size(uint32_t nb_mbufs, uint32_t mbuf_sz, size_t pgsz, size_t *out)
@@ -846,6 +857,7 @@ setup_extmem(uint32_t nb_mbufs, uint32_t mbuf_sz, bool huge)
 
 	return 0;
 }
+
 static void
 dma_unmap_cb(struct rte_mempool *mp __rte_unused, void *opaque __rte_unused,
 	     struct rte_mempool_memhdr *memhdr, unsigned mem_idx __rte_unused)
@@ -902,6 +914,7 @@ dma_map_cb(struct rte_mempool *mp __rte_unused, void *opaque __rte_unused,
 		}
 	}
 }
+#endif
 
 static unsigned int
 setup_extbuf(uint32_t nb_mbufs, uint16_t mbuf_sz, unsigned int socket_id,
@@ -972,9 +985,11 @@ mbuf_pool_create(uint16_t mbuf_seg_size, unsigned nb_mbuf,
 {
 	char pool_name[RTE_MEMPOOL_NAMESIZE];
 	struct rte_mempool *rte_mp = NULL;
+#ifndef RTE_EXEC_ENV_WINDOWS
 	uint32_t mb_size;
 
 	mb_size = sizeof(struct rte_mbuf) + mbuf_seg_size;
+#endif
 	mbuf_poolname_build(socket_id, pool_name, sizeof(pool_name), size_idx);
 
 	TESTPMD_LOG(INFO,
@@ -991,6 +1006,7 @@ mbuf_pool_create(uint16_t mbuf_seg_size, unsigned nb_mbuf,
 				mb_mempool_cache, 0, mbuf_seg_size, socket_id);
 			break;
 		}
+#ifndef RTE_EXEC_ENV_WINDOWS
 	case MP_ALLOC_ANON:
 		{
 			rte_mp = rte_mempool_create_empty(pool_name, nb_mbuf,
@@ -1031,6 +1047,7 @@ mbuf_pool_create(uint16_t mbuf_seg_size, unsigned nb_mbuf,
 					heap_socket);
 			break;
 		}
+#endif
 	case MP_ALLOC_XBUF:
 		{
 			struct rte_pktmbuf_extmem *ext_mem;
@@ -1056,7 +1073,7 @@ mbuf_pool_create(uint16_t mbuf_seg_size, unsigned nb_mbuf,
 			rte_exit(EXIT_FAILURE, "Invalid mempool creation mode\n");
 		}
 	}
-
+#ifndef RTE_EXEC_ENV_WINDOWS
 err:
 	if (rte_mp == NULL) {
 		rte_exit(EXIT_FAILURE,
@@ -1065,6 +1082,7 @@ err:
 	} else if (verbose_level > 0) {
 		rte_mempool_dump(stdout, rte_mp);
 	}
+#endif
 	return rte_mp;
 }
 
@@ -3047,11 +3065,14 @@ pmd_test_exit(void)
 {
 	portid_t pt_id;
 	unsigned int i;
+#ifndef RTE_EXEC_ENV_WINDOWS
 	int ret;
+#endif
 
 	if (test_done == 0)
 		stop_packet_forwarding();
 
+#ifndef RTE_EXEC_ENV_WINDOWS
 	for (i = 0 ; i < RTE_DIM(mempools) ; i++) {
 		if (mempools[i]) {
 			if (mp_alloc_type == MP_ALLOC_ANON)
@@ -3059,6 +3080,7 @@ pmd_test_exit(void)
 						     NULL);
 		}
 	}
+#endif
 	if (ports != NULL) {
 		no_link_check = 1;
 		RTE_ETH_FOREACH_DEV(pt_id) {
@@ -3072,7 +3094,7 @@ pmd_test_exit(void)
 			close_port(pt_id);
 		}
 	}
-
+#ifndef RTE_EXEC_ENV_WINDOWS
 	if (hot_plug) {
 		ret = rte_dev_event_monitor_stop();
 		if (ret) {
@@ -3096,6 +3118,7 @@ pmd_test_exit(void)
 			return;
 		}
 	}
+#endif
 	for (i = 0 ; i < RTE_DIM(mempools) ; i++) {
 		if (mempools[i])
 			rte_mempool_free(mempools[i]);
@@ -3259,6 +3282,7 @@ register_eth_event_callback(void)
 	return 0;
 }
 
+#ifndef RTE_EXEC_ENV_WINDOWS
 /* This function is used by the interrupt thread */
 static void
 dev_event_callback(const char *device_name, enum rte_dev_event_type type,
@@ -3308,6 +3332,7 @@ dev_event_callback(const char *device_name, enum rte_dev_event_type type,
 		break;
 	}
 }
+#endif
 
 static void
 rxtx_port_config(struct rte_port *port)
@@ -3759,7 +3784,9 @@ signal_handler(int signum)
 		f_quit = 1;
 		/* exit with the expected status */
 		signal(signum, SIG_DFL);
+#ifndef RTE_EXEC_ENV_WINDOWS
 		kill(getpid(), signum);
+#endif
 	}
 }
 
@@ -3834,10 +3861,12 @@ main(int argc, char** argv)
 	if (argc > 1)
 		launch_args_parse(argc, argv);
 
+#ifndef RTE_EXEC_ENV_WINDOWS
 	if (do_mlockall && mlockall(MCL_CURRENT | MCL_FUTURE)) {
 		TESTPMD_LOG(NOTICE, "mlockall() failed with error \"%s\"\n",
 			strerror(errno));
 	}
+#endif
 
 	if (tx_first && interactive)
 		rte_exit(EXIT_FAILURE, "--tx-first cannot be used on "
@@ -3859,6 +3888,7 @@ main(int argc, char** argv)
 
 	init_config();
 
+#ifndef RTE_EXEC_ENV_WINDOWS
 	if (hot_plug) {
 		ret = rte_dev_hotplug_handle_enable();
 		if (ret) {
@@ -3882,6 +3912,7 @@ main(int argc, char** argv)
 			return -1;
 		}
 	}
+#endif
 
 	if (!no_device_start && start_port(RTE_PORT_ALL) != 0)
 		rte_exit(EXIT_FAILURE, "Start ports failed\n");
@@ -3969,10 +4000,11 @@ main(int argc, char** argv)
 			return 1;
 	}
 
+#ifndef RTE_EXEC_ENV_WINDOWS
 	ret = rte_eal_cleanup();
 	if (ret != 0)
 		rte_exit(EXIT_FAILURE,
 			 "EAL cleanup failed: %s\n", strerror(-ret));
-
+#endif
 	return EXIT_SUCCESS;
 }

@@ -1,10 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2017-2019 Intel Corporation
 
-if is_windows
-	subdir_done()
-endif
-
 apps = [
 	'pdump',
 	'proc-info',
@@ -20,6 +16,11 @@ apps = [
 	'test-pmd',
 	'test-regex',
 	'test-sad']
+
+if is_windows
+	apps = [
+		'test-pmd']
+endif
 
 # for BSD only
 lib_execinfo = cc.find_library('execinfo', required: false)
@@ -73,5 +74,7 @@ foreach app:apps
 	endif
 endforeach
 
-# special case the autotests
-subdir('test')
+if not(is_windows)
+	# special case the autotests
+	subdir('test')
+endif

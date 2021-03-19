@@ -38,7 +38,6 @@
 #include <rte_string_fns.h>
 #include <rte_cycles.h>
 #include <rte_flow.h>
-#include <rte_errno.h>
 #ifdef RTE_NET_IXGBE
 #include <rte_pmd_ixgbe.h>
 #endif
@@ -170,6 +169,27 @@ print_ethaddr(const char *name, struct rte_ether_addr *eth_addr)
 	printf("%s%s", name, buf);
 }
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+clock_gettime_monotonic(struct timespec *tp)
+{
+	LARGE_INTEGER pf, pc;
+	LONGLONG nsec;
+
+	if (QueryPerformanceFrequency(&pf) == 0)
+		return -1;
+
+	if (QueryPerformanceCounter(&pc) == 0)
+		return -1;
+
+	nsec = pc.QuadPart * NS_PER_SEC / pf.QuadPart;
+	tp->tv_sec = nsec / NS_PER_SEC;
+	tp->tv_nsec = nsec - tp->tv_sec * NS_PER_SEC;
+
+	return 0;
+}
+#endif
+
 void
 nic_stats_display(portid_t port_id)
 {
@@ -182,6 +202,7 @@ nic_stats_display(portid_t port_id)
 	uint64_t diff_pkts_rx, diff_pkts_tx, diff_bytes_rx, diff_bytes_tx,
 								diff_ns;
 	uint64_t mpps_rx, mpps_tx, mbps_rx, mbps_tx;
+	int ret;
 	struct rte_eth_stats stats;
 
 	static const char *nic_stats_border = "########################";
@@ -202,7 +223,13 @@ nic_stats_display(portid_t port_id)
 	       "%-"PRIu64"\n", stats.opackets, stats.oerrors, stats.obytes);
 
 	diff_ns = 0;
-	if (clock_gettime(CLOCK_TYPE_ID, &cur_time) == 0) {
+
+#ifdef RTE_EXEC_ENV_WINDOWS
+	ret = clock_gettime_monotonic(&cur_time);
+#else
+	ret = clock_gettime(CLOCK_TYPE_ID, &cur_time);
+#endif
+	if (ret == 0) {
 		uint64_t ns;
 
 		ns = cur_time.tv_sec * NS_PER_SEC;
@@ -2674,7 +2701,7 @@ port_rss_hash_conf_show(portid_t port_id, int show_rss_key)
 
 void
 port_rss_hash_key_update(portid_t port_id, char rss_type[], uint8_t *hash_key,
-			 uint hash_key_len)
+			 unsigned int hash_key_len)
 {
 	struct rte_eth_rss_conf rss_conf;
 	int diag;
@@ -3404,13 +3431,13 @@ set_tx_pkt_split(const char *name)
 }
 
 int
-parse_fec_mode(const char *name, uint32_t *mode)
+parse_fec_mode(const char *name, uint32_t *fec_capa)
 {
 	uint8_t i;
 
 	for (i = 0; i < RTE_DIM(fec_mode_name); i++) {
 		if (strcmp(fec_mode_name[i].name, name) == 0) {
-			*mode = RTE_ETH_FEC_MODE_TO_CAPA(fec_mode_name[i].mode);
+			*fec_capa = RTE_ETH_FEC_MODE_TO_CAPA(fec_mode_name[i].mode);
 			return 0;
 		}
 	}

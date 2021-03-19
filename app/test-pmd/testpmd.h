@@ -761,7 +761,7 @@ inc_tx_burst_stats(struct fwd_stream *fs, uint16_t nb_tx)
 }
 
 /* Prototypes */
-unsigned int parse_item_list(char* str, const char* item_name,
+unsigned int parse_item_list(const char *str, const char *item_name,
 			unsigned int max_items,
 			unsigned int *parsed_items, int check_unique_values);
 void launch_args_parse(int argc, char** argv);
@@ -881,7 +881,7 @@ void show_tx_pkt_segments(void);
 void set_tx_pkt_times(unsigned int *tx_times);
 void show_tx_pkt_times(void);
 void set_tx_pkt_split(const char *name);
-int parse_fec_mode(const char *name, enum rte_eth_fec_mode *mode);
+int parse_fec_mode(const char *name, uint32_t *fec_capa);
 void show_fec_capability(uint32_t num, struct rte_eth_fec_capa *speed_fec_capa);
 void set_nb_pkt_per_burst(uint16_t pkt_burst);
 char *list_pkt_forwarding_modes(void);
@@ -936,7 +936,7 @@ int set_vf_rate_limit(portid_t port_id, uint16_t vf, uint16_t rate,
 
 void port_rss_hash_conf_show(portid_t port_id, int show_rss_key);
 void port_rss_hash_key_update(portid_t port_id, char rss_type[],
-			      uint8_t *hash_key, uint hash_key_len);
+			      uint8_t *hash_key, unsigned int hash_key_len);
 int rx_queue_id_is_invalid(queueid_t rxq_id);
 int tx_queue_id_is_invalid(queueid_t txq_id);
 void setup_gro(const char *onoff, portid_t port_id);
