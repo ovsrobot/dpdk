@@ -76,6 +76,12 @@ New Features
 
   * Added support for txgbevf PMD.
 
+* **Added Wangxun ngbe PMD.**
+
+  Added a new PMD driver for Wangxun 1 Gigabit Ethernet NICs.
+
+  See the :doc:`../nics/ngbe` for more details.
+
 * **Updated testpmd.**
 
   * Added a command line option to configure forced speed for Ethernet port.

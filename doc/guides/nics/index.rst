@@ -47,6 +47,7 @@ Network Interface Controller Drivers
     netvsc
     nfb
     nfp
+    ngbe
     null
     octeontx
     octeontx2
