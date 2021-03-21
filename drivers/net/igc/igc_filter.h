@@ -9,7 +9,6 @@
 #include <rte_ethdev.h>
 #include <rte_ethdev_core.h>
 #include <ethdev_driver.h>
-#include <rte_eth_ctrl.h>
 
 #include "igc_ethdev.h"
 
