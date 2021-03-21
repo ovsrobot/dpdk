@@ -323,7 +323,8 @@ main(int argc, char **argv)
 	uint8_t cdev_id;
 	uint32_t lcore_id;
 
-	/* Initialise DPDK EAL */
+	rte_set_application_usage_hook(comp_perf_usage);
+
 	ret = rte_eal_init(argc, argv);
 	if (ret < 0)
 		rte_exit(EXIT_FAILURE, "Invalid EAL arguments!\n");
