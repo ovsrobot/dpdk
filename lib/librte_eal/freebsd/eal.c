@@ -421,13 +421,13 @@ eal_usage(const char *prgname)
 {
 	rte_usage_hook_t hook = eal_get_application_usage_hook();
 
-	printf("\nUsage: %s ", prgname);
-	eal_common_usage();
-	/* Allow the application to print its usage message too if hook is set */
 	if (hook) {
-		printf("===== Application Usage =====\n\n");
+		/* Print application usage through EAL options parsing. */
 		(hook)(prgname);
+		printf("\n");
 	}
+
+	eal_common_usage();
 }
 
 static inline size_t
