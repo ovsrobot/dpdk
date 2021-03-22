@@ -113,10 +113,7 @@ if not is_windows
 endif
 
 # use pthreads if available for the platform
-if not is_windows
-	add_project_link_arguments('-pthread', language: 'c')
-	dpdk_extra_ldflags += '-pthread'
-endif
+threads_dep = dependency('threads')
 
 # on some OS, maths functions are in a separate library
 if cc.find_library('m', required : false).found()
