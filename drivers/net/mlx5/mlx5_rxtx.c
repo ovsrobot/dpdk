@@ -1325,13 +1325,16 @@ rxq_cq_to_ol_flags(volatile struct mlx5_cqe *cqe)
 	uint32_t ol_flags = 0;
 	uint16_t flags = rte_be_to_cpu_16(cqe->hdr_type_etc);
 
-	ol_flags =
-		TRANSPOSE(flags,
-			  MLX5_CQE_RX_L3_HDR_VALID,
-			  PKT_RX_IP_CKSUM_GOOD) |
-		TRANSPOSE(flags,
-			  MLX5_CQE_RX_L4_HDR_VALID,
-			  PKT_RX_L4_CKSUM_GOOD);
+	if (flags & MLX5_CQE_RX_L3_HDR_VALID)
+		ol_flags |= PKT_RX_IP_CKSUM_GOOD;
+	else
+		ol_flags |= PKT_RX_IP_CKSUM_BAD;
+
+	if (flags & MLX5_CQE_RX_L4_HDR_VALID)
+		ol_flags |= PKT_RX_IP_CKSUM_GOOD;
+	else
+		ol_flags |= PKT_RX_IP_CKSUM_BAD;
+
 	return ol_flags;
 }
 

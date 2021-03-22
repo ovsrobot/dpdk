@@ -44,12 +44,6 @@ extern int mlx5_logtype;
 #define NB_SEGS(m) ((m)->nb_segs)
 #define PORT(m) ((m)->port)
 
-/* Transpose flags. Useful to convert IBV to DPDK flags. */
-#define TRANSPOSE(val, from, to) \
-	(((from) >= (to)) ? \
-	 (((val) & (from)) / ((from) / (to))) : \
-	 (((val) & (from)) * ((to) / (from))))
-
 /*
  * For the case which data is linked with sequence increased index, the
  * array table will be more efficiect than hash table once need to serarch
