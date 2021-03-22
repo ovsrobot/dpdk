@@ -4,6 +4,8 @@
 sources = files('rte_metrics.c', 'rte_metrics_telemetry.c')
 headers = files('rte_metrics.h', 'rte_metrics_telemetry.h')
 
+ext_deps += threads_dep
+
 jansson = dependency('jansson', required: false, method: 'pkg-config')
 if jansson.found()
 	dpdk_conf.set('RTE_HAS_JANSSON', 1)

@@ -3,6 +3,8 @@
 
 includes = [global_inc]
 
+ext_deps += threads_dep
+
 sources = files('telemetry.c', 'telemetry_data.c', 'telemetry_legacy.c')
 headers = files('rte_telemetry.h')
 includes += include_directories('../librte_metrics')
