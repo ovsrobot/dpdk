@@ -4608,7 +4608,8 @@ flow_dv_validate_action_modify_field(const uint64_t action_flags,
 
 	if (action_modify_field->dst.field != RTE_FLOW_FIELD_VALUE &&
 	    action_modify_field->dst.field != RTE_FLOW_FIELD_POINTER) {
-		if (action_modify_field->dst.offset >= dst_width ||
+		if ((action_modify_field->dst.offset +
+		     action_modify_field->width > dst_width) ||
 		    (action_modify_field->dst.offset % 32))
 			return rte_flow_error_set(error, EINVAL,
 						RTE_FLOW_ERROR_TYPE_ACTION,
@@ -4624,7 +4625,8 @@ flow_dv_validate_action_modify_field(const uint64_t action_flags,
 	}
 	if (action_modify_field->src.field != RTE_FLOW_FIELD_VALUE &&
 	    action_modify_field->src.field != RTE_FLOW_FIELD_POINTER) {
-		if (action_modify_field->src.offset >= src_width ||
+		if ((action_modify_field->src.offset +
+		     action_modify_field->width > src_width) ||
 		    (action_modify_field->src.offset % 32))
 			return rte_flow_error_set(error, EINVAL,
 						RTE_FLOW_ERROR_TYPE_ACTION,
@@ -4640,9 +4642,16 @@ flow_dv_validate_action_modify_field(const uint64_t action_flags,
 	}
 	if (action_modify_field->width == 0)
 		return rte_flow_error_set(error, EINVAL,
-						RTE_FLOW_ERROR_TYPE_ACTION,
-						NULL,
-						"width is required for modify action");
+					RTE_FLOW_ERROR_TYPE_ACTION,
+					NULL,
+					"cannot modify 0 bits");
+	else if (action_modify_field->width > dst_width ||
+		 action_modify_field->width > src_width)
+		return rte_flow_error_set(error, EINVAL,
+					RTE_FLOW_ERROR_TYPE_ACTION,
+					NULL,
+					"cannot modify more bits than"
+					" the width of a field");
 	if (action_modify_field->dst.field ==
 	    action_modify_field->src.field)
 		return rte_flow_error_set(error, EINVAL,
