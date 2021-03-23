@@ -20,6 +20,10 @@
 #define RTE_LOGTYPE_TESTAPP1 RTE_LOGTYPE_USER1
 #define RTE_LOGTYPE_TESTAPP2 RTE_LOGTYPE_USER2
 
+static int logtype1;
+static int logtype2;
+RTE_LOG_REGISTER(logtype3, logtype3, ERR)
+
 /*
  * Logs
  * ====
@@ -61,8 +65,23 @@ test_legacy_logs(void)
 static int
 test_logs(void)
 {
-	int logtype1, logtype2;
 	int ret;
+
+#define CHECK_LEVELS(exp_logtype1, exp_logtype2, exp_logtype3) do \
+{ \
+	ret = rte_log_get_level(logtype1); \
+	TEST_ASSERT_EQUAL(ret, exp_logtype1, \
+		"%s:%d, invalid level for logtype1 %d, expecting %d\n", \
+		__FILE__, __LINE__, ret, exp_logtype1); \
+	ret = rte_log_get_level(logtype2); \
+	TEST_ASSERT_EQUAL(ret, exp_logtype2, \
+		"%s:%d, invalid level for logtype2 %d, expecting %d\n", \
+		__FILE__, __LINE__, ret, exp_logtype2); \
+	ret = rte_log_get_level(logtype3); \
+	TEST_ASSERT_EQUAL(ret, exp_logtype3, \
+		"%s:%d, invalid level for logtype3 %d, expecting %d\n", \
+		__FILE__, __LINE__, ret, exp_logtype3); \
+} while (0)
 
 	printf("== dynamic log types\n");
 
@@ -71,15 +90,41 @@ test_logs(void)
 		printf("Cannot register logtype1\n");
 		return -1;
 	}
+	ret = rte_log_get_level(logtype1);
+	TEST_ASSERT_EQUAL(ret, RTE_LOG_INFO,
+		"invalid default level for logtype1 %d, expecting %d\n",
+		ret, RTE_LOG_INFO);
+
 	logtype2 = rte_log_register("logtype2");
 	if (logtype2 < 0) {
 		printf("Cannot register logtype2\n");
 		return -1;
 	}
+	ret = rte_log_get_level(logtype2);
+	TEST_ASSERT_EQUAL(ret, RTE_LOG_INFO,
+		"invalid default level for logtype2 %d, expecting %d\n",
+		ret, RTE_LOG_INFO);
+
+	ret = rte_log_get_level(logtype3);
+	TEST_ASSERT_EQUAL(ret, RTE_LOG_ERR,
+		"invalid default level for logtype3 %d, expecting %d\n",
+		ret, RTE_LOG_ERR);
+
+	rte_log_set_level(logtype1, RTE_LOG_ERR);
+	CHECK_LEVELS(RTE_LOG_ERR, RTE_LOG_INFO, RTE_LOG_ERR);
+
+	rte_log_set_level_regexp("type$", RTE_LOG_EMERG);
+	CHECK_LEVELS(RTE_LOG_ERR, RTE_LOG_INFO, RTE_LOG_ERR);
+
+	rte_log_set_level_regexp("type[23]", RTE_LOG_EMERG);
+	CHECK_LEVELS(RTE_LOG_ERR, RTE_LOG_EMERG, RTE_LOG_EMERG);
+
+	rte_log_set_level_pattern("logtype", RTE_LOG_DEBUG);
+	CHECK_LEVELS(RTE_LOG_ERR, RTE_LOG_EMERG, RTE_LOG_EMERG);
 
 	/* set logtype level low to so we can test global level */
-	rte_log_set_level(logtype1, RTE_LOG_DEBUG);
-	rte_log_set_level(logtype2, RTE_LOG_DEBUG);
+	rte_log_set_level_pattern("logtype*", RTE_LOG_DEBUG);
+	CHECK_LEVELS(RTE_LOG_DEBUG, RTE_LOG_DEBUG, RTE_LOG_DEBUG);
 
 	/* log in error level */
 	rte_log_set_global_level(RTE_LOG_ERR);
@@ -102,6 +147,8 @@ test_logs(void)
 	ret = test_legacy_logs();
 	if (ret < 0)
 		return ret;
+
+#undef CHECK_LEVELS
 
 	return 0;
 }
