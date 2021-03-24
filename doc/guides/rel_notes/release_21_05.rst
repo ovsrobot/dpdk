@@ -94,6 +94,14 @@ New Features
 
   * Added support for preferred busy polling.
 
+* **Updated the OCTEON TX crypto PMD.**
+
+  * Added support for DIGEST_ENCRYPTED mode in OCTEON TX crypto PMD.
+
+* **Updated the OCTEON TX2 crypto PMD.**
+
+  * Added support for DIGEST_ENCRYPTED mode in OCTEON TX2 crypto PMD.
+
 * **Updated testpmd.**
 
   * Added a command line option to configure forced speed for Ethernet port.
