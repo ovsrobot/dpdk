@@ -2784,6 +2784,41 @@ can be used as both source and destination fields as set by ``field``.
 The immediate value ``RTE_FLOW_FIELD_VALUE`` (or a pointer to it
 ``RTE_FLOW_FIELD_POINTER``) is allowed as a source only.
 ``RTE_FLOW_FIELD_START`` is used to point to the beginning of a packet.
+See ``enum rte_flow_field_id`` for the list of supported fields:
+
+.. code-block:: c
+
+   enum rte_flow_field_id {
+        RTE_FLOW_FIELD_START = 0,       /**< Start of a packet. */
+        RTE_FLOW_FIELD_MAC_DST,         /**< Destination MAC Address. */
+        RTE_FLOW_FIELD_MAC_SRC,         /**< Source MAC Address. */
+        RTE_FLOW_FIELD_VLAN_TYPE,       /**< 802.1Q Tag Identifier. */
+        RTE_FLOW_FIELD_VLAN_ID,         /**< 802.1Q VLAN Identifier. */
+        RTE_FLOW_FIELD_MAC_TYPE,        /**< EtherType. */
+        RTE_FLOW_FIELD_IPV4_DSCP,       /**< IPv4 DSCP. */
+        RTE_FLOW_FIELD_IPV4_TTL,        /**< IPv4 Time To Live. */
+        RTE_FLOW_FIELD_IPV4_SRC,        /**< IPv4 Source Address. */
+        RTE_FLOW_FIELD_IPV4_DST,        /**< IPv4 Destination Address. */
+        RTE_FLOW_FIELD_IPV6_DSCP,       /**< IPv6 DSCP. */
+        RTE_FLOW_FIELD_IPV6_HOPLIMIT,   /**< IPv6 Hop Limit. */
+        RTE_FLOW_FIELD_IPV6_SRC,        /**< IPv6 Source Address. */
+        RTE_FLOW_FIELD_IPV6_DST,        /**< IPv6 Destination Address. */
+        RTE_FLOW_FIELD_TCP_PORT_SRC,    /**< TCP Source Port Number. */
+        RTE_FLOW_FIELD_TCP_PORT_DST,    /**< TCP Destination Port Number. */
+        RTE_FLOW_FIELD_TCP_SEQ_NUM,     /**< TCP Sequence Number. */
+        RTE_FLOW_FIELD_TCP_ACK_NUM,     /**< TCP Acknowledgment Number. */
+        RTE_FLOW_FIELD_TCP_FLAGS,       /**< TCP Flags. */
+        RTE_FLOW_FIELD_UDP_PORT_SRC,    /**< UDP Source Port Number. */
+        RTE_FLOW_FIELD_UDP_PORT_DST,    /**< UDP Destination Port Number. */
+        RTE_FLOW_FIELD_VXLAN_VNI,       /**< VXLAN Network Identifier. */
+        RTE_FLOW_FIELD_GENEVE_VNI,      /**< GENEVE Network Identifier. */
+        RTE_FLOW_FIELD_GTP_TEID,        /**< GTP Tunnel Endpoint Identifier. */
+        RTE_FLOW_FIELD_TAG,             /**< Tag value. */
+        RTE_FLOW_FIELD_MARK,            /**< Mark value. */
+        RTE_FLOW_FIELD_META,            /**< Metadata value. */
+        RTE_FLOW_FIELD_POINTER,         /**< Memory pointer. */
+        RTE_FLOW_FIELD_VALUE,           /**< Immediate value. */
+   };
 
 ``op`` selects the operation to perform on a destination field.
 - ``set`` copies the data from ``src`` field to ``dst`` field.
@@ -2817,12 +2852,15 @@ for ``RTE_FLOW_FIELD_VALUE`` and ``RTE_FLOW_FIELD_POINTER`` respectively.
 
 .. table:: MODIFY_FIELD
 
-   +-----------------------------------------+
+   +---------------+-------------------------+
    | Field         | Value                   |
    +===============+=========================+
    | ``op``        | operation to perform    |
+   +---------------+-------------------------+
    | ``dst``       | destination field       |
+   +---------------+-------------------------+
    | ``src``       | source field            |
+   +---------------+-------------------------+
    | ``width``     | number of bits to use   |
    +---------------+-------------------------+
 
@@ -2830,12 +2868,15 @@ for ``RTE_FLOW_FIELD_VALUE`` and ``RTE_FLOW_FIELD_POINTER`` respectively.
 
 .. table:: destination/source field definition
 
-   +--------------------------------------------------------------------------+
+   +---------------+----------------------------------------------------------+
    | Field         | Value                                                    |
    +===============+==========================================================+
    | ``field``     | ID: packet field, mark, meta, tag, immediate, pointer    |
+   +---------------+----------------------------------------------------------+
    | ``level``     | encapsulation level of a packet field or tag array index |
+   +---------------+----------------------------------------------------------+
    | ``offset``    | number of bits to skip at the beginning                  |
+   +---------------+----------------------------------------------------------+
    | ``value``     | immediate value or a pointer to this value               |
    +---------------+----------------------------------------------------------+
 
