@@ -170,6 +170,7 @@ struct rte_thread_ctrl_params {
 	void *(*start_routine)(void *);
 	void *arg;
 	pthread_barrier_t configured;
+	bool barrier_in_use;
 };
 
 static void *ctrl_thread_init(void *arg)
@@ -186,9 +187,13 @@ static void *ctrl_thread_init(void *arg)
 
 	ret = pthread_barrier_wait(&params->configured);
 	if (ret == PTHREAD_BARRIER_SERIAL_THREAD) {
+		while (__atomic_load_n(&params->barrier_in_use,
+				       __ATOMIC_ACQUIRE))
+			sched_yield();
 		pthread_barrier_destroy(&params->configured);
 		free(params);
-	}
+	} else
+		__atomic_store_n(&params->barrier_in_use, 0, __ATOMIC_RELEASE);
 
 	return start_routine(routine_arg);
 }
@@ -210,6 +215,7 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 
 	params->start_routine = start_routine;
 	params->arg = arg;
+	params->barrier_in_use = 1;
 
 	pthread_barrier_init(&params->configured, NULL, 2);
 
@@ -232,18 +238,26 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 
 	ret = pthread_barrier_wait(&params->configured);
 	if (ret == PTHREAD_BARRIER_SERIAL_THREAD) {
+		while (__atomic_load_n(&params->barrier_in_use,
+				       __ATOMIC_ACQUIRE))
+			sched_yield();
 		pthread_barrier_destroy(&params->configured);
 		free(params);
-	}
+	} else
+		__atomic_store_n(&params->barrier_in_use, 0, __ATOMIC_RELEASE);
 
 	return 0;
 
 fail:
 	if (PTHREAD_BARRIER_SERIAL_THREAD ==
 	    pthread_barrier_wait(&params->configured)) {
+		while (__atomic_load_n(&params->barrier_in_use,
+				       __ATOMIC_ACQUIRE))
+			sched_yield();
 		pthread_barrier_destroy(&params->configured);
 		free(params);
-	}
+	} else
+		__atomic_store_n(&params->barrier_in_use, 0, __ATOMIC_RELEASE);
 	pthread_cancel(*thread);
 	pthread_join(*thread, NULL);
 	return -ret;
