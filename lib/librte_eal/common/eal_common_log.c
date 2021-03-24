@@ -135,6 +135,38 @@ rte_log_can_log(uint32_t logtype, uint32_t level)
 	return true;
 }
 
+static const char *
+loglevel_to_string(uint32_t level)
+{
+	switch (level) {
+	case 0: return "disabled";
+	case RTE_LOG_EMERG: return "emerg";
+	case RTE_LOG_ALERT: return "alert";
+	case RTE_LOG_CRIT: return "critical";
+	case RTE_LOG_ERR: return "error";
+	case RTE_LOG_WARNING: return "warning";
+	case RTE_LOG_NOTICE: return "notice";
+	case RTE_LOG_INFO: return "info";
+	case RTE_LOG_DEBUG: return "debug";
+	default: return "unknown";
+	}
+}
+
+static void
+logtype_set_level(uint32_t type, uint32_t level)
+{
+	uint32_t current = rte_logs.dynamic_types[type].loglevel;
+
+	if (current != level) {
+		rte_logs.dynamic_types[type].loglevel = level;
+		RTE_LOG(DEBUG, EAL, "%s logtype level changed from %s to %s\n",
+			rte_logs.dynamic_types[type].name == NULL ?
+				"" : rte_logs.dynamic_types[type].name,
+			loglevel_to_string(current),
+			loglevel_to_string(level));
+	}
+}
+
 int
 rte_log_set_level(uint32_t type, uint32_t level)
 {
@@ -143,7 +175,7 @@ rte_log_set_level(uint32_t type, uint32_t level)
 	if (level > RTE_LOG_DEBUG)
 		return -1;
 
-	rte_logs.dynamic_types[type].loglevel = level;
+	logtype_set_level(type, level);
 
 	return 0;
 }
@@ -166,7 +198,7 @@ rte_log_set_level_regexp(const char *regex, uint32_t level)
 			continue;
 		if (regexec(&r, rte_logs.dynamic_types[i].name, 0,
 				NULL, 0) == 0)
-			rte_logs.dynamic_types[i].loglevel = level;
+			logtype_set_level(i, level);
 	}
 
 	regfree(&r);
@@ -226,7 +258,7 @@ rte_log_set_level_pattern(const char *pattern, uint32_t level)
 			continue;
 
 		if (fnmatch(pattern, rte_logs.dynamic_types[i].name, 0) == 0)
-			rte_logs.dynamic_types[i].loglevel = level;
+			logtype_set_level(i, level);
 	}
 
 	return 0;
@@ -264,29 +296,11 @@ rte_log_lookup(const char *name)
 	return -1;
 }
 
-/* register an extended log type, assuming table is large enough, and id
- * is not yet registered.
- */
 static int
-__rte_log_register(const char *name, int id)
-{
-	char *dup_name = strdup(name);
-
-	if (dup_name == NULL)
-		return -ENOMEM;
-
-	rte_logs.dynamic_types[id].name = dup_name;
-	rte_logs.dynamic_types[id].loglevel = RTE_LOG_INFO;
-
-	return id;
-}
-
-/* register an extended log type */
-int
-rte_log_register(const char *name)
+__rte_log_register(const char *name, uint32_t level)
 {
 	struct rte_log_dynamic_type *new_dynamic_types;
-	int id, ret;
+	int id;
 
 	id = rte_log_lookup(name);
 	if (id >= 0)
@@ -299,13 +313,24 @@ rte_log_register(const char *name)
 		return -ENOMEM;
 	rte_logs.dynamic_types = new_dynamic_types;
 
-	ret = __rte_log_register(name, rte_logs.dynamic_types_len);
-	if (ret < 0)
-		return ret;
+	id = rte_logs.dynamic_types_len;
+	memset(&rte_logs.dynamic_types[id], 0,
+		sizeof(rte_logs.dynamic_types[id]));
+	rte_logs.dynamic_types[id].name = strdup(name);
+	if (rte_logs.dynamic_types[id].name == NULL)
+		return -ENOMEM;
+	logtype_set_level(id, level);
 
 	rte_logs.dynamic_types_len++;
 
-	return ret;
+	return id;
+}
+
+/* register an extended log type */
+int
+rte_log_register(const char *name)
+{
+	return __rte_log_register(name, RTE_LOG_INFO);
 }
 
 /* Register an extended log type and try to pick its level from EAL options */
@@ -314,11 +339,6 @@ rte_log_register_type_and_pick_level(const char *name, uint32_t level_def)
 {
 	struct rte_eal_opt_loglevel *opt_ll;
 	uint32_t level = level_def;
-	int type;
-
-	type = rte_log_register(name);
-	if (type < 0)
-		return type;
 
 	TAILQ_FOREACH(opt_ll, &opt_loglevel_list, next) {
 		if (opt_ll->level > RTE_LOG_DEBUG)
@@ -333,9 +353,7 @@ rte_log_register_type_and_pick_level(const char *name, uint32_t level_def)
 		}
 	}
 
-	rte_logs.dynamic_types[type].loglevel = level;
-
-	return type;
+	return __rte_log_register(name, level);
 }
 
 struct logtype {
@@ -388,28 +406,13 @@ RTE_INIT_PRIO(rte_log_init, LOG)
 		return;
 
 	/* register legacy log types */
-	for (i = 0; i < RTE_DIM(logtype_strings); i++)
-		__rte_log_register(logtype_strings[i].logtype,
-				logtype_strings[i].log_id);
+	for (i = 0; i < RTE_DIM(logtype_strings); i++) {
+		rte_logs.dynamic_types[logtype_strings[i].log_id].name =
+			strdup(logtype_strings[i].logtype);
+		logtype_set_level(logtype_strings[i].log_id, RTE_LOG_INFO);
+	}
 
 	rte_logs.dynamic_types_len = RTE_LOGTYPE_FIRST_EXT_ID;
-}
-
-static const char *
-loglevel_to_string(uint32_t level)
-{
-	switch (level) {
-	case 0: return "disabled";
-	case RTE_LOG_EMERG: return "emerg";
-	case RTE_LOG_ALERT: return "alert";
-	case RTE_LOG_CRIT: return "critical";
-	case RTE_LOG_ERR: return "error";
-	case RTE_LOG_WARNING: return "warning";
-	case RTE_LOG_NOTICE: return "notice";
-	case RTE_LOG_INFO: return "info";
-	case RTE_LOG_DEBUG: return "debug";
-	default: return "unknown";
-	}
 }
 
 /* dump global level and registered log types */
