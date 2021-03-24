@@ -101,6 +101,14 @@ New Features
   * Added command to display Rx queue used descriptor count.
     ``show port (port_id) rxq (queue_id) desc used count``
 
+* **Add Event device vector capability.**
+
+  * Added ``rte_event_vector`` data structure which is capable of holding
+    multiple ``uintptr_t`` of the same flow thereby allowing applications
+    to vectorize their pipelines and also reduce the complexity of pipelining
+    the events across multiple stages.
+  * This also reduces the scheduling overhead on a event device.
+
 
 Removed Items
 -------------
