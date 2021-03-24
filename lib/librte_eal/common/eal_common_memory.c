@@ -1010,6 +1010,13 @@ rte_eal_memory_detach(void)
 	size_t page_sz = rte_mem_page_size();
 	unsigned int i;
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+	/* Multi-process is not supported, detaching is not needed.
+	 * mcfg->mp_status can't be used: it's always "unknown" on Windows.
+	 */
+	return 0;
+#endif
+
 	rte_rwlock_write_lock(&mcfg->memory_hotplug_lock);
 
 	/* detach internal memory subsystem data first */
@@ -1032,7 +1039,7 @@ rte_eal_memory_detach(void)
 		if (!msl->external)
 			if (rte_mem_unmap(msl->base_va, msl->len) != 0)
 				RTE_LOG(ERR, EAL, "Could not unmap memory: %s\n",
-						strerror(errno));
+						rte_strerror(rte_errno));
 
 		/*
 		 * we are detaching the fbarray rather than destroying because
