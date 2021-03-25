@@ -296,6 +296,52 @@ __rte_experimental
 int rte_thread_mutex_destroy(rte_thread_mutex_t *mutex);
 
 /**
+ * Initializes a synchronization barrier.
+ *
+ * @param barrier
+ *    A pointer that references the newly created 'barrier' object.
+ *
+ * @param count
+ *    The number of threads that must enter the barrier before
+ *    the threads can continue execution.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_barrier_init(rte_thread_barrier_t *barrier, int count);
+
+/**
+ * Causes the calling thread to wait at the synchronization barrier 'barrier'.
+ *
+ * @param barrier
+ *    The barrier used for synchronizing the threads.
+ *
+ * @return
+ *   Return RTE_THREAD_BARRIER_SERIAL_THREAD for the thread synchronized
+ *      at the barrier.
+ *   Return 0 for all other threads.
+ *   Return a positive errno-style error number, in case of failure.
+ */
+__rte_experimental
+int rte_thread_barrier_wait(rte_thread_barrier_t *barrier);
+
+/**
+ * Releases all resources used by a synchronization barrier
+ * and uninitializes it.
+ *
+ * @param barrier
+ *    The barrier to be destroyed.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_barrier_destroy(rte_thread_barrier_t *barrier);
+
+/**
  * Terminates a thread.
  *
  * @param thread_id

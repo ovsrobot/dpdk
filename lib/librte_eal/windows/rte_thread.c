@@ -446,6 +446,33 @@ rte_thread_mutex_destroy(rte_thread_mutex_t *mutex)
 }
 
 int
+rte_thread_barrier_init(rte_thread_barrier_t *barrier, int count)
+{
+	int ret = 0;
+
+	if (!InitializeSynchronizationBarrier(barrier, count, -1)) {
+		ret = rte_thread_translate_win32_error(GetLastError());
+		RTE_LOG_WIN32_ERR("InitializeSynchronizationBarrier()");
+		return ret;
+	}
+	return 0;
+}
+
+int
+rte_thread_barrier_wait(rte_thread_barrier_t *barrier)
+{
+	return EnterSynchronizationBarrier(barrier,
+				SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY);
+}
+
+int
+rte_thread_barrier_destroy(rte_thread_barrier_t *barrier)
+{
+	DeleteSynchronizationBarrier(barrier);
+	return 0;
+}
+
+int
 rte_thread_cancel(rte_thread_t thread_id)
 {
 	int ret = 0;
