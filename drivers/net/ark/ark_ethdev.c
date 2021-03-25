@@ -618,12 +618,12 @@ eth_ark_dev_start(struct rte_eth_dev *dev)
 		ark_pktchkr_run(ark->pc);
 
 	if (ark->start_pg && (dev->data->port_id == 0)) {
-		pthread_t thread;
+		rte_thread_t thread;
 
 		/* Delay packet generatpr start allow the hardware to be ready
 		 * This is only used for sanity checking with internal generator
 		 */
-		if (pthread_create(&thread, NULL, delay_pg_start, ark)) {
+		if (rte_thread_create(&thread, NULL, delay_pg_start, ark)) {
 			ARK_PMD_LOG(ERR, "Could not create pktgen "
 				    "starter thread\n");
 			return -1;

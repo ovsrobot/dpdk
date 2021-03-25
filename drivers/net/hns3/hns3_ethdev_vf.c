@@ -1107,7 +1107,7 @@ hns3vf_interrupt_handler(void *param)
 	uint32_t clearval;
 
 	if (hw->irq_thread_id == 0)
-		hw->irq_thread_id = pthread_self();
+		hw->irq_thread_id = rte_thread_self();
 
 	/* Disable interrupt */
 	hns3vf_disable_irq0(hw);

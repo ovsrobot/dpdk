@@ -101,7 +101,7 @@ hns3_get_mbx_resp(struct hns3_hw *hw, uint16_t code0, uint16_t code1,
 		 * Sending mbox in the interrupt thread cannot wait for the
 		 * response, so polling the mbox response on the irq thread.
 		 */
-		if (pthread_equal(hw->irq_thread_id, pthread_self())) {
+		if (rte_thread_equal(hw->irq_thread_id, rte_thread_self())) {
 			in_irq = true;
 			hns3_poll_all_sync_msg();
 		} else {

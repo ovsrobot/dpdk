@@ -632,7 +632,7 @@ struct mlx5_txpp_ts {
 
 /* Tx packet pacing structure. */
 struct mlx5_dev_txpp {
-	pthread_mutex_t mutex; /* Pacing create/destroy mutex. */
+	rte_thread_mutex_t mutex; /* Pacing create/destroy mutex. */
 	uint32_t refcnt; /* Pacing reference counter. */
 	uint32_t freq; /* Timestamp frequency, Hz. */
 	uint32_t tick; /* Completion tick duration in nanoseconds. */

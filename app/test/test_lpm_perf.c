@@ -25,7 +25,7 @@ static volatile uint32_t thr_id;
 static uint64_t gwrite_cycles;
 static uint32_t num_writers;
 /* LPM APIs are not thread safe, use mutex to provide thread safety */
-static pthread_mutex_t lpm_mutex = PTHREAD_MUTEX_INITIALIZER;
+static rte_thread_mutex_t lpm_mutex = RTE_THREAD_MUTEX_INITIALIZER;
 
 /* Report quiescent state interval every 1024 lookups. Larger critical
  * sections in reader will result in writer polling multiple times.
@@ -443,7 +443,7 @@ test_lpm_rcu_qsbr_writer(void *arg)
 		/* Add all the entries */
 		for (j = si; j < ei; j++) {
 			if (num_writers > 1)
-				pthread_mutex_lock(&lpm_mutex);
+				rte_thread_mutex_lock(&lpm_mutex);
 			if (rte_lpm_add(lpm, large_ldepth_route_table[j].ip,
 					large_ldepth_route_table[j].depth,
 					next_hop_add) != 0) {
@@ -452,13 +452,13 @@ test_lpm_rcu_qsbr_writer(void *arg)
 				goto error;
 			}
 			if (num_writers > 1)
-				pthread_mutex_unlock(&lpm_mutex);
+				rte_thread_mutex_unlock(&lpm_mutex);
 		}
 
 		/* Delete all the entries */
 		for (j = si; j < ei; j++) {
 			if (num_writers > 1)
-				pthread_mutex_lock(&lpm_mutex);
+				rte_thread_mutex_lock(&lpm_mutex);
 			if (rte_lpm_delete(lpm, large_ldepth_route_table[j].ip,
 				large_ldepth_route_table[j].depth) != 0) {
 				printf("Failed to delete iteration %d, route# %d\n",
@@ -466,7 +466,7 @@ test_lpm_rcu_qsbr_writer(void *arg)
 				goto error;
 			}
 			if (num_writers > 1)
-				pthread_mutex_unlock(&lpm_mutex);
+				rte_thread_mutex_unlock(&lpm_mutex);
 		}
 	}
 
@@ -478,7 +478,7 @@ test_lpm_rcu_qsbr_writer(void *arg)
 
 error:
 	if (num_writers > 1)
-		pthread_mutex_unlock(&lpm_mutex);
+		rte_thread_mutex_unlock(&lpm_mutex);
 	return -1;
 }
 

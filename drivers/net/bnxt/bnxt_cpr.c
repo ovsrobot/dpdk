@@ -135,7 +135,7 @@ void bnxt_handle_async_event(struct bnxt *bp,
 			return;
 		}
 
-		pthread_mutex_lock(&bp->err_recovery_lock);
+		rte_thread_mutex_lock(&bp->err_recovery_lock);
 		event_data = rte_le_to_cpu_32(async_cmp->event_data1);
 		/* timestamp_lo/hi values are in units of 100ms */
 		bp->fw_reset_max_msecs = async_cmp->timestamp_hi ?
@@ -157,7 +157,7 @@ void bnxt_handle_async_event(struct bnxt *bp,
 		}
 
 		bp->flags |= BNXT_FLAG_FW_RESET;
-		pthread_mutex_unlock(&bp->err_recovery_lock);
+		rte_thread_mutex_unlock(&bp->err_recovery_lock);
 		rte_eal_alarm_set(US_PER_MS, bnxt_dev_reset_and_resume,
 				  (void *)bp);
 		break;

@@ -1043,7 +1043,7 @@ static int bnxt_dev_configure_op(struct rte_eth_dev *eth_dev)
 		 * are calculated correctly.
 		 */
 
-		pthread_mutex_lock(&bp->def_cp_lock);
+		rte_thread_mutex_lock(&bp->def_cp_lock);
 
 		if (!BNXT_HAS_NQ(bp) && bp->async_cp_ring) {
 			bnxt_disable_int(bp);
@@ -1053,20 +1053,20 @@ static int bnxt_dev_configure_op(struct rte_eth_dev *eth_dev)
 		rc = bnxt_hwrm_func_reserve_vf_resc(bp, false);
 		if (rc) {
 			PMD_DRV_LOG(ERR, "HWRM resource alloc fail:%x\n", rc);
-			pthread_mutex_unlock(&bp->def_cp_lock);
+			rte_thread_mutex_unlock(&bp->def_cp_lock);
 			return -ENOSPC;
 		}
 
 		if (!BNXT_HAS_NQ(bp) && bp->async_cp_ring) {
 			rc = bnxt_alloc_async_cp_ring(bp);
 			if (rc) {
-				pthread_mutex_unlock(&bp->def_cp_lock);
+				rte_thread_mutex_unlock(&bp->def_cp_lock);
 				return rc;
 			}
 			bnxt_enable_int(bp);
 		}
 
-		pthread_mutex_unlock(&bp->def_cp_lock);
+		rte_thread_mutex_unlock(&bp->def_cp_lock);
 	}
 
 	/* Inherit new configurations */
@@ -1443,14 +1443,14 @@ static int bnxt_dev_stop_op(struct rte_eth_dev *eth_dev)
 {
 	struct bnxt *bp = eth_dev->data->dev_private;
 
-	pthread_mutex_lock(&bp->err_recovery_lock);
+	rte_thread_mutex_lock(&bp->err_recovery_lock);
 	if (bp->flags & BNXT_FLAG_FW_RESET) {
 		PMD_DRV_LOG(ERR,
 			    "Adapter recovering from error..Please retry\n");
-		pthread_mutex_unlock(&bp->err_recovery_lock);
+		rte_thread_mutex_unlock(&bp->err_recovery_lock);
 		return -EAGAIN;
 	}
-	pthread_mutex_unlock(&bp->err_recovery_lock);
+	rte_thread_mutex_unlock(&bp->err_recovery_lock);
 
 	return bnxt_dev_stop(eth_dev);
 }
@@ -1532,13 +1532,13 @@ error:
 static void
 bnxt_uninit_locks(struct bnxt *bp)
 {
-	pthread_mutex_destroy(&bp->flow_lock);
-	pthread_mutex_destroy(&bp->def_cp_lock);
-	pthread_mutex_destroy(&bp->health_check_lock);
-	pthread_mutex_destroy(&bp->err_recovery_lock);
+	rte_thread_mutex_destroy(&bp->flow_lock);
+	rte_thread_mutex_destroy(&bp->def_cp_lock);
+	rte_thread_mutex_destroy(&bp->health_check_lock);
+	rte_thread_mutex_destroy(&bp->err_recovery_lock);
 	if (bp->rep_info) {
-		pthread_mutex_destroy(&bp->rep_info->vfr_lock);
-		pthread_mutex_destroy(&bp->rep_info->vfr_start_lock);
+		rte_thread_mutex_destroy(&bp->rep_info->vfr_lock);
+		rte_thread_mutex_destroy(&bp->rep_info->vfr_start_lock);
 	}
 }
 
@@ -1571,14 +1571,14 @@ static int bnxt_dev_close_op(struct rte_eth_dev *eth_dev)
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
-	pthread_mutex_lock(&bp->err_recovery_lock);
+	rte_thread_mutex_lock(&bp->err_recovery_lock);
 	if (bp->flags & BNXT_FLAG_FW_RESET) {
 		PMD_DRV_LOG(ERR,
 			    "Adapter recovering from error...Please retry\n");
-		pthread_mutex_unlock(&bp->err_recovery_lock);
+		rte_thread_mutex_unlock(&bp->err_recovery_lock);
 		return -EAGAIN;
 	}
-	pthread_mutex_unlock(&bp->err_recovery_lock);
+	rte_thread_mutex_unlock(&bp->err_recovery_lock);
 
 	/* cancel the recovery handler before remove dev */
 	rte_eal_alarm_cancel(bnxt_dev_reset_and_resume, (void *)bp);
@@ -4066,7 +4066,7 @@ static void bnxt_dev_recover(void *arg)
 		goto err_start;
 
 	PMD_DRV_LOG(INFO, "Recovered from FW reset\n");
-	pthread_mutex_unlock(&bp->err_recovery_lock);
+	rte_thread_mutex_unlock(&bp->err_recovery_lock);
 
 	return;
 err_start:
@@ -4074,7 +4074,7 @@ err_start:
 err:
 	bp->flags |= BNXT_FLAG_FATAL_ERROR;
 	bnxt_uninit_resources(bp, false);
-	pthread_mutex_unlock(&bp->err_recovery_lock);
+	rte_thread_mutex_unlock(&bp->err_recovery_lock);
 	PMD_DRV_LOG(ERR, "Failed to recover from FW reset\n");
 }
 
@@ -4244,7 +4244,7 @@ void bnxt_schedule_fw_health_check(struct bnxt *bp)
 {
 	uint32_t polling_freq;
 
-	pthread_mutex_lock(&bp->health_check_lock);
+	rte_thread_mutex_lock(&bp->health_check_lock);
 
 	if (!bnxt_is_recovery_enabled(bp))
 		goto done;
@@ -4259,7 +4259,7 @@ void bnxt_schedule_fw_health_check(struct bnxt *bp)
 	bp->flags |= BNXT_FLAG_FW_HEALTH_CHECK_SCHEDULED;
 
 done:
-	pthread_mutex_unlock(&bp->health_check_lock);
+	rte_thread_mutex_unlock(&bp->health_check_lock);
 }
 
 static void bnxt_cancel_fw_health_check(struct bnxt *bp)
@@ -5048,25 +5048,25 @@ bnxt_init_locks(struct bnxt *bp)
 {
 	int err;
 
-	err = pthread_mutex_init(&bp->flow_lock, NULL);
+	err = rte_thread_mutex_init(&bp->flow_lock);
 	if (err) {
 		PMD_DRV_LOG(ERR, "Unable to initialize flow_lock\n");
 		return err;
 	}
 
-	err = pthread_mutex_init(&bp->def_cp_lock, NULL);
+	err = rte_thread_mutex_init(&bp->def_cp_lock);
 	if (err) {
 		PMD_DRV_LOG(ERR, "Unable to initialize def_cp_lock\n");
 		return err;
 	}
 
-	err = pthread_mutex_init(&bp->health_check_lock, NULL);
+	err = rte_thread_mutex_init(&bp->health_check_lock);
 	if (err) {
 		PMD_DRV_LOG(ERR, "Unable to initialize health_check_lock\n");
 		return err;
 	}
 
-	err = pthread_mutex_init(&bp->err_recovery_lock, NULL);
+	err = rte_thread_mutex_init(&bp->err_recovery_lock);
 	if (err)
 		PMD_DRV_LOG(ERR, "Unable to initialize err_recovery_lock\n");
 
@@ -5833,14 +5833,14 @@ static int bnxt_init_rep_info(struct bnxt *bp)
 	for (i = 0; i < BNXT_MAX_CFA_CODE; i++)
 		bp->cfa_code_map[i] = BNXT_VF_IDX_INVALID;
 
-	rc = pthread_mutex_init(&bp->rep_info->vfr_lock, NULL);
+	rc = rte_thread_mutex_init(&bp->rep_info->vfr_lock);
 	if (rc) {
 		PMD_DRV_LOG(ERR, "Unable to initialize vfr_lock\n");
 		bnxt_free_rep_info(bp);
 		return rc;
 	}
 
-	rc = pthread_mutex_init(&bp->rep_info->vfr_start_lock, NULL);
+	rc = rte_thread_mutex_init(&bp->rep_info->vfr_start_lock);
 	if (rc) {
 		PMD_DRV_LOG(ERR, "Unable to initialize vfr_start_lock\n");
 		bnxt_free_rep_info(bp);
