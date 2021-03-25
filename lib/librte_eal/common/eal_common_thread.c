@@ -170,11 +170,11 @@ struct rte_thread_ctrl_params {
 	void *(*start_routine)(void *);
 	void *arg;
 	pthread_barrier_t configured;
+	unsigned int barrier_refcnt;
 };
 
 static void *ctrl_thread_init(void *arg)
 {
-	int ret;
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 	rte_cpuset_t *cpuset = &internal_conf->ctrl_cpuset;
@@ -184,8 +184,9 @@ static void *ctrl_thread_init(void *arg)
 
 	__rte_thread_init(rte_lcore_id(), cpuset);
 
-	ret = pthread_barrier_wait(&params->configured);
-	if (ret == PTHREAD_BARRIER_SERIAL_THREAD) {
+	pthread_barrier_wait(&params->configured);
+	if (__atomic_sub_fetch(&params->barrier_refcnt, 1,
+				__ATOMIC_ACQ_REL) == 0) {
 		pthread_barrier_destroy(&params->configured);
 		free(params);
 	}
@@ -210,14 +211,16 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 
 	params->start_routine = start_routine;
 	params->arg = arg;
-
-	pthread_barrier_init(&params->configured, NULL, 2);
-
-	ret = pthread_create(thread, attr, ctrl_thread_init, (void *)params);
+	__atomic_store_n(&params->barrier_refcnt, 2, __ATOMIC_RELEASE);
+	ret = pthread_barrier_init(&params->configured, NULL, 2);
 	if (ret != 0) {
 		free(params);
 		return -ret;
 	}
+
+	ret = pthread_create(thread, attr, ctrl_thread_init, (void *)params);
+	if (ret != 0)
+		goto fail;
 
 	if (name != NULL) {
 		ret = rte_thread_setname(*thread, name);
@@ -227,25 +230,26 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 	}
 
 	ret = pthread_setaffinity_np(*thread, sizeof(*cpuset), cpuset);
-	if (ret)
-		goto fail;
+	if (ret != 0)
+		goto fail_cancel;
 
-	ret = pthread_barrier_wait(&params->configured);
-	if (ret == PTHREAD_BARRIER_SERIAL_THREAD) {
+	pthread_barrier_wait(&params->configured);
+	if (__atomic_sub_fetch(&params->barrier_refcnt, 1,
+				__ATOMIC_ACQ_REL) == 0) {
 		pthread_barrier_destroy(&params->configured);
 		free(params);
 	}
 
 	return 0;
 
-fail:
-	if (PTHREAD_BARRIER_SERIAL_THREAD ==
-	    pthread_barrier_wait(&params->configured)) {
-		pthread_barrier_destroy(&params->configured);
-		free(params);
-	}
+fail_cancel:
 	pthread_cancel(*thread);
 	pthread_join(*thread, NULL);
+
+fail:
+	pthread_barrier_destroy(&params->configured);
+	free(params);
+
 	return -ret;
 }
 
