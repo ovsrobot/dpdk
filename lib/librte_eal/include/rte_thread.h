@@ -241,6 +241,61 @@ __rte_experimental
 int rte_thread_join(rte_thread_t thread_id, int *value_ptr);
 
 /**
+ * Initializes a mutex.
+ *
+ * @param mutex
+ *    The mutex to be initialized.
+ *
+ * @param attr
+ *    Attributes for initialization of the mutex.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_mutex_init(rte_thread_mutex_t *mutex);
+
+/**
+ * Locks a mutex.
+ *
+ * @param mutex
+ *    The mutex to be locked.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_mutex_lock(rte_thread_mutex_t *mutex);
+
+/**
+ * Unlocks a mutex.
+ *
+ * @param mutex
+ *    The mutex to be unlocked.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_mutex_unlock(rte_thread_mutex_t *mutex);
+
+/**
+ * Releases all resources associated with a mutex.
+ *
+ * @param mutex
+ *    The mutex to be uninitialized.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_mutex_destroy(rte_thread_mutex_t *mutex);
+
+/**
  * Terminates a thread.
  *
  * @param thread_id
