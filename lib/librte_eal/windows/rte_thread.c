@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright 2021 Mellanox Technologies, Ltd
+ * Copyright(c) 2021 Microsoft Corporation
  */
 
 #include <rte_common.h>
@@ -10,6 +11,18 @@
 struct eal_tls_key {
 	DWORD thread_index;
 };
+
+rte_thread_t
+rte_thread_self(void)
+{
+	return GetCurrentThreadId();
+}
+
+int
+rte_thread_equal(rte_thread_t t1, rte_thread_t t2)
+{
+	return t1 == t2 ? 1 : 0;
+}
 
 int
 rte_thread_tls_key_create(rte_tls_key *key,
