@@ -551,3 +551,98 @@ The command line options are:
     bit 1 - two hairpin ports paired
     bit 0 - two hairpin ports loop
     The default value is 0. Hairpin will use single port mode and implicit Tx flow mode.
+
+
+Testpmd Support Multi Process Command-line Options
+--------------------------------------------------
+
+The following are the command-line options for the testpmd applications(support
+multi process).They must be separated from the EAL options, shown in the previous
+section, with a ``--`` separator:
+
+.. code-block:: console
+
+	primary process:
+	sudo ./dpdk-testpmd -a xxx --proc-type=auto -l 0-1 -- -i --rxq=4 --txq=4 \
+        --num-procs=2 --proc-id=0
+
+	secondary process:
+	sudo ./dpdk-testpmd -a xxx --proc-type=auto -l 2-3 -- -i --rxq=4 --txq=4 \
+        --num-procs=2 --proc-id=1
+
+The command line options are:
+
+*   ``-a, --allow``
+
+    Add a device to the allow list. ``xxx`` means device used which should be the
+    same in primary process and secondary process.
+
+*   ``--proc-type``
+
+    Specify a given process instance as the primary or secondary DPDK instance.
+    ``auto`` set here is OK.
+
+*   ``-l CORELIST``
+
+     List of cores to run on. the corelist should be different in primary process and
+    secondary process.
+
+*   ``--rxq=N``
+
+    Set the number of Rx queues per port to N. N is the sum of queues used by primary
+    and secondary process. As primary process and secondary process should have separate
+    queues, and each should occupy at least one queue.where N should be no less than two.
+
+*   ``--txq=N``
+
+    Set the number of Tx queues per port to N. N is the sum of queues used by primary
+    and secondary process. As primary process and secondary process should have separate
+    queues, and each should occupy at least one queue.where N should be no less than two.
+
+*   ``--num-procs=N``
+
+    The number of processes which will be used.
+
+*   ``--proc-id=id``
+
+    The id of the current process (id < num-procs). id should be different in primary
+    process and secondary process.
+
+Calculation rule for queue:
+All queues are allocated to different processes based on proc_num and proc_id.
+Calculation rule for the Testpmd to allocate queues to each process:
+start(queue start id) = proc_id * nb_q / num_procs；
+end(queue end id) = start + nb_q / num_procs；
+
+For example, if supports 4 txq and rxq
+the 0~1 for primary process
+the 2~3 for secondary process
+
+The number of rings had better be a multiple of the number of processes. If not,
+redundant queues will exist after queues are allocated to processes. After RSS is
+enabled, packet loss occurs when traffic is sent to all processes at the same time.
+Some traffic enters redundant queues and cannot be forwarded.
+
+Most dev ops is supported in primary and secondary process. While secondary process
+is not permitted to allocate or release shared memory, so some ops are not supported
+as follows:
+``dev_configure``
+``dev_start``
+``dev_stop``
+``rx_queue_setup``
+``tx_queue_setup``
+``rx_queue_release``
+``tx_queue_release``
+
+So, any command from testpmd which calls those APIs will not be supported in secondary
+process, like:
+``port config all rxq|txq|rxd|txd <value>``
+``port config <port_id> rx_offload xxx on/off ``
+``port config <port_id> tx_offload xxx on/off``
+etc.
+
+RTE_FLOW supported, it applies only on its own process on SW side, but all on HW size.
+stats supported, stats will not change when one quit and start, As they share the same
+buffer to store the stats.
+RSS supported, Primary process and secondary process has separate queues to use, RSS
+will work in their own queues whether primary and secondary process.
