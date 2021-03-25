@@ -451,9 +451,12 @@ hugepage_info_init(void)
 		hpi->lock_descriptor = open(hpi->hugedir, O_RDONLY);
 
 		/* if blocking lock failed */
-		if (flock(hpi->lock_descriptor, LOCK_EX) == -1) {
+		if (flock(hpi->lock_descriptor, LOCK_EX | LOCK_NB) == -1) {
 			RTE_LOG(CRIT, EAL,
-				"Failed to lock hugepage directory!\n");
+				"Failed to lock hugepage directory! "
+				"The hugepage dir (%s) was locked by "
+				"other processes or self twice.\n",
+				hpi->hugedir);
 			break;
 		}
 		/* clear out the hugepages dir from unused pages */
