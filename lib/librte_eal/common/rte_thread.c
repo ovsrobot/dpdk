@@ -30,6 +30,59 @@ rte_thread_equal(rte_thread_t t1, rte_thread_t t2)
 }
 
 int
+rte_thread_attr_init(rte_thread_attr_t *attr)
+{
+	if (attr == NULL) {
+		RTE_LOG(DEBUG, EAL, "Invalid thread attributes parameter\n");
+		return EINVAL;
+	}
+
+	CPU_ZERO(&attr->cpuset);
+	attr->priority = RTE_THREAD_PRIORITY_NORMAL;
+
+	return 0;
+}
+
+int
+rte_thread_attr_set_affinity(rte_thread_attr_t *thread_attr,
+			     rte_cpuset_t *cpuset)
+{
+	if (thread_attr == NULL || cpuset == NULL) {
+		RTE_LOG(DEBUG, EAL, "Invalid thread attributes parameter\n");
+		return EINVAL;
+	}
+	thread_attr->cpuset = *cpuset;
+	return 0;
+}
+
+int
+rte_thread_attr_get_affinity(rte_thread_attr_t *thread_attr,
+			     rte_cpuset_t *cpuset)
+{
+	if ((thread_attr == NULL) || (cpuset == NULL)) {
+		RTE_LOG(DEBUG, EAL, "Invalid thread attributes parameter\n");
+		return EINVAL;
+	}
+
+	*cpuset = thread_attr->cpuset;
+	return 0;
+}
+
+int
+rte_thread_attr_set_priority(rte_thread_attr_t *thread_attr,
+			     enum rte_thread_priority priority)
+{
+	if (thread_attr == NULL) {
+		RTE_LOG(DEBUG, EAL,
+			"Unable to set priority attribute, invalid parameter\n");
+		return EINVAL;
+	}
+
+	thread_attr->priority = priority;
+	return 0;
+}
+
+int
 rte_thread_tls_key_create(rte_tls_key *key, void (*destructor)(void *))
 {
 	int err;
