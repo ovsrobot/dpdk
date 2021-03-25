@@ -51,4 +51,14 @@ extern int txgbe_logtype_tx_free;
 #define PMD_INIT_FUNC_TRACE()     TLOG_DEBUG(" >>")
 #define DEBUGFUNC(fmt)            TLOG_DEBUG(fmt)
 
+#define TXGBE_DEBUG_BP
+#ifdef TXGBE_DEBUG_BP
+#define BP_LOG(fmt, ...) \
+		RTE_LOG(CRIT, PMD, "[%lu.%lu]%s(%d): " fmt, \
+			usec_stamp() / 1000000, usec_stamp() % 1000000, \
+			__func__, __LINE__, ## __VA_ARGS__)
+#else
+#define BP_LOG(fmt, ...) do { } while (0)
+#endif
+
 #endif /* _TXGBE_LOGS_H_ */
