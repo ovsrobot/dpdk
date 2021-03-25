@@ -326,6 +326,131 @@ rte_thread_attr_set_priority(rte_thread_attr_t *thread_attr,
 }
 
 int
+rte_thread_create(rte_thread_t *thread_id,
+		  const rte_thread_attr_t *thread_attr,
+		  void *(*thread_func)(void *), void *args)
+{
+	int ret = 0;
+	HANDLE thread_handle = NULL;
+	GROUP_AFFINITY thread_affinity;
+
+	thread_handle = CreateThread(NULL, 0,
+				(LPTHREAD_START_ROUTINE)(ULONG_PTR)thread_func,
+				args, 0, thread_id);
+	if (thread_handle == NULL) {
+		ret = rte_thread_translate_win32_error(GetLastError());
+		RTE_LOG_WIN32_ERR("CreateThread()");
+		goto cleanup;
+	}
+
+	if (thread_attr != NULL) {
+		if (CPU_COUNT(&thread_attr->cpuset) > 0) {
+			ret = rte_convert_cpuset_to_affinity(&thread_attr->cpuset, &thread_affinity);
+			if (ret != 0) {
+				RTE_LOG(DEBUG, EAL, "Unable to convert cpuset to thread affinity\n");
+				goto cleanup;
+			}
+
+			if (!SetThreadGroupAffinity(thread_handle, &thread_affinity, NULL)) {
+				ret = rte_thread_translate_win32_error(GetLastError());
+				RTE_LOG_WIN32_ERR("SetThreadGroupAffinity()");
+				goto cleanup;
+			}
+		}
+		ret = rte_thread_set_priority(*thread_id, thread_attr->priority);
+		if (ret != 0) {
+			RTE_LOG(DEBUG, EAL, "Unable to set thread priority\n");
+			goto cleanup;
+		}
+	}
+
+	return 0;
+
+cleanup:
+	if (thread_handle != NULL) {
+		CloseHandle(thread_handle);
+		thread_handle = NULL;
+	}
+	return ret;
+}
+
+int
+rte_thread_join(rte_thread_t thread_id, int *value_ptr)
+{
+	HANDLE thread_handle = NULL;
+	DWORD result = 0;
+	DWORD exit_code = 0;
+	BOOL err = 0;
+	int ret = 0;
+
+	thread_handle = OpenThread(SYNCHRONIZE | THREAD_QUERY_INFORMATION,
+				   FALSE, thread_id);
+	if (thread_handle == NULL) {
+		ret = rte_thread_translate_win32_error(GetLastError());
+		RTE_LOG_WIN32_ERR("OpenThread()");
+		goto cleanup;
+	}
+
+	result = WaitForSingleObject(thread_handle, INFINITE);
+	if (result != WAIT_OBJECT_0) {
+		ret = rte_thread_translate_win32_error(GetLastError());
+		RTE_LOG_WIN32_ERR("WaitForSingleObject()");
+		goto cleanup;
+	}
+
+	if (value_ptr != NULL) {
+		err = GetExitCodeThread(thread_handle, &exit_code);
+		if (err == 0) {
+			ret = rte_thread_translate_win32_error(GetLastError());
+			RTE_LOG_WIN32_ERR("GetExitCodeThread()");
+			goto cleanup;
+		}
+		*value_ptr = exit_code;
+	}
+
+cleanup:
+	if (thread_handle != NULL) {
+		CloseHandle(thread_handle);
+		thread_handle = NULL;
+	}
+
+	return ret;
+}
+
+int
+rte_thread_cancel(rte_thread_t thread_id)
+{
+	int ret = 0;
+	HANDLE thread_handle = NULL;
+
+	thread_handle = OpenThread(THREAD_TERMINATE, FALSE, thread_id);
+	if (thread_handle == NULL) {
+		ret = rte_thread_translate_win32_error(GetLastError());
+		RTE_LOG_WIN32_ERR("OpenThread()");
+		goto cleanup;
+	}
+
+	/*
+	 * TODO: Behavior is different between POSIX and Windows threads.
+	 * POSIX threads wait for a cancellation point.
+	 * Current Windows emulation kills thread at any point.
+	 */
+	ret = TerminateThread(thread_handle, 0);
+	if (ret != 0) {
+		ret = rte_thread_translate_win32_error(GetLastError());
+		RTE_LOG_WIN32_ERR("TerminateThread()");
+		goto cleanup;
+	}
+
+cleanup:
+	if (thread_handle != NULL) {
+		CloseHandle(thread_handle);
+		thread_handle = NULL;
+	}
+	return ret;
+}
+
+int
 rte_thread_tls_key_create(rte_tls_key *key,
 		__rte_unused void (*destructor)(void *))
 {
