@@ -115,6 +115,23 @@ int rte_thread_get_affinity_by_id(rte_thread_t thread_id, size_t cpuset_size,
 				  rte_cpuset_t *cpuset);
 
 /**
+ * Set the priority of a thread.
+ *
+ * @param thread_id
+ *    Id of the thread for which to set priority.
+ *
+ * @param priority
+ *   Priority value to be set.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_set_priority(rte_thread_t thread_id,
+			    enum rte_thread_priority priority);
+
+/**
  * Initialize the attributes of a thread.
  * These attributes can be passed to the rte_thread_create() function
  * that will create a new thread and set its attributes according to attr;

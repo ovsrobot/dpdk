@@ -43,6 +43,31 @@ int rte_thread_get_affinity_by_id(rte_thread_t threadid, size_t cpuset_size,
 }
 
 int
+rte_thread_set_priority(rte_thread_t thread_id,
+		enum rte_thread_priority priority)
+{
+	int policy;
+	struct sched_param param = {
+		.sched_priority = 0,
+	};
+
+
+	if (priority == RTE_THREAD_PRIORITY_REALTIME_CRITICAL) {
+		policy = SCHED_RR;
+		param.sched_priority = priority;
+	} else if (priority == RTE_THREAD_PRIORITY_NORMAL) {
+		policy = SCHED_OTHER;
+		param.sched_priority = priority;
+	} else {
+		RTE_LOG(DEBUG, EAL, "Invalid priority to set."
+				    "Defaulting to priority 'normal'.\n");
+		policy = SCHED_OTHER;
+	}
+
+	return pthread_setschedparam(thread_id, policy, &param);
+}
+
+int
 rte_thread_attr_init(rte_thread_attr_t *attr)
 {
 	if (attr == NULL) {

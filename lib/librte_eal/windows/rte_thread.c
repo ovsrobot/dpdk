@@ -193,6 +193,82 @@ cleanup:
 	return ret;
 }
 
+static HANDLE
+get_process_handle_from_thread_handle(HANDLE thread_handle)
+{
+	DWORD process_id = 0;
+
+	process_id = GetProcessIdOfThread(thread_handle);
+	if (process_id == 0) {
+		RTE_LOG_WIN32_ERR("GetProcessIdOfThread()");
+		return NULL;
+	}
+
+	return OpenProcess(PROCESS_SET_INFORMATION, FALSE, process_id);
+}
+
+int
+rte_thread_set_priority(rte_thread_t thread_id,
+			enum rte_thread_priority priority)
+{
+	HANDLE thread_handle = NULL;
+	HANDLE process_handle = NULL;
+	DWORD priority_class = NORMAL_PRIORITY_CLASS;
+	int ret = 0;
+
+	thread_handle = OpenThread(THREAD_SET_INFORMATION |
+				   THREAD_QUERY_INFORMATION, FALSE, thread_id);
+	if (thread_handle == NULL) {
+		ret = rte_thread_translate_win32_error(GetLastError());
+		RTE_LOG_WIN32_ERR("OpenThread()");
+		goto cleanup;
+	}
+
+	switch (priority) {
+
+	case RTE_THREAD_PRIORITY_REALTIME_CRITICAL:
+		priority_class = REALTIME_PRIORITY_CLASS;
+		break;
+
+	case RTE_THREAD_PRIORITY_NORMAL:
+	/* FALLTHROUGH */
+	default:
+		priority_class = NORMAL_PRIORITY_CLASS;
+		priority = RTE_THREAD_PRIORITY_NORMAL;
+		break;
+	}
+
+	process_handle = get_process_handle_from_thread_handle(thread_handle);
+	if (process_handle == NULL) {
+		ret = rte_thread_translate_win32_error(GetLastError());
+		RTE_LOG_WIN32_ERR("get_process_handle_from_thread_handle()");
+		goto cleanup;
+	}
+
+	if (!SetPriorityClass(process_handle, priority_class)) {
+		ret = rte_thread_translate_win32_error(GetLastError());
+		RTE_LOG_WIN32_ERR("SetPriorityClass()");
+		goto cleanup;
+	}
+
+	if (!SetThreadPriority(thread_handle, priority)) {
+		ret = rte_thread_translate_win32_error(GetLastError());
+		RTE_LOG_WIN32_ERR("SetThreadPriority()");
+		goto cleanup;
+	}
+
+cleanup:
+	if (thread_handle != NULL) {
+		CloseHandle(thread_handle);
+		thread_handle = NULL;
+	}
+	if (process_handle != NULL) {
+		CloseHandle(process_handle);
+		process_handle = NULL;
+	}
+	return ret;
+}
+
 int
 rte_thread_attr_init(rte_thread_attr_t *attr)
 {
