@@ -7,6 +7,7 @@
 #include <rte_cryptodev_pmd.h>
 #include <rte_errno.h>
 #include <rte_ethdev.h>
+#include <rte_event_crypto_adapter.h>
 
 #include "otx2_cryptodev.h"
 #include "otx2_cryptodev_capabilities.h"
@@ -438,10 +439,22 @@ static __rte_always_inline void __rte_hot
 otx2_ca_enqueue_req(const struct otx2_cpt_qp *qp,
 		    struct cpt_request_info *req,
 		    void *lmtline,
+		    struct rte_crypto_op *op,
 		    uint64_t cpt_inst_w7)
 {
+	union rte_event_crypto_metadata *m_data;
 	union cpt_inst_s inst;
 	uint64_t lmt_status;
+
+	if (op->sess_type == RTE_CRYPTO_OP_WITH_SESSION)
+		m_data = rte_cryptodev_sym_session_get_user_data(
+						op->sym->session);
+	else if (op->sess_type == RTE_CRYPTO_OP_SESSIONLESS &&
+		 op->private_data_offset)
+		m_data = (union rte_event_crypto_metadata *)
+			 ((uint8_t *)op +
+			  op->private_data_offset);
+
 
 	inst.u[0] = 0;
 	inst.s9x.res_addr = req->comp_baddr;
@@ -453,12 +466,11 @@ otx2_ca_enqueue_req(const struct otx2_cpt_qp *qp,
 	inst.s9x.ei2 = req->ist.ei2;
 	inst.s9x.ei3 = cpt_inst_w7;
 
-	inst.s9x.qord = 1;
-	inst.s9x.grp = qp->ev.queue_id;
-	inst.s9x.tt = qp->ev.sched_type;
-	inst.s9x.tag = (RTE_EVENT_TYPE_CRYPTODEV << 28) |
-			qp->ev.flow_id;
-	inst.s9x.wq_ptr = (uint64_t)req >> 3;
+	inst.u[2] = (((RTE_EVENT_TYPE_CRYPTODEV << 28) |
+		      m_data->response_info.flow_id) |
+		     ((uint64_t)m_data->response_info.sched_type << 32) |
+		     ((uint64_t)m_data->response_info.queue_id << 34));
+	inst.u[3] = 1 | (((uint64_t)req >> 3) << 3);
 	req->qp = qp;
 
 	do {
@@ -481,6 +493,7 @@ static __rte_always_inline int32_t __rte_hot
 otx2_cpt_enqueue_req(const struct otx2_cpt_qp *qp,
 		     struct pending_queue *pend_q,
 		     struct cpt_request_info *req,
+		     struct rte_crypto_op *op,
 		     uint64_t cpt_inst_w7)
 {
 	void *lmtline = qp->lmtline;
@@ -488,7 +501,7 @@ otx2_cpt_enqueue_req(const struct otx2_cpt_qp *qp,
 	uint64_t lmt_status;
 
 	if (qp->ca_enable) {
-		otx2_ca_enqueue_req(qp, req, lmtline, cpt_inst_w7);
+		otx2_ca_enqueue_req(qp, req, lmtline, op, cpt_inst_w7);
 		return 0;
 	}
 
@@ -594,7 +607,8 @@ otx2_cpt_enqueue_asym(struct otx2_cpt_qp *qp,
 		goto req_fail;
 	}
 
-	ret = otx2_cpt_enqueue_req(qp, pend_q, params.req, sess->cpt_inst_w7);
+	ret = otx2_cpt_enqueue_req(qp, pend_q, params.req, op,
+				   sess->cpt_inst_w7);
 
 	if (unlikely(ret)) {
 		CPT_LOG_DP_ERR("Could not enqueue crypto req");
@@ -638,7 +652,7 @@ otx2_cpt_enqueue_sym(struct otx2_cpt_qp *qp, struct rte_crypto_op *op,
 		return ret;
 	}
 
-	ret = otx2_cpt_enqueue_req(qp, pend_q, req, sess->cpt_inst_w7);
+	ret = otx2_cpt_enqueue_req(qp, pend_q, req, op, sess->cpt_inst_w7);
 
 	if (unlikely(ret)) {
 		/* Free buffer allocated by fill params routines */
@@ -707,7 +721,7 @@ otx2_cpt_enqueue_sec(struct otx2_cpt_qp *qp, struct rte_crypto_op *op,
 		return ret;
 	}
 
-	ret = otx2_cpt_enqueue_req(qp, pend_q, req, sess->cpt_inst_w7);
+	ret = otx2_cpt_enqueue_req(qp, pend_q, req, op, sess->cpt_inst_w7);
 
 	if (winsz && esn) {
 		seq_in_sa = ((uint64_t)esn_hi << 32) | esn_low;
