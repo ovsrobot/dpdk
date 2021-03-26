@@ -1273,6 +1273,10 @@ typedef uint16_t (*event_tx_adapter_enqueue_same_dest)(void *port,
  * burst having same destination Ethernet port & Tx queue.
  */
 
+typedef uint16_t (*event_crypto_adapter_enqueue)(void *port,
+				struct rte_event ev[], uint16_t nb_events);
+/**< @internal Enqueue burst of events on crypto adapter */
+
 #define RTE_EVENTDEV_NAME_MAX_LEN	(64)
 /**< @internal Max length of name of event PMD */
 
@@ -1344,6 +1348,8 @@ struct rte_eventdev {
 	 */
 	event_tx_adapter_enqueue txa_enqueue;
 	/**< Pointer to PMD eth Tx adapter enqueue function. */
+	event_crypto_adapter_enqueue ca_enqueue;
+	/**< Pointer to PMD crypto adapter enqueue function. */
 	struct rte_eventdev_data *data;
 	/**< Pointer to device data */
 	struct rte_eventdev_ops *dev_ops;
@@ -1356,7 +1362,7 @@ struct rte_eventdev {
 	/**< Flag indicating the device is attached */
 
 	uint64_t reserved_64s[4]; /**< Reserved for future fields */
-	void *reserved_ptrs[4];   /**< Reserved for future fields */
+	void *reserved_ptrs[3];   /**< Reserved for future fields */
 } __rte_cache_aligned;
 
 extern struct rte_eventdev *rte_eventdevs;
