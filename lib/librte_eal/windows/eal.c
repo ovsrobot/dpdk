@@ -368,6 +368,28 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
+	ret = rte_thread_set_priority(rte_thread_self(),
+				      internal_conf->thread_priority);
+	if (ret != 0) {
+		rte_eal_init_alert("Cannot set thread priority");
+		rte_errno = ret;
+		return -1;
+	}
+	rte_thread_attr_t thread_attr;
+	ret = rte_thread_attr_init(&thread_attr);
+	if (ret != 0) {
+		rte_eal_init_alert("Cannot initialize thread attributes");
+		rte_errno = ret;
+		return -1;
+	}
+	ret = rte_thread_attr_set_priority(&thread_attr,
+					   internal_conf->thread_priority);
+	if (ret != 0) {
+		rte_eal_init_alert("Cannot set thread priority attribute");
+		rte_errno = ret;
+		return -1;
+	}
+
 	RTE_LCORE_FOREACH_WORKER(i) {
 
 		/*
@@ -384,7 +406,9 @@ rte_eal_init(int argc, char **argv)
 		lcore_config[i].state = WAIT;
 
 		/* create a thread for each lcore */
-		if (eal_thread_create(&lcore_config[i].thread_id) != 0)
+		ret = rte_thread_create(&lcore_config[i].thread_id,
+					&thread_attr, eal_thread_loop, NULL);
+		if (ret != 0)
 			rte_panic("Cannot create thread\n");
 	}
 

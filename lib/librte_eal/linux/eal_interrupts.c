@@ -97,7 +97,7 @@ static union intr_pipefds intr_pipe;
 static struct rte_intr_source_list intr_sources;
 
 /* interrupt handling thread */
-static pthread_t intr_thread;
+static rte_thread_t intr_thread;
 
 /* VFIO interrupts */
 #ifdef VFIO_PRESENT
@@ -1558,5 +1558,5 @@ rte_intr_cap_multiple(struct rte_intr_handle *intr_handle)
 
 int rte_thread_is_intr(void)
 {
-	return pthread_equal(intr_thread, pthread_self());
+	return rte_thread_equal(intr_thread, rte_thread_self());
 }

@@ -48,7 +48,7 @@
 
 TAILQ_HEAD(mlx5_vdpa_privs, mlx5_vdpa_priv) priv_list =
 					      TAILQ_HEAD_INITIALIZER(priv_list);
-static pthread_mutex_t priv_list_lock = PTHREAD_MUTEX_INITIALIZER;
+static rte_thread_mutex_t priv_list_lock = RTE_THREAD_MUTEX_INITIALIZER;
 
 static struct mlx5_vdpa_priv *
 mlx5_vdpa_find_priv_resource_by_vdev(struct rte_vdpa_device *vdev)
@@ -56,14 +56,14 @@ mlx5_vdpa_find_priv_resource_by_vdev(struct rte_vdpa_device *vdev)
 	struct mlx5_vdpa_priv *priv;
 	int found = 0;
 
-	pthread_mutex_lock(&priv_list_lock);
+	rte_thread_mutex_lock(&priv_list_lock);
 	TAILQ_FOREACH(priv, &priv_list, next) {
 		if (vdev == priv->vdev) {
 			found = 1;
 			break;
 		}
 	}
-	pthread_mutex_unlock(&priv_list_lock);
+	rte_thread_mutex_unlock(&priv_list_lock);
 	if (!found) {
 		DRV_LOG(ERR, "Invalid vDPA device: %s.", vdev->device->name);
 		rte_errno = EINVAL;
@@ -143,9 +143,9 @@ mlx5_vdpa_set_vring_state(int vid, int vring, int state)
 		DRV_LOG(ERR, "Too big vring id: %d.", vring);
 		return -E2BIG;
 	}
-	pthread_mutex_lock(&priv->vq_config_lock);
+	rte_thread_mutex_lock(&priv->vq_config_lock);
 	ret = mlx5_vdpa_virtq_enable(priv, vring, state);
-	pthread_mutex_unlock(&priv->vq_config_lock);
+	rte_thread_mutex_unlock(&priv->vq_config_lock);
 	return ret;
 }
 
@@ -296,7 +296,7 @@ mlx5_vdpa_dev_close(int vid)
 	priv->configured = 0;
 	priv->vid = 0;
 	/* The mutex may stay locked after event thread cancel - initiate it. */
-	pthread_mutex_init(&priv->vq_config_lock, NULL);
+	rte_thread_mutex_init(&priv->vq_config_lock);
 	DRV_LOG(INFO, "vDPA device %d was closed.", vid);
 	return ret;
 }
@@ -764,10 +764,10 @@ mlx5_vdpa_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	}
 	mlx5_vdpa_config_get(pci_dev->device.devargs, priv);
 	SLIST_INIT(&priv->mr_list);
-	pthread_mutex_init(&priv->vq_config_lock, NULL);
-	pthread_mutex_lock(&priv_list_lock);
+	rte_thread_mutex_init(&priv->vq_config_lock);
+	rte_thread_mutex_lock(&priv_list_lock);
 	TAILQ_INSERT_TAIL(&priv_list, priv, next);
-	pthread_mutex_unlock(&priv_list_lock);
+	rte_thread_mutex_unlock(&priv_list_lock);
 	return 0;
 
 error:
@@ -798,7 +798,7 @@ mlx5_vdpa_pci_remove(struct rte_pci_device *pci_dev)
 	struct mlx5_vdpa_priv *priv = NULL;
 	int found = 0;
 
-	pthread_mutex_lock(&priv_list_lock);
+	rte_thread_mutex_lock(&priv_list_lock);
 	TAILQ_FOREACH(priv, &priv_list, next) {
 		if (!rte_pci_addr_cmp(&priv->pci_dev->addr, &pci_dev->addr)) {
 			found = 1;
@@ -807,7 +807,7 @@ mlx5_vdpa_pci_remove(struct rte_pci_device *pci_dev)
 	}
 	if (found)
 		TAILQ_REMOVE(&priv_list, priv, next);
-	pthread_mutex_unlock(&priv_list_lock);
+	rte_thread_mutex_unlock(&priv_list_lock);
 	if (found) {
 		if (priv->configured)
 			mlx5_vdpa_dev_close(priv->vid);
@@ -816,7 +816,7 @@ mlx5_vdpa_pci_remove(struct rte_pci_device *pci_dev)
 			priv->var = NULL;
 		}
 		mlx5_glue->close_device(priv->ctx);
-		pthread_mutex_destroy(&priv->vq_config_lock);
+		rte_thread_mutex_destroy(&priv->vq_config_lock);
 		rte_free(priv);
 	}
 	return 0;

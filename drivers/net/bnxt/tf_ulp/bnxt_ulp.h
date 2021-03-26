@@ -49,7 +49,7 @@ struct bnxt_ulp_data {
 	uint32_t			dev_id; /* Hardware device id */
 	uint32_t			ref_cnt;
 	struct bnxt_ulp_flow_db		*flow_db;
-	pthread_mutex_t			flow_db_lock;
+	rte_thread_mutex_t			flow_db_lock;
 	void				*mapper_data;
 	struct bnxt_ulp_port_db		*port_db;
 	struct bnxt_ulp_fc_info		*fc_info;
@@ -75,7 +75,7 @@ struct bnxt_ulp_pci_info {
 struct bnxt_ulp_session_state {
 	STAILQ_ENTRY(bnxt_ulp_session_state)	next;
 	bool					bnxt_ulp_init;
-	pthread_mutex_t				bnxt_ulp_mutex;
+	rte_thread_mutex_t				bnxt_ulp_mutex;
 	struct bnxt_ulp_pci_info		pci_info;
 	struct bnxt_ulp_data			*cfg_data;
 	struct tf				*g_tfp;

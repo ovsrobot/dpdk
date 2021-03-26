@@ -22,8 +22,6 @@
 extern "C" {
 #endif
 
-#include <pthread.h>
-
 /**
  * Macro to define a per lcore variable "var" of type "type", don't
  * use keywords like "static" or "volatile" in type, just prefix the

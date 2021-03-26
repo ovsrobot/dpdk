@@ -28,7 +28,7 @@ STAILQ_HEAD(, bnxt_ulp_session_state) bnxt_ulp_session_list =
 			STAILQ_HEAD_INITIALIZER(bnxt_ulp_session_list);
 
 /* Mutex to synchronize bnxt_ulp_session_list operations. */
-static pthread_mutex_t bnxt_ulp_global_mutex = PTHREAD_MUTEX_INITIALIZER;
+static rte_thread_mutex_t bnxt_ulp_global_mutex = RTE_THREAD_MUTEX_INITIALIZER;
 
 /*
  * Allow the deletion of context only for the bnxt device that
@@ -640,7 +640,7 @@ ulp_ctx_detach(struct bnxt *bp)
 static void
 ulp_context_initialized(struct bnxt_ulp_session_state *session, bool *init)
 {
-	pthread_mutex_lock(&session->bnxt_ulp_mutex);
+	rte_thread_mutex_lock(&session->bnxt_ulp_mutex);
 
 	if (!session->bnxt_ulp_init) {
 		session->bnxt_ulp_init = true;
@@ -649,7 +649,7 @@ ulp_context_initialized(struct bnxt_ulp_session_state *session, bool *init)
 		*init = true;
 	}
 
-	pthread_mutex_unlock(&session->bnxt_ulp_mutex);
+	rte_thread_mutex_unlock(&session->bnxt_ulp_mutex);
 }
 
 /*
@@ -690,7 +690,7 @@ ulp_session_init(struct bnxt *bp,
 	pci_dev = RTE_DEV_TO_PCI(bp->eth_dev->device);
 	pci_addr = &pci_dev->addr;
 
-	pthread_mutex_lock(&bnxt_ulp_global_mutex);
+	rte_thread_mutex_lock(&bnxt_ulp_global_mutex);
 
 	session = ulp_get_session(pci_addr);
 	if (!session) {
@@ -701,17 +701,17 @@ ulp_session_init(struct bnxt *bp,
 		if (!session) {
 			BNXT_TF_DBG(ERR,
 				    "Allocation failed for bnxt_ulp_session\n");
-			pthread_mutex_unlock(&bnxt_ulp_global_mutex);
+			rte_thread_mutex_unlock(&bnxt_ulp_global_mutex);
 			return NULL;
 
 		} else {
 			/* Add it to the queue */
 			session->pci_info.domain = pci_addr->domain;
 			session->pci_info.bus = pci_addr->bus;
-			rc = pthread_mutex_init(&session->bnxt_ulp_mutex, NULL);
+			rc = rte_thread_mutex_init(&session->bnxt_ulp_mutex);
 			if (rc) {
 				BNXT_TF_DBG(ERR, "mutex create failed\n");
-				pthread_mutex_unlock(&bnxt_ulp_global_mutex);
+				rte_thread_mutex_unlock(&bnxt_ulp_global_mutex);
 				return NULL;
 			}
 			STAILQ_INSERT_TAIL(&bnxt_ulp_session_list,
@@ -719,7 +719,7 @@ ulp_session_init(struct bnxt *bp,
 		}
 	}
 	ulp_context_initialized(session, init);
-	pthread_mutex_unlock(&bnxt_ulp_global_mutex);
+	rte_thread_mutex_unlock(&bnxt_ulp_global_mutex);
 	return session;
 }
 
@@ -734,12 +734,12 @@ ulp_session_deinit(struct bnxt_ulp_session_state *session)
 		return;
 
 	if (!session->cfg_data) {
-		pthread_mutex_lock(&bnxt_ulp_global_mutex);
+		rte_thread_mutex_lock(&bnxt_ulp_global_mutex);
 		STAILQ_REMOVE(&bnxt_ulp_session_list, session,
 			      bnxt_ulp_session_state, next);
-		pthread_mutex_destroy(&session->bnxt_ulp_mutex);
+		rte_thread_mutex_destroy(&session->bnxt_ulp_mutex);
 		rte_free(session);
-		pthread_mutex_unlock(&bnxt_ulp_global_mutex);
+		rte_thread_mutex_unlock(&bnxt_ulp_global_mutex);
 	}
 }
 
@@ -892,7 +892,7 @@ bnxt_ulp_deinit(struct bnxt *bp,
 					 BNXT_ULP_NAT_OUTER_MOST_FLAGS, 0);
 
 	/* free the flow db lock */
-	pthread_mutex_destroy(&bp->ulp_ctx->cfg_data->flow_db_lock);
+	rte_thread_mutex_destroy(&bp->ulp_ctx->cfg_data->flow_db_lock);
 
 	/* Delete the ulp context and tf session and free the ulp context */
 	ulp_ctx_deinit(bp, session);
@@ -917,7 +917,7 @@ bnxt_ulp_init(struct bnxt *bp,
 		goto jump_to_error;
 	}
 
-	rc = pthread_mutex_init(&bp->ulp_ctx->cfg_data->flow_db_lock, NULL);
+	rc = rte_thread_mutex_init(&bp->ulp_ctx->cfg_data->flow_db_lock);
 	if (rc) {
 		BNXT_TF_DBG(ERR, "Unable to initialize flow db lock\n");
 		goto jump_to_error;
@@ -1117,9 +1117,9 @@ bnxt_ulp_port_deinit(struct bnxt *bp)
 	/* Get the session details  */
 	pci_dev = RTE_DEV_TO_PCI(bp->eth_dev->device);
 	pci_addr = &pci_dev->addr;
-	pthread_mutex_lock(&bnxt_ulp_global_mutex);
+	rte_thread_mutex_lock(&bnxt_ulp_global_mutex);
 	session = ulp_get_session(pci_addr);
-	pthread_mutex_unlock(&bnxt_ulp_global_mutex);
+	rte_thread_mutex_unlock(&bnxt_ulp_global_mutex);
 
 	/* session not found then just exit */
 	if (!session) {
@@ -1451,7 +1451,7 @@ bnxt_ulp_cntxt_acquire_fdb_lock(struct bnxt_ulp_context	*ulp_ctx)
 	if (!ulp_ctx || !ulp_ctx->cfg_data)
 		return -1;
 
-	if (pthread_mutex_lock(&ulp_ctx->cfg_data->flow_db_lock)) {
+	if (rte_thread_mutex_lock(&ulp_ctx->cfg_data->flow_db_lock)) {
 		BNXT_TF_DBG(ERR, "unable to acquire fdb lock\n");
 		return -1;
 	}
@@ -1465,5 +1465,5 @@ bnxt_ulp_cntxt_release_fdb_lock(struct bnxt_ulp_context	*ulp_ctx)
 	if (!ulp_ctx || !ulp_ctx->cfg_data)
 		return;
 
-	pthread_mutex_unlock(&ulp_ctx->cfg_data->flow_db_lock);
+	rte_thread_mutex_unlock(&ulp_ctx->cfg_data->flow_db_lock);
 }

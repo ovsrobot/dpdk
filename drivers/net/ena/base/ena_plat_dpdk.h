@@ -129,14 +129,14 @@ do {                                                                   \
 #define q_waitqueue_t			\
 	struct {			\
 		pthread_cond_t cond;	\
-		pthread_mutex_t mutex;	\
+		rte_thread_mutex_t mutex;	\
 	}
 
 #define ena_wait_queue_t q_waitqueue_t
 
 #define ENA_WAIT_EVENT_INIT(waitqueue)					\
 	do {								\
-		pthread_mutex_init(&(waitqueue).mutex, NULL);		\
+		rte_thread_mutex_init(&(waitqueue).mutex);		\
 		pthread_cond_init(&(waitqueue).cond, NULL);		\
 	} while (0)
 
@@ -149,10 +149,10 @@ do {                                                                   \
 		wait.tv_sec = now.tv_sec + timeout / 1000000UL;		\
 		timeout_us = timeout % 1000000UL;			\
 		wait.tv_nsec = (now.tv_usec + timeout_us) * 1000UL;	\
-		pthread_mutex_lock(&waitevent.mutex);			\
+		rte_thread_mutex_lock(&waitevent.mutex);		\
 		pthread_cond_timedwait(&waitevent.cond,			\
 				&waitevent.mutex, &wait);		\
-		pthread_mutex_unlock(&waitevent.mutex);			\
+		rte_thread_mutex_unlock(&waitevent.mutex);		\
 	} while (0)
 #define ENA_WAIT_EVENT_SIGNAL(waitevent) pthread_cond_signal(&waitevent.cond)
 /* pthread condition doesn't need to be rearmed after usage */

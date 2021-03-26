@@ -37,7 +37,7 @@
 static int mp_fd = -1;
 static char mp_filter[PATH_MAX];   /* Filter for secondary process sockets */
 static char mp_dir_path[PATH_MAX]; /* The directory path for all mp sockets */
-static pthread_mutex_t mp_mutex_action = PTHREAD_MUTEX_INITIALIZER;
+static rte_thread_mutex_t mp_mutex_action = RTE_THREAD_MUTEX_INITIALIZER;
 static char peer_name[PATH_MAX];
 
 struct action_entry {
@@ -96,10 +96,10 @@ TAILQ_HEAD(pending_request_list, pending_request);
 
 static struct {
 	struct pending_request_list requests;
-	pthread_mutex_t lock;
+	rte_thread_mutex_t lock;
 } pending_requests = {
 	.requests = TAILQ_HEAD_INITIALIZER(pending_requests.requests),
-	.lock = PTHREAD_MUTEX_INITIALIZER,
+	.lock = RTE_THREAD_MUTEX_INITIALIZER,
 	/**< used in async requests only */
 };
 
@@ -222,15 +222,15 @@ rte_mp_action_register(const char *name, rte_mp_t action)
 	strlcpy(entry->action_name, name, sizeof(entry->action_name));
 	entry->action = action;
 
-	pthread_mutex_lock(&mp_mutex_action);
+	rte_thread_mutex_lock(&mp_mutex_action);
 	if (find_action_entry_by_name(name) != NULL) {
-		pthread_mutex_unlock(&mp_mutex_action);
+		rte_thread_mutex_unlock(&mp_mutex_action);
 		rte_errno = EEXIST;
 		free(entry);
 		return -1;
 	}
 	TAILQ_INSERT_TAIL(&action_entry_list, entry, next);
-	pthread_mutex_unlock(&mp_mutex_action);
+	rte_thread_mutex_unlock(&mp_mutex_action);
 	return 0;
 }
 
@@ -249,14 +249,14 @@ rte_mp_action_unregister(const char *name)
 		return;
 	}
 
-	pthread_mutex_lock(&mp_mutex_action);
+	rte_thread_mutex_lock(&mp_mutex_action);
 	entry = find_action_entry_by_name(name);
 	if (entry == NULL) {
-		pthread_mutex_unlock(&mp_mutex_action);
+		rte_thread_mutex_unlock(&mp_mutex_action);
 		return;
 	}
 	TAILQ_REMOVE(&action_entry_list, entry, next);
-	pthread_mutex_unlock(&mp_mutex_action);
+	rte_thread_mutex_unlock(&mp_mutex_action);
 	free(entry);
 }
 
@@ -328,7 +328,7 @@ process_msg(struct mp_msg_internal *m, struct sockaddr_un *s)
 	if (m->type == MP_REP || m->type == MP_IGN) {
 		struct pending_request *req = NULL;
 
-		pthread_mutex_lock(&pending_requests.lock);
+		rte_thread_mutex_lock(&pending_requests.lock);
 		pending_req = find_pending_request(s->sun_path, msg->name);
 		if (pending_req) {
 			memcpy(pending_req->reply, msg, sizeof(*msg));
@@ -343,18 +343,18 @@ process_msg(struct mp_msg_internal *m, struct sockaddr_un *s)
 						pending_req);
 		} else
 			RTE_LOG(ERR, EAL, "Drop mp reply: %s\n", msg->name);
-		pthread_mutex_unlock(&pending_requests.lock);
+		rte_thread_mutex_unlock(&pending_requests.lock);
 
 		if (req != NULL)
 			trigger_async_action(req);
 		return;
 	}
 
-	pthread_mutex_lock(&mp_mutex_action);
+	rte_thread_mutex_lock(&mp_mutex_action);
 	entry = find_action_entry_by_name(msg->name);
 	if (entry != NULL)
 		action = entry->action;
-	pthread_mutex_unlock(&mp_mutex_action);
+	rte_thread_mutex_unlock(&mp_mutex_action);
 
 	if (!action) {
 		if (m->type == MP_REQ && !internal_conf->init_complete) {
@@ -527,9 +527,9 @@ async_reply_handle(void *arg)
 {
 	struct pending_request *req;
 
-	pthread_mutex_lock(&pending_requests.lock);
+	rte_thread_mutex_lock(&pending_requests.lock);
 	req = async_reply_handle_thread_unsafe(arg);
-	pthread_mutex_unlock(&pending_requests.lock);
+	rte_thread_mutex_unlock(&pending_requests.lock);
 
 	if (req != NULL)
 		trigger_async_action(req);
@@ -587,7 +587,7 @@ rte_mp_channel_init(void)
 {
 	char path[PATH_MAX];
 	int dir_fd;
-	pthread_t mp_handle_tid;
+	rte_thread_t mp_handle_tid;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 
@@ -999,9 +999,9 @@ rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
 
 	/* for secondary process, send request to the primary process only */
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
-		pthread_mutex_lock(&pending_requests.lock);
+		rte_thread_mutex_lock(&pending_requests.lock);
 		ret = mp_request_sync(eal_mp_socket_path(), req, reply, &end);
-		pthread_mutex_unlock(&pending_requests.lock);
+		rte_thread_mutex_unlock(&pending_requests.lock);
 		goto end;
 	}
 
@@ -1022,7 +1022,7 @@ rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
 		goto close_end;
 	}
 
-	pthread_mutex_lock(&pending_requests.lock);
+	rte_thread_mutex_lock(&pending_requests.lock);
 	while ((ent = readdir(mp_dir))) {
 		char path[PATH_MAX];
 
@@ -1041,7 +1041,7 @@ rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
 	ret = 0;
 
 unlock_end:
-	pthread_mutex_unlock(&pending_requests.lock);
+	rte_thread_mutex_unlock(&pending_requests.lock);
 	/* unlock the directory */
 	flock(dir_fd, LOCK_UN);
 
@@ -1119,7 +1119,7 @@ rte_mp_request_async(struct rte_mp_msg *req, const struct timespec *ts,
 	 * of requests to the queue at once, and some of the replies may arrive
 	 * before we add all of the requests to the queue.
 	 */
-	pthread_mutex_lock(&pending_requests.lock);
+	rte_thread_mutex_lock(&pending_requests.lock);
 
 	/* we have to ensure that callback gets triggered even if we don't send
 	 * anything, therefore earlier we have allocated a dummy request. fill
@@ -1142,7 +1142,7 @@ rte_mp_request_async(struct rte_mp_msg *req, const struct timespec *ts,
 			dummy_used = true;
 		}
 
-		pthread_mutex_unlock(&pending_requests.lock);
+		rte_thread_mutex_unlock(&pending_requests.lock);
 
 		/* if we couldn't send anything, clean up */
 		if (ret != 0)
@@ -1186,7 +1186,7 @@ rte_mp_request_async(struct rte_mp_msg *req, const struct timespec *ts,
 	}
 
 	/* finally, unlock the queue */
-	pthread_mutex_unlock(&pending_requests.lock);
+	rte_thread_mutex_unlock(&pending_requests.lock);
 
 	/* unlock the directory */
 	flock(dir_fd, LOCK_UN);
@@ -1202,7 +1202,7 @@ rte_mp_request_async(struct rte_mp_msg *req, const struct timespec *ts,
 closedir_fail:
 	closedir(mp_dir);
 unlock_fail:
-	pthread_mutex_unlock(&pending_requests.lock);
+	rte_thread_mutex_unlock(&pending_requests.lock);
 fail:
 	free(dummy);
 	free(param);
