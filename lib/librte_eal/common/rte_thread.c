@@ -30,6 +30,19 @@ rte_thread_equal(rte_thread_t t1, rte_thread_t t2)
 }
 
 int
+rte_thread_set_affinity_by_id(rte_thread_t thread_id, size_t cpuset_size,
+			const rte_cpuset_t *cpuset)
+{
+	return pthread_setaffinity_np(thread_id, cpuset_size, cpuset);
+}
+
+int rte_thread_get_affinity_by_id(rte_thread_t threadid, size_t cpuset_size,
+		rte_cpuset_t *cpuset)
+{
+	return pthread_getaffinity_np(threadid, cpuset_size, cpuset);
+}
+
+int
 rte_thread_attr_init(rte_thread_attr_t *attr)
 {
 	if (attr == NULL) {
