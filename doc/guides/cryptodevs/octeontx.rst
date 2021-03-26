@@ -135,3 +135,9 @@ application:
 
         ./dpdk-test
         RTE>>cryptodev_octeontx_asym_autotest
+
+Limitations
+-----------
+
+Multiple lcores may not operate on the same crypto queue pair. The lcore that
+enqueues to a queueu pair is the one that must dequeue from it.
