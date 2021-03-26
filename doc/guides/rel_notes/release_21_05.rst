@@ -101,6 +101,12 @@ New Features
   * Added command to display Rx queue used descriptor count.
     ``show port (port_id) rxq (queue_id) desc used count``
 
+* **Updated Intel iavf driver.**
+
+  Updated the Intel iavf driver with new features and improvements, including:
+
+  * Added flow filter to support GTPU inner L3/L4 fields matching.
+
 
 Removed Items
 -------------
