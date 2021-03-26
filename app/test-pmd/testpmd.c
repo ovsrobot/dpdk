@@ -63,6 +63,9 @@
 
 #include "testpmd.h"
 
+int testpmd_fd_copy; /* the copy of STDIN_FILENO */
+struct cmdline *testpmd_cl;
+
 #ifndef MAP_HUGETLB
 /* FreeBSD may not have MAP_HUGETLB (in fact, it probably doesn't) */
 #define HUGE_FLAG (0x40000)
@@ -124,6 +127,9 @@ uint8_t port_numa[RTE_MAX_ETHPORTS];
  * is allocated.
  */
 uint8_t rxring_numa[RTE_MAX_ETHPORTS];
+
+int proc_id;
+unsigned int num_procs = 1;
 
 /*
  * Store specified sockets on which TX ring to be used by ports
@@ -977,6 +983,11 @@ mbuf_pool_create(uint16_t mbuf_seg_size, unsigned nb_mbuf,
 	mb_size = sizeof(struct rte_mbuf) + mbuf_seg_size;
 	mbuf_poolname_build(socket_id, pool_name, sizeof(pool_name), size_idx);
 
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		rte_mp = rte_mempool_lookup(pool_name);
+		goto err;
+	}
+
 	TESTPMD_LOG(INFO,
 		"create a new mbuf pool <%s>: n=%u, size=%u, socket=%u\n",
 		pool_name, nb_mbuf, mbuf_seg_size, socket_id);
@@ -1059,9 +1070,14 @@ mbuf_pool_create(uint16_t mbuf_seg_size, unsigned nb_mbuf,
 
 err:
 	if (rte_mp == NULL) {
-		rte_exit(EXIT_FAILURE,
-			"Creation of mbuf pool for socket %u failed: %s\n",
-			socket_id, rte_strerror(rte_errno));
+		if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+			rte_exit(EXIT_FAILURE,
+				"Creation of mbuf pool for socket %u failed: %s\n",
+				socket_id, rte_strerror(rte_errno));
+		else
+			rte_exit(EXIT_FAILURE,
+				"Get mbuf pool for socket %u failed: %s\n",
+				socket_id, rte_strerror(rte_errno));
 	} else if (verbose_level > 0) {
 		rte_mempool_dump(stdout, rte_mp);
 	}
@@ -2002,6 +2018,12 @@ flush_fwd_rx_queues(void)
 	uint64_t prev_tsc = 0, diff_tsc, cur_tsc, timer_tsc = 0;
 	uint64_t timer_period;
 
+	if (num_procs > 1) {
+		printf("multi-process not support for flushing fwd rx "
+		       "queues, skip the below lines and return.\n");
+		return;
+	}
+
 	/* convert to number of cycles */
 	timer_period = rte_get_timer_hz(); /* 1 second timeout */
 
@@ -2511,21 +2533,28 @@ start_port(portid_t pid)
 				return -1;
 			}
 			/* configure port */
-			diag = rte_eth_dev_configure(pi, nb_rxq + nb_hairpinq,
+			if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+				diag = rte_eth_dev_configure(pi,
+						     nb_rxq + nb_hairpinq,
 						     nb_txq + nb_hairpinq,
 						     &(port->dev_conf));
-			if (diag != 0) {
-				if (rte_atomic16_cmpset(&(port->port_status),
-				RTE_PORT_HANDLING, RTE_PORT_STOPPED) == 0)
-					printf("Port %d can not be set back "
-							"to stopped\n", pi);
-				printf("Fail to configure port %d\n", pi);
-				/* try to reconfigure port next time */
-				port->need_reconfig = 1;
-				return -1;
+				if (diag != 0) {
+					if (rte_atomic16_cmpset(
+							&(port->port_status),
+							RTE_PORT_HANDLING,
+							RTE_PORT_STOPPED) == 0)
+						printf("Port %d can not be set "
+						       "back to stopped\n", pi);
+					printf("Fail to configure port %d\n",
+						pi);
+					/* try to reconfigure port next time */
+					port->need_reconfig = 1;
+					return -1;
+				}
 			}
 		}
-		if (port->need_reconfig_queues > 0) {
+		if (port->need_reconfig_queues > 0 &&
+		    rte_eal_process_type() == RTE_PROC_PRIMARY) {
 			port->need_reconfig_queues = 0;
 			/* setup tx queues */
 			for (qi = 0; qi < nb_txq; qi++) {
@@ -2626,17 +2655,20 @@ start_port(portid_t pid)
 		cnt_pi++;
 
 		/* start port */
-		diag = rte_eth_dev_start(pi);
-		if (diag < 0) {
-			printf("Fail to start port %d: %s\n", pi,
-			       rte_strerror(-diag));
+		if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+			diag = rte_eth_dev_start(pi);
+			if (diag < 0) {
+				printf("Fail to start port %d: %s\n", pi,
+				       rte_strerror(-diag));
 
-			/* Fail to setup rx queue, return */
-			if (rte_atomic16_cmpset(&(port->port_status),
+				/* Fail to setup rx queue, return */
+				if (rte_atomic16_cmpset(&(port->port_status),
 				RTE_PORT_HANDLING, RTE_PORT_STOPPED) == 0)
-				printf("Port %d can not be set back to "
-							"stopped\n", pi);
-			continue;
+					printf("Port %d can not be set back to "
+								"stopped\n",
+						pi);
+				continue;
+			}
 		}
 
 		if (rte_atomic16_cmpset(&(port->port_status),
@@ -2765,7 +2797,8 @@ stop_port(portid_t pid)
 		if (port->flow_list)
 			port_flow_flush(pi);
 
-		if (rte_eth_dev_stop(pi) != 0)
+		if (rte_eal_process_type() == RTE_PROC_PRIMARY &&
+		    rte_eth_dev_stop(pi) != 0)
 			RTE_LOG(ERR, EAL, "rte_eth_dev_stop failed for port %u\n",
 				pi);
 
@@ -2834,8 +2867,10 @@ close_port(portid_t pid)
 			continue;
 		}
 
-		port_flow_flush(pi);
-		rte_eth_dev_close(pi);
+		if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+			port_flow_flush(pi);
+		if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+			rte_eth_dev_close(pi);
 	}
 
 	remove_invalid_ports();
@@ -3099,7 +3134,7 @@ pmd_test_exit(void)
 		}
 	}
 	for (i = 0 ; i < RTE_DIM(mempools) ; i++) {
-		if (mempools[i])
+		if (rte_eal_process_type() == RTE_PROC_PRIMARY && mempools[i])
 			rte_mempool_free(mempools[i]);
 	}
 
@@ -3621,6 +3656,10 @@ init_port_dcb_config(portid_t pid,
 	int retval;
 	uint16_t i;
 
+	if (num_procs > 1) {
+		printf("The multi-process feature doesn't support dcb.\n");
+		return -ENOTSUP;
+	}
 	rte_port = &ports[pid];
 
 	memset(&port_conf, 0, sizeof(struct rte_eth_conf));
@@ -3719,13 +3758,6 @@ init_port(void)
 }
 
 static void
-force_quit(void)
-{
-	pmd_test_exit();
-	prompt_exit();
-}
-
-static void
 print_stats(void)
 {
 	uint8_t i;
@@ -3756,12 +3788,16 @@ signal_handler(int signum)
 		if (latencystats_enabled != 0)
 			rte_latencystats_uninit();
 #endif
-		force_quit();
 		/* Set flag to indicate the force termination. */
 		f_quit = 1;
-		/* exit with the expected status */
-		signal(signum, SIG_DFL);
-		kill(getpid(), signum);
+		if (interactive == 1) {
+			dup2(testpmd_cl->s_in, testpmd_fd_copy);
+			close(testpmd_cl->s_in);
+		} else {
+			dup2(0, testpmd_fd_copy);
+			close(0);
+		}
+
 	}
 }
 
@@ -3785,10 +3821,6 @@ main(int argc, char** argv)
 	if (diag < 0)
 		rte_exit(EXIT_FAILURE, "Cannot init EAL: %s\n",
 			 rte_strerror(rte_errno));
-
-	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
-		rte_exit(EXIT_FAILURE,
-			 "Secondary process type not supported.\n");
 
 	ret = register_eth_event_callback();
 	if (ret != 0)
@@ -3885,8 +3917,10 @@ main(int argc, char** argv)
 		}
 	}
 
-	if (!no_device_start && start_port(RTE_PORT_ALL) != 0)
+	if (!no_device_start && start_port(RTE_PORT_ALL) != 0) {
+		pmd_test_exit();
 		rte_exit(EXIT_FAILURE, "Start ports failed\n");
+	}
 
 	/* set all ports to promiscuous mode by default */
 	RTE_ETH_FOREACH_DEV(port_id) {
@@ -3932,6 +3966,8 @@ main(int argc, char** argv)
 		}
 		prompt();
 		pmd_test_exit();
+		if (unlikely(f_quit == 1))
+			prompt_exit();
 	} else
 #endif
 	{
@@ -3967,6 +4003,11 @@ main(int argc, char** argv)
 		printf("Press enter to exit\n");
 		rc = read(0, &c, 1);
 		pmd_test_exit();
+		if (unlikely(f_quit == 1)) {
+			dup2(testpmd_fd_copy, 0);
+			close(testpmd_fd_copy);
+			prompt_exit();
+		}
 		if (rc < 0)
 			return 1;
 	}
