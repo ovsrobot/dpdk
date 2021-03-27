@@ -197,6 +197,7 @@ you may use various combinations of implementer/part number::
       'generic': Generic armv8
       '0x41':    Arm
       '0x43':    Cavium
+      '0x48':    Hisilicon
       '0x50':    Ampere Computing
       '0x56':    Marvell ARMADA
       'dpaa':    NXP DPAA
@@ -218,6 +219,9 @@ you may use various combinations of implementer/part number::
       '0xa3':    thunderxt83
       '0xaf':    thunderx2t99
       '0xb2':    octeontx2
+
+   Supported part_numbers for 0x48:
+      '0xd01':    kunpeng920
 
    Supported part_numbers for 0x50:
       '0x0':     emag
