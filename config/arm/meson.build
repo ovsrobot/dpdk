@@ -133,6 +133,32 @@ implementer_cavium = {
 	}
 }
 
+implementer_hisilicon = {
+	'description': 'Hisilicon',
+	'flags': [
+		['RTE_USE_C11_MEM_MODEL', true],
+		['RTE_CACHE_LINE_SIZE', 128],
+		['RTE_MAX_NUMA_NODES', 4]
+	],
+	'part_number_config': {
+		'0xd01': {
+			'machine_args': ['-march=armv8.2-a+crypto',
+					 '-mtune=tsv110'],
+			'flag': [['RTE_MACHINE', '"kunpeng920"'],
+				 ['RTE_MAX_LCORE', 128],
+				 ['RTE_ARM_FEATURE_ATOMICS', true]
+			]
+		},
+		'0xd02': {
+			'machine_args': ['-march=armv8.2-a+crypto+sve'],
+			'flag': [['RTE_MACHINE', '"kunpeng930"'],
+				 ['RTE_MAX_LCORE', 256],
+				 ['RTE_ARM_FEATURE_ATOMICS', true]
+			]
+		}
+	}
+}
+
 implementer_ampere = {
 	'description': 'Ampere Computing',
 	'flags': [
@@ -190,6 +216,7 @@ implementers = {
 	'generic': implementer_generic,
 	'0x41': implementer_arm,
 	'0x43': implementer_cavium,
+	'0x48': implementer_hisilicon,
 	'0x50': implementer_ampere,
 	'0x51': implementer_qualcomm,
 	'0x56': implementer_marvell,
