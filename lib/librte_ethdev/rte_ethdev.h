@@ -4429,6 +4429,7 @@ int rte_eth_dev_get_eeprom_length(uint16_t port_id);
  * @return
  *   - (0) if successful.
  *   - (-ENOTSUP) if hardware doesn't support.
+ *   - (-EINVAL) if bad parameter.
  *   - (-ENODEV) if *port_id* invalid.
  *   - (-EIO) if device is removed.
  *   - others depends on the specific operations implementation.
@@ -4490,6 +4491,7 @@ rte_eth_dev_get_module_info(uint16_t port_id,
  * @return
  *   - (0) if successful.
  *   - (-ENOTSUP) if hardware doesn't support.
+ *   - (-EINVAL) if bad parameter.
  *   - (-ENODEV) if *port_id* invalid.
  *   - (-EIO) if device is removed.
  *   - others depends on the specific operations implementation.
