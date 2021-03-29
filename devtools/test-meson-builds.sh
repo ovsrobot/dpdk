@@ -223,12 +223,13 @@ done
 # test compilation with minimal x86 instruction set
 # Set the install path for libraries to "lib" explicitly to prevent problems
 # with pkg-config prefixes if installed in "lib/x86_64-linux-gnu" later.
-default_machine='nehalem'
-if ! check_cc_flags "-march=$default_machine" ; then
-	default_machine='corei7'
+default_isa='nehalem'
+if ! check_cc_flags "-march=$default_isa" ; then
+	default_isa='corei7'
 fi
 build build-x86-default cc skipABI -Dcheck_includes=true \
-	-Dlibdir=lib -Dmachine=$default_machine $use_shared
+	-Dlibdir=lib -Dcpu_instruction_set=$default_isa \
+	$use_shared
 
 # 32-bit with default compiler
 if check_cc_flags '-m32' ; then

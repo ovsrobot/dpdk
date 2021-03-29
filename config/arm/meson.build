@@ -208,7 +208,7 @@ if dpdk_conf.get('RTE_ARCH_32')
 else
 	# aarch64 build
 	if not meson.is_cross_build()
-		if machine == 'default'
+		if platform == 'generic'
 			# default build
 			implementer_id = 'generic'
 			part_number = 'generic'
@@ -238,7 +238,7 @@ else
 	else
 		error('Unsupported Arm implementer: @0@. '.format(implementer_id) +
 		      'Please add support for it or use the generic ' +
-		      '(-Dmachine=generic) build.')
+		      '(-Dplatform=generic) build.')
 	endif
 
 	message('Arm implementer: ' + implementer_config['description'])
@@ -253,7 +253,7 @@ else
 		error('Unsupported part number @0@ of implementer @1@. '
 		      .format(part_number, implementer_id) +
 		      'Please add support for it or use the generic ' +
-		      '(-Dmachine=generic) build.')
+		      '(-Dplatform=generic) build.')
 	endif
 
 	# use default flags with implementer flags
