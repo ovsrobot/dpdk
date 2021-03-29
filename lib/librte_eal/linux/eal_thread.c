@@ -73,11 +73,11 @@ eal_thread_loop(__rte_unused void *arg)
 	char c;
 	int n, ret;
 	unsigned lcore_id;
-	pthread_t thread_id;
+	rte_thread_t thread_id;
 	int m2w, w2m;
 	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
 
-	thread_id = pthread_self();
+	thread_id = rte_thread_self();
 
 	/* retrieve our lcore_id from the configuration structure */
 	RTE_LCORE_FOREACH_WORKER(lcore_id) {
@@ -148,7 +148,7 @@ int rte_sys_gettid(void)
 	return (int)syscall(SYS_gettid);
 }
 
-int rte_thread_setname(pthread_t id, const char *name)
+int rte_thread_setname(rte_thread_t id, const char *name)
 {
 	int ret = ENOSYS;
 #if defined(__GLIBC__) && defined(__GLIBC_PREREQ)
@@ -164,7 +164,7 @@ int rte_thread_setname(pthread_t id, const char *name)
 	return -ret;
 }
 
-int rte_thread_getname(pthread_t id, char *name, size_t len)
+int rte_thread_getname(rte_thread_t id, char *name, size_t len)
 {
 	int ret = ENOSYS;
 #if defined(__GLIBC__) && defined(__GLIBC_PREREQ)

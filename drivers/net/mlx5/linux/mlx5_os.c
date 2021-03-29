@@ -2349,7 +2349,7 @@ mlx5_os_open_device(const struct mlx5_dev_spawn_data *spawn,
 	int err = 0;
 
 	sh->numa_node = spawn->pci_dev->device.numa_node;
-	pthread_mutex_init(&sh->txpp.mutex, NULL);
+	rte_thread_mutex_init(&sh->txpp.mutex);
 	/*
 	 * Configure environment variable "MLX5_BF_SHUT_UP"
 	 * before the device creation. The rdma_core library

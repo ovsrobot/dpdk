@@ -1042,8 +1042,8 @@ main(int argc, char** argv)
 	int ret;
 	uint16_t nb_sys_ports, port;
 	unsigned i;
-	void *retval;
-	pthread_t kni_link_tid;
+	int retval;
+	rte_thread_t kni_link_tid;
 	int pid;
 
 	/* Associate signal_hanlder function with USR signals */
@@ -1126,7 +1126,7 @@ main(int argc, char** argv)
 			return -1;
 	}
 	monitor_links = 0;
-	pthread_join(kni_link_tid, &retval);
+	rte_thread_join(kni_link_tid, &retval);
 
 	/* Release resources */
 	RTE_ETH_FOREACH_DEV(port) {

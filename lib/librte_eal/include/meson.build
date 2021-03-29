@@ -40,6 +40,7 @@ headers += files(
 	'rte_string_fns.h',
 	'rte_tailq.h',
 	'rte_thread.h',
+	'rte_thread_types.h',
 	'rte_time.h',
 	'rte_trace.h',
 	'rte_trace_point.h',

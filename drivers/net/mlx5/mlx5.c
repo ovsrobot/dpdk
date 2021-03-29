@@ -181,7 +181,7 @@ int mlx5_logtype;
 
 static LIST_HEAD(, mlx5_dev_ctx_shared) mlx5_dev_ctx_list =
 						LIST_HEAD_INITIALIZER();
-static pthread_mutex_t mlx5_dev_ctx_list_mutex;
+static rte_thread_mutex_t mlx5_dev_ctx_list_mutex;
 static const struct mlx5_indexed_pool_config mlx5_ipool_cfg[] = {
 #if defined(HAVE_IBV_FLOW_DV_SUPPORT) || !defined(HAVE_INFINIBAND_VERBS_H)
 	[MLX5_IPOOL_DECAP_ENCAP] = {
@@ -884,7 +884,7 @@ mlx5_alloc_shared_dev_ctx(const struct mlx5_dev_spawn_data *spawn,
 	MLX5_ASSERT(spawn);
 	/* Secondary process should not create the shared context. */
 	MLX5_ASSERT(rte_eal_process_type() == RTE_PROC_PRIMARY);
-	pthread_mutex_lock(&mlx5_dev_ctx_list_mutex);
+	rte_thread_mutex_lock(&mlx5_dev_ctx_list_mutex);
 	/* Search for IB context by device name. */
 	LIST_FOREACH(sh, &mlx5_dev_ctx_list, next) {
 		if (!strcmp(sh->ibdev_name,
@@ -1010,11 +1010,11 @@ mlx5_alloc_shared_dev_ctx(const struct mlx5_dev_spawn_data *spawn,
 	LIST_INSERT_HEAD(&mlx5_dev_ctx_list, sh, next);
 	rte_spinlock_init(&sh->geneve_tlv_opt_sl);
 exit:
-	pthread_mutex_unlock(&mlx5_dev_ctx_list_mutex);
+	rte_thread_mutex_unlock(&mlx5_dev_ctx_list_mutex);
 	return sh;
 error:
-	pthread_mutex_destroy(&sh->txpp.mutex);
-	pthread_mutex_unlock(&mlx5_dev_ctx_list_mutex);
+	rte_thread_mutex_destroy(&sh->txpp.mutex);
+	rte_thread_mutex_unlock(&mlx5_dev_ctx_list_mutex);
 	MLX5_ASSERT(sh);
 	if (sh->cnt_id_tbl)
 		mlx5_l3t_destroy(sh->cnt_id_tbl);
@@ -1046,7 +1046,7 @@ error:
 void
 mlx5_free_shared_dev_ctx(struct mlx5_dev_ctx_shared *sh)
 {
-	pthread_mutex_lock(&mlx5_dev_ctx_list_mutex);
+	rte_thread_mutex_lock(&mlx5_dev_ctx_list_mutex);
 #ifdef RTE_LIBRTE_MLX5_DEBUG
 	/* Check the object presence in the list. */
 	struct mlx5_dev_ctx_shared *lctx;
@@ -1077,7 +1077,7 @@ mlx5_free_shared_dev_ctx(struct mlx5_dev_ctx_shared *sh)
 	/* Release flow workspaces objects on the last device. */
 	if (LIST_EMPTY(&mlx5_dev_ctx_list))
 		mlx5_flow_os_release_workspace();
-	pthread_mutex_unlock(&mlx5_dev_ctx_list_mutex);
+	rte_thread_mutex_unlock(&mlx5_dev_ctx_list_mutex);
 	/*
 	 *  Ensure there is no async event handler installed.
 	 *  Only primary process handles async device events.
@@ -1108,11 +1108,11 @@ mlx5_free_shared_dev_ctx(struct mlx5_dev_ctx_shared *sh)
 	if (sh->ctx)
 		claim_zero(mlx5_glue->close_device(sh->ctx));
 	MLX5_ASSERT(sh->geneve_tlv_option_resource == NULL);
-	pthread_mutex_destroy(&sh->txpp.mutex);
+	rte_thread_mutex_destroy(&sh->txpp.mutex);
 	mlx5_free(sh);
 	return;
 exit:
-	pthread_mutex_unlock(&mlx5_dev_ctx_list_mutex);
+	rte_thread_mutex_unlock(&mlx5_dev_ctx_list_mutex);
 }
 
 /**
@@ -2234,7 +2234,7 @@ RTE_LOG_REGISTER(mlx5_logtype, pmd.net.mlx5, NOTICE)
  */
 RTE_INIT(rte_mlx5_pmd_init)
 {
-	pthread_mutex_init(&mlx5_dev_ctx_list_mutex, NULL);
+	rte_thread_mutex_init(&mlx5_dev_ctx_list_mutex);
 	mlx5_common_init();
 	/* Build the static tables for Verbs conversion. */
 	mlx5_set_ptype_table();

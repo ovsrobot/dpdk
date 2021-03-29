@@ -374,7 +374,7 @@ rte_lcore_dump(FILE *f);
  * @return
  *   On success, return 0; otherwise return a negative value.
  */
-int rte_thread_setname(pthread_t id, const char *name);
+int rte_thread_setname(rte_thread_t id, const char *name);
 
 /**
  * Get thread name.
@@ -391,7 +391,7 @@ int rte_thread_setname(pthread_t id, const char *name);
  *   On success, return 0; otherwise return a negative value.
  */
 __rte_experimental
-int rte_thread_getname(pthread_t id, char *name, size_t len);
+int rte_thread_getname(rte_thread_t id, char *name, size_t len);
 
 /**
  * Register current non-EAL thread as a lcore.
@@ -440,8 +440,8 @@ rte_thread_unregister(void);
  *   corresponding to the error number.
  */
 int
-rte_ctrl_thread_create(pthread_t *thread, const char *name,
-		const pthread_attr_t *attr,
+rte_ctrl_thread_create(rte_thread_t *thread, const char *name,
+		const rte_thread_attr_t *attr,
 		void *(*start_routine)(void *), void *arg);
 
 #ifdef __cplusplus

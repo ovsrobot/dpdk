@@ -50,7 +50,7 @@ struct pmd_internals {
 	uint16_t port_id;
 	int is_kni_started;
 
-	pthread_t thread;
+	rte_thread_t thread;
 	int stop_thread;
 	int no_request_thread;
 
@@ -186,11 +186,11 @@ eth_kni_dev_stop(struct rte_eth_dev *dev)
 	if (internals->no_request_thread == 0 && internals->stop_thread == 0) {
 		internals->stop_thread = 1;
 
-		ret = pthread_cancel(internals->thread);
+		ret = rte_thread_cancel(internals->thread);
 		if (ret)
 			PMD_LOG(ERR, "Can't cancel the thread");
 
-		ret = pthread_join(internals->thread, NULL);
+		ret = rte_thread_join(internals->thread, NULL);
 		if (ret)
 			PMD_LOG(ERR, "Can't join the thread");
 	}

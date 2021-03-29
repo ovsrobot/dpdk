@@ -69,7 +69,7 @@ static const struct rte_pci_id pci_ifpga_map[] = {
 static struct ifpga_rawdev ifpga_rawdevices[IFPGA_RAWDEV_NUM];
 
 static int ifpga_monitor_start;
-static pthread_t ifpga_monitor_start_thread;
+static rte_thread_t ifpga_monitor_start_thread;
 
 #define IFPGA_MAX_IRQ 12
 /* 0 for FME interrupt, others are reserved for AFU irq */
@@ -526,7 +526,7 @@ ifpga_monitor_start_func(void)
 	int ret;
 
 	if (ifpga_monitor_start == 0) {
-		ret = pthread_create(&ifpga_monitor_start_thread,
+		ret = rte_thread_create(&ifpga_monitor_start_thread,
 			NULL,
 			ifpga_rawdev_gsd_handle, NULL);
 		if (ret) {
@@ -545,11 +545,11 @@ ifpga_monitor_stop_func(void)
 	int ret;
 
 	if (ifpga_monitor_start == 1) {
-		ret = pthread_cancel(ifpga_monitor_start_thread);
+		ret = rte_thread_cancel(ifpga_monitor_start_thread);
 		if (ret)
 			IFPGA_RAWDEV_PMD_ERR("Can't cancel the thread");
 
-		ret = pthread_join(ifpga_monitor_start_thread, NULL);
+		ret = rte_thread_join(ifpga_monitor_start_thread, NULL);
 		if (ret)
 			IFPGA_RAWDEV_PMD_ERR("Can't join the thread");
 

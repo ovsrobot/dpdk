@@ -10,7 +10,8 @@
 #include <string.h>
 #include <stdbool.h>
 #include <netinet/in.h>
-#include <pthread.h>
+#include <rte_compat.h>
+#include <rte_thread.h>
 
 #include <rte_common.h>
 
@@ -141,7 +142,7 @@ struct aq_hw_s {
 	u32 rpc_tid;
 	struct hw_aq_atl_utils_fw_rpc rpc;
 
-	pthread_mutex_t mbox_mutex;
+	rte_thread_mutex_t mbox_mutex;
 };
 
 struct aq_fw_ops {

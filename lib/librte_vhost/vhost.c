@@ -26,7 +26,7 @@
 #include "vhost_user.h"
 
 struct virtio_net *vhost_devices[MAX_VHOST_DEVICE];
-pthread_mutex_t vhost_dev_lock = PTHREAD_MUTEX_INITIALIZER;
+rte_thread_mutex_t vhost_dev_lock = RTE_THREAD_MUTEX_INITIALIZER;
 
 /* Called with iotlb_lock read-locked */
 uint64_t
@@ -646,7 +646,7 @@ vhost_new_device(void)
 	struct virtio_net *dev;
 	int i;
 
-	pthread_mutex_lock(&vhost_dev_lock);
+	rte_thread_mutex_lock(&vhost_dev_lock);
 	for (i = 0; i < MAX_VHOST_DEVICE; i++) {
 		if (vhost_devices[i] == NULL)
 			break;
@@ -655,7 +655,7 @@ vhost_new_device(void)
 	if (i == MAX_VHOST_DEVICE) {
 		VHOST_LOG_CONFIG(ERR,
 			"Failed to find a free slot for new device.\n");
-		pthread_mutex_unlock(&vhost_dev_lock);
+		rte_thread_mutex_unlock(&vhost_dev_lock);
 		return -1;
 	}
 
@@ -663,12 +663,12 @@ vhost_new_device(void)
 	if (dev == NULL) {
 		VHOST_LOG_CONFIG(ERR,
 			"Failed to allocate memory for new dev.\n");
-		pthread_mutex_unlock(&vhost_dev_lock);
+		rte_thread_mutex_unlock(&vhost_dev_lock);
 		return -1;
 	}
 
 	vhost_devices[i] = dev;
-	pthread_mutex_unlock(&vhost_dev_lock);
+	rte_thread_mutex_unlock(&vhost_dev_lock);
 
 	dev->vid = i;
 	dev->flags = VIRTIO_DEV_BUILTIN_VIRTIO_NET;

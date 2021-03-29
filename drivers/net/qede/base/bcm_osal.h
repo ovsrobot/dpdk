@@ -153,10 +153,10 @@ void osal_dma_free_mem(struct ecore_dev *edev, dma_addr_t phys);
 
 /* Mutexes */
 
-typedef pthread_mutex_t osal_mutex_t;
-#define OSAL_MUTEX_RELEASE(lock) pthread_mutex_unlock(lock)
-#define OSAL_MUTEX_INIT(lock) pthread_mutex_init(lock, NULL)
-#define OSAL_MUTEX_ACQUIRE(lock) pthread_mutex_lock(lock)
+typedef rte_thread_mutex_t osal_mutex_t;
+#define OSAL_MUTEX_RELEASE(lock) rte_thread_mutex_unlock(lock)
+#define OSAL_MUTEX_INIT(lock) rte_thread_mutex_init(lock)
+#define OSAL_MUTEX_ACQUIRE(lock) rte_thread_mutex_lock(lock)
 #define OSAL_MUTEX_ALLOC(hwfn, lock) nothing
 #define OSAL_MUTEX_DEALLOC(lock) nothing
 

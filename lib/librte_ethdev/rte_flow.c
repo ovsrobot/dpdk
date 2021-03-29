@@ -223,14 +223,14 @@ static inline void
 fts_enter(struct rte_eth_dev *dev)
 {
 	if (!(dev->data->dev_flags & RTE_ETH_DEV_FLOW_OPS_THREAD_SAFE))
-		pthread_mutex_lock(&dev->data->flow_ops_mutex);
+		rte_thread_mutex_lock(&dev->data->flow_ops_mutex);
 }
 
 static inline void
 fts_exit(struct rte_eth_dev *dev)
 {
 	if (!(dev->data->dev_flags & RTE_ETH_DEV_FLOW_OPS_THREAD_SAFE))
-		pthread_mutex_unlock(&dev->data->flow_ops_mutex);
+		rte_thread_mutex_unlock(&dev->data->flow_ops_mutex);
 }
 
 static int

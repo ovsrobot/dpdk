@@ -47,7 +47,7 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 	char path[32];
 #ifdef RTE_LIB_PDUMP
 #ifdef RTE_NET_RING
-	pthread_t thread;
+	rte_thread_t thread;
 #endif
 #endif
 
@@ -127,7 +127,7 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 #ifdef RTE_LIB_PDUMP
 #ifdef RTE_NET_RING
 	if ((strcmp(env_value, "run_pdump_server_tests") == 0))
-		pthread_create(&thread, NULL, &send_pkts, NULL);
+		rte_thread_create(&thread, NULL, &send_pkts, NULL);
 #endif
 #endif
 
@@ -137,7 +137,7 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 #ifdef RTE_NET_RING
 	if ((strcmp(env_value, "run_pdump_server_tests") == 0)) {
 		flag_for_send_pkts = 0;
-		pthread_join(thread, NULL);
+		rte_thread_join(thread, NULL);
 	}
 #endif
 #endif
