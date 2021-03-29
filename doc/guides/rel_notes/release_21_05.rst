@@ -89,6 +89,7 @@ New Features
 * **Updated Wangxun txgbe driver.**
 
   * Added support for txgbevf PMD.
+  * Support device arguments to handle AN training for backplane NICs.
 
 * **Updated the AF_XDP driver.**
 
