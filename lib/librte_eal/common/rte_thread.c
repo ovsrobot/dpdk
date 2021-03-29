@@ -220,6 +220,30 @@ rte_thread_join(rte_thread_t thread_id, int *value_ptr)
 	return 0;
 }
 
+int
+rte_thread_mutex_init(rte_thread_mutex_t *mutex)
+{
+	return pthread_mutex_init(mutex, NULL);
+}
+
+int
+rte_thread_mutex_lock(rte_thread_mutex_t *mutex)
+{
+	return pthread_mutex_lock(mutex);
+}
+
+int
+rte_thread_mutex_unlock(rte_thread_mutex_t *mutex)
+{
+	return pthread_mutex_unlock(mutex);
+}
+
+int
+rte_thread_mutex_destroy(rte_thread_mutex_t *mutex)
+{
+	return pthread_mutex_destroy(mutex);
+}
+
 int rte_thread_cancel(rte_thread_t thread_id)
 {
 	/*
