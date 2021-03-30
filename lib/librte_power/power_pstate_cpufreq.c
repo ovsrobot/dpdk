@@ -450,6 +450,9 @@ power_set_governor_performance(struct pstate_power_info *pi)
 	ret = read_core_sysfs_s(f_governor, buf, sizeof(buf));
 	FOPS_OR_ERR_GOTO(ret, out);
 
+	/* Save the original governor */
+	strscpy(pi->governor_ori, buf, sizeof(pi->governor_ori));
+
 	/* Check if current governor is performance */
 	if (strncmp(buf, POWER_GOVERNOR_PERF,
 			sizeof(POWER_GOVERNOR_PERF)) == 0) {
@@ -458,8 +461,6 @@ power_set_governor_performance(struct pstate_power_info *pi)
 				"already performance\n", pi->lcore_id);
 		goto out;
 	}
-	/* Save the original governor */
-	strlcpy(pi->governor_ori, buf, sizeof(pi->governor_ori));
 
 	/* Write 'performance' to the governor */
 	ret = write_core_sysfs_s(f_governor, POWER_GOVERNOR_PERF);
