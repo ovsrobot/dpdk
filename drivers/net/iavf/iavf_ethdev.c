@@ -127,6 +127,12 @@ static int iavf_set_mc_addr_list(struct rte_eth_dev *dev,
 
 static const struct rte_pci_id pci_id_iavf_map[] = {
 	{ RTE_PCI_DEVICE(IAVF_INTEL_VENDOR_ID, IAVF_DEV_ID_ADAPTIVE_VF) },
+	{ RTE_PCI_DEVICE(IAVF_INTEL_VENDOR_ID, IAVF_DEV_ID_VF) },
+	{ RTE_PCI_DEVICE(IAVF_INTEL_VENDOR_ID, IAVF_DEV_ID_VF_HV) },
+	{ RTE_PCI_DEVICE(IAVF_INTEL_VENDOR_ID, IAVF_DEV_ID_X722_VF) },
+#ifdef X722_A0_SUPPORT
+	{ RTE_PCI_DEVICE(IAVF_INTEL_VENDOR_ID, I40E_DEV_ID_X722_A0_VF) },
+#endif
 	{ .vendor_id = 0, /* sentinel */ },
 };
 
