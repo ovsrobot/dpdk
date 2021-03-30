@@ -61,6 +61,40 @@ struct rte_gtp_hdr_ext_word {
 	uint8_t next_ext;     /**< Next Extension Header Type. */
 }  __rte_packed;
 
+/**
+ * Optional extention for GTP with next_ext set to 0x85
+ * defined based on RFC 38415-g30.
+ */
+__extension__
+struct rte_gtp_psc {
+	uint8_t ext_hdr_len; /**< PDU ext hdr len in multiples of 4 bytes */
+	uint8_t type:4; /**< PDU type */
+	uint8_t qmp:1; /**< Qos Monitoring Packet */
+	union {
+		struct {
+			uint8_t snp:1; /**< Sequence number presence */
+			uint8_t spare_dl1:2; /**< spare down link bits */
+		};
+		struct {
+			uint8_t dl_delay_ind:1; /**< dl delay result presence */
+			uint8_t ul_delay_ind:1; /**< ul delay result presence */
+			uint8_t snp_ul1:1; /**< Sequence number presence ul */
+		};
+	};
+	union {
+		struct {
+			uint8_t ppp:1; /**< Paging policy presence */
+			uint8_t rqi:1; /**< Reflective Qos Indicator */
+		};
+		struct {
+			uint8_t n_delay_ind:1; /**< N3/N9 delay result presence */
+			uint8_t spare_ul2:1; /**< spare up link bits */
+		};
+	};
+	uint8_t qfi:6; /**< Qos Flow Identifier */
+	uint8_t data[0]; /**< data feilds */
+} __rte_packed;
+
 /** GTP header length */
 #define RTE_ETHER_GTP_HLEN \
 	(sizeof(struct rte_udp_hdr) + sizeof(struct rte_gtp_hdr))
