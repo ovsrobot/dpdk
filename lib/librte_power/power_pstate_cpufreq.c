@@ -37,6 +37,13 @@
 		} \
 } while (0)
 
+#define FOPEN_OR_ERR_GOTO(f, label) do { \
+		if ((f) == NULL) { \
+			RTE_LOG(ERR, POWER, "File not opened\n"); \
+			goto label; \
+		} \
+} while (0)
+
 #define FOPS_OR_NULL_GOTO(ret, label) do { \
 		if ((ret) == NULL) { \
 			RTE_LOG(ERR, POWER, "fgets returns nothing\n"); \
@@ -148,93 +155,107 @@ out:	close(fd);
 	return ret;
 }
 
+static int
+open_core_sysfs_file(const char *template, unsigned int core, const char *mode,
+		FILE **f)
+{
+	char fullpath[PATH_MAX];
+	FILE *tmpf;
+
+	/* silenced -Wformat-nonliteral here */
+	snprintf(fullpath, sizeof(fullpath), template, core);
+	tmpf = fopen(fullpath, mode);
+	if (tmpf == NULL)
+		return -1;
+	*f = tmpf;
+
+	return 0;
+}
+
+static int
+read_core_sysfs_u32(FILE *f, uint32_t *val)
+{
+	char buf[BUFSIZ];
+	uint32_t fval;
+	char *s;
+
+	s = fgets(buf, sizeof(buf), f);
+	if (s == NULL)
+		return -1;
+
+	/* fgets puts null terminator in, but do this just in case */
+	buf[BUFSIZ - 1] = '\0';
+
+	/* strip off any terminating newlines */
+	if (strlen(buf))
+		strtok(buf, "\n");
+
+	fval = strtoul(buf, NULL, POWER_CONVERT_TO_DECIMAL);
+
+	/* write the value */
+	*val = fval;
+
+	return 0;
+}
+
 /**
  * It is to fopen the sys file for the future setting the lcore frequency.
  */
 static int
 power_init_for_setting_freq(struct pstate_power_info *pi)
 {
-	FILE *f_min, *f_max, *f_base = NULL, *f_base_max;
-	char fullpath_min[PATH_MAX];
-	char fullpath_max[PATH_MAX];
-	char fullpath_base[PATH_MAX];
-	char fullpath_base_max[PATH_MAX];
-	char buf_base[BUFSIZ];
-	char *s_base;
-	char *s_base_max;
-	uint32_t base_ratio = 0;
-	uint32_t base_max_ratio = 0;
-	uint64_t max_non_turbo = 0;
-	int  ret_val = 0;
+	FILE *f_base = NULL, *f_base_max = NULL, *f_min = NULL, *f_max = NULL;
+	uint32_t base_ratio, base_max_ratio;
+	uint64_t max_non_turbo;
+	int ret;
 
-	snprintf(fullpath_base_max,
-			sizeof(fullpath_base_max),
-			POWER_SYSFILE_BASE_MAX_FREQ,
-			pi->lcore_id);
-	f_base_max = fopen(fullpath_base_max, "r");
-	FOPEN_OR_ERR_RET(f_base_max, -1);
-	if (f_base_max != NULL) {
-		s_base_max = fgets(buf_base, sizeof(buf_base), f_base_max);
-		FOPS_OR_NULL_GOTO(s_base_max, out);
+	/* open all files we expect to have open */
+	open_core_sysfs_file(POWER_SYSFILE_BASE_MAX_FREQ, pi->lcore_id, "r",
+			&f_base_max);
+	FOPEN_OR_ERR_GOTO(f_base_max, err);
 
-		buf_base[BUFSIZ-1] = '\0';
-		if (strlen(buf_base))
-			/* Strip off terminating '\n' */
-			strtok(buf_base, "\n");
+	open_core_sysfs_file(POWER_SYSFILE_MIN_FREQ, pi->lcore_id, "rw+",
+			&f_min);
+	FOPEN_OR_ERR_GOTO(f_min, err);
 
-		base_max_ratio =
-			strtoul(buf_base, NULL, POWER_CONVERT_TO_DECIMAL)
-				/ BUS_FREQ;
-	}
+	open_core_sysfs_file(POWER_SYSFILE_MAX_FREQ, pi->lcore_id, "rw+",
+			&f_max);
+	FOPEN_OR_ERR_GOTO(f_max, err);
 
-	snprintf(fullpath_min, sizeof(fullpath_min), POWER_SYSFILE_MIN_FREQ,
-			pi->lcore_id);
-	f_min = fopen(fullpath_min, "rw+");
-	FOPEN_OR_ERR_RET(f_min, -1);
+	open_core_sysfs_file(POWER_SYSFILE_BASE_FREQ, pi->lcore_id, "r",
+			&f_base);
+	/* base ratio file may not exist in some kernels, so no error check */
 
-	snprintf(fullpath_max, sizeof(fullpath_max), POWER_SYSFILE_MAX_FREQ,
-			pi->lcore_id);
-	f_max = fopen(fullpath_max, "rw+");
-	if (f_max == NULL)
-		fclose(f_min);
-	FOPEN_OR_ERR_RET(f_max, -1);
+	/* read base max ratio */
+	ret = read_core_sysfs_u32(f_base_max, &base_max_ratio);
+	FOPS_OR_ERR_GOTO(ret, err);
 
-	pi->f_cur_min = f_min;
-	pi->f_cur_max = f_max;
-
-	snprintf(fullpath_base, sizeof(fullpath_base), POWER_SYSFILE_BASE_FREQ,
-			pi->lcore_id);
-
-	f_base = fopen(fullpath_base, "r");
-	FOPEN_OR_ERR_RET(f_base, -1);
-	if (f_base == NULL) {
-		/* No sysfs base_frequency, that's OK, continue without */
-		base_ratio = 0;
+	/* base ratio may not exist */
+	if (f_base != NULL) {
+		ret = read_core_sysfs_u32(f_base, &base_ratio);
+		FOPS_OR_ERR_GOTO(ret, err);
 	} else {
-		s_base = fgets(buf_base, sizeof(buf_base), f_base);
-		FOPS_OR_NULL_GOTO(s_base, out);
-
-		buf_base[BUFSIZ-1] = '\0';
-		if (strlen(buf_base))
-			/* Strip off terminating '\n' */
-			strtok(buf_base, "\n");
-
-		base_ratio = strtoul(buf_base, NULL, POWER_CONVERT_TO_DECIMAL)
-				/ BUS_FREQ;
+		base_ratio = 0;
 	}
 
 	/* Add MSR read to detect turbo status */
+	if (power_rdmsr(PLATFORM_INFO, &max_non_turbo, pi->lcore_id) < 0)
+		goto err;
+	/* no errors after this point */
 
-	if (power_rdmsr(PLATFORM_INFO, &max_non_turbo, pi->lcore_id) < 0) {
-		ret_val = -1;
-		goto out;
-	}
+	/* convert ratios to bins */
+	base_max_ratio /= BUS_FREQ;
+	base_ratio /= BUS_FREQ;
+
+	/* assign file handles */
+	pi->f_cur_min = f_min;
+	pi->f_cur_max = f_max;
 
 	max_non_turbo = (max_non_turbo&NON_TURBO_MASK)>>NON_TURBO_OFFSET;
 
 	POWER_DEBUG_TRACE("no turbo perf %"PRIu64"\n", max_non_turbo);
 
-	pi->non_turbo_max_ratio = max_non_turbo;
+	pi->non_turbo_max_ratio = (uint32_t)max_non_turbo;
 
 	/*
 	 * If base_frequency is reported as greater than the maximum
@@ -260,7 +281,20 @@ power_init_for_setting_freq(struct pstate_power_info *pi)
 out:
 	if (f_base != NULL)
 		fclose(f_base);
-	return ret_val;
+	fclose(f_base_max);
+	/* f_min and f_max are stored, no need to close */
+	return 0;
+
+err:
+	if (f_base != NULL)
+		fclose(f_base);
+	if (f_base_max != NULL)
+		fclose(f_base_max);
+	if (f_min != NULL)
+		fclose(f_min);
+	if (f_max != NULL)
+		fclose(f_max);
+	return -1;
 }
 
 static int

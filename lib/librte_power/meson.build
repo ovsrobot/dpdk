@@ -5,6 +5,13 @@ if not is_linux
 	build = false
 	reason = 'only supported on Linux'
 endif
+
+# we do some snprintf magic so silence format-nonliteral
+flag_nonliteral = '-Wno-format-nonliteral'
+if cc.has_argument(flag_nonliteral)
+	cflags += flag_nonliteral
+endif
+
 sources = files('rte_power.c', 'power_acpi_cpufreq.c',
 		'power_kvm_vm.c', 'guest_channel.c',
 		'rte_power_empty_poll.c',
