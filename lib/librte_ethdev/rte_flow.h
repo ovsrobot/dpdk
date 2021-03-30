@@ -20,6 +20,7 @@
 #include <rte_arp.h>
 #include <rte_common.h>
 #include <rte_ether.h>
+#include <rte_gtp.h>
 #include <rte_icmp.h>
 #include <rte_ip.h>
 #include <rte_sctp.h>
@@ -1390,16 +1391,27 @@ static const struct rte_flow_item_meta rte_flow_item_meta_mask = {
  *
  * Matches a GTP PDU extension header with type 0x85.
  */
+RTE_STD_C11
 struct rte_flow_item_gtp_psc {
-	uint8_t pdu_type; /**< PDU type. */
-	uint8_t qfi; /**< QoS flow identifier. */
+	union {
+		struct {
+			/*
+			 * These fields are retained for compatibility.
+			 * Please switch to the new header field below.
+			 */
+			uint8_t pdu_type; /**< PDU type. */
+			uint8_t qfi; /**< PPP, RQI, QoS flow identifier. */
+
+		};
+		struct rte_gtp_psc gtp_psc;
+	};
 };
 
 /** Default mask for RTE_FLOW_ITEM_TYPE_GTP_PSC. */
 #ifndef __cplusplus
 static const struct rte_flow_item_gtp_psc
 rte_flow_item_gtp_psc_mask = {
-	.qfi = 0x3f,
+	.qfi = 0xff,
 };
 #endif
 
