@@ -22,6 +22,8 @@ dpdk_drivers = []
 dpdk_extra_ldflags = []
 dpdk_libs_disabled = []
 dpdk_drvs_disabled = []
+disabled_drivers = []
+enabled_drivers = []
 abi_version_file = files('ABI_VERSION')
 
 if host_machine.cpu_family().startswith('x86')
