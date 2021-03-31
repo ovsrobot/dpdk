@@ -811,6 +811,9 @@ rte_pktmbuf_data_room_size(struct rte_mempool *mp)
 {
 	struct rte_pktmbuf_pool_private *mbp_priv;
 
+	if (mp->private_data_size < sizeof(struct rte_pktmbuf_pool_private))
+		return 0;
+
 	mbp_priv = (struct rte_pktmbuf_pool_private *)rte_mempool_get_priv(mp);
 	return mbp_priv->mbuf_data_room_size;
 }
@@ -831,6 +834,9 @@ static inline uint16_t
 rte_pktmbuf_priv_size(struct rte_mempool *mp)
 {
 	struct rte_pktmbuf_pool_private *mbp_priv;
+
+	if (mp->private_data_size < sizeof(struct rte_pktmbuf_pool_private))
+		return 0;
 
 	mbp_priv = (struct rte_pktmbuf_pool_private *)rte_mempool_get_priv(mp);
 	return mbp_priv->mbuf_priv_size;
