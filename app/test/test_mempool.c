@@ -543,7 +543,8 @@ test_mempool(void)
 	mp_stack_mempool_iter = rte_mempool_create("test_iter_obj",
 		MEMPOOL_SIZE,
 		MEMPOOL_ELT_SIZE,
-		RTE_MEMPOOL_CACHE_MAX_SIZE, 0,
+		RTE_MEMPOOL_CACHE_MAX_SIZE,
+		sizeof(struct rte_pktmbuf_pool_private),
 		NULL, NULL,
 		my_obj_init, NULL,
 		SOCKET_ID_ANY, 0);
