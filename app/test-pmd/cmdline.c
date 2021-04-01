@@ -15626,7 +15626,7 @@ cmd_config_per_queue_rx_offload_parsed(void *parsed_result,
 	else
 		port->rx_conf[queue_id].offloads &= ~single_offload;
 
-	cmd_reconfig_device_queue(port_id, 1, 1);
+	cmd_reconfig_device_queue(port_id, 0, 1);
 }
 
 cmdline_parse_inst_t cmd_config_per_queue_rx_offload = {
@@ -16044,7 +16044,7 @@ cmd_config_per_queue_tx_offload_parsed(void *parsed_result,
 	else
 		port->tx_conf[queue_id].offloads &= ~single_offload;
 
-	cmd_reconfig_device_queue(port_id, 1, 1);
+	cmd_reconfig_device_queue(port_id, 0, 1);
 }
 
 cmdline_parse_inst_t cmd_config_per_queue_tx_offload = {
