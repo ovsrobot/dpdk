@@ -52,6 +52,7 @@ set_ipsec_conf(struct ipsec_sa *sa, struct rte_security_ipsec_xform *ipsec)
 	ipsec->esn_soft_limit = IPSEC_OFFLOAD_ESN_SOFTLIMIT;
 	ipsec->replay_win_sz = app_sa_prm.window_size;
 	ipsec->options.esn = app_sa_prm.enable_esn;
+	ipsec->options.udp_encap = sa->udp_encap;
 }
 
 int
@@ -528,6 +529,7 @@ ipsec_enqueue(ipsec_xform_fn xform_func, struct ipsec_ctx *ipsec_ctx,
 	struct rte_crypto_sym_op *sym_cop;
 	struct ipsec_sa *sa;
 	struct rte_ipsec_session *ips;
+	int is_udp_esp;
 
 	for (i = 0; i < nb_pkts; i++) {
 		if (unlikely(sas[i] == NULL)) {
@@ -552,6 +554,13 @@ ipsec_enqueue(ipsec_xform_fn xform_func, struct ipsec_ctx *ipsec_ctx,
 
 			if ((unlikely(ips->security.ses == NULL)) &&
 				create_lookaside_session(ipsec_ctx, sa, ips)) {
+				free_pkts(&pkts[i], 1);
+				continue;
+			}
+
+			is_udp_esp = pkts[i]->packet_type &
+					RTE_PTYPE_TUNNEL_ESP_IN_UDP;
+			if (unlikely(is_udp_esp && sa->udp_encap != 1)) {
 				free_pkts(&pkts[i], 1);
 				continue;
 			}
