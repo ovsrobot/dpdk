@@ -16,6 +16,10 @@
  */
 #define ROC_CN9K_NPA_BULK_ALLOC_MAX_PTRS 30
 
+/* Callbacks that are called after NPA lf init/fini respectively */
+typedef int (*roc_npa_lf_init_cb_t)(void);
+typedef void (*roc_npa_lf_fini_cb_t)(void);
+
 /*
  * Generate 64bit handle to have optimized alloc and free aura operation.
  * 0 - ROC_AURA_ID_MASK for storing the aura_id.
@@ -649,5 +653,9 @@ int __roc_api roc_npa_dump(void);
 
 /* Reset operation performance counter. */
 int __roc_api roc_npa_pool_op_pc_reset(uint64_t aura_handle);
+
+/* Callback registration */
+void __roc_api roc_npa_lf_init_cb_register(roc_npa_lf_init_cb_t cb);
+void __roc_api roc_npa_lf_fini_cb_register(roc_npa_lf_fini_cb_t cb);
 
 #endif /* _ROC_NPA_H_ */
