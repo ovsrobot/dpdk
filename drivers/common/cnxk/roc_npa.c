@@ -5,6 +5,21 @@
 #include "roc_api.h"
 #include "roc_priv.h"
 
+static roc_npa_lf_init_cb_t npa_lf_init_cb;
+static roc_npa_lf_fini_cb_t npa_lf_fini_cb;
+
+void
+roc_npa_lf_init_cb_register(roc_npa_lf_init_cb_t cb)
+{
+	npa_lf_init_cb = cb;
+}
+
+void
+roc_npa_lf_fini_cb_register(roc_npa_lf_fini_cb_t cb)
+{
+	npa_lf_fini_cb = cb;
+}
+
 void
 roc_npa_aura_op_range_set(uint64_t aura_handle, uint64_t start_iova,
 			  uint64_t end_iova)
@@ -717,10 +732,19 @@ npa_lf_init(struct dev *dev, struct plt_pci_device *pci_dev)
 	if (rc)
 		goto npa_fini;
 
+	if (npa_lf_init_cb) {
+		rc = npa_lf_init_cb();
+		if (rc)
+			goto npa_irq_unregister;
+	}
+
 	plt_npa_dbg("npa=%p max_pools=%d pf_func=0x%x msix=0x%x", lf,
 		    roc_idev_npa_maxpools_get(), lf->pf_func, npa_msixoff);
 
 	return 0;
+
+npa_irq_unregister:
+	npa_unregister_irqs(idev->npa);
 
 npa_fini:
 	npa_dev_fini(idev->npa);
@@ -749,6 +773,9 @@ npa_lf_fini(void)
 	rc |= npa_dev_fini(idev->npa);
 	rc |= npa_detach(idev->npa->mbox);
 	idev_set_defaults(idev);
+
+	if (npa_lf_fini_cb)
+		npa_lf_fini_cb();
 
 	return rc;
 }
