@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added new packet type for UDP-ESP packets in mbuf.**
+
+  Added new packet type ``RTE_PTYPE_TUNNEL_ESP_IN_UDP`` which can be
+  used to identify UDP encapsulated ESP packets.
+
 * **Enhanced ethdev representor syntax.**
 
   * Introduced representor type of VF, SF and PF.

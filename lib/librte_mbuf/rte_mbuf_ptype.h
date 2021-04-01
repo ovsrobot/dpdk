@@ -492,6 +492,27 @@ extern "C" {
  */
 #define RTE_PTYPE_TUNNEL_MPLS_IN_UDP      0x0000d000
 /**
+ * ESP-in-UDP tunneling packet type (RFC 3948).
+ *
+ * Packet format:
+ * <'ether type'=0x0800
+ * | 'version'=4, 'protocol'=17
+ * | 'destination port'=4500>
+ * or,
+ * <'ether type'=0x86DD
+ * | 'version'=6, 'next header'=17
+ * | 'destination port'=4500>
+ * or,
+ * <'ether type'=0x0800
+ * | 'version'=4, 'protocol'=17
+ * | 'source port'=4500>
+ * or,
+ * <'ether type'=0x86DD
+ * | 'version'=6, 'next header'=17
+ * | 'source port'=4500>
+ */
+#define RTE_PTYPE_TUNNEL_ESP_IN_UDP       0x0000e000
+/**
  * Mask of tunneling packet types.
  */
 #define RTE_PTYPE_TUNNEL_MASK               0x0000f000
