@@ -103,6 +103,8 @@ New Features
 
   * Updated the OCTEON TX2 crypto PMD lookaside protocol offload for IPsec with
     UDP encapsulation support for NAT Traversal.
+  * Updated the OCTEON TX2 crypto PMD lookaside protocol offload for IPsec with
+    IPv4 transport mode support.
 
 * **Updated testpmd.**
 
