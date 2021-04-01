@@ -458,15 +458,13 @@ Run as non-root
 ^^^^^^^^^^^^^^^
 
 In order to run as a non-root user,
-some capabilities must be granted to the application::
+some capabilities must be granted to the application, while others are
+optional for some use cases. Capabilities can be set for example using
+the setcap utilitiy::
 
-   setcap cap_sys_admin,cap_net_admin,cap_net_raw,cap_ipc_lock+ep <dpdk-app>
+   setcap cap_net_admin,cap_net_raw,cap_ipc_lock,cap_sys_admin,cap_sys_rawio+ep <dpdk-app>
 
 Below are the reasons of the need for each capability:
-
-``cap_sys_admin``
-   When using physical addresses (PA mode), with Linux >= 4.0,
-   for access to ``/proc/self/pagemap``.
 
 ``cap_net_admin``
    For device configuration.
@@ -476,6 +474,14 @@ Below are the reasons of the need for each capability:
 
 ``cap_ipc_lock``
    For DMA memory pinning.
+
+``cap_sys_admin`` optional
+   When using physical addresses (PA mode), with Linux >= 4.0,
+   for access to ``/proc/self/pagemap``.
+
+``cap_sys_rawio`` optional
+   For the application to be able to apply rte_flow flows in transfer
+   mode.
 
 Driver options
 ^^^^^^^^^^^^^^
