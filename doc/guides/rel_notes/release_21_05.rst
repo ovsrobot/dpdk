@@ -94,6 +94,12 @@ New Features
 
   * Added support for preferred busy polling.
 
+* **Updated Mellanox mlx5 driver.**
+
+  Updated the Mellanox mlx5 driver with new features and improvements, including:
+
+  * Support push VLAN on ingress traffic and pop VLAN on egress traffic in E-Switch mode.
+
 * **Updated testpmd.**
 
   * Added a command line option to configure forced speed for Ethernet port.
