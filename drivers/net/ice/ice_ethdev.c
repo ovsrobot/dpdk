@@ -808,8 +808,8 @@ ice_init_mac_address(struct rte_eth_dev *dev)
 		(struct rte_ether_addr *)hw->port_info[0].mac.lan_addr,
 		(struct rte_ether_addr *)hw->port_info[0].mac.perm_addr);
 
-	dev->data->mac_addrs =
-		rte_zmalloc(NULL, sizeof(struct rte_ether_addr), 0);
+	dev->data->mac_addrs = rte_zmalloc(NULL,
+		RTE_ETHER_ADDR_LEN * ICE_NUM_MACADDR_MAX, 0);
 	if (!dev->data->mac_addrs) {
 		PMD_INIT_LOG(ERR,
 			     "Failed to allocate memory to store mac address");
