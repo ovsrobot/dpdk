@@ -79,6 +79,20 @@ enum cryptodev_api_test_type {
 
 extern enum cryptodev_api_test_type global_api_test_type;
 
+extern struct crypto_testsuite_params *p_testsuite_params;
+struct crypto_testsuite_params {
+	struct rte_mempool *mbuf_pool;
+	struct rte_mempool *large_mbuf_pool;
+	struct rte_mempool *op_mpool;
+	struct rte_mempool *session_mpool;
+	struct rte_mempool *session_priv_mpool;
+	struct rte_cryptodev_config conf;
+	struct rte_cryptodev_qp_conf qp_conf;
+
+	uint8_t valid_devs[RTE_CRYPTO_MAX_DEVS];
+	uint8_t valid_dev_count;
+};
+
 /**
  * Write (spread) data from buffer to mbuf data
  *
@@ -221,5 +235,11 @@ void
 process_sym_raw_dp_op(uint8_t dev_id, uint16_t qp_id,
 		struct rte_crypto_op *op, uint8_t is_cipher, uint8_t is_auth,
 		uint8_t len_in_bits, uint8_t cipher_iv_len);
+
+int
+ut_setup(void);
+
+void
+ut_teardown(void);
 
 #endif /* TEST_CRYPTODEV_H_ */
