@@ -13,5 +13,9 @@
 #define IAVF_DEV_ID_VF_HV		0x1571
 #define IAVF_DEV_ID_ADAPTIVE_VF		0x1889
 #define IAVF_DEV_ID_X722_VF		0x37CD
+#ifdef X722_A0_SUPPORT
+#define I40E_DEV_ID_X722_A0_VF          0x374D
+#endif
+
 
 #endif /* _IAVF_DEVIDS_H_ */
