@@ -41,6 +41,11 @@ extern cmdline_parse_ctx_t main_ctx[];
 		suite->unit_test_cases[iter].testcase;			\
 		iter++, case = suite->unit_test_cases[iter])
 
+#define FOR_EACH_SUITE_TESTSUITE(iter, suite, sub_ts)			\
+	for (iter = 0, sub_ts = suite->unit_test_suites[0];		\
+		suite->unit_test_suites[iter]->suite_name != NULL;	\
+		iter++, sub_ts = suite->unit_test_suites[iter])
+
 const char *prgname; /* to be set to argv[0] */
 
 static const char *recursive_call; /* used in linux for MP and other tests */
@@ -214,21 +219,46 @@ out:
 
 static void
 unit_test_suite_count_tcs_on_setup_fail(struct unit_test_suite *suite,
-		int test_success)
+		int test_success, unsigned int *sub_ts_failed,
+		unsigned int *sub_ts_skipped, unsigned int *sub_ts_total)
 {
 	struct unit_test_case tc;
+	struct unit_test_suite *ts;
+	int i;
 
-	FOR_EACH_SUITE_TESTCASE(suite->total, suite, tc) {
-		if (!tc.enabled || test_success == TEST_SKIPPED)
-			suite->skipped++;
-		else
-			suite->failed++;
+	if (suite->unit_test_suites) {
+		FOR_EACH_SUITE_TESTSUITE(i, suite, ts) {
+			unit_test_suite_count_tcs_on_setup_fail(
+				ts, test_success, sub_ts_failed,
+				sub_ts_skipped, sub_ts_total);
+			suite->total += ts->total;
+			suite->failed += ts->failed;
+			suite->skipped += ts->skipped;
+			if (ts->failed)
+				(*sub_ts_failed)++;
+			else
+				(*sub_ts_skipped)++;
+			(*sub_ts_total)++;
+		}
+	} else {
+		FOR_EACH_SUITE_TESTCASE(suite->total, suite, tc) {
+			if (!tc.enabled || test_success == TEST_SKIPPED)
+				suite->skipped++;
+			else
+				suite->failed++;
+		}
 	}
 }
 
 static void
 unit_test_suite_reset_counts(struct unit_test_suite *suite)
 {
+	struct unit_test_suite *ts;
+	int i;
+
+	if (suite->unit_test_suites)
+		FOR_EACH_SUITE_TESTSUITE(i, suite, ts)
+			unit_test_suite_reset_counts(ts);
 	suite->total = 0;
 	suite->executed = 0;
 	suite->succeeded = 0;
@@ -240,9 +270,12 @@ unit_test_suite_reset_counts(struct unit_test_suite *suite)
 int
 unit_test_suite_runner(struct unit_test_suite *suite)
 {
-	int test_success;
+	int test_success, i, ret;
 	const char *status;
 	struct unit_test_case tc;
+	struct unit_test_suite *ts;
+	unsigned int sub_ts_succeeded = 0, sub_ts_failed = 0;
+	unsigned int sub_ts_skipped = 0, sub_ts_total = 0;
 
 	unit_test_suite_reset_counts(suite);
 
@@ -259,70 +292,111 @@ unit_test_suite_runner(struct unit_test_suite *suite)
 			 * mark them as failed/skipped
 			 */
 			unit_test_suite_count_tcs_on_setup_fail(suite,
-					test_success);
+					test_success, &sub_ts_failed,
+					&sub_ts_skipped, &sub_ts_total);
 			goto suite_summary;
 		}
 	}
 
 	printf(" + ------------------------------------------------------- +\n");
 
-	FOR_EACH_SUITE_TESTCASE(suite->total, suite, tc) {
-		if (!tc.enabled) {
-			suite->skipped++;
-			continue;
-		} else {
-			suite->executed++;
-		}
-
-		/* run test case setup */
-		if (tc.setup)
-			test_success = tc.setup();
-		else
-			test_success = TEST_SUCCESS;
-
-		if (test_success == TEST_SUCCESS) {
-			/* run the test case */
-			test_success = tc.testcase();
-			if (test_success == TEST_SUCCESS)
-				suite->succeeded++;
-			else if (test_success == TEST_SKIPPED)
-				suite->skipped++;
-			else if (test_success == -ENOTSUP)
-				suite->unsupported++;
+	if (suite->unit_test_suites) {
+		FOR_EACH_SUITE_TESTSUITE(i, suite, ts) {
+			ret = unit_test_suite_runner(ts);
+			if (ret == TEST_SUCCESS)
+				sub_ts_succeeded++;
+			else if (ret == TEST_SKIPPED)
+				sub_ts_skipped++;
 			else
-				suite->failed++;
-		} else if (test_success == -ENOTSUP) {
-			suite->unsupported++;
-		} else {
-			suite->failed++;
+				sub_ts_failed++;
+			sub_ts_total++;
 		}
+	} else {
+		FOR_EACH_SUITE_TESTCASE(suite->total, suite, tc) {
+			if (!tc.enabled) {
+				suite->skipped++;
+				continue;
+			} else {
+				suite->executed++;
+			}
 
-		/* run the test case teardown */
-		if (tc.teardown)
-			tc.teardown();
+			/* run test case setup */
+			if (tc.setup)
+				test_success = tc.setup();
+			else
+				test_success = TEST_SUCCESS;
 
-		if (test_success == TEST_SUCCESS)
-			status = "succeeded";
-		else if (test_success == TEST_SKIPPED)
-			status = "skipped";
-		else if (test_success == -ENOTSUP)
-			status = "unsupported";
-		else
-			status = "failed";
+			if (test_success == TEST_SUCCESS) {
+				/* run the test case */
+				test_success = tc.testcase();
+				if (test_success == TEST_SUCCESS)
+					suite->succeeded++;
+				else if (test_success == TEST_SKIPPED)
+					suite->skipped++;
+				else if (test_success == -ENOTSUP)
+					suite->unsupported++;
+				else
+					suite->failed++;
+			} else if (test_success == -ENOTSUP) {
+				suite->unsupported++;
+			} else {
+				suite->failed++;
+			}
 
-		printf(" + TestCase [%2d] : %s %s\n", suite->total,
-				tc.name, status);
+			/* run the test case teardown */
+			if (tc.teardown)
+				tc.teardown();
+
+			if (test_success == TEST_SUCCESS)
+				status = "succeeded";
+			else if (test_success == TEST_SKIPPED)
+				status = "skipped";
+			else if (test_success == -ENOTSUP)
+				status = "unsupported";
+			else
+				status = "failed";
+
+			printf(" + TestCase [%2d] : %s %s\n", suite->total,
+					tc.name, status);
+		}
 	}
 
 	/* Run test suite teardown */
 	if (suite->teardown)
 		suite->teardown();
 
+	if (suite->unit_test_suites)
+		FOR_EACH_SUITE_TESTSUITE(i, suite, ts) {
+			suite->total += ts->total;
+			suite->succeeded += ts->succeeded;
+			suite->failed += ts->failed;
+			suite->skipped += ts->skipped;
+			suite->unsupported += ts->unsupported;
+			suite->executed += ts->executed;
+		}
+
 	goto suite_summary;
 
 suite_summary:
 	printf(" + ------------------------------------------------------- +\n");
 	printf(" + Test Suite Summary : %s\n", suite->suite_name);
+	printf(" + ------------------------------------------------------- +\n");
+
+	if (suite->unit_test_suites) {
+		FOR_EACH_SUITE_TESTSUITE(i, suite, ts)
+			printf(" + %s : %d/%d passed, %d/%d skipped, "
+				"%d/%d failed, %d/%d unsupported\n",
+				ts->suite_name, ts->succeeded, ts->total,
+				ts->skipped, ts->total, ts->failed, ts->total,
+				ts->unsupported, ts->total);
+		printf(" + ------------------------------------------------------- +\n");
+		printf(" + Sub Testsuites Total :     %2d\n", sub_ts_total);
+		printf(" + Sub Testsuites Skipped :   %2d\n", sub_ts_skipped);
+		printf(" + Sub Testsuites Passed :    %2d\n", sub_ts_succeeded);
+		printf(" + Sub Testsuites Failed :    %2d\n", sub_ts_failed);
+		printf(" + ------------------------------------------------------- +\n");
+	}
+
 	printf(" + Tests Total :       %2d\n", suite->total);
 	printf(" + Tests Skipped :     %2d\n", suite->skipped);
 	printf(" + Tests Executed :    %2d\n", suite->executed);
