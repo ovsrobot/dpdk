@@ -226,7 +226,7 @@ mlx5_os_open_device(const struct mlx5_dev_spawn_data *spawn,
 	int err = 0;
 	struct mlx5_context *mlx5_ctx;
 
-	pthread_mutex_init(&sh->txpp.mutex, NULL);
+	rte_thread_mutex_init(&sh->txpp.mutex);
 	/* Set numa node from pci probe */
 	sh->numa_node = spawn->pci_dev->device.numa_node;
 

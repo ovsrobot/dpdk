@@ -60,11 +60,11 @@ eal_thread_loop(void *arg __rte_unused)
 	char c;
 	int n, ret;
 	unsigned int lcore_id;
-	pthread_t thread_id;
+	rte_thread_t thread_id;
 	int m2w, w2m;
 	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
 
-	thread_id = pthread_self();
+	thread_id = rte_thread_self();
 
 	/* retrieve our lcore_id from the configuration structure */
 	RTE_LCORE_FOREACH_WORKER(lcore_id) {
@@ -122,24 +122,6 @@ eal_thread_loop(void *arg __rte_unused)
 	}
 }
 
-/* function to create threads */
-int
-eal_thread_create(pthread_t *thread)
-{
-	HANDLE th;
-
-	th = CreateThread(NULL, 0,
-		(LPTHREAD_START_ROUTINE)(ULONG_PTR)eal_thread_loop,
-						NULL, 0, (LPDWORD)thread);
-	if (!th)
-		return -1;
-
-	SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
-	SetThreadPriority(th, THREAD_PRIORITY_NORMAL);
-
-	return 0;
-}
-
 /* get current thread ID */
 int
 rte_sys_gettid(void)
@@ -148,7 +130,7 @@ rte_sys_gettid(void)
 }
 
 int
-rte_thread_setname(__rte_unused pthread_t id, __rte_unused const char *name)
+rte_thread_setname(__rte_unused rte_thread_t id, __rte_unused const char *name)
 {
 	/* TODO */
 	/* This is a stub, not the expected result */

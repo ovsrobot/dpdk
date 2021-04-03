@@ -61,9 +61,9 @@ fdset_shrink_nolock(struct fdset *pfdset)
 static void
 fdset_shrink(struct fdset *pfdset)
 {
-	pthread_mutex_lock(&pfdset->fd_mutex);
+	rte_thread_mutex_lock(&pfdset->fd_mutex);
 	fdset_shrink_nolock(pfdset);
-	pthread_mutex_unlock(&pfdset->fd_mutex);
+	rte_thread_mutex_unlock(&pfdset->fd_mutex);
 }
 
 /**
@@ -126,21 +126,21 @@ fdset_add(struct fdset *pfdset, int fd, fd_cb rcb, fd_cb wcb, void *dat)
 	if (pfdset == NULL || fd == -1)
 		return -1;
 
-	pthread_mutex_lock(&pfdset->fd_mutex);
+	rte_thread_mutex_lock(&pfdset->fd_mutex);
 	i = pfdset->num < MAX_FDS ? pfdset->num++ : -1;
 	if (i == -1) {
-		pthread_mutex_lock(&pfdset->fd_pooling_mutex);
+		rte_thread_mutex_lock(&pfdset->fd_pooling_mutex);
 		fdset_shrink_nolock(pfdset);
-		pthread_mutex_unlock(&pfdset->fd_pooling_mutex);
+		rte_thread_mutex_unlock(&pfdset->fd_pooling_mutex);
 		i = pfdset->num < MAX_FDS ? pfdset->num++ : -1;
 		if (i == -1) {
-			pthread_mutex_unlock(&pfdset->fd_mutex);
+			rte_thread_mutex_unlock(&pfdset->fd_mutex);
 			return -2;
 		}
 	}
 
 	fdset_add_fd(pfdset, i, fd, rcb, wcb, dat);
-	pthread_mutex_unlock(&pfdset->fd_mutex);
+	rte_thread_mutex_unlock(&pfdset->fd_mutex);
 
 	return 0;
 }
@@ -159,7 +159,7 @@ fdset_del(struct fdset *pfdset, int fd)
 		return NULL;
 
 	do {
-		pthread_mutex_lock(&pfdset->fd_mutex);
+		rte_thread_mutex_lock(&pfdset->fd_mutex);
 
 		i = fdset_find_fd(pfdset, fd);
 		if (i != -1 && pfdset->fd[i].busy == 0) {
@@ -170,7 +170,7 @@ fdset_del(struct fdset *pfdset, int fd)
 			pfdset->fd[i].dat = NULL;
 			i = -1;
 		}
-		pthread_mutex_unlock(&pfdset->fd_mutex);
+		rte_thread_mutex_unlock(&pfdset->fd_mutex);
 	} while (i != -1);
 
 	return dat;
@@ -192,10 +192,10 @@ fdset_try_del(struct fdset *pfdset, int fd)
 	if (pfdset == NULL || fd == -1)
 		return -2;
 
-	pthread_mutex_lock(&pfdset->fd_mutex);
+	rte_thread_mutex_lock(&pfdset->fd_mutex);
 	i = fdset_find_fd(pfdset, fd);
 	if (i != -1 && pfdset->fd[i].busy) {
-		pthread_mutex_unlock(&pfdset->fd_mutex);
+		rte_thread_mutex_unlock(&pfdset->fd_mutex);
 		return -1;
 	}
 
@@ -205,7 +205,7 @@ fdset_try_del(struct fdset *pfdset, int fd)
 		pfdset->fd[i].dat = NULL;
 	}
 
-	pthread_mutex_unlock(&pfdset->fd_mutex);
+	rte_thread_mutex_unlock(&pfdset->fd_mutex);
 	return 0;
 }
 
@@ -244,19 +244,19 @@ fdset_event_dispatch(void *arg)
 		 * might have been updated. It is ok if there is unwanted call
 		 * for new listenfds.
 		 */
-		pthread_mutex_lock(&pfdset->fd_mutex);
+		rte_thread_mutex_lock(&pfdset->fd_mutex);
 		numfds = pfdset->num;
-		pthread_mutex_unlock(&pfdset->fd_mutex);
+		rte_thread_mutex_unlock(&pfdset->fd_mutex);
 
-		pthread_mutex_lock(&pfdset->fd_pooling_mutex);
+		rte_thread_mutex_lock(&pfdset->fd_pooling_mutex);
 		val = poll(pfdset->rwfds, numfds, 1000 /* millisecs */);
-		pthread_mutex_unlock(&pfdset->fd_pooling_mutex);
+		rte_thread_mutex_unlock(&pfdset->fd_pooling_mutex);
 		if (val < 0)
 			continue;
 
 		need_shrink = 0;
 		for (i = 0; i < numfds; i++) {
-			pthread_mutex_lock(&pfdset->fd_mutex);
+			rte_thread_mutex_lock(&pfdset->fd_mutex);
 
 			pfdentry = &pfdset->fd[i];
 			fd = pfdentry->fd;
@@ -264,12 +264,12 @@ fdset_event_dispatch(void *arg)
 
 			if (fd < 0) {
 				need_shrink = 1;
-				pthread_mutex_unlock(&pfdset->fd_mutex);
+				rte_thread_mutex_unlock(&pfdset->fd_mutex);
 				continue;
 			}
 
 			if (!pfd->revents) {
-				pthread_mutex_unlock(&pfdset->fd_mutex);
+				rte_thread_mutex_unlock(&pfdset->fd_mutex);
 				continue;
 			}
 
@@ -280,7 +280,7 @@ fdset_event_dispatch(void *arg)
 			dat = pfdentry->dat;
 			pfdentry->busy = 1;
 
-			pthread_mutex_unlock(&pfdset->fd_mutex);
+			rte_thread_mutex_unlock(&pfdset->fd_mutex);
 
 			if (rcb && pfd->revents & (POLLIN | FDPOLLERR))
 				rcb(fd, dat, &remove1);

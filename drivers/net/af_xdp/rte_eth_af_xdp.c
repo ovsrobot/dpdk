@@ -179,7 +179,7 @@ TAILQ_HEAD(internal_list_head, internal_list);
 static struct internal_list_head internal_list =
 	TAILQ_HEAD_INITIALIZER(internal_list);
 
-static pthread_mutex_t internal_list_lock = PTHREAD_MUTEX_INITIALIZER;
+static rte_thread_mutex_t internal_list_lock = RTE_THREAD_MUTEX_INITIALIZER;
 
 #if defined(XDP_UMEM_UNALIGNED_CHUNK_FLAG)
 static inline int
@@ -670,7 +670,7 @@ find_internal_resource(struct pmd_internals *port_int)
 	if (port_int == NULL)
 		return NULL;
 
-	pthread_mutex_lock(&internal_list_lock);
+	rte_thread_mutex_lock(&internal_list_lock);
 
 	TAILQ_FOREACH(list, &internal_list, next) {
 		struct pmd_internals *list_int =
@@ -681,7 +681,7 @@ find_internal_resource(struct pmd_internals *port_int)
 		}
 	}
 
-	pthread_mutex_unlock(&internal_list_lock);
+	rte_thread_mutex_unlock(&internal_list_lock);
 
 	if (!found)
 		return NULL;
@@ -719,7 +719,7 @@ get_shared_umem(struct pkt_rx_queue *rxq, const char *ifname,
 	if (mb_pool == NULL)
 		return ret;
 
-	pthread_mutex_lock(&internal_list_lock);
+	rte_thread_mutex_lock(&internal_list_lock);
 
 	TAILQ_FOREACH(list, &internal_list, next) {
 		internals = list->eth_dev->data->dev_private;
@@ -745,7 +745,7 @@ get_shared_umem(struct pkt_rx_queue *rxq, const char *ifname,
 	}
 
 out:
-	pthread_mutex_unlock(&internal_list_lock);
+	rte_thread_mutex_unlock(&internal_list_lock);
 
 	return ret;
 }
@@ -774,9 +774,9 @@ eth_dev_configure(struct rte_eth_dev *dev)
 			return -1;
 
 		list->eth_dev = dev;
-		pthread_mutex_lock(&internal_list_lock);
+		rte_thread_mutex_lock(&internal_list_lock);
 		TAILQ_INSERT_TAIL(&internal_list, list, next);
-		pthread_mutex_unlock(&internal_list_lock);
+		rte_thread_mutex_unlock(&internal_list_lock);
 	}
 
 	return 0;
@@ -942,9 +942,9 @@ eth_dev_close(struct rte_eth_dev *dev)
 		/* Remove ethdev from list used to track and share UMEMs */
 		list = find_internal_resource(internals);
 		if (list) {
-			pthread_mutex_lock(&internal_list_lock);
+			rte_thread_mutex_lock(&internal_list_lock);
 			TAILQ_REMOVE(&internal_list, list, next);
-			pthread_mutex_unlock(&internal_list_lock);
+			rte_thread_mutex_unlock(&internal_list_lock);
 			rte_free(list);
 		}
 	}

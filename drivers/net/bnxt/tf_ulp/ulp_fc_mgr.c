@@ -84,7 +84,7 @@ ulp_fc_mgr_init(struct bnxt_ulp_context *ctxt)
 	if (!ulp_fc_info)
 		goto error;
 
-	rc = pthread_mutex_init(&ulp_fc_info->fc_lock, NULL);
+	rc = rte_thread_mutex_init(&ulp_fc_info->fc_lock);
 	if (rc) {
 		PMD_DRV_LOG(ERR, "Failed to initialize fc mutex\n");
 		goto error;
@@ -141,7 +141,7 @@ ulp_fc_mgr_deinit(struct bnxt_ulp_context *ctxt)
 
 	ulp_fc_mgr_thread_cancel(ctxt);
 
-	pthread_mutex_destroy(&ulp_fc_info->fc_lock);
+	rte_thread_mutex_destroy(&ulp_fc_info->fc_lock);
 
 	for (i = 0; i < TF_DIR_MAX; i++)
 		rte_free(ulp_fc_info->sw_acc_tbl[i]);
@@ -383,7 +383,7 @@ ulp_fc_mgr_alarm_cb(void *arg)
 		goto out;
 
 	if (!ulp_fc_info->num_entries) {
-		pthread_mutex_unlock(&ulp_fc_info->fc_lock);
+		rte_thread_mutex_unlock(&ulp_fc_info->fc_lock);
 		ulp_fc_mgr_thread_cancel(ctxt);
 		return;
 	}
@@ -414,7 +414,7 @@ ulp_fc_mgr_alarm_cb(void *arg)
 		}
 	}
 
-	pthread_mutex_unlock(&ulp_fc_info->fc_lock);
+	rte_thread_mutex_unlock(&ulp_fc_info->fc_lock);
 
 	/*
 	 * If cmd fails once, no need of
@@ -503,12 +503,12 @@ int32_t ulp_fc_mgr_cntr_set(struct bnxt_ulp_context *ctxt, enum tf_dir dir,
 	if (!ulp_fc_info)
 		return -EIO;
 
-	pthread_mutex_lock(&ulp_fc_info->fc_lock);
+	rte_thread_mutex_lock(&ulp_fc_info->fc_lock);
 	sw_cntr_idx = hw_cntr_id - ulp_fc_info->shadow_hw_tbl[dir].start_idx;
 	ulp_fc_info->sw_acc_tbl[dir][sw_cntr_idx].valid = true;
 	ulp_fc_info->sw_acc_tbl[dir][sw_cntr_idx].hw_cntr_id = hw_cntr_id;
 	ulp_fc_info->num_entries++;
-	pthread_mutex_unlock(&ulp_fc_info->fc_lock);
+	rte_thread_mutex_unlock(&ulp_fc_info->fc_lock);
 
 	return 0;
 }
@@ -535,14 +535,14 @@ int32_t ulp_fc_mgr_cntr_reset(struct bnxt_ulp_context *ctxt, enum tf_dir dir,
 	if (!ulp_fc_info)
 		return -EIO;
 
-	pthread_mutex_lock(&ulp_fc_info->fc_lock);
+	rte_thread_mutex_lock(&ulp_fc_info->fc_lock);
 	sw_cntr_idx = hw_cntr_id - ulp_fc_info->shadow_hw_tbl[dir].start_idx;
 	ulp_fc_info->sw_acc_tbl[dir][sw_cntr_idx].valid = false;
 	ulp_fc_info->sw_acc_tbl[dir][sw_cntr_idx].hw_cntr_id = 0;
 	ulp_fc_info->sw_acc_tbl[dir][sw_cntr_idx].pkt_count = 0;
 	ulp_fc_info->sw_acc_tbl[dir][sw_cntr_idx].byte_count = 0;
 	ulp_fc_info->num_entries--;
-	pthread_mutex_unlock(&ulp_fc_info->fc_lock);
+	rte_thread_mutex_unlock(&ulp_fc_info->fc_lock);
 
 	return 0;
 }
@@ -607,7 +607,7 @@ int ulp_fc_mgr_query_count_get(struct bnxt_ulp_context *ctxt,
 	hw_cntr_id = params.resource_hndl;
 	if (params.resource_sub_type ==
 			BNXT_ULP_RESOURCE_SUB_TYPE_INDEX_TYPE_INT_COUNT) {
-		pthread_mutex_lock(&ulp_fc_info->fc_lock);
+		rte_thread_mutex_lock(&ulp_fc_info->fc_lock);
 		sw_cntr_idx = hw_cntr_id -
 			ulp_fc_info->shadow_hw_tbl[dir].start_idx;
 		sw_acc_tbl_entry = &ulp_fc_info->sw_acc_tbl[dir][sw_cntr_idx];
@@ -621,7 +621,7 @@ int ulp_fc_mgr_query_count_get(struct bnxt_ulp_context *ctxt,
 			sw_acc_tbl_entry->pkt_count = 0;
 			sw_acc_tbl_entry->byte_count = 0;
 		}
-		pthread_mutex_unlock(&ulp_fc_info->fc_lock);
+		rte_thread_mutex_unlock(&ulp_fc_info->fc_lock);
 	} else if (params.resource_sub_type ==
 			BNXT_ULP_RESOURCE_SUB_TYPE_INDEX_TYPE_INT_COUNT_ACC) {
 		/* Get stats from the parent child table */
@@ -663,7 +663,7 @@ int32_t ulp_fc_mgr_cntr_parent_flow_set(struct bnxt_ulp_context *ctxt,
 	if (!ulp_fc_info)
 		return -EIO;
 
-	pthread_mutex_lock(&ulp_fc_info->fc_lock);
+	rte_thread_mutex_lock(&ulp_fc_info->fc_lock);
 	sw_cntr_idx = hw_cntr_id - ulp_fc_info->shadow_hw_tbl[dir].start_idx;
 	if (ulp_fc_info->sw_acc_tbl[dir][sw_cntr_idx].valid) {
 		ulp_fc_info->sw_acc_tbl[dir][sw_cntr_idx].parent_flow_id = fid;
@@ -672,7 +672,7 @@ int32_t ulp_fc_mgr_cntr_parent_flow_set(struct bnxt_ulp_context *ctxt,
 			    hw_cntr_id, fid);
 		rc = -ENOENT;
 	}
-	pthread_mutex_unlock(&ulp_fc_info->fc_lock);
+	rte_thread_mutex_unlock(&ulp_fc_info->fc_lock);
 
 	return rc;
 }

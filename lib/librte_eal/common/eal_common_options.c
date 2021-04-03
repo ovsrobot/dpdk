@@ -1843,8 +1843,8 @@ eal_auto_detect_cores(struct rte_config *cfg)
 	unsigned int removed = 0;
 	rte_cpuset_t affinity_set;
 
-	if (pthread_getaffinity_np(pthread_self(), sizeof(rte_cpuset_t),
-				&affinity_set))
+	if (rte_thread_get_affinity_by_id(rte_thread_self(),
+					sizeof(rte_cpuset_t),  &affinity_set))
 		CPU_ZERO(&affinity_set);
 
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
@@ -1872,8 +1872,8 @@ compute_ctrl_threads_cpuset(struct internal_config *internal_cfg)
 	}
 	RTE_CPU_NOT(cpuset, cpuset);
 
-	if (pthread_getaffinity_np(pthread_self(), sizeof(rte_cpuset_t),
-				&default_set))
+	if (rte_thread_get_affinity_by_id(rte_thread_self(),
+					  sizeof(rte_cpuset_t), &default_set))
 		CPU_ZERO(&default_set);
 
 	RTE_CPU_AND(cpuset, cpuset, &default_set);

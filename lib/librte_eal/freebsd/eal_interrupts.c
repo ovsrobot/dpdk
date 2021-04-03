@@ -52,7 +52,7 @@ static rte_spinlock_t intr_lock = RTE_SPINLOCK_INITIALIZER;
 static struct rte_intr_source_list intr_sources;
 
 /* interrupt handling thread */
-static pthread_t intr_thread;
+static rte_thread_t intr_thread;
 
 static volatile int kq = -1;
 
@@ -725,5 +725,5 @@ rte_intr_free_epoll_fd(struct rte_intr_handle *intr_handle)
 
 int rte_thread_is_intr(void)
 {
-	return pthread_equal(intr_thread, pthread_self());
+	return rte_thread_equal(intr_thread, rte_thread_self());
 }

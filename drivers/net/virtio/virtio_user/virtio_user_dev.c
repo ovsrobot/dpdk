@@ -142,7 +142,7 @@ virtio_user_dev_set_features(struct virtio_user_dev *dev)
 	uint64_t features;
 	int ret = -1;
 
-	pthread_mutex_lock(&dev->mutex);
+	rte_thread_mutex_lock(&dev->mutex);
 
 	/* Step 0: tell vhost to create queues */
 	if (virtio_user_queue_setup(dev, virtio_user_create_queue) < 0)
@@ -160,7 +160,7 @@ virtio_user_dev_set_features(struct virtio_user_dev *dev)
 		goto error;
 	PMD_DRV_LOG(INFO, "(%s) set features: 0x%" PRIx64, dev->path, features);
 error:
-	pthread_mutex_unlock(&dev->mutex);
+	rte_thread_mutex_unlock(&dev->mutex);
 
 	return ret;
 }
@@ -184,7 +184,7 @@ virtio_user_start_device(struct virtio_user_dev *dev)
 	 * memory subsystem in the future.
 	 */
 	rte_mcfg_mem_read_lock();
-	pthread_mutex_lock(&dev->mutex);
+	rte_thread_mutex_lock(&dev->mutex);
 
 	/* Step 2: share memory regions */
 	ret = dev->ops->set_memory_table(dev);
@@ -205,12 +205,12 @@ virtio_user_start_device(struct virtio_user_dev *dev)
 
 	dev->started = true;
 
-	pthread_mutex_unlock(&dev->mutex);
+	rte_thread_mutex_unlock(&dev->mutex);
 	rte_mcfg_mem_read_unlock();
 
 	return 0;
 error:
-	pthread_mutex_unlock(&dev->mutex);
+	rte_thread_mutex_unlock(&dev->mutex);
 	rte_mcfg_mem_read_unlock();
 
 	PMD_INIT_LOG(ERR, "(%s) Failed to start device\n", dev->path);
@@ -225,7 +225,7 @@ int virtio_user_stop_device(struct virtio_user_dev *dev)
 	uint32_t i;
 	int ret;
 
-	pthread_mutex_lock(&dev->mutex);
+	rte_thread_mutex_lock(&dev->mutex);
 	if (!dev->started)
 		goto out;
 
@@ -248,11 +248,11 @@ int virtio_user_stop_device(struct virtio_user_dev *dev)
 	dev->started = false;
 
 out:
-	pthread_mutex_unlock(&dev->mutex);
+	rte_thread_mutex_unlock(&dev->mutex);
 
 	return 0;
 err:
-	pthread_mutex_unlock(&dev->mutex);
+	rte_thread_mutex_unlock(&dev->mutex);
 
 	PMD_INIT_LOG(ERR, "(%s) Failed to stop device\n", dev->path);
 
@@ -379,7 +379,7 @@ virtio_user_mem_event_cb(enum rte_mem_event type __rte_unused,
 	if (msl->external)
 		return;
 
-	pthread_mutex_lock(&dev->mutex);
+	rte_thread_mutex_lock(&dev->mutex);
 
 	if (dev->started == false)
 		goto exit;
@@ -404,7 +404,7 @@ virtio_user_mem_event_cb(enum rte_mem_event type __rte_unused,
 	}
 
 exit:
-	pthread_mutex_unlock(&dev->mutex);
+	rte_thread_mutex_unlock(&dev->mutex);
 
 	if (ret < 0)
 		PMD_DRV_LOG(ERR, "(%s) Failed to update memory table\n", dev->path);
@@ -490,7 +490,7 @@ virtio_user_dev_init(struct virtio_user_dev *dev, char *path, int queues,
 	uint64_t backend_features;
 	int i;
 
-	pthread_mutex_init(&dev->mutex, NULL);
+	rte_thread_mutex_init(&dev->mutex);
 	strlcpy(dev->path, path, PATH_MAX);
 
 	for (i = 0; i < VIRTIO_MAX_VIRTQUEUES; i++) {
@@ -795,13 +795,13 @@ virtio_user_dev_set_status(struct virtio_user_dev *dev, uint8_t status)
 {
 	int ret;
 
-	pthread_mutex_lock(&dev->mutex);
+	rte_thread_mutex_lock(&dev->mutex);
 	dev->status = status;
 	ret = dev->ops->set_status(dev, status);
 	if (ret && ret != -ENOTSUP)
 		PMD_INIT_LOG(ERR, "(%s) Failed to set backend status\n", dev->path);
 
-	pthread_mutex_unlock(&dev->mutex);
+	rte_thread_mutex_unlock(&dev->mutex);
 	return ret;
 }
 
@@ -811,7 +811,7 @@ virtio_user_dev_update_status(struct virtio_user_dev *dev)
 	int ret;
 	uint8_t status;
 
-	pthread_mutex_lock(&dev->mutex);
+	rte_thread_mutex_lock(&dev->mutex);
 
 	ret = dev->ops->get_status(dev, &status);
 	if (!ret) {
@@ -836,7 +836,7 @@ virtio_user_dev_update_status(struct virtio_user_dev *dev)
 		PMD_INIT_LOG(ERR, "(%s) Failed to get backend status\n", dev->path);
 	}
 
-	pthread_mutex_unlock(&dev->mutex);
+	rte_thread_mutex_unlock(&dev->mutex);
 	return ret;
 }
 

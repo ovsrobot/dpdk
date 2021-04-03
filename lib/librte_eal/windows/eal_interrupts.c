@@ -7,7 +7,7 @@
 #include "eal_private.h"
 #include "eal_windows.h"
 
-static pthread_t intr_thread;
+static rte_thread_t intr_thread;
 
 static HANDLE intr_iocp;
 
@@ -76,7 +76,7 @@ rte_eal_intr_init(void)
 int
 rte_thread_is_intr(void)
 {
-	return pthread_equal(intr_thread, pthread_self());
+	return rte_thread_equal(intr_thread, rte_thread_self());
 }
 
 int
@@ -94,7 +94,7 @@ eal_intr_thread_schedule(void (*func)(void *arg), void *arg)
 
 	handle = OpenThread(THREAD_ALL_ACCESS, FALSE, intr_thread);
 	if (handle == NULL) {
-		RTE_LOG_WIN32_ERR("OpenThread(%llu)", intr_thread);
+		RTE_LOG_WIN32_ERR("OpenThread(%lu)", intr_thread);
 		return -ENOENT;
 	}
 

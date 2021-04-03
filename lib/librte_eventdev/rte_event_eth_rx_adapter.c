@@ -121,7 +121,7 @@ struct rte_event_eth_rx_adapter {
 	/* Count of interrupt vectors in use */
 	uint32_t num_intr_vec;
 	/* Thread blocked on Rx interrupts */
-	pthread_t rx_intr_thread;
+	rte_thread_t rx_intr_thread;
 	/* Configuration callback for rte_service configuration */
 	rte_event_eth_rx_adapter_conf_cb conf_cb;
 	/* Configuration callback argument */
@@ -1302,12 +1302,12 @@ rxa_destroy_intr_thread(struct rte_event_eth_rx_adapter *rx_adapter)
 {
 	int err;
 
-	err = pthread_cancel(rx_adapter->rx_intr_thread);
+	err = rte_thread_cancel(rx_adapter->rx_intr_thread);
 	if (err)
 		RTE_EDEV_LOG_ERR("Can't cancel interrupt thread err = %d\n",
 				err);
 
-	err = pthread_join(rx_adapter->rx_intr_thread, NULL);
+	err = rte_thread_join(rx_adapter->rx_intr_thread, NULL);
 	if (err)
 		RTE_EDEV_LOG_ERR("Can't join interrupt thread err = %d\n", err);
 

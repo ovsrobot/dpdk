@@ -92,10 +92,10 @@ dpaa2_get_core_id(void)
 	rte_cpuset_t cpuset;
 	int i, ret, cpu_id = -1;
 
-	ret = pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t),
-		&cpuset);
+	ret = rte_thread_get_affinity_by_id(rte_thread_self(),
+					    sizeof(cpu_set_t), &cpuset);
 	if (ret) {
-		DPAA2_BUS_ERR("pthread_getaffinity_np() failed");
+		DPAA2_BUS_ERR("rte_thread_get_affinity_by_id() failed");
 		return ret;
 	}
 

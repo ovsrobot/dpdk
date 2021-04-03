@@ -1635,7 +1635,7 @@ main(int argc, char *argv[])
 	unsigned nb_ports, valid_num_ports;
 	int ret, i;
 	uint16_t portid;
-	static pthread_t tid;
+	static rte_thread_t tid;
 	uint64_t flags = 0;
 
 	signal(SIGINT, sigint_handler);

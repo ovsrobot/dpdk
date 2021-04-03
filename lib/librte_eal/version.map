@@ -421,6 +421,27 @@ EXPERIMENTAL {
 	rte_version_release;
 	rte_version_suffix;
 	rte_version_year;
+
+	rte_thread_mutex_lock;
+	rte_thread_mutex_unlock;
+	rte_thread_mutex_init;
+	rte_thread_mutex_destroy;
+	rte_thread_create;
+	rte_thread_set_affinity_by_id;
+	rte_thread_get_affinity_by_id;
+	rte_thread_set_priority;
+	rte_thread_attr_init;
+	rte_thread_attr_set_affinity;
+	rte_thread_attr_get_affinity;
+	rte_thread_join;
+	rte_thread_self;
+	rte_thread_equal;
+	rte_thread_barrier_init;
+	rte_thread_barrier_wait;
+	rte_thread_barrier_destroy;
+	rte_thread_cancel;
+	rte_thread_attr_set_priority;
+
 };
 
 INTERNAL {
