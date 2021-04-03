@@ -244,6 +244,22 @@ rte_thread_mutex_destroy(rte_thread_mutex_t *mutex)
 	return pthread_mutex_destroy(mutex);
 }
 
+int
+rte_thread_barrier_init(rte_thread_barrier_t *barrier, int count)
+{
+	return pthread_barrier_init(barrier, NULL, count);
+}
+
+int rte_thread_barrier_wait(rte_thread_barrier_t *barrier)
+{
+	return pthread_barrier_wait(barrier);
+}
+
+int rte_thread_barrier_destroy(rte_thread_barrier_t *barrier)
+{
+	return pthread_barrier_destroy(barrier);
+}
+
 int rte_thread_cancel(rte_thread_t thread_id)
 {
 	/*
