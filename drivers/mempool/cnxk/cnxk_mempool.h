@@ -23,4 +23,7 @@ int __rte_hot cnxk_mempool_enq(struct rte_mempool *mp, void *const *obj_table,
 int __rte_hot cnxk_mempool_deq(struct rte_mempool *mp, void **obj_table,
 			       unsigned int n);
 
+int cn10k_mempool_lf_init(void);
+void cn10k_mempool_lf_fini(void);
+
 #endif
