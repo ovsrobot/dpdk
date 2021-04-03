@@ -106,6 +106,7 @@ eal_long_options[] = {
 	{OPT_TELEMETRY,         0, NULL, OPT_TELEMETRY_NUM        },
 	{OPT_NO_TELEMETRY,      0, NULL, OPT_NO_TELEMETRY_NUM     },
 	{OPT_FORCE_MAX_SIMD_BITWIDTH, 1, NULL, OPT_FORCE_MAX_SIMD_BITWIDTH_NUM},
+	{OPT_THREAD_PRIORITY,   1, NULL, OPT_THREAD_PRIORITY_NUM},
 
 	/* legacy options that will be removed in future */
 	{OPT_PCI_BLACKLIST,     1, NULL, OPT_PCI_BLACKLIST_NUM    },
@@ -1384,6 +1385,24 @@ eal_parse_simd_bitwidth(const char *arg)
 }
 
 static int
+eal_parse_thread_priority(const char *arg)
+{
+	struct internal_config *internal_conf =
+		eal_get_internal_configuration();
+	enum rte_thread_priority priority;
+
+	if (!strncmp("normal", arg, sizeof("normal")))
+		priority = RTE_THREAD_PRIORITY_NORMAL;
+	else if (!strncmp("realtime", arg, sizeof("realtime")))
+		priority = RTE_THREAD_PRIORITY_REALTIME_CRITICAL;
+	else
+		return -1;
+
+	internal_conf->thread_priority = priority;
+	return 0;
+}
+
+static int
 eal_parse_base_virtaddr(const char *arg)
 {
 	char *end;
@@ -1796,7 +1815,13 @@ eal_parse_common_option(int opt, const char *optarg,
 			return -1;
 		}
 		break;
-
+	case OPT_THREAD_PRIORITY_NUM:
+		if (eal_parse_thread_priority(optarg) < 0) {
+			RTE_LOG(ERR, EAL, "invalid parameter for --"
+					OPT_THREAD_PRIORITY "\n");
+			return -1;
+		}
+		break;
 	/* don't know what to do, leave this to caller */
 	default:
 		return 1;
@@ -2059,6 +2084,7 @@ eal_common_usage(void)
 	       "                      (can be used multiple times)\n"
 	       "  --"OPT_VMWARE_TSC_MAP"    Use VMware TSC map instead of native RDTSC\n"
 	       "  --"OPT_PROC_TYPE"         Type of this process (primary|secondary|auto)\n"
+	       "  --"OPT_THREAD_PRIORITY"   Set threads priority (normal|realtime)\n"
 #ifndef RTE_EXEC_ENV_WINDOWS
 	       "  --"OPT_SYSLOG"            Set syslog facility\n"
 #endif
