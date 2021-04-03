@@ -201,6 +201,59 @@ int rte_thread_attr_set_priority(rte_thread_attr_t *thread_attr,
 				 enum rte_thread_priority priority);
 
 /**
+ * Create a new thread that will invoke the 'thread_func' routine.
+ *
+ * @param thread_id
+ *    A pointer that will store the id of the newly created thread.
+ *
+ * @param thread_attr
+ *    Attributes that are used at the creation of the new thread.
+ *
+ * @param thread_func
+ *    The routine that the new thread will invoke when starting execution.
+ *
+ * @param args
+ *    Arguments to be passed to the 'thread_func' routine.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_create(rte_thread_t *thread_id,
+		      const rte_thread_attr_t *thread_attr,
+		      void *(*thread_func)(void *), void *args);
+
+/**
+ * Waits for the thread identified by 'thread_id' to terminate
+ *
+ * @param thread_id
+ *    The identifier of the thread.
+ *
+ * @param value_ptr
+ *    Stores the exit status of the thread.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_join(rte_thread_t thread_id, int *value_ptr);
+
+/**
+ * Terminates a thread.
+ *
+ * @param thread_id
+ *    The id of the thread to be cancelled.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_cancel(rte_thread_t thread_id);
+
+/**
  * Set core affinity of the current thread.
  * Support both EAL and non-EAL thread and update TLS.
  *
