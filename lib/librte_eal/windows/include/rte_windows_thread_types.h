@@ -7,6 +7,9 @@
 
 #include <rte_windows.h>
 
+#define EAL_THREAD_PRIORITY_NORMAL             THREAD_PRIORITY_NORMAL
+#define EAL_THREAD_PRIORITY_REALTIME_CIRTICAL  THREAD_PRIORITY_TIME_CRITICAL
+
 typedef DWORD                       rte_thread_t;
 
 #endif /* _RTE_THREAD_TYPES_H_ */
