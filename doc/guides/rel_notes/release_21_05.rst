@@ -126,6 +126,12 @@ New Features
   * Added command to display Rx queue used descriptor count.
     ``show port (port_id) rxq (queue_id) desc used count``
 
+* **Added feature to support multiple data-units on cryptodev library API.**
+
+  The Cryptodev library has been enhanced to allow operations on multiple
+  data-units for AES-XTS algorithm, the data-unit length should be set in the
+  transformation. A capability for it was added too.
+
 
 Removed Items
 -------------
