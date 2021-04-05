@@ -551,6 +551,15 @@ enum rte_flow_item_type {
 	 * See struct rte_flow_item_geneve_opt
 	 */
 	RTE_FLOW_ITEM_TYPE_GENEVE_OPT,
+
+	/**
+	 * [META]
+	 *
+	 * Matches on packet integrity.
+	 *
+	 * See struct rte_flow_item_packet_integrity_checks.
+	 */
+	RTE_FLOW_ITEM_TYPE_PACKET_INTEGRITY_CHECKS,
 };
 
 /**
@@ -1682,6 +1691,43 @@ struct rte_flow_item_geneve_opt {
 static const struct rte_flow_item_geneve_opt
 rte_flow_item_geneve_opt_mask = {
 	.option_type = 0xff,
+};
+#endif
+
+struct rte_flow_item_packet_integrity_checks {
+	uint32_t level;
+	/**< Packet encapsulation level the item should apply to.
+	 * @see rte_flow_action_rss
+	 */
+RTE_STD_C11
+	union {
+		struct {
+			uint64_t packet_ok:1;
+			/** The packet is valid after passing all HW checks. */
+			uint64_t l2_ok:1;
+			/**< L2 layer is valid after passing all HW checks. */
+			uint64_t l3_ok:1;
+			/**< L3 layer is valid after passing all HW checks. */
+			uint64_t l4_ok:1;
+			/**< L4 layer is valid after passing all HW checks. */
+			uint64_t l2_crc_ok:1;
+			/**< L2 layer checksum is valid. */
+			uint64_t ipv4_csum_ok:1;
+			/**< L3 layer checksum is valid. */
+			uint64_t l4_csum_ok:1;
+			/**< L4 layer checksum is valid. */
+			uint64_t l3_len_ok:1;
+			/**< The l3 len is smaller than the packet len. */
+			uint64_t reserved:56;
+		};
+		uint64_t  value;
+	};
+};
+
+#ifndef __cplusplus
+static const struct rte_flow_item_sanity_checks
+	rte_flow_item_sanity_checks_mask = {
+		.value = 0,
 };
 #endif
 
