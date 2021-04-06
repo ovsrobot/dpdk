@@ -113,6 +113,12 @@ New Features
   * Added support for txgbevf PMD.
   * Support device arguments to handle AN training for backplane NICs.
 
+* **Added Wangxun ngbe PMD.**
+
+  Added a new PMD driver for Wangxun 1 Gigabit Ethernet NICs.
+
+  See the :doc:`../nics/ngbe` for more details.
+
 * **Enabled vmxnet3 PMD on Windows.**
 
 * **Updated the AF_XDP driver.**
