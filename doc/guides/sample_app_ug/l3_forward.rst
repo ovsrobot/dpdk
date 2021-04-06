@@ -11,7 +11,7 @@ The application performs L3 forwarding.
 Overview
 --------
 
-The application demonstrates the use of the hash and LPM libraries in the DPDK
+The application demonstrates the use of the hash, LPM and FIB libraries in DPDK
 to implement packet forwarding using poll or event mode PMDs for packet I/O.
 The initialization and run-time paths are very similar to those of the
 :doc:`l2_forward_real_virtual` and :doc:`l2_forward_event`.
@@ -22,7 +22,7 @@ decision is made based on information read from the input packet.
 Eventdev can optionally use S/W or H/W (if supported by platform) scheduler
 implementation for packet I/O based on run time parameters.
 
-The lookup method is either hash-based or LPM-based and is selected at run time. When the selected lookup method is hash-based,
+The lookup method is hash-based, LPM-based or FIB-based and is selected at run time. When the selected lookup method is hash-based,
 a hash object is used to emulate the flow classification stage.
 The hash object is used in correlation with a flow table to map each input packet to its flow at runtime.
 
@@ -30,14 +30,14 @@ The hash lookup key is represented by a DiffServ 5-tuple composed of the followi
 Source IP Address, Destination IP Address, Protocol, Source Port and Destination Port.
 The ID of the output interface for the input packet is read from the identified flow table entry.
 The set of flows used by the application is statically configured and loaded into the hash at initialization time.
-When the selected lookup method is LPM based, an LPM object is used to emulate the forwarding stage for IPv4 packets.
-The LPM object is used as the routing table to identify the next hop for each input packet at runtime.
+When the selected lookup method is LPM or FIB based, an LPM or FIB object is used to emulate the forwarding stage for IPv4 packets.
+The LPM or FIB object is used as the routing table to identify the next hop for each input packet at runtime.
 
-The LPM lookup key is represented by the Destination IP Address field read from the input packet.
-The ID of the output interface for the input packet is the next hop returned by the LPM lookup.
-The set of LPM rules used by the application is statically configured and loaded into the LPM object at initialization time.
+The LPM and FIB lookup keys are represented by the Destination IP Address field read from the input packet.
+The ID of the output interface for the input packet is the next hop returned by the LPM or FIB lookup.
+The set of LPM and FIB rules used by the application is statically configured and loaded into the LPM or FIB object at initialization time.
 
-In the sample application, hash-based forwarding supports IPv4 and IPv6. LPM-based forwarding supports IPv4 only.
+In the sample application, hash-based and FIB-based forwarding supports both IPv4 and IPv6. LPM-based forwarding supports IPv4 only.
 
 Compiling the Application
 -------------------------
@@ -53,8 +53,7 @@ The application has a number of command line options::
 
     ./dpdk-l3fwd [EAL options] -- -p PORTMASK
                              [-P]
-                             [-E]
-                             [-L]
+                             [--lookup LOOKUP_METHOD]
                              --config(port,queue,lcore)[,(port,queue,lcore)]
                              [--eth-dest=X,MM:MM:MM:MM:MM:MM]
                              [--enable-jumbo [--max-pkt-len PKTLEN]]
@@ -66,6 +65,8 @@ The application has a number of command line options::
                              [--mode]
                              [--eventq-sched]
                              [--event-eth-rxqs]
+                             [-E]
+                             [-L]
 
 Where,
 
@@ -74,9 +75,7 @@ Where,
 * ``-P:`` Optional, sets all ports to promiscuous mode so that packets are accepted regardless of the packet's Ethernet MAC destination address.
   Without this option, only packets with the Ethernet MAC destination address set to the Ethernet address of the port are accepted.
 
-* ``-E:`` Optional, enable exact match.
-
-* ``-L:`` Optional, enable longest prefix match.
+* ``--lookup:`` Optional, Select the lookup method. Accepted options ``em`` (Exact Match), ``lpm`` (Longest Prefix Match), ``fib`` (Forwarding Information Base). Default is ``lpm``.
 
 * ``--config (port,queue,lcore)[,(port,queue,lcore)]:`` Determines which queues from which ports are mapped to which cores.
 
@@ -101,6 +100,10 @@ Where,
 * ``--eventq-sched:`` Optional, Event queue synchronization method, Ordered, Atomic or Parallel. Only valid if --mode=eventdev.
 
 * ``--event-eth-rxqs:`` Optional, Number of ethernet RX queues per device. Only valid if --mode=eventdev.
+
+* ``-E:`` Optional, enable exact match, legacy flag please use ``--lookup=em`` instead.
+
+* ``-L:`` Optional, enable longest prefix match, legacy flag please use ``--lookup=lpm`` instead.
 
 
 For example, consider a dual processor socket platform with 8 physical cores, where cores 0-7 and 16-23 appear on socket 0,
@@ -290,6 +293,61 @@ The LPM object is created and loaded with the pre-configured entries read from a
     }
     #endif
 
+FIB Initialization
+~~~~~~~~~~~~~~~~~~
+
+The FIB object is created and loaded with the pre-configured entries read from a global array.
+
+.. code-block:: c
+
+    #if (APP_LOOKUP_METHOD == APP_LOOKUP_FIB)
+
+    void
+    setup_fib(const int socketid)
+    {
+        unsigned int i;
+        int ret;
+        char s[64];
+
+        /* create the FIB table */
+
+        snprintf(s, sizeof(s), "IPV4_L3FWD_FIB_%d", socketid);
+
+        ipv4_l3fwd_fib_lookup_struct[socketid] = rte_fib_create(s, socketid, IPV4_L3FWD_FIB_MAX_RULES);
+
+        if (ipv4_l3fwd_fib_lookup_struct[socketid] == NULL)
+            rte_exit(EXIT_FAILURE, "Unable to create the l3fwd FIB table on socket %d\n", socketid);
+
+        /* populate the FIB table */
+
+        for (i = 0; i < IPV4_L3FWD_NUM_ROUTES; i++) {
+            struct in_addr in;
+
+            /* skip unused ports */
+            if ((1 << ipv4_l3fwd_fib_route_array[i].if_out & enabled_port_mask) == 0)
+                continue;
+
+            ret = rte_fib_add(ipv4_l3fwd_fib_lookup_struct[socketid],
+                ipv4_l3fwd_fib_route_array[i].ip,
+                ipv4_l3fwd_fib_route_array[i].depth,
+                ipv4_l3fwd_fib_route_array[i].if_out);
+
+            if (ret < 0) {
+                rte_exit(EXIT_FAILURE, "Unable to add entry %u to the l3fwd FIB table on socket %d\n",
+                        i, socketid);
+            }
+
+            in.s_addr = htonl(ipv4_l3fwd_fib_route_array[i].ip);
+            printf("FIB: Adding route %s / %d (%d)\n",
+                inet_ntop(AF_INET, &in, abuf, sizeof(abuf)),
+                ipv4_l3fwd_fib_route_array[i].depth,
+                ipv4_l3fwd_fib_route_array[i].if_out);
+        }
+
+        /* ipv6 omitted from this example for brevity */
+    }
+    #endif
+
 Packet Forwarding for Hash-based Lookups
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -379,6 +437,35 @@ for LPM-based lookups is done by the get_ipv4_dst_port() function below:
 
         return ((rte_lpm_lookup(ipv4_l3fwd_lookup_struct, rte_be_to_cpu_32(ipv4_hdr->dst_addr), &next_hop) == 0)? next_hop : portid);
     }
+
+Packet Forwarding for FIB-based Lookups
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The FIB library was designed to process multiple packets at once, it does not have separate functions for single
+and bulk lookups. ``rte_fib_lookup_bulk`` is used for ipv4 lookups and ``rte_fib6_lookup_bulk`` for ipv6.
+An example of a FIB lookup function can be seen below:
+
+.. code-block:: c
+
+    static inline uint16_t
+    fib_get_ipv4_dst_ports(struct rte_fib *ipv4_l3fwd_lookup_struct, uint32_t *ipv4_addrs, uint64_t *next_hops, uint16_t portid, int nb_pkts)
+    {
+        uint16_t hops[nb_pkts];
+
+        rte_fib_lookup_bulk(ipv4_l3fwd_lookup_struct, ipv4_addrs, next_hops, nb_pkts);
+
+        /*
+         * If FIB has returned its default value for an unknown IP address set it to the portid supplied.
+         * FIB uses uint64_t for hops but l3fwd uses uint16_t so the values are cast.
+         */
+
+        for (i = 0; i < nb_pkts; i++)
+            (next_hops[i]==FIB_DEFAULT_HOP) ? (hops[i] = (uint16_t)portid) : (hops[i] = (uint16_t)next_hop[i]);
+
+        return hops;
+    }
+
+    /* IPv6 example omitted for brevity */
 
 Eventdev Driver Initialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
