@@ -5,6 +5,7 @@
 #include <rte_common.h>
 #include <ethdev_pci.h>
 
+#include "ngbe_logs.h"
 #include "base/ngbe.h"
 #include "ngbe_ethdev.h"
 
@@ -36,6 +37,8 @@ eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	struct ngbe_hw *hw = NGBE_DEV_HW(eth_dev);
 	const struct rte_memzone *mz;
 
+	PMD_INIT_FUNC_TRACE();
+
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
@@ -64,6 +67,8 @@ eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 static int
 eth_ngbe_dev_uninit(struct rte_eth_dev *eth_dev)
 {
+	PMD_INIT_FUNC_TRACE();
+
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
@@ -129,6 +134,8 @@ static struct rte_pci_driver rte_ngbe_pmd = {
 static int
 ngbe_dev_close(struct rte_eth_dev *dev)
 {
+	PMD_INIT_FUNC_TRACE();
+
 	RTE_SET_USED(dev);
 
 	return 0;
@@ -138,3 +145,12 @@ RTE_PMD_REGISTER_PCI(net_ngbe, rte_ngbe_pmd);
 RTE_PMD_REGISTER_PCI_TABLE(net_ngbe, pci_id_ngbe_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ngbe, "* igb_uio | uio_pci_generic | vfio-pci");
 
+RTE_LOG_REGISTER(ngbe_logtype_init, pmd.net.ngbe.init, NOTICE);
+RTE_LOG_REGISTER(ngbe_logtype_driver, pmd.net.ngbe.driver, NOTICE);
+
+#ifdef RTE_ETHDEV_DEBUG_RX
+	RTE_LOG_REGISTER(ngbe_logtype_rx, pmd.net.ngbe.rx, DEBUG);
+#endif
+#ifdef RTE_ETHDEV_DEBUG_TX
+	RTE_LOG_REGISTER(ngbe_logtype_tx, pmd.net.ngbe.tx, DEBUG);
+#endif
