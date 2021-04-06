@@ -2471,8 +2471,9 @@ virtio_dev_tx_packed(struct virtio_net *dev,
 	uint32_t remained = count;
 	uint16_t i;
 
-	for (i = 0; i < count; ++i)
-		pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
+	if (rte_pktmbuf_alloc_bulk(mbuf_pool, pkts, count)) {
+		return 0;
+	}
 
 	do {
 		rte_prefetch0(&vq->desc_packed[vq->last_avail_idx]);
@@ -2497,8 +2498,9 @@ virtio_dev_tx_packed(struct virtio_net *dev,
 
 	} while (remained);
 
-	for (i = pkt_idx; i < count; ++i)
-		rte_pktmbuf_free(pkts[i]);
+	if (pkt_idx != count) {
+		rte_pktmbuf_free_bulk(&pkts[pkt_idx], count - pkt_idx);
+	}
 
 	if (vq->shadow_used_idx) {
 		do_data_copy_dequeue(vq);
