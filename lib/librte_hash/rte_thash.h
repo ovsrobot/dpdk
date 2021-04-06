@@ -360,6 +360,48 @@ __rte_experimental
 const uint8_t *
 rte_thash_get_key(struct rte_thash_ctx *ctx);
 
+/**
+ * Function prototype for the rte_thash_adjust_tuple
+ * to check if adjusted tuple could be used.
+ * Generally it is some kind of lookup function to check
+ * if adjusted tuple is already in use.
+ *
+ * @param userdata
+ *  Pointer to the userdata. It could be a pointer to the
+ *  table with used tuples to search.
+ * @param tuple
+ *  Pointer to the tuple to check
+ *
+ * @return
+ *  1 on success
+ *  0 otherwise
+ */
+typedef int (*rte_thash_check_tuple_t)(void *userdata, uint8_t *tuple);
+
+/**
+ * Adjust tuple with complimentary bits.
+ *
+ * @param h
+ *  Pointer to the helper struct
+ * @param orig_tuple
+ *  Pointer to the tuple to be adjusted
+ * @param adj_bits
+ *  Valure returned by rte_thash_get_compliment
+ * @param fn
+ *  Callback function to check adjusted tuple. Could be NULL
+ * @param userdata
+ *  Pointer to the userdata to be passed to fn(). Could be NULL
+ *
+ * @return
+ *  0 on success
+ *  negative otherwise
+ */
+__rte_experimental
+int
+rte_thash_adjust_tuple(struct rte_thash_subtuple_helper *h,
+	uint8_t *orig_tuple, uint32_t adj_bits,
+	rte_thash_check_tuple_t fn, void *userdata);
+
 #ifdef __cplusplus
 }
 #endif
