@@ -421,6 +421,7 @@ EXPERIMENTAL {
 	rte_version_release;
 	rte_version_suffix;
 	rte_version_year;
+	rte_intr_callback_unregister_sync;
 };
 
 INTERNAL {
