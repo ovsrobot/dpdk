@@ -65,6 +65,15 @@ New Features
       representor=[[c#]pf#]sf# sf[0,2-1023] /* 1023 SFs.                     */
       representor=[c#]pf#      c2pf[0,1]    /* 2 PFs on controller 2.        */
 
+* **Added support for Marvell CN10K SoC drivers.**
+
+  Added Marvell CN10K SoC support. Marvell CN10K SoC are based on Octeon 10
+  family of ARM64 processors with ARM Neoverse N2 core with accelerators for
+  packet processing, timers, cryptography, etc.
+
+  * Added common/cnxk driver consisting of common API to be used by
+    net, crypto and event PMD's.
+
 * **Updated Arkville PMD driver.**
 
   Updated Arkville net driver with new features and improvements, including:
