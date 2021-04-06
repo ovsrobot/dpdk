@@ -161,6 +161,9 @@ This section lists dataplane H/W block(s) available in OCTEON TX2 SoC.
 #. **Regex Device Driver**
    See :doc:`../regexdevs/octeontx2` for REE regex device driver information.
 
+#. **Mempool Driver**
+   See :doc:`../mempool/cnxk` for NPA mempool driver information.
+
 Procedure to Setup Platform
 ---------------------------
 
