@@ -9,6 +9,13 @@
  * Structure to store private data for each driver instance (for each port).
  */
 struct ngbe_adapter {
+	struct ngbe_hw             hw;
 };
+
+#define NGBE_DEV_ADAPTER(dev) \
+	((struct ngbe_adapter *)(dev)->data->dev_private)
+
+#define NGBE_DEV_HW(dev) \
+	(&((struct ngbe_adapter *)(dev)->data->dev_private)->hw)
 
 #endif /* _NGBE_ETHDEV_H_ */

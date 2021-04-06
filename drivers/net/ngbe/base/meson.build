@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2018-2020
 
-sources = []
+sources = [
+	'ngbe_hw.c',
+]
 
 error_cflags = []
 
