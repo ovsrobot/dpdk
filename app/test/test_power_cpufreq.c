@@ -386,7 +386,7 @@ check_power_turbo(void)
 {
 	int ret;
 
-	if (rte_power_turbo_status(TEST_POWER_LCORE_ID) == 0) {
+	if (rte_power_turbo_status(TEST_POWER_LCORE_ID) != 1) {
 		printf("Turbo not available on lcore %u, skipping test\n",
 				TEST_POWER_LCORE_ID);
 		return 0;
