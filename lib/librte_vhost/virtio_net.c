@@ -2471,14 +2471,13 @@ virtio_dev_tx_packed(struct virtio_net *dev,
 	uint32_t remained = count;
 	uint16_t i;
 
+	for (i = 0; i < count; ++i)
+		pkts[i] = rte_pktmbuf_alloc(mbuf_pool);
+
 	do {
 		rte_prefetch0(&vq->desc_packed[vq->last_avail_idx]);
 
 		if (remained >= PACKED_BATCH_SIZE) {
-			vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE) {
-				pkts[pkt_idx + i] =
-					rte_pktmbuf_alloc(mbuf_pool);
-			}
 
 			if (!virtio_dev_tx_batch_packed(dev, vq,
 							&pkts[pkt_idx])) {
@@ -2486,25 +2485,20 @@ virtio_dev_tx_packed(struct virtio_net *dev,
 				remained -= PACKED_BATCH_SIZE;
 
 				continue;
-			} else {
-				vhost_for_each_try_unroll(i, 0,
-					PACKED_BATCH_SIZE) {
-					rte_pktmbuf_free(pkts[pkt_idx + i]);
-				}
 			}
 		}
 
-		pkts[pkt_idx] = rte_pktmbuf_alloc(mbuf_pool);
-
 		if (virtio_dev_tx_single_packed(dev, vq, mbuf_pool,
 						&pkts[pkt_idx])) {
-			rte_pktmbuf_free(pkts[pkt_idx]);
 			break;
 		}
 		pkt_idx++;
 		remained--;
 
 	} while (remained);
+
+	for (i = pkt_idx; i < count; ++i)
+		rte_pktmbuf_free(pkts[i]);
 
 	if (vq->shadow_used_idx) {
 		do_data_copy_dequeue(vq);
