@@ -97,6 +97,10 @@ New Features
 
   * Added flow filter to support GTPU inner L3/L4 fields matching.
 
+* **Updated Intel ice driver.**
+
+  * Added GTP TEID support for DCF switch filter.
+
 * **Updated NXP DPAA driver.**
 
   * Added support for shared ethernet interface.
