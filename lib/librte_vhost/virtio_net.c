@@ -2390,7 +2390,7 @@ static __rte_always_inline int
 vhost_dequeue_single_packed(struct virtio_net *dev,
 			    struct vhost_virtqueue *vq,
 			    struct rte_mempool *mbuf_pool,
-			    struct rte_mbuf **pkts,
+			    struct rte_mbuf *pkts,
 			    uint16_t *buf_id,
 			    uint16_t *desc_count)
 {
@@ -2408,7 +2408,7 @@ vhost_dequeue_single_packed(struct virtio_net *dev,
 		return -1;
 
 
-	if (unlikely(virtio_dev_pktmbuf_prep(dev, *pkts, buf_len))) {
+	if (unlikely(virtio_dev_pktmbuf_prep(dev, pkts, buf_len))) {
 		if (!allocerr_warned) {
 			VHOST_LOG_DATA(ERR,
 				"Failed mbuf alloc of size %d from %s on %s.\n",
@@ -2418,7 +2418,7 @@ vhost_dequeue_single_packed(struct virtio_net *dev,
 		return -1;
 	}
 
-	err = copy_desc_to_mbuf(dev, vq, buf_vec, nr_vec, *pkts,
+	err = copy_desc_to_mbuf(dev, vq, buf_vec, nr_vec, pkts,
 				mbuf_pool);
 	if (unlikely(err)) {
 		if (!allocerr_warned) {
@@ -2437,7 +2437,7 @@ static __rte_always_inline int
 virtio_dev_tx_single_packed(struct virtio_net *dev,
 			    struct vhost_virtqueue *vq,
 			    struct rte_mempool *mbuf_pool,
-			    struct rte_mbuf **pkts)
+			    struct rte_mbuf *pkts)
 {
 
 	uint16_t buf_id, desc_count = 0;
@@ -2489,7 +2489,7 @@ virtio_dev_tx_packed(struct virtio_net *dev,
 		}
 
 		if (virtio_dev_tx_single_packed(dev, vq, mbuf_pool,
-						&pkts[pkt_idx])) {
+						pkts[pkt_idx])) {
 			break;
 		}
 		pkt_idx++;
