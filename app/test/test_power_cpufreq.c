@@ -47,6 +47,9 @@ static uint32_t freqs[TEST_POWER_FREQS_NUM_MAX];
 static int
 check_cur_freq(unsigned lcore_id, uint32_t idx)
 {
+	/* wait for the value to be updated */
+	sleep(1);
+
 #define TEST_POWER_CONVERT_TO_DECIMAL 10
 	FILE *f;
 	char fullpath[PATH_MAX];
