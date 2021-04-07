@@ -3345,7 +3345,7 @@ i40e_set_tx_function_flag(struct rte_eth_dev *dev, struct i40e_tx_queue *txq)
 
 	/* Use a simple Tx queue if possible (only fast free is allowed) */
 	ad->tx_simple_allowed =
-		(txq->offloads ==
+		(txq->offloads != 0 && txq->offloads ==
 		 (txq->offloads & DEV_TX_OFFLOAD_MBUF_FAST_FREE) &&
 		 txq->tx_rs_thresh >= RTE_PMD_I40E_TX_MAX_BURST);
 	ad->tx_vec_allowed = (ad->tx_simple_allowed &&
