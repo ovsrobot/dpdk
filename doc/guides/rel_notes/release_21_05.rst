@@ -97,6 +97,10 @@ New Features
 
   * Added flow filter to support GTPU inner L3/L4 fields matching.
 
+* **Updated Mellanox mlx5 driver.**
+
+  * Added support for the monitor policy of Power Management API.
+
 * **Updated NXP DPAA driver.**
 
   * Added support for shared ethernet interface.
