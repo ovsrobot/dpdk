@@ -256,6 +256,27 @@ static int worker_main(__rte_unused void *ptr_data)
 	return 0;
 }
 
+static void close_ports(void)
+{
+	uint16_t portid;
+	int ret;
+
+	for (portid = 0; portid < app_cfg.cnt_ports; portid++) {
+		printf("Closing port %d...", portid);
+		ret = rte_eth_dev_stop(portid);
+		if (ret != 0)
+			rte_exit(EXIT_FAILURE, "rte_eth_dev_stop: err=%s, port=%u\n",
+				 strerror(-ret), portid);
+		rte_eth_dev_close(portid);
+		printf(" Done\n");
+	}
+
+	ret = rte_eal_cleanup();
+	if (ret != 0)
+		rte_exit(EXIT_FAILURE, "EAL cleanup failed: %s\n",
+			 strerror(-ret));
+}
+
 int main(int argc, char **argv)
 {
 	int cnt_args_parsed;
@@ -298,6 +319,8 @@ int main(int argc, char **argv)
 		if (rte_eal_wait_lcore(id_core) < 0)
 			return -1;
 	}
+
+	close_ports();
 
 	return 0;
 }
