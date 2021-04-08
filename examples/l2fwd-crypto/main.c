@@ -2111,13 +2111,11 @@ check_capabilities(struct l2fwd_crypto_options *options, uint8_t cdev_id)
 					cap->sym.cipher.key_size.min,
 					cap->sym.cipher.key_size.max,
 					cap->sym.cipher.key_size.increment)
-						!= 0) {
+						!= 0)
 				RTE_LOG(DEBUG, USER1,
-					"Device %u does not support cipher "
-					"key length\n",
+					"Key length does not match the device "
+					"%u capability\n",
 					cdev_id);
-				return -1;
-			}
 		/*
 		 * Check if length of the cipher key to be randomly generated
 		 * is supported by the algorithm chosen.
