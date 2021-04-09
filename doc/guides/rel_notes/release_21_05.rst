@@ -166,6 +166,9 @@ API Changes
 * pci: The value ``PCI_ANY_ID`` is marked as deprecated
   and can be replaced with ``RTE_PCI_ANY_ID``.
 
+* ethdev: The experimental shared action APIs in ``rte_flow.h`` has been
+  replaced from ``rte_flow_shared_action_*`` to indirect action APIs named
+  ``rte_flow_action_handle_*``.
 
 ABI Changes
 -----------
