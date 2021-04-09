@@ -56,7 +56,8 @@ part_number_config_arm = {
 			['RTE_MACHINE', '"neoverse-n1"'],
 			['RTE_ARM_FEATURE_ATOMICS', true],
 			['RTE_MAX_MEM_MB', 1048576],
-			['RTE_MAX_LCORE', 80]
+			['RTE_MAX_LCORE', 160],
+			['RTE_MAX_NUMA_NODES', 2]
 		]
 	},
 	'0xd49': {
@@ -64,7 +65,8 @@ part_number_config_arm = {
 		'flags': [
 			['RTE_MACHINE', '"neoverse-n2"'],
 			['RTE_ARM_FEATURE_ATOMICS', true],
-			['RTE_MAX_LCORE', 64]
+			['RTE_MAX_LCORE', 64],
+			['RTE_MAX_NUMA_NODES', 1]
 		]
 	}
 }
@@ -74,8 +76,8 @@ implementer_arm = {
 		['RTE_MACHINE', '"armv8a"'],
 		['RTE_USE_C11_MEM_MODEL', true],
 		['RTE_CACHE_LINE_SIZE', 64],
-		['RTE_MAX_LCORE', 16],
-		['RTE_MAX_NUMA_NODES', 1]
+		['RTE_MAX_LCORE', 64],
+		['RTE_MAX_NUMA_NODES', 4]
 	],
 	'part_number_config': part_number_config_arm
 }
@@ -157,39 +159,13 @@ implementer_qualcomm = {
 	}
 }
 
-implementer_marvell = {
-	'description': 'Marvell ARMADA',
-	'flags': [
-		['RTE_MACHINE', '"armv8a"'],
-		['RTE_CACHE_LINE_SIZE', 64],
-		['RTE_MAX_LCORE', 16],
-		['RTE_MAX_NUMA_NODES', 1]
-	],
-	'part_number_config': part_number_config_arm
-}
-
-implementer_dpaa = {
-	'description': 'NXP DPAA',
-	'flags': [
-		['RTE_MACHINE', '"dpaa"'],
-		['RTE_LIBRTE_DPAA2_USE_PHYS_IOVA', false],
-		['RTE_USE_C11_MEM_MODEL', true],
-		['RTE_CACHE_LINE_SIZE', 64],
-		['RTE_MAX_LCORE', 16],
-		['RTE_MAX_NUMA_NODES', 1]
-	],
-	'part_number_config': part_number_config_arm
-}
-
 ## Arm implementers (ID from MIDR in Arm Architecture Reference Manual)
 implementers = {
 	'generic': implementer_generic,
 	'0x41': implementer_arm,
 	'0x43': implementer_cavium,
 	'0x50': implementer_ampere,
-	'0x51': implementer_qualcomm,
-	'0x56': implementer_marvell,
-	'dpaa': implementer_dpaa
+	'0x51': implementer_qualcomm
 }
 
 # soc specific aarch64 flags have the highest priority
@@ -202,8 +178,12 @@ soc_generic = {
 
 soc_armada = {
 	'description': 'Marvell ARMADA',
-	'implementer': '0x56',
+	'implementer': '0x41',
 	'part_number': '0xd08',
+	'flags': [
+		['RTE_MAX_LCORE', 16],
+		['RTE_MAX_NUMA_NODES', 1]
+	],
 	'numa': false
 }
 
@@ -211,13 +191,23 @@ soc_bluefield = {
 	'description': 'NVIDIA BlueField',
 	'implementer': '0x41',
 	'part_number': '0xd08',
+	'flags': [
+		['RTE_MAX_LCORE', 16],
+		['RTE_MAX_NUMA_NODES', 1]
+	],
 	'numa': false
 }
 
 soc_dpaa = {
 	'description': 'NXP DPAA',
-	'implementer': 'dpaa',
+	'implementer': '0x41',
 	'part_number': '0xd08',
+	'flags': [
+		['RTE_MACHINE', '"dpaa"'],
+		['RTE_LIBRTE_DPAA2_USE_PHYS_IOVA', false],
+		['RTE_MAX_LCORE', 16],
+		['RTE_MAX_NUMA_NODES', 1]
+	],
 	'numa': false
 }
 
@@ -261,6 +251,10 @@ soc_octeontx2 = {
 soc_stingray = {
 	'description': 'Broadcom Stingray',
 	'implementer': '0x41',
+	'flags': [
+		['RTE_MAX_LCORE', 16],
+		['RTE_MAX_NUMA_NODES', 1]
+	],
 	'part_number': '0xd08',
 	'numa': false
 }
