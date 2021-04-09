@@ -8449,15 +8449,15 @@ RTE_PMD_REGISTER_KMOD_DEP(net_ixgbe_vf, "* igb_uio | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_ixgbe_vf,
 			      IXGBEVF_DEVARG_PFLINK_FULLCHK "=<0|1>");
 
-RTE_LOG_REGISTER(ixgbe_logtype_init, pmd.net.ixgbe.init, NOTICE);
-RTE_LOG_REGISTER(ixgbe_logtype_driver, pmd.net.ixgbe.driver, NOTICE);
+RTE_LOG_REGISTER(ixgbe_logtype_init, .init, NOTICE);
+RTE_LOG_REGISTER(ixgbe_logtype_driver, .driver, NOTICE);
 
 #ifdef RTE_LIBRTE_IXGBE_DEBUG_RX
-RTE_LOG_REGISTER(ixgbe_logtype_rx, pmd.net.ixgbe.rx, DEBUG);
+RTE_LOG_REGISTER(ixgbe_logtype_rx, .rx, DEBUG);
 #endif
 #ifdef RTE_LIBRTE_IXGBE_DEBUG_TX
-RTE_LOG_REGISTER(ixgbe_logtype_tx, pmd.net.ixgbe.tx, DEBUG);
+RTE_LOG_REGISTER(ixgbe_logtype_tx, .tx, DEBUG);
 #endif
 #ifdef RTE_LIBRTE_IXGBE_DEBUG_TX_FREE
-RTE_LOG_REGISTER(ixgbe_logtype_tx_free, pmd.net.ixgbe.tx_free, DEBUG);
+RTE_LOG_REGISTER(ixgbe_logtype_tx_free, .tx_free, DEBUG);
 #endif

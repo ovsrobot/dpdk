@@ -460,4 +460,4 @@ dpaax_handle_memevents(void)
 					       dpaax_memevent_cb, NULL);
 }
 
-RTE_LOG_REGISTER(dpaax_logger, pmd.common.dpaax, ERR);
+RTE_LOG_REGISTER(dpaax_logger, , ERR);

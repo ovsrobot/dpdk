@@ -14,6 +14,7 @@
 #include <rte_eal.h>
 #include <rte_log.h>
 #include <rte_per_lcore.h>
+#include <rte_string_fns.h>
 
 #include "eal_log.h"
 
@@ -264,6 +265,44 @@ int rte_log_cur_msg_loglevel(void)
 int rte_log_cur_msg_logtype(void)
 {
 	return RTE_PER_LCORE(log_cur_msg).logtype;
+}
+
+int rte_log_logtype_from_file(char *logtype, size_t size, const char *file,
+	const char *suffix)
+{
+	char pattern[PATH_MAX];
+	const char *prefix;
+	char *start;
+	char *pos;
+	int ret;
+
+	strlcpy(pattern, file, sizeof(pattern));
+	if ((pos = strstr(pattern, "drivers/")) != NULL) {
+		start = pos + strlen("drivers/");
+		pos = strstr(start, "/");
+		if (pos == NULL)
+			return -1;
+		pos[0] = '.';
+		pos = strstr(pos + 1, "/");
+		if (pos == NULL)
+			return -1;
+		pos[0] = '\0';
+		prefix = "pmd.";
+	} else if ((pos = strstr(pattern, "lib/librte_")) != NULL) {
+		start = pos + strlen("lib/librte_");
+		pos = strstr(start, "/");
+		if (pos == NULL)
+			return -1;
+		pos[0] = '\0';
+		prefix = "lib.";
+	} else {
+		return -1;
+	}
+	ret = snprintf(logtype, size, "%s%s%s", prefix, start,
+		suffix != NULL ? suffix : "");
+	if (ret < 0 || (unsigned int)ret >= size)
+		return -1;
+	return 0;
 }
 
 static int

@@ -148,7 +148,7 @@ static struct rte_eth_link pmd_link = {
 		.link_autoneg = ETH_LINK_FIXED,
 };
 
-RTE_LOG_REGISTER(eth_pcap_logtype, pmd.net.pcap, NOTICE);
+RTE_LOG_REGISTER(eth_pcap_logtype, , NOTICE);
 
 #define PMD_LOG(level, fmt, args...) \
 	rte_log(RTE_LOG_ ## level, eth_pcap_logtype, \

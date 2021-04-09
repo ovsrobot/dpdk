@@ -5923,7 +5923,7 @@ rte_eth_representor_info_get(uint16_t port_id,
 								      info));
 }
 
-RTE_LOG_REGISTER(rte_eth_dev_logtype, lib.ethdev, INFO);
+RTE_LOG_REGISTER(rte_eth_dev_logtype, , INFO);
 
 RTE_INIT(ethdev_init_telemetry)
 {

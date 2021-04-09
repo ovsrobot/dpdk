@@ -4082,4 +4082,4 @@ dlb_parse_params(const char *params,
 	}
 	return ret;
 }
-RTE_LOG_REGISTER(eventdev_dlb_log_level, pmd.event.dlb, NOTICE);
+RTE_LOG_REGISTER(eventdev_dlb_log_level, , NOTICE);

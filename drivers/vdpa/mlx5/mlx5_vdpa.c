@@ -869,7 +869,7 @@ static struct mlx5_pci_driver mlx5_vdpa_driver = {
 	},
 };
 
-RTE_LOG_REGISTER(mlx5_vdpa_logtype, pmd.vdpa.mlx5, NOTICE)
+RTE_LOG_REGISTER(mlx5_vdpa_logtype, , NOTICE)
 
 /**
  * Driver initialization routine.

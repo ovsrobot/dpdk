@@ -6866,5 +6866,5 @@ RTE_PMD_REGISTER_KMOD_DEP(net_hns3, "* igb_uio | vfio-pci");
 RTE_PMD_REGISTER_PARAM_STRING(net_hns3,
 		HNS3_DEVARG_RX_FUNC_HINT "=vec|sve|simple|common "
 		HNS3_DEVARG_TX_FUNC_HINT "=vec|sve|simple|common ");
-RTE_LOG_REGISTER(hns3_logtype_init, pmd.net.hns3.init, NOTICE);
-RTE_LOG_REGISTER(hns3_logtype_driver, pmd.net.hns3.driver, NOTICE);
+RTE_LOG_REGISTER(hns3_logtype_init, .init, NOTICE);
+RTE_LOG_REGISTER(hns3_logtype_driver, .driver, NOTICE);

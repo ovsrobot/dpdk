@@ -373,6 +373,29 @@ int rte_vlog(uint32_t level, uint32_t logtype, const char *format, va_list ap)
 		 RTE_LOGTYPE_ ## t, # t ": " __VA_ARGS__) :	\
 	 0)
 
+/*
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Generates a log type based on the file which calls RTE_LOG_REGISTER and an
+ * optional suffix.
+ *
+ * @param logtype
+ *   A buffer where this helper writes the log type.
+ * @param size
+ *   The size of the logtype buffer.
+ * @param file
+ *   The file which called RTE_LOG_REGISTER.
+ * @param suffix
+ *   If not NULL, a suffix to append to the log type.
+ * @return
+ *   - 0: Success.
+ *   - Negative on error, the logtype content is invalid.
+ */
+__rte_experimental
+int rte_log_logtype_from_file(char *logtype, size_t size, const char *file,
+	const char *suffix);
+
 /**
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice
@@ -384,17 +407,27 @@ int rte_vlog(uint32_t level, uint32_t logtype, const char *format, va_list ap)
  *
  * @param type
  *   The log type identifier
- * @param name
- *    Name for the log type to be registered
+ * @param suffix
+ *    Name for the log type to be registered.
+ *    If empty or starts with a ., then this name is used as a suffix appended
+ *    to the default logtype for the current file
+ *    (see rte_log_logtype_from_file).
  * @param level
  *   Log level. A value between EMERG (1) and DEBUG (8).
  */
-#define RTE_LOG_REGISTER(type, name, level)				\
+#define RTE_LOG_REGISTER(type, suffix, level)				\
 int type;								\
 RTE_INIT(__##type)							\
 {									\
-	type = rte_log_register_type_and_pick_level(RTE_STR(name),	\
-						    RTE_LOG_##level);	\
+	const char *name = RTE_STR(suffix);                             \
+	char pattern[PATH_MAX];                                         \
+	if (name[0] == '\0' || name[0] == '.') {                        \
+		if (rte_log_logtype_from_file(pattern, sizeof(pattern), \
+				__FILE__, name) == 0)                   \
+			name = pattern;                                 \
+	}                                                               \
+	type = rte_log_register_type_and_pick_level(name,               \
+						    RTE_LOG_##level);   \
 	if (type < 0)                                                   \
 		type = RTE_LOGTYPE_EAL;                                 \
 }

@@ -105,7 +105,7 @@ struct octeontx_fpadev {
 
 static struct octeontx_fpadev fpadev;
 
-RTE_LOG_REGISTER(octeontx_logtype_fpavf, pmd.mempool.octeontx, NOTICE);
+RTE_LOG_REGISTER(octeontx_logtype_fpavf, , NOTICE);
 
 /* lock is taken by caller */
 static int

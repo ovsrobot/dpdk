@@ -192,4 +192,4 @@ rte_stack_lookup(const char *name)
 	return r;
 }
 
-RTE_LOG_REGISTER(stack_logtype, lib.stack, NOTICE);
+RTE_LOG_REGISTER(stack_logtype, , NOTICE);
