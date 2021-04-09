@@ -45,6 +45,7 @@ New Features
      * Core libs (EAL, mempool, ring, mbuf, buses)
      * Device abstraction libs and PMDs
        - ethdev (lib, PMDs)
+         * PMDs are ordered alphabetically on vendor name
        - cryptodev (lib, PMDs)
        - eventdev (lib, PMDs)
        - etc
