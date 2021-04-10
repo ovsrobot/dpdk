@@ -574,6 +574,7 @@ eth_ark_dev_start(struct rte_eth_dev *dev)
 				    "starter thread\n");
 			return -1;
 		}
+		rte_thread_setname(thread, "ark-delay-pg");
 	}
 
 	if (ark->user_ext.dev_start)
