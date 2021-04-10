@@ -37,6 +37,8 @@ RTE_LOG_REGISTER(ifcvf_vdpa_logtype, pmd.vdpa.ifcvf, NOTICE);
 #define IFCVF_VDPA_MODE		"vdpa"
 #define IFCVF_SW_FALLBACK_LM	"sw-live-migration"
 
+#define THREAD_NAME_LEN	16
+
 static const char * const ifcvf_valid_arguments[] = {
 	IFCVF_VDPA_MODE,
 	IFCVF_SW_FALLBACK_LM,
@@ -494,6 +496,7 @@ notify_relay(void *arg)
 static int
 setup_notify_relay(struct ifcvf_internal *internal)
 {
+	char name[THREAD_NAME_LEN];
 	int ret;
 
 	ret = pthread_create(&internal->tid, NULL, notify_relay,
@@ -502,6 +505,10 @@ setup_notify_relay(struct ifcvf_internal *internal)
 		DRV_LOG(ERR, "failed to create notify relay pthread.");
 		return -1;
 	}
+
+	snprintf(name, sizeof(name), "ifc-notify-%d", internal->vid);
+	rte_thread_setname(internal->tid, name);
+
 	return 0;
 }
 
@@ -797,6 +804,7 @@ vring_relay(void *arg)
 static int
 setup_vring_relay(struct ifcvf_internal *internal)
 {
+	char name[THREAD_NAME_LEN];
 	int ret;
 
 	ret = pthread_create(&internal->tid, NULL, vring_relay,
@@ -805,6 +813,10 @@ setup_vring_relay(struct ifcvf_internal *internal)
 		DRV_LOG(ERR, "failed to create ring relay pthread.");
 		return -1;
 	}
+
+	snprintf(name, sizeof(name), "ifc-vring-%d", internal->vid);
+	rte_thread_setname(internal->tid, name);
+
 	return 0;
 }
 
