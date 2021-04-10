@@ -53,7 +53,8 @@ starts_with(const char *str, const char *pre)
 
 /* tokenization test values separated by a comma */
 static int
-parse_values(char *tokens, uint32_t **data, uint32_t *data_length)
+parse_values(char *tokens, uint32_t **data, uint32_t *data_length,
+	     int network_order)
 {
 	uint32_t n_tokens = 0;
 	uint32_t data_size = 32;
@@ -94,6 +95,14 @@ parse_values(char *tokens, uint32_t **data, uint32_t *data_length)
 		}
 
 		*data_length = *data_length + (strlen(tok) - strlen("0x"))/2;
+		if (network_order) {
+			if ((strlen(tok) - strlen("0x"))/2 == 4)
+				values[n_tokens] =
+					rte_cpu_to_be_32(values[n_tokens]);
+			else if ((strlen(tok) - strlen("0x"))/2 == 2)
+				values[n_tokens] =
+					rte_cpu_to_be_16(values[n_tokens]);
+		}
 
 		tok = strtok(NULL, VALUE_DELIMITER);
 		if (tok == NULL)
@@ -416,7 +425,8 @@ parse_data_entry(const char *key_token, char *token,
 	/* Clear new op data struct */
 	memset(op_data + *nb_ops, 0, sizeof(struct op_data_buf));
 
-	ret = parse_values(token, &data, &data_length);
+	ret = parse_values(token, &data, &data_length,
+			vector->network_order);
 	if (!ret) {
 		op_data[*nb_ops].addr = data;
 		op_data[*nb_ops].length = data_length;
@@ -728,6 +738,10 @@ parse_ldpc_encoder_params(const char *key_token, char *token,
 		ret = parse_expected_status(token, &status, vector->op_type);
 		if (!ret)
 			vector->expected_status = status;
+	} else if (!strcmp(key_token, "network_order")) {
+		vector->mask |= TEST_BBDEV_VF_NETWORK_ORDER;
+		vector->network_order = (uint8_t) strtoul(token, &err, 0);
+		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else {
 		printf("Not valid ldpc enc key: '%s'\n", key_token);
 		return -1;
