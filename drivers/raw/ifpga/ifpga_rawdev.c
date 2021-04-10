@@ -534,6 +534,7 @@ ifpga_monitor_start_func(void)
 				"Fail to create ifpga nonitor thread");
 			return -1;
 		}
+		rte_thread_setname(ifpga_monitor_start_thread, "ifpga-monitor");
 		ifpga_monitor_start = 1;
 	}
 
