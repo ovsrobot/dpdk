@@ -130,6 +130,10 @@ New Features
   * Added command to display Rx queue used descriptor count.
     ``show port (port_id) rxq (queue_id) desc used count``
 
+* **Added support for vhost async packed ring data path.**
+
+  Added packed ring support for async vhost.
+
 
 Removed Items
 -------------
