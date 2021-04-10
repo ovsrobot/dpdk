@@ -130,6 +130,11 @@ New Features
   * Added command to display Rx queue used descriptor count.
     ``show port (port_id) rxq (queue_id) desc used count``
 
+* **Added NXP LA12xx baseband PMD.**
+
+  Added a new baseband PMD driver for NXP LA12xx Software defined radio.
+
+  See the :doc:`../bbdevs/la12xx` for more details.
 
 Removed Items
 -------------
