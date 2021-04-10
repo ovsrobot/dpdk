@@ -689,6 +689,7 @@ new_device(int vid)
 		fprintf(stderr, "Worker Thread Started Failed\n");
 		return -1;
 	}
+	rte_thread_setname(tid, "vhostblk-ctrlr");
 
 	/* device has been started */
 	ctrlr->started = 1;
