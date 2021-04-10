@@ -151,7 +151,9 @@ ice_dcf_vsi_update_service_handler(void *param)
 static void
 start_vsi_reset_thread(struct ice_dcf_hw *dcf_hw, bool vfr, uint16_t vf_id)
 {
+#define THREAD_NAME_LEN	16
 	struct ice_dcf_reset_event_param *param;
+	char name[THREAD_NAME_LEN];
 	pthread_t thread;
 	int ret;
 
@@ -171,6 +173,9 @@ start_vsi_reset_thread(struct ice_dcf_hw *dcf_hw, bool vfr, uint16_t vf_id)
 		PMD_DRV_LOG(ERR, "Failed to start the thread for reset handling");
 		free(param);
 	}
+
+	snprintf(name, sizeof(name), "ice-reset-%u", vf_id);
+	rte_thread_setname(thread, name);
 }
 
 void
