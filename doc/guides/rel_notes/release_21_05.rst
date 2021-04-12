@@ -192,6 +192,10 @@ API Changes
 * pci: The value ``PCI_ANY_ID`` is marked as deprecated
   and can be replaced with ``RTE_PCI_ANY_ID``.
 
+* Lock-free ``rte_stack`` no longer silently ignores push and pop when it's not
+  supported on the current platform. Instead ``rte_stack_create()`` fails and
+  ``rte_errno`` is set to ``ENOTSUP``.
+
 
 ABI Changes
 -----------

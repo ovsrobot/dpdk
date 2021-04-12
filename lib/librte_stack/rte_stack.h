@@ -205,6 +205,7 @@ rte_stack_free_count(struct rte_stack *s)
  *    - EEXIST - a stack with the same name already exists
  *    - ENOMEM - insufficient memory to create the stack
  *    - ENAMETOOLONG - name size exceeds RTE_STACK_NAMESIZE
+ *    - ENOTSUP - platform does not support given flags combination.
  */
 struct rte_stack *
 rte_stack_create(const char *name, unsigned int count, int socket_id,
