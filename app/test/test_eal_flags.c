@@ -756,6 +756,15 @@ test_no_huge_flag(void)
 #else
 	const char * prefix = "--file-prefix=nohuge";
 #endif
+#ifdef RTE_EXEC_ENV_LINUX
+	/* EAL requires hugepages for RTE_IOVA_PA operation on linux.
+	 * The test application is run with RTE_IOVA_DC, so if at this point we
+	 * get RTE_IOVA_PA, it means that newly spawned process will also get
+	 * it.
+	 */
+	if (rte_eal_iova_mode() == RTE_IOVA_PA)
+		return TEST_SKIPPED;
+#endif
 
 	/* With --no-huge */
 	const char *argv1[] = {prgname, prefix, no_huge};
