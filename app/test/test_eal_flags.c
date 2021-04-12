@@ -666,8 +666,8 @@ test_main_lcore_flag(void)
 /*
  * Test that the app doesn't run with invalid -n flag option.
  * Final test ensures it does run with valid options as sanity check
- * Since -n is not compulsory for MP, we instead use --no-huge and --no-shconf
- * flags.
+ * For compatibility with BSD use --no-huge and --no-shconf flags as we need to
+ * run a primary process.
  */
 static int
 test_invalid_n_flag(void)
