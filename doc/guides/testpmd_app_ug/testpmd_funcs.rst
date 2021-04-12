@@ -272,6 +272,17 @@ and ready to be processed by the driver on a given RX queue::
 
    testpmd> show port (port_id) rxq (queue_id) desc used count
 
+cleanup txq mbufs
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Request the driver to free mbufs currently cached by the driver for a given port's
+Tx queue::
+   testpmd> tx_done_cleanup port (port_id) (queue_id) (free_cnt)
+
+.. note::
+   This command is dangerous, users must make sure there are no cucurrent access to
+   the same Tx queue (link rte_eth_tx_burst, rte_eth_dev_tx_queue_stop and so on).
+
 show config
 ~~~~~~~~~~~
 

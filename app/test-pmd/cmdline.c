@@ -675,6 +675,9 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"set port (port_id) ptype_mask (ptype_mask)\n"
 			"    set packet types classification for a specific port\n\n"
 
+			"tx_done_cleanup (port_id) (queue_id) (free_cnt)\n"
+			"    Cleanup a Tx queue's mbuf on a port\n\n"
+
 			"set port (port_id) queue-region region_id (value) "
 			"queue_start_index (value) queue_num (value)\n"
 			"    Set a queue region on a port\n\n"
@@ -16912,6 +16915,87 @@ cmdline_parse_inst_t cmd_showport_macs = {
 	},
 };
 
+/* *** tx_done_cleanup *** */
+struct cmd_tx_done_cleanup_result {
+	cmdline_fixed_string_t clean;
+	cmdline_fixed_string_t port;
+	uint16_t port_id;
+	uint16_t queue_id;
+	uint32_t free_cnt;
+};
+
+static void
+cmd_tx_done_cleanup_parsed(void *parsed_result,
+			   __rte_unused struct cmdline *cl,
+			   __rte_unused void *data)
+{
+	struct cmd_tx_done_cleanup_result *res = parsed_result;
+	uint16_t port_id = res->port_id;
+	uint16_t queue_id = res->queue_id;
+	uint32_t free_cnt = res->free_cnt;
+	struct rte_eth_txq_info qinfo;
+	int ret;
+
+	if (port_is_started(port_id) != 1) {
+		printf("Please start port %u first\n", port_id);
+		return;
+	}
+
+	/* Make sure the Tx queue is valid by called get tx queue info API */
+	if (rte_eth_tx_queue_info_get(port_id, queue_id, &qinfo)) {
+		printf("Failed to get port %u Tx queue %u info!\n",
+		       port_id, queue_id);
+		return;
+	}
+
+	/*
+	 * rte_eth_tx_done_cleanup is a dataplane API, user must make sure
+	 * there are no concurrent access to the same Tx queue (like
+	 * rte_eth_tx_burst, rte_eth_dev_tx_queue_stop and so on) when this API
+	 * called.
+	 */
+	ret = rte_eth_tx_done_cleanup(port_id, queue_id, free_cnt);
+	if (ret < 0) {
+		printf("Failed to cleanup mbuf for port %u Tx queue %u "
+		       "error desc: %s(%d)\n",
+		       port_id, queue_id, strerror(-ret), ret);
+		return;
+	}
+
+	printf("Cleanup port %u Tx queue %u mbuf nums: %u\n",
+	       port_id, queue_id, ret);
+}
+
+cmdline_parse_token_string_t cmd_tx_done_cleanup_clean =
+	TOKEN_STRING_INITIALIZER(struct cmd_tx_done_cleanup_result, clean,
+				 "tx_done_cleanup");
+cmdline_parse_token_string_t cmd_tx_done_cleanup_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_tx_done_cleanup_result, port,
+				 "port");
+cmdline_parse_token_num_t cmd_tx_done_cleanup_port_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_tx_done_cleanup_result, port_id,
+			      UINT16);
+cmdline_parse_token_num_t cmd_tx_done_cleanup_queue_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_tx_done_cleanup_result, queue_id,
+			      UINT16);
+cmdline_parse_token_num_t cmd_tx_done_cleanup_free_cnt =
+	TOKEN_NUM_INITIALIZER(struct cmd_tx_done_cleanup_result, free_cnt,
+			      UINT32);
+
+cmdline_parse_inst_t cmd_tx_done_cleanup = {
+	.f = cmd_tx_done_cleanup_parsed,
+	.data = NULL,
+	.help_str = "tx_done_cleanup port <port_id> <queue_id> <free_cnt>",
+	.tokens = {
+		(void *)&cmd_tx_done_cleanup_clean,
+		(void *)&cmd_tx_done_cleanup_port,
+		(void *)&cmd_tx_done_cleanup_port_id,
+		(void *)&cmd_tx_done_cleanup_queue_id,
+		(void *)&cmd_tx_done_cleanup_free_cnt,
+		NULL,
+	},
+};
+
 /* ******************************************************************************** */
 
 /* list of instructions */
@@ -17037,6 +17121,7 @@ cmdline_parse_ctx_t main_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_config_rss_reta,
 	(cmdline_parse_inst_t *)&cmd_showport_reta,
 	(cmdline_parse_inst_t *)&cmd_showport_macs,
+	(cmdline_parse_inst_t *)&cmd_tx_done_cleanup,
 	(cmdline_parse_inst_t *)&cmd_config_burst,
 	(cmdline_parse_inst_t *)&cmd_config_thresh,
 	(cmdline_parse_inst_t *)&cmd_config_threshold,
