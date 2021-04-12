@@ -1724,6 +1724,29 @@ virtio_dev_rx_async_submit_split(struct virtio_net *dev,
 }
 
 static __rte_always_inline int
+virtio_dev_rx_async_batch_packed(struct virtio_net *dev,
+			   struct vhost_virtqueue *vq,
+			   struct rte_mbuf **pkts,
+			   struct rte_mbuf **comp_pkts, uint32_t *pkt_done)
+{
+	uint16_t i;
+	uint32_t cpy_threshold = vq->async_threshold;
+
+	vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE) {
+		if (unlikely(pkts[i]->pkt_len >= cpy_threshold))
+			return -1;
+	}
+	if (!virtio_dev_rx_batch_packed(dev, vq, pkts)) {
+		vhost_for_each_try_unroll(i, 0, PACKED_BATCH_SIZE)
+			comp_pkts[(*pkt_done)++] = pkts[i];
+
+		return 0;
+	}
+
+	return -1;
+}
+
+static __rte_always_inline int
 vhost_enqueue_async_single_packed(struct virtio_net *dev,
 			    struct vhost_virtqueue *vq,
 			    struct rte_mbuf *pkt,
@@ -1846,6 +1869,7 @@ virtio_dev_rx_async_submit_packed(struct virtio_net *dev,
 	struct rte_mbuf **comp_pkts, uint32_t *comp_count)
 {
 	uint32_t pkt_idx = 0, pkt_burst_idx = 0;
+	uint32_t remained = count;
 	uint16_t async_descs_idx = 0;
 	uint16_t num_buffers;
 	uint16_t num_desc;
@@ -1865,9 +1889,17 @@ virtio_dev_rx_async_submit_packed(struct virtio_net *dev,
 	uint32_t num_async_pkts = 0, num_done_pkts = 0;
 	struct vring_packed_desc async_descs[vq->size];
 
-	rte_prefetch0(&vq->desc_packed[vq->last_avail_idx & (vq->size - 1)]);
-
-	for (pkt_idx = 0; pkt_idx < count; pkt_idx++) {
+	do {
+		rte_prefetch0(&vq->desc_packed[vq->last_avail_idx &
+							(vq->size - 1)]);
+		if (remained >= PACKED_BATCH_SIZE) {
+			if (!virtio_dev_rx_async_batch_packed(dev, vq,
+				&pkts[pkt_idx], comp_pkts, &num_done_pkts)) {
+				pkt_idx += PACKED_BATCH_SIZE;
+				remained -= PACKED_BATCH_SIZE;
+				continue;
+			}
+		}
 		if (unlikely(virtio_dev_rx_async_single_packed(dev, vq,
 						pkts[pkt_idx],
 						&num_desc, &num_buffers,
@@ -1915,6 +1947,8 @@ virtio_dev_rx_async_submit_packed(struct virtio_net *dev,
 		} else
 			comp_pkts[num_done_pkts++] = pkts[pkt_idx];
 
+		pkt_idx++;
+		remained--;
 		vq_inc_last_avail_packed(vq, num_desc);
 
 		/*
@@ -1940,13 +1974,12 @@ virtio_dev_rx_async_submit_packed(struct virtio_net *dev,
 				 */
 				pkt_err = pkt_burst_idx - n_pkts;
 				pkt_burst_idx = 0;
-				pkt_idx++;
 				break;
 			}
 
 			pkt_burst_idx = 0;
 		}
-	}
+	} while (pkt_idx < count);
 
 	if (pkt_burst_idx) {
 		n_pkts = vq->async_ops.transfer_data(dev->vid,
