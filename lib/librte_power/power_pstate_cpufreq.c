@@ -185,6 +185,9 @@ power_init_for_setting_freq(struct pstate_power_info *pi)
 		base_max_ratio =
 			strtoul(buf_base, NULL, POWER_CONVERT_TO_DECIMAL)
 				/ BUS_FREQ;
+		/* not needed any more */
+		fclose(f_base_max);
+		f_base_max = NULL;
 	}
 
 	snprintf(fullpath_min, sizeof(fullpath_min), POWER_SYSFILE_MIN_FREQ,
