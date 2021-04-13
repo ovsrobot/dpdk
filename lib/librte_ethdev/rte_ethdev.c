@@ -199,6 +199,9 @@ rte_eth_iterator_init(struct rte_dev_iterator *iter, const char *devargs_str)
 	char *cls_str = NULL;
 	int str_size;
 
+	if (iter == NULL || devargs_str == NULL)
+		return -EINVAL;
+
 	memset(iter, 0, sizeof(*iter));
 
 	/*
@@ -293,7 +296,7 @@ error:
 uint16_t
 rte_eth_iterator_next(struct rte_dev_iterator *iter)
 {
-	if (iter->cls == NULL) /* invalid ethdev iterator */
+	if (iter == NULL || iter->cls == NULL) /* invalid ethdev iterator */
 		return RTE_MAX_ETHPORTS;
 
 	do { /* loop to try all matching rte_device */
@@ -322,7 +325,7 @@ rte_eth_iterator_next(struct rte_dev_iterator *iter)
 void
 rte_eth_iterator_cleanup(struct rte_dev_iterator *iter)
 {
-	if (iter->bus_str == NULL)
+	if (iter == NULL || iter->bus_str == NULL)
 		return; /* nothing to free in pure class filter */
 	free(RTE_CAST_FIELD(iter, bus_str, char *)); /* workaround const */
 	free(RTE_CAST_FIELD(iter, cls_str, char *)); /* workaround const */
@@ -622,6 +625,9 @@ rte_eth_find_next_owned_by(uint16_t port_id, const uint64_t owner_id)
 int
 rte_eth_dev_owner_new(uint64_t *owner_id)
 {
+	if (owner_id == NULL)
+		return -EINVAL;
+
 	eth_dev_shared_data_prepare();
 
 	rte_spinlock_lock(&eth_dev_shared_data->ownership_lock);
@@ -677,6 +683,9 @@ rte_eth_dev_owner_set(const uint16_t port_id,
 		      const struct rte_eth_dev_owner *owner)
 {
 	int ret;
+
+	if (owner == NULL)
+		return -EINVAL;
 
 	eth_dev_shared_data_prepare();
 
@@ -740,6 +749,9 @@ rte_eth_dev_owner_get(const uint16_t port_id, struct rte_eth_dev_owner *owner)
 {
 	int ret = 0;
 	struct rte_eth_dev *ethdev = &rte_eth_devices[port_id];
+
+	if (owner == NULL)
+		return -EINVAL;
 
 	eth_dev_shared_data_prepare();
 
@@ -820,7 +832,7 @@ rte_eth_dev_get_port_by_name(const char *name, uint16_t *port_id)
 {
 	uint16_t pid;
 
-	if (name == NULL) {
+	if (name == NULL || port_id == NULL) {
 		RTE_ETHDEV_LOG(ERR, "Null pointer is specified\n");
 		return -EINVAL;
 	}
@@ -1296,6 +1308,9 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 	int diag;
 	int ret;
 	uint16_t old_mtu;
+
+	if (dev_conf == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 
@@ -2137,6 +2152,9 @@ rte_eth_rx_hairpin_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 	int i;
 	int count;
 
+	if (conf == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 
 	dev = &rte_eth_devices[port_id];
@@ -2309,6 +2327,9 @@ rte_eth_tx_hairpin_queue_setup(uint16_t port_id, uint16_t tx_queue_id,
 	int count;
 	int ret;
 
+	if (conf == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
 	if (tx_queue_id >= dev->data->nb_tx_queues) {
@@ -2459,6 +2480,9 @@ int
 rte_eth_tx_buffer_set_err_callback(struct rte_eth_dev_tx_buffer *buffer,
 		buffer_tx_error_fn cbfn, void *userdata)
 {
+	if (buffer == NULL)
+		return -EINVAL;
+
 	buffer->error_callback = cbfn;
 	buffer->error_userdata = userdata;
 	return 0;
@@ -2490,6 +2514,12 @@ rte_eth_tx_done_cleanup(uint16_t port_id, uint16_t queue_id, uint32_t free_cnt)
 	/* Validate Input Data. Bail if not valid or not supported. */
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->tx_done_cleanup, -ENOTSUP);
+
+	if (queue_id >= dev->data->nb_tx_queues) {
+		RTE_ETHDEV_LOG(ERR, "Queue id should be < %u.",
+			       dev->data->nb_tx_queues);
+		return -EINVAL;
+	}
 
 	/* Call driver to free pending mbufs. */
 	ret = (*dev->dev_ops->tx_done_cleanup)(dev->data->tx_queues[queue_id],
@@ -2606,6 +2636,9 @@ rte_eth_link_get(uint16_t port_id, struct rte_eth_link *eth_link)
 {
 	struct rte_eth_dev *dev;
 
+	if (eth_link == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
 
@@ -2625,6 +2658,9 @@ int
 rte_eth_link_get_nowait(uint16_t port_id, struct rte_eth_link *eth_link)
 {
 	struct rte_eth_dev *dev;
+
+	if (eth_link == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
@@ -2667,6 +2703,9 @@ rte_eth_link_speed_to_str(uint32_t link_speed)
 int
 rte_eth_link_to_str(char *str, size_t len, const struct rte_eth_link *eth_link)
 {
+	if (str == NULL || eth_link == NULL)
+		return -EINVAL;
+
 	if (eth_link->link_status == ETH_LINK_DOWN)
 		return snprintf(str, len, "Link down");
 	else
@@ -2682,6 +2721,9 @@ int
 rte_eth_stats_get(uint16_t port_id, struct rte_eth_stats *stats)
 {
 	struct rte_eth_dev *dev;
+
+	if (stats == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 
@@ -3257,6 +3299,9 @@ rte_eth_dev_fw_version_get(uint16_t port_id, char *fw_version, size_t fw_size)
 {
 	struct rte_eth_dev *dev;
 
+	if (fw_version == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
 
@@ -3277,6 +3322,9 @@ rte_eth_dev_info_get(uint16_t port_id, struct rte_eth_dev_info *dev_info)
 		.nb_mtu_seg_max = UINT16_MAX,
 	};
 	int diag;
+
+	if (dev_info == NULL)
+		return -EINVAL;
 
 	/*
 	 * Init dev_info before port_id check since caller does not have
@@ -3324,6 +3372,9 @@ rte_eth_dev_get_supported_ptypes(uint16_t port_id, uint32_t ptype_mask,
 	int i, j;
 	struct rte_eth_dev *dev;
 	const uint32_t *all_ptypes;
+
+	if (ptypes == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
@@ -3434,6 +3485,9 @@ rte_eth_macaddr_get(uint16_t port_id, struct rte_ether_addr *mac_addr)
 {
 	struct rte_eth_dev *dev;
 
+	if (mac_addr == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
 	rte_ether_addr_copy(&dev->data->mac_addrs[0], mac_addr);
@@ -3445,6 +3499,9 @@ int
 rte_eth_dev_get_mtu(uint16_t port_id, uint16_t *mtu)
 {
 	struct rte_eth_dev *dev;
+
+	if (mtu == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 
@@ -3695,6 +3752,9 @@ rte_eth_dev_flow_ctrl_get(uint16_t port_id, struct rte_eth_fc_conf *fc_conf)
 {
 	struct rte_eth_dev *dev;
 
+	if (fc_conf == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->flow_ctrl_get, -ENOTSUP);
@@ -3706,6 +3766,9 @@ int
 rte_eth_dev_flow_ctrl_set(uint16_t port_id, struct rte_eth_fc_conf *fc_conf)
 {
 	struct rte_eth_dev *dev;
+
+	if (fc_conf == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	if ((fc_conf->send_xon != 0) && (fc_conf->send_xon != 1)) {
@@ -3723,6 +3786,9 @@ rte_eth_dev_priority_flow_ctrl_set(uint16_t port_id,
 				   struct rte_eth_pfc_conf *pfc_conf)
 {
 	struct rte_eth_dev *dev;
+
+	if (pfc_conf == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	if (pfc_conf->priority > (ETH_DCB_NUM_USER_PRIORITIES - 1)) {
@@ -3744,9 +3810,6 @@ eth_check_reta_mask(struct rte_eth_rss_reta_entry64 *reta_conf,
 {
 	uint16_t i, num;
 
-	if (!reta_conf)
-		return -EINVAL;
-
 	num = (reta_size + RTE_RETA_GROUP_SIZE - 1) / RTE_RETA_GROUP_SIZE;
 	for (i = 0; i < num; i++) {
 		if (reta_conf[i].mask)
@@ -3762,9 +3825,6 @@ eth_check_reta_entry(struct rte_eth_rss_reta_entry64 *reta_conf,
 			 uint16_t max_rxq)
 {
 	uint16_t i, idx, shift;
-
-	if (!reta_conf)
-		return -EINVAL;
 
 	if (max_rxq == 0) {
 		RTE_ETHDEV_LOG(ERR, "No receive queue is available\n");
@@ -3795,6 +3855,9 @@ rte_eth_dev_rss_reta_update(uint16_t port_id,
 	struct rte_eth_dev *dev;
 	int ret;
 
+	if (reta_conf == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	/* Check mask bits */
 	ret = eth_check_reta_mask(reta_conf, reta_size);
@@ -3822,6 +3885,9 @@ rte_eth_dev_rss_reta_query(uint16_t port_id,
 	struct rte_eth_dev *dev;
 	int ret;
 
+	if (reta_conf == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 
 	/* Check mask bits */
@@ -3842,6 +3908,9 @@ rte_eth_dev_rss_hash_update(uint16_t port_id,
 	struct rte_eth_dev *dev;
 	struct rte_eth_dev_info dev_info = { .flow_type_rss_offloads = 0, };
 	int ret;
+
+	if (rss_conf == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 
@@ -3870,6 +3939,9 @@ rte_eth_dev_rss_hash_conf_get(uint16_t port_id,
 			      struct rte_eth_rss_conf *rss_conf)
 {
 	struct rte_eth_dev *dev;
+
+	if (rss_conf == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
@@ -4026,6 +4098,9 @@ rte_eth_dev_mac_addr_add(uint16_t port_id, struct rte_ether_addr *addr,
 	uint64_t pool_mask;
 	int ret;
 
+	if (addr == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->mac_addr_add, -ENOTSUP);
@@ -4076,6 +4151,9 @@ rte_eth_dev_mac_addr_remove(uint16_t port_id, struct rte_ether_addr *addr)
 	struct rte_eth_dev *dev;
 	int index;
 
+	if (addr == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->mac_addr_remove, -ENOTSUP);
@@ -4106,6 +4184,9 @@ rte_eth_dev_default_mac_addr_set(uint16_t port_id, struct rte_ether_addr *addr)
 {
 	struct rte_eth_dev *dev;
 	int ret;
+
+	if (addr == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 
@@ -4161,6 +4242,9 @@ rte_eth_dev_uc_hash_table_set(uint16_t port_id, struct rte_ether_addr *addr,
 	int index;
 	int ret;
 	struct rte_eth_dev *dev;
+
+	if (addr == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 
@@ -4263,6 +4347,9 @@ rte_eth_mirror_rule_set(uint16_t port_id,
 			uint8_t rule_id, uint8_t on)
 {
 	struct rte_eth_dev *dev;
+
+	if (mirror_conf == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	if (mirror_conf->rule_type == 0) {
@@ -4601,6 +4688,9 @@ rte_eth_dma_zone_free(const struct rte_eth_dev *dev, const char *ring_name,
 	char z_name[RTE_MEMZONE_NAMESIZE];
 	const struct rte_memzone *mz;
 	int rc = 0;
+
+	if (dev == NULL || ring_name == NULL)
+		return -EINVAL;
 
 	rc = eth_dev_dma_mzone_name(z_name, sizeof(z_name), dev->data->port_id,
 			queue_id, ring_name);
@@ -5207,6 +5297,9 @@ rte_eth_timesync_read_rx_timestamp(uint16_t port_id, struct timespec *timestamp,
 {
 	struct rte_eth_dev *dev;
 
+	if (timestamp == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
 
@@ -5220,6 +5313,9 @@ rte_eth_timesync_read_tx_timestamp(uint16_t port_id,
 				   struct timespec *timestamp)
 {
 	struct rte_eth_dev *dev;
+
+	if (timestamp == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
@@ -5247,6 +5343,9 @@ rte_eth_timesync_read_time(uint16_t port_id, struct timespec *timestamp)
 {
 	struct rte_eth_dev *dev;
 
+	if (timestamp == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
 
@@ -5260,6 +5359,9 @@ rte_eth_timesync_write_time(uint16_t port_id, const struct timespec *timestamp)
 {
 	struct rte_eth_dev *dev;
 
+	if (timestamp == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
 
@@ -5272,6 +5374,9 @@ int
 rte_eth_read_clock(uint16_t port_id, uint64_t *clock)
 {
 	struct rte_eth_dev *dev;
+
+	if (clock == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 	dev = &rte_eth_devices[port_id];
@@ -5370,6 +5475,9 @@ rte_eth_dev_get_dcb_info(uint16_t port_id,
 {
 	struct rte_eth_dev *dev;
 
+	if (dcb_info == NULL)
+		return -EINVAL;
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 
 	dev = &rte_eth_devices[port_id];
@@ -5420,6 +5528,9 @@ rte_eth_dev_hairpin_capability_get(uint16_t port_id,
 				   struct rte_eth_hairpin_cap *cap)
 {
 	struct rte_eth_dev *dev;
+
+	if (cap == NULL)
+		return -EINVAL;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
 
@@ -5629,6 +5740,8 @@ rte_eth_representor_id_get(const struct rte_eth_dev *ethdev,
 	struct rte_eth_representor_info *info = NULL;
 	size_t size;
 
+	if (ethdev == NULL)
+		return -EINVAL;
 	if (type == RTE_ETH_REPRESENTOR_NONE)
 		return 0;
 	if (repr_id == NULL)
