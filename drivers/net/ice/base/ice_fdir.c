@@ -736,8 +736,8 @@ static const struct ice_fdir_base_pkt ice_fdir_pkt[] = {
 	},
 	{
 		ICE_FLTR_PTYPE_FRAG_IPV4,
-		sizeof(ice_fdir_ipv4_pkt), ice_fdir_ipv4_frag_pkt,
-		sizeof(ice_fdir_ipv4_pkt), ice_fdir_ipv4_frag_pkt,
+		sizeof(ice_fdir_ipv4_frag_pkt), ice_fdir_ipv4_frag_pkt,
+		sizeof(ice_fdir_ipv4_frag_pkt), ice_fdir_ipv4_frag_pkt,
 	},
 	{
 		ICE_FLTR_PTYPE_FRAG_IPV6,
