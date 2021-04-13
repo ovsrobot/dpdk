@@ -3783,6 +3783,13 @@ This section lists supported pattern items and their attributes, if any.
   - ``s_field {unsigned}``: S field.
   - ``seid {unsigned}``: session endpoint identifier.
 
+- ``integrity``: match packet integrity.
+
+   - ``level {unsigned}``: Packet encapsulation level the item should
+     apply to. See rte_flow_action_rss for details.
+   - ``value {unsigned}``: A bitmask that specify what packet elements
+     must be matched for integrity.
+
 Actions list
 ^^^^^^^^^^^^
 
