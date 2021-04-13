@@ -1300,6 +1300,15 @@ F: doc/guides/rawdevs/ntb.rst
 F: examples/ntb/
 F: doc/guides/sample_app_ug/ntb.rst
 
+Baseband Drivers
+-------------------
+
+NXP LA12xx
+M: Hemant Agrawal <hemant.agrawal@nxp.com>
+M: Nipun Gupta <nipun.gupta@nxp.com>
+F: drivers/baseband/la12xx/
+F: doc/guides/bbdevs/la12xx.rst
+F: doc/guides/bbdevs/features/la12xx.ini
 
 Packet processing
 -----------------
