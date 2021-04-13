@@ -222,6 +222,19 @@ struct rte_crypto_cipher_xform {
 	 *  - Each key can be either 128 bits (16 bytes) or 256 bits (32 bytes).
 	 *  - Both keys must have the same size.
 	 **/
+
+	uint16_t dataunit_len;
+	/**< When RTE_CRYPTODEV_FF_CIPHER_MULTIPLE_DATA_UNITS is enabled,
+	 * this is the data-unit length of the algorithm,
+	 * otherwise or when the value is 0, use the operation length.
+	 * The value should be in the range defined by the dataunit_set field
+	 * in the cipher capability.
+	 *
+	 * - For AES-XTS it is the size of data-unit, from IEEE Std 1619-2007.
+	 * For-each data-unit in the operation, the tweak (IV) value is
+	 * assigned consecutively starting from the operation assigned IV.
+	 */
+
 	struct {
 		uint16_t offset;
 		/**< Starting point for Initialisation Vector or Counter,
@@ -701,9 +714,10 @@ struct rte_crypto_sym_op {
 					 /**< The message length, in bytes, of the
 					  * source buffer on which the cryptographic
 					  * operation will be computed.
+					  * This is also the same as the result length.
 					  * This must be a multiple of the block size
-					  * if a block cipher is being used. This is
-					  * also the same as the result length.
+					  * or a multiple of data-unit length
+					  * as described in xform.
 					  *
 					  * @note
 					  * For SNOW 3G @ RTE_CRYPTO_AUTH_SNOW3G_UEA2,
