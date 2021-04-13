@@ -96,6 +96,14 @@ struct rte_crypto_param_range {
 };
 
 /**
+ * Data-unit supported lengths of cipher algorithms.
+ * A bit can represent any set of data-unit sizes
+ * (single size, multiple size, range, etc).
+ */
+#define RTE_CRYPTO_CIPHER_DATA_UNIT_LEN_512_BYTES	(1 << 0)
+#define RTE_CRYPTO_CIPHER_DATA_UNIT_LEN_4096_BYTES	(1 << 1)
+
+/**
  * Symmetric Crypto Capability
  */
 struct rte_cryptodev_symmetric_capability {
@@ -127,6 +135,11 @@ struct rte_cryptodev_symmetric_capability {
 			/**< cipher key size range */
 			struct rte_crypto_param_range iv_size;
 			/**< Initialisation vector data size range */
+			uint32_t dataunit_set;
+			/**<
+			 * A bitmap for a set of the supported data-unit lengths.
+			 * 0 for any length defined in the algorithm standard.
+			 */
 		} cipher;
 		/**< Symmetric Cipher transform capabilities */
 		struct {
@@ -461,6 +474,8 @@ rte_cryptodev_asym_get_xform_enum(enum rte_crypto_asym_xform_type *xform_enum,
 /**< Support operations on data which is not byte aligned */
 #define RTE_CRYPTODEV_FF_SYM_RAW_DP			(1ULL << 24)
 /**< Support accelerator specific symmetric raw data-path APIs */
+#define RTE_CRYPTODEV_FF_CIPHER_MULTIPLE_DATA_UNITS	(1ULL << 25)
+/**< Support operations on multiple data-units message */
 
 /**
  * Get the name of a crypto device feature flag
