@@ -61,6 +61,14 @@ extern "C" {
 #define unlink _unlink
 #endif
 
+#define strcasecmp _stricmp
+#define open _open
+#define read _read
+
+#ifndef S_ISREG
+#define S_ISREG(mode)  (((mode)&S_IFMT) == S_IFREG)
+#endif
+
 /* cpu_set macros implementation */
 #define RTE_CPU_AND(dst, src1, src2) CPU_AND(dst, src1, src2)
 #define RTE_CPU_OR(dst, src1, src2) CPU_OR(dst, src1, src2)
