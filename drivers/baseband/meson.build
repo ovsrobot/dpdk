@@ -5,4 +5,4 @@ if is_windows
 	subdir_done()
 endif
 
-drivers = ['null', 'turbo_sw', 'fpga_lte_fec', 'fpga_5gnr_fec', 'acc100']
+drivers = ['null', 'turbo_sw', 'fpga_lte_fec', 'fpga_5gnr_fec', 'acc100', 'la12xx']
