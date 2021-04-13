@@ -1398,6 +1398,25 @@ Matches a eCPRI header.
 - ``hdr``: eCPRI header definition (``rte_ecpri.h``).
 - Default ``mask`` matches nothing, for all eCPRI messages.
 
+Item: ``PACKET_INTEGRITY_CHECKS``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Matches packet integrity.
+
+- ``level``: the encapsulation level that should be checked. level 0 means the
+  default PMD mode (Can be inner most / outermost). value of 1 means outermost
+  and higher value means inner header. See also RSS level.
+- ``packet_ok``: All HW packet integrity checks have passed based on the max
+  layer of the packet.
+  layer of the packet.
+- ``l2_ok``: all layer 2 HW integrity checks passed.
+- ``l3_ok``: all layer 3 HW integrity checks passed.
+- ``l4_ok``: all layer 4 HW integrity checks passed.
+- ``l2_crc_ok``: layer 2 crc check passed.
+- ``ipv4_csum_ok``: ipv4 checksum check passed.
+- ``l4_csum_ok``: layer 4 checksum check passed.
+- ``l3_len_ok``: the layer 3 len is smaller than the frame len.
+
 Actions
 ~~~~~~~
 
