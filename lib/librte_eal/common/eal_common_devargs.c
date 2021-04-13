@@ -125,7 +125,6 @@ rte_devargs_layers_parse(struct rte_devargs *devargs,
 		layers[i].str = s;
 		layers[i].kvlist = rte_kvargs_parse_delim(s, NULL, "/");
 		if (layers[i].kvlist == NULL) {
-			RTE_LOG(ERR, EAL, "Could not parse %s\n", s);
 			ret = -EINVAL;
 			goto get_out;
 		}
@@ -143,7 +142,7 @@ next_layer:
 		kv = &layers[i].kvlist->pairs[0];
 		if (kv->key == NULL)
 			continue;
-		if (strcmp(kv->key, "bus") == 0) {
+		if (strcmp(kv->key, RTE_DEVARGS_KEY_BUS) == 0) {
 			bus = rte_bus_find_by_name(kv->value);
 			if (bus == NULL) {
 				RTE_LOG(ERR, EAL, "Could not find bus \"%s\"\n",
@@ -151,7 +150,7 @@ next_layer:
 				ret = -EFAULT;
 				goto get_out;
 			}
-		} else if (strcmp(kv->key, "class") == 0) {
+		} else if (strcmp(kv->key, RTE_DEVARGS_KEY_CLASS) == 0) {
 			cls = rte_class_find_by_name(kv->value);
 			if (cls == NULL) {
 				RTE_LOG(ERR, EAL, "Could not find class \"%s\"\n",
@@ -159,7 +158,7 @@ next_layer:
 				ret = -EFAULT;
 				goto get_out;
 			}
-		} else if (strcmp(kv->key, "driver") == 0) {
+		} else if (strcmp(kv->key, RTE_DEVARGS_KEY_DRIVER) == 0) {
 			/* Ignore */
 			continue;
 		}
@@ -223,6 +222,15 @@ rte_devargs_parse(struct rte_devargs *da, const char *dev)
 
 	if (da == NULL)
 		return -EINVAL;
+
+	/* First parse according global device syntax. */
+	if (rte_devargs_layers_parse(da, dev) == 0) {
+		if (da->bus != NULL || da->cls != NULL)
+			return 0;
+		rte_devargs_reset(da);
+	}
+
+	/* Otherwise fallback to legacy syntax: */
 
 	/* Retrieve eventual bus info */
 	do {
