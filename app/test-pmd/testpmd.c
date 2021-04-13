@@ -9,7 +9,6 @@
 #include <string.h>
 #include <time.h>
 #include <fcntl.h>
-#include <sys/mman.h>
 #include <sys/types.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -59,6 +58,10 @@
 #endif
 #ifdef RTE_LIB_LATENCYSTATS
 #include <rte_latencystats.h>
+#endif
+#include <rte_eal_paging.h>
+#ifdef RTE_EXEC_ENV_WINDOWS
+#include <process.h>
 #endif
 
 #include "testpmd.h"
@@ -688,13 +691,11 @@ alloc_mem(size_t memsz, size_t pgsz, bool huge)
 	int flags;
 
 	/* allocate anonymous hugepages */
-	flags = MAP_ANONYMOUS | MAP_PRIVATE;
+	flags = RTE_MAP_ANONYMOUS | RTE_MAP_PRIVATE;
 	if (huge)
 		flags |= HUGE_FLAG | pagesz_flags(pgsz);
 
-	addr = mmap(NULL, memsz, PROT_READ | PROT_WRITE, flags, -1, 0);
-	if (addr == MAP_FAILED)
-		return NULL;
+	addr = rte_mem_map(NULL, memsz, RTE_PROT_READ | RTE_PROT_WRITE, flags, -1, 0);
 
 	return addr;
 }
@@ -728,7 +729,7 @@ create_extmem(uint32_t nb_mbufs, uint32_t mbuf_sz, struct extmem_param *param,
 
 		/* if we were told not to allocate hugepages, override */
 		if (!huge)
-			cur_pgsz = sysconf(_SC_PAGESIZE);
+			cur_pgsz = rte_mem_page_size();
 
 		ret = calc_mem_size(nb_mbufs, mbuf_sz, cur_pgsz, &mem_sz);
 		if (ret < 0) {
@@ -757,7 +758,7 @@ create_extmem(uint32_t nb_mbufs, uint32_t mbuf_sz, struct extmem_param *param,
 		}
 		/* lock memory if it's not huge pages */
 		if (!huge)
-			mlock(addr, mem_sz);
+			rte_mem_lock(addr, mem_sz);
 
 		/* populate IOVA addresses */
 		for (cur_page = 0; cur_page < n_pages; cur_page++) {
@@ -793,7 +794,7 @@ fail:
 	if (iovas)
 		free(iovas);
 	if (addr)
-		munmap(addr, mem_sz);
+		rte_mem_unmap(addr, mem_sz);
 
 	return -1;
 }
@@ -835,7 +836,7 @@ setup_extmem(uint32_t nb_mbufs, uint32_t mbuf_sz, bool huge)
 
 	if (ret < 0) {
 		TESTPMD_LOG(ERR, "Cannot add memory to heap\n");
-		munmap(param.addr, param.len);
+		rte_mem_unmap(param.addr, param.len);
 		return -1;
 	}
 
@@ -846,6 +847,7 @@ setup_extmem(uint32_t nb_mbufs, uint32_t mbuf_sz, bool huge)
 
 	return 0;
 }
+
 static void
 dma_unmap_cb(struct rte_mempool *mp __rte_unused, void *opaque __rte_unused,
 	     struct rte_mempool_memhdr *memhdr, unsigned mem_idx __rte_unused)
@@ -878,7 +880,7 @@ dma_map_cb(struct rte_mempool *mp __rte_unused, void *opaque __rte_unused,
 	   struct rte_mempool_memhdr *memhdr, unsigned mem_idx __rte_unused)
 {
 	uint16_t pid = 0;
-	size_t page_size = sysconf(_SC_PAGESIZE);
+	size_t page_size = rte_mem_page_size();
 	int ret;
 
 	ret = rte_extmem_register(memhdr->addr, memhdr->len, NULL, 0,
@@ -1056,7 +1058,6 @@ mbuf_pool_create(uint16_t mbuf_seg_size, unsigned nb_mbuf,
 			rte_exit(EXIT_FAILURE, "Invalid mempool creation mode\n");
 		}
 	}
-
 err:
 	if (rte_mp == NULL) {
 		rte_exit(EXIT_FAILURE,
@@ -3061,6 +3062,7 @@ pmd_test_exit(void)
 						     NULL);
 		}
 	}
+
 	if (ports != NULL) {
 		no_link_check = 1;
 		RTE_ETH_FOREACH_DEV(pt_id) {
@@ -3074,7 +3076,6 @@ pmd_test_exit(void)
 			close_port(pt_id);
 		}
 	}
-
 	if (hot_plug) {
 		ret = rte_dev_event_monitor_stop();
 		if (ret) {
@@ -3761,7 +3762,9 @@ signal_handler(int signum)
 		f_quit = 1;
 		/* exit with the expected status */
 		signal(signum, SIG_DFL);
+#ifndef RTE_EXEC_ENV_WINDOWS
 		kill(getpid(), signum);
+#endif
 	}
 }
 
@@ -3824,8 +3827,8 @@ main(int argc, char** argv)
 	latencystats_enabled = 0;
 #endif
 
-	/* on FreeBSD, mlockall() is disabled by default */
-#ifdef RTE_EXEC_ENV_FREEBSD
+	/* on FreeBSD and Window, mlockall() is disabled by default */
+#if (defined(RTE_EXEC_ENV_FREEBSD) || defined (RTE_EXEC_ENV_WINDOWS))
 	do_mlockall = 0;
 #else
 	do_mlockall = 1;
@@ -3836,9 +3839,13 @@ main(int argc, char** argv)
 	if (argc > 1)
 		launch_args_parse(argc, argv);
 
-	if (do_mlockall && mlockall(MCL_CURRENT | MCL_FUTURE)) {
-		TESTPMD_LOG(NOTICE, "mlockall() failed with error \"%s\"\n",
-			strerror(errno));
+	if (do_mlockall) {
+		ret = rte_mem_lockall(RTE_MCL_CURRENT | RTE_MCL_FUTURE);
+		if (ret) {
+			RTE_LOG(ERR, EAL,
+				"rte_mem_lockall() failed with error %d\n", ret);
+		}
+
 	}
 
 	if (tx_first && interactive)
@@ -3971,10 +3978,11 @@ main(int argc, char** argv)
 			return 1;
 	}
 
+#ifndef RTE_EXEC_ENV_WINDOWS
 	ret = rte_eal_cleanup();
 	if (ret != 0)
 		rte_exit(EXIT_FAILURE,
 			 "EAL cleanup failed: %s\n", strerror(-ret));
-
+#endif
 	return EXIT_SUCCESS;
 }

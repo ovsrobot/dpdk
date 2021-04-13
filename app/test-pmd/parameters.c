@@ -15,6 +15,7 @@
 
 #include <sys/queue.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
 
 #include <stdint.h>
 #include <unistd.h>
@@ -211,7 +212,7 @@ usage(char* progname)
 
 #ifdef RTE_LIB_CMDLINE
 static int
-init_peer_eth_addrs(char *config_filename)
+init_peer_eth_addrs(const char *config_filename)
 {
 	FILE *config_file;
 	portid_t i;
@@ -723,13 +724,14 @@ launch_args_parse(int argc, char** argv)
 						 "Invalid tx-ip: %s", optarg);
 
 				*end++ = 0;
-				if (inet_aton(optarg, &in) == 0)
+
+				if (inet_pton(AF_INET, optarg, &in) == 0)
 					rte_exit(EXIT_FAILURE,
 						 "Invalid source IP address: %s\n",
 						 optarg);
 				tx_ip_src_addr = rte_be_to_cpu_32(in.s_addr);
 
-				if (inet_aton(end, &in) == 0)
+				if (inet_pton(AF_INET, end, &in) == 0)
 					rte_exit(EXIT_FAILURE,
 						 "Invalid destination IP address: %s\n",
 						 optarg);

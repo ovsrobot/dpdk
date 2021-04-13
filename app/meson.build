@@ -1,10 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2017-2019 Intel Corporation
 
-if is_windows
-	subdir_done()
-endif
-
 apps = [
 	'pdump',
 	'proc-info',
@@ -19,7 +15,11 @@ apps = [
 	'test-pipeline',
 	'test-pmd',
 	'test-regex',
-	'test-sad']
+	'test-sad'
+]
+
+# for BSD only
+lib_execinfo = cc.find_library('execinfo', required: false)
 
 default_cflags = machine_args + ['-DALLOW_EXPERIMENTAL_API']
 default_ldflags = []

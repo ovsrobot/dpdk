@@ -4,6 +4,10 @@
 # override default name to drop the hyphen
 name = 'testpmd'
 cflags += '-Wno-deprecated-declarations'
+
+# Enable using internal APIs in testpmd
+cflags += ['-DALLOW_INTERNAL_API']
+
 sources = files('5tswap.c',
 	'cmdline.c',
 	'cmdline_flow.c',
