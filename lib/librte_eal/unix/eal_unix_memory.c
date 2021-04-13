@@ -150,3 +150,16 @@ rte_mem_lock(const void *virt, size_t size)
 		rte_errno = errno;
 	return ret;
 }
+
+int
+rte_mem_lockall(int flags)
+{
+	int mlockall_flags = 0;
+
+	if (flags & RTE_MCL_CURRENT)
+		mlockall_flags |= MCL_CURRENT;
+	if (flags & RTE_MCL_FUTURE)
+		mlockall_flags |= MCL_FUTURE;
+
+	return mlockall(mlockall_flags);
+}

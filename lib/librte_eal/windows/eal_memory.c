@@ -715,3 +715,13 @@ rte_eal_hugepage_attach(void)
 	EAL_LOG_NOT_IMPLEMENTED();
 	return -1;
 }
+
+int
+rte_mem_lockall(int flags)
+{
+	RTE_SET_USED(flags);
+
+	EAL_LOG_NOT_IMPLEMENTED();
+
+	return -1;
+}

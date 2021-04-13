@@ -37,6 +37,14 @@ enum rte_map_flags {
 	RTE_MAP_FORCE_ADDRESS = 1 << 3
 };
 
+/** Flags for memory lockall. */
+enum rte_mem_lockall_flags {
+	/** Lock all pages currently mapped into process's address space. */
+	RTE_MCL_CURRENT = 1 << 0,
+	/** Lock all pages mapped into process's address space in the future.*/
+	RTE_MCL_FUTURE = 1 << 1
+};
+
 /**
  * Map a portion of an opened file or the page file into memory.
  *
@@ -96,3 +104,15 @@ rte_mem_page_size(void);
 __rte_internal
 int
 rte_mem_lock(const void *virt, size_t size);
+
+/**
+ * locks all pages mapped into the address space of the calling process.
+ *
+ * @param flags
+ *  Memory lockall flags, a combination of rte_mem_lockall_flags.
+ * @return
+ *   0 on success, negative on error.
+ */
+__rte_internal
+int
+rte_mem_lockall(int flags);
