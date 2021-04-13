@@ -760,6 +760,7 @@ struct rte_pci_bus rte_pci_bus = {
 		.dev_iterate = rte_pci_dev_iterate,
 		.hot_unplug_handler = pci_hot_unplug_handler,
 		.sigbus_handler = pci_sigbus_handler,
+		.devargs_parse = rte_pci_devargs_parse,
 	},
 	.device_list = TAILQ_HEAD_INITIALIZER(rte_pci_bus.device_list),
 	.driver_list = TAILQ_HEAD_INITIALIZER(rte_pci_bus.driver_list),

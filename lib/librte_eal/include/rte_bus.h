@@ -211,6 +211,22 @@ typedef int (*rte_bus_hot_unplug_handler_t)(struct rte_device *dev);
 typedef int (*rte_bus_sigbus_handler_t)(const void *failure_addr);
 
 /**
+ * Parse bus part of the device arguments.
+ *
+ * The field name of the struct rte_devargs will be set.
+ *
+ * @param da
+ *	Pointer to the devargs to parse.
+ *
+ * @return
+ *	0 on successful parsing, otherwise rte_errno is set.
+ *	-EINVAL: on parsing error.
+ *	-ENODEV: if no key matching a device argument is specified.
+ *	-E2BIG: device name is too long.
+ */
+typedef int (*rte_bus_devargs_parse_t)(struct rte_devargs *da);
+
+/**
  * Bus scan policies
  */
 enum rte_bus_scan_mode {
@@ -267,6 +283,7 @@ struct rte_bus {
 				/**< handle hot-unplug failure on the bus */
 	rte_bus_sigbus_handler_t sigbus_handler;
 					/**< handle sigbus error on the bus */
+	rte_bus_devargs_parse_t devargs_parse; /**< Parse bus devargs */
 
 };
 
