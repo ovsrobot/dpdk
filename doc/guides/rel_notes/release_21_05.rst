@@ -170,6 +170,18 @@ New Features
     ``show port (port_id) rxq (queue_id) desc used count``
 
 
+* **Added support for meter PPS profile.**
+
+  Currently meter algorithms only supports bytes per second(BPS).
+  Add packet_mode in the meter profile parameters data structures
+  to support packet per second (PPS) mode.
+  So that it can meter traffic by packet per second.
+  Packet_mode must be 0 when it is bytes mode.
+
+* **Updated MLX5 driver.**
+
+  * Added support for meter profile packet per second mode (packet_mode).
+
 Removed Items
 -------------
 
