@@ -127,6 +127,10 @@ Deprecation Notices
   values to the function ``rte_event_eth_rx_adapter_queue_add`` using
   the structure ``rte_event_eth_rx_adapter_queue_add``.
 
+* eventdev: The function pointer ``ca_enqueue`` in structure ``rte_eventdev``
+  will be moved after ``txa_enqueue`` so that all enqueue/dequeue
+  function pointers are adjacent to each other.
+
 * sched: To allow more traffic classes, flexible mapping of pipe queues to
   traffic classes, and subport level configuration of pipes and queues
   changes will be made to macros, data structures and API functions defined

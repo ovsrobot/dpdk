@@ -24,3 +24,8 @@
 ; Ignore changes in reserved fields
 [suppress_variable]
 	name_regexp = reserved
+
+; Ignore fields inserted in place of reserved fields of rte_eventdev
+[suppress_type]
+	name = rte_eventdev
+	has_data_member_inserted_between = {offset_after(attached), end}
