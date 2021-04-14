@@ -22,8 +22,9 @@ extern "C" {
 
 #include <stdio.h>
 #include <sys/queue.h>
+
 #include <rte_compat.h>
-#include <rte_bus.h>
+#include <rte_dev.h>
 
 /**
  * Type of generic device

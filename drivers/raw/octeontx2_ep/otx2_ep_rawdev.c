@@ -4,7 +4,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <rte_bus.h>
 #include <rte_bus_pci.h>
 #include <rte_eal.h>
 #include <rte_lcore.h>

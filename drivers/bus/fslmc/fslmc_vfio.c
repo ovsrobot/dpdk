@@ -29,7 +29,6 @@
 #include <rte_cycles.h>
 #include <rte_kvargs.h>
 #include <rte_dev.h>
-#include <rte_bus.h>
 #include <rte_eal_memconfig.h>
 
 #include "rte_fslmc.h"

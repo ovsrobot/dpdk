@@ -33,7 +33,6 @@ extern "C" {
 #include <string.h>
 
 #include <rte_compat.h>
-#include <rte_bus.h>
 #include <rte_cpuflags.h>
 #include <rte_memory.h>
 

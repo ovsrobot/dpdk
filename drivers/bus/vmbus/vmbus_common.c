@@ -11,7 +11,6 @@
 #include <sys/mman.h>
 
 #include <rte_log.h>
-#include <rte_bus.h>
 #include <rte_eal.h>
 #include <rte_tailq.h>
 #include <rte_devargs.h>

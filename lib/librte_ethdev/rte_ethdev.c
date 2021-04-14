@@ -35,6 +35,7 @@
 #include <rte_spinlock.h>
 #include <rte_string_fns.h>
 #include <rte_kvargs.h>
+#include <rte_bus.h>
 #include <rte_class.h>
 #include <rte_ether.h>
 #include <rte_telemetry.h>

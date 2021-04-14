@@ -28,6 +28,7 @@ extern "C" {
 #include <rte_uuid.h>
 #include <rte_debug.h>
 #include <rte_interrupts.h>
+#include <rte_bus.h>
 #include <rte_dev.h>
 #include <rte_vmbus_reg.h>
 

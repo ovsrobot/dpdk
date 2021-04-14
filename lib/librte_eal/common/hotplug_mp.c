@@ -8,6 +8,7 @@
 #include <rte_alarm.h>
 #include <rte_string_fns.h>
 #include <rte_devargs.h>
+#include <rte_bus.h>
 
 #include "hotplug_mp.h"
 #include "eal_private.h"

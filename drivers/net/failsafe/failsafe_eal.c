@@ -5,6 +5,7 @@
 
 #include <rte_string_fns.h>
 #include <rte_malloc.h>
+#include <rte_bus.h>
 
 #include "failsafe_private.h"
 

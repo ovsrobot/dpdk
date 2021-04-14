@@ -13,7 +13,6 @@
 #include <rte_errno.h>
 #include <rte_interrupts.h>
 #include <rte_log.h>
-#include <rte_bus.h>
 #include <rte_pci.h>
 #include <rte_bus_pci.h>
 #include <rte_per_lcore.h>

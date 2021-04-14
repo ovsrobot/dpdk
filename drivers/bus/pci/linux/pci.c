@@ -6,7 +6,6 @@
 #include <dirent.h>
 
 #include <rte_log.h>
-#include <rte_bus.h>
 #include <rte_pci.h>
 #include <rte_bus_pci.h>
 #include <rte_malloc.h>

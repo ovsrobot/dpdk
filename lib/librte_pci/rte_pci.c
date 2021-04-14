@@ -13,7 +13,6 @@
 #include <rte_errno.h>
 #include <rte_interrupts.h>
 #include <rte_log.h>
-#include <rte_bus.h>
 #include <rte_eal_paging.h>
 #include <rte_per_lcore.h>
 #include <rte_memory.h>
