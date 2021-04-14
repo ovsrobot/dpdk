@@ -167,6 +167,11 @@ New Features
     the events across multiple stages.
   * This also reduced the scheduling overhead on a event device.
 
+* **Added packet integrity match to RTE flow rules.**
+
+  * Added ``PACKET_INTEGRITY_CHECKS`` flow item.
+  * Added ``rte_flow_item_integrity`` data structure.
+
 * **Updated testpmd.**
 
   * Added a command line option to configure forced speed for Ethernet port.
