@@ -100,12 +100,6 @@ virtio_recv_pkts_vec(void *rx_queue,
 
 	rte_prefetch_non_temporal(rused);
 
-	if (vq->vq_free_cnt >= RTE_VIRTIO_VPMD_RX_REARM_THRESH) {
-		virtio_rxq_rearm_vec(rxvq);
-		if (unlikely(virtqueue_kick_prepare(vq)))
-			virtqueue_notify(vq);
-	}
-
 	nb_total = nb_used;
 	ref_rx_pkts = rx_pkts;
 	for (nb_pkts_received = 0;
@@ -209,6 +203,12 @@ virtio_recv_pkts_vec(void *rx_queue,
 	rxvq->stats.packets += nb_pkts_received;
 	for (nb_used = 0; nb_used < nb_pkts_received; nb_used++)
 		virtio_update_packet_stats(&rxvq->stats, ref_rx_pkts[nb_used]);
+
+	if (vq->vq_free_cnt >= RTE_VIRTIO_VPMD_RX_REARM_THRESH) {
+		virtio_rxq_rearm_vec(rxvq);
+		if (unlikely(virtqueue_kick_prepare(vq)))
+			virtqueue_notify(vq);
+	}
 
 	return nb_pkts_received;
 }
