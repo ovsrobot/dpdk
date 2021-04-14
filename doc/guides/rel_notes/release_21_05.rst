@@ -201,6 +201,9 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* ethdev: Added a rte_flow pointer parameter to the function
+  ``rte_flow_dev_dump()`` allowing dump for single flow.
+
 * eal: The experimental TLS API added in ``rte_thread.h`` has been renamed
   from ``rte_thread_tls_*`` to ``rte_thread_*`` to avoid naming redundancy
   and confusion with the transport layer security term.
