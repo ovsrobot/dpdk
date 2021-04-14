@@ -168,6 +168,8 @@ New Features
     ``dpdk-testpmd -- --eth-link-speed N``
   * Added command to display Rx queue used descriptor count.
     ``show port (port_id) rxq (queue_id) desc used count``
+  * Added command to dump internal representation information of single flow.
+    ``flow dump (port_id) rule (rule_id)``
 
 
 Removed Items
@@ -200,6 +202,9 @@ API Changes
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+
+* ethdev: Added a rte_flow pointer parameter to the function
+  ``rte_flow_dev_dump()`` allowing dump for single flow.
 
 * eal: The experimental TLS API added in ``rte_thread.h`` has been renamed
   from ``rte_thread_tls_*`` to ``rte_thread_*`` to avoid naming redundancy
