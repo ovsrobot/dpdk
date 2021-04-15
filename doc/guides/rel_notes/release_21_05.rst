@@ -236,6 +236,12 @@ ABI Changes
   function was already marked as internal in the API documentation for it,
   and was not for use by external applications.
 
+* Added new field ``queue_state`` to ``rte_eth_rxq_info`` structure
+  to provide indicated rxq queue state.
+
+* Added new field ``queue_state`` to ``rte_eth_txq_info`` structure
+  to provide indicated txq queue state.
+
 
 Known Issues
 ------------
