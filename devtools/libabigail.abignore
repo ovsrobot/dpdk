@@ -20,3 +20,8 @@
 [suppress_type]
         name = rte_cryptodev
         has_data_member_inserted_between = {offset_after(attached), end}
+
+; Ignore fields inserted in place of reserved fields of rte_eventdev
+[suppress_type]
+	name = rte_eventdev
+	has_data_member_inserted_between = {offset_after(attached), end}
