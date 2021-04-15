@@ -15,6 +15,7 @@
 #include <rte_malloc.h>
 #include <rte_mbuf.h>
 #include <rte_bus_vdev.h>
+#include <rte_os_shim.h>
 
 #include "pcap_osdep.h"
 
@@ -140,10 +141,6 @@ static struct rte_eth_link pmd_link = {
 };
 
 RTE_LOG_REGISTER(eth_pcap_logtype, pmd.net.pcap, NOTICE);
-
-#define PMD_LOG(level, fmt, args...) \
-	rte_log(RTE_LOG_ ## level, eth_pcap_logtype, \
-		"%s(): " fmt "\n", __func__, ##args)
 
 static struct queue_missed_stat*
 queue_missed_stat_update(struct rte_eth_dev *dev, unsigned int qid)
