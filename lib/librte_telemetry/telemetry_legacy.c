@@ -83,6 +83,7 @@ register_client(const char *cmd __rte_unused, const char *params,
 	pthread_t th;
 	char data[BUF_SIZE];
 	int fd;
+	int rc;
 	struct sockaddr_un addrs;
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
@@ -112,8 +113,13 @@ register_client(const char *cmd __rte_unused, const char *params,
 		close(fd);
 		return -1;
 	}
-	pthread_create(&th, NULL, &legacy_client_handler,
-			(void *)(uintptr_t)fd);
+	rc = pthread_create(&th, NULL, &legacy_client_handler,
+				(void *)(uintptr_t)fd);
+	if (rc != 0) {
+		perror("Failed to create legacy client thread\n");
+		close(fd);
+		return -1;
+	}
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 	return 0;
 }

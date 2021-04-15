@@ -350,6 +350,7 @@ socket_listener(void *socket)
 {
 	while (1) {
 		pthread_t th;
+		int rc;
 		struct socket *s = (struct socket *)socket;
 		int s_accepted = accept(s->sock, NULL, NULL);
 		if (s_accepted < 0) {
@@ -366,7 +367,12 @@ socket_listener(void *socket)
 			__atomic_add_fetch(s->num_clients, 1,
 					__ATOMIC_RELAXED);
 		}
-		pthread_create(&th, NULL, s->fn, (void *)(uintptr_t)s_accepted);
+		rc = pthread_create(&th, NULL, s->fn, (void *)(uintptr_t)s_accepted);
+		if (rc != 0) {
+			TMTY_LOG(ERR, "Error with create client thread\n");
+			close(s_accepted);
+			return NULL;
+		}
 		pthread_detach(th);
 	}
 	return NULL;
@@ -425,6 +431,7 @@ static int
 telemetry_legacy_init(void)
 {
 	pthread_t t_old;
+	int rc;
 
 	if (num_legacy_callbacks == 1) {
 		TMTY_LOG(WARNING, "No legacy callbacks, legacy socket not created\n");
@@ -440,7 +447,15 @@ telemetry_legacy_init(void)
 	v1_socket.sock = create_socket(v1_socket.path);
 	if (v1_socket.sock < 0)
 		return -1;
-	pthread_create(&t_old, NULL, socket_listener, &v1_socket);
+	rc = pthread_create(&t_old, NULL, socket_listener, &v1_socket);
+	if (rc != 0) {
+		TMTY_LOG(ERR, "Error with create thread for legacy socket\n");
+		close(v1_socket.sock);
+		v1_socket.sock = -1;
+		unlink(v1_socket.path);
+		v1_socket.path[0] = '\0';
+		return -1;
+	}
 	pthread_setaffinity_np(t_old, sizeof(*thread_cpuset), thread_cpuset);
 
 	TMTY_LOG(DEBUG, "Legacy telemetry socket initialized ok\n");
@@ -451,6 +466,7 @@ static int
 telemetry_v2_init(void)
 {
 	pthread_t t_new;
+	int rc;
 
 	v2_socket.num_clients = &v2_clients;
 	rte_telemetry_register_cmd("/", list_commands,
@@ -469,7 +485,15 @@ telemetry_v2_init(void)
 	v2_socket.sock = create_socket(v2_socket.path);
 	if (v2_socket.sock < 0)
 		return -1;
-	pthread_create(&t_new, NULL, socket_listener, &v2_socket);
+	rc = pthread_create(&t_new, NULL, socket_listener, &v2_socket);
+	if (rc != 0) {
+		TMTY_LOG(ERR, "Error with create thread for socket");
+		close(v2_socket.sock);
+		v2_socket.sock = -1;
+		unlink(v2_socket.path);
+		v2_socket.path[0] = '\0';
+		return -1;
+	}
 	pthread_setaffinity_np(t_new, sizeof(*thread_cpuset), thread_cpuset);
 	atexit(unlink_sockets);
 
