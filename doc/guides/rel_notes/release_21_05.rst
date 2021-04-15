@@ -117,6 +117,7 @@ New Features
 * **Updated Intel ice driver.**
 
   * Added Intel ice support on Windows.
+  * Added flow priority support for DCF switch filter.
 
 * **Updated Marvell OCTEON TX2 ethdev driver.**
 

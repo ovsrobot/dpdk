@@ -1335,6 +1335,7 @@ out:
 static int
 ice_switch_parse_dcf_action(struct ice_dcf_adapter *ad,
 			    const struct rte_flow_action *actions,
+			    uint32_t priority,
 			    struct rte_flow_error *error,
 			    struct ice_adv_rule_info *rule_info)
 {
@@ -1382,7 +1383,7 @@ ice_switch_parse_dcf_action(struct ice_dcf_adapter *ad,
 	rule_info->sw_act.src = rule_info->sw_act.vsi_handle;
 	rule_info->sw_act.flag = ICE_FLTR_RX;
 	rule_info->rx = 1;
-	rule_info->priority = 5;
+	rule_info->priority = priority + 5;
 
 	return 0;
 }
@@ -1390,6 +1391,7 @@ ice_switch_parse_dcf_action(struct ice_dcf_adapter *ad,
 static int
 ice_switch_parse_action(struct ice_pf *pf,
 		const struct rte_flow_action *actions,
+		uint32_t priority,
 		struct rte_flow_error *error,
 		struct ice_adv_rule_info *rule_info)
 {
@@ -1460,7 +1462,7 @@ ice_switch_parse_action(struct ice_pf *pf,
 	rule_info->sw_act.vsi_handle = vsi->idx;
 	rule_info->rx = 1;
 	rule_info->sw_act.src = vsi->idx;
-	rule_info->priority = 5;
+	rule_info->priority = priority + 5;
 
 	return 0;
 
@@ -1532,6 +1534,7 @@ ice_switch_parse_pattern_action(struct ice_adapter *ad,
 		uint32_t array_len,
 		const struct rte_flow_item pattern[],
 		const struct rte_flow_action actions[],
+		uint32_t priority,
 		void **meta,
 		struct rte_flow_error *error)
 {
@@ -1622,10 +1625,11 @@ ice_switch_parse_pattern_action(struct ice_adapter *ad,
 		goto error;
 
 	if (ad->hw.dcf_enabled)
-		ret = ice_switch_parse_dcf_action((void *)ad, actions, error,
-						  &rule_info);
+		ret = ice_switch_parse_dcf_action((void *)ad, actions, priority,
+						  error, &rule_info);
 	else
-		ret = ice_switch_parse_action(pf, actions, error, &rule_info);
+		ret = ice_switch_parse_action(pf, actions, priority, error,
+					      &rule_info);
 
 	if (ret)
 		goto error;
