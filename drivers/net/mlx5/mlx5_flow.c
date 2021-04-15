@@ -4357,6 +4357,9 @@ flow_create_split_inner(struct rte_eth_dev *dev,
 		dev_flow->handle->mark = 1;
 	if (sub_flow)
 		*sub_flow = dev_flow;
+#ifdef HAVE_IBV_FLOW_DV_SUPPORT
+	dev_flow->dv.table_id = flow_split_info->table_id;
+#endif
 	return flow_drv_translate(dev, dev_flow, attr, items, actions, error);
 }
 
@@ -5504,8 +5507,7 @@ flow_create_split_sample(struct rte_eth_dev *dev,
 						struct mlx5_flow_tbl_data_entry,
 						tbl);
 			sfx_attr.group = sfx_attr.transfer ?
-						(sfx_tbl_data->table_id - 1) :
-						sfx_tbl_data->table_id;
+			(sfx_tbl_data->level - 1) : sfx_tbl_data->level;
 		} else {
 			MLX5_ASSERT(attr->transfer);
 			sfx_attr.group = jump_table;
@@ -5705,7 +5707,8 @@ flow_list_create(struct rte_eth_dev *dev, uint32_t *list,
 		.skip_scale = 0,
 		.flow_idx = 0,
 		.prefix_mark = 0,
-		.prefix_layers = 0
+		.prefix_layers = 0,
+		.table_id = 0
 	};
 	int ret;
 
@@ -7758,10 +7761,12 @@ tunnel_mark_decode(struct rte_eth_dev *dev, uint32_t mark)
 	union tunnel_offload_mark mbits = { .val = mark };
 	union mlx5_flow_tbl_key table_key = {
 		{
-			.table_id = tunnel_id_to_flow_tbl(mbits.table_id),
+			.level = tunnel_id_to_flow_tbl(mbits.table_id),
+			.id = 0,
+			.reserved = 0,
 			.dummy = 0,
-			.domain = !!mbits.transfer,
-			.direction = 0,
+			.is_fdb = !!mbits.transfer,
+			.is_egress = 0,
 		}
 	};
 	he = mlx5_hlist_lookup(sh->flow_tbls, table_key.v64, NULL);
