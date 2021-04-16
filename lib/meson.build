@@ -44,8 +44,13 @@ if is_windows
 		'rcu',
 		'mempool', 'mbuf', 'net', 'meter', 'ethdev', 'pci',
 		'cmdline',
+		'metrics',
 		'hash',
-		'cfgfile',
+		'timer',
+		'bitratestats', 'cfgfile',
+		'gro', 'gso',
+		'latencystats',
+		'pdump',
 	] # only supported libraries for windows
 endif
 
