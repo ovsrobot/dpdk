@@ -63,6 +63,12 @@
 
 #define NS_PER_SEC 1E9
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+#define _clock_gettime_monotonic(cur_time) clock_gettime_monotonic(&cur_time)
+#else
+#define _clock_gettime_monotonic(cur_time) clock_gettime(CLOCK_TYPE_ID, &cur_time)
+#endif
+
 static char *flowtype_to_str(uint16_t flow_type);
 
 static const struct {
@@ -170,6 +176,27 @@ print_ethaddr(const char *name, struct rte_ether_addr *eth_addr)
 	printf("%s%s", name, buf);
 }
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+clock_gettime_monotonic(struct timespec *tp)
+{
+	LARGE_INTEGER pf, pc;
+	LONGLONG nsec;
+
+	if (QueryPerformanceFrequency(&pf) == 0)
+		return -1;
+
+	if (QueryPerformanceCounter(&pc) == 0)
+		return -1;
+
+	nsec = pc.QuadPart * NS_PER_SEC / pf.QuadPart;
+	tp->tv_sec = nsec / NS_PER_SEC;
+	tp->tv_nsec = nsec - tp->tv_sec * NS_PER_SEC;
+
+	return 0;
+}
+#endif
+
 void
 nic_stats_display(portid_t port_id)
 {
@@ -185,6 +212,8 @@ nic_stats_display(portid_t port_id)
 	struct rte_eth_stats stats;
 
 	static const char *nic_stats_border = "########################";
+
+	int ret;
 
 	if (port_id_is_invalid(port_id, ENABLED_WARN)) {
 		print_valid_ports();
@@ -202,7 +231,9 @@ nic_stats_display(portid_t port_id)
 	       "%-"PRIu64"\n", stats.opackets, stats.oerrors, stats.obytes);
 
 	diff_ns = 0;
-	if (clock_gettime(CLOCK_TYPE_ID, &cur_time) == 0) {
+
+	ret = _clock_gettime_monotonic(cur_time);
+	if (ret == 0) {
 		uint64_t ns;
 
 		ns = cur_time.tv_sec * NS_PER_SEC;
