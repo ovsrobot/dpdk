@@ -19,7 +19,6 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <inttypes.h>
-#include <arpa/inet.h>
 
 #include <rte_common.h>
 #include <rte_byteorder.h>
