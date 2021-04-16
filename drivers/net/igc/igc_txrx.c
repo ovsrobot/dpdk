@@ -1290,20 +1290,24 @@ igc_rx_init(struct rte_eth_dev *dev)
 	 * This needs to be done after enable.
 	 */
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		uint32_t dvmolr;
+
 		rxq = dev->data->rx_queues[i];
 		IGC_WRITE_REG(hw, IGC_RDH(rxq->reg_idx), 0);
-		IGC_WRITE_REG(hw, IGC_RDT(rxq->reg_idx),
-				rxq->nb_rx_desc - 1);
+		IGC_WRITE_REG(hw, IGC_RDT(rxq->reg_idx), rxq->nb_rx_desc - 1);
+
+		dvmolr = IGC_READ_REG(hw, IGC_DVMOLR(rxq->queue_id));
 
 		/* strip queue vlan offload */
-		if (rxq->offloads & DEV_RX_OFFLOAD_VLAN_STRIP) {
-			uint32_t dvmolr;
-			dvmolr = IGC_READ_REG(hw, IGC_DVMOLR(rxq->queue_id));
+		dvmolr = (rxq->offloads & DEV_RX_OFFLOAD_VLAN_STRIP) ?
+			 (dvmolr | IGC_DVMOLR_STRVLAN) :
+			 (dvmolr & ~IGC_DVMOLR_STRVLAN);
 
-			/* If vlan been stripped off, the CRC is meaningless. */
-			dvmolr |= IGC_DVMOLR_STRVLAN | IGC_DVMOLR_STRCRC;
-			IGC_WRITE_REG(hw, IGC_DVMOLR(rxq->reg_idx), dvmolr);
-		}
+		dvmolr = (offloads & DEV_RX_OFFLOAD_KEEP_CRC) ?
+			 (dvmolr & ~IGC_DVMOLR_STRCRC) :
+			 (dvmolr | IGC_DVMOLR_STRCRC);
+
+		IGC_WRITE_REG(hw, IGC_DVMOLR(rxq->reg_idx), dvmolr);
 	}
 
 	return 0;
