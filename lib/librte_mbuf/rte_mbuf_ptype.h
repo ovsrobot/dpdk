@@ -145,6 +145,13 @@ extern "C" {
  */
 #define RTE_PTYPE_L2_ETHER_MPLS             0x0000000a
 /**
+ * eCPRI (extend Common Public Radio Interface) packet type.
+ *
+ * Packet format:
+ * <'ether type'=[0xAEFE]>
+ */
+#define RTE_PTYPE_L2_ETHER_ECPRI            0x0000000b
+/**
  * Mask of layer 2 packet types.
  * It is used for outer packet for tunneling cases.
  */
@@ -492,6 +499,19 @@ extern "C" {
  */
 #define RTE_PTYPE_TUNNEL_MPLS_IN_UDP      0x0000d000
 /**
+ * ECPRI packet type.
+ *
+ * Packet format:
+ * <'ether type'=0x0800
+ * | 'version'=4, 'protocol'=17,
+ * | 'destination port'=5123>
+ * or,
+ * <'ether type'=0x86DD
+ * | 'version'=6, 'protocol'=17,
+ * | 'destination port'=5123>
+ */
+#define RTE_PTYPE_TUNNEL_ECPRI              0x0000e000
+/**
  * Mask of tunneling packet types.
  */
 #define RTE_PTYPE_TUNNEL_MASK               0x0000f000
@@ -688,6 +708,8 @@ extern "C" {
 		RTE_PTYPE_INNER_L3_MASK |				\
 		RTE_PTYPE_INNER_L4_MASK))
 
+/* Check if it is a ECPRI packet */
+#define  RTE_ETH_IS_ECPRI_HDR(ptype) ((ptype) & RTE_PTYPE_TUNNEL_ECPRI)
 /**
  * Get the name of the l2 packet type
  *
