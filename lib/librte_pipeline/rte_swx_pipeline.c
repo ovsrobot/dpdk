@@ -9447,8 +9447,8 @@ rte_swx_ctl_table_info_get(struct rte_swx_pipeline *p,
 	if (!t)
 		return -EINVAL;
 
-	strcpy(table->name, t->name);
-	strcpy(table->args, t->args);
+	strncpy(table->name, t->name, RTE_SWX_CTL_NAME_SIZE);
+	strncpy(table->args, t->args, RTE_SWX_CTL_NAME_SIZE);
 	table->n_match_fields = t->n_fields;
 	table->n_actions = t->n_actions;
 	table->default_action_is_const = t->default_action_is_const;
