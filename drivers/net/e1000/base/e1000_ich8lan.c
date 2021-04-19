@@ -5406,6 +5406,8 @@ STATIC s32 e1000_kmrn_lock_loss_workaround_ich8lan(struct e1000_hw *hw)
 	 * stability
 	 */
 	ret_val = e1000_phy_has_link_generic(hw, 1, 0, &link);
+	if (ret_val)
+		return ret_val;
 	if (!link)
 		return E1000_SUCCESS;
 
