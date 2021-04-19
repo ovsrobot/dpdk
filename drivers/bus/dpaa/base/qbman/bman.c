@@ -70,10 +70,8 @@ struct bman_portal *bman_create_portal(struct bman_portal *portal,
 		pr_err("Bman RCR initialisation failed\n");
 		return NULL;
 	}
-	if (bm_mc_init(p)) {
-		pr_err("Bman MC initialisation failed\n");
-		goto fail_mc;
-	}
+	(void)bm_mc_init(p);
+
 	portal->pools = kmalloc(2 * sizeof(*pools), GFP_KERNEL);
 	if (!portal->pools)
 		goto fail_pools;
