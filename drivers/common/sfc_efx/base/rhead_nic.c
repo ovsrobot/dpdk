@@ -483,8 +483,7 @@ rhead_nic_get_bar_region(
 		break;
 
 	default:
-		rc = EINVAL;
-		goto fail1;
+		break;
 	}
 
 	return (0);
