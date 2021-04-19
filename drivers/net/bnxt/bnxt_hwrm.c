@@ -795,6 +795,9 @@ void bnxt_free_vf_info(struct bnxt *bp)
 	if (bp->pf->vf_info == NULL)
 		return;
 
+	if (bp->pf == NULL)
+		return;
+
 	for (i = 0; i < bp->pf->max_vfs; i++) {
 		rte_free(bp->pf->vf_info[i].vlan_table);
 		bp->pf->vf_info[i].vlan_table = NULL;
