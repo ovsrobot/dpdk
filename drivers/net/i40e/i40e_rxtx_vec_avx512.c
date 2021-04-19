@@ -1111,6 +1111,7 @@ i40e_xmit_fixed_burst_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pkts,
 
 	txq->tx_tail = tx_id;
 
+	rte_io_wmb();
 	I40E_PCI_REG_WC_WRITE(txq->qtx_tail, txq->tx_tail);
 
 	return nb_pkts;
