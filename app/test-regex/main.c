@@ -725,9 +725,11 @@ main(int argc, char **argv)
 	if (data_len <= 0)
 		rte_exit(EXIT_FAILURE, "Error, can't read file, or file is empty.\n");
 
-	job_len = data_len / nb_jobs;
-	if (job_len == 0)
-		rte_exit(EXIT_FAILURE, "Error, To many jobs, for the given input.\n");
+	if (!nb_jobs) {
+		job_len = data_len / nb_jobs;
+		if (job_len == 0)
+			rte_exit(EXIT_FAILURE, "Error, To many jobs, for the given input.\n");
+	}
 
 	if (job_len > nb_max_payload)
 		rte_exit(EXIT_FAILURE, "Error, not enough jobs to cover input.\n");
