@@ -474,12 +474,7 @@ end:
 		/* fallthrough */
 	case ST_CLEAR:
 	default:
-		i = rte_eal_cleanup();
-		if (i) {
-			RTE_LOG(ERR, USER1,
-				"Error from rte_eal_cleanup(), %d\n", i);
-			ret = i;
-		}
+		rte_eal_cleanup();
 		break;
 	}
 	return ret;

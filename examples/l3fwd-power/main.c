@@ -2914,8 +2914,7 @@ main(int argc, char **argv)
 			deinit_power_library())
 		rte_exit(EXIT_FAILURE, "deinit_power_library failed\n");
 
-	if (rte_eal_cleanup() < 0)
-		RTE_LOG(ERR, L3FWD_POWER, "EAL cleanup failed\n");
+	rte_eal_cleanup();
 
 	return 0;
 }

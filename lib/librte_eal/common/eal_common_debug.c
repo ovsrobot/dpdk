@@ -37,8 +37,6 @@ rte_exit(int exit_code, const char *format, ...)
 	rte_vlog(RTE_LOG_CRIT, RTE_LOGTYPE_EAL, format, ap);
 	va_end(ap);
 
-	if (rte_eal_cleanup() != 0)
-		RTE_LOG(CRIT, EAL,
-			"EAL could not release all resources\n");
+	rte_eal_cleanup();
 	exit(exit_code);
 }

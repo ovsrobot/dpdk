@@ -1458,9 +1458,7 @@ main(int argc, char **argv)
 	RTE_ETH_FOREACH_DEV(i)
 		rte_eth_dev_close(i);
 
-	ret = rte_eal_cleanup();
-	if (ret)
-		printf("Error from rte_eal_cleanup(), %d\n", ret);
+	rte_eal_cleanup();
 
 	return 0;
 }

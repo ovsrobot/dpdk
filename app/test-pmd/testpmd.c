@@ -3972,10 +3972,7 @@ main(int argc, char** argv)
 			return 1;
 	}
 
-	ret = rte_eal_cleanup();
-	if (ret != 0)
-		rte_exit(EXIT_FAILURE,
-			 "EAL cleanup failed: %s\n", strerror(-ret));
+	rte_eal_cleanup();
 
 	return EXIT_SUCCESS;
 }
