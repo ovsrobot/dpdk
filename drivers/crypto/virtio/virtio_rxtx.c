@@ -500,10 +500,10 @@ virtio_crypto_pkt_tx_burst(void *tx_queue, struct rte_crypto_op **tx_pkts,
 		/* Enqueue Packet buffers */
 		error = virtqueue_crypto_enqueue_xmit(txvq, tx_pkts[nb_tx]);
 		if (unlikely(error)) {
-			if (error == ENOSPC)
+			if (error == -ENOSPC)
 				VIRTIO_CRYPTO_TX_LOG_ERR(
 					"virtqueue_enqueue Free count = 0");
-			else if (error == EMSGSIZE)
+			else if (error == -EMSGSIZE)
 				VIRTIO_CRYPTO_TX_LOG_ERR(
 					"virtqueue_enqueue Free count < 1");
 			else
