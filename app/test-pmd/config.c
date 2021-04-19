@@ -1663,7 +1663,7 @@ port_flow_tunnel_offload_cmd_prep(portid_t port_id,
 		     aptr->type != RTE_FLOW_ACTION_TYPE_END;
 		     aptr++, num_actions++);
 		pft->actions = malloc(
-				(num_actions +  pft->num_pmd_actions) *
+				(num_actions +  pft->num_pmd_actions + 1) *
 				sizeof(actions[0]));
 		if (!pft->actions) {
 			rte_flow_tunnel_action_decap_release(
@@ -1671,9 +1671,10 @@ port_flow_tunnel_offload_cmd_prep(portid_t port_id,
 					pft->num_pmd_actions, &error);
 			return NULL;
 		}
-		rte_memcpy(pft->actions, pft->pmd_actions,
+		pft->actions[0].type = RTE_FLOW_ACTION_TYPE_VOID;
+		rte_memcpy(pft->actions + 1, pft->pmd_actions,
 			   pft->num_pmd_actions * sizeof(actions[0]));
-		rte_memcpy(pft->actions + pft->num_pmd_actions, actions,
+		rte_memcpy(pft->actions + pft->num_pmd_actions + 1, actions,
 			   num_actions * sizeof(actions[0]));
 	}
 	if (tunnel_ops->items) {
@@ -1691,7 +1692,7 @@ port_flow_tunnel_offload_cmd_prep(portid_t port_id,
 		for (iptr = pattern, num_items = 1;
 		     iptr->type != RTE_FLOW_ITEM_TYPE_END;
 		     iptr++, num_items++);
-		pft->items = malloc((num_items + pft->num_pmd_items) *
+		pft->items = malloc((num_items + pft->num_pmd_items + 1) *
 				    sizeof(pattern[0]));
 		if (!pft->items) {
 			rte_flow_tunnel_item_release(
@@ -1699,9 +1700,10 @@ port_flow_tunnel_offload_cmd_prep(portid_t port_id,
 					pft->num_pmd_items, &error);
 			return NULL;
 		}
-		rte_memcpy(pft->items, pft->pmd_items,
+		pft->items[0].type = RTE_FLOW_ITEM_TYPE_VOID;
+		rte_memcpy(pft->items + 1, pft->pmd_items,
 			   pft->num_pmd_items * sizeof(pattern[0]));
-		rte_memcpy(pft->items + pft->num_pmd_items, pattern,
+		rte_memcpy(pft->items + pft->num_pmd_items + 1, pattern,
 			   num_items * sizeof(pattern[0]));
 	}
 
