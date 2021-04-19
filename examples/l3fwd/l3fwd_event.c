@@ -105,7 +105,11 @@ l3fwd_eth_dev_port_setup(struct rte_eth_conf *port_conf)
 				 "Cannot adjust number of descriptors: err=%d, "
 				 "port=%d\n", ret, port_id);
 
-		rte_eth_macaddr_get(port_id, &ports_eth_addr[port_id]);
+		ret = rte_eth_macaddr_get(port_id, &ports_eth_addr[port_id]);
+		if (ret < 0)
+			rte_exit(EXIT_FAILURE,
+				 "Cannot get MAC address: err=%d, port=%d\n",
+				 ret, port_id);
 		print_ethaddr(" Address:", &ports_eth_addr[port_id]);
 		printf(", ");
 		print_ethaddr("Destination:",
