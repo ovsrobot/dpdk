@@ -211,6 +211,8 @@ New Features
     ``show port (port_id) rxq (queue_id) desc used count``
   * Added command to dump internal representation information of single flow.
     ``flow dump (port_id) rule (rule_id)``
+  * Added command to cleanup a Tx queue's mbuf on a port.
+    ``tx_done_cleanup port <port_id> <queue_id> <free_cnt>``
 
 * **Updated ipsec-secgw sample application.**
 
