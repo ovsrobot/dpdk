@@ -1237,7 +1237,7 @@ bond_mode_8023ad_conf_assign(struct mode8023ad_private *mode4,
 	mode4->aggregate_wait_timeout = conf->aggregate_wait_timeout_ms * ms_ticks;
 	mode4->tx_period_timeout = conf->tx_period_ms * ms_ticks;
 	mode4->rx_marker_timeout = conf->rx_marker_period_ms * ms_ticks;
-	mode4->update_timeout_us = conf->update_timeout_ms * 1000;
+	mode4->update_timeout_us = (uint64_t)conf->update_timeout_ms * 1000;
 
 	mode4->dedicated_queues.enabled = 0;
 	mode4->dedicated_queues.rx_qid = UINT16_MAX;
