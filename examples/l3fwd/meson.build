@@ -9,6 +9,10 @@
 allow_experimental_apis = true
 deps += ['hash', 'lpm', 'eventdev']
 sources = files(
-	'l3fwd_em.c', 'l3fwd_lpm.c', 'l3fwd_event.c',
-	'l3fwd_event_internal_port.c', 'l3fwd_event_generic.c', 'main.c'
+        'l3fwd_em.c',
+        'l3fwd_event.c',
+        'l3fwd_event_internal_port.c',
+        'l3fwd_event_generic.c',
+        'l3fwd_lpm.c',
+        'main.c',
 )
