@@ -2,15 +2,15 @@
 # Copyright 2018 NXP
 
 if not is_linux
-	build = false
-	reason = 'only supported on Linux'
+    build = false
+    reason = 'only supported on Linux'
 endif
 
 deps += ['bus_vdev', 'bus_dpaa', 'security']
 sources = files('caam_jr_capabilities.c',
-		'caam_jr_hw.c',
-		'caam_jr_uio.c',
-		'caam_jr.c')
+        'caam_jr_hw.c',
+        'caam_jr_uio.c',
+        'caam_jr.c')
 
 includes += include_directories('../../bus/dpaa/include/')
 includes += include_directories('../../common/dpaax/')

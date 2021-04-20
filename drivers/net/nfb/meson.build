@@ -4,9 +4,9 @@
 # All rights reserved.
 
 if is_windows
-	build = false
-	reason = 'not supported on Windows'
-	subdir_done()
+    build = false
+    reason = 'not supported on Windows'
+    subdir_done()
 endif
 
 dep = dependency('netcope-common', required: false, method: 'pkg-config')
