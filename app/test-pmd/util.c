@@ -258,16 +258,23 @@ dump_pkt_burst(uint16_t port_id, uint16_t queue, struct rte_mbuf *pkts[],
 				udp_hdr = rte_pktmbuf_mtod_offset(mb,
 				struct rte_udp_hdr *,
 				l2_len + l3_len);
-				l4_len = sizeof(struct rte_udp_hdr);
-				vxlan_hdr = rte_pktmbuf_mtod_offset(mb,
-				struct rte_vxlan_hdr *,
-				l2_len + l3_len + l4_len);
 				udp_port = RTE_BE_TO_CPU_16(udp_hdr->dst_port);
-				vx_vni = rte_be_to_cpu_32(vxlan_hdr->vx_vni);
-				MKDUMPSTR(print_buf, buf_size, cur_len,
-					  " - VXLAN packet: packet type =%d, "
-					  "Destination UDP port =%d, VNI = %d",
-					  packet_type, udp_port, vx_vni >> 8);
+				l4_len = sizeof(struct rte_udp_hdr);
+				if (RTE_ETH_IS_ECPRI_HDR(packet_type)) {
+					MKDUMPSTR(print_buf, buf_size, cur_len,
+						  " - eCPRI packet: packet type =%d, "
+						  "Destination UDP port =%d",
+						  packet_type, udp_port);
+				} else {
+					vxlan_hdr = rte_pktmbuf_mtod_offset(mb,
+					struct rte_vxlan_hdr *,
+					l2_len + l3_len + l4_len);
+					vx_vni = rte_be_to_cpu_32(vxlan_hdr->vx_vni);
+					MKDUMPSTR(print_buf, buf_size, cur_len,
+						  " - VXLAN packet: packet type =%d, "
+						  "Destination UDP port =%d, VNI = %d",
+						  packet_type, udp_port, vx_vni >> 8);
+				}
 			}
 		}
 		MKDUMPSTR(print_buf, buf_size, cur_len,
