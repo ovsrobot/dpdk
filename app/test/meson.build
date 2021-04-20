@@ -215,7 +215,6 @@ fast_tests = [
         ['hash_autotest', true],
         ['interrupt_autotest', true],
         ['ipfrag_autotest', false],
-        ['lcores_autotest', true],
         ['logs_autotest', true],
         ['lpm_autotest', true],
         ['lpm6_autotest', true],
@@ -420,6 +419,11 @@ endif
 if dpdk_conf.has('RTE_CRYPTO_SCHEDULER')
 	driver_test_names += 'cryptodev_scheduler_autotest'
 	test_deps += 'crypto_scheduler'
+endif
+
+# This test consistently times out on ppc64
+if arch_subdir != 'ppc'
+	fast_tests += [['lcores_autotest', true]]
 endif
 
 foreach d:test_deps
