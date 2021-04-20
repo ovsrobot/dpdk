@@ -347,7 +347,7 @@ else
 	soc = get_option('platform')
 	soc_config = {}
 	if not meson.is_cross_build()
-		if machine == 'generic'
+		if platform == 'generic'
 			# generic build
 			if soc != ''
 				error('Building for a particular platform is ' +
@@ -402,7 +402,7 @@ else
 	else
 		error('Unsupported Arm implementer: @0@. '.format(implementer_id) +
 		      'Please add support for it or use the generic ' +
-		      '(-Dmachine=generic) build.')
+		      '(-Dplatform=generic) build.')
 	endif
 
 	message('Arm implementer: ' + implementer_config['description'])
@@ -417,7 +417,7 @@ else
 		error('Unsupported part number @0@ of implementer @1@. '
 		      .format(part_number, implementer_id) +
 		      'Please add support for it or use the generic ' +
-		      '(-Dmachine=generic) build.')
+		      '(-Dplatform=generic) build.')
 	endif
 
 	# add/overwrite flags in the proper order
