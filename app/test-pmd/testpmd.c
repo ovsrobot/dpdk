@@ -2678,6 +2678,12 @@ start_port(portid_t pid)
 			}
 		}
 	}
+	/*
+	 * In some scenarios, eg, dev_configure is called again, the forwarding
+	 * streams may not be updated. As a result, the actual forwarding
+	 * streams cannot be queried by "show config fwd" command.
+	 */
+	fwd_config_setup();
 
 	printf("Done\n");
 	return 0;
