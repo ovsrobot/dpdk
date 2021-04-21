@@ -5162,7 +5162,7 @@ instr_regprefetch_translate(struct rte_swx_pipeline *p,
 	char *regarray = tokens[1], *idx = tokens[2];
 	struct regarray *r;
 	struct field *fidx;
-	uint32_t idx_struct_id, idx_val;
+	uint32_t idx_struct_id = 0, idx_val;
 
 	CHECK(n_tokens == 3, EINVAL);
 
@@ -5206,7 +5206,7 @@ instr_regrd_translate(struct rte_swx_pipeline *p,
 	char *dst = tokens[1], *regarray = tokens[2], *idx = tokens[3];
 	struct regarray *r;
 	struct field *fdst, *fidx;
-	uint32_t dst_struct_id, idx_struct_id, idx_val;
+	uint32_t dst_struct_id = 0, idx_struct_id = 0, idx_val;
 
 	CHECK(n_tokens == 4, EINVAL);
 
@@ -5265,7 +5265,7 @@ instr_regwr_translate(struct rte_swx_pipeline *p,
 	struct regarray *r;
 	struct field *fidx, *fsrc;
 	uint64_t src_val;
-	uint32_t idx_struct_id, idx_val, src_struct_id;
+	uint32_t idx_struct_id = 0, idx_val, src_struct_id = 0;
 
 	CHECK(n_tokens == 4, EINVAL);
 
@@ -5354,7 +5354,7 @@ instr_regadd_translate(struct rte_swx_pipeline *p,
 	struct regarray *r;
 	struct field *fidx, *fsrc;
 	uint64_t src_val;
-	uint32_t idx_struct_id, idx_val, src_struct_id;
+	uint32_t idx_struct_id = 0, idx_val, src_struct_id = 0;
 
 	CHECK(n_tokens == 4, EINVAL);
 
@@ -6064,7 +6064,7 @@ instr_metprefetch_translate(struct rte_swx_pipeline *p,
 	char *metarray = tokens[1], *idx = tokens[2];
 	struct metarray *m;
 	struct field *fidx;
-	uint32_t idx_struct_id, idx_val;
+	uint32_t idx_struct_id = 0, idx_val;
 
 	CHECK(n_tokens == 3, EINVAL);
 
@@ -6107,8 +6107,8 @@ instr_meter_translate(struct rte_swx_pipeline *p,
 	char *color_in = tokens[4], *color_out = tokens[5];
 	struct metarray *m;
 	struct field *fidx, *flength, *fcin, *fcout;
-	uint32_t idx_struct_id, length_struct_id;
-	uint32_t color_in_struct_id, color_out_struct_id;
+	uint32_t idx_struct_id = 0, length_struct_id = 0;
+	uint32_t color_in_struct_id = 0, color_out_struct_id = 0;
 
 	CHECK(n_tokens == 6, EINVAL);
 
