@@ -235,6 +235,10 @@ New Features
   * Added support for crypto adapter forward mode in octeontx2 event and crypto
     device driver.
 
+* **Enabled libpcap-based PMD on Windows.**
+
+   A libpcap distribution, such as Npcap or WinPcap, is required to run the PMD.
+
 
 Removed Items
 -------------
