@@ -2251,6 +2251,9 @@ iavf_dev_close(struct rte_eth_dev *dev)
 	rte_free(vf->aq_resp);
 	vf->aq_resp = NULL;
 
+	if (vf->vf_reset)
+		rte_pci_enable_bus_master(pci_dev);
+
 	vf->vf_reset = false;
 
 	return ret;
