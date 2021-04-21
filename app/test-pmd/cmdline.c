@@ -9554,6 +9554,9 @@ dump_socket_mem(FILE *f)
 			socket_stats.alloc_count,
 			socket_stats.free_count);
 	}
+
+	if (total == 0)
+		return;
 	fprintf(f,
 		"Total   : size(M) total: %.6lf alloc: %.6lf(%.3lf%%) free: %.6lf \tcount alloc: %-4u free: %u\n",
 		(double)total / (1024 * 1024), (double)alloc / (1024 * 1024),
