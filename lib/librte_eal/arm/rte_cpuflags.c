@@ -46,8 +46,12 @@ struct feature_entry {
 #define FEAT_DEF(name, reg, bit) \
 	[RTE_CPUFLAG_##name] = {reg, bit, #name},
 
+#ifdef RTE_ARCH_32
 #ifdef RTE_ARCH_ARMv7
 #define PLATFORM_STR "v7l"
+#elif defined RTE_ARCH_ARMv8_AARCH32
+#define PLATFORM_STR "v8l"
+#endif
 typedef Elf32_auxv_t _Elfx_auxv_t;
 
 const struct feature_entry rte_cpu_feature_table[] = {
@@ -79,9 +83,10 @@ const struct feature_entry rte_cpu_feature_table[] = {
 	FEAT_DEF(SHA2,      REG_HWCAP2,   3)
 	FEAT_DEF(CRC32,     REG_HWCAP2,   4)
 	FEAT_DEF(V7L,       REG_PLATFORM, 0)
+	FEAT_DEF(V8L,       REG_PLATFORM, 0)
 };
 
-#elif defined RTE_ARCH_ARM64
+#elif defined RTE_ARCH_64
 #define PLATFORM_STR "aarch64"
 typedef Elf64_auxv_t _Elfx_auxv_t;
 
@@ -108,7 +113,7 @@ const struct feature_entry rte_cpu_feature_table[] = {
 	FEAT_DEF(SVEF32MM,	REG_HWCAP2,   10)
 	FEAT_DEF(SVEF64MM,	REG_HWCAP2,   11)
 	FEAT_DEF(SVEBF16,	REG_HWCAP2,   12)
-	FEAT_DEF(AARCH64,	REG_PLATFORM, 1)
+	FEAT_DEF(AARCH64,	REG_PLATFORM, 0)
 };
 #endif /* RTE_ARCH */
 
