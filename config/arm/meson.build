@@ -69,7 +69,15 @@ part_number_config_arm = {
 			['RTE_MAX_LCORE', 64],
 			['RTE_MAX_NUMA_NODES', 1]
 		]
-	}
+	},
+	'aarch32': {
+		'machine_args': ['-march=armv8-a',
+				 '-mfpu=neon'],
+		'flags': [
+			['RTE_ARCH_ARM_NEON_MEMCPY', false],
+			['RTE_ARCH_STRICT_ALIGN', true],
+			['RTE_ARCH_ARMv8_AARCH32', true]
+		]}
 }
 implementer_arm = {
 	'description': 'Arm',
@@ -348,14 +356,25 @@ socs = {
 dpdk_conf.set('RTE_ARCH_ARM', 1)
 dpdk_conf.set('RTE_FORCE_INTRINSICS', 1)
 
+update_flags = false
+soc_flags = []
 if dpdk_conf.get('RTE_ARCH_32')
-	# armv7 build
+	# 32-bit build
 	dpdk_conf.set('RTE_CACHE_LINE_SIZE', 64)
-	dpdk_conf.set('RTE_ARCH_ARMv7', 1)
-	# the minimum architecture supported, armv7-a, needs the following,
-	machine_args += '-mfpu=neon'
+	if meson.is_cross_build()
+		update_flags = true
+		implementer_id = meson.get_cross_property('implementer_id')
+		part_number = meson.get_cross_property('part_number')
+		flags_common = []
+	else
+		# armv7 build
+		dpdk_conf.set('RTE_ARCH_ARMv7', true)
+		# the minimum architecture supported, armv7-a, needs the following,
+		machine_args += '-mfpu=neon'
+	endif
 else
 	# aarch64 build
+	update_flags = true
 	soc = get_option('platform')
 	soc_config = {}
 	if not meson.is_cross_build()
@@ -393,7 +412,6 @@ else
 		soc_config = socs.get(soc, {'not_supported': true})
 	endif
 
-	soc_flags = []
 	if soc_config.has_key('not_supported')
 		error('SoC @0@ not supported.'.format(soc))
 	elif soc_config != {}
@@ -408,7 +426,9 @@ else
 		disable_drivers += ',' + soc_config.get('disable_drivers', '')
 		enable_drivers += ',' + soc_config.get('enable_drivers', '')
 	endif
+endif
 
+if update_flags
 	if implementers.has_key(implementer_id)
 		implementer_config = implementers[implementer_id]
 	else
