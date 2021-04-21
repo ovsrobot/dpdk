@@ -785,6 +785,8 @@ eal_parse_service_corelist(const char *corelist)
 		idx = strtoul(corelist, &end, 10);
 		if (errno || end == NULL)
 			return -1;
+		if (idx < 0 || idx >= RTE_MAX_LCORE)
+			return -1;
 		while (isblank(*end))
 			end++;
 		if (*end == '-') {
