@@ -517,8 +517,6 @@ eval_divmod(uint32_t op, struct bpf_reg_val *rd, struct bpf_reg_val *rs,
 	} else {
 		if (op == BPF_MOD)
 			rd->u.max = RTE_MIN(rd->u.max, rs->u.max - 1);
-		else
-			rd->u.max = rd->u.max;
 		rd->u.min = 0;
 	}
 
