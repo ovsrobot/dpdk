@@ -433,6 +433,51 @@ Code and Literal block sections
          return 0;
       }
 
+* Code snippets can also be included directly from the code using the ``literalinclude`` block.
+  Using this block instead of a code block will ensure that the code snippets shown in the
+  documentation are always up to date with the code.
+
+  The following will include a snippet from the skeleton sample app::
+
+      .. literalinclude:: ../../../examples/skeleton/basicfwd.c
+        :language: c
+        :start-after: Display the port MAC address.
+        :end-before: Enable RX in promiscuous mode for the Ethernet device.
+        :dedent: 1
+
+  This would be rendered as:
+
+  .. literalinclude:: ../../../examples/skeleton/basicfwd.c
+    :language: c
+    :start-after: Display the port MAC address.
+    :end-before: Enable RX in promiscuous mode for the Ethernet device.
+    :dedent: 1
+
+  Specifying ``:language:`` will enable syntax highlighting for the specified language.
+  ``:dedent:`` is used in this example to remove 1 leading tab from each line of the snippet.
+
+* ``start-after`` and ``end-before`` can use any text within a given file,
+  however it may be difficult to find unique text within your code to mark the
+  start and end of your snippets. In these cases, it is recommended to include
+  explicit tags in your code to denote these locations for documentation purposes.
+
+  This can be done as follows:
+
+  .. code-block:: c
+
+    /* #guide_doc: Example feature being documented. */
+    ...
+    /* #guide_doc: End of example feature being documented. */
+
+  ``...`` could then be included in the docs using::
+
+      .. literalinclude:: ../../../examples/sample_app/main.c
+        :language: c
+        :start-after: #guide_doc: Example feature being documented.
+        :end-before: #guide_doc: End of example feature being documented.
+
+* More information about the ``literalinclude`` block can be found within the
+  `Sphinx Documentation <https://www.sphinx-doc.org/en/master/usage/restructuredtext/directives.html?highlight=literalinclude#directive-literalinclude>`_.
 
 * The default encoding for a literal block using the simplified ``::``
   directive is ``none``.
