@@ -8638,8 +8638,10 @@ instruction_config(struct rte_swx_pipeline *p,
 	return 0;
 
 error:
-	free(data);
-	free(instr);
+	if (data)
+		free(data);
+	if (instr)
+		free(instr);
 	return err;
 }
 
