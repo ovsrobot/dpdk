@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <inttypes.h>
+#include <assert.h>
 #include <rte_byteorder.h>
 #include <rte_common.h>
 
@@ -228,13 +229,19 @@ iavf_execute_vf_cmd(struct iavf_adapter *adapter, struct iavf_cmd_info *args)
 			rte_delay_ms(ASQ_DELAY_MS);
 			/* If don't read msg or read sys event, continue */
 		} while (i++ < MAX_TRY_TIMES);
-		/* If there's no response is received, clear command */
-		if (i >= MAX_TRY_TIMES  ||
-		    vf->cmd_retval != VIRTCHNL_STATUS_SUCCESS) {
-			err = -1;
-			PMD_DRV_LOG(ERR, "No response or return failure (%d)"
-				    " for cmd %d", vf->cmd_retval, args->ops);
+
+		if (i >= MAX_TRY_TIMES) {
+			PMD_DRV_LOG(ERR, "No response for cmd %d", args->ops);
 			_clear_cmd(vf);
+			err = -EIO;
+		} else if (vf->cmd_retval ==
+			   (uint32_t)VIRTCHNL_STATUS_ERR_NOT_SUPPORTED) {
+			PMD_DRV_LOG(ERR, "Cmd %d not supported", args->ops);
+			err = -ENOTSUP;
+		} else if (vf->cmd_retval != VIRTCHNL_STATUS_SUCCESS) {
+			PMD_DRV_LOG(ERR, "Return failure %d for cmd %d",
+				    vf->cmd_retval, args->ops);
+			err = -EINVAL;
 		}
 		break;
 	}
@@ -1493,6 +1500,32 @@ iavf_add_del_rss_cfg(struct iavf_adapter *adapter,
 			    "OP_DEL_RSS_INPUT_CFG");
 
 	return err;
+}
+
+int
+iavf_get_hena_caps(struct iavf_adapter *adapter, uint64_t *caps)
+{
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
+	struct iavf_cmd_info args;
+	int err;
+
+	assert(caps);
+
+	args.ops = VIRTCHNL_OP_GET_RSS_HENA_CAPS;
+	args.in_args = NULL;
+	args.in_args_size = 0;
+	args.out_buffer = vf->aq_resp;
+	args.out_size = IAVF_AQ_BUF_SZ;
+
+	err = iavf_execute_vf_cmd(adapter, &args);
+	if (err) {
+		PMD_DRV_LOG(ERR,
+			    "Failed to execute command of OP_GET_RSS_HENA_CAPS");
+		return err;
+	}
+
+	*caps = ((struct virtchnl_rss_hena *)args.out_buffer)->hena;
+	return 0;
 }
 
 int
