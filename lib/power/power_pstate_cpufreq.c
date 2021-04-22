@@ -37,6 +37,13 @@
 		} \
 } while (0)
 
+#define FOPEN_OR_ERR_GOTO(f, label) do { \
+		if ((f) == NULL) { \
+			RTE_LOG(ERR, POWER, "File not opened\n"); \
+			goto label; \
+		} \
+} while (0)
+
 #define FOPS_OR_NULL_GOTO(ret, label) do { \
 		if ((ret) == NULL) { \
 			RTE_LOG(ERR, POWER, "fgets returns nothing\n"); \
@@ -148,97 +155,145 @@ out:	close(fd);
 	return ret;
 }
 
+static int
+open_core_sysfs_file(const char *template, unsigned int core, const char *mode,
+		FILE **f)
+{
+	char fullpath[PATH_MAX];
+	FILE *tmpf;
+
+	/* silenced -Wformat-nonliteral here */
+	snprintf(fullpath, sizeof(fullpath), template, core);
+	tmpf = fopen(fullpath, mode);
+	if (tmpf == NULL)
+		return -1;
+	*f = tmpf;
+
+	return 0;
+}
+
+static int
+read_core_sysfs_u32(FILE *f, uint32_t *val)
+{
+	char buf[BUFSIZ];
+	uint32_t fval;
+	char *s;
+
+	s = fgets(buf, sizeof(buf), f);
+	if (s == NULL)
+		return -1;
+
+	/* fgets puts null terminator in, but do this just in case */
+	buf[BUFSIZ - 1] = '\0';
+
+	/* strip off any terminating newlines */
+	*strchrnul(buf, '\n') = '\0';
+
+	fval = strtoul(buf, NULL, POWER_CONVERT_TO_DECIMAL);
+
+	/* write the value */
+	*val = fval;
+
+	return 0;
+}
+
+static int
+read_core_sysfs_s(FILE *f, char *buf, unsigned int len)
+{
+	char *s;
+
+	s = fgets(buf, len, f);
+	if (s == NULL)
+		return -1;
+
+	/* fgets puts null terminator in, but do this just in case */
+	buf[len - 1] = '\0';
+
+	/* strip off any terminating newlines */
+	*strchrnul(buf, '\n') = '\0';
+
+	return 0;
+}
+
+static int
+write_core_sysfs_s(FILE *f, const char *str)
+{
+	int ret;
+
+	ret = fseek(f, 0, SEEK_SET);
+	if (ret != 0)
+		return -1;
+
+	ret = fputs(str, f);
+	if (ret != 0)
+		return -1;
+
+	/* flush the output */
+	ret = fflush(f);
+	if (ret != 0)
+		return -1;
+
+	return 0;
+}
+
 /**
  * It is to fopen the sys file for the future setting the lcore frequency.
  */
 static int
 power_init_for_setting_freq(struct pstate_power_info *pi)
 {
-	FILE *f_min, *f_max, *f_base = NULL, *f_base_max;
-	char fullpath_min[PATH_MAX];
-	char fullpath_max[PATH_MAX];
-	char fullpath_base[PATH_MAX];
-	char fullpath_base_max[PATH_MAX];
-	char buf_base[BUFSIZ];
-	char *s_base;
-	char *s_base_max;
-	uint32_t base_ratio = 0;
-	uint32_t base_max_ratio = 0;
-	uint64_t max_non_turbo = 0;
-	int  ret_val = 0;
+	FILE *f_base = NULL, *f_base_max = NULL, *f_min = NULL, *f_max = NULL;
+	uint32_t base_ratio, base_max_ratio;
+	uint64_t max_non_turbo;
+	int ret;
 
-	snprintf(fullpath_base_max,
-			sizeof(fullpath_base_max),
-			POWER_SYSFILE_BASE_MAX_FREQ,
-			pi->lcore_id);
-	f_base_max = fopen(fullpath_base_max, "r");
-	FOPEN_OR_ERR_RET(f_base_max, -1);
-	if (f_base_max != NULL) {
-		s_base_max = fgets(buf_base, sizeof(buf_base), f_base_max);
+	/* open all files we expect to have open */
+	open_core_sysfs_file(POWER_SYSFILE_BASE_MAX_FREQ, pi->lcore_id, "r",
+			&f_base_max);
+	FOPEN_OR_ERR_GOTO(f_base_max, err);
 
-		/* close the file unconditionally */
-		fclose(f_base_max);
-		f_base_max = NULL;
+	open_core_sysfs_file(POWER_SYSFILE_MIN_FREQ, pi->lcore_id, "rw+",
+			&f_min);
+	FOPEN_OR_ERR_GOTO(f_min, err);
 
-		FOPS_OR_NULL_GOTO(s_base_max, out);
+	open_core_sysfs_file(POWER_SYSFILE_MAX_FREQ, pi->lcore_id, "rw+",
+			&f_max);
+	FOPEN_OR_ERR_GOTO(f_max, err);
 
-		buf_base[BUFSIZ-1] = '\0';
-		if (strlen(buf_base))
-			/* Strip off terminating '\n' */
-			strtok(buf_base, "\n");
+	open_core_sysfs_file(POWER_SYSFILE_BASE_FREQ, pi->lcore_id, "r",
+			&f_base);
+	/* base ratio file may not exist in some kernels, so no error check */
 
-		base_max_ratio =
-			strtoul(buf_base, NULL, POWER_CONVERT_TO_DECIMAL)
-				/ BUS_FREQ;
-	}
+	/* read base max ratio */
+	ret = read_core_sysfs_u32(f_base_max, &base_max_ratio);
+	FOPS_OR_ERR_GOTO(ret, err);
 
-	snprintf(fullpath_min, sizeof(fullpath_min), POWER_SYSFILE_MIN_FREQ,
-			pi->lcore_id);
-	f_min = fopen(fullpath_min, "rw+");
-	FOPEN_OR_ERR_RET(f_min, -1);
-
-	snprintf(fullpath_max, sizeof(fullpath_max), POWER_SYSFILE_MAX_FREQ,
-			pi->lcore_id);
-	f_max = fopen(fullpath_max, "rw+");
-	if (f_max == NULL)
-		fclose(f_min);
-	FOPEN_OR_ERR_RET(f_max, -1);
-
-	pi->f_cur_min = f_min;
-	pi->f_cur_max = f_max;
-
-	snprintf(fullpath_base, sizeof(fullpath_base), POWER_SYSFILE_BASE_FREQ,
-			pi->lcore_id);
-
-	f_base = fopen(fullpath_base, "r");
-	if (f_base == NULL) {
-		/* No sysfs base_frequency, that's OK, continue without */
-		base_ratio = 0;
+	/* base ratio may not exist */
+	if (f_base != NULL) {
+		ret = read_core_sysfs_u32(f_base, &base_ratio);
+		FOPS_OR_ERR_GOTO(ret, err);
 	} else {
-		s_base = fgets(buf_base, sizeof(buf_base), f_base);
-		FOPS_OR_NULL_GOTO(s_base, out);
-
-		buf_base[BUFSIZ-1] = '\0';
-		if (strlen(buf_base))
-			/* Strip off terminating '\n' */
-			strtok(buf_base, "\n");
-
-		base_ratio = strtoul(buf_base, NULL, POWER_CONVERT_TO_DECIMAL)
-				/ BUS_FREQ;
+		base_ratio = 0;
 	}
 
 	/* Add MSR read to detect turbo status */
+	if (power_rdmsr(PLATFORM_INFO, &max_non_turbo, pi->lcore_id) < 0)
+		goto err;
+	/* no errors after this point */
 
-	if (power_rdmsr(PLATFORM_INFO, &max_non_turbo, pi->lcore_id) < 0) {
-		ret_val = -1;
-		goto out;
-	}
+	/* convert ratios to bins */
+	base_max_ratio /= BUS_FREQ;
+	base_ratio /= BUS_FREQ;
+
+	/* assign file handles */
+	pi->f_cur_min = f_min;
+	pi->f_cur_max = f_max;
 
 	max_non_turbo = (max_non_turbo&NON_TURBO_MASK)>>NON_TURBO_OFFSET;
 
 	POWER_DEBUG_TRACE("no turbo perf %"PRIu64"\n", max_non_turbo);
 
-	pi->non_turbo_max_ratio = max_non_turbo;
+	pi->non_turbo_max_ratio = (uint32_t)max_non_turbo;
 
 	/*
 	 * If base_frequency is reported as greater than the maximum
@@ -264,7 +319,20 @@ power_init_for_setting_freq(struct pstate_power_info *pi)
 out:
 	if (f_base != NULL)
 		fclose(f_base);
-	return ret_val;
+	fclose(f_base_max);
+	/* f_min and f_max are stored, no need to close */
+	return 0;
+
+err:
+	if (f_base != NULL)
+		fclose(f_base);
+	if (f_base_max != NULL)
+		fclose(f_base_max);
+	if (f_min != NULL)
+		fclose(f_min);
+	if (f_max != NULL)
+		fclose(f_max);
+	return -1;
 }
 
 static int
@@ -369,22 +437,16 @@ set_freq_internal(struct pstate_power_info *pi, uint32_t idx)
 static int
 power_set_governor_performance(struct pstate_power_info *pi)
 {
-	FILE *f;
+	FILE *f_governor = NULL;
 	int ret = -1;
 	char buf[BUFSIZ];
-	char fullpath[PATH_MAX];
-	char *s;
-	int val;
 
-	snprintf(fullpath, sizeof(fullpath), POWER_SYSFILE_GOVERNOR,
-			pi->lcore_id);
-	f = fopen(fullpath, "rw+");
-	FOPEN_OR_ERR_RET(f, ret);
+	open_core_sysfs_file(POWER_SYSFILE_GOVERNOR, pi->lcore_id, "rw+",
+			&f_governor);
+	FOPEN_OR_ERR_GOTO(f_governor, out);
 
-	s = fgets(buf, sizeof(buf), f);
-	FOPS_OR_NULL_GOTO(s, out);
-	/* Strip off terminating '\n' */
-	strtok(buf, "\n");
+	ret = read_core_sysfs_s(f_governor, buf, sizeof(buf));
+	FOPS_OR_ERR_GOTO(ret, out);
 
 	/* Save the original governor */
 	rte_strscpy(pi->governor_ori, buf, sizeof(pi->governor_ori));
@@ -399,21 +461,15 @@ power_set_governor_performance(struct pstate_power_info *pi)
 	}
 
 	/* Write 'performance' to the governor */
-	val = fseek(f, 0, SEEK_SET);
-	FOPS_OR_ERR_GOTO(val, out);
-
-	val = fputs(POWER_GOVERNOR_PERF, f);
-	FOPS_OR_ERR_GOTO(val, out);
-
-	/* We need to flush to see if the fputs succeeds */
-	val = fflush(f);
-	FOPS_OR_ERR_GOTO(val, out);
+	ret = write_core_sysfs_s(f_governor, POWER_GOVERNOR_PERF);
+	FOPS_OR_ERR_GOTO(ret, out);
 
 	ret = 0;
 	RTE_LOG(INFO, POWER, "Power management governor of lcore %u has been "
 			"set to performance successfully\n", pi->lcore_id);
 out:
-	fclose(f);
+	if (f_governor != NULL)
+		fclose(f_governor);
 
 	return ret;
 }
@@ -425,20 +481,16 @@ out:
 static int
 power_set_governor_original(struct pstate_power_info *pi)
 {
-	FILE *f;
+	FILE *f_governor = NULL;
 	int ret = -1;
 	char buf[BUFSIZ];
-	char fullpath[PATH_MAX];
-	char *s;
-	int val;
 
-	snprintf(fullpath, sizeof(fullpath), POWER_SYSFILE_GOVERNOR,
-			pi->lcore_id);
-	f = fopen(fullpath, "rw+");
-	FOPEN_OR_ERR_RET(f, ret);
+	open_core_sysfs_file(POWER_SYSFILE_GOVERNOR, pi->lcore_id, "rw+",
+			&f_governor);
+	FOPEN_OR_ERR_GOTO(f_governor, out);
 
-	s = fgets(buf, sizeof(buf), f);
-	FOPS_OR_NULL_GOTO(s, out);
+	ret = read_core_sysfs_s(f_governor, buf, sizeof(buf));
+	FOPS_OR_ERR_GOTO(ret, out);
 
 	/* Check if the governor to be set is the same as current */
 	if (strncmp(buf, pi->governor_ori, sizeof(pi->governor_ori)) == 0) {
@@ -450,19 +502,16 @@ power_set_governor_original(struct pstate_power_info *pi)
 	}
 
 	/* Write back the original governor */
-	val = fseek(f, 0, SEEK_SET);
-	FOPS_OR_ERR_GOTO(val, out);
-
-	val = fputs(pi->governor_ori, f);
-	FOPS_OR_ERR_GOTO(val, out);
+	ret = write_core_sysfs_s(f_governor, pi->governor_ori);
+	FOPS_OR_ERR_GOTO(ret, out);
 
 	ret = 0;
 	RTE_LOG(INFO, POWER, "Power management governor of lcore %u "
 			"has been set back to %s successfully\n",
 			pi->lcore_id, pi->governor_ori);
 out:
-	fclose(f);
-
+	if (f_governor != NULL)
+		fclose(f_governor);
 	return ret;
 }
 
@@ -473,51 +522,26 @@ out:
 static int
 power_get_available_freqs(struct pstate_power_info *pi)
 {
-	FILE *f_min, *f_max;
+	FILE *f_min = NULL, *f_max = NULL;
 	int ret = -1;
-	char *p_min, *p_max;
-	char buf_min[BUFSIZ];
-	char buf_max[BUFSIZ];
-	char fullpath_min[PATH_MAX];
-	char fullpath_max[PATH_MAX];
-	char *s_min, *s_max;
 	uint32_t sys_min_freq = 0, sys_max_freq = 0, base_max_freq = 0;
 	uint32_t i, num_freqs = 0;
 
-	snprintf(fullpath_max, sizeof(fullpath_max),
-			POWER_SYSFILE_BASE_MAX_FREQ,
-			pi->lcore_id);
-	snprintf(fullpath_min, sizeof(fullpath_min),
-			POWER_SYSFILE_BASE_MIN_FREQ,
-			pi->lcore_id);
+	/* open all files */
+	open_core_sysfs_file(POWER_SYSFILE_BASE_MAX_FREQ, pi->lcore_id, "r",
+			&f_max);
+	FOPEN_OR_ERR_GOTO(f_max, out);
 
-	f_min = fopen(fullpath_min, "r");
-	FOPEN_OR_ERR_RET(f_min, ret);
+	open_core_sysfs_file(POWER_SYSFILE_BASE_MIN_FREQ, pi->lcore_id, "r",
+			     &f_min);
+	FOPEN_OR_ERR_GOTO(f_max, out);
 
-	f_max = fopen(fullpath_max, "r");
-	if (f_max == NULL)
-		fclose(f_min);
+	/* read base ratios */
+	ret = read_core_sysfs_u32(f_max, &sys_max_freq);
+	FOPS_OR_ERR_GOTO(ret, out);
 
-	FOPEN_OR_ERR_RET(f_max, ret);
-
-	s_min = fgets(buf_min, sizeof(buf_min), f_min);
-	FOPS_OR_NULL_GOTO(s_min, out);
-
-	s_max = fgets(buf_max, sizeof(buf_max), f_max);
-	FOPS_OR_NULL_GOTO(s_max, out);
-
-
-	/* Strip the line break if there is */
-	p_min = strchr(buf_min, '\n');
-	if (p_min != NULL)
-		*p_min = 0;
-
-	p_max = strchr(buf_max, '\n');
-	if (p_max != NULL)
-		*p_max = 0;
-
-	sys_min_freq = strtoul(buf_min, &p_min, POWER_CONVERT_TO_DECIMAL);
-	sys_max_freq = strtoul(buf_max, &p_max, POWER_CONVERT_TO_DECIMAL);
+	ret = read_core_sysfs_u32(f_min, &sys_min_freq);
+	FOPS_OR_ERR_GOTO(ret, out);
 
 	if (sys_max_freq < sys_min_freq)
 		goto out;
@@ -576,27 +600,14 @@ power_get_cur_idx(struct pstate_power_info *pi)
 {
 	FILE *f_cur;
 	int ret = -1;
-	char *p_cur;
-	char buf_cur[BUFSIZ];
-	char fullpath_cur[PATH_MAX];
-	char *s_cur;
 	uint32_t sys_cur_freq = 0;
 	unsigned int i;
 
-	snprintf(fullpath_cur, sizeof(fullpath_cur),
-			POWER_SYSFILE_CUR_FREQ,
-			pi->lcore_id);
-	f_cur = fopen(fullpath_cur, "r");
-	FOPEN_OR_ERR_RET(f_cur, ret);
+	open_core_sysfs_file(POWER_SYSFILE_CUR_FREQ, pi->lcore_id, "r", &f_cur);
+	FOPEN_OR_ERR_GOTO(f_cur, fail);
 
-	/* initialize the cur_idx to matching current frequency freq index */
-	s_cur = fgets(buf_cur, sizeof(buf_cur), f_cur);
-	FOPS_OR_NULL_GOTO(s_cur, fail);
-
-	p_cur = strchr(buf_cur, '\n');
-	if (p_cur != NULL)
-		*p_cur = 0;
-	sys_cur_freq = strtoul(buf_cur, &p_cur, POWER_CONVERT_TO_DECIMAL);
+	ret = read_core_sysfs_u32(f_cur, &sys_cur_freq);
+	FOPS_OR_ERR_GOTO(ret, fail);
 
 	/* convert the frequency to nearest 100000 value
 	 * Ex: if sys_cur_freq=1396789 then freq_conv=1400000
@@ -615,10 +626,10 @@ power_get_cur_idx(struct pstate_power_info *pi)
 		}
 	}
 
-	fclose(f_cur);
-	return 0;
+	ret = 0;
 fail:
-	fclose(f_cur);
+	if (f_cur != NULL)
+		fclose(f_cur);
 	return ret;
 }
 
