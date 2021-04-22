@@ -125,6 +125,11 @@ test_timer_secondary(void)
 
 		mz = rte_memzone_reserve(TEST_INFO_MZ_NAME, sizeof(*test_info),
 					 SOCKET_ID_ANY, 0);
+		if (mz == NULL) {
+			printf("Failed to reserve memzone\n");
+			return TEST_SKIPPED;
+		}
+
 		test_info = mz->addr;
 		TEST_ASSERT_NOT_NULL(test_info, "Couldn't allocate memory for "
 				     "test data");
@@ -171,6 +176,11 @@ test_timer_secondary(void)
 		int i;
 
 		mz = rte_memzone_lookup(TEST_INFO_MZ_NAME);
+		if (mz == NULL) {
+			printf("Failed to lookup memzone\n");
+			return TEST_SKIPPED;
+		}
+
 		test_info = mz->addr;
 		TEST_ASSERT_NOT_NULL(test_info, "Couldn't lookup memzone for "
 				     "test info");
