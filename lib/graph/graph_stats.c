@@ -174,7 +174,7 @@ stats_mem_populate(struct rte_graph_cluster_stats **stats_in,
 	cluster->stat.hz = rte_get_timer_hz();
 	node = graph_node_id_to_ptr(graph, id);
 	if (node == NULL)
-		SET_ERR_JMP(ENOENT, err, "Failed to find node %s in graph %s",
+		SET_ERR_JMP(ENOENT, free, "Failed to find node %s in graph %s",
 			    graph_node->node->name, graph->name);
 	cluster->nodes[cluster->nb_nodes++] = node;
 
@@ -183,6 +183,8 @@ stats_mem_populate(struct rte_graph_cluster_stats **stats_in,
 	*stats_in = stats;
 
 	return 0;
+free:
+	free(stats);
 err:
 	return -rte_errno;
 }
