@@ -1101,6 +1101,7 @@ tap_dev_close(struct rte_eth_dev *dev)
 	struct pmd_internals *internals = dev->data->dev_private;
 	struct pmd_process_private *process_private = dev->process_private;
 	struct rx_queue *rxq;
+	int ret;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
 		rte_free(dev->process_private);
@@ -1133,8 +1134,11 @@ tap_dev_close(struct rte_eth_dev *dev)
 
 	if (internals->remote_if_index) {
 		/* Restore initial remote state */
-		ioctl(internals->ioctl_sock, SIOCSIFFLAGS,
+		ret = ioctl(internals->ioctl_sock, SIOCSIFFLAGS,
 				&internals->remote_initial_flags);
+		if (ret)
+			TAP_LOG(ERR, "restore remote state failed: %d", ret);
+
 	}
 
 	rte_mempool_free(internals->gso_ctx_mp);
