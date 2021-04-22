@@ -1212,7 +1212,6 @@ i40evf_check_vf_reset_done(struct rte_eth_dev *dev)
 	if (i >= MAX_RESET_WAIT_CNT)
 		return -1;
 
-	vf->vf_reset = false;
 	vf->pend_msg &= ~PFMSG_RESET_IMPENDING;
 
 	return 0;
@@ -1391,6 +1390,7 @@ i40evf_handle_pf_event(struct rte_eth_dev *dev, uint8_t *msg,
 	switch (pf_msg->event) {
 	case VIRTCHNL_EVENT_RESET_IMPENDING:
 		PMD_DRV_LOG(DEBUG, "VIRTCHNL_EVENT_RESET_IMPENDING event");
+		vf->vf_reset = true;
 		rte_eth_dev_callback_process(dev,
 				RTE_ETH_EVENT_INTR_RESET, NULL);
 		break;
@@ -2486,6 +2486,11 @@ i40evf_dev_close(struct rte_eth_dev *dev)
 	i40evf_reset_vf(dev);
 	i40e_shutdown_adminq(hw);
 	i40evf_disable_irq0(hw);
+
+	if (vf->vf_reset)
+		rte_pci_enable_bus_master(RTE_ETH_DEV_TO_PCI(dev));
+
+	vf->vf_reset = false;
 
 	rte_free(vf->vf_res);
 	vf->vf_res = NULL;
