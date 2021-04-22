@@ -2216,7 +2216,8 @@ test_activebackup_rx_burst(void)
 			"failed to get primary slave for bonded port (%d)",
 			test_params->bonded_port_id);
 
-	for (i = 0; i < test_params->bonded_slave_count; i++) {
+	for (i = 0; i < test_params->bonded_slave_count &&
+		i < TEST_MAX_NUMBER_OF_PORTS; i++) {
 		/* Generate test bursts of packets to transmit */
 		TEST_ASSERT_EQUAL(generate_test_burst(
 				&gen_pkt_burst[0], burst_size, 0, 1, 0, 0, 0),
