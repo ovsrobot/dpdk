@@ -62,6 +62,11 @@ if [ "$AARCH64" = "true" ]; then
     fi
 fi
 
+if [ "$AARCH32" = "true" ]; then
+    # convert the arch specifier
+    OPTS="$OPTS --cross-file config/arm/arm32_armv8a_linux_gcc"
+fi
+
 if [ "$BUILD_DOCS" = "true" ]; then
     OPTS="$OPTS -Denable_docs=true"
 fi
@@ -84,7 +89,7 @@ OPTS="$OPTS -Dcheck_includes=true"
 meson build --werror $OPTS
 ninja -C build
 
-if [ "$AARCH64" != "true" ]; then
+if [ "$AARCH64" != "true" ] && [ "$AARCH32" != "true" ]; then
     failed=
     configure_coredump
     devtools/test-null.sh || failed="true"
