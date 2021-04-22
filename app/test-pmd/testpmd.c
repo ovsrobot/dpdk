@@ -3563,7 +3563,7 @@ get_eth_dcb_conf(portid_t pid, struct rte_eth_conf *eth_conf,
 		for (i = 0; i < vmdq_rx_conf->nb_pool_maps; i++) {
 			vmdq_rx_conf->pool_map[i].vlan_id = vlan_tags[i];
 			vmdq_rx_conf->pool_map[i].pools =
-				1 << (i % vmdq_rx_conf->nb_queue_pools);
+				1ULL << (i % vmdq_rx_conf->nb_queue_pools);
 		}
 		for (i = 0; i < ETH_DCB_NUM_USER_PRIORITIES; i++) {
 			vmdq_rx_conf->dcb_tc[i] = i % num_tcs;
