@@ -346,11 +346,12 @@ hns3_link_fail_parse(struct hns3_hw *hw, uint8_t link_fail_code)
 }
 
 static void
-hns3pf_handle_link_change_event(struct hns3_hw *hw,
-			      struct hns3_mbx_pf_to_vf_cmd *req)
+hns3pf_handle_link_change_event(struct hns3_hw *hw, void *data)
 {
 #define LINK_STATUS_OFFSET     1
 #define LINK_FAIL_CODE_OFFSET  2
+
+	struct hns3_mbx_vf_to_pf_cmd *req = data;
 
 	if (!req->msg[LINK_STATUS_OFFSET])
 		hns3_link_fail_parse(hw, req->msg[LINK_FAIL_CODE_OFFSET]);
