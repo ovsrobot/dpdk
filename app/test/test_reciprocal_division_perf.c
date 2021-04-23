@@ -143,7 +143,7 @@ test_reciprocal_division_perf(void)
 					"result %"PRIu64"",
 					nresult_u64, rresult_u64);
 			result = 1;
-			break;
+			goto err;
 		}
 	}
 
@@ -182,7 +182,7 @@ test_reciprocal_division_perf(void)
 					dividend_u64, divisor_u64,
 					nresult_u64, rresult_u64);
 			result = 1;
-			break;
+			goto err;
 		}
 	}
 	printf("64bit Division results:\n");
@@ -195,6 +195,7 @@ test_reciprocal_division_perf(void)
 	printf("Cycles per division(reciprocal) : %3.2f\n",
 			((double)tot_cyc_r)/i);
 
+err:
 	return result;
 }
 
