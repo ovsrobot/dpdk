@@ -1712,6 +1712,8 @@ slave_configure(struct rte_eth_dev *bonded_eth_dev,
 	struct rte_flow_error flow_error;
 
 	struct bond_dev_private *internals = bonded_eth_dev->data->dev_private;
+	uint64_t tx_offload_cap = internals->tx_offload_capa;
+	uint64_t tx_offload;
 
 	/* Stop slave */
 	errval = rte_eth_dev_stop(slave_eth_dev->data->port_id);
@@ -1758,6 +1760,17 @@ slave_configure(struct rte_eth_dev *bonded_eth_dev,
 	else
 		slave_eth_dev->data->dev_conf.rxmode.offloads &=
 				~DEV_RX_OFFLOAD_JUMBO_FRAME;
+
+	while (tx_offload_cap != 0) {
+		tx_offload = 1ULL << __builtin_ctzll(tx_offload_cap);
+		if (bonded_eth_dev->data->dev_conf.txmode.offloads & tx_offload)
+			slave_eth_dev->data->dev_conf.txmode.offloads |=
+				tx_offload;
+		else
+			slave_eth_dev->data->dev_conf.txmode.offloads &=
+				~tx_offload;
+		tx_offload_cap &= ~tx_offload;
+	}
 
 	nb_rx_queues = bonded_eth_dev->data->nb_rx_queues;
 	nb_tx_queues = bonded_eth_dev->data->nb_tx_queues;
