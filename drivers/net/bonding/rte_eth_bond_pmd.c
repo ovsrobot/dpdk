@@ -606,8 +606,14 @@ bond_ethdev_tx_burst_round_robin(void *queue, struct rte_mbuf **bufs,
 	/* Send packet burst on each slave device */
 	for (i = 0; i < num_of_slaves; i++) {
 		if (slave_nb_pkts[i] > 0) {
+			int nb_prep_pkts;
+
+			nb_prep_pkts = rte_eth_tx_prepare(slaves[i],
+					bd_tx_q->queue_id, slave_bufs[i],
+					slave_nb_pkts[i]);
+
 			num_tx_slave = rte_eth_tx_burst(slaves[i], bd_tx_q->queue_id,
-					slave_bufs[i], slave_nb_pkts[i]);
+					slave_bufs[i], nb_prep_pkts);
 
 			/* if tx burst fails move packets to end of bufs */
 			if (unlikely(num_tx_slave < slave_nb_pkts[i])) {
@@ -632,6 +638,7 @@ bond_ethdev_tx_burst_active_backup(void *queue,
 {
 	struct bond_dev_private *internals;
 	struct bond_tx_queue *bd_tx_q;
+	int nb_prep_pkts;
 
 	bd_tx_q = (struct bond_tx_queue *)queue;
 	internals = bd_tx_q->dev_private;
@@ -639,8 +646,11 @@ bond_ethdev_tx_burst_active_backup(void *queue,
 	if (internals->active_slave_count < 1)
 		return 0;
 
+	nb_prep_pkts = rte_eth_tx_prepare(internals->current_primary_port,
+				bd_tx_q->queue_id, bufs, nb_pkts);
+
 	return rte_eth_tx_burst(internals->current_primary_port, bd_tx_q->queue_id,
-			bufs, nb_pkts);
+			bufs, nb_prep_pkts);
 }
 
 static inline uint16_t
@@ -939,6 +949,8 @@ bond_ethdev_tx_burst_tlb(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	}
 
 	for (i = 0; i < num_of_slaves; i++) {
+		int nb_prep_pkts;
+
 		rte_eth_macaddr_get(slaves[i], &active_slave_addr);
 		for (j = num_tx_total; j < nb_pkts; j++) {
 			if (j + 3 < nb_pkts)
@@ -955,8 +967,11 @@ bond_ethdev_tx_burst_tlb(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 #endif
 		}
 
-		num_tx_total += rte_eth_tx_burst(slaves[i], bd_tx_q->queue_id,
+		nb_prep_pkts = rte_eth_tx_prepare(slaves[i], bd_tx_q->queue_id,
 				bufs + num_tx_total, nb_pkts - num_tx_total);
+
+		num_tx_total += rte_eth_tx_burst(slaves[i], bd_tx_q->queue_id,
+				bufs + num_tx_total, nb_prep_pkts);
 
 		if (num_tx_total == nb_pkts)
 			break;
@@ -1159,12 +1174,17 @@ tx_burst_balance(void *queue, struct rte_mbuf **bufs, uint16_t nb_bufs,
 
 	/* Send packet burst on each slave device */
 	for (i = 0; i < slave_count; i++) {
+		int nb_prep_pkts;
+
 		if (slave_nb_bufs[i] == 0)
 			continue;
+		nb_prep_pkts = rte_eth_tx_prepare(slave_port_ids[i],
+				bd_tx_q->queue_id, slave_bufs[i],
+				slave_nb_bufs[i]);
 
 		slave_tx_count = rte_eth_tx_burst(slave_port_ids[i],
 				bd_tx_q->queue_id, slave_bufs[i],
-				slave_nb_bufs[i]);
+				nb_prep_pkts);
 
 		total_tx_count += slave_tx_count;
 

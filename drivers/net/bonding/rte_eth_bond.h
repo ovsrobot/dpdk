@@ -343,7 +343,6 @@ rte_eth_bond_link_up_prop_delay_set(uint16_t bonded_port_id,
 int
 rte_eth_bond_link_up_prop_delay_get(uint16_t bonded_port_id);
 
-
 #ifdef __cplusplus
 }
 #endif
