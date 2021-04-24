@@ -186,7 +186,9 @@ enum rte_bbdev_op_ldpcdec_flag_bitmasks {
 	 *  for HARQ memory. If not set, it is assumed the filler bits are not
 	 *  in HARQ memory and handled directly by the LDPC decoder.
 	 */
-	RTE_BBDEV_LDPC_INTERNAL_HARQ_MEMORY_FILLERS = (1ULL << 18)
+	RTE_BBDEV_LDPC_INTERNAL_HARQ_MEMORY_FILLERS = (1ULL << 18),
+	/** Set if a device supports network order data processing */
+	RTE_BBDEV_LDPC_DEC_NETWORK_ORDER = (1ULL << 19)
 };
 
 /** Flags for LDPC encoder operation and capability structure */
@@ -206,7 +208,9 @@ enum rte_bbdev_op_ldpcenc_flag_bitmasks {
 	/** Set if a device supports scatter-gather functionality. */
 	RTE_BBDEV_LDPC_ENC_SCATTER_GATHER = (1ULL << 6),
 	/** Set if a device supports concatenation of non byte aligned output */
-	RTE_BBDEV_LDPC_ENC_CONCATENATION = (1ULL << 7)
+	RTE_BBDEV_LDPC_ENC_CONCATENATION = (1ULL << 7),
+	/** Set if a device supports network order data processing */
+	RTE_BBDEV_LDPC_ENC_NETWORK_ORDER = (1ULL << 8)
 };
 
 /** Flags for the Code Block/Transport block mode  */

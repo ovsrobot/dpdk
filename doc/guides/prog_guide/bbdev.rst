@@ -747,6 +747,9 @@ given below.
 |RTE_BBDEV_LDPC_ENC_CONCATENATION                                    |
 | Set if a device supports concatenation of non byte aligned output  |
 +--------------------------------------------------------------------+
+|RTE_BBDEV_LDPC_ENC_NETWORK_ORDER                                    |
+| Set if a device supports network order data processing             |
++--------------------------------------------------------------------+
 
 The structure passed for each LDPC encode operation is given below,
 with the operation flags forming a bitmask in the ``op_flags`` field.
@@ -941,6 +944,9 @@ given below.
 +--------------------------------------------------------------------+
 |RTE_BBDEV_LDPC_INTERNAL_HARQ_MEMORY_LOOPBACK                        |
 | Set if a device supports loopback access to HARQ internal memory   |
++--------------------------------------------------------------------+
+|RTE_BBDEV_LDPC_DEC_NETWORK_ORDER                                    |
+| Set if a device supports network order data processing             |
 +--------------------------------------------------------------------+
 
 The structure passed for each LDPC decode operation is given below,
