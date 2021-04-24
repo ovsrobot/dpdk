@@ -5,16 +5,10 @@
 #ifndef __BBDEV_LA12XX_H__
 #define __BBDEV_LA12XX_H__
 
-#define BBDEV_IPC_ENC_OP_TYPE	1
-#define BBDEV_IPC_DEC_OP_TYPE	2
-
-#define MAX_LDPC_ENC_FECA_QUEUES	4
-#define MAX_LDPC_DEC_FECA_QUEUES	4
-
 #define MAX_CHANNEL_DEPTH 16
 /* private data structure */
 struct bbdev_la12xx_private {
-	void *ipc_priv;
+	ipc_userspace_t *ipc_priv;
 	uint8_t num_valid_queues;
 	uint8_t max_nb_queues;
 	uint8_t num_ldpc_enc_queues;
@@ -52,5 +46,6 @@ struct bbdev_la12xx_q_priv {
 
 #define lower_32_bits(x) ((uint32_t)((uint64_t)x))
 #define upper_32_bits(x) ((uint32_t)(((uint64_t)(x) >> 16) >> 16))
-
+#define join_32_bits(upper, lower) \
+	((size_t)(((uint64_t)(upper) << 32) | (uint32_t)(lower)))
 #endif

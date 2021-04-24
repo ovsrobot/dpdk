@@ -236,6 +236,11 @@ New Features
   the hash function used in NICs to spread the traffic among the queues.
   It can be used to get predictable mapping of the flows.
 
+* **Added NXP LA12xx baseband PMD.**
+
+  * Added a new baseband PMD driver for NXP LA12xx Software defined radio.
+  * See the :doc:`../bbdevs/la12xx` for more details.
+
 * **Updated testpmd.**
 
   * Added a command line option to configure forced speed for Ethernet port.
