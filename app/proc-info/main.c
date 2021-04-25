@@ -94,6 +94,9 @@ static char *mempool_name;
 /**< Enable iter mempool. */
 static uint32_t enable_iter_mempool;
 static char *mempool_iter_name;
+/**< Enable dump regs. */
+static uint32_t enable_dump_regs;
+static char *dump_regs_file_prefix;
 
 /**< display usage */
 static void
@@ -119,7 +122,8 @@ proc_info_usage(const char *prgname)
 		"  --show-crypto: to display crypto information\n"
 		"  --show-ring[=name]: to display ring information\n"
 		"  --show-mempool[=name]: to display mempool information\n"
-		"  --iter-mempool=name: iterate mempool elements to display content\n",
+		"  --iter-mempool=name: iterate mempool elements to display content\n"
+		"  --dump-regs=file-prefix: dump reg to file with the file-prefix\n",
 		prgname);
 }
 
@@ -226,6 +230,7 @@ proc_info_parse_args(int argc, char **argv)
 		{"show-ring", optional_argument, NULL, 0},
 		{"show-mempool", optional_argument, NULL, 0},
 		{"iter-mempool", required_argument, NULL, 0},
+		{"dump-regs", required_argument, NULL, 0},
 		{NULL, 0, 0, 0}
 	};
 
@@ -288,6 +293,10 @@ proc_info_parse_args(int argc, char **argv)
 					"iter-mempool", MAX_LONG_OPT_SZ)) {
 				enable_iter_mempool = 1;
 				mempool_iter_name = optarg;
+			} else if (!strncmp(long_option[option_index].name,
+					"dump-regs", MAX_LONG_OPT_SZ)) {
+				enable_dump_regs = 1;
+				dump_regs_file_prefix = optarg;
 			}
 			break;
 		case 1:
@@ -1349,6 +1358,85 @@ iter_mempool(char *name)
 	}
 }
 
+static void
+dump_regs(char *file_prefix)
+{
+#define MAX_FILE_NAME_SZ (MAX_LONG_OPT_SZ + 10)
+	char file_name[MAX_FILE_NAME_SZ];
+	struct rte_dev_reg_info reg_info;
+	struct rte_eth_dev_info dev_info;
+	unsigned char *buf_data;
+	FILE *fp_regs;
+	int buf_size;
+	uint16_t i;
+	int ret;
+
+	snprintf(bdr_str, MAX_STRING_LEN, " dump - Port REG");
+	STATS_BDR_STR(10, bdr_str);
+
+	RTE_ETH_FOREACH_DEV(i) {
+		/* Skip if port is not in mask */
+		if ((enabled_port_mask & (1ul << i)) == 0)
+			continue;
+
+		snprintf(bdr_str, MAX_STRING_LEN, " Port (%u)", i);
+		STATS_BDR_STR(5, bdr_str);
+
+		memset(&reg_info, 0, sizeof(reg_info));
+		memset(&dev_info, 0, sizeof(dev_info));
+
+		ret = rte_eth_dev_info_get(i, &dev_info);
+		if (ret) {
+			printf("Error getting device info: %d\n", ret);
+			continue;
+		}
+
+		ret = rte_eth_dev_get_reg_info(i, &reg_info);
+		if (ret) {
+			printf("Error getting device reg info: %d\n", ret);
+			continue;
+		}
+
+		buf_size = reg_info.length * reg_info.width;
+		buf_data = malloc(buf_size);
+		if (buf_data == NULL) {
+			printf("Error allocating %d bytes buffer\n", buf_size);
+			continue;
+		}
+
+		reg_info.data = buf_data;
+		reg_info.length = 0;
+		ret = rte_eth_dev_get_reg_info(i, &reg_info);
+		if (ret) {
+			printf("Error getting regs from device: %d\n", ret);
+			free(buf_data);
+			continue;
+		}
+
+		snprintf(file_name, MAX_FILE_NAME_SZ, "%s-port%u",
+				file_prefix, i);
+		fp_regs = fopen(file_name, "wb");
+		if (fp_regs == NULL) {
+			printf("Error during opening '%s' for writing\n",
+					file_name);
+		} else {
+			if ((int)fwrite(buf_data, 1, buf_size, fp_regs) !=
+					buf_size)
+				printf("Error during writing %s\n",
+						file_prefix);
+			else
+				printf("dump device (%s) regs successfully, "
+					"driver:%s version:0X%08X\n",
+					dev_info.device->name,
+					dev_info.driver_name, reg_info.version);
+
+			fclose(fp_regs);
+		}
+
+		free(buf_data);
+	}
+}
+
 int
 main(int argc, char **argv)
 {
@@ -1454,6 +1542,8 @@ main(int argc, char **argv)
 		show_mempool(mempool_name);
 	if (enable_iter_mempool)
 		iter_mempool(mempool_iter_name);
+	if (enable_dump_regs)
+		dump_regs(dump_regs_file_prefix);
 
 	RTE_ETH_FOREACH_DEV(i)
 		rte_eth_dev_close(i);
