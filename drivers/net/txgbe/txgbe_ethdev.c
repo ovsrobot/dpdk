@@ -1217,17 +1217,12 @@ static void
 txgbe_vlan_hw_extend_enable(struct rte_eth_dev *dev)
 {
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
-	struct rte_eth_rxmode *rxmode = &dev->data->dev_conf.rxmode;
-	struct rte_eth_txmode *txmode = &dev->data->dev_conf.txmode;
 	uint32_t ctrl;
 
 	PMD_INIT_FUNC_TRACE();
 
 	ctrl  = rd32(hw, TXGBE_PORTCTL);
-	ctrl |= TXGBE_PORTCTL_VLANEXT;
-	if (rxmode->offloads & DEV_RX_OFFLOAD_QINQ_STRIP ||
-	    txmode->offloads & DEV_TX_OFFLOAD_QINQ_INSERT)
-		ctrl |= TXGBE_PORTCTL_QINQ;
+	ctrl |= TXGBE_PORTCTL_VLANEXT | TXGBE_PORTCTL_QINQ;
 	wr32(hw, TXGBE_PORTCTL, ctrl);
 }
 
@@ -1287,8 +1282,9 @@ txgbe_vlan_offload_config(struct rte_eth_dev *dev, int mask)
 			txgbe_vlan_hw_filter_disable(dev);
 	}
 
-	if (mask & ETH_VLAN_EXTEND_MASK) {
-		if (rxmode->offloads & DEV_RX_OFFLOAD_VLAN_EXTEND)
+	if (mask & (ETH_VLAN_EXTEND_MASK | ETH_QINQ_STRIP_MASK)) {
+		if (rxmode->offloads & DEV_RX_OFFLOAD_VLAN_EXTEND ||
+			rxmode->offloads & DEV_RX_OFFLOAD_QINQ_STRIP)
 			txgbe_vlan_hw_extend_enable(dev);
 		else
 			txgbe_vlan_hw_extend_disable(dev);
