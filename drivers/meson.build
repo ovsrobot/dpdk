@@ -137,6 +137,7 @@ foreach subpath:subdirs
 
         enabled_drivers += name
         lib_name = '_'.join(['rte', class, name])
+        cflags += '-DRTE_LOG_DEFAULT_LOGTYPE=' + '.'.join(['pmd', class, name])
         dpdk_conf.set(lib_name.to_upper(), 1)
 
         dpdk_extra_ldflags += pkgconfig_extra_libs
