@@ -13,7 +13,8 @@ sources = files('cn10k_worker.c',
                 'cn9k_worker.c',
                 'cn9k_eventdev.c',
                 'cnxk_eventdev.c',
-                'cnxk_eventdev_selftest.c'
+                'cnxk_eventdev_selftest.c',
+                'cnxk_eventdev_stats.c',
                 )
 
 deps += ['bus_pci', 'common_cnxk', 'net_cnxk']
