@@ -329,6 +329,11 @@ API Changes
   ``policer_action_recolor_supported`` and ``policer_action_drop_supported``
   have been removed.
 
+* raw/ioat: The experimental function ``rte_ioat_completed_ops()`` now
+  supports two additional parameters, ``status`` and ``num_unsuccessful``,
+  to allow the reporting of errors from hardware when performing copy
+  operations.
+
 
 ABI Changes
 -----------

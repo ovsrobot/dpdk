@@ -73,13 +73,15 @@ do_multi_copies(int dev_id, int split_batches, int split_completions)
 	if (split_completions) {
 		/* gather completions in two halves */
 		uint16_t half_len = RTE_DIM(srcs) / 2;
-		if (rte_ioat_completed_ops(dev_id, half_len, (void *)completed_src,
+		if (rte_ioat_completed_ops(dev_id, half_len, NULL, NULL,
+				(void *)completed_src,
 				(void *)completed_dst) != half_len) {
 			PRINT_ERR("Error with rte_ioat_completed_ops - first half request\n");
 			rte_rawdev_dump(dev_id, stdout);
 			return -1;
 		}
-		if (rte_ioat_completed_ops(dev_id, half_len, (void *)&completed_src[half_len],
+		if (rte_ioat_completed_ops(dev_id, half_len, NULL, NULL,
+				(void *)&completed_src[half_len],
 				(void *)&completed_dst[half_len]) != half_len) {
 			PRINT_ERR("Error with rte_ioat_completed_ops - second half request\n");
 			rte_rawdev_dump(dev_id, stdout);
@@ -87,7 +89,8 @@ do_multi_copies(int dev_id, int split_batches, int split_completions)
 		}
 	} else {
 		/* gather all completions in one go */
-		if (rte_ioat_completed_ops(dev_id, 64, (void *)completed_src,
+		if (rte_ioat_completed_ops(dev_id, RTE_DIM(completed_src), NULL, NULL,
+				(void *)completed_src,
 				(void *)completed_dst) != RTE_DIM(srcs)) {
 			PRINT_ERR("Error with rte_ioat_completed_ops\n");
 			rte_rawdev_dump(dev_id, stdout);
@@ -151,7 +154,7 @@ test_enqueue_copies(int dev_id)
 		rte_ioat_perform_ops(dev_id);
 		usleep(10);
 
-		if (rte_ioat_completed_ops(dev_id, 1, (void *)&completed[0],
+		if (rte_ioat_completed_ops(dev_id, 1, NULL, NULL, (void *)&completed[0],
 				(void *)&completed[1]) != 1) {
 			PRINT_ERR("Error with rte_ioat_completed_ops\n");
 			return -1;
@@ -170,6 +173,13 @@ test_enqueue_copies(int dev_id)
 			}
 		rte_pktmbuf_free(src);
 		rte_pktmbuf_free(dst);
+
+		/* check ring is now empty */
+		if (rte_ioat_completed_ops(dev_id, 1, NULL, NULL, (void *)&completed[0],
+				(void *)&completed[1]) != 0) {
+			PRINT_ERR("Error: got unexpected returned handles from rte_ioat_completed_ops\n");
+			return -1;
+		}
 	} while (0);
 
 	/* test doing a multiple single copies */
@@ -203,7 +213,8 @@ test_enqueue_copies(int dev_id)
 		}
 		usleep(10);
 
-		if (rte_ioat_completed_ops(dev_id, max_completions, (void *)&completed[0],
+		if (rte_ioat_completed_ops(dev_id, max_completions, NULL, NULL,
+				(void *)&completed[0],
 				(void *)&completed[max_completions]) != max_ops) {
 			PRINT_ERR("Error with rte_ioat_completed_ops\n");
 			rte_rawdev_dump(dev_id, stdout);
@@ -256,7 +267,7 @@ test_enqueue_fill(int dev_id)
 		rte_ioat_perform_ops(dev_id);
 		usleep(100);
 
-		if (rte_ioat_completed_ops(dev_id, 1, (void *)&completed[0],
+		if (rte_ioat_completed_ops(dev_id, 1, NULL, NULL, (void *)&completed[0],
 			(void *)&completed[1]) != 1) {
 			PRINT_ERR("Error with completed ops\n");
 			return -1;
@@ -266,8 +277,7 @@ test_enqueue_fill(int dev_id)
 			char pat_byte = ((char *)&pattern)[j % 8];
 			if (dst_data[j] != pat_byte) {
 				PRINT_ERR("Error with fill operation (lengths = %u): got (%x), not (%x)\n",
-						lengths[i], dst_data[j],
-						pat_byte);
+						lengths[i], dst_data[j], pat_byte);
 				return -1;
 			}
 		}
@@ -307,12 +317,16 @@ test_burst_capacity(int dev_id)
 	unsigned int i;
 	unsigned int length = 1024;
 	uintptr_t completions[BURST_SIZE];
+	/* for CBDMA, no batch descriptor, for DSA there is one */
+	unsigned int batch_desc = (*(enum rte_ioat_dev_type *)
+			rte_rawdevs[dev_id].dev_private == RTE_IDXD_DEV);
+	unsigned int desc_per_burst = BURST_SIZE + batch_desc;
 
 	/* Ring pointer reset needed for checking test results */
 	reset_ring_ptrs(dev_id);
 
 	const unsigned int ring_space = rte_ioat_burst_capacity(dev_id);
-	const unsigned int expected_bursts = (ring_space)/BURST_SIZE;
+	const unsigned int expected_bursts = (ring_space)/(desc_per_burst);
 	src = rte_pktmbuf_alloc(pool);
 	dst = rte_pktmbuf_alloc(pool);
 
@@ -327,8 +341,7 @@ test_burst_capacity(int dev_id)
 			}
 		}
 		bursts_enqueued++;
-		if ((i & 1) == 1) /* hit doorbell every second burst */
-			rte_ioat_perform_ops(dev_id);
+		rte_ioat_perform_ops(dev_id);
 	}
 	rte_ioat_perform_ops(dev_id);
 
@@ -340,9 +353,9 @@ test_burst_capacity(int dev_id)
 	}
 
 	/* check the space is now as expected */
-	if (rte_ioat_burst_capacity(dev_id) != ring_space - bursts_enqueued * BURST_SIZE) {
-		printf("Capacity error. Expected %u free slots, got %u\n",
-				ring_space - bursts_enqueued * BURST_SIZE,
+	if (rte_ioat_burst_capacity(dev_id) != ring_space - bursts_enqueued * desc_per_burst) {
+		PRINT_ERR("Capacity error. Expected %u free slots, got %u\n",
+				ring_space - bursts_enqueued * desc_per_burst,
 				rte_ioat_burst_capacity(dev_id));
 		return -1;
 	}
@@ -350,8 +363,8 @@ test_burst_capacity(int dev_id)
 	/* do cleanup before next tests */
 	usleep(100);
 	for (i = 0; i < bursts_enqueued; i++) {
-		if (rte_ioat_completed_ops(dev_id, BURST_SIZE, completions,
-				completions) != BURST_SIZE) {
+		if (rte_ioat_completed_ops(dev_id, BURST_SIZE, NULL, NULL,
+				completions, completions) != BURST_SIZE) {
 			PRINT_ERR("error with completions\n");
 			return -1;
 		}
@@ -364,7 +377,8 @@ test_burst_capacity(int dev_id)
 
 	/* Verify the descriptor ring is empty before we test */
 	if (rte_ioat_burst_capacity(dev_id) != ring_space) {
-		PRINT_ERR("Error, ring should be empty\n");
+		PRINT_ERR("Error, ring should be empty. Expected %u, got %u\n",
+				ring_space, rte_ioat_burst_capacity(dev_id));
 		return -1;
 	}
 
@@ -386,25 +400,263 @@ test_burst_capacity(int dev_id)
 	/* This check will confirm both that the correct amount of space is taken
 	 * the ring, and that the ring wrap around handling is correct.
 	 */
-	if (rte_ioat_burst_capacity(dev_id) != ring_space - BURST_SIZE) {
-		PRINT_ERR("Error, space available not as expected\n");
+	if (rte_ioat_burst_capacity(dev_id) != ring_space - desc_per_burst) {
+		PRINT_ERR("Error, space available not as expected. Expected %u, got %u\n",
+				ring_space - desc_per_burst, rte_ioat_burst_capacity(dev_id));
 		return -1;
 	}
 
 	/* Now we gather completions to update the read pointer */
-	if (rte_ioat_completed_ops(dev_id, BURST_SIZE, completions, completions) != BURST_SIZE) {
+	if (rte_ioat_completed_ops(dev_id, BURST_SIZE, NULL, NULL,
+			completions, completions) != BURST_SIZE) {
 		PRINT_ERR("Error with completions\n");
 		return -1;
 	}
 
 	/* After gathering the completions, the descriptor ring should be empty */
 	if (rte_ioat_burst_capacity(dev_id) != ring_space) {
-		PRINT_ERR("Error, space available not as expected\n");
+		PRINT_ERR("Error, space available not as expected, Expected %u, got %u\n",
+				ring_space, rte_ioat_burst_capacity(dev_id));
 		return -1;
 	}
 
 	rte_pktmbuf_free(src);
 	rte_pktmbuf_free(dst);
+
+	return 0;
+}
+
+static int
+test_completion_status(int dev_id)
+{
+#define COMP_BURST_SZ	16
+	const unsigned int fail_copy[] = {0, 7, 15};
+	struct rte_mbuf *srcs[COMP_BURST_SZ], *dsts[COMP_BURST_SZ];
+	struct rte_mbuf *completed_src[COMP_BURST_SZ * 2];
+	struct rte_mbuf *completed_dst[COMP_BURST_SZ * 2];
+	unsigned int length = 1024;
+	unsigned int i;
+	uint8_t not_ok = 0;
+
+	/* Test single full batch statuses */
+	for (i = 0; i < RTE_DIM(fail_copy); i++) {
+		uint32_t status[COMP_BURST_SZ] = {0};
+		unsigned int j;
+
+		for (j = 0; j < COMP_BURST_SZ; j++) {
+			srcs[j] = rte_pktmbuf_alloc(pool);
+			dsts[j] = rte_pktmbuf_alloc(pool);
+
+			if (rte_ioat_enqueue_copy(dev_id,
+					(j == fail_copy[i] ? (phys_addr_t)NULL :
+							(srcs[j]->buf_iova + srcs[j]->data_off)),
+					dsts[j]->buf_iova + dsts[j]->data_off,
+					length,
+					(uintptr_t)srcs[j],
+					(uintptr_t)dsts[j]) != 1) {
+				PRINT_ERR("Error with rte_ioat_enqueue_copy for buffer %u\n", j);
+				return -1;
+			}
+		}
+		rte_ioat_perform_ops(dev_id);
+		usleep(100);
+
+		if (rte_ioat_completed_ops(dev_id, COMP_BURST_SZ, status, &not_ok,
+				(void *)completed_src, (void *)completed_dst) != COMP_BURST_SZ) {
+			PRINT_ERR("Error with rte_ioat_completed_ops\n");
+			rte_rawdev_dump(dev_id, stdout);
+			return -1;
+		}
+		if (not_ok != 1 || status[fail_copy[i]] == RTE_IOAT_OP_SUCCESS) {
+			unsigned int j;
+			PRINT_ERR("Error, missing expected failed copy, %u\n", fail_copy[i]);
+			for (j = 0; j < COMP_BURST_SZ; j++)
+				printf("%u ", status[j]);
+			printf("<-- Statuses\n");
+			return -1;
+		}
+		for (j = 0; j < COMP_BURST_SZ; j++) {
+			rte_pktmbuf_free(completed_src[j]);
+			rte_pktmbuf_free(completed_dst[j]);
+		}
+	}
+
+	/* Test gathering status for two batches at once */
+	for (i = 0; i < RTE_DIM(fail_copy); i++) {
+		uint32_t status[COMP_BURST_SZ] = {0};
+		unsigned int batch, j;
+		unsigned int expected_failures = 0;
+
+		for (batch = 0; batch < 2; batch++) {
+			for (j = 0; j < COMP_BURST_SZ/2; j++) {
+				srcs[j] = rte_pktmbuf_alloc(pool);
+				dsts[j] = rte_pktmbuf_alloc(pool);
+
+				if (j == fail_copy[i])
+					expected_failures++;
+				if (rte_ioat_enqueue_copy(dev_id,
+						(j == fail_copy[i] ? (phys_addr_t)NULL :
+							(srcs[j]->buf_iova + srcs[j]->data_off)),
+						dsts[j]->buf_iova + dsts[j]->data_off,
+						length,
+						(uintptr_t)srcs[j],
+						(uintptr_t)dsts[j]) != 1) {
+					PRINT_ERR("Error with rte_ioat_enqueue_copy for buffer %u\n",
+							j);
+					return -1;
+				}
+			}
+			rte_ioat_perform_ops(dev_id);
+		}
+		usleep(100);
+
+		if (rte_ioat_completed_ops(dev_id, COMP_BURST_SZ, status, &not_ok,
+				(void *)completed_src, (void *)completed_dst) != COMP_BURST_SZ) {
+			PRINT_ERR("Error with rte_ioat_completed_ops\n");
+			rte_rawdev_dump(dev_id, stdout);
+			return -1;
+		}
+		if (not_ok != expected_failures) {
+			unsigned int j;
+			PRINT_ERR("Error, missing expected failed copy, got %u, not %u\n",
+					not_ok, expected_failures);
+			for (j = 0; j < COMP_BURST_SZ; j++)
+				printf("%u ", status[j]);
+			printf("<-- Statuses\n");
+			return -1;
+		}
+		for (j = 0; j < COMP_BURST_SZ; j++) {
+			rte_pktmbuf_free(completed_src[j]);
+			rte_pktmbuf_free(completed_dst[j]);
+		}
+	}
+
+	/* Test gathering status for half batch at a time */
+	for (i = 0; i < RTE_DIM(fail_copy); i++) {
+		uint32_t status[COMP_BURST_SZ] = {0};
+		unsigned int j;
+
+		for (j = 0; j < COMP_BURST_SZ; j++) {
+			srcs[j] = rte_pktmbuf_alloc(pool);
+			dsts[j] = rte_pktmbuf_alloc(pool);
+
+			if (rte_ioat_enqueue_copy(dev_id,
+					(j == fail_copy[i] ? (phys_addr_t)NULL :
+							(srcs[j]->buf_iova + srcs[j]->data_off)),
+					dsts[j]->buf_iova + dsts[j]->data_off,
+					length,
+					(uintptr_t)srcs[j],
+					(uintptr_t)dsts[j]) != 1) {
+				PRINT_ERR("Error with rte_ioat_enqueue_copy for buffer %u\n", j);
+				return -1;
+			}
+		}
+		rte_ioat_perform_ops(dev_id);
+		usleep(100);
+
+		if (rte_ioat_completed_ops(dev_id, COMP_BURST_SZ / 2, status, &not_ok,
+				(void *)completed_src,
+				(void *)completed_dst) != (COMP_BURST_SZ / 2)) {
+			PRINT_ERR("Error with rte_ioat_completed_ops\n");
+			rte_rawdev_dump(dev_id, stdout);
+			return -1;
+		}
+		if (fail_copy[i] < COMP_BURST_SZ / 2 &&
+				(not_ok != 1 || status[fail_copy[i]] == RTE_IOAT_OP_SUCCESS)) {
+			PRINT_ERR("Missing expected failure in first half-batch\n");
+			rte_rawdev_dump(dev_id, stdout);
+			return -1;
+		}
+		if (rte_ioat_completed_ops(dev_id, COMP_BURST_SZ / 2, status, &not_ok,
+				(void *)&completed_src[COMP_BURST_SZ / 2],
+				(void *)&completed_dst[COMP_BURST_SZ / 2]) != (COMP_BURST_SZ / 2)) {
+			PRINT_ERR("Error with rte_ioat_completed_ops\n");
+			rte_rawdev_dump(dev_id, stdout);
+			return -1;
+		}
+		if (fail_copy[i] >= COMP_BURST_SZ / 2 && (not_ok != 1 ||
+				status[fail_copy[i] - (COMP_BURST_SZ / 2)]
+					== RTE_IOAT_OP_SUCCESS)) {
+			PRINT_ERR("Missing expected failure in second half-batch\n");
+			rte_rawdev_dump(dev_id, stdout);
+			return -1;
+		}
+
+		for (j = 0; j < COMP_BURST_SZ; j++) {
+			rte_pktmbuf_free(completed_src[j]);
+			rte_pktmbuf_free(completed_dst[j]);
+		}
+	}
+
+	/* Test gathering statuses with fence */
+	for (i = 1; i < RTE_DIM(fail_copy); i++) {
+		uint32_t status[COMP_BURST_SZ * 2] = {0};
+		unsigned int j;
+		uint16_t count;
+
+		for (j = 0; j < COMP_BURST_SZ; j++) {
+			srcs[j] = rte_pktmbuf_alloc(pool);
+			dsts[j] = rte_pktmbuf_alloc(pool);
+
+			/* always fail the first copy */
+			if (rte_ioat_enqueue_copy(dev_id,
+					(j == 0 ? (phys_addr_t)NULL :
+						(srcs[j]->buf_iova + srcs[j]->data_off)),
+					dsts[j]->buf_iova + dsts[j]->data_off,
+					length,
+					(uintptr_t)srcs[j],
+					(uintptr_t)dsts[j]) != 1) {
+				PRINT_ERR("Error with rte_ioat_enqueue_copy for buffer %u\n", j);
+				return -1;
+			}
+			/* put in a fence which will stop any further transactions
+			 * because we had a previous failure.
+			 */
+			if (j == fail_copy[i])
+				rte_ioat_fence(dev_id);
+		}
+		rte_ioat_perform_ops(dev_id);
+		usleep(100);
+
+		count = rte_ioat_completed_ops(dev_id, COMP_BURST_SZ * 2, status, &not_ok,
+				(void *)completed_src, (void *)completed_dst);
+		if (count != COMP_BURST_SZ) {
+			PRINT_ERR("Error with rte_ioat_completed_ops, got %u not %u\n",
+					count, COMP_BURST_SZ);
+			for (j = 0; j < count; j++)
+				printf("%u ", status[j]);
+			printf("<-- Statuses\n");
+			return -1;
+		}
+		if (not_ok != COMP_BURST_SZ - fail_copy[i]) {
+			PRINT_ERR("Unexpected failed copy count, got %u, expected %u\n",
+					not_ok, COMP_BURST_SZ - fail_copy[i]);
+			for (j = 0; j < COMP_BURST_SZ; j++)
+				printf("%u ", status[j]);
+			printf("<-- Statuses\n");
+			return -1;
+		}
+		if (status[0] == RTE_IOAT_OP_SUCCESS || status[0] == RTE_IOAT_OP_SKIPPED) {
+			PRINT_ERR("Error, op 0 unexpectedly did not fail.\n");
+			return -1;
+		}
+		for (j = 1; j <= fail_copy[i]; j++) {
+			if (status[j] != RTE_IOAT_OP_SUCCESS) {
+				PRINT_ERR("Error, op %u unexpectedly failed\n", j);
+				return -1;
+			}
+		}
+		for (j = fail_copy[i] + 1; j < COMP_BURST_SZ; j++) {
+			if (status[j] != RTE_IOAT_OP_SKIPPED) {
+				PRINT_ERR("Error, all descriptors after fence should be invalid\n");
+				return -1;
+			}
+		}
+		for (j = 0; j < COMP_BURST_SZ; j++) {
+			rte_pktmbuf_free(completed_src[j]);
+			rte_pktmbuf_free(completed_dst[j]);
+		}
+	}
 
 	return 0;
 }
@@ -520,6 +772,12 @@ ioat_rawdev_test(uint16_t dev_id)
 	printf("Running Burst Capacity Test\n");
 	if (test_burst_capacity(dev_id) != 0)
 		goto err;
+
+	if (rte_eal_iova_mode() == RTE_IOVA_VA) {
+		printf("Running Completions Status Test\n");
+		if (test_completion_status(dev_id) != 0)
+			goto err;
+	}
 
 	rte_rawdev_stop(dev_id);
 	if (rte_rawdev_xstats_reset(dev_id, NULL, 0) != 0) {
