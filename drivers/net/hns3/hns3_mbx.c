@@ -346,11 +346,19 @@ hns3_link_fail_parse(struct hns3_hw *hw, uint8_t link_fail_code)
 }
 
 static void
+
 hns3pf_handle_link_change_event(struct hns3_hw *hw,
-			      struct hns3_mbx_pf_to_vf_cmd *req)
+				struct hns3_mbx_pf_to_vf_cmd *cmd)
 {
 #define LINK_STATUS_OFFSET     1
 #define LINK_FAIL_CODE_OFFSET  2
+
+	/*
+	 * This message is reported by the firmware and is reported in
+	 * 'struct hns3_mbx_vf_to_pf_cmd' format. Therefore, we should cast
+	 * the cmd to 'struct hns3_mbx_vf_to_pf_cmd' first.
+	 */
+	struct hns3_mbx_vf_to_pf_cmd *req = (struct hns3_mbx_vf_to_pf_cmd *)cmd;
 
 	if (!req->msg[LINK_STATUS_OFFSET])
 		hns3_link_fail_parse(hw, req->msg[LINK_FAIL_CODE_OFFSET]);
