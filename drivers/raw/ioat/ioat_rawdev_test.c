@@ -277,6 +277,138 @@ test_enqueue_fill(int dev_id)
 	return 0;
 }
 
+static inline void
+reset_ring_ptrs(int dev_id)
+{
+	enum rte_ioat_dev_type *type =
+		(enum rte_ioat_dev_type *)rte_rawdevs[dev_id].dev_private;
+
+	if (*type == RTE_IDXD_DEV) {
+		struct rte_idxd_rawdev *idxd =
+			(struct rte_idxd_rawdev *)rte_rawdevs[dev_id].dev_private;
+
+		idxd->batch_start = 0;
+		idxd->hdls_read = 0;
+	} else {
+		struct rte_ioat_rawdev *ioat =
+			(struct rte_ioat_rawdev *)rte_rawdevs[dev_id].dev_private;
+
+		ioat->next_read = 0;
+		ioat->next_write = 0;
+	}
+}
+
+static int
+test_burst_capacity(int dev_id)
+{
+#define BURST_SIZE			64
+	struct rte_mbuf *src, *dst;
+	unsigned int bursts_enqueued = 0;
+	unsigned int i;
+	unsigned int length = 1024;
+	uintptr_t completions[BURST_SIZE];
+
+	/* Ring pointer reset needed for checking test results */
+	reset_ring_ptrs(dev_id);
+
+	const unsigned int ring_space = rte_ioat_burst_capacity(dev_id);
+	const unsigned int expected_bursts = (ring_space)/BURST_SIZE;
+	src = rte_pktmbuf_alloc(pool);
+	dst = rte_pktmbuf_alloc(pool);
+
+	/* Enqueue burst until they won't fit */
+	while (rte_ioat_burst_capacity(dev_id) >= BURST_SIZE) {
+		for (i = 0; i < BURST_SIZE; i++) {
+
+			if (rte_ioat_enqueue_copy(dev_id, rte_pktmbuf_iova(src),
+					rte_pktmbuf_iova(dst), length, 0, 0) != 1) {
+				PRINT_ERR("Error with rte_ioat_enqueue_copy\n");
+				return -1;
+			}
+		}
+		bursts_enqueued++;
+		if ((i & 1) == 1) /* hit doorbell every second burst */
+			rte_ioat_perform_ops(dev_id);
+	}
+	rte_ioat_perform_ops(dev_id);
+
+	/* check the number of bursts enqueued was as expected */
+	if (bursts_enqueued != expected_bursts) {
+		PRINT_ERR("Capacity test failed, enqueued %u not %u bursts\n",
+				bursts_enqueued, expected_bursts);
+		return -1;
+	}
+
+	/* check the space is now as expected */
+	if (rte_ioat_burst_capacity(dev_id) != ring_space - bursts_enqueued * BURST_SIZE) {
+		printf("Capacity error. Expected %u free slots, got %u\n",
+				ring_space - bursts_enqueued * BURST_SIZE,
+				rte_ioat_burst_capacity(dev_id));
+		return -1;
+	}
+
+	/* do cleanup before next tests */
+	usleep(100);
+	for (i = 0; i < bursts_enqueued; i++) {
+		if (rte_ioat_completed_ops(dev_id, BURST_SIZE, completions,
+				completions) != BURST_SIZE) {
+			PRINT_ERR("error with completions\n");
+			return -1;
+		}
+	}
+
+	/* Since we reset the ring pointers before the previous test, and we enqueued
+	 * the max amount of bursts, enqueuing one more burst will enable us to test
+	 * the wrap around handling in rte_ioat_burst_capacity().
+	 */
+
+	/* Verify the descriptor ring is empty before we test */
+	if (rte_ioat_burst_capacity(dev_id) != ring_space) {
+		PRINT_ERR("Error, ring should be empty\n");
+		return -1;
+	}
+
+	/* Enqueue one burst of mbufs & verify the expected space is taken */
+	for (i = 0; i < BURST_SIZE; i++) {
+		if (rte_ioat_enqueue_copy(dev_id, rte_pktmbuf_iova(src),
+				rte_pktmbuf_iova(dst), length, 0, 0) != 1) {
+			PRINT_ERR("Error with rte_ioat_enqueue_copy\n");
+			return -1;
+		}
+	}
+
+	/* Perform the copy before checking the capacity again so that the write
+	 * pointer in the descriptor ring is wrapped/masked
+	 */
+	rte_ioat_perform_ops(dev_id);
+	usleep(100);
+
+	/* This check will confirm both that the correct amount of space is taken
+	 * the ring, and that the ring wrap around handling is correct.
+	 */
+	if (rte_ioat_burst_capacity(dev_id) != ring_space - BURST_SIZE) {
+		PRINT_ERR("Error, space available not as expected\n");
+		return -1;
+	}
+
+	/* Now we gather completions to update the read pointer */
+	if (rte_ioat_completed_ops(dev_id, BURST_SIZE, completions, completions) != BURST_SIZE) {
+		PRINT_ERR("Error with completions\n");
+		return -1;
+	}
+
+	/* After gathering the completions, the descriptor ring should be empty */
+	if (rte_ioat_burst_capacity(dev_id) != ring_space) {
+		PRINT_ERR("Error, space available not as expected\n");
+		return -1;
+	}
+
+	rte_pktmbuf_free(src);
+	rte_pktmbuf_free(dst);
+
+	return 0;
+}
+
 int
 ioat_rawdev_test(uint16_t dev_id)
 {
@@ -321,7 +453,7 @@ ioat_rawdev_test(uint16_t dev_id)
 	}
 
 	pool = rte_pktmbuf_pool_create("TEST_IOAT_POOL",
-			256, /* n == num elements */
+			p.ring_size * 2, /* n == num elements */
 			32,  /* cache size */
 			0,   /* priv size */
 			2048, /* data room size */
@@ -384,6 +516,10 @@ ioat_rawdev_test(uint16_t dev_id)
 		printf("\r");
 	}
 	printf("\n");
+
+	printf("Running Burst Capacity Test\n");
+	if (test_burst_capacity(dev_id) != 0)
+		goto err;
 
 	rte_rawdev_stop(dev_id);
 	if (rte_rawdev_xstats_reset(dev_id, NULL, 0) != 0) {
