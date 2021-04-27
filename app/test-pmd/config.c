@@ -54,16 +54,9 @@
 
 #include "testpmd.h"
 #include "cmdline_mtr.h"
+#include "config.h"
 
 #define ETHDEV_FWVERS_LEN 32
-
-#ifdef CLOCK_MONOTONIC_RAW /* Defined in glibc bits/time.h */
-#define CLOCK_TYPE_ID CLOCK_MONOTONIC_RAW
-#else
-#define CLOCK_TYPE_ID CLOCK_MONOTONIC
-#endif
-
-#define NS_PER_SEC 1E9
 
 static char *flowtype_to_str(uint16_t flow_type);
 
@@ -205,6 +198,7 @@ nic_stats_display(portid_t port_id)
 	       "%-"PRIu64"\n", stats.opackets, stats.oerrors, stats.obytes);
 
 	diff_ns = 0;
+
 	if (clock_gettime(CLOCK_TYPE_ID, &cur_time) == 0) {
 		uint64_t ns;
 
