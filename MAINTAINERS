@@ -726,7 +726,6 @@ F: doc/guides/nics/ice.rst
 F: doc/guides/nics/features/ice.ini
 
 Intel igc
-M: Jeff Guo <jia.guo@intel.com>
 M: Haiyue Wang <haiyue.wang@intel.com>
 T: git://dpdk.org/next/dpdk-next-net-intel
 F: drivers/net/igc/
