@@ -271,6 +271,10 @@ New Features
   * Added support for crypto adapter forward mode in octeontx2 event and crypto
     device driver.
 
+* **Added support for vhost async packed ring data path.**
+
+  Added packed ring support for async vhost.
+
 
 Removed Items
 -------------
