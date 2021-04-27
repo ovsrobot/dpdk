@@ -1501,7 +1501,9 @@ i40e_simple_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 			return i;
 		}
 
-		if (ol_flags & PKT_TX_OFFLOAD_MASK) {
+		if (ol_flags & PKT_TX_OFFLOAD_MASK &
+		    ~(PKT_TX_OUTER_IPV6 | PKT_TX_OUTER_IPV4 |
+		      PKT_TX_IPV6 | PKT_TX_IPV4)) {
 			rte_errno = ENOTSUP;
 			return i;
 		}
