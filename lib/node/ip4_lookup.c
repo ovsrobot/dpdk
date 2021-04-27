@@ -129,7 +129,7 @@ rte_node_ip4_route_add(uint32_t ip, uint8_t depth, uint16_t next_hop,
 {
 	char abuf[INET6_ADDRSTRLEN];
 	struct in_addr in;
-	uint8_t socket;
+	int socket;
 	uint32_t val;
 	int ret;
 

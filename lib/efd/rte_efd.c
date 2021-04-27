@@ -500,7 +500,7 @@ rte_efd_create(const char *name, uint32_t max_num_rules, uint32_t key_len,
 	struct rte_efd_table *table = NULL;
 	uint8_t *key_array = NULL;
 	uint32_t num_chunks, num_chunks_shift;
-	uint8_t socket_id;
+	unsigned int socket_id;
 	struct rte_efd_list *efd_list = NULL;
 	struct rte_tailq_entry *te;
 	uint64_t offline_table_size;
@@ -746,7 +746,7 @@ rte_efd_find_existing(const char *name)
 void
 rte_efd_free(struct rte_efd_table *table)
 {
-	uint8_t socket_id;
+	unsigned int socket_id;
 	struct rte_efd_list *efd_list;
 	struct rte_tailq_entry *te, *temp;
 
