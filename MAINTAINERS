@@ -674,7 +674,6 @@ F: doc/guides/nics/hinic.rst
 F: doc/guides/nics/features/hinic.ini
 
 Intel e1000
-M: Jeff Guo <jia.guo@intel.com>
 M: Haiyue Wang <haiyue.wang@intel.com>
 T: git://dpdk.org/next/dpdk-next-net-intel
 F: drivers/net/e1000/
