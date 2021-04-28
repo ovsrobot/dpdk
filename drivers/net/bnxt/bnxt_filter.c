@@ -188,6 +188,7 @@ struct bnxt_filter_info *bnxt_get_unused_filter(struct bnxt *bp)
 		return NULL;
 	}
 	STAILQ_REMOVE_HEAD(&bp->free_filter_list, next);
+	memset(filter, 0, sizeof(*filter));
 
 	return filter;
 }
