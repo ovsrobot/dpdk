@@ -1549,8 +1549,12 @@ cmd_config_speed_all_parsed(void *parsed_result,
 			__rte_unused void *data)
 {
 	struct cmd_config_speed_all *res = parsed_result;
+	uint32_t old_link_speeds[RTE_MAX_ETHPORTS];
+	struct rte_port *port;
 	uint32_t link_speed;
 	portid_t pid;
+	portid_t i;
+	int ret;
 
 	if (!all_ports_stopped()) {
 		printf("Please stop all ports first\n");
@@ -1562,7 +1566,26 @@ cmd_config_speed_all_parsed(void *parsed_result,
 		return;
 
 	RTE_ETH_FOREACH_DEV(pid) {
-		ports[pid].dev_conf.link_speeds = link_speed;
+		port = &ports[pid];
+		old_link_speeds[pid] = port->dev_conf.link_speeds;
+		port->dev_conf.link_speeds = link_speed;
+		ret = rte_eth_dev_configure(pid, nb_rxq, nb_txq,
+					    &port->dev_conf);
+		if (ret < 0) {
+			printf("Failed to check link speeds for port %d, ret = %d.\n",
+				pid, ret);
+			goto roolback;
+		}
+	}
+
+	cmd_reconfig_device_queue(RTE_PORT_ALL, 1, 1);
+
+	return;
+
+roolback:
+	for (i = 0; i <= pid; i++) {
+		port = &ports[i];
+		port->dev_conf.link_speeds = old_link_speeds[i];
 	}
 
 	cmd_reconfig_device_queue(RTE_PORT_ALL, 1, 1);
@@ -1621,7 +1644,10 @@ cmd_config_speed_specific_parsed(void *parsed_result,
 				__rte_unused void *data)
 {
 	struct cmd_config_speed_specific *res = parsed_result;
+	uint32_t old_link_speeds;
+	struct rte_port *port;
 	uint32_t link_speed;
+	int ret;
 
 	if (!all_ports_stopped()) {
 		printf("Please stop all ports first\n");
@@ -1635,8 +1661,20 @@ cmd_config_speed_specific_parsed(void *parsed_result,
 			&link_speed) < 0)
 		return;
 
-	ports[res->id].dev_conf.link_speeds = link_speed;
+	port = &ports[res->id];
+	old_link_speeds = port->dev_conf.link_speeds;
+	port->dev_conf.link_speeds = link_speed;
+	ret = rte_eth_dev_configure(res->id, nb_rxq, nb_txq,
+				    &port->dev_conf);
+	if (ret < 0) {
+		printf("Failed to check link speeds for port %d, ret = %d.\n",
+			res->id, ret);
+		port->dev_conf.link_speeds = old_link_speeds;
+	}
 
+	/*
+	 * If the cmd fails to execute, it is necessary to reconfigure device.
+	 */
 	cmd_reconfig_device_queue(RTE_PORT_ALL, 1, 1);
 }
 
