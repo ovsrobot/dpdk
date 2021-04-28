@@ -298,6 +298,13 @@ soc_octeontx2 = {
     'numa': false
 }
 
+soc_qualcomm = {
+    'description': 'Qualcomm',
+    'implementer': '0x51',
+    'part_number': '0xc00',
+    'numa': false
+}
+
 soc_stingray = {
     'description': 'Broadcom Stingray',
     'implementer': '0x41',
@@ -334,6 +341,7 @@ socs = {
     'n1sdp': soc_n1sdp,
     'n2': soc_n2,
     'octeontx2': soc_octeontx2,
+    'qualcomm': soc_qualcomm,
     'stingray': soc_stingray,
     'thunderx2': soc_thunderx2,
     'thunderxt88': soc_thunderxt88
