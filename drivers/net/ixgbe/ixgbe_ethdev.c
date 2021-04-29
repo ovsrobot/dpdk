@@ -1884,6 +1884,39 @@ ixgbe_vlan_tpid_set(struct rte_eth_dev *dev,
 			/* Only the high 16-bits is valid */
 			IXGBE_WRITE_REG(hw, IXGBE_EXVET, (uint32_t)tpid <<
 					IXGBE_EXVET_VET_EXT_SHIFT);
+			/* For X550, additional register need be set*/
+			switch (hw->device_id) {
+			case IXGBE_DEV_ID_X550T:
+			case IXGBE_DEV_ID_X550T1:
+			case IXGBE_DEV_ID_X550EM_A_KR:
+			case IXGBE_DEV_ID_X550EM_A_KR_L:
+			case IXGBE_DEV_ID_X550EM_A_SFP_N:
+			case IXGBE_DEV_ID_X550EM_A_SGMII:
+			case IXGBE_DEV_ID_X550EM_A_SGMII_L:
+			case IXGBE_DEV_ID_X550EM_A_10G_T:
+			case IXGBE_DEV_ID_X550EM_A_QSFP:
+			case IXGBE_DEV_ID_X550EM_A_QSFP_N:
+			case IXGBE_DEV_ID_X550EM_A_SFP:
+			case IXGBE_DEV_ID_X550EM_A_1G_T:
+			case IXGBE_DEV_ID_X550EM_A_1G_T_L:
+			case IXGBE_DEV_ID_X550EM_X_KX4:
+			case IXGBE_DEV_ID_X550EM_X_KR:
+			case IXGBE_DEV_ID_X550EM_X_SFP:
+			case IXGBE_DEV_ID_X550EM_X_10G_T:
+			case IXGBE_DEV_ID_X550EM_X_1G_T:
+			case IXGBE_DEV_ID_X550EM_X_XFI:
+			case IXGBE_DEV_ID_X550_VF_HV:
+			case IXGBE_DEV_ID_X550_VF:
+			case IXGBE_DEV_ID_X550EM_A_VF:
+			case IXGBE_DEV_ID_X550EM_A_VF_HV:
+			case IXGBE_DEV_ID_X550EM_X_VF:
+			case IXGBE_DEV_ID_X550EM_X_VF_HV:
+				IXGBE_WRITE_REG(hw, IXGBE_EXVET_T, (uint32_t)tpid <<
+					IXGBE_EXVET_VET_EXT_SHIFT);
+				break;
+			default:
+				break;
+			}
 		} else {
 			reg = IXGBE_READ_REG(hw, IXGBE_VLNCTRL);
 			reg = (reg & (~IXGBE_VLNCTRL_VET)) | (uint32_t)tpid;

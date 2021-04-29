@@ -151,6 +151,7 @@
 #define IXGBE_TCPTIMER		0x0004C
 #define IXGBE_CORESPARE		0x00600
 #define IXGBE_EXVET		0x05078
+#define IXGBE_EXVET_T		0x08224
 
 /* NVM Registers */
 #define IXGBE_EEC		0x10010
