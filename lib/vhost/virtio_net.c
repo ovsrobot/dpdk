@@ -8,6 +8,7 @@
 
 #include <rte_mbuf.h>
 #include <rte_memcpy.h>
+#include <rte_net.h>
 #include <rte_ether.h>
 #include <rte_ip.h>
 #include <rte_vhost.h>
@@ -1827,105 +1828,74 @@ virtio_net_with_host_offload(struct virtio_net *dev)
 	return false;
 }
 
-static void
-parse_ethernet(struct rte_mbuf *m, uint16_t *l4_proto, void **l4_hdr)
-{
-	struct rte_ipv4_hdr *ipv4_hdr;
-	struct rte_ipv6_hdr *ipv6_hdr;
-	void *l3_hdr = NULL;
-	struct rte_ether_hdr *eth_hdr;
-	uint16_t ethertype;
-
-	eth_hdr = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
-
-	m->l2_len = sizeof(struct rte_ether_hdr);
-	ethertype = rte_be_to_cpu_16(eth_hdr->ether_type);
-
-	if (ethertype == RTE_ETHER_TYPE_VLAN) {
-		struct rte_vlan_hdr *vlan_hdr =
-			(struct rte_vlan_hdr *)(eth_hdr + 1);
-
-		m->l2_len += sizeof(struct rte_vlan_hdr);
-		ethertype = rte_be_to_cpu_16(vlan_hdr->eth_proto);
-	}
-
-	l3_hdr = (char *)eth_hdr + m->l2_len;
-
-	switch (ethertype) {
-	case RTE_ETHER_TYPE_IPV4:
-		ipv4_hdr = l3_hdr;
-		*l4_proto = ipv4_hdr->next_proto_id;
-		m->l3_len = rte_ipv4_hdr_len(ipv4_hdr);
-		*l4_hdr = (char *)l3_hdr + m->l3_len;
-		m->ol_flags |= PKT_TX_IPV4;
-		break;
-	case RTE_ETHER_TYPE_IPV6:
-		ipv6_hdr = l3_hdr;
-		*l4_proto = ipv6_hdr->proto;
-		m->l3_len = sizeof(struct rte_ipv6_hdr);
-		*l4_hdr = (char *)l3_hdr + m->l3_len;
-		m->ol_flags |= PKT_TX_IPV6;
-		break;
-	default:
-		m->l3_len = 0;
-		*l4_proto = 0;
-		*l4_hdr = NULL;
-		break;
-	}
-}
-
-static __rte_always_inline void
+static __rte_always_inline int
 vhost_dequeue_offload(struct virtio_net_hdr *hdr, struct rte_mbuf *m)
 {
-	uint16_t l4_proto = 0;
-	void *l4_hdr = NULL;
-	struct rte_tcp_hdr *tcp_hdr = NULL;
+	struct rte_net_hdr_lens hdr_lens;
+	uint32_t hdrlen, ptype;
+	int l4_supported = 0;
 
+	/* nothing to do */
 	if (hdr->flags == 0 && hdr->gso_type == VIRTIO_NET_HDR_GSO_NONE)
-		return;
+		return 0;
 
-	parse_ethernet(m, &l4_proto, &l4_hdr);
-	if (hdr->flags == VIRTIO_NET_HDR_F_NEEDS_CSUM) {
-		if (hdr->csum_start == (m->l2_len + m->l3_len)) {
-			switch (hdr->csum_offset) {
-			case (offsetof(struct rte_tcp_hdr, cksum)):
-				if (l4_proto == IPPROTO_TCP)
-					m->ol_flags |= PKT_TX_TCP_CKSUM;
-				break;
-			case (offsetof(struct rte_udp_hdr, dgram_cksum)):
-				if (l4_proto == IPPROTO_UDP)
-					m->ol_flags |= PKT_TX_UDP_CKSUM;
-				break;
-			case (offsetof(struct rte_sctp_hdr, cksum)):
-				if (l4_proto == IPPROTO_SCTP)
-					m->ol_flags |= PKT_TX_SCTP_CKSUM;
-				break;
-			default:
-				break;
-			}
+	m->ol_flags |= PKT_RX_IP_CKSUM_UNKNOWN;
+
+	ptype = rte_net_get_ptype(m, &hdr_lens, RTE_PTYPE_ALL_MASK);
+	m->packet_type = ptype;
+	if ((ptype & RTE_PTYPE_L4_MASK) == RTE_PTYPE_L4_TCP ||
+	    (ptype & RTE_PTYPE_L4_MASK) == RTE_PTYPE_L4_UDP ||
+	    (ptype & RTE_PTYPE_L4_MASK) == RTE_PTYPE_L4_SCTP)
+		l4_supported = 1;
+
+	if (hdr->flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) {
+		hdrlen = hdr_lens.l2_len + hdr_lens.l3_len + hdr_lens.l4_len;
+		if (hdr->csum_start <= hdrlen && l4_supported) {
+			m->ol_flags |= PKT_RX_L4_CKSUM_NONE;
+		} else {
+			/* Unknown proto or tunnel, do sw cksum. We can assume
+			 * the cksum field is in the first segment since the
+			 * buffers we provided to the host are large enough.
+			 * In case of SCTP, this will be wrong since it's a CRC
+			 * but there's nothing we can do.
+			 */
+			uint16_t csum = 0, off;
+
+			if (rte_raw_cksum_mbuf(m, hdr->csum_start,
+					rte_pktmbuf_pkt_len(m) - hdr->csum_start, &csum) < 0)
+				return -EINVAL;
+			if (likely(csum != 0xffff))
+				csum = ~csum;
+			off = hdr->csum_offset + hdr->csum_start;
+			if (rte_pktmbuf_data_len(m) >= off + 1)
+				*rte_pktmbuf_mtod_offset(m, uint16_t *, off) = csum;
 		}
+	} else if (hdr->flags & VIRTIO_NET_HDR_F_DATA_VALID && l4_supported) {
+		m->ol_flags |= PKT_RX_L4_CKSUM_GOOD;
 	}
 
-	if (l4_hdr && hdr->gso_type != VIRTIO_NET_HDR_GSO_NONE) {
+	/* GSO request, save required information in mbuf */
+	if (hdr->gso_type != VIRTIO_NET_HDR_GSO_NONE) {
+		/* Check unsupported modes */
+		if (hdr->gso_size == 0)
+			return -EINVAL;
+
 		switch (hdr->gso_type & ~VIRTIO_NET_HDR_GSO_ECN) {
 		case VIRTIO_NET_HDR_GSO_TCPV4:
 		case VIRTIO_NET_HDR_GSO_TCPV6:
-			tcp_hdr = l4_hdr;
-			m->ol_flags |= PKT_TX_TCP_SEG;
-			m->tso_segsz = hdr->gso_size;
-			m->l4_len = (tcp_hdr->data_off & 0xf0) >> 2;
-			break;
 		case VIRTIO_NET_HDR_GSO_UDP:
-			m->ol_flags |= PKT_TX_UDP_SEG;
+			m->ol_flags |= PKT_RX_LRO | PKT_RX_L4_CKSUM_NONE;
+			/* Update mss lengths in mbuf */
 			m->tso_segsz = hdr->gso_size;
-			m->l4_len = sizeof(struct rte_udp_hdr);
 			break;
 		default:
 			VHOST_LOG_DATA(WARNING,
 				"unsupported gso type %u.\n", hdr->gso_type);
-			break;
+			return -EINVAL;
 		}
 	}
+
+	return 0;
 }
 
 static __rte_noinline void
@@ -2084,8 +2054,11 @@ copy_desc_to_mbuf(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	prev->data_len = mbuf_offset;
 	m->pkt_len    += mbuf_offset;
 
-	if (hdr)
-		vhost_dequeue_offload(hdr, m);
+	if (hdr && vhost_dequeue_offload(hdr, m) < 0) {
+		VHOST_LOG_DATA(ERR, "Packet with invalid offloads.\n");
+		error = -1;
+		goto out;
+	}
 
 out:
 
