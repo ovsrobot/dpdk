@@ -490,14 +490,8 @@ async_reply_handle_thread_unsafe(void *arg)
 	struct pending_request *req = (struct pending_request *)arg;
 	enum async_action action;
 	struct timespec ts_now;
-	struct timeval now;
 
-	if (gettimeofday(&now, NULL) < 0) {
-		RTE_LOG(ERR, EAL, "Cannot get current time\n");
-		goto no_trigger;
-	}
-	ts_now.tv_nsec = now.tv_usec * 1000;
-	ts_now.tv_sec = now.tv_sec;
+	clock_gettime(CLOCK_MONOTONIC, &ts_now);
 
 	action = process_async_request(req, &ts_now);
 
@@ -896,6 +890,7 @@ mp_request_sync(const char *dst, struct rte_mp_msg *req,
 	       struct rte_mp_reply *reply, const struct timespec *ts)
 {
 	int ret;
+	pthread_condattr_t attr;
 	struct rte_mp_msg msg, *tmp;
 	struct pending_request pending_req, *exist;
 
@@ -904,7 +899,9 @@ mp_request_sync(const char *dst, struct rte_mp_msg *req,
 	strlcpy(pending_req.dst, dst, sizeof(pending_req.dst));
 	pending_req.request = req;
 	pending_req.reply = &msg;
-	pthread_cond_init(&pending_req.sync.cond, NULL);
+	pthread_condattr_init(&attr);
+	pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+	pthread_cond_init(&pending_req.sync.cond, &attr);
 
 	exist = find_pending_request(dst, req->name);
 	if (exist) {
@@ -967,8 +964,7 @@ rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
 	int dir_fd, ret = -1;
 	DIR *mp_dir;
 	struct dirent *ent;
-	struct timeval now;
-	struct timespec end;
+	struct timespec now, end;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 
@@ -987,15 +983,10 @@ rte_mp_request_sync(struct rte_mp_msg *req, struct rte_mp_reply *reply,
 		return -1;
 	}
 
-	if (gettimeofday(&now, NULL) < 0) {
-		RTE_LOG(ERR, EAL, "Failed to get current time\n");
-		rte_errno = errno;
-		goto end;
-	}
-
-	end.tv_nsec = (now.tv_usec * 1000 + ts->tv_nsec) % 1000000000;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	end.tv_nsec = (now.tv_nsec + ts->tv_nsec) % 1000000000;
 	end.tv_sec = now.tv_sec + ts->tv_sec +
-			(now.tv_usec * 1000 + ts->tv_nsec) / 1000000000;
+			(now.tv_nsec + ts->tv_nsec) / 1000000000;
 
 	/* for secondary process, send request to the primary process only */
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
@@ -1069,7 +1060,7 @@ rte_mp_request_async(struct rte_mp_msg *req, const struct timespec *ts,
 	int dir_fd, ret = 0;
 	DIR *mp_dir;
 	struct dirent *ent;
-	struct timeval now;
+	struct timespec now;
 	struct timespec *end;
 	bool dummy_used = false;
 	const struct internal_config *internal_conf =
@@ -1086,11 +1077,6 @@ rte_mp_request_async(struct rte_mp_msg *req, const struct timespec *ts,
 		return -1;
 	}
 
-	if (gettimeofday(&now, NULL) < 0) {
-		RTE_LOG(ERR, EAL, "Failed to get current time\n");
-		rte_errno = errno;
-		return -1;
-	}
 	copy = calloc(1, sizeof(*copy));
 	dummy = calloc(1, sizeof(*dummy));
 	param = calloc(1, sizeof(*param));
@@ -1108,9 +1094,10 @@ rte_mp_request_async(struct rte_mp_msg *req, const struct timespec *ts,
 	end = &param->end;
 	reply = &param->user_reply;
 
-	end->tv_nsec = (now.tv_usec * 1000 + ts->tv_nsec) % 1000000000;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	end->tv_nsec = (now.tv_nsec + ts->tv_nsec) % 1000000000;
 	end->tv_sec = now.tv_sec + ts->tv_sec +
-			(now.tv_usec * 1000 + ts->tv_nsec) / 1000000000;
+			(now.tv_nsec + ts->tv_nsec) / 1000000000;
 	reply->nb_sent = 0;
 	reply->nb_received = 0;
 	reply->msgs = NULL;
