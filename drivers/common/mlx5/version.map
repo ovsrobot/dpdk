@@ -121,4 +121,10 @@ INTERNAL {
 	mlx5_free;
 
 	mlx5_pci_driver_register;
+
+	mlx5_hlist_create;
+	mlx5_hlist_lookup;
+	mlx5_hlist_register;
+	mlx5_hlist_unregister;
+	mlx5_hlist_destroy;
 };
