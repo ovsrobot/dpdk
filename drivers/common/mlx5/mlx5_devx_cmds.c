@@ -278,6 +278,10 @@ mlx5_devx_cmd_mkey_create(void *ctx,
 	MLX5_SET64(mkc, mkc, start_addr, attr->addr);
 	MLX5_SET64(mkc, mkc, len, attr->size);
 	MLX5_SET(mkc, mkc, crypto_en, attr->crypto_en);
+	if (attr->crypto_en) {
+		MLX5_SET(mkc, mkc, bsf_en, attr->crypto_en);
+		MLX5_SET(mkc, mkc, bsf_octword_size, 4);
+	}
 	mkey->obj = mlx5_glue->devx_obj_create(ctx, in, in_size_dw * 4, out,
 					       sizeof(out));
 	if (!mkey->obj) {
