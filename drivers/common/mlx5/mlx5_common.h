@@ -18,6 +18,7 @@
 
 #include "mlx5_prm.h"
 #include "mlx5_devx_cmds.h"
+#include "mlx5_common_os.h"
 
 /* Reported driver name. */
 #define MLX5_PCI_DRIVER_NAME "mlx5_pci"
@@ -215,6 +216,7 @@ enum mlx5_class {
 	MLX5_CLASS_VDPA = RTE_BIT64(1),
 	MLX5_CLASS_REGEX = RTE_BIT64(2),
 	MLX5_CLASS_COMPRESS = RTE_BIT64(3),
+	MLX5_CLASS_CRYPTO = RTE_BIT64(4),
 };
 
 #define MLX5_DBR_SIZE RTE_CACHE_LINE_SIZE

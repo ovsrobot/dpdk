@@ -111,6 +111,7 @@ INTERNAL {
 	mlx5_os_reg_mr;
 	mlx5_os_umem_reg;
 	mlx5_os_umem_dereg;
+	mlx5_os_get_ib_device_match; # WINDOWS_NO_EXPORT
 
 	mlx5_translate_port_name; # WINDOWS_NO_EXPORT
 
