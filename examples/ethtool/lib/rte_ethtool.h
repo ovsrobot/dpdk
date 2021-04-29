@@ -309,7 +309,7 @@ int rte_ethtool_net_validate_addr(uint16_t port_id,
  *   - (-EINVAL) if parameters invalid.
  *   - others depends on the specific operations implementation.
  */
-int rte_ethtool_net_change_mtu(uint16_t port_id, int mtu);
+int rte_ethtool_net_change_mtu(uint16_t port_id, uint16_t mtu);
 
 /**
  * Retrieve the Ethernet device traffic statistics

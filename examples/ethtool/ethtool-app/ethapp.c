@@ -521,13 +521,9 @@ pcmd_mtu_callback(void *ptr_params,
 {
 	struct pcmd_intstr_params *params = ptr_params;
 	int stat;
-	int new_mtu;
+	uint16_t new_mtu;
 	char *ptr_parse_end;
 
-	if (!rte_eth_dev_is_valid_port(params->port)) {
-		printf("Error: Invalid port number %i\n", params->port);
-		return;
-	}
 	new_mtu = strtoul(params->opt, &ptr_parse_end, 10);
 	if (*ptr_parse_end != '\0' ||
 			new_mtu < RTE_ETHER_MIN_MTU ||
