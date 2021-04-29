@@ -23,6 +23,7 @@
  * rte_ethtool_net_stop:            net_device_ops::ndo_stop
  * rte_ethtool_net_set_mac_addr:    net_device_ops::ndo_set_mac_address
  * rte_ethtool_net_validate_addr:   net_device_ops::ndo_validate_addr
+ * rte_ethtool_net_get_mtu:         net_device_ops::ndo_get_mtu
  * rte_ethtool_net_change_mtu:      net_device_ops::ndo_change_mtu
  * rte_ethtool_net_get_stats64:     net_device_ops::ndo_get_stats64
  * rte_ethtool_net_vlan_rx_add_vid  net_device_ops::ndo_vlan_rx_add_vid
@@ -294,6 +295,19 @@ int rte_ethtool_net_set_mac_addr(uint16_t port_id, struct rte_ether_addr *addr);
  */
 int rte_ethtool_net_validate_addr(uint16_t port_id,
 				struct rte_ether_addr *addr);
+
+/**
+ * Retrieve the MTU of an Ethernet device.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param mtu
+ *   A pointer to a uint16_t where the retrieved MTU is to be stored.
+ * @return
+ *   - (0) if successful.
+ *   - (-ENODEV) if *port_id* invalid.
+ */
+int rte_ethtool_net_get_mtu(uint16_t port_id, uint16_t *mtu);
 
 /**
  * Setting the Ethernet device maximum Tx unit.

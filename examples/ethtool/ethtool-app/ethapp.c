@@ -517,30 +517,40 @@ pcmd_macaddr_callback(void *ptr_params,
 static void
 pcmd_mtu_callback(void *ptr_params,
 	__rte_unused struct cmdline *ctx,
-	__rte_unused void *ptr_data)
+	void *ptr_data)
 {
 	struct pcmd_intstr_params *params = ptr_params;
 	int stat;
 	uint16_t new_mtu;
 	char *ptr_parse_end;
 
-	new_mtu = strtoul(params->opt, &ptr_parse_end, 10);
-	if (*ptr_parse_end != '\0' ||
-			new_mtu < RTE_ETHER_MIN_MTU ||
-			new_mtu > RTE_ETHER_MAX_JUMBO_FRAME_LEN) {
-		printf("Port %i: Invalid MTU value\n", params->port);
+	if (ptr_data == NULL) {
+		new_mtu = strtoul(params->opt, &ptr_parse_end, 10);
+		if (*ptr_parse_end != '\0' ||
+				new_mtu < RTE_ETHER_MIN_MTU ||
+				new_mtu > RTE_ETHER_MAX_JUMBO_FRAME_LEN) {
+			printf("Port %i: Invalid MTU value\n", params->port);
+			return;
+		}
+		stat = rte_ethtool_net_change_mtu(params->port, new_mtu);
+		if (stat == 0)
+			printf("Port %i: MTU set to %i\n", params->port,
+				new_mtu);
+		else if (stat == -ENOTSUP)
+			printf("Port %i: Operation not supported\n",
+				params->port);
+		else
+			printf("Port %i: Error setting MTU\n", params->port);
+
 		return;
 	}
-	stat = rte_ethtool_net_change_mtu(params->port, new_mtu);
-	if (stat == 0)
-		printf("Port %i: MTU set to %i\n", params->port, new_mtu);
-	else if (stat == -ENOTSUP)
+
+	stat = rte_ethtool_net_get_mtu(params->port, &new_mtu);
+	if (stat)
 		printf("Port %i: Operation not supported\n", params->port);
 	else
-		printf("Port %i: Error setting MTU\n", params->port);
+		printf("Port %i: Current MTU: %i\n", params->port, new_mtu);
 }
-
-
 
 static void pcmd_portstats_callback(__rte_unused void *ptr_params,
 	__rte_unused struct cmdline *ctx,
@@ -799,6 +809,17 @@ cmdline_parse_inst_t pcmd_macaddr = {
 		NULL
 	},
 };
+cmdline_parse_inst_t pcmd_mtu_get = {
+	.f = pcmd_mtu_callback,
+	.data = (void *)0x01,
+	.help_str = "mtu <port_id>\n"
+		"     Get MTU",
+	.tokens = {
+		(void *)&pcmd_mtu_token_cmd,
+		(void *)&pcmd_intstr_token_port,
+		NULL
+	},
+};
 cmdline_parse_inst_t pcmd_mtu = {
 	.f = pcmd_mtu_callback,
 	.data = NULL,
@@ -879,6 +900,7 @@ cmdline_parse_ctx_t list_prompt_commands[] = {
 	(cmdline_parse_inst_t *)&pcmd_link,
 	(cmdline_parse_inst_t *)&pcmd_macaddr_get,
 	(cmdline_parse_inst_t *)&pcmd_macaddr,
+	(cmdline_parse_inst_t *)&pcmd_mtu_get,
 	(cmdline_parse_inst_t *)&pcmd_mtu,
 	(cmdline_parse_inst_t *)&pcmd_open,
 	(cmdline_parse_inst_t *)&pcmd_pause_noopt,

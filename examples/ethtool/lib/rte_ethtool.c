@@ -345,6 +345,13 @@ rte_ethtool_net_validate_addr(uint16_t port_id __rte_unused,
 	return rte_is_valid_assigned_ether_addr(addr);
 }
 
+int
+rte_ethtool_net_get_mtu(uint16_t port_id, uint16_t *mtu)
+{
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+
+	return rte_eth_dev_get_mtu(port_id, mtu);
+}
 
 int
 rte_ethtool_net_change_mtu(uint16_t port_id, uint16_t mtu)
