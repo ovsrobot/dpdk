@@ -202,11 +202,16 @@ Substitute <target_soc> with one of the supported SoCs::
    generic:     Generic un-optimized build for all aarch64 machines.
    armada:      Marvell ARMADA
    bluefield:   NVIDIA BlueField
+   cn10k:       Marvell OCTEON 10
    dpaa:        NXP DPAA
    emag:        Ampere eMAG
    graviton2:   AWS Graviton2
+   kunpeng920:  HiSilicon Kunpeng 920
+   kunpeng930:  HiSilicon Kunpeng 930
    n1sdp:       Arm Neoverse N1SDP
+   n2:          Arm Neoverse N2
    octeontx2:   Marvell OCTEON TX2
+   qualcomm:    Qualcomm Centriq 2400
    stingray:    Broadcom Stingray
    thunderx2:   Marvell ThunderX2 T99
    thunderxt88: Marvell ThunderX T88
