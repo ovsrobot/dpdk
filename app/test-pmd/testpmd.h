@@ -763,7 +763,7 @@ inc_tx_burst_stats(struct fwd_stream *fs, uint16_t nb_tx)
 }
 
 /* Prototypes */
-unsigned int parse_item_list(char* str, const char* item_name,
+unsigned int parse_item_list(const char *str, const char *item_name,
 			unsigned int max_items,
 			unsigned int *parsed_items, int check_unique_values);
 void launch_args_parse(int argc, char** argv);
