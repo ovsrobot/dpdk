@@ -206,7 +206,7 @@ typedef struct {
  * Each rte_memzone should have unique name.
  * To satisfy it, count number of allocations and add it to name.
  */
-extern rte_atomic64_t ena_alloc_cnt;
+extern rte_atomic64_t *ena_alloc_cnt;
 
 #define ENA_MEM_ALLOC_COHERENT_ALIGNED(					       \
 	dmadev, size, virt, phys, mem_handle, alignment)		       \
@@ -216,7 +216,7 @@ extern rte_atomic64_t ena_alloc_cnt;
 		if (size > 0) {						       \
 			char z_name[RTE_MEMZONE_NAMESIZE];		       \
 			snprintf(z_name, sizeof(z_name), "ena_alloc_%"PRIi64"",\
-				rte_atomic64_add_return(&ena_alloc_cnt,	1));   \
+				rte_atomic64_add_return(ena_alloc_cnt, 1));    \
 			mz = rte_memzone_reserve_aligned(z_name, size,	       \
 					SOCKET_ID_ANY, RTE_MEMZONE_IOVA_CONTIG,\
 					alignment);			       \
@@ -246,7 +246,7 @@ extern rte_atomic64_t ena_alloc_cnt;
 		if (size > 0) {						       \
 			char z_name[RTE_MEMZONE_NAMESIZE];		       \
 			snprintf(z_name, sizeof(z_name), "ena_alloc_%"PRIi64"",\
-				rte_atomic64_add_return(&ena_alloc_cnt, 1));   \
+				rte_atomic64_add_return(ena_alloc_cnt, 1));    \
 			mz = rte_memzone_reserve_aligned(z_name, size,	       \
 				node, RTE_MEMZONE_IOVA_CONTIG, alignment);     \
 			mem_handle = mz;				       \

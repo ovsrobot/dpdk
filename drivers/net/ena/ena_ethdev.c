@@ -83,11 +83,15 @@ struct ena_stats {
 /* Device arguments */
 #define ENA_DEVARG_LARGE_LLQ_HDR "large_llq_hdr"
 
+#define ENA_MZ_SHARED_DATA "ena_shared_data"
+
 /*
  * Each rte_memzone should have unique name.
  * To satisfy it, count number of allocation and add it to name.
  */
-rte_atomic64_t ena_alloc_cnt;
+rte_atomic64_t *ena_alloc_cnt;
+
+struct ena_shared_data *ena_shared_data;
 
 static const struct ena_stats ena_stats_global_strings[] = {
 	ENA_STAT_GLOBAL_ENTRY(wd_expired),
@@ -1752,6 +1756,42 @@ static uint32_t ena_calc_max_io_queue_num(struct ena_com_dev *ena_dev,
 	return max_num_io_queues;
 }
 
+static void ena_prepare_shared_data(struct ena_shared_data *shared_data)
+{
+	memset(shared_data, 0, sizeof(*shared_data));
+}
+
+static int ena_shared_data_init(void)
+{
+	const struct rte_memzone *mz;
+
+	if (ena_shared_data != NULL)
+		return 0;
+
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		/* Allocate shared memory. */
+		mz = rte_memzone_reserve(ENA_MZ_SHARED_DATA,
+					 sizeof(*ena_shared_data),
+					 SOCKET_ID_ANY, 0);
+		if (mz == NULL) {
+			PMD_INIT_LOG(CRIT, "Cannot allocate ena shared data");
+			return -rte_errno;
+		}
+		ena_prepare_shared_data(mz->addr);
+	} else {
+		/* Lookup allocated shared memory. */
+		mz = rte_memzone_lookup(ENA_MZ_SHARED_DATA);
+		if (mz == NULL) {
+			PMD_INIT_LOG(CRIT, "Cannot attach ena shared data");
+			return -rte_errno;
+		}
+	}
+	ena_shared_data = mz->addr;
+	/* Setup ENA_MEM memzone name counter. */
+	ena_alloc_cnt = &ena_shared_data->mz_alloc_cnt;
+	return 0;
+}
+
 static int eth_ena_dev_init(struct rte_eth_dev *eth_dev)
 {
 	struct ena_calc_queue_size_ctx calc_queue_ctx = { 0 };
@@ -1772,6 +1812,10 @@ static int eth_ena_dev_init(struct rte_eth_dev *eth_dev)
 	eth_dev->rx_pkt_burst = &eth_ena_recv_pkts;
 	eth_dev->tx_pkt_burst = &eth_ena_xmit_pkts;
 	eth_dev->tx_pkt_prepare = &eth_ena_prep_pkts;
+
+	rc = ena_shared_data_init();
+	if (rc != 0)
+		return rc;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
