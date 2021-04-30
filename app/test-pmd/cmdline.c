@@ -10,9 +10,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <inttypes.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-
 #include <sys/queue.h>
 
 #include <rte_common.h>
