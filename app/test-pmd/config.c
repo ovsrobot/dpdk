@@ -205,6 +205,7 @@ nic_stats_display(portid_t port_id)
 	       "%-"PRIu64"\n", stats.opackets, stats.oerrors, stats.obytes);
 
 	diff_ns = 0;
+
 	if (clock_gettime(CLOCK_TYPE_ID, &cur_time) == 0) {
 		uint64_t ns;
 
