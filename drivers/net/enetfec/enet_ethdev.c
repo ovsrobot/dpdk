@@ -46,6 +46,9 @@
 #define ENET_ENET_OPD_V		0xFFF0
 #define ENET_MDIO_PM_TIMEOUT	100 /* ms */
 
+/* Extended buffer descriptor */
+#define ENETFEC_EXTENDED_BD	0
+
 int enetfec_logtype_pmd;
 
 /* Supported Rx offloads */
@@ -60,6 +63,50 @@ static uint64_t dev_tx_offloads_sup =
 		DEV_TX_OFFLOAD_IPV4_CKSUM |
 		DEV_TX_OFFLOAD_UDP_CKSUM |
 		DEV_TX_OFFLOAD_TCP_CKSUM;
+
+static void enet_free_buffers(struct rte_eth_dev *dev)
+{
+	struct enetfec_private *fep = dev->data->dev_private;
+	unsigned int i, q;
+	struct rte_mbuf *mbuf;
+	struct bufdesc  *bdp;
+	struct enetfec_priv_rx_q *rxq;
+	struct enetfec_priv_tx_q *txq;
+
+	for (q = 0; q < dev->data->nb_rx_queues; q++) {
+		rxq = fep->rx_queues[q];
+		bdp = rxq->bd.base;
+		for (i = 0; i < rxq->bd.ring_size; i++) {
+			mbuf = rxq->rx_mbuf[i];
+			rxq->rx_mbuf[i] = NULL;
+			if (mbuf)
+				rte_pktmbuf_free(mbuf);
+			bdp = enet_get_nextdesc(bdp, &rxq->bd);
+		}
+	}
+
+	for (q = 0; q < dev->data->nb_tx_queues; q++) {
+		txq = fep->tx_queues[q];
+		bdp = txq->bd.base;
+		for (i = 0; i < txq->bd.ring_size; i++) {
+			mbuf = txq->tx_mbuf[i];
+			txq->tx_mbuf[i] = NULL;
+			if (mbuf)
+				rte_pktmbuf_free(mbuf);
+		}
+	}
+}
+
+static void enet_free_queue(struct rte_eth_dev *dev)
+{
+	struct enetfec_private *fep = dev->data->dev_private;
+	unsigned int i;
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++)
+		rte_free(fep->rx_queues[i]);
+	for (i = 0; i < dev->data->nb_tx_queues; i++)
+		rte_free(fep->rx_queues[i]);
+}
 
 /*
  * This function is called to start or restart the FEC during a link
@@ -188,7 +235,6 @@ enetfec_eth_open(struct rte_eth_dev *dev)
 
 	return 0;
 }
-
 
 static int
 enetfec_eth_configure(__rte_unused struct rte_eth_dev *dev)
@@ -395,12 +441,137 @@ err_alloc:
 	return -1;
 }
 
+static int
+enetfec_promiscuous_enable(__rte_unused struct rte_eth_dev *dev)
+{
+	struct enetfec_private *fep = dev->data->dev_private;
+	uint32_t tmp;
+
+	tmp = rte_read32(fep->hw_baseaddr_v + ENET_RCR);
+	tmp |= 0x8;
+	tmp &= ~0x2;
+	rte_write32(tmp, fep->hw_baseaddr_v + ENET_RCR);
+
+	return 0;
+}
+
+static int
+enetfec_eth_link_update(__rte_unused struct rte_eth_dev *dev,
+			__rte_unused int wait_to_complete)
+{
+	return 0;
+}
+
+static int
+enetfec_stats_get(struct rte_eth_dev *dev,
+	      struct rte_eth_stats *stats)
+{
+	struct enetfec_private *fep = dev->data->dev_private;
+	struct rte_eth_stats *eth_stats = &fep->stats;
+
+	if (stats == NULL)
+		return -1;
+
+	memset(stats, 0, sizeof(struct rte_eth_stats));
+
+	stats->ipackets = eth_stats->ipackets;
+	stats->ibytes = eth_stats->ibytes;
+	stats->ierrors = eth_stats->ierrors;
+	stats->opackets = eth_stats->opackets;
+	stats->obytes = eth_stats->obytes;
+	stats->oerrors = eth_stats->oerrors;
+
+	return 0;
+}
+
+static void
+enetfec_stop(__rte_unused struct rte_eth_dev *dev)
+{
+/*TODO*/
+}
+
+static int
+enetfec_eth_close(__rte_unused struct rte_eth_dev *dev)
+{
+	/* phy_stop(ndev->phydev); */
+	enetfec_stop(dev);
+	/* phy_disconnect(ndev->phydev); */
+
+	enet_free_buffers(dev);
+	return 0;
+}
+
+static uint16_t
+enetfec_dummy_xmit_pkts(__rte_unused void *tx_queue,
+		__rte_unused struct rte_mbuf **tx_pkts,
+		__rte_unused uint16_t nb_pkts)
+{
+	return 0;
+}
+
+static uint16_t
+enetfec_dummy_recv_pkts(__rte_unused void *rxq,
+		__rte_unused struct rte_mbuf **rx_pkts,
+		__rte_unused uint16_t nb_pkts)
+{
+	return 0;
+}
+
+static int
+enetfec_eth_stop(__rte_unused struct rte_eth_dev *dev)
+{
+	dev->rx_pkt_burst = &enetfec_dummy_recv_pkts;
+	dev->tx_pkt_burst = &enetfec_dummy_xmit_pkts;
+
+	return 0;
+}
+
+static int
+enetfec_multicast_enable(struct rte_eth_dev *dev)
+{
+	struct enetfec_private *fep = dev->data->dev_private;
+
+	rte_write32(0xffffffff, fep->hw_baseaddr_v + ENET_GAUR);
+	rte_write32(0xffffffff, fep->hw_baseaddr_v + ENET_GALR);
+	dev->data->all_multicast = 1;
+
+	rte_write32(0x04400002, fep->hw_baseaddr_v + ENET_GAUR);
+	rte_write32(0x10800049, fep->hw_baseaddr_v + ENET_GALR);
+
+	return 0;
+}
+
+/* Set a MAC change in hardware. */
+static int
+enetfec_set_mac_address(struct rte_eth_dev *dev,
+		    struct rte_ether_addr *addr)
+{
+	struct enetfec_private *fep = dev->data->dev_private;
+
+	writel(addr->addr_bytes[3] | (addr->addr_bytes[2] << 8) |
+		(addr->addr_bytes[1] << 16) | (addr->addr_bytes[0] << 24),
+		fep->hw_baseaddr_v + ENET_PALR);
+	writel((addr->addr_bytes[5] << 16) | (addr->addr_bytes[4] << 24),
+		fep->hw_baseaddr_v + ENET_PAUR);
+
+	rte_ether_addr_copy(addr, &dev->data->mac_addrs[0]);
+
+	return 0;
+}
+
 static const struct eth_dev_ops ops = {
 	.dev_start = enetfec_eth_open,
+	.dev_stop = enetfec_eth_stop,
+	.dev_close = enetfec_eth_close,
 	.dev_configure = enetfec_eth_configure,
 	.dev_infos_get = enetfec_eth_info,
 	.rx_queue_setup = enetfec_rx_queue_setup,
 	.tx_queue_setup = enetfec_tx_queue_setup,
+	.link_update  = enetfec_eth_link_update,
+	.mac_addr_set	      = enetfec_set_mac_address,
+	.stats_get  = enetfec_stats_get,
+	.promiscuous_enable   = enetfec_promiscuous_enable,
+	.allmulticast_enable = enetfec_multicast_enable
 };
 
 static int
@@ -434,6 +605,7 @@ pmd_enetfec_probe(struct rte_vdev_device *vdev)
 	struct enetfec_private *fep;
 	const char *name;
 	int rc = -1;
+	struct rte_ether_addr macaddr;
 	int i;
 	unsigned int bdsize;
 
@@ -474,12 +646,37 @@ pmd_enetfec_probe(struct rte_vdev_device *vdev)
 		fep->bd_addr_p = fep->bd_addr_p + bdsize;
 	}
 
+	/* Copy the station address into the dev structure, */
+	dev->data->mac_addrs = rte_zmalloc("mac_addr", ETHER_ADDR_LEN, 0);
+	if (dev->data->mac_addrs == NULL) {
+		ENET_PMD_ERR("Failed to allocate mem %d to store MAC addresses",
+			ETHER_ADDR_LEN);
+		rc = -ENOMEM;
+		goto err;
+	}
+
+	/* TODO get mac address from device tree or get random addr.
+	 * Currently setting default as 1,1,1,1,1,1
+	 */
+	macaddr.addr_bytes[0] = 1;
+	macaddr.addr_bytes[1] = 1;
+	macaddr.addr_bytes[2] = 1;
+	macaddr.addr_bytes[3] = 1;
+	macaddr.addr_bytes[4] = 1;
+	macaddr.addr_bytes[5] = 1;
+
+	enetfec_set_mac_address(dev, &macaddr);
+	/* enable the extended buffer mode */
+	fep->bufdesc_ex = ENETFEC_EXTENDED_BD;
+
 	rc = enetfec_eth_init(dev);
 	if (rc)
 		goto failed_init;
 	return 0;
 failed_init:
 	ENET_PMD_ERR("Failed to init");
+err:
+	rte_eth_dev_release_port(dev);
 	return rc;
 }
 
@@ -487,15 +684,28 @@ static int
 pmd_enetfec_remove(struct rte_vdev_device *vdev)
 {
 	struct rte_eth_dev *eth_dev = NULL;
+	struct enetfec_private *fep;
+	struct enetfec_priv_rx_q *rxq;
 
 	/* find the ethdev entry */
 	eth_dev = rte_eth_dev_allocated(rte_vdev_device_name(vdev));
 	if (!eth_dev)
 		return -ENODEV;
 
+	fep = eth_dev->data->dev_private;
+	/* Free descriptor base of first RX queue as it was configured
+	 * first in enetfec_eth_init().
+	 */
+	rxq = fep->rx_queues[0];
+	rte_free(rxq->bd.base);
+	enet_free_queue(eth_dev);
+
+	enetfec_eth_stop(eth_dev);
 	rte_eth_dev_release_port(eth_dev);
 
 	ENET_PMD_INFO("Closing sw device\n");
+	munmap(fep->hw_baseaddr_v, fep->cbus_size);
+
 	return 0;
 }
 
