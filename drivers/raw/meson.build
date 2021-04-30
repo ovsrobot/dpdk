@@ -13,6 +13,7 @@ drivers = [
         'ntb',
         'octeontx2_dma',
         'octeontx2_ep',
+	'ptdma',
         'skeleton',
 ]
 std_deps = ['rawdev']

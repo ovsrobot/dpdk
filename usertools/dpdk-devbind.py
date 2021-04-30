@@ -59,6 +59,8 @@ intel_ntb_skx = {'Class': '06', 'Vendor': '8086', 'Device': '201c',
                  'SVendor': None, 'SDevice': None}
 intel_ntb_icx = {'Class': '06', 'Vendor': '8086', 'Device': '347e',
                  'SVendor': None, 'SDevice': None}
+amd_ptdma   = {'Class': '10', 'Vendor': '1022', 'Device': '1498',
+                 'SVendor': None, 'SDevice': None}
 
 network_devices = [network_class, cavium_pkx, avp_vnic, ifpga_class]
 baseband_devices = [acceleration_class]
@@ -68,7 +70,7 @@ mempool_devices = [cavium_fpa, octeontx2_npa]
 compress_devices = [cavium_zip]
 regex_devices = [octeontx2_ree]
 misc_devices = [intel_ioat_bdw, intel_ioat_skx, intel_ioat_icx, intel_idxd_spr,
-                intel_ntb_skx, intel_ntb_icx,
+                intel_ntb_skx, intel_ntb_icx, amd_ptdma,
                 octeontx2_dma]
 
 # global dict ethernet devices present. Dictionary indexed by PCI address.
