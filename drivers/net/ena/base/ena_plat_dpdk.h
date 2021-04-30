@@ -163,7 +163,7 @@ extern int ena_logtype_com;
 #define ENA_WAIT_EVENT_SIGNAL(waitevent) pthread_cond_signal(&waitevent.cond)
 /* pthread condition doesn't need to be rearmed after usage */
 #define ENA_WAIT_EVENT_CLEAR(...)
-#define ENA_WAIT_EVENT_DESTROY(waitqueue) ((void)(waitqueue))
+#define ENA_WAIT_EVENT_DESTROY(admin_queue) ((void)(admin_queue))
 
 #define ena_wait_event_t ena_wait_queue_t
 #define ENA_MIGHT_SLEEP()
@@ -295,7 +295,7 @@ extern rte_atomic32_t ena_alloc_cnt;
 #define ENA_TIME_EXPIRE(timeout)  (timeout < rte_get_timer_cycles())
 #define ENA_GET_SYSTEM_TIMEOUT(timeout_us)				\
     (timeout_us * rte_get_timer_hz() / 1000000 + rte_get_timer_cycles())
-#define ENA_WAIT_EVENT_DESTROY(waitqueue) ((void)(waitqueue))
+#define ENA_WAIT_EVENTS_DESTROY(waitqueue) ((void)(waitqueue))
 
 #ifndef READ_ONCE
 #define READ_ONCE(var) (*((volatile typeof(var) *)(&(var))))
