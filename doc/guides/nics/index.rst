@@ -25,6 +25,7 @@ Network Interface Controller Drivers
     e1000em
     ena
     enetc
+    enetfec
     enic
     fm10k
     hinic
