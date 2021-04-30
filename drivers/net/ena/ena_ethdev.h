@@ -219,9 +219,8 @@ struct ena_shared_data {
 /* board specific private data structure */
 struct ena_adapter {
 	/* OS defined structs */
-	struct rte_pci_device *pdev;
-	struct rte_eth_dev_data *rte_eth_dev_data;
-	struct rte_eth_dev *rte_dev;
+	struct rte_eth_dev_data *edev_data;
+	int port_id;
 
 	struct ena_com_dev ena_dev __rte_cache_aligned;
 
