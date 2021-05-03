@@ -87,7 +87,7 @@ load_env () # <target compiler>
 	fi
 	echo "Using DPDK_TARGET $DPDK_TARGET" >&$verbose
 	# config input: $DPDK_TARGET
-	. $srcdir/devtools/load-devel-config
+	. $srcdir/devtools/load-devel-config || return 1
 	# config output: $DPDK_MESON_OPTIONS, $PATH, $PKG_CONFIG_PATH, etc
 	command -v $targetcc >/dev/null 2>&1 || return 1
 }
