@@ -329,6 +329,12 @@ API Changes
   ``policer_action_recolor_supported`` and ``policer_action_drop_supported``
   have been removed.
 
+* vhost: The vhost library currently populates received mbufs from a virtio
+  driver with Tx offload flags while not filling Rx offload flags.
+  While this behavior is arguable, it is kept untouched.
+  A new flag ``RTE_VHOST_USER_NET_COMPLIANT_OL_FLAGS`` has been added to ask
+  for a behavior compliant with to the mbuf offload API.
+
 
 ABI Changes
 -----------
