@@ -16,6 +16,7 @@ sources = files('cn10k_worker.c',
                 'cnxk_eventdev.c',
                 'cnxk_eventdev_selftest.c',
                 'cnxk_eventdev_stats.c',
+                'cnxk_tim_worker.c',
                 'cnxk_tim_evdev.c',
                 )
 
