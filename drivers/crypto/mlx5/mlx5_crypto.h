@@ -29,6 +29,7 @@ struct mlx5_crypto_priv {
 	struct mlx5_hlist *dek_hlist; /* Dek hash list. */
 	struct rte_cryptodev_config dev_config;
 	struct mlx5_mr_share_cache mr_scache; /* Global shared MR cache. */
+	struct mlx5_devx_obj *login_obj;
 };
 
 struct mlx5_crypto_qp {
@@ -46,6 +47,12 @@ struct mlx5_crypto_dek {
 	struct mlx5_devx_obj *obj; /* Pointer to DEK DevX object. */
 	uint8_t data[MLX5_CRYPTO_KEY_LENGTH]; /* DEK key data. */
 	bool size_is_48; /* Whether the key\data size is 48 bytes or not. */
+};
+
+
+struct mlx5_crypto_devarg_params {
+	bool login_devarg;
+	struct mlx5_devx_crypto_login_attr login_attr;
 };
 
 int
