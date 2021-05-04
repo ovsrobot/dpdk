@@ -19,6 +19,7 @@
 
 #define MLX5_CRYPTO_DRIVER_NAME mlx5_crypto
 #define MLX5_CRYPTO_LOG_NAME pmd.crypto.mlx5
+#define MLX5_CRYPTO_MAX_QPS 1024
 
 TAILQ_HEAD(mlx5_crypto_privs, mlx5_crypto_priv) mlx5_crypto_priv_list =
 				TAILQ_HEAD_INITIALIZER(mlx5_crypto_priv_list);
@@ -27,6 +28,9 @@ static pthread_mutex_t priv_list_lock = PTHREAD_MUTEX_INITIALIZER;
 int mlx5_crypto_logtype;
 
 uint8_t mlx5_crypto_driver_id;
+
+const struct rte_cryptodev_capabilities
+		mlx5_crypto_caps[RTE_CRYPTO_OP_TYPE_UNDEFINED];
 
 static const char mlx5_crypto_drv_name[] = RTE_STR(MLX5_CRYPTO_DRIVER_NAME);
 
@@ -49,22 +53,47 @@ struct mlx5_crypto_session {
 	uint32_t dek_id; /* DEK ID */
 } __rte_packed;
 
-static unsigned int
-mlx5_crypto_sym_session_get_size(struct rte_cryptodev *dev __rte_unused)
+static void
+mlx5_crypto_dev_infos_get(struct rte_cryptodev *dev,
+			  struct rte_cryptodev_info *dev_info)
 {
-	return sizeof(struct mlx5_crypto_session);
+	RTE_SET_USED(dev);
+	if (dev_info != NULL) {
+		dev_info->driver_id = mlx5_crypto_driver_id;
+		dev_info->feature_flags = 0;
+		dev_info->capabilities = mlx5_crypto_caps;
+		dev_info->max_nb_queue_pairs = MLX5_CRYPTO_MAX_QPS;
+		dev_info->min_mbuf_headroom_req = 0;
+		dev_info->min_mbuf_tailroom_req = 0;
+		dev_info->sym.max_nb_sessions = 0;
+		/*
+		 * If 0, the device does not have any limitation in number of
+		 * sessions that can be used.
+		 */
+	}
 }
 
 static int
 mlx5_crypto_dev_configure(struct rte_cryptodev *dev,
-		struct rte_cryptodev_config *config __rte_unused)
+			  struct rte_cryptodev_config *config)
 {
 	struct mlx5_crypto_priv *priv = dev->data->dev_private;
 
+	if (config == NULL) {
+		DRV_LOG(ERR, "Invalid crypto dev configure parameters.");
+		return -EINVAL;
+	}
+	if ((config->ff_disable & RTE_CRYPTODEV_FF_SYMMETRIC_CRYPTO) != 0) {
+		DRV_LOG(ERR,
+			"Disabled symmetric crypto feature is not supported.");
+		return -ENOTSUP;
+	}
 	if (mlx5_crypto_dek_setup(priv) != 0) {
 		DRV_LOG(ERR, "Dek hash list creation has failed.");
 		return -ENOMEM;
 	}
+	priv->dev_config = *config;
+	DRV_LOG(DEBUG, "Device %u was configured.", dev->driver_id);
 	return 0;
 }
 
@@ -74,7 +103,14 @@ mlx5_crypto_dev_close(struct rte_cryptodev *dev)
 	struct mlx5_crypto_priv *priv = dev->data->dev_private;
 
 	mlx5_crypto_dek_unset(priv);
+	DRV_LOG(DEBUG, "Device %u was closed.", dev->driver_id);
 	return 0;
+}
+
+static unsigned int
+mlx5_crypto_sym_session_get_size(struct rte_cryptodev *dev __rte_unused)
+{
+	return sizeof(struct mlx5_crypto_session);
 }
 
 static int
@@ -153,7 +189,7 @@ static struct rte_cryptodev_ops mlx5_crypto_ops = {
 	.dev_start			= NULL,
 	.dev_stop			= NULL,
 	.dev_close			= mlx5_crypto_dev_close,
-	.dev_infos_get			= NULL,
+	.dev_infos_get			= mlx5_crypto_dev_infos_get,
 	.stats_get			= NULL,
 	.stats_reset			= NULL,
 	.queue_pair_setup		= NULL,
