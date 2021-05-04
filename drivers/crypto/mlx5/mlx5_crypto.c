@@ -48,6 +48,11 @@ struct mlx5_crypto_session {
 	 * bsf_size, bsf_p_type, encryption_order and encryption standard,
 	 * saved in big endian format.
 	 */
+	uint32_t bsp_res;
+	/*
+	 * crypto_block_size_pointer and reserved 24 bits saved in big endian
+	 * format.
+	 */
 	uint32_t iv_offset:16;
 	/* Starting point for Initialisation Vector. */
 	struct mlx5_crypto_dek *dek; /* Pointer to dek struct. */
@@ -171,6 +176,24 @@ mlx5_crypto_sym_session_configure(struct rte_cryptodev *dev,
 			 MLX5_BSF_P_TYPE_CRYPTO << MLX5_BSF_P_TYPE_OFFSET |
 			 encryption_order << MLX5_ENCRYPTION_ORDER_OFFSET |
 			 MLX5_ENCRYPTION_STANDARD_AES_XTS);
+	switch (xform->cipher.dataunit_len) {
+	case 0:
+		sess_private_data->bsp_res = 0;
+		break;
+	case 512:
+		sess_private_data->bsp_res = rte_cpu_to_be_32
+					     ((uint32_t)MLX5_BLOCK_SIZE_512B <<
+					     MLX5_BLOCK_SIZE_OFFSET);
+		break;
+	case 4096:
+		sess_private_data->bsp_res = rte_cpu_to_be_32
+					     ((uint32_t)MLX5_BLOCK_SIZE_4096B <<
+					     MLX5_BLOCK_SIZE_OFFSET);
+		break;
+	default:
+		DRV_LOG(ERR, "Cipher data unit length is not supported.");
+		return -ENOTSUP;
+	}
 	sess_private_data->iv_offset = cipher->iv.offset;
 	sess_private_data->dek_id =
 			rte_cpu_to_be_32(sess_private_data->dek->obj->id &
