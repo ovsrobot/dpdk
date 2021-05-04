@@ -22,6 +22,14 @@
 #define MLX5_CRYPTO_LOG_NAME pmd.crypto.mlx5
 #define MLX5_CRYPTO_MAX_QPS 1024
 #define MLX5_CRYPTO_MAX_SEGS 56
+#define MLX5_CRYPTO_FEATURE_FLAGS \
+	(RTE_CRYPTODEV_FF_SYMMETRIC_CRYPTO | RTE_CRYPTODEV_FF_HW_ACCELERATED | \
+	RTE_CRYPTODEV_FF_IN_PLACE_SGL | RTE_CRYPTODEV_FF_OOP_SGL_IN_SGL_OUT | \
+	RTE_CRYPTODEV_FF_OOP_SGL_IN_LB_OUT | \
+	RTE_CRYPTODEV_FF_OOP_LB_IN_SGL_OUT | \
+	RTE_CRYPTODEV_FF_OOP_LB_IN_LB_OUT | \
+	RTE_CRYPTODEV_FF_CIPHER_WRAPPED_KEY | \
+	RTE_CRYPTODEV_FF_CIPHER_MULTIPLE_DATA_UNITS)
 
 TAILQ_HEAD(mlx5_crypto_privs, mlx5_crypto_priv) mlx5_crypto_priv_list =
 				TAILQ_HEAD_INITIALIZER(mlx5_crypto_priv_list);
@@ -31,8 +39,32 @@ int mlx5_crypto_logtype;
 
 uint8_t mlx5_crypto_driver_id;
 
-const struct rte_cryptodev_capabilities
-		mlx5_crypto_caps[RTE_CRYPTO_OP_TYPE_UNDEFINED];
+const struct rte_cryptodev_capabilities mlx5_crypto_caps[] = {
+	{		/* AES XTS */
+		.op = RTE_CRYPTO_OP_TYPE_SYMMETRIC,
+		{.sym = {
+			.xform_type = RTE_CRYPTO_SYM_XFORM_CIPHER,
+			{.cipher = {
+				.algo = RTE_CRYPTO_CIPHER_AES_XTS,
+				.block_size = 16,
+				.key_size = {
+					.min = 32,
+					.max = 64,
+					.increment = 32
+				},
+				.iv_size = {
+					.min = 16,
+					.max = 16,
+					.increment = 0
+				},
+				.dataunit_set =
+				RTE_CRYPTO_CIPHER_DATA_UNIT_LEN_512_BYTES |
+				RTE_CRYPTO_CIPHER_DATA_UNIT_LEN_4096_BYTES,
+			}, }
+		}, }
+	},
+};
+
 
 static const char mlx5_crypto_drv_name[] = RTE_STR(MLX5_CRYPTO_DRIVER_NAME);
 
@@ -67,7 +99,7 @@ mlx5_crypto_dev_infos_get(struct rte_cryptodev *dev,
 	RTE_SET_USED(dev);
 	if (dev_info != NULL) {
 		dev_info->driver_id = mlx5_crypto_driver_id;
-		dev_info->feature_flags = 0;
+		dev_info->feature_flags = MLX5_CRYPTO_FEATURE_FLAGS;
 		dev_info->capabilities = mlx5_crypto_caps;
 		dev_info->max_nb_queue_pairs = MLX5_CRYPTO_MAX_QPS;
 		dev_info->min_mbuf_headroom_req = 0;
@@ -954,6 +986,7 @@ mlx5_crypto_pci_probe(struct rte_pci_driver *pci_drv,
 	crypto_dev->dev_ops = &mlx5_crypto_ops;
 	crypto_dev->dequeue_burst = mlx5_crypto_dequeue_burst;
 	crypto_dev->enqueue_burst = mlx5_crypto_enqueue_burst;
+	crypto_dev->feature_flags = MLX5_CRYPTO_FEATURE_FLAGS;
 	crypto_dev->driver_id = mlx5_crypto_driver_id;
 	priv = crypto_dev->data->dev_private;
 	priv->ctx = ctx;
