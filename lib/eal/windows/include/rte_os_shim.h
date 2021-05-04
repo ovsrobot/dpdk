@@ -75,4 +75,42 @@ rte_timespec_get(struct timespec *now, int base)
 
 #endif /* RTE_TOOLCHAIN_GCC */
 
+/* Identifier for system-wide realtime clock. */
+#define CLOCK_REALTIME                  0
+/* Monotonic system-wide clock. */
+#define CLOCK_MONOTONIC                 1
+/* High-resolution timer from the CPU. */
+#define CLOCK_PROCESS_CPUTIME_ID        2
+/* Thread-specific CPU-time clock. */
+#define CLOCK_THREAD_CPUTIME_ID         3
+
+#define NS_PER_SEC 1E9
+
+typedef int clockid_t;
+
+static inline int
+rte_clock_gettime(clockid_t clock_id, struct timespec *tp)
+{
+	LARGE_INTEGER pf, pc;
+	LONGLONG nsec;
+	switch (clock_id) {
+	case CLOCK_REALTIME:
+		if (timespec_get(tp, TIME_UTC) != TIME_UTC)
+			return -1;
+		return 0;
+	case CLOCK_MONOTONIC:
+		if (QueryPerformanceFrequency(&pf) == 0)
+			return -1;
+		if (QueryPerformanceCounter(&pc) == 0)
+			return -1;
+		nsec = pc.QuadPart * NS_PER_SEC / pf.QuadPart;
+		tp->tv_sec = nsec / NS_PER_SEC;
+		tp->tv_nsec = nsec - tp->tv_sec * NS_PER_SEC;
+		return 0;
+	default:
+		return -1;
+	}
+}
+#define clock_gettime(clock_id, tp) rte_clock_gettime(clock_id, tp)
+
 #endif /* _RTE_OS_SHIM_ */
