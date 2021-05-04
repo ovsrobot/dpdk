@@ -37,6 +37,9 @@ struct mlx5_crypto_priv {
 	uint16_t rdmw_wqe_size;
 	uint16_t wqe_stride;
 	uint16_t max_rdmaw_klm_n;
+#ifndef RTE_ARCH_64
+	rte_spinlock_t uar32_sl;
+#endif /* RTE_ARCH_64 */
 };
 
 struct mlx5_crypto_qp {
