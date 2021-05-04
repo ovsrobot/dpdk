@@ -9,13 +9,14 @@ endif
 
 deps += ['hash', 'pci', 'bus_pci', 'net', 'eal', 'kvargs']
 sources += files(
-        'mlx5_devx_cmds.c',
-        'mlx5_common.c',
-        'mlx5_common_mp.c',
-        'mlx5_common_mr.c',
-        'mlx5_malloc.c',
-        'mlx5_common_pci.c',
-        'mlx5_common_devx.c',
+	'mlx5_devx_cmds.c',
+	'mlx5_common.c',
+	'mlx5_common_mp.c',
+	'mlx5_common_mr.c',
+	'mlx5_malloc.c',
+	'mlx5_common_pci.c',
+	'mlx5_common_devx.c',
+	'mlx5_common_utils.c',
 )
 
 cflags_options = [
