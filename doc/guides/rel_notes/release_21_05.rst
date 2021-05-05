@@ -271,6 +271,19 @@ New Features
   * Added support for crypto adapter forward mode in octeontx2 event and crypto
     device driver.
 
+* **Updated Amazon ENA PMD.**
+
+  The new driver version (v2.3.0) introduces bug fixes and improvements,
+  including:
+
+  * Changed memcpy mapping to the dpdk-optimized version.
+  * Updated ena_com (HAL) to the latest version.
+  * Fixed bugs when requesting large LLQ headers using the devargs.
+  * Added indication of the RSS hash presence in the mbuf.
+  * Fixed bug when the default ring size was set.
+  * Add multiple fixes for the SMP mode (although ENA is not fully MP aware,
+    yet).
+
 
 Removed Items
 -------------
