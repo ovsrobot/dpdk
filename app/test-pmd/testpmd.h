@@ -11,6 +11,7 @@
 #include <rte_bus_pci.h>
 #include <rte_gro.h>
 #include <rte_gso.h>
+#include <rte_os_shim.h>
 #include <cmdline.h>
 #include <sys/queue.h>
 
