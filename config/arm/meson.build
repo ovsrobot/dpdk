@@ -230,6 +230,7 @@ soc_cn10k = {
         ['RTE_MAX_LCORE', 24],
         ['RTE_MAX_NUMA_NODES', 1]
     ],
+    'extensions' : ['lse', 'crc'],
     'part_number': '0xd49',
     'numa': false
 }
@@ -387,6 +388,7 @@ else
     endif
 
     soc_flags = []
+    soc_extensions = []
     if soc_config.has_key('not_supported')
         error('SoC @0@ not supported.'.format(soc))
     elif soc_config != {}
@@ -394,6 +396,7 @@ else
         implementer_config = implementers[implementer_id]
         part_number = soc_config['part_number']
         soc_flags = soc_config.get('flags', [])
+        soc_extensions = soc_config.get('extensions', [])
         if not soc_config.get('numa', true)
             has_libnuma = 0
         endif
@@ -431,6 +434,11 @@ else
     # apply supported machine args
     machine_args = [] # Clear previous machine args
     foreach flag: part_number_config['machine_args']
+        if flag.startswith('-march') and soc_extensions.length() != 0
+            foreach ex: soc_extensions
+                flag += '+' + ex
+            endforeach
+        endif
         if cc.has_argument(flag)
             machine_args += flag
         endif
