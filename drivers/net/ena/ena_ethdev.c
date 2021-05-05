@@ -51,6 +51,8 @@
 
 #define ENA_MIN_RING_DESC	128
 
+#define ENA_PTYPE_HAS_HASH	(RTE_PTYPE_L4_TCP | RTE_PTYPE_L4_UDP)
+
 enum ethtool_stringset {
 	ETH_SS_TEST             = 0,
 	ETH_SS_STATS,
@@ -313,6 +315,11 @@ static inline void ena_rx_mbuf_prepare(struct rte_mbuf *mbuf,
 			ol_flags |= PKT_RX_L4_CKSUM_BAD;
 		else
 			ol_flags |= PKT_RX_L4_CKSUM_GOOD;
+
+	if (likely((packet_type & ENA_PTYPE_HAS_HASH) && !ena_rx_ctx->frag)) {
+		ol_flags |= PKT_RX_RSS_HASH;
+		mbuf->hash.rss = ena_rx_ctx->hash;
+	}
 
 	mbuf->ol_flags = ol_flags;
 	mbuf->packet_type = packet_type;
@@ -2244,8 +2251,6 @@ static uint16_t eth_ena_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 			rte_atomic64_inc(&rx_ring->adapter->drv_stats->ierrors);
 			++rx_ring->rx_stats.bad_csum;
 		}
-
-		mbuf->hash.rss = ena_rx_ctx.hash;
 
 		rx_pkts[completed] = mbuf;
 		rx_ring->rx_stats.bytes += mbuf->pkt_len;
