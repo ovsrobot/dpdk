@@ -168,6 +168,7 @@ static const struct rte_pci_id pci_id_ena_map[] = {
 static struct ena_aenq_handlers aenq_handlers;
 
 static int ena_device_init(struct ena_com_dev *ena_dev,
+			   struct rte_pci_device *pdev,
 			   struct ena_com_dev_get_features_ctx *get_feat_ctx,
 			   bool *wd_state);
 static int ena_dev_configure(struct rte_eth_dev *dev);
@@ -451,11 +452,11 @@ err:
 }
 
 /* This function calculates the number of xstats based on the current config */
-static unsigned int ena_xstats_calc_num(struct rte_eth_dev *dev)
+static unsigned int ena_xstats_calc_num(struct rte_eth_dev_data *data)
 {
 	return ENA_STATS_ARRAY_GLOBAL + ENA_STATS_ARRAY_ENI +
-		(dev->data->nb_tx_queues * ENA_STATS_ARRAY_TX) +
-		(dev->data->nb_rx_queues * ENA_STATS_ARRAY_RX);
+		(data->nb_tx_queues * ENA_STATS_ARRAY_TX) +
+		(data->nb_rx_queues * ENA_STATS_ARRAY_RX);
 }
 
 static void ena_config_debug_area(struct ena_adapter *adapter)
@@ -463,7 +464,7 @@ static void ena_config_debug_area(struct ena_adapter *adapter)
 	u32 debug_area_size;
 	int rc, ss_count;
 
-	ss_count = ena_xstats_calc_num(adapter->rte_dev);
+	ss_count = ena_xstats_calc_num(adapter->edev_data);
 
 	/* allocate 32 bytes for each string and 64bit for the value */
 	debug_area_size = ss_count * ETH_GSTRING_LEN + sizeof(u64) * ss_count;
@@ -587,7 +588,7 @@ static int ena_rss_reta_update(struct rte_eth_dev *dev,
 	}
 
 	PMD_DRV_LOG(DEBUG, "%s(): RSS configured %d entries  for port %d\n",
-		__func__, reta_size, adapter->rte_dev->data->port_id);
+		__func__, reta_size, dev->data->port_id);
 
 	return 0;
 }
@@ -631,7 +632,7 @@ static int ena_rss_reta_query(struct rte_eth_dev *dev,
 static int ena_rss_init_default(struct ena_adapter *adapter)
 {
 	struct ena_com_dev *ena_dev = &adapter->ena_dev;
-	uint16_t nb_rx_queues = adapter->rte_dev->data->nb_rx_queues;
+	uint16_t nb_rx_queues = adapter->edev_data->nb_rx_queues;
 	int rc, i;
 	u32 val;
 
@@ -669,8 +670,7 @@ static int ena_rss_init_default(struct ena_adapter *adapter)
 		PMD_DRV_LOG(ERR, "Cannot flush the indirect table\n");
 		goto err_fill_indir;
 	}
-	PMD_DRV_LOG(DEBUG, "RSS configured for port %d\n",
-		adapter->rte_dev->data->port_id);
+	PMD_DRV_LOG(DEBUG, "RSS configured for port %d\n", adapter->port_id);
 
 	return 0;
 
@@ -841,10 +841,10 @@ static uint32_t ena_get_mtu_conf(struct ena_adapter *adapter)
 {
 	uint32_t max_frame_len = adapter->max_mtu;
 
-	if (adapter->rte_eth_dev_data->dev_conf.rxmode.offloads &
+	if (adapter->edev_data->dev_conf.rxmode.offloads &
 	    DEV_RX_OFFLOAD_JUMBO_FRAME)
 		max_frame_len =
-			adapter->rte_eth_dev_data->dev_conf.rxmode.max_rx_pkt_len;
+			adapter->edev_data->dev_conf.rxmode.max_rx_pkt_len;
 
 	return max_frame_len;
 }
@@ -1064,8 +1064,8 @@ static int ena_start(struct rte_eth_dev *dev)
 	if (rc)
 		goto err_start_tx;
 
-	if (adapter->rte_dev->data->dev_conf.rxmode.mq_mode &
-	    ETH_MQ_RX_RSS_FLAG && adapter->rte_dev->data->nb_rx_queues > 0) {
+	if (adapter->edev_data->dev_conf.rxmode.mq_mode &
+	    ETH_MQ_RX_RSS_FLAG && adapter->edev_data->nb_rx_queues > 0) {
 		rc = ena_rss_init_default(adapter);
 		if (rc)
 			goto err_rss_init;
@@ -1505,6 +1505,7 @@ static int ena_populate_rx_queue(struct ena_ring *rxq, unsigned int count)
 }
 
 static int ena_device_init(struct ena_com_dev *ena_dev,
+			   struct rte_pci_device *pdev,
 			   struct ena_com_dev_get_features_ctx *get_feat_ctx,
 			   bool *wd_state)
 {
@@ -1522,9 +1523,7 @@ static int ena_device_init(struct ena_com_dev *ena_dev,
 	/* The PCIe configuration space revision id indicate if mmio reg
 	 * read is disabled.
 	 */
-	readless_supported =
-		!(((struct rte_pci_device *)ena_dev->dmadev)->id.class_id
-			       & ENA_MMIO_DISABLE_REG_READ);
+	readless_supported = !(pdev->id.class_id & ENA_MMIO_DISABLE_REG_READ);
 	ena_com_set_mmio_read_mode(ena_dev, readless_supported);
 
 	/* reset device */
@@ -1634,7 +1633,7 @@ static void ena_timer_wd_callback(__rte_unused struct rte_timer *timer,
 				  void *arg)
 {
 	struct ena_adapter *adapter = arg;
-	struct rte_eth_dev *dev = adapter->rte_dev;
+	struct rte_eth_dev *dev = &rte_eth_devices[adapter->port_id];
 
 	check_for_missing_keep_alive(adapter);
 	check_for_admin_com_state(adapter);
@@ -1819,11 +1818,10 @@ static int eth_ena_dev_init(struct rte_eth_dev *eth_dev)
 	memset(adapter, 0, sizeof(struct ena_adapter));
 	ena_dev = &adapter->ena_dev;
 
-	adapter->rte_eth_dev_data = eth_dev->data;
-	adapter->rte_dev = eth_dev;
+	adapter->edev_data = eth_dev->data;
+	adapter->port_id = eth_dev->data->port_id;
 
 	pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
-	adapter->pdev = pci_dev;
 
 	PMD_INIT_LOG(INFO, "Initializing %x:%x:%x.%d",
 		     pci_dev->addr.domain,
@@ -1843,7 +1841,8 @@ static int eth_ena_dev_init(struct rte_eth_dev *eth_dev)
 	}
 
 	ena_dev->reg_bar = adapter->regs;
-	ena_dev->dmadev = adapter->pdev;
+	/* This is a dummy pointer for ena_com functions. */
+	ena_dev->dmadev = adapter;
 
 	adapter->id_number = adapters_found;
 
@@ -1857,7 +1856,7 @@ static int eth_ena_dev_init(struct rte_eth_dev *eth_dev)
 	}
 
 	/* device specific initialization routine */
-	rc = ena_device_init(ena_dev, &get_feat_ctx, &wd_state);
+	rc = ena_device_init(ena_dev, pci_dev, &get_feat_ctx, &wd_state);
 	if (rc) {
 		PMD_INIT_LOG(CRIT, "Failed to init ENA device");
 		goto err;
@@ -2716,7 +2715,7 @@ static int ena_xstats_get_names(struct rte_eth_dev *dev,
 				struct rte_eth_xstat_name *xstats_names,
 				unsigned int n)
 {
-	unsigned int xstats_count = ena_xstats_calc_num(dev);
+	unsigned int xstats_count = ena_xstats_calc_num(dev->data);
 	unsigned int stat, i, count = 0;
 
 	if (n < xstats_count || !xstats_names)
@@ -2765,7 +2764,7 @@ static int ena_xstats_get(struct rte_eth_dev *dev,
 			  unsigned int n)
 {
 	struct ena_adapter *adapter = dev->data->dev_private;
-	unsigned int xstats_count = ena_xstats_calc_num(dev);
+	unsigned int xstats_count = ena_xstats_calc_num(dev->data);
 	unsigned int stat, i, count = 0;
 	int stat_offset;
 	void *stats_begin;
@@ -2997,7 +2996,7 @@ static void ena_update_on_link_change(void *adapter_data,
 
 	adapter = adapter_data;
 	aenq_link_desc = (struct ena_admin_aenq_link_change_desc *)aenq_e;
-	eth_dev = adapter->rte_dev;
+	eth_dev = &rte_eth_devices[adapter->port_id];
 
 	status = get_ena_admin_aenq_link_change_desc_link_status(aenq_link_desc);
 	adapter->link_status = status;
