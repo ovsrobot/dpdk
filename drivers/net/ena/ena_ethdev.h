@@ -209,6 +209,7 @@ struct ena_offloads {
 
 /* Holds data shared between all instances of ENA PMD. */
 struct ena_shared_data {
+	uint8_t default_key[ENA_HASH_KEY_SIZE];
 	/* Each rte_memzone should have unique name.
 	 * To satisfy it, count number of allocation and add it to name.
 	 */

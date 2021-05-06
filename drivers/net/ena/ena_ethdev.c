@@ -276,19 +276,9 @@ static const struct eth_dev_ops ena_dev_ops = {
 
 void ena_rss_key_fill(void *key, size_t size)
 {
-	static bool key_generated;
-	static uint8_t default_key[ENA_HASH_KEY_SIZE];
-	size_t i;
-
 	RTE_ASSERT(size <= ENA_HASH_KEY_SIZE);
 
-	if (!key_generated) {
-		for (i = 0; i < ENA_HASH_KEY_SIZE; ++i)
-			default_key[i] = rte_rand() & 0xff;
-		key_generated = true;
-	}
-
-	rte_memcpy(key, default_key, size);
+	rte_memcpy(key, ena_shared_data->default_key, size);
 }
 
 static inline void ena_rx_mbuf_prepare(struct rte_mbuf *mbuf,
@@ -1758,7 +1748,11 @@ static uint32_t ena_calc_max_io_queue_num(struct ena_com_dev *ena_dev,
 
 static void ena_prepare_shared_data(struct ena_shared_data *shared_data)
 {
+	size_t i;
+
 	memset(shared_data, 0, sizeof(*shared_data));
+	for (i = 0; i < ENA_HASH_KEY_SIZE; ++i)
+		shared_data->default_key[i] = rte_rand() & 0xff;
 }
 
 static int ena_shared_data_init(void)
