@@ -207,6 +207,14 @@ struct ena_offloads {
 	bool rx_csum_supported;
 };
 
+/* Holds data shared between all instances of ENA PMD. */
+struct ena_shared_data {
+	/* Each rte_memzone should have unique name.
+	 * To satisfy it, count number of allocation and add it to name.
+	 */
+	rte_atomic64_t mz_alloc_cnt;
+};
+
 /* board specific private data structure */
 struct ena_adapter {
 	/* OS defined structs */
