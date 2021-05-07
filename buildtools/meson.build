@@ -2,7 +2,6 @@
 # Copyright(c) 2017-2019 Intel Corporation
 
 pkgconf = find_program('pkg-config', 'pkgconf', required: false)
-list_dir_globs = find_program('list-dir-globs.py')
 check_symbols = find_program('check-symbols.sh')
 ldflags_ibverbs_static = find_program('options-ibverbs-static.sh')
 binutils_avx512_check = find_program('binutils-avx512-check.sh')
@@ -16,6 +15,7 @@ else
 endif
 map_to_win_cmd = py3 + files('map_to_win.py')
 sphinx_wrapper = py3 + files('call-sphinx-build.py')
+list_dir_globs = py3 + files('list-dir-globs.py')
 
 # select library and object file format
 pmdinfo = py3 + files('gen-pmdinfo-cfile.py') + [meson.current_build_dir()]
