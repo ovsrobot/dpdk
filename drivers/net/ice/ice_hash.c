@@ -111,7 +111,6 @@ ice_hash_parse_pattern_action(struct ice_adapter *ad,
 /* Rss configuration template */
 struct ice_rss_hash_cfg ipv4_tmplt = {
 	ICE_FLOW_SEG_HDR_ETH | ICE_FLOW_SEG_HDR_IPV4 |
-	ICE_FLOW_SEG_HDR_IPV_FRAG |
 	ICE_FLOW_SEG_HDR_IPV_OTHER,
 	ICE_FLOW_HASH_ETH | ICE_FLOW_HASH_IPV4,
 	ICE_RSS_OUTER_HEADERS,
@@ -152,8 +151,7 @@ struct ice_rss_hash_cfg ipv6_tmplt = {
 
 struct ice_rss_hash_cfg ipv6_frag_tmplt = {
 	ICE_FLOW_SEG_HDR_ETH | ICE_FLOW_SEG_HDR_IPV6 |
-	ICE_FLOW_SEG_HDR_IPV_FRAG |
-	ICE_FLOW_SEG_HDR_IPV_OTHER,
+	ICE_FLOW_SEG_HDR_IPV_FRAG,
 	ICE_FLOW_HASH_ETH | ICE_FLOW_HASH_IPV6,
 	ICE_RSS_ANY_HEADERS,
 	0
@@ -657,17 +655,20 @@ ice_refine_hash_cfg_l234(struct ice_rss_hash_cfg *hash_cfg,
 		    ETH_RSS_NONFRAG_IPV4_UDP |
 		    ETH_RSS_NONFRAG_IPV4_TCP |
 		    ETH_RSS_NONFRAG_IPV4_SCTP)) {
-			if (rss_type & ETH_RSS_FRAG_IPV4)
-				*hash_flds &=
-					~(BIT_ULL(ICE_FLOW_FIELD_IDX_IPV4_ID));
-			else if (rss_type & ETH_RSS_L3_SRC_ONLY)
+			if (rss_type & ETH_RSS_FRAG_IPV4) {
+				*addl_hdrs |= ICE_FLOW_SEG_HDR_IPV_FRAG;
+				*addl_hdrs &= ~(ICE_FLOW_SEG_HDR_IPV_FRAG);
+				*hash_flds |=
+					BIT_ULL(ICE_FLOW_FIELD_IDX_IPV4_ID);
+			} else if (rss_type & ETH_RSS_L3_SRC_ONLY) {
 				*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_IPV4_DA));
-			else if (rss_type & ETH_RSS_L3_DST_ONLY)
+			} else if (rss_type & ETH_RSS_L3_DST_ONLY) {
 				*hash_flds &= ~(BIT_ULL(ICE_FLOW_FIELD_IDX_IPV4_SA));
-			else if (rss_type &
+			} else if (rss_type &
 				(ETH_RSS_L4_SRC_ONLY |
-				ETH_RSS_L4_DST_ONLY))
+				ETH_RSS_L4_DST_ONLY)) {
 				*hash_flds &= ~ICE_FLOW_HASH_IPV4;
+			}
 		} else {
 			*hash_flds &= ~ICE_FLOW_HASH_IPV4;
 		}
