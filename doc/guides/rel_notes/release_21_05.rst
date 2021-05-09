@@ -287,6 +287,11 @@ New Features
   * Added support for crypto adapter forward mode in octeontx2 event and crypto
     device driver.
 
+* **Added support for Nvidia crypto device driver.**
+
+  * Added mlx5 crypto driver to support AES-XTS cipher operations.
+    the first device to support it is ConnectX-6.
+
 
 Removed Items
 -------------
