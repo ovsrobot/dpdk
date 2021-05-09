@@ -103,6 +103,19 @@ mlx5_crypto_dev_configure(struct rte_cryptodev *dev,
 	return 0;
 }
 
+static void
+mlx5_crypto_dev_stop(struct rte_cryptodev *dev)
+{
+	RTE_SET_USED(dev);
+}
+
+static int
+mlx5_crypto_dev_start(struct rte_cryptodev *dev)
+{
+	RTE_SET_USED(dev);
+	return 0;
+}
+
 static int
 mlx5_crypto_dev_close(struct rte_cryptodev *dev)
 {
@@ -330,8 +343,8 @@ error:
 
 static struct rte_cryptodev_ops mlx5_crypto_ops = {
 	.dev_configure			= mlx5_crypto_dev_configure,
-	.dev_start			= NULL,
-	.dev_stop			= NULL,
+	.dev_start			= mlx5_crypto_dev_start,
+	.dev_stop			= mlx5_crypto_dev_stop,
 	.dev_close			= mlx5_crypto_dev_close,
 	.dev_infos_get			= mlx5_crypto_dev_infos_get,
 	.stats_get			= NULL,
