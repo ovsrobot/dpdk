@@ -332,9 +332,10 @@ struct igb_eth_syn_filter_ele {
 };
 
 #define IGB_FLEX_FILTER_MAXLEN	128	/**< bytes to use in flex filter. */
-#define IGB_FLEX_FILTER_MASK_SIZE	\
-	(RTE_ALIGN(IGB_FLEX_FILTER_MAXLEN, CHAR_BIT) / CHAR_BIT)
-					/**< mask bytes in flex filter. */
+#define IGB_FLEX_FILTER_MASK_SIZE                                              \
+	(RTE_ALIGN_FLOOR(IGB_FLEX_FILTER_MAXLEN + (CHAR_BIT - 1), CHAR_BIT) /  \
+	 CHAR_BIT)
+/**< mask bytes in flex filter. */
 
 /**
  * A structure used to define the flex filter entry
