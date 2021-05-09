@@ -233,6 +233,7 @@ mlx5_crypto_queue_pair_release(struct rte_cryptodev *dev, uint16_t qp_id)
 		claim_zero(mlx5_glue->devx_umem_dereg(qp->umem_obj));
 	if (qp->umem_buf != NULL)
 		rte_free(qp->umem_buf);
+	mlx5_mr_btree_free(&qp->mr_ctrl.cache_bh);
 	mlx5_devx_cq_destroy(&qp->cq_obj);
 	rte_free(qp);
 	dev->data->queue_pairs[qp_id] = NULL;
@@ -310,6 +311,13 @@ mlx5_crypto_queue_pair_setup(struct rte_cryptodev *dev, uint16_t qp_id,
 					       IBV_ACCESS_LOCAL_WRITE);
 	if (qp->umem_obj == NULL) {
 		DRV_LOG(ERR, "Failed to register QP umem.");
+		goto error;
+	}
+	if (mlx5_mr_btree_init(&qp->mr_ctrl.cache_bh, MLX5_MR_BTREE_CACHE_N,
+			       priv->dev_config.socket_id) != 0) {
+		DRV_LOG(ERR, "Cannot allocate MR Btree for qp %u.",
+			(uint32_t)qp_id);
+		rte_errno = ENOMEM;
 		goto error;
 	}
 	attr.pd = priv->pdn;
@@ -500,6 +508,17 @@ mlx5_crypto_pci_probe(struct rte_pci_driver *pci_drv,
 		claim_zero(mlx5_glue->close_device(priv->ctx));
 		return -1;
 	}
+	if (mlx5_mr_btree_init(&priv->mr_scache.cache,
+			     MLX5_MR_BTREE_CACHE_N * 2, rte_socket_id()) != 0) {
+		DRV_LOG(ERR, "Failed to allocate shared cache MR memory.");
+		mlx5_crypto_hw_global_release(priv);
+		rte_cryptodev_pmd_destroy(priv->crypto_dev);
+		claim_zero(mlx5_glue->close_device(priv->ctx));
+		rte_errno = ENOMEM;
+		return -rte_errno;
+	}
+	priv->mr_scache.reg_mr_cb = mlx5_common_verbs_reg_mr;
+	priv->mr_scache.dereg_mr_cb = mlx5_common_verbs_dereg_mr;
 	pthread_mutex_lock(&priv_list_lock);
 	TAILQ_INSERT_TAIL(&mlx5_crypto_priv_list, priv, next);
 	pthread_mutex_unlock(&priv_list_lock);
@@ -519,6 +538,7 @@ mlx5_crypto_pci_remove(struct rte_pci_device *pdev)
 		TAILQ_REMOVE(&mlx5_crypto_priv_list, priv, next);
 	pthread_mutex_unlock(&priv_list_lock);
 	if (priv) {
+		mlx5_mr_release_cache(&priv->mr_scache);
 		mlx5_crypto_hw_global_release(priv);
 		rte_cryptodev_pmd_destroy(priv->crypto_dev);
 		claim_zero(mlx5_glue->close_device(priv->ctx));
