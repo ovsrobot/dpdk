@@ -15,6 +15,7 @@ drivers = [
         'dpaa_sec',
         'dpaa2_sec',
         'kasumi',
+        'mlx5',
         'mvsam',
         'nitrox',
         'null',
