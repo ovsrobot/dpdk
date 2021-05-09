@@ -469,56 +469,52 @@ mlx5_crypto_args_check_handler(const char *key, const char *val, void *opaque)
 		attr->session_import_kek_ptr = (uint32_t)tmp;
 	else if (strcmp(key, "credential_id") == 0)
 		attr->credential_pointer = (uint32_t)tmp;
+	else if (strcmp(key, "keytag") == 0)
+		devarg_prms->keytag = tmp;
 	else
 		DRV_LOG(WARNING, "Invalid key %s.", key);
 	return 0;
 }
 
-static struct mlx5_devx_obj *
-mlx5_crypto_config_login(struct rte_devargs *devargs,
-			 struct ibv_context *ctx)
+static int
+mlx5_crypto_parse_devargs(struct rte_devargs *devargs,
+			  struct mlx5_crypto_devarg_params *devarg_prms)
 {
-	/*
-	 * Set credential pointer and session import KEK pointer to a default
-	 * value of 0.
-	 */
-	struct mlx5_crypto_devarg_params login = {
-			.login_devarg = false,
-			.login_attr = {
-					.credential_pointer = 0,
-					.session_import_kek_ptr = 0,
-			}
-	};
+	struct mlx5_devx_crypto_login_attr *attr = &devarg_prms->login_attr;
 	struct rte_kvargs *kvlist;
 
+	/* Default values. */
+	attr->credential_pointer = 0;
+	attr->session_import_kek_ptr = 0;
+	devarg_prms->keytag = 0;
 	if (devargs == NULL) {
 		DRV_LOG(ERR,
 	"No login devargs in order to enable crypto operations in the device.");
 		rte_errno = EINVAL;
-		return NULL;
+		return -1;
 	}
 	kvlist = rte_kvargs_parse(devargs->args, NULL);
 	if (kvlist == NULL) {
 		DRV_LOG(ERR, "Failed to parse devargs.");
 		rte_errno = EINVAL;
-		return NULL;
+		return -1;
 	}
 	if (rte_kvargs_process(kvlist, NULL, mlx5_crypto_args_check_handler,
-			   &login) != 0) {
+			   devarg_prms) != 0) {
 		DRV_LOG(ERR, "Devargs handler function Failed.");
 		rte_kvargs_free(kvlist);
 		rte_errno = EINVAL;
-		return NULL;
+		return -1;
 	}
 	rte_kvargs_free(kvlist);
-	if (login.login_devarg == false) {
+	if (devarg_prms->login_devarg == false) {
 		DRV_LOG(ERR,
 	"No login credential devarg in order to enable crypto operations "
 	"in the device.");
 		rte_errno = EINVAL;
-		return NULL;
+		return -1;
 	}
-	return mlx5_devx_cmd_create_crypto_login_obj(ctx, &login.login_attr);
+	return 0;
 }
 
 /**
@@ -544,6 +540,7 @@ mlx5_crypto_pci_probe(struct rte_pci_driver *pci_drv,
 	struct ibv_context *ctx;
 	struct mlx5_devx_obj *login;
 	struct mlx5_crypto_priv *priv;
+	struct mlx5_crypto_devarg_params devarg_prms = { 0 };
 	struct mlx5_hca_attr attr = { 0 };
 	struct rte_cryptodev_pmd_init_params init_params = {
 		.name = "",
@@ -552,6 +549,8 @@ mlx5_crypto_pci_probe(struct rte_pci_driver *pci_drv,
 		.max_nb_queue_pairs =
 				RTE_CRYPTODEV_PMD_DEFAULT_MAX_NB_QUEUE_PAIRS,
 	};
+	int ret;
+
 	RTE_SET_USED(pci_drv);
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
 		DRV_LOG(ERR, "Non-primary process type is not supported.");
@@ -581,7 +580,13 @@ mlx5_crypto_pci_probe(struct rte_pci_driver *pci_drv,
 		rte_errno = ENOTSUP;
 		return -ENOTSUP;
 	}
-	login = mlx5_crypto_config_login(pci_dev->device.devargs, ctx);
+	ret = mlx5_crypto_parse_devargs(pci_dev->device.devargs, &devarg_prms);
+	if (ret) {
+		DRV_LOG(ERR, "Failed to parse devargs.");
+		return -rte_errno;
+	}
+	login = mlx5_devx_cmd_create_crypto_login_obj(ctx,
+						      &devarg_prms.login_attr);
 	if (login == NULL) {
 		DRV_LOG(ERR, "Failed to configure login.");
 		return -rte_errno;
@@ -621,6 +626,7 @@ mlx5_crypto_pci_probe(struct rte_pci_driver *pci_drv,
 	}
 	priv->mr_scache.reg_mr_cb = mlx5_common_verbs_reg_mr;
 	priv->mr_scache.dereg_mr_cb = mlx5_common_verbs_dereg_mr;
+	priv->keytag = rte_cpu_to_be_64(devarg_prms.keytag);
 	pthread_mutex_lock(&priv_list_lock);
 	TAILQ_INSERT_TAIL(&mlx5_crypto_priv_list, priv, next);
 	pthread_mutex_unlock(&priv_list_lock);
