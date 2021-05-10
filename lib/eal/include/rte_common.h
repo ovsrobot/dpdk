@@ -329,27 +329,37 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
  * value will be of the same type as the first parameter and will be no lower
  * than the first parameter.
  */
-#define RTE_ALIGN_MUL_CEIL(v, mul) \
-	((((v) + (typeof(v))(mul) - 1) / ((typeof(v))(mul))) * (typeof(v))(mul))
+#define RTE_ALIGN_MUL_CEIL(v, mul)                                             \
+	__extension__({                                                        \
+		typeof(v) _vc = (v);                                           \
+		typeof(v) _mc = (mul);                                         \
+		((_vc + _mc - 1) / _mc) * _mc;                                 \
+	})
 
 /**
  * Macro to align a value to the multiple of given value. The resultant
  * value will be of the same type as the first parameter and will be no higher
  * than the first parameter.
  */
-#define RTE_ALIGN_MUL_FLOOR(v, mul) \
-	(((v) / ((typeof(v))(mul))) * (typeof(v))(mul))
+#define RTE_ALIGN_MUL_FLOOR(v, mul)                                            \
+	__extension__({                                                        \
+		typeof(v) _vf = (v);                                           \
+		typeof(v) _mf = (mul);                                         \
+		(_vf / _mf) * _mf;                                             \
+	})
 
 /**
  * Macro to align value to the nearest multiple of the given value.
  * The resultant value might be greater than or less than the first parameter
  * whichever difference is the lowest.
  */
-#define RTE_ALIGN_MUL_NEAR(v, mul)				\
-	({							\
-		typeof(v) ceil = RTE_ALIGN_MUL_CEIL(v, mul);	\
-		typeof(v) floor = RTE_ALIGN_MUL_FLOOR(v, mul);	\
-		(ceil - (v)) > ((v) - floor) ? floor : ceil;	\
+#define RTE_ALIGN_MUL_NEAR(v, mul)                                             \
+	__extension__({                                                        \
+		typeof(v) _v = (v);                                            \
+		typeof(v) _m = (mul);                                          \
+		typeof(v) floor = RTE_ALIGN_MUL_FLOOR(_v, _m);                 \
+		typeof(v) ceil = RTE_ALIGN_MUL_CEIL(_v, _m);                   \
+		(ceil - _v) > (_v - floor) ? floor : ceil;                     \
 	})
 
 /**
