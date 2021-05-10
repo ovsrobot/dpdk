@@ -1517,11 +1517,8 @@ iavf_get_hena_caps(struct iavf_adapter *adapter, uint64_t *caps)
 	args.out_size = IAVF_AQ_BUF_SZ;
 
 	err = iavf_execute_vf_cmd(adapter, &args);
-	if (err) {
-		PMD_DRV_LOG(ERR,
-			    "Failed to execute command of OP_GET_RSS_HENA_CAPS");
+	if (err)
 		return err;
-	}
 
 	*caps = ((struct virtchnl_rss_hena *)args.out_buffer)->hena;
 	return 0;
@@ -1533,7 +1530,6 @@ iavf_set_hena(struct iavf_adapter *adapter, uint64_t hena)
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
 	struct virtchnl_rss_hena vrh;
 	struct iavf_cmd_info args;
-	int err;
 
 	vrh.hena = hena;
 	args.ops = VIRTCHNL_OP_SET_RSS_HENA;
@@ -1542,12 +1538,7 @@ iavf_set_hena(struct iavf_adapter *adapter, uint64_t hena)
 	args.out_buffer = vf->aq_resp;
 	args.out_size = IAVF_AQ_BUF_SZ;
 
-	err = iavf_execute_vf_cmd(adapter, &args);
-	if (err)
-		PMD_DRV_LOG(ERR,
-			    "Failed to execute command of OP_SET_RSS_HENA");
-
-	return err;
+	return iavf_execute_vf_cmd(adapter, &args);
 }
 
 int
