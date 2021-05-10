@@ -71,6 +71,7 @@ static uint32_t rules_count;
 static uint32_t rules_batch;
 static uint32_t hairpin_queues_num; /* total hairpin q number - default: 0 */
 static uint32_t nb_lcores;
+static uint64_t meter_cir;
 
 #define MAX_PKT_BURST    32
 #define LCORE_MODE_PKT    1
@@ -144,6 +145,8 @@ usage(char *progname)
 	printf("  --unique-data: flag to set using unique data for all"
 		" actions that support data, such as header modify and encap actions\n");
 	printf("  --policy-mtr: To create meter with policy\n");
+	printf("  --meter-cir=N: to set committed information rate(CIR)"
+		" parameter in meter profile, default is %d\n", METER_CIR);
 
 	printf("To set flow attributes:\n");
 	printf("  --ingress: set ingress attribute in flows\n");
@@ -584,6 +587,7 @@ args_parse(int argc, char **argv)
 		{ "portmask",                   1, 0, 0 },
 		{ "cores",                      1, 0, 0 },
 		{ "policy-mtr",                 0, 0, 0 },
+		{ "meter-cir",                  1, 0, 0 },
 		/* Attributes */
 		{ "ingress",                    0, 0, 0 },
 		{ "egress",                     0, 0, 0 },
@@ -815,6 +819,10 @@ args_parse(int argc, char **argv)
 			}
 			if (strcmp(lgopts[opt_idx].name, "policy-mtr") == 0)
 				policy_mtr = true;
+			if (strcmp(lgopts[opt_idx].name, "meter-cir") == 0) {
+				n = atoi(optarg);
+				meter_cir = (uint64_t) n;
+			}
 			break;
 		default:
 			usage(argv[0]);
@@ -1130,8 +1138,8 @@ create_meter_profile(void)
 			continue;
 
 		mp.alg = RTE_MTR_SRTCM_RFC2697;
-		mp.srtcm_rfc2697.cir = METER_CIR;
-		mp.srtcm_rfc2697.cbs = METER_CIR / 8;
+		mp.srtcm_rfc2697.cir = meter_cir;
+		mp.srtcm_rfc2697.cbs = meter_cir / 8;
 		mp.srtcm_rfc2697.ebs = 0;
 
 		ret = rte_mtr_meter_profile_add
@@ -1952,6 +1960,7 @@ main(int argc, char **argv)
 	dump_socket_mem_flag = false;
 	flow_group = DEFAULT_GROUP;
 	unique_data = false;
+	meter_cir = METER_CIR;
 
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
