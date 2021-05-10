@@ -219,8 +219,10 @@ struct txgbe_5tuple_filter {
 	uint16_t queue;       /* rx queue assigned to */
 };
 
-#define TXGBE_5TUPLE_ARRAY_SIZE \
-	(RTE_ALIGN(TXGBE_MAX_FTQF_FILTERS, (sizeof(uint32_t) * NBBY)) / \
+#define TXGBE_5TUPLE_ARRAY_SIZE                                                \
+	(RTE_ALIGN_FLOOR(TXGBE_MAX_FTQF_FILTERS + (sizeof(uint32_t) * NBBY) -  \
+				 1,                                            \
+			 (sizeof(uint32_t) * NBBY)) /                          \
 	 (sizeof(uint32_t) * NBBY))
 
 struct txgbe_ethertype_filter {

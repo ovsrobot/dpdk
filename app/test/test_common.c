@@ -69,6 +69,12 @@ test_macros(int __rte_unused unused_parm)
 	TEST_SIDE_EFFECT_2(RTE_PTR_ADD, void *, size_t);
 	TEST_SIDE_EFFECT_2(RTE_PTR_DIFF, void *, void *);
 	TEST_SIDE_EFFECT_2(RTE_PTR_SUB, void *, size_t);
+	TEST_SIDE_EFFECT_2(RTE_PTR_ALIGN, void *, size_t);
+	TEST_SIDE_EFFECT_2(RTE_PTR_ALIGN_CEIL, void *, size_t);
+	TEST_SIDE_EFFECT_2(RTE_PTR_ALIGN_FLOOR, void *, size_t);
+	TEST_SIDE_EFFECT_2(RTE_ALIGN, unsigned int, unsigned int);
+	TEST_SIDE_EFFECT_2(RTE_ALIGN_CEIL, unsigned int, unsigned int);
+	TEST_SIDE_EFFECT_2(RTE_ALIGN_FLOOR, unsigned int, unsigned int);
 	TEST_SIDE_EFFECT_2(RTE_ALIGN_MUL_CEIL, unsigned int, unsigned int);
 	TEST_SIDE_EFFECT_2(RTE_ALIGN_MUL_FLOOR, unsigned int, unsigned int);
 	TEST_SIDE_EFFECT_2(RTE_ALIGN_MUL_NEAR, unsigned int, unsigned int);

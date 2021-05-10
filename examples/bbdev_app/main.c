@@ -45,7 +45,7 @@
 
 /* Hardcoded K value */
 #define K 40
-#define NCB (3 * RTE_ALIGN_CEIL(K + 4, 32))
+#define NCB (3 * RTE_ALIGN_FLOOR((K + 4) + 31, 32))
 
 #define CRC_24B_LEN 3
 

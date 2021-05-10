@@ -431,8 +431,9 @@ enum rte_fdir_mode {
 };
 
 #define UINT64_BIT (CHAR_BIT * sizeof(uint64_t))
-#define RTE_FLOW_MASK_ARRAY_SIZE \
-	(RTE_ALIGN(RTE_ETH_FLOW_MAX, UINT64_BIT)/UINT64_BIT)
+#define RTE_FLOW_MASK_ARRAY_SIZE                                               \
+	(RTE_ALIGN_FLOOR(RTE_ETH_FLOW_MAX + (UINT64_BIT - 1), UINT64_BIT) /    \
+	 UINT64_BIT)
 
 /**
  * A structure used to get the information of flow director filter.

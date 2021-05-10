@@ -42,8 +42,8 @@ S_ASSERT_RTE_MBUF(offsetof(struct rte_mbuf, hash) ==
 S_ASSERT_RTE_MBUF(offsetof(struct rte_mbuf, ol_flags) ==
 		  offsetof(struct rte_mbuf, rearm_data) + 8);
 S_ASSERT_RTE_MBUF(offsetof(struct rte_mbuf, rearm_data) ==
-		  RTE_ALIGN(offsetof(struct rte_mbuf, rearm_data), 16));
-
+		  RTE_ALIGN_FLOOR(offsetof(struct rte_mbuf, rearm_data) + 15,
+				  16));
 /* rxq_burst_v() */
 S_ASSERT_RTE_MBUF(offsetof(struct rte_mbuf, pkt_len) ==
 		  offsetof(struct rte_mbuf, rx_descriptor_fields1) + 4);
@@ -63,7 +63,8 @@ S_ASSERT_MLX5_CQE(offsetof(struct mlx5_cqe, vlan_info) ==
 S_ASSERT_MLX5_CQE(offsetof(struct mlx5_cqe, lro_num_seg) + 12 ==
 		  offsetof(struct mlx5_cqe, byte_cnt));
 S_ASSERT_MLX5_CQE(offsetof(struct mlx5_cqe, sop_drop_qpn) ==
-		  RTE_ALIGN(offsetof(struct mlx5_cqe, sop_drop_qpn), 8));
+		  RTE_ALIGN_FLOOR(offsetof(struct mlx5_cqe, sop_drop_qpn) + 7,
+				  8));
 S_ASSERT_MLX5_CQE(offsetof(struct mlx5_cqe, op_own) ==
 		  offsetof(struct mlx5_cqe, sop_drop_qpn) + 7);
 

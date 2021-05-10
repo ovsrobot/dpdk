@@ -294,8 +294,13 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
  * point to an address no lower than the first parameter. Second parameter
  * must be a power-of-two value.
  */
-#define RTE_PTR_ALIGN_CEIL(ptr, align) \
-	RTE_PTR_ALIGN_FLOOR((typeof(ptr))RTE_PTR_ADD(ptr, (align) - 1), align)
+#define RTE_PTR_ALIGN_CEIL(ptr, align)                                         \
+	__extension__({                                                        \
+		typeof(ptr) _pc = (ptr);                                       \
+		typeof(align) _ac = (align);                                   \
+		RTE_PTR_ALIGN_FLOOR((typeof(ptr))RTE_PTR_ADD(_pc, _ac - 1),    \
+				    _ac);                                      \
+	})
 
 /**
  * Macro to align a value to a given power-of-two. The resultant value
@@ -303,8 +308,12 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
  * than the first parameter. Second parameter must be a power-of-two
  * value.
  */
-#define RTE_ALIGN_CEIL(val, align) \
-	RTE_ALIGN_FLOOR(((val) + ((typeof(val)) (align) - 1)), align)
+#define RTE_ALIGN_CEIL(val, align)                                             \
+	__extension__({                                                        \
+		typeof(val) _vc = (val);                                       \
+		typeof(val) _ac = (typeof(val))(align);                        \
+		RTE_ALIGN_FLOOR((_vc + _ac - 1), _ac);                         \
+	})
 
 /**
  * Macro to align a pointer to a given power-of-two. The resultant
