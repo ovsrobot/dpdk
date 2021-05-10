@@ -77,7 +77,7 @@ and the external crypto libraries supported by them:
    DPDK version   Crypto library version
    =============  ================================
    16.04 - 19.11  LibSSO SNOW3G
-   20.02+         Multi-buffer library 0.53 - 0.54
+   20.02+         Multi-buffer library 0.53 - 1.0
    =============  ================================
 
 
