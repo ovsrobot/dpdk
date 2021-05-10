@@ -3704,6 +3704,7 @@ ice_add_marker_act(struct ice_hw *hw, struct ice_fltr_mgmt_list_entry *m_ent,
 	enum ice_status status;
 	u16 lg_act_size;
 	u16 rules_size;
+	u16 max_size;
 	u32 act;
 	u16 id;
 
@@ -3717,7 +3718,9 @@ ice_add_marker_act(struct ice_hw *hw, struct ice_fltr_mgmt_list_entry *m_ent,
 	 */
 	lg_act_size = (u16)ICE_SW_RULE_LG_ACT_SIZE(num_lg_acts);
 	rules_size = lg_act_size + ICE_SW_RULE_RX_TX_ETH_HDR_SIZE;
-	lg_act = (struct ice_aqc_sw_rules_elem *)ice_malloc(hw, rules_size);
+	max_size = sizeof(struct ice_aqc_sw_rules_elem) * 2;
+	lg_act = (struct ice_aqc_sw_rules_elem *)ice_malloc(hw,
+		rules_size < max_size ? max_size : rules_size);
 	if (!lg_act)
 		return ICE_ERR_NO_MEMORY;
 
@@ -3803,6 +3806,7 @@ ice_add_counter_act(struct ice_hw *hw, struct ice_fltr_mgmt_list_entry *m_ent,
 	u16 lg_act_size;
 	u16 rules_size;
 	u16 f_rule_id;
+	u16 max_size;
 	u32 act;
 	u16 id;
 
@@ -3816,7 +3820,9 @@ ice_add_counter_act(struct ice_hw *hw, struct ice_fltr_mgmt_list_entry *m_ent,
 	 */
 	lg_act_size = (u16)ICE_SW_RULE_LG_ACT_SIZE(num_acts);
 	rules_size = lg_act_size + ICE_SW_RULE_RX_TX_ETH_HDR_SIZE;
-	lg_act = (struct ice_aqc_sw_rules_elem *)ice_malloc(hw, rules_size);
+	max_size = sizeof(struct ice_aqc_sw_rules_elem) * 2;
+	lg_act = (struct ice_aqc_sw_rules_elem *)ice_malloc(hw,
+		rules_size < max_size ? max_size : rules_size);
 	if (!lg_act)
 		return ICE_ERR_NO_MEMORY;
 
@@ -4009,12 +4015,14 @@ static enum ice_status
 ice_create_pkt_fwd_rule(struct ice_hw *hw, struct ice_sw_recipe *recp_list,
 			struct ice_fltr_list_entry *f_entry)
 {
+	u16 max_size = sizeof(struct ice_aqc_sw_rules_elem);
 	struct ice_fltr_mgmt_list_entry *fm_entry;
 	struct ice_aqc_sw_rules_elem *s_rule;
 	enum ice_status status;
 
 	s_rule = (struct ice_aqc_sw_rules_elem *)
-		ice_malloc(hw, ICE_SW_RULE_RX_TX_ETH_HDR_SIZE);
+		ice_malloc(hw, ICE_SW_RULE_RX_TX_ETH_HDR_SIZE < max_size ?
+				max_size : ICE_SW_RULE_RX_TX_ETH_HDR_SIZE);
 	if (!s_rule)
 		return ICE_ERR_NO_MEMORY;
 	fm_entry = (struct ice_fltr_mgmt_list_entry *)
@@ -4068,11 +4076,13 @@ ice_create_pkt_fwd_rule_exit:
 static enum ice_status
 ice_update_pkt_fwd_rule(struct ice_hw *hw, struct ice_fltr_info *f_info)
 {
+	u16 max_size = sizeof(struct ice_aqc_sw_rules_elem);
 	struct ice_aqc_sw_rules_elem *s_rule;
 	enum ice_status status;
 
 	s_rule = (struct ice_aqc_sw_rules_elem *)
-		ice_malloc(hw, ICE_SW_RULE_RX_TX_ETH_HDR_SIZE);
+		ice_malloc(hw, ICE_SW_RULE_RX_TX_ETH_HDR_SIZE < max_size ?
+				max_size : ICE_SW_RULE_RX_TX_ETH_HDR_SIZE);
 	if (!s_rule)
 		return ICE_ERR_NO_MEMORY;
 
@@ -4545,11 +4555,13 @@ ice_remove_rule_internal(struct ice_hw *hw, struct ice_sw_recipe *recp_list,
 	}
 
 	if (remove_rule) {
+		u16 max_size = sizeof(struct ice_aqc_sw_rules_elem);
 		/* Remove the lookup rule */
 		struct ice_aqc_sw_rules_elem *s_rule;
 
 		s_rule = (struct ice_aqc_sw_rules_elem *)
-			ice_malloc(hw, ICE_SW_RULE_RX_TX_NO_HDR_SIZE);
+			ice_malloc(hw, ICE_SW_RULE_RX_TX_NO_HDR_SIZE < max_size
+				? max_size : ICE_SW_RULE_RX_TX_NO_HDR_SIZE);
 		if (!s_rule) {
 			status = ICE_ERR_NO_MEMORY;
 			goto exit;
@@ -5264,6 +5276,7 @@ enum ice_status
 ice_cfg_dflt_vsi(struct ice_port_info *pi, u16 vsi_handle, bool set,
 		 u8 direction)
 {
+	u16 max_size = sizeof(struct ice_aqc_sw_rules_elem);
 	struct ice_aqc_sw_rules_elem *s_rule;
 	struct ice_fltr_info f_info;
 	struct ice_hw *hw = pi->hw;
@@ -5279,7 +5292,8 @@ ice_cfg_dflt_vsi(struct ice_port_info *pi, u16 vsi_handle, bool set,
 	s_rule_size = set ? ICE_SW_RULE_RX_TX_ETH_HDR_SIZE :
 		ICE_SW_RULE_RX_TX_NO_HDR_SIZE;
 
-	s_rule = (struct ice_aqc_sw_rules_elem *)ice_malloc(hw, s_rule_size);
+	s_rule = (struct ice_aqc_sw_rules_elem *)ice_malloc(hw, s_rule_size <
+		max_size ? max_size : s_rule_size);
 	if (!s_rule)
 		return ICE_ERR_NO_MEMORY;
 
@@ -8998,12 +9012,14 @@ ice_rem_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 	}
 	ice_release_lock(rule_lock);
 	if (remove_rule) {
+		u16 max_size = sizeof(struct ice_aqc_sw_rules_elem);
 		struct ice_aqc_sw_rules_elem *s_rule;
 		u16 rule_buf_sz;
 
 		rule_buf_sz = ICE_SW_RULE_RX_TX_NO_HDR_SIZE;
 		s_rule = (struct ice_aqc_sw_rules_elem *)
-			ice_malloc(hw, rule_buf_sz);
+			ice_malloc(hw, rule_buf_sz < max_size ? max_size :
+				rule_buf_sz);
 		if (!s_rule)
 			return ICE_ERR_NO_MEMORY;
 		s_rule->pdata.lkup_tx_rx.act = 0;
