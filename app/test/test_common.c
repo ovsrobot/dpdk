@@ -18,6 +18,13 @@
 	{printf(x "() test failed!\n");\
 	return -1;}
 
+static uintptr_t callcount;
+static uintptr_t
+inc_callcount(void)
+{
+	return callcount++;
+}
+
 /* this is really a sanity check */
 static int
 test_macros(int __rte_unused unused_parm)
@@ -29,7 +36,19 @@ test_macros(int __rte_unused unused_parm)
 	{printf(#x "() test failed!\n");\
 	return -1;}
 
+#define TEST_SIDE_EFFECT_2(macro, type1, type2)                                \
+	do {                                                                   \
+		callcount = 0;                                                 \
+		(void)macro((type1)inc_callcount(), (type2)inc_callcount());   \
+		if (callcount != 2) {                                          \
+			printf(#macro " has side effects: callcount=%u\n",     \
+			       (unsigned int)callcount);                       \
+			ret = -1;                                              \
+		}                                                              \
+	} while (0)
+
 	uintptr_t unused = 0;
+	int ret = 0;
 
 	RTE_SET_USED(unused);
 
@@ -47,7 +66,13 @@ test_macros(int __rte_unused unused_parm)
 	if (strncmp(RTE_STR(test), "test", sizeof("test")))
 		FAIL_MACRO(RTE_STR);
 
-	return 0;
+	TEST_SIDE_EFFECT_2(RTE_PTR_ADD, void *, size_t);
+	TEST_SIDE_EFFECT_2(RTE_PTR_DIFF, void *, void *);
+	TEST_SIDE_EFFECT_2(RTE_PTR_SUB, void *, size_t);
+	TEST_SIDE_EFFECT_2(RTE_ALIGN_MUL_CEIL, unsigned int, unsigned int);
+	TEST_SIDE_EFFECT_2(RTE_ALIGN_MUL_FLOOR, unsigned int, unsigned int);
+	TEST_SIDE_EFFECT_2(RTE_ALIGN_MUL_NEAR, unsigned int, unsigned int);
+	return ret;
 }
 
 static int
