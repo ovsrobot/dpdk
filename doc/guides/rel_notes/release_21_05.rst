@@ -202,6 +202,13 @@ New Features
 
   Added packed ring support for async vhost.
 
+* **Updated Amazon ENA PMD.**
+
+  The new driver version (v2.3.0) introduces bug fixes and improvements,
+  including:
+
+  * Changed memcpy mapping to the dpdk-optimized version.
+
 * **Added support of multiple data-units in cryptodev API.**
 
   The cryptodev library has been enhanced to allow operations on multiple
