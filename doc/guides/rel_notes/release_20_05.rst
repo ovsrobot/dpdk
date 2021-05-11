@@ -178,6 +178,13 @@ New Features
   * Added support for flow patterns with wildcard VLAN items (without VID value).
   * Updated support for matching on GTP headers, added match on GTP flags.
 
+* **Updated Cisco enic driver.**
+
+  Updated Cisco enic driver GENEVE tunneling support:
+
+  * Added support to control GENEVE tunneling via UCSM/CIMC and removed devarg.
+  * Added GENEVE port number configuration.
+
 * **Added Chacha20-Poly1305 algorithm to Cryptodev API.**
 
   Added support for Chacha20-Poly1305 AEAD algorithm in Cryptodev.
