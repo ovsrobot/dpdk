@@ -12252,12 +12252,16 @@ flow_dv_translate(struct rte_eth_dev *dev,
 				MLX5_FLOW_FATE_QUEUE;
 			break;
 		case MLX5_RTE_FLOW_ACTION_TYPE_AGE:
-			flow->age = (uint32_t)(uintptr_t)(action->conf);
-			age_act = flow_aso_age_get_by_idx(dev, flow->age);
-			__atomic_fetch_add(&age_act->refcnt, 1,
-					   __ATOMIC_RELAXED);
-			age_act_pos = actions_n++;
-			action_flags |= MLX5_FLOW_ACTION_AGE;
+			if (priv->sh->flow_hit_aso_en && (attr->group ||
+			    attr->transfer)) {
+				flow->age = (uint32_t)(uintptr_t)(action->conf);
+				age_act = flow_aso_age_get_by_idx(dev,
+								  flow->age);
+				__atomic_fetch_add(&age_act->refcnt, 1,
+						   __ATOMIC_RELAXED);
+				age_act_pos = actions_n++;
+				action_flags |= MLX5_FLOW_ACTION_AGE;
+			}
 			break;
 		case RTE_FLOW_ACTION_TYPE_AGE:
 			non_shared_age = action->conf;
@@ -12615,7 +12619,7 @@ flow_dv_translate(struct rte_eth_dev *dev,
 				if ((non_shared_age &&
 				     count && !count->shared) ||
 				    !(priv->sh->flow_hit_aso_en &&
-				      attr->group)) {
+				      dev_flow->dv.group)) {
 					/* Creates age by counters. */
 					cnt_act = flow_dv_prepare_counter
 								(dev, dev_flow,
@@ -12628,7 +12632,9 @@ flow_dv_translate(struct rte_eth_dev *dev,
 								cnt_act->action;
 					break;
 				}
-				if (!flow->age && non_shared_age) {
+				if (!flow->age && non_shared_age &&
+				    priv->sh->flow_hit_aso_en &&
+				    dev_flow->dv.group) {
 					flow->age =
 						flow_dv_translate_create_aso_age
 								(dev,
@@ -12641,6 +12647,8 @@ flow_dv_translate(struct rte_eth_dev *dev,
 						     NULL,
 						     "can't create ASO age action");
 				}
+				if (!flow->age)
+					return -rte_errno;
 				age_act = flow_aso_age_get_by_idx(dev,
 								  flow->age);
 				dev_flow->dv.actions[age_act_pos] =
