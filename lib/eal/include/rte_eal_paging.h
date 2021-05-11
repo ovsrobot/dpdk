@@ -3,6 +3,7 @@
  */
 
 #include <stdint.h>
+#include <sys/types.h>
 
 #include <rte_compat.h>
 
@@ -61,7 +62,7 @@ enum rte_map_flags {
 __rte_internal
 void *
 rte_mem_map(void *requested_addr, size_t size, int prot, int flags,
-	int fd, size_t offset);
+	int fd, off_t offset);
 
 /**
  * OS-independent implementation of POSIX munmap(3).
