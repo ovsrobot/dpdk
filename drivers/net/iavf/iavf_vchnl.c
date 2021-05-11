@@ -234,8 +234,10 @@ iavf_execute_vf_cmd(struct iavf_adapter *adapter, struct iavf_cmd_info *args)
 			_clear_cmd(vf);
 			err = -EIO;
 		} else if (vf->cmd_retval ==
-			   VIRTCHNL_STATUS_ERR_NOT_SUPPORTED) {
-			PMD_DRV_LOG(ERR, "Cmd %d not supported", args->ops);
+			   VIRTCHNL_STATUS_ERR_NOT_SUPPORTED ||
+			   vf->cmd_retval ==
+			   VIRTCHNL_STATUS_ERR_NOT_IMPLEMENTED) {
+			PMD_DRV_LOG(WARNING, "Cmd %d not supported", args->ops);
 			err = -ENOTSUP;
 		} else if (vf->cmd_retval != VIRTCHNL_STATUS_SUCCESS) {
 			PMD_DRV_LOG(ERR, "Return failure %d for cmd %d",
