@@ -209,6 +209,7 @@ New Features
 
   * Changed memcpy mapping to the dpdk-optimized version.
   * Updated ena_com (HAL) to the latest version.
+  * Fixed bugs when requesting large LLQ headers using the devargs.
 
 * **Added support of multiple data-units in cryptodev API.**
 
