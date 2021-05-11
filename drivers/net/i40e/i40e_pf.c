@@ -1464,8 +1464,8 @@ i40e_pf_host_handle_vf_msg(struct rte_eth_dev *dev,
 	 */
 	default:
 		PMD_DRV_LOG(ERR, "%u received, not supported", opcode);
-		i40e_pf_host_send_msg_to_vf(vf, opcode, I40E_ERR_PARAM,
-								NULL, 0);
+		i40e_pf_host_send_msg_to_vf(vf, opcode,
+					    I40E_ERR_NOT_IMPLEMENTED, NULL, 0);
 		break;
 	}
 
