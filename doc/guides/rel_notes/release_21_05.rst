@@ -208,6 +208,7 @@ New Features
   including:
 
   * Changed memcpy mapping to the dpdk-optimized version.
+  * Updated ena_com (HAL) to the latest version.
 
 * **Added support of multiple data-units in cryptodev API.**
 
