@@ -211,6 +211,7 @@ New Features
   * Updated ena_com (HAL) to the latest version.
   * Fixed bugs when requesting large LLQ headers using the devargs.
   * Added indication of the RSS hash presence in the mbuf.
+  * Fixed bug when the default ring size was set.
 
 * **Added support of multiple data-units in cryptodev API.**
 
