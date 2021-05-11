@@ -986,6 +986,12 @@ includes
 
 	includes += include_directories('base')
 
+log_prefix
+	**Default Value = pmd.<class>**
+	Some driver classes have a customized log prefix.
+	This prefix is combined with the driver name
+	when registering a default log name for the driver.
+
 name
 	As above, though note that each driver class can define it's own naming
 	scheme for the resulting ``.so`` files.
