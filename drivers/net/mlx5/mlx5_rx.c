@@ -282,7 +282,7 @@ int mlx5_get_monitor_addr(void *rx_queue, struct rte_power_monitor_cond *pmc)
 		return -rte_errno;
 	}
 	pmc->addr = &cqe->op_own;
-	pmc->val =  !!idx;
+	pmc->val =  !idx;
 	pmc->mask = MLX5_CQE_OWNER_MASK;
 	pmc->size = sizeof(uint8_t);
 	return 0;

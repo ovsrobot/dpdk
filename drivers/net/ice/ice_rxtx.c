@@ -43,7 +43,7 @@ ice_get_monitor_addr(void *rx_queue, struct rte_power_monitor_cond *pmc)
 	 * we expect the DD bit to be set to 1 if this descriptor was already
 	 * written to.
 	 */
-	pmc->val = rte_cpu_to_le_16(1 << ICE_RX_FLEX_DESC_STATUS0_DD_S);
+	pmc->val = 0;
 	pmc->mask = rte_cpu_to_le_16(1 << ICE_RX_FLEX_DESC_STATUS0_DD_S);
 
 	/* register is 16-bit */

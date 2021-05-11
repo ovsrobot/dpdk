@@ -45,10 +45,10 @@ struct rte_power_monitor_cond {
  * Additionally, an expected value (`pmc->val`), mask (`pmc->mask`), and data
  * size (`pmc->size`) are provided in the `pmc` power monitoring condition. If
  * the mask is non-zero, the current value pointed to by the `pmc->addr` pointer
- * will be read and compared against the expected value, and if they match, the
- * entering of optimized power state will be aborted. This is intended to
- * prevent the CPU from entering optimized power state and waiting on a write
- * that has already happened by the time this API is called.
+ * will be read and compared against the expected value, and if they do not
+ * match, the entering of optimized power state will be aborted. This is
+ * intended to prevent the CPU from entering optimized power state and waiting
+ * on a write that has already happened by the time this API is called.
  *
  * @warning It is responsibility of the user to check if this function is
  *   supported at runtime using `rte_cpu_get_intrinsics_support()` API call.

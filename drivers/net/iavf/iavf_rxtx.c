@@ -73,7 +73,7 @@ iavf_get_monitor_addr(void *rx_queue, struct rte_power_monitor_cond *pmc)
 	 * we expect the DD bit to be set to 1 if this descriptor was already
 	 * written to.
 	 */
-	pmc->val = rte_cpu_to_le_64(1 << IAVF_RX_DESC_STATUS_DD_SHIFT);
+	pmc->val = 0;
 	pmc->mask = rte_cpu_to_le_64(1 << IAVF_RX_DESC_STATUS_DD_SHIFT);
 
 	/* registers are 64-bit */

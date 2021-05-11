@@ -3188,7 +3188,7 @@ dlb2_dequeue_wait(struct dlb2_eventdev *dlb2,
 			&cq_base[qm_port->cq_idx];
 		monitor_addr++; /* cq_gen bit is in second 64bit location */
 
-		if (qm_port->gen_bit)
+		if (!qm_port->gen_bit)
 			expected_value = qe_mask.raw_qe[1];
 		else
 			expected_value = 0;

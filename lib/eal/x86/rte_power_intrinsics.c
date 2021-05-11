@@ -116,8 +116,8 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 				pmc->addr, pmc->size);
 		const uint64_t masked = cur_value & pmc->mask;
 
-		/* if the masked value is already matching, abort */
-		if (masked == pmc->val)
+		/* if the masked value is not matching, abort */
+		if (masked != pmc->val)
 			goto end;
 	}
 
