@@ -535,6 +535,12 @@ ena_dev_reset(struct rte_eth_dev *dev)
 {
 	int rc = 0;
 
+	/* Cannot release memory in secondary process */
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		PMD_DRV_LOG(WARNING, "dev_reset not supported in secondary.\n");
+		return -EPERM;
+	}
+
 	ena_destroy_device(dev);
 	rc = eth_ena_dev_init(dev);
 	if (rc)
@@ -1058,6 +1064,12 @@ static int ena_start(struct rte_eth_dev *dev)
 	uint64_t ticks;
 	int rc = 0;
 
+	/* Cannot allocate memory in secondary process */
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		PMD_DRV_LOG(WARNING, "dev_start not supported in secondary.\n");
+		return -EPERM;
+	}
+
 	rc = ena_check_valid_conf(adapter);
 	if (rc)
 		return rc;
@@ -1103,6 +1115,12 @@ static int ena_stop(struct rte_eth_dev *dev)
 	struct ena_adapter *adapter = dev->data->dev_private;
 	struct ena_com_dev *ena_dev = &adapter->ena_dev;
 	int rc;
+
+	/* Cannot free memory in secondary process */
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		PMD_DRV_LOG(WARNING, "dev_stop not supported in secondary.\n");
+		return -EPERM;
+	}
 
 	rte_timer_stop_sync(&adapter->timer_wd);
 	ena_queue_stop_all(dev, ENA_RING_TYPE_TX);
