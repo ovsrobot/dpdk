@@ -125,9 +125,8 @@ test_timer_secondary(void)
 
 		mz = rte_memzone_reserve(TEST_INFO_MZ_NAME, sizeof(*test_info),
 					 SOCKET_ID_ANY, 0);
+		TEST_ASSERT_NOT_NULL(mz, "Couldn't allocate memory for test data");
 		test_info = mz->addr;
-		TEST_ASSERT_NOT_NULL(test_info, "Couldn't allocate memory for "
-				     "test data");
 
 		test_info->tim_mempool = rte_mempool_create("test_timer_mp",
 				NUM_TIMERS, sizeof(struct rte_timer), 0, 0,
@@ -171,9 +170,8 @@ test_timer_secondary(void)
 		int i;
 
 		mz = rte_memzone_lookup(TEST_INFO_MZ_NAME);
+		TEST_ASSERT_NOT_NULL(mz, "Couldn't lookup memzone for test info");
 		test_info = mz->addr;
-		TEST_ASSERT_NOT_NULL(test_info, "Couldn't lookup memzone for "
-				     "test info");
 
 		for (i = 0; i < NUM_TIMERS; i++) {
 			rte_mempool_get(test_info->tim_mempool, (void **)&tim);
