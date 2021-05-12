@@ -4089,6 +4089,10 @@ This section lists supported actions and their attributes, if any.
 
   - ``indirect_action_id {unsigned}``: Indirect action ID to use
 
+- ``color``: Color the packet to reflect the meter color result
+
+  - ``type {value}``: Set color type with specified value(green/yellow/red)
+
 Destroying flow rules
 ~~~~~~~~~~~~~~~~~~~~~
 
