@@ -158,7 +158,7 @@ implementer_hisilicon = {
             ]
         },
         '0xd02': {
-            'machine_args': ['-march=armv8.2-a+crypto+sve'],
+            'machine_args': ['-march=armv8.2-a+crypto', '-march=armv8.2-a+crypto+sve'],
             'flags': [
                 ['RTE_MACHINE', '"Kunpeng 930"'],
                 ['RTE_ARM_FEATURE_ATOMICS', true],
