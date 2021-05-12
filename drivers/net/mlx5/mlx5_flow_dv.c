@@ -11496,17 +11496,23 @@ flow_dv_aso_age_alloc(struct rte_eth_dev *dev, struct rte_flow_error *error)
  *
  * @param[in] dev
  *   Pointer to rte_eth_dev structure.
+ * @param[in] dev_flow
+ *   Pointer to the sub flow.
  * @param[in] age
  *   Pointer to the aging action configuration.
+ * @param[in] shared_age_offset
+ *   Shared age action offset.
  * @param[out] error
  *   Pointer to the error structure.
  *
  * @return
- *   Index to flow counter on success, 0 otherwise.
+ *   Index to flow ASO age on success, 0 otherwise.
  */
 static uint32_t
 flow_dv_translate_create_aso_age(struct rte_eth_dev *dev,
+				 struct mlx5_flow *dev_flow,
 				 const struct rte_flow_action_age *age,
+				 uint32_t shared_age_offset,
 				 struct rte_flow_error *error)
 {
 	uint32_t age_idx = 0;
@@ -11516,7 +11522,12 @@ flow_dv_translate_create_aso_age(struct rte_eth_dev *dev,
 	if (!age_idx)
 		return 0;
 	aso_age = flow_aso_age_get_by_idx(dev, age_idx);
-	aso_age->age_params.context = age->context;
+	if (shared_age_offset)
+		aso_age->age_params.context =
+			(void *)(uintptr_t)(shared_age_offset | age_idx);
+	else
+		aso_age->age_params.context = age->context ? age->context :
+			(void *)(uintptr_t)(dev_flow->flow_idx);
 	aso_age->age_params.timeout = age->timeout;
 	aso_age->age_params.port_id = dev->data->port_id;
 	__atomic_store_n(&aso_age->age_params.sec_since_last_hit, 0,
@@ -12631,8 +12642,9 @@ flow_dv_translate(struct rte_eth_dev *dev,
 				if (!flow->age && non_shared_age) {
 					flow->age =
 						flow_dv_translate_create_aso_age
-								(dev,
+								(dev, dev_flow,
 								 non_shared_age,
+								 0,
 								 error);
 					if (!flow->age)
 						return rte_flow_error_set
@@ -14212,17 +14224,12 @@ flow_dv_action_create(struct rte_eth_dev *dev,
 		       MLX5_INDIRECT_ACTION_TYPE_OFFSET) | ret;
 		break;
 	case RTE_FLOW_ACTION_TYPE_AGE:
-		ret = flow_dv_translate_create_aso_age(dev, action->conf, err);
 		idx = (MLX5_INDIRECT_ACTION_TYPE_AGE <<
-		       MLX5_INDIRECT_ACTION_TYPE_OFFSET) | ret;
-		if (ret) {
-			struct mlx5_aso_age_action *aso_age =
-					      flow_aso_age_get_by_idx(dev, ret);
-
-			if (!aso_age->age_params.context)
-				aso_age->age_params.context =
-							 (void *)(uintptr_t)idx;
-		}
+		       MLX5_INDIRECT_ACTION_TYPE_OFFSET);
+		ret = flow_dv_translate_create_aso_age(dev, NULL,
+						       action->conf,
+						       idx, err);
+		idx |= ret;
 		break;
 	case RTE_FLOW_ACTION_TYPE_COUNT:
 		ret = flow_dv_translate_create_counter(dev, NULL, NULL, NULL);
