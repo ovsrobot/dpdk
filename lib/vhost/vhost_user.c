@@ -311,6 +311,7 @@ vhost_user_set_features(struct virtio_net **pdev, struct VhostUserMsg *msg,
 	uint64_t features = msg->payload.u64;
 	uint64_t vhost_features = 0;
 	struct rte_vdpa_device *vdpa_dev;
+	uint32_t i;
 
 	if (validate_msg_fds(msg, 0) != 0)
 		return RTE_VHOST_MSG_RESULT_ERR;
@@ -389,6 +390,14 @@ vhost_user_set_features(struct virtio_net **pdev, struct VhostUserMsg *msg,
 		vdpa_dev->ops->set_features(dev->vid);
 
 	dev->flags &= ~VIRTIO_DEV_FEATURES_FAILED;
+
+	if (dev->features & (1ULL << VIRTIO_F_IOMMU_PLATFORM)) {
+		for (i = 0; i < dev->nr_vring; i++) {
+			if (vhost_user_iotlb_init(dev, i))
+				return RTE_VHOST_MSG_RESULT_ERR;
+		}
+	}
+
 	return RTE_VHOST_MSG_RESULT_OK;
 }
 
@@ -469,10 +478,6 @@ vhost_user_set_vring_num(struct virtio_net **pdev,
 		return RTE_VHOST_MSG_RESULT_ERR;
 	}
 
-	if (dev->features & (1ULL << VIRTIO_F_IOMMU_PLATFORM)) {
-		if (vhost_user_iotlb_init(dev, msg->payload.state.index))
-			return RTE_VHOST_MSG_RESULT_ERR;
-	}
 	return RTE_VHOST_MSG_RESULT_OK;
 }
 
