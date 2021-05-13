@@ -149,7 +149,9 @@ implementer_hisilicon = {
     ],
     'part_number_config': {
         '0xd01': {
-            'machine_args': ['-march=armv8.2-a+crypto', '-mtune=tsv110'],
+            'march_base' : ['-march=armv8-a', '-march=armv8.2-a'],
+            'march_feature' : ['crypto'],
+            'machine_args': ['-mtune=tsv110'],
             'flags': [
                 ['RTE_MACHINE', '"Kunpeng 920"'],
                 ['RTE_ARM_FEATURE_ATOMICS', true],
@@ -158,7 +160,9 @@ implementer_hisilicon = {
             ]
         },
         '0xd02': {
-            'machine_args': ['-march=armv8.2-a+crypto+sve'],
+            'march_base' : ['-march=armv8-a', '-march=armv8.2-a'],
+            'march_feature' : ['crypto', 'sve'],
+            'machine_args': [],
             'flags': [
                 ['RTE_MACHINE', '"Kunpeng 930"'],
                 ['RTE_ARM_FEATURE_ATOMICS', true],
@@ -449,8 +453,27 @@ else
     # add/overwrite flags in the proper order
     dpdk_flags = flags_common + implementer_config['flags'] + part_number_config.get('flags', []) + soc_flags
 
+    # select the most suitable march+feature combination
+    machine_march = []
+    if part_number_config.has_key('march_base')
+        foreach arch: part_number_config['march_base']
+            if cc.has_argument(arch)
+                machine_march = arch # Set the higher supported arch as possible
+            endif
+        endforeach
+    endif
+    if part_number_config.has_key('march_feature')
+        foreach feature: part_number_config['march_feature']
+            tmp_machine_march = machine_march + '+' + feature
+            if cc.has_argument(tmp_machine_march)
+                machine_march = tmp_machine_march # Set the more supported feature as possible
+            endif
+        endforeach
+    endif
+
     # apply supported machine args
     machine_args = [] # Clear previous machine args
+    machine_args += machine_march
     foreach flag: part_number_config['machine_args']
         if cc.has_argument(flag)
             machine_args += flag
