@@ -304,6 +304,11 @@ New Features
   * The unit test suite struct now supports having both a nested
     list of sub-testsuites, and a list of testcases as before.
 
+* **Updated Intel QuickAssist compression PMD.**
+
+  * The compression is now available on all QAT GEN3 devices
+    that support it in hardware.
+
 
 Removed Items
 -------------
