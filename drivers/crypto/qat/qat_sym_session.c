@@ -1190,8 +1190,8 @@ static int partial_hash_compute(enum icp_qat_hw_auth_algo hash_alg,
 			uint8_t *data_out)
 {
 	int digest_size;
-	uint8_t digest[qat_hash_get_digest_size(
-			ICP_QAT_HW_AUTH_ALGO_DELIMITER)];
+	uint8_t *digest = (uint8_t *)calloc(qat_hash_get_digest_size(
+				ICP_QAT_HW_AUTH_ALGO_DELIMITER), sizeof(uint8_t));
 	uint32_t *hash_state_out_be32;
 	uint64_t *hash_state_out_be64;
 	int i;
