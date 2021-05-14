@@ -35,7 +35,20 @@ deps += ['hash']
 
 if arch_subdir == 'arm' and dpdk_conf.get('RTE_ARCH_64')
     sources += files('hns3_rxtx_vec.c')
+
+    # compile SVE when:
+    # a. support SVE in minimum instruction set baseline
+    # b. it's not minimum instruction set, but compiler support
     if cc.get_define('__ARM_FEATURE_SVE', args: machine_args) != ''
+        cflags += ['-DCC_SVE_SUPPORT']
         sources += files('hns3_rxtx_vec_sve.c')
+    elif cc.has_argument('-march=armv8.2-a+sve')
+        cflags += ['-DCC_SVE_SUPPORT']
+        hns3_sve_lib = static_library('hns3_sve_lib',
+                        'hns3_rxtx_vec_sve.c',
+                        dependencies: [static_rte_ethdev],
+                        include_directories: includes,
+                        c_args: [cflags, '-march=armv8.2-a+sve'])
+        objs += hns3_sve_lib.extract_objects('hns3_rxtx_vec_sve.c')
     endif
 endif
