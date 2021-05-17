@@ -107,18 +107,15 @@ mlx5_mr_mem_event_free_cb(struct mlx5_dev_ctx_shared *sh,
 	if (rebuild) {
 		mlx5_mr_rebuild_cache(&sh->share_cache);
 		/*
-		 * Flush local caches by propagating invalidation across cores.
-		 * rte_smp_wmb() is enough to synchronize this event. If one of
-		 * freed memsegs is seen by other core, that means the memseg
-		 * has been allocated by allocator, which will come after this
-		 * free call. Therefore, this store instruction (incrementing
-		 * generation below) will be guaranteed to be seen by other core
-		 * before the core sees the newly allocated memory.
+		 * No wmb is needed after updating dev_gen due to store-release of
+		 * unlock can provide the implicit wmb at the level visible by
+		 * software. This makes rebuilt global cache and updated dev_gen
+		 * be observed when local_cache starts to be updating by other
+		 * agents.
 		 */
 		++sh->share_cache.dev_gen;
 		DRV_LOG(DEBUG, "broadcasting local cache flush, gen=%d",
 		      sh->share_cache.dev_gen);
-		rte_smp_wmb();
 	}
 	rte_rwlock_write_unlock(&sh->share_cache.rwlock);
 }
@@ -411,18 +408,15 @@ mlx5_dma_unmap(struct rte_pci_device *pdev, void *addr,
 	      (void *)mr);
 	mlx5_mr_rebuild_cache(&sh->share_cache);
 	/*
-	 * Flush local caches by propagating invalidation across cores.
-	 * rte_smp_wmb() is enough to synchronize this event. If one of
-	 * freed memsegs is seen by other core, that means the memseg
-	 * has been allocated by allocator, which will come after this
-	 * free call. Therefore, this store instruction (incrementing
-	 * generation below) will be guaranteed to be seen by other core
-	 * before the core sees the newly allocated memory.
+	 * No wmb is needed after updating dev_gen due to store-release of
+	 * unlock can provide the implicit wmb at the level visible by
+	 * software. This makes rebuilt global cache and updated dev_gen
+	 * be observed when local_cache starts to be updating by other
+	 * agents.
 	 */
 	++sh->share_cache.dev_gen;
 	DRV_LOG(DEBUG, "broadcasting local cache flush, gen=%d",
 	      sh->share_cache.dev_gen);
-	rte_smp_wmb();
 	rte_rwlock_read_unlock(&sh->share_cache.rwlock);
 	return 0;
 }
