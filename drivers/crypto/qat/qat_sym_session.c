@@ -1190,8 +1190,7 @@ static int partial_hash_compute(enum icp_qat_hw_auth_algo hash_alg,
 			uint8_t *data_out)
 {
 	int digest_size;
-	uint8_t digest[qat_hash_get_digest_size(
-			ICP_QAT_HW_AUTH_ALGO_DELIMITER)];
+	uint8_t *digest;
 	uint32_t *hash_state_out_be32;
 	uint64_t *hash_state_out_be64;
 	int i;
@@ -1200,55 +1199,65 @@ static int partial_hash_compute(enum icp_qat_hw_auth_algo hash_alg,
 	if (digest_size <= 0)
 		return -EFAULT;
 
+	digest = calloc(qat_hash_get_digest_size(
+				ICP_QAT_HW_AUTH_ALGO_DELIMITER), sizeof(uint8_t));
+	if (!digest)
+		return -ENOMEM;
+
 	hash_state_out_be32 = (uint32_t *)data_out;
 	hash_state_out_be64 = (uint64_t *)data_out;
 
 	switch (hash_alg) {
 	case ICP_QAT_HW_AUTH_ALGO_SHA1:
 		if (partial_hash_sha1(data_in, digest))
-			return -EFAULT;
+			goto fail
 		for (i = 0; i < digest_size >> 2; i++, hash_state_out_be32++)
 			*hash_state_out_be32 =
 				rte_bswap32(*(((uint32_t *)digest)+i));
 		break;
 	case ICP_QAT_HW_AUTH_ALGO_SHA224:
 		if (partial_hash_sha224(data_in, digest))
-			return -EFAULT;
+			goto fail;
 		for (i = 0; i < digest_size >> 2; i++, hash_state_out_be32++)
 			*hash_state_out_be32 =
 				rte_bswap32(*(((uint32_t *)digest)+i));
 		break;
 	case ICP_QAT_HW_AUTH_ALGO_SHA256:
 		if (partial_hash_sha256(data_in, digest))
-			return -EFAULT;
+			goto fail;
 		for (i = 0; i < digest_size >> 2; i++, hash_state_out_be32++)
 			*hash_state_out_be32 =
 				rte_bswap32(*(((uint32_t *)digest)+i));
 		break;
 	case ICP_QAT_HW_AUTH_ALGO_SHA384:
 		if (partial_hash_sha384(data_in, digest))
-			return -EFAULT;
+			goto fail;
 		for (i = 0; i < digest_size >> 3; i++, hash_state_out_be64++)
 			*hash_state_out_be64 =
 				rte_bswap64(*(((uint64_t *)digest)+i));
 		break;
 	case ICP_QAT_HW_AUTH_ALGO_SHA512:
 		if (partial_hash_sha512(data_in, digest))
-			return -EFAULT;
+			goto fail;
 		for (i = 0; i < digest_size >> 3; i++, hash_state_out_be64++)
 			*hash_state_out_be64 =
 				rte_bswap64(*(((uint64_t *)digest)+i));
 		break;
 	case ICP_QAT_HW_AUTH_ALGO_MD5:
 		if (partial_hash_md5(data_in, data_out))
-			return -EFAULT;
+			goto fail;
 		break;
 	default:
 		QAT_LOG(ERR, "invalid hash alg %u", hash_alg);
-		return -EFAULT;
+		goto fail;
 	}
 
+	free(digest);
 	return 0;
+
+fail:
+	free(digest);
+	return -EFAULT;
 }
 #define HMAC_IPAD_VALUE	0x36
 #define HMAC_OPAD_VALUE	0x5c
