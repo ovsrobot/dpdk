@@ -923,6 +923,18 @@ Supports to get Rx/Tx packet burst mode information.
 * **[implements] eth_dev_ops**: ``rx_burst_mode_get``, ``tx_burst_mode_get``.
 * **[related] API**: ``rte_eth_rx_burst_mode_get()``, ``rte_eth_tx_burst_mode_get()``.
 
+.. _nic_features_connection_tracking:
+
+Connection tracking
+-------------------
+
+Supports conntrack offload by HW module.
+
+* **[uses]       rte_flow_item**: ``rte_flow_item_conntrack``.
+* **[uses]       rte_flow_action**: ``rte_flow_action_conntrack``.
+* **[uses]       user config**: ``rte_flow_modify_conntrack``.
+* **[related] API**: ``rte_flow_action_handle_create()``, ``rte_flow_action_handle_destroy()``, ``rte_flow_action_handle_update()``, ``rte_flow_action_handle_query()``.
+
 .. _nic_features_other:
 
 Other dev ops not represented by a Feature
