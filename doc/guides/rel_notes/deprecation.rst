@@ -126,6 +126,14 @@ Deprecation Notices
   can still be used if users specify the devarg "driver=i40evf". I40evf will
   be deleted in DPDK 21.11.
 
+* vdpa: The vDPA API should not try to manipulate or export
+  any ``rte_device`` object, which belongs to the bus layer.
+  The function ``rte_vdpa_get_rte_device()`` will be deprecated in 21.11,
+  when its usage will be replaced with a function ``rte_vdpa_close()``.
+  The new function should enter in 21.08 and get promoted to stable in 21.11.
+  A port close function will allow to close a single port without destroying
+  the rest of the device.
+
 * eventdev: The structure ``rte_event_eth_rx_adapter_queue_conf`` will be
   extended to include ``rte_event_eth_rx_adapter_event_vector_config`` elements
   and the function ``rte_event_eth_rx_adapter_queue_event_vector_config`` will
