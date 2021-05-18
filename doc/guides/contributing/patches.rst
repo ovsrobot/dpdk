@@ -177,6 +177,8 @@ Make your planned changes in the cloned ``dpdk`` repo. Here are some guidelines 
 * Add documentation, if relevant, in the form of Doxygen comments or a User Guide in RST format.
   See the :ref:`Documentation Guidelines <doc_guidelines>`.
 
+* Code and related documentation must be updated atomically in the same patch.
+
 Once the changes have been made you should commit them to your local repo.
 
 For small changes, that do not require specific explanations, it is better to keep things together in the
@@ -660,3 +662,73 @@ patch accepted. The general cycle for patch review and acceptance is:
      than rework of the original.
    * Trivial patches may be merged sooner than described above at the tree committer's
      discretion.
+
+
+Milestones definition
+---------------------
+
+Each DPDK release has milestones that help everyone to converge to the release date.
+The following is a list of these milestones
+together with concrete definitions and expectations,
+for a typical release cycle (3 months ending after 4 release candidates).
+The number and expectations of release candidates might vary slightly.
+The schedule is updated in the `roadmap <https://core.dpdk.org/roadmap/#dates>`_.
+
+.. note::
+   Sooner is always better. Deadlines are not ideal dates.
+
+   Integration is never guaranteed but everyone can help.
+
+Roadmap
+~~~~~~~
+
+* Announce new features in libraries, drivers, applications, and examples.
+* To be published before the first day of the release cycle.
+
+Proposal Deadline
+~~~~~~~~~~~~~~~~~
+
+* Must send an RFC or a complete v1 patch.
+* Early RFC gives time for design review before complete implementation.
+* Should include at least the API changes in libraries and applications.
+* Library code should be quite complete at the deadline.
+* Nice to have: driver implementation (full or draft), example code, and documentation.
+
+rc1
+~~~
+
+* Priority: libraries. No library feature should be accepted after -rc1.
+* New API must be defined and implemented in libraries.
+* The API must include Doxygen documentation
+  and be part of the relevant .rst files (library-specific and release notes).
+* API should be used in a test application (``/app``).
+* At least one PMD should implement the API.
+  It may be a draft sent in a separate series.
+* The above should be sent to the mailing list at least 2 weeks before -rc1.
+* Nice to have: example code (``/examples``)
+
+rc2
+~~~
+
+* Priority: drivers. No driver feature should be accepted after -rc2.
+* A driver change must include documentation
+  in the relevant .rst files (driver-specific and release notes).
+* The above should be sent to the mailing list at least 2 weeks before -rc2.
+
+rc3
+~~~
+
+* Priority: applications. No application feature should be accepted after -rc3.
+* New functionality that does not depend on libraries update
+  can be integrated as part of -rc3.
+* The application change must include documentation in the relevant .rst files
+  (application-specific and release notes if significant).
+* Libraries and drivers cleanup are allowed.
+* Small driver reworks.
+* Critical and minor bug fixes.
+
+rc4
+~~~
+
+* Documentation updates.
+* Critical bug fixes.
