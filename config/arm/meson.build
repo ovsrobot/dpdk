@@ -158,7 +158,9 @@ implementer_hisilicon = {
             ]
         },
         '0xd02': {
-            'machine_args': ['-march=armv8.2-a+crypto+sve'],
+            'march_base': ['-march=armv8.2-a'],
+            'march_feature': ['crypto', 'sve'],
+            'machine_args': [],
             'flags': [
                 ['RTE_MACHINE', '"Kunpeng 930"'],
                 ['RTE_ARM_FEATURE_ATOMICS', true],
@@ -458,8 +460,33 @@ else
     # add/overwrite flags in the proper order
     dpdk_flags = flags_common + implementer_config['flags'] + part_number_config.get('flags', []) + soc_flags
 
+    # select the most suitable march+feature combination
+    machine_march = []
+    if part_number_config.has_key('march_base')
+        tmp_machine_march = ''
+        march_valid = false
+        foreach march: part_number_config['march_base']
+            if cc.has_argument(march)
+                tmp_machine_march = march # Set the higher supported march as possible
+                march_valid = true
+            endif
+        endforeach
+        # select feature only when march valid
+        if march_valid and part_number_config.has_key('march_feature')
+            foreach feature: part_number_config['march_feature']
+                tmp_feature = tmp_machine_march + '+' + feature
+                if cc.has_argument(tmp_feature)
+                    tmp_machine_march = tmp_feature # Set the more supported feature as possible
+                endif
+            endforeach
+        endif
+        if march_valid
+            machine_march = [tmp_machine_march]
+        endif
+    endif
+
     # apply supported machine args
-    machine_args = [] # Clear previous machine args
+    machine_args = machine_march # Init with machine march which set above
     foreach flag: part_number_config['machine_args']
         if cc.has_argument(flag)
             machine_args += flag
