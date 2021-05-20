@@ -9,7 +9,9 @@
 # - DPDK_CHECKPATCH_OPTIONS
 . $(dirname $(readlink -f $0))/load-devel-config
 
-VALIDATE_NEW_API=$(dirname $(readlink -f $0))/check-symbol-change.sh
+ROOTDIR=$(readlink -f $(dirname $(readlink -f $0))/..)
+VALIDATE_NEW_API=$ROOTDIR/devtools/check-symbol-change.sh
+FORBIDDEN_TOKENS_SCRIPT=$ROOTDIR/devtools/check-forbidden-tokens.awk
 
 # Enable codespell by default. This can be overwritten from a config file.
 # Codespell can also be enabled by setting DPDK_CHECKPATCH_CODESPELL to a valid path
@@ -58,7 +60,7 @@ check_forbidden_additions() { # <patch>
 		-v EXPRESSIONS="rte_panic\\\( rte_exit\\\(" \
 		-v RET_ON_FAIL=1 \
 		-v MESSAGE='Using rte_panic/rte_exit' \
-		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		-f $FORBIDDEN_TOKENS_SCRIPT \
 		"$1" || res=1
 
 	# refrain from using compiler attribute without defining a common macro
@@ -66,7 +68,7 @@ check_forbidden_additions() { # <patch>
 		-v EXPRESSIONS="__attribute__" \
 		-v RET_ON_FAIL=1 \
 		-v MESSAGE='Using compiler attribute directly' \
-		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		-f $FORBIDDEN_TOKENS_SCRIPT \
 		"$1" || res=1
 
 	# forbid variable declaration inside "for" loop
@@ -74,7 +76,7 @@ check_forbidden_additions() { # <patch>
 		-v EXPRESSIONS='for[[:space:]]*\\((char|u?int|unsigned|s?size_t)' \
 		-v RET_ON_FAIL=1 \
 		-v MESSAGE='Declaring a variable inside for()' \
-		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		-f $FORBIDDEN_TOKENS_SCRIPT \
 		"$1" || res=1
 
 	# refrain from new additions of 16/32/64 bits rte_atomicNN_xxx()
@@ -82,7 +84,7 @@ check_forbidden_additions() { # <patch>
 		-v EXPRESSIONS="rte_atomic[0-9][0-9]_.*\\\(" \
 		-v RET_ON_FAIL=1 \
 		-v MESSAGE='Using rte_atomicNN_xxx' \
-		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		-f $FORBIDDEN_TOKENS_SCRIPT \
 		"$1" || res=1
 
 	# refrain from new additions of rte_smp_[r/w]mb()
@@ -90,7 +92,7 @@ check_forbidden_additions() { # <patch>
 		-v EXPRESSIONS="rte_smp_(r|w)?mb\\\(" \
 		-v RET_ON_FAIL=1 \
 		-v MESSAGE='Using rte_smp_[r/w]mb' \
-		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		-f $FORBIDDEN_TOKENS_SCRIPT \
 		"$1" || res=1
 
 	# refrain from using compiler __sync_xxx builtins
@@ -98,7 +100,7 @@ check_forbidden_additions() { # <patch>
 		-v EXPRESSIONS="__sync_.*\\\(" \
 		-v RET_ON_FAIL=1 \
 		-v MESSAGE='Using __sync_xxx builtins' \
-		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		-f $FORBIDDEN_TOKENS_SCRIPT \
 		"$1" || res=1
 
 	# refrain from using compiler __atomic_thread_fence()
@@ -107,7 +109,7 @@ check_forbidden_additions() { # <patch>
 		-v EXPRESSIONS="__atomic_thread_fence\\\(" \
 		-v RET_ON_FAIL=1 \
 		-v MESSAGE='Using __atomic_thread_fence' \
-		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		-f $FORBIDDEN_TOKENS_SCRIPT \
 		"$1" || res=1
 
 	# forbid use of experimental build flag except in examples
@@ -115,7 +117,7 @@ check_forbidden_additions() { # <patch>
 		-v EXPRESSIONS='-DALLOW_EXPERIMENTAL_API allow_experimental_apis' \
 		-v RET_ON_FAIL=1 \
 		-v MESSAGE='Using experimental build flag for in-tree compilation' \
-		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		-f $FORBIDDEN_TOKENS_SCRIPT \
 		"$1" || res=1
 
 	# SVG must be included with wildcard extension to allow conversion
@@ -123,7 +125,7 @@ check_forbidden_additions() { # <patch>
 		-v EXPRESSIONS='::[[:space:]]*[^[:space:]]*\\.svg' \
 		-v RET_ON_FAIL=1 \
 		-v MESSAGE='Using explicit .svg extension instead of .*' \
-		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		-f $FORBIDDEN_TOKENS_SCRIPT \
 		"$1" || res=1
 
 	# links must prefer https over http
@@ -131,7 +133,7 @@ check_forbidden_additions() { # <patch>
 		-v EXPRESSIONS='http://.*dpdk.org' \
 		-v RET_ON_FAIL=1 \
 		-v MESSAGE='Using non https link to dpdk.org' \
-		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		-f $FORBIDDEN_TOKENS_SCRIPT \
 		"$1" || res=1
 
 	return $res
@@ -196,6 +198,18 @@ check_internal_tags() { # <patch>
 	}' || res=1
 
 	return $res
+}
+
+check_release_notes() { # <patch>
+	rel_notes_prefix=doc/guides/rel_notes/release_
+	current_version=$(cat $ROOTDIR/VERSION)
+	major_version=${current_version%%.*}
+	current_version=${current_version##${major_version}.}
+	minor_version=${current_version%%.*}
+	current_rn=${rel_notes_prefix}${major_version}_${minor_version}.rst
+
+	! grep -e '^--- a/'$rel_notes_prefix -e '^+++ b/'$rel_notes_prefix $1 |
+		grep -v $current_rn
 }
 
 number=0
@@ -283,6 +297,14 @@ check () { # <patch> <commit> <title>
 
 	! $verbose || printf '\nChecking __rte_internal tags:\n'
 	report=$(check_internal_tags "$tmpinput")
+	if [ $? -ne 0 ] ; then
+		$headline_printed || print_headline "$3"
+		printf '%s\n' "$report"
+		ret=1
+	fi
+
+	! $verbose || printf '\nChecking release notes updates:\n'
+	report=$(check_release_notes "$tmpinput")
 	if [ $? -ne 0 ] ; then
 		$headline_printed || print_headline "$3"
 		printf '%s\n' "$report"
