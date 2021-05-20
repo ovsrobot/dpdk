@@ -480,6 +480,11 @@ if (cc.get_define('__ARM_NEON', args: machine_args) != '' or
     compile_time_cpuflags += ['RTE_CPUFLAG_NEON']
 endif
 
+if (cc.get_define('__ARM_FEATURE_SVE', args: machine_args) != '' and
+    cc.check_header('arm_sve.h'))
+    dpdk_conf.set('CC_SVE_ACLE_SUPPORT', 1)
+endif
+
 if cc.get_define('__ARM_FEATURE_CRC32', args: machine_args) != ''
     compile_time_cpuflags += ['RTE_CPUFLAG_CRC32']
 endif
