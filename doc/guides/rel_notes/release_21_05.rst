@@ -311,6 +311,10 @@ New Features
   * The unit test suite struct now supports having both a nested
     list of sub-testsuites, and a list of testcases as before.
 
+* **Added support for GCC 11 and clang 12.**
+
+  Added support for building with GCC 11.1.1 and clang 12.0.0.
+
 
 Removed Items
 -------------
