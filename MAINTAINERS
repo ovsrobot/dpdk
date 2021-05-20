@@ -421,7 +421,7 @@ F: examples/bbdev_app/
 F: doc/guides/sample_app_ug/bbdev_app.rst
 
 Crypto API
-M: Declan Doherty <declan.doherty@intel.com>
+M: Fan Zhang <roy.fan.zhang@intel.com>
 T: git://dpdk.org/next/dpdk-next-crypto
 F: lib/cryptodev/
 F: app/test/test_cryptodev*
@@ -429,7 +429,7 @@ F: examples/l2fwd-crypto/
 
 Security API
 M: Akhil Goyal <gakhil@marvell.com>
-M: Declan Doherty <declan.doherty@intel.com>
+M: Fan Zhang <roy.fan.zhang@intel.com>
 T: git://dpdk.org/next/dpdk-next-crypto
 F: lib/security/
 F: doc/guides/prog_guide/rte_security.rst
@@ -1031,23 +1031,22 @@ F: drivers/crypto/scheduler/
 F: doc/guides/cryptodevs/scheduler.rst
 
 Intel AES-NI GCM
-M: Declan Doherty <declan.doherty@intel.com>
 M: Pablo de Lara <pablo.de.lara.guarch@intel.com>
+M: Fan Zhang <roy.fan.zhang@intel.com>
 F: drivers/crypto/aesni_gcm/
 F: doc/guides/cryptodevs/aesni_gcm.rst
 F: doc/guides/cryptodevs/features/aesni_gcm.ini
 
 Intel AES-NI Multi-Buffer
-M: Declan Doherty <declan.doherty@intel.com>
 M: Pablo de Lara <pablo.de.lara.guarch@intel.com>
+M: Fan Zhang <roy.fan.zhang@intel.com>
 F: drivers/crypto/aesni_mb/
 F: doc/guides/cryptodevs/aesni_mb.rst
 F: doc/guides/cryptodevs/features/aesni_mb.ini
 
 Intel QuickAssist
-M: John Griffin <john.griffin@intel.com>
 M: Fiona Trahe <fiona.trahe@intel.com>
-M: Deepak Kumar Jain <deepak.k.jain@intel.com>
+M: Fan Zhang <roy.fan.zhang@intel.com>
 F: drivers/crypto/qat/
 F: drivers/common/qat/
 F: doc/guides/cryptodevs/qat.rst
@@ -1055,6 +1054,7 @@ F: doc/guides/cryptodevs/features/qat.ini
 
 KASUMI
 M: Pablo de Lara <pablo.de.lara.guarch@intel.com>
+M: Fan Zhang <roy.fan.zhang@intel.com>
 F: drivers/crypto/kasumi/
 F: doc/guides/cryptodevs/kasumi.rst
 F: doc/guides/cryptodevs/features/kasumi.ini
@@ -1081,7 +1081,7 @@ F: doc/guides/cryptodevs/octeontx2.rst
 F: doc/guides/cryptodevs/features/octeontx2.ini
 
 Null Crypto
-M: Declan Doherty <declan.doherty@intel.com>
+M: Fan Zhang <roy.fan.zhang@intel.com>
 F: drivers/crypto/null/
 F: doc/guides/cryptodevs/null.rst
 F: doc/guides/cryptodevs/features/null.ini
@@ -1108,13 +1108,14 @@ F: doc/guides/cryptodevs/dpaa2_sec.rst
 F: doc/guides/cryptodevs/features/dpaa2_sec.ini
 
 OpenSSL
-M: Declan Doherty <declan.doherty@intel.com>
+M: Fan Zhang <roy.fan.zhang@intel.com>
 F: drivers/crypto/openssl/
 F: doc/guides/cryptodevs/openssl.rst
 F: doc/guides/cryptodevs/features/openssl.ini
 
 SNOW 3G
 M: Pablo de Lara <pablo.de.lara.guarch@intel.com>
+M: Fan Zhang <roy.fan.zhang@intel.com>
 F: drivers/crypto/snow3g/
 F: doc/guides/cryptodevs/snow3g.rst
 F: doc/guides/cryptodevs/features/snow3g.ini
@@ -1127,6 +1128,7 @@ F: doc/guides/cryptodevs/features/virtio.ini
 
 ZUC
 M: Pablo de Lara <pablo.de.lara.guarch@intel.com>
+M: Fan Zhang <roy.fan.zhang@intel.com>
 F: drivers/crypto/zuc/
 F: doc/guides/cryptodevs/zuc.rst
 F: doc/guides/cryptodevs/features/zuc.ini
