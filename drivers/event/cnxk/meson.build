@@ -8,6 +8,13 @@ if not is_linux or not dpdk_conf.get('RTE_ARCH_64')
     subdir_done()
 endif
 
+extra_flags = ['-Wno-strict-aliasing']
+foreach flag: extra_flags
+    if cc.has_argument(flag)
+        cflags += flag
+    endif
+endforeach
+
 sources = files(
         'cn9k_eventdev.c',
         'cn9k_worker.c',
