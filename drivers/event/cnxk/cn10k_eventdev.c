@@ -407,6 +407,76 @@ cn10k_sso_selftest(void)
 	return cnxk_sso_selftest(RTE_STR(event_cn10k));
 }
 
+static int
+cn10k_sso_rx_adapter_caps_get(const struct rte_eventdev *event_dev,
+			      const struct rte_eth_dev *eth_dev, uint32_t *caps)
+{
+	int rc;
+
+	RTE_SET_USED(event_dev);
+	rc = strncmp(eth_dev->device->driver->name, "net_cn10k", 9);
+	if (rc)
+		*caps = RTE_EVENT_ETH_RX_ADAPTER_SW_CAP;
+	else
+		*caps = RTE_EVENT_ETH_RX_ADAPTER_CAP_INTERNAL_PORT |
+			RTE_EVENT_ETH_RX_ADAPTER_CAP_MULTI_EVENTQ |
+			RTE_EVENT_ETH_RX_ADAPTER_CAP_OVERRIDE_FLOW_ID;
+
+	return 0;
+}
+
+static void
+cn10k_sso_set_lookup_mem(const struct rte_eventdev *event_dev, void *lookup_mem)
+{
+	struct cnxk_sso_evdev *dev = cnxk_sso_pmd_priv(event_dev);
+	int i;
+
+	for (i = 0; i < dev->nb_event_ports; i++) {
+		struct cn10k_sso_hws *ws = event_dev->data->ports[i];
+		ws->lookup_mem = lookup_mem;
+	}
+}
+
+static int
+cn10k_sso_rx_adapter_queue_add(
+	const struct rte_eventdev *event_dev, const struct rte_eth_dev *eth_dev,
+	int32_t rx_queue_id,
+	const struct rte_event_eth_rx_adapter_queue_conf *queue_conf)
+{
+	void *lookup_mem;
+	int rc;
+
+	rc = strncmp(eth_dev->device->driver->name, "net_cn10k", 8);
+	if (rc)
+		return -EINVAL;
+
+	rc = cnxk_sso_rx_adapter_queue_add(event_dev, eth_dev, rx_queue_id,
+					   queue_conf);
+	if (rc)
+		return -EINVAL;
+
+	lookup_mem = ((struct cn10k_eth_rxq *)eth_dev->data->rx_queues[0])
+			     ->lookup_mem;
+	cn10k_sso_set_lookup_mem(event_dev, lookup_mem);
+	cn10k_sso_fp_fns_set((struct rte_eventdev *)(uintptr_t)event_dev);
+
+	return 0;
+}
+
+static int
+cn10k_sso_rx_adapter_queue_del(const struct rte_eventdev *event_dev,
+			       const struct rte_eth_dev *eth_dev,
+			       int32_t rx_queue_id)
+{
+	int rc;
+
+	rc = strncmp(eth_dev->device->driver->name, "net_cn10k", 8);
+	if (rc)
+		return -EINVAL;
+
+	return cnxk_sso_rx_adapter_queue_del(event_dev, eth_dev, rx_queue_id);
+}
+
 static struct rte_eventdev_ops cn10k_sso_dev_ops = {
 	.dev_infos_get = cn10k_sso_info_get,
 	.dev_configure = cn10k_sso_dev_configure,
@@ -419,6 +489,12 @@ static struct rte_eventdev_ops cn10k_sso_dev_ops = {
 	.port_link = cn10k_sso_port_link,
 	.port_unlink = cn10k_sso_port_unlink,
 	.timeout_ticks = cnxk_sso_timeout_ticks,
+
+	.eth_rx_adapter_caps_get = cn10k_sso_rx_adapter_caps_get,
+	.eth_rx_adapter_queue_add = cn10k_sso_rx_adapter_queue_add,
+	.eth_rx_adapter_queue_del = cn10k_sso_rx_adapter_queue_del,
+	.eth_rx_adapter_start = cnxk_sso_rx_adapter_start,
+	.eth_rx_adapter_stop = cnxk_sso_rx_adapter_stop,
 
 	.timer_adapter_caps_get = cnxk_tim_caps_get,
 
