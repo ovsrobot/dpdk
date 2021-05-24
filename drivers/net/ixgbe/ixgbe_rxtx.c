@@ -2571,9 +2571,18 @@ ixgbe_set_tx_function(struct rte_eth_dev *dev, struct ixgbe_tx_queue *txq)
 uint64_t
 ixgbe_get_tx_queue_offloads(struct rte_eth_dev *dev)
 {
-	RTE_SET_USED(dev);
+	uint64_t offloads = 0;
+	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
-	return 0;
+	if (hw->mac.type == ixgbe_mac_X550 ||
+	    hw->mac.type == ixgbe_mac_X550EM_x ||
+	    hw->mac.type == ixgbe_mac_X550EM_a ||
+	    hw->mac.type == ixgbe_mac_X550_vf ||
+	    hw->mac.type == ixgbe_mac_X550EM_x_vf ||
+	    hw->mac.type == ixgbe_mac_X550EM_a_vf)
+		offloads |= RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP;
+
+	return offloads;
 }
 
 uint64_t
@@ -3007,6 +3016,14 @@ ixgbe_get_rx_queue_offloads(struct rte_eth_dev *dev)
 
 	if (hw->mac.type != ixgbe_mac_82598EB)
 		offloads |= DEV_RX_OFFLOAD_VLAN_STRIP;
+
+	if (hw->mac.type == ixgbe_mac_X550 ||
+	    hw->mac.type == ixgbe_mac_X550EM_x ||
+	    hw->mac.type == ixgbe_mac_X550EM_a ||
+	    hw->mac.type == ixgbe_mac_X550_vf ||
+	    hw->mac.type == ixgbe_mac_X550EM_x_vf ||
+	    hw->mac.type == ixgbe_mac_X550EM_a_vf)
+		offloads |= RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP;
 
 	return offloads;
 }
