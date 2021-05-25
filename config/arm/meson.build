@@ -226,6 +226,7 @@ soc_bluefield = {
 soc_centriq2400 = {
     'description': 'Qualcomm Centriq 2400',
     'implementer': '0x51',
+    'part_number': '0x800',
     'part_number': '0xc00',
     'numa': false
 }
