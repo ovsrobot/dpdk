@@ -141,6 +141,14 @@ Deprecation Notices
   in "rte_sched.h". These changes are aligned to improvements suggested in the
   RFC https://mails.dpdk.org/archives/dev/2018-November/120035.html.
 
+* sched: To add PIE based active queue management support to DPDK scheduler
+  library, changes will be made to data structures 
+  ``rte_sched_subport_params``, ``rte_sched_subport_stats``,
+  ``rte_sched_queue_stats``, ``rte_sched_queue_extra``, ``rte_sched_subport``.
+  New structures are introduced for PIE ``rte_pie_params``, ``rte_pie_config``,
+  ``rte_pie``. These changes are aligned to improvements suggested in the RFC
+  https://mails.dpdk.org/archives/dev/2021-May/210067.html.
+
 * metrics: The function ``rte_metrics_init`` will have a non-void return
   in order to notify errors instead of calling ``rte_exit``.
 
