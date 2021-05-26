@@ -786,6 +786,28 @@ ice_fdir_cross_prof_conflict(struct ice_pf *pf,
 			(pf, cflct_ptype, is_tunnel))
 			goto err;
 		break;
+	case ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_UDP:
+	case ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_TCP:
+	case ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_SCTP:
+		cflct_ptype = ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_OTHER;
+		if (!ice_fdir_prof_resolve_conflict
+			(pf, cflct_ptype, is_tunnel))
+			goto err;
+		break;
+	case ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_OTHER:
+		cflct_ptype = ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_UDP;
+		if (!ice_fdir_prof_resolve_conflict
+			(pf, cflct_ptype, is_tunnel))
+			goto err;
+		cflct_ptype = ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_TCP;
+		if (!ice_fdir_prof_resolve_conflict
+			(pf, cflct_ptype, is_tunnel))
+			goto err;
+		cflct_ptype = ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_SCTP;
+		if (!ice_fdir_prof_resolve_conflict
+			(pf, cflct_ptype, is_tunnel))
+			goto err;
+		break;
 	default:
 		break;
 	}
@@ -968,9 +990,11 @@ ice_fdir_input_set_hdrs(enum ice_fltr_ptype flow, struct ice_flow_seg_info *seg)
 		ICE_FLOW_SET_HDRS(seg, ICE_FLOW_SEG_HDR_IPV6 |
 				  ICE_FLOW_SEG_HDR_IPV_FRAG);
 		break;
-	case ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN:
-		ICE_FLOW_SET_HDRS(seg, ICE_FLOW_SEG_HDR_UDP |
-				ICE_FLOW_SEG_HDR_IPV4 |
+	case ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_UDP:
+	case ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_TCP:
+	case ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_SCTP:
+	case ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_OTHER:
+		ICE_FLOW_SET_HDRS(seg, ICE_FLOW_SEG_HDR_IPV4 |
 				ICE_FLOW_SEG_HDR_VXLAN |
 				ICE_FLOW_SEG_HDR_IPV_OTHER);
 		break;
@@ -1908,10 +1932,12 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 				assert(p_v4);
 				p_v4->dst_port = tcp_spec->hdr.dst_port;
 				p_v4->src_port = tcp_spec->hdr.src_port;
+				p_v4->proto = ICE_IP_PROTO_TCP;
 			} else if (l3 == RTE_FLOW_ITEM_TYPE_IPV6) {
 				assert(p_v6);
 				p_v6->dst_port = tcp_spec->hdr.dst_port;
 				p_v6->src_port = tcp_spec->hdr.src_port;
+				p_v6->proto = ICE_IP_PROTO_TCP;
 			}
 			break;
 		case RTE_FLOW_ITEM_TYPE_UDP:
@@ -1946,10 +1972,12 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 				assert(p_v4);
 				p_v4->dst_port = udp_spec->hdr.dst_port;
 				p_v4->src_port = udp_spec->hdr.src_port;
+				p_v4->proto = ICE_IP_PROTO_UDP;
 			} else if (l3 == RTE_FLOW_ITEM_TYPE_IPV6) {
 				assert(p_v6);
 				p_v6->src_port = udp_spec->hdr.src_port;
 				p_v6->dst_port = udp_spec->hdr.dst_port;
+				p_v6->proto = ICE_IP_PROTO_UDP;
 			}
 			break;
 		case RTE_FLOW_ITEM_TYPE_SCTP:
@@ -1983,10 +2011,12 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 				assert(p_v4);
 				p_v4->dst_port = sctp_spec->hdr.dst_port;
 				p_v4->src_port = sctp_spec->hdr.src_port;
+				p_v4->proto = ICE_IP_PROTO_SCTP;
 			} else if (l3 == RTE_FLOW_ITEM_TYPE_IPV6) {
 				assert(p_v6);
 				p_v6->dst_port = sctp_spec->hdr.dst_port;
 				p_v6->src_port = sctp_spec->hdr.src_port;
+				p_v6->proto = ICE_IP_PROTO_SCTP;
 			}
 			break;
 		case RTE_FLOW_ITEM_TYPE_VOID:
@@ -2073,8 +2103,18 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 	else if (tunnel_type == ICE_FDIR_TUNNEL_TYPE_GTPU_EH &&
 		flow_type == ICE_FLTR_PTYPE_NONF_IPV6_UDP)
 		flow_type = ICE_FLTR_PTYPE_NONF_IPV6_GTPU_EH;
-	else if (tunnel_type == ICE_FDIR_TUNNEL_TYPE_VXLAN)
-		flow_type = ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN;
+	else if (tunnel_type == ICE_FDIR_TUNNEL_TYPE_VXLAN &&
+		flow_type == ICE_FLTR_PTYPE_NONF_IPV4_UDP)
+		flow_type = ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_UDP;
+	else if (tunnel_type == ICE_FDIR_TUNNEL_TYPE_VXLAN &&
+		flow_type == ICE_FLTR_PTYPE_NONF_IPV4_TCP)
+		flow_type = ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_TCP;
+	else if (tunnel_type == ICE_FDIR_TUNNEL_TYPE_VXLAN &&
+		flow_type == ICE_FLTR_PTYPE_NONF_IPV4_SCTP)
+		flow_type = ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_SCTP;
+	else if (tunnel_type == ICE_FDIR_TUNNEL_TYPE_VXLAN &&
+		flow_type == ICE_FLTR_PTYPE_NONF_IPV4_OTHER)
+		flow_type = ICE_FLTR_PTYPE_NONF_IPV4_UDP_VXLAN_IPV4_OTHER;
 
 	filter->tunnel_type = tunnel_type;
 	filter->input.flow_type = flow_type;
