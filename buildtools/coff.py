@@ -146,9 +146,3 @@ class Image:
 
     def get_string(self, offset):
         return decode_asciiz(self._strings[offset:])
-
-
-def decode_asciiz(data):
-    index = data.find(b'\x00')
-    end = index if index >= 0 else len(data)
-    return data[:end].decode()

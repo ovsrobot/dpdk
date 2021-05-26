@@ -19,6 +19,12 @@ except ImportError:
 import coff
 
 
+def decode_asciiz(data):
+    index = data.find(b'\x00')
+    end = index if index >= 0 else len(data)
+    return data[:end].decode()
+
+
 class ELFSymbol:
     def __init__(self, image, symbol):
         self._image = image
@@ -28,7 +34,7 @@ class ELFSymbol:
     def string_value(self):
         size = self._symbol["st_size"]
         value = self.get_value(0, size)
-        return value[:-1].decode() if value else ""
+        return decode_asciiz(value) if value else ""
 
     def get_value(self, offset, size):
         section = self._symbol["st_shndx"]
@@ -86,7 +92,7 @@ class COFFSymbol:
     @property
     def string_value(self):
         value = self._symbol.get_value(0)
-        return coff.decode_asciiz(value) if value else ''
+        return decode_asciiz(value) if value else ""
 
 
 class COFFImage:
