@@ -29,7 +29,7 @@ Compiling the Application
 
 To compile the sample application see :doc:`compiling`.
 
-The application is located in the ``ioat`` sub-directory.
+The ``ioat`` application code is located in the ``drivers/raw`` sub-directory.
 
 
 Running the Application
