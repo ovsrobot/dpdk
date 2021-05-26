@@ -58,10 +58,6 @@ examples are highlighted below.
   forwarding Graph, or ``l3fwd_graph`` application does forwarding based on IPv4
   like a simple router with DPDK Graph framework.
 
-* :doc:`Hardware packet copying<ioat>`: The Hardware packet copying,
-  or ``ioatfwd`` application demonstrates how to use IOAT rawdev driver for
-  copying packets between two threads.
-
 * :doc:`Packet Distributor<dist_app>`: The Packet Distributor
   demonstrates how to distribute packets arriving on an Rx port to different
   cores for processing and transmission.
@@ -94,3 +90,15 @@ examples are highlighted below.
 There are many more examples shown in the following chapters. Each of the
 documented sample applications show how to compile, configure and run the
 application as well as explaining the main functionality of the code.
+
+Driver specific Sample Application
+----------------------------------
+
+There are case where exiting sample applications may not be suitable to test
+a new driver contribution. In such cases a new driver specific sample application
+can be added to specific drivers sub-directory in the examples folder with prior
+approval from DPDK technical board. e.g.
+
+* :doc:`Hardware packet copying<ioat>`: The Hardware packet copying,
+  or ``ioat`` application demonstrates how to use IOAT rawdev driver for
+  copying packets between two threads.
