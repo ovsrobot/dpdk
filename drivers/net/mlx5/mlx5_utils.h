@@ -247,6 +247,13 @@ struct mlx5_indexed_cache {
 	uint32_t res;
 };
 
+struct mlx5_indexed_bmp {
+	struct rte_bitmap *bmp;
+	void *mem;
+	uint32_t mem_size;
+	uint32_t num;
+} __rte_cache_aligned;
+
 struct mlx5_indexed_pool {
 	struct mlx5_indexed_pool_config cfg; /* Indexed pool configuration. */
 	rte_spinlock_t lock; /* Pool lock for multiple thread usage. */
@@ -261,6 +268,7 @@ struct mlx5_indexed_pool {
 	struct mlx5_indexed_cache *idx_g;
 	struct mlx5_indexed_cache *idx_c[MLX5_IPOOL_MAX_CORES];
 	struct rte_ring *l_idx_c[MLX5_IPOOL_MAX_CORES];
+	struct mlx5_indexed_bmp *ibmp;
 	uint32_t free_list; /* Index to first free trunk. */
 #ifdef POOL_DEBUG
 	uint32_t n_entry;
@@ -860,5 +868,10 @@ struct {								\
 	for (idx = 0, (entry) = mlx5_l3t_get_next((tbl), &idx);		\
 	     (entry);							\
 	     idx++, (entry) = mlx5_l3t_get_next((tbl), &idx))
+
+#define MLX5_IPOOL_FOREACH(ipool, idx, entry) \
+	for ((idx) = 1, mlx5_ipool_flush_cache((ipool)), \
+	     entry = mlx5_ipool_get_next((ipool), &idx); \
+	     (entry); idx++, entry = mlx5_ipool_get_next((ipool), &idx))
 
 #endif /* RTE_PMD_MLX5_UTILS_H_ */
