@@ -609,6 +609,49 @@ struct bnxt_flow_stat_info {
 	struct bnxt_ctx_mem_buf_info tx_fc_out_tbl;
 };
 
+struct bnxt_ring_stats {
+	/* Number of transmitted unicast packets */
+	uint64_t	tx_ucast_pkts;
+	/* Number of transmitted multicast packets */
+	uint64_t	tx_mcast_pkts;
+	/* Number of transmitted broadcast packets */
+	uint64_t	tx_bcast_pkts;
+	/* Number of packets discarded in transmit path */
+	uint64_t	tx_discard_pkts;
+	/* Number of packets in transmit path with error */
+	uint64_t	tx_error_pkts;
+	/* Number of transmitted bytes for unicast traffic */
+	uint64_t	tx_ucast_bytes;
+	/* Number of transmitted bytes for multicast traffic */
+	uint64_t	tx_mcast_bytes;
+	/* Number of transmitted bytes for broadcast traffic */
+	uint64_t	tx_bcast_bytes;
+	/* Number of received unicast packets */
+	uint64_t	rx_ucast_pkts;
+	/* Number of received multicast packets */
+	uint64_t	rx_mcast_pkts;
+	/* Number of received broadcast packets */
+	uint64_t	rx_bcast_pkts;
+	/* Number of packets discarded in receive path */
+	uint64_t	rx_discard_pkts;
+	/* Number of packets in receive path with errors */
+	uint64_t	rx_error_pkts;
+	/* Number of received bytes for unicast traffic */
+	uint64_t	rx_ucast_bytes;
+	/* Number of received bytes for multicast traffic */
+	uint64_t	rx_mcast_bytes;
+	/* Number of received bytes for broadcast traffic */
+	uint64_t	rx_bcast_bytes;
+	/* Number of aggregated unicast packets */
+	uint64_t	rx_agg_pkts;
+	/* Number of aggregated unicast bytes */
+	uint64_t	rx_agg_bytes;
+	/* Number of aggregation events */
+	uint64_t	rx_agg_events;
+	/* Number of aborted aggregations */
+	uint64_t	rx_agg_aborts;
+};
+
 struct bnxt {
 	void				*bar0;
 
@@ -832,6 +875,7 @@ struct bnxt {
 	struct bnxt_flow_stat_info *flow_stat;
 	uint16_t		max_num_kflows;
 	uint16_t		tx_cfa_action;
+	struct bnxt_ring_stats	*prev_ring_stats[RTE_ETHDEV_QUEUE_STAT_CNTRS];
 };
 
 static
@@ -999,5 +1043,6 @@ int bnxt_flow_stats_cnt(struct bnxt *bp);
 uint32_t bnxt_get_speed_capabilities(struct bnxt *bp);
 int bnxt_flow_ops_get_op(struct rte_eth_dev *dev,
 			 const struct rte_flow_ops **ops);
+void bnxt_update_prev_stat(uint64_t *cntr, uint64_t *prev_cntr);
 
 #endif

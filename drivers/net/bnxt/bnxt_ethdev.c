@@ -1557,11 +1557,16 @@ bnxt_uninit_locks(struct bnxt *bp)
 
 static void bnxt_drv_uninit(struct bnxt *bp)
 {
+	int i = 0;
+
 	bnxt_free_leds_info(bp);
 	bnxt_free_cos_queues(bp);
 	bnxt_free_link_info(bp);
 	bnxt_free_parent_info(bp);
 	bnxt_uninit_locks(bp);
+
+	for (i = 0; i < RTE_ETHDEV_QUEUE_STAT_CNTRS; i++)
+		rte_free(bp->prev_ring_stats[i]);
 
 	rte_memzone_free((const struct rte_memzone *)bp->tx_mem_zone);
 	bp->tx_mem_zone = NULL;
@@ -4644,6 +4649,7 @@ static int bnxt_alloc_stats_mem(struct bnxt *bp)
 	const struct rte_memzone *mz = NULL;
 	uint32_t total_alloc_len;
 	rte_iova_t mz_phys_addr;
+	int i = 0;
 
 	if (pci_dev->id.device_id == BROADCOM_DEV_ID_NS2)
 		return 0;
@@ -4722,6 +4728,14 @@ static int bnxt_alloc_stats_mem(struct bnxt *bp)
 			bp->hw_tx_port_stats_map +
 			sizeof(struct tx_port_stats);
 		bp->flags |= BNXT_FLAG_EXT_TX_PORT_STATS;
+	}
+
+	for (i = 0; i < RTE_ETHDEV_QUEUE_STAT_CNTRS; i++) {
+		bp->prev_ring_stats[i] = rte_zmalloc("bnxt_prev_stats",
+						     sizeof(struct bnxt_ring_stats),
+						     0);
+		if (bp->prev_ring_stats[i] == NULL)
+			return -ENOMEM;
 	}
 
 	return 0;
