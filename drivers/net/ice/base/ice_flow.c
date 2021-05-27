@@ -257,7 +257,7 @@ static const u32 ice_ptypes_ipv4_ofos[] = {
  * IPV4 other PTYPEs
  */
 static const u32 ice_ptypes_ipv4_ofos_all[] = {
-	0x1DC00000, 0x24000800, 0x00000000, 0x00000000,
+	0x1DC00000, 0x27BF7800, 0x00000000, 0x00000000,
 	0x00000000, 0x00000155, 0x00000000, 0x00000000,
 	0x00000000, 0x000FC000, 0x83E0FAA0, 0x00000101,
 	0x03FFD500, 0x00000000, 0x00000000, 0x00000000,
@@ -297,7 +297,7 @@ static const u32 ice_ptypes_ipv6_ofos[] = {
  * IPV6 other PTYPEs
  */
 static const u32 ice_ptypes_ipv6_ofos_all[] = {
-	0x00000000, 0x00000000, 0x77000000, 0x10002000,
+	0x00000000, 0x00000000, 0x77000000, 0x1EFDE000,
 	0x00000000, 0x000002AA, 0x00000000, 0x00000000,
 	0x00000000, 0x03F00000, 0x7C1F0540, 0x00000206,
 	0xFC002A00, 0x0000003F, 0x00000000, 0x00000000,
@@ -444,7 +444,7 @@ static const u32 ice_ptypes_icmp_il[] = {
 /* Packet types for packets with an Outermost/First GRE header */
 static const u32 ice_ptypes_gre_of[] = {
 	0x00000000, 0xBFBF7800, 0x000001DF, 0xFEFDE000,
-	0x0000017E, 0x00000000, 0x00000000, 0x00000000,
+	0x0000077E, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
 	0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -803,7 +803,7 @@ struct ice_flow_prof_params {
 	ICE_FLOW_SEG_HDR_ESP | ICE_FLOW_SEG_HDR_AH | \
 	ICE_FLOW_SEG_HDR_NAT_T_ESP | ICE_FLOW_SEG_HDR_GTPU_NON_IP | \
 	ICE_FLOW_SEG_HDR_ECPRI_TP0 | ICE_FLOW_SEG_HDR_UDP_ECPRI_TP0 | \
-	ICE_FLOW_SEG_HDR_L2TPV2 | ICE_FLOW_SEG_HDR_PPP)
+	ICE_FLOW_SEG_HDR_L2TPV2 | ICE_FLOW_SEG_HDR_PPP | ICE_FLOW_SEG_HDR_GRE)
 
 #define ICE_FLOW_SEG_HDRS_L2_MASK	\
 	(ICE_FLOW_SEG_HDR_ETH | ICE_FLOW_SEG_HDR_VLAN)
@@ -1020,11 +1020,9 @@ ice_flow_proc_seg_hdrs(struct ice_flow_prof_params *params)
 			ice_and_bitmap(params->ptypes, params->ptypes, src,
 				       ICE_FLOW_PTYPE_MAX);
 		} else if (hdrs & ICE_FLOW_SEG_HDR_GRE) {
-			if (!i) {
-				src = (const ice_bitmap_t *)ice_ptypes_gre_of;
-				ice_and_bitmap(params->ptypes, params->ptypes,
-					       src, ICE_FLOW_PTYPE_MAX);
-			}
+			src = (const ice_bitmap_t *)ice_ptypes_gre_of;
+			ice_and_bitmap(params->ptypes, params->ptypes,
+				       src, ICE_FLOW_PTYPE_MAX);
 		} else if (hdrs & ICE_FLOW_SEG_HDR_GTPC) {
 			src = (const ice_bitmap_t *)ice_ptypes_gtpc;
 			ice_and_bitmap(params->ptypes, params->ptypes,
