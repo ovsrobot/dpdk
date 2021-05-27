@@ -1295,6 +1295,7 @@ i40e_tx_free_bufs(struct i40e_tx_queue *txq)
 {
 	struct i40e_tx_entry *txep;
 	uint16_t i;
+	struct rte_mbuf *free[RTE_I40E_TX_MAX_FREE_BUF_SZ];
 
 	if ((txq->tx_ring[txq->tx_next_dd].cmd_type_offset_bsz &
 			rte_cpu_to_le_64(I40E_TXD_QW1_DTYPE_MASK)) !=
@@ -1308,9 +1309,11 @@ i40e_tx_free_bufs(struct i40e_tx_queue *txq)
 
 	if (txq->offloads & DEV_TX_OFFLOAD_MBUF_FAST_FREE) {
 		for (i = 0; i < txq->tx_rs_thresh; ++i, ++txep) {
-			rte_mempool_put(txep->mbuf->pool, txep->mbuf);
+			free[i] = txep->mbuf;
 			txep->mbuf = NULL;
 		}
+		rte_mempool_put_bulk(free[0]->pool, (void **)free,
+					txq->tx_rs_thresh);
 	} else {
 		for (i = 0; i < txq->tx_rs_thresh; ++i, ++txep) {
 			rte_pktmbuf_free_seg(txep->mbuf);
