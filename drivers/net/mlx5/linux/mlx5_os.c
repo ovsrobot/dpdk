@@ -1608,6 +1608,17 @@ err_secondary:
 	mlx5_set_min_inline(spawn, config);
 	/* Store device configuration on private structure. */
 	priv->config = *config;
+	struct mlx5_indexed_pool_config icfg = {
+		.size = sizeof(struct rte_flow),
+		.trunk_size = 4096,
+		.need_lock = 1,
+		.release_mem_en = 0,
+		.malloc = mlx5_malloc,
+		.free = mlx5_free,
+		.per_core_cache = 1 << 23,
+		.type = "rte_flow_ipool",
+	};
+	priv->flows = mlx5_ipool_create(&icfg);
 	/* Create context for virtual machine VLAN workaround. */
 	priv->vmwa_context = mlx5_vlan_vmwa_init(eth_dev, spawn->ifindex);
 	if (config->dv_flow_en) {

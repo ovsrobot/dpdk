@@ -323,6 +323,7 @@ static const struct mlx5_indexed_pool_config mlx5_ipool_cfg[] = {
 		.grow_shift = 2,
 		.need_lock = 1,
 		.release_mem_en = 1,
+		.per_core_cache = 1 << 23,
 		.malloc = mlx5_malloc,
 		.free = mlx5_free,
 		.type = "mlx5_flow_handle_ipool",
@@ -1528,7 +1529,7 @@ mlx5_dev_close(struct rte_eth_dev *dev)
 	 * If all the flows are already flushed in the device stop stage,
 	 * then this will return directly without any action.
 	 */
-	mlx5_flow_list_flush(dev, &priv->flows, true);
+	mlx5_flow_list_flush(dev, false, true);
 	mlx5_action_handle_flush(dev);
 	mlx5_flow_meter_flush(dev, NULL);
 	/* Prevent crashes when queues are still in use. */
