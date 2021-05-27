@@ -29,6 +29,29 @@ class SysfsDir:
                 f.write(str(contents))
 
 
+def reset_device(dsa_id):
+    "Reset the DSA device and all its queues"
+    drv_dir = SysfsDir("/sys/bus/dsa/drivers/dsa")
+    drv_dir.write_values({"unbind": f"dsa{dsa_id}"})
+
+
+def get_pci_dir(pci):
+    "Search for the sysfs directory of the PCI device"
+    full_pci = pci if pci.startswith("0000:") else f"0000:{pci}"
+    if os.path.exists(f'/sys/bus/pci/devices/{full_pci}'):
+        return f'/sys/bus/pci/devices/{full_pci}'
+    return None
+
+
+def get_dsa_id(pci):
+    "Get the DSA instance ID using the PCI address of the device"
+    pci_dir = get_pci_dir(pci)
+    for path, dirs, files in os.walk(pci_dir):
+        for dir in dirs:
+            if dir.startswith('dsa') and 'wq' not in dir:
+                return int(dir[3:])
+
+
 def configure_dsa(dsa_id, queues, prefix):
     "Configure the DSA instance with appropriate number of queues"
     dsa_dir = SysfsDir(f"/sys/bus/dsa/devices/dsa{dsa_id}")
@@ -68,14 +91,25 @@ def main(args):
     "Main function, does arg parsing and calls config function"
     arg_p = argparse.ArgumentParser(
         description="Configure whole DSA device instance for DPDK use")
-    arg_p.add_argument('dsa_id', type=int, help="DSA instance number")
+    arg_p.add_argument('dsa_id',
+                       help="Specify DSA instance either via DSA instance number or PCI address")
     arg_p.add_argument('-q', metavar='queues', type=int, default=255,
                        help="Number of queues to set up")
     arg_p.add_argument('--name-prefix', metavar='prefix', dest='prefix',
                        default="dpdk",
                        help="Prefix for workqueue name to mark for DPDK use [default: 'dpdk']")
+    arg_p.add_argument('--reset', action='store_true',
+                       help="Reset DSA device and its queues")
     parsed_args = arg_p.parse_args(args[1:])
-    configure_dsa(parsed_args.dsa_id, parsed_args.q, parsed_args.prefix)
+
+    dsa_id = parsed_args.dsa_id
+    dsa_id = get_dsa_id(dsa_id) if ':' in dsa_id else dsa_id
+    if parsed_args.reset:
+        print(f"Resetting DSA instance {dsa_id}")
+        reset_device(dsa_id)
+    else:
+        print(f"Configuring DSA instance {dsa_id}")
+        configure_dsa(dsa_id, parsed_args.q, parsed_args.prefix)
 
 
 if __name__ == "__main__":
