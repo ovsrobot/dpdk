@@ -2670,32 +2670,6 @@ virtio_dev_pktmbuf_prep(struct virtio_net *dev, struct rte_mbuf *pkt,
 	return -1;
 }
 
-/*
- * Allocate a host supported pktmbuf.
- */
-static __rte_always_inline struct rte_mbuf *
-virtio_dev_pktmbuf_alloc(struct virtio_net *dev, struct rte_mempool *mp,
-			 uint32_t data_len)
-{
-	struct rte_mbuf *pkt = rte_pktmbuf_alloc(mp);
-
-	if (unlikely(pkt == NULL)) {
-		VHOST_LOG_DATA(ERR,
-			"Failed to allocate memory for mbuf.\n");
-		return NULL;
-	}
-
-	if (virtio_dev_pktmbuf_prep(dev, pkt, data_len)) {
-		/* Data doesn't fit into the buffer and the host supports
-		 * only linear buffers
-		 */
-		rte_pktmbuf_free(pkt);
-		return NULL;
-	}
-
-	return pkt;
-}
-
 __rte_always_inline
 static uint16_t
 virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
@@ -2725,6 +2699,9 @@ virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	VHOST_LOG_DATA(DEBUG, "(%d) about to dequeue %u buffers\n",
 			dev->vid, count);
 
+	if (rte_pktmbuf_alloc_bulk(mbuf_pool, pkts, count))
+		return 0;
+
 	for (i = 0; i < count; i++) {
 		struct buf_vector buf_vec[BUF_VECTOR_MAX];
 		uint16_t head_idx;
@@ -2741,8 +2718,8 @@ virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 
 		update_shadow_used_ring_split(vq, head_idx, 0);
 
-		pkts[i] = virtio_dev_pktmbuf_alloc(dev, mbuf_pool, buf_len);
-		if (unlikely(pkts[i] == NULL)) {
+		err = virtio_dev_pktmbuf_prep(dev, pkts[i], buf_len);
+		if (unlikely(err)) {
 			/*
 			 * mbuf allocation fails for jumbo packets when external
 			 * buffer allocation is not allowed and linear buffer
@@ -2762,7 +2739,6 @@ virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		err = copy_desc_to_mbuf(dev, vq, buf_vec, nr_vec, pkts[i],
 				mbuf_pool, legacy_ol_flags);
 		if (unlikely(err)) {
-			rte_pktmbuf_free(pkts[i]);
 			if (!allocerr_warned) {
 				VHOST_LOG_DATA(ERR,
 					"Failed to copy desc to mbuf on %s.\n",
@@ -2774,6 +2750,9 @@ virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 			break;
 		}
 	}
+
+	if (i != count)
+		rte_pktmbuf_free_bulk(&pkts[i - 1], count - i);
 
 	vq->last_avail_idx += i;
 
