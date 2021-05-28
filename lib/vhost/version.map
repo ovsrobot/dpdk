@@ -79,4 +79,8 @@ EXPERIMENTAL {
 
 	# added in 21.05
 	rte_vhost_get_negotiated_protocol_features;
+
+	# added in 21.08
+	rte_vhost_async_channel_register_thread_unsafe;
+	rte_vhost_async_channel_unregister_thread_unsafe;
 };
