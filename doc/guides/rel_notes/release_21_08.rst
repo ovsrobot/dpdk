@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Mellanox mlx5 net driver and common layer.**
+
+  Updated Mellanox mlx5 driver with new features and improvements, including:
+
+  * Added devargs options ``allow_duplicate_pattern``.
+
 
 Removed Items
 -------------
