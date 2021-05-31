@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel QuickAssist PMD.**
+
+  Added fourth generation of QuickAssist Technology devices support.
+  Only symmetric crypto has been currently enabled, compression and asymmetric
+  crypto PMD will fail to create.
+
 
 Removed Items
 -------------
