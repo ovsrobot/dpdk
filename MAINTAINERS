@@ -1307,6 +1307,11 @@ F: doc/guides/rawdevs/ntb.rst
 F: examples/ntb/
 F: doc/guides/sample_app_ug/ntb.rst
 
+Marvell CNXK BPHY
+M: Tomasz Duszynski <tduszynski@marvell.com>
+M: Jakub Palider <jpalider@marvell.com>
+F: drivers/raw/cnxk_bphy/
+F: doc/guides/rawdevs/cnxk_bphy.rst
 
 Packet processing
 -----------------
