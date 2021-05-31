@@ -6,6 +6,8 @@ INTERNAL {
 
 	cnxk_bphy_intr_init;
 	cnxk_bphy_intr_fini;
+	cnxk_bphy_intr_register;
+	cnxk_bphy_intr_unregister;
 	cnxk_bphy_irq_max_get;
 	cnxk_bphy_mem_get;
 };
@@ -15,4 +17,6 @@ EXPERIMENTAL {
 	rte_pmd_bphy_intr_fini;
 	rte_pmd_bphy_intr_init;
 	rte_pmd_bphy_intr_mem_get;
+	rte_pmd_bphy_intr_register;
+	rte_pmd_bphy_intr_unregister;
 };

@@ -40,6 +40,20 @@ rte_pmd_bphy_intr_mem_get(uint16_t dev_id)
 	return cnxk_bphy_mem_get(dev_id);
 }
 
+int
+rte_pmd_bphy_intr_register(uint16_t dev_id, int irq_num,
+			    cnxk_bphy_intr_handler_t handler, void *data,
+			    int cpu)
+{
+	return cnxk_bphy_intr_register(dev_id, irq_num, handler, data, cpu);
+}
+
+void
+rte_pmd_bphy_intr_unregister(uint16_t dev_id, int irq_num)
+{
+	cnxk_bphy_intr_unregister(dev_id, irq_num);
+}
+
 static const struct rte_rawdev_ops bphy_rawdev_ops = {
 };
 

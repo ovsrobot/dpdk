@@ -10,6 +10,8 @@
 
 #include <roc_api.h>
 
+typedef void (*cnxk_bphy_intr_handler_t)(int irq_num, void *isr_data);
+
 struct bphy_mem {
 	struct rte_mem_resource res0;
 	struct rte_mem_resource res2;
@@ -25,8 +27,14 @@ int cnxk_bphy_intr_init(uint16_t dev_id);
 __rte_internal
 void cnxk_bphy_intr_fini(uint16_t dev_id);
 __rte_internal
-uint64_t cnxk_bphy_irq_max_get(uint16_t dev_id);
-__rte_internal
 struct bphy_mem *cnxk_bphy_mem_get(uint16_t dev_id);
+__rte_internal
+int cnxk_bphy_intr_register(uint16_t dev_id, int irq_num,
+			    cnxk_bphy_intr_handler_t handler, void *isr_data,
+			    int cpu);
+__rte_internal
+void cnxk_bphy_intr_unregister(uint16_t dev_id, int irq_num);
+__rte_internal
+uint64_t cnxk_bphy_irq_max_get(uint16_t dev_id);
 
 #endif /* _CNXK_BPHY_IRQ_ */

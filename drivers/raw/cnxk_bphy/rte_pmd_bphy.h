@@ -110,6 +110,12 @@ int rte_pmd_bphy_intr_init(uint16_t dev_id);
 __rte_experimental
 struct cnxk_bphy_mem *rte_pmd_bphy_intr_mem_get(uint16_t dev_id);
 __rte_experimental
+int rte_pmd_bphy_intr_register(uint16_t dev_id, int irq_num,
+			       cnxk_bphy_intr_handler_t handler, void *isr_data,
+			       int cpu);
+__rte_experimental
 void rte_pmd_bphy_intr_fini(uint16_t dev_id);
+__rte_experimental
+void rte_pmd_bphy_intr_unregister(uint16_t dev_id, int irq_num);
 
 #endif /* _CNXK_BPHY_H_ */
