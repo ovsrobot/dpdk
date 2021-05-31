@@ -45,6 +45,7 @@
 #include <rte_common.h>
 #include <rte_malloc.h>
 #include <rte_log.h>
+#include <rte_vfio.h>
 
 #include "iotlb.h"
 #include "vhost.h"
@@ -866,87 +867,6 @@ vhost_user_set_vring_base(struct virtio_net **pdev,
 	return RTE_VHOST_MSG_RESULT_OK;
 }
 
-static int
-add_one_guest_page(struct virtio_net *dev, uint64_t guest_phys_addr,
-		   uint64_t host_phys_addr, uint64_t size)
-{
-	struct guest_page *page, *last_page;
-	struct guest_page *old_pages;
-
-	if (dev->nr_guest_pages == dev->max_guest_pages) {
-		dev->max_guest_pages *= 2;
-		old_pages = dev->guest_pages;
-		dev->guest_pages = rte_realloc(dev->guest_pages,
-					dev->max_guest_pages * sizeof(*page),
-					RTE_CACHE_LINE_SIZE);
-		if (dev->guest_pages == NULL) {
-			VHOST_LOG_CONFIG(ERR, "cannot realloc guest_pages\n");
-			rte_free(old_pages);
-			return -1;
-		}
-	}
-
-	if (dev->nr_guest_pages > 0) {
-		last_page = &dev->guest_pages[dev->nr_guest_pages - 1];
-		/* merge if the two pages are continuous */
-		if (host_phys_addr == last_page->host_phys_addr +
-				      last_page->size) {
-			last_page->size += size;
-			return 0;
-		}
-	}
-
-	page = &dev->guest_pages[dev->nr_guest_pages++];
-	page->guest_phys_addr = guest_phys_addr;
-	page->host_phys_addr  = host_phys_addr;
-	page->size = size;
-
-	return 0;
-}
-
-static int
-add_guest_pages(struct virtio_net *dev, struct rte_vhost_mem_region *reg,
-		uint64_t page_size)
-{
-	uint64_t reg_size = reg->size;
-	uint64_t host_user_addr  = reg->host_user_addr;
-	uint64_t guest_phys_addr = reg->guest_phys_addr;
-	uint64_t host_phys_addr;
-	uint64_t size;
-
-	host_phys_addr = rte_mem_virt2iova((void *)(uintptr_t)host_user_addr);
-	size = page_size - (guest_phys_addr & (page_size - 1));
-	size = RTE_MIN(size, reg_size);
-
-	if (add_one_guest_page(dev, guest_phys_addr, host_phys_addr, size) < 0)
-		return -1;
-
-	host_user_addr  += size;
-	guest_phys_addr += size;
-	reg_size -= size;
-
-	while (reg_size > 0) {
-		size = RTE_MIN(reg_size, page_size);
-		host_phys_addr = rte_mem_virt2iova((void *)(uintptr_t)
-						  host_user_addr);
-		if (add_one_guest_page(dev, guest_phys_addr, host_phys_addr,
-				size) < 0)
-			return -1;
-
-		host_user_addr  += size;
-		guest_phys_addr += size;
-		reg_size -= size;
-	}
-
-	/* sort guest page array if over binary search threshold */
-	if (dev->nr_guest_pages >= VHOST_BINARY_SEARCH_THRESH) {
-		qsort((void *)dev->guest_pages, dev->nr_guest_pages,
-			sizeof(struct guest_page), guest_page_addrcmp);
-	}
-
-	return 0;
-}
-
 #ifdef RTE_LIBRTE_VHOST_DEBUG
 /* TODO: enable it only in debug mode? */
 static void
@@ -1158,13 +1078,6 @@ vhost_user_mmap_region(struct virtio_net *dev,
 	region->mmap_size = mmap_size;
 	region->host_user_addr = (uint64_t)(uintptr_t)mmap_addr + mmap_offset;
 
-	if (dev->async_copy)
-		if (add_guest_pages(dev, region, alignment) < 0) {
-			VHOST_LOG_CONFIG(ERR,
-					"adding guest pages to region failed.\n");
-			return -1;
-		}
-
 	VHOST_LOG_CONFIG(INFO,
 			"guest memory region size: 0x%" PRIx64 "\n"
 			"\t guest physical addr: 0x%" PRIx64 "\n"
@@ -1196,6 +1109,7 @@ vhost_user_set_mem_table(struct virtio_net **pdev, struct VhostUserMsg *msg,
 
 	uint64_t mmap_offset;
 	uint32_t i;
+	int ret;
 
 	if (validate_msg_fds(msg, memory->nregions) != 0)
 		return RTE_VHOST_MSG_RESULT_ERR;
@@ -1280,6 +1194,18 @@ vhost_user_set_mem_table(struct virtio_net **pdev, struct VhostUserMsg *msg,
 		}
 
 		dev->mem->nregions++;
+
+		if (dev->async_copy) {
+			/* Add mapped region into the default container of DPDK. */
+			ret = rte_vfio_container_dma_map(RTE_VFIO_DEFAULT_CONTAINER_FD,
+							 reg->host_user_addr,
+							 reg->host_user_addr,
+							 reg->size);
+			if (ret < 0) {
+				VHOST_LOG_CONFIG(ERR, "Configure IOMMU for DMA engine failed");
+				goto free_mem_table;
+			}
+		}
 	}
 
 	if (vhost_user_postcopy_register(dev, main_fd, msg) < 0)
