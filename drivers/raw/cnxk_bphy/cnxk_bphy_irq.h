@@ -20,4 +20,9 @@ struct bphy_device {
 	struct bphy_mem mem;
 };
 
+__rte_internal
+int cnxk_bphy_intr_init(uint16_t dev_id);
+__rte_internal
+void cnxk_bphy_intr_fini(uint16_t dev_id);
+
 #endif /* _CNXK_BPHY_IRQ_ */

@@ -13,6 +13,7 @@
 #include <roc_api.h>
 
 #include "cnxk_bphy_irq.h"
+#include "rte_pmd_bphy.h"
 
 static const struct rte_pci_id pci_bphy_map[] = {
 	{RTE_PCI_DEVICE(PCI_VENDOR_ID_CAVIUM, PCI_DEVID_CNXK_BPHY)},
@@ -20,6 +21,18 @@ static const struct rte_pci_id pci_bphy_map[] = {
 		.vendor_id = 0,
 	},
 };
+
+int
+rte_pmd_bphy_intr_init(uint16_t dev_id)
+{
+	return cnxk_bphy_intr_init(dev_id);
+}
+
+void
+rte_pmd_bphy_intr_fini(uint16_t dev_id)
+{
+	return cnxk_bphy_intr_fini(dev_id);
+}
 
 static const struct rte_rawdev_ops bphy_rawdev_ops = {
 };

@@ -1,3 +1,15 @@
 DPDK_21 {
 	local: *;
 };
+INTERNAL {
+	global:
+
+	cnxk_bphy_intr_init;
+	cnxk_bphy_intr_fini;
+};
+EXPERIMENTAL {
+	global:
+
+	rte_pmd_bphy_intr_fini;
+	rte_pmd_bphy_intr_init;
+};

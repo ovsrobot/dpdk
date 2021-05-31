@@ -5,6 +5,8 @@
 #ifndef _CNXK_BPHY_H_
 #define _CNXK_BPHY_H_
 
+#include "cnxk_bphy_irq.h"
+
 enum cnxk_bphy_cgx_msg_type {
 	CNXK_BPHY_CGX_MSG_TYPE_GET_LINKINFO,
 	CNXK_BPHY_CGX_MSG_TYPE_INTLBK_DISABLE,
@@ -100,5 +102,10 @@ struct cnxk_bphy_cgx_msg {
 	 */
 	void *data;
 };
+
+__rte_experimental
+int rte_pmd_bphy_intr_init(uint16_t dev_id);
+__rte_experimental
+void rte_pmd_bphy_intr_fini(uint16_t dev_id);
 
 #endif /* _CNXK_BPHY_H_ */
