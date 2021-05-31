@@ -17,6 +17,8 @@ Features
 The BPHY CGX/RPM implements following features in the rawdev API:
 
 - Access to BPHY CGX/RPM via set of predefined messages.
+- Access to BPHY memory
+- Custom interrupt handlers
 
 Device Setup
 ------------
@@ -33,6 +35,16 @@ To perform data transfer use standard ``rte_rawdev_enqueue_buffers()`` and
 ``rte_rawdev_dequeue_buffers()`` APIs. Not all messages produce sensible
 responses hence dequeueing is not always necessary.
 
+Other features are realized by custom API calls:
+
+- BPHY memory ranges are obtained with single ``rte_pmd_bphy_intr_mem_get()``,
+- interrupt  initialization, registration, unregistration and termination are
+  done with ``rte_pmd_bphy_intr_init()``, ``rte_pmd_bphy_intr_register()``,
+  ``rte_pmd_bphy_intr_unregister()`` and ``rte_pmd_bphy_intr_fini()``,
+  respectively. In order to register an interrupt prior initialization is
+  required. The same way, the subsystem should be terminated when no longer
+  used.
+
 Self test
 ---------
 
@@ -40,7 +52,7 @@ On EAL initialization, BPHY CGX/RPM devices will be probed and populated into
 the raw devices. The rawdev ID of the device can be obtained using invocation
 of ``rte_rawdev_get_dev_id("NAME:x")`` from the test application, where:
 
-- NAME is the desired subsystem: use "BPHY_CGX" for
+- NAME is the desired subsystem: use "BPHY" for regular, and "BPHY_CGX" for
   RFOE module,
 - x is the device's bus id specified in "bus:device.func" (BDF) format.
 
