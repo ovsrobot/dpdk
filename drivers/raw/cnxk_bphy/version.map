@@ -6,6 +6,7 @@ INTERNAL {
 
 	cnxk_bphy_intr_init;
 	cnxk_bphy_intr_fini;
+	cnxk_bphy_irq_max_get;
 };
 EXPERIMENTAL {
 	global:
