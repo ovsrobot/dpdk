@@ -7,10 +7,12 @@ INTERNAL {
 	cnxk_bphy_intr_init;
 	cnxk_bphy_intr_fini;
 	cnxk_bphy_irq_max_get;
+	cnxk_bphy_mem_get;
 };
 EXPERIMENTAL {
 	global:
 
 	rte_pmd_bphy_intr_fini;
 	rte_pmd_bphy_intr_init;
+	rte_pmd_bphy_intr_mem_get;
 };

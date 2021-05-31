@@ -34,6 +34,12 @@ rte_pmd_bphy_intr_fini(uint16_t dev_id)
 	return cnxk_bphy_intr_fini(dev_id);
 }
 
+struct cnxk_bphy_mem *
+rte_pmd_bphy_intr_mem_get(uint16_t dev_id)
+{
+	return cnxk_bphy_mem_get(dev_id);
+}
+
 static const struct rte_rawdev_ops bphy_rawdev_ops = {
 };
 

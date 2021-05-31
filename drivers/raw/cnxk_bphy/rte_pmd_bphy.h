@@ -103,8 +103,12 @@ struct cnxk_bphy_cgx_msg {
 	void *data;
 };
 
+#define cnxk_bphy_mem  bphy_mem
+
 __rte_experimental
 int rte_pmd_bphy_intr_init(uint16_t dev_id);
+__rte_experimental
+struct cnxk_bphy_mem *rte_pmd_bphy_intr_mem_get(uint16_t dev_id);
 __rte_experimental
 void rte_pmd_bphy_intr_fini(uint16_t dev_id);
 
