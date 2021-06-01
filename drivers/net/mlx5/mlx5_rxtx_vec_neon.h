@@ -768,18 +768,11 @@ rxq_cq_process_v(struct mlx5_rxq_data *rxq, volatile struct mlx5_cqe *cq,
 					  comp_mask), 0)) /
 					  (sizeof(uint16_t) * 8);
 		/* D.6 mask out entries after the compressed CQE. */
-		mask = vcreate_u16(comp_idx < MLX5_VPMD_DESCS_PER_LOOP ?
-				   -1UL >> (comp_idx * sizeof(uint16_t) * 8) :
-				   0);
-		invalid_mask = vorr_u16(invalid_mask, mask);
+		invalid_mask = vorr_u16(invalid_mask, comp_mask);
 		/* D.7 count non-compressed valid CQEs. */
 		n = __builtin_clzl(vget_lane_u64(vreinterpret_u64_u16(
 				   invalid_mask), 0)) / (sizeof(uint16_t) * 8);
 		nocmp_n += n;
-		/* D.2 get the final invalid mask. */
-		mask = vcreate_u16(n < MLX5_VPMD_DESCS_PER_LOOP ?
-				   -1UL >> (n * sizeof(uint16_t) * 8) : 0);
-		invalid_mask = vorr_u16(invalid_mask, mask);
 		/* D.3 check error in opcode. */
 		opcode = vceq_u16(resp_err_check, opcode);
 		opcode = vbic_u16(opcode, invalid_mask);
