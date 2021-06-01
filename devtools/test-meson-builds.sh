@@ -168,7 +168,8 @@ build () # <directory> <target cc | cross file> <ABI check> [meson options]
 	config $srcdir $builds_dir/$targetdir $cross --werror $*
 	compile $builds_dir/$targetdir
 	if [ -n "$DPDK_ABI_REF_VERSION" -a "$abicheck" = ABI ] ; then
-		abirefdir=${DPDK_ABI_REF_DIR:-reference}/$DPDK_ABI_REF_VERSION
+		abirefdir=$(readlink -f \
+			${DPDK_ABI_REF_DIR:-reference}/$DPDK_ABI_REF_VERSION)
 		if [ ! -d $abirefdir/$targetdir ]; then
 			# clone current sources
 			if [ ! -d $abirefdir/src ]; then
