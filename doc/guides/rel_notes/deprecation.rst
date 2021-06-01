@@ -147,3 +147,8 @@ Deprecation Notices
 * cmdline: ``cmdline`` structure will be made opaque to hide platform-specific
   content. On Linux and FreeBSD, supported prior to DPDK 20.11,
   original structure will be kept until DPDK 21.11.
+
+* pci: To reduce unnecessary ABIs exposed by DPDK bus driver, "rte_bus_pci.h"
+  will be made internal in 21.11 and macros/data structures/functions defined
+  in the header will not be considered as ABI anymore. This change is inspired
+  by the RFC https://patchwork.dpdk.org/project/dpdk/list/?series=17176.
