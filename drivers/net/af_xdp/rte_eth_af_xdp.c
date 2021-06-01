@@ -37,6 +37,7 @@
 #include <rte_malloc.h>
 #include <rte_ring.h>
 #include <rte_spinlock.h>
+#include <rte_power_intrinsics.h>
 
 #include "compat.h"
 
@@ -789,6 +790,29 @@ eth_dev_configure(struct rte_eth_dev *dev)
 }
 
 static int
+eth_get_monitor_addr(void *rx_queue, struct rte_power_monitor_cond *pmc)
+{
+	struct pkt_rx_queue *rxq = rx_queue;
+	unsigned int *prod = rxq->rx.producer;
+	const uint32_t cur_val = rxq->rx.cached_prod; /* use cached value */
+
+	/* watch for changes in producer ring */
+	pmc->addr = (void*)prod;
+
+	/* store current value */
+	pmc->val = cur_val;
+	pmc->mask = (uint32_t)~0; /* mask entire uint32_t value */
+
+	/* AF_XDP producer ring index is 32-bit */
+	pmc->size = sizeof(uint32_t);
+
+	/* this requires an inverted check */
+	pmc->invert = 1;
+
+	return 0;
+}
+
+static int
 eth_dev_info(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 {
 	struct pmd_internals *internals = dev->data->dev_private;
@@ -1448,6 +1472,7 @@ static const struct eth_dev_ops ops = {
 	.link_update = eth_link_update,
 	.stats_get = eth_stats_get,
 	.stats_reset = eth_stats_reset,
+	.get_monitor_addr = eth_get_monitor_addr
 };
 
 /** parse busy_budget argument */
