@@ -16,7 +16,7 @@ srcdir=$(dirname $(readlink -f $0))/..
 
 MESON=${MESON:-meson}
 use_shared="--default-library=shared"
-builds_dir=${DPDK_BUILD_TEST_DIR:-.}
+builds_dir=$(readlink -f ${DPDK_BUILD_TEST_DIR:-.})
 
 if command -v gmake >/dev/null 2>&1 ; then
 	MAKE=gmake
@@ -193,16 +193,16 @@ build () # <directory> <target cc | cross file> <ABI check> [meson options]
 		fi
 
 		install_target $builds_dir/$targetdir \
-			$(readlink -f $builds_dir/$targetdir/install)
+			$builds_dir/$targetdir/install
 		echo "Checking ABI compatibility of $targetdir" >&$verbose
 		echo $srcdir/devtools/gen-abi.sh \
-			$(readlink -f $builds_dir/$targetdir/install) >&$veryverbose
+			$builds_dir/$targetdir/install >&$veryverbose
 		$srcdir/devtools/gen-abi.sh \
-			$(readlink -f $builds_dir/$targetdir/install) >&$veryverbose
+			$builds_dir/$targetdir/install >&$veryverbose
 		echo $srcdir/devtools/check-abi.sh $abirefdir/$targetdir \
-			$(readlink -f $builds_dir/$targetdir/install) >&$veryverbose
+			$builds_dir/$targetdir/install >&$veryverbose
 		$srcdir/devtools/check-abi.sh $abirefdir/$targetdir \
-			$(readlink -f $builds_dir/$targetdir/install) >&$verbose
+			$builds_dir/$targetdir/install >&$verbose
 	fi
 }
 
@@ -275,7 +275,7 @@ done
 # Test installation of the x86-generic target, to be used for checking
 # the sample apps build using the pkg-config file for cflags and libs
 load_env cc
-build_path=$(readlink -f $builds_dir/build-x86-generic)
+build_path=$builds_dir/build-x86-generic
 export DESTDIR=$build_path/install
 install_target $build_path $DESTDIR
 pc_file=$(find $DESTDIR -name libdpdk.pc)
