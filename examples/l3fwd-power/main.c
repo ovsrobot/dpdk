@@ -2498,6 +2498,27 @@ mode_to_str(enum appmode mode)
 	}
 }
 
+static void
+pmd_pmgmt_set_up(unsigned int lcore, uint16_t portid, uint16_t qid, bool last)
+{
+	int ret;
+
+	ret = rte_power_ethdev_pmgmt_queue_enable(lcore, portid,
+			qid, pmgmt_type);
+	if (ret < 0)
+		rte_exit(EXIT_FAILURE,
+			"rte_power_ethdev_pmgmt_queue_enable: err=%d, port=%d\n",
+			ret, portid);
+
+	if (!last)
+		return;
+	ret = rte_power_ethdev_pmgmt_queue_set_power_save(lcore, portid, qid);
+	if (ret < 0)
+		rte_exit(EXIT_FAILURE,
+			"rte_power_ethdev_pmgmt_queue_set_power_save: err=%d, port=%d\n",
+			ret, portid);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -2723,12 +2744,6 @@ main(int argc, char **argv)
 		printf("\nInitializing rx queues on lcore %u ... ", lcore_id );
 		fflush(stdout);
 
-		/* PMD power management mode can only do 1 queue per core */
-		if (app_mode == APP_MODE_PMD_MGMT && qconf->n_rx_queue > 1) {
-			rte_exit(EXIT_FAILURE,
-				"In PMD power management mode, only one queue per lcore is allowed\n");
-		}
-
 		/* init RX queues */
 		for(queue = 0; queue < qconf->n_rx_queue; ++queue) {
 			struct rte_eth_rxconf rxq_conf;
@@ -2767,15 +2782,9 @@ main(int argc, char **argv)
 						 "Fail to add ptype cb\n");
 			}
 
-			if (app_mode == APP_MODE_PMD_MGMT) {
-				ret = rte_power_ethdev_pmgmt_queue_enable(
-						lcore_id, portid, queueid,
-						pmgmt_type);
-				if (ret < 0)
-					rte_exit(EXIT_FAILURE,
-						"rte_power_ethdev_pmgmt_queue_enable: err=%d, port=%d\n",
-							ret, portid);
-			}
+			if (app_mode == APP_MODE_PMD_MGMT)
+				pmd_pmgmt_set_up(lcore_id, portid, queueid,
+					queue == (qconf->n_rx_queue - 1));
 		}
 	}
 
