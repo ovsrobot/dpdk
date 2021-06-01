@@ -95,6 +95,7 @@ mlx5_rx_replenish_bulk_mbuf(struct mlx5_rxq_data *rxq)
 	volatile struct mlx5_wqe_data_seg *wq =
 		&((volatile struct mlx5_wqe_data_seg *)rxq->wqes)[elts_idx];
 	unsigned int i;
+	uint16_t btree_len;
 
 	if (n >= rxq->rq_repl_thresh) {
 		MLX5_ASSERT(n >= MLX5_VPMD_RXQ_RPLNSH_THRESH(q_n));
@@ -106,6 +107,8 @@ mlx5_rx_replenish_bulk_mbuf(struct mlx5_rxq_data *rxq)
 			rxq->stats.rx_nombuf += n;
 			return;
 		}
+
+		btree_len = mlx5_mr_btree_len(&rxq->mr_ctrl.cache_bh);
 		for (i = 0; i < n; ++i) {
 			void *buf_addr;
 
@@ -119,8 +122,7 @@ mlx5_rx_replenish_bulk_mbuf(struct mlx5_rxq_data *rxq)
 			wq[i].addr = rte_cpu_to_be_64((uintptr_t)buf_addr +
 						      RTE_PKTMBUF_HEADROOM);
 			/* If there's a single MR, no need to replace LKey. */
-			if (unlikely(mlx5_mr_btree_len(&rxq->mr_ctrl.cache_bh)
-				     > 1))
+			if (unlikely(btree_len > 1))
 				wq[i].lkey = mlx5_rx_mb2mr(rxq, elts[i]);
 		}
 		rxq->rq_ci += n;
