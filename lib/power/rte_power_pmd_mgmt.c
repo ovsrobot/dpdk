@@ -147,6 +147,23 @@ queue_list_remove(struct pmd_core_cfg *cfg, const struct queue *q)
 	return 0;
 }
 
+static inline int
+get_monitor_addresses(struct pmd_core_cfg *cfg,
+		struct rte_power_monitor_cond *pmc)
+{
+	size_t i;
+	int ret;
+
+	for (i = 0; i < cfg->n_queues; i++) {
+		struct rte_power_monitor_cond *cur = &pmc[i];
+		struct queue *q = &cfg->queues[i];
+		ret = rte_eth_get_monitor_addr(q->portid, q->qid, cur);
+		if (ret < 0)
+			return ret;
+	}
+	return 0;
+}
+
 static void
 calc_tsc(void)
 {
@@ -173,6 +190,48 @@ calc_tsc(void)
 
 		global_data.pause_per_us = (uint64_t)(1.0 / us_per_pause);
 	}
+}
+
+static uint16_t
+clb_multiwait(uint16_t port_id, uint16_t qidx,
+		struct rte_mbuf **pkts __rte_unused, uint16_t nb_rx,
+		uint16_t max_pkts __rte_unused, void *addr __rte_unused)
+{
+	const unsigned int lcore = rte_lcore_id();
+	const struct queue q = {port_id, qidx};
+	const bool empty = nb_rx == 0;
+	struct pmd_core_cfg *q_conf;
+
+	q_conf = &lcore_cfg[lcore];
+
+	/* early exit */
+	if (likely(!empty)) {
+		q_conf->empty_poll_stats = 0;
+	} else {
+		/* do we care about this particular queue? */
+		if (!queue_is_power_save(q_conf, &q))
+			return nb_rx;
+
+		/*
+		 * we can increment unconditionally here because if there were
+		 * non-empty polls in other queues assigned to this core, we
+		 * dropped the counter to zero anyway.
+		 */
+		q_conf->empty_poll_stats++;
+		if (unlikely(q_conf->empty_poll_stats > EMPTYPOLL_MAX)) {
+			struct rte_power_monitor_cond pmc[RTE_MAX_ETHPORTS];
+			uint16_t ret;
+
+			/* gather all monitoring conditions */
+			ret = get_monitor_addresses(q_conf, pmc);
+
+			if (ret == 0)
+				rte_power_monitor_multi(pmc,
+					q_conf->n_queues, UINT64_MAX);
+		}
+	}
+
+	return nb_rx;
 }
 
 static uint16_t
@@ -315,14 +374,19 @@ static int
 check_monitor(struct pmd_core_cfg *cfg, const struct queue *qdata)
 {
 	struct rte_power_monitor_cond dummy;
+	bool multimonitor_supported;
 
 	/* check if rte_power_monitor is supported */
 	if (!global_data.intrinsics_support.power_monitor) {
 		RTE_LOG(DEBUG, POWER, "Monitoring intrinsics are not supported\n");
 		return -ENOTSUP;
 	}
+	/* check if multi-monitor is supported */
+	multimonitor_supported =
+			global_data.intrinsics_support.power_monitor_multi;
 
-	if (cfg->n_queues > 0) {
+	/* if we're adding a new queue, do we support multiple queues? */
+	if (cfg->n_queues > 0 && !multimonitor_supported) {
 		RTE_LOG(DEBUG, POWER, "Monitoring multiple queues is not supported\n");
 		return -ENOTSUP;
 	}
@@ -336,6 +400,13 @@ check_monitor(struct pmd_core_cfg *cfg, const struct queue *qdata)
 
 	/* we're done */
 	return 0;
+}
+
+static inline rte_rx_callback_fn
+get_monitor_callback(void)
+{
+	return global_data.intrinsics_support.power_monitor_multi ?
+		clb_multiwait : clb_umwait;
 }
 
 int
@@ -385,7 +456,7 @@ rte_power_ethdev_pmgmt_queue_enable(unsigned int lcore_id, uint16_t port_id,
 		if (ret < 0)
 			goto end;
 
-		clb = clb_umwait;
+		clb = get_monitor_callback();
 		break;
 	case RTE_POWER_MGMT_TYPE_SCALE:
 		/* check if we can add a new queue */
