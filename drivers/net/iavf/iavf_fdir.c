@@ -164,6 +164,54 @@ static struct iavf_pattern_match_item iavf_fdir_pattern[] = {
 	{iavf_pattern_eth_ipv4_gtpu_eh_ipv6,	 IAVF_FDIR_INSET_GTPU_IPV6,	IAVF_INSET_NONE},
 	{iavf_pattern_eth_ipv4_gtpu_eh_ipv6_udp, IAVF_FDIR_INSET_GTPU_IPV6_UDP,	IAVF_INSET_NONE},
 	{iavf_pattern_eth_ipv4_gtpu_eh_ipv6_tcp, IAVF_FDIR_INSET_GTPU_IPV6_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv4_gtpu_ipv4,	 IAVF_FDIR_INSET_GTPU_IPV4,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv4_gtpu_ipv4_udp,	 IAVF_FDIR_INSET_GTPU_IPV4_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv4_gtpu_ipv4_tcp,	 IAVF_FDIR_INSET_GTPU_IPV4_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv4_gtpu_ipv6,	 IAVF_FDIR_INSET_GTPU_IPV6,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv4_gtpu_ipv6_udp,	 IAVF_FDIR_INSET_GTPU_IPV6_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv4_gtpu_ipv6_tcp,	 IAVF_FDIR_INSET_GTPU_IPV6_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv6_gtpu_ipv4,	 IAVF_FDIR_INSET_GTPU_IPV4,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv6_gtpu_ipv4_udp,	 IAVF_FDIR_INSET_GTPU_IPV4_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv6_gtpu_ipv4_tcp,	 IAVF_FDIR_INSET_GTPU_IPV4_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv6_gtpu_ipv6,	 IAVF_FDIR_INSET_GTPU_IPV6,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv6_gtpu_ipv6_udp,	 IAVF_FDIR_INSET_GTPU_IPV6_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv6_gtpu_ipv6_tcp,	 IAVF_FDIR_INSET_GTPU_IPV6_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv4_gtpu_ipv4,	 IAVF_FDIR_INSET_GTPU_IPV4,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv4_gtpu_ipv4_udp,	 IAVF_FDIR_INSET_GTPU_IPV4_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv4_gtpu_ipv4_tcp,	 IAVF_FDIR_INSET_GTPU_IPV4_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv4_gtpu_ipv6,	 IAVF_FDIR_INSET_GTPU_IPV6,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv4_gtpu_ipv6_udp,	 IAVF_FDIR_INSET_GTPU_IPV6_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv4_gtpu_ipv6_tcp,	 IAVF_FDIR_INSET_GTPU_IPV6_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv6_gtpu_ipv4,	 IAVF_FDIR_INSET_GTPU_IPV4,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv6_gtpu_ipv4_udp,	 IAVF_FDIR_INSET_GTPU_IPV4_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv6_gtpu_ipv4_tcp,	 IAVF_FDIR_INSET_GTPU_IPV4_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv6_gtpu_ipv6,	 IAVF_FDIR_INSET_GTPU_IPV6,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv6_gtpu_ipv6_udp,	 IAVF_FDIR_INSET_GTPU_IPV6_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv6_gtpu_ipv6_tcp,	 IAVF_FDIR_INSET_GTPU_IPV6_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv4_gtpu_eh_ipv4,		 IAVF_FDIR_INSET_GTPU_IPV4,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv4_gtpu_eh_ipv4_udp,	 IAVF_FDIR_INSET_GTPU_IPV4_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv4_gtpu_eh_ipv4_tcp,	 IAVF_FDIR_INSET_GTPU_IPV4_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv4_gtpu_eh_ipv6,		 IAVF_FDIR_INSET_GTPU_IPV6,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv4_gtpu_eh_ipv6_udp,	 IAVF_FDIR_INSET_GTPU_IPV6_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv4_gtpu_eh_ipv6_tcp,	 IAVF_FDIR_INSET_GTPU_IPV6_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv6_gtpu_eh_ipv4,		 IAVF_FDIR_INSET_GTPU_IPV4,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv6_gtpu_eh_ipv4_udp,	 IAVF_FDIR_INSET_GTPU_IPV4_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv6_gtpu_eh_ipv4_tcp,	 IAVF_FDIR_INSET_GTPU_IPV4_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv6_gtpu_eh_ipv6,		 IAVF_FDIR_INSET_GTPU_IPV6,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv6_gtpu_eh_ipv6_udp,	 IAVF_FDIR_INSET_GTPU_IPV6_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv4_gre_ipv6_gtpu_eh_ipv6_tcp,	 IAVF_FDIR_INSET_GTPU_IPV6_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv4_gtpu_eh_ipv4,		 IAVF_FDIR_INSET_GTPU_IPV4,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv4_gtpu_eh_ipv4_udp,	 IAVF_FDIR_INSET_GTPU_IPV4_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv4_gtpu_eh_ipv4_tcp,	 IAVF_FDIR_INSET_GTPU_IPV4_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv4_gtpu_eh_ipv6,		 IAVF_FDIR_INSET_GTPU_IPV6,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv4_gtpu_eh_ipv6_udp,	 IAVF_FDIR_INSET_GTPU_IPV6_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv4_gtpu_eh_ipv6_tcp,	 IAVF_FDIR_INSET_GTPU_IPV6_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv6_gtpu_eh_ipv4,		 IAVF_FDIR_INSET_GTPU_IPV4,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv6_gtpu_eh_ipv4_udp,	 IAVF_FDIR_INSET_GTPU_IPV4_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv6_gtpu_eh_ipv4_tcp,	 IAVF_FDIR_INSET_GTPU_IPV4_TCP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv6_gtpu_eh_ipv6,		 IAVF_FDIR_INSET_GTPU_IPV6,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv6_gtpu_eh_ipv6_udp,	 IAVF_FDIR_INSET_GTPU_IPV6_UDP,	IAVF_INSET_NONE},
+	{iavf_pattern_eth_ipv6_gre_ipv6_gtpu_eh_ipv6_tcp,	 IAVF_FDIR_INSET_GTPU_IPV6_TCP,	IAVF_INSET_NONE},
 	{iavf_pattern_eth_ipv6_gtpu,		 IAVF_FDIR_INSET_IPV6_GTPU,	IAVF_INSET_NONE},
 	{iavf_pattern_eth_ipv6_gtpu_eh,		 IAVF_FDIR_INSET_IPV6_GTPU_EH,	IAVF_INSET_NONE},
 	{iavf_pattern_eth_ipv4_l2tpv3,		 IAVF_FDIR_INSET_L2TPV3OIP,	IAVF_INSET_NONE},
@@ -589,6 +637,7 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 	const struct rte_flow_item_udp *udp_spec, *udp_mask;
 	const struct rte_flow_item_tcp *tcp_spec, *tcp_mask;
 	const struct rte_flow_item_sctp *sctp_spec, *sctp_mask;
+	const struct rte_flow_item_gre *gre_spec, *gre_mask;
 	const struct rte_flow_item_gtp *gtp_spec, *gtp_mask;
 	const struct rte_flow_item_gtp_psc *gtp_psc_spec, *gtp_psc_mask;
 	const struct rte_flow_item_l2tpv3oip *l2tpv3oip_spec, *l2tpv3oip_mask;
@@ -1022,6 +1071,23 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 						&sctp_spec->hdr,
 						sizeof(sctp_spec->hdr));
 			}
+
+			hdrs->count = ++layer;
+			break;
+
+		case RTE_FLOW_ITEM_TYPE_GRE:
+			gre_spec = item->spec;
+			gre_mask = item->mask;
+
+			hdr = &hdrs->proto_hdr[layer];
+
+			VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, GRE);
+
+			if (gre_spec && gre_mask) {
+				rte_memcpy(hdr->buffer, gre_spec, sizeof(*gre_spec));
+			}
+
+			tun_inner = 1;
 
 			hdrs->count = ++layer;
 			break;
