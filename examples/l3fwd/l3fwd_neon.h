@@ -43,11 +43,6 @@ processx4_step3(struct rte_mbuf *pkt[FWDSTEP], uint16_t dst_port[FWDSTEP])
 	ve[2] = vsetq_lane_u32(vgetq_lane_u32(te[2], 3), ve[2], 3);
 	ve[3] = vsetq_lane_u32(vgetq_lane_u32(te[3], 3), ve[3], 3);
 
-	vst1q_u32(p[0], ve[0]);
-	vst1q_u32(p[1], ve[1]);
-	vst1q_u32(p[2], ve[2]);
-	vst1q_u32(p[3], ve[3]);
-
 	rfc1812_process((struct rte_ipv4_hdr *)
 			((struct rte_ether_hdr *)p[0] + 1),
 			&dst_port[0], pkt[0]->packet_type);
@@ -60,6 +55,11 @@ processx4_step3(struct rte_mbuf *pkt[FWDSTEP], uint16_t dst_port[FWDSTEP])
 	rfc1812_process((struct rte_ipv4_hdr *)
 			((struct rte_ether_hdr *)p[3] + 1),
 			&dst_port[3], pkt[3]->packet_type);
+
+	vst1q_u32(p[0], ve[0]);
+	vst1q_u32(p[1], ve[1]);
+	vst1q_u32(p[2], ve[2]);
+	vst1q_u32(p[3], ve[3]);
 }
 
 /*
