@@ -31,6 +31,10 @@ struct rte_power_monitor_cond {
 	                  *   4, or 8. Supplying any other value will result in
 	                  *   an error.
 	                  */
+	uint8_t invert;  /**< Invert check for expected value (e.g. instead of
+	                  *   checking if `val` matches something, check if
+	                  *   `val` *doesn't* match a particular value)
+	                  */
 };
 
 /**

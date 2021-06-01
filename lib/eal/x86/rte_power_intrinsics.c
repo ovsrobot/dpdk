@@ -117,7 +117,10 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 		const uint64_t masked = cur_value & pmc->mask;
 
 		/* if the masked value is already matching, abort */
-		if (masked == pmc->val)
+		if (!pmc->invert && masked == pmc->val)
+			goto end;
+		/* same, but for inverse check */
+		if (pmc->invert && masked != pmc->val)
 			goto end;
 	}
 
