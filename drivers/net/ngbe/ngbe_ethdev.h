@@ -19,4 +19,6 @@ struct ngbe_adapter {
 #define NGBE_DEV_HW(dev) \
 	(&((struct ngbe_adapter *)(dev)->data->dev_private)->hw)
 
+#define NGBE_VMDQ_NUM_UC_MAC         4096 /* Maximum nb. of UC MAC addr. */
+
 #endif /* _NGBE_ETHDEV_H_ */
