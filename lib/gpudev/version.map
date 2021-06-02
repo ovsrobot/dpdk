@@ -1,0 +1,11 @@
+EXPERIMENTAL {
+	global:
+
+	rte_gpu_dev_count_avail;
+	rte_gpu_dev_find_next;
+	rte_gpu_dev_info_get;
+	rte_gpu_dev_is_valid;
+	rte_gpu_free;
+	rte_gpu_malloc;
+	rte_gpu_malloc_visible;
+};
