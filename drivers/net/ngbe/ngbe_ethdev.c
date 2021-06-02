@@ -110,7 +110,7 @@ eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 
 	eth_dev->dev_ops = &ngbe_eth_dev_ops;
 	eth_dev->rx_pkt_burst = &ngbe_recv_pkts;
-	eth_dev->tx_pkt_burst = &ngbe_xmit_pkts_simple;
+	eth_dev->tx_pkt_burst = &ngbe_xmit_pkts;
 
 	/*
 	 * For secondary processes, we don't initialise any further as primary
@@ -118,6 +118,20 @@ eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	 * RX and TX function.
 	 */
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		struct ngbe_tx_queue *txq;
+		/* TX queue function in primary, set by last queue initialized
+		 * Tx queue may not initialized by primary process
+		 */
+		if (eth_dev->data->tx_queues) {
+			uint16_t nb_tx_queues = eth_dev->data->nb_tx_queues;
+			txq = eth_dev->data->tx_queues[nb_tx_queues - 1];
+			ngbe_set_tx_function(eth_dev, txq);
+		} else {
+			/* Use default TX function if we get here */
+			PMD_INIT_LOG(NOTICE, "No TX queues configured yet. "
+				     "Using default TX function.");
+		}
+
 		ngbe_set_rx_function(eth_dev);
 
 		return 0;

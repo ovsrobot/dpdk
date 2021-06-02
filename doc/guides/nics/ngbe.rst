@@ -12,9 +12,10 @@ Features
 
 - Packet type information
 - Checksum offload
+- TSO offload
 - Jumbo frames
 - Link state information
-- Scattered and gather for RX
+- Scattered and gather for TX and RX
 
 Prerequisites
 -------------

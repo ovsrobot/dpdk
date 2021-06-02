@@ -16,5 +16,7 @@ sources = files(
 	'ngbe_rxtx.c',
 )
 
+deps += ['security']
+
 includes += include_directories('base')
 
