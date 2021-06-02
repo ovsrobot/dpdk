@@ -166,6 +166,15 @@ if fdt_dep.found() and cc.has_header('fdt.h')
     dpdk_extra_ldflags += '-lfdt'
 endif
 
+has_libarchive = 0
+archive_dep = cc.find_library('libarchive', required: false)
+if archive_dep.found() and cc.has_header('archive.h')
+    dpdk_conf.set10('RTE_HAS_LIBARCHIVE', true)
+    has_libarchive = 1
+    add_project_link_arguments('-larchive', language: 'c')
+    dpdk_extra_ldflags += '-larchive'
+endif
+
 libexecinfo = cc.find_library('libexecinfo', required: false)
 if libexecinfo.found() and cc.has_header('execinfo.h')
     add_project_link_arguments('-lexecinfo', language: 'c')
