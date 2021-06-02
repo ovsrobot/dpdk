@@ -1,0 +1,18 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(C) 2021 Marvell.
+ */
+
+#ifndef __ROC_IE_ON_H__
+#define __ROC_IE_ON_H__
+
+/* CN9K IPSEC LA opcodes */
+#define ROC_IE_ONL_MAJOR_OP_WRITE_IPSEC_OUTBOUND   0x20
+#define ROC_IE_ONL_MAJOR_OP_WRITE_IPSEC_INBOUND	   0x21
+#define ROC_IE_ONL_MAJOR_OP_PROCESS_OUTBOUND_IPSEC 0x23
+#define ROC_IE_ONL_MAJOR_OP_PROCESS_INBOUND_IPSEC  0x24
+
+/* CN9K IPSEC FP opcodes */
+#define ROC_IE_ONF_MAJOR_OP_PROCESS_OUTBOUND_IPSEC 0x25
+#define ROC_IE_ONF_MAJOR_OP_PROCESS_INBOUND_IPSEC  0x26
+
+#endif /* __ROC_IE_ON_H__ */
