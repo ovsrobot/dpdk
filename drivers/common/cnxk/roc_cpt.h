@@ -7,6 +7,9 @@
 
 #include "roc_api.h"
 
+#define ROC_AE_CPT_BLOCK_TYPE1 0
+#define ROC_AE_CPT_BLOCK_TYPE2 1
+
 #define ROC_CPT_MAX_LFS 64
 
 struct roc_cpt_lf {
