@@ -109,6 +109,13 @@ eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 		return -EIO;
 	}
 
+	err = hw->mac.init_hw(hw);
+
+	if (err) {
+		PMD_INIT_LOG(ERR, "Hardware Initialization Failure: %d", err);
+		return -EIO;
+	}
+
 	return 0;
 }
 
