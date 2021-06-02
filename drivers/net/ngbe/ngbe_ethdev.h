@@ -43,6 +43,7 @@ struct ngbe_interrupt {
 struct ngbe_adapter {
 	struct ngbe_hw             hw;
 	struct ngbe_interrupt      intr;
+	bool rx_bulk_alloc_allowed;
 };
 
 #define NGBE_DEV_ADAPTER(dev) \
@@ -53,6 +54,13 @@ struct ngbe_adapter {
 
 #define NGBE_DEV_INTR(dev) \
 	(&((struct ngbe_adapter *)(dev)->data->dev_private)->intr)
+
+void ngbe_dev_rx_queue_release(void *rxq);
+
+int  ngbe_dev_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
+		uint16_t nb_rx_desc, unsigned int socket_id,
+		const struct rte_eth_rxconf *rx_conf,
+		struct rte_mempool *mb_pool);
 
 int
 ngbe_dev_link_update_share(struct rte_eth_dev *dev,

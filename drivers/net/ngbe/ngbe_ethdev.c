@@ -262,11 +262,18 @@ static int
 ngbe_dev_configure(struct rte_eth_dev *dev)
 {
 	struct ngbe_interrupt *intr = NGBE_DEV_INTR(dev);
+	struct ngbe_adapter *adapter = NGBE_DEV_ADAPTER(dev);
 
 	PMD_INIT_FUNC_TRACE();
 
 	/* set flag to update link status after init */
 	intr->flags |= NGBE_FLAG_NEED_LINK_UPDATE;
+
+	/*
+	 * Initialize to TRUE. If any of Rx queues doesn't meet the bulk
+	 * allocation Rx preconditions we will reset it.
+	 */
+	adapter->rx_bulk_alloc_allowed = true;
 
 	return 0;
 }
@@ -654,6 +661,8 @@ static const struct eth_dev_ops ngbe_eth_dev_ops = {
 	.dev_configure              = ngbe_dev_configure,
 	.dev_infos_get              = ngbe_dev_info_get,
 	.link_update                = ngbe_dev_link_update,
+	.rx_queue_setup             = ngbe_dev_rx_queue_setup,
+	.rx_queue_release           = ngbe_dev_rx_queue_release,
 };
 
 RTE_PMD_REGISTER_PCI(net_ngbe, rte_ngbe_pmd);
