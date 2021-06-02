@@ -6,6 +6,8 @@
 #ifndef _NGBE_TYPE_H_
 #define _NGBE_TYPE_H_
 
+#define NGBE_LINK_UP_TIME	90 /* 9.0 Seconds */
+
 #define NGBE_FRAME_SIZE_DFT       (1522) /* Default frame size, +FCS */
 
 #define NGBE_ALIGN		128 /* as intel did */
@@ -96,6 +98,8 @@ struct ngbe_mac_info {
 	s32 (*acquire_swfw_sync)(struct ngbe_hw *hw, u32 mask);
 	void (*release_swfw_sync)(struct ngbe_hw *hw, u32 mask);
 
+	s32 (*setup_link)(struct ngbe_hw *hw, u32 speed,
+			       bool autoneg_wait_to_complete);
 	s32 (*check_link)(struct ngbe_hw *hw, u32 *speed,
 			       bool *link_up, bool link_up_wait_to_complete);
 	/* RAR */
@@ -121,6 +125,7 @@ struct ngbe_mac_info {
 	bool get_link_status;
 	struct ngbe_thermal_sensor_data  thermal_sensor_data;
 	bool set_lben;
+	u32  max_link_up_time;
 };
 
 struct ngbe_phy_info {
@@ -134,6 +139,9 @@ struct ngbe_phy_info {
 				u32 device_type, u16 *phy_data);
 	s32 (*write_reg_unlocked)(struct ngbe_hw *hw, u32 reg_addr,
 				u32 device_type, u16 phy_data);
+	s32 (*setup_link)(struct ngbe_hw *hw, u32 speed,
+				bool autoneg_wait_to_complete);
+	s32 (*check_link)(struct ngbe_hw *hw, u32 *speed, bool *link_up);
 
 	enum ngbe_media_type media_type;
 	enum ngbe_phy_type type;
@@ -142,6 +150,7 @@ struct ngbe_phy_info {
 	u32 revision;
 	u32 phy_semaphore_mask;
 	bool reset_disable;
+	u32 autoneg_advertised;
 };
 
 enum ngbe_isb_idx {
