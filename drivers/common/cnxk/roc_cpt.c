@@ -5,6 +5,119 @@
 #include "roc_api.h"
 #include "roc_priv.h"
 
+#define CPT_IQ_FC_LEN  128
+#define CPT_IQ_GRP_LEN 16
+
+#define CPT_IQ_NB_DESC_MULTIPLIER 40
+
+/* The effective queue size to software is (CPT_LF_Q_SIZE[SIZE_DIV40] - 1 - 8).
+ *
+ * CPT requires 320 free entries (+8). And 40 entries are required for
+ * allowing CPT to discard packet when the queues are full (+1).
+ */
+#define CPT_IQ_NB_DESC_SIZE_DIV40(nb_desc)                                     \
+	(PLT_DIV_CEIL(nb_desc, CPT_IQ_NB_DESC_MULTIPLIER) + 1 + 8)
+
+#define CPT_IQ_GRP_SIZE(nb_desc)                                               \
+	(CPT_IQ_NB_DESC_SIZE_DIV40(nb_desc) * CPT_IQ_GRP_LEN)
+
+#define CPT_LF_MAX_NB_DESC     128000
+#define CPT_LF_DEFAULT_NB_DESC 1024
+
+static void
+cpt_lf_misc_intr_enb_dis(struct roc_cpt_lf *lf, bool enb)
+{
+	/* Enable all cpt lf error irqs except RQ_DISABLED and CQ_DISABLED */
+	if (enb)
+		plt_write64((BIT_ULL(6) | BIT_ULL(5) | BIT_ULL(3) | BIT_ULL(2) |
+			     BIT_ULL(1)),
+			    lf->rbase + CPT_LF_MISC_INT_ENA_W1S);
+	else
+		plt_write64((BIT_ULL(6) | BIT_ULL(5) | BIT_ULL(3) | BIT_ULL(2) |
+			     BIT_ULL(1)),
+			    lf->rbase + CPT_LF_MISC_INT_ENA_W1C);
+}
+
+static void
+cpt_lf_misc_irq(void *param)
+{
+	struct roc_cpt_lf *lf = (struct roc_cpt_lf *)param;
+	struct dev *dev = lf->dev;
+	uint64_t intr;
+
+	intr = plt_read64(lf->rbase + CPT_LF_MISC_INT);
+	if (intr == 0)
+		return;
+
+	plt_err("Err_irq=0x%" PRIx64 " pf=%d, vf=%d", intr, dev->pf, dev->vf);
+
+	/* Clear interrupt */
+	plt_write64(intr, lf->rbase + CPT_LF_MISC_INT);
+}
+
+static int
+cpt_lf_register_misc_irq(struct roc_cpt_lf *lf)
+{
+	struct plt_pci_device *pci_dev = lf->roc_cpt->pci_dev;
+	struct plt_intr_handle *handle;
+	int rc, vec;
+
+	handle = &pci_dev->intr_handle;
+
+	vec = lf->msixoff + CPT_LF_INT_VEC_MISC;
+	/* Clear err interrupt */
+	cpt_lf_misc_intr_enb_dis(lf, false);
+	/* Set used interrupt vectors */
+	rc = dev_irq_register(handle, cpt_lf_misc_irq, lf, vec);
+	/* Enable all dev interrupt except for RQ_DISABLED */
+	cpt_lf_misc_intr_enb_dis(lf, true);
+
+	return rc;
+}
+
+static void
+cpt_lf_unregister_misc_irq(struct roc_cpt_lf *lf)
+{
+	struct plt_pci_device *pci_dev = lf->roc_cpt->pci_dev;
+	struct plt_intr_handle *handle;
+	int vec;
+
+	handle = &pci_dev->intr_handle;
+
+	vec = lf->msixoff + CPT_LF_INT_VEC_MISC;
+	/* Clear err interrupt */
+	cpt_lf_misc_intr_enb_dis(lf, false);
+	dev_irq_unregister(handle, cpt_lf_misc_irq, lf, vec);
+}
+
+static int
+cpt_lf_register_irqs(struct roc_cpt_lf *lf)
+{
+	int rc;
+
+	if (lf->msixoff == MSIX_VECTOR_INVALID) {
+		plt_err("Invalid CPTLF MSIX vector offset vector: 0x%x",
+			lf->msixoff);
+		return -EINVAL;
+	}
+
+	/* Register lf err interrupt */
+	rc = cpt_lf_register_misc_irq(lf);
+	if (rc)
+		plt_err("Error registering IRQs");
+
+	/* TODO */
+	/* rc = cpt_lf_register_done_irq(cpt); */
+
+	return rc;
+}
+
+static void
+cpt_lf_unregister_irqs(struct roc_cpt_lf *lf)
+{
+	cpt_lf_unregister_misc_irq(lf);
+}
+
 int
 roc_cpt_rxc_time_cfg(struct roc_cpt *roc_cpt, struct roc_cpt_rxc_time_cfg *cfg)
 {
@@ -135,6 +248,69 @@ cpt_hardware_caps_get(struct dev *dev, union cpt_eng_caps *hw_caps)
 	return 0;
 }
 
+static uint32_t
+cpt_lf_iq_mem_calc(uint32_t nb_desc)
+{
+	uint32_t len;
+
+	/* Space for instruction group memory */
+	len = CPT_IQ_GRP_SIZE(nb_desc);
+
+	/* Align to 128B */
+	len = PLT_ALIGN(len, ROC_ALIGN);
+
+	/* Space for FC */
+	len += CPT_IQ_FC_LEN;
+
+	/* For instruction queues */
+	len += CPT_IQ_NB_DESC_SIZE_DIV40(nb_desc) * CPT_IQ_NB_DESC_MULTIPLIER *
+	       sizeof(struct cpt_inst_s);
+
+	return len;
+}
+
+static inline void
+cpt_iq_init(struct roc_cpt_lf *lf)
+{
+	union cpt_lf_q_size lf_q_size = {.u = 0x0};
+	union cpt_lf_q_base lf_q_base = {.u = 0x0};
+	union cpt_lf_inprog lf_inprog;
+	union cpt_lf_ctl lf_ctl;
+	uintptr_t addr;
+
+	lf->io_addr = lf->rbase + CPT_LF_NQX(0);
+
+	/* Disable command queue */
+	roc_cpt_iq_disable(lf);
+
+	/* Set command queue base address */
+	addr = (uintptr_t)lf->iq_vaddr +
+	       PLT_ALIGN(CPT_IQ_GRP_SIZE(lf->nb_desc), ROC_ALIGN);
+
+	lf_q_base.u = addr;
+
+	plt_write64(lf_q_base.u, lf->rbase + CPT_LF_Q_BASE);
+
+	/* Set command queue size */
+	lf_q_size.s.size_div40 = CPT_IQ_NB_DESC_SIZE_DIV40(lf->nb_desc);
+	plt_write64(lf_q_size.u, lf->rbase + CPT_LF_Q_SIZE);
+
+	/* Enable command queue execution */
+	lf_inprog.u = plt_read64(lf->rbase + CPT_LF_INPROG);
+	lf_inprog.s.eena = 1;
+	plt_write64(lf_inprog.u, lf->rbase + CPT_LF_INPROG);
+
+	/* Enable instruction queue enqueuing */
+	lf_ctl.u = plt_read64(lf->rbase + CPT_LF_CTL);
+	lf_ctl.s.ena = 1;
+	lf_ctl.s.fc_ena = 1;
+	lf_ctl.s.fc_up_crossing = 1;
+	lf_ctl.s.fc_hyst_bits = CPT_FC_NUM_HYST_BITS;
+	plt_write64(lf_ctl.u, lf->rbase + CPT_LF_CTL);
+
+	lf->fc_addr = (uint64_t *)addr;
+}
+
 int
 roc_cpt_dev_configure(struct roc_cpt *roc_cpt, int nb_lf)
 {
@@ -174,6 +350,49 @@ lfs_free:
 	cpt_lfs_free(&cpt->dev);
 lfs_detach:
 	cpt_lfs_detach(&cpt->dev);
+	return rc;
+}
+
+int
+roc_cpt_lf_init(struct roc_cpt *roc_cpt, struct roc_cpt_lf *lf)
+{
+	struct cpt *cpt;
+	void *iq_mem;
+	int rc;
+
+	cpt = roc_cpt_to_cpt_priv(roc_cpt);
+
+	if (lf->nb_desc == 0 || lf->nb_desc > CPT_LF_MAX_NB_DESC)
+		lf->nb_desc = CPT_LF_DEFAULT_NB_DESC;
+
+	/* Allocate memory for instruction queue for CPT LF. */
+	iq_mem = plt_zmalloc(cpt_lf_iq_mem_calc(lf->nb_desc), ROC_ALIGN);
+
+	plt_cpt_dbg("Initializing %d CPT LF", lf->lf_id);
+
+	lf->dev = &cpt->dev;
+	lf->roc_cpt = roc_cpt;
+	lf->msixoff = cpt->lf_msix_off[lf->lf_id];
+	lf->rbase = cpt->dev.bar2 +
+		    ((RVU_BLOCK_ADDR_CPT0 << 20) | (lf->lf_id << 12));
+	lf->iq_vaddr = iq_mem;
+	lf->lmt_base = cpt->dev.lmt_base;
+
+	/* Initialize instruction queue */
+	cpt_iq_init(lf);
+
+	rc = cpt_lf_register_irqs(lf);
+	if (rc)
+		goto lf_destroy;
+
+	lf->pf_func = cpt->dev.pf_func;
+
+	return 0;
+
+lf_destroy:
+	roc_cpt_iq_disable(lf);
+	plt_free(iq_mem);
+
 	return rc;
 }
 
@@ -226,6 +445,18 @@ roc_cpt_dev_init(struct roc_cpt *roc_cpt)
 
 fail:
 	return rc;
+}
+
+void
+roc_cpt_lf_fini(struct roc_cpt_lf *lf)
+{
+	if (lf == NULL)
+		return;
+
+	cpt_lf_unregister_irqs(lf);
+
+	roc_cpt_iq_disable(lf);
+	plt_free(lf->iq_vaddr);
 }
 
 int
@@ -297,4 +528,35 @@ roc_cpt_eng_grp_add(struct roc_cpt *roc_cpt, enum cpt_eng_type eng_type)
 	roc_cpt->eng_grp[eng_type] = rsp->eng_grp_num;
 
 	return rsp->eng_grp_num;
+}
+
+void
+roc_cpt_iq_disable(struct roc_cpt_lf *lf)
+{
+	union cpt_lf_ctl lf_ctl = {.u = 0x0};
+	union cpt_lf_inprog lf_inprog;
+	int timeout = 20;
+
+	/* Disable instructions enqueuing */
+	plt_write64(lf_ctl.u, lf->rbase + CPT_LF_CTL);
+
+	/* Wait for instruction queue to become empty */
+	do {
+		lf_inprog.u = plt_read64(lf->rbase + CPT_LF_INPROG);
+		if (!lf_inprog.s.inflight)
+			break;
+
+		plt_delay_ms(20);
+		if (timeout-- < 0) {
+			plt_err("CPT LF %d is still busy", lf->lf_id);
+			break;
+		}
+
+	} while (1);
+
+	/* Disable executions in the LF's queue.
+	 * The queue should be empty at this point
+	 */
+	lf_inprog.s.eena = 0x0;
+	plt_write64(lf_inprog.u, lf->rbase + CPT_LF_INPROG);
 }
