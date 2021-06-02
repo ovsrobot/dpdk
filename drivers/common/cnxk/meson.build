@@ -11,6 +11,7 @@ endif
 config_flag_fmt = 'RTE_LIBRTE_@0@_COMMON'
 deps = ['eal', 'pci', 'bus_pci', 'mbuf']
 sources = files(
+        'roc_ae_fpm_tables.c',
         'roc_cpt.c',
         'roc_dev.c',
         'roc_idev.c',
