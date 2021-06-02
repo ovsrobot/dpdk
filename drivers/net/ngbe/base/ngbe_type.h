@@ -26,4 +26,6 @@ struct ngbe_hw {
 	bool is_pf;
 };
 
+#include "ngbe_regs.h"
+
 #endif /* _NGBE_TYPE_H_ */
