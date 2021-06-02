@@ -40,6 +40,7 @@ drivers = [
         'netvsc',
         'nfb',
         'nfp',
+	'ngbe',
         'null',
         'octeontx',
         'octeontx2',

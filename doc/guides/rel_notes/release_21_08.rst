@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added Wangxun ngbe PMD.**
+
+  Added a new PMD driver for Wangxun 1 Gigabit Ethernet NICs.
+
+  See the :doc:`../nics/ngbe` for more details.
+
 
 Removed Items
 -------------
