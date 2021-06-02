@@ -13,6 +13,7 @@ sources = files(
         'cn9k_cryptodev_ops.c',
         'cn10k_cryptodev.c',
         'cn10k_cryptodev_ops.c',
+        'cnxk_cpt_ops_helper.c',
         'cnxk_cryptodev.c',
         'cnxk_cryptodev_capabilities.c',
         'cnxk_cryptodev_ops.c',
