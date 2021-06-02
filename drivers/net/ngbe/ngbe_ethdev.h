@@ -18,6 +18,8 @@
 #define NGBE_VLAN_TAG_SIZE 4
 #define NGBE_HKEY_MAX_INDEX 10
 
+#define NGBE_QUEUE_ITR_INTERVAL_DEFAULT	500 /* 500us */
+
 #define NGBE_RSS_OFFLOAD_ALL ( \
 	ETH_RSS_IPV4 | \
 	ETH_RSS_NONFRAG_IPV4_TCP | \
@@ -30,6 +32,7 @@
 	ETH_RSS_IPV6_UDP_EX)
 
 #define NGBE_MISC_VEC_ID               RTE_INTR_VEC_ZERO_OFFSET
+#define NGBE_RX_VEC_START              RTE_INTR_VEC_RXTX_OFFSET
 
 /* structure for interrupt relative data */
 struct ngbe_interrupt {
@@ -91,6 +94,9 @@ uint16_t ngbe_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 
 uint16_t ngbe_xmit_pkts_simple(void *tx_queue, struct rte_mbuf **tx_pkts,
 		uint16_t nb_pkts);
+
+void ngbe_set_ivar_map(struct ngbe_hw *hw, int8_t direction,
+			       uint8_t queue, uint8_t msix_vector);
 
 int
 ngbe_dev_link_update_share(struct rte_eth_dev *dev,
