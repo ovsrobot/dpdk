@@ -663,6 +663,8 @@ static const struct eth_dev_ops ngbe_eth_dev_ops = {
 	.link_update                = ngbe_dev_link_update,
 	.rx_queue_setup             = ngbe_dev_rx_queue_setup,
 	.rx_queue_release           = ngbe_dev_rx_queue_release,
+	.tx_queue_setup             = ngbe_dev_tx_queue_setup,
+	.tx_queue_release           = ngbe_dev_tx_queue_release,
 };
 
 RTE_PMD_REGISTER_PCI(net_ngbe, rte_ngbe_pmd);

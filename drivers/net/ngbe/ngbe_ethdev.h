@@ -57,10 +57,16 @@ struct ngbe_adapter {
 
 void ngbe_dev_rx_queue_release(void *rxq);
 
+void ngbe_dev_tx_queue_release(void *txq);
+
 int  ngbe_dev_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 		uint16_t nb_rx_desc, unsigned int socket_id,
 		const struct rte_eth_rxconf *rx_conf,
 		struct rte_mempool *mb_pool);
+
+int  ngbe_dev_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
+		uint16_t nb_tx_desc, unsigned int socket_id,
+		const struct rte_eth_txconf *tx_conf);
 
 int
 ngbe_dev_link_update_share(struct rte_eth_dev *dev,
