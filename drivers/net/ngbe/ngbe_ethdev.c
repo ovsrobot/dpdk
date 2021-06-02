@@ -3,9 +3,11 @@
  * Copyright(c) 2010-2017 Intel Corporation
  */
 
+#include <rte_common.h>
 #include <ethdev_pci.h>
 
 #include <base/ngbe_devids.h>
+#include "ngbe_ethdev.h"
 
 /*
  * The set of PCI devices this driver supports
@@ -27,19 +29,55 @@ static const struct rte_pci_id pci_id_ngbe_map[] = {
 };
 
 static int
+eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
+{
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
+
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return 0;
+
+	rte_eth_copy_pci_info(eth_dev, pci_dev);
+
+	return 0;
+}
+
+static int
+eth_ngbe_dev_uninit(struct rte_eth_dev *eth_dev)
+{
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return 0;
+
+	RTE_SET_USED(eth_dev);
+
+	return 0;
+}
+
+static int
 eth_ngbe_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 		struct rte_pci_device *pci_dev)
 {
-	RTE_SET_USED(pci_dev);
+	int retval;
+
+	retval = rte_eth_dev_create(&pci_dev->device, pci_dev->device.name,
+			sizeof(struct ngbe_adapter),
+			eth_dev_pci_specific_init, pci_dev,
+			eth_ngbe_dev_init, NULL);
+
+	if (retval)
+		return retval;
 
 	return 0;
 }
 
 static int eth_ngbe_pci_remove(struct rte_pci_device *pci_dev)
 {
-	RTE_SET_USED(pci_dev);
+	struct rte_eth_dev *ethdev;
 
-	return 0;
+	ethdev = rte_eth_dev_allocated(pci_dev->device.name);
+	if (!ethdev)
+		return 0;
+
+	return rte_eth_dev_destroy(ethdev, eth_ngbe_dev_uninit);
 }
 
 static struct rte_pci_driver rte_ngbe_pmd = {
