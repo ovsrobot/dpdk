@@ -15,9 +15,491 @@
 #include "ngbe_ethdev.h"
 #include "ngbe_rxtx.h"
 
+/*
+ * Prefetch a cache line into all cache levels.
+ */
+#define rte_ngbe_prefetch(p)   rte_prefetch0(p)
+
+/*********************************************************************
+ *
+ *  TX functions
+ *
+ **********************************************************************/
+
+/*
+ * Check for descriptors with their DD bit set and free mbufs.
+ * Return the total number of buffers freed.
+ */
+static __rte_always_inline int
+ngbe_tx_free_bufs(struct ngbe_tx_queue *txq)
+{
+	struct ngbe_tx_entry *txep;
+	uint32_t status;
+	int i, nb_free = 0;
+	struct rte_mbuf *m, *free[RTE_NGBE_TX_MAX_FREE_BUF_SZ];
+
+	/* check DD bit on threshold descriptor */
+	status = txq->tx_ring[txq->tx_next_dd].dw3;
+	if (!(status & rte_cpu_to_le_32(NGBE_TXD_DD))) {
+		if (txq->nb_tx_free >> 1 < txq->tx_free_thresh)
+			ngbe_set32_masked(txq->tdc_reg_addr,
+				NGBE_TXCFG_FLUSH, NGBE_TXCFG_FLUSH);
+		return 0;
+	}
+
+	/*
+	 * first buffer to free from S/W ring is at index
+	 * tx_next_dd - (tx_free_thresh-1)
+	 */
+	txep = &txq->sw_ring[txq->tx_next_dd - (txq->tx_free_thresh - 1)];
+	for (i = 0; i < txq->tx_free_thresh; ++i, ++txep) {
+		/* free buffers one at a time */
+		m = rte_pktmbuf_prefree_seg(txep->mbuf);
+		txep->mbuf = NULL;
+
+		if (unlikely(m == NULL))
+			continue;
+
+		if (nb_free >= RTE_NGBE_TX_MAX_FREE_BUF_SZ ||
+		    (nb_free > 0 && m->pool != free[0]->pool)) {
+			rte_mempool_put_bulk(free[0]->pool,
+					     (void **)free, nb_free);
+			nb_free = 0;
+		}
+
+		free[nb_free++] = m;
+	}
+
+	if (nb_free > 0)
+		rte_mempool_put_bulk(free[0]->pool, (void **)free, nb_free);
+
+	/* buffers were freed, update counters */
+	txq->nb_tx_free = (uint16_t)(txq->nb_tx_free + txq->tx_free_thresh);
+	txq->tx_next_dd = (uint16_t)(txq->tx_next_dd + txq->tx_free_thresh);
+	if (txq->tx_next_dd >= txq->nb_tx_desc)
+		txq->tx_next_dd = (uint16_t)(txq->tx_free_thresh - 1);
+
+	return txq->tx_free_thresh;
+}
+
+/* Populate 4 descriptors with data from 4 mbufs */
+static inline void
+tx4(volatile struct ngbe_tx_desc *txdp, struct rte_mbuf **pkts)
+{
+	uint64_t buf_dma_addr;
+	uint32_t pkt_len;
+	int i;
+
+	for (i = 0; i < 4; ++i, ++txdp, ++pkts) {
+		buf_dma_addr = rte_mbuf_data_iova(*pkts);
+		pkt_len = (*pkts)->data_len;
+
+		/* write data to descriptor */
+		txdp->qw0 = rte_cpu_to_le_64(buf_dma_addr);
+		txdp->dw2 = cpu_to_le32(NGBE_TXD_FLAGS |
+					NGBE_TXD_DATLEN(pkt_len));
+		txdp->dw3 = cpu_to_le32(NGBE_TXD_PAYLEN(pkt_len));
+
+		rte_prefetch0(&(*pkts)->pool);
+	}
+}
+
+/* Populate 1 descriptor with data from 1 mbuf */
+static inline void
+tx1(volatile struct ngbe_tx_desc *txdp, struct rte_mbuf **pkts)
+{
+	uint64_t buf_dma_addr;
+	uint32_t pkt_len;
+
+	buf_dma_addr = rte_mbuf_data_iova(*pkts);
+	pkt_len = (*pkts)->data_len;
+
+	/* write data to descriptor */
+	txdp->qw0 = cpu_to_le64(buf_dma_addr);
+	txdp->dw2 = cpu_to_le32(NGBE_TXD_FLAGS |
+				NGBE_TXD_DATLEN(pkt_len));
+	txdp->dw3 = cpu_to_le32(NGBE_TXD_PAYLEN(pkt_len));
+
+	rte_prefetch0(&(*pkts)->pool);
+}
+
+/*
+ * Fill H/W descriptor ring with mbuf data.
+ * Copy mbuf pointers to the S/W ring.
+ */
+static inline void
+ngbe_tx_fill_hw_ring(struct ngbe_tx_queue *txq, struct rte_mbuf **pkts,
+		      uint16_t nb_pkts)
+{
+	volatile struct ngbe_tx_desc *txdp = &txq->tx_ring[txq->tx_tail];
+	struct ngbe_tx_entry *txep = &txq->sw_ring[txq->tx_tail];
+	const int N_PER_LOOP = 4;
+	const int N_PER_LOOP_MASK = N_PER_LOOP - 1;
+	int mainpart, leftover;
+	int i, j;
+
+	/*
+	 * Process most of the packets in chunks of N pkts.  Any
+	 * leftover packets will get processed one at a time.
+	 */
+	mainpart = (nb_pkts & ((uint32_t)~N_PER_LOOP_MASK));
+	leftover = (nb_pkts & ((uint32_t)N_PER_LOOP_MASK));
+	for (i = 0; i < mainpart; i += N_PER_LOOP) {
+		/* Copy N mbuf pointers to the S/W ring */
+		for (j = 0; j < N_PER_LOOP; ++j)
+			(txep + i + j)->mbuf = *(pkts + i + j);
+		tx4(txdp + i, pkts + i);
+	}
+
+	if (unlikely(leftover > 0)) {
+		for (i = 0; i < leftover; ++i) {
+			(txep + mainpart + i)->mbuf = *(pkts + mainpart + i);
+			tx1(txdp + mainpart + i, pkts + mainpart + i);
+		}
+	}
+}
+
+static inline uint16_t
+tx_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
+	     uint16_t nb_pkts)
+{
+	struct ngbe_tx_queue *txq = (struct ngbe_tx_queue *)tx_queue;
+	uint16_t n = 0;
+
+	/*
+	 * Begin scanning the H/W ring for done descriptors when the
+	 * number of available descriptors drops below tx_free_thresh.  For
+	 * each done descriptor, free the associated buffer.
+	 */
+	if (txq->nb_tx_free < txq->tx_free_thresh)
+		ngbe_tx_free_bufs(txq);
+
+	/* Only use descriptors that are available */
+	nb_pkts = (uint16_t)RTE_MIN(txq->nb_tx_free, nb_pkts);
+	if (unlikely(nb_pkts == 0))
+		return 0;
+
+	/* Use exactly nb_pkts descriptors */
+	txq->nb_tx_free = (uint16_t)(txq->nb_tx_free - nb_pkts);
+
+	/*
+	 * At this point, we know there are enough descriptors in the
+	 * ring to transmit all the packets.  This assumes that each
+	 * mbuf contains a single segment, and that no new offloads
+	 * are expected, which would require a new context descriptor.
+	 */
+
+	/*
+	 * See if we're going to wrap-around. If so, handle the top
+	 * of the descriptor ring first, then do the bottom.  If not,
+	 * the processing looks just like the "bottom" part anyway...
+	 */
+	if ((txq->tx_tail + nb_pkts) > txq->nb_tx_desc) {
+		n = (uint16_t)(txq->nb_tx_desc - txq->tx_tail);
+		ngbe_tx_fill_hw_ring(txq, tx_pkts, n);
+		txq->tx_tail = 0;
+	}
+
+	/* Fill H/W descriptor ring with mbuf data */
+	ngbe_tx_fill_hw_ring(txq, tx_pkts + n, (uint16_t)(nb_pkts - n));
+	txq->tx_tail = (uint16_t)(txq->tx_tail + (nb_pkts - n));
+
+	/*
+	 * Check for wrap-around. This would only happen if we used
+	 * up to the last descriptor in the ring, no more, no less.
+	 */
+	if (txq->tx_tail >= txq->nb_tx_desc)
+		txq->tx_tail = 0;
+
+	PMD_TX_LOG(DEBUG, "port_id=%u queue_id=%u tx_tail=%u nb_tx=%u",
+		   (uint16_t)txq->port_id, (uint16_t)txq->queue_id,
+		   (uint16_t)txq->tx_tail, (uint16_t)nb_pkts);
+
+	/* update tail pointer */
+	rte_wmb();
+	ngbe_set32_relaxed(txq->tdt_reg_addr, txq->tx_tail);
+
+	return nb_pkts;
+}
+
+uint16_t
+ngbe_xmit_pkts_simple(void *tx_queue, struct rte_mbuf **tx_pkts,
+		       uint16_t nb_pkts)
+{
+	uint16_t nb_tx;
+
+	/* Try to transmit at least chunks of TX_MAX_BURST pkts */
+	if (likely(nb_pkts <= RTE_PMD_NGBE_TX_MAX_BURST))
+		return tx_xmit_pkts(tx_queue, tx_pkts, nb_pkts);
+
+	/* transmit more than the max burst, in chunks of TX_MAX_BURST */
+	nb_tx = 0;
+	while (nb_pkts) {
+		uint16_t ret, n;
+
+		n = (uint16_t)RTE_MIN(nb_pkts, RTE_PMD_NGBE_TX_MAX_BURST);
+		ret = tx_xmit_pkts(tx_queue, &tx_pkts[nb_tx], n);
+		nb_tx = (uint16_t)(nb_tx + ret);
+		nb_pkts = (uint16_t)(nb_pkts - ret);
+		if (ret < n)
+			break;
+	}
+
+	return nb_tx;
+}
+
 #ifndef DEFAULT_TX_FREE_THRESH
 #define DEFAULT_TX_FREE_THRESH 32
 #endif
+
+/*********************************************************************
+ *
+ *  RX functions
+ *
+ **********************************************************************/
+static inline uint32_t
+ngbe_rxd_pkt_info_to_pkt_type(uint32_t pkt_info, uint16_t ptid_mask)
+{
+	uint16_t ptid = NGBE_RXD_PTID(pkt_info);
+
+	ptid &= ptid_mask;
+
+	return ngbe_decode_ptype(ptid);
+}
+
+static inline uint64_t
+ngbe_rxd_pkt_info_to_pkt_flags(uint32_t pkt_info)
+{
+	static uint64_t ip_rss_types_map[16] __rte_cache_aligned = {
+		0, PKT_RX_RSS_HASH, PKT_RX_RSS_HASH, PKT_RX_RSS_HASH,
+		0, PKT_RX_RSS_HASH, 0, PKT_RX_RSS_HASH,
+		PKT_RX_RSS_HASH, 0, 0, 0,
+		0, 0, 0,  PKT_RX_FDIR,
+	};
+	return ip_rss_types_map[NGBE_RXD_RSSTYPE(pkt_info)];
+}
+
+static inline uint64_t
+rx_desc_status_to_pkt_flags(uint32_t rx_status, uint64_t vlan_flags)
+{
+	uint64_t pkt_flags;
+
+	/*
+	 * Check if VLAN present only.
+	 * Do not check whether L3/L4 rx checksum done by NIC or not,
+	 * That can be found from rte_eth_rxmode.offloads flag
+	 */
+	pkt_flags = (rx_status & NGBE_RXD_STAT_VLAN &&
+		     vlan_flags & PKT_RX_VLAN_STRIPPED)
+		    ? vlan_flags : 0;
+
+	return pkt_flags;
+}
+
+static inline uint64_t
+rx_desc_error_to_pkt_flags(uint32_t rx_status)
+{
+	uint64_t pkt_flags = 0;
+
+	/* checksum offload can't be disabled */
+	if (rx_status & NGBE_RXD_STAT_IPCS) {
+		pkt_flags |= (rx_status & NGBE_RXD_ERR_IPCS
+				? PKT_RX_IP_CKSUM_BAD : PKT_RX_IP_CKSUM_GOOD);
+	}
+
+	if (rx_status & NGBE_RXD_STAT_L4CS) {
+		pkt_flags |= (rx_status & NGBE_RXD_ERR_L4CS
+				? PKT_RX_L4_CKSUM_BAD : PKT_RX_L4_CKSUM_GOOD);
+	}
+
+	if (rx_status & NGBE_RXD_STAT_EIPCS &&
+	    rx_status & NGBE_RXD_ERR_EIPCS) {
+		pkt_flags |= PKT_RX_OUTER_IP_CKSUM_BAD;
+	}
+
+
+	return pkt_flags;
+}
+
+uint16_t
+ngbe_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
+		uint16_t nb_pkts)
+{
+	struct ngbe_rx_queue *rxq;
+	volatile struct ngbe_rx_desc *rx_ring;
+	volatile struct ngbe_rx_desc *rxdp;
+	struct ngbe_rx_entry *sw_ring;
+	struct ngbe_rx_entry *rxe;
+	struct rte_mbuf *rxm;
+	struct rte_mbuf *nmb;
+	struct ngbe_rx_desc rxd;
+	uint64_t dma_addr;
+	uint32_t staterr;
+	uint32_t pkt_info;
+	uint16_t pkt_len;
+	uint16_t rx_id;
+	uint16_t nb_rx;
+	uint16_t nb_hold;
+	uint64_t pkt_flags;
+
+	nb_rx = 0;
+	nb_hold = 0;
+	rxq = rx_queue;
+	rx_id = rxq->rx_tail;
+	rx_ring = rxq->rx_ring;
+	sw_ring = rxq->sw_ring;
+	struct rte_eth_dev *dev = &rte_eth_devices[rxq->port_id];
+	while (nb_rx < nb_pkts) {
+		/*
+		 * The order of operations here is important as the DD status
+		 * bit must not be read after any other descriptor fields.
+		 * rx_ring and rxdp are pointing to volatile data so the order
+		 * of accesses cannot be reordered by the compiler. If they were
+		 * not volatile, they could be reordered which could lead to
+		 * using invalid descriptor fields when read from rxd.
+		 */
+		rxdp = &rx_ring[rx_id];
+		staterr = rxdp->qw1.lo.status;
+		if (!(staterr & rte_cpu_to_le_32(NGBE_RXD_STAT_DD)))
+			break;
+		rxd = *rxdp;
+
+		/*
+		 * End of packet.
+		 *
+		 * If the NGBE_RXD_STAT_EOP flag is not set, the RX packet
+		 * is likely to be invalid and to be dropped by the various
+		 * validation checks performed by the network stack.
+		 *
+		 * Allocate a new mbuf to replenish the RX ring descriptor.
+		 * If the allocation fails:
+		 *    - arrange for that RX descriptor to be the first one
+		 *      being parsed the next time the receive function is
+		 *      invoked [on the same queue].
+		 *
+		 *    - Stop parsing the RX ring and return immediately.
+		 *
+		 * This policy do not drop the packet received in the RX
+		 * descriptor for which the allocation of a new mbuf failed.
+		 * Thus, it allows that packet to be later retrieved if
+		 * mbuf have been freed in the mean time.
+		 * As a side effect, holding RX descriptors instead of
+		 * systematically giving them back to the NIC may lead to
+		 * RX ring exhaustion situations.
+		 * However, the NIC can gracefully prevent such situations
+		 * to happen by sending specific "back-pressure" flow control
+		 * frames to its peer(s).
+		 */
+		PMD_RX_LOG(DEBUG, "port_id=%u queue_id=%u rx_id=%u "
+			   "ext_err_stat=0x%08x pkt_len=%u",
+			   (uint16_t)rxq->port_id, (uint16_t)rxq->queue_id,
+			   (uint16_t)rx_id, (uint32_t)staterr,
+			   (uint16_t)rte_le_to_cpu_16(rxd.qw1.hi.len));
+
+		nmb = rte_mbuf_raw_alloc(rxq->mb_pool);
+		if (nmb == NULL) {
+			PMD_RX_LOG(DEBUG, "RX mbuf alloc failed port_id=%u "
+				   "queue_id=%u", (uint16_t)rxq->port_id,
+				   (uint16_t)rxq->queue_id);
+			dev->data->rx_mbuf_alloc_failed++;
+			break;
+		}
+
+		nb_hold++;
+		rxe = &sw_ring[rx_id];
+		rx_id++;
+		if (rx_id == rxq->nb_rx_desc)
+			rx_id = 0;
+
+		/* Prefetch next mbuf while processing current one. */
+		rte_ngbe_prefetch(sw_ring[rx_id].mbuf);
+
+		/*
+		 * When next RX descriptor is on a cache-line boundary,
+		 * prefetch the next 4 RX descriptors and the next 8 pointers
+		 * to mbufs.
+		 */
+		if ((rx_id & 0x3) == 0) {
+			rte_ngbe_prefetch(&rx_ring[rx_id]);
+			rte_ngbe_prefetch(&sw_ring[rx_id]);
+		}
+
+		rxm = rxe->mbuf;
+		rxe->mbuf = nmb;
+		dma_addr = rte_cpu_to_le_64(rte_mbuf_data_iova_default(nmb));
+		NGBE_RXD_HDRADDR(rxdp, 0);
+		NGBE_RXD_PKTADDR(rxdp, dma_addr);
+
+		/*
+		 * Initialize the returned mbuf.
+		 * 1) setup generic mbuf fields:
+		 *    - number of segments,
+		 *    - next segment,
+		 *    - packet length,
+		 *    - RX port identifier.
+		 * 2) integrate hardware offload data, if any:
+		 *    - RSS flag & hash,
+		 *    - IP checksum flag,
+		 *    - VLAN TCI, if any,
+		 *    - error flags.
+		 */
+		pkt_len = (uint16_t)(rte_le_to_cpu_16(rxd.qw1.hi.len) -
+				      rxq->crc_len);
+		rxm->data_off = RTE_PKTMBUF_HEADROOM;
+		rte_packet_prefetch((char *)rxm->buf_addr + rxm->data_off);
+		rxm->nb_segs = 1;
+		rxm->next = NULL;
+		rxm->pkt_len = pkt_len;
+		rxm->data_len = pkt_len;
+		rxm->port = rxq->port_id;
+
+		pkt_info = rte_le_to_cpu_32(rxd.qw0.dw0);
+		/* Only valid if PKT_RX_VLAN set in pkt_flags */
+		rxm->vlan_tci = rte_le_to_cpu_16(rxd.qw1.hi.tag);
+
+		pkt_flags = rx_desc_status_to_pkt_flags(staterr,
+					rxq->vlan_flags);
+		pkt_flags |= rx_desc_error_to_pkt_flags(staterr);
+		pkt_flags |= ngbe_rxd_pkt_info_to_pkt_flags(pkt_info);
+		rxm->ol_flags = pkt_flags;
+		rxm->packet_type = ngbe_rxd_pkt_info_to_pkt_type(pkt_info,
+						       rxq->pkt_type_mask);
+
+		if (likely(pkt_flags & PKT_RX_RSS_HASH))
+			rxm->hash.rss = rte_le_to_cpu_32(rxd.qw0.dw1);
+
+		/*
+		 * Store the mbuf address into the next entry of the array
+		 * of returned packets.
+		 */
+		rx_pkts[nb_rx++] = rxm;
+	}
+	rxq->rx_tail = rx_id;
+
+	/*
+	 * If the number of free RX descriptors is greater than the RX free
+	 * threshold of the queue, advance the Receive Descriptor Tail (RDT)
+	 * register.
+	 * Update the RDT with the value of the last processed RX descriptor
+	 * minus 1, to guarantee that the RDT register is never equal to the
+	 * RDH register, which creates a "full" ring situation from the
+	 * hardware point of view...
+	 */
+	nb_hold = (uint16_t)(nb_hold + rxq->nb_rx_hold);
+	if (nb_hold > rxq->rx_free_thresh) {
+		PMD_RX_LOG(DEBUG, "port_id=%u queue_id=%u rx_tail=%u "
+			   "nb_hold=%u nb_rx=%u",
+			   (uint16_t)rxq->port_id, (uint16_t)rxq->queue_id,
+			   (uint16_t)rx_id, (uint16_t)nb_hold,
+			   (uint16_t)nb_rx);
+		rx_id = (uint16_t)((rx_id == 0) ?
+				(rxq->nb_rx_desc - 1) : (rx_id - 1));
+		ngbe_set32(rxq->rdt_reg_addr, rx_id);
+		nb_hold = 0;
+	}
+	rxq->nb_rx_hold = nb_hold;
+	return nb_rx;
+}
 
 /*********************************************************************
  *

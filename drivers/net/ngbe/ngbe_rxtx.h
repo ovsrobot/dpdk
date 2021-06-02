@@ -43,6 +43,85 @@ struct ngbe_rx_desc {
 	} qw1; /* also as r.hdr_addr */
 };
 
+/* @ngbe_rx_desc.qw0 */
+#define NGBE_RXD_PKTADDR(rxd, v)  \
+	(((volatile __le64 *)(rxd))[0] = cpu_to_le64(v))
+
+/* @ngbe_rx_desc.qw1 */
+#define NGBE_RXD_HDRADDR(rxd, v)  \
+	(((volatile __le64 *)(rxd))[1] = cpu_to_le64(v))
+
+/* @ngbe_rx_desc.dw0 */
+#define NGBE_RXD_RSSTYPE(dw)      RS(dw, 0, 0xF)
+#define   NGBE_RSSTYPE_NONE       0
+#define   NGBE_RSSTYPE_IPV4TCP    1
+#define   NGBE_RSSTYPE_IPV4       2
+#define   NGBE_RSSTYPE_IPV6TCP    3
+#define   NGBE_RSSTYPE_IPV4SCTP   4
+#define   NGBE_RSSTYPE_IPV6       5
+#define   NGBE_RSSTYPE_IPV6SCTP   6
+#define   NGBE_RSSTYPE_IPV4UDP    7
+#define   NGBE_RSSTYPE_IPV6UDP    8
+#define   NGBE_RSSTYPE_FDIR       15
+#define NGBE_RXD_SECTYPE(dw)      RS(dw, 4, 0x3)
+#define NGBE_RXD_SECTYPE_NONE     LS(0, 4, 0x3)
+#define NGBE_RXD_SECTYPE_IPSECESP LS(2, 4, 0x3)
+#define NGBE_RXD_SECTYPE_IPSECAH  LS(3, 4, 0x3)
+#define NGBE_RXD_TPIDSEL(dw)      RS(dw, 6, 0x7)
+#define NGBE_RXD_PTID(dw)         RS(dw, 9, 0xFF)
+#define NGBE_RXD_RSCCNT(dw)       RS(dw, 17, 0xF)
+#define NGBE_RXD_HDRLEN(dw)       RS(dw, 21, 0x3FF)
+#define NGBE_RXD_SPH              MS(31, 0x1)
+
+/* @ngbe_rx_desc.dw1 */
+/** bit 0-31, as rss hash when  **/
+#define NGBE_RXD_RSSHASH(rxd)     ((rxd)->qw0.dw1)
+
+/** bit 0-31, as ip csum when  **/
+#define NGBE_RXD_IPID(rxd)        ((rxd)->qw0.hi.ipid)
+#define NGBE_RXD_CSUM(rxd)        ((rxd)->qw0.hi.csum)
+
+/* @ngbe_rx_desc.dw2 */
+#define NGBE_RXD_STATUS(rxd)      ((rxd)->qw1.lo.status)
+/** bit 0-1 **/
+#define NGBE_RXD_STAT_DD          MS(0, 0x1) /* Descriptor Done */
+#define NGBE_RXD_STAT_EOP         MS(1, 0x1) /* End of Packet */
+/** bit 2-31, when EOP=0 **/
+#define NGBE_RXD_NEXTP_RESV(v)    LS(v, 2, 0x3)
+#define NGBE_RXD_NEXTP(dw)        RS(dw, 4, 0xFFFF) /* Next Descriptor */
+/** bit 2-31, when EOP=1 **/
+#define NGBE_RXD_PKT_CLS_MASK     MS(2, 0x7) /* Packet Class */
+#define NGBE_RXD_PKT_CLS_TC_RSS   LS(0, 2, 0x7) /* RSS Hash */
+#define NGBE_RXD_PKT_CLS_FLM      LS(1, 2, 0x7) /* FDir Match */
+#define NGBE_RXD_PKT_CLS_SYN      LS(2, 2, 0x7) /* TCP Sync */
+#define NGBE_RXD_PKT_CLS_5TUPLE   LS(3, 2, 0x7) /* 5 Tuple */
+#define NGBE_RXD_PKT_CLS_ETF      LS(4, 2, 0x7) /* Ethertype Filter */
+#define NGBE_RXD_STAT_VLAN        MS(5, 0x1) /* IEEE VLAN Packet */
+#define NGBE_RXD_STAT_UDPCS       MS(6, 0x1) /* UDP xsum calculated */
+#define NGBE_RXD_STAT_L4CS        MS(7, 0x1) /* L4 xsum calculated */
+#define NGBE_RXD_STAT_IPCS        MS(8, 0x1) /* IP xsum calculated */
+#define NGBE_RXD_STAT_PIF         MS(9, 0x1) /* Non-unicast address */
+#define NGBE_RXD_STAT_EIPCS       MS(10, 0x1) /* Encap IP xsum calculated */
+#define NGBE_RXD_STAT_VEXT        MS(11, 0x1) /* Multi-VLAN */
+#define NGBE_RXD_STAT_IPV6EX      MS(12, 0x1) /* IPv6 with option header */
+#define NGBE_RXD_STAT_LLINT       MS(13, 0x1) /* Pkt caused LLI */
+#define NGBE_RXD_STAT_1588        MS(14, 0x1) /* IEEE1588 Time Stamp */
+#define NGBE_RXD_STAT_SECP        MS(15, 0x1) /* Security Processing */
+#define NGBE_RXD_STAT_LB          MS(16, 0x1) /* Loopback Status */
+/*** bit 17-30, when PTYPE=IP ***/
+#define NGBE_RXD_STAT_BMC         MS(17, 0x1) /* PTYPE=IP, BMC status */
+#define NGBE_RXD_ERR_HBO          MS(23, 0x1) /* Header Buffer Overflow */
+#define NGBE_RXD_ERR_EIPCS        MS(26, 0x1) /* Encap IP header error */
+#define NGBE_RXD_ERR_SECERR       MS(27, 0x1) /* macsec or ipsec error */
+#define NGBE_RXD_ERR_RXE          MS(29, 0x1) /* Any MAC Error */
+#define NGBE_RXD_ERR_L4CS         MS(30, 0x1) /* TCP/UDP xsum error */
+#define NGBE_RXD_ERR_IPCS         MS(31, 0x1) /* IP xsum error */
+#define NGBE_RXD_ERR_CSUM(dw)     RS(dw, 30, 0x3)
+
+/* @ngbe_rx_desc.dw3 */
+#define NGBE_RXD_LENGTH(rxd)           ((rxd)->qw1.hi.len)
+#define NGBE_RXD_VLAN(rxd)             ((rxd)->qw1.hi.tag)
+
 /*****************************************************************************
  * Transmit Descriptor
  *****************************************************************************/
@@ -68,10 +147,39 @@ struct ngbe_tx_desc {
 	__le32 dw3; /* r.olinfo_status, w.status      */
 };
 
+/* @ngbe_tx_desc.dw2 */
+#define NGBE_TXD_DATLEN(v)        ((0xFFFF & (v))) /* data buffer length */
+#define NGBE_TXD_1588             ((0x1) << 19) /* IEEE1588 time stamp */
+#define NGBE_TXD_DATA             ((0x0) << 20) /* data descriptor */
+#define NGBE_TXD_EOP              ((0x1) << 24) /* End of Packet */
+#define NGBE_TXD_FCS              ((0x1) << 25) /* Insert FCS */
+#define NGBE_TXD_LINKSEC          ((0x1) << 26) /* Insert LinkSec */
+#define NGBE_TXD_ECU              ((0x1) << 28) /* forward to ECU */
+#define NGBE_TXD_CNTAG            ((0x1) << 29) /* insert CN tag */
+#define NGBE_TXD_VLE              ((0x1) << 30) /* insert VLAN tag */
+#define NGBE_TXD_TSE              ((0x1) << 31) /* transmit segmentation */
+
+#define NGBE_TXD_FLAGS (NGBE_TXD_FCS | NGBE_TXD_EOP)
+
+/* @ngbe_tx_desc.dw3 */
+#define NGBE_TXD_DD_UNUSED        NGBE_TXD_DD
+#define NGBE_TXD_IDX_UNUSED(v)    NGBE_TXD_IDX(v)
+#define NGBE_TXD_CC               ((0x1) << 7) /* check context */
+#define NGBE_TXD_IPSEC            ((0x1) << 8) /* request ipsec offload */
+#define NGBE_TXD_L4CS             ((0x1) << 9) /* insert TCP/UDP/SCTP csum */
+#define NGBE_TXD_IPCS             ((0x1) << 10) /* insert IPv4 csum */
+#define NGBE_TXD_EIPCS            ((0x1) << 11) /* insert outer IP csum */
+#define NGBE_TXD_MNGFLT           ((0x1) << 12) /* enable management filter */
+#define NGBE_TXD_PAYLEN(v)        ((0x7FFFF & (v)) << 13) /* payload length */
+
+#define RTE_PMD_NGBE_TX_MAX_BURST 32
 #define RTE_PMD_NGBE_RX_MAX_BURST 32
+#define RTE_NGBE_TX_MAX_FREE_BUF_SZ 64
 
 #define RX_RING_SZ ((NGBE_RING_DESC_MAX + RTE_PMD_NGBE_RX_MAX_BURST) * \
 		    sizeof(struct ngbe_rx_desc))
+
+#define rte_packet_prefetch(p)  rte_prefetch1(p)
 
 #define NGBE_TX_MAX_SEG                    40
 
@@ -124,6 +232,8 @@ struct ngbe_rx_queue {
 	uint8_t             crc_len;  /**< 0 if CRC stripped, 4 otherwise. */
 	uint8_t             drop_en;  /**< If not 0, set SRRCTL.Drop_En. */
 	uint8_t             rx_deferred_start; /**< not in global dev start. */
+	/** flags to set in mbuf when a vlan is detected. */
+	uint64_t            vlan_flags;
 	uint64_t	    offloads; /**< Rx offloads with DEV_RX_OFFLOAD_* */
 	/** need to alloc dummy mbuf, for wraparound when scanning hw ring */
 	struct rte_mbuf fake_mbuf;

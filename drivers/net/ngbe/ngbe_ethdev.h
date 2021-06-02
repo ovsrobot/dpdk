@@ -75,6 +75,12 @@ int ngbe_dev_rx_init(struct rte_eth_dev *dev);
 
 void ngbe_dev_tx_init(struct rte_eth_dev *dev);
 
+uint16_t ngbe_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
+		uint16_t nb_pkts);
+
+uint16_t ngbe_xmit_pkts_simple(void *tx_queue, struct rte_mbuf **tx_pkts,
+		uint16_t nb_pkts);
+
 int
 ngbe_dev_link_update_share(struct rte_eth_dev *dev,
 		int wait_to_complete);

@@ -109,6 +109,8 @@ eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	PMD_INIT_FUNC_TRACE();
 
 	eth_dev->dev_ops = &ngbe_eth_dev_ops;
+	eth_dev->rx_pkt_burst = &ngbe_recv_pkts;
+	eth_dev->tx_pkt_burst = &ngbe_xmit_pkts_simple;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
@@ -357,8 +359,10 @@ ngbe_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 const uint32_t *
 ngbe_dev_supported_ptypes_get(struct rte_eth_dev *dev)
 {
-	RTE_SET_USED(dev);
-	return ngbe_get_supported_ptypes();
+	if (dev->rx_pkt_burst == ngbe_recv_pkts)
+		return ngbe_get_supported_ptypes();
+
+	return NULL;
 }
 
 /* return 0 means link status changed, -1 means not changed */
