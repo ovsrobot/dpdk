@@ -1080,6 +1080,15 @@ F: drivers/crypto/octeontx2/
 F: doc/guides/cryptodevs/octeontx2.rst
 F: doc/guides/cryptodevs/features/octeontx2.ini
 
+Marvell cnxk
+M: Ankur Dwivedi <adwivedi@marvell.com>
+M: Anoob Joseph <anoobj@marvell.com>
+M: Tejasree Kondoj <ktejasree@marvell.com>
+F: drivers/crypto/cnxk/
+F: doc/guides/cryptodevs/cnxk.rst
+F: doc/guides/cryptodevs/features/cn9k.ini
+F: doc/guides/cryptodevs/features/cn10k.ini
+
 Null Crypto
 M: Declan Doherty <declan.doherty@intel.com>
 F: drivers/crypto/null/
