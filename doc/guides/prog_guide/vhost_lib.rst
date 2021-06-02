@@ -420,3 +420,23 @@ Finally, a set of device ops is defined for device specific operations:
 * ``get_notify_area``
 
   Called to get the notify area info of the queue.
+
+  Vhost async data path
+  -----------------------------------
+
+* Address mode
+
+    Modern IOAT devices supports to use the IOMMU, which can avoid using
+    the unsafe HPA. Besides, the CPU cycles took by SW to translate from
+    GPA to HPA can also be saved. So IOAT devices are defined to use
+    virtual address instead of physical address.
+
+    With IOMMU enabled, to use IOAT devices:
+    1. IOAT devices must be binded to vfio-pci, rather than igb_uio.
+    2. DPDK must use ``--iova-mode=va``.
+
+* Fallback
+
+    When the DMA copy fails, the user who implements the transfer_data
+    callback can fallback to SW copy or fallback to PA copy through
+    rte_mem_virt2iova().
