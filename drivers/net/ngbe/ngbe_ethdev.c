@@ -9,6 +9,7 @@
 #include "ngbe_logs.h"
 #include "base/ngbe.h"
 #include "ngbe_ethdev.h"
+#include "ngbe_rxtx.h"
 
 static int ngbe_dev_close(struct rte_eth_dev *dev);
 
@@ -30,6 +31,22 @@ static const struct rte_pci_id pci_id_ngbe_map[] = {
 	{ RTE_PCI_DEVICE(PCI_VENDOR_ID_WANGXUN, NGBE_DEV_ID_EM_WX1860AL_W) },
 	{ .vendor_id = 0, /* sentinel */ },
 };
+
+static const struct rte_eth_desc_lim rx_desc_lim = {
+	.nb_max = NGBE_RING_DESC_MAX,
+	.nb_min = NGBE_RING_DESC_MIN,
+	.nb_align = NGBE_RXD_ALIGN,
+};
+
+static const struct rte_eth_desc_lim tx_desc_lim = {
+	.nb_max = NGBE_RING_DESC_MAX,
+	.nb_min = NGBE_RING_DESC_MIN,
+	.nb_align = NGBE_TXD_ALIGN,
+	.nb_seg_max = NGBE_TX_MAX_SEG,
+	.nb_mtu_seg_max = NGBE_TX_MAX_SEG,
+};
+
+static const struct eth_dev_ops ngbe_eth_dev_ops;
 
 /*
  * Ensure that all locks are released before first NVM or PHY access
@@ -63,6 +80,8 @@ eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	int err;
 
 	PMD_INIT_FUNC_TRACE();
+
+	eth_dev->dev_ops = &ngbe_eth_dev_ops;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
@@ -205,6 +224,73 @@ ngbe_dev_close(struct rte_eth_dev *dev)
 
 	return 0;
 }
+
+static int
+ngbe_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
+{
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct ngbe_hw *hw = NGBE_DEV_HW(dev);
+
+	dev_info->max_rx_queues = (uint16_t)hw->mac.max_rx_queues;
+	dev_info->max_tx_queues = (uint16_t)hw->mac.max_tx_queues;
+	dev_info->min_rx_bufsize = 1024;
+	dev_info->max_rx_pktlen = 15872;
+	dev_info->max_mac_addrs = hw->mac.num_rar_entries;
+	dev_info->max_hash_mac_addrs = NGBE_VMDQ_NUM_UC_MAC;
+	dev_info->max_vfs = pci_dev->max_vfs;
+	dev_info->max_vmdq_pools = ETH_64_POOLS;
+	dev_info->vmdq_queue_num = dev_info->max_rx_queues;
+	dev_info->rx_queue_offload_capa = ngbe_get_rx_queue_offloads(dev);
+	dev_info->rx_offload_capa = (ngbe_get_rx_port_offloads(dev) |
+				     dev_info->rx_queue_offload_capa);
+	dev_info->tx_queue_offload_capa = 0;
+	dev_info->tx_offload_capa = ngbe_get_tx_port_offloads(dev);
+
+	dev_info->default_rxconf = (struct rte_eth_rxconf) {
+		.rx_thresh = {
+			.pthresh = NGBE_DEFAULT_RX_PTHRESH,
+			.hthresh = NGBE_DEFAULT_RX_HTHRESH,
+			.wthresh = NGBE_DEFAULT_RX_WTHRESH,
+		},
+		.rx_free_thresh = NGBE_DEFAULT_RX_FREE_THRESH,
+		.rx_drop_en = 0,
+		.offloads = 0,
+	};
+
+	dev_info->default_txconf = (struct rte_eth_txconf) {
+		.tx_thresh = {
+			.pthresh = NGBE_DEFAULT_TX_PTHRESH,
+			.hthresh = NGBE_DEFAULT_TX_HTHRESH,
+			.wthresh = NGBE_DEFAULT_TX_WTHRESH,
+		},
+		.tx_free_thresh = NGBE_DEFAULT_TX_FREE_THRESH,
+		.offloads = 0,
+	};
+
+	dev_info->rx_desc_lim = rx_desc_lim;
+	dev_info->tx_desc_lim = tx_desc_lim;
+
+	dev_info->hash_key_size = NGBE_HKEY_MAX_INDEX * sizeof(uint32_t);
+	dev_info->reta_size = ETH_RSS_RETA_SIZE_128;
+	dev_info->flow_type_rss_offloads = NGBE_RSS_OFFLOAD_ALL;
+
+	dev_info->speed_capa = ETH_LINK_SPEED_1G | ETH_LINK_SPEED_10G;
+	dev_info->speed_capa |= ETH_LINK_SPEED_100M;
+
+	/* Driver-preferred Rx/Tx parameters */
+	dev_info->default_rxportconf.burst_size = 32;
+	dev_info->default_txportconf.burst_size = 32;
+	dev_info->default_rxportconf.nb_queues = 1;
+	dev_info->default_txportconf.nb_queues = 1;
+	dev_info->default_rxportconf.ring_size = 256;
+	dev_info->default_txportconf.ring_size = 256;
+
+	return 0;
+}
+
+static const struct eth_dev_ops ngbe_eth_dev_ops = {
+	.dev_infos_get              = ngbe_dev_info_get,
+};
 
 RTE_PMD_REGISTER_PCI(net_ngbe, rte_ngbe_pmd);
 RTE_PMD_REGISTER_PCI_TABLE(net_ngbe, pci_id_ngbe_map);
