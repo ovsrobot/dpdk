@@ -78,6 +78,14 @@ void ngbe_dev_tx_init(struct rte_eth_dev *dev);
 uint16_t ngbe_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 		uint16_t nb_pkts);
 
+uint16_t ngbe_recv_pkts_bulk_alloc(void *rx_queue, struct rte_mbuf **rx_pkts,
+				    uint16_t nb_pkts);
+
+uint16_t ngbe_recv_pkts_sc_single_alloc(void *rx_queue,
+		struct rte_mbuf **rx_pkts, uint16_t nb_pkts);
+uint16_t ngbe_recv_pkts_sc_bulk_alloc(void *rx_queue,
+		struct rte_mbuf **rx_pkts, uint16_t nb_pkts);
+
 uint16_t ngbe_xmit_pkts_simple(void *tx_queue, struct rte_mbuf **tx_pkts,
 		uint16_t nb_pkts);
 

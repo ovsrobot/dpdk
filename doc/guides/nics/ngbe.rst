@@ -14,6 +14,7 @@ Features
 - Checksum offload
 - Jumbo frames
 - Link state information
+- Scattered and gather for RX
 
 Prerequisites
 -------------

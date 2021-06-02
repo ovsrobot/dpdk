@@ -112,8 +112,16 @@ eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	eth_dev->rx_pkt_burst = &ngbe_recv_pkts;
 	eth_dev->tx_pkt_burst = &ngbe_xmit_pkts_simple;
 
-	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+	/*
+	 * For secondary processes, we don't initialise any further as primary
+	 * has already done this work. Only check we don't need a different
+	 * RX and TX function.
+	 */
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		ngbe_set_rx_function(eth_dev);
+
 		return 0;
+	}
 
 	rte_eth_copy_pci_info(eth_dev, pci_dev);
 
@@ -359,7 +367,10 @@ ngbe_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 const uint32_t *
 ngbe_dev_supported_ptypes_get(struct rte_eth_dev *dev)
 {
-	if (dev->rx_pkt_burst == ngbe_recv_pkts)
+	if (dev->rx_pkt_burst == ngbe_recv_pkts ||
+	    dev->rx_pkt_burst == ngbe_recv_pkts_sc_single_alloc ||
+	    dev->rx_pkt_burst == ngbe_recv_pkts_sc_bulk_alloc ||
+	    dev->rx_pkt_burst == ngbe_recv_pkts_bulk_alloc)
 		return ngbe_get_supported_ptypes();
 
 	return NULL;
