@@ -13,6 +13,8 @@
 #include "cn9k_cryptodev.h"
 #include "cn9k_cryptodev_ops.h"
 #include "cnxk_cryptodev.h"
+#include "cnxk_cryptodev_capabilities.h"
+
 #include "roc_api.h"
 
 uint8_t cn9k_cryptodev_driver_id;
@@ -72,6 +74,8 @@ cn9k_cpt_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 			goto dev_fini;
 		}
 	}
+
+	cnxk_cpt_caps_populate(vf);
 
 	return 0;
 
