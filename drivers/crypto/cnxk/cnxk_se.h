@@ -438,6 +438,71 @@ cpt_fc_auth_set_key(struct roc_se_ctx *se_ctx, roc_se_auth_type type,
 }
 
 static __rte_always_inline int
+fill_sess_aead(struct rte_crypto_sym_xform *xform, struct cnxk_se_sess *sess)
+{
+	struct rte_crypto_aead_xform *aead_form;
+	roc_se_cipher_type enc_type = 0; /* NULL Cipher type */
+	roc_se_auth_type auth_type = 0;	 /* NULL Auth type */
+	uint32_t cipher_key_len = 0;
+	uint8_t aes_gcm = 0;
+	aead_form = &xform->aead;
+
+	if (aead_form->op == RTE_CRYPTO_AEAD_OP_ENCRYPT) {
+		sess->cpt_op |= ROC_SE_OP_CIPHER_ENCRYPT;
+		sess->cpt_op |= ROC_SE_OP_AUTH_GENERATE;
+	} else if (aead_form->op == RTE_CRYPTO_AEAD_OP_DECRYPT) {
+		sess->cpt_op |= ROC_SE_OP_CIPHER_DECRYPT;
+		sess->cpt_op |= ROC_SE_OP_AUTH_VERIFY;
+	} else {
+		CPT_LOG_DP_ERR("Unknown aead operation\n");
+		return -1;
+	}
+	switch (aead_form->algo) {
+	case RTE_CRYPTO_AEAD_AES_GCM:
+		enc_type = ROC_SE_AES_GCM;
+		cipher_key_len = 16;
+		aes_gcm = 1;
+		break;
+	case RTE_CRYPTO_AEAD_AES_CCM:
+		CPT_LOG_DP_ERR("Crypto: Unsupported cipher algo %u",
+			       aead_form->algo);
+		return -1;
+	case RTE_CRYPTO_AEAD_CHACHA20_POLY1305:
+		enc_type = ROC_SE_CHACHA20;
+		auth_type = ROC_SE_POLY1305;
+		cipher_key_len = 32;
+		sess->chacha_poly = 1;
+		break;
+	default:
+		CPT_LOG_DP_ERR("Crypto: Undefined cipher algo %u specified",
+			       aead_form->algo);
+		return -1;
+	}
+	if (aead_form->key.length < cipher_key_len) {
+		CPT_LOG_DP_ERR("Invalid cipher params keylen %u",
+			       aead_form->key.length);
+		return -1;
+	}
+	sess->zsk_flag = 0;
+	sess->aes_gcm = aes_gcm;
+	sess->mac_len = aead_form->digest_length;
+	sess->iv_offset = aead_form->iv.offset;
+	sess->iv_length = aead_form->iv.length;
+	sess->aad_length = aead_form->aad_length;
+
+	if (unlikely(cpt_fc_ciph_set_key(&sess->roc_se_ctx, enc_type,
+					 aead_form->key.data,
+					 aead_form->key.length, NULL)))
+		return -1;
+
+	if (unlikely(cpt_fc_auth_set_key(&sess->roc_se_ctx, auth_type, NULL, 0,
+					 aead_form->digest_length)))
+		return -1;
+
+	return 0;
+}
+
+static __rte_always_inline int
 fill_sess_cipher(struct rte_crypto_sym_xform *xform, struct cnxk_se_sess *sess)
 {
 	struct rte_crypto_cipher_xform *c_form;
