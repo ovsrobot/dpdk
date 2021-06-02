@@ -77,6 +77,8 @@ cn9k_cpt_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 
 	cnxk_cpt_caps_populate(vf);
 
+	cn9k_cpt_set_enqdeq_fns(dev);
+
 	return 0;
 
 dev_fini:
