@@ -77,6 +77,10 @@ cn9k_cpt_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 
 	cnxk_cpt_caps_populate(vf);
 
+	dev->feature_flags = RTE_CRYPTODEV_FF_SYMMETRIC_CRYPTO |
+			     RTE_CRYPTODEV_FF_HW_ACCELERATED |
+			     RTE_CRYPTODEV_FF_SYM_SESSIONLESS;
+
 	cn9k_cpt_set_enqdeq_fns(dev);
 
 	return 0;
