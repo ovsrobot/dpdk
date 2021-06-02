@@ -46,6 +46,47 @@ gen_key_snow3g(const uint8_t *ck, uint32_t *keyx)
 	}
 }
 
+static __rte_always_inline int
+cpt_mac_len_verify(struct rte_crypto_auth_xform *auth)
+{
+	uint16_t mac_len = auth->digest_length;
+	int ret;
+
+	switch (auth->algo) {
+	case RTE_CRYPTO_AUTH_MD5:
+	case RTE_CRYPTO_AUTH_MD5_HMAC:
+		ret = (mac_len == 16) ? 0 : -1;
+		break;
+	case RTE_CRYPTO_AUTH_SHA1:
+	case RTE_CRYPTO_AUTH_SHA1_HMAC:
+		ret = (mac_len == 20) ? 0 : -1;
+		break;
+	case RTE_CRYPTO_AUTH_SHA224:
+	case RTE_CRYPTO_AUTH_SHA224_HMAC:
+		ret = (mac_len == 28) ? 0 : -1;
+		break;
+	case RTE_CRYPTO_AUTH_SHA256:
+	case RTE_CRYPTO_AUTH_SHA256_HMAC:
+		ret = (mac_len == 32) ? 0 : -1;
+		break;
+	case RTE_CRYPTO_AUTH_SHA384:
+	case RTE_CRYPTO_AUTH_SHA384_HMAC:
+		ret = (mac_len == 48) ? 0 : -1;
+		break;
+	case RTE_CRYPTO_AUTH_SHA512:
+	case RTE_CRYPTO_AUTH_SHA512_HMAC:
+		ret = (mac_len == 64) ? 0 : -1;
+		break;
+	case RTE_CRYPTO_AUTH_NULL:
+		ret = 0;
+		break;
+	default:
+		ret = -1;
+	}
+
+	return ret;
+}
+
 static __rte_always_inline void
 cpt_fc_salt_update(struct roc_se_ctx *se_ctx, uint8_t *salt)
 {
@@ -308,6 +349,95 @@ success:
 }
 
 static __rte_always_inline int
+cpt_fc_auth_set_key(struct roc_se_ctx *se_ctx, roc_se_auth_type type,
+		    const uint8_t *key, uint16_t key_len, uint16_t mac_len)
+{
+	struct roc_se_zuc_snow3g_ctx *zs_ctx;
+	struct roc_se_kasumi_ctx *k_ctx;
+	struct roc_se_context *fctx;
+
+	if (se_ctx == NULL)
+		return -1;
+
+	zs_ctx = &se_ctx->se_ctx.zs_ctx;
+	k_ctx = &se_ctx->se_ctx.k_ctx;
+	fctx = &se_ctx->se_ctx.fctx;
+
+	if ((type >= ROC_SE_ZUC_EIA3) && (type <= ROC_SE_KASUMI_F9_ECB)) {
+		uint32_t keyx[4];
+
+		if (key_len != 16)
+			return -1;
+		/* No support for AEAD yet */
+		if (se_ctx->enc_cipher)
+			return -1;
+		/* For ZUC/SNOW3G/Kasumi */
+		switch (type) {
+		case ROC_SE_SNOW3G_UIA2:
+			se_ctx->pdcp_alg_type = ROC_SE_PDCP_ALG_TYPE_SNOW3G;
+			gen_key_snow3g(key, keyx);
+			memcpy(zs_ctx->ci_key, keyx, key_len);
+			se_ctx->fc_type = ROC_SE_PDCP;
+			se_ctx->zsk_flags = 0x1;
+			break;
+		case ROC_SE_ZUC_EIA3:
+			se_ctx->pdcp_alg_type = ROC_SE_PDCP_ALG_TYPE_ZUC;
+			memcpy(zs_ctx->ci_key, key, key_len);
+			memcpy(zs_ctx->zuc_const, zuc_d, 32);
+			se_ctx->fc_type = ROC_SE_PDCP;
+			se_ctx->zsk_flags = 0x1;
+			break;
+		case ROC_SE_KASUMI_F9_ECB:
+			/* Kasumi ECB mode */
+			se_ctx->k_ecb = 1;
+			memcpy(k_ctx->ci_key, key, key_len);
+			se_ctx->fc_type = ROC_SE_KASUMI;
+			se_ctx->zsk_flags = 0x1;
+			break;
+		case ROC_SE_KASUMI_F9_CBC:
+			memcpy(k_ctx->ci_key, key, key_len);
+			se_ctx->fc_type = ROC_SE_KASUMI;
+			se_ctx->zsk_flags = 0x1;
+			break;
+		default:
+			return -1;
+		}
+		se_ctx->mac_len = 4;
+		se_ctx->hash_type = type;
+		return 0;
+	}
+
+	if (!(se_ctx->fc_type == ROC_SE_FC_GEN && !type)) {
+		if (!se_ctx->fc_type || !se_ctx->enc_cipher)
+			se_ctx->fc_type = ROC_SE_HASH_HMAC;
+	}
+
+	if (se_ctx->fc_type == ROC_SE_FC_GEN && key_len > 64)
+		return -1;
+
+	/* For GMAC auth, cipher must be NULL */
+	if (type == ROC_SE_GMAC_TYPE)
+		fctx->enc.enc_cipher = 0;
+
+	fctx->enc.hash_type = se_ctx->hash_type = type;
+	fctx->enc.mac_len = se_ctx->mac_len = mac_len;
+
+	if (key_len) {
+		se_ctx->hmac = 1;
+		memset(se_ctx->auth_key, 0, sizeof(se_ctx->auth_key));
+		memcpy(se_ctx->auth_key, key, key_len);
+		se_ctx->auth_key_len = key_len;
+		memset(fctx->hmac.ipad, 0, sizeof(fctx->hmac.ipad));
+		memset(fctx->hmac.opad, 0, sizeof(fctx->hmac.opad));
+
+		if (key_len <= 64)
+			memcpy(fctx->hmac.opad, key, key_len);
+		fctx->enc.auth_input_type = 1;
+	}
+	return 0;
+}
+
+static __rte_always_inline int
 fill_sess_cipher(struct rte_crypto_sym_xform *xform, struct cnxk_se_sess *sess)
 {
 	struct rte_crypto_cipher_xform *c_form;
@@ -414,4 +544,157 @@ fill_sess_cipher(struct rte_crypto_sym_xform *xform, struct cnxk_se_sess *sess)
 
 	return 0;
 }
+
+static __rte_always_inline int
+fill_sess_auth(struct rte_crypto_sym_xform *xform, struct cnxk_se_sess *sess)
+{
+	struct rte_crypto_auth_xform *a_form;
+	roc_se_auth_type auth_type = 0; /* NULL Auth type */
+	uint8_t zsk_flag = 0, aes_gcm = 0, is_null = 0;
+
+	if (xform->next != NULL &&
+	    xform->next->type == RTE_CRYPTO_SYM_XFORM_CIPHER &&
+	    xform->next->cipher.op == RTE_CRYPTO_CIPHER_OP_ENCRYPT) {
+		/* Perform auth followed by encryption */
+		sess->roc_se_ctx.template_w4.s.opcode_minor =
+			ROC_SE_FC_MINOR_OP_HMAC_FIRST;
+	}
+
+	a_form = &xform->auth;
+
+	if (a_form->op == RTE_CRYPTO_AUTH_OP_VERIFY)
+		sess->cpt_op |= ROC_SE_OP_AUTH_VERIFY;
+	else if (a_form->op == RTE_CRYPTO_AUTH_OP_GENERATE)
+		sess->cpt_op |= ROC_SE_OP_AUTH_GENERATE;
+	else {
+		CPT_LOG_DP_ERR("Unknown auth operation");
+		return -1;
+	}
+
+	switch (a_form->algo) {
+	case RTE_CRYPTO_AUTH_SHA1_HMAC:
+		/* Fall through */
+	case RTE_CRYPTO_AUTH_SHA1:
+		auth_type = ROC_SE_SHA1_TYPE;
+		break;
+	case RTE_CRYPTO_AUTH_SHA256_HMAC:
+	case RTE_CRYPTO_AUTH_SHA256:
+		auth_type = ROC_SE_SHA2_SHA256;
+		break;
+	case RTE_CRYPTO_AUTH_SHA512_HMAC:
+	case RTE_CRYPTO_AUTH_SHA512:
+		auth_type = ROC_SE_SHA2_SHA512;
+		break;
+	case RTE_CRYPTO_AUTH_AES_GMAC:
+		auth_type = ROC_SE_GMAC_TYPE;
+		aes_gcm = 1;
+		break;
+	case RTE_CRYPTO_AUTH_SHA224_HMAC:
+	case RTE_CRYPTO_AUTH_SHA224:
+		auth_type = ROC_SE_SHA2_SHA224;
+		break;
+	case RTE_CRYPTO_AUTH_SHA384_HMAC:
+	case RTE_CRYPTO_AUTH_SHA384:
+		auth_type = ROC_SE_SHA2_SHA384;
+		break;
+	case RTE_CRYPTO_AUTH_MD5_HMAC:
+	case RTE_CRYPTO_AUTH_MD5:
+		auth_type = ROC_SE_MD5_TYPE;
+		break;
+	case RTE_CRYPTO_AUTH_KASUMI_F9:
+		auth_type = ROC_SE_KASUMI_F9_ECB;
+		/*
+		 * Indicate that direction needs to be taken out
+		 * from end of src
+		 */
+		zsk_flag = ROC_SE_K_F9;
+		break;
+	case RTE_CRYPTO_AUTH_SNOW3G_UIA2:
+		auth_type = ROC_SE_SNOW3G_UIA2;
+		zsk_flag = ROC_SE_ZS_IA;
+		break;
+	case RTE_CRYPTO_AUTH_ZUC_EIA3:
+		auth_type = ROC_SE_ZUC_EIA3;
+		zsk_flag = ROC_SE_ZS_IA;
+		break;
+	case RTE_CRYPTO_AUTH_NULL:
+		auth_type = 0;
+		is_null = 1;
+		break;
+	case RTE_CRYPTO_AUTH_AES_XCBC_MAC:
+	case RTE_CRYPTO_AUTH_AES_CMAC:
+	case RTE_CRYPTO_AUTH_AES_CBC_MAC:
+		CPT_LOG_DP_ERR("Crypto: Unsupported hash algo %u",
+			       a_form->algo);
+		return -1;
+	default:
+		CPT_LOG_DP_ERR("Crypto: Undefined Hash algo %u specified",
+			       a_form->algo);
+		return -1;
+	}
+
+	sess->zsk_flag = zsk_flag;
+	sess->aes_gcm = aes_gcm;
+	sess->mac_len = a_form->digest_length;
+	sess->is_null = is_null;
+	if (zsk_flag) {
+		sess->auth_iv_offset = a_form->iv.offset;
+		sess->auth_iv_length = a_form->iv.length;
+	}
+	if (unlikely(cpt_fc_auth_set_key(&sess->roc_se_ctx, auth_type,
+					 a_form->key.data, a_form->key.length,
+					 a_form->digest_length)))
+		return -1;
+
+	return 0;
+}
+
+static __rte_always_inline int
+fill_sess_gmac(struct rte_crypto_sym_xform *xform, struct cnxk_se_sess *sess)
+{
+	struct rte_crypto_auth_xform *a_form;
+	roc_se_cipher_type enc_type = 0; /* NULL Cipher type */
+	roc_se_auth_type auth_type = 0;	 /* NULL Auth type */
+
+	a_form = &xform->auth;
+
+	if (a_form->op == RTE_CRYPTO_AUTH_OP_GENERATE)
+		sess->cpt_op |= ROC_SE_OP_ENCODE;
+	else if (a_form->op == RTE_CRYPTO_AUTH_OP_VERIFY)
+		sess->cpt_op |= ROC_SE_OP_DECODE;
+	else {
+		CPT_LOG_DP_ERR("Unknown auth operation");
+		return -1;
+	}
+
+	switch (a_form->algo) {
+	case RTE_CRYPTO_AUTH_AES_GMAC:
+		enc_type = ROC_SE_AES_GCM;
+		auth_type = ROC_SE_GMAC_TYPE;
+		break;
+	default:
+		CPT_LOG_DP_ERR("Crypto: Undefined cipher algo %u specified",
+			       a_form->algo);
+		return -1;
+	}
+
+	sess->zsk_flag = 0;
+	sess->aes_gcm = 0;
+	sess->is_gmac = 1;
+	sess->iv_offset = a_form->iv.offset;
+	sess->iv_length = a_form->iv.length;
+	sess->mac_len = a_form->digest_length;
+
+	if (unlikely(cpt_fc_ciph_set_key(&sess->roc_se_ctx, enc_type,
+					 a_form->key.data, a_form->key.length,
+					 NULL)))
+		return -1;
+
+	if (unlikely(cpt_fc_auth_set_key(&sess->roc_se_ctx, auth_type, NULL, 0,
+					 a_form->digest_length)))
+		return -1;
+
+	return 0;
+}
+
 #endif /*_CNXK_SE_H_ */
