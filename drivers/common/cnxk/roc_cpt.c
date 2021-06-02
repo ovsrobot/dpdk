@@ -118,6 +118,34 @@ cpt_lf_unregister_irqs(struct roc_cpt_lf *lf)
 	cpt_lf_unregister_misc_irq(lf);
 }
 
+static void
+cpt_lf_dump(struct roc_cpt_lf *lf)
+{
+	plt_cpt_dbg("CPT LF");
+	plt_cpt_dbg("RBASE: 0x%016lx", lf->rbase);
+	plt_cpt_dbg("LMT_BASE: 0x%016lx", lf->lmt_base);
+	plt_cpt_dbg("MSIXOFF: 0x%x", lf->msixoff);
+	plt_cpt_dbg("LF_ID: 0x%x", lf->lf_id);
+	plt_cpt_dbg("NB DESC: %d", lf->nb_desc);
+	plt_cpt_dbg("FC_ADDR: 0x%016lx", (uintptr_t)lf->fc_addr);
+	plt_cpt_dbg("CQ.VADDR: 0x%016lx", (uintptr_t)lf->iq_vaddr);
+
+	plt_cpt_dbg("CPT LF REG:");
+	plt_cpt_dbg("LF_CTL[0x%016llx]: 0x%016lx", CPT_LF_CTL,
+		    plt_read64(lf->rbase + CPT_LF_CTL));
+	plt_cpt_dbg("Q_SIZE[0x%016llx]: 0x%016lx", CPT_LF_INPROG,
+		    plt_read64(lf->rbase + CPT_LF_INPROG));
+
+	plt_cpt_dbg("Q_BASE[0x%016llx]: 0x%016lx", CPT_LF_Q_BASE,
+		    plt_read64(lf->rbase + CPT_LF_Q_BASE));
+	plt_cpt_dbg("Q_SIZE[0x%016llx]: 0x%016lx", CPT_LF_Q_SIZE,
+		    plt_read64(lf->rbase + CPT_LF_Q_SIZE));
+	plt_cpt_dbg("Q_INST_PTR[0x%016llx]: 0x%016lx", CPT_LF_Q_INST_PTR,
+		    plt_read64(lf->rbase + CPT_LF_Q_INST_PTR));
+	plt_cpt_dbg("Q_GRP_PTR[0x%016llx]: 0x%016lx", CPT_LF_Q_GRP_PTR,
+		    plt_read64(lf->rbase + CPT_LF_Q_GRP_PTR));
+}
+
 int
 roc_cpt_rxc_time_cfg(struct roc_cpt *roc_cpt, struct roc_cpt_rxc_time_cfg *cfg)
 {
@@ -387,6 +415,8 @@ roc_cpt_lf_init(struct roc_cpt *roc_cpt, struct roc_cpt_lf *lf)
 
 	lf->pf_func = cpt->dev.pf_func;
 
+	cpt_lf_dump(lf);
+
 	return 0;
 
 lf_destroy:
@@ -528,6 +558,158 @@ roc_cpt_eng_grp_add(struct roc_cpt *roc_cpt, enum cpt_eng_type eng_type)
 	roc_cpt->eng_grp[eng_type] = rsp->eng_grp_num;
 
 	return rsp->eng_grp_num;
+}
+
+static int
+cpt_af_reg_read(struct roc_cpt *roc_cpt, uint64_t reg, uint64_t *val)
+{
+	struct cpt *cpt = roc_cpt_to_cpt_priv(roc_cpt);
+	struct cpt_rd_wr_reg_msg *msg;
+	struct dev *dev = &cpt->dev;
+	int ret;
+
+	msg = mbox_alloc_msg_cpt_rd_wr_register(dev->mbox);
+	if (msg == NULL)
+		return -EIO;
+
+	msg->hdr.pcifunc = dev->pf_func;
+
+	msg->is_write = 0;
+	msg->reg_offset = reg;
+	msg->ret_val = val;
+
+	ret = mbox_process_msg(dev->mbox, (void *)&msg);
+	if (ret)
+		return -EIO;
+
+	*val = msg->val;
+
+	return 0;
+}
+
+static int
+cpt_sts_print(struct roc_cpt *roc_cpt)
+{
+	struct cpt *cpt = roc_cpt_to_cpt_priv(roc_cpt);
+	struct dev *dev = &cpt->dev;
+	struct cpt_sts_req *req;
+	struct cpt_sts_rsp *rsp;
+	int ret;
+
+	req = mbox_alloc_msg_cpt_sts_get(dev->mbox);
+	if (req == NULL)
+		return -EIO;
+
+	req->blkaddr = 0;
+	ret = mbox_process_msg(dev->mbox, (void *)&rsp);
+	if (ret)
+		return -EIO;
+
+	plt_print("    %s:\t0x%016lx", "inst_req_pc", rsp->inst_req_pc);
+	plt_print("    %s:\t0x%016lx", "inst_lat_pc", rsp->inst_lat_pc);
+	plt_print("    %s:\t\t0x%016lx", "rd_req_pc", rsp->rd_req_pc);
+	plt_print("    %s:\t\t0x%016lx", "rd_lat_pc", rsp->rd_lat_pc);
+	plt_print("    %s:\t\t0x%016lx", "rd_uc_pc", rsp->rd_uc_pc);
+	plt_print("    %s:\t0x%016lx", "active_cycles_pc",
+		  rsp->active_cycles_pc);
+	plt_print("    %s:\t\t0x%016lx", "ctx_mis_pc", rsp->ctx_mis_pc);
+	plt_print("    %s:\t\t0x%016lx", "ctx_hit_pc", rsp->ctx_hit_pc);
+	plt_print("    %s:\t\t0x%016lx", "ctx_aop_pc", rsp->ctx_aop_pc);
+	plt_print("    %s:\t0x%016lx", "ctx_aop_lat_pc", rsp->ctx_aop_lat_pc);
+	plt_print("    %s:\t0x%016lx", "ctx_ifetch_pc", rsp->ctx_ifetch_pc);
+	plt_print("    %s:\t0x%016lx", "ctx_ifetch_lat_pc",
+		  rsp->ctx_ifetch_lat_pc);
+	plt_print("    %s:\t0x%016lx", "ctx_ffetch_pc", rsp->ctx_ffetch_pc);
+	plt_print("    %s:\t0x%016lx", "ctx_ffetch_lat_pc",
+		  rsp->ctx_ffetch_lat_pc);
+	plt_print("    %s:\t0x%016lx", "ctx_wback_pc", rsp->ctx_wback_pc);
+	plt_print("    %s:\t0x%016lx", "ctx_wback_lat_pc",
+		  rsp->ctx_wback_lat_pc);
+	plt_print("    %s:\t\t0x%016lx", "ctx_psh_pc", rsp->ctx_psh_pc);
+	plt_print("    %s:\t0x%016lx", "ctx_psh_lat_pc", rsp->ctx_psh_lat_pc);
+	plt_print("    %s:\t\t0x%016lx", "ctx_err", rsp->ctx_err);
+	plt_print("    %s:\t\t0x%016lx", "ctx_enc_id", rsp->ctx_enc_id);
+	plt_print("    %s:\t0x%016lx", "ctx_flush_timer", rsp->ctx_flush_timer);
+	plt_print("    %s:\t\t0x%016lx", "rxc_time", rsp->rxc_time);
+	plt_print("    %s:\t0x%016lx", "rxc_time_cfg", rsp->rxc_time_cfg);
+	plt_print("    %s:\t0x%016lx", "rxc_active_sts", rsp->rxc_active_sts);
+	plt_print("    %s:\t0x%016lx", "rxc_zombie_sts", rsp->rxc_zombie_sts);
+	plt_print("    %s:\t0x%016lx", "rxc_dfrg", rsp->rxc_dfrg);
+	plt_print("    %s:\t0x%016lx", "x2p_link_cfg0", rsp->x2p_link_cfg0);
+	plt_print("    %s:\t0x%016lx", "x2p_link_cfg1", rsp->x2p_link_cfg1);
+	plt_print("    %s:\t0x%016lx", "busy_sts_ae", rsp->busy_sts_ae);
+	plt_print("    %s:\t0x%016lx", "free_sts_ae", rsp->free_sts_ae);
+	plt_print("    %s:\t0x%016lx", "busy_sts_se", rsp->busy_sts_se);
+	plt_print("    %s:\t0x%016lx", "free_sts_se", rsp->free_sts_se);
+	plt_print("    %s:\t0x%016lx", "busy_sts_ie", rsp->busy_sts_ie);
+	plt_print("    %s:\t0x%016lx", "free_sts_ie", rsp->free_sts_ie);
+	plt_print("    %s:\t0x%016lx", "exe_err_info", rsp->exe_err_info);
+	plt_print("    %s:\t\t0x%016lx", "cptclk_cnt", rsp->cptclk_cnt);
+	plt_print("    %s:\t\t0x%016lx", "diag", rsp->diag);
+
+	return 0;
+}
+
+int
+roc_cpt_afs_print(struct roc_cpt *roc_cpt)
+{
+	uint64_t reg_val;
+
+	plt_print("CPT AF registers:");
+
+	if (cpt_af_reg_read(roc_cpt, CPT_AF_LFX_CTL(0), &reg_val))
+		return -EIO;
+
+	plt_print("    CPT_AF_LF0_CTL:\t0x%016lx", reg_val);
+
+	if (cpt_af_reg_read(roc_cpt, CPT_AF_LFX_CTL2(0), &reg_val))
+		return -EIO;
+
+	plt_print("    CPT_AF_LF0_CTL2:\t0x%016lx", reg_val);
+
+	cpt_sts_print(roc_cpt);
+
+	return 0;
+}
+
+static void
+cpt_lf_print(struct roc_cpt_lf *lf)
+{
+	uint64_t reg_val;
+
+	reg_val = plt_read64(lf->rbase + CPT_LF_CTX_ENC_BYTE_CNT);
+	plt_print("    Encrypted byte count:\t%ld", reg_val);
+
+	reg_val = plt_read64(lf->rbase + CPT_LF_CTX_ENC_PKT_CNT);
+	plt_print("    Encrypted packet count:\t%ld", reg_val);
+
+	reg_val = plt_read64(lf->rbase + CPT_LF_CTX_DEC_BYTE_CNT);
+	plt_print("    Decrypted byte count:\t%ld", reg_val);
+
+	reg_val = plt_read64(lf->rbase + CPT_LF_CTX_ENC_PKT_CNT);
+	plt_print("    Decrypted packet count:\t%ld", reg_val);
+}
+
+int
+roc_cpt_lfs_print(struct roc_cpt *roc_cpt)
+{
+	struct cpt *cpt = roc_cpt_to_cpt_priv(roc_cpt);
+	struct roc_cpt_lf *lf;
+	int lf_id;
+
+	if (cpt == NULL)
+		return -EINVAL;
+
+	for (lf_id = 0; lf_id < roc_cpt->nb_lf; lf_id++) {
+		lf = roc_cpt->lf[lf_id];
+		if (lf == NULL)
+			continue;
+
+		plt_print("Count registers for CPT LF%d:", lf_id);
+		cpt_lf_print(lf);
+	}
+
+	return 0;
 }
 
 void
