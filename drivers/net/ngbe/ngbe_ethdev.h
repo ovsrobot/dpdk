@@ -13,6 +13,7 @@
 #define NGBE_FLAG_MACSEC           (uint32_t)(1 << 3)
 #define NGBE_FLAG_NEED_LINK_CONFIG (uint32_t)(1 << 4)
 
+#define NGBE_VLAN_TAG_SIZE 4
 #define NGBE_HKEY_MAX_INDEX 10
 
 #define NGBE_RSS_OFFLOAD_ALL ( \
@@ -67,6 +68,10 @@ int  ngbe_dev_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 int  ngbe_dev_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 		uint16_t nb_tx_desc, unsigned int socket_id,
 		const struct rte_eth_txconf *tx_conf);
+
+int ngbe_dev_rx_init(struct rte_eth_dev *dev);
+
+void ngbe_dev_tx_init(struct rte_eth_dev *dev);
 
 int
 ngbe_dev_link_update_share(struct rte_eth_dev *dev,

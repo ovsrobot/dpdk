@@ -10,6 +10,8 @@ for Wangxun 1 Gigabit Ethernet NICs.
 Features
 --------
 
+- Checksum offload
+- Jumbo frames
 - Link state information
 
 Prerequisites

@@ -582,3 +582,190 @@ ngbe_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	return 0;
 }
 
+/*
+ * Initializes Receive Unit.
+ */
+int __rte_cold
+ngbe_dev_rx_init(struct rte_eth_dev *dev)
+{
+	struct ngbe_hw *hw;
+	struct ngbe_rx_queue *rxq;
+	uint64_t bus_addr;
+	uint32_t fctrl;
+	uint32_t hlreg0;
+	uint32_t srrctl;
+	uint32_t rdrxctl;
+	uint32_t rxcsum;
+	uint16_t buf_size;
+	uint16_t i;
+	struct rte_eth_rxmode *rx_conf = &dev->data->dev_conf.rxmode;
+
+	PMD_INIT_FUNC_TRACE();
+	hw = NGBE_DEV_HW(dev);
+
+	/*
+	 * Make sure receives are disabled while setting
+	 * up the RX context (registers, descriptor rings, etc.).
+	 */
+	wr32m(hw, NGBE_MACRXCFG, NGBE_MACRXCFG_ENA, 0);
+	wr32m(hw, NGBE_PBRXCTL, NGBE_PBRXCTL_ENA, 0);
+
+	/* Enable receipt of broadcasted frames */
+	fctrl = rd32(hw, NGBE_PSRCTL);
+	fctrl |= NGBE_PSRCTL_BCA;
+	wr32(hw, NGBE_PSRCTL, fctrl);
+
+	/*
+	 * Configure CRC stripping, if any.
+	 */
+	hlreg0 = rd32(hw, NGBE_SECRXCTL);
+	if (rx_conf->offloads & DEV_RX_OFFLOAD_KEEP_CRC)
+		hlreg0 &= ~NGBE_SECRXCTL_CRCSTRIP;
+	else
+		hlreg0 |= NGBE_SECRXCTL_CRCSTRIP;
+	hlreg0 &= ~NGBE_SECRXCTL_XDSA;
+	wr32(hw, NGBE_SECRXCTL, hlreg0);
+
+	/*
+	 * Configure jumbo frame support, if any.
+	 */
+	if (rx_conf->offloads & DEV_RX_OFFLOAD_JUMBO_FRAME) {
+		wr32m(hw, NGBE_FRMSZ, NGBE_FRMSZ_MAX_MASK,
+			NGBE_FRMSZ_MAX(rx_conf->max_rx_pkt_len));
+	} else {
+		wr32m(hw, NGBE_FRMSZ, NGBE_FRMSZ_MAX_MASK,
+			NGBE_FRMSZ_MAX(NGBE_FRAME_SIZE_DFT));
+	}
+
+	/*
+	 * If loopback mode is configured, set LPBK bit.
+	 */
+	hlreg0 = rd32(hw, NGBE_PSRCTL);
+	if (hw->is_pf && dev->data->dev_conf.lpbk_mode)
+		hlreg0 |= NGBE_PSRCTL_LBENA;
+	else
+		hlreg0 &= ~NGBE_PSRCTL_LBENA;
+
+	wr32(hw, NGBE_PSRCTL, hlreg0);
+
+	/*
+	 * Assume no header split and no VLAN strip support
+	 * on any Rx queue first .
+	 */
+	rx_conf->offloads &= ~DEV_RX_OFFLOAD_VLAN_STRIP;
+
+	/* Setup RX queues */
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+
+		/*
+		 * Reset crc_len in case it was changed after queue setup by a
+		 * call to configure.
+		 */
+		if (rx_conf->offloads & DEV_RX_OFFLOAD_KEEP_CRC)
+			rxq->crc_len = RTE_ETHER_CRC_LEN;
+		else
+			rxq->crc_len = 0;
+
+		/* Setup the Base and Length of the Rx Descriptor Rings */
+		bus_addr = rxq->rx_ring_phys_addr;
+		wr32(hw, NGBE_RXBAL(rxq->reg_idx),
+				(uint32_t)(bus_addr & BIT_MASK32));
+		wr32(hw, NGBE_RXBAH(rxq->reg_idx),
+				(uint32_t)(bus_addr >> 32));
+		wr32(hw, NGBE_RXRP(rxq->reg_idx), 0);
+		wr32(hw, NGBE_RXWP(rxq->reg_idx), 0);
+
+		srrctl = NGBE_RXCFG_RNGLEN(rxq->nb_rx_desc);
+
+		/* Set if packets are dropped when no descriptors available */
+		if (rxq->drop_en)
+			srrctl |= NGBE_RXCFG_DROP;
+
+		/*
+		 * Configure the RX buffer size in the PKTLEN field of
+		 * the RXCFG register of the queue.
+		 * The value is in 1 KB resolution. Valid values can be from
+		 * 1 KB to 16 KB.
+		 */
+		buf_size = (uint16_t)(rte_pktmbuf_data_room_size(rxq->mb_pool) -
+			RTE_PKTMBUF_HEADROOM);
+		buf_size = ROUND_DOWN(buf_size, 0x1 << 10);
+		srrctl |= NGBE_RXCFG_PKTLEN(buf_size);
+
+		wr32(hw, NGBE_RXCFG(rxq->reg_idx), srrctl);
+
+		/* It adds dual VLAN length for supporting dual VLAN */
+		if (dev->data->dev_conf.rxmode.max_rx_pkt_len +
+					    2 * NGBE_VLAN_TAG_SIZE > buf_size)
+			dev->data->scattered_rx = 1;
+		if (rxq->offloads & DEV_RX_OFFLOAD_VLAN_STRIP)
+			rx_conf->offloads |= DEV_RX_OFFLOAD_VLAN_STRIP;
+	}
+
+	if (rx_conf->offloads & DEV_RX_OFFLOAD_SCATTER)
+		dev->data->scattered_rx = 1;
+
+	/*
+	 * Setup the Checksum Register.
+	 * Disable Full-Packet Checksum which is mutually exclusive with RSS.
+	 * Enable IP/L4 checksum computation by hardware if requested to do so.
+	 */
+	rxcsum = rd32(hw, NGBE_PSRCTL);
+	rxcsum |= NGBE_PSRCTL_PCSD;
+	if (rx_conf->offloads & DEV_RX_OFFLOAD_CHECKSUM)
+		rxcsum |= NGBE_PSRCTL_L4CSUM;
+	else
+		rxcsum &= ~NGBE_PSRCTL_L4CSUM;
+
+	wr32(hw, NGBE_PSRCTL, rxcsum);
+
+	if (hw->is_pf) {
+		rdrxctl = rd32(hw, NGBE_SECRXCTL);
+		if (rx_conf->offloads & DEV_RX_OFFLOAD_KEEP_CRC)
+			rdrxctl &= ~NGBE_SECRXCTL_CRCSTRIP;
+		else
+			rdrxctl |= NGBE_SECRXCTL_CRCSTRIP;
+		wr32(hw, NGBE_SECRXCTL, rdrxctl);
+	}
+
+	return 0;
+}
+
+/*
+ * Initializes Transmit Unit.
+ */
+void __rte_cold
+ngbe_dev_tx_init(struct rte_eth_dev *dev)
+{
+	struct ngbe_hw     *hw;
+	struct ngbe_tx_queue *txq;
+	uint64_t bus_addr;
+	uint16_t i;
+
+	PMD_INIT_FUNC_TRACE();
+	hw = NGBE_DEV_HW(dev);
+
+	/* Enable TX CRC (checksum offload requirement) and hw padding
+	 * (TSO requirement)
+	 */
+	wr32m(hw, NGBE_SECTXCTL, NGBE_SECTXCTL_ODSA, NGBE_SECTXCTL_ODSA);
+	wr32m(hw, NGBE_SECTXCTL, NGBE_SECTXCTL_XDSA, 0);
+
+	/* Setup the Base and Length of the Tx Descriptor Rings */
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		txq = dev->data->tx_queues[i];
+
+		bus_addr = txq->tx_ring_phys_addr;
+		wr32(hw, NGBE_TXBAL(txq->reg_idx),
+				(uint32_t)(bus_addr & BIT_MASK32));
+		wr32(hw, NGBE_TXBAH(txq->reg_idx),
+				(uint32_t)(bus_addr >> 32));
+		wr32m(hw, NGBE_TXCFG(txq->reg_idx), NGBE_TXCFG_BUFLEN_MASK,
+			NGBE_TXCFG_BUFLEN(txq->nb_tx_desc));
+		/* Setup the HW Tx Head and TX Tail descriptor pointers */
+		wr32(hw, NGBE_TXRP(txq->reg_idx), 0);
+		wr32(hw, NGBE_TXWP(txq->reg_idx), 0);
+	}
+}
+
