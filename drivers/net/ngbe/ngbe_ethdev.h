@@ -6,6 +6,13 @@
 #ifndef _NGBE_ETHDEV_H_
 #define _NGBE_ETHDEV_H_
 
+/* need update link, bit flag */
+#define NGBE_FLAG_NEED_LINK_UPDATE (uint32_t)(1 << 0)
+#define NGBE_FLAG_MAILBOX          (uint32_t)(1 << 1)
+#define NGBE_FLAG_PHY_INTERRUPT    (uint32_t)(1 << 2)
+#define NGBE_FLAG_MACSEC           (uint32_t)(1 << 3)
+#define NGBE_FLAG_NEED_LINK_CONFIG (uint32_t)(1 << 4)
+
 #define NGBE_HKEY_MAX_INDEX 10
 
 #define NGBE_RSS_OFFLOAD_ALL ( \
@@ -19,11 +26,23 @@
 	ETH_RSS_IPV6_TCP_EX | \
 	ETH_RSS_IPV6_UDP_EX)
 
+#define NGBE_MISC_VEC_ID               RTE_INTR_VEC_ZERO_OFFSET
+
+/* structure for interrupt relative data */
+struct ngbe_interrupt {
+	uint32_t flags;
+	uint32_t mask_misc;
+	uint32_t mask_misc_orig; /* save mask during delayed handler */
+	uint64_t mask;
+	uint64_t mask_orig; /* save mask during delayed handler */
+};
+
 /*
  * Structure to store private data for each driver instance (for each port).
  */
 struct ngbe_adapter {
 	struct ngbe_hw             hw;
+	struct ngbe_interrupt      intr;
 };
 
 #define NGBE_DEV_ADAPTER(dev) \
@@ -32,6 +51,15 @@ struct ngbe_adapter {
 #define NGBE_DEV_HW(dev) \
 	(&((struct ngbe_adapter *)(dev)->data->dev_private)->hw)
 
+#define NGBE_DEV_INTR(dev) \
+	(&((struct ngbe_adapter *)(dev)->data->dev_private)->intr)
+
+int
+ngbe_dev_link_update_share(struct rte_eth_dev *dev,
+		int wait_to_complete);
+
+#define NGBE_LINK_DOWN_CHECK_TIMEOUT 4000 /* ms */
+#define NGBE_LINK_UP_CHECK_TIMEOUT   1000 /* ms */
 #define NGBE_VMDQ_NUM_UC_MAC         4096 /* Maximum nb. of UC MAC addr. */
 
 /*
