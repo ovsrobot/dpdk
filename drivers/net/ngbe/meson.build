@@ -7,6 +7,12 @@ if is_windows
 	subdir_done()
 endif
 
+subdir('base')
+objs = [base_objs]
+
 sources = files(
 	'ngbe_ethdev.c',
 )
+
+includes += include_directories('base')
+
