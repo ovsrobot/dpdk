@@ -2236,6 +2236,53 @@ ngbe_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	return 0;
 }
 
+void __rte_cold
+ngbe_dev_clear_queues(struct rte_eth_dev *dev)
+{
+	unsigned int i;
+	struct ngbe_adapter *adapter = NGBE_DEV_ADAPTER(dev);
+
+	PMD_INIT_FUNC_TRACE();
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		struct ngbe_tx_queue *txq = dev->data->tx_queues[i];
+
+		if (txq != NULL) {
+			txq->ops->release_mbufs(txq);
+			txq->ops->reset(txq);
+		}
+	}
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		struct ngbe_rx_queue *rxq = dev->data->rx_queues[i];
+
+		if (rxq != NULL) {
+			ngbe_rx_queue_release_mbufs(rxq);
+			ngbe_reset_rx_queue(adapter, rxq);
+		}
+	}
+}
+
+void
+ngbe_dev_free_queues(struct rte_eth_dev *dev)
+{
+	unsigned int i;
+
+	PMD_INIT_FUNC_TRACE();
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		ngbe_dev_rx_queue_release(dev->data->rx_queues[i]);
+		dev->data->rx_queues[i] = NULL;
+	}
+	dev->data->nb_rx_queues = 0;
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		ngbe_dev_tx_queue_release(dev->data->tx_queues[i]);
+		dev->data->tx_queues[i] = NULL;
+	}
+	dev->data->nb_tx_queues = 0;
+}
+
 static int __rte_cold
 ngbe_alloc_rx_queue_mbufs(struct ngbe_rx_queue *rxq)
 {

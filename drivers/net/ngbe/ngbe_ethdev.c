@@ -531,7 +531,68 @@ skip_link_setup:
 
 error:
 	PMD_INIT_LOG(ERR, "failure in dev start: %d", err);
+	ngbe_dev_clear_queues(dev);
 	return -EIO;
+}
+
+/*
+ * Stop device: disable rx and tx functions to allow for reconfiguring.
+ */
+static int
+ngbe_dev_stop(struct rte_eth_dev *dev)
+{
+	struct rte_eth_link link;
+	struct ngbe_hw *hw = NGBE_DEV_HW(dev);
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+
+	if (hw->adapter_stopped)
+		return 0;
+
+	PMD_INIT_FUNC_TRACE();
+
+	if ((hw->sub_system_id & NGBE_OEM_MASK) == NGBE_LY_M88E1512_SFP ||
+		(hw->sub_system_id & NGBE_OEM_MASK) == NGBE_LY_YT8521S_SFP) {
+		/* gpio0 is used to power on/off control*/
+		wr32(hw, NGBE_GPIODATA, NGBE_GPIOBIT_0);
+	}
+
+	/* disable interrupts */
+	ngbe_disable_intr(hw);
+
+	/* reset the NIC */
+	ngbe_pf_reset_hw(hw);
+	hw->adapter_stopped = 0;
+
+	/* stop adapter */
+	ngbe_stop_hw(hw);
+
+	ngbe_dev_clear_queues(dev);
+
+	/* Clear stored conf */
+	dev->data->scattered_rx = 0;
+
+	/* Clear recorded link status */
+	memset(&link, 0, sizeof(link));
+	rte_eth_linkstatus_set(dev, &link);
+
+	if (!rte_intr_allow_others(intr_handle))
+		/* resume to the default handler */
+		rte_intr_callback_register(intr_handle,
+					   ngbe_dev_interrupt_handler,
+					   (void *)dev);
+
+	/* Clean datapath event and queue/vec mapping */
+	rte_intr_efd_disable(intr_handle);
+	if (intr_handle->intr_vec != NULL) {
+		rte_free(intr_handle->intr_vec);
+		intr_handle->intr_vec = NULL;
+	}
+
+	hw->adapter_stopped = true;
+	dev->data->dev_started = 0;
+
+	return 0;
 }
 
 /*
@@ -540,11 +601,66 @@ error:
 static int
 ngbe_dev_close(struct rte_eth_dev *dev)
 {
+	struct ngbe_hw *hw = NGBE_DEV_HW(dev);
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	int retries = 0;
+	int ret;
+
 	PMD_INIT_FUNC_TRACE();
 
-	RTE_SET_USED(dev);
+	ngbe_pf_reset_hw(hw);
 
-	return 0;
+	ret = ngbe_dev_stop(dev);
+
+	ngbe_dev_free_queues(dev);
+
+	/* reprogram the RAR[0] in case user changed it. */
+	ngbe_set_rar(hw, 0, hw->mac.addr, 0, true);
+
+	/* Unlock any pending hardware semaphore */
+	ngbe_swfw_lock_reset(hw);
+
+	/* disable uio intr before callback unregister */
+	rte_intr_disable(intr_handle);
+
+	do {
+		ret = rte_intr_callback_unregister(intr_handle,
+				ngbe_dev_interrupt_handler, dev);
+		if (ret >= 0 || ret == -ENOENT) {
+			break;
+		} else if (ret != -EAGAIN) {
+			PMD_INIT_LOG(ERR,
+				"intr callback unregister failed: %d",
+				ret);
+		}
+		rte_delay_ms(100);
+	} while (retries++ < (10 + NGBE_LINK_UP_TIME));
+
+	rte_free(dev->data->mac_addrs);
+	dev->data->mac_addrs = NULL;
+
+	rte_free(dev->data->hash_mac_addrs);
+	dev->data->hash_mac_addrs = NULL;
+
+	return ret;
+}
+
+/*
+ * Reset PF device.
+ */
+static int
+ngbe_dev_reset(struct rte_eth_dev *dev)
+{
+	int ret;
+
+	ret = eth_ngbe_dev_uninit(dev);
+	if (ret)
+		return ret;
+
+	ret = eth_ngbe_dev_init(dev, NULL);
+
+	return ret;
 }
 
 static int
@@ -1120,6 +1236,9 @@ static const struct eth_dev_ops ngbe_eth_dev_ops = {
 	.dev_configure              = ngbe_dev_configure,
 	.dev_infos_get              = ngbe_dev_info_get,
 	.dev_start                  = ngbe_dev_start,
+	.dev_stop                   = ngbe_dev_stop,
+	.dev_close                  = ngbe_dev_close,
+	.dev_reset                  = ngbe_dev_reset,
 	.link_update                = ngbe_dev_link_update,
 	.dev_supported_ptypes_get   = ngbe_dev_supported_ptypes_get,
 	.rx_queue_start	            = ngbe_dev_rx_queue_start,

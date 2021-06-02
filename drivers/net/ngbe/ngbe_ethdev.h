@@ -61,6 +61,13 @@ struct ngbe_adapter {
 #define NGBE_DEV_INTR(dev) \
 	(&((struct ngbe_adapter *)(dev)->data->dev_private)->intr)
 
+/*
+ * RX/TX function prototypes
+ */
+void ngbe_dev_clear_queues(struct rte_eth_dev *dev);
+
+void ngbe_dev_free_queues(struct rte_eth_dev *dev);
+
 void ngbe_dev_rx_queue_release(void *rxq);
 
 void ngbe_dev_tx_queue_release(void *txq);
