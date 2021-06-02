@@ -354,6 +354,13 @@ ngbe_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	return 0;
 }
 
+const uint32_t *
+ngbe_dev_supported_ptypes_get(struct rte_eth_dev *dev)
+{
+	RTE_SET_USED(dev);
+	return ngbe_get_supported_ptypes();
+}
+
 /* return 0 means link status changed, -1 means not changed */
 int
 ngbe_dev_link_update_share(struct rte_eth_dev *dev,
@@ -661,6 +668,7 @@ static const struct eth_dev_ops ngbe_eth_dev_ops = {
 	.dev_configure              = ngbe_dev_configure,
 	.dev_infos_get              = ngbe_dev_info_get,
 	.link_update                = ngbe_dev_link_update,
+	.dev_supported_ptypes_get   = ngbe_dev_supported_ptypes_get,
 	.rx_queue_setup             = ngbe_dev_rx_queue_setup,
 	.rx_queue_release           = ngbe_dev_rx_queue_release,
 	.tx_queue_setup             = ngbe_dev_tx_queue_setup,

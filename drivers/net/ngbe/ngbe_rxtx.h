@@ -74,7 +74,6 @@ struct ngbe_tx_desc {
 		    sizeof(struct ngbe_rx_desc))
 
 #define NGBE_TX_MAX_SEG                    40
-#define NGBE_PTID_MASK                     0xFF
 
 /**
  * Structure associated with each descriptor of the RX ring of a RX queue.
