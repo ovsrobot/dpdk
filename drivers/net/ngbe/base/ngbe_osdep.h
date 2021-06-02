@@ -19,6 +19,8 @@
 #include <rte_config.h>
 #include <rte_io.h>
 
+#include "../ngbe_logs.h"
+
 #define RTE_LIBRTE_NGBE_TM        DCPV(1, 0)
 #define TMZ_PADDR(mz)  ((mz)->iova)
 #define TMZ_VADDR(mz)  ((mz)->addr)

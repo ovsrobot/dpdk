@@ -37,6 +37,7 @@ eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
 	struct ngbe_hw *hw = NGBE_DEV_HW(eth_dev);
 	const struct rte_memzone *mz;
+	int err;
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -61,6 +62,13 @@ eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 
 	hw->isb_dma = TMZ_PADDR(mz);
 	hw->isb_mem = TMZ_VADDR(mz);
+
+	/* Initialize the shared code (base driver) */
+	err = ngbe_init_shared_code(hw);
+	if (err != 0) {
+		PMD_INIT_LOG(ERR, "Shared code init failed: %d", err);
+		return -EIO;
+	}
 
 	return 0;
 }
