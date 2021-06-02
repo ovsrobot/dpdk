@@ -208,6 +208,9 @@ struct ngbe_tx_desc {
 
 #define rte_packet_prefetch(p)  rte_prefetch1(p)
 
+#define RTE_NGBE_REGISTER_POLL_WAIT_10_MS  10
+#define RTE_NGBE_WAIT_100_US               100
+
 #define NGBE_TX_MAX_SEG                    40
 
 /**

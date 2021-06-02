@@ -435,6 +435,12 @@ ngbe_dev_start(struct rte_eth_dev *dev)
 		goto error;
 	}
 
+	err = ngbe_dev_rxtx_start(dev);
+	if (err < 0) {
+		PMD_INIT_LOG(ERR, "Unable to start rxtx queues");
+		goto error;
+	}
+
 	/* Skip link setup if loopback mode is enabled. */
 	if (hw->is_pf && dev->data->dev_conf.lpbk_mode)
 		goto skip_link_setup;
@@ -1116,6 +1122,10 @@ static const struct eth_dev_ops ngbe_eth_dev_ops = {
 	.dev_start                  = ngbe_dev_start,
 	.link_update                = ngbe_dev_link_update,
 	.dev_supported_ptypes_get   = ngbe_dev_supported_ptypes_get,
+	.rx_queue_start	            = ngbe_dev_rx_queue_start,
+	.rx_queue_stop              = ngbe_dev_rx_queue_stop,
+	.tx_queue_start	            = ngbe_dev_tx_queue_start,
+	.tx_queue_stop              = ngbe_dev_tx_queue_stop,
 	.rx_queue_setup             = ngbe_dev_rx_queue_setup,
 	.rx_queue_release           = ngbe_dev_rx_queue_release,
 	.tx_queue_setup             = ngbe_dev_tx_queue_setup,
