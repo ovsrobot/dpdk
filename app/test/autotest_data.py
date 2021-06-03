@@ -10,12 +10,6 @@ from autotest_test_funcs import *
 # the grouping has been found largely empirically
 parallel_test_list = [
     {
-        "Name":    "Cycles autotest",
-        "Command": "cycles_autotest",
-        "Func":    default_autotest,
-        "Report":  None,
-    },
-    {
         "Name":    "Timer autotest",
         "Command": "timer_autotest",
         "Func":    timer_autotest,
@@ -180,12 +174,6 @@ parallel_test_list = [
     {
         "Name":    "String autotest",
         "Command": "string_autotest",
-        "Func":    default_autotest,
-        "Report":  None,
-    },
-    {
-        "Name":    "Alarm autotest",
-        "Command": "alarm_autotest",
         "Func":    default_autotest,
         "Report":  None,
     },
