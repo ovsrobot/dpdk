@@ -172,6 +172,13 @@ if libexecinfo.found() and cc.has_header('execinfo.h')
     dpdk_extra_ldflags += '-lexecinfo'
 endif
 
+libarchive = dependency('libarchive', required: false, method: 'pkg-config')
+if libarchive.found()
+    dpdk_conf.set('RTE_HAS_LIBARCHIVE', 1)
+    add_project_link_arguments('-larchive', language: 'c')
+    dpdk_extra_ldflags += '-larchive'
+endif
+
 # check for libbsd
 libbsd = dependency('libbsd', required: false, method: 'pkg-config')
 if libbsd.found()
