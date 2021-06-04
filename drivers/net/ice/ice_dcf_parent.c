@@ -3,7 +3,7 @@
  */
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <pthread.h>
+#include <rte_thread.h>
 #include <unistd.h>
 
 #include <rte_spinlock.h>
@@ -121,7 +121,7 @@ ice_dcf_vsi_update_service_handler(void *param)
 	struct ice_dcf_hw *hw = reset_param->dcf_hw;
 	struct ice_dcf_adapter *adapter;
 
-	pthread_detach(pthread_self());
+	rte_thread_detach(rte_thread_self());
 
 	rte_delay_us(ICE_DCF_VSI_UPDATE_SERVICE_INTERVAL);
 
@@ -156,7 +156,7 @@ start_vsi_reset_thread(struct ice_dcf_hw *dcf_hw, bool vfr, uint16_t vf_id)
 #define THREAD_NAME_LEN	16
 	struct ice_dcf_reset_event_param *param;
 	char name[THREAD_NAME_LEN];
-	pthread_t thread;
+	rte_thread_t thread;
 	int ret;
 
 	param = malloc(sizeof(*param));

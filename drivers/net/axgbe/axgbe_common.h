@@ -19,7 +19,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <inttypes.h>
-#include <pthread.h>
+#include <rte_thread.h>
 
 #include <rte_bitops.h>
 #include <rte_byteorder.h>

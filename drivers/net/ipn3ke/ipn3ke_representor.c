@@ -27,7 +27,7 @@
 #include "ipn3ke_ethdev.h"
 
 static int ipn3ke_rpst_scan_num;
-static pthread_t ipn3ke_rpst_scan_thread;
+static rte_thread_t ipn3ke_rpst_scan_thread;
 
 /** Double linked list of representor port. */
 TAILQ_HEAD(ipn3ke_rpst_list, ipn3ke_rpst);
@@ -2614,11 +2614,11 @@ ipn3ke_rpst_scan_check(void)
 			return -1;
 		}
 	} else if (ipn3ke_rpst_scan_num == 0) {
-		ret = pthread_cancel(ipn3ke_rpst_scan_thread);
+		ret = rte_thread_cancel(ipn3ke_rpst_scan_thread);
 		if (ret)
 			IPN3KE_AFU_PMD_ERR("Can't cancel the thread");
 
-		ret = pthread_join(ipn3ke_rpst_scan_thread, NULL);
+		ret = rte_thread_join(ipn3ke_rpst_scan_thread, NULL);
 		if (ret)
 			IPN3KE_AFU_PMD_ERR("Can't join the thread");
 

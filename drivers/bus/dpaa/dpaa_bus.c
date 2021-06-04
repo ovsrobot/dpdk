@@ -10,7 +10,7 @@
 #include <limits.h>
 #include <sched.h>
 #include <signal.h>
-#include <pthread.h>
+#include <rte_thread.h>
 #include <sys/types.h>
 #include <sys/syscall.h>
 #include <sys/eventfd.h>
@@ -48,7 +48,7 @@ static struct rte_dpaa_bus rte_dpaa_bus;
 struct netcfg_info *dpaa_netcfg;
 
 /* define a variable to hold the portal_key, once created.*/
-static pthread_key_t dpaa_portal_key;
+static rte_thread_key dpaa_portal_key;
 
 unsigned int dpaa_svr_family;
 
@@ -316,10 +316,10 @@ int rte_dpaa_portal_init(void *arg)
 	DPAA_PER_LCORE_PORTAL->bman_idx = bman_get_portal_index();
 	DPAA_PER_LCORE_PORTAL->tid = syscall(SYS_gettid);
 
-	ret = pthread_setspecific(dpaa_portal_key,
+	ret = rte_thread_value_set(dpaa_portal_key,
 				  (void *)DPAA_PER_LCORE_PORTAL);
 	if (ret) {
-		DPAA_BUS_LOG(ERR, "pthread_setspecific failed on core %u"
+		DPAA_BUS_LOG(ERR, "rte_thread_value_set failed on core %u"
 			     " (lcore=%u) with ret: %d", cpu, lcore, ret);
 		dpaa_portal_finish(NULL);
 
@@ -377,7 +377,7 @@ dpaa_portal_finish(void *arg)
 	bman_thread_finish();
 	qman_thread_finish();
 
-	pthread_setspecific(dpaa_portal_key, NULL);
+	rte_thread_value_set(dpaa_portal_key, NULL);
 
 	rte_free(dpaa_io_portal);
 	dpaa_io_portal = NULL;
@@ -453,9 +453,9 @@ rte_dpaa_bus_scan(void)
 	/* create the key, supplying a function that'll be invoked
 	 * when a portal affined thread will be deleted.
 	 */
-	ret = pthread_key_create(&dpaa_portal_key, dpaa_portal_finish);
+	ret = rte_thread_key_create(&dpaa_portal_key, dpaa_portal_finish);
 	if (ret) {
-		DPAA_BUS_LOG(DEBUG, "Unable to create pthread key. (%d)", ret);
+		DPAA_BUS_LOG(DEBUG, "Unable to create thread key. (%d)", ret);
 		dpaa_clean_device_list();
 		return ret;
 	}

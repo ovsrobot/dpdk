@@ -80,7 +80,7 @@ static uint64_t eal_hpet_resolution_hz = 0;
 /* Incremented 4 times during one 32bits hpet full count */
 static uint32_t eal_hpet_msb;
 
-static pthread_t msb_inc_thread_id;
+static rte_thread_t msb_inc_thread_id;
 
 /*
  * This function runs on a specific thread to update a global variable

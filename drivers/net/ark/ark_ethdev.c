@@ -563,7 +563,7 @@ eth_ark_dev_start(struct rte_eth_dev *dev)
 		ark_pktchkr_run(ark->pc);
 
 	if (ark->start_pg && (dev->data->port_id == 0)) {
-		pthread_t thread;
+		rte_thread_t thread;
 
 		/* Delay packet generatpr start allow the hardware to be ready
 		 * This is only used for sanity checking with internal generator

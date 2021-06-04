@@ -164,7 +164,7 @@ static void *initial_lthread(void *args __rte_unused)
 			rte_exit(EXIT_FAILURE, "Cannot create helloworld thread\n");
 
 		snprintf(name, sizeof(name), "helloworld-%u", (uint32_t)i);
-		rte_thread_setname(tid[i], name);
+		pthread_setname_np(tid[i], name);
 	}
 
 	/* wait for 1s to allow threads

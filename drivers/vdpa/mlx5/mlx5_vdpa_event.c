@@ -285,7 +285,7 @@ mlx5_vdpa_event_handle(void *arg)
 	case MLX5_VDPA_EVENT_MODE_FIXED_TIMER:
 		priv->timer_delay_us = priv->event_us;
 		while (1) {
-			pthread_mutex_lock(&priv->vq_config_lock);
+			rte_thread_mutex_lock(&priv->vq_config_lock);
 			max = mlx5_vdpa_queues_complete(priv);
 			if (max == 0 && priv->no_traffic_counter++ >=
 			    priv->no_traffic_max) {
@@ -293,10 +293,10 @@ mlx5_vdpa_event_handle(void *arg)
 					priv->vdev->device->name);
 				mlx5_vdpa_arm_all_cqs(priv);
 				do {
-					pthread_mutex_unlock
+					rte_thread_mutex_unlock
 							(&priv->vq_config_lock);
 					cq = mlx5_vdpa_event_wait(priv);
-					pthread_mutex_lock
+					rte_thread_mutex_lock
 							(&priv->vq_config_lock);
 					if (cq == NULL ||
 					       mlx5_vdpa_queue_complete(cq) > 0)
@@ -307,7 +307,7 @@ mlx5_vdpa_event_handle(void *arg)
 			} else if (max != 0) {
 				priv->no_traffic_counter = 0;
 			}
-			pthread_mutex_unlock(&priv->vq_config_lock);
+			rte_thread_mutex_unlock(&priv->vq_config_lock);
 			mlx5_vdpa_timer_sleep(priv, max);
 		}
 		return NULL;
@@ -315,10 +315,10 @@ mlx5_vdpa_event_handle(void *arg)
 		do {
 			cq = mlx5_vdpa_event_wait(priv);
 			if (cq != NULL) {
-				pthread_mutex_lock(&priv->vq_config_lock);
+				rte_thread_mutex_lock(&priv->vq_config_lock);
 				if (mlx5_vdpa_queue_complete(cq) > 0)
 					mlx5_vdpa_cq_arm(priv, cq);
-				pthread_mutex_unlock(&priv->vq_config_lock);
+				rte_thread_mutex_unlock(&priv->vq_config_lock);
 			}
 		} while (1);
 		return NULL;
@@ -340,7 +340,7 @@ mlx5_vdpa_err_interrupt_handler(void *cb_arg __rte_unused)
 	struct mlx5_vdpa_virtq *virtq;
 	uint64_t sec;
 
-	pthread_mutex_lock(&priv->vq_config_lock);
+	rte_thread_mutex_lock(&priv->vq_config_lock);
 	while (mlx5_glue->devx_get_event(priv->err_chnl, &out.event_resp,
 					 sizeof(out.buf)) >=
 				       (ssize_t)sizeof(out.event_resp.cookie)) {
@@ -386,7 +386,7 @@ log:
 			virtq->err_time[i - 1] = virtq->err_time[i];
 		virtq->err_time[RTE_DIM(virtq->err_time) - 1] = rte_rdtsc();
 	}
-	pthread_mutex_unlock(&priv->vq_config_lock);
+	rte_thread_mutex_unlock(&priv->vq_config_lock);
 #endif
 }
 
@@ -473,27 +473,25 @@ mlx5_vdpa_cqe_event_setup(struct mlx5_vdpa_priv *priv)
 {
 	int ret;
 	rte_cpuset_t cpuset;
-	pthread_attr_t attr;
+	rte_thread_attr_t attr;
 	char name[16];
-	const struct sched_param sp = {
-		.sched_priority = sched_get_priority_max(SCHED_RR),
-	};
 
 	if (!priv->eventc)
 		/* All virtqs are in poll mode. */
 		return 0;
-	pthread_attr_init(&attr);
-	ret = pthread_attr_setschedpolicy(&attr, SCHED_RR);
+
+	ret = rte_thread_attr_init(&attr);
 	if (ret) {
-		DRV_LOG(ERR, "Failed to set thread sched policy = RR.");
+		DRV_LOG(ERR, "Failed to initialize thread attributes");
 		return -1;
 	}
-	ret = pthread_attr_setschedparam(&attr, &sp);
+	ret = rte_thread_attr_set_priority(&attr,
+			RTE_THREAD_PRIORITY_REALTIME_CRITICAL);
 	if (ret) {
 		DRV_LOG(ERR, "Failed to set thread priority.");
 		return -1;
 	}
-	ret = pthread_create(&priv->timer_tid, &attr, mlx5_vdpa_event_handle,
+	ret = rte_thread_create(&priv->timer_tid, &attr, mlx5_vdpa_event_handle,
 			     (void *)priv);
 	if (ret) {
 		DRV_LOG(ERR, "Failed to create timer thread.");
@@ -504,13 +502,13 @@ mlx5_vdpa_cqe_event_setup(struct mlx5_vdpa_priv *priv)
 		CPU_SET(priv->event_core, &cpuset);
 	else
 		cpuset = rte_lcore_cpuset(rte_get_main_lcore());
-	ret = pthread_setaffinity_np(priv->timer_tid, sizeof(cpuset), &cpuset);
+	ret = rte_thread_set_affinity_by_id(priv->timer_tid, &cpuset);
 	if (ret) {
 		DRV_LOG(ERR, "Failed to set thread affinity.");
 		return -1;
 	}
 	snprintf(name, sizeof(name), "vDPA-mlx5-%d", priv->vid);
-	ret = rte_thread_setname(priv->timer_tid, name);
+	ret = pthread_setname_np(priv->timer_tid.opaque_id, name);
 	if (ret)
 		DRV_LOG(DEBUG, "Cannot set timer thread name.");
 	return 0;
@@ -519,13 +517,11 @@ mlx5_vdpa_cqe_event_setup(struct mlx5_vdpa_priv *priv)
 void
 mlx5_vdpa_cqe_event_unset(struct mlx5_vdpa_priv *priv)
 {
-	void *status;
-
-	if (priv->timer_tid) {
-		pthread_cancel(priv->timer_tid);
-		pthread_join(priv->timer_tid, &status);
+	if (priv->timer_tid.opaque_id) {
+		rte_thread_cancel(priv->timer_tid);
+		rte_thread_join(priv->timer_tid, NULL);
 	}
-	priv->timer_tid = 0;
+	priv->timer_tid.opaque_id = 0;
 }
 
 void

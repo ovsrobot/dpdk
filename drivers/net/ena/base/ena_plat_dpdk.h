@@ -148,14 +148,14 @@ extern int ena_logtype_com;
 
 typedef struct {
 	pthread_cond_t cond;
-	pthread_mutex_t mutex;
+	rte_thread_mutex_t mutex;
 	uint8_t flag;
 } ena_wait_event_t;
 
 #define ENA_WAIT_EVENT_INIT(waitevent)					       \
 	do {								       \
 		ena_wait_event_t *_we = &(waitevent);			       \
-		pthread_mutex_init(&_we->mutex, NULL);			       \
+		rte_thread_mutex_init(&_we->mutex);				       \
 		pthread_cond_init(&_we->cond, NULL);			       \
 		_we->flag = 0;						       \
 	} while (0)
@@ -172,7 +172,7 @@ typedef struct {
 		wait.tv_sec = now.tv_sec + _tmo / 1000000UL;		       \
 		timeout_us = _tmo % 1000000UL;				       \
 		wait.tv_nsec = (now.tv_usec + timeout_us) * 1000UL;	       \
-		pthread_mutex_lock(&_we->mutex);			       \
+		rte_thread_mutex_lock(&_we->mutex);			       \
 		while (ret == 0 && !_we->flag) {			       \
 			ret = pthread_cond_timedwait(&_we->cond,	       \
 				&_we->mutex, &wait);			       \
@@ -185,15 +185,15 @@ typedef struct {
 			ena_trc_err(NULL,				       \
 				"Timeout waiting for " #waitevent "\n");       \
 		_we->flag = 0;						       \
-		pthread_mutex_unlock(&_we->mutex);			       \
+		rte_thread_mutex_unlock(&_we->mutex);			       \
 	} while (0)
 #define ENA_WAIT_EVENT_SIGNAL(waitevent)				       \
 	do {								       \
 		ena_wait_event_t *_we = &(waitevent);			       \
-		pthread_mutex_lock(&_we->mutex);			       \
+		rte_thread_mutex_lock(&_we->mutex);			       \
 		_we->flag = 1;						       \
 		pthread_cond_signal(&_we->cond);			       \
-		pthread_mutex_unlock(&_we->mutex);			       \
+		rte_thread_mutex_unlock(&_we->mutex);			       \
 	} while (0)
 /* pthread condition doesn't need to be rearmed after usage */
 #define ENA_WAIT_EVENT_CLEAR(...)

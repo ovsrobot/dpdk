@@ -203,7 +203,7 @@ configure_ethdev(uint16_t port_id, uint8_t start, uint8_t en_isr)
 static int slaves_initialized;
 static int mac_slaves_initialized;
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static rte_thread_mutex_t mutex = RTE_THREAD_MUTEX_INITIALIZER;
 static pthread_cond_t cvar = PTHREAD_COND_INITIALIZER;
 
 
@@ -1191,11 +1191,11 @@ test_bonding_lsc_event_callback(uint16_t port_id __rte_unused,
 		void *param __rte_unused,
 		void *ret_param __rte_unused)
 {
-	pthread_mutex_lock(&mutex);
+	rte_thread_mutex_lock(&mutex);
 	test_lsc_interrupt_count++;
 
 	pthread_cond_signal(&cvar);
-	pthread_mutex_unlock(&mutex);
+	rte_thread_mutex_unlock(&mutex);
 
 	return 0;
 }
@@ -1220,11 +1220,11 @@ lsc_timeout(int wait_us)
 		ts.tv_sec += 1;
 	}
 
-	pthread_mutex_lock(&mutex);
+	rte_thread_mutex_lock(&mutex);
 	if (test_lsc_interrupt_count < 1)
 		retval = pthread_cond_timedwait(&cvar, &mutex, &ts);
 
-	pthread_mutex_unlock(&mutex);
+	rte_thread_mutex_unlock(&mutex);
 
 	if (retval == 0 && test_lsc_interrupt_count < 1)
 		return -1;

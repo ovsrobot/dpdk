@@ -26,7 +26,7 @@
 
 #ifdef RTE_LIB_PDUMP
 #ifdef RTE_NET_RING
-#include <pthread.h>
+#include <rte_thread.h>
 extern void *send_pkts(void *empty);
 extern uint16_t flag_for_send_pkts;
 #endif
@@ -47,7 +47,7 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 	char path[32];
 #ifdef RTE_LIB_PDUMP
 #ifdef RTE_NET_RING
-	pthread_t thread;
+	rte_thread_t thread;
 	int rc;
 #endif
 #endif
@@ -128,7 +128,7 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 #ifdef RTE_LIB_PDUMP
 #ifdef RTE_NET_RING
 	if ((strcmp(env_value, "run_pdump_server_tests") == 0)) {
-		rc = pthread_create(&thread, NULL, &send_pkts, NULL);
+		rc = rte_thread_create(&thread, NULL, &send_pkts, NULL);
 		if (rc != 0) {
 			rte_panic("Cannot start send pkts thread: %s\n",
 				  strerror(rc));
@@ -143,7 +143,7 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 #ifdef RTE_NET_RING
 	if ((strcmp(env_value, "run_pdump_server_tests") == 0)) {
 		flag_for_send_pkts = 0;
-		pthread_join(thread, NULL);
+		rte_thread_join(thread, NULL);
 	}
 #endif
 #endif

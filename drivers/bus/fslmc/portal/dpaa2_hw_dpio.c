@@ -13,7 +13,7 @@
 #include <stdarg.h>
 #include <inttypes.h>
 #include <signal.h>
-#include <pthread.h>
+#include <rte_thread.h>
 #include <sys/types.h>
 #include <sys/queue.h>
 #include <sys/ioctl.h>
@@ -59,7 +59,7 @@ uint8_t dpaa2_dqrr_size;
 uint8_t dpaa2_eqcr_size;
 
 /* Variable to hold the portal_key, once created.*/
-static pthread_key_t dpaa2_portal_key;
+static rte_thread_key dpaa2_portal_key;
 
 /*Stashing Macros default for LS208x*/
 static int dpaa2_core_cluster_base = 0x04;
@@ -92,10 +92,9 @@ dpaa2_get_core_id(void)
 	rte_cpuset_t cpuset;
 	int i, ret, cpu_id = -1;
 
-	ret = pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t),
-		&cpuset);
+	ret = rte_thread_get_affinity_by_id(rte_thread_self(), &cpuset);
 	if (ret) {
-		DPAA2_BUS_ERR("pthread_getaffinity_np() failed");
+		DPAA2_BUS_ERR("rte_thread_get_affinity_by_id() failed");
 		return ret;
 	}
 
@@ -296,9 +295,9 @@ static struct dpaa2_dpio_dev *dpaa2_get_qbman_swp(void)
 		}
 	}
 
-	ret = pthread_setspecific(dpaa2_portal_key, (void *)dpio_dev);
+	ret = rte_thread_value_set(dpaa2_portal_key, (void *)dpio_dev);
 	if (ret) {
-		DPAA2_BUS_ERR("pthread_setspecific failed with ret: %d", ret);
+		DPAA2_BUS_ERR("rte_thread_value_set failed with ret: %d", ret);
 		dpaa2_put_qbman_swp(dpio_dev);
 		return NULL;
 	}
@@ -357,7 +356,7 @@ static void dpaa2_portal_finish(void *arg)
 	dpaa2_put_qbman_swp(RTE_PER_LCORE(_dpaa2_io).dpio_dev);
 	dpaa2_put_qbman_swp(RTE_PER_LCORE(_dpaa2_io).ethrx_dpio_dev);
 
-	pthread_setspecific(dpaa2_portal_key, NULL);
+	rte_thread_value_set(dpaa2_portal_key, NULL);
 }
 
 static int
@@ -515,10 +514,10 @@ dpaa2_create_dpio_device(int vdev_fd,
 		/* create the key, supplying a function that'll be invoked
 		 * when a portal affined thread will be deleted.
 		 */
-		ret = pthread_key_create(&dpaa2_portal_key,
+		ret = rte_thread_key_create(&dpaa2_portal_key,
 					 dpaa2_portal_finish);
 		if (ret) {
-			DPAA2_BUS_DEBUG("Unable to create pthread key (%d)",
+			DPAA2_BUS_DEBUG("Unable to create thread key (%d)",
 					ret);
 			goto err;
 		}

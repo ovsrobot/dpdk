@@ -19,7 +19,12 @@ sources += files(
         'eal_timer.c',
         'fnmatch.c',
         'getopt.c',
-        'rte_thread.c',
 )
+
+if get_option('use_external_thread_lib')
+	sources += 'eal/common/rte_thread.c'
+else
+	sources += 'eal/windows/rte_thread.c'
+endif
 
 dpdk_conf.set10('RTE_EAL_NUMA_AWARE_HUGEPAGES', true)

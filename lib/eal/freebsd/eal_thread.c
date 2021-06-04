@@ -73,15 +73,15 @@ eal_thread_loop(__rte_unused void *arg)
 	char c;
 	int n, ret;
 	unsigned lcore_id;
-	pthread_t thread_id;
+	rte_thread_t thread_id;
 	int m2w, w2m;
 	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
 
-	thread_id = pthread_self();
+	thread_id = rte_thread_self();
 
 	/* retrieve our lcore_id from the configuration structure */
 	RTE_LCORE_FOREACH_WORKER(lcore_id) {
-		if (thread_id == lcore_config[lcore_id].thread_id)
+		if (rte_thread_equal(thread_id, lcore_config[lcore_id].thread_id))
 			break;
 	}
 	if (lcore_id == RTE_MAX_LCORE)
@@ -93,8 +93,8 @@ eal_thread_loop(__rte_unused void *arg)
 	__rte_thread_init(lcore_id, &lcore_config[lcore_id].cpuset);
 
 	ret = eal_thread_dump_current_affinity(cpuset, sizeof(cpuset));
-	RTE_LOG(DEBUG, EAL, "lcore %u is ready (tid=%p;cpuset=[%s%s])\n",
-		lcore_id, thread_id, cpuset, ret == 0 ? "" : "...");
+	RTE_LOG(DEBUG, EAL, "lcore %u is ready (cpuset=[%s%s])\n",
+		lcore_id, cpuset, ret == 0 ? "" : "...");
 
 	rte_eal_trace_thread_lcore_ready(lcore_id, cpuset);
 
@@ -143,14 +143,14 @@ int rte_sys_gettid(void)
 	return (int)lwpid;
 }
 
-int rte_thread_setname(pthread_t id, const char *name)
+int rte_thread_setname(rte_thread_t id, const char *name)
 {
 	/* this BSD function returns no error */
 	pthread_set_name_np(id, name);
 	return 0;
 }
 
-int rte_thread_getname(pthread_t id, char *name, size_t len)
+int rte_thread_getname(rte_thread_t id, char *name, size_t len)
 {
 	RTE_SET_USED(id);
 	RTE_SET_USED(name);

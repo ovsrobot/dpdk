@@ -58,4 +58,10 @@ eal_thread_dump_affinity(rte_cpuset_t *cpuset, char *str, unsigned int size);
 int
 eal_thread_dump_current_affinity(char *str, unsigned int size);
 
+/**
+ * Set the initial thread priority in the internal configuration
+ * to the default value of RTE_THREAD_PRIORITY_NORMAL.
+ */
+void rte_thread_priority_init(void);
+
 #endif /* EAL_THREAD_H */

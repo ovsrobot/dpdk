@@ -19,7 +19,7 @@
  * Structure storing internal configuration (per-lcore)
  */
 struct lcore_config {
-	pthread_t thread_id;       /**< pthread identifier */
+	rte_thread_t thread_id;       /**< pthread identifier */
 	int pipe_main2worker[2];   /**< communication pipe with main */
 	int pipe_worker2main[2];   /**< communication pipe with main */
 

@@ -47,7 +47,7 @@ struct bnxt_ulp_fc_info {
 	struct hw_fc_mem_info	shadow_hw_tbl[TF_DIR_MAX];
 	uint32_t		flags;
 	uint32_t		num_entries;
-	pthread_mutex_t		fc_lock;
+	rte_thread_mutex_t		fc_lock;
 };
 
 int32_t

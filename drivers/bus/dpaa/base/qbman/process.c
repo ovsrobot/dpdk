@@ -21,7 +21,7 @@
  * what the lock is for.
  */
 static int fd = -1;
-static pthread_mutex_t fd_init_lock = PTHREAD_MUTEX_INITIALIZER;
+static rte_thread_mutex_t fd_init_lock = RTE_THREAD_MUTEX_INITIALIZER;
 
 static int check_fd(void)
 {
@@ -29,12 +29,12 @@ static int check_fd(void)
 
 	if (fd >= 0)
 		return 0;
-	ret = pthread_mutex_lock(&fd_init_lock);
+	ret = rte_thread_mutex_lock(&fd_init_lock);
 	assert(!ret);
 	/* check again with the lock held */
 	if (fd < 0)
 		fd = open(PROCESS_PATH, O_RDWR);
-	ret = pthread_mutex_unlock(&fd_init_lock);
+	ret = rte_thread_mutex_unlock(&fd_init_lock);
 	assert(!ret);
 	return (fd >= 0) ? 0 : -ENODEV;
 }

@@ -8,7 +8,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <pthread.h>
+#include <rte_thread.h>
 
 #include <rte_string_fns.h>
 #include <rte_cycles.h>
@@ -194,7 +194,7 @@ static void *dlb2_complete_queue_map_unmap(void *__args)
 static inline void os_schedule_work(struct dlb2_hw *hw)
 {
 	struct dlb2_dev *dlb2_dev;
-	pthread_t complete_queue_map_unmap_thread;
+	rte_thread_t complete_queue_map_unmap_thread;
 	int ret;
 
 	dlb2_dev = container_of(hw, struct dlb2_dev, hw);

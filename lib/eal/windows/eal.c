@@ -274,6 +274,8 @@ rte_eal_init(int argc, char **argv)
 		eal_get_internal_configuration();
 	int ret;
 
+	rte_thread_priority_init();
+
 	eal_log_init(NULL, 0);
 
 	eal_log_level_parse(argc, argv);
@@ -375,6 +377,36 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
+	if (rte_thread_set_affinity_by_id(rte_thread_self(),
+			&lcore_config[config->main_lcore].cpuset) != 0) {
+		rte_eal_init_alert("Cannot set affinity");
+		rte_errno = EINVAL;
+		return -1;
+	}
+
+	ret = rte_thread_set_priority(rte_thread_self(),
+				      internal_conf->thread_priority);
+	if (ret != 0) {
+		rte_eal_init_alert("Cannot set thread priority");
+		rte_errno = ret;
+		return -1;
+	}
+
+	rte_thread_attr_t thread_attr;
+	ret = rte_thread_attr_init(&thread_attr);
+	if (ret != 0) {
+		rte_eal_init_alert("Cannot initialize thread attributes");
+		rte_errno = ret;
+		return -1;
+	}
+	ret = rte_thread_attr_set_priority(&thread_attr,
+					   internal_conf->thread_priority);
+	if (ret != 0) {
+		rte_eal_init_alert("Cannot set thread priority attribute");
+		rte_errno = ret;
+		return -1;
+	}
+
 	RTE_LCORE_FOREACH_WORKER(i) {
 
 		/*
@@ -390,8 +422,17 @@ rte_eal_init(int argc, char **argv)
 
 		lcore_config[i].state = WAIT;
 
+		ret = rte_thread_attr_set_affinity(&thread_attr, &lcore_config[i].cpuset);
+		if (ret != 0) {
+			rte_eal_init_alert("Cannot set thread affinity attribute");
+			rte_errno = ret;
+			return -1;
+		}
+
 		/* create a thread for each lcore */
-		if (eal_thread_create(&lcore_config[i].thread_id) != 0)
+		ret = rte_thread_create(&lcore_config[i].thread_id,
+					&thread_attr, eal_thread_loop, NULL);
+		if (ret != 0)
 			rte_panic("Cannot create thread\n");
 	}
 

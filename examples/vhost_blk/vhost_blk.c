@@ -5,7 +5,7 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
-#include <pthread.h>
+#include <rte_thread.h>
 #include <sched.h>
 
 #include <stdint.h>
@@ -533,7 +533,7 @@ ctrlr_worker(void *arg)
 {
 	struct vhost_blk_ctrlr *ctrlr = (struct vhost_blk_ctrlr *)arg;
 	cpu_set_t cpuset;
-	pthread_t thread;
+	rte_thread_t thread;
 	int i;
 
 	fprintf(stdout, "Ctrlr Worker Thread start\n");
@@ -545,10 +545,10 @@ ctrlr_worker(void *arg)
 		exit(0);
 	}
 
-	thread = pthread_self();
+	thread = rte_thread_self();
 	CPU_ZERO(&cpuset);
 	CPU_SET(0, &cpuset);
-	pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+	rte_thread_set_affinity_by_id(thread, &cpuset);
 
 	for (i = 0; i < NUM_OF_BLK_QUEUES; i++)
 		submit_inflight_vq(&ctrlr->queues[i]);
@@ -604,7 +604,7 @@ new_device(int vid)
 	struct vhost_blk_queue *vq;
 	char path[PATH_MAX];
 	uint64_t features, protocol_features;
-	pthread_t tid;
+	rte_thread_t tid;
 	int i, ret;
 	bool packed_ring, inflight_shmfd;
 
@@ -693,7 +693,7 @@ new_device(int vid)
 
 	/* device has been started */
 	ctrlr->started = 1;
-	pthread_detach(tid);
+	rte_thread_detach(tid);
 	return 0;
 }
 
