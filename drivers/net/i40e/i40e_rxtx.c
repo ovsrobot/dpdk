@@ -452,7 +452,7 @@ i40e_rx_scan_hw_ring(struct i40e_rx_queue *rxq)
 	uint16_t pkt_len;
 	uint64_t qword1;
 	uint32_t rx_status;
-	int32_t s[I40E_LOOK_AHEAD], nb_dd;
+	int32_t s[I40E_LOOK_AHEAD], var, nb_dd;
 	int32_t i, j, nb_rx = 0;
 	uint64_t pkt_flags;
 	uint32_t *ptype_tbl = rxq->vsi->adapter->ptype_tbl;
@@ -482,11 +482,14 @@ i40e_rx_scan_hw_ring(struct i40e_rx_queue *rxq)
 					I40E_RXD_QW1_STATUS_SHIFT;
 		}
 
-		rte_smp_rmb();
-
 		/* Compute how many status bits were set */
-		for (j = 0, nb_dd = 0; j < I40E_LOOK_AHEAD; j++)
-			nb_dd += s[j] & (1 << I40E_RX_DESC_STATUS_DD_SHIFT);
+		for (j = 0, nb_dd = 0; j < I40E_LOOK_AHEAD; j++) {
+			var = s[j] & (1 << I40E_RX_DESC_STATUS_DD_SHIFT);
+			if (var)
+				nb_dd += 1;
+			else
+				break;
+		}
 
 		nb_rx += nb_dd;
 
