@@ -7,7 +7,4 @@
 
 #include <pthread.h>
 
-#define EAL_THREAD_PRIORITY_NORMAL               0
-#define EAL_THREAD_PRIORITY_REALTIME_CIRTICAL    99
-
 #endif /* _RTE_THREAD_TYPES_H_ */
