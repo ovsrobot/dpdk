@@ -7,4 +7,8 @@
 
 #include <pthread.h>
 
+#define RTE_THREAD_MUTEX_INITIALIZER     PTHREAD_MUTEX_INITIALIZER
+
+typedef pthread_mutex_t                 rte_thread_mutex_t;
+
 #endif /* _RTE_THREAD_TYPES_H_ */

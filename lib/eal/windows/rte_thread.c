@@ -471,6 +471,88 @@ cleanup:
 }
 
 int
+rte_thread_mutex_init(rte_thread_mutex_t *mutex)
+{
+	int ret = 0;
+	CRITICAL_SECTION *m = NULL;
+
+	RTE_VERIFY(mutex != NULL);
+
+	m = calloc(1, sizeof(*m));
+	if (m == NULL) {
+		RTE_LOG(DEBUG, EAL, "Unable to initialize mutex. Insufficient memory!\n");
+		ret = ENOMEM;
+		goto cleanup;
+	}
+
+	InitializeCriticalSection(m);
+	mutex->mutex_id = m;
+	m = NULL;
+
+cleanup:
+	return ret;
+}
+
+int
+rte_thread_mutex_lock(rte_thread_mutex_t *mutex)
+{
+	int ret = 0;
+	void* id = 0;
+	rte_thread_mutex_t m;
+
+	RTE_VERIFY(mutex != NULL);
+
+	/* Check if mutex has been statically initialized */
+	id = InterlockedCompareExchangePointer(&mutex->mutex_id, mutex->mutex_id, WINDOWS_MUTEX_INITIALIZER);
+	/* If mutex has been statically initialized */
+	if (id == WINDOWS_MUTEX_INITIALIZER) {
+		ret = rte_thread_mutex_init(&m);
+		if (ret != 0) {
+			return ret;
+		}
+
+		id = InterlockedCompareExchangePointer(&mutex->mutex_id, m.mutex_id, WINDOWS_MUTEX_INITIALIZER);
+		/* If meanwhile the mutex was initialized by a different thread,
+		 * destroy the local initialization.
+		 */
+		if (id != WINDOWS_MUTEX_INITIALIZER) {
+			rte_thread_mutex_destroy(&m);
+		}
+	}
+
+	EnterCriticalSection(mutex->mutex_id);
+
+	return 0;
+}
+
+int
+rte_thread_mutex_unlock(rte_thread_mutex_t *mutex)
+{
+	RTE_VERIFY(mutex != NULL);
+
+	LeaveCriticalSection(mutex->mutex_id);
+	return 0;
+}
+
+int
+rte_thread_mutex_destroy(rte_thread_mutex_t *mutex)
+{
+	RTE_VERIFY(mutex != NULL);
+
+	if (mutex->mutex_id == WINDOWS_MUTEX_INITIALIZER) {
+		goto cleanup;
+	}
+
+	DeleteCriticalSection(mutex->mutex_id);
+	free(mutex->mutex_id);
+
+cleanup:
+	mutex->mutex_id = NULL;
+
+	return 0;
+}
+
+int
 rte_thread_cancel(rte_thread_t thread_id)
 {
 	int ret = 0;
@@ -549,7 +631,6 @@ rte_thread_key_delete(rte_thread_key key)
 int
 rte_thread_value_set(rte_thread_key key, const void *value)
 {
-	int ret;
 	char *p;
 
 	if (key == NULL) {
