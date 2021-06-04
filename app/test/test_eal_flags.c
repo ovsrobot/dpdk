@@ -29,6 +29,17 @@
 #define mp_flag "--proc-type=secondary"
 #define no_hpet "--no-hpet"
 #define no_huge "--no-huge"
+/* FreeBSD does not support running multiple primary processes, hence for tests
+ * requiring no-shconf, no-huge is also required.
+ * On Linux on the other hand no-huge is not needed so don't pass it as it
+ * would break cases when IOMMU is not able to provide IOVA translation
+ * (rte_eal_iova_mode() == RTE_IOVA_PA).
+ */
+#ifdef RTE_EXEC_ENV_LINUX
+#define no_huge_compat ""
+#else
+#define no_huge_compat no_huge
+#endif
 #define no_shconf "--no-shconf"
 #define allow "--allow"
 #define vdev "--vdev"
@@ -354,18 +365,18 @@ test_invalid_vdev_flag(void)
 #endif
 
 	/* Test with invalid vdev option */
-	const char *vdevinval[] = {prgname, prefix, no_huge,
-				vdev, "eth_dummy"};
+	const char * const vdevinval[] = {prgname, prefix, no_huge_compat,
+					  vdev, "eth_dummy"};
 
 	/* Test with valid vdev option */
-	const char *vdevval1[] = {prgname, prefix, no_huge,
-	vdev, "net_ring0"};
+	const char * const vdevval1[] = {prgname, prefix, no_huge_compat,
+					 vdev, "net_ring0"};
 
-	const char *vdevval2[] = {prgname, prefix, no_huge,
-	vdev, "net_ring0,args=test"};
+	const char * const vdevval2[] = {prgname, prefix, no_huge_compat,
+					 vdev, "net_ring0,args=test"};
 
-	const char *vdevval3[] = {prgname, prefix, no_huge,
-	vdev, "net_ring0,nodeaction=r1:0:CREATE"};
+	const char * const vdevval3[] = {prgname, prefix, no_huge_compat,
+		vdev, "net_ring0,nodeaction=r1:0:CREATE"};
 
 	if (launch_proc(vdevinval) == 0) {
 		printf("Error - process did run ok with invalid "
@@ -674,19 +685,20 @@ test_invalid_n_flag(void)
 #endif
 
 	/* -n flag but no value */
-	const char *argv1[] = { prgname, prefix, no_huge, no_shconf,
-				"-n"};
+	const char * const argv1[] = { prgname, prefix, no_huge_compat,
+				       no_shconf, "-n"};
 	/* bad numeric value */
-	const char *argv2[] = { prgname, prefix, no_huge, no_shconf,
-				"-n", "e" };
+	const char * const argv2[] = { prgname, prefix, no_huge_compat,
+				       no_shconf, "-n", "e" };
 	/* zero is invalid */
-	const char *argv3[] = { prgname, prefix, no_huge, no_shconf,
-				"-n", "0" };
+	const char * const argv3[] = { prgname, prefix, no_huge_compat,
+				       no_shconf, "-n", "0" };
 	/* sanity test - check with good value */
-	const char *argv4[] = { prgname, prefix, no_huge, no_shconf,
-				"-n", "2" };
+	const char * const argv4[] = { prgname, prefix, no_huge_compat,
+				       no_shconf, "-n", "2" };
 	/* sanity test - check with no -n flag */
-	const char *argv5[] = { prgname, prefix, no_huge, no_shconf};
+	const char * const argv5[] = { prgname, prefix, no_huge_compat,
+				       no_shconf};
 
 	if (launch_proc(argv1) == 0
 			|| launch_proc(argv2) == 0
@@ -878,7 +890,7 @@ test_misc_flags(void)
 	const char *argv5[] = {prgname, prefix, mp_flag, "--syslog", "error"};
 	/* With no-sh-conf, also use no-huge to ensure this test runs on BSD */
 	const char *argv6[] = {prgname, "-m", DEFAULT_MEM_SIZE,
-			no_shconf, nosh_prefix, no_huge};
+			no_shconf, nosh_prefix, no_huge_compat};
 
 	/* With --huge-dir */
 	const char *argv7[] = {prgname, "-m", DEFAULT_MEM_SIZE,
@@ -920,7 +932,7 @@ test_misc_flags(void)
 
 	/* With process type as auto-detect with no-shconf */
 	const char * const argv17[] = {prgname, "--proc-type=auto",
-			no_shconf, nosh_prefix, no_huge};
+			no_shconf, nosh_prefix, no_huge_compat};
 
 	/* With process type as --create-uio-dev flag */
 	const char * const argv18[] = {prgname, "--file-prefix=uiodev",
