@@ -5,17 +5,18 @@
 #ifndef _RTE_BYTEORDER_ARM_H_
 #define _RTE_BYTEORDER_ARM_H_
 
-#ifndef RTE_FORCE_INTRINSICS
-#  error Platform must be built with RTE_FORCE_INTRINSICS
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <stdint.h>
 #include <rte_common.h>
+#include <rte_config.h>
 #include "generic/rte_byteorder.h"
+
+#ifndef RTE_FORCE_INTRINSICS
+#  error Platform must be built with RTE_FORCE_INTRINSICS
+#endif
 
 /* fix missing __builtin_bswap16 for gcc older then 4.8 */
 #if !(__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8))
