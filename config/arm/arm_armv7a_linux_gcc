@@ -1,0 +1,17 @@
+[binaries]
+c = 'arm-none-linux-gnueabi-gcc'
+cpp = 'arm-none-linux-gnueabi-cpp'
+ar = 'arm-none-linux-gnueabi-ar'
+strip = 'arm-none-linux-gnueabi-strip'
+pkgconfig = 'arm-none-linux-gnueabi-pkg-config'
+pcap-config = ''
+
+[host_machine]
+system = 'linux'
+cpu_family = 'arm'
+cpu = 'armv7-a'
+endian = 'little'
+
+[properties]
+# Generate binaries that are portable across all Armv7 machines
+platform = 'generic'
