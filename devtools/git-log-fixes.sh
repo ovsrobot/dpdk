@@ -34,13 +34,15 @@ done
 shift $(($OPTIND - 1))
 [ $# -ge 1 ] || usage_error 'range argument required'
 range="$*"
+range_last=$(git log --oneline v21.05-rc3..v21.05 |head -n1|cut -d' ' -f1)
+# use first branch
+refbranch=$(git branch --contains $range_last -r --sort=-authordate |head -n1)
 
 # get major release version of a commit
 commit_version () # <hash>
 {
 	local VER="v*.*"
 	# use current branch as history reference
-	local refbranch=$(git rev-parse --abbrev-ref HEAD)
 	local tag=$( (git tag -l $VER --contains $1 --sort=creatordate --merged $refbranch 2>&- ||
 		# tag --merged option has been introduced in git 2.7.0
 		# below is a fallback in case of old git version
