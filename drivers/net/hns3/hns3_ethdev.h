@@ -139,6 +139,7 @@ struct hns3_dcb_info {
 	struct hns3_tc_info tc_info[HNS3_MAX_TC_NUM];
 	uint8_t hw_pfc_map; /* Allow for packet drop or not on this TC */
 	uint8_t pfc_en; /* Pfc enabled or not for user priority */
+	uint32_t dcb_capability_en;
 };
 
 enum hns3_fc_status {

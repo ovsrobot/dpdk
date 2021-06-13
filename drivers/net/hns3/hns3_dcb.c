@@ -1427,10 +1427,12 @@ hns3_dcb_cfg_validate(struct hns3_adapter *hns, uint8_t *tc, bool *changed)
 	 * We ensure that dcb information can be reconfigured
 	 * after the hns3_priority_flow_ctrl_set function called.
 	 */
-	if (hw->requested_fc_mode != HNS3_FC_FULL)
+	if (hw->requested_fc_mode != HNS3_FC_FULL ||
+		hw->requested_fc_mode != HNS3_FC_NONE)
 		*changed = true;
 	pfc_en = RTE_LEN2MASK((uint8_t)dcb_rx_conf->nb_tcs, uint8_t);
-	if (hw->dcb_info.pfc_en != pfc_en)
+	if (hw->dcb_info.pfc_en != pfc_en || hw->dcb_info.dcb_capability_en !=
+		hw->data->dev_conf.dcb_capability_en)
 		*changed = true;
 
 	/* tx/rx queue number is reconfigured. */
@@ -1567,36 +1569,32 @@ hns3_dcb_hw_configure(struct hns3_adapter *hns)
 		hw->dcb_info.hw_pfc_map =
 				hns3_dcb_undrop_tc_map(hw, hw->dcb_info.pfc_en);
 
-		ret = hns3_buffer_alloc(hw);
-		if (ret)
-			goto buffer_alloc_fail;
-
 		hw->current_fc_status = HNS3_FC_STATUS_PFC;
 		hw->requested_fc_mode = HNS3_FC_FULL;
-		ret = hns3_dcb_pause_setup_hw(hw);
-		if (ret) {
-			hns3_err(hw, "setup pfc failed! ret = %d", ret);
-			goto pfc_setup_fail;
-		}
 	} else {
-		/*
-		 * Although dcb_capability_en is lack of ETH_DCB_PFC_SUPPORT
-		 * flag, the DCB information is configured, such as tc numbers.
-		 * Therefore, refreshing the allocation of packet buffer is
-		 * necessary.
-		 */
-		ret = hns3_buffer_alloc(hw);
-		if (ret)
-			return ret;
+		hw->current_fc_status = HNS3_FC_STATUS_NONE;
+		hw->requested_fc_mode = HNS3_FC_NONE;
+		hw->dcb_info.pfc_en = 0;
+		hw->dcb_info.hw_pfc_map = 0;
 	}
+
+	ret = hns3_buffer_alloc(hw);
+	if (ret)
+		goto cfg_fail;
+
+	ret = hns3_dcb_pause_setup_hw(hw);
+	if (ret) {
+		hns3_err(hw, "setup pfc failed! ret = %d", ret);
+		goto cfg_fail;
+	}
+
+	hw->dcb_info.dcb_capability_en = hw->data->dev_conf.dcb_capability_en;
 
 	return 0;
 
-pfc_setup_fail:
+cfg_fail:
 	hw->requested_fc_mode = requested_fc_mode;
 	hw->current_fc_status = fc_status;
-
-buffer_alloc_fail:
 	hw->dcb_info.pfc_en = pfc_en;
 	hw->dcb_info.hw_pfc_map = hw_pfc_map;
 
@@ -1781,15 +1779,21 @@ hns3_dcb_pfc_enable(struct rte_eth_dev *dev, struct rte_eth_pfc_conf *pfc_conf)
 	uint16_t pause_time = pf->pause_time;
 	int ret;
 
-	pf->pause_time = pfc_conf->fc.pause_time;
-	hns3_get_fc_mode(hw, pfc_conf->fc.mode);
-	hw->current_fc_status = HNS3_FC_STATUS_PFC;
 	hw->dcb_info.pfc_en |= BIT(priority);
 	hw->dcb_info.hw_pfc_map =
 			hns3_dcb_undrop_tc_map(hw, hw->dcb_info.pfc_en);
 	ret = hns3_buffer_alloc(hw);
-	if (ret)
-		goto pfc_setup_fail;
+	if (ret) {
+		hns3_err(hw, "update packet buffer failed, ret = %d", ret);
+		goto buffer_alloc_fail;
+	}
+
+	pf->pause_time = pfc_conf->fc.pause_time;
+	hns3_get_fc_mode(hw, pfc_conf->fc.mode);
+	if (hw->requested_fc_mode == HNS3_FC_NONE)
+		hw->current_fc_status = HNS3_FC_STATUS_NONE;
+	else
+		hw->current_fc_status = HNS3_FC_STATUS_PFC;
 
 	/*
 	 * The flow control mode of all UPs will be changed based on
@@ -1807,6 +1811,7 @@ pfc_setup_fail:
 	hw->requested_fc_mode = old_fc_mode;
 	hw->current_fc_status = fc_status;
 	pf->pause_time = pause_time;
+buffer_alloc_fail:
 	hw->dcb_info.pfc_en = pfc_en;
 	hw->dcb_info.hw_pfc_map = hw_pfc_map;
 
