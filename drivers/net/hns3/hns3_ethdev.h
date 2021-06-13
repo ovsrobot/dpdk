@@ -868,7 +868,11 @@ enum {
 	HNS3_DEV_SUPPORT_RXD_ADV_LAYOUT_B,
 	HNS3_DEV_SUPPORT_OUTER_UDP_CKSUM_B,
 	HNS3_DEV_SUPPORT_RAS_IMP_B,
+	HNS3_DEV_SUPPORT_VF_VLAN_FLT_MOD_B,
 };
+
+#define hns3_dev_vf_vlan_flt_supported(hw) \
+		hns3_get_bit((hw)->capability, HNS3_DEV_SUPPORT_VF_VLAN_FLT_MOD_B)
 
 #define hns3_dev_dcb_supported(hw) \
 	hns3_get_bit((hw)->capability, HNS3_DEV_SUPPORT_DCB_B)
