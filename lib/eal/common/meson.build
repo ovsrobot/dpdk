@@ -77,6 +77,7 @@ sources += files(
         'malloc_mp.c',
         'rte_keepalive.c',
         'rte_malloc.c',
+        'rte_parray.c',
         'rte_random.c',
         'rte_reciprocal.c',
         'rte_service.c',

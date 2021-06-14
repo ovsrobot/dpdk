@@ -432,4 +432,8 @@ INTERNAL {
 	rte_mem_map;
 	rte_mem_page_size;
 	rte_mem_unmap;
+	rte_parray_alloc;
+	rte_parray_find_next;
+	rte_parray_free;
+	rte_parray_free_all;
 };

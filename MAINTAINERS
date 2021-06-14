@@ -167,6 +167,7 @@ F: app/test/test_errno.c
 F: app/test/test_lcores.c
 F: app/test/test_logs.c
 F: app/test/test_memcpy*
+F: app/test/test_parray.c
 F: app/test/test_per_lcore.c
 F: app/test/test_pflock.c
 F: app/test/test_prefetch.c
