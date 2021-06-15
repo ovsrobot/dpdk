@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added Baseband phy CNXK PMD.**
+
+  Added new Baseband phy CGX/RPM PMD which is used for configuring Ethernet I/O
+  interfaces hardwired to Baseband phy subsystem. Configuration happens via
+  standard rawdev enq/deq operations. See the :doc:`../rawdevs/cnxk_bphy`
+  rawdev guide for more details on this driver.
+
 
 Removed Items
 -------------
