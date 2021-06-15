@@ -2254,6 +2254,10 @@ cmd_config_rss_parsed(void *parsed_result,
 		rss_conf.rss_hf = ETH_RSS_ECPRI;
 	else if (!strcmp(res->value, "mpls"))
 		rss_conf.rss_hf = ETH_RSS_MPLS;
+	else if (!strcmp(res->value, "ipv4-chksum"))
+		rss_conf.rss_hf = ETH_RSS_IPV4_CHKSUM;
+	else if (!strcmp(res->value, "l4-chksum"))
+		rss_conf.rss_hf = ETH_RSS_L4_CHKSUM;
 	else if (!strcmp(res->value, "none"))
 		rss_conf.rss_hf = 0;
 	else if (!strcmp(res->value, "level-default")) {

@@ -537,6 +537,8 @@ struct rte_eth_rss_conf {
 #define ETH_RSS_PPPOE		   (1ULL << 31)
 #define ETH_RSS_ECPRI		   (1ULL << 32)
 #define ETH_RSS_MPLS		   (1ULL << 33)
+#define ETH_RSS_IPV4_CHKSUM	   (1ULL << 34)
+#define ETH_RSS_L4_CHKSUM	   (1ULL << 35)
 
 /*
  * We use the following macros to combine with above ETH_RSS_* for
