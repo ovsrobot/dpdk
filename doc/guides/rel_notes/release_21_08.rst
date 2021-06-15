@@ -54,7 +54,7 @@ New Features
      This section is a comment. Do not overwrite or remove it.
      Also, make sure to start the actual text at the margin.
      =======================================================
-
+   * Added support multi-process for testpmd.
 
 Removed Items
 -------------
