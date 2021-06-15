@@ -62,6 +62,12 @@ New Features
   standard rawdev enq/deq operations. See the :doc:`../rawdevs/cnxk_bphy`
   rawdev guide for more details on this driver.
 
+  Added new Baseband phy PMD which provides means for configuring baseband hardware via
+  standard rawdev enq/deq operations. Baseband phy is a hardware subsystem accelerating
+  5G/LTE related tasks.
+
+  Both BPHY and BPHY CGX/RPM drivers are related hence kept together to ease maintenance.
+
 
 Removed Items
 -------------
