@@ -1845,6 +1845,10 @@ i40e_flow_add_del_fdir_filter(struct rte_eth_dev *dev,
 			return -EINVAL;
 		}
 
+		/* clear input_set flag */
+		pf->fdir.input_set[pctype] = 0;
+		pf->fdir.inset_flag[pctype] = 0;
+
 		pf->fdir.flex_mask_flag[pctype] = 0;
 
 		if (fdir_info->fdir_invalprio == 1)
