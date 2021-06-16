@@ -579,7 +579,7 @@ rte_flow_classify_table_entry_delete(struct rte_flow_classifier *cls,
 						&rule->u.key.key_del,
 						&rule->key_found,
 						&rule->entry);
-
+				free(rule);
 				return ret;
 			}
 		}
