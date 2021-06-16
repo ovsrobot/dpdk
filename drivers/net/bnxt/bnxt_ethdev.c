@@ -573,13 +573,14 @@ static int bnxt_register_fc_ctx_mem(struct bnxt *bp)
 	return rc;
 }
 
-static int bnxt_alloc_ctx_mem_buf(char *type, size_t size,
+static int bnxt_alloc_ctx_mem_buf(struct bnxt *bp, char *type, size_t size,
 				  struct bnxt_ctx_mem_buf_info *ctx)
 {
 	if (!ctx)
 		return -EINVAL;
 
-	ctx->va = rte_zmalloc(type, size, 0);
+	ctx->va = rte_zmalloc_socket(type, size, 0,
+				     bp->eth_dev->device->numa_node);
 	if (ctx->va == NULL)
 		return -ENOMEM;
 	rte_mem_lock_page(ctx->va);
@@ -603,7 +604,7 @@ static int bnxt_init_fc_ctx_mem(struct bnxt *bp)
 	sprintf(type, "bnxt_rx_fc_in_" PCI_PRI_FMT, pdev->addr.domain,
 		pdev->addr.bus, pdev->addr.devid, pdev->addr.function);
 	/* 4 bytes for each counter-id */
-	rc = bnxt_alloc_ctx_mem_buf(type,
+	rc = bnxt_alloc_ctx_mem_buf(bp, type,
 				    max_fc * 4,
 				    &bp->flow_stat->rx_fc_in_tbl);
 	if (rc)
@@ -612,7 +613,7 @@ static int bnxt_init_fc_ctx_mem(struct bnxt *bp)
 	sprintf(type, "bnxt_rx_fc_out_" PCI_PRI_FMT, pdev->addr.domain,
 		pdev->addr.bus, pdev->addr.devid, pdev->addr.function);
 	/* 16 bytes for each counter - 8 bytes pkt_count, 8 bytes byte_count */
-	rc = bnxt_alloc_ctx_mem_buf(type,
+	rc = bnxt_alloc_ctx_mem_buf(bp, type,
 				    max_fc * 16,
 				    &bp->flow_stat->rx_fc_out_tbl);
 	if (rc)
@@ -621,7 +622,7 @@ static int bnxt_init_fc_ctx_mem(struct bnxt *bp)
 	sprintf(type, "bnxt_tx_fc_in_" PCI_PRI_FMT, pdev->addr.domain,
 		pdev->addr.bus, pdev->addr.devid, pdev->addr.function);
 	/* 4 bytes for each counter-id */
-	rc = bnxt_alloc_ctx_mem_buf(type,
+	rc = bnxt_alloc_ctx_mem_buf(bp, type,
 				    max_fc * 4,
 				    &bp->flow_stat->tx_fc_in_tbl);
 	if (rc)
@@ -630,7 +631,7 @@ static int bnxt_init_fc_ctx_mem(struct bnxt *bp)
 	sprintf(type, "bnxt_tx_fc_out_" PCI_PRI_FMT, pdev->addr.domain,
 		pdev->addr.bus, pdev->addr.devid, pdev->addr.function);
 	/* 16 bytes for each counter - 8 bytes pkt_count, 8 bytes byte_count */
-	rc = bnxt_alloc_ctx_mem_buf(type,
+	rc = bnxt_alloc_ctx_mem_buf(bp, type,
 				    max_fc * 16,
 				    &bp->flow_stat->tx_fc_out_tbl);
 	if (rc)
@@ -4511,7 +4512,7 @@ static int bnxt_alloc_ctx_mem_blk(struct bnxt *bp,
 		if (!mz) {
 			mz = rte_memzone_reserve_aligned(mz_name,
 						rmem->nr_pages * 8,
-						SOCKET_ID_ANY,
+						bp->eth_dev->device->numa_node,
 						RTE_MEMZONE_2MB |
 						RTE_MEMZONE_SIZE_HINT_ONLY |
 						RTE_MEMZONE_IOVA_CONTIG,
@@ -4534,7 +4535,7 @@ static int bnxt_alloc_ctx_mem_blk(struct bnxt *bp,
 	if (!mz) {
 		mz = rte_memzone_reserve_aligned(mz_name,
 						 mem_size,
-						 SOCKET_ID_ANY,
+						 bp->eth_dev->device->numa_node,
 						 RTE_MEMZONE_1GB |
 						 RTE_MEMZONE_SIZE_HINT_ONLY |
 						 RTE_MEMZONE_IOVA_CONTIG,
