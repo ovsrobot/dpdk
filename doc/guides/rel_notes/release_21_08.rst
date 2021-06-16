@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated testpmd to log errors to stderr.**
+
+  Updated testpmd application to log errors and warnings to stderr
+  instead of stdout used before.
+
 
 Removed Items
 -------------
