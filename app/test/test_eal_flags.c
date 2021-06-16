@@ -125,6 +125,7 @@ process_hugefiles(const char * prefix, enum hugepage_action action)
 				{
 					/* file exists, return */
 					result = 1;
+					closedir(hugepage_dir);
 					goto end;
 				}
 				break;
