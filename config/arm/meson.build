@@ -179,7 +179,8 @@ implementer_qualcomm = {
         ['RTE_MAX_NUMA_NODES', 1]
     ],
     'part_number_config': {
-        '0xc00': {'machine_args':  ['-march=armv8-a+crc']}
+        '0x800': {'machine_args':  ['-march=armv8-a+crc']},
+        '0xc00': {'machine_args':  ['-march=armv8-a+crc']},
     }
 }
 
@@ -223,8 +224,15 @@ soc_bluefield = {
     'numa': false
 }
 
+soc_centriq2400_v1_1 = {
+    'description': 'Qualcomm Centriq 2400 (SoC v1.1)',
+    'implementer': '0x51',
+    'part_number': '0x800',
+    'numa': false
+}
+
 soc_centriq2400 = {
-    'description': 'Qualcomm Centriq 2400',
+    'description': 'Qualcomm Centriq 2400 (SoC v2.0)',
     'implementer': '0x51',
     'part_number': '0xc00',
     'numa': false
