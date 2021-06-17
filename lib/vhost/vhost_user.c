@@ -488,9 +488,6 @@ numa_realloc(struct virtio_net *dev, int index)
 	struct batch_copy_elem *new_batch_copy_elems;
 	int ret;
 
-	if (dev->flags & VIRTIO_DEV_RUNNING)
-		return dev;
-
 	old_dev = dev;
 	vq = old_vq = dev->virtqueue[index];
 
@@ -506,6 +503,11 @@ numa_realloc(struct virtio_net *dev, int index)
 		return dev;
 	}
 	if (oldnode != newnode) {
+		if (vq->ready) {
+			vq->ready = false;
+			vhost_user_notify_queue_state(dev, index, 0);
+		}
+
 		VHOST_LOG_CONFIG(INFO,
 			"reallocate vq from %d to %d node\n", oldnode, newnode);
 		vq = rte_malloc_socket(NULL, sizeof(*vq), 0, newnode);
@@ -557,6 +559,9 @@ numa_realloc(struct virtio_net *dev, int index)
 
 		rte_free(old_vq);
 	}
+
+	if (dev->flags & VIRTIO_DEV_RUNNING)
+		goto out;
 
 	/* check if we need to reallocate dev */
 	ret = get_mempolicy(&oldnode, NULL, 0, old_dev,
