@@ -235,9 +235,8 @@ int rte_thread_value_set(rte_thread_key key, const void *value);
  *
  * @return
  *   On success, value data pointer (can also be NULL).
- *   On failure, NULL and an error number is set in rte_errno.
- *   rte_errno can be: EINVAL  - Invalid parameter passed.
- *                     ENOEXEC - Specific OS error.
+ *   On failure, NULL and a positive error number is set in rte_errno.
+ *
  */
 __rte_experimental
 void *rte_thread_value_get(rte_thread_key key);

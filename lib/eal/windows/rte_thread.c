@@ -13,6 +13,54 @@ struct eal_tls_key {
 	DWORD thread_index;
 };
 
+/* Translates the most common error codes related to threads */
+static int
+thread_translate_win32_error(DWORD error)
+{
+	switch (error) {
+	case ERROR_SUCCESS:
+		return 0;
+
+	case ERROR_INVALID_PARAMETER:
+		return EINVAL;
+
+	case ERROR_INVALID_HANDLE:
+		return EFAULT;
+
+	case ERROR_NOT_ENOUGH_MEMORY:
+	/* FALLTHROUGH */
+	case ERROR_NO_SYSTEM_RESOURCES:
+		return ENOMEM;
+
+	case ERROR_PRIVILEGE_NOT_HELD:
+	/* FALLTHROUGH */
+	case ERROR_ACCESS_DENIED:
+		return EACCES;
+
+	case ERROR_ALREADY_EXISTS:
+		return EEXIST;
+
+	case ERROR_POSSIBLE_DEADLOCK:
+		return EDEADLK;
+
+	case ERROR_INVALID_FUNCTION:
+	/* FALLTHROUGH */
+	case ERROR_CALL_NOT_IMPLEMENTED:
+		return ENOSYS;
+	}
+
+	return EINVAL;
+}
+
+static int
+thread_log_last_error(const char *message)
+{
+	DWORD error = GetLastError();
+	RTE_LOG(DEBUG, EAL, "GetLastError()=%lu: %s\n", error, message);
+
+	return thread_translate_win32_error(error);
+}
+
 rte_thread_t
 rte_thread_self(void)
 {
@@ -42,7 +90,7 @@ rte_thread_attr_init(rte_thread_attr_t *attr)
 
 int
 rte_thread_attr_set_affinity(rte_thread_attr_t *thread_attr,
-			     rte_cpuset_t *cpuset)
+		rte_cpuset_t *cpuset)
 {
 	RTE_VERIFY(thread_attr != NULL);
 	thread_attr->cpuset = *cpuset;
@@ -52,7 +100,7 @@ rte_thread_attr_set_affinity(rte_thread_attr_t *thread_attr,
 
 int
 rte_thread_attr_get_affinity(rte_thread_attr_t *thread_attr,
-			     rte_cpuset_t *cpuset)
+		rte_cpuset_t *cpuset)
 {
 	RTE_VERIFY(thread_attr != NULL);
 
@@ -63,7 +111,7 @@ rte_thread_attr_get_affinity(rte_thread_attr_t *thread_attr,
 
 int
 rte_thread_attr_set_priority(rte_thread_attr_t *thread_attr,
-			     enum rte_thread_priority priority)
+		enum rte_thread_priority priority)
 {
 	RTE_VERIFY(thread_attr != NULL);
 
@@ -76,18 +124,18 @@ int
 rte_thread_key_create(rte_thread_key *key,
 		__rte_unused void (*destructor)(void *))
 {
+	int ret;
+
 	*key = malloc(sizeof(**key));
 	if ((*key) == NULL) {
 		RTE_LOG(DEBUG, EAL, "Cannot allocate TLS key.\n");
-		rte_errno = ENOMEM;
-		return -1;
+		return ENOMEM;
 	}
 	(*key)->thread_index = TlsAlloc();
 	if ((*key)->thread_index == TLS_OUT_OF_INDEXES) {
-		RTE_LOG_WIN32_ERR("TlsAlloc()");
+		ret = thread_log_last_error("TlsAlloc()");
 		free(*key);
-		rte_errno = ENOEXEC;
-		return -1;
+		return ret;
 	}
 	return 0;
 }
@@ -95,16 +143,16 @@ rte_thread_key_create(rte_thread_key *key,
 int
 rte_thread_key_delete(rte_thread_key key)
 {
-	if (!key) {
+	int ret;
+
+	if (key == NULL) {
 		RTE_LOG(DEBUG, EAL, "Invalid TLS key.\n");
-		rte_errno = EINVAL;
-		return -1;
+		return EINVAL;
 	}
 	if (!TlsFree(key->thread_index)) {
-		RTE_LOG_WIN32_ERR("TlsFree()");
+		ret = thread_log_last_error("TlsFree()");
 		free(key);
-		rte_errno = ENOEXEC;
-		return -1;
+		return ret;
 	}
 	free(key);
 	return 0;
@@ -115,17 +163,14 @@ rte_thread_value_set(rte_thread_key key, const void *value)
 {
 	char *p;
 
-	if (!key) {
+	if (key == NULL) {
 		RTE_LOG(DEBUG, EAL, "Invalid TLS key.\n");
-		rte_errno = EINVAL;
-		return -1;
+		return EINVAL;
 	}
 	/* discard const qualifier */
 	p = (char *) (uintptr_t) value;
 	if (!TlsSetValue(key->thread_index, p)) {
-		RTE_LOG_WIN32_ERR("TlsSetValue()");
-		rte_errno = ENOEXEC;
-		return -1;
+		return thread_log_last_error("TlsSetValue()");
 	}
 	return 0;
 }
@@ -134,16 +179,18 @@ void *
 rte_thread_value_get(rte_thread_key key)
 {
 	void *output;
+	DWORD ret = 0;
 
-	if (!key) {
+	if (key == NULL) {
 		RTE_LOG(DEBUG, EAL, "Invalid TLS key.\n");
 		rte_errno = EINVAL;
 		return NULL;
 	}
 	output = TlsGetValue(key->thread_index);
-	if (GetLastError() != ERROR_SUCCESS) {
-		RTE_LOG_WIN32_ERR("TlsGetValue()");
-		rte_errno = ENOEXEC;
+	ret = GetLastError();
+	if (ret != 0) {
+		RTE_LOG(DEBUG, EAL, "GetLastError()=%lu: TlsGetValue()\n", ret);
+		rte_errno = thread_translate_win32_error(ret);
 		return NULL;
 	}
 	return output;
