@@ -501,6 +501,62 @@ rte_thread_mutex_destroy(rte_thread_mutex *mutex)
 }
 
 int
+rte_thread_barrier_init(rte_thread_barrier *barrier, int count)
+{
+	int ret = 0;
+	SYNCHRONIZATION_BARRIER *sync_barrier = NULL;
+
+	RTE_VERIFY(barrier != NULL);
+	RTE_VERIFY(count > 0);
+
+	sync_barrier = calloc(1, sizeof(*sync_barrier));
+	if (sync_barrier == NULL) {
+		RTE_LOG(DEBUG, EAL, "Unable to initialize barrier. Insufficient memory!\n");
+		ret = ENOMEM;
+		goto cleanup;
+	}
+	if (!InitializeSynchronizationBarrier(sync_barrier, count, -1)) {
+		ret = thread_log_last_error("InitializeSynchronizationBarrier()");
+		goto cleanup;
+	}
+
+	barrier->barrier_id = sync_barrier;
+	sync_barrier = NULL;
+
+cleanup:
+	free(sync_barrier);
+	return ret;
+}
+
+int
+rte_thread_barrier_wait(rte_thread_barrier *barrier)
+{
+	RTE_VERIFY(barrier != NULL);
+	RTE_VERIFY(barrier->barrier_id != NULL);
+
+	if (EnterSynchronizationBarrier(barrier->barrier_id,
+				SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY)) {
+
+		return RTE_THREAD_BARRIER_SERIAL_THREAD;
+	}
+
+	return 0;
+}
+
+int
+rte_thread_barrier_destroy(rte_thread_barrier *barrier)
+{
+	RTE_VERIFY(barrier != NULL);
+
+	DeleteSynchronizationBarrier(barrier->barrier_id);
+
+	free(barrier->barrier_id);
+	barrier->barrier_id = NULL;
+
+	return 0;
+}
+
+int
 rte_thread_key_create(rte_thread_key *key,
 		__rte_unused void (*destructor)(void *))
 {

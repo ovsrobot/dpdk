@@ -77,6 +77,18 @@ typedef struct rte_thread_mutex_tag {
 } rte_thread_mutex;
 
 /**
+ * Returned by rte_thread_barrier_wait() when call is successful.
+ */
+#define RTE_THREAD_BARRIER_SERIAL_THREAD -1
+
+/**
+ * Thread barrier representation.
+ */
+typedef struct rte_thread_barrier_tag {
+	void *barrier_id;  /**< barrrier identifier */
+} rte_thread_barrier;
+
+/**
  * TLS key type, an opaque pointer.
  */
 typedef struct eal_tls_key *rte_thread_key;
@@ -380,6 +392,52 @@ int rte_thread_mutex_unlock(rte_thread_mutex *mutex);
  */
 __rte_experimental
 int rte_thread_mutex_destroy(rte_thread_mutex *mutex);
+
+/**
+ * Initializes a synchronization barrier.
+ *
+ * @param barrier
+ *    A pointer that references the newly created 'barrier' object.
+ *
+ * @param count
+ *    The number of threads that must enter the barrier before
+ *    the threads can continue execution.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_barrier_init(rte_thread_barrier *barrier, int count);
+
+/**
+ * Causes the calling thread to wait at the synchronization barrier 'barrier'.
+ *
+ * @param barrier
+ *    The barrier used for synchronizing the threads.
+ *
+ * @return
+ *   Return RTE_THREAD_BARRIER_SERIAL_THREAD for the thread synchronized
+ *      at the barrier.
+ *   Return 0 for all other threads.
+ *   Return a positive errno-style error number, in case of failure.
+ */
+__rte_experimental
+int rte_thread_barrier_wait(rte_thread_barrier *barrier);
+
+/**
+ * Releases all resources used by a synchronization barrier
+ * and uninitializes it.
+ *
+ * @param barrier
+ *    The barrier to be destroyed.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_barrier_destroy(rte_thread_barrier *barrier);
 
 /**
  * Create a TLS data key visible to all threads in the process.
