@@ -145,6 +145,113 @@ rte_thread_attr_set_priority(rte_thread_attr_t *thread_attr,
 }
 
 int
+rte_thread_create(rte_thread_t *thread_id,
+		const rte_thread_attr_t *thread_attr,
+		rte_thread_func thread_func, void *args)
+{
+	int ret = 0;
+	pthread_attr_t attr;
+	pthread_attr_t *attrp = NULL;
+	struct sched_param param = {
+		.sched_priority = 0,
+	};
+	int policy = SCHED_OTHER;
+
+	if (thread_attr != NULL) {
+		ret = pthread_attr_init(&attr);
+		if (ret != 0) {
+			RTE_LOG(DEBUG, EAL, "pthread_attr_init failed\n");
+			goto cleanup;
+		}
+
+		attrp = &attr;
+
+		if (thread_attr->priority != RTE_THREAD_PRIORITY_UNDEFINED) {
+			/*
+			 * Set the inherit scheduler parameter to explicit,
+			 * otherwise the priority attribute is ignored.
+			 */
+			ret = pthread_attr_setinheritsched(attrp,
+					PTHREAD_EXPLICIT_SCHED);
+			if (ret != 0) {
+				RTE_LOG(DEBUG, EAL, "pthread_attr_setinheritsched failed\n");
+				goto cleanup;
+			}
+
+			ret = thread_map_priority_to_os_value(
+					thread_attr->priority,
+					&param.sched_priority, &policy
+					);
+			if (ret != 0)
+				goto cleanup;
+
+			ret = pthread_attr_setschedpolicy(attrp, policy);
+			if (ret != 0) {
+				RTE_LOG(DEBUG, EAL, "pthread_attr_setschedpolicy failed\n");
+				goto cleanup;
+			}
+
+			ret = pthread_attr_setschedparam(attrp, &param);
+			if (ret != 0) {
+				RTE_LOG(DEBUG, EAL, "pthread_attr_setschedparam failed\n");
+				goto cleanup;
+			}
+		}
+
+		if (CPU_COUNT(&thread_attr->cpuset) > 0) {
+			ret = pthread_attr_setaffinity_np(attrp,
+					sizeof(thread_attr->cpuset),
+					&thread_attr->cpuset);
+			if (ret != 0) {
+				RTE_LOG(DEBUG, EAL, "pthread_attr_setaffinity_np failed\n");
+				goto cleanup;
+			}
+		}
+	}
+
+	ret = pthread_create((pthread_t *)&thread_id->opaque_id, attrp,
+		thread_func, args);
+	if (ret != 0) {
+		RTE_LOG(DEBUG, EAL, "pthread_create failed\n");
+		goto cleanup;
+	}
+
+cleanup:
+	if (attrp != NULL)
+		pthread_attr_destroy(&attr);
+
+	return ret;
+}
+
+int
+rte_thread_join(rte_thread_t thread_id, unsigned long *value_ptr)
+{
+	int ret = 0;
+	void *res = NULL;
+	void **pres = NULL;
+
+	if (value_ptr != NULL)
+		pres = &res;
+
+	ret = pthread_join((pthread_t)thread_id.opaque_id, pres);
+	if (ret != 0) {
+		RTE_LOG(DEBUG, EAL, "pthread_join failed\n");
+		return ret;
+	}
+
+	if (pres != NULL)
+		*value_ptr = *(unsigned long *)(*pres);
+
+	return 0;
+}
+
+int
+rte_thread_detach(rte_thread_t thread_id)
+{
+	return pthread_detach((pthread_t)thread_id.opaque_id);
+}
+
+int
 rte_thread_key_create(rte_thread_key *key, void (*destructor)(void *))
 {
 	int err;
