@@ -15,7 +15,8 @@ sources = files('cnxk_ethdev.c',
 		'cnxk_lookup.c')
 
 # CN9K
-sources += files('cn9k_ethdev.c')
+sources += files('cn9k_ethdev.c',
+		 'cn9k_rx.c')
 # CN10K
 sources += files('cn10k_ethdev.c')
 
