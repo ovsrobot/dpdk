@@ -13,6 +13,7 @@ sources = files('cnxk_ethdev.c',
 		'cnxk_ethdev_devargs.c',
 		'cnxk_link.c',
 		'cnxk_lookup.c',
+		'cnxk_ptp.c',
 		'cnxk_rte_flow.c',
 		'cnxk_stats.c')
 
