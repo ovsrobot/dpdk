@@ -745,8 +745,11 @@ M: Kiran Kumar K <kirankumark@marvell.com>
 M: Sunil Kumar Kori <skori@marvell.com>
 M: Satha Rao <skoteshwar@marvell.com>
 T: git://dpdk.org/next/dpdk-next-net-mrvl
-F: drivers/common/cnxk/
+F: doc/guides/nics/cnxk.rst
+F: doc/guides/nics/features/cnxk*.ini
 F: doc/guides/platform/cnxk.rst
+F: drivers/common/cnxk/
+F: drivers/net/cnxk/
 
 Marvell mvpp2
 M: Liron Himi <lironh@marvell.com>

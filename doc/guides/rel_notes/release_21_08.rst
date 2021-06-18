@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added support for Marvell CN10K SoC ethernet device.**
+
+  * Added net/cnxk driver which provides the support for the integrated ethernet
+    device.
+
 
 Removed Items
 -------------
