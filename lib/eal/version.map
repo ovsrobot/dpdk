@@ -423,6 +423,9 @@ EXPERIMENTAL {
 	rte_version_release; # WINDOWS_NO_EXPORT
 	rte_version_suffix; # WINDOWS_NO_EXPORT
 	rte_version_year; # WINDOWS_NO_EXPORT
+
+	rte_thread_self;
+	rte_thread_equal;
 };
 
 INTERNAL {
