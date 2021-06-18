@@ -50,6 +50,55 @@ rte_thread_get_affinity_by_id(rte_thread_t thread_id,
 		sizeof(*cpuset), cpuset);
 }
 
+static int
+thread_map_priority_to_os_value(enum rte_thread_priority eal_pri,
+		int *os_pri, int *pol)
+{
+	/* Clear the output parameters */
+	*os_pri = sched_get_priority_min(SCHED_OTHER) - 1;
+	*pol = -1;
+
+	switch (eal_pri) {
+	case RTE_THREAD_PRIORITY_NORMAL:
+		*pol = SCHED_OTHER;
+
+		/*
+		 * Choose the middle of the range to represent
+		 * the priority 'normal'.
+		 * On Linux, this should be 0, since both
+		 * sched_get_priority_min/_max return 0 for SCHED_OTHER.
+		 */
+		*os_pri = (sched_get_priority_min(SCHED_OTHER) +
+			sched_get_priority_max(SCHED_OTHER))/2;
+		break;
+	case RTE_THREAD_PRIORITY_REALTIME_CRITICAL:
+		*pol = SCHED_RR;
+		*os_pri = sched_get_priority_max(SCHED_RR);
+		break;
+	default:
+		RTE_LOG(DEBUG, EAL, "The requested priority value is invalid.\n");
+		return EINVAL;
+	}
+	return 0;
+}
+
+int
+rte_thread_set_priority(rte_thread_t thread_id,
+		enum rte_thread_priority priority)
+{
+	int ret;
+	int policy;
+	struct sched_param param;
+
+	ret = thread_map_priority_to_os_value(priority, &param.sched_priority,
+		&policy);
+	if (ret != 0)
+		return ret;
+
+	return pthread_setschedparam((pthread_t)thread_id.opaque_id,
+		policy, &param);
+}
+
 int
 rte_thread_attr_init(rte_thread_attr_t *attr)
 {

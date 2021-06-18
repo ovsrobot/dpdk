@@ -216,6 +216,23 @@ void rte_thread_get_affinity(rte_cpuset_t *cpusetp);
 #endif /* RTE_HAS_CPUSET */
 
 /**
+ * Set the priority of a thread.
+ *
+ * @param thread_id
+ *    Id of the thread for which to set priority.
+ *
+ * @param priority
+ *   Priority value to be set.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_set_priority(rte_thread_t thread_id,
+		enum rte_thread_priority priority);
+
+/**
  * Create a TLS data key visible to all threads in the process.
  * the created key is later used to get/set a value.
  * and optional destructor can be set to be called when a thread exits.
