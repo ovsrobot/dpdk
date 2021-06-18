@@ -258,6 +258,7 @@ eth_em_dev_init(struct rte_eth_dev *eth_dev)
 	 * has already done this work. Only check we don't need a different
 	 * RX function */
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY){
+		e1000_setup_init_funcs(hw, TRUE);
 		if (eth_dev->data->scattered_rx)
 			eth_dev->rx_pkt_burst =
 				(eth_rx_burst_t)&eth_em_recv_scattered_pkts;

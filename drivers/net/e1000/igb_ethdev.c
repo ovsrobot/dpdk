@@ -737,6 +737,7 @@ eth_igb_dev_init(struct rte_eth_dev *eth_dev)
 	 * has already done this work. Only check we don't need a different
 	 * RX function */
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY){
+		e1000_setup_init_funcs(hw, TRUE);
 		if (eth_dev->data->scattered_rx)
 			eth_dev->rx_pkt_burst = &eth_igb_recv_scattered_pkts;
 		return 0;
@@ -931,6 +932,7 @@ eth_igbvf_dev_init(struct rte_eth_dev *eth_dev)
 	 * has already done this work. Only check we don't need a different
 	 * RX function */
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY){
+		e1000_setup_init_funcs(hw, TRUE);
 		if (eth_dev->data->scattered_rx)
 			eth_dev->rx_pkt_burst = &eth_igb_recv_scattered_pkts;
 		return 0;
