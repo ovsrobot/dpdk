@@ -12,6 +12,9 @@
 #define MAX_VHOST_DEVICE 1024
 #define IOAT_RING_SIZE 4096
 #define MAX_ENQUEUED_SIZE 4096
+#define MAX_RING_COUNT	2
+#define ASYNC_RX_VHOST	1
+#define ASYNC_TX_VHOST	2
 
 struct dma_info {
 	struct rte_pci_addr addr;
@@ -20,6 +23,7 @@ struct dma_info {
 };
 
 struct dma_for_vhost {
+	int async_flag;
 	struct dma_info dmas[RTE_MAX_QUEUES_PER_PORT * 2];
 	uint16_t nr;
 };

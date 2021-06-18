@@ -9,6 +9,8 @@
 
 #include <rte_ether.h>
 
+#include "ioat.h"
+
 /* Macros for printing using RTE_LOG */
 #define RTE_LOGTYPE_VHOST_CONFIG RTE_LOGTYPE_USER1
 #define RTE_LOGTYPE_VHOST_DATA   RTE_LOGTYPE_USER2
@@ -17,6 +19,9 @@
 enum {VIRTIO_RXQ, VIRTIO_TXQ, VIRTIO_QNUM};
 
 #define MAX_PKT_BURST 32		/* Max burst size for RX/TX */
+
+extern struct dma_for_vhost dma_bind[MAX_VHOST_DEVICE];
+extern int vid2txd[MAX_VHOST_DEVICE];
 
 struct device_statistics {
 	uint64_t	tx;

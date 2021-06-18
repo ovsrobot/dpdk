@@ -25,7 +25,6 @@
 #include <rte_tcp.h>
 #include <rte_pause.h>
 
-#include "ioat.h"
 #include "main.h"
 
 #ifndef MAX_QUEUES
@@ -92,8 +91,6 @@ static uint32_t enable_tso;
 static int client_mode;
 
 static int builtin_net_driver;
-
-static int async_vhost_driver;
 
 static char *dma_type;
 
@@ -679,7 +676,6 @@ us_vhost_parse_args(int argc, char **argv)
 				us_vhost_usage(prgname);
 				return -1;
 			}
-			async_vhost_driver = 1;
 			break;
 
 		case OPT_CLIENT_NUM:
@@ -897,7 +893,7 @@ drain_vhost(struct vhost_dev *vdev)
 				__ATOMIC_SEQ_CST);
 	}
 
-	if (!async_vhost_driver)
+	if ((dma_bind[vid2txd[vdev->vid]].async_flag & ASYNC_RX_VHOST) == 0)
 		free_pkts(m, nr_xmit);
 }
 
@@ -1237,8 +1233,17 @@ drain_eth_rx(struct vhost_dev *vdev)
 				__ATOMIC_SEQ_CST);
 	}
 
-	if (!async_vhost_driver)
+	if ((dma_bind[vid2txd[vdev->vid]].async_flag & ASYNC_RX_VHOST) == 0)
 		free_pkts(pkts, rx_count);
+}
+
+uint16_t async_dequeue_pkts(struct vhost_dev *dev, uint16_t queue_id,
+				struct rte_mempool *mbuf_pool,
+				struct rte_mbuf **pkts, uint16_t count)
+{
+	int nr_inflight;
+	return rte_vhost_async_try_dequeue_burst(dev->vid, queue_id,
+			mbuf_pool, pkts, count, &nr_inflight);
 }
 
 uint16_t sync_dequeue_pkts(struct vhost_dev *dev, uint16_t queue_id,
@@ -1392,10 +1397,88 @@ destroy_device(int vid)
 		"(%d) device has been removed from data core\n",
 		vdev->vid);
 
-	if (async_vhost_driver)
+	if (dma_bind[vid2txd[vid]].async_flag & ASYNC_RX_VHOST)
 		rte_vhost_async_channel_unregister(vid, VIRTIO_RXQ);
+	if (dma_bind[vid2txd[vid]].async_flag & ASYNC_TX_VHOST)
+		rte_vhost_async_channel_unregister(vid, VIRTIO_TXQ);
 
 	rte_free(vdev);
+}
+
+static int
+get_txd_id(int vid)
+{
+	int i;
+	char ifname[PATH_MAX];
+	rte_vhost_get_ifname(vid, ifname, sizeof(ifname));
+
+	for (i = 0; i < nb_sockets; i++) {
+		char *file = socket_files + i * PATH_MAX;
+		if (strcmp(file, ifname) == 0)
+			return i;
+	}
+
+	return -1;
+}
+
+static int
+init_vhost_queue_ops(int vid)
+{
+	int i = get_txd_id(vid);
+	if (i == -1)
+		return -1;
+
+	vid2txd[vid] = i;
+	if (builtin_net_driver) {
+		vdev_queue_ops[vid].enqueue_pkt_burst = builtin_enqueue_pkts;
+		vdev_queue_ops[vid].dequeue_pkt_burst = builtin_dequeue_pkts;
+	} else {
+		if (dma_bind[i].async_flag & ASYNC_RX_VHOST) {
+			vdev_queue_ops[vid].enqueue_pkt_burst =
+						async_enqueue_pkts;
+		} else {
+			vdev_queue_ops[vid].enqueue_pkt_burst =
+						sync_enqueue_pkts;
+		}
+
+		if (dma_bind[i].async_flag & ASYNC_TX_VHOST) {
+			vdev_queue_ops[vid].dequeue_pkt_burst =
+						async_dequeue_pkts;
+		} else {
+			vdev_queue_ops[vid].dequeue_pkt_burst =
+						sync_dequeue_pkts;
+		}
+	}
+
+	return 0;
+}
+
+static int
+vhost_aysnc_channel_register(int vid)
+{
+	int ret = 0;
+	struct rte_vhost_async_features f;
+	struct rte_vhost_async_channel_ops channel_ops;
+
+	if (dma_type != NULL && strncmp(dma_type, "ioat", 4) == 0) {
+		channel_ops.transfer_data = ioat_transfer_data_cb;
+		channel_ops.check_completed_copies =
+			ioat_check_completed_copies_cb;
+
+		f.async_inorder = 1;
+		f.async_threshold = 256;
+
+		if (dma_bind[vid2txd[vid]].async_flag & ASYNC_RX_VHOST) {
+			ret |= rte_vhost_async_channel_register(vid, VIRTIO_RXQ,
+					f.intval, &channel_ops);
+		}
+		if (dma_bind[vid2txd[vid]].async_flag & ASYNC_TX_VHOST) {
+			ret |= rte_vhost_async_channel_register(vid, VIRTIO_TXQ,
+					f.intval, &channel_ops);
+		}
+	}
+
+	return ret;
 }
 
 /*
@@ -1431,20 +1514,8 @@ new_device(int vid)
 		}
 	}
 
-	if (builtin_net_driver) {
-		vdev_queue_ops[vid].enqueue_pkt_burst = builtin_enqueue_pkts;
-		vdev_queue_ops[vid].dequeue_pkt_burst = builtin_dequeue_pkts;
-	} else {
-		if (async_vhost_driver) {
-			vdev_queue_ops[vid].enqueue_pkt_burst =
-							async_enqueue_pkts;
-		} else {
-			vdev_queue_ops[vid].enqueue_pkt_burst =
-							sync_enqueue_pkts;
-		}
-
-		vdev_queue_ops[vid].dequeue_pkt_burst = sync_dequeue_pkts;
-	}
+	if (init_vhost_queue_ops(vid) != 0)
+		return -1;
 
 	if (builtin_net_driver)
 		vs_vhost_net_setup(vdev);
@@ -1473,28 +1544,13 @@ new_device(int vid)
 	rte_vhost_enable_guest_notification(vid, VIRTIO_RXQ, 0);
 	rte_vhost_enable_guest_notification(vid, VIRTIO_TXQ, 0);
 
+	int ret = vhost_aysnc_channel_register(vid);
+
 	RTE_LOG(INFO, VHOST_DATA,
 		"(%d) device has been added to data core %d\n",
 		vid, vdev->coreid);
 
-	if (async_vhost_driver) {
-		struct rte_vhost_async_features f;
-		struct rte_vhost_async_channel_ops channel_ops;
-
-		if (dma_type != NULL && strncmp(dma_type, "ioat", 4) == 0) {
-			channel_ops.transfer_data = ioat_transfer_data_cb;
-			channel_ops.check_completed_copies =
-				ioat_check_completed_copies_cb;
-
-			f.async_inorder = 1;
-			f.async_threshold = 256;
-
-			return rte_vhost_async_channel_register(vid, VIRTIO_RXQ,
-				f.intval, &channel_ops);
-		}
-	}
-
-	return 0;
+	return ret;
 }
 
 /*
@@ -1735,10 +1791,11 @@ main(int argc, char *argv[])
 	for (i = 0; i < nb_sockets; i++) {
 		char *file = socket_files + i * PATH_MAX;
 
-		if (async_vhost_driver)
-			flags = flags | RTE_VHOST_USER_ASYNC_COPY;
+		uint64_t flag = flags;
+		if (dma_bind[i].async_flag != 0)
+			flag |= RTE_VHOST_USER_ASYNC_COPY;
 
-		ret = rte_vhost_driver_register(file, flags);
+		ret = rte_vhost_driver_register(file, flag);
 		if (ret != 0) {
 			unregister_drivers(i);
 			rte_exit(EXIT_FAILURE,
