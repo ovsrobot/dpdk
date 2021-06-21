@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added Baseband phy CNXK PMD.**
+
+  Added Baseband phy PMD which allows to configure BPHY hardware block
+  comprising accelerators and DSPs specifically tailored for 5G/LTE inline
+  usecases. Configuration happens via standard rawdev enq/deq operations. See
+  the :doc:`../rawdevs/cnxk_bphy` rawdev guide for more details on this driver.
+
 
 Removed Items
 -------------
