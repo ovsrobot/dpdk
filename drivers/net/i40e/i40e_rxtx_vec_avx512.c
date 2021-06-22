@@ -10,7 +10,7 @@
 #include "base/i40e_type.h"
 #include "i40e_ethdev.h"
 #include "i40e_rxtx.h"
-#include "i40e_rxtx_vec_common.h"
+#include "i40e_rxtx_vec_avx_common.h"
 
 #include <rte_vect.h>
 
