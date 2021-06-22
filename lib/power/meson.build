@@ -5,6 +5,13 @@ if not is_linux
     build = false
     reason = 'only supported on Linux'
 endif
+
+# we do some snprintf magic so silence format-nonliteral
+flag_nonliteral = '-Wno-format-nonliteral'
+if cc.has_argument(flag_nonliteral)
+	cflags += flag_nonliteral
+endif
+
 sources = files(
         'guest_channel.c',
         'power_acpi_cpufreq.c',
