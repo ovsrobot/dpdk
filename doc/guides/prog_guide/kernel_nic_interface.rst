@@ -6,16 +6,48 @@
 Kernel NIC Interface
 ====================
 
+.. Note::
+
+   KNI kernel module will be removed from main git repository to `dpdk-kmods <https://git.dpdk.org/dpdk-kmods/>`_
+   repository by the `DPDK technical board decision <https://mails.dpdk.org/archives/dev/2021-January/197077.html>`_.
+   Also there is a `long term plan <https://mails.dpdk.org/archives/dev/2021-May/209026.html>`_ to deprecate the KNI.
+
+   :ref:`virtio_user_as_exceptional_path` alternative is preferred way for
+   interfacing with Linux network stack as it is being in-kernel solution and
+   similar performance expectations.
+
 The DPDK Kernel NIC Interface (KNI) allows userspace applications access to the Linux* control plane.
 
-The benefits of using the DPDK KNI are:
+KNI allows an interface with the kernel network stack and allows management of
+DPDK ports using standard Linux net tools such as ``ethtool``, ``ifconfig`` and
+``tcpdump``.
+
+Main use case of KNI is get/receive exception packets from/to Linux network
+stack while main datapath IO is done bypassing the networking stack.
+
+There are other alternatives to KNI, all are available in the upstream Linux:
+
+#. :ref:`TunTap_PMD` as wrapper to `Linux tun/tap
+   <https://www.kernel.org/doc/Documentation/networking/tuntap.txt>`_
+
+#. :ref:`virtio_user_as_exceptional_path`
+
+The benefits of using the DPDK KNI against alternatives are:
 
 *   Faster than existing Linux TUN/TAP interfaces
     (by eliminating system calls and copy_to_user()/copy_from_user() operations.
 
-*   Allows management of DPDK ports using standard Linux net tools such as ethtool, ifconfig and tcpdump.
+The cons of the DPDK KNI are:
 
-*   Allows an interface with the kernel network stack.
+* It is out-of-tree Linux kernel module and it can't be distributed as binary as
+  part of OSV DPDK packages. This makes it harder to consume, although it is
+  always possible to compile it from the source code.
+
+* As it shares memory between userspace and kernelspace, and kernel part
+  directly uses input provided by userspace, it is not safe. This makes hard to
+  upstream the module.
+
+* Only a subset of control commands are supported by KNI.
 
 The components of an application using the DPDK Kernel NIC Interface are shown in :numref:`figure_kernel_nic_intf`.
 
