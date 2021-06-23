@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Marvell OCTEON TX PMD.**
+
+  Added support for crypto adapter OP_FORWARD mode.
+
 
 Removed Items
 -------------
