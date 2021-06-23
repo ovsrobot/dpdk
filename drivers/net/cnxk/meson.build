@@ -28,7 +28,8 @@ sources += files('cn10k_ethdev.c',
 		 'cn10k_rx_mseg.c',
 		 'cn10k_rx_vec.c',
 		 'cn10k_tx.c',
-		 'cn10k_tx_mseg.c')
+		 'cn10k_tx_mseg.c',
+		 'cn10k_tx_vec.c')
 
 deps += ['bus_pci', 'cryptodev', 'eventdev', 'security']
 deps += ['common_cnxk', 'mempool_cnxk']
