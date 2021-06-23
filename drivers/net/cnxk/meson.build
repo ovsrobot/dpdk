@@ -8,7 +8,8 @@ if not dpdk_conf.get('RTE_ARCH_64')
 	subdir_done()
 endif
 
-sources = files('cnxk_ethdev.c')
+sources = files('cnxk_ethdev.c',
+		'cnxk_ethdev_devargs.c')
 
 # CN9K
 sources += files('cn9k_ethdev.c')
