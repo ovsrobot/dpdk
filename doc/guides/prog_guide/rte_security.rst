@@ -560,7 +560,11 @@ created by the application is attached to the security session by the API
 
 For Inline Crypto and Inline protocol offload, device specific defined metadata is
 updated in the mbuf using ``rte_security_set_pkt_metadata()`` if
-``DEV_TX_OFFLOAD_SEC_NEED_MDATA`` is set.
+``RTE_SECURITY_TX_OLOAD_NEED_MDATA`` is set. ``rte_security_set_pkt_metadata()``
+should be called on mbuf only with Layer 3 and above data present and
+``mbuf.data_off`` should be pointing to Layer 3 Header. Once called,
+Layer 3 and above data cannot be modified or moved around unless
+``rte_security_set_pkt_metadata()`` is called again.
 
 For inline protocol offloaded ingress traffic, the application can register a
 pointer, ``userdata`` , in the security session. When the packet is received,
