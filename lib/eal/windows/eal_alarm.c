@@ -4,6 +4,7 @@
 
 #include <stdatomic.h>
 #include <stdbool.h>
+#include <inttypes.h>
 
 #include <rte_alarm.h>
 #include <rte_spinlock.h>
@@ -90,6 +91,22 @@ rte_eal_alarm_set(uint64_t us, rte_eal_alarm_callback cb_fn, void *cb_arg)
 	FILETIME ft;
 	LARGE_INTEGER deadline;
 	int ret;
+
+	/* Check if us is valid */
+	if (us < 1 || us >(UINT64_MAX - US_PER_S)) {
+		RTE_LOG(ERR, EAL, "Invalid us: %" PRIu64 "\n"
+			"Valid us range is 1 to (UINT64_MAX - US_PER_S)\n",
+			us);
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	/* Check if callback is not NULL */
+	if (!cb_fn) {
+		RTE_LOG(ERR, EAL, "NULL callback\n");
+		ret = -EINVAL;
+		goto exit;
+	}
 
 	/* Calculate deadline ASAP, unit of measure = 100ns. */
 	GetSystemTimePreciseAsFileTime(&ft);
@@ -180,6 +197,12 @@ rte_eal_alarm_cancel(rte_eal_alarm_callback cb_fn, void *cb_arg)
 	bool executing;
 
 	removed = 0;
+
+	if (!cb_fn) {
+		RTE_LOG(ERR, EAL, "NULL callback\n");
+		return -EINVAL;
+	}
+
 	do {
 		executing = false;
 
