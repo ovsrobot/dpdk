@@ -109,4 +109,7 @@
 /* CPT */
 #include "roc_cpt.h"
 
+/* CPT microcode */
+#include "roc_se.h"
+
 #endif /* _ROC_API_H_ */
