@@ -14,6 +14,7 @@ sources = files(
         'rte_power.c',
         'rte_power_empty_poll.c',
         'rte_power_pmd_mgmt.c',
+	'power_cppc_cpufreq.c',
 )
 headers = files(
         'rte_power.h',
