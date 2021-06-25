@@ -32,4 +32,7 @@
 /* TIM */
 #include "roc_tim_priv.h"
 
+/* CPT */
+#include "roc_cpt_priv.h"
+
 #endif /* _ROC_PRIV_H_ */

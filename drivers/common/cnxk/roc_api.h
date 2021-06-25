@@ -106,4 +106,7 @@
 /* Idev */
 #include "roc_idev.h"
 
+/* CPT */
+#include "roc_cpt.h"
+
 #endif /* _ROC_API_H_ */
