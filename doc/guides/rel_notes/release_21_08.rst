@@ -84,6 +84,7 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* eal: the ``rte_power_intrinsics`` API changed to use a callback mechanism.
 
 ABI Changes
 -----------

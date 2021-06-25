@@ -110,14 +110,11 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 	/* now that we've put this address into monitor, we can unlock */
 	rte_spinlock_unlock(&s->lock);
 
-	/* if we have a comparison mask, we might not need to sleep at all */
-	if (pmc->mask) {
+	/* if we have a callback, we might not need to sleep at all */
+	if (pmc->fn) {
 		const uint64_t cur_value = __get_umwait_val(
 				pmc->addr, pmc->size);
-		const uint64_t masked = cur_value & pmc->mask;
-
-		/* if the masked value is already matching, abort */
-		if (masked == pmc->val)
+		if (pmc->fn(cur_value, pmc->opaque) != 0)
 			goto end;
 	}
 
