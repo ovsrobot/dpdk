@@ -235,7 +235,8 @@ ice_dcf_get_vf_resource(struct ice_dcf_hw *hw)
 	caps = VIRTCHNL_VF_OFFLOAD_WB_ON_ITR | VIRTCHNL_VF_OFFLOAD_RX_POLLING |
 	       VIRTCHNL_VF_CAP_ADV_LINK_SPEED | VIRTCHNL_VF_CAP_DCF |
 	       VIRTCHNL_VF_OFFLOAD_VLAN_V2 |
-	       VF_BASE_MODE_OFFLOADS | VIRTCHNL_VF_OFFLOAD_RX_FLEX_DESC;
+	       VF_BASE_MODE_OFFLOADS | VIRTCHNL_VF_OFFLOAD_RX_FLEX_DESC |
+	       VIRTCHNL_VF_OFFLOAD_QOS;
 
 	err = ice_dcf_send_cmd_req_no_irq(hw, VIRTCHNL_OP_GET_VF_RESOURCES,
 					  (uint8_t *)&caps, sizeof(caps));
@@ -667,6 +668,9 @@ ice_dcf_init_hw(struct rte_eth_dev *eth_dev, struct ice_dcf_hw *hw)
 			goto err_rss;
 		}
 	}
+
+	if (hw->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_QOS)
+		ice_dcf_tm_conf_init(eth_dev);
 
 	hw->eth_dev = eth_dev;
 	rte_intr_callback_register(&pci_dev->intr_handle,
