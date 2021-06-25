@@ -110,6 +110,7 @@
 #include "roc_cpt.h"
 
 /* CPT microcode */
+#include "roc_ae.h"
 #include "roc_ie_on.h"
 #include "roc_ie_ot.h"
 #include "roc_se.h"
