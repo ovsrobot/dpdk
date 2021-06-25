@@ -226,16 +226,29 @@ get_hugepage_dir(uint64_t hugepage_sz, char *hugedir, int len)
 		default_size = get_default_hp_size();
 
 	while (fgets(buf, sizeof(buf), fd)){
+		const char *dir;
+
 		if (rte_strsplit(buf, sizeof(buf), splitstr, _FIELDNAME_MAX,
 				split_tok) != _FIELDNAME_MAX) {
 			RTE_LOG(ERR, EAL, "Error parsing %s\n", proc_mounts);
 			break; /* return NULL */
 		}
 
-		/* we have a specified --huge-dir option, only examine that dir */
-		if (internal_conf->hugepage_dir != NULL &&
-				strcmp(splitstr[MOUNTPT], internal_conf->hugepage_dir) != 0)
-			continue;
+		dir = splitstr[MOUNTPT];
+
+		/*
+		 * If a --huge-dir option has been specified, only examine
+		 * mounts that contain that directory, and make sure to return
+		 * the directory, not the mount.
+		 */
+		if (internal_conf->hugepage_dir != NULL) {
+			if (strncmp(internal_conf->hugepage_dir,
+				splitstr[MOUNTPT],
+				strlen(splitstr[MOUNTPT])) != 0)
+				continue;
+
+			dir = internal_conf->hugepage_dir;
+		}
 
 		if (strncmp(splitstr[FSTYPE], hugetlbfs_str, htlbfs_str_len) == 0){
 			const char *pagesz_str = strstr(splitstr[OPTIONS], pagesize_opt);
@@ -243,7 +256,7 @@ get_hugepage_dir(uint64_t hugepage_sz, char *hugedir, int len)
 			/* if no explicit page size, the default page size is compared */
 			if (pagesz_str == NULL){
 				if (hugepage_sz == default_size){
-					strlcpy(hugedir, splitstr[MOUNTPT], len);
+					strlcpy(hugedir, dir, len);
 					retval = 0;
 					break;
 				}
@@ -252,7 +265,7 @@ get_hugepage_dir(uint64_t hugepage_sz, char *hugedir, int len)
 			else {
 				uint64_t pagesz = rte_str_to_size(&pagesz_str[pagesize_opt_len]);
 				if (pagesz == hugepage_sz) {
-					strlcpy(hugedir, splitstr[MOUNTPT], len);
+					strlcpy(hugedir, dir, len);
 					retval = 0;
 					break;
 				}
