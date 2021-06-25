@@ -33,7 +33,28 @@ enum pmd_mgmt_state {
 	PMD_MGMT_ENABLED
 };
 
-struct pmd_queue_cfg {
+union queue {
+	uint32_t val;
+	struct {
+		uint16_t portid;
+		uint16_t qid;
+	};
+};
+
+struct queue_list_entry {
+	TAILQ_ENTRY(queue_list_entry) next;
+	union queue queue;
+};
+
+struct pmd_core_cfg {
+	TAILQ_HEAD(queue_list_head, queue_list_entry) head;
+	/**< Which port-queue pairs are associated with this lcore? */
+	union queue power_save_queue;
+	/**< When polling multiple queues, all but this one will be ignored */
+	bool power_save_queue_set;
+	/**< When polling multiple queues, power save queue must be set */
+	size_t n_queues;
+	/**< How many queues are in the list? */
 	volatile enum pmd_mgmt_state pwr_mgmt_state;
 	/**< State of power management for this queue */
 	enum rte_power_pmd_mgmt_type cb_mode;
@@ -43,8 +64,96 @@ struct pmd_queue_cfg {
 	uint64_t empty_poll_stats;
 	/**< Number of empty polls */
 } __rte_cache_aligned;
+static struct pmd_core_cfg lcore_cfg[RTE_MAX_LCORE];
 
-static struct pmd_queue_cfg port_cfg[RTE_MAX_ETHPORTS][RTE_MAX_QUEUES_PER_PORT];
+static inline bool
+queue_equal(const union queue *l, const union queue *r)
+{
+	return l->val == r->val;
+}
+
+static inline void
+queue_copy(union queue *dst, const union queue *src)
+{
+	dst->val = src->val;
+}
+
+static inline bool
+queue_is_power_save(const struct pmd_core_cfg *cfg, const union queue *q)
+{
+	const union queue *pwrsave = &cfg->power_save_queue;
+
+	/* if there's only single queue, no need to check anything */
+	if (cfg->n_queues == 1)
+		return true;
+	return cfg->power_save_queue_set && queue_equal(q, pwrsave);
+}
+
+static struct queue_list_entry *
+queue_list_find(const struct pmd_core_cfg *cfg, const union queue *q)
+{
+	struct queue_list_entry *cur;
+
+	TAILQ_FOREACH(cur, &cfg->head, next) {
+		if (queue_equal(&cur->queue, q))
+			return cur;
+	}
+	return NULL;
+}
+
+static int
+queue_set_power_save(struct pmd_core_cfg *cfg, const union queue *q)
+{
+	const struct queue_list_entry *found = queue_list_find(cfg, q);
+	if (found == NULL)
+		return -ENOENT;
+	queue_copy(&cfg->power_save_queue, q);
+	cfg->power_save_queue_set = true;
+	return 0;
+}
+
+static int
+queue_list_add(struct pmd_core_cfg *cfg, const union queue *q)
+{
+	struct queue_list_entry *qle;
+
+	/* is it already in the list? */
+	if (queue_list_find(cfg, q) != NULL)
+		return -EEXIST;
+
+	qle = malloc(sizeof(*qle));
+	if (qle == NULL)
+		return -ENOMEM;
+
+	queue_copy(&qle->queue, q);
+	TAILQ_INSERT_TAIL(&cfg->head, qle, next);
+	cfg->n_queues++;
+
+	return 0;
+}
+
+static int
+queue_list_remove(struct pmd_core_cfg *cfg, const union queue *q)
+{
+	struct queue_list_entry *found;
+
+	found = queue_list_find(cfg, q);
+	if (found == NULL)
+		return -ENOENT;
+
+	TAILQ_REMOVE(&cfg->head, found, next);
+	cfg->n_queues--;
+	free(found);
+
+	/* if this was a power save queue, unset it */
+	if (cfg->power_save_queue_set && queue_is_power_save(cfg, q)) {
+		union queue *pwrsave = &cfg->power_save_queue;
+		cfg->power_save_queue_set = false;
+		pwrsave->val = 0;
+	}
+
+	return 0;
+}
 
 static void
 calc_tsc(void)
@@ -79,10 +188,10 @@ clb_umwait(uint16_t port_id, uint16_t qidx, struct rte_mbuf **pkts __rte_unused,
 		uint16_t nb_rx, uint16_t max_pkts __rte_unused,
 		void *addr __rte_unused)
 {
+	const unsigned int lcore = rte_lcore_id();
+	struct pmd_core_cfg *q_conf;
 
-	struct pmd_queue_cfg *q_conf;
-
-	q_conf = &port_cfg[port_id][qidx];
+	q_conf = &lcore_cfg[lcore];
 
 	if (unlikely(nb_rx == 0)) {
 		q_conf->empty_poll_stats++;
@@ -107,11 +216,26 @@ clb_pause(uint16_t port_id, uint16_t qidx, struct rte_mbuf **pkts __rte_unused,
 		uint16_t nb_rx, uint16_t max_pkts __rte_unused,
 		void *addr __rte_unused)
 {
-	struct pmd_queue_cfg *q_conf;
+	const unsigned int lcore = rte_lcore_id();
+	const union queue q = {.portid = port_id, .qid = qidx};
+	const bool empty = nb_rx == 0;
+	struct pmd_core_cfg *q_conf;
 
-	q_conf = &port_cfg[port_id][qidx];
+	q_conf = &lcore_cfg[lcore];
 
-	if (unlikely(nb_rx == 0)) {
+	/* early exit */
+	if (likely(!empty)) {
+		q_conf->empty_poll_stats = 0;
+	} else {
+		/* do we care about this particular queue? */
+		if (!queue_is_power_save(q_conf, &q))
+			return nb_rx;
+
+		/*
+		 * we can increment unconditionally here because if there were
+		 * non-empty polls in other queues assigned to this core, we
+		 * dropped the counter to zero anyway.
+		 */
 		q_conf->empty_poll_stats++;
 		/* sleep for 1 microsecond */
 		if (unlikely(q_conf->empty_poll_stats > EMPTYPOLL_MAX)) {
@@ -127,8 +251,7 @@ clb_pause(uint16_t port_id, uint16_t qidx, struct rte_mbuf **pkts __rte_unused,
 					rte_pause();
 			}
 		}
-	} else
-		q_conf->empty_poll_stats = 0;
+	}
 
 	return nb_rx;
 }
@@ -138,19 +261,33 @@ clb_scale_freq(uint16_t port_id, uint16_t qidx,
 		struct rte_mbuf **pkts __rte_unused, uint16_t nb_rx,
 		uint16_t max_pkts __rte_unused, void *_  __rte_unused)
 {
-	struct pmd_queue_cfg *q_conf;
+	const unsigned int lcore = rte_lcore_id();
+	const union queue q = {.portid = port_id, .qid = qidx};
+	const bool empty = nb_rx == 0;
+	struct pmd_core_cfg *q_conf;
 
-	q_conf = &port_cfg[port_id][qidx];
+	q_conf = &lcore_cfg[lcore];
 
-	if (unlikely(nb_rx == 0)) {
+	/* early exit */
+	if (likely(!empty)) {
+		q_conf->empty_poll_stats = 0;
+
+		/* scale up freq immediately */
+		rte_power_freq_max(rte_lcore_id());
+	} else {
+		/* do we care about this particular queue? */
+		if (!queue_is_power_save(q_conf, &q))
+			return nb_rx;
+
+		/*
+		 * we can increment unconditionally here because if there were
+		 * non-empty polls in other queues assigned to this core, we
+		 * dropped the counter to zero anyway.
+		 */
 		q_conf->empty_poll_stats++;
 		if (unlikely(q_conf->empty_poll_stats > EMPTYPOLL_MAX))
 			/* scale down freq */
 			rte_power_freq_min(rte_lcore_id());
-	} else {
-		q_conf->empty_poll_stats = 0;
-		/* scale up freq */
-		rte_power_freq_max(rte_lcore_id());
 	}
 
 	return nb_rx;
@@ -167,11 +304,79 @@ queue_stopped(const uint16_t port_id, const uint16_t queue_id)
 	return qinfo.queue_state == RTE_ETH_QUEUE_STATE_STOPPED;
 }
 
+static int
+cfg_queues_stopped(struct pmd_core_cfg *queue_cfg)
+{
+	const struct queue_list_entry *entry;
+
+	TAILQ_FOREACH(entry, &queue_cfg->head, next) {
+		const union queue *q = &entry->queue;
+		int ret = queue_stopped(q->portid, q->qid);
+		if (ret != 1)
+			return ret;
+	}
+	return 1;
+}
+
+static int
+check_scale(unsigned int lcore)
+{
+	enum power_management_env env;
+
+	/* only PSTATE and ACPI modes are supported */
+	if (!rte_power_check_env_supported(PM_ENV_ACPI_CPUFREQ) &&
+	    !rte_power_check_env_supported(PM_ENV_PSTATE_CPUFREQ)) {
+		RTE_LOG(DEBUG, POWER, "Neither ACPI nor PSTATE modes are supported\n");
+		return -ENOTSUP;
+	}
+	/* ensure we could initialize the power library */
+	if (rte_power_init(lcore))
+		return -EINVAL;
+
+	/* ensure we initialized the correct env */
+	env = rte_power_get_env();
+	if (env != PM_ENV_ACPI_CPUFREQ && env != PM_ENV_PSTATE_CPUFREQ) {
+		RTE_LOG(DEBUG, POWER, "Neither ACPI nor PSTATE modes were initialized\n");
+		return -ENOTSUP;
+	}
+
+	/* we're done */
+	return 0;
+}
+
+static int
+check_monitor(struct pmd_core_cfg *cfg, const union queue *qdata)
+{
+	struct rte_power_monitor_cond dummy;
+
+	/* check if rte_power_monitor is supported */
+	if (!global_data.intrinsics_support.power_monitor) {
+		RTE_LOG(DEBUG, POWER, "Monitoring intrinsics are not supported\n");
+		return -ENOTSUP;
+	}
+
+	if (cfg->n_queues > 0) {
+		RTE_LOG(DEBUG, POWER, "Monitoring multiple queues is not supported\n");
+		return -ENOTSUP;
+	}
+
+	/* check if the device supports the necessary PMD API */
+	if (rte_eth_get_monitor_addr(qdata->portid, qdata->qid,
+			&dummy) == -ENOTSUP) {
+		RTE_LOG(DEBUG, POWER, "The device does not support rte_eth_get_monitor_addr\n");
+		return -ENOTSUP;
+	}
+
+	/* we're done */
+	return 0;
+}
+
 int
 rte_power_ethdev_pmgmt_queue_enable(unsigned int lcore_id, uint16_t port_id,
 		uint16_t queue_id, enum rte_power_pmd_mgmt_type mode)
 {
-	struct pmd_queue_cfg *queue_cfg;
+	const union queue qdata = {.portid = port_id, .qid = queue_id};
+	struct pmd_core_cfg *queue_cfg;
 	struct rte_eth_dev_info info;
 	rte_rx_callback_fn clb;
 	int ret;
@@ -202,9 +407,19 @@ rte_power_ethdev_pmgmt_queue_enable(unsigned int lcore_id, uint16_t port_id,
 		goto end;
 	}
 
-	queue_cfg = &port_cfg[port_id][queue_id];
+	queue_cfg = &lcore_cfg[lcore_id];
 
-	if (queue_cfg->pwr_mgmt_state != PMD_MGMT_DISABLED) {
+	/* check if other queues are stopped as well */
+	ret = cfg_queues_stopped(queue_cfg);
+	if (ret != 1) {
+		/* error means invalid queue, 0 means queue wasn't stopped */
+		ret = ret < 0 ? -EINVAL : -EBUSY;
+		goto end;
+	}
+
+	/* if callback was already enabled, check current callback type */
+	if (queue_cfg->pwr_mgmt_state != PMD_MGMT_DISABLED &&
+			queue_cfg->cb_mode != mode) {
 		ret = -EINVAL;
 		goto end;
 	}
@@ -214,53 +429,20 @@ rte_power_ethdev_pmgmt_queue_enable(unsigned int lcore_id, uint16_t port_id,
 
 	switch (mode) {
 	case RTE_POWER_MGMT_TYPE_MONITOR:
-	{
-		struct rte_power_monitor_cond dummy;
-
-		/* check if rte_power_monitor is supported */
-		if (!global_data.intrinsics_support.power_monitor) {
-			RTE_LOG(DEBUG, POWER, "Monitoring intrinsics are not supported\n");
-			ret = -ENOTSUP;
+		/* check if we can add a new queue */
+		ret = check_monitor(queue_cfg, &qdata);
+		if (ret < 0)
 			goto end;
-		}
 
-		/* check if the device supports the necessary PMD API */
-		if (rte_eth_get_monitor_addr(port_id, queue_id,
-				&dummy) == -ENOTSUP) {
-			RTE_LOG(DEBUG, POWER, "The device does not support rte_eth_get_monitor_addr\n");
-			ret = -ENOTSUP;
-			goto end;
-		}
 		clb = clb_umwait;
 		break;
-	}
 	case RTE_POWER_MGMT_TYPE_SCALE:
-	{
-		enum power_management_env env;
-		/* only PSTATE and ACPI modes are supported */
-		if (!rte_power_check_env_supported(PM_ENV_ACPI_CPUFREQ) &&
-				!rte_power_check_env_supported(
-					PM_ENV_PSTATE_CPUFREQ)) {
-			RTE_LOG(DEBUG, POWER, "Neither ACPI nor PSTATE modes are supported\n");
-			ret = -ENOTSUP;
+		/* check if we can add a new queue */
+		ret = check_scale(lcore_id);
+		if (ret < 0)
 			goto end;
-		}
-		/* ensure we could initialize the power library */
-		if (rte_power_init(lcore_id)) {
-			ret = -EINVAL;
-			goto end;
-		}
-		/* ensure we initialized the correct env */
-		env = rte_power_get_env();
-		if (env != PM_ENV_ACPI_CPUFREQ &&
-				env != PM_ENV_PSTATE_CPUFREQ) {
-			RTE_LOG(DEBUG, POWER, "Neither ACPI nor PSTATE modes were initialized\n");
-			ret = -ENOTSUP;
-			goto end;
-		}
 		clb = clb_scale_freq;
 		break;
-	}
 	case RTE_POWER_MGMT_TYPE_PAUSE:
 		/* figure out various time-to-tsc conversions */
 		if (global_data.tsc_per_us == 0)
@@ -273,11 +455,20 @@ rte_power_ethdev_pmgmt_queue_enable(unsigned int lcore_id, uint16_t port_id,
 		ret = -EINVAL;
 		goto end;
 	}
+	/* add this queue to the list */
+	ret = queue_list_add(queue_cfg, &qdata);
+	if (ret < 0) {
+		RTE_LOG(DEBUG, POWER, "Failed to add queue to list: %s\n",
+				strerror(-ret));
+		goto end;
+	}
 
 	/* initialize data before enabling the callback */
-	queue_cfg->empty_poll_stats = 0;
-	queue_cfg->cb_mode = mode;
-	queue_cfg->pwr_mgmt_state = PMD_MGMT_ENABLED;
+	if (queue_cfg->n_queues == 1) {
+		queue_cfg->empty_poll_stats = 0;
+		queue_cfg->cb_mode = mode;
+		queue_cfg->pwr_mgmt_state = PMD_MGMT_ENABLED;
+	}
 	queue_cfg->cur_cb = rte_eth_add_rx_callback(port_id, queue_id,
 			clb, NULL);
 
@@ -290,7 +481,8 @@ int
 rte_power_ethdev_pmgmt_queue_disable(unsigned int lcore_id,
 		uint16_t port_id, uint16_t queue_id)
 {
-	struct pmd_queue_cfg *queue_cfg;
+	const union queue qdata = {.portid = port_id, .qid = queue_id};
+	struct pmd_core_cfg *queue_cfg;
 	int ret;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -EINVAL);
@@ -306,13 +498,31 @@ rte_power_ethdev_pmgmt_queue_disable(unsigned int lcore_id,
 	}
 
 	/* no need to check queue id as wrong queue id would not be enabled */
-	queue_cfg = &port_cfg[port_id][queue_id];
+	queue_cfg = &lcore_cfg[lcore_id];
+
+	/* check if other queues are stopped as well */
+	ret = cfg_queues_stopped(queue_cfg);
+	if (ret != 1) {
+		/* error means invalid queue, 0 means queue wasn't stopped */
+		return ret < 0 ? -EINVAL : -EBUSY;
+	}
 
 	if (queue_cfg->pwr_mgmt_state != PMD_MGMT_ENABLED)
 		return -EINVAL;
 
-	/* stop any callbacks from progressing */
-	queue_cfg->pwr_mgmt_state = PMD_MGMT_DISABLED;
+	/*
+	 * There is no good/easy way to do this without race conditions, so we
+	 * are just going to throw our hands in the air and hope that the user
+	 * has read the documentation and has ensured that ports are stopped at
+	 * the time we enter the API functions.
+	 */
+	ret = queue_list_remove(queue_cfg, &qdata);
+	if (ret < 0)
+		return -ret;
+
+	/* if we've removed all queues from the lists, set state to disabled */
+	if (queue_cfg->n_queues == 0)
+		queue_cfg->pwr_mgmt_state = PMD_MGMT_DISABLED;
 
 	switch (queue_cfg->cb_mode) {
 	case RTE_POWER_MGMT_TYPE_MONITOR: /* fall-through */
@@ -335,4 +545,43 @@ rte_power_ethdev_pmgmt_queue_disable(unsigned int lcore_id,
 	rte_free((void *)queue_cfg->cur_cb);
 
 	return 0;
+}
+
+int
+rte_power_ethdev_pmgmt_queue_set_power_save(unsigned int lcore_id,
+		uint16_t port_id, uint16_t queue_id)
+{
+	const union queue qdata = {.portid = port_id, .qid = queue_id};
+	struct pmd_core_cfg *queue_cfg;
+	int ret;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -EINVAL);
+
+	if (lcore_id >= RTE_MAX_LCORE || queue_id >= RTE_MAX_QUEUES_PER_PORT)
+		return -EINVAL;
+
+	/* no need to check queue id as wrong queue id would not be enabled */
+	queue_cfg = &lcore_cfg[lcore_id];
+
+	if (queue_cfg->pwr_mgmt_state != PMD_MGMT_ENABLED)
+		return -EINVAL;
+
+	ret = queue_set_power_save(queue_cfg, &qdata);
+	if (ret < 0) {
+		RTE_LOG(DEBUG, POWER, "Failed to set power save queue: %s\n",
+			strerror(-ret));
+		return -ret;
+	}
+
+	return 0;
+}
+
+RTE_INIT(rte_power_ethdev_pmgmt_init) {
+	size_t i;
+
+	/* initialize all tailqs */
+	for (i = 0; i < RTE_DIM(lcore_cfg); i++) {
+		struct pmd_core_cfg *cfg = &lcore_cfg[i];
+		TAILQ_INIT(&cfg->head);
+	}
 }

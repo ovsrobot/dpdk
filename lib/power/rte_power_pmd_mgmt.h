@@ -90,6 +90,40 @@ int
 rte_power_ethdev_pmgmt_queue_disable(unsigned int lcore_id,
 		uint16_t port_id, uint16_t queue_id);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice.
+ *
+ * Set a specific Ethernet device Rx queue to be the "power save" queue for a
+ * particular lcore. When multiple queues are assigned to a single lcore using
+ * the `rte_power_ethdev_pmgmt_queue_enable` API, only one of them will trigger
+ * the power management. In a typical scenario, the last queue to be polled on
+ * a particular lcore should be designated as power save queue.
+ *
+ * @note This function is not thread-safe.
+ *
+ * @note When using multiple queues per lcore, calling this function is
+ *   mandatory. If not called, no power management routines would be triggered
+ *   when the traffic starts.
+ *
+ * @warning This function must be called when all affected Ethernet ports are
+ *   stopped and no Rx/Tx is in progress!
+ *
+ * @param lcore_id
+ *   The lcore the Rx queue is polled from.
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param queue_id
+ *   The queue identifier of the Ethernet device.
+ * @return
+ *   0 on success
+ *   <0 on error
+ */
+__rte_experimental
+int
+rte_power_ethdev_pmgmt_queue_set_power_save(unsigned int lcore_id,
+		uint16_t port_id, uint16_t queue_id);
+
 #ifdef __cplusplus
 }
 #endif
