@@ -57,6 +57,9 @@ New Features
 
 * eal: added ``rte_power_monitor_multi`` to support waiting for multiple events.
 
+* rte_power: The experimental PMD power management API now supports managing
+  multiple Ethernet Rx queues per lcore.
+
 
 Removed Items
 -------------

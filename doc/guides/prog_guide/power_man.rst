@@ -198,34 +198,41 @@ Ethernet PMD Power Management API
 Abstract
 ~~~~~~~~
 
-Existing power management mechanisms require developers
-to change application design or change code to make use of it.
-The PMD power management API provides a convenient alternative
-by utilizing Ethernet PMD RX callbacks,
-and triggering power saving whenever empty poll count reaches a certain number.
+Existing power management mechanisms require developers to change application
+design or change code to make use of it. The PMD power management API provides a
+convenient alternative by utilizing Ethernet PMD RX callbacks, and triggering
+power saving whenever empty poll count reaches a certain number.
 
-Monitor
-   This power saving scheme will put the CPU into optimized power state
-   and use the ``rte_power_monitor()`` function
-   to monitor the Ethernet PMD RX descriptor address,
-   and wake the CPU up whenever there's new traffic.
+* Monitor
+   This power saving scheme will put the CPU into optimized power state and
+   monitor the Ethernet PMD RX descriptor address, waking the CPU up whenever
+   there's new traffic. Support for this scheme may not be available on all
+   platforms, and further limitations may apply (see below).
 
-Pause
-   This power saving scheme will avoid busy polling
-   by either entering power-optimized sleep state
-   with ``rte_power_pause()`` function,
-   or, if it's not available, use ``rte_pause()``.
+* Pause
+   This power saving scheme will avoid busy polling by either entering
+   power-optimized sleep state with ``rte_power_pause()`` function, or, if it's
+   not supported by the underlying platform, use ``rte_pause()``.
 
-Frequency scaling
-   This power saving scheme will use ``librte_power`` library
-   functionality to scale the core frequency up/down
-   depending on traffic volume.
+* Frequency scaling
+   This power saving scheme will use ``librte_power`` library functionality to
+   scale the core frequency up/down depending on traffic volume.
 
-.. note::
+The "monitor" mode is only supported in the following configurations and scenarios:
 
-   Currently, this power management API is limited to mandatory mapping
-   of 1 queue to 1 core (multiple queues are supported,
-   but they must be polled from different cores).
+* If ``rte_cpu_get_intrinsics_support()`` function indicates that
+  ``rte_power_monitor()`` is supported by the platform, then monitoring will be
+  limited to a mapping of 1 core 1 queue (thus, each Rx queue will have to be
+  monitored from a different lcore).
+
+* If ``rte_cpu_get_intrinsics_support()`` function indicates that the
+  ``rte_power_monitor()`` function is not supported, then monitor mode will not
+  be supported.
+
+* Not all Ethernet devices support monitoring, even if the underlying
+  platform may support the necessary CPU instructions. Please refer to
+  :doc:`../nics/overview` for more information.
+
 
 API Overview for Ethernet PMD Power Management
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -233,6 +240,16 @@ API Overview for Ethernet PMD Power Management
 * **Queue Enable**: Enable specific power scheme for certain queue/port/core.
 
 * **Queue Disable**: Disable power scheme for certain queue/port/core.
+
+* **Set Power Save Queue**: In case of polling multiple queues from one lcore,
+  designate a specific queue to be the one that triggers power management routines.
+
+.. note::
+
+   When using PMD power management with multiple Ethernet Rx queues on one lcore,
+   it is required to designate one of the configured Rx queues as a "power save"
+   queue by calling the appropriate API. Failing to do so will result in no
+   power saving ever taking effect.
 
 References
 ----------
@@ -242,3 +259,5 @@ References
 
 *   The :doc:`../sample_app_ug/vm_power_management`
     chapter in the :doc:`../sample_app_ug/index` section.
+
+*   The :doc:`../nics/overview` chapter in the :doc:`../nics/index` section
