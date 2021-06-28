@@ -55,6 +55,8 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* eal: added ``rte_power_monitor_multi`` to support waiting for multiple events.
+
 
 Removed Items
 -------------
