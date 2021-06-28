@@ -492,3 +492,9 @@ if cc.get_define('__ARM_FEATURE_CRYPTO', args: machine_args) != ''
     compile_time_cpuflags += ['RTE_CPUFLAG_AES', 'RTE_CPUFLAG_PMULL',
     'RTE_CPUFLAG_SHA1', 'RTE_CPUFLAG_SHA2']
 endif
+
+# Check whether SVE ACLE is supported and set the corresponding flag which will used with SVE ACLE code.
+if (cc.get_define('__ARM_FEATURE_SVE', args: machine_args) != '' and
+        cc.check_header('arm_sve.h'))
+    dpdk_conf.set('RTE_HAS_SVE_ACLE', 1)
+endif
