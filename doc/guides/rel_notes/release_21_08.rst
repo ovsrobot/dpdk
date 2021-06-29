@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel ice driver.**
+
+  * In AVX2 code, added the new RX and TX paths to use the HW offload
+    features. When the HW offload features are configured to be used, the
+    offload paths are chosen automatically. In parallel the support for HW
+    offload features was removed from the legacy AVX2 paths.
 
 Removed Items
 -------------
