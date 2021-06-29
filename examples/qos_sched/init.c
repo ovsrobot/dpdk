@@ -61,7 +61,7 @@ static struct rte_eth_conf port_conf = {
 		.split_hdr_size = 0,
 	},
 	.txmode = {
-		.mq_mode = ETH_DCB_NONE,
+		.mq_mode = RTE_ETH_MQ_TX_NONE,
 	},
 };
 

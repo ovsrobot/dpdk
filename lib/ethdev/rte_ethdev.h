@@ -249,7 +249,7 @@ void rte_eth_iterator_cleanup(struct rte_dev_iterator *iter);
  * field is not supported, its value is 0.
  * All byte-related statistics do not include Ethernet FCS regardless
  * of whether these bytes have been delivered to the application
- * (see DEV_RX_OFFLOAD_KEEP_CRC).
+ * (see RTE_ETH_RX_OFFLOAD_KEEP_CRC).
  */
 struct rte_eth_stats {
 	uint64_t ipackets;  /**< Total number of successfully received packets. */
@@ -279,42 +279,74 @@ struct rte_eth_stats {
 /**
  * Device supported speeds bitmap flags
  */
-#define ETH_LINK_SPEED_AUTONEG  (0 <<  0)  /**< Autonegotiate (all speeds) */
-#define ETH_LINK_SPEED_FIXED    (1 <<  0)  /**< Disable autoneg (fixed speed) */
-#define ETH_LINK_SPEED_10M_HD   (1 <<  1)  /**<  10 Mbps half-duplex */
-#define ETH_LINK_SPEED_10M      (1 <<  2)  /**<  10 Mbps full-duplex */
-#define ETH_LINK_SPEED_100M_HD  (1 <<  3)  /**< 100 Mbps half-duplex */
-#define ETH_LINK_SPEED_100M     (1 <<  4)  /**< 100 Mbps full-duplex */
-#define ETH_LINK_SPEED_1G       (1 <<  5)  /**<   1 Gbps */
-#define ETH_LINK_SPEED_2_5G     (1 <<  6)  /**< 2.5 Gbps */
-#define ETH_LINK_SPEED_5G       (1 <<  7)  /**<   5 Gbps */
-#define ETH_LINK_SPEED_10G      (1 <<  8)  /**<  10 Gbps */
-#define ETH_LINK_SPEED_20G      (1 <<  9)  /**<  20 Gbps */
-#define ETH_LINK_SPEED_25G      (1 << 10)  /**<  25 Gbps */
-#define ETH_LINK_SPEED_40G      (1 << 11)  /**<  40 Gbps */
-#define ETH_LINK_SPEED_50G      (1 << 12)  /**<  50 Gbps */
-#define ETH_LINK_SPEED_56G      (1 << 13)  /**<  56 Gbps */
-#define ETH_LINK_SPEED_100G     (1 << 14)  /**< 100 Gbps */
-#define ETH_LINK_SPEED_200G     (1 << 15)  /**< 200 Gbps */
+#define RTE_ETH_LINK_SPEED_AUTONEG  (0 <<  0)  /**< Autonegotiate (all speeds) */
+#define ETH_LINK_SPEED_AUTONEG	RTE_ETH_LINK_SPEED_AUTONEG
+#define RTE_ETH_LINK_SPEED_FIXED    (1 <<  0)  /**< Disable autoneg (fixed speed) */
+#define ETH_LINK_SPEED_FIXED	RTE_ETH_LINK_SPEED_FIXED
+#define RTE_ETH_LINK_SPEED_10M_HD   (1 <<  1)  /**<  10 Mbps half-duplex */
+#define ETH_LINK_SPEED_10M_HD	RTE_ETH_LINK_SPEED_10M_HD
+#define RTE_ETH_LINK_SPEED_10M      (1 <<  2)  /**<  10 Mbps full-duplex */
+#define ETH_LINK_SPEED_10M	RTE_ETH_LINK_SPEED_10M
+#define RTE_ETH_LINK_SPEED_100M_HD  (1 <<  3)  /**< 100 Mbps half-duplex */
+#define ETH_LINK_SPEED_100M_HD	RTE_ETH_LINK_SPEED_100M_HD
+#define RTE_ETH_LINK_SPEED_100M     (1 <<  4)  /**< 100 Mbps full-duplex */
+#define ETH_LINK_SPEED_100M	RTE_ETH_LINK_SPEED_100M
+#define RTE_ETH_LINK_SPEED_1G       (1 <<  5)  /**<   1 Gbps */
+#define ETH_LINK_SPEED_1G	RTE_ETH_LINK_SPEED_1G
+#define RTE_ETH_LINK_SPEED_2_5G     (1 <<  6)  /**< 2.5 Gbps */
+#define ETH_LINK_SPEED_2_5G	RTE_ETH_LINK_SPEED_2_5G
+#define RTE_ETH_LINK_SPEED_5G       (1 <<  7)  /**<   5 Gbps */
+#define ETH_LINK_SPEED_5G	RTE_ETH_LINK_SPEED_5G
+#define RTE_ETH_LINK_SPEED_10G      (1 <<  8)  /**<  10 Gbps */
+#define ETH_LINK_SPEED_10G	RTE_ETH_LINK_SPEED_10G
+#define RTE_ETH_LINK_SPEED_20G      (1 <<  9)  /**<  20 Gbps */
+#define ETH_LINK_SPEED_20G	RTE_ETH_LINK_SPEED_20G
+#define RTE_ETH_LINK_SPEED_25G      (1 << 10)  /**<  25 Gbps */
+#define ETH_LINK_SPEED_25G	RTE_ETH_LINK_SPEED_25G
+#define RTE_ETH_LINK_SPEED_40G      (1 << 11)  /**<  40 Gbps */
+#define ETH_LINK_SPEED_40G	RTE_ETH_LINK_SPEED_40G
+#define RTE_ETH_LINK_SPEED_50G      (1 << 12)  /**<  50 Gbps */
+#define ETH_LINK_SPEED_50G	RTE_ETH_LINK_SPEED_50G
+#define RTE_ETH_LINK_SPEED_56G      (1 << 13)  /**<  56 Gbps */
+#define ETH_LINK_SPEED_56G	RTE_ETH_LINK_SPEED_56G
+#define RTE_ETH_LINK_SPEED_100G     (1 << 14)  /**< 100 Gbps */
+#define ETH_LINK_SPEED_100G	RTE_ETH_LINK_SPEED_100G
+#define RTE_ETH_LINK_SPEED_200G     (1 << 15)  /**< 200 Gbps */
+#define ETH_LINK_SPEED_200G	RTE_ETH_LINK_SPEED_200G
 
 /**
  * Ethernet numeric link speeds in Mbps
  */
-#define ETH_SPEED_NUM_NONE         0 /**< Not defined */
-#define ETH_SPEED_NUM_10M         10 /**<  10 Mbps */
-#define ETH_SPEED_NUM_100M       100 /**< 100 Mbps */
-#define ETH_SPEED_NUM_1G        1000 /**<   1 Gbps */
-#define ETH_SPEED_NUM_2_5G      2500 /**< 2.5 Gbps */
-#define ETH_SPEED_NUM_5G        5000 /**<   5 Gbps */
-#define ETH_SPEED_NUM_10G      10000 /**<  10 Gbps */
-#define ETH_SPEED_NUM_20G      20000 /**<  20 Gbps */
-#define ETH_SPEED_NUM_25G      25000 /**<  25 Gbps */
-#define ETH_SPEED_NUM_40G      40000 /**<  40 Gbps */
-#define ETH_SPEED_NUM_50G      50000 /**<  50 Gbps */
-#define ETH_SPEED_NUM_56G      56000 /**<  56 Gbps */
-#define ETH_SPEED_NUM_100G    100000 /**< 100 Gbps */
-#define ETH_SPEED_NUM_200G    200000 /**< 200 Gbps */
-#define ETH_SPEED_NUM_UNKNOWN UINT32_MAX /**< Unknown */
+#define RTE_ETH_SPEED_NUM_NONE         0 /**< Not defined */
+#define ETH_SPEED_NUM_NONE	RTE_ETH_SPEED_NUM_NONE
+#define RTE_ETH_SPEED_NUM_10M         10 /**<  10 Mbps */
+#define ETH_SPEED_NUM_10M	RTE_ETH_SPEED_NUM_10M
+#define RTE_ETH_SPEED_NUM_100M       100 /**< 100 Mbps */
+#define ETH_SPEED_NUM_100M	RTE_ETH_SPEED_NUM_100M
+#define RTE_ETH_SPEED_NUM_1G        1000 /**<   1 Gbps */
+#define ETH_SPEED_NUM_1G	RTE_ETH_SPEED_NUM_1G
+#define RTE_ETH_SPEED_NUM_2_5G      2500 /**< 2.5 Gbps */
+#define ETH_SPEED_NUM_2_5G	RTE_ETH_SPEED_NUM_2_5G
+#define RTE_ETH_SPEED_NUM_5G        5000 /**<   5 Gbps */
+#define ETH_SPEED_NUM_5G	RTE_ETH_SPEED_NUM_5G
+#define RTE_ETH_SPEED_NUM_10G      10000 /**<  10 Gbps */
+#define ETH_SPEED_NUM_10G	RTE_ETH_SPEED_NUM_10G
+#define RTE_ETH_SPEED_NUM_20G      20000 /**<  20 Gbps */
+#define ETH_SPEED_NUM_20G	RTE_ETH_SPEED_NUM_20G
+#define RTE_ETH_SPEED_NUM_25G      25000 /**<  25 Gbps */
+#define ETH_SPEED_NUM_25G	RTE_ETH_SPEED_NUM_25G
+#define RTE_ETH_SPEED_NUM_40G      40000 /**<  40 Gbps */
+#define ETH_SPEED_NUM_40G	RTE_ETH_SPEED_NUM_40G
+#define RTE_ETH_SPEED_NUM_50G      50000 /**<  50 Gbps */
+#define ETH_SPEED_NUM_50G	RTE_ETH_SPEED_NUM_50G
+#define RTE_ETH_SPEED_NUM_56G      56000 /**<  56 Gbps */
+#define ETH_SPEED_NUM_56G	RTE_ETH_SPEED_NUM_56G
+#define RTE_ETH_SPEED_NUM_100G    100000 /**< 100 Gbps */
+#define ETH_SPEED_NUM_100G	RTE_ETH_SPEED_NUM_100G
+#define RTE_ETH_SPEED_NUM_200G    200000 /**< 200 Gbps */
+#define ETH_SPEED_NUM_200G	RTE_ETH_SPEED_NUM_200G
+#define RTE_ETH_SPEED_NUM_UNKNOWN UINT32_MAX /**< Unknown */
+#define ETH_SPEED_NUM_UNKNOWN	RTE_ETH_SPEED_NUM_UNKNOWN
 
 /**
  * A structure used to retrieve link-level information of an Ethernet port.
@@ -328,12 +360,18 @@ struct rte_eth_link {
 } __rte_aligned(8);      /**< aligned for atomic64 read/write */
 
 /* Utility constants */
-#define ETH_LINK_HALF_DUPLEX 0 /**< Half-duplex connection (see link_duplex). */
-#define ETH_LINK_FULL_DUPLEX 1 /**< Full-duplex connection (see link_duplex). */
-#define ETH_LINK_DOWN        0 /**< Link is down (see link_status). */
-#define ETH_LINK_UP          1 /**< Link is up (see link_status). */
-#define ETH_LINK_FIXED       0 /**< No autonegotiation (see link_autoneg). */
-#define ETH_LINK_AUTONEG     1 /**< Autonegotiated (see link_autoneg). */
+#define RTE_ETH_LINK_HALF_DUPLEX 0 /**< Half-duplex connection (see link_duplex). */
+#define ETH_LINK_HALF_DUPLEX	RTE_ETH_LINK_HALF_DUPLEX
+#define RTE_ETH_LINK_FULL_DUPLEX 1 /**< Full-duplex connection (see link_duplex). */
+#define ETH_LINK_FULL_DUPLEX	RTE_ETH_LINK_FULL_DUPLEX
+#define RTE_ETH_LINK_DOWN        0 /**< Link is down (see link_status). */
+#define ETH_LINK_DOWN	RTE_ETH_LINK_DOWN
+#define RTE_ETH_LINK_UP          1 /**< Link is up (see link_status). */
+#define ETH_LINK_UP	RTE_ETH_LINK_UP
+#define RTE_ETH_LINK_FIXED       0 /**< No autonegotiation (see link_autoneg). */
+#define ETH_LINK_FIXED	RTE_ETH_LINK_FIXED
+#define RTE_ETH_LINK_AUTONEG     1 /**< Autonegotiated (see link_autoneg). */
+#define ETH_LINK_AUTONEG	RTE_ETH_LINK_AUTONEG
 #define RTE_ETH_LINK_MAX_STR_LEN 40 /**< Max length of default link string. */
 
 /**
@@ -349,9 +387,12 @@ struct rte_eth_thresh {
 /**
  *  Simple flags are used for rte_eth_conf.rxmode.mq_mode.
  */
-#define ETH_MQ_RX_RSS_FLAG  0x1
-#define ETH_MQ_RX_DCB_FLAG  0x2
-#define ETH_MQ_RX_VMDQ_FLAG 0x4
+#define RTE_ETH_MQ_RX_RSS_FLAG  0x1
+#define ETH_MQ_RX_RSS_FLAG	RTE_ETH_MQ_RX_RSS_FLAG
+#define RTE_ETH_MQ_RX_DCB_FLAG  0x2
+#define ETH_MQ_RX_DCB_FLAG	RTE_ETH_MQ_RX_DCB_FLAG
+#define RTE_ETH_MQ_RX_VMDQ_FLAG 0x4
+#define ETH_MQ_RX_VMDQ_FLAG	RTE_ETH_MQ_RX_VMDQ_FLAG
 
 /**
  *  A set of values to identify what method is to be used to route
@@ -359,50 +400,49 @@ struct rte_eth_thresh {
  */
 enum rte_eth_rx_mq_mode {
 	/** None of DCB,RSS or VMDQ mode */
-	ETH_MQ_RX_NONE = 0,
+	RTE_ETH_MQ_RX_NONE = 0,
 
 	/** For RX side, only RSS is on */
-	ETH_MQ_RX_RSS = ETH_MQ_RX_RSS_FLAG,
+	RTE_ETH_MQ_RX_RSS = RTE_ETH_MQ_RX_RSS_FLAG,
 	/** For RX side,only DCB is on. */
-	ETH_MQ_RX_DCB = ETH_MQ_RX_DCB_FLAG,
+	RTE_ETH_MQ_RX_DCB = RTE_ETH_MQ_RX_DCB_FLAG,
 	/** Both DCB and RSS enable */
-	ETH_MQ_RX_DCB_RSS = ETH_MQ_RX_RSS_FLAG | ETH_MQ_RX_DCB_FLAG,
+	RTE_ETH_MQ_RX_DCB_RSS = RTE_ETH_MQ_RX_RSS_FLAG | RTE_ETH_MQ_RX_DCB_FLAG,
 
 	/** Only VMDQ, no RSS nor DCB */
-	ETH_MQ_RX_VMDQ_ONLY = ETH_MQ_RX_VMDQ_FLAG,
+	RTE_ETH_MQ_RX_VMDQ_ONLY = RTE_ETH_MQ_RX_VMDQ_FLAG,
 	/** RSS mode with VMDQ */
-	ETH_MQ_RX_VMDQ_RSS = ETH_MQ_RX_RSS_FLAG | ETH_MQ_RX_VMDQ_FLAG,
+	RTE_ETH_MQ_RX_VMDQ_RSS = RTE_ETH_MQ_RX_RSS_FLAG | RTE_ETH_MQ_RX_VMDQ_FLAG,
 	/** Use VMDQ+DCB to route traffic to queues */
-	ETH_MQ_RX_VMDQ_DCB = ETH_MQ_RX_VMDQ_FLAG | ETH_MQ_RX_DCB_FLAG,
+	RTE_ETH_MQ_RX_VMDQ_DCB = RTE_ETH_MQ_RX_VMDQ_FLAG | RTE_ETH_MQ_RX_DCB_FLAG,
 	/** Enable both VMDQ and DCB in VMDq */
-	ETH_MQ_RX_VMDQ_DCB_RSS = ETH_MQ_RX_RSS_FLAG | ETH_MQ_RX_DCB_FLAG |
-				 ETH_MQ_RX_VMDQ_FLAG,
+	RTE_ETH_MQ_RX_VMDQ_DCB_RSS = RTE_ETH_MQ_RX_RSS_FLAG | RTE_ETH_MQ_RX_DCB_FLAG |
+				 RTE_ETH_MQ_RX_VMDQ_FLAG,
 };
 
-/**
- * for rx mq mode backward compatible
- */
-#define ETH_RSS                       ETH_MQ_RX_RSS
-#define VMDQ_DCB                      ETH_MQ_RX_VMDQ_DCB
-#define ETH_DCB_RX                    ETH_MQ_RX_DCB
+#define ETH_MQ_RX_NONE		RTE_ETH_MQ_RX_NONE
+#define ETH_MQ_RX_RSS		RTE_ETH_MQ_RX_RSS
+#define ETH_MQ_RX_DCB		RTE_ETH_MQ_RX_DCB
+#define ETH_MQ_RX_DCB_RSS	RTE_ETH_MQ_RX_DCB_RSS
+#define ETH_MQ_RX_VMDQ_ONLY	RTE_ETH_MQ_RX_VMDQ_ONLY
+#define ETH_MQ_RX_VMDQ_RSS	RTE_ETH_MQ_RX_VMDQ_RSS
+#define ETH_MQ_RX_VMDQ_DCB	RTE_ETH_MQ_RX_VMDQ_DCB
+#define ETH_MQ_RX_VMDQ_DCB_RSS	RTE_ETH_MQ_RX_VMDQ_DCB_RSS
 
 /**
  * A set of values to identify what method is to be used to transmit
  * packets using multi-TCs.
  */
 enum rte_eth_tx_mq_mode {
-	ETH_MQ_TX_NONE    = 0,  /**< It is in neither DCB nor VT mode. */
-	ETH_MQ_TX_DCB,          /**< For TX side,only DCB is on. */
-	ETH_MQ_TX_VMDQ_DCB,	/**< For TX side,both DCB and VT is on. */
-	ETH_MQ_TX_VMDQ_ONLY,    /**< Only VT on, no DCB */
+	RTE_ETH_MQ_TX_NONE    = 0,  /**< It is in neither DCB nor VT mode. */
+	RTE_ETH_MQ_TX_DCB,          /**< For TX side,only DCB is on. */
+	RTE_ETH_MQ_TX_VMDQ_DCB,	/**< For TX side,both DCB and VT is on. */
+	RTE_ETH_MQ_TX_VMDQ_ONLY,    /**< Only VT on, no DCB */
 };
-
-/**
- * for tx mq mode backward compatible
- */
-#define ETH_DCB_NONE                ETH_MQ_TX_NONE
-#define ETH_VMDQ_DCB_TX             ETH_MQ_TX_VMDQ_DCB
-#define ETH_DCB_TX                  ETH_MQ_TX_DCB
+#define ETH_MQ_TX_NONE RTE_ETH_MQ_TX_NONE
+#define ETH_MQ_TX_DCB RTE_ETH_MQ_TX_DCB
+#define ETH_MQ_TX_VMDQ_DCB RTE_ETH_MQ_TX_VMDQ_DCB
+#define ETH_MQ_TX_VMDQ_ONLY RTE_ETH_MQ_TX_VMDQ_ONLY
 
 /**
  * A structure used to configure the RX features of an Ethernet port.
@@ -415,7 +455,7 @@ struct rte_eth_rxmode {
 	uint32_t max_lro_pkt_size;
 	uint16_t split_hdr_size;  /**< hdr buf size (header_split enabled).*/
 	/**
-	 * Per-port Rx offloads to be set using DEV_RX_OFFLOAD_* flags.
+	 * Per-port Rx offloads to be set using RTE_ETH_RX_OFFLOAD_* flags.
 	 * Only offloads set on rx_offload_capa field on rte_eth_dev_info
 	 * structure are allowed to be set.
 	 */
@@ -430,11 +470,16 @@ struct rte_eth_rxmode {
  * Note that single VLAN is treated the same as inner VLAN.
  */
 enum rte_vlan_type {
-	ETH_VLAN_TYPE_UNKNOWN = 0,
-	ETH_VLAN_TYPE_INNER, /**< Inner VLAN. */
-	ETH_VLAN_TYPE_OUTER, /**< Single VLAN, or outer VLAN. */
-	ETH_VLAN_TYPE_MAX,
+	RTE_ETH_VLAN_TYPE_UNKNOWN = 0,
+	RTE_ETH_VLAN_TYPE_INNER, /**< Inner VLAN. */
+	RTE_ETH_VLAN_TYPE_OUTER, /**< Single VLAN, or outer VLAN. */
+	RTE_ETH_VLAN_TYPE_MAX,
 };
+
+#define ETH_VLAN_TYPE_UNKNOWN	RTE_ETH_VLAN_TYPE_UNKNOWN
+#define ETH_VLAN_TYPE_INNER	RTE_ETH_VLAN_TYPE_INNER
+#define ETH_VLAN_TYPE_OUTER	RTE_ETH_VLAN_TYPE_OUTER
+#define ETH_VLAN_TYPE_MAX	RTE_ETH_VLAN_TYPE_MAX
 
 /**
  * A structure used to describe a vlan filter.
@@ -506,37 +551,68 @@ struct rte_eth_rss_conf {
  * Below macros are defined for RSS offload types, they can be used to
  * fill rte_eth_rss_conf.rss_hf or rte_flow_action_rss.types.
  */
-#define ETH_RSS_IPV4               (1ULL << 2)
-#define ETH_RSS_FRAG_IPV4          (1ULL << 3)
-#define ETH_RSS_NONFRAG_IPV4_TCP   (1ULL << 4)
-#define ETH_RSS_NONFRAG_IPV4_UDP   (1ULL << 5)
-#define ETH_RSS_NONFRAG_IPV4_SCTP  (1ULL << 6)
-#define ETH_RSS_NONFRAG_IPV4_OTHER (1ULL << 7)
-#define ETH_RSS_IPV6               (1ULL << 8)
-#define ETH_RSS_FRAG_IPV6          (1ULL << 9)
-#define ETH_RSS_NONFRAG_IPV6_TCP   (1ULL << 10)
-#define ETH_RSS_NONFRAG_IPV6_UDP   (1ULL << 11)
-#define ETH_RSS_NONFRAG_IPV6_SCTP  (1ULL << 12)
-#define ETH_RSS_NONFRAG_IPV6_OTHER (1ULL << 13)
-#define ETH_RSS_L2_PAYLOAD         (1ULL << 14)
-#define ETH_RSS_IPV6_EX            (1ULL << 15)
-#define ETH_RSS_IPV6_TCP_EX        (1ULL << 16)
-#define ETH_RSS_IPV6_UDP_EX        (1ULL << 17)
-#define ETH_RSS_PORT               (1ULL << 18)
-#define ETH_RSS_VXLAN              (1ULL << 19)
-#define ETH_RSS_GENEVE             (1ULL << 20)
-#define ETH_RSS_NVGRE              (1ULL << 21)
-#define ETH_RSS_GTPU               (1ULL << 23)
-#define ETH_RSS_ETH                (1ULL << 24)
-#define ETH_RSS_S_VLAN             (1ULL << 25)
-#define ETH_RSS_C_VLAN             (1ULL << 26)
-#define ETH_RSS_ESP                (1ULL << 27)
-#define ETH_RSS_AH                 (1ULL << 28)
-#define ETH_RSS_L2TPV3             (1ULL << 29)
-#define ETH_RSS_PFCP               (1ULL << 30)
-#define ETH_RSS_PPPOE		   (1ULL << 31)
-#define ETH_RSS_ECPRI		   (1ULL << 32)
-#define ETH_RSS_MPLS		   (1ULL << 33)
+#define RTE_ETH_RSS_IPV4               (1ULL << 2)
+#define ETH_RSS_IPV4	RTE_ETH_RSS_IPV4
+#define RTE_ETH_RSS_FRAG_IPV4          (1ULL << 3)
+#define ETH_RSS_FRAG_IPV4	RTE_ETH_RSS_FRAG_IPV4
+#define RTE_ETH_RSS_NONFRAG_IPV4_TCP   (1ULL << 4)
+#define ETH_RSS_NONFRAG_IPV4_TCP	RTE_ETH_RSS_NONFRAG_IPV4_TCP
+#define RTE_ETH_RSS_NONFRAG_IPV4_UDP   (1ULL << 5)
+#define ETH_RSS_NONFRAG_IPV4_UDP	RTE_ETH_RSS_NONFRAG_IPV4_UDP
+#define RTE_ETH_RSS_NONFRAG_IPV4_SCTP  (1ULL << 6)
+#define ETH_RSS_NONFRAG_IPV4_SCTP	RTE_ETH_RSS_NONFRAG_IPV4_SCTP
+#define RTE_ETH_RSS_NONFRAG_IPV4_OTHER (1ULL << 7)
+#define ETH_RSS_NONFRAG_IPV4_OTHER	RTE_ETH_RSS_NONFRAG_IPV4_OTHER
+#define RTE_ETH_RSS_IPV6               (1ULL << 8)
+#define ETH_RSS_IPV6	RTE_ETH_RSS_IPV6
+#define RTE_ETH_RSS_FRAG_IPV6          (1ULL << 9)
+#define ETH_RSS_FRAG_IPV6	RTE_ETH_RSS_FRAG_IPV6
+#define RTE_ETH_RSS_NONFRAG_IPV6_TCP   (1ULL << 10)
+#define ETH_RSS_NONFRAG_IPV6_TCP	RTE_ETH_RSS_NONFRAG_IPV6_TCP
+#define RTE_ETH_RSS_NONFRAG_IPV6_UDP   (1ULL << 11)
+#define ETH_RSS_NONFRAG_IPV6_UDP	RTE_ETH_RSS_NONFRAG_IPV6_UDP
+#define RTE_ETH_RSS_NONFRAG_IPV6_SCTP  (1ULL << 12)
+#define ETH_RSS_NONFRAG_IPV6_SCTP	RTE_ETH_RSS_NONFRAG_IPV6_SCTP
+#define RTE_ETH_RSS_NONFRAG_IPV6_OTHER (1ULL << 13)
+#define ETH_RSS_NONFRAG_IPV6_OTHER	RTE_ETH_RSS_NONFRAG_IPV6_OTHER
+#define RTE_ETH_RSS_L2_PAYLOAD         (1ULL << 14)
+#define ETH_RSS_L2_PAYLOAD	RTE_ETH_RSS_L2_PAYLOAD
+#define RTE_ETH_RSS_IPV6_EX            (1ULL << 15)
+#define ETH_RSS_IPV6_EX	RTE_ETH_RSS_IPV6_EX
+#define RTE_ETH_RSS_IPV6_TCP_EX        (1ULL << 16)
+#define ETH_RSS_IPV6_TCP_EX	RTE_ETH_RSS_IPV6_TCP_EX
+#define RTE_ETH_RSS_IPV6_UDP_EX        (1ULL << 17)
+#define ETH_RSS_IPV6_UDP_EX	RTE_ETH_RSS_IPV6_UDP_EX
+#define RTE_ETH_RSS_PORT               (1ULL << 18)
+#define ETH_RSS_PORT	RTE_ETH_RSS_PORT
+#define RTE_ETH_RSS_VXLAN              (1ULL << 19)
+#define ETH_RSS_VXLAN	RTE_ETH_RSS_VXLAN
+#define RTE_ETH_RSS_GENEVE             (1ULL << 20)
+#define ETH_RSS_GENEVE	RTE_ETH_RSS_GENEVE
+#define RTE_ETH_RSS_NVGRE              (1ULL << 21)
+#define ETH_RSS_NVGRE	RTE_ETH_RSS_NVGRE
+#define RTE_ETH_RSS_GTPU               (1ULL << 23)
+#define ETH_RSS_GTPU	RTE_ETH_RSS_GTPU
+#define RTE_ETH_RSS_ETH                (1ULL << 24)
+#define ETH_RSS_ETH	RTE_ETH_RSS_ETH
+#define RTE_ETH_RSS_S_VLAN             (1ULL << 25)
+#define ETH_RSS_S_VLAN	RTE_ETH_RSS_S_VLAN
+#define RTE_ETH_RSS_C_VLAN             (1ULL << 26)
+#define ETH_RSS_C_VLAN	RTE_ETH_RSS_C_VLAN
+#define RTE_ETH_RSS_ESP                (1ULL << 27)
+#define ETH_RSS_ESP	RTE_ETH_RSS_ESP
+#define RTE_ETH_RSS_AH                 (1ULL << 28)
+#define ETH_RSS_AH	RTE_ETH_RSS_AH
+#define RTE_ETH_RSS_L2TPV3             (1ULL << 29)
+#define ETH_RSS_L2TPV3	RTE_ETH_RSS_L2TPV3
+#define RTE_ETH_RSS_PFCP               (1ULL << 30)
+#define ETH_RSS_PFCP	RTE_ETH_RSS_PFCP
+#define RTE_ETH_RSS_PPPOE		   (1ULL << 31)
+#define ETH_RSS_PPPOE	RTE_ETH_RSS_PPPOE
+#define RTE_ETH_RSS_ECPRI		   (1ULL << 32)
+#define ETH_RSS_ECPRI	RTE_ETH_RSS_ECPRI
+#define RTE_ETH_RSS_MPLS		   (1ULL << 33)
+#define ETH_RSS_MPLS	RTE_ETH_RSS_MPLS
 
 /*
  * We use the following macros to combine with above ETH_RSS_* for
@@ -547,12 +623,18 @@ struct rte_eth_rss_conf {
  * the same level are used simultaneously, it is the same case as none of
  * them are added.
  */
-#define ETH_RSS_L3_SRC_ONLY        (1ULL << 63)
-#define ETH_RSS_L3_DST_ONLY        (1ULL << 62)
-#define ETH_RSS_L4_SRC_ONLY        (1ULL << 61)
-#define ETH_RSS_L4_DST_ONLY        (1ULL << 60)
-#define ETH_RSS_L2_SRC_ONLY        (1ULL << 59)
-#define ETH_RSS_L2_DST_ONLY        (1ULL << 58)
+#define RTE_ETH_RSS_L3_SRC_ONLY        (1ULL << 63)
+#define ETH_RSS_L3_SRC_ONLY	RTE_ETH_RSS_L3_SRC_ONLY
+#define RTE_ETH_RSS_L3_DST_ONLY        (1ULL << 62)
+#define ETH_RSS_L3_DST_ONLY	RTE_ETH_RSS_L3_DST_ONLY
+#define RTE_ETH_RSS_L4_SRC_ONLY        (1ULL << 61)
+#define ETH_RSS_L4_SRC_ONLY	RTE_ETH_RSS_L4_SRC_ONLY
+#define RTE_ETH_RSS_L4_DST_ONLY        (1ULL << 60)
+#define ETH_RSS_L4_DST_ONLY	RTE_ETH_RSS_L4_DST_ONLY
+#define RTE_ETH_RSS_L2_SRC_ONLY        (1ULL << 59)
+#define ETH_RSS_L2_SRC_ONLY	RTE_ETH_RSS_L2_SRC_ONLY
+#define RTE_ETH_RSS_L2_DST_ONLY        (1ULL << 58)
+#define ETH_RSS_L2_DST_ONLY	RTE_ETH_RSS_L2_DST_ONLY
 
 /*
  * Only select IPV6 address prefix as RSS input set according to
@@ -580,22 +662,27 @@ struct rte_eth_rss_conf {
  * It basically stands for the innermost encapsulation level RSS
  * can be performed on according to PMD and device capabilities.
  */
-#define ETH_RSS_LEVEL_PMD_DEFAULT       (0ULL << 50)
+#define RTE_ETH_RSS_LEVEL_PMD_DEFAULT       (0ULL << 50)
+#define ETH_RSS_LEVEL_PMD_DEFAULT	RTE_ETH_RSS_LEVEL_PMD_DEFAULT
 
 /**
  * level 1, requests RSS to be performed on the outermost packet
  * encapsulation level.
  */
-#define ETH_RSS_LEVEL_OUTERMOST         (1ULL << 50)
+#define RTE_ETH_RSS_LEVEL_OUTERMOST         (1ULL << 50)
+#define ETH_RSS_LEVEL_OUTERMOST	RTE_ETH_RSS_LEVEL_OUTERMOST
 
 /**
  * level 2, requests RSS to be performed on the specified inner packet
  * encapsulation level, from outermost to innermost (lower to higher values).
  */
-#define ETH_RSS_LEVEL_INNERMOST         (2ULL << 50)
-#define ETH_RSS_LEVEL_MASK              (3ULL << 50)
+#define RTE_ETH_RSS_LEVEL_INNERMOST         (2ULL << 50)
+#define ETH_RSS_LEVEL_INNERMOST	RTE_ETH_RSS_LEVEL_INNERMOST
+#define RTE_ETH_RSS_LEVEL_MASK              (3ULL << 50)
+#define ETH_RSS_LEVEL_MASK	RTE_ETH_RSS_LEVEL_MASK
 
-#define ETH_RSS_LEVEL(rss_hf) ((rss_hf & ETH_RSS_LEVEL_MASK) >> 50)
+#define RTE_ETH_RSS_LEVEL(rss_hf) ((rss_hf & RTE_ETH_RSS_LEVEL_MASK) >> 50)
+#define ETH_RSS_LEVEL(rss_hf)	RTE_ETH_RSS_LEVEL(rss_hf)
 
 /**
  * For input set change of hash filter, if SRC_ONLY and DST_ONLY of
@@ -619,213 +706,277 @@ rte_eth_rss_hf_refine(uint64_t rss_hf)
 	return rss_hf;
 }
 
-#define ETH_RSS_IPV6_PRE32 ( \
-		ETH_RSS_IPV6 | \
+#define RTE_ETH_RSS_IPV6_PRE32 ( \
+		RTE_ETH_RSS_IPV6 | \
 		RTE_ETH_RSS_L3_PRE32)
+#define ETH_RSS_IPV6_PRE32	RTE_ETH_RSS_IPV6_PRE32
 
-#define ETH_RSS_IPV6_PRE40 ( \
-		ETH_RSS_IPV6 | \
+#define RTE_ETH_RSS_IPV6_PRE40 ( \
+		RTE_ETH_RSS_IPV6 | \
 		RTE_ETH_RSS_L3_PRE40)
+#define ETH_RSS_IPV6_PRE40	RTE_ETH_RSS_IPV6_PRE40
 
-#define ETH_RSS_IPV6_PRE48 ( \
-		ETH_RSS_IPV6 | \
+#define RTE_ETH_RSS_IPV6_PRE48 ( \
+		RTE_ETH_RSS_IPV6 | \
 		RTE_ETH_RSS_L3_PRE48)
+#define ETH_RSS_IPV6_PRE48	RTE_ETH_RSS_IPV6_PRE48
 
-#define ETH_RSS_IPV6_PRE56 ( \
-		ETH_RSS_IPV6 | \
+#define RTE_ETH_RSS_IPV6_PRE56 ( \
+		RTE_ETH_RSS_IPV6 | \
 		RTE_ETH_RSS_L3_PRE56)
+#define ETH_RSS_IPV6_PRE56	RTE_ETH_RSS_IPV6_PRE56
 
-#define ETH_RSS_IPV6_PRE64 ( \
-		ETH_RSS_IPV6 | \
+#define RTE_ETH_RSS_IPV6_PRE64 ( \
+		RTE_ETH_RSS_IPV6 | \
 		RTE_ETH_RSS_L3_PRE64)
+#define ETH_RSS_IPV6_PRE64	RTE_ETH_RSS_IPV6_PRE64
 
-#define ETH_RSS_IPV6_PRE96 ( \
-		ETH_RSS_IPV6 | \
+#define RTE_ETH_RSS_IPV6_PRE96 ( \
+		RTE_ETH_RSS_IPV6 | \
 		RTE_ETH_RSS_L3_PRE96)
+#define ETH_RSS_IPV6_PRE96	RTE_ETH_RSS_IPV6_PRE96
 
-#define ETH_RSS_IPV6_PRE32_UDP ( \
-		ETH_RSS_NONFRAG_IPV6_UDP | \
+#define RTE_ETH_RSS_IPV6_PRE32_UDP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_UDP | \
 		RTE_ETH_RSS_L3_PRE32)
+#define ETH_RSS_IPV6_PRE32_UDP	RTE_ETH_RSS_IPV6_PRE32_UDP
 
-#define ETH_RSS_IPV6_PRE40_UDP ( \
-		ETH_RSS_NONFRAG_IPV6_UDP | \
+#define RTE_ETH_RSS_IPV6_PRE40_UDP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_UDP | \
 		RTE_ETH_RSS_L3_PRE40)
+#define ETH_RSS_IPV6_PRE40_UDP	RTE_ETH_RSS_IPV6_PRE40_UDP
 
-#define ETH_RSS_IPV6_PRE48_UDP ( \
-		ETH_RSS_NONFRAG_IPV6_UDP | \
+#define RTE_ETH_RSS_IPV6_PRE48_UDP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_UDP | \
 		RTE_ETH_RSS_L3_PRE48)
+#define ETH_RSS_IPV6_PRE48_UDP	RTE_ETH_RSS_IPV6_PRE48_UDP
 
-#define ETH_RSS_IPV6_PRE56_UDP ( \
-		ETH_RSS_NONFRAG_IPV6_UDP | \
+#define RTE_ETH_RSS_IPV6_PRE56_UDP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_UDP | \
 		RTE_ETH_RSS_L3_PRE56)
+#define ETH_RSS_IPV6_PRE56_UDP	RTE_ETH_RSS_IPV6_PRE56_UDP
 
-#define ETH_RSS_IPV6_PRE64_UDP ( \
-		ETH_RSS_NONFRAG_IPV6_UDP | \
+#define RTE_ETH_RSS_IPV6_PRE64_UDP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_UDP | \
 		RTE_ETH_RSS_L3_PRE64)
+#define ETH_RSS_IPV6_PRE64_UDP	RTE_ETH_RSS_IPV6_PRE64_UDP
 
-#define ETH_RSS_IPV6_PRE96_UDP ( \
-		ETH_RSS_NONFRAG_IPV6_UDP | \
+#define RTE_ETH_RSS_IPV6_PRE96_UDP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_UDP | \
 		RTE_ETH_RSS_L3_PRE96)
+#define ETH_RSS_IPV6_PRE96_UDP	RTE_ETH_RSS_IPV6_PRE96_UDP
 
-#define ETH_RSS_IPV6_PRE32_TCP ( \
-		ETH_RSS_NONFRAG_IPV6_TCP | \
+#define RTE_ETH_RSS_IPV6_PRE32_TCP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_TCP | \
 		RTE_ETH_RSS_L3_PRE32)
+#define ETH_RSS_IPV6_PRE32_TCP	RTE_ETH_RSS_IPV6_PRE32_TCP
 
-#define ETH_RSS_IPV6_PRE40_TCP ( \
-		ETH_RSS_NONFRAG_IPV6_TCP | \
+#define RTE_ETH_RSS_IPV6_PRE40_TCP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_TCP | \
 		RTE_ETH_RSS_L3_PRE40)
+#define ETH_RSS_IPV6_PRE40_TCP	RTE_ETH_RSS_IPV6_PRE40_TCP
 
-#define ETH_RSS_IPV6_PRE48_TCP ( \
-		ETH_RSS_NONFRAG_IPV6_TCP | \
+#define RTE_ETH_RSS_IPV6_PRE48_TCP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_TCP | \
 		RTE_ETH_RSS_L3_PRE48)
+#define ETH_RSS_IPV6_PRE48_TCP	RTE_ETH_RSS_IPV6_PRE48_TCP
 
-#define ETH_RSS_IPV6_PRE56_TCP ( \
-		ETH_RSS_NONFRAG_IPV6_TCP | \
+#define RTE_ETH_RSS_IPV6_PRE56_TCP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_TCP | \
 		RTE_ETH_RSS_L3_PRE56)
+#define ETH_RSS_IPV6_PRE56_TCP	RTE_ETH_RSS_IPV6_PRE56_TCP
 
-#define ETH_RSS_IPV6_PRE64_TCP ( \
-		ETH_RSS_NONFRAG_IPV6_TCP | \
+#define RTE_ETH_RSS_IPV6_PRE64_TCP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_TCP | \
 		RTE_ETH_RSS_L3_PRE64)
+#define ETH_RSS_IPV6_PRE64_TCP	RTE_ETH_RSS_IPV6_PRE64_TCP
 
-#define ETH_RSS_IPV6_PRE96_TCP ( \
-		ETH_RSS_NONFRAG_IPV6_TCP | \
+#define RTE_ETH_RSS_IPV6_PRE96_TCP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_TCP | \
 		RTE_ETH_RSS_L3_PRE96)
+#define ETH_RSS_IPV6_PRE96_TCP	RTE_ETH_RSS_IPV6_PRE96_TCP
 
-#define ETH_RSS_IPV6_PRE32_SCTP ( \
-		ETH_RSS_NONFRAG_IPV6_SCTP | \
+#define RTE_ETH_RSS_IPV6_PRE32_SCTP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_SCTP | \
 		RTE_ETH_RSS_L3_PRE32)
+#define ETH_RSS_IPV6_PRE32_SCTP	RTE_ETH_RSS_IPV6_PRE32_SCTP
 
-#define ETH_RSS_IPV6_PRE40_SCTP ( \
-		ETH_RSS_NONFRAG_IPV6_SCTP | \
+#define RTE_ETH_RSS_IPV6_PRE40_SCTP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_SCTP | \
 		RTE_ETH_RSS_L3_PRE40)
+#define ETH_RSS_IPV6_PRE40_SCTP	RTE_ETH_RSS_IPV6_PRE40_SCTP
 
-#define ETH_RSS_IPV6_PRE48_SCTP ( \
-		ETH_RSS_NONFRAG_IPV6_SCTP | \
+#define RTE_ETH_RSS_IPV6_PRE48_SCTP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_SCTP | \
 		RTE_ETH_RSS_L3_PRE48)
+#define ETH_RSS_IPV6_PRE48_SCTP	RTE_ETH_RSS_IPV6_PRE48_SCTP
 
-#define ETH_RSS_IPV6_PRE56_SCTP ( \
-		ETH_RSS_NONFRAG_IPV6_SCTP | \
+#define RTE_ETH_RSS_IPV6_PRE56_SCTP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_SCTP | \
 		RTE_ETH_RSS_L3_PRE56)
+#define ETH_RSS_IPV6_PRE56_SCTP	RTE_ETH_RSS_IPV6_PRE56_SCTP
 
-#define ETH_RSS_IPV6_PRE64_SCTP ( \
-		ETH_RSS_NONFRAG_IPV6_SCTP | \
+#define RTE_ETH_RSS_IPV6_PRE64_SCTP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_SCTP | \
 		RTE_ETH_RSS_L3_PRE64)
+#define ETH_RSS_IPV6_PRE64_SCTP	RTE_ETH_RSS_IPV6_PRE64_SCTP
 
-#define ETH_RSS_IPV6_PRE96_SCTP ( \
-		ETH_RSS_NONFRAG_IPV6_SCTP | \
+#define RTE_ETH_RSS_IPV6_PRE96_SCTP ( \
+		RTE_ETH_RSS_NONFRAG_IPV6_SCTP | \
 		RTE_ETH_RSS_L3_PRE96)
+#define ETH_RSS_IPV6_PRE96_SCTP	RTE_ETH_RSS_IPV6_PRE96_SCTP
 
-#define ETH_RSS_IP ( \
-	ETH_RSS_IPV4 | \
-	ETH_RSS_FRAG_IPV4 | \
-	ETH_RSS_NONFRAG_IPV4_OTHER | \
-	ETH_RSS_IPV6 | \
-	ETH_RSS_FRAG_IPV6 | \
-	ETH_RSS_NONFRAG_IPV6_OTHER | \
-	ETH_RSS_IPV6_EX)
+#define RTE_ETH_RSS_IP ( \
+	RTE_ETH_RSS_IPV4 | \
+	RTE_ETH_RSS_FRAG_IPV4 | \
+	RTE_ETH_RSS_NONFRAG_IPV4_OTHER | \
+	RTE_ETH_RSS_IPV6 | \
+	RTE_ETH_RSS_FRAG_IPV6 | \
+	RTE_ETH_RSS_NONFRAG_IPV6_OTHER | \
+	RTE_ETH_RSS_IPV6_EX)
+#define ETH_RSS_IP	RTE_ETH_RSS_IP
 
-#define ETH_RSS_UDP ( \
-	ETH_RSS_NONFRAG_IPV4_UDP | \
-	ETH_RSS_NONFRAG_IPV6_UDP | \
-	ETH_RSS_IPV6_UDP_EX)
+#define RTE_ETH_RSS_UDP ( \
+	RTE_ETH_RSS_NONFRAG_IPV4_UDP | \
+	RTE_ETH_RSS_NONFRAG_IPV6_UDP | \
+	RTE_ETH_RSS_IPV6_UDP_EX)
+#define ETH_RSS_UDP	RTE_ETH_RSS_UDP
 
-#define ETH_RSS_TCP ( \
-	ETH_RSS_NONFRAG_IPV4_TCP | \
-	ETH_RSS_NONFRAG_IPV6_TCP | \
-	ETH_RSS_IPV6_TCP_EX)
+#define RTE_ETH_RSS_TCP ( \
+	RTE_ETH_RSS_NONFRAG_IPV4_TCP | \
+	RTE_ETH_RSS_NONFRAG_IPV6_TCP | \
+	RTE_ETH_RSS_IPV6_TCP_EX)
+#define ETH_RSS_TCP	RTE_ETH_RSS_TCP
 
-#define ETH_RSS_SCTP ( \
-	ETH_RSS_NONFRAG_IPV4_SCTP | \
-	ETH_RSS_NONFRAG_IPV6_SCTP)
+#define RTE_ETH_RSS_SCTP ( \
+	RTE_ETH_RSS_NONFRAG_IPV4_SCTP | \
+	RTE_ETH_RSS_NONFRAG_IPV6_SCTP)
+#define ETH_RSS_SCTP	RTE_ETH_RSS_SCTP
 
-#define ETH_RSS_TUNNEL ( \
-	ETH_RSS_VXLAN  | \
-	ETH_RSS_GENEVE | \
-	ETH_RSS_NVGRE)
+#define RTE_ETH_RSS_TUNNEL ( \
+	RTE_ETH_RSS_VXLAN  | \
+	RTE_ETH_RSS_GENEVE | \
+	RTE_ETH_RSS_NVGRE)
+#define ETH_RSS_TUNNEL	RTE_ETH_RSS_TUNNEL
 
-#define ETH_RSS_VLAN ( \
-	ETH_RSS_S_VLAN  | \
-	ETH_RSS_C_VLAN)
+#define RTE_ETH_RSS_VLAN ( \
+	RTE_ETH_RSS_S_VLAN  | \
+	RTE_ETH_RSS_C_VLAN)
+#define ETH_RSS_VLAN	RTE_ETH_RSS_VLAN
 
 /**< Mask of valid RSS hash protocols */
-#define ETH_RSS_PROTO_MASK ( \
-	ETH_RSS_IPV4 | \
-	ETH_RSS_FRAG_IPV4 | \
-	ETH_RSS_NONFRAG_IPV4_TCP | \
-	ETH_RSS_NONFRAG_IPV4_UDP | \
-	ETH_RSS_NONFRAG_IPV4_SCTP | \
-	ETH_RSS_NONFRAG_IPV4_OTHER | \
-	ETH_RSS_IPV6 | \
-	ETH_RSS_FRAG_IPV6 | \
-	ETH_RSS_NONFRAG_IPV6_TCP | \
-	ETH_RSS_NONFRAG_IPV6_UDP | \
-	ETH_RSS_NONFRAG_IPV6_SCTP | \
-	ETH_RSS_NONFRAG_IPV6_OTHER | \
-	ETH_RSS_L2_PAYLOAD | \
-	ETH_RSS_IPV6_EX | \
-	ETH_RSS_IPV6_TCP_EX | \
-	ETH_RSS_IPV6_UDP_EX | \
-	ETH_RSS_PORT  | \
-	ETH_RSS_VXLAN | \
-	ETH_RSS_GENEVE | \
-	ETH_RSS_NVGRE | \
-	ETH_RSS_MPLS)
+#define RTE_ETH_RSS_PROTO_MASK ( \
+	RTE_ETH_RSS_IPV4 | \
+	RTE_ETH_RSS_FRAG_IPV4 | \
+	RTE_ETH_RSS_NONFRAG_IPV4_TCP | \
+	RTE_ETH_RSS_NONFRAG_IPV4_UDP | \
+	RTE_ETH_RSS_NONFRAG_IPV4_SCTP | \
+	RTE_ETH_RSS_NONFRAG_IPV4_OTHER | \
+	RTE_ETH_RSS_IPV6 | \
+	RTE_ETH_RSS_FRAG_IPV6 | \
+	RTE_ETH_RSS_NONFRAG_IPV6_TCP | \
+	RTE_ETH_RSS_NONFRAG_IPV6_UDP | \
+	RTE_ETH_RSS_NONFRAG_IPV6_SCTP | \
+	RTE_ETH_RSS_NONFRAG_IPV6_OTHER | \
+	RTE_ETH_RSS_L2_PAYLOAD | \
+	RTE_ETH_RSS_IPV6_EX | \
+	RTE_ETH_RSS_IPV6_TCP_EX | \
+	RTE_ETH_RSS_IPV6_UDP_EX | \
+	RTE_ETH_RSS_PORT  | \
+	RTE_ETH_RSS_VXLAN | \
+	RTE_ETH_RSS_GENEVE | \
+	RTE_ETH_RSS_NVGRE | \
+	RTE_ETH_RSS_MPLS)
+#define ETH_RSS_PROTO_MASK	RTE_ETH_RSS_PROTO_MASK
 
 /*
  * Definitions used for redirection table entry size.
  * Some RSS RETA sizes may not be supported by some drivers, check the
  * documentation or the description of relevant functions for more details.
  */
-#define ETH_RSS_RETA_SIZE_64  64
-#define ETH_RSS_RETA_SIZE_128 128
-#define ETH_RSS_RETA_SIZE_256 256
-#define ETH_RSS_RETA_SIZE_512 512
-#define RTE_RETA_GROUP_SIZE   64
+#define RTE_ETH_RSS_RETA_SIZE_64  64
+#define ETH_RSS_RETA_SIZE_64	RTE_ETH_RSS_RETA_SIZE_64
+#define RTE_ETH_RSS_RETA_SIZE_128 128
+#define ETH_RSS_RETA_SIZE_128	RTE_ETH_RSS_RETA_SIZE_128
+#define RTE_ETH_RSS_RETA_SIZE_256 256
+#define ETH_RSS_RETA_SIZE_256	RTE_ETH_RSS_RETA_SIZE_256
+#define RTE_ETH_RSS_RETA_SIZE_512 512
+#define ETH_RSS_RETA_SIZE_512	RTE_ETH_RSS_RETA_SIZE_512
+#define RTE_ETH_RETA_GROUP_SIZE   64
+#define RTE_RETA_GROUP_SIZE	RTE_ETH_RETA_GROUP_SIZE
 
 /* Definitions used for VMDQ and DCB functionality */
-#define ETH_VMDQ_MAX_VLAN_FILTERS   64 /**< Maximum nb. of VMDQ vlan filters. */
-#define ETH_DCB_NUM_USER_PRIORITIES 8  /**< Maximum nb. of DCB priorities. */
-#define ETH_VMDQ_DCB_NUM_QUEUES     128 /**< Maximum nb. of VMDQ DCB queues. */
-#define ETH_DCB_NUM_QUEUES          128 /**< Maximum nb. of DCB queues. */
+#define RTE_ETH_VMDQ_MAX_VLAN_FILTERS   64 /**< Maximum nb. of VMDQ vlan filters. */
+#define ETH_VMDQ_MAX_VLAN_FILTERS	RTE_ETH_VMDQ_MAX_VLAN_FILTERS
+#define RTE_ETH_DCB_NUM_USER_PRIORITIES 8  /**< Maximum nb. of DCB priorities. */
+#define ETH_DCB_NUM_USER_PRIORITIES	RTE_ETH_DCB_NUM_USER_PRIORITIES
+#define RTE_ETH_VMDQ_DCB_NUM_QUEUES     128 /**< Maximum nb. of VMDQ DCB queues. */
+#define ETH_VMDQ_DCB_NUM_QUEUES	RTE_ETH_VMDQ_DCB_NUM_QUEUES
+#define RTE_ETH_DCB_NUM_QUEUES          128 /**< Maximum nb. of DCB queues. */
+#define ETH_DCB_NUM_QUEUES	RTE_ETH_DCB_NUM_QUEUES
 
 /* DCB capability defines */
-#define ETH_DCB_PG_SUPPORT      0x00000001 /**< Priority Group(ETS) support. */
-#define ETH_DCB_PFC_SUPPORT     0x00000002 /**< Priority Flow Control support. */
+#define RTE_ETH_DCB_PG_SUPPORT      0x00000001 /**< Priority Group(ETS) support. */
+#define ETH_DCB_PG_SUPPORT	RTE_ETH_DCB_PG_SUPPORT
+#define RTE_ETH_DCB_PFC_SUPPORT     0x00000002 /**< Priority Flow Control support. */
+#define ETH_DCB_PFC_SUPPORT	RTE_ETH_DCB_PFC_SUPPORT
 
 /* Definitions used for VLAN Offload functionality */
-#define ETH_VLAN_STRIP_OFFLOAD   0x0001 /**< VLAN Strip  On/Off */
-#define ETH_VLAN_FILTER_OFFLOAD  0x0002 /**< VLAN Filter On/Off */
-#define ETH_VLAN_EXTEND_OFFLOAD  0x0004 /**< VLAN Extend On/Off */
-#define ETH_QINQ_STRIP_OFFLOAD   0x0008 /**< QINQ Strip On/Off */
+#define RTE_ETH_VLAN_STRIP_OFFLOAD   0x0001 /**< VLAN Strip  On/Off */
+#define ETH_VLAN_STRIP_OFFLOAD	RTE_ETH_VLAN_STRIP_OFFLOAD
+#define RTE_ETH_VLAN_FILTER_OFFLOAD  0x0002 /**< VLAN Filter On/Off */
+#define ETH_VLAN_FILTER_OFFLOAD	RTE_ETH_VLAN_FILTER_OFFLOAD
+#define RTE_ETH_VLAN_EXTEND_OFFLOAD  0x0004 /**< VLAN Extend On/Off */
+#define ETH_VLAN_EXTEND_OFFLOAD	RTE_ETH_VLAN_EXTEND_OFFLOAD
+#define RTE_ETH_QINQ_STRIP_OFFLOAD   0x0008 /**< QINQ Strip On/Off */
+#define ETH_QINQ_STRIP_OFFLOAD	RTE_ETH_QINQ_STRIP_OFFLOAD
 
 /* Definitions used for mask VLAN setting */
-#define ETH_VLAN_STRIP_MASK   0x0001 /**< VLAN Strip  setting mask */
-#define ETH_VLAN_FILTER_MASK  0x0002 /**< VLAN Filter  setting mask*/
-#define ETH_VLAN_EXTEND_MASK  0x0004 /**< VLAN Extend  setting mask*/
-#define ETH_QINQ_STRIP_MASK   0x0008 /**< QINQ Strip  setting mask */
-#define ETH_VLAN_ID_MAX       0x0FFF /**< VLAN ID is in lower 12 bits*/
+#define RTE_ETH_VLAN_STRIP_MASK   0x0001 /**< VLAN Strip  setting mask */
+#define ETH_VLAN_STRIP_MASK	RTE_ETH_VLAN_STRIP_MASK
+#define RTE_ETH_VLAN_FILTER_MASK  0x0002 /**< VLAN Filter  setting mask*/
+#define ETH_VLAN_FILTER_MASK	RTE_ETH_VLAN_FILTER_MASK
+#define RTE_ETH_VLAN_EXTEND_MASK  0x0004 /**< VLAN Extend  setting mask*/
+#define ETH_VLAN_EXTEND_MASK	RTE_ETH_VLAN_EXTEND_MASK
+#define RTE_ETH_QINQ_STRIP_MASK   0x0008 /**< QINQ Strip  setting mask */
+#define ETH_QINQ_STRIP_MASK	RTE_ETH_QINQ_STRIP_MASK
+#define RTE_ETH_VLAN_ID_MAX       0x0FFF /**< VLAN ID is in lower 12 bits*/
+#define ETH_VLAN_ID_MAX	RTE_ETH_VLAN_ID_MAX
 
 /* Definitions used for receive MAC address   */
-#define ETH_NUM_RECEIVE_MAC_ADDR  128 /**< Maximum nb. of receive mac addr. */
+#define RTE_ETH_NUM_RECEIVE_MAC_ADDR  128 /**< Maximum nb. of receive mac addr. */
+#define ETH_NUM_RECEIVE_MAC_ADDR	RTE_ETH_NUM_RECEIVE_MAC_ADDR
 
 /* Definitions used for unicast hash  */
-#define ETH_VMDQ_NUM_UC_HASH_ARRAY  128 /**< Maximum nb. of UC hash array. */
+#define RTE_ETH_VMDQ_NUM_UC_HASH_ARRAY  128 /**< Maximum nb. of UC hash array. */
+#define ETH_VMDQ_NUM_UC_HASH_ARRAY	RTE_ETH_VMDQ_NUM_UC_HASH_ARRAY
 
 /* Definitions used for VMDQ pool rx mode setting */
-#define ETH_VMDQ_ACCEPT_UNTAG   0x0001 /**< accept untagged packets. */
-#define ETH_VMDQ_ACCEPT_HASH_MC 0x0002 /**< accept packets in multicast table . */
-#define ETH_VMDQ_ACCEPT_HASH_UC 0x0004 /**< accept packets in unicast table. */
-#define ETH_VMDQ_ACCEPT_BROADCAST   0x0008 /**< accept broadcast packets. */
-#define ETH_VMDQ_ACCEPT_MULTICAST   0x0010 /**< multicast promiscuous. */
+#define RTE_ETH_VMDQ_ACCEPT_UNTAG   0x0001 /**< accept untagged packets. */
+#define ETH_VMDQ_ACCEPT_UNTAG	RTE_ETH_VMDQ_ACCEPT_UNTAG
+#define RTE_ETH_VMDQ_ACCEPT_HASH_MC 0x0002 /**< accept packets in multicast table . */
+#define ETH_VMDQ_ACCEPT_HASH_MC	RTE_ETH_VMDQ_ACCEPT_HASH_MC
+#define RTE_ETH_VMDQ_ACCEPT_HASH_UC 0x0004 /**< accept packets in unicast table. */
+#define ETH_VMDQ_ACCEPT_HASH_UC	RTE_ETH_VMDQ_ACCEPT_HASH_UC
+#define RTE_ETH_VMDQ_ACCEPT_BROADCAST   0x0008 /**< accept broadcast packets. */
+#define ETH_VMDQ_ACCEPT_BROADCAST	RTE_ETH_VMDQ_ACCEPT_BROADCAST
+#define RTE_ETH_VMDQ_ACCEPT_MULTICAST   0x0010 /**< multicast promiscuous. */
+#define ETH_VMDQ_ACCEPT_MULTICAST	RTE_ETH_VMDQ_ACCEPT_MULTICAST
 
 /** Maximum nb. of vlan per mirror rule */
-#define ETH_MIRROR_MAX_VLANS       64
+#define RTE_ETH_MIRROR_MAX_VLANS       64
+#define ETH_MIRROR_MAX_VLANS	RTE_ETH_MIRROR_MAX_VLANS
 
-#define ETH_MIRROR_VIRTUAL_POOL_UP     0x01  /**< Virtual Pool uplink Mirroring. */
-#define ETH_MIRROR_UPLINK_PORT         0x02  /**< Uplink Port Mirroring. */
-#define ETH_MIRROR_DOWNLINK_PORT       0x04  /**< Downlink Port Mirroring. */
-#define ETH_MIRROR_VLAN                0x08  /**< VLAN Mirroring. */
-#define ETH_MIRROR_VIRTUAL_POOL_DOWN   0x10  /**< Virtual Pool downlink Mirroring. */
+#define RTE_ETH_MIRROR_VIRTUAL_POOL_UP     0x01  /**< Virtual Pool uplink Mirroring. */
+#define ETH_MIRROR_VIRTUAL_POOL_UP	RTE_ETH_MIRROR_VIRTUAL_POOL_UP
+#define RTE_ETH_MIRROR_UPLINK_PORT         0x02  /**< Uplink Port Mirroring. */
+#define ETH_MIRROR_UPLINK_PORT	RTE_ETH_MIRROR_UPLINK_PORT
+#define RTE_ETH_MIRROR_DOWNLINK_PORT       0x04  /**< Downlink Port Mirroring. */
+#define ETH_MIRROR_DOWNLINK_PORT	RTE_ETH_MIRROR_DOWNLINK_PORT
+#define RTE_ETH_MIRROR_VLAN                0x08  /**< VLAN Mirroring. */
+#define ETH_MIRROR_VLAN	RTE_ETH_MIRROR_VLAN
+#define RTE_ETH_MIRROR_VIRTUAL_POOL_DOWN   0x10  /**< Virtual Pool downlink Mirroring. */
+#define ETH_MIRROR_VIRTUAL_POOL_DOWN	RTE_ETH_MIRROR_VIRTUAL_POOL_DOWN
 
 /**
  * A structure used to configure VLAN traffic mirror of an Ethernet port.
@@ -865,20 +1016,26 @@ struct rte_eth_rss_reta_entry64 {
  * in DCB configurations
  */
 enum rte_eth_nb_tcs {
-	ETH_4_TCS = 4, /**< 4 TCs with DCB. */
-	ETH_8_TCS = 8  /**< 8 TCs with DCB. */
+	RTE_ETH_4_TCS = 4, /**< 4 TCs with DCB. */
+	RTE_ETH_8_TCS = 8  /**< 8 TCs with DCB. */
 };
+#define ETH_4_TCS RTE_ETH_4_TCS
+#define ETH_8_TCS RTE_ETH_8_TCS
 
 /**
  * This enum indicates the possible number of queue pools
  * in VMDQ configurations.
  */
 enum rte_eth_nb_pools {
-	ETH_8_POOLS = 8,    /**< 8 VMDq pools. */
-	ETH_16_POOLS = 16,  /**< 16 VMDq pools. */
-	ETH_32_POOLS = 32,  /**< 32 VMDq pools. */
-	ETH_64_POOLS = 64   /**< 64 VMDq pools. */
+	RTE_ETH_8_POOLS = 8,    /**< 8 VMDq pools. */
+	RTE_ETH_16_POOLS = 16,  /**< 16 VMDq pools. */
+	RTE_ETH_32_POOLS = 32,  /**< 32 VMDq pools. */
+	RTE_ETH_64_POOLS = 64   /**< 64 VMDq pools. */
 };
+#define ETH_8_POOLS	RTE_ETH_8_POOLS
+#define ETH_16_POOLS	RTE_ETH_16_POOLS
+#define ETH_32_POOLS	RTE_ETH_32_POOLS
+#define ETH_64_POOLS	RTE_ETH_64_POOLS
 
 /* This structure may be extended in future. */
 struct rte_eth_dcb_rx_conf {
@@ -964,7 +1121,7 @@ struct rte_eth_vmdq_rx_conf {
 struct rte_eth_txmode {
 	enum rte_eth_tx_mq_mode mq_mode; /**< TX multi-queues mode. */
 	/**
-	 * Per-port Tx offloads to be set using DEV_TX_OFFLOAD_* flags.
+	 * Per-port Tx offloads to be set using RTE_ETH_TX_OFFLOAD_* flags.
 	 * Only offloads set on tx_offload_capa field on rte_eth_dev_info
 	 * structure are allowed to be set.
 	 */
@@ -1048,7 +1205,7 @@ struct rte_eth_rxconf {
 	uint8_t rx_deferred_start; /**< Do not start queue with rte_eth_dev_start(). */
 	uint16_t rx_nseg; /**< Number of descriptions in rx_seg array. */
 	/**
-	 * Per-queue Rx offloads to be set using DEV_RX_OFFLOAD_* flags.
+	 * Per-queue Rx offloads to be set using RTE_ETH_RX_OFFLOAD_* flags.
 	 * Only offloads set on rx_queue_offload_capa or rx_offload_capa
 	 * fields on rte_eth_dev_info structure are allowed to be set.
 	 */
@@ -1077,7 +1234,7 @@ struct rte_eth_txconf {
 
 	uint8_t tx_deferred_start; /**< Do not start queue with rte_eth_dev_start(). */
 	/**
-	 * Per-queue Tx offloads to be set  using DEV_TX_OFFLOAD_* flags.
+	 * Per-queue Tx offloads to be set  using RTE_ETH_TX_OFFLOAD_* flags.
 	 * Only offloads set on tx_queue_offload_capa or tx_offload_capa
 	 * fields on rte_eth_dev_info structure are allowed to be set.
 	 */
@@ -1188,11 +1345,16 @@ struct rte_eth_desc_lim {
  * This enum indicates the flow control mode
  */
 enum rte_eth_fc_mode {
-	RTE_FC_NONE = 0, /**< Disable flow control. */
-	RTE_FC_RX_PAUSE, /**< RX pause frame, enable flowctrl on TX side. */
-	RTE_FC_TX_PAUSE, /**< TX pause frame, enable flowctrl on RX side. */
-	RTE_FC_FULL      /**< Enable flow control on both side. */
+	RTE_ETH_FC_NONE = 0, /**< Disable flow control. */
+	RTE_ETH_FC_RX_PAUSE, /**< RX pause frame, enable flowctrl on TX side. */
+	RTE_ETH_FC_TX_PAUSE, /**< TX pause frame, enable flowctrl on RX side. */
+	RTE_ETH_FC_FULL      /**< Enable flow control on both side. */
 };
+
+#define RTE_FC_NONE	RTE_ETH_FC_NONE
+#define RTE_FC_RX_PAUSE	RTE_ETH_FC_RX_PAUSE
+#define RTE_FC_TX_PAUSE	RTE_ETH_FC_TX_PAUSE
+#define RTE_FC_FULL	RTE_ETH_FC_FULL
 
 /**
  * A structure used to configure Ethernet flow control parameter.
@@ -1224,17 +1386,28 @@ struct rte_eth_pfc_conf {
  * @see rte_eth_udp_tunnel
  */
 enum rte_eth_tunnel_type {
-	RTE_TUNNEL_TYPE_NONE = 0,
-	RTE_TUNNEL_TYPE_VXLAN,
-	RTE_TUNNEL_TYPE_GENEVE,
-	RTE_TUNNEL_TYPE_TEREDO,
-	RTE_TUNNEL_TYPE_NVGRE,
-	RTE_TUNNEL_TYPE_IP_IN_GRE,
-	RTE_L2_TUNNEL_TYPE_E_TAG,
-	RTE_TUNNEL_TYPE_VXLAN_GPE,
-	RTE_TUNNEL_TYPE_ECPRI,
-	RTE_TUNNEL_TYPE_MAX,
+	RTE_ETH_TUNNEL_TYPE_NONE = 0,
+	RTE_ETH_TUNNEL_TYPE_VXLAN,
+	RTE_ETH_TUNNEL_TYPE_GENEVE,
+	RTE_ETH_TUNNEL_TYPE_TEREDO,
+	RTE_ETH_TUNNEL_TYPE_NVGRE,
+	RTE_ETH_TUNNEL_TYPE_IP_IN_GRE,
+	RTE_ETH_L2_TUNNEL_TYPE_E_TAG,
+	RTE_ETH_TUNNEL_TYPE_VXLAN_GPE,
+	RTE_ETH_TUNNEL_TYPE_ECPRI,
+	RTE_ETH_TUNNEL_TYPE_MAX,
 };
+
+#define RTE_TUNNEL_TYPE_NONE		RTE_ETH_TUNNEL_TYPE_NONE
+#define RTE_TUNNEL_TYPE_VXLAN		RTE_ETH_TUNNEL_TYPE_VXLAN
+#define RTE_TUNNEL_TYPE_GENEVE		RTE_ETH_TUNNEL_TYPE_GENEVE
+#define RTE_TUNNEL_TYPE_TEREDO		RTE_ETH_TUNNEL_TYPE_TEREDO
+#define RTE_TUNNEL_TYPE_NVGRE		RTE_ETH_TUNNEL_TYPE_NVGRE
+#define RTE_TUNNEL_TYPE_IP_IN_GRE	RTE_ETH_TUNNEL_TYPE_IP_IN_GRE
+#define RTE_L2_TUNNEL_TYPE_E_TAG	RTE_ETH_L2_TUNNEL_TYPE_E_TAG
+#define RTE_TUNNEL_TYPE_VXLAN_GPE	RTE_ETH_TUNNEL_TYPE_VXLAN_GPE
+#define RTE_TUNNEL_TYPE_ECPRI		RTE_ETH_TUNNEL_TYPE_ECPRI
+#define RTE_TUNNEL_TYPE_MAX		RTE_ETH_TUNNEL_TYPE_MAX
 
 /* Deprecated API file for rte_eth_dev_filter_* functions */
 #include "rte_eth_ctrl.h"
@@ -1243,11 +1416,16 @@ enum rte_eth_tunnel_type {
  *  Memory space that can be configured to store Flow Director filters
  *  in the board memory.
  */
-enum rte_fdir_pballoc_type {
-	RTE_FDIR_PBALLOC_64K = 0,  /**< 64k. */
-	RTE_FDIR_PBALLOC_128K,     /**< 128k. */
-	RTE_FDIR_PBALLOC_256K,     /**< 256k. */
+enum rte_eth_fdir_pballoc_type {
+	RTE_ETH_FDIR_PBALLOC_64K = 0,  /**< 64k. */
+	RTE_ETH_FDIR_PBALLOC_128K,     /**< 128k. */
+	RTE_ETH_FDIR_PBALLOC_256K,     /**< 256k. */
 };
+#define rte_fdir_pballoc_type	rte_eth_fdir_pballoc_type
+
+#define RTE_FDIR_PBALLOC_64K	RTE_ETH_FDIR_PBALLOC_64K
+#define RTE_FDIR_PBALLOC_128K	RTE_ETH_FDIR_PBALLOC_128K
+#define RTE_FDIR_PBALLOC_256K	RTE_ETH_FDIR_PBALLOC_256K
 
 /**
  *  Select report mode of FDIR hash information in RX descriptors.
@@ -1264,9 +1442,9 @@ enum rte_fdir_status_mode {
  *
  * If mode is RTE_FDIR_MODE_NONE, the pballoc value is ignored.
  */
-struct rte_fdir_conf {
+struct rte_eth_fdir_conf {
 	enum rte_fdir_mode mode; /**< Flow Director mode. */
-	enum rte_fdir_pballoc_type pballoc; /**< Space for FDIR filters. */
+	enum rte_eth_fdir_pballoc_type pballoc; /**< Space for FDIR filters. */
 	enum rte_fdir_status_mode status;  /**< How to report FDIR hash. */
 	/** RX queue of packets matching a "drop" filter in perfect mode. */
 	uint8_t drop_queue;
@@ -1274,6 +1452,8 @@ struct rte_fdir_conf {
 	struct rte_eth_fdir_flex_conf flex_conf;
 	/**< Flex payload configuration. */
 };
+
+#define rte_fdir_conf rte_eth_fdir_conf
 
 /**
  * UDP tunneling configuration.
@@ -1292,7 +1472,7 @@ struct rte_eth_udp_tunnel {
 /**
  * A structure used to enable/disable specific device interrupts.
  */
-struct rte_intr_conf {
+struct rte_eth_intr_conf {
 	/** enable/disable lsc interrupt. 0 (default) - disable, 1 enable */
 	uint32_t lsc:1;
 	/** enable/disable rxq interrupt. 0 (default) - disable, 1 enable */
@@ -1300,6 +1480,8 @@ struct rte_intr_conf {
 	/** enable/disable rmv interrupt. 0 (default) - disable, 1 enable */
 	uint32_t rmv:1;
 };
+
+#define rte_intr_conf rte_eth_intr_conf
 
 /**
  * A structure used to configure an Ethernet port.
@@ -1348,39 +1530,60 @@ struct rte_eth_conf {
 /**
  * RX offload capabilities of a device.
  */
-#define DEV_RX_OFFLOAD_VLAN_STRIP  0x00000001
-#define DEV_RX_OFFLOAD_IPV4_CKSUM  0x00000002
-#define DEV_RX_OFFLOAD_UDP_CKSUM   0x00000004
-#define DEV_RX_OFFLOAD_TCP_CKSUM   0x00000008
-#define DEV_RX_OFFLOAD_TCP_LRO     0x00000010
-#define DEV_RX_OFFLOAD_QINQ_STRIP  0x00000020
-#define DEV_RX_OFFLOAD_OUTER_IPV4_CKSUM 0x00000040
-#define DEV_RX_OFFLOAD_MACSEC_STRIP     0x00000080
-#define DEV_RX_OFFLOAD_HEADER_SPLIT	0x00000100
-#define DEV_RX_OFFLOAD_VLAN_FILTER	0x00000200
-#define DEV_RX_OFFLOAD_VLAN_EXTEND	0x00000400
-#define DEV_RX_OFFLOAD_JUMBO_FRAME	0x00000800
-#define DEV_RX_OFFLOAD_SCATTER		0x00002000
+#define RTE_ETH_RX_OFFLOAD_VLAN_STRIP  0x00000001
+#define DEV_RX_OFFLOAD_VLAN_STRIP	RTE_ETH_RX_OFFLOAD_VLAN_STRIP
+#define RTE_ETH_RX_OFFLOAD_IPV4_CKSUM  0x00000002
+#define DEV_RX_OFFLOAD_IPV4_CKSUM	RTE_ETH_RX_OFFLOAD_IPV4_CKSUM
+#define RTE_ETH_RX_OFFLOAD_UDP_CKSUM   0x00000004
+#define DEV_RX_OFFLOAD_UDP_CKSUM	RTE_ETH_RX_OFFLOAD_UDP_CKSUM
+#define RTE_ETH_RX_OFFLOAD_TCP_CKSUM   0x00000008
+#define DEV_RX_OFFLOAD_TCP_CKSUM	RTE_ETH_RX_OFFLOAD_TCP_CKSUM
+#define RTE_ETH_RX_OFFLOAD_TCP_LRO     0x00000010
+#define DEV_RX_OFFLOAD_TCP_LRO	RTE_ETH_RX_OFFLOAD_TCP_LRO
+#define RTE_ETH_RX_OFFLOAD_QINQ_STRIP  0x00000020
+#define DEV_RX_OFFLOAD_QINQ_STRIP	RTE_ETH_RX_OFFLOAD_QINQ_STRIP
+#define RTE_ETH_RX_OFFLOAD_OUTER_IPV4_CKSUM 0x00000040
+#define DEV_RX_OFFLOAD_OUTER_IPV4_CKSUM	RTE_ETH_RX_OFFLOAD_OUTER_IPV4_CKSUM
+#define RTE_ETH_RX_OFFLOAD_MACSEC_STRIP     0x00000080
+#define DEV_RX_OFFLOAD_MACSEC_STRIP	RTE_ETH_RX_OFFLOAD_MACSEC_STRIP
+#define RTE_ETH_RX_OFFLOAD_HEADER_SPLIT	0x00000100
+#define DEV_RX_OFFLOAD_HEADER_SPLIT	RTE_ETH_RX_OFFLOAD_HEADER_SPLIT
+#define RTE_ETH_RX_OFFLOAD_VLAN_FILTER	0x00000200
+#define DEV_RX_OFFLOAD_VLAN_FILTER	RTE_ETH_RX_OFFLOAD_VLAN_FILTER
+#define RTE_ETH_RX_OFFLOAD_VLAN_EXTEND	0x00000400
+#define DEV_RX_OFFLOAD_VLAN_EXTEND	RTE_ETH_RX_OFFLOAD_VLAN_EXTEND
+#define RTE_ETH_RX_OFFLOAD_JUMBO_FRAME	0x00000800
+#define DEV_RX_OFFLOAD_JUMBO_FRAME	RTE_ETH_RX_OFFLOAD_JUMBO_FRAME
+#define RTE_ETH_RX_OFFLOAD_SCATTER	0x00002000
+#define DEV_RX_OFFLOAD_SCATTER		RTE_ETH_RX_OFFLOAD_SCATTER
 /**
  * Timestamp is set by the driver in RTE_MBUF_DYNFIELD_TIMESTAMP_NAME
  * and RTE_MBUF_DYNFLAG_RX_TIMESTAMP_NAME is set in ol_flags.
  * The mbuf field and flag are registered when the offload is configured.
  */
-#define DEV_RX_OFFLOAD_TIMESTAMP	0x00004000
-#define DEV_RX_OFFLOAD_SECURITY         0x00008000
-#define DEV_RX_OFFLOAD_KEEP_CRC		0x00010000
-#define DEV_RX_OFFLOAD_SCTP_CKSUM	0x00020000
-#define DEV_RX_OFFLOAD_OUTER_UDP_CKSUM  0x00040000
-#define DEV_RX_OFFLOAD_RSS_HASH		0x00080000
+#define RTE_ETH_RX_OFFLOAD_TIMESTAMP	0x00004000
+#define DEV_RX_OFFLOAD_TIMESTAMP	RTE_ETH_RX_OFFLOAD_TIMESTAMP
+#define RTE_ETH_RX_OFFLOAD_SECURITY     0x00008000
+#define DEV_RX_OFFLOAD_SECURITY		RTE_ETH_RX_OFFLOAD_SECURITY
+#define RTE_ETH_RX_OFFLOAD_KEEP_CRC	0x00010000
+#define DEV_RX_OFFLOAD_KEEP_CRC		RTE_ETH_RX_OFFLOAD_KEEP_CRC
+#define RTE_ETH_RX_OFFLOAD_SCTP_CKSUM	0x00020000
+#define DEV_RX_OFFLOAD_SCTP_CKSUM	RTE_ETH_RX_OFFLOAD_SCTP_CKSUM
+#define RTE_ETH_RX_OFFLOAD_OUTER_UDP_CKSUM  0x00040000
+#define DEV_RX_OFFLOAD_OUTER_UDP_CKSUM	RTE_ETH_RX_OFFLOAD_OUTER_UDP_CKSUM
+#define RTE_ETH_RX_OFFLOAD_RSS_HASH	0x00080000
+#define DEV_RX_OFFLOAD_RSS_HASH	RTE_ETH_RX_OFFLOAD_RSS_HASH
 #define RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT 0x00100000
 
-#define DEV_RX_OFFLOAD_CHECKSUM (DEV_RX_OFFLOAD_IPV4_CKSUM | \
-				 DEV_RX_OFFLOAD_UDP_CKSUM | \
-				 DEV_RX_OFFLOAD_TCP_CKSUM)
-#define DEV_RX_OFFLOAD_VLAN (DEV_RX_OFFLOAD_VLAN_STRIP | \
-			     DEV_RX_OFFLOAD_VLAN_FILTER | \
-			     DEV_RX_OFFLOAD_VLAN_EXTEND | \
-			     DEV_RX_OFFLOAD_QINQ_STRIP)
+#define RTE_ETH_RX_OFFLOAD_CHECKSUM (RTE_ETH_RX_OFFLOAD_IPV4_CKSUM | \
+				 RTE_ETH_RX_OFFLOAD_UDP_CKSUM | \
+				 RTE_ETH_RX_OFFLOAD_TCP_CKSUM)
+#define DEV_RX_OFFLOAD_CHECKSUM	RTE_ETH_RX_OFFLOAD_CHECKSUM
+#define RTE_ETH_RX_OFFLOAD_VLAN (RTE_ETH_RX_OFFLOAD_VLAN_STRIP | \
+			     RTE_ETH_RX_OFFLOAD_VLAN_FILTER | \
+			     RTE_ETH_RX_OFFLOAD_VLAN_EXTEND | \
+			     RTE_ETH_RX_OFFLOAD_QINQ_STRIP)
+#define DEV_RX_OFFLOAD_VLAN	RTE_ETH_RX_OFFLOAD_VLAN
 
 /*
  * If new Rx offload capabilities are defined, they also must be
@@ -1390,52 +1593,74 @@ struct rte_eth_conf {
 /**
  * TX offload capabilities of a device.
  */
-#define DEV_TX_OFFLOAD_VLAN_INSERT 0x00000001
-#define DEV_TX_OFFLOAD_IPV4_CKSUM  0x00000002
-#define DEV_TX_OFFLOAD_UDP_CKSUM   0x00000004
-#define DEV_TX_OFFLOAD_TCP_CKSUM   0x00000008
-#define DEV_TX_OFFLOAD_SCTP_CKSUM  0x00000010
-#define DEV_TX_OFFLOAD_TCP_TSO     0x00000020
-#define DEV_TX_OFFLOAD_UDP_TSO     0x00000040
-#define DEV_TX_OFFLOAD_OUTER_IPV4_CKSUM 0x00000080 /**< Used for tunneling packet. */
-#define DEV_TX_OFFLOAD_QINQ_INSERT 0x00000100
-#define DEV_TX_OFFLOAD_VXLAN_TNL_TSO    0x00000200    /**< Used for tunneling packet. */
-#define DEV_TX_OFFLOAD_GRE_TNL_TSO      0x00000400    /**< Used for tunneling packet. */
-#define DEV_TX_OFFLOAD_IPIP_TNL_TSO     0x00000800    /**< Used for tunneling packet. */
-#define DEV_TX_OFFLOAD_GENEVE_TNL_TSO   0x00001000    /**< Used for tunneling packet. */
-#define DEV_TX_OFFLOAD_MACSEC_INSERT    0x00002000
-#define DEV_TX_OFFLOAD_MT_LOCKFREE      0x00004000
+#define RTE_ETH_TX_OFFLOAD_VLAN_INSERT 0x00000001
+#define DEV_TX_OFFLOAD_VLAN_INSERT	RTE_ETH_TX_OFFLOAD_VLAN_INSERT
+#define RTE_ETH_TX_OFFLOAD_IPV4_CKSUM  0x00000002
+#define DEV_TX_OFFLOAD_IPV4_CKSUM	RTE_ETH_TX_OFFLOAD_IPV4_CKSUM
+#define RTE_ETH_TX_OFFLOAD_UDP_CKSUM   0x00000004
+#define DEV_TX_OFFLOAD_UDP_CKSUM	RTE_ETH_TX_OFFLOAD_UDP_CKSUM
+#define RTE_ETH_TX_OFFLOAD_TCP_CKSUM   0x00000008
+#define DEV_TX_OFFLOAD_TCP_CKSUM	RTE_ETH_TX_OFFLOAD_TCP_CKSUM
+#define RTE_ETH_TX_OFFLOAD_SCTP_CKSUM  0x00000010
+#define DEV_TX_OFFLOAD_SCTP_CKSUM	RTE_ETH_TX_OFFLOAD_SCTP_CKSUM
+#define RTE_ETH_TX_OFFLOAD_TCP_TSO     0x00000020
+#define DEV_TX_OFFLOAD_TCP_TSO		RTE_ETH_TX_OFFLOAD_TCP_TSO
+#define RTE_ETH_TX_OFFLOAD_UDP_TSO     0x00000040
+#define DEV_TX_OFFLOAD_UDP_TSO		RTE_ETH_TX_OFFLOAD_UDP_TSO
+#define RTE_ETH_TX_OFFLOAD_OUTER_IPV4_CKSUM 0x00000080 /**< Used for tunneling packet. */
+#define DEV_TX_OFFLOAD_OUTER_IPV4_CKSUM	RTE_ETH_TX_OFFLOAD_OUTER_IPV4_CKSUM
+#define RTE_ETH_TX_OFFLOAD_QINQ_INSERT 0x00000100
+#define DEV_TX_OFFLOAD_QINQ_INSERT	RTE_ETH_TX_OFFLOAD_QINQ_INSERT
+#define RTE_ETH_TX_OFFLOAD_VXLAN_TNL_TSO    0x00000200    /**< Used for tunneling packet. */
+#define DEV_TX_OFFLOAD_VXLAN_TNL_TSO	RTE_ETH_TX_OFFLOAD_VXLAN_TNL_TSO
+#define RTE_ETH_TX_OFFLOAD_GRE_TNL_TSO      0x00000400    /**< Used for tunneling packet. */
+#define DEV_TX_OFFLOAD_GRE_TNL_TSO	RTE_ETH_TX_OFFLOAD_GRE_TNL_TSO
+#define RTE_ETH_TX_OFFLOAD_IPIP_TNL_TSO     0x00000800    /**< Used for tunneling packet. */
+#define DEV_TX_OFFLOAD_IPIP_TNL_TSO	RTE_ETH_TX_OFFLOAD_IPIP_TNL_TSO
+#define RTE_ETH_TX_OFFLOAD_GENEVE_TNL_TSO   0x00001000    /**< Used for tunneling packet. */
+#define DEV_TX_OFFLOAD_GENEVE_TNL_TSO	RTE_ETH_TX_OFFLOAD_GENEVE_TNL_TSO
+#define RTE_ETH_TX_OFFLOAD_MACSEC_INSERT    0x00002000
+#define DEV_TX_OFFLOAD_MACSEC_INSERT	RTE_ETH_TX_OFFLOAD_MACSEC_INSERT
+#define RTE_ETH_TX_OFFLOAD_MT_LOCKFREE      0x00004000
+#define DEV_TX_OFFLOAD_MT_LOCKFREE	RTE_ETH_TX_OFFLOAD_MT_LOCKFREE
 /**< Multiple threads can invoke rte_eth_tx_burst() concurrently on the same
  * tx queue without SW lock.
  */
-#define DEV_TX_OFFLOAD_MULTI_SEGS	0x00008000
+#define RTE_ETH_TX_OFFLOAD_MULTI_SEGS	0x00008000
+#define DEV_TX_OFFLOAD_MULTI_SEGS	RTE_ETH_TX_OFFLOAD_MULTI_SEGS
 /**< Device supports multi segment send. */
-#define DEV_TX_OFFLOAD_MBUF_FAST_FREE	0x00010000
+#define RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE	0x00010000
+#define DEV_TX_OFFLOAD_MBUF_FAST_FREE	RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE
 /**< Device supports optimization for fast release of mbufs.
  *   When set application must guarantee that per-queue all mbufs comes from
  *   the same mempool and has refcnt = 1.
  */
-#define DEV_TX_OFFLOAD_SECURITY         0x00020000
+#define RTE_ETH_TX_OFFLOAD_SECURITY         0x00020000
+#define DEV_TX_OFFLOAD_SECURITY	RTE_ETH_TX_OFFLOAD_SECURITY
 /**
  * Device supports generic UDP tunneled packet TSO.
  * Application must set PKT_TX_TUNNEL_UDP and other mbuf fields required
  * for tunnel TSO.
  */
-#define DEV_TX_OFFLOAD_UDP_TNL_TSO      0x00040000
+#define RTE_ETH_TX_OFFLOAD_UDP_TNL_TSO      0x00040000
+#define DEV_TX_OFFLOAD_UDP_TNL_TSO	RTE_ETH_TX_OFFLOAD_UDP_TNL_TSO
 /**
  * Device supports generic IP tunneled packet TSO.
  * Application must set PKT_TX_TUNNEL_IP and other mbuf fields required
  * for tunnel TSO.
  */
-#define DEV_TX_OFFLOAD_IP_TNL_TSO       0x00080000
+#define RTE_ETH_TX_OFFLOAD_IP_TNL_TSO       0x00080000
+#define DEV_TX_OFFLOAD_IP_TNL_TSO	RTE_ETH_TX_OFFLOAD_IP_TNL_TSO
 /** Device supports outer UDP checksum */
-#define DEV_TX_OFFLOAD_OUTER_UDP_CKSUM  0x00100000
+#define RTE_ETH_TX_OFFLOAD_OUTER_UDP_CKSUM  0x00100000
+#define DEV_TX_OFFLOAD_OUTER_UDP_CKSUM	RTE_ETH_TX_OFFLOAD_OUTER_UDP_CKSUM
 /**
  * Device sends on time read from RTE_MBUF_DYNFIELD_TIMESTAMP_NAME
  * if RTE_MBUF_DYNFLAG_TX_TIMESTAMP_NAME is set in ol_flags.
  * The mbuf field and flag are registered when the offload is configured.
  */
-#define DEV_TX_OFFLOAD_SEND_ON_TIMESTAMP 0x00200000
+#define RTE_ETH_TX_OFFLOAD_SEND_ON_TIMESTAMP 0x00200000
+#define DEV_TX_OFFLOAD_SEND_ON_TIMESTAMP	RTE_ETH_TX_OFFLOAD_SEND_ON_TIMESTAMP
 /*
  * If new Tx offload capabilities are defined, they also must be
  * mentioned in rte_tx_offload_names in rte_ethdev.c file.
@@ -1672,8 +1897,10 @@ struct rte_eth_xstat_name {
 	char name[RTE_ETH_XSTATS_NAME_SIZE]; /**< The statistic name. */
 };
 
-#define ETH_DCB_NUM_TCS    8
-#define ETH_MAX_VMDQ_POOL  64
+#define RTE_ETH_DCB_NUM_TCS    8
+#define ETH_DCB_NUM_TCS	RTE_ETH_DCB_NUM_TCS
+#define RTE_ETH_MAX_VMDQ_POOL  64
+#define ETH_MAX_VMDQ_POOL	RTE_ETH_MAX_VMDQ_POOL
 
 /**
  * A structure used to get the information of queue and
@@ -1749,13 +1976,17 @@ struct rte_eth_fec_capa {
  */
 
 /**< l2 tunnel enable mask */
-#define ETH_L2_TUNNEL_ENABLE_MASK       0x00000001
+#define RTE_ETH_L2_TUNNEL_ENABLE_MASK       0x00000001
+#define ETH_L2_TUNNEL_ENABLE_MASK	RTE_ETH_L2_TUNNEL_ENABLE_MASK
 /**< l2 tunnel insertion mask */
-#define ETH_L2_TUNNEL_INSERTION_MASK    0x00000002
+#define RTE_ETH_L2_TUNNEL_INSERTION_MASK    0x00000002
+#define ETH_L2_TUNNEL_INSERTION_MASK	RTE_ETH_L2_TUNNEL_INSERTION_MASK
 /**< l2 tunnel stripping mask */
-#define ETH_L2_TUNNEL_STRIPPING_MASK    0x00000004
+#define RTE_ETH_L2_TUNNEL_STRIPPING_MASK    0x00000004
+#define ETH_L2_TUNNEL_STRIPPING_MASK	RTE_ETH_L2_TUNNEL_STRIPPING_MASK
 /**< l2 tunnel forwarding mask */
-#define ETH_L2_TUNNEL_FORWARDING_MASK   0x00000008
+#define RTE_ETH_L2_TUNNEL_FORWARDING_MASK   0x00000008
+#define ETH_L2_TUNNEL_FORWARDING_MASK	RTE_ETH_L2_TUNNEL_FORWARDING_MASK
 
 /**
  * Function type used for RX packet processing packet callbacks.
@@ -2075,7 +2306,7 @@ uint16_t rte_eth_dev_count_total(void);
 uint32_t rte_eth_speed_bitflag(uint32_t speed, int duplex);
 
 /**
- * Get DEV_RX_OFFLOAD_* flag name.
+ * Get RTE_ETH_RX_OFFLOAD_* flag name.
  *
  * @param offload
  *   Offload flag.
@@ -2085,7 +2316,7 @@ uint32_t rte_eth_speed_bitflag(uint32_t speed, int duplex);
 const char *rte_eth_dev_rx_offload_name(uint64_t offload);
 
 /**
- * Get DEV_TX_OFFLOAD_* flag name.
+ * Get RTE_ETH_TX_OFFLOAD_* flag name.
  *
  * @param offload
  *   Offload flag.
@@ -2179,7 +2410,7 @@ rte_eth_dev_is_removed(uint16_t port_id);
  *   of the Prefetch, Host, and Write-Back threshold registers of the receive
  *   ring.
  *   In addition it contains the hardware offloads features to activate using
- *   the DEV_RX_OFFLOAD_* flags.
+ *   the RTE_ETH_RX_OFFLOAD_* flags.
  *   If an offloading set in rx_conf->offloads
  *   hasn't been set in the input argument eth_conf->rxmode.offloads
  *   to rte_eth_dev_configure(), it is a new added offloading, it must be
@@ -5224,7 +5455,7 @@ static inline int rte_eth_tx_descriptor_status(uint16_t port_id,
  * rte_eth_tx_burst() function must [attempt to] free the *rte_mbuf*  buffers
  * of those packets whose transmission was effectively completed.
  *
- * If the PMD is DEV_TX_OFFLOAD_MT_LOCKFREE capable, multiple threads can
+ * If the PMD is RTE_ETH_TX_OFFLOAD_MT_LOCKFREE capable, multiple threads can
  * invoke this function concurrently on the same tx queue without SW lock.
  * @see rte_eth_dev_info_get, struct rte_eth_txconf::offloads
  *

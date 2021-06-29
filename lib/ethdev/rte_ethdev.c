@@ -98,9 +98,6 @@ static const struct rte_eth_xstats_name_off eth_dev_txq_stats_strings[] = {
 #define RTE_NB_TXQ_STATS RTE_DIM(eth_dev_txq_stats_strings)
 
 #define RTE_RX_OFFLOAD_BIT2STR(_name)	\
-	{ DEV_RX_OFFLOAD_##_name, #_name }
-
-#define RTE_ETH_RX_OFFLOAD_BIT2STR(_name)	\
 	{ RTE_ETH_RX_OFFLOAD_##_name, #_name }
 
 static const struct {
@@ -126,14 +123,14 @@ static const struct {
 	RTE_RX_OFFLOAD_BIT2STR(SCTP_CKSUM),
 	RTE_RX_OFFLOAD_BIT2STR(OUTER_UDP_CKSUM),
 	RTE_RX_OFFLOAD_BIT2STR(RSS_HASH),
-	RTE_ETH_RX_OFFLOAD_BIT2STR(BUFFER_SPLIT),
+	RTE_RX_OFFLOAD_BIT2STR(BUFFER_SPLIT),
 };
 
 #undef RTE_RX_OFFLOAD_BIT2STR
 #undef RTE_ETH_RX_OFFLOAD_BIT2STR
 
 #define RTE_TX_OFFLOAD_BIT2STR(_name)	\
-	{ DEV_TX_OFFLOAD_##_name, #_name }
+	{ RTE_ETH_TX_OFFLOAD_##_name, #_name }
 
 static const struct {
 	uint64_t offload;
