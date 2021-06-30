@@ -84,13 +84,21 @@ struct rte_vhost_async_channel_ops {
 };
 
 /**
- * inflight async packet information
+ * in-flight async packet information
  */
+struct async_nethdr {
+	struct virtio_net_hdr hdr;
+	bool valid;
+};
+
 struct async_inflight_info {
 	struct rte_mbuf *mbuf;
-	uint16_t descs; /* num of descs inflight */
+	union {
+		uint16_t descs; /* num of descs in-flight */
+		struct async_nethdr nethdr;
+	};
 	uint16_t nr_buffers; /* num of buffers inflight for packed ring */
-};
+} __rte_cache_aligned;
 
 /**
  *  dma channel feature bit definition
@@ -192,5 +200,35 @@ uint16_t rte_vhost_submit_enqueue_burst(int vid, uint16_t queue_id,
 __rte_experimental
 uint16_t rte_vhost_poll_enqueue_completed(int vid, uint16_t queue_id,
 		struct rte_mbuf **pkts, uint16_t count);
+
+/**
+ * This function tries to receive packets from the guest with offloading
+ * large copies to the DMA engine. Successfully dequeued packets are
+ * transfer completed, either by the CPU or the DMA engine, and they are
+ * returned in "pkts". There may be other packets that are sent from
+ * the guest but being transferred by the DMA engine, called in-flight
+ * packets. The amount of in-flight packets by now is returned in
+ * "nr_inflight". This function will return in-flight packets only after
+ * the DMA engine finishes transferring.
+ *
+ * @param vid
+ *  id of vhost device to dequeue data
+ * @param queue_id
+ *  queue id to dequeue data
+ * @param pkts
+ *  blank array to keep successfully dequeued packets
+ * @param count
+ *  size of the packet array
+ * @param nr_inflight
+ *  the amount of in-flight packets by now. If error occurred, its
+ *  value is set to -1.
+ * @return
+ *  num of successfully dequeued packets
+ */
+__rte_experimental
+uint16_t
+rte_vhost_async_try_dequeue_burst(int vid, uint16_t queue_id,
+	struct rte_mempool *mbuf_pool, struct rte_mbuf **pkts, uint16_t count,
+	int *nr_inflight);
 
 #endif /* _RTE_VHOST_ASYNC_H_ */
