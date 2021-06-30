@@ -38,12 +38,13 @@ range="$*"
 # get major release version of a commit
 commit_version () # <hash>
 {
+	local VER="v*.*"
 	# use current branch as history reference
 	local refbranch=$(git rev-parse --abbrev-ref HEAD)
-	local tag=$( (git tag -l --contains $1 --merged $refbranch 2>&- ||
+	local tag=$( (git tag -l "$VER" --contains $1 --sort=creatordate --merged $refbranch 2>&- ||
 		# tag --merged option has been introduced in git 2.7.0
 		# below is a fallback in case of old git version
-		for t in $(git tag -l --contains $1) ; do
+		for t in $(git tag -l "$VER" --contains $1) ; do
 			git branch $refbranch --contains $t |
 			sed "s,.\+,$t,"
 		done) |
