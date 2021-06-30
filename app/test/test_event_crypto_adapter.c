@@ -229,7 +229,7 @@ test_op_forward_mode(uint8_t session_less)
 		first_xform = &cipher_xform;
 		sym_op->xform = first_xform;
 		uint32_t len = IV_OFFSET + MAXIMUM_IV_LENGTH +
-				(sizeof(struct rte_crypto_sym_xform) * 2);
+				(sizeof(union rte_event_crypto_metadata));
 		op->private_data_offset = len;
 		/* Fill in private data information */
 		rte_memcpy(&m_data.response_info, &response_info,
@@ -424,7 +424,7 @@ test_op_new_mode(uint8_t session_less)
 		first_xform = &cipher_xform;
 		sym_op->xform = first_xform;
 		uint32_t len = IV_OFFSET + MAXIMUM_IV_LENGTH +
-				(sizeof(struct rte_crypto_sym_xform) * 2);
+				(sizeof(union rte_event_crypto_metadata));
 		op->private_data_offset = len;
 		/* Fill in private data information */
 		rte_memcpy(&m_data.response_info, &response_info,
