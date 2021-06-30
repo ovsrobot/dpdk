@@ -118,6 +118,11 @@ Deprecation Notices
   consistent with existing outer header checksum status flag naming, which
   should help in reducing confusion about its usage.
 
+* ethdev: Will add 'RTE_ETH_' prefix to all ethdev macros/enums in v21.11. Macros
+  will be added for backward compatibility. Backward compatibility macros will be
+  removed on v22.11. A few old backward compatibility macros from 2013 that does
+  not have proper prefix will be removed on v21.11.
+
 * i40e: As there are both i40evf and iavf pmd, the functions of them are
   duplicated. And now more and more advanced features are developed on iavf.
   To keep consistent with kernel driver's name
