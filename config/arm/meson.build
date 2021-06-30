@@ -380,19 +380,23 @@ if dpdk_conf.get('RTE_ARCH_32')
     machine_args += '-mfpu=neon'
 else
     # aarch64 build
-    soc = get_option('platform')
+    # for backwards compatibility:
+    #   machine=native is the same behavior as platform=native
+    #   machine=generic/default is the same as platform=generic
+    if machine != 'auto'
+        # cpu_instruction_set holds the proper value - native, generic or cpu
+        # the old behavior only distinguished between generic and native build
+        if cpu_instruction_set == 'generic'
+            soc = 'generic'
+        else
+            soc = 'native'
+        endif
+    else
+        soc = platform
+    endif
     soc_config = {}
     if not meson.is_cross_build()
-        if machine == 'generic'
-            # generic build
-            if soc != ''
-                error('Building for a particular platform is unsupported with generic build.')
-            endif
-            implementer_id = 'generic'
-            part_number = 'generic'
-        elif soc != ''
-            soc_config = socs.get(soc, {'not_supported': true})
-        else
+        if soc == 'native'
             # native build
             # The script returns ['Implementer', 'Variant', 'Architecture',
             # 'Primary Part number', 'Revision']
@@ -406,6 +410,9 @@ else
             else
                 error('Error when getting Arm Implementer ID and part number.')
             endif
+        else
+            # SoC build
+            soc_config = socs.get(soc, {'not_supported': true})
         endif
     else
         # cross build
@@ -437,7 +444,7 @@ else
     else
         error('Unsupported Arm implementer: @0@. '.format(implementer_id) +
               'Please add support for it or use the generic ' +
-              '(-Dmachine=generic) build.')
+              '(-Dplatform=generic) build.')
     endif
 
     message('Arm implementer: ' + implementer_config['description'])
@@ -452,7 +459,7 @@ else
         error('Unsupported part number @0@ of implementer @1@. '
               .format(part_number, implementer_id) +
               'Please add support for it or use the generic ' +
-              '(-Dmachine=generic) build.')
+              '(-Dplatform=generic) build.')
     endif
 
     # add/overwrite flags in the proper order
