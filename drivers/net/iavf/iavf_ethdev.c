@@ -122,6 +122,7 @@ static int iavf_dev_flow_ops_get(struct rte_eth_dev *dev,
 static int iavf_set_mc_addr_list(struct rte_eth_dev *dev,
 			struct rte_ether_addr *mc_addrs,
 			uint32_t mc_addrs_num);
+static int iavf_tm_ops_get(struct rte_eth_dev *dev __rte_unused, void *arg);
 
 static const struct rte_pci_id pci_id_iavf_map[] = {
 	{ RTE_PCI_DEVICE(IAVF_INTEL_VENDOR_ID, IAVF_DEV_ID_ADAPTIVE_VF) },
@@ -200,7 +201,20 @@ static const struct eth_dev_ops iavf_eth_dev_ops = {
 	.flow_ops_get               = iavf_dev_flow_ops_get,
 	.tx_done_cleanup	    = iavf_dev_tx_done_cleanup,
 	.get_monitor_addr           = iavf_get_monitor_addr,
+	.tm_ops_get                 = iavf_tm_ops_get,
 };
+
+static int
+iavf_tm_ops_get(struct rte_eth_dev *dev __rte_unused,
+			void *arg)
+{
+	if (!arg)
+		return -EINVAL;
+
+	*(const void **)arg = &iavf_tm_ops;
+
+	return 0;
+}
 
 static int
 iavf_set_mc_addr_list(struct rte_eth_dev *dev,
@@ -806,6 +820,11 @@ iavf_dev_start(struct rte_eth_dev *dev)
 				      dev->data->nb_tx_queues);
 	num_queue_pairs = vf->num_queue_pairs;
 
+	if (iavf_get_qos_cap(adapter)) {
+		PMD_INIT_LOG(ERR, "Failed to get qos capability");
+		return -1;
+	}
+
 	if (iavf_init_queues(dev) != 0) {
 		PMD_DRV_LOG(ERR, "failed to do Queue init");
 		return -1;
@@ -891,6 +910,7 @@ iavf_dev_stop(struct rte_eth_dev *dev)
 
 	adapter->stopped = 1;
 	dev->data->dev_started = 0;
+	vf->tm_conf.committed = false;
 
 	return 0;
 }
@@ -2090,6 +2110,15 @@ iavf_init_vf(struct rte_eth_dev *dev)
 		PMD_INIT_LOG(ERR, "unable to allocate vf_res memory");
 		goto err_api;
 	}
+
+	bufsz = sizeof(struct virtchnl_qos_cap_list) +
+		IAVF_MAX_TRAFFIC_CLASS * sizeof(struct virtchnl_qos_cap_elem);
+	vf->qos_cap = rte_zmalloc("qos_cap", bufsz, 0);
+	if (!vf->qos_cap) {
+		PMD_INIT_LOG(ERR, "unable to allocate qos_cap memory");
+		goto err_api;
+	}
+
 	if (iavf_get_vf_resource(adapter) != 0) {
 		PMD_INIT_LOG(ERR, "iavf_get_vf_config failed");
 		goto err_alloc;
@@ -2131,6 +2160,7 @@ err_rss:
 	rte_free(vf->rss_key);
 	rte_free(vf->rss_lut);
 err_alloc:
+	rte_free(vf->qos_cap);
 	rte_free(vf->vf_res);
 	vf->vsi_res = NULL;
 err_api:
@@ -2299,6 +2329,8 @@ iavf_dev_init(struct rte_eth_dev *eth_dev)
 
 	iavf_default_rss_disable(adapter);
 
+	iavf_tm_conf_init(eth_dev);
+
 	return 0;
 }
 
@@ -2337,6 +2369,8 @@ iavf_dev_close(struct rte_eth_dev *dev)
 	rte_intr_callback_unregister(intr_handle,
 				     iavf_dev_interrupt_handler, dev);
 	iavf_disable_irq0(hw);
+
+	iavf_tm_conf_uninit(dev);
 
 	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_RSS_PF) {
 		if (vf->rss_lut) {
