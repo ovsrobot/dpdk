@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel iavf driver.**
+
+  * Added Tx QoS VF queue TC mapping.
+
+* **Updated Intel ice driver.**
+
+  * Added Tx QoS TC bandwidth configuration in DCF.
 
 Removed Items
 -------------
