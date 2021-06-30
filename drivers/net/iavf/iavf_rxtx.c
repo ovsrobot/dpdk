@@ -2342,14 +2342,49 @@ end_of_tx:
 	return nb_tx;
 }
 
+/* Check if the packet with vlan user priority is transmitted in the
+ * correct queue.
+ */
+static int
+iavf_check_vlan_up2tc(struct iavf_tx_queue *txq, uint8_t tc, struct rte_mbuf *m)
+{
+	struct rte_eth_dev *dev = &rte_eth_devices[txq->port_id];
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+	uint16_t up;
+
+	up = m->vlan_tci >> IAVF_VLAN_TAG_PCP_OFFSET;
+
+	if (!(vf->qos_cap->cap[tc].tc_prio & BIT(up))) {
+		PMD_TX_LOG(ERR, "packet with vlan pcp %u cannot transmit in queue %u\n",
+			up, txq->queue_id);
+		return -1;
+	} else {
+		return 0;
+	}
+}
+
 /* TX prep functions */
 uint16_t
 iavf_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 	      uint16_t nb_pkts)
 {
 	int i, ret;
+	uint8_t tc = 0;
 	uint64_t ol_flags;
 	struct rte_mbuf *m;
+	struct iavf_tx_queue *txq = tx_queue;
+	struct rte_eth_dev *dev = &rte_eth_devices[txq->port_id];
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+
+	if (vf->tm_conf.committed) {
+		for (i = 0; i < vf->qos_cap->num_elem; i++) {
+			if (txq->queue_id >= vf->qtc_map[i].start_queue_id &&
+				txq->queue_id < (vf->qtc_map[i].start_queue_id +
+				vf->qtc_map[i].queue_count))
+				break;
+		}
+		tc = i;
+	}
 
 	for (i = 0; i < nb_pkts; i++) {
 		m = tx_pkts[i];
@@ -2384,6 +2419,14 @@ iavf_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 		if (ret != 0) {
 			rte_errno = -ret;
 			return i;
+		}
+
+		if (ol_flags & (PKT_RX_VLAN_STRIPPED | PKT_RX_VLAN)) {
+			ret = iavf_check_vlan_up2tc(txq, tc, m);
+			if (ret != 0) {
+				rte_errno = -ret;
+				return i;
+			}
 		}
 	}
 
