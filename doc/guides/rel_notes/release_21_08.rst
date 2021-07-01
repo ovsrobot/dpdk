@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added support for Nvidia crypto device driver.**
+
+  * Added mlx5 crypto driver to support AES-XTS cipher operations.
+    The first device to support it is ConnectX-6.
+
 
 Removed Items
 -------------
