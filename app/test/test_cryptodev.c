@@ -35,6 +35,7 @@
 #include "test_cryptodev_hash_test_vectors.h"
 #include "test_cryptodev_kasumi_test_vectors.h"
 #include "test_cryptodev_kasumi_hash_test_vectors.h"
+#include "test_cryptodev_mlx5_test_vectors.h"
 #include "test_cryptodev_snow3g_test_vectors.h"
 #include "test_cryptodev_snow3g_hash_test_vectors.h"
 #include "test_cryptodev_zuc_test_vectors.h"
@@ -1268,6 +1269,39 @@ negative_hmac_sha1_testsuite_setup(void)
 }
 
 static int
+mlx5_testsuite_setup(void)
+{
+	struct crypto_testsuite_params *ts_params = &testsuite_params;
+	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_cryptodev_info dev_info;
+	const enum rte_crypto_cipher_algorithm ciphers[] = {
+		RTE_CRYPTO_CIPHER_AES_XTS
+	};
+
+	rte_cryptodev_info_get(dev_id, &dev_info);
+
+	if (!(dev_info.feature_flags & RTE_CRYPTODEV_FF_SYMMETRIC_CRYPTO) &&
+			!(dev_info.feature_flags &
+				RTE_CRYPTODEV_FF_CIPHER_WRAPPED_KEY) &&
+			!(dev_info.feature_flags &
+				RTE_CRYPTODEV_FF_CIPHER_MULTIPLE_DATA_UNITS)) {
+		RTE_LOG(INFO, USER1,
+		"Feature flag requirements for MLX5 testsuite not met\n");
+
+		return TEST_SKIPPED;
+	}
+
+	if (check_cipher_capabilities_supported(ciphers,
+						RTE_DIM(ciphers)) != 0) {
+		RTE_LOG(INFO, USER1,
+		"Capability requirements for MLX5 testsuite not met\n");
+		return TEST_SKIPPED;
+	}
+
+	return 0;
+}
+
+static int
 dev_configure_and_start(uint64_t ff_disable)
 {
 	struct crypto_testsuite_params *ts_params = &testsuite_params;
@@ -2366,7 +2400,7 @@ create_wireless_algo_cipher_session(uint8_t dev_id,
 			enum rte_crypto_cipher_operation op,
 			enum rte_crypto_cipher_algorithm algo,
 			const uint8_t *key, const uint8_t key_len,
-			uint8_t iv_len)
+			uint8_t iv_len, uint64_t dataunit_len)
 {
 	uint8_t cipher_key[key_len];
 	int status;
@@ -2378,13 +2412,13 @@ create_wireless_algo_cipher_session(uint8_t dev_id,
 	/* Setup Cipher Parameters */
 	ut_params->cipher_xform.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
 	ut_params->cipher_xform.next = NULL;
-
 	ut_params->cipher_xform.cipher.algo = algo;
 	ut_params->cipher_xform.cipher.op = op;
 	ut_params->cipher_xform.cipher.key.data = cipher_key;
 	ut_params->cipher_xform.cipher.key.length = key_len;
 	ut_params->cipher_xform.cipher.iv.offset = IV_OFFSET;
 	ut_params->cipher_xform.cipher.iv.length = iv_len;
+	ut_params->cipher_xform.cipher.dataunit_len = dataunit_len;
 
 	debug_hexdump(stdout, "key:", key, key_len);
 
@@ -3528,7 +3562,7 @@ test_kasumi_encryption(const struct kasumi_test_data *tdata)
 					RTE_CRYPTO_CIPHER_OP_ENCRYPT,
 					RTE_CRYPTO_CIPHER_KASUMI_F8,
 					tdata->key.data, tdata->key.len,
-					tdata->cipher_iv.len);
+					tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -3631,7 +3665,7 @@ test_kasumi_encryption_sgl(const struct kasumi_test_data *tdata)
 					RTE_CRYPTO_CIPHER_OP_ENCRYPT,
 					RTE_CRYPTO_CIPHER_KASUMI_F8,
 					tdata->key.data, tdata->key.len,
-					tdata->cipher_iv.len);
+					tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -3718,7 +3752,7 @@ test_kasumi_encryption_oop(const struct kasumi_test_data *tdata)
 					RTE_CRYPTO_CIPHER_OP_ENCRYPT,
 					RTE_CRYPTO_CIPHER_KASUMI_F8,
 					tdata->key.data, tdata->key.len,
-					tdata->cipher_iv.len);
+					tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -3815,7 +3849,7 @@ test_kasumi_encryption_oop_sgl(const struct kasumi_test_data *tdata)
 					RTE_CRYPTO_CIPHER_OP_ENCRYPT,
 					RTE_CRYPTO_CIPHER_KASUMI_F8,
 					tdata->key.data, tdata->key.len,
-					tdata->cipher_iv.len);
+					tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -3896,7 +3930,7 @@ test_kasumi_decryption_oop(const struct kasumi_test_data *tdata)
 					RTE_CRYPTO_CIPHER_OP_DECRYPT,
 					RTE_CRYPTO_CIPHER_KASUMI_F8,
 					tdata->key.data, tdata->key.len,
-					tdata->cipher_iv.len);
+					tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -3986,7 +4020,7 @@ test_kasumi_decryption(const struct kasumi_test_data *tdata)
 					RTE_CRYPTO_CIPHER_OP_DECRYPT,
 					RTE_CRYPTO_CIPHER_KASUMI_F8,
 					tdata->key.data, tdata->key.len,
-					tdata->cipher_iv.len);
+					tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -4078,7 +4112,7 @@ test_snow3g_encryption(const struct snow3g_test_data *tdata)
 					RTE_CRYPTO_CIPHER_OP_ENCRYPT,
 					RTE_CRYPTO_CIPHER_SNOW3G_UEA2,
 					tdata->key.data, tdata->key.len,
-					tdata->cipher_iv.len);
+					tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -4162,7 +4196,7 @@ test_snow3g_encryption_oop(const struct snow3g_test_data *tdata)
 					RTE_CRYPTO_CIPHER_OP_ENCRYPT,
 					RTE_CRYPTO_CIPHER_SNOW3G_UEA2,
 					tdata->key.data, tdata->key.len,
-					tdata->cipher_iv.len);
+					tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -4262,7 +4296,7 @@ test_snow3g_encryption_oop_sgl(const struct snow3g_test_data *tdata)
 					RTE_CRYPTO_CIPHER_OP_ENCRYPT,
 					RTE_CRYPTO_CIPHER_SNOW3G_UEA2,
 					tdata->key.data, tdata->key.len,
-					tdata->cipher_iv.len);
+					tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -4376,7 +4410,7 @@ test_snow3g_encryption_offset_oop(const struct snow3g_test_data *tdata)
 					RTE_CRYPTO_CIPHER_OP_ENCRYPT,
 					RTE_CRYPTO_CIPHER_SNOW3G_UEA2,
 					tdata->key.data, tdata->key.len,
-					tdata->cipher_iv.len);
+					tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -4488,7 +4522,7 @@ static int test_snow3g_decryption(const struct snow3g_test_data *tdata)
 					RTE_CRYPTO_CIPHER_OP_DECRYPT,
 					RTE_CRYPTO_CIPHER_SNOW3G_UEA2,
 					tdata->key.data, tdata->key.len,
-					tdata->cipher_iv.len);
+					tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -4569,7 +4603,7 @@ static int test_snow3g_decryption_oop(const struct snow3g_test_data *tdata)
 					RTE_CRYPTO_CIPHER_OP_DECRYPT,
 					RTE_CRYPTO_CIPHER_SNOW3G_UEA2,
 					tdata->key.data, tdata->key.len,
-					tdata->cipher_iv.len);
+					tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -5811,7 +5845,7 @@ test_zuc_encryption(const struct wireless_test_data *tdata)
 					RTE_CRYPTO_CIPHER_OP_ENCRYPT,
 					RTE_CRYPTO_CIPHER_ZUC_EEA3,
 					tdata->key.data, tdata->key.len,
-					tdata->cipher_iv.len);
+					tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -5924,7 +5958,7 @@ test_zuc_encryption_sgl(const struct wireless_test_data *tdata)
 			RTE_CRYPTO_CIPHER_OP_ENCRYPT,
 			RTE_CRYPTO_CIPHER_ZUC_EEA3,
 			tdata->key.data, tdata->key.len,
-			tdata->cipher_iv.len);
+			tdata->cipher_iv.len, 0);
 	if (retval < 0)
 		return retval;
 
@@ -6457,6 +6491,193 @@ test_zuc_auth_cipher_sgl(const struct wireless_test_data *tdata,
 			DIGEST_BYTE_LENGTH_KASUMI_F9,
 			"ZUC Generated auth tag not as expected");
 	}
+	return 0;
+}
+
+static int
+test_mlx5_encryption(const struct mlx5_test_data *tdata)
+{
+	struct crypto_testsuite_params *ts_params = &testsuite_params;
+	struct crypto_unittest_params *ut_params = &unittest_params;
+	struct rte_cryptodev_sym_capability_idx cap_idx;
+	struct rte_cryptodev_info dev_info;
+	struct rte_cryptodev_stats stats;
+	uint8_t *plaintext, *ciphertext;
+	uint64_t feat_flags;
+	unsigned int plaintext_pad_len;
+	unsigned int plaintext_len;
+	int retval;
+
+	rte_cryptodev_info_get(ts_params->valid_devs[0], &dev_info);
+	feat_flags = dev_info.feature_flags;
+	if ((global_api_test_type == CRYPTODEV_RAW_API_TEST) &&
+			(!(feat_flags & RTE_CRYPTODEV_FF_SYM_RAW_DP))) {
+		printf("Device doesn't support RAW data-path APIs.\n");
+		return -ENOTSUP;
+	}
+	if (gbl_action_type == RTE_SECURITY_ACTION_TYPE_CPU_CRYPTO)
+		return -ENOTSUP;
+	/* Verify the capabilities */
+	cap_idx.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
+	cap_idx.algo.cipher = RTE_CRYPTO_CIPHER_AES_XTS;
+	if (rte_cryptodev_sym_capability_get(ts_params->valid_devs[0],
+			&cap_idx) == NULL)
+		return -ENOTSUP;
+	/* Create mlx5 session */
+	retval = create_wireless_algo_cipher_session(ts_params->valid_devs[0],
+						RTE_CRYPTO_CIPHER_OP_ENCRYPT,
+						RTE_CRYPTO_CIPHER_AES_XTS,
+						tdata->key.data, tdata->key.len,
+						tdata->cipher_iv.len, 0);
+	if (retval < 0)
+		return retval;
+	ut_params->ibuf = rte_pktmbuf_alloc(ts_params->mbuf_pool);
+	if (unlikely(ut_params->ibuf == NULL))
+		return -ENOMEM;
+	/* Clear mbuf payload */
+	memset(rte_pktmbuf_mtod(ut_params->ibuf, uint8_t *), 0,
+	       rte_pktmbuf_tailroom(ut_params->ibuf));
+	plaintext_len = ceil_byte_length(tdata->plaintext.len);
+	/* Append data which is padded to a multiple */
+	/* of the algorithms block size */
+	plaintext_pad_len = RTE_ALIGN_CEIL(plaintext_len, 8);
+	plaintext = (uint8_t *)rte_pktmbuf_append(ut_params->ibuf,
+				plaintext_pad_len);
+	if (unlikely(plaintext == NULL))
+		return -ENOMEM;
+	memcpy(plaintext, tdata->plaintext.data, plaintext_len);
+	debug_hexdump(stdout, "plaintext:", plaintext, plaintext_len);
+	retval = create_wireless_algo_cipher_operation(tdata->cipher_iv.data,
+				tdata->cipher_iv.len, (tdata->cipher.len_bits),
+				(tdata->cipher.offset_bits));
+	if (retval < 0)
+		return retval;
+	if (global_api_test_type == CRYPTODEV_RAW_API_TEST)
+		process_sym_raw_dp_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 0, 1, tdata->cipher_iv.len);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+						ut_params->op);
+	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
+	ut_params->obuf = ut_params->op->sym->m_dst;
+	if (ut_params->obuf)
+		ciphertext = rte_pktmbuf_mtod(ut_params->obuf, uint8_t *);
+	else
+		ciphertext = plaintext;
+	debug_hexdump(stdout, "ciphertext:", ciphertext, plaintext_len);
+	/* Validate obuf */
+	TEST_ASSERT_BUFFERS_ARE_EQUAL_BIT(
+		ciphertext,
+		tdata->ciphertext.data,
+		tdata->validCipherLenInBits.len,
+		"MLX5 Ciphertext data not as expected");
+	/* Validate stats */
+	TEST_ASSERT_SUCCESS(rte_cryptodev_stats_get(ts_params->valid_devs[0],
+			    &stats), "rte_cryptodev_stats_get failed");
+	TEST_ASSERT((stats.enqueued_count == 1),
+		   "rte_cryptodev_stats_get returned unexpected enqueued stat");
+	TEST_ASSERT((stats.dequeued_count == 1),
+		   "rte_cryptodev_stats_get returned unexpected dequeued stat");
+	TEST_ASSERT((stats.enqueue_err_count == 0),
+		   "rte_cryptodev_stats_get returned error enqueued stat");
+	TEST_ASSERT((stats.dequeue_err_count == 0),
+		   "rte_cryptodev_stats_get returned error dequeued stat");
+	return 0;
+}
+
+static int
+test_mlx5_decryption(const struct mlx5_test_data *tdata)
+{
+	struct crypto_testsuite_params *ts_params = &testsuite_params;
+	struct crypto_unittest_params *ut_params = &unittest_params;
+	struct rte_cryptodev_sym_capability_idx cap_idx;
+	struct rte_cryptodev_info dev_info;
+	struct rte_cryptodev_stats stats;
+	const uint8_t *reference_plaintext;
+	uint8_t *ciphertext, *plaintext;
+	uint64_t feat_flags;
+	unsigned int ciphertext_pad_len;
+	unsigned int ciphertext_len;
+	int retval;
+
+
+	rte_cryptodev_info_get(ts_params->valid_devs[0], &dev_info);
+	feat_flags = dev_info.feature_flags;
+	if ((global_api_test_type == CRYPTODEV_RAW_API_TEST) &&
+			(!(feat_flags & RTE_CRYPTODEV_FF_SYM_RAW_DP))) {
+		printf("Device doesn't support RAW data-path APIs.\n");
+		return -ENOTSUP;
+	}
+	if (gbl_action_type == RTE_SECURITY_ACTION_TYPE_CPU_CRYPTO)
+		return -ENOTSUP;
+	/* Verify the capabilities */
+	cap_idx.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
+	cap_idx.algo.cipher = RTE_CRYPTO_CIPHER_AES_XTS;
+	if (rte_cryptodev_sym_capability_get(ts_params->valid_devs[0],
+			&cap_idx) == NULL)
+		return -ENOTSUP;
+	/* Create mlx5 session */
+	retval = create_wireless_algo_cipher_session(ts_params->valid_devs[0],
+						RTE_CRYPTO_CIPHER_OP_DECRYPT,
+						RTE_CRYPTO_CIPHER_AES_XTS,
+						tdata->key.data, tdata->key.len,
+						tdata->cipher_iv.len, 0);
+	if (retval < 0)
+		return retval;
+	ut_params->ibuf = rte_pktmbuf_alloc(ts_params->mbuf_pool);
+	if (unlikely(ut_params->ibuf == NULL))
+		return -ENOMEM;
+	/* Clear mbuf payload */
+	memset(rte_pktmbuf_mtod(ut_params->ibuf, uint8_t *), 0,
+	       rte_pktmbuf_tailroom(ut_params->ibuf));
+	ciphertext_len = ceil_byte_length(tdata->ciphertext.len);
+	/* Append data which is padded to a multiple */
+	/* of the algorithms block size */
+	ciphertext_pad_len = RTE_ALIGN_CEIL(ciphertext_len, 8);
+	ciphertext = (uint8_t *)rte_pktmbuf_append(ut_params->ibuf,
+				ciphertext_pad_len);
+	if (unlikely(ciphertext == NULL))
+		return -ENOMEM;
+	memcpy(ciphertext, tdata->ciphertext.data, ciphertext_len);
+	debug_hexdump(stdout, "ciphertext:", ciphertext, ciphertext_len);
+	/* Create mlx5 operation */
+	retval = create_wireless_algo_cipher_operation(tdata->cipher_iv.data,
+				tdata->cipher_iv.len, (tdata->cipher.len_bits),
+				(tdata->cipher.offset_bits));
+	if (retval < 0)
+		return retval;
+	if (global_api_test_type == CRYPTODEV_RAW_API_TEST)
+		process_sym_raw_dp_op(ts_params->valid_devs[0], 0,
+				ut_params->op, 1, 0, 1, 0);
+	else
+		ut_params->op = process_crypto_request(ts_params->valid_devs[0],
+						ut_params->op);
+	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
+	ut_params->obuf = ut_params->op->sym->m_dst;
+	if (ut_params->obuf)
+		plaintext = rte_pktmbuf_mtod(ut_params->obuf, uint8_t *);
+	else
+		plaintext = ciphertext + (tdata->cipher.offset_bits);
+	debug_hexdump(stdout, "plaintext:", plaintext, ciphertext_len);
+	reference_plaintext = tdata->plaintext.data +
+				(tdata->cipher.offset_bits);
+	/* Validate obuf */
+	TEST_ASSERT_BUFFERS_ARE_EQUAL_BIT(
+		plaintext,
+		reference_plaintext,
+		tdata->validCipherLenInBits.len,
+		"MLX5 Plaintext data not as expected");
+	/* Validate stats */
+	TEST_ASSERT_SUCCESS(rte_cryptodev_stats_get(ts_params->valid_devs[0],
+			    &stats), "rte_cryptodev_stats_get failed");
+	TEST_ASSERT((stats.enqueued_count == 1),
+		   "rte_cryptodev_stats_get returned unexpected enqueued stat");
+	TEST_ASSERT((stats.dequeued_count == 1),
+		   "rte_cryptodev_stats_get returned unexpected dequeued stat");
+	TEST_ASSERT((stats.enqueue_err_count == 0),
+		   "rte_cryptodev_stats_get returned error enqueued stat");
+	TEST_ASSERT((stats.dequeue_err_count == 0),
+		   "rte_cryptodev_stats_get returned error dequeued stat");
 	return 0;
 }
 
@@ -7074,6 +7295,54 @@ test_zuc_auth_cipher_verify_test_case_1_oop_sgl(void)
 {
 	return test_zuc_auth_cipher_sgl(
 		&zuc_auth_cipher_test_case_1, OUT_OF_PLACE, 1);
+}
+
+static int
+test_mlx5_encryption_test_case_1(void)
+{
+	return test_mlx5_encryption(&mlx5_test_case_cipher_aes_xts_1);
+}
+
+static int
+test_mlx5_encryption_test_case_2(void)
+{
+	return test_mlx5_encryption(&mlx5_test_case_cipher_aes_xts_2);
+}
+
+static int
+test_mlx5_encryption_test_case_3(void)
+{
+	return test_mlx5_encryption(&mlx5_test_case_cipher_aes_xts_3);
+}
+
+static int
+test_mlx5_encryption_test_case_4(void)
+{
+	return test_mlx5_encryption(&mlx5_test_case_cipher_aes_xts_4);
+}
+
+static int
+test_mlx5_decryption_test_case_1(void)
+{
+	return test_mlx5_decryption(&mlx5_test_case_cipher_aes_xts_1);
+}
+
+static int
+test_mlx5_decryption_test_case_2(void)
+{
+	return test_mlx5_decryption(&mlx5_test_case_cipher_aes_xts_2);
+}
+
+static int
+test_mlx5_decryption_test_case_3(void)
+{
+	return test_mlx5_decryption(&mlx5_test_case_cipher_aes_xts_3);
+}
+
+static int
+test_mlx5_decryption_test_case_4(void)
+{
+	return test_mlx5_decryption(&mlx5_test_case_cipher_aes_xts_4);
 }
 
 static int
@@ -14458,6 +14727,31 @@ static struct unit_test_suite cryptodev_mixed_cipher_hash_testsuite  = {
 	}
 };
 
+static struct unit_test_suite cryptodev_mlx5_testsuite  = {
+	.suite_name = "MLX5 Test Suite",
+	.setup = mlx5_testsuite_setup,
+	.unit_test_cases = {
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_mlx5_decryption_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_mlx5_decryption_test_case_2),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_mlx5_decryption_test_case_3),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_mlx5_decryption_test_case_4),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_mlx5_encryption_test_case_1),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_mlx5_encryption_test_case_2),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_mlx5_encryption_test_case_3),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_mlx5_encryption_test_case_4),
+		TEST_CASES_END()
+	}
+};
+
+
 static int
 run_cryptodev_testsuite(const char *pmd_name)
 {
@@ -14483,6 +14777,7 @@ run_cryptodev_testsuite(const char *pmd_name)
 		&cryptodev_hmac_md5_auth_testsuite,
 		&cryptodev_kasumi_testsuite,
 		&cryptodev_esn_testsuite,
+		&cryptodev_mlx5_testsuite,
 		&cryptodev_negative_aes_gcm_testsuite,
 		&cryptodev_negative_aes_gmac_testsuite,
 		&cryptodev_mixed_cipher_hash_testsuite,
@@ -14588,6 +14883,12 @@ static int
 test_cryptodev_sw_kasumi(void /*argv __rte_unused, int argc __rte_unused*/)
 {
 	return run_cryptodev_testsuite(RTE_STR(CRYPTODEV_NAME_KASUMI_PMD));
+}
+
+static int
+test_cryptodev_sw_mlx5(void /*argv __rte_unused, int argc __rte_unused*/)
+{
+	return run_cryptodev_testsuite(RTE_STR(CRYPTODEV_NAME_MLX5_PMD));
 }
 
 static int
@@ -14791,6 +15092,7 @@ REGISTER_TEST_COMMAND(cryptodev_cpu_aesni_gcm_autotest,
 REGISTER_TEST_COMMAND(cryptodev_null_autotest, test_cryptodev_null);
 REGISTER_TEST_COMMAND(cryptodev_sw_snow3g_autotest, test_cryptodev_sw_snow3g);
 REGISTER_TEST_COMMAND(cryptodev_sw_kasumi_autotest, test_cryptodev_sw_kasumi);
+REGISTER_TEST_COMMAND(cryptodev_sw_mlx5_autotest, test_cryptodev_sw_mlx5);
 REGISTER_TEST_COMMAND(cryptodev_sw_zuc_autotest, test_cryptodev_sw_zuc);
 REGISTER_TEST_COMMAND(cryptodev_sw_armv8_autotest, test_cryptodev_armv8);
 REGISTER_TEST_COMMAND(cryptodev_sw_mvsam_autotest, test_cryptodev_mrvl);

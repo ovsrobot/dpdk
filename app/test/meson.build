@@ -313,6 +313,7 @@ driver_test_names = [
         'cryptodev_aesni_gcm_autotest',
         'cryptodev_dpaa_sec_autotest',
         'cryptodev_dpaa2_sec_autotest',
+        'cryptodev_mlx5_autotest',
         'cryptodev_null_autotest',
         'cryptodev_octeontx2_autotest',
         'cryptodev_openssl_autotest',
