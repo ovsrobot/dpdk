@@ -2496,7 +2496,4 @@ static struct mlx5_test_data mlx5_test_case_cipher_aes_xts_4 = {
 	.dataunit_len = 0
 };
 
-
-
-
 #endif /*TEST_CRYPTODEV_MLX5_TEST_VECTORS_H_*/
