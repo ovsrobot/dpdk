@@ -838,9 +838,8 @@ eal_parse_args(int argc, char **argv)
 		}
 	}
 
-	/* create runtime data directory */
-	if (internal_conf->no_shconf == 0 &&
-			eal_create_runtime_dir() < 0) {
+	/* create runtime data directory. In no_shconf mode, skip any errors */
+	if (eal_create_runtime_dir() < 0 && internal_conf->no_shconf == 0) {
 		RTE_LOG(ERR, EAL, "Cannot create runtime directory\n");
 		ret = -1;
 		goto out;
