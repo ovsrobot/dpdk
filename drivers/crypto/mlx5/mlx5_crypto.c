@@ -3,12 +3,9 @@
  */
 
 #include <rte_malloc.h>
-#include <rte_log.h>
 #include <rte_errno.h>
+#include <rte_log.h>
 #include <rte_pci.h>
-#include <rte_crypto.h>
-#include <rte_cryptodev.h>
-#include <rte_cryptodev_pmd.h>
 
 #include <mlx5_glue.h>
 #include <mlx5_common.h>
@@ -17,22 +14,13 @@
 #include <mlx5_common_os.h>
 
 #include "mlx5_crypto_utils.h"
+#include "mlx5_crypto.h"
 
 #define MLX5_CRYPTO_DRIVER_NAME mlx5_crypto
 #define MLX5_CRYPTO_LOG_NAME pmd.crypto.mlx5
 
 #define MLX5_CRYPTO_FEATURE_FLAGS \
 	RTE_CRYPTODEV_FF_HW_ACCELERATED
-
-struct mlx5_crypto_priv {
-	TAILQ_ENTRY(mlx5_crypto_priv) next;
-	struct ibv_context *ctx; /* Device context. */
-	struct rte_pci_device *pci_dev;
-	struct rte_cryptodev *crypto_dev;
-	void *uar; /* User Access Region. */
-	uint32_t pdn; /* Protection Domain number. */
-	struct ibv_pd *pd;
-};
 
 TAILQ_HEAD(mlx5_crypto_privs, mlx5_crypto_priv) mlx5_crypto_priv_list =
 				TAILQ_HEAD_INITIALIZER(mlx5_crypto_priv_list);
@@ -51,11 +39,33 @@ static const struct rte_driver mlx5_drv = {
 
 static struct cryptodev_driver mlx5_cryptodev_driver;
 
+static int
+mlx5_crypto_dev_configure(struct rte_cryptodev *dev,
+		struct rte_cryptodev_config *config __rte_unused)
+{
+	struct mlx5_crypto_priv *priv = dev->data->dev_private;
+
+	if (mlx5_crypto_dek_setup(priv) != 0) {
+		DRV_LOG(ERR, "Dek hash list creation has failed.");
+		return -ENOMEM;
+	}
+	return 0;
+}
+
+static int
+mlx5_crypto_dev_close(struct rte_cryptodev *dev)
+{
+	struct mlx5_crypto_priv *priv = dev->data->dev_private;
+
+	mlx5_crypto_dek_unset(priv);
+	return 0;
+}
+
 static struct rte_cryptodev_ops mlx5_crypto_ops = {
-	.dev_configure			= NULL,
+	.dev_configure			= mlx5_crypto_dev_configure,
 	.dev_start			= NULL,
 	.dev_stop			= NULL,
-	.dev_close			= NULL,
+	.dev_close			= mlx5_crypto_dev_close,
 	.dev_infos_get			= NULL,
 	.stats_get			= NULL,
 	.stats_reset			= NULL,
