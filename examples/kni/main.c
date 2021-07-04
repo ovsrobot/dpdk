@@ -755,7 +755,7 @@ monitor_all_ports_link_status(void *arg)
 			}
 			for (i = 0; i < p[portid]->nb_kni; i++) {
 				prev = rte_kni_update_link(p[portid]->kni[i],
-						link.link_status);
+						&link);
 				log_link_state(p[portid]->kni[i], prev, &link);
 			}
 		}

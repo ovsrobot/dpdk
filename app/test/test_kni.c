@@ -125,6 +125,7 @@ kni_change_mtu(uint16_t port_id, unsigned int new_mtu)
 static int
 test_kni_link_change(void)
 {
+	struct rte_eth_link link;
 	int ret;
 	int pid;
 
@@ -135,42 +136,35 @@ test_kni_link_change(void)
 	}
 
 	if (pid == 0) {
+		link.link_speed = ETH_SPEED_NUM_10G;
+		link.link_duplex = ETH_LINK_FULL_DUPLEX;
+		link.link_autoneg = ETH_LINK_AUTONEG;
+
 		printf("Starting KNI Link status change tests.\n");
 		if (system(IFCONFIG TEST_KNI_PORT" up") == -1) {
 			ret = -1;
 			goto error;
 		}
 
-		ret = rte_kni_update_link(test_kni_ctx, 1);
+		link.link_status = ETH_LINK_UP;
+		ret = rte_kni_update_link(test_kni_ctx, &link);
 		if (ret < 0) {
 			printf("Failed to change link state to Up ret=%d.\n",
 				ret);
 			goto error;
 		}
 		rte_delay_ms(1000);
-		printf("KNI: Set LINKUP, previous state=%d\n", ret);
+		printf("KNI: Set LINKUP\n");
 
-		ret = rte_kni_update_link(test_kni_ctx, 0);
-		if (ret != 1) {
-			printf(
-		"Failed! Previous link state should be 1, returned %d.\n",
+		link.link_status = ETH_LINK_DOWN;
+		ret = rte_kni_update_link(test_kni_ctx, &link);
+		if (ret < 0) {
+			printf("Failed to change link state to Down ret=%d.\n",
 				ret);
 			goto error;
 		}
 		rte_delay_ms(1000);
-		printf("KNI: Set LINKDOWN, previous state=%d\n", ret);
-
-		ret = rte_kni_update_link(test_kni_ctx, 1);
-		if (ret != 0) {
-			printf(
-		"Failed! Previous link state should be 0, returned %d.\n",
-				ret);
-			goto error;
-		}
-		printf("KNI: Set LINKUP, previous state=%d\n", ret);
-
-		ret = 0;
-		rte_delay_ms(1000);
+		printf("KNI: Set LINKDOWN\n");
 
 error:
 		if (system(IFCONFIG TEST_KNI_PORT" down") == -1)
