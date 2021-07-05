@@ -110,6 +110,7 @@ Features
 - Flow integrity offload API.
 - Connection tracking.
 - Sub-Function representors.
+- IPv4 IHL offload.
 
 Limitations
 -----------

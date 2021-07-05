@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Mellanox MLX5 PMD.**
+
+  * Added IPv4 IHL offload support.
 
 Removed Items
 -------------
