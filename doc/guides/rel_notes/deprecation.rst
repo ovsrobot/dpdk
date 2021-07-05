@@ -141,6 +141,9 @@ Deprecation Notices
   in "rte_sched.h". These changes are aligned to improvements suggested in the
   RFC https://mails.dpdk.org/archives/dev/2018-November/120035.html.
 
+* security: The IPsec SA config options structure ``struct rte_security_ipsec_sa_options``
+  will be updated with a new field to support IPsec tunnel header verification.
+
 * metrics: The function ``rte_metrics_init`` will have a non-void return
   in order to notify errors instead of calling ``rte_exit``.
 
