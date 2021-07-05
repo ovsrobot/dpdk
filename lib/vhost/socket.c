@@ -42,6 +42,7 @@ struct vhost_user_socket {
 	bool extbuf;
 	bool linearbuf;
 	bool async_copy;
+	bool async_use_vfio;
 	bool net_compliant_ol_flags;
 
 	/*
@@ -241,6 +242,13 @@ vhost_user_add_connection(int fd, struct vhost_user_socket *vsocket)
 
 		if (dev)
 			dev->async_copy = 1;
+	}
+
+	if (vsocket->async_use_vfio) {
+		dev = get_device(vid);
+
+		if (dev)
+			dev->async_use_vfio = 1;
 	}
 
 	VHOST_LOG_CONFIG(INFO, "new device, handle is %d\n", vid);
@@ -879,6 +887,7 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 	vsocket->extbuf = flags & RTE_VHOST_USER_EXTBUF_SUPPORT;
 	vsocket->linearbuf = flags & RTE_VHOST_USER_LINEARBUF_SUPPORT;
 	vsocket->async_copy = flags & RTE_VHOST_USER_ASYNC_COPY;
+	vsocket->async_use_vfio = flags & RTE_VHOST_USER_ASYNC_USE_VFIO;
 	vsocket->net_compliant_ol_flags = flags & RTE_VHOST_USER_NET_COMPLIANT_OL_FLAGS;
 
 	if (vsocket->async_copy &&

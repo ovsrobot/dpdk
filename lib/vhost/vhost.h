@@ -370,6 +370,7 @@ struct virtio_net {
 	int16_t			broadcast_rarp;
 	uint32_t		nr_vring;
 	int			async_copy;
+	int			async_use_vfio;
 	int			extbuf;
 	int			linearbuf;
 	struct vhost_virtqueue	*virtqueue[VHOST_MAX_QUEUE_PAIRS * 2];

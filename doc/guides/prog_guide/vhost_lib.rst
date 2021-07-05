@@ -118,6 +118,15 @@ The following is an overview of some key Vhost API functions:
 
     It is disabled by default.
 
+  - ``RTE_VHOST_USER_ASYNC_USE_VFIO``
+
+    In asynchronous data path, vhost liarary is not aware of which driver
+    (igb_uio/vfio) the DMA device is bound to. Application should pass
+    this flag to tell vhost library whether IOMMU should be programmed
+    for guest memory.
+
+    It is disabled by default.
+
   - ``RTE_VHOST_USER_NET_COMPLIANT_OL_FLAGS``
 
     Since v16.04, the vhost library forwards checksum and gso requests for
