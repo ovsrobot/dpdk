@@ -173,6 +173,13 @@ Async vhost-user net driver will be used if --dmas is set. For example
 device 0 enqueue operation and use DMA channel 00:04.1 for vhost device 1
 enqueue operation.
 
+**--dma-vfio**
+This parameter is used to specify whether the IOMMU needs to be programmed.
+If the DMA device is bound to vfio, IOMMU dma mapping will be setup for
+guest memory. If igb_uio is bound by DMA device, there is no need to do
+IOMMU dma mapping. It is a supplementary parameter for async vhost-user
+driver and it is disabled by default.
+
 Common Issues
 -------------
 
