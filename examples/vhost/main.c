@@ -89,6 +89,8 @@ static uint32_t enable_tx_csum;
 /* Disable TSO offload */
 static uint32_t enable_tso;
 
+static uint32_t dma_use_vfio = 0;
+
 static int client_mode;
 
 static int builtin_net_driver;
@@ -472,7 +474,8 @@ us_vhost_usage(const char *prgname)
 	"		--tso [0|1] disable/enable TCP segment offload.\n"
 	"		--client register a vhost-user socket as client mode.\n"
 	"		--dma-type register dma type for your vhost async driver. For example \"ioat\" for now.\n"
-	"		--dmas register dma channel for specific vhost device.\n",
+	"		--dmas register dma channel for specific vhost device.\n"
+	"		--dma-vfio [0|1]: 0: DMA device uses igb_uio, 1: DMA device uses vfio\n",
 	       prgname);
 }
 
@@ -503,6 +506,8 @@ enum {
 	OPT_DMA_TYPE_NUM,
 #define OPT_DMAS                "dmas"
 	OPT_DMAS_NUM,
+#define OPT_DMA_VFIO            "dma-vfio"
+	OPT_DMA_VFIO_NUM,
 };
 
 /*
@@ -542,6 +547,8 @@ us_vhost_parse_args(int argc, char **argv)
 				NULL, OPT_DMA_TYPE_NUM},
 		{OPT_DMAS, required_argument,
 				NULL, OPT_DMAS_NUM},
+		{OPT_DMA_VFIO, required_argument,
+				NULL, OPT_DMA_VFIO_NUM},
 		{NULL, 0, 0, 0},
 	};
 
@@ -678,6 +685,10 @@ us_vhost_parse_args(int argc, char **argv)
 				return -1;
 			}
 			async_vhost_driver = 1;
+			break;
+
+		case OPT_DMA_VFIO_NUM:
+			dma_use_vfio = 1;
 			break;
 
 		case OPT_CLIENT_NUM:
@@ -1720,6 +1731,9 @@ main(int argc, char *argv[])
 
 	if (client_mode)
 		flags |= RTE_VHOST_USER_CLIENT;
+
+	if (dma_use_vfio)
+		flags |= RTE_VHOST_USER_ASYNC_USE_VFIO;
 
 	/* Register vhost user driver to handle vhost messages. */
 	for (i = 0; i < nb_sockets; i++) {
