@@ -281,6 +281,16 @@ The following is an overview of some key Vhost API functions:
   Poll enqueue completion status from async data path. Completed packets
   are returned to applications through ``pkts``.
 
+* ``rte_vhost_async_try_dequeue_burst(vid, queue_id, mbuf_pool, pkts, count, nr_inflight)``
+
+  Try to receive packets from the guest with offloading large packets
+  to the DMA engine. Successfully dequeued packets are transfer
+  completed and returned in ``pkts``. But there may be other packets
+  that are sent from the guest but being transferred by the DMA engine,
+  called in-flight packets. This function will return in-flight packets
+  only after the DMA engine finishes transferring. The amount of
+  in-flight packets by now is returned in ``nr_inflight``.
+
 Vhost-user Implementations
 --------------------------
 
