@@ -37,6 +37,7 @@
 #include "eal_hugepages.h"
 #include "eal_hugepage_info.h"
 #include "eal_filesystem.h"
+#include "eal_memalloc.h"
 
 static const char sys_dir_path[] = "/sys/kernel/mm/hugepages";
 static const char sys_pages_numa_dir_path[] = "/sys/devices/system/node";
@@ -514,6 +515,10 @@ hugepage_info_init(void)
 	/* sort the page directory entries by size, largest to smallest */
 	qsort(&internal_conf->hugepage_info[0], num_sizes,
 	      sizeof(internal_conf->hugepage_info[0]), compare_hpi);
+
+	/* add pre-allocated pages with --mem-file option to available ones */
+	if (eal_memalloc_memfile_init())
+		return -1;
 
 	/* now we have all info, check we have at least one valid size */
 	for (i = 0; i < num_sizes; i++) {

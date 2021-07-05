@@ -548,6 +548,7 @@ eal_usage(const char *prgname)
 	       "  --"OPT_LEGACY_MEM"        Legacy memory mode (no dynamic allocation, contiguous segments)\n"
 	       "  --"OPT_SINGLE_FILE_SEGMENTS" Put all hugepage memory in single files\n"
 	       "  --"OPT_MATCH_ALLOCATIONS" Free hugepages exactly as allocated\n"
+	       "  --"OPT_MEM_FILE"          Comma-separated list of files in hugetlbfs.\n"
 	       "\n");
 	/* Allow the application to print its usage message too if hook is set */
 	if (hook) {
@@ -676,6 +677,22 @@ eal_log_level_parse(int argc, char **argv)
 	optind = old_optind;
 	optopt = old_optopt;
 	optarg = old_optarg;
+}
+
+static int
+eal_parse_memfile_arg(const char *arg, char **mem_file)
+{
+	int ret;
+
+	char *copy = strdup(arg);
+	if (copy == NULL) {
+		RTE_LOG(ERR, EAL, "Cannot store --"OPT_MEM_FILE" names\n");
+		return -1;
+	}
+
+	ret = rte_strsplit(copy, strlen(copy), mem_file,
+			MAX_MEMFILE_ITEMS, ',');
+	return ret <= 0 ? -1 : 0;
 }
 
 /* Parse the argument given in the command line of the application */
@@ -817,6 +834,17 @@ eal_parse_args(int argc, char **argv)
 		}
 		case OPT_MATCH_ALLOCATIONS_NUM:
 			internal_conf->match_allocations = 1;
+			break;
+
+		case OPT_MEM_FILE_NUM:
+			if (eal_parse_memfile_arg(optarg,
+					internal_conf->mem_file) < 0) {
+				RTE_LOG(ERR, EAL, "invalid parameters for --"
+						OPT_MEM_FILE "\n");
+				eal_usage(prgname);
+				ret = -1;
+				goto out;
+			}
 			break;
 
 		default:

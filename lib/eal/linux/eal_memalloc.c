@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <fcntl.h>
+#include <mntent.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
 #include <signal.h>
@@ -41,6 +42,7 @@
 #include <rte_spinlock.h>
 
 #include "eal_filesystem.h"
+#include "eal_hugepage_info.h"
 #include "eal_internal_cfg.h"
 #include "eal_memalloc.h"
 #include "eal_memcfg.h"
@@ -101,6 +103,19 @@ static struct {
 	int len; /**< total length of the array */
 	int count; /**< entries used in an array */
 } fd_list[RTE_MAX_MEMSEG_LISTS];
+
+struct memfile {
+	char *fname;		/**< file name */
+	uint64_t hugepage_sz;	/**< size of a huge page */
+	uint32_t num_pages;	/**< number of pages */
+	uint32_t num_allocated;	/**< number of already allocated pages */
+	int socket_id;		/**< Socket ID  */
+	int fd;			/**< file descriptor */
+};
+
+struct memfile mem_file[MAX_MEMFILE_ITEMS];
+
+static int alloc_memfile;
 
 /** local copy of a memory map, used to synchronize memory hotplug in MP */
 static struct rte_memseg_list local_memsegs[RTE_MAX_MEMSEG_LISTS];
@@ -542,6 +557,26 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 		 * stage.
 		 */
 		map_offset = 0;
+	} else if (alloc_memfile) {
+		uint32_t mf;
+
+		for (mf = 0; mf < RTE_DIM(mem_file); mf++) {
+			if (alloc_sz == mem_file[mf].hugepage_sz &&
+			    socket_id == mem_file[mf].socket_id &&
+			    mem_file[mf].num_allocated < mem_file[mf].num_pages)
+				break;
+		}
+		if (mf >= RTE_DIM(mem_file)) {
+			RTE_LOG(ERR, EAL,
+				"%s() cannot allocate from memfile\n",
+				__func__);
+			return -1;
+		}
+		fd = mem_file[mf].fd;
+		fd_list[list_idx].fds[seg_idx] = fd;
+		map_offset = mem_file[mf].num_allocated * alloc_sz;
+		mmap_flags = MAP_SHARED | MAP_POPULATE | MAP_FIXED;
+		mem_file[mf].num_allocated++;
 	} else {
 		/* takes out a read lock on segment or segment list */
 		fd = get_seg_fd(path, sizeof(path), hi, list_idx, seg_idx);
@@ -683,6 +718,10 @@ resized:
 	if (fd < 0)
 		return -1;
 
+	/* don't cleanup pre-allocated files */
+	if (alloc_memfile)
+		return -1;
+
 	if (internal_conf->single_file_segments) {
 		resize_hugefile(fd, map_offset, alloc_sz, false);
 		/* ignore failure, can't make it any worse */
@@ -712,8 +751,9 @@ free_seg(struct rte_memseg *ms, struct hugepage_info *hi,
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 
-	/* erase page data */
-	memset(ms->addr, 0, ms->len);
+	/* Erase page data unless it's pre-allocated files. */
+	if (!alloc_memfile)
+		memset(ms->addr, 0, ms->len);
 
 	if (mmap(ms->addr, ms->len, PROT_NONE,
 			MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) ==
@@ -724,8 +764,12 @@ free_seg(struct rte_memseg *ms, struct hugepage_info *hi,
 
 	eal_mem_set_dump(ms->addr, ms->len, false);
 
-	/* if we're using anonymous hugepages, nothing to be done */
-	if (internal_conf->in_memory && !memfd_create_supported) {
+	/*
+	 * if we're using anonymous hugepages or pre-allocated files,
+	 * nothing to be done
+	 */
+	if ((internal_conf->in_memory && !memfd_create_supported) ||
+			alloc_memfile) {
 		memset(ms, 0, sizeof(*ms));
 		return 0;
 	}
@@ -838,7 +882,9 @@ alloc_seg_walk(const struct rte_memseg_list *msl, void *arg)
 	 * during init, we already hold a write lock, so don't try to take out
 	 * another one.
 	 */
-	if (wa->hi->lock_descriptor == -1 && !internal_conf->in_memory) {
+	if (wa->hi->lock_descriptor == -1 &&
+	    !internal_conf->in_memory &&
+	    !alloc_memfile) {
 		dir_fd = open(wa->hi->hugedir, O_RDONLY);
 		if (dir_fd < 0) {
 			RTE_LOG(ERR, EAL, "%s(): Cannot open '%s': %s\n",
@@ -868,7 +914,7 @@ alloc_seg_walk(const struct rte_memseg_list *msl, void *arg)
 				need, i);
 
 			/* if exact number wasn't requested, stop */
-			if (!wa->exact)
+			if (!wa->exact || alloc_memfile)
 				goto out;
 
 			/* clean up */
@@ -1121,6 +1167,262 @@ eal_memalloc_free_seg(struct rte_memseg *ms)
 }
 
 static int
+memfile_fill_socket_id(struct memfile *mf)
+{
+#ifdef RTE_EAL_NUMA_AWARE_HUGEPAGES
+	void *va;
+	int ret;
+
+	va = mmap(NULL, mf->hugepage_sz, PROT_READ | PROT_WRITE,
+			MAP_SHARED | MAP_POPULATE, mf->fd, 0);
+	if (va == MAP_FAILED) {
+		RTE_LOG(ERR, EAL, "%s(): %s: mmap(): %s\n",
+				__func__, mf->fname, strerror(errno));
+		return -1;
+	}
+
+	ret = 0;
+	if (check_numa()) {
+		if (get_mempolicy(&mf->socket_id, NULL, 0, va,
+				MPOL_F_NODE | MPOL_F_ADDR) < 0) {
+			RTE_LOG(ERR, EAL, "%s(): %s: get_mempolicy(): %s\n",
+				__func__, mf->fname, strerror(errno));
+			ret = -1;
+		}
+	} else
+		mf->socket_id = 0;
+
+	munmap(va, mf->hugepage_sz);
+	return ret;
+#else
+	mf->socket_id = 0;
+	return 0;
+#endif
+}
+
+struct match_memfile_path_arg {
+	const char *path;
+	uint64_t file_sz;
+	uint64_t hugepage_sz;
+	size_t best_len;
+};
+
+/*
+ * While it is unlikely for hugetlbfs, mount points can be nested.
+ * Find the deepest mount point that contains the file.
+ */
+static int
+match_memfile_path(const char *path, uint64_t hugepage_sz, void *cb_arg)
+{
+	struct match_memfile_path_arg *arg = cb_arg;
+	size_t dir_len = strlen(path);
+
+	if (dir_len < arg->best_len)
+		return 0;
+	if (strncmp(path, arg->path, dir_len) != 0)
+		return 0;
+	if (arg->file_sz % hugepage_sz != 0)
+		return 0;
+
+	arg->hugepage_sz = hugepage_sz;
+	arg->best_len = dir_len;
+	return 0;
+}
+
+/* Determine hugepage size from the path to a file in hugetlbfs. */
+static int
+memfile_fill_hugepage_sz(struct memfile *mf, uint64_t file_sz)
+{
+	char abspath[PATH_MAX];
+	struct match_memfile_path_arg arg;
+
+	if (realpath(mf->fname, abspath) == NULL) {
+		RTE_LOG(ERR, EAL, "%s(): realpath(): %s\n",
+				__func__, strerror(errno));
+		return -1;
+	}
+
+	memset(&arg, 0, sizeof(arg));
+	arg.path = abspath;
+	arg.file_sz = file_sz;
+	if (eal_hugepage_mount_walk(match_memfile_path, &arg) == 0 &&
+			arg.hugepage_sz != 0) {
+		mf->hugepage_sz = arg.hugepage_sz;
+		return 0;
+	}
+	return -1;
+}
+
+int
+eal_memalloc_memfile_init(void)
+{
+	struct internal_config *internal_conf =
+			eal_get_internal_configuration();
+	int err = -1, fd;
+	uint32_t i;
+
+	if (internal_conf->mem_file[0] == NULL)
+		return 0;
+
+	for (i = 0; i < RTE_DIM(internal_conf->mem_file); i++) {
+		struct memfile *mf = &mem_file[i];
+		uint64_t fsize;
+
+		if (internal_conf->mem_file[i] == NULL) {
+			err = 0;
+			break;
+		}
+		mf->fname = internal_conf->mem_file[i];
+		fd = open(mf->fname, O_RDWR, 0600);
+		mf->fd = fd;
+		if (fd < 0) {
+			RTE_LOG(ERR, EAL, "%s(): %s: open(): %s\n",
+					__func__, mf->fname, strerror(errno));
+			break;
+		}
+
+		/* take out a read lock and keep it indefinitely */
+		if (lock(fd, LOCK_SH) != 1) {
+			RTE_LOG(ERR, EAL, "%s(): %s: cannot lock file\n",
+					__func__, mf->fname);
+			break;
+		}
+
+		fsize = get_file_size(fd);
+		if (!fsize) {
+			RTE_LOG(ERR, EAL, "%s(): %s: zero file length\n",
+					__func__, mf->fname);
+			break;
+		}
+
+		if (memfile_fill_hugepage_sz(mf, fsize) < 0) {
+			RTE_LOG(ERR, EAL, "%s(): %s: cannot detect page size\n",
+					__func__, mf->fname);
+			break;
+		}
+		mf->num_pages = fsize / mf->hugepage_sz;
+
+		if (memfile_fill_socket_id(mf) < 0) {
+			RTE_LOG(ERR, EAL, "%s(): %s: cannot detect NUMA node\n",
+					__func__, mf->fname);
+			break;
+		}
+	}
+
+	/* check if some problem happened */
+	if (err && i < RTE_DIM(internal_conf->mem_file)) {
+		/* some error occurred, do rollback */
+		do {
+			fd = mem_file[i].fd;
+			/* closing fd drops the lock */
+			if (fd >= 0)
+				close(fd);
+			mem_file[i].fd = -1;
+		} while (i--);
+		return -1;
+	}
+
+	/* update hugepage_info with pages allocated in files */
+	for (i = 0; i < RTE_DIM(mem_file); i++) {
+		const struct memfile *mf = &mem_file[i];
+		struct hugepage_info *hpi = NULL;
+		uint64_t sz;
+
+		if (!mf->hugepage_sz)
+			break;
+
+		for (sz = 0; sz < internal_conf->num_hugepage_sizes; sz++) {
+			hpi = &internal_conf->hugepage_info[sz];
+
+			if (mf->hugepage_sz == hpi->hugepage_sz) {
+				hpi->num_pages[mf->socket_id] += mf->num_pages;
+				break;
+			}
+		}
+
+		/* it seems hugepage info is not socket aware yet */
+		if (hpi != NULL && sz >= internal_conf->num_hugepage_sizes)
+			hpi->num_pages[0] += mf->num_pages;
+	}
+	return 0;
+}
+
+int
+eal_memalloc_memfile_alloc(struct hugepage_info *hpa)
+{
+	struct internal_config *internal_conf =
+			eal_get_internal_configuration();
+	uint32_t i, sz;
+
+	if (internal_conf->mem_file[0] == NULL ||
+			rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return 0;
+
+	for (i = 0; i < RTE_DIM(mem_file); i++) {
+		struct memfile *mf = &mem_file[i];
+		uint64_t hugepage_sz = mf->hugepage_sz;
+		int socket_id = mf->socket_id;
+		struct rte_memseg **pages;
+
+		if (!hugepage_sz)
+			break;
+
+		while (mf->num_allocated < mf->num_pages) {
+			int needed, allocated, j;
+			uint32_t prev;
+
+			prev = mf->num_allocated;
+			needed = mf->num_pages - mf->num_allocated;
+			pages = malloc(sizeof(*pages) * needed);
+			if (pages == NULL)
+				return -1;
+
+			/* memalloc is locked, it's safe to switch allocator */
+			alloc_memfile = 1;
+			allocated = eal_memalloc_alloc_seg_bulk(pages,
+					needed, hugepage_sz, socket_id,	false);
+			/* switch allocator back */
+			alloc_memfile = 0;
+			if (allocated <= 0) {
+				RTE_LOG(ERR, EAL, "%s(): %s: allocation failed\n",
+						__func__, mf->fname);
+				free(pages);
+				return -1;
+			}
+
+			/* mark preallocated pages as unfreeable */
+			for (j = 0; j < allocated; j++) {
+				struct rte_memseg *ms = pages[j];
+
+				ms->flags |= RTE_MEMSEG_FLAG_DO_NOT_FREE |
+					     RTE_MEMSEG_FLAG_PRE_ALLOCATED;
+			}
+
+			free(pages);
+
+			/* check whether we allocated from expected file */
+			if (prev + allocated != mf->num_allocated) {
+				RTE_LOG(ERR, EAL, "%s(): %s: incorrect allocation\n",
+						__func__, mf->fname);
+				return -1;
+			}
+		}
+
+		/* reflect we pre-allocated some memory */
+		for (sz = 0; sz < internal_conf->num_hugepage_sizes; sz++) {
+			struct hugepage_info *hpi = &hpa[sz];
+
+			if (hpi->hugepage_sz != hugepage_sz)
+				continue;
+			hpi->num_pages[socket_id] -=
+					RTE_MIN(hpi->num_pages[socket_id],
+						mf->num_allocated);
+		}
+	}
+	return 0;
+}
+
+static int
 sync_chunk(struct rte_memseg_list *primary_msl,
 		struct rte_memseg_list *local_msl, struct hugepage_info *hi,
 		unsigned int msl_idx, bool used, int start, int end)
@@ -1178,6 +1480,14 @@ sync_chunk(struct rte_memseg_list *primary_msl,
 		if (l_ms == NULL || p_ms == NULL)
 			return -1;
 
+		/*
+		 * Switch allocator for this segment.
+		 * This function is only called during init,
+		 * so don't try to restore allocator on failure.
+		 */
+		if (p_ms->flags & RTE_MEMSEG_FLAG_PRE_ALLOCATED)
+			alloc_memfile = 1;
+
 		if (used) {
 			ret = alloc_seg(l_ms, p_ms->addr,
 					p_ms->socket_id, hi,
@@ -1191,6 +1501,9 @@ sync_chunk(struct rte_memseg_list *primary_msl,
 			if (ret < 0)
 				return -1;
 		}
+
+		/* Reset the allocator. */
+		alloc_memfile = 0;
 	}
 
 	/* if we just allocated memory, notify the application */
@@ -1391,6 +1704,9 @@ eal_memalloc_sync_with_primary(void)
 	/* nothing to be done in primary */
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
 		return 0;
+
+	if (eal_memalloc_memfile_init() < 0)
+		return -1;
 
 	/* memalloc is locked, so it's safe to call thread-unsafe version */
 	if (rte_memseg_list_walk_thread_unsafe(sync_walk, NULL))

@@ -22,6 +22,9 @@
 #define MAX_HUGEPAGE_SIZES 3  /**< support up to 3 page sizes */
 #endif
 
+#define MAX_MEMFILE_ITEMS (MAX_HUGEPAGE_SIZES * RTE_MAX_NUMA_NODES)
+/**< Maximal number of mem-file parameters. */
+
 /*
  * internal configuration structure for the number, size and
  * mount points of hugepages
@@ -83,6 +86,7 @@ struct internal_config {
 	rte_uuid_t vfio_vf_token;
 	char *hugefile_prefix;      /**< the base filename of hugetlbfs files */
 	char *hugepage_dir;         /**< specific hugetlbfs directory to use */
+	char *mem_file[MAX_MEMFILE_ITEMS]; /**< pre-allocated memory files */
 	char *user_mbuf_pool_ops_name;
 			/**< user defined mbuf pool ops name */
 	unsigned num_hugepage_sizes;      /**< how many sizes on this system */

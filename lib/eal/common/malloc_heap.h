@@ -10,6 +10,7 @@
 
 #include <rte_malloc.h>
 #include <rte_spinlock.h>
+#include "eal_private.h"
 
 /* Number of free lists per heap, grouped by size. */
 #define RTE_HEAP_NUM_FREELISTS  13
@@ -46,6 +47,13 @@ malloc_get_numa_socket(void)
 		return 0;
 
 	return socket_id;
+}
+
+static inline bool
+malloc_clear_on_alloc(void)
+{
+	const struct internal_config *cfg = eal_get_internal_configuration();
+	return cfg->mem_file[0] != NULL;
 }
 
 void *

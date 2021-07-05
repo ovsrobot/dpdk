@@ -92,6 +92,23 @@ Memory-related options
 
     Free hugepages back to system exactly as they were originally allocated.
 
+*   ``--mem-file <pre-allocated files>``
+
+    Use memory from pre-allocated files in ``hugetlbfs`` without clearing it;
+    when this memory is exhausted, switch to default dynamic allocation.
+    This speeds up startup compared to ``--legacy-mem`` while also avoiding
+    later delays for allocating new hugepages. One downside is slowdown
+    of all zeroed memory allocations. Security warning: an application
+    can access contents left by previous users of hugepages. Multiple files
+    can be pre-allocated in ``hugetlbfs`` with different page sizes,
+    on desired NUMA nodes, using ``mount`` options and ``numactl``:
+
+        --mem-file /mnt/huge-1G/node0,/mnt/huge-1G/node1,/mnt/huge-2M/extra
+
+    This option is incompatible with ``--legacy-mem``, ``--in-memory``,
+    and ``--single-file-segments``. Primary and secondary processes
+    must specify exactly the same list of files.
+
 Other options
 ~~~~~~~~~~~~~
 
