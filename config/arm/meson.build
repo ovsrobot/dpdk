@@ -37,20 +37,26 @@ implementer_generic = {
         ['RTE_MAX_NUMA_NODES', 4]
     ],
     'part_number_config': {
-        'generic': {'machine_args': ['-march=armv8-a+crc', '-moutline-atomics']}
+        'generic': {
+            'march': 'armv8-a',
+            'march_features': ['crc'],
+            'compiler_options': ['-moutline-atomics']
+        }
     }
 }
 
 part_number_config_arm = {
-    '0xd03': {'machine_args':  ['-mcpu=cortex-a53']},
-    '0xd04': {'machine_args':  ['-mcpu=cortex-a35']},
-    '0xd07': {'machine_args':  ['-mcpu=cortex-a57']},
-    '0xd08': {'machine_args':  ['-mcpu=cortex-a72']},
-    '0xd09': {'machine_args':  ['-mcpu=cortex-a73']},
-    '0xd0a': {'machine_args':  ['-mcpu=cortex-a75']},
-    '0xd0b': {'machine_args':  ['-mcpu=cortex-a76']},
+    '0xd03': {'compiler_options':  ['-mcpu=cortex-a53']},
+    '0xd04': {'compiler_options':  ['-mcpu=cortex-a35']},
+    '0xd07': {'compiler_options':  ['-mcpu=cortex-a57']},
+    '0xd08': {'compiler_options':  ['-mcpu=cortex-a72']},
+    '0xd09': {'compiler_options':  ['-mcpu=cortex-a73']},
+    '0xd0a': {'compiler_options':  ['-mcpu=cortex-a75']},
+    '0xd0b': {'compiler_options':  ['-mcpu=cortex-a76']},
     '0xd0c': {
-        'machine_args':  ['-march=armv8.2-a+crypto', '-mcpu=neoverse-n1'],
+        'march': 'armv8.2-a',
+        'march_features': ['crypto'],
+        'compiler_options':  ['-mcpu=neoverse-n1'],
         'flags': [
             ['RTE_MACHINE', '"neoverse-n1"'],
             ['RTE_ARM_FEATURE_ATOMICS', true],
@@ -60,7 +66,8 @@ part_number_config_arm = {
         ]
     },
     '0xd49': {
-        'machine_args':  ['-march=armv8.5-a+crypto+sve2'],
+        'march': 'armv8.5-a',
+        'march_features': ['crypto', 'sve2'],
         'flags': [
             ['RTE_MACHINE', '"neoverse-n2"'],
             ['RTE_ARM_FEATURE_ATOMICS', true],
@@ -94,19 +101,21 @@ implementer_cavium = {
     ],
     'part_number_config': {
         '0xa1': {
-            'machine_args': ['-mcpu=thunderxt88'],
+            'compiler_options': ['-mcpu=thunderxt88'],
             'flags': flags_part_number_thunderx
         },
         '0xa2': {
-            'machine_args': ['-mcpu=thunderxt81'],
+            'compiler_options': ['-mcpu=thunderxt81'],
             'flags': flags_part_number_thunderx
         },
         '0xa3': {
-            'machine_args': ['-mcpu=thunderxt83'],
+            'compiler_options': ['-mcpu=thunderxt83'],
             'flags': flags_part_number_thunderx
         },
         '0xaf': {
-            'machine_args': ['-march=armv8.1-a+crc+crypto', '-mcpu=thunderx2t99'],
+            'march': 'armv8.1-a',
+            'march_features': ['crc', 'crypto'],
+            'compiler_options': ['-mcpu=thunderx2t99'],
             'flags': [
                 ['RTE_MACHINE', '"thunderx2"'],
                 ['RTE_ARM_FEATURE_ATOMICS', true],
@@ -116,7 +125,9 @@ implementer_cavium = {
             ]
         },
         '0xb2': {
-            'machine_args': ['-march=armv8.2-a+crc+crypto+lse', '-mcpu=octeontx2'],
+            'march': 'armv8.2-a',
+            'march_features': ['crc', 'crypto', 'lse'],
+            'compiler_options': ['-mcpu=octeontx2'],
             'flags': [
                 ['RTE_MACHINE', '"octeontx2"'],
                 ['RTE_ARM_FEATURE_ATOMICS', true],
@@ -137,7 +148,11 @@ implementer_ampere = {
         ['RTE_MAX_NUMA_NODES', 1]
     ],
     'part_number_config': {
-        '0x0': {'machine_args':  ['-march=armv8-a+crc+crypto', '-mtune=emag']}
+        '0x0': {
+            'march': 'armv8-a',
+            'march_features': ['crc', 'crypto'],
+            'compiler_options':  ['-mtune=emag']
+        }
     }
 }
 
@@ -149,7 +164,9 @@ implementer_hisilicon = {
     ],
     'part_number_config': {
         '0xd01': {
-            'machine_args': ['-march=armv8.2-a+crypto', '-mtune=tsv110'],
+            'march': 'armv8.2-a',
+            'march_features': ['crypto'],
+            'compiler_options': ['-mtune=tsv110'],
             'flags': [
                 ['RTE_MACHINE', '"Kunpeng 920"'],
                 ['RTE_ARM_FEATURE_ATOMICS', true],
@@ -158,7 +175,8 @@ implementer_hisilicon = {
             ]
         },
         '0xd02': {
-            'machine_args': ['-march=armv8.2-a+crypto+sve'],
+            'march': 'armv8.2-a',
+            'march_features': ['crypto', 'sve'],
             'flags': [
                 ['RTE_MACHINE', '"Kunpeng 930"'],
                 ['RTE_ARM_FEATURE_ATOMICS', true],
@@ -179,7 +197,10 @@ implementer_qualcomm = {
         ['RTE_MAX_NUMA_NODES', 1]
     ],
     'part_number_config': {
-        '0xc00': {'machine_args':  ['-march=armv8-a+crc']}
+        '0xc00': {
+            'march': 'armv8-a',
+            'march_features': ['crc']
+        }
     }
 }
 
@@ -458,13 +479,66 @@ else
     # add/overwrite flags in the proper order
     dpdk_flags = flags_common + implementer_config['flags'] + part_number_config.get('flags', []) + soc_flags
 
-    # apply supported machine args
     machine_args = [] # Clear previous machine args
-    foreach flag: part_number_config['machine_args']
-        if cc.has_argument(flag)
-            machine_args += flag
+
+    # probe supported marchs and their features
+    candidate_march = ''
+    if part_number_config.has_key('march')
+        supported_marchs = ['armv8.6-a', 'armv8.5-a', 'armv8.4-a', 'armv8.3-a',
+                            'armv8.2-a', 'armv8.1-a', 'armv8-a']
+        check_compiler_support = false
+        foreach supported_march: supported_marchs
+            if supported_march == part_number_config['march']
+                # start checking from this version downwards
+                check_compiler_support = true
+            endif
+            if (check_compiler_support and
+                cc.has_argument('-march=' + supported_march))
+                candidate_march = supported_march
+                # highest supported march version found
+                break
+            endif
+        endforeach
+        if candidate_march == ''
+            error('No suitable armv8 march version found.')
+        else
+            if candidate_march != part_number_config['march']
+                warning('Configuration march version is ' +
+                        '@0@, but the compiler supports only @1@.'
+                        .format(part_number_config['march'], candidate_march))
+            endif
+            candidate_march = '-march=' + candidate_march
         endif
-    endforeach
+        if part_number_config.has_key('march_features')
+            feature_unsupported = false
+            foreach feature: part_number_config['march_features']
+                if cc.has_argument('+'.join([candidate_march, feature]))
+                    candidate_march = '+'.join([candidate_march, feature])
+                else
+                    feature_unsupported = true
+                endif
+            endforeach
+            if feature_unsupported
+                warning('Configuration march features are ' +
+                        '@0@, but the compiler supports only @1@.'
+                        .format(part_number_config['march_features'],
+                                candidate_march))
+            endif
+        endif
+        machine_args += candidate_march
+    endif
+
+    # apply supported compiler options
+    if part_number_config.has_key('compiler_options')
+        foreach flag: part_number_config['compiler_options']
+            if cc.has_argument(flag)
+                machine_args += flag
+            else
+                warning('Configuration compiler option ' +
+                        '@0@ isn\'t supported.'.format(flag))
+            endif
+        endforeach
+    endif
 
     # apply flags
     foreach flag: dpdk_flags
