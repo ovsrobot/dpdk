@@ -61,6 +61,12 @@ New Features
   representing sub-domains of functionality. Each auxiliary device
   represents a part of its parent functionality.
 
+* **Added XZ compressed firmware support.**
+
+  Using ``rte_firmware_read``, a driver can now handle XZ compressed firmwares
+  in a transparent way, with EAL uncompressing using libarchive if this library
+  is available when building DPDK.
+
 * **Added Baseband PHY CNXK PMD.**
 
   Added Baseband PHY PMD which allows to configure BPHY hardware block

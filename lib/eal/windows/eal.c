@@ -21,6 +21,7 @@
 #include <eal_private.h>
 #include <rte_service_component.h>
 #include <rte_vfio.h>
+#include <rte_firmware.h>
 
 #include "eal_hugepages.h"
 #include "eal_trace.h"
@@ -462,6 +463,14 @@ rte_vfio_container_dma_unmap(__rte_unused int container_fd,
 			__rte_unused uint64_t vaddr,
 			__rte_unused uint64_t iova,
 			__rte_unused uint64_t len)
+{
+	return -1;
+}
+
+int
+rte_firmware_read(__rte_unused const char *name,
+			__rte_unused void **buf,
+			__rte_unused size_t *bufsz)
 {
 	return -1;
 }
