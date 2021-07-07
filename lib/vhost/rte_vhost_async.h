@@ -93,18 +93,13 @@ struct async_inflight_info {
 };
 
 /**
- *  dma channel feature bit definition
+ *  dma channel features
  */
 struct rte_vhost_async_features {
-	union {
-		uint32_t intval;
-		struct {
-			uint32_t async_inorder:1;
-			uint32_t resvd_0:15;
-			uint32_t async_threshold:12;
-			uint32_t resvd_1:4;
-		};
-	};
+	uint32_t async_threshold;
+	uint32_t resvd_0[13];
+	uint8_t async_inorder;
+	uint8_t resvd_1[7];
 };
 
 /**
@@ -115,11 +110,7 @@ struct rte_vhost_async_features {
  * @param queue_id
  *  vhost queue id async channel to be attached to
  * @param features
- *  DMA channel feature bit
- *    b0       : DMA supports inorder data transfer
- *    b1  - b15: reserved
- *    b16 - b27: Packet length threshold for DMA transfer
- *    b28 - b31: reserved
+ *  DMA channel feature structure
  * @param ops
  *  DMA operation callbacks
  * @return
@@ -127,7 +118,8 @@ struct rte_vhost_async_features {
  */
 __rte_experimental
 int rte_vhost_async_channel_register(int vid, uint16_t queue_id,
-	uint32_t features, struct rte_vhost_async_channel_ops *ops);
+	struct rte_vhost_async_features features,
+	struct rte_vhost_async_channel_ops *ops);
 
 /**
  * unregister a dma channel for vhost

@@ -1620,17 +1620,14 @@ int rte_vhost_extern_callback_register(int vid,
 }
 
 int rte_vhost_async_channel_register(int vid, uint16_t queue_id,
-					uint32_t features,
-					struct rte_vhost_async_channel_ops *ops)
+		struct rte_vhost_async_features features,
+		struct rte_vhost_async_channel_ops *ops)
 {
 	struct vhost_virtqueue *vq;
 	struct virtio_net *dev = get_device(vid);
-	struct rte_vhost_async_features f;
 
 	if (dev == NULL || ops == NULL)
 		return -1;
-
-	f.intval = features;
 
 	if (queue_id >= VHOST_MAX_VRING)
 		return -1;
@@ -1640,7 +1637,7 @@ int rte_vhost_async_channel_register(int vid, uint16_t queue_id,
 	if (unlikely(vq == NULL || !dev->async_copy))
 		return -1;
 
-	if (unlikely(!f.async_inorder)) {
+	if (unlikely(!features.async_inorder)) {
 		VHOST_LOG_CONFIG(ERR,
 			"async copy is not supported on non-inorder mode "
 			"(vid %d, qid: %d)\n", vid, queue_id);
@@ -1720,8 +1717,8 @@ int rte_vhost_async_channel_register(int vid, uint16_t queue_id,
 	vq->async_ops.check_completed_copies = ops->check_completed_copies;
 	vq->async_ops.transfer_data = ops->transfer_data;
 
-	vq->async_inorder = f.async_inorder;
-	vq->async_threshold = f.async_threshold;
+	vq->async_inorder = features.async_inorder;
+	vq->async_threshold = features.async_threshold;
 
 	vq->async_registered = true;
 
