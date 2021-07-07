@@ -18,7 +18,6 @@ flags_common = [
         #    ['RTE_ARM64_MEMCPY_STRICT_ALIGN', false],
 
         ['RTE_SCHED_VECTOR', false],
-        ['RTE_ARM_USE_WFE', false],
         ['RTE_ARCH_ARM64', true],
         ['RTE_CACHE_LINE_SIZE', 128]
 ]
@@ -371,6 +370,7 @@ socs = {
 
 dpdk_conf.set('RTE_ARCH_ARM', 1)
 dpdk_conf.set('RTE_FORCE_INTRINSICS', 1)
+dpdk_conf.set('RTE_ARM_USE_WFE', get_option('use_wfe'))
 
 if dpdk_conf.get('RTE_ARCH_32')
     # armv7 build
