@@ -1,15 +1,16 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
-    Copyright(c) 2020 ARM Corporation.
+    Copyright(c) 2021 ARM Corporation.
 
-Cross compiling DPDK for ARM64
-==============================
-This chapter describes how to cross compile DPDK for ARM64 from x86 build hosts.
+Cross compile DPDK for aarch64 and aarch32
+==========================================
+This chapter describes how to cross compile DPDK for aarch64 on x86 build
+machines and compile 32-bit aarch32 DPDK on aarch64 build machines.
 
 .. note::
 
-   Whilst it is recommended to natively build DPDK on ARM64 (just
-   like with x86), it is also possible to cross compile DPDK for ARM64.
-   An ARM64 cross compiler GNU toolchain or an LLVM/clang toolchain
+   Whilst it is recommended to natively build DPDK on aarch64 (just
+   like with x86), it is also possible to cross compile DPDK for aarch64.
+   An aarch64 cross compiler GNU toolchain or an LLVM/clang toolchain
    may be used for cross-compilation.
 
 
@@ -54,6 +55,11 @@ To install it in Ubuntu::
    sudo apt install pkg-config-aarch64-linux-gnu
 
 
+For aarch32, install ``pkg-config-arm-linux-gnueabihf``::
+
+   sudo apt install pkg-config-arm-linux-gnueabihf
+
+
 GNU toolchain
 -------------
 
@@ -72,15 +78,29 @@ the following description is an example of this version.
 
 .. code-block:: console
 
+   # aarch64 binaries
    wget https://developer.arm.com/-/media/Files/downloads/gnu-a/9.2-2019.12/binrel/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu.tar.xz
+
+.. code-block:: console
+
+   # aarch32 binaries
+   wget https://developer.arm.com/-/media/Files/downloads/gnu-a/9.2-2019.12/binrel/gcc-arm-9.2-2019.12-x86_64-arm-none-linux-gnueabihf.tar.xz
+
 
 Unzip and add into the PATH
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: console
 
+   # aarch64
    tar -xvf gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu.tar.xz
    export PATH=$PATH:<cross_install_dir>/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin
+
+.. code-block:: console
+
+   # aarch32
+   tar -xvf gcc-arm-9.2-2019.12-x86_64-arm-none-linux-gnueabihf.tar.xz
+   export PATH=$PATH:<cross_install_dir>/gcc-arm-9.2-2019.12-x86_64-arm-none-linux-gnueabihf/bin
 
 .. note::
 
@@ -118,6 +138,10 @@ command::
    meson aarch64-build-gcc --cross-file config/arm/arm64_armv8_linux_gcc
    ninja -C aarch64-build-gcc
 
+If the target machine is aarch32 we can use the following command::
+
+   meson aarch32-build --cross-file config/arm/arm32_armv8_linux_gcc
+   ninja -C aarch32-build
 
 LLVM/Clang toolchain
 --------------------
