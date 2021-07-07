@@ -117,6 +117,8 @@ API Changes
 * eal: ``rte_strscpy`` sets ``rte_errno`` to ``E2BIG`` in case of string
   truncation.
 
+* eal: the ``rte_power_intrinsics`` API changed to use a callback mechanism.
+
 
 ABI Changes
 -----------
