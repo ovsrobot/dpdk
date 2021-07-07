@@ -119,6 +119,10 @@ API Changes
 
 * eal: the ``rte_power_intrinsics`` API changed to use a callback mechanism.
 
+* rte_power: The experimental PMD power management API is no longer considered
+  to be thread safe; all Rx queues affected by the API will now need to be
+  stopped before making any changes to the power management scheme.
+
 
 ABI Changes
 -----------
