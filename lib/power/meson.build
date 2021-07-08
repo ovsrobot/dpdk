@@ -5,6 +5,7 @@ if not is_linux
     build = false
     reason = 'only supported on Linux'
 endif
+
 sources = files(
         'guest_channel.c',
         'power_acpi_cpufreq.c',
