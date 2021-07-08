@@ -34,8 +34,8 @@
  */
 
 struct pmd_params {
-	const char *name;
-	const char *firmware;
+	char name[RTE_DEV_NAME_MAX_LEN];
+	char firmware[PATH_MAX];
 	uint16_t conn_port;
 	uint32_t cpu_id;
 	int sc; /**< Service cores. */
