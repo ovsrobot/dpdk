@@ -103,6 +103,9 @@ New Features
   usecases. Configuration happens via standard rawdev enq/deq operations. See
   the :doc:`../rawdevs/cnxk_bphy` rawdev guide for more details on this driver.
 
+* rte_power: The experimental PMD power management API now supports managing
+  multiple Ethernet Rx queues per lcore.
+
 
 Removed Items
 -------------
