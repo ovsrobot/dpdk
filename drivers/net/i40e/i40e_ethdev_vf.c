@@ -2866,25 +2866,16 @@ i40evf_dev_rss_hash_conf_get(struct rte_eth_dev *dev,
 }
 
 static int
-i40evf_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
+i40evf_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu __rte_unused)
 {
-	struct i40e_vf *vf = I40EVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
-	struct rte_eth_dev_data *dev_data = vf->dev_data;
-	uint32_t frame_size = mtu + I40E_ETH_OVERHEAD;
-	int ret = 0;
-
-	/* check if mtu is within the allowed range */
-	if (mtu < RTE_ETHER_MIN_MTU || frame_size > I40E_FRAME_SIZE_MAX)
-		return -EINVAL;
-
 	/* mtu setting is forbidden if port is start */
-	if (dev_data->dev_started) {
+	if (dev->data->dev_started) {
 		PMD_DRV_LOG(ERR, "port %d must be stopped before configuration",
-			    dev_data->port_id);
+			    dev->data->port_id);
 		return -EBUSY;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int
