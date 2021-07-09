@@ -32,6 +32,7 @@
 #include <rte_hash_crc.h>
 #include <rte_flow.h>
 #include <rte_flow_driver.h>
+#include <rte_tailq.h>
 
 #include "ixgbe_logs.h"
 #include "base/ixgbe_api.h"
@@ -3339,6 +3340,7 @@ ixgbe_flow_destroy(struct rte_eth_dev *dev,
 	struct ixgbe_hw_fdir_info *fdir_info =
 		IXGBE_DEV_PRIVATE_TO_FDIR_INFO(dev->data->dev_private);
 	struct ixgbe_rss_conf_ele *rss_filter_ptr;
+	void *tmp;
 
 	switch (filter_type) {
 	case RTE_ETH_FILTER_NTUPLE:
@@ -3432,7 +3434,7 @@ ixgbe_flow_destroy(struct rte_eth_dev *dev,
 		return ret;
 	}
 
-	TAILQ_FOREACH(ixgbe_flow_mem_ptr, &ixgbe_flow_list, entries) {
+	TAILQ_FOREACH_SAFE(ixgbe_flow_mem_ptr, &ixgbe_flow_list, entries, tmp) {
 		if (ixgbe_flow_mem_ptr->flow == pmd_flow) {
 			TAILQ_REMOVE(&ixgbe_flow_list,
 				ixgbe_flow_mem_ptr, entries);
