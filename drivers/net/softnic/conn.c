@@ -146,6 +146,7 @@ softnic_conn_free(struct softnic_conn *conn)
 	free(conn->msg_in);
 	free(conn->prompt);
 	free(conn->welcome);
+	free(conn->buf);
 	free(conn);
 }
 
