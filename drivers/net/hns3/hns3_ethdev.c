@@ -2379,20 +2379,11 @@ hns3_refresh_mtu(struct rte_eth_dev *dev, struct rte_eth_conf *conf)
 {
 	struct hns3_adapter *hns = dev->data->dev_private;
 	struct hns3_hw *hw = &hns->hw;
-	uint32_t max_rx_pkt_len;
-	uint16_t mtu;
-	int ret;
+	uint32_t max_rx_pktlen;
 
-	if (!(conf->rxmode.offloads & DEV_RX_OFFLOAD_JUMBO_FRAME))
-		return 0;
-
-	/*
-	 * If jumbo frames are enabled, MTU needs to be refreshed
-	 * according to the maximum RX packet length.
-	 */
-	max_rx_pkt_len = conf->rxmode.max_rx_pkt_len;
-	if (max_rx_pkt_len > HNS3_MAX_FRAME_LEN ||
-	    max_rx_pkt_len <= HNS3_DEFAULT_FRAME_LEN) {
+	max_rx_pktlen = conf->rxmode.mtu + HNS3_ETH_OVERHEAD;
+	if (max_rx_pktlen > HNS3_MAX_FRAME_LEN ||
+	    max_rx_pktlen <= HNS3_DEFAULT_FRAME_LEN) {
 		hns3_err(hw, "maximum Rx packet length must be greater than %u "
 			 "and no more than %u when jumbo frame enabled.",
 			 (uint16_t)HNS3_DEFAULT_FRAME_LEN,
@@ -2400,13 +2391,7 @@ hns3_refresh_mtu(struct rte_eth_dev *dev, struct rte_eth_conf *conf)
 		return -EINVAL;
 	}
 
-	mtu = (uint16_t)HNS3_PKTLEN_TO_MTU(max_rx_pkt_len);
-	ret = hns3_dev_mtu_set(dev, mtu);
-	if (ret)
-		return ret;
-	dev->data->mtu = mtu;
-
-	return 0;
+	return hns3_dev_mtu_set(dev, conf->rxmode.mtu);
 }
 
 static int
@@ -2622,7 +2607,7 @@ hns3_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 	}
 
 	rte_spinlock_lock(&hw->lock);
-	is_jumbo_frame = frame_size > HNS3_DEFAULT_FRAME_LEN ? true : false;
+	is_jumbo_frame = mtu > RTE_ETHER_MTU ? true : false;
 	frame_size = RTE_MAX(frame_size, HNS3_DEFAULT_FRAME_LEN);
 
 	/*
@@ -2643,7 +2628,6 @@ hns3_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 	else
 		dev->data->dev_conf.rxmode.offloads &=
 						~DEV_RX_OFFLOAD_JUMBO_FRAME;
-	dev->data->dev_conf.rxmode.max_rx_pkt_len = frame_size;
 	rte_spinlock_unlock(&hw->lock);
 
 	return 0;

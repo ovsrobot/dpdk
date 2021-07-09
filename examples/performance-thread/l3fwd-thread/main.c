@@ -308,7 +308,6 @@ static uint16_t nb_tx_thread_params = RTE_DIM(tx_thread_params_array_default);
 static struct rte_eth_conf port_conf = {
 	.rxmode = {
 		.mq_mode = ETH_MQ_RX_RSS,
-		.max_rx_pkt_len = RTE_ETHER_MAX_LEN,
 		.split_hdr_size = 0,
 		.offloads = DEV_RX_OFFLOAD_CHECKSUM,
 	},
@@ -3004,10 +3003,12 @@ parse_args(int argc, char **argv)
 					print_usage(prgname);
 					return -1;
 				}
-				port_conf.rxmode.max_rx_pkt_len = ret;
+				port_conf.rxmode.mtu = ret - (RTE_ETHER_HDR_LEN +
+					RTE_ETHER_CRC_LEN);
 			}
 			printf("set jumbo frame max packet length to %u\n",
-				(unsigned int)port_conf.rxmode.max_rx_pkt_len);
+				(unsigned int)port_conf.rxmode.mtu +
+				RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN);
 			break;
 		}
 #if (APP_LOOKUP_METHOD == APP_LOOKUP_EXACT_MATCH)

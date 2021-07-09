@@ -59,12 +59,6 @@ static struct{
 } parm_config;
 const char cb_port_delim[] = ":";
 
-static const struct rte_eth_conf port_conf_default = {
-	.rxmode = {
-		.max_rx_pkt_len = RTE_ETHER_MAX_LEN,
-	},
-};
-
 struct flow_classifier {
 	struct rte_flow_classifier *cls;
 };
@@ -191,7 +185,7 @@ static struct rte_flow_attr attr;
 static inline int
 port_init(uint8_t port, struct rte_mempool *mbuf_pool)
 {
-	struct rte_eth_conf port_conf = port_conf_default;
+	struct rte_eth_conf port_conf;
 	struct rte_ether_addr addr;
 	const uint16_t rx_rings = 1, tx_rings = 1;
 	int retval;
@@ -201,6 +195,8 @@ port_init(uint8_t port, struct rte_mempool *mbuf_pool)
 
 	if (!rte_eth_dev_is_valid_port(port))
 		return -1;
+
+	memset(&port_conf, 0, sizeof(struct rte_eth_conf));
 
 	retval = rte_eth_dev_info_get(port, &dev_info);
 	if (retval != 0) {

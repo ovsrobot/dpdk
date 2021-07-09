@@ -1927,8 +1927,7 @@ i40evf_rxq_init(struct rte_eth_dev *dev, struct i40e_rx_queue *rxq)
 	rxq->rx_hdr_len = 0;
 	rxq->rx_buf_len = RTE_ALIGN(buf_size, (1 << I40E_RXQ_CTX_DBUFF_SHIFT));
 	len = rxq->rx_buf_len * I40E_MAX_CHAINED_RX_BUFFERS;
-	rxq->max_pkt_len = RTE_MIN(len,
-		dev_data->dev_conf.rxmode.max_rx_pkt_len);
+	rxq->max_pkt_len = RTE_MIN(len, dev_data->mtu + I40E_ETH_OVERHEAD);
 
 	/**
 	 * Check if the jumbo frame and maximum packet length are set correctly
@@ -2173,7 +2172,7 @@ i40evf_dev_start(struct rte_eth_dev *dev)
 
 	hw->adapter_stopped = 0;
 
-	vf->max_pkt_len = dev->data->dev_conf.rxmode.max_rx_pkt_len;
+	vf->max_pkt_len = dev->data->mtu + I40E_ETH_OVERHEAD;
 	vf->num_queue_pairs = RTE_MAX(dev->data->nb_rx_queues,
 					dev->data->nb_tx_queues);
 
@@ -2885,13 +2884,10 @@ i40evf_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 		return -EBUSY;
 	}
 
-	if (frame_size > I40E_ETH_MAX_LEN)
-		dev_data->dev_conf.rxmode.offloads |=
-			DEV_RX_OFFLOAD_JUMBO_FRAME;
+	if (mtu > RTE_ETHER_MTU)
+		dev_data->dev_conf.rxmode.offloads |= DEV_RX_OFFLOAD_JUMBO_FRAME;
 	else
-		dev_data->dev_conf.rxmode.offloads &=
-			~DEV_RX_OFFLOAD_JUMBO_FRAME;
-	dev_data->dev_conf.rxmode.max_rx_pkt_len = frame_size;
+		dev_data->dev_conf.rxmode.offloads &= ~DEV_RX_OFFLOAD_JUMBO_FRAME;
 
 	return ret;
 }

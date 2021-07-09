@@ -175,7 +175,7 @@ each RX queue uses its own mempool.
 .. code-block:: c
 
     nb_mbuf = RTE_MAX(max_flow_num, 2UL * MAX_PKT_BURST) * RTE_LIBRTE_IP_FRAG_MAX_FRAGS;
-    nb_mbuf *= (port_conf.rxmode.max_rx_pkt_len + BUF_SIZE - 1) / BUF_SIZE;
+    nb_mbuf *= (port_conf.rxmode.mtu + RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN + BUF_SIZE - 1) / BUF_SIZE;
     nb_mbuf *= 2; /* ipv4 and ipv6 */
     nb_mbuf += RTE_TEST_RX_DESC_DEFAULT + RTE_TEST_TX_DESC_DEFAULT;
     nb_mbuf = RTE_MAX(nb_mbuf, (uint32_t)NB_MBUF);
