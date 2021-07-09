@@ -256,6 +256,12 @@ The following is an overview of some key Vhost API functions:
     vhost invokes this function to get the copy data completed by async
     devices.
 
+* ``rte_vhost_async_channel_register_thread_unsafe(vid, queue_id, config, ops)``
+  Register a vhost queue with async copy device channel without
+  performing any locking.
+
+  This function is only safe to call from within vhost callback functions.
+
 * ``rte_vhost_async_channel_unregister(vid, queue_id)``
 
   Unregister the async copy device channel from a vhost queue.
@@ -267,6 +273,12 @@ The following is an overview of some key Vhost API functions:
   queue. The recommended way is to unregister async copy
   devices for all vhost queues in destroy_device(), when a
   virtio device is paused or shut down.
+
+* ``rte_vhost_async_channel_unregister_thread_unsafe(vid, queue_id)``
+  Unregister the async copy device channel from a vhost queue without
+  performing any locking.
+
+  This function is only safe to call from within vhost callback functions.
 
 * ``rte_vhost_submit_enqueue_burst(vid, queue_id, pkts, count, comp_pkts, comp_count)``
 
