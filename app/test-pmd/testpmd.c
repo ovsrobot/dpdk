@@ -2475,6 +2475,9 @@ start_port(portid_t pid)
 		}
 
 		if (port->need_reconfig > 0) {
+			const struct rte_eth_dev *dev = &rte_eth_devices[pi];
+			int k;
+
 			port->need_reconfig = 0;
 
 			if (flow_isolate_all) {
@@ -2508,6 +2511,18 @@ start_port(portid_t pid)
 				port->need_reconfig = 1;
 				return -1;
 			}
+
+			/* Apply TxRx configuration for all ports */
+			port->dev_conf.txmode = dev->data->dev_conf.txmode;
+			port->dev_conf.rxmode = dev->data->dev_conf.rxmode;
+			/* Apply Rx offloads configuration */
+			for (k = 0; k < port->dev_info.max_rx_queues; k++)
+				port->rx_conf[k].offloads =
+					port->dev_conf.rxmode.offloads;
+			/* Apply Tx offloads configuration */
+			for (k = 0; k < port->dev_info.max_tx_queues; k++)
+				port->tx_conf[k].offloads =
+					port->dev_conf.txmode.offloads;
 		}
 		if (port->need_reconfig_queues > 0) {
 			port->need_reconfig_queues = 0;
