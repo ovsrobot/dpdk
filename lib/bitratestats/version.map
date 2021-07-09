@@ -8,8 +8,8 @@ DPDK_21 {
 	local: *;
 };
 
-EXPERIMENTAL {
+DPDK_22 {
 	global:
 
 	rte_stats_bitrate_free;
-};
+} DPDK_21;
