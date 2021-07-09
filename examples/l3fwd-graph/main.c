@@ -493,7 +493,6 @@ parse_args(int argc, char **argv)
 			const struct option lenopts = {"max-pkt-len",
 						       required_argument, 0, 0};
 
-			port_conf.rxmode.offloads |= DEV_RX_OFFLOAD_JUMBO_FRAME;
 			port_conf.txmode.offloads |= DEV_TX_OFFLOAD_MULTI_SEGS;
 
 			/*

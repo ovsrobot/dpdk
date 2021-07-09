@@ -637,8 +637,6 @@ us_vhost_parse_args(int argc, char **argv)
 			}
 			mergeable = !!ret;
 			if (ret) {
-				vmdq_conf_default.rxmode.offloads |=
-					DEV_RX_OFFLOAD_JUMBO_FRAME;
 				vmdq_conf_default.rxmode.mtu =
 					JUMBO_FRAME_MAX_SIZE;
 			}

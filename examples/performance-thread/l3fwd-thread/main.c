@@ -2986,8 +2986,6 @@ parse_args(int argc, char **argv)
 					required_argument, 0, 0};
 
 			printf("jumbo frame is enabled - disabling simple TX path\n");
-			port_conf.rxmode.offloads |=
-					DEV_RX_OFFLOAD_JUMBO_FRAME;
 			port_conf.txmode.offloads |=
 					DEV_TX_OFFLOAD_MULTI_SEGS;
 

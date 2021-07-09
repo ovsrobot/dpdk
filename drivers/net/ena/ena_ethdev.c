@@ -2042,8 +2042,6 @@ static int ena_infos_get(struct rte_eth_dev *dev,
 			DEV_RX_OFFLOAD_UDP_CKSUM  |
 			DEV_RX_OFFLOAD_TCP_CKSUM;
 
-	rx_feat |= DEV_RX_OFFLOAD_JUMBO_FRAME;
-
 	/* Inform framework about available features */
 	dev_info->rx_offload_capa = rx_feat;
 	dev_info->rx_offload_capa |= DEV_RX_OFFLOAD_RSS_HASH;

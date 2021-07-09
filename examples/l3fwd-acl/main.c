@@ -1813,8 +1813,6 @@ parse_args(int argc, char **argv)
 			};
 
 			printf("jumbo frame is enabled\n");
-			port_conf.rxmode.offloads |=
-					DEV_RX_OFFLOAD_JUMBO_FRAME;
 			port_conf.txmode.offloads |=
 					DEV_TX_OFFLOAD_MULTI_SEGS;
 
