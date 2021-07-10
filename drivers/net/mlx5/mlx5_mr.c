@@ -315,9 +315,9 @@ mlx5_dma_unmap(struct rte_pci_device *pdev, void *addr,
 		return -1;
 	}
 	LIST_REMOVE(mr, mr);
-	mlx5_mr_free(mr, sh->share_cache.dereg_mr_cb);
 	DRV_LOG(DEBUG, "port %u remove MR(%p) from list", dev->data->port_id,
 	      (void *)mr);
+	mlx5_mr_free(mr, sh->share_cache.dereg_mr_cb);
 	mlx5_mr_rebuild_cache(&sh->share_cache);
 	/*
 	 * No explicit wmb is needed after updating dev_gen due to
