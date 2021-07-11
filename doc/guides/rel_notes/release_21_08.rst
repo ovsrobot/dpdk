@@ -117,6 +117,11 @@ New Features
   The experimental PMD power management API now supports managing
   multiple Ethernet Rx queues per lcore.
 
+* **Added support for Marvell CN10K, CN9K, event Rx/Tx adapter.**
+  * Added Rx/Tx adapter support for event/cnxk when the ethernet device requested
+    is net/cnxk.
+  * Add support for event vectorization for Rx/Tx adapter.
+
 
 Removed Items
 -------------
