@@ -491,6 +491,29 @@ static struct iavf_flow_parser iavf_hash_parser = {
 	.stage = IAVF_FLOW_STAGE_RSS,
 };
 
+static void
+iavf_hash_add_fragment_hdr(struct virtchnl_proto_hdrs *hdrs, int layer)
+{
+	struct virtchnl_proto_hdr *hdr1;
+	struct virtchnl_proto_hdr *hdr2;
+	int i;
+
+	if (layer < 0 || layer > hdrs->count)
+		return;
+
+	/* shift headers layer */
+	for (i = hdrs->count; i >= layer; i--) {
+		hdr1 = &hdrs->proto_hdr[i];
+		hdr2 = &hdrs->proto_hdr[i - 1];
+		*hdr1 = *hdr2;
+	}
+
+	/* adding dummy fragment header */
+	hdr1 = &hdrs->proto_hdr[layer];
+	VIRTCHNL_SET_PROTO_HDR_TYPE(hdr1, IPV4_FRAG);
+	hdrs->count = ++layer;
+}
+
 int
 iavf_rss_hash_set(struct iavf_adapter *ad, uint64_t rss_hf, bool add)
 {
@@ -505,7 +528,9 @@ iavf_rss_hash_set(struct iavf_adapter *ad, uint64_t rss_hf, bool add)
 	ETH_RSS_NONFRAG_IPV4_TCP | \
 	ETH_RSS_NONFRAG_IPV6_TCP | \
 	ETH_RSS_NONFRAG_IPV4_SCTP | \
-	ETH_RSS_NONFRAG_IPV6_SCTP)
+	ETH_RSS_NONFRAG_IPV6_SCTP | \
+	ETH_RSS_FRAG_IPV4 | \
+	ETH_RSS_FRAG_IPV6)
 
 	rss_cfg.rss_algorithm = VIRTCHNL_RSS_ALG_TOEPLITZ_ASYMMETRIC;
 	if (rss_hf & ETH_RSS_IPV4) {
@@ -531,6 +556,10 @@ iavf_rss_hash_set(struct iavf_adapter *ad, uint64_t rss_hf, bool add)
 	if (rss_hf & ETH_RSS_IPV6) {
 		rss_cfg.proto_hdrs = inner_ipv6_tmplt;
 		iavf_add_del_rss_cfg(ad, &rss_cfg, add);
+		if (rss_hf & ETH_RSS_FRAG_IPV6) {
+			rss_cfg.proto_hdrs = outer_ipv6_frag_tmplt;
+			iavf_add_del_rss_cfg(ad, &rss_cfg, add);
+		}
 	}
 
 	if (rss_hf & ETH_RSS_NONFRAG_IPV6_UDP) {
@@ -545,6 +574,12 @@ iavf_rss_hash_set(struct iavf_adapter *ad, uint64_t rss_hf, bool add)
 
 	if (rss_hf & ETH_RSS_NONFRAG_IPV6_SCTP) {
 		rss_cfg.proto_hdrs = inner_ipv6_sctp_tmplt;
+		iavf_add_del_rss_cfg(ad, &rss_cfg, add);
+	}
+
+	if (rss_hf & ETH_RSS_FRAG_IPV4) {
+		rss_cfg.proto_hdrs = outer_ipv4_tmplt;
+		iavf_hash_add_fragment_hdr(&rss_cfg.proto_hdrs, 1);
 		iavf_add_del_rss_cfg(ad, &rss_cfg, add);
 	}
 
@@ -657,29 +692,6 @@ do { \
 	REFINE_PROTO_FLD(DEL, fld_1);	\
 	REFINE_PROTO_FLD(ADD, fld_2);	\
 } while (0)
-
-static void
-iavf_hash_add_fragment_hdr(struct virtchnl_proto_hdrs *hdrs, int layer)
-{
-	struct virtchnl_proto_hdr *hdr1;
-	struct virtchnl_proto_hdr *hdr2;
-	int i;
-
-	if (layer < 0 || layer > hdrs->count)
-		return;
-
-	/* shift headers layer */
-	for (i = hdrs->count; i >= layer; i--) {
-		hdr1 = &hdrs->proto_hdr[i];
-		hdr2 = &hdrs->proto_hdr[i - 1];
-		*hdr1 = *hdr2;
-	}
-
-	/* adding dummy fragment header */
-	hdr1 = &hdrs->proto_hdr[layer];
-	VIRTCHNL_SET_PROTO_HDR_TYPE(hdr1, IPV4_FRAG);
-	hdrs->count = ++layer;
-}
 
 /* refine proto hdrs base on l2, l3, l4 rss type */
 static void
