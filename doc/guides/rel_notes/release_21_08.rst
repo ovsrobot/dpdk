@@ -88,6 +88,7 @@ New Features
 
   * Added support for meter hierarchy.
   * Added devargs options ``allow_duplicate_pattern``.
+  * Optimize multiple-thread flow insertion rate.
 
 * **Added support for Marvell CNXK crypto driver.**
 
