@@ -668,8 +668,8 @@ trs_process(const struct rte_ipsec_sa *sa, struct rte_mbuf *mb[],
 			/* modify packet's layout */
 			np = trs_process_step2(mb[i], ml[i], hl[i], cofs,
 				to[i], tl, sqn + k);
-			update_trs_l3hdr(sa, np + l2, mb[i]->pkt_len,
-				l2, hl[i] - l2, espt[i].next_proto);
+			update_trs_l34hdrs(sa, np + l2, mb[i]->pkt_len,
+				l2, hl[i] - l2, espt[i].next_proto, 0);
 
 			/* update mbuf's metadata */
 			trs_process_step3(mb[i]);

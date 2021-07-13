@@ -6,6 +6,8 @@
 #define _IPH_H_
 
 #include <rte_ip.h>
+#include <rte_udp.h>
+#include <rte_tcp.h>
 
 /**
  * @file iph.h
@@ -39,8 +41,8 @@ insert_esph(char *np, char *op, uint32_t hlen)
 
 /* update original ip header fields for transport case */
 static inline int
-update_trs_l3hdr(const struct rte_ipsec_sa *sa, void *p, uint32_t plen,
-		uint32_t l2len, uint32_t l3len, uint8_t proto)
+update_trs_l34hdrs(const struct rte_ipsec_sa *sa, void *p, uint32_t plen,
+		uint32_t l2len, uint32_t l3len, uint8_t proto, uint8_t tso)
 {
 	int32_t rc;
 
@@ -51,6 +53,10 @@ update_trs_l3hdr(const struct rte_ipsec_sa *sa, void *p, uint32_t plen,
 		v4h = p;
 		rc = v4h->next_proto_id;
 		v4h->next_proto_id = proto;
+		if (tso) {
+			v4h->hdr_checksum = 0;
+			v4h->total_length = 0;
+		}
 		v4h->total_length = rte_cpu_to_be_16(plen - l2len);
 	/* IPv6 */
 	} else {
