@@ -2475,6 +2475,11 @@ start_port(portid_t pid)
 		}
 
 		if (port->need_reconfig > 0) {
+			const struct rte_eth_dev *dev = &rte_eth_devices[pi];
+			struct rte_eth_conf *dev_conf;
+			int k;
+
+			dev_conf = &dev->data->dev_conf;
 			port->need_reconfig = 0;
 
 			if (flow_isolate_all) {
@@ -2507,6 +2512,20 @@ start_port(portid_t pid)
 				/* try to reconfigure port next time */
 				port->need_reconfig = 1;
 				return -1;
+			}
+			/* Apply Rx offloads configuration */
+			for (k = 0; k < port->dev_info.max_rx_queues; k++) {
+				if (port->rx_conf[k].offloads !=
+					dev_conf->rxmode.offloads)
+					port->rx_conf[k].offloads =
+						dev_conf->rxmode.offloads;
+			}
+			/* Apply Tx offloads configuration */
+			for (k = 0; k < port->dev_info.max_tx_queues; k++) {
+				if (port->tx_conf[k].offloads !=
+					dev_conf->txmode.offloads)
+					port->tx_conf[k].offloads =
+						dev_conf->txmode.offloads;
 			}
 		}
 		if (port->need_reconfig_queues > 0) {
