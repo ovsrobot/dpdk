@@ -7,7 +7,7 @@
 #include <rte_ip.h>
 #include <rte_errno.h>
 #include <rte_cryptodev.h>
-
+#include <rte_telemetry.h>
 #include "sa.h"
 #include "ipsec_sqn.h"
 #include "crypto.h"
@@ -24,6 +24,7 @@ struct crypto_xform {
 	struct rte_crypto_cipher_xform *cipher;
 	struct rte_crypto_aead_xform *aead;
 };
+
 
 /*
  * helper routine, fills internal crypto_xform structure.
@@ -532,6 +533,249 @@ rte_ipsec_sa_size(const struct rte_ipsec_sa_prm *prm)
 	wsz = prm->ipsec_xform.replay_win_sz;
 	return ipsec_sa_size(type, &wsz, &nb);
 }
+struct rte_ipsec_telemetry {
+	bool initialized;
+	LIST_HEAD(, rte_ipsec_sa) sa_list_head;
+};
+
+#include <rte_malloc.h>
+
+static struct rte_ipsec_telemetry rte_ipsec_telemetry_instance = {
+	.initialized = false };
+
+static int
+handle_telemetry_cmd_ipsec_sa_list(const char *cmd __rte_unused,
+		const char *params __rte_unused,
+		struct rte_tel_data *data)
+{
+	struct rte_ipsec_telemetry *telemetry = &rte_ipsec_telemetry_instance;
+	struct rte_ipsec_sa *sa;
+
+	rte_tel_data_start_array(data, RTE_TEL_U64_VAL);
+
+	LIST_FOREACH(sa, &telemetry->sa_list_head, telemetry_next) {
+		rte_tel_data_add_array_u64(data, htonl(sa->spi));
+	}
+
+	return 0;
+}
+
+/**
+ * Handle IPsec SA statistics telemetry request
+ *
+ * Return dict of SA's with dict of key/value counters
+ *
+ * {
+ *     "SA_SPI_XX": {"count": 0, "bytes": 0, "errors": 0},
+ *     "SA_SPI_YY": {"count": 0, "bytes": 0, "errors": 0}
+ * }
+ *
+ */
+static int
+handle_telemetry_cmd_ipsec_sa_stats(const char *cmd __rte_unused,
+		const char *params,
+		struct rte_tel_data *data)
+{
+	struct rte_ipsec_telemetry *telemetry = &rte_ipsec_telemetry_instance;
+	struct rte_ipsec_sa *sa;
+	bool user_specified_spi = false;
+	uint32_t sa_spi;
+
+	if (params) {
+		user_specified_spi = true;
+		sa_spi = htonl((uint32_t)atoi(params));
+	}
+
+	rte_tel_data_start_dict(data);
+
+	LIST_FOREACH(sa, &telemetry->sa_list_head, telemetry_next) {
+		char sa_name[64];
+
+		static const char *name_pkt_cnt = "count";
+		static const char *name_byte_cnt = "bytes";
+		static const char *name_error_cnt = "errors";
+		struct rte_tel_data *sa_data;
+
+		/* If user provided SPI only get telemetry for that SA */
+		if (user_specified_spi && (sa_spi != sa->spi))
+			continue;
+
+		/* allocate telemetry data struct for SA telemetry */
+		sa_data = rte_tel_data_alloc();
+		if (!sa_data)
+			return -ENOMEM;
+
+		rte_tel_data_start_dict(sa_data);
+
+		/* add telemetry key/values pairs */
+		rte_tel_data_add_dict_u64(sa_data, name_pkt_cnt,
+					sa->statistics.count);
+
+		rte_tel_data_add_dict_u64(sa_data, name_byte_cnt,
+					sa->statistics.bytes);
+
+		rte_tel_data_add_dict_u64(sa_data, name_error_cnt,
+					sa->statistics.errors.count);
+
+		/* generate telemetry label */
+		snprintf(sa_name, sizeof(sa_name), "SA_SPI_%i", htonl(sa->spi));
+
+		/* add SA telemetry to dictionary container */
+		rte_tel_data_add_dict_container(data, sa_name, sa_data, 0);
+	}
+
+	return 0;
+}
+
+static int
+handle_telemetry_cmd_ipsec_sa_configuration(const char *cmd __rte_unused,
+		const char *params,
+		struct rte_tel_data *data)
+{
+	struct rte_ipsec_telemetry *telemetry = &rte_ipsec_telemetry_instance;
+	struct rte_ipsec_sa *sa;
+	uint32_t sa_spi;
+
+	if (params)
+		sa_spi = htonl((uint32_t)atoi(params));
+	else
+		return -EINVAL;
+
+	rte_tel_data_start_dict(data);
+
+	LIST_FOREACH(sa, &telemetry->sa_list_head, telemetry_next) {
+		uint64_t mode;
+
+		if (sa_spi != sa->spi)
+			continue;
+
+		/* add SA configuration key/values pairs */
+		rte_tel_data_add_dict_string(data, "Type",
+			(sa->type & RTE_IPSEC_SATP_PROTO_MASK) ==
+			RTE_IPSEC_SATP_PROTO_AH ? "AH" : "ESP");
+
+		rte_tel_data_add_dict_string(data, "Direction",
+			(sa->type & RTE_IPSEC_SATP_DIR_MASK) ==
+			RTE_IPSEC_SATP_DIR_IB ?	"Inbound" : "Outbound");
+
+		mode = sa->type & RTE_IPSEC_SATP_MODE_MASK;
+
+		if (mode == RTE_IPSEC_SATP_MODE_TRANS) {
+			rte_tel_data_add_dict_string(data, "Mode", "Transport");
+		} else {
+			rte_tel_data_add_dict_string(data, "Mode", "Tunnel");
+
+			if ((sa->type & RTE_IPSEC_SATP_NATT_MASK) ==
+				RTE_IPSEC_SATP_NATT_ENABLE) {
+				if (sa->type & RTE_IPSEC_SATP_MODE_TUNLV4) {
+					rte_tel_data_add_dict_string(data,
+						"Tunnel-Type",
+						"IPv4-UDP");
+				} else if (sa->type &
+						RTE_IPSEC_SATP_MODE_TUNLV6) {
+					rte_tel_data_add_dict_string(data,
+						"Tunnel-Type",
+						"IPv4-UDP");
+				}
+			} else {
+				if (sa->type & RTE_IPSEC_SATP_MODE_TUNLV4) {
+					rte_tel_data_add_dict_string(data,
+						"Tunnel-Type",
+						"IPv4-UDP");
+				} else if (sa->type &
+						RTE_IPSEC_SATP_MODE_TUNLV6) {
+					rte_tel_data_add_dict_string(data,
+						"Tunnel-Type",
+						"IPv4-UDP");
+				}
+			}
+		}
+
+		rte_tel_data_add_dict_string(data,
+				"extended-sequence-number",
+				(sa->type & RTE_IPSEC_SATP_ESN_MASK) ==
+				 RTE_IPSEC_SATP_ESN_ENABLE ?
+				"enabled" : "disabled");
+
+		if ((sa->type & RTE_IPSEC_SATP_DIR_MASK) ==
+			RTE_IPSEC_SATP_DIR_IB)
+
+			if (sa->sqn.inb.rsn[sa->sqn.inb.rdidx])
+				rte_tel_data_add_dict_u64(data,
+				"sequence-number",
+				sa->sqn.inb.rsn[sa->sqn.inb.rdidx]->sqn);
+			else
+				rte_tel_data_add_dict_u64(data,
+					"sequence-number", 0);
+		else
+			rte_tel_data_add_dict_u64(data, "sequence-number",
+					sa->sqn.outb);
+
+		rte_tel_data_add_dict_string(data,
+				"explicit-congestion-notification",
+				(sa->type & RTE_IPSEC_SATP_ECN_MASK) ==
+				RTE_IPSEC_SATP_ECN_ENABLE ?
+				"enabled" : "disabled");
+
+		rte_tel_data_add_dict_string(data,
+				"copy-DSCP",
+				(sa->type & RTE_IPSEC_SATP_DSCP_MASK) ==
+				RTE_IPSEC_SATP_DSCP_ENABLE ?
+				"enabled" : "disabled");
+
+		rte_tel_data_add_dict_string(data, "TSO",
+				sa->tso.enabled ? "enabled" : "disabled");
+
+		if (sa->tso.enabled)
+			rte_tel_data_add_dict_u64(data, "TSO-MSS", sa->tso.mss);
+
+	}
+
+	return 0;
+}
+int
+rte_ipsec_telemetry_init(void)
+{
+	struct rte_ipsec_telemetry *telemetry = &rte_ipsec_telemetry_instance;
+	int rc = 0;
+
+	if (telemetry->initialized)
+		return rc;
+
+	LIST_INIT(&telemetry->sa_list_head);
+
+	rc = rte_telemetry_register_cmd("/ipsec/sa/list",
+		handle_telemetry_cmd_ipsec_sa_list,
+		"Return list of IPsec Security Associations with telemetry enabled.");
+	if (rc)
+		return rc;
+
+	rc = rte_telemetry_register_cmd("/ipsec/sa/stats",
+		handle_telemetry_cmd_ipsec_sa_stats,
+		"Returns IPsec Security Association stastistics. Parameters: int sa_spi");
+	if (rc)
+		return rc;
+
+	rc = rte_telemetry_register_cmd("/ipsec/sa/details",
+		handle_telemetry_cmd_ipsec_sa_configuration,
+		"Returns IPsec Security Association configuration. Parameters: int sa_spi");
+	if (rc)
+		return rc;
+
+	telemetry->initialized = true;
+
+	return rc;
+}
+
+int
+rte_ipsec_telemetry_sa_add(struct rte_ipsec_sa *sa)
+{
+	struct rte_ipsec_telemetry *telemetry = &rte_ipsec_telemetry_instance;
+
+	LIST_INSERT_HEAD(&telemetry->sa_list_head, sa, telemetry_next);
+
+	return 0;
+}
 
 int
 rte_ipsec_sa_init(struct rte_ipsec_sa *sa, const struct rte_ipsec_sa_prm *prm,
@@ -644,18 +888,23 @@ uint16_t
 pkt_flag_process(const struct rte_ipsec_session *ss,
 		struct rte_mbuf *mb[], uint16_t num)
 {
-	uint32_t i, k;
+	uint32_t i, k, bytes = 0;
 	uint32_t dr[num];
 
 	RTE_SET_USED(ss);
 
 	k = 0;
 	for (i = 0; i != num; i++) {
-		if ((mb[i]->ol_flags & PKT_RX_SEC_OFFLOAD_FAILED) == 0)
+		if ((mb[i]->ol_flags & PKT_RX_SEC_OFFLOAD_FAILED) == 0) {
 			k++;
+			bytes += mb[i]->data_len;
+		}
 		else
 			dr[i - k] = i;
 	}
+
+	ss->sa->statistics.count += k;
+	ss->sa->statistics.bytes += bytes - (ss->sa->hdr_len * k);
 
 	/* handle unprocessed mbufs */
 	if (k != num) {

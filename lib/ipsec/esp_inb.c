@@ -722,6 +722,7 @@ esp_inb_pkt_process(struct rte_ipsec_sa *sa, struct rte_mbuf *mb[],
 
 	/* process packets, extract seq numbers */
 	k = process(sa, mb, sqn, dr, num, sqh_len);
+	sa->statistics.count += k;
 
 	/* handle unprocessed mbufs */
 	if (k != num && k != 0)
