@@ -240,6 +240,14 @@ struct rte_security_ipsec_xform {
 	 */
 	uint32_t mss;
 	/**< IPsec payload Maximum Segment Size */
+	union {
+		uint64_t value;
+		struct {
+			uint32_t low;
+			uint32_t hi;
+		};
+	} esn;
+	/**< Extended Sequence Number */
 };
 
 /**
