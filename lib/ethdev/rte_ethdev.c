@@ -4649,8 +4649,6 @@ rte_eth_dev_callback_register(uint16_t port_id,
 						  user_cb, next);
 			} else {
 				rte_spinlock_unlock(&eth_dev_cb_lock);
-				rte_eth_dev_callback_unregister(port_id, event,
-								cb_fn, cb_arg);
 				return -ENOMEM;
 			}
 
