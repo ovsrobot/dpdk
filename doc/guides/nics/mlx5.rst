@@ -448,6 +448,11 @@ Limitations
   - 256 ports maximum.
   - 4M connections maximum.
 
+- Multiple-thread flow insertion:
+
+  - In order to achieve best insertion rate, application should manage the flows on the rte-lcore.
+  - Better to configure ``reclaim_mem_mode`` as 0 to accelerate the flow object allocate and release with cache.
+
 Statistics
 ----------
 
