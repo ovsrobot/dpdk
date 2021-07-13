@@ -661,7 +661,7 @@ esp_outb_sqh_process(const struct rte_ipsec_session *ss, struct rte_mbuf *mb[],
  */
 static inline void
 inline_outb_mbuf_prepare(const struct rte_ipsec_session *ss,
-	struct rte_mbuf *mb[], uint16_t num)
+	struct rte_mbuf *mb[], uint16_t num, uint64_t *sqn)
 {
 	uint32_t i, ol_flags, bytes = 0;
 
@@ -672,7 +672,7 @@ inline_outb_mbuf_prepare(const struct rte_ipsec_session *ss,
 		bytes += mb[i]->data_len;
 		if (ol_flags != 0)
 			rte_security_set_pkt_metadata(ss->security.ctx,
-				ss->security.ses, mb[i], NULL);
+				ss->security.ses, mb[i], sqn);
 	}
 	ss->sa->statistics.count += num;
 	ss->sa->statistics.bytes += bytes - (ss->sa->hdr_len * num);
@@ -764,7 +764,10 @@ inline_outb_tun_pkt_process(const struct rte_ipsec_session *ss,
 	if (k != num && k != 0)
 		move_bad_mbufs(mb, dr, num, num - k);
 
-	inline_outb_mbuf_prepare(ss, mb, k);
+	if (sa->sqn_mask > UINT32_MAX)
+		inline_outb_mbuf_prepare(ss, mb, k, &sqn);
+	else
+		inline_outb_mbuf_prepare(ss, mb, k, NULL);
 	return k;
 }
 
@@ -799,8 +802,7 @@ inline_outb_trs_pkt_process(const struct rte_ipsec_session *ss,
 	if (nb_sqn_alloc != nb_sqn)
 		rte_errno = EOVERFLOW;
 
-	k = 0;
-	for (i = 0; i != num; i++) {
+	for (i = 0, k = 0; i != num; i++) {
 
 		sqc = rte_cpu_to_be_64(sqn + i);
 		gen_iv(iv, sqc);
@@ -828,7 +830,10 @@ inline_outb_trs_pkt_process(const struct rte_ipsec_session *ss,
 	if (k != num && k != 0)
 		move_bad_mbufs(mb, dr, num, num - k);
 
-	inline_outb_mbuf_prepare(ss, mb, k);
+	if (sa->sqn_mask > UINT32_MAX)
+		inline_outb_mbuf_prepare(ss, mb, k, &sqn);
+	else
+		inline_outb_mbuf_prepare(ss, mb, k, NULL);
 	return k;
 }
 
@@ -840,6 +845,6 @@ uint16_t
 inline_proto_outb_pkt_process(const struct rte_ipsec_session *ss,
 	struct rte_mbuf *mb[], uint16_t num)
 {
-	inline_outb_mbuf_prepare(ss, mb, num);
+	inline_outb_mbuf_prepare(ss, mb, num, NULL);
 	return num;
 }
