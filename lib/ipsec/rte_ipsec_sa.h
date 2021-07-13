@@ -38,7 +38,8 @@ struct rte_ipsec_sa_prm {
 	union {
 		struct {
 			uint8_t hdr_len;     /**< tunnel header len */
-			uint8_t hdr_l3_off;  /**< offset for IPv4/IPv6 header */
+			uint8_t hdr_l3_off;   /**< tunnel l3 header len */
+			uint8_t hdr_l3_len;   /**< tunnel l3 header len */
 			uint8_t next_proto;  /**< next header protocol */
 			const void *hdr;     /**< tunnel header template */
 		} tun; /**< tunnel mode related parameters */

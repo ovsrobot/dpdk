@@ -559,7 +559,8 @@ trs_process_step3(struct rte_mbuf *mb)
  * - tx_offload
  */
 static inline void
-tun_process_step3(struct rte_mbuf *mb, uint64_t txof_msk, uint64_t txof_val)
+tun_process_step3(struct rte_mbuf *mb, uint8_t is_ipv4, uint64_t txof_msk,
+	uint64_t txof_val)
 {
 	/* reset mbuf metatdata: L2/L3 len, packet type */
 	mb->packet_type = RTE_PTYPE_UNKNOWN;
@@ -567,6 +568,14 @@ tun_process_step3(struct rte_mbuf *mb, uint64_t txof_msk, uint64_t txof_val)
 
 	/* clear the PKT_RX_SEC_OFFLOAD flag if set */
 	mb->ol_flags &= ~PKT_RX_SEC_OFFLOAD;
+
+	if (is_ipv4) {
+		mb->l3_len = sizeof(struct rte_ipv4_hdr);
+		mb->ol_flags |= (PKT_TX_IPV4 | PKT_TX_IP_CKSUM);
+	} else {
+		mb->l3_len = sizeof(struct rte_ipv6_hdr);
+		mb->ol_flags |= PKT_TX_IPV6;
+	}
 }
 
 /*
@@ -618,8 +627,12 @@ tun_process(const struct rte_ipsec_sa *sa, struct rte_mbuf *mb[],
 			update_tun_inb_l3hdr(sa, outh, inh);
 
 			/* update mbuf's metadata */
-			tun_process_step3(mb[i], sa->tx_offload.msk,
+			tun_process_step3(mb[i],
+				(sa->type & RTE_IPSEC_SATP_IPV_MASK) ==
+					RTE_IPSEC_SATP_IPV4 ? 1 : 0,
+				sa->tx_offload.msk,
 				sa->tx_offload.val);
+
 			k++;
 		} else
 			dr[i - k] = i;

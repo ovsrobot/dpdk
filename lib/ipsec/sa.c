@@ -17,6 +17,8 @@
 
 #define MBUF_MAX_L2_LEN		RTE_LEN2MASK(RTE_MBUF_L2_LEN_BITS, uint64_t)
 #define MBUF_MAX_L3_LEN		RTE_LEN2MASK(RTE_MBUF_L3_LEN_BITS, uint64_t)
+#define MBUF_MAX_TSO_LEN	RTE_LEN2MASK(RTE_MBUF_TSO_SEGSZ_BITS, uint64_t)
+#define MBUF_MAX_OL3_LEN	RTE_LEN2MASK(RTE_MBUF_OUTL3_LEN_BITS, uint64_t)
 
 /* some helper structures */
 struct crypto_xform {
@@ -348,6 +350,11 @@ esp_outb_init(struct rte_ipsec_sa *sa, uint32_t hlen, uint64_t sqn)
 	sa->cofs.ofs.cipher.head = sa->ctp.cipher.offset - sa->ctp.auth.offset;
 	sa->cofs.ofs.cipher.tail = (sa->ctp.auth.offset + sa->ctp.auth.length) -
 			(sa->ctp.cipher.offset + sa->ctp.cipher.length);
+
+	if (sa->type & RTE_IPSEC_SATP_MODE_TUNLV4)
+		sa->tx_ol_flags |= (PKT_TX_IPV4 | PKT_TX_IP_CKSUM);
+	else if (sa->type & RTE_IPSEC_SATP_MODE_TUNLV6)
+		sa->tx_ol_flags |= PKT_TX_IPV6;
 }
 
 /*
@@ -362,9 +369,43 @@ esp_outb_tun_init(struct rte_ipsec_sa *sa, const struct rte_ipsec_sa_prm *prm)
 	sa->hdr_len = prm->tun.hdr_len;
 	sa->hdr_l3_off = prm->tun.hdr_l3_off;
 
+
 	/* update l2_len and l3_len fields for outbound mbuf */
-	sa->tx_offload.val = rte_mbuf_tx_offload(sa->hdr_l3_off,
-		sa->hdr_len - sa->hdr_l3_off, 0, 0, 0, 0, 0);
+	sa->inline_crypto.tx_offload.val = rte_mbuf_tx_offload(
+			0,			/* iL2_LEN */
+			0,			/* iL3_LEN */
+			0,			/* iL4_LEN */
+			0,			/* TSO_SEG_SZ */
+			prm->tun.hdr_l3_len,	/* oL3_LEN */
+			prm->tun.hdr_l3_off,	/* oL2_LEN */
+			0);
+
+	sa->inline_crypto.tx_ol_flags |= PKT_TX_TUNNEL_ESP;
+
+	if (sa->type & RTE_IPSEC_SATP_MODE_TUNLV4)
+		sa->inline_crypto.tx_ol_flags |= PKT_TX_OUTER_IPV4;
+	else if (sa->type & RTE_IPSEC_SATP_MODE_TUNLV6)
+		sa->inline_crypto.tx_ol_flags |= PKT_TX_OUTER_IPV6;
+
+	if (sa->inline_crypto.tx_ol_flags & PKT_TX_OUTER_IPV4)
+		sa->inline_crypto.tx_ol_flags |= PKT_TX_OUTER_IP_CKSUM;
+	if (sa->tx_ol_flags & PKT_TX_IPV4)
+		sa->inline_crypto.tx_ol_flags |= PKT_TX_IP_CKSUM;
+
+	/* update l2_len and l3_len fields for outbound mbuf */
+	sa->tx_offload.val = rte_mbuf_tx_offload(
+			prm->tun.hdr_l3_off,	/* iL2_LEN */
+			prm->tun.hdr_l3_len,	/* iL3_LEN */
+			0,			/* iL4_LEN */
+			0,			/* TSO_SEG_SZ */
+			0,			/* oL3_LEN */
+			0,			/* oL2_LEN */
+			0);
+
+	if (sa->type & RTE_IPSEC_SATP_MODE_TUNLV4)
+		sa->tx_ol_flags |= (PKT_TX_IPV4 | PKT_TX_IP_CKSUM);
+	else if (sa->type & RTE_IPSEC_SATP_MODE_TUNLV6)
+		sa->tx_ol_flags |= PKT_TX_IPV6;
 
 	memcpy(sa->hdr, prm->tun.hdr, sa->hdr_len);
 
@@ -473,6 +514,10 @@ esp_sa_init(struct rte_ipsec_sa *sa, const struct rte_ipsec_sa_prm *prm,
 	sa->salt = prm->ipsec_xform.salt;
 
 	/* preserve all values except l2_len and l3_len */
+	sa->inline_crypto.tx_offload.msk =
+		~rte_mbuf_tx_offload(MBUF_MAX_L2_LEN, MBUF_MAX_L3_LEN,
+				0, 0, MBUF_MAX_OL3_LEN, 0, 0);
+
 	sa->tx_offload.msk =
 		~rte_mbuf_tx_offload(MBUF_MAX_L2_LEN, MBUF_MAX_L3_LEN,
 				0, 0, 0, 0, 0);

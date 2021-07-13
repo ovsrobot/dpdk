@@ -101,6 +101,14 @@ struct rte_ipsec_sa {
 		uint64_t msk;
 		uint64_t val;
 	} tx_offload;
+	uint64_t tx_ol_flags;
+	struct {
+		uint64_t tx_ol_flags;
+		struct {
+			uint64_t msk;
+			uint64_t val;
+		} tx_offload;
+	} inline_crypto;
 	struct {
 		uint16_t sport;
 		uint16_t dport;
