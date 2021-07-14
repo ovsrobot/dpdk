@@ -857,7 +857,7 @@ rte_str_to_size(const char *str)
  * Function to terminate the application immediately, printing an error
  * message and returning the exit_code back to the shell.
  *
- * This function never returns
+ * To be executed on the MAIN lcore only. This function never returns.
  *
  * @param exit_code
  *     The exit code to be returned by the application
