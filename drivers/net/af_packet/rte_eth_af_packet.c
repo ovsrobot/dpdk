@@ -749,13 +749,15 @@ rte_pmd_init_internals(struct rte_vdev_device *dev,
 		}
 
 #if defined(PACKET_QDISC_BYPASS)
-		rc = setsockopt(qsockfd, SOL_PACKET, PACKET_QDISC_BYPASS,
-				&qdisc_bypass, sizeof(qdisc_bypass));
-		if (rc == -1) {
-			PMD_LOG_ERRNO(ERR,
-				"%s: could not set PACKET_QDISC_BYPASS on AF_PACKET socket for %s",
-				name, pair->value);
-			goto error;
+		if (qdisc_bypass) {
+			rc = setsockopt(qsockfd, SOL_PACKET, PACKET_QDISC_BYPASS,
+					&qdisc_bypass, sizeof(qdisc_bypass));
+			if (rc == -1) {
+				PMD_LOG_ERRNO(ERR,
+					"%s: could not set PACKET_QDISC_BYPASS on AF_PACKET socket for %s",
+					name, pair->value);
+				goto error;
+			}
 		}
 #else
 		RTE_SET_USED(qdisc_bypass);
