@@ -60,7 +60,7 @@ l2fwd_poll_main_loop(struct l2fwd_resources *rsrc)
 	}
 
 	while (!rsrc->force_quit) {
-
+		/* Draining TX queue in main loop. 8< */
 		cur_tsc = rte_rdtsc();
 
 		/*
@@ -80,9 +80,11 @@ l2fwd_poll_main_loop(struct l2fwd_resources *rsrc)
 			prev_tsc = cur_tsc;
 		}
 
-		/*
-		 * Read packet from RX queues
-		 */
+		/* >8 End of draining TX queue in main loop. */
+
+		/* Reading ingress packets. 8< */
+
+		/* Read packet from RX queues */
 		for (i = 0; i < qconf->n_rx_port; i++) {
 
 			port_id = qconf->rx_port_list[i];
@@ -97,6 +99,7 @@ l2fwd_poll_main_loop(struct l2fwd_resources *rsrc)
 				l2fwd_poll_simple_forward(rsrc, m, port_id);
 			}
 		}
+		/* >8 End of reading ingress packets. */
 	}
 }
 

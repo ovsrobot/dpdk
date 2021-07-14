@@ -390,7 +390,7 @@ Code and Literal block sections
       .. literalinclude:: ../../../examples/skeleton/basicfwd.c
          :language: c
          :start-after: Display the port MAC address.
-         :end-before: Enable RX in promiscuous mode for the Ethernet device.
+         :end-before: RX port is set in promiscuous mode. 8<
          :dedent: 1
 
   This would be rendered as:
@@ -398,7 +398,7 @@ Code and Literal block sections
   .. literalinclude:: ../../../examples/skeleton/basicfwd.c
      :language: c
      :start-after: Display the port MAC address.
-     :end-before: Enable RX in promiscuous mode for the Ethernet device.
+     :end-before: RX port is set in promiscuous mode. 8<
      :dedent: 1
 
   Specifying ``:language:`` will enable syntax highlighting for the specified language.

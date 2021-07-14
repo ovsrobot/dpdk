@@ -210,7 +210,7 @@ l2fwd_event_parse_args(int argc, char **argv, struct l2fwd_resources *rsrc)
 	int option_index;
 	char **argvopt;
 
-	/* reset l2fwd_dst_ports */
+	/* Reset l2fwd_dst_ports. 8< */
 	for (port_id = 0; port_id < RTE_MAX_ETHPORTS; port_id++)
 		rsrc->dst_ports[port_id] = UINT32_MAX;
 
@@ -289,10 +289,10 @@ l2fwd_event_parse_args(int argc, char **argv, struct l2fwd_resources *rsrc)
 	ret = optind-1;
 	optind = 1; /* reset getopt lib */
 	return ret;
+	/* >8 End of reset l2fwd_dst_ports. */
 }
 
-/*
- * Check port pair config with enabled port mask,
+/* Check port pair config with enabled port mask,
  * and for valid port pair combinations.
  */
 static int
@@ -563,7 +563,7 @@ main(int argc, char **argv)
 	uint16_t nb_ports;
 	int i, ret;
 
-	/* init EAL */
+	/* Init EAL. 8< */
 	ret = rte_eal_init(argc, argv);
 	if (ret < 0)
 		rte_panic("Invalid EAL arguments\n");
@@ -579,7 +579,7 @@ main(int argc, char **argv)
 	ret = l2fwd_event_parse_args(argc, argv, rsrc);
 	if (ret < 0)
 		rte_panic("Invalid L2FWD arguments\n");
-
+	/* >8 End of init EAL. */
 	printf("MAC updating %s\n", rsrc->mac_updating ? "enabled" :
 			"disabled");
 
@@ -626,13 +626,13 @@ main(int argc, char **argv)
 				       MAX_PKT_BURST + rte_lcore_count() *
 				       MEMPOOL_CACHE_SIZE), 8192U);
 
-	/* create the mbuf pool */
+	/* Create the mbuf pool. 8< */
 	rsrc->pktmbuf_pool = rte_pktmbuf_pool_create("mbuf_pool",
 			nb_mbufs, MEMPOOL_CACHE_SIZE, 0,
 			RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 	if (rsrc->pktmbuf_pool == NULL)
 		rte_panic("Cannot init mbuf pool\n");
-
+	/* >8 End of creation of mbuf pool. */
 	nb_ports_available = l2fwd_event_init_ports(rsrc);
 	if (!nb_ports_available)
 		rte_panic("All available ports are disabled. Please set portmask.\n");
