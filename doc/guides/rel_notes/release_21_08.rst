@@ -117,6 +117,9 @@ New Features
   The experimental PMD power management API now supports managing
   multiple Ethernet Rx queues per lcore.
 
+* **Updated ISAL compress device PMD.**
+
+  The ISAL compress device PMD now supports Arm platforms.
 
 Removed Items
 -------------
