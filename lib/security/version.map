@@ -20,4 +20,6 @@ EXPERIMENTAL {
 	rte_security_get_userdata;
 	rte_security_session_stats_get;
 	rte_security_session_update;
+	__rte_security_set_pkt_metadata;
+	__rte_security_get_userdata;
 };
