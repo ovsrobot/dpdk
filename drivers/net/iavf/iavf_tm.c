@@ -469,7 +469,7 @@ iavf_tm_capabilities_get(struct rte_eth_dev *dev,
 	cap->shaper_private_n_max = cap->n_nodes_max;
 	cap->shaper_private_dual_rate_n_max = 0;
 	cap->shaper_private_rate_min = 0;
-	/* GBps */
+	/* Bytes per second */
 	cap->shaper_private_rate_max =
 		vf->link_speed * 1000 / IAVF_BITS_PER_BYTE;
 	cap->shaper_private_packet_mode_supported = 0;
@@ -544,7 +544,7 @@ iavf_level_capabilities_get(struct rte_eth_dev *dev,
 		cap->nonleaf.shaper_private_supported = true;
 		cap->nonleaf.shaper_private_dual_rate_supported = false;
 		cap->nonleaf.shaper_private_rate_min = 0;
-		/* GBps */
+		/* Bytes per second */
 		cap->nonleaf.shaper_private_rate_max =
 			vf->link_speed * 1000 / IAVF_BITS_PER_BYTE;
 		cap->nonleaf.shaper_private_packet_mode_supported = 0;
@@ -632,8 +632,11 @@ iavf_node_capabilities_get(struct rte_eth_dev *dev,
 
 	cap->shaper_private_supported = true;
 	cap->shaper_private_dual_rate_supported = false;
-	cap->shaper_private_rate_min = tc_cap.shaper.committed;
-	cap->shaper_private_rate_max = tc_cap.shaper.peak;
+	/* Bytes per second */
+	cap->shaper_private_rate_min =
+		tc_cap.shaper.committed * 1000 / IAVF_BITS_PER_BYTE;
+	cap->shaper_private_rate_max =
+		tc_cap.shaper.peak * 1000 / IAVF_BITS_PER_BYTE;
 	cap->shaper_shared_n_max = 0;
 	cap->nonleaf.sched_n_children_max = vf->num_queue_pairs;
 	cap->nonleaf.sched_sp_n_priorities_max = 1;
