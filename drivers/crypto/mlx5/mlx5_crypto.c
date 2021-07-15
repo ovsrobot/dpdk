@@ -105,22 +105,27 @@ mlx5_crypto_dev_infos_get(struct rte_cryptodev *dev,
 	}
 }
 
-static unsigned int
-mlx5_crypto_sym_session_get_size(struct rte_cryptodev *dev __rte_unused)
-{
-	return sizeof(struct mlx5_crypto_session);
-}
-
 static int
 mlx5_crypto_dev_configure(struct rte_cryptodev *dev,
-		struct rte_cryptodev_config *config __rte_unused)
+			  struct rte_cryptodev_config *config)
 {
 	struct mlx5_crypto_priv *priv = dev->data->dev_private;
 
+	if (config == NULL) {
+		DRV_LOG(ERR, "Invalid crypto dev configure parameters.");
+		return -EINVAL;
+	}
+	if ((config->ff_disable & RTE_CRYPTODEV_FF_SYMMETRIC_CRYPTO) != 0) {
+		DRV_LOG(ERR,
+			"Disabled symmetric crypto feature is not supported.");
+		return -ENOTSUP;
+	}
 	if (mlx5_crypto_dek_setup(priv) != 0) {
 		DRV_LOG(ERR, "Dek hash list creation has failed.");
 		return -ENOMEM;
 	}
+	priv->dev_config = *config;
+	DRV_LOG(DEBUG, "Device %u was configured.", dev->driver_id);
 	return 0;
 }
 
@@ -130,7 +135,14 @@ mlx5_crypto_dev_close(struct rte_cryptodev *dev)
 	struct mlx5_crypto_priv *priv = dev->data->dev_private;
 
 	mlx5_crypto_dek_unset(priv);
+	DRV_LOG(DEBUG, "Device %u was closed.", dev->driver_id);
 	return 0;
+}
+
+static unsigned int
+mlx5_crypto_sym_session_get_size(struct rte_cryptodev *dev __rte_unused)
+{
+	return sizeof(struct mlx5_crypto_session);
 }
 
 static int
