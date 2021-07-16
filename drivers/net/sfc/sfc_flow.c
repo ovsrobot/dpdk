@@ -1123,84 +1123,84 @@ sfc_flow_parse_pppoex(const struct rte_flow_item *item,
 
 static const struct sfc_flow_item sfc_flow_items[] = {
 	{
-		.type = RTE_FLOW_ITEM_TYPE_VOID,
+		SFC_FLOW_ITEM(RTE_FLOW_ITEM_TYPE_VOID),
 		.prev_layer = SFC_FLOW_ITEM_ANY_LAYER,
 		.layer = SFC_FLOW_ITEM_ANY_LAYER,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_void,
 	},
 	{
-		.type = RTE_FLOW_ITEM_TYPE_ETH,
+		SFC_FLOW_ITEM(RTE_FLOW_ITEM_TYPE_ETH),
 		.prev_layer = SFC_FLOW_ITEM_START_LAYER,
 		.layer = SFC_FLOW_ITEM_L2,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_eth,
 	},
 	{
-		.type = RTE_FLOW_ITEM_TYPE_VLAN,
+		SFC_FLOW_ITEM(RTE_FLOW_ITEM_TYPE_VLAN),
 		.prev_layer = SFC_FLOW_ITEM_L2,
 		.layer = SFC_FLOW_ITEM_L2,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_vlan,
 	},
 	{
-		.type = RTE_FLOW_ITEM_TYPE_PPPOED,
+		SFC_FLOW_ITEM(RTE_FLOW_ITEM_TYPE_PPPOED),
 		.prev_layer = SFC_FLOW_ITEM_L2,
 		.layer = SFC_FLOW_ITEM_L2,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_pppoex,
 	},
 	{
-		.type = RTE_FLOW_ITEM_TYPE_PPPOES,
+		SFC_FLOW_ITEM(RTE_FLOW_ITEM_TYPE_PPPOES),
 		.prev_layer = SFC_FLOW_ITEM_L2,
 		.layer = SFC_FLOW_ITEM_L2,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_pppoex,
 	},
 	{
-		.type = RTE_FLOW_ITEM_TYPE_IPV4,
+		SFC_FLOW_ITEM(RTE_FLOW_ITEM_TYPE_IPV4),
 		.prev_layer = SFC_FLOW_ITEM_L2,
 		.layer = SFC_FLOW_ITEM_L3,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_ipv4,
 	},
 	{
-		.type = RTE_FLOW_ITEM_TYPE_IPV6,
+		SFC_FLOW_ITEM(RTE_FLOW_ITEM_TYPE_IPV6),
 		.prev_layer = SFC_FLOW_ITEM_L2,
 		.layer = SFC_FLOW_ITEM_L3,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_ipv6,
 	},
 	{
-		.type = RTE_FLOW_ITEM_TYPE_TCP,
+		SFC_FLOW_ITEM(RTE_FLOW_ITEM_TYPE_TCP),
 		.prev_layer = SFC_FLOW_ITEM_L3,
 		.layer = SFC_FLOW_ITEM_L4,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_tcp,
 	},
 	{
-		.type = RTE_FLOW_ITEM_TYPE_UDP,
+		SFC_FLOW_ITEM(RTE_FLOW_ITEM_TYPE_UDP),
 		.prev_layer = SFC_FLOW_ITEM_L3,
 		.layer = SFC_FLOW_ITEM_L4,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_udp,
 	},
 	{
-		.type = RTE_FLOW_ITEM_TYPE_VXLAN,
+		SFC_FLOW_ITEM(RTE_FLOW_ITEM_TYPE_VXLAN),
 		.prev_layer = SFC_FLOW_ITEM_L4,
 		.layer = SFC_FLOW_ITEM_START_LAYER,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_vxlan,
 	},
 	{
-		.type = RTE_FLOW_ITEM_TYPE_GENEVE,
+		SFC_FLOW_ITEM(RTE_FLOW_ITEM_TYPE_GENEVE),
 		.prev_layer = SFC_FLOW_ITEM_L4,
 		.layer = SFC_FLOW_ITEM_START_LAYER,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_geneve,
 	},
 	{
-		.type = RTE_FLOW_ITEM_TYPE_NVGRE,
+		SFC_FLOW_ITEM(RTE_FLOW_ITEM_TYPE_NVGRE),
 		.prev_layer = SFC_FLOW_ITEM_L3,
 		.layer = SFC_FLOW_ITEM_START_LAYER,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
@@ -1296,7 +1296,8 @@ sfc_flow_get_item(const struct sfc_flow_item *items,
 }
 
 int
-sfc_flow_parse_pattern(const struct sfc_flow_item *flow_items,
+sfc_flow_parse_pattern(struct sfc_adapter *sa,
+		       const struct sfc_flow_item *flow_items,
 		       unsigned int nb_flow_items,
 		       const struct rte_flow_item pattern[],
 		       struct sfc_flow_parse_ctx *parse_ctx,
@@ -1380,8 +1381,11 @@ sfc_flow_parse_pattern(const struct sfc_flow_item *flow_items,
 		}
 
 		rc = item->parse(pattern, parse_ctx, error);
-		if (rc != 0)
+		if (rc != 0) {
+			sfc_err(sa, "failed to parse item %s: %s",
+				item->name, strerror(-rc));
 			return rc;
+		}
 
 		if (item->layer != SFC_FLOW_ITEM_ANY_LAYER)
 			prev_layer = item->layer;
@@ -2477,7 +2481,7 @@ sfc_flow_parse_rte_to_filter(struct rte_eth_dev *dev,
 	ctx.type = SFC_FLOW_PARSE_CTX_FILTER;
 	ctx.filter = &spec_filter->template;
 
-	rc = sfc_flow_parse_pattern(sfc_flow_items, RTE_DIM(sfc_flow_items),
+	rc = sfc_flow_parse_pattern(sa, sfc_flow_items, RTE_DIM(sfc_flow_items),
 				    pattern, &ctx, error);
 	if (rc != 0)
 		goto fail_bad_value;
