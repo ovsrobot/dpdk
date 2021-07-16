@@ -1275,6 +1275,15 @@ vhost_user_set_mem_table(struct virtio_net **pdev, struct VhostUserMsg *msg,
 				vdpa_dev->ops->dev_close(dev->vid);
 			dev->flags &= ~VIRTIO_DEV_VDPA_CONFIGURED;
 		}
+
+		/* notify the backend application to stop DMA transfers */
+		if (dev->async_copy && dev->notify_ops->vring_state_changed) {
+			for (i = 0; i < dev->nr_vring; i++) {
+				dev->notify_ops->vring_state_changed(dev->vid,
+						i, 0);
+			}
+		}
+
 		free_mem_region(dev);
 		rte_free(dev->mem);
 		dev->mem = NULL;
