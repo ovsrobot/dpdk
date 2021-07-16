@@ -25,7 +25,12 @@
 
 #define BATCH_SIZE		32
 #define BLOCK_CNT_THRESHOLD	10
-#define ETH_EVENT_BUFFER_SIZE	(4*BATCH_SIZE)
+
+#define ETH_EVENT_BUFFER_SIZE \
+		(RTE_EVENT_ETH_RX_ADAPTER_BUFFER_SIZE + BATCH_SIZE + BATCH_SIZE)
+
+#define MAX_ETH_EVENT_BUFFER_SIZE (USHRT_MAX - BATCH_SIZE - BATCH_SIZE)
+
 #define MAX_VECTOR_SIZE		1024
 #define MIN_VECTOR_SIZE		4
 #define MAX_VECTOR_NS		1E9
@@ -2163,6 +2168,13 @@ rte_event_eth_rx_adapter_create_ext(uint8_t id, uint8_t dev_id,
 	if (rx_adapter != NULL) {
 		RTE_EDEV_LOG_ERR("Eth Rx adapter exists id = %" PRIu8, id);
 		return -EEXIST;
+	}
+
+	if (RTE_DIM(rx_adapter->event_enqueue_buffer.events) > USHRT_MAX) {
+		RTE_EDEV_LOG_ERR("CONFIG_RTE_ADPTR_ETH_EVENT_BUFFER_SIZE is "
+				 "greater than max allowed value %u",
+				 MAX_ETH_EVENT_BUFFER_SIZE);
+		return -EINVAL;
 	}
 
 	socket_id = rte_event_dev_socket_id(dev_id);
