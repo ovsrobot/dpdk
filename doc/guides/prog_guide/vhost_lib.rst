@@ -281,6 +281,11 @@ The following is an overview of some key Vhost API functions:
   Poll enqueue completion status from async data path. Completed packets
   are returned to applications through ``pkts``.
 
+* ``rte_vhost_try_drain_queue_thread_unsafe(vid, queue_id, **pkts, count, times)``
+
+  Try to drain in-flight packets which are submitted to DMA engine in vhost async data
+  path. Completed packets are returned to applications through ``pkts``.
+
 Vhost-user Implementations
 --------------------------
 
