@@ -338,6 +338,7 @@ print_stats(void)
 	fflush(stdout);
 }
 
+/* l2fwd_crypto_send_burst 8< */
 static int
 l2fwd_crypto_send_burst(struct lcore_queue_conf *qconf, unsigned n,
 		struct l2fwd_crypto_params *cparams)
@@ -362,7 +363,9 @@ l2fwd_crypto_send_burst(struct lcore_queue_conf *qconf, unsigned n,
 
 	return 0;
 }
+/* >8 End of l2fwd_crypto_send_burst. */
 
+/* Crypto enqueue. 8< */
 static int
 l2fwd_crypto_enqueue(struct rte_crypto_op *op,
 		struct l2fwd_crypto_params *cparams)
@@ -386,6 +389,7 @@ l2fwd_crypto_enqueue(struct rte_crypto_op *op,
 	qconf->op_buf[cparams->dev_id].len = len;
 	return 0;
 }
+/* >8 End of crypto enqueue. */
 
 static int
 l2fwd_simple_crypto_enqueue(struct rte_mbuf *m,
@@ -571,7 +575,7 @@ l2fwd_send_burst(struct lcore_queue_conf *qconf, unsigned n,
 	return 0;
 }
 
-/* Enqueue packets for TX and prepare them to be sent */
+/* Enqueue packets for TX and prepare them to be sent. 8< */
 static int
 l2fwd_send_packet(struct rte_mbuf *m, uint16_t port)
 {
@@ -594,6 +598,7 @@ l2fwd_send_packet(struct rte_mbuf *m, uint16_t port)
 	qconf->pkt_buf[port].len = len;
 	return 0;
 }
+/* >8 End of Enqueuing packets for TX. */
 
 static void
 l2fwd_mac_updating(struct rte_mbuf *m, uint16_t dest_portid)
@@ -657,6 +662,7 @@ generate_random_key(uint8_t *key, unsigned length)
 		rte_exit(EXIT_FAILURE, "Failed to generate random key\n");
 }
 
+/* Session is created and is later attached to the crypto operation. 8< */
 static struct rte_cryptodev_sym_session *
 initialize_crypto_session(struct l2fwd_crypto_options *options, uint8_t cdev_id)
 {
@@ -695,6 +701,7 @@ initialize_crypto_session(struct l2fwd_crypto_options *options, uint8_t cdev_id)
 
 	return session;
 }
+/* >8 End of creation of session. */
 
 static void
 l2fwd_crypto_options_print(struct l2fwd_crypto_options *options);
@@ -913,6 +920,7 @@ l2fwd_main_loop(struct l2fwd_crypto_options *options)
 
 			port_statistics[portid].rx += nb_rx;
 
+			/* Allocate and fillcrypto operations. 8< */
 			if (nb_rx) {
 				/*
 				 * If we can't allocate a crypto_ops, then drop
@@ -929,6 +937,7 @@ l2fwd_main_loop(struct l2fwd_crypto_options *options)
 
 					nb_rx = 0;
 				}
+				/* >8 End of crypto operation allocated and filled. */
 
 				/* Enqueue packets from Crypto device*/
 				for (j = 0; j < nb_rx; j++) {
@@ -939,7 +948,7 @@ l2fwd_main_loop(struct l2fwd_crypto_options *options)
 				}
 			}
 
-			/* Dequeue packets from Crypto device */
+			/* Dequeue packets from Crypto device. 8< */
 			do {
 				nb_rx = rte_cryptodev_dequeue_burst(
 						cparams->dev_id, cparams->qp_id,
@@ -957,6 +966,7 @@ l2fwd_main_loop(struct l2fwd_crypto_options *options)
 							options);
 				}
 			} while (nb_rx == MAX_PKT_BURST);
+			/* >8 End of dequeue packets from crypto device. */
 		}
 	}
 }
@@ -2099,7 +2109,8 @@ check_capabilities(struct l2fwd_crypto_options *options, uint8_t cdev_id)
 	if (options->xform_chain == L2FWD_CRYPTO_CIPHER_HASH ||
 			options->xform_chain == L2FWD_CRYPTO_HASH_CIPHER ||
 			options->xform_chain == L2FWD_CRYPTO_CIPHER_ONLY) {
-		/* Check if device supports cipher algo */
+
+		/* Check if device supports cipher algo. 8< */
 		cap = check_device_support_cipher_algo(options, &dev_info,
 						cdev_id);
 		if (cap == NULL)
@@ -2114,6 +2125,9 @@ check_capabilities(struct l2fwd_crypto_options *options, uint8_t cdev_id)
 				cdev_id);
 			return -1;
 		}
+		/* >8 End of check if device supports cipher algo. */
+
+		/* Check if capable cipher is supported. 8< */
 
 		/*
 		 * Check if length of provided cipher key is supported
@@ -2158,6 +2172,7 @@ check_capabilities(struct l2fwd_crypto_options *options, uint8_t cdev_id)
 				return -1;
 			}
 		}
+		/* >8 End of checking if cipher is supported. */
 	}
 
 	/* Set auth parameters */
