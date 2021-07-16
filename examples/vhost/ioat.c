@@ -21,6 +21,8 @@ struct packet_tracker {
 
 struct packet_tracker cb_tracker[MAX_VHOST_DEVICE];
 
+int vid2socketid[MAX_VHOST_DEVICE];
+
 int
 open_ioat(const char *value)
 {
@@ -29,7 +31,7 @@ open_ioat(const char *value)
 	char *addrs = input;
 	char *ptrs[2];
 	char *start, *end, *substr;
-	int64_t vid, vring_id;
+	int64_t socketid, vring_id;
 	struct rte_ioat_rawdev_config config;
 	struct rte_rawdev_info info = { .dev_private = &config };
 	char name[32];
@@ -60,6 +62,7 @@ open_ioat(const char *value)
 		goto out;
 	}
 	while (i < args_nr) {
+		bool is_txd;
 		char *arg_temp = dma_arg[i];
 		uint8_t sub_nr;
 		sub_nr = rte_strsplit(arg_temp, strlen(arg_temp), ptrs, 2, '@');
@@ -68,27 +71,39 @@ open_ioat(const char *value)
 			goto out;
 		}
 
-		start = strstr(ptrs[0], "txd");
-		if (start == NULL) {
+		int async_flag;
+		char *txd, *rxd;
+		txd = strstr(ptrs[0], "txd");
+		rxd = strstr(ptrs[0], "rxd");
+		if (txd) {
+			is_txd = true;
+			start = txd;
+			async_flag = ASYNC_ENQUEUE_VHOST;
+		} else if (rxd) {
+			is_txd = false;
+			start = rxd;
+			async_flag = ASYNC_DEQUEUE_VHOST;
+		} else {
 			ret = -1;
 			goto out;
 		}
 
 		start += 3;
-		vid = strtol(start, &end, 0);
+		socketid = strtol(start, &end, 0);
 		if (end == start) {
 			ret = -1;
 			goto out;
 		}
 
-		vring_id = 0 + VIRTIO_RXQ;
+		vring_id = is_txd ? VIRTIO_RXQ : VIRTIO_TXQ;
+
 		if (rte_pci_addr_parse(ptrs[1],
-				&(dma_info + vid)->dmas[vring_id].addr) < 0) {
+			&(dma_info + socketid)->dmas[vring_id].addr) < 0) {
 			ret = -1;
 			goto out;
 		}
 
-		rte_pci_device_name(&(dma_info + vid)->dmas[vring_id].addr,
+		rte_pci_device_name(&(dma_info + socketid)->dmas[vring_id].addr,
 				name, sizeof(name));
 		dev_id = rte_rawdev_get_dev_id(name);
 		if (dev_id == (uint16_t)(-ENODEV) ||
@@ -103,8 +118,9 @@ open_ioat(const char *value)
 			goto out;
 		}
 
-		(dma_info + vid)->dmas[vring_id].dev_id = dev_id;
-		(dma_info + vid)->dmas[vring_id].is_valid = true;
+		(dma_info + socketid)->dmas[vring_id].dev_id = dev_id;
+		(dma_info + socketid)->dmas[vring_id].is_valid = true;
+		(dma_info + socketid)->async_flag |= async_flag;
 		config.ring_size = IOAT_RING_SIZE;
 		config.hdls_disable = true;
 		if (rte_rawdev_configure(dev_id, &info, sizeof(config)) < 0) {
@@ -126,13 +142,16 @@ ioat_transfer_data_cb(int vid, uint16_t queue_id,
 		struct rte_vhost_async_status *opaque_data, uint16_t count)
 {
 	uint32_t i_desc;
-	uint16_t dev_id = dma_bind[vid].dmas[queue_id * 2 + VIRTIO_RXQ].dev_id;
 	struct rte_vhost_iov_iter *src = NULL;
 	struct rte_vhost_iov_iter *dst = NULL;
 	unsigned long i_seg;
 	unsigned short mask = MAX_ENQUEUED_SIZE - 1;
-	unsigned short write = cb_tracker[dev_id].next_write;
 
+	if (queue_id >= MAX_RING_COUNT)
+		return -1;
+
+	uint16_t dev_id = dma_bind[vid2socketid[vid]].dmas[queue_id].dev_id;
+	unsigned short write = cb_tracker[dev_id].next_write;
 	if (!opaque_data) {
 		for (i_desc = 0; i_desc < count; i_desc++) {
 			src = descs[i_desc].src;
@@ -170,16 +189,16 @@ ioat_check_completed_copies_cb(int vid, uint16_t queue_id,
 		struct rte_vhost_async_status *opaque_data,
 		uint16_t max_packets)
 {
-	if (!opaque_data) {
+	if (!opaque_data && (queue_id < MAX_RING_COUNT)) {
 		uintptr_t dump[255];
 		int n_seg;
 		unsigned short read, write;
 		unsigned short nb_packet = 0;
 		unsigned short mask = MAX_ENQUEUED_SIZE - 1;
 		unsigned short i;
+		uint16_t dev_id;
 
-		uint16_t dev_id = dma_bind[vid].dmas[queue_id * 2
-				+ VIRTIO_RXQ].dev_id;
+		dev_id = dma_bind[vid2socketid[vid]].dmas[queue_id].dev_id;
 		n_seg = rte_ioat_completed_ops(dev_id, 255, NULL, NULL, dump, dump);
 		if (n_seg < 0) {
 			RTE_LOG(ERR,
@@ -215,4 +234,18 @@ ioat_check_completed_copies_cb(int vid, uint16_t queue_id,
 	return -1;
 }
 
+uint32_t get_async_flag_by_vid(int vid)
+{
+	return dma_bind[vid2socketid[vid]].async_flag;
+}
+
+uint32_t get_async_flag_by_socketid(int socketid)
+{
+	return dma_bind[socketid].async_flag;
+}
+
+void init_vid2socketid_array(int vid, int socketid)
+{
+	vid2socketid[vid] = socketid;
+}
 #endif /* RTE_RAW_IOAT */
