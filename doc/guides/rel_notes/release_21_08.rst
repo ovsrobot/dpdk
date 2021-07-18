@@ -94,6 +94,7 @@ New Features
   * Added support for matching on VXLAN header last 8-bits reserved field.
   * Optimized multi-thread flow rule insertion rate.
   * Added support for metering policy actions of yellow color.
+  * Added support for metering trTCM RFC2698 and RFC4115.
 
 * **Added Wangxun ngbe PMD.**
 
