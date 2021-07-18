@@ -641,6 +641,12 @@ struct mlx5_dev_shared_port {
 #define MLX5_MTR_TABLE_ID_SUFFIX 1
 /* Drop table_id on MLX5_FLOW_TABLE_LEVEL_METER. */
 #define MLX5_MTR_TABLE_ID_DROP 2
+/* Priority of the meter policy matcher. */
+#define MLX5_MTR_POLICY_MATCHER_PRIO 0
+/* Default policy. */
+#define MLX5_MTR_POLICY_MODE_DEF 1
+/* Only green color valid. */
+#define MLX5_MTR_POLICY_MODE_OG 2
 
 enum mlx5_meter_domain {
 	MLX5_MTR_DOMAIN_INGRESS,
