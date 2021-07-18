@@ -66,3 +66,5 @@ else
     cflags += [ '-UPEDANTIC' ]
 endif
 subdir(exec_env)
+
+headers = files('rte_pmd_mlx5.h')
