@@ -744,6 +744,10 @@ struct mlx5_flow_meter_policy {
 	/* Is queue action in policy table. */
 	uint32_t is_hierarchy:1;
 	/* Is meter action in policy table. */
+	uint32_t skip_y:1;
+	/* If yellow color policy is skipped. */
+	uint32_t skip_g:1;
+	/* If green color policy is skipped. */
 	rte_spinlock_t sl;
 	uint32_t ref_cnt;
 	/* Use count. */
