@@ -14766,7 +14766,39 @@ test_cryptodev_bcmfs(void)
 static int
 test_cryptodev_qat_raw_api(void)
 {
-	int ret;
+	static const char *pmd_name = RTE_STR(CRYPTODEV_NAME_QAT_SYM_PMD);
+	struct rte_cryptodev_info dev_info;
+	uint8_t i, nb_devs, found = 0;
+	int driver_id, ret;
+
+	driver_id = rte_cryptodev_driver_id_get(pmd_name);
+	if (driver_id == -1) {
+		RTE_LOG(WARNING, USER1, "%s PMD must be loaded.\n", pmd_name);
+		return TEST_SKIPPED;
+	}
+
+	nb_devs = rte_cryptodev_count();
+	if (nb_devs < 1) {
+		RTE_LOG(WARNING, USER1, "No crypto devices found?\n");
+		return TEST_SKIPPED;
+	}
+
+	for (i = 0; i < nb_devs; i++) {
+		rte_cryptodev_info_get(i, &dev_info);
+		if (dev_info.driver_id == driver_id) {
+			if (!(dev_info.feature_flags &
+					RTE_CRYPTODEV_FF_SYM_RAW_DP)) {
+				RTE_LOG(INFO, USER1, "RAW API not supported\n");
+				return TEST_SKIPPED;
+			}
+			found = 1;
+			break;
+		}
+	}
+	if (!found) {
+		RTE_LOG(INFO, USER1, "RAW API not supported\n");
+		return TEST_SKIPPED;
+	}
 
 	global_api_test_type = CRYPTODEV_RAW_API_TEST;
 	ret = run_cryptodev_testsuite(RTE_STR(CRYPTODEV_NAME_QAT_SYM_PMD));
