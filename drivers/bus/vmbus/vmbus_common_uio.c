@@ -69,8 +69,10 @@ vmbus_uio_map_secondary(struct rte_vmbus_device *dev)
 					     fd, offset,
 					     uio_res->maps[i].size, 0);
 
-		if (mapaddr == uio_res->maps[i].addr)
+		if (mapaddr == uio_res->maps[i].addr) {
+			dev->resource[i].addr = mapaddr;
 			continue;	/* successful map */
+		}
 
 		if (mapaddr == MAP_FAILED)
 			VMBUS_LOG(ERR,
@@ -88,9 +90,9 @@ vmbus_uio_map_secondary(struct rte_vmbus_device *dev)
 	/* fd is not needed in secondary process, close it */
 	close(fd);
 
-	dev->primary = uio_res->primary;
-	if (!dev->primary) {
-		VMBUS_LOG(ERR, "missing primary channel");
+	if (vmbus_chan_create(dev, dev->relid, 0,
+					dev->monitor_id, &dev->primary)) {
+		VMBUS_LOG(ERR, "cannot create primary channel");
 		return -1;
 	}
 
@@ -211,8 +213,11 @@ vmbus_uio_unmap_resource(struct rte_vmbus_device *dev)
 		return;
 
 	/* secondary processes - just free maps */
-	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		if (dev->primary != NULL)
+			rte_free(dev->primary);
 		return vmbus_uio_unmap(uio_res);
+	}
 
 	TAILQ_REMOVE(uio_res_list, uio_res, next);
 
