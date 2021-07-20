@@ -52,6 +52,13 @@ enum rte_crypto_op_status {
 	/**< Operation failed due to invalid arguments in request */
 	RTE_CRYPTO_OP_STATUS_ERROR,
 	/**< Error handling operation */
+	RTE_CRYPTO_OP_STATUS_WAR = 128,
+	/**<
+	 * Operation completed successfully with warnings.
+	 * Note: All the warnings starts from here.
+	 */
+	RTE_CRYPTO_OPSTATUS_WAR_SOFT_EXPIRY,
+	/**< Operation completed successfully with soft expiry of lifetime */
 };
 
 /**
