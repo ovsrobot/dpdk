@@ -259,7 +259,7 @@ iavf_set_mc_addr_list(struct rte_eth_dev *dev,
 	return err;
 }
 
-static int
+static void
 iavf_config_rss_hf(struct iavf_adapter *adapter, uint64_t rss_hf)
 {
 	static const uint64_t map_hena_rss[] = {
@@ -319,8 +319,12 @@ iavf_config_rss_hf(struct iavf_adapter *adapter, uint64_t rss_hf)
 	int ret;
 
 	ret = iavf_get_hena_caps(adapter, &caps);
-	if (ret)
-		return ret;
+	if (ret) {
+		PMD_DRV_LOG(WARNING,
+			    "fail to get supported RSS caps, lack PF support");
+		return;
+	}
+
 	/**
 	 * ETH_RSS_IPV4 and ETH_RSS_IPV6 can be considered as 2
 	 * generalizations of all other IPv4 and IPv6 RSS types.
@@ -343,8 +347,11 @@ iavf_config_rss_hf(struct iavf_adapter *adapter, uint64_t rss_hf)
 	}
 
 	ret = iavf_set_hena(adapter, hena);
-	if (ret)
-		return ret;
+	if (ret) {
+		PMD_DRV_LOG(WARNING,
+			    "fail to clean existing RSS, lack PF support");
+		return;
+	}
 
 	if (valid_rss_hf & ipv4_rss)
 		valid_rss_hf |= rss_hf & ETH_RSS_IPV4;
@@ -357,7 +364,6 @@ iavf_config_rss_hf(struct iavf_adapter *adapter, uint64_t rss_hf)
 			    rss_hf & ~valid_rss_hf);
 
 	vf->rss_hf = valid_rss_hf;
-	return 0;
 }
 
 static int
@@ -409,9 +415,7 @@ iavf_init_rss(struct iavf_adapter *adapter)
 			return ret;
 		}
 	} else {
-		ret = iavf_config_rss_hf(adapter, rss_conf->rss_hf);
-		if (ret != -ENOTSUP)
-			return ret;
+		iavf_config_rss_hf(adapter, rss_conf->rss_hf);
 	}
 
 	return 0;
@@ -1400,9 +1404,7 @@ iavf_dev_rss_hash_update(struct rte_eth_dev *dev,
 			return ret;
 		}
 	} else {
-		ret = iavf_config_rss_hf(adapter, rss_conf->rss_hf);
-		if (ret != -ENOTSUP)
-			return ret;
+		iavf_config_rss_hf(adapter, rss_conf->rss_hf);
 	}
 
 	return 0;
