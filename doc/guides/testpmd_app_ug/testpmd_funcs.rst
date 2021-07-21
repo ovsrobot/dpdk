@@ -2603,6 +2603,9 @@ when in mode 4 (link-aggregation-802.3ad)::
 
    testpmd> set bonding lacp dedicated_queues (port_id) (enable|disable)
 
+.. note::
+   Dedicated queues `do not currently work
+   <https://bugs.dpdk.org/show_bug.cgi?id=759>`__ on mlx5 NICs.
 
 set bonding agg_mode
 ~~~~~~~~~~~~~~~~~~~~
