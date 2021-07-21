@@ -17,7 +17,6 @@ struct packet_tracker {
 	unsigned short next_read;
 	unsigned short next_write;
 	unsigned short last_remain;
-	unsigned short ioat_space;
 };
 
 struct packet_tracker cb_tracker[MAX_VHOST_DEVICE];
@@ -113,7 +112,6 @@ open_ioat(const char *value)
 			goto out;
 		}
 		rte_rawdev_start(dev_id);
-		cb_tracker[dev_id].ioat_space = IOAT_RING_SIZE - 1;
 		dma_info->nr++;
 		i++;
 	}
@@ -140,7 +138,7 @@ ioat_transfer_data_cb(int vid, uint16_t queue_id,
 			src = descs[i_desc].src;
 			dst = descs[i_desc].dst;
 			i_seg = 0;
-			if (cb_tracker[dev_id].ioat_space < src->nr_segs)
+			if (rte_ioat_burst_capacity(dev_id) < src->nr_segs)
 				break;
 			while (i_seg < src->nr_segs) {
 				rte_ioat_enqueue_copy(dev_id,
@@ -155,7 +153,6 @@ ioat_transfer_data_cb(int vid, uint16_t queue_id,
 			}
 			write &= mask;
 			cb_tracker[dev_id].size_track[write] = src->nr_segs;
-			cb_tracker[dev_id].ioat_space -= src->nr_segs;
 			write++;
 		}
 	} else {
@@ -194,7 +191,6 @@ ioat_check_completed_copies_cb(int vid, uint16_t queue_id,
 		if (n_seg == 0)
 			return 0;
 
-		cb_tracker[dev_id].ioat_space += n_seg;
 		n_seg += cb_tracker[dev_id].last_remain;
 
 		read = cb_tracker[dev_id].next_read;
