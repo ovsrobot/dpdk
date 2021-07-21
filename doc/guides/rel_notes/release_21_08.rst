@@ -154,6 +154,11 @@ New Features
   The experimental PMD power management API now supports managing
   multiple Ethernet Rx queues per lcore.
 
+* **Added Sub-Function support for mlx5 PMDs**
+
+  Added Sub-Function support based on auxiliary bus for mlx5 PMDs:
+  net, vDPA, compress and regex.
+
 
 Removed Items
 -------------
