@@ -3097,6 +3097,10 @@ actually created and a handle returned.
                    const struct rte_flow_action *actions[],
                    struct rte_flow_error *error);
 
+The ability to create a flow rule may depend on the status (started/stopped)
+of the port for which the rule is being created. This behaviour is
+PMD specific. Seek relevant PMD documentation for details.
+
 Arguments:
 
 - ``port_id``: port identifier of Ethernet device.
