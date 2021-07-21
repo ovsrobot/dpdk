@@ -66,6 +66,7 @@ static bool dump_socket_mem_flag;
 static bool enable_fwd;
 static bool unique_data;
 static bool policy_mtr;
+static bool packet_mode;
 
 static struct rte_mempool *mbuf_mp;
 static uint32_t nb_lcores;
@@ -143,6 +144,7 @@ usage(char *progname)
 	printf("  --policy-g_actions: To set meter policy green color actions\n");
 	printf("  --meter-cir=N: to set committed information rate(CIR)"
 		" parameter in meter profile, default is %d\n", METER_CIR);
+	printf("  --packet-mode: To enable packet mode for meter profile\n");
 
 	printf("To set flow attributes:\n");
 	printf("  --ingress: set ingress attribute in flows\n");
@@ -585,6 +587,7 @@ args_parse(int argc, char **argv)
 		{ "policy-mtr",                 0, 0, 0 },
 		{ "policy-g_actions",           1, 0, 0 },
 		{ "meter-cir",                  1, 0, 0 },
+		{ "packet-mode",                0, 0, 0 },
 		/* Attributes */
 		{ "ingress",                    0, 0, 0 },
 		{ "egress",                     0, 0, 0 },
@@ -820,6 +823,8 @@ args_parse(int argc, char **argv)
 				n = atoi(optarg);
 				meter_cir = (uint64_t) n;
 			}
+			if (strcmp(lgopts[opt_idx].name, "packet-mode") == 0)
+				packet_mode = true;
 			if (strcmp(lgopts[opt_idx].name,
 					"policy-g_actions") == 0) {
 				token = strtok(optarg, ",");
@@ -1165,6 +1170,7 @@ create_meter_profile(void)
 		mp.srtcm_rfc2697.cir = meter_cir;
 		mp.srtcm_rfc2697.cbs = meter_cir / 8;
 		mp.srtcm_rfc2697.ebs = 0;
+		mp.packet_mode = packet_mode;
 		ret = rte_mtr_meter_profile_add
 			(port_id, DEFAULT_METER_PROF_ID, &mp, &error);
 		if (ret != 0) {

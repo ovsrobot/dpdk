@@ -108,6 +108,9 @@ The command line options are:
 *	``--meter-cir=N``
 	Set the committed information rate(CIR) parameter, default count is 1250000.
 
+*	``--packet-mode``
+	Enable packets mode for meter profile.
+
 Attributes:
 
 *	``--ingress``
