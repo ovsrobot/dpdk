@@ -83,12 +83,20 @@ struct rte_vhost_async_channel_ops {
 		uint16_t max_packets);
 };
 
+struct async_nethdr {
+	struct virtio_net_hdr hdr;
+	bool valid;
+};
+
 /**
- * inflight async packet information
+ * in-flight async packet information
  */
 struct async_inflight_info {
 	struct rte_mbuf *mbuf;
-	uint16_t descs; /* num of descs inflight */
+	union {
+		uint16_t descs; /* num of descs in-flight */
+		struct async_nethdr nethdr;
+	};
 	uint16_t nr_buffers; /* num of buffers inflight for packed ring */
 };
 
@@ -192,5 +200,32 @@ uint16_t rte_vhost_submit_enqueue_burst(int vid, uint16_t queue_id,
 __rte_experimental
 uint16_t rte_vhost_poll_enqueue_completed(int vid, uint16_t queue_id,
 		struct rte_mbuf **pkts, uint16_t count);
+
+/**
+ * This function tries to receive packets from the guest with offloading
+ * large copies to the async channel. The packets that are transfer completed
+ * are returned in "pkts". The other packets that their copies are submitted to
+ * the async channel but not completed are called "in-flight packets".
+ * This function will not return in-flight packets until their copies are
+ * completed by the async channel.
+ *
+ * @param vid
+ *  id of vhost device to dequeue data
+ * @param queue_id
+ *  queue id to dequeue data
+ * @param pkts
+ *  blank array to keep successfully dequeued packets
+ * @param count
+ *  size of the packet array
+ * @param nr_inflight
+ *  the amount of in-flight packets. If error occurred, its value is set to -1.
+ * @return
+ *  num of successfully dequeued packets
+ */
+__rte_experimental
+uint16_t
+rte_vhost_async_try_dequeue_burst(int vid, uint16_t queue_id,
+	struct rte_mempool *mbuf_pool, struct rte_mbuf **pkts, uint16_t count,
+	int *nr_inflight);
 
 #endif /* _RTE_VHOST_ASYNC_H_ */
