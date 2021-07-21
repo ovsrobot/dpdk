@@ -7,15 +7,39 @@ endif
 dpdk_conf.set('RTE_ARCH', 'ppc_64')
 dpdk_conf.set('RTE_ARCH_PPC_64', 1)
 
-# RHEL 7.x uses gcc 4.8.X which doesn't generate code for Power 9 CPUs,
-# though it will detect a Power 9 CPU when the "-mcpu=native" argument
-# is used, resulting in a build failure.
-power9_supported = cc.has_argument('-mcpu=power9')
-if not power9_supported
-    cpu_instruction_set = 'power8'
-    machine_args = ['-mcpu=power8', '-mtune=power8']
-    dpdk_conf.set('RTE_MACHINE','power8')
+# Checking compiler for supporting Power CPU platform
+# For newer Power(N) System that current gcc may not supoort it yet,
+# it falls back and try  N-1 and N-2
+check_cpu = find_program(join_paths(meson.current_source_dir(),
+		  'check_cpu_platform.sh'))
+
+target_cpu = run_command(check_cpu.path()).stdout().strip()
+
+cpu_int = target_cpu.to_int()
+cpu_flag = '-mcpu=power@0@'
+tune_flag = '-mtune=power@0@'
+machine_type = 'power@0@'
+debug = 'configure the compiler to build DPDK for POWER@0@ platform'
+
+if cc.has_argument(cpu_flag.format(cpu_int))
+
+  # target system cpu is supported by the compiler, use '-mcpu=native'
+  message(debug.format(target_cpu+'_native'))
+  machine_args = ['-mcpu=native']
+  dpdk_conf.set('RTE_MACHINE',machine_type.format(cpu_int))
+elif cc.has_argument(cpu_flag.format(cpu_int-1))
+  message(debug.format(cpu_int-1))
+  machine_args = [cpu_flag.format(cpu_int-1),tune_flag.format(cpu_int-1)]
+  dpdk_conf.set('RTE_MACHINE',machine_type.format(cpu_int-1))
+elif cc.has_argument(cpu_flag.format(cpu_int-2))
+  message(debug.format(cpu_int-2))
+  machine_args = [cpu_flag.format(cpu_int-2),tune_flag.format(cpu_int-2)]
+  dpdk_conf.set('RTE_MACHINE',machine_type.format(cpu_int-2))
+else
+  error('The compiler does not support POWER@0@ platform' .format(cpu_int))
 endif
+
+
 
 # Certain POWER9 systems can scale as high as 1536 LCORES, but setting such a
 # high value can waste memory, cause timeouts in time limited autotests, and is
