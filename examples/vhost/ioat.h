@@ -12,6 +12,9 @@
 #define MAX_VHOST_DEVICE 1024
 #define IOAT_RING_SIZE 4096
 #define MAX_ENQUEUED_SIZE 4096
+#define MAX_RING_COUNT	2
+#define ASYNC_ENQUEUE_VHOST	1
+#define ASYNC_DEQUEUE_VHOST	2
 
 struct dma_info {
 	struct rte_pci_addr addr;
@@ -20,6 +23,7 @@ struct dma_info {
 };
 
 struct dma_for_vhost {
+	int async_flag;
 	struct dma_info dmas[RTE_MAX_QUEUES_PER_PORT * 2];
 	uint16_t nr;
 };
@@ -36,6 +40,10 @@ uint32_t
 ioat_check_completed_copies_cb(int vid, uint16_t queue_id,
 		struct rte_vhost_async_status *opaque_data,
 		uint16_t max_packets);
+
+uint32_t get_async_flag_by_vid(int vid);
+uint32_t get_async_flag_by_socketid(int socketid);
+void init_vid2socketid_array(int vid, int socketid);
 #else
 static int open_ioat(const char *value __rte_unused)
 {
@@ -58,6 +66,23 @@ ioat_check_completed_copies_cb(int vid __rte_unused,
 		uint16_t max_packets __rte_unused)
 {
 	return -1;
+}
+
+static uint32_t
+get_async_flag_by_vid(int vid __rte_unused)
+{
+	return 0;
+}
+
+static uint32_t
+get_async_flag_by_socketid(int socketid __rte_unused)
+{
+	return 0;
+}
+
+static void
+init_vid2socketid_array(int vid __rte_unused, int socketid __rte_unused)
+{
 }
 #endif
 #endif /* _IOAT_H_ */
