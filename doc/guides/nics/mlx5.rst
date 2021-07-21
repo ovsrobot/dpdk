@@ -1797,7 +1797,11 @@ not represented in the system.
 All references to these flows held by the application should be discarded
 directly but neither destroyed nor flushed.
 
-The application should re-create the flows as required after the port restart.
+The application should re-create the flows as required after the port is
+started again.
+
+Creating flows before port start is not permitted. All flows the application
+wants to create have to be created after the port is started.
 
 Notes for testpmd
 -----------------
