@@ -118,6 +118,14 @@ Currently the Link Bonding PMD library supports following modes of operation:
        frames. Additionally LACP packets are included in the statistics, but
        they are not returned to the application.
 
+    This mode also supports enabling dedicated rx and tx queues for handling
+    LACP frames separately from fast application path, resulting in
+    a potential performance improvement.
+
+.. note::
+    Currently mlx5 doesn't work with enabled dedicated queues due to
+    an issue with RTE flow rule creation prior to port start.
+
 *   **Transmit Load Balancing (Mode 5):**
 
 .. figure:: img/bond-mode-5.*
