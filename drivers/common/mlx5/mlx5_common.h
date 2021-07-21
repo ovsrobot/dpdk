@@ -24,6 +24,7 @@
 
 /* Reported driver name. */
 #define MLX5_PCI_DRIVER_NAME "mlx5_pci"
+#define MLX5_AUXILIARY_DRIVER_NAME "mlx5_auxiliary"
 
 /* Bit-field manipulation. */
 #define BITFIELD_DECLARE(bf, type, size) \
@@ -109,6 +110,7 @@ pmd_drv_log_basename(const char *s)
 	int mkstr_size_##name = snprintf(NULL, 0, "" __VA_ARGS__); \
 	char name[mkstr_size_##name + 1]; \
 	\
+	memset(name, 0, mkstr_size_##name + 1); \
 	snprintf(name, sizeof(name), "" __VA_ARGS__)
 
 enum {
@@ -136,6 +138,10 @@ enum {
 	PCI_DEVICE_ID_MELLANOX_CONNECTX7BF = 0Xa2dc,
 };
 
+
+__rte_internal
+int mlx5_auxiliary_get_child_name(const char *dev, const char *node,
+				  char *child, size_t size);
 /* Maximum number of simultaneous unicast MAC addresses. */
 #define MLX5_MAX_UC_MAC_ADDRESSES 128
 /* Maximum number of simultaneous Multicast MAC addresses. */
