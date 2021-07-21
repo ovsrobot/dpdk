@@ -354,3 +354,9 @@ Actions:
 *       ``--meter``
         Add meter action to all flows actions.
         Currently, 1 meter profile -> N meter rules -> N rte flows.
+
+*       ``--policy-mtr``
+        Add policy-mtr to create meter with policy.
+
+*       ``--policy-g_actions``
+        Add policy-g_actions to specify policy green color actions.
