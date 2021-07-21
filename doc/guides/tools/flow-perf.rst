@@ -105,6 +105,9 @@ The command line options are:
         Such as header modify and encap actions. Default is using fixed
         data for any action that support data for all flows.
 
+*	``--meter-cir=N``
+	Set the committed information rate(CIR) parameter, default count is 1250000.
+
 Attributes:
 
 *	``--ingress``

@@ -141,6 +141,8 @@ usage(char *progname)
 		" actions that support data, such as header modify and encap actions\n");
 	printf("  --policy-mtr: To create meter with policy\n");
 	printf("  --policy-g_actions: To set meter policy green color actions\n");
+	printf("  --meter-cir=N: to set committed information rate(CIR)"
+		" parameter in meter profile, default is %d\n", METER_CIR);
 
 	printf("To set flow attributes:\n");
 	printf("  --ingress: set ingress attribute in flows\n");
@@ -582,7 +584,7 @@ args_parse(int argc, char **argv)
 		{ "cores",                      1, 0, 0 },
 		{ "policy-mtr",                 0, 0, 0 },
 		{ "policy-g_actions",           1, 0, 0 },
-		{ "meter-profile-alg",          1, 0, 0 },
+		{ "meter-cir",                  1, 0, 0 },
 		/* Attributes */
 		{ "ingress",                    0, 0, 0 },
 		{ "egress",                     0, 0, 0 },
@@ -814,6 +816,10 @@ args_parse(int argc, char **argv)
 			}
 			if (strcmp(lgopts[opt_idx].name, "policy-mtr") == 0)
 				policy_mtr = true;
+			if (strcmp(lgopts[opt_idx].name, "meter-cir") == 0) {
+				n = atoi(optarg);
+				meter_cir = (uint64_t) n;
+			}
 			if (strcmp(lgopts[opt_idx].name,
 					"policy-g_actions") == 0) {
 				token = strtok(optarg, ",");
