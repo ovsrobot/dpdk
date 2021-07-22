@@ -155,6 +155,11 @@ New Features
   The experimental PMD power management API now supports managing
   multiple Ethernet Rx queues per lcore.
 
+* **Added inflight packets clear API in vhost library.**
+
+  Added an API which can clear the inflight packets submitted to DMA
+  engine in vhost async data path.
+
 
 Removed Items
 -------------
