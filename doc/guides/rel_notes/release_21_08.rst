@@ -196,6 +196,10 @@ API Changes
   to be thread safe; all Rx queues affected by the API will now need to be
   stopped before making any changes to the power management scheme.
 
+* eal: ``rte_bsf32_safe`` now takes a 32 bit value for its first
+  argument. This fixes warnings about loss of precision when used
+  with some compilers settings.
+
 
 ABI Changes
 -----------
