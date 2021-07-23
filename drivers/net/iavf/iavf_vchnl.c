@@ -13,6 +13,7 @@
 #include <rte_common.h>
 
 #include <rte_debug.h>
+#include <rte_alarm.h>
 #include <rte_atomic.h>
 #include <rte_eal.h>
 #include <rte_ether.h>
@@ -1663,7 +1664,6 @@ iavf_request_queues(struct iavf_adapter *adapter, uint16_t num)
 {
 	struct rte_eth_dev *dev = adapter->eth_dev;
 	struct iavf_info *vf =  IAVF_DEV_PRIVATE_TO_VF(adapter);
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	struct virtchnl_vf_res_request vfres;
 	struct iavf_cmd_info args;
 	uint16_t num_queue_pairs;
@@ -1687,13 +1687,10 @@ iavf_request_queues(struct iavf_adapter *adapter, uint16_t num)
 	args.out_buffer = vf->aq_resp;
 	args.out_size = IAVF_AQ_BUF_SZ;
 
-	/*
-	 * disable interrupt to avoid the admin queue message to be read
-	 * before iavf_read_msg_from_pf.
-	 */
-	rte_intr_disable(&pci_dev->intr_handle);
+	rte_eal_alarm_cancel(iavf_dev_alarm_handler, dev);
 	err = iavf_execute_vf_cmd(adapter, &args);
-	rte_intr_enable(&pci_dev->intr_handle);
+	rte_eal_alarm_set(IAVF_ALARM_INTERVAL,
+			  iavf_dev_alarm_handler, dev);
 	if (err) {
 		PMD_DRV_LOG(ERR, "fail to execute command OP_REQUEST_QUEUES");
 		return err;
