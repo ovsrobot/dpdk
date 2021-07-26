@@ -42,7 +42,6 @@ struct mapped_vmbus_resource {
 
 	rte_uuid_t id;
 	int nb_maps;
-	struct vmbus_channel *primary;
 	struct vmbus_map maps[VMBUS_MAX_RESOURCE];
 	char path[PATH_MAX];
 };
