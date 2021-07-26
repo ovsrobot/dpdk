@@ -3499,8 +3499,7 @@ enum rte_eth_event_type {
 	RTE_ETH_EVENT_INTR_LSC, /**< lsc interrupt event */
 	RTE_ETH_EVENT_QUEUE_STATE,
 				/**< queue state event (enabled/disabled) */
-	RTE_ETH_EVENT_INTR_RESET,
-			/**< reset interrupt event, sent to VF on PF reset */
+	RTE_ETH_EVENT_INTR_RESET, /**< reset interrupt event */
 	RTE_ETH_EVENT_VF_MBOX,  /**< message from the VF received by PF */
 	RTE_ETH_EVENT_MACSEC,   /**< MACsec offload related event */
 	RTE_ETH_EVENT_INTR_RMV, /**< device removal event */
