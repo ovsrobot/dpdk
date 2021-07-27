@@ -112,7 +112,8 @@ vmbus_probe_one_driver(struct rte_vmbus_driver *dr,
 	dev->driver = dr;
 
 	if (dev->device.numa_node < 0) {
-		VMBUS_LOG(WARNING, "  Invalid NUMA socket, default to 0");
+		if (rte_socket_count() > 1)
+			VMBUS_LOG(INFO, "  Device is not NUMA-aware, defaulting socket to 0");
 		dev->device.numa_node = 0;
 	}
 
