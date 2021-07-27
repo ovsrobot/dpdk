@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2016-2018 Intel Corporation
+ * Copyright(c) 2016-2021 Intel Corporation
  */
 
 #include <rte_common.h>
@@ -179,6 +179,24 @@ snow3g_get_session(struct snow3g_qp *qp, struct rte_crypto_op *op)
 	return sess;
 }
 
+/** Check if conditions are met for digest-appended operations */
+static uint8_t *
+snow3g_digest_appended_in_src(struct rte_crypto_op *op)
+{
+	unsigned int auth_size, cipher_size;
+
+	auth_size = (op->sym->auth.data.offset >> 3) +
+		(op->sym->auth.data.length >> 3);
+	cipher_size = (op->sym->cipher.data.offset >> 3) +
+		(op->sym->cipher.data.length >> 3);
+
+	if (auth_size < cipher_size)
+		return rte_pktmbuf_mtod_offset(op->sym->m_src,
+				uint8_t *, auth_size);
+
+	return NULL;
+}
+
 /** Encrypt/decrypt mbufs with same cipher key. */
 static uint8_t
 process_snow3g_cipher_op(struct snow3g_qp *qp, struct rte_crypto_op **ops,
@@ -187,22 +205,52 @@ process_snow3g_cipher_op(struct snow3g_qp *qp, struct rte_crypto_op **ops,
 {
 	unsigned i;
 	uint8_t processed_ops = 0;
-	const void *src[SNOW3G_MAX_BURST];
-	void *dst[SNOW3G_MAX_BURST];
-	const void *iv[SNOW3G_MAX_BURST];
-	uint32_t num_bytes[SNOW3G_MAX_BURST];
+	const void *src[SNOW3G_MAX_BURST] = {NULL};
+	void *dst[SNOW3G_MAX_BURST] = {NULL};
+	uint8_t *digest_appended[SNOW3G_MAX_BURST] = {NULL };
+	const void *iv[SNOW3G_MAX_BURST] = {NULL};
+	uint32_t num_bytes[SNOW3G_MAX_BURST] = {0};
+	uint32_t cipher_off, cipher_len;
+	int unencrypted_bytes = 0;
 
 	for (i = 0; i < num_ops; i++) {
-		src[i] = rte_pktmbuf_mtod(ops[i]->sym->m_src, uint8_t *) +
-				(ops[i]->sym->cipher.data.offset >> 3);
-		dst[i] = ops[i]->sym->m_dst ?
-			rte_pktmbuf_mtod(ops[i]->sym->m_dst, uint8_t *) +
-				(ops[i]->sym->cipher.data.offset >> 3) :
-			rte_pktmbuf_mtod(ops[i]->sym->m_src, uint8_t *) +
-				(ops[i]->sym->cipher.data.offset >> 3);
+		cipher_off = ops[i]->sym->cipher.data.offset >> 3;
+		cipher_len = ops[i]->sym->cipher.data.length >> 3;
+		src[i] = rte_pktmbuf_mtod_offset(
+			ops[i]->sym->m_src,	uint8_t *, cipher_off);
+
+		/* If out-of-place operation */
+		if (ops[i]->sym->m_dst &&
+			ops[i]->sym->m_src != ops[i]->sym->m_dst) {
+			dst[i] = rte_pktmbuf_mtod_offset(
+				ops[i]->sym->m_dst, uint8_t *, cipher_off);
+
+			/* In case of out-of-place, auth-cipher operation
+			 * with partial encryption of the digest, copy
+			 * the remaining, unencrypted part.
+			 */
+			if (session->op == SNOW3G_OP_AUTH_CIPHER)
+				unencrypted_bytes =
+					(ops[i]->sym->auth.data.offset >> 3) +
+					(ops[i]->sym->auth.data.length >> 3) +
+					(SNOW3G_DIGEST_LENGTH) -
+					cipher_off - cipher_len;
+			if (unencrypted_bytes > 0)
+				rte_memcpy(
+					rte_pktmbuf_mtod_offset(
+						ops[i]->sym->m_dst, uint8_t *,
+						cipher_off + cipher_len),
+					rte_pktmbuf_mtod_offset(
+						ops[i]->sym->m_src, uint8_t *,
+						cipher_off + cipher_len),
+					unencrypted_bytes);
+		} else
+			dst[i] = rte_pktmbuf_mtod_offset(ops[i]->sym->m_src,
+						uint8_t *, cipher_off);
+
 		iv[i] = rte_crypto_op_ctod_offset(ops[i], uint8_t *,
 				session->cipher_iv_offset);
-		num_bytes[i] = ops[i]->sym->cipher.data.length >> 3;
+		num_bytes[i] = cipher_len;
 
 		processed_ops++;
 	}
@@ -210,6 +258,20 @@ process_snow3g_cipher_op(struct snow3g_qp *qp, struct rte_crypto_op **ops,
 	IMB_SNOW3G_F8_N_BUFFER(qp->mgr, &session->pKeySched_cipher, iv,
 			src, dst, num_bytes, processed_ops);
 
+	/* Take care of the raw digest data in src buffer */
+	for (i = 0; i < num_ops; i++) {
+		if (session->op == SNOW3G_OP_AUTH_CIPHER &&
+				ops[i]->sym->m_dst != NULL) {
+			digest_appended[i] =
+				snow3g_digest_appended_in_src(ops[i]);
+			/* Clear unencrypted digest from
+			 * the src buffer
+			 */
+			if (digest_appended[i] != NULL)
+				memset(digest_appended[i],
+					0, SNOW3G_DIGEST_LENGTH);
+		}
+	}
 	return processed_ops;
 }
 
@@ -222,6 +284,7 @@ process_snow3g_cipher_op_bit(struct snow3g_qp *qp,
 	uint8_t *src, *dst;
 	uint8_t *iv;
 	uint32_t length_in_bits, offset_in_bits;
+	int unencrypted_bytes = 0;
 
 	offset_in_bits = op->sym->cipher.data.offset;
 	src = rte_pktmbuf_mtod(op->sym->m_src, uint8_t *);
@@ -230,10 +293,30 @@ process_snow3g_cipher_op_bit(struct snow3g_qp *qp,
 		SNOW3G_LOG(ERR, "bit-level in-place not supported\n");
 		return 0;
 	}
+	length_in_bits = op->sym->cipher.data.length;
 	dst = rte_pktmbuf_mtod(op->sym->m_dst, uint8_t *);
+	/* In case of out-of-place, auth-cipher operation
+	 * with partial encryption of the digest, copy
+	 * the remaining, unencrypted part.
+	 */
+	if (session->op == SNOW3G_OP_AUTH_CIPHER)
+		unencrypted_bytes =
+			(op->sym->auth.data.offset >> 3) +
+			(op->sym->auth.data.length >> 3) +
+			(SNOW3G_DIGEST_LENGTH) -
+			(offset_in_bits >> 3) -
+			(length_in_bits >> 3);
+	if (unencrypted_bytes > 0)
+		rte_memcpy(
+			rte_pktmbuf_mtod_offset(
+				op->sym->m_dst, uint8_t *,
+				(length_in_bits >> 3)),
+			rte_pktmbuf_mtod_offset(
+				op->sym->m_src, uint8_t *,
+				(length_in_bits >> 3)),
+				unencrypted_bytes);
 	iv = rte_crypto_op_ctod_offset(op, uint8_t *,
 				session->cipher_iv_offset);
-	length_in_bits = op->sym->cipher.data.length;
 
 	IMB_SNOW3G_F8_1_BUFFER_BIT(qp->mgr, &session->pKeySched_cipher, iv,
 			src, dst, length_in_bits, offset_in_bits);
@@ -252,6 +335,7 @@ process_snow3g_hash_op(struct snow3g_qp *qp, struct rte_crypto_op **ops,
 	uint8_t *src, *dst;
 	uint32_t length_in_bits;
 	uint8_t *iv;
+	uint8_t digest_appended = 0;
 
 	for (i = 0; i < num_ops; i++) {
 		/* Data must be byte aligned */
@@ -260,6 +344,8 @@ process_snow3g_hash_op(struct snow3g_qp *qp, struct rte_crypto_op **ops,
 			SNOW3G_LOG(ERR, "Offset");
 			break;
 		}
+
+		dst = NULL;
 
 		length_in_bits = ops[i]->sym->auth.data.length;
 
@@ -271,6 +357,13 @@ process_snow3g_hash_op(struct snow3g_qp *qp, struct rte_crypto_op **ops,
 		if (session->auth_op == RTE_CRYPTO_AUTH_OP_VERIFY) {
 			dst = qp->temp_digest;
 
+			 /* Handle auth cipher verify oop case*/
+			if (session->op == SNOW3G_OP_CIPHER_AUTH &&
+				ops[i]->sym->m_dst != NULL)
+				src = rte_pktmbuf_mtod_offset(
+					ops[i]->sym->m_dst, uint8_t *,
+					ops[i]->sym->auth.data.offset >> 3);
+
 			IMB_SNOW3G_F9_1_BUFFER(qp->mgr,
 					&session->pKeySched_hash,
 					iv, src, length_in_bits, dst);
@@ -278,12 +371,23 @@ process_snow3g_hash_op(struct snow3g_qp *qp, struct rte_crypto_op **ops,
 			if (memcmp(dst, ops[i]->sym->auth.digest.data,
 					SNOW3G_DIGEST_LENGTH) != 0)
 				ops[i]->status = RTE_CRYPTO_OP_STATUS_AUTH_FAILED;
-		} else  {
-			dst = ops[i]->sym->auth.digest.data;
+		} else {
+			if (session->op == SNOW3G_OP_AUTH_CIPHER)
+				dst = snow3g_digest_appended_in_src(ops[i]);
+
+			if (dst != NULL)
+				digest_appended = 1;
+			else
+				dst = ops[i]->sym->auth.digest.data;
 
 			IMB_SNOW3G_F9_1_BUFFER(qp->mgr,
 					&session->pKeySched_hash,
 					iv, src, length_in_bits, dst);
+
+			/* Copy back digest from src to auth.digest.data */
+			if (digest_appended)
+				rte_memcpy(ops[i]->sym->auth.digest.data,
+					dst, SNOW3G_DIGEST_LENGTH);
 		}
 		processed_ops++;
 	}
@@ -564,7 +668,8 @@ cryptodev_snow3g_create(const char *name,
 			RTE_CRYPTODEV_FF_SYM_OPERATION_CHAINING |
 			RTE_CRYPTODEV_FF_NON_BYTE_ALIGNED_DATA |
 			RTE_CRYPTODEV_FF_SYM_SESSIONLESS |
-			RTE_CRYPTODEV_FF_OOP_LB_IN_LB_OUT;
+			RTE_CRYPTODEV_FF_OOP_LB_IN_LB_OUT |
+			RTE_CRYPTODEV_FF_DIGEST_ENCRYPTED;
 
 	mgr = alloc_mb_mgr(0);
 	if (mgr == NULL)
