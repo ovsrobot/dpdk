@@ -164,6 +164,15 @@ Runtime Config Options
 
     -a 0002:0e:00.0,tim_ring_ctl=[2-1023-1-0]
 
+- ``TIM external clock frequency``
+
+  The ``tim_ext_clk`` devagrs can be used to pass external clock frequency when
+  external clock source is selected.
+
+  For Example::
+
+    -a 0002:0e:00.0,tim_ext_clk=122880000
+
 Debugging Options
 -----------------
 

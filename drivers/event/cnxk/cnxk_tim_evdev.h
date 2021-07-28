@@ -39,6 +39,7 @@
 #define CNXK_TIM_STATS_ENA   "tim_stats_ena"
 #define CNXK_TIM_RINGS_LMT   "tim_rings_lmt"
 #define CNXK_TIM_RING_CTL    "tim_ring_ctl"
+#define CNXK_TIM_EXT_CLK     "tim_ext_clk"
 
 #define CNXK_TIM_SP	   0x1
 #define CNXK_TIM_MP	   0x2
@@ -94,6 +95,7 @@ struct cnxk_tim_evdev {
 	uint16_t min_ring_cnt;
 	uint8_t enable_stats;
 	uint16_t ring_ctl_cnt;
+	uint64_t ext_clk_frq;
 	struct cnxk_tim_ctl *ring_ctl_data;
 };
 
@@ -187,7 +189,9 @@ cnxk_tim_convert_clk_src(enum cnxk_tim_clk_src clk_src)
 	switch (clk_src) {
 	case RTE_EVENT_TIMER_ADAPTER_CPU_CLK:
 		return roc_model_runtime_is_cn9k() ? ROC_TIM_CLK_SRC_10NS :
-							   ROC_TIM_CLK_SRC_GTI;
+						     ROC_TIM_CLK_SRC_GTI;
+	case RTE_EVENT_TIMER_ADAPTER_EXT_CLK0:
+		return ROC_TIM_CLK_SRC_GPIO;
 	default:
 		return ROC_TIM_CLK_SRC_INVALID;
 	}

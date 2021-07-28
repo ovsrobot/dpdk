@@ -2,6 +2,8 @@
  * Copyright(C) 2021 Marvell.
  */
 
+#include <math.h>
+
 #include "cnxk_eventdev.h"
 #include "cnxk_tim_evdev.h"
 
@@ -115,12 +117,88 @@ cnxk_tim_ring_info_get(const struct rte_event_timer_adapter *adptr,
 		   sizeof(struct rte_event_timer_adapter_conf));
 }
 
+static inline void
+sort_multi_array(double ref_arr[], uint64_t arr1[], uint64_t arr2[],
+		 uint64_t arr3[], uint8_t sz)
+{
+	int x;
+
+	for (x = 0; x < sz - 1; x++) {
+		if (ref_arr[x] > ref_arr[x + 1]) {
+			PLT_SWAP(ref_arr[x], ref_arr[x + 1]);
+			PLT_SWAP(arr1[x], arr1[x + 1]);
+			PLT_SWAP(arr2[x], arr2[x + 1]);
+			PLT_SWAP(arr3[x], arr3[x + 1]);
+			x = -1;
+		}
+	}
+}
+
+static inline void
+populate_sample(uint64_t tck[], uint64_t ns[], double diff[], uint64_t dst[],
+		uint64_t req_tck, uint64_t clk_freq, double tck_ns, uint8_t sz,
+		bool mov_fwd)
+{
+	int i;
+
+	for (i = 0; i < sz; i++) {
+		tck[i] = i ? tck[i - 1] : req_tck;
+		do {
+			mov_fwd ? tck[i]++ : tck[i]--;
+			ns[i] = round((double)tck[i] * tck_ns);
+			if (round((double)tck[i] * tck_ns) >
+			    ((double)tck[i] * tck_ns))
+				continue;
+		} while (ns[i] % cnxk_tim_min_resolution_ns(clk_freq));
+		diff[i] = PLT_MAX((double)ns[i], (double)tck[i] * tck_ns) -
+			  PLT_MIN((double)ns[i], (double)tck[i] * tck_ns);
+		dst[i] = mov_fwd ? tck[i] - req_tck : req_tck - tck[i];
+	}
+}
+
+static void
+tim_adjust_resolution(uint64_t *req_ns, uint64_t *req_tck, double tck_ns,
+		      uint64_t clk_freq, uint64_t max_tmo)
+{
+#define MAX_SAMPLES 5
+	double rmax_diff[MAX_SAMPLES], rmin_diff[MAX_SAMPLES];
+	uint64_t min_tck[MAX_SAMPLES], max_tck[MAX_SAMPLES];
+	uint64_t min_dst[MAX_SAMPLES], max_dst[MAX_SAMPLES];
+	uint64_t min_ns[MAX_SAMPLES], max_ns[MAX_SAMPLES];
+	uint64_t m_tck = cnxk_tim_min_tmo_ticks(cnxk_tim_cntfrq());
+	int i;
+
+	populate_sample(max_tck, max_ns, rmax_diff, max_dst, *req_tck, clk_freq,
+			tck_ns, MAX_SAMPLES, true);
+	sort_multi_array(rmax_diff, max_dst, max_tck, max_ns, MAX_SAMPLES);
+
+	populate_sample(min_tck, min_ns, rmin_diff, min_dst, *req_tck, clk_freq,
+			tck_ns, MAX_SAMPLES, false);
+	sort_multi_array(rmin_diff, min_dst, min_tck, min_ns, MAX_SAMPLES);
+
+	for (i = 0; i < MAX_SAMPLES; i++) {
+		if (min_dst[i] < max_dst[i] && min_tck[i] > m_tck &&
+		    (max_tmo / min_ns[i]) <=
+			    (TIM_MAX_BUCKET_SIZE - TIM_MIN_BUCKET_SIZE)) {
+			*req_tck = min_tck[i];
+			*req_ns = min_ns[i];
+			break;
+		} else if ((max_tmo / max_ns[i]) <
+			   (TIM_MAX_BUCKET_SIZE - TIM_MIN_BUCKET_SIZE)) {
+			*req_tck = max_tck[i];
+			*req_ns = max_ns[i];
+			break;
+		}
+	}
+}
+
 static int
 cnxk_tim_ring_create(struct rte_event_timer_adapter *adptr)
 {
 	struct rte_event_timer_adapter_conf *rcfg = &adptr->data->conf;
 	struct cnxk_tim_evdev *dev = cnxk_tim_priv_get();
 	struct cnxk_tim_ring *tim_ring;
+	uint64_t interval;
 	int i, rc;
 
 	if (dev == NULL)
@@ -153,11 +231,35 @@ cnxk_tim_ring_create(struct rte_event_timer_adapter *adptr)
 			goto tim_hw_free;
 		}
 	}
+
 	tim_ring->ring_id = adptr->data->id;
 	tim_ring->clk_src = (int)rcfg->clk_src;
-	tim_ring->tck_nsec = RTE_ALIGN_MUL_CEIL(
-		rcfg->timer_tick_ns,
-		cnxk_tim_min_resolution_ns(cnxk_tim_cntfrq()));
+	if (rcfg->clk_src == RTE_EVENT_TIMER_ADAPTER_CPU_CLK) {
+		rcfg->timer_tick_ns = RTE_ALIGN_MUL_CEIL(
+			rcfg->timer_tick_ns,
+			cnxk_tim_min_resolution_ns(cnxk_tim_cntfrq()));
+	} else { /* External clock */
+		uint64_t req_ns, req_tck;
+		double tck_ns;
+
+		if (dev->ext_clk_frq == 0) {
+			rc = -ENODEV;
+			goto tim_hw_free;
+		}
+
+		req_ns = rcfg->timer_tick_ns;
+		tck_ns = NSECPERSEC / dev->ext_clk_frq;
+		req_tck = round(rcfg->timer_tick_ns / tck_ns);
+		tim_adjust_resolution(&req_ns, &req_tck, tck_ns,
+				      cnxk_tim_cntfrq(), rcfg->max_tmo_ns);
+		if ((rcfg->timer_tick_ns != req_ns) &&
+		    !(rcfg->flags & RTE_EVENT_TIMER_ADAPTER_F_ADJUST_RES)) {
+			rc = -ERANGE;
+			goto tim_hw_free;
+		}
+		rcfg->timer_tick_ns = ceil(req_tck * tck_ns);
+	}
+	tim_ring->tck_nsec = rcfg->timer_tick_ns;
 	tim_ring->max_tout = rcfg->max_tmo_ns;
 	tim_ring->nb_bkts = (tim_ring->max_tout / tim_ring->tck_nsec);
 	tim_ring->nb_timers = rcfg->nb_timers;
@@ -201,11 +303,15 @@ cnxk_tim_ring_create(struct rte_event_timer_adapter *adptr)
 	if (rc < 0)
 		goto tim_bkt_free;
 
-	rc = roc_tim_lf_config(
-		&dev->tim, tim_ring->ring_id,
-		cnxk_tim_convert_clk_src(tim_ring->clk_src), 0, 0,
-		tim_ring->nb_bkts, tim_ring->chunk_sz,
-		NSEC2TICK(tim_ring->tck_nsec, cnxk_tim_cntfrq()));
+	if (rcfg->clk_src == RTE_EVENT_TIMER_ADAPTER_CPU_CLK)
+		interval = NSEC2TICK(tim_ring->tck_nsec, cnxk_tim_cntfrq());
+	else
+		interval = NSEC2TICK(tim_ring->tck_nsec, dev->ext_clk_frq);
+
+	rc = roc_tim_lf_config(&dev->tim, tim_ring->ring_id,
+			       cnxk_tim_convert_clk_src(tim_ring->clk_src), 0,
+			       0, tim_ring->nb_bkts, tim_ring->chunk_sz,
+			       interval);
 	if (rc < 0) {
 		plt_err("Failed to configure timer ring");
 		goto tim_chnk_free;
@@ -480,6 +586,8 @@ cnxk_tim_parse_devargs(struct rte_devargs *devargs, struct cnxk_tim_evdev *dev)
 			   &dev->enable_stats);
 	rte_kvargs_process(kvlist, CNXK_TIM_RINGS_LMT, &parse_kvargs_value,
 			   &dev->min_ring_cnt);
+	rte_kvargs_process(kvlist, CNXK_TIM_EXT_CLK, &parse_kvargs_value,
+			   &dev->ext_clk_frq);
 	rte_kvargs_process(kvlist, CNXK_TIM_RING_CTL,
 			   &cnxk_tim_parse_kvargs_dict, &dev);
 
