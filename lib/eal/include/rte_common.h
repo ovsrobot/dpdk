@@ -810,6 +810,14 @@ rte_log2_u64(uint64_t v)
 /** Number of elements in the array. */
 #define	RTE_DIM(a)	(sizeof (a) / sizeof ((a)[0]))
 
+/** Macro to swap two numbers. */
+#define RTE_SWAP(a, b) \
+	__extension__ ({ \
+		typeof (a) _a = a; \
+		a = b; \
+		b = _a; \
+	})
+
 /**
  * Converts a numeric string to the equivalent uint64_t value.
  * As well as straight number conversion, also recognises the suffixes
