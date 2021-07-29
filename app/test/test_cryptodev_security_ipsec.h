@@ -47,6 +47,7 @@ struct ipsec_test_data {
 
 struct ipsec_test_flags {
 	bool display_alg;
+	bool icv_corrupt;
 };
 
 struct crypto_param {
