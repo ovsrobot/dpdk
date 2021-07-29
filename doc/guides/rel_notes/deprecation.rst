@@ -147,3 +147,7 @@ Deprecation Notices
 * cmdline: ``cmdline`` structure will be made opaque to hide platform-specific
   content. On Linux and FreeBSD, supported prior to DPDK 20.11,
   original structure will be kept until DPDK 21.11.
+
+* vhost: ``rte_vdpa_register_device``, ``rte_vdpa_unregister_device``,
+  ``rte_vhost_host_notifier_ctrl`` and ``rte_vdpa_relay_vring_used`` vDPA
+  driver API will be marked as internal in DPDK v21.11.
