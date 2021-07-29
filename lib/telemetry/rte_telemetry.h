@@ -46,7 +46,8 @@ enum rte_tel_value_type {
 	RTE_TEL_STRING_VAL, /** a string value */
 	RTE_TEL_INT_VAL,    /** a signed 32-bit int value */
 	RTE_TEL_U64_VAL,    /** an unsigned 64-bit int value */
-	RTE_TEL_CONTAINER, /** a container struct */
+	RTE_TEL_CONTAINER,  /** a container struct */
+	RTE_TEL_PTR_VAL,    /** a pointer value */
 };
 
 /**
@@ -138,6 +139,22 @@ int
 rte_tel_data_add_array_u64(struct rte_tel_data *d, uint64_t x);
 
 /**
+ * Add a pointer value to an array.
+ * The array must have been started by rte_tel_data_start_array() with
+ * RTE_TEL_PTR_VAL as the type parameter.
+ *
+ * @param d
+ *   The data structure passed to the callback
+ * @param x
+ *   The pointer value to be returned in the array
+ * @return
+ *   0 on success, negative errno on error
+ */
+__rte_experimental
+int
+rte_tel_data_add_array_ptr(struct rte_tel_data *d, void *x);
+
+/**
  * Add a container to an array. A container is an existing telemetry data
  * array. The array the container is to be added to must have been started by
  * rte_tel_data_start_array() with RTE_TEL_CONTAINER as the type parameter.
@@ -212,6 +229,24 @@ __rte_experimental
 int
 rte_tel_data_add_dict_u64(struct rte_tel_data *d,
 		const char *name, uint64_t val);
+
+/**
+ * Add a pointer value to a dictionary.
+ * The dict must have been started by rte_tel_data_start_dict().
+ *
+ * @param d
+ *   The data structure passed to the callback
+ * @param name
+ *   The name the value is to be stored under in the dict
+ * @param val
+ *   The pointer value to be stored in the dict
+ * @return
+ *   0 on success, negative errno on error, E2BIG on string truncation of name.
+ */
+__rte_experimental
+int
+rte_tel_data_add_dict_ptr(struct rte_tel_data *d,
+		const char *name, void *ptr);
 
 /**
  * Add a container to a dictionary. A container is an existing telemetry data
