@@ -11,18 +11,22 @@
 static int
 test_basic_array(void)
 {
-	const char *expected = "[\"meaning of life\",42]";
-	char buf[1024];
-	int used = 0;
+	char buf[1024], expected[80];
+	int used = 0, n = 42, *p;
 
 	printf("%s: ", __func__);
 	used = rte_tel_json_empty_array(buf, sizeof(buf), used);
 	if (used != 2 || strcmp(buf, "[]"))
 		return -1;
 
+	p = &n;
+	memset(expected, 0, sizeof(expected));
+	sprintf(expected, "[\"meaning of life\",42,\"%p\"]", p);
+
 	used = rte_tel_json_add_array_string(buf, sizeof(buf), used,
 		"meaning of life");
-	used = rte_tel_json_add_array_int(buf, sizeof(buf), used, 42);
+	used = rte_tel_json_add_array_int(buf, sizeof(buf), used, n);
+	used = rte_tel_json_add_array_ptr(buf, sizeof(buf), used, p);
 
 	printf("buf = '%s', expected = '%s'\n", buf, expected);
 	if (used != (int)strlen(expected))
@@ -33,14 +37,24 @@ test_basic_array(void)
 static int
 test_basic_obj(void)
 {
-	const char *expected = "{\"weddings\":4,\"funerals\":1}";
-	char buf[1024];
-	int used = 0;
+	char buf[1024], expected[80];
+	int used = 0, n = 42, *p;
+
+	p = &n;
+	memset(expected, 0, sizeof(expected));
+	sprintf(expected,
+			"{\"weddings\":4,\"funerals\":1,"
+			"\"address\":\"%p\",\"reset\":\"(nil)\"}", p);
 
 	used = rte_tel_json_add_obj_u64(buf, sizeof(buf), used,
 		"weddings", 4);
 	used = rte_tel_json_add_obj_u64(buf, sizeof(buf), used,
 		"funerals", 1);
+	used = rte_tel_json_add_obj_ptr(buf, sizeof(buf), used,
+		"address", p);
+	p = NULL;
+	used = rte_tel_json_add_obj_ptr(buf, sizeof(buf), used,
+		"reset", p);
 
 	printf("%s: buf = '%s', expected = '%s'\n", __func__, buf, expected);
 	if (used != (int)strlen(expected))
