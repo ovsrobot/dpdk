@@ -140,6 +140,7 @@ test_sources = files(
         'test_table_tables.c',
         'test_tailq.c',
         'test_thash.c',
+	'test_threads.c',
         'test_timer.c',
         'test_timer_perf.c',
         'test_timer_racecond.c',
@@ -276,6 +277,7 @@ fast_tests = [
         ['reorder_autotest', true],
         ['service_autotest', true],
         ['thash_autotest', true],
+	['threads_autotest, true'],
         ['trace_autotest', true],
 ]
 
