@@ -56,6 +56,26 @@ typedef struct {
 
 #endif /* RTE_HAS_CPUSET */
 
+#define RTE_DECLARE_MUTEX(private_lock)          rte_thread_mutex private_lock
+
+#define RTE_DEFINE_MUTEX(private_lock)\
+RTE_INIT(__rte_ ## private_lock ## _init)\
+{\
+	RTE_VERIFY(rte_thread_mutex_init(&private_lock) == 0);\
+}
+
+#define RTE_STATIC_MUTEX(private_lock)\
+static RTE_DECLARE_MUTEX(private_lock);\
+RTE_DEFINE_MUTEX(private_lock)
+
+
+/**
+ * Thread mutex representation.
+ */
+typedef struct rte_thread_mutex_tag {
+	void *mutex_id;  /**< mutex identifier */
+} rte_thread_mutex;
+
 /**
  * TLS key type, an opaque pointer.
  */
@@ -268,6 +288,28 @@ int rte_thread_join(rte_thread_t thread_id, unsigned long *value_ptr);
 __rte_experimental
 int rte_thread_detach(rte_thread_t thread_id);
 
+/**
+ * Set core affinity of the current thread.
+ * Support both EAL and non-EAL thread and update TLS.
+ *
+ * @param cpusetp
+ *   Pointer to CPU affinity to set.
+ *
+ * @return
+ *   On success, return 0; otherwise return -1;
+ */
+int rte_thread_set_affinity(rte_cpuset_t *cpusetp);
+
+/**
+ * Get core affinity of the current thread.
+ *
+ * @param cpusetp
+ *   Pointer to CPU affinity of current thread.
+ *   It presumes input is not NULL, otherwise it causes panic.
+ *
+ */
+void rte_thread_get_affinity(rte_cpuset_t *cpusetp);
+
 #endif /* RTE_HAS_CPUSET */
 
 /**
@@ -286,6 +328,58 @@ int rte_thread_detach(rte_thread_t thread_id);
 __rte_experimental
 int rte_thread_set_priority(rte_thread_t thread_id,
 		enum rte_thread_priority priority);
+
+/**
+ * Initializes a mutex.
+ *
+ * @param mutex
+ *    The mutex to be initialized.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_mutex_init(rte_thread_mutex *mutex);
+
+/**
+ * Locks a mutex.
+ *
+ * @param mutex
+ *    The mutex to be locked.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_mutex_lock(rte_thread_mutex *mutex);
+
+/**
+ * Unlocks a mutex.
+ *
+ * @param mutex
+ *    The mutex to be unlocked.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_mutex_unlock(rte_thread_mutex *mutex);
+
+/**
+ * Releases all resources associated with a mutex.
+ *
+ * @param mutex
+ *    The mutex to be uninitialized.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_mutex_destroy(rte_thread_mutex *mutex);
 
 /**
  * Create a TLS data key visible to all threads in the process.
