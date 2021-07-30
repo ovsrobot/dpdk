@@ -11,6 +11,10 @@ here.
 Deprecation Notices
 -------------------
 
+* eal: The lcore state FINISHED will be removed from the enum
+  rte_lcore_state_t. The lcore state WAIT is enough to represent the same
+  state.
+
 * kvargs: The function ``rte_kvargs_process`` will get a new parameter
   for returning key match count. It will ease handling of no-match case.
 
