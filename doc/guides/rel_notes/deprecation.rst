@@ -11,6 +11,13 @@ here.
 Deprecation Notices
 -------------------
 
+* eal: The expected behaviour of the function ``rte_ctrl_thread_create``
+  abstracted to allow for simplified implementation. The new behaviour is
+  as follows:
+  Creates a control thread with the given name. The affinity of the new
+  thread is based on the CPU affinity retrieved at the time rte_eal_init()
+  was called, the dataplane and service lcores are then excluded.
+
 * kvargs: The function ``rte_kvargs_process`` will get a new parameter
   for returning key match count. It will ease handling of no-match case.
 
