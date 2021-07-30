@@ -426,6 +426,10 @@ EXPERIMENTAL {
 
 	# added in 21.08
 	rte_power_monitor_multi; # WINDOWS_NO_EXPORT
+
+	# added in 21.11
+	rte_oops_signals_enabled; # WINDOWS_NO_EXPORT
+	rte_oops_decode; # WINDOWS_NO_EXPORT
 };
 
 INTERNAL {
