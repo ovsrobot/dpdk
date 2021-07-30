@@ -147,3 +147,8 @@ Deprecation Notices
 * cmdline: ``cmdline`` structure will be made opaque to hide platform-specific
   content. On Linux and FreeBSD, supported prior to DPDK 20.11,
   original structure will be kept until DPDK 21.11.
+
+* mbuf: The mbuf offload flags ``PKT_*`` will be renamed as ``RTE_MBUF_F_*``.
+  A compatibility layer will be kept until DPDK 22.11, except for the flags
+  that are already deprecated (ex: ``PKT_RX_L4_CKSUM_BAD``), which will
+  be removed.
