@@ -147,3 +147,11 @@ Deprecation Notices
 * cmdline: ``cmdline`` structure will be made opaque to hide platform-specific
   content. On Linux and FreeBSD, supported prior to DPDK 20.11,
   original structure will be kept until DPDK 21.11.
+
+* vhost: The experimental tags of ``rte_vhost_driver_get_protocol_features``,
+  ``rte_vhost_driver_get_queue_num``, ``rte_vhost_crypto_create``,
+  ``rte_vhost_crypto_free``, ``rte_vhost_crypto_fetch_requests``,
+  ``rte_vhost_crypto_finalize_requests``, ``rte_vhost_crypto_set_zero_copy``,
+  ``rte_vhost_va_from_guest_pa``, ``rte_vhost_extern_callback_register``,
+  and ``rte_vhost_driver_set_protocol_features`` APIs will be removed and the
+  APIs will be made stable in DPDK 21.11.
