@@ -542,7 +542,7 @@ test_one_case(const void *test_case, int sessionless)
 		printf("  %u) TestCase %s %s\n", test_index++,
 			tc.modex.description, test_msg);
 	} else {
-		for (i = 0; i < RTE_CRYPTO_ASYM_OP_LIST_END; i++) {
+		for (i = 0; i <= RTE_CRYPTO_ASYM_OP_SHARED_SECRET_COMPUTE; i++) {
 			if (tc.modex.xform_type == RTE_CRYPTO_ASYM_XFORM_RSA) {
 				if (tc.rsa_data.op_type_flags & (1 << i)) {
 					if (tc.rsa_data.key_exp) {
@@ -1028,7 +1028,7 @@ static inline void print_asym_capa(
 			rte_crypto_asym_xform_strings[capa->xform_type]);
 	printf("operation supported -");
 
-	for (i = 0; i < RTE_CRYPTO_ASYM_OP_LIST_END; i++) {
+	for (i = 0; i <= RTE_CRYPTO_ASYM_OP_SHARED_SECRET_COMPUTE; i++) {
 		/* check supported operations */
 		if (rte_cryptodev_asym_xform_capability_check_optype(capa, i))
 			printf(" %s",

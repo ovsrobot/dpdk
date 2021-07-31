@@ -94,8 +94,6 @@ enum rte_crypto_asym_xform_type {
 	 */
 	RTE_CRYPTO_ASYM_XFORM_ECPM,
 	/**< Elliptic Curve Point Multiplication */
-	RTE_CRYPTO_ASYM_XFORM_TYPE_LIST_END
-	/**< End of list */
 };
 
 /**
@@ -116,7 +114,6 @@ enum rte_crypto_asym_op_type {
 	/**< DH Public Key generation operation */
 	RTE_CRYPTO_ASYM_OP_SHARED_SECRET_COMPUTE,
 	/**< DH Shared Secret compute operation */
-	RTE_CRYPTO_ASYM_OP_LIST_END
 };
 
 /**
@@ -133,7 +130,6 @@ enum rte_crypto_rsa_padding_type {
 	/**< RSA PKCS#1 OAEP padding scheme */
 	RTE_CRYPTO_RSA_PADDING_PSS,
 	/**< RSA PKCS#1 PSS padding scheme */
-	RTE_CRYPTO_RSA_PADDING_TYPE_LIST_END
 };
 
 /**

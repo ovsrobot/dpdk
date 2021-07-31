@@ -742,7 +742,7 @@ qat_asym_session_configure(struct rte_cryptodev *dev,
 			err = -EINVAL;
 			goto error;
 		}
-	} else if (xform->xform_type >= RTE_CRYPTO_ASYM_XFORM_TYPE_LIST_END
+	} else if (xform->xform_type > RTE_CRYPTO_ASYM_XFORM_ECPM
 			|| xform->xform_type <= RTE_CRYPTO_ASYM_XFORM_NONE) {
 		QAT_LOG(ERR, "Invalid asymmetric crypto xform");
 		err = -EINVAL;
