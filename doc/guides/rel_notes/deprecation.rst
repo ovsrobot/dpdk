@@ -151,3 +151,7 @@ Deprecation Notices
 * security: The functions ``rte_security_set_pkt_metadata`` and
   ``rte_security_get_userdata`` will be made inline functions and additional
   flags will be added in structure ``rte_security_ctx`` in DPDK 21.11.
+
+* security: The IPsec SA config options ``struct rte_security_ipsec_sa_options``
+  will be updated with new fields to support new features like IPsec inner
+  checksum, tunnel header verification, TSO in case of protocol offload.
