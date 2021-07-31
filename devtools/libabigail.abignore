@@ -52,3 +52,7 @@
 ; https://sourceware.org/bugzilla/show_bug.cgi?id=28060
 [suppress_type]
 	name = rte_eth_dev_data
+
+; Ignore changes in reserved_opts bitfield of rte_security_ipsec_sa_options
+[suppress_variable]
+	name = reserved_opts

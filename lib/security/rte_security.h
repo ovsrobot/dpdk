@@ -181,6 +181,12 @@ struct rte_security_ipsec_sa_options {
 	 * * 0: Disable per session security statistics collection for this SA.
 	 */
 	uint32_t stats : 1;
+
+	/** Reserved bit fields for future extension
+	 *
+	 * Note: reduce number of bits in reserved_opts for every new option
+	 */
+	uint32_t reserved_opts : 24;
 };
 
 /** IPSec security association direction */
