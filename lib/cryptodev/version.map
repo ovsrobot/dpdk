@@ -1,4 +1,4 @@
-DPDK_21 {
+DPDK_22 {
 	global:
 
 	rte_crypto_aead_algorithm_strings;
@@ -9,6 +9,18 @@ DPDK_21 {
 	rte_crypto_cipher_operation_strings;
 	rte_crypto_op_pool_create;
 	rte_cryptodev_allocate_driver;
+
+	rte_cryptodev_asym_capability_get;
+	rte_cryptodev_asym_get_header_session_size;
+	rte_cryptodev_asym_get_private_session_size;
+	rte_cryptodev_asym_get_xform_enum;
+	rte_cryptodev_asym_session_clear;
+	rte_cryptodev_asym_session_create;
+	rte_cryptodev_asym_session_free;
+	rte_cryptodev_asym_session_init;
+	rte_cryptodev_asym_xform_capability_check_modlen;
+	rte_cryptodev_asym_xform_capability_check_optype;
+
 	rte_cryptodev_callback_register;
 	rte_cryptodev_callback_unregister;
 	rte_cryptodev_close;
@@ -61,16 +73,6 @@ DPDK_21 {
 EXPERIMENTAL {
 	global:
 
-	rte_cryptodev_asym_capability_get;
-	rte_cryptodev_asym_get_header_session_size;
-	rte_cryptodev_asym_get_private_session_size;
-	rte_cryptodev_asym_get_xform_enum;
-	rte_cryptodev_asym_session_clear;
-	rte_cryptodev_asym_session_create;
-	rte_cryptodev_asym_session_free;
-	rte_cryptodev_asym_session_init;
-	rte_cryptodev_asym_xform_capability_check_modlen;
-	rte_cryptodev_asym_xform_capability_check_optype;
 	rte_cryptodev_sym_cpu_crypto_process;
 	rte_cryptodev_sym_get_existing_header_session_size;
 	rte_cryptodev_sym_session_get_user_data;

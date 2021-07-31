@@ -247,7 +247,6 @@ rte_cryptodev_sym_capability_get(uint8_t dev_id,
  *   - Return description of the asymmetric crypto capability if exist.
  *   - Return NULL if the capability not exist.
  */
-__rte_experimental
 const struct rte_cryptodev_asymmetric_xform_capability *
 rte_cryptodev_asym_capability_get(uint8_t dev_id,
 		const struct rte_cryptodev_asym_capability_idx *idx);
@@ -317,7 +316,6 @@ rte_cryptodev_sym_capability_check_aead(
  *   - Return 1 if the op type is supported
  *   - Return 0 if unsupported
  */
-__rte_experimental
 int
 rte_cryptodev_asym_xform_capability_check_optype(
 	const struct rte_cryptodev_asymmetric_xform_capability *capability,
@@ -333,7 +331,6 @@ rte_cryptodev_asym_xform_capability_check_optype(
  *   - Return 0 if the parameters are in range of the capability.
  *   - Return -1 if the parameters are out of range of the capability.
  */
-__rte_experimental
 int
 rte_cryptodev_asym_xform_capability_check_modlen(
 	const struct rte_cryptodev_asymmetric_xform_capability *capability,
@@ -395,7 +392,6 @@ rte_cryptodev_get_aead_algo_enum(enum rte_crypto_aead_algorithm *algo_enum,
  * - Return -1 if string is not valid
  * - Return 0 if the string is valid
  */
-__rte_experimental
 int
 rte_cryptodev_asym_get_xform_enum(enum rte_crypto_asym_xform_type *xform_enum,
 		const char *xform_string);
@@ -1192,7 +1188,6 @@ rte_cryptodev_sym_session_create(struct rte_mempool *mempool);
  *  - On success return pointer to asym-session
  *  - On failure returns NULL
  */
-__rte_experimental
 struct rte_cryptodev_asym_session *
 rte_cryptodev_asym_session_create(struct rte_mempool *mempool);
 
@@ -1223,7 +1218,6 @@ rte_cryptodev_sym_session_free(struct rte_cryptodev_sym_session *sess);
  *  - -EINVAL if session is NULL.
  *  - -EBUSY if not all device private data has been freed.
  */
-__rte_experimental
 int
 rte_cryptodev_asym_session_free(struct rte_cryptodev_asym_session *sess);
 
@@ -1264,7 +1258,6 @@ rte_cryptodev_sym_session_init(uint8_t dev_id,
  *  - -ENOTSUP if crypto device does not support the crypto transform.
  *  - -ENOMEM if the private session could not be allocated.
  */
-__rte_experimental
 int
 rte_cryptodev_asym_session_init(uint8_t dev_id,
 			struct rte_cryptodev_asym_session *sess,
@@ -1299,7 +1292,6 @@ rte_cryptodev_sym_session_clear(uint8_t dev_id,
  *  - 0 if successful.
  *  - -EINVAL if device is invalid or session is NULL.
  */
-__rte_experimental
 int
 rte_cryptodev_asym_session_clear(uint8_t dev_id,
 			struct rte_cryptodev_asym_session *sess);
@@ -1336,7 +1328,6 @@ rte_cryptodev_sym_get_existing_header_session_size(
  * @return
  *   Size of the asymmetric header session.
  */
-__rte_experimental
 unsigned int
 rte_cryptodev_asym_get_header_session_size(void);
 
@@ -1364,7 +1355,6 @@ rte_cryptodev_sym_get_private_session_size(uint8_t dev_id);
  *   - Size of the asymmetric private data, if successful
  *   - 0 if device is invalid or does not have private session
  */
-__rte_experimental
 unsigned int
 rte_cryptodev_asym_get_private_session_size(uint8_t dev_id);
 
