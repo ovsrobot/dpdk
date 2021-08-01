@@ -163,3 +163,8 @@ Deprecation Notices
   clarification. Structure rte_flow_action_port_id will be extended to
   specify traffic direction to represented entity or ethdev port itself in
   DPDK 21.11.
+
+* ethdev: Flow API documentation is unclear if ethdev port used to create
+  a flow rule adds any implicit match criteria in the case of transfer rules.
+  The semantics will be clarified in DPDK 21.11 and it will require fixes in
+  drivers and applications which interpret it in a different way.
