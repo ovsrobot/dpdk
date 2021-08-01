@@ -302,6 +302,126 @@ test_array_with_array_u64_values(void)
 }
 
 static int
+test_case_array_ptr(void)
+{
+	int *p, i, j, a[] = {1, 2, 3, 4, 5};
+	char exp[120];
+
+	memset(&response_data, 0, sizeof(response_data));
+	memset(exp, 0, sizeof(exp));
+	rte_tel_data_start_array(&response_data, RTE_TEL_PTR_VAL);
+
+	i = sprintf(exp, "{\"/test\":[");
+	for (j = 0; j < 5; j++) {
+		p = &a[j];
+		i += sprintf(exp + i, "%ld,", (uintptr_t)p);
+		rte_tel_data_add_array_ptr(&response_data, p);
+	}
+
+	sprintf(exp + i - 1, "]}");
+	return TEST_OUTPUT(exp);
+}
+
+static int
+test_case_add_dict_ptr(void)
+{
+	int *p, i, j, a[] = {1, 2, 3, 4, 5};
+	char name[8], exp[160];
+
+	memset(&response_data, 0, sizeof(response_data));
+	memset(exp, 0, sizeof(exp));
+	rte_tel_data_start_dict(&response_data);
+
+	i = sprintf(exp, "{\"/test\":{");
+	for (j = 0; j < 5; j++) {
+		p = &a[j];
+		sprintf(name, "dict_%d", j);
+		i += sprintf(exp + i, "\"%s\":%ld,", name, (uintptr_t)p);
+		rte_tel_data_add_dict_ptr(&response_data, name, p);
+	}
+
+	sprintf(exp + i - 1, "}}");
+	return TEST_OUTPUT(exp);
+}
+
+static int
+test_dict_with_array_ptr_values(void)
+{
+	int *p, i, j, a[] = {1, 2, 3, 4, 5};
+	char exp[256];
+
+	struct rte_tel_data *child_data = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data, RTE_TEL_PTR_VAL);
+
+	struct rte_tel_data *child_data2 = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data2, RTE_TEL_PTR_VAL);
+
+	memset(&response_data, 0, sizeof(response_data));
+	memset(exp, 0, sizeof(exp));
+	rte_tel_data_start_dict(&response_data);
+
+	i = sprintf(exp, "{\"/test\":{\"dict_0\":[");
+	for (j = 0; j < 5; j++) {
+		p = &a[j];
+		i += sprintf(exp + i, "%ld,", (uintptr_t)p);
+		rte_tel_data_add_array_ptr(child_data, p);
+	}
+
+	i += sprintf(exp + i - 1, "],\"dict_1\":[");
+	for (j = 5; j > 0; j--) {
+		p = &a[j - 1];
+		i += sprintf(exp + i - 1, "%ld,", (uintptr_t)p);
+		rte_tel_data_add_array_ptr(child_data2, p);
+	}
+
+	sprintf(exp + i - 2, "]}}");
+	rte_tel_data_add_dict_container(&response_data, "dict_0",
+								child_data, 0);
+	rte_tel_data_add_dict_container(&response_data, "dict_1",
+								child_data2, 0);
+
+	return TEST_OUTPUT(exp);
+}
+
+static int
+test_array_with_array_ptr_values(void)
+{
+	int *p, i, j, a[] = {1, 2, 3, 4, 5};
+	char exp[256];
+
+	struct rte_tel_data *child_data = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data, RTE_TEL_PTR_VAL);
+
+	struct rte_tel_data *child_data2 = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data2, RTE_TEL_PTR_VAL);
+
+	memset(&response_data, 0, sizeof(response_data));
+	memset(exp, 0, sizeof(exp));
+	rte_tel_data_start_array(&response_data, RTE_TEL_CONTAINER);
+
+	i = sprintf(exp, "{\"/test\":[[");
+	for (j = 0; j < 5; j++) {
+		p = &a[j];
+		i += sprintf(exp + i, "%ld,", (uintptr_t)p);
+		rte_tel_data_add_array_ptr(child_data, p);
+	}
+
+	i += sprintf(exp + i - 1, "],[");
+	for (j = 5; j > 0; j--) {
+		p = &a[j - 1];
+		i += sprintf(exp + i - 1, "%ld,", (uintptr_t)p);
+		rte_tel_data_add_array_ptr(child_data2, p);
+	}
+
+	sprintf(exp + i - 2, "]]}");
+
+	rte_tel_data_add_array_container(&response_data, child_data, 0);
+	rte_tel_data_add_array_container(&response_data, child_data2, 0);
+
+	return TEST_OUTPUT(exp);
+}
+
+static int
 connect_to_socket(void)
 {
 	char buf[BUF_SIZE];
@@ -350,13 +470,17 @@ test_telemetry_data(void)
 
 	test_case test_cases[] = {test_case_array_string,
 			test_case_array_int, test_case_array_u64,
+			test_case_array_ptr,
 			test_case_add_dict_int, test_case_add_dict_u64,
+			test_case_add_dict_ptr,
 			test_case_add_dict_string,
 			test_dict_with_array_int_values,
 			test_dict_with_array_u64_values,
+			test_dict_with_array_ptr_values,
 			test_dict_with_array_string_values,
 			test_array_with_array_int_values,
 			test_array_with_array_u64_values,
+			test_array_with_array_ptr_values,
 			test_array_with_array_string_values };
 
 	rte_telemetry_register_cmd(REQUEST_CMD, test_cb, "Test");
