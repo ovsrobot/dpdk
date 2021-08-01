@@ -158,3 +158,8 @@ Deprecation Notices
 * security: The functions ``rte_security_set_pkt_metadata`` and
   ``rte_security_get_userdata`` will be made inline functions and additional
   flags will be added in structure ``rte_security_ctx`` in DPDK 21.11.
+
+* ethdev: Definition of the flow API action PORT_ID is ambiguous and needs
+  clarification. Structure rte_flow_action_port_id will be extended to
+  specify traffic direction to represented entity or ethdev port itself in
+  DPDK 21.11.
