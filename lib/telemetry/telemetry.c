@@ -157,8 +157,10 @@ container_to_json(const struct rte_tel_data *d, char *out_buf, size_t buf_len)
 	size_t used = 0;
 	unsigned int i;
 
-	if (d->type != RTE_TEL_ARRAY_U64 && d->type != RTE_TEL_ARRAY_INT
-			&& d->type != RTE_TEL_ARRAY_STRING)
+	if (d->type != RTE_TEL_ARRAY_U64
+		&& d->type != RTE_TEL_ARRAY_INT
+		&& d->type != RTE_TEL_ARRAY_PTR
+		&& d->type != RTE_TEL_ARRAY_STRING)
 		return snprintf(out_buf, buf_len, "null");
 
 	used = rte_tel_json_empty_array(out_buf, buf_len, 0);
@@ -167,6 +169,11 @@ container_to_json(const struct rte_tel_data *d, char *out_buf, size_t buf_len)
 			used = rte_tel_json_add_array_u64(out_buf,
 				buf_len, used,
 				d->data.array[i].u64val);
+	if (d->type == RTE_TEL_ARRAY_PTR)
+		for (i = 0; i < d->data_len; i++)
+			used = rte_tel_json_add_array_ptr(out_buf,
+				buf_len, used,
+				d->data.array[i].ptrval);
 	if (d->type == RTE_TEL_ARRAY_INT)
 		for (i = 0; i < d->data_len; i++)
 			used = rte_tel_json_add_array_int(out_buf,
@@ -226,6 +233,11 @@ output_json(const char *cmd, const struct rte_tel_data *d, int s)
 						buf_len, used,
 						v->name, v->value.u64val);
 				break;
+			case RTE_TEL_PTR_VAL:
+				used = rte_tel_json_add_obj_ptr(cb_data_buf,
+						buf_len, used,
+						v->name, v->value.ptrval);
+				break;
 			case RTE_TEL_CONTAINER:
 			{
 				char temp[buf_len];
@@ -248,6 +260,7 @@ output_json(const char *cmd, const struct rte_tel_data *d, int s)
 	case RTE_TEL_ARRAY_STRING:
 	case RTE_TEL_ARRAY_INT:
 	case RTE_TEL_ARRAY_U64:
+	case RTE_TEL_ARRAY_PTR:
 	case RTE_TEL_ARRAY_CONTAINER:
 		prefix_used = snprintf(out_buf, sizeof(out_buf), "{\"%.*s\":",
 				MAX_CMD_LEN, cmd);
@@ -269,6 +282,10 @@ output_json(const char *cmd, const struct rte_tel_data *d, int s)
 				used = rte_tel_json_add_array_u64(cb_data_buf,
 						buf_len, used,
 						d->data.array[i].u64val);
+			else if (d->type == RTE_TEL_ARRAY_PTR)
+				used = rte_tel_json_add_array_ptr(cb_data_buf,
+						buf_len, used,
+						d->data.array[i].ptrval);
 			else if (d->type == RTE_TEL_ARRAY_CONTAINER) {
 				char temp[buf_len];
 				const struct container *rec_data =

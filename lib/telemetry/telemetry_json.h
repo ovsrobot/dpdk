@@ -102,6 +102,19 @@ rte_tel_json_add_array_u64(char *buf, const int len, const int used,
 	return ret == 0 ? used : end + ret;
 }
 
+/* Appends a pointer value into the JSON array in the provided buffer. */
+static inline int
+rte_tel_json_add_array_ptr(char *buf, const int len, const int used,
+		void *ptr)
+{
+	int ret, end = used - 1; /* strip off final delimiter */
+	if (used <= 2) /* assume empty, since minimum is '[]' */
+		return __json_snprintf(buf, len, "[%ld]", (uintptr_t)ptr);
+
+	ret = __json_snprintf(buf + end, len - end, ",%ld]", (uintptr_t)ptr);
+	return ret == 0 ? used : end + ret;
+}
+
 /*
  * Add a new element with raw JSON value to the JSON array stored in the
  * provided buffer.
@@ -133,6 +146,24 @@ rte_tel_json_add_obj_u64(char *buf, const int len, const int used,
 
 	ret = __json_snprintf(buf + end, len - end, ",\"%s\":%"PRIu64"}",
 			name, val);
+	return ret == 0 ? used : end + ret;
+}
+
+/**
+ * Add a new element with uint64_t value to the JSON object stored in the
+ * provided buffer.
+ */
+static inline int
+rte_tel_json_add_obj_ptr(char *buf, const int len, const int used,
+		const char *name, void *ptr)
+{
+	int ret, end = used - 1;
+	if (used <= 2) /* assume empty, since minimum is '{}' */
+		return __json_snprintf(buf, len, "{\"%s\":%ld}", name,
+				(uintptr_t)ptr);
+
+	ret = __json_snprintf(buf + end, len - end, ",\"%s\":%ld}", name,
+				(uintptr_t)ptr);
 	return ret == 0 ? used : end + ret;
 }
 
