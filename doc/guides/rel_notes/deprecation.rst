@@ -158,3 +158,8 @@ Deprecation Notices
 * security: The functions ``rte_security_set_pkt_metadata`` and
   ``rte_security_get_userdata`` will be made inline functions and additional
   flags will be added in structure ``rte_security_ctx`` in DPDK 21.11.
+
+* net: The structure ``rte_ipv4_hdr`` will have two unions.
+  The first union is for existing ``version_ihl`` byte and new bitfield for
+  version and IHL. The second union is for existing ``fragment_offset`` and
+  new bitfield for fragment flags and offset.
