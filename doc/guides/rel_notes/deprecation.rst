@@ -131,6 +131,9 @@ Deprecation Notices
   consistent with existing outer header checksum status flag naming, which
   should help in reducing confusion about its usage.
 
+* ethdev: add new Rx queue offload flag ``RTE_ETH_RX_OFFLOAD_SHARED_RXQ`` and
+  ``shared_group`` field to struct rte_eth_rxconf.
+
 * ethdev: queue release callback parameter will be changed to device and queue
   ID to align with other queue configureation callback.
 
