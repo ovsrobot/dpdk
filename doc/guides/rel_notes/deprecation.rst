@@ -131,6 +131,9 @@ Deprecation Notices
   consistent with existing outer header checksum status flag naming, which
   should help in reducing confusion about its usage.
 
+* ethdev: queue release callback parameter will be changed to device and queue
+  ID to align with other queue configureation callback.
+
 * i40e: As there are both i40evf and iavf pmd, the functions of them are
   duplicated. And now more and more advanced features are developed on iavf.
   To keep consistent with kernel driver's name
