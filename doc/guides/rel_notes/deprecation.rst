@@ -158,3 +158,6 @@ Deprecation Notices
 * security: The functions ``rte_security_set_pkt_metadata`` and
   ``rte_security_get_userdata`` will be made inline functions and additional
   flags will be added in structure ``rte_security_ctx`` in DPDK 21.11.
+
+* net: structure ``rte_tcp_hdr`` will have a union that will provide
+  byte access to existing ``tcp_flags`` and add a bitfield for TCP flags.
