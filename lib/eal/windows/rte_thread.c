@@ -14,6 +14,11 @@ struct eal_tls_key {
 	DWORD thread_index;
 };
 
+struct thread_routine_ctx {
+	rte_thread_func thread_func;
+	void *routine_args;
+};
+
 /* Translates the most common error codes related to threads */
 static int
 thread_translate_win32_error(DWORD error)
@@ -306,6 +311,139 @@ rte_thread_attr_set_priority(rte_thread_attr_t *thread_attr,
 
 	thread_attr->priority = priority;
 
+	return 0;
+}
+
+static DWORD
+thread_func_wrapper(void *args)
+{
+	struct thread_routine_ctx *pctx = args;
+	unsigned long *func_ret = NULL;
+	struct thread_routine_ctx ctx;
+
+	ctx.thread_func = pctx->thread_func;
+	ctx.routine_args = pctx->routine_args;
+
+	free(pctx);
+
+	func_ret = (unsigned long *)ctx.thread_func(ctx.routine_args);
+	return *func_ret;
+}
+
+int
+rte_thread_create(rte_thread_t *thread_id,
+		  const rte_thread_attr_t *thread_attr,
+		  rte_thread_func thread_func, void *args)
+{
+	int ret = 0;
+	DWORD tid;
+	HANDLE thread_handle = NULL;
+	GROUP_AFFINITY thread_affinity;
+	struct thread_routine_ctx *ctx = NULL;
+
+	ctx = calloc(1, sizeof(*ctx));
+	if (ctx == NULL) {
+		RTE_LOG(DEBUG, EAL, "Insufficient memory for thread context allocations\n");
+		ret = ENOMEM;
+		goto cleanup;
+	}
+	ctx->routine_args = args;
+	ctx->thread_func = thread_func;
+
+	thread_handle = CreateThread(NULL, 0, thread_func_wrapper, ctx,
+		CREATE_SUSPENDED, &tid);
+	if (thread_handle == NULL) {
+		ret = thread_log_last_error("CreateThread()");
+		free(ctx);
+		goto cleanup;
+	}
+	thread_id->opaque_id = tid;
+
+	if (thread_attr != NULL) {
+		if (CPU_COUNT(&thread_attr->cpuset) > 0) {
+			ret = rte_convert_cpuset_to_affinity(
+							&thread_attr->cpuset,
+							&thread_affinity
+							);
+			if (ret != 0) {
+				RTE_LOG(DEBUG, EAL, "Unable to convert cpuset to thread affinity\n");
+				goto cleanup;
+			}
+
+			if (!SetThreadGroupAffinity(thread_handle,
+						    &thread_affinity, NULL)) {
+				ret = thread_log_last_error("SetThreadGroupAffinity()");
+				goto cleanup;
+			}
+		}
+		if (thread_attr->priority != RTE_THREAD_PRIORITY_UNDEFINED) {
+			ret = rte_thread_set_priority(*thread_id,
+						      thread_attr->priority);
+			if (ret != 0) {
+				RTE_LOG(DEBUG, EAL, "Unable to set thread priority\n");
+				goto cleanup;
+			}
+		}
+	}
+
+	if (ResumeThread(thread_handle) == (DWORD)-1) {
+		ret = thread_log_last_error("ResumeThread()");
+		goto cleanup;
+	}
+
+cleanup:
+	if (thread_handle != NULL) {
+		CloseHandle(thread_handle);
+		thread_handle = NULL;
+	}
+	return ret;
+}
+
+int
+rte_thread_join(rte_thread_t thread_id, unsigned long *value_ptr)
+{
+	HANDLE thread_handle;
+	DWORD result;
+	DWORD exit_code = 0;
+	BOOL err;
+	int ret = 0;
+
+	thread_handle = OpenThread(SYNCHRONIZE | THREAD_QUERY_INFORMATION,
+				   FALSE, thread_id.opaque_id);
+	if (thread_handle == NULL) {
+		ret = thread_log_last_error("OpenThread()");
+		goto cleanup;
+	}
+
+	result = WaitForSingleObject(thread_handle, INFINITE);
+	if (result != WAIT_OBJECT_0) {
+		ret = thread_log_last_error("WaitForSingleObject()");
+		goto cleanup;
+	}
+
+	if (value_ptr != NULL) {
+		err = GetExitCodeThread(thread_handle, &exit_code);
+		if (err == 0) {
+			ret = thread_log_last_error("GetExitCodeThread()");
+			goto cleanup;
+		}
+		*value_ptr = exit_code;
+	}
+
+cleanup:
+	if (thread_handle != NULL) {
+		CloseHandle(thread_handle);
+		thread_handle = NULL;
+	}
+
+	return ret;
+}
+
+int
+rte_thread_detach(rte_thread_t thread_id)
+{
+	/* No resources that need to be released. */
+	RTE_SET_USED(thread_id);
 	return 0;
 }
 
