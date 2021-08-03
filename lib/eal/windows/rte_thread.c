@@ -448,6 +448,59 @@ rte_thread_detach(rte_thread_t thread_id)
 }
 
 int
+rte_thread_mutex_init(rte_thread_mutex *mutex)
+{
+	int ret = 0;
+	CRITICAL_SECTION *m = NULL;
+
+	RTE_VERIFY(mutex != NULL);
+
+	m = calloc(1, sizeof(*m));
+	if (m == NULL) {
+		RTE_LOG(DEBUG, EAL, "Unable to initialize mutex. Insufficient memory!\n");
+		ret = ENOMEM;
+		goto cleanup;
+	}
+
+	InitializeCriticalSection(m);
+	mutex->mutex_id = m;
+	m = NULL;
+
+cleanup:
+	return ret;
+}
+
+int
+rte_thread_mutex_lock(rte_thread_mutex *mutex)
+{
+	RTE_VERIFY(mutex != NULL);
+
+	EnterCriticalSection(mutex->mutex_id);
+	return 0;
+}
+
+int
+rte_thread_mutex_unlock(rte_thread_mutex *mutex)
+{
+	RTE_VERIFY(mutex != NULL);
+
+	LeaveCriticalSection(mutex->mutex_id);
+	return 0;
+}
+
+int
+rte_thread_mutex_destroy(rte_thread_mutex *mutex)
+{
+	RTE_VERIFY(mutex != NULL);
+
+	DeleteCriticalSection(mutex->mutex_id);
+	free(mutex->mutex_id);
+	mutex->mutex_id = NULL;
+
+	return 0;
+}
+
+int
 rte_thread_key_create(rte_thread_key *key,
 		__rte_unused void (*destructor)(void *))
 {
