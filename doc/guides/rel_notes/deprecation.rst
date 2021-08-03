@@ -171,3 +171,7 @@ Deprecation Notices
 * security: The functions ``rte_security_set_pkt_metadata`` and
   ``rte_security_get_userdata`` will be made inline functions and additional
   flags will be added in structure ``rte_security_ctx`` in DPDK 21.11.
+
+* ethdev: The struct ``rte_flow_action_modify_data`` will be modified
+  to support modifying larger fields than 64 bits.
+  In addition, documentation will be updated to clarify byte order.
