@@ -175,3 +175,6 @@ Deprecation Notices
 * ethdev: The struct ``rte_flow_action_modify_data`` will be modified
   to support modifying larger fields than 64 bits.
   In addition, documentation will be updated to clarify byte order.
+
+* ethdev: Announce moving from dedicated modify function for each field,
+  to using the general ``rte_flow_modify_field`` action.
