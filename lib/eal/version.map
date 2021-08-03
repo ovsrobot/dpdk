@@ -426,6 +426,9 @@ EXPERIMENTAL {
 
 	# added in 21.08
 	rte_power_monitor_multi; # WINDOWS_NO_EXPORT
+
+	rte_thread_self;
+	rte_thread_equal;
 };
 
 INTERNAL {
