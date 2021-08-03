@@ -1745,6 +1745,11 @@ Supported hardware offloads
    |                       | |  rdma-core 33 | | rdma-core 33  |
    |                       | |  ConnectX-6 Dx| | ConnectX-6 Dx |
    +-----------------------+-----------------+-----------------+
+   | Metering Hierarchy    | |  DPDK 21.08   | | DPDK 21.08    |
+   |                       | |  OFED 5.3     | | OFED 5.3      |
+   |                       | |  N/A          | | N/A           |
+   |                       | |  ConnectX-6 Dx| | ConnectX-6 Dx |
+   +-----------------------+-----------------+-----------------+
    | Sampling              | |  DPDK 20.11   | | DPDK 20.11    |
    |                       | |  OFED 5.1-2   | | OFED 5.1-2    |
    |                       | |  rdma-core 32 | | N/A           |
