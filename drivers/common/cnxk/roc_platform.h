@@ -19,6 +19,7 @@
 #include <rte_pci.h>
 #include <rte_spinlock.h>
 #include <rte_string_fns.h>
+#include <rte_telemetry.h>
 
 #include "roc_bits.h"
 
@@ -138,6 +139,13 @@
 #define plt_lcore_id rte_lcore_id
 
 #define plt_strlcpy rte_strlcpy
+
+#define plt_tel_data		     rte_tel_data
+#define plt_tel_data_start_dict	     rte_tel_data_start_dict
+#define plt_tel_data_add_dict_int    rte_tel_data_add_dict_int
+#define plt_tel_data_add_dict_ptr    rte_tel_data_add_dict_ptr
+#define plt_tel_data_add_dict_string rte_tel_data_add_dict_string
+#define plt_tel_data_add_dict_u64    rte_tel_data_add_dict_u64
 
 /* Log */
 extern int cnxk_logtype_base;
