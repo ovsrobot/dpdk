@@ -86,10 +86,7 @@ static uint16_t nb_rxd = IPSEC_SECGW_RX_DESC_DEFAULT;
 static uint16_t nb_txd = IPSEC_SECGW_TX_DESC_DEFAULT;
 
 #define ETHADDR_TO_UINT64(addr) __BYTES_TO_UINT64( \
-		(addr)->addr_bytes[0], (addr)->addr_bytes[1], \
-		(addr)->addr_bytes[2], (addr)->addr_bytes[3], \
-		(addr)->addr_bytes[4], (addr)->addr_bytes[5], \
-		0, 0)
+		RTE_ETHER_ADDR_BYTES(addr), 0, 0)
 
 #define	FRAG_TBL_BUCKET_ENTRIES	4
 #define	MAX_FRAG_TTL_NS		(10LL * NS_PER_S)
