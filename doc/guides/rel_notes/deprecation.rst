@@ -171,3 +171,8 @@ Deprecation Notices
 * security: The functions ``rte_security_set_pkt_metadata`` and
   ``rte_security_get_userdata`` will be made inline functions and additional
   flags will be added in structure ``rte_security_ctx`` in DPDK 21.11.
+
+* security: The IPsec configuration structure
+  ``struct rte_security_ipsec_xform`` will be updated with new members to allow
+  SA lifetime configuration. A new structure would be introduced to replace the
+  current member, ``esn_soft_limit``.
