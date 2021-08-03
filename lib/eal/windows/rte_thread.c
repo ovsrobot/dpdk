@@ -200,6 +200,72 @@ cleanup:
 	return ret;
 }
 
+static int
+thread_map_priority_to_os_value(enum rte_thread_priority eal_pri,
+		int *os_pri, int *pri_class)
+{
+	/* Clear the output parameters */
+	*os_pri = -1;
+	*pri_class = -1;
+
+	switch (eal_pri) {
+	case RTE_THREAD_PRIORITY_NORMAL:
+		*pri_class = NORMAL_PRIORITY_CLASS;
+		*os_pri = THREAD_PRIORITY_NORMAL;
+		break;
+	case RTE_THREAD_PRIORITY_REALTIME_CRITICAL:
+		*pri_class = REALTIME_PRIORITY_CLASS;
+		*os_pri = THREAD_PRIORITY_TIME_CRITICAL;
+		break;
+	default:
+		RTE_LOG(DEBUG, EAL, "The requested priority value is invalid.\n");
+		return EINVAL;
+	}
+
+	return 0;
+}
+
+int
+rte_thread_set_priority(rte_thread_t thread_id,
+			enum rte_thread_priority priority)
+{
+	HANDLE thread_handle;
+	int priority_class;
+	int os_priority;
+	int ret = 0;
+
+	thread_handle = OpenThread(THREAD_SET_INFORMATION |
+		THREAD_QUERY_INFORMATION, FALSE,
+		thread_id.opaque_id);
+	if (thread_handle == NULL) {
+		ret = thread_log_last_error("OpenThread()");
+		goto cleanup;
+	}
+
+	ret = thread_map_priority_to_os_value(priority, &os_priority,
+		&priority_class);
+	if (ret != 0)
+		goto cleanup;
+
+	if (!SetPriorityClass(GetCurrentProcess(), priority_class)) {
+		ret = thread_log_last_error("SetPriorityClass()");
+		goto cleanup;
+	}
+
+	if (!SetThreadPriority(thread_handle, os_priority)) {
+		ret = thread_log_last_error("SetThreadPriority()");
+		goto cleanup;
+	}
+
+cleanup:
+	if (thread_handle != NULL) {
+		CloseHandle(thread_handle);
+		thread_handle = NULL;
+	}
+
+	return ret;
+}
+
 int
 rte_thread_attr_init(rte_thread_attr_t *attr)
 {
