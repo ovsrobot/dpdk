@@ -171,3 +171,7 @@ Deprecation Notices
 * security: The functions ``rte_security_set_pkt_metadata`` and
   ``rte_security_get_userdata`` will be made inline functions and additional
   flags will be added in structure ``rte_security_ctx`` in DPDK 21.11.
+
+* security: Hide stucture ``rte_security_session`` and expose an opaque
+  pointer for the private data to the application which can be attached
+  to the packet while enqueuing.
