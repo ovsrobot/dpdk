@@ -14,12 +14,13 @@ SW or mixed HW-SW implementation.
 
 The main features are:
 
-* Part of DPDK rte_ethdev API
-* Capability query API
-* Metering algorithms: RFC 2697 Single Rate Three Color Marker (srTCM), RFC 2698
-  and RFC 4115 Two Rate Three Color Marker (trTCM)
-* Policer actions (per meter output color): recolor, drop
-* Statistics (per policer output color)
+#. Part of DPDK rte_ethdev API
+#. Capability query API
+#. Metering algorithms: RFC 2697 Single Rate Three Color Marker (srTCM), RFC 2698
+   and RFC 4115 Two Rate Three Color Marker (trTCM)
+#. Policer actions (per meter output color): recolor, drop
+#. Statistics (per policer output color)
+#. Chaining the meter objects
 
 Configuration steps
 -------------------
@@ -64,3 +65,32 @@ The processing done for each input packet hitting an MTR object is:
 * Statistics: The set of counters maintained for each MTR object is
   configurable and subject to the implementation support. This set includes
   the number of packets and bytes dropped or passed for each output color.
+
+API Walk-through
+----------------
+
+.. _figure_meter_components:
+
+.. figure:: img/meter.*
+
+   Meter components
+
+This section will introduce the reader to the critical APIs to use
+the traffic meter and policing library.
+
+In general, the following steps performed by the application to configure
+the traffic meter and policing library.
+
+#. Application gets the meter driver capabilities using ``rte_mtr_capabilities_get()``.
+#. Application identifies the profile(s) needed for metering and creates it with
+   ``rte_mtr_meter_profile_add()``.
+#. Application identifies the policies needed and creates it with ``rte_mtr_meter_policy_add()``.
+#. An meter object consists of a profile and a policy. Use above created objects to create
+   meter object using ``rte_mtr_create()``. Application uses
+   ``struct rte_mtr_params::meter_profile_id`` and ``struct rte_mtr_params::meter_policy_id``
+   to specify the profile(created in step 2) and policy(created in step 3).
+#. Once the meter object is created, the application shall use ``rte_flow_create()`` API to
+   instantiate the meter object using ``RTE_FLOW_ACTION_TYPE_METER`` action.
+#. The API allows chaining the meter objects to create complex metering topology
+   by specifying ``struct rte_mtr_meter_policy_params::actions`` as
+   ``RTE_FLOW_ACTION_TYPE_METER`` the parent meter object.
