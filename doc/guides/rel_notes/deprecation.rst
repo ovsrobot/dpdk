@@ -195,3 +195,5 @@ Deprecation Notices
   communicate events such as soft expiry with IPsec in lookaside mode.
 
 * rib: The ``rib`` library will be promoted from experimental to stable.
+
+* fib: The ``fib`` library will be promoted from experimental to stable.
