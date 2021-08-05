@@ -193,3 +193,15 @@ Deprecation Notices
   reserved bytes to 2 (from 3), and use 1 byte to indicate warnings and other
   information from the crypto/security operation. This field will be used to
   communicate events such as soft expiry with IPsec in lookaside mode.
+
+* cryptodev: The structure ``rte_crypto_sym_vec`` would be updated to add
+  ``dest_sgl`` to support out of place processing. This field will be null for
+  inplace processing. This change is targeted for DPDK 21.11
+
+* cryptodev: The structure ``rte_crypto_vec`` would be updated to add
+  ``tot_len`` to support total buffer length. This is required for security
+  cases like IPsec and PDCP encryption offload to know how much additional
+  memory space is available in buffer other than data length so that driver/HW
+  can write expanded size data after encryption. This change is targeted for
+  DPDK 21.11
+
