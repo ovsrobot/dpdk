@@ -193,3 +193,5 @@ Deprecation Notices
   reserved bytes to 2 (from 3), and use 1 byte to indicate warnings and other
   information from the crypto/security operation. This field will be used to
   communicate events such as soft expiry with IPsec in lookaside mode.
+
+* rib: The ``rib`` library will be promoted from experimental to stable.
