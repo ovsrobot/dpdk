@@ -1024,6 +1024,19 @@ again:
 	for (i = 0; i < vhost_user.vsocket_cnt; i++) {
 		struct vhost_user_socket *vsocket = vhost_user.vsockets[i];
 
+		if (vsocket->is_server) {
+			/*
+			 * If r/wcb is executing, release vhost_user's
+			 * mutex lock, and try again since the r/wcb
+			 * may use the mutex lock.
+			 */
+			if (fdset_try_del(&vhost_user.fdset, vsocket->socket_fd) == -1) {
+				pthread_mutex_unlock(&vhost_user.mutex);
+				goto again;
+			}
+		 } else if (vsocket->reconnect)
+			vhost_user_remove_reconnect(vsocket);
+
 		if (!strcmp(vsocket->path, path)) {
 			pthread_mutex_lock(&vsocket->conn_mutex);
 			for (conn = TAILQ_FIRST(&vsocket->conn_list);
@@ -1056,21 +1069,8 @@ again:
 			pthread_mutex_unlock(&vsocket->conn_mutex);
 
 			if (vsocket->is_server) {
-				/*
-				 * If r/wcb is executing, release vhost_user's
-				 * mutex lock, and try again since the r/wcb
-				 * may use the mutex lock.
-				 */
-				if (fdset_try_del(&vhost_user.fdset,
-						vsocket->socket_fd) == -1) {
-					pthread_mutex_unlock(&vhost_user.mutex);
-					goto again;
-				}
-
 				close(vsocket->socket_fd);
 				unlink(path);
-			} else if (vsocket->reconnect) {
-				vhost_user_remove_reconnect(vsocket);
 			}
 
 			pthread_mutex_destroy(&vsocket->conn_mutex);
