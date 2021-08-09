@@ -9081,30 +9081,31 @@ err:
 	return err;
 }
 
-static inline bool
+static inline int
 mlx5_flow_tunnel_validate(struct rte_eth_dev *dev,
 			  struct rte_flow_tunnel *tunnel,
-			  const char *err_msg)
+			  struct rte_flow_error *error)
 {
-	err_msg = NULL;
 	if (!is_tunnel_offload_active(dev)) {
-		err_msg = "tunnel offload was not activated";
-		goto out;
+		return rte_flow_error_set(error, EINVAL,
+					  RTE_FLOW_ERROR_TYPE_ACTION_CONF, NULL,
+					  "tunnel offload was not activated");
 	} else if (!tunnel) {
-		err_msg = "no application tunnel";
-		goto out;
+		return rte_flow_error_set(error, EINVAL,
+					  RTE_FLOW_ERROR_TYPE_ACTION_CONF, NULL,
+					  "no application tunnel");
 	}
 
 	switch (tunnel->type) {
 	default:
-		err_msg = "unsupported tunnel type";
-		goto out;
+		return rte_flow_error_set(error, EINVAL,
+					  RTE_FLOW_ERROR_TYPE_ACTION_CONF, NULL,
+					  "unsupported tunnel type");
 	case RTE_FLOW_ITEM_TYPE_VXLAN:
 		break;
 	}
 
-out:
-	return !err_msg;
+	return 0;
 }
 
 static int
@@ -9116,13 +9117,11 @@ mlx5_flow_tunnel_decap_set(struct rte_eth_dev *dev,
 {
 	int ret;
 	struct mlx5_flow_tunnel *tunnel;
-	const char *err_msg = NULL;
-	bool verdict = mlx5_flow_tunnel_validate(dev, app_tunnel, err_msg);
 
-	if (!verdict)
-		return rte_flow_error_set(error, EINVAL,
-					  RTE_FLOW_ERROR_TYPE_ACTION_CONF, NULL,
-					  err_msg);
+	ret = mlx5_flow_tunnel_validate(dev, app_tunnel, error);
+	if (ret < 0)
+		return ret;
+
 	ret = mlx5_get_flow_tunnel(dev, app_tunnel, &tunnel);
 	if (ret < 0) {
 		return rte_flow_error_set(error, ret,
@@ -9143,13 +9142,11 @@ mlx5_flow_tunnel_match(struct rte_eth_dev *dev,
 {
 	int ret;
 	struct mlx5_flow_tunnel *tunnel;
-	const char *err_msg = NULL;
-	bool verdict = mlx5_flow_tunnel_validate(dev, app_tunnel, err_msg);
 
-	if (!verdict)
-		return rte_flow_error_set(error, EINVAL,
-					  RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
-					  err_msg);
+	ret = mlx5_flow_tunnel_validate(dev, app_tunnel, error);
+	if (ret < 0)
+		return ret;
+
 	ret = mlx5_get_flow_tunnel(dev, app_tunnel, &tunnel);
 	if (ret < 0) {
 		return rte_flow_error_set(error, ret,
