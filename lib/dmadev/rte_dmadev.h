@@ -799,9 +799,21 @@ struct rte_dmadev_sge {
  *   - <0: Error code returned by the driver copy function.
  */
 __rte_experimental
-int
+static inline int
 rte_dmadev_copy(uint16_t dev_id, uint16_t vchan, rte_iova_t src, rte_iova_t dst,
-		uint32_t length, uint64_t flags);
+		uint32_t length, uint64_t flags)
+{
+	struct rte_dmadev *dev = &rte_dmadevices[dev_id];
+
+#ifdef RTE_DMADEV_DEBUG
+	if (!rte_dmadev_is_valid_dev(dev_id) ||
+	    vchan >= dev->data->dev_conf.nb_vchans || length == 0)
+		return -EINVAL;
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->copy, -ENOTSUP);
+#endif
+
+	return (*dev->copy)(dev, vchan, src, dst, length, flags);
+}
 
 /**
  * @warning
@@ -836,10 +848,23 @@ rte_dmadev_copy(uint16_t dev_id, uint16_t vchan, rte_iova_t src, rte_iova_t dst,
  *   - <0: Error code returned by the driver copy scatter-gather list function.
  */
 __rte_experimental
-int
+static inline int
 rte_dmadev_copy_sg(uint16_t dev_id, uint16_t vchan, struct rte_dmadev_sge *src,
 		   struct rte_dmadev_sge *dst, uint16_t nb_src, uint16_t nb_dst,
-		   uint64_t flags);
+		   uint64_t flags)
+{
+	struct rte_dmadev *dev = &rte_dmadevices[dev_id];
+
+#ifdef RTE_DMADEV_DEBUG
+	if (!rte_dmadev_is_valid_dev(dev_id) ||
+	    vchan >= dev->data->dev_conf.nb_vchans ||
+	    src == NULL || dst == NULL || nb_src == 0 || nb_dst == 0)
+		return -EINVAL;
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->copy_sg, -ENOTSUP);
+#endif
+
+	return (*dev->copy_sg)(dev, vchan, src, dst, nb_src, nb_dst, flags);
+}
 
 /**
  * @warning
@@ -870,9 +895,21 @@ rte_dmadev_copy_sg(uint16_t dev_id, uint16_t vchan, struct rte_dmadev_sge *src,
  *   - <0: Error code returned by the driver fill function.
  */
 __rte_experimental
-int
+static inline int
 rte_dmadev_fill(uint16_t dev_id, uint16_t vchan, uint64_t pattern,
-		rte_iova_t dst, uint32_t length, uint64_t flags);
+		rte_iova_t dst, uint32_t length, uint64_t flags)
+{
+	struct rte_dmadev *dev = &rte_dmadevices[dev_id];
+
+#ifdef RTE_DMADEV_DEBUG
+	if (!rte_dmadev_is_valid_dev(dev_id) ||
+	    vchan >= dev->data->dev_conf.nb_vchans || length == 0)
+		return -EINVAL;
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->fill, -ENOTSUP);
+#endif
+
+	return (*dev->fill)(dev, vchan, pattern, dst, length, flags);
+}
 
 /**
  * @warning
@@ -893,8 +930,20 @@ rte_dmadev_fill(uint16_t dev_id, uint16_t vchan, uint64_t pattern,
  *   - <0: Failure to trigger hardware.
  */
 __rte_experimental
-int
-rte_dmadev_submit(uint16_t dev_id, uint16_t vchan);
+static inline int
+rte_dmadev_submit(uint16_t dev_id, uint16_t vchan)
+{
+	struct rte_dmadev *dev = &rte_dmadevices[dev_id];
+
+#ifdef RTE_DMADEV_DEBUG
+	if (!rte_dmadev_is_valid_dev(dev_id) ||
+	    vchan >= dev->data->dev_conf.nb_vchans)
+		return -EINVAL;
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->submit, -ENOTSUP);
+#endif
+
+	return (*dev->submit)(dev, vchan);
+}
 
 /**
  * @warning
@@ -920,9 +969,37 @@ rte_dmadev_submit(uint16_t dev_id, uint16_t vchan);
  *   must be less than or equal to the value of nb_cpls.
  */
 __rte_experimental
-uint16_t
+static inline uint16_t
 rte_dmadev_completed(uint16_t dev_id, uint16_t vchan, const uint16_t nb_cpls,
-		     uint16_t *last_idx, bool *has_error);
+		     uint16_t *last_idx, bool *has_error)
+{
+	struct rte_dmadev *dev = &rte_dmadevices[dev_id];
+	uint16_t idx;
+	bool err;
+
+#ifdef RTE_DMADEV_DEBUG
+	if (!rte_dmadev_is_valid_dev(dev_id) ||
+	    vchan >= dev->data->dev_conf.nb_vchans || nb_cpls == 0)
+		return 0;
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->completed, 0);
+#endif
+
+	/* Ensure the pointer values are non-null to simplify drivers.
+	 * In most cases these should be compile time evaluated, since this is
+	 * an inline function.
+	 * - If NULL is explicitly passed as parameter, then compiler knows the
+	 *   value is NULL
+	 * - If address of local variable is passed as parameter, then compiler
+	 *   can know it's non-NULL.
+	 */
+	if (last_idx == NULL)
+		last_idx = &idx;
+	if (has_error == NULL)
+		has_error = &err;
+
+	*has_error = false;
+	return (*dev->completed)(dev, vchan, nb_cpls, last_idx, has_error);
+}
 
 /**
  * @warning
@@ -952,10 +1029,27 @@ rte_dmadev_completed(uint16_t dev_id, uint16_t vchan, const uint16_t nb_cpls,
  *   status array are also set.
  */
 __rte_experimental
-uint16_t
+static inline uint16_t
 rte_dmadev_completed_status(uint16_t dev_id, uint16_t vchan,
 			    const uint16_t nb_cpls, uint16_t *last_idx,
-			    enum rte_dma_status_code *status);
+			    enum rte_dma_status_code *status)
+{
+	struct rte_dmadev *dev = &rte_dmadevices[dev_id];
+	uint16_t idx;
+
+#ifdef RTE_DMADEV_DEBUG
+	if (!rte_dmadev_is_valid_dev(dev_id) ||
+	    vchan >= dev->data->dev_conf.nb_vchans ||
+	    nb_cpls == 0 || status == NULL)
+		return 0;
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->completed_status, 0);
+#endif
+
+	if (last_idx == NULL)
+		last_idx = &idx;
+
+	return (*dev->completed_status)(dev, vchan, nb_cpls, last_idx, status);
+}
 
 #ifdef __cplusplus
 }
