@@ -29,6 +29,7 @@ Programmer's Guide
     regexdev
     rte_security
     rawdev
+    dmadev
     link_bonding_poll_mode_drv_lib
     timer_lib
     hash_lib
