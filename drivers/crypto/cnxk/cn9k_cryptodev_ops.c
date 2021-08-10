@@ -3,7 +3,7 @@
  */
 
 #include <rte_cryptodev.h>
-#include <rte_cryptodev_pmd.h>
+#include <cryptodev_pmd.h>
 
 #include "cn9k_cryptodev.h"
 #include "cn9k_cryptodev_ops.h"
