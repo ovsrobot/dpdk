@@ -208,7 +208,7 @@ Deprecation Notices
 
 * cryptodev: The structure ``rte_crypto_sym_vec`` would be updated to add
   ``dest_sgl`` to support out of place processing.
-  This field will be null for inplace processing.
+  This field will be null for in place processing.
   This change is targeted for DPDK 21.11.
 
 * cryptodev: The structure ``rte_crypto_vec`` would be updated to add
@@ -233,7 +233,7 @@ Deprecation Notices
 * security: The IPsec configuration structure
   ``struct rte_security_ipsec_xform`` will be updated with new members to allow
   SA lifetime configuration. A new structure would be introduced to replace the
-  current member, ``esn_soft_limit``.
+  current member ``esn_soft_limit``.
 
 * security: The structure ``rte_security_ipsec_xform`` will be extended with
   multiple fields: source and destination port of UDP encapsulation,
