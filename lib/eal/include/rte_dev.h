@@ -18,8 +18,8 @@ extern "C" {
 #endif
 
 #include <stdio.h>
-#include <sys/queue.h>
 
+#include <rte_os.h>
 #include <rte_config.h>
 #include <rte_compat.h>
 #include <rte_log.h>

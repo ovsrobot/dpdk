@@ -19,8 +19,8 @@ extern "C" {
 #endif
 
 #include <stdio.h>
-#include <sys/queue.h>
 
+#include <rte_os.h>
 #include <rte_log.h>
 #include <rte_dev.h>
 

@@ -11,6 +11,7 @@
  */
 
 #include <pthread_np.h>
+#include <sys/queue.h>
 
 typedef cpuset_t rte_cpuset_t;
 #define RTE_HAS_CPUSET

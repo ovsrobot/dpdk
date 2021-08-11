@@ -11,6 +11,7 @@
  */
 
 #include <sched.h>
+#include <sys/queue.h>
 
 #ifdef CPU_SETSIZE /* may require _GNU_SOURCE */
 typedef cpu_set_t rte_cpuset_t;
