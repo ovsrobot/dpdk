@@ -72,13 +72,13 @@ static uint32_t nfp_net_rx_queue_count(struct rte_eth_dev *dev,
 				       uint16_t queue_idx);
 static uint16_t nfp_net_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 				  uint16_t nb_pkts);
-static void nfp_net_rx_queue_release(void *rxq);
+static void nfp_net_rx_queue_release(struct rte_eth_dev *dev, uint16_t qid);
 static int nfp_net_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 				  uint16_t nb_desc, unsigned int socket_id,
 				  const struct rte_eth_rxconf *rx_conf,
 				  struct rte_mempool *mp);
 static int nfp_net_tx_free_bufs(struct nfp_net_txq *txq);
-static void nfp_net_tx_queue_release(void *txq);
+static void nfp_net_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid);
 static int nfp_net_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 				  uint16_t nb_desc, unsigned int socket_id,
 				  const struct rte_eth_txconf *tx_conf);
@@ -230,14 +230,15 @@ nfp_net_rx_queue_release_mbufs(struct nfp_net_rxq *rxq)
 }
 
 static void
-nfp_net_rx_queue_release(void *rx_queue)
+nfp_net_rx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
 {
-	struct nfp_net_rxq *rxq = rx_queue;
+	struct nfp_net_rxq *rxq = dev->data->rx_queues[qid];
 
 	if (rxq) {
 		nfp_net_rx_queue_release_mbufs(rxq);
 		rte_free(rxq->rxbufs);
 		rte_free(rxq);
+		dev->data->rx_queues[qid] = NULL;
 	}
 }
 
@@ -266,14 +267,15 @@ nfp_net_tx_queue_release_mbufs(struct nfp_net_txq *txq)
 }
 
 static void
-nfp_net_tx_queue_release(void *tx_queue)
+nfp_net_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
 {
-	struct nfp_net_txq *txq = tx_queue;
+	struct nfp_net_txq *txq = dev->data->tx_queues[qid];
 
 	if (txq) {
 		nfp_net_tx_queue_release_mbufs(txq);
 		rte_free(txq->txbufs);
 		rte_free(txq);
+		dev->data->tx_queues[qid] = NULL;
 	}
 }
 
@@ -1598,16 +1600,17 @@ nfp_net_rx_queue_setup(struct rte_eth_dev *dev,
 	 * Free memory prior to re-allocation if needed. This is the case after
 	 * calling nfp_net_stop
 	 */
-	if (dev->data->rx_queues[queue_idx]) {
-		nfp_net_rx_queue_release(dev->data->rx_queues[queue_idx]);
-		dev->data->rx_queues[queue_idx] = NULL;
-	}
+	if (dev->data->rx_queues[queue_idx])
+		nfp_net_rx_queue_release(dev, queue_idx);
 
 	/* Allocating rx queue data structure */
 	rxq = rte_zmalloc_socket("ethdev RX queue", sizeof(struct nfp_net_rxq),
 				 RTE_CACHE_LINE_SIZE, socket_id);
 	if (rxq == NULL)
 		return -ENOMEM;
+
+	dev->data->rx_queues[queue_idx] = rxq;
+	rxq->hw = hw;
 
 	/* Hw queues mapping based on firmware configuration */
 	rxq->qidx = queue_idx;
@@ -1642,7 +1645,7 @@ nfp_net_rx_queue_setup(struct rte_eth_dev *dev,
 
 	if (tz == NULL) {
 		PMD_DRV_LOG(ERR, "Error allocating rx dma");
-		nfp_net_rx_queue_release(rxq);
+		nfp_net_rx_queue_release(dev, queue_idx);
 		return -ENOMEM;
 	}
 
@@ -1655,7 +1658,7 @@ nfp_net_rx_queue_setup(struct rte_eth_dev *dev,
 					 sizeof(*rxq->rxbufs) * nb_desc,
 					 RTE_CACHE_LINE_SIZE, socket_id);
 	if (rxq->rxbufs == NULL) {
-		nfp_net_rx_queue_release(rxq);
+		nfp_net_rx_queue_release(dev, queue_idx);
 		return -ENOMEM;
 	}
 
@@ -1663,9 +1666,6 @@ nfp_net_rx_queue_setup(struct rte_eth_dev *dev,
 		   rxq->rxbufs, rxq->rxds, (unsigned long int)rxq->dma);
 
 	nfp_net_reset_rx_queue(rxq);
-
-	dev->data->rx_queues[queue_idx] = rxq;
-	rxq->hw = hw;
 
 	/*
 	 * Telling the HW about the physical address of the RX ring and number
@@ -1763,8 +1763,7 @@ nfp_net_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	if (dev->data->tx_queues[queue_idx]) {
 		PMD_TX_LOG(DEBUG, "Freeing memory prior to re-allocation %d",
 			   queue_idx);
-		nfp_net_tx_queue_release(dev->data->tx_queues[queue_idx]);
-		dev->data->tx_queues[queue_idx] = NULL;
+		nfp_net_tx_queue_release(dev, queue_idx);
 	}
 
 	/* Allocating tx queue data structure */
@@ -1774,6 +1773,9 @@ nfp_net_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 		PMD_DRV_LOG(ERR, "Error allocating tx dma");
 		return -ENOMEM;
 	}
+
+	dev->data->tx_queues[queue_idx] = txq;
+	txq->hw = hw;
 
 	/*
 	 * Allocate TX ring hardware descriptors. A memzone large enough to
@@ -1786,7 +1788,7 @@ nfp_net_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 				   socket_id);
 	if (tz == NULL) {
 		PMD_DRV_LOG(ERR, "Error allocating tx dma");
-		nfp_net_tx_queue_release(txq);
+		nfp_net_tx_queue_release(dev, queue_idx);
 		return -ENOMEM;
 	}
 
@@ -1812,16 +1814,13 @@ nfp_net_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 					 sizeof(*txq->txbufs) * nb_desc,
 					 RTE_CACHE_LINE_SIZE, socket_id);
 	if (txq->txbufs == NULL) {
-		nfp_net_tx_queue_release(txq);
+		nfp_net_tx_queue_release(dev, queue_idx);
 		return -ENOMEM;
 	}
 	PMD_TX_LOG(DEBUG, "txbufs=%p hw_ring=%p dma_addr=0x%" PRIx64,
 		   txq->txbufs, txq->txds, (unsigned long int)txq->dma);
 
 	nfp_net_reset_tx_queue(txq);
-
-	dev->data->tx_queues[queue_idx] = txq;
-	txq->hw = hw;
 
 	/*
 	 * Telling the HW about the physical address of the TX ring and number
