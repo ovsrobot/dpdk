@@ -384,6 +384,11 @@ The command line options are:
 
     Generate multiple flows in txonly mode.
 
+*   ``--rxq-share``
+
+    Create all queues in shared RX queue mode if device supports, queues in
+    same switch domain are shared according queue ID.
+
 *   ``--eth-link-speed``
 
     Set a forced link speed to the ethernet port::
