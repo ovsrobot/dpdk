@@ -4,7 +4,7 @@
 
 print_usage ()
 {
-	echo "usage: $(basename $0) [-h] <git_range>"
+	echo "usage: $(basename $0) [-h] <git_range> [<branch>]"
 }
 
 print_help ()
@@ -15,6 +15,7 @@ print_help ()
 	Find fixes to backport on previous versions.
 	It looks for the word "fix" in the headline or a tag "Fixes" or "Reverts".
 	The oldest bug origin is printed as well as partially fixed versions.
+	It looks into current branch or the branch specified.
 	END_OF_HELP
 }
 
@@ -33,14 +34,23 @@ while getopts h ARG ; do
 done
 shift $(($OPTIND - 1))
 [ $# -ge 1 ] || usage_error 'range argument required'
-range="$*"
+range="$1"
+branch="$2"
+
+# default to current branch as history reference
+[ -n "$branch" ] || branch="HEAD"
+# get real brnach name
+refbranch=$(git rev-parse --abbrev-ref $branch)
+range_last=$(git rev-parse $range | head -n1)
+if ! git branch -a --contains $range_last | grep -q -e " $refbranch$" -e " remotes/$refbranch$"; then
+	echo "range $range not included by branch $refbranch"
+	exit 1
+fi
 
 # get major release version of a commit
 commit_version () # <hash>
 {
 	local VER="v*.*"
-	# use current branch as history reference
-	local refbranch=$(git rev-parse --abbrev-ref HEAD)
 	local tag=$( (git tag -l "$VER" --contains $1 --sort=creatordate --merged $refbranch 2>&- ||
 		# tag --merged option has been introduced in git 2.7.0
 		# below is a fallback in case of old git version
@@ -49,9 +59,11 @@ commit_version () # <hash>
 			sed "s,.\+,$t,"
 		done) |
 		head -n1)
-	if [ -z "$tag" ] ; then
-		# before -rc1 tag of release in progress
-		cat VERSION | cut -d'.' -f-2
+	if [ -z "$tag" ]; then
+		if [ "$branch" = 'HEAD' ]; then
+			# before -rc1 tag of release in progress
+			cat VERSION | cut -d'.' -f-2
+		fi
 	else
 		echo $tag | sed 's,^v,,' | sed 's,-rc.*,,'
 	fi
