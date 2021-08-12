@@ -51,6 +51,8 @@ static struct rte_ether_addr cfg_ether_src =
 static struct rte_ether_addr cfg_ether_dst =
 	{{ 0x00, 0x01, 0x02, 0x03, 0x04, 0x01 }};
 
+RTE_DEFINE_PER_LCORE(int, _next_flow);
+
 #define IP_DEFTTL  64   /* from RFC 1340. */
 
 /*
@@ -80,7 +82,6 @@ pkt_burst_flow_gen(struct fwd_stream *fs)
 	uint32_t retry;
 	uint64_t tx_offloads;
 	uint64_t start_tsc = 0;
-	static int next_flow = 0;
 
 	get_start_cycles(&start_tsc);
 
@@ -136,7 +137,7 @@ pkt_burst_flow_gen(struct fwd_stream *fs)
 			ip_hdr->packet_id	= 0;
 			ip_hdr->src_addr	= rte_cpu_to_be_32(cfg_ip_src);
 			ip_hdr->dst_addr	= rte_cpu_to_be_32(cfg_ip_dst +
-								   next_flow);
+					RTE_PER_LCORE(_next_flow));
 			ip_hdr->total_length	= RTE_CPU_TO_BE_16(pkt_size -
 								   sizeof(*eth_hdr));
 			ip_hdr->hdr_checksum	= rte_ipv4_cksum(ip_hdr);
@@ -163,7 +164,8 @@ pkt_burst_flow_gen(struct fwd_stream *fs)
 		}
 		pkts_burst[nb_pkt] = pkt;
 
-		next_flow = (next_flow + 1) % cfg_n_flows;
+		RTE_PER_LCORE(_next_flow) = (RTE_PER_LCORE(_next_flow) + 1) %
+				cfg_n_flows;
 	}
 
 	nb_tx = rte_eth_tx_burst(fs->tx_port, fs->tx_queue, pkts_burst, nb_pkt);
@@ -183,9 +185,9 @@ pkt_burst_flow_gen(struct fwd_stream *fs)
 	inc_tx_burst_stats(fs, nb_tx);
 	if (unlikely(nb_tx < nb_pkt)) {
 		/* Back out the flow counter. */
-		next_flow -= (nb_pkt - nb_tx);
-		while (next_flow < 0)
-			next_flow += cfg_n_flows;
+		RTE_PER_LCORE(_next_flow) -= (nb_pkt - nb_tx);
+		while (RTE_PER_LCORE(_next_flow) < 0)
+			RTE_PER_LCORE(_next_flow) += cfg_n_flows;
 
 		fs->fwd_dropped += nb_pkt - nb_tx;
 		do {
