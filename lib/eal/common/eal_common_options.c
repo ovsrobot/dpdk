@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/queue.h>
 #ifndef RTE_EXEC_ENV_WINDOWS
 #include <syslog.h>
 #endif
