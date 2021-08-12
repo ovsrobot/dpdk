@@ -53,6 +53,8 @@ static struct rte_ether_addr cfg_ether_dst =
 
 #define IP_DEFTTL  64   /* from RFC 1340. */
 
+RTE_DEFINE_PER_LCORE(int, _next_flow);
+
 /*
  * Multi-flow generation mode.
  *
@@ -80,7 +82,7 @@ pkt_burst_flow_gen(struct fwd_stream *fs)
 	uint32_t retry;
 	uint64_t tx_offloads;
 	uint64_t start_tsc = 0;
-	static int next_flow = 0;
+	int next_flow = RTE_PER_LCORE(_next_flow);
 
 	get_start_cycles(&start_tsc);
 
@@ -192,6 +194,8 @@ pkt_burst_flow_gen(struct fwd_stream *fs)
 			rte_pktmbuf_free(pkts_burst[nb_tx]);
 		} while (++nb_tx < nb_pkt);
 	}
+
+	RTE_PER_LCORE(_next_flow) = next_flow;
 
 	get_end_cycles(fs, start_tsc);
 }
