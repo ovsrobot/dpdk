@@ -113,6 +113,10 @@ struct rte_ipsec_sa {
 	uint8_t iv_len;
 	uint8_t pad_align;
 	uint8_t tos_mask;
+	struct {
+		uint8_t enabled:1;
+		uint16_t mss;
+	} tso;
 
 	/* template for tunnel header */
 	uint8_t hdr[IPSEC_MAX_HDR_SIZE];
