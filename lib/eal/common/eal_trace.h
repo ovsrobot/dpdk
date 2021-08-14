@@ -5,6 +5,8 @@
 #ifndef __EAL_TRACE_H
 #define __EAL_TRACE_H
 
+#include <sys/queue.h>
+
 #include <rte_cycles.h>
 #include <rte_log.h>
 #include <rte_malloc.h>

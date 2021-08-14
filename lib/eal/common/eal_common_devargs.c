@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <sys/queue.h>
 
 #include <rte_bus.h>
 #include <rte_class.h>
@@ -18,6 +19,7 @@
 #include <rte_errno.h>
 #include <rte_kvargs.h>
 #include <rte_log.h>
+#include <rte_os.h>
 #include <rte_tailq.h>
 #include "eal_private.h"
 
@@ -291,7 +293,7 @@ rte_devargs_insert(struct rte_devargs **da)
 	if (*da == NULL || (*da)->bus == NULL)
 		return -1;
 
-	TAILQ_FOREACH_SAFE(listed_da, &devargs_list, next, tmp) {
+	RTE_TAILQ_FOREACH_SAFE(listed_da, &devargs_list, next, tmp) {
 		if (listed_da == *da)
 			/* devargs already in the list */
 			return 0;
@@ -358,7 +360,7 @@ rte_devargs_remove(struct rte_devargs *devargs)
 	if (devargs == NULL || devargs->bus == NULL)
 		return -1;
 
-	TAILQ_FOREACH_SAFE(d, &devargs_list, next, tmp) {
+	RTE_TAILQ_FOREACH_SAFE(d, &devargs_list, next, tmp) {
 		if (strcmp(d->bus->name, devargs->bus->name) == 0 &&
 		    strcmp(d->name, devargs->name) == 0) {
 			TAILQ_REMOVE(&devargs_list, d, next);
