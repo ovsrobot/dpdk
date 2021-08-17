@@ -3459,6 +3459,33 @@ rte_eth_dev_info_get(uint16_t port_id, struct rte_eth_dev_info *dev_info)
 }
 
 int
+rte_eth_dev_conf_info_get(uint16_t port_id,
+				struct rte_eth_dev_conf_info *dev_conf_info)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (dev_conf_info == NULL) {
+		RTE_ETHDEV_LOG(ERR, "Cannot get ethdev port %u config info to NULL\n",
+			port_id);
+		return -EINVAL;
+	}
+
+	/*
+	 * Init dev_conf_info before port_id check since caller does not have
+	 * return status and does not know if get is successful or not.
+	 */
+	memset(dev_conf_info, 0, sizeof(struct rte_eth_dev_conf_info));
+
+	dev_conf_info->rx_offloads = dev->data->dev_conf.rxmode.offloads;
+	dev_conf_info->tx_offloads = dev->data->dev_conf.txmode.offloads;
+
+	return 0;
+}
+
+int
 rte_eth_dev_get_supported_ptypes(uint16_t port_id, uint32_t ptype_mask,
 				 uint32_t *ptypes, int num)
 {

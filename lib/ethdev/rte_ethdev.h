@@ -1588,6 +1588,15 @@ struct rte_eth_dev_info {
 };
 
 /**
+ * Ethernet device configuration information structure.
+ * Used to retrieve information about configured device.
+ */
+struct rte_eth_dev_conf_info {
+	uint64_t rx_offloads; /**rxmode offloads */
+	uint64_t tx_offloads; /**txmode offloads */
+};
+
+/**
  * RX/TX queue states
  */
 #define RTE_ETH_QUEUE_STATE_STOPPED 0
@@ -3057,6 +3066,23 @@ int rte_eth_macaddr_get(uint16_t port_id, struct rte_ether_addr *mac_addr);
  *   - (-EINVAL) if bad parameter.
  */
 int rte_eth_dev_info_get(uint16_t port_id, struct rte_eth_dev_info *dev_info);
+
+/**
+ * Retrieve the contextual information of an Ethernet device.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param dev_conf_info
+ *   A pointer to a structure of type *rte_eth_dev_conf_info* to be filled with
+ *   the contextual information of the Ethernet device.
+ * @return
+ *   - (0) if successful.
+ *   - (-ENOTSUP) if support for dev_infos_get() does not exist for the device.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-EINVAL) if bad parameter.
+ */
+int rte_eth_dev_conf_info_get(uint16_t port_id,
+				struct rte_eth_dev_conf_info *dev_conf_info);
 
 /**
  * Retrieve the firmware version of a device.

@@ -2461,6 +2461,9 @@ start_port(portid_t pid)
 		}
 
 		if (port->need_reconfig > 0) {
+			struct rte_eth_dev_conf_info dev_conf_info;
+			int k;
+
 			port->need_reconfig = 0;
 
 			if (flow_isolate_all) {
@@ -2497,6 +2500,36 @@ start_port(portid_t pid)
 				/* try to reconfigure port next time */
 				port->need_reconfig = 1;
 				return -1;
+			}
+			/* get offloads */
+			if (0 !=
+				eth_dev_conf_info_get_print_err(pi,
+							&dev_conf_info)) {
+				rte_exit(EXIT_FAILURE,
+				    "rte_eth_dev_conf_info_get() failed\n");
+				return -1;
+			}
+			/* Apply Rx offloads configuration */
+			if (dev_conf_info.rx_offloads !=
+				port->dev_conf.rxmode.offloads) {
+				port->dev_conf.rxmode.offloads =
+					dev_conf_info.rx_offloads;
+				for (k = 0;
+				     k < port->dev_info.max_rx_queues;
+				     k++)
+					port->rx_conf[k].offloads =
+						dev_conf_info.rx_offloads;
+			}
+			/* Apply Tx offloads configuration */
+			if (dev_conf_info.tx_offloads !=
+				port->dev_conf.txmode.offloads) {
+				port->dev_conf.txmode.offloads =
+					dev_conf_info.tx_offloads;
+				for (k = 0;
+				     k < port->dev_info.max_tx_queues;
+				     k++)
+					port->tx_conf[k].offloads =
+						dev_conf_info.tx_offloads;
 			}
 		}
 		if (port->need_reconfig_queues > 0) {
