@@ -692,6 +692,11 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
+	if (eal_oops_init()) {
+		rte_eal_init_alert("oops init failed.");
+		rte_errno = ENOENT;
+	}
+
 	thread_id = pthread_self();
 
 	eal_reset_internal_config(internal_conf);
@@ -974,6 +979,7 @@ rte_eal_cleanup(void)
 	rte_trace_save();
 	eal_trace_fini();
 	eal_cleanup_config(internal_conf);
+	eal_oops_fini();
 	return 0;
 }
 
