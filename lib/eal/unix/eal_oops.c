@@ -163,6 +163,25 @@ archinfo_dump(ucontext_t *uc)
 	stack_code_dump((void *)mc->gregs[REG_RSP], (void *)mc->gregs[REG_RIP]);
 }
 
+#elif defined(RTE_ARCH_ARM64) && defined(RTE_EXEC_ENV_LINUX)
+
+static void
+archinfo_dump(ucontext_t *uc)
+{
+	mcontext_t *mc = &uc->uc_mcontext;
+	int i;
+
+	oops_print("PC : 0x%.16llx ", mc->pc);
+	oops_print("SP : 0x%.16llx\n", mc->sp);
+	for (i = 0; i < 31; i++)
+		oops_print("X%.2d: 0x%.16llx%s", i, mc->regs[i],
+			   i & 0x1 ? "\n" : " ");
+
+	oops_print("PSTATE: 0x%.16llx\n", mc->pstate);
+
+	stack_code_dump((void *)mc->sp, (void *)mc->pc);
+}
+
 #else
 
 static void
