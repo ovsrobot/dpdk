@@ -236,6 +236,14 @@ if cc.get_id() == 'clang' and dpdk_conf.get('RTE_ARCH_64') == false
     dpdk_extra_ldflags += '-latomic'
 endif
 
+# check for libunwind
+unwind_dep = dependency('libunwind', required: false, method: 'pkg-config')
+if unwind_dep.found() and cc.has_header('libunwind.h', dependencies: unwind_dep)
+    dpdk_conf.set('RTE_USE_LIBUNWIND', 1)
+    add_project_link_arguments('-lunwind', language: 'c')
+    dpdk_extra_ldflags += '-lunwind'
+endif
+
 # add -include rte_config to cflags
 add_project_arguments('-include', 'rte_config.h', language: 'c')
 

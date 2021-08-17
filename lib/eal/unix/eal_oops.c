@@ -26,6 +26,50 @@ struct oops_signal {
 
 static struct oops_signal signals_db[RTE_DIM(oops_signals)];
 
+#if defined(RTE_USE_LIBUNWIND)
+
+#define BACKTRACE_DEPTH 256
+#define UNW_LOCAL_ONLY
+#include <libunwind.h>
+
+static void
+back_trace_dump(ucontext_t *context)
+{
+	unw_cursor_t cursor;
+	unw_word_t ip, off;
+	int rc, level = 0;
+	char name[256];
+
+	if (context == NULL) {
+		rte_dump_stack();
+		return;
+	}
+
+	rc = unw_init_local(&cursor, (unw_context_t *)context);
+	if (rc < 0)
+		goto fail;
+
+	for (;;) {
+		rc = unw_get_reg(&cursor, UNW_REG_IP, &ip);
+		if (rc < 0)
+			goto fail;
+		rc = unw_get_proc_name(&cursor, name, sizeof(name), &off);
+		if (rc == 0)
+			oops_print("[%16p]: %s()+0x%" PRIx64 "\n", (void *)ip,
+				   name, (uint64_t)off);
+		else
+			oops_print("[%16p]: <unknown>\n", (void *)ip);
+		rc = unw_step(&cursor);
+		if (rc <= 0 || ++level >= BACKTRACE_DEPTH)
+			break;
+	}
+	return;
+fail:
+	oops_print("libunwind call failed %s\n", unw_strerror(rc));
+}
+
+#else
+
 static void
 back_trace_dump(ucontext_t *context)
 {
@@ -33,6 +77,9 @@ back_trace_dump(ucontext_t *context)
 
 	rte_dump_stack();
 }
+
+#endif
+
 static void
 siginfo_dump(int sig, siginfo_t *info)
 {
