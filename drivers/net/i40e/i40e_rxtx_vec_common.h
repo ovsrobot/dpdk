@@ -268,7 +268,7 @@ i40e_rx_vec_dev_conf_condition_check_default(struct rte_eth_dev *dev)
 #endif
 }
 
-#ifdef CC_AVX2_SUPPORT
+#ifdef __AVX2__
 static __rte_always_inline void
 i40e_rxq_rearm_common(struct i40e_rx_queue *rxq, __rte_unused bool avx512)
 {
@@ -329,7 +329,7 @@ i40e_rxq_rearm_common(struct i40e_rx_queue *rxq, __rte_unused bool avx512)
 		_mm_store_si128((__m128i *)&rxdp++->read, dma_addr1);
 	}
 #else
-#ifdef CC_AVX512_SUPPORT
+#ifdef __AVX512VL__
 	if (avx512) {
 		struct rte_mbuf *mb0, *mb1, *mb2, *mb3;
 		struct rte_mbuf *mb4, *mb5, *mb6, *mb7;
