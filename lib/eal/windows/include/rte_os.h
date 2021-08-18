@@ -18,6 +18,37 @@
 extern "C" {
 #endif
 
+/* These macros are compatible with bundled sys/queue.h. */
+#define RTE_TAILQ_HEAD(name, type) \
+struct name { \
+	struct type *tqh_first; /* first element */ \
+	struct type **tqh_last; /* addr of last next element */ \
+}
+#define RTE_TAILQ_ENTRY(type) \
+struct { \
+	struct type *tqe_next; /* next element */ \
+	struct type **tqe_prev; /* address of previous next element */ \
+}
+#define RTE_TAILQ_FOREACH(var, head, field) \
+	for ((var) = RTE_TAILQ_FIRST((head)); \
+	    (var); \
+	    (var) = RTE_TAILQ_NEXT((var), field))
+#define RTE_TAILQ_FOREACH_SAFE(var, head, field, tvar) \
+	for ((var) = TAILQ_FIRST((head)); \
+	    (var) && ((tvar) = TAILQ_NEXT((var), field), 1); \
+	    (var) = (tvar))
+#define RTE_TAILQ_FIRST(head) ((head)->tqh_first)
+#define RTE_TAILQ_NEXT(elm, field) ((elm)->field.tqe_next)
+#define RTE_STAILQ_HEAD(name, type) \
+struct name { \
+	struct type *stqh_first;/* first element */ \
+	struct type **stqh_last;/* addr of last next element */ \
+}
+#define RTE_STAILQ_ENTRY(type) \
+struct { \
+	struct type *stqe_next; /* next element */ \
+}
+
 /* cpu_set macros implementation */
 #define RTE_CPU_AND(dst, src1, src2) CPU_AND(dst, src1, src2)
 #define RTE_CPU_OR(dst, src1, src2) CPU_OR(dst, src1, src2)
