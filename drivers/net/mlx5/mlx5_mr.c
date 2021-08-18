@@ -128,9 +128,36 @@ mlx5_tx_addr2mr_bh(struct mlx5_txq_data *txq, uintptr_t addr)
 uint32_t
 mlx5_tx_mb2mr_bh(struct mlx5_txq_data *txq, struct rte_mbuf *mb)
 {
+	struct mlx5_txq_ctrl *txq_ctrl =
+		container_of(txq, struct mlx5_txq_ctrl, txq);
+	struct mlx5_mr_ctrl *mr_ctrl = &txq->mr_ctrl;
+	struct mlx5_priv *priv = txq_ctrl->priv;
 	uintptr_t addr = (uintptr_t)mb->buf_addr;
 	uint32_t lkey;
 
+	if (priv->config.mr_mempool_reg_en) {
+		struct rte_mempool *mp = NULL;
+		struct mlx5_mprq_buf *buf;
+
+		if (!RTE_MBUF_HAS_EXTBUF(mb)) {
+			mp = mlx5_mb2mp(mb);
+		} else if (mb->shinfo->free_cb == mlx5_mprq_buf_free_cb) {
+			/* Recover MPRQ mempool. */
+			buf = mb->shinfo->fcb_opaque;
+			mp = buf->mp;
+		}
+		if (mp != NULL) {
+			lkey = mlx5_mr_mempool2mr_bh(&priv->sh->share_cache,
+						     mr_ctrl, mp, addr);
+			/*
+			 * Lookup can only fail on invalid input, e.g. "addr"
+			 * is not from "mp" or "mp" has MEMPOOL_F_NON_IO set.
+			 */
+			if (lkey != UINT32_MAX)
+				return lkey;
+		}
+		/* Fallback for generic mechanism in corner cases. */
+	}
 	lkey = mlx5_tx_addr2mr_bh(txq, addr);
 	if (lkey == UINT32_MAX && rte_errno == ENXIO) {
 		/* Mempool may have externally allocated memory. */

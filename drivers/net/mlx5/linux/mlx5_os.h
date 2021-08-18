@@ -20,5 +20,7 @@ enum {
 #define MLX5_NAMESIZE IF_NAMESIZE
 
 int mlx5_auxiliary_get_ifindex(const char *sf_name);
+void mlx5_mempool_event_cb(enum rte_mempool_event event,
+			   struct rte_mempool *mp, void *arg);
 
 #endif /* RTE_PMD_MLX5_OS_H_ */

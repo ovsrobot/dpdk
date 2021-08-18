@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Mellanox mlx5 driver.**
+
+  Updated the Mellanox mlx5 driver with new features and improvements, including:
+
+  * Added implicit mempool registration to avoid data path hiccups (opt-out).
+
 
 Removed Items
 -------------

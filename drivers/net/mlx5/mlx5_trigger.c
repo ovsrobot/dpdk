@@ -1124,6 +1124,13 @@ mlx5_dev_start(struct rte_eth_dev *dev)
 			dev->data->port_id, strerror(rte_errno));
 		goto error;
 	}
+	if (priv->config.mr_mempool_reg_en) {
+		if (mlx5_dev_ctx_shared_mempool_subscribe(priv->sh) != 0) {
+			DRV_LOG(ERR, "port %u failed to subscribe for mempool life cycle: %s",
+				dev->data->port_id, rte_strerror(rte_errno));
+			goto error;
+		}
+	}
 	rte_wmb();
 	dev->tx_pkt_burst = mlx5_select_tx_function(dev);
 	dev->rx_pkt_burst = mlx5_select_rx_function(dev);
@@ -1193,11 +1200,10 @@ mlx5_dev_stop(struct rte_eth_dev *dev)
 	if (priv->obj_ops.lb_dummy_queue_release)
 		priv->obj_ops.lb_dummy_queue_release(dev);
 	mlx5_txpp_stop(dev);
-
 	return 0;
 }
 
-/**
+/*
  * Enable traffic flows configured by control plane
  *
  * @param dev
