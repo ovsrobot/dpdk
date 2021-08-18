@@ -51,6 +51,7 @@ enum {
 	CB_FLD_DST_PORT_MASK,
 	CB_FLD_PROTO,
 	CB_FLD_PRIORITY,
+	CB_FLD_TCP_FLAGS,
 	CB_FLD_NUM,
 };
 
@@ -86,6 +87,7 @@ enum {
 	DST_FIELD_IPV4,
 	SRCP_FIELD_IPV4,
 	DSTP_FIELD_IPV4,
+	TCP_FLAGS_FIELD,
 	NUM_FIELDS_IPV4
 };
 
@@ -93,7 +95,8 @@ enum {
 	PROTO_INPUT_IPV4,
 	SRC_INPUT_IPV4,
 	DST_INPUT_IPV4,
-	SRCP_DESTP_INPUT_IPV4
+	SRCP_DESTP_INPUT_IPV4,
+	TCP_FLAGS_INDEX,
 };
 
 static struct rte_acl_field_def ipv4_defs[NUM_FIELDS_IPV4] = {
@@ -149,6 +152,17 @@ static struct rte_acl_field_def ipv4_defs[NUM_FIELDS_IPV4] = {
 		.offset = sizeof(struct rte_ether_hdr) +
 			sizeof(struct rte_ipv4_hdr) +
 			offsetof(struct rte_tcp_hdr, dst_port),
+	},
+	/* next field must be 4 bytes, even though flags is only 1 byte */
+	{
+		/* rte_flags */
+		.type = RTE_ACL_FIELD_TYPE_BITMASK,
+		.size = sizeof(uint32_t),
+		.field_index = TCP_FLAGS_FIELD,
+		.input_index = TCP_FLAGS_INDEX,
+		.offset = sizeof(struct rte_ether_hdr) +
+			sizeof(struct rte_ipv4_hdr) +
+			offsetof(struct rte_tcp_hdr, tcp_flags),
 	},
 };
 /* >8 End of creation of ACL table. */
@@ -285,12 +299,14 @@ lcore_main(struct flow_classifier *cls_app)
 	int ret;
 	int i = 0;
 
-	ret = rte_flow_classify_table_entry_delete(cls_app->cls,
-			rules[7]);
-	if (ret)
-		printf("table_entry_delete failed [7] %d\n\n", ret);
-	else
-		printf("table_entry_delete succeeded [7]\n\n");
+	if (rules[7]) {
+		ret = rte_flow_classify_table_entry_delete(cls_app->cls,
+				rules[7]);
+		if (ret)
+			printf("table_entry_delete failed [7] %d\n\n", ret);
+		else
+			printf("table_entry_delete succeeded [7]\n\n");
+	}
 
 	/*
 	 * Check that the port is on the same NUMA node as the polling thread
@@ -411,6 +427,53 @@ parse_ipv4_net(char *in, uint32_t *addr, uint32_t *mask_len)
 }
 
 static int
+get_tcp_flags(char *in, struct rte_eth_ntuple_filter *ntuple_filter)
+{
+	int len = strlen(in);
+	int i;
+	uint8_t flags = 0;
+
+	if (strcmp(in, "*") == 0) {
+		ntuple_filter->tcp_flags = 0;
+		return 0;
+	}
+
+	for (i = 0; i < len; i++) {
+		switch (in[i]) {
+		case 'S':
+			flags |= RTE_TCP_SYN_FLAG;
+			break;
+		case 'F':
+			flags |= RTE_TCP_FIN_FLAG;
+			break;
+		case 'R':
+			flags |= RTE_TCP_RST_FLAG;
+			break;
+		case 'P':
+			flags |= RTE_TCP_PSH_FLAG;
+			break;
+		case 'A':
+			flags |= RTE_TCP_ACK_FLAG;
+			break;
+		case 'U':
+			flags |= RTE_TCP_URG_FLAG;
+			break;
+		case 'E':
+			flags |= RTE_TCP_ECE_FLAG;
+			break;
+		case 'C':
+			flags |= RTE_TCP_CWR_FLAG;
+			break;
+		default:
+			fprintf(stderr, "unknown flag %c\n", in[i]);
+			return -EINVAL;
+		}
+	}
+	ntuple_filter->tcp_flags = flags;
+	return 0;
+}
+
+static int
 parse_ipv4_5tuple_rule(char *str, struct rte_eth_ntuple_filter *ntuple_filter)
 {
 	int i, ret;
@@ -481,6 +544,8 @@ parse_ipv4_5tuple_rule(char *str, struct rte_eth_ntuple_filter *ntuple_filter)
 	ntuple_filter->priority = (uint16_t)temp;
 	if (ntuple_filter->priority > FLOW_CLASSIFY_MAX_PRIORITY)
 		ret = -EINVAL;
+	if (get_tcp_flags(in[CB_FLD_TCP_FLAGS], ntuple_filter))
+		return -EINVAL;
 
 	return ret;
 }
@@ -597,10 +662,13 @@ add_classify_rule(struct rte_eth_ntuple_filter *ntuple_filter,
 		memset(&tcp_spec, 0, sizeof(tcp_spec));
 		tcp_spec.hdr.src_port = ntuple_filter->src_port;
 		tcp_spec.hdr.dst_port = ntuple_filter->dst_port;
+		tcp_spec.hdr.tcp_flags = ntuple_filter->tcp_flags;
 
 		memset(&tcp_mask, 0, sizeof(tcp_mask));
 		tcp_mask.hdr.src_port = ntuple_filter->src_port_mask;
 		tcp_mask.hdr.dst_port = ntuple_filter->dst_port_mask;
+		if (tcp_spec.hdr.tcp_flags != 0)
+			tcp_mask.hdr.tcp_flags = 0xff;
 
 		tcp_item.type = RTE_FLOW_ITEM_TYPE_TCP;
 		tcp_item.spec = &tcp_spec;
@@ -655,6 +723,11 @@ add_classify_rule(struct rte_eth_ntuple_filter *ntuple_filter,
 		return ret;
 	}
 
+	/* XXX but this only adds table_type of
+	 * RTE_FLOW_CLASSIFY_TABLE_ACL_IP4_5TUPLE
+	 * i.e., it only ever does allocate_acl_ipv4_5tuple_rule()
+	 * so the tcp_flags is ignored!
+	 */
 	rule = rte_flow_classify_table_entry_add(
 			cls_app->cls, &attr, pattern_ipv4_5tuple,
 			actions, &key_found, &error);
