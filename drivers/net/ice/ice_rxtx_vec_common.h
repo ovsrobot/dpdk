@@ -194,7 +194,7 @@ _ice_tx_queue_release_mbufs_vec(struct ice_tx_queue *txq)
 	 */
 	i = txq->tx_next_dd - txq->tx_rs_thresh + 1;
 
-#ifdef CC_AVX512_SUPPORT
+#ifdef __AVX512VL__
 	struct rte_eth_dev *dev = &rte_eth_devices[txq->vsi->adapter->pf.dev_data->port_id];
 
 	if (dev->tx_pkt_burst == ice_xmit_pkts_vec_avx512 ||
@@ -352,7 +352,7 @@ ice_tx_vec_dev_check_default(struct rte_eth_dev *dev)
 	return result;
 }
 
-#ifdef CC_AVX2_SUPPORT
+#ifdef __AVX2__
 static __rte_always_inline void
 ice_rxq_rearm_common(struct ice_rx_queue *rxq, __rte_unused bool avx512)
 {
@@ -414,7 +414,7 @@ ice_rxq_rearm_common(struct ice_rx_queue *rxq, __rte_unused bool avx512)
 		_mm_store_si128((__m128i *)&rxdp++->read, dma_addr1);
 	}
 #else
-#ifdef CC_AVX512_SUPPORT
+#ifdef __AVX512VL__
 	if (avx512) {
 		struct rte_mbuf *mb0, *mb1, *mb2, *mb3;
 		struct rte_mbuf *mb4, *mb5, *mb6, *mb7;
