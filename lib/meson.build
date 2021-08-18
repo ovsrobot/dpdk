@@ -81,10 +81,16 @@ if is_windows
             'timer',
             'bitratestats',
             'cfgfile',
+            'efd',
             'gro',
             'gso',
+            'ip_frag',
             'latencystats',
+            'lpm',
             'pdump',
+            'rib',
+            'reorder',
+            'stack',
     ] # only supported libraries for windows
 endif
 
