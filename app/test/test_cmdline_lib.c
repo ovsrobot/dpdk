@@ -140,6 +140,9 @@ test_cmdline_vt100_fns(void)
 static int
 test_cmdline_socket_fns(void)
 {
+#ifdef RTE_EXEC_ENV_WINDOWS
+	return 0;
+#else
 	cmdline_parse_ctx_t ctx;
 	struct cmdline *cl;
 
@@ -179,6 +182,7 @@ error:
 	printf("Error: function accepted null parameter!\n");
 	cmdline_free(cl);
 	return -1;
+#endif
 }
 
 static int
