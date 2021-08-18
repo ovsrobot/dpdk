@@ -317,6 +317,9 @@ ice_dcf_init_parent_hw(struct ice_hw *hw)
 	if (status)
 		goto err_unroll_alloc;
 
+	if (!hw->port_info->is_vf)
+		hw->pf_id = hw->port_info->pf_vf_num;
+
 	pcaps = (struct ice_aqc_get_phy_caps_data *)
 		ice_malloc(hw, sizeof(*pcaps));
 	if (!pcaps) {
