@@ -359,7 +359,7 @@ test_mt1(int (*test)(void *))
 	wrk_cmd = WRK_CMD_RUN;
 	rte_smp_wmb();
 
-	usleep(run_time * US_PER_S);
+	rte_delay_us(run_time* US_PER_S);
 
 	/* signal worker to start test */
 	wrk_cmd = WRK_CMD_STOP;
