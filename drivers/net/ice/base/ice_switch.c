@@ -3413,6 +3413,10 @@ ice_init_port_info(struct ice_port_info *pi, u16 vsi_port_num, u8 type,
 		pi->dflt_tx_vsi_num = ICE_DFLT_VSI_INVAL;
 		pi->dflt_rx_vsi_num = ICE_DFLT_VSI_INVAL;
 		break;
+	case ICE_AQC_GET_SW_CONF_RESP_VSI:
+		pi->is_vf = is_vf;
+		pi->pf_vf_num = pf_vf_num;
+		break;
 	default:
 		ice_debug(pi->hw, ICE_DBG_SW, "incorrect VSI/port type received\n");
 		break;
@@ -3486,6 +3490,14 @@ enum ice_status ice_get_initial_sw_cfg(struct ice_hw *hw)
 						   vsi_port_num, res_type, swid,
 						   pf_vf_num, is_vf);
 				j++;
+				break;
+			case ICE_AQC_GET_SW_CONF_RESP_VSI:
+				/* get PF ID of VF's parent */
+				if (!is_vf)
+					ice_init_port_info(hw->port_info,
+							   vsi_port_num,
+							   res_type, swid,
+							   pf_vf_num, is_vf);
 				break;
 			default:
 				break;
