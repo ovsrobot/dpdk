@@ -42,6 +42,18 @@ static struct rte_tailq_elem rte_mempool_tailq = {
 };
 EAL_REGISTER_TAILQ(rte_mempool_tailq)
 
+TAILQ_HEAD(mempool_callback_list, rte_tailq_entry);
+
+static struct rte_tailq_elem callback_tailq = {
+	.name = "RTE_MEMPOOL_CALLBACK",
+};
+EAL_REGISTER_TAILQ(callback_tailq)
+
+/* Invoke all registered mempool event callbacks. */
+static void
+mempool_event_callback_invoke(enum rte_mempool_event event,
+			      struct rte_mempool *mp);
+
 #define CACHE_FLUSHTHRESH_MULTIPLIER 1.5
 #define CALC_CACHE_FLUSHTHRESH(c)	\
 	((typeof(c))((c) * CACHE_FLUSHTHRESH_MULTIPLIER))
@@ -722,6 +734,7 @@ rte_mempool_free(struct rte_mempool *mp)
 	}
 	rte_mcfg_tailq_write_unlock();
 
+	mempool_event_callback_invoke(RTE_MEMPOOL_EVENT_DESTROY, mp);
 	rte_mempool_trace_free(mp);
 	rte_mempool_free_memchunks(mp);
 	rte_mempool_ops_free(mp);
@@ -778,10 +791,10 @@ rte_mempool_cache_free(struct rte_mempool_cache *cache)
 }
 
 /* create an empty mempool */
-struct rte_mempool *
-rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
-	unsigned cache_size, unsigned private_data_size,
-	int socket_id, unsigned flags)
+static struct rte_mempool *
+mempool_create_empty(const char *name, unsigned int n,
+	unsigned int elt_size, unsigned int cache_size,
+	unsigned int private_data_size, int socket_id, unsigned int flags)
 {
 	char mz_name[RTE_MEMZONE_NAMESIZE];
 	struct rte_mempool_list *mempool_list;
@@ -915,6 +928,19 @@ exit_unlock:
 	return NULL;
 }
 
+struct rte_mempool *
+rte_mempool_create_empty(const char *name, unsigned int n,
+	unsigned int elt_size, unsigned int cache_size,
+	unsigned int private_data_size, int socket_id, unsigned int flags)
+{
+	struct rte_mempool *mp;
+
+	mp = mempool_create_empty(name, n, elt_size, cache_size,
+		private_data_size, socket_id, flags);
+	mempool_event_callback_invoke(RTE_MEMPOOL_EVENT_CREATE, mp);
+	return mp;
+}
+
 /* create the mempool */
 struct rte_mempool *
 rte_mempool_create(const char *name, unsigned n, unsigned elt_size,
@@ -926,7 +952,7 @@ rte_mempool_create(const char *name, unsigned n, unsigned elt_size,
 	int ret;
 	struct rte_mempool *mp;
 
-	mp = rte_mempool_create_empty(name, n, elt_size, cache_size,
+	mp = mempool_create_empty(name, n, elt_size, cache_size,
 		private_data_size, socket_id, flags);
 	if (mp == NULL)
 		return NULL;
@@ -957,6 +983,8 @@ rte_mempool_create(const char *name, unsigned n, unsigned elt_size,
 	/* call the object initializers */
 	if (obj_init)
 		rte_mempool_obj_iter(mp, obj_init, obj_init_arg);
+
+	mempool_event_callback_invoke(RTE_MEMPOOL_EVENT_CREATE, mp);
 
 	rte_mempool_trace_create(name, n, elt_size, cache_size,
 		private_data_size, mp_init, mp_init_arg, obj_init,
@@ -1342,4 +1370,119 @@ void rte_mempool_walk(void (*func)(struct rte_mempool *, void *),
 	}
 
 	rte_mcfg_mempool_read_unlock();
+}
+
+struct mempool_callback {
+	rte_mempool_event_callback *func;
+	void *arg;
+};
+
+static void
+mempool_event_callback_invoke(enum rte_mempool_event event,
+			      struct rte_mempool *mp)
+{
+	struct mempool_callback_list *list;
+	struct rte_tailq_entry *te;
+	void *tmp_te;
+
+	rte_mcfg_tailq_read_lock();
+	list = RTE_TAILQ_CAST(callback_tailq.head, mempool_callback_list);
+	TAILQ_FOREACH_SAFE(te, list, next, tmp_te) {
+		struct mempool_callback *cb = te->data;
+		rte_mcfg_tailq_read_unlock();
+		cb->func(event, mp, cb->arg);
+		rte_mcfg_tailq_read_lock();
+	}
+	rte_mcfg_tailq_read_unlock();
+}
+
+int
+rte_mempool_event_callback_register(rte_mempool_event_callback *func,
+				    void *arg)
+{
+	struct mempool_callback_list *list;
+	struct rte_tailq_entry *te = NULL;
+	struct mempool_callback *cb;
+	void *tmp_te;
+	int ret;
+
+	rte_mcfg_mempool_read_lock();
+	rte_mcfg_tailq_write_lock();
+
+	list = RTE_TAILQ_CAST(callback_tailq.head, mempool_callback_list);
+	TAILQ_FOREACH_SAFE(te, list, next, tmp_te) {
+		struct mempool_callback *cb =
+					(struct mempool_callback *)te->data;
+		if (cb->func == func && cb->arg == arg) {
+			ret = -EEXIST;
+			goto exit;
+		}
+	}
+
+	te = rte_zmalloc("MEMPOOL_TAILQ_ENTRY", sizeof(*te), 0);
+	if (te == NULL) {
+		RTE_LOG(ERR, MEMPOOL,
+			"Cannot allocate event callback tailq entry!\n");
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	cb = rte_malloc("MEMPOOL_EVENT_CALLBACK", sizeof(*cb), 0);
+	if (cb == NULL) {
+		RTE_LOG(ERR, MEMPOOL,
+			"Cannot allocate event callback!\n");
+		rte_free(te);
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	cb->func = func;
+	cb->arg = arg;
+	te->data = cb;
+	TAILQ_INSERT_TAIL(list, te, next);
+	ret = 0;
+
+exit:
+	rte_mcfg_tailq_write_unlock();
+	rte_mcfg_mempool_read_unlock();
+	rte_errno = -ret;
+	return ret;
+}
+
+int
+rte_mempool_event_callback_unregister(rte_mempool_event_callback *func,
+				      void *arg)
+{
+	struct mempool_callback_list *list;
+	struct rte_tailq_entry *te = NULL;
+	struct mempool_callback *cb;
+	int ret;
+
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		rte_errno = EPERM;
+		return -1;
+	}
+
+	rte_mcfg_mempool_read_lock();
+	rte_mcfg_tailq_write_lock();
+	ret = -ENOENT;
+	list = RTE_TAILQ_CAST(callback_tailq.head, mempool_callback_list);
+	TAILQ_FOREACH(te, list, next) {
+		cb = (struct mempool_callback *)te->data;
+		if (cb->func == func && cb->arg == arg)
+			break;
+	}
+	if (te != NULL) {
+		TAILQ_REMOVE(list, te, next);
+		ret = 0;
+	}
+	rte_mcfg_tailq_write_unlock();
+	rte_mcfg_mempool_read_unlock();
+
+	if (ret == 0) {
+		rte_free(te);
+		rte_free(cb);
+	}
+	rte_errno = -ret;
+	return ret;
 }
