@@ -723,11 +723,6 @@ add_classify_rule(struct rte_eth_ntuple_filter *ntuple_filter,
 		return ret;
 	}
 
-	/* XXX but this only adds table_type of
-	 * RTE_FLOW_CLASSIFY_TABLE_ACL_IP4_5TUPLE
-	 * i.e., it only ever does allocate_acl_ipv4_5tuple_rule()
-	 * so the tcp_flags is ignored!
-	 */
 	rule = rte_flow_classify_table_entry_add(
 			cls_app->cls, &attr, pattern_ipv4_5tuple,
 			actions, &key_found, &error);
@@ -856,7 +851,8 @@ main(int argc, char *argv[])
 	int ret;
 	int socket_id;
 	struct rte_table_acl_params table_acl_params;
-	struct rte_flow_classify_table_params cls_table_params;
+	struct rte_table_acl_params table_acl_tcp_params;
+	struct rte_flow_classify_table_params cls_table_params[2];
 	struct flow_classifier *cls_app;
 	struct rte_flow_classifier_params cls_params;
 	uint32_t size;
@@ -923,21 +919,42 @@ main(int argc, char *argv[])
 	memcpy(table_acl_params.field_format, ipv4_defs, sizeof(ipv4_defs));
 
 	/* initialise table create params */
-	cls_table_params.ops = &rte_table_acl_ops;
-	cls_table_params.arg_create = &table_acl_params;
-	cls_table_params.type = RTE_FLOW_CLASSIFY_TABLE_ACL_IP4_5TUPLE;
+	cls_table_params[0].ops = &rte_table_acl_ops;
+	cls_table_params[0].arg_create = &table_acl_params;
+	cls_table_params[0].type = RTE_FLOW_CLASSIFY_TABLE_ACL_IP4_5TUPLE;
 
-	ret = rte_flow_classify_table_create(cls_app->cls, &cls_table_params);
+	/* initialise ACL table params */
+	table_acl_tcp_params.name = "table_acl_ipv4_tcp_5tuple";
+	table_acl_tcp_params.n_rules = FLOW_CLASSIFY_MAX_RULE_NUM;
+	table_acl_tcp_params.n_rule_fields = RTE_DIM(ipv4_defs);
+	memcpy(table_acl_tcp_params.field_format, ipv4_defs, sizeof(ipv4_defs));
+
+	/* initialise table create params */
+	cls_table_params[1].ops = &rte_table_acl_ops;
+	cls_table_params[1].arg_create = &table_acl_tcp_params;
+	cls_table_params[1].type = RTE_FLOW_CLASSIFY_TABLE_ACL_IP4_TCP_5TUPLE;
+
+	ret = rte_flow_classify_table_create(cls_app->cls,
+					     &cls_table_params[0]);
 	if (ret) {
 		rte_flow_classifier_free(cls_app->cls);
 		rte_free(cls_app);
 		rte_exit(EXIT_FAILURE, "Failed to create classifier table\n");
 	}
+	ret = rte_flow_classify_table_create(cls_app->cls,
+					     &cls_table_params[1]);
+	if (ret) {
+		rte_flow_classifier_free(cls_app->cls);
+		rte_free(cls_app);
+		rte_exit(EXIT_FAILURE,
+			 "Failed to create classifier table\n");
+	}
+
 	/* >8 End of initialization of table create params. */
 
 	/* read file of IPv4 5 tuple rules and initialize parameters
-	 * for rte_flow_classify_validate and rte_flow_classify_table_entry_add
-	 * API's.
+	 * for rte_flow_classify_validate and
+	 * rte_flow_classify_table_entry_add  API's.
 	 */
 
 	/* Read file of IPv4 tuple rules. 8< */

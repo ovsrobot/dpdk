@@ -60,6 +60,7 @@ enum {
 	DST_FIELD_IPV4,
 	SRCP_FIELD_IPV4,
 	DSTP_FIELD_IPV4,
+	TCP_FLAGS_FIELD,
 	NUM_FIELDS_IPV4
 };
 
@@ -72,6 +73,7 @@ struct classify_rules {
 	enum rte_flow_classify_rule_type type;
 	union {
 		struct rte_flow_classify_ipv4_5tuple ipv4_5tuple;
+		struct rte_flow_classify_ipv4_tcp_5tuple ipv4_tcp_5tuple;
 	} u;
 };
 
@@ -477,6 +479,84 @@ allocate_acl_ipv4_5tuple_rule(struct rte_flow_classifier *cls)
 	return rule;
 }
 
+static struct rte_flow_classify_rule *
+allocate_acl_ipv4_tcp_5tuple_rule(struct rte_flow_classifier *cls)
+{
+	struct rte_flow_classify_rule *rule;
+	int log_level;
+
+	rule = malloc(sizeof(struct rte_flow_classify_rule));
+	if (!rule)
+		return rule;
+
+	memset(rule, 0, sizeof(struct rte_flow_classify_rule));
+	rule->id = unique_id++;
+	rule->rules.type = RTE_FLOW_CLASSIFY_RULE_TYPE_IPV4_TCP_5TUPLE;
+
+	/* key add values */
+	rule->u.key.key_add.priority = cls->ntuple_filter.priority;
+	rule->u.key.key_add.field_value[PROTO_FIELD_IPV4].mask_range.u8 =
+			cls->ntuple_filter.proto_mask;
+	rule->u.key.key_add.field_value[PROTO_FIELD_IPV4].value.u8 =
+			cls->ntuple_filter.proto;
+	rule->rules.u.ipv4_tcp_5tuple.proto = cls->ntuple_filter.proto;
+	rule->rules.u.ipv4_tcp_5tuple.proto_mask =
+			cls->ntuple_filter.proto_mask;
+
+	rule->u.key.key_add.field_value[SRC_FIELD_IPV4].mask_range.u32 =
+			cls->ntuple_filter.src_ip_mask;
+	rule->u.key.key_add.field_value[SRC_FIELD_IPV4].value.u32 =
+			cls->ntuple_filter.src_ip;
+	rule->rules.u.ipv4_tcp_5tuple.src_ip_mask =
+			cls->ntuple_filter.src_ip_mask;
+	rule->rules.u.ipv4_tcp_5tuple.src_ip = cls->ntuple_filter.src_ip;
+
+	rule->u.key.key_add.field_value[DST_FIELD_IPV4].mask_range.u32 =
+			cls->ntuple_filter.dst_ip_mask;
+	rule->u.key.key_add.field_value[DST_FIELD_IPV4].value.u32 =
+			cls->ntuple_filter.dst_ip;
+	rule->rules.u.ipv4_tcp_5tuple.dst_ip_mask =
+			cls->ntuple_filter.dst_ip_mask;
+	rule->rules.u.ipv4_tcp_5tuple.dst_ip = cls->ntuple_filter.dst_ip;
+
+	rule->u.key.key_add.field_value[SRCP_FIELD_IPV4].mask_range.u16 =
+			cls->ntuple_filter.src_port_mask;
+	rule->u.key.key_add.field_value[SRCP_FIELD_IPV4].value.u16 =
+			cls->ntuple_filter.src_port;
+	rule->rules.u.ipv4_tcp_5tuple.src_port_mask =
+			cls->ntuple_filter.src_port_mask;
+	rule->rules.u.ipv4_tcp_5tuple.src_port = cls->ntuple_filter.src_port;
+
+	rule->u.key.key_add.field_value[DSTP_FIELD_IPV4].mask_range.u16 =
+			cls->ntuple_filter.dst_port_mask;
+	rule->u.key.key_add.field_value[DSTP_FIELD_IPV4].value.u16 =
+			cls->ntuple_filter.dst_port;
+	rule->rules.u.ipv4_tcp_5tuple.dst_port_mask =
+			cls->ntuple_filter.dst_port_mask;
+	rule->rules.u.ipv4_tcp_5tuple.dst_port = cls->ntuple_filter.dst_port;
+
+	rule->u.key.key_add.field_value[TCP_FLAGS_FIELD].mask_range.u32 =
+			rte_be_to_cpu_32(0xff);
+	rule->u.key.key_add.field_value[TCP_FLAGS_FIELD].value.u32 =
+			rte_be_to_cpu_32(cls->ntuple_filter.tcp_flags);
+	rule->rules.u.ipv4_tcp_5tuple.tcp_flags = cls->ntuple_filter.tcp_flags;
+
+	log_level = rte_log_get_level(librte_flow_classify_logtype);
+
+	if (log_level == RTE_LOG_DEBUG)
+		print_acl_ipv4_key_add(&rule->u.key.key_add);
+
+	/* key delete values */
+	memcpy(&rule->u.key.key_del.field_value[PROTO_FIELD_IPV4],
+	       &rule->u.key.key_add.field_value[PROTO_FIELD_IPV4],
+	       NUM_FIELDS_IPV4 * sizeof(struct rte_acl_field));
+
+	if (log_level == RTE_LOG_DEBUG)
+		print_acl_ipv4_key_delete(&rule->u.key.key_del);
+
+	return rule;
+}
+
 struct rte_flow_classify_rule *
 rte_flow_classify_table_entry_add(struct rte_flow_classifier *cls,
 		const struct rte_flow_attr *attr,
@@ -509,6 +589,13 @@ rte_flow_classify_table_entry_add(struct rte_flow_classifier *cls,
 	switch (table_type) {
 	case RTE_FLOW_CLASSIFY_TABLE_ACL_IP4_5TUPLE:
 		rule = allocate_acl_ipv4_5tuple_rule(cls);
+		if (!rule)
+			return NULL;
+		rule->tbl_type = table_type;
+		cls->table_mask |= table_type;
+		break;
+	case RTE_FLOW_CLASSIFY_TABLE_ACL_IP4_TCP_5TUPLE:
+		rule = allocate_acl_ipv4_tcp_5tuple_rule(cls);
 		if (!rule)
 			return NULL;
 		rule->tbl_type = table_type;

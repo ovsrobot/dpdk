@@ -216,6 +216,7 @@ classify_parse_ntuple_filter(const struct rte_flow_attr *attr,
 	const struct rte_flow_action_count *count;
 	const struct rte_flow_action_mark *mark_spec;
 	uint32_t index;
+	bool have_tcp = false;
 
 	/* parse pattern */
 	index = 0;
@@ -375,6 +376,8 @@ classify_parse_ntuple_filter(const struct rte_flow_attr *attr,
 		filter->dst_port  = tcp_spec->hdr.dst_port;
 		filter->src_port  = tcp_spec->hdr.src_port;
 		filter->tcp_flags = tcp_spec->hdr.tcp_flags;
+		if (filter->tcp_flags != 0)
+			have_tcp = true;
 	} else if (item->type == RTE_FLOW_ITEM_TYPE_UDP) {
 		udp_mask = item->mask;
 
@@ -434,7 +437,10 @@ classify_parse_ntuple_filter(const struct rte_flow_attr *attr,
 		return -EINVAL;
 	}
 
-	table_type = RTE_FLOW_CLASSIFY_TABLE_ACL_IP4_5TUPLE;
+	if (have_tcp)
+		table_type = RTE_FLOW_CLASSIFY_TABLE_ACL_IP4_TCP_5TUPLE;
+	else
+		table_type = RTE_FLOW_CLASSIFY_TABLE_ACL_IP4_5TUPLE;
 
 	/* parse attr */
 	/* must be input direction */

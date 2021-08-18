@@ -80,6 +80,8 @@ enum rte_flow_classify_rule_type {
 	RTE_FLOW_CLASSIFY_RULE_TYPE_NONE,
 	/** IPv4 5tuple type */
 	RTE_FLOW_CLASSIFY_RULE_TYPE_IPV4_5TUPLE,
+	/** IPv4 TCP 5tuple type */
+	RTE_FLOW_CLASSIFY_RULE_TYPE_IPV4_TCP_5TUPLE,
 };
 
 /** Flow classify table type */
@@ -92,6 +94,8 @@ enum rte_flow_classify_table_type {
 	RTE_FLOW_CLASSIFY_TABLE_ACL_VLAN_IP4_5TUPLE = 1 << 2,
 	/** ACL QinQ IP4 5TUPLE */
 	RTE_FLOW_CLASSIFY_TABLE_ACL_QINQ_IP4_5TUPLE = 1 << 3,
+	/** ACL IP4 5TUPLE with tcp_flags */
+	RTE_FLOW_CLASSIFY_TABLE_ACL_IP4_TCP_5TUPLE = 1 << 4,
 
 };
 
@@ -129,6 +133,21 @@ struct rte_flow_classify_ipv4_5tuple {
 	uint16_t src_port_mask;  /**< Mask of source port. */
 	uint8_t proto;           /**< L4 protocol. */
 	uint8_t proto_mask;      /**< Mask of L4 protocol. */
+};
+
+/** IPv4 5-tuple data with tcp flags*/
+struct rte_flow_classify_ipv4_tcp_5tuple {
+	uint32_t dst_ip;         /**< Destination IP address in big endian. */
+	uint32_t dst_ip_mask;    /**< Mask of destination IP address. */
+	uint32_t src_ip;         /**< Source IP address in big endian. */
+	uint32_t src_ip_mask;    /**< Mask of destination IP address. */
+	uint16_t dst_port;       /**< Destination port in big endian. */
+	uint16_t dst_port_mask;  /**< Mask of destination port. */
+	uint16_t src_port;       /**< Source Port in big endian. */
+	uint16_t src_port_mask;  /**< Mask of source port. */
+	uint8_t proto;           /**< L4 protocol. */
+	uint8_t proto_mask;      /**< Mask of L4 protocol. */
+	uint8_t tcp_flags;       /**< Tcp only */
 };
 
 /**
