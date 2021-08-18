@@ -84,6 +84,9 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* mempool: Added ``MEMPOOL_F_NON_IO`` flag to give a hint to DPDK components
+  that objects from this pool will not be used for device IO (e.g. DMA).
+
 
 ABI Changes
 -----------
