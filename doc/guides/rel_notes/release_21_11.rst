@@ -59,6 +59,10 @@ New Features
 
   Added support for more comprehensive CRC options.
 
+* **Updated the ACC100 bbdev PMD.**
+
+  Added support for more comprehensive CRC options.
+
 Removed Items
 -------------
 
