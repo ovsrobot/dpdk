@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated the turbo_sw bbdev PMD.**
+
+  Added support for more comprehensive CRC options.
 
 Removed Items
 -------------
