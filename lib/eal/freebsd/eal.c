@@ -899,6 +899,9 @@ rte_eal_init(int argc, char **argv)
 			sizeof(rte_cpuset_t), &lcore_config[i].cpuset);
 		if (ret != 0)
 			rte_panic("Cannot set affinity\n");
+
+		/* worker threads are never joined */
+		pthread_detach(lcore_config[i].thread_id);
 	}
 
 	/*

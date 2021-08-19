@@ -1175,6 +1175,9 @@ rte_eal_intr_init(void)
 			"Failed to create thread for interrupt handling\n");
 	}
 
+	/* the interrupt thread is never joined */
+	pthread_detach(intr_thread);
+
 	return ret;
 }
 
