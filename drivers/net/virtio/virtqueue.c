@@ -208,6 +208,20 @@ virtqueue_txvq_reset_packed(struct virtqueue *vq)
 			rte_pktmbuf_free(dxp->cookie);
 			dxp->cookie = NULL;
 		}
+
+		struct virtio_tx_region *txr;
+		txr = txvq->virtio_net_hdr_mz->addr;
+		/* first indirect descriptor is always the tx header */
+		struct vring_packed_desc *start_dp =
+			txr[desc_idx].tx_packed_indir;
+		vring_desc_init_indirect_packed(start_dp,
+		      RTE_DIM(txr[desc_idx].tx_packed_indir));
+		start_dp->addr = txvq->virtio_net_hdr_mem
+			+ desc_idx * sizeof(*txr)
+			+ offsetof(struct virtio_tx_region,
+				   tx_hdr);
+		start_dp->len = vq->hw->vtnet_hdr_size;
+
 	}
 
 	vring_desc_init_packed(vq, size);
