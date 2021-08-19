@@ -429,6 +429,10 @@ EXPERIMENTAL {
 
 	rte_thread_self;
 	rte_thread_equal;
+	rte_thread_attr_init;
+	rte_thread_attr_get_affinity;
+	rte_thread_attr_set_affinity;
+	rte_thread_attr_set_priority;
 };
 
 INTERNAL {
