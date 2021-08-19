@@ -84,6 +84,7 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* bbdev: Added capability related to more comprehensive CRC options.
 
 ABI Changes
 -----------
