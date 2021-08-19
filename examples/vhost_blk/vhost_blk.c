@@ -17,7 +17,6 @@
 #include <linux/virtio_blk.h>
 #include <linux/virtio_ring.h>
 
-#include <rte_atomic.h>
 #include <rte_cycles.h>
 #include <rte_log.h>
 #include <rte_malloc.h>
