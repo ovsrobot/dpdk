@@ -36,6 +36,7 @@
 #include <rte_errno.h>
 #include <rte_spinlock.h>
 #include <rte_string_fns.h>
+#include <rte_telemetry.h>
 
 #include "rte_crypto.h"
 #include "rte_cryptodev.h"
@@ -2426,4 +2427,65 @@ rte_cryptodev_allocate_driver(struct cryptodev_driver *crypto_drv,
 	TAILQ_INSERT_TAIL(&cryptodev_driver_list, crypto_drv, next);
 
 	return nb_drivers++;
+}
+
+static int
+cryptodev_handle_dev_list(const char *cmd __rte_unused,
+		const char *params __rte_unused,
+		struct rte_tel_data *d)
+{
+	int dev_id;
+
+	if (rte_cryptodev_count() < 1)
+		return -1;
+
+	rte_tel_data_start_dict(d);
+	for (dev_id = 0; dev_id < RTE_CRYPTO_MAX_DEVS; dev_id++)
+		if (rte_cryptodev_pmd_is_valid_dev(dev_id))
+			rte_tel_data_add_dict_int(d,
+				rte_cryptodev_name_get(dev_id), dev_id);
+
+	return 0;
+}
+
+#define ADD_DICT_STAT(stats, s) rte_tel_data_add_dict_u64(d, #s, stats.s)
+
+static int
+cryptodev_handle_dev_stats(const char *cmd __rte_unused,
+		const char *params,
+		struct rte_tel_data *d)
+{
+	struct rte_cryptodev_stats cryptodev_stats;
+	int dev_id, ret;
+	char *end_param;
+
+	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
+		return -1;
+
+	dev_id = strtoul(params, &end_param, 0);
+	if (*end_param != '\0')
+		CDEV_LOG_ERR("Extra parameters passed to cryptodev telemetry command, ignoring");
+	if (!rte_cryptodev_pmd_is_valid_dev(dev_id))
+		return -1;
+
+	ret = rte_cryptodev_stats_get(dev_id, &cryptodev_stats);
+	if (ret < 0)
+		return -1;
+
+	rte_tel_data_start_dict(d);
+	ADD_DICT_STAT(cryptodev_stats, enqueued_count);
+	ADD_DICT_STAT(cryptodev_stats, dequeued_count);
+	ADD_DICT_STAT(cryptodev_stats, enqueue_err_count);
+	ADD_DICT_STAT(cryptodev_stats, dequeue_err_count);
+
+	return 0;
+}
+
+RTE_INIT(cryptodev_init_telemetry)
+{
+	rte_telemetry_register_cmd("/cryptodev/list", cryptodev_handle_dev_list,
+			"Returns list of available cryptodev names and IDs.");
+	rte_telemetry_register_cmd("/cryptodev/stats",
+			cryptodev_handle_dev_stats,
+			"Returns the stats for a cryptodev. Parameters: int dev_id");
 }
