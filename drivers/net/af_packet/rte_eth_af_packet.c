@@ -148,6 +148,10 @@ eth_af_packet_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		if (ppd->tp_status & TP_STATUS_VLAN_VALID) {
 			mbuf->vlan_tci = ppd->tp_vlan_tci;
 			mbuf->ol_flags |= (PKT_RX_VLAN | PKT_RX_VLAN_STRIPPED);
+
+			/* the kernel always strips the vlan tag, try to reinsert it */
+			if (rte_vlan_insert(&mbuf))
+				PMD_LOG(ERR, "Failed to reinsert vlan tag");
 		}
 
 		/* release incoming frame and advance ring buffer */
