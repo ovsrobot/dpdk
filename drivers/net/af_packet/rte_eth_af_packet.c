@@ -167,6 +167,12 @@ eth_af_packet_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	return num_rx;
 }
 
+static inline __u32 tx_ring_status_remove_ts(volatile __u32 *tp_status)
+{
+	return *tp_status &
+		~(TP_STATUS_TS_SOFTWARE | TP_STATUS_TS_RAW_HARDWARE);
+}
+
 /*
  * Callback to handle sending packets through a real NIC.
  */
@@ -211,9 +217,41 @@ eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			}
 		}
 
+		/*
+		 * We must eliminate the timestamp status from the packet
+		 * status. This should only matter if timestamping is enabled
+		 * on the socket, but there is a BUG in the kernel which is
+		 * fixed in newer releases.
+
+		 * For interfaces of type 'veth', the sent skb is forwarded
+		 * to the peer and back into the network stack which timestamps
+		 * it on the RX path if timestamping is enabled globally
+		 * (which happens if any socket enables timestamping).
+
+		 * When the skb is destructed, tpacket_destruct_skb() is called
+		 * and it calls __packet_set_timestamp() which doesn't check
+		 * the flags on the socket and returns the timestamp if it is
+		 * set in the skb (and for veth it is, as mentioned above).
+		 */
+
 		/* point at the next incoming frame */
-		if ((ppd->tp_status != TP_STATUS_AVAILABLE) &&
-		    (poll(&pfd, 1, -1) < 0))
+		if ((tx_ring_status_remove_ts(&ppd->tp_status)
+			!= TP_STATUS_AVAILABLE) && (poll(&pfd, 1, -1) < 0))
+			break;
+
+		/*
+		 * Poll can return POLLERR if the interface is down or POLLOUT,
+		 * even if there are no extra buffers available.
+		 * This happens, because packet_poll() calls datagram_poll()
+		 * which checks the space left in the socket buffer and in the
+		 * case of packet_mmap the default socket buffer length
+		 * doesn't match the requested size for the tx_ring so there
+		 * is always space left in socket buffer, which doesn't seem
+		 * to be correlated to the requested size for the tx_ring
+		 * in packet_mmap.
+		 */
+		if (tx_ring_status_remove_ts(&ppd->tp_status)
+			!= TP_STATUS_AVAILABLE)
 			break;
 
 		/* copy the tx frame data */
@@ -241,6 +279,11 @@ eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		num_tx_bytes += mbuf->pkt_len;
 		rte_pktmbuf_free(mbuf);
 	}
+
+	/*
+	 * We might have to ignore a few more errnos here since the packets
+	 * remain in the mmap-ed queue and will be sent later, presumably.
+	 */
 
 	/* kick-off transmits */
 	if (sendto(pkt_q->sockfd, NULL, 0, MSG_DONTWAIT, NULL, 0) == -1 &&
