@@ -1822,6 +1822,7 @@ i40evf_dev_rx_queue_start(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 	/* Ready to switch the queue on */
 	err = i40evf_switch_queue(dev, TRUE, rx_queue_id, TRUE);
 	if (err) {
+		i40e_rx_queue_release_mbufs(rxq);
 		PMD_DRV_LOG(ERR, "Failed to switch RX queue %u on",
 			    rx_queue_id);
 		return err;
