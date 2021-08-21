@@ -1622,6 +1622,7 @@ i40evf_dev_init(struct rte_eth_dev *eth_dev)
 		PMD_INIT_LOG(ERR, "Failed to allocate %d bytes needed to"
 				" store MAC addresses",
 				RTE_ETHER_ADDR_LEN * I40E_NUM_MACADDR_MAX);
+		(void)i40evf_uninit_vf(eth_dev);
 		return -ENOMEM;
 	}
 	rte_ether_addr_copy((struct rte_ether_addr *)hw->mac.addr,
