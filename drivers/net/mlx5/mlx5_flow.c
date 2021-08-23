@@ -3231,6 +3231,45 @@ flow_null_sync_domain(struct rte_eth_dev *dev __rte_unused,
 	return 0;
 }
 
+int
+flow_null_get_aged_flows(struct rte_eth_dev *dev,
+		    void **context __rte_unused,
+		    uint32_t nb_contexts __rte_unused,
+		    struct rte_flow_error *error __rte_unused)
+{
+	DRV_LOG(ERR, "port %u get aged flows is not supported.",
+		dev->data->port_id);
+	return -ENOTSUP;
+}
+
+uint32_t
+flow_null_counter_allocate(struct rte_eth_dev *dev)
+{
+	DRV_LOG(ERR, "port %u counter allocate is not supported.",
+		dev->data->port_id);
+	return 0;
+}
+
+void
+flow_null_counter_free(struct rte_eth_dev *dev,
+			uint32_t counter __rte_unused)
+{
+	DRV_LOG(ERR, "port %u counter free is not supported.",
+		 dev->data->port_id);
+}
+
+int
+flow_null_counter_query(struct rte_eth_dev *dev,
+			uint32_t counter __rte_unused,
+			bool clear __rte_unused,
+			uint64_t *pkts __rte_unused,
+			uint64_t *bytes __rte_unused)
+{
+	DRV_LOG(ERR, "port %u counter query is not supported.",
+		 dev->data->port_id);
+	return -ENOTSUP;
+}
+
 /* Void driver to protect from null pointer reference. */
 const struct mlx5_flow_driver_ops mlx5_flow_null_drv_ops = {
 	.validate = flow_null_validate,
@@ -3241,6 +3280,10 @@ const struct mlx5_flow_driver_ops mlx5_flow_null_drv_ops = {
 	.destroy = flow_null_destroy,
 	.query = flow_null_query,
 	.sync_domain = flow_null_sync_domain,
+	.get_aged_flows = flow_null_get_aged_flows,
+	.counter_alloc = flow_null_counter_allocate,
+	.counter_free = flow_null_counter_free,
+	.counter_query = flow_null_counter_query,
 };
 
 /**
@@ -7497,17 +7540,10 @@ mlx5_flow_mtr_free(struct rte_eth_dev *dev, uint32_t mtr_idx)
 uint32_t
 mlx5_counter_alloc(struct rte_eth_dev *dev)
 {
-	const struct mlx5_flow_driver_ops *fops;
 	struct rte_flow_attr attr = { .transfer = 0 };
 
-	if (flow_get_drv_type(dev, &attr) == MLX5_FLOW_TYPE_DV) {
-		fops = flow_get_drv_ops(MLX5_FLOW_TYPE_DV);
-		return fops->counter_alloc(dev);
-	}
-	DRV_LOG(ERR,
-		"port %u counter allocate is not supported.",
-		 dev->data->port_id);
-	return 0;
+	return flow_get_drv_ops(flow_get_drv_type(dev, &attr))->counter_alloc
+		(dev);
 }
 
 /**
@@ -7521,17 +7557,9 @@ mlx5_counter_alloc(struct rte_eth_dev *dev)
 void
 mlx5_counter_free(struct rte_eth_dev *dev, uint32_t cnt)
 {
-	const struct mlx5_flow_driver_ops *fops;
 	struct rte_flow_attr attr = { .transfer = 0 };
 
-	if (flow_get_drv_type(dev, &attr) == MLX5_FLOW_TYPE_DV) {
-		fops = flow_get_drv_ops(MLX5_FLOW_TYPE_DV);
-		fops->counter_free(dev, cnt);
-		return;
-	}
-	DRV_LOG(ERR,
-		"port %u counter free is not supported.",
-		 dev->data->port_id);
+	flow_get_drv_ops(flow_get_drv_type(dev, &attr))->counter_free(dev, cnt);
 }
 
 /**
@@ -7555,17 +7583,10 @@ int
 mlx5_counter_query(struct rte_eth_dev *dev, uint32_t cnt,
 		   bool clear, uint64_t *pkts, uint64_t *bytes)
 {
-	const struct mlx5_flow_driver_ops *fops;
 	struct rte_flow_attr attr = { .transfer = 0 };
 
-	if (flow_get_drv_type(dev, &attr) == MLX5_FLOW_TYPE_DV) {
-		fops = flow_get_drv_ops(MLX5_FLOW_TYPE_DV);
-		return fops->counter_query(dev, cnt, clear, pkts, bytes);
-	}
-	DRV_LOG(ERR,
-		"port %u counter query is not supported.",
-		 dev->data->port_id);
-	return -ENOTSUP;
+	return flow_get_drv_ops(flow_get_drv_type(dev, &attr))->counter_query
+		(dev, cnt, clear, pkts, bytes);
 }
 
 /**
@@ -8279,18 +8300,10 @@ int
 mlx5_flow_get_aged_flows(struct rte_eth_dev *dev, void **contexts,
 			uint32_t nb_contexts, struct rte_flow_error *error)
 {
-	const struct mlx5_flow_driver_ops *fops;
 	struct rte_flow_attr attr = { .transfer = 0 };
 
-	if (flow_get_drv_type(dev, &attr) == MLX5_FLOW_TYPE_DV) {
-		fops = flow_get_drv_ops(MLX5_FLOW_TYPE_DV);
-		return fops->get_aged_flows(dev, contexts, nb_contexts,
-						    error);
-	}
-	DRV_LOG(ERR,
-		"port %u get aged flows is not supported.",
-		 dev->data->port_id);
-	return -ENOTSUP;
+	return flow_get_drv_ops(flow_get_drv_type(dev, &attr))->get_aged_flows
+		(dev, contexts, nb_contexts, error);
 }
 
 /* Wrapper for driver action_validate op callback */

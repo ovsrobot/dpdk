@@ -1713,5 +1713,17 @@ mlx5_get_tof(const struct rte_flow_item *items,
 	     const struct rte_flow_action *actions,
 	     enum mlx5_tof_rule_type *rule_type);
 
+int flow_null_get_aged_flows(struct rte_eth_dev *dev,
+		    void **context,
+		    uint32_t nb_contexts,
+		    struct rte_flow_error *error);
+uint32_t flow_null_counter_allocate(struct rte_eth_dev *dev);
+void flow_null_counter_free(struct rte_eth_dev *dev,
+			uint32_t counter);
+int flow_null_counter_query(struct rte_eth_dev *dev,
+			uint32_t counter,
+			bool clear,
+		    uint64_t *pkts,
+			uint64_t *bytes);
 
 #endif /* RTE_PMD_MLX5_FLOW_H_ */
