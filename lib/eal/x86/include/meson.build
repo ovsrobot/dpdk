@@ -27,3 +27,4 @@ arch_indirect_headers = files(
 )
 install_headers(arch_headers + arch_indirect_headers, subdir: get_option('include_subdir_arch'))
 dpdk_chkinc_headers += arch_headers
+dpdk_conf.set('RTE_MEMCPY_AMDEPYC2', get_option('rte_memcpy_amdepyc2'))
