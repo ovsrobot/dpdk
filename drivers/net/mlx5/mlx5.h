@@ -298,6 +298,9 @@ struct mlx5_dev_config {
 	int tx_skew; /* Tx scheduling skew between WQE and data on wire. */
 	struct mlx5_hca_attr hca_attr; /* HCA attributes. */
 	struct mlx5_lro_config lro; /* LRO configuration. */
+#ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
+	unsigned int mprq_tstore_memcpy:1;
+#endif
 };
 
 

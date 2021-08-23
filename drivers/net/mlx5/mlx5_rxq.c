@@ -1449,6 +1449,10 @@ mlx5_rxq_new(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 	tmpl->socket = socket;
 	if (dev->data->dev_conf.intr_conf.rxq)
 		tmpl->irq = 1;
+#ifdef RTE_LIBRTE_MLX5_NTLOAD_TSTORE_ALIGN_COPY
+	tmpl->rxq.mprq_tstore_memcpy = config->mprq_tstore_memcpy;
+#endif
+
 	/*
 	 * This Rx queue can be configured as a Multi-Packet RQ if all of the
 	 * following conditions are met:
