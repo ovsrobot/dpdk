@@ -2151,9 +2151,9 @@ i40evf_add_del_all_mac_addr(struct rte_eth_dev *dev, bool add)
 				    "OP_DEL_ETHER_ADDRESS");
 		} else {
 			if (add)
-				vf->vsi.mac_num++;
+				vf->vsi.mac_num += j;
 			else
-				vf->vsi.mac_num--;
+				vf->vsi.mac_num -= j;
 		}
 		rte_free(list);
 		begin = next_begin;
