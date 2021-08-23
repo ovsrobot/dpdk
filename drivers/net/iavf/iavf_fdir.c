@@ -1160,15 +1160,16 @@ iavf_fdir_parse_pattern(__rte_unused struct iavf_adapter *ad,
 
 			if (!gtp_psc_spec)
 				VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, GTPU_EH);
-			else if ((gtp_psc_mask->qfi) && !(gtp_psc_mask->pdu_type))
+			else if ((gtp_psc_mask->hdr.qfi) &&
+				!(gtp_psc_mask->hdr.type))
 				VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, GTPU_EH);
-			else if (gtp_psc_spec->pdu_type == IAVF_GTPU_EH_UPLINK)
+			else if (gtp_psc_spec->hdr.type == IAVF_GTPU_EH_UPLINK)
 				VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, GTPU_EH_PDU_UP);
-			else if (gtp_psc_spec->pdu_type == IAVF_GTPU_EH_DWLINK)
+			else if (gtp_psc_spec->hdr.type == IAVF_GTPU_EH_DWLINK)
 				VIRTCHNL_SET_PROTO_HDR_TYPE(hdr, GTPU_EH_PDU_DWN);
 
 			if (gtp_psc_spec && gtp_psc_mask) {
-				if (gtp_psc_mask->qfi == UINT8_MAX) {
+				if (gtp_psc_mask->hdr.qfi == 0x3F) {
 					input_set |= IAVF_INSET_GTPU_QFI;
 					VIRTCHNL_ADD_PROTO_HDR_FIELD_BIT(hdr, GTPU_EH, QFI);
 				}
