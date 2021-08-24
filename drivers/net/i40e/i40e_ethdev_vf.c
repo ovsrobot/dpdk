@@ -1898,11 +1898,30 @@ static int
 i40evf_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
 {
 	int ret;
+	struct rte_eth_conf *dev_conf = &dev->data->dev_conf;
+	struct i40e_vf *vf = I40EVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+	bool promisc_unicast_enabled = vf->promisc_unicast_enabled;
+	bool promisc_multicast_enabled = vf->promisc_multicast_enabled;
 
-	if (on)
+	if (promisc_unicast_enabled)
+		i40evf_dev_promiscuous_disable(dev);
+
+	if (promisc_multicast_enabled)
+		i40evf_dev_allmulticast_disable(dev);
+
+	if (on) {
 		ret = i40evf_add_vlan(dev, vlan_id);
-	else
+		if ((dev_conf->rxmode.offloads & DEV_RX_OFFLOAD_VLAN_STRIP) == 0)
+			i40evf_disable_vlan_strip(dev);
+	} else {
 		ret = i40evf_del_vlan(dev,vlan_id);
+	}
+
+	if (promisc_unicast_enabled)
+		i40evf_dev_promiscuous_enable(dev);
+
+	if (promisc_multicast_enabled)
+		i40evf_dev_allmulticast_enable(dev);
 
 	return ret;
 }
