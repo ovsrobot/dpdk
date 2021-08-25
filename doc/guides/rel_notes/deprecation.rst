@@ -287,3 +287,6 @@ Deprecation Notices
   reserved bytes to 2 (from 3), and use 1 byte to indicate warnings and other
   information from the crypto/security operation. This field will be used to
   communicate events such as soft expiry with IPsec in lookaside mode.
+
+  * vfio: the functions `rte_vfio_container_dma_map` and `rte_vfio_container_dma_unmap`
+  will be amended to include page size. This change is targeted for DPDK 21.11.
