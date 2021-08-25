@@ -118,7 +118,6 @@ struct rte_mbuf_dynflag {
  *   - ENOMEM: allocation failure.
  *   - ENAMETOOLONG: name does not ends with \0.
  */
-__rte_experimental
 int rte_mbuf_dynfield_register(const struct rte_mbuf_dynfield *params);
 
 /**
@@ -143,7 +142,6 @@ int rte_mbuf_dynfield_register(const struct rte_mbuf_dynfield *params);
  *   - ENOMEM: allocation failure.
  *   - ENAMETOOLONG: name does not ends with \0.
  */
-__rte_experimental
 int rte_mbuf_dynfield_register_offset(const struct rte_mbuf_dynfield *params,
 				size_t offset);
 
@@ -160,7 +158,6 @@ int rte_mbuf_dynfield_register_offset(const struct rte_mbuf_dynfield *params,
  *   Possible values for rte_errno:
  *   - ENOENT: no dynamic field matches this name.
  */
-__rte_experimental
 int rte_mbuf_dynfield_lookup(const char *name,
 			struct rte_mbuf_dynfield *params);
 
@@ -183,7 +180,6 @@ int rte_mbuf_dynfield_lookup(const char *name,
  *   - ENOMEM: allocation failure.
  *   - ENAMETOOLONG: name is longer than RTE_MBUF_DYN_NAMESIZE - 1.
  */
-__rte_experimental
 int rte_mbuf_dynflag_register(const struct rte_mbuf_dynflag *params);
 
 /**
@@ -208,7 +204,6 @@ int rte_mbuf_dynflag_register(const struct rte_mbuf_dynflag *params);
  *   - ENOMEM: allocation failure.
  *   - ENAMETOOLONG: name is longer than RTE_MBUF_DYN_NAMESIZE - 1.
  */
-__rte_experimental
 int rte_mbuf_dynflag_register_bitnum(const struct rte_mbuf_dynflag *params,
 				unsigned int bitnum);
 
@@ -225,7 +220,6 @@ int rte_mbuf_dynflag_register_bitnum(const struct rte_mbuf_dynflag *params,
  *   Possible values for rte_errno:
  *   - ENOENT: no dynamic flag matches this name.
  */
-__rte_experimental
 int rte_mbuf_dynflag_lookup(const char *name,
 			struct rte_mbuf_dynflag *params);
 
@@ -240,7 +234,6 @@ int rte_mbuf_dynflag_lookup(const char *name,
  * @param out
  *   The stream where the status is displayed.
  */
-__rte_experimental
 void rte_mbuf_dyn_dump(FILE *out);
 
 /*
@@ -295,7 +288,6 @@ typedef uint64_t rte_mbuf_timestamp_t;
  *   - ENOENT: no more field or flag available.
  *   - ENOMEM: allocation failure.
  */
-__rte_experimental
 int rte_mbuf_dyn_rx_timestamp_register(int *field_offset, uint64_t *rx_flag);
 
 /**
@@ -332,7 +324,6 @@ int rte_mbuf_dyn_rx_timestamp_register(int *field_offset, uint64_t *rx_flag);
  *   - ENOENT: no more field or flag available.
  *   - ENOMEM: allocation failure.
  */
-__rte_experimental
 int rte_mbuf_dyn_tx_timestamp_register(int *field_offset, uint64_t *tx_flag);
 
 #ifdef __cplusplus
