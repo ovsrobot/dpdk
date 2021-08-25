@@ -221,7 +221,7 @@ process_sym_raw_dp_op(uint8_t dev_id, uint16_t qp_id,
 	digest.va = NULL;
 	sgl.vec = data_vec;
 	vec.num = 1;
-	vec.sgl = &sgl;
+	vec.src_sgl = &sgl;
 	vec.iv = &cipher_iv;
 	vec.digest = &digest;
 	vec.aad = &aad_auth_iv;
@@ -385,7 +385,7 @@ process_cpu_aead_op(uint8_t dev_id, struct rte_crypto_op *op)
 
 	sgl.vec = vec;
 	sgl.num = n;
-	symvec.sgl = &sgl;
+	symvec.src_sgl = &sgl;
 	symvec.iv = &iv_ptr;
 	symvec.digest = &digest_ptr;
 	symvec.aad = &aad_ptr;
@@ -431,7 +431,7 @@ process_cpu_crypt_auth_op(uint8_t dev_id, struct rte_crypto_op *op)
 
 	sgl.vec = vec;
 	sgl.num = n;
-	symvec.sgl = &sgl;
+	symvec.src_sgl = &sgl;
 	symvec.iv = &iv_ptr;
 	symvec.digest = &digest_ptr;
 	symvec.status = &st;
