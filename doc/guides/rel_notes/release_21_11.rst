@@ -51,6 +51,10 @@ New Features
      * Other libs
      * Apps, Examples, Tools (if significant)
 
+	 * **Added support multi-process for testpmd.**
+       Added command-line options to specify total number of processes and
+       current process ID. Each process owns subset of Rx and Tx queues.
+
      This section is a comment. Do not overwrite or remove it.
      Also, make sure to start the actual text at the margin.
      =======================================================
