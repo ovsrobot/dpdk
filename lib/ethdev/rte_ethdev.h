@@ -3059,6 +3059,27 @@ int rte_eth_macaddr_get(uint16_t port_id, struct rte_ether_addr *mac_addr);
 int rte_eth_dev_info_get(uint16_t port_id, struct rte_eth_dev_info *dev_info);
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Retrieve the contextual information of an Ethernet device.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param dev_conf_info
+ *   A pointer to a structure of type *rte_eth_dev* to be filled with
+ *   the contextual information of the Ethernet device.
+ * @return
+ *   - (0) if successful.
+ *   - (-ENOTSUP) if support for dev_infos_get() does not exist for the device.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-EINVAL) if bad parameter.
+ */
+__rte_experimental
+int rte_eth_dev_conf_info_get(uint16_t port_id,
+				struct rte_eth_conf *dev_conf_info);
+
+/**
  * Retrieve the firmware version of a device.
  *
  * @param port_id
