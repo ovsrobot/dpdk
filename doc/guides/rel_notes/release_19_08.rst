@@ -204,7 +204,7 @@ New Features
   * :doc:`../nics/octeontx2`
   * :doc:`../mempool/octeontx2`
   * :doc:`../eventdevs/octeontx2`
-  * :doc:`../rawdevs/octeontx2_dma`
+  * :doc:``../rawdevs/octeontx2_dma``
 
 * **Introduced the Intel NTB PMD.**
 
