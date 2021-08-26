@@ -26,6 +26,7 @@ sources = files('rte_ipsec_mb_pmd.c',
 		'pmd_aesni_mb.c',
 		'pmd_aesni_gcm.c',
 		'pmd_kasumi.c',
-		'pmd_snow3g.c'
+		'pmd_snow3g.c',
+		'pmd_zuc.c'
 		)
 deps += ['bus_vdev', 'net', 'security']
