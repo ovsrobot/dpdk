@@ -297,8 +297,10 @@ eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			break;
 
 		mbuf = rte_pktmbuf_alloc(pcap_q->mb_pool);
-		if (unlikely(mbuf == NULL))
-			break;
+		if (unlikely(mbuf == NULL)) {
+			pcap_q->rx_stat.err_pkts++;
+			continue;
+		}
 
 		if (header.caplen <= rte_pktmbuf_tailroom(mbuf)) {
 			/* pcap packet will fit in the mbuf, can copy it */
@@ -311,6 +313,7 @@ eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 						       mbuf,
 						       packet,
 						       header.caplen) == -1)) {
+				pcap_q->rx_stat.err_pkts++;
 				rte_pktmbuf_free(mbuf);
 				break;
 			}
@@ -490,8 +493,13 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		 */
 		ret = pcap_sendpacket(pcap,
 			rte_pktmbuf_read(mbuf, 0, len, temp_data), len);
-		if (unlikely(ret != 0))
+		if (unlikely(ret != 0)) {
+			if (errno == EMSGSIZE) {
+				rte_pktmbuf_free(mbuf);
+			}
 			break;
+		}
+
 		num_tx++;
 		tx_bytes += len;
 		rte_pktmbuf_free(mbuf);
@@ -784,6 +792,7 @@ eth_stats_reset(struct rte_eth_dev *dev)
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		internal->rx_queue[i].rx_stat.pkts = 0;
 		internal->rx_queue[i].rx_stat.bytes = 0;
+		internal->rx_queue[i].rx_stat.err_pkts = 0;
 		queue_missed_stat_reset(dev, i);
 	}
 
