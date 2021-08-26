@@ -24,6 +24,7 @@ endif
 sources = files('rte_ipsec_mb_pmd.c',
 		'rte_ipsec_mb_pmd_ops.c',
 		'pmd_aesni_mb.c',
-		'pmd_aesni_gcm.c'
+		'pmd_aesni_gcm.c',
+		'pmd_kasumi.c'
 		)
 deps += ['bus_vdev', 'net', 'security']
