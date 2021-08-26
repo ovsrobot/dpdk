@@ -1898,11 +1898,15 @@ static int
 i40evf_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
 {
 	int ret;
+	struct rte_eth_conf *dev_conf = &dev->data->dev_conf;
 
-	if (on)
+	if (on) {
 		ret = i40evf_add_vlan(dev, vlan_id);
-	else
+		if ((dev_conf->rxmode.offloads & DEV_RX_OFFLOAD_VLAN_STRIP) == 0)
+			i40evf_disable_vlan_strip(dev);
+	} else {
 		ret = i40evf_del_vlan(dev,vlan_id);
+	}
 
 	return ret;
 }
