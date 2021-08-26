@@ -63,6 +63,11 @@ Deprecation Notices
   us extending existing enum/define.
   One solution can be using a fixed size array instead of ``.*MAX.*`` value.
 
+* lib: Will hide internal data structures and symbols from the public interfaces
+  as much as possible in v21.11.
+  This ABI break is done to improve the ABI stability in the long term and will
+  be done mainly, but not limited to, in device abstraction layer libraries.
+
 * ethdev: Will add ``RTE_ETH_`` prefix to all ethdev macros/enums in v21.11.
   Macros will be added for backward compatibility.
   Backward compatibility macros will be removed on v22.11.
