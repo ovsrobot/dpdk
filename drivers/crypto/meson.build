@@ -6,6 +6,7 @@ if is_windows
 endif
 
 drivers = [
+        'ipsec_mb',
         'aesni_gcm',
         'aesni_mb',
         'armv8',
