@@ -11,8 +11,9 @@ endif
 sources = files(
         'cnxk_mempool.c',
         'cnxk_mempool_ops.c',
+        'cnxk_mempool_telemetry.c',
         'cn9k_mempool_ops.c',
         'cn10k_mempool_ops.c',
 )
 
-deps += ['eal', 'mbuf', 'kvargs', 'bus_pci', 'common_cnxk', 'mempool']
+deps += ['eal', 'mbuf', 'kvargs', 'bus_pci', 'common_cnxk', 'mempool', 'telemetry']
