@@ -965,6 +965,7 @@ virtio_tx_local(struct vhost_dev *vdev, struct rte_mbuf *m)
 		return -1;
 
 	if (vdev->vid == dst_vdev->vid) {
+		rte_pktmbuf_free(m);
 		RTE_LOG_DP(DEBUG, VHOST_DATA,
 			"(%d) TX: src and dst MAC is same. Dropping packet.\n",
 			vdev->vid);
@@ -975,6 +976,7 @@ virtio_tx_local(struct vhost_dev *vdev, struct rte_mbuf *m)
 		"(%d) TX: MAC address is local\n", dst_vdev->vid);
 
 	if (unlikely(dst_vdev->remove)) {
+		rte_pktmbuf_free(m);
 		RTE_LOG_DP(DEBUG, VHOST_DATA,
 			"(%d) device is marked for removal\n", dst_vdev->vid);
 		return 0;
