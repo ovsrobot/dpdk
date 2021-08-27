@@ -60,5 +60,7 @@ sources = files(
 # Security common code
 sources += files('cnxk_security.c')
 
-includes += include_directories('../../bus/pci')
-includes += include_directories('../../../lib/net')
+# Telemetry common code
+sources += files('cnxk_telemetry_npa.c')
+
+deps += ['bus_pci', 'net', 'telemetry']
