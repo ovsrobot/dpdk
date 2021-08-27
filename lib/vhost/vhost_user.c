@@ -1823,8 +1823,14 @@ vhost_check_queue_inflights_split(struct virtio_net *dev,
 	last_io = inflight_split->last_inflight_io;
 
 	if (inflight_split->used_idx != used->idx) {
-		inflight_split->desc[last_io].inflight = 0;
-		rte_atomic_thread_fence(__ATOMIC_SEQ_CST);
+		if (unlikely(last_io >= inflight_split->desc_num)) {
+			VHOST_LOG_CONFIG(ERR, "last_inflight_io '%"PRIu16"' exceeds inflight "
+				"queue size (%"PRIu16").\n", last_io,
+				inflight_split->desc_num);
+		} else {
+			inflight_split->desc[last_io].inflight = 0;
+			rte_atomic_thread_fence(__ATOMIC_SEQ_CST);
+		}
 		inflight_split->used_idx = used->idx;
 	}
 
