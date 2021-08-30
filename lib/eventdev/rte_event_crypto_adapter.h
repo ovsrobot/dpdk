@@ -200,11 +200,6 @@ enum rte_event_crypto_adapter_mode {
  * provide event request information to the adapter.
  */
 struct rte_event_crypto_request {
-	uint8_t resv[8];
-	/**< Overlaps with first 8 bytes of struct rte_event
-	 * that encode the response event information. Application
-	 * is expected to fill in struct rte_event response_info.
-	 */
 	uint16_t cdev_id;
 	/**< cryptodev ID to be used */
 	uint16_t queue_pair_id;
@@ -223,15 +218,15 @@ struct rte_event_crypto_request {
  * operation. If the transfer is done by SW, event response information
  * will be used by the adapter.
  */
-union rte_event_crypto_metadata {
-	struct rte_event_crypto_request request_info;
-	/**< Request information to be filled in by application
-	 * for RTE_EVENT_CRYPTO_ADAPTER_OP_FORWARD mode.
-	 */
+struct rte_event_crypto_metadata {
 	struct rte_event response_info;
 	/**< Response information to be filled in by application
 	 * for RTE_EVENT_CRYPTO_ADAPTER_OP_NEW and
 	 * RTE_EVENT_CRYPTO_ADAPTER_OP_FORWARD mode.
+	 */
+	struct rte_event_crypto_request request_info;
+	/**< Request information to be filled in by application
+	 * for RTE_EVENT_CRYPTO_ADAPTER_OP_FORWARD mode.
 	 */
 };
 
