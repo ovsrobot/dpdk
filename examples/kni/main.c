@@ -85,6 +85,7 @@ struct kni_port_params {
 	unsigned lcore_tx; /* lcore ID for TX */
 	uint32_t nb_lcore_k; /* Number of lcores for KNI multi kernel threads */
 	uint32_t nb_kni; /* Number of KNI devices to be created */
+	uint8_t link_status; /* Current link status of the port */
 	unsigned lcore_k[KNI_MAX_KTHREAD]; /* lcore ID list for kthreads */
 	struct rte_kni *kni[KNI_MAX_KTHREAD]; /* KNI context pointers */
 } __rte_cache_aligned;
@@ -720,7 +721,7 @@ log_link_state(struct rte_kni *kni, int prev, struct rte_eth_link *link)
 
 	rte_eth_link_to_str(link_status_text, sizeof(link_status_text), link);
 	if (prev != link->link_status)
-		RTE_LOG(INFO, APP, "%s NIC %s",
+		RTE_LOG(INFO, APP, "%s NIC %s\n",
 			rte_kni_get_name(kni),
 			link_status_text);
 }
@@ -754,9 +755,10 @@ monitor_all_ports_link_status(void *arg)
 				continue;
 			}
 			for (i = 0; i < p[portid]->nb_kni; i++) {
-				prev = rte_kni_update_link(p[portid]->kni[i],
-						link.link_status);
+				rte_kni_update_link(p[portid]->kni[i], &link);
+				prev = p[portid]->link_status;
 				log_link_state(p[portid]->kni[i], prev, &link);
+				p[portid]->link_status = link.link_status;
 			}
 		}
 	}

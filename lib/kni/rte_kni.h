@@ -21,6 +21,7 @@
 #include <rte_memory.h>
 #include <rte_mempool.h>
 #include <rte_ether.h>
+#include <rte_ethdev.h>
 
 #include <rte_kni_common.h>
 
@@ -244,19 +245,16 @@ int rte_kni_unregister_handlers(struct rte_kni *kni);
  *
  * @param kni
  *  pointer to struct rte_kni.
- * @param linkup
- *  New link state:
- *  0 for linkdown.
- *  > 0 for linkup.
+ * @param link
+ *  new link state, speed, duplex, autoneg.
  *
  * @return
+ *  On success: 0
  *  On failure: -1
- *  Previous link state == linkdown: 0
- *  Previous link state == linkup: 1
  */
 __rte_experimental
 int
-rte_kni_update_link(struct rte_kni *kni, unsigned int linkup);
+rte_kni_update_link(struct rte_kni *kni, struct rte_eth_link *link);
 
 /**
  *  Close KNI device.

@@ -88,6 +88,11 @@ struct kni_dev {
 	void *alloc_va[MBUF_BURST_SZ];
 
 	struct task_struct *usr_tsk;
+
+	/* correct when netif_carrier_ok */
+	uint32_t speed;
+	uint8_t duplex;
+	uint8_t autoneg;
 };
 
 #ifdef HAVE_IOVA_TO_KVA_MAPPING_SUPPORT
