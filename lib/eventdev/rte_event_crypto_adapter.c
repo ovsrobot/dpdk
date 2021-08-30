@@ -333,7 +333,7 @@ eca_enq_to_cryptodev(struct rte_event_crypto_adapter *adapter,
 		 struct rte_event *ev, unsigned int cnt)
 {
 	struct rte_event_crypto_adapter_stats *stats = &adapter->crypto_stats;
-	union rte_event_crypto_metadata *m_data = NULL;
+	struct rte_event_crypto_metadata *m_data = NULL;
 	struct crypto_queue_pair_info *qp_info = NULL;
 	struct rte_crypto_op *crypto_op;
 	unsigned int i, n;
@@ -371,7 +371,7 @@ eca_enq_to_cryptodev(struct rte_event_crypto_adapter *adapter,
 			len++;
 		} else if (crypto_op->sess_type == RTE_CRYPTO_OP_SESSIONLESS &&
 				crypto_op->private_data_offset) {
-			m_data = (union rte_event_crypto_metadata *)
+			m_data = (struct rte_event_crypto_metadata *)
 				 ((uint8_t *)crypto_op +
 					crypto_op->private_data_offset);
 			cdev_id = m_data->request_info.cdev_id;
@@ -504,7 +504,7 @@ eca_ops_enqueue_burst(struct rte_event_crypto_adapter *adapter,
 		  struct rte_crypto_op **ops, uint16_t num)
 {
 	struct rte_event_crypto_adapter_stats *stats = &adapter->crypto_stats;
-	union rte_event_crypto_metadata *m_data = NULL;
+	struct rte_event_crypto_metadata *m_data = NULL;
 	uint8_t event_dev_id = adapter->eventdev_id;
 	uint8_t event_port_id = adapter->event_port_id;
 	struct rte_event events[BATCH_SIZE];
@@ -523,7 +523,7 @@ eca_ops_enqueue_burst(struct rte_event_crypto_adapter *adapter,
 					ops[i]->sym->session);
 		} else if (ops[i]->sess_type == RTE_CRYPTO_OP_SESSIONLESS &&
 				ops[i]->private_data_offset) {
-			m_data = (union rte_event_crypto_metadata *)
+			m_data = (struct rte_event_crypto_metadata *)
 				 ((uint8_t *)ops[i] +
 				  ops[i]->private_data_offset);
 		}
