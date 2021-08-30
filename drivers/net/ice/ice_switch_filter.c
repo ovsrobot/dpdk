@@ -1651,7 +1651,7 @@ ice_switch_parse_action(struct ice_pf *pf,
 	rule_info->sw_act.vsi_handle = vsi->idx;
 	rule_info->rx = 1;
 	rule_info->sw_act.src = vsi->idx;
-	rule_info->priority = priority + 5;
+	rule_info->priority = 6 - priority;
 
 	return 0;
 
