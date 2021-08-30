@@ -175,4 +175,33 @@ l3fwd_em_no_opt_process_events(int nb_rx, struct rte_event **events,
 		l3fwd_em_simple_process(events[j]->mbuf, qconf);
 }
 
+static inline void
+l3fwd_em_no_opt_process_event_vector(struct rte_event_vector *vec,
+				     struct lcore_conf *qconf)
+{
+	int32_t i;
+
+	/* Prefetch first packets */
+	for (i = 0; i < PREFETCH_OFFSET && i < vec->nb_elem; i++)
+		rte_prefetch0(rte_pktmbuf_mtod(vec->mbufs[i], void *));
+
+	event_vector_attr_init(vec, vec->mbufs[0]);
+
+	/*
+	 * Prefetch and forward already prefetched packets.
+	 */
+	for (i = 0; i < (vec->nb_elem - PREFETCH_OFFSET); i++) {
+		rte_prefetch0(rte_pktmbuf_mtod(vec->mbufs[i + PREFETCH_OFFSET],
+					       void *));
+		l3fwd_em_simple_process(vec->mbufs[i], qconf);
+		event_vector_attr_update(vec, vec->mbufs[i]);
+	}
+
+	/* Forward remaining prefetched packets */
+	for (; i < vec->nb_elem; i++) {
+		l3fwd_em_simple_process(vec->mbufs[i], qconf);
+		event_vector_attr_update(vec, vec->mbufs[i]);
+	}
+}
+
 #endif /* __L3FWD_EM_H__ */

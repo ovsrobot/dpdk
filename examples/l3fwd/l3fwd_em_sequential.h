@@ -121,4 +121,27 @@ l3fwd_em_process_events(int nb_rx, struct rte_event **events,
 		process_packet(mbuf, &mbuf->port);
 	}
 }
+
+static inline void
+l3fwd_em_process_event_vector(struct rte_event_vector *vec,
+			      struct lcore_conf *qconf)
+{
+	int32_t i, j;
+
+	rte_prefetch0(rte_pktmbuf_mtod(vec->mbufs[0],
+				       struct rte_ether_hdr *) + 1);
+	event_vector_attr_init(vec, vec->mbufs[0]);
+
+	for (i = 0, j = 1; i < vec->nb_elem; i++, j++) {
+		struct rte_mbuf *mbuf = vec->mbufs[i];
+
+		if (j < vec->nb_elem)
+			rte_prefetch0(rte_pktmbuf_mtod(vec->mbufs[j],
+					       struct rte_ether_hdr *) + 1);
+		mbuf->port = em_get_dst_port(qconf, mbuf, mbuf->port);
+		process_packet(mbuf, &mbuf->port);
+		event_vector_attr_update(vec, mbuf);
+	}
+}
+
 #endif /* __L3FWD_EM_SEQUENTIAL_H__ */
