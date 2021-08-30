@@ -214,7 +214,7 @@ error:
 			p_ret = waitpid(pid, &status, WNOHANG);
 			if (p_ret != 0) {
 				if (WIFEXITED(status))
-					return WEXITSTATUS(status);
+					return WEXITSTATUS(status) ? -1 : 0;
 				return -1;
 			}
 			rte_delay_ms(10);
