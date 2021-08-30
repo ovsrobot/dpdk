@@ -820,9 +820,34 @@ static void kni_get_drvinfo(struct net_device *dev,
 	strlcpy(info->driver, "kni", sizeof(info->driver));
 }
 
+#ifdef ETHTOOL_GLINKSETTINGS
+static int kni_get_link_ksettings(struct net_device *dev,
+				  struct ethtool_link_ksettings *settings)
+{
+	struct kni_dev *kni = netdev_priv(dev);
+
+	settings->base.port = PORT_OTHER;
+
+	if (netif_carrier_ok(dev)) {
+		settings->base.speed = kni->speed;
+		settings->base.duplex = kni->duplex;
+		settings->base.autoneg = kni->autoneg;
+	} else {
+		settings->base.speed = SPEED_UNKNOWN;
+		settings->base.duplex = DUPLEX_UNKNOWN;
+		settings->base.autoneg = AUTONEG_ENABLE;
+	}
+
+	return 0;
+}
+#endif
+
 static const struct ethtool_ops kni_net_ethtool_ops = {
 	.get_drvinfo	= kni_get_drvinfo,
 	.get_link	= ethtool_op_get_link,
+#ifdef ETHTOOL_GLINKSETTINGS
+	.get_link_ksettings	= kni_get_link_ksettings,
+#endif
 };
 
 void
