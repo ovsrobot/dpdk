@@ -20,6 +20,10 @@ DPDK Release 21.11
       make doc-guides-html
       xdg-open build/doc/html/guides/rel_notes/release_21_11.html
 
+* **Updated Marvell cn10k_crypto PMD.**
+
+  * Added AES-CBC-SHA1-HMAC in lookaside protocol (IPsec).
+
 
 New Features
 ------------
