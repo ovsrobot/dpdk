@@ -8,8 +8,8 @@
 #include "ixgbe_common.h"
 #include "ixgbe_phy.h"
 
-#define IXGBE_82599_MAX_TX_QUEUES 128
-#define IXGBE_82599_MAX_RX_QUEUES 128
+#define IXGBE_82599_MAX_TX_QUEUES 16
+#define IXGBE_82599_MAX_RX_QUEUES 16
 #define IXGBE_82599_RAR_ENTRIES   128
 #define IXGBE_82599_MC_TBL_SIZE   128
 #define IXGBE_82599_VFT_TBL_SIZE  128
