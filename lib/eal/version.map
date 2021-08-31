@@ -110,6 +110,7 @@ DPDK_22 {
 	rte_log_get_level;
 	rte_log_get_stream;
 	rte_log_register;
+	rte_log_register_type_and_pick_level;
 	rte_log_set_global_level;
 	rte_log_set_level;
 	rte_log_set_level_pattern;
@@ -251,7 +252,6 @@ EXPERIMENTAL {
 	rte_fbarray_is_used;
 	rte_fbarray_set_free;
 	rte_fbarray_set_used;
-	rte_log_register_type_and_pick_level;
 	rte_malloc_dump_heaps;
 	rte_mem_alloc_validator_register;
 	rte_mem_alloc_validator_unregister;
