@@ -98,9 +98,11 @@ DPDK_22 {
 	rte_keepalive_register_core; # WINDOWS_NO_EXPORT
 	rte_keepalive_register_relay_callback; # WINDOWS_NO_EXPORT
 	rte_lcore_count;
+	rte_lcore_cpuset;
 	rte_lcore_has_role;
 	rte_lcore_index;
 	rte_lcore_is_enabled;
+	rte_lcore_to_cpu_id;
 	rte_lcore_to_socket_id;
 	rte_log;
 	rte_log_cur_msg_loglevel;
@@ -322,8 +324,6 @@ EXPERIMENTAL {
 
 	# added in 19.08
 	rte_intr_ack;
-	rte_lcore_cpuset;
-	rte_lcore_to_cpu_id;
 	rte_mcfg_timer_lock;
 	rte_mcfg_timer_unlock;
 	rte_rand_max; # WINDOWS_NO_EXPORT
