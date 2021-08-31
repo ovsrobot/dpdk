@@ -287,3 +287,7 @@ Deprecation Notices
   reserved bytes to 2 (from 3), and use 1 byte to indicate warnings and other
   information from the crypto/security operation. This field will be used to
   communicate events such as soft expiry with IPsec in lookaside mode.
+
+* efd: The type of parameter ``online_cpu_socket_bitmask`` of function ``rte_efd_create``
+  will be modified from ``uint8_t`` to ``uint64_t``, to allow a higher number of sockets
+  than 8.
