@@ -23,6 +23,7 @@ DPDK Release 21.11
 * **Updated Marvell cn10k_crypto PMD.**
 
   * Added AES-CBC-SHA1-HMAC in lookaside protocol (IPsec).
+  * Added transport mode in lookaside protocol (IPsec).
 
 
 New Features

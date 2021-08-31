@@ -230,6 +230,7 @@ Features supported
 * IPv4
 * ESP
 * Tunnel mode
+* Transport mode
 * AES-128/192/256-GCM
 * AES-128/192/256-CBC-SHA1-HMAC
 
