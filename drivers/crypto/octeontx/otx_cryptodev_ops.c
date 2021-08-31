@@ -710,17 +710,17 @@ submit_request_to_sso(struct ssows *ws, uintptr_t req,
 	ssovf_store_pair(add_work, req, ws->grps[rsp_info->queue_id]);
 }
 
-static inline union rte_event_crypto_metadata *
+static inline struct rte_event_crypto_metadata *
 get_event_crypto_mdata(struct rte_crypto_op *op)
 {
-	union rte_event_crypto_metadata *ec_mdata;
+	struct rte_event_crypto_metadata *ec_mdata;
 
 	if (op->sess_type == RTE_CRYPTO_OP_WITH_SESSION)
 		ec_mdata = rte_cryptodev_sym_session_get_user_data(
 							   op->sym->session);
 	else if (op->sess_type == RTE_CRYPTO_OP_SESSIONLESS &&
 		 op->private_data_offset)
-		ec_mdata = (union rte_event_crypto_metadata *)
+		ec_mdata = (struct rte_event_crypto_metadata *)
 			((uint8_t *)op + op->private_data_offset);
 	else
 		return NULL;
@@ -731,7 +731,7 @@ get_event_crypto_mdata(struct rte_crypto_op *op)
 uint16_t __rte_hot
 otx_crypto_adapter_enqueue(void *port, struct rte_crypto_op *op)
 {
-	union rte_event_crypto_metadata *ec_mdata;
+	struct rte_event_crypto_metadata *ec_mdata;
 	struct cpt_instance *instance;
 	struct cpt_request_info *req;
 	struct rte_event *rsp_info;

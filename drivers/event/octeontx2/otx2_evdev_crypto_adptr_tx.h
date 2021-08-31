@@ -16,7 +16,7 @@
 static inline uint16_t
 otx2_ca_enq(uintptr_t tag_op, const struct rte_event *ev)
 {
-	union rte_event_crypto_metadata *m_data;
+	struct rte_event_crypto_metadata *m_data;
 	struct rte_crypto_op *crypto_op;
 	struct rte_cryptodev *cdev;
 	struct otx2_cpt_qp *qp;
@@ -37,7 +37,7 @@ otx2_ca_enq(uintptr_t tag_op, const struct rte_event *ev)
 		qp_id = m_data->request_info.queue_pair_id;
 	} else if (crypto_op->sess_type == RTE_CRYPTO_OP_SESSIONLESS &&
 		   crypto_op->private_data_offset) {
-		m_data = (union rte_event_crypto_metadata *)
+		m_data = (struct rte_event_crypto_metadata *)
 			 ((uint8_t *)crypto_op +
 			  crypto_op->private_data_offset);
 		cdev_id = m_data->request_info.cdev_id;

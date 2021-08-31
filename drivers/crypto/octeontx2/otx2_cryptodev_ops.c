@@ -453,7 +453,7 @@ otx2_ca_enqueue_req(const struct otx2_cpt_qp *qp,
 		    struct rte_crypto_op *op,
 		    uint64_t cpt_inst_w7)
 {
-	union rte_event_crypto_metadata *m_data;
+	struct rte_event_crypto_metadata *m_data;
 	union cpt_inst_s inst;
 	uint64_t lmt_status;
 
@@ -468,7 +468,7 @@ otx2_ca_enqueue_req(const struct otx2_cpt_qp *qp,
 		}
 	} else if (op->sess_type == RTE_CRYPTO_OP_SESSIONLESS &&
 		   op->private_data_offset) {
-		m_data = (union rte_event_crypto_metadata *)
+		m_data = (struct rte_event_crypto_metadata *)
 			 ((uint8_t *)op +
 			  op->private_data_offset);
 	} else {

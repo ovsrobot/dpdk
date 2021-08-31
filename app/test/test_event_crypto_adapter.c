@@ -168,7 +168,7 @@ test_op_forward_mode(uint8_t session_less)
 {
 	struct rte_crypto_sym_xform cipher_xform;
 	struct rte_cryptodev_sym_session *sess;
-	union rte_event_crypto_metadata m_data;
+	struct rte_event_crypto_metadata m_data;
 	struct rte_crypto_sym_op *sym_op;
 	struct rte_crypto_op *op;
 	struct rte_mbuf *m;
@@ -368,7 +368,7 @@ test_op_new_mode(uint8_t session_less)
 {
 	struct rte_crypto_sym_xform cipher_xform;
 	struct rte_cryptodev_sym_session *sess;
-	union rte_event_crypto_metadata m_data;
+	struct rte_event_crypto_metadata m_data;
 	struct rte_crypto_sym_op *sym_op;
 	struct rte_crypto_op *op;
 	struct rte_mbuf *m;
@@ -406,7 +406,7 @@ test_op_new_mode(uint8_t session_less)
 		if (cap & RTE_EVENT_CRYPTO_ADAPTER_CAP_SESSION_PRIVATE_DATA) {
 			/* Fill in private user data information */
 			rte_memcpy(&m_data.response_info, &response_info,
-				   sizeof(m_data));
+				   sizeof(response_info));
 			rte_cryptodev_sym_session_set_user_data(sess,
 						&m_data, sizeof(m_data));
 		}
@@ -426,7 +426,7 @@ test_op_new_mode(uint8_t session_less)
 		op->private_data_offset = len;
 		/* Fill in private data information */
 		rte_memcpy(&m_data.response_info, &response_info,
-			   sizeof(m_data));
+			   sizeof(response_info));
 		rte_memcpy((uint8_t *)op + len, &m_data, sizeof(m_data));
 	}
 
@@ -519,7 +519,7 @@ configure_cryptodev(void)
 			DEFAULT_NUM_XFORMS *
 			sizeof(struct rte_crypto_sym_xform) +
 			MAXIMUM_IV_LENGTH +
-			sizeof(union rte_event_crypto_metadata),
+			sizeof(struct rte_event_crypto_metadata),
 			rte_socket_id());
 	if (params.op_mpool == NULL) {
 		RTE_LOG(ERR, USER1, "Can't create CRYPTO_OP_POOL\n");
@@ -549,12 +549,12 @@ configure_cryptodev(void)
 	 * to include the session headers & private data
 	 */
 	session_size = rte_cryptodev_sym_get_private_session_size(TEST_CDEV_ID);
-	session_size += sizeof(union rte_event_crypto_metadata);
+	session_size += sizeof(struct rte_event_crypto_metadata);
 
 	params.session_mpool = rte_cryptodev_sym_session_pool_create(
 			"CRYPTO_ADAPTER_SESSION_MP",
 			MAX_NB_SESSIONS, 0, 0,
-			sizeof(union rte_event_crypto_metadata),
+			sizeof(struct rte_event_crypto_metadata),
 			SOCKET_ID_ANY);
 	TEST_ASSERT_NOT_NULL(params.session_mpool,
 			"session mempool allocation failed\n");

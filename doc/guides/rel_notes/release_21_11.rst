@@ -100,6 +100,8 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* eventdev: Modified type of ``union rte_event_crypto_metadata`` to struct and
+  removed reserved bytes from ``struct rte_event_crypto_request``.
 
 Known Issues
 ------------
