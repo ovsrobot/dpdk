@@ -537,6 +537,30 @@ struct rte_eth_rss_conf {
 #define ETH_RSS_PPPOE		   (1ULL << 31)
 #define ETH_RSS_ECPRI		   (1ULL << 32)
 #define ETH_RSS_MPLS		   (1ULL << 33)
+#define ETH_RSS_IPV4_CHKSUM	   (1ULL << 34)
+
+/**
+ * The ETH_RSS_L4_CHKSUM generally refers to a type of checksum field for
+ * any L4 header, such as TCP, UDP and SCTP. It is similar to ETH_RSS_PORT,
+ * it does not specify the type of L4 header.
+ * We use this macro to replace below macro for constricting the use of RSS
+ * offload bits:
+ * ETH_RSS_IPV4_TCP_CHKSUM
+ * ETH_RSS_IPV4_UDP_CHKSUM
+ * ETH_RSS_IPV4_SCTP_CHKSUM
+ * ETH_RSS_IPV6_TCP_CHKSUM
+ * ETH_RSS_IPV6_UDP_CHKSUM
+ * ETH_RSS_IPV6_SCTP_CHKSUM
+ *
+ * Then how to use this macro? We can use it in RSS flow where the pattern
+ * type will specify the L4 header type, for example "flow create 0 ingress \
+ * pattern eth / ipv4 / tcp / end actions rss types l4-chksum  end queues end \
+ * / end"
+ *
+ * For the case that checksum is not used in a UDP header, it takes the
+ * reserved value 0 as input for the hash function.
+ */
+#define ETH_RSS_L4_CHKSUM	   (1ULL << 35)
 
 /*
  * We use the following macros to combine with above ETH_RSS_* for

@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Add new RSS offload types for IPv4/L4 checksum in RSS flow.**
+  Add macros ETH_RSS_IPV4_CHKSUM and ETH_RSS_L4_CHKSUM, now IPv4 and
+  TCP/UDP/SCTP header checksum field can be used as input set for RSS.
+
 
 Removed Items
 -------------
