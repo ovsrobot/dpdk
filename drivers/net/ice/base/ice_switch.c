@@ -3483,6 +3483,9 @@ enum ice_status ice_get_initial_sw_cfg(struct ice_hw *hw)
 						   pf_vf_num, is_vf);
 				j++;
 				break;
+			case ICE_AQC_GET_SW_CONF_RESP_VSI:
+				if (hw->dcf_enabled && !is_vf)
+					hw->pf_id = pf_vf_num;
 			default:
 				break;
 			}
