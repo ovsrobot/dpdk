@@ -1773,7 +1773,7 @@ static inline int rte_pktmbuf_chain(struct rte_mbuf *head, struct rte_mbuf *tail
 	return 0;
 }
 
-/*
+/**
  * @warning
  * @b EXPERIMENTAL: This API may change without prior notice.
  *
@@ -1797,6 +1797,7 @@ static inline int rte_pktmbuf_chain(struct rte_mbuf *head, struct rte_mbuf *tail
  * @return
  *   raw tx_offload value.
  */
+__rte_experimental
 static __rte_always_inline uint64_t
 rte_mbuf_tx_offload(uint64_t il2, uint64_t il3, uint64_t il4, uint64_t tso,
 	uint64_t ol3, uint64_t ol2, uint64_t unused)
