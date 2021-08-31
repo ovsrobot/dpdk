@@ -83,6 +83,8 @@ API Changes
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+* bbdev: the experimental tag is dropped from the bbdev library, and its
+  interfaces are considered stable as of DPDK 21.11.
 
 
 ABI Changes
