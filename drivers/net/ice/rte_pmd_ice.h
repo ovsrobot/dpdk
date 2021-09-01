@@ -149,7 +149,6 @@ extern uint64_t rte_net_ice_dynflag_proto_xtr_ip_offset_mask;
  * @return
  *   True if registered, false otherwise.
  */
-__rte_experimental
 static __rte_always_inline int
 rte_net_ice_dynf_proto_xtr_metadata_avail(void)
 {
@@ -164,7 +163,6 @@ rte_net_ice_dynf_proto_xtr_metadata_avail(void)
  * @return
  *   The saved protocol extraction metadata.
  */
-__rte_experimental
 static __rte_always_inline uint32_t
 rte_net_ice_dynf_proto_xtr_metadata_get(struct rte_mbuf *m)
 {
@@ -177,7 +175,6 @@ rte_net_ice_dynf_proto_xtr_metadata_get(struct rte_mbuf *m)
  * @param m
  *    The pointer to the mbuf.
  */
-__rte_experimental
 static inline void
 rte_net_ice_dump_proto_xtr_metadata(struct rte_mbuf *m)
 {
