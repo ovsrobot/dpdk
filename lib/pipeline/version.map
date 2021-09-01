@@ -24,14 +24,6 @@ DPDK_22 {
 	rte_pipeline_table_entry_delete;
 	rte_pipeline_table_entry_delete_bulk;
 	rte_pipeline_table_stats_read;
-
-	local: *;
-};
-
-EXPERIMENTAL {
-	global:
-
-	# added in 18.05
 	rte_port_in_action_apply;
 	rte_port_in_action_create;
 	rte_port_in_action_free;
@@ -55,9 +47,13 @@ EXPERIMENTAL {
 	rte_table_action_table_params_get;
 	rte_table_action_time_read;
 	rte_table_action_ttl_read;
-
-	# added in 18.11
 	rte_table_action_crypto_sym_session_get;
+
+	local: *;
+};
+
+EXPERIMENTAL {
+	global:
 
 	# added in 20.11
 	rte_swx_ctl_action_arg_info_get;

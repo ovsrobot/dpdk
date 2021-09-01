@@ -48,8 +48,6 @@
  *  - Use the table action object to read action data (e.g. stats counters) for
  *    any given rule. API functions: rte_table_action_XYZ_read().
  *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
  */
 
 #ifdef __cplusplus
@@ -823,7 +821,6 @@ struct rte_table_action_profile;
  * @return
  *   Table action profile handle on success, NULL otherwise.
  */
-__rte_experimental
 struct rte_table_action_profile *
 rte_table_action_profile_create(struct rte_table_action_common_config *common);
 
@@ -835,7 +832,6 @@ rte_table_action_profile_create(struct rte_table_action_common_config *common);
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_table_action_profile_free(struct rte_table_action_profile *profile);
 
@@ -854,7 +850,6 @@ rte_table_action_profile_free(struct rte_table_action_profile *profile);
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_table_action_profile_action_register(struct rte_table_action_profile *profile,
 	enum rte_table_action_type type,
@@ -875,7 +870,6 @@ rte_table_action_profile_action_register(struct rte_table_action_profile *profil
  *
  * @see rte_table_action_create()
  */
-__rte_experimental
 int
 rte_table_action_profile_freeze(struct rte_table_action_profile *profile);
 
@@ -899,7 +893,6 @@ struct rte_table_action;
  *
  * @see rte_table_action_create()
  */
-__rte_experimental
 struct rte_table_action *
 rte_table_action_create(struct rte_table_action_profile *profile,
 	uint32_t socket_id);
@@ -912,7 +905,6 @@ rte_table_action_create(struct rte_table_action_profile *profile,
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_table_action_free(struct rte_table_action *action);
 
@@ -926,7 +918,6 @@ rte_table_action_free(struct rte_table_action *action);
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_table_action_table_params_get(struct rte_table_action *action,
 	struct rte_pipeline_table_params *params);
@@ -949,7 +940,6 @@ rte_table_action_table_params_get(struct rte_table_action *action,
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_table_action_apply(struct rte_table_action *action,
 	void *data,
@@ -969,7 +959,6 @@ rte_table_action_apply(struct rte_table_action *action,
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_table_action_dscp_table_update(struct rte_table_action *action,
 	uint64_t dscp_mask,
@@ -989,7 +978,6 @@ rte_table_action_dscp_table_update(struct rte_table_action *action,
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_table_action_meter_profile_add(struct rte_table_action *action,
 	uint32_t meter_profile_id,
@@ -1006,7 +994,6 @@ rte_table_action_meter_profile_add(struct rte_table_action *action,
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_table_action_meter_profile_delete(struct rte_table_action *action,
 	uint32_t meter_profile_id);
@@ -1038,7 +1025,6 @@ rte_table_action_meter_profile_delete(struct rte_table_action *action,
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_table_action_meter_read(struct rte_table_action *action,
 	void *data,
@@ -1065,7 +1051,6 @@ rte_table_action_meter_read(struct rte_table_action *action,
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_table_action_ttl_read(struct rte_table_action *action,
 	void *data,
@@ -1091,7 +1076,6 @@ rte_table_action_ttl_read(struct rte_table_action *action,
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_table_action_stats_read(struct rte_table_action *action,
 	void *data,
@@ -1112,7 +1096,6 @@ rte_table_action_stats_read(struct rte_table_action *action,
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_table_action_time_read(struct rte_table_action *action,
 	void *data,
@@ -1128,7 +1111,6 @@ rte_table_action_time_read(struct rte_table_action *action,
  * @return
  *   The pointer to the session on success, NULL otherwise.
  */
-__rte_experimental
 struct rte_cryptodev_sym_session *
 rte_table_action_crypto_sym_session_get(struct rte_table_action *action,
 	void *data);

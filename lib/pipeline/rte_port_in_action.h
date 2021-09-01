@@ -42,8 +42,6 @@
  *    used by the input port action handler based on given action parameters.
  *    API functions: rte_port_in_action_apply().
  *
- * @warning
- * @b EXPERIMENTAL: this API may change without prior notice
  */
 
 #ifdef __cplusplus
@@ -172,7 +170,6 @@ struct rte_port_in_action_profile;
  * @return
  *   Input port action profile handle on success, NULL otherwise.
  */
-__rte_experimental
 struct rte_port_in_action_profile *
 rte_port_in_action_profile_create(uint32_t socket_id);
 
@@ -184,7 +181,6 @@ rte_port_in_action_profile_create(uint32_t socket_id);
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_port_in_action_profile_free(struct rte_port_in_action_profile *profile);
 
@@ -203,7 +199,6 @@ rte_port_in_action_profile_free(struct rte_port_in_action_profile *profile);
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_port_in_action_profile_action_register(
 	struct rte_port_in_action_profile *profile,
@@ -226,7 +221,6 @@ rte_port_in_action_profile_action_register(
  *
  * @see rte_port_in_action_create()
  */
-__rte_experimental
 int
 rte_port_in_action_profile_freeze(struct rte_port_in_action_profile *profile);
 
@@ -249,7 +243,6 @@ struct rte_port_in_action;
  * @return
  *   Handle to input port action object on success, NULL on error.
  */
-__rte_experimental
 struct rte_port_in_action *
 rte_port_in_action_create(struct rte_port_in_action_profile *profile,
 	uint32_t socket_id);
@@ -262,7 +255,6 @@ rte_port_in_action_create(struct rte_port_in_action_profile *profile,
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_port_in_action_free(struct rte_port_in_action *action);
 
@@ -276,7 +268,6 @@ rte_port_in_action_free(struct rte_port_in_action *action);
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_port_in_action_params_get(struct rte_port_in_action *action,
 	struct rte_pipeline_port_in_params *params);
@@ -296,7 +287,6 @@ rte_port_in_action_params_get(struct rte_port_in_action *action,
  * @return
  *   Zero on success, non-zero error code otherwise.
  */
-__rte_experimental
 int
 rte_port_in_action_apply(struct rte_port_in_action *action,
 	enum rte_port_in_action_type type,
