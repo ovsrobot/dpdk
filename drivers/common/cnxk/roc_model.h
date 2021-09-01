@@ -106,6 +106,12 @@ roc_model_is_cn96_ax(void)
 }
 
 static inline uint64_t
+roc_model_is_cn96_cx(void)
+{
+	return (roc_model->flag & ROC_MODEL_CN96xx_C0);
+}
+
+static inline uint64_t
 roc_model_is_cn95_a0(void)
 {
 	return roc_model->flag & ROC_MODEL_CNF95xx_A0;
