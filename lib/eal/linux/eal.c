@@ -1332,7 +1332,7 @@ rte_eal_init(int argc, char **argv)
 	}
 
 	eal_mcfg_complete();
-
+	rte_log(RTE_LOG_DEBUG, RTE_LOGTYPE_EAL, "DPDK version: %s\n", rte_version());
 	return fctret;
 }
 

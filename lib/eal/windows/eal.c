@@ -419,6 +419,7 @@ rte_eal_init(int argc, char **argv)
 	 */
 	rte_eal_mp_remote_launch(sync_func, NULL, SKIP_MAIN);
 	rte_eal_mp_wait_lcore();
+	rte_log(RTE_LOG_DEBUG, RTE_LOGTYPE_EAL, "DPDK version: %s\n", rte_version());
 	return fctret;
 }
 
