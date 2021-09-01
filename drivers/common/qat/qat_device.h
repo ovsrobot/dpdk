@@ -21,6 +21,24 @@
 #define COMP_ENQ_THRESHOLD_NAME "qat_comp_enq_threshold"
 #define MAX_QP_THRESHOLD_SIZE	32
 
+typedef int (*qat_dev_reset_ring_pairs_t)
+		(struct qat_pci_device *);
+typedef const struct rte_mem_resource* (*qat_dev_get_transport_bar_t)
+		(struct rte_pci_device *);
+typedef int (*qat_dev_get_misc_bar_t)
+		(struct rte_mem_resource **, struct rte_pci_device *);
+typedef int (*qat_dev_read_config_t)
+		(struct qat_pci_device *);
+
+struct qat_dev_hw_spec_funcs {
+	qat_dev_reset_ring_pairs_t	qat_dev_reset_ring_pairs;
+	qat_dev_get_transport_bar_t	qat_dev_get_transport_bar;
+	qat_dev_get_misc_bar_t		qat_dev_get_misc_bar;
+	qat_dev_read_config_t		qat_dev_read_config;
+};
+
+extern struct qat_dev_hw_spec_funcs *qat_dev_hw_spec[];
+
 struct qat_dev_cmd_param {
 	const char *name;
 	uint16_t val;
@@ -56,6 +74,9 @@ struct qat_device_info {
 	 * pci_dev so that its driver can have a compression-specific name
 	 */
 };
+
+extern const struct qat_qp_hw_data qat_gen1_qps[][ADF_MAX_QPS_ON_ANY_SERVICE];
+extern const struct qat_qp_hw_data qat_gen3_qps[][ADF_MAX_QPS_ON_ANY_SERVICE];
 
 extern struct qat_device_info qat_pci_devs[];
 
@@ -158,8 +179,5 @@ qat_comp_dev_create(struct qat_pci_device *qat_pci_dev __rte_unused,
 
 int
 qat_comp_dev_destroy(struct qat_pci_device *qat_pci_dev __rte_unused);
-
-int
-qat_query_svc(struct qat_pci_device *qat_pci_dev, uint8_t *ret);
 
 #endif /* _QAT_DEVICE_H_ */

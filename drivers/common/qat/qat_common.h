@@ -22,6 +22,8 @@ enum qat_device_gen {
 	QAT_GEN4
 };
 
+#define QAT_DEV_GEN_NO	(QAT_GEN4 + 1)
+
 enum qat_service_type {
 	QAT_SERVICE_ASYMMETRIC = 0,
 	QAT_SERVICE_SYMMETRIC,

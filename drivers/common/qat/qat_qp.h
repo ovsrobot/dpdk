@@ -24,6 +24,8 @@ struct qat_pci_device;
 #define QAT_GEN4_BUNDLE_NUM             4
 #define QAT_GEN4_QPS_PER_BUNDLE_NUM     1
 
+#define ADF_ARB_RINGSRVARBEN_OFFSET		0x19C
+
 /**
  * Structure with data needed for creation of queue pair.
  */
@@ -96,9 +98,6 @@ struct qat_qp {
 	uint16_t min_enq_burst_threshold;
 } __rte_cache_aligned;
 
-extern const struct qat_qp_hw_data qat_gen1_qps[][ADF_MAX_QPS_ON_ANY_SERVICE];
-extern const struct qat_qp_hw_data qat_gen3_qps[][ADF_MAX_QPS_ON_ANY_SERVICE];
-
 uint16_t
 qat_enqueue_op_burst(void *qp, void **ops, uint16_t nb_ops);
 
@@ -130,10 +129,42 @@ qat_comp_process_response(void **op __rte_unused, uint8_t *resp __rte_unused,
 			  uint64_t *dequeue_err_count __rte_unused);
 
 int
-qat_select_valid_queue(struct qat_pci_device *qat_dev, int qp_id,
-			enum qat_service_type service_type);
-
-int
 qat_read_qp_config(struct qat_pci_device *qat_dev);
+
+typedef int (*qat_qp_rings_per_service_t)
+		(struct qat_pci_device *, enum qat_service_type);
+typedef void (*qat_qp_build_ring_base_t)
+		(void *, struct qat_queue *);
+typedef void (*qat_qp_adf_arb_enable_t)
+		(const struct qat_queue *, void *,
+			rte_spinlock_t *);
+typedef void (*qat_qp_adf_arb_disable_t)
+		(const struct qat_queue *, void *,
+			rte_spinlock_t *);
+typedef void (*qat_qp_adf_configure_queues_t)(struct qat_qp *);
+
+typedef void (*qat_qp_csr_write_tail_t)(struct qat_qp *qp,
+					struct qat_queue *q);
+
+typedef void (*qat_qp_csr_write_head_t)(struct qat_qp *qp,
+					struct qat_queue *q,
+					uint32_t new_head);
+
+typedef void (*qat_qp_csr_setup_t)(struct qat_pci_device*,
+					void *, struct qat_qp *);
+
+struct qat_qp_hw_spec_funcs {
+	qat_qp_rings_per_service_t	qat_qp_rings_per_service;
+	qat_qp_build_ring_base_t	qat_qp_build_ring_base;
+	qat_qp_adf_arb_enable_t		qat_qp_adf_arb_enable;
+	qat_qp_adf_arb_disable_t	qat_qp_adf_arb_disable;
+	qat_qp_adf_configure_queues_t	qat_qp_adf_configure_queues;
+	qat_qp_csr_write_tail_t		qat_qp_csr_write_tail;
+	qat_qp_csr_write_head_t		qat_qp_csr_write_head;
+	qat_qp_csr_setup_t		qat_qp_csr_setup;
+};
+
+extern struct
+qat_qp_hw_spec_funcs *qat_qp_hw_spec[];
 
 #endif /* _QAT_QP_H_ */
