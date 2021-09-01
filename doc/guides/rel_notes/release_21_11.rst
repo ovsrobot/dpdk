@@ -58,6 +58,7 @@ New Features
 * **Updated Marvell cn10k_crypto PMD.**
 
   * Added aes-cbc sha1-hmac in lookaside protocol (IPsec).
+  * Added transport mode in lookaside protocol (IPsec).
 
 
 Removed Items
