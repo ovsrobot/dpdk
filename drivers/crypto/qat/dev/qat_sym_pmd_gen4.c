@@ -8,6 +8,11 @@
 #include "qat_sym_session.h"
 #include "qat_sym.h"
 
+static struct rte_cryptodev_capabilities qat_gen4_sym_capabilities[] = {
+	QAT_BASE_GEN4_SYM_CAPABILITIES,
+	RTE_CRYPTODEV_END_OF_CAPABILITIES_LIST()
+};
+
 static int
 qat_select_valid_queue(struct qat_pci_device *qat_dev, int qp_id,
 			enum qat_service_type service_type)
@@ -76,7 +81,24 @@ struct rte_cryptodev_ops crypto_qat_gen4_ops = {
 		.sym_configure_raw_dp_ctx = qat_sym_configure_dp_ctx,
 };
 
+static struct
+qat_capabilities_info get_capabilties_gen4(
+			struct qat_pci_device *qat_dev __rte_unused)
+{
+	struct qat_capabilities_info capa_info;
+
+	capa_info.data = qat_gen4_sym_capabilities;
+	capa_info.size = sizeof(qat_gen4_sym_capabilities);
+	return capa_info;
+}
+
+static struct
+qat_sym_pmd_dev_ops qat_sym_pmd_ops_gen4 = {
+	.qat_sym_get_capabilities	= get_capabilties_gen4,
+};
+
 RTE_INIT(qat_sym_pmd_gen4_init)
 {
-	QAT_CRYPTODEV_OPS[QAT_GEN4] = &crypto_qat_gen4_ops;
+	QAT_CRYPTODEV_OPS[QAT_GEN4]	= &crypto_qat_gen4_ops;
+	qat_sym_pmd_ops[QAT_GEN4]	= &qat_sym_pmd_ops_gen4;
 }

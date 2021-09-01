@@ -9,6 +9,13 @@
 #include "qat_sym.h"
 #include "qat_sym_pmd_gen1.h"
 
+static struct rte_cryptodev_capabilities qat_gen3_sym_capabilities[] = {
+	QAT_BASE_GEN1_SYM_CAPABILITIES,
+	QAT_EXTRA_GEN2_SYM_CAPABILITIES,
+	QAT_EXTRA_GEN3_SYM_CAPABILITIES,
+	RTE_CRYPTODEV_END_OF_CAPABILITIES_LIST()
+};
+
 struct rte_cryptodev_ops crypto_qat_gen3_ops = {
 
 		/* Device related operations */
@@ -33,7 +40,24 @@ struct rte_cryptodev_ops crypto_qat_gen3_ops = {
 		.sym_configure_raw_dp_ctx = qat_sym_configure_dp_ctx,
 };
 
+static struct
+qat_capabilities_info get_capabilties_gen3(
+			struct qat_pci_device *qat_dev __rte_unused)
+{
+	struct qat_capabilities_info capa_info;
+	capa_info.data = qat_gen3_sym_capabilities;
+	capa_info.size = sizeof(qat_gen3_sym_capabilities);
+	return capa_info;
+}
+
+static struct
+qat_sym_pmd_dev_ops qat_sym_pmd_ops_gen3 = {
+	.qat_sym_get_capabilities	= get_capabilties_gen3,
+};
+
+
 RTE_INIT(qat_sym_pmd_gen3_init)
 {
-	QAT_CRYPTODEV_OPS[QAT_GEN3] = &crypto_qat_gen3_ops;
+	QAT_CRYPTODEV_OPS[QAT_GEN3]	= &crypto_qat_gen3_ops;
+	qat_sym_pmd_ops[QAT_GEN3]	= &qat_sym_pmd_ops_gen3;
 }

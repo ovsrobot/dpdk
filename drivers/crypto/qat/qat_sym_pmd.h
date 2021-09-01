@@ -26,7 +26,24 @@
 
 extern uint8_t qat_sym_driver_id;
 
-extern struct rte_cryptodev_ops *QAT_CRYPTODEV_OPS[];
+struct qat_capabilities_info {
+	struct rte_cryptodev_capabilities *data;
+	uint64_t size;
+};
+
+extern struct
+rte_cryptodev_ops *QAT_CRYPTODEV_OPS[];
+extern struct
+qat_capabilities_info qat_sym_capabilities[];
+
+typedef struct qat_capabilities_info (*get_capabilities_info_t)
+			(struct qat_pci_device *qat_dev);
+
+struct qat_sym_pmd_dev_ops {
+	get_capabilities_info_t qat_sym_get_capabilities;
+};
+
+extern struct qat_sym_pmd_dev_ops *qat_sym_pmd_ops[];
 
 /** private data structure for a QAT device.
  * This QAT device is a device offering only symmetric crypto service,

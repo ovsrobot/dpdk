@@ -22,28 +22,9 @@
 
 uint8_t qat_sym_driver_id;
 
-static const struct rte_cryptodev_capabilities qat_gen1_sym_capabilities[] = {
-	QAT_BASE_GEN1_SYM_CAPABILITIES,
-	RTE_CRYPTODEV_END_OF_CAPABILITIES_LIST()
-};
-
-static const struct rte_cryptodev_capabilities qat_gen2_sym_capabilities[] = {
-	QAT_BASE_GEN1_SYM_CAPABILITIES,
-	QAT_EXTRA_GEN2_SYM_CAPABILITIES,
-	RTE_CRYPTODEV_END_OF_CAPABILITIES_LIST()
-};
-
-static const struct rte_cryptodev_capabilities qat_gen3_sym_capabilities[] = {
-	QAT_BASE_GEN1_SYM_CAPABILITIES,
-	QAT_EXTRA_GEN2_SYM_CAPABILITIES,
-	QAT_EXTRA_GEN3_SYM_CAPABILITIES,
-	RTE_CRYPTODEV_END_OF_CAPABILITIES_LIST()
-};
-
-static const struct rte_cryptodev_capabilities qat_gen4_sym_capabilities[] = {
-	QAT_BASE_GEN4_SYM_CAPABILITIES,
-	RTE_CRYPTODEV_END_OF_CAPABILITIES_LIST()
-};
+struct qat_capabilities_info qat_sym_capabilities[QAT_DEV_GEN_NO];
+struct rte_cryptodev_ops *QAT_CRYPTODEV_OPS[QAT_DEV_GEN_NO];
+struct qat_sym_pmd_dev_ops *qat_sym_pmd_ops[QAT_DEV_GEN_NO];
 
 #ifdef RTE_LIB_SECURITY
 static const struct rte_cryptodev_capabilities
@@ -61,6 +42,16 @@ static const struct rte_security_capability qat_security_capabilities[] = {
 #endif
 
 struct rte_cryptodev_ops *QAT_CRYPTODEV_OPS[QAT_DEV_GEN_NO];
+
+static struct
+qat_capabilities_info qat_sym_get_capa_info(
+		struct qat_pci_device *qat_dev)
+{
+	struct qat_sym_pmd_dev_ops *ops =
+			qat_sym_pmd_ops[qat_dev->qat_dev_gen];
+
+	return ops->qat_sym_get_capabilities(qat_dev);
+}
 
 int qat_sym_dev_config(__rte_unused struct rte_cryptodev *dev,
 		__rte_unused struct rte_cryptodev_config *config)
@@ -83,7 +74,7 @@ int qat_sym_dev_close(struct rte_cryptodev *dev)
 	int i, ret;
 
 	for (i = 0; i < dev->data->nb_queue_pairs; i++) {
-		ret = qat_sym_qp_release(dev, i);
+		ret = dev->dev_ops->queue_pair_release(dev, i);
 		if (ret < 0)
 			return ret;
 	}
@@ -171,7 +162,7 @@ int qat_sym_qp_setup(struct rte_cryptodev *dev, uint16_t qp_id,
 
 	/* If qp is already in use free ring memory and qp metadata. */
 	if (*qp_addr != NULL) {
-		ret = qat_sym_qp_release(dev, qp_id);
+		ret = dev->dev_ops->queue_pair_release(dev, qp_id);
 		if (ret < 0)
 			return -EBUSY;
 	}
@@ -283,6 +274,7 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 	char capa_memz_name[RTE_CRYPTODEV_NAME_MAX_LEN];
 	struct rte_cryptodev *cryptodev;
 	struct qat_sym_dev_private *internals;
+	struct qat_capabilities_info capa_info;
 	const struct rte_cryptodev_capabilities *capabilities;
 	uint64_t capa_size;
 
@@ -370,30 +362,10 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 	internals->qat_dev = qat_pci_dev;
 
 	internals->sym_dev_id = cryptodev->data->dev_id;
-	switch (qat_pci_dev->qat_dev_gen) {
-	case QAT_GEN1:
-		capabilities = qat_gen1_sym_capabilities;
-		capa_size = sizeof(qat_gen1_sym_capabilities);
-		break;
-	case QAT_GEN2:
-		capabilities = qat_gen2_sym_capabilities;
-		capa_size = sizeof(qat_gen2_sym_capabilities);
-		break;
-	case QAT_GEN3:
-		capabilities = qat_gen3_sym_capabilities;
-		capa_size = sizeof(qat_gen3_sym_capabilities);
-		break;
-	case QAT_GEN4:
-		capabilities = qat_gen4_sym_capabilities;
-		capa_size = sizeof(qat_gen4_sym_capabilities);
-		break;
-	default:
-		QAT_LOG(DEBUG,
-			"QAT gen %d capabilities unknown",
-			qat_pci_dev->qat_dev_gen);
-		ret = -(EINVAL);
-		goto error;
-	}
+
+	capa_info = qat_sym_get_capa_info(qat_pci_dev);
+	capabilities = capa_info.data;
+	capa_size = capa_info.size;
 
 	internals->capa_mz = rte_memzone_lookup(capa_memz_name);
 	if (internals->capa_mz == NULL) {

@@ -7,8 +7,15 @@
 #include "qat_sym_pmd.h"
 #include "qat_sym_session.h"
 #include "qat_sym.h"
+#include "qat_sym_capabilities.h"
 
 #define MIXED_CRYPTO_MIN_FW_VER 0x04090000
+
+static struct rte_cryptodev_capabilities qat_gen2_sym_capabilities[] = {
+	QAT_BASE_GEN1_SYM_CAPABILITIES,
+	QAT_EXTRA_GEN2_SYM_CAPABILITIES,
+	RTE_CRYPTODEV_END_OF_CAPABILITIES_LIST()
+};
 
 static int qat_sym_qp_setup_gen2(struct rte_cryptodev *dev, uint16_t qp_id,
 	const struct rte_cryptodev_qp_conf *qp_conf,
@@ -74,7 +81,23 @@ struct rte_cryptodev_ops crypto_qat_gen2_ops = {
 		.sym_configure_raw_dp_ctx = qat_sym_configure_dp_ctx,
 };
 
+static struct
+qat_capabilities_info get_capabilties_gen2(
+			struct qat_pci_device *qat_dev __rte_unused)
+{
+	struct qat_capabilities_info capa_info;
+	capa_info.data = qat_gen2_sym_capabilities;
+	capa_info.size = sizeof(qat_gen2_sym_capabilities);
+	return capa_info;
+}
+
+static struct
+qat_sym_pmd_dev_ops qat_sym_pmd_ops_gen2 = {
+	.qat_sym_get_capabilities	= get_capabilties_gen2,
+};
+
 RTE_INIT(qat_sym_pmd_gen2)
 {
-	QAT_CRYPTODEV_OPS[QAT_GEN2] = &crypto_qat_gen2_ops;
+	QAT_CRYPTODEV_OPS[QAT_GEN2]	= &crypto_qat_gen2_ops;
+	qat_sym_pmd_ops[QAT_GEN2]	= &qat_sym_pmd_ops_gen2;
 }
