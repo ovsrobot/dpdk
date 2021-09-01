@@ -148,6 +148,7 @@ DPDK_22 {
 	rte_memzone_walk;
 	rte_openlog_stream;
 	rte_rand;
+	rte_rand_max;
 	rte_realloc;
 	rte_reciprocal_value;
 	rte_reciprocal_value_u64;
@@ -326,7 +327,6 @@ EXPERIMENTAL {
 	rte_lcore_to_cpu_id;
 	rte_mcfg_timer_lock;
 	rte_mcfg_timer_unlock;
-	rte_rand_max; # WINDOWS_NO_EXPORT
 
 	# added in 19.11
 	rte_mcfg_get_single_file_segments;
