@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Marvell cn10k_crypto PMD.**
+
+  * Added aes-cbc sha1-hmac in lookaside protocol (IPsec).
+
 
 Removed Items
 -------------
