@@ -26,7 +26,7 @@ Refer to :numref:`figure_single_port_nic`.
 
 Therefore, a NIC is logically distributed among multiple virtual machines (as shown in :numref:`figure_single_port_nic`),
 while still having global data in common to share with the Physical Function and other Virtual Functions.
-The DPDK fm10kvf, i40evf, igbvf or ixgbevf as a Poll Mode Driver (PMD) serves for the Intel® 82576 Gigabit Ethernet Controller,
+The DPDK fm10kvf, iavf, igbvf or ixgbevf as a Poll Mode Driver (PMD) serves for the Intel® 82576 Gigabit Ethernet Controller,
 Intel® Ethernet Controller I350 family, Intel® 82599 10 Gigabit Ethernet Controller NIC,
 Intel® Fortville 10/40 Gigabit Ethernet Controller NIC's virtual PCI function, or PCIe host-interface of the Intel Ethernet Switch
 FM10000 Series.
@@ -87,12 +87,6 @@ For more detail on SR-IOV, please refer to the following documents:
     To use DPDK IAVF PMD on Intel® 700 Series Ethernet Controller, the device id (0x1889) need to specified during device
     assignment in hypervisor. Take qemu for example, the device assignment should carry the IAVF device id (0x1889) like
     ``-device vfio-pci,x-pci-device-id=0x1889,host=03:0a.0``.
-
-    Starting from DPDK 21.05, the default VF driver for Intel® 700 Series Ethernet Controller will be IAVF. No new feature
-    will be added into i40evf except bug fix until it's removed in DPDK 21.11. Between DPDK 21.05 and 21.11, by using the
-    ``devargs`` option ``driver=i40evf``, i40evf PMD still can be used on Intel® 700 Series Ethernet Controller, for example::
-
-    -a 81:02.0,driver=i40evf
 
     When IAVF is backed by an Intel® E810 device, the "Protocol Extraction" feature which is supported by ice PMD is also
     available for IAVF PMD. The same devargs with the same parameters can be applied to IAVF PMD, for detail please reference
