@@ -15,6 +15,7 @@
 
 #include "qat_sym_capabilities.h"
 #include "qat_device.h"
+#include "qat_qp.h"
 
 /** Intel(R) QAT Symmetric Crypto PMD driver name */
 #define CRYPTODEV_NAME_QAT_SYM_PMD	crypto_qat
@@ -24,6 +25,8 @@
 #define QAT_SYM_CAP_VALID		(1 << 31)
 
 extern uint8_t qat_sym_driver_id;
+
+extern struct rte_cryptodev_ops *QAT_CRYPTODEV_OPS[];
 
 /** private data structure for a QAT device.
  * This QAT device is a device offering only symmetric crypto service,
@@ -48,6 +51,26 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 
 int
 qat_sym_dev_destroy(struct qat_pci_device *qat_pci_dev);
+
+int qat_sym_qp_release(struct rte_cryptodev *dev, uint16_t queue_pair_id);
+
+int qat_sym_qp_setup(struct rte_cryptodev *dev, uint16_t qp_id,
+	const struct rte_cryptodev_qp_conf *qp_conf, struct qat_qp_config qat_qp_conf,
+	int socket_id);
+
+void qat_sym_stats_reset(struct rte_cryptodev *dev);
+
+void qat_sym_stats_get(struct rte_cryptodev *dev,
+		struct rte_cryptodev_stats *stats);
+
+void qat_sym_dev_info_get(struct rte_cryptodev *dev,
+			struct rte_cryptodev_info *info);
+
+int qat_sym_dev_config(__rte_unused struct rte_cryptodev *dev,
+		__rte_unused struct rte_cryptodev_config *config);
+int qat_sym_dev_close(struct rte_cryptodev *dev);
+void qat_sym_dev_stop(__rte_unused struct rte_cryptodev *dev);
+int qat_sym_dev_start(__rte_unused struct rte_cryptodev *dev);
 
 #endif
 #endif /* _QAT_SYM_PMD_H_ */

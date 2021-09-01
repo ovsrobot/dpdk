@@ -16,6 +16,7 @@
 #include "qat_sym.h"
 #include "qat_sym_session.h"
 #include "qat_sym_pmd.h"
+#include "qat_qp.h"
 
 #define MIXED_CRYPTO_MIN_FW_VER 0x04090000
 
@@ -59,26 +60,25 @@ static const struct rte_security_capability qat_security_capabilities[] = {
 };
 #endif
 
-static int qat_sym_qp_release(struct rte_cryptodev *dev,
-	uint16_t queue_pair_id);
+struct rte_cryptodev_ops *QAT_CRYPTODEV_OPS[QAT_DEV_GEN_NO];
 
-static int qat_sym_dev_config(__rte_unused struct rte_cryptodev *dev,
+int qat_sym_dev_config(__rte_unused struct rte_cryptodev *dev,
 		__rte_unused struct rte_cryptodev_config *config)
 {
 	return 0;
 }
 
-static int qat_sym_dev_start(__rte_unused struct rte_cryptodev *dev)
+int qat_sym_dev_start(__rte_unused struct rte_cryptodev *dev)
 {
 	return 0;
 }
 
-static void qat_sym_dev_stop(__rte_unused struct rte_cryptodev *dev)
+void qat_sym_dev_stop(__rte_unused struct rte_cryptodev *dev)
 {
 	return;
 }
 
-static int qat_sym_dev_close(struct rte_cryptodev *dev)
+int qat_sym_dev_close(struct rte_cryptodev *dev)
 {
 	int i, ret;
 
@@ -91,7 +91,7 @@ static int qat_sym_dev_close(struct rte_cryptodev *dev)
 	return 0;
 }
 
-static void qat_sym_dev_info_get(struct rte_cryptodev *dev,
+void qat_sym_dev_info_get(struct rte_cryptodev *dev,
 			struct rte_cryptodev_info *info)
 {
 	struct qat_sym_dev_private *internals = dev->data->dev_private;
@@ -108,7 +108,7 @@ static void qat_sym_dev_info_get(struct rte_cryptodev *dev,
 	}
 }
 
-static void qat_sym_stats_get(struct rte_cryptodev *dev,
+void qat_sym_stats_get(struct rte_cryptodev *dev,
 		struct rte_cryptodev_stats *stats)
 {
 	struct qat_common_stats qat_stats = {0};
@@ -127,7 +127,7 @@ static void qat_sym_stats_get(struct rte_cryptodev *dev,
 	stats->dequeue_err_count = qat_stats.dequeue_err_count;
 }
 
-static void qat_sym_stats_reset(struct rte_cryptodev *dev)
+void qat_sym_stats_reset(struct rte_cryptodev *dev)
 {
 	struct qat_sym_dev_private *qat_priv;
 
@@ -141,7 +141,7 @@ static void qat_sym_stats_reset(struct rte_cryptodev *dev)
 
 }
 
-static int qat_sym_qp_release(struct rte_cryptodev *dev, uint16_t queue_pair_id)
+int qat_sym_qp_release(struct rte_cryptodev *dev, uint16_t queue_pair_id)
 {
 	struct qat_sym_dev_private *qat_private = dev->data->dev_private;
 	enum qat_device_gen qat_dev_gen = qat_private->qat_dev->qat_dev_gen;
@@ -156,70 +156,46 @@ static int qat_sym_qp_release(struct rte_cryptodev *dev, uint16_t queue_pair_id)
 			&(dev->data->queue_pairs[queue_pair_id]));
 }
 
-static int qat_sym_qp_setup(struct rte_cryptodev *dev, uint16_t qp_id,
-	const struct rte_cryptodev_qp_conf *qp_conf,
+int qat_sym_qp_setup(struct rte_cryptodev *dev, uint16_t qp_id,
+	const struct rte_cryptodev_qp_conf *qp_conf, struct qat_qp_config qat_qp_conf,
 	int socket_id)
 {
 	struct qat_qp *qp;
 	int ret = 0;
 	uint32_t i;
-	struct qat_qp_config qat_qp_conf;
-	const struct qat_qp_hw_data *sym_hw_qps = NULL;
-	const struct qat_qp_hw_data *qp_hw_data = NULL;
 
 	struct qat_qp **qp_addr =
 			(struct qat_qp **)&(dev->data->queue_pairs[qp_id]);
-	struct qat_sym_dev_private *qat_private = dev->data->dev_private;
-	struct qat_pci_device *qat_dev = qat_private->qat_dev;
-
-	if (qat_dev->qat_dev_gen == QAT_GEN4) {
-		int ring_pair =
-			qat_select_valid_queue(qat_dev, qp_id,
-				QAT_SERVICE_SYMMETRIC);
-
-		if (ring_pair < 0) {
-			QAT_LOG(ERR,
-				"qp_id %u invalid for this device, no enough services allocated for GEN4 device",
-				qp_id);
-			return -EINVAL;
-		}
-		sym_hw_qps =
-			&qat_dev->qp_gen4_data[0][0];
-		qp_hw_data =
-			&qat_dev->qp_gen4_data[ring_pair][0];
-	} else {
-		sym_hw_qps = qat_gen_config[qat_dev->qat_dev_gen]
-				.qp_hw_data[QAT_SERVICE_SYMMETRIC];
-		qp_hw_data = sym_hw_qps + qp_id;
-	}
+	struct qat_sym_dev_private *qat_sym_private = dev->data->dev_private;
+	struct qat_pci_device *qat_dev = qat_sym_private->qat_dev;
 
 	/* If qp is already in use free ring memory and qp metadata. */
 	if (*qp_addr != NULL) {
 		ret = qat_sym_qp_release(dev, qp_id);
 		if (ret < 0)
-			return ret;
+			return -EBUSY;
 	}
 	if (qp_id >= qat_qps_per_service(qat_dev, QAT_SERVICE_SYMMETRIC)) {
 		QAT_LOG(ERR, "qp_id %u invalid for this device", qp_id);
 		return -EINVAL;
 	}
 
-	qat_qp_conf.hw = qp_hw_data;
-	qat_qp_conf.cookie_size = sizeof(struct qat_sym_op_cookie);
-	qat_qp_conf.nb_descriptors = qp_conf->nb_descriptors;
+	if (qat_qp_conf.cookie_size == 0)
+		qat_qp_conf.cookie_size = sizeof(struct qat_sym_op_cookie);
+	if (qat_qp_conf.nb_descriptors == 0)
+		qat_qp_conf.nb_descriptors = qp_conf->nb_descriptors;
 	qat_qp_conf.socket_id = socket_id;
 	qat_qp_conf.service_str = "sym";
 
-	ret = qat_qp_setup(qat_private->qat_dev, qp_addr, qp_id, &qat_qp_conf);
+	ret = qat_qp_setup(qat_dev, qp_addr, qp_id, &qat_qp_conf);
 	if (ret != 0)
 		return ret;
 
 	/* store a link to the qp in the qat_pci_device */
-	qat_private->qat_dev->qps_in_use[QAT_SERVICE_SYMMETRIC][qp_id]
-							= *qp_addr;
+	qat_dev->qps_in_use[QAT_SERVICE_SYMMETRIC][qp_id] = *qp_addr;
 
 	qp = (struct qat_qp *)*qp_addr;
-	qp->min_enq_burst_threshold = qat_private->min_enq_burst_threshold;
+	qp->min_enq_burst_threshold = qat_sym_private->min_enq_burst_threshold;
 
 	for (i = 0; i < qp->nb_descriptors; i++) {
 
@@ -240,60 +216,10 @@ static int qat_sym_qp_setup(struct rte_cryptodev *dev, uint16_t qp_id,
 				rte_mempool_virt2iova(cookie) +
 				offsetof(struct qat_sym_op_cookie,
 				opt.spc_gmac.cd_cipher);
-
-	}
-
-	/* Get fw version from QAT (GEN2), skip if we've got it already */
-	if (qp->qat_dev_gen == QAT_GEN2 && !(qat_private->internal_capabilities
-			& QAT_SYM_CAP_VALID)) {
-		ret = qat_cq_get_fw_version(qp);
-
-		if (ret < 0) {
-			qat_sym_qp_release(dev, qp_id);
-			return ret;
-		}
-
-		if (ret != 0)
-			QAT_LOG(DEBUG, "QAT firmware version: %d.%d.%d",
-					(ret >> 24) & 0xff,
-					(ret >> 16) & 0xff,
-					(ret >> 8) & 0xff);
-		else
-			QAT_LOG(DEBUG, "unknown QAT firmware version");
-
-		/* set capabilities based on the fw version */
-		qat_private->internal_capabilities = QAT_SYM_CAP_VALID |
-				((ret >= MIXED_CRYPTO_MIN_FW_VER) ?
-						QAT_SYM_CAP_MIXED_CRYPTO : 0);
-		ret = 0;
 	}
 
 	return ret;
 }
-
-static struct rte_cryptodev_ops crypto_qat_ops = {
-
-		/* Device related operations */
-		.dev_configure		= qat_sym_dev_config,
-		.dev_start		= qat_sym_dev_start,
-		.dev_stop		= qat_sym_dev_stop,
-		.dev_close		= qat_sym_dev_close,
-		.dev_infos_get		= qat_sym_dev_info_get,
-
-		.stats_get		= qat_sym_stats_get,
-		.stats_reset		= qat_sym_stats_reset,
-		.queue_pair_setup	= qat_sym_qp_setup,
-		.queue_pair_release	= qat_sym_qp_release,
-
-		/* Crypto related operations */
-		.sym_session_get_size	= qat_sym_session_get_private_size,
-		.sym_session_configure	= qat_sym_session_configure,
-		.sym_session_clear	= qat_sym_session_clear,
-
-		/* Raw data-path API related operations */
-		.sym_get_raw_dp_ctx_size = qat_sym_get_dp_ctx_size,
-		.sym_configure_raw_dp_ctx = qat_sym_configure_dp_ctx,
-};
 
 #ifdef RTE_LIB_SECURITY
 static const struct rte_security_capability *
@@ -397,7 +323,7 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 
 	qat_dev_instance->sym_rte_dev.name = cryptodev->data->name;
 	cryptodev->driver_id = qat_sym_driver_id;
-	cryptodev->dev_ops = &crypto_qat_ops;
+	cryptodev->dev_ops = QAT_CRYPTODEV_OPS[qat_pci_dev->qat_dev_gen];
 
 	cryptodev->enqueue_burst = qat_sym_pmd_enqueue_op_burst;
 	cryptodev->dequeue_burst = qat_sym_pmd_dequeue_op_burst;
