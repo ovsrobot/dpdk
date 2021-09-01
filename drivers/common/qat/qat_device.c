@@ -51,6 +51,16 @@ static const struct rte_pci_id pci_id_qat_map[] = {
 		{.device_id = 0},
 };
 
+static int
+qat_pci_get_extra_size(enum qat_device_gen qat_dev_gen)
+{
+	struct qat_dev_hw_spec_funcs *ops_hw =
+		qat_dev_hw_spec[qat_dev_gen];
+	RTE_FUNC_PTR_OR_ERR_RET(ops_hw->qat_dev_get_extra_size,
+		-ENOTSUP);
+	return ops_hw->qat_dev_get_extra_size();
+}
+
 static struct qat_pci_device *
 qat_pci_get_named_dev(const char *name)
 {
@@ -156,14 +166,37 @@ qat_pci_device_allocate(struct rte_pci_device *pci_dev,
 		struct qat_dev_cmd_param *qat_dev_cmd_param)
 {
 	struct qat_pci_device *qat_dev;
+	enum qat_device_gen qat_dev_gen;
 	uint8_t qat_dev_id = 0;
 	char name[QAT_DEV_NAME_MAX_LEN];
 	struct rte_devargs *devargs = pci_dev->device.devargs;
 	struct qat_dev_hw_spec_funcs *ops_hw = NULL;
 	struct rte_mem_resource *mem_resource;
+	int extra_size;
 
 	rte_pci_device_name(&pci_dev->addr, name, sizeof(name));
 	snprintf(name+strlen(name), QAT_DEV_NAME_MAX_LEN-strlen(name), "_qat");
+
+	switch (pci_dev->id.device_id) {
+	case 0x0443:
+		qat_dev_gen = QAT_GEN1;
+		break;
+	case 0x37c9:
+	case 0x19e3:
+	case 0x6f55:
+	case 0x18ef:
+		qat_dev_gen = QAT_GEN2;
+		break;
+	case 0x18a1:
+		qat_dev_gen = QAT_GEN3;
+		break;
+	case 0x4941:
+		qat_dev_gen = QAT_GEN4;
+		break;
+	default:
+		QAT_LOG(ERR, "Invalid dev_id, can't determine generation");
+		return NULL;
+	}
 
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
 		const struct rte_memzone *mz = rte_memzone_lookup(name);
@@ -194,9 +227,15 @@ qat_pci_device_allocate(struct rte_pci_device *pci_dev,
 		QAT_LOG(ERR, "Reached maximum number of QAT devices");
 		return NULL;
 	}
-
+	extra_size = qat_pci_get_extra_size(qat_dev_gen);
+	if (extra_size < 0) {
+		QAT_LOG(ERR, "Error when acquiring extra size len QAT_%d",
+			qat_dev_id);
+		return NULL;
+	}
 	qat_pci_devs[qat_dev_id].mz = rte_memzone_reserve(name,
-		sizeof(struct qat_pci_device),
+		sizeof(struct qat_pci_device) +
+			extra_size,
 		rte_socket_id(), 0);
 
 	if (qat_pci_devs[qat_dev_id].mz == NULL) {
@@ -207,30 +246,11 @@ qat_pci_device_allocate(struct rte_pci_device *pci_dev,
 
 	qat_dev = qat_pci_devs[qat_dev_id].mz->addr;
 	memset(qat_dev, 0, sizeof(*qat_dev));
+	qat_dev->dev_private = qat_dev + 1;
 	strlcpy(qat_dev->name, name, QAT_DEV_NAME_MAX_LEN);
 	qat_dev->qat_dev_id = qat_dev_id;
 	qat_pci_devs[qat_dev_id].pci_dev = pci_dev;
-	switch (pci_dev->id.device_id) {
-	case 0x0443:
-		qat_dev->qat_dev_gen = QAT_GEN1;
-		break;
-	case 0x37c9:
-	case 0x19e3:
-	case 0x6f55:
-	case 0x18ef:
-		qat_dev->qat_dev_gen = QAT_GEN2;
-		break;
-	case 0x18a1:
-		qat_dev->qat_dev_gen = QAT_GEN3;
-		break;
-	case 0x4941:
-		qat_dev->qat_dev_gen = QAT_GEN4;
-		break;
-	default:
-		QAT_LOG(ERR, "Invalid dev_id, can't determine generation");
-		rte_memzone_free(qat_pci_devs[qat_dev->qat_dev_id].mz);
-		return NULL;
-	}
+	qat_dev->qat_dev_gen = qat_dev_gen;
 
 	ops_hw = qat_dev_hw_spec[qat_dev->qat_dev_gen];
 	RTE_FUNC_PTR_OR_ERR_RET(ops_hw->qat_dev_get_misc_bar, NULL);

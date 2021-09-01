@@ -227,11 +227,18 @@ qat_dev_read_config_gen1(struct qat_pci_device *qat_dev __rte_unused)
 	return 0;
 }
 
+int
+qat_dev_get_extra_size_gen1(void)
+{
+	return 0;
+}
+
 static struct qat_dev_hw_spec_funcs qat_dev_hw_spec_gen1 = {
 	.qat_dev_reset_ring_pairs	= qat_reset_ring_pairs_gen1,
 	.qat_dev_get_transport_bar	= qat_dev_get_transport_bar_gen1,
 	.qat_dev_get_misc_bar		= qat_dev_get_misc_bar_gen1,
 	.qat_dev_read_config		= qat_dev_read_config_gen1,
+	.qat_dev_get_extra_size		= qat_dev_get_extra_size_gen1,
 };
 
 RTE_INIT(qat_dev_gen_gen1_init)

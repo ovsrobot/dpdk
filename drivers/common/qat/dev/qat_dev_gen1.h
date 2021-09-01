@@ -14,6 +14,9 @@ extern const struct qat_qp_hw_data qat_gen1_qps[QAT_MAX_SERVICES]
 					 [ADF_MAX_QPS_ON_ANY_SERVICE];
 
 int
+qat_dev_get_extra_size_gen1(void);
+
+int
 qat_qp_rings_per_service_gen1(struct qat_pci_device *qat_dev,
 		enum qat_service_type service);
 void

@@ -29,12 +29,14 @@ typedef int (*qat_dev_get_misc_bar_t)
 		(struct rte_mem_resource **, struct rte_pci_device *);
 typedef int (*qat_dev_read_config_t)
 		(struct qat_pci_device *);
+typedef int (*qat_dev_get_extra_size_t)(void);
 
 struct qat_dev_hw_spec_funcs {
 	qat_dev_reset_ring_pairs_t	qat_dev_reset_ring_pairs;
 	qat_dev_get_transport_bar_t	qat_dev_get_transport_bar;
 	qat_dev_get_misc_bar_t		qat_dev_get_misc_bar;
 	qat_dev_read_config_t		qat_dev_read_config;
+	qat_dev_get_extra_size_t	qat_dev_get_extra_size;
 };
 
 extern struct qat_dev_hw_spec_funcs *qat_dev_hw_spec[];
@@ -74,9 +76,6 @@ struct qat_device_info {
 	 * pci_dev so that its driver can have a compression-specific name
 	 */
 };
-
-extern const struct qat_qp_hw_data qat_gen1_qps[][ADF_MAX_QPS_ON_ANY_SERVICE];
-extern const struct qat_qp_hw_data qat_gen3_qps[][ADF_MAX_QPS_ON_ANY_SERVICE];
 
 extern struct qat_device_info qat_pci_devs[];
 
@@ -126,11 +125,10 @@ struct qat_pci_device {
 	/* Data relating to compression service */
 	struct qat_comp_dev_private *comp_dev;
 	/**< link back to compressdev private data */
-	struct qat_qp_hw_data qp_gen4_data[QAT_GEN4_BUNDLE_NUM]
-		[QAT_GEN4_QPS_PER_BUNDLE_NUM];
-	/**< Data of ring configuration on gen4 */
 	void *misc_bar_io_addr;
 	/**< Address of misc bar */
+	void *dev_private;
+	/**< Address per generation */
 };
 
 struct qat_gen_hw_data {

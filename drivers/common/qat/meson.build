@@ -9,6 +9,7 @@ endif
 
 qat_crypto = true
 qat_crypto_path = 'crypto/qat'
+qat_devs_path = 'dev'
 qat_crypto_relpath = '../../' + qat_crypto_path
 qat_compress = true
 qat_compress_path = 'compress/qat'
@@ -59,6 +60,7 @@ includes += include_directories(
         'qat_adf',
         qat_crypto_relpath,
         qat_compress_relpath,
+        qat_devs_path
 )
 
 if qat_compress

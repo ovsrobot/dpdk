@@ -39,15 +39,6 @@ struct qat_qp_hw_data {
 };
 
 /**
- * Structure with data needed for creation of queue pair on gen4.
- */
-struct qat_qp_gen4_data {
-	struct qat_qp_hw_data qat_qp_hw_data;
-	uint8_t reserved;
-	uint8_t valid;
-};
-
-/**
  * Structure with data needed for creation of queue pair.
  */
 struct qat_qp_config {

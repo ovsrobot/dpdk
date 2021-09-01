@@ -7,6 +7,7 @@
 #include "qat_sym_pmd.h"
 #include "qat_sym_session.h"
 #include "qat_sym.h"
+#include "qat_dev_gen4.h"
 
 static struct rte_cryptodev_capabilities qat_gen4_sym_capabilities[] = {
 	QAT_BASE_GEN4_SYM_CAPABILITIES,
@@ -18,9 +19,10 @@ qat_select_valid_queue(struct qat_pci_device *qat_dev, int qp_id,
 			enum qat_service_type service_type)
 {
 	int i = 0, valid_qps = 0;
+	struct qat_dev_gen4_extra *dev_extra = qat_dev->dev_private;
 
 	for (; i < QAT_GEN4_BUNDLE_NUM; i++) {
-		if (qat_dev->qp_gen4_data[i][0].service_type ==
+		if (qat_dev4_get_qp_serv(dev_extra, i) ==
 			service_type) {
 			if (valid_qps == qp_id)
 				return i;
@@ -39,6 +41,7 @@ static int qat_sym_qp_setup_gen4(struct rte_cryptodev *dev, uint16_t qp_id,
 	struct qat_qp_config qat_qp_conf = { };
 	struct qat_sym_dev_private *qat_sym_private = dev->data->dev_private;
 	struct qat_pci_device *qat_dev = qat_sym_private->qat_dev;
+	struct qat_dev_gen4_extra *dev_extra = qat_dev->dev_private;
 
 	ring_pair =
 		qat_select_valid_queue(qat_sym_private->qat_dev, qp_id,
@@ -50,7 +53,7 @@ static int qat_sym_qp_setup_gen4(struct rte_cryptodev *dev, uint16_t qp_id,
 		return -EINVAL;
 	}
 	qat_qp_conf.hw =
-		&qat_dev->qp_gen4_data[ring_pair][0];
+		qat_dev4_get_hw(dev_extra, ring_pair);
 
 	ret = qat_sym_qp_setup(dev, qp_id, qp_conf, qat_qp_conf, socket_id);
 

@@ -10,8 +10,26 @@
 #include "adf_transport_access_macros_gen4vf.h"
 #include "adf_pf2vf_msg.h"
 #include "qat_pf2vf.h"
+#include "qat_dev_gen4.h"
 
 #include <stdint.h>
+
+struct qat_dev_gen4_extra {
+	struct qat_qp_hw_data qp_gen4_data[QAT_GEN4_BUNDLE_NUM]
+		[QAT_GEN4_QPS_PER_BUNDLE_NUM];
+};
+
+enum qat_service_type qat_dev4_get_qp_serv(
+		struct qat_dev_gen4_extra *dev_extra, int ring_pair)
+{
+	return dev_extra->qp_gen4_data[ring_pair][0].service_type;
+}
+
+const struct qat_qp_hw_data *qat_dev4_get_hw(
+		struct qat_dev_gen4_extra *dev_extra, int ring_pair)
+{
+	return &dev_extra->qp_gen4_data[ring_pair][0];
+}
 
 static struct qat_pf2vf_dev qat_pf2vf_gen4 = {
 	.pf2vf_offset = ADF_4XXXIOV_PF2VM_OFFSET,
@@ -38,10 +56,11 @@ qat_qp_rings_per_service_gen4(struct qat_pci_device *qat_dev,
 		enum qat_service_type service)
 {
 	int i = 0, count = 0, max_ops_per_srv = 0;
+	struct qat_dev_gen4_extra *dev_extra = qat_dev->dev_private;
 
 	max_ops_per_srv = QAT_GEN4_BUNDLE_NUM;
 	for (i = 0, count = 0; i < max_ops_per_srv; i++)
-		if (qat_dev->qp_gen4_data[i][0].service_type == service)
+		if (dev_extra->qp_gen4_data[i][0].service_type == service)
 			count++;
 	return count;
 }
@@ -51,12 +70,13 @@ qat_dev_read_config_gen4(struct qat_pci_device *qat_dev)
 {
 	int i = 0;
 	uint16_t svc = 0;
+	struct qat_dev_gen4_extra *dev_extra = qat_dev->dev_private;
 
 	if (qat_query_svc(qat_dev, (uint8_t *)&svc))
 		return -EFAULT;
 	for (; i < QAT_GEN4_BUNDLE_NUM; i++) {
 		struct qat_qp_hw_data *hw_data =
-			&qat_dev->qp_gen4_data[i][0];
+			&dev_extra->qp_gen4_data[i][0];
 		uint8_t svc1 = (svc >> (3 * i)) & 0x7;
 		enum qat_service_type service_type = QAT_SERVICE_INVALID;
 
@@ -239,11 +259,18 @@ qat_dev_get_misc_bar_gen4(
 	return 0;
 }
 
+static int
+qat_dev_get_extra_size_gen4(void)
+{
+	return sizeof(struct qat_dev_gen4_extra);
+}
+
 static struct qat_dev_hw_spec_funcs qat_dev_hw_spec_gen4 = {
 	.qat_dev_reset_ring_pairs	= qat_reset_ring_pairs_gen4,
 	.qat_dev_get_transport_bar	= qat_dev_get_transport_bar_gen4,
 	.qat_dev_get_misc_bar		= qat_dev_get_misc_bar_gen4,
 	.qat_dev_read_config		= qat_dev_read_config_gen4,
+	.qat_dev_get_extra_size		= qat_dev_get_extra_size_gen4,
 };
 
 RTE_INIT(qat_dev_gen_4_init)
