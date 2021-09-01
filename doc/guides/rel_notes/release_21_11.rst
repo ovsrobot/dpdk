@@ -59,6 +59,7 @@ New Features
 
   * Added aes-cbc sha1-hmac in lookaside protocol (IPsec).
   * Added transport mode in lookaside protocol (IPsec).
+  * Added UDP encapsulation in lookaside protocol (IPsec).
 
 
 Removed Items
