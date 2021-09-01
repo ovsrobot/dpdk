@@ -171,12 +171,23 @@ When supported, this effectively enables an application to reroute traffic
 not necessarily intended for it (e.g. coming from or addressed to different
 physical ports, VFs or applications) at the device level.
 
-It complements the behavior of some pattern items such as `Item: PHY_PORT`_
-and is meaningless without them.
-
 When transferring flow rules, **ingress** and **egress** attributes
 (`Attribute: Traffic direction`_) keep their original meaning, as if
 processing traffic emitted or received by the application.
+
+DPDK port used to create transfer rule is important since it implicitly adds
+filtering by it (similar to `Item: PORT_ID` with ``spec.id`` equal to
+the port ID and exact match mask) if no other items which specify source
+are present in the rule pattern (e.g. `Item: PHY_PORT`, `Item: VF` or
+explicit `Item: PORT_ID`). It means that by default ingress rules apply to
+traffic which comes from associated upstream switch port, i.e. physical
+network port for PF DPDK port, VF for VF representor. Egress rules
+transfer traffic transmitted via corresponding DPDK port, i.e. PF DPDK
+port or VF representor itself.
+
+It is still possible to apply transfer rule on a traffic originating from
+any switch port using wildcard mask in corresponding pattern item if
+underlying PMD supports it.
 
 Pattern item
 ~~~~~~~~~~~~
