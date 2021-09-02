@@ -62,6 +62,9 @@ New Features
   * Added bus-level parsing of the devargs syntax.
   * Kept compatibility with the legacy syntax as parsing fallback.
 
+* **Added support for event crypto adapter on Marvell CN10K and CN9K.**
+
+  * Added event crypto adapter OP_FORWARD mode support.
 
 Removed Items
 -------------
