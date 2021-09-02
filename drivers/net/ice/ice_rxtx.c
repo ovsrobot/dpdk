@@ -354,6 +354,10 @@ ice_program_hw_rx_queue(struct ice_rx_queue *rxq)
 	regval |= (0x03 << QRXFLXP_CNTXT_RXDID_PRIO_S) &
 		QRXFLXP_CNTXT_RXDID_PRIO_M;
 
+	/* Enable timestamp bit in the queue context */
+	if (rxq->offloads & DEV_RX_OFFLOAD_TIMESTAMP)
+		regval |= QRXFLXP_CNTXT_TS_M;
+
 	ICE_WRITE_REG(hw, QRXFLXP_CNTXT(rxq->reg_idx), regval);
 
 	err = ice_clear_rxq_ctx(hw, rxq->reg_idx);
@@ -689,6 +693,7 @@ ice_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 	tx_ctx.tso_ena = 1; /* tso enable */
 	tx_ctx.tso_qnum = txq->reg_idx; /* index for tso state structure */
 	tx_ctx.legacy_int = 1; /* Legacy or Advanced Host Interface */
+	tx_ctx.tsyn_ena = 1;
 
 	ice_set_ctx(hw, (uint8_t *)&tx_ctx, txq_elem->txqs[0].txq_ctx,
 		    ice_tlan_ctx_info);
@@ -1589,6 +1594,13 @@ ice_rx_scan_hw_ring(struct ice_rx_queue *rxq)
 			ice_rxd_to_vlan_tci(mb, &rxdp[j]);
 			rxq->rxd_to_pkt_fields(rxq, mb, &rxdp[j]);
 
+			if (rxq->offloads & DEV_RX_OFFLOAD_TIMESTAMP) {
+				rxq->time_high =
+				   rte_le_to_cpu_32(rxdp[j].wb.flex_ts.ts_high);
+				mb->timesync = rxq->queue_id;
+				pkt_flags |= PKT_RX_IEEE1588_PTP;
+			}
+
 			mb->ol_flags |= pkt_flags;
 		}
 
@@ -1882,6 +1894,13 @@ ice_recv_scattered_pkts(void *rx_queue,
 		ice_rxd_to_vlan_tci(first_seg, &rxd);
 		rxq->rxd_to_pkt_fields(rxq, first_seg, &rxd);
 		pkt_flags = ice_rxd_error_to_pkt_flags(rx_stat_err0);
+
+		if (rxq->offloads & DEV_RX_OFFLOAD_TIMESTAMP) {
+			rxq->time_high = rxd.wb.flex_ts.ts_high;
+			first_seg->timesync = rxq->queue_id;
+			pkt_flags |= PKT_RX_IEEE1588_PTP;
+		}
+
 		first_seg->ol_flags |= pkt_flags;
 		/* Prefetch data of first segment, if configured to do so. */
 		rte_prefetch0(RTE_PTR_ADD(first_seg->buf_addr,
@@ -2288,6 +2307,13 @@ ice_recv_pkts(void *rx_queue,
 		ice_rxd_to_vlan_tci(rxm, &rxd);
 		rxq->rxd_to_pkt_fields(rxq, rxm, &rxd);
 		pkt_flags = ice_rxd_error_to_pkt_flags(rx_stat_err0);
+
+		if (rxq->offloads & DEV_RX_OFFLOAD_TIMESTAMP) {
+			rxq->time_high = rxd.wb.flex_ts.ts_high;
+			rxm->timesync = rxq->queue_id;
+			pkt_flags |= PKT_RX_IEEE1588_PTP;
+		}
+
 		rxm->ol_flags |= pkt_flags;
 		/* copy old mbuf to rx_pkts */
 		rx_pkts[nb_rx++] = rxm;
@@ -2499,7 +2525,8 @@ ice_calc_context_desc(uint64_t flags)
 	static uint64_t mask = PKT_TX_TCP_SEG |
 		PKT_TX_QINQ |
 		PKT_TX_OUTER_IP_CKSUM |
-		PKT_TX_TUNNEL_MASK;
+		PKT_TX_TUNNEL_MASK |
+		PKT_TX_IEEE1588_TMST;
 
 	return (flags & mask) ? 1 : 0;
 }
@@ -2667,6 +2694,12 @@ ice_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 			if (ol_flags & PKT_TX_TCP_SEG)
 				cd_type_cmd_tso_mss |=
 					ice_set_tso_ctx(tx_pkt, tx_offload);
+			else {
+				if (ol_flags & PKT_TX_IEEE1588_TMST)
+					cd_type_cmd_tso_mss |=
+					   ((uint64_t)ICE_TX_CTX_DESC_TSYN <<
+					    ICE_TXD_CTX_QW1_CMD_S);
+			}
 
 			ctx_txd->tunneling_params =
 				rte_cpu_to_le_32(cd_tunneling_params);
