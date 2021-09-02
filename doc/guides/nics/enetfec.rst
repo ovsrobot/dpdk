@@ -75,6 +75,8 @@ ENETFEC driver.
 ENETFEC Features
 ~~~~~~~~~~~~~~~~~
 
+- Basic stats
+- Promiscuous
 - ARMv8
 
 Supported ENETFEC SoCs
