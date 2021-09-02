@@ -4888,6 +4888,72 @@ __rte_experimental
 int rte_eth_representor_info_get(uint16_t port_id,
 				 struct rte_eth_representor_info *info);
 
+/**
+ * The ethdev will be able to detect flagged packets provided that
+ * there are active flow rules comprising the corresponding action.
+ */
+#define RTE_ETH_RX_META_USER_FLAG (UINT64_C(1) << 0)
+
+/**
+ * The ethdev will manage to see mark IDs in packets provided that
+ * there are active flow rules comprising the corresponding action.
+ */
+#define RTE_ETH_RX_META_USER_MARK (UINT64_C(1) << 1)
+
+/**
+ * The ethdev will be able to identify partially offloaded packets
+ * and process rte_flow_get_restore_info() invocations accordingly
+ * provided that there're so-called "tunnel_set" flow rules in use.
+ */
+#define RTE_ETH_RX_META_TUNNEL_ID (UINT64_C(1) << 2)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Negotiate support for specific fractions of Rx meta information.
+ *
+ * This function has to be invoked as early as possible, precisely,
+ * before the first rte_eth_dev_configure() invocation, to let the
+ * PMD make preparations which might be hard to do on later stages.
+ *
+ * The negotiation process is assumed to be carried out as follows:
+ *
+ * - the application composes a mask of preferred Rx meta features
+ *   intending to enable at least some of them and invokes the API;
+ *
+ * - the ethdev driver reports back the optimal (from its point of
+ *   view) subset of the initial feature set thus agreeing to make
+ *   those comprising the subset simultaneously available to users;
+ *
+ * - should the application find the result unsatisfactory, it may
+ *   come up with another pick of preferred features and try again;
+ *
+ * - the application can pass zero to clear the negotiation result;
+ *
+ * - the last negotiated result takes effect upon the ethdev start.
+ *
+ * If the method itself is unsupported by the PMD, the application
+ * may just ignore that and proceed with the rest of configuration
+ * procedure intending to simply try using the features it prefers.
+ *
+ * @param[in] port_id
+ *   Port (ethdev) identifier
+ *
+ * @param[inout] features
+ *   Feature selection buffer
+ *
+ * @return
+ *   - (-EBUSY) if the port can't handle this in its current state;
+ *   - (-ENOTSUP) if the method itself is not supported by the PMD;
+ *   - (-ENODEV) if *port_id* is invalid;
+ *   - (-EINVAL) if *features* is NULL;
+ *   - (-EIO) if the device is removed;
+ *   - (0) on success
+ */
+__rte_experimental
+int rte_eth_negotiate_rx_meta(uint16_t port_id, uint64_t *features);
+
 #include <rte_ethdev_core.h>
 
 /**
