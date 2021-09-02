@@ -44,6 +44,7 @@ libraries = [
         'power',
         'pdump',
         'rawdev',
+        'dmadev',
         'regexdev',
         'rib',
         'reorder',

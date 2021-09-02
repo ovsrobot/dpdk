@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added dmadev library support.**
+
+  The dmadev library provides a DMA device framework for management and
+  provision of hardware and software DMA devices.
+
 
 Removed Items
 -------------
