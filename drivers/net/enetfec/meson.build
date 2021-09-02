@@ -8,7 +8,8 @@ endif
 
 deps += ['common_dpaax']
 
-sources = files('enet_ethdev.c')
+sources = files('enet_ethdev.c',
+		'enet_uio.c')
 
 if cc.has_argument('-Wno-pointer-arith')
 	cflags += '-Wno-pointer-arith'
