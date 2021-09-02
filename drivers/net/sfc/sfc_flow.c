@@ -1759,7 +1759,7 @@ sfc_flow_parse_actions(struct sfc_adapter *sa,
 	int rc;
 	struct sfc_flow_spec *spec = &flow->spec;
 	struct sfc_flow_spec_filter *spec_filter = &spec->filter;
-	const unsigned int dp_rx_features = sa->priv.dp_rx->features;
+	const uint64_t rx_meta = sa->negotiated_rx_meta;
 	uint32_t actions_set = 0;
 	const uint32_t fate_actions_mask = (1UL << RTE_FLOW_ACTION_TYPE_QUEUE) |
 					   (1UL << RTE_FLOW_ACTION_TYPE_RSS) |
@@ -1827,10 +1827,10 @@ sfc_flow_parse_actions(struct sfc_adapter *sa,
 			if ((actions_set & mark_actions_mask) != 0)
 				goto fail_actions_overlap;
 
-			if ((dp_rx_features & SFC_DP_RX_FEAT_FLOW_FLAG) == 0) {
+			if ((rx_meta & RTE_ETH_RX_META_USER_FLAG) == 0) {
 				rte_flow_error_set(error, ENOTSUP,
 					RTE_FLOW_ERROR_TYPE_ACTION, NULL,
-					"FLAG action is not supported on the current Rx datapath");
+					"Action FLAG is unsupported on the current Rx datapath or has not been negotiated");
 				return -rte_errno;
 			}
 
@@ -1844,10 +1844,10 @@ sfc_flow_parse_actions(struct sfc_adapter *sa,
 			if ((actions_set & mark_actions_mask) != 0)
 				goto fail_actions_overlap;
 
-			if ((dp_rx_features & SFC_DP_RX_FEAT_FLOW_MARK) == 0) {
+			if ((rx_meta & RTE_ETH_RX_META_USER_MARK) == 0) {
 				rte_flow_error_set(error, ENOTSUP,
 					RTE_FLOW_ERROR_TYPE_ACTION, NULL,
-					"MARK action is not supported on the current Rx datapath");
+					"Action MARK is unsupported on the current Rx datapath or has not been negotiated");
 				return -rte_errno;
 			}
 

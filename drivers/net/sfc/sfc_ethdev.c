@@ -1859,6 +1859,27 @@ sfc_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t ethdev_qid)
 	return sap->dp_rx->intr_disable(rxq_info->dp);
 }
 
+static int
+sfc_negotiate_rx_meta(struct rte_eth_dev *dev, uint64_t *features)
+{
+	struct sfc_adapter *sa = sfc_adapter_by_eth_dev(dev);
+
+	sfc_adapter_lock(sa);
+
+	if ((sa->priv.dp_rx->features & SFC_DP_RX_FEAT_FLOW_FLAG) != 0)
+		sa->negotiated_rx_meta |= RTE_ETH_RX_META_USER_FLAG;
+
+	if ((sa->priv.dp_rx->features & SFC_DP_RX_FEAT_FLOW_MARK) != 0)
+		sa->negotiated_rx_meta |= RTE_ETH_RX_META_USER_MARK;
+
+	sa->negotiated_rx_meta &= *features;
+	*features = sa->negotiated_rx_meta;
+
+	sfc_adapter_unlock(sa);
+
+	return 0;
+}
+
 static const struct eth_dev_ops sfc_eth_dev_ops = {
 	.dev_configure			= sfc_dev_configure,
 	.dev_start			= sfc_dev_start,
@@ -1906,6 +1927,7 @@ static const struct eth_dev_ops sfc_eth_dev_ops = {
 	.xstats_get_by_id		= sfc_xstats_get_by_id,
 	.xstats_get_names_by_id		= sfc_xstats_get_names_by_id,
 	.pool_ops_supported		= sfc_pool_ops_supported,
+	.negotiate_rx_meta		= sfc_negotiate_rx_meta,
 };
 
 /**
@@ -1996,6 +2018,18 @@ sfc_eth_dev_set_ops(struct rte_eth_dev *dev)
 	if (sas->dp_rx_name == NULL) {
 		rc = ENOMEM;
 		goto fail_dp_rx_name;
+	}
+
+	if (strcmp(dp_rx->dp.name, SFC_KVARG_DATAPATH_EF10_ESSB) == 0) {
+		/*
+		 * Datapath EF10 ESSB is available only on EF10 NICs running
+		 * Rx FW variant DPDK, which always provides fields FLAG and
+		 * MARK in Rx prefix, so point this fact out below. This way,
+		 * legacy applications from EF10 era, which are not aware of
+		 * rte_eth_negotiate_rx_meta(), can keep the workflow intact.
+		 */
+		sa->negotiated_rx_meta |= RTE_ETH_RX_META_USER_FLAG;
+		sa->negotiated_rx_meta |= RTE_ETH_RX_META_USER_MARK;
 	}
 
 	sfc_notice(sa, "use %s Rx datapath", sas->dp_rx_name);
