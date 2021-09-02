@@ -62,6 +62,7 @@ struct sfc_ef100_rxq {
 #define SFC_EF100_RXQ_RSS_HASH		0x10
 #define SFC_EF100_RXQ_USER_MARK		0x20
 #define SFC_EF100_RXQ_FLAG_INTR_EN	0x40
+#define SFC_EF100_RXQ_USER_FLAG		0x80
 	unsigned int			ptr_mask;
 	unsigned int			evq_phase_bit_shift;
 	unsigned int			ready_pkts;
@@ -371,6 +372,7 @@ static const efx_rx_prefix_layout_t sfc_ef100_rx_prefix_layout = {
 		SFC_EF100_RX_PREFIX_FIELD(RSS_HASH_VALID, B_FALSE),
 		SFC_EF100_RX_PREFIX_FIELD(CLASS, B_FALSE),
 		SFC_EF100_RX_PREFIX_FIELD(RSS_HASH, B_FALSE),
+		SFC_EF100_RX_PREFIX_FIELD(USER_FLAG, B_FALSE),
 		SFC_EF100_RX_PREFIX_FIELD(USER_MARK, B_FALSE),
 
 #undef	SFC_EF100_RX_PREFIX_FIELD
@@ -405,6 +407,15 @@ sfc_ef100_rx_prefix_to_offloads(const struct sfc_ef100_rxq *rxq,
 		/* EFX_OWORD_FIELD converts little-endian to CPU */
 		m->hash.rss = EFX_OWORD_FIELD(rx_prefix[0],
 					      ESF_GZ_RX_PREFIX_RSS_HASH);
+	}
+
+	if (rxq->flags & SFC_EF100_RXQ_USER_FLAG) {
+		uint32_t user_flag;
+
+		user_flag = EFX_OWORD_FIELD(rx_prefix[0],
+					    ESF_GZ_RX_PREFIX_USER_FLAG);
+		if (user_flag != 0)
+			ol_flags |= PKT_RX_FDIR;
 	}
 
 	if (rxq->flags & SFC_EF100_RXQ_USER_MARK) {
@@ -801,6 +812,12 @@ sfc_ef100_rx_qstart(struct sfc_dp_rxq *dp_rxq, unsigned int evq_read_ptr,
 		rxq->flags &= ~SFC_EF100_RXQ_RSS_HASH;
 
 	if ((unsup_rx_prefix_fields &
+	     (1U << EFX_RX_PREFIX_FIELD_USER_FLAG)) == 0)
+		rxq->flags |= SFC_EF100_RXQ_USER_FLAG;
+	else
+		rxq->flags &= ~SFC_EF100_RXQ_USER_FLAG;
+
+	if ((unsup_rx_prefix_fields &
 	     (1U << EFX_RX_PREFIX_FIELD_USER_MARK)) == 0)
 		rxq->flags |= SFC_EF100_RXQ_USER_MARK;
 	else
@@ -914,6 +931,7 @@ struct sfc_dp_rx sfc_ef100_rx = {
 		.hw_fw_caps	= SFC_DP_HW_FW_CAP_EF100,
 	},
 	.features		= SFC_DP_RX_FEAT_MULTI_PROCESS |
+				  SFC_DP_RX_FEAT_FLOW_FLAG |
 				  SFC_DP_RX_FEAT_FLOW_MARK |
 				  SFC_DP_RX_FEAT_INTR,
 	.dev_offload_capa	= 0,
