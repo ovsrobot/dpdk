@@ -107,7 +107,11 @@ enetfec_restart(struct rte_eth_dev *dev)
 		val = rte_read32(fep->hw_baseaddr_v + ENETFEC_RACC);
 		/* align IP header */
 		val |= ENETFEC_RACC_SHIFT16;
-		val &= ~ENETFEC_RACC_OPTIONS;
+		if (fep->flag_csum & RX_FLAG_CSUM_EN)
+			/* set RX checksum */
+			val |= ENETFEC_RACC_OPTIONS;
+		else
+			val &= ~ENETFEC_RACC_OPTIONS;
 		rte_write32(rte_cpu_to_le_32(val),
 				fep->hw_baseaddr_v + ENETFEC_RACC);
 		rte_write32(rte_cpu_to_le_32(PKT_MAX_BUF_SIZE),
@@ -602,9 +606,20 @@ static int
 enetfec_eth_init(struct rte_eth_dev *dev)
 {
 	struct enetfec_private *fep = dev->data->dev_private;
+	struct rte_eth_conf *eth_conf = &fep->dev->data->dev_conf;
+	uint64_t rx_offloads = eth_conf->rxmode.offloads;
 
 	fep->full_duplex = FULL_DUPLEX;
 	dev->dev_ops = &enetfec_ops;
+	if (fep->quirks & QUIRK_VLAN)
+		/* enable hw VLAN support */
+		rx_offloads |= DEV_RX_OFFLOAD_VLAN;
+
+	if (fep->quirks & QUIRK_CSUM) {
+		/* enable hw accelerator */
+		rx_offloads |= DEV_RX_OFFLOAD_CHECKSUM;
+		fep->flag_csum |= RX_FLAG_CSUM_EN;
+	}
 	rte_eth_dev_probing_finish(dev);
 
 	return 0;

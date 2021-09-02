@@ -77,6 +77,8 @@ ENETFEC Features
 
 - Basic stats
 - Promiscuous
+- VLAN offload
+- L3/L4 checksum offload
 - ARMv8
 
 Supported ENETFEC SoCs
