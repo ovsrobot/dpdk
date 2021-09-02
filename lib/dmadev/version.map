@@ -26,6 +26,7 @@ EXPERIMENTAL {
 INTERNAL {
         global:
 
+	rte_dmadevices;
 	rte_dmadev_get_device_by_name;
 	rte_dmadev_pmd_allocate;
 	rte_dmadev_pmd_release;

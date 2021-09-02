@@ -173,4 +173,6 @@ struct rte_dmadev {
 	uint64_t reserved[2]; /**< Reserved for future fields. */
 } __rte_cache_aligned;
 
+extern struct rte_dmadev rte_dmadevices[];
+
 #endif /* _RTE_DMADEV_CORE_H_ */
