@@ -46,6 +46,7 @@ static int
 ice_dcf_vf_repr_dev_stop(struct rte_eth_dev *dev)
 {
 	dev->data->dev_link.link_status = ETH_LINK_DOWN;
+	dev->data->dev_started = 0;
 
 	return 0;
 }
@@ -53,6 +54,7 @@ ice_dcf_vf_repr_dev_stop(struct rte_eth_dev *dev)
 static int
 ice_dcf_vf_repr_dev_close(struct rte_eth_dev *dev)
 {
+	(void)ice_dcf_vf_repr_dev_stop(dev);
 	return ice_dcf_vf_repr_uninit(dev);
 }
 
@@ -464,7 +466,6 @@ void
 ice_dcf_vf_repr_stop_all(struct ice_dcf_adapter *dcf_adapter)
 {
 	uint16_t vf_id;
-	int ret;
 
 	if (!dcf_adapter->repr_infos)
 		return;
@@ -475,8 +476,25 @@ ice_dcf_vf_repr_stop_all(struct ice_dcf_adapter *dcf_adapter)
 		if (!vf_rep_eth_dev || vf_rep_eth_dev->data->dev_started == 0)
 			continue;
 
-		ret = ice_dcf_vf_repr_dev_stop(vf_rep_eth_dev);
-		if (!ret)
-			vf_rep_eth_dev->data->dev_started = 0;
+		(void)ice_dcf_vf_repr_dev_stop(vf_rep_eth_dev);
+	}
+}
+
+void
+ice_dcf_vf_repr_close_all(struct ice_dcf_adapter *dcf_adapter)
+{
+	uint16_t vf_id;
+
+	if (!dcf_adapter->repr_infos)
+		return;
+
+	for (vf_id = 0; vf_id < dcf_adapter->real_hw.num_vfs; vf_id++) {
+		struct rte_eth_dev *vf_rep_eth_dev =
+				dcf_adapter->repr_infos[vf_id].vf_rep_eth_dev;
+		if (!vf_rep_eth_dev)
+			continue;
+
+		(void)ice_dcf_vf_repr_dev_close(vf_rep_eth_dev);
+		(void)rte_eth_dev_release_port(vf_rep_eth_dev);
 	}
 }
