@@ -195,8 +195,11 @@ pkt_burst_prepare(struct rte_mbuf *pkt, struct rte_mempool *mbp,
 	uint32_t nb_segs, pkt_len;
 	uint8_t i;
 
-	if (unlikely(tx_pkt_split == TX_PKT_SPLIT_RND))
-		nb_segs = rte_rand() % tx_pkt_nb_segs + 1;
+	if (unlikely(tx_pkt_split == TX_PKT_SPLIT_RND) &&
+	    tx_pkt_nb_segs > tx_pkt_nb_min_segs)
+		nb_segs = rte_rand() %
+			  (tx_pkt_nb_segs - tx_pkt_nb_min_segs + 1) +
+			  tx_pkt_nb_min_segs;
 	else
 		nb_segs = tx_pkt_nb_segs;
 

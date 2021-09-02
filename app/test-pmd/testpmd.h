@@ -464,6 +464,11 @@ extern uint8_t  rx_pkt_nb_offs; /**< Number of specified offsets */
 extern uint16_t tx_pkt_length; /**< Length of TXONLY packet */
 extern uint16_t tx_pkt_seg_lengths[RTE_MAX_SEGS_PER_PKT]; /**< Seg. lengths */
 extern uint8_t  tx_pkt_nb_segs; /**< Number of segments in TX packets */
+
+/**< Minimum number of segments in TXONLY packets to accommodate all packet
+ * headers.
+ */
+extern uint8_t  tx_pkt_nb_min_segs;
 extern uint32_t tx_pkt_times_intra;
 extern uint32_t tx_pkt_times_inter;
 

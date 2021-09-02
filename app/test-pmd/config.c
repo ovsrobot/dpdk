@@ -3837,10 +3837,11 @@ set_tx_pkt_segments(unsigned int *seg_lengths, unsigned int nb_segs)
 	 * Check that each segment length is greater or equal than
 	 * the mbuf data size.
 	 * Check also that the total packet length is greater or equal than the
-	 * size of an empty UDP/IP packet (sizeof(struct rte_ether_hdr) +
-	 * 20 + 8).
+	 * size of an Eth/IP/UDP + timestamp packet
+	 * (sizeof(struct rte_ether_hdr) + 20 + 8 + 16).
 	 */
 	tx_pkt_len = 0;
+	tx_pkt_nb_min_segs = 0;
 	for (i = 0; i < nb_segs; i++) {
 		if (seg_lengths[i] > mbuf_data_size[0]) {
 			fprintf(stderr,
@@ -3849,11 +3850,16 @@ set_tx_pkt_segments(unsigned int *seg_lengths, unsigned int nb_segs)
 			return;
 		}
 		tx_pkt_len = (uint16_t)(tx_pkt_len + seg_lengths[i]);
+
+		if (!tx_pkt_nb_min_segs &&
+		    tx_pkt_len >= (sizeof(struct rte_ether_hdr) + 20 + 8 + 16))
+			tx_pkt_nb_min_segs = i + 1;
 	}
-	if (tx_pkt_len < (sizeof(struct rte_ether_hdr) + 20 + 8)) {
+
+	if (!tx_pkt_nb_min_segs) {
 		fprintf(stderr, "total packet length=%u < %d - give up\n",
-				(unsigned) tx_pkt_len,
-				(int)(sizeof(struct rte_ether_hdr) + 20 + 8));
+			(unsigned int) tx_pkt_len,
+			(int)(sizeof(struct rte_ether_hdr) + 20 + 8 + 16));
 		return;
 	}
 
