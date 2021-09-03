@@ -26,6 +26,7 @@ libraries = [
         'timer',   # eventdev depends on this
         'acl',
         'bbdev',
+        'bpf',
         'bitratestats',
         'cfgfile',
         'compressdev',
@@ -43,7 +44,6 @@ libraries = [
         'member',
         'pcapng',
         'power',
-        'pdump',
         'rawdev',
         'regexdev',
         'rib',
@@ -55,10 +55,10 @@ libraries = [
         'ipsec', # ipsec lib depends on net, crypto and security
         'fib', #fib lib depends on rib
         'port', # pkt framework libs which use other libs from above
+	'pdump', # pdump lib depends on bpf pcapng
         'table',
         'pipeline',
         'flow_classify', # flow_classify lib depends on pkt framework table lib
-        'bpf',
         'graph',
         'node',
 ]
