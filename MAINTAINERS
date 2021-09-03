@@ -1429,6 +1429,12 @@ F: app/test/test_pdump.*
 F: app/pdump/
 F: doc/guides/tools/pdump.rst
 
+Packet dump
+M: Stephen Hemminger <stephen@networkplumber.org>
+F: lib/pcapng/
+F: doc/guides/prog_guide/pcapng_lib.rst
+F: app/dumpcap/
+F: doc/guides/tools/dumpcap.rst
 
 Packet Framework
 ----------------
