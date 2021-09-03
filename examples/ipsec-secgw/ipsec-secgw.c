@@ -515,7 +515,7 @@ prepare_traffic(struct rte_mbuf **pkts, struct ipsec_traffic *t,
 
 static inline void
 prepare_tx_pkt(struct rte_mbuf *pkt, uint16_t port,
-		const struct lcore_conf *qconf)
+		const struct lcore_conf *qconf __rte_unused)
 {
 	struct ip *ip;
 	struct rte_ether_hdr *ethhdr;
@@ -526,20 +526,17 @@ prepare_tx_pkt(struct rte_mbuf *pkt, uint16_t port,
 		rte_pktmbuf_prepend(pkt, RTE_ETHER_HDR_LEN);
 
 	if (ip->ip_v == IPVERSION) {
-		pkt->ol_flags |= qconf->outbound.ipv4_offloads;
-		pkt->l3_len = sizeof(struct ip);
 		pkt->l2_len = RTE_ETHER_HDR_LEN;
 
-		ip->ip_sum = 0;
-
 		/* calculate IPv4 cksum in SW */
-		if ((pkt->ol_flags & PKT_TX_IP_CKSUM) == 0)
+		if ((pkt->ol_flags &
+				(PKT_TX_IP_CKSUM | PKT_TX_OUTER_IP_CKSUM)) == 0)
 			ip->ip_sum = rte_ipv4_cksum((struct rte_ipv4_hdr *)ip);
+		else
+			ip->ip_sum = 0;
 
 		ethhdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
 	} else {
-		pkt->ol_flags |= qconf->outbound.ipv6_offloads;
-		pkt->l3_len = sizeof(struct ip6_hdr);
 		pkt->l2_len = RTE_ETHER_HDR_LEN;
 
 		ethhdr->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV6);
