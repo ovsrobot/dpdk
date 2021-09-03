@@ -55,13 +55,17 @@ struct rte_intr_handle {
 		};
 		void *handle; /**< device driver handle (Windows) */
 	};
+	bool alloc_from_hugepage;
 	enum rte_intr_handle_type type;  /**< handle type */
 	uint32_t max_intr;             /**< max interrupt requested */
 	uint32_t nb_efd;               /**< number of available efd(event fd) */
 	uint8_t efd_counter_size;      /**< size of efd counter, used for vdev */
+	uint16_t nb_intr;
+		/**< Max vector count, default RTE_MAX_RXTX_INTR_VEC_ID */
 	int efds[RTE_MAX_RXTX_INTR_VEC_ID];  /**< intr vectors/efds mapping */
 	struct rte_epoll_event elist[RTE_MAX_RXTX_INTR_VEC_ID];
-				       /**< intr vector epoll event */
+						/**< intr vector epoll event */
+	uint16_t vec_list_size;
 	int *intr_vec;                 /**< intr vector number array */
 };
 
