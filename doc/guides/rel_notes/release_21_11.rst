@@ -91,6 +91,10 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* ethdev: ``struct rte_flow_action_port_id`` is extended with the direction
+  field with unspecified default, so all ``PORT_ID`` flow API action users
+  must be updated to make correct choice.
+
 
 ABI Changes
 -----------

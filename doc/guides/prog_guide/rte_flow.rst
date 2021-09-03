@@ -1919,7 +1919,10 @@ See `Item: PHY_PORT`_.
 
 Action: ``PORT_ID``
 ^^^^^^^^^^^^^^^^^^^
-Directs matching traffic to a given DPDK port ID.
+
+Directs matching traffic to the specified DPDK port (ingress) or to
+the would-be destination as if the application itself sent this traffic
+from the said DPDK port (egress).
 
 See `Item: PORT_ID`_.
 
@@ -1933,6 +1936,8 @@ See `Item: PORT_ID`_.
    | ``original`` | use original DPDK port ID if possible |
    +--------------+---------------------------------------+
    | ``id``       | DPDK port ID                          |
+   +--------------+---------------------------------------+
+   | ``dir``      | egress or ingress                     |
    +--------------+---------------------------------------+
 
 Action: ``METER``

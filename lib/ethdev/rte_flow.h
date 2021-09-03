@@ -2632,10 +2632,32 @@ struct rte_flow_action_phy_port {
 	uint32_t index; /**< Physical port index. */
 };
 
+/** Traffic direction from application point of view. */
+enum rte_flow_direction {
+	/**
+	 * Invalid value which should not be used and must be
+	 * rejected by drivers.
+	 */
+	RTE_FLOW_DIRECTION_UNSPECIFIED = 0,
+	/** As if the traffic was sent by the application. */
+	RTE_FLOW_EGRESS,
+	/** To be received by the application. */
+	RTE_FLOW_INGRESS,
+};
+
 /**
  * RTE_FLOW_ACTION_TYPE_PORT_ID
  *
- * Directs matching traffic to a given DPDK port ID.
+ * Directs matching traffic to an ethdev with the given DPDK port ID or
+ * to the upstream port (the peer side of the wire) corresponding to it.
+ *
+ * It's assumed that it's the PMD (typically, its instance at the admin
+ * PF) which controls the binding between a (representor) ethdev and an
+ * upstream port. Typical bindings: VF rep. <=> VF, PF <=> network port.
+ * If the PMD instance is unaware of the binding between the ethdev and
+ * its upstream port (or can't control it), it should reject the action
+ * with the egress direction specified and log an appropriate error
+ * message.
  *
  * @see RTE_FLOW_ITEM_TYPE_PORT_ID
  */
@@ -2643,6 +2665,7 @@ struct rte_flow_action_port_id {
 	uint32_t original:1; /**< Use original DPDK port ID if possible. */
 	uint32_t reserved:31; /**< Reserved, must be zero. */
 	uint32_t id; /**< DPDK port ID. */
+	enum rte_flow_direction dir; /**< Direction to route traffic to. */
 };
 
 /**
