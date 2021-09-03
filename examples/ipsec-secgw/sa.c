@@ -46,6 +46,7 @@ struct supported_cipher_algo {
 struct supported_auth_algo {
 	const char *keyword;
 	enum rte_crypto_auth_algorithm algo;
+	uint16_t iv_len;
 	uint16_t digest_len;
 	uint16_t key_len;
 	uint8_t key_not_req;
@@ -99,6 +100,20 @@ const struct supported_cipher_algo cipher_algos[] = {
 		.key_len = 20
 	},
 	{
+		.keyword = "aes-192-ctr",
+		.algo = RTE_CRYPTO_CIPHER_AES_CTR,
+		.iv_len = 16,
+		.block_size = 16,
+		.key_len = 28
+	},
+	{
+		.keyword = "aes-256-ctr",
+		.algo = RTE_CRYPTO_CIPHER_AES_CTR,
+		.iv_len = 16,
+		.block_size = 16,
+		.key_len = 36
+	},
+	{
 		.keyword = "3des-cbc",
 		.algo = RTE_CRYPTO_CIPHER_3DES_CBC,
 		.iv_len = 8,
@@ -126,6 +141,31 @@ const struct supported_auth_algo auth_algos[] = {
 		.algo = RTE_CRYPTO_AUTH_SHA256_HMAC,
 		.digest_len = 16,
 		.key_len = 32
+	},
+	{
+		.keyword = "sha384-hmac",
+		.algo = RTE_CRYPTO_AUTH_SHA384_HMAC,
+		.digest_len = 24,
+		.key_len = 48
+	},
+	{
+		.keyword = "sha512-hmac",
+		.algo = RTE_CRYPTO_AUTH_SHA512_HMAC,
+		.digest_len = 32,
+		.key_len = 64
+	},
+	{
+		.keyword = "aes-gmac",
+		.algo = RTE_CRYPTO_AUTH_AES_GMAC,
+		.iv_len = 8,
+		.digest_len = 16,
+		.key_len = 20
+	},
+	{
+		.keyword = "aes-xcbc-mac-96",
+		.algo = RTE_CRYPTO_AUTH_AES_XCBC_MAC,
+		.digest_len = 12,
+		.key_len = 16
 	}
 };
 
@@ -153,6 +193,42 @@ const struct supported_aead_algo aead_algos[] = {
 		.algo = RTE_CRYPTO_AEAD_AES_GCM,
 		.iv_len = 8,
 		.block_size = 4,
+		.key_len = 36,
+		.digest_len = 16,
+		.aad_len = 8,
+	},
+	{
+		.keyword = "aes-128-ccm",
+		.algo = RTE_CRYPTO_AEAD_AES_CCM,
+		.iv_len = 8,
+		.block_size = 4,
+		.key_len = 20,
+		.digest_len = 16,
+		.aad_len = 8,
+	},
+	{
+		.keyword = "aes-192-ccm",
+		.algo = RTE_CRYPTO_AEAD_AES_CCM,
+		.iv_len = 8,
+		.block_size = 4,
+		.key_len = 28,
+		.digest_len = 16,
+		.aad_len = 8,
+	},
+	{
+		.keyword = "aes-256-ccm",
+		.algo = RTE_CRYPTO_AEAD_AES_CCM,
+		.iv_len = 8,
+		.block_size = 4,
+		.key_len = 36,
+		.digest_len = 16,
+		.aad_len = 8,
+	},
+	{
+		.keyword = "chacha20-poly1305",
+		.algo = RTE_CRYPTO_AEAD_CHACHA20_POLY1305,
+		.iv_len = 12,
+		.block_size = 64,
 		.key_len = 36,
 		.digest_len = 16,
 		.aad_len = 8,
@@ -352,6 +428,8 @@ parse_sa_tokens(char **tokens, uint32_t n_tokens,
 			} else if (strcmp(tokens[ti], "ipv6-udp-tunnel") == 0) {
 				sa_cnt->nb_v6++;
 				rule->flags |= IP6_TUNNEL | NATT_UDP_TUNNEL;
+				rule->udp.sport = 0;
+				rule->udp.dport = 4500;
 			} else if (strcmp(tokens[ti], "transport") == 0) {
 				sa_cnt->nb_v4++;
 				sa_cnt->nb_v6++;
@@ -498,6 +576,15 @@ parse_sa_tokens(char **tokens, uint32_t n_tokens,
 				"unrecognized input \"%s\"", tokens[ti]);
 			if (status->status < 0)
 				return;
+
+			if (algo->algo == RTE_CRYPTO_AUTH_AES_GMAC) {
+				key_len -= 4;
+				rule->auth_key_len = key_len;
+				rule->iv_len = algo->iv_len;
+				memcpy(&rule->salt,
+					&rule->auth_key[key_len], 4);
+			}
+
 
 			auth_algo_p = 1;
 			continue;
@@ -1209,10 +1296,15 @@ sa_add_rules(struct sa_ctx *sa_ctx, const struct ipsec_sa entries[],
 			sa->aead_algo == RTE_CRYPTO_AEAD_AES_CCM ||
 			sa->aead_algo == RTE_CRYPTO_AEAD_CHACHA20_POLY1305) {
 
-			if (ips->type == RTE_SECURITY_ACTION_TYPE_INLINE_CRYPTO)
+			if (ips->type ==
+				RTE_SECURITY_ACTION_TYPE_INLINE_CRYPTO) {
 				iv_length = 8;
-			else
-				iv_length = 12;
+			} else {
+				if (sa->aead_algo == RTE_CRYPTO_AEAD_AES_CCM)
+					iv_length = 11;
+				else
+					iv_length = 12;
+			}
 
 			sa_ctx->xf[idx].a.type = RTE_CRYPTO_SYM_XFORM_AEAD;
 			sa_ctx->xf[idx].a.aead.algo = sa->aead_algo;
@@ -1236,16 +1328,23 @@ sa_add_rules(struct sa_ctx *sa_ctx, const struct ipsec_sa entries[],
 			case RTE_CRYPTO_CIPHER_NULL:
 			case RTE_CRYPTO_CIPHER_3DES_CBC:
 			case RTE_CRYPTO_CIPHER_AES_CBC:
-				iv_length = sa->iv_len;
-				break;
 			case RTE_CRYPTO_CIPHER_AES_CTR:
-				iv_length = 16;
+				iv_length = sa->iv_len;
 				break;
 			default:
 				RTE_LOG(ERR, IPSEC_ESP,
 						"unsupported cipher algorithm %u\n",
 						sa->cipher_algo);
 				return -EINVAL;
+			}
+
+			if (sa->auth_algo == RTE_CRYPTO_AUTH_AES_GMAC) {
+				if (ips->type ==
+				    RTE_SECURITY_ACTION_TYPE_INLINE_CRYPTO) {
+					iv_length = 8;
+				} else {
+					iv_length = 12;
+				}
 			}
 
 			if (inbound) {
@@ -1269,6 +1368,9 @@ sa_add_rules(struct sa_ctx *sa_ctx, const struct ipsec_sa entries[],
 					sa->digest_len;
 				sa_ctx->xf[idx].a.auth.op =
 					RTE_CRYPTO_AUTH_OP_VERIFY;
+				sa_ctx->xf[idx].a.auth.iv.offset = IV_OFFSET;
+				sa_ctx->xf[idx].a.auth.iv.length = iv_length;
+
 			} else { /* outbound */
 				sa_ctx->xf[idx].a.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
 				sa_ctx->xf[idx].a.cipher.algo = sa->cipher_algo;
@@ -1290,11 +1392,21 @@ sa_add_rules(struct sa_ctx *sa_ctx, const struct ipsec_sa entries[],
 					sa->digest_len;
 				sa_ctx->xf[idx].b.auth.op =
 					RTE_CRYPTO_AUTH_OP_GENERATE;
+				sa_ctx->xf[idx].b.auth.iv.offset = IV_OFFSET;
+				sa_ctx->xf[idx].b.auth.iv.length = iv_length;
+
 			}
 
-			sa_ctx->xf[idx].a.next = &sa_ctx->xf[idx].b;
-			sa_ctx->xf[idx].b.next = NULL;
-			sa->xforms = &sa_ctx->xf[idx].a;
+			if (sa->auth_algo == RTE_CRYPTO_AUTH_AES_GMAC) {
+				sa->xforms = inbound ?
+					&sa_ctx->xf[idx].a : &sa_ctx->xf[idx].b;
+				sa->xforms->next = NULL;
+
+			} else {
+				sa_ctx->xf[idx].a.next = &sa_ctx->xf[idx].b;
+				sa_ctx->xf[idx].b.next = NULL;
+				sa->xforms = &sa_ctx->xf[idx].a;
+			}
 		}
 
 		if (ips->type ==

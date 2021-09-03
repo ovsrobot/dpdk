@@ -2254,7 +2254,7 @@ port_init(uint16_t portid, uint64_t req_rx_offloads, uint64_t req_tx_offloads)
 			local_port_conf.rxmode.offloads)
 		rte_exit(EXIT_FAILURE,
 			"Error: port %u required RX offloads: 0x%" PRIx64
-			", avaialbe RX offloads: 0x%" PRIx64 "\n",
+			", available RX offloads: 0x%" PRIx64 "\n",
 			portid, local_port_conf.rxmode.offloads,
 			dev_info.rx_offload_capa);
 
@@ -2262,7 +2262,7 @@ port_init(uint16_t portid, uint64_t req_rx_offloads, uint64_t req_tx_offloads)
 			local_port_conf.txmode.offloads)
 		rte_exit(EXIT_FAILURE,
 			"Error: port %u required TX offloads: 0x%" PRIx64
-			", avaialbe TX offloads: 0x%" PRIx64 "\n",
+			", available TX offloads: 0x%" PRIx64 "\n",
 			portid, local_port_conf.txmode.offloads,
 			dev_info.tx_offload_capa);
 
@@ -2541,6 +2541,17 @@ inline_ipsec_event_callback(uint16_t port_id, enum rte_eth_event_type type,
 	}
 
 	return -1;
+}
+
+static int
+ethdev_reset_event_callback(uint16_t port_id,
+		enum rte_eth_event_type type __rte_unused,
+		 void *param __rte_unused, void *ret_param __rte_unused)
+{
+	printf("Reset Event on port id %d\n", port_id);
+	printf("Force quit application");
+	force_quit = true;
+	return 0;
 }
 
 static uint16_t
@@ -3316,6 +3327,9 @@ main(int32_t argc, char **argv)
 					"rte_eth_promiscuous_enable: err=%s, port=%d\n",
 					rte_strerror(-ret), portid);
 		}
+
+		rte_eth_dev_callback_register(portid, RTE_ETH_EVENT_INTR_RESET,
+			ethdev_reset_event_callback, NULL);
 
 		rte_eth_dev_callback_register(portid,
 			RTE_ETH_EVENT_IPSEC, inline_ipsec_event_callback, NULL);

@@ -65,7 +65,7 @@ struct ip_addr {
 	} ip;
 };
 
-#define MAX_KEY_SIZE		36
+#define MAX_KEY_SIZE	132
 
 /*
  * application wide SA parameters
@@ -146,7 +146,7 @@ struct ipsec_sa {
 	uint8_t udp_encap;
 	uint16_t portid;
 	uint16_t mss;
-	uint16_t esn;
+	uint32_t esn;
 
 	uint8_t fdir_qid;
 	uint8_t fdir_flag;
