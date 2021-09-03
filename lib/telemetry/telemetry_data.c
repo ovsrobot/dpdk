@@ -153,7 +153,7 @@ rte_tel_data_add_dict_container(struct rte_tel_data *d, const char *name,
 {
 	struct tel_dict_entry *e = &d->data.dict[d->data_len];
 
-	if (d->type != RTE_TEL_DICT || (val->type != RTE_TEL_ARRAY_U64
+	if ((d->type != RTE_TEL_DICT && val->type != RTE_TEL_ARRAY_U64
 			&& val->type != RTE_TEL_ARRAY_INT
 			&& val->type != RTE_TEL_ARRAY_STRING))
 		return -EINVAL;
