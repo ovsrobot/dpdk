@@ -860,7 +860,7 @@ eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 	struct pkt_rx_queue *rxq;
 	struct pkt_tx_queue *txq;
 	socklen_t optlen;
-	int i, ret;
+	int i;
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		optlen = sizeof(struct xdp_statistics);
@@ -876,13 +876,12 @@ eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		stats->ibytes += stats->q_ibytes[i];
 		stats->imissed += rxq->stats.rx_dropped;
 		stats->oerrors += txq->stats.tx_dropped;
-		ret = getsockopt(xsk_socket__fd(rxq->xsk), SOL_XDP,
-				XDP_STATISTICS, &xdp_stats, &optlen);
-		if (ret != 0) {
-			AF_XDP_LOG(ERR, "getsockopt() failed for XDP_STATISTICS.\n");
-			return -1;
-		}
-		stats->imissed += xdp_stats.rx_dropped;
+
+		/* The socket fd is not valid in secondary process */
+		if (rte_eal_process_type() != RTE_PROC_SECONDARY &&
+		    getsockopt(xsk_socket__fd(rxq->xsk), SOL_XDP,
+			       XDP_STATISTICS, &xdp_stats, &optlen) == 0)
+			stats->imissed += xdp_stats.rx_dropped;
 
 		stats->opackets += stats->q_opackets[i];
 		stats->obytes += stats->q_obytes[i];
@@ -1799,7 +1798,9 @@ rte_pmd_af_xdp_probe(struct rte_vdev_device *dev)
 			AF_XDP_LOG(ERR, "Failed to probe %s\n", name);
 			return -EINVAL;
 		}
+		/* TODO: reconnect socket from primary */
 		eth_dev->dev_ops = &ops;
+		eth_dev->device = &dev->device;
 		rte_eth_dev_probing_finish(eth_dev);
 		return 0;
 	}
