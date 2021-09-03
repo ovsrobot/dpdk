@@ -25,8 +25,8 @@ ipsec_sad_add(struct ipsec_sad *sad, struct ipsec_sa *sa)
 	/* spi field is common for ipv4 and ipv6 key types */
 	key.v4.spi = rte_cpu_to_be_32(sa->spi);
 	lookup_key[0] = &key;
-	switch (WITHOUT_TRANSPORT_VERSION(sa->flags)) {
-	case IP4_TUNNEL:
+
+	if (IS_IP4(sa->flags) && IS_TUNNEL(sa->flags)) {
 		rte_ipsec_sad_lookup(sad->sad_v4, lookup_key, &tmp, 1);
 		if (tmp != NULL)
 			return -EEXIST;
@@ -35,8 +35,7 @@ ipsec_sad_add(struct ipsec_sad *sad, struct ipsec_sa *sa)
 			RTE_IPSEC_SAD_SPI_ONLY, sa);
 		if (ret != 0)
 			return ret;
-		break;
-	case IP6_TUNNEL:
+	} else if (IS_IP6(sa->flags) && IS_TUNNEL(sa->flags)) {
 		rte_ipsec_sad_lookup(sad->sad_v6, lookup_key, &tmp, 1);
 		if (tmp != NULL)
 			return -EEXIST;
@@ -45,8 +44,7 @@ ipsec_sad_add(struct ipsec_sad *sad, struct ipsec_sa *sa)
 			RTE_IPSEC_SAD_SPI_ONLY, sa);
 		if (ret != 0)
 			return ret;
-		break;
-	case TRANSPORT:
+	} else if (IS_TRANSPORT(sa->flags)) {
 		if (sp4_spi_present(sa->spi, 1, NULL, NULL) >= 0) {
 			rte_ipsec_sad_lookup(sad->sad_v4, lookup_key, &tmp, 1);
 			if (tmp != NULL)

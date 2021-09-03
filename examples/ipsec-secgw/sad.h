@@ -29,16 +29,16 @@ static inline int
 cmp_sa_key(struct ipsec_sa *sa, int is_v4, struct rte_ipv4_hdr *ipv4,
 	struct rte_ipv6_hdr *ipv6)
 {
-	int sa_type = WITHOUT_TRANSPORT_VERSION(sa->flags);
-	if ((sa_type == TRANSPORT) ||
-			/* IPv4 check */
-			(is_v4 && (sa_type == IP4_TUNNEL) &&
-			(sa->src.ip.ip4 == ipv4->src_addr) &&
-			(sa->dst.ip.ip4 == ipv4->dst_addr)) ||
-			/* IPv6 check */
-			(!is_v4 && (sa_type == IP6_TUNNEL) &&
-			(!memcmp(sa->src.ip.ip6.ip6, ipv6->src_addr, 16)) &&
-			(!memcmp(sa->dst.ip.ip6.ip6, ipv6->dst_addr, 16))))
+
+	if (IS_TRANSPORT(sa->flags) ||
+		/* IPv4 check */
+		(is_v4 && IS_IP4(sa->flags) &&
+		(sa->src.ip.ip4 == ipv4->src_addr) &&
+		(sa->dst.ip.ip4 == ipv4->dst_addr)) ||
+		/* IPv6 check */
+		(!is_v4 && IS_IP6(sa->flags) &&
+		(!memcmp(sa->src.ip.ip6.ip6, ipv6->src_addr, 16)) &&
+		(!memcmp(sa->dst.ip.ip6.ip6, ipv6->dst_addr, 16))))
 		return 1;
 
 	return 0;

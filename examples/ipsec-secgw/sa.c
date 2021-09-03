@@ -17,6 +17,7 @@
 #include <rte_byteorder.h>
 #include <rte_errno.h>
 #include <rte_ip.h>
+#include <rte_udp.h>
 #include <rte_random.h>
 #include <rte_ethdev.h>
 #include <rte_malloc.h>
@@ -339,13 +340,28 @@ parse_sa_tokens(char **tokens, uint32_t n_tokens,
 			if (strcmp(tokens[ti], "ipv4-tunnel") == 0) {
 				sa_cnt->nb_v4++;
 				rule->flags = IP4_TUNNEL;
+			} else if (strcmp(tokens[ti], "ipv4-udp-tunnel") == 0) {
+				sa_cnt->nb_v4++;
+				rule->flags = IP4_TUNNEL | NATT_UDP_TUNNEL;
+				rule->udp.sport = 0;
+				rule->udp.dport = 4500;
 			} else if (strcmp(tokens[ti], "ipv6-tunnel") == 0) {
 				sa_cnt->nb_v6++;
 				rule->flags = IP6_TUNNEL;
+			} else if (strcmp(tokens[ti], "ipv6-udp-tunnel") == 0) {
+				sa_cnt->nb_v6++;
+				rule->flags = IP6_TUNNEL | NATT_UDP_TUNNEL;
 			} else if (strcmp(tokens[ti], "transport") == 0) {
 				sa_cnt->nb_v4++;
 				sa_cnt->nb_v6++;
-				rule->flags = TRANSPORT;
+				rule->flags = IP4_TRANSPORT | IP6_TRANSPORT;
+			} else if (strcmp(tokens[ti], "udp-transport") == 0) {
+				sa_cnt->nb_v4++;
+				sa_cnt->nb_v6++;
+				rule->flags = IP4_TRANSPORT | IP6_TRANSPORT |
+						NATT_UDP_TUNNEL;
+				rule->udp.sport = 0;
+				rule->udp.dport = 4500;
 			} else {
 				APP_CHECK(0, status, "unrecognized "
 					"input \"%s\"", tokens[ti]);
@@ -548,7 +564,7 @@ parse_sa_tokens(char **tokens, uint32_t n_tokens,
 			if (status->status < 0)
 				return;
 
-			if (IS_IP4_TUNNEL(rule->flags)) {
+			if (IS_IP4(rule->flags) && IS_TUNNEL(rule->flags)) {
 				struct in_addr ip;
 
 				APP_CHECK(parse_ipv4_addr(tokens[ti],
@@ -560,7 +576,8 @@ parse_sa_tokens(char **tokens, uint32_t n_tokens,
 					return;
 				rule->src.ip.ip4 = rte_bswap32(
 					(uint32_t)ip.s_addr);
-			} else if (IS_IP6_TUNNEL(rule->flags)) {
+			} else if (IS_IP6(rule->flags) &&
+					IS_TUNNEL(rule->flags)) {
 				struct in6_addr ip;
 
 				APP_CHECK(parse_ipv6_addr(tokens[ti], &ip,
@@ -591,7 +608,7 @@ parse_sa_tokens(char **tokens, uint32_t n_tokens,
 			if (status->status < 0)
 				return;
 
-			if (IS_IP4_TUNNEL(rule->flags)) {
+			if (IS_IP4(rule->flags) && IS_TUNNEL(rule->flags)) {
 				struct in_addr ip;
 
 				APP_CHECK(parse_ipv4_addr(tokens[ti],
@@ -603,7 +620,8 @@ parse_sa_tokens(char **tokens, uint32_t n_tokens,
 					return;
 				rule->dst.ip.ip4 = rte_bswap32(
 					(uint32_t)ip.s_addr);
-			} else if (IS_IP6_TUNNEL(rule->flags)) {
+			} else if (IS_IP6(rule->flags) &&
+					IS_TUNNEL(rule->flags)) {
 				struct in6_addr ip;
 
 				APP_CHECK(parse_ipv6_addr(tokens[ti], &ip,
@@ -832,19 +850,19 @@ print_one_sa_rule(const struct ipsec_sa *sa, int inbound)
 	const struct rte_ipsec_session *ips;
 	const struct rte_ipsec_session *fallback_ips;
 
-	printf("\tspi_%s(%3u):", inbound?"in":"out", sa->spi);
+	printf("\tspi_%s (%3u):", inbound?"in":"out", sa->spi);
 
 	for (i = 0; i < RTE_DIM(cipher_algos); i++) {
 		if (cipher_algos[i].algo == sa->cipher_algo &&
 				cipher_algos[i].key_len == sa->cipher_key_len) {
-			printf("%s ", cipher_algos[i].keyword);
+			printf(" %s", cipher_algos[i].keyword);
 			break;
 		}
 	}
 
 	for (i = 0; i < RTE_DIM(auth_algos); i++) {
 		if (auth_algos[i].algo == sa->auth_algo) {
-			printf("%s ", auth_algos[i].keyword);
+			printf(" %s", auth_algos[i].keyword);
 			break;
 		}
 	}
@@ -852,23 +870,29 @@ print_one_sa_rule(const struct ipsec_sa *sa, int inbound)
 	for (i = 0; i < RTE_DIM(aead_algos); i++) {
 		if (aead_algos[i].algo == sa->aead_algo &&
 				aead_algos[i].key_len-4 == sa->cipher_key_len) {
-			printf("%s ", aead_algos[i].keyword);
+			printf(" %s ", aead_algos[i].keyword);
 			break;
 		}
 	}
 
-	printf("mode:");
+	printf(", mode:");
 
-	switch (WITHOUT_TRANSPORT_VERSION(sa->flags)) {
-	case IP4_TUNNEL:
-		printf("IP4Tunnel ");
+	if (IS_IP4(sa->flags) && IS_TUNNEL(sa->flags)) {
+
+		if (IS_NATT_UDP_TUNNEL(sa->flags))
+			printf("IP4Tunnel NAT-T (");
+		else
+			printf("IP4Tunnel (");
 		uint32_t_to_char(sa->src.ip.ip4, &a, &b, &c, &d);
 		printf("%hhu.%hhu.%hhu.%hhu ", d, c, b, a);
 		uint32_t_to_char(sa->dst.ip.ip4, &a, &b, &c, &d);
 		printf("%hhu.%hhu.%hhu.%hhu", d, c, b, a);
-		break;
-	case IP6_TUNNEL:
-		printf("IP6Tunnel ");
+	} else if (IS_IP6(sa->flags) && IS_TUNNEL(sa->flags)) {
+
+		if (IS_NATT_UDP_TUNNEL(sa->flags))
+			printf("IP6Tunnel NAT-T (");
+		else
+			printf("IP6Tunnel (");
 		for (i = 0; i < 16; i++) {
 			if (i % 2 && i != 15)
 				printf("%.2x:", sa->src.ip.ip6.ip6_b[i]);
@@ -882,14 +906,15 @@ print_one_sa_rule(const struct ipsec_sa *sa, int inbound)
 			else
 				printf("%.2x", sa->dst.ip.ip6.ip6_b[i]);
 		}
-		break;
-	case TRANSPORT:
-		printf("Transport ");
-		break;
+	} else if (IS_TRANSPORT(sa->flags)) {
+		if (IS_NATT_UDP_TUNNEL(sa->flags))
+			printf("Transport NAT-T (");
+		else
+			printf("Transport (");
 	}
 
 	ips = &sa->sessions[IPSEC_SESSION_PRIMARY];
-	printf(" type:");
+	printf("), type: ");
 	switch (ips->type) {
 	case RTE_SECURITY_ACTION_TYPE_NONE:
 		printf("no-offload ");
@@ -1053,7 +1078,11 @@ sa_add_address_inline_crypto(struct ipsec_sa *sa)
 	protocol = get_spi_proto(sa->spi, sa->direction, ip_addr, mask);
 	if (protocol < 0)
 		return protocol;
-	else if (protocol == IPPROTO_IPIP) {
+
+	/* Clear transport bits before selecting IP4/IP6 */
+	sa->flags &= ~(IP4_TRANSPORT | IP6_TRANSPORT);
+
+	if (protocol == IPPROTO_IPIP) {
 		sa->flags |= IP4_TRANSPORT;
 		if (mask[0] == IP4_FULL_MASK &&
 				mask[1] == IP4_FULL_MASK &&
@@ -1131,12 +1160,7 @@ sa_add_rules(struct sa_ctx *sa_ctx, const struct ipsec_sa entries[],
 				return -EINVAL;
 		}
 
-		switch (WITHOUT_TRANSPORT_VERSION(sa->flags)) {
-		case IP4_TUNNEL:
-			sa->src.ip.ip4 = rte_cpu_to_be_32(sa->src.ip.ip4);
-			sa->dst.ip.ip4 = rte_cpu_to_be_32(sa->dst.ip.ip4);
-			break;
-		case TRANSPORT:
+		if (IS_TRANSPORT(sa->flags)) {
 			if (ips->type ==
 				RTE_SECURITY_ACTION_TYPE_INLINE_CRYPTO) {
 				inline_status =
@@ -1144,11 +1168,25 @@ sa_add_rules(struct sa_ctx *sa_ctx, const struct ipsec_sa entries[],
 				if (inline_status < 0)
 					return inline_status;
 			}
-			break;
+		} else if (IS_TUNNEL(sa->flags)) {
+			if (IS_IP4(sa->flags)) {
+				sa->src.ip.ip4 =
+					rte_cpu_to_be_32(sa->src.ip.ip4);
+				sa->dst.ip.ip4 =
+					rte_cpu_to_be_32(sa->dst.ip.ip4);
+			}
+
 		}
 
-		if (sa->aead_algo == RTE_CRYPTO_AEAD_AES_GCM) {
-			iv_length = 12;
+
+		if (sa->aead_algo == RTE_CRYPTO_AEAD_AES_GCM ||
+			sa->aead_algo == RTE_CRYPTO_AEAD_AES_CCM ||
+			sa->aead_algo == RTE_CRYPTO_AEAD_CHACHA20_POLY1305) {
+
+			if (ips->type == RTE_SECURITY_ACTION_TYPE_INLINE_CRYPTO)
+				iv_length = 8;
+			else
+				iv_length = 12;
 
 			sa_ctx->xf[idx].a.type = RTE_CRYPTO_SYM_XFORM_AEAD;
 			sa_ctx->xf[idx].a.aead.algo = sa->aead_algo;
@@ -1285,9 +1323,21 @@ fill_ipsec_app_sa_prm(struct rte_ipsec_sa_prm *prm,
 	prm->ipsec_xform.replay_win_sz = app_prm->window_size;
 }
 
+struct udp_ipv4_tunnel {
+	struct rte_ipv4_hdr v4;
+	struct rte_udp_hdr udp;
+} __rte_packed;
+
+struct udp_ipv6_tunnel {
+	struct rte_ipv6_hdr v6;
+	struct rte_udp_hdr udp;
+} __rte_packed;
+
 static int
 fill_ipsec_sa_prm(struct rte_ipsec_sa_prm *prm, const struct ipsec_sa *ss,
-	const struct rte_ipv4_hdr *v4, struct rte_ipv6_hdr *v6)
+	const struct rte_ipv4_hdr *v4, struct rte_ipv6_hdr *v6,
+	const struct udp_ipv4_tunnel *udp_ipv4,
+	const struct udp_ipv6_tunnel *udp_ipv6)
 {
 	int32_t rc;
 
@@ -1311,22 +1361,49 @@ fill_ipsec_sa_prm(struct rte_ipsec_sa_prm *prm, const struct ipsec_sa *ss,
 	prm->ipsec_xform.mode = (IS_TRANSPORT(ss->flags)) ?
 		RTE_SECURITY_IPSEC_SA_MODE_TRANSPORT :
 		RTE_SECURITY_IPSEC_SA_MODE_TUNNEL;
+	prm->ipsec_xform.options.udp_encap =
+			(IS_NATT_UDP_TUNNEL(ss->flags)) ? 1 : 0;
 	prm->ipsec_xform.options.ecn = 1;
 	prm->ipsec_xform.options.copy_dscp = 1;
 
-	if (IS_IP4_TUNNEL(ss->flags)) {
-		prm->ipsec_xform.tunnel.type = RTE_SECURITY_IPSEC_TUNNEL_IPV4;
-		prm->tun.hdr_len = sizeof(*v4);
-		prm->tun.next_proto = rc;
-		prm->tun.hdr = v4;
-	} else if (IS_IP6_TUNNEL(ss->flags)) {
-		prm->ipsec_xform.tunnel.type = RTE_SECURITY_IPSEC_TUNNEL_IPV6;
-		prm->tun.hdr_len = sizeof(*v6);
-		prm->tun.next_proto = rc;
-		prm->tun.hdr = v6;
-	} else {
+	if (IS_TRANSPORT(ss->flags)) {
 		/* transport mode */
 		prm->trs.proto = rc;
+	} else if (IS_TUNNEL(ss->flags)) {
+		prm->tun.hdr_l3_off = 0;
+
+		/* tunnel mode */
+		if (IS_IP4(ss->flags)) {
+			prm->ipsec_xform.tunnel.type =
+					RTE_SECURITY_IPSEC_TUNNEL_IPV4;
+			prm->tun.next_proto = rc;
+			prm->tun.hdr_l3_len = sizeof(*v4);
+
+			if (IS_NATT_UDP_TUNNEL(ss->flags)) {
+				prm->tun.hdr_len = sizeof(*udp_ipv4);
+				prm->tun.hdr = udp_ipv4;
+
+			} else {
+				prm->tun.hdr_len = sizeof(*v4);
+				prm->tun.hdr = v4;
+			}
+
+		} else if (IS_IP6(ss->flags)) {
+			prm->ipsec_xform.tunnel.type =
+					RTE_SECURITY_IPSEC_TUNNEL_IPV6;
+			prm->tun.next_proto = rc;
+			prm->tun.hdr_l3_len = sizeof(*v6);
+
+			if (IS_NATT_UDP_TUNNEL(ss->flags)) {
+
+				prm->tun.hdr_len = sizeof(*udp_ipv6);
+				prm->tun.hdr = udp_ipv6;
+
+			} else {
+				prm->tun.hdr_len = sizeof(*v6);
+				prm->tun.hdr = v6;
+			}
+		}
 	}
 
 	/* setup crypto section */
@@ -1362,25 +1439,66 @@ ipsec_sa_init(struct ipsec_sa *lsa, struct rte_ipsec_sa *sa, uint32_t sa_size)
 	int rc;
 	struct rte_ipsec_sa_prm prm;
 	struct rte_ipsec_session *ips;
-	struct rte_ipv4_hdr v4  = {
-		.version_ihl = IPVERSION << 4 |
-			sizeof(v4) / RTE_IPV4_IHL_MULTIPLIER,
-		.time_to_live = IPDEFTTL,
-		.next_proto_id = IPPROTO_ESP,
-		.src_addr = lsa->src.ip.ip4,
-		.dst_addr = lsa->dst.ip.ip4,
-	};
-	struct rte_ipv6_hdr v6 = {
-		.vtc_flow = htonl(IP6_VERSION << 28),
-		.proto = IPPROTO_ESP,
-	};
+	struct rte_ipv4_hdr v4;
+	struct rte_ipv6_hdr v6;
+	struct udp_ipv4_tunnel udp_ipv4;
+	struct udp_ipv6_tunnel udp_ipv6;
 
-	if (IS_IP6_TUNNEL(lsa->flags)) {
-		memcpy(v6.src_addr, lsa->src.ip.ip6.ip6_b, sizeof(v6.src_addr));
-		memcpy(v6.dst_addr, lsa->dst.ip.ip6.ip6_b, sizeof(v6.dst_addr));
+
+	if (IS_TUNNEL(lsa->flags) && IS_NATT_UDP_TUNNEL(lsa->flags)) {
+		if (IS_IP4(lsa->flags)) {
+
+			udp_ipv4.v4.version_ihl = IPVERSION << 4 | sizeof(v4) /
+					RTE_IPV4_IHL_MULTIPLIER;
+			udp_ipv4.v4.time_to_live = IPDEFTTL;
+			udp_ipv4.v4.next_proto_id = IPPROTO_UDP;
+			udp_ipv4.v4.src_addr = lsa->src.ip.ip4;
+			udp_ipv4.v4.dst_addr = lsa->dst.ip.ip4;
+
+			udp_ipv4.udp.src_port =
+					rte_cpu_to_be_16(lsa->udp.sport);
+			udp_ipv4.udp.dst_port =
+					rte_cpu_to_be_16(lsa->udp.dport);
+
+		} else if (IS_IP6(lsa->flags)) {
+
+			udp_ipv6.v6.vtc_flow = htonl(IP6_VERSION << 28),
+			udp_ipv6.v6.proto = IPPROTO_UDP,
+			memcpy(udp_ipv6.v6.src_addr, lsa->src.ip.ip6.ip6_b,
+					sizeof(udp_ipv6.v6.src_addr));
+			memcpy(udp_ipv6.v6.dst_addr, lsa->dst.ip.ip6.ip6_b,
+					sizeof(udp_ipv6.v6.dst_addr));
+
+			udp_ipv6.udp.src_port =
+					rte_cpu_to_be_16(lsa->udp.sport);
+			udp_ipv6.udp.dst_port =
+					rte_cpu_to_be_16(lsa->udp.dport);
+		}
+
+	} else if (IS_TUNNEL(lsa->flags)) {
+
+		if (IS_IP4(lsa->flags)) {
+			v4.version_ihl = IPVERSION << 4 | sizeof(v4) /
+					RTE_IPV4_IHL_MULTIPLIER;
+			v4.time_to_live = IPDEFTTL;
+			v4.next_proto_id = IPPROTO_ESP;
+			v4.src_addr = lsa->src.ip.ip4;
+			v4.dst_addr = lsa->dst.ip.ip4;
+
+		} else if (IS_IP6(lsa->flags)) {
+
+			v6.vtc_flow = htonl(IP6_VERSION << 28),
+			v6.proto = IPPROTO_ESP,
+			memcpy(v6.src_addr, lsa->src.ip.ip6.ip6_b,
+					sizeof(v6.src_addr));
+			memcpy(v6.dst_addr, lsa->dst.ip.ip6.ip6_b,
+					sizeof(v6.dst_addr));
+
+		}
+
 	}
 
-	rc = fill_ipsec_sa_prm(&prm, lsa, &v4, &v6);
+	rc = fill_ipsec_sa_prm(&prm, lsa, &v4, &v6, &udp_ipv4, &udp_ipv6);
 	if (rc == 0)
 		rc = rte_ipsec_sa_init(sa, &prm, sa_size);
 	if (rc < 0)
@@ -1415,7 +1533,7 @@ ipsec_satbl_init(struct sa_ctx *ctx, uint32_t nb_ent, int32_t socket)
 
 	/* determine SA size */
 	idx = 0;
-	fill_ipsec_sa_prm(&prm, ctx->sa + idx, NULL, NULL);
+	fill_ipsec_sa_prm(&prm, ctx->sa + idx, NULL, NULL, NULL, NULL);
 	sz = rte_ipsec_sa_size(&prm);
 	if (sz < 0) {
 		RTE_LOG(ERR, IPSEC, "%s(%p, %u, %d): "

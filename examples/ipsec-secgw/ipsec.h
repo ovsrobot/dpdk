@@ -122,11 +122,15 @@ struct ipsec_sa {
 	uint16_t flags;
 #define IP4_TUNNEL (1 << 0)
 #define IP6_TUNNEL (1 << 1)
-#define TRANSPORT  (1 << 2)
+#define NATT_UDP_TUNNEL  (1 << 2)
 #define IP4_TRANSPORT (1 << 3)
 #define IP6_TRANSPORT (1 << 4)
 	struct ip_addr src;
 	struct ip_addr dst;
+	struct {
+		uint16_t sport;
+		uint16_t dport;
+	} udp;
 	uint8_t cipher_key[MAX_KEY_SIZE];
 	uint16_t cipher_key_len;
 	uint8_t auth_key[MAX_KEY_SIZE];
@@ -142,7 +146,7 @@ struct ipsec_sa {
 	uint8_t fdir_qid;
 	uint8_t fdir_flag;
 
-#define MAX_RTE_FLOW_PATTERN (4)
+#define MAX_RTE_FLOW_PATTERN (5)
 #define MAX_RTE_FLOW_ACTIONS (3)
 	struct rte_flow_item pattern[MAX_RTE_FLOW_PATTERN];
 	struct rte_flow_action action[MAX_RTE_FLOW_ACTIONS];
@@ -151,6 +155,7 @@ struct ipsec_sa {
 		struct rte_flow_item_ipv4 ipv4_spec;
 		struct rte_flow_item_ipv6 ipv6_spec;
 	};
+	struct rte_flow_item_udp udp_spec;
 	struct rte_flow_item_esp esp_spec;
 	struct rte_flow *flow;
 	struct rte_security_session_conf sess_conf;
@@ -181,17 +186,15 @@ struct ipsec_mbuf_metadata {
 	uint8_t buf[32];
 } __rte_cache_aligned;
 
-#define IS_TRANSPORT(flags) ((flags) & TRANSPORT)
+#define IS_TRANSPORT(flags) ((flags) & (IP4_TRANSPORT | IP6_TRANSPORT))
 
 #define IS_TUNNEL(flags) ((flags) & (IP4_TUNNEL | IP6_TUNNEL))
+
+#define IS_NATT_UDP_TUNNEL(flags) ((flags) & NATT_UDP_TUNNEL)
 
 #define IS_IP4(flags) ((flags) & (IP4_TUNNEL | IP4_TRANSPORT))
 
 #define IS_IP6(flags) ((flags) & (IP6_TUNNEL | IP6_TRANSPORT))
-
-#define IS_IP4_TUNNEL(flags) ((flags) & IP4_TUNNEL)
-
-#define IS_IP6_TUNNEL(flags) ((flags) & IP6_TUNNEL)
 
 /*
  * Macro for getting ipsec_sa flags statuses without version of protocol
@@ -200,7 +203,7 @@ struct ipsec_mbuf_metadata {
 #define WITHOUT_TRANSPORT_VERSION(flags) \
 		((flags) & (IP4_TUNNEL | \
 			IP6_TUNNEL | \
-			TRANSPORT))
+			(IP4_TRANSPORT | IP6_TRANSPORT)))
 
 struct cdev_qp {
 	uint16_t id;

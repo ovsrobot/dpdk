@@ -265,9 +265,9 @@ esp_outbound(struct rte_mbuf *m, struct ipsec_sa *sa,
 
 	RTE_ASSERT(IS_TUNNEL(sa->flags) || IS_TRANSPORT(sa->flags));
 
-	if (likely(IS_IP4_TUNNEL(sa->flags)))
+	if (likely((IS_TUNNEL(sa->flags) && IS_IP4(sa->flags))))
 		ip_hdr_len = sizeof(struct ip);
-	else if (IS_IP6_TUNNEL(sa->flags))
+	else if ((IS_TUNNEL(sa->flags) && IS_IP6(sa->flags)))
 		ip_hdr_len = sizeof(struct ip6_hdr);
 	else if (!IS_TRANSPORT(sa->flags)) {
 		RTE_LOG(ERR, IPSEC_ESP, "Unsupported SA flags: 0x%x\n",
@@ -308,7 +308,8 @@ esp_outbound(struct rte_mbuf *m, struct ipsec_sa *sa,
 				&sa->src, &sa->dst);
 		esp = (struct rte_esp_hdr *)(ip6 + 1);
 		break;
-	case TRANSPORT:
+	case IP4_TRANSPORT:
+	case IP6_TRANSPORT:
 		new_ip = (uint8_t *)rte_pktmbuf_prepend(m,
 				sizeof(struct rte_esp_hdr) + sa->iv_len);
 		memmove(new_ip, ip4, ip_hdr_len);

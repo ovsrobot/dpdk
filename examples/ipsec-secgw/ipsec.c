@@ -24,7 +24,7 @@ set_ipsec_conf(struct ipsec_sa *sa, struct rte_security_ipsec_xform *ipsec)
 	if (ipsec->mode == RTE_SECURITY_IPSEC_SA_MODE_TUNNEL) {
 		struct rte_security_ipsec_tunnel_param *tunnel =
 				&ipsec->tunnel;
-		if (IS_IP4_TUNNEL(sa->flags)) {
+		if (IS_TUNNEL(sa->flags) && IS_IP4(sa->flags)) {
 			tunnel->type =
 				RTE_SECURITY_IPSEC_TUNNEL_IPV4;
 			tunnel->ipv4.ttl = IPDEFTTL;
@@ -34,7 +34,7 @@ set_ipsec_conf(struct ipsec_sa *sa, struct rte_security_ipsec_xform *ipsec)
 
 			memcpy((uint8_t *)&tunnel->ipv4.dst_ip,
 				(uint8_t *)&sa->dst.ip.ip4, 4);
-		} else if (IS_IP6_TUNNEL(sa->flags)) {
+		} else if (IS_TUNNEL(sa->flags) && IS_IP6(sa->flags)) {
 			tunnel->type =
 				RTE_SECURITY_IPSEC_TUNNEL_IPV6;
 			tunnel->ipv6.hlimit = IPDEFTTL;
@@ -163,261 +163,195 @@ create_inline_session(struct socket_ctx *skt_ctx, struct ipsec_sa *sa,
 {
 	int32_t ret = 0;
 	struct rte_security_ctx *sec_ctx;
+	const struct rte_security_capability *sec_cap;
 	struct rte_security_session_conf sess_conf = {
 		.action_type = ips->type,
 		.protocol = RTE_SECURITY_PROTOCOL_IPSEC,
 		{.ipsec = {
-			.spi = sa->spi,
+			.spi = htonl(sa->spi),
 			.salt = sa->salt,
 			.options = { 0 },
 			.replay_win_sz = 0,
 			.direction = sa->direction,
-			.proto = RTE_SECURITY_IPSEC_SA_PROTO_ESP,
-			.mode = (sa->flags == IP4_TUNNEL ||
-					sa->flags == IP6_TUNNEL) ?
-					RTE_SECURITY_IPSEC_SA_MODE_TUNNEL :
-					RTE_SECURITY_IPSEC_SA_MODE_TRANSPORT,
+			.proto = RTE_SECURITY_IPSEC_SA_PROTO_ESP
 		} },
 		.crypto_xform = sa->xforms,
 		.userdata = NULL,
 	};
 
+	if (IS_TRANSPORT(sa->flags)) {
+		sess_conf.ipsec.mode = RTE_SECURITY_IPSEC_SA_MODE_TRANSPORT;
+		/**
+		 * TODO: address this in rte_security API
+		 * Use tunnel parameters to pass both transport IP addresses
+		 */
+		if (IS_IP4(sa->flags)) {
+			sess_conf.ipsec.tunnel.type =
+				RTE_SECURITY_IPSEC_TUNNEL_IPV4;
+
+			sess_conf.ipsec.tunnel.ipv4.src_ip.s_addr =
+				sa->src.ip.ip4;
+			sess_conf.ipsec.tunnel.ipv4.dst_ip.s_addr =
+				sa->dst.ip.ip4;
+		} else if (IS_IP6(sa->flags)) {
+			sess_conf.ipsec.tunnel.type =
+				RTE_SECURITY_IPSEC_TUNNEL_IPV6;
+
+			memcpy(sess_conf.ipsec.tunnel.ipv6.src_addr.s6_addr,
+				sa->src.ip.ip6.ip6_b, 16);
+			memcpy(sess_conf.ipsec.tunnel.ipv6.dst_addr.s6_addr,
+				sa->dst.ip.ip6.ip6_b, 16);
+		}
+	} else if (IS_TUNNEL(sa->flags)) {
+		sess_conf.ipsec.mode = RTE_SECURITY_IPSEC_SA_MODE_TUNNEL;
+
+		if (IS_IP4(sa->flags)) {
+			sess_conf.ipsec.tunnel.type =
+				RTE_SECURITY_IPSEC_TUNNEL_IPV4;
+
+			sess_conf.ipsec.tunnel.ipv4.src_ip.s_addr =
+				sa->src.ip.ip4;
+			sess_conf.ipsec.tunnel.ipv4.dst_ip.s_addr =
+				sa->dst.ip.ip4;
+		} else if (IS_IP6(sa->flags)) {
+			sess_conf.ipsec.tunnel.type =
+				RTE_SECURITY_IPSEC_TUNNEL_IPV6;
+
+			memcpy(sess_conf.ipsec.tunnel.ipv6.src_addr.s6_addr,
+				sa->src.ip.ip6.ip6_b, 16);
+			memcpy(sess_conf.ipsec.tunnel.ipv6.dst_addr.s6_addr,
+				sa->dst.ip.ip6.ip6_b, 16);
+		} else {
+			RTE_LOG(ERR, IPSEC, "invalid tunnel type\n");
+			return -1;
+		}
+	}
+
+	if (IS_NATT_UDP_TUNNEL(sa->flags)) {
+		sess_conf.ipsec.options.udp_encap = 1;
+
+		sess_conf.ipsec.udp.sport = htons(sa->udp.sport);
+		sess_conf.ipsec.udp.dport = htons(sa->udp.dport);
+	}
+
+	struct rte_flow_action_security action_security;
+	struct rte_flow_error err;
+
 	RTE_LOG_DP(DEBUG, IPSEC, "Create session for SA spi %u on port %u\n",
 		sa->spi, sa->portid);
 
-	if (ips->type == RTE_SECURITY_ACTION_TYPE_INLINE_CRYPTO) {
-		struct rte_flow_error err;
-		const struct rte_security_capability *sec_cap;
-		int ret = 0;
+	sec_ctx = (struct rte_security_ctx *)
+				rte_eth_dev_get_sec_ctx(sa->portid);
+	if (sec_ctx == NULL) {
+		RTE_LOG(ERR, IPSEC,
+			" rte_eth_dev_get_sec_ctx failed\n");
+		return -1;
+	}
 
-		sec_ctx = (struct rte_security_ctx *)
-					rte_eth_dev_get_sec_ctx(
-					sa->portid);
-		if (sec_ctx == NULL) {
-			RTE_LOG(ERR, IPSEC,
-				" rte_eth_dev_get_sec_ctx failed\n");
-			return -1;
-		}
+	ips->security.ses = rte_security_session_create(sec_ctx,
+			&sess_conf, skt_ctx->session_pool,
+			skt_ctx->session_priv_pool);
+	if (ips->security.ses == NULL) {
+		RTE_LOG(ERR, IPSEC,
+			"SEC Session init failed: err: %d\n", ret);
+		return -1;
+	}
 
-		ips->security.ses = rte_security_session_create(sec_ctx,
-				&sess_conf, skt_ctx->session_pool,
-				skt_ctx->session_priv_pool);
-		if (ips->security.ses == NULL) {
-			RTE_LOG(ERR, IPSEC,
-				"SEC Session init failed: err: %d\n", ret);
-			return -1;
-		}
+	ips->security.ctx = sec_ctx;
 
-		sec_cap = rte_security_capabilities_get(sec_ctx);
+	sec_cap = rte_security_capabilities_get(sec_ctx);
 
-		/* iterate until ESP tunnel*/
-		while (sec_cap->action != RTE_SECURITY_ACTION_TYPE_NONE) {
-			if (sec_cap->action == ips->type &&
-			    sec_cap->protocol ==
-				RTE_SECURITY_PROTOCOL_IPSEC &&
-			    sec_cap->ipsec.mode ==
-				RTE_SECURITY_IPSEC_SA_MODE_TUNNEL &&
-			    sec_cap->ipsec.direction == sa->direction)
-				break;
-			sec_cap++;
-		}
+	ips->security.ol_flags = sec_cap->ol_flags;
 
-		if (sec_cap->action == RTE_SECURITY_ACTION_TYPE_NONE) {
-			RTE_LOG(ERR, IPSEC,
-				"No suitable security capability found\n");
-			return -1;
-		}
+	if (sa->direction == RTE_SECURITY_IPSEC_SA_DIR_EGRESS)
+		return 0;
 
-		ips->security.ol_flags = sec_cap->ol_flags;
-		ips->security.ctx = sec_ctx;
-		sa->pattern[0].type = RTE_FLOW_ITEM_TYPE_ETH;
+	sa->pattern[0].type = RTE_FLOW_ITEM_TYPE_ETH;
+	sa->pattern[0].spec = NULL;
 
-		if (IS_IP6(sa->flags)) {
-			sa->pattern[1].mask = &rte_flow_item_ipv6_mask;
-			sa->pattern[1].type = RTE_FLOW_ITEM_TYPE_IPV6;
-			sa->pattern[1].spec = &sa->ipv6_spec;
+	if (IS_IP6(sa->flags)) {
+		memcpy(sa->ipv6_spec.hdr.dst_addr,
+			sa->dst.ip.ip6.ip6_b, 16);
+		memcpy(sa->ipv6_spec.hdr.src_addr,
+			sa->src.ip.ip6.ip6_b, 16);
 
-			memcpy(sa->ipv6_spec.hdr.dst_addr,
-				sa->dst.ip.ip6.ip6_b, 16);
-			memcpy(sa->ipv6_spec.hdr.src_addr,
-			       sa->src.ip.ip6.ip6_b, 16);
-		} else if (IS_IP4(sa->flags)) {
-			sa->pattern[1].mask = &rte_flow_item_ipv4_mask;
-			sa->pattern[1].type = RTE_FLOW_ITEM_TYPE_IPV4;
-			sa->pattern[1].spec = &sa->ipv4_spec;
+		sa->pattern[1].mask = &rte_flow_item_ipv6_mask;
+		sa->pattern[1].type = RTE_FLOW_ITEM_TYPE_IPV6;
+		sa->pattern[1].spec = &sa->ipv6_spec;
 
-			sa->ipv4_spec.hdr.dst_addr = sa->dst.ip.ip4;
-			sa->ipv4_spec.hdr.src_addr = sa->src.ip.ip4;
-		}
+	} else if (IS_IP4(sa->flags)) {
+		sa->ipv4_spec.hdr.dst_addr = sa->dst.ip.ip4;
+		sa->ipv4_spec.hdr.src_addr = sa->src.ip.ip4;
+
+		sa->pattern[1].mask = &rte_flow_item_ipv4_mask;
+		sa->pattern[1].type = RTE_FLOW_ITEM_TYPE_IPV4;
+		sa->pattern[1].spec = &sa->ipv4_spec;
+	}
+
+	if (IS_NATT_UDP_TUNNEL(sa->flags)) {
+
+		sa->udp_spec.hdr.dst_port = rte_cpu_to_be_16(sa->udp.dport);
+		sa->udp_spec.hdr.src_port = rte_cpu_to_be_16(sa->udp.sport);
+
+		sa->pattern[2].mask = &rte_flow_item_udp_mask;
+		sa->pattern[2].type = RTE_FLOW_ITEM_TYPE_UDP;
+		sa->pattern[2].spec = &sa->udp_spec;
+
+		sa->esp_spec.hdr.spi = rte_cpu_to_be_32(sa->spi);
+
+		sa->pattern[3].type = RTE_FLOW_ITEM_TYPE_ESP;
+		sa->pattern[3].spec = &sa->esp_spec;
+		sa->pattern[3].mask = &rte_flow_item_esp_mask;
+
+		sa->pattern[4].type = RTE_FLOW_ITEM_TYPE_END;
+	} else {
+		sa->esp_spec.hdr.spi = rte_cpu_to_be_32(sa->spi);
 
 		sa->pattern[2].type = RTE_FLOW_ITEM_TYPE_ESP;
 		sa->pattern[2].spec = &sa->esp_spec;
 		sa->pattern[2].mask = &rte_flow_item_esp_mask;
-		sa->esp_spec.hdr.spi = rte_cpu_to_be_32(sa->spi);
 
 		sa->pattern[3].type = RTE_FLOW_ITEM_TYPE_END;
-
-		sa->action[0].type = RTE_FLOW_ACTION_TYPE_SECURITY;
-		sa->action[0].conf = ips->security.ses;
-
-		sa->action[1].type = RTE_FLOW_ACTION_TYPE_END;
-
-		sa->attr.egress = (sa->direction ==
-				RTE_SECURITY_IPSEC_SA_DIR_EGRESS);
-		sa->attr.ingress = (sa->direction ==
-				RTE_SECURITY_IPSEC_SA_DIR_INGRESS);
-		if (sa->attr.ingress) {
-			uint8_t rss_key[40];
-			struct rte_eth_rss_conf rss_conf = {
-				.rss_key = rss_key,
-				.rss_key_len = 40,
-			};
-			struct rte_eth_dev_info dev_info;
-			uint16_t queue[RTE_MAX_QUEUES_PER_PORT];
-			struct rte_flow_action_rss action_rss;
-			unsigned int i;
-			unsigned int j;
-
-			/* Don't create flow if default flow is created */
-			if (flow_info_tbl[sa->portid].rx_def_flow)
-				return 0;
-
-			ret = rte_eth_dev_info_get(sa->portid, &dev_info);
-			if (ret != 0) {
-				RTE_LOG(ERR, IPSEC,
-					"Error during getting device (port %u) info: %s\n",
-					sa->portid, strerror(-ret));
-				return ret;
-			}
-
-			sa->action[2].type = RTE_FLOW_ACTION_TYPE_END;
-			/* Try RSS. */
-			sa->action[1].type = RTE_FLOW_ACTION_TYPE_RSS;
-			sa->action[1].conf = &action_rss;
-			ret = rte_eth_dev_rss_hash_conf_get(sa->portid,
-					&rss_conf);
-			if (ret != 0) {
-				RTE_LOG(ERR, IPSEC,
-					"rte_eth_dev_rss_hash_conf_get:ret=%d\n",
-					ret);
-				return -1;
-			}
-			for (i = 0, j = 0; i < dev_info.nb_rx_queues; ++i)
-				queue[j++] = i;
-
-			action_rss = (struct rte_flow_action_rss){
-					.types = rss_conf.rss_hf,
-					.key_len = rss_conf.rss_key_len,
-					.queue_num = j,
-					.key = rss_key,
-					.queue = queue,
-			};
-			ret = rte_flow_validate(sa->portid, &sa->attr,
-						sa->pattern, sa->action,
-						&err);
-			if (!ret)
-				goto flow_create;
-			/* Try Queue. */
-			sa->action[1].type = RTE_FLOW_ACTION_TYPE_QUEUE;
-			sa->action[1].conf =
-				&(struct rte_flow_action_queue){
-				.index = 0,
-			};
-			ret = rte_flow_validate(sa->portid, &sa->attr,
-						sa->pattern, sa->action,
-						&err);
-			/* Try End. */
-			sa->action[1].type = RTE_FLOW_ACTION_TYPE_END;
-			sa->action[1].conf = NULL;
-			ret = rte_flow_validate(sa->portid, &sa->attr,
-						sa->pattern, sa->action,
-						&err);
-			if (ret)
-				goto flow_create_failure;
-		} else if (sa->attr.egress &&
-				(ips->security.ol_flags &
-					RTE_SECURITY_TX_HW_TRAILER_OFFLOAD)) {
-			sa->action[1].type =
-					RTE_FLOW_ACTION_TYPE_PASSTHRU;
-			sa->action[2].type =
-					RTE_FLOW_ACTION_TYPE_END;
-		}
-flow_create:
-		sa->flow = rte_flow_create(sa->portid,
-				&sa->attr, sa->pattern, sa->action, &err);
-		if (sa->flow == NULL) {
-flow_create_failure:
-			RTE_LOG(ERR, IPSEC,
-				"Failed to create ipsec flow msg: %s\n",
-				err.message);
-			return -1;
-		}
-	} else if (ips->type ==	RTE_SECURITY_ACTION_TYPE_INLINE_PROTOCOL) {
-		const struct rte_security_capability *sec_cap;
-
-		sec_ctx = (struct rte_security_ctx *)
-				rte_eth_dev_get_sec_ctx(sa->portid);
-
-		if (sec_ctx == NULL) {
-			RTE_LOG(ERR, IPSEC,
-				"Ethernet device doesn't have security features registered\n");
-			return -1;
-		}
-
-		/* Set IPsec parameters in conf */
-		set_ipsec_conf(sa, &(sess_conf.ipsec));
-
-		/* Save SA as userdata for the security session. When
-		 * the packet is received, this userdata will be
-		 * retrieved using the metadata from the packet.
-		 *
-		 * The PMD is expected to set similar metadata for other
-		 * operations, like rte_eth_event, which are tied to
-		 * security session. In such cases, the userdata could
-		 * be obtained to uniquely identify the security
-		 * parameters denoted.
-		 */
-
-		sess_conf.userdata = (void *) sa;
-
-		ips->security.ses = rte_security_session_create(sec_ctx,
-					&sess_conf, skt_ctx->session_pool,
-					skt_ctx->session_priv_pool);
-		if (ips->security.ses == NULL) {
-			RTE_LOG(ERR, IPSEC,
-				"SEC Session init failed: err: %d\n", ret);
-			return -1;
-		}
-
-		sec_cap = rte_security_capabilities_get(sec_ctx);
-		if (sec_cap == NULL) {
-			RTE_LOG(ERR, IPSEC,
-				"No capabilities registered\n");
-			return -1;
-		}
-
-		/* iterate until ESP tunnel*/
-		while (sec_cap->action !=
-				RTE_SECURITY_ACTION_TYPE_NONE) {
-			if (sec_cap->action == ips->type &&
-			    sec_cap->protocol ==
-				RTE_SECURITY_PROTOCOL_IPSEC &&
-			    sec_cap->ipsec.mode ==
-				sess_conf.ipsec.mode &&
-			    sec_cap->ipsec.direction == sa->direction)
-				break;
-			sec_cap++;
-		}
-
-		if (sec_cap->action == RTE_SECURITY_ACTION_TYPE_NONE) {
-			RTE_LOG(ERR, IPSEC,
-				"No suitable security capability found\n");
-			return -1;
-		}
-
-		ips->security.ol_flags = sec_cap->ol_flags;
-		ips->security.ctx = sec_ctx;
 	}
+
+	action_security.security_session = ips->security.ses;
+
+	sa->action[0].type = RTE_FLOW_ACTION_TYPE_SECURITY;
+	sa->action[0].conf = &action_security;
+
+
+	sa->action[1].type = RTE_FLOW_ACTION_TYPE_END;
+	sa->action[1].conf = NULL;
+
+	sa->attr.egress = (sa->direction ==
+			RTE_SECURITY_IPSEC_SA_DIR_EGRESS);
+
+	if (sa->attr.egress)
+		return 0;
+
+	sa->attr.ingress = (sa->direction ==
+			RTE_SECURITY_IPSEC_SA_DIR_INGRESS);
+
+
+	ret = rte_flow_validate(sa->portid,
+				&sa->attr,
+				sa->pattern,
+				sa->action,
+				&err);
+	if (ret)
+		goto flow_create_failure;
+
+	sa->flow = rte_flow_create(sa->portid, &sa->attr, sa->pattern,
+					sa->action, &err);
+	if (sa->flow == NULL) {
+flow_create_failure:
+		RTE_LOG(ERR, IPSEC,
+			"Failed to create ipsec flow msg: %s\n",
+			err.message);
+		return -1;
+	}
+
+	sa->cdev_id_qp = 0;
 
 	return 0;
 }
@@ -427,23 +361,28 @@ create_ipsec_esp_flow(struct ipsec_sa *sa)
 {
 	int ret = 0;
 	struct rte_flow_error err;
+
 	if (sa->direction == RTE_SECURITY_IPSEC_SA_DIR_EGRESS) {
 		RTE_LOG(ERR, IPSEC,
 			"No Flow director rule for Egress traffic\n");
 		return -1;
 	}
-	if (sa->flags == TRANSPORT) {
+
+	if (IS_TRANSPORT(sa->flags)) {
 		RTE_LOG(ERR, IPSEC,
 			"No Flow director rule for transport mode\n");
 		return -1;
 	}
+
 	sa->action[0].type = RTE_FLOW_ACTION_TYPE_QUEUE;
 	sa->pattern[0].type = RTE_FLOW_ITEM_TYPE_ETH;
 	sa->action[0].conf = &(struct rte_flow_action_queue) {
 				.index = sa->fdir_qid,
 	};
+
 	sa->attr.egress = 0;
 	sa->attr.ingress = 1;
+
 	if (IS_IP6(sa->flags)) {
 		sa->pattern[1].mask = &rte_flow_item_ipv6_mask;
 		sa->pattern[1].type = RTE_FLOW_ITEM_TYPE_IPV6;

@@ -2299,9 +2299,6 @@ port_init(uint16_t portid, uint64_t req_rx_offloads, uint64_t req_tx_offloads)
 		/* Pre-populate pkt offloads based on capabilities */
 		qconf->outbound.ipv4_offloads = PKT_TX_IPV4;
 		qconf->outbound.ipv6_offloads = PKT_TX_IPV6;
-		if (local_port_conf.txmode.offloads & DEV_TX_OFFLOAD_IPV4_CKSUM)
-			qconf->outbound.ipv4_offloads |= PKT_TX_IP_CKSUM;
-
 		tx_queueid++;
 
 		/* init RX queues */
