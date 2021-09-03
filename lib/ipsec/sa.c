@@ -217,6 +217,10 @@ fill_sa_type(const struct rte_ipsec_sa_prm *prm, uint64_t *type)
 	} else
 		return -EINVAL;
 
+	/* check for UDP encapsulation flag */
+	if (prm->ipsec_xform.options.udp_encap == 1)
+		tp |= RTE_IPSEC_SATP_NATT_ENABLE;
+
 	/* check for ESN flag */
 	if (prm->ipsec_xform.options.esn == 0)
 		tp |= RTE_IPSEC_SATP_ESN_DISABLE;
@@ -372,7 +376,8 @@ esp_sa_init(struct rte_ipsec_sa *sa, const struct rte_ipsec_sa_prm *prm,
 	const struct crypto_xform *cxf)
 {
 	static const uint64_t msk = RTE_IPSEC_SATP_DIR_MASK |
-				RTE_IPSEC_SATP_MODE_MASK;
+				RTE_IPSEC_SATP_MODE_MASK |
+				RTE_IPSEC_SATP_NATT_MASK;
 
 	if (prm->ipsec_xform.options.ecn)
 		sa->tos_mask |= RTE_IPV4_HDR_ECN_MASK;
@@ -475,10 +480,16 @@ esp_sa_init(struct rte_ipsec_sa *sa, const struct rte_ipsec_sa_prm *prm,
 	case (RTE_IPSEC_SATP_DIR_IB | RTE_IPSEC_SATP_MODE_TRANS):
 		esp_inb_init(sa);
 		break;
+	case (RTE_IPSEC_SATP_DIR_OB | RTE_IPSEC_SATP_MODE_TUNLV4 |
+			RTE_IPSEC_SATP_NATT_ENABLE):
+	case (RTE_IPSEC_SATP_DIR_OB | RTE_IPSEC_SATP_MODE_TUNLV6 |
+			RTE_IPSEC_SATP_NATT_ENABLE):
 	case (RTE_IPSEC_SATP_DIR_OB | RTE_IPSEC_SATP_MODE_TUNLV4):
 	case (RTE_IPSEC_SATP_DIR_OB | RTE_IPSEC_SATP_MODE_TUNLV6):
 		esp_outb_tun_init(sa, prm);
 		break;
+	case (RTE_IPSEC_SATP_DIR_OB | RTE_IPSEC_SATP_MODE_TRANS |
+			RTE_IPSEC_SATP_NATT_ENABLE):
 	case (RTE_IPSEC_SATP_DIR_OB | RTE_IPSEC_SATP_MODE_TRANS):
 		esp_outb_init(sa, 0);
 		break;
