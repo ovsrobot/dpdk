@@ -7,7 +7,7 @@
 #include <stdbool.h>
 
 #ifndef STATS_INTERVAL
-#define STATS_INTERVAL 0
+#define STATS_INTERVAL 10ULL
 #endif
 
 #define NB_SOCKETS 4
