@@ -234,6 +234,11 @@ create_inline_session(struct socket_ctx *skt_ctx, struct ipsec_sa *sa,
 		sess_conf.ipsec.udp.dport = htons(sa->udp.dport);
 	}
 
+	if (sa->esn > 0) {
+		sess_conf.ipsec.options.esn = 1;
+		sess_conf.ipsec.esn.value = sa->esn;
+	}
+
 	struct rte_flow_action_security action_security;
 	struct rte_flow_error err;
 

@@ -711,6 +711,16 @@ parse_sa_tokens(char **tokens, uint32_t n_tokens,
 			continue;
 		}
 
+		if (strcmp(tokens[ti], "esn") == 0) {
+			INCREMENT_TOKEN_INDEX(ti, n_tokens, status);
+			if (status->status < 0)
+				return;
+			rule->esn = atoll(tokens[ti]);
+			if (status->status < 0)
+				return;
+			continue;
+		}
+
 		if (strcmp(tokens[ti], "fallback") == 0) {
 			struct rte_ipsec_session *fb;
 
@@ -1385,6 +1395,11 @@ fill_ipsec_sa_prm(struct rte_ipsec_sa_prm *prm, const struct ipsec_sa *ss,
 	if (ss->mss > 0) {
 		prm->ipsec_xform.options.tso = 1;
 		prm->ipsec_xform.mss = ss->mss;
+	}
+
+	if (ss->esn > 0) {
+		prm->ipsec_xform.options.esn = 1;
+		prm->ipsec_xform.esn.value = ss->esn;
 	}
 
 	if (IS_TRANSPORT(ss->flags)) {
