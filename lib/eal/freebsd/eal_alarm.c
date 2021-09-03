@@ -46,6 +46,13 @@ static rte_spinlock_t alarm_list_lk = RTE_SPINLOCK_INITIALIZER;
 static struct rte_intr_handle *intr_handle;
 static void eal_alarm_callback(void *arg);
 
+void
+rte_eal_alarm_fini(void)
+{
+	if (intr_handle)
+		rte_intr_handle_instance_free(intr_handle);
+}
+
 int
 rte_eal_alarm_init(void)
 {

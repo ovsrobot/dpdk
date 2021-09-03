@@ -1370,6 +1370,7 @@ rte_eal_cleanup(void)
 	rte_eal_memory_detach();
 	rte_trace_save();
 	eal_trace_fini();
+	rte_eal_alarm_fini();
 	eal_cleanup_config(internal_conf);
 	return 0;
 }

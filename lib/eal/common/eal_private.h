@@ -163,6 +163,17 @@ int rte_eal_intr_init(void);
 int rte_eal_alarm_init(void);
 
 /**
+ * Init alarm mechanism. This is to allow a callback be called after
+ * specific time.
+ *
+ * This function is private to EAL.
+ *
+ * @return
+ *  0 on success, negative on error
+ */
+void rte_eal_alarm_fini(void);
+
+/**
  * Function is to check if the kernel module(like, vfio, vfio_iommu_type1,
  * etc.) loaded.
  *
