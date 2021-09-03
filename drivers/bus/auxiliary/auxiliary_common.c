@@ -320,6 +320,8 @@ auxiliary_unplug(struct rte_device *dev)
 	if (ret == 0) {
 		rte_auxiliary_remove_device(adev);
 		rte_devargs_remove(dev->devargs);
+		if (adev->intr_handle)
+			rte_intr_handle_instance_free(adev->intr_handle);
 		free(adev);
 	}
 	return ret;

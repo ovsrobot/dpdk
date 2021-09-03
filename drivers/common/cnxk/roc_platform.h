@@ -101,6 +101,40 @@
 #define plt_thread_is_intr	     rte_thread_is_intr
 #define plt_intr_callback_fn	     rte_intr_callback_fn
 
+#define plt_intr_handle_efd_counter_size_get				      \
+					   rte_intr_handle_efd_counter_size_get
+#define plt_intr_handle_efd_counter_size_set				      \
+					   rte_intr_handle_efd_counter_size_set
+#define plt_intr_handle_vec_list_index_get rte_intr_handle_vec_list_index_get
+#define plt_intr_handle_vec_list_index_set rte_intr_handle_vec_list_index_set
+#define plt_intr_handle_vec_list_base      rte_intr_handle_vec_list_base
+#define plt_intr_handle_vec_list_alloc     rte_intr_handle_vec_list_alloc
+#define plt_intr_handle_vec_list_free      rte_intr_handle_vec_list_free
+#define plt_intr_handle_vec_list_base      rte_intr_handle_vec_list_base
+#define plt_intr_handle_vec_list_base      rte_intr_handle_vec_list_base
+#define plt_intr_handle_fd_set             rte_intr_handle_fd_set
+#define plt_intr_handle_fd_get             rte_intr_handle_fd_get
+#define plt_intr_handle_dev_fd_get         rte_intr_handle_dev_fd_get
+#define plt_intr_handle_dev_fd_set         rte_intr_handle_dev_fd_set
+#define plt_intr_handle_type_get           rte_intr_handle_type_get
+#define plt_intr_handle_type_set           rte_intr_handle_type_set
+#define plt_intr_handle_instance_alloc     rte_intr_handle_instance_alloc
+#define plt_intr_handle_instance_index_get rte_intr_handle_instance_index_get
+#define plt_intr_handle_instance_index_set rte_intr_handle_instance_index_set
+#define plt_intr_handle_instance_free      rte_intr_handle_instance_free
+#define plt_intr_handle_event_list_update  rte_intr_handle_event_list_update
+#define plt_intr_handle_max_intr_get       rte_intr_handle_max_intr_get
+#define plt_intr_handle_max_intr_set       rte_intr_handle_max_intr_set
+#define plt_intr_handle_nb_efd_get	   rte_intr_handle_nb_efd_get
+#define plt_intr_handle_nb_efd_set	   rte_intr_handle_nb_efd_set
+#define plt_intr_handle_nb_intr_get	   rte_intr_handle_nb_intr_get
+#define plt_intr_handle_nb_intr_set	   rte_intr_handle_nb_intr_set
+#define plt_intr_handle_efds_index_get	   rte_intr_handle_efds_index_get
+#define plt_intr_handle_efds_index_set	   rte_intr_handle_efds_index_set
+#define plt_intr_handle_efds_base	   rte_intr_handle_efds_base
+#define plt_intr_handle_elist_index_get	   rte_intr_handle_elist_index_get
+#define plt_intr_handle_elist_index_set	   rte_intr_handle_elist_index_set
+
 #define plt_alarm_set	 rte_eal_alarm_set
 #define plt_alarm_cancel rte_eal_alarm_cancel
 

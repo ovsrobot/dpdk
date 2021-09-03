@@ -384,7 +384,7 @@ igc_intr_other_disable(struct rte_eth_dev *dev)
 {
 	struct igc_hw *hw = IGC_DEV_PRIVATE_HW(dev);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 
 	if (rte_intr_allow_others(intr_handle) &&
 		dev->data->dev_conf.intr_conf.lsc) {
@@ -404,7 +404,7 @@ igc_intr_other_enable(struct rte_eth_dev *dev)
 	struct igc_interrupt *intr = IGC_DEV_PRIVATE_INTR(dev);
 	struct igc_hw *hw = IGC_DEV_PRIVATE_HW(dev);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 
 	if (rte_intr_allow_others(intr_handle) &&
 		dev->data->dev_conf.intr_conf.lsc) {
@@ -616,7 +616,7 @@ eth_igc_stop(struct rte_eth_dev *dev)
 	struct igc_adapter *adapter = IGC_DEV_PRIVATE(dev);
 	struct igc_hw *hw = IGC_DEV_PRIVATE_HW(dev);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct rte_eth_link link;
 
 	dev->data->dev_started = 0;
@@ -668,10 +668,8 @@ eth_igc_stop(struct rte_eth_dev *dev)
 
 	/* Clean datapath event and queue/vec mapping */
 	rte_intr_efd_disable(intr_handle);
-	if (intr_handle->intr_vec != NULL) {
-		rte_free(intr_handle->intr_vec);
-		intr_handle->intr_vec = NULL;
-	}
+	if (rte_intr_handle_vec_list_base(intr_handle))
+		rte_intr_handle_vec_list_free(intr_handle);
 
 	return 0;
 }
@@ -731,7 +729,7 @@ igc_configure_msix_intr(struct rte_eth_dev *dev)
 {
 	struct igc_hw *hw = IGC_DEV_PRIVATE_HW(dev);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 
 	uint32_t intr_mask;
 	uint32_t vec = IGC_MISC_VEC_ID;
@@ -755,8 +753,8 @@ igc_configure_msix_intr(struct rte_eth_dev *dev)
 	IGC_WRITE_REG(hw, IGC_GPIE, IGC_GPIE_MSIX_MODE |
 				IGC_GPIE_PBA | IGC_GPIE_EIAME |
 				IGC_GPIE_NSICR);
-	intr_mask = RTE_LEN2MASK(intr_handle->nb_efd, uint32_t) <<
-		misc_shift;
+	intr_mask = RTE_LEN2MASK(rte_intr_handle_nb_efd_get(intr_handle),
+				 uint32_t) << misc_shift;
 
 	if (dev->data->dev_conf.intr_conf.lsc)
 		intr_mask |= (1u << IGC_MSIX_OTHER_INTR_VEC);
@@ -773,8 +771,8 @@ igc_configure_msix_intr(struct rte_eth_dev *dev)
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		igc_write_ivar(hw, i, 0, vec);
-		intr_handle->intr_vec[i] = vec;
-		if (vec < base + intr_handle->nb_efd - 1)
+		rte_intr_handle_vec_list_index_set(intr_handle, i, vec);
+		if (vec < base + rte_intr_handle_nb_efd_get(intr_handle) - 1)
 			vec++;
 	}
 
@@ -810,7 +808,7 @@ igc_rxq_interrupt_setup(struct rte_eth_dev *dev)
 	uint32_t mask;
 	struct igc_hw *hw = IGC_DEV_PRIVATE_HW(dev);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	int misc_shift = rte_intr_allow_others(intr_handle) ? 1 : 0;
 
 	/* won't configure msix register if no mapping is done
@@ -819,7 +817,8 @@ igc_rxq_interrupt_setup(struct rte_eth_dev *dev)
 	if (!rte_intr_dp_is_en(intr_handle))
 		return;
 
-	mask = RTE_LEN2MASK(intr_handle->nb_efd, uint32_t) << misc_shift;
+	mask = RTE_LEN2MASK(rte_intr_handle_nb_efd_get(intr_handle), uint32_t)
+		<< misc_shift;
 	IGC_WRITE_REG(hw, IGC_EIMS, mask);
 }
 
@@ -913,7 +912,7 @@ eth_igc_start(struct rte_eth_dev *dev)
 	struct igc_hw *hw = IGC_DEV_PRIVATE_HW(dev);
 	struct igc_adapter *adapter = IGC_DEV_PRIVATE(dev);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint32_t *speeds;
 	int ret;
 
@@ -951,10 +950,10 @@ eth_igc_start(struct rte_eth_dev *dev)
 			return -1;
 	}
 
-	if (rte_intr_dp_is_en(intr_handle) && !intr_handle->intr_vec) {
-		intr_handle->intr_vec = rte_zmalloc("intr_vec",
-			dev->data->nb_rx_queues * sizeof(int), 0);
-		if (intr_handle->intr_vec == NULL) {
+	if (rte_intr_dp_is_en(intr_handle) &&
+	    !rte_intr_handle_vec_list_base(intr_handle)) {
+		if (rte_intr_handle_vec_list_alloc(intr_handle, "intr_vec",
+						  dev->data->nb_rx_queues)) {
 			PMD_DRV_LOG(ERR,
 				"Failed to allocate %d rx_queues intr_vec",
 				dev->data->nb_rx_queues);
@@ -1169,7 +1168,7 @@ static int
 eth_igc_close(struct rte_eth_dev *dev)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct igc_hw *hw = IGC_DEV_PRIVATE_HW(dev);
 	struct igc_adapter *adapter = IGC_DEV_PRIVATE(dev);
 	int retry = 0;
@@ -1339,11 +1338,11 @@ eth_igc_dev_init(struct rte_eth_dev *dev)
 			dev->data->port_id, pci_dev->id.vendor_id,
 			pci_dev->id.device_id);
 
-	rte_intr_callback_register(&pci_dev->intr_handle,
+	rte_intr_callback_register(pci_dev->intr_handle,
 			eth_igc_interrupt_handler, (void *)dev);
 
 	/* enable uio/vfio intr/eventfd mapping */
-	rte_intr_enable(&pci_dev->intr_handle);
+	rte_intr_enable(pci_dev->intr_handle);
 
 	/* enable support intr */
 	igc_intr_other_enable(dev);
@@ -2100,7 +2099,7 @@ eth_igc_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
 {
 	struct igc_hw *hw = IGC_DEV_PRIVATE_HW(dev);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint32_t vec = IGC_MISC_VEC_ID;
 
 	if (rte_intr_allow_others(intr_handle))
@@ -2119,7 +2118,7 @@ eth_igc_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 {
 	struct igc_hw *hw = IGC_DEV_PRIVATE_HW(dev);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint32_t vec = IGC_MISC_VEC_ID;
 
 	if (rte_intr_allow_others(intr_handle))

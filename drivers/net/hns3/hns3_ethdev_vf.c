@@ -1985,7 +1985,7 @@ hns3vf_init_vf(struct rte_eth_dev *eth_dev)
 
 	hns3vf_clear_event_cause(hw, 0);
 
-	ret = rte_intr_callback_register(&pci_dev->intr_handle,
+	ret = rte_intr_callback_register(pci_dev->intr_handle,
 					 hns3vf_interrupt_handler, eth_dev);
 	if (ret) {
 		PMD_INIT_LOG(ERR, "Failed to register intr: %d", ret);
@@ -1993,7 +1993,7 @@ hns3vf_init_vf(struct rte_eth_dev *eth_dev)
 	}
 
 	/* Enable interrupt */
-	rte_intr_enable(&pci_dev->intr_handle);
+	rte_intr_enable(pci_dev->intr_handle);
 	hns3vf_enable_irq0(hw);
 
 	/* Get configuration from PF */
@@ -2045,8 +2045,8 @@ err_set_tc_queue:
 
 err_get_config:
 	hns3vf_disable_irq0(hw);
-	rte_intr_disable(&pci_dev->intr_handle);
-	hns3_intr_unregister(&pci_dev->intr_handle, hns3vf_interrupt_handler,
+	rte_intr_disable(pci_dev->intr_handle);
+	hns3_intr_unregister(pci_dev->intr_handle, hns3vf_interrupt_handler,
 			     eth_dev);
 err_intr_callback_register:
 err_cmd_init:
@@ -2074,8 +2074,8 @@ hns3vf_uninit_vf(struct rte_eth_dev *eth_dev)
 	hns3_flow_uninit(eth_dev);
 	hns3_tqp_stats_uninit(hw);
 	hns3vf_disable_irq0(hw);
-	rte_intr_disable(&pci_dev->intr_handle);
-	hns3_intr_unregister(&pci_dev->intr_handle, hns3vf_interrupt_handler,
+	rte_intr_disable(pci_dev->intr_handle);
+	hns3_intr_unregister(pci_dev->intr_handle, hns3vf_interrupt_handler,
 			     eth_dev);
 	hns3_cmd_uninit(hw);
 	hns3_cmd_destroy_queue(hw);
@@ -2118,7 +2118,7 @@ hns3vf_unmap_rx_interrupt(struct rte_eth_dev *dev)
 {
 	struct hns3_hw *hw = HNS3_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint8_t base = RTE_INTR_VEC_ZERO_OFFSET;
 	uint8_t vec = RTE_INTR_VEC_ZERO_OFFSET;
 	uint16_t q_id;
@@ -2136,16 +2136,17 @@ hns3vf_unmap_rx_interrupt(struct rte_eth_dev *dev)
 			(void)hns3vf_bind_ring_with_vector(hw, vec, false,
 							   HNS3_RING_TYPE_RX,
 							   q_id);
-			if (vec < base + intr_handle->nb_efd - 1)
+			if (vec < base + rte_intr_handle_nb_efd_get(intr_handle)
+			    - 1)
 				vec++;
 		}
 	}
 	/* Clean datapath event and queue/vec mapping */
 	rte_intr_efd_disable(intr_handle);
-	if (intr_handle->intr_vec) {
-		rte_free(intr_handle->intr_vec);
-		intr_handle->intr_vec = NULL;
-	}
+
+	/* Cleanup vector list */
+	if (rte_intr_handle_vec_list_base(intr_handle))
+		rte_intr_handle_vec_list_free(intr_handle);
 }
 
 static int
@@ -2301,7 +2302,7 @@ static int
 hns3vf_map_rx_interrupt(struct rte_eth_dev *dev)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct hns3_hw *hw = HNS3_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint8_t base = RTE_INTR_VEC_ZERO_OFFSET;
 	uint8_t vec = RTE_INTR_VEC_ZERO_OFFSET;
@@ -2324,11 +2325,10 @@ hns3vf_map_rx_interrupt(struct rte_eth_dev *dev)
 	if (rte_intr_efd_enable(intr_handle, intr_vector))
 		return -EINVAL;
 
-	if (intr_handle->intr_vec == NULL) {
-		intr_handle->intr_vec =
-			rte_zmalloc("intr_vec",
-				    hw->used_rx_queues * sizeof(int), 0);
-		if (intr_handle->intr_vec == NULL) {
+	/* Allocate vector list */
+	if (!rte_intr_handle_vec_list_base(intr_handle)) {
+		if (rte_intr_handle_vec_list_alloc(intr_handle, "intr_vec",
+						    hw->used_rx_queues)) {
 			hns3_err(hw, "Failed to allocate %u rx_queues"
 				     " intr_vec", hw->used_rx_queues);
 			ret = -ENOMEM;
@@ -2346,20 +2346,22 @@ hns3vf_map_rx_interrupt(struct rte_eth_dev *dev)
 						   HNS3_RING_TYPE_RX, q_id);
 		if (ret)
 			goto vf_bind_vector_error;
-		intr_handle->intr_vec[q_id] = vec;
+
+		if (rte_intr_handle_vec_list_index_set(intr_handle, q_id, vec))
+			goto vf_bind_vector_error;
+
 		/*
 		 * If there are not enough efds (e.g. not enough interrupt),
 		 * remaining queues will be bond to the last interrupt.
 		 */
-		if (vec < base + intr_handle->nb_efd - 1)
+		if (vec < base + rte_intr_handle_nb_efd_get(intr_handle) - 1)
 			vec++;
 	}
 	rte_intr_enable(intr_handle);
 	return 0;
 
 vf_bind_vector_error:
-	free(intr_handle->intr_vec);
-	intr_handle->intr_vec = NULL;
+	rte_intr_handle_vec_list_free(intr_handle);
 vf_alloc_intr_vec_error:
 	rte_intr_efd_disable(intr_handle);
 	return ret;
@@ -2370,7 +2372,7 @@ hns3vf_restore_rx_interrupt(struct hns3_hw *hw)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[hw->data->port_id];
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint16_t q_id;
 	int ret;
 
@@ -2380,8 +2382,9 @@ hns3vf_restore_rx_interrupt(struct hns3_hw *hw)
 	if (rte_intr_dp_is_en(intr_handle)) {
 		for (q_id = 0; q_id < hw->used_rx_queues; q_id++) {
 			ret = hns3vf_bind_ring_with_vector(hw,
-					intr_handle->intr_vec[q_id], true,
-					HNS3_RING_TYPE_RX, q_id);
+				rte_intr_handle_vec_list_index_get(intr_handle,
+								   q_id),
+				true, HNS3_RING_TYPE_RX, q_id);
 			if (ret)
 				return ret;
 		}
@@ -2845,7 +2848,7 @@ hns3vf_reinit_dev(struct hns3_adapter *hns)
 	int ret;
 
 	if (hw->reset.level == HNS3_VF_FULL_RESET) {
-		rte_intr_disable(&pci_dev->intr_handle);
+		rte_intr_disable(pci_dev->intr_handle);
 		ret = hns3vf_set_bus_master(pci_dev, true);
 		if (ret < 0) {
 			hns3_err(hw, "failed to set pci bus, ret = %d", ret);
@@ -2871,7 +2874,7 @@ hns3vf_reinit_dev(struct hns3_adapter *hns)
 				hns3_err(hw, "Failed to enable msix");
 		}
 
-		rte_intr_enable(&pci_dev->intr_handle);
+		rte_intr_enable(pci_dev->intr_handle);
 	}
 
 	ret = hns3_reset_all_tqps(hns);

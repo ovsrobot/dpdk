@@ -266,11 +266,25 @@ fs_eth_dev_create(struct rte_vdev_device *vdev)
 		mac->addr_bytes[4], mac->addr_bytes[5]);
 	dev->data->dev_flags |= RTE_ETH_DEV_INTR_LSC |
 				RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
-	PRIV(dev)->intr_handle = (struct rte_intr_handle){
-		.fd = -1,
-		.type = RTE_INTR_HANDLE_EXT,
-	};
+
+	/* Allocate interrupt instance */
+	PRIV(dev)->intr_handle =
+		rte_intr_handle_instance_alloc(RTE_INTR_HANDLE_DEFAULT_SIZE,
+					       true);
+	if (!PRIV(dev)->intr_handle) {
+		ERROR("Failed to allocate intr handle");
+		goto cancel_alarm;
+	}
+
+	if (rte_intr_handle_fd_set(PRIV(dev)->intr_handle, -1))
+		goto cancel_alarm;
+
+	if (rte_intr_handle_type_set(PRIV(dev)->intr_handle,
+				     RTE_INTR_HANDLE_EXT))
+		goto cancel_alarm;
+
 	rte_eth_dev_probing_finish(dev);
+
 	return 0;
 cancel_alarm:
 	failsafe_hotplug_alarm_cancel(dev);
@@ -299,6 +313,8 @@ fs_rte_eth_free(const char *name)
 		return 0; /* port already released */
 	ret = failsafe_eth_dev_close(dev);
 	rte_eth_dev_release_port(dev);
+	if (PRIV(dev)->intr_handle)
+		rte_intr_handle_instance_free(PRIV(dev)->intr_handle);
 	return ret;
 }
 

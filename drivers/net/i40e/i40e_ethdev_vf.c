@@ -678,7 +678,7 @@ i40evf_config_irq_map(struct rte_eth_dev *dev)
 	uint8_t *cmd_buffer = NULL;
 	struct virtchnl_irq_map_info *map_info;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint32_t vec, cmd_buffer_size, max_vectors, nb_msix, msix_base, i;
 	uint16_t rxq_map[vf->vf_res->max_vectors];
 	int err;
@@ -689,12 +689,14 @@ i40evf_config_irq_map(struct rte_eth_dev *dev)
 		msix_base = I40E_RX_VEC_START;
 		/* For interrupt mode, available vector id is from 1. */
 		max_vectors = vf->vf_res->max_vectors - 1;
-		nb_msix = RTE_MIN(max_vectors, intr_handle->nb_efd);
+		nb_msix = RTE_MIN(max_vectors,
+			(uint32_t)rte_intr_handle_nb_efd_get(intr_handle));
 
 		vec = msix_base;
 		for (i = 0; i < dev->data->nb_rx_queues; i++) {
 			rxq_map[vec] |= 1 << i;
-			intr_handle->intr_vec[i] = vec++;
+			rte_intr_handle_vec_list_index_set(intr_handle, i,
+							   vec++);
 			if (vec >= vf->vf_res->max_vectors)
 				vec = msix_base;
 		}
@@ -705,7 +707,8 @@ i40evf_config_irq_map(struct rte_eth_dev *dev)
 		for (i = 0; i < dev->data->nb_rx_queues; i++) {
 			rxq_map[msix_base] |= 1 << i;
 			if (rte_intr_dp_is_en(intr_handle))
-				intr_handle->intr_vec[i] = msix_base;
+				rte_intr_handle_vec_list_index_set(intr_handle,
+							   i, msix_base);
 		}
 	}
 
@@ -2003,7 +2006,7 @@ i40evf_enable_queues_intr(struct rte_eth_dev *dev)
 {
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 
 	if (!rte_intr_allow_others(intr_handle)) {
 		I40E_WRITE_REG(hw,
@@ -2023,7 +2026,7 @@ i40evf_disable_queues_intr(struct rte_eth_dev *dev)
 {
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 
 	if (!rte_intr_allow_others(intr_handle)) {
 		I40E_WRITE_REG(hw, I40E_VFINT_DYN_CTL01,
@@ -2039,13 +2042,13 @@ static int
 i40evf_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint16_t interval =
 		i40e_calc_itr_interval(0, 0);
 	uint16_t msix_intr;
 
-	msix_intr = intr_handle->intr_vec[queue_id];
+	msix_intr = rte_intr_handle_vec_list_index_get(intr_handle, queue_id);
 	if (msix_intr == I40E_MISC_VEC_ID)
 		I40E_WRITE_REG(hw, I40E_VFINT_DYN_CTL01,
 			       I40E_VFINT_DYN_CTL01_INTENA_MASK |
@@ -2072,11 +2075,11 @@ static int
 i40evf_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint16_t msix_intr;
 
-	msix_intr = intr_handle->intr_vec[queue_id];
+	msix_intr = rte_intr_handle_vec_list_index_get(intr_handle, queue_id);
 	if (msix_intr == I40E_MISC_VEC_ID)
 		I40E_WRITE_REG(hw, I40E_VFINT_DYN_CTL01, 0);
 	else
@@ -2166,7 +2169,7 @@ i40evf_dev_start(struct rte_eth_dev *dev)
 	struct i40e_vf *vf = I40EVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint32_t intr_vector = 0;
 
 	PMD_INIT_FUNC_TRACE();
@@ -2185,11 +2188,10 @@ i40evf_dev_start(struct rte_eth_dev *dev)
 			return -1;
 	}
 
-	if (rte_intr_dp_is_en(intr_handle) && !intr_handle->intr_vec) {
-		intr_handle->intr_vec =
-			rte_zmalloc("intr_vec",
-				    dev->data->nb_rx_queues * sizeof(int), 0);
-		if (!intr_handle->intr_vec) {
+	if (rte_intr_dp_is_en(intr_handle) &&
+	    !rte_intr_handle_vec_list_base(intr_handle)) {
+		if (rte_intr_handle_vec_list_alloc(intr_handle, "intr_vec",
+						   dev->data->nb_rx_queues)) {
 			PMD_INIT_LOG(ERR, "Failed to allocate %d rx_queues"
 				     " intr_vec", dev->data->nb_rx_queues);
 			return -ENOMEM;
@@ -2243,7 +2245,7 @@ static int
 i40evf_dev_stop(struct rte_eth_dev *dev)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct i40e_vf *vf = I40EVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
 
@@ -2260,10 +2262,9 @@ i40evf_dev_stop(struct rte_eth_dev *dev)
 
 	/* Clean datapath event and queue/vec mapping */
 	rte_intr_efd_disable(intr_handle);
-	if (intr_handle->intr_vec) {
-		rte_free(intr_handle->intr_vec);
-		intr_handle->intr_vec = NULL;
-	}
+
+	if (rte_intr_handle_vec_list_base(intr_handle))
+		rte_intr_handle_vec_list_free(intr_handle);
 	/* remove all mac addrs */
 	i40evf_add_del_all_mac_addr(dev, FALSE);
 	/* remove all multicast addresses */

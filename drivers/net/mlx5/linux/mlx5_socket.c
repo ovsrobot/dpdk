@@ -23,7 +23,7 @@
 #define MLX5_SOCKET_PATH "/var/tmp/dpdk_net_mlx5_%d"
 
 int server_socket; /* Unix socket for primary process. */
-struct rte_intr_handle server_intr_handle; /* Interrupt handler. */
+struct rte_intr_handle *server_intr_handle; /* Interrupt handler. */
 
 /**
  * Handle server pmd socket interrupts.
@@ -145,9 +145,20 @@ static int
 mlx5_pmd_interrupt_handler_install(void)
 {
 	MLX5_ASSERT(server_socket);
-	server_intr_handle.fd = server_socket;
-	server_intr_handle.type = RTE_INTR_HANDLE_EXT;
-	return rte_intr_callback_register(&server_intr_handle,
+	server_intr_handle =
+		rte_intr_handle_instance_alloc(RTE_INTR_HANDLE_DEFAULT_SIZE,
+					       false);
+	if (!server_intr_handle) {
+		DRV_LOG(ERR, "Fail to allocate intr_handle");
+		return -ENOMEM;
+	}
+	if (rte_intr_handle_fd_set(server_intr_handle, server_socket))
+		return -1;
+
+	if (rte_intr_handle_type_set(server_intr_handle, RTE_INTR_HANDLE_EXT))
+		return -1;
+
+	return rte_intr_callback_register(server_intr_handle,
 					  mlx5_pmd_socket_handle, NULL);
 }
 
@@ -158,12 +169,13 @@ static void
 mlx5_pmd_interrupt_handler_uninstall(void)
 {
 	if (server_socket) {
-		mlx5_intr_callback_unregister(&server_intr_handle,
+		mlx5_intr_callback_unregister(server_intr_handle,
 					      mlx5_pmd_socket_handle,
 					      NULL);
 	}
-	server_intr_handle.fd = 0;
-	server_intr_handle.type = RTE_INTR_HANDLE_UNKNOWN;
+	rte_intr_handle_fd_set(server_intr_handle, 0);
+	rte_intr_handle_type_set(server_intr_handle, RTE_INTR_HANDLE_UNKNOWN);
+	rte_intr_handle_instance_free(server_intr_handle);
 }
 
 /**

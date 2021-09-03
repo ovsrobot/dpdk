@@ -1034,7 +1034,7 @@ eth_ixgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 {
 	struct ixgbe_adapter *ad = eth_dev->data->dev_private;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct ixgbe_hw *hw =
 		IXGBE_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);
 	struct ixgbe_vfta *shadow_vfta =
@@ -1529,7 +1529,7 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	uint32_t tc, tcs;
 	struct ixgbe_adapter *ad = eth_dev->data->dev_private;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct ixgbe_hw *hw =
 		IXGBE_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);
 	struct ixgbe_vfta *shadow_vfta =
@@ -2548,7 +2548,7 @@ ixgbe_dev_start(struct rte_eth_dev *dev)
 	struct ixgbe_vf_info *vfinfo =
 		*IXGBE_DEV_PRIVATE_TO_P_VFDATA(dev->data->dev_private);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint32_t intr_vector = 0;
 	int err;
 	bool link_up = false, negotiate = 0;
@@ -2603,11 +2603,10 @@ ixgbe_dev_start(struct rte_eth_dev *dev)
 			return -1;
 	}
 
-	if (rte_intr_dp_is_en(intr_handle) && !intr_handle->intr_vec) {
-		intr_handle->intr_vec =
-			rte_zmalloc("intr_vec",
-				    dev->data->nb_rx_queues * sizeof(int), 0);
-		if (intr_handle->intr_vec == NULL) {
+	if (rte_intr_dp_is_en(intr_handle) &&
+	    !rte_intr_handle_vec_list_base(intr_handle)) {
+		if (rte_intr_handle_vec_list_alloc(intr_handle, "intr_vec",
+						   dev->data->nb_rx_queues)) {
 			PMD_INIT_LOG(ERR, "Failed to allocate %d rx_queues"
 				     " intr_vec", dev->data->nb_rx_queues);
 			return -ENOMEM;
@@ -2843,7 +2842,7 @@ ixgbe_dev_stop(struct rte_eth_dev *dev)
 	struct ixgbe_vf_info *vfinfo =
 		*IXGBE_DEV_PRIVATE_TO_P_VFDATA(dev->data->dev_private);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	int vf;
 	struct ixgbe_tm_conf *tm_conf =
 		IXGBE_DEV_PRIVATE_TO_TM_CONF(dev->data->dev_private);
@@ -2894,10 +2893,8 @@ ixgbe_dev_stop(struct rte_eth_dev *dev)
 
 	/* Clean datapath event and queue/vec mapping */
 	rte_intr_efd_disable(intr_handle);
-	if (intr_handle->intr_vec != NULL) {
-		rte_free(intr_handle->intr_vec);
-		intr_handle->intr_vec = NULL;
-	}
+	if (rte_intr_handle_vec_list_base(intr_handle))
+		rte_intr_handle_vec_list_free(intr_handle);
 
 	/* reset hierarchy commit */
 	tm_conf->committed = false;
@@ -2981,7 +2978,7 @@ ixgbe_dev_close(struct rte_eth_dev *dev)
 	struct ixgbe_hw *hw =
 		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	int retries = 0;
 	int ret;
 
@@ -4626,7 +4623,7 @@ ixgbe_dev_interrupt_delayed_handler(void *param)
 {
 	struct rte_eth_dev *dev = (struct rte_eth_dev *)param;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct ixgbe_interrupt *intr =
 		IXGBE_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
 	struct ixgbe_hw *hw =
@@ -5307,7 +5304,7 @@ ixgbevf_dev_start(struct rte_eth_dev *dev)
 		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint32_t intr_vector = 0;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 
 	int err, mask = 0;
 
@@ -5368,11 +5365,10 @@ ixgbevf_dev_start(struct rte_eth_dev *dev)
 			return -1;
 	}
 
-	if (rte_intr_dp_is_en(intr_handle) && !intr_handle->intr_vec) {
-		intr_handle->intr_vec =
-			rte_zmalloc("intr_vec",
-				    dev->data->nb_rx_queues * sizeof(int), 0);
-		if (intr_handle->intr_vec == NULL) {
+	if (rte_intr_dp_is_en(intr_handle) &&
+	    !rte_intr_handle_vec_list_base(intr_handle)) {
+		if (rte_intr_handle_vec_list_alloc(intr_handle, "intr_vec",
+						   dev->data->nb_rx_queues)) {
 			PMD_INIT_LOG(ERR, "Failed to allocate %d rx_queues"
 				     " intr_vec", dev->data->nb_rx_queues);
 			return -ENOMEM;
@@ -5411,7 +5407,7 @@ ixgbevf_dev_stop(struct rte_eth_dev *dev)
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct ixgbe_adapter *adapter = dev->data->dev_private;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 
 	if (hw->adapter_stopped)
 		return 0;
@@ -5439,10 +5435,8 @@ ixgbevf_dev_stop(struct rte_eth_dev *dev)
 
 	/* Clean datapath event and queue/vec mapping */
 	rte_intr_efd_disable(intr_handle);
-	if (intr_handle->intr_vec != NULL) {
-		rte_free(intr_handle->intr_vec);
-		intr_handle->intr_vec = NULL;
-	}
+	if (rte_intr_handle_vec_list_base(intr_handle))
+		rte_intr_handle_vec_list_free(intr_handle);
 
 	adapter->rss_reta_updated = 0;
 
@@ -5454,7 +5448,7 @@ ixgbevf_dev_close(struct rte_eth_dev *dev)
 {
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	int ret;
 
 	PMD_INIT_FUNC_TRACE();
@@ -5937,7 +5931,7 @@ static int
 ixgbevf_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct ixgbe_interrupt *intr =
 		IXGBE_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
 	struct ixgbe_hw *hw =
@@ -5963,7 +5957,7 @@ ixgbevf_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
 	struct ixgbe_hw *hw =
 		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint32_t vec = IXGBE_MISC_VEC_ID;
 
 	if (rte_intr_allow_others(intr_handle))
@@ -5979,7 +5973,7 @@ static int
 ixgbe_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint32_t mask;
 	struct ixgbe_hw *hw =
 		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
@@ -6106,7 +6100,7 @@ static void
 ixgbevf_configure_msix(struct rte_eth_dev *dev)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct ixgbe_hw *hw =
 		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint32_t q_idx;
@@ -6133,8 +6127,10 @@ ixgbevf_configure_msix(struct rte_eth_dev *dev)
 		 * as IXGBE_VF_MAXMSIVECOTR = 1
 		 */
 		ixgbevf_set_ivar_map(hw, 0, q_idx, vector_idx);
-		intr_handle->intr_vec[q_idx] = vector_idx;
-		if (vector_idx < base + intr_handle->nb_efd - 1)
+		rte_intr_handle_vec_list_index_set(intr_handle, q_idx,
+						   vector_idx);
+		if (vector_idx < base + rte_intr_handle_nb_efd_get(intr_handle)
+		    - 1)
 			vector_idx++;
 	}
 
@@ -6155,7 +6151,7 @@ static void
 ixgbe_configure_msix(struct rte_eth_dev *dev)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct ixgbe_hw *hw =
 		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint32_t queue_id, base = IXGBE_MISC_VEC_ID;
@@ -6199,8 +6195,10 @@ ixgbe_configure_msix(struct rte_eth_dev *dev)
 			queue_id++) {
 			/* by default, 1:1 mapping */
 			ixgbe_set_ivar_map(hw, 0, queue_id, vec);
-			intr_handle->intr_vec[queue_id] = vec;
-			if (vec < base + intr_handle->nb_efd - 1)
+			rte_intr_handle_vec_list_index_set(intr_handle,
+							   queue_id, vec);
+			if (vec < base + rte_intr_handle_nb_efd_get(intr_handle)
+			    - 1)
 				vec++;
 		}
 

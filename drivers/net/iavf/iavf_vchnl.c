@@ -1691,9 +1691,9 @@ iavf_request_queues(struct iavf_adapter *adapter, uint16_t num)
 	 * disable interrupt to avoid the admin queue message to be read
 	 * before iavf_read_msg_from_pf.
 	 */
-	rte_intr_disable(&pci_dev->intr_handle);
+	rte_intr_disable(pci_dev->intr_handle);
 	err = iavf_execute_vf_cmd(adapter, &args);
-	rte_intr_enable(&pci_dev->intr_handle);
+	rte_intr_enable(pci_dev->intr_handle);
 	if (err) {
 		PMD_DRV_LOG(ERR, "fail to execute command OP_REQUEST_QUEUES");
 		return err;

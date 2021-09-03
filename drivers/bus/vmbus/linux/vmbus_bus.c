@@ -297,6 +297,13 @@ vmbus_scan_one(const char *name)
 
 	dev->device.devargs = vmbus_devargs_lookup(dev);
 
+	/* Allocate interrupt handle instance */
+	dev->intr_handle =
+		rte_intr_handle_instance_alloc(RTE_INTR_HANDLE_DEFAULT_SIZE,
+					       false);
+	if (!dev->intr_handle)
+		goto error;
+
 	/* device is valid, add in list (sorted) */
 	VMBUS_LOG(DEBUG, "Adding vmbus device %s", name);
 

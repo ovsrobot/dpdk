@@ -116,7 +116,7 @@ struct rte_auxiliary_device {
 	TAILQ_ENTRY(rte_auxiliary_device) next;   /**< Next probed device. */
 	struct rte_device device;                 /**< Inherit core device */
 	char name[RTE_DEV_NAME_MAX_LEN + 1];      /**< ASCII device name */
-	struct rte_intr_handle intr_handle;       /**< Interrupt handle */
+	struct rte_intr_handle *intr_handle;       /**< Interrupt handle */
 	struct rte_auxiliary_driver *driver;      /**< Device driver */
 };
 

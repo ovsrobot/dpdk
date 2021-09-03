@@ -47,6 +47,8 @@ cleanup_fslmc_device_list(void)
 
 	TAILQ_FOREACH_SAFE(dev, &rte_fslmc_bus.device_list, next, t_dev) {
 		TAILQ_REMOVE(&rte_fslmc_bus.device_list, dev, next);
+		if (dev->intr_handle)
+			rte_intr_handle_instance_free(dev->intr_handle);
 		free(dev);
 		dev = NULL;
 	}
@@ -160,6 +162,16 @@ scan_one_fslmc_device(char *dev_name)
 
 	dev->device.bus = &rte_fslmc_bus.bus;
 
+	/* Allocate interrupt instance */
+	dev->intr_handle =
+		rte_intr_handle_instance_alloc(RTE_INTR_HANDLE_DEFAULT_SIZE,
+						false);
+	if (!dev->intr_handle) {
+		DPAA2_BUS_ERR("Failed to allocate intr handle");
+		ret = -ENOMEM;
+		goto cleanup;
+	}
+
 	/* Parse the device name and ID */
 	t_ptr = strtok(dup_dev_name, ".");
 	if (!t_ptr) {
@@ -220,8 +232,11 @@ scan_one_fslmc_device(char *dev_name)
 cleanup:
 	if (dup_dev_name)
 		free(dup_dev_name);
-	if (dev)
+	if (dev) {
+		if (dev->intr_handle)
+			rte_intr_handle_instance_free(dev->intr_handle);
 		free(dev);
+	}
 	return ret;
 }
 
