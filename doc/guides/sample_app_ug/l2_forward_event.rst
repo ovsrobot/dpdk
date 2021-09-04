@@ -52,7 +52,12 @@ The application requires a number of command line options:
 
 .. code-block:: console
 
-    ./<build_dir>/examples/dpdk-l2fwd-event [EAL options] -- -p PORTMASK [-q NQ] --[no-]mac-updating --mode=MODE --eventq-sched=SCHED_MODE
+    ./<build_dir>/examples/dpdk-l2fwd-event [EAL options] -- -p PORTMASK
+                                                        [-q NQ]
+                                                        [--[no-]mac-updating]
+                                                        [--mode=MODE]
+                                                        [--eventq-sched=SCHED_MODE]
+                                                        [--enable-vector [--vector-size SIZE] [--vector-tmo-ns NS]]
 
 where,
 
@@ -67,6 +72,12 @@ where,
 *   --eventq-sched=SCHED_MODE: Event queue schedule mode, Ordered, Atomic or Parallel. Atomic by default.
 
 *   --config: Configure forwarding port pair mapping. Alternate port pairs by default.
+
+*   --enable-vector: Enable event vectorization. Only valid if --mode=eventdev.
+
+*   --vector-size: Max vector size if event vectorization is enabled.
+
+*   --vector-tmo-ns: Max timeout to form vector in nanoseconds if event vectorization is enabled.
 
 Sample usage commands are given below to run the application into different mode:
 
