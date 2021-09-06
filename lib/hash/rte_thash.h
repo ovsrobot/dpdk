@@ -9,19 +9,16 @@
 /**
  * @file
  *
- * toeplitz hash functions.
+ * Software implementation of the Toeplitz hash function used by RSS.
+ * Can be used either for packet distribution on single queue NIC
+ * or for simulating of RSS computation on specific NIC (for example
+ * after GRE header decapsulating)
+ *
  */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/**
- * Software implementation of the Toeplitz hash function used by RSS.
- * Can be used either for packet distribution on single queue NIC
- * or for simulating of RSS computation on specific NIC (for example
- * after GRE header decapsulating)
- */
 
 #include <stdint.h>
 #include <rte_byteorder.h>
