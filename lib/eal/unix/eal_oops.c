@@ -131,6 +131,38 @@ stack_code_dump(void *stack, void *code)
 	mem32_dump(code);
 	oops_print("\n");
 }
+
+#if defined(RTE_ARCH_X86_64) && defined(RTE_EXEC_ENV_LINUX)
+static void
+archinfo_dump(ucontext_t *uc)
+{
+
+	mcontext_t *mc = &uc->uc_mcontext;
+
+	oops_print("R8 : 0x%.16llx  ", mc->gregs[REG_R8]);
+	oops_print("R9 : 0x%.16llx\n", mc->gregs[REG_R9]);
+	oops_print("R10: 0x%.16llx  ", mc->gregs[REG_R10]);
+	oops_print("R11: 0x%.16llx\n", mc->gregs[REG_R11]);
+	oops_print("R12: 0x%.16llx  ", mc->gregs[REG_R12]);
+	oops_print("R13: 0x%.16llx\n", mc->gregs[REG_R13]);
+	oops_print("R14: 0x%.16llx  ", mc->gregs[REG_R14]);
+	oops_print("R15: 0x%.16llx\n", mc->gregs[REG_R15]);
+	oops_print("RAX: 0x%.16llx  ", mc->gregs[REG_RAX]);
+	oops_print("RBX: 0x%.16llx\n", mc->gregs[REG_RBX]);
+	oops_print("RCX: 0x%.16llx  ", mc->gregs[REG_RCX]);
+	oops_print("RDX: 0x%.16llx\n", mc->gregs[REG_RDX]);
+	oops_print("RBP: 0x%.16llx  ", mc->gregs[REG_RBP]);
+	oops_print("RSP: 0x%.16llx\n", mc->gregs[REG_RSP]);
+	oops_print("RSI: 0x%.16llx  ", mc->gregs[REG_RSI]);
+	oops_print("RDI: 0x%.16llx\n", mc->gregs[REG_RDI]);
+	oops_print("RIP: 0x%.16llx  ", mc->gregs[REG_RIP]);
+	oops_print("EFL: 0x%.16llx\n", mc->gregs[REG_EFL]);
+
+	stack_code_dump((void *)mc->gregs[REG_RSP], (void *)mc->gregs[REG_RIP]);
+}
+
+#else
+
 static void
 archinfo_dump(ucontext_t *uc)
 {
@@ -138,6 +170,8 @@ archinfo_dump(ucontext_t *uc)
 
 	stack_code_dump(NULL, NULL);
 }
+
+#endif
 
 static void
 default_signal_handler_invoke(int sig)
