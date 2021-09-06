@@ -5400,6 +5400,9 @@ ixgbevf_dev_start(struct rte_eth_dev *dev)
 	 */
 	ixgbevf_dev_link_update(dev, 0);
 
+	/* Clear the mac address, the rte frame will be restored */
+	ixgbevf_set_uc_addr_vf(hw, 0, NULL);
+
 	hw->adapter_stopped = false;
 
 	return 0;
@@ -5443,6 +5446,9 @@ ixgbevf_dev_stop(struct rte_eth_dev *dev)
 		rte_free(intr_handle->intr_vec);
 		intr_handle->intr_vec = NULL;
 	}
+
+	/* Clear the mac address */
+	ixgbevf_set_uc_addr_vf(hw, 0, NULL);
 
 	adapter->rss_reta_updated = 0;
 
