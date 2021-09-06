@@ -716,6 +716,9 @@ void __rte_thread_init(unsigned int lcore_id, rte_cpuset_t *cpuset);
  */
 void __rte_thread_uninit(void);
 
+int eal_oops_init(void);
+void eal_oops_fini(void);
+
 /**
  * asprintf(3) replacement for Windows.
  */

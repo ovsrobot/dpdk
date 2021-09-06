@@ -226,3 +226,7 @@ Other options
     To disable use of max SIMD bitwidth limit::
 
         --force-max-simd-bitwidth=0
+
+*    ``--no-oops``:
+
+    Disable default EAL oops handler.

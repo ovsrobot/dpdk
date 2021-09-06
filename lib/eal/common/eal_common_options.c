@@ -107,6 +107,7 @@ eal_long_options[] = {
 	{OPT_TELEMETRY,         0, NULL, OPT_TELEMETRY_NUM        },
 	{OPT_NO_TELEMETRY,      0, NULL, OPT_NO_TELEMETRY_NUM     },
 	{OPT_FORCE_MAX_SIMD_BITWIDTH, 1, NULL, OPT_FORCE_MAX_SIMD_BITWIDTH_NUM},
+	{OPT_NO_OOPS,           0, NULL, OPT_NO_OOPS_NUM          },
 
 	/* legacy options that will be removed in future */
 	{OPT_PCI_BLACKLIST,     1, NULL, OPT_PCI_BLACKLIST_NUM    },
@@ -1825,6 +1826,9 @@ eal_parse_common_option(int opt, const char *optarg,
 			return -1;
 		}
 		break;
+	case OPT_NO_OOPS_NUM:
+		conf->no_oops = 1;
+		break;
 
 	/* don't know what to do, leave this to caller */
 	default:
@@ -2128,6 +2132,7 @@ eal_common_usage(void)
 	       "  --"OPT_TELEMETRY"   Enable telemetry support (on by default)\n"
 	       "  --"OPT_NO_TELEMETRY"   Disable telemetry support\n"
 	       "  --"OPT_FORCE_MAX_SIMD_BITWIDTH" Force the max SIMD bitwidth\n"
+	       "  --"OPT_NO_OOPS"     Disable default oops EAL handler(on by default)\n"
 	       "\nEAL options for DEBUG use only:\n"
 	       "  --"OPT_HUGE_UNLINK"       Unlink hugepage files after init\n"
 	       "  --"OPT_NO_HUGE"           Use malloc instead of hugetlbfs\n"

@@ -62,6 +62,16 @@ New Features
   * Added bus-level parsing of the devargs syntax.
   * Kept compatibility with the legacy syntax as parsing fallback.
 
+* **Added APIs for oops handling support.**
+
+  Added support for decoding the oops fault with ``libunwind`` based backtrace,
+  architecture-specific register dump, instruction memory dump, and
+  stack memory dump. EAL installs the default oops handler if ``no-oops`` EAL
+  command line argument is not provided. The default EAL oops handler stores the
+  existing handler and invoke after decoding. It also offers ``rte_oops_decode``
+  API to integrate the EAL oops decode function where the application does not
+  use the default EAL handler.
+
 
 Removed Items
 -------------

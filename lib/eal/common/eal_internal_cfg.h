@@ -94,6 +94,7 @@ struct internal_config {
 	unsigned int no_telemetry; /**< true to disable Telemetry */
 	struct simd_bitwidth max_simd_bitwidth;
 	/**< max simd bitwidth path to use */
+	unsigned int no_oops; /**< true to disable oops */
 };
 
 void eal_reset_internal_config(struct internal_config *internal_cfg);

@@ -1017,6 +1017,11 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
+	if (internal_conf->no_oops == 0 && eal_oops_init()) {
+		rte_eal_init_alert("oops init failed.");
+		rte_errno = ENOENT;
+	}
+
 	if (eal_plugins_init() < 0) {
 		rte_eal_init_alert("Cannot init plugins");
 		rte_errno = EINVAL;
@@ -1370,6 +1375,8 @@ rte_eal_cleanup(void)
 	rte_eal_memory_detach();
 	rte_trace_save();
 	eal_trace_fini();
+	if (internal_conf->no_oops == 0)
+		eal_oops_fini();
 	eal_cleanup_config(internal_conf);
 	return 0;
 }

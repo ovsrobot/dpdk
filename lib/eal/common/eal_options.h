@@ -93,6 +93,8 @@ enum {
 	OPT_NO_TELEMETRY_NUM,
 #define OPT_FORCE_MAX_SIMD_BITWIDTH  "force-max-simd-bitwidth"
 	OPT_FORCE_MAX_SIMD_BITWIDTH_NUM,
+#define OPT_NO_OOPS           "no-oops"
+	OPT_NO_OOPS_NUM,
 
 	/* legacy option that will be removed in future */
 #define OPT_PCI_BLACKLIST     "pci-blacklist"
