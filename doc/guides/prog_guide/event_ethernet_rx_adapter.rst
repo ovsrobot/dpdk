@@ -146,6 +146,14 @@ if the callback is supported, and the counts maintained by the service function,
 if one exists. The service function also maintains a count of cycles for which
 it was not able to enqueue to the event device.
 
+Getting Adapter queue info
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The  ``rte_event_eth_rx_adapter_queue_info_get()`` function reports
+flags for handling received packets, event queue identifier, scheduar type,
+event priority, polling frequency of the receive queue and flow identifier
+in struct ``rte_event_eth_rx_adapter_queue_info``.
+
 Interrupt Based Rx Queues
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
