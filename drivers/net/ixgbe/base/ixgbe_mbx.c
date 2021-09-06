@@ -370,15 +370,23 @@ STATIC s32 ixgbe_check_for_rst_vf(struct ixgbe_hw *hw, u16 mbx_id)
 STATIC s32 ixgbe_obtain_mbx_lock_vf(struct ixgbe_hw *hw)
 {
 	s32 ret_val = IXGBE_ERR_MBX;
+	s32 timeout = hw->mbx.timeout;
+	s32 usec = hw->mbx.usec_delay;
 
 	DEBUGFUNC("ixgbe_obtain_mbx_lock_vf");
 
-	/* Take ownership of the buffer */
-	IXGBE_WRITE_REG(hw, IXGBE_VFMAILBOX, IXGBE_VFMAILBOX_VFU);
+	do {
+		/* Take ownership of the buffer */
+		IXGBE_WRITE_REG(hw, IXGBE_VFMAILBOX, IXGBE_VFMAILBOX_VFU);
 
-	/* reserve mailbox for vf use */
-	if (ixgbe_read_v2p_mailbox(hw) & IXGBE_VFMAILBOX_VFU)
-		ret_val = IXGBE_SUCCESS;
+		/* reserve mailbox for vf use */
+		if (ixgbe_read_v2p_mailbox(hw) & IXGBE_VFMAILBOX_VFU) {
+			ret_val = IXGBE_SUCCESS;
+			break;
+		}
+
+		usec_delay(usec);
+	} while (timeout--);
 
 	return ret_val;
 }
