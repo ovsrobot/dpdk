@@ -402,7 +402,7 @@ static const struct rte_cryptodev_capabilities aesni_mb_pmd_capabilities[] = {
 					.min = 16,
 #if IMB_VERSION(0, 54, 2) <= IMB_VERSION_NUM
 					.max = 32,
-					.increment = 16
+					.increment = 8
 #else
 					.max = 16,
 					.increment = 0
