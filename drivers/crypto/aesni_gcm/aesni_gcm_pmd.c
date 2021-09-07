@@ -73,13 +73,13 @@ aesni_gcm_set_session_parameters(const struct aesni_gcm_ops *gcm_ops,
 		key = auth_xform->auth.key.data;
 		sess->req_digest_length = auth_xform->auth.digest_length;
 
-	/* AES-GCM */
+	/* AES-GCM - AES-CCM */
 	} else if (xform->type == RTE_CRYPTO_SYM_XFORM_AEAD) {
 		aead_xform = xform;
-
-		if (aead_xform->aead.algo != RTE_CRYPTO_AEAD_AES_GCM) {
+		if ((aead_xform->aead.algo != RTE_CRYPTO_AEAD_AES_GCM) &&
+		    (aead_xform->aead.algo != RTE_CRYPTO_AEAD_AES_CCM)) {
 			AESNI_GCM_LOG(ERR, "The only combined operation "
-						"supported is AES GCM");
+						"supported is AES GCM/CCM");
 			return -ENOTSUP;
 		}
 
