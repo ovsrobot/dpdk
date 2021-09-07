@@ -66,6 +66,11 @@ New Features
 
   * Added rte_flow support for dual VLAN insert and strip actions.
 
+* **Added IPsec SA option to disable IV generation.**
+
+  * Added IPsec SA option to disable IV generation to allow known vector
+    tests as well as usage of application provided IV on supported PMDs.
+
 * **Updated Marvell cnxk crypto PMD.**
 
   * Added AES-CBC SHA1-HMAC support in lookaside protocol (IPsec) for CN10K.
