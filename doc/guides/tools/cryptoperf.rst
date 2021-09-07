@@ -316,9 +316,9 @@ The following are the application command-line options:
         Set PDCP sequence number size(n) in bits. Valid values of n will
         be 5/7/12/15/18.
 
-* ``--pdcp-domain <control/user>``
+* ``--pdcp-domain <control/user/short_mac>``
 
-        Set PDCP domain to specify Control/user plane.
+        Set PDCP domain to specify short_mac/control/user plane.
 
 * ``--docsis-hdr-sz <n>``
 
