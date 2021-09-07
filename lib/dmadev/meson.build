@@ -2,3 +2,4 @@
 # Copyright(c) 2021 HiSilicon Limited.
 
 headers = files('rte_dmadev.h')
+indirect_headers += files('rte_dmadev_core.h')
