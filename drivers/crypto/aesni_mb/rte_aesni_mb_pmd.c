@@ -462,6 +462,9 @@ aesni_mb_set_session_cipher_parameters(const MB_MGR *mb_mgr,
 
 	/* Select cipher mode */
 	switch (xform->cipher.algo) {
+	case RTE_CRYPTO_CIPHER_NULL:
+		sess->cipher.mode = NULL_CIPHER;
+		return 0;
 	case RTE_CRYPTO_CIPHER_AES_CBC:
 		sess->cipher.mode = CBC;
 		is_aes = 1;
