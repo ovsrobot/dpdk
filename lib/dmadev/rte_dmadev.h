@@ -730,6 +730,8 @@ struct rte_dmadev_sge {
 	uint32_t length; /**< The DMA operation length. */
 };
 
+#include "rte_dmadev_core.h"
+
 /* DMA flags to augment operation preparation. */
 #define RTE_DMA_OP_FLAG_FENCE	(1ull << 0)
 /**< DMA fence flag.
