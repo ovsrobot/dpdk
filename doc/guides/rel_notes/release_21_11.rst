@@ -62,6 +62,11 @@ New Features
   * Added bus-level parsing of the devargs syntax.
   * Kept compatibility with the legacy syntax as parsing fallback.
 
+* **Added dmadev library support.**
+
+  The dmadev library provides a DMA device framework for management and
+  provision of hardware and software DMA devices.
+
 
 Removed Items
 -------------
