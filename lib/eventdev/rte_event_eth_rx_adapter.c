@@ -2759,3 +2759,79 @@ rte_event_eth_rx_adapter_cb_register(uint8_t id,
 
 	return 0;
 }
+
+int
+rte_event_eth_rx_adapter_queue_info_get(uint8_t id, uint16_t eth_dev_id,
+			uint16_t rx_queue_id,
+			struct rte_event_eth_rx_adapter_queue_info *info)
+{
+	struct rte_eventdev *dev;
+	struct eth_device_info *dev_info;
+	struct rte_event_eth_rx_adapter *rx_adapter;
+	struct eth_rx_queue_info *queue_info;
+	struct rte_event *qi_ev;
+	int ret;
+	uint32_t cap;
+
+	RTE_EVENT_ETH_RX_ADAPTER_ID_VALID_OR_ERR_RET(id, -EINVAL);
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(eth_dev_id, -EINVAL);
+
+	if (rx_queue_id >= rte_eth_devices[eth_dev_id].data->nb_rx_queues) {
+		RTE_EDEV_LOG_ERR("Invalid rx queue_id %u", rx_queue_id);
+		return -EINVAL;
+	}
+
+	if (info == NULL) {
+		RTE_EDEV_LOG_ERR("Rx queue info cannot be NULL");
+		return -EINVAL;
+	}
+
+	rx_adapter = rxa_id_to_adapter(id);
+	if (rx_adapter == NULL)
+		return -EINVAL;
+
+	dev = &rte_eventdevs[rx_adapter->eventdev_id];
+	ret = rte_event_eth_rx_adapter_caps_get(rx_adapter->eventdev_id,
+						eth_dev_id,
+						&cap);
+	if (ret) {
+		RTE_EDEV_LOG_ERR("Failed to get adapter caps edev %" PRIu8
+				 "eth port %" PRIu16, id, eth_dev_id);
+		return ret;
+	}
+
+	if (cap & RTE_EVENT_ETH_RX_ADAPTER_CAP_INTERNAL_PORT) {
+		RTE_FUNC_PTR_OR_ERR_RET(
+				*dev->dev_ops->eth_rx_adapter_queue_info_get,
+				-ENOTSUP);
+		ret = (*dev->dev_ops->eth_rx_adapter_queue_info_get)(dev,
+						&rte_eth_devices[eth_dev_id],
+						rx_queue_id,
+						info);
+		return ret;
+	}
+
+	dev_info = &rx_adapter->eth_devices[eth_dev_id];
+
+	queue_info = &dev_info->rx_queue[rx_queue_id];
+	if (!queue_info->queue_enabled) {
+		RTE_EDEV_LOG_ERR("Rx queue %u not added", rx_queue_id);
+		return -EINVAL;
+	}
+
+	qi_ev = (struct rte_event *)&queue_info->event;
+
+	memset(info, 0, sizeof(*info));
+	info->servicing_weight = queue_info->wt;
+	info->event_queue_id = qi_ev->queue_id;
+	info->sched_type = qi_ev->sched_type;
+	info->priority = qi_ev->priority;
+	info->rx_queue_flags = 0;
+	if (queue_info->flow_id_mask != 0) {
+		info->rx_queue_flags |=
+				RTE_EVENT_ETH_RX_ADAPTER_QUEUE_FLOW_ID_VALID;
+		info->flow_id = qi_ev->flow_id;
+	}
+
+	return 0;
+}
