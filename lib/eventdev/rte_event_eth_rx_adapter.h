@@ -33,6 +33,7 @@
  *  - rte_event_eth_rx_adapter_stop()
  *  - rte_event_eth_rx_adapter_stats_get()
  *  - rte_event_eth_rx_adapter_stats_reset()
+ *  - rte_event_eth_rx_adapter_queue_info_get()
  *
  * The application creates an ethernet to event adapter using
  * rte_event_eth_rx_adapter_create_ext() or rte_event_eth_rx_adapter_create()
@@ -138,6 +139,56 @@ struct rte_event_eth_rx_adapter_conf {
 typedef int (*rte_event_eth_rx_adapter_conf_cb) (uint8_t id, uint8_t dev_id,
 			struct rte_event_eth_rx_adapter_conf *conf,
 			void *arg);
+
+/**
+ * Rx queue info
+ */
+struct rte_event_eth_rx_adapter_queue_info {
+	uint32_t rx_queue_flags;
+	/**< Flags for handling received packets
+	 * @see RTE_EVENT_ETH_RX_ADAPTER_QUEUE_FLOW_ID_VALID
+	 */
+	uint16_t servicing_weight;
+	/**< Relative polling frequency of ethernet receive queue when the
+	 * adapter uses a service core function for ethernet to event device
+	 * transfers. If it is set to zero, the Rx queue is interrupt driven
+	 * (unless rx queue interrupts are not enabled for the ethernet
+	 * device).
+	 */
+
+	uint8_t event_queue_id;
+	/**< Targeted event queue identifier for the enqueue or
+	 * dequeue operation.
+	 * The value must be in the range of
+	 * [0, nb_event_queues - 1] which previously supplied to
+	 * rte_event_dev_configure().
+	 */
+
+	uint8_t sched_type;
+	/**< Scheduler synchronization type (RTE_SCHED_TYPE_*)
+	 * associated with flow id on a given event queue
+	 * for the enqueue and dequeue operation.
+	 */
+
+	uint8_t priority;
+	/**< Event priority relative to other events in the
+	 * event queue. The requested priority should in the
+	 * range of  [RTE_EVENT_DEV_PRIORITY_HIGHEST,
+	 * RTE_EVENT_DEV_PRIORITY_LOWEST].
+	 * The implementation shall normalize the requested
+	 * priority to supported priority value.
+	 * Valid when the device has
+	 * RTE_EVENT_DEV_CAP_EVENT_QOS capability.
+	 */
+
+	uint32_t flow_id;
+	/**< Targeted flow identifier for the enqueue and
+	 * dequeue operation.
+	 * The value must be in the range of
+	 * [0, nb_event_queue_flows - 1] which
+	 * previously supplied to rte_event_dev_configure().
+	 */
+};
 
 /**
  * Rx queue configuration structure
@@ -574,6 +625,26 @@ __rte_experimental
 int rte_event_eth_rx_adapter_queue_event_vector_config(
 	uint8_t id, uint16_t eth_dev_id, int32_t rx_queue_id,
 	struct rte_event_eth_rx_adapter_event_vector_config *config);
+
+/**
+ * Retrieve information about Rx queue.
+ *
+ * @param id
+ *  Adapter identifier.
+ * @param eth_dev_id
+ *  Port identifier of Ethernet device.
+ * @param rx_queue_id
+ *  Ethernet device receive queue index.
+ * @param info
+ *  Pointer to struct rte_event_eth_rx_adapter_queue_info
+ * @return
+ *  - 0: Success, Receive queue added correctly.
+ *  - <0: Error code on failure.
+ */
+int rte_event_eth_rx_adapter_queue_info_get(uint8_t id,
+		     uint16_t eth_dev_id,
+		     uint16_t rx_queue_id,
+		     struct rte_event_eth_rx_adapter_queue_info *info);
 
 #ifdef __cplusplus
 }
