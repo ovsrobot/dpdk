@@ -492,6 +492,131 @@ static struct rte_pci_driver rte_ngbe_pmd = {
 	.remove = eth_ngbe_pci_remove,
 };
 
+static int
+ngbe_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	struct ngbe_vfta *shadow_vfta = NGBE_DEV_VFTA(dev);
+	uint32_t vfta;
+	uint32_t vid_idx;
+	uint32_t vid_bit;
+
+	vid_idx = (uint32_t)((vlan_id >> 5) & 0x7F);
+	vid_bit = (uint32_t)(1 << (vlan_id & 0x1F));
+	vfta = rd32(hw, NGBE_VLANTBL(vid_idx));
+	if (on)
+		vfta |= vid_bit;
+	else
+		vfta &= ~vid_bit;
+	wr32(hw, NGBE_VLANTBL(vid_idx), vfta);
+
+	/* update local VFTA copy */
+	shadow_vfta->vfta[vid_idx] = vfta;
+
+	return 0;
+}
+
+static void
+ngbe_vlan_strip_queue_set(struct rte_eth_dev *dev, uint16_t queue, int on)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	struct ngbe_rx_queue *rxq;
+	bool restart;
+	uint32_t rxcfg, rxbal, rxbah;
+
+	if (on)
+		ngbe_vlan_hw_strip_enable(dev, queue);
+	else
+		ngbe_vlan_hw_strip_disable(dev, queue);
+
+	rxq = dev->data->rx_queues[queue];
+	rxbal = rd32(hw, NGBE_RXBAL(rxq->reg_idx));
+	rxbah = rd32(hw, NGBE_RXBAH(rxq->reg_idx));
+	rxcfg = rd32(hw, NGBE_RXCFG(rxq->reg_idx));
+	if (rxq->offloads & DEV_RX_OFFLOAD_VLAN_STRIP) {
+		restart = (rxcfg & NGBE_RXCFG_ENA) &&
+			!(rxcfg & NGBE_RXCFG_VLAN);
+		rxcfg |= NGBE_RXCFG_VLAN;
+	} else {
+		restart = (rxcfg & NGBE_RXCFG_ENA) &&
+			(rxcfg & NGBE_RXCFG_VLAN);
+		rxcfg &= ~NGBE_RXCFG_VLAN;
+	}
+	rxcfg &= ~NGBE_RXCFG_ENA;
+
+	if (restart) {
+		/* set vlan strip for ring */
+		ngbe_dev_rx_queue_stop(dev, queue);
+		wr32(hw, NGBE_RXBAL(rxq->reg_idx), rxbal);
+		wr32(hw, NGBE_RXBAH(rxq->reg_idx), rxbah);
+		wr32(hw, NGBE_RXCFG(rxq->reg_idx), rxcfg);
+		ngbe_dev_rx_queue_start(dev, queue);
+	}
+}
+
+static int
+ngbe_vlan_tpid_set(struct rte_eth_dev *dev,
+		    enum rte_vlan_type vlan_type,
+		    uint16_t tpid)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	int ret = 0;
+	uint32_t portctrl, vlan_ext, qinq;
+
+	portctrl = rd32(hw, NGBE_PORTCTL);
+
+	vlan_ext = (portctrl & NGBE_PORTCTL_VLANEXT);
+	qinq = vlan_ext && (portctrl & NGBE_PORTCTL_QINQ);
+	switch (vlan_type) {
+	case ETH_VLAN_TYPE_INNER:
+		if (vlan_ext) {
+			wr32m(hw, NGBE_VLANCTL,
+				NGBE_VLANCTL_TPID_MASK,
+				NGBE_VLANCTL_TPID(tpid));
+			wr32m(hw, NGBE_DMATXCTRL,
+				NGBE_DMATXCTRL_TPID_MASK,
+				NGBE_DMATXCTRL_TPID(tpid));
+		} else {
+			ret = -ENOTSUP;
+			PMD_DRV_LOG(ERR,
+				"Inner type is not supported by single VLAN");
+		}
+
+		if (qinq) {
+			wr32m(hw, NGBE_TAGTPID(0),
+				NGBE_TAGTPID_LSB_MASK,
+				NGBE_TAGTPID_LSB(tpid));
+		}
+		break;
+	case ETH_VLAN_TYPE_OUTER:
+		if (vlan_ext) {
+			/* Only the high 16-bits is valid */
+			wr32m(hw, NGBE_EXTAG,
+				NGBE_EXTAG_VLAN_MASK,
+				NGBE_EXTAG_VLAN(tpid));
+		} else {
+			wr32m(hw, NGBE_VLANCTL,
+				NGBE_VLANCTL_TPID_MASK,
+				NGBE_VLANCTL_TPID(tpid));
+			wr32m(hw, NGBE_DMATXCTRL,
+				NGBE_DMATXCTRL_TPID_MASK,
+				NGBE_DMATXCTRL_TPID(tpid));
+		}
+
+		if (qinq) {
+			wr32m(hw, NGBE_TAGTPID(0),
+				NGBE_TAGTPID_MSB_MASK,
+				NGBE_TAGTPID_MSB(tpid));
+		}
+		break;
+	default:
+		PMD_DRV_LOG(ERR, "Unsupported VLAN type %d", vlan_type);
+		return -EINVAL;
+	}
+
+	return ret;
+}
+
 void
 ngbe_vlan_hw_filter_disable(struct rte_eth_dev *dev)
 {
@@ -2411,7 +2536,10 @@ static const struct eth_dev_ops ngbe_eth_dev_ops = {
 	.queue_stats_mapping_set    = ngbe_dev_queue_stats_mapping_set,
 	.fw_version_get             = ngbe_fw_version_get,
 	.mtu_set                    = ngbe_dev_mtu_set,
+	.vlan_filter_set            = ngbe_vlan_filter_set,
+	.vlan_tpid_set              = ngbe_vlan_tpid_set,
 	.vlan_offload_set           = ngbe_vlan_offload_set,
+	.vlan_strip_queue_set       = ngbe_vlan_strip_queue_set,
 	.rx_queue_start	            = ngbe_dev_rx_queue_start,
 	.rx_queue_stop              = ngbe_dev_rx_queue_stop,
 	.tx_queue_start	            = ngbe_dev_tx_queue_start,

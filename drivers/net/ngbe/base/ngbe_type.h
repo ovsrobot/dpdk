@@ -10,6 +10,7 @@
 
 #define NGBE_FRAME_SIZE_MAX       (9728) /* Maximum frame size, +FCS */
 #define NGBE_FRAME_SIZE_DFT       (1522) /* Default frame size, +FCS */
+#define NGBE_NUM_POOL             (32)
 #define NGBE_MAX_QP               (8)
 #define NGBE_MAX_UTA              128
 
@@ -252,6 +253,7 @@ struct ngbe_mac_info {
 	s32 (*update_mc_addr_list)(struct ngbe_hw *hw, u8 *mc_addr_list,
 				      u32 mc_addr_count,
 				      ngbe_mc_addr_itr func, bool clear);
+	s32 (*clear_vfta)(struct ngbe_hw *hw);
 
 	/* Manageability interface */
 	s32 (*init_thermal_sensor_thresh)(struct ngbe_hw *hw);
@@ -264,6 +266,7 @@ struct ngbe_mac_info {
 	u32 mta_shadow[NGBE_MAX_MTA];
 	s32 mc_filter_type;
 	u32 mcft_size;
+	u32 vft_size;
 	u32 num_rar_entries;
 	u32 max_tx_queues;
 	u32 max_rx_queues;

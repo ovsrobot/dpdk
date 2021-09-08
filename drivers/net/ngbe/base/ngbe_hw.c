@@ -19,6 +19,9 @@ s32 ngbe_start_hw(struct ngbe_hw *hw)
 {
 	DEBUGFUNC("ngbe_start_hw");
 
+	/* Clear the VLAN filter table */
+	hw->mac.clear_vfta(hw);
+
 	/* Clear statistics registers */
 	hw->mac.clear_hw_cntrs(hw);
 
@@ -911,6 +914,30 @@ s32 ngbe_init_uta_tables(struct ngbe_hw *hw)
 }
 
 /**
+ *  ngbe_clear_vfta - Clear VLAN filter table
+ *  @hw: pointer to hardware structure
+ *
+ *  Clears the VLAN filer table, and the VMDq index associated with the filter
+ **/
+s32 ngbe_clear_vfta(struct ngbe_hw *hw)
+{
+	u32 offset;
+
+	DEBUGFUNC("ngbe_clear_vfta");
+
+	for (offset = 0; offset < hw->mac.vft_size; offset++)
+		wr32(hw, NGBE_VLANTBL(offset), 0);
+
+	for (offset = 0; offset < NGBE_NUM_POOL; offset++) {
+		wr32(hw, NGBE_PSRVLANIDX, offset);
+		wr32(hw, NGBE_PSRVLAN, 0);
+		wr32(hw, NGBE_PSRVLANPLM(0), 0);
+	}
+
+	return 0;
+}
+
+/**
  *  ngbe_check_mac_link_em - Determine link and speed status
  *  @hw: pointer to hardware structure
  *  @speed: pointer to link speed
@@ -1238,6 +1265,7 @@ s32 ngbe_init_ops_pf(struct ngbe_hw *hw)
 	mac->update_mc_addr_list = ngbe_update_mc_addr_list;
 	mac->set_vmdq = ngbe_set_vmdq;
 	mac->clear_vmdq = ngbe_clear_vmdq;
+	mac->clear_vfta = ngbe_clear_vfta;
 
 	/* Link */
 	mac->get_link_capabilities = ngbe_get_link_capabilities_em;
@@ -1254,6 +1282,7 @@ s32 ngbe_init_ops_pf(struct ngbe_hw *hw)
 	rom->validate_checksum = ngbe_validate_eeprom_checksum_em;
 
 	mac->mcft_size		= NGBE_EM_MC_TBL_SIZE;
+	mac->vft_size		= NGBE_EM_VFT_TBL_SIZE;
 	mac->num_rar_entries	= NGBE_EM_RAR_ENTRIES;
 	mac->max_rx_queues	= NGBE_EM_MAX_RX_QUEUES;
 	mac->max_tx_queues	= NGBE_EM_MAX_TX_QUEUES;
