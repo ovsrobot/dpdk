@@ -856,6 +856,9 @@ ngbe_dev_configure(struct rte_eth_dev *dev)
 
 	PMD_INIT_FUNC_TRACE();
 
+	if (dev->data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG)
+		dev->data->dev_conf.rxmode.offloads |= DEV_RX_OFFLOAD_RSS_HASH;
+
 	/* set flag to update link status after init */
 	intr->flags |= NGBE_FLAG_NEED_LINK_UPDATE;
 
@@ -1082,6 +1085,7 @@ static int
 ngbe_dev_stop(struct rte_eth_dev *dev)
 {
 	struct rte_eth_link link;
+	struct ngbe_adapter *adapter = ngbe_dev_adapter(dev);
 	struct ngbe_hw *hw = ngbe_dev_hw(dev);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
@@ -1128,6 +1132,8 @@ ngbe_dev_stop(struct rte_eth_dev *dev)
 		rte_free(intr_handle->intr_vec);
 		intr_handle->intr_vec = NULL;
 	}
+
+	adapter->rss_reta_updated = 0;
 
 	hw->adapter_stopped = true;
 	dev->data->dev_started = 0;
@@ -1718,6 +1724,10 @@ ngbe_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->rx_desc_lim = rx_desc_lim;
 	dev_info->tx_desc_lim = tx_desc_lim;
 
+	dev_info->hash_key_size = NGBE_HKEY_MAX_INDEX * sizeof(uint32_t);
+	dev_info->reta_size = ETH_RSS_RETA_SIZE_128;
+	dev_info->flow_type_rss_offloads = NGBE_RSS_OFFLOAD_ALL;
+
 	dev_info->speed_capa = ETH_LINK_SPEED_1G | ETH_LINK_SPEED_100M |
 				ETH_LINK_SPEED_10M;
 
@@ -2184,6 +2194,91 @@ ngbe_dev_interrupt_handler(void *param)
 	ngbe_dev_interrupt_action(dev);
 }
 
+int
+ngbe_dev_rss_reta_update(struct rte_eth_dev *dev,
+			  struct rte_eth_rss_reta_entry64 *reta_conf,
+			  uint16_t reta_size)
+{
+	uint8_t i, j, mask;
+	uint32_t reta;
+	uint16_t idx, shift;
+	struct ngbe_adapter *adapter = ngbe_dev_adapter(dev);
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+
+	PMD_INIT_FUNC_TRACE();
+
+	if (!hw->is_pf) {
+		PMD_DRV_LOG(ERR, "RSS reta update is not supported on this "
+			"NIC.");
+		return -ENOTSUP;
+	}
+
+	if (reta_size != ETH_RSS_RETA_SIZE_128) {
+		PMD_DRV_LOG(ERR, "The size of hash lookup table configured "
+			"(%d) doesn't match the number hardware can supported "
+			"(%d)", reta_size, ETH_RSS_RETA_SIZE_128);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < reta_size; i += 4) {
+		idx = i / RTE_RETA_GROUP_SIZE;
+		shift = i % RTE_RETA_GROUP_SIZE;
+		mask = (uint8_t)RS64(reta_conf[idx].mask, shift, 0xF);
+		if (!mask)
+			continue;
+
+		reta = rd32a(hw, NGBE_REG_RSSTBL, i >> 2);
+		for (j = 0; j < 4; j++) {
+			if (RS8(mask, j, 0x1)) {
+				reta  &= ~(MS32(8 * j, 0xFF));
+				reta |= LS32(reta_conf[idx].reta[shift + j],
+						8 * j, 0xFF);
+			}
+		}
+		wr32a(hw, NGBE_REG_RSSTBL, i >> 2, reta);
+	}
+	adapter->rss_reta_updated = 1;
+
+	return 0;
+}
+
+int
+ngbe_dev_rss_reta_query(struct rte_eth_dev *dev,
+			 struct rte_eth_rss_reta_entry64 *reta_conf,
+			 uint16_t reta_size)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	uint8_t i, j, mask;
+	uint32_t reta;
+	uint16_t idx, shift;
+
+	PMD_INIT_FUNC_TRACE();
+
+	if (reta_size != ETH_RSS_RETA_SIZE_128) {
+		PMD_DRV_LOG(ERR, "The size of hash lookup table configured "
+			"(%d) doesn't match the number hardware can supported "
+			"(%d)", reta_size, ETH_RSS_RETA_SIZE_128);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < reta_size; i += 4) {
+		idx = i / RTE_RETA_GROUP_SIZE;
+		shift = i % RTE_RETA_GROUP_SIZE;
+		mask = (uint8_t)RS64(reta_conf[idx].mask, shift, 0xF);
+		if (!mask)
+			continue;
+
+		reta = rd32a(hw, NGBE_REG_RSSTBL, i >> 2);
+		for (j = 0; j < 4; j++) {
+			if (RS8(mask, j, 0x1))
+				reta_conf[idx].reta[shift + j] =
+					(uint16_t)RS32(reta, 8 * j, 0xFF);
+		}
+	}
+
+	return 0;
+}
+
 static int
 ngbe_add_rar(struct rte_eth_dev *dev, struct rte_ether_addr *mac_addr,
 				uint32_t index, uint32_t pool)
@@ -2555,6 +2650,10 @@ static const struct eth_dev_ops ngbe_eth_dev_ops = {
 	.mac_addr_set               = ngbe_set_default_mac_addr,
 	.uc_hash_table_set          = ngbe_uc_hash_table_set,
 	.uc_all_hash_table_set      = ngbe_uc_all_hash_table_set,
+	.reta_update                = ngbe_dev_rss_reta_update,
+	.reta_query                 = ngbe_dev_rss_reta_query,
+	.rss_hash_update            = ngbe_dev_rss_hash_update,
+	.rss_hash_conf_get          = ngbe_dev_rss_hash_conf_get,
 	.set_mc_addr_list           = ngbe_dev_set_mc_addr_list,
 };
 
