@@ -11,6 +11,7 @@
 #define NGBE_FRAME_SIZE_MAX       (9728) /* Maximum frame size, +FCS */
 #define NGBE_FRAME_SIZE_DFT       (1522) /* Default frame size, +FCS */
 #define NGBE_MAX_QP               (8)
+#define NGBE_MAX_UTA              128
 
 #define NGBE_ALIGN		128 /* as intel did */
 #define NGBE_ISB_SIZE		16
@@ -68,6 +69,7 @@ enum ngbe_media_type {
 struct ngbe_hw;
 
 struct ngbe_addr_filter_info {
+	u32 num_mc_addrs;
 	u32 mta_in_use;
 };
 
@@ -200,6 +202,10 @@ struct ngbe_hw_stats {
 
 };
 
+/* iterator type for walking multicast address lists */
+typedef u8* (*ngbe_mc_addr_itr) (struct ngbe_hw *hw, u8 **mc_addr_ptr,
+				  u32 *vmdq);
+
 struct ngbe_rom_info {
 	s32 (*init_params)(struct ngbe_hw *hw);
 	s32 (*read32)(struct ngbe_hw *hw, u32 addr, u32 *data);
@@ -243,6 +249,9 @@ struct ngbe_mac_info {
 	s32 (*set_vmdq)(struct ngbe_hw *hw, u32 rar, u32 vmdq);
 	s32 (*clear_vmdq)(struct ngbe_hw *hw, u32 rar, u32 vmdq);
 	s32 (*init_rx_addrs)(struct ngbe_hw *hw);
+	s32 (*update_mc_addr_list)(struct ngbe_hw *hw, u8 *mc_addr_list,
+				      u32 mc_addr_count,
+				      ngbe_mc_addr_itr func, bool clear);
 
 	/* Manageability interface */
 	s32 (*init_thermal_sensor_thresh)(struct ngbe_hw *hw);
@@ -251,6 +260,8 @@ struct ngbe_mac_info {
 	enum ngbe_mac_type type;
 	u8 addr[ETH_ADDR_LEN];
 	u8 perm_addr[ETH_ADDR_LEN];
+#define NGBE_MAX_MTA			128
+	u32 mta_shadow[NGBE_MAX_MTA];
 	s32 mc_filter_type;
 	u32 mcft_size;
 	u32 num_rar_entries;
