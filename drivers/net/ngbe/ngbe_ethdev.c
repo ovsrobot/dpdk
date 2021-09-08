@@ -2095,6 +2095,39 @@ ngbe_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 	return 0;
 }
 
+static int
+ngbe_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
+{
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	uint32_t mask;
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+
+	if (queue_id < 32) {
+		mask = rd32(hw, NGBE_IMS(0));
+		mask &= (1 << queue_id);
+		wr32(hw, NGBE_IMS(0), mask);
+	}
+	rte_intr_enable(intr_handle);
+
+	return 0;
+}
+
+static int
+ngbe_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
+{
+	uint32_t mask;
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+
+	if (queue_id < 32) {
+		mask = rd32(hw, NGBE_IMS(0));
+		mask &= ~(1 << queue_id);
+		wr32(hw, NGBE_IMS(0), mask);
+	}
+
+	return 0;
+}
+
 /**
  * Set the IVAR registers, mapping interrupt causes to vectors
  * @param hw
@@ -2215,6 +2248,8 @@ static const struct eth_dev_ops ngbe_eth_dev_ops = {
 	.tx_queue_start	            = ngbe_dev_tx_queue_start,
 	.tx_queue_stop              = ngbe_dev_tx_queue_stop,
 	.rx_queue_setup             = ngbe_dev_rx_queue_setup,
+	.rx_queue_intr_enable       = ngbe_dev_rx_queue_intr_enable,
+	.rx_queue_intr_disable      = ngbe_dev_rx_queue_intr_disable,
 	.rx_queue_release           = ngbe_dev_rx_queue_release,
 	.tx_queue_setup             = ngbe_dev_tx_queue_setup,
 	.tx_queue_release           = ngbe_dev_tx_queue_release,

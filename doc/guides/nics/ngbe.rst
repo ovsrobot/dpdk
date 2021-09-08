@@ -20,6 +20,7 @@ Features
 - Port hardware statistics
 - Jumbo frames
 - Link state information
+- Interrupt mode for RX
 - Scattered and gather for TX and RX
 - FW version
 
