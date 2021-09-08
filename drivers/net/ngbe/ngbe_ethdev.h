@@ -7,6 +7,9 @@
 #define _NGBE_ETHDEV_H_
 
 #include "ngbe_ptypes.h"
+#ifdef RTE_LIB_SECURITY
+#include "ngbe_ipsec.h"
+#endif
 #include <rte_time.h>
 #include <rte_ethdev.h>
 #include <rte_ethdev_core.h>
@@ -107,6 +110,9 @@ struct ngbe_adapter {
 	struct ngbe_hwstrip        hwstrip;
 	struct ngbe_vf_info        *vfdata;
 	struct ngbe_uta_info       uta_info;
+#ifdef RTE_LIB_SECURITY
+	struct ngbe_ipsec          ipsec;
+#endif
 	bool                       rx_bulk_alloc_allowed;
 	struct rte_timecounter     systime_tc;
 	struct rte_timecounter     rx_tstamp_tc;
@@ -160,6 +166,8 @@ ngbe_dev_intr(struct rte_eth_dev *dev)
 #define NGBE_DEV_UTA_INFO(dev) \
 	(&((struct ngbe_adapter *)(dev)->data->dev_private)->uta_info)
 
+#define NGBE_DEV_IPSEC(dev) \
+	(&((struct ngbe_adapter *)(dev)->data->dev_private)->ipsec)
 
 /*
  * Rx/Tx function prototypes
