@@ -17,6 +17,9 @@
 static int ngbe_dev_close(struct rte_eth_dev *dev);
 static int ngbe_dev_link_update(struct rte_eth_dev *dev,
 				int wait_to_complete);
+static void ngbe_vlan_hw_strip_enable(struct rte_eth_dev *dev, uint16_t queue);
+static void ngbe_vlan_hw_strip_disable(struct rte_eth_dev *dev,
+					uint16_t queue);
 
 static void ngbe_dev_link_status_print(struct rte_eth_dev *dev);
 static int ngbe_dev_lsc_interrupt_setup(struct rte_eth_dev *dev, uint8_t on);
@@ -26,6 +29,24 @@ static int ngbe_dev_rxq_interrupt_setup(struct rte_eth_dev *dev);
 static void ngbe_dev_interrupt_handler(void *param);
 static void ngbe_dev_interrupt_delayed_handler(void *param);
 static void ngbe_configure_msix(struct rte_eth_dev *dev);
+
+#define NGBE_SET_HWSTRIP(h, q) do {\
+		uint32_t idx = (q) / (sizeof((h)->bitmap[0]) * NBBY); \
+		uint32_t bit = (q) % (sizeof((h)->bitmap[0]) * NBBY); \
+		(h)->bitmap[idx] |= 1 << bit;\
+	} while (0)
+
+#define NGBE_CLEAR_HWSTRIP(h, q) do {\
+		uint32_t idx = (q) / (sizeof((h)->bitmap[0]) * NBBY); \
+		uint32_t bit = (q) % (sizeof((h)->bitmap[0]) * NBBY); \
+		(h)->bitmap[idx] &= ~(1 << bit);\
+	} while (0)
+
+#define NGBE_GET_HWSTRIP(h, q, r) do {\
+		uint32_t idx = (q) / (sizeof((h)->bitmap[0]) * NBBY); \
+		uint32_t bit = (q) % (sizeof((h)->bitmap[0]) * NBBY); \
+		(r) = (h)->bitmap[idx] >> bit & 1;\
+	} while (0)
 
 /*
  * The set of PCI devices this driver supports
@@ -129,6 +150,8 @@ eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
 	struct ngbe_hw *hw = ngbe_dev_hw(eth_dev);
+	struct ngbe_vfta *shadow_vfta = NGBE_DEV_VFTA(eth_dev);
+	struct ngbe_hwstrip *hwstrip = NGBE_DEV_HWSTRIP(eth_dev);
 	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
 	const struct rte_memzone *mz;
 	uint32_t ctrl_ext;
@@ -242,6 +265,12 @@ eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 		return -ENOMEM;
 	}
 
+	/* initialize the vfta */
+	memset(shadow_vfta, 0, sizeof(*shadow_vfta));
+
+	/* initialize the hw strip bitmap*/
+	memset(hwstrip, 0, sizeof(*hwstrip));
+
 	ctrl_ext = rd32(hw, NGBE_PORTCTL);
 	/* let hardware know driver is loaded */
 	ctrl_ext |= NGBE_PORTCTL_DRVLOAD;
@@ -311,6 +340,237 @@ static struct rte_pci_driver rte_ngbe_pmd = {
 	.remove = eth_ngbe_pci_remove,
 };
 
+void
+ngbe_vlan_hw_filter_disable(struct rte_eth_dev *dev)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	uint32_t vlnctrl;
+
+	PMD_INIT_FUNC_TRACE();
+
+	/* Filter Table Disable */
+	vlnctrl = rd32(hw, NGBE_VLANCTL);
+	vlnctrl &= ~NGBE_VLANCTL_VFE;
+	wr32(hw, NGBE_VLANCTL, vlnctrl);
+}
+
+void
+ngbe_vlan_hw_filter_enable(struct rte_eth_dev *dev)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	struct ngbe_vfta *shadow_vfta = NGBE_DEV_VFTA(dev);
+	uint32_t vlnctrl;
+	uint16_t i;
+
+	PMD_INIT_FUNC_TRACE();
+
+	/* Filter Table Enable */
+	vlnctrl = rd32(hw, NGBE_VLANCTL);
+	vlnctrl &= ~NGBE_VLANCTL_CFIENA;
+	vlnctrl |= NGBE_VLANCTL_VFE;
+	wr32(hw, NGBE_VLANCTL, vlnctrl);
+
+	/* write whatever is in local vfta copy */
+	for (i = 0; i < NGBE_VFTA_SIZE; i++)
+		wr32(hw, NGBE_VLANTBL(i), shadow_vfta->vfta[i]);
+}
+
+void
+ngbe_vlan_hw_strip_bitmap_set(struct rte_eth_dev *dev, uint16_t queue, bool on)
+{
+	struct ngbe_hwstrip *hwstrip = NGBE_DEV_HWSTRIP(dev);
+	struct ngbe_rx_queue *rxq;
+
+	if (queue >= NGBE_MAX_RX_QUEUE_NUM)
+		return;
+
+	if (on)
+		NGBE_SET_HWSTRIP(hwstrip, queue);
+	else
+		NGBE_CLEAR_HWSTRIP(hwstrip, queue);
+
+	if (queue >= dev->data->nb_rx_queues)
+		return;
+
+	rxq = dev->data->rx_queues[queue];
+
+	if (on) {
+		rxq->vlan_flags = PKT_RX_VLAN | PKT_RX_VLAN_STRIPPED;
+		rxq->offloads |= DEV_RX_OFFLOAD_VLAN_STRIP;
+	} else {
+		rxq->vlan_flags = PKT_RX_VLAN;
+		rxq->offloads &= ~DEV_RX_OFFLOAD_VLAN_STRIP;
+	}
+}
+
+static void
+ngbe_vlan_hw_strip_disable(struct rte_eth_dev *dev, uint16_t queue)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	uint32_t ctrl;
+
+	PMD_INIT_FUNC_TRACE();
+
+	ctrl = rd32(hw, NGBE_RXCFG(queue));
+	ctrl &= ~NGBE_RXCFG_VLAN;
+	wr32(hw, NGBE_RXCFG(queue), ctrl);
+
+	/* record those setting for HW strip per queue */
+	ngbe_vlan_hw_strip_bitmap_set(dev, queue, 0);
+}
+
+static void
+ngbe_vlan_hw_strip_enable(struct rte_eth_dev *dev, uint16_t queue)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	uint32_t ctrl;
+
+	PMD_INIT_FUNC_TRACE();
+
+	ctrl = rd32(hw, NGBE_RXCFG(queue));
+	ctrl |= NGBE_RXCFG_VLAN;
+	wr32(hw, NGBE_RXCFG(queue), ctrl);
+
+	/* record those setting for HW strip per queue */
+	ngbe_vlan_hw_strip_bitmap_set(dev, queue, 1);
+}
+
+static void
+ngbe_vlan_hw_extend_disable(struct rte_eth_dev *dev)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	uint32_t ctrl;
+
+	PMD_INIT_FUNC_TRACE();
+
+	ctrl = rd32(hw, NGBE_PORTCTL);
+	ctrl &= ~NGBE_PORTCTL_VLANEXT;
+	ctrl &= ~NGBE_PORTCTL_QINQ;
+	wr32(hw, NGBE_PORTCTL, ctrl);
+}
+
+static void
+ngbe_vlan_hw_extend_enable(struct rte_eth_dev *dev)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	uint32_t ctrl;
+
+	PMD_INIT_FUNC_TRACE();
+
+	ctrl  = rd32(hw, NGBE_PORTCTL);
+	ctrl |= NGBE_PORTCTL_VLANEXT | NGBE_PORTCTL_QINQ;
+	wr32(hw, NGBE_PORTCTL, ctrl);
+}
+
+static void
+ngbe_qinq_hw_strip_disable(struct rte_eth_dev *dev)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	uint32_t ctrl;
+
+	PMD_INIT_FUNC_TRACE();
+
+	ctrl = rd32(hw, NGBE_PORTCTL);
+	ctrl &= ~NGBE_PORTCTL_QINQ;
+	wr32(hw, NGBE_PORTCTL, ctrl);
+}
+
+static void
+ngbe_qinq_hw_strip_enable(struct rte_eth_dev *dev)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	uint32_t ctrl;
+
+	PMD_INIT_FUNC_TRACE();
+
+	ctrl  = rd32(hw, NGBE_PORTCTL);
+	ctrl |= NGBE_PORTCTL_QINQ | NGBE_PORTCTL_VLANEXT;
+	wr32(hw, NGBE_PORTCTL, ctrl);
+}
+
+void
+ngbe_vlan_hw_strip_config(struct rte_eth_dev *dev)
+{
+	struct ngbe_rx_queue *rxq;
+	uint16_t i;
+
+	PMD_INIT_FUNC_TRACE();
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+
+		if (rxq->offloads & DEV_RX_OFFLOAD_VLAN_STRIP)
+			ngbe_vlan_hw_strip_enable(dev, i);
+		else
+			ngbe_vlan_hw_strip_disable(dev, i);
+	}
+}
+
+void
+ngbe_config_vlan_strip_on_all_queues(struct rte_eth_dev *dev, int mask)
+{
+	uint16_t i;
+	struct rte_eth_rxmode *rxmode;
+	struct ngbe_rx_queue *rxq;
+
+	if (mask & ETH_VLAN_STRIP_MASK) {
+		rxmode = &dev->data->dev_conf.rxmode;
+		if (rxmode->offloads & DEV_RX_OFFLOAD_VLAN_STRIP)
+			for (i = 0; i < dev->data->nb_rx_queues; i++) {
+				rxq = dev->data->rx_queues[i];
+				rxq->offloads |= DEV_RX_OFFLOAD_VLAN_STRIP;
+			}
+		else
+			for (i = 0; i < dev->data->nb_rx_queues; i++) {
+				rxq = dev->data->rx_queues[i];
+				rxq->offloads &= ~DEV_RX_OFFLOAD_VLAN_STRIP;
+			}
+	}
+}
+
+static int
+ngbe_vlan_offload_config(struct rte_eth_dev *dev, int mask)
+{
+	struct rte_eth_rxmode *rxmode;
+	rxmode = &dev->data->dev_conf.rxmode;
+
+	if (mask & ETH_VLAN_STRIP_MASK)
+		ngbe_vlan_hw_strip_config(dev);
+
+	if (mask & ETH_VLAN_FILTER_MASK) {
+		if (rxmode->offloads & DEV_RX_OFFLOAD_VLAN_FILTER)
+			ngbe_vlan_hw_filter_enable(dev);
+		else
+			ngbe_vlan_hw_filter_disable(dev);
+	}
+
+	if (mask & ETH_VLAN_EXTEND_MASK) {
+		if (rxmode->offloads & DEV_RX_OFFLOAD_VLAN_EXTEND)
+			ngbe_vlan_hw_extend_enable(dev);
+		else
+			ngbe_vlan_hw_extend_disable(dev);
+	}
+
+	if (mask & ETH_QINQ_STRIP_MASK) {
+		if (rxmode->offloads & DEV_RX_OFFLOAD_QINQ_STRIP)
+			ngbe_qinq_hw_strip_enable(dev);
+		else
+			ngbe_qinq_hw_strip_disable(dev);
+	}
+
+	return 0;
+}
+
+static int
+ngbe_vlan_offload_set(struct rte_eth_dev *dev, int mask)
+{
+	ngbe_config_vlan_strip_on_all_queues(dev, mask);
+
+	ngbe_vlan_offload_config(dev, mask);
+
+	return 0;
+}
+
 static int
 ngbe_dev_configure(struct rte_eth_dev *dev)
 {
@@ -363,6 +623,7 @@ ngbe_dev_start(struct rte_eth_dev *dev)
 	bool link_up = false, negotiate = false;
 	uint32_t speed = 0;
 	uint32_t allowed_speeds = 0;
+	int mask = 0;
 	int status;
 	uint32_t *link_speeds;
 
@@ -419,6 +680,16 @@ ngbe_dev_start(struct rte_eth_dev *dev)
 		PMD_INIT_LOG(ERR, "Unable to initialize Rx hardware");
 		goto error;
 	}
+
+	mask = ETH_VLAN_STRIP_MASK | ETH_VLAN_FILTER_MASK |
+		ETH_VLAN_EXTEND_MASK;
+	err = ngbe_vlan_offload_config(dev, mask);
+	if (err != 0) {
+		PMD_INIT_LOG(ERR, "Unable to set VLAN offload");
+		goto error;
+	}
+
+	ngbe_configure_port(dev);
 
 	err = ngbe_dev_rxtx_start(dev);
 	if (err < 0) {
@@ -654,6 +925,7 @@ ngbe_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->max_tx_queues = (uint16_t)hw->mac.max_tx_queues;
 	dev_info->min_rx_bufsize = 1024;
 	dev_info->max_rx_pktlen = 15872;
+	dev_info->rx_queue_offload_capa = ngbe_get_rx_queue_offloads(dev);
 	dev_info->rx_offload_capa = (ngbe_get_rx_port_offloads(dev) |
 				     dev_info->rx_queue_offload_capa);
 	dev_info->tx_queue_offload_capa = 0;
@@ -1190,6 +1462,7 @@ static const struct eth_dev_ops ngbe_eth_dev_ops = {
 	.dev_close                  = ngbe_dev_close,
 	.dev_reset                  = ngbe_dev_reset,
 	.link_update                = ngbe_dev_link_update,
+	.vlan_offload_set           = ngbe_vlan_offload_set,
 	.rx_queue_start	            = ngbe_dev_rx_queue_start,
 	.rx_queue_stop              = ngbe_dev_rx_queue_stop,
 	.tx_queue_start	            = ngbe_dev_tx_queue_start,
