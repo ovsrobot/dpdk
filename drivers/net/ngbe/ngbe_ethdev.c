@@ -667,6 +667,15 @@ ngbe_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	return 0;
 }
 
+const uint32_t *
+ngbe_dev_supported_ptypes_get(struct rte_eth_dev *dev)
+{
+	if (dev->rx_pkt_burst == ngbe_recv_pkts)
+		return ngbe_get_supported_ptypes();
+
+	return NULL;
+}
+
 /* return 0 means link status changed, -1 means not changed */
 int
 ngbe_dev_link_update_share(struct rte_eth_dev *dev,
