@@ -62,6 +62,16 @@ New Features
   * Added bus-level parsing of the devargs syntax.
   * Kept compatibility with the legacy syntax as parsing fallback.
 
+* **Updated Wangxun ngbe driver.**
+  Updated the Wangxun ngbe driver. Add more features to complete the driver,
+  some of them including:
+
+  * Added offloads and packet type on RxTx.
+  * Added device basic statistics and extended stats.
+  * Added VLAN and MAC filters.
+  * Added multi-queue and RSS.
+  * Added SRIOV.
+  * Added IPsec.
 
 Removed Items
 -------------
