@@ -243,6 +243,7 @@ struct ngbe_rx_queue {
 	uint16_t        port_id;  /**< Device port identifier */
 	uint8_t         drop_en;  /**< If not 0, set SRRCTL.Drop_En */
 	uint8_t         rx_deferred_start; /**< not in global dev start */
+	uint64_t	offloads; /**< Rx offloads with DEV_RX_OFFLOAD_* */
 	/** need to alloc dummy mbuf, for wraparound when scanning hw ring */
 	struct rte_mbuf fake_mbuf;
 	/** hold packets to return to application */
@@ -307,5 +308,9 @@ struct ngbe_txq_ops {
 	void (*free_swring)(struct ngbe_tx_queue *txq);
 	void (*reset)(struct ngbe_tx_queue *txq);
 };
+
+void ngbe_set_rx_function(struct rte_eth_dev *dev);
+
+uint64_t ngbe_get_rx_port_offloads(struct rte_eth_dev *dev);
 
 #endif /* _NGBE_RXTX_H_ */
