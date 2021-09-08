@@ -261,7 +261,10 @@ struct ngbe_rx_queue {
 	uint16_t rx_nb_avail; /**< nr of staged pkts ready to ret to app */
 	uint16_t rx_next_avail; /**< idx of next staged pkt to ret to app */
 	uint16_t rx_free_trigger; /**< triggers rx buffer allocation */
-
+#ifdef RTE_LIB_SECURITY
+	uint8_t            using_ipsec;
+	/** indicates that IPsec Rx feature is in use */
+#endif
 	uint16_t        rx_free_thresh; /**< max free Rx desc to hold */
 	uint16_t        queue_id; /**< RX queue index */
 	uint16_t        reg_idx;  /**< RX queue register index */
@@ -305,6 +308,11 @@ union ngbe_tx_offload {
 		uint64_t outer_tun_len:8; /**< Outer TUN (Tunnel) Hdr Length. */
 		uint64_t outer_l2_len:8; /**< Outer L2 (MAC) Hdr Length. */
 		uint64_t outer_l3_len:16; /**< Outer L3 (IP) Hdr Length. */
+#ifdef RTE_LIB_SECURITY
+		/* inline ipsec related*/
+		uint64_t sa_idx:8;	/**< TX SA database entry index */
+		uint64_t sec_pad_len:4;	/**< padding length */
+#endif
 	};
 };
 
@@ -355,6 +363,10 @@ struct ngbe_tx_queue {
 	uint8_t              tx_deferred_start; /**< not in global dev start */
 
 	const struct ngbe_txq_ops *ops;       /**< txq ops */
+#ifdef RTE_LIB_SECURITY
+	uint8_t		    using_ipsec;
+	/**< indicates that IPsec TX feature is in use */
+#endif
 };
 
 struct ngbe_txq_ops {

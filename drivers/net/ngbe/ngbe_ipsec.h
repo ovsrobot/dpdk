@@ -90,4 +90,6 @@ struct ngbe_ipsec {
 	struct ngbe_crypto_tx_sa_table tx_sa_tbl[IPSEC_MAX_SA_COUNT];
 };
 
+int ngbe_crypto_enable_ipsec(struct rte_eth_dev *dev);
+
 #endif /*NGBE_IPSEC_H_*/

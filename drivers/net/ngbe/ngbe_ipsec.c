@@ -17,6 +17,55 @@
 	(a).ipv6[2] == (b).ipv6[2] && \
 	(a).ipv6[3] == (b).ipv6[3])
 
+static void
+ngbe_crypto_clear_ipsec_tables(struct rte_eth_dev *dev)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	struct ngbe_ipsec *priv = NGBE_DEV_IPSEC(dev);
+	int i = 0;
+
+	/* clear Rx IP table*/
+	for (i = 0; i < IPSEC_MAX_RX_IP_COUNT; i++) {
+		uint16_t index = i << 3;
+		uint32_t reg_val = NGBE_IPSRXIDX_WRITE |
+				NGBE_IPSRXIDX_TB_IP | index;
+		wr32(hw, NGBE_IPSRXADDR(0), 0);
+		wr32(hw, NGBE_IPSRXADDR(1), 0);
+		wr32(hw, NGBE_IPSRXADDR(2), 0);
+		wr32(hw, NGBE_IPSRXADDR(3), 0);
+		wr32w(hw, NGBE_IPSRXIDX, reg_val, NGBE_IPSRXIDX_WRITE, 1000);
+	}
+
+	/* clear Rx SPI and Rx/Tx SA tables*/
+	for (i = 0; i < IPSEC_MAX_SA_COUNT; i++) {
+		uint32_t index = i << 3;
+		uint32_t reg_val = NGBE_IPSRXIDX_WRITE |
+				NGBE_IPSRXIDX_TB_SPI | index;
+		wr32(hw, NGBE_IPSRXSPI, 0);
+		wr32(hw, NGBE_IPSRXADDRIDX, 0);
+		wr32w(hw, NGBE_IPSRXIDX, reg_val, NGBE_IPSRXIDX_WRITE, 1000);
+		reg_val = NGBE_IPSRXIDX_WRITE | NGBE_IPSRXIDX_TB_KEY | index;
+		wr32(hw, NGBE_IPSRXKEY(0), 0);
+		wr32(hw, NGBE_IPSRXKEY(1), 0);
+		wr32(hw, NGBE_IPSRXKEY(2), 0);
+		wr32(hw, NGBE_IPSRXKEY(3), 0);
+		wr32(hw, NGBE_IPSRXSALT, 0);
+		wr32(hw, NGBE_IPSRXMODE, 0);
+		wr32w(hw, NGBE_IPSRXIDX, reg_val, NGBE_IPSRXIDX_WRITE, 1000);
+		reg_val = NGBE_IPSTXIDX_WRITE | index;
+		wr32(hw, NGBE_IPSTXKEY(0), 0);
+		wr32(hw, NGBE_IPSTXKEY(1), 0);
+		wr32(hw, NGBE_IPSTXKEY(2), 0);
+		wr32(hw, NGBE_IPSTXKEY(3), 0);
+		wr32(hw, NGBE_IPSTXSALT, 0);
+		wr32w(hw, NGBE_IPSTXIDX, reg_val, NGBE_IPSTXIDX_WRITE, 1000);
+	}
+
+	memset(priv->rx_ip_tbl, 0, sizeof(priv->rx_ip_tbl));
+	memset(priv->rx_sa_tbl, 0, sizeof(priv->rx_sa_tbl));
+	memset(priv->tx_sa_tbl, 0, sizeof(priv->tx_sa_tbl));
+}
+
 static int
 ngbe_crypto_add_sa(struct ngbe_crypto_session *ic_session)
 {
@@ -548,6 +597,63 @@ ngbe_crypto_capabilities_get(void *device __rte_unused)
 	};
 
 	return ngbe_security_capabilities;
+}
+
+int
+ngbe_crypto_enable_ipsec(struct rte_eth_dev *dev)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	uint32_t reg;
+	uint64_t rx_offloads;
+	uint64_t tx_offloads;
+
+	rx_offloads = dev->data->dev_conf.rxmode.offloads;
+	tx_offloads = dev->data->dev_conf.txmode.offloads;
+
+	/* sanity checks */
+	if (rx_offloads & DEV_RX_OFFLOAD_TCP_LRO) {
+		PMD_DRV_LOG(ERR, "RSC and IPsec not supported");
+		return -1;
+	}
+	if (rx_offloads & DEV_RX_OFFLOAD_KEEP_CRC) {
+		PMD_DRV_LOG(ERR, "HW CRC strip needs to be enabled for IPsec");
+		return -1;
+	}
+
+	/* Set NGBE_SECTXBUFFAF to 0x14 as required in the datasheet*/
+	wr32(hw, NGBE_SECTXBUFAF, 0x14);
+
+	/* IFG needs to be set to 3 when we are using security. Otherwise a Tx
+	 * hang will occur with heavy traffic.
+	 */
+	reg = rd32(hw, NGBE_SECTXIFG);
+	reg = (reg & ~NGBE_SECTXIFG_MIN_MASK) | NGBE_SECTXIFG_MIN(0x3);
+	wr32(hw, NGBE_SECTXIFG, reg);
+
+	reg = rd32(hw, NGBE_SECRXCTL);
+	reg |= NGBE_SECRXCTL_CRCSTRIP;
+	wr32(hw, NGBE_SECRXCTL, reg);
+
+	if (rx_offloads & DEV_RX_OFFLOAD_SECURITY) {
+		wr32m(hw, NGBE_SECRXCTL, NGBE_SECRXCTL_ODSA, 0);
+		reg = rd32m(hw, NGBE_SECRXCTL, NGBE_SECRXCTL_ODSA);
+		if (reg != 0) {
+			PMD_DRV_LOG(ERR, "Error enabling Rx Crypto");
+			return -1;
+		}
+	}
+	if (tx_offloads & DEV_TX_OFFLOAD_SECURITY) {
+		wr32(hw, NGBE_SECTXCTL, NGBE_SECTXCTL_STFWD);
+		reg = rd32(hw, NGBE_SECTXCTL);
+		if (reg != NGBE_SECTXCTL_STFWD) {
+			PMD_DRV_LOG(ERR, "Error enabling Rx Crypto");
+			return -1;
+		}
+	}
+
+	ngbe_crypto_clear_ipsec_tables(dev);
+
+	return 0;
 }
 
 static struct rte_security_ops ngbe_security_ops = {

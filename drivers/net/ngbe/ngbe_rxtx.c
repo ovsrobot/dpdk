@@ -33,6 +33,9 @@ static const u64 NGBE_TX_OFFLOAD_MASK = (PKT_TX_IP_CKSUM |
 		PKT_TX_TCP_SEG |
 		PKT_TX_TUNNEL_MASK |
 		PKT_TX_OUTER_IP_CKSUM |
+#ifdef RTE_LIB_SECURITY
+		PKT_TX_SEC_OFFLOAD |
+#endif
 		NGBE_TX_IEEE1588_TMST);
 
 #define NGBE_TX_OFFLOAD_NOTSUP_MASK \
@@ -274,7 +277,8 @@ ngbe_xmit_pkts_simple(void *tx_queue, struct rte_mbuf **tx_pkts,
 static inline void
 ngbe_set_xmit_ctx(struct ngbe_tx_queue *txq,
 		volatile struct ngbe_tx_ctx_desc *ctx_txd,
-		uint64_t ol_flags, union ngbe_tx_offload tx_offload)
+		uint64_t ol_flags, union ngbe_tx_offload tx_offload,
+		__rte_unused uint64_t *mdata)
 {
 	union ngbe_tx_offload tx_offload_mask;
 	uint32_t type_tucmd_mlhl;
@@ -360,6 +364,19 @@ ngbe_set_xmit_ctx(struct ngbe_tx_queue *txq,
 		tx_offload_mask.vlan_tci |= ~0;
 		vlan_macip_lens |= NGBE_TXD_VLAN(tx_offload.vlan_tci);
 	}
+
+#ifdef RTE_LIB_SECURITY
+	if (ol_flags & PKT_TX_SEC_OFFLOAD) {
+		union ngbe_crypto_tx_desc_md *md =
+				(union ngbe_crypto_tx_desc_md *)mdata;
+		tunnel_seed |= NGBE_TXD_IPSEC_SAIDX(md->sa_idx);
+		type_tucmd_mlhl |= md->enc ?
+			(NGBE_TXD_IPSEC_ESP | NGBE_TXD_IPSEC_ESPENC) : 0;
+		type_tucmd_mlhl |= NGBE_TXD_IPSEC_ESPLEN(md->pad_len);
+		tx_offload_mask.sa_idx |= ~0;
+		tx_offload_mask.sec_pad_len |= ~0;
+	}
+#endif
 
 	txq->ctx_cache[ctx_idx].flags = ol_flags;
 	txq->ctx_cache[ctx_idx].tx_offload.data[0] =
@@ -592,6 +609,9 @@ ngbe_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 	uint32_t ctx = 0;
 	uint32_t new_ctx;
 	union ngbe_tx_offload tx_offload;
+#ifdef RTE_LIB_SECURITY
+	uint8_t use_ipsec;
+#endif
 
 	tx_offload.data[0] = 0;
 	tx_offload.data[1] = 0;
@@ -618,6 +638,9 @@ ngbe_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 		 * are needed for offload functionality.
 		 */
 		ol_flags = tx_pkt->ol_flags;
+#ifdef RTE_LIB_SECURITY
+		use_ipsec = txq->using_ipsec && (ol_flags & PKT_TX_SEC_OFFLOAD);
+#endif
 
 		/* If hardware offload required */
 		tx_ol_req = ol_flags & NGBE_TX_OFFLOAD_MASK;
@@ -632,6 +655,16 @@ ngbe_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 			tx_offload.outer_l2_len = tx_pkt->outer_l2_len;
 			tx_offload.outer_l3_len = tx_pkt->outer_l3_len;
 			tx_offload.outer_tun_len = 0;
+
+#ifdef RTE_LIB_SECURITY
+			if (use_ipsec) {
+				union ngbe_crypto_tx_desc_md *ipsec_mdata =
+					(union ngbe_crypto_tx_desc_md *)
+						rte_security_dynfield(tx_pkt);
+				tx_offload.sa_idx = ipsec_mdata->sa_idx;
+				tx_offload.sec_pad_len = ipsec_mdata->pad_len;
+			}
+#endif
 
 			/* If new context need be built or reuse the exist ctx*/
 			ctx = what_ctx_update(txq, tx_ol_req, tx_offload);
@@ -776,7 +809,8 @@ ngbe_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 				}
 
 				ngbe_set_xmit_ctx(txq, ctx_txd, tx_ol_req,
-					tx_offload);
+					tx_offload,
+					rte_security_dynfield(tx_pkt));
 
 				txe->last_id = tx_last;
 				tx_id = txe->next_id;
@@ -795,6 +829,10 @@ ngbe_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 		}
 
 		olinfo_status |= NGBE_TXD_PAYLEN(pkt_len);
+#ifdef RTE_LIB_SECURITY
+		if (use_ipsec)
+			olinfo_status |= NGBE_TXD_IPSEC;
+#endif
 
 		m_seg = tx_pkt;
 		do {
@@ -978,6 +1016,13 @@ rx_desc_error_to_pkt_flags(uint32_t rx_status)
 		pkt_flags |= PKT_RX_OUTER_IP_CKSUM_BAD;
 	}
 
+#ifdef RTE_LIB_SECURITY
+	if (rx_status & NGBE_RXD_STAT_SECP) {
+		pkt_flags |= PKT_RX_SEC_OFFLOAD;
+		if (rx_status & NGBE_RXD_ERR_SECERR)
+			pkt_flags |= PKT_RX_SEC_OFFLOAD_FAILED;
+	}
+#endif
 
 	return pkt_flags;
 }
@@ -1800,6 +1845,9 @@ ngbe_dev_tx_done_cleanup(void *tx_queue, uint32_t free_cnt)
 {
 	struct ngbe_tx_queue *txq = (struct ngbe_tx_queue *)tx_queue;
 	if (txq->offloads == 0 &&
+#ifdef RTE_LIB_SECURITY
+		!(txq->using_ipsec) &&
+#endif
 		txq->tx_free_thresh >= RTE_PMD_NGBE_TX_MAX_BURST)
 		return ngbe_tx_done_cleanup_simple(txq, free_cnt);
 
@@ -1885,6 +1933,9 @@ ngbe_set_tx_function(struct rte_eth_dev *dev, struct ngbe_tx_queue *txq)
 {
 	/* Use a simple Tx queue (no offloads, no multi segs) if possible */
 	if (txq->offloads == 0 &&
+#ifdef RTE_LIB_SECURITY
+			!(txq->using_ipsec) &&
+#endif
 			txq->tx_free_thresh >= RTE_PMD_NGBE_TX_MAX_BURST) {
 		PMD_INIT_LOG(DEBUG, "Using simple tx code path");
 		dev->tx_pkt_burst = ngbe_xmit_pkts_simple;
@@ -1926,6 +1977,10 @@ ngbe_get_tx_port_offloads(struct rte_eth_dev *dev)
 	if (hw->is_pf)
 		tx_offload_capa |= DEV_TX_OFFLOAD_QINQ_INSERT;
 
+#ifdef RTE_LIB_SECURITY
+	if (dev->security_ctx)
+		tx_offload_capa |= DEV_TX_OFFLOAD_SECURITY;
+#endif
 	return tx_offload_capa;
 }
 
@@ -2012,6 +2067,10 @@ ngbe_dev_tx_queue_setup(struct rte_eth_dev *dev,
 	txq->offloads = offloads;
 	txq->ops = &def_txq_ops;
 	txq->tx_deferred_start = tx_conf->tx_deferred_start;
+#ifdef RTE_LIB_SECURITY
+	txq->using_ipsec = !!(dev->data->dev_conf.txmode.offloads &
+			DEV_TX_OFFLOAD_SECURITY);
+#endif
 
 	txq->tdt_reg_addr = NGBE_REG_ADDR(hw, NGBE_TXWP(txq->reg_idx));
 	txq->tdc_reg_addr = NGBE_REG_ADDR(hw, NGBE_TXCFG(txq->reg_idx));
@@ -2219,6 +2278,11 @@ ngbe_get_rx_port_offloads(struct rte_eth_dev *dev)
 	if (hw->is_pf)
 		offloads |= (DEV_RX_OFFLOAD_QINQ_STRIP |
 			     DEV_RX_OFFLOAD_VLAN_EXTEND);
+
+#ifdef RTE_LIB_SECURITY
+	if (dev->security_ctx)
+		offloads |= DEV_RX_OFFLOAD_SECURITY;
+#endif
 
 	return offloads;
 }
@@ -2745,6 +2809,7 @@ ngbe_dev_mq_rx_configure(struct rte_eth_dev *dev)
 void
 ngbe_set_rx_function(struct rte_eth_dev *dev)
 {
+	uint16_t i;
 	struct ngbe_adapter *adapter = ngbe_dev_adapter(dev);
 
 	if (dev->data->scattered_rx) {
@@ -2788,6 +2853,15 @@ ngbe_set_rx_function(struct rte_eth_dev *dev)
 
 		dev->rx_pkt_burst = ngbe_recv_pkts;
 	}
+
+#ifdef RTE_LIB_SECURITY
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		struct ngbe_rx_queue *rxq = dev->data->rx_queues[i];
+
+		rxq->using_ipsec = !!(dev->data->dev_conf.rxmode.offloads &
+				DEV_RX_OFFLOAD_SECURITY);
+	}
+#endif
 }
 
 /*
@@ -3051,6 +3125,19 @@ ngbe_dev_rxtx_start(struct rte_eth_dev *dev)
 	/* If loopback mode is enabled, set up the link accordingly */
 	if (hw->is_pf && dev->data->dev_conf.lpbk_mode)
 		ngbe_setup_loopback_link(hw);
+
+#ifdef RTE_LIB_SECURITY
+	if ((dev->data->dev_conf.rxmode.offloads & DEV_RX_OFFLOAD_SECURITY) ||
+	    (dev->data->dev_conf.txmode.offloads & DEV_TX_OFFLOAD_SECURITY)) {
+		ret = ngbe_crypto_enable_ipsec(dev);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR,
+				    "ngbe_crypto_enable_ipsec fails with %d.",
+				    ret);
+			return ret;
+		}
+	}
+#endif
 
 	return 0;
 }
