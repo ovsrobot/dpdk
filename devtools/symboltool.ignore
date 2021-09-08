@@ -1,0 +1,3 @@
+; regex of symbols for the symbol-tool to ignore
+
+rte_cryptodev_asym_.*
