@@ -85,7 +85,6 @@ if is_windows
             'gro',
             'gso',
             'latencystats',
-            'pdump',
     ] # only supported libraries for windows
 endif
 
