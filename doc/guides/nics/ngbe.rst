@@ -26,6 +26,7 @@ Features
 - Link flow control
 - Interrupt mode for RX
 - Scattered and gather for TX and RX
+- IEEE 1588
 - FW version
 
 
