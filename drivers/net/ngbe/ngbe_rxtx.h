@@ -268,6 +268,7 @@ struct ngbe_rx_queue {
 	/** Packet type mask for different NICs */
 	uint16_t        pkt_type_mask;
 	uint16_t        port_id;  /**< Device port identifier */
+	uint8_t         crc_len;  /**< 0 if CRC stripped, 4 otherwise. */
 	uint8_t         drop_en;  /**< If not 0, set SRRCTL.Drop_En */
 	uint8_t         rx_deferred_start; /**< not in global dev start */
 	uint64_t	offloads; /**< Rx offloads with DEV_RX_OFFLOAD_* */
