@@ -360,6 +360,12 @@ ngbe_crypto_create_session(void *device,
 	return 0;
 }
 
+static unsigned int
+ngbe_crypto_session_get_size(__rte_unused void *device)
+{
+	return sizeof(struct ngbe_crypto_session);
+}
+
 static int
 ngbe_crypto_remove_session(void *device,
 		struct rte_security_session *session)
@@ -382,6 +388,39 @@ ngbe_crypto_remove_session(void *device,
 
 	rte_mempool_put(mempool, (void *)ic_session);
 
+	return 0;
+}
+
+static inline uint8_t
+ngbe_crypto_compute_pad_len(struct rte_mbuf *m)
+{
+	if (m->nb_segs == 1) {
+		/* 16 bytes ICV + 2 bytes ESP trailer + payload padding size
+		 * payload padding size is stored at <pkt_len - 18>
+		 */
+		uint8_t *esp_pad_len = rte_pktmbuf_mtod_offset(m, uint8_t *,
+					rte_pktmbuf_pkt_len(m) -
+					(ESP_TRAILER_SIZE + ESP_ICV_SIZE));
+		return *esp_pad_len + ESP_TRAILER_SIZE + ESP_ICV_SIZE;
+	}
+	return 0;
+}
+
+static int
+ngbe_crypto_update_mb(void *device __rte_unused,
+		struct rte_security_session *session,
+		       struct rte_mbuf *m, void *params __rte_unused)
+{
+	struct ngbe_crypto_session *ic_session =
+			get_sec_session_private_data(session);
+	if (ic_session->op == NGBE_OP_AUTHENTICATED_ENCRYPTION) {
+		union ngbe_crypto_tx_desc_md *mdata =
+			(union ngbe_crypto_tx_desc_md *)
+				rte_security_dynfield(m);
+		mdata->enc = 1;
+		mdata->sa_idx = ic_session->sa_index;
+		mdata->pad_len = ngbe_crypto_compute_pad_len(m);
+	}
 	return 0;
 }
 
@@ -513,7 +552,9 @@ ngbe_crypto_capabilities_get(void *device __rte_unused)
 
 static struct rte_security_ops ngbe_security_ops = {
 	.session_create = ngbe_crypto_create_session,
+	.session_get_size = ngbe_crypto_session_get_size,
 	.session_destroy = ngbe_crypto_remove_session,
+	.set_pkt_metadata = ngbe_crypto_update_mb,
 	.capabilities_get = ngbe_crypto_capabilities_get
 };
 
