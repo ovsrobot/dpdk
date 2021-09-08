@@ -430,6 +430,12 @@ eth_ngbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	/* Unlock any pending hardware semaphore */
 	ngbe_swfw_lock_reset(hw);
 
+#ifdef RTE_LIB_SECURITY
+	/* Initialize security_ctx only for primary process*/
+	if (ngbe_ipsec_ctx_create(eth_dev))
+		return -ENOMEM;
+#endif
+
 	/* Get Hardware Flow Control setting */
 	hw->fc.requested_mode = ngbe_fc_full;
 	hw->fc.current_mode = ngbe_fc_full;
@@ -1281,6 +1287,10 @@ ngbe_dev_close(struct rte_eth_dev *dev)
 
 	rte_free(dev->data->hash_mac_addrs);
 	dev->data->hash_mac_addrs = NULL;
+
+#ifdef RTE_LIB_SECURITY
+	rte_free(dev->security_ctx);
+#endif
 
 	return ret;
 }

@@ -264,6 +264,10 @@ void ngbe_pf_mbx_process(struct rte_eth_dev *eth_dev);
 
 int ngbe_pf_host_configure(struct rte_eth_dev *eth_dev);
 
+#ifdef RTE_LIB_SECURITY
+int ngbe_ipsec_ctx_create(struct rte_eth_dev *dev);
+#endif
+
 /* High threshold controlling when to start sending XOFF frames. */
 #define NGBE_FC_XOFF_HITH              128 /*KB*/
 /* Low threshold controlling when to start sending XON frames. */
