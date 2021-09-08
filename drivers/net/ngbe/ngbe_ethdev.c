@@ -1525,6 +1525,26 @@ ngbe_dev_xstats_reset(struct rte_eth_dev *dev)
 }
 
 static int
+ngbe_fw_version_get(struct rte_eth_dev *dev, char *fw_version, size_t fw_size)
+{
+	struct ngbe_hw *hw = ngbe_dev_hw(dev);
+	int ret;
+
+	ret = snprintf(fw_version, fw_size, "0x%08x", hw->eeprom_id);
+
+	if (ret < 0)
+		return -EINVAL;
+
+	ret += 1; /* add the size of '\0' */
+	if (fw_size < (size_t)ret)
+		return ret;
+	else
+		return 0;
+
+	return 0;
+}
+
+static int
 ngbe_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 {
 	struct ngbe_hw *hw = ngbe_dev_hw(dev);
@@ -2181,6 +2201,7 @@ static const struct eth_dev_ops ngbe_eth_dev_ops = {
 	.xstats_get_names           = ngbe_dev_xstats_get_names,
 	.xstats_get_names_by_id     = ngbe_dev_xstats_get_names_by_id,
 	.queue_stats_mapping_set    = ngbe_dev_queue_stats_mapping_set,
+	.fw_version_get             = ngbe_fw_version_get,
 	.mtu_set                    = ngbe_dev_mtu_set,
 	.vlan_offload_set           = ngbe_vlan_offload_set,
 	.rx_queue_start	            = ngbe_dev_rx_queue_start,
