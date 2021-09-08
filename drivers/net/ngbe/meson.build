@@ -20,3 +20,5 @@ sources = files(
 deps += ['hash']
 
 includes += include_directories('base')
+
+install_headers('rte_pmd_ngbe.h')
