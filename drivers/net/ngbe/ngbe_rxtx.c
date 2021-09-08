@@ -2008,6 +2008,7 @@ ngbe_get_rx_port_offloads(struct rte_eth_dev *dev __rte_unused)
 		   DEV_RX_OFFLOAD_UDP_CKSUM   |
 		   DEV_RX_OFFLOAD_TCP_CKSUM   |
 		   DEV_RX_OFFLOAD_KEEP_CRC    |
+		   DEV_RX_OFFLOAD_JUMBO_FRAME |
 		   DEV_RX_OFFLOAD_SCATTER;
 
 	return offloads;
@@ -2314,8 +2315,16 @@ ngbe_dev_rx_init(struct rte_eth_dev *dev)
 	hlreg0 &= ~NGBE_SECRXCTL_XDSA;
 	wr32(hw, NGBE_SECRXCTL, hlreg0);
 
-	wr32m(hw, NGBE_FRMSZ, NGBE_FRMSZ_MAX_MASK,
+	/*
+	 * Configure jumbo frame support, if any.
+	 */
+	if (rx_conf->offloads & DEV_RX_OFFLOAD_JUMBO_FRAME) {
+		wr32m(hw, NGBE_FRMSZ, NGBE_FRMSZ_MAX_MASK,
+			NGBE_FRMSZ_MAX(rx_conf->max_rx_pkt_len));
+	} else {
+		wr32m(hw, NGBE_FRMSZ, NGBE_FRMSZ_MAX_MASK,
 			NGBE_FRMSZ_MAX(NGBE_FRAME_SIZE_DFT));
+	}
 
 	/* Setup Rx queues */
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
