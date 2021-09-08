@@ -8,6 +8,7 @@ DPDK Tools User Guides
     :maxdepth: 2
     :numbered:
 
+    dumpcap
     proc_info
     pdump
     pmdinfo
