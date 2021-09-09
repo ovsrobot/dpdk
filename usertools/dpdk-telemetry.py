@@ -48,7 +48,7 @@ def get_app_name(pid):
     return None
 
 
-def handle_socket(path):
+def handle_socket(path, query):
     """ Connect to socket and handle user input """
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
     global CMDS
@@ -69,13 +69,17 @@ def handle_socket(path):
     sock.send("/".encode())
     CMDS = read_socket(sock, output_buf_len, False)["/"]
 
-    # interactive prompt
-    text = input('--> ').strip()
-    while text != "quit":
-        if text.startswith('/'):
-            sock.send(text.encode())
-            read_socket(sock, output_buf_len)
+    if (query != ""):
+        sock.send(query.encode())
+        read_socket(sock, output_buf_len)
+    else:
+        # interactive prompt
         text = input('--> ').strip()
+        while text != "quit":
+            if text.startswith('/'):
+                sock.send(text.encode())
+                read_socket(sock, output_buf_len)
+            text = input('--> ').strip()
     sock.close()
 
 
@@ -104,6 +108,8 @@ readline.set_completer_delims(readline.get_completer_delims().replace('/', ''))
 parser = argparse.ArgumentParser()
 parser.add_argument('-f', '--file-prefix', \
         help='Provide file-prefix for DPDK runtime directory', default='rte')
+parser.add_argument('-q', '--query', \
+        help='run this query and exit', default='')
 args = parser.parse_args()
 rdir = get_dpdk_runtime_dir(args.file_prefix)
-handle_socket(os.path.join(rdir, 'dpdk_telemetry.{}'.format(TELEMETRY_VERSION)))
+handle_socket(os.path.join(rdir, 'dpdk_telemetry.{}'.format(TELEMETRY_VERSION)), args.query)
