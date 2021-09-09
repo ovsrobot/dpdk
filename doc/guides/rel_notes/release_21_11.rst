@@ -62,6 +62,10 @@ New Features
   * Added bus-level parsing of the devargs syntax.
   * Kept compatibility with the legacy syntax as parsing fallback.
 
+* **Updated Intel iavf driver.**
+
+  * Added Intel iavf support on Windows.
+
 
 Removed Items
 -------------
