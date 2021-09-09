@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added vhost API to get the number of inflight packets.**
+
+  Added an API which can get the number of inflight packets in
+  vhost async data path.
+
 * **Enabled new devargs parser.**
 
   * Enabled devargs syntax

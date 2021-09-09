@@ -305,6 +305,11 @@ The following is an overview of some key Vhost API functions:
   This function returns the amount of in-flight packets for the vhost
   queue using async acceleration.
 
+    ``rte_vhost_async_get_inflight_thread_unsafe(vid, queue_id)``
+
+  Get the number of inflight packets for a vhost queue without
+  performing any locking.
+
 * ``rte_vhost_clear_queue_thread_unsafe(vid, queue_id, **pkts, count)``
 
   Clear inflight packets which are submitted to DMA engine in vhost async data
