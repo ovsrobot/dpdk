@@ -373,7 +373,7 @@ rte_empty_poll_detection(struct rte_timer *tim, void *arg)
 
 	RTE_SET_USED(arg);
 
-	for (i = 0; i < NUM_NODES; i++) {
+	for (i = 0; i < RTE_MAX_LCORE; i++) {
 
 		poll_stats = &(ep_params->wrk_data.wrk_stats[i]);
 
@@ -436,7 +436,7 @@ rte_power_empty_poll_stat_init(struct ep_params **eptr, uint8_t *freq_tlb,
 	*eptr = ep_params;
 
 	/* initialize all wrk_stats state */
-	for (i = 0; i < NUM_NODES; i++) {
+	for (i = 0; i < RTE_MAX_LCORE; i++) {
 
 		if (rte_lcore_is_enabled(i) == 0)
 			continue;
@@ -476,7 +476,7 @@ rte_power_empty_poll_stat_update(unsigned int lcore_id)
 {
 	struct priority_worker *poll_stats;
 
-	if (lcore_id >= NUM_NODES)
+	if (lcore_id >= RTE_MAX_LCORE)
 		return -1;
 
 	poll_stats = &(ep_params->wrk_data.wrk_stats[lcore_id]);
@@ -495,7 +495,7 @@ rte_power_poll_stat_update(unsigned int lcore_id, uint8_t nb_pkt)
 
 	struct priority_worker *poll_stats;
 
-	if (lcore_id >= NUM_NODES)
+	if (lcore_id >= RTE_MAX_LCORE)
 		return -1;
 
 	poll_stats = &(ep_params->wrk_data.wrk_stats[lcore_id]);
@@ -514,7 +514,7 @@ rte_power_empty_poll_stat_fetch(unsigned int lcore_id)
 {
 	struct priority_worker *poll_stats;
 
-	if (lcore_id >= NUM_NODES)
+	if (lcore_id >= RTE_MAX_LCORE)
 		return -1;
 
 	poll_stats = &(ep_params->wrk_data.wrk_stats[lcore_id]);
@@ -530,7 +530,7 @@ rte_power_poll_stat_fetch(unsigned int lcore_id)
 {
 	struct priority_worker *poll_stats;
 
-	if (lcore_id >= NUM_NODES)
+	if (lcore_id >= RTE_MAX_LCORE)
 		return -1;
 
 	poll_stats = &(ep_params->wrk_data.wrk_stats[lcore_id]);

@@ -31,8 +31,6 @@ extern "C" {
 
 #define NUM_PRIORITIES          2
 
-#define NUM_NODES         256  /* Max core number*/
-
 /* Processor Power State */
 enum freq_val {
 	LOW,
@@ -98,7 +96,7 @@ struct priority_worker {
 
 struct stats_data {
 
-	struct priority_worker wrk_stats[NUM_NODES];
+	struct priority_worker wrk_stats[RTE_MAX_LCORE];
 
 	/* flag to stop rx threads processing packets until training over */
 	bool start_rx;
