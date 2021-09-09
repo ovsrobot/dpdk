@@ -62,6 +62,16 @@ New Features
   * Added bus-level parsing of the devargs syntax.
   * Kept compatibility with the legacy syntax as parsing fallback.
 
+* **Enhance Packet capture.**
+
+  * New dpdk-dumpcap program that has most of the features of the
+    wireshark dumpcap utility including capture of multiple interfaces,
+    stopping after number of bytes, packets.
+  * New library for writing pcapng packet capture files.
+  * Enhancement to the pdump library to support:
+    * Packet filter with BPF.
+    * Pcapng format with timestamps and meta-data.
+    * Fixes packet capture with stripped VLAN tags.
 
 Removed Items
 -------------
