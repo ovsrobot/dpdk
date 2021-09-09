@@ -27,8 +27,6 @@ rte_eal_wait_lcore(unsigned worker_id)
 					__ATOMIC_ACQUIRE) != WAIT)
 		rte_pause();
 
-	rte_rmb();
-
 	return lcore_config[worker_id].ret;
 }
 

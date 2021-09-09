@@ -39,13 +39,17 @@ rte_eal_remote_launch(int (*f)(void *), void *arg, unsigned int worker_id)
 	int w2m = lcore_config[worker_id].pipe_worker2main[0];
 	int rc = -EBUSY;
 
-	if (lcore_config[worker_id].state != WAIT)
+	/* Check if the worker is in 'WAIT' state. Use acquire order
+	 * since 'state' variable is used as the guard variable.
+	 */
+	if (__atomic_load_n(&lcore_config[worker_id].state,
+					__ATOMIC_ACQUIRE) != WAIT)
 		goto finish;
 
 	lcore_config[worker_id].arg = arg;
 	/* Ensure that all the memory operations are completed
 	 * before the worker thread starts running the function.
-	 * Use worker thread function as the guard variable.
+	 * Use worker thread function pointer as the guard variable.
 	 */
 	__atomic_store_n(&lcore_config[worker_id].f, f, __ATOMIC_RELEASE);
 
@@ -115,7 +119,11 @@ eal_thread_loop(__rte_unused void *arg)
 		if (n <= 0)
 			rte_panic("cannot read on configuration pipe\n");
 
-		lcore_config[lcore_id].state = RUNNING;
+		/* Set the state to 'RUNNING'. Use release order
+		 * since 'state' variable is used as the guard variable.
+		 */
+		__atomic_store_n(&lcore_config[lcore_id].state, RUNNING,
+					__ATOMIC_RELEASE);
 
 		/* send ack */
 		n = 0;
@@ -139,9 +147,14 @@ eal_thread_loop(__rte_unused void *arg)
 		lcore_config[lcore_id].ret = ret;
 		lcore_config[lcore_id].f = NULL;
 		lcore_config[lcore_id].arg = NULL;
-		rte_wmb();
 
-		lcore_config[lcore_id].state = WAIT;
+		/* Store the state with release order to ensure that
+		 * the memory operations from the worker thread
+		 * are completed before the state is updated.
+		 * Use 'state' as the guard variable.
+		 */
+		__atomic_store_n(&lcore_config[lcore_id].state, WAIT,
+					__ATOMIC_RELEASE);
 	}
 
 	/* never reached */
