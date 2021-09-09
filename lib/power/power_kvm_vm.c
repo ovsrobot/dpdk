@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <rte_log.h>
+#include <rte_malloc.h>
 
 #include "rte_power_guest_channel.h"
 #include "guest_channel.h"
@@ -13,7 +14,8 @@
 
 #define FD_PATH "/dev/virtio-ports/virtio.serial.port.poweragent"
 
-static struct rte_power_channel_packet pkt[RTE_MAX_LCORE];
+static struct rte_power_channel_packet
+		*power_channel_pkt[RTE_MAX_LCORE] = { NULL };
 
 int
 power_kvm_vm_check_supported(void)
@@ -29,8 +31,21 @@ power_kvm_vm_init(unsigned int lcore_id)
 				lcore_id, RTE_MAX_LCORE-1);
 		return -1;
 	}
-	pkt[lcore_id].command = RTE_POWER_CPU_POWER;
-	pkt[lcore_id].resource_id = lcore_id;
+
+	if (power_channel_pkt[lcore_id] == NULL) {
+		power_channel_pkt[lcore_id] =
+			rte_malloc(NULL,
+				sizeof(struct rte_power_channel_packet), 0);
+		if (power_channel_pkt[lcore_id] == NULL) {
+			RTE_LOG(ERR, POWER,
+				"Cannot allocate channel for core %u\n",
+				lcore_id);
+			return -1;
+		}
+	}
+
+	power_channel_pkt[lcore_id]->command = RTE_POWER_CPU_POWER;
+	power_channel_pkt[lcore_id]->resource_id = lcore_id;
 	return guest_channel_host_connect(FD_PATH, lcore_id);
 }
 
@@ -38,6 +53,10 @@ int
 power_kvm_vm_exit(unsigned int lcore_id)
 {
 	guest_channel_host_disconnect(lcore_id);
+
+	if (power_channel_pkt[lcore_id] != NULL)
+		rte_free(power_channel_pkt[lcore_id]);
+
 	return 0;
 }
 
@@ -78,8 +97,15 @@ send_msg(unsigned int lcore_id, uint32_t scale_direction)
 				lcore_id, RTE_MAX_LCORE-1);
 		return -1;
 	}
-	pkt[lcore_id].unit = scale_direction;
-	ret = guest_channel_send_msg(&pkt[lcore_id], lcore_id);
+
+	if (power_channel_pkt[lcore_id] == NULL) {
+		RTE_LOG(ERR, POWER, "channel for core %u not initialised\n",
+				lcore_id);
+		return -1;
+	}
+
+	power_channel_pkt[lcore_id]->unit = scale_direction;
+	ret = guest_channel_send_msg(power_channel_pkt[lcore_id], lcore_id);
 	if (ret == 0)
 		return 1;
 	RTE_LOG(DEBUG, POWER, "Error sending message: %s\n",
