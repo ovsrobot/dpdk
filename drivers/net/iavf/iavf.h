@@ -212,6 +212,12 @@ struct iavf_info {
 	int cmd_retval; /* return value of the cmd response from PF */
 	uint8_t *aq_resp; /* buffer to store the adminq response from PF */
 
+	struct {
+		uint8_t enabled:1;
+		uint64_t period_us;
+	} watchdog;
+	/** iAVF watchdog configuration */
+
 	/* Event from pf */
 	bool dev_closed;
 	bool link_up;
