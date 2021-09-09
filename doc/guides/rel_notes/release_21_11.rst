@@ -62,6 +62,10 @@ New Features
   * Added bus-level parsing of the devargs syntax.
   * Kept compatibility with the legacy syntax as parsing fallback.
 
+* **Added NXP ENETFEC PMD.**
+
+  Added the new ENETFEC driver for the NXP IMX8MMEVK platform. See the
+  :doc:`../nics/enetfec` NIC driver guide for more details on this new driver.
 
 Removed Items
 -------------
