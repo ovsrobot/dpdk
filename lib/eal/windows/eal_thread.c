@@ -32,8 +32,12 @@ rte_eal_remote_launch(lcore_function_t *f, void *arg, unsigned int worker_id)
 	if (lcore_config[worker_id].state != WAIT)
 		return -EBUSY;
 
-	lcore_config[worker_id].f = f;
 	lcore_config[worker_id].arg = arg;
+	/* Ensure that all the memory operations are completed
+	 * before the worker thread starts running the function.
+	 * Use worker thread function as the guard variable.
+	 */
+	__atomic_store_n(&lcore_config[worker_id].f, f, __ATOMIC_RELEASE);
 
 	/* send message */
 	n = 0;
@@ -84,6 +88,7 @@ eal_thread_loop(void *arg __rte_unused)
 
 	/* read on our pipe to get commands */
 	while (1) {
+		lcore_function_t *f;
 		void *fct_arg;
 
 		/* wait command */
@@ -103,12 +108,18 @@ eal_thread_loop(void *arg __rte_unused)
 		if (n < 0)
 			rte_panic("cannot write on configuration pipe\n");
 
-		if (lcore_config[lcore_id].f == NULL)
-			rte_panic("NULL function pointer\n");
+		/* Load 'f' with acquire order to ensure that
+		 * the memory operations from the main thread
+		 * are accessed only after update to 'f' is visible.
+		 * Wait till the update to 'f' is visible to the worker.
+		 */
+		while ((f = __atomic_load_n(&lcore_config[lcore_id].f,
+			__ATOMIC_ACQUIRE)) == NULL)
+			rte_pause();
 
 		/* call the function and store the return value */
 		fct_arg = lcore_config[lcore_id].arg;
-		ret = lcore_config[lcore_id].f(fct_arg);
+		ret = f(fct_arg);
 		lcore_config[lcore_id].ret = ret;
 		lcore_config[lcore_id].f = NULL;
 		lcore_config[lcore_id].arg = NULL;
