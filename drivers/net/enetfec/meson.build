@@ -8,4 +8,5 @@ endif
 
 deps += ['common_dpaax']
 
-sources = files('enet_ethdev.c')
+sources = files('enet_ethdev.c',
+		'enet_uio.c')
