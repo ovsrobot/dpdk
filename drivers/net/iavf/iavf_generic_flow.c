@@ -1709,6 +1709,9 @@ iavf_register_parser(struct iavf_flow_parser *parser,
 	} else if (parser->engine->type == IAVF_FLOW_ENGINE_FDIR) {
 		list = &vf->dist_parser_list;
 		TAILQ_INSERT_HEAD(list, parser_node, node);
+	} else if (parser->engine->type == IAVF_FLOW_ENGINE_IPSEC_CRYPTO) {
+		list = &vf->ipsec_crypto_parser_list;
+		TAILQ_INSERT_HEAD(list, parser_node, node);
 	} else {
 		return -EINVAL;
 	}
@@ -2018,6 +2021,14 @@ iavf_flow_process_filter(struct rte_eth_dev *dev,
 
 	*engine = iavf_parse_engine(ad, flow, &vf->dist_parser_list, pattern,
 				    actions, error);
+	if (*engine)
+		return 0;
+
+	*engine = iavf_parse_engine(ad, flow, &vf->ipsec_crypto_parser_list,
+			pattern, actions, error);
+	if (*engine)
+		return 0;
+
 
 	if (!*engine) {
 		rte_flow_error_set(error, EINVAL,

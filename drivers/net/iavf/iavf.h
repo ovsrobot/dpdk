@@ -189,6 +189,7 @@ struct iavf_info {
 	uint64_t supported_rxdid;
 	uint8_t *proto_xtr; /* proto xtr type for all queues */
 	volatile enum virtchnl_ops pend_cmd; /* pending command not finished */
+	rte_atomic32_t pend_cmd_count;
 	int cmd_retval; /* return value of the cmd response from PF */
 	uint8_t *aq_resp; /* buffer to store the adminq response from PF */
 
@@ -216,6 +217,7 @@ struct iavf_info {
 	rte_spinlock_t flow_ops_lock;
 	struct iavf_parser_list rss_parser_list;
 	struct iavf_parser_list dist_parser_list;
+	struct iavf_parser_list ipsec_crypto_parser_list;
 
 	struct iavf_fdir_info fdir; /* flow director info */
 	/* indicate large VF support enabled or not */
@@ -238,6 +240,7 @@ enum iavf_proto_xtr_type {
 	IAVF_PROTO_XTR_IPV6_FLOW,
 	IAVF_PROTO_XTR_TCP,
 	IAVF_PROTO_XTR_IP_OFFSET,
+	IAVF_PROTO_XTR_IPSEC_CRYPTO_SAID,
 	IAVF_PROTO_XTR_MAX,
 };
 
@@ -249,11 +252,14 @@ struct iavf_devargs {
 	uint8_t proto_xtr[IAVF_MAX_QUEUE_NUM];
 };
 
+struct iavf_security_ctx;
+
 /* Structure to store private data for each VF instance. */
 struct iavf_adapter {
 	struct iavf_hw hw;
 	struct rte_eth_dev *eth_dev;
 	struct iavf_info vf;
+	struct iavf_security_ctx *security_ctx;
 
 	bool rx_bulk_alloc_allowed;
 	/* For vector PMD */
@@ -272,6 +278,8 @@ struct iavf_adapter {
 	(&((struct iavf_adapter *)adapter)->vf)
 #define IAVF_DEV_PRIVATE_TO_HW(adapter) \
 	(&((struct iavf_adapter *)adapter)->hw)
+#define IAVF_DEV_PRIVATE_TO_IAVF_SECURITY_CTX(adapter) \
+	(((struct iavf_adapter *)adapter)->security_ctx)
 
 /* IAVF_VSI_TO */
 #define IAVF_VSI_TO_HW(vsi) \
@@ -340,9 +348,24 @@ _atomic_set_cmd(struct iavf_info *vf, enum virtchnl_ops ops)
 	if (!ret)
 		PMD_DRV_LOG(ERR, "There is incomplete cmd %d", vf->pend_cmd);
 
+	rte_atomic32_set(&vf->pend_cmd_count, 1);
+
 	return !ret;
 }
 
+/* Check there is pending cmd in execution. If none, set new command. */
+static inline int
+_atomic_set_async_response_cmd(struct iavf_info *vf, enum virtchnl_ops ops)
+{
+	int ret = rte_atomic32_cmpset(&vf->pend_cmd, VIRTCHNL_OP_UNKNOWN, ops);
+
+	if (!ret)
+		PMD_DRV_LOG(ERR, "There is incomplete cmd %d", vf->pend_cmd);
+
+	rte_atomic32_set(&vf->pend_cmd_count, 2);
+
+	return !ret;
+}
 int iavf_check_api_version(struct iavf_adapter *adapter);
 int iavf_get_vf_resource(struct iavf_adapter *adapter);
 void iavf_handle_virtchnl_msg(struct rte_eth_dev *dev);
@@ -399,5 +422,8 @@ int iavf_set_q_tc_map(struct rte_eth_dev *dev,
 			uint16_t size);
 void iavf_tm_conf_init(struct rte_eth_dev *dev);
 void iavf_tm_conf_uninit(struct rte_eth_dev *dev);
+int iavf_ipsec_crypto_request(struct iavf_adapter *adapter,
+		uint8_t *msg, size_t msg_len,
+		uint8_t *resp_msg, size_t resp_msg_len);
 extern const struct rte_tm_ops iavf_tm_ops;
 #endif /* _IAVF_ETHDEV_H_ */

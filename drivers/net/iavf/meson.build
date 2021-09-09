@@ -10,7 +10,7 @@ endif
 cflags += ['-Wno-strict-aliasing']
 
 includes += include_directories('../../common/iavf')
-deps += ['common_iavf']
+deps += ['common_iavf', 'security', 'cryptodev']
 
 sources = files(
         'iavf_ethdev.c',
@@ -20,6 +20,7 @@ sources = files(
         'iavf_fdir.c',
         'iavf_hash.c',
         'iavf_tm.c',
+        'iavf_ipsec_crypto.c',
 )
 
 if arch_subdir == 'x86'
