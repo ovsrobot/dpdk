@@ -1723,7 +1723,7 @@ static const struct bpf_ins_check ins_chk[UINT8_MAX + 1] = {
 
 /*
  * make sure that instruction syntax is valid,
- * and it fields don't violate partciular instrcution type restrictions.
+ * and it fields don't violate particular instruction type restrictions.
  */
 static const char *
 check_syntax(const struct ebpf_insn *ins)
@@ -1981,7 +1981,7 @@ validate(struct bpf_verifier *bvf)
 
 		/*
 		 * construct CFG, jcc nodes have to outgoing edges,
-		 * 'exit' nodes - none, all others nodes have exaclty one
+		 * 'exit' nodes - none, all others nodes have exactly one
 		 * outgoing edge.
 		 */
 		switch (ins->code) {
