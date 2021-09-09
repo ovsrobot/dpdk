@@ -16,6 +16,7 @@
 
 #include <rte_memcpy.h>
 #include <rte_memory.h>
+#include <rte_malloc.h>
 #include <rte_string_fns.h>
 
 #include "power_pstate_cpufreq.h"
@@ -76,7 +77,7 @@ struct pstate_power_info {
 } __rte_cache_aligned;
 
 
-static struct pstate_power_info lcore_power_info[RTE_MAX_LCORE];
+static struct pstate_power_info *lcore_power_info[RTE_MAX_LCORE] = { NULL };
 
 /**
  * It is to read the specific MSR.
@@ -518,7 +519,17 @@ power_pstate_cpufreq_init(unsigned int lcore_id)
 		return -1;
 	}
 
-	pi = &lcore_power_info[lcore_id];
+	if (lcore_power_info[lcore_id] == NULL) {
+		lcore_power_info[lcore_id] =
+			rte_malloc(NULL, sizeof(struct pstate_power_info), 0);
+		if (lcore_power_info[lcore_id] == NULL) {
+			RTE_LOG(ERR, POWER, "Cannot allocate core %u\n",
+					lcore_id);
+			return -1;
+		}
+	}
+
+	pi = lcore_power_info[lcore_id];
 	exp_state = POWER_IDLE;
 	/* The power in use state works as a guard variable between
 	 * the CPU frequency control initialization and exit process.
@@ -595,7 +606,13 @@ power_pstate_cpufreq_exit(unsigned int lcore_id)
 				lcore_id, RTE_MAX_LCORE - 1U);
 		return -1;
 	}
-	pi = &lcore_power_info[lcore_id];
+
+	if (lcore_power_info[lcore_id] == NULL) {
+		RTE_LOG(ERR, POWER, "core %u not initialised\n", lcore_id);
+		return RTE_POWER_INVALID_FREQ_INDEX;
+	}
+
+	pi = lcore_power_info[lcore_id];
 
 	exp_state = POWER_USED;
 	/* The power in use state works as a guard variable between
@@ -632,6 +649,9 @@ power_pstate_cpufreq_exit(unsigned int lcore_id)
 	__atomic_compare_exchange_n(&(pi->state), &exp_state, POWER_IDLE,
 				    0, __ATOMIC_RELEASE, __ATOMIC_RELAXED);
 
+	if (lcore_power_info[lcore_id] != NULL)
+		rte_free(lcore_power_info[lcore_id]);
+
 	return 0;
 
 fail:
@@ -658,7 +678,12 @@ power_pstate_cpufreq_freqs(unsigned int lcore_id, uint32_t *freqs, uint32_t num)
 		return 0;
 	}
 
-	pi = &lcore_power_info[lcore_id];
+	if (lcore_power_info[lcore_id] == NULL) {
+		RTE_LOG(ERR, POWER, "core %u not initialised\n", lcore_id);
+		return RTE_POWER_INVALID_FREQ_INDEX;
+	}
+
+	pi = lcore_power_info[lcore_id];
 	if (num < pi->nb_freqs) {
 		RTE_LOG(ERR, POWER, "Buffer size is not enough\n");
 		return 0;
@@ -676,7 +701,12 @@ power_pstate_cpufreq_get_freq(unsigned int lcore_id)
 		return RTE_POWER_INVALID_FREQ_INDEX;
 	}
 
-	return lcore_power_info[lcore_id].curr_idx;
+	if (lcore_power_info[lcore_id] == NULL) {
+		RTE_LOG(ERR, POWER, "core %u not initialised\n", lcore_id);
+		return RTE_POWER_INVALID_FREQ_INDEX;
+	}
+
+	return lcore_power_info[lcore_id]->curr_idx;
 }
 
 
@@ -688,7 +718,12 @@ power_pstate_cpufreq_set_freq(unsigned int lcore_id, uint32_t index)
 		return -1;
 	}
 
-	return set_freq_internal(&(lcore_power_info[lcore_id]), index);
+	if (lcore_power_info[lcore_id] == NULL) {
+		RTE_LOG(ERR, POWER, "core %u not initialised\n", lcore_id);
+		return RTE_POWER_INVALID_FREQ_INDEX;
+	}
+
+	return set_freq_internal(lcore_power_info[lcore_id], index);
 }
 
 int
@@ -701,7 +736,12 @@ power_pstate_cpufreq_freq_up(unsigned int lcore_id)
 		return -1;
 	}
 
-	pi = &lcore_power_info[lcore_id];
+	if (lcore_power_info[lcore_id] == NULL) {
+		RTE_LOG(ERR, POWER, "core %u not initialised\n", lcore_id);
+		return RTE_POWER_INVALID_FREQ_INDEX;
+	}
+
+	pi = lcore_power_info[lcore_id];
 	if (pi->curr_idx == 0 ||
 	    (pi->curr_idx == 1 && pi->turbo_available && !pi->turbo_enable))
 		return 0;
@@ -720,7 +760,12 @@ power_pstate_cpufreq_freq_down(unsigned int lcore_id)
 		return -1;
 	}
 
-	pi = &lcore_power_info[lcore_id];
+	if (lcore_power_info[lcore_id] == NULL) {
+		RTE_LOG(ERR, POWER, "core %u not initialised\n", lcore_id);
+		return RTE_POWER_INVALID_FREQ_INDEX;
+	}
+
+	pi = lcore_power_info[lcore_id];
 	if (pi->curr_idx + 1 == pi->nb_freqs)
 		return 0;
 
@@ -736,18 +781,23 @@ power_pstate_cpufreq_freq_max(unsigned int lcore_id)
 		return -1;
 	}
 
+	if (lcore_power_info[lcore_id] == NULL) {
+		RTE_LOG(ERR, POWER, "core %u not initialised\n", lcore_id);
+		return RTE_POWER_INVALID_FREQ_INDEX;
+	}
+
 	/* Frequencies in the array are from high to low. */
-	if (lcore_power_info[lcore_id].turbo_available) {
-		if (lcore_power_info[lcore_id].turbo_enable)
+	if (lcore_power_info[lcore_id]->turbo_available) {
+		if (lcore_power_info[lcore_id]->turbo_enable)
 			/* Set to Turbo */
 			return set_freq_internal(
-					&lcore_power_info[lcore_id], 0);
+					lcore_power_info[lcore_id], 0);
 		else
 			/* Set to max non-turbo */
 			return set_freq_internal(
-					&lcore_power_info[lcore_id], 1);
+					lcore_power_info[lcore_id], 1);
 	} else
-		return set_freq_internal(&lcore_power_info[lcore_id], 0);
+		return set_freq_internal(lcore_power_info[lcore_id], 0);
 }
 
 
@@ -761,7 +811,12 @@ power_pstate_cpufreq_freq_min(unsigned int lcore_id)
 		return -1;
 	}
 
-	pi = &lcore_power_info[lcore_id];
+	if (lcore_power_info[lcore_id] == NULL) {
+		RTE_LOG(ERR, POWER, "core %u not initialised\n", lcore_id);
+		return RTE_POWER_INVALID_FREQ_INDEX;
+	}
+
+	pi = lcore_power_info[lcore_id];
 
 	/* Frequencies in the array are from high to low. */
 	return set_freq_internal(pi, pi->nb_freqs - 1);
@@ -778,7 +833,12 @@ power_pstate_turbo_status(unsigned int lcore_id)
 		return -1;
 	}
 
-	pi = &lcore_power_info[lcore_id];
+	if (lcore_power_info[lcore_id] == NULL) {
+		RTE_LOG(ERR, POWER, "core %u not initialised\n", lcore_id);
+		return RTE_POWER_INVALID_FREQ_INDEX;
+	}
+
+	pi = lcore_power_info[lcore_id];
 
 	return pi->turbo_enable;
 }
@@ -793,7 +853,12 @@ power_pstate_enable_turbo(unsigned int lcore_id)
 		return -1;
 	}
 
-	pi = &lcore_power_info[lcore_id];
+	if (lcore_power_info[lcore_id] == NULL) {
+		RTE_LOG(ERR, POWER, "core %u not initialised\n", lcore_id);
+		return RTE_POWER_INVALID_FREQ_INDEX;
+	}
+
+	pi = lcore_power_info[lcore_id];
 
 	if (pi->turbo_available)
 		pi->turbo_enable = 1;
@@ -819,7 +884,12 @@ power_pstate_disable_turbo(unsigned int lcore_id)
 		return -1;
 	}
 
-	pi = &lcore_power_info[lcore_id];
+	if (lcore_power_info[lcore_id] == NULL) {
+		RTE_LOG(ERR, POWER, "core %u not initialised\n", lcore_id);
+		return RTE_POWER_INVALID_FREQ_INDEX;
+	}
+
+	pi = lcore_power_info[lcore_id];
 
 	pi->turbo_enable = 0;
 
@@ -851,7 +921,12 @@ int power_pstate_get_capabilities(unsigned int lcore_id,
 		return -1;
 	}
 
-	pi = &lcore_power_info[lcore_id];
+	if (lcore_power_info[lcore_id] == NULL) {
+		RTE_LOG(ERR, POWER, "core %u not initialised\n", lcore_id);
+		return RTE_POWER_INVALID_FREQ_INDEX;
+	}
+
+	pi = lcore_power_info[lcore_id];
 	caps->capabilities = 0;
 	caps->turbo = !!(pi->turbo_available);
 	caps->priority = pi->priority_core;
