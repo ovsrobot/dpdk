@@ -616,3 +616,21 @@ which belongs to the destination VF on the VM.
 .. figure:: img/inter_vm_comms.*
 
    Inter-VM Communication
+
+
+Windows Support
+---------------
+
+*   IAVF PMD currently is supported only inside Windows guest created on Linux host.
+
+*   Physical PCI resources are exposed as virtual functions into Windows VM using SR-IOV pass through feature.
+
+*   Create a Windows guest on Linux host using KVM hypervisor. Refer to the steps mentioned in the above section "Setting Up a KVM Virtual Machine monitor"
+
+*   In the Host machine, download and install the kernel Ethernet driver from:
+    `http://downloadcenter.intel.com/Detail_Desc.aspx?agr=Y&amp;DwnldID=14687 <http://downloadcenter.intel.com/Detail_Desc.aspx?agr=Y&amp;DwnldID=14687>`_
+
+*   For Windows guest, install NetUIO driver in place of existing built-in(inbox) Virtual Function driver.
+
+*   To load NetUIO driver, follow the steps mentioned in `dpdk-kmods repository
+    <https://git.dpdk.org/dpdk-kmods/tree/windows/netuio/README.rst>`_.
