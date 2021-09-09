@@ -19,9 +19,10 @@ extern "C" {
  * State of an lcore.
  */
 enum rte_lcore_state_t {
-	WAIT,       /**< waiting a new command */
-	RUNNING,    /**< executing command */
-	FINISHED,   /**< command executed */
+	WAIT,
+	/**< waiting for new command */
+	RUNNING,
+	/**< executing command */
 };
 
 /**
@@ -41,7 +42,7 @@ typedef int (lcore_function_t)(void *);
  *
  * When the remote lcore receives the message, it switches to
  * the RUNNING state, then calls the function f with argument arg. Once the
- * execution is done, the remote lcore switches to a FINISHED state and
+ * execution is done, the remote lcore switches to WAIT state and
  * the return value of f is stored in a local variable to be read using
  * rte_eal_wait_lcore().
  *
