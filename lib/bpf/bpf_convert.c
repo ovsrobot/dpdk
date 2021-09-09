@@ -331,7 +331,12 @@ do_pass:
 		case BPF_LD | BPF_IND | BPF_H:
 		case BPF_LD | BPF_IND | BPF_B:
 			/* All arithmetic insns map as-is. */
-			*insn = BPF_RAW_INSN(fp->code, BPF_REG_A, BPF_REG_X, 0, fp->k);
+			insn->code = fp->code;
+			insn->dst_reg = BPF_REG_A;
+			bpf_src = BPF_SRC(fp->code);
+			insn->src_reg = bpf_src == BPF_X ? BPF_REG_X : 0;
+			insn->off = 0;
+			insn->imm = fp->k;
 			break;
 
 			/* Jump transformation cannot use BPF block macros
