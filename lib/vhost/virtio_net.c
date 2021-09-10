@@ -1218,6 +1218,16 @@ virtio_dev_rx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		uint32_t pkt_len = pkts[pkt_idx]->pkt_len + dev->vhost_hlen;
 		uint16_t nr_vec = 0;
 
+		/* Do VLAN tag insertion */
+		if (pkts[pkt_idx]->ol_flags & PKT_TX_VLAN_PKT) {
+			int error = rte_vlan_insert(&pkts[pkt_idx]);
+			if (unlikely(error)) {
+				rte_pktmbuf_free(pkts[pkt_idx]);
+				pkts[pkt_idx] = NULL;
+				continue;
+			}
+		}
+
 		if (unlikely(reserve_avail_buf_split(dev, vq,
 						pkt_len, buf_vec, &num_buffers,
 						avail_head, &nr_vec) < 0)) {
@@ -1489,6 +1499,17 @@ virtio_dev_rx_packed(struct virtio_net *dev,
 
 	do {
 		rte_prefetch0(&vq->desc_packed[vq->last_avail_idx]);
+
+		/* Do VLAN tag insertion */
+		if (pkts[pkt_idx]->ol_flags & PKT_TX_VLAN_PKT) {
+			int error = rte_vlan_insert(&pkts[pkt_idx]);
+			if (unlikely(error)) {
+				rte_pktmbuf_free(pkts[pkt_idx]);
+				pkts[pkt_idx] = NULL;
+				pkt_idx++;
+				continue;
+			}
+		}
 
 		if (count - pkt_idx >= PACKED_BATCH_SIZE) {
 			if (!virtio_dev_rx_sync_batch_packed(dev, vq,
