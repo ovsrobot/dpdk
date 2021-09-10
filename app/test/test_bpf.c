@@ -10,6 +10,7 @@
 #include <rte_memory.h>
 #include <rte_debug.h>
 #include <rte_hexdump.h>
+#include <rte_malloc.h>
 #include <rte_random.h>
 #include <rte_byteorder.h>
 #include <rte_errno.h>
@@ -3233,3 +3234,150 @@ test_bpf(void)
 }
 
 REGISTER_TEST_COMMAND(bpf_autotest, test_bpf);
+
+#ifdef RTE_PORT_PCAP
+#include <pcap/pcap.h>
+
+static void
+test_bpf_dump(struct bpf_program *cbf, const struct rte_bpf_prm *prm)
+{
+	printf("cBPF program (%u insns)\n", cbf->bf_len);
+	bpf_dump(cbf, 1);
+
+	printf("\neBPF program (%u insns)\n", prm->nb_ins);
+	rte_bpf_dump(stdout, prm->ins, prm->nb_ins);
+}
+
+static int
+test_bpf_match(pcap_t *pcap, const char *str, bool expected)
+{
+	struct bpf_program fcode;
+	struct rte_bpf_prm *prm = NULL;
+	struct rte_bpf *bpf = NULL;
+	uint8_t tbuf[sizeof(struct dummy_mbuf)];
+	int ret = -1;
+	uint64_t rc;
+
+	if (pcap_compile(pcap, &fcode, str, 1, PCAP_NETMASK_UNKNOWN)) {
+		printf("%s@%d: pcap_compile(\"%s\") failed: %s;\n",
+		       __func__, __LINE__,  str, pcap_geterr(pcap));
+		return -1;
+	}
+
+	prm = rte_bpf_convert(&fcode);
+	if (prm == NULL) {
+		printf("%s@%d: bpf_convert('%s') failed,, error=%d(%s);\n",
+		       __func__, __LINE__, str, rte_errno, strerror(rte_errno));
+		goto error;
+	}
+
+	bpf = rte_bpf_load(prm);
+	if (bpf == NULL) {
+		printf("%s@%d: failed to load bpf code, error=%d(%s);\n",
+			__func__, __LINE__, rte_errno, strerror(rte_errno));
+		goto error;
+	}
+
+	test_ld_mbuf1_prepare(tbuf);
+	rc = rte_bpf_exec(bpf, tbuf);
+	if ((rc == 0) == expected)
+		ret = 0;
+	else
+		printf("%s@%d: failed match: expect %s 0 got %"PRIu64"\n",
+		       __func__, __LINE__, expected ? "==" : "<>",  rc);
+error:
+	if (bpf)
+		rte_bpf_destroy(bpf);
+	rte_free(prm);
+	pcap_freecode(&fcode);
+	return ret;
+}
+
+/* Basic sanity test can we match a IP packet */
+static int
+test_bpf_filter_sanity(pcap_t *pcap)
+{
+	int ret;
+
+	ret = test_bpf_match(pcap, "ip", true);
+	ret |= test_bpf_match(pcap, "not ip", false);
+
+	return ret;
+}
+
+/* Some sample pcap filter strings from tcpdump man page */
+static const char * const sample_filters[] = {
+	"host 192.168.1.100",
+	"src net 10",
+	"not stp",
+	"len = 128",
+	"ip host 1.1.1.1 and not 1.1.1.2",
+	"ip and not net 127.0.0.1",
+	"tcp[tcpflags] & (tcp-syn|tcp-fin) != 0 and not src and dst net 127.0.0.1",
+	"ether[0] & 1 = 0 and ip[16] >= 224",
+	"icmp[icmptype] != icmp-echo and icmp[icmptype] != icmp-echoreply",
+};
+
+static int
+test_bpf_filter(pcap_t *pcap, const char *s)
+{
+	struct bpf_program fcode;
+	struct rte_bpf_prm *prm = NULL;
+	struct rte_bpf *bpf = NULL;
+
+	if (pcap_compile(pcap, &fcode, s, 1, PCAP_NETMASK_UNKNOWN)) {
+		printf("%s@%d: pcap_compile('%s') failed: %s;\n",
+		       __func__, __LINE__, s, pcap_geterr(pcap));
+		return -1;
+	}
+
+	prm = rte_bpf_convert(&fcode);
+	if (prm == NULL) {
+		printf("%s@%d: bpf_convert('%s') failed,, error=%d(%s);\n",
+		       __func__, __LINE__, s, rte_errno, strerror(rte_errno));
+		goto error;
+	}
+
+	bpf = rte_bpf_load(prm);
+	if (bpf == NULL) {
+		printf("%s@%d: failed to load bpf code, error=%d(%s);\n",
+			__func__, __LINE__, rte_errno, strerror(rte_errno));
+		goto error;
+	}
+
+error:
+	if (bpf)
+		rte_bpf_destroy(bpf);
+	else {
+		printf("%s \"%s\"\n", __func__, s);
+		test_bpf_dump(&fcode, prm);
+	}
+
+	rte_free(prm);
+	pcap_freecode(&fcode);
+	return (bpf == NULL) ? -1 : 0;
+}
+
+static int
+test_bpf_convert(void)
+{
+	unsigned int i;
+	pcap_t *pcap;
+	int rc;
+
+	pcap = pcap_open_dead(DLT_EN10MB, 262144);
+	if (!pcap) {
+		printf("pcap_open_dead failed\n");
+		return -1;
+	}
+
+	rc = test_bpf_filter_sanity(pcap);
+	for (i = 0; i < RTE_DIM(sample_filters); i++)
+		rc |= test_bpf_filter(pcap, sample_filters[i]);
+
+	pcap_close(pcap);
+	return rc;
+}
+
+REGISTER_TEST_COMMAND(bpf_convert_autotest, test_bpf_convert);
+#endif /* RTE_PORT_PCAP */
