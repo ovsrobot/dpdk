@@ -24,7 +24,7 @@ extern "C" {
 #include <rte_eal.h>
 #include <rte_lcore.h>
 #include <rte_pci.h>
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 
 #include "eventdev_pmd.h"
 

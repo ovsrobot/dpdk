@@ -2,7 +2,7 @@
  * Copyright (C) 2019 Marvell International Ltd.
  */
 
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 #include <rte_common.h>
 #include <rte_crypto.h>
 #include <rte_cryptodev.h>

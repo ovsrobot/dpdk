@@ -3,7 +3,7 @@
  */
 
 #include <rte_pci.h>
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 #include <ethdev_pci.h>
 #include <rte_mbuf.h>
 #include <rte_malloc.h>

@@ -112,6 +112,8 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* pci: Removed all ABIs defined in rte_bus_pci.h except the function
+  ``rte_pci_dump()``.
 
 Known Issues
 ------------

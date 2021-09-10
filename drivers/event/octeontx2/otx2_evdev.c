@@ -4,7 +4,7 @@
 
 #include <inttypes.h>
 
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 #include <rte_common.h>
 #include <rte_eal.h>
 #include <eventdev_pmd_pci.h>

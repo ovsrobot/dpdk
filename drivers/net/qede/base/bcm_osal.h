@@ -21,7 +21,7 @@
 #include <rte_ether.h>
 #include <rte_io.h>
 #include <rte_version.h>
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 
 /* Forward declaration */
 struct ecore_dev;

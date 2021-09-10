@@ -5,7 +5,7 @@
 #include <inttypes.h>
 
 #include <rte_common.h>
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 
 #include "otx2_common.h"
 #include "otx2_irq.h"
