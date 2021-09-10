@@ -950,10 +950,6 @@ vlan_id_is_invalid(uint16_t vlan_id)
 static int
 port_reg_off_is_invalid(portid_t port_id, uint32_t reg_off)
 {
-	const struct rte_pci_device *pci_dev;
-	const struct rte_bus *bus;
-	uint64_t pci_len;
-
 	if (reg_off & 0x3) {
 		fprintf(stderr,
 			"Port register offset 0x%X not aligned on a 4-byte boundary\n",
@@ -966,22 +962,6 @@ port_reg_off_is_invalid(portid_t port_id, uint32_t reg_off)
 		return 0;
 	}
 
-	bus = rte_bus_find_by_device(ports[port_id].dev_info.device);
-	if (bus && !strcmp(bus->name, "pci")) {
-		pci_dev = RTE_DEV_TO_PCI(ports[port_id].dev_info.device);
-	} else {
-		fprintf(stderr, "Not a PCI device\n");
-		return 1;
-	}
-
-	pci_len = pci_dev->mem_resource[0].len;
-	if (reg_off >= pci_len) {
-		fprintf(stderr,
-			"Port %d: register offset %u (0x%X) out of port PCI resource (length=%"PRIu64")\n",
-			port_id, (unsigned int)reg_off, (unsigned int)reg_off,
-			pci_len);
-		return 1;
-	}
 	return 0;
 }
 
@@ -1009,14 +989,14 @@ port_reg_bit_display(portid_t port_id, uint32_t reg_off, uint8_t bit_x)
 {
 	uint32_t reg_v;
 
-
 	if (port_id_is_invalid(port_id, ENABLED_WARN))
 		return;
 	if (port_reg_off_is_invalid(port_id, reg_off))
 		return;
 	if (reg_bit_pos_is_invalid(bit_x))
 		return;
-	reg_v = port_id_pci_reg_read(port_id, reg_off);
+	if (port_id_pci_reg_read(port_id, reg_off, &reg_v))
+		return;
 	display_port_and_reg_off(port_id, (unsigned)reg_off);
 	printf("bit %d=%d\n", bit_x, (int) ((reg_v & (1 << bit_x)) >> bit_x));
 }
@@ -1042,7 +1022,8 @@ port_reg_bit_field_display(portid_t port_id, uint32_t reg_off,
 	else
 		l_bit = bit1_pos, h_bit = bit2_pos;
 
-	reg_v = port_id_pci_reg_read(port_id, reg_off);
+	if (port_id_pci_reg_read(port_id, reg_off, &reg_v))
+		return;
 	reg_v >>= l_bit;
 	if (h_bit < 31)
 		reg_v &= ((1 << (h_bit - l_bit + 1)) - 1);
@@ -1060,7 +1041,8 @@ port_reg_display(portid_t port_id, uint32_t reg_off)
 		return;
 	if (port_reg_off_is_invalid(port_id, reg_off))
 		return;
-	reg_v = port_id_pci_reg_read(port_id, reg_off);
+	if (port_id_pci_reg_read(port_id, reg_off, &reg_v))
+		return;
 	display_port_reg_value(port_id, reg_off, reg_v);
 }
 
@@ -1081,7 +1063,9 @@ port_reg_bit_set(portid_t port_id, uint32_t reg_off, uint8_t bit_pos,
 			(int) bit_v);
 		return;
 	}
-	reg_v = port_id_pci_reg_read(port_id, reg_off);
+	if (port_id_pci_reg_read(port_id, reg_off, &reg_v))
+		return;
+
 	if (bit_v == 0)
 		reg_v &= ~(1 << bit_pos);
 	else
@@ -1123,7 +1107,9 @@ port_reg_bit_field_set(portid_t port_id, uint32_t reg_off,
 				(unsigned)max_v, (unsigned)max_v);
 		return;
 	}
-	reg_v = port_id_pci_reg_read(port_id, reg_off);
+	if (port_id_pci_reg_read(port_id, reg_off, &reg_v))
+		return;
+
 	reg_v &= ~(max_v << l_bit); /* Keep unchanged bits */
 	reg_v |= (value << l_bit); /* Set changed bits */
 	port_id_pci_reg_write(port_id, reg_off, reg_v);
