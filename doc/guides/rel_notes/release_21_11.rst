@@ -62,6 +62,11 @@ New Features
   * Added bus-level parsing of the devargs syntax.
   * Kept compatibility with the legacy syntax as parsing fallback.
 
+* **Added new memory resource read/write APIs in PCI bus.**
+
+  Added new memory resource read/write APIs ``rte_pci_mem_rd32`` and
+  ``rte_pci_mem_wr32`` for applications to read/write PCI memory
+  resource.
 
 Removed Items
 -------------

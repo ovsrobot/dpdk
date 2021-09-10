@@ -25,6 +25,7 @@
 #include <rte_common.h>
 #include <rte_devargs.h>
 #include <rte_vfio.h>
+#include <rte_io.h>
 
 #include "private.h"
 
@@ -774,6 +775,83 @@ rte_pci_set_bus_master(struct rte_pci_device *dev, bool enable)
 		return -1;
 	}
 
+	return 0;
+}
+
+static void *
+get_pci_mem_addr(const char *name, uint16_t idx, uint64_t offset)
+{
+	struct rte_pci_device *dev = NULL;
+	struct rte_pci_addr addr = {0};
+	struct rte_mem_resource *res = NULL;
+	bool found = false;
+
+	if (rte_pci_addr_parse(name, &addr)) {
+		RTE_LOG(ERR, EAL, "Wrong name format of PCI device (%s)", name);
+		return NULL;
+	}
+
+	FOREACH_DEVICE_ON_PCIBUS(dev) {
+		if (rte_pci_addr_cmp(&dev->addr, &addr)) {
+			continue;
+		} else {
+			found = true;
+			break;
+		}
+	}
+
+	if (!found) {
+		RTE_LOG(ERR, EAL, "Can not find the device (%s)", name);
+		return NULL;
+	}
+
+	res = &dev->mem_resource[idx];
+	if (idx >= PCI_MAX_RESOURCE || res->len == 0 || res->addr == NULL) {
+		RTE_LOG(ERR, EAL, "Invalid index of a mapped memory resourse");
+		return NULL;
+	}
+
+	if (offset >= res->len || offset + 4 > res->len) {
+		RTE_LOG(ERR, EAL, "Invalid offset of a memory resourse");
+		return NULL;
+	}
+
+	return (void *)((char *)res->addr + offset);
+}
+
+int
+rte_pci_mem_rd32(const char *name, uint16_t idx, uint32_t *data, uint64_t offset)
+{
+	void *reg_addr = NULL;
+
+	if (data == NULL) {
+		RTE_LOG(ERR, EAL, "NULL data buffer for PCI memory access");
+		return -EINVAL;
+	}
+
+	reg_addr = get_pci_mem_addr(name, idx, offset);
+	if (reg_addr == NULL)
+		return -EINVAL;
+
+	*data = rte_read32(reg_addr);
+	return 0;
+}
+
+int
+rte_pci_mem_wr32(const char *name, uint16_t idx, const uint32_t *data, uint64_t offset)
+{
+	void *reg_addr = NULL;
+
+	if (data == NULL) {
+		RTE_LOG(ERR, EAL, "NULL data buffer for PCI memory access");
+		return -EINVAL;
+	}
+
+	reg_addr = get_pci_mem_addr(name, idx, offset);
+	if (reg_addr == NULL)
+		return -EINVAL;
+
+	rte_write32(*data, reg_addr);
 	return 0;
 }
 

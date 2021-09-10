@@ -24,4 +24,8 @@ EXPERIMENTAL {
 
 	# added in 21.08
 	rte_pci_set_bus_master;
+
+	# added in 21.11
+	rte_pci_mem_rd32;
+	rte_pci_mem_wr32;
 };
