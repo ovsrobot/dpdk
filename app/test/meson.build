@@ -97,6 +97,7 @@ test_sources = files(
         'test_metrics.c',
         'test_mcslock.c',
         'test_mp_secondary.c',
+        'test_pcapng.c',
         'test_per_lcore.c',
         'test_pflock.c',
         'test_pmd_perf.c',
