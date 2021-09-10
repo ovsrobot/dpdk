@@ -33,7 +33,16 @@ struct cmdline {
 	char repeated_char;
 	WORD repeat_count;
 };
-#endif
+#else
+struct cmdline {
+	int s_in;
+	int s_out;
+	cmdline_parse_ctx_t *ctx;
+	struct rdline rdl;
+	char prompt[RDLINE_PROMPT_SIZE];
+	struct termios oldterm;
+};
+#endif /* !RTE_EXEC_ENV_WINDOWS */
 
 /* Disable buffering and echoing, save previous settings to oldterm. */
 void terminal_adjust(struct cmdline *cl);
