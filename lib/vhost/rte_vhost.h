@@ -38,6 +38,8 @@ extern "C" {
 #define RTE_VHOST_USER_ASYNC_COPY	(1ULL << 7)
 #define RTE_VHOST_USER_NET_COMPLIANT_OL_FLAGS	(1ULL << 8)
 
+#define VHOST_POWER_MONITOR_RING_PACKED (1ULL << 0)
+
 /* Features. */
 #ifndef VIRTIO_NET_F_GUEST_ANNOUNCE
  #define VIRTIO_NET_F_GUEST_ANNOUNCE 21
@@ -290,6 +292,20 @@ struct vhost_device_ops {
 	void (*guest_notified)(int vid);
 
 	void *reserved[1]; /**< Reserved for future extension */
+};
+
+/**
+ * Power monitor condition.
+ */
+struct rte_vhost_power_monitor_cond {
+	volatile void *addr;  /**< Address to monitor for changes */
+	/**< If the `mask` is non-zero, location pointed
+	 *   to by `addr` will be read and compared
+	 *   against this value.
+	 */
+	uint64_t val;
+	uint64_t mask; /**< 64-bit mask to extract value read from `addr` */
+	uint8_t flag;  /**< if 1, vhost packed ring, otherwise split ring */
 };
 
 /**
@@ -913,6 +929,23 @@ int rte_vhost_vring_call(int vid, uint16_t vring_idx);
  *  num of desc available
  */
 uint32_t rte_vhost_rx_queue_count(int vid, uint16_t qid);
+
+/**
+ * Get power monitor address of the vhost device
+ *
+ * @param vid
+ *  vhost device ID
+ * @param queue_id
+ *  vhost queue ID
+ * @param pmc
+ *  power monitor condition
+ * @return
+ *  0 on success, -1 on failure
+ */
+__rte_experimental
+int
+rte_vhost_get_monitor_addr(int vid, uint16_t queue_id,
+		struct rte_vhost_power_monitor_cond *pmc);
 
 /**
  * Get log base and log size of the vhost device
