@@ -29,7 +29,7 @@
 #include "main.h"
 
 #ifndef MAX_QUEUES
-#define MAX_QUEUES 128
+#define MAX_QUEUES 512
 #endif
 
 /* the maximum number of external ports supported */
