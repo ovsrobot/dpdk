@@ -428,7 +428,6 @@ eth_vhost_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 {
 	struct vhost_queue *r = q;
 	uint16_t i, nb_tx = 0;
-	uint16_t nb_send = 0;
 	uint64_t nb_bytes = 0;
 	uint64_t nb_missed = 0;
 
@@ -440,33 +439,17 @@ eth_vhost_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	if (unlikely(rte_atomic32_read(&r->allow_queuing) == 0))
 		goto out;
 
-	for (i = 0; i < nb_bufs; i++) {
-		struct rte_mbuf *m = bufs[i];
-
-		/* Do VLAN tag insertion */
-		if (m->ol_flags & PKT_TX_VLAN_PKT) {
-			int error = rte_vlan_insert(&m);
-			if (unlikely(error)) {
-				rte_pktmbuf_free(m);
-				continue;
-			}
-		}
-
-		bufs[nb_send] = m;
-		++nb_send;
-	}
-
 	/* Enqueue packets to guest RX queue */
-	while (nb_send) {
+	while (nb_bufs) {
 		uint16_t nb_pkts;
-		uint16_t num = (uint16_t)RTE_MIN(nb_send,
+		uint16_t num = (uint16_t)RTE_MIN(nb_bufs,
 						 VHOST_MAX_PKT_BURST);
 
 		nb_pkts = rte_vhost_enqueue_burst(r->vid, r->virtqueue_id,
 						  &bufs[nb_tx], num);
 
 		nb_tx += nb_pkts;
-		nb_send -= nb_pkts;
+		nb_bufs -= nb_pkts;
 		if (nb_pkts < num)
 			break;
 	}
@@ -474,7 +457,7 @@ eth_vhost_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	for (i = 0; likely(i < nb_tx); i++)
 		nb_bytes += bufs[i]->pkt_len;
 
-	nb_missed = nb_bufs - nb_tx;
+	nb_missed = nb_bufs;
 
 	r->stats.pkts += nb_tx;
 	r->stats.bytes += nb_bytes;
