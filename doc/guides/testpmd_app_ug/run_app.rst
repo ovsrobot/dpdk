@@ -15,6 +15,12 @@ a list of available EAL command-line options.
 Testpmd Command-line Options
 ----------------------------
 
+By default, testpmd receives packets on each configured port and
+forwards the received packets to its paired port.  Ports 0 and 1 are
+paired, as are ports 2 and 3, and so on.  With an odd number of ports,
+the last port is paired with itself: packets received on the port are
+sent back out on the same port.
+
 The following are the command-line options for the testpmd applications.
 They must be separated from the EAL options, shown in the previous section, with a ``--`` separator:
 
