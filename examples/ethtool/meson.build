@@ -18,7 +18,7 @@ sources = files(
 )
 includes = include_directories('lib', 'ethtool-app')
 
-deps += 'bus_pci'
+deps += 'pci'
 if dpdk_conf.has('RTE_NET_IXGBE')
     deps += 'net_ixgbe'
 endif
