@@ -5,6 +5,10 @@ includes += include_directories('.')
 
 cflags += [ '-DABI_VERSION="@0@"'.format(abi_version) ]
 
+if get_option('b_sanitize').startswith('address')
+	cflags += '-DRTE_MALLOC_ASAN'
+endif
+
 if is_windows
     sources += files(
             'eal_common_bus.c',
