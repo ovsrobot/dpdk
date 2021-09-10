@@ -91,6 +91,8 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* cmdline: Made ``cmdline`` structure definition hidden on Linux and FreeBSD.
+
 
 ABI Changes
 -----------
