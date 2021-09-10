@@ -848,12 +848,14 @@ iavf_dev_rx_queue_start(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 	else
 		err = iavf_switch_queue_lv(adapter, rx_queue_id, true, true);
 
-	if (err)
+	if (err) {
+		release_rxq_mbufs(rxq);
 		PMD_DRV_LOG(ERR, "Failed to switch RX queue %u on",
 			    rx_queue_id);
-	else
+	} else {
 		dev->data->rx_queue_state[rx_queue_id] =
 			RTE_ETH_QUEUE_STATE_STARTED;
+	}
 
 	return err;
 }
