@@ -1811,6 +1811,8 @@ parse_args(int argc, char **argv)
 		{"high-perf-cores", 1, 0, 0},
 		{"no-numa", 0, 0, 0},
 		{"enable-jumbo", 0, 0, 0},
+		{"vlan-strip", 0, 0, 0},
+		{"rx-none", 0, 0, 0},
 		{CMD_LINE_OPT_EMPTY_POLL, 1, 0, 0},
 		{CMD_LINE_OPT_PARSE_PTYPE, 0, 0, 0},
 		{CMD_LINE_OPT_LEGACY, 0, 0, 0},
@@ -1984,6 +1986,19 @@ parse_args(int argc, char **argv)
 				printf("set jumbo frame "
 					"max packet length to %u\n",
 				(unsigned int)port_conf.rxmode.max_rx_pkt_len);
+			}
+
+			if (!strncmp(lgopts[option_index].name,
+					"vlan-strip", 10)) {
+				printf("set vlan strip\n");
+				port_conf.rxmode.offloads =
+						DEV_RX_OFFLOAD_VLAN_STRIP;
+			}
+
+			if (!strncmp(lgopts[option_index].name,
+					"rx-none", 7)) {
+				printf("none of DCB,RSS or VMDQ mode\n");
+				port_conf.rxmode.mq_mode = ETH_MQ_RX_NONE;
 			}
 
 			if (!strncmp(lgopts[option_index].name,
