@@ -1380,6 +1380,51 @@ eth_rx_queue_count(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 	return rte_vhost_rx_queue_count(vq->vid, vq->virtqueue_id);
 }
 
+#define CLB_VAL_IDX 0
+#define CLB_MSK_IDX 1
+static int
+vhost_packed_monitor_callback(const uint64_t value,
+		const uint64_t opaque[RTE_POWER_MONITOR_OPAQUE_SZ])
+{
+	const uint64_t m = opaque[CLB_MSK_IDX];
+	const uint64_t v = opaque[CLB_VAL_IDX];
+
+	return (value & m) == v ? -1 : 0;
+}
+
+static int
+vhost_split_monitor_callback(const uint64_t value,
+		const uint64_t opaque[RTE_POWER_MONITOR_OPAQUE_SZ])
+{
+	const uint64_t m = opaque[CLB_MSK_IDX];
+	const uint64_t v = opaque[CLB_VAL_IDX];
+
+	return (value & m) == v ? 0 : -1;
+}
+
+static int
+vhost_get_monitor_addr(void *rx_queue, struct rte_power_monitor_cond *pmc)
+{
+	struct vhost_queue *vq = rx_queue;
+	struct rte_vhost_power_monitor_cond vhost_pmc;
+	int ret;
+	if (vq == NULL)
+		return -EINVAL;
+	ret = rte_vhost_get_monitor_addr(vq->vid, vq->virtqueue_id,
+			&vhost_pmc);
+	if (ret < 0)
+		return -EINVAL;
+	pmc->addr = vhost_pmc.addr;
+	pmc->opaque[CLB_VAL_IDX] = vhost_pmc.val;
+	pmc->opaque[CLB_MSK_IDX] = vhost_pmc.mask;
+	if (vhost_pmc.flag & VHOST_POWER_MONITOR_RING_PACKED)
+		pmc->fn = vhost_packed_monitor_callback;
+	else
+		pmc->fn = vhost_split_monitor_callback;
+	pmc->size = sizeof(uint16_t);
+	return 0;
+}
+
 static const struct eth_dev_ops ops = {
 	.dev_start = eth_dev_start,
 	.dev_stop = eth_dev_stop,
@@ -1399,6 +1444,7 @@ static const struct eth_dev_ops ops = {
 	.xstats_get_names = vhost_dev_xstats_get_names,
 	.rx_queue_intr_enable = eth_rxq_intr_enable,
 	.rx_queue_intr_disable = eth_rxq_intr_disable,
+	.get_monitor_addr        = vhost_get_monitor_addr,
 };
 
 static int
