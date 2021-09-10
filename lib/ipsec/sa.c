@@ -565,6 +565,12 @@ rte_ipsec_sa_init(struct rte_ipsec_sa *sa, const struct rte_ipsec_sa_prm *prm,
 	sa->type = type;
 	sa->size = sz;
 
+
+	if (prm->ipsec_xform.options.tso == 1) {
+		sa->tso.enabled = 1;
+		sa->tso.mss = prm->ipsec_xform.mss;
+	}
+
 	/* check for ESN flag */
 	sa->sqn_mask = (prm->ipsec_xform.options.esn == 0) ?
 		UINT32_MAX : UINT64_MAX;
