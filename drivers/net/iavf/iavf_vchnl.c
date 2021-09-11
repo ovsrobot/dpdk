@@ -23,7 +23,7 @@
 #include "iavf.h"
 #include "iavf_rxtx.h"
 
-#define MAX_TRY_TIMES 200
+#define MAX_TRY_TIMES 1500
 #define ASQ_DELAY_MS  10
 
 static uint32_t
