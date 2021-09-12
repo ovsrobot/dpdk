@@ -750,6 +750,27 @@ adapter_stats(void)
 	return TEST_SUCCESS;
 }
 
+static int
+adapter_queue_conf(void)
+{
+	int err;
+	struct rte_event_eth_rx_adapter_queue_conf queue_conf;
+
+	err = rte_event_eth_rx_adapter_queue_conf_get(TEST_INST_ID, TEST_DEV_ID,
+						      0, &queue_conf);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	err = rte_event_eth_rx_adapter_queue_conf_get(TEST_INST_ID, TEST_DEV_ID,
+						      -1, &queue_conf);
+	TEST_ASSERT(err == -EINVAL, "Expected -EINVAL got %d", err);
+
+	err = rte_event_eth_rx_adapter_queue_conf_get(TEST_INST_ID, TEST_DEV_ID,
+						      0, NULL);
+	TEST_ASSERT(err == -EINVAL, "Expected -EINVAL got %d", err);
+
+	return TEST_SUCCESS;
+}
+
 static struct unit_test_suite event_eth_rx_tests = {
 	.suite_name = "rx event eth adapter test suite",
 	.setup = testsuite_setup,
@@ -762,6 +783,7 @@ static struct unit_test_suite event_eth_rx_tests = {
 					adapter_multi_eth_add_del),
 		TEST_CASE_ST(adapter_create, adapter_free, adapter_start_stop),
 		TEST_CASE_ST(adapter_create, adapter_free, adapter_stats),
+		TEST_CASE_ST(adapter_create, adapter_free, adapter_queue_conf),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
