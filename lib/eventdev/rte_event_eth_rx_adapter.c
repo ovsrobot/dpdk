@@ -2759,3 +2759,78 @@ rte_event_eth_rx_adapter_cb_register(uint8_t id,
 
 	return 0;
 }
+
+int
+rte_event_eth_rx_adapter_queue_conf_get(uint8_t id,
+			uint16_t eth_dev_id,
+			uint16_t rx_queue_id,
+			struct rte_event_eth_rx_adapter_queue_conf *queue_conf)
+{
+	struct rte_eventdev *dev;
+	struct eth_device_info *dev_info;
+	struct rte_event_eth_rx_adapter *rx_adapter;
+	struct eth_rx_queue_info *queue_info;
+	struct rte_event *qi_ev;
+	int ret;
+	uint32_t cap;
+
+	RTE_EVENT_ETH_RX_ADAPTER_ID_VALID_OR_ERR_RET(id, -EINVAL);
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(eth_dev_id, -EINVAL);
+
+	if (rx_queue_id >= rte_eth_devices[eth_dev_id].data->nb_rx_queues) {
+		RTE_EDEV_LOG_ERR("Invalid rx queue_id %u", rx_queue_id);
+		return -EINVAL;
+	}
+
+	if (queue_conf == NULL) {
+		RTE_EDEV_LOG_ERR("Rx queue conf struct cannot be NULL");
+		return -EINVAL;
+	}
+
+	rx_adapter = rxa_id_to_adapter(id);
+	if (rx_adapter == NULL)
+		return -EINVAL;
+
+	dev = &rte_eventdevs[rx_adapter->eventdev_id];
+	ret = rte_event_eth_rx_adapter_caps_get(rx_adapter->eventdev_id,
+						eth_dev_id,
+						&cap);
+	if (ret) {
+		RTE_EDEV_LOG_ERR("Failed to get adapter caps edev %" PRIu8
+				 "eth port %" PRIu16, id, eth_dev_id);
+		return ret;
+	}
+
+	if (cap & RTE_EVENT_ETH_RX_ADAPTER_CAP_INTERNAL_PORT) {
+		RTE_FUNC_PTR_OR_ERR_RET(
+				*dev->dev_ops->eth_rx_adapter_queue_conf_get,
+				-ENOTSUP);
+		ret = (*dev->dev_ops->eth_rx_adapter_queue_conf_get)(dev,
+						&rte_eth_devices[eth_dev_id],
+						rx_queue_id,
+						queue_conf);
+		return ret;
+	}
+
+	dev_info = &rx_adapter->eth_devices[eth_dev_id];
+
+	queue_info = &dev_info->rx_queue[rx_queue_id];
+	if (!queue_info->queue_enabled) {
+		RTE_EDEV_LOG_ERR("Rx queue %u not added", rx_queue_id);
+		return -EINVAL;
+	}
+
+	qi_ev = (struct rte_event *)&queue_info->event;
+
+	memset(queue_conf, 0, sizeof(*queue_conf));
+	queue_conf->rx_queue_flags = 0;
+	if (queue_info->flow_id_mask != 0)
+		queue_conf->rx_queue_flags |=
+			RTE_EVENT_ETH_RX_ADAPTER_QUEUE_FLOW_ID_VALID;
+
+	queue_conf->servicing_weight = queue_info->wt;
+
+	memcpy(&queue_conf->ev, qi_ev, sizeof(*qi_ev));
+
+	return 0;
+}
