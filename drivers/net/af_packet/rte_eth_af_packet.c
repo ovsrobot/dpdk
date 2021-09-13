@@ -216,6 +216,25 @@ eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		    (poll(&pfd, 1, -1) < 0))
 			break;
 
+		/*
+		 * Poll can return POLLERR if the interface is down
+		 *
+		 * It will almost always return POLLOUT, even if there
+		 * are no extra buffers available
+		 *
+		 * This happens, because packet_poll() calls datagram_poll()
+		 * which checks the space left in the socket buffer and,
+		 * in the case of packet_mmap, the default socket buffer length
+		 * doesn't match the requested size for the tx_ring.
+		 * As such, there is almost always space left in socket buffer,
+		 * which doesn't seem to be correlated to the requested size
+		 * for the tx_ring in packet_mmap.
+		 *
+		 * This results in poll() returning POLLOUT.
+		 */
+		if (ppd->tp_status != TP_STATUS_AVAILABLE)
+			break;
+
 		/* copy the tx frame data */
 		pbuf = (uint8_t *) ppd + TPACKET2_HDRLEN -
 			sizeof(struct sockaddr_ll);
