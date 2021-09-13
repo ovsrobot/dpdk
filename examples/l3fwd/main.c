@@ -123,7 +123,7 @@ static struct rte_eth_conf port_conf = {
 		.mq_mode = ETH_MQ_RX_RSS,
 		.max_rx_pkt_len = RTE_ETHER_MAX_LEN,
 		.split_hdr_size = 0,
-		.offloads = DEV_RX_OFFLOAD_CHECKSUM,
+
 	},
 	.rx_adv_conf = {
 		.rss_conf = {
@@ -1038,6 +1038,30 @@ l3fwd_poll_resource_setup(void)
 		if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MBUF_FAST_FREE)
 			local_port_conf.txmode.offloads |=
 				DEV_TX_OFFLOAD_MBUF_FAST_FREE;
+
+		if (dev_info.rx_offload_capa & DEV_RX_OFFLOAD_IPV4_CKSUM)
+			local_port_conf.rxmode.offloads |=
+			 DEV_RX_OFFLOAD_IPV4_CKSUM;
+		else {
+			rte_exit(EXIT_FAILURE,
+				"IPV4 Checksum offload not available. (port %u) ",
+				portid);
+		}
+
+		if (dev_info.rx_offload_capa & DEV_RX_OFFLOAD_UDP_CKSUM)
+			local_port_conf.rxmode.offloads |=
+			DEV_RX_OFFLOAD_UDP_CKSUM;
+
+		else
+			printf("WARNING: UDP Checksum offload not available.\n");
+
+		if (dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_CKSUM)
+			local_port_conf.rxmode.offloads |=
+			DEV_RX_OFFLOAD_TCP_CKSUM;
+
+		else
+			printf("WARNING: TCP Checksum offload not available.\n");
+
 
 		local_port_conf.rx_adv_conf.rss_conf.rss_hf &=
 			dev_info.flow_type_rss_offloads;
