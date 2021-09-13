@@ -887,6 +887,7 @@ iavf_dev_start(struct rte_eth_dev *dev)
 
 err_mac:
 	iavf_add_del_all_mac_addr(adapter, false);
+	iavf_stop_queues(dev);
 err_queue:
 	return -1;
 }
