@@ -167,6 +167,22 @@ eth_af_packet_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	return num_rx;
 }
 
+static inline bool tx_ring_status_unavailable(uint32_t tp_status)
+{
+	/*
+	 * We eliminate the timestamp status from the packet status.
+	 * This should only matter if timestamping is enabled on the socket,
+	 * but there is a bug in the kernel which is fixed in newer releases.
+	 *
+	 * See the following kernel commit for reference:
+	 *     commit 171c3b151118a2fe0fc1e2a9d1b5a1570cfe82d2
+	 *     net: packetmmap: fix only tx timestamp on request
+	 */
+	tp_status &= ~(TP_STATUS_TS_SOFTWARE | TP_STATUS_TS_RAW_HARDWARE);
+
+	return tp_status != TP_STATUS_AVAILABLE;
+}
+
 /*
  * Callback to handle sending packets through a real NIC.
  */
@@ -212,8 +228,8 @@ eth_af_packet_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		}
 
 		/* point at the next incoming frame */
-		if ((ppd->tp_status != TP_STATUS_AVAILABLE) &&
-		    (poll(&pfd, 1, -1) < 0))
+		if (tx_ring_status_unavailable(ppd->tp_status) &&
+		    poll(&pfd, 1, -1) < 0)
 			break;
 
 		/* copy the tx frame data */
