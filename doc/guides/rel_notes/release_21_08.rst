@@ -223,6 +223,12 @@ ABI Changes
 
 * No ABI change that would break compatibility with 20.11.
 
+* security: ``rte_security_set_pkt_metadata`` and ``rte_security_get_userdata``
+  routines used by Inline outbound and Inline inbound security processing are
+  made inline and enhanced to do simple 64-bit set/get for PMD's that donot
+  have much processing in PMD specific callbacks but just 64-bit set/get.
+  This avoids a per-pkt function pointer jump overhead for such PMD's.
+
 
 Known Issues
 ------------
