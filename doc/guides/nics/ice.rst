@@ -219,6 +219,14 @@ Runtime Config Options
 
   These ICE_DBG_XXX are defined in ``drivers/net/ice/base/ice_type.h``.
 
+- ``Reduce Rx interrupts and latency`` (default ``0``)
+
+  vRAN workloads require low latency DPDK interface for the front haul
+  interface connection to Radio. Now we can reduce Rx interrupts and
+  latency by specify ``1`` for parameter ``rx-low-latency``::
+
+    -a 0000:88:00.0,rx-low-latency=1
+
 Driver compilation and testing
 ------------------------------
 
