@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <fnmatch.h>
 #include <inttypes.h>
+#include <mntent.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include <errno.h>
@@ -34,6 +35,7 @@
 #include "eal_private.h"
 #include "eal_internal_cfg.h"
 #include "eal_hugepages.h"
+#include "eal_hugepage_info.h"
 #include "eal_filesystem.h"
 
 static const char sys_dir_path[] = "/sys/kernel/mm/hugepages";
@@ -195,73 +197,110 @@ get_default_hp_size(void)
 	return size;
 }
 
-static int
-get_hugepage_dir(uint64_t hugepage_sz, char *hugedir, int len)
+int
+eal_hugepage_mount_walk(eal_hugepage_mount_walk_cb *cb, void *cb_arg)
 {
-	enum proc_mount_fieldnames {
-		DEVICE = 0,
-		MOUNTPT,
-		FSTYPE,
-		OPTIONS,
-		_FIELDNAME_MAX
-	};
-	static uint64_t default_size = 0;
-	const char proc_mounts[] = "/proc/mounts";
-	const char hugetlbfs_str[] = "hugetlbfs";
-	const size_t htlbfs_str_len = sizeof(hugetlbfs_str) - 1;
-	const char pagesize_opt[] = "pagesize=";
-	const size_t pagesize_opt_len = sizeof(pagesize_opt) - 1;
-	const char split_tok = ' ';
-	char *splitstr[_FIELDNAME_MAX];
-	char buf[BUFSIZ];
-	int retval = -1;
-	const struct internal_config *internal_conf =
-		eal_get_internal_configuration();
+	static const char PATH[] = "/proc/mounts";
+	static const char OPTION[] = "pagesize";
 
-	FILE *fd = fopen(proc_mounts, "r");
-	if (fd == NULL)
-		rte_panic("Cannot open %s\n", proc_mounts);
+	static uint64_t default_size;
+
+	FILE *f = NULL;
+	struct mntent *m;
+	char *hugepage_sz_str;
+	uint64_t hugepage_sz;
+	int ret = -1;
+
+	f = setmntent(PATH, "r");
+	if (f == NULL) {
+		RTE_LOG(ERR, EAL, "%s(): setmntent(%s): %s\n",
+				__func__, PATH, strerror(errno));
+		goto exit;
+	}
 
 	if (default_size == 0)
 		default_size = get_default_hp_size();
 
-	while (fgets(buf, sizeof(buf), fd)){
-		if (rte_strsplit(buf, sizeof(buf), splitstr, _FIELDNAME_MAX,
-				split_tok) != _FIELDNAME_MAX) {
-			RTE_LOG(ERR, EAL, "Error parsing %s\n", proc_mounts);
-			break; /* return NULL */
-		}
+	ret = 0;
+	do {
+		m = getmntent(f);
+		if (m == NULL)
+			break;
 
-		/* we have a specified --huge-dir option, only examine that dir */
-		if (internal_conf->hugepage_dir != NULL &&
-				strcmp(splitstr[MOUNTPT], internal_conf->hugepage_dir) != 0)
+		if (strcmp(m->mnt_type, "hugetlbfs") != 0)
 			continue;
 
-		if (strncmp(splitstr[FSTYPE], hugetlbfs_str, htlbfs_str_len) == 0){
-			const char *pagesz_str = strstr(splitstr[OPTIONS], pagesize_opt);
-
-			/* if no explicit page size, the default page size is compared */
-			if (pagesz_str == NULL){
-				if (hugepage_sz == default_size){
-					strlcpy(hugedir, splitstr[MOUNTPT], len);
-					retval = 0;
-					break;
-				}
+		hugepage_sz_str = hasmntopt(m, OPTION);
+		if (hugepage_sz_str != NULL) {
+			hugepage_sz_str += strlen(OPTION) + 1; /* +1 for '=' */
+			hugepage_sz = rte_str_to_size(hugepage_sz_str);
+			if (hugepage_sz == 0) {
+				RTE_LOG(DEBUG, EAL, "Cannot parse hugepage size from '%s' for %s\n",
+						m->mnt_opts, m->mnt_dir);
+				continue;
 			}
-			/* there is an explicit page size, so check it */
-			else {
-				uint64_t pagesz = rte_str_to_size(&pagesz_str[pagesize_opt_len]);
-				if (pagesz == hugepage_sz) {
-					strlcpy(hugedir, splitstr[MOUNTPT], len);
-					retval = 0;
-					break;
-				}
-			}
-		} /* end if strncmp hugetlbfs */
-	} /* end while fgets */
+		} else {
+			RTE_LOG(DEBUG, EAL, "Hugepage filesystem at %s without %s option\n",
+					m->mnt_dir, OPTION);
+			hugepage_sz = default_size;
+		}
 
-	fclose(fd);
-	return retval;
+		if (cb(m->mnt_dir, hugepage_sz, cb_arg) != 0)
+			break;
+	} while (m != NULL);
+
+	if (ferror(f) && !feof(f)) {
+		RTE_LOG(DEBUG, EAL, "%s(): getmntent(): %s\n",
+				__func__, strerror(errno));
+		ret = -1;
+		goto exit;
+	}
+
+exit:
+	if (f != NULL)
+		endmntent(f);
+	return ret;
+}
+
+struct match_hugepage_mount_arg {
+	uint64_t hugepage_sz;
+	char *hugedir;
+	int hugedir_len;
+	bool done;
+};
+
+static int
+match_hugepage_mount(const char *path, uint64_t hugepage_sz, void *cb_arg)
+{
+	const struct internal_config *internal_conf =
+		eal_get_internal_configuration();
+	struct match_hugepage_mount_arg *arg = cb_arg;
+
+	/* we have a specified --huge-dir option, only examine that dir */
+	if (internal_conf->hugepage_dir != NULL &&
+			strcmp(path, internal_conf->hugepage_dir) != 0)
+		return 0;
+
+	if (hugepage_sz == arg->hugepage_sz) {
+		strlcpy(arg->hugedir, path, arg->hugedir_len);
+		arg->done = true;
+		return 1;
+	}
+
+	return 0;
+}
+
+static int
+get_hugepage_dir(uint64_t hugepage_sz, char *hugedir, int len)
+{
+	struct match_hugepage_mount_arg arg = {
+		.hugepage_sz = hugepage_sz,
+		.hugedir = hugedir,
+		.hugedir_len = len,
+		.done = false,
+	};
+	int ret = eal_hugepage_mount_walk(match_hugepage_mount, &arg);
+	return ret == 0 && arg.done ? 0 : -1;
 }
 
 /*
