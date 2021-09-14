@@ -202,7 +202,7 @@ struct rte_port {
 	struct rte_eth_dev_info dev_info;   /**< PCI info + driver name */
 	struct rte_eth_conf     dev_conf;   /**< Port configuration. */
 	struct rte_ether_addr       eth_addr;   /**< Port ethernet address */
-	struct rte_eth_stats    stats;      /**< Last port statistics */
+	struct rte_eth_stats    *stats;      /**< Last port statistics */
 	unsigned int            socket_id;  /**< For NUMA support */
 	uint16_t		parse_tunnel:1; /**< Parse internal headers */
 	uint16_t                tso_segsz;  /**< Segmentation offload MSS for non-tunneled packets. */

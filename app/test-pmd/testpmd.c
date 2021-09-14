@@ -84,6 +84,7 @@
 
 #define EXTMEM_HEAP_NAME "extmem"
 #define EXTBUF_ZONE_SIZE RTE_PGSIZE_2M
+#define TESTPMD_ETH_STATS_MZNAME "testpmd_eth_stats"
 
 uint16_t verbose_level = 0; /**< Silent by default. */
 int testpmd_logtype; /**< Log type for testpmd logs */
@@ -598,6 +599,46 @@ uint16_t gso_max_segment_size = RTE_ETHER_MAX_LEN - RTE_ETHER_CRC_LEN;
 
 /* Holds the registered mbuf dynamic flags names. */
 char dynf_names[64][RTE_MBUF_DYN_NAMESIZE];
+
+/* Memzone for storing ethdev last port statistics. */
+const struct rte_memzone *eth_stats_mz;
+
+static int
+eth_stats_zone_reserve(void)
+{
+	size_t len = RTE_MAX_ETHPORTS * sizeof(struct rte_eth_stats);
+
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		eth_stats_mz = rte_memzone_reserve_aligned(
+						TESTPMD_ETH_STATS_MZNAME, len,
+						SOCKET_ID_ANY, 0,
+						RTE_CACHE_LINE_SIZE);
+	} else {
+		eth_stats_mz = rte_memzone_lookup(TESTPMD_ETH_STATS_MZNAME);
+	}
+	if (eth_stats_mz == NULL)
+		return -1;
+
+	return 0;
+}
+
+static void
+eth_stats_zone_free(void)
+{
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+		rte_memzone_free(eth_stats_mz);
+}
+
+static void
+port_stats_init(portid_t pid)
+{
+	struct rte_eth_stats *buf = (struct rte_eth_stats *)eth_stats_mz->addr;
+	struct rte_port *port = &ports[pid];
+
+	port->stats = &buf[pid];
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+		memset(port->stats, 0, sizeof(struct rte_eth_stats));
+}
 
 /*
  * Helper function to check if socket is already discovered.
@@ -1929,13 +1970,13 @@ fwd_stats_display(void)
 		port = &ports[pt_id];
 
 		rte_eth_stats_get(pt_id, &stats);
-		stats.ipackets -= port->stats.ipackets;
-		stats.opackets -= port->stats.opackets;
-		stats.ibytes -= port->stats.ibytes;
-		stats.obytes -= port->stats.obytes;
-		stats.imissed -= port->stats.imissed;
-		stats.oerrors -= port->stats.oerrors;
-		stats.rx_nombuf -= port->stats.rx_nombuf;
+		stats.ipackets -= port->stats->ipackets;
+		stats.opackets -= port->stats->opackets;
+		stats.ibytes -= port->stats->ibytes;
+		stats.obytes -= port->stats->obytes;
+		stats.imissed -= port->stats->imissed;
+		stats.oerrors -= port->stats->oerrors;
+		stats.rx_nombuf -= port->stats->rx_nombuf;
 
 		total_recv += stats.ipackets;
 		total_xmit += stats.opackets;
@@ -2027,7 +2068,7 @@ fwd_stats_reset(void)
 
 	for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
 		pt_id = fwd_ports_ids[i];
-		rte_eth_stats_get(pt_id, &ports[pt_id].stats);
+		rte_eth_stats_get(pt_id, ports[pt_id].stats);
 	}
 	for (sm_id = 0; sm_id < cur_fwd_config.nb_fwd_streams; sm_id++) {
 		struct fwd_stream *fs = fwd_streams[sm_id];
@@ -2888,6 +2929,7 @@ close_port(portid_t pid)
 			port_flow_flush(pi);
 			rte_eth_dev_close(pi);
 		}
+		eth_stats_zone_free();
 	}
 
 	remove_invalid_ports();
@@ -3572,6 +3614,7 @@ init_port_config(void)
 			port->dev_conf.intr_conf.lsc = 1;
 		if (rmv_interrupt && (*port->dev_info.dev_flags & RTE_ETH_DEV_INTR_RMV))
 			port->dev_conf.intr_conf.rmv = 1;
+		port_stats_init(pid);
 	}
 }
 
@@ -3881,6 +3924,10 @@ main(int argc, char** argv)
 	if (diag < 0)
 		rte_exit(EXIT_FAILURE, "Cannot init EAL: %s\n",
 			 rte_strerror(rte_errno));
+
+	ret = eth_stats_zone_reserve();
+	if (ret != 0)
+		rte_exit(EXIT_FAILURE, "Allocate memzone ethdev stats failed");
 
 	ret = register_eth_event_callback();
 	if (ret != 0)

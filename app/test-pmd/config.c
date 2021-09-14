@@ -265,7 +265,7 @@ nic_stats_clear(portid_t port_id)
 		return;
 	}
 
-	ret = rte_eth_stats_get(port_id, &ports[port_id].stats);
+	ret = rte_eth_stats_get(port_id, ports[port_id].stats);
 	if (ret != 0) {
 		if (ret < 0)
 			ret = -ret;
@@ -358,7 +358,7 @@ nic_xstats_clear(portid_t port_id)
 		return;
 	}
 
-	ret = rte_eth_stats_get(port_id, &ports[port_id].stats);
+	ret = rte_eth_stats_get(port_id, ports[port_id].stats);
 	if (ret != 0) {
 		if (ret < 0)
 			ret = -ret;
