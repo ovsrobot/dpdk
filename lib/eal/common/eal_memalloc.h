@@ -8,7 +8,7 @@
 #include <stdbool.h>
 
 #include <rte_memory.h>
-
+#include "eal_internal_cfg.h"
 /*
  * Allocate segment of specified page size.
  */
@@ -95,5 +95,11 @@ eal_memalloc_init(void);
 
 int
 eal_memalloc_cleanup(void);
+
+int
+eal_memalloc_memfile_init(void);
+
+int
+eal_memalloc_memfile_alloc(struct hugepage_info *hpa);
 
 #endif /* EAL_MEMALLOC_H */
