@@ -19,9 +19,13 @@ extern "C" {
 
 #include <sys/types.h>
 
+#ifndef RTE_EXEC_ENV_WINDOWS
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#else
+#include <Ws2tcpip.h>
+#endif
 
 #include <rte_compat.h>
 #include <rte_common.h>

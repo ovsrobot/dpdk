@@ -12,7 +12,11 @@
 #include <errno.h>
 #include <stdint.h>
 #include <inttypes.h>
+#ifndef RTE_EXEC_ENV_WINDOWS
 #include <netinet/in.h>
+#else
+#include <Ws2tcpip.h>
+#endif
 
 #include <rte_byteorder.h>
 #include <rte_log.h>

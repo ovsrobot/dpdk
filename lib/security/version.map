@@ -1,7 +1,6 @@
 DPDK_22 {
 	global:
 
-	rte_security_attach_session;
 	rte_security_capabilities_get;
 	rte_security_capability_get;
 	rte_security_session_create;
