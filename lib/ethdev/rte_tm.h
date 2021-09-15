@@ -93,38 +93,38 @@ extern "C" {
  */
 enum rte_tm_stats_type {
 	/** Number of packets scheduled from current node. */
-	RTE_TM_STATS_N_PKTS = 1 << 0,
+	RTE_TM_STATS_N_PKTS = RTE_BIT64(0),
 
 	/** Number of bytes scheduled from current node. */
-	RTE_TM_STATS_N_BYTES = 1 << 1,
+	RTE_TM_STATS_N_BYTES = RTE_BIT64(1),
 
 	/** Number of green packets dropped by current leaf node.  */
-	RTE_TM_STATS_N_PKTS_GREEN_DROPPED = 1 << 2,
+	RTE_TM_STATS_N_PKTS_GREEN_DROPPED = RTE_BIT64(2),
 
 	/** Number of yellow packets dropped by current leaf node.  */
-	RTE_TM_STATS_N_PKTS_YELLOW_DROPPED = 1 << 3,
+	RTE_TM_STATS_N_PKTS_YELLOW_DROPPED = RTE_BIT64(3),
 
 	/** Number of red packets dropped by current leaf node.  */
-	RTE_TM_STATS_N_PKTS_RED_DROPPED = 1 << 4,
+	RTE_TM_STATS_N_PKTS_RED_DROPPED = RTE_BIT64(4),
 
 	/** Number of green bytes dropped by current leaf node.  */
-	RTE_TM_STATS_N_BYTES_GREEN_DROPPED = 1 << 5,
+	RTE_TM_STATS_N_BYTES_GREEN_DROPPED = RTE_BIT64(5),
 
 	/** Number of yellow bytes dropped by current leaf node.  */
-	RTE_TM_STATS_N_BYTES_YELLOW_DROPPED = 1 << 6,
+	RTE_TM_STATS_N_BYTES_YELLOW_DROPPED = RTE_BIT64(6),
 
 	/** Number of red bytes dropped by current leaf node.  */
-	RTE_TM_STATS_N_BYTES_RED_DROPPED = 1 << 7,
+	RTE_TM_STATS_N_BYTES_RED_DROPPED = RTE_BIT64(7),
 
 	/** Number of packets currently waiting in the packet queue of current
 	 * leaf node.
 	 */
-	RTE_TM_STATS_N_PKTS_QUEUED = 1 << 8,
+	RTE_TM_STATS_N_PKTS_QUEUED = RTE_BIT64(8),
 
 	/** Number of bytes currently waiting in the packet queue of current
 	 * leaf node.
 	 */
-	RTE_TM_STATS_N_BYTES_QUEUED = 1 << 9,
+	RTE_TM_STATS_N_BYTES_QUEUED = RTE_BIT64(9),
 };
 
 /**
@@ -169,31 +169,31 @@ enum rte_tm_dynamic_update_type {
 	 * hierarchy level as the former parent node. Consequently, the node
 	 * whose parent is changed preserves its hierarchy level.
 	 */
-	RTE_TM_UPDATE_NODE_PARENT_KEEP_LEVEL = 1 << 0,
+	RTE_TM_UPDATE_NODE_PARENT_KEEP_LEVEL = RTE_BIT64(0),
 
 	/** Dynamic parent node update. The new parent node is located on
 	 * different hierarchy level than the former parent node. Consequently,
 	 * the node whose parent is changed also changes its hierarchy level.
 	 */
-	RTE_TM_UPDATE_NODE_PARENT_CHANGE_LEVEL = 1 << 1,
+	RTE_TM_UPDATE_NODE_PARENT_CHANGE_LEVEL = RTE_BIT64(1),
 
 	/** Dynamic node add/delete. */
-	RTE_TM_UPDATE_NODE_ADD_DELETE = 1 << 2,
+	RTE_TM_UPDATE_NODE_ADD_DELETE = RTE_BIT64(2),
 
 	/** Suspend/resume nodes. */
-	RTE_TM_UPDATE_NODE_SUSPEND_RESUME = 1 << 3,
+	RTE_TM_UPDATE_NODE_SUSPEND_RESUME = RTE_BIT64(3),
 
 	/** Dynamic switch between byte-based and packet-based WFQ weights. */
-	RTE_TM_UPDATE_NODE_WFQ_WEIGHT_MODE = 1 << 4,
+	RTE_TM_UPDATE_NODE_WFQ_WEIGHT_MODE = RTE_BIT64(4),
 
 	/** Dynamic update on number of SP priorities. */
-	RTE_TM_UPDATE_NODE_N_SP_PRIORITIES = 1 << 5,
+	RTE_TM_UPDATE_NODE_N_SP_PRIORITIES = RTE_BIT64(5),
 
 	/** Dynamic update of congestion management mode for leaf nodes. */
-	RTE_TM_UPDATE_NODE_CMAN = 1 << 6,
+	RTE_TM_UPDATE_NODE_CMAN = RTE_BIT64(6),
 
 	/** Dynamic update of the set of enabled stats counter types. */
-	RTE_TM_UPDATE_NODE_STATS = 1 << 7,
+	RTE_TM_UPDATE_NODE_STATS = RTE_BIT64(7),
 };
 
 /**

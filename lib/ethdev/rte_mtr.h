@@ -60,28 +60,28 @@ extern "C" {
  */
 enum rte_mtr_stats_type {
 	/** Number of packets passed as green by the policer. */
-	RTE_MTR_STATS_N_PKTS_GREEN = 1 << 0,
+	RTE_MTR_STATS_N_PKTS_GREEN = RTE_BIT64(0),
 
 	/** Number of packets passed as yellow by the policer. */
-	RTE_MTR_STATS_N_PKTS_YELLOW = 1 << 1,
+	RTE_MTR_STATS_N_PKTS_YELLOW = RTE_BIT64(1),
 
 	/** Number of packets passed as red by the policer. */
-	RTE_MTR_STATS_N_PKTS_RED = 1 << 2,
+	RTE_MTR_STATS_N_PKTS_RED = RTE_BIT64(2),
 
 	/** Number of packets dropped by the policer. */
-	RTE_MTR_STATS_N_PKTS_DROPPED = 1 << 3,
+	RTE_MTR_STATS_N_PKTS_DROPPED = RTE_BIT64(3),
 
 	/** Number of bytes passed as green by the policer. */
-	RTE_MTR_STATS_N_BYTES_GREEN = 1 << 4,
+	RTE_MTR_STATS_N_BYTES_GREEN = RTE_BIT64(4),
 
 	/** Number of bytes passed as yellow by the policer. */
-	RTE_MTR_STATS_N_BYTES_YELLOW = 1 << 5,
+	RTE_MTR_STATS_N_BYTES_YELLOW = RTE_BIT64(5),
 
 	/** Number of bytes passed as red by the policer. */
-	RTE_MTR_STATS_N_BYTES_RED = 1 << 6,
+	RTE_MTR_STATS_N_BYTES_RED = RTE_BIT64(6),
 
 	/** Number of bytes dropped by the policer. */
-	RTE_MTR_STATS_N_BYTES_DROPPED = 1 << 7,
+	RTE_MTR_STATS_N_BYTES_DROPPED = RTE_BIT64(7),
 };
 
 /**
