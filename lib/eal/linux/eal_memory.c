@@ -1002,7 +1002,7 @@ remap_needed_hugepages(struct hugepage_file *hugepages, int n_pages)
 		cur = &hugepages[cur_page];
 		prev = cur_page == 0 ? NULL : &hugepages[cur_page - 1];
 
-		/* if size is zero, no more pages left */
+		/* if size is zero, no more page left */
 		if (cur->size == 0)
 			break;
 
@@ -1550,7 +1550,7 @@ eal_legacy_hugepage_attach(void)
 		struct rte_memseg_list *msl;
 		struct rte_memseg *ms;
 
-		/* if size is zero, no more pages left */
+		/* if size is zero, no more page left */
 		if (map_sz == 0)
 			break;
 

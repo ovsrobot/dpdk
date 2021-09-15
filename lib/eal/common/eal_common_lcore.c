@@ -191,9 +191,12 @@ rte_eal_cpu_init(void)
 	/* Set the count of enabled logical cores of the EAL configuration */
 	config->lcore_count = count;
 	RTE_LOG(DEBUG, EAL,
-		"Support maximum %u logical core(s) by configuration.\n",
-		RTE_MAX_LCORE);
-	RTE_LOG(INFO, EAL, "Detected %u lcore(s)\n", config->lcore_count);
+			"Support maximum %u logical core%s by configuration.\n",
+			RTE_MAX_LCORE,
+			RTE_MAX_LCORE > 1 ? "s" : "");
+	RTE_LOG(INFO, EAL, "Detected %u lcore%s\n",
+			config->lcore_count,
+			config->lcore_count > 1 ? "s" : "");
 
 	/* sort all socket id's in ascending order */
 	qsort(lcore_to_socket_id, RTE_DIM(lcore_to_socket_id),
@@ -208,7 +211,9 @@ rte_eal_cpu_init(void)
 					socket_id;
 		prev_socket_id = socket_id;
 	}
-	RTE_LOG(INFO, EAL, "Detected %u NUMA nodes\n", config->numa_node_count);
+	RTE_LOG(INFO, EAL, "Detected %u NUMA node%s\n",
+			config->numa_node_count,
+			config->numa_node_count > 1 ? "s" : "");
 
 	return 0;
 }

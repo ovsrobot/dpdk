@@ -117,7 +117,7 @@ get_num_hugepages(const char *subdir, size_t sz)
 		over_pages = 0;
 
 	if (num_pages == 0 && over_pages == 0)
-		RTE_LOG(WARNING, EAL, "No available %zu kB hugepages reported\n",
+		RTE_LOG(WARNING, EAL, "No available %zu kB hugepage reported\n",
 				sz >> 10);
 
 	num_pages += over_pages;
@@ -158,7 +158,7 @@ get_num_hugepages_on_node(const char *subdir, unsigned int socket, size_t sz)
 		return 0;
 
 	if (num_pages == 0)
-		RTE_LOG(WARNING, EAL, "No free %zu kB hugepages reported on node %u\n",
+		RTE_LOG(WARNING, EAL, "No free %zu kB hugepage reported on node %u\n",
 				sz >> 10, socket);
 
 	/*
