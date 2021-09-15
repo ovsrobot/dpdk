@@ -836,6 +836,8 @@ eal_parse_service_corelist(const char *corelist)
 	return 0;
 }
 
+#define MAX_LCORES_STRING 512
+
 static int
 eal_parse_corelist(const char *corelist, int *cores)
 {
@@ -843,6 +845,9 @@ eal_parse_corelist(const char *corelist, int *cores)
 	char *end = NULL;
 	int min, max;
 	int idx;
+	bool overflow = false;
+	char lcores[MAX_LCORES_STRING] = "";
+	int len = 0;
 
 	for (idx = 0; idx < RTE_MAX_LCORE; idx++)
 		cores[idx] = -1;
@@ -862,8 +867,10 @@ eal_parse_corelist(const char *corelist, int *cores)
 		idx = strtol(corelist, &end, 10);
 		if (errno || end == NULL)
 			return -1;
-		if (idx < 0 || idx >= RTE_MAX_LCORE)
+		if (idx < 0)
 			return -1;
+		if (idx >= RTE_MAX_LCORE)
+			overflow = true;
 		while (isblank(*end))
 			end++;
 		if (*end == '-') {
@@ -873,10 +880,19 @@ eal_parse_corelist(const char *corelist, int *cores)
 			if (min == RTE_MAX_LCORE)
 				min = idx;
 			for (idx = min; idx <= max; idx++) {
-				if (cores[idx] == -1) {
-					cores[idx] = count;
-					count++;
+				if (idx < RTE_MAX_LCORE) {
+					if (cores[idx] == -1)
+						cores[idx] = count;
 				}
+				count++;
+				if (count == 1)
+					len = len + snprintf(&lcores[len],
+							MAX_LCORES_STRING - len,
+							"%d@%d", count-1, idx);
+				else
+					len = len + snprintf(&lcores[len],
+							MAX_LCORES_STRING - len,
+							",%d@%d", count-1, idx);
 			}
 			min = RTE_MAX_LCORE;
 		} else
@@ -886,6 +902,13 @@ eal_parse_corelist(const char *corelist, int *cores)
 
 	if (count == 0)
 		return -1;
+	if (overflow) {
+		RTE_LOG(ERR, EAL, "Error = One of the %d cores provided exceeds RTE_MAX_LCORE (%d)\n",
+				count, RTE_MAX_LCORE);
+		RTE_LOG(ERR, EAL, "Please use --lcores instead, e.g. --lcores %s\n",
+				lcores);
+		return -1;
+	}
 	return 0;
 }
 
