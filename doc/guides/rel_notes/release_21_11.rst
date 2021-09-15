@@ -87,6 +87,11 @@ New Features
   Added command-line options to specify total number of processes and
   current process ID. Each process owns subset of Rx and Tx queues.
 
+* **Add new RSS offload types for IPv4/L4 checksum in RSS flow.**
+
+  Add macros ETH_RSS_IPV4_CHKSUM and ETH_RSS_L4_CHKSUM, now IPv4 and
+  TCP/UDP/SCTP header checksum field can be used as input set for RSS.
+
 
 Removed Items
 -------------
