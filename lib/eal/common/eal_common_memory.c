@@ -20,6 +20,8 @@
 #include <rte_eal_paging.h>
 #include <rte_errno.h>
 #include <rte_log.h>
+#include <rte_string_fns.h>
+#include <rte_telemetry.h>
 
 #include "eal_memalloc.h"
 #include "eal_private.h"
@@ -38,6 +40,7 @@
 
 #define MEMSEG_LIST_FMT "memseg-%" PRIu64 "k-%i-%i"
 
+static int count;
 static void *next_baseaddr;
 static uint64_t system_page_sz;
 
@@ -1101,4 +1104,79 @@ rte_eal_memory_init(void)
 fail:
 	rte_mcfg_mem_read_unlock();
 	return -1;
+}
+
+#define EAL_MEMZONE_DUMP_REQ	"/eal/memzone_dump"
+#define EAL_MALLOC_INFO_REQ	"/eal/malloc_info"
+#define EAL_MALLOC_DUMP_REQ	"/eal/malloc_dump"
+
+static void
+memzone_walk_clb(const struct rte_memzone *mz __rte_unused,
+		 void *arg __rte_unused)
+{
+	count++;
+}
+
+/* Callback handler for telemetry library to dump named and unnamed memory
+ * information.
+ */
+static int
+handle_eal_mem_info_request(const char *cmd, const char *params,
+		      struct rte_tel_data *d)
+{
+	char filename[PATH_MAX];
+	FILE *fp;
+
+	if (params == NULL || strlen(params) == 0)
+		return -1;
+
+	rte_strscpy(filename, params, PATH_MAX);
+
+	fp = fopen(filename, "w+");
+	if (fp == NULL) {
+		RTE_LOG(ERR, EAL, "cannot open %s", filename);
+		return -1;
+	}
+
+	rte_tel_data_start_dict(d);
+	/* Dumping memzone info. */
+	if (strcmp(cmd, EAL_MEMZONE_DUMP_REQ) == 0) {
+		count = 0;
+		/* Callback to count memzones */
+		rte_memzone_walk(memzone_walk_clb, NULL);
+		rte_tel_data_add_dict_int(d, "Memzones count: ", count);
+		rte_tel_data_add_dict_string(d, "Memzones info file: ",
+					     filename);
+		rte_memzone_dump(fp);
+	}
+
+	/* Dumping malloc statistics */
+	if (strcmp(cmd, EAL_MALLOC_INFO_REQ) == 0) {
+		rte_tel_data_add_dict_string(d, "Malloc stats file: ",
+					     filename);
+		rte_malloc_dump_stats(fp, NULL);
+	}
+
+	/* Dumping malloc elements info */
+	if (strcmp(cmd, EAL_MALLOC_DUMP_REQ) == 0) {
+		rte_tel_data_add_dict_string(d, "Malloc elements file: ",
+					     filename);
+		rte_malloc_dump_heaps(fp);
+	}
+
+	fclose(fp);
+	return 0;
+}
+
+RTE_INIT(memory_telemetry)
+{
+	rte_telemetry_register_cmd(
+			EAL_MEMZONE_DUMP_REQ, handle_eal_mem_info_request,
+			"Dumps memzones info to file. Parameters: file name");
+	rte_telemetry_register_cmd(
+			EAL_MALLOC_INFO_REQ, handle_eal_mem_info_request,
+			"Dumps malloc info to file. Parameters: file name");
+	rte_telemetry_register_cmd(
+			EAL_MALLOC_DUMP_REQ, handle_eal_mem_info_request,
+			"Dumps malloc elems to file. Parameters: file name");
 }
