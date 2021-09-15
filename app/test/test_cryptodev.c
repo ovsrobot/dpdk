@@ -2352,6 +2352,9 @@ create_wireless_algo_hash_session(uint8_t dev_id,
 	status = rte_cryptodev_sym_session_init(dev_id, ut_params->sess,
 			&ut_params->auth_xform,
 			ts_params->session_priv_mpool);
+	if (status == -ENOTSUP)
+		return TEST_SKIPPED;
+
 	TEST_ASSERT_EQUAL(status, 0, "session init failed");
 	TEST_ASSERT_NOT_NULL(ut_params->sess, "Session creation failed");
 	return 0;
@@ -2391,6 +2394,9 @@ create_wireless_algo_cipher_session(uint8_t dev_id,
 	status = rte_cryptodev_sym_session_init(dev_id, ut_params->sess,
 			&ut_params->cipher_xform,
 			ts_params->session_priv_mpool);
+	if (status == -ENOTSUP)
+		return TEST_SKIPPED;
+
 	TEST_ASSERT_EQUAL(status, 0, "session init failed");
 	TEST_ASSERT_NOT_NULL(ut_params->sess, "Session creation failed");
 	return 0;
@@ -5808,7 +5814,7 @@ test_zuc_encryption(const struct wireless_test_data *tdata)
 					RTE_CRYPTO_CIPHER_ZUC_EEA3,
 					tdata->key.data, tdata->key.len,
 					tdata->cipher_iv.len);
-	if (retval < 0)
+	if (retval != 0)
 		return retval;
 
 	ut_params->ibuf = rte_pktmbuf_alloc(ts_params->mbuf_pool);
@@ -6010,7 +6016,7 @@ test_zuc_authentication(const struct wireless_test_data *tdata)
 			tdata->auth_iv.len, tdata->digest.len,
 			RTE_CRYPTO_AUTH_OP_GENERATE,
 			RTE_CRYPTO_AUTH_ZUC_EIA3);
-	if (retval < 0)
+	if (retval != 0)
 		return retval;
 
 	/* alloc mbuf and set payload */
@@ -6957,6 +6963,12 @@ test_zuc_encryption_test_case_6_sgl(void)
 }
 
 static int
+test_zuc_encryption_test_case_7(void)
+{
+	return test_zuc_encryption(&zuc_test_case_cipher_800b_key_256b);
+}
+
+static int
 test_zuc_hash_generate_test_case_1(void)
 {
 	return test_zuc_authentication(&zuc_test_case_auth_1b);
@@ -7002,6 +7014,18 @@ static int
 test_zuc_hash_generate_test_case_8(void)
 {
 	return test_zuc_authentication(&zuc_test_case_auth_584b);
+}
+
+static int
+test_zuc_hash_generate_test_case_9(void)
+{
+	return test_zuc_authentication(&zuc_test_case_auth_584b_mac_64b);
+}
+
+static int
+test_zuc_hash_generate_test_case_10(void)
+{
+	return test_zuc_authentication(&zuc_test_case_auth_2080b_mac_128b);
 }
 
 static int
@@ -14200,6 +14224,8 @@ static struct unit_test_suite cryptodev_zuc_testsuite  = {
 			test_zuc_encryption_test_case_5),
 		TEST_CASE_ST(ut_setup, ut_teardown,
 			test_zuc_encryption_test_case_6_sgl),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_zuc_encryption_test_case_7),
 
 		/** ZUC authenticate (EIA3) */
 		TEST_CASE_ST(ut_setup, ut_teardown,
@@ -14218,6 +14244,11 @@ static struct unit_test_suite cryptodev_zuc_testsuite  = {
 			test_zuc_hash_generate_test_case_7),
 		TEST_CASE_ST(ut_setup, ut_teardown,
 			test_zuc_hash_generate_test_case_8),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_zuc_hash_generate_test_case_9),
+		TEST_CASE_ST(ut_setup, ut_teardown,
+			test_zuc_hash_generate_test_case_10),
+
 
 		/** ZUC alg-chain (EEA3/EIA3) */
 		TEST_CASE_ST(ut_setup, ut_teardown,
