@@ -171,6 +171,8 @@ static int eth_igbvf_xstats_get_names(struct rte_eth_dev *dev,
 static int eth_igbvf_stats_reset(struct rte_eth_dev *dev);
 static int igbvf_vlan_filter_set(struct rte_eth_dev *dev,
 		uint16_t vlan_id, int on);
+static int igbvf_vlan_offload_config(struct rte_eth_dev *dev, int mask);
+static int igbvf_vlan_offload_set(struct rte_eth_dev *dev, int mask);
 static int igbvf_set_vfta(struct e1000_hw *hw, uint16_t vid, bool on);
 static void igbvf_set_vfta_all(struct rte_eth_dev *dev, bool on);
 static int igbvf_default_mac_addr_set(struct rte_eth_dev *dev,
@@ -410,6 +412,7 @@ static const struct eth_dev_ops igbvf_eth_dev_ops = {
 	.xstats_get_names     = eth_igbvf_xstats_get_names,
 	.stats_reset          = eth_igbvf_stats_reset,
 	.xstats_reset         = eth_igbvf_stats_reset,
+	.vlan_offload_set     = igbvf_vlan_offload_set,
 	.vlan_filter_set      = igbvf_vlan_filter_set,
 	.dev_infos_get        = eth_igbvf_infos_get,
 	.dev_supported_ptypes_get = eth_igb_supported_ptypes_get,
@@ -3299,6 +3302,8 @@ igbvf_dev_start(struct rte_eth_dev *dev)
 	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
 	int ret;
 	uint32_t intr_vector = 0;
+	int mask;
+	int err;
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -3307,6 +3312,14 @@ igbvf_dev_start(struct rte_eth_dev *dev)
 
 	/* Set all vfta */
 	igbvf_set_vfta_all(dev,1);
+
+	/* Set vlan filter mask */
+	mask = ETH_VLAN_FILTER_MASK;
+	err = igbvf_vlan_offload_config(dev, mask);
+	if (err) {
+		PMD_INIT_LOG(ERR, "Unable to set VLAN offload (%d)", err);
+		return err;
+	}
 
 	eth_igbvf_tx_init(dev);
 
@@ -3524,6 +3537,21 @@ static void igbvf_set_vfta_all(struct rte_eth_dev *dev, bool on)
 		}
 	}
 
+}
+
+static int
+igbvf_vlan_offload_config(__rte_unused struct rte_eth_dev *dev, int mask)
+{
+	if (mask & ETH_VLAN_STRIP_MASK)
+		return -ENOTSUP;
+	return 0;
+}
+
+static int
+igbvf_vlan_offload_set(struct rte_eth_dev *dev, int mask)
+{
+	igbvf_vlan_offload_config(dev, mask);
+	return 0;
 }
 
 static int
