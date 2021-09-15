@@ -254,15 +254,6 @@ Deprecation Notices
   An 8-byte reserved field will be added to the structure ``rte_event_timer`` to
   support future extensions.
 
-* eventdev: The structure ``rte_event_eth_rx_adapter_queue_conf`` will be
-  extended to include ``rte_event_eth_rx_adapter_event_vector_config`` elements
-  and the function ``rte_event_eth_rx_adapter_queue_event_vector_config`` will
-  be removed in DPDK 21.11.
-
-  An application can enable event vectorization by passing the desired vector
-  values to the function ``rte_event_eth_rx_adapter_queue_add`` using
-  the structure ``rte_event_eth_rx_adapter_queue_add``.
-
 * eventdev: Reserved bytes of ``rte_event_crypto_request`` is a space holder
   for ``response_info``. Both should be decoupled for better clarity.
   New space for ``response_info`` can be made by changing
