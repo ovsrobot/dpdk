@@ -1461,7 +1461,6 @@ int i40e_add_macvlan_filters(struct i40e_vsi *vsi,
 			     int total);
 bool is_device_supported(struct rte_eth_dev *dev, struct rte_pci_driver *drv);
 bool is_i40e_supported(struct rte_eth_dev *dev);
-bool is_i40evf_supported(struct rte_eth_dev *dev);
 void i40e_set_symmetric_hash_enable_per_port(struct i40e_hw *hw,
 					     uint8_t enable);
 int i40e_validate_input_set(enum i40e_filter_pctype pctype,
