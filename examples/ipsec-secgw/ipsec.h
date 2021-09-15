@@ -142,6 +142,7 @@ struct ipsec_sa {
 	uint8_t udp_encap;
 	uint16_t portid;
 	uint16_t mss;
+	uint64_t esn;
 	uint8_t fdir_qid;
 	uint8_t fdir_flag;
 

@@ -746,6 +746,16 @@ where each options means:
 
    * *mss N* N is the segment size
 
+ ``<esn>``
+
+ * Enable ESN and set the initial ESN value.
+
+ * Optional: Yes, ESN not enabled by default
+
+ * Syntax:
+
+   * *esn N* N is the initial ESN value
+
 Example SA rules:
 
 .. code-block:: console
