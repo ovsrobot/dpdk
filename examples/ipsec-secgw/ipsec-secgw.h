@@ -6,9 +6,6 @@
 
 #include <stdbool.h>
 
-#ifndef STATS_INTERVAL
-#define STATS_INTERVAL 0
-#endif
 
 #define NB_SOCKETS 4
 
@@ -144,38 +141,26 @@ is_unprotected_port(uint16_t port_id)
 static inline void
 core_stats_update_rx(int n)
 {
-#if (STATS_INTERVAL > 0)
 	int lcore_id = rte_lcore_id();
 	core_statistics[lcore_id].rx += n;
 	core_statistics[lcore_id].rx_call++;
 	if (n == MAX_PKT_BURST)
 		core_statistics[lcore_id].burst_rx += n;
-#else
-	RTE_SET_USED(n);
-#endif /* STATS_INTERVAL */
 }
 
 static inline void
 core_stats_update_tx(int n)
 {
-#if (STATS_INTERVAL > 0)
 	int lcore_id = rte_lcore_id();
 	core_statistics[lcore_id].tx += n;
 	core_statistics[lcore_id].tx_call++;
-#else
-	RTE_SET_USED(n);
-#endif /* STATS_INTERVAL */
 }
 
 static inline void
 core_stats_update_drop(int n)
 {
-#if (STATS_INTERVAL > 0)
 	int lcore_id = rte_lcore_id();
 	core_statistics[lcore_id].dropped += n;
-#else
-	RTE_SET_USED(n);
-#endif /* STATS_INTERVAL */
 }
 
 /* helper routine to free bulk of packets */
