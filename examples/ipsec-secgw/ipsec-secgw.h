@@ -83,7 +83,17 @@ struct ethaddr_info {
 	uint64_t src, dst;
 };
 
-#if (STATS_INTERVAL > 0)
+struct ipsec_spd_stats {
+	uint64_t protect;
+	uint64_t bypass;
+	uint64_t discard;
+};
+
+struct ipsec_sa_stats {
+	uint64_t hit;
+	uint64_t miss;
+};
+
 struct ipsec_core_statistics {
 	uint64_t tx;
 	uint64_t rx;
@@ -91,10 +101,29 @@ struct ipsec_core_statistics {
 	uint64_t tx_call;
 	uint64_t dropped;
 	uint64_t burst_rx;
+
+	struct {
+		struct ipsec_spd_stats spd4;
+		struct ipsec_spd_stats spd6;
+		struct ipsec_sa_stats sad;
+	} outbound;
+
+	struct {
+		struct ipsec_spd_stats spd4;
+		struct ipsec_spd_stats spd6;
+		struct ipsec_sa_stats sad;
+	} inbound;
+
+	struct {
+		uint64_t miss;
+	} lpm4;
+
+	struct {
+		uint64_t miss;
+	} lpm6;
 } __rte_cache_aligned;
 
 struct ipsec_core_statistics core_statistics[RTE_MAX_LCORE];
-#endif /* STATS_INTERVAL */
 
 extern struct ethaddr_info ethaddr_tbl[RTE_MAX_ETHPORTS];
 
