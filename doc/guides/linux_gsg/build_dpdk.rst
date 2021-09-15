@@ -191,8 +191,7 @@ and the sources for that build are stored in ``$(SRCS-y)``.
 
 .. note::
 
-   Unlike with the make build system present in older DPDK releases,
-   the meson system is not
+   The meson system is not
    designed to be used directly from a build directory. Instead it is
    recommended that it be installed either system-wide or to a known
    location in the user's home directory. The install location can be set
