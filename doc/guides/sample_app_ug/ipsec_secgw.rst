@@ -736,6 +736,16 @@ where each options means:
 
    * *telemetry*
 
+ ``<mss>``
+
+ * Maximum segment size for TSO offload, available for egress SAs only.
+
+ * Optional: Yes, TSO offload not set by default
+
+ * Syntax:
+
+   * *mss N* N is the segment size
+
 Example SA rules:
 
 .. code-block:: console
