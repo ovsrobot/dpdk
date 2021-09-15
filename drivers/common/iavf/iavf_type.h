@@ -709,11 +709,29 @@ enum iavf_rx_prog_status_desc_error_bits {
 #define IAVF_FOUR_BIT_MASK	0xF
 #define IAVF_EIGHTEEN_BIT_MASK	0x3FFFF
 
-/* TX Descriptor */
+/* TX Data Descriptor */
 struct iavf_tx_desc {
-	__le64 buffer_addr; /* Address of descriptor's data buf */
-	__le64 cmd_type_offset_bsz;
-};
+	union {
+		struct {
+			__le64 buffer_addr; /* Addr of descriptor's data buf */
+			__le64 cmd_type_offset_bsz;
+		};
+		struct {
+			__le64 qw0; /**< data buffer address */
+			__le64 qw1; /**< dtyp, cmd, offset, buf_sz and l2tag1 */
+		};
+		struct {
+			__le64 buffer_addr;	/**< Data buffer address */
+			__le64 type:4;		/**< Descriptor type */
+			__le64 cmd:12;		/**< Command field */
+			__le64 offset_l2len:7;	/**< L2 header length */
+			__le64 offset_l3len:7;	/**< L3 header length */
+			__le64 offset_l4len:4;	/**< L4 header length */
+			__le64 buffer_sz:14;	/**< Data buffer size */
+			__le64 l2tag1:16;	/**< L2 Tag 1 value */
+		} debug __rte_packed;
+	};
+} __rte_packed;
 
 #define IAVF_TXD_QW1_DTYPE_SHIFT	0
 #define IAVF_TXD_QW1_DTYPE_MASK		(0xFUL << IAVF_TXD_QW1_DTYPE_SHIFT)
@@ -723,6 +741,7 @@ enum iavf_tx_desc_dtype_value {
 	IAVF_TX_DESC_DTYPE_NOP		= 0x1, /* same as Context desc */
 	IAVF_TX_DESC_DTYPE_CONTEXT	= 0x1,
 	IAVF_TX_DESC_DTYPE_FCOE_CTX	= 0x2,
+	IAVF_TX_DESC_DTYPE_IPSEC	= 0x3,
 	IAVF_TX_DESC_DTYPE_FILTER_PROG	= 0x8,
 	IAVF_TX_DESC_DTYPE_DDP_CTX	= 0x9,
 	IAVF_TX_DESC_DTYPE_FLEX_DATA	= 0xB,
@@ -734,7 +753,7 @@ enum iavf_tx_desc_dtype_value {
 #define IAVF_TXD_QW1_CMD_SHIFT	4
 #define IAVF_TXD_QW1_CMD_MASK	(0x3FFUL << IAVF_TXD_QW1_CMD_SHIFT)
 
-enum iavf_tx_desc_cmd_bits {
+enum iavf_tx_data_desc_cmd_bits {
 	IAVF_TX_DESC_CMD_EOP			= 0x0001,
 	IAVF_TX_DESC_CMD_RS			= 0x0002,
 	IAVF_TX_DESC_CMD_ICRC			= 0x0004,
@@ -778,18 +797,79 @@ enum iavf_tx_desc_length_fields {
 #define IAVF_TXD_QW1_L2TAG1_SHIFT	48
 #define IAVF_TXD_QW1_L2TAG1_MASK	(0xFFFFULL << IAVF_TXD_QW1_L2TAG1_SHIFT)
 
+#define IAVF_TXD_DATA_QW1_DTYPE_SHIFT	(0)
+#define IAVF_TXD_DATA_QW1_DTYPE_MASK	(0xFUL << IAVF_TXD_QW1_DTYPE_SHIFT)
+
+#define IAVF_TXD_DATA_QW1_CMD_SHIFT	(4)
+#define IAVF_TXD_DATA_QW1_CMD_MASK	(0x3FFUL << IAVF_TXD_DATA_QW1_CMD_SHIFT)
+
+#define IAVF_TXD_DATA_QW1_OFFSET_SHIFT	(16)
+#define IAVF_TXD_DATA_QW1_OFFSET_MASK	(0x3FFFFULL << \
+					IAVF_TXD_DATA_QW1_OFFSET_SHIFT)
+
+#define IAVF_TXD_DATA_QW1_OFFSET_MACLEN_SHIFT	(IAVF_TXD_DATA_QW1_OFFSET_SHIFT)
+#define IAVF_TXD_DATA_QW1_OFFSET_MACLEN_MASK	\
+	(0x7FUL << IAVF_TXD_DATA_QW1_OFFSET_MACLEN_SHIFT)
+
+#define IAVF_TXD_DATA_QW1_OFFSET_IPLEN_SHIFT	\
+	(IAVF_TXD_DATA_QW1_OFFSET_SHIFT + IAVF_TX_DESC_LENGTH_IPLEN_SHIFT)
+#define IAVF_TXD_DATA_QW1_OFFSET_IPLEN_MASK	\
+	(0x7FUL << IAVF_TXD_DATA_QW1_OFFSET_IPLEN_SHIFT)
+
+#define IAVF_TXD_DATA_QW1_OFFSET_L4LEN_SHIFT	\
+	(IAVF_TXD_DATA_QW1_OFFSET_SHIFT + IAVF_TX_DESC_LENGTH_L4_FC_LEN_SHIFT)
+#define IAVF_TXD_DATA_QW1_OFFSET_L4LEN_MASK	\
+	(0xFUL << IAVF_TXD_DATA_QW1_OFFSET_L4LEN_SHIFT)
+
+#define IAVF_TXD_DATA_QW1_MACLEN_MASK	\
+	(0x7FUL << IAVF_TX_DESC_LENGTH_MACLEN_SHIFT)
+#define IAVF_TXD_DATA_QW1_IPLEN_MASK	\
+	(0x7FUL << IAVF_TX_DESC_LENGTH_IPLEN_SHIFT)
+#define IAVF_TXD_DATA_QW1_L4LEN_MASK	\
+	(0xFUL << IAVF_TX_DESC_LENGTH_L4_FC_LEN_SHIFT)
+#define IAVF_TXD_DATA_QW1_FCLEN_MASK	\
+	(0xFUL << IAVF_TX_DESC_LENGTH_L4_FC_LEN_SHIFT)
+
+#define IAVF_TXD_DATA_QW1_TX_BUF_SZ_SHIFT	(34)
+#define IAVF_TXD_DATA_QW1_TX_BUF_SZ_MASK	\
+	(0x3FFFULL << IAVF_TXD_DATA_QW1_TX_BUF_SZ_SHIFT)
+
+#define IAVF_TXD_DATA_QW1_L2TAG1_SHIFT		(48)
+#define IAVF_TXD_DATA_QW1_L2TAG1_MASK		\
+	(0xFFFFULL << IAVF_TXD_DATA_QW1_L2TAG1_SHIFT)
+
 /* Context descriptors */
 struct iavf_tx_context_desc {
+	union {
+		struct {
 	__le32 tunneling_params;
 	__le16 l2tag2;
 	__le16 rsvd;
 	__le64 type_cmd_tso_mss;
 };
+		struct {
+			__le64 qw0;
+			__le64 qw1;
+		};
+		struct {
+			__le32 tunneling;
+			__le16 l2tag2;
+			__le16 rsvd0;
+			__le64 type:4;
+			__le64 cmd:7;
+			__le64 ipsec:7;
+			__le64 rsvd1:12;
+			__le64 tlen_tsyn:18;
+			__le64 rsvd2:2;
+			__le64 mss_target_vsi:14;
+		} debug __rte_packed;
+	};
+} __rte_packed;
 
-#define IAVF_TXD_CTX_QW1_DTYPE_SHIFT	0
+#define IAVF_TXD_CTX_QW1_DTYPE_SHIFT	(0)
 #define IAVF_TXD_CTX_QW1_DTYPE_MASK	(0xFUL << IAVF_TXD_CTX_QW1_DTYPE_SHIFT)
 
-#define IAVF_TXD_CTX_QW1_CMD_SHIFT	4
+#define IAVF_TXD_CTX_QW1_CMD_SHIFT	(4)
 #define IAVF_TXD_CTX_QW1_CMD_MASK	(0xFFFFUL << IAVF_TXD_CTX_QW1_CMD_SHIFT)
 
 enum iavf_tx_ctx_desc_cmd_bits {
@@ -803,6 +883,63 @@ enum iavf_tx_ctx_desc_cmd_bits {
 	IAVF_TX_CTX_DESC_SWTCH_VSI	= 0x30,
 	IAVF_TX_CTX_DESC_SWPE		= 0x40
 };
+
+#define IAVF_TXD_CTX_QW1_IPSEC_PARAMS_CIPHERBLK_SHIFT	(11)
+#define IAVF_TXD_CTX_QW1_IPSEC_PARAMS_CIPHERBLK_MASK	\
+	(0x7UL << IAVF_TXD_CTX_QW1_IPSEC_PARAMS_CIPHERBLK_SHIFT)
+
+#define IAVF_TXD_CTX_QW1_IPSEC_PARAMS_ICVLEN_SHIFT	(14)
+#define IAVF_TXD_CTX_QW1_IPSEC_PARAMS_ICVLEN_MASK	\
+	(0xFUL << IAVF_TXD_CTX_QW1_IPSEC_PARAMS_ICVLEN_SHIFT)
+
+#define IAVF_TXD_CTX_QW1_SEG_PARAMS_TLEN_SHIFT		(30)
+#define IAVF_TXD_CTX_QW1_SEG_PARAMS_TLEN_MASK		\
+	(0x3FFFFUL << IAVF_TXD_CTX_QW1_SEG_PARAMS_TLEN_SHIFT)
+
+#define IAVF_TXD_CTX_QW1_TSYNC_PARAMS_TLEN_SHIFT	(30)
+#define IAVF_TXD_CTX_QW1_TSYNC_PARAMS_TLEN_MASK		\
+	(0x3FUL << IAVF_TXD_CTX_QW1_SEG_PARAMS_TLEN_SHIFT)
+
+#define IAVF_TXD_CTX_QW1_SEG_PARAMS_MSS_SHIFT		(50)
+#define IAVF_TXD_CTX_QW1_SEG_PARAMS_MSS_MASK		\
+	(0x3FFFUL << IAVF_TXD_CTX_QW1_SEG_PARAMS_MSS_SHIFT)
+
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_EIPT_SHIFT		(0)
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_EIPT_MASK		(0x3UL)
+
+enum iavf_tx_ctx_desc_tunnel_external_ip_type {
+	IAVF_TX_CTX_DESC_EIPT_NONE,
+	IAVF_TX_CTX_DESC_EIPT_IPV6,
+	IAVF_TX_CTX_DESC_EIPT_IPV4_NO_CHECKSUM_OFFLOAD,
+	IAVF_TX_CTX_DESC_EIPT_IPV4_CHECKSUM_OFFLOAD
+};
+
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_EIPLEN_SHIFT	(2)
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_EIPLEN_MASK		(0x7FUL)
+
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_L4TUNT_SHIFT	(9)
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_L4TUNT_MASK		(0x3UL)
+
+enum iavf_tx_ctx_desc_tunnel_l4_tunnel_type {
+	IAVF_TX_CTX_DESC_L4_TUN_TYP_NO_UDP_GRE,
+	IAVF_TX_CTX_DESC_L4_TUN_TYP_UDP,
+	IAVF_TX_CTX_DESC_L4_TUN_TYP_GRE
+};
+
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_EIP_NOINC_SHIFT	(11)
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_EIP_NOINC_MASK	(0x1UL)
+
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_L4TUNLEN_SHIFT	(12)
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_L4TUNLEN_MASK	(0x7FUL)
+
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_DECTTL_SHIFT	(19)
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_DECTTL_MASK		(0xFUL)
+
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_L4T_CS_SHIFT	(23)
+#define IAVF_TXD_CTX_QW0_TUN_PARAMS_L4T_CS_MASK		(0x1UL)
+
+#define IAVF_TXD_CTX_QW0_L2TAG2_PARAM			(32)
+#define IAVF_TXD_CTX_QW0_L2TAG2_MASK			(0xFFFFUL)
 
 struct iavf_nop_desc {
 	__le64 rsvd;
@@ -910,6 +1047,68 @@ enum iavf_tx_ctx_desc_eipt_offload {
 
 #define IAVF_TXD_CTX_QW0_L4T_CS_SHIFT	23
 #define IAVF_TXD_CTX_QW0_L4T_CS_MASK	BIT_ULL(IAVF_TXD_CTX_QW0_L4T_CS_SHIFT)
+
+
+struct iavf_tx_ipsec_desc {
+	union {
+		struct {
+			__le64 qw0;
+			__le64 qw1;
+		};
+		struct {
+			__le16 l4payload_length;
+			__le32 esn;
+			__le16 trailer_length;
+			u8 type:4;
+			u8 rsv:1;
+			u8 udp:1;
+			u8 ivlen:2;
+			u8 next_header;
+			__le16 ipv6_ext_hdr_length;
+			__le32 said;
+		} __rte_packed;
+	};
+} __rte_packed;
+
+#define IAVF_IPSEC_TX_DESC_QW0_L4PAYLEN_SHIFT    0
+#define IAVF_IPSEC_TX_DESC_QW0_L4PAYLEN_MASK     (0x3FFFULL << \
+			IAVF_IPSEC_TX_DESC_QW0_L4PAYLEN_SHIFT)
+
+#define IAVF_IPSEC_TX_DESC_QW0_IPSECESN_SHIFT    16
+#define IAVF_IPSEC_TX_DESC_QW0_IPSECESN_MASK     (0xFFFFFFFFULL << \
+			IAVF_IPSEC_TX_DESC_QW0_IPSECESN_SHIFT)
+
+#define IAVF_IPSEC_TX_DESC_QW0_TRAILERLEN_SHIFT  48
+#define IAVF_IPSEC_TX_DESC_QW0_TRAILERLEN_MASK   (0x3FULL << \
+			IAVF_IPSEC_TX_DESC_QW0_TRAILERLEN_SHIFT)
+
+#define IAVF_IPSEC_TX_DESC_QW1_UDP_SHIFT         5
+#define IAVF_IPSEC_TX_DESC_QW1_UDP_MASK          (0x1ULL << \
+			IAVF_IPSEC_TX_DESC_QW1_UDP_SHIFT)
+
+#define IAVF_IPSEC_TX_DESC_QW1_IVLEN_SHIFT       6
+#define IAVF_IPSEC_TX_DESC_QW1_IVLEN_MASK        (0x3ULL << \
+			IAVF_IPSEC_TX_DESC_QW1_IVLEN_SHIFT)
+
+#define IAVF_IPSEC_TX_DESC_QW1_IPSECNH_SHIFT     8
+#define IAVF_IPSEC_TX_DESC_QW1_IPSECNH_MASK      (0xFFULL << \
+			IAVF_IPSEC_TX_DESC_QW1_IPSECNH_SHIFT)
+
+#define IAVF_IPSEC_TX_DESC_QW1_EXTLEN_SHIFT      16
+#define IAVF_IPSEC_TX_DESC_QW1_EXTLEN_MASK       (0xFFULL << \
+			IAVF_IPSEC_TX_DESC_QW1_EXTLEN_SHIFT)
+
+#define IAVF_IPSEC_TX_DESC_QW1_IPSECSA_SHIFT     32
+#define IAVF_IPSEC_TX_DESC_QW1_IPSECSA_MASK      (0xFFFFFULL << \
+			IAVF_IPSEC_TX_DESC_QW1_IPSECSA_SHIFT)
+
+/* Initialization Vector Length type */
+enum iavf_ipsec_iv_len {
+	IAVF_IPSEC_IV_LEN_NONE,		/* No IV */
+	IAVF_IPSEC_IV_LEN_DW,		/* 4B IV */
+	IAVF_IPSEC_IV_LEN_DDW,		/* 8B IV */
+	IAVF_IPSEC_IV_LEN_QDW,		/* 16B IV */
+};
 
 /* Statistics collected by each port, VSI, VEB, and S-channel */
 struct iavf_eth_stats {
