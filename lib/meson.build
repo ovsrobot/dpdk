@@ -85,6 +85,7 @@ if is_windows
             'gso',
             'latencystats',
             'pdump',
+            'security',
     ] # only supported libraries for windows
 endif
 
