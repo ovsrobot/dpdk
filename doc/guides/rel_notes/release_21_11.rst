@@ -100,6 +100,8 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* Removed i40evf driver. Due to iavf already became the default VF driver
+  for i40e devices, so remove i40evf due to it's no need to maintain.
 
 API Changes
 -----------
