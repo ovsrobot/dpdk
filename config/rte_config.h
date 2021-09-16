@@ -70,6 +70,9 @@
 /* regexdev defines */
 #define RTE_MAX_REGEXDEV_DEVS 32
 
+/* dmadev defines */
+#define RTE_DMADEV_DEFAULT_MAX_DEVS 64
+
 /* eventdev defines */
 #define RTE_EVENT_MAX_DEVS 16
 #define RTE_EVENT_MAX_QUEUES_PER_DEV 255

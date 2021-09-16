@@ -87,6 +87,10 @@ New Features
   Added command-line options to specify total number of processes and
   current process ID. Each process owns subset of Rx and Tx queues.
 
+* **Introduced dmadev library with:**
+
+  * Device allocation and it's multi-process support.
+
 
 Removed Items
 -------------
