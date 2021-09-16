@@ -2092,6 +2092,7 @@ rte_vfio_setup_device(__rte_unused const char *sysfs_base,
 		__rte_unused int *vfio_dev_fd,
 		__rte_unused struct vfio_device_info *device_info)
 {
+	rte_errno = ENOTSUP;
 	return -1;
 }
 
@@ -2099,12 +2100,14 @@ int
 rte_vfio_release_device(__rte_unused const char *sysfs_base,
 		__rte_unused const char *dev_addr, __rte_unused int fd)
 {
+	rte_errno = ENOTSUP;
 	return -1;
 }
 
 int
 rte_vfio_enable(__rte_unused const char *modname)
 {
+	rte_errno = ENOTSUP;
 	return -1;
 }
 
@@ -2131,30 +2134,35 @@ rte_vfio_get_group_num(__rte_unused const char *sysfs_base,
 		__rte_unused const char *dev_addr,
 		__rte_unused int *iommu_group_num)
 {
+	rte_errno = ENOTSUP;
 	return -1;
 }
 
 int
 rte_vfio_get_container_fd(void)
 {
+	rte_errno = ENOTSUP;
 	return -1;
 }
 
 int
 rte_vfio_get_group_fd(__rte_unused int iommu_group_num)
 {
+	rte_errno = ENOTSUP;
 	return -1;
 }
 
 int
 rte_vfio_container_create(void)
 {
+	rte_errno = ENOTSUP;
 	return -1;
 }
 
 int
 rte_vfio_container_destroy(__rte_unused int container_fd)
 {
+	rte_errno = ENOTSUP;
 	return -1;
 }
 
@@ -2162,6 +2170,7 @@ int
 rte_vfio_container_group_bind(__rte_unused int container_fd,
 		__rte_unused int iommu_group_num)
 {
+	rte_errno = ENOTSUP;
 	return -1;
 }
 
@@ -2169,6 +2178,7 @@ int
 rte_vfio_container_group_unbind(__rte_unused int container_fd,
 		__rte_unused int iommu_group_num)
 {
+	rte_errno = ENOTSUP;
 	return -1;
 }
 
@@ -2178,6 +2188,7 @@ rte_vfio_container_dma_map(__rte_unused int container_fd,
 		__rte_unused uint64_t iova,
 		__rte_unused uint64_t len)
 {
+	rte_errno = ENOTSUP;
 	return -1;
 }
 
@@ -2187,6 +2198,7 @@ rte_vfio_container_dma_unmap(__rte_unused int container_fd,
 		__rte_unused uint64_t iova,
 		__rte_unused uint64_t len)
 {
+	rte_errno = ENOTSUP;
 	return -1;
 }
 
