@@ -68,6 +68,7 @@ New Features
   * Added Transport mode support in lookaside protocol (IPsec) for CN10K.
   * Added UDP encapsulation support in lookaside protocol (IPsec) for CN10K.
   * Added support for lookaside protocol (IPsec) offload for CN9K.
+  * Added CN98xx dual block support.
 
 * **Added support for event crypto adapter on Marvell CN10K and CN9K.**
 
