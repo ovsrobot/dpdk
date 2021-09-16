@@ -90,6 +90,7 @@ New Features
 * **Introduced dmadev library with:**
 
   * Device allocation and it's multi-process support.
+  * Control plane functions.
 
 
 Removed Items
