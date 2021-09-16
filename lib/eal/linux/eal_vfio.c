@@ -2111,19 +2111,19 @@ rte_vfio_enable(__rte_unused const char *modname)
 int
 rte_vfio_is_enabled(__rte_unused const char *modname)
 {
-	return -1;
+	return 0;
 }
 
 int
 rte_vfio_noiommu_is_enabled(void)
 {
-	return -1;
+	return 0;
 }
 
 int
 rte_vfio_clear_group(__rte_unused int vfio_group_fd)
 {
-	return -1;
+	return 0;
 }
 
 int
