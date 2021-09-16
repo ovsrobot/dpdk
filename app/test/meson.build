@@ -150,6 +150,8 @@ test_sources = files(
         'test_trace_perf.c',
         'test_version.c',
         'virtual_pmd.c',
+	'test_asan_heap_buffer_overflow.c',
+        'test_asan_use_after_free.c',
 )
 
 test_deps = [
