@@ -45,6 +45,8 @@
 #include <rte_common.h>
 #include <rte_malloc.h>
 #include <rte_log.h>
+#include <rte_vfio.h>
+#include <rte_errno.h>
 
 #include "iotlb.h"
 #include "vhost.h"
@@ -141,6 +143,46 @@ get_blk_size(int fd)
 	return ret == -1 ? (uint64_t)-1 : (uint64_t)stat.st_blksize;
 }
 
+static int
+async_dma_map(struct rte_vhost_mem_region *region, bool do_map)
+{
+	int ret = 0;
+	uint64_t host_iova;
+	host_iova = rte_mem_virt2iova((void *)(uintptr_t)region->host_user_addr);
+	if (do_map) {
+		/* Add mapped region into the default container of DPDK. */
+		ret = rte_vfio_container_dma_map(RTE_VFIO_DEFAULT_CONTAINER_FD,
+						 region->host_user_addr,
+						 host_iova,
+						 region->size);
+		region->dma_map_success = ret == 0;
+		if (ret) {
+			if (rte_errno != ENODEV && rte_errno != ENOTSUP) {
+				VHOST_LOG_CONFIG(ERR, "DMA engine map failed\n");
+				return ret;
+			}
+			return 0;
+		}
+		return ret;
+	} else {
+		/* No need to do vfio unmap if the map failed. */
+		if (!region->dma_map_success)
+			return 0;
+
+		/* Remove mapped region from the default container of DPDK. */
+		ret = rte_vfio_container_dma_unmap(RTE_VFIO_DEFAULT_CONTAINER_FD,
+						   region->host_user_addr,
+						   host_iova,
+						   region->size);
+		if (ret) {
+			VHOST_LOG_CONFIG(ERR, "DMA engine unmap failed\n");
+			return ret;
+		}
+		region->dma_map_success = 0;
+	}
+	return ret;
+}
+
 static void
 free_mem_region(struct virtio_net *dev)
 {
@@ -153,6 +195,9 @@ free_mem_region(struct virtio_net *dev)
 	for (i = 0; i < dev->mem->nregions; i++) {
 		reg = &dev->mem->regions[i];
 		if (reg->host_user_addr) {
+			if (dev->async_copy && rte_vfio_is_enabled("vfio"))
+				async_dma_map(reg, false);
+
 			munmap(reg->mmap_addr, reg->mmap_size);
 			close(reg->fd);
 		}
@@ -1157,6 +1202,7 @@ vhost_user_mmap_region(struct virtio_net *dev,
 	uint64_t mmap_size;
 	uint64_t alignment;
 	int populate;
+	int ret;
 
 	/* Check for memory_size + mmap_offset overflow */
 	if (mmap_offset >= -region->size) {
@@ -1210,12 +1256,21 @@ vhost_user_mmap_region(struct virtio_net *dev,
 	region->mmap_size = mmap_size;
 	region->host_user_addr = (uint64_t)(uintptr_t)mmap_addr + mmap_offset;
 
-	if (dev->async_copy)
+	if (dev->async_copy) {
 		if (add_guest_pages(dev, region, alignment) < 0) {
 			VHOST_LOG_CONFIG(ERR,
 					"adding guest pages to region failed.\n");
 			return -1;
 		}
+
+		if (rte_vfio_is_enabled("vfio")) {
+			ret = async_dma_map(region, true);
+			if (ret < 0) {
+				VHOST_LOG_CONFIG(ERR, "Configure IOMMU for DMA engine failed\n");
+				return -1;
+			}
+		}
+	}
 
 	VHOST_LOG_CONFIG(INFO,
 			"guest memory region size: 0x%" PRIx64 "\n"
