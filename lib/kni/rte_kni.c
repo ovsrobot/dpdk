@@ -31,6 +31,9 @@
 #define KNI_FIFO_COUNT_MAX     1024
 #define KNI_FIFO_SIZE          (KNI_FIFO_COUNT_MAX * sizeof(void *) + \
 					sizeof(struct rte_kni_fifo))
+#define KNI_REQS_SIZE          (KNI_FIFO_COUNT_MAX * \
+					sizeof(struct rte_kni_request) + \
+					sizeof(struct rte_kni_fifo))
 
 #define KNI_REQUEST_MBUF_NUM_MAX      32
 
@@ -175,8 +178,8 @@ kni_reserve_mz(struct rte_kni *kni)
 	KNI_MEM_CHECK(kni->m_resp_q == NULL, resp_q_fail);
 
 	snprintf(mz_name, RTE_MEMZONE_NAMESIZE, KNI_SYNC_ADDR_MZ_NAME_FMT, kni->name);
-	kni->m_sync_addr = rte_memzone_reserve(mz_name, KNI_FIFO_SIZE, SOCKET_ID_ANY,
-			RTE_MEMZONE_IOVA_CONTIG);
+	kni->m_sync_addr = rte_memzone_reserve(mz_name, KNI_REQS_SIZE,
+			SOCKET_ID_ANY, RTE_MEMZONE_IOVA_CONTIG);
 	KNI_MEM_CHECK(kni->m_sync_addr == NULL, sync_addr_fail);
 
 	return 0;
@@ -307,6 +310,7 @@ rte_kni_alloc(struct rte_mempool *pktmbuf_pool,
 	kni->sync_addr = kni->m_sync_addr->addr;
 	dev_info.sync_va = kni->m_sync_addr->addr;
 	dev_info.sync_phys = kni->m_sync_addr->iova;
+	dev_info.sync_ring_size = KNI_FIFO_COUNT_MAX;
 
 	kni->pktmbuf_pool = pktmbuf_pool;
 	kni->group_id = conf->group_id;
@@ -544,11 +548,7 @@ rte_kni_handle_request(struct rte_kni *kni)
 	if (ret != 1)
 		return 0; /* It is OK of can not getting the request mbuf */
 
-	if (req != kni->sync_addr) {
-		RTE_LOG(ERR, KNI, "Wrong req pointer %p\n", req);
-		return -1;
-	}
-
+	printf("%s: req %p id %u\n", __func__, req, req->req_id);
 	/* Analyze the request and call the relevant actions for it */
 	switch (req->req_id) {
 	case RTE_KNI_REQ_CHANGE_MTU: /* Change MTU */

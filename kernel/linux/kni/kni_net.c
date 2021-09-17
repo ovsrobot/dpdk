@@ -110,6 +110,8 @@ kni_net_process_request(struct net_device *dev, struct rte_kni_request *req)
 	void *resp_va;
 	uint32_t num;
 	int ret_val;
+	unsigned int idx;
+	char *k_reqptr, *v_reqptr;
 
 	ASSERT_RTNL();
 
@@ -122,10 +124,17 @@ kni_net_process_request(struct net_device *dev, struct rte_kni_request *req)
 	}
 
 	mutex_lock(&kni->sync_lock);
-
+	idx = atomic_read(&kni->sync_ring_idx);
+	atomic_cmpxchg(&kni->sync_ring_idx, idx,
+		(idx + 1) % kni->sync_ring_size);
 	/* Construct data */
-	memcpy(kni->sync_kva, req, sizeof(struct rte_kni_request));
-	num = kni_fifo_put(kni->req_q, &kni->sync_va, 1);
+	k_reqptr = (char *)((uintptr_t)kni->sync_kva +
+			sizeof(struct rte_kni_request) * idx);
+	v_reqptr = (char *)((uintptr_t)kni->sync_va +
+			sizeof(struct rte_kni_request) * idx);
+
+	memcpy(k_reqptr, req, sizeof(struct rte_kni_request));
+	num = kni_fifo_put(kni->req_q, (void **)&v_reqptr, 1);
 	if (num < 1) {
 		pr_err("Cannot send to req_q\n");
 		ret = -EBUSY;
@@ -147,14 +156,14 @@ kni_net_process_request(struct net_device *dev, struct rte_kni_request *req)
 		goto fail;
 	}
 	num = kni_fifo_get(kni->resp_q, (void **)&resp_va, 1);
-	if (num != 1 || resp_va != kni->sync_va) {
+	if (num != 1) {
 		/* This should never happen */
 		pr_err("No data in resp_q\n");
 		ret = -ENODATA;
 		goto fail;
 	}
 
-	memcpy(req, kni->sync_kva, sizeof(struct rte_kni_request));
+	memcpy(req, k_reqptr, sizeof(struct rte_kni_request));
 async:
 	ret = 0;
 
@@ -681,13 +690,12 @@ kni_net_change_mtu(struct net_device *dev, int new_mtu)
 static void
 kni_net_change_rx_flags(struct net_device *netdev, int flags)
 {
-	struct rte_kni_request req;
+	struct rte_kni_request req = { 0 };
 
 	memset(&req, 0, sizeof(req));
 
 	if (flags & IFF_ALLMULTI) {
 		req.req_id = RTE_KNI_REQ_CHANGE_ALLMULTI;
-
 		if (netdev->flags & IFF_ALLMULTI)
 			req.allmulti = 1;
 		else
@@ -703,7 +711,8 @@ kni_net_change_rx_flags(struct net_device *netdev, int flags)
 			req.promiscusity = 0;
 	}
 
-	kni_net_process_request(netdev, &req);
+	if (req.req_id)
+		kni_net_process_request(netdev, &req);
 }
 
 /*

@@ -74,6 +74,8 @@ struct kni_dev {
 
 	void *sync_kva;
 	void *sync_va;
+	unsigned int sync_ring_size;
+	atomic_t sync_ring_idx;
 
 	void *mbuf_kva;
 	void *mbuf_va;

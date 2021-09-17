@@ -345,6 +345,8 @@ kni_ioctl_create(struct net *net, uint32_t ioctl_num,
 
 	kni->net_dev = net_dev;
 	kni->core_id = dev_info.core_id;
+	kni->sync_ring_size = dev_info.sync_ring_size;
+	kni->sync_ring_idx.counter = 0;
 	strncpy(kni->name, dev_info.name, RTE_KNI_NAMESIZE);
 
 	/* Translate user space info into kernel space info */

@@ -110,6 +110,7 @@ struct rte_kni_device_info {
 	phys_addr_t resp_phys;
 	phys_addr_t sync_phys;
 	void * sync_va;
+	unsigned int sync_ring_size;
 
 	/* mbuf mempool */
 	void * mbuf_va;
