@@ -3051,6 +3051,16 @@ fwd_topology_tx_port_get(portid_t rxp)
 }
 
 static void
+fwd_stream_set_common(struct fwd_stream *fs)
+{
+	fs->nb_pkt_per_burst = nb_pkt_per_burst;
+	fs->record_burst_stats = !!record_burst_stats;
+	fs->record_core_cycles = !!record_core_cycles;
+	fs->retry_enabled = !!retry_enabled;
+	fs->rxq_share = !!rxq_share;
+}
+
+static void
 simple_fwd_config_setup(void)
 {
 	portid_t i;
@@ -3079,7 +3089,7 @@ simple_fwd_config_setup(void)
 				fwd_ports_ids[fwd_topology_tx_port_get(i)];
 		fwd_streams[i]->tx_queue  = 0;
 		fwd_streams[i]->peer_addr = fwd_streams[i]->tx_port;
-		fwd_streams[i]->retry_enabled = retry_enabled;
+		fwd_stream_set_common(fwd_streams[i]);
 	}
 }
 
@@ -3140,7 +3150,7 @@ rss_fwd_config_setup(void)
 		fs->tx_port = fwd_ports_ids[txp];
 		fs->tx_queue = rxq;
 		fs->peer_addr = fs->tx_port;
-		fs->retry_enabled = retry_enabled;
+		fwd_stream_set_common(fs);
 		rxp++;
 		if (rxp < nb_fwd_ports)
 			continue;
@@ -3255,7 +3265,7 @@ dcb_fwd_config_setup(void)
 				fs->tx_port = fwd_ports_ids[txp];
 				fs->tx_queue = txq + j % nb_tx_queue;
 				fs->peer_addr = fs->tx_port;
-				fs->retry_enabled = retry_enabled;
+				fwd_stream_set_common(fs);
 			}
 			fwd_lcores[lc_id]->stream_nb +=
 				rxp_dcb_info.tc_queue.tc_rxq[i][tc].nb_queue;
@@ -3326,7 +3336,7 @@ icmp_echo_config_setup(void)
 			fs->tx_port = fs->rx_port;
 			fs->tx_queue = rxq;
 			fs->peer_addr = fs->tx_port;
-			fs->retry_enabled = retry_enabled;
+			fwd_stream_set_common(fs);
 			if (verbose_level > 0)
 				printf("  stream=%d port=%d rxq=%d txq=%d\n",
 				       sm_id, fs->rx_port, fs->rx_queue,

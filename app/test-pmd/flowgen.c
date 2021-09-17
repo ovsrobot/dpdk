@@ -97,12 +97,12 @@ flow_gen_stream(struct fwd_stream *fs, uint16_t nb_rx,
 	if (tx_offloads	& DEV_TX_OFFLOAD_MACSEC_INSERT)
 		ol_flags |= PKT_TX_MACSEC;
 
-	for (nb_pkt = 0; nb_pkt < nb_pkt_per_burst; nb_pkt++) {
+	for (nb_pkt = 0; nb_pkt < fs->nb_pkt_per_burst; nb_pkt++) {
 		if (!nb_pkt || !nb_clones) {
 			nb_clones = nb_pkt_flowgen_clones;
 			/* Logic limitation */
-			if (nb_clones > nb_pkt_per_burst)
-				nb_clones = nb_pkt_per_burst;
+			if (nb_clones > fs->nb_pkt_per_burst)
+				nb_clones = fs->nb_pkt_per_burst;
 
 			pkt = rte_mbuf_raw_alloc(mbp);
 			if (!pkt)

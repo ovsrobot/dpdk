@@ -153,7 +153,7 @@ pkt_burst_noisy_vnf(struct fwd_stream *fs)
 	uint64_t now;
 
 	nb_rx = rte_eth_rx_burst(fs->rx_port, fs->rx_queue,
-			pkts_burst, nb_pkt_per_burst);
+			pkts_burst, fs->nb_pkt_per_burst);
 	inc_rx_burst_stats(fs, nb_rx);
 	if (unlikely(nb_rx == 0))
 		goto flush;

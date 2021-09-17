@@ -128,12 +128,17 @@ struct fwd_stream {
 	queueid_t  tx_queue;  /**< TX queue to send forwarded packets */
 	streamid_t peer_addr; /**< index of peer ethernet address of packets */
 
-	unsigned int retry_enabled;
+	uint16_t nb_pkt_per_burst;
+	unsigned int record_burst_stats:1;
+	unsigned int record_core_cycles:1;
+	unsigned int retry_enabled:1;
+	unsigned int rxq_share:1;
 
 	/* "read-write" results */
 	uint64_t rx_packets;  /**< received packets */
 	uint64_t tx_packets;  /**< received packets transmitted */
 	uint64_t fwd_dropped; /**< received packets not forwarded */
+	uint64_t core_cycles; /**< used for RX and TX processing */
 	uint64_t rx_bad_ip_csum ; /**< received packets has bad ip checksum */
 	uint64_t rx_bad_l4_csum ; /**< received packets has bad l4 checksum */
 	uint64_t rx_bad_outer_l4_csum;
@@ -141,7 +146,6 @@ struct fwd_stream {
 	uint64_t rx_bad_outer_ip_csum;
 	/**< received packets having bad outer ip checksum */
 	unsigned int gro_times;	/**< GRO operation times */
-	uint64_t     core_cycles; /**< used for RX and TX processing */
 	struct pkt_burst_stats rx_burst_stats;
 	struct pkt_burst_stats tx_burst_stats;
 	struct fwd_lcore *lcore; /**< Lcore being scheduled. */
@@ -750,28 +754,27 @@ port_pci_reg_write(struct rte_port *port, uint32_t reg_off, uint32_t reg_v)
 static inline void
 get_start_cycles(uint64_t *start_tsc)
 {
-	if (record_core_cycles)
-		*start_tsc = rte_rdtsc();
+	*start_tsc = rte_rdtsc();
 }
 
 static inline void
 get_end_cycles(struct fwd_stream *fs, uint64_t start_tsc)
 {
-	if (record_core_cycles)
+	if (unlikely(fs->record_core_cycles))
 		fs->core_cycles += rte_rdtsc() - start_tsc;
 }
 
 static inline void
 inc_rx_burst_stats(struct fwd_stream *fs, uint16_t nb_rx)
 {
-	if (record_burst_stats)
+	if (unlikely(fs->record_burst_stats))
 		fs->rx_burst_stats.pkt_burst_spread[nb_rx]++;
 }
 
 static inline void
 inc_tx_burst_stats(struct fwd_stream *fs, uint16_t nb_tx)
 {
-	if (record_burst_stats)
+	if (unlikely(fs->record_burst_stats))
 		fs->tx_burst_stats.pkt_burst_spread[nb_tx]++;
 }
 
@@ -1032,13 +1035,13 @@ int update_jumbo_frame_offload(portid_t portid);
 static void                                                     \
 pkt_burst_fwd(struct fwd_stream *fs)                            \
 {                                                               \
-	struct rte_mbuf *pkts_burst[nb_pkt_per_burst];          \
+	struct rte_mbuf *pkts_burst[fs->nb_pkt_per_burst];      \
 	uint16_t nb_rx;                                         \
 	uint64_t start_tsc = 0;                                 \
 								\
 	get_start_cycles(&start_tsc);                           \
 	nb_rx = rte_eth_rx_burst(fs->rx_port, fs->rx_queue,     \
-			pkts_burst, nb_pkt_per_burst);          \
+			pkts_burst, fs->nb_pkt_per_burst);      \
 	inc_rx_burst_stats(fs, nb_rx);                          \
 	if (unlikely(nb_rx == 0))                               \
 		return;                                         \

@@ -367,8 +367,8 @@ pkt_burst_transmit(struct fwd_stream *fs)
 	eth_hdr.ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
 
 	if (rte_mempool_get_bulk(mbp, (void **)pkts_burst,
-				nb_pkt_per_burst) == 0) {
-		for (nb_pkt = 0; nb_pkt < nb_pkt_per_burst; nb_pkt++) {
+				fs->nb_pkt_per_burst) == 0) {
+		for (nb_pkt = 0; nb_pkt < fs->nb_pkt_per_burst; nb_pkt++) {
 			if (unlikely(!pkt_burst_prepare(pkts_burst[nb_pkt], mbp,
 							&eth_hdr, vlan_tci,
 							vlan_tci_outer,
@@ -376,12 +376,12 @@ pkt_burst_transmit(struct fwd_stream *fs)
 							nb_pkt, fs))) {
 				rte_mempool_put_bulk(mbp,
 						(void **)&pkts_burst[nb_pkt],
-						nb_pkt_per_burst - nb_pkt);
+						fs->nb_pkt_per_burst - nb_pkt);
 				break;
 			}
 		}
 	} else {
-		for (nb_pkt = 0; nb_pkt < nb_pkt_per_burst; nb_pkt++) {
+		for (nb_pkt = 0; nb_pkt < fs->nb_pkt_per_burst; nb_pkt++) {
 			pkt = rte_mbuf_raw_alloc(mbp);
 			if (pkt == NULL)
 				break;
