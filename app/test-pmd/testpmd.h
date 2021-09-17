@@ -276,6 +276,8 @@ struct fwd_lcore {
 typedef void (*port_fwd_begin_t)(portid_t pi);
 typedef void (*port_fwd_end_t)(portid_t pi);
 typedef void (*packet_fwd_t)(struct fwd_stream *fs);
+typedef void (*packet_fwd_cb)(struct fwd_stream *fs, uint16_t nb_rx,
+			      struct rte_mbuf **pkts);
 
 struct fwd_engine {
 	const char       *fwd_mode_name; /**< Forwarding mode name. */
@@ -910,6 +912,8 @@ char *list_pkt_forwarding_modes(void);
 char *list_pkt_forwarding_retry_modes(void);
 void set_pkt_forwarding_mode(const char *fwd_mode);
 void start_packet_forwarding(int with_tx_first);
+void forward_shared_rxq(struct fwd_stream *fs, uint16_t nb_rx,
+			struct rte_mbuf **pkts_burst, packet_fwd_cb fwd);
 void fwd_stats_display(void);
 void fwd_stats_reset(void);
 void stop_packet_forwarding(void);
@@ -1046,7 +1050,10 @@ pkt_burst_fwd(struct fwd_stream *fs)                            \
 	if (unlikely(nb_rx == 0))                               \
 		return;                                         \
 	fs->rx_packets += nb_rx;                                \
-	cb(fs, nb_rx, pkts_burst);                              \
+	if (fs->rxq_share)                                      \
+		forward_shared_rxq(fs, nb_rx, pkts_burst, cb);  \
+	else                                                    \
+		cb(fs, nb_rx, pkts_burst);                      \
 	get_end_cycles(fs, start_tsc);                          \
 }
 
