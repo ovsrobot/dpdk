@@ -101,6 +101,10 @@ struct rte_ipsec_sa {
 		uint64_t msk;
 		uint64_t val;
 	} tx_offload;
+	struct {
+		uint16_t sport;
+		uint16_t dport;
+	} natt;
 	uint32_t salt;
 	uint8_t algo_type;
 	uint8_t proto;    /* next proto */

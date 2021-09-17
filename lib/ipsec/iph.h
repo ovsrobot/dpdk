@@ -251,6 +251,7 @@ update_tun_outb_l3hdr(const struct rte_ipsec_sa *sa, void *outh,
 {
 	struct rte_ipv4_hdr *v4h;
 	struct rte_ipv6_hdr *v6h;
+	struct rte_udp_hdr *udph;
 	uint8_t is_outh_ipv4;
 
 	if (sa->type & RTE_IPSEC_SATP_MODE_TUNLV4) {
@@ -258,11 +259,27 @@ update_tun_outb_l3hdr(const struct rte_ipsec_sa *sa, void *outh,
 		v4h = outh;
 		v4h->packet_id = pid;
 		v4h->total_length = rte_cpu_to_be_16(plen - l2len);
+
+		if (sa->type & RTE_IPSEC_SATP_NATT_ENABLE) {
+			udph = (struct rte_udp_hdr *)(v4h + 1);
+			udph->dst_port = sa->natt.dport;
+			udph->src_port = sa->natt.sport;
+			udph->dgram_len = rte_cpu_to_be_16(plen - l2len -
+				(sizeof(*v4h) + sizeof(*udph)));
+		}
 	} else {
 		is_outh_ipv4 = 0;
 		v6h = outh;
 		v6h->payload_len = rte_cpu_to_be_16(plen - l2len -
 				sizeof(*v6h));
+
+		if (sa->type & RTE_IPSEC_SATP_NATT_ENABLE) {
+			udph = (struct rte_udp_hdr *)(v6h + 1);
+			udph->dst_port = sa->natt.dport;
+			udph->src_port = sa->natt.sport;
+			udph->dgram_len = rte_cpu_to_be_16(plen - l2len -
+				(sizeof(*v6h) + sizeof(*udph)));
+		}
 	}
 
 	if (sa->type & TUN_HDR_MSK)
