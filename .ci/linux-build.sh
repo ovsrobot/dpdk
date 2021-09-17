@@ -79,7 +79,14 @@ fi
 
 OPTS="$OPTS -Dmachine=default"
 OPTS="$OPTS --default-library=$DEF_LIB"
-OPTS="$OPTS --buildtype=debugoptimized"
+
+if [ "$CC" != "${CC%%clang}" ] && [ "$RUN_TESTS" = 'true' ]; then
+    # Let's run tests with ASAN
+    OPTS="$OPTS -Db_sanitize=address -Db_lundef=false --buildtype=debug"
+else
+    OPTS="$OPTS --buildtype=debugoptimized"
+fi
+
 OPTS="$OPTS -Dcheck_includes=true"
 meson build --werror $OPTS
 ninja -C build
