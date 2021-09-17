@@ -181,6 +181,19 @@ struct rte_security_ipsec_sa_options {
 	 * * 0: Disable per session security statistics collection for this SA.
 	 */
 	uint32_t stats : 1;
+
+	/** Transmit Segmentation Offload (TSO)
+	 *
+	 * * 1: Enable per session security TSO support, use MSS value provide
+	 *      in IPsec security session when PKT_TX_TCP_SEG or PKT_TX_UDP_SEG
+	 *      ol_flags are set in mbuf.
+	 *      this SA, if supported by the driver.
+	 * * 0: No TSO support for offload IPsec packets. Hardware will not
+	 *      attempt to segment packet, and packet transmission will fail if
+	 *      larger than MTU of interface
+	 */
+	uint32_t tso : 1;
+
 };
 
 /** IPSec security association direction */
@@ -217,6 +230,8 @@ struct rte_security_ipsec_xform {
 	/**< Anti replay window size to enable sequence replay attack handling.
 	 * replay checking is disabled if the window size is 0.
 	 */
+	uint32_t mss;
+	/**< IPsec payload Maximum Segment Size */
 };
 
 /**
