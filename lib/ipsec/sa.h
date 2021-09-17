@@ -122,9 +122,30 @@ struct rte_ipsec_sa {
 		uint16_t mss;
 	} tso;
 
+	LIST_ENTRY(rte_ipsec_sa) telemetry_next;
+	/**< list entry for telemetry enabled SA */
+
+
+	RTE_MARKER cachealign_statistics __rte_cache_min_aligned;
+
+	/* Statistics */
+	struct {
+		uint64_t count;
+		uint64_t bytes;
+
+		struct {
+			uint64_t count;
+			uint64_t authentication_failed;
+		} errors;
+	} statistics;
+
+	RTE_MARKER cachealign_tunnel_header __rte_cache_min_aligned;
+
 	/* template for tunnel header */
 	uint8_t hdr[IPSEC_MAX_HDR_SIZE];
 
+
+	RTE_MARKER cachealign_tunnel_seq_num_replay_win __rte_cache_min_aligned;
 	/*
 	 * sqn and replay window
 	 * In case of SA handled by multiple threads *sqn* cacheline
