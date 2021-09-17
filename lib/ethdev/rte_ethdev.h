@@ -4895,6 +4895,22 @@ __rte_experimental
 int rte_eth_representor_info_get(uint16_t port_id,
 				 struct rte_eth_representor_info *info);
 
+/**
+ * Aggregate shared Rx queue ports to one port for polling.
+ *
+ * Only queues with specified share group is aggregated.
+ * Any operation besides Rx burst and device close is unexpected.
+ *
+ * @param port_id
+ *   The port identifier of the device from shared Rx queue group.
+ * @param group
+ *   Shared Rx queue group to aggregate.
+ * @return
+ *   UINT16_MAX if failed, otherwise aggregated port number.
+ */
+__rte_experimental
+uint16_t rte_eth_shared_rxq_aggregate(uint16_t port_id, uint32_t group);
+
 #include <rte_ethdev_core.h>
 
 /**
