@@ -112,6 +112,12 @@ struct rte_security_ipsec_tunnel_param {
 	};
 };
 
+struct rte_security_ipsec_udp_param {
+
+	uint16_t sport;
+	uint16_t dport;
+};
+
 /**
  * IPsec Security Association option flags
  */
@@ -224,6 +230,8 @@ struct rte_security_ipsec_xform {
 	/**< IPsec SA Mode - transport/tunnel */
 	struct rte_security_ipsec_tunnel_param tunnel;
 	/**< Tunnel parameters, NULL for transport mode */
+	struct rte_security_ipsec_udp_param udp;
+	/**< UDP parameters, ignored when udp_encap option not specified */
 	uint64_t esn_soft_limit;
 	/**< ESN for which the overflow event need to be raised */
 	uint32_t replay_win_sz;
