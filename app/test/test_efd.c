@@ -91,9 +91,9 @@ static struct flow_key keys[5] = {
 /* Array to store the data */
 static efd_value_t data[5];
 
-static inline uint8_t efd_get_all_sockets_bitmask(void)
+static inline uint64_t efd_get_all_sockets_bitmask(void)
 {
-	uint8_t all_cpu_sockets_bitmask = 0;
+	uint64_t all_cpu_sockets_bitmask = 0;
 	unsigned int i;
 	unsigned int next_lcore = rte_get_main_lcore();
 	const int val_true = 1, val_false = 0;
