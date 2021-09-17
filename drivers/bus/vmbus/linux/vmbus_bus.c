@@ -242,7 +242,7 @@ vmbus_scan_one(const char *name)
 		return -1;
 
 	dev->device.bus = &rte_vmbus_bus.bus;
-	dev->device.name = strdup(name);
+	dev->device.name = dev->name = strdup(name);
 	if (!dev->device.name)
 		goto error;
 
@@ -261,6 +261,7 @@ vmbus_scan_one(const char *name)
 
 	/* skip non-network devices */
 	if (rte_uuid_compare(dev->class_id, vmbus_nic_uuid) != 0) {
+		free(dev->name);
 		free(dev);
 		return 0;
 	}
@@ -312,6 +313,7 @@ vmbus_scan_one(const char *name)
 		} else { /* already registered */
 			VMBUS_LOG(NOTICE,
 				"%s already registered", name);
+			free(dev->name);
 			free(dev);
 		}
 		return 0;
@@ -322,6 +324,7 @@ vmbus_scan_one(const char *name)
 error:
 	VMBUS_LOG(DEBUG, "failed");
 
+	free(dev->name);
 	free(dev);
 	return -1;
 }

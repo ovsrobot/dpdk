@@ -65,6 +65,7 @@ struct rte_vmbus_device {
 	TAILQ_ENTRY(rte_vmbus_device) next;    /**< Next probed VMBUS device */
 	const struct rte_vmbus_driver *driver; /**< Associated driver */
 	struct rte_device device;              /**< Inherit core device */
+	char *name;                            /**< Device name */
 	rte_uuid_t device_id;		       /**< VMBUS device id */
 	rte_uuid_t class_id;		       /**< VMBUS device type */
 	uint32_t relid;			       /**< id for primary */
