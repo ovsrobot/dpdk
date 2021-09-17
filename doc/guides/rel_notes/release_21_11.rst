@@ -87,6 +87,13 @@ New Features
   Added command-line options to specify total number of processes and
   current process ID. Each process owns subset of Rx and Tx queues.
 
+* **Added lookaside protocol (IPsec) tests in dpdk-test.**
+
+  * Added known vector tests (AES-GCM 128, 192, 256).
+  * Added tests to verify error reporting with ICV corruption.
+  * Added tests to verify IV generation.
+  * Added tests to verify UDP encapsulation.
+
 
 Removed Items
 -------------
