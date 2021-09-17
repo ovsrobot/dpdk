@@ -6,6 +6,7 @@ Arm
 armv7
 armv8
 BAR
+CPT
 CRC
 DCB
 DevX
@@ -33,10 +34,12 @@ L2
 L3
 L4
 LACP
+LBK
 Linux
 LRO
 LSC
 MAC
+MCAM
 MPLS
 MSI
 MSI-X
@@ -44,6 +47,9 @@ MSS
 MTU
 NEON
 NIC
+NIX
+NPA
+NPC
 null
 NUMA
 NVGRE
@@ -57,11 +63,13 @@ PVID
 QinQ
 RDMA
 RETA
+ROC
 RSS
 Rx
 SCTP
 SMP
 SoC
+SSO
 SW
 TC
 TCAM
