@@ -61,10 +61,10 @@ RTE_DEFINE_PER_LCORE(int, _next_flow);
  * still do so in order to maintain traffic statistics.
  */
 static void
-pkt_burst_flow_gen(struct fwd_stream *fs)
+flow_gen_stream(struct fwd_stream *fs, uint16_t nb_rx,
+		struct rte_mbuf **pkts_burst)
 {
 	unsigned pkt_size = tx_pkt_length - 4;	/* Adjust FCS */
-	struct rte_mbuf  *pkts_burst[MAX_PKT_BURST];
 	struct rte_mempool *mbp;
 	struct rte_mbuf  *pkt = NULL;
 	struct rte_ether_hdr *eth_hdr;
@@ -72,7 +72,6 @@ pkt_burst_flow_gen(struct fwd_stream *fs)
 	struct rte_udp_hdr *udp_hdr;
 	uint16_t vlan_tci, vlan_tci_outer;
 	uint64_t ol_flags = 0;
-	uint16_t nb_rx;
 	uint16_t nb_tx;
 	uint16_t nb_dropped;
 	uint16_t nb_pkt;
@@ -80,17 +79,9 @@ pkt_burst_flow_gen(struct fwd_stream *fs)
 	uint16_t i;
 	uint32_t retry;
 	uint64_t tx_offloads;
-	uint64_t start_tsc = 0;
 	int next_flow = RTE_PER_LCORE(_next_flow);
 
-	get_start_cycles(&start_tsc);
-
-	/* Receive a burst of packets and discard them. */
-	nb_rx = rte_eth_rx_burst(fs->rx_port, fs->rx_queue, pkts_burst,
-				 nb_pkt_per_burst);
 	inc_rx_burst_stats(fs, nb_rx);
-	fs->rx_packets += nb_rx;
-
 	for (i = 0; i < nb_rx; i++)
 		rte_pktmbuf_free(pkts_burst[i]);
 
@@ -195,11 +186,10 @@ pkt_burst_flow_gen(struct fwd_stream *fs)
 			rte_pktmbuf_free(pkts_burst[nb_tx]);
 		} while (++nb_tx < nb_pkt);
 	}
-
 	RTE_PER_LCORE(_next_flow) = next_flow;
-
-	get_end_cycles(fs, start_tsc);
 }
+
+PKT_BURST_FWD(flow_gen_stream);
 
 static void
 flowgen_begin(portid_t pi)
@@ -211,5 +201,5 @@ struct fwd_engine flow_gen_engine = {
 	.fwd_mode_name  = "flowgen",
 	.port_fwd_begin = flowgen_begin,
 	.port_fwd_end   = NULL,
-	.packet_fwd     = pkt_burst_flow_gen,
+	.packet_fwd     = pkt_burst_fwd,
 };
