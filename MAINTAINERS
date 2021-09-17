@@ -1303,8 +1303,6 @@ IOAT Rawdev
 M: Bruce Richardson <bruce.richardson@intel.com>
 F: drivers/raw/ioat/
 F: doc/guides/rawdevs/ioat.rst
-F: examples/ioat/
-F: doc/guides/sample_app_ug/ioat.rst
 
 NXP DPAA2 QDMA
 M: Nipun Gupta <nipun.gupta@nxp.com>
@@ -1674,6 +1672,11 @@ F: doc/guides/tools/proc_info.rst
 
 Other Example Applications
 --------------------------
+
+DMAdev example
+M: Kevin Laatz <kevin.laatz@intel.com>
+F: examples/dma/
+F: doc/guides/sample_app_ug/dma.rst
 
 Ethtool example
 F: examples/ethtool/
