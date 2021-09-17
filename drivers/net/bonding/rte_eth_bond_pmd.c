@@ -2329,8 +2329,10 @@ bond_ethdev_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 }
 
 static void
-bond_ethdev_rx_queue_release(void *queue)
+bond_ethdev_rx_queue_release(struct rte_eth_dev *dev, uint16_t queue_id)
 {
+	void *queue = dev->data->rx_queues[queue_id];
+
 	if (queue == NULL)
 		return;
 
@@ -2338,8 +2340,10 @@ bond_ethdev_rx_queue_release(void *queue)
 }
 
 static void
-bond_ethdev_tx_queue_release(void *queue)
+bond_ethdev_tx_queue_release(struct rte_eth_dev *dev, uint16_t queue_id)
 {
+	void *queue = dev->data->rx_queues[queue_id];
+
 	if (queue == NULL)
 		return;
 

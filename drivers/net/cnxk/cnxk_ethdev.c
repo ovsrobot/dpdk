@@ -190,7 +190,7 @@ cnxk_nix_tx_queue_setup(struct rte_eth_dev *eth_dev, uint16_t qid,
 	/* Free memory prior to re-allocation if needed. */
 	if (eth_dev->data->tx_queues[qid] != NULL) {
 		plt_nix_dbg("Freeing memory prior to re-allocation %d", qid);
-		dev_ops->tx_queue_release(eth_dev->data->tx_queues[qid]);
+		dev_ops->tx_queue_release(eth_dev, qid);
 		eth_dev->data->tx_queues[qid] = NULL;
 	}
 
@@ -232,20 +232,20 @@ cnxk_nix_tx_queue_setup(struct rte_eth_dev *eth_dev, uint16_t qid,
 }
 
 static void
-cnxk_nix_tx_queue_release(void *txq)
+cnxk_nix_tx_queue_release(struct rte_eth_dev *eth_dev, uint16_t qid)
 {
+	void *txq = eth_dev->data->tx_queues[qid];
 	struct cnxk_eth_txq_sp *txq_sp;
 	struct cnxk_eth_dev *dev;
 	struct roc_nix_sq *sq;
-	uint16_t qid;
 	int rc;
 
 	if (!txq)
 		return;
 
 	txq_sp = cnxk_eth_txq_to_sp(txq);
+
 	dev = txq_sp->dev;
-	qid = txq_sp->qid;
 
 	plt_nix_dbg("Releasing txq %u", qid);
 
@@ -299,7 +299,7 @@ cnxk_nix_rx_queue_setup(struct rte_eth_dev *eth_dev, uint16_t qid,
 		const struct eth_dev_ops *dev_ops = eth_dev->dev_ops;
 
 		plt_nix_dbg("Freeing memory prior to re-allocation %d", qid);
-		dev_ops->rx_queue_release(eth_dev->data->rx_queues[qid]);
+		dev_ops->rx_queue_release(eth_dev, qid);
 		eth_dev->data->rx_queues[qid] = NULL;
 	}
 
@@ -379,13 +379,13 @@ fail:
 }
 
 static void
-cnxk_nix_rx_queue_release(void *rxq)
+cnxk_nix_rx_queue_release(struct rte_eth_dev *eth_dev, uint16_t qid)
 {
+	void *rxq = eth_dev->data->rx_queues[qid];
 	struct cnxk_eth_rxq_sp *rxq_sp;
 	struct cnxk_eth_dev *dev;
 	struct roc_nix_rq *rq;
 	struct roc_nix_cq *cq;
-	uint16_t qid;
 	int rc;
 
 	if (!rxq)
@@ -393,7 +393,6 @@ cnxk_nix_rx_queue_release(void *rxq)
 
 	rxq_sp = cnxk_eth_rxq_to_sp(rxq);
 	dev = rxq_sp->dev;
-	qid = rxq_sp->qid;
 
 	plt_nix_dbg("Releasing rxq %u", qid);
 
@@ -558,7 +557,7 @@ nix_store_queue_cfg_and_then_release(struct rte_eth_dev *eth_dev)
 		txq_sp = cnxk_eth_txq_to_sp(txq[i]);
 		memcpy(&tx_qconf[i], &txq_sp->qconf, sizeof(*tx_qconf));
 		tx_qconf[i].valid = true;
-		dev_ops->tx_queue_release(txq[i]);
+		dev_ops->tx_queue_release(eth_dev, i);
 		eth_dev->data->tx_queues[i] = NULL;
 	}
 
@@ -572,7 +571,7 @@ nix_store_queue_cfg_and_then_release(struct rte_eth_dev *eth_dev)
 		rxq_sp = cnxk_eth_rxq_to_sp(rxq[i]);
 		memcpy(&rx_qconf[i], &rxq_sp->qconf, sizeof(*rx_qconf));
 		rx_qconf[i].valid = true;
-		dev_ops->rx_queue_release(rxq[i]);
+		dev_ops->rx_queue_release(eth_dev, i);
 		eth_dev->data->rx_queues[i] = NULL;
 	}
 
@@ -594,7 +593,6 @@ nix_restore_queue_cfg(struct rte_eth_dev *eth_dev)
 	struct cnxk_eth_qconf *tx_qconf = dev->tx_qconf;
 	struct cnxk_eth_qconf *rx_qconf = dev->rx_qconf;
 	int rc, i, nb_rxq, nb_txq;
-	void **txq, **rxq;
 
 	nb_rxq = RTE_MIN(dev->nb_rxq, eth_dev->data->nb_rx_queues);
 	nb_txq = RTE_MIN(dev->nb_txq, eth_dev->data->nb_tx_queues);
@@ -629,9 +627,8 @@ nix_restore_queue_cfg(struct rte_eth_dev *eth_dev)
 					     &tx_qconf[i].conf.tx);
 		if (rc) {
 			plt_err("Failed to setup tx queue rc=%d", rc);
-			txq = eth_dev->data->tx_queues;
 			for (i -= 1; i >= 0; i--)
-				dev_ops->tx_queue_release(txq[i]);
+				dev_ops->tx_queue_release(eth_dev, i);
 			goto fail;
 		}
 	}
@@ -647,9 +644,8 @@ nix_restore_queue_cfg(struct rte_eth_dev *eth_dev)
 					     rx_qconf[i].mp);
 		if (rc) {
 			plt_err("Failed to setup rx queue rc=%d", rc);
-			rxq = eth_dev->data->rx_queues;
 			for (i -= 1; i >= 0; i--)
-				dev_ops->rx_queue_release(rxq[i]);
+				dev_ops->rx_queue_release(eth_dev, i);
 			goto tx_queue_release;
 		}
 	}
@@ -660,9 +656,8 @@ nix_restore_queue_cfg(struct rte_eth_dev *eth_dev)
 	return 0;
 
 tx_queue_release:
-	txq = eth_dev->data->tx_queues;
 	for (i = 0; i < eth_dev->data->nb_tx_queues; i++)
-		dev_ops->tx_queue_release(txq[i]);
+		dev_ops->tx_queue_release(eth_dev, i);
 fail:
 	if (tx_qconf)
 		free(tx_qconf);
@@ -1417,14 +1412,14 @@ cnxk_eth_dev_uninit(struct rte_eth_dev *eth_dev, bool reset)
 
 	/* Free up SQs */
 	for (i = 0; i < eth_dev->data->nb_tx_queues; i++) {
-		dev_ops->tx_queue_release(eth_dev->data->tx_queues[i]);
+		dev_ops->tx_queue_release(eth_dev, i);
 		eth_dev->data->tx_queues[i] = NULL;
 	}
 	eth_dev->data->nb_tx_queues = 0;
 
 	/* Free up RQ's and CQ's */
 	for (i = 0; i < eth_dev->data->nb_rx_queues; i++) {
-		dev_ops->rx_queue_release(eth_dev->data->rx_queues[i]);
+		dev_ops->rx_queue_release(eth_dev, i);
 		eth_dev->data->rx_queues[i] = NULL;
 	}
 	eth_dev->data->nb_rx_queues = 0;

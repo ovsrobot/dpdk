@@ -909,7 +909,9 @@ eth_dev_rx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues)
 
 		if (dev->dev_ops->rx_queue_release != NULL)
 			for (i = nb_queues; i < old_nb_queues; i++)
-				(*dev->dev_ops->rx_queue_release)(rxq[i]);
+				if (rxq[i] != NULL)
+					(*dev->dev_ops->rx_queue_release)(dev, i);
+
 		rxq = rte_realloc(rxq, sizeof(rxq[0]) * nb_queues,
 				RTE_CACHE_LINE_SIZE);
 		if (rxq == NULL)
@@ -928,7 +930,8 @@ eth_dev_rx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues)
 
 		if (dev->dev_ops->rx_queue_release != NULL)
 			for (i = nb_queues; i < old_nb_queues; i++)
-				(*dev->dev_ops->rx_queue_release)(rxq[i]);
+				if (rxq[i] != NULL)
+					(*dev->dev_ops->rx_queue_release)(dev, i);
 
 		rte_free(dev->data->rx_queues);
 		dev->data->rx_queues = NULL;
@@ -1147,7 +1150,10 @@ eth_dev_tx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues)
 
 		if (dev->dev_ops->tx_queue_release != NULL)
 			for (i = nb_queues; i < old_nb_queues; i++)
-				(*dev->dev_ops->tx_queue_release)(txq[i]);
+				if (txq[i] != NULL)
+					(*dev->dev_ops->tx_queue_release)(dev, i);
+
+		txq = dev->data->tx_queues;
 		txq = rte_realloc(txq, sizeof(txq[0]) * nb_queues,
 				  RTE_CACHE_LINE_SIZE);
 		if (txq == NULL)
@@ -1166,7 +1172,8 @@ eth_dev_tx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues)
 
 		if (dev->dev_ops->tx_queue_release != NULL)
 			for (i = nb_queues; i < old_nb_queues; i++)
-				(*dev->dev_ops->tx_queue_release)(txq[i]);
+				if (txq[i] != NULL)
+					(*dev->dev_ops->tx_queue_release)(dev, i);
 
 		rte_free(dev->data->tx_queues);
 		dev->data->tx_queues = NULL;
@@ -2107,9 +2114,9 @@ rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		return -EBUSY;
 
 	rxq = dev->data->rx_queues;
-	if (rxq[rx_queue_id]) {
+	if (rxq[rx_queue_id] != NULL) {
 		if (dev->dev_ops->rx_queue_release != NULL)
-			(*dev->dev_ops->rx_queue_release)(rxq[rx_queue_id]);
+			(*dev->dev_ops->rx_queue_release)(dev, rx_queue_id);
 		rxq[rx_queue_id] = NULL;
 	}
 
@@ -2244,7 +2251,7 @@ rte_eth_rx_hairpin_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 	rxq = dev->data->rx_queues;
 	if (rxq[rx_queue_id] != NULL) {
 		if (dev->dev_ops->rx_queue_release != NULL)
-			(*dev->dev_ops->rx_queue_release)(rxq[rx_queue_id]);
+			(*dev->dev_ops->rx_queue_release)(dev, rx_queue_id);
 		rxq[rx_queue_id] = NULL;
 	}
 	ret = (*dev->dev_ops->rx_hairpin_queue_setup)(dev, rx_queue_id,
@@ -2309,9 +2316,9 @@ rte_eth_tx_queue_setup(uint16_t port_id, uint16_t tx_queue_id,
 		return -EBUSY;
 
 	txq = dev->data->tx_queues;
-	if (txq[tx_queue_id]) {
+	if (txq[tx_queue_id] != NULL) {
 		if (dev->dev_ops->tx_queue_release != NULL)
-			(*dev->dev_ops->tx_queue_release)(txq[tx_queue_id]);
+			(*dev->dev_ops->tx_queue_release)(dev, tx_queue_id);
 		txq[tx_queue_id] = NULL;
 	}
 
@@ -2422,7 +2429,7 @@ rte_eth_tx_hairpin_queue_setup(uint16_t port_id, uint16_t tx_queue_id,
 	txq = dev->data->tx_queues;
 	if (txq[tx_queue_id] != NULL) {
 		if (dev->dev_ops->tx_queue_release != NULL)
-			(*dev->dev_ops->tx_queue_release)(txq[tx_queue_id]);
+			(*dev->dev_ops->tx_queue_release)(dev, tx_queue_id);
 		txq[tx_queue_id] = NULL;
 	}
 	ret = (*dev->dev_ops->tx_hairpin_queue_setup)
