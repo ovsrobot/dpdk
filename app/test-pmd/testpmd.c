@@ -498,6 +498,11 @@ uint8_t record_core_cycles;
  */
 uint8_t record_burst_stats;
 
+/*
+ * Number of ports per shared Rx queue group, 0 disable.
+ */
+uint32_t rxq_share;
+
 unsigned int num_sockets = 0;
 unsigned int socket_ids[RTE_MAX_NUMA_NODES];
 
@@ -1505,6 +1510,11 @@ init_config_port_offloads(portid_t pid, uint32_t socket_id)
 	if (!(port->dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MBUF_FAST_FREE))
 		port->dev_conf.txmode.offloads &=
 			~DEV_TX_OFFLOAD_MBUF_FAST_FREE;
+
+	if (rxq_share > 0 &&
+	    (port->dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_SHARED_RXQ))
+		port->dev_conf.rxmode.offloads |=
+				RTE_ETH_RX_OFFLOAD_SHARED_RXQ;
 
 	/* Apply Rx offloads configuration */
 	for (i = 0; i < port->dev_info.max_rx_queues; i++)
@@ -3401,6 +3411,14 @@ rxtx_port_config(struct rte_port *port)
 	for (qid = 0; qid < nb_rxq; qid++) {
 		offloads = port->rx_conf[qid].offloads;
 		port->rx_conf[qid] = port->dev_info.default_rxconf;
+
+		if (rxq_share > 0 &&
+		    (port->dev_info.rx_offload_capa &
+		     RTE_ETH_RX_OFFLOAD_SHARED_RXQ)) {
+			offloads |= RTE_ETH_RX_OFFLOAD_SHARED_RXQ;
+			port->rx_conf[qid].shared_group = nb_ports / rxq_share;
+		}
+
 		if (offloads != 0)
 			port->rx_conf[qid].offloads = offloads;
 
