@@ -392,6 +392,42 @@ void rte_pci_ioport_read(struct rte_pci_ioport *p,
 void rte_pci_ioport_write(struct rte_pci_ioport *p,
 		const void *data, size_t len, off_t offset);
 
+/**
+ * Read 4 bytes from PCI memory resource.
+ *
+ * @param name
+ *   PCI device name (e.g., 0000:18:00.0).
+ * @param idx
+ *   Memory resource index.
+ * @param data
+ *   Data buffer where the bytes should be read into.
+ * @param offset
+ *   The offset into the PCI memory resource.
+ * @return
+ *  0 on success, negative value on error.
+ */
+__rte_experimental
+int
+rte_pci_mem_rd32(const char *name, uint16_t idx, uint32_t *data, uint64_t offset);
+
+/**
+ * Write 4 bytes to PCI memory resource.
+ *
+ * @param name
+ *   PCI device name (e.g., 0000:18:00.0).
+ * @param idx
+ *   Memory resource index.
+ * @param data
+ *   Buffer of data that should be written to PCI memory.
+ * @param offset
+ *   The offset into the PCI memory resource.
+ * @return
+ *  0 on success, negative value on error.
+ */
+__rte_experimental
+int
+rte_pci_mem_wr32(const char *name, uint16_t idx, const uint32_t *data, uint64_t offset);
+
 #ifdef __cplusplus
 }
 #endif

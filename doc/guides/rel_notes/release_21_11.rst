@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added new memory resource read/write APIs in PCI bus.**
+
+  Added new memory resource read/write APIs ``rte_pci_mem_rd32`` and
+  ``rte_pci_mem_wr32`` for applications to read/write PCI memory
+  resource.
+
 * **Enabled new devargs parser.**
 
   * Enabled devargs syntax
