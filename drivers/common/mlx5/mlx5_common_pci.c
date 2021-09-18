@@ -9,7 +9,7 @@
 #include <rte_errno.h>
 #include <rte_class.h>
 #include <rte_pci.h>
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 
 #include "mlx5_common_log.h"
 #include "mlx5_common_private.h"

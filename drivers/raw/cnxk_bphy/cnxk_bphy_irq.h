@@ -5,7 +5,7 @@
 #ifndef _CNXK_BPHY_IRQ_
 #define _CNXK_BPHY_IRQ_
 
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 #include <rte_dev.h>
 
 #include <roc_api.h>

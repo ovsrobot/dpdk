@@ -10,7 +10,7 @@
 #include <stdarg.h>
 #include <inttypes.h>
 
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 #include <rte_interrupts.h>
 #include <rte_log.h>
 #include <rte_debug.h>

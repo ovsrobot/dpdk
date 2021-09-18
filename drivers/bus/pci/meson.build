@@ -29,4 +29,8 @@ if is_windows
     includes += include_directories('windows')
 endif
 
+driver_sdk_headers += files(
+        'pci_driver.h',
+)
+
 deps += ['kvargs']

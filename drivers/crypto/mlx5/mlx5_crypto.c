@@ -6,7 +6,7 @@
 #include <rte_mempool.h>
 #include <rte_errno.h>
 #include <rte_log.h>
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 #include <rte_memory.h>
 
 #include <mlx5_glue.h>

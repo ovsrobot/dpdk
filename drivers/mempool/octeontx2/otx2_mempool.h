@@ -6,7 +6,7 @@
 #define __OTX2_MEMPOOL_H__
 
 #include <rte_bitmap.h>
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 #include <rte_devargs.h>
 #include <rte_mempool.h>
 

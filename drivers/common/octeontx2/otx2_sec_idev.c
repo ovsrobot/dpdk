@@ -3,7 +3,7 @@
  */
 
 #include <rte_atomic.h>
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 #include <rte_ethdev.h>
 #include <rte_spinlock.h>
 

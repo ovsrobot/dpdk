@@ -4,7 +4,7 @@
 
 #include <inttypes.h>
 
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 #include <rte_malloc.h>
 
 #include "otx2_ethdev.h"

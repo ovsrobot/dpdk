@@ -32,7 +32,7 @@
 #pragma GCC diagnostic error "-Wpedantic"
 #endif
 
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 #include <rte_errno.h>
 #include <ethdev_driver.h>
 #include <rte_ether.h>

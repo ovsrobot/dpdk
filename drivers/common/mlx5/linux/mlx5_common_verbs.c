@@ -11,7 +11,7 @@
 #include <inttypes.h>
 
 #include <rte_errno.h>
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 #include <rte_bus_auxiliary.h>
 
 #include "mlx5_common_utils.h"

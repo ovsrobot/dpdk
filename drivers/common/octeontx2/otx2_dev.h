@@ -5,7 +5,7 @@
 #ifndef _OTX2_DEV_H
 #define _OTX2_DEV_H
 
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 
 #include "otx2_common.h"
 #include "otx2_irq.h"

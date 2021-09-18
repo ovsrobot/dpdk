@@ -2,7 +2,7 @@
  * Copyright(c) 2015-2018 Intel Corporation
  */
 
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 #include <rte_common.h>
 #include <rte_dev.h>
 #include <rte_malloc.h>

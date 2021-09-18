@@ -11,7 +11,6 @@
 
 #include <rte_eal.h>
 #include <rte_pci.h>
-#include <rte_bus_pci.h>
 #include <rte_tailq.h>
 #include <rte_log.h>
 #include <rte_malloc.h>

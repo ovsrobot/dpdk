@@ -12,7 +12,7 @@
 #include <rte_log.h>
 #include <rte_errno.h>
 #include <rte_string_fns.h>
-#include <rte_bus_pci.h>
+#include <pci_driver.h>
 
 #include <mlx5_glue.h>
 #include <mlx5_common.h>
