@@ -53,9 +53,9 @@ void bnxt_free_tx_mbufs(struct bnxt *bp)
 	}
 }
 
-void bnxt_tx_queue_release_op(void *tx_queue)
+void bnxt_tx_queue_release_op(struct rte_eth_dev *dev, uint16_t queue_idx)
 {
-	struct bnxt_tx_queue *txq = (struct bnxt_tx_queue *)tx_queue;
+	struct bnxt_tx_queue *txq = dev->data->tx_queues[queue_idx];
 
 	if (txq) {
 		if (is_bnxt_in_error(txq->bp))
@@ -83,6 +83,7 @@ void bnxt_tx_queue_release_op(void *tx_queue)
 
 		rte_free(txq->free);
 		rte_free(txq);
+		dev->data->tx_queues[queue_idx] = NULL;
 	}
 }
 
@@ -115,7 +116,7 @@ int bnxt_tx_queue_setup_op(struct rte_eth_dev *eth_dev,
 	if (eth_dev->data->tx_queues) {
 		txq = eth_dev->data->tx_queues[queue_idx];
 		if (txq) {
-			bnxt_tx_queue_release_op(txq);
+			bnxt_tx_queue_release_op(eth_dev, queue_idx);
 			txq = NULL;
 		}
 	}
@@ -126,6 +127,9 @@ int bnxt_tx_queue_setup_op(struct rte_eth_dev *eth_dev,
 		return -ENOMEM;
 	}
 
+	txq->bp = bp;
+	eth_dev->data->tx_queues[queue_idx] = txq;
+
 	txq->free = rte_zmalloc_socket(NULL,
 				       sizeof(struct rte_mbuf *) * nb_desc,
 				       RTE_CACHE_LINE_SIZE, socket_id);
@@ -134,7 +138,6 @@ int bnxt_tx_queue_setup_op(struct rte_eth_dev *eth_dev,
 		rc = -ENOMEM;
 		goto err;
 	}
-	txq->bp = bp;
 	txq->nb_tx_desc = nb_desc;
 	txq->tx_free_thresh =
 		RTE_MIN(rte_align32pow2(nb_desc) / 4, RTE_BNXT_MAX_TX_BURST);
@@ -164,8 +167,6 @@ int bnxt_tx_queue_setup_op(struct rte_eth_dev *eth_dev,
 		goto err;
 	}
 
-	eth_dev->data->tx_queues[queue_idx] = txq;
-
 	if (txq->tx_deferred_start)
 		txq->tx_started = false;
 	else
@@ -173,6 +174,6 @@ int bnxt_tx_queue_setup_op(struct rte_eth_dev *eth_dev,
 
 	return 0;
 err:
-	bnxt_tx_queue_release_op(txq);
+	bnxt_tx_queue_release_op(eth_dev, queue_idx);
 	return rc;
 }
