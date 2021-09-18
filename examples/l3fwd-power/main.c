@@ -2637,6 +2637,11 @@ main(int argc, char **argv)
 				local_port_conf.rx_adv_conf.rss_conf.rss_hf);
 		}
 
+		if (local_port_conf.rx_adv_conf.rss_conf.rss_hf == 0)
+			local_port_conf.rxmode.mq_mode = ETH_MQ_RX_NONE;
+		local_port_conf.rxmode.offloads &= dev_info.rx_offload_capa;
+		port_conf.rxmode.offloads = local_port_conf.rxmode.offloads;
+
 		ret = rte_eth_dev_configure(portid, nb_rx_queue,
 					(uint16_t)n_tx_queue, &local_port_conf);
 		if (ret < 0)
