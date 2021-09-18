@@ -1004,12 +1004,6 @@ dpaa2_dev_rx_queue_release(void *q __rte_unused)
 	}
 }
 
-static void
-dpaa2_dev_tx_queue_release(void *q __rte_unused)
-{
-	PMD_INIT_FUNC_TRACE();
-}
-
 static uint32_t
 dpaa2_dev_rx_queue_count(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 {
