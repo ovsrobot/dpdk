@@ -688,61 +688,63 @@ mbuf_pool_find(unsigned int sock_id, uint16_t idx)
 /**
  * Read/Write operations on a PCI register of a port.
  */
-static inline uint32_t
-port_pci_reg_read(struct rte_port *port, uint32_t reg_off)
+static inline int
+port_id_pci_reg_read(portid_t pt_id, uint32_t reg_off, uint32_t *reg_v)
 {
-	const struct rte_pci_device *pci_dev;
+	struct rte_port *port = &ports[(pt_id)];
+	char name[RTE_ETH_NAME_MAX_LEN];
 	const struct rte_bus *bus;
-	void *reg_addr;
-	uint32_t reg_v;
 
 	if (!port->dev_info.device) {
 		fprintf(stderr, "Invalid device\n");
-		return 0;
+		return -1;
 	}
 
 	bus = rte_bus_find_by_device(port->dev_info.device);
 	if (bus && !strcmp(bus->name, "pci")) {
-		pci_dev = RTE_DEV_TO_PCI(port->dev_info.device);
+		rte_eth_dev_get_name_by_port(pt_id, name);
 	} else {
 		fprintf(stderr, "Not a PCI device\n");
-		return 0;
+		return -1;
 	}
 
-	reg_addr = ((char *)pci_dev->mem_resource[0].addr + reg_off);
-	reg_v = *((volatile uint32_t *)reg_addr);
-	return rte_le_to_cpu_32(reg_v);
+	if (rte_pci_mem_rd32(name, 0, reg_v, reg_off)) {
+		fprintf(stderr, "Failed to read register\n");
+		return -1;
+	}
+
+	*reg_v = rte_le_to_cpu_32(*reg_v);
+	return 0;
 }
 
-#define port_id_pci_reg_read(pt_id, reg_off) \
-	port_pci_reg_read(&ports[(pt_id)], (reg_off))
-
-static inline void
-port_pci_reg_write(struct rte_port *port, uint32_t reg_off, uint32_t reg_v)
+static inline int
+port_id_pci_reg_write(portid_t pt_id, uint32_t reg_off, uint32_t reg_v)
 {
-	const struct rte_pci_device *pci_dev;
+	struct rte_port *port = &ports[(pt_id)];
+	char name[RTE_ETH_NAME_MAX_LEN];
 	const struct rte_bus *bus;
-	void *reg_addr;
 
 	if (!port->dev_info.device) {
 		fprintf(stderr, "Invalid device\n");
-		return;
+		return -1;
 	}
 
 	bus = rte_bus_find_by_device(port->dev_info.device);
 	if (bus && !strcmp(bus->name, "pci")) {
-		pci_dev = RTE_DEV_TO_PCI(port->dev_info.device);
+		rte_eth_dev_get_name_by_port(pt_id, name);
 	} else {
 		fprintf(stderr, "Not a PCI device\n");
-		return;
+		return -1;
 	}
 
-	reg_addr = ((char *)pci_dev->mem_resource[0].addr + reg_off);
-	*((volatile uint32_t *)reg_addr) = rte_cpu_to_le_32(reg_v);
-}
+	reg_v = rte_cpu_to_le_32(reg_v);
+	if (rte_pci_mem_wr32(name, 0, &reg_v, reg_off)) {
+		fprintf(stderr, "Failed to write register\n");
+		return -1;
+	}
 
-#define port_id_pci_reg_write(pt_id, reg_off, reg_value) \
-	port_pci_reg_write(&ports[(pt_id)], (reg_off), (reg_value))
+	return 0;
+}
 
 static inline void
 get_start_cycles(uint64_t *start_tsc)
