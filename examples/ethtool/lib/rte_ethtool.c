@@ -8,7 +8,7 @@
 #include <rte_version.h>
 #include <rte_ethdev.h>
 #include <rte_ether.h>
-#include <rte_bus_pci.h>
+#include <rte_pci.h>
 #ifdef RTE_NET_IXGBE
 #include <rte_pmd_ixgbe.h>
 #endif
@@ -23,8 +23,9 @@ rte_ethtool_get_drvinfo(uint16_t port_id, struct ethtool_drvinfo *drvinfo)
 {
 	struct rte_eth_dev_info dev_info;
 	struct rte_dev_reg_info reg_info;
-	const struct rte_pci_device *pci_dev;
 	const struct rte_bus *bus = NULL;
+	char name[RTE_ETH_NAME_MAX_LEN];
+	struct rte_pci_addr addr;
 	int n;
 	int ret;
 
@@ -56,11 +57,14 @@ rte_ethtool_get_drvinfo(uint16_t port_id, struct ethtool_drvinfo *drvinfo)
 	if (dev_info.device)
 		bus = rte_bus_find_by_device(dev_info.device);
 	if (bus && !strcmp(bus->name, "pci")) {
-		pci_dev = RTE_DEV_TO_PCI(dev_info.device);
+		rte_eth_dev_get_name_by_port(port_id, name);
+		if (rte_pci_addr_parse(name, &addr)) {
+			printf("Failed to parse pci address\n");
+			return -1;
+		}
 		snprintf(drvinfo->bus_info, sizeof(drvinfo->bus_info),
 			"%04x:%02x:%02x.%x",
-			pci_dev->addr.domain, pci_dev->addr.bus,
-			pci_dev->addr.devid, pci_dev->addr.function);
+			addr.domain, addr.bus, addr.devid, addr.function);
 	} else {
 		snprintf(drvinfo->bus_info, sizeof(drvinfo->bus_info), "N/A");
 	}
