@@ -293,6 +293,30 @@ struct vhost_device_ops {
 };
 
 /**
+ * Power monitor condition.
+ */
+struct rte_vhost_power_monitor_cond {
+	volatile void *addr;  /**< Address to monitor for changes */
+	/**< If the `mask` is non-zero, location pointed
+	 *   to by `addr` will be read and compared
+	 *   against this value.
+	 */
+	uint64_t val;
+	uint64_t mask; /**< 64-bit mask to extract value read from `addr` */
+	/**< Data size (in bytes) that will be read from the
+	 *   monitored memory location (`addr`). Can be 1, 2,
+	 *   4, or 8. Supplying any other value will result in
+	 *   an error.
+	 */
+	uint8_t size;
+	/**< If 1, checking if `val` matches something.
+	 *  If 0, checking if `val` *doesn't* match a
+	 *  particular value.
+	 */
+	uint8_t match;
+};
+
+/**
  * Convert guest physical address to host virtual address
  *
  * This function is deprecated because unsafe.
@@ -913,6 +937,23 @@ int rte_vhost_vring_call(int vid, uint16_t vring_idx);
  *  num of desc available
  */
 uint32_t rte_vhost_rx_queue_count(int vid, uint16_t qid);
+
+/**
+ * Get power monitor address of the vhost device
+ *
+ * @param vid
+ *  vhost device ID
+ * @param queue_id
+ *  vhost queue ID
+ * @param pmc
+ *  power monitor condition
+ * @return
+ *  0 on success, -1 on failure
+ */
+__rte_experimental
+int
+rte_vhost_get_monitor_addr(int vid, uint16_t queue_id,
+		struct rte_vhost_power_monitor_cond *pmc);
 
 /**
  * Get log base and log size of the vhost device
