@@ -548,12 +548,16 @@ cperf_test_vector_get_dummy(struct cperf_options *options)
 		t_vec->aead_key.data = aead_key;
 
 		if (options->aead_aad_sz) {
-			t_vec->aad.data = rte_malloc(NULL,
+			t_vec->aad.data = rte_zmalloc(NULL,
 					options->aead_aad_sz, 16);
 			if (t_vec->aad.data == NULL) {
 				rte_free(t_vec);
 				return NULL;
 			}
+
+			if(options->aead_aad_sz > 12)
+				options->aead_aad_sz = 12;
+
 			memcpy(t_vec->aad.data, aad, options->aead_aad_sz);
 			t_vec->aad.phys_addr = rte_malloc_virt2iova(t_vec->aad.data);
 			t_vec->aad.length = options->aead_aad_sz;
