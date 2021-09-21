@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <rte_common.h>
+#include <rte_telemetry.h>
 
 /**
  * @file
@@ -23,13 +24,15 @@
  * @internal
  * Copies a value into a buffer if the buffer has enough available space.
  * Nothing written to buffer if an overflow ocurs.
- * This function is not for use for values larger than 1k.
+ * Size of buffer is (single largest value - 6), where at least 6 chars
+ * would have been used for creating json dict i.e '{"x": ... }'.
+ * This function is not for use for values larger than this buffer size.
  */
 __rte_format_printf(3, 4)
 static inline int
 __json_snprintf(char *buf, const int len, const char *format, ...)
 {
-	char tmp[1024];
+	char tmp[RTE_TEL_MAX_SINGLE_STRING_LEN - 6];
 	va_list ap;
 	int ret;
 
