@@ -704,6 +704,47 @@ update_lcore_config(int *cores)
 }
 
 static int
+check_core_list(int *lcores, unsigned int count)
+{
+	unsigned int i, j;
+	char *lcorestr;
+	int len = 0;
+	bool overflow = false;
+
+	for (j = 0; j < count; j++) {
+		if (lcores[j] >= RTE_MAX_LCORE) {
+			RTE_LOG(ERR, EAL, "lcore %d >= RTE_MAX_LCORE (%d)\n",
+					lcores[j], RTE_MAX_LCORE);
+			overflow = true;
+		}
+	}
+	if (overflow) {
+		/*
+		 * If we've encountered a core that's greater than
+		 * RTE_MAX_LCORE, suggest using --lcores option to
+		 * map lcores onto physical cores greater than
+		 * RTE_MAX_LCORE, then return.
+		 */
+		lcorestr = calloc(1, RTE_MAX_LCORE * 10);
+		if (lcorestr == NULL) {
+			RTE_LOG(ERR, EAL, "Unable to allocate lcore string\n");
+			return -ENOMEM;
+		}
+		for (i = 0; i < count; i++)
+			len = len + snprintf(&lcorestr[len],
+					RTE_MAX_LCORE * 10 - len,
+					"%d@%d,", i, lcores[i]);
+		if (len > 0)
+			lcorestr[len-1] = 0;
+		RTE_LOG(ERR, EAL, "to use high physical core ids , please use --lcores to map them to lcore ids below RTE_MAX_LCORE,\n");
+		RTE_LOG(ERR, EAL, "    e.g. --lcores %s\n", lcorestr);
+		free(lcorestr);
+		return -1;
+	}
+	return 0;
+}
+
+static int
 eal_parse_coremask(const char *coremask, int *cores)
 {
 	unsigned count = 0;
@@ -833,54 +874,87 @@ eal_parse_service_corelist(const char *corelist)
 static int
 eal_parse_corelist(const char *corelist, int *cores)
 {
-	unsigned count = 0;
+	unsigned int count = 0, k;
 	char *end = NULL;
 	int min, max;
 	int idx;
+	int lcores[RTE_MAX_LCORE];
+	char *corelist_copy;
 
 	for (idx = 0; idx < RTE_MAX_LCORE; idx++)
 		cores[idx] = -1;
+
+	corelist_copy = strdup(corelist);
+	if (corelist_copy == NULL) {
+		RTE_LOG(ERR, EAL, "Unable to duplicate corelist\n");
+		return -ENOMEM;
+	}
 
 	/* Remove all blank characters ahead */
 	while (isblank(*corelist))
 		corelist++;
 
 	/* Get list of cores */
-	min = RTE_MAX_LCORE;
+	min = -1;
 	do {
 		while (isblank(*corelist))
 			corelist++;
 		if (*corelist == '\0')
-			return -1;
+			goto err;
 		errno = 0;
 		idx = strtol(corelist, &end, 10);
 		if (errno || end == NULL)
-			return -1;
-		if (idx < 0 || idx >= RTE_MAX_LCORE)
-			return -1;
+			goto err;
+		if (idx < 0)
+			goto err;
 		while (isblank(*end))
 			end++;
 		if (*end == '-') {
 			min = idx;
 		} else if ((*end == ',') || (*end == '\0')) {
 			max = idx;
-			if (min == RTE_MAX_LCORE)
+			if (min == -1)
 				min = idx;
 			for (idx = min; idx <= max; idx++) {
-				if (cores[idx] == -1) {
-					cores[idx] = count;
-					count++;
+				if (count < RTE_MAX_LCORE)
+					lcores[count++] = idx;
+				else {
+					RTE_LOG(ERR, EAL, "Too many lcores provided. Cannot exceed %d\n",
+							RTE_MAX_LCORE);
+					goto err;
 				}
 			}
-			min = RTE_MAX_LCORE;
+			min = -1;
 		} else
-			return -1;
+			goto err;
 		corelist = end + 1;
 	} while (*end != '\0');
 
 	if (count == 0)
-		return -1;
+		goto err;
+
+	if (check_core_list(lcores, count))
+		goto err;
+
+	/*
+	 * Now that we've gto a list of cores no longer than
+	 * RTE_MAX_LCORE, and no lcore in that list is greater
+	 * than RTE_MAX_LCORE, populate the cores
+	 * array and return.
+	 */
+
+	for (k = 0; k < count; k++)
+		cores[lcores[k]] = k;
+
+	if (corelist_copy)
+		free(corelist_copy);
+
 	return 0;
+err:
+	if (corelist_copy)
+		free(corelist_copy);
+
+	return -1;
 }
 
 /* Changes the lcore id of the main thread */
