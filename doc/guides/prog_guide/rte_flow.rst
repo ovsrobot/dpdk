@@ -1425,6 +1425,30 @@ Matches a conntrack state after conntrack action.
 - ``flags``: conntrack packet state flags.
 - Default ``mask`` matches all state bits.
 
+Item: ``FLEX``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Matches with the network protocol header of preliminary configured format.
+The application describes the desired header structure, defines the header
+fields attributes and header relations with preceding and following
+protocols and configures the ethernet devices accordingly via
+rte_flow_flex_item_create() routine.
+
+- ``handle``: the flex item handle returned by the PMD on successful
+  rte_flow_flex_item_create() call. The item handle is unique within
+  the device port, mask for this field is ignored.
+- ``length``: match pattern length in bytes. If the length does not cover
+  all fields defined in item configuration, the pattern spec and mask are
+  supposed to be appended with zeroes till the full configured item length.
+- ``pattern``: pattern to match. The protocol header fields are considered
+  as bit fields, all offsets and widths are expressed in bits. The pattern
+  is the buffer containing the bit concatenation of all the fields presented
+  at item configuration time, in the same order and same amount. The most
+  regular way is to define all the header fields in the flex item configuration
+  and directly use the header structure as pattern template, i.e. application
+  just can fill the header structures with desired match values and masks and
+  specify these structures as flex item pattern directly.
+
 Actions
 ~~~~~~~
 

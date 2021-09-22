@@ -573,6 +573,15 @@ enum rte_flow_item_type {
 	 * @see struct rte_flow_item_conntrack.
 	 */
 	RTE_FLOW_ITEM_TYPE_CONNTRACK,
+
+	/**
+	 * Matches a configured set of fields at runtime calculated offsets
+	 * over the generic network header with variable length and
+	 * flexible pattern
+	 *
+	 * @see struct rte_flow_item_flex.
+	 */
+	RTE_FLOW_ITEM_TYPE_FLEX,
 };
 
 /**
@@ -1837,6 +1846,160 @@ struct rte_flow_item {
 	const void *spec; /**< Pointer to item specification structure. */
 	const void *last; /**< Defines an inclusive range (spec to last). */
 	const void *mask; /**< Bit-mask applied to spec and last. */
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
+ * RTE_FLOW_ITEM_TYPE_FLEX
+ *
+ * Matches a specified set of fields within the network protocol
+ * header. Each field is presented as set of bits with specified width, and
+ * bit offset (this is dynamic one - can be calulated by several methods
+ * in runtime) from the header beginning.
+ *
+ * The pattern is concatenation of all bit fields configured at item creation
+ * by rte_flow_flex_item_create() exactly in the same order and amount, no
+ * fields can be omitted or swapped. The dummy mode field can be used for
+ * pattern byte boundary alignment, least significant bit in byte goes first.
+ * Only the fields specified in sample_data configuration parameter participate
+ * in pattern construction.
+ *
+ * If pattern length is smaller than configured fields overall length it is
+ * extended with trailing zeroes, both for value and mask.
+ *
+ * This type does not support ranges (struct rte_flow_item.last).
+ */
+struct rte_flow_item_flex {
+	struct rte_flow_item_flex_handle *handle; /**< Opaque item handle. */
+	uint32_t length; /**< Pattern length in bytes. */
+	const uint8_t *pattern; /**< Combined bitfields pattern to match. */
+};
+/**
+ * Field bit offset calculation mode.
+ */
+enum rte_flow_item_flex_field_mode {
+	/**
+	 * Dummy field, used for byte boundary alignment in pattern.
+	 * Pattern mask and data are ignored in the match. All configuration
+	 * parameters besides field size are ignored.
+	 */
+	FIELD_MODE_DUMMY = 0,
+	/**
+	 * Fixed offset field. The bit offset from header beginning is
+	 * is permanent and defined by field_base parameter.
+	 */
+	FIELD_MODE_FIXED,
+	/**
+	 * The field bit offset is extracted from other header field (indirect
+	 * offset field). The resulting field offset to match is calculated as:
+	 *
+	 *    field_base + (*field_offset & offset_mask) << field_shift
+	 */
+	FIELD_MODE_OFFSET,
+	/**
+	 * The field bit offset is extracted from other header field (indirect
+	 * offset field), the latter is considered as bitmask containing some
+	 * number of one bits, the resulting field offset to match is
+	 * calculated as:
+	 *
+	 *    field_base + bitcount(*field_offset & offset_mask) << field_shift
+	 */
+	FIELD_MODE_BITMASK,
+};
+
+/**
+ * Flex item field tunnel mode
+ */
+enum rte_flow_item_flex_tunnel_mode {
+	FLEX_TUNNEL_MODE_FIRST = 0, /**< First item occurrence. */
+	FLEX_TUNNEL_MODE_OUTER = 1, /**< Outer item. */
+	FLEX_TUNNEL_MODE_INNER = 2  /**< Inner item. */
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ */
+__extension__
+struct rte_flow_item_flex_field {
+	/** Defines how match field offset is calculated over the packet. */
+	enum rte_flow_item_flex_field_mode field_mode;
+	uint32_t field_size; /**< Match field size in bits. */
+	int32_t field_base; /**< Match field offset in bits. */
+	uint32_t offset_base; /**< Indirect offset field offset in bits. */
+	uint32_t offset_mask; /**< Indirect offset field bit mask. */
+	int32_t offset_shift; /**< Indirect offset multiply factor. */
+	uint16_t tunnel_count:2; /**< 0-first occurrence, 1-outer, 2-inner.*/
+	uint16_t rss_hash:1; /**< Field participates in RSS hash calculation. */
+	uint16_t field_id; /**< device hint, for flows with multiple items. */
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ */
+struct rte_flow_item_flex_link {
+	/**
+	 * Preceding/following header. The item type must be always provided.
+	 * For preceding one item must specify the header value/mask to match
+	 * for the link be taken and start the flex item header parsing.
+	 */
+	struct rte_flow_item item;
+	/**
+	 * Next field value to match to continue with one of the configured
+	 * next protocols.
+	 */
+	uint32_t next;
+	/**
+	 * Specifies whether flex item represents tunnel protocol
+	 */
+	bool tunnel;
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ */
+struct rte_flow_item_flex_conf {
+	/**
+	 * The next header offset, it presents the network header size covered
+	 * by the flex item and can be obtained with all supported offset
+	 * calculating methods (fixed, dedicated field, bitmask, etc).
+	 */
+	struct rte_flow_item_flex_field next_header;
+	/**
+	 * Specifies the next protocol field to match with link next protocol
+	 * values and continue packet parsing with matching link.
+	 */
+	struct rte_flow_item_flex_field next_protocol;
+	/**
+	 * The fields will be sampled and presented for explicit match
+	 * with pattern in the rte_flow_flex_item. There can be multiple
+	 * fields descriptors, the number should be specified by sample_num.
+	 */
+	struct rte_flow_item_flex_field *sample_data;
+	/** Number of field descriptors in the sample_data array. */
+	uint32_t sample_num;
+	/**
+	 * Input link defines the flex item relation with preceding
+	 * header. It specified the preceding item type and provides pattern
+	 * to match. The flex item will continue parsing and will provide the
+	 * data to flow match in case if there is the match with one of input
+	 * links.
+	 */
+	struct rte_flow_item_flex_link *input_link;
+	/** Number of link descriptors in the input link array. */
+	uint32_t input_num;
+	/**
+	 * Output link defines the next protocol field value to match and
+	 * the following protocol header to continue packet parsing. Also
+	 * defines the tunnel-related behaviour.
+	 */
+	struct rte_flow_item_flex_link *output_link;
+	/** Number of link descriptors in the output link array. */
+	uint32_t output_num;
 };
 
 /**
@@ -4288,6 +4451,71 @@ rte_flow_tunnel_item_release(uint16_t port_id,
 			     struct rte_flow_item *items,
 			     uint32_t num_of_items,
 			     struct rte_flow_error *error);
+
+/**
+ * Create the flex item with specified configuration over
+ * the Ethernet device.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param[in] conf
+ *   Item configuration.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL. PMDs initialize this
+ *   structure in case of error only.
+ *
+ * @return
+ *   Non-NULL opaque pointer on success, NULL otherwise and rte_errno is set.
+ */
+__rte_experimental
+struct rte_flow_item_flex_handle *
+rte_flow_flex_item_create(uint16_t port_id,
+			  const struct rte_flow_item_flex_conf *conf,
+			  struct rte_flow_error *error);
+
+/**
+ * Release the flex item on the specified Ethernet device.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param[in] handle
+ *   Handle of the item existing on the specified device.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL. PMDs initialize this
+ *   structure in case of error only.
+ *
+ * @return
+ *   0 on success, a negative errno value otherwise and rte_errno is set.
+ */
+__rte_experimental
+int
+rte_flow_flex_item_release(uint16_t port_id,
+			   const struct rte_flow_item_flex_handle *handle,
+			   struct rte_flow_error *error);
+
+/**
+ * Modify the flex item on the specified Ethernet device.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param[in] handle
+ *   Handle of the item existing on the specified device.
+ * @param[in] conf
+ *   Item new configuration.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL. PMDs initialize this
+ *   structure in case of error only.
+ *
+ * @return
+ *   0 on success, a negative errno value otherwise and rte_errno is set.
+ */
+__rte_experimental
+int
+rte_flow_flex_item_update(uint16_t port_id,
+			  const struct rte_flow_item_flex_handle *handle,
+			  const struct rte_flow_item_flex_conf *conf,
+			  struct rte_flow_error *error);
+
 #ifdef __cplusplus
 }
 #endif
