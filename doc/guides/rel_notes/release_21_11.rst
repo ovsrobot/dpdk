@@ -91,6 +91,12 @@ New Features
   Added command-line options to specify total number of processes and
   current process ID. Each process owns subset of Rx and Tx queues.
 
+* **Added initial RSS support to Virtio PMD.**
+
+  Initial support for RSS receive mode has been added to the Virtio PMD,
+  with the capability for the application to configure the hash key, the
+  RETA and the hash types. Virtio hash reporting is yet to be added.
+
 
 Removed Items
 -------------
