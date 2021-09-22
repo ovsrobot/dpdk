@@ -16,6 +16,7 @@
 #include <rte_log.h>
 #include <rte_byteorder.h>
 #include <rte_io.h>
+#include <rte_ip.h>
 
 #include "../ixgbe_logs.h"
 #include "../ixgbe_bypass_defines.h"
@@ -43,12 +44,16 @@
 
 #define false               0
 #define true                1
+#ifndef RTE_EXEC_ENV_WINDOWS
 #define min(a,b)	RTE_MIN(a,b) 
+#endif
 
 #define EWARN(hw, S, args...)     DEBUGOUT1(S, ##args)
 
 /* Bunch of defines for shared code bogosity */
+#ifndef UNREFERENCED_PARAMETER
 #define UNREFERENCED_PARAMETER(_p)  
+#endif
 #define UNREFERENCED_1PARAMETER(_p) 
 #define UNREFERENCED_2PARAMETER(_p, _q)
 #define UNREFERENCED_3PARAMETER(_p, _q, _r) 

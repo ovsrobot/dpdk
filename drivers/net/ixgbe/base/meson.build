@@ -28,7 +28,14 @@ foreach flag: error_cflags
     endif
 endforeach
 
+inc = []
+inc += include_directories('../../../../lib/net')
+inc += include_directories('../../../../lib/mbuf')
+inc += include_directories('../../../../lib/mempool')
+inc += include_directories('../../../../lib/ring')
+
 base_lib = static_library('ixgbe_base', sources,
     dependencies: static_rte_eal,
+    include_directories: inc,
     c_args: c_args)
 base_objs = base_lib.extract_all_objects(recursive: true)
