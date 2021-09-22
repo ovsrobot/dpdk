@@ -747,14 +747,22 @@ check_core_list(int *lcores, unsigned int count)
 static int
 eal_parse_coremask(const char *coremask, int *cores)
 {
-	unsigned count = 0;
+	unsigned int count = 0, k;
 	int i, j, idx;
 	int val;
 	char c;
+	int lcores[RTE_MAX_LCORE];
+	char *coremask_copy = NULL;
 
 	for (idx = 0; idx < RTE_MAX_LCORE; idx++)
 		cores[idx] = -1;
 	idx = 0;
+
+	coremask_copy = strdup(coremask);
+	if (coremask_copy == NULL) {
+		RTE_LOG(ERR, EAL, "Unable to duplicate coremask\n");
+		return -ENOMEM;
+	}
 
 	/* Remove all blank characters ahead and after .
 	 * Remove 0x/0X if exists.
@@ -767,30 +775,64 @@ eal_parse_coremask(const char *coremask, int *cores)
 	i = strlen(coremask);
 	while ((i > 0) && isblank(coremask[i - 1]))
 		i--;
-	if (i == 0)
-		return -1;
+	if (i == 0) {
+		RTE_LOG(ERR, EAL, "No lcores in coremask: %s\n", coremask_copy);
+		goto err;
+	}
 
-	for (i = i - 1; i >= 0 && idx < RTE_MAX_LCORE; i--) {
+	for (i = i - 1; i >= 0; i--) {
 		c = coremask[i];
 		if (isxdigit(c) == 0) {
 			/* invalid characters */
-			return -1;
+			RTE_LOG(ERR, EAL, "invalid characters in coremask: %s\n",
+					coremask_copy);
+			goto err;
 		}
 		val = xdigit2val(c);
-		for (j = 0; j < BITS_PER_HEX && idx < RTE_MAX_LCORE; j++, idx++)
+		for (j = 0; j < BITS_PER_HEX; j++, idx++)
 		{
 			if ((1 << j) & val) {
-				cores[idx] = count;
-				count++;
+				if (count < RTE_MAX_LCORE) {
+					lcores[count++] = idx;
+				} else {
+					RTE_LOG(ERR, EAL, "Too many lcores provided. Cannot exceed %d\n",
+							RTE_MAX_LCORE);
+					goto err;
+				}
 			}
 		}
 	}
 	for (; i >= 0; i--)
-		if (coremask[i] != '0')
-			return -1;
-	if (count == 0)
-		return -1;
+		if (coremask[i] != '0') {
+			RTE_LOG(ERR, EAL, "invalid characters in coremask: %s\n",
+					coremask_copy);
+			goto err;
+		}
+	if (count == 0) {
+		RTE_LOG(ERR, EAL, "No lcores in coremask: %s\n", coremask_copy);
+		goto err;
+	}
+
+	if (check_core_list(lcores, count))
+		goto err;
+
+	/*
+	 * Now that we've gto a list of cores no longer than
+	 * RTE_MAX_LCORE, and no lcore in that list is greater
+	 * than RTE_MAX_LCORE, populate the cores
+	 * array and return.
+	 */
+	for (k = 0; k < count; k++)
+		cores[lcores[k]] = k;
+
+	if (coremask_copy)
+		free(coremask_copy);
+
 	return 0;
+err:
+	if (coremask_copy)
+		free(coremask_copy);
+	return -1;
 }
 
 static int
