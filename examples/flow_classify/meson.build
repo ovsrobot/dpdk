@@ -7,7 +7,7 @@
 # DPDK instance, use 'make'
 
 deps += 'flow_classify'
-allow_experimental_apis = true
+
 sources = files(
         'flow_classify.c',
 )
