@@ -247,6 +247,11 @@ EXPERIMENTAL {
 	rte_mtr_meter_policy_delete;
 	rte_mtr_meter_policy_update;
 	rte_mtr_meter_policy_validate;
+
+	# added in 21.11
+	rte_flow_flex_item_create;
+	rte_flow_flex_item_release;
+	rte_flow_flex_item_update;
 };
 
 INTERNAL {
