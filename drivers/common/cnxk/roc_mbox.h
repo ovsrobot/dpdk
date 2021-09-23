@@ -131,6 +131,8 @@ struct mbox_msghdr {
 	M(TIM_ENABLE_RING, 0x803, tim_enable_ring, tim_ring_req,               \
 	  tim_enable_rsp)                                                      \
 	M(TIM_DISABLE_RING, 0x804, tim_disable_ring, tim_ring_req, msg_rsp)    \
+	M(TIM_GET_MIN_INTVL, 0x805, tim_get_min_intvl, tim_intvl_req,          \
+	  tim_intvl_rsp)                                                       \
 	/* CPT mbox IDs (range 0xA00 - 0xBFF) */                               \
 	M(CPT_LF_ALLOC, 0xA00, cpt_lf_alloc, cpt_lf_alloc_req_msg, msg_rsp)    \
 	M(CPT_LF_FREE, 0xA01, cpt_lf_free, msg_req, msg_rsp)                   \
@@ -1755,6 +1757,9 @@ struct tim_config_req {
 	uint32_t __io chunksize;
 	uint32_t __io interval;
 	uint8_t __io gpioedge;
+	uint8_t __io rsvd[7];
+	uint64_t __io intervalns;
+	uint64_t __io clockfreq;
 };
 
 struct tim_lf_alloc_rsp {
@@ -1766,6 +1771,18 @@ struct tim_enable_rsp {
 	struct mbox_msghdr hdr;
 	uint64_t __io timestarted;
 	uint32_t __io currentbucket;
+};
+
+struct tim_intvl_req {
+	struct mbox_msghdr hdr;
+	uint8_t __io clocksource;
+	uint64_t __io clockfreq;
+};
+
+struct tim_intvl_rsp {
+	struct mbox_msghdr hdr;
+	uint64_t __io intvl_cyc;
+	uint64_t __io intvl_ns;
 };
 
 struct sdp_node_info {
