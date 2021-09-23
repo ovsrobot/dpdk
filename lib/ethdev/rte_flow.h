@@ -1904,6 +1904,10 @@ enum rte_flow_action_type {
 	 * PKT_RX_FDIR_ID mbuf flags.
 	 *
 	 * See struct rte_flow_action_mark.
+	 *
+	 * One should negotiate delivery of mark IDs beforehand.
+	 * @see rte_eth_rx_meta_negotiate()
+	 * @see RTE_ETH_RX_META_USER_MARK
 	 */
 	RTE_FLOW_ACTION_TYPE_MARK,
 
@@ -1912,6 +1916,10 @@ enum rte_flow_action_type {
 	 * sets the PKT_RX_FDIR mbuf flag.
 	 *
 	 * No associated configuration structure.
+	 *
+	 * One should negotiate flag delivery beforehand.
+	 * @see rte_eth_rx_meta_negotiate()
+	 * @see RTE_ETH_RX_META_USER_FLAG
 	 */
 	RTE_FLOW_ACTION_TYPE_FLAG,
 
@@ -4222,6 +4230,10 @@ rte_flow_tunnel_match(uint16_t port_id,
 
 /**
  * Populate the current packet processing state, if exists, for the given mbuf.
+ *
+ * One should negotiate the processing state information delivery beforehand.
+ * @see rte_eth_rx_meta_negotiate()
+ * @see RTE_ETH_RX_META_TUNNEL_ID
  *
  * @param port_id
  *   Port identifier of Ethernet device.

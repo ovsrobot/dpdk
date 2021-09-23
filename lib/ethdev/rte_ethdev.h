@@ -4870,6 +4870,51 @@ __rte_experimental
 int rte_eth_representor_info_get(uint16_t port_id,
 				 struct rte_eth_representor_info *info);
 
+/** The ethdev sees flagged packets if there are flows with action FLAG. */
+#define RTE_ETH_RX_META_USER_FLAG (UINT64_C(1) << 0)
+
+/** The ethdev sees mark IDs in packets if there are flows with action MARK. */
+#define RTE_ETH_RX_META_USER_MARK (UINT64_C(1) << 1)
+
+/** The ethdev detects missed packets if there are "tunnel_set" flows in use. */
+#define RTE_ETH_RX_META_TUNNEL_ID (UINT64_C(1) << 2)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Negotiate delivery of specific parts of Rx meta data.
+ *
+ * Invoke this API before the first rte_eth_dev_configure() invocation
+ * to let the PMD make preparations that are inconvenient to do later.
+ *
+ * The negotiation process is as follows:
+ *
+ * - the application requests features intending to use at least some of them;
+ * - the PMD responds with the guaranteed subset of the requested feature set;
+ * - the application can retry negotiation with another set of features;
+ * - the application can pass zero to clear the negotiation result;
+ * - the last negotiated result takes effect upon the ethdev start.
+ *
+ * If this API is unsupported, the application should gracefully ignore that.
+ *
+ * @param port_id
+ *   Port (ethdev) identifier
+ *
+ * @param[inout] features
+ *   Feature selection buffer
+ *
+ * @return
+ *   - (-EBUSY) if the port can't handle this in its current state;
+ *   - (-ENOTSUP) if the method itself is not supported by the PMD;
+ *   - (-ENODEV) if *port_id* is invalid;
+ *   - (-EINVAL) if *features* is NULL;
+ *   - (-EIO) if the device is removed;
+ *   - (0) on success
+ */
+__rte_experimental
+int rte_eth_rx_meta_negotiate(uint16_t port_id, uint64_t *features);
+
 #include <rte_ethdev_core.h>
 
 /**

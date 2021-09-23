@@ -1485,9 +1485,35 @@ static void
 init_config_port_offloads(portid_t pid, uint32_t socket_id)
 {
 	struct rte_port *port = &ports[pid];
+	uint64_t rx_meta_features = 0;
 	uint16_t data_size;
 	int ret;
 	int i;
+
+	rx_meta_features |= RTE_ETH_RX_META_USER_FLAG;
+	rx_meta_features |= RTE_ETH_RX_META_USER_MARK;
+	rx_meta_features |= RTE_ETH_RX_META_TUNNEL_ID;
+
+	ret = rte_eth_rx_meta_negotiate(pid, &rx_meta_features);
+	if (ret == 0) {
+		if (!(rx_meta_features & RTE_ETH_RX_META_USER_FLAG)) {
+			TESTPMD_LOG(INFO, "Flow action FLAG will not affect Rx mbufs on port %u\n",
+				    pid);
+		}
+
+		if (!(rx_meta_features & RTE_ETH_RX_META_USER_MARK)) {
+			TESTPMD_LOG(INFO, "Flow action MARK will not affect Rx mbufs on port %u\n",
+				    pid);
+		}
+
+		if (!(rx_meta_features & RTE_ETH_RX_META_TUNNEL_ID)) {
+			TESTPMD_LOG(INFO, "Flow tunnel offload support might be limited or unavailable on port %u\n",
+				    pid);
+		}
+	} else if (ret != -ENOTSUP) {
+		rte_exit(EXIT_FAILURE, "Error when negotiating Rx meta features on port %u: %s\n",
+			 pid, rte_strerror(-ret));
+	}
 
 	port->dev_conf.txmode = tx_mode;
 	port->dev_conf.rxmode = rx_mode;

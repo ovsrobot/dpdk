@@ -91,6 +91,15 @@ New Features
   Added command-line options to specify total number of processes and
   current process ID. Each process owns subset of Rx and Tx queues.
 
+* **Added an API to negotiate delivery of specific parts of Rx meta data**
+
+  A new API, ``rte_eth_rx_meta_negotiate()``, was added.
+  The following parts of Rx meta data were defined:
+
+  * ``RTE_ETH_RX_META_USER_FLAG``
+  * ``RTE_ETH_RX_META_USER_MARK``
+  * ``RTE_ETH_RX_META_TUNNEL_ID``
+
 
 Removed Items
 -------------

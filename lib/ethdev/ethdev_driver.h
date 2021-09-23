@@ -786,6 +786,22 @@ typedef int (*eth_representor_info_get_t)(struct rte_eth_dev *dev,
 	struct rte_eth_representor_info *info);
 
 /**
+ * @internal
+ * Negotiate delivery of specific parts of Rx meta data.
+ *
+ * @param dev
+ *   Port (ethdev) handle
+ *
+ * @param[inout] features
+ *   Feature selection buffer
+ *
+ * @return
+ *   Negative errno value on error, zero otherwise
+ */
+typedef int (*eth_rx_meta_negotiate_t)(struct rte_eth_dev *dev,
+				       uint64_t *features);
+
+/**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
 struct eth_dev_ops {
@@ -945,6 +961,9 @@ struct eth_dev_ops {
 
 	eth_representor_info_get_t representor_info_get;
 	/**< Get representor info. */
+
+	eth_rx_meta_negotiate_t rx_meta_negotiate;
+	/**< Negotiate delivery of specific parts of Rx meta data. */
 };
 
 /**
