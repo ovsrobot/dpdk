@@ -750,10 +750,12 @@ check_core_list(int *lcores, unsigned int count)
 static int
 eal_parse_coremask(const char *coremask, int *cores)
 {
-	unsigned count = 0;
+	unsigned int count = 0;
 	int i, j, idx;
 	int val;
 	char c;
+	int lcores[RTE_MAX_LCORE];
+	const char *coremask_orig = coremask;
 
 	for (idx = 0; idx < RTE_MAX_LCORE; idx++)
 		cores[idx] = -1;
@@ -770,29 +772,60 @@ eal_parse_coremask(const char *coremask, int *cores)
 	i = strlen(coremask);
 	while ((i > 0) && isblank(coremask[i - 1]))
 		i--;
-	if (i == 0)
+	if (i == 0) {
+		RTE_LOG(ERR, EAL, "No lcores in coremask: [%s]\n",
+				coremask_orig);
 		return -1;
+	}
 
-	for (i = i - 1; i >= 0 && idx < RTE_MAX_LCORE; i--) {
+	for (i = i - 1; i >= 0; i--) {
 		c = coremask[i];
 		if (isxdigit(c) == 0) {
 			/* invalid characters */
+			RTE_LOG(ERR, EAL, "invalid characters in coremask: [%s]\n",
+					coremask_orig);
 			return -1;
 		}
 		val = xdigit2val(c);
-		for (j = 0; j < BITS_PER_HEX && idx < RTE_MAX_LCORE; j++, idx++)
+		for (j = 0; j < BITS_PER_HEX; j++, idx++)
 		{
 			if ((1 << j) & val) {
-				cores[idx] = count;
+				if (count >= RTE_MAX_LCORE) {
+					RTE_LOG(ERR, EAL, "Too many lcores provided. Cannot exceed %d\n",
+							RTE_MAX_LCORE);
+					return -1;
+				}
+				lcores[count] = idx;
 				count++;
 			}
 		}
 	}
 	for (; i >= 0; i--)
-		if (coremask[i] != '0')
+		if (coremask[i] != '0') {
+			RTE_LOG(ERR, EAL, "invalid characters in coremask: [%s]\n",
+					coremask_orig);
 			return -1;
-	if (count == 0)
+		}
+	if (count == 0) {
+		RTE_LOG(ERR, EAL, "No lcores in coremask: [%s]\n",
+				coremask_orig);
 		return -1;
+	}
+
+	if (check_core_list(lcores, count))
+		return -1;
+
+	/*
+	 * Now that we've gto a list of cores no longer than
+	 * RTE_MAX_LCORE, and no lcore in that list is greater
+	 * than RTE_MAX_LCORE, populate the cores
+	 * array and return.
+	 */
+	do {
+		count--;
+		cores[lcores[count]] = count;
+	} while (count != 0);
+
 	return 0;
 }
 
