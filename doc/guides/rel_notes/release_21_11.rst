@@ -111,6 +111,8 @@ Removed Items
   blacklist/whitelist are removed. Users must use the new
   block/allow list arguments.
 
+* i40e: Removed i40evf driver. Due to iavf already became the default VF
+  driver for i40e devices, so remove i40evf due to it's no need to maintain.
 
 API Changes
 -----------
