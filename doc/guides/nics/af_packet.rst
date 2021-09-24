@@ -65,3 +65,41 @@ framecnt=512):
 .. code-block:: console
 
     --vdev=eth_af_packet0,iface=tap0,blocksz=4096,framesz=2048,framecnt=512,qpairs=1,qdisc_bypass=0
+
+Features and Limitations of the af_packet PMD
+---------------------------------------------
+
+Since the following commit, the Linux kernel strips the vlan tag
+
+.. code-block:: console
+
+    commit bcc6d47903612c3861201cc3a866fb604f26b8b2
+    Author: Jiri Pirko <jpirko@xxxxxxxxxx>
+    Date:   Thu Apr 7 19:48:33 2011 +0000
+
+     net: vlan: make non-hw-accel rx path similar to hw-accel
+
+Running on such a kernel results in receiving untagged frames while using
+the af_packet PMD. Fortunately, the stripped information is still available
+for use in ``mbuf->vlan_tci``, and applications could check ``PKT_RX_VLAN_STRIPPED``.
+
+However, we currently don't have a way to describe offloads which can't be
+disabled by PMDs, and this creates an inconsistency with the way applications
+expect the PMD offloads to work, and requires them to be aware of which
+underlying driver they use.
+
+Since release 21.11 the af_packet PMD will implement support for the
+``DEV_RX_OFFLOAD_VLAN_STRIP`` offload, and users can control the desired vlan
+stripping behavior.
+
+It's important to note that the default case will change. If previously,
+the vlan tag was stripped, if the application now requires the same behavior,
+it will need to configure ``rxmode.offloads`` with ``DEV_RX_OFFLOAD_VLAN_STRIP``.
+
+The PMD driver will re-insert the vlan tag transparently to the application
+if the kernel strips it, as long as the ``DEV_RX_OFFLOAD_VLAN_STRIP`` is not
+enabled.
+
+.. code-block:: console
+
+    port_conf.rxmode.offloads |= DEV_RX_OFFLOAD_VLAN_STRIP
