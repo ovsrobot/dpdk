@@ -40,6 +40,7 @@ enum rte_kni_req_id {
  */
 struct rte_kni_request {
 	uint32_t req_id;             /**< Request id */
+	uint32_t req_in_progress;    /**< Request in progress flag */
 	RTE_STD_C11
 	union {
 		uint32_t new_mtu;    /**< New MTU */

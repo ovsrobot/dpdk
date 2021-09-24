@@ -110,6 +110,7 @@ kni_net_process_request(struct net_device *dev, struct rte_kni_request *req)
 	void *resp_va;
 	uint32_t num;
 	int ret_val;
+	struct rte_kni_request *cur_req;
 
 	ASSERT_RTNL();
 
@@ -123,7 +124,15 @@ kni_net_process_request(struct net_device *dev, struct rte_kni_request *req)
 
 	mutex_lock(&kni->sync_lock);
 
+	/* Check that existing request has been processed: */
+	cur_req = (struct rte_kni_request *)kni->sync_kva;
+	if (cur_req->req_in_progress) {
+		ret = -EAGAIN;
+		goto fail;
+	}
+
 	/* Construct data */
+	req->req_in_progress = 1;
 	memcpy(kni->sync_kva, req, sizeof(struct rte_kni_request));
 	num = kni_fifo_put(kni->req_q, &kni->sync_va, 1);
 	if (num < 1) {

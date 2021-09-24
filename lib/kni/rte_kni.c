@@ -307,6 +307,7 @@ rte_kni_alloc(struct rte_mempool *pktmbuf_pool,
 	kni->sync_addr = kni->m_sync_addr->addr;
 	dev_info.sync_va = kni->m_sync_addr->addr;
 	dev_info.sync_phys = kni->m_sync_addr->iova;
+	memset(kni->sync_addr, 0, sizeof(struct rte_kni_request));
 
 	kni->pktmbuf_pool = pktmbuf_pool;
 	kni->group_id = conf->group_id;
@@ -596,6 +597,7 @@ rte_kni_handle_request(struct rte_kni *kni)
 		ret = kni_fifo_put(kni->resp_q, (void **)&req, 1);
 	else
 		ret = 1;
+	req->req_in_progress = 0;
 	if (ret != 1) {
 		RTE_LOG(ERR, KNI, "Fail to put the muf back to resp_q\n");
 		return -1; /* It is an error of can't putting the mbuf back */
