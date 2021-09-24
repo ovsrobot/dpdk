@@ -299,6 +299,8 @@ enum index {
 	ITEM_GENEVE_OPT_TYPE,
 	ITEM_GENEVE_OPT_LENGTH,
 	ITEM_GENEVE_OPT_DATA,
+	ITEM_PPP,
+	ITEM_L2TPV2,
 	ITEM_INTEGRITY,
 	ITEM_INTEGRITY_LEVEL,
 	ITEM_INTEGRITY_VALUE,
@@ -997,6 +999,8 @@ static const enum index next_item[] = {
 	ITEM_AH,
 	ITEM_PFCP,
 	ITEM_ECPRI,
+	ITEM_PPP,
+	ITEM_L2TPV2,
 	ITEM_GENEVE_OPT,
 	ITEM_INTEGRITY,
 	ITEM_CONNTRACK,
@@ -1364,6 +1368,16 @@ static const enum index item_integrity[] = {
 static const enum index item_integrity_lv[] = {
 	ITEM_INTEGRITY_LEVEL,
 	ITEM_INTEGRITY_VALUE,
+	ITEM_NEXT,
+	ZERO,
+};
+
+static const enum index item_ppp[] = {
+	ITEM_NEXT,
+	ZERO,
+};
+
+static const enum index item_l2tpv2[] = {
 	ITEM_NEXT,
 	ZERO,
 };
@@ -3578,6 +3592,20 @@ static const struct token token_list[] = {
 			     ARGS_ENTRY_ARB
 				(sizeof(struct rte_flow_item_geneve_opt),
 				ITEM_GENEVE_OPT_DATA_SIZE)),
+	},
+	[ITEM_PPP] = {
+		.name = "ppp",
+		.help = "match ppp header",
+		.priv = PRIV_ITEM(PPP, sizeof(struct rte_flow_item_ppp)),
+		.next = NEXT(item_ppp),
+		.call = parse_vc,
+	},
+	[ITEM_L2TPV2] = {
+		.name = "l2tpv2",
+		.help = "match l2tpv2 header",
+		.priv = PRIV_ITEM(L2TPV2, sizeof(struct rte_flow_item_l2tpv2)),
+		.next = NEXT(item_l2tpv2),
+		.call = parse_vc,
 	},
 	[ITEM_INTEGRITY] = {
 		.name = "integrity",
@@ -8342,6 +8370,12 @@ flow_item_default_mask(const struct rte_flow_item *item)
 		break;
 	case RTE_FLOW_ITEM_TYPE_PFCP:
 		mask = &rte_flow_item_pfcp_mask;
+		break;
+	case RTE_FLOW_ITEM_TYPE_L2TPV2:
+		mask = &rte_flow_item_l2tpv2_mask;
+		break;
+	case RTE_FLOW_ITEM_TYPE_PPP:
+		mask = &rte_flow_item_ppp_mask;
 		break;
 	default:
 		break;
