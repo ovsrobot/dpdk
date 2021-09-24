@@ -543,6 +543,9 @@ static struct iavf_pattern_match_item iavf_hash_pattern_list[] = {
 	{iavf_pattern_eth_ipv4_udp_l2tpv2_ppp_ipv4,	IAVF_RSS_TYPE_INNER_IPV4,	&udp_l2tpv2_ppp_ipv4_tmplt},
 	{iavf_pattern_eth_ipv4_udp_l2tpv2_ppp_ipv4_udp,	IAVF_RSS_TYPE_INNER_IPV4_UDP,	&udp_l2tpv2_ppp_ipv4_udp_tmplt},
 	{iavf_pattern_eth_ipv4_udp_l2tpv2_ppp_ipv4_tcp,	IAVF_RSS_TYPE_INNER_IPV4_TCP,	&udp_l2tpv2_ppp_ipv4_tcp_tmplt},
+	{iavf_pattern_eth_ipv6_udp_l2tpv2_ppp_ipv4,	IAVF_RSS_TYPE_INNER_IPV4,	&udp_l2tpv2_ppp_ipv4_tmplt},
+	{iavf_pattern_eth_ipv6_udp_l2tpv2_ppp_ipv4_udp,	IAVF_RSS_TYPE_INNER_IPV4_UDP,	&udp_l2tpv2_ppp_ipv4_udp_tmplt},
+	{iavf_pattern_eth_ipv6_udp_l2tpv2_ppp_ipv4_tcp,	IAVF_RSS_TYPE_INNER_IPV4_TCP,	&udp_l2tpv2_ppp_ipv4_tcp_tmplt},
 
 	/* IPv6 */
 	{iavf_pattern_eth_ipv6,				IAVF_RSS_TYPE_OUTER_IPV6,	&outer_ipv6_tmplt},
@@ -607,6 +610,9 @@ static struct iavf_pattern_match_item iavf_hash_pattern_list[] = {
 	{iavf_pattern_eth_ipv4_udp_l2tpv2_ppp_ipv6,	IAVF_RSS_TYPE_INNER_IPV6,	&udp_l2tpv2_ppp_ipv6_tmplt},
 	{iavf_pattern_eth_ipv4_udp_l2tpv2_ppp_ipv6_udp,	IAVF_RSS_TYPE_INNER_IPV6_UDP,	&udp_l2tpv2_ppp_ipv6_udp_tmplt},
 	{iavf_pattern_eth_ipv4_udp_l2tpv2_ppp_ipv6_tcp,	IAVF_RSS_TYPE_INNER_IPV6_TCP,	&udp_l2tpv2_ppp_ipv6_tcp_tmplt},
+	{iavf_pattern_eth_ipv6_udp_l2tpv2_ppp_ipv6,	IAVF_RSS_TYPE_INNER_IPV6,	&udp_l2tpv2_ppp_ipv6_tmplt},
+	{iavf_pattern_eth_ipv6_udp_l2tpv2_ppp_ipv6_udp,	IAVF_RSS_TYPE_INNER_IPV6_UDP,	&udp_l2tpv2_ppp_ipv6_udp_tmplt},
+	{iavf_pattern_eth_ipv6_udp_l2tpv2_ppp_ipv6_tcp,	IAVF_RSS_TYPE_INNER_IPV6_TCP,	&udp_l2tpv2_ppp_ipv6_tcp_tmplt},
 
 };
 
