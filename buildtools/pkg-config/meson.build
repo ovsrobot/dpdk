@@ -40,7 +40,13 @@ Use libdpdk.pc instead of this file to query DPDK compile/link arguments''',
 platform_flags = []
 if not is_windows
     platform_flags += ['-Wl,--export-dynamic'] # ELF only
+    libraries_args = ['-Wl,--whole-archive'] +
+                     dpdk_drivers + dpdk_static_libraries +
+                     ['-Wl,--no-whole-archive'] + platform_flags
+else
+     libraries_args = dpdk_drivers + dpdk_static_libraries
 endif
+
 pkg.generate(name: 'DPDK', # main DPDK pkgconfig file
         filebase: 'libdpdk',
         version: meson.project_version(),
@@ -49,9 +55,7 @@ Note that CFLAGS might contain an -march flag higher than typical baseline.
 This is required for a number of static inline functions in the public headers.''',
         requires: ['libdpdk-libs', libbsd], # may need libbsd for string funcs
                       # if libbsd is not enabled, then this is blank
-        libraries_private: ['-Wl,--whole-archive'] +
-            dpdk_drivers + dpdk_static_libraries +
-            ['-Wl,--no-whole-archive'] + platform_flags
+        libraries_private: libraries_args
 )
 
 # For static linking with dependencies as shared libraries,
