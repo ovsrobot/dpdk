@@ -98,6 +98,8 @@ static const struct rte_flow_desc_data rte_flow_desc_item[] = {
 	MK_FLOW_ITEM(PFCP, sizeof(struct rte_flow_item_pfcp)),
 	MK_FLOW_ITEM(ECPRI, sizeof(struct rte_flow_item_ecpri)),
 	MK_FLOW_ITEM(GENEVE_OPT, sizeof(struct rte_flow_item_geneve_opt)),
+	MK_FLOW_ITEM(L2TPV2, sizeof(struct rte_flow_item_l2tpv2)),
+	MK_FLOW_ITEM(PPP, sizeof(struct rte_flow_item_ppp)),
 	MK_FLOW_ITEM(INTEGRITY, sizeof(struct rte_flow_item_integrity)),
 	MK_FLOW_ITEM(CONNTRACK, sizeof(uint32_t)),
 };

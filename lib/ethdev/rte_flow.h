@@ -555,6 +555,20 @@ enum rte_flow_item_type {
 	RTE_FLOW_ITEM_TYPE_GENEVE_OPT,
 
 	/**
+	 * Matches L2TPV2 Header.
+	 *
+	 * See struct rte_flow_item_l2tpv2.
+	 */
+	RTE_FLOW_ITEM_TYPE_L2TPV2,
+
+	/**
+	 * Matches PPP Header.
+	 *
+	 * See struct rte_flow_item_ppp.
+	 */
+	RTE_FLOW_ITEM_TYPE_PPP,
+
+	/**
 	 * [META]
 	 *
 	 * Matches on packet integrity.
@@ -1796,6 +1810,91 @@ struct rte_flow_item_conntrack {
 #ifndef __cplusplus
 static const struct rte_flow_item_conntrack rte_flow_item_conntrack_mask = {
 	.flags = 0xffffffff,
+};
+#endif
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ * RTE_FLOW_ITEM_TYPE_L2TPV2
+ *
+ * Matches L2TPv2 Header
+ */
+RTE_STD_C11
+struct rte_flow_item_l2tpv2 {
+	rte_be16_t flags_version;   /**< flag(12)  version(2). version must be 2 */
+	union{
+		struct{
+			rte_be16_t length;  /**< length(16) */
+			rte_be16_t tunnel_id;   /**< tunnel id(16) */
+			rte_be16_t session_id;  /**< session id(16) */
+			rte_be32_t ns_nr;   /**< Ns(16) + Nr(16) */
+			rte_be32_t offset;  /**< offset size(16) + offset padding(16) */
+		} type1;
+		struct{
+			rte_be16_t tunnel_id;   /**< tunnel id(16) */
+			rte_be16_t session_id;  /**< session id(16) */
+			rte_be32_t ns_nr;   /**< Ns(16) + Nr(16) */
+			rte_be32_t offset;  /**< offset size(16) + offset padding(16) */
+		} type2;
+		struct{
+			rte_be16_t length;  /**< length(16) */
+			rte_be16_t tunnel_id;   /**< tunnel id(16) */
+			rte_be16_t session_id;  /**< session id(16) */
+			rte_be32_t offset;  /**< offset size(16) + offset padding(16) */
+		} type3;
+		struct{
+			rte_be16_t length;  /**< length(16) */
+			rte_be16_t tunnel_id;   /**< tunnel id(16) */
+			rte_be16_t session_id;  /**< session id(16) */
+			rte_be32_t ns_nr;   /**< Ns(16) + Nr(16) */
+		} type4;
+		struct{
+			rte_be16_t tunnel_id;   /**< tunnel id(16) */
+			rte_be16_t session_id;  /**< session id(16) */
+			rte_be32_t offset;  /**< offset size(16) + offset padding(16) */
+		} type5;
+		struct{
+			rte_be16_t tunnel_id;   /**< tunnel id(16) */
+			rte_be16_t session_id;  /**< session id(16) */
+			rte_be32_t ns_nr;   /**< Ns(16) + Nr(16) */
+		} type6;
+		struct{
+			rte_be16_t length;  /**< length(16) */
+			rte_be16_t tunnel_id;   /**< tunnel id(16) */
+			rte_be16_t session_id;  /**< session id(16) */
+		} type7;
+		struct{
+			rte_be16_t tunnel_id;   /**< tunnel id(16) */
+			rte_be16_t session_id;  /**< session id(16) */
+		} type8;
+	};
+};
+
+/** Default mask for RTE_FLOW_ITEM_TYPE_L2TPV2. */
+#ifndef __cplusplus
+static const struct rte_flow_item_l2tpv2 rte_flow_item_l2tpv2_mask = {
+	.flags_version = 0xffff,
+};
+#endif
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ * RTE_FLOW_ITEM_TYPE_PPP
+ *
+ * Matches PPP Header
+ */
+struct rte_flow_item_ppp {
+	rte_be16_t pppaddr_ctrl; /**< ppp address(8) + control(8) */
+	rte_be16_t pppproto_id; /**< ppp protocol id(16) */
+};
+
+/** Default mask for RTE_FLOW_ITEM_TYPE_PPP. */
+#ifndef __cplusplus
+static const struct rte_flow_item_ppp rte_flow_item_ppp_mask = {
+	.pppaddr_ctrl = 0xffff,
+	.pppproto_id = 0xffff,
 };
 #endif
 
