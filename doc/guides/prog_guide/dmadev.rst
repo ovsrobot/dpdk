@@ -62,3 +62,44 @@ identifiers:
 
 - A device name used to designate the DMA device in console messages, for
   administration or debugging purposes.
+
+
+Device Configuration
+~~~~~~~~~~~~~~~~~~~~
+
+The rte_dma_configure API is used to configure a DMA device.
+
+.. code-block:: c
+
+   int rte_dma_configure(int16_t dev_id,
+                         const struct rte_dma_conf *dev_conf);
+
+The ``rte_dma_conf`` structure is used to pass the configuration parameters
+for the DMA device for example the number of virtual DMA channels to set up,
+indication of whether to enable silent mode.
+
+
+Configuration of Virtual DMA Channels
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The rte_dma_vchan_setup API is used to configure a virtual DMA channel.
+
+.. code-block:: c
+
+   int rte_dma_vchan_setup(int16_t dev_id, uint16_t vchan,
+                           const struct rte_dma_vchan_conf *conf);
+
+The ``rte_dma_vchan_conf`` structure is used to pass the configuration
+parameters for the virtual DMA channel for example transfer direction, number of
+descriptor for the virtual DMA channel, source device access port parameter,
+destination device access port parameter.
+
+
+Device Features and Capabilities
+--------------------------------
+
+DMA devices may support different feature sets. The ``rte_dma_info_get`` API
+can be used to get the device info and supported features.
+
+Silent mode is a special device capability which does not require the
+application to invoke dequeue APIs.

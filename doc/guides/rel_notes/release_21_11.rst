@@ -94,6 +94,7 @@ New Features
 * **Introduced dmadev library with:**
 
   * Device allocation APIs.
+  * Control plane APIs.
 
 
 Removed Items
