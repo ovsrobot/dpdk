@@ -821,8 +821,8 @@ rte_dma_copy(int16_t dev_id, uint16_t vchan, rte_iova_t src, rte_iova_t dst,
 	struct rte_dma_dev *dev = &rte_dma_devices[dev_id];
 
 #ifdef RTE_DMADEV_DEBUG
-	if (!rte_dma_is_valid(dev_id) || !dev->dev_started ||
-	    vchan >= dev->dev_conf.nb_vchans || length == 0)
+	if (!rte_dma_is_valid(dev_id) || !dev->data->dev_started ||
+	    vchan >= dev->data->dev_conf.nb_vchans || length == 0)
 		return -EINVAL;
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->copy, -ENOTSUP);
 #endif
@@ -872,8 +872,8 @@ rte_dma_copy_sg(int16_t dev_id, uint16_t vchan, struct rte_dma_sge *src,
 	struct rte_dma_dev *dev = &rte_dma_devices[dev_id];
 
 #ifdef RTE_DMADEV_DEBUG
-	if (!rte_dma_is_valid(dev_id) || !dev->dev_started ||
-	    vchan >= dev->dev_conf.nb_vchans ||
+	if (!rte_dma_is_valid(dev_id) || !dev->data->dev_started ||
+	    vchan >= dev->data->dev_conf.nb_vchans ||
 	    src == NULL || dst == NULL || nb_src == 0 || nb_dst == 0)
 		return -EINVAL;
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->copy_sg, -ENOTSUP);
@@ -919,8 +919,8 @@ rte_dma_fill(int16_t dev_id, uint16_t vchan, uint64_t pattern,
 	struct rte_dma_dev *dev = &rte_dma_devices[dev_id];
 
 #ifdef RTE_DMADEV_DEBUG
-	if (!rte_dma_is_valid(dev_id) || !dev->dev_started ||
-	    vchan >= dev->dev_conf.nb_vchans || length == 0)
+	if (!rte_dma_is_valid(dev_id) || !dev->data->dev_started ||
+	    vchan >= dev->data->dev_conf.nb_vchans || length == 0)
 		return -EINVAL;
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->fill, -ENOTSUP);
 #endif
@@ -952,8 +952,8 @@ rte_dma_submit(int16_t dev_id, uint16_t vchan)
 	struct rte_dma_dev *dev = &rte_dma_devices[dev_id];
 
 #ifdef RTE_DMADEV_DEBUG
-	if (!rte_dma_is_valid(dev_id) || !dev->dev_started ||
-	    vchan >= dev->dev_conf.nb_vchans)
+	if (!rte_dma_is_valid(dev_id) || !dev->data->dev_started ||
+	    vchan >= dev->data->dev_conf.nb_vchans)
 		return -EINVAL;
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->submit, -ENOTSUP);
 #endif
@@ -994,8 +994,8 @@ rte_dma_completed(int16_t dev_id, uint16_t vchan, const uint16_t nb_cpls,
 	bool err;
 
 #ifdef RTE_DMADEV_DEBUG
-	if (!rte_dma_is_valid(dev_id) || !dev->dev_started ||
-	    vchan >= dev->dev_conf.nb_vchans || nb_cpls == 0)
+	if (!rte_dma_is_valid(dev_id) || !dev->data->dev_started ||
+	    vchan >= dev->data->dev_conf.nb_vchans || nb_cpls == 0)
 		return 0;
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->completed, 0);
 #endif
@@ -1054,8 +1054,8 @@ rte_dma_completed_status(int16_t dev_id, uint16_t vchan,
 	uint16_t idx;
 
 #ifdef RTE_DMADEV_DEBUG
-	if (!rte_dma_is_valid(dev_id) || !dev->dev_started ||
-	    vchan >= dev->dev_conf.nb_vchans ||
+	if (!rte_dma_is_valid(dev_id) || !dev->data->dev_started ||
+	    vchan >= dev->data->dev_conf.nb_vchans ||
 	    nb_cpls == 0 || status == NULL)
 		return 0;
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->completed_status, 0);

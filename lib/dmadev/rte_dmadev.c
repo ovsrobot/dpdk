@@ -17,6 +17,13 @@
 
 struct rte_dma_dev *rte_dma_devices;
 static int16_t dma_devices_max;
+static struct {
+	/* Hold the dev_max information of the primary process. This field is
+	 * set by the primary process and is read by the secondary process.
+	 */
+	int16_t dev_max;
+	struct rte_dma_dev_data data[0];
+} *dma_devices_shared_data;
 
 RTE_LOG_REGISTER_DEFAULT(rte_dma_logtype, INFO);
 #define RTE_DMA_LOG(level, fmt, args...) \
@@ -76,11 +83,11 @@ dma_find_free_dev(void)
 {
 	int16_t i;
 
-	if (rte_dma_devices == NULL)
+	if (rte_dma_devices == NULL || dma_devices_shared_data == NULL)
 		return -1;
 
 	for (i = 0; i < dma_devices_max; i++) {
-		if (rte_dma_devices[i].dev_name[0] == '\0')
+		if (dma_devices_shared_data->data[i].dev_name[0] == '\0')
 			return i;
 	}
 
@@ -97,7 +104,7 @@ dma_find(const char *name)
 
 	for (i = 0; i < dma_devices_max; i++) {
 		if ((rte_dma_devices[i].state != RTE_DMA_DEV_UNUSED) &&
-		    (!strcmp(name, rte_dma_devices[i].dev_name)))
+		    (!strcmp(name, rte_dma_devices[i].data->dev_name)))
 			return &rte_dma_devices[i];
 	}
 
@@ -131,15 +138,64 @@ dma_process_data_prepare(void)
 }
 
 static int
+dma_shared_data_prepare(void)
+{
+	const char *mz_name = "rte_dma_dev_data";
+	const struct rte_memzone *mz;
+	size_t size;
+
+	if (dma_devices_shared_data != NULL)
+		return 0;
+
+	size = sizeof(*dma_devices_shared_data) +
+		sizeof(struct rte_dma_dev_data) * dma_devices_max;
+
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+		mz = rte_memzone_reserve(mz_name, size, rte_socket_id(), 0);
+	else
+		mz = rte_memzone_lookup(mz_name);
+	if (mz == NULL)
+		return -ENOMEM;
+
+	dma_devices_shared_data = mz->addr;
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		memset(dma_devices_shared_data, 0, size);
+		dma_devices_shared_data->dev_max = dma_devices_max;
+	} else {
+		dma_devices_max = dma_devices_shared_data->dev_max;
+	}
+
+	return 0;
+}
+
+static int
 dma_data_prepare(void)
 {
-	if (dma_devices_max == 0)
-		dma_devices_max = RTE_DMADEV_DEFAULT_MAX_DEVS;
-	return dma_process_data_prepare();
+	int ret;
+
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		if (dma_devices_max == 0)
+			dma_devices_max = RTE_DMADEV_DEFAULT_MAX_DEVS;
+		ret = dma_process_data_prepare();
+		if (ret)
+			return ret;
+		ret = dma_shared_data_prepare();
+		if (ret)
+			return ret;
+	} else {
+		ret = dma_shared_data_prepare();
+		if (ret)
+			return ret;
+		ret = dma_process_data_prepare();
+		if (ret)
+			return ret;
+	}
+
+	return 0;
 }
 
 static struct rte_dma_dev *
-dma_allocate(const char *name, int numa_node, size_t private_data_size)
+dma_allocate_primary(const char *name, int numa_node, size_t private_data_size)
 {
 	struct rte_dma_dev *dev;
 	void *dev_private;
@@ -174,10 +230,55 @@ dma_allocate(const char *name, int numa_node, size_t private_data_size)
 
 	dev = &rte_dma_devices[dev_id];
 	dev->dev_private = dev_private;
-	rte_strscpy(dev->dev_name, name, sizeof(dev->dev_name));
-	dev->dev_id = dev_id;
-	dev->numa_node = numa_node;
-	dev->dev_private = dev_private;
+	dev->data = &dma_devices_shared_data->data[dev_id];
+	rte_strscpy(dev->data->dev_name, name, sizeof(dev->data->dev_name));
+	dev->data->dev_id = dev_id;
+	dev->data->numa_node = numa_node;
+	dev->data->dev_private = dev_private;
+
+	return dev;
+}
+
+static struct rte_dma_dev *
+dma_attach_secondary(const char *name)
+{
+	struct rte_dma_dev *dev;
+	int16_t i;
+	int ret;
+
+	ret = dma_data_prepare();
+	if (ret < 0) {
+		RTE_DMA_LOG(ERR, "Cannot initialize dmadevs data");
+		return NULL;
+	}
+
+	for (i = 0; i < dma_devices_max; i++) {
+		if (!strcmp(dma_devices_shared_data->data[i].dev_name, name))
+			break;
+	}
+	if (i == dma_devices_max) {
+		RTE_DMA_LOG(ERR,
+			"Device %s is not driven by the primary process",
+			name);
+		return NULL;
+	}
+
+	dev = &rte_dma_devices[i];
+	dev->data = &dma_devices_shared_data->data[i];
+	dev->dev_private = dev->data->dev_private;
+
+	return dev;
+}
+
+static struct rte_dma_dev *
+dma_allocate(const char *name, int numa_node, size_t private_data_size)
+{
+	struct rte_dma_dev *dev;
+
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+		dev = dma_allocate_primary(name, numa_node, private_data_size);
+	else
+		dev = dma_attach_secondary(name);
 
 	return dev;
 }
@@ -185,7 +286,11 @@ dma_allocate(const char *name, int numa_node, size_t private_data_size)
 static void
 dma_release(struct rte_dma_dev *dev)
 {
-	rte_free(dev->dev_private);
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		memset(dev->data, 0, sizeof(struct rte_dma_dev_data));
+		rte_free(dev->dev_private);
+	}
+
 	memset(dev, 0, sizeof(struct rte_dma_dev));
 }
 
@@ -219,7 +324,7 @@ rte_dma_pmd_release(const char *name)
 		return -EINVAL;
 
 	if (dev->state == RTE_DMA_DEV_READY)
-		return rte_dma_close(dev->dev_id);
+		return rte_dma_close(dev->data->dev_id);
 
 	dma_release(dev);
 	return 0;
@@ -237,7 +342,7 @@ rte_dma_get_dev_id(const char *name)
 	if (dev == NULL)
 		return -EINVAL;
 
-	return dev->dev_id;
+	return dev->data->dev_id;
 }
 
 bool
@@ -283,7 +388,7 @@ rte_dma_info_get(int16_t dev_id, struct rte_dma_info *dev_info)
 		return ret;
 
 	dev_info->numa_node = dev->device->numa_node;
-	dev_info->nb_vchans = dev->dev_conf.nb_vchans;
+	dev_info->nb_vchans = dev->data->dev_conf.nb_vchans;
 
 	return 0;
 }
@@ -299,7 +404,7 @@ rte_dma_configure(int16_t dev_id, const struct rte_dma_conf *dev_conf)
 	if (dev_conf == NULL)
 		return -EINVAL;
 
-	if (dev->dev_started != 0) {
+	if (dev->data->dev_started != 0) {
 		RTE_DMA_LOG(ERR,
 			"Device %d must be stopped to allow configuration",
 			dev_id);
@@ -331,7 +436,8 @@ rte_dma_configure(int16_t dev_id, const struct rte_dma_conf *dev_conf)
 	ret = (*dev->dev_ops->dev_configure)(dev, dev_conf,
 					     sizeof(struct rte_dma_conf));
 	if (ret == 0)
-		memcpy(&dev->dev_conf, dev_conf, sizeof(struct rte_dma_conf));
+		memcpy(&dev->data->dev_conf, dev_conf,
+		       sizeof(struct rte_dma_conf));
 
 	return ret;
 }
@@ -344,12 +450,12 @@ rte_dma_start(int16_t dev_id)
 
 	RTE_DMA_VALID_DEV_ID_OR_ERR_RET(dev_id, -EINVAL);
 
-	if (dev->dev_conf.nb_vchans == 0) {
+	if (dev->data->dev_conf.nb_vchans == 0) {
 		RTE_DMA_LOG(ERR, "Device %d must be configured first", dev_id);
 		return -EINVAL;
 	}
 
-	if (dev->dev_started != 0) {
+	if (dev->data->dev_started != 0) {
 		RTE_DMA_LOG(WARNING, "Device %d already started", dev_id);
 		return 0;
 	}
@@ -362,7 +468,7 @@ rte_dma_start(int16_t dev_id)
 		return ret;
 
 mark_started:
-	dev->dev_started = 1;
+	dev->data->dev_started = 1;
 	return 0;
 }
 
@@ -374,7 +480,7 @@ rte_dma_stop(int16_t dev_id)
 
 	RTE_DMA_VALID_DEV_ID_OR_ERR_RET(dev_id, -EINVAL);
 
-	if (dev->dev_started == 0) {
+	if (dev->data->dev_started == 0) {
 		RTE_DMA_LOG(WARNING, "Device %d already stopped", dev_id);
 		return 0;
 	}
@@ -387,7 +493,7 @@ rte_dma_stop(int16_t dev_id)
 		return ret;
 
 mark_stopped:
-	dev->dev_started = 0;
+	dev->data->dev_started = 0;
 	return 0;
 }
 
@@ -400,7 +506,7 @@ rte_dma_close(int16_t dev_id)
 	RTE_DMA_VALID_DEV_ID_OR_ERR_RET(dev_id, -EINVAL);
 
 	/* Device must be stopped before it can be closed */
-	if (dev->dev_started == 1) {
+	if (dev->data->dev_started == 1) {
 		RTE_DMA_LOG(ERR,
 			"Device %d must be stopped before closing", dev_id);
 		return -EBUSY;
@@ -427,7 +533,7 @@ rte_dma_vchan_setup(int16_t dev_id, uint16_t vchan,
 	if (conf == NULL)
 		return -EINVAL;
 
-	if (dev->dev_started != 0) {
+	if (dev->data->dev_started != 0) {
 		RTE_DMA_LOG(ERR,
 			"Device %d must be stopped to allow configuration",
 			dev_id);
@@ -439,7 +545,7 @@ rte_dma_vchan_setup(int16_t dev_id, uint16_t vchan,
 		RTE_DMA_LOG(ERR, "Device %d get device info fail", dev_id);
 		return -EINVAL;
 	}
-	if (dev->dev_conf.nb_vchans == 0) {
+	if (dev->data->dev_conf.nb_vchans == 0) {
 		RTE_DMA_LOG(ERR, "Device %d must be configured first", dev_id);
 		return -EINVAL;
 	}
@@ -513,7 +619,7 @@ rte_dma_stats_get(int16_t dev_id, uint16_t vchan, struct rte_dma_stats *stats)
 	RTE_DMA_VALID_DEV_ID_OR_ERR_RET(dev_id, -EINVAL);
 	if (stats == NULL)
 		return -EINVAL;
-	if (vchan >= dev->dev_conf.nb_vchans &&
+	if (vchan >= dev->data->dev_conf.nb_vchans &&
 	    vchan != RTE_DMA_ALL_VCHAN) {
 		RTE_DMA_LOG(ERR,
 			"Device %d vchan %u out of range", dev_id, vchan);
@@ -532,7 +638,7 @@ rte_dma_stats_reset(int16_t dev_id, uint16_t vchan)
 	struct rte_dma_dev *dev = &rte_dma_devices[dev_id];
 
 	RTE_DMA_VALID_DEV_ID_OR_ERR_RET(dev_id, -EINVAL);
-	if (vchan >= dev->dev_conf.nb_vchans &&
+	if (vchan >= dev->data->dev_conf.nb_vchans &&
 	    vchan != RTE_DMA_ALL_VCHAN) {
 		RTE_DMA_LOG(ERR,
 			"Device %d vchan %u out of range", dev_id, vchan);
@@ -606,14 +712,14 @@ rte_dma_dump(int16_t dev_id, FILE *f)
 	}
 
 	(void)fprintf(f, "DMA Dev %d, '%s' [%s]\n",
-		dev->dev_id,
-		dev->dev_name,
-		dev->dev_started ? "started" : "stopped");
+		dev->data->dev_id,
+		dev->data->dev_name,
+		dev->data->dev_started ? "started" : "stopped");
 	dma_dump_capability(f, dev_info.dev_capa);
 	(void)fprintf(f, "  max_vchans_supported: %u\n", dev_info.max_vchans);
 	(void)fprintf(f, "  nb_vchans_configured: %u\n", dev_info.nb_vchans);
 	(void)fprintf(f, "  silent_mode: %s\n",
-		dev->dev_conf.enable_silent ? "on" : "off");
+		dev->data->dev_conf.enable_silent ? "on" : "off");
 
 	if (dev->dev_ops->dev_dump != NULL)
 		return (*dev->dev_ops->dev_dump)(dev, f);
