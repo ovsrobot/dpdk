@@ -1425,12 +1425,17 @@ F: doc/guides/sample_app_ug/qos_scheduler.rst
 
 Packet capture
 M: Reshma Pattan <reshma.pattan@intel.com>
+M: Stephen Hemminger <stephen@networkplumber.org>
 F: lib/pdump/
+F: lib/pcapng/
 F: doc/guides/prog_guide/pdump_lib.rst
-F: app/test/test_pdump.*
-F: app/pdump/
+F: doc/guides/prog_guide/pcapng_lib.rst
+F: doc/guides/tools/dumpcap.rst
 F: doc/guides/tools/pdump.rst
-
+F: app/test/test_pdump.c
+F: app/test/test_pcapng.c
+F: app/pdump/
+F: app/dumpcap/
 
 Packet Framework
 ----------------
