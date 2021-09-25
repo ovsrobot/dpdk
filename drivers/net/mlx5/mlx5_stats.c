@@ -39,23 +39,37 @@ mlx5_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *stats,
 		unsigned int n)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
-	unsigned int i;
-	uint64_t counters[n];
 	struct mlx5_xstats_ctrl *xstats_ctrl = &priv->xstats_ctrl;
-	uint16_t mlx5_stats_n = xstats_ctrl->mlx5_stats_n;
+	uint16_t mlx5_stats_n;
+	int stats_n;
+
+	stats_n = mlx5_os_get_stats_n(dev);
+	if (stats_n < 0)
+		return stats_n;
+	if (xstats_ctrl->stats_n != stats_n)
+		mlx5_os_stats_init(dev);
+	mlx5_stats_n = xstats_ctrl->mlx5_stats_n;
 
 	if (n >= mlx5_stats_n && stats) {
-		int stats_n;
+		uint64_t *counters;
+		unsigned int i;
 		int ret;
 
-		stats_n = mlx5_os_get_stats_n(dev);
-		if (stats_n < 0)
-			return stats_n;
-		if (xstats_ctrl->stats_n != stats_n)
-			mlx5_os_stats_init(dev);
+		counters = mlx5_malloc(MLX5_MEM_SYS, sizeof(*counters) *
+				mlx5_stats_n, 0,
+				SOCKET_ID_ANY);
+		if (counters == NULL) {
+			DRV_LOG(WARNING, "port %u unable to allocate "
+					"memory for xstats counters",
+					dev->data->port_id);
+			rte_errno = ENOMEM;
+			return -rte_errno;
+		}
 		ret = mlx5_os_read_dev_counters(dev, counters);
-		if (ret)
+		if (ret) {
+			mlx5_free(counters);
 			return ret;
+		}
 		for (i = 0; i != mlx5_stats_n; ++i) {
 			stats[i].id = i;
 			if (xstats_ctrl->info[i].dev) {
@@ -76,6 +90,7 @@ mlx5_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *stats,
 					(counters[i] - xstats_ctrl->base[i]);
 			}
 		}
+		mlx5_free(counters);
 	}
 	mlx5_stats_n = mlx5_txpp_xstats_get(dev, stats, n, mlx5_stats_n);
 	return mlx5_stats_n;
