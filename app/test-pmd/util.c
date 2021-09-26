@@ -444,6 +444,21 @@ eth_dev_info_get_print_err(uint16_t port_id,
 	return ret;
 }
 
+int
+eth_dev_conf_info_get_print_err(uint16_t port_id,
+				struct rte_eth_conf *dev_conf_info)
+{
+	int ret;
+
+	ret = rte_eth_dev_conf_info_get(port_id, dev_conf_info);
+	if (ret != 0)
+		fprintf(stderr,
+			"Error during getting device configuration (port %u) info: %s\n",
+			port_id, strerror(-ret));
+
+	return ret;
+}
+
 void
 eth_set_promisc_mode(uint16_t port, int enable)
 {

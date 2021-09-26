@@ -15995,6 +15995,7 @@ cmd_rx_offload_get_configuration_parsed(
 	struct rte_eth_dev_info dev_info;
 	portid_t port_id = res->port_id;
 	struct rte_port *port = &ports[port_id];
+	struct rte_eth_conf dev_conf_info;
 	uint64_t port_offloads;
 	uint64_t queue_offloads;
 	uint16_t nb_rx_queues;
@@ -16003,7 +16004,11 @@ cmd_rx_offload_get_configuration_parsed(
 
 	printf("Rx Offloading Configuration of port %d :\n", port_id);
 
-	port_offloads = port->dev_conf.rxmode.offloads;
+	ret = eth_dev_conf_info_get_print_err(port_id, &dev_conf_info);
+	if (ret != 0)
+		return;
+
+	port_offloads = dev_conf_info.rxmode.offloads;
 	printf("  Port :");
 	print_rx_offloads(port_offloads);
 	printf("\n");
@@ -16409,6 +16414,7 @@ cmd_tx_offload_get_configuration_parsed(
 	struct rte_eth_dev_info dev_info;
 	portid_t port_id = res->port_id;
 	struct rte_port *port = &ports[port_id];
+	struct rte_eth_conf dev_conf_info;
 	uint64_t port_offloads;
 	uint64_t queue_offloads;
 	uint16_t nb_tx_queues;
@@ -16417,7 +16423,11 @@ cmd_tx_offload_get_configuration_parsed(
 
 	printf("Tx Offloading Configuration of port %d :\n", port_id);
 
-	port_offloads = port->dev_conf.txmode.offloads;
+	ret = eth_dev_conf_info_get_print_err(port_id, &dev_conf_info);
+	if (ret != 0)
+		return;
+
+	port_offloads = dev_conf_info.txmode.offloads;
 	printf("  Port :");
 	print_tx_offloads(port_offloads);
 	printf("\n");
