@@ -91,6 +91,10 @@ New Features
   Added command-line options to specify total number of processes and
   current process ID. Each process owns subset of Rx and Tx queues.
 
+* **Added support for users get device configuration.**
+  Added an API which can help users get device configuration.
+  The declarations for the API's can be found in ``rte_ethdev.h``.
+
 
 Removed Items
 -------------
