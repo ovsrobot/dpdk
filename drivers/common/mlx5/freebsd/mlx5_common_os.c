@@ -147,77 +147,35 @@ mlx5_translate_port_name(const char *port_name_in,
 }
 
 int
-mlx5_get_ifname_sysfs(const char *ibdev_path, char *ifname)
+mlx5_get_ibvindex(const char *ibdev_path)
 {
-	DIR *dir;
-	struct dirent *dent;
-	unsigned int dev_type = 0;
-	unsigned int dev_port_prev = ~0u;
-	char match[IF_NAMESIZE] = "";
+	unsigned int ibv_idx;
 
 	MLX5_ASSERT(ibdev_path);
-	{
-		MKSTR(path, "%s/device/net", ibdev_path);
+	sscanf(ibdev_path, "/sys/class/infiniband/mlx5_%u", &ibv_idx);
 
-		dir = opendir(path);
-		if (dir == NULL) {
-			rte_errno = errno;
-			return -rte_errno;
-		}
-	}
-	while ((dent = readdir(dir)) != NULL) {
-		char *name = dent->d_name;
-		FILE *file;
-		unsigned int dev_port;
-		int r;
+	return ibv_idx;
+}
 
-		if ((name[0] == '.') &&
-		    ((name[1] == '\0') ||
-		     ((name[1] == '.') && (name[2] == '\0'))))
-			continue;
+int
+mlx5_get_ifname_sysfs(const char *ibdev_path, char *ifname)
+{
+	char buffer[MLX5_SYSCTL_BY_NAME_SIZE];
+	char name[IF_NAMESIZE];
+	size_t len = IF_NAMESIZE;
+	unsigned int idx;
 
-		MKSTR(path, "%s/device/net/%s/%s",
-		      ibdev_path, name,
-		      (dev_type ? "dev_id" : "dev_port"));
+	idx = mlx5_get_ibvindex(ibdev_path);
 
-		file = fopen(path, "rb");
-		if (file == NULL) {
-			if (errno != ENOENT)
-				continue;
-			/*
-			 * Switch to dev_id when dev_port does not exist as
-			 * is the case with Linux kernel versions < 3.15.
-			 */
-try_dev_id:
-			match[0] = '\0';
-			if (dev_type)
-				break;
-			dev_type = 1;
-			dev_port_prev = ~0u;
-			rewinddir(dir);
-			continue;
-		}
-		r = fscanf(file, (dev_type ? "%x" : "%u"), &dev_port);
-		fclose(file);
-		if (r != 1)
-			continue;
-		/*
-		 * Switch to dev_id when dev_port returns the same value for
-		 * all ports. May happen when using a MOFED release older than
-		 * 3.0 with a Linux kernel >= 3.15.
-		 */
-		if (dev_port == dev_port_prev)
-			goto try_dev_id;
-		dev_port_prev = dev_port;
-		if (dev_port == 0)
-			strlcpy(match, name, IF_NAMESIZE);
-	}
-	closedir(dir);
-	if (match[0] == '\0') {
-		rte_errno = ENOENT;
+	snprintf(buffer, sizeof(buffer), "dev.mlx5_core.%u.ifname", idx);
+	if (sysctlbyname(buffer, &name, &len, NULL, 0)) {
+		DRV_LOG(ERR, "port %u failed to get interface name: %s",
+			idx, strerror(errno));
+		rte_errno = errno;
 		return -rte_errno;
 	}
-	strncpy(ifname, match, IF_NAMESIZE);
+	strncpy(ifname, name, IF_NAMESIZE);
+
 	return 0;
 }
 

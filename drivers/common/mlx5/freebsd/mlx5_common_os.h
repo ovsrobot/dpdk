@@ -298,4 +298,7 @@ __rte_internal
 struct ibv_device *
 mlx5_os_get_ibv_dev(const struct rte_device *dev);
 
+int
+mlx5_get_ibvindex(const char *ibdev_path);
+
 #endif /* RTE_PMD_MLX5_COMMON_OS_H_ */
