@@ -2516,6 +2516,7 @@ mlx5_os_vf_mac_addr_modify(struct mlx5_priv *priv,
 	char ifname[IF_NAMESIZE];
 	int ret;
 
+	RTE_SET_USED(iface_idx);
 	ret = mlx5_get_ifname_sysfs(priv->sh->ibdev_path, ifname);
 	if (!ret)
 		ret = mlx5_inet_mac_addr_set(priv->nl_socket_route, ifname,
@@ -2569,6 +2570,7 @@ mlx5_os_set_allmulti(struct rte_eth_dev *dev, int enable)
 	char ifname[IF_NAMESIZE];
 	int ret;
 
+	RTE_SET_USED(enable);
 	ret = mlx5_get_ifname_sysfs(priv->sh->ibdev_path, ifname);
 	if (!ret)
 		ret = mlx5_inet_check_allmulti_flag(priv->nl_socket_route,
