@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright 2019 Mellanox Technologies, Ltd
 
-if not (is_linux or (is_windows and is_ms_linker))
+if not (is_linux or (is_windows and is_ms_linker) or is_freebsd)
     build = false
-    reason = 'only supported on Linux and Windows build with clang'
+    reason = 'only supported on Linux, Windows and FreeBSD build with clang'
     subdir_done()
 endif
 
@@ -24,8 +24,14 @@ cflags_options = [
         '-Wno-strict-prototypes',
         '-D_BSD_SOURCE',
         '-D_DEFAULT_SOURCE',
-        '-D_XOPEN_SOURCE=600',
 ]
+
+if not is_freebsd
+    cflags_options += [
+	'-D_XOPEN_SOURCE=600',
+    ]
+endif
+
 foreach option:cflags_options
     if cc.has_argument(option)
         cflags += option
