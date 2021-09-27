@@ -414,31 +414,12 @@ mlx5_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 int
 mlx5_dev_get_flow_ctrl(struct rte_eth_dev *dev, struct rte_eth_fc_conf *fc_conf)
 {
-	struct ifreq ifr;
-	struct ethtool_pauseparam ethpause = {
-		.cmd = ETHTOOL_GPAUSEPARAM
-	};
-	int ret;
+	RTE_SET_USED(fc_conf);
+	DRV_LOG(WARNING,
+		"port %u can not get flow control status. Operation not supported in FreeBSD",
+		dev->data->port_id);
 
-	ifr.ifr_data = (void *)&ethpause;
-	ret = mlx5_ifreq(dev, SIOCETHTOOL, &ifr);
-	if (ret) {
-		DRV_LOG(WARNING,
-			"port %u ioctl(SIOCETHTOOL, ETHTOOL_GPAUSEPARAM) failed:"
-			" %s",
-			dev->data->port_id, strerror(rte_errno));
-		return ret;
-	}
-	fc_conf->autoneg = ethpause.autoneg;
-	if (ethpause.rx_pause && ethpause.tx_pause)
-		fc_conf->mode = RTE_FC_FULL;
-	else if (ethpause.rx_pause)
-		fc_conf->mode = RTE_FC_RX_PAUSE;
-	else if (ethpause.tx_pause)
-		fc_conf->mode = RTE_FC_TX_PAUSE;
-	else
-		fc_conf->mode = RTE_FC_NONE;
-	return 0;
+	return -EOPNOTSUPP;
 }
 
 /**
@@ -455,34 +436,12 @@ mlx5_dev_get_flow_ctrl(struct rte_eth_dev *dev, struct rte_eth_fc_conf *fc_conf)
 int
 mlx5_dev_set_flow_ctrl(struct rte_eth_dev *dev, struct rte_eth_fc_conf *fc_conf)
 {
-	struct ifreq ifr;
-	struct ethtool_pauseparam ethpause = {
-		.cmd = ETHTOOL_SPAUSEPARAM
-	};
-	int ret;
+	RTE_SET_USED(fc_conf);
+	DRV_LOG(WARNING,
+		"port %u can not modify flow control. Operation not supported in FreeBSD",
+		dev->data->port_id);
 
-	ifr.ifr_data = (void *)&ethpause;
-	ethpause.autoneg = fc_conf->autoneg;
-	if (((fc_conf->mode & RTE_FC_FULL) == RTE_FC_FULL) ||
-	    (fc_conf->mode & RTE_FC_RX_PAUSE))
-		ethpause.rx_pause = 1;
-	else
-		ethpause.rx_pause = 0;
-
-	if (((fc_conf->mode & RTE_FC_FULL) == RTE_FC_FULL) ||
-	    (fc_conf->mode & RTE_FC_TX_PAUSE))
-		ethpause.tx_pause = 1;
-	else
-		ethpause.tx_pause = 0;
-	ret = mlx5_ifreq(dev, SIOCETHTOOL, &ifr);
-	if (ret) {
-		DRV_LOG(WARNING,
-			"port %u ioctl(SIOCETHTOOL, ETHTOOL_SPAUSEPARAM)"
-			" failed: %s",
-			dev->data->port_id, strerror(rte_errno));
-		return ret;
-	}
-	return 0;
+	return -EOPNOTSUPP;
 }
 
 /**
