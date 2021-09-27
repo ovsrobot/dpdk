@@ -131,8 +131,6 @@ struct ethtool_link_settings {
 /**
  * Get interface name from private structure.
  *
- * This is a port representor-aware version of mlx5_get_ifname_sysfs().
- *
  * @param[in] dev
  *   Pointer to Ethernet device.
  * @param[out] ifname
@@ -145,26 +143,10 @@ int
 mlx5_get_ifname(const struct rte_eth_dev *dev, char (*ifname)[MLX5_NAMESIZE])
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
-	unsigned int ifindex;
 
 	MLX5_ASSERT(priv);
 	MLX5_ASSERT(priv->sh);
-	if (priv->master && priv->sh->bond.ifindex > 0) {
-		memcpy(ifname, priv->sh->bond.ifname, MLX5_NAMESIZE);
-		return 0;
-	}
-	ifindex = mlx5_ifindex(dev);
-	if (!ifindex) {
-		if (!priv->representor)
-			return mlx5_get_ifname_sysfs(priv->sh->ibdev_path,
-						     *ifname);
-		rte_errno = ENXIO;
-		return -rte_errno;
-	}
-	if (if_indextoname(ifindex, &(*ifname)[0]))
-		return 0;
-	rte_errno = errno;
-	return -rte_errno;
+	return mlx5_get_ifname_sysfs(priv->sh->ibdev_path, *ifname);
 }
 
 /**
