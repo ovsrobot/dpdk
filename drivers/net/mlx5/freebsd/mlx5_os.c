@@ -20,7 +20,6 @@
 #include <ethdev_pci.h>
 #include <rte_pci.h>
 #include <rte_bus_pci.h>
-#include <rte_bus_auxiliary.h>
 #include <rte_common.h>
 #include <rte_kvargs.h>
 #include <rte_rwlock.h>
@@ -2716,57 +2715,10 @@ mlx5_os_pci_probe(struct rte_pci_device *pci_dev)
 	}
 	return ret;
 }
-
-/* Probe a single SF device on auxiliary bus, no representor support. */
-static int
-mlx5_os_auxiliary_probe(struct rte_device *dev)
-{
-	struct rte_eth_devargs eth_da = { .nb_ports = 0 };
-	struct mlx5_dev_config config;
-	struct mlx5_dev_spawn_data spawn = { .pf_bond = -1 };
-	struct rte_auxiliary_device *adev = RTE_DEV_TO_AUXILIARY(dev);
-	struct rte_eth_dev *eth_dev;
-	int ret = 0;
-
-	/* Parse ethdev devargs. */
-	ret = mlx5_os_parse_eth_devargs(dev, &eth_da);
-	if (ret != 0)
-		return ret;
-	/* Set default config data. */
-	mlx5_os_config_default(&config);
-	config.sf = 1;
-	/* Init spawn data. */
-	spawn.max_port = 1;
-	spawn.phys_port = 1;
-	spawn.phys_dev = mlx5_os_get_ibv_dev(dev);
-	if (spawn.phys_dev == NULL)
-		return -rte_errno;
-	ret = mlx5_auxiliary_get_ifindex(dev->name);
-	if (ret < 0) {
-		DRV_LOG(ERR, "failed to get ethdev ifindex: %s", dev->name);
-		return ret;
-	}
-	spawn.ifindex = ret;
-	spawn.numa_node = dev->numa_node;
-	/* Spawn device. */
-	eth_dev = mlx5_dev_spawn(dev, &spawn, &config, &eth_da);
-	if (eth_dev == NULL)
-		return -rte_errno;
-	/* Post create. */
-	eth_dev->intr_handle = &adev->intr_handle;
-	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
-		eth_dev->data->dev_flags |= RTE_ETH_DEV_INTR_LSC;
-		eth_dev->data->dev_flags |= RTE_ETH_DEV_INTR_RMV;
-		eth_dev->data->numa_node = dev->numa_node;
-	}
-	rte_eth_dev_probing_finish(eth_dev);
-	return 0;
-}
-
 /**
  * Net class driver callback to probe a device.
  *
- * This function probe PCI bus device(s) or a single SF on auxiliary bus.
+ * This function probe PCI bus device(s)
  *
  * @param[in] dev
  *   Pointer to the generic device.
@@ -2790,7 +2742,7 @@ mlx5_os_net_probe(struct rte_device *dev)
 	if (mlx5_dev_is_pci(dev))
 		return mlx5_os_pci_probe(RTE_DEV_TO_PCI(dev));
 	else
-		return mlx5_os_auxiliary_probe(dev);
+		return -ENOTSUP;
 }
 
 static int
