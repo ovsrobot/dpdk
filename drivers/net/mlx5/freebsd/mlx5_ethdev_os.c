@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <dirent.h>
 #include <net/if.h>
+#include <net/if_media.h>
 #include <sys/sockio.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -308,265 +309,133 @@ mlx5_read_clock(struct rte_eth_dev *dev, uint64_t *clock)
 	return 0;
 }
 
-/**
- * Retrieve the master device for representor in the same switch domain.
- *
- * @param dev
- *   Pointer to representor Ethernet device structure.
- *
- * @return
- *   Master device structure  on success, NULL otherwise.
- */
-static struct rte_eth_dev *
-mlx5_find_master_dev(struct rte_eth_dev *dev)
-{
-	struct mlx5_priv *priv;
-	uint16_t port_id;
-	uint16_t domain_id;
+static const struct ifmedia_baudrate ifmedia_baudrate_desc[] =
+	IFM_BAUDRATE_DESCRIPTIONS;
 
-	priv = dev->data->dev_private;
-	domain_id = priv->domain_id;
-	MLX5_ASSERT(priv->representor);
-	MLX5_ETH_FOREACH_DEV(port_id, dev->device) {
-		struct mlx5_priv *opriv =
-			rte_eth_devices[port_id].data->dev_private;
-		if (opriv &&
-		    opriv->master &&
-		    opriv->domain_id == domain_id &&
-		    opriv->sh == priv->sh)
-			return &rte_eth_devices[port_id];
+static uint64_t
+mlx5_ifmedia_baudrate(int mword)
+{
+	int i;
+
+	for (i = 0; ifmedia_baudrate_desc[i].ifmb_word != 0; i++) {
+		if (IFM_TYPE_MATCH(mword, ifmedia_baudrate_desc[i].ifmb_word))
+			return (ifmedia_baudrate_desc[i].ifmb_baudrate);
 	}
-	return NULL;
+
+	return (0);
 }
 
-/**
- * DPDK callback to retrieve physical link information.
- *
- * @param dev
- *   Pointer to Ethernet device structure.
- * @param[out] link
- *   Storage for current link status.
- *
- * @return
- *   0 on success, a negative errno value otherwise and rte_errno is set.
- */
 static int
-mlx5_link_update_unlocked_gset(struct rte_eth_dev *dev,
-			       struct rte_eth_link *link)
+mlx5_link_update_bsd(struct rte_eth_dev *dev,
+		     struct rte_eth_link *link)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
-	struct ethtool_cmd edata = {
-		.cmd = ETHTOOL_GSET /* Deprecated since Linux v4.5. */
-	};
-	struct ifreq ifr;
 	struct rte_eth_link dev_link;
-	int link_speed = 0;
-	int ret;
+	int link_speed = 0, sock;
+	struct ifmediareq ifmr;
+	char ifname[IF_NAMESIZE];
+	int *media_list;
 
-	ret = mlx5_ifreq(dev, SIOCGIFFLAGS, &ifr);
-	if (ret) {
-		DRV_LOG(WARNING, "port %u ioctl(SIOCGIFFLAGS) failed: %s",
+	sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+	if (sock == -1) {
+		DRV_LOG(ERR,
+			"port %u CANT OPEN SOCKET FOR MEDIA REQUEST on FREEBSD: %s",
 			dev->data->port_id, strerror(rte_errno));
-		return ret;
+		return sock;
 	}
-	dev_link = (struct rte_eth_link) {
-		.link_status = ((ifr.ifr_flags & IFF_UP) &&
-				(ifr.ifr_flags & IFF_RUNNING)),
-	};
-	ifr = (struct ifreq) {
-		.ifr_data = (void *)&edata,
-	};
-	ret = mlx5_ifreq(dev, SIOCETHTOOL, &ifr);
-	if (ret) {
-		if (ret == -ENOTSUP && priv->representor) {
-			struct rte_eth_dev *master;
 
-			/*
-			 * For representors we can try to inherit link
-			 * settings from the master device. Actually
-			 * link settings do not make a lot of sense
-			 * for representors due to missing physical
-			 * link. The old kernel drivers supported
-			 * emulated settings query for representors,
-			 * the new ones do not, so we have to add
-			 * this code for compatibility issues.
-			 */
-			master = mlx5_find_master_dev(dev);
-			if (master) {
-				ifr = (struct ifreq) {
-					.ifr_data = (void *)&edata,
-				};
-				ret = mlx5_ifreq(master, SIOCETHTOOL, &ifr);
-			}
-		}
-		if (ret) {
-			DRV_LOG(WARNING,
-				"port %u ioctl(SIOCETHTOOL,"
-				" ETHTOOL_GSET) failed: %s",
-				dev->data->port_id, strerror(rte_errno));
-			return ret;
-		}
+	mlx5_get_ifname(dev, &ifname);
+	memset(&ifmr, 0, sizeof(struct ifmediareq));
+	strlcpy(ifmr.ifm_name, ifname, sizeof(ifmr.ifm_name));
+
+	if (ioctl(sock, SIOCGIFXMEDIA, (caddr_t)&ifmr) < 0) {
+		DRV_LOG(ERR,
+			"ioctl(SIOCGIFMEDIA) on %s: %s",
+			ifname, strerror(errno));
+		close(sock);
+		return errno;
 	}
-	link_speed = ethtool_cmd_speed(&edata);
-	if (link_speed == -1)
-		dev_link.link_speed = ETH_SPEED_NUM_UNKNOWN;
+
+	media_list = (int *)malloc(ifmr.ifm_count * sizeof(int));
+	ifmr.ifm_ulist = media_list;
+
+	if (ioctl(sock, SIOCGIFXMEDIA, (caddr_t)&ifmr) < 0) {
+		DRV_LOG(ERR,
+			"ioctl(SIOCGIFMEDIA) on %s: %s",
+			ifname, strerror(errno));
+		close(sock);
+		return errno;
+	}
+
+	if (ifmr.ifm_status == (IFM_AVALID | IFM_ACTIVE))
+		dev_link.link_status = ETH_LINK_UP;
+	else
+		dev_link.link_status = ETH_LINK_DOWN;
+
+	link_speed = ifmr.ifm_status & IFM_AVALID ?
+			mlx5_ifmedia_baudrate(ifmr.ifm_active) / (1000 * 1000) : 0;
+
+	if (link_speed == 0)
+		dev_link.link_speed = ETH_SPEED_NUM_NONE;
 	else
 		dev_link.link_speed = link_speed;
+
 	priv->link_speed_capa = 0;
-	if (edata.supported & (SUPPORTED_1000baseT_Full |
-			       SUPPORTED_1000baseKX_Full))
-		priv->link_speed_capa |= ETH_LINK_SPEED_1G;
-	if (edata.supported & SUPPORTED_10000baseKR_Full)
-		priv->link_speed_capa |= ETH_LINK_SPEED_10G;
-	if (edata.supported & (SUPPORTED_40000baseKR4_Full |
-			       SUPPORTED_40000baseCR4_Full |
-			       SUPPORTED_40000baseSR4_Full |
-			       SUPPORTED_40000baseLR4_Full))
-		priv->link_speed_capa |= ETH_LINK_SPEED_40G;
-	dev_link.link_duplex = ((edata.duplex == DUPLEX_HALF) ?
-				ETH_LINK_HALF_DUPLEX : ETH_LINK_FULL_DUPLEX);
-	dev_link.link_autoneg = !(dev->data->dev_conf.link_speeds &
-			ETH_LINK_SPEED_FIXED);
-	*link = dev_link;
-	return 0;
-}
+	/* Add support for duplex types */
+	dev_link.link_duplex = ETH_LINK_FULL_DUPLEX;
+	/* FreeBSD automatically negotiates speed,
+	 * so it is displayed in its capabilities.
+	 */
+	priv->link_speed_capa |= ETH_LINK_SPEED_AUTONEG;
 
-/**
- * Retrieve physical link information (unlocked version using new ioctl).
- *
- * @param dev
- *   Pointer to Ethernet device structure.
- * @param[out] link
- *   Storage for current link status.
- *
- * @return
- *   0 on success, a negative errno value otherwise and rte_errno is set.
- */
-static int
-mlx5_link_update_unlocked_gs(struct rte_eth_dev *dev,
-			     struct rte_eth_link *link)
-
-{
-	struct mlx5_priv *priv = dev->data->dev_private;
-	struct ethtool_link_settings gcmd = { .cmd = ETHTOOL_GLINKSETTINGS };
-	struct ifreq ifr;
-	struct rte_eth_link dev_link;
-	struct rte_eth_dev *master = NULL;
-	uint64_t sc;
-	int ret;
-
-	ret = mlx5_ifreq(dev, SIOCGIFFLAGS, &ifr);
-	if (ret) {
-		DRV_LOG(WARNING, "port %u ioctl(SIOCGIFFLAGS) failed: %s",
-			dev->data->port_id, strerror(rte_errno));
-		return ret;
-	}
-	dev_link = (struct rte_eth_link) {
-		.link_status = ((ifr.ifr_flags & IFF_UP) &&
-				(ifr.ifr_flags & IFF_RUNNING)),
-	};
-	ifr = (struct ifreq) {
-		.ifr_data = (void *)&gcmd,
-	};
-	ret = mlx5_ifreq(dev, SIOCETHTOOL, &ifr);
-	if (ret) {
-		if (ret == -ENOTSUP && priv->representor) {
-			/*
-			 * For representors we can try to inherit link
-			 * settings from the master device. Actually
-			 * link settings do not make a lot of sense
-			 * for representors due to missing physical
-			 * link. The old kernel drivers supported
-			 * emulated settings query for representors,
-			 * the new ones do not, so we have to add
-			 * this code for compatibility issues.
-			 */
-			master = mlx5_find_master_dev(dev);
-			if (master) {
-				ifr = (struct ifreq) {
-					.ifr_data = (void *)&gcmd,
-				};
-				ret = mlx5_ifreq(master, SIOCETHTOOL, &ifr);
-			}
-		}
-		if (ret) {
-			DRV_LOG(DEBUG,
-				"port %u ioctl(SIOCETHTOOL,"
-				" ETHTOOL_GLINKSETTINGS) failed: %s",
-				dev->data->port_id, strerror(rte_errno));
-			return ret;
+	for (int i = 1; i < ifmr.ifm_count; i += 2) {
+		switch (mlx5_ifmedia_baudrate(media_list[i]) / (1000 * 1000)) {
+		case 100000:
+			priv->link_speed_capa |= ETH_LINK_SPEED_100G;
+			break;
+		case 56000:
+			priv->link_speed_capa |= ETH_LINK_SPEED_56G;
+			break;
+		case 50000:
+			priv->link_speed_capa |= ETH_LINK_SPEED_50G;
+			break;
+		case 40000:
+			priv->link_speed_capa |= ETH_LINK_SPEED_40G;
+			break;
+		case 25000:
+			priv->link_speed_capa |= ETH_LINK_SPEED_25G;
+			break;
+		case 10000:
+			priv->link_speed_capa |= ETH_LINK_SPEED_10G;
+			break;
+		case 2500:
+			priv->link_speed_capa |= ETH_LINK_SPEED_2_5G;
+			break;
+		case 1000:
+			priv->link_speed_capa |= ETH_LINK_SPEED_1G;
+			break;
+		case 100:
+			priv->link_speed_capa |= (dev_link.link_duplex ==
+						ETH_LINK_FULL_DUPLEX) ?
+						ETH_LINK_SPEED_100M :
+						ETH_LINK_SPEED_100M_HD;
+			break;
+		case 10:
+			priv->link_speed_capa |= (dev_link.link_duplex ==
+						ETH_LINK_FULL_DUPLEX) ?
+						ETH_LINK_SPEED_10M :
+						ETH_LINK_SPEED_10M_HD;
+			break;
+		case 0:
+		default:
+			break;
 		}
 	}
-	gcmd.link_mode_masks_nwords = -gcmd.link_mode_masks_nwords;
-
-	alignas(struct ethtool_link_settings)
-	uint8_t data[offsetof(struct ethtool_link_settings, link_mode_masks) +
-		     sizeof(uint32_t) * gcmd.link_mode_masks_nwords * 3];
-	struct ethtool_link_settings *ecmd = (void *)data;
-
-	*ecmd = gcmd;
-	ifr.ifr_data = (void *)ecmd;
-	ret = mlx5_ifreq(master ? master : dev, SIOCETHTOOL, &ifr);
-	if (ret) {
-		DRV_LOG(DEBUG,
-			"port %u ioctl(SIOCETHTOOL,"
-			"ETHTOOL_GLINKSETTINGS) failed: %s",
-			dev->data->port_id, strerror(rte_errno));
-		return ret;
-	}
-	dev_link.link_speed = (ecmd->speed == UINT32_MAX) ?
-				ETH_SPEED_NUM_UNKNOWN : ecmd->speed;
-	sc = ecmd->link_mode_masks[0] |
-		((uint64_t)ecmd->link_mode_masks[1] << 32);
-	priv->link_speed_capa = 0;
-	if (sc & (MLX5_BITSHIFT(ETHTOOL_LINK_MODE_1000baseT_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_1000baseKX_Full_BIT)))
-		priv->link_speed_capa |= ETH_LINK_SPEED_1G;
-	if (sc & (MLX5_BITSHIFT(ETHTOOL_LINK_MODE_10000baseKX4_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_10000baseKR_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_10000baseR_FEC_BIT)))
-		priv->link_speed_capa |= ETH_LINK_SPEED_10G;
-	if (sc & (MLX5_BITSHIFT(ETHTOOL_LINK_MODE_20000baseMLD2_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_20000baseKR2_Full_BIT)))
-		priv->link_speed_capa |= ETH_LINK_SPEED_20G;
-	if (sc & (MLX5_BITSHIFT(ETHTOOL_LINK_MODE_40000baseKR4_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_40000baseCR4_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_40000baseSR4_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_40000baseLR4_Full_BIT)))
-		priv->link_speed_capa |= ETH_LINK_SPEED_40G;
-	if (sc & (MLX5_BITSHIFT(ETHTOOL_LINK_MODE_56000baseKR4_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_56000baseCR4_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_56000baseSR4_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_56000baseLR4_Full_BIT)))
-		priv->link_speed_capa |= ETH_LINK_SPEED_56G;
-	if (sc & (MLX5_BITSHIFT(ETHTOOL_LINK_MODE_25000baseCR_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_25000baseKR_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_25000baseSR_Full_BIT)))
-		priv->link_speed_capa |= ETH_LINK_SPEED_25G;
-	if (sc & (MLX5_BITSHIFT(ETHTOOL_LINK_MODE_50000baseCR2_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_50000baseKR2_Full_BIT)))
-		priv->link_speed_capa |= ETH_LINK_SPEED_50G;
-	if (sc & (MLX5_BITSHIFT(ETHTOOL_LINK_MODE_100000baseKR4_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_100000baseSR4_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_100000baseCR4_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_100000baseLR4_ER4_Full_BIT)))
-		priv->link_speed_capa |= ETH_LINK_SPEED_100G;
-	if (sc & (MLX5_BITSHIFT(ETHTOOL_LINK_MODE_200000baseKR4_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_200000baseSR4_Full_BIT)))
-		priv->link_speed_capa |= ETH_LINK_SPEED_200G;
-
-	sc = ecmd->link_mode_masks[2] |
-		((uint64_t)ecmd->link_mode_masks[3] << 32);
-	if (sc & (MLX5_BITSHIFT(ETHTOOL_LINK_MODE_200000baseCR4_Full_BIT) |
-		  MLX5_BITSHIFT
-		       (ETHTOOL_LINK_MODE_200000baseLR4_ER4_FR4_Full_BIT) |
-		  MLX5_BITSHIFT(ETHTOOL_LINK_MODE_200000baseDR4_Full_BIT)))
-		priv->link_speed_capa |= ETH_LINK_SPEED_200G;
-	dev_link.link_duplex = ((ecmd->duplex == DUPLEX_HALF) ?
-				ETH_LINK_HALF_DUPLEX : ETH_LINK_FULL_DUPLEX);
 	dev_link.link_autoneg = !(dev->data->dev_conf.link_speeds &
-				  ETH_LINK_SPEED_FIXED);
+				ETH_LINK_SPEED_FIXED);
+	free(media_list);
 	*link = dev_link;
+	close(sock);
 	return 0;
 }
 
@@ -591,9 +460,7 @@ mlx5_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 	int retry = MLX5_GET_LINK_STATUS_RETRY_COUNT;
 
 	do {
-		ret = mlx5_link_update_unlocked_gs(dev, &dev_link);
-		if (ret == -ENOTSUP)
-			ret = mlx5_link_update_unlocked_gset(dev, &dev_link);
+		ret = mlx5_link_update_bsd(dev, &dev_link);
 		if (ret == 0)
 			break;
 		/* Handle wait to complete situation. */
