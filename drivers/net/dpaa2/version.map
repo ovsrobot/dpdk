@@ -10,6 +10,8 @@ DPDK_22 {
 EXPERIMENTAL {
 	global:
 
+	# added in 21.11
+	rte_pmd_dpaa2_get_tlu_hash;
 	# added in 21.05
 	rte_pmd_dpaa2_mux_rx_frame_len;
 	# added in 21.08
