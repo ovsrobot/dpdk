@@ -909,28 +909,9 @@ int
 mlx5_get_module_info(struct rte_eth_dev *dev,
 		     struct rte_eth_dev_module_info *modinfo)
 {
-	struct ethtool_modinfo info = {
-		.cmd = ETHTOOL_GMODULEINFO,
-	};
-	struct ifreq ifr = (struct ifreq) {
-		.ifr_data = (void *)&info,
-	};
-	int ret = 0;
-
-	if (!dev) {
-		DRV_LOG(WARNING, "missing argument, cannot get module info");
-		rte_errno = EINVAL;
-		return -rte_errno;
-	}
-	ret = mlx5_ifreq(dev, SIOCETHTOOL, &ifr);
-	if (ret) {
-		DRV_LOG(WARNING, "port %u ioctl(SIOCETHTOOL) failed: %s",
-			dev->data->port_id, strerror(rte_errno));
-		return ret;
-	}
-	modinfo->type = info.type;
-	modinfo->eeprom_len = info.eeprom_len;
-	return ret;
+	RTE_SET_USED(dev);
+	RTE_SET_USED(modinfo);
+	return -ENOTSUP;
 }
 
 /**
@@ -947,38 +928,9 @@ mlx5_get_module_info(struct rte_eth_dev *dev,
 int mlx5_get_module_eeprom(struct rte_eth_dev *dev,
 			   struct rte_dev_eeprom_info *info)
 {
-	struct ethtool_eeprom *eeprom;
-	struct ifreq ifr;
-	int ret = 0;
-
-	if (!dev) {
-		DRV_LOG(WARNING, "missing argument, cannot get module eeprom");
-		rte_errno = EINVAL;
-		return -rte_errno;
-	}
-	eeprom = mlx5_malloc(MLX5_MEM_ZERO,
-			     (sizeof(struct ethtool_eeprom) + info->length), 0,
-			     SOCKET_ID_ANY);
-	if (!eeprom) {
-		DRV_LOG(WARNING, "port %u cannot allocate memory for "
-			"eeprom data", dev->data->port_id);
-		rte_errno = ENOMEM;
-		return -rte_errno;
-	}
-	eeprom->cmd = ETHTOOL_GMODULEEEPROM;
-	eeprom->offset = info->offset;
-	eeprom->len = info->length;
-	ifr = (struct ifreq) {
-		.ifr_data = (void *)eeprom,
-	};
-	ret = mlx5_ifreq(dev, SIOCETHTOOL, &ifr);
-	if (ret)
-		DRV_LOG(WARNING, "port %u ioctl(SIOCETHTOOL) failed: %s",
-			dev->data->port_id, strerror(rte_errno));
-	else
-		rte_memcpy(info->data, eeprom->data, info->length);
-	mlx5_free(eeprom);
-	return ret;
+	RTE_SET_USED(dev);
+	RTE_SET_USED(info);
+	return -ENOTSUP;
 }
 
 /**
