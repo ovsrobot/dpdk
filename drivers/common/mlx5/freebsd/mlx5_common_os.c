@@ -10,6 +10,7 @@
 #endif
 #include <dirent.h>
 #include <net/if.h>
+#include <sys/sysctl.h>
 
 #include <rte_errno.h>
 #include <rte_string_fns.h>
@@ -26,48 +27,46 @@ const struct mlx5_glue *mlx5_glue;
 int
 mlx5_get_pci_addr(const char *dev_path, struct rte_pci_addr *pci_addr)
 {
-	FILE *file;
-	char line[32];
-	int rc = -ENOENT;
-	MKSTR(path, "%s/device/uevent", dev_path);
+	char id[10];
+	char searchstr[MLX5_SYSCTL_BY_NAME_SIZE];
+	size_t length = MLX5_SYSCTL_BY_NAME_SIZE;
+	char name[MLX5_SYSCTL_BY_NAME_SIZE];
+	int traverse = 0;
 
-	file = fopen(path, "rb");
-	if (file == NULL) {
-		rte_errno = errno;
-		return -rte_errno;
-	}
-	while (fgets(line, sizeof(line), file) == line) {
-		size_t len = strlen(line);
+	strncpy(id, &dev_path[strlen("/sys/class/infiniband/mlx5_")],
+			strlen(dev_path) - strlen("/sys/class/infiniband/mlx5_"));
+	sprintf(searchstr, "dev.mlx5_core.%s.%slocation", id, "%");
+	sysctlbyname(searchstr, &name, &length, NULL, 0);
 
-		/* Truncate long lines. */
-		if (len == (sizeof(line) - 1)) {
-			while (line[(len - 1)] != '\n') {
-				int ret = fgetc(file);
-
-				if (ret == EOF)
-					goto exit;
-				line[(len - 1)] = ret;
-			}
-			/* No match for long lines. */
-			continue;
-		}
-		/* Extract information. */
-		if (sscanf(line,
-			   "PCI_SLOT_NAME="
-			   "%" SCNx32 ":%" SCNx8 ":%" SCNx8 ".%" SCNx8 "\n",
-			   &pci_addr->domain,
-			   &pci_addr->bus,
-			   &pci_addr->devid,
-			   &pci_addr->function) == 4) {
-			rc = 0;
+	while (name[traverse]) {
+		if (name[traverse] == 'p' && name[traverse + 1] == 'c' &&
+				name[traverse + 2] == 'i')
 			break;
-		}
+		++traverse;
 	}
-exit:
-	fclose(file);
-	if (rc)
-		rte_errno = -rc;
-	return rc;
+	traverse += 3;
+
+	int end = traverse;
+
+	while (name[end] != ' ')
+		++end;
+
+	char address[end - traverse + 1];
+
+	memcpy(address, &name[traverse], end - traverse);
+	address[end - traverse] = '\0';
+
+	char *ptr = strtok(address, " :");
+
+	pci_addr->domain = (uint32_t)atoi(ptr);
+	ptr = strtok(NULL, " :");
+	pci_addr->bus = (uint8_t)atoi(ptr);
+	ptr =   strtok(NULL, " :");
+	pci_addr->devid = (uint8_t)atoi(ptr);
+	ptr =   strtok(NULL, " :");
+	pci_addr->function = (uint8_t)atoi(ptr);
+
+	return 0;
 }
 
 /**

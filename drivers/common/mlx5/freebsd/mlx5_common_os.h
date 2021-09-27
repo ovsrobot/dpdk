@@ -19,6 +19,8 @@
 #include "mlx5_glue.h"
 #include "mlx5_malloc.h"
 
+#define MLX5_SYSCTL_BY_NAME_SIZE 100
+
 /**
  * Get device name. Given an ibv_device pointer - return a
  * pointer to the corresponding device name.
