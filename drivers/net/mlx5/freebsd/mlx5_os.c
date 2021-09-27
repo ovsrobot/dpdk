@@ -44,6 +44,7 @@
 #include "mlx5_flow.h"
 #include "rte_pmd_mlx5.h"
 #include "mlx5_verbs.h"
+#include "mlx5_inet.h"
 #include "mlx5_devx.h"
 
 #ifndef HAVE_IBV_MLX5_MOD_MPW
@@ -1095,7 +1096,7 @@ err_secondary:
 	priv->mtu = RTE_ETHER_MTU;
 	/* RDMA core has no listener */
 	priv->nl_socket_rdma = -1;
-	priv->nl_socket_route =	-1;
+	priv->nl_socket_route =	mlx5_inet_init();
 	priv->representor = !!switch_info->representor;
 	priv->master = !!switch_info->master;
 	priv->domain_id = RTE_ETH_DEV_SWITCH_DOMAIN_ID_INVALID;
@@ -2453,8 +2454,11 @@ mlx5_os_set_reg_mr_cb(mlx5_reg_mr_t *reg_mr_cb,
 void
 mlx5_os_mac_addr_remove(struct rte_eth_dev *dev, uint32_t index)
 {
-	RTE_SET_USED(dev);
-	RTE_SET_USED(index);
+	struct mlx5_priv *priv = dev->data->dev_private;
+	const int vf = priv->config.vf;
+
+	if (vf)
+		mlx5_inet_mac_addr_remove(dev->data->port_id, index);
 }
 
 /**
@@ -2474,11 +2478,18 @@ int
 mlx5_os_mac_addr_add(struct rte_eth_dev *dev, struct rte_ether_addr *mac,
 		     uint32_t index)
 {
-	RTE_SET_USED(dev);
-	RTE_SET_USED(mac);
-	RTE_SET_USED(index);
+	struct mlx5_priv *priv = dev->data->dev_private;
+	const int vf = priv->config.vf;
+	int ret = 0;
+	char ifname[IF_NAMESIZE];
 
-	return -ENOTSUP;
+	mlx5_get_ifname_sysfs(priv->sh->ibdev_path, ifname);
+	if (vf)
+		ret = mlx5_inet_mac_addr_set(priv->nl_socket_route,
+					     ifname, mac, index,
+					     dev->data->port_id,
+					     priv->mac_own);
+	return ret;
 }
 
 /**
@@ -2502,12 +2513,16 @@ mlx5_os_vf_mac_addr_modify(struct mlx5_priv *priv,
 			   struct rte_ether_addr *mac_addr,
 			   int vf_index)
 {
-	RTE_SET_USED(priv);
-	RTE_SET_USED(idx);
-	RTE_SET_USED(mac_addr);
-	RTE_SET_USED(vf_index);
+	char ifname[IF_NAMESIZE];
+	int ret;
 
-	return -ENOTSUP;
+	ret = mlx5_get_ifname_sysfs(priv->sh->ibdev_path, ifname);
+	if (!ret)
+		ret = mlx5_inet_mac_addr_set(priv->nl_socket_route, ifname,
+				mac_addr, vf_index,
+				priv->dev_data->port_id,
+				priv->mac_own);
+	return ret;
 }
 
 /**
@@ -2524,10 +2539,16 @@ mlx5_os_vf_mac_addr_modify(struct mlx5_priv *priv,
 int
 mlx5_os_set_promisc(struct rte_eth_dev *dev, int enable)
 {
-	RTE_SET_USED(dev);
-	RTE_SET_USED(enable);
+	struct mlx5_priv *priv = dev->data->dev_private;
+	char ifname[IF_NAMESIZE];
+	int ret;
 
-	return -ENOTSUP;
+	ret = mlx5_get_ifname_sysfs(priv->sh->ibdev_path, ifname);
+	if (!ret)
+		ret = mlx5_inet_promisc(priv->nl_socket_route,
+				 ifname, enable,
+				 dev->data->port_id);
+	return ret;
 }
 
 /**
@@ -2544,10 +2565,15 @@ mlx5_os_set_promisc(struct rte_eth_dev *dev, int enable)
 int
 mlx5_os_set_allmulti(struct rte_eth_dev *dev, int enable)
 {
-	RTE_SET_USED(dev);
-	RTE_SET_USED(enable);
+	struct mlx5_priv *priv = dev->data->dev_private;
+	char ifname[IF_NAMESIZE];
+	int ret;
 
-	return -ENOTSUP;
+	ret = mlx5_get_ifname_sysfs(priv->sh->ibdev_path, ifname);
+	if (!ret)
+		ret = mlx5_inet_check_allmulti_flag(priv->nl_socket_route,
+					     ifname, dev->data->port_id);
+	return ret;
 }
 
 /**
@@ -2560,5 +2586,13 @@ mlx5_os_set_allmulti(struct rte_eth_dev *dev, int enable)
 void
 mlx5_os_mac_addr_flush(struct rte_eth_dev *dev)
 {
-	RTE_SET_USED(dev);
+	struct mlx5_priv *priv = dev->data->dev_private;
+	struct rte_ether_addr *lladdr = &dev->data->mac_addrs[0];
+	char ifname[IF_NAMESIZE];
+
+	if (mlx5_get_ifname_sysfs(priv->sh->ibdev_path, ifname))
+		return;
+
+	mlx5_inet_mac_addr_flush(priv->nl_socket_route, ifname,
+				 lladdr, dev->data->port_id);
 }
