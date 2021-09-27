@@ -14,11 +14,11 @@
 #include <errno.h>
 #include <dirent.h>
 #include <net/if.h>
+#include <sys/sockio.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <linux/ethtool.h>
-#include <linux/sockios.h>
 #include <fcntl.h>
 #include <stdalign.h>
 #include <sys/un.h>
@@ -1612,9 +1612,9 @@ mlx5_get_mac(struct rte_eth_dev *dev, uint8_t (*mac)[RTE_ETHER_ADDR_LEN])
 	struct ifreq request;
 	int ret;
 
-	ret = mlx5_ifreq(dev, SIOCGIFHWADDR, &request);
+	ret = mlx5_ifreq(dev, SIOCGHWADDR, &request);
 	if (ret)
 		return ret;
-	memcpy(mac, request.ifr_hwaddr.sa_data, RTE_ETHER_ADDR_LEN);
+	memcpy(mac, request.ifr_addr.sa_data, RTE_ETHER_ADDR_LEN);
 	return 0;
 }
