@@ -227,6 +227,64 @@ clear_soft_out_cap(uint32_t *op_flags)
 	*op_flags &= ~RTE_BBDEV_TURBO_NEG_LLR_1_BIT_SOFT_OUT;
 }
 
+static inline void
+reverse_op(struct op_data_entries *op)
+{
+	uint8_t nb_segs = op->nb_segments;
+	uint32_t *data, len;
+	int complete, rem, i, j;
+	uint8_t *rem_data, temp;
+
+	/* Validate each mbuf segment length */
+	for (i = 0; i < nb_segs; ++i) {
+		len = op->segments[i].length;
+		data = op->segments[i].addr;
+
+		/* Swap complete u32 bytes */
+		complete = len / 4;
+		for (j = 0; j < complete; j++)
+			data[j] = rte_bswap32(data[j]);
+
+		/* Swap any remaining data for last seg */
+		if (i == (nb_segs - 1)) {
+			rem = len % 4;
+			rem_data = (uint8_t *)&data[j];
+			for (j = 0; j < rem/2; j++) {
+				temp = rem_data[j];
+				rem_data[j] = rem_data[rem - j - 1];
+				rem_data[rem - j - 1] = temp;
+			}
+		}
+	}
+}
+
+static inline void
+reverse_all_ops(void)
+{
+	unsigned int nb_inputs, nb_soft_outputs, nb_hard_outputs,
+		nb_harq_inputs, nb_harq_outputs;
+
+	nb_inputs = test_vector.entries[DATA_INPUT].nb_segments;
+	if (nb_inputs)
+		reverse_op(&test_vector.entries[DATA_INPUT]);
+
+	nb_soft_outputs = test_vector.entries[DATA_SOFT_OUTPUT].nb_segments;
+	if (nb_soft_outputs)
+		reverse_op(&test_vector.entries[DATA_SOFT_OUTPUT]);
+
+	nb_hard_outputs = test_vector.entries[DATA_HARD_OUTPUT].nb_segments;
+	if (nb_hard_outputs)
+		reverse_op(&test_vector.entries[DATA_HARD_OUTPUT]);
+
+	nb_harq_inputs  = test_vector.entries[DATA_HARQ_INPUT].nb_segments;
+	if (nb_harq_inputs)
+		reverse_op(&test_vector.entries[DATA_HARQ_INPUT]);
+
+	nb_harq_outputs = test_vector.entries[DATA_HARQ_OUTPUT].nb_segments;
+	if (nb_harq_outputs)
+		reverse_op(&test_vector.entries[DATA_HARQ_OUTPUT]);
+}
+
 static int
 check_dev_cap(const struct rte_bbdev_info *dev_info)
 {
@@ -234,6 +292,7 @@ check_dev_cap(const struct rte_bbdev_info *dev_info)
 	unsigned int nb_inputs, nb_soft_outputs, nb_hard_outputs,
 		nb_harq_inputs, nb_harq_outputs;
 	const struct rte_bbdev_op_cap *op_cap = dev_info->drv.capabilities;
+	uint8_t be_data = dev_info->drv.support_be_data;
 
 	nb_inputs = test_vector.entries[DATA_INPUT].nb_segments;
 	nb_soft_outputs = test_vector.entries[DATA_SOFT_OUTPUT].nb_segments;
@@ -244,6 +303,9 @@ check_dev_cap(const struct rte_bbdev_info *dev_info)
 	for (i = 0; op_cap->type != RTE_BBDEV_OP_NONE; ++i, ++op_cap) {
 		if (op_cap->type != test_vector.op_type)
 			continue;
+
+		if (be_data)
+			reverse_all_ops();
 
 		if (op_cap->type == RTE_BBDEV_OP_TURBO_DEC) {
 			const struct rte_bbdev_op_cap_turbo_dec *cap =
