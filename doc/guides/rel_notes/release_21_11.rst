@@ -111,6 +111,10 @@ Removed Items
   blacklist/whitelist are removed. Users must use the new
   block/allow list arguments.
 
+* ethdev: Removed deprecated ``shared`` attribute of the
+  ``struct rte_flow_action_count``. Shared counters should be managed
+  using indirect actions API (``rte_flow_action_handle_create`` etc).
+
 
 API Changes
 -----------

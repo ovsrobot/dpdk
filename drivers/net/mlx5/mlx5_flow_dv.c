@@ -3315,32 +3315,10 @@ flow_dv_validate_action_set_tag(struct rte_eth_dev *dev,
 }
 
 /**
- * Check if action counter is shared by either old or new mechanism.
- *
- * @param[in] action
- *   Pointer to the action structure.
- *
- * @return
- *   True when counter is shared, false otherwise.
- */
-static inline bool
-is_shared_action_count(const struct rte_flow_action *action)
-{
-	const struct rte_flow_action_count *count =
-			(const struct rte_flow_action_count *)action->conf;
-
-	if ((int)action->type == MLX5_RTE_FLOW_ACTION_TYPE_COUNT)
-		return true;
-	return !!(count && count->shared);
-}
-
-/**
  * Validate count action.
  *
  * @param[in] dev
  *   Pointer to rte_eth_dev structure.
- * @param[in] shared
- *   Indicator if action is shared.
  * @param[in] action_flags
  *   Holds the actions detected until now.
  * @param[out] error
@@ -3350,7 +3328,7 @@ is_shared_action_count(const struct rte_flow_action *action)
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
 static int
-flow_dv_validate_action_count(struct rte_eth_dev *dev, bool shared,
+flow_dv_validate_action_count(struct rte_eth_dev *dev,
 			      uint64_t action_flags,
 			      struct rte_flow_error *error)
 {
@@ -3362,11 +3340,6 @@ flow_dv_validate_action_count(struct rte_eth_dev *dev, bool shared,
 		return rte_flow_error_set(error, EINVAL,
 					  RTE_FLOW_ERROR_TYPE_ACTION, NULL,
 					  "duplicate count actions set");
-	if (shared && (action_flags & MLX5_FLOW_ACTION_AGE) &&
-	    !priv->sh->flow_hit_aso_en)
-		return rte_flow_error_set(error, EINVAL,
-					  RTE_FLOW_ERROR_TYPE_ACTION, NULL,
-					  "old age and shared count combination is not supported");
 #ifdef HAVE_IBV_FLOW_DEVX_COUNTERS
 	return 0;
 #endif
@@ -5664,9 +5637,7 @@ flow_dv_validate_action_sample(uint64_t *action_flags,
 			break;
 		case RTE_FLOW_ACTION_TYPE_COUNT:
 			ret = flow_dv_validate_action_count
-				(dev, is_shared_action_count(act),
-				 *action_flags | sub_action_flags,
-				 error);
+				(dev, *action_flags | sub_action_flags, error);
 			if (ret < 0)
 				return ret;
 			*count = act->conf;
@@ -6237,60 +6208,6 @@ err:
 }
 
 /**
- * Allocate a shared flow counter.
- *
- * @param[in] ctx
- *   Pointer to the shared counter configuration.
- * @param[in] data
- *   Pointer to save the allocated counter index.
- *
- * @return
- *   Index to flow counter on success, 0 otherwise and rte_errno is set.
- */
-
-static int32_t
-flow_dv_counter_alloc_shared_cb(void *ctx, union mlx5_l3t_data *data)
-{
-	struct mlx5_shared_counter_conf *conf = ctx;
-	struct rte_eth_dev *dev = conf->dev;
-	struct mlx5_flow_counter *cnt;
-
-	data->dword = flow_dv_counter_alloc(dev, 0);
-	data->dword |= MLX5_CNT_SHARED_OFFSET;
-	cnt = flow_dv_counter_get_by_idx(dev, data->dword, NULL);
-	cnt->shared_info.id = conf->id;
-	return 0;
-}
-
-/**
- * Get a shared flow counter.
- *
- * @param[in] dev
- *   Pointer to the Ethernet device structure.
- * @param[in] id
- *   Counter identifier.
- *
- * @return
- *   Index to flow counter on success, 0 otherwise and rte_errno is set.
- */
-static uint32_t
-flow_dv_counter_get_shared(struct rte_eth_dev *dev, uint32_t id)
-{
-	struct mlx5_priv *priv = dev->data->dev_private;
-	struct mlx5_shared_counter_conf conf = {
-		.dev = dev,
-		.id = id,
-	};
-	union mlx5_l3t_data data = {
-		.dword = 0,
-	};
-
-	mlx5_l3t_prepare_entry(priv->sh->cnt_id_tbl, id, &data,
-			       flow_dv_counter_alloc_shared_cb, &conf);
-	return data.dword;
-}
-
-/**
  * Get age param from counter index.
  *
  * @param[in] dev
@@ -6373,16 +6290,6 @@ flow_dv_counter_free(struct rte_eth_dev *dev, uint32_t counter)
 		flow_dv_counter_remove_from_age(dev, counter, cnt);
 	} else {
 		/*
-		 * If the counter action is shared by ID, the l3t_clear_entry
-		 * function reduces its references counter. If after the
-		 * reduction the action is still referenced, the function
-		 * returns here and does not release it.
-		 */
-		if (IS_LEGACY_SHARED_CNT(counter) &&
-		    mlx5_l3t_clear_entry(priv->sh->cnt_id_tbl,
-					 cnt->shared_info.id))
-			return;
-		/*
 		 * If the counter action is shared by indirect action API,
 		 * the atomic function reduces its references counter.
 		 * If after the reduction the action is still referenced, the
@@ -6391,8 +6298,7 @@ flow_dv_counter_free(struct rte_eth_dev *dev, uint32_t counter)
 		 * indirect action API, shared info is 1 before the reduction,
 		 * so this condition is failed and function doesn't return here.
 		 */
-		if (!IS_LEGACY_SHARED_CNT(counter) &&
-		    __atomic_sub_fetch(&cnt->shared_info.refcnt, 1,
+		if (__atomic_sub_fetch(&cnt->shared_info.refcnt, 1,
 				       __ATOMIC_RELAXED))
 			return;
 	}
@@ -7281,7 +7187,6 @@ flow_dv_validate(struct rte_eth_dev *dev, const struct rte_flow_attr *attr,
 	}
 	for (; actions->type != RTE_FLOW_ACTION_TYPE_END; actions++) {
 		int type = actions->type;
-		bool shared_count = false;
 
 		if (!mlx5_flow_os_action_supported(type))
 			return rte_flow_error_set(error, ENOTSUP,
@@ -7433,8 +7338,7 @@ flow_dv_validate(struct rte_eth_dev *dev, const struct rte_flow_attr *attr,
 			break;
 		case MLX5_RTE_FLOW_ACTION_TYPE_COUNT:
 		case RTE_FLOW_ACTION_TYPE_COUNT:
-			shared_count = is_shared_action_count(actions);
-			ret = flow_dv_validate_action_count(dev, shared_count,
+			ret = flow_dv_validate_action_count(dev,
 							    action_flags,
 							    error);
 			if (ret < 0)
@@ -7753,12 +7657,6 @@ flow_dv_validate(struct rte_eth_dev *dev, const struct rte_flow_attr *attr,
 			 * mutual exclusion with share counter actions.
 			 */
 			if (!priv->sh->flow_hit_aso_en) {
-				if (shared_count)
-					return rte_flow_error_set
-						(error, EINVAL,
-						RTE_FLOW_ERROR_TYPE_ACTION,
-						NULL,
-						"old age and shared count combination is not supported");
 				if (sample_count)
 					return rte_flow_error_set
 						(error, EINVAL,
@@ -10843,16 +10741,14 @@ flow_dv_translate_action_port_id(struct rte_eth_dev *dev,
 static uint32_t
 flow_dv_translate_create_counter(struct rte_eth_dev *dev,
 				struct mlx5_flow *dev_flow,
-				const struct rte_flow_action_count *count,
+				const struct rte_flow_action_count *count
+					__rte_unused,
 				const struct rte_flow_action_age *age)
 {
 	uint32_t counter;
 	struct mlx5_age_param *age_param;
 
-	if (count && count->shared)
-		counter = flow_dv_counter_get_shared(dev, count->id);
-	else
-		counter = flow_dv_counter_alloc(dev, !!age);
+	counter = flow_dv_counter_alloc(dev, !!age);
 	if (!counter || age == NULL)
 		return counter;
 	age_param = flow_dv_counter_idx_get_age(dev, counter);
@@ -13203,8 +13099,7 @@ flow_dv_translate(struct rte_eth_dev *dev,
 			 * when they are not shared.
 			 */
 			if (action_flags & MLX5_FLOW_ACTION_AGE) {
-				if ((non_shared_age &&
-				     count && !count->shared) ||
+				if ((non_shared_age && count) ||
 				    !(priv->sh->flow_hit_aso_en &&
 				      (attr->group || attr->transfer))) {
 					/* Creates age by counters. */
@@ -17456,19 +17351,7 @@ flow_dv_action_validate(struct rte_eth_dev *dev,
 						"Indirect age action not supported");
 		return flow_dv_validate_action_age(0, action, dev, err);
 	case RTE_FLOW_ACTION_TYPE_COUNT:
-		/*
-		 * There are two mechanisms to share the action count.
-		 * The old mechanism uses the shared field to share, while the
-		 * new mechanism uses the indirect action API.
-		 * This validation comes to make sure that the two mechanisms
-		 * are not combined.
-		 */
-		if (is_shared_action_count(action))
-			return rte_flow_error_set(err, ENOTSUP,
-						  RTE_FLOW_ERROR_TYPE_ACTION,
-						  NULL,
-						  "Mix shared and indirect counter is not supported");
-		return flow_dv_validate_action_count(dev, true, 0, err);
+		return flow_dv_validate_action_count(dev, 0, err);
 	case RTE_FLOW_ACTION_TYPE_CONNTRACK:
 		if (!priv->sh->ct_aso_en)
 			return rte_flow_error_set(err, ENOTSUP,
