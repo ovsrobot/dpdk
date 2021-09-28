@@ -713,6 +713,7 @@ _iavf_recv_raw_pkts_vec_avx512_flex_rxd(struct iavf_rx_queue *rxq,
 #ifdef IAVF_RX_PTYPE_OFFLOAD
 	const uint32_t *type_table = rxq->vsi->adapter->ptype_tbl;
 #endif
+	struct rte_eth_dev *dev = &rte_eth_devices[rxq->port_id];
 
 	const __m256i mbuf_init = _mm256_set_epi64x(0, 0, 0,
 						    rxq->mbuf_initializer);
@@ -1137,7 +1138,7 @@ _iavf_recv_raw_pkts_vec_avx512_flex_rxd(struct iavf_rx_queue *rxq,
 			 * needs to load 2nd 16B of each desc for RSS hash parsing,
 			 * will cause performance drop to get into this context.
 			 */
-			if (rxq->vsi->adapter->eth_dev->data->dev_conf.rxmode.offloads &
+			if (dev->data->dev_conf.rxmode.offloads &
 			    DEV_RX_OFFLOAD_RSS_HASH ||
 			    rxq->rx_flags & IAVF_RX_FLAGS_VLAN_TAG_LOC_L2TAG2_2) {
 				/* load bottom half of every 32B desc */
@@ -1190,7 +1191,7 @@ _iavf_recv_raw_pkts_vec_avx512_flex_rxd(struct iavf_rx_queue *rxq,
 						(_mm256_castsi128_si256(raw_desc_bh0),
 						 raw_desc_bh1, 1);
 
-				if (rxq->vsi->adapter->eth_dev->data->dev_conf.rxmode.offloads &
+				if (dev->data->dev_conf.rxmode.offloads &
 						DEV_RX_OFFLOAD_RSS_HASH) {
 					/**
 					 * to shift the 32b RSS hash value to the
