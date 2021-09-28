@@ -842,11 +842,8 @@ complete_async_pkts(struct vhost_dev *vdev)
 
 	complete_count = rte_vhost_poll_enqueue_completed(vdev->vid,
 					VIRTIO_RXQ, p_cpl, MAX_PKT_BURST);
-	if (complete_count) {
+	if (complete_count)
 		free_pkts(p_cpl, complete_count);
-		__atomic_sub_fetch(&vdev->pkts_inflight, complete_count, __ATOMIC_SEQ_CST);
-	}
-
 }
 
 static __rte_always_inline void
@@ -886,7 +883,6 @@ drain_vhost(struct vhost_dev *vdev)
 
 		complete_async_pkts(vdev);
 		ret = rte_vhost_submit_enqueue_burst(vdev->vid, VIRTIO_RXQ, m, nr_xmit);
-		__atomic_add_fetch(&vdev->pkts_inflight, ret, __ATOMIC_SEQ_CST);
 
 		enqueue_fail = nr_xmit - ret;
 		if (enqueue_fail)
@@ -1212,7 +1208,6 @@ drain_eth_rx(struct vhost_dev *vdev)
 		complete_async_pkts(vdev);
 		enqueue_count = rte_vhost_submit_enqueue_burst(vdev->vid,
 					VIRTIO_RXQ, pkts, rx_count);
-		__atomic_add_fetch(&vdev->pkts_inflight, enqueue_count, __ATOMIC_SEQ_CST);
 
 		enqueue_fail = rx_count - enqueue_count;
 		if (enqueue_fail)
@@ -1338,6 +1333,7 @@ destroy_device(int vid)
 	struct vhost_dev *vdev = NULL;
 	int lcore;
 	uint16_t i;
+	int pkts_inflight;
 
 	TAILQ_FOREACH(vdev, &vhost_dev_list, global_vdev_entry) {
 		if (vdev->vid == vid)
@@ -1384,13 +1380,13 @@ destroy_device(int vid)
 
 	if (async_vhost_driver) {
 		uint16_t n_pkt = 0;
-		struct rte_mbuf *m_cpl[vdev->pkts_inflight];
+		pkts_inflight = rte_vhost_async_get_inflight_thread_unsafe(vid, VIRTIO_RXQ);
+		struct rte_mbuf *m_cpl[pkts_inflight];
 
-		while (vdev->pkts_inflight) {
+		while (pkts_inflight) {
 			n_pkt = rte_vhost_clear_queue_thread_unsafe(vid, VIRTIO_RXQ,
-						m_cpl, vdev->pkts_inflight);
+						m_cpl, pkts_inflight);
 			free_pkts(m_cpl, n_pkt);
-			__atomic_sub_fetch(&vdev->pkts_inflight, n_pkt, __ATOMIC_SEQ_CST);
 		}
 
 		rte_vhost_async_channel_unregister(vid, VIRTIO_RXQ);
@@ -1486,6 +1482,7 @@ static int
 vring_state_changed(int vid, uint16_t queue_id, int enable)
 {
 	struct vhost_dev *vdev = NULL;
+	int pkts_inflight;
 
 	TAILQ_FOREACH(vdev, &vhost_dev_list, global_vdev_entry) {
 		if (vdev->vid == vid)
@@ -1500,13 +1497,13 @@ vring_state_changed(int vid, uint16_t queue_id, int enable)
 	if (async_vhost_driver) {
 		if (!enable) {
 			uint16_t n_pkt = 0;
-			struct rte_mbuf *m_cpl[vdev->pkts_inflight];
+			pkts_inflight = rte_vhost_async_get_inflight_thread_unsafe(vid, queue_id);
+			struct rte_mbuf *m_cpl[pkts_inflight];
 
-			while (vdev->pkts_inflight) {
+			while (pkts_inflight) {
 				n_pkt = rte_vhost_clear_queue_thread_unsafe(vid, queue_id,
-							m_cpl, vdev->pkts_inflight);
+							m_cpl, pkts_inflight);
 				free_pkts(m_cpl, n_pkt);
-				__atomic_sub_fetch(&vdev->pkts_inflight, n_pkt, __ATOMIC_SEQ_CST);
 			}
 		}
 	}
