@@ -91,6 +91,11 @@ New Features
   Added command-line options to specify total number of processes and
   current process ID. Each process owns subset of Rx and Tx queues.
 
+* **Added NXP LA12xx baseband PMD.**
+
+  * Added a new baseband PMD driver for NXP LA12xx Software defined radio.
+  * See the :doc:`../bbdevs/la12xx` for more details.
+
 
 Removed Items
 -------------
