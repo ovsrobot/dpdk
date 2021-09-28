@@ -309,6 +309,8 @@ struct rte_bbdev_driver_info {
 	uint16_t min_alignment;
 	/** HARQ memory available in kB */
 	uint32_t harq_buffer_size;
+	/** Device support input, output and HARQ data as big-endian */
+	uint8_t support_be_data;
 	/** Default queue configuration used if none is supplied  */
 	struct rte_bbdev_queue_conf default_queue_conf;
 	/** Device operation capabilities */
