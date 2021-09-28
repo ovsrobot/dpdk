@@ -106,6 +106,8 @@ static uint32_t burst_rx_retry_num = BURST_RX_RETRIES;
 static char *socket_files;
 static int nb_sockets;
 
+static struct vhost_queue_ops vdev_queue_ops[MAX_VHOST_DEVICE];
+
 /* empty vmdq configuration structure. Filled in programatically */
 static struct rte_eth_conf vmdq_conf_default = {
 	.rxmode = {
@@ -879,22 +881,8 @@ drain_vhost(struct vhost_dev *vdev)
 	uint16_t nr_xmit = vhost_txbuff[buff_idx]->len;
 	struct rte_mbuf **m = vhost_txbuff[buff_idx]->m_table;
 
-	if (builtin_net_driver) {
-		ret = vs_enqueue_pkts(vdev, VIRTIO_RXQ, m, nr_xmit);
-	} else if (async_vhost_driver) {
-		uint16_t enqueue_fail = 0;
-
-		complete_async_pkts(vdev);
-		ret = rte_vhost_submit_enqueue_burst(vdev->vid, VIRTIO_RXQ, m, nr_xmit);
-		__atomic_add_fetch(&vdev->pkts_inflight, ret, __ATOMIC_SEQ_CST);
-
-		enqueue_fail = nr_xmit - ret;
-		if (enqueue_fail)
-			free_pkts(&m[ret], nr_xmit - ret);
-	} else {
-		ret = rte_vhost_enqueue_burst(vdev->vid, VIRTIO_RXQ,
-						m, nr_xmit);
-	}
+	ret = vdev_queue_ops[vdev->vid].enqueue_pkt_burst(vdev,
+					VIRTIO_RXQ, m, nr_xmit);
 
 	if (enable_stats) {
 		__atomic_add_fetch(&vdev->stats.rx_total_atomic, nr_xmit,
@@ -1173,6 +1161,33 @@ drain_mbuf_table(struct mbuf_table *tx_q)
 	}
 }
 
+uint16_t
+async_enqueue_pkts(struct vhost_dev *vdev, uint16_t queue_id,
+		struct rte_mbuf **pkts, uint32_t rx_count)
+{
+	uint16_t enqueue_count;
+	uint16_t enqueue_fail = 0;
+
+	complete_async_pkts(vdev);
+	enqueue_count = rte_vhost_submit_enqueue_burst(vdev->vid,
+				queue_id, pkts, rx_count);
+	__atomic_add_fetch(&vdev->pkts_inflight, enqueue_count,
+					__ATOMIC_SEQ_CST);
+
+	enqueue_fail = rx_count - enqueue_count;
+	if (enqueue_fail)
+		free_pkts(&pkts[enqueue_count], enqueue_fail);
+
+	return enqueue_count;
+}
+
+uint16_t
+sync_enqueue_pkts(struct vhost_dev *vdev, uint16_t queue_id,
+		struct rte_mbuf **pkts, uint32_t rx_count)
+{
+	return rte_vhost_enqueue_burst(vdev->vid, queue_id, pkts, rx_count);
+}
+
 static __rte_always_inline void
 drain_eth_rx(struct vhost_dev *vdev)
 {
@@ -1203,25 +1218,8 @@ drain_eth_rx(struct vhost_dev *vdev)
 		}
 	}
 
-	if (builtin_net_driver) {
-		enqueue_count = vs_enqueue_pkts(vdev, VIRTIO_RXQ,
-						pkts, rx_count);
-	} else if (async_vhost_driver) {
-		uint16_t enqueue_fail = 0;
-
-		complete_async_pkts(vdev);
-		enqueue_count = rte_vhost_submit_enqueue_burst(vdev->vid,
-					VIRTIO_RXQ, pkts, rx_count);
-		__atomic_add_fetch(&vdev->pkts_inflight, enqueue_count, __ATOMIC_SEQ_CST);
-
-		enqueue_fail = rx_count - enqueue_count;
-		if (enqueue_fail)
-			free_pkts(&pkts[enqueue_count], enqueue_fail);
-
-	} else {
-		enqueue_count = rte_vhost_enqueue_burst(vdev->vid, VIRTIO_RXQ,
-						pkts, rx_count);
-	}
+	enqueue_count = vdev_queue_ops[vdev->vid].enqueue_pkt_burst(vdev,
+						VIRTIO_RXQ, pkts, rx_count);
 
 	if (enable_stats) {
 		__atomic_add_fetch(&vdev->stats.rx_total_atomic, rx_count,
@@ -1234,6 +1232,14 @@ drain_eth_rx(struct vhost_dev *vdev)
 		free_pkts(pkts, rx_count);
 }
 
+uint16_t sync_dequeue_pkts(struct vhost_dev *dev, uint16_t queue_id,
+			struct rte_mempool *mbuf_pool,
+			struct rte_mbuf **pkts, uint16_t count)
+{
+	return rte_vhost_dequeue_burst(dev->vid, queue_id,
+					mbuf_pool, pkts, count);
+}
+
 static __rte_always_inline void
 drain_virtio_tx(struct vhost_dev *vdev)
 {
@@ -1241,13 +1247,8 @@ drain_virtio_tx(struct vhost_dev *vdev)
 	uint16_t count;
 	uint16_t i;
 
-	if (builtin_net_driver) {
-		count = vs_dequeue_pkts(vdev, VIRTIO_TXQ, mbuf_pool,
-					pkts, MAX_PKT_BURST);
-	} else {
-		count = rte_vhost_dequeue_burst(vdev->vid, VIRTIO_TXQ,
-					mbuf_pool, pkts, MAX_PKT_BURST);
-	}
+	count = vdev_queue_ops[vdev->vid].dequeue_pkt_burst(vdev,
+				VIRTIO_TXQ, mbuf_pool, pkts, MAX_PKT_BURST);
 
 	/* setup VMDq for the first packet */
 	if (unlikely(vdev->ready == DEVICE_MAC_LEARNING) && count) {
@@ -1430,6 +1431,21 @@ new_device(int vid)
 			  "(%d) couldn't allocate memory for vhost TX\n", vid);
 			return -1;
 		}
+	}
+
+	if (builtin_net_driver) {
+		vdev_queue_ops[vid].enqueue_pkt_burst = builtin_enqueue_pkts;
+		vdev_queue_ops[vid].dequeue_pkt_burst = builtin_dequeue_pkts;
+	} else {
+		if (async_vhost_driver) {
+			vdev_queue_ops[vid].enqueue_pkt_burst =
+							async_enqueue_pkts;
+		} else {
+			vdev_queue_ops[vid].enqueue_pkt_burst =
+							sync_enqueue_pkts;
+		}
+
+		vdev_queue_ops[vid].dequeue_pkt_burst = sync_dequeue_pkts;
 	}
 
 	if (builtin_net_driver)

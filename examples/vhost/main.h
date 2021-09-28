@@ -61,6 +61,19 @@ struct vhost_dev {
 	struct vhost_queue queues[MAX_QUEUE_PAIRS * 2];
 } __rte_cache_aligned;
 
+typedef uint16_t (*vhost_enqueue_burst_t)(struct vhost_dev *dev,
+			uint16_t queue_id, struct rte_mbuf **pkts,
+			uint32_t count);
+
+typedef uint16_t (*vhost_dequeue_burst_t)(struct vhost_dev *dev,
+			uint16_t queue_id, struct rte_mempool *mbuf_pool,
+			struct rte_mbuf **pkts, uint16_t count);
+
+struct vhost_queue_ops {
+	vhost_enqueue_burst_t enqueue_pkt_burst;
+	vhost_dequeue_burst_t dequeue_pkt_burst;
+};
+
 TAILQ_HEAD(vhost_dev_tailq_list, vhost_dev);
 
 
@@ -87,7 +100,16 @@ void vs_vhost_net_remove(struct vhost_dev *dev);
 uint16_t vs_enqueue_pkts(struct vhost_dev *dev, uint16_t queue_id,
 			 struct rte_mbuf **pkts, uint32_t count);
 
-uint16_t vs_dequeue_pkts(struct vhost_dev *dev, uint16_t queue_id,
-			 struct rte_mempool *mbuf_pool,
-			 struct rte_mbuf **pkts, uint16_t count);
+uint16_t builtin_enqueue_pkts(struct vhost_dev *dev, uint16_t queue_id,
+			struct rte_mbuf **pkts, uint32_t count);
+uint16_t builtin_dequeue_pkts(struct vhost_dev *dev, uint16_t queue_id,
+			struct rte_mempool *mbuf_pool,
+			struct rte_mbuf **pkts, uint16_t count);
+uint16_t sync_enqueue_pkts(struct vhost_dev *dev, uint16_t queue_id,
+			 struct rte_mbuf **pkts, uint32_t count);
+uint16_t sync_dequeue_pkts(struct vhost_dev *dev, uint16_t queue_id,
+			struct rte_mempool *mbuf_pool,
+			struct rte_mbuf **pkts, uint16_t count);
+uint16_t async_enqueue_pkts(struct vhost_dev *dev, uint16_t queue_id,
+			 struct rte_mbuf **pkts, uint32_t count);
 #endif /* _MAIN_H_ */
