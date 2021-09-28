@@ -51,7 +51,8 @@ struct vhost_dev {
 	uint64_t features;
 	size_t hdr_len;
 	uint16_t nr_vrings;
-	uint16_t pkts_inflight;
+	uint16_t pkts_enq_inflight;
+	uint16_t pkts_deq_inflight;
 	struct rte_vhost_memory *mem;
 	struct device_statistics stats;
 	TAILQ_ENTRY(vhost_dev) global_vdev_entry;
@@ -112,4 +113,7 @@ uint16_t sync_dequeue_pkts(struct vhost_dev *dev, uint16_t queue_id,
 			struct rte_mbuf **pkts, uint16_t count);
 uint16_t async_enqueue_pkts(struct vhost_dev *dev, uint16_t queue_id,
 			 struct rte_mbuf **pkts, uint32_t count);
+uint16_t async_dequeue_pkts(struct vhost_dev *dev, uint16_t queue_id,
+			struct rte_mempool *mbuf_pool,
+			struct rte_mbuf **pkts, uint16_t count);
 #endif /* _MAIN_H_ */

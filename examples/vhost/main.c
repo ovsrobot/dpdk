@@ -93,8 +93,6 @@ static int client_mode;
 
 static int builtin_net_driver;
 
-static int async_vhost_driver;
-
 static char *dma_type;
 
 /* Specify timeout (in useconds) between retries on RX. */
@@ -673,7 +671,6 @@ us_vhost_parse_args(int argc, char **argv)
 				us_vhost_usage(prgname);
 				return -1;
 			}
-			async_vhost_driver = 1;
 			break;
 
 		case OPT_CLIENT_NUM:
@@ -846,7 +843,8 @@ complete_async_pkts(struct vhost_dev *vdev)
 					VIRTIO_RXQ, p_cpl, MAX_PKT_BURST);
 	if (complete_count) {
 		free_pkts(p_cpl, complete_count);
-		__atomic_sub_fetch(&vdev->pkts_inflight, complete_count, __ATOMIC_SEQ_CST);
+		__atomic_sub_fetch(&vdev->pkts_enq_inflight,
+				complete_count, __ATOMIC_SEQ_CST);
 	}
 
 }
@@ -891,7 +889,7 @@ drain_vhost(struct vhost_dev *vdev)
 				__ATOMIC_SEQ_CST);
 	}
 
-	if (!async_vhost_driver)
+	if ((get_async_flag_by_vid(vdev->vid) & ASYNC_ENQUEUE_VHOST) == 0)
 		free_pkts(m, nr_xmit);
 }
 
@@ -1171,8 +1169,8 @@ async_enqueue_pkts(struct vhost_dev *vdev, uint16_t queue_id,
 	complete_async_pkts(vdev);
 	enqueue_count = rte_vhost_submit_enqueue_burst(vdev->vid,
 				queue_id, pkts, rx_count);
-	__atomic_add_fetch(&vdev->pkts_inflight, enqueue_count,
-					__ATOMIC_SEQ_CST);
+	__atomic_add_fetch(&vdev->pkts_enq_inflight,
+			enqueue_count, __ATOMIC_SEQ_CST);
 
 	enqueue_fail = rx_count - enqueue_count;
 	if (enqueue_fail)
@@ -1228,8 +1226,21 @@ drain_eth_rx(struct vhost_dev *vdev)
 				__ATOMIC_SEQ_CST);
 	}
 
-	if (!async_vhost_driver)
+	if ((get_async_flag_by_vid(vdev->vid) & ASYNC_ENQUEUE_VHOST) == 0)
 		free_pkts(pkts, rx_count);
+}
+
+uint16_t async_dequeue_pkts(struct vhost_dev *dev, uint16_t queue_id,
+				struct rte_mempool *mbuf_pool,
+				struct rte_mbuf **pkts, uint16_t count)
+{
+	int nr_inflight;
+	uint16_t dequeue_count;
+	dequeue_count = rte_vhost_async_try_dequeue_burst(dev->vid, queue_id,
+			mbuf_pool, pkts, count, &nr_inflight);
+	if (likely(nr_inflight != -1))
+		dev->pkts_deq_inflight = nr_inflight;
+	return dequeue_count;
 }
 
 uint16_t sync_dequeue_pkts(struct vhost_dev *dev, uint16_t queue_id,
@@ -1327,6 +1338,32 @@ switch_worker(void *arg __rte_unused)
 	return 0;
 }
 
+static void
+vhost_clear_queue_thread_unsafe(struct vhost_dev *vdev, uint16_t queue_id)
+{
+	uint16_t n_pkt = 0;
+	struct rte_mbuf *m_enq_cpl[vdev->pkts_enq_inflight];
+	struct rte_mbuf *m_deq_cpl[vdev->pkts_deq_inflight];
+
+	if (queue_id % 2 == 0) {
+		while (vdev->pkts_enq_inflight) {
+			n_pkt = rte_vhost_clear_queue_thread_unsafe(vdev->vid,
+				queue_id, m_enq_cpl, vdev->pkts_enq_inflight);
+			free_pkts(m_enq_cpl, n_pkt);
+			__atomic_sub_fetch(&vdev->pkts_enq_inflight,
+					n_pkt, __ATOMIC_SEQ_CST);
+		}
+	} else {
+		while (vdev->pkts_deq_inflight) {
+			n_pkt = rte_vhost_clear_queue_thread_unsafe(vdev->vid,
+				queue_id, m_deq_cpl, vdev->pkts_deq_inflight);
+			free_pkts(m_deq_cpl, n_pkt);
+			__atomic_sub_fetch(&vdev->pkts_deq_inflight,
+					n_pkt, __ATOMIC_SEQ_CST);
+		}
+	}
+}
+
 /*
  * Remove a device from the specific data core linked list and from the
  * main linked list. Synchonization  occurs through the use of the
@@ -1383,21 +1420,91 @@ destroy_device(int vid)
 		"(%d) device has been removed from data core\n",
 		vdev->vid);
 
-	if (async_vhost_driver) {
-		uint16_t n_pkt = 0;
-		struct rte_mbuf *m_cpl[vdev->pkts_inflight];
-
-		while (vdev->pkts_inflight) {
-			n_pkt = rte_vhost_clear_queue_thread_unsafe(vid, VIRTIO_RXQ,
-						m_cpl, vdev->pkts_inflight);
-			free_pkts(m_cpl, n_pkt);
-			__atomic_sub_fetch(&vdev->pkts_inflight, n_pkt, __ATOMIC_SEQ_CST);
-		}
-
+	if (get_async_flag_by_vid(vid) & ASYNC_ENQUEUE_VHOST) {
+		vhost_clear_queue_thread_unsafe(vdev, VIRTIO_RXQ);
 		rte_vhost_async_channel_unregister(vid, VIRTIO_RXQ);
+	}
+	if (get_async_flag_by_vid(vid) & ASYNC_DEQUEUE_VHOST) {
+		vhost_clear_queue_thread_unsafe(vdev, VIRTIO_TXQ);
+		rte_vhost_async_channel_unregister(vid, VIRTIO_TXQ);
 	}
 
 	rte_free(vdev);
+}
+
+static int
+get_socketid_by_vid(int vid)
+{
+	int i;
+	char ifname[PATH_MAX];
+	rte_vhost_get_ifname(vid, ifname, sizeof(ifname));
+
+	for (i = 0; i < nb_sockets; i++) {
+		char *file = socket_files + i * PATH_MAX;
+		if (strcmp(file, ifname) == 0)
+			return i;
+	}
+
+	return -1;
+}
+
+static int
+init_vhost_queue_ops(int vid)
+{
+	int socketid = get_socketid_by_vid(vid);
+	if (socketid == -1)
+		return -1;
+
+	init_vid2socketid_array(vid, socketid);
+	if (builtin_net_driver) {
+		vdev_queue_ops[vid].enqueue_pkt_burst = builtin_enqueue_pkts;
+		vdev_queue_ops[vid].dequeue_pkt_burst = builtin_dequeue_pkts;
+	} else {
+		if (get_async_flag_by_vid(vid) & ASYNC_ENQUEUE_VHOST) {
+			vdev_queue_ops[vid].enqueue_pkt_burst =
+						async_enqueue_pkts;
+		} else {
+			vdev_queue_ops[vid].enqueue_pkt_burst =
+						sync_enqueue_pkts;
+		}
+
+		if (get_async_flag_by_vid(vid) & ASYNC_DEQUEUE_VHOST) {
+			vdev_queue_ops[vid].dequeue_pkt_burst =
+						async_dequeue_pkts;
+		} else {
+			vdev_queue_ops[vid].dequeue_pkt_burst =
+						sync_dequeue_pkts;
+		}
+	}
+
+	return 0;
+}
+
+static int
+vhost_async_channel_register(int vid)
+{
+	int ret = 0;
+	struct rte_vhost_async_config config = {0};
+	struct rte_vhost_async_channel_ops channel_ops;
+
+	if (dma_type != NULL && strncmp(dma_type, "ioat", 4) == 0) {
+		channel_ops.transfer_data = ioat_transfer_data_cb;
+		channel_ops.check_completed_copies =
+			ioat_check_completed_copies_cb;
+
+		config.features = RTE_VHOST_ASYNC_INORDER;
+
+		if (get_async_flag_by_vid(vid) & ASYNC_ENQUEUE_VHOST) {
+			ret |= rte_vhost_async_channel_register(vid, VIRTIO_RXQ,
+					config, &channel_ops);
+		}
+		if (get_async_flag_by_vid(vid) & ASYNC_DEQUEUE_VHOST) {
+			ret |= rte_vhost_async_channel_register(vid, VIRTIO_TXQ,
+					config, &channel_ops);
+		}
+	}
+
+	return ret;
 }
 
 /*
@@ -1433,20 +1540,8 @@ new_device(int vid)
 		}
 	}
 
-	if (builtin_net_driver) {
-		vdev_queue_ops[vid].enqueue_pkt_burst = builtin_enqueue_pkts;
-		vdev_queue_ops[vid].dequeue_pkt_burst = builtin_dequeue_pkts;
-	} else {
-		if (async_vhost_driver) {
-			vdev_queue_ops[vid].enqueue_pkt_burst =
-							async_enqueue_pkts;
-		} else {
-			vdev_queue_ops[vid].enqueue_pkt_burst =
-							sync_enqueue_pkts;
-		}
-
-		vdev_queue_ops[vid].dequeue_pkt_burst = sync_dequeue_pkts;
-	}
+	if (init_vhost_queue_ops(vid) != 0)
+		return -1;
 
 	if (builtin_net_driver)
 		vs_vhost_net_setup(vdev);
@@ -1475,27 +1570,13 @@ new_device(int vid)
 	rte_vhost_enable_guest_notification(vid, VIRTIO_RXQ, 0);
 	rte_vhost_enable_guest_notification(vid, VIRTIO_TXQ, 0);
 
+	int ret = vhost_async_channel_register(vid);
+
 	RTE_LOG(INFO, VHOST_DATA,
 		"(%d) device has been added to data core %d\n",
 		vid, vdev->coreid);
 
-	if (async_vhost_driver) {
-		struct rte_vhost_async_config config = {0};
-		struct rte_vhost_async_channel_ops channel_ops;
-
-		if (dma_type != NULL && strncmp(dma_type, "ioat", 4) == 0) {
-			channel_ops.transfer_data = ioat_transfer_data_cb;
-			channel_ops.check_completed_copies =
-				ioat_check_completed_copies_cb;
-
-			config.features = RTE_VHOST_ASYNC_INORDER;
-
-			return rte_vhost_async_channel_register(vid, VIRTIO_RXQ,
-				config, &channel_ops);
-		}
-	}
-
-	return 0;
+	return ret;
 }
 
 static int
@@ -1513,19 +1594,8 @@ vring_state_changed(int vid, uint16_t queue_id, int enable)
 	if (queue_id != VIRTIO_RXQ)
 		return 0;
 
-	if (async_vhost_driver) {
-		if (!enable) {
-			uint16_t n_pkt = 0;
-			struct rte_mbuf *m_cpl[vdev->pkts_inflight];
-
-			while (vdev->pkts_inflight) {
-				n_pkt = rte_vhost_clear_queue_thread_unsafe(vid, queue_id,
-							m_cpl, vdev->pkts_inflight);
-				free_pkts(m_cpl, n_pkt);
-				__atomic_sub_fetch(&vdev->pkts_inflight, n_pkt, __ATOMIC_SEQ_CST);
-			}
-		}
-	}
+	if (!enable)
+		vhost_clear_queue_thread_unsafe(vdev, queue_id);
 
 	return 0;
 }
@@ -1769,10 +1839,11 @@ main(int argc, char *argv[])
 	for (i = 0; i < nb_sockets; i++) {
 		char *file = socket_files + i * PATH_MAX;
 
-		if (async_vhost_driver)
-			flags = flags | RTE_VHOST_USER_ASYNC_COPY;
+		uint64_t flag = flags;
+		if (get_async_flag_by_socketid(i) != 0)
+			flag |= RTE_VHOST_USER_ASYNC_COPY;
 
-		ret = rte_vhost_driver_register(file, flags);
+		ret = rte_vhost_driver_register(file, flag);
 		if (ret != 0) {
 			unregister_drivers(i);
 			rte_exit(EXIT_FAILURE,
