@@ -3637,6 +3637,7 @@ This section lists supported pattern items and their attributes, if any.
   - ``offset {integer}``: absolute or relative offset for pattern.
   - ``limit {unsigned}``: search area limit for start of pattern.
   - ``pattern {string}``: byte string to look for.
+  - ``pattern_hex {string}``: byte string (provided in hexadecimal) to look for.
 
 - ``eth``: match Ethernet header.
 
@@ -5035,6 +5036,18 @@ The meter policy action list: ``green -> green, yellow -> yellow, red -> red``.
             r_actions color type red / end
    testpmd> create port meter 0 1 13 1 yes 0xffff 0 0
    testpmd> flow create 0 priority 0 ingress group 1 pattern eth / end actions meter mtr_id 1 / end
+
+Sample RAW rule
+~~~~~~~~~~~~~~~
+
+A RAW rule can be creted as following using ``pattern_hex`` key and mask.
+
+::
+
+    testpmd> flow create 0 group 0 priority 1 ingress pattern raw relative is 0 search is 0 offset
+             is 0 limit is 0 pattern_hex spec 00000000000000000000000000000000000000000000000000000a0a0a0a
+             pattern_hex mask 0000000000000000000000000000000000000000000000000000ffffffff / end actions
+             queue index 4 / end
 
 BPF Functions
 --------------
