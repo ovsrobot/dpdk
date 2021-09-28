@@ -91,6 +91,9 @@ New Features
   Added command-line options to specify total number of processes and
   current process ID. Each process owns subset of Rx and Tx queues.
 
+* **Added support for vhost async splited ring data path.**
+
+  Added async dequeue support for splited ring in vhost async data path.
 
 Removed Items
 -------------

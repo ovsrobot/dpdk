@@ -303,6 +303,15 @@ The following is an overview of some key Vhost API functions:
   Clear inflight packets which are submitted to DMA engine in vhost async data
   path. Completed packets are returned to applications through ``pkts``.
 
+* ``rte_vhost_async_try_dequeue_burst(vid, queue_id, mbuf_pool, pkts, count, nr_inflight)``
+
+  This function tries to receive packets from the guest with offloading
+  copies to the async channel. The packets that are transfer completed
+  are returned in ``pkts``. The other packets that their copies are submitted
+  to the async channel but not completed are called "in-flight packets".
+  This function will not return in-flight packets until their copies are
+  completed by the async channel.
+
 Vhost-user Implementations
 --------------------------
 
