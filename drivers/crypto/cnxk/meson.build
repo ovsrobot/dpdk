@@ -19,6 +19,7 @@ sources = files(
         'cnxk_cryptodev_capabilities.c',
         'cnxk_cryptodev_ops.c',
         'cnxk_cryptodev_sec.c',
+        'cnxk_cryptodev_telemetry.c',
 )
 
 deps += ['bus_pci', 'common_cnxk', 'security', 'eventdev']
