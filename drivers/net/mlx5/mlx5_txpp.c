@@ -961,8 +961,12 @@ mlx5_txpp_stop(struct rte_eth_dev *dev)
 	MLX5_ASSERT(!ret);
 	RTE_SET_USED(ret);
 	MLX5_ASSERT(sh->txpp.refcnt);
-	if (!sh->txpp.refcnt || --sh->txpp.refcnt)
+	if (!sh->txpp.refcnt || --sh->txpp.refcnt) {
+		ret = pthread_mutex_unlock(&sh->txpp.mutex);
+		MLX5_ASSERT(!ret);
+		RTE_SET_USED(ret);
 		return;
+	}
 	/* No references any more, do actual destroy. */
 	mlx5_txpp_destroy(sh);
 	ret = pthread_mutex_unlock(&sh->txpp.mutex);
