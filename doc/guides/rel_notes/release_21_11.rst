@@ -126,6 +126,9 @@ Removed Items
   blacklist/whitelist are removed. Users must use the new
   block/allow list arguments.
 
+* mbuf: Removed offload flag ``PKT_RX_EIP_CKSUM_BAD``.
+  ``PKT_RX_OUTER_IP_CKSUM_BAD`` should be used as a replacement.
+
 
 API Changes
 -----------

@@ -42,7 +42,7 @@ Deprecation Notices
 * mbuf: The mbuf offload flags ``PKT_*`` will be renamed as ``RTE_MBUF_F_*``.
   A compatibility layer will be kept until DPDK 22.11, except for the flags
   that are already deprecated (``PKT_RX_L4_CKSUM_BAD``, ``PKT_RX_IP_CKSUM_BAD``,
-  ``PKT_RX_EIP_CKSUM_BAD``, ``PKT_TX_QINQ_PKT``) which will be removed.
+  ``PKT_RX_OUTER_IP_CKSUM_BAD``, ``PKT_TX_QINQ_PKT``) which will be removed.
 
 * pci: To reduce unnecessary ABIs exposed by DPDK bus driver, "rte_bus_pci.h"
   will be made internal in 21.11 and macros/data structures/functions defined
@@ -158,11 +158,6 @@ Deprecation Notices
   Instead queue stats will be received via xstats API. Current method support
   will be limited to maximum 256 queues.
   Also compile time flag ``RTE_ETHDEV_QUEUE_STAT_CNTRS`` will be removed.
-
-* ethdev: The offload flag ``PKT_RX_EIP_CKSUM_BAD`` will be removed and
-  replaced by the new flag ``PKT_RX_OUTER_IP_CKSUM_BAD``. The new name is more
-  consistent with existing outer header checksum status flag naming, which
-  should help in reducing confusion about its usage.
 
 * i40e: As there are both i40evf and iavf pmd, the functions of them are
   duplicated. And now more and more advanced features are developed on iavf.
