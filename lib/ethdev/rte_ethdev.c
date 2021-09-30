@@ -6311,6 +6311,28 @@ rte_eth_representor_info_get(uint16_t port_id,
 	return eth_err(port_id, (*dev->dev_ops->representor_info_get)(dev, info));
 }
 
+uint16_t
+rte_eth_shared_rxq_aggregate(uint16_t port_id, uint32_t group)
+{
+	struct rte_eth_dev *dev;
+	uint64_t offloads;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->shared_rxq_aggregate,
+				UINT16_MAX);
+
+	offloads = dev->data->dev_conf.rxmode.offloads;
+	if ((offloads & RTE_ETH_RX_OFFLOAD_SHARED_RXQ) == 0) {
+		RTE_ETHDEV_LOG(ERR, "port_id=%u doesn't support Rx offload\n",
+			       port_id);
+		return UINT16_MAX;
+	}
+
+	return (*dev->dev_ops->shared_rxq_aggregate)(dev, group);
+}
+
 RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO);
 
 RTE_INIT(ethdev_init_telemetry)

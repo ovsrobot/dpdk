@@ -781,9 +781,27 @@ typedef int (*eth_get_monitor_addr_t)(void *rxq,
  * @return
  *   Negative errno value on error, number of info entries otherwise.
  */
-
 typedef int (*eth_representor_info_get_t)(struct rte_eth_dev *dev,
 	struct rte_eth_representor_info *info);
+
+/**
+ * @internal
+ * Aggregate shared Rx queue.
+ *
+ * Create a new port used for shared Rx queue polling.
+ *
+ * Only queues with specified share group are aggregated.
+ * At least Rx burst and device close should be supported.
+ *
+ * @param dev
+ *   Ethdev handle of port.
+ * @param group
+ *   Shared Rx queue group to aggregate.
+ * @return
+ *   UINT16_MAX if failed, otherwise aggregated port number.
+ */
+typedef uint16_t (*eth_shared_rxq_aggregate_t)(struct rte_eth_dev *dev,
+					       uint32_t group);
 
 /**
  * @internal A structure containing the functions exported by an Ethernet driver.
@@ -945,6 +963,9 @@ struct eth_dev_ops {
 
 	eth_representor_info_get_t representor_info_get;
 	/**< Get representor info. */
+
+	eth_shared_rxq_aggregate_t shared_rxq_aggregate;
+	/**< Aggregate shared Rx queue. */
 };
 
 /**
