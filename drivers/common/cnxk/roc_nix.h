@@ -6,6 +6,8 @@
 #define _ROC_NIX_H_
 
 /* Constants */
+#define ROC_NIX_BPF_LEVEL_IDX_INVALID 0xFF
+
 enum roc_nix_rss_reta_sz {
 	ROC_NIX_RSS_RETA_SZ_64 = 64,
 	ROC_NIX_RSS_RETA_SZ_128 = 128,
@@ -27,6 +29,12 @@ enum roc_nix_fc_mode {
 enum roc_nix_vlan_type {
 	ROC_NIX_VLAN_TYPE_INNER = 0x01,
 	ROC_NIX_VLAN_TYPE_OUTER = 0x02,
+};
+
+enum roc_nix_bpf_level_flag {
+	ROC_NIX_BPF_LEVEL_F_LEAF = BIT(0),
+	ROC_NIX_BPF_LEVEL_F_MID = BIT(1),
+	ROC_NIX_BPF_LEVEL_F_TOP = BIT(2),
 };
 
 struct roc_nix_vlan_config {
@@ -468,6 +476,9 @@ int __roc_api roc_nix_tm_rsrc_count(struct roc_nix *roc_nix,
 int __roc_api roc_nix_tm_node_name_get(struct roc_nix *roc_nix,
 				       uint32_t node_id, char *buf,
 				       size_t buflen);
+/* Ingress Policer API */
+uint8_t __roc_api
+roc_nix_bpf_level_to_idx(enum roc_nix_bpf_level_flag lvl_flag);
 
 /* MAC */
 int __roc_api roc_nix_mac_rxtx_start_stop(struct roc_nix *roc_nix, bool start);
