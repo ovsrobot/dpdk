@@ -1985,7 +1985,7 @@ i40e_dev_rx_queue_setup(struct rte_eth_dev *dev,
 
 	/* Free memory if needed */
 	if (dev->data->rx_queues[queue_idx]) {
-		i40e_dev_rx_queue_release(dev->data->rx_queues[queue_idx]);
+		i40e_rx_queue_release(dev->data->rx_queues[queue_idx]);
 		dev->data->rx_queues[queue_idx] = NULL;
 	}
 
@@ -2029,7 +2029,7 @@ i40e_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	rz = rte_eth_dma_zone_reserve(dev, "rx_ring", queue_idx,
 			      ring_size, I40E_RING_BASE_ALIGN, socket_id);
 	if (!rz) {
-		i40e_dev_rx_queue_release(rxq);
+		i40e_rx_queue_release(rxq);
 		PMD_DRV_LOG(ERR, "Failed to reserve DMA memory for RX");
 		return -ENOMEM;
 	}
@@ -2049,7 +2049,7 @@ i40e_dev_rx_queue_setup(struct rte_eth_dev *dev,
 				   RTE_CACHE_LINE_SIZE,
 				   socket_id);
 	if (!rxq->sw_ring) {
-		i40e_dev_rx_queue_release(rxq);
+		i40e_rx_queue_release(rxq);
 		PMD_DRV_LOG(ERR, "Failed to allocate memory for SW ring");
 		return -ENOMEM;
 	}
@@ -2072,7 +2072,7 @@ i40e_dev_rx_queue_setup(struct rte_eth_dev *dev,
 
 	if (dev->data->dev_started) {
 		if (i40e_dev_rx_queue_setup_runtime(dev, rxq)) {
-			i40e_dev_rx_queue_release(rxq);
+			i40e_rx_queue_release(rxq);
 			return -EINVAL;
 		}
 	} else {
@@ -2102,7 +2102,19 @@ i40e_dev_rx_queue_setup(struct rte_eth_dev *dev,
 }
 
 void
-i40e_dev_rx_queue_release(void *rxq)
+i40e_dev_rx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
+{
+	i40e_rx_queue_release(dev->data->rx_queues[qid]);
+}
+
+void
+i40e_dev_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
+{
+	i40e_tx_queue_release(dev->data->tx_queues[qid]);
+}
+
+void
+i40e_rx_queue_release(void *rxq)
 {
 	struct i40e_rx_queue *q = (struct i40e_rx_queue *)rxq;
 
@@ -2407,7 +2419,7 @@ i40e_dev_tx_queue_setup(struct rte_eth_dev *dev,
 
 	/* Free memory if needed. */
 	if (dev->data->tx_queues[queue_idx]) {
-		i40e_dev_tx_queue_release(dev->data->tx_queues[queue_idx]);
+		i40e_tx_queue_release(dev->data->tx_queues[queue_idx]);
 		dev->data->tx_queues[queue_idx] = NULL;
 	}
 
@@ -2428,7 +2440,7 @@ i40e_dev_tx_queue_setup(struct rte_eth_dev *dev,
 	tz = rte_eth_dma_zone_reserve(dev, "tx_ring", queue_idx,
 			      ring_size, I40E_RING_BASE_ALIGN, socket_id);
 	if (!tz) {
-		i40e_dev_tx_queue_release(txq);
+		i40e_tx_queue_release(txq);
 		PMD_DRV_LOG(ERR, "Failed to reserve DMA memory for TX");
 		return -ENOMEM;
 	}
@@ -2456,7 +2468,7 @@ i40e_dev_tx_queue_setup(struct rte_eth_dev *dev,
 				   RTE_CACHE_LINE_SIZE,
 				   socket_id);
 	if (!txq->sw_ring) {
-		i40e_dev_tx_queue_release(txq);
+		i40e_tx_queue_release(txq);
 		PMD_DRV_LOG(ERR, "Failed to allocate memory for SW TX ring");
 		return -ENOMEM;
 	}
@@ -2479,7 +2491,7 @@ i40e_dev_tx_queue_setup(struct rte_eth_dev *dev,
 
 	if (dev->data->dev_started) {
 		if (i40e_dev_tx_queue_setup_runtime(dev, txq)) {
-			i40e_dev_tx_queue_release(txq);
+			i40e_tx_queue_release(txq);
 			return -EINVAL;
 		}
 	} else {
@@ -2495,7 +2507,7 @@ i40e_dev_tx_queue_setup(struct rte_eth_dev *dev,
 }
 
 void
-i40e_dev_tx_queue_release(void *txq)
+i40e_tx_queue_release(void *txq)
 {
 	struct i40e_tx_queue *q = (struct i40e_tx_queue *)txq;
 
@@ -3060,7 +3072,7 @@ i40e_dev_free_queues(struct rte_eth_dev *dev)
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		if (!dev->data->rx_queues[i])
 			continue;
-		i40e_dev_rx_queue_release(dev->data->rx_queues[i]);
+		i40e_rx_queue_release(dev->data->rx_queues[i]);
 		dev->data->rx_queues[i] = NULL;
 		rte_eth_dma_zone_free(dev, "rx_ring", i);
 	}
@@ -3068,7 +3080,7 @@ i40e_dev_free_queues(struct rte_eth_dev *dev)
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		if (!dev->data->tx_queues[i])
 			continue;
-		i40e_dev_tx_queue_release(dev->data->tx_queues[i]);
+		i40e_tx_queue_release(dev->data->tx_queues[i]);
 		dev->data->tx_queues[i] = NULL;
 		rte_eth_dma_zone_free(dev, "tx_ring", i);
 	}
@@ -3108,7 +3120,7 @@ i40e_fdir_setup_tx_resources(struct i40e_pf *pf)
 				      I40E_FDIR_QUEUE_ID, ring_size,
 				      I40E_RING_BASE_ALIGN, SOCKET_ID_ANY);
 	if (!tz) {
-		i40e_dev_tx_queue_release(txq);
+		i40e_tx_queue_release(txq);
 		PMD_DRV_LOG(ERR, "Failed to reserve DMA memory for TX.");
 		return I40E_ERR_NO_MEMORY;
 	}
@@ -3166,7 +3178,7 @@ i40e_fdir_setup_rx_resources(struct i40e_pf *pf)
 				      I40E_FDIR_QUEUE_ID, ring_size,
 				      I40E_RING_BASE_ALIGN, SOCKET_ID_ANY);
 	if (!rz) {
-		i40e_dev_rx_queue_release(rxq);
+		i40e_rx_queue_release(rxq);
 		PMD_DRV_LOG(ERR, "Failed to reserve DMA memory for RX.");
 		return I40E_ERR_NO_MEMORY;
 	}

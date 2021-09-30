@@ -109,9 +109,9 @@ hns3_tx_queue_release(void *queue)
 }
 
 void
-hns3_dev_rx_queue_release(void *queue)
+hns3_dev_rx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
 {
-	struct hns3_rx_queue *rxq = queue;
+	struct hns3_rx_queue *rxq = dev->data->rx_queues[qid];
 	struct hns3_adapter *hns;
 
 	if (rxq == NULL)
@@ -119,14 +119,14 @@ hns3_dev_rx_queue_release(void *queue)
 
 	hns = rxq->hns;
 	rte_spinlock_lock(&hns->hw.lock);
-	hns3_rx_queue_release(queue);
+	hns3_rx_queue_release(rxq);
 	rte_spinlock_unlock(&hns->hw.lock);
 }
 
 void
-hns3_dev_tx_queue_release(void *queue)
+hns3_dev_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
 {
-	struct hns3_tx_queue *txq = queue;
+	struct hns3_tx_queue *txq = dev->data->tx_queues[qid];
 	struct hns3_adapter *hns;
 
 	if (txq == NULL)
@@ -134,7 +134,7 @@ hns3_dev_tx_queue_release(void *queue)
 
 	hns = txq->hns;
 	rte_spinlock_lock(&hns->hw.lock);
-	hns3_tx_queue_release(queue);
+	hns3_tx_queue_release(txq);
 	rte_spinlock_unlock(&hns->hw.lock);
 }
 
@@ -1536,7 +1536,7 @@ hns3_fake_rx_queue_config(struct hns3_hw *hw, uint16_t nb_queues)
 		/* re-configure */
 		rxq = hw->fkq_data.rx_queues;
 		for (i = nb_queues; i < old_nb_queues; i++)
-			hns3_dev_rx_queue_release(rxq[i]);
+			hns3_dev_rx_queue_release(HNS3_DEV(hw), i);
 
 		rxq = rte_realloc(rxq, sizeof(rxq[0]) * nb_queues,
 				  RTE_CACHE_LINE_SIZE);
@@ -1549,9 +1549,8 @@ hns3_fake_rx_queue_config(struct hns3_hw *hw, uint16_t nb_queues)
 
 		hw->fkq_data.rx_queues = rxq;
 	} else if (hw->fkq_data.rx_queues != NULL && nb_queues == 0) {
-		rxq = hw->fkq_data.rx_queues;
 		for (i = nb_queues; i < old_nb_queues; i++)
-			hns3_dev_rx_queue_release(rxq[i]);
+			hns3_dev_rx_queue_release(HNS3_DEV(hw), i);
 
 		rte_free(hw->fkq_data.rx_queues);
 		hw->fkq_data.rx_queues = NULL;
@@ -1583,7 +1582,7 @@ hns3_fake_tx_queue_config(struct hns3_hw *hw, uint16_t nb_queues)
 		/* re-configure */
 		txq = hw->fkq_data.tx_queues;
 		for (i = nb_queues; i < old_nb_queues; i++)
-			hns3_dev_tx_queue_release(txq[i]);
+			hns3_dev_tx_queue_release(HNS3_DEV(hw), i);
 		txq = rte_realloc(txq, sizeof(txq[0]) * nb_queues,
 				  RTE_CACHE_LINE_SIZE);
 		if (txq == NULL)
@@ -1597,7 +1596,7 @@ hns3_fake_tx_queue_config(struct hns3_hw *hw, uint16_t nb_queues)
 	} else if (hw->fkq_data.tx_queues != NULL && nb_queues == 0) {
 		txq = hw->fkq_data.tx_queues;
 		for (i = nb_queues; i < old_nb_queues; i++)
-			hns3_dev_tx_queue_release(txq[i]);
+			hns3_dev_tx_queue_release(HNS3_DEV(hw), i);
 
 		rte_free(hw->fkq_data.tx_queues);
 		hw->fkq_data.tx_queues = NULL;

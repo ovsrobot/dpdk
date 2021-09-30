@@ -104,6 +104,9 @@
 
 #define HNS3_MAX_USER_PRIO		8
 #define HNS3_PG_NUM			4
+
+#define HNS3_DEV(hw) &rte_eth_devices[(hw)->data->port_id]
+
 enum hns3_fc_mode {
 	HNS3_FC_NONE,
 	HNS3_FC_RX_PAUSE,
