@@ -38,4 +38,6 @@ struct cn10k_eth_rxq {
 void cn10k_eth_set_rx_function(struct rte_eth_dev *eth_dev);
 void cn10k_eth_set_tx_function(struct rte_eth_dev *eth_dev);
 
+/* MTR */
+int cn10k_nix_mtr_ops_get(struct rte_eth_dev *dev, void *ops);
 #endif /* __CN10K_ETHDEV_H__ */

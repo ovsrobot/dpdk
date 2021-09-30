@@ -457,6 +457,7 @@ nix_eth_dev_ops_override(void)
 	cnxk_eth_dev_ops.dev_ptypes_set = cn10k_nix_ptypes_set;
 	cnxk_eth_dev_ops.timesync_enable = cn10k_nix_timesync_enable;
 	cnxk_eth_dev_ops.timesync_disable = cn10k_nix_timesync_disable;
+	cnxk_eth_dev_ops.mtr_ops_get = cn10k_nix_mtr_ops_get;
 }
 
 static void
