@@ -71,3 +71,4 @@ Programmer's Guide
     lto
     profile_app
     glossary
+    ASan
