@@ -39,6 +39,15 @@ enum roc_nix_bpf_level_flag {
 	ROC_NIX_BPF_LEVEL_F_TOP = BIT(2),
 };
 
+enum roc_nix_bpf_pc_mode {
+	ROC_NIX_BPF_PC_MODE_VLAN_INNER,
+	ROC_NIX_BPF_PC_MODE_VLAN_OUTER,
+	ROC_NIX_BPF_PC_MODE_DSCP_INNER,
+	ROC_NIX_BPF_PC_MODE_DSCP_OUTER,
+	ROC_NIX_BPF_PC_MODE_GEN_INNER,
+	ROC_NIX_BPF_PC_MODE_GEN_OUTER
+};
+
 enum roc_nix_bpf_color {
 	ROC_NIX_BPF_COLOR_GREEN,
 	ROC_NIX_BPF_COLOR_YELLOW,
@@ -99,6 +108,13 @@ struct roc_nix_bpf_objs {
 	uint16_t level;
 	uint16_t count;
 	uint16_t ids[ROC_NIX_BPF_PER_PFFUNC];
+};
+
+struct roc_nix_bpf_precolor {
+#define ROC_NIX_BPF_PRE_COLOR_MAX 64
+	uint8_t count;
+	enum roc_nix_bpf_pc_mode mode;
+	enum roc_nix_bpf_color color[ROC_NIX_BPF_PRE_COLOR_MAX];
 };
 
 struct roc_nix_vlan_config {
@@ -565,6 +581,10 @@ int __roc_api roc_nix_bpf_ena_dis(struct roc_nix *roc_nix, uint16_t id,
 
 int __roc_api roc_nix_bpf_dump(struct roc_nix *roc_nix, uint16_t id,
 			       enum roc_nix_bpf_level_flag lvl_flag);
+
+int __roc_api roc_nix_bpf_pre_color_tbl_setup(
+	struct roc_nix *roc_nix, uint16_t id,
+	enum roc_nix_bpf_level_flag lvl_flag, struct roc_nix_bpf_precolor *tbl);
 
 uint8_t __roc_api
 roc_nix_bpf_level_to_idx(enum roc_nix_bpf_level_flag lvl_flag);
