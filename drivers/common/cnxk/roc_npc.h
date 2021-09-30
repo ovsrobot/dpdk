@@ -58,7 +58,7 @@ struct roc_npc_flow_item_raw {
 	const uint8_t *pattern; /**< Byte string to look for. */
 };
 
-#define ROC_NPC_MAX_ACTION_COUNT 12
+#define ROC_NPC_MAX_ACTION_COUNT 17
 
 enum roc_npc_action_type {
 	ROC_NPC_ACTION_TYPE_END = (1 << 0),
@@ -77,6 +77,7 @@ enum roc_npc_action_type {
 	ROC_NPC_ACTION_TYPE_VLAN_INSERT = (1 << 13),
 	ROC_NPC_ACTION_TYPE_VLAN_ETHTYPE_INSERT = (1 << 14),
 	ROC_NPC_ACTION_TYPE_VLAN_PCP_INSERT = (1 << 15),
+	ROC_NPC_ACTION_TYPE_METER = (1 << 16),
 };
 
 struct roc_npc_action {
@@ -108,6 +109,10 @@ struct roc_npc_action_of_set_vlan_vid {
 
 struct roc_npc_action_of_set_vlan_pcp {
 	uint8_t vlan_pcp; /**< VLAN priority. */
+};
+
+struct roc_npc_action_meter {
+	uint32_t mtr_id; /**< Meter id to be applied. > */
 };
 
 struct roc_npc_attr {

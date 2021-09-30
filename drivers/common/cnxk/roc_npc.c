@@ -447,6 +447,9 @@ npc_parse_actions(struct npc *npc, const struct roc_npc_attr *attr,
 		case ROC_NPC_ACTION_TYPE_VLAN_PCP_INSERT:
 			req_act |= ROC_NPC_ACTION_TYPE_VLAN_PCP_INSERT;
 			break;
+		case ROC_NPC_ACTION_TYPE_METER:
+			req_act |= ROC_NPC_ACTION_TYPE_METER;
+			break;
 		default:
 			errcode = NPC_ERR_ACTION_NOTSUP;
 			goto err_exit;
