@@ -227,10 +227,6 @@ typedef int (*eth_xstats_get_by_id_t)(struct rte_eth_dev *dev,
  */
 typedef int (*eth_xstats_reset_t)(struct rte_eth_dev *dev);
 
-typedef int (*eth_xstats_get_names_t)(struct rte_eth_dev *dev,
-	struct rte_eth_xstat_name *xstats_names, unsigned int size);
-/**< @internal Get names of extended stats of an Ethernet device. */
-
 /**
  * @internal
  * Get names of extended stats of an Ethernet device.
@@ -238,13 +234,12 @@ typedef int (*eth_xstats_get_names_t)(struct rte_eth_dev *dev,
  * @param dev
  *   ethdev handle of port.
  * @param ids
- *   IDs array to retrieve specific statistics. Can be NULL together
- *   with @p xstats_names to retrieve number of available statistics.
- * @param ids
- *   IDs array to retrieve specific statistics. Must not be NULL.
+ *   IDs array to retrieve specific statistics. Can be NULL to get names
+ *   of all available statistics.
  * @param xstats_names
  *   An rte_eth_xstat_name array of at least *size* elements to
- *   be filled. Must not be NULL.
+ *   be filled. Can be NULL together with @p ids to get number of
+ *   extended statistics.
  * @param size
  *   Element count in @p ids and @p xstats_names.
  *
@@ -253,7 +248,7 @@ typedef int (*eth_xstats_get_names_t)(struct rte_eth_dev *dev,
  *   - A number of available stats if both xstats_names and ids are NULL.
  *   - A negative value on error.
  */
-typedef int (*eth_xstats_get_names_by_id_t)(struct rte_eth_dev *dev,
+typedef int (*eth_xstats_get_names_t)(struct rte_eth_dev *dev,
 	const uint64_t *ids, struct rte_eth_xstat_name *xstats_names,
 	unsigned int size);
 
@@ -940,8 +935,6 @@ struct eth_dev_ops {
 
 	eth_xstats_get_by_id_t     xstats_get_by_id;
 	/**< Get extended device statistic values by ID. */
-	eth_xstats_get_names_by_id_t xstats_get_names_by_id;
-	/**< Get name of extended device statistics by ID. */
 
 	eth_tm_ops_get_t tm_ops_get;
 	/**< Get Traffic Management (TM) operations. */
