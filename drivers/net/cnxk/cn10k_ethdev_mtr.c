@@ -551,6 +551,64 @@ exit:
 	return rc;
 }
 
+static int
+cn10k_nix_mtr_enable(struct rte_eth_dev *eth_dev, uint32_t mtr_id,
+		     struct rte_mtr_error *error)
+{
+	struct cnxk_eth_dev *dev = cnxk_eth_pmd_priv(eth_dev);
+	struct roc_nix *nix = &dev->nix;
+	struct cnxk_meter_node *mtr;
+	struct roc_nix_rq *rq;
+	uint32_t i;
+	int rc = 0;
+
+	mtr = nix_mtr_find(dev, mtr_id);
+	if (mtr == NULL) {
+		return -rte_mtr_error_set(error, ENOENT,
+					  RTE_MTR_ERROR_TYPE_MTR_ID, NULL,
+					  "Meter id is invalid.");
+	}
+
+	if (mtr->level != 0)
+		return 0;
+
+	for (i = 0; i < mtr->rq_num; i++) {
+		rq = &dev->rqs[mtr->rq_id[i]];
+		rc |= roc_nix_bpf_ena_dis(nix, mtr->bpf_id, rq, true);
+	}
+
+	return rc;
+}
+
+static int
+cn10k_nix_mtr_disable(struct rte_eth_dev *eth_dev, uint32_t mtr_id,
+		      struct rte_mtr_error *error)
+{
+	struct cnxk_eth_dev *dev = cnxk_eth_pmd_priv(eth_dev);
+	struct roc_nix *nix = &dev->nix;
+	struct cnxk_meter_node *mtr;
+	struct roc_nix_rq *rq;
+	uint32_t i;
+	int rc = 0;
+
+	mtr = nix_mtr_find(dev, mtr_id);
+	if (mtr == NULL) {
+		return -rte_mtr_error_set(error, ENOENT,
+					  RTE_MTR_ERROR_TYPE_MTR_ID, NULL,
+					  "Meter id is invalid.");
+	}
+
+	if (mtr->level != 0)
+		return 0;
+
+	for (i = 0; i < mtr->rq_num; i++) {
+		rq = &dev->rqs[mtr->rq_id[i]];
+		rc |= roc_nix_bpf_ena_dis(nix, mtr->bpf_id, rq, false);
+	}
+
+	return rc;
+}
+
 const struct rte_mtr_ops nix_mtr_ops = {
 	.capabilities_get = cn10k_nix_mtr_capabilities_get,
 	.meter_profile_add = cn10k_nix_mtr_profile_add,
@@ -560,6 +618,8 @@ const struct rte_mtr_ops nix_mtr_ops = {
 	.meter_policy_delete = cn10k_nix_mtr_policy_delete,
 	.create = cn10k_nix_mtr_create,
 	.destroy = cn10k_nix_mtr_destroy,
+	.meter_enable = cn10k_nix_mtr_enable,
+	.meter_disable = cn10k_nix_mtr_disable,
 };
 
 int
