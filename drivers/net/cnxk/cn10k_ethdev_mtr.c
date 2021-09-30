@@ -8,6 +8,10 @@
 #define NIX_MTR_COUNT_MAX      73 /* 64(leaf) + 8(mid) + 1(top) */
 #define NIX_MTR_COUNT_PER_FLOW 3  /* 1(leaf) + 1(mid) + 1(top) */
 
+static const enum roc_nix_bpf_level_flag lvl_map[] = {ROC_NIX_BPF_LEVEL_F_LEAF,
+						      ROC_NIX_BPF_LEVEL_F_MID,
+						      ROC_NIX_BPF_LEVEL_F_TOP};
+
 static struct rte_mtr_capabilities mtr_capa = {
 	.n_max = NIX_MTR_COUNT_MAX,
 	.n_shared_max = NIX_MTR_COUNT_PER_FLOW,
@@ -470,6 +474,83 @@ cn10k_nix_mtr_create(struct rte_eth_dev *eth_dev, uint32_t mtr_id,
 	return 0;
 }
 
+static int
+cn10k_nix_mtr_destroy(struct rte_eth_dev *eth_dev, uint32_t mtr_id,
+		      struct rte_mtr_error *error)
+{
+	struct cnxk_eth_dev *dev = cnxk_eth_pmd_priv(eth_dev);
+	struct roc_nix_bpf_objs profs = {0};
+	struct cnxk_mtr *fm = &dev->mtr;
+	struct roc_nix *nix = &dev->nix;
+	struct cnxk_meter_node *mtr;
+	int rc = 0;
+
+	mtr = nix_mtr_find(dev, mtr_id);
+	if (mtr == NULL) {
+		return -rte_mtr_error_set(error, ENOENT,
+					  RTE_MTR_ERROR_TYPE_MTR_ID, &mtr_id,
+					  "Meter id is invalid.");
+	}
+
+	if (mtr->ref_cnt) {
+		return -rte_mtr_error_set(error, EADDRINUSE,
+					  RTE_MTR_ERROR_TYPE_MTR_ID, &mtr_id,
+					  "Meter id in use.");
+	}
+
+	switch (lvl_map[mtr->level]) {
+	case ROC_NIX_BPF_LEVEL_F_LEAF:
+		if (mtr->is_next) {
+			rc = roc_nix_bpf_connect(nix, ROC_NIX_BPF_LEVEL_F_LEAF,
+						 mtr_id,
+						 ROC_NIX_BPF_ID_INVALID);
+		}
+		break;
+	case ROC_NIX_BPF_LEVEL_F_MID:
+		while (mtr->prev_cnt) {
+			rc = roc_nix_bpf_connect(nix, ROC_NIX_BPF_LEVEL_F_LEAF,
+						 mtr->prev_id[mtr->prev_cnt],
+						 ROC_NIX_BPF_ID_INVALID);
+			mtr->prev_cnt--;
+		}
+		if (mtr->is_next) {
+			rc = roc_nix_bpf_connect(nix, ROC_NIX_BPF_LEVEL_F_MID,
+						 mtr_id,
+						 ROC_NIX_BPF_ID_INVALID);
+		}
+		break;
+	case ROC_NIX_BPF_LEVEL_F_TOP:
+		while (mtr->prev_cnt) {
+			rc = roc_nix_bpf_connect(nix, ROC_NIX_BPF_LEVEL_F_MID,
+						 mtr->prev_id[mtr->prev_cnt],
+						 ROC_NIX_BPF_ID_INVALID);
+			mtr->prev_cnt--;
+		}
+		break;
+	default:
+		return -rte_mtr_error_set(error, EINVAL,
+					  RTE_MTR_ERROR_TYPE_MTR_ID, NULL,
+					  "Invalid meter level");
+	}
+
+	if (rc)
+		goto exit;
+
+	profs.level = mtr->level;
+	profs.count = 1;
+	profs.ids[0] = mtr->bpf_id;
+	rc = roc_nix_bpf_free(nix, &profs, 1);
+	if (rc)
+		goto exit;
+
+	TAILQ_REMOVE(fm, mtr, next);
+	plt_free(mtr->params.dscp_table);
+	plt_free(mtr);
+
+exit:
+	return rc;
+}
+
 const struct rte_mtr_ops nix_mtr_ops = {
 	.capabilities_get = cn10k_nix_mtr_capabilities_get,
 	.meter_profile_add = cn10k_nix_mtr_profile_add,
@@ -478,6 +559,7 @@ const struct rte_mtr_ops nix_mtr_ops = {
 	.meter_policy_add = cn10k_nix_mtr_policy_add,
 	.meter_policy_delete = cn10k_nix_mtr_policy_delete,
 	.create = cn10k_nix_mtr_create,
+	.destroy = cn10k_nix_mtr_destroy,
 };
 
 int
