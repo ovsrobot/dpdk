@@ -891,7 +891,7 @@ mlx5_flow_get_reg_id(struct rte_eth_dev *dev,
 			return rte_flow_error_set(error, EINVAL,
 						  RTE_FLOW_ERROR_TYPE_ITEM,
 						  NULL, "invalid tag id");
-		if (config->flow_mreg_c[id + start_reg - REG_C_0] == REG_NON)
+		if (priv->sh->flow_mreg_c[id + start_reg - REG_C_0] == REG_NON)
 			return rte_flow_error_set(error, ENOTSUP,
 						  RTE_FLOW_ERROR_TYPE_ITEM,
 						  NULL, "unsupported tag id");
@@ -901,21 +901,21 @@ mlx5_flow_get_reg_id(struct rte_eth_dev *dev,
 		 * If the available index REG_C_y >= REG_C_x, skip the
 		 * color register.
 		 */
-		if (skip_mtr_reg && config->flow_mreg_c
+		if (skip_mtr_reg && priv->sh->flow_mreg_c
 		    [id + start_reg - REG_C_0] >= priv->mtr_color_reg) {
 			if (id >= (uint32_t)(REG_C_7 - start_reg))
 				return rte_flow_error_set(error, EINVAL,
 						       RTE_FLOW_ERROR_TYPE_ITEM,
 							NULL, "invalid tag id");
-			if (config->flow_mreg_c
+			if (priv->sh->flow_mreg_c
 			    [id + 1 + start_reg - REG_C_0] != REG_NON)
-				return config->flow_mreg_c
+				return priv->sh->flow_mreg_c
 					       [id + 1 + start_reg - REG_C_0];
 			return rte_flow_error_set(error, ENOTSUP,
 						  RTE_FLOW_ERROR_TYPE_ITEM,
 						  NULL, "unsupported tag id");
 		}
-		return config->flow_mreg_c[id + start_reg - REG_C_0];
+		return priv->sh->flow_mreg_c[id + start_reg - REG_C_0];
 	}
 	MLX5_ASSERT(false);
 	return rte_flow_error_set(error, EINVAL,
@@ -936,7 +936,6 @@ bool
 mlx5_flow_ext_mreg_supported(struct rte_eth_dev *dev)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
-	struct mlx5_dev_config *config = &priv->config;
 
 	/*
 	 * Having available reg_c can be regarded inclusively as supporting
@@ -946,7 +945,7 @@ mlx5_flow_ext_mreg_supported(struct rte_eth_dev *dev)
 	 * - reg_c's are preserved across different domain (FDB and NIC) on
 	 *   packet loopback by flow lookup miss.
 	 */
-	return config->flow_mreg_c[2] != REG_NON;
+	return priv->sh->flow_mreg_c[2] != REG_NON;
 }
 
 /**
@@ -967,7 +966,7 @@ mlx5_get_lowest_priority(struct rte_eth_dev *dev,
 	struct mlx5_priv *priv = dev->data->dev_private;
 
 	if (!attr->group && !attr->transfer)
-		return priv->config.flow_prio - 2;
+		return priv->sh->flow_max_priority - 2;
 	return MLX5_NON_ROOT_FLOW_MAX_PRIO - 1;
 }
 
@@ -993,7 +992,7 @@ mlx5_get_matcher_priority(struct rte_eth_dev *dev,
 
 	if (!attr->group && !attr->transfer) {
 		if (attr->priority == MLX5_FLOW_LOWEST_PRIO_INDICATOR)
-			priority = priv->config.flow_prio - 1;
+			priority = priv->sh->flow_max_priority - 1;
 		return mlx5_os_flow_adjust_priority(dev, priority, subpriority);
 	}
 	if (attr->priority == MLX5_FLOW_LOWEST_PRIO_INDICATOR)
@@ -1849,7 +1848,7 @@ mlx5_flow_validate_attributes(struct rte_eth_dev *dev,
 			      struct rte_flow_error *error)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
-	uint32_t priority_max = priv->config.flow_prio - 1;
+	uint32_t priority_max = priv->sh->flow_max_priority - 1;
 
 	if (attributes->group)
 		return rte_flow_error_set(error, ENOTSUP,
@@ -7999,13 +7998,12 @@ int
 mlx5_flow_discover_mreg_c(struct rte_eth_dev *dev)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
-	struct mlx5_dev_config *config = &priv->config;
 	enum modify_reg idx;
 	int n = 0;
 
 	/* reg_c[0] and reg_c[1] are reserved. */
-	config->flow_mreg_c[n++] = REG_C_0;
-	config->flow_mreg_c[n++] = REG_C_1;
+	priv->sh->flow_mreg_c[n++] = REG_C_0;
+	priv->sh->flow_mreg_c[n++] = REG_C_1;
 	/* Discover availability of other reg_c's. */
 	for (idx = REG_C_2; idx <= REG_C_7; ++idx) {
 		struct rte_flow_attr attr = {
@@ -8041,7 +8039,7 @@ mlx5_flow_discover_mreg_c(struct rte_eth_dev *dev)
 		struct rte_flow *flow;
 		struct rte_flow_error error;
 
-		if (!config->dv_flow_en)
+		if (!priv->config.dv_flow_en)
 			break;
 		/* Create internal flow, validation skips copy action. */
 		flow_idx = flow_list_create(dev, MLX5_FLOW_TYPE_GEN, &attr,
@@ -8050,11 +8048,12 @@ mlx5_flow_discover_mreg_c(struct rte_eth_dev *dev)
 				      flow_idx);
 		if (!flow)
 			continue;
-		config->flow_mreg_c[n++] = idx;
+		priv->sh->flow_mreg_c[n++] = idx;
 		flow_list_destroy(dev, MLX5_FLOW_TYPE_GEN, flow_idx);
 	}
 	for (; n < MLX5_MREG_C_NUM; ++n)
-		config->flow_mreg_c[n] = REG_NON;
+		priv->sh->flow_mreg_c[n] = REG_NON;
+	priv->sh->metadata_regc_check_flag = 1;
 	return 0;
 }
 
