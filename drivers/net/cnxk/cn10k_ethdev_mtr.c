@@ -609,6 +609,48 @@ cn10k_nix_mtr_disable(struct rte_eth_dev *eth_dev, uint32_t mtr_id,
 	return rc;
 }
 
+static int
+cn10k_nix_mtr_dscp_table_update(struct rte_eth_dev *eth_dev, uint32_t mtr_id,
+				enum rte_color *dscp_table,
+				struct rte_mtr_error *error)
+{
+	enum roc_nix_bpf_color nix_dscp_tbl[ROC_NIX_BPF_PRE_COLOR_MAX];
+	enum roc_nix_bpf_color color_map[] = {ROC_NIX_BPF_COLOR_GREEN,
+					      ROC_NIX_BPF_COLOR_YELLOW,
+					      ROC_NIX_BPF_COLOR_RED};
+	struct cnxk_eth_dev *dev = cnxk_eth_pmd_priv(eth_dev);
+	uint8_t lvl_flag = ROC_NIX_BPF_LEVEL_F_LEAF;
+	struct roc_nix_bpf_precolor table;
+	struct roc_nix *nix = &dev->nix;
+	int rc, i;
+
+	if (!dscp_table) {
+		for (i = 0; i < ROC_NIX_BPF_PRE_COLOR_MAX; i++)
+			nix_dscp_tbl[i] = ROC_NIX_BPF_COLOR_GREEN;
+	} else {
+		for (i = 0; i < ROC_NIX_BPF_PRE_COLOR_MAX; i++)
+			nix_dscp_tbl[i] = color_map[dscp_table[i]];
+	}
+
+	table.count = ROC_NIX_BPF_PRE_COLOR_MAX;
+	table.mode = ROC_NIX_BPF_PC_MODE_DSCP_OUTER;
+	for (i = 0; i < ROC_NIX_BPF_PRE_COLOR_MAX; i++)
+		table.color[i] = nix_dscp_tbl[i];
+
+	rc = roc_nix_bpf_pre_color_tbl_setup(nix, mtr_id, lvl_flag, &table);
+	if (rc) {
+		rte_mtr_error_set(error, rc, RTE_MTR_ERROR_TYPE_UNSPECIFIED,
+				  NULL, NULL);
+		goto exit;
+	}
+
+	for (i = 0; i < ROC_NIX_BPF_PRE_COLOR_MAX; i++)
+		dev->precolor_tbl[i] = nix_dscp_tbl[i];
+
+exit:
+	return rc;
+}
+
 const struct rte_mtr_ops nix_mtr_ops = {
 	.capabilities_get = cn10k_nix_mtr_capabilities_get,
 	.meter_profile_add = cn10k_nix_mtr_profile_add,
@@ -620,6 +662,7 @@ const struct rte_mtr_ops nix_mtr_ops = {
 	.destroy = cn10k_nix_mtr_destroy,
 	.meter_enable = cn10k_nix_mtr_enable,
 	.meter_disable = cn10k_nix_mtr_disable,
+	.meter_dscp_table_update = cn10k_nix_mtr_dscp_table_update,
 };
 
 int
