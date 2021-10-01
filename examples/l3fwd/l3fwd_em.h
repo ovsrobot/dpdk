@@ -40,7 +40,7 @@ l3fwd_em_handle_ipv4(struct rte_mbuf *m, uint16_t portid,
 
 	/* src addr */
 	rte_ether_addr_copy(&ports_eth_addr[dst_port],
-			&eth_hdr->s_addr);
+			&eth_hdr->src_addr);
 
 	return dst_port;
 }
@@ -68,7 +68,7 @@ l3fwd_em_handle_ipv6(struct rte_mbuf *m, uint16_t portid,
 
 	/* src addr */
 	rte_ether_addr_copy(&ports_eth_addr[dst_port],
-			&eth_hdr->s_addr);
+			&eth_hdr->src_addr);
 
 	return dst_port;
 }

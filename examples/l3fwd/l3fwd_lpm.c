@@ -260,7 +260,7 @@ lpm_process_event_pkt(const struct lcore_conf *lconf, struct rte_mbuf *mbuf)
 
 	/* src addr */
 	rte_ether_addr_copy(&ports_eth_addr[mbuf->port],
-			&eth_hdr->s_addr);
+			&eth_hdr->src_addr);
 #endif
 	return mbuf->port;
 }

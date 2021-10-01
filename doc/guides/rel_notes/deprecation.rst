@@ -172,9 +172,6 @@ Deprecation Notices
   can still be used if users specify the devarg "driver=i40evf". I40evf will
   be deleted in DPDK 21.11.
 
-* net: ``s_addr`` and ``d_addr`` fields of ``rte_ether_hdr`` structure
-  will be renamed in DPDK 21.11 to avoid conflict with Windows Sockets headers.
-
 * net: The structure ``rte_ipv4_hdr`` will have two unions.
   The first union is for existing ``version_ihl`` byte
   and new bitfield for version and IHL.

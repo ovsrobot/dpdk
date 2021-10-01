@@ -30,8 +30,8 @@ do_macswap(struct rte_mbuf *pkts[], uint16_t nb,
 
 		/* Swap dest and src mac addresses. */
 		rte_ether_addr_copy(&eth_hdr->d_addr, &addr);
-		rte_ether_addr_copy(&eth_hdr->s_addr, &eth_hdr->d_addr);
-		rte_ether_addr_copy(&addr, &eth_hdr->s_addr);
+		rte_ether_addr_copy(&eth_hdr->src_addr, &eth_hdr->d_addr);
+		rte_ether_addr_copy(&addr, &eth_hdr->src_addr);
 
 		mbuf_field_set(mb, ol_flags);
 	}
