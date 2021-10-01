@@ -69,6 +69,12 @@ extern struct qat_qp_hw_spec_funcs *qat_qp_hw_spec[];
 #define QAT_GEN4_BUNDLE_NUM             4
 #define QAT_GEN4_QPS_PER_BUNDLE_NUM     1
 
+/* Queue pair setup error codes */
+#define QAT_NOMEM		1
+#define QAT_QP_INVALID_DESC_NO	2
+#define QAT_QP_BUSY		3
+#define QAT_PCI_NO_RESOURCE	4
+
 /**
  * Structure with data needed for creation of queue pair.
  */
@@ -79,15 +85,6 @@ struct qat_qp_hw_data {
 	uint8_t rx_ring_num;
 	uint16_t tx_msg_size;
 	uint16_t rx_msg_size;
-};
-
-/**
- * Structure with data needed for creation of queue pair on gen4.
- */
-struct qat_qp_gen4_data {
-	struct qat_qp_hw_data qat_qp_hw_data;
-	uint8_t reserved;
-	uint8_t valid;
 };
 
 /**
@@ -141,9 +138,6 @@ struct qat_qp {
 	uint16_t min_enq_burst_threshold;
 } __rte_cache_aligned;
 
-extern const struct qat_qp_hw_data qat_gen1_qps[][ADF_MAX_QPS_ON_ANY_SERVICE];
-extern const struct qat_qp_hw_data qat_gen3_qps[][ADF_MAX_QPS_ON_ANY_SERVICE];
-
 uint16_t
 qat_enqueue_op_burst(void *qp, void **ops, uint16_t nb_ops);
 
@@ -163,7 +157,11 @@ qat_qp_setup(struct qat_pci_device *qat_dev,
 
 int
 qat_qps_per_service(struct qat_pci_device *qat_dev,
-			enum qat_service_type service);
+		enum qat_service_type service);
+
+const struct qat_qp_hw_data *
+qat_qp_get_hw_data(struct qat_pci_device *qat_dev,
+		enum qat_service_type service, uint16_t qp_id);
 
 int
 qat_cq_get_fw_version(struct qat_qp *qp);
@@ -173,11 +171,6 @@ int
 qat_comp_process_response(void **op __rte_unused, uint8_t *resp __rte_unused,
 			  void *op_cookie __rte_unused,
 			  uint64_t *dequeue_err_count __rte_unused);
-
-int
-qat_select_valid_queue(struct qat_pci_device *qat_dev, int qp_id,
-			enum qat_service_type service_type);
-
 int
 qat_read_qp_config(struct qat_pci_device *qat_dev);
 
