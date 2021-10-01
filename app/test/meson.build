@@ -194,6 +194,8 @@ test_deps = [
 fast_tests = [
         ['acl_autotest', true],
         ['atomic_autotest', false],
+        ['bpf_autotest', true],
+        ['bpf_convert_autotest', true],
         ['bitops_autotest', true],
         ['byteorder_autotest', true],
         ['cksum_autotest', true],
