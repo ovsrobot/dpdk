@@ -252,6 +252,4 @@ RTE_INIT(qat_dev_gen_gen1_init)
 	qat_qp_hw_spec[QAT_GEN1] = &qat_qp_hw_spec_gen1;
 	qat_dev_hw_spec[QAT_GEN1] = &qat_dev_hw_spec_gen1;
 	qat_gen_config[QAT_GEN1].dev_gen = QAT_GEN1;
-	qat_gen_config[QAT_GEN1].comp_num_im_bufs_required =
-		QAT_NUM_INTERM_BUFS_GEN1;
 }
