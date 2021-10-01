@@ -1175,7 +1175,7 @@ void bnxt_print_link_info(struct rte_eth_dev *eth_dev)
 	struct rte_eth_link *link = &eth_dev->data->dev_link;
 
 	if (link->link_status)
-		PMD_DRV_LOG(INFO, "Port %d Link Up - speed %u Mbps - %s\n",
+		PMD_DRV_LOG(DEBUG, "Port %d Link Up - speed %u Mbps - %s\n",
 			eth_dev->data->port_id,
 			(uint32_t)link->link_speed,
 			(link->link_duplex == ETH_LINK_FULL_DUPLEX) ?
@@ -6026,7 +6026,7 @@ static int bnxt_init_rep_info(struct bnxt *bp)
 		return 0;
 
 	bp->rep_info = rte_zmalloc("bnxt_rep_info",
-				   sizeof(bp->rep_info[0]) * BNXT_MAX_VF_REPS,
+				   sizeof(bp->rep_info[0]) * BNXT_MAX_VF_REPS(bp),
 				   0);
 	if (!bp->rep_info) {
 		PMD_DRV_LOG(ERR, "Failed to alloc memory for rep info\n");
@@ -6068,7 +6068,9 @@ static int bnxt_rep_port_probe(struct rte_pci_device *pci_dev,
 {
 	struct rte_eth_dev *vf_rep_eth_dev;
 	char name[RTE_ETH_NAME_MAX_LEN];
-	struct bnxt *backing_bp;
+	struct bnxt *backing_bp = backing_eth_dev->data->dev_private;
+	uint16_t max_vf_reps = BNXT_MAX_VF_REPS(backing_bp);
+
 	uint16_t num_rep;
 	int i, ret = 0;
 	struct rte_kvargs *kvlist = NULL;
@@ -6081,9 +6083,9 @@ static int bnxt_rep_port_probe(struct rte_pci_device *pci_dev,
 		return -ENOTSUP;
 	}
 	num_rep = eth_da->nb_representor_ports;
-	if (num_rep > BNXT_MAX_VF_REPS) {
+	if (num_rep > max_vf_reps) {
 		PMD_DRV_LOG(ERR, "nb_representor_ports = %d > %d MAX VF REPS\n",
-			    num_rep, BNXT_MAX_VF_REPS);
+			    num_rep, max_vf_reps);
 		return -EINVAL;
 	}
 
@@ -6093,8 +6095,6 @@ static int bnxt_rep_port_probe(struct rte_pci_device *pci_dev,
 			    num_rep, RTE_MAX_ETHPORTS);
 		return -EINVAL;
 	}
-
-	backing_bp = backing_eth_dev->data->dev_private;
 
 	if (!(BNXT_PF(backing_bp) || BNXT_VF_IS_TRUSTED(backing_bp))) {
 		PMD_DRV_LOG(ERR,
@@ -6115,9 +6115,9 @@ static int bnxt_rep_port_probe(struct rte_pci_device *pci_dev,
 			.parent_dev = backing_eth_dev
 		};
 
-		if (representor.vf_id >= BNXT_MAX_VF_REPS) {
+		if (representor.vf_id >= max_vf_reps) {
 			PMD_DRV_LOG(ERR, "VF-Rep id %d >= %d MAX VF ID\n",
-				    representor.vf_id, BNXT_MAX_VF_REPS);
+				    representor.vf_id, max_vf_reps);
 			continue;
 		}
 
