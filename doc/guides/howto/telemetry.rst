@@ -72,6 +72,9 @@ and query information using the telemetry client python script.
      When connecting to a process run with `--in-memory` EAL flag,
      one must specify the PID of the process to connect to using the `-p` flag.
      This is because there may be multiple such instances.
+     If there are only *in-memory* DPDK processes to connect to,
+     and no PID, or an invalid PID parameter, is provided,
+     the telemetry script will list any available telemetry sockets and how to connect to them.
 
 #. When connected, the script displays the following, waiting for user input::
 
