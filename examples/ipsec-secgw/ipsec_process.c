@@ -222,6 +222,8 @@ prep_process_group(void *sa, struct rte_mbuf *mb[], uint32_t cnt)
 	for (j = 0; j != cnt; j++) {
 		priv = get_priv(mb[j]);
 		priv->sa = sa;
+		if (priv->sa->mss)
+			mb[j]->tso_segsz = priv->sa->mss;
 	}
 }
 

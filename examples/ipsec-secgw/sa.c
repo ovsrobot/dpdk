@@ -678,6 +678,16 @@ parse_sa_tokens(char **tokens, uint32_t n_tokens,
 			continue;
 		}
 
+		if (strcmp(tokens[ti], "mss") == 0) {
+			INCREMENT_TOKEN_INDEX(ti, n_tokens, status);
+			if (status->status < 0)
+				return;
+			rule->mss = atoi(tokens[ti]);
+			if (status->status < 0)
+				return;
+			continue;
+		}
+
 		if (strcmp(tokens[ti], "fallback") == 0) {
 			struct rte_ipsec_session *fb;
 
@@ -1326,11 +1336,13 @@ fill_ipsec_sa_prm(struct rte_ipsec_sa_prm *prm, const struct ipsec_sa *ss,
 	if (IS_IP4_TUNNEL(ss->flags)) {
 		prm->ipsec_xform.tunnel.type = RTE_SECURITY_IPSEC_TUNNEL_IPV4;
 		prm->tun.hdr_len = sizeof(*v4);
+		prm->tun.hdr_l3_off = 0;
 		prm->tun.next_proto = rc;
 		prm->tun.hdr = v4;
 	} else if (IS_IP6_TUNNEL(ss->flags)) {
 		prm->ipsec_xform.tunnel.type = RTE_SECURITY_IPSEC_TUNNEL_IPV6;
 		prm->tun.hdr_len = sizeof(*v6);
+		prm->tun.hdr_l3_off = 0;
 		prm->tun.next_proto = rc;
 		prm->tun.hdr = v6;
 	} else {
