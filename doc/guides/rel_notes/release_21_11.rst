@@ -213,6 +213,12 @@ ABI Changes
   ``rte_security_ipsec_xform`` to allow applications to configure SA soft
   and hard expiry limits. Limits can be either in number of packets or bytes.
 
+* ethdev: Input parameters for ``eth_rx_queue_count_t`` was changed.
+  Instead of pointer to ``rte_eth_dev`` and queue index, now it accepts pointer
+  to internal queue data as input parameter. While this change is transparent
+  to user, it still counts as an ABI change, as ``eth_rx_queue_count_t``
+  is used by  public inline function ``rte_eth_rx_queue_count``.
+
 
 Known Issues
 ------------
