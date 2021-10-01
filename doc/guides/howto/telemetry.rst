@@ -67,6 +67,12 @@ and query information using the telemetry client python script.
 
       ./usertools/dpdk-telemetry.py
 
+   .. note::
+
+     When connecting to a process run with `--in-memory` EAL flag,
+     one must specify the PID of the process to connect to using the `-p` flag.
+     This is because there may be multiple such instances.
+
 #. When connected, the script displays the following, waiting for user input::
 
      Connecting to /var/run/dpdk/rte/dpdk_telemetry.v2

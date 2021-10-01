@@ -104,6 +104,11 @@ readline.set_completer_delims(readline.get_completer_delims().replace('/', ''))
 parser = argparse.ArgumentParser()
 parser.add_argument('-f', '--file-prefix', \
         help='Provide file-prefix for DPDK runtime directory', default='rte')
+parser.add_argument('-p', '--pid', \
+        help='Connect to DPDK process with the given pid')
 args = parser.parse_args()
 rdir = get_dpdk_runtime_dir(args.file_prefix)
-handle_socket(os.path.join(rdir, 'dpdk_telemetry.{}'.format(TELEMETRY_VERSION)))
+sock_path = os.path.join(rdir, 'dpdk_telemetry.{}'.format(TELEMETRY_VERSION))
+if args.pid:
+    sock_path += ".{}".format(args.pid)
+handle_socket(sock_path)
