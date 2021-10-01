@@ -247,11 +247,16 @@ EXPERIMENTAL {
 	rte_mtr_meter_policy_delete;
 	rte_mtr_meter_policy_update;
 	rte_mtr_meter_policy_validate;
+
+	# added in 21.05
+	__rte_eth_rx_epilog;
+	__rte_eth_tx_prolog;
 };
 
 INTERNAL {
 	global:
 
+	rte_eth_fp_ops;
 	rte_eth_dev_allocate;
 	rte_eth_dev_allocated;
 	rte_eth_dev_attach_secondary;
