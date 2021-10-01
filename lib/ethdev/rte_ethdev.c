@@ -44,6 +44,9 @@
 static const char *MZ_RTE_ETH_DEV_DATA = "rte_eth_dev_data";
 struct rte_eth_dev rte_eth_devices[RTE_MAX_ETHPORTS];
 
+/* public 'fast' API */
+struct rte_eth_fp_ops rte_eth_fp_ops[RTE_MAX_ETHPORTS];
+
 /* spinlock for eth device callbacks */
 static rte_spinlock_t eth_dev_cb_lock = RTE_SPINLOCK_INITIALIZER;
 
@@ -1788,6 +1791,9 @@ rte_eth_dev_start(uint16_t port_id)
 		(*dev->dev_ops->link_update)(dev, 0);
 	}
 
+	/* expose selection of PMD rx/tx function */
+	eth_dev_fp_ops_setup(rte_eth_fp_ops + port_id, dev);
+
 	rte_ethdev_trace_start(port_id);
 	return 0;
 }
@@ -1809,6 +1815,9 @@ rte_eth_dev_stop(uint16_t port_id)
 			port_id);
 		return 0;
 	}
+
+	/* point rx/tx functions to dummy ones */
+	eth_dev_fp_ops_reset(rte_eth_fp_ops + port_id);
 
 	dev->data->dev_started = 0;
 	ret = (*dev->dev_ops->dev_stop)(dev);
@@ -4566,6 +4575,14 @@ rte_eth_mirror_rule_reset(uint16_t port_id, uint8_t rule_id)
 
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->mirror_rule_reset, -ENOTSUP);
 	return eth_err(port_id, (*dev->dev_ops->mirror_rule_reset)(dev, rule_id));
+}
+
+RTE_INIT(eth_dev_init_fp_ops)
+{
+	uint32_t i;
+
+	for (i = 0; i != RTE_DIM(rte_eth_fp_ops); i++)
+		eth_dev_fp_ops_reset(rte_eth_fp_ops + i);
 }
 
 RTE_INIT(eth_dev_init_cb_lists)
