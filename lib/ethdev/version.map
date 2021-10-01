@@ -251,6 +251,7 @@ EXPERIMENTAL {
 	# added in 21.05
 	__rte_eth_rx_epilog;
 	__rte_eth_tx_prolog;
+	rte_eth_macaddrs_get;
 };
 
 INTERNAL {
