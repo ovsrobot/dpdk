@@ -1058,8 +1058,8 @@ struct hwrm_err_output {
 #define HWRM_VERSION_MINOR 10
 #define HWRM_VERSION_UPDATE 2
 /* non-zero means beta version */
-#define HWRM_VERSION_RSVD 55
-#define HWRM_VERSION_STR "1.10.2.55"
+#define HWRM_VERSION_RSVD 58
+#define HWRM_VERSION_STR "1.10.2.58"
 
 /****************
  * hwrm_ver_get *
@@ -45178,7 +45178,7 @@ struct hwrm_tf_version_get_input {
 	uint64_t	resp_addr;
 } __rte_packed;
 
-/* hwrm_tf_version_get_output (size:128b/16B) */
+/* hwrm_tf_version_get_output (size:256b/32B) */
 struct hwrm_tf_version_get_output {
 	/* The specific error status for the command. */
 	uint16_t	error_code;
@@ -45195,7 +45195,14 @@ struct hwrm_tf_version_get_output {
 	/* Version Update number. */
 	uint8_t	update;
 	/* unused. */
-	uint8_t	unused0[4];
+	uint8_t	unused0[5];
+	/*
+	 * This field is used to indicate device's capabilities and
+	 * configurations.
+	 */
+	uint64_t	dev_caps_cfg;
+	/* unused. */
+	uint8_t	unused1[7];
 	/*
 	 * This field is used in Output records to indicate that the output
 	 * is completely written to RAM. This field should be read as '1'
