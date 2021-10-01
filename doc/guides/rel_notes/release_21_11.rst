@@ -85,6 +85,11 @@ New Features
 
   * Added rte_flow support for dual VLAN insert and strip actions.
 
+* **Updated af_packet ethdev driver.**
+
+  * Default VLAN strip behavior changed.
+    If previously, the VLAN tag was stripped by the kernel, if the application now requires the same behavior, it will need to enable ``DEV_RX_OFFLOAD_VLAN_STRIP``.
+
 * **Updated Marvell cnxk crypto PMD.**
 
   * Added AES-CBC SHA1-HMAC support in lookaside protocol (IPsec) for CN10K.
