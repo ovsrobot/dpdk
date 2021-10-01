@@ -1058,8 +1058,8 @@ struct hwrm_err_output {
 #define HWRM_VERSION_MINOR 10
 #define HWRM_VERSION_UPDATE 2
 /* non-zero means beta version */
-#define HWRM_VERSION_RSVD 54
-#define HWRM_VERSION_STR "1.10.2.54"
+#define HWRM_VERSION_RSVD 55
+#define HWRM_VERSION_STR "1.10.2.55"
 
 /****************
  * hwrm_ver_get *
@@ -46253,13 +46253,22 @@ struct hwrm_tf_tbl_type_get_input {
 	/* Control flags. */
 	uint16_t	flags;
 	/* Indicates the flow direction. */
-	#define HWRM_TF_TBL_TYPE_GET_INPUT_FLAGS_DIR     UINT32_C(0x1)
+	#define HWRM_TF_TBL_TYPE_GET_INPUT_FLAGS_DIR \
+		UINT32_C(0x1)
 	/* If this bit set to 0, then it indicates rx flow. */
-	#define HWRM_TF_TBL_TYPE_GET_INPUT_FLAGS_DIR_RX    UINT32_C(0x0)
+	#define HWRM_TF_TBL_TYPE_GET_INPUT_FLAGS_DIR_RX \
+		UINT32_C(0x0)
 	/* If this bit is set to 1, then it indicates tx flow. */
-	#define HWRM_TF_TBL_TYPE_GET_INPUT_FLAGS_DIR_TX    UINT32_C(0x1)
+	#define HWRM_TF_TBL_TYPE_GET_INPUT_FLAGS_DIR_TX \
+		UINT32_C(0x1)
 	#define HWRM_TF_TBL_TYPE_GET_INPUT_FLAGS_DIR_LAST \
 		HWRM_TF_TBL_TYPE_GET_INPUT_FLAGS_DIR_TX
+	/*
+	 * When set use the special access register access to clear
+	 * the table entry on read.
+	 */
+	#define HWRM_TF_TBL_TYPE_GET_INPUT_FLAGS_CLEAR_ON_READ \
+		UINT32_C(0x2)
 	/* unused. */
 	uint8_t	unused0[2];
 	/*
@@ -48489,13 +48498,22 @@ struct hwrm_tf_tbl_type_bulk_get_input {
 	/* Control flags. */
 	uint16_t	flags;
 	/* Indicates the flow direction. */
-	#define HWRM_TF_TBL_TYPE_BULK_GET_INPUT_FLAGS_DIR     UINT32_C(0x1)
+	#define HWRM_TF_TBL_TYPE_BULK_GET_INPUT_FLAGS_DIR \
+		UINT32_C(0x1)
 	/* If this bit set to 0, then it indicates rx flow. */
-	#define HWRM_TF_TBL_TYPE_BULK_GET_INPUT_FLAGS_DIR_RX    UINT32_C(0x0)
+	#define HWRM_TF_TBL_TYPE_BULK_GET_INPUT_FLAGS_DIR_RX \
+		UINT32_C(0x0)
 	/* If this bit is set to 1, then it indicates tx flow. */
-	#define HWRM_TF_TBL_TYPE_BULK_GET_INPUT_FLAGS_DIR_TX    UINT32_C(0x1)
+	#define HWRM_TF_TBL_TYPE_BULK_GET_INPUT_FLAGS_DIR_TX \
+		UINT32_C(0x1)
 	#define HWRM_TF_TBL_TYPE_BULK_GET_INPUT_FLAGS_DIR_LAST \
 		HWRM_TF_TBL_TYPE_BULK_GET_INPUT_FLAGS_DIR_TX
+	/*
+	 * When set use the special access register access to clear
+	 * the table entries on read.
+	 */
+	#define HWRM_TF_TBL_TYPE_BULK_GET_INPUT_FLAGS_CLEAR_ON_READ \
+		UINT32_C(0x2)
 	/* unused. */
 	uint8_t	unused0[2];
 	/*
