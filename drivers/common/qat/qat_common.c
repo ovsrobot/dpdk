@@ -6,6 +6,14 @@
 #include "qat_device.h"
 #include "qat_logs.h"
 
+/* Keep it the same ordering as enum qat_service_type */
+const char *qat_service_type_str[] = {
+	"asym",
+	"sym",
+	"comp",
+	"invalid"
+};
+
 int
 qat_sgl_fill_array(struct rte_mbuf *buf, int64_t offset,
 		void *list_in, uint32_t data_len,
