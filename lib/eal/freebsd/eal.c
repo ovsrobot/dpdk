@@ -952,6 +952,7 @@ rte_eal_init(int argc, char **argv)
 		if (tlog < 0)
 			tlog = RTE_LOGTYPE_EAL;
 		if (rte_telemetry_init(rte_eal_get_runtime_dir(),
+				internal_conf->in_memory | internal_conf->no_shconf,
 				rte_version(),
 				&internal_conf->ctrl_cpuset, rte_log, tlog) != 0)
 			return -1;
