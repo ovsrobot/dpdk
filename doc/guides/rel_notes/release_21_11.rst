@@ -178,6 +178,10 @@ API Changes
   the crypto/security operation. This field will be used to communicate
   events such as soft expiry with IPsec in lookaside mode.
 
+* ethdev: ``rte_flow_action_modify_data`` structure udpdated, immediate data
+  array is extended, data pointer field is explicitly added to union, the
+  action behavior is defined in more strict fashion and documentation uddated.
+
 
 ABI Changes
 -----------
@@ -212,6 +216,9 @@ ABI Changes
   replace ``esn_soft_limit`` in IPsec configuration structure
   ``rte_security_ipsec_xform`` to allow applications to configure SA soft
   and hard expiry limits. Limits can be either in number of packets or bytes.
+
+
+* ethdev: ``rte_flow_action_modify_data`` structure udpdated.
 
 
 Known Issues

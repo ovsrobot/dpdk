@@ -2835,6 +2835,14 @@ a packet to any other part of it.
 ``value`` sets an immediate value to be used as a source or points to a
 location of the value in memory. It is used instead of ``level`` and ``offset``
 for ``RTE_FLOW_FIELD_VALUE`` and ``RTE_FLOW_FIELD_POINTER`` respectively.
+The data in memory should be presented exactly in the same byte order and
+length as in the relevant flow item, i.e. data for field with type
+RTE_FLOW_FIELD_MAC_DST should follow the conventions of dst field
+in rte_flow_item_eth structure, with type RTE_FLOW_FIELD_IPV6_SRC -
+rte_flow_item_ipv6 conventions, and so on. The bitfield exatracted from the
+memory being applied as second operation parameter is defined by width and
+the destination field offset. If the field size is large than 16 bytes the
+pattern can be provided as pointer only.
 
 .. _table_rte_flow_action_modify_field:
 
