@@ -327,9 +327,6 @@ uint32_t
 fm10k_dev_rx_queue_count(void *rx_queue);
 
 int
-fm10k_dev_rx_descriptor_done(void *rx_queue, uint16_t offset);
-
-int
 fm10k_dev_rx_descriptor_status(void *rx_queue, uint16_t offset);
 
 int

@@ -401,8 +401,6 @@ int eth_igb_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 
 uint32_t eth_igb_rx_queue_count(void *rx_queue);
 
-int eth_igb_rx_descriptor_done(void *rx_queue, uint16_t offset);
-
 int eth_igb_rx_descriptor_status(void *rx_queue, uint16_t offset);
 int eth_igb_tx_descriptor_status(void *tx_queue, uint16_t offset);
 
@@ -476,8 +474,6 @@ int eth_em_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 		struct rte_mempool *mb_pool);
 
 uint32_t eth_em_rx_queue_count(void *rx_queue);
-
-int eth_em_rx_descriptor_done(void *rx_queue, uint16_t offset);
 
 int eth_em_rx_descriptor_status(void *rx_queue, uint16_t offset);
 int eth_em_tx_descriptor_status(void *tx_queue, uint16_t offset);

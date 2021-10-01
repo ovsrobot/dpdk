@@ -106,11 +106,6 @@ Deprecation Notices
   the device packet overhead can be calculated as:
   ``(struct rte_eth_dev_info).max_rx_pktlen - (struct rte_eth_dev_info).max_mtu``
 
-* ethdev: ``rx_descriptor_done`` dev_ops and ``rte_eth_rx_descriptor_done``
-  will be removed in 21.11.
-  Existing ``rte_eth_rx_descriptor_status`` and ``rte_eth_tx_descriptor_status``
-  APIs can be used as replacement.
-
 * ethdev: The port mirroring API can be replaced with a more fine grain flow API.
   The structs ``rte_eth_mirror_conf``, ``rte_eth_vlan_mirror`` and the functions
   ``rte_eth_mirror_rule_set``, ``rte_eth_mirror_rule_reset`` will be marked

@@ -150,6 +150,10 @@ Removed Items
   blacklist/whitelist are removed. Users must use the new
   block/allow list arguments.
 
+* ethdev: Removed ``rx_descriptor_done`` dev_ops and
+  ``rte_eth_rx_descriptor_done``.  Existing ``rte_eth_rx_descriptor_status``
+  APIs can be used as a replacement.
+
 
 API Changes
 -----------
