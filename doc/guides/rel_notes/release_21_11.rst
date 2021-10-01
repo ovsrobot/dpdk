@@ -178,6 +178,10 @@ API Changes
   the crypto/security operation. This field will be used to communicate
   events such as soft expiry with IPsec in lookaside mode.
 
+* common/qat: QAT PMD is refactored to divide generation specific control
+  path code into dedicated files. This change also applies qat compression,
+  qat symmetric crypto, and qat asymmetric crypto.
+
 
 ABI Changes
 -----------
