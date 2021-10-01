@@ -898,7 +898,8 @@ eth_dev_rx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues)
 
 	if (dev->data->rx_queues == NULL && nb_queues != 0) { /* first time configuration */
 		dev->data->rx_queues = rte_zmalloc("ethdev->rx_queues",
-				sizeof(dev->data->rx_queues[0]) * nb_queues,
+				sizeof(dev->data->rx_queues[0]) *
+				RTE_MAX_QUEUES_PER_PORT,
 				RTE_CACHE_LINE_SIZE);
 		if (dev->data->rx_queues == NULL) {
 			dev->data->nb_rx_queues = 0;
@@ -909,20 +910,10 @@ eth_dev_rx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues)
 
 		rxq = dev->data->rx_queues;
 
-		for (i = nb_queues; i < old_nb_queues; i++)
+		for (i = nb_queues; i < old_nb_queues; i++) {
 			(*dev->dev_ops->rx_queue_release)(rxq[i]);
-		rxq = rte_realloc(rxq, sizeof(rxq[0]) * nb_queues,
-				RTE_CACHE_LINE_SIZE);
-		if (rxq == NULL)
-			return -(ENOMEM);
-		if (nb_queues > old_nb_queues) {
-			uint16_t new_qs = nb_queues - old_nb_queues;
-
-			memset(rxq + old_nb_queues, 0,
-				sizeof(rxq[0]) * new_qs);
+			rxq[i] = NULL;
 		}
-
-		dev->data->rx_queues = rxq;
 
 	} else if (dev->data->rx_queues != NULL && nb_queues == 0) {
 		RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->rx_queue_release, -ENOTSUP);
@@ -1138,8 +1129,9 @@ eth_dev_tx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues)
 
 	if (dev->data->tx_queues == NULL && nb_queues != 0) { /* first time configuration */
 		dev->data->tx_queues = rte_zmalloc("ethdev->tx_queues",
-						   sizeof(dev->data->tx_queues[0]) * nb_queues,
-						   RTE_CACHE_LINE_SIZE);
+				sizeof(dev->data->tx_queues[0]) *
+				RTE_MAX_QUEUES_PER_PORT,
+				RTE_CACHE_LINE_SIZE);
 		if (dev->data->tx_queues == NULL) {
 			dev->data->nb_tx_queues = 0;
 			return -(ENOMEM);
@@ -1149,20 +1141,10 @@ eth_dev_tx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues)
 
 		txq = dev->data->tx_queues;
 
-		for (i = nb_queues; i < old_nb_queues; i++)
+		for (i = nb_queues; i < old_nb_queues; i++) {
 			(*dev->dev_ops->tx_queue_release)(txq[i]);
-		txq = rte_realloc(txq, sizeof(txq[0]) * nb_queues,
-				  RTE_CACHE_LINE_SIZE);
-		if (txq == NULL)
-			return -ENOMEM;
-		if (nb_queues > old_nb_queues) {
-			uint16_t new_qs = nb_queues - old_nb_queues;
-
-			memset(txq + old_nb_queues, 0,
-			       sizeof(txq[0]) * new_qs);
+			txq[i] = NULL;
 		}
-
-		dev->data->tx_queues = txq;
 
 	} else if (dev->data->tx_queues != NULL && nb_queues == 0) {
 		RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->tx_queue_release, -ENOTSUP);
