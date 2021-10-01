@@ -131,6 +131,11 @@ struct rte_security_ipsec_tunnel_param {
 	};
 };
 
+struct rte_security_ipsec_udp_param {
+	uint16_t sport;
+	uint16_t dport;
+};
+
 /**
  * IPsec Security Association option flags
  */
@@ -291,6 +296,8 @@ struct rte_security_ipsec_xform {
 		};
 	} esn;
 	/**< Extended Sequence Number */
+	struct rte_security_ipsec_udp_param udp;
+	/**< UDP parameters, ignored when udp_encap option not specified */
 };
 
 /**
