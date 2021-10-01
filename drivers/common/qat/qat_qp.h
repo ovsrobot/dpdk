@@ -8,6 +8,51 @@
 #include "adf_transport_access_macros.h"
 
 struct qat_pci_device;
+struct qat_qp_hw_data;
+struct qat_queue;
+struct qat_qp;
+
+/**
+ * Function prototypes for GENx specific queue pair operations.
+ **/
+typedef int (*qat_qp_rings_per_service_t)
+		(struct qat_pci_device *, enum qat_service_type);
+
+typedef void (*qat_qp_build_ring_base_t)(void *, struct qat_queue *);
+
+typedef void (*qat_qp_adf_arb_enable_t)(const struct qat_queue *, void *,
+		rte_spinlock_t *);
+
+typedef void (*qat_qp_adf_arb_disable_t)(const struct qat_queue *, void *,
+		rte_spinlock_t *);
+
+typedef void (*qat_qp_adf_configure_queues_t)(struct qat_qp *);
+
+typedef void (*qat_qp_csr_write_tail_t)(struct qat_qp *qp, struct qat_queue *q);
+
+typedef void (*qat_qp_csr_write_head_t)(struct qat_qp *qp, struct qat_queue *q,
+		uint32_t new_head);
+
+typedef void (*qat_qp_csr_setup_t)(struct qat_pci_device*, void *,
+		struct qat_qp *);
+
+typedef const struct qat_qp_hw_data * (*qat_qp_get_hw_data_t)(
+		struct qat_pci_device *dev, enum qat_service_type service_type,
+		uint16_t qp_id);
+
+struct qat_qp_hw_spec_funcs {
+	qat_qp_rings_per_service_t	qat_qp_rings_per_service;
+	qat_qp_build_ring_base_t	qat_qp_build_ring_base;
+	qat_qp_adf_arb_enable_t		qat_qp_adf_arb_enable;
+	qat_qp_adf_arb_disable_t	qat_qp_adf_arb_disable;
+	qat_qp_adf_configure_queues_t	qat_qp_adf_configure_queues;
+	qat_qp_csr_write_tail_t		qat_qp_csr_write_tail;
+	qat_qp_csr_write_head_t		qat_qp_csr_write_head;
+	qat_qp_csr_setup_t		qat_qp_csr_setup;
+	qat_qp_get_hw_data_t		qat_qp_get_hw_data;
+};
+
+extern struct qat_qp_hw_spec_funcs *qat_qp_hw_spec[];
 
 #define QAT_CSR_HEAD_WRITE_THRESH 32U
 /* number of requests to accumulate before writing head CSR */
