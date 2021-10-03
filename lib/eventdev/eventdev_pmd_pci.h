@@ -67,8 +67,11 @@ rte_event_pmd_pci_probe_named(struct rte_pci_driver *pci_drv,
 
 	/* Invoke PMD device initialization function */
 	retval = devinit(eventdev);
-	if (retval == 0)
+	if (retval == 0) {
+		event_dev_fp_ops_set(rte_event_fp_ops + eventdev->data->dev_id,
+				     eventdev);
 		return 0;
+	}
 
 	RTE_EDEV_LOG_ERR("driver %s: (vendor_id=0x%x device_id=0x%x)"
 			" failed", pci_drv->driver.name,
