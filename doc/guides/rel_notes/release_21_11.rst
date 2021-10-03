@@ -125,6 +125,12 @@ New Features
   * Added tests to validate packets hard expiry.
   * Added tests to verify tunnel header verification in IPsec inbound.
 
+* **Increase number of routes configured in l3fwd lpm, em and fib lookups.**
+
+  * Increase number of routes from 8 to 16 for all lookup modes of l3fwd, this
+    helps in validating SoC with more than 8 ethernet devices using l3fwd.
+  * Update EM mode to use RFC2544 reserved IP address space.
+
 
 Removed Items
 -------------
