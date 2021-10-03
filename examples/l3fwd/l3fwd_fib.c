@@ -439,6 +439,7 @@ setup_fib(const int socketid)
 
 	/* Populate the fib ipv4 table. */
 	for (i = 0; i < RTE_DIM(ipv4_l3fwd_route_array); i++) {
+		struct rte_eth_dev_info dev_info;
 		struct in_addr in;
 
 		/* Skip unused ports. */
@@ -446,6 +447,8 @@ setup_fib(const int socketid)
 				enabled_port_mask) == 0)
 			continue;
 
+		rte_eth_dev_info_get(ipv4_l3fwd_route_array[i].if_out,
+				     &dev_info);
 		ret = rte_fib_add(ipv4_l3fwd_fib_lookup_struct[socketid],
 			ipv4_l3fwd_route_array[i].ip,
 			ipv4_l3fwd_route_array[i].depth,
@@ -459,13 +462,14 @@ setup_fib(const int socketid)
 
 		in.s_addr = htonl(ipv4_l3fwd_route_array[i].ip);
 		if (inet_ntop(AF_INET, &in, abuf, sizeof(abuf)) != NULL) {
-			printf("FIB: Adding route %s / %d (%d)\n",
-				abuf,
-				ipv4_l3fwd_route_array[i].depth,
-				ipv4_l3fwd_route_array[i].if_out);
+			printf("FIB: Adding route %s / %d (%d) [%s]\n", abuf,
+			       ipv4_l3fwd_route_array[i].depth,
+			       ipv4_l3fwd_route_array[i].if_out,
+			       dev_info.device->name);
 		} else {
-			printf("FIB: IPv4 route added to port %d\n",
-				ipv4_l3fwd_route_array[i].if_out);
+			printf("FIB: IPv4 route added to port %d [%s]\n",
+			       ipv4_l3fwd_route_array[i].if_out,
+			       dev_info.device->name);
 		}
 	}
 	/* >8 End of setup fib. */

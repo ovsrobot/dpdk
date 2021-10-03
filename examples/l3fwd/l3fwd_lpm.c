@@ -451,6 +451,7 @@ setup_lpm(const int socketid)
 
 	/* populate the LPM table */
 	for (i = 0; i < RTE_DIM(ipv4_l3fwd_route_array); i++) {
+		struct rte_eth_dev_info dev_info;
 		struct in_addr in;
 
 		/* skip unused ports */
@@ -458,6 +459,8 @@ setup_lpm(const int socketid)
 				enabled_port_mask) == 0)
 			continue;
 
+		rte_eth_dev_info_get(ipv4_l3fwd_route_array[i].if_out,
+				     &dev_info);
 		ret = rte_lpm_add(ipv4_l3fwd_lpm_lookup_struct[socketid],
 			ipv4_l3fwd_route_array[i].ip,
 			ipv4_l3fwd_route_array[i].depth,
@@ -470,10 +473,10 @@ setup_lpm(const int socketid)
 		}
 
 		in.s_addr = htonl(ipv4_l3fwd_route_array[i].ip);
-		printf("LPM: Adding route %s / %d (%d)\n",
+		printf("LPM: Adding route %s / %d (%d) [%s]\n",
 		       inet_ntop(AF_INET, &in, abuf, sizeof(abuf)),
-			ipv4_l3fwd_route_array[i].depth,
-			ipv4_l3fwd_route_array[i].if_out);
+		       ipv4_l3fwd_route_array[i].depth,
+		       ipv4_l3fwd_route_array[i].if_out, dev_info.device->name);
 	}
 
 	/* create the LPM6 table */
