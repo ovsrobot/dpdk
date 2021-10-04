@@ -16,10 +16,18 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include <rte_config.h>
-#include <rte_cpuflags.h>
+
 #include <rte_branch_prediction.h>
 #include <rte_common.h>
+#include <rte_config.h>
+#include <rte_cpuflags.h>
+#include <rte_log.h>
+
+#if defined(RTE_ARCH_ARM64) && defined(__ARM_FEATURE_CRC32)
+#include "hash_crc_arm64.h"
+#elif defined(RTE_ARCH_X86)
+#include "hash_crc_x86.h"
+#endif
 
 #include <hash_crc_sw.h>
 
@@ -31,37 +39,64 @@ extern "C" {
 
 static uint8_t crc32_alg = CRC32_SW;
 
-#if defined(RTE_ARCH_ARM64) && defined(__ARM_FEATURE_CRC32)
-#include "rte_crc_arm64.h"
-#else
-#include "hash_crc_x86.h"
-
 /**
- * Allow or disallow use of SSE4.2 instrinsics for CRC32 hash
+ * Allow or disallow use of SSE4.2/ARMv8 intrinsics for CRC32 hash
  * calculation.
  *
  * @param alg
  *   An OR of following flags:
- *   - (CRC32_SW) Don't use SSE4.2 intrinsics
+ *   - (CRC32_SW) Don't use SSE4.2/ARMv8 intrinsics (default non-[x86/ARMv8])
  *   - (CRC32_SSE42) Use SSE4.2 intrinsics if available
- *   - (CRC32_SSE42_x64) Use 64-bit SSE4.2 intrinsic if available (default)
+ *   - (CRC32_SSE42_x64) Use 64-bit SSE4.2 intrinsic if available (default x86)
+ *   - (CRC32_ARM64) Use ARMv8 CRC intrinsic if available (default ARMv8)
  *
  */
 static inline void
 rte_hash_crc_set_alg(uint8_t alg)
 {
-#if defined(RTE_ARCH_X86)
-	if (alg == CRC32_SSE42_x64 &&
-			!rte_cpu_get_flag_enabled(RTE_CPUFLAG_EM64T))
-		alg = CRC32_SSE42;
+	switch (alg) {
+	case CRC32_SSE42_x64:
+	case CRC32_SSE42:
+#if defined RTE_ARCH_X86
+		if (!rte_cpu_get_flag_enabled(RTE_CPUFLAG_EM64T))
+			crc32_alg = CRC32_SSE42;
+		else
+			crc32_alg = alg;
 #endif
-	crc32_alg = alg;
+#if defined RTE_ARCH_ARM64
+		RTE_LOG(WARNING, HASH,
+			"Incorrect CRC32 algorithm requested setting best available algorithm on the architecture\n");
+		rte_hash_crc_set_alg(CRC32_ARM64);
+#endif
+		break;
+	case CRC32_ARM64:
+#if defined RTE_ARCH_ARM64
+		if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_CRC32))
+			crc32_alg = CRC32_ARM64;
+#endif
+#if defined RTE_ARCH_X86
+		RTE_LOG(WARNING, HASH,
+			"Incorrect CRC32 algorithm requested setting best available algorithm on the architecture\n");
+		rte_hash_crc_set_alg(CRC32_SSE42_x64);
+#endif
+		break;
+	case CRC32_SW:
+	default:
+		crc32_alg = CRC32_SW;
+		break;
+	}
 }
 
 /* Setting the best available algorithm */
 RTE_INIT(rte_hash_crc_init_alg)
 {
+#if defined(RTE_ARCH_X86)
 	rte_hash_crc_set_alg(CRC32_SSE42_x64);
+#elif defined(RTE_ARCH_ARM64) && defined(__ARM_FEATURE_CRC32)
+	rte_hash_crc_set_alg(CRC32_ARM64);
+#else
+	rte_hash_crc_set_alg(CRC32_SW);
+#endif
 }
 
 /**
@@ -82,6 +117,9 @@ rte_hash_crc_1byte(uint8_t data, uint32_t init_val)
 #if defined RTE_ARCH_X86
 	if (likely(crc32_alg & CRC32_SSE42))
 		return crc32c_sse42_u8(data, init_val);
+#elif defined(RTE_ARCH_ARM64) && defined(__ARM_FEATURE_CRC32)
+	if (likely(crc32_alg & CRC32_ARM64))
+		return crc32c_arm64_u8(data, init_val);
 #endif
 
 	return crc32c_1byte(data, init_val);
@@ -105,6 +143,9 @@ rte_hash_crc_2byte(uint16_t data, uint32_t init_val)
 #if defined RTE_ARCH_X86
 	if (likely(crc32_alg & CRC32_SSE42))
 		return crc32c_sse42_u16(data, init_val);
+#elif defined(RTE_ARCH_ARM64) && defined(__ARM_FEATURE_CRC32)
+	if (likely(crc32_alg & CRC32_ARM64))
+		return crc32c_arm64_u16(data, init_val);
 #endif
 
 	return crc32c_2bytes(data, init_val);
@@ -128,6 +169,9 @@ rte_hash_crc_4byte(uint32_t data, uint32_t init_val)
 #if defined RTE_ARCH_X86
 	if (likely(crc32_alg & CRC32_SSE42))
 		return crc32c_sse42_u32(data, init_val);
+#elif defined(RTE_ARCH_ARM64) && defined(__ARM_FEATURE_CRC32)
+	if (likely(crc32_alg & CRC32_ARM64))
+		return crc32c_arm64_u32(data, init_val);
 #endif
 
 	return crc32c_1word(data, init_val);
@@ -158,10 +202,13 @@ rte_hash_crc_8byte(uint64_t data, uint32_t init_val)
 		return crc32c_sse42_u64_mimic(data, init_val);
 #endif
 
+#if defined(RTE_ARCH_ARM64) && defined(__ARM_FEATURE_CRC32)
+	if (likely(crc32_alg & CRC32_ARM64))
+		return crc32c_arm64_u64(data, init_val);
+#endif
+
 	return crc32c_2words(data, init_val);
 }
-
-#endif
 
 /**
  * Calculate CRC32 hash on user-supplied byte array.
