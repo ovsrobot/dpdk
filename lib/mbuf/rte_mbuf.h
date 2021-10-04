@@ -272,7 +272,6 @@ rte_mbuf_to_baddr(struct rte_mbuf *md)
  * @return
  *   The starting address of the private data area of the given mbuf.
  */
-__rte_experimental
 static inline void *
 rte_mbuf_to_priv(struct rte_mbuf *m)
 {
