@@ -178,6 +178,9 @@ API Changes
   the crypto/security operation. This field will be used to communicate
   events such as soft expiry with IPsec in lookaside mode.
 
+* net: Add ``version`` and ``ihl`` bit-fields to ``struct rte_ipv4_hdr``.
+  Existing ``version_ihl`` field was kept for backward compatibility.
+
 
 ABI Changes
 -----------
