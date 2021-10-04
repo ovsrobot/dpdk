@@ -190,6 +190,9 @@ ABI Changes
      Use fixed width quotes for ``function_names`` or ``struct_names``.
      Use the past tense.
 
+* cryptodev: The field ``dataunit_len`` of the ``struct rte_crypto_cipher_xform``
+  moved to the end of the structure and extended to ``uint32_t``.
+
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================

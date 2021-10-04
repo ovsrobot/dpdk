@@ -202,10 +202,6 @@ Deprecation Notices
 * cryptodev: ``min`` and ``max`` fields of ``rte_crypto_param_range`` structure
   will be renamed in DPDK 21.11 to avoid conflict with Windows Sockets headers.
 
-* cryptodev: The field ``dataunit_len`` of the ``struct rte_crypto_cipher_xform``
-  has a limited size ``uint16_t``.
-  It will be moved and extended as ``uint32_t`` in DPDK 21.11.
-
 * cryptodev: The structure ``rte_crypto_sym_vec`` would be updated to add
   ``dest_sgl`` to support out of place processing.
   This field will be null for inplace processing.
