@@ -1685,6 +1685,7 @@ slave_configure(struct rte_eth_dev *bonded_eth_dev,
 
 	int errval;
 	uint16_t q_id;
+	bool device_started = false;
 	struct rte_flow_error flow_error;
 
 	struct bond_dev_private *internals = bonded_eth_dev->data->dev_private;
@@ -1815,6 +1816,16 @@ slave_configure(struct rte_eth_dev *bonded_eth_dev,
 					internals->mode4.dedicated_queues.flow[slave_eth_dev->data->port_id],
 					&flow_error);
 
+		if (slave_eth_dev->dev_capa & RTE_ETH_DEV_CAPA_FLOW_CREATE_BEFORE_START == 0) {
+			errval = rte_eth_dev_start(slave_eth_dev->data->port_id);
+			if (errval != 0) {
+				RTE_BOND_LOG(ERR, "rte_eth_dev_start: port=%u, err (%d)",
+						slave_eth_dev->data->port_id, errval);
+				return errval;
+			}
+		}
+		device_started = true;
+
 		errval = bond_ethdev_8023ad_flow_set(bonded_eth_dev,
 				slave_eth_dev->data->port_id);
 		if (errval != 0) {
@@ -1825,12 +1836,14 @@ slave_configure(struct rte_eth_dev *bonded_eth_dev,
 		}
 	}
 
-	/* Start device */
-	errval = rte_eth_dev_start(slave_eth_dev->data->port_id);
-	if (errval != 0) {
-		RTE_BOND_LOG(ERR, "rte_eth_dev_start: port=%u, err (%d)",
-				slave_eth_dev->data->port_id, errval);
-		return -1;
+	if (!device_started) {
+		/* Start device */
+		errval = rte_eth_dev_start(slave_eth_dev->data->port_id);
+		if (errval != 0) {
+			RTE_BOND_LOG(ERR, "rte_eth_dev_start: port=%u, err (%d)",
+					slave_eth_dev->data->port_id, errval);
+			return -1;
+		}
 	}
 
 	/* If RSS is enabled for bonding, synchronize RETA */
