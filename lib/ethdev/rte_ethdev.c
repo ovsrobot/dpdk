@@ -1336,6 +1336,47 @@ eth_dev_get_overhead_len(uint32_t max_rx_pktlen, uint16_t max_mtu)
 	return overhead_len;
 }
 
+/* rte_eth_dev_info_get() should be called prior to this function */
+static int
+eth_dev_validate_mtu(uint16_t port_id, struct rte_eth_dev_info *dev_info,
+		uint16_t mtu)
+{
+	uint16_t overhead_len;
+	uint32_t frame_size;
+
+	if (mtu < dev_info->min_mtu) {
+		RTE_ETHDEV_LOG(ERR,
+			"MTU (%u) < device min MTU (%u) for port_id %u\n",
+			mtu, dev_info->min_mtu, port_id);
+		return -EINVAL;
+	}
+	if (mtu > dev_info->max_mtu) {
+		RTE_ETHDEV_LOG(ERR,
+			"MTU (%u) > device max MTU (%u) for port_id %u\n",
+			mtu, dev_info->max_mtu, port_id);
+		return -EINVAL;
+	}
+
+	overhead_len = eth_dev_get_overhead_len(dev_info->max_rx_pktlen,
+			dev_info->max_mtu);
+	frame_size = mtu + overhead_len;
+	if (frame_size < RTE_ETHER_MIN_LEN) {
+		RTE_ETHDEV_LOG(ERR,
+			"Frame size (%u) < min frame size (%u) for port_id %u\n",
+			frame_size, RTE_ETHER_MIN_LEN, port_id);
+		return -EINVAL;
+	}
+
+	if (frame_size > dev_info->max_rx_pktlen) {
+		RTE_ETHDEV_LOG(ERR,
+			"Frame size (%u) > device max frame size (%u) for port_id %u\n",
+			frame_size, dev_info->max_rx_pktlen, port_id);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 int
 rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 		      const struct rte_eth_conf *dev_conf)
@@ -1463,26 +1504,13 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 		goto rollback;
 	}
 
-	/*
-	 * Check that the maximum RX packet length is supported by the
-	 * configured device.
-	 */
 	if (dev_conf->rxmode.mtu == 0)
 		dev->data->dev_conf.rxmode.mtu = RTE_ETHER_MTU;
-	max_rx_pktlen = dev->data->dev_conf.rxmode.mtu + overhead_len;
-	if (max_rx_pktlen > dev_info.max_rx_pktlen) {
-		RTE_ETHDEV_LOG(ERR,
-			"Ethdev port_id=%u max_rx_pktlen %u > max valid value %u\n",
-			port_id, max_rx_pktlen, dev_info.max_rx_pktlen);
-		ret = -EINVAL;
+
+	ret = eth_dev_validate_mtu(port_id, &dev_info,
+			dev->data->dev_conf.rxmode.mtu);
+	if (ret != 0)
 		goto rollback;
-	} else if (max_rx_pktlen < RTE_ETHER_MIN_LEN) {
-		RTE_ETHDEV_LOG(ERR,
-			"Ethdev port_id=%u max_rx_pktlen %u < min valid value %u\n",
-			port_id, max_rx_pktlen, RTE_ETHER_MIN_LEN);
-		ret = -EINVAL;
-		goto rollback;
-	}
 
 	dev->data->mtu = dev->data->dev_conf.rxmode.mtu;
 
@@ -1491,6 +1519,9 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 	 * size is supported by the configured device.
 	 */
 	if (dev_conf->rxmode.offloads & DEV_RX_OFFLOAD_TCP_LRO) {
+		overhead_len = eth_dev_get_overhead_len(dev_info.max_rx_pktlen,
+				dev_info.max_mtu);
+		max_rx_pktlen = dev->data->dev_conf.rxmode.mtu + overhead_len;
 		if (dev_conf->rxmode.max_lro_pkt_size == 0)
 			dev->data->dev_conf.rxmode.max_lro_pkt_size = max_rx_pktlen;
 		ret = eth_dev_check_lro_pkt_size(port_id,
@@ -3437,7 +3468,8 @@ rte_eth_dev_info_get(uint16_t port_id, struct rte_eth_dev_info *dev_info)
 	dev_info->rx_desc_lim = lim;
 	dev_info->tx_desc_lim = lim;
 	dev_info->device = dev->device;
-	dev_info->min_mtu = RTE_ETHER_MIN_MTU;
+	dev_info->min_mtu = RTE_ETHER_MIN_LEN - RTE_ETHER_HDR_LEN -
+		RTE_ETHER_CRC_LEN;
 	dev_info->max_mtu = UINT16_MAX;
 
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->dev_infos_get, -ENOTSUP);
@@ -3643,21 +3675,13 @@ rte_eth_dev_set_mtu(uint16_t port_id, uint16_t mtu)
 	 * which relies on dev->dev_ops->dev_infos_get.
 	 */
 	if (*dev->dev_ops->dev_infos_get != NULL) {
-		uint16_t overhead_len;
-		uint32_t frame_size;
-
 		ret = rte_eth_dev_info_get(port_id, &dev_info);
 		if (ret != 0)
 			return ret;
 
-		if (mtu < dev_info.min_mtu || mtu > dev_info.max_mtu)
-			return -EINVAL;
-
-		overhead_len = eth_dev_get_overhead_len(dev_info.max_rx_pktlen,
-				dev_info.max_mtu);
-		frame_size = mtu + overhead_len;
-		if (mtu < RTE_ETHER_MIN_MTU || frame_size > dev_info.max_rx_pktlen)
-			return -EINVAL;
+		ret = eth_dev_validate_mtu(port_id, &dev_info, mtu);
+		if (ret != 0)
+			return ret;
 	}
 
 	ret = (*dev->dev_ops->mtu_set)(dev, mtu);
