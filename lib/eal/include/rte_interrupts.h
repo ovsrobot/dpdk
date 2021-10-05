@@ -28,6 +28,8 @@ struct rte_intr_handle;
 /** Interrupt instance allocation flags
  * @see rte_intr_instance_alloc
  */
+/** Allocate interrupt instance from traditional heap */
+#define RTE_INTR_ALLOC_TRAD_HEAP	0x00000000
 /** Allocate interrupt instance using DPDK memory management APIs */
 #define RTE_INTR_ALLOC_DPDK_ALLOCATOR	0x00000001
 
