@@ -58,6 +58,13 @@ static struct rte_intr_handle *intr_handle;
 static int handler_registered = 0;
 static void eal_alarm_callback(void *arg);
 
+void
+rte_eal_alarm_fini(void)
+{
+	if (intr_handle)
+		rte_intr_instance_free(intr_handle);
+}
+
 int
 rte_eal_alarm_init(void)
 {
@@ -68,7 +75,8 @@ rte_eal_alarm_init(void)
 		goto error;
 	}
 
-	rte_intr_type_set(intr_handle, RTE_INTR_HANDLE_ALARM);
+	if (rte_intr_type_set(intr_handle, RTE_INTR_HANDLE_ALARM))
+		goto error;
 
 	/* create a timerfd file descriptor */
 	if (rte_intr_fd_set(intr_handle,
