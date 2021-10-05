@@ -42,6 +42,7 @@ test_sources = files(
         'test_cryptodev_security_pdcp.c',
         'test_cycles.c',
         'test_debug.c',
+        'test_devargs.c',
         'test_distributor.c',
         'test_distributor_perf.c',
         'test_eal_flags.c',

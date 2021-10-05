@@ -1,0 +1,147 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2021 NVIDIA Corporation & Affiliates
+ */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <rte_common.h>
+#include <rte_devargs.h>
+#include <rte_kvargs.h>
+
+#include "test.h"
+
+/* Check layer arguments. */
+static int
+test_args(const char *devargs, const char *layer, const char *args, const int n)
+{
+	struct rte_kvargs *kvlist;
+
+	if (n == 0) {
+		if (args != NULL && strlen(args) > 0) {
+			printf("rte_devargs_parse(%s) %s args parsed (not expected)\n",
+			       devargs, layer);
+			return -1;
+		} else {
+			return 0;
+		}
+	}
+	if (args == NULL) {
+		printf("rte_devargs_parse(%s) %s args not parsed\n",
+		       devargs, layer);
+		return -1;
+	}
+	kvlist = rte_kvargs_parse(args, NULL);
+	if (kvlist == NULL) {
+		printf("rte_devargs_parse(%s) %s_str: %s not parsed\n",
+		       devargs, layer, args);
+		return -1;
+	}
+	if ((int)kvlist->count != n) {
+		printf("rte_devargs_parse(%s) %s_str: %s kv number %u, not %d\n",
+		       devargs, layer, args, kvlist->count, n);
+		return -1;
+	}
+	return 0;
+}
+
+/* Test several valid cases */
+static int
+test_valid_devargs(void)
+{
+	static const struct {
+		const char *devargs;
+		int bus_kv;
+		int class_kv;
+		int driver_kv;
+	} list[] = {
+		/* Global devargs syntax: */
+		{ "bus=pci", 1, 0, 0 },
+		{ "class=eth", 0, 1, 0 },
+		{ "bus=pci,addr=1:2.3/class=eth/driver=abc,k0=v0", 2, 1, 2 },
+		{ "bus=vdev,name=/dev/file/name/class=eth", 2, 1, 0 },
+		/* Legacy devargs syntax: */
+		{ "1:2.3", 0, 0, 0 },
+		{ "pci:1:2.3,k0=v0", 0, 0, 1 },
+		{ "net_virtio_user0,iface=test,path=/dev/vhost-net,queues=1",
+		  0, 0, 3 },
+	};
+	struct rte_devargs da;
+	uint32_t i;
+	int ret;
+	int fail = 0;
+
+	for (i = 0; i < RTE_DIM(list); i++) {
+		memset(&da, 0, sizeof(da));
+		ret = rte_devargs_parse(&da, list[i].devargs);
+		if (ret < 0) {
+			printf("rte_devargs_parse(%s) returned %d (but should not)\n",
+			       list[i].devargs, ret);
+			goto fail;
+		}
+		if (list[i].bus_kv > 0 && da.bus == NULL) {
+			printf("rte_devargs_parse(%s) bus not parsed\n",
+			       list[i].devargs);
+			goto fail;
+		}
+		if (test_args(list[i].devargs, "bus", da.bus_str,
+			      list[i].bus_kv) != 0)
+			goto fail;
+		if (list[i].class_kv > 0 && da.cls == NULL) {
+			printf("rte_devargs_parse(%s) class not parsed\n",
+			       list[i].devargs);
+			goto fail;
+		}
+		if (test_args(list[i].devargs, "class", da.cls_str,
+			      list[i].class_kv) != 0)
+			goto fail;
+		if (test_args(list[i].devargs, "driver", da.drv_str,
+			      list[i].driver_kv) != 0)
+			goto fail;
+		goto cleanup;
+fail:
+		fail = -1;
+cleanup:
+		rte_devargs_reset(&da);
+	}
+	return fail;
+}
+
+/* Test several invalid cases */
+static int
+test_invalid_devargs(void)
+{
+	static const char * const list[] = {
+		"bus=wrong-bus",
+		"class=wrong-class"};
+	struct rte_devargs da;
+	uint32_t i;
+	int ret;
+	int fail = 0;
+
+	for (i = 0; i < RTE_DIM(list); i++) {
+		ret = rte_devargs_parse(&da, list[i]);
+		if (ret >= 0) {
+			printf("rte_devargs_parse(%s) returned %d (but should not)\n",
+			       list[i], ret);
+			fail = ret;
+		}
+		rte_devargs_reset(&da);
+	}
+	return fail;
+}
+
+static int
+test_devargs(void)
+{
+	printf("== test valid case ==\n");
+	if (test_valid_devargs() < 0)
+		return -1;
+	printf("== test invalid case ==\n");
+	if (test_invalid_devargs() < 0)
+		return -1;
+	return 0;
+}
+
+REGISTER_TEST_COMMAND(devargs_autotest, test_devargs);
