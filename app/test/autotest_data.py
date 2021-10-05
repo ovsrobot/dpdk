@@ -785,6 +785,12 @@ non_parallel_test_list = [
         "Func":    default_autotest,
         "Report":  None,
     },
+    {
+        "Name":    "Devargs autotest",
+        "Command": "devargs_autotest",
+        "Func":    default_autotest,
+        "Report":  None,
+    },
     #
     # Please always make sure that ring_perf is the last test!
     #
