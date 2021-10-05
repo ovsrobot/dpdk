@@ -11,6 +11,29 @@
 
 #include <rte_interrupts.h>
 
+struct rte_intr_handle {
+	RTE_STD_C11
+	union {
+		struct {
+			/** VFIO/UIO cfg device file descriptor */
+			int dev_fd;
+			int fd;	/**< interrupt event file descriptor */
+		};
+		void *handle; /**< device driver handle (Windows) */
+	};
+	bool mem_allocator;
+	enum rte_intr_handle_type type;  /**< handle type */
+	uint32_t max_intr;            /**< max interrupt requested */
+	uint32_t nb_efd;              /**< number of available efd(event fd) */
+	uint8_t efd_counter_size;     /**< size of efd counter, used for vdev */
+	uint16_t nb_intr;
+		/**< Max vector count, default RTE_MAX_RXTX_INTR_VEC_ID */
+	int *efds;  /**< intr vectors/efds mapping */
+	struct rte_epoll_event *elist; /**< intr vector epoll event */
+	uint16_t vec_list_size;
+	int *intr_vec;                 /**< intr vector number array */
+};
+
 
 struct rte_intr_handle *rte_intr_instance_alloc(uint32_t flags)
 {
@@ -29,15 +52,52 @@ struct rte_intr_handle *rte_intr_instance_alloc(uint32_t flags)
 		return NULL;
 	}
 
+	if (mem_allocator)
+		intr_handle->efds = rte_zmalloc(NULL,
+						RTE_MAX_RXTX_INTR_VEC_ID *
+						sizeof(uint32_t), 0);
+	else
+		intr_handle->efds = calloc(RTE_MAX_RXTX_INTR_VEC_ID,
+					   sizeof(uint32_t));
+	if (!intr_handle->efds) {
+		RTE_LOG(ERR, EAL, "Fail to allocate event fd list\n");
+		rte_errno = ENOMEM;
+		goto fail;
+	}
+
+	if (mem_allocator)
+		intr_handle->elist =
+			rte_zmalloc(NULL, RTE_MAX_RXTX_INTR_VEC_ID *
+				    sizeof(struct rte_epoll_event), 0);
+	else
+		intr_handle->elist = calloc(RTE_MAX_RXTX_INTR_VEC_ID,
+					    sizeof(struct rte_epoll_event));
+	if (!intr_handle->elist) {
+		RTE_LOG(ERR, EAL, "fail to allocate event fd list\n");
+		rte_errno = ENOMEM;
+		goto fail;
+	}
 	intr_handle->nb_intr = RTE_MAX_RXTX_INTR_VEC_ID;
 	intr_handle->mem_allocator = mem_allocator;
 
 	return intr_handle;
+fail:
+	if (intr_handle->mem_allocator) {
+		rte_free(intr_handle->efds);
+		rte_free(intr_handle);
+	} else {
+		free(intr_handle->efds);
+		free(intr_handle);
+	}
+	return NULL;
 }
 
 int rte_intr_instance_copy(struct rte_intr_handle *intr_handle,
 			   const struct rte_intr_handle *src)
 {
+	struct rte_epoll_event *tmp_elist;
+	int *tmp_efds;
+
 	if (intr_handle == NULL) {
 		RTE_LOG(ERR, EAL, "Interrupt instance unallocated\n");
 		rte_errno = ENOTSUP;
@@ -51,16 +111,51 @@ int rte_intr_instance_copy(struct rte_intr_handle *intr_handle,
 	}
 
 	intr_handle->fd = src->fd;
-	intr_handle->vfio_dev_fd = src->vfio_dev_fd;
+	intr_handle->dev_fd = src->dev_fd;
 	intr_handle->type = src->type;
+	intr_handle->mem_allocator = src->mem_allocator;
 	intr_handle->max_intr = src->max_intr;
 	intr_handle->nb_efd = src->nb_efd;
 	intr_handle->efd_counter_size = src->efd_counter_size;
+
+	if (intr_handle->nb_intr != src->nb_intr) {
+		if (src->mem_allocator)
+			tmp_efds = rte_realloc(intr_handle->efds, src->nb_intr *
+					       sizeof(uint32_t), 0);
+		else
+			tmp_efds = realloc(intr_handle->efds, src->nb_intr *
+					   sizeof(uint32_t));
+		if (tmp_efds == NULL) {
+			RTE_LOG(ERR, EAL, "Failed to realloc the efds list");
+			rte_errno = ENOMEM;
+			goto fail;
+		}
+
+		if (src->mem_allocator)
+			tmp_elist = rte_realloc(intr_handle->elist,
+						src->nb_intr *
+						sizeof(struct rte_epoll_event),
+						0);
+		else
+			tmp_elist = realloc(intr_handle->elist,	src->nb_intr *
+					    sizeof(struct rte_epoll_event));
+		if (tmp_elist == NULL) {
+			RTE_LOG(ERR, EAL, "Failed to realloc the event list");
+			rte_errno = ENOMEM;
+			goto up_efds;
+		}
+
+		intr_handle->efds = tmp_efds;
+		intr_handle->elist = tmp_elist;
+		intr_handle->nb_intr = src->nb_intr;
+	}
 
 	memcpy(intr_handle->efds, src->efds, src->nb_intr);
 	memcpy(intr_handle->elist, src->elist, src->nb_intr);
 
 	return 0;
+up_efds:
+	intr_handle->efds = tmp_efds;
 fail:
 	return -rte_errno;
 }
@@ -76,6 +171,61 @@ int rte_intr_instance_mem_allocator_get(
 	return intr_handle->mem_allocator;
 }
 
+int rte_intr_event_list_update(struct rte_intr_handle *intr_handle,
+				      int size)
+{
+	struct rte_epoll_event *tmp_elist;
+	int *tmp_efds;
+
+	if (intr_handle == NULL) {
+		RTE_LOG(ERR, EAL, "Interrupt instance unallocated\n");
+		rte_errno = ENOTSUP;
+		goto fail;
+	}
+
+	if (size == 0) {
+		RTE_LOG(ERR, EAL, "Size can't be zero\n");
+		rte_errno = EINVAL;
+		goto fail;
+	}
+
+	if (intr_handle->mem_allocator)
+		tmp_efds = rte_realloc(intr_handle->efds, size *
+				       sizeof(uint32_t), 0);
+	else
+		tmp_efds = realloc(intr_handle->efds, size *
+				   sizeof(uint32_t));
+	if (tmp_efds == NULL) {
+		RTE_LOG(ERR, EAL, "Failed to realloc the efds list");
+		rte_errno = ENOMEM;
+		goto fail;
+	}
+
+	if (intr_handle->mem_allocator)
+		tmp_elist = rte_realloc(intr_handle->elist, size *
+					sizeof(struct rte_epoll_event),
+					0);
+	else
+		tmp_elist = realloc(intr_handle->elist,	size *
+				    sizeof(struct rte_epoll_event));
+	if (tmp_elist == NULL) {
+		RTE_LOG(ERR, EAL, "Failed to realloc the event list");
+		rte_errno = ENOMEM;
+		goto up_efds;
+	}
+
+	intr_handle->efds = tmp_efds;
+	intr_handle->elist = tmp_elist;
+	intr_handle->nb_intr = size;
+
+	return 0;
+up_efds:
+	intr_handle->efds = tmp_efds;
+fail:
+	return -rte_errno;
+}
+
+
 void rte_intr_instance_free(struct rte_intr_handle *intr_handle)
 {
 	if (intr_handle == NULL) {
@@ -83,10 +233,15 @@ void rte_intr_instance_free(struct rte_intr_handle *intr_handle)
 		rte_errno = ENOTSUP;
 	}
 
-	if (intr_handle->mem_allocator)
+	if (intr_handle->mem_allocator) {
+		rte_free(intr_handle->efds);
+		rte_free(intr_handle->elist);
 		rte_free(intr_handle);
-	else
+	} else {
+		free(intr_handle->efds);
+		free(intr_handle->elist);
 		free(intr_handle);
+	}
 }
 
 int rte_intr_fd_set(struct rte_intr_handle *intr_handle, int fd)
@@ -153,7 +308,7 @@ int rte_intr_dev_fd_set(struct rte_intr_handle *intr_handle, int fd)
 		goto fail;
 	}
 
-	intr_handle->vfio_dev_fd = fd;
+	intr_handle->dev_fd = fd;
 
 	return 0;
 fail:
@@ -168,7 +323,7 @@ int rte_intr_dev_fd_get(const struct rte_intr_handle *intr_handle)
 		goto fail;
 	}
 
-	return intr_handle->vfio_dev_fd;
+	return intr_handle->dev_fd;
 fail:
 	return -1;
 }
@@ -289,6 +444,12 @@ int rte_intr_efds_index_get(const struct rte_intr_handle *intr_handle,
 		goto fail;
 	}
 
+	if (!intr_handle->efds) {
+		RTE_LOG(ERR, EAL, "Event fd list not allocated\n");
+		rte_errno = EFAULT;
+		goto fail;
+	}
+
 	if (index >= intr_handle->nb_intr) {
 		RTE_LOG(ERR, EAL, "Invalid size %d, max limit %d\n", index,
 			intr_handle->nb_intr);
@@ -307,6 +468,12 @@ int rte_intr_efds_index_set(struct rte_intr_handle *intr_handle,
 	if (intr_handle == NULL) {
 		RTE_LOG(ERR, EAL, "Interrupt instance unallocated\n");
 		rte_errno = ENOTSUP;
+		goto fail;
+	}
+
+	if (!intr_handle->efds) {
+		RTE_LOG(ERR, EAL, "Event fd list not allocated\n");
+		rte_errno = EFAULT;
 		goto fail;
 	}
 
@@ -333,6 +500,12 @@ struct rte_epoll_event *rte_intr_elist_index_get(
 		goto fail;
 	}
 
+	if (!intr_handle->elist) {
+		RTE_LOG(ERR, EAL, "Event list not allocated\n");
+		rte_errno = ENOTSUP;
+		goto fail;
+	}
+
 	if (index >= intr_handle->nb_intr) {
 		RTE_LOG(ERR, EAL, "Invalid size %d, max limit %d\n", index,
 			intr_handle->nb_intr);
@@ -350,6 +523,12 @@ int rte_intr_elist_index_set(struct rte_intr_handle *intr_handle,
 {
 	if (intr_handle == NULL) {
 		RTE_LOG(ERR, EAL, "Interrupt instance unallocated\n");
+		rte_errno = ENOTSUP;
+		goto fail;
+	}
+
+	if (!intr_handle->elist) {
+		RTE_LOG(ERR, EAL, "Event list not allocated\n");
 		rte_errno = ENOTSUP;
 		goto fail;
 	}
