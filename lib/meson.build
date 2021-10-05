@@ -86,6 +86,7 @@ if is_windows
             'latencystats',
             'pdump',
             'stack',
+            'security',
     ] # only supported libraries for windows
 endif
 
