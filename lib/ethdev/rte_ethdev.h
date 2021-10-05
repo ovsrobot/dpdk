@@ -1478,6 +1478,8 @@ struct rte_eth_conf {
 #define RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP 0x00000001
 /** Device supports Tx queue setup after device started. */
 #define RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP 0x00000002
+/** Device supports RTE Flow rule creation before device start. */
+#define RTE_ETH_DEV_CAPA_FLOW_CREATE_BEFORE_START 0x00000004
 /**@}*/
 
 /*
