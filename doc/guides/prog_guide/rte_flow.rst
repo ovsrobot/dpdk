@@ -87,6 +87,15 @@ To avoid resource leaks on the PMD side, handles must be explicitly
 destroyed by the application before releasing associated resources such as
 queues and ports.
 
+By default flow rules are implicitly destroyed when the device is stopped.
+If the device advertises ``RTE_DEV_CAPA_FLOW_RULE_KEEP``, flow rules persist
+across device stop and start with possible reconfiguration in between.
+Some configuration changes may be incompatible with existing flow rules,
+in this case ``rte_eth_dev_configure()`` or ``rte_eth_rx/tx_queue_setup()``
+will fail. At this point PMD developers are encouraged to log errors identical
+to the ones that would be emitted by ``rte_flow_create()`` if the new
+configuration was active.
+
 The following sections cover:
 
 - **Attributes** (represented by ``struct rte_flow_attr``): properties of a
