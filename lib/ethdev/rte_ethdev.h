@@ -1480,6 +1480,12 @@ struct rte_eth_conf {
 #define RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP 0x00000002
 /** Device keeps flow rules across restart and reconfiguration. */
 #define RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP 0x00000004
+/**
+ * Device keeps objects that are shared between flow rules,
+ * e.g. indirect actions, across restart and reconfiguration.
+ * For a specific PMD this may not be applicable to certain action types.
+ */
+#define RTE_ETH_DEV_CAPA_FLOW_SHARED_OBJECT_KEEP 0x00000008
 /**@}*/
 
 /*

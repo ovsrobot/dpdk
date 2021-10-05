@@ -2794,6 +2794,18 @@ updated depend on the type of the ``action`` and different for every type.
 The indirect action specified data (e.g. counter) can be queried by
 ``rte_flow_action_handle_query()``.
 
+By default indirect actions are destroyed when the device is stopped.
+If the device advertises ``RTE_ETH_DEV_CAPA_FLOW_SHARED_OBJECT_KEEP``,
+indirect actions persist across the device stop and start with possible
+reconfiguration in between. Some configuration changes may be incompatible
+with existing indirect actions, in this case ``rte_eth_dev_configure()`` and/or
+``rte_eth_rx/tx_queue_setup()`` will fail. At this point PMD developers
+are encouraged to log errors identical to the ones that would be emitted by
+``rte_flow_action_handle_create()`` if the new configuration was active.
+Even if this capability is advertised, there may be kinds of indirect actions
+that the device cannot keep. They are implicitly destroyed at device stop.
+PMD developers must document such kinds of actions if applicable.
+
 .. _table_rte_flow_action_handle:
 
 .. table:: INDIRECT
