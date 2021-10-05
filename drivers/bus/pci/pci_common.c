@@ -230,6 +230,24 @@ rte_pci_probe_one_driver(struct rte_pci_driver *dr,
 	}
 
 	if (!already_probed && (dr->drv_flags & RTE_PCI_DRV_NEED_MAPPING)) {
+		/* Allocate interrupt instance for pci device */
+		dev->intr_handle =
+			rte_intr_instance_alloc(RTE_INTR_ALLOC_TRAD_HEAP);
+		if (!dev->intr_handle) {
+			RTE_LOG(ERR, EAL,
+				"Failed to create interrupt instance for %s\n",
+				dev->device.name);
+			return -ENOMEM;
+		}
+
+		dev->vfio_req_intr_handle =
+			rte_intr_instance_alloc(RTE_INTR_ALLOC_TRAD_HEAP);
+		if (!dev->vfio_req_intr_handle) {
+			RTE_LOG(ERR, EAL,
+				"Failed to create vfio req interrupt instance for %s\n",
+				dev->device.name);
+			return -ENOMEM;
+		}
 		/* map resources for devices that use igb_uio */
 		ret = rte_pci_map_device(dev);
 		if (ret != 0) {
@@ -253,8 +271,12 @@ rte_pci_probe_one_driver(struct rte_pci_driver *dr,
 			 * driver needs mapped resources.
 			 */
 			!(ret > 0 &&
-				(dr->drv_flags & RTE_PCI_DRV_KEEP_MAPPED_RES)))
+			  (dr->drv_flags & RTE_PCI_DRV_KEEP_MAPPED_RES))) {
 			rte_pci_unmap_device(dev);
+			rte_intr_instance_free(dev->intr_handle);
+			rte_intr_instance_free(
+						dev->vfio_req_intr_handle);
+		}
 	} else {
 		dev->device.driver = &dr->driver;
 	}
@@ -296,9 +318,12 @@ rte_pci_detach_dev(struct rte_pci_device *dev)
 	dev->driver = NULL;
 	dev->device.driver = NULL;
 
-	if (dr->drv_flags & RTE_PCI_DRV_NEED_MAPPING)
+	if (dr->drv_flags & RTE_PCI_DRV_NEED_MAPPING) {
 		/* unmap resources for devices that use igb_uio */
 		rte_pci_unmap_device(dev);
+		rte_intr_instance_free(dev->intr_handle);
+		rte_intr_instance_free(dev->vfio_req_intr_handle);
+	}
 
 	return 0;
 }

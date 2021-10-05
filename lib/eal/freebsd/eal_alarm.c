@@ -32,7 +32,7 @@
 
 struct alarm_entry {
 	LIST_ENTRY(alarm_entry) next;
-	struct rte_intr_handle handle;
+	struct rte_intr_handle *handle;
 	struct timespec time;
 	rte_eal_alarm_callback cb_fn;
 	void *cb_arg;
@@ -43,22 +43,43 @@ struct alarm_entry {
 static LIST_HEAD(alarm_list, alarm_entry) alarm_list = LIST_HEAD_INITIALIZER();
 static rte_spinlock_t alarm_list_lk = RTE_SPINLOCK_INITIALIZER;
 
-static struct rte_intr_handle intr_handle = {.fd = -1 };
+static struct rte_intr_handle *intr_handle;
 static void eal_alarm_callback(void *arg);
 
 int
 rte_eal_alarm_init(void)
 {
-	intr_handle.type = RTE_INTR_HANDLE_ALARM;
+	int fd;
+
+	intr_handle = rte_intr_instance_alloc(RTE_INTR_ALLOC_TRAD_HEAP);
+	if (!intr_handle) {
+		RTE_LOG(ERR, EAL, "Fail to allocate intr_handle\n");
+		goto error;
+	}
+
+	if (rte_intr_type_set(intr_handle, RTE_INTR_HANDLE_ALARM))
+		goto error;
+
+	if (rte_intr_fd_set(intr_handle, -1))
+		goto error;
 
 	/* on FreeBSD, timers don't use fd's, and their identifiers are stored
 	 * in separate namespace from fd's, so using any value is OK. however,
 	 * EAL interrupts handler expects fd's to be unique, so use an actual fd
 	 * to guarantee unique timer identifier.
 	 */
-	intr_handle.fd = open("/dev/zero", O_RDONLY);
+	fd = open("/dev/zero", O_RDONLY);
+
+	if (rte_intr_fd_set(intr_handle, fd))
+		goto error;
 
 	return 0;
+error:
+	if (intr_handle)
+		rte_intr_instance_free(intr_handle);
+
+	rte_intr_fd_set(intr_handle, -1);
+	return -1;
 }
 
 static inline int
@@ -118,7 +139,7 @@ unregister_current_callback(void)
 		ap = LIST_FIRST(&alarm_list);
 
 		do {
-			ret = rte_intr_callback_unregister(&intr_handle,
+			ret = rte_intr_callback_unregister(intr_handle,
 				eal_alarm_callback, &ap->time);
 		} while (ret == -EAGAIN);
 	}
@@ -136,7 +157,7 @@ register_first_callback(void)
 		ap = LIST_FIRST(&alarm_list);
 
 		/* register a new callback */
-		ret = rte_intr_callback_register(&intr_handle,
+		ret = rte_intr_callback_register(intr_handle,
 				eal_alarm_callback, &ap->time);
 	}
 	return ret;
@@ -164,6 +185,8 @@ eal_alarm_callback(void *arg __rte_unused)
 		rte_spinlock_lock(&alarm_list_lk);
 
 		LIST_REMOVE(ap, next);
+		if (ap->handle)
+			rte_intr_instance_free(ap->handle);
 		free(ap);
 
 		ap = LIST_FIRST(&alarm_list);
@@ -201,6 +224,10 @@ rte_eal_alarm_set(uint64_t us, rte_eal_alarm_callback cb_fn, void *cb_arg)
 	new_alarm->cb_arg = cb_arg;
 	new_alarm->time.tv_nsec = (now.tv_nsec + ns) % NS_PER_S;
 	new_alarm->time.tv_sec = now.tv_sec + ((now.tv_nsec + ns) / NS_PER_S);
+
+	new_alarm->handle = rte_intr_instance_alloc(RTE_INTR_ALLOC_TRAD_HEAP);
+	if (new_alarm->handle == NULL)
+		return -ENOMEM;
 
 	rte_spinlock_lock(&alarm_list_lk);
 
@@ -256,6 +283,9 @@ rte_eal_alarm_cancel(rte_eal_alarm_callback cb_fn, void *cb_arg)
 			if (ap->executing == 0) {
 				LIST_REMOVE(ap, next);
 				free(ap);
+				if (ap->handle)
+					rte_intr_instance_free(
+								ap->handle);
 				count++;
 			} else {
 				/* If calling from other context, mark that
@@ -282,6 +312,9 @@ rte_eal_alarm_cancel(rte_eal_alarm_callback cb_fn, void *cb_arg)
 					 cb_arg == ap->cb_arg)) {
 				if (ap->executing == 0) {
 					LIST_REMOVE(ap, next);
+					if (ap->handle)
+						rte_intr_instance_free(
+								ap->handle);
 					free(ap);
 					count++;
 					ap = ap_prev;

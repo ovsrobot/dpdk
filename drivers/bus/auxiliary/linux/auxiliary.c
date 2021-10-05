@@ -39,6 +39,13 @@ auxiliary_scan_one(const char *dirname, const char *name)
 	dev->device.name = dev->name;
 	dev->device.bus = &auxiliary_bus.bus;
 
+	/* Allocate interrupt instance */
+	dev->intr_handle = rte_intr_instance_alloc(RTE_INTR_ALLOC_TRAD_HEAP);
+	if (!dev->intr_handle) {
+		free(dev);
+		return -1;
+	}
+
 	/* Get NUMA node, default to 0 if not present */
 	snprintf(filename, sizeof(filename), "%s/%s/numa_node",
 		 dirname, name);
@@ -67,6 +74,8 @@ auxiliary_scan_one(const char *dirname, const char *name)
 				rte_devargs_remove(dev2->device.devargs);
 				auxiliary_on_scan(dev2);
 			}
+			if (dev->intr_handle)
+				rte_intr_instance_free(dev->intr_handle);
 			free(dev);
 		}
 		return 0;

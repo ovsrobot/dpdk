@@ -326,7 +326,8 @@ eth_memif_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 
 	/* consume interrupt */
 	if ((ring->flags & MEMIF_RING_FLAG_MASK_INT) == 0)
-		size = read(mq->intr_handle.fd, &b, sizeof(b));
+		size = read(rte_intr_fd_get(mq->intr_handle), &b,
+			    sizeof(b));
 
 	ring_size = 1 << mq->log2_ring_size;
 	mask = ring_size - 1;
@@ -462,7 +463,8 @@ eth_memif_rx_zc(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	if ((ring->flags & MEMIF_RING_FLAG_MASK_INT) == 0) {
 		uint64_t b;
 		ssize_t size __rte_unused;
-		size = read(mq->intr_handle.fd, &b, sizeof(b));
+		size = read(rte_intr_fd_get(mq->intr_handle), &b,
+			    sizeof(b));
 	}
 
 	ring_size = 1 << mq->log2_ring_size;
@@ -680,7 +682,8 @@ no_free_slots:
 
 	if ((ring->flags & MEMIF_RING_FLAG_MASK_INT) == 0) {
 		a = 1;
-		size = write(mq->intr_handle.fd, &a, sizeof(a));
+		size = write(rte_intr_fd_get(mq->intr_handle), &a,
+			     sizeof(a));
 		if (unlikely(size < 0)) {
 			MIF_LOG(WARNING,
 				"Failed to send interrupt. %s", strerror(errno));
@@ -832,7 +835,8 @@ no_free_slots:
 	/* Send interrupt, if enabled. */
 	if ((ring->flags & MEMIF_RING_FLAG_MASK_INT) == 0) {
 		uint64_t a = 1;
-		ssize_t size = write(mq->intr_handle.fd, &a, sizeof(a));
+		ssize_t size = write(rte_intr_fd_get(mq->intr_handle),
+				     &a, sizeof(a));
 		if (unlikely(size < 0)) {
 			MIF_LOG(WARNING,
 				"Failed to send interrupt. %s", strerror(errno));
@@ -1092,8 +1096,11 @@ memif_init_queues(struct rte_eth_dev *dev)
 		mq->ring_offset = memif_get_ring_offset(dev, mq, MEMIF_RING_C2S, i);
 		mq->last_head = 0;
 		mq->last_tail = 0;
-		mq->intr_handle.fd = eventfd(0, EFD_NONBLOCK);
-		if (mq->intr_handle.fd < 0) {
+		if (rte_intr_fd_set(mq->intr_handle,
+					   eventfd(0, EFD_NONBLOCK)))
+			return -rte_errno;
+
+		if (rte_intr_fd_get(mq->intr_handle) < 0) {
 			MIF_LOG(WARNING,
 				"Failed to create eventfd for tx queue %d: %s.", i,
 				strerror(errno));
@@ -1115,8 +1122,11 @@ memif_init_queues(struct rte_eth_dev *dev)
 		mq->ring_offset = memif_get_ring_offset(dev, mq, MEMIF_RING_S2C, i);
 		mq->last_head = 0;
 		mq->last_tail = 0;
-		mq->intr_handle.fd = eventfd(0, EFD_NONBLOCK);
-		if (mq->intr_handle.fd < 0) {
+		if (rte_intr_fd_set(mq->intr_handle,
+					   eventfd(0, EFD_NONBLOCK)))
+			return -rte_errno;
+
+		if (rte_intr_fd_get(mq->intr_handle) < 0) {
 			MIF_LOG(WARNING,
 				"Failed to create eventfd for rx queue %d: %s.", i,
 				strerror(errno));
@@ -1310,12 +1320,25 @@ memif_tx_queue_setup(struct rte_eth_dev *dev,
 		return -ENOMEM;
 	}
 
+	/* Allocate interrupt instance */
+	mq->intr_handle =
+		rte_intr_instance_alloc(RTE_INTR_ALLOC_DPDK_ALLOCATOR);
+	if (!mq->intr_handle) {
+		MIF_LOG(ERR, "Failed to allocate intr handle");
+		return -ENOMEM;
+	}
+
 	mq->type =
 	    (pmd->role == MEMIF_ROLE_CLIENT) ? MEMIF_RING_C2S : MEMIF_RING_S2C;
 	mq->n_pkts = 0;
 	mq->n_bytes = 0;
-	mq->intr_handle.fd = -1;
-	mq->intr_handle.type = RTE_INTR_HANDLE_EXT;
+
+	if (rte_intr_fd_set(mq->intr_handle, -1))
+		return -rte_errno;
+
+	if (rte_intr_type_set(mq->intr_handle, RTE_INTR_HANDLE_EXT))
+		return -rte_errno;
+
 	mq->in_port = dev->data->port_id;
 	dev->data->tx_queues[qid] = mq;
 
@@ -1339,11 +1362,24 @@ memif_rx_queue_setup(struct rte_eth_dev *dev,
 		return -ENOMEM;
 	}
 
+	/* Allocate interrupt instance */
+	mq->intr_handle =
+		rte_intr_instance_alloc(RTE_INTR_ALLOC_DPDK_ALLOCATOR);
+	if (!mq->intr_handle) {
+		MIF_LOG(ERR, "Failed to allocate intr handle");
+		return -ENOMEM;
+	}
+
 	mq->type = (pmd->role == MEMIF_ROLE_CLIENT) ? MEMIF_RING_S2C : MEMIF_RING_C2S;
 	mq->n_pkts = 0;
 	mq->n_bytes = 0;
-	mq->intr_handle.fd = -1;
-	mq->intr_handle.type = RTE_INTR_HANDLE_EXT;
+
+	if (rte_intr_fd_set(mq->intr_handle, -1))
+		return -rte_errno;
+
+	if (rte_intr_type_set(mq->intr_handle, RTE_INTR_HANDLE_EXT))
+		return -rte_errno;
+
 	mq->mempool = mb_pool;
 	mq->in_port = dev->data->port_id;
 	dev->data->rx_queues[qid] = mq;
@@ -1359,6 +1395,7 @@ memif_queue_release(void *queue)
 	if (!mq)
 		return;
 
+	rte_intr_instance_free(mq->intr_handle);
 	rte_free(mq);
 }
 

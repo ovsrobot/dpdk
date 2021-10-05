@@ -547,7 +547,7 @@ eth_txgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	struct txgbe_dcb_config *dcb_config = TXGBE_DEV_DCB_CONFIG(eth_dev);
 	struct txgbe_filter_info *filter_info = TXGBE_DEV_FILTER(eth_dev);
 	struct txgbe_bw_conf *bw_conf = TXGBE_DEV_BW_CONF(eth_dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	const struct rte_memzone *mz;
 	uint32_t ctrl_ext;
 	uint16_t csum;
@@ -1619,7 +1619,7 @@ txgbe_dev_start(struct rte_eth_dev *dev)
 	struct txgbe_hw_stats *hw_stats = TXGBE_DEV_STATS(dev);
 	struct txgbe_vf_info *vfinfo = *TXGBE_DEV_VFDATA(dev);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint32_t intr_vector = 0;
 	int err;
 	bool link_up = false, negotiate = 0;
@@ -1680,17 +1680,14 @@ txgbe_dev_start(struct rte_eth_dev *dev)
 			return -1;
 	}
 
-	if (rte_intr_dp_is_en(intr_handle) && !intr_handle->intr_vec) {
-		intr_handle->intr_vec =
-			rte_zmalloc("intr_vec",
-				    dev->data->nb_rx_queues * sizeof(int), 0);
-		if (intr_handle->intr_vec == NULL) {
+	if (rte_intr_dp_is_en(intr_handle)) {
+		if (rte_intr_vec_list_alloc(intr_handle, "intr_vec",
+						   dev->data->nb_rx_queues)) {
 			PMD_INIT_LOG(ERR, "Failed to allocate %d rx_queues"
 				     " intr_vec", dev->data->nb_rx_queues);
 			return -ENOMEM;
 		}
 	}
-
 	/* confiugre msix for sleep until rx interrupt */
 	txgbe_configure_msix(dev);
 
@@ -1871,7 +1868,7 @@ txgbe_dev_stop(struct rte_eth_dev *dev)
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
 	struct txgbe_vf_info *vfinfo = *TXGBE_DEV_VFDATA(dev);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	int vf;
 	struct txgbe_tm_conf *tm_conf = TXGBE_DEV_TM_CONF(dev);
 
@@ -1921,10 +1918,7 @@ txgbe_dev_stop(struct rte_eth_dev *dev)
 
 	/* Clean datapath event and queue/vec mapping */
 	rte_intr_efd_disable(intr_handle);
-	if (intr_handle->intr_vec != NULL) {
-		rte_free(intr_handle->intr_vec);
-		intr_handle->intr_vec = NULL;
-	}
+	rte_intr_vec_list_free(intr_handle);
 
 	/* reset hierarchy commit */
 	tm_conf->committed = false;
@@ -1987,7 +1981,7 @@ txgbe_dev_close(struct rte_eth_dev *dev)
 {
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	int retries = 0;
 	int ret;
 
@@ -3107,7 +3101,7 @@ txgbe_dev_interrupt_delayed_handler(void *param)
 {
 	struct rte_eth_dev *dev = (struct rte_eth_dev *)param;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct txgbe_interrupt *intr = TXGBE_DEV_INTR(dev);
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
 	uint32_t eicr;
@@ -3640,7 +3634,7 @@ static int
 txgbe_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint32_t mask;
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
 
@@ -3722,7 +3716,7 @@ static void
 txgbe_configure_msix(struct rte_eth_dev *dev)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
 	uint32_t queue_id, base = TXGBE_MISC_VEC_ID;
 	uint32_t vec = TXGBE_MISC_VEC_ID;
@@ -3756,8 +3750,10 @@ txgbe_configure_msix(struct rte_eth_dev *dev)
 			queue_id++) {
 			/* by default, 1:1 mapping */
 			txgbe_set_ivar_map(hw, 0, queue_id, vec);
-			intr_handle->intr_vec[queue_id] = vec;
-			if (vec < base + intr_handle->nb_efd - 1)
+			rte_intr_vec_list_index_set(intr_handle,
+							   queue_id, vec);
+			if (vec < base + rte_intr_nb_efd_get(intr_handle)
+			    - 1)
 				vec++;
 		}
 

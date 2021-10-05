@@ -1451,7 +1451,7 @@ eth_i40e_dev_init(struct rte_eth_dev *dev, void *init_params __rte_unused)
 	}
 	i40e_set_default_ptype_table(dev);
 	pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	intr_handle = &pci_dev->intr_handle;
+	intr_handle = pci_dev->intr_handle;
 
 	rte_eth_copy_pci_info(dev, pci_dev);
 	dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
@@ -1987,7 +1987,7 @@ i40e_vsi_queues_unbind_intr(struct i40e_vsi *vsi)
 {
 	struct rte_eth_dev *dev = I40E_VSI_TO_ETH_DEV(vsi);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct i40e_hw *hw = I40E_VSI_TO_HW(vsi);
 	uint16_t msix_vect = vsi->msix_intr;
 	uint16_t i;
@@ -2103,10 +2103,11 @@ i40e_vsi_queues_bind_intr(struct i40e_vsi *vsi, uint16_t itr_idx)
 {
 	struct rte_eth_dev *dev = I40E_VSI_TO_ETH_DEV(vsi);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct i40e_hw *hw = I40E_VSI_TO_HW(vsi);
 	uint16_t msix_vect = vsi->msix_intr;
-	uint16_t nb_msix = RTE_MIN(vsi->nb_msix, intr_handle->nb_efd);
+	uint16_t nb_msix = RTE_MIN(vsi->nb_msix,
+				   rte_intr_nb_efd_get(intr_handle));
 	uint16_t queue_idx = 0;
 	int record = 0;
 	int i;
@@ -2156,8 +2157,8 @@ i40e_vsi_queues_bind_intr(struct i40e_vsi *vsi, uint16_t itr_idx)
 					       vsi->nb_used_qps - i,
 					       itr_idx);
 			for (; !!record && i < vsi->nb_used_qps; i++)
-				intr_handle->intr_vec[queue_idx + i] =
-					msix_vect;
+				rte_intr_vec_list_index_set(intr_handle,
+						queue_idx + i, msix_vect);
 			break;
 		}
 		/* 1:1 queue/msix_vect mapping */
@@ -2165,7 +2166,9 @@ i40e_vsi_queues_bind_intr(struct i40e_vsi *vsi, uint16_t itr_idx)
 				       vsi->base_queue + i, 1,
 				       itr_idx);
 		if (!!record)
-			intr_handle->intr_vec[queue_idx + i] = msix_vect;
+			if (rte_intr_vec_list_index_set(intr_handle,
+						queue_idx + i, msix_vect))
+				return -rte_errno;
 
 		msix_vect++;
 		nb_msix--;
@@ -2179,7 +2182,7 @@ i40e_vsi_enable_queues_intr(struct i40e_vsi *vsi)
 {
 	struct rte_eth_dev *dev = I40E_VSI_TO_ETH_DEV(vsi);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct i40e_hw *hw = I40E_VSI_TO_HW(vsi);
 	struct i40e_pf *pf = I40E_VSI_TO_PF(vsi);
 	uint16_t msix_intr, i;
@@ -2206,7 +2209,7 @@ i40e_vsi_disable_queues_intr(struct i40e_vsi *vsi)
 {
 	struct rte_eth_dev *dev = I40E_VSI_TO_ETH_DEV(vsi);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct i40e_hw *hw = I40E_VSI_TO_HW(vsi);
 	struct i40e_pf *pf = I40E_VSI_TO_PF(vsi);
 	uint16_t msix_intr, i;
@@ -2372,7 +2375,7 @@ i40e_dev_start(struct rte_eth_dev *dev)
 	struct i40e_vsi *main_vsi = pf->main_vsi;
 	int ret, i;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint32_t intr_vector = 0;
 	struct i40e_vsi *vsi;
 	uint16_t nb_rxq, nb_txq;
@@ -2390,12 +2393,9 @@ i40e_dev_start(struct rte_eth_dev *dev)
 			return ret;
 	}
 
-	if (rte_intr_dp_is_en(intr_handle) && !intr_handle->intr_vec) {
-		intr_handle->intr_vec =
-			rte_zmalloc("intr_vec",
-				    dev->data->nb_rx_queues * sizeof(int),
-				    0);
-		if (!intr_handle->intr_vec) {
+	if (rte_intr_dp_is_en(intr_handle)) {
+		if (rte_intr_vec_list_alloc(intr_handle, "intr_vec",
+						   dev->data->nb_rx_queues)) {
 			PMD_INIT_LOG(ERR,
 				"Failed to allocate %d rx_queues intr_vec",
 				dev->data->nb_rx_queues);
@@ -2536,7 +2536,7 @@ i40e_dev_stop(struct rte_eth_dev *dev)
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct i40e_vsi *main_vsi = pf->main_vsi;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	int i;
 
 	if (hw->adapter_stopped == 1)
@@ -2577,10 +2577,9 @@ i40e_dev_stop(struct rte_eth_dev *dev)
 
 	/* Clean datapath event and queue/vec mapping */
 	rte_intr_efd_disable(intr_handle);
-	if (intr_handle->intr_vec) {
-		rte_free(intr_handle->intr_vec);
-		intr_handle->intr_vec = NULL;
-	}
+
+	/* Cleanup vector list */
+	rte_intr_vec_list_free(intr_handle);
 
 	/* reset hierarchy commit */
 	pf->tm_conf.committed = false;
@@ -2599,7 +2598,7 @@ i40e_dev_close(struct rte_eth_dev *dev)
 	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct i40e_mirror_rule *p_mirror;
 	struct i40e_filter_control_settings settings;
 	struct rte_flow *p_flow;
@@ -11407,11 +11406,11 @@ static int
 i40e_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint16_t msix_intr;
 
-	msix_intr = intr_handle->intr_vec[queue_id];
+	msix_intr = rte_intr_vec_list_index_get(intr_handle, queue_id);
 	if (msix_intr == I40E_MISC_VEC_ID)
 		I40E_WRITE_REG(hw, I40E_PFINT_DYN_CTL0,
 			       I40E_PFINT_DYN_CTL0_INTENA_MASK |
@@ -11426,7 +11425,7 @@ i40e_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id)
 			       I40E_PFINT_DYN_CTLN_ITR_INDX_MASK);
 
 	I40E_WRITE_FLUSH(hw);
-	rte_intr_ack(&pci_dev->intr_handle);
+	rte_intr_ack(pci_dev->intr_handle);
 
 	return 0;
 }
@@ -11435,11 +11434,11 @@ static int
 i40e_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
 {
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint16_t msix_intr;
 
-	msix_intr = intr_handle->intr_vec[queue_id];
+	msix_intr = rte_intr_vec_list_index_get(intr_handle, queue_id);
 	if (msix_intr == I40E_MISC_VEC_ID)
 		I40E_WRITE_REG(hw, I40E_PFINT_DYN_CTL0,
 			       I40E_PFINT_DYN_CTL0_ITR_INDX_MASK);

@@ -737,8 +737,7 @@ virtio_dev_close(struct rte_eth_dev *dev)
 	if (intr_conf->lsc || intr_conf->rxq) {
 		virtio_intr_disable(dev);
 		rte_intr_efd_disable(dev->intr_handle);
-		rte_free(dev->intr_handle->intr_vec);
-		dev->intr_handle->intr_vec = NULL;
+		rte_intr_vec_list_free(dev->intr_handle);
 	}
 
 	virtio_reset(hw);
@@ -1649,7 +1648,9 @@ virtio_queues_bind_intr(struct rte_eth_dev *dev)
 
 	PMD_INIT_LOG(INFO, "queue/interrupt binding");
 	for (i = 0; i < dev->data->nb_rx_queues; ++i) {
-		dev->intr_handle->intr_vec[i] = i + 1;
+		if (rte_intr_vec_list_index_set(dev->intr_handle, i,
+						       i + 1))
+			return -rte_errno;
 		if (VIRTIO_OPS(hw)->set_queue_irq(hw, hw->vqs[i * 2], i + 1) ==
 						 VIRTIO_MSI_NO_VECTOR) {
 			PMD_DRV_LOG(ERR, "failed to set queue vector");
@@ -1688,15 +1689,11 @@ virtio_configure_intr(struct rte_eth_dev *dev)
 		return -1;
 	}
 
-	if (!dev->intr_handle->intr_vec) {
-		dev->intr_handle->intr_vec =
-			rte_zmalloc("intr_vec",
-				    hw->max_queue_pairs * sizeof(int), 0);
-		if (!dev->intr_handle->intr_vec) {
-			PMD_INIT_LOG(ERR, "Failed to allocate %u rxq vectors",
-				     hw->max_queue_pairs);
-			return -ENOMEM;
-		}
+	if (rte_intr_vec_list_alloc(dev->intr_handle, "intr_vec",
+				    hw->max_queue_pairs)) {
+		PMD_INIT_LOG(ERR, "Failed to allocate %u rxq vectors",
+			     hw->max_queue_pairs);
+		return -ENOMEM;
 	}
 
 	if (dev->data->dev_flags & RTE_ETH_DEV_INTR_LSC) {
