@@ -51,6 +51,7 @@ static struct socket v1_socket; /* socket for v1 telemetry */
 
 static const char *telemetry_version; /* save rte_version */
 static const char *socket_dir;        /* runtime directory */
+static bool socket_uses_pid;          /* for in-memory mode, we need different socket paths */
 static rte_cpuset_t *thread_cpuset;
 static rte_log_fn rte_log_ptr;
 static uint32_t logtype;
@@ -432,8 +433,14 @@ static inline char *
 get_socket_path(const char *runtime_dir, const int version)
 {
 	static char path[PATH_MAX];
-	snprintf(path, sizeof(path), "%s/dpdk_telemetry.v%d",
-			strlen(runtime_dir) ? runtime_dir : "/tmp", version);
+	if (!socket_uses_pid)
+		snprintf(path, sizeof(path), "%s/dpdk_telemetry.v%d",
+				strlen(runtime_dir) ? runtime_dir : "/tmp", version);
+	else
+		snprintf(path, sizeof(path), "%s/dpdk_telemetry.v%d.%u",
+				strlen(runtime_dir) ? runtime_dir : "/tmp",
+				version,
+				(unsigned int)getpid());
 	return path;
 }
 
@@ -590,11 +597,13 @@ telemetry_v2_init(void)
 #endif /* !RTE_EXEC_ENV_WINDOWS */
 
 int32_t
-rte_telemetry_init(const char *runtime_dir, const char *rte_version, rte_cpuset_t *cpuset,
+rte_telemetry_init(const char *runtime_dir, bool in_memory,
+		const char *rte_version, rte_cpuset_t *cpuset,
 		rte_log_fn log_fn, uint32_t registered_logtype)
 {
 	telemetry_version = rte_version;
 	socket_dir = runtime_dir;
+	socket_uses_pid = in_memory; /* for in-memory mode use pid in sock path for uniqueness */
 	thread_cpuset = cpuset;
 	rte_log_ptr = log_fn;
 	logtype = registered_logtype;

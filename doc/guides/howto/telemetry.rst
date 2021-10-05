@@ -13,11 +13,26 @@ ethdev port list, and eal parameters.
 Telemetry Interface
 -------------------
 
-The :doc:`../prog_guide/telemetry_lib` opens a socket with path
+For applications run normally, i.e. without the `--in-memory` EAL flag,
+the :doc:`../prog_guide/telemetry_lib` opens a socket with path
 *<runtime_directory>/dpdk_telemetry.<version>*. The version represents the
 telemetry version, the latest is v2. For example, a client would connect to a
 socket with path  */var/run/dpdk/\*/dpdk_telemetry.v2* (when the primary process
 is run by a root user).
+
+For applications run with the `--in-memory` EAL flag,
+the socket file is created with an additional suffix of the process PID.
+This is because multiple independent DPDK processes can be run simultaneously
+using the same runtime directory when *in-memory* mode is used.
+For example, when a user with UID 1000 runs processes with in-memory mode,
+we would find sockets available such as::
+
+  /run/user/1000/dpdk/rte/dpdk_telemetry.v2.1982
+  /run/user/1000/dpdk/rte/dpdk_telemetry.v2.1935
+
+Where `/run/user/<uid>` is the runtime directory for the user given by the
+`$XDG_RUNTIME_DIR` environment variable,
+and `rte` is the default DPDK file prefix used for a runtime directory.
 
 
 Telemetry Initialization
