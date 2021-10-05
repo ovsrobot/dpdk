@@ -457,19 +457,35 @@ create_socket(char *path)
 
 	struct sockaddr_un sun = {.sun_family = AF_UNIX};
 	strlcpy(sun.sun_path, path, sizeof(sun.sun_path));
-	unlink(sun.sun_path);
+	TMTY_LOG(DEBUG, "Attempting socket bind to path '%s'\n", path);
+
 	if (bind(sock, (void *) &sun, sizeof(sun)) < 0) {
 		struct stat st;
 
-		TMTY_LOG(ERR, "Error binding socket: %s\n", strerror(errno));
-		if (stat(socket_dir, &st) < 0 || !S_ISDIR(st.st_mode))
+		/* first check if we have a runtime dir */
+		if (stat(socket_dir, &st) < 0 || !S_ISDIR(st.st_mode)) {
 			TMTY_LOG(ERR, "Cannot access DPDK runtime directory: %s\n", socket_dir);
-		sun.sun_path[0] = 0;
-		goto error;
+			goto error;
+		}
+
+		/* check if current socket is active */
+		if (connect(sock, (void *)&sun, sizeof(sun)) == 0) {
+			TMTY_LOG(ERR, "Error binding telemetry socket, path already in use\n");
+			TMTY_LOG(ERR, "Use '--file-prefix' to select a different socket path, or '--no-telemetry' to disable\n");
+			goto error;
+		}
+
+		/* socket is not active, delete and attempt rebind */
+		unlink(sun.sun_path);
+		if (bind(sock, (void *) &sun, sizeof(sun)) < 0) {
+			TMTY_LOG(ERR, "Error binding socket: %s\n", strerror(errno));
+			goto error;
+		}
 	}
 
 	if (listen(sock, 1) < 0) {
 		TMTY_LOG(ERR, "Error calling listen for socket: %s\n", strerror(errno));
+		unlink(sun.sun_path);
 		goto error;
 	}
 
@@ -477,7 +493,7 @@ create_socket(char *path)
 
 error:
 	close(sock);
-	unlink_sockets();
+	path[0] = 0;
 	return -1;
 }
 
