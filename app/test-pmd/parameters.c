@@ -870,7 +870,9 @@ launch_args_parse(int argc, char** argv)
 			if (!strcmp(lgopts[opt_idx].name, "max-pkt-len")) {
 				n = atoi(optarg);
 				if (n >= RTE_ETHER_MIN_LEN)
-					rx_mode.max_rx_pkt_len = (uint32_t) n;
+					rx_mode.mtu = (uint32_t) n -
+						(RTE_ETHER_HDR_LEN +
+						 RTE_ETHER_CRC_LEN);
 				else
 					rte_exit(EXIT_FAILURE,
 						 "Invalid max-pkt-len=%d - should be > %d\n",
