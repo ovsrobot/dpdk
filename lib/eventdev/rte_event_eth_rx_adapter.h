@@ -543,7 +543,6 @@ int rte_event_eth_rx_adapter_cb_register(uint8_t id, uint16_t eth_dev_id,
  *  - 0: Success.
  *  - <0: Error code on failure.
  */
-__rte_experimental
 int rte_event_eth_rx_adapter_vector_limits_get(
 	uint8_t dev_id, uint16_t eth_port_id,
 	struct rte_event_eth_rx_adapter_vector_limits *limits);
@@ -570,7 +569,6 @@ int rte_event_eth_rx_adapter_vector_limits_get(
  *  - 0: Success, Receive queue configured correctly.
  *  - <0: Error code on failure.
  */
-__rte_experimental
 int rte_event_eth_rx_adapter_queue_event_vector_config(
 	uint8_t id, uint16_t eth_dev_id, int32_t rx_queue_id,
 	struct rte_event_eth_rx_adapter_event_vector_config *config);
