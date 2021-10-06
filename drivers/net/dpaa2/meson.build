@@ -20,6 +20,7 @@ sources = files(
         'mc/dpkg.c',
         'mc/dpdmux.c',
         'mc/dpni.c',
+	'base/dpaa2_tlu_hash.c',
 )
 
 includes += include_directories('base', 'mc')
