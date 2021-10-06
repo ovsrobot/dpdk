@@ -24,7 +24,6 @@ headers = files(
         'rte_event_ring.h',
         'rte_event_eth_rx_adapter.h',
         'rte_event_timer_adapter.h',
-        'rte_event_timer_adapter_pmd.h',
         'rte_event_crypto_adapter.h',
         'rte_event_eth_tx_adapter.h',
 )
@@ -35,6 +34,7 @@ driver_sdk_headers += files(
         'eventdev_pmd.h',
         'eventdev_pmd_pci.h',
         'eventdev_pmd_vdev.h',
+        'event_timer_adapter_pmd.h',
 )
 
 deps += ['ring', 'ethdev', 'hash', 'mempool', 'mbuf', 'timer', 'cryptodev']
