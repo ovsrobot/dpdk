@@ -4299,6 +4299,13 @@ struct rte_flow_port_attr {
 	 */
 	uint32_t version;
 	/**
+	 * Number of flow queues to be configured.
+	 * Flow queues are used for asyncronous flow rule creation/destruction.
+	 * The order of operations is not guaranteed inside a queue.
+	 * Flow queues are not thread-safe.
+	 */
+	uint16_t nb_queues;
+	/**
 	 * Memory size allocated for the flow rules management.
 	 * If set to 0, memory is allocated dynamically.
 	 */
@@ -4331,6 +4338,21 @@ struct rte_flow_port_attr {
 };
 
 /**
+ * Flow engine queue configuration.
+ */
+__extension__
+struct rte_flow_queue_attr {
+	/**
+	 * Version of the struct layout, should be 0.
+	 */
+	uint32_t version;
+	/**
+	 * Number of flow rule operations a queue can hold.
+	 */
+	uint32_t size;
+};
+
+/**
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice.
  *
@@ -4346,6 +4368,8 @@ struct rte_flow_port_attr {
  *   Port identifier of Ethernet device.
  * @param[in] port_attr
  *   Port configuration attributes.
+ * @param[in] queue_attr
+ *   Array that holds attributes for each queue.
  * @param[out] error
  *   Perform verbose error reporting if not NULL.
  *   PMDs initialize this structure in case of error only.
@@ -4357,6 +4381,7 @@ __rte_experimental
 int
 rte_flow_configure(uint16_t port_id,
 		   const struct rte_flow_port_attr *port_attr,
+		   const struct rte_flow_queue_attr *queue_attr[],
 		   struct rte_flow_error *error);
 
 /**
@@ -4626,6 +4651,269 @@ __rte_experimental
 int
 rte_flow_table_destroy(uint16_t port_id, struct rte_flow_table *table,
 		       struct rte_flow_error *error);
+
+/**
+ * Queue operation attributes
+ */
+__extension__
+struct rte_flow_q_ops_attr {
+	/**
+	 * Version of the struct layout, should be 0.
+	 */
+	uint32_t version;
+	/**
+	 * The user data that will be returned on the completion.
+	 */
+	void *user_data;
+	/**
+	 * When set, the requested action must be sent to the HW without
+	 * any delay. Any prior requests must be also sent to the HW.
+	 * If this bit is cleared, the application must call the
+	 * rte_flow_queue_flush API to actually send the request to the HW.
+	 */
+	uint32_t flush:1;
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Enqueue rule creation operation.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param queue
+ *   Flow queue used to insert the rule.
+ * @param[in] attr
+ *   Rule creation operation attributes.
+ * @param[in] table
+ *   Table to select templates from.
+ * @param[in] items
+ *   List of pattern items to be used.
+ *   The list order should match the order in the item template.
+ *   The spec is the only relevant member of the item that is being used.
+ * @param[in] item_template_index
+ *   Item template index in the table.
+ * @param[in] actions
+ *   List of actions to be used.
+ *   The list order should match the order in the action template.
+ * @param[in] action_template_index
+ *   Action template index in the table.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *   Handle on success, NULL otherwise and rte_errno is set.
+ *   The rule handle doesn't mean that the rule was offloaded.
+ *   Only completion result indicates that the rule was offloaded.
+ */
+__rte_experimental
+struct rte_flow *
+rte_flow_q_flow_create(uint16_t port_id, uint32_t queue,
+		       const struct rte_flow_q_ops_attr *attr,
+		       const struct rte_flow_table *table,
+			   const struct rte_flow_item items[],
+		       uint8_t item_template_index,
+			   const struct rte_flow_action actions[],
+		       uint8_t action_template_index,
+		       struct rte_flow_error *error);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Enqueue rule destruction operation.
+ *
+ * This function enqueues a destruction operation on the queue.
+ * Application should assume that after calling this function
+ * the rule handle is not valid anymore.
+ * Completion indicates the full removal of the rule from the HW.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param queue
+ *   Flow queue which is used to destroy the rule.
+ *   This must match the queue on which the rule was created.
+ * @param[in] attr
+ *   Rule destroy operation attributes.
+ * @param[in] flow
+ *   Flow handle to be destroyed.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *   0 on success, a negative errno value otherwise and rte_errno is set.
+ */
+__rte_experimental
+int
+rte_flow_q_flow_destroy(uint16_t port_id, uint32_t queue,
+			struct rte_flow_q_ops_attr *attr,
+			struct rte_flow *flow,
+			struct rte_flow_error *error);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Enqueue indirect rule creation operation.
+ * @see rte_flow_action_handle_create
+ *
+ * @param[in] port_id
+ *   Port identifier of Ethernet device.
+ * @param[in] queue
+ *   Flow queue which is used to create the rule.
+ * @param[in] attr
+ *   Queue operation attributes.
+ * @param[in] conf
+ *   Action configuration for the indirect action object creation.
+ * @param[in] action
+ *   Specific configuration of the indirect action object.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *   - (0) if success.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-ENOSYS) if underlying device does not support this functionality.
+ *   - (-EIO) if underlying device is removed.
+ *   - (-ENOENT) if action pointed by *action* handle was not found.
+ *   - (-EBUSY) if action pointed by *action* handle still used by some rules
+ *   rte_errno is also set.
+ */
+__rte_experimental
+struct rte_flow_action_handle *
+rte_flow_q_action_handle_create(uint16_t port_id, uint32_t queue,
+				const struct rte_flow_q_ops_attr *attr,
+				const struct rte_flow_indir_action_conf *conf,
+				const struct rte_flow_action *action,
+				struct rte_flow_error *error);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Enqueue indirect rule destruction operation.
+ * The destroy queue must be the same
+ * as the queue on which the action was created.
+ *
+ * @param[in] port_id
+ *   Port identifier of Ethernet device.
+ * @param[in] queue
+ *   Flow queue which is used to destroy the rule.
+ * @param[in] attr
+ *   Queue operation attributes.
+ * @param[in] handle
+ *   Handle for the indirect action object to be destroyed.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *   - (0) if success.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-ENOSYS) if underlying device does not support this functionality.
+ *   - (-EIO) if underlying device is removed.
+ *   - (-ENOENT) if action pointed by *action* handle was not found.
+ *   - (-EBUSY) if action pointed by *action* handle still used by some rules
+ *   rte_errno is also set.
+ */
+__rte_experimental
+int
+rte_flow_q_action_handle_destroy(uint16_t port_id, uint32_t queue,
+				struct rte_flow_q_ops_attr *attr,
+				struct rte_flow_action_handle *handle,
+				struct rte_flow_error *error);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Flush all internally stored rules to the HW.
+ * Non-flushed rules are rules that were inserted without the flush flag set.
+ * Can be used to notify the HW about batch of rules prepared by the SW to
+ * reduce the number of communications between the HW and SW.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param queue
+ *   Flow queue to be flushed.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *    0 on success, a negative errno value otherwise and rte_errno is set.
+ */
+__rte_experimental
+int
+rte_flow_q_flush(uint16_t port_id, uint32_t queue,
+		 struct rte_flow_error *error);
+
+/**
+ * Dequeue operation status.
+ */
+enum rte_flow_q_op_status {
+	/**
+	 * The operation was completed successfully.
+	 */
+	RTE_FLOW_Q_OP_SUCCESS,
+	/**
+	 * The operation was not completed successfully.
+	 */
+	RTE_FLOW_Q_OP_ERROR,
+};
+
+/**
+ * Dequeue operation result.
+ */
+struct rte_flow_q_op_res {
+	/**
+	 * Version of the struct layout, should be 0.
+	 */
+	uint32_t version;
+	/**
+	 * Returns the status of the operation that this completion signals.
+	 */
+	enum rte_flow_q_op_status status;
+	/**
+	 * User data that was supplied during operation submission.
+	 */
+	void *user_data;
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Dequeue a rte flow operation.
+ * The application must invoke this function in order to complete
+ * the flow rule offloading and to receive the flow rule operation status.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param queue
+ *   Flow queue which is used to dequeue the operation.
+ * @param[out] res
+ *   Array of results that will be set.
+ * @param[in] n_res
+ *   Maximum number of results that can be returned.
+ *   This value is equal to the size of the res array.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *   Number of results that were dequeued,
+ *   a negative errno value otherwise and rte_errno is set.
+ */
+__rte_experimental
+int
+rte_flow_q_dequeue(uint16_t port_id, uint32_t queue,
+		   struct rte_flow_q_op_res res[], uint16_t n_res,
+		   struct rte_flow_error *error);
 #ifdef __cplusplus
 }
 #endif
