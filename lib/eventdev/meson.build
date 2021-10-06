@@ -8,6 +8,7 @@ else
 endif
 
 sources = files(
+        'eventdev_private.c',
         'rte_eventdev.c',
         'rte_event_ring.c',
         'eventdev_trace_points.c',
