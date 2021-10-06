@@ -33,7 +33,7 @@ RTE_LOG_REGISTER_SUFFIX(evtim_logtype, adapter.timer, NOTICE);
 RTE_LOG_REGISTER_SUFFIX(evtim_buffer_logtype, adapter.timer, NOTICE);
 RTE_LOG_REGISTER_SUFFIX(evtim_svc_logtype, adapter.timer.svc, NOTICE);
 
-static struct rte_event_timer_adapter adapters[RTE_EVENT_TIMER_ADAPTER_NUM_MAX];
+static struct rte_event_timer_adapter *adapters;
 
 static const struct event_timer_adapter_ops swtim_ops;
 
@@ -137,6 +137,17 @@ rte_event_timer_adapter_create_ext(
 	char mz_name[DATA_MZ_NAME_MAX_LEN];
 	int n, ret;
 	struct rte_eventdev *dev;
+
+	if (adapters == NULL) {
+		adapters = rte_zmalloc("Eventdev",
+				       sizeof(struct rte_event_timer_adapter) *
+					       RTE_EVENT_TIMER_ADAPTER_NUM_MAX,
+				       RTE_CACHE_LINE_SIZE);
+		if (adapters == NULL) {
+			rte_errno = ENOMEM;
+			return NULL;
+		}
+	}
 
 	if (conf == NULL) {
 		rte_errno = EINVAL;
@@ -311,6 +322,17 @@ rte_event_timer_adapter_lookup(uint16_t adapter_id)
 	struct rte_event_timer_adapter *adapter;
 	int ret;
 	struct rte_eventdev *dev;
+
+	if (adapters == NULL) {
+		adapters = rte_zmalloc("Eventdev",
+				       sizeof(struct rte_event_timer_adapter) *
+					       RTE_EVENT_TIMER_ADAPTER_NUM_MAX,
+				       RTE_CACHE_LINE_SIZE);
+		if (adapters == NULL) {
+			rte_errno = ENOMEM;
+			return NULL;
+		}
+	}
 
 	if (adapters[adapter_id].allocated)
 		return &adapters[adapter_id]; /* Adapter is already loaded */
