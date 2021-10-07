@@ -49,6 +49,12 @@ enum rte_bbdev_state {
 	RTE_BBDEV_INITIALIZED
 };
 
+/** Definitions of device data byte endianness types */
+enum rte_bbdev_endianness {
+	RTE_BBDEV_BIG_ENDIAN,    /**< Data with byte-endianness BE */
+	RTE_BBDEV_LITTLE_ENDIAN, /**< Data with byte-endianness LE */
+};
+
 /**
  * Get the total number of devices that have been successfully initialised.
  *
@@ -309,6 +315,8 @@ struct rte_bbdev_driver_info {
 	uint16_t min_alignment;
 	/** HARQ memory available in kB */
 	uint32_t harq_buffer_size;
+	/** Byte endianness assumption for input/output data */
+	enum rte_bbdev_endianness data_endianness;
 	/** Default queue configuration used if none is supplied  */
 	struct rte_bbdev_queue_conf default_queue_conf;
 	/** Device operation capabilities */

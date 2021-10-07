@@ -187,6 +187,7 @@ API Changes
   the crypto/security operation. This field will be used to communicate
   events such as soft expiry with IPsec in lookaside mode.
 
+* bbdev: Added device info related to data byte endianness processing assumption.
 
 ABI Changes
 -----------
