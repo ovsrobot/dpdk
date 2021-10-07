@@ -191,6 +191,9 @@ API Changes
   the crypto/security operation. This field will be used to communicate
   events such as soft expiry with IPsec in lookaside mode.
 
+* net: Renamed ``s_addr`` and ``d_addr`` fields of ``rte_ether_hdr`` structure
+  to ``src_addr`` and ``dst_addr``, respectively.
+
 
 ABI Changes
 -----------
