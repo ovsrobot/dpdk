@@ -11,6 +11,7 @@ drivers = [
         'fpga_lte_fec',
         'null',
         'turbo_sw',
+        'la12xx',
 ]
 
 log_prefix = 'pmd.bb'
