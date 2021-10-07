@@ -154,6 +154,10 @@ Removed Items
   iavf already became the default VF driver for i40e devices,
   so there is no need to maintain i40evf.
 
+* ethdev: Removed ``rx_descriptor_done`` dev_ops and
+  ``rte_eth_rx_descriptor_done``.  Existing ``rte_eth_rx_descriptor_status``
+  APIs can be used as a replacement.
+
 
 API Changes
 -----------
