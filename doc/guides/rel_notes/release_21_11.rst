@@ -130,6 +130,11 @@ New Features
   * Added tests to validate packets hard expiry.
   * Added tests to verify tunnel header verification in IPsec inbound.
 
+* **Add new function into ethdev lib.**
+
+  * Added ``rte_eth_macaddrs_get`` to allow user to retrieve all Ethernet
+    addresses assigned to given ethernet port.
+
 
 Removed Items
 -------------
