@@ -130,6 +130,11 @@ New Features
   * Added tests to validate packets hard expiry.
   * Added tests to verify tunnel header verification in IPsec inbound.
 
+* **Added NXP LA12xx baseband PMD.**
+
+  * Added a new baseband PMD driver for NXP LA12xx Software defined radio.
+  * See the :doc:`../bbdevs/la12xx` for more details.
+
 
 Removed Items
 -------------
