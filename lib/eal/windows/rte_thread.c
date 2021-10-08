@@ -7,7 +7,8 @@
 #include <rte_debug.h>
 #include <rte_errno.h>
 #include <rte_thread.h>
-#include <rte_windows.h>
+
+#include "eal_windows.h"
 
 struct eal_tls_key {
 	DWORD thread_index;
@@ -75,6 +76,128 @@ int
 rte_thread_equal(rte_thread_t t1, rte_thread_t t2)
 {
 	return t1.opaque_id == t2.opaque_id;
+}
+
+static int
+rte_convert_cpuset_to_affinity(const rte_cpuset_t *cpuset,
+		PGROUP_AFFINITY affinity)
+{
+	int ret = 0;
+	PGROUP_AFFINITY cpu_affinity = NULL;
+	unsigned int cpu_idx;
+
+	memset(affinity, 0, sizeof(GROUP_AFFINITY));
+	affinity->Group = (USHORT)-1;
+
+	/* Check that all cpus of the set belong to the same processor group and
+	 * accumulate thread affinity to be applied.
+	 */
+	for (cpu_idx = 0; cpu_idx < CPU_SETSIZE; cpu_idx++) {
+		if (!CPU_ISSET(cpu_idx, cpuset))
+			continue;
+
+		cpu_affinity = eal_get_cpu_affinity(cpu_idx);
+
+		if (affinity->Group == (USHORT)-1) {
+			affinity->Group = cpu_affinity->Group;
+		} else if (affinity->Group != cpu_affinity->Group) {
+			ret = EINVAL;
+			goto cleanup;
+		}
+
+		affinity->Mask |= cpu_affinity->Mask;
+	}
+
+	if (affinity->Mask == 0) {
+		ret = EINVAL;
+		goto cleanup;
+	}
+
+cleanup:
+	return ret;
+}
+
+int
+rte_thread_set_affinity_by_id(rte_thread_t thread_id,
+		const rte_cpuset_t *cpuset)
+{
+	int ret = 0;
+	GROUP_AFFINITY thread_affinity;
+	HANDLE thread_handle = NULL;
+
+	RTE_VERIFY(cpuset != NULL);
+
+	ret = rte_convert_cpuset_to_affinity(cpuset, &thread_affinity);
+	if (ret != 0) {
+		RTE_LOG(DEBUG, EAL, "Unable to convert cpuset to thread affinity\n");
+		goto cleanup;
+	}
+
+	thread_handle = OpenThread(THREAD_ALL_ACCESS, FALSE,
+		thread_id.opaque_id);
+	if (thread_handle == NULL) {
+		ret = thread_log_last_error("OpenThread()");
+		goto cleanup;
+	}
+
+	if (!SetThreadGroupAffinity(thread_handle, &thread_affinity, NULL)) {
+		ret = thread_log_last_error("SetThreadGroupAffinity()");
+		goto cleanup;
+	}
+
+cleanup:
+	if (thread_handle != NULL) {
+		CloseHandle(thread_handle);
+		thread_handle = NULL;
+	}
+
+	return ret;
+}
+
+int
+rte_thread_get_affinity_by_id(rte_thread_t thread_id,
+		rte_cpuset_t *cpuset)
+{
+	HANDLE thread_handle = NULL;
+	PGROUP_AFFINITY cpu_affinity;
+	GROUP_AFFINITY thread_affinity;
+	unsigned int cpu_idx;
+	int ret = 0;
+
+	RTE_VERIFY(cpuset != NULL);
+
+	thread_handle = OpenThread(THREAD_ALL_ACCESS, FALSE,
+		thread_id.opaque_id);
+	if (thread_handle == NULL) {
+		ret = thread_log_last_error("OpenThread()");
+		goto cleanup;
+	}
+
+	/* obtain previous thread affinity */
+	if (!GetThreadGroupAffinity(thread_handle, &thread_affinity)) {
+		ret = thread_log_last_error("GetThreadGroupAffinity()");
+		goto cleanup;
+	}
+
+	CPU_ZERO(cpuset);
+
+	/* Convert affinity to DPDK cpu set */
+	for (cpu_idx = 0; cpu_idx < CPU_SETSIZE; cpu_idx++) {
+
+		cpu_affinity = eal_get_cpu_affinity(cpu_idx);
+
+		if ((cpu_affinity->Group == thread_affinity.Group) &&
+		   ((cpu_affinity->Mask & thread_affinity.Mask) != 0)) {
+			CPU_SET(cpu_idx, cpuset);
+		}
+	}
+
+cleanup:
+	if (thread_handle != NULL) {
+		CloseHandle(thread_handle);
+		thread_handle = NULL;
+	}
+	return ret;
 }
 
 int
