@@ -32,6 +32,28 @@ typedef struct rte_thread_tag {
 } rte_thread_t;
 
 /**
+ * Thread priority values.
+ */
+enum rte_thread_priority {
+	RTE_THREAD_PRIORITY_NORMAL            = 0,
+	/**< normal thread priority, the default */
+	RTE_THREAD_PRIORITY_REALTIME_CRITICAL = 1,
+	/**< highest thread priority allowed */
+};
+
+#ifdef RTE_HAS_CPUSET
+
+/**
+ * Representation for thread attributes.
+ */
+typedef struct {
+	enum rte_thread_priority priority; /**< thread priority */
+	rte_cpuset_t cpuset; /**< thread affinity */
+} rte_thread_attr_t;
+
+#endif /* RTE_HAS_CPUSET */
+
+/**
  * TLS key type, an opaque pointer.
  */
 typedef struct eal_tls_key *rte_thread_key;
@@ -62,6 +84,75 @@ __rte_experimental
 int rte_thread_equal(rte_thread_t t1, rte_thread_t t2);
 
 #ifdef RTE_HAS_CPUSET
+
+/**
+ * Initialize the attributes of a thread.
+ * These attributes can be passed to the rte_thread_create() function
+ * that will create a new thread and set its attributes according to attr.
+ *
+ * @param attr
+ *   Thread attributes to initialize.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_attr_init(rte_thread_attr_t *attr);
+
+/**
+ * Set the CPU affinity value in the thread attributes pointed to
+ * by 'thread_attr'.
+ *
+ * @param thread_attr
+ *   Points to the thread attributes in which affinity will be updated.
+ *
+ * @param cpuset
+ *   Points to the value of the affinity to be set.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_attr_set_affinity(rte_thread_attr_t *thread_attr,
+		rte_cpuset_t *cpuset);
+
+/**
+ * Get the value of CPU affinity that is set in the thread attributes pointed
+ * to by 'thread_attr'.
+ *
+ * @param thread_attr
+ *   Points to the thread attributes from which affinity will be retrieved.
+ *
+ * @param cpuset
+ *   Pointer to the memory that will store the affinity.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_attr_get_affinity(rte_thread_attr_t *thread_attr,
+		rte_cpuset_t *cpuset);
+
+/**
+ * Set the thread priority value in the thread attributes pointed to
+ * by 'thread_attr'.
+ *
+ * @param thread_attr
+ *   Points to the thread attributes in which priority will be updated.
+ *
+ * @param priority
+ *   Points to the value of the priority to be set.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_attr_set_priority(rte_thread_attr_t *thread_attr,
+		enum rte_thread_priority priority);
 
 /**
  * Set core affinity of the current thread.
