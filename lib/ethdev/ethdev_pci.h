@@ -151,6 +151,20 @@ rte_eth_dev_pci_generic_remove(struct rte_pci_device *pci_dev,
 	if (!eth_dev)
 		return 0;
 
+	/*
+	 * In secondary process, because it doesn't clear eth_dev->data, the
+	 * "eth_dev" above will not be NULL when rte_eth_dev_close() has been
+	 * called before this interface is called.
+	 * In this case, Ethernet device will be released repeatedly.
+	 * The state of the Ethernet device is equal to RTE_ETH_DEV_UNUSED after
+	 * calling rte_eth_dev_close(). Using this state resolves problem.
+	 */
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY &&
+	    eth_dev->state == RTE_ETH_DEV_UNUSED) {
+		RTE_ETHDEV_LOG(INFO, "The ethdev port has been released.");
+		return 0;
+	}
+
 	if (dev_uninit) {
 		ret = dev_uninit(eth_dev);
 		if (ret)
