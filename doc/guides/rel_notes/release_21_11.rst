@@ -191,6 +191,11 @@ API Changes
   the crypto/security operation. This field will be used to communicate
   events such as soft expiry with IPsec in lookaside mode.
 
+* cmdline: The API cmdline_stdin_exit has added cmdline_free function.
+  Malloc cl in the cmdline_stdin_new function, so release in the
+  cmdline_stdin_exit function is logical. The application code
+  that calls cmdline_free needs to be deleted.
+
 
 ABI Changes
 -----------
