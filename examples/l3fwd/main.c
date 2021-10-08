@@ -123,7 +123,6 @@ static struct rte_eth_conf port_conf = {
 		.mq_mode = ETH_MQ_RX_RSS,
 		.max_rx_pkt_len = RTE_ETHER_MAX_LEN,
 		.split_hdr_size = 0,
-		.offloads = DEV_RX_OFFLOAD_CHECKSUM,
 	},
 	.rx_adv_conf = {
 		.rss_conf = {
@@ -981,6 +980,7 @@ prepare_ptype_parser(uint16_t portid, uint16_t queueid)
 	return 0;
 }
 
+
 static void
 l3fwd_poll_resource_setup(void)
 {
@@ -993,7 +993,8 @@ l3fwd_poll_resource_setup(void)
 	unsigned int nb_ports;
 	unsigned int lcore_id;
 	int ret;
-
+	l3_sft_cksum = false;
+	l4_sft_cksum = false;
 	if (check_lcore_params() < 0)
 		rte_exit(EXIT_FAILURE, "check_lcore_params failed\n");
 
@@ -1034,10 +1035,35 @@ l3fwd_poll_resource_setup(void)
 			rte_exit(EXIT_FAILURE,
 				"Error during getting device (port %u) info: %s\n",
 				portid, strerror(-ret));
-
 		if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MBUF_FAST_FREE)
 			local_port_conf.txmode.offloads |=
 				DEV_TX_OFFLOAD_MBUF_FAST_FREE;
+
+		if (dev_info.rx_offload_capa & DEV_RX_OFFLOAD_IPV4_CKSUM)
+			local_port_conf.rxmode.offloads |=
+			DEV_RX_OFFLOAD_IPV4_CKSUM;
+		else {
+			l3_sft_cksum = true;
+			printf("WARNING: IPV4 Checksum offload not available.\n");
+			}
+
+		if (dev_info.rx_offload_capa & DEV_RX_OFFLOAD_UDP_CKSUM)
+			local_port_conf.rxmode.offloads |=
+				DEV_RX_OFFLOAD_UDP_CKSUM;
+
+		else {
+			l4_sft_cksum = true;
+			printf("WARNING: UDP Checksum offload not available.\n");
+			}
+
+		if (dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_CKSUM)
+			local_port_conf.rxmode.offloads |=
+				DEV_RX_OFFLOAD_TCP_CKSUM;
+
+		else {
+			l4_sft_cksum = true;
+			printf("WARNING: TCP Checksum offload not available.\n");
+			}
 
 		local_port_conf.rx_adv_conf.rss_conf.rss_hf &=
 			dev_info.flow_type_rss_offloads;
