@@ -1617,7 +1617,8 @@ test_hash_add_delete_jhash2(void)
 	int32_t pos1, pos2;
 
 	hash_params_ex.name = "hash_test_jhash2";
-	hash_params_ex.key_len = 4;
+	/* Set the key_len divided by 4 due to using rte_jhash_32b() */
+	hash_params_ex.key_len = 4 / sizeof(uint32_t);
 	hash_params_ex.hash_func = (rte_hash_function)rte_jhash_32b;
 
 	handle = rte_hash_create(&hash_params_ex);
@@ -1656,7 +1657,8 @@ test_hash_add_delete_2_jhash2(void)
 	int32_t pos1, pos2;
 
 	hash_params_ex.name = "hash_test_2_jhash2";
-	hash_params_ex.key_len = 8;
+	/* Set the key_len divided by 4 due to using rte_jhash_32b() */
+	hash_params_ex.key_len = 8 / sizeof(uint32_t);
 	hash_params_ex.hash_func = (rte_hash_function)rte_jhash_32b;
 
 	handle = rte_hash_create(&hash_params_ex);
