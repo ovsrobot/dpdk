@@ -134,6 +134,11 @@ New Features
   * Added tests to validate packets hard expiry.
   * Added tests to verify tunnel header verification in IPsec inbound.
 
+* **Added support for users get device configuration.**
+
+  * Added an API which can help users get device configuration.
+    The declarations for the API's can be found in ``rte_ethdev.h``.
+
 
 Removed Items
 -------------
