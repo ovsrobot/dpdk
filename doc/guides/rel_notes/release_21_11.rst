@@ -67,6 +67,10 @@ New Features
   Added macros ETH_RSS_IPV4_CHKSUM and ETH_RSS_L4_CHKSUM, now IPv4 and
   TCP/UDP/SCTP header checksum field can be used as input set for RSS.
 
+* **Updated AF_XDP PMD.**
+
+  * Disabled secondary process support.
+
 * **Updated Broadcom bnxt PMD.**
 
   * Added flow offload support for Thor.
