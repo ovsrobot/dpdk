@@ -80,8 +80,8 @@ struct rte_lpm6_rule {
 /** Rules tbl entry key. */
 struct rte_lpm6_rule_key {
 	uint8_t ip[RTE_LPM6_IPV6_ADDR_SIZE]; /**< Rule IP address. */
-	uint8_t depth; /**< Rule depth. */
-};
+	uint32_t depth; /**< Rule depth. */
+} __rte_aligned(sizeof(uint32_t));
 
 /* Header of tbl8 */
 struct rte_lpm_tbl8_hdr {
