@@ -110,6 +110,10 @@ New Features
   * Added DES-CBC, AES-XCBC-MAC, AES-CMAC and non-HMAC algo support.
   * Added PDCP short MAC-I support.
 
+* **Updated Mellanox mlx5 driver.**
+
+  * Added socket direct mode bonding support which needs OFED 5.4+.
+
 * **Updated NXP dpaa2_sec crypto PMD.**
 
   * Added PDCP short MAC-I support.
