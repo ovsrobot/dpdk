@@ -47,7 +47,7 @@ rte_thread_attr_init(rte_thread_attr_t *attr)
 
 int
 rte_thread_attr_set_affinity(rte_thread_attr_t *thread_attr,
-			     rte_cpuset_t *cpuset)
+		rte_cpuset_t *cpuset)
 {
 	RTE_VERIFY(thread_attr != NULL);
 	RTE_VERIFY(cpuset != NULL);
@@ -59,7 +59,7 @@ rte_thread_attr_set_affinity(rte_thread_attr_t *thread_attr,
 
 int
 rte_thread_attr_get_affinity(rte_thread_attr_t *thread_attr,
-			     rte_cpuset_t *cpuset)
+		rte_cpuset_t *cpuset)
 {
 	RTE_VERIFY(thread_attr != NULL);
 	RTE_VERIFY(cpuset != NULL);
@@ -71,7 +71,7 @@ rte_thread_attr_get_affinity(rte_thread_attr_t *thread_attr,
 
 int
 rte_thread_attr_set_priority(rte_thread_attr_t *thread_attr,
-			     enum rte_thread_priority priority)
+		enum rte_thread_priority priority)
 {
 	RTE_VERIFY(thread_attr != NULL);
 
