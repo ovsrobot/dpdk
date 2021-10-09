@@ -429,6 +429,8 @@ EXPERIMENTAL {
 	rte_thread_attr_set_priority;
 	rte_thread_get_affinity_by_id;
 	rte_thread_set_affinity_by_id;
+	rte_thread_get_priority;
+	rte_thread_set_priority;
 };
 
 INTERNAL {
