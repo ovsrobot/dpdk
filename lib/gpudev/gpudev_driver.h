@@ -31,6 +31,7 @@ typedef int (rte_gpu_mem_alloc_t)(struct rte_gpu *dev, size_t size, void **ptr);
 typedef int (rte_gpu_free_t)(struct rte_gpu *dev, void *ptr);
 typedef int (rte_gpu_mem_register_t)(struct rte_gpu *dev, size_t size, void *ptr);
 typedef int (rte_gpu_mem_unregister_t)(struct rte_gpu *dev, void *ptr);
+typedef int (rte_gpu_mbw_t)(struct rte_gpu *dev);
 
 struct rte_gpu_ops {
 	/* Get device info. If NULL, info is just copied. */
@@ -45,6 +46,8 @@ struct rte_gpu_ops {
 	rte_gpu_free_t *mem_free;
 	/* Unregister CPU memory in device. */
 	rte_gpu_mem_unregister_t *mem_unregister;
+	/* Enforce GPU memory write barrier. */
+	rte_gpu_mbw_t *mbw;
 };
 
 struct rte_gpu_mpshared {

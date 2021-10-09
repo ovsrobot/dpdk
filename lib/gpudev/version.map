@@ -13,6 +13,7 @@ EXPERIMENTAL {
 	rte_gpu_init;
 	rte_gpu_is_valid;
 	rte_gpu_malloc;
+	rte_gpu_mbw;
 	rte_gpu_register;
 	rte_gpu_unregister;
 };
