@@ -31,6 +31,7 @@
 #define CNXK_TIM_NB_CHUNK_SLOTS(sz) (((sz) / CNXK_TIM_CHUNK_ALIGNMENT) - 1)
 #define CNXK_TIM_MIN_CHUNK_SLOTS    (0x1)
 #define CNXK_TIM_MAX_CHUNK_SLOTS    (0x1FFE)
+#define CNXK_TIM_MAX_POOL_CACHE_SZ  (128)
 
 #define CN9K_TIM_MIN_TMO_TKS (256)
 
@@ -39,6 +40,7 @@
 #define CNXK_TIM_STATS_ENA   "tim_stats_ena"
 #define CNXK_TIM_RINGS_LMT   "tim_rings_lmt"
 #define CNXK_TIM_RING_CTL    "tim_ring_ctl"
+#define CNXK_TIM_EXT_CLK     "tim_eclk_freq"
 
 #define CNXK_TIM_SP	   0x1
 #define CNXK_TIM_MP	   0x2
@@ -90,10 +92,11 @@ struct cnxk_tim_evdev {
 	uint32_t chunk_sz;
 	/* Dev args */
 	uint8_t disable_npa;
-	uint16_t chunk_slots;
-	uint16_t min_ring_cnt;
+	uint32_t chunk_slots;
+	uint32_t min_ring_cnt;
 	uint8_t enable_stats;
 	uint16_t ring_ctl_cnt;
+	uint64_t ext_clk_freq[ROC_TIM_CLK_SRC_INVALID];
 	struct cnxk_tim_ctl *ring_ctl_data;
 };
 
@@ -165,8 +168,6 @@ cnxk_tim_ns_per_tck(uint64_t freq)
 	return (long double)NSECPERSEC / freq;
 }
 
-
-
 #ifdef RTE_ARCH_ARM64
 static inline uint64_t
 cnxk_tim_cntvct(void)
@@ -237,6 +238,8 @@ cnxk_tim_get_clk_freq(struct cnxk_tim_evdev *dev, enum roc_tim_clk_src clk_src,
 	case ROC_TIM_CLK_SRC_GPIO:
 	case ROC_TIM_CLK_SRC_PTP:
 	case ROC_TIM_CLK_SRC_SYNCE:
+		*freq = dev->ext_clk_freq[clk_src];
+		break;
 	default:
 		return -EINVAL;
 	}
