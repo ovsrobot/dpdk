@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2021 Mellanox Technologies, Ltd
+ * Copyright(c) 2021 Microsoft Corporation
  */
+#include <stdint.h>
 
 #include <rte_os.h>
 #include <rte_compat.h>
@@ -20,10 +22,44 @@
 extern "C" {
 #endif
 
+#include <sched.h>
+
+/**
+ * Thread id descriptor.
+ */
+typedef struct rte_thread_tag {
+	uintptr_t opaque_id; /**< thread identifier */
+} rte_thread_t;
+
 /**
  * TLS key type, an opaque pointer.
  */
 typedef struct eal_tls_key *rte_thread_key;
+
+/**
+ * Get the id of the calling thread.
+ *
+ * @return
+ *   Return the thread id of the calling thread.
+ */
+__rte_experimental
+rte_thread_t rte_thread_self(void);
+
+/**
+ * Check if 2 thread ids are equal.
+ *
+ * @param t1
+ *   First thread id.
+ *
+ * @param t2
+ *   Second thread id.
+ *
+ * @return
+ *   If the ids are equal, return nonzero.
+ *   Otherwise, return 0.
+ */
+__rte_experimental
+int rte_thread_equal(rte_thread_t t1, rte_thread_t t2);
 
 #ifdef RTE_HAS_CPUSET
 
@@ -63,9 +99,7 @@ void rte_thread_get_affinity(rte_cpuset_t *cpusetp);
  *
  * @return
  *   On success, zero.
- *   On failure, a negative number and an error number is set in rte_errno.
- *   rte_errno can be: ENOMEM  - Memory allocation error.
- *                     ENOEXEC - Specific OS error.
+ *   On failure, return a positive errno-style error number.
  */
 
 __rte_experimental
@@ -80,9 +114,7 @@ int rte_thread_key_create(rte_thread_key *key,
  *
  * @return
  *   On success, zero.
- *   On failure, a negative number and an error number is set in rte_errno.
- *   rte_errno can be: EINVAL  - Invalid parameter passed.
- *                     ENOEXEC - Specific OS error.
+ *   On failure, return a positive errno-style error number.
  */
 __rte_experimental
 int rte_thread_key_delete(rte_thread_key key);
@@ -97,9 +129,7 @@ int rte_thread_key_delete(rte_thread_key key);
  *
  * @return
  *   On success, zero.
- *   On failure, a negative number and an error number is set in rte_errno.
- *   rte_errno can be: EINVAL  - Invalid parameter passed.
- *                     ENOEXEC - Specific OS error.
+ *   On failure, return a positive errno-style error number.
  */
 __rte_experimental
 int rte_thread_value_set(rte_thread_key key, const void *value);

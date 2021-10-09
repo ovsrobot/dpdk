@@ -51,5 +51,6 @@ if not is_windows
             'hotplug_mp.c',
             'malloc_mp.c',
             'rte_keepalive.c',
+            'rte_thread.c'
     )
 endif
