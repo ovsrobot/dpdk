@@ -1,6 +1,8 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
     Copyright(c) 2010-2014 Intel Corporation.
 
+.. include:: <isonum.txt>
+
 Driver for VM Emulated Devices
 ==============================
 
@@ -153,3 +155,14 @@ The following are known limitations:
 #.  Qemu e1000 only supports one interrupt source, so link and Rx interrupt should be exclusive.
 
 #.  Qemu e1000 does not support interrupt auto-clear, application should disable interrupt immediately when woken up.
+
+Windows Configuration
+---------------------
+
+- Follow the :doc:`guide for Windows <../windows_gsg/run_apps>`
+  to setup the basic DPDK environment.
+
+- Identify the Intel\ |reg| Ethernet adapter.
+
+- To load NetUIO driver, follow the steps mentioned in `dpdk-kmods repository
+  <https://git.dpdk.org/dpdk-kmods/tree/windows/netuio/README.rst>`_.
