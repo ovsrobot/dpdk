@@ -75,6 +75,13 @@ struct rte_dma_dev_ops {
 	rte_dma_stats_reset_t      stats_reset;
 
 	rte_dma_dump_t             dev_dump;
+
+	rte_dma_copy_t             copy;
+	rte_dma_copy_sg_t          copy_sg;
+	rte_dma_fill_t             fill;
+	rte_dma_submit_t           submit;
+	rte_dma_completed_t        completed;
+	rte_dma_completed_status_t completed_status;
 };
 /**
  * Possible states of a DMA device.

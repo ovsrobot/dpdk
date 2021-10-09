@@ -17,6 +17,7 @@
 
 static int16_t dma_devices_max;
 
+struct rte_dma_fp_object *rte_dma_fp_objs;
 struct rte_dma_dev *rte_dma_devices;
 
 RTE_LOG_REGISTER_DEFAULT(rte_dma_logtype, INFO);
@@ -97,6 +98,38 @@ dma_find_by_name(const char *name)
 	return NULL;
 }
 
+static void dma_fp_object_reset(int16_t dev_id);
+
+static int
+dma_fp_data_prepare(void)
+{
+	size_t size;
+	void *ptr;
+	int i;
+
+	if (rte_dma_fp_objs != NULL)
+		return 0;
+
+	/* Fast-path object must align cacheline, but the return value of malloc
+	 * may not be aligned to the cache line. Therefore, extra memory is
+	 * applied for realignment.
+	 * note: We do not call posix_memalign/aligned_alloc because it is
+	 * version dependent on libc.
+	 */
+	size = dma_devices_max * sizeof(struct rte_dma_fp_object) +
+		RTE_CACHE_LINE_SIZE;
+	ptr = malloc(size);
+	if (ptr == NULL)
+		return -ENOMEM;
+	memset(ptr, 0, size);
+
+	rte_dma_fp_objs = RTE_PTR_ALIGN(ptr, RTE_CACHE_LINE_SIZE);
+	for (i = 0; i < dma_devices_max; i++)
+		dma_fp_object_reset(i);
+
+	return 0;
+}
+
 static int
 dma_dev_data_prepare(void)
 {
@@ -117,8 +150,15 @@ dma_dev_data_prepare(void)
 static int
 dma_data_prepare(void)
 {
+	int ret;
+
 	if (dma_devices_max == 0)
 		dma_devices_max = RTE_DMADEV_DEFAULT_MAX;
+
+	ret = dma_fp_data_prepare();
+	if (ret)
+		return ret;
+
 	return dma_dev_data_prepare();
 }
 
@@ -317,6 +357,8 @@ rte_dma_configure(int16_t dev_id, const struct rte_dma_conf *dev_conf)
 	return ret;
 }
 
+static void dma_fp_object_setup(int16_t dev_id,	const struct rte_dma_dev *dev);
+
 int
 rte_dma_start(int16_t dev_id)
 {
@@ -344,6 +386,7 @@ rte_dma_start(int16_t dev_id)
 		return ret;
 
 mark_started:
+	dma_fp_object_setup(dev_id, dev);
 	dev->dev_started = 1;
 	return 0;
 }
@@ -370,6 +413,7 @@ rte_dma_stop(int16_t dev_id)
 		return ret;
 
 mark_stopped:
+	dma_fp_object_reset(dev_id);
 	dev->dev_started = 0;
 	return 0;
 }
@@ -603,4 +647,94 @@ rte_dma_dump(int16_t dev_id, FILE *f)
 		return (*dev->dev_ops->dev_dump)(dev, f);
 
 	return 0;
+}
+
+static int
+dummy_copy(__rte_unused void *dev_private, __rte_unused uint16_t vchan,
+	   __rte_unused rte_iova_t src, __rte_unused rte_iova_t dst,
+	   __rte_unused uint32_t length, __rte_unused uint64_t flags)
+{
+	RTE_DMA_LOG(ERR, "copy is not configured or not supported.");
+	return -EINVAL;
+}
+
+static int
+dummy_copy_sg(__rte_unused void *dev_private, __rte_unused uint16_t vchan,
+	      __rte_unused const struct rte_dma_sge *src,
+	      __rte_unused const struct rte_dma_sge *dst,
+	      __rte_unused uint16_t nb_src, __rte_unused uint16_t nb_dst,
+	      __rte_unused uint64_t flags)
+{
+	RTE_DMA_LOG(ERR, "copy_sg is not configured or not supported.");
+	return -EINVAL;
+}
+
+static int
+dummy_fill(__rte_unused void *dev_private, __rte_unused uint16_t vchan,
+	   __rte_unused uint64_t pattern, __rte_unused rte_iova_t dst,
+	   __rte_unused uint32_t length, __rte_unused uint64_t flags)
+{
+	RTE_DMA_LOG(ERR, "fill is not configured or not supported.");
+	return -EINVAL;
+}
+
+static int
+dummy_submit(__rte_unused void *dev_private, __rte_unused uint16_t vchan)
+{
+	RTE_DMA_LOG(ERR, "submit is not configured or not supported.");
+	return -EINVAL;
+}
+
+static uint16_t
+dummy_completed(__rte_unused void *dev_private,	__rte_unused uint16_t vchan,
+		__rte_unused const uint16_t nb_cpls,
+		__rte_unused uint16_t *last_idx, __rte_unused bool *has_error)
+{
+	RTE_DMA_LOG(ERR, "completed is not configured or not supported.");
+	return 0;
+}
+
+static uint16_t
+dummy_completed_status(__rte_unused void *dev_private,
+		       __rte_unused uint16_t vchan,
+		       __rte_unused const uint16_t nb_cpls,
+		       __rte_unused uint16_t *last_idx,
+		       __rte_unused enum rte_dma_status_code *status)
+{
+	RTE_DMA_LOG(ERR,
+		    "completed_status is not configured or not supported.");
+	return 0;
+}
+
+static void
+dma_fp_object_reset(int16_t dev_id)
+{
+	struct rte_dma_fp_object *obj = &rte_dma_fp_objs[dev_id];
+
+	obj->copy             = dummy_copy;
+	obj->copy_sg          = dummy_copy_sg;
+	obj->fill             = dummy_fill;
+	obj->submit           = dummy_submit;
+	obj->completed        = dummy_completed;
+	obj->completed_status = dummy_completed_status;
+}
+
+static void
+dma_fp_object_setup(int16_t dev_id, const struct rte_dma_dev *dev)
+{
+	struct rte_dma_fp_object *obj = &rte_dma_fp_objs[dev_id];
+
+	obj->dev_private = dev->dev_private;
+	if (dev->dev_ops->copy)
+		obj->copy = dev->dev_ops->copy;
+	if (dev->dev_ops->copy_sg)
+		obj->copy_sg = dev->dev_ops->copy_sg;
+	if (dev->dev_ops->fill)
+		obj->fill = dev->dev_ops->fill;
+	if (dev->dev_ops->submit)
+		obj->submit = dev->dev_ops->submit;
+	if (dev->dev_ops->completed)
+		obj->completed = dev->dev_ops->completed;
+	if (dev->dev_ops->completed_status)
+		obj->completed_status = dev->dev_ops->completed_status;
 }
