@@ -454,6 +454,12 @@ F: app/test-regex/
 F: doc/guides/prog_guide/regexdev.rst
 F: doc/guides/regexdevs/features/default.ini
 
+General-Purpose Graphics Processing Unit (GPU) API - EXPERIMENTAL
+M: Elena Agostini <eagostini@nvidia.com>
+F: lib/gpudev/
+F: doc/guides/prog_guide/gpudev.rst
+F: doc/guides/gpus/features/default.ini
+
 Eventdev API
 M: Jerin Jacob <jerinj@marvell.com>
 T: git://dpdk.org/next/dpdk-next-eventdev
