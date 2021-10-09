@@ -296,6 +296,75 @@ rte_thread_detach(rte_thread_t thread_id)
 }
 
 int
+rte_thread_mutex_init(rte_thread_mutex *mutex)
+{
+	int ret = 0;
+	pthread_mutex_t *m = NULL;
+
+	RTE_VERIFY(mutex != NULL);
+
+	m = calloc(1, sizeof(*m));
+	if (m == NULL) {
+		RTE_LOG(DEBUG, EAL, "Unable to initialize mutex. Insufficient memory!\n");
+		ret = ENOMEM;
+		goto cleanup;
+	}
+
+	ret = pthread_mutex_init(m, NULL);
+	if (ret != 0) {
+		RTE_LOG(DEBUG, EAL, "Failed to init mutex. ret = %d\n", ret);
+		goto cleanup;
+	}
+
+	mutex->mutex_id = m;
+	m = NULL;
+
+cleanup:
+	free(m);
+	return ret;
+}
+
+int
+rte_thread_mutex_lock(rte_thread_mutex *mutex)
+{
+	RTE_VERIFY(mutex != NULL);
+
+	return pthread_mutex_lock((pthread_mutex_t *)mutex->mutex_id);
+}
+
+int
+rte_thread_mutex_unlock(rte_thread_mutex *mutex)
+{
+	RTE_VERIFY(mutex != NULL);
+
+	return pthread_mutex_unlock((pthread_mutex_t *)mutex->mutex_id);
+}
+
+int
+rte_thread_mutex_try_lock(rte_thread_mutex *mutex)
+{
+	RTE_VERIFY(mutex != NULL);
+
+	return pthread_mutex_trylock((pthread_mutex_t *)mutex->mutex_id);
+}
+
+int
+rte_thread_mutex_destroy(rte_thread_mutex *mutex)
+{
+	int ret = 0;
+	RTE_VERIFY(mutex != NULL);
+
+	ret = pthread_mutex_destroy((pthread_mutex_t *)mutex->mutex_id);
+	if (ret != 0)
+		RTE_LOG(DEBUG, EAL, "Unable to destroy mutex, ret = %d\n", ret);
+
+	free(mutex->mutex_id);
+	mutex->mutex_id = NULL;
+
+	return ret;
+}
+
+int
 rte_thread_key_create(rte_thread_key *key, void (*destructor)(void *))
 {
 	int err;

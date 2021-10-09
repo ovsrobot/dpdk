@@ -434,6 +434,11 @@ EXPERIMENTAL {
 	rte_thread_create;
 	rte_thread_join;
 	rte_thread_detach;
+	rte_thread_mutex_init;
+	rte_thread_mutex_lock;
+	rte_thread_mutex_unlock;
+	rte_thread_mutex_try_lock;
+	rte_thread_mutex_destroy;
 };
 
 INTERNAL {
