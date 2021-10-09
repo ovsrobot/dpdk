@@ -83,6 +83,27 @@ struct rte_dma_dev_ops {
 	rte_dma_completed_t        completed;
 	rte_dma_completed_status_t completed_status;
 };
+
+/**
+ * @internal
+ * The data part, with no function pointers, associated with each DMA device.
+ *
+ * This structure is safe to place in shared memory to be common among different
+ * processes in a multi-process configuration.
+ *
+ * @see struct rte_dma_dev::data
+ */
+struct rte_dma_dev_data {
+	char dev_name[RTE_DEV_NAME_MAX_LEN]; /**< Unique identifier name */
+	int16_t dev_id; /**< Device [external] identifier. */
+	int16_t numa_node; /**< Local NUMA memory ID. -1 if unknown. */
+	void *dev_private; /**< PMD-specific private data. */
+	struct rte_dma_conf dev_conf; /**< DMA device configuration. */
+	__extension__
+	uint8_t dev_started : 1; /**< Device state: STARTED(1)/STOPPED(0). */
+	uint64_t reserved[2]; /**< Reserved for future fields */
+} __rte_cache_aligned;
+
 /**
  * Possible states of a DMA device.
  *
@@ -101,18 +122,12 @@ enum rte_dma_dev_state {
  * The generic data structure associated with each DMA device.
  */
 struct rte_dma_dev {
-	char dev_name[RTE_DEV_NAME_MAX_LEN]; /**< Unique identifier name */
-	int16_t dev_id; /**< Device [external] identifier. */
-	int16_t numa_node; /**< Local NUMA memory ID. -1 if unknown. */
-	void *dev_private; /**< PMD-specific private data. */
 	/** Device info which supplied during device initialization. */
 	struct rte_device *device;
+	struct rte_dma_dev_data *data; /**< Pointer to shared device data. */
 	/** Functions implemented by PMD. */
 	const struct rte_dma_dev_ops *dev_ops;
-	struct rte_dma_conf dev_conf; /**< DMA device configuration. */
 	enum rte_dma_dev_state state; /**< Flag indicating the device state. */
-	__extension__
-	uint8_t dev_started : 1; /**< Device state: STARTED(1)/STOPPED(0). */
 	uint64_t reserved[2]; /**< Reserved for future fields. */
 } __rte_cache_aligned;
 

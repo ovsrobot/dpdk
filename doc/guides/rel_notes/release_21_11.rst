@@ -138,6 +138,7 @@ New Features
 
   * Device allocation functions.
   * Control and data plane API.
+  * Multi-process support.
 
 
 Removed Items
