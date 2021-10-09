@@ -365,6 +365,67 @@ rte_thread_mutex_destroy(rte_thread_mutex *mutex)
 }
 
 int
+rte_thread_barrier_init(rte_thread_barrier *barrier, int count)
+{
+	int ret = 0;
+	pthread_barrier_t *pthread_barrier = NULL;
+
+	RTE_VERIFY(barrier != NULL);
+	RTE_VERIFY(count > 0);
+
+	pthread_barrier = calloc(1, sizeof(*pthread_barrier));
+	if (pthread_barrier == NULL) {
+		RTE_LOG(DEBUG, EAL, "Unable to initialize barrier. Insufficient memory!\n");
+		ret = ENOMEM;
+		goto cleanup;
+	}
+	ret = pthread_barrier_init(pthread_barrier, NULL, count);
+	if (ret != 0) {
+		RTE_LOG(DEBUG, EAL, "Failed to init barrier, ret = %d\n", ret);
+		goto cleanup;
+	}
+
+	barrier->barrier_id = pthread_barrier;
+	pthread_barrier = NULL;
+
+cleanup:
+	free(pthread_barrier);
+	return ret;
+}
+
+int
+rte_thread_barrier_wait(rte_thread_barrier *barrier)
+{
+	int ret = 0;
+
+	RTE_VERIFY(barrier != NULL);
+	RTE_VERIFY(barrier->barrier_id != NULL);
+
+	ret = pthread_barrier_wait(barrier->barrier_id);
+	if (ret == PTHREAD_BARRIER_SERIAL_THREAD)
+		ret = RTE_THREAD_BARRIER_SERIAL_THREAD;
+
+	return ret;
+}
+
+int
+rte_thread_barrier_destroy(rte_thread_barrier *barrier)
+{
+	int ret = 0;
+
+	RTE_VERIFY(barrier != NULL);
+
+	ret = pthread_barrier_destroy(barrier->barrier_id);
+	if (ret != 0)
+		RTE_LOG(DEBUG, EAL, "Failed to destroy barrier: %d\n", ret);
+
+	free(barrier->barrier_id);
+	barrier->barrier_id = NULL;
+
+	return ret;
+}
+
+int
 rte_thread_key_create(rte_thread_key *key, void (*destructor)(void *))
 {
 	int err;
