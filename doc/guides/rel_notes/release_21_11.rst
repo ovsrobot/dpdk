@@ -174,7 +174,7 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
-* ethdev: Added items ``PORT_REPRESENTOR``, ``REPRESENTED_PORT`` and action ``PORT_REPRESENTOR`` to flow API.
+* ethdev: Added items and actions ``PORT_REPRESENTOR``, ``REPRESENTED_PORT`` to flow API.
 
 * kvargs: The experimental function ``rte_kvargs_strcmp()`` has been
   removed. Its usages have been replaced by a new function
