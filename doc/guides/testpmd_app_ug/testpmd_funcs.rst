@@ -3824,6 +3824,11 @@ This section lists supported pattern items and their attributes, if any.
 
   - ``port_id {unsigned}``: ethdev port ID
 
+- ``represented_port``: match traffic entering the embedded switch from
+  the entity represented by the given ethdev
+
+  - ``ethdev_port_id {unsigned}``: ethdev port ID
+
 Actions list
 ^^^^^^^^^^^^
 
