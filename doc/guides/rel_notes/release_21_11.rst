@@ -176,6 +176,9 @@ API Changes
 
 * ethdev: Added items and actions ``PORT_REPRESENTOR``, ``REPRESENTED_PORT`` to flow API.
 
+* ethdev: Deprecated items and actions ``PF``, ``VF``, ``PHY_PORT``, ``PORT_ID``.
+  Suggested items and actions ``PORT_REPRESENTOR``, ``REPRESENTED_PORT`` instead.
+
 * kvargs: The experimental function ``rte_kvargs_strcmp()`` has been
   removed. Its usages have been replaced by a new function
   ``rte_kvargs_get_with_value()``.
