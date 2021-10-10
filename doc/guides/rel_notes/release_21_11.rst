@@ -179,6 +179,9 @@ API Changes
 * ethdev: Deprecated items and actions ``PF``, ``VF``, ``PHY_PORT``, ``PORT_ID``.
   Suggested items and actions ``PORT_REPRESENTOR``, ``REPRESENTED_PORT`` instead.
 
+* ethdev: Deprecated the use of attributes ``ingress`` / ``egress`` combined
+  with ``transfer``. See items ``PORT_REPRESENTOR``, ``REPRESENTED_PORT``.
+
 * kvargs: The experimental function ``rte_kvargs_strcmp()`` has been
   removed. Its usages have been replaced by a new function
   ``rte_kvargs_get_with_value()``.
