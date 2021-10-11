@@ -134,6 +134,10 @@ New Features
   * Added tests to validate packets hard expiry.
   * Added tests to verify tunnel header verification in IPsec inbound.
 
+* **IPsec library new features.**
+
+  * Added support for AEAD algorithms AES_CCM, CHACHA20_POLY1305 and AES_GMAC.
+
 
 Removed Items
 -------------
