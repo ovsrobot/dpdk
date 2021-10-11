@@ -252,6 +252,7 @@ The command line options are:
        tm
        noisy
        5tswap
+       shared-rxq
 
 *   ``--rss-ip``
 
