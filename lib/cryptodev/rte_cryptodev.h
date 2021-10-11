@@ -1830,13 +1830,18 @@ static inline uint16_t
 rte_cryptodev_dequeue_burst(uint8_t dev_id, uint16_t qp_id,
 		struct rte_crypto_op **ops, uint16_t nb_ops)
 {
-	struct rte_cryptodev *dev = &rte_cryptodevs[dev_id];
+	struct rte_crypto_fp_ops *fp_ops;
+	void *qp;
 
 	rte_cryptodev_trace_dequeue_burst(dev_id, qp_id, (void **)ops, nb_ops);
-	nb_ops = (*dev->dequeue_burst)
-			(dev->data->queue_pairs[qp_id], ops, nb_ops);
+
+	fp_ops = &rte_crypto_fp_ops[dev_id];
+	qp = fp_ops->qp.data[qp_id];
+
+	nb_ops = fp_ops->dequeue_burst(qp, ops, nb_ops);
+
 #ifdef RTE_CRYPTO_CALLBACKS
-	if (unlikely(dev->deq_cbs != NULL)) {
+	if (unlikely(fp_ops->qp.deq_cb != NULL)) {
 		struct rte_cryptodev_cb_rcu *list;
 		struct rte_cryptodev_cb *cb;
 
@@ -1846,7 +1851,7 @@ rte_cryptodev_dequeue_burst(uint8_t dev_id, uint16_t qp_id,
 		 * cb and cb->fn/cb->next, __ATOMIC_ACQUIRE memory order is
 		 * not required.
 		 */
-		list = &dev->deq_cbs[qp_id];
+		list = (struct rte_cryptodev_cb_rcu *)&fp_ops->qp.deq_cb[qp_id];
 		rte_rcu_qsbr_thread_online(list->qsbr, 0);
 		cb = __atomic_load_n(&list->next, __ATOMIC_RELAXED);
 
@@ -1897,10 +1902,13 @@ static inline uint16_t
 rte_cryptodev_enqueue_burst(uint8_t dev_id, uint16_t qp_id,
 		struct rte_crypto_op **ops, uint16_t nb_ops)
 {
-	struct rte_cryptodev *dev = &rte_cryptodevs[dev_id];
+	struct rte_crypto_fp_ops *fp_ops;
+	void *qp;
 
+	fp_ops = &rte_crypto_fp_ops[dev_id];
+	qp = fp_ops->qp.data[qp_id];
 #ifdef RTE_CRYPTO_CALLBACKS
-	if (unlikely(dev->enq_cbs != NULL)) {
+	if (unlikely(fp_ops->qp.enq_cb != NULL)) {
 		struct rte_cryptodev_cb_rcu *list;
 		struct rte_cryptodev_cb *cb;
 
@@ -1910,7 +1918,7 @@ rte_cryptodev_enqueue_burst(uint8_t dev_id, uint16_t qp_id,
 		 * cb and cb->fn/cb->next, __ATOMIC_ACQUIRE memory order is
 		 * not required.
 		 */
-		list = &dev->enq_cbs[qp_id];
+		list = (struct rte_cryptodev_cb_rcu *)&fp_ops->qp.enq_cb[qp_id];
 		rte_rcu_qsbr_thread_online(list->qsbr, 0);
 		cb = __atomic_load_n(&list->next, __ATOMIC_RELAXED);
 
@@ -1925,8 +1933,7 @@ rte_cryptodev_enqueue_burst(uint8_t dev_id, uint16_t qp_id,
 #endif
 
 	rte_cryptodev_trace_enqueue_burst(dev_id, qp_id, (void **)ops, nb_ops);
-	return (*dev->enqueue_burst)(
-			dev->data->queue_pairs[qp_id], ops, nb_ops);
+	return fp_ops->enqueue_burst(qp, ops, nb_ops);
 }
 
 
