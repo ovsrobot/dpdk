@@ -4360,6 +4360,7 @@ int
 rte_eth_dev_default_mac_addr_set(uint16_t port_id, struct rte_ether_addr *addr)
 {
 	struct rte_eth_dev *dev;
+	int index;
 	int ret;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
@@ -4380,6 +4381,20 @@ rte_eth_dev_default_mac_addr_set(uint16_t port_id, struct rte_ether_addr *addr)
 	ret = (*dev->dev_ops->mac_addr_set)(dev, addr);
 	if (ret < 0)
 		return ret;
+
+	/*
+	 * If the address has been added as a non-default MAC address by
+	 * rte_eth_dev_mac_addr_add API, it should be removed from
+	 * dev->data->mac_addrs[].
+	 */
+	index = eth_dev_get_mac_addr_index(port_id, addr);
+	if (index > 0) {
+		/* remove address in NIC data structure */
+		rte_ether_addr_copy(&null_mac_addr,
+				    &dev->data->mac_addrs[index]);
+		/* reset pool bitmap */
+		dev->data->mac_pool_sel[index] = 0;
+	}
 
 	/* Update default address in NIC data structure */
 	rte_ether_addr_copy(addr, &dev->data->mac_addrs[0]);
