@@ -147,6 +147,7 @@ outb_tun_pkt_prepare(struct rte_ipsec_sa *sa, rte_be64_t sqc,
 	struct rte_esp_tail *espt;
 	char *ph, *pt;
 	uint64_t *iv;
+	uint8_t tso = !!(mb->ol_flags & (PKT_TX_TCP_SEG | PKT_TX_UDP_SEG));
 
 	/* calculate extra header space required */
 	hlen = sa->hdr_len + sa->iv_len + sizeof(*esph);
@@ -157,11 +158,20 @@ outb_tun_pkt_prepare(struct rte_ipsec_sa *sa, rte_be64_t sqc,
 
 	/* number of bytes to encrypt */
 	clen = plen + sizeof(*espt);
-	clen = RTE_ALIGN_CEIL(clen, sa->pad_align);
+
+	/* We don't need to pad/ailgn packet when using TSO offload */
+	if (likely(!tso))
+		clen = RTE_ALIGN_CEIL(clen, sa->pad_align);
+
 
 	/* pad length + esp tail */
 	pdlen = clen - plen;
-	tlen = pdlen + sa->icv_len + sqh_len;
+
+	/* We don't append ICV length when using TSO offload */
+	if (likely(!tso))
+		tlen = pdlen + sa->icv_len + sqh_len;
+	else
+		tlen = pdlen + sqh_len;
 
 	/* do append and prepend */
 	ml = rte_pktmbuf_lastseg(mb);
@@ -346,6 +356,7 @@ outb_trs_pkt_prepare(struct rte_ipsec_sa *sa, rte_be64_t sqc,
 	char *ph, *pt;
 	uint64_t *iv;
 	uint32_t l2len, l3len;
+	uint8_t tso = !!(mb->ol_flags & (PKT_TX_TCP_SEG | PKT_TX_UDP_SEG));
 
 	l2len = mb->l2_len;
 	l3len = mb->l3_len;
@@ -358,11 +369,19 @@ outb_trs_pkt_prepare(struct rte_ipsec_sa *sa, rte_be64_t sqc,
 
 	/* number of bytes to encrypt */
 	clen = plen + sizeof(*espt);
-	clen = RTE_ALIGN_CEIL(clen, sa->pad_align);
+
+	/* We don't need to pad/ailgn packet when using TSO offload */
+	if (likely(!tso))
+		clen = RTE_ALIGN_CEIL(clen, sa->pad_align);
 
 	/* pad length + esp tail */
 	pdlen = clen - plen;
-	tlen = pdlen + sa->icv_len + sqh_len;
+
+	/* We don't append ICV length when using TSO offload */
+	if (likely(!tso))
+		tlen = pdlen + sa->icv_len + sqh_len;
+	else
+		tlen = pdlen + sqh_len;
 
 	/* do append and insert */
 	ml = rte_pktmbuf_lastseg(mb);
@@ -660,6 +679,29 @@ inline_outb_mbuf_prepare(const struct rte_ipsec_session *ss,
 	}
 }
 
+/* check if packet will exceed MSS and segmentation is required */
+static inline int
+esn_outb_nb_segments(struct rte_mbuf *m) {
+	uint16_t segments = 1;
+	uint16_t pkt_l3len = m->pkt_len - m->l2_len;
+
+	/* Only support segmentation for UDP/TCP flows */
+	if (!(m->packet_type & (RTE_PTYPE_L4_UDP | RTE_PTYPE_L4_TCP)))
+		return segments;
+
+	if (m->tso_segsz > 0 && pkt_l3len > m->tso_segsz) {
+		segments = pkt_l3len / m->tso_segsz;
+		if (segments * m->tso_segsz < pkt_l3len)
+			segments++;
+		if  (m->packet_type & RTE_PTYPE_L4_TCP)
+			m->ol_flags |= (PKT_TX_TCP_SEG | PKT_TX_TCP_CKSUM);
+		else
+			m->ol_flags |= (PKT_TX_UDP_SEG | PKT_TX_UDP_CKSUM);
+	}
+
+	return segments;
+}
+
 /*
  * process group of ESP outbound tunnel packets destined for
  * INLINE_CRYPTO type of device.
@@ -669,24 +711,36 @@ inline_outb_tun_pkt_process(const struct rte_ipsec_session *ss,
 	struct rte_mbuf *mb[], uint16_t num)
 {
 	int32_t rc;
-	uint32_t i, k, n;
+	uint32_t i, k, nb_sqn = 0, nb_sqn_alloc;
 	uint64_t sqn;
 	rte_be64_t sqc;
 	struct rte_ipsec_sa *sa;
 	union sym_op_data icv;
 	uint64_t iv[IPSEC_MAX_IV_QWORD];
 	uint32_t dr[num];
+	uint16_t nb_segs[num];
 
 	sa = ss->sa;
 
-	n = num;
-	sqn = esn_outb_update_sqn(sa, &n);
-	if (n != num)
+	for (i = 0; i != num; i++) {
+		nb_segs[i] = esn_outb_nb_segments(mb[i]);
+		nb_sqn += nb_segs[i];
+		/* setup offload fields for TSO */
+		if (nb_segs[i] > 1) {
+			mb[i]->ol_flags |= (PKT_TX_OUTER_IPV4 |
+					PKT_TX_OUTER_IP_CKSUM |
+					PKT_TX_TUNNEL_ESP);
+			mb[i]->outer_l3_len = mb[i]->l3_len;
+		}
+	}
+
+	nb_sqn_alloc = nb_sqn;
+	sqn = esn_outb_update_sqn(sa, &nb_sqn_alloc);
+	if (nb_sqn_alloc != nb_sqn)
 		rte_errno = EOVERFLOW;
 
 	k = 0;
-	for (i = 0; i != n; i++) {
-
+	for (i = 0; i != num; i++) {
 		sqc = rte_cpu_to_be_64(sqn + i);
 		gen_iv(iv, sqc);
 
@@ -700,11 +754,18 @@ inline_outb_tun_pkt_process(const struct rte_ipsec_session *ss,
 			dr[i - k] = i;
 			rte_errno = -rc;
 		}
+
+		/**
+		 * If packet is using tso, increment sqn by the number of
+		 * segments for	packet
+		 */
+		if  (mb[i]->ol_flags & (PKT_TX_TCP_SEG | PKT_TX_UDP_SEG))
+			sqn += nb_segs[i] - 1;
 	}
 
 	/* copy not processed mbufs beyond good ones */
-	if (k != n && k != 0)
-		move_bad_mbufs(mb, dr, n, n - k);
+	if (k != num && k != 0)
+		move_bad_mbufs(mb, dr, num, num - k);
 
 	inline_outb_mbuf_prepare(ss, mb, k);
 	return k;
@@ -719,23 +780,36 @@ inline_outb_trs_pkt_process(const struct rte_ipsec_session *ss,
 	struct rte_mbuf *mb[], uint16_t num)
 {
 	int32_t rc;
-	uint32_t i, k, n;
+	uint32_t i, k, nb_sqn, nb_sqn_alloc;
 	uint64_t sqn;
 	rte_be64_t sqc;
 	struct rte_ipsec_sa *sa;
 	union sym_op_data icv;
 	uint64_t iv[IPSEC_MAX_IV_QWORD];
 	uint32_t dr[num];
+	uint16_t nb_segs[num];
 
 	sa = ss->sa;
 
-	n = num;
-	sqn = esn_outb_update_sqn(sa, &n);
-	if (n != num)
+	/* Calculate number of sequence numbers required */
+	for (i = 0, nb_sqn = 0; i != num; i++) {
+		nb_segs[i] = esn_outb_nb_segments(mb[i]);
+		nb_sqn += nb_segs[i];
+		/* setup offload fields for TSO */
+		if (nb_segs[i] > 1) {
+			mb[i]->ol_flags |= (PKT_TX_OUTER_IPV4 |
+					PKT_TX_OUTER_IP_CKSUM);
+			mb[i]->outer_l3_len = mb[i]->l3_len;
+		}
+	}
+
+	nb_sqn_alloc = nb_sqn;
+	sqn = esn_outb_update_sqn(sa, &nb_sqn_alloc);
+	if (nb_sqn_alloc != nb_sqn)
 		rte_errno = EOVERFLOW;
 
 	k = 0;
-	for (i = 0; i != n; i++) {
+	for (i = 0; i != num; i++) {
 
 		sqc = rte_cpu_to_be_64(sqn + i);
 		gen_iv(iv, sqc);
@@ -750,11 +824,18 @@ inline_outb_trs_pkt_process(const struct rte_ipsec_session *ss,
 			dr[i - k] = i;
 			rte_errno = -rc;
 		}
+
+		/**
+		 * If packet is using tso, increment sqn by the number of
+		 * segments for	packet
+		 */
+		if  (mb[i]->ol_flags & (PKT_TX_TCP_SEG | PKT_TX_UDP_SEG))
+			sqn += nb_segs[i] - 1;
 	}
 
 	/* copy not processed mbufs beyond good ones */
-	if (k != n && k != 0)
-		move_bad_mbufs(mb, dr, n, n - k);
+	if (k != num && k != 0)
+		move_bad_mbufs(mb, dr, num, num - k);
 
 	inline_outb_mbuf_prepare(ss, mb, k);
 	return k;
