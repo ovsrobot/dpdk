@@ -43,7 +43,6 @@ DPDK_22 {
 	rte_cryptodev_sym_session_create;
 	rte_cryptodev_sym_session_free;
 	rte_cryptodev_sym_session_init;
-	rte_cryptodevs;
 
 	#added in 21.11
 	rte_crypto_fp_ops;
@@ -124,4 +123,5 @@ INTERNAL {
 	rte_cryptodev_pmd_get_named_dev;
 	rte_cryptodev_pmd_parse_input_args;
 	rte_cryptodev_pmd_release_device;
+	rte_cryptodevs;
 };
