@@ -210,12 +210,9 @@ Deprecation Notices
   pointer for the private data to the application which can be attached
   to the packet while enqueuing.
 
-* security: The structure ``rte_security_ipsec_xform`` will be extended with:
-  new field: IPsec payload MSS (Maximum Segment Size).
-
 * security: The IPsec SA config options ``struct rte_security_ipsec_sa_options``
   will be updated with new fields to support new features like IPsec inner
-  checksum, TSO in case of protocol offload.
+  checksum.
 
 * eventdev: The file ``rte_eventdev_pmd.h`` will be renamed to ``eventdev_driver.h``
   to make the driver interface as internal and the structures ``rte_eventdev_data``,
