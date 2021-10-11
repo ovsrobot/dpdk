@@ -87,6 +87,8 @@ enum {
 	OPT_NO_TELEMETRY_NUM,
 #define OPT_FORCE_MAX_SIMD_BITWIDTH  "force-max-simd-bitwidth"
 	OPT_FORCE_MAX_SIMD_BITWIDTH_NUM,
+#define OPT_MEM_FILE          "mem-file"
+	OPT_MEM_FILE_NUM,
 
 	OPT_LONG_MAX_NUM
 };

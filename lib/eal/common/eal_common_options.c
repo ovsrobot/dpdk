@@ -84,6 +84,7 @@ eal_long_options[] = {
 	{OPT_TRACE_MODE,        1, NULL, OPT_TRACE_MODE_NUM       },
 	{OPT_MAIN_LCORE,        1, NULL, OPT_MAIN_LCORE_NUM       },
 	{OPT_MBUF_POOL_OPS_NAME, 1, NULL, OPT_MBUF_POOL_OPS_NAME_NUM},
+	{OPT_MEM_FILE,          1, NULL, OPT_MEM_FILE_NUM         },
 	{OPT_NO_HPET,           0, NULL, OPT_NO_HPET_NUM          },
 	{OPT_NO_HUGE,           0, NULL, OPT_NO_HUGE_NUM          },
 	{OPT_NO_PCI,            0, NULL, OPT_NO_PCI_NUM           },
@@ -1879,6 +1880,8 @@ eal_cleanup_config(struct internal_config *internal_cfg)
 		free(internal_cfg->hugepage_dir);
 	if (internal_cfg->user_mbuf_pool_ops_name != NULL)
 		free(internal_cfg->user_mbuf_pool_ops_name);
+	if (internal_cfg->mem_file[0])
+		free(internal_cfg->mem_file[0]);
 
 	return 0;
 }
@@ -1998,6 +2001,26 @@ eal_check_common_options(struct internal_config *internal_cfg)
 		RTE_LOG(NOTICE, EAL, "Static memory layout is selected, "
 			"amount of reserved memory can be adjusted with "
 			"-m or --"OPT_SOCKET_MEM"\n");
+	}
+	if (internal_cfg->mem_file[0] && internal_conf->legacy_mem) {
+		RTE_LOG(ERR, EAL, "Option --"OPT_MEM_FILE" is not compatible "
+				"with --"OPT_LEGACY_MEM"\n");
+		return -1;
+	}
+	if (internal_cfg->mem_file[0] && internal_conf->no_hugetlbfs) {
+		RTE_LOG(ERR, EAL, "Option --"OPT_MEM_FILE" is not compatible "
+				"with --"OPT_NO_HUGE"\n");
+		return -1;
+	}
+	if (internal_cfg->mem_file[0] && internal_conf->in_memory) {
+		RTE_LOG(ERR, EAL, "Option --"OPT_MEM_FILE" is not compatible "
+				"with --"OPT_IN_MEMORY"\n");
+		return -1;
+	}
+	if (internal_cfg->mem_file[0] && internal_conf->single_file_segments) {
+		RTE_LOG(ERR, EAL, "Option --"OPT_MEM_FILE" is not compatible "
+				"with --"OPT_SINGLE_FILE_SEGMENTS"\n");
+		return -1;
 	}
 
 	return 0;

@@ -40,7 +40,9 @@ extern "C" {
 /**
  * Physical memory segment descriptor.
  */
-#define RTE_MEMSEG_FLAG_DO_NOT_FREE (1 << 0)
+#define RTE_MEMSEG_FLAG_DO_NOT_FREE   (1 << 0)
+#define RTE_MEMSEG_FLAG_PRE_ALLOCATED (1 << 1)
+
 /**< Prevent this segment from being freed back to the OS. */
 struct rte_memseg {
 	rte_iova_t iova;            /**< Start IO address. */

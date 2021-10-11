@@ -578,8 +578,13 @@ malloc_elem_free(struct malloc_elem *elem)
 	/* decrease heap's count of allocated elements */
 	elem->heap->alloc_count--;
 
+#ifdef MALLOC_DEBUG
 	/* poison memory */
 	memset(ptr, MALLOC_POISON, data_len);
+#else
+	if (!malloc_clear_on_alloc())
+		memset(ptr, 0, data_len);
+#endif
 
 	return elem;
 }

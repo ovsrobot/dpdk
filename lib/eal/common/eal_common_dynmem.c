@@ -272,6 +272,12 @@ eal_dynmem_hugepage_init(void)
 			internal_conf->num_hugepage_sizes) < 0)
 		return -1;
 
+#ifdef RTE_EXEC_ENV_LINUX
+	/* pre-allocate pages from --mem-file option files */
+	if (eal_memalloc_memfile_alloc(used_hp) < 0)
+		return -1;
+#endif
+
 	for (hp_sz_idx = 0;
 			hp_sz_idx < (int)internal_conf->num_hugepage_sizes;
 			hp_sz_idx++) {
