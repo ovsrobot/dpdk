@@ -134,6 +134,10 @@ New Features
   * Added tests to validate packets hard expiry.
   * Added tests to verify tunnel header verification in IPsec inbound.
 
+* **Introduced dmadev library with:**
+
+  * Device allocation functions.
+
 
 Removed Items
 -------------
