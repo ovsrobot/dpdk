@@ -137,6 +137,7 @@ New Features
 * **IPsec library new features.**
 
   * Added support for AEAD algorithms AES_CCM, CHACHA20_POLY1305 and AES_GMAC.
+  * Added support for NAT-T / UDP encapsulated ESP
 
 
 Removed Items
