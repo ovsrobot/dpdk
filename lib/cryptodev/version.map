@@ -45,6 +45,9 @@ DPDK_22 {
 	rte_cryptodev_sym_session_init;
 	rte_cryptodevs;
 
+	#added in 21.11
+	rte_crypto_fp_ops;
+
 	local: *;
 };
 
@@ -109,6 +112,8 @@ EXPERIMENTAL {
 INTERNAL {
 	global:
 
+	cryptodev_fp_ops_reset;
+	cryptodev_fp_ops_set;
 	rte_cryptodev_allocate_driver;
 	rte_cryptodev_pmd_allocate;
 	rte_cryptodev_pmd_callback_process;
