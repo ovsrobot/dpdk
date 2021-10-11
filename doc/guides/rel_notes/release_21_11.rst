@@ -229,6 +229,10 @@ ABI Changes
   ``rte_security_ipsec_xform`` to allow applications to configure SA soft
   and hard expiry limits. Limits can be either in number of packets or bytes.
 
+* security: A new structure ``esn`` was added in structure
+  ``rte_security_ipsec_xform`` to set an initial ESN value. This permits
+  application to start from an arbitrary ESN value for debug and SA lifetime
+  enforcement purposes.
 
 Known Issues
 ------------
