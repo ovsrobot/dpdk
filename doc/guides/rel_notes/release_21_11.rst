@@ -238,6 +238,11 @@ ABI Changes
   application to start from an arbitrary ESN value for debug and SA lifetime
   enforcement purposes.
 
+* security: A new structure ``udp`` was added in structure
+  ``rte_security_ipsec_xform`` to allow setting the source and destination ports
+  for UDP encapsulated IPsec traffic.
+
+
 Known Issues
 ------------
 
