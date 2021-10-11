@@ -134,6 +134,10 @@ New Features
   * Added tests to validate packets hard expiry.
   * Added tests to verify tunnel header verification in IPsec inbound.
 
+* **Added ethdev shared Rx queue support. **
+
+  * Added new Rx queue offloading capability flag.
+  * Added share group to Rx queue configuration.
 
 Removed Items
 -------------
