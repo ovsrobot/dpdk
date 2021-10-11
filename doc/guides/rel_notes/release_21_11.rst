@@ -140,6 +140,7 @@ New Features
   * Added support for NAT-T / UDP encapsulated ESP
   * Added support TSO offload support; only supported for inline crypto mode.
   * Added support for SA telemetry.
+  * Added support for setting a non default starting ESN value.
 
 
 Removed Items
