@@ -14,6 +14,9 @@
 #include <rte_os_shim.h>
 #include <cmdline.h>
 #include <sys/queue.h>
+#ifdef RTE_HAS_JANSSON
+#include <jansson.h>
+#endif
 
 #define RTE_PORT_ALL            (~(portid_t)0x0)
 
