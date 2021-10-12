@@ -419,6 +419,8 @@ if get_option('b_sanitize') == 'address'
             error('broken dependency, "libasan"')
         endif
     endif
+
+    dpdk_conf.set10('RTE_MALLOC_ASAN', true)
 endif
 
 if get_option('default_library') == 'both'
