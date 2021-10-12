@@ -30,13 +30,65 @@ uint64_t rte_flow_dynf_metadata_mask;
 struct rte_flow_desc_data {
 	const char *name;
 	size_t size;
+	size_t (*desc_fn)(void *dst, const void *src);
 };
+
+/**
+ *
+ * @param buf
+ * Destination memory.
+ * @param data
+ * Source memory
+ * @param size
+ * Requested copy size
+ * @param desc
+ * rte_flow_desc_item - for flow item conversion.
+ * rte_flow_desc_action - for flow action conversion.
+ * @param type
+ * Offset into the desc param or negative value for private flow elements.
+ */
+static inline size_t
+rte_flow_conv_copy(void *buf, const void *data, const size_t size,
+		   const struct rte_flow_desc_data *desc, int type)
+{
+	/**
+	 * Allow PMD private flow item
+	 */
+	size_t sz = type >= 0 ? desc[type].size : sizeof(void *);
+	if (buf == NULL || data == NULL)
+		return 0;
+	rte_memcpy(buf, data, (size > sz ? sz : size));
+	if (desc[type].desc_fn)
+		sz += desc[type].desc_fn(size > 0 ? buf : NULL, data);
+	return sz;
+}
+
+static size_t
+rte_flow_item_flex_conv(void *buf, const void *data)
+{
+	struct rte_flow_item_flex *dst = buf;
+	const struct rte_flow_item_flex *src = data;
+	if (buf) {
+		dst->pattern = rte_memcpy
+			((void *)((uintptr_t)(dst + 1)), src->pattern,
+			 src->length);
+	}
+	return src->length;
+}
 
 /** Generate flow_item[] entry. */
 #define MK_FLOW_ITEM(t, s) \
 	[RTE_FLOW_ITEM_TYPE_ ## t] = { \
 		.name = # t, \
-		.size = s, \
+		.size = s,               \
+		.desc_fn = NULL,\
+	}
+
+#define MK_FLOW_ITEM_FN(t, s, fn) \
+	[RTE_FLOW_ITEM_TYPE_ ## t] = {\
+		.name = # t,                 \
+		.size = s,                   \
+		.desc_fn = fn,               \
 	}
 
 /** Information about known flow pattern items. */
@@ -100,6 +152,8 @@ static const struct rte_flow_desc_data rte_flow_desc_item[] = {
 	MK_FLOW_ITEM(GENEVE_OPT, sizeof(struct rte_flow_item_geneve_opt)),
 	MK_FLOW_ITEM(INTEGRITY, sizeof(struct rte_flow_item_integrity)),
 	MK_FLOW_ITEM(CONNTRACK, sizeof(uint32_t)),
+	MK_FLOW_ITEM_FN(FLEX, sizeof(struct rte_flow_item_flex),
+			rte_flow_item_flex_conv),
 };
 
 /** Generate flow_action[] entry. */
@@ -107,7 +161,16 @@ static const struct rte_flow_desc_data rte_flow_desc_item[] = {
 	[RTE_FLOW_ACTION_TYPE_ ## t] = { \
 		.name = # t, \
 		.size = s, \
+		.desc_fn = NULL,\
 	}
+
+#define MK_FLOW_ACTION_FN(t, fn) \
+	[RTE_FLOW_ACTION_TYPE_ ## t] = { \
+		.name = # t, \
+		.size = 0, \
+		.desc_fn = fn,\
+	}
+
 
 /** Information about known flow actions. */
 static const struct rte_flow_desc_data rte_flow_desc_action[] = {
@@ -527,12 +590,8 @@ rte_flow_conv_item_spec(void *buf, const size_t size,
 		}
 		break;
 	default:
-		/**
-		 * allow PMD private flow item
-		 */
-		off = (int)item->type >= 0 ?
-		      rte_flow_desc_item[item->type].size : sizeof(void *);
-		rte_memcpy(buf, data, (size > off ? off : size));
+		off = rte_flow_conv_copy(buf, data, size,
+					 rte_flow_desc_item, item->type);
 		break;
 	}
 	return off;
@@ -634,12 +693,8 @@ rte_flow_conv_action_conf(void *buf, const size_t size,
 		}
 		break;
 	default:
-		/**
-		 * allow PMD private flow action
-		 */
-		off = (int)action->type >= 0 ?
-		      rte_flow_desc_action[action->type].size : sizeof(void *);
-		rte_memcpy(buf, action->conf, (size > off ? off : size));
+		off = rte_flow_conv_copy(buf, action->conf, size,
+					 rte_flow_desc_action, action->type);
 		break;
 	}
 	return off;
