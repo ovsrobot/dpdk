@@ -54,6 +54,8 @@ enum index {
 	COMMON_PRIORITY_LEVEL,
 	COMMON_INDIRECT_ACTION_ID,
 	COMMON_POLICY_ID,
+	COMMON_FLEX_HANDLE,
+	COMMON_FLEX_TOKEN,
 
 	/* TOP-level command. */
 	ADD,
@@ -81,6 +83,12 @@ enum index {
 	AGED,
 	ISOLATE,
 	TUNNEL,
+	FLEX,
+
+	/* Flex arguments */
+	FLEX_ITEM_INIT,
+	FLEX_ITEM_CREATE,
+	FLEX_ITEM_DESTROY,
 
 	/* Tunnel arguments. */
 	TUNNEL_CREATE,
@@ -306,6 +314,9 @@ enum index {
 	ITEM_POL_PORT,
 	ITEM_POL_METER,
 	ITEM_POL_POLICY,
+	ITEM_FLEX,
+	ITEM_FLEX_ITEM_HANDLE,
+	ITEM_FLEX_PATTERN_HANDLE,
 
 	/* Validate/create actions. */
 	ACTIONS,
@@ -844,6 +855,11 @@ struct buffer {
 		struct {
 			uint32_t policy_id;
 		} policy;/**< Policy arguments. */
+		struct {
+			uint16_t token;
+			uintptr_t uintptr;
+			char filename[128];
+		} flex; /**< Flex arguments*/
 	} args; /**< Command arguments. */
 };
 
@@ -870,6 +886,13 @@ struct parse_action_priv {
 		.type = RTE_FLOW_ACTION_TYPE_ ## t, \
 		.size = s, \
 	})
+
+static const enum index next_flex_item[] = {
+	FLEX_ITEM_INIT,
+	FLEX_ITEM_CREATE,
+	FLEX_ITEM_DESTROY,
+	ZERO,
+};
 
 static const enum index next_ia_create_attr[] = {
 	INDIRECT_ACTION_CREATE_ID,
@@ -1000,6 +1023,7 @@ static const enum index next_item[] = {
 	ITEM_GENEVE_OPT,
 	ITEM_INTEGRITY,
 	ITEM_CONNTRACK,
+	ITEM_FLEX,
 	END_SET,
 	ZERO,
 };
@@ -1368,6 +1392,13 @@ static const enum index item_integrity_lv[] = {
 	ZERO,
 };
 
+static const enum index item_flex[] = {
+	ITEM_FLEX_PATTERN_HANDLE,
+	ITEM_FLEX_ITEM_HANDLE,
+	ITEM_NEXT,
+	ZERO,
+};
+
 static const enum index next_action[] = {
 	ACTION_END,
 	ACTION_VOID,
@@ -1724,6 +1755,9 @@ static int parse_set_sample_action(struct context *, const struct token *,
 static int parse_set_init(struct context *, const struct token *,
 			  const char *, unsigned int,
 			  void *, unsigned int);
+static int
+parse_flex_handle(struct context *, const struct token *,
+		  const char *, unsigned int, void *, unsigned int);
 static int parse_init(struct context *, const struct token *,
 		      const char *, unsigned int,
 		      void *, unsigned int);
@@ -1840,6 +1874,8 @@ static int parse_isolate(struct context *, const struct token *,
 static int parse_tunnel(struct context *, const struct token *,
 			const char *, unsigned int,
 			void *, unsigned int);
+static int parse_flex(struct context *, const struct token *,
+		      const char *, unsigned int, void *, unsigned int);
 static int parse_int(struct context *, const struct token *,
 		     const char *, unsigned int,
 		     void *, unsigned int);
@@ -1904,6 +1940,17 @@ static int comp_set_modify_field_op(struct context *, const struct token *,
 			      unsigned int, char *, unsigned int);
 static int comp_set_modify_field_id(struct context *, const struct token *,
 			      unsigned int, char *, unsigned int);
+static void flex_item_create(portid_t port_id, uint16_t flex_id,
+			     const char *filename);
+static void flex_item_destroy(portid_t port_id, uint16_t flex_id);
+struct flex_pattern {
+	struct rte_flow_item_flex spec, mask;
+	uint8_t spec_pattern[FLEX_MAX_FLOW_PATTERN_LENGTH];
+	uint8_t mask_pattern[FLEX_MAX_FLOW_PATTERN_LENGTH];
+};
+
+static struct flex_item *flex_items[RTE_MAX_ETHPORTS][FLEX_MAX_PARSERS_NUM];
+static struct flex_pattern flex_patterns[FLEX_MAX_PATTERNS_NUM];
 
 /** Token definitions. */
 static const struct token token_list[] = {
@@ -2040,6 +2087,20 @@ static const struct token token_list[] = {
 		.call = parse_int,
 		.comp = comp_none,
 	},
+	[COMMON_FLEX_TOKEN] = {
+		.name = "{flex token}",
+		.type = "flex token",
+		.help = "flex token",
+		.call = parse_int,
+		.comp = comp_none,
+	},
+	[COMMON_FLEX_HANDLE] = {
+		.name = "{flex handle}",
+		.type = "FLEX HANDLE",
+		.help = "fill flex item data",
+		.call = parse_flex_handle,
+		.comp = comp_none,
+	},
 	/* Top-level command. */
 	[FLOW] = {
 		.name = "flow",
@@ -2056,7 +2117,8 @@ static const struct token token_list[] = {
 			      AGED,
 			      QUERY,
 			      ISOLATE,
-			      TUNNEL)),
+			      TUNNEL,
+			      FLEX)),
 		.call = parse_init,
 	},
 	/* Top-level command. */
@@ -2167,6 +2229,41 @@ static const struct token token_list[] = {
 		.args = ARGS(ARGS_ENTRY(struct buffer, args.isolate.set),
 			     ARGS_ENTRY(struct buffer, port)),
 		.call = parse_isolate,
+	},
+	[FLEX] = {
+		.name = "flex_item",
+		.help = "flex item API",
+		.next = NEXT(next_flex_item),
+		.call = parse_flex,
+	},
+	[FLEX_ITEM_INIT] = {
+		.name = "init",
+		.help = "flex item init",
+		.args = ARGS(ARGS_ENTRY(struct buffer, args.flex.token),
+			     ARGS_ENTRY(struct buffer, port)),
+		.next = NEXT(NEXT_ENTRY(COMMON_FLEX_TOKEN),
+			     NEXT_ENTRY(COMMON_PORT_ID)),
+		.call = parse_flex
+	},
+	[FLEX_ITEM_CREATE] = {
+		.name = "create",
+		.help = "flex item create",
+		.args = ARGS(ARGS_ENTRY(struct buffer, args.flex.filename),
+			     ARGS_ENTRY(struct buffer, args.flex.token),
+			     ARGS_ENTRY(struct buffer, port)),
+		.next = NEXT(NEXT_ENTRY(COMMON_FILE_PATH),
+			     NEXT_ENTRY(COMMON_FLEX_TOKEN),
+			     NEXT_ENTRY(COMMON_PORT_ID)),
+		.call = parse_flex
+	},
+	[FLEX_ITEM_DESTROY] = {
+		.name = "destroy",
+		.help = "flex item destroy",
+		.args = ARGS(ARGS_ENTRY(struct buffer, args.flex.token),
+			     ARGS_ENTRY(struct buffer, port)),
+		.next = NEXT(NEXT_ENTRY(COMMON_FLEX_TOKEN),
+			     NEXT_ENTRY(COMMON_PORT_ID)),
+		.call = parse_flex
 	},
 	[TUNNEL] = {
 		.name = "tunnel",
@@ -3607,6 +3704,27 @@ static const struct token token_list[] = {
 		.next = NEXT(NEXT_ENTRY(ITEM_NEXT), NEXT_ENTRY(COMMON_UNSIGNED),
 			     item_param),
 		.args = ARGS(ARGS_ENTRY(struct rte_flow_item_conntrack, flags)),
+	},
+	[ITEM_FLEX] = {
+		.name = "flex",
+		.help = "match flex header",
+		.priv = PRIV_ITEM(FLEX, sizeof(struct rte_flow_item_flex)),
+		.next = NEXT(item_flex),
+		.call = parse_vc,
+	},
+	[ITEM_FLEX_ITEM_HANDLE] = {
+		.name = "item",
+		.help = "flex item handle",
+		.next = NEXT(item_flex, NEXT_ENTRY(COMMON_FLEX_HANDLE),
+			     NEXT_ENTRY(ITEM_PARAM_IS)),
+		.args = ARGS(ARGS_ENTRY(struct rte_flow_item_flex, handle)),
+	},
+	[ITEM_FLEX_PATTERN_HANDLE] = {
+		.name = "pattern",
+		.help = "flex pattern handle",
+		.next = NEXT(item_flex, NEXT_ENTRY(COMMON_FLEX_HANDLE),
+			     NEXT_ENTRY(ITEM_PARAM_IS)),
+		.args = ARGS(ARGS_ENTRY(struct rte_flow_item_flex, pattern)),
 	},
 	/* Validate/create actions. */
 	[ACTIONS] = {
@@ -7000,6 +7118,43 @@ parse_isolate(struct context *ctx, const struct token *token,
 }
 
 static int
+parse_flex(struct context *ctx, const struct token *token,
+	     const char *str, unsigned int len,
+	     void *buf, unsigned int size)
+{
+	struct buffer *out = buf;
+
+	/* Token name must match. */
+	if (parse_default(ctx, token, str, len, NULL, 0) < 0)
+		return -1;
+	/* Nothing else to do if there is no buffer. */
+	if (!out)
+		return len;
+	if (out->command == ZERO) {
+		if (ctx->curr != FLEX)
+			return -1;
+		if (sizeof(*out) > size)
+			return -1;
+		out->command = ctx->curr;
+		ctx->objdata = 0;
+		ctx->object = out;
+		ctx->objmask = NULL;
+	} else {
+		switch (ctx->curr) {
+		default:
+			break;
+		case FLEX_ITEM_INIT:
+		case FLEX_ITEM_CREATE:
+		case FLEX_ITEM_DESTROY:
+			out->command = ctx->curr;
+			break;
+		}
+	}
+
+	return len;
+}
+
+static int
 parse_tunnel(struct context *ctx, const struct token *token,
 	     const char *str, unsigned int len,
 	     void *buf, unsigned int size)
@@ -7661,6 +7816,71 @@ parse_set_init(struct context *ctx, const struct token *token,
 	return len;
 }
 
+/*
+ * Replace testpmd handles in a flex flow item with real values.
+ */
+static int
+parse_flex_handle(struct context *ctx, const struct token *token,
+		  const char *str, unsigned int len,
+		  void *buf, unsigned int size)
+{
+	struct rte_flow_item_flex *spec, *mask;
+	const struct rte_flow_item_flex *src_spec, *src_mask;
+	const struct arg *arg = pop_args(ctx);
+	uint32_t offset;
+	uint16_t handle;
+	int ret;
+
+	if (!arg) {
+		printf("Bad environment\n");
+		return -1;
+	}
+	offset = arg->offset;
+	push_args(ctx, arg);
+	ret = parse_int(ctx, token, str, len, buf, size);
+	if (ret <= 0 || !ctx->object)
+		return ret;
+	if (ctx->port >= RTE_MAX_ETHPORTS) {
+		printf("Bad port\n");
+		return -1;
+	}
+	if (offset == offsetof(struct rte_flow_item_flex, handle)) {
+		const struct flex_item *fp;
+		struct rte_flow_item_flex *item_flex = ctx->object;
+		handle = (uint16_t)(uintptr_t)item_flex->handle;
+		if (handle >= FLEX_MAX_PARSERS_NUM) {
+			printf("Bad flex item handle\n");
+			return -1;
+		}
+		fp = flex_items[ctx->port][handle];
+		if (!fp) {
+			printf("Bad flex item handle\n");
+			return -1;
+		}
+		item_flex->handle = fp->flex_handle;
+	} else if (offset == offsetof(struct rte_flow_item_flex, pattern)) {
+		handle = (uint16_t)(uintptr_t)
+			((struct rte_flow_item_flex *)ctx->object)->pattern;
+		if (handle >= FLEX_MAX_PATTERNS_NUM) {
+			printf("Bad pattern handle\n");
+			return -1;
+		}
+		src_spec = &flex_patterns[handle].spec;
+		src_mask = &flex_patterns[handle].mask;
+		spec = ctx->object;
+		mask = spec + 2; /* spec, last, mask */
+		/* fill flow rule spec and mask parameters */
+		spec->length = src_spec->length;
+		spec->pattern = src_spec->pattern;
+		mask->length = src_mask->length;
+		mask->pattern = src_mask->pattern;
+	} else {
+		printf("Bad arguments - unknown flex item offset\n");
+		return -1;
+	}
+	return ret;
+}
+
 /** No completion. */
 static int
 comp_none(struct context *ctx, const struct token *token,
@@ -8167,6 +8387,13 @@ cmd_flow_parsed(const struct buffer *in)
 		port_meter_policy_add(in->port, in->args.policy.policy_id,
 					in->args.vc.actions);
 		break;
+	case FLEX_ITEM_CREATE:
+		flex_item_create(in->port, in->args.flex.token,
+				 in->args.flex.filename);
+		break;
+	case FLEX_ITEM_DESTROY:
+		flex_item_destroy(in->port, in->args.flex.token);
+		break;
 	default:
 		break;
 	}
@@ -8618,6 +8845,11 @@ cmd_set_raw_parsed(const struct buffer *in)
 		case RTE_FLOW_ITEM_TYPE_PFCP:
 			size = sizeof(struct rte_flow_item_pfcp);
 			break;
+		case RTE_FLOW_ITEM_TYPE_FLEX:
+			size = item->spec ?
+				((const struct rte_flow_item_flex *)
+				item->spec)->length : 0;
+			break;
 		default:
 			fprintf(stderr, "Error - Not supported item\n");
 			goto error;
@@ -8799,4 +9031,534 @@ cmdline_parse_inst_t cmd_show_set_raw_all = {
 		(void *)&cmd_show_set_raw_cmd_all,
 		NULL,
 	},
+};
+
+#ifdef RTE_HAS_JANSSON
+static __rte_always_inline bool
+match_strkey(const char *key, const char *pattern)
+{
+	return strncmp(key, pattern, strlen(key)) == 0;
+}
+
+static struct flex_item *
+flex_parser_fetch(uint16_t port_id, uint16_t flex_id)
+{
+	if (port_id >= RTE_MAX_ETHPORTS) {
+		printf("Invalid port_id: %u\n", port_id);
+		return FLEX_PARSER_ERR;
+	}
+	if (flex_id >= FLEX_MAX_PARSERS_NUM) {
+		printf("Invalid flex item flex_id: %u\n", flex_id);
+		return FLEX_PARSER_ERR;
+	}
+	return flex_items[port_id][flex_id];
+}
+
+static void
+flex_item_destroy(portid_t port_id, uint16_t flex_id)
+{
+	int ret;
+	struct rte_flow_error error;
+	struct flex_item *fp = flex_parser_fetch(port_id, flex_id);
+	if (fp == FLEX_PARSER_ERR) {
+		printf("Bad parameters: port_id=%u flex_id=%u\n",
+		       port_id, flex_id);
+		return;
+	}
+	if (!fp)
+		return;
+	ret = rte_flow_flex_item_release(port_id, fp->flex_handle, &error);
+	if (!ret) {
+		free(fp);
+		flex_items[port_id][flex_id] = NULL;
+		printf("port-%u: released flex item #%u\n",
+		       port_id, flex_id);
+
+	} else {
+		printf("port-%u: cannot release flex item #%u: %s\n",
+		       port_id, flex_id, error.message);
+	}
+}
+
+static int
+flex_tunnel_parse(json_t *jtun, enum rte_flow_item_flex_tunnel_mode *tunnel)
+{
+	int tun = -1;
+
+	if (json_is_integer(jtun))
+		tun = (int)json_integer_value(jtun);
+	else if (json_is_real(jtun))
+		tun = (int)json_real_value(jtun);
+	else if (json_is_string(jtun)) {
+		const char *mode = json_string_value(jtun);
+
+		if (match_strkey(mode, "FLEX_TUNNEL_MODE_SINGLE"))
+			tun = FLEX_TUNNEL_MODE_SINGLE;
+		else if (match_strkey(mode, "FLEX_TUNNEL_MODE_OUTER"))
+			tun = FLEX_TUNNEL_MODE_OUTER;
+		else if (match_strkey(mode, "FLEX_TUNNEL_MODE_INNER"))
+			tun = FLEX_TUNNEL_MODE_INNER;
+		else if (match_strkey(mode, "FLEX_TUNNEL_MODE_MULTI"))
+			tun = FLEX_TUNNEL_MODE_MULTI;
+		else if (match_strkey(mode, "FLEX_TUNNEL_MODE_TUNNEL"))
+			tun = FLEX_TUNNEL_MODE_TUNNEL;
+		else
+			return -EINVAL;
+	} else
+		return -EINVAL;
+	*tunnel = (enum rte_flow_item_flex_tunnel_mode)tun;
+	return 0;
+}
+
+static int
+flex_field_parse(json_t *jfld, struct rte_flow_item_flex_field *fld)
+{
+	const char *key;
+	json_t *je;
+
+#define FLEX_FIELD_GET(fm, t) \
+do {                  \
+	if (!strncmp(key, # fm, strlen(# fm))) { \
+		if (json_is_real(je))   \
+			fld->fm = (t) json_real_value(je); \
+		else if (json_is_integer(je))   \
+			fld->fm = (t) json_integer_value(je); \
+		else   \
+			return -EINVAL; \
+	}         \
+} while (0)
+
+	json_object_foreach(jfld, key, je) {
+		FLEX_FIELD_GET(field_size, uint32_t);
+		FLEX_FIELD_GET(field_base, int32_t);
+		FLEX_FIELD_GET(offset_base, uint32_t);
+		FLEX_FIELD_GET(offset_mask, uint32_t);
+		FLEX_FIELD_GET(offset_shift, int32_t);
+		FLEX_FIELD_GET(field_id, uint16_t);
+		if (match_strkey(key, "field_mode")) {
+			const char *mode;
+			if (!json_is_string(je))
+				return -EINVAL;
+			mode = json_string_value(je);
+			if (match_strkey(mode, "FIELD_MODE_DUMMY"))
+				fld->field_mode = FIELD_MODE_DUMMY;
+			else if (match_strkey(mode, "FIELD_MODE_FIXED"))
+				fld->field_mode = FIELD_MODE_FIXED;
+			else if (match_strkey(mode, "FIELD_MODE_OFFSET"))
+				fld->field_mode = FIELD_MODE_OFFSET;
+			else if (match_strkey(mode, "FIELD_MODE_BITMASK"))
+				fld->field_mode = FIELD_MODE_BITMASK;
+			else
+				return -EINVAL;
+		}
+	}
+	return 0;
+}
+
+enum flex_link_type {
+	FLEX_LINK_IN = 0,
+	FLEX_LINK_OUT = 1
+};
+
+static int
+flex_link_item_parse(const char *pattern, struct rte_flow_item *item)
+{
+#define  FLEX_PARSE_DATA_SIZE 1024
+
+	int ret;
+	uint8_t *ptr, data[FLEX_PARSE_DATA_SIZE] = {0,};
+	char flow_rule[256];
+	struct context saved_flow_ctx = cmd_flow_context;
+
+	sprintf(flow_rule, "flow create 0 pattern %s / end", pattern);
+	pattern = flow_rule;
+	cmd_flow_context_init(&cmd_flow_context);
+	do {
+		ret = cmd_flow_parse(NULL, pattern, (void *)data, sizeof(data));
+		if (ret > 0) {
+			pattern += ret;
+			while (isspace(*pattern))
+				pattern++;
+		}
+	} while (ret > 0 && strlen(pattern));
+	if (ret >= 0 && !strlen(pattern)) {
+		struct buffer *pbuf = (struct buffer *)(uintptr_t)data;
+		struct rte_flow_item *src = pbuf->args.vc.pattern;
+
+		item->type = src->type;
+		if (src->spec) {
+			ptr = (void *)(uintptr_t)item->spec;
+			memcpy(ptr, src->spec, FLEX_MAX_FLOW_PATTERN_LENGTH);
+		} else {
+			item->spec = NULL;
+		}
+		if (src->mask) {
+			ptr = (void *)(uintptr_t)item->mask;
+			memcpy(ptr, src->mask, FLEX_MAX_FLOW_PATTERN_LENGTH);
+		} else {
+			item->mask = NULL;
+		}
+		if (src->last) {
+			ptr = (void *)(uintptr_t)item->last;
+			memcpy(ptr, src->last, FLEX_MAX_FLOW_PATTERN_LENGTH);
+		} else {
+			item->last = NULL;
+		}
+		ret = 0;
+	}
+	cmd_flow_context = saved_flow_ctx;
+	return ret;
+}
+
+static int
+flex_link_parse(json_t *jobj, struct rte_flow_item_flex_link *link,
+		enum flex_link_type link_type)
+{
+	const char *key;
+	json_t *je;
+	int ret;
+	json_object_foreach(jobj, key, je) {
+		if (match_strkey(key, "item")) {
+			if (!json_is_string(je))
+				return -EINVAL;
+			ret = flex_link_item_parse(json_string_value(je),
+						   &link->item);
+			if (ret)
+				return -EINVAL;
+			if (link_type == FLEX_LINK_IN) {
+				if (!link->item.spec || !link->item.mask)
+					return -EINVAL;
+				if (link->item.last)
+					return -EINVAL;
+			}
+		}
+		if (match_strkey(key, "next")) {
+			if (json_is_integer(je))
+				link->next = (typeof(link->next))
+					     json_integer_value(je);
+			else if (json_is_real(je))
+				link->next = (typeof(link->next))
+					     json_real_value(je);
+			else
+				return -EINVAL;
+		}
+	}
+	return 0;
+}
+
+static int flex_item_config(json_t *jroot,
+			    struct rte_flow_item_flex_conf *flex_conf)
+{
+	const char *key;
+	json_t *jobj = NULL;
+	int ret = 0;
+
+	json_object_foreach(jroot, key, jobj) {
+		if (match_strkey(key, "tunnel")) {
+			ret = flex_tunnel_parse(jobj, &flex_conf->tunnel);
+			if (ret) {
+				printf("Can't parse tunnel value\n");
+				goto out;
+			}
+		} else if (match_strkey(key, "next_header")) {
+			ret = flex_field_parse(jobj, &flex_conf->next_header);
+			if (ret) {
+				printf("Can't parse next_header field\n");
+				goto out;
+			}
+		} else if (match_strkey(key, "next_protocol")) {
+			ret = flex_field_parse(jobj,
+					       &flex_conf->next_protocol);
+			if (ret) {
+				printf("Can't parse next_protocol field\n");
+				goto out;
+			}
+		} else if (match_strkey(key, "sample_data")) {
+			json_t *ji;
+			uint32_t i, size = json_array_size(jobj);
+			for (i = 0; i < size; i++) {
+				ji = json_array_get(jobj, i);
+				ret = flex_field_parse
+					(ji, flex_conf->sample_data + i);
+				if (ret) {
+					printf("Can't parse sample_data field(s)\n");
+					goto out;
+				}
+			}
+			flex_conf->nb_samples = size;
+		} else if (match_strkey(key, "input_link")) {
+			json_t *ji;
+			uint32_t i, size = json_array_size(jobj);
+			for (i = 0; i < size; i++) {
+				ji = json_array_get(jobj, i);
+				ret = flex_link_parse(ji,
+						      flex_conf->input_link + i,
+						      FLEX_LINK_IN);
+				if (ret) {
+					printf("Can't parse input_link(s)\n");
+					goto out;
+				}
+			}
+			flex_conf->nb_inputs = size;
+		} else if (match_strkey(key, "output_link")) {
+			json_t *ji;
+			uint32_t i, size = json_array_size(jobj);
+			for (i = 0; i < size; i++) {
+				ji = json_array_get(jobj, i);
+				ret = flex_link_parse
+					(ji, flex_conf->output_link + i,
+					 FLEX_LINK_OUT);
+				if (ret) {
+					printf("Can't parse output_link(s)\n");
+					goto out;
+				}
+			}
+			flex_conf->nb_outputs = size;
+		}
+	}
+out:
+	return ret;
+}
+
+static struct flex_item *
+flex_item_init(void)
+{
+	size_t base_size, samples_size, links_size, spec_size;
+	struct rte_flow_item_flex_conf *conf;
+	struct flex_item *fp;
+	uint8_t (*pattern)[FLEX_MAX_FLOW_PATTERN_LENGTH];
+	int i;
+
+	base_size = RTE_ALIGN(sizeof(*conf), sizeof(uintptr_t));
+	samples_size = RTE_ALIGN(FLEX_ITEM_MAX_SAMPLES_NUM *
+				 sizeof(conf->sample_data[0]),
+				 sizeof(uintptr_t));
+	links_size = RTE_ALIGN(FLEX_ITEM_MAX_LINKS_NUM *
+			       sizeof(conf->input_link[0]),
+			       sizeof(uintptr_t));
+	/* spec & mask for all input links */
+	spec_size = 2 * FLEX_MAX_FLOW_PATTERN_LENGTH * FLEX_ITEM_MAX_LINKS_NUM;
+	fp = calloc(1, base_size + samples_size + 2 * links_size + spec_size);
+	if (fp == NULL) {
+		printf("Can't allocate memory for flex item\n");
+		return NULL;
+	}
+	conf = &fp->flex_conf;
+	conf->sample_data = (typeof(conf->sample_data))
+			    ((uint8_t *)fp + base_size);
+	conf->input_link = (typeof(conf->input_link))
+			   ((uint8_t *)conf->sample_data + samples_size);
+	conf->output_link = (typeof(conf->output_link))
+			    ((uint8_t *)conf->input_link + links_size);
+	pattern = (typeof(pattern))((uint8_t *)conf->output_link + links_size);
+	for (i = 0; i < FLEX_ITEM_MAX_LINKS_NUM; i++) {
+		struct rte_flow_item_flex_link *in = conf->input_link + i;
+		in->item.spec = pattern++;
+		in->item.mask = pattern++;
+	}
+	return fp;
+}
+
+static void
+flex_item_create(portid_t port_id, uint16_t flex_id, const char *filename)
+{
+	struct rte_flow_error flow_error;
+	json_error_t json_error;
+	json_t *jroot = NULL;
+	struct flex_item *fp = flex_parser_fetch(port_id, flex_id);
+	int ret;
+
+	if (fp == FLEX_PARSER_ERR) {
+		printf("Bad parameters: port_id=%u flex_id=%u\n",
+		       port_id, flex_id);
+		return;
+	}
+	if (fp) {
+		printf("port-%u: flex item #%u is already in use\n",
+		       port_id, flex_id);
+		return;
+	}
+	jroot = json_load_file(filename, 0, &json_error);
+	if (!jroot) {
+		printf("Bad JSON file \"%s\": %s\n", filename, json_error.text);
+		return;
+	}
+	fp = flex_item_init();
+	if (!fp) {
+		printf("Could not allocate flex item\n");
+		goto out;
+	}
+	ret = flex_item_config(jroot, &fp->flex_conf);
+	if (ret)
+		goto out;
+	fp->flex_handle = rte_flow_flex_item_create(port_id,
+						    &fp->flex_conf,
+						    &flow_error);
+	if (fp->flex_handle) {
+		flex_items[port_id][flex_id] = fp;
+		printf("port-%u: created flex item #%u\n", port_id, flex_id);
+		fp = NULL;
+	} else {
+		printf("port-%u: flex item #%u creation failed: %s\n",
+		       port_id, flex_id,
+		       flow_error.message ? flow_error.message : "");
+	}
+out:
+	if (fp)
+		free(fp);
+	if (jroot)
+		json_decref(jroot);
+}
+
+#else /* RTE_HAS_JANSSON */
+static void flex_item_create(__rte_unused portid_t port_id,
+			     __rte_unused uint16_t flex_id,
+			     __rte_unused const char *filename)
+{
+	printf("no JSON library\n");
+}
+
+static void flex_item_destroy(__rte_unused portid_t port_id,
+			     __rte_unused uint16_t flex_id)
+{
+	printf("no JSON library\n");
+}
+#endif /* RTE_HAS_JANSSON */
+
+void
+port_flex_item_flush(portid_t port_id)
+{
+	uint16_t i;
+
+	for (i = 0; i < FLEX_MAX_PARSERS_NUM; i++) {
+		flex_item_destroy(port_id, i);
+		flex_items[port_id][i] = NULL;
+	}
+}
+
+struct flex_pattern_set {
+	cmdline_fixed_string_t set, flex_pattern;
+	cmdline_fixed_string_t is_spec, mask;
+	cmdline_fixed_string_t spec_data, mask_data;
+	uint16_t id;
+};
+
+static cmdline_parse_token_string_t flex_pattern_set_token =
+	TOKEN_STRING_INITIALIZER(struct flex_pattern_set, set, "set");
+static cmdline_parse_token_string_t flex_pattern_token =
+	TOKEN_STRING_INITIALIZER(struct flex_pattern_set,
+				 flex_pattern, "flex_pattern");
+static cmdline_parse_token_string_t flex_pattern_is_token =
+	TOKEN_STRING_INITIALIZER(struct flex_pattern_set,
+				 is_spec, "is");
+static cmdline_parse_token_string_t flex_pattern_spec_token =
+	TOKEN_STRING_INITIALIZER(struct flex_pattern_set,
+				 is_spec, "spec");
+static cmdline_parse_token_string_t flex_pattern_mask_token =
+	TOKEN_STRING_INITIALIZER(struct flex_pattern_set, mask, "mask");
+static cmdline_parse_token_string_t flex_pattern_spec_data_token =
+	TOKEN_STRING_INITIALIZER(struct flex_pattern_set, spec_data, NULL);
+static cmdline_parse_token_string_t flex_pattern_mask_data_token =
+	TOKEN_STRING_INITIALIZER(struct flex_pattern_set, mask_data, NULL);
+static cmdline_parse_token_num_t flex_pattern_id_token =
+	TOKEN_NUM_INITIALIZER(struct flex_pattern_set, id, RTE_UINT16);
+
+/*
+ * flex pattern data - spec or mask is a string representation of byte array
+ * in hexadecimal format. Each byte in data string must have 2 characters:
+ * 0x15 - "15"
+ * 0x1  - "01"
+ * Bytes in data array are in network order.
+ */
+static uint32_t
+flex_pattern_data(const char *str, uint8_t *data)
+{
+	uint32_t i, len = strlen(str);
+	char b[3], *endptr;
+
+	if (len & 01)
+		return 0;
+	len /= 2;
+	if (len >= FLEX_MAX_FLOW_PATTERN_LENGTH)
+		return 0;
+	for (i = 0, b[2] = '\0'; i < len; i++) {
+		b[0] = str[2 * i];
+		b[1] = str[2 * i + 1];
+		data[i] = strtoul(b, &endptr, 16);
+		if (endptr != &b[2])
+			return 0;
+	}
+	return len;
+}
+
+static void
+flex_pattern_parsed_fn(void *parsed_result,
+		       __rte_unused struct cmdline *cl,
+		       __rte_unused void *data)
+{
+	struct flex_pattern_set *res = parsed_result;
+	struct flex_pattern *fp;
+	bool full_spec;
+
+	if (res->id >= FLEX_MAX_PATTERNS_NUM) {
+		printf("Bad flex pattern id\n");
+		return;
+	}
+	fp = flex_patterns + res->id;
+	memset(fp->spec_pattern, 0, sizeof(fp->spec_pattern));
+	memset(fp->mask_pattern, 0, sizeof(fp->mask_pattern));
+	fp->spec.length = flex_pattern_data(res->spec_data, fp->spec_pattern);
+	if (!fp->spec.length) {
+		printf("Bad flex pattern spec\n");
+		return;
+	}
+	full_spec = strncmp(res->is_spec, "spec", strlen("spec")) == 0;
+	if (full_spec) {
+		fp->mask.length = flex_pattern_data(res->mask_data,
+						    fp->mask_pattern);
+		if (!fp->mask.length) {
+			printf("Bad flex pattern mask\n");
+			return;
+		}
+	} else {
+		memset(fp->mask_pattern, 0xFF, fp->spec.length);
+		fp->mask.length = fp->spec.length;
+	}
+	if (fp->mask.length != fp->spec.length) {
+		printf("Spec length do not match mask length\n");
+		return;
+	}
+	fp->spec.pattern = fp->spec_pattern;
+	fp->mask.pattern = fp->mask_pattern;
+	printf("created pattern #%u\n", res->id);
+}
+
+cmdline_parse_inst_t cmd_set_flex_is_pattern = {
+	.f = flex_pattern_parsed_fn,
+	.data = NULL,
+	.help_str = "set flex_pattern <id> is <spec_data>",
+	.tokens = {
+		(void *)&flex_pattern_set_token,
+		(void *)&flex_pattern_token,
+		(void *)&flex_pattern_id_token,
+		(void *)&flex_pattern_is_token,
+		(void *)&flex_pattern_spec_data_token,
+		NULL,
+	}
+};
+
+cmdline_parse_inst_t cmd_set_flex_spec_pattern = {
+	.f = flex_pattern_parsed_fn,
+	.data = NULL,
+	.help_str = "set flex_pattern <id> spec <spec_data> mask <mask_data>",
+	.tokens = {
+		(void *)&flex_pattern_set_token,
+		(void *)&flex_pattern_token,
+		(void *)&flex_pattern_id_token,
+		(void *)&flex_pattern_spec_token,
+		(void *)&flex_pattern_spec_data_token,
+		(void *)&flex_pattern_mask_token,
+		(void *)&flex_pattern_mask_data_token,
+		NULL,
+	}
 };

@@ -282,6 +282,19 @@ struct fwd_engine {
 	packet_fwd_t     packet_fwd;     /**< Mandatory. */
 };
 
+struct flex_item {
+	struct rte_flow_item_flex_conf flex_conf;
+	struct rte_flow_item_flex_handle *flex_handle;
+	uint32_t flex_id;
+};
+
+#define FLEX_ITEM_MAX_SAMPLES_NUM 16
+#define FLEX_ITEM_MAX_LINKS_NUM 16
+#define FLEX_MAX_FLOW_PATTERN_LENGTH 64
+#define FLEX_MAX_PARSERS_NUM 8
+#define FLEX_MAX_PATTERNS_NUM 64
+#define FLEX_PARSER_ERR ((struct flex_item *)-1)
+
 #define BURST_TX_WAIT_US 1
 #define BURST_TX_RETRIES 64
 
@@ -306,6 +319,8 @@ extern struct fwd_engine * fwd_engines[]; /**< NULL terminated array. */
 extern cmdline_parse_inst_t cmd_set_raw;
 extern cmdline_parse_inst_t cmd_show_set_raw;
 extern cmdline_parse_inst_t cmd_show_set_raw_all;
+extern cmdline_parse_inst_t cmd_set_flex_is_pattern;
+extern cmdline_parse_inst_t cmd_set_flex_spec_pattern;
 
 extern uint16_t mempool_flags;
 
@@ -1026,6 +1041,7 @@ uint16_t tx_pkt_set_dynf(uint16_t port_id, __rte_unused uint16_t queue,
 void add_tx_dynf_callback(portid_t portid);
 void remove_tx_dynf_callback(portid_t portid);
 int update_jumbo_frame_offload(portid_t portid);
+void port_flex_item_flush(portid_t port_id);
 
 /*
  * Work-around of a compilation error with ICC on invocations of the
