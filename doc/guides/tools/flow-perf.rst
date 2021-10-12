@@ -96,6 +96,12 @@ The command line options are:
 *	``--portmask=N``
 	hexadecimal bitmask of ports to be used.
 
+*      ``--dst-ports=N,M``
+       Destination ports for ports with port-id action, the number of values
+       must be the same with number of set bits in portmask, and the parameter
+       is only valid for port-id action. The parameter is not MUST, the value
+       is by default 1 as before if not provided.
+
 *	``--cores=N``
 	Set the number of needed cores to insert/delete rte_flow rules.
 	Default cores count is 1.
