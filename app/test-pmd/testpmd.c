@@ -2886,6 +2886,7 @@ close_port(portid_t pid)
 
 		if (is_proc_primary()) {
 			port_flow_flush(pi);
+			port_flex_item_flush(pi);
 			rte_eth_dev_close(pi);
 		}
 	}
@@ -4017,7 +4018,6 @@ main(int argc, char** argv)
 		rte_stats_bitrate_reg(bitrate_data);
 	}
 #endif
-
 #ifdef RTE_LIB_CMDLINE
 	if (strlen(cmdline_filename) != 0)
 		cmdline_read_from_file(cmdline_filename);
