@@ -1774,6 +1774,62 @@ void rte_mempool_walk(void (*func)(struct rte_mempool *, void *arg),
 int
 rte_mempool_get_page_size(struct rte_mempool *mp, size_t *pg_sz);
 
+/**
+ * Mempool event type.
+ * @internal
+ */
+enum rte_mempool_event {
+	/** Occurs after a mempool is successfully populated. */
+	RTE_MEMPOOL_EVENT_READY = 0,
+	/** Occurs before destruction of a mempool begins. */
+	RTE_MEMPOOL_EVENT_DESTROY = 1,
+};
+
+/**
+ * @internal
+ * Mempool event callback.
+ */
+typedef void (rte_mempool_event_callback)(
+		enum rte_mempool_event event,
+		struct rte_mempool *mp,
+		void *user_data);
+
+/**
+ * @internal
+ * Register a callback invoked on mempool life cycle event.
+ * Callbacks will be invoked in the process that creates the mempool.
+ *
+ * @param func
+ *   Callback function.
+ * @param user_data
+ *   User data.
+ *
+ * @return
+ *   0 on success, negative on failure and rte_errno is set.
+ */
+__rte_internal
+int
+rte_mempool_event_callback_register(rte_mempool_event_callback *func,
+				    void *user_data);
+
+/**
+ * @internal
+ * Unregister a callback added with rte_mempool_event_callback_register().
+ * @p func and @p user_data must exactly match registration parameters.
+ *
+ * @param func
+ *   Callback function.
+ * @param user_data
+ *   User data.
+ *
+ * @return
+ *   0 on success, negative on failure and rte_errno is set.
+ */
+__rte_internal
+int
+rte_mempool_event_callback_unregister(rte_mempool_event_callback *func,
+				      void *user_data);
+
 #ifdef __cplusplus
 }
 #endif

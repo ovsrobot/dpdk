@@ -14,6 +14,7 @@
 #include <rte_common.h>
 #include <rte_log.h>
 #include <rte_debug.h>
+#include <rte_errno.h>
 #include <rte_memory.h>
 #include <rte_launch.h>
 #include <rte_cycles.h>
@@ -471,6 +472,74 @@ test_mp_mem_init(struct rte_mempool *mp,
 	data->ret = 0;
 }
 
+struct test_mempool_events_data {
+	struct rte_mempool *mp;
+	enum rte_mempool_event event;
+	bool invoked;
+};
+
+static void
+test_mempool_events_cb(enum rte_mempool_event event,
+		       struct rte_mempool *mp, void *arg)
+{
+	struct test_mempool_events_data *data = arg;
+
+	data->mp = mp;
+	data->event = event;
+	data->invoked = true;
+}
+
+static int
+test_mempool_events(int (*populate)(struct rte_mempool *mp))
+{
+	struct test_mempool_events_data data;
+	struct rte_mempool *mp;
+	int ret;
+
+	ret = rte_mempool_event_callback_register(NULL, &data);
+	RTE_TEST_ASSERT_NOT_EQUAL(ret, 0, "Registered a NULL callback");
+
+	memset(&data, 0, sizeof(data));
+	ret = rte_mempool_event_callback_register(test_mempool_events_cb,
+						  &data);
+	RTE_TEST_ASSERT_EQUAL(ret, 0, "Failed to register the callback: %s",
+			      rte_strerror(rte_errno));
+
+	mp = rte_mempool_create_empty("empty", MEMPOOL_SIZE,
+				      MEMPOOL_ELT_SIZE, 0, 0,
+				      SOCKET_ID_ANY, 0);
+	RTE_TEST_ASSERT_NOT_NULL(mp, "Cannot create an empty mempool: %s",
+				 rte_strerror(rte_errno));
+	RTE_TEST_ASSERT_EQUAL(data.invoked, false,
+			      "Callback invoked on an empty mempool creation");
+
+	rte_mempool_set_ops_byname(mp, rte_mbuf_best_mempool_ops(), NULL);
+	ret = populate(mp);
+	RTE_TEST_ASSERT_EQUAL(ret, (int)mp->size, "Failed to populate the mempool: %s",
+			      rte_strerror(rte_errno));
+	RTE_TEST_ASSERT_EQUAL(data.invoked, true,
+			      "Callback not invoked on an empty mempool population");
+	RTE_TEST_ASSERT_EQUAL(data.event, RTE_MEMPOOL_EVENT_READY,
+			      "Wrong callback invoked, expected READY");
+	RTE_TEST_ASSERT_EQUAL(data.mp, mp,
+			      "Callback invoked for a wrong mempool");
+
+	memset(&data, 0, sizeof(data));
+	rte_mempool_free(mp);
+	RTE_TEST_ASSERT_EQUAL(data.invoked, true,
+			      "Callback not invoked on mempool destruction");
+	RTE_TEST_ASSERT_EQUAL(data.event, RTE_MEMPOOL_EVENT_DESTROY,
+			      "Wrong callback invoked, expected DESTROY");
+	RTE_TEST_ASSERT_EQUAL(data.mp, mp,
+			      "Callback invoked for a wrong mempool");
+
+	ret = rte_mempool_event_callback_unregister(test_mempool_events_cb,
+						    &data);
+	RTE_TEST_ASSERT_EQUAL(ret, 0, "Failed to unregister the callback: %s",
+			      rte_strerror(rte_errno));
+	return 0;
+}
+
 static int
 test_mempool(void)
 {
@@ -643,6 +712,12 @@ test_mempool(void)
 		GOTO_ERR(ret, err);
 
 	if (test_mempool_basic(default_pool, 1) < 0)
+		GOTO_ERR(ret, err);
+
+	/* test mempool event callbacks */
+	if (test_mempool_events(rte_mempool_populate_default) < 0)
+		GOTO_ERR(ret, err);
+	if (test_mempool_events(rte_mempool_populate_anon) < 0)
 		GOTO_ERR(ret, err);
 
 	rte_mempool_list_dump(stdout);
