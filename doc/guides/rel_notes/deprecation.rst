@@ -114,10 +114,6 @@ Deprecation Notices
 * ethdev: Announce moving from dedicated modify function for each field,
   to using the general ``rte_flow_modify_field`` action.
 
-* ethdev: The struct ``rte_flow_action_modify_data`` will be modified
-  to support modifying fields larger than 64 bits.
-  In addition, documentation will be updated to clarify byte order.
-
 * ethdev: Attribute ``shared`` of the ``struct rte_flow_action_count``
   is deprecated and will be removed in DPDK 21.11. Shared counters should
   be managed using shared actions API (``rte_flow_shared_action_create`` etc).
