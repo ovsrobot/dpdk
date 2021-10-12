@@ -1323,3 +1323,43 @@ rte_flow_tunnel_item_release(uint16_t port_id,
 				  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
 				  NULL, rte_strerror(ENOTSUP));
 }
+
+struct rte_flow_item_flex_handle *
+rte_flow_flex_item_create(uint16_t port_id,
+			  const struct rte_flow_item_flex_conf *conf,
+			  struct rte_flow_error *error)
+{
+	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
+	struct rte_flow_item_flex_handle *handle;
+
+	if (unlikely(!ops))
+		return NULL;
+	if (unlikely(!ops->flex_item_create)) {
+		rte_flow_error_set(error, ENOTSUP,
+				   RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
+				   NULL, rte_strerror(ENOTSUP));
+		return NULL;
+	}
+	handle = ops->flex_item_create(dev, conf, error);
+	if (handle == NULL)
+		flow_err(port_id, -rte_errno, error);
+	return handle;
+}
+
+int
+rte_flow_flex_item_release(uint16_t port_id,
+			   const struct rte_flow_item_flex_handle *handle,
+			   struct rte_flow_error *error)
+{
+	int ret;
+	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
+
+	if (unlikely(!ops || !ops->flex_item_release))
+		return rte_flow_error_set(error, ENOTSUP,
+					  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
+					  NULL, rte_strerror(ENOTSUP));
+	ret = ops->flex_item_release(dev, handle, error);
+	return flow_err(port_id, ret, error);
+}
