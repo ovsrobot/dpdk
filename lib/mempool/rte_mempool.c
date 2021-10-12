@@ -777,6 +777,13 @@ rte_mempool_cache_free(struct rte_mempool_cache *cache)
 	rte_free(cache);
 }
 
+#define MEMPOOL_KNOWN_FLAGS ( MEMPOOL_F_NO_SPREAD \
+	| MEMPOOL_F_NO_CACHE_ALIGN \
+	| MEMPOOL_F_SP_PUT \
+	| MEMPOOL_F_SC_GET \
+	| MEMPOOL_F_POOL_CREATED \
+	| MEMPOOL_F_NO_IOVA_CONTIG \
+	)
 /* create an empty mempool */
 struct rte_mempool *
 rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
@@ -805,6 +812,12 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	RTE_BUILD_BUG_ON((offsetof(struct rte_mempool, stats) &
 			  RTE_CACHE_LINE_MASK) != 0);
 #endif
+
+	/* enforce no unknown flag is passed by the application */
+	if ((flags & ~MEMPOOL_KNOWN_FLAGS) != 0) {
+		rte_errno = EINVAL;
+		return NULL;
+	}
 
 	mempool_list = RTE_TAILQ_CAST(rte_mempool_tailq.head, rte_mempool_list);
 
