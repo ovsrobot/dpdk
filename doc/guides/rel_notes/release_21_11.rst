@@ -154,6 +154,11 @@ New Features
   * Added tests to verify tunnel header verification in IPsec inbound.
   * Added tests to verify inner checksum.
 
+* **Added ethdev shared Rx queue support.**
+
+  * Added new device capability flag and rx domain field to switch info.
+  * Added share group to Rx queue configuration.
+  * Added testpmd support and dedicate forwarding engine.
 
 Removed Items
 -------------
