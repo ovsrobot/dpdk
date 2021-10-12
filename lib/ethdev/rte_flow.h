@@ -3204,6 +3204,9 @@ enum rte_flow_field_id {
 };
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
  * Field description for MODIFY_FIELD action.
  */
 struct rte_flow_action_modify_data {
