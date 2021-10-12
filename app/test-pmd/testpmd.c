@@ -498,6 +498,11 @@ uint8_t record_core_cycles;
  */
 uint8_t record_burst_stats;
 
+/*
+ * Number of ports per shared Rx queue group, 0 disable.
+ */
+uint32_t rxq_share;
+
 unsigned int num_sockets = 0;
 unsigned int socket_ids[RTE_MAX_NUMA_NODES];
 
@@ -3401,6 +3406,13 @@ rxtx_port_config(struct rte_port *port)
 	for (qid = 0; qid < nb_rxq; qid++) {
 		offloads = port->rx_conf[qid].offloads;
 		port->rx_conf[qid] = port->dev_info.default_rxconf;
+
+		if (rxq_share > 0 &&
+		    (port->dev_info.dev_capa & RTE_ETH_DEV_CAPA_RXQ_SHARE))
+			/* Non-zero share group to enable RxQ share. */
+			port->rx_conf[qid].share_group = nb_ports / rxq_share
+							 + 1;
+
 		if (offloads != 0)
 			port->rx_conf[qid].offloads = offloads;
 
