@@ -221,6 +221,13 @@ API Changes
   the crypto/security operation. This field will be used to communicate
   events such as soft expiry with IPsec in lookaside mode.
 
+* ethdev: ``rte_flow_action_modify_data`` structure updated, immediate data
+  array is extended, data pointer field is explicitly added to union, the
+  action behavior is defined in more strict fashion and documentation updated.
+  The immediate value behavior has been changed, the entire immediate field
+  should be provided, and offset for immediate source bitfield is assigned
+  from destination one.
+
 
 ABI Changes
 -----------
