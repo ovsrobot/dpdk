@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Introduced RTE Flow Flex Item.**
+
+  * The configurable RTE Flow Flex Item provides the capability to introduce
+    the arbitrary user specified network protocol header, configure the device
+    hardware accordingly, and perform match on this header with desired patterns
+    and masks.
+
 * **Enabled new devargs parser.**
 
   * Enabled devargs syntax
