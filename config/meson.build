@@ -411,6 +411,16 @@ if get_option('b_lto')
     endif
 endif
 
+if get_option('b_sanitize') == 'address'
+    if cc.get_id() == 'gcc'
+        asan_dep = cc.find_library('asan', required: true)
+        if (not cc.links('int main(int argc, char *argv[]) { return 0; }',
+                    dependencies: asan_dep))
+            error('broken dependency, "libasan"')
+        endif
+    endif
+endif
+
 if get_option('default_library') == 'both'
     error( '''
  Unsupported value "both" for "default_library" option.
