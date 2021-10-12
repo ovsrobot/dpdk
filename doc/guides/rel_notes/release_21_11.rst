@@ -141,6 +141,12 @@ New Features
   * Added tests to validate packets hard expiry.
   * Added tests to verify tunnel header verification in IPsec inbound.
 
+* **Updated Mellanox mlx5 driver.**
+
+  Updated the Mellanox mlx5 driver with new features and improvements, including:
+
+  * Added implicit mempool registration to avoid data path hiccups (opt-out).
+
 
 Removed Items
 -------------
