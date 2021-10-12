@@ -61,3 +61,8 @@ if dpdk_conf.has('RTE_LIB_BPF')
     sources += files('bpf_cmd.c')
     deps += 'bpf'
 endif
+jansson_dep = dependency('jansson', required: false, method: 'pkg-config')
+if jansson_dep.found()
+    dpdk_conf.set('RTE_HAS_JANSSON', 1)
+    ext_deps += jansson_dep
+endif
