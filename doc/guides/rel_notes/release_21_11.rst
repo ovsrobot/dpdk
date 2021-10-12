@@ -154,6 +154,10 @@ New Features
   * Added tests to verify tunnel header verification in IPsec inbound.
   * Added tests to verify inner checksum.
 
+* **Updated Mellanox mlx5 driver.**
+
+  * Added NIC offloads for the PMD on Windows (TSO, VLAN strip, Keep CRC).
+
 
 Removed Items
 -------------
