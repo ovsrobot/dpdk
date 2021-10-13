@@ -673,6 +673,74 @@ test_mempool_events_safety(void)
 }
 
 static int
+test_mempool_flag_non_io_set_when_no_iova_contig_set(void)
+{
+	struct rte_mempool *mp;
+	int ret;
+
+	mp = rte_mempool_create_empty("empty", MEMPOOL_SIZE,
+				      MEMPOOL_ELT_SIZE, 0, 0,
+				      SOCKET_ID_ANY, MEMPOOL_F_NO_IOVA_CONTIG);
+	RTE_TEST_ASSERT_NOT_NULL(mp, "Cannot create mempool: %s",
+				 rte_strerror(rte_errno));
+	rte_mempool_set_ops_byname(mp, rte_mbuf_best_mempool_ops(), NULL);
+	ret = rte_mempool_populate_default(mp);
+	RTE_TEST_ASSERT(ret > 0, "Failed to populate mempool: %s",
+			rte_strerror(rte_errno));
+	RTE_TEST_ASSERT(mp->flags & MEMPOOL_F_NON_IO,
+			"NON_IO flag is not set when NO_IOVA_CONTIG is set");
+	rte_mempool_free(mp);
+	return 0;
+}
+
+static int
+test_mempool_flag_non_io_set_when_populated_with_bad_iova(void)
+{
+	void *addr;
+	size_t size = 1 << 16;
+	struct rte_mempool *mp;
+	int ret;
+
+	addr = rte_malloc("test_mempool", size, 0);
+	RTE_TEST_ASSERT_NOT_NULL(addr, "Cannot allocate memory");
+	mp = rte_mempool_create_empty("empty", MEMPOOL_SIZE,
+				      MEMPOOL_ELT_SIZE, 0, 0,
+				      SOCKET_ID_ANY, 0);
+	RTE_TEST_ASSERT_NOT_NULL(mp, "Cannot create mempool: %s",
+				 rte_strerror(rte_errno));
+	ret = rte_mempool_populate_iova(mp, addr, RTE_BAD_IOVA, size,
+					NULL, NULL);
+	/* The flag must be inferred even if population isn't full. */
+	RTE_TEST_ASSERT(ret > 0, "Failed to populate mempool: %s",
+			rte_strerror(rte_errno));
+	RTE_TEST_ASSERT(mp->flags & MEMPOOL_F_NON_IO,
+			"NON_IO flag is not set when mempool is populated with RTE_BAD_IOVA");
+	rte_mempool_free(mp);
+	rte_free(addr);
+	return 0;
+}
+
+static int
+test_mempool_flag_non_io_unset_by_default(void)
+{
+	struct rte_mempool *mp;
+	int ret;
+
+	mp = rte_mempool_create_empty("empty", MEMPOOL_SIZE,
+				      MEMPOOL_ELT_SIZE, 0, 0,
+				      SOCKET_ID_ANY, 0);
+	RTE_TEST_ASSERT_NOT_NULL(mp, "Cannot create mempool: %s",
+				 rte_strerror(rte_errno));
+	ret = rte_mempool_populate_default(mp);
+	RTE_TEST_ASSERT_EQUAL(ret, (int)mp->size, "Failed to populate mempool: %s",
+			      rte_strerror(rte_errno));
+	RTE_TEST_ASSERT(!(mp->flags & MEMPOOL_F_NON_IO),
+			"NON_IO flag is set by default");
+	rte_mempool_free(mp);
+	return 0;
+}
+
+static int
 test_mempool(void)
 {
 	int ret = -1;
@@ -852,6 +920,14 @@ test_mempool(void)
 	if (test_mempool_events(rte_mempool_populate_anon) < 0)
 		GOTO_ERR(ret, err);
 	if (test_mempool_events_safety() < 0)
+		GOTO_ERR(ret, err);
+
+	/* test NON_IO flag inference */
+	if (test_mempool_flag_non_io_unset_by_default() < 0)
+		GOTO_ERR(ret, err);
+	if (test_mempool_flag_non_io_set_when_no_iova_contig_set() < 0)
+		GOTO_ERR(ret, err);
+	if (test_mempool_flag_non_io_set_when_populated_with_bad_iova() < 0)
 		GOTO_ERR(ret, err);
 
 	rte_mempool_list_dump(stdout);

@@ -371,6 +371,8 @@ rte_mempool_populate_iova(struct rte_mempool *mp, char *vaddr,
 
 	STAILQ_INSERT_TAIL(&mp->mem_list, memhdr, next);
 	mp->nb_mem_chunks++;
+	if (iova == RTE_BAD_IOVA)
+		mp->flags |= MEMPOOL_F_NON_IO;
 
 	/* Report the mempool as ready only when fully populated. */
 	if (mp->populated_size >= mp->size)
