@@ -159,6 +159,10 @@ New Features
   * Added tests to verify tunnel header verification in IPsec inbound.
   * Added tests to verify inner checksum.
 
+* **IPsec library new features.**
+
+  * Added support for AEAD algorithms AES_CCM, CHACHA20_POLY1305 and AES_GMAC.
+
 
 Removed Items
 -------------
