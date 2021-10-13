@@ -137,6 +137,11 @@ New Features
 
   Added support for more comprehensive CRC options.
 
+* **Added Telemetry callbacks to Cryptodev library.**
+
+  Added Telemetry callback functions which allow a list of Crypto devices,
+  stats for a Crypto device, and other device information to be queried.
+
 * **Added multi-process support for testpmd.**
 
   Added command-line options to specify total number of processes and
