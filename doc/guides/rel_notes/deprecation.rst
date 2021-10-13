@@ -158,9 +158,6 @@ Deprecation Notices
   consistent with existing outer header checksum status flag naming, which
   should help in reducing confusion about its usage.
 
-* net: The structure ``rte_ipv4_hdr`` will have a union for
-  existing ``version_ihl`` byte and new bitfield for ``version`` and ``ihl``.
-
 * vhost: ``rte_vdpa_register_device``, ``rte_vdpa_unregister_device``,
   ``rte_vhost_host_notifier_ctrl`` and ``rte_vdpa_relay_vring_used`` vDPA
   driver interface will be marked as internal in DPDK v21.11.
