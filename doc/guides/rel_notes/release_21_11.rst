@@ -226,6 +226,9 @@ API Changes
   the crypto/security operation. This field will be used to communicate
   events such as soft expiry with IPsec in lookaside mode.
 
+* cmdline: ``cmdline_stdin_exit()`` now frees the ``cmdline`` structure.
+  Calls to ``cmdline_free()`` after it need to be deleted from applications.
+
 
 ABI Changes
 -----------
