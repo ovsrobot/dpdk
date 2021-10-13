@@ -56,6 +56,7 @@ static uint64_t flow_attrs[MAX_ATTRS_NUM];
 static uint8_t items_idx, actions_idx, attrs_idx;
 
 static uint64_t ports_mask;
+static uint16_t dst_ports[RTE_MAX_ETHPORTS];
 static volatile bool force_quit;
 static bool dump_iterations;
 static bool delete_flag;
@@ -595,7 +596,7 @@ args_parse(int argc, char **argv)
 		{ "icmpv4",                     0, 0, 0 },
 		{ "icmpv6",                     0, 0, 0 },
 		/* Actions */
-		{ "port-id",                    0, 0, 0 },
+		{ "port-id",                    2, 0, 0 },
 		{ "rss",                        0, 0, 0 },
 		{ "queue",                      0, 0, 0 },
 		{ "jump",                       0, 0, 0 },
@@ -632,6 +633,9 @@ args_parse(int argc, char **argv)
 
 	RTE_ETH_FOREACH_DEV(i)
 		ports_mask |= 1 << i;
+
+	for (i = 0; i < RTE_MAX_ETHPORTS; i++)
+		dst_ports[i] = PORT_ID_DST;
 
 	hairpin_queues_num = 0;
 	argvopt = argv;
@@ -786,6 +790,17 @@ args_parse(int argc, char **argv)
 				if ((optarg[0] == '\0') || (end == NULL) || (*end != '\0'))
 					rte_exit(EXIT_FAILURE, "Invalid fwd port mask\n");
 				ports_mask = pm;
+			}
+			if (strcmp(lgopts[opt_idx].name,
+					"port-id") == 0) {
+				uint16_t port_idx = 0;
+				char *token;
+
+				token = strtok(optarg, ",");
+				while (token != NULL) {
+					dst_ports[port_idx++] = atoi(token);
+					token = strtok(NULL, ",");
+				}
 			}
 			if (strcmp(lgopts[opt_idx].name, "cores") == 0) {
 				n = atoi(optarg);
@@ -1128,7 +1143,7 @@ destroy_flows(int port_id, uint8_t core_id, struct rte_flow **flows_list)
 }
 
 static struct rte_flow **
-insert_flows(int port_id, uint8_t core_id)
+insert_flows(int port_id, uint8_t core_id, uint16_t dst_port_id)
 {
 	struct rte_flow **flows_list;
 	struct rte_flow_error error;
@@ -1173,8 +1188,8 @@ insert_flows(int port_id, uint8_t core_id)
 		 * group 0 eth / end actions jump group <flow_group>
 		 */
 		flow = generate_flow(port_id, 0, flow_attrs,
-			global_items, global_actions,
-			flow_group, 0, 0, 0, 0, core_id, unique_data, &error);
+			global_items, global_actions, flow_group, 0, 0, 0, 0,
+			dst_port_id, core_id, unique_data, &error);
 
 		if (flow == NULL) {
 			print_flow_error(error);
@@ -1189,7 +1204,7 @@ insert_flows(int port_id, uint8_t core_id)
 			flow_attrs, flow_items, flow_actions,
 			JUMP_ACTION_TABLE, counter,
 			hairpin_queues_num,
-			encap_data, decap_data,
+			encap_data, decap_data, dst_port_id,
 			core_id, unique_data, &error);
 
 		if (!counter) {
@@ -1250,6 +1265,7 @@ static void
 flows_handler(uint8_t core_id)
 {
 	struct rte_flow **flows_list;
+	uint16_t port_idx = 0;
 	uint16_t nr_ports;
 	int port_id;
 
@@ -1269,7 +1285,8 @@ flows_handler(uint8_t core_id)
 		mc_pool.last_alloc[core_id] = (int64_t)dump_socket_mem(stdout);
 		if (has_meter())
 			meters_handler(port_id, core_id, METER_CREATE);
-		flows_list = insert_flows(port_id, core_id);
+		flows_list = insert_flows(port_id, core_id,
+						dst_ports[port_idx++]);
 		if (flows_list == NULL)
 			rte_exit(EXIT_FAILURE, "Error: Insertion Failed!\n");
 		mc_pool.current_alloc[core_id] = (int64_t)dump_socket_mem(stdout);
