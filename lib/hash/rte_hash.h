@@ -430,7 +430,6 @@ rte_hash_get_key_with_position(const struct rte_hash *h, const int32_t position,
  *   - 0 if freed successfully
  *   - -EINVAL if the parameters are invalid.
  */
-__rte_experimental
 int
 rte_hash_free_key_with_position(const struct rte_hash *h,
 				const int32_t position);
@@ -691,7 +690,6 @@ rte_hash_iterate(const struct rte_hash *h, const void **key, void **data, uint32
  *   - EEXIST - already added QSBR
  *   - ENOMEM - memory allocation failure
  */
-__rte_experimental
 int rte_hash_rcu_qsbr_add(struct rte_hash *h, struct rte_hash_rcu_config *cfg);
 
 #ifdef __cplusplus
