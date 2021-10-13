@@ -18,7 +18,7 @@
 
 typedef int32_t (*esp_outb_prepare_t)(struct rte_ipsec_sa *sa, rte_be64_t sqc,
 	const uint64_t ivp[IPSEC_MAX_IV_QWORD], struct rte_mbuf *mb,
-	union sym_op_data *icv, uint8_t sqh_len);
+	union sym_op_data *icv, uint8_t sqh_len, uint8_t tso);
 
 /*
  * helper function to fill crypto_sym op for cipher+auth algorithms.
@@ -139,7 +139,7 @@ outb_cop_prepare(struct rte_crypto_op *cop,
 static inline int32_t
 outb_tun_pkt_prepare(struct rte_ipsec_sa *sa, rte_be64_t sqc,
 	const uint64_t ivp[IPSEC_MAX_IV_QWORD], struct rte_mbuf *mb,
-	union sym_op_data *icv, uint8_t sqh_len)
+	union sym_op_data *icv, uint8_t sqh_len, uint8_t tso)
 {
 	uint32_t clen, hlen, l2len, pdlen, pdofs, plen, tlen;
 	struct rte_mbuf *ml;
@@ -157,11 +157,20 @@ outb_tun_pkt_prepare(struct rte_ipsec_sa *sa, rte_be64_t sqc,
 
 	/* number of bytes to encrypt */
 	clen = plen + sizeof(*espt);
-	clen = RTE_ALIGN_CEIL(clen, sa->pad_align);
+
+	/* We don't need to pad/align packet when using TSO offload */
+	if (!tso)
+		clen = RTE_ALIGN_CEIL(clen, sa->pad_align);
+
 
 	/* pad length + esp tail */
 	pdlen = clen - plen;
-	tlen = pdlen + sa->icv_len + sqh_len;
+
+	/* We don't append ICV length when using TSO offload */
+	if (!tso)
+		tlen = pdlen + sa->icv_len + sqh_len;
+	else
+		tlen = pdlen + sqh_len;
 
 	/* do append and prepend */
 	ml = rte_pktmbuf_lastseg(mb);
@@ -309,7 +318,7 @@ esp_outb_tun_prepare(const struct rte_ipsec_session *ss, struct rte_mbuf *mb[],
 
 		/* try to update the packet itself */
 		rc = outb_tun_pkt_prepare(sa, sqc, iv, mb[i], &icv,
-					  sa->sqh_len);
+					  sa->sqh_len, 0);
 		/* success, setup crypto op */
 		if (rc >= 0) {
 			outb_pkt_xprepare(sa, sqc, &icv);
@@ -336,7 +345,7 @@ esp_outb_tun_prepare(const struct rte_ipsec_session *ss, struct rte_mbuf *mb[],
 static inline int32_t
 outb_trs_pkt_prepare(struct rte_ipsec_sa *sa, rte_be64_t sqc,
 	const uint64_t ivp[IPSEC_MAX_IV_QWORD], struct rte_mbuf *mb,
-	union sym_op_data *icv, uint8_t sqh_len)
+	union sym_op_data *icv, uint8_t sqh_len, uint8_t tso)
 {
 	uint8_t np;
 	uint32_t clen, hlen, pdlen, pdofs, plen, tlen, uhlen;
@@ -358,11 +367,19 @@ outb_trs_pkt_prepare(struct rte_ipsec_sa *sa, rte_be64_t sqc,
 
 	/* number of bytes to encrypt */
 	clen = plen + sizeof(*espt);
-	clen = RTE_ALIGN_CEIL(clen, sa->pad_align);
+
+	/* We don't need to pad/align packet when using TSO offload */
+	if (!tso)
+		clen = RTE_ALIGN_CEIL(clen, sa->pad_align);
 
 	/* pad length + esp tail */
 	pdlen = clen - plen;
-	tlen = pdlen + sa->icv_len + sqh_len;
+
+	/* We don't append ICV length when using TSO offload */
+	if (!tso)
+		tlen = pdlen + sa->icv_len + sqh_len;
+	else
+		tlen = pdlen + sqh_len;
 
 	/* do append and insert */
 	ml = rte_pktmbuf_lastseg(mb);
@@ -452,7 +469,7 @@ esp_outb_trs_prepare(const struct rte_ipsec_session *ss, struct rte_mbuf *mb[],
 
 		/* try to update the packet itself */
 		rc = outb_trs_pkt_prepare(sa, sqc, iv, mb[i], &icv,
-				  sa->sqh_len);
+				  sa->sqh_len, 0);
 		/* success, setup crypto op */
 		if (rc >= 0) {
 			outb_pkt_xprepare(sa, sqc, &icv);
@@ -549,7 +566,7 @@ cpu_outb_pkt_prepare(const struct rte_ipsec_session *ss,
 		gen_iv(ivbuf[k], sqc);
 
 		/* try to update the packet itself */
-		rc = prepare(sa, sqc, ivbuf[k], mb[i], &icv, sa->sqh_len);
+		rc = prepare(sa, sqc, ivbuf[k], mb[i], &icv, sa->sqh_len, 0);
 
 		/* success, proceed with preparations */
 		if (rc >= 0) {
@@ -660,6 +677,20 @@ inline_outb_mbuf_prepare(const struct rte_ipsec_session *ss,
 	}
 }
 
+
+static inline int
+esn_outb_nb_segments(struct rte_mbuf *m)
+{
+	if  (m->ol_flags & (PKT_TX_TCP_SEG | PKT_TX_UDP_SEG)) {
+		uint16_t pkt_l3len = m->pkt_len - m->l2_len;
+		uint16_t segments =
+			(m->tso_segsz > 0 && pkt_l3len > m->tso_segsz) ?
+			(pkt_l3len + m->tso_segsz - 1) / m->tso_segsz : 1;
+		return segments;
+	}
+	return 1; /* no TSO */
+}
+
 /*
  * process group of ESP outbound tunnel packets destined for
  * INLINE_CRYPTO type of device.
@@ -669,29 +700,47 @@ inline_outb_tun_pkt_process(const struct rte_ipsec_session *ss,
 	struct rte_mbuf *mb[], uint16_t num)
 {
 	int32_t rc;
-	uint32_t i, k, n;
+	uint32_t i, k, n, nb_sqn;
 	uint64_t sqn;
 	rte_be64_t sqc;
 	struct rte_ipsec_sa *sa;
 	union sym_op_data icv;
 	uint64_t iv[IPSEC_MAX_IV_QWORD];
 	uint32_t dr[num];
+	uint16_t nb_segs[num];
 
 	sa = ss->sa;
+	nb_sqn = 0;
+	for (i = 0; i != num; i++) {
+		nb_segs[i] = esn_outb_nb_segments(mb[i]);
+		nb_sqn += nb_segs[i];
+		/* setup outer l2 and l3 len for TSO */
+		if (nb_segs[i] > 1) {
+			if (sa->type & RTE_IPSEC_SATP_MODE_TUNLV4)
+				mb[i]->outer_l3_len =
+						sizeof(struct rte_ipv4_hdr);
+			else
+				mb[i]->outer_l3_len =
+						sizeof(struct rte_ipv6_hdr);
+			mb[i]->outer_l2_len = mb[i]->l2_len;
+		}
+	}
 
-	n = num;
+	n = nb_sqn;
 	sqn = esn_outb_update_sqn(sa, &n);
-	if (n != num)
+	if (n != nb_sqn)
 		rte_errno = EOVERFLOW;
 
 	k = 0;
-	for (i = 0; i != n; i++) {
+	for (i = 0; i != num; i++) {
 
-		sqc = rte_cpu_to_be_64(sqn + i);
+		sqc = rte_cpu_to_be_64(sqn);
 		gen_iv(iv, sqc);
+		sqn += nb_segs[i];
 
 		/* try to update the packet itself */
-		rc = outb_tun_pkt_prepare(sa, sqc, iv, mb[i], &icv, 0);
+		rc = outb_tun_pkt_prepare(sa, sqc, iv, mb[i], &icv, 0,
+				nb_segs[i] > 1);
 
 		k += (rc >= 0);
 
@@ -703,8 +752,8 @@ inline_outb_tun_pkt_process(const struct rte_ipsec_session *ss,
 	}
 
 	/* copy not processed mbufs beyond good ones */
-	if (k != n && k != 0)
-		move_bad_mbufs(mb, dr, n, n - k);
+	if (k != num && k != 0)
+		move_bad_mbufs(mb, dr, num, num - k);
 
 	inline_outb_mbuf_prepare(ss, mb, k);
 	return k;
@@ -719,29 +768,48 @@ inline_outb_trs_pkt_process(const struct rte_ipsec_session *ss,
 	struct rte_mbuf *mb[], uint16_t num)
 {
 	int32_t rc;
-	uint32_t i, k, n;
+	uint32_t i, k, n, nb_sqn;
 	uint64_t sqn;
 	rte_be64_t sqc;
 	struct rte_ipsec_sa *sa;
 	union sym_op_data icv;
 	uint64_t iv[IPSEC_MAX_IV_QWORD];
 	uint32_t dr[num];
+	uint16_t nb_segs[num];
 
 	sa = ss->sa;
+	nb_sqn = 0;
+	/* Calculate number of sequence numbers required */
+	for (i = 0; i != num; i++) {
+		nb_segs[i] = esn_outb_nb_segments(mb[i]);
+		nb_sqn += nb_segs[i];
+		/* setup outer l2 and l3 len for TSO */
+		if (nb_segs[i] > 1) {
+			if (sa->type & RTE_IPSEC_SATP_MODE_TUNLV4)
+				mb[i]->outer_l3_len =
+						sizeof(struct rte_ipv4_hdr);
+			else
+				mb[i]->outer_l3_len =
+						sizeof(struct rte_ipv6_hdr);
+			mb[i]->outer_l2_len = mb[i]->l2_len;
+		}
+	}
 
-	n = num;
+	n = nb_sqn;
 	sqn = esn_outb_update_sqn(sa, &n);
-	if (n != num)
+	if (n != nb_sqn)
 		rte_errno = EOVERFLOW;
 
 	k = 0;
-	for (i = 0; i != n; i++) {
+	for (i = 0; i != num; i++) {
 
-		sqc = rte_cpu_to_be_64(sqn + i);
+		sqc = rte_cpu_to_be_64(sqn);
 		gen_iv(iv, sqc);
+		sqn += nb_segs[i];
 
 		/* try to update the packet itself */
-		rc = outb_trs_pkt_prepare(sa, sqc, iv, mb[i], &icv, 0);
+		rc = outb_trs_pkt_prepare(sa, sqc, iv, mb[i], &icv, 0,
+				nb_segs[i] > 1);
 
 		k += (rc >= 0);
 
@@ -753,8 +821,8 @@ inline_outb_trs_pkt_process(const struct rte_ipsec_session *ss,
 	}
 
 	/* copy not processed mbufs beyond good ones */
-	if (k != n && k != 0)
-		move_bad_mbufs(mb, dr, n, n - k);
+	if (k != num && k != 0)
+		move_bad_mbufs(mb, dr, num, num - k);
 
 	inline_outb_mbuf_prepare(ss, mb, k);
 	return k;
