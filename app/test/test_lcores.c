@@ -11,6 +11,16 @@
 
 #include "test.h"
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_lcores(void)
+{
+	printf("lcore not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 struct thread_context {
 	enum { INIT, ERROR, DONE } state;
 	bool lcore_id_any;
@@ -369,5 +379,7 @@ test_lcores(void)
 
 	return TEST_SUCCESS;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(lcores_autotest, test_lcores);

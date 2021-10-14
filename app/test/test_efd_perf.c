@@ -15,6 +15,16 @@
 
 #include "test.h"
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_efd_perf(void)
+{
+	printf("efd_perf not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 #define NUM_KEYSIZES 10
 #define NUM_SHUFFLES 10
 #define MAX_KEYSIZE 64
@@ -381,5 +391,7 @@ test_efd_perf(void)
 
 	return 0;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(efd_perf_autotest, test_efd_perf);
