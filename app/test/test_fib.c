@@ -159,7 +159,7 @@ test_add_del_invalid(void)
 	RTE_TEST_ASSERT(ret < 0,
 		"Call succeeded with invalid parameters\n");
 
-	/*Create valid fib to use in rest of test. */
+	/* Create valid fib to use in rest of test. */
 	fib = rte_fib_create(__func__, SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(fib != NULL, "Failed to create FIB\n");
 

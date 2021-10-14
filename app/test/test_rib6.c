@@ -130,7 +130,7 @@ test_insert_invalid(void)
 	RTE_TEST_ASSERT(node == NULL,
 		"Call succeeded with invalid parameters\n");
 
-	/*Create valid rib to use in rest of test. */
+	/* Create valid rib to use in rest of test. */
 	rib = rte_rib6_create(__func__, SOCKET_ID_ANY, &config);
 	RTE_TEST_ASSERT(rib != NULL, "Failed to create RIB\n");
 
