@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2019 Intel Corporation
  */
+#include "test.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -8,6 +9,17 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <stdlib.h>
+
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_malloc(void)
+{
+	printf("malloc not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 #include <sys/mman.h>
 #include <sys/queue.h>
 #include <unistd.h>
@@ -23,10 +35,7 @@
 #include <rte_random.h>
 #include <rte_string_fns.h>
 
-#include "test.h"
-
 #define N 10000
-
 
 static int
 is_mem_on_socket(int32_t socket);
@@ -1079,5 +1088,7 @@ test_malloc(void)
 
 	return 0;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(malloc_autotest, test_malloc);

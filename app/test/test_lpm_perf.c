@@ -18,6 +18,16 @@
 #include "test.h"
 #include "test_xmmt_ops.h"
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_lpm_perf(void)
+{
+	printf("lpm6_perf not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 struct rte_lpm *lpm;
 static struct rte_rcu_qsbr *rv;
 static volatile uint8_t writer_done;
@@ -762,5 +772,7 @@ test_lpm_perf(void)
 
 	return 0;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(lpm_perf_autotest, test_lpm_perf);

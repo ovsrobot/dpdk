@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2014 Intel Corporation
  */
+#include "test.h"
 
 #include <string.h>
 #include <stdarg.h>
@@ -34,7 +35,15 @@
 #include <rte_tcp.h>
 #include <rte_mbuf_dyn.h>
 
-#include "test.h"
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_mbuf(void)
+{
+	printf("mbuf not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
 
 #define MEMPOOL_CACHE_SIZE      32
 #define MBUF_DATA_SIZE          2048
@@ -2882,5 +2891,7 @@ err:
 	return ret;
 }
 #undef GOTO_FAIL
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(mbuf_autotest, test_mbuf);
