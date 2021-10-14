@@ -55,6 +55,8 @@
 #define L3FWD_HASH_ENTRIES		(1024*1024*1)
 #endif
 #define HASH_ENTRY_NUMBER_DEFAULT	4
+extern bool l3_sft_cksum;
+extern bool l4_sft_cksum;
 
 struct mbuf_table {
 	uint16_t len;
@@ -209,6 +211,10 @@ em_main_loop(__rte_unused void *dummy);
 
 int
 lpm_main_loop(__rte_unused void *dummy);
+
+int
+check_software_cksum(struct rte_mbuf **pkts_burst,
+struct rte_mbuf **pkts_burst_to_send, int nb_rx);
 
 int
 fib_main_loop(__rte_unused void *dummy);

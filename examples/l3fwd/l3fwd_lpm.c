@@ -26,6 +26,7 @@
 #include <rte_udp.h>
 #include <rte_lpm.h>
 #include <rte_lpm6.h>
+#include <rte_net.h>
 
 #include "l3fwd.h"
 #include "l3fwd_event.h"
@@ -139,16 +140,65 @@ lpm_get_dst_port_with_ipv4(const struct lcore_conf *qconf, struct rte_mbuf *pkt,
 #include "l3fwd_lpm.h"
 #endif
 
+
+int check_software_cksum(struct rte_mbuf **pkts_burst,
+struct rte_mbuf **pkts_burst_to_send, int nb_rx)
+{
+	int j;
+	int i = 0;
+	struct rte_net_hdr_lens hdr_lens;
+	struct rte_ipv4_hdr *ipv4_hdr;
+	void *l3_hdr;
+	void *l4_hdr;
+	rte_be16_t prev_cksum;
+	int dropped_pkts_udp_tcp = 0;
+	int dropped_pkts_ipv4 = 0;
+	bool dropped;
+	for (j = 0; j < nb_rx; j++) {
+		dropped = false;
+		rte_net_get_ptype(pkts_burst[j], &hdr_lens, RTE_PTYPE_ALL_MASK);
+		l3_hdr = rte_pktmbuf_mtod_offset(pkts_burst[j],
+		void *, hdr_lens.l2_len);
+		l4_hdr = rte_pktmbuf_mtod_offset(pkts_burst[j],
+		void *, hdr_lens.l2_len + hdr_lens.l3_len);
+		ipv4_hdr = l3_hdr;
+		prev_cksum = ipv4_hdr->hdr_checksum;
+		ipv4_hdr->hdr_checksum = 0;
+		ipv4_hdr->hdr_checksum = rte_ipv4_cksum(ipv4_hdr);
+
+		if (l3_sft_cksum && prev_cksum != ipv4_hdr->hdr_checksum) {
+			rte_pktmbuf_free(pkts_burst[j]);
+			dropped_pkts_ipv4++;
+			dropped = true;
+		} else if (l4_sft_cksum &&
+				rte_ipv4_udptcp_cksum_verify
+				(l3_hdr, l4_hdr) != 0) {
+
+			rte_pktmbuf_free(pkts_burst[j]);
+			dropped_pkts_udp_tcp++;
+			dropped = true;
+		}
+		if (dropped == false) {
+			pkts_burst_to_send[i] = pkts_burst[j];
+			i++;
+		}
+
+	}
+	return dropped_pkts_udp_tcp+dropped_pkts_ipv4;
+}
+
 /* main processing loop */
 int
 lpm_main_loop(__rte_unused void *dummy)
 {
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
+	struct rte_mbuf *pkts_burst_to_send[MAX_PKT_BURST];
 	unsigned lcore_id;
 	uint64_t prev_tsc, diff_tsc, cur_tsc;
 	int i, nb_rx;
 	uint16_t portid;
 	uint8_t queueid;
+	int dropped;
 	struct lcore_conf *qconf;
 	const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) /
 		US_PER_S * BURST_TX_DRAIN_US;
@@ -209,19 +259,35 @@ lpm_main_loop(__rte_unused void *dummy)
 			if (nb_rx == 0)
 				continue;
 
+			if (l3_sft_cksum || l4_sft_cksum) {
+				dropped = check_software_cksum(pkts_burst,
+				pkts_burst_to_send,	nb_rx);
+
+				nb_rx = nb_rx-dropped;
+			}
+
+
 #if defined RTE_ARCH_X86 || defined __ARM_NEON \
 			 || defined RTE_ARCH_PPC_64
+		if (l3_sft_cksum == false && l4_sft_cksum == false)
 			l3fwd_lpm_send_packets(nb_rx, pkts_burst,
 						portid, qconf);
+		else
+			l3fwd_lpm_send_packets(nb_rx, pkts_burst_to_send,
+						portid, qconf);
+
 #else
-			l3fwd_lpm_no_opt_send_packets(nb_rx, pkts_burst,
+			if (l3_sft_cksum == false && l4_sft_cksum == false)
+				l3fwd_lpm_no_opt_send_packets(nb_rx, pkts_burst,
 							portid, qconf);
+			else
+				l3fwd_lpm_no_opt_send_packets(nb_rx,
+				pkts_burst_to_send, portid, qconf);
+
 #endif /* X86 */
 		}
-
 		cur_tsc = rte_rdtsc();
 	}
-
 	return 0;
 }
 
