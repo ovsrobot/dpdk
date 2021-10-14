@@ -31,6 +31,7 @@ test_cmdline(void)
 		return -1;
 	if (test_parse_num_invalid_param() < 0)
 		return -1;
+#ifndef RTE_EXEC_ENV_WINDOWS
 	printf("Testing parsing IP addresses...\n");
 	if (test_parse_ipaddr_valid() < 0)
 		return -1;
@@ -38,6 +39,7 @@ test_cmdline(void)
 		return -1;
 	if (test_parse_ipaddr_invalid_param() < 0)
 		return -1;
+#endif
 	printf("Testing parsing strings...\n");
 	if (test_parse_string_valid() < 0)
 		return -1;
