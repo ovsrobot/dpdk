@@ -317,6 +317,11 @@ struct ice_fdir_filter_conf {
 	uint64_t input_set_o; /* used for non-tunnel or tunnel outer fields */
 	uint64_t input_set_i; /* only for tunnel inner fields */
 	uint32_t mark_flag;
+
+	struct ice_parser_profile *prof;
+	const u8 *pkt_buf;
+	bool parser_ena;
+	u8 pkt_len;
 };
 
 #define ICE_MAX_FDIR_FILTER_NUM		(1024 * 16)
