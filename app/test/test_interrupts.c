@@ -12,6 +12,15 @@
 
 #include "test.h"
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_interrupt(void)
+{
+	printf("Interrupt on Windows is not fully supported yet, skipping test\n");
+	return TEST_SKIPPED;
+}
+#else
+
 #define TEST_INTERRUPT_CHECK_INTERVAL 100 /* ms */
 
 /* predefined interrupt handle types */
@@ -558,5 +567,6 @@ out:
 
 	return ret;
 }
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(interrupt_autotest, test_interrupt);
