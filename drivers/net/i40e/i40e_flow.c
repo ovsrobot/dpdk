@@ -3047,6 +3047,10 @@ i40e_flow_parse_fdir_pattern(struct rte_eth_dev *dev,
 				return -rte_errno;
 			}
 
+#if defined(RTE_ARCH_PPC_64) && defined(RTE_TOOLCHAIN_GCC) && \
+(GCC_VERSION >= 110000)
+#pragma GCC unroll 1
+#endif
 			for (i = 0; i < raw_spec->length; i++) {
 				j = i + next_dst_off;
 				filter->input.flow_ext.flexbytes[j] =
