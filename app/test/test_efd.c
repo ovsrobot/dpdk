@@ -12,6 +12,16 @@
 
 #include "test.h"
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_efd(void)
+{
+	printf("efd not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 #define EFD_TEST_KEY_LEN 8
 #define TABLE_SIZE (1 << 21)
 #define ITERATIONS 3
@@ -461,5 +471,7 @@ test_efd(void)
 
 	return 0;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(efd_autotest, test_efd);

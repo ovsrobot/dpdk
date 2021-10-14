@@ -2,9 +2,12 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#ifndef RTE_EXEC_ENV_WINDOWS
+
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+
 #include <netinet/in.h>
 #include <sys/socket.h>
 
@@ -669,3 +672,5 @@ test_parse_ipaddr_invalid_param(void)
 	}
 	return 0;
 }
+
+#endif /*ifndef RTE_EXEC_ENV_WINDOWS*/

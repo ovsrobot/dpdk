@@ -2,20 +2,30 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#include "test.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_memcpy_perf(void)
+{
+	printf("memcpy_perf not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 #include <sys/time.h>
 
 #include <rte_common.h>
 #include <rte_cycles.h>
 #include <rte_random.h>
 #include <rte_malloc.h>
-
 #include <rte_memcpy.h>
-
-#include "test.h"
 
 /*
  * Set this to the maximum buffer size you want to test. If it is 0, then the
@@ -346,5 +356,7 @@ test_memcpy_perf(void)
 		return -1;
 	return 0;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(memcpy_perf_autotest, test_memcpy_perf);

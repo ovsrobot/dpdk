@@ -2,6 +2,8 @@
  * Copyright(C) 2021 Marvell.
  */
 
+#ifndef RTE_EXEC_ENV_WINDOWS
+
 #include <rte_common.h>
 #include <rte_cryptodev.h>
 #include <rte_esp.h>
@@ -672,3 +674,5 @@ test_ipsec_status_check(struct rte_crypto_op *op,
 
 	return ret;
 }
+
+#endif /*ifndef RTE_EXEC_ENV_WINDOWS*/

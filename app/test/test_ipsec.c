@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2018 Intel Corporation
  */
+#include "test.h"
 
 #include <time.h>
 
@@ -13,15 +14,25 @@
 #include <rte_bus_vdev.h>
 #include <rte_ip.h>
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_ipsec(void)
+{
+	printf("ipsec not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 #include <rte_crypto.h>
 #include <rte_cryptodev.h>
 #include <rte_lcore.h>
+
 #include <rte_ipsec.h>
 #include <rte_random.h>
 #include <rte_esp.h>
 #include <rte_security_driver.h>
 
-#include "test.h"
 #include "test_cryptodev.h"
 
 #define VDEV_ARGS_SIZE	100
@@ -2535,5 +2546,7 @@ test_ipsec(void)
 {
 	return unit_test_suite_runner(&ipsec_testsuite);
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(ipsec_autotest, test_ipsec);

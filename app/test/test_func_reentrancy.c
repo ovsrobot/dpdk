@@ -41,6 +41,16 @@
 
 #include "test.h"
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_func_reentrancy(void)
+{
+	printf("reentrancy not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 typedef int (*case_func_t)(void* arg);
 typedef void (*case_clean_t)(unsigned lcore_id);
 
@@ -511,5 +521,7 @@ test_func_reentrancy(void)
 
 	return 0;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(func_reentrancy_autotest, test_func_reentrancy);

@@ -13,6 +13,16 @@
 #include <rte_random.h>
 #include <rte_reciprocal.h>
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_reciprocal(void)
+{
+	printf("reciprocal not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 #define MAX_ITERATIONS	(1ULL << 32)
 #define DIVIDE_ITER	(100)
 
@@ -163,5 +173,7 @@ test_reciprocal(void)
 
 	return result;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(reciprocal_division, test_reciprocal);
