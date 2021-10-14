@@ -451,7 +451,7 @@ dpdk_test = executable('dpdk-test',
              driver_install_path),
         install: true)
 
-has_hugepage = run_command('has-hugepage.sh').stdout().strip() != '0'
+has_hugepage = run_command(py3, 'has_hugepage.py').stdout().strip() != '0'
 message('hugepage availability: @0@'.format(has_hugepage))
 
 # some perf tests (eg: memcpy perf autotest)take very long
@@ -459,8 +459,9 @@ message('hugepage availability: @0@'.format(has_hugepage))
 timeout_seconds = 600
 timeout_seconds_fast = 10
 
-get_coremask = find_program('get-coremask.sh')
-num_cores_arg = '-l ' + run_command(get_coremask).stdout().strip()
+list_of_cores = run_command(py3, 'get_coremask.py').stdout().strip()
+message('list of cores: @0@'.format(list_of_cores))
+num_cores_arg = '-l ' + list_of_cores
 
 default_test_args = [num_cores_arg]
 
