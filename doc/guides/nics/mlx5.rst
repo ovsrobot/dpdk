@@ -464,6 +464,10 @@ Limitations
   - In order to achieve best insertion rate, application should manage the flows per lcore.
   - Better to disable memory reclaim by setting ``reclaim_mem_mode`` to 0 to accelerate the flow object allocation and release with cache.
 
+- Bonding under socket direct mode
+
+  - Needs OFED 5.4+.
+
 Statistics
 ----------
 
