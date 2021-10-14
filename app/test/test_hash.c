@@ -74,13 +74,17 @@ static uint32_t hashtest_key_lens[] = {0, 2, 4, 5, 6, 7, 8, 10, 11, 15, 16, 21, 
 	}								\
 } while (0)
 
-/* 5-tuple key type */
+/*
+ * 5-tuple key type.
+ * Should be packed to avoid holes with potentially
+ * undefined content in the middle.
+ */
 struct flow_key {
 	uint32_t ip_src;
 	uint32_t ip_dst;
 	uint16_t port_src;
 	uint16_t port_dst;
-	uint8_t proto;
+	uint32_t proto;
 } __rte_packed;
 
 /*
@@ -1607,6 +1611,17 @@ static struct rte_hash_parameters hash_params_ex = {
 };
 
 /*
+ * Wrapper function around rte_jhash_32b.
+ * It is required because rte_jhash_32b() accepts the length
+ * as size of 4-byte units.
+ */
+static inline uint32_t
+test_jhash_32b(const void *k, uint32_t length, uint32_t initval)
+{
+	return rte_jhash_32b(k, length >> 2, initval);
+}
+
+/*
  * add/delete key with jhash2
  */
 static int
@@ -1618,7 +1633,7 @@ test_hash_add_delete_jhash2(void)
 
 	hash_params_ex.name = "hash_test_jhash2";
 	hash_params_ex.key_len = 4;
-	hash_params_ex.hash_func = (rte_hash_function)rte_jhash_32b;
+	hash_params_ex.hash_func = (rte_hash_function)test_jhash_32b;
 
 	handle = rte_hash_create(&hash_params_ex);
 	if (handle == NULL) {
@@ -1657,7 +1672,7 @@ test_hash_add_delete_2_jhash2(void)
 
 	hash_params_ex.name = "hash_test_2_jhash2";
 	hash_params_ex.key_len = 8;
-	hash_params_ex.hash_func = (rte_hash_function)rte_jhash_32b;
+	hash_params_ex.hash_func = (rte_hash_function)test_jhash_32b;
 
 	handle = rte_hash_create(&hash_params_ex);
 	if (handle == NULL)
@@ -2180,6 +2195,8 @@ test_hash_rcu_qsbr_sync_mode(uint8_t ext_bkt)
 static int
 test_hash(void)
 {
+	RTE_BUILD_BUG_ON(sizeof(struct flow_key) % sizeof(uint32_t) != 0);
+
 	if (test_add_delete() < 0)
 		return -1;
 	if (test_hash_add_delete_jhash2() < 0)
