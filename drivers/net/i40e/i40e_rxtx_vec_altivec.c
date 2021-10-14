@@ -27,10 +27,10 @@ i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 	struct i40e_rx_entry *rxep = &rxq->sw_ring[rxq->rxrearm_start];
 	struct rte_mbuf *mb0, *mb1;
 
-	vector unsigned long hdr_room = (vector unsigned long){
+	vector unsigned int hdr_room = (vector unsigned int){
 						RTE_PKTMBUF_HEADROOM,
 						RTE_PKTMBUF_HEADROOM};
-	vector unsigned long dma_addr0, dma_addr1;
+	vector unsigned int dma_addr0, dma_addr1;
 
 	rxdp = rxq->rx_ring + rxq->rxrearm_start;
 
@@ -40,11 +40,11 @@ i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 				 RTE_I40E_RXQ_REARM_THRESH) < 0) {
 		if (rxq->rxrearm_nb + RTE_I40E_RXQ_REARM_THRESH >=
 		    rxq->nb_rx_desc) {
-			dma_addr0 = (vector unsigned long){};
+			dma_addr0 = (vector unsigned int){};
 			for (i = 0; i < RTE_I40E_DESCS_PER_LOOP; i++) {
 				rxep[i].mbuf = &rxq->fake_mbuf;
 				vec_st(dma_addr0, 0,
-				       (vector unsigned long *)&rxdp[i].read);
+				       (vector unsigned int *)&rxdp[i].read);
 			}
 		}
 		rte_eth_devices[rxq->port_id].data->rx_mbuf_alloc_failed +=
@@ -54,7 +54,7 @@ i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 
 	/* Initialize the mbufs in vector, process 2 mbufs in one loop */
 	for (i = 0; i < RTE_I40E_RXQ_REARM_THRESH; i += 2, rxep += 2) {
-		vector unsigned long vaddr0, vaddr1;
+		vector unsigned int vaddr0, vaddr1;
 		uintptr_t p0, p1;
 
 		mb0 = rxep[0].mbuf;
@@ -72,8 +72,8 @@ i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 		*(uint64_t *)p1 = rxq->mbuf_initializer;
 
 		/* load buf_addr(lo 64bit) and buf_iova(hi 64bit) */
-		vaddr0 = vec_ld(0, (vector unsigned long *)&mb0->buf_addr);
-		vaddr1 = vec_ld(0, (vector unsigned long *)&mb1->buf_addr);
+		vaddr0 = vec_ld(0, (vector unsigned int *)&mb0->buf_addr);
+		vaddr1 = vec_ld(0, (vector unsigned int *)&mb1->buf_addr);
 
 		/* convert pa to dma_addr hdr/data */
 		dma_addr0 = vec_mergel(vaddr0, vaddr0);
@@ -84,8 +84,8 @@ i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 		dma_addr1 = vec_add(dma_addr1, hdr_room);
 
 		/* flush desc with pa dma_addr */
-		vec_st(dma_addr0, 0, (vector unsigned long *)&rxdp++->read);
-		vec_st(dma_addr1, 0, (vector unsigned long *)&rxdp++->read);
+		vec_st(dma_addr0, 0, (vector unsigned int *)&rxdp++->read);
+		vec_st(dma_addr1, 0, (vector unsigned int *)&rxdp++->read);
 	}
 
 	rxq->rxrearm_start += RTE_I40E_RXQ_REARM_THRESH;
@@ -102,7 +102,7 @@ i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 }
 
 static inline void
-desc_to_olflags_v(vector unsigned long descs[4], struct rte_mbuf **rx_pkts)
+desc_to_olflags_v(vector unsigned int descs[4], struct rte_mbuf **rx_pkts)
 {
 	vector unsigned int vlan0, vlan1, rss, l3_l4e;
 
@@ -169,14 +169,14 @@ desc_to_olflags_v(vector unsigned long descs[4], struct rte_mbuf **rx_pkts)
 #define PKTLEN_SHIFT     10
 
 static inline void
-desc_to_ptype_v(vector unsigned long descs[4], struct rte_mbuf **rx_pkts,
+desc_to_ptype_v(vector unsigned int descs[4], struct rte_mbuf **rx_pkts,
 		uint32_t *ptype_tbl)
 {
-	vector unsigned long ptype0 = vec_mergel(descs[0], descs[1]);
-	vector unsigned long ptype1 = vec_mergel(descs[2], descs[3]);
+	vector unsigned int ptype0 = vec_mergel(descs[0], descs[1]);
+	vector unsigned int ptype1 = vec_mergel(descs[2], descs[3]);
 
-	ptype0 = vec_sr(ptype0, (vector unsigned long){30, 30});
-	ptype1 = vec_sr(ptype1, (vector unsigned long){30, 30});
+	ptype0 = vec_sr(ptype0, (vector unsigned int){30, 30});
+	ptype1 = vec_sr(ptype1, (vector unsigned int){30, 30});
 
 	rx_pkts[0]->packet_type =
 		ptype_tbl[(*(vector unsigned char *)&ptype0)[0]];
@@ -214,7 +214,7 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 		rxq->crc_len, /* sub crc on data_len */
 		0, 0, 0       /* ignore non-length fields */
 		};
-	vector unsigned long dd_check, eop_check;
+	vector unsigned int dd_check, eop_check;
 
 	/* nb_pkts has to be floor-aligned to RTE_I40E_DESCS_PER_LOOP */
 	nb_pkts = RTE_ALIGN_FLOOR(nb_pkts, RTE_I40E_DESCS_PER_LOOP);
@@ -274,7 +274,7 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	for (pos = 0, nb_pkts_recd = 0; pos < nb_pkts;
 			pos += RTE_I40E_DESCS_PER_LOOP,
 			rxdp += RTE_I40E_DESCS_PER_LOOP) {
-		vector unsigned long descs[RTE_I40E_DESCS_PER_LOOP];
+		vector unsigned int descs[RTE_I40E_DESCS_PER_LOOP];
 		vector unsigned char pkt_mb1, pkt_mb2, pkt_mb3, pkt_mb4;
 		vector unsigned short staterr, sterr_tmp1, sterr_tmp2;
 		vector unsigned long mbp1, mbp2; /* two mbuf pointer
@@ -432,7 +432,7 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 
 		/* C.4 calc avaialbe number of desc */
 		var = __builtin_popcountll((vec_ld(0,
-			(vector unsigned long *)&staterr)[0]));
+			(vector unsigned int *)&staterr)[0]));
 		nb_pkts_recd += var;
 		if (likely(var != RTE_I40E_DESCS_PER_LOOP))
 			break;

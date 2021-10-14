@@ -13,24 +13,24 @@
 #include "cperf_test_vector_parsing.h"
 
 int
-free_test_vector(struct cperf_test_vector *vector, struct cperf_options *opts)
+free_test_vector(struct cperf_test_vector *dpdk_vector, struct cperf_options *opts)
 {
-	if (vector == NULL || opts == NULL)
+	if (dpdk_vector == NULL || opts == NULL)
 		return -1;
 
-	rte_free(vector->cipher_iv.data);
-	rte_free(vector->auth_iv.data);
-	rte_free(vector->aad.data);
-	rte_free(vector->digest.data);
+	rte_free(dpdk_vector->cipher_iv.data);
+	rte_free(dpdk_vector->auth_iv.data);
+	rte_free(dpdk_vector->aad.data);
+	rte_free(dpdk_vector->digest.data);
 
 	if (opts->test_file != NULL) {
-		rte_free(vector->plaintext.data);
-		rte_free(vector->cipher_key.data);
-		rte_free(vector->auth_key.data);
-		rte_free(vector->ciphertext.data);
+		rte_free(dpdk_vector->plaintext.data);
+		rte_free(dpdk_vector->cipher_key.data);
+		rte_free(dpdk_vector->auth_key.data);
+		rte_free(dpdk_vector->ciphertext.data);
 	}
 
-	rte_free(vector);
+	rte_free(dpdk_vector);
 
 	return 0;
 }
@@ -272,7 +272,7 @@ parse_values(char *tokens, uint8_t **data, uint32_t *data_length)
 
 /* checks the type of key and assigns data */
 static int
-parse_entry(char *entry, struct cperf_test_vector *vector,
+parse_entry(char *entry, struct cperf_test_vector *dpdk_vector,
 	struct cperf_options *opts, uint8_t tc_found)
 {
 	int status;
@@ -303,146 +303,146 @@ parse_entry(char *entry, struct cperf_test_vector *vector,
 
 	/* compare keys */
 	if (strstr(key_token, "plaintext")) {
-		rte_free(vector->plaintext.data);
-		vector->plaintext.data = data;
+		rte_free(dpdk_vector->plaintext.data);
+		dpdk_vector->plaintext.data = data;
 		if (tc_found)
-			vector->plaintext.length = data_length;
+			dpdk_vector->plaintext.length = data_length;
 		else {
 			if (opts->max_buffer_size > data_length) {
 				printf("Global plaintext shorter than "
 					"buffer_sz\n");
 				return -1;
 			}
-			vector->plaintext.length = opts->max_buffer_size;
+			dpdk_vector->plaintext.length = opts->max_buffer_size;
 		}
 
 	} else if (strstr(key_token, "cipher_key")) {
-		rte_free(vector->cipher_key.data);
-		vector->cipher_key.data = data;
+		rte_free(dpdk_vector->cipher_key.data);
+		dpdk_vector->cipher_key.data = data;
 		if (tc_found)
-			vector->cipher_key.length = data_length;
+			dpdk_vector->cipher_key.length = data_length;
 		else {
 			if (opts->cipher_key_sz > data_length) {
 				printf("Global cipher_key shorter than "
 					"cipher_key_sz\n");
 				return -1;
 			}
-			vector->cipher_key.length = opts->cipher_key_sz;
+			dpdk_vector->cipher_key.length = opts->cipher_key_sz;
 		}
 
 	} else if (strstr(key_token, "auth_key")) {
-		rte_free(vector->auth_key.data);
-		vector->auth_key.data = data;
+		rte_free(dpdk_vector->auth_key.data);
+		dpdk_vector->auth_key.data = data;
 		if (tc_found)
-			vector->auth_key.length = data_length;
+			dpdk_vector->auth_key.length = data_length;
 		else {
 			if (opts->auth_key_sz > data_length) {
 				printf("Global auth_key shorter than "
 					"auth_key_sz\n");
 				return -1;
 			}
-			vector->auth_key.length = opts->auth_key_sz;
+			dpdk_vector->auth_key.length = opts->auth_key_sz;
 		}
 
 	} else if (strstr(key_token, "aead_key")) {
-		rte_free(vector->aead_key.data);
-		vector->aead_key.data = data;
+		rte_free(dpdk_vector->aead_key.data);
+		dpdk_vector->aead_key.data = data;
 		if (tc_found)
-			vector->aead_key.length = data_length;
+			dpdk_vector->aead_key.length = data_length;
 		else {
 			if (opts->aead_key_sz > data_length) {
 				printf("Global aead_key shorter than "
 					"aead_key_sz\n");
 				return -1;
 			}
-			vector->aead_key.length = opts->aead_key_sz;
+			dpdk_vector->aead_key.length = opts->aead_key_sz;
 		}
 
 	} else if (strstr(key_token, "cipher_iv")) {
-		rte_free(vector->cipher_iv.data);
-		vector->cipher_iv.data = data;
+		rte_free(dpdk_vector->cipher_iv.data);
+		dpdk_vector->cipher_iv.data = data;
 		if (tc_found)
-			vector->cipher_iv.length = data_length;
+			dpdk_vector->cipher_iv.length = data_length;
 		else {
 			if (opts->cipher_iv_sz > data_length) {
 				printf("Global cipher iv shorter than "
 					"cipher_iv_sz\n");
 				return -1;
 			}
-			vector->cipher_iv.length = opts->cipher_iv_sz;
+			dpdk_vector->cipher_iv.length = opts->cipher_iv_sz;
 		}
 
 	} else if (strstr(key_token, "auth_iv")) {
-		rte_free(vector->auth_iv.data);
-		vector->auth_iv.data = data;
+		rte_free(dpdk_vector->auth_iv.data);
+		dpdk_vector->auth_iv.data = data;
 		if (tc_found)
-			vector->auth_iv.length = data_length;
+			dpdk_vector->auth_iv.length = data_length;
 		else {
 			if (opts->auth_iv_sz > data_length) {
 				printf("Global auth iv shorter than "
 					"auth_iv_sz\n");
 				return -1;
 			}
-			vector->auth_iv.length = opts->auth_iv_sz;
+			dpdk_vector->auth_iv.length = opts->auth_iv_sz;
 		}
 
 	} else if (strstr(key_token, "aead_iv")) {
-		rte_free(vector->aead_iv.data);
-		vector->aead_iv.data = data;
+		rte_free(dpdk_vector->aead_iv.data);
+		dpdk_vector->aead_iv.data = data;
 		if (tc_found)
-			vector->aead_iv.length = data_length;
+			dpdk_vector->aead_iv.length = data_length;
 		else {
 			if (opts->aead_iv_sz > data_length) {
 				printf("Global aead iv shorter than "
 					"aead_iv_sz\n");
 				return -1;
 			}
-			vector->aead_iv.length = opts->aead_iv_sz;
+			dpdk_vector->aead_iv.length = opts->aead_iv_sz;
 		}
 
 	} else if (strstr(key_token, "ciphertext")) {
-		rte_free(vector->ciphertext.data);
-		vector->ciphertext.data = data;
+		rte_free(dpdk_vector->ciphertext.data);
+		dpdk_vector->ciphertext.data = data;
 		if (tc_found)
-			vector->ciphertext.length = data_length;
+			dpdk_vector->ciphertext.length = data_length;
 		else {
 			if (opts->max_buffer_size > data_length) {
 				printf("Global ciphertext shorter than "
 					"buffer_sz\n");
 				return -1;
 			}
-			vector->ciphertext.length = opts->max_buffer_size;
+			dpdk_vector->ciphertext.length = opts->max_buffer_size;
 		}
 
 	} else if (strstr(key_token, "aad")) {
-		rte_free(vector->aad.data);
-		vector->aad.data = data;
-		vector->aad.phys_addr = rte_malloc_virt2iova(vector->aad.data);
+		rte_free(dpdk_vector->aad.data);
+		dpdk_vector->aad.data = data;
+		dpdk_vector->aad.phys_addr = rte_malloc_virt2iova(dpdk_vector->aad.data);
 		if (tc_found)
-			vector->aad.length = data_length;
+			dpdk_vector->aad.length = data_length;
 		else {
 			if (opts->aead_aad_sz > data_length) {
 				printf("Global aad shorter than "
 					"aead_aad_sz\n");
 				return -1;
 			}
-			vector->aad.length = opts->aead_aad_sz;
+			dpdk_vector->aad.length = opts->aead_aad_sz;
 		}
 
 	} else if (strstr(key_token, "digest")) {
-		rte_free(vector->digest.data);
-		vector->digest.data = data;
-		vector->digest.phys_addr = rte_malloc_virt2iova(
-			vector->digest.data);
+		rte_free(dpdk_vector->digest.data);
+		dpdk_vector->digest.data = data;
+		dpdk_vector->digest.phys_addr = rte_malloc_virt2iova(
+			dpdk_vector->digest.data);
 		if (tc_found)
-			vector->digest.length = data_length;
+			dpdk_vector->digest.length = data_length;
 		else {
 			if (opts->digest_sz > data_length) {
 				printf("Global digest shorter than "
 					"digest_sz\n");
 				return -1;
 			}
-			vector->digest.length = opts->digest_sz;
+			dpdk_vector->digest.length = opts->digest_sz;
 		}
 	} else {
 		printf("Not valid key: '%s'\n", trim_space(key_token));
@@ -454,7 +454,7 @@ parse_entry(char *entry, struct cperf_test_vector *vector,
 
 /* searches in the file for test keys and values */
 static int
-parse_file(struct cperf_test_vector *vector, struct cperf_options *opts)
+parse_file(struct cperf_test_vector *dpdk_vector, struct cperf_options *opts)
 {
 	uint8_t tc_found = 0;
 	uint8_t tc_data_start = 0;
@@ -530,7 +530,7 @@ parse_file(struct cperf_test_vector *vector, struct cperf_options *opts)
 					break;
 			}
 		}
-		status = parse_entry(entry, vector, opts, tc_found);
+		status = parse_entry(entry, dpdk_vector, opts, tc_found);
 		if (status) {
 			printf("An error occurred while parsing!\n");
 			goto err;

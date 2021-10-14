@@ -382,7 +382,7 @@ parse_expected_status(char *tokens, int *status, enum rte_bbdev_op_type op_type)
  */
 static int
 parse_data_entry(const char *key_token, char *token,
-		struct test_bbdev_vector *vector, enum op_data_type type,
+		struct test_bbdev_vector *dpdk_vector, enum op_data_type type,
 		const char *prefix)
 {
 	int ret;
@@ -397,8 +397,8 @@ parse_data_entry(const char *key_token, char *token,
 		return -1;
 	}
 
-	op_data = vector->entries[type].segments;
-	nb_ops = &vector->entries[type].nb_segments;
+	op_data = dpdk_vector->entries[type].segments;
+	nb_ops = &dpdk_vector->entries[type].nb_segments;
 
 	if (*nb_ops >= RTE_BBDEV_TURBO_MAX_CODE_BLOCKS) {
 		printf("Too many segments (code blocks defined): %u, max %d!\n",
@@ -433,106 +433,106 @@ parse_data_entry(const char *key_token, char *token,
 /* parses turbo decoder parameters and assigns to global variable */
 static int
 parse_decoder_params(const char *key_token, char *token,
-		struct test_bbdev_vector *vector)
+		struct test_bbdev_vector *dpdk_vector)
 {
 	int ret = 0, status = 0;
 	uint32_t op_flags = 0;
 	char *err = NULL;
 
-	struct rte_bbdev_op_turbo_dec *turbo_dec = &vector->turbo_dec;
+	struct rte_bbdev_op_turbo_dec *turbo_dec = &dpdk_vector->turbo_dec;
 
 	/* compare keys */
 	if (starts_with(key_token, op_data_prefixes[DATA_INPUT]))
-		ret = parse_data_entry(key_token, token, vector,
+		ret = parse_data_entry(key_token, token, dpdk_vector,
 				DATA_INPUT, op_data_prefixes[DATA_INPUT]);
 
 	else if (starts_with(key_token, op_data_prefixes[DATA_SOFT_OUTPUT]))
-		ret = parse_data_entry(key_token, token, vector,
+		ret = parse_data_entry(key_token, token, dpdk_vector,
 				DATA_SOFT_OUTPUT,
 				op_data_prefixes[DATA_SOFT_OUTPUT]);
 
 	else if (starts_with(key_token, op_data_prefixes[DATA_HARD_OUTPUT]))
-		ret = parse_data_entry(key_token, token, vector,
+		ret = parse_data_entry(key_token, token, dpdk_vector,
 				DATA_HARD_OUTPUT,
 				op_data_prefixes[DATA_HARD_OUTPUT]);
 	else if (!strcmp(key_token, "e")) {
-		vector->mask |= TEST_BBDEV_VF_E;
+		dpdk_vector->mask |= TEST_BBDEV_VF_E;
 		turbo_dec->cb_params.e = (uint32_t) strtoul(token, &err, 0);
 	} else if (!strcmp(key_token, "ea")) {
-		vector->mask |= TEST_BBDEV_VF_EA;
+		dpdk_vector->mask |= TEST_BBDEV_VF_EA;
 		turbo_dec->tb_params.ea = (uint32_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "eb")) {
-		vector->mask |= TEST_BBDEV_VF_EB;
+		dpdk_vector->mask |= TEST_BBDEV_VF_EB;
 		turbo_dec->tb_params.eb = (uint32_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "k")) {
-		vector->mask |= TEST_BBDEV_VF_K;
+		dpdk_vector->mask |= TEST_BBDEV_VF_K;
 		turbo_dec->cb_params.k = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "k_pos")) {
-		vector->mask |= TEST_BBDEV_VF_K_POS;
+		dpdk_vector->mask |= TEST_BBDEV_VF_K_POS;
 		turbo_dec->tb_params.k_pos = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "k_neg")) {
-		vector->mask |= TEST_BBDEV_VF_K_NEG;
+		dpdk_vector->mask |= TEST_BBDEV_VF_K_NEG;
 		turbo_dec->tb_params.k_neg = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "c")) {
-		vector->mask |= TEST_BBDEV_VF_C;
+		dpdk_vector->mask |= TEST_BBDEV_VF_C;
 		turbo_dec->tb_params.c = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "c_neg")) {
-		vector->mask |= TEST_BBDEV_VF_C_NEG;
+		dpdk_vector->mask |= TEST_BBDEV_VF_C_NEG;
 		turbo_dec->tb_params.c_neg = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "cab")) {
-		vector->mask |= TEST_BBDEV_VF_CAB;
+		dpdk_vector->mask |= TEST_BBDEV_VF_CAB;
 		turbo_dec->tb_params.cab = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "rv_index")) {
-		vector->mask |= TEST_BBDEV_VF_RV_INDEX;
+		dpdk_vector->mask |= TEST_BBDEV_VF_RV_INDEX;
 		turbo_dec->rv_index = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "iter_max")) {
-		vector->mask |= TEST_BBDEV_VF_ITER_MAX;
+		dpdk_vector->mask |= TEST_BBDEV_VF_ITER_MAX;
 		turbo_dec->iter_max = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "iter_min")) {
-		vector->mask |= TEST_BBDEV_VF_ITER_MIN;
+		dpdk_vector->mask |= TEST_BBDEV_VF_ITER_MIN;
 		turbo_dec->iter_min = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "expected_iter_count")) {
-		vector->mask |= TEST_BBDEV_VF_EXPECTED_ITER_COUNT;
+		dpdk_vector->mask |= TEST_BBDEV_VF_EXPECTED_ITER_COUNT;
 		turbo_dec->iter_count = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "ext_scale")) {
-		vector->mask |= TEST_BBDEV_VF_EXT_SCALE;
+		dpdk_vector->mask |= TEST_BBDEV_VF_EXT_SCALE;
 		turbo_dec->ext_scale = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "num_maps")) {
-		vector->mask |= TEST_BBDEV_VF_NUM_MAPS;
+		dpdk_vector->mask |= TEST_BBDEV_VF_NUM_MAPS;
 		turbo_dec->num_maps = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "r")) {
-		vector->mask |= TEST_BBDEV_VF_R;
+		dpdk_vector->mask |= TEST_BBDEV_VF_R;
 		turbo_dec->tb_params.r = (uint8_t)strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "code_block_mode")) {
-		vector->mask |= TEST_BBDEV_VF_CODE_BLOCK_MODE;
+		dpdk_vector->mask |= TEST_BBDEV_VF_CODE_BLOCK_MODE;
 		turbo_dec->code_block_mode = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "op_flags")) {
-		vector->mask |= TEST_BBDEV_VF_OP_FLAGS;
+		dpdk_vector->mask |= TEST_BBDEV_VF_OP_FLAGS;
 		ret = parse_turbo_flags(token, &op_flags,
-			vector->op_type);
+			dpdk_vector->op_type);
 		if (!ret)
 			turbo_dec->op_flags = op_flags;
 	} else if (!strcmp(key_token, "expected_status")) {
-		vector->mask |= TEST_BBDEV_VF_EXPECTED_STATUS;
-		ret = parse_expected_status(token, &status, vector->op_type);
+		dpdk_vector->mask |= TEST_BBDEV_VF_EXPECTED_STATUS;
+		ret = parse_expected_status(token, &status, dpdk_vector->op_type);
 		if (!ret)
-			vector->expected_status = status;
+			dpdk_vector->expected_status = status;
 	} else {
 		printf("Not valid dec key: '%s'\n", key_token);
 		return -1;
@@ -549,94 +549,94 @@ parse_decoder_params(const char *key_token, char *token,
 /* parses turbo encoder parameters and assigns to global variable */
 static int
 parse_encoder_params(const char *key_token, char *token,
-		struct test_bbdev_vector *vector)
+		struct test_bbdev_vector *dpdk_vector)
 {
 	int ret = 0, status = 0;
 	uint32_t op_flags = 0;
 	char *err = NULL;
 
 
-	struct rte_bbdev_op_turbo_enc *turbo_enc = &vector->turbo_enc;
+	struct rte_bbdev_op_turbo_enc *turbo_enc = &dpdk_vector->turbo_enc;
 
 	if (starts_with(key_token, op_data_prefixes[DATA_INPUT]))
-		ret = parse_data_entry(key_token, token, vector,
+		ret = parse_data_entry(key_token, token, dpdk_vector,
 				DATA_INPUT, op_data_prefixes[DATA_INPUT]);
 	else if (starts_with(key_token, "output"))
-		ret = parse_data_entry(key_token, token, vector,
+		ret = parse_data_entry(key_token, token, dpdk_vector,
 				DATA_HARD_OUTPUT, "output");
 	else if (!strcmp(key_token, "e")) {
-		vector->mask |= TEST_BBDEV_VF_E;
+		dpdk_vector->mask |= TEST_BBDEV_VF_E;
 		turbo_enc->cb_params.e = (uint32_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "ea")) {
-		vector->mask |= TEST_BBDEV_VF_EA;
+		dpdk_vector->mask |= TEST_BBDEV_VF_EA;
 		turbo_enc->tb_params.ea = (uint32_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "eb")) {
-		vector->mask |= TEST_BBDEV_VF_EB;
+		dpdk_vector->mask |= TEST_BBDEV_VF_EB;
 		turbo_enc->tb_params.eb = (uint32_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "k")) {
-		vector->mask |= TEST_BBDEV_VF_K;
+		dpdk_vector->mask |= TEST_BBDEV_VF_K;
 		turbo_enc->cb_params.k = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "k_neg")) {
-		vector->mask |= TEST_BBDEV_VF_K_NEG;
+		dpdk_vector->mask |= TEST_BBDEV_VF_K_NEG;
 		turbo_enc->tb_params.k_neg = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "k_pos")) {
-		vector->mask |= TEST_BBDEV_VF_K_POS;
+		dpdk_vector->mask |= TEST_BBDEV_VF_K_POS;
 		turbo_enc->tb_params.k_pos = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "c_neg")) {
-		vector->mask |= TEST_BBDEV_VF_C_NEG;
+		dpdk_vector->mask |= TEST_BBDEV_VF_C_NEG;
 		turbo_enc->tb_params.c_neg = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "c")) {
-		vector->mask |= TEST_BBDEV_VF_C;
+		dpdk_vector->mask |= TEST_BBDEV_VF_C;
 		turbo_enc->tb_params.c = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "cab")) {
-		vector->mask |= TEST_BBDEV_VF_CAB;
+		dpdk_vector->mask |= TEST_BBDEV_VF_CAB;
 		turbo_enc->tb_params.cab = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "rv_index")) {
-		vector->mask |= TEST_BBDEV_VF_RV_INDEX;
+		dpdk_vector->mask |= TEST_BBDEV_VF_RV_INDEX;
 		turbo_enc->rv_index = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "ncb")) {
-		vector->mask |= TEST_BBDEV_VF_NCB;
+		dpdk_vector->mask |= TEST_BBDEV_VF_NCB;
 		turbo_enc->cb_params.ncb = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "ncb_neg")) {
-		vector->mask |= TEST_BBDEV_VF_NCB_NEG;
+		dpdk_vector->mask |= TEST_BBDEV_VF_NCB_NEG;
 		turbo_enc->tb_params.ncb_neg =
 				(uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "ncb_pos")) {
-		vector->mask |= TEST_BBDEV_VF_NCB_POS;
+		dpdk_vector->mask |= TEST_BBDEV_VF_NCB_POS;
 		turbo_enc->tb_params.ncb_pos =
 				(uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "r")) {
-		vector->mask |= TEST_BBDEV_VF_R;
+		dpdk_vector->mask |= TEST_BBDEV_VF_R;
 		turbo_enc->tb_params.r = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "code_block_mode")) {
-		vector->mask |= TEST_BBDEV_VF_CODE_BLOCK_MODE;
+		dpdk_vector->mask |= TEST_BBDEV_VF_CODE_BLOCK_MODE;
 		turbo_enc->code_block_mode = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "op_flags")) {
-		vector->mask |= TEST_BBDEV_VF_OP_FLAGS;
+		dpdk_vector->mask |= TEST_BBDEV_VF_OP_FLAGS;
 		ret = parse_turbo_flags(token, &op_flags,
-				vector->op_type);
+				dpdk_vector->op_type);
 		if (!ret)
 			turbo_enc->op_flags = op_flags;
 	} else if (!strcmp(key_token, "expected_status")) {
-		vector->mask |= TEST_BBDEV_VF_EXPECTED_STATUS;
-		ret = parse_expected_status(token, &status, vector->op_type);
+		dpdk_vector->mask |= TEST_BBDEV_VF_EXPECTED_STATUS;
+		ret = parse_expected_status(token, &status, dpdk_vector->op_type);
 		if (!ret)
-			vector->expected_status = status;
+			dpdk_vector->expected_status = status;
 	} else {
 		printf("Not valid enc key: '%s'\n", key_token);
 		return -1;
@@ -654,84 +654,84 @@ parse_encoder_params(const char *key_token, char *token,
 /* parses LDPC encoder parameters and assigns to global variable */
 static int
 parse_ldpc_encoder_params(const char *key_token, char *token,
-		struct test_bbdev_vector *vector)
+		struct test_bbdev_vector *dpdk_vector)
 {
 	int ret = 0, status = 0;
 	uint32_t op_flags = 0;
 	char *err = NULL;
 
-	struct rte_bbdev_op_ldpc_enc *ldpc_enc = &vector->ldpc_enc;
+	struct rte_bbdev_op_ldpc_enc *ldpc_enc = &dpdk_vector->ldpc_enc;
 
 	if (starts_with(key_token, op_data_prefixes[DATA_INPUT]))
-		ret = parse_data_entry(key_token, token, vector,
+		ret = parse_data_entry(key_token, token, dpdk_vector,
 				DATA_INPUT,
 				op_data_prefixes[DATA_INPUT]);
 	else if (starts_with(key_token, "output"))
-		ret = parse_data_entry(key_token, token, vector,
+		ret = parse_data_entry(key_token, token, dpdk_vector,
 				DATA_HARD_OUTPUT,
 				"output");
 	else if (!strcmp(key_token, "e")) {
-		vector->mask |= TEST_BBDEV_VF_E;
+		dpdk_vector->mask |= TEST_BBDEV_VF_E;
 		ldpc_enc->cb_params.e = (uint32_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "ea")) {
-		vector->mask |= TEST_BBDEV_VF_EA;
+		dpdk_vector->mask |= TEST_BBDEV_VF_EA;
 		ldpc_enc->tb_params.ea = (uint32_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "eb")) {
-		vector->mask |= TEST_BBDEV_VF_EB;
+		dpdk_vector->mask |= TEST_BBDEV_VF_EB;
 		ldpc_enc->tb_params.eb = (uint32_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "c")) {
-		vector->mask |= TEST_BBDEV_VF_C;
+		dpdk_vector->mask |= TEST_BBDEV_VF_C;
 		ldpc_enc->tb_params.c = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "cab")) {
-		vector->mask |= TEST_BBDEV_VF_CAB;
+		dpdk_vector->mask |= TEST_BBDEV_VF_CAB;
 		ldpc_enc->tb_params.cab = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "rv_index")) {
-		vector->mask |= TEST_BBDEV_VF_RV_INDEX;
+		dpdk_vector->mask |= TEST_BBDEV_VF_RV_INDEX;
 		ldpc_enc->rv_index = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "n_cb")) {
-		vector->mask |= TEST_BBDEV_VF_NCB;
+		dpdk_vector->mask |= TEST_BBDEV_VF_NCB;
 		ldpc_enc->n_cb = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "r")) {
-		vector->mask |= TEST_BBDEV_VF_R;
+		dpdk_vector->mask |= TEST_BBDEV_VF_R;
 		ldpc_enc->tb_params.r = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "q_m")) {
-		vector->mask |= TEST_BBDEV_VF_QM;
+		dpdk_vector->mask |= TEST_BBDEV_VF_QM;
 		ldpc_enc->q_m = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "basegraph")) {
-		vector->mask |= TEST_BBDEV_VF_BG;
+		dpdk_vector->mask |= TEST_BBDEV_VF_BG;
 		ldpc_enc->basegraph = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "z_c")) {
-		vector->mask |= TEST_BBDEV_VF_ZC;
+		dpdk_vector->mask |= TEST_BBDEV_VF_ZC;
 		ldpc_enc->z_c = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "n_filler")) {
-		vector->mask |= TEST_BBDEV_VF_F;
+		dpdk_vector->mask |= TEST_BBDEV_VF_F;
 		ldpc_enc->n_filler = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "code_block_mode")) {
-		vector->mask |= TEST_BBDEV_VF_CODE_BLOCK_MODE;
+		dpdk_vector->mask |= TEST_BBDEV_VF_CODE_BLOCK_MODE;
 		ldpc_enc->code_block_mode = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "op_flags")) {
-		vector->mask |= TEST_BBDEV_VF_OP_FLAGS;
-		ret = parse_turbo_flags(token, &op_flags, vector->op_type);
+		dpdk_vector->mask |= TEST_BBDEV_VF_OP_FLAGS;
+		ret = parse_turbo_flags(token, &op_flags, dpdk_vector->op_type);
 		if (!ret)
 			ldpc_enc->op_flags = op_flags;
 	} else if (!strcmp(key_token, "expected_status")) {
-		vector->mask |= TEST_BBDEV_VF_EXPECTED_STATUS;
-		ret = parse_expected_status(token, &status, vector->op_type);
+		dpdk_vector->mask |= TEST_BBDEV_VF_EXPECTED_STATUS;
+		ret = parse_expected_status(token, &status, dpdk_vector->op_type);
 		if (!ret)
-			vector->expected_status = status;
+			dpdk_vector->expected_status = status;
 	} else {
 		printf("Not valid ldpc enc key: '%s'\n", key_token);
 		return -1;
@@ -748,100 +748,100 @@ parse_ldpc_encoder_params(const char *key_token, char *token,
 /* parses LDPC decoder parameters and assigns to global variable */
 static int
 parse_ldpc_decoder_params(const char *key_token, char *token,
-		struct test_bbdev_vector *vector)
+		struct test_bbdev_vector *dpdk_vector)
 {
 	int ret = 0, status = 0;
 	uint32_t op_flags = 0;
 	char *err = NULL;
 
-	struct rte_bbdev_op_ldpc_dec *ldpc_dec = &vector->ldpc_dec;
+	struct rte_bbdev_op_ldpc_dec *ldpc_dec = &dpdk_vector->ldpc_dec;
 
 	if (starts_with(key_token, op_data_prefixes[DATA_INPUT]))
-		ret = parse_data_entry(key_token, token, vector,
+		ret = parse_data_entry(key_token, token, dpdk_vector,
 				DATA_INPUT,
 				op_data_prefixes[DATA_INPUT]);
 	else if (starts_with(key_token, "output"))
-		ret = parse_data_entry(key_token, token, vector,
+		ret = parse_data_entry(key_token, token, dpdk_vector,
 				DATA_HARD_OUTPUT,
 				"output");
 	else if (starts_with(key_token, op_data_prefixes[DATA_HARQ_INPUT]))
-		ret = parse_data_entry(key_token, token, vector,
+		ret = parse_data_entry(key_token, token, dpdk_vector,
 				DATA_HARQ_INPUT,
 				op_data_prefixes[DATA_HARQ_INPUT]);
 	else if (starts_with(key_token, op_data_prefixes[DATA_HARQ_OUTPUT]))
-		ret = parse_data_entry(key_token, token, vector,
+		ret = parse_data_entry(key_token, token, dpdk_vector,
 				DATA_HARQ_OUTPUT,
 				op_data_prefixes[DATA_HARQ_OUTPUT]);
 	else if (!strcmp(key_token, "e")) {
-		vector->mask |= TEST_BBDEV_VF_E;
+		dpdk_vector->mask |= TEST_BBDEV_VF_E;
 		ldpc_dec->cb_params.e = (uint32_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "ea")) {
-		vector->mask |= TEST_BBDEV_VF_EA;
+		dpdk_vector->mask |= TEST_BBDEV_VF_EA;
 		ldpc_dec->tb_params.ea = (uint32_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "eb")) {
-		vector->mask |= TEST_BBDEV_VF_EB;
+		dpdk_vector->mask |= TEST_BBDEV_VF_EB;
 		ldpc_dec->tb_params.eb = (uint32_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "c")) {
-		vector->mask |= TEST_BBDEV_VF_C;
+		dpdk_vector->mask |= TEST_BBDEV_VF_C;
 		ldpc_dec->tb_params.c = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "cab")) {
-		vector->mask |= TEST_BBDEV_VF_CAB;
+		dpdk_vector->mask |= TEST_BBDEV_VF_CAB;
 		ldpc_dec->tb_params.cab = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "rv_index")) {
-		vector->mask |= TEST_BBDEV_VF_RV_INDEX;
+		dpdk_vector->mask |= TEST_BBDEV_VF_RV_INDEX;
 		ldpc_dec->rv_index = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "n_cb")) {
-		vector->mask |= TEST_BBDEV_VF_NCB;
+		dpdk_vector->mask |= TEST_BBDEV_VF_NCB;
 		ldpc_dec->n_cb = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "r")) {
-		vector->mask |= TEST_BBDEV_VF_R;
+		dpdk_vector->mask |= TEST_BBDEV_VF_R;
 		ldpc_dec->tb_params.r = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "q_m")) {
-		vector->mask |= TEST_BBDEV_VF_QM;
+		dpdk_vector->mask |= TEST_BBDEV_VF_QM;
 		ldpc_dec->q_m = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "basegraph")) {
-		vector->mask |= TEST_BBDEV_VF_BG;
+		dpdk_vector->mask |= TEST_BBDEV_VF_BG;
 		ldpc_dec->basegraph = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "z_c")) {
-		vector->mask |= TEST_BBDEV_VF_ZC;
+		dpdk_vector->mask |= TEST_BBDEV_VF_ZC;
 		ldpc_dec->z_c = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "n_filler")) {
-		vector->mask |= TEST_BBDEV_VF_F;
+		dpdk_vector->mask |= TEST_BBDEV_VF_F;
 		ldpc_dec->n_filler = (uint16_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "expected_iter_count")) {
-		vector->mask |= TEST_BBDEV_VF_EXPECTED_ITER_COUNT;
+		dpdk_vector->mask |= TEST_BBDEV_VF_EXPECTED_ITER_COUNT;
 		ldpc_dec->iter_count = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "iter_max")) {
-		vector->mask |= TEST_BBDEV_VF_ITER_MAX;
+		dpdk_vector->mask |= TEST_BBDEV_VF_ITER_MAX;
 		ldpc_dec->iter_max = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "code_block_mode")) {
-		vector->mask |= TEST_BBDEV_VF_CODE_BLOCK_MODE;
+		dpdk_vector->mask |= TEST_BBDEV_VF_CODE_BLOCK_MODE;
 		ldpc_dec->code_block_mode = (uint8_t) strtoul(token, &err, 0);
 		ret = ((err == NULL) || (*err != '\0')) ? -1 : 0;
 	} else if (!strcmp(key_token, "op_flags")) {
-		vector->mask |= TEST_BBDEV_VF_OP_FLAGS;
-		ret = parse_turbo_flags(token, &op_flags, vector->op_type);
+		dpdk_vector->mask |= TEST_BBDEV_VF_OP_FLAGS;
+		ret = parse_turbo_flags(token, &op_flags, dpdk_vector->op_type);
 		if (!ret)
 			ldpc_dec->op_flags = op_flags;
 	} else if (!strcmp(key_token, "expected_status")) {
-		vector->mask |= TEST_BBDEV_VF_EXPECTED_STATUS;
-		ret = parse_expected_status(token, &status, vector->op_type);
+		dpdk_vector->mask |= TEST_BBDEV_VF_EXPECTED_STATUS;
+		ret = parse_expected_status(token, &status, dpdk_vector->op_type);
 		if (!ret)
-			vector->expected_status = status;
+			dpdk_vector->expected_status = status;
 	} else {
 		printf("Not valid ldpc dec key: '%s'\n", key_token);
 		return -1;
@@ -857,7 +857,7 @@ parse_ldpc_decoder_params(const char *key_token, char *token,
 
 /* checks the type of key and assigns data */
 static int
-parse_entry(char *entry, struct test_bbdev_vector *vector)
+parse_entry(char *entry, struct test_bbdev_vector *dpdk_vector)
 {
 	int ret = 0;
 	char *token, *key_token;
@@ -881,11 +881,11 @@ parse_entry(char *entry, struct test_bbdev_vector *vector)
 	trim_space(key_token);
 
 	/* first key_token has to specify type of operation */
-	if (vector->op_type == RTE_BBDEV_OP_NONE) {
+	if (dpdk_vector->op_type == RTE_BBDEV_OP_NONE) {
 		if (!strcmp(key_token, "op_type")) {
 			ret = op_turbo_type_strtol(token, &op_type);
 			if (!ret)
-				vector->op_type = op_type;
+				dpdk_vector->op_type = op_type;
 			return (!ret) ? 0 : -1;
 		}
 		printf("First key_token (%s) does not specify op_type\n",
@@ -894,17 +894,17 @@ parse_entry(char *entry, struct test_bbdev_vector *vector)
 	}
 
 	/* compare keys */
-	if (vector->op_type == RTE_BBDEV_OP_TURBO_DEC) {
-		if (parse_decoder_params(key_token, token, vector) == -1)
+	if (dpdk_vector->op_type == RTE_BBDEV_OP_TURBO_DEC) {
+		if (parse_decoder_params(key_token, token, dpdk_vector) == -1)
 			return -1;
-	} else if (vector->op_type == RTE_BBDEV_OP_TURBO_ENC) {
-		if (parse_encoder_params(key_token, token, vector) == -1)
+	} else if (dpdk_vector->op_type == RTE_BBDEV_OP_TURBO_ENC) {
+		if (parse_encoder_params(key_token, token, dpdk_vector) == -1)
 			return -1;
-	} else if (vector->op_type == RTE_BBDEV_OP_LDPC_ENC) {
-		if (parse_ldpc_encoder_params(key_token, token, vector) == -1)
+	} else if (dpdk_vector->op_type == RTE_BBDEV_OP_LDPC_ENC) {
+		if (parse_ldpc_encoder_params(key_token, token, dpdk_vector) == -1)
 			return -1;
-	} else if (vector->op_type == RTE_BBDEV_OP_LDPC_DEC) {
-		if (parse_ldpc_decoder_params(key_token, token, vector) == -1)
+	} else if (dpdk_vector->op_type == RTE_BBDEV_OP_LDPC_DEC) {
+		if (parse_ldpc_decoder_params(key_token, token, dpdk_vector) == -1)
 			return -1;
 	}
 
@@ -912,75 +912,75 @@ parse_entry(char *entry, struct test_bbdev_vector *vector)
 }
 
 static int
-check_decoder_segments(struct test_bbdev_vector *vector)
+check_decoder_segments(struct test_bbdev_vector *dpdk_vector)
 {
 	unsigned char i;
-	struct rte_bbdev_op_turbo_dec *turbo_dec = &vector->turbo_dec;
+	struct rte_bbdev_op_turbo_dec *turbo_dec = &dpdk_vector->turbo_dec;
 
-	if (vector->entries[DATA_INPUT].nb_segments == 0)
+	if (dpdk_vector->entries[DATA_INPUT].nb_segments == 0)
 		return -1;
 
-	for (i = 0; i < vector->entries[DATA_INPUT].nb_segments; i++)
-		if (vector->entries[DATA_INPUT].segments[i].addr == NULL)
+	for (i = 0; i < dpdk_vector->entries[DATA_INPUT].nb_segments; i++)
+		if (dpdk_vector->entries[DATA_INPUT].segments[i].addr == NULL)
 			return -1;
 
-	if (vector->entries[DATA_HARD_OUTPUT].nb_segments == 0)
+	if (dpdk_vector->entries[DATA_HARD_OUTPUT].nb_segments == 0)
 		return -1;
 
-	for (i = 0; i < vector->entries[DATA_HARD_OUTPUT].nb_segments;
+	for (i = 0; i < dpdk_vector->entries[DATA_HARD_OUTPUT].nb_segments;
 			i++)
-		if (vector->entries[DATA_HARD_OUTPUT].segments[i].addr == NULL)
+		if (dpdk_vector->entries[DATA_HARD_OUTPUT].segments[i].addr == NULL)
 			return -1;
 
 	if ((turbo_dec->op_flags & RTE_BBDEV_TURBO_SOFT_OUTPUT) &&
-			(vector->entries[DATA_SOFT_OUTPUT].nb_segments == 0))
+			(dpdk_vector->entries[DATA_SOFT_OUTPUT].nb_segments == 0))
 		return -1;
 
-	for (i = 0; i < vector->entries[DATA_SOFT_OUTPUT].nb_segments;
+	for (i = 0; i < dpdk_vector->entries[DATA_SOFT_OUTPUT].nb_segments;
 			i++)
-		if (vector->entries[DATA_SOFT_OUTPUT].segments[i].addr == NULL)
+		if (dpdk_vector->entries[DATA_SOFT_OUTPUT].segments[i].addr == NULL)
 			return -1;
 
 	return 0;
 }
 
 static int
-check_ldpc_decoder_segments(struct test_bbdev_vector *vector)
+check_ldpc_decoder_segments(struct test_bbdev_vector *dpdk_vector)
 {
 	unsigned char i;
-	struct rte_bbdev_op_ldpc_dec *ldpc_dec = &vector->ldpc_dec;
+	struct rte_bbdev_op_ldpc_dec *ldpc_dec = &dpdk_vector->ldpc_dec;
 
-	for (i = 0; i < vector->entries[DATA_INPUT].nb_segments; i++)
-		if (vector->entries[DATA_INPUT].segments[i].addr == NULL)
+	for (i = 0; i < dpdk_vector->entries[DATA_INPUT].nb_segments; i++)
+		if (dpdk_vector->entries[DATA_INPUT].segments[i].addr == NULL)
 			return -1;
 
-	for (i = 0; i < vector->entries[DATA_HARD_OUTPUT].nb_segments; i++)
-		if (vector->entries[DATA_HARD_OUTPUT].segments[i].addr == NULL)
+	for (i = 0; i < dpdk_vector->entries[DATA_HARD_OUTPUT].nb_segments; i++)
+		if (dpdk_vector->entries[DATA_HARD_OUTPUT].segments[i].addr == NULL)
 			return -1;
 
 	if ((ldpc_dec->op_flags & RTE_BBDEV_LDPC_SOFT_OUT_ENABLE) &&
-			(vector->entries[DATA_SOFT_OUTPUT].nb_segments == 0))
+			(dpdk_vector->entries[DATA_SOFT_OUTPUT].nb_segments == 0))
 		return -1;
 
-	for (i = 0; i < vector->entries[DATA_SOFT_OUTPUT].nb_segments; i++)
-		if (vector->entries[DATA_SOFT_OUTPUT].segments[i].addr == NULL)
+	for (i = 0; i < dpdk_vector->entries[DATA_SOFT_OUTPUT].nb_segments; i++)
+		if (dpdk_vector->entries[DATA_SOFT_OUTPUT].segments[i].addr == NULL)
 			return -1;
 
 	if ((ldpc_dec->op_flags & RTE_BBDEV_LDPC_HQ_COMBINE_OUT_ENABLE) &&
-			(vector->entries[DATA_HARQ_OUTPUT].nb_segments == 0))
+			(dpdk_vector->entries[DATA_HARQ_OUTPUT].nb_segments == 0))
 		return -1;
 
-	for (i = 0; i < vector->entries[DATA_HARQ_OUTPUT].nb_segments; i++)
-		if (vector->entries[DATA_HARQ_OUTPUT].segments[i].addr == NULL)
+	for (i = 0; i < dpdk_vector->entries[DATA_HARQ_OUTPUT].nb_segments; i++)
+		if (dpdk_vector->entries[DATA_HARQ_OUTPUT].segments[i].addr == NULL)
 			return -1;
 
 	return 0;
 }
 
 static int
-check_decoder_llr_spec(struct test_bbdev_vector *vector)
+check_decoder_llr_spec(struct test_bbdev_vector *dpdk_vector)
 {
-	struct rte_bbdev_op_turbo_dec *turbo_dec = &vector->turbo_dec;
+	struct rte_bbdev_op_turbo_dec *turbo_dec = &dpdk_vector->turbo_dec;
 
 	/* Check input LLR sign formalism specification */
 	if ((turbo_dec->op_flags & RTE_BBDEV_TURBO_POS_LLR_1_BIT_IN) &&
@@ -1022,9 +1022,9 @@ check_decoder_llr_spec(struct test_bbdev_vector *vector)
 }
 
 static int
-check_decoder_op_flags(struct test_bbdev_vector *vector)
+check_decoder_op_flags(struct test_bbdev_vector *dpdk_vector)
 {
-	struct rte_bbdev_op_turbo_dec *turbo_dec = &vector->turbo_dec;
+	struct rte_bbdev_op_turbo_dec *turbo_dec = &dpdk_vector->turbo_dec;
 
 	if ((turbo_dec->op_flags & RTE_BBDEV_TURBO_DEC_TB_CRC_24B_KEEP) &&
 		!(turbo_dec->op_flags & RTE_BBDEV_TURBO_CRC_TYPE_24B)) {
@@ -1038,18 +1038,18 @@ check_decoder_op_flags(struct test_bbdev_vector *vector)
 
 /* checks decoder parameters */
 static int
-check_decoder(struct test_bbdev_vector *vector)
+check_decoder(struct test_bbdev_vector *dpdk_vector)
 {
-	struct rte_bbdev_op_turbo_dec *turbo_dec = &vector->turbo_dec;
-	const int mask = vector->mask;
+	struct rte_bbdev_op_turbo_dec *turbo_dec = &dpdk_vector->turbo_dec;
+	const int mask = dpdk_vector->mask;
 
-	if (check_decoder_segments(vector) < 0)
+	if (check_decoder_segments(dpdk_vector) < 0)
 		return -1;
 
-	if (check_decoder_llr_spec(vector) < 0)
+	if (check_decoder_llr_spec(dpdk_vector) < 0)
 		return -1;
 
-	if (check_decoder_op_flags(vector) < 0)
+	if (check_decoder_op_flags(dpdk_vector) < 0)
 		return -1;
 
 	/* Check which params were set */
@@ -1126,19 +1126,19 @@ check_decoder(struct test_bbdev_vector *vector)
 
 /* checks LDPC decoder parameters */
 static int
-check_ldpc_decoder(struct test_bbdev_vector *vector)
+check_ldpc_decoder(struct test_bbdev_vector *dpdk_vector)
 {
-	struct rte_bbdev_op_ldpc_dec *ldpc_dec = &vector->ldpc_dec;
-	const int mask = vector->mask;
+	struct rte_bbdev_op_ldpc_dec *ldpc_dec = &dpdk_vector->ldpc_dec;
+	const int mask = dpdk_vector->mask;
 
-	if (check_ldpc_decoder_segments(vector) < 0)
+	if (check_ldpc_decoder_segments(dpdk_vector) < 0)
 		return -1;
 
 	/*
-	 * if (check_ldpc_decoder_llr_spec(vector) < 0)
+	 * if (check_ldpc_decoder_llr_spec(dpdk_vector) < 0)
 	 *	return -1;
 	 *
-	 * if (check_ldpc_decoder_op_flags(vector) < 0)
+	 * if (check_ldpc_decoder_op_flags(dpdk_vector) < 0)
 	 *	return -1;
 	 */
 
@@ -1237,9 +1237,9 @@ check_encoder(struct test_bbdev_vector *vector)
 		if (!(mask & TEST_BBDEV_VF_C)) {
 			printf(
 				"WARNING: c was not specified in vector file and will be set to 1\n");
-			vector->turbo_enc.tb_params.c = 1;
+			dpdk_vector->turbo_enc.tb_params.c = 1;
 		}
-		if (!(mask & TEST_BBDEV_VF_CAB) && (vector->turbo_enc.op_flags &
+		if (!(mask & TEST_BBDEV_VF_CAB) && (dpdk_vector->turbo_enc.op_flags &
 				RTE_BBDEV_TURBO_RATE_MATCH))
 			printf(
 				"WARNING: cab was not specified in vector file and will be set to 0\n");
@@ -1253,7 +1253,7 @@ check_encoder(struct test_bbdev_vector *vector)
 			printf(
 				"WARNING: r was not specified in vector file and will be set to 0\n");
 	} else {
-		if (!(mask & TEST_BBDEV_VF_E) && (vector->turbo_enc.op_flags &
+		if (!(mask & TEST_BBDEV_VF_E) && (dpdk_vector->turbo_enc.op_flags &
 				RTE_BBDEV_TURBO_RATE_MATCH))
 			printf(
 				"WARNING: e was not specified in vector file and will be set to 0\n");
@@ -1334,21 +1334,21 @@ check_ldpc_encoder(struct test_bbdev_vector *vector)
 }
 
 static int
-bbdev_check_vector(struct test_bbdev_vector *vector)
+bbdev_check_vector(struct test_bbdev_vector *dpdk_vector)
 {
-	if (vector->op_type == RTE_BBDEV_OP_TURBO_DEC) {
-		if (check_decoder(vector) == -1)
+	if (dpdk_vector->op_type == RTE_BBDEV_OP_TURBO_DEC) {
+		if (check_decoder(dpdk_vector) == -1)
 			return -1;
-	} else if (vector->op_type == RTE_BBDEV_OP_TURBO_ENC) {
-		if (check_encoder(vector) == -1)
+	} else if (dpdk_vector->op_type == RTE_BBDEV_OP_TURBO_ENC) {
+		if (check_encoder(dpdk_vector) == -1)
 			return -1;
-	} else if (vector->op_type == RTE_BBDEV_OP_LDPC_ENC) {
-		if (check_ldpc_encoder(vector) == -1)
+	} else if (dpdk_vector->op_type == RTE_BBDEV_OP_LDPC_ENC) {
+		if (check_ldpc_encoder(dpdk_vector) == -1)
 			return -1;
-	} else if (vector->op_type == RTE_BBDEV_OP_LDPC_DEC) {
-		if (check_ldpc_decoder(vector) == -1)
+	} else if (dpdk_vector->op_type == RTE_BBDEV_OP_LDPC_DEC) {
+		if (check_ldpc_decoder(dpdk_vector) == -1)
 			return -1;
-	} else if (vector->op_type != RTE_BBDEV_OP_NONE) {
+	} else if (dpdk_vector->op_type != RTE_BBDEV_OP_NONE) {
 		printf("Vector was not filled\n");
 		return -1;
 	}
@@ -1358,7 +1358,7 @@ bbdev_check_vector(struct test_bbdev_vector *vector)
 
 int
 test_bbdev_vector_read(const char *filename,
-		struct test_bbdev_vector *vector)
+		struct test_bbdev_vector *dpdk_vector)
 {
 	int ret = 0;
 	size_t len = 0;
@@ -1419,13 +1419,13 @@ test_bbdev_vector_read(const char *filename,
 					break;
 			}
 		}
-		ret = parse_entry(entry, vector);
+		ret = parse_entry(entry, dpdk_vector);
 		if (ret != 0) {
 			printf("An error occurred while parsing!\n");
 			goto exit;
 		}
 	}
-	ret = bbdev_check_vector(vector);
+	ret = bbdev_check_vector(dpdk_vector);
 	if (ret != 0)
 		printf("An error occurred while checking!\n");
 

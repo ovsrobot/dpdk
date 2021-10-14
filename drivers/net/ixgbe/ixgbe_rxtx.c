@@ -4755,12 +4755,12 @@ ixgbe_get_rscctl_maxdesc(struct rte_mempool *pool)
  * @type RX/TX/MISC
  */
 static void
-ixgbe_set_ivar(struct rte_eth_dev *dev, u8 entry, u8 vector, s8 type)
+ixgbe_set_ivar(struct rte_eth_dev *dev, u8 entry, u8 dpdk_vector, s8 type)
 {
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	u32 ivar, index;
 
-	vector |= IXGBE_IVAR_ALLOC_VAL;
+	dpdk_vector |= IXGBE_IVAR_ALLOC_VAL;
 
 	switch (hw->mac.type) {
 
@@ -4772,7 +4772,7 @@ ixgbe_set_ivar(struct rte_eth_dev *dev, u8 entry, u8 vector, s8 type)
 		index = (entry >> 2) & 0x1F;
 		ivar = IXGBE_READ_REG(hw, IXGBE_IVAR(index));
 		ivar &= ~(0xFF << (8 * (entry & 0x3)));
-		ivar |= (vector << (8 * (entry & 0x3)));
+		ivar |= (dpdk_vector << (8 * (entry & 0x3)));
 		IXGBE_WRITE_REG(hw, IXGBE_IVAR(index), ivar);
 		break;
 
@@ -4782,13 +4782,13 @@ ixgbe_set_ivar(struct rte_eth_dev *dev, u8 entry, u8 vector, s8 type)
 			index = (entry & 1) * 8;
 			ivar = IXGBE_READ_REG(hw, IXGBE_IVAR_MISC);
 			ivar &= ~(0xFF << index);
-			ivar |= (vector << index);
+			ivar |= (dpdk_vector << index);
 			IXGBE_WRITE_REG(hw, IXGBE_IVAR_MISC, ivar);
 		} else {	/* RX/TX IVARS */
 			index = (16 * (entry & 1)) + (8 * type);
 			ivar = IXGBE_READ_REG(hw, IXGBE_IVAR(entry >> 1));
 			ivar &= ~(0xFF << index);
-			ivar |= (vector << index);
+			ivar |= (dpdk_vector << index);
 			IXGBE_WRITE_REG(hw, IXGBE_IVAR(entry >> 1), ivar);
 		}
 

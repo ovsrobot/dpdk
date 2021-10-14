@@ -94,7 +94,7 @@ err:
 static int
 cperf_verify_op(struct rte_crypto_op *op,
 		const struct cperf_options *options,
-		const struct cperf_test_vector *vector)
+		const struct cperf_test_vector *dpdk_vector)
 {
 	const struct rte_mbuf *m;
 	uint32_t len;
@@ -176,18 +176,18 @@ cperf_verify_op(struct rte_crypto_op *op,
 	if (cipher == 1) {
 		if (options->cipher_op == RTE_CRYPTO_CIPHER_OP_ENCRYPT)
 			res += memcmp(data + cipher_offset,
-					vector->ciphertext.data,
+					dpdk_vector->ciphertext.data,
 					options->test_buffer_size);
 		else
 			res += memcmp(data + cipher_offset,
-					vector->plaintext.data,
+					dpdk_vector->plaintext.data,
 					options->test_buffer_size);
 	}
 
 	if (auth == 1) {
 		if (options->auth_op == RTE_CRYPTO_AUTH_OP_GENERATE)
 			res += memcmp(data + auth_offset,
-					vector->digest.data,
+					dpdk_vector->digest.data,
 					options->digest_sz);
 	}
 

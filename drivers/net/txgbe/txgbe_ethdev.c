@@ -3502,39 +3502,39 @@ txgbe_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 static uint32_t
 txgbe_uta_vector(struct txgbe_hw *hw, struct rte_ether_addr *uc_addr)
 {
-	uint32_t vector = 0;
+	uint32_t dpdk_vector = 0;
 
 	switch (hw->mac.mc_filter_type) {
 	case 0:   /* use bits [47:36] of the address */
-		vector = ((uc_addr->addr_bytes[4] >> 4) |
+		dpdk_vector = ((uc_addr->addr_bytes[4] >> 4) |
 			(((uint16_t)uc_addr->addr_bytes[5]) << 4));
 		break;
 	case 1:   /* use bits [46:35] of the address */
-		vector = ((uc_addr->addr_bytes[4] >> 3) |
+		dpdk_vector = ((uc_addr->addr_bytes[4] >> 3) |
 			(((uint16_t)uc_addr->addr_bytes[5]) << 5));
 		break;
 	case 2:   /* use bits [45:34] of the address */
-		vector = ((uc_addr->addr_bytes[4] >> 2) |
+		dpdk_vector = ((uc_addr->addr_bytes[4] >> 2) |
 			(((uint16_t)uc_addr->addr_bytes[5]) << 6));
 		break;
 	case 3:   /* use bits [43:32] of the address */
-		vector = ((uc_addr->addr_bytes[4]) |
+		dpdk_vector = ((uc_addr->addr_bytes[4]) |
 			(((uint16_t)uc_addr->addr_bytes[5]) << 8));
 		break;
 	default:  /* Invalid mc_filter_type */
 		break;
 	}
 
-	/* vector can only be 12-bits or boundary will be exceeded */
-	vector &= 0xFFF;
-	return vector;
+	/* dpdk_vector can only be 12-bits or boundary will be exceeded */
+	dpdk_vector &= 0xFFF;
+	return dpdk_vector;
 }
 
 static int
 txgbe_uc_hash_table_set(struct rte_eth_dev *dev,
 			struct rte_ether_addr *mac_addr, uint8_t on)
 {
-	uint32_t vector;
+	uint32_t dpdk_vector;
 	uint32_t uta_idx;
 	uint32_t reg_val;
 	uint32_t uta_mask;
@@ -3547,9 +3547,9 @@ txgbe_uc_hash_table_set(struct rte_eth_dev *dev,
 	if (hw->mac.type < txgbe_mac_raptor)
 		return -ENOTSUP;
 
-	vector = txgbe_uta_vector(hw, mac_addr);
-	uta_idx = (vector >> 5) & 0x7F;
-	uta_mask = 0x1UL << (vector & 0x1F);
+	dpdk_vector = txgbe_uta_vector(hw, mac_addr);
+	uta_idx = (dpdk_vector >> 5) & 0x7F;
+	uta_mask = 0x1UL << (dpdk_vector & 0x1F);
 
 	if (!!on == !!(uta_info->uta_shadow[uta_idx] & uta_mask))
 		return 0;

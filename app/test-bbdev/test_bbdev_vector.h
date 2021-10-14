@@ -73,7 +73,7 @@ struct test_bbdev_vector {
 /* fills test vector parameters based on test file */
 int
 test_bbdev_vector_read(const char *filename,
-		struct test_bbdev_vector *vector);
+		struct test_bbdev_vector *dpdk_vector);
 
 
 #endif /* TEST_BBDEV_VECTOR_H_ */

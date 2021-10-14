@@ -566,14 +566,14 @@ create_mempools(struct active_device *ad, int socket_id,
 
 static int
 add_bbdev_dev(uint8_t dev_id, struct rte_bbdev_info *info,
-		struct test_bbdev_vector *vector)
+		struct test_bbdev_vector *dpdk_vector)
 {
 	int ret;
 	unsigned int queue_id;
 	struct rte_bbdev_queue_conf qconf;
 	struct active_device *ad = &active_devs[nb_active_devs];
 	unsigned int nb_queues;
-	enum rte_bbdev_op_type op_type = vector->op_type;
+	enum rte_bbdev_op_type op_type = dpdk_vector->op_type;
 
 /* Configure fpga lte fec with PF & VF values
  * if '-i' flag is set and using fpga device
@@ -782,14 +782,14 @@ add_bbdev_dev(uint8_t dev_id, struct rte_bbdev_info *info,
 
 static int
 add_active_device(uint8_t dev_id, struct rte_bbdev_info *info,
-		struct test_bbdev_vector *vector)
+		struct test_bbdev_vector *dpdk_vector)
 {
 	int ret;
 
 	active_devs[nb_active_devs].driver_name = info->drv.driver_name;
 	active_devs[nb_active_devs].dev_id = dev_id;
 
-	ret = add_bbdev_dev(dev_id, info, vector);
+	ret = add_bbdev_dev(dev_id, info, dpdk_vector);
 	if (ret == TEST_SUCCESS)
 		++nb_active_devs;
 	return ret;

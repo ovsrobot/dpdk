@@ -19,7 +19,7 @@
  *   0 on success, (-1) on error.
  */
 int
-free_test_vector(struct cperf_test_vector *vector, struct cperf_options *opts);
+free_test_vector(struct cperf_test_vector *dpdk_vector, struct cperf_options *opts);
 
 /**
  * Displays data in test vector
