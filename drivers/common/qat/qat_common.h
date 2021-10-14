@@ -84,11 +84,11 @@ qat_sgl_fill_array(struct rte_mbuf *buf, int64_t offset,
 		void *list_in, uint32_t data_len,
 		const uint16_t max_segs);
 void
-qat_stats_get(struct qat_pci_device *dev,
+qat_stats_get(struct qat_pci_device *qat_dev,
 		struct qat_common_stats *stats,
 		enum qat_service_type service);
 void
-qat_stats_reset(struct qat_pci_device *dev,
+qat_stats_reset(struct qat_pci_device *qat_dev,
 		enum qat_service_type service);
 
 const char *

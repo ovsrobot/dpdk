@@ -37,10 +37,6 @@
 		}							\
 	}
 
-extern uint8_t qat_asym_driver_id;
-
-extern struct qat_crypto_gen_dev_ops qat_asym_gen_dev_ops[];
-
 void
 qat_asym_init_op_cookie(void *op_cookie);
 
@@ -51,5 +47,8 @@ qat_asym_pmd_enqueue_op_burst(void *qp, struct rte_crypto_op **ops,
 uint16_t
 qat_asym_pmd_dequeue_op_burst(void *qp, struct rte_crypto_op **ops,
 			      uint16_t nb_ops);
+
+extern struct qat_crypto_gen_dev_ops qat_asym_gen_dev_ops[];
+extern uint8_t qat_asym_driver_id;
 
 #endif /* _QAT_ASYM_PMD_H_ */

@@ -86,7 +86,7 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 	char name[RTE_CRYPTODEV_NAME_MAX_LEN];
 	char capa_memz_name[RTE_CRYPTODEV_NAME_MAX_LEN];
 	struct rte_cryptodev *cryptodev;
-	struct qat_cryptodev_private *internals;
+	struct qat_cryptodev_private *qat_crypto;
 	struct qat_capabilities_info capa_info;
 	const struct rte_cryptodev_capabilities *capabilities;
 	const struct qat_crypto_gen_dev_ops *gen_dev_ops =
@@ -166,20 +166,20 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 			"QAT_SYM_CAPA_GEN_%d",
 			qat_pci_dev->qat_dev_gen);
 
-	internals = cryptodev->data->dev_private;
-	internals->qat_dev = qat_pci_dev;
-	internals->service_type = QAT_SERVICE_SYMMETRIC;
-	internals->dev_id = cryptodev->data->dev_id;
+	qat_crypto = cryptodev->data->dev_private;
+	qat_crypto->qat_dev = qat_pci_dev;
+	qat_crypto->service_type = QAT_SERVICE_SYMMETRIC;
+	qat_crypto->dev_id = cryptodev->data->dev_id;
 
 	capa_info = gen_dev_ops->get_capabilities(qat_pci_dev);
 	capabilities = capa_info.data;
 	capa_size = capa_info.size;
 
-	internals->capa_mz = rte_memzone_lookup(capa_memz_name);
-	if (internals->capa_mz == NULL) {
-		internals->capa_mz = rte_memzone_reserve(capa_memz_name,
+	qat_crypto->capa_mz = rte_memzone_lookup(capa_memz_name);
+	if (qat_crypto->capa_mz == NULL) {
+		qat_crypto->capa_mz = rte_memzone_reserve(capa_memz_name,
 				capa_size, rte_socket_id(), 0);
-		if (internals->capa_mz == NULL) {
+		if (qat_crypto->capa_mz == NULL) {
 			QAT_LOG(DEBUG,
 				"Error allocating capability memzon for %s",
 				name);
@@ -188,21 +188,21 @@ qat_sym_dev_create(struct qat_pci_device *qat_pci_dev,
 		}
 	}
 
-	memcpy(internals->capa_mz->addr, capabilities, capa_size);
-	internals->qat_dev_capabilities = internals->capa_mz->addr;
+	memcpy(qat_crypto->capa_mz->addr, capabilities, capa_size);
+	qat_crypto->qat_dev_capabilities = qat_crypto->capa_mz->addr;
 
 	while (1) {
 		if (qat_dev_cmd_param[i].name == NULL)
 			break;
 		if (!strcmp(qat_dev_cmd_param[i].name, SYM_ENQ_THRESHOLD_NAME))
-			internals->min_enq_burst_threshold =
+			qat_crypto->min_enq_burst_threshold =
 					qat_dev_cmd_param[i].val;
 		i++;
 	}
 
-	qat_pci_dev->sym_dev = internals;
+	qat_pci_dev->sym_dev = qat_crypto;
 	QAT_LOG(DEBUG, "Created QAT SYM device %s as cryptodev instance %d",
-			cryptodev->data->name, internals->dev_id);
+			cryptodev->data->name, qat_crypto->dev_id);
 
 	return 0;
 

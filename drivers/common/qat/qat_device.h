@@ -21,33 +21,8 @@
 #define COMP_ENQ_THRESHOLD_NAME "qat_comp_enq_threshold"
 #define MAX_QP_THRESHOLD_SIZE	32
 
-/**
- * Function prototypes for GENx specific device operations.
- **/
-typedef int (*qat_dev_reset_ring_pairs_t)
-		(struct qat_pci_device *);
-typedef const struct rte_mem_resource* (*qat_dev_get_transport_bar_t)
-		(struct rte_pci_device *);
-typedef int (*qat_dev_get_misc_bar_t)
-		(struct rte_mem_resource **, struct rte_pci_device *);
-typedef int (*qat_dev_read_config_t)
-		(struct qat_pci_device *);
-typedef int (*qat_dev_get_extra_size_t)(void);
-
-struct qat_dev_hw_spec_funcs {
-	qat_dev_reset_ring_pairs_t	qat_dev_reset_ring_pairs;
-	qat_dev_get_transport_bar_t	qat_dev_get_transport_bar;
-	qat_dev_get_misc_bar_t		qat_dev_get_misc_bar;
-	qat_dev_read_config_t		qat_dev_read_config;
-	qat_dev_get_extra_size_t	qat_dev_get_extra_size;
-};
-
-extern struct qat_dev_hw_spec_funcs *qat_dev_hw_spec[];
-
-struct qat_dev_cmd_param {
-	const char *name;
-	uint16_t val;
-};
+struct qat_cryptodev_private;
+struct qat_comp_dev_private;
 
 struct qat_device_info {
 	const struct rte_memzone *mz;
@@ -73,11 +48,6 @@ struct qat_device_info {
 	 * pci_dev so that its driver can have a compression-specific name
 	 */
 };
-
-extern struct qat_device_info qat_pci_devs[];
-
-struct qat_cryptodev_private;
-struct qat_comp_dev_private;
 
 /*
  * This struct holds all the data about a QAT pci device
@@ -142,7 +112,10 @@ struct qat_pf2vf_dev {
 	uint32_t pf2vf_data_mask;
 };
 
-extern struct qat_gen_hw_data qat_gen_config[];
+struct qat_dev_cmd_param {
+	const char *name;
+	uint16_t val;
+};
 
 struct qat_pci_device *
 qat_pci_device_allocate(struct rte_pci_device *pci_dev,
@@ -153,24 +126,49 @@ qat_get_qat_dev_from_pci_dev(struct rte_pci_device *pci_dev);
 
 /* declaration needed for weak functions */
 int
-qat_sym_dev_create(struct qat_pci_device *qat_pci_dev __rte_unused,
+qat_sym_dev_create(struct qat_pci_device *qat_dev __rte_unused,
 		struct qat_dev_cmd_param *qat_dev_cmd_param);
 
 int
-qat_asym_dev_create(struct qat_pci_device *qat_pci_dev __rte_unused,
+qat_asym_dev_create(struct qat_pci_device *qat_dev __rte_unused,
 		struct qat_dev_cmd_param *qat_dev_cmd_param);
 
 int
-qat_sym_dev_destroy(struct qat_pci_device *qat_pci_dev __rte_unused);
+qat_sym_dev_destroy(struct qat_pci_device *qat_dev __rte_unused);
 
 int
-qat_asym_dev_destroy(struct qat_pci_device *qat_pci_dev __rte_unused);
+qat_asym_dev_destroy(struct qat_pci_device *qat_dev __rte_unused);
 
 int
-qat_comp_dev_create(struct qat_pci_device *qat_pci_dev __rte_unused,
+qat_comp_dev_create(struct qat_pci_device *qat_dev __rte_unused,
 		struct qat_dev_cmd_param *qat_dev_cmd_param);
 
 int
-qat_comp_dev_destroy(struct qat_pci_device *qat_pci_dev __rte_unused);
+qat_comp_dev_destroy(struct qat_pci_device *qat_dev __rte_unused);
+
+/**
+ * Function prototypes for GENx specific device operations.
+ **/
+typedef int (*qat_dev_reset_ring_pairs_t)
+		(struct qat_pci_device *);
+typedef const struct rte_mem_resource* (*qat_dev_get_transport_bar_t)
+		(struct rte_pci_device *);
+typedef int (*qat_dev_get_misc_bar_t)
+		(struct rte_mem_resource **, struct rte_pci_device *);
+typedef int (*qat_dev_read_config_t)
+		(struct qat_pci_device *);
+typedef int (*qat_dev_get_extra_size_t)(void);
+
+struct qat_dev_hw_spec_funcs {
+	qat_dev_reset_ring_pairs_t	qat_dev_reset_ring_pairs;
+	qat_dev_get_transport_bar_t	qat_dev_get_transport_bar;
+	qat_dev_get_misc_bar_t		qat_dev_get_misc_bar;
+	qat_dev_read_config_t		qat_dev_read_config;
+	qat_dev_get_extra_size_t	qat_dev_get_extra_size;
+};
+
+extern struct qat_gen_hw_data qat_gen_config[];
+extern struct qat_device_info qat_pci_devs[];
+extern struct qat_dev_hw_spec_funcs *qat_dev_hw_spec[];
 
 #endif /* _QAT_DEVICE_H_ */

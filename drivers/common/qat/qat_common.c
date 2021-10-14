@@ -7,9 +7,9 @@
 #include "qat_logs.h"
 
 const char *
-qat_service_get_str(enum qat_service_type type)
+qat_service_get_str(enum qat_service_type qat_service)
 {
-	switch (type) {
+	switch (qat_service) {
 	case QAT_SERVICE_SYMMETRIC:
 		return "sym";
 	case QAT_SERVICE_ASYMMETRIC:
@@ -84,24 +84,24 @@ qat_sgl_fill_array(struct rte_mbuf *buf, int64_t offset,
 	return res;
 }
 
-void qat_stats_get(struct qat_pci_device *dev,
+void qat_stats_get(struct qat_pci_device *qat_dev,
 		struct qat_common_stats *stats,
-		enum qat_service_type service)
+		enum qat_service_type qat_service)
 {
 	int i;
 	struct qat_qp **qp;
 
-	if (stats == NULL || dev == NULL || service >= QAT_SERVICE_INVALID) {
+	if (stats == NULL || qat_dev == NULL || qat_service >= QAT_SERVICE_INVALID) {
 		QAT_LOG(ERR, "invalid param: stats %p, dev %p, service %d",
-				stats, dev, service);
+				stats, qat_dev, qat_service);
 		return;
 	}
 
-	qp = dev->qps_in_use[service];
+	qp = qat_dev->qps_in_use[qat_service];
 	for (i = 0; i < ADF_MAX_QPS_ON_ANY_SERVICE; i++) {
 		if (qp[i] == NULL) {
 			QAT_LOG(DEBUG, "Service %d Uninitialised qp %d",
-					service, i);
+					qat_service, i);
 			continue;
 		}
 
@@ -115,27 +115,27 @@ void qat_stats_get(struct qat_pci_device *dev,
 	}
 }
 
-void qat_stats_reset(struct qat_pci_device *dev,
-		enum qat_service_type service)
+void qat_stats_reset(struct qat_pci_device *qat_dev,
+		enum qat_service_type qat_service)
 {
 	int i;
 	struct qat_qp **qp;
 
-	if (dev == NULL || service >= QAT_SERVICE_INVALID) {
+	if (qat_dev == NULL || qat_service >= QAT_SERVICE_INVALID) {
 		QAT_LOG(ERR, "invalid param: dev %p, service %d",
-				dev, service);
+				qat_dev, qat_service);
 		return;
 	}
 
-	qp = dev->qps_in_use[service];
+	qp = qat_dev->qps_in_use[qat_service];
 	for (i = 0; i < ADF_MAX_QPS_ON_ANY_SERVICE; i++) {
 		if (qp[i] == NULL) {
 			QAT_LOG(DEBUG, "Service %d Uninitialised qp %d",
-					service, i);
+					qat_service, i);
 			continue;
 		}
 		memset(&(qp[i]->stats), 0, sizeof(qp[i]->stats));
 	}
 
-	QAT_LOG(DEBUG, "QAT: %d stats cleared", service);
+	QAT_LOG(DEBUG, "QAT: %d stats cleared", qat_service);
 }

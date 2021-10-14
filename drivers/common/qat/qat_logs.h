@@ -5,9 +5,6 @@
 #ifndef _QAT_LOGS_H_
 #define _QAT_LOGS_H_
 
-extern int qat_gen_logtype;
-extern int qat_dp_logtype;
-
 #define QAT_LOG(level, fmt, args...)			\
 	rte_log(RTE_LOG_ ## level, qat_gen_logtype,		\
 			"%s(): " fmt "\n", __func__, ## args)
@@ -29,5 +26,8 @@ extern int qat_dp_logtype;
 int
 qat_hexdump_log(uint32_t level, uint32_t logtype, const char *title,
 		const void *buf, unsigned int len);
+
+extern int qat_gen_logtype;
+extern int qat_dp_logtype;
 
 #endif /* _QAT_LOGS_H_ */
