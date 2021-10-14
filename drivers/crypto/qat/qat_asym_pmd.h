@@ -18,6 +18,7 @@
  * Helper function to add an asym capability
  * <name> <op type> <modlen (min, max, increment)>
  **/
+
 #define QAT_ASYM_CAP(n, o, l, r, i)					\
 	{								\
 		.op = RTE_CRYPTO_OP_TYPE_ASYMMETRIC,			\
