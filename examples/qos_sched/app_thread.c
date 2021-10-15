@@ -205,7 +205,6 @@ app_worker_thread(struct thread_conf **confs)
 		if (likely(nb_pkt)) {
 			int nb_sent = rte_sched_port_enqueue(conf->sched_port, mbufs,
 					nb_pkt);
-
 			APP_STATS_ADD(conf->stat.nb_drop, nb_pkt - nb_sent);
 			APP_STATS_ADD(conf->stat.nb_rx, nb_pkt);
 		}
