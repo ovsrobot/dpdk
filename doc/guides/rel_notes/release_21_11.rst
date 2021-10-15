@@ -111,6 +111,7 @@ New Features
 
     * AESNI_MB PMD.
     * AESNI_GCM PMD.
+    * KASUMI PMD.
 
 * **Updated the aesni_mb crypto PMD.**
 
