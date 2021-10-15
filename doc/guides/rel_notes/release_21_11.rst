@@ -114,6 +114,7 @@ New Features
     * KASUMI PMD.
     * SNOW3G PMD.
     * ZUC PMD.
+    * CHACHA20_POLY1305 PMD.
 
 * **Updated the aesni_mb crypto PMD.**
 
