@@ -116,6 +116,9 @@ New Features
     * ZUC PMD.
     * CHACHA20_POLY1305 PMD.
 
+  * An autotest was added for the CHACHA20_POLY1305 PMD,
+    including a new testcase for SGL OOP.
+
 * **Updated the aesni_mb crypto PMD.**
 
   * Added support for ZUC-EEA3-256 and ZUC-EIA3-256.
