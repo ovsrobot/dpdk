@@ -43,6 +43,7 @@ EXPERIMENTAL {
 	rte_thash_find_existing;
 	rte_thash_free_ctx;
 	rte_thash_get_complement;
+	rte_thash_get_gfni_matrices;
 	rte_thash_get_helper;
 	rte_thash_get_key;
 	rte_thash_gfni_supported;
