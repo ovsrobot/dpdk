@@ -104,6 +104,9 @@ New Features
   The IPSec_MB framework was added to share common code between Intel
   SW Crypto PMDs that depend on the intel-ipsec-mb library.
 
+  * Multiprocess support was added for the consolidated PMDs,
+    which requires v1.1 of the intel-ipsec-mb library.
+
 * **Updated Marvell cnxk ethdev driver.**
 
   * Added rte_flow support for dual VLAN insert and strip actions.
