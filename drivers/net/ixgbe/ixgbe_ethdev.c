@@ -6371,6 +6371,9 @@ ixgbevf_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
 		return -EINVAL;
 	}
 
+	/* update max frame size */
+	dev->data->dev_conf.rxmode.max_rx_pkt_len = max_frame;
+
 	/*
 	 * When supported by the underlying PF driver, use the IXGBE_VF_SET_MTU
 	 * request of the version 2.0 of the mailbox API.
@@ -6383,8 +6386,6 @@ ixgbevf_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
 	if (ixgbevf_rlpml_set_vf(hw, max_frame))
 		return -EINVAL;
 
-	/* update max frame size */
-	dev->data->dev_conf.rxmode.max_rx_pkt_len = max_frame;
 	return 0;
 }
 

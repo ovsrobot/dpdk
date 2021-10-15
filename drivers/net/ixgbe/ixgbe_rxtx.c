@@ -5695,7 +5695,6 @@ ixgbevf_dev_rx_init(struct rte_eth_dev *dev)
 	    (uint16_t)dev->data->dev_conf.rxmode.max_rx_pkt_len)) {
 		PMD_INIT_LOG(ERR, "Set max packet length to %d failed.",
 			     dev->data->dev_conf.rxmode.max_rx_pkt_len);
-		return -EINVAL;
 	}
 
 	/*
