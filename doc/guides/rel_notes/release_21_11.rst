@@ -159,6 +159,16 @@ New Features
   * Added tests to verify tunnel header verification in IPsec inbound.
   * Added tests to verify inner checksum.
 
+* **Revised packet capture framework.**
+
+  * New dpdk-dumpcap program that has most of the features of the
+    wireshark dumpcap utility including: capture of multiple interfaces,
+    filtering, and stopping after number of bytes, packets.
+  * New library for writing pcapng packet capture files.
+  * Enhancements to the pdump library to support:
+    * Packet filter with BPF.
+    * Pcapng format with timestamps and meta-data.
+    * Fixes packet capture with stripped VLAN tags.
 
 Removed Items
 -------------
