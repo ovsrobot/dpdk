@@ -106,6 +106,10 @@ New Features
 
   * Multiprocess support was added for the consolidated PMDs,
     which requires v1.1 of the intel-ipsec-mb library.
+  * The following PMDs were moved into a single source folder,
+    however their usage and EAL options remain unchanged.
+
+    * AESNI_MB PMD.
 
 * **Updated Marvell cnxk ethdev driver.**
 
