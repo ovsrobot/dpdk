@@ -463,6 +463,6 @@ void lthread_set_funcname(const char *f)
 {
 	struct lthread *lt = THIS_LTHREAD;
 
-	strncpy(lt->funcname, f, sizeof(lt->funcname));
+	strncpy(lt->funcname, f, sizeof(lt->funcname) - 1);
 	lt->funcname[sizeof(lt->funcname)-1] = 0;
 }

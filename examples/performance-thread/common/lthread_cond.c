@@ -57,9 +57,9 @@ lthread_cond_init(char *name, struct lthread_cond **cond,
 	}
 
 	if (name == NULL)
-		strncpy(c->name, "no name", sizeof(c->name));
+		strncpy(c->name, "no name", sizeof(c->name) - 1);
 	else
-		strncpy(c->name, name, sizeof(c->name));
+		strncpy(c->name, name, sizeof(c->name) - 1);
 	c->name[sizeof(c->name)-1] = 0;
 
 	c->root_sched = THIS_SCHED;
