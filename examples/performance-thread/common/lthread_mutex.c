@@ -52,9 +52,9 @@ lthread_mutex_init(char *name, struct lthread_mutex **mutex,
 	}
 
 	if (name == NULL)
-		strncpy(m->name, "no name", sizeof(m->name));
+		strncpy(m->name, "no name", sizeof(m->name) - 1);
 	else
-		strncpy(m->name, name, sizeof(m->name));
+		strncpy(m->name, name, sizeof(m->name) - 1);
 	m->name[sizeof(m->name)-1] = 0;
 
 	m->root_sched = THIS_SCHED;
