@@ -111,6 +111,10 @@ New Features
 
     * AESNI_MB PMD.
 
+* **Updated the aesni_mb crypto PMD.**
+
+  * Added support for ZUC-EEA3-256 and ZUC-EIA3-256.
+
 * **Updated Marvell cnxk ethdev driver.**
 
   * Added rte_flow support for dual VLAN insert and strip actions.
