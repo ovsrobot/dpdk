@@ -159,6 +159,10 @@ New Features
   * Added tests to verify tunnel header verification in IPsec inbound.
   * Added tests to verify inner checksum.
 
+* **Added optimized Toeplitz hash implementation.**
+
+  Added optimized Toeplitz hash implementation using Galois Fields New Instructions.
+
 
 Removed Items
 -------------

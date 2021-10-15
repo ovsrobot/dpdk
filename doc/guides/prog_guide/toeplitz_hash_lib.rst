@@ -19,23 +19,52 @@ to calculate the RSS hash sum to spread the traffic among the queues.
 Toeplitz hash function API
 --------------------------
 
-There are two functions that provide calculation of the Toeplitz hash sum:
+There are four functions that provide calculation of the Toeplitz hash sum:
 
 * ``rte_softrss()``
 * ``rte_softrss_be()``
+* ``rte_thash_gfni()``
+* ``rte_thash_gfni_x2()``
 
-Both of these functions take the parameters:
+First two functions are scalar implementation and take the parameters:
 
 * A pointer to the tuple, containing fields extracted from the packet.
 * A length of this tuple counted in double words.
 * A pointer to the RSS hash key corresponding to the one installed on the NIC.
 
-Both functions expect the tuple to be in "host" byte order
-and a multiple of 4 bytes in length.
+Both of abovementioned _softrss_ functions expect the tuple to be in
+"host" byte order and a multiple of 4 bytes in length.
 The ``rte_softrss()`` function expects the ``rss_key``
 to be exactly the same as the one installed on the NIC.
 The ``rte_softrss_be`` function is a faster implementation,
 but it expects ``rss_key`` to be converted to the host byte order.
+
+The last two functions are vectorized implementations using
+Galois Fields New Instructions. Could be used if ``rte_thash_gfni_supported`` is true.
+They expect the tuple to be in network byte order.
+
+``rte_thash_gfni()`` calculates the hash value for a single tuple, and
+``rte_thash_gfni_x2()`` calculates for a two independent tuples in one go.
+
+``rte_thash_gfni()`` takes the parameters:
+
+* A pointer to the matrixes derived from the RSS hash key using ``rte_thash_complete_matrix()``.
+* A pointer to the tuple.
+* A length of the tuple in bytes.
+
+``rte_thash_gfni_x2()`` takes the parameters:
+
+* A pointer to the matrices derived from the RSS hash key using ``rte_thash_complete_matrix()``.
+* Two tuple pointers.
+* A length of the longest tuple in bytes.
+* Two pointers on the ``uint32_t`` to write results to.
+
+``rte_thash_complete_matrix()`` is a function that calculates matrices required by
+GFNI implementations from the RSS hash key. It takes the parameters:
+
+* A pointer to the memory where the matrices will be written.
+* A pointer to the RSS hash key.
+* Length of the RSS hash key in bytes.
 
 
 Predictable RSS
