@@ -118,6 +118,13 @@ New Features
 
   * Added support for ZUC-EEA3-256 and ZUC-EIA3-256.
 
+* **Added digest appended ops support for Snow3G PMD.**
+
+  * Added support for out-of-place auth-cipher operations that encrypt
+    the digest along with the rest of the raw data.
+  * Added support for partially encrypted digest when using auth-cipher
+    operations.
+
 * **Updated Marvell cnxk ethdev driver.**
 
   * Added rte_flow support for dual VLAN insert and strip actions.
