@@ -87,6 +87,33 @@ To avoid resource leaks on the PMD side, handles must be explicitly
 destroyed by the application before releasing associated resources such as
 queues and ports.
 
+By default it is unspecified if the flow rules persist after the device stop.
+If ``RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP`` is not advertised,
+then rules must be explicitly flushed before stopping the device
+if the application needs to ensure they are removed.
+If it is advertised, this means the PMD can keep at least some rules
+across the device stop and start with possible reconfiguration in between.
+However, it may be only supported for some kinds of rules.
+The kind is a combination of the following rule properties:
+
+- the sequence of item types;
+- the sequence of action types;
+- the value of the transfer attribute.
+
+To test if a particular kind of rules is kept, the application must try
+to create a valid rule of that kind when the device is stopped
+(after it has been configured or started previously).
+If it succeeds, all rules of the same kind are kept at the device stop.
+If it fails with an error of type ``RTE_FLOW_ERROR_TYPE_STATE``,
+rules of this kind are flushed when the device is stopped.
+Rules of a kept kind that are created when the device is stopped, including
+the rules created for the test, will be kept after the device is started.
+Some configuration changes may be incompatible with existing rules.
+In this case ``rte_eth_dev_configure()``, ``rte_eth_rx/tx_queue_setup()``,
+and/or ``rte_eth_dev_start()`` will fail with a log message from the PMD that
+should be similar to the one that would be emitted by ``rte_flow_create()``
+if an attempt was made to create the offending rule with the new configuration.
+
 The following sections cover:
 
 - **Attributes** (represented by ``struct rte_flow_attr``): properties of a
