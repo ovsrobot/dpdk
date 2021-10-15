@@ -99,6 +99,11 @@ New Features
 
   * Added Intel ixgbe support on Windows.
 
+* **Added framework for consolidation of IPSec_MB dependent SW Crypto PMDs.**
+
+  The IPSec_MB framework was added to share common code between Intel
+  SW Crypto PMDs that depend on the intel-ipsec-mb library.
+
 * **Updated Marvell cnxk ethdev driver.**
 
   * Added rte_flow support for dual VLAN insert and strip actions.
