@@ -2812,6 +2812,30 @@ updated depend on the type of the ``action`` and different for every type.
 The indirect action specified data (e.g. counter) can be queried by
 ``rte_flow_action_handle_query()``.
 
+By default it is unspecified if indirect actions persist after the device stop.
+If ``RTE_ETH_DEV_CAPA_FLOW_SHARED_OBJECT_KEEP`` is not advertised,
+then indirect actions must be explicitly destroyed before stopping the device
+if the application needs to ensure they are removed.
+If it is advertised, this means the PMD can keep at least some indirect actions
+across device stop and start with possible reconfiguration in between.
+However, it may be only supported for certain kinds of indirect actions.
+The kind is a combination of the action type and the value of its transfer bit.
+To test if a particular kind of indirect actions is kept,
+the application must try to create a valid indirect action of that kind
+when the device is stopped (after it has been configured or started previously).
+If it succeeds, all indirect actions of the same kind are kept
+when the device is stopped.
+If it fails with an error of type ``RTE_FLOW_ERROR_TYPE_STATE``,
+indirect actions of this kind are flushed when the device is stopped.
+Indirect actions of a kept kind that are created when the device is stopped,
+including the ones created for the test, will be kept after the device start.
+Some configuration changes may be incompatible with existing indirect actions.
+In this case ``rte_eth_dev_configure()``, ``rte_eth_rx/tx_queue_setup()``,
+and/or ``rte_eth_dev_start()`` will fail with a log message from the PMD that
+should be similar to the one that would be emitted
+by ``rte_flow_action_handle_create()`` if an attempt was made
+to create the offending rule with the new configuration.
+
 .. _table_rte_flow_action_handle:
 
 .. table:: INDIRECT
