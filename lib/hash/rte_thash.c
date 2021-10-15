@@ -13,6 +13,7 @@
 #include <rte_eal_memconfig.h>
 #include <rte_log.h>
 #include <rte_malloc.h>
+#include <rte_thash_gfni.h>
 
 #define THASH_NAME_LEN		64
 #define TOEPLITZ_HASH_LEN	32
@@ -89,6 +90,24 @@ struct rte_thash_ctx {
 	uint32_t	flags;
 	uint8_t		hash_key[0];
 };
+
+/** Flag indicating GFNI support */
+uint8_t rte_thash_gfni_supported;
+
+void
+rte_thash_complete_matrix(uint64_t *matrixes, const uint8_t *rss_key, int size)
+{
+	int i, j;
+	uint8_t *m = (uint8_t *)matrixes;
+
+	for (i = 0; i < size; i++) {
+		for (j = 0; j < 8; j++) {
+			m[i * 8 + j] = (rss_key[i] << j)|
+				(uint8_t)((uint16_t)(rss_key[i + 1]) >>
+				(8 - j));
+		}
+	}
+}
 
 static inline uint32_t
 get_bit_lfsr(struct thash_lfsr *lfsr)
@@ -760,4 +779,13 @@ rte_thash_adjust_tuple(struct rte_thash_ctx *ctx,
 	}
 
 	return ret;
+}
+
+RTE_INIT(rte_thash_gfni_init)
+{
+	rte_thash_gfni_supported = 0;
+#ifdef __GFNI__
+	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_GFNI))
+		rte_thash_gfni_supported = 1;
+#endif
 }
