@@ -18,7 +18,7 @@
 #include <rte_log.h>
 #include <rte_debug.h>
 #include <rte_cycles.h>
-#include <rte_memory.h>
+#include <rte_malloc.h>
 #include <rte_memcpy.h>
 #include <rte_launch.h>
 #include <rte_eal.h>
@@ -55,6 +55,11 @@
 #define GRE_EXT_LEN		4
 #define GRE_SUPPORTED_FIELDS	(GRE_CHECKSUM_PRESENT | GRE_KEY_PRESENT |\
 				 GRE_SEQUENCE_PRESENT)
+
+/* When UDP or TCP or outer UDP csum offload is off, sw l4 csum is needed */
+#define UDP_TCP_CSUM            (DEV_TX_OFFLOAD_UDP_CKSUM |\
+				 DEV_TX_OFFLOAD_TCP_CKSUM |\
+				 DEV_TX_OFFLOAD_OUTER_UDP_CKSUM)
 
 /* We cannot use rte_cpu_to_be_16() on a constant in a switch/case */
 #if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
@@ -602,12 +607,8 @@ process_outer_cksums(void *outer_l3_hdr, struct testpmd_offload_info *info,
 	/* do not recalculate udp cksum if it was 0 */
 	if (udp_hdr->dgram_cksum != 0) {
 		udp_hdr->dgram_cksum = 0;
-		if (info->outer_ethertype == _htons(RTE_ETHER_TYPE_IPV4))
-			udp_hdr->dgram_cksum =
-				rte_ipv4_udptcp_cksum(ipv4_hdr, udp_hdr);
-		else
-			udp_hdr->dgram_cksum =
-				rte_ipv6_udptcp_cksum(ipv6_hdr, udp_hdr);
+		udp_hdr->dgram_cksum = get_udptcp_checksum(outer_l3_hdr,
+					udp_hdr, info->outer_ethertype);
 	}
 
 	return ol_flags;
@@ -802,6 +803,7 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 	struct rte_mbuf *m, *p;
 	struct rte_ether_hdr *eth_hdr;
 	void *l3_hdr = NULL, *outer_l3_hdr = NULL; /* can be IPv4 or IPv6 */
+	uint8_t *l3_buf = NULL;
 	void **gro_ctx;
 	uint16_t gro_pkts_num;
 	uint8_t gro_enable;
@@ -877,7 +879,19 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 		rte_ether_addr_copy(&ports[fs->tx_port].eth_addr,
 				&eth_hdr->src_addr);
 		parse_ethernet(eth_hdr, &info);
-		l3_hdr = (char *)eth_hdr + info.l2_len;
+		/* When sw csum is needed, multi-segs needs a buf to contain
+		 * the whole packet for later UDP/TCP csum calculation.
+		 */
+		if (m->nb_segs > 1 && !(tx_ol_flags & PKT_TX_TCP_SEG) &&
+		    !(tx_offloads & UDP_TCP_CSUM)) {
+			l3_buf = rte_zmalloc("csum l3_buf",
+					     info.pkt_len - info.l2_len,
+					     RTE_CACHE_LINE_SIZE);
+			rte_pktmbuf_read(m, info.l2_len,
+					 info.pkt_len - info.l2_len, l3_buf);
+			l3_hdr = l3_buf;
+		} else
+			l3_hdr = (char *)eth_hdr + info.l2_len;
 
 		/* check if it's a supported tunnel */
 		if (txp->parse_tunnel) {
@@ -1051,6 +1065,7 @@ tunnel_update:
 			printf("tx: flags=%s", buf);
 			printf("\n");
 		}
+		rte_free(l3_buf);
 	}
 
 	if (unlikely(gro_enable)) {
