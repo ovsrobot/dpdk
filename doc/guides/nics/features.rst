@@ -615,6 +615,19 @@ Supports inner packet L4 checksum.
   ``tx_offload_capa,tx_queue_offload_capa:DEV_TX_OFFLOAD_OUTER_UDP_CKSUM``.
 
 
+.. _nic_features_shared_rx_queue:
+
+Shared Rx queue
+---------------
+
+Supports shared Rx queue for ports in same Rx domain of a switch domain.
+
+* **[uses]     rte_eth_dev_info**: ``dev_capa:RTE_ETH_DEV_CAPA_RXQ_SHARE``.
+* **[uses]     rte_eth_dev_info，rte_eth_switch_info**: ``rx_domain``, ``domain_id``.
+* **[uses]     rte_eth_rxconf**: ``share_group``.
+* **[provides] mbuf**: ``mbuf.port``.
+
+
 .. _nic_features_packet_type_parsing:
 
 Packet type parsing
