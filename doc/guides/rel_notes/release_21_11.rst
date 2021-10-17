@@ -159,6 +159,11 @@ New Features
   * Added tests to verify tunnel header verification in IPsec inbound.
   * Added tests to verify inner checksum.
 
+* **Added NXP LA12xx baseband PMD.**
+
+  * Added a new baseband PMD driver for NXP LA12xx Software defined radio.
+  * See the :doc:`../bbdevs/la12xx` for more details.
+
 
 Removed Items
 -------------
