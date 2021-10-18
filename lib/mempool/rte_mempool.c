@@ -777,13 +777,6 @@ rte_mempool_cache_free(struct rte_mempool_cache *cache)
 	rte_free(cache);
 }
 
-#define MEMPOOL_KNOWN_FLAGS (MEMPOOL_F_NO_SPREAD \
-	| MEMPOOL_F_NO_CACHE_ALIGN \
-	| MEMPOOL_F_SP_PUT \
-	| MEMPOOL_F_SC_GET \
-	| MEMPOOL_F_POOL_CREATED \
-	| MEMPOOL_F_NO_IOVA_CONTIG \
-	)
 /* create an empty mempool */
 struct rte_mempool *
 rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
@@ -828,8 +821,8 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 		return NULL;
 	}
 
-	/* enforce no unknown flag is passed by the application */
-	if ((flags & ~MEMPOOL_KNOWN_FLAGS) != 0) {
+	/* enforce only user flags are passed by the application */
+	if ((flags & ~MEMPOOL_VALID_USER_FLAGS) != 0) {
 		rte_errno = EINVAL;
 		return NULL;
 	}

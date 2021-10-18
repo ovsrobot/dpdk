@@ -259,6 +259,15 @@ struct rte_mempool {
 #define MEMPOOL_F_NO_IOVA_CONTIG 0x0020 /**< Don't need IOVA contiguous objs. */
 
 /**
+ * This macro lists all the mempool flags an application may request.
+ */
+#define MEMPOOL_VALID_USER_FLAGS (MEMPOOL_F_NO_SPREAD \
+	| MEMPOOL_F_NO_CACHE_ALIGN \
+	| MEMPOOL_F_SP_PUT \
+	| MEMPOOL_F_SC_GET \
+	| MEMPOOL_F_NO_IOVA_CONTIG \
+	)
+/**
  * @internal When debug is enabled, store some statistics.
  *
  * @param mp
