@@ -80,6 +80,10 @@ New Features
   Added macros ETH_RSS_IPV4_CHKSUM and ETH_RSS_L4_CHKSUM, now IPv4 and
   TCP/UDP/SCTP header checksum field can be used as input set for RSS.
 
+* **Added power monitor API in vhost library.**
+
+  Added an API to support power monitor in vhost library.
+
 * **Updated virtio PMD.**
 
   Implement rte_power_monitor API in virtio PMD.
