@@ -43,6 +43,10 @@ Deprecation Notices
   removed in DPDK 22.11. Corresponding flags with ``RTE_MEMPOOL_F_*``
   should be used instead.
 
+* mempool: Helper macro ``MEMPOOL_HEADER_SIZE()`` is deprecated and will
+  be removed in DPDK 22.11. The replacement macro
+  ``RTE_MEMPOOL_HEADER_SIZE()`` is internal only.
+
 * mbuf: The mbuf offload flags ``PKT_*`` will be renamed as ``RTE_MBUF_F_*``.
   A compatibility layer will be kept until DPDK 22.11, except for the flags
   that are already deprecated (``PKT_RX_L4_CKSUM_BAD``, ``PKT_RX_IP_CKSUM_BAD``,
