@@ -733,6 +733,7 @@ port_infos_display(portid_t port_id)
 	printf("Max segment number per MTU/TSO: %hu\n",
 		dev_info.tx_desc_lim.nb_mtu_seg_max);
 
+	printf("Device capabilities: 0x%"PRIx64"\n", dev_info.dev_capa);
 	/* Show switch info only if valid switch domain and port id is set */
 	if (dev_info.switch_info.domain_id !=
 		RTE_ETH_DEV_SWITCH_DOMAIN_ID_INVALID) {
@@ -743,6 +744,9 @@ port_infos_display(portid_t port_id)
 			dev_info.switch_info.domain_id);
 		printf("Switch Port Id: %u\n",
 			dev_info.switch_info.port_id);
+		if ((dev_info.dev_capa & RTE_ETH_DEV_CAPA_RXQ_SHARE) != 0)
+			printf("Switch Rx domain: %u\n",
+			       dev_info.switch_info.rx_domain);
 	}
 }
 
