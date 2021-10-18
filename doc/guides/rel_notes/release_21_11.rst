@@ -167,6 +167,10 @@ New Features
   * Added tests to verify tunnel header verification in IPsec inbound.
   * Added tests to verify inner checksum.
 
+* **IPsec Security Gateway sample application new features.**
+
+  * Added support for telemetry
+
 
 Removed Items
 -------------
