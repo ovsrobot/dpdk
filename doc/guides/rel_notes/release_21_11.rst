@@ -170,6 +170,8 @@ New Features
 * **IPsec Security Gateway sample application new features.**
 
   * Added support for telemetry
+  * Added support for more AEAD algorithms: AES-GMAC, AES_CTR, AES_XCBC_MAC,
+    AES_CCM, CHACHA20_POLY1305
 
 
 Removed Items
