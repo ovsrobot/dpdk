@@ -29,7 +29,7 @@ int open_ioat(const char *value);
 
 int32_t
 ioat_transfer_data_cb(int vid, uint16_t queue_id,
-		struct rte_vhost_async_desc *descs,
+		struct rte_vhost_iov_iter *iov_iter,
 		struct rte_vhost_async_status *opaque_data, uint16_t count);
 
 int32_t
