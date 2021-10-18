@@ -216,7 +216,7 @@ rte_mempool_calc_obj_size(uint32_t elt_size, uint32_t flags,
 	sz = (sz != NULL) ? sz : &lsz;
 
 	sz->header_size = sizeof(struct rte_mempool_objhdr);
-	if ((flags & MEMPOOL_F_NO_CACHE_ALIGN) == 0)
+	if ((flags & RTE_MEMPOOL_F_NO_CACHE_ALIGN) == 0)
 		sz->header_size = RTE_ALIGN_CEIL(sz->header_size,
 			RTE_MEMPOOL_ALIGN);
 
@@ -230,7 +230,7 @@ rte_mempool_calc_obj_size(uint32_t elt_size, uint32_t flags,
 	sz->elt_size = RTE_ALIGN_CEIL(elt_size, sizeof(uint64_t));
 
 	/* expand trailer to next cache line */
-	if ((flags & MEMPOOL_F_NO_CACHE_ALIGN) == 0) {
+	if ((flags & RTE_MEMPOOL_F_NO_CACHE_ALIGN) == 0) {
 		sz->total_size = sz->header_size + sz->elt_size +
 			sz->trailer_size;
 		sz->trailer_size += ((RTE_MEMPOOL_ALIGN -
@@ -242,7 +242,7 @@ rte_mempool_calc_obj_size(uint32_t elt_size, uint32_t flags,
 	 * increase trailer to add padding between objects in order to
 	 * spread them across memory channels/ranks
 	 */
-	if ((flags & MEMPOOL_F_NO_SPREAD) == 0) {
+	if ((flags & RTE_MEMPOOL_F_NO_SPREAD) == 0) {
 		unsigned new_size;
 		new_size = arch_mem_object_align
 			    (sz->header_size + sz->elt_size + sz->trailer_size);
@@ -294,11 +294,11 @@ mempool_ops_alloc_once(struct rte_mempool *mp)
 	int ret;
 
 	/* create the internal ring if not already done */
-	if ((mp->flags & MEMPOOL_F_POOL_CREATED) == 0) {
+	if ((mp->flags & RTE_MEMPOOL_F_POOL_CREATED) == 0) {
 		ret = rte_mempool_ops_alloc(mp);
 		if (ret != 0)
 			return ret;
-		mp->flags |= MEMPOOL_F_POOL_CREATED;
+		mp->flags |= RTE_MEMPOOL_F_POOL_CREATED;
 	}
 	return 0;
 }
@@ -336,7 +336,7 @@ rte_mempool_populate_iova(struct rte_mempool *mp, char *vaddr,
 	memhdr->free_cb = free_cb;
 	memhdr->opaque = opaque;
 
-	if (mp->flags & MEMPOOL_F_NO_CACHE_ALIGN)
+	if (mp->flags & RTE_MEMPOOL_F_NO_CACHE_ALIGN)
 		off = RTE_PTR_ALIGN_CEIL(vaddr, 8) - vaddr;
 	else
 		off = RTE_PTR_ALIGN_CEIL(vaddr, RTE_MEMPOOL_ALIGN) - vaddr;
@@ -393,7 +393,7 @@ rte_mempool_populate_virt(struct rte_mempool *mp, char *addr,
 	size_t off, phys_len;
 	int ret, cnt = 0;
 
-	if (mp->flags & MEMPOOL_F_NO_IOVA_CONTIG)
+	if (mp->flags & RTE_MEMPOOL_F_NO_IOVA_CONTIG)
 		return rte_mempool_populate_iova(mp, addr, RTE_BAD_IOVA,
 			len, free_cb, opaque);
 
@@ -450,7 +450,7 @@ rte_mempool_get_page_size(struct rte_mempool *mp, size_t *pg_sz)
 	if (ret < 0)
 		return -EINVAL;
 	alloc_in_ext_mem = (ret == 1);
-	need_iova_contig_obj = !(mp->flags & MEMPOOL_F_NO_IOVA_CONTIG);
+	need_iova_contig_obj = !(mp->flags & RTE_MEMPOOL_F_NO_IOVA_CONTIG);
 
 	if (!need_iova_contig_obj)
 		*pg_sz = 0;
@@ -527,7 +527,7 @@ rte_mempool_populate_default(struct rte_mempool *mp)
 	 * reserve space in smaller chunks.
 	 */
 
-	need_iova_contig_obj = !(mp->flags & MEMPOOL_F_NO_IOVA_CONTIG);
+	need_iova_contig_obj = !(mp->flags & RTE_MEMPOOL_F_NO_IOVA_CONTIG);
 	ret = rte_mempool_get_page_size(mp, &pg_sz);
 	if (ret < 0)
 		return ret;
@@ -777,12 +777,12 @@ rte_mempool_cache_free(struct rte_mempool_cache *cache)
 	rte_free(cache);
 }
 
-#define MEMPOOL_KNOWN_FLAGS (MEMPOOL_F_NO_SPREAD \
-	| MEMPOOL_F_NO_CACHE_ALIGN \
-	| MEMPOOL_F_SP_PUT \
-	| MEMPOOL_F_SC_GET \
-	| MEMPOOL_F_POOL_CREATED \
-	| MEMPOOL_F_NO_IOVA_CONTIG \
+#define MEMPOOL_KNOWN_FLAGS (RTE_MEMPOOL_F_NO_SPREAD \
+	| RTE_MEMPOOL_F_NO_CACHE_ALIGN \
+	| RTE_MEMPOOL_F_SP_PUT \
+	| RTE_MEMPOOL_F_SC_GET \
+	| RTE_MEMPOOL_F_POOL_CREATED \
+	| RTE_MEMPOOL_F_NO_IOVA_CONTIG \
 	)
 /* create an empty mempool */
 struct rte_mempool *
@@ -835,8 +835,8 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	}
 
 	/* "no cache align" imply "no spread" */
-	if (flags & MEMPOOL_F_NO_CACHE_ALIGN)
-		flags |= MEMPOOL_F_NO_SPREAD;
+	if (flags & RTE_MEMPOOL_F_NO_CACHE_ALIGN)
+		flags |= RTE_MEMPOOL_F_NO_SPREAD;
 
 	/* calculate mempool object sizes. */
 	if (!rte_mempool_calc_obj_size(elt_size, flags, &objsz)) {
@@ -948,11 +948,11 @@ rte_mempool_create(const char *name, unsigned n, unsigned elt_size,
 	 * Since we have 4 combinations of the SP/SC/MP/MC examine the flags to
 	 * set the correct index into the table of ops structs.
 	 */
-	if ((flags & MEMPOOL_F_SP_PUT) && (flags & MEMPOOL_F_SC_GET))
+	if ((flags & RTE_MEMPOOL_F_SP_PUT) && (flags & RTE_MEMPOOL_F_SC_GET))
 		ret = rte_mempool_set_ops_byname(mp, "ring_sp_sc", NULL);
-	else if (flags & MEMPOOL_F_SP_PUT)
+	else if (flags & RTE_MEMPOOL_F_SP_PUT)
 		ret = rte_mempool_set_ops_byname(mp, "ring_sp_mc", NULL);
-	else if (flags & MEMPOOL_F_SC_GET)
+	else if (flags & RTE_MEMPOOL_F_SC_GET)
 		ret = rte_mempool_set_ops_byname(mp, "ring_mp_sc", NULL);
 	else
 		ret = rte_mempool_set_ops_byname(mp, "ring_mp_mc", NULL);

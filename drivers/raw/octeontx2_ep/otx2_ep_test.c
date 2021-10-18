@@ -71,7 +71,8 @@ sdp_ioq_mempool_create(void)
 				   NULL /*obj_init*/,
 				   NULL /*obj_init arg*/,
 				   rte_socket_id() /*socket id*/,
-				   (MEMPOOL_F_SP_PUT | MEMPOOL_F_SC_GET));
+				   (RTE_MEMPOOL_F_SP_PUT |
+				    RTE_MEMPOOL_F_SC_GET));
 
 	return mpool;
 }

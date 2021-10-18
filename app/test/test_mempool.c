@@ -213,7 +213,7 @@ static int test_mempool_creation_with_unknown_flag(void)
 		MEMPOOL_ELT_SIZE, 0, 0,
 		NULL, NULL,
 		NULL, NULL,
-		SOCKET_ID_ANY, MEMPOOL_F_NO_IOVA_CONTIG << 1);
+		SOCKET_ID_ANY, RTE_MEMPOOL_F_NO_IOVA_CONTIG << 1);
 
 	if (mp_cov != NULL) {
 		rte_mempool_free(mp_cov);
@@ -336,8 +336,8 @@ test_mempool_sp_sc(void)
 			my_mp_init, NULL,
 			my_obj_init, NULL,
 			SOCKET_ID_ANY,
-			MEMPOOL_F_NO_CACHE_ALIGN | MEMPOOL_F_SP_PUT |
-			MEMPOOL_F_SC_GET);
+			RTE_MEMPOOL_F_NO_CACHE_ALIGN | RTE_MEMPOOL_F_SP_PUT |
+			RTE_MEMPOOL_F_SC_GET);
 		if (mp_spsc == NULL)
 			RET_ERR();
 	}

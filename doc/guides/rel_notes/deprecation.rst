@@ -39,6 +39,10 @@ Deprecation Notices
   ``__atomic_thread_fence`` must be used for patches that need to be merged in
   20.08 onwards. This change will not introduce any performance degradation.
 
+* mempool: The mempool flags ``MEMPOOL_F_*`` are deprecated and will be
+  removed in DPDK 22.11. Corresponding flags with ``RTE_MEMPOOL_F_*``
+  should be used instead.
+
 * mbuf: The mbuf offload flags ``PKT_*`` will be renamed as ``RTE_MBUF_F_*``.
   A compatibility layer will be kept until DPDK 22.11, except for the flags
   that are already deprecated (``PKT_RX_L4_CKSUM_BAD``, ``PKT_RX_IP_CKSUM_BAD``,
