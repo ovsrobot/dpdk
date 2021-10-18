@@ -1332,8 +1332,8 @@ F: drivers/raw/octeontx2_ep/
 F: doc/guides/rawdevs/octeontx2_ep.rst
 
 NTB
-M: Xiaoyun Li <xiaoyun.li@intel.com>
 M: Jingjing Wu <jingjing.wu@intel.com>
+M: Junfeng Guo <junfeng.guo@intel.com>
 F: drivers/raw/ntb/
 F: doc/guides/rawdevs/ntb.rst
 F: examples/ntb/
