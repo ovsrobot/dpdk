@@ -80,6 +80,10 @@ New Features
   Added macros ETH_RSS_IPV4_CHKSUM and ETH_RSS_L4_CHKSUM, now IPv4 and
   TCP/UDP/SCTP header checksum field can be used as input set for RSS.
 
+* **Updated virtio PMD.**
+
+  Implement rte_power_monitor API in virtio PMD.
+
 * **Updated af_packet ethdev driver.**
 
   * Default VLAN strip behavior was changed. VLAN tag won't be stripped
