@@ -75,6 +75,12 @@ New Features
     operations.
   * Added multi-process support.
 
+* **Added ethdev shared Rx queue support.**
+
+  * Added new device capability flag and rx domain field to switch info.
+  * Added share group and share queue ID to Rx queue configuration.
+  * Added testpmd support and dedicate forwarding engine.
+ 
 * **Added new RSS offload types for IPv4/L4 checksum in RSS flow.**
 
   Added macros ETH_RSS_IPV4_CHKSUM and ETH_RSS_L4_CHKSUM, now IPv4 and
