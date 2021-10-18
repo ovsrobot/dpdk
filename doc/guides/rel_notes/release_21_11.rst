@@ -167,6 +167,12 @@ New Features
   * Added tests to verify tunnel header verification in IPsec inbound.
   * Added tests to verify inner checksum.
 
+* **Added initial RSS support to Virtio PMD.**
+
+  Initial support for RSS receive mode has been added to the Virtio PMD,
+  with the capability for the application to configure the hash key, the
+  RETA and the hash types. Virtio hash reporting is yet to be added.
+
 
 Removed Items
 -------------
