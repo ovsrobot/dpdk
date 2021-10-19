@@ -422,6 +422,14 @@ mprq_buf_to_pkt(struct mlx5_rxq_data *rxq, struct rte_mbuf *pkt, uint32_t len,
 	const uint32_t offset = strd_idx * strd_sz + strd_shift;
 	void *addr = RTE_PTR_ADD(mlx5_mprq_buf_addr(buf, strd_n), offset);
 
+#ifdef RTE_MEMCPY_AMDEPYC
+	if (len <= rxq->mprq_max_memcpy_len) {
+		rte_prefetch1(addr);
+		if (len > RTE_CACHE_LINE_SIZE)
+			rte_prefetch2((void *)((uintptr_t)addr +
+					       RTE_CACHE_LINE_SIZE));
+	}
+#endif
 	/*
 	 * Memcpy packets to the target mbuf if:
 	 * - The size of packet is smaller than mprq_max_memcpy_len.
@@ -433,8 +441,19 @@ mprq_buf_to_pkt(struct mlx5_rxq_data *rxq, struct rte_mbuf *pkt, uint32_t len,
 	    (hdrm_overlap > 0 && !rxq->strd_scatter_en)) {
 		if (likely(len <=
 			   (uint32_t)(pkt->buf_len - RTE_PKTMBUF_HEADROOM))) {
+#ifdef RTE_MEMCPY_AMDEPYC
+			uintptr_t data_addr;
+
+			data_addr = (uintptr_t)rte_pktmbuf_mtod(pkt, void *);
+			if (!((data_addr | (uintptr_t)addr) & ALIGNMENT_MASK))
+				rte_memcpy_aligned_tstore16((void *)data_addr,
+					   addr, len);
+			else
+				rte_memcpy((void *)data_addr, addr, len);
+#else
 			rte_memcpy(rte_pktmbuf_mtod(pkt, void *),
 				   addr, len);
+#endif
 			DATA_LEN(pkt) = len;
 		} else if (rxq->strd_scatter_en) {
 			struct rte_mbuf *prev = pkt;
