@@ -1,11 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2017 Intel Corporation
 
-sources = files('rte_sched.c', 'rte_red.c', 'rte_approx.c')
-headers = files(
-        'rte_approx.h',
-        'rte_red.h',
-        'rte_sched.h',
-        'rte_sched_common.h',
-)
+sources = files('rte_sched.c', 'rte_red.c', 'rte_approx.c', 'rte_pie.c')
+headers = files('rte_sched.h', 'rte_sched_common.h',
+		'rte_red.h', 'rte_approx.h', 'rte_pie.h')
 deps += ['mbuf', 'meter']
