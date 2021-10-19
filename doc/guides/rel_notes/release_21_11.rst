@@ -167,6 +167,15 @@ New Features
   * Added tests to verify tunnel header verification in IPsec inbound.
   * Added tests to verify inner checksum.
 
+* **Enable ASan for memory detector on DPDK.**
+
+  `AddressSanitizer
+  <https://github.com/google/sanitizers/wiki/AddressSanitizer>` (ASan)
+  is a widely-used debugging tool to detect memory access errors.
+  It helps detect issues like use-after-free, various kinds of buffer
+  overruns in C/C++ programs, and other similar errors, as well as
+  printing out detailed debug information whenever an error is detected.
+
 
 Removed Items
 -------------
