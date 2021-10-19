@@ -752,6 +752,8 @@ hinic_dev_infos_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *info)
 				DEV_TX_OFFLOAD_TCP_TSO |
 				DEV_TX_OFFLOAD_MULTI_SEGS;
 
+	info->dev_capa &= ~RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP;
+
 	info->hash_key_size = HINIC_RSS_KEY_SIZE;
 	info->reta_size = HINIC_RSS_INDIR_SIZE;
 	info->flow_type_rss_offloads = HINIC_RSS_OFFLOAD_ALL;

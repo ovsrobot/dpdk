@@ -1718,6 +1718,8 @@ mrvl_dev_infos_get(struct rte_eth_dev *dev,
 {
 	struct mrvl_priv *priv = dev->data->dev_private;
 
+	info->dev_capa &= ~RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP;
+
 	info->speed_capa = ETH_LINK_SPEED_10M |
 			   ETH_LINK_SPEED_100M |
 			   ETH_LINK_SPEED_1G |
