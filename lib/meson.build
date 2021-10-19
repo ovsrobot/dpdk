@@ -75,6 +75,7 @@ if is_windows
             'net',
             'meter',
             'ethdev',
+            'dmadev',
             'pci',
             'cmdline',
             'metrics',
