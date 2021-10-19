@@ -175,5 +175,7 @@ struct bufdesc *enet_get_nextdesc(struct bufdesc *bdp,
 		struct bufdesc_prop *bd);
 int enet_new_rxbdp(struct enetfec_private *fep, struct bufdesc *bdp,
 		struct rte_mbuf *mbuf);
+void enetfec_enable(void *base);
+void enetfec_disable(void *base);
 
 #endif /*__ENETFEC_ETHDEV_H__*/
