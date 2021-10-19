@@ -165,6 +165,20 @@ static const struct {
 
 #undef RTE_TX_OFFLOAD_BIT2STR
 
+#define RTE_ETH_DEV_CAPA_BIT2STR(_name)	\
+	{ RTE_ETH_DEV_CAPA_##_name, #_name }
+
+static const struct {
+	uint64_t offload;
+	const char *name;
+} rte_eth_dev_capa_names[] = {
+	RTE_ETH_DEV_CAPA_BIT2STR(RUNTIME_RX_QUEUE_SETUP),
+	RTE_ETH_DEV_CAPA_BIT2STR(RUNTIME_TX_QUEUE_SETUP),
+	RTE_ETH_DEV_CAPA_BIT2STR(RXQ_SHARE),
+};
+
+#undef RTE_ETH_DEV_CAPA_BIT2STR
+
 /**
  * The user application callback description.
  *
@@ -1253,6 +1267,22 @@ rte_eth_dev_tx_offload_name(uint64_t offload)
 	for (i = 0; i < RTE_DIM(eth_dev_tx_offload_names); ++i) {
 		if (offload == eth_dev_tx_offload_names[i].offload) {
 			name = eth_dev_tx_offload_names[i].name;
+			break;
+		}
+	}
+
+	return name;
+}
+
+const char *
+rte_eth_dev_capability_name(uint64_t capability)
+{
+	const char *name = "UNKNOWN";
+	unsigned int i;
+
+	for (i = 0; i < RTE_DIM(rte_eth_dev_capa_names); ++i) {
+		if (capability == rte_eth_dev_capa_names[i].offload) {
+			name = rte_eth_dev_capa_names[i].name;
 			break;
 		}
 	}
