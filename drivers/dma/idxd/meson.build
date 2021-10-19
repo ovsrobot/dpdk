@@ -10,6 +10,7 @@ endif
 
 deps += ['bus_pci']
 sources = files(
+        'idxd_bus.c',
         'idxd_common.c',
         'idxd_pci.c'
 )
