@@ -1171,6 +1171,7 @@ struct i40e_pf {
 	bool dport_replace_flag;   /* Destination port replace is done */
 	struct i40e_tm_conf tm_conf;
 	bool support_multi_driver; /* 1 - support multiple driver */
+	bool disable_source_pruning; /* 1 - disable source pruning */
 
 	/* Dynamic Device Personalization */
 	bool gtp_support; /* 1 - support GTP-C and GTP-U */

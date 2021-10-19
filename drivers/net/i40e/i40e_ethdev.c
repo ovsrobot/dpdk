@@ -47,6 +47,7 @@
 #define ETH_I40E_SUPPORT_MULTI_DRIVER	"support-multi-driver"
 #define ETH_I40E_QUEUE_NUM_PER_VF_ARG	"queue-num-per-vf"
 #define ETH_I40E_VF_MSG_CFG		"vf_msg_cfg"
+#define ETH_I40E_DISABLE_SOURCE_PRUNING_ARG	"disable_source_pruning"
 
 #define I40E_CLEAR_PXE_WAIT_MS     200
 #define I40E_VSI_TSR_QINQ_STRIP		0x4010
@@ -411,6 +412,7 @@ static const char *const valid_keys[] = {
 	ETH_I40E_SUPPORT_MULTI_DRIVER,
 	ETH_I40E_QUEUE_NUM_PER_VF_ARG,
 	ETH_I40E_VF_MSG_CFG,
+	ETH_I40E_DISABLE_SOURCE_PRUNING_ARG,
 	NULL};
 
 static const struct rte_pci_id pci_id_i40e_map[] = {
@@ -1368,6 +1370,23 @@ read_vf_msg_config(__rte_unused const char *key,
 }
 
 static int
+i40e_parse_bool(__rte_unused const char *key, const char *value, void *opaque)
+{
+	char *end;
+	unsigned long i;
+
+	errno = 0;
+	i = strtoul(value, &end, 10);
+	if (errno != 0 || end == value || *end != 0 || i > 1) {
+		PMD_DRV_LOG(ERR, "Wrong bool value: %s", value);
+		return -EINVAL;
+	}
+
+	*(bool *)opaque = (bool)i;
+	return 0;
+}
+
+static int
 i40e_parse_vf_msg_config(struct rte_eth_dev *dev,
 		struct i40e_vf_msg_cfg *msg_cfg)
 {
@@ -1398,6 +1417,42 @@ i40e_parse_vf_msg_config(struct rte_eth_dev *dev,
 	if (rte_kvargs_process(kvlist, ETH_I40E_VF_MSG_CFG,
 			read_vf_msg_config, msg_cfg) < 0)
 		ret = -EINVAL;
+
+free_end:
+	rte_kvargs_free(kvlist);
+	return ret;
+}
+
+static int
+i40e_parse_source_pruning_config(struct rte_eth_dev *dev)
+{
+	struct i40e_pf *pf = I40E_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct rte_kvargs *kvlist;
+	int kvargs_count;
+	int ret = -EINVAL;
+
+	if (!dev->device->devargs)
+		return 0;
+
+	kvlist = rte_kvargs_parse(dev->device->devargs->args, valid_keys);
+	if (!kvlist)
+		return 0;
+
+	kvargs_count = rte_kvargs_count(kvlist,
+					ETH_I40E_DISABLE_SOURCE_PRUNING_ARG);
+	if (kvargs_count > 1) {
+		PMD_DRV_LOG(ERR, "More than one argument \"%s\"!",
+			    ETH_I40E_DISABLE_SOURCE_PRUNING_ARG);
+		goto free_end;
+	}
+
+	if (kvargs_count &&
+	    rte_kvargs_process(kvlist, ETH_I40E_DISABLE_SOURCE_PRUNING_ARG,
+			       i40e_parse_bool,
+			       &pf->disable_source_pruning) < 0)
+		goto free_end;
+
+	ret = 0;
 
 free_end:
 	rte_kvargs_free(kvlist);
@@ -1486,6 +1541,10 @@ eth_i40e_dev_init(struct rte_eth_dev *dev, void *init_params __rte_unused)
 	i40e_parse_vf_msg_config(dev, &pf->vf_msg_cfg);
 	/* Check if need to support multi-driver */
 	i40e_support_multi_driver(dev);
+
+	ret = i40e_parse_source_pruning_config(dev);
+	if (ret)
+		return ret;
 
 	/* Make sure all is clean before doing PF reset */
 	i40e_clear_hw(hw);
@@ -5812,6 +5871,12 @@ i40e_vsi_setup(struct i40e_pf *pf,
 		ctxt.pf_num = hw->pf_id;
 		ctxt.uplink_seid = vsi->uplink_seid;
 		ctxt.vf_num = 0;
+		if (pf->disable_source_pruning) {
+			ctxt.info.valid_sections |=
+				cpu_to_le16(I40E_AQ_VSI_PROP_SWITCH_VALID);
+			ctxt.info.switch_id |=
+				cpu_to_le16(I40E_AQ_VSI_SW_ID_FLAG_LOCAL_LB);
+		}
 
 		/* Update VSI parameters */
 		ret = i40e_aq_update_vsi_params(hw, &ctxt, NULL);

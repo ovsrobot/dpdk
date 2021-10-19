@@ -236,6 +236,15 @@ Runtime Config Options
 
   -a 84:00.0,vf_msg_cfg=80@120:180
 
+- ``Disable source pruning on PF`` (default ``not disabled``)
+
+  When a MAC address is added to a device, packets originating from that MAC
+  address will be dropped for source pruning. To disable source pruning on PF
+  we can add ``devargs`` parameter ``disable_source_pruning=[0,1]`` and set its
+  value to 1, for example::
+
+  -a 84:00.0,disable_source_pruning=1
+
 Vector RX Pre-conditions
 ~~~~~~~~~~~~~~~~~~~~~~~~
 For Vector RX it is assumed that the number of descriptor rings will be a power
