@@ -9,6 +9,7 @@ if is_windows
 endif
 
 deps += ['bus_pci']
+cflags += '-mavx2' # all platforms with idxd HW support AVX
 sources = files(
         'idxd_bus.c',
         'idxd_common.c',
