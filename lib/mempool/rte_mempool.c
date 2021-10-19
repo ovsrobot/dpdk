@@ -861,7 +861,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 		goto exit_unlock;
 	}
 
-	mempool_size = MEMPOOL_HEADER_SIZE(mp, cache_size);
+	mempool_size = RTE_MEMPOOL_HEADER_SIZE(mp, cache_size);
 	mempool_size += private_data_size;
 	mempool_size = RTE_ALIGN_CEIL(mempool_size, RTE_MEMPOOL_ALIGN);
 
@@ -877,7 +877,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 
 	/* init the mempool structure */
 	mp = mz->addr;
-	memset(mp, 0, MEMPOOL_HEADER_SIZE(mp, cache_size));
+	memset(mp, 0, RTE_MEMPOOL_HEADER_SIZE(mp, cache_size));
 	ret = strlcpy(mp->name, name, sizeof(mp->name));
 	if (ret < 0 || ret >= (int)sizeof(mp->name)) {
 		rte_errno = ENAMETOOLONG;
@@ -901,7 +901,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	 * The local_cache points to just past the elt_pa[] array.
 	 */
 	mp->local_cache = (struct rte_mempool_cache *)
-		RTE_PTR_ADD(mp, MEMPOOL_HEADER_SIZE(mp, 0));
+		RTE_PTR_ADD(mp, RTE_MEMPOOL_HEADER_SIZE(mp, 0));
 
 	/* Init all default caches. */
 	if (cache_size != 0) {
