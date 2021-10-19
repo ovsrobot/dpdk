@@ -71,4 +71,5 @@ Programmer's Guide
     writing_efficient_code
     lto
     profile_app
+    asan
     glossary
