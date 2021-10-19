@@ -1298,12 +1298,15 @@ show_mempool(char *name)
 				"\t  -- No IOVA config (%c)\n",
 				ptr->name,
 				ptr->socket_id,
-				(flags & MEMPOOL_F_NO_SPREAD) ? 'y' : 'n',
-				(flags & MEMPOOL_F_NO_CACHE_ALIGN) ? 'y' : 'n',
-				(flags & MEMPOOL_F_SP_PUT) ? 'y' : 'n',
-				(flags & MEMPOOL_F_SC_GET) ? 'y' : 'n',
-				(flags & MEMPOOL_F_POOL_CREATED) ? 'y' : 'n',
-				(flags & MEMPOOL_F_NO_IOVA_CONTIG) ? 'y' : 'n');
+				(flags & RTE_MEMPOOL_F_NO_SPREAD) ? 'y' : 'n',
+				(flags & RTE_MEMPOOL_F_NO_CACHE_ALIGN) ?
+					'y' : 'n',
+				(flags & RTE_MEMPOOL_F_SP_PUT) ? 'y' : 'n',
+				(flags & RTE_MEMPOOL_F_SC_GET) ? 'y' : 'n',
+				(flags & RTE_MEMPOOL_F_POOL_CREATED) ?
+					'y' : 'n',
+				(flags & RTE_MEMPOOL_F_NO_IOVA_CONTIG) ?
+					'y' : 'n');
 			printf("  - Size %u Cache %u element %u\n"
 				"  - header %u trailer %u\n"
 				"  - private data size %u\n",
