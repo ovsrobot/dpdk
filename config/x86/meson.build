@@ -72,3 +72,10 @@ endif
 dpdk_conf.set('RTE_CACHE_LINE_SIZE', 64)
 dpdk_conf.set('RTE_MAX_LCORE', 128)
 dpdk_conf.set('RTE_MAX_NUMA_NODES', 32)
+
+if meson.is_cross_build()
+	if meson.get_cross_property('platform') == 'amd-epyc'
+	    dpdk_conf.set('RTE_MAX_LCORE', 512)
+	    dpdk_conf.set('RTE_MEMCPY_AMDEPYC', 1)
+	endif
+endif
