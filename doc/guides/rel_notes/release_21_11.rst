@@ -20,6 +20,10 @@ DPDK Release 21.11
       ninja -C build doc
       xdg-open build/doc/guides/html/rel_notes/release_21_11.html
 
+* **Added NXP ENETFEC PMD.**
+
+  Added the new ENETFEC driver for the NXP IMX8MMEVK platform. See the
+  :doc:`../nics/enetfec` NIC driver guide for more details on this new driver.
 
 New Features
 ------------
