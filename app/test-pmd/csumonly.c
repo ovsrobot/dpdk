@@ -91,12 +91,41 @@ struct simple_gre_hdr {
 } __rte_packed;
 
 static uint16_t
-get_udptcp_checksum(void *l3_hdr, void *l4_hdr, uint16_t ethertype)
+get_udptcp_checksum(void *l3_hdr, struct rte_mbuf *m, uint16_t l4_off,
+		    uint16_t ethertype)
 {
+	uint16_t off = l4_off;
+	uint32_t cksum = 0;
+	char *buf;
+
+	while (m != NULL) {
+		buf = rte_pktmbuf_mtod_offset(m, char *, off);
+		cksum += rte_raw_cksum(buf, m->data_len - off);
+		off = 0;
+		m = m->next;
+	}
 	if (ethertype == _htons(RTE_ETHER_TYPE_IPV4))
-		return rte_ipv4_udptcp_cksum(l3_hdr, l4_hdr);
+		cksum += rte_ipv4_phdr_cksum(l3_hdr, 0);
 	else /* assume ethertype == RTE_ETHER_TYPE_IPV6 */
-		return rte_ipv6_udptcp_cksum(l3_hdr, l4_hdr);
+		cksum += rte_ipv6_phdr_cksum(l3_hdr, 0);
+
+	cksum = ((cksum & 0xffff0000) >> 16) + (cksum & 0xffff);
+	cksum = (~cksum) & 0xffff;
+
+	/*
+	 * Per RFC 768:If the computed checksum is zero for UDP,
+	 * it is transmitted as all ones
+	 * (the equivalent in one's complement arithmetic).
+	 */
+	if (cksum == 0 && ethertype == _htons(RTE_ETHER_TYPE_IPV4) &&
+	    ((struct rte_ipv4_hdr *)l3_hdr)->next_proto_id == IPPROTO_UDP)
+		cksum = 0xffff;
+
+	if (cksum == 0 && ethertype == _htons(RTE_ETHER_TYPE_IPV6) &&
+	    ((struct rte_ipv6_hdr *)l3_hdr)->proto == IPPROTO_UDP)
+		cksum = 0xffff;
+
+	return (uint16_t)cksum;
 }
 
 /* Parse an IPv4 header to fill l3_len, l4_len, and l4_proto */
@@ -455,7 +484,7 @@ parse_encap_ip(void *encap_ip, struct testpmd_offload_info *info)
  * depending on the testpmd command line configuration */
 static uint64_t
 process_inner_cksums(void *l3_hdr, const struct testpmd_offload_info *info,
-	uint64_t tx_offloads)
+	uint64_t tx_offloads, struct rte_mbuf *m)
 {
 	struct rte_ipv4_hdr *ipv4_hdr = l3_hdr;
 	struct rte_udp_hdr *udp_hdr;
@@ -463,6 +492,7 @@ process_inner_cksums(void *l3_hdr, const struct testpmd_offload_info *info,
 	struct rte_sctp_hdr *sctp_hdr;
 	uint64_t ol_flags = 0;
 	uint32_t max_pkt_len, tso_segsz = 0;
+	uint16_t l4_off;
 
 	/* ensure packet is large enough to require tso */
 	if (!info->is_tunnel) {
@@ -505,9 +535,15 @@ process_inner_cksums(void *l3_hdr, const struct testpmd_offload_info *info,
 			if (tx_offloads & DEV_TX_OFFLOAD_UDP_CKSUM) {
 				ol_flags |= PKT_TX_UDP_CKSUM;
 			} else {
+				if (info->is_tunnel)
+					l4_off = info->l2_len +
+						info->outer_l3_len +
+						info->l2_len + info->l3_len;
+				else
+					l4_off = info->l2_len +	info->l3_len;
 				udp_hdr->dgram_cksum = 0;
 				udp_hdr->dgram_cksum =
-					get_udptcp_checksum(l3_hdr, udp_hdr,
+					get_udptcp_checksum(l3_hdr, m, l4_off,
 						info->ethertype);
 			}
 		}
@@ -520,9 +556,14 @@ process_inner_cksums(void *l3_hdr, const struct testpmd_offload_info *info,
 		else if (tx_offloads & DEV_TX_OFFLOAD_TCP_CKSUM) {
 			ol_flags |= PKT_TX_TCP_CKSUM;
 		} else {
+			if (info->is_tunnel)
+				l4_off = info->l2_len + info->outer_l3_len +
+					info->l2_len + info->l3_len;
+			else
+				l4_off = info->l2_len + info->l3_len;
 			tcp_hdr->cksum = 0;
 			tcp_hdr->cksum =
-				get_udptcp_checksum(l3_hdr, tcp_hdr,
+				get_udptcp_checksum(l3_hdr, m, l4_off,
 					info->ethertype);
 		}
 		if (info->gso_enable)
@@ -548,7 +589,7 @@ process_inner_cksums(void *l3_hdr, const struct testpmd_offload_info *info,
 /* Calculate the checksum of outer header */
 static uint64_t
 process_outer_cksums(void *outer_l3_hdr, struct testpmd_offload_info *info,
-	uint64_t tx_offloads, int tso_enabled)
+	uint64_t tx_offloads, int tso_enabled, struct rte_mbuf *m)
 {
 	struct rte_ipv4_hdr *ipv4_hdr = outer_l3_hdr;
 	struct rte_ipv6_hdr *ipv6_hdr = outer_l3_hdr;
@@ -602,12 +643,9 @@ process_outer_cksums(void *outer_l3_hdr, struct testpmd_offload_info *info,
 	/* do not recalculate udp cksum if it was 0 */
 	if (udp_hdr->dgram_cksum != 0) {
 		udp_hdr->dgram_cksum = 0;
-		if (info->outer_ethertype == _htons(RTE_ETHER_TYPE_IPV4))
-			udp_hdr->dgram_cksum =
-				rte_ipv4_udptcp_cksum(ipv4_hdr, udp_hdr);
-		else
-			udp_hdr->dgram_cksum =
-				rte_ipv6_udptcp_cksum(ipv6_hdr, udp_hdr);
+		udp_hdr->dgram_cksum = get_udptcp_checksum(outer_l3_hdr,
+					m, info->l2_len + info->outer_l3_len,
+					info->outer_ethertype);
 	}
 
 	return ol_flags;
@@ -942,7 +980,7 @@ tunnel_update:
 
 		/* process checksums of inner headers first */
 		tx_ol_flags |= process_inner_cksums(l3_hdr, &info,
-			tx_offloads);
+			tx_offloads, m);
 
 		/* Then process outer headers if any. Note that the software
 		 * checksum will be wrong if one of the inner checksums is
@@ -950,7 +988,7 @@ tunnel_update:
 		if (info.is_tunnel == 1) {
 			tx_ol_flags |= process_outer_cksums(outer_l3_hdr, &info,
 					tx_offloads,
-					!!(tx_ol_flags & PKT_TX_TCP_SEG));
+					!!(tx_ol_flags & PKT_TX_TCP_SEG), m);
 		}
 
 		/* step 3: fill the mbuf meta data (flags and header lengths) */
