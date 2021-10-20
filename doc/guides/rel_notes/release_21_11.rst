@@ -75,6 +75,11 @@ New Features
     operations.
   * Added multi-process support.
 
+* **Added IDXD dmadev driver implementation.**
+
+  The IDXD dmadev driver provide device drivers for the Intel DSA devices.
+  This device driver can be used through the generic dmadev API.
+
 * **Added new RSS offload types for IPv4/L4 checksum in RSS flow.**
 
   Added macros ETH_RSS_IPV4_CHKSUM and ETH_RSS_L4_CHKSUM, now IPv4 and
