@@ -121,9 +121,7 @@ rte_pflock_read_lock(rte_pflock_t *pf)
 		return;
 
 	/* Wait for current write phase to complete. */
-	while ((__atomic_load_n(&pf->rd.in, __ATOMIC_ACQUIRE)
-		& RTE_PFLOCK_WBITS) == w)
-		rte_pause();
+	rte_wait_event(&pf->rd.in, RTE_PFLOCK_WBITS, w, ==, __ATOMIC_ACQUIRE, 16);
 }
 
 /**
