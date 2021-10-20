@@ -116,8 +116,13 @@ rte_mcslock_unlock(rte_mcslock_t **msl, rte_mcslock_t *me)
 		/* More nodes added to the queue by other CPUs.
 		 * Wait until the next pointer is set.
 		 */
-		while (__atomic_load_n(&me->next, __ATOMIC_RELAXED) == NULL)
-			rte_pause();
+#ifdef RTE_ARCH_32
+		rte_wait_event((uint32_t *)&me->next, UINT32_MAX, 0, ==,
+				__ATOMIC_RELAXED, 32);
+#else
+		rte_wait_event((uint64_t *)&me->next, UINT64_MAX, 0, ==,
+				__ATOMIC_RELAXED, 64);
+#endif
 	}
 
 	/* Pass lock to next waiter. */
