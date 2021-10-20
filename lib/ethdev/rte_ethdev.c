@@ -1884,6 +1884,17 @@ rte_eth_dev_close(uint16_t port_id)
 	dev = &rte_eth_devices[port_id];
 
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->dev_close, -ENOTSUP);
+
+	if (dev->data->dev_started) {
+		*lasterr = rte_eth_dev_stop(port_id);
+		if (*lasterr != 0) {
+			RTE_ETHDEV_LOG(ERR,
+				"Failed to stop device (port %u) before close: %s - ignore\n",
+				port_id, rte_strerror(-*lasterr));
+			lasterr = &binerr;
+		}
+	}
+
 	*lasterr = (*dev->dev_ops->dev_close)(dev);
 	if (*lasterr != 0)
 		lasterr = &binerr;
