@@ -111,6 +111,38 @@ rte_wait_until_equal_64(volatile uint64_t *addr, uint64_t expected,
 	while (__atomic_load_n(addr, memorder) != expected)
 		rte_pause();
 }
+
+/*
+ * Wait until *addr breaks the condition, with a relaxed memory
+ * ordering model meaning the loads around this API can be reordered.
+ *
+ * @param addr
+ *  A pointer to the memory location.
+ * @param mask
+ *  A mask of value bits in interest.
+ * @param expected
+ *  A 16-bit expected value to be in the memory location.
+ * @param cond
+ *  A symbol representing the condition (==, !=).
+ * @param memorder
+ *  Two different memory orders that can be specified:
+ *  __ATOMIC_ACQUIRE and __ATOMIC_RELAXED. These map to
+ *  C++11 memory orders with the same names, see the C++11 standard or
+ *  the GCC wiki on atomic synchronization for detailed definition.
+ * @param size
+ * The bit size of *addr:
+ * It is used for arm architecture to choose load instructions,
+ * and the optional value is 16, 32 and 64.
+ */
+#define rte_wait_event(addr, mask, expected, cond, memorder, size)     \
+do {                                                                   \
+	RTE_BUILD_BUG_ON(!__builtin_constant_p(memorder));             \
+	RTE_BUILD_BUG_ON(memorder != __ATOMIC_ACQUIRE &&               \
+				memorder != __ATOMIC_RELAXED);         \
+	RTE_BUILD_BUG_ON(size != 16 && size != 32 && size != 64);      \
+	while ((__atomic_load_n(addr, memorder) & mask) cond expected) \
+		rte_pause();                                           \
+} while (0)
 #endif
 
 #endif /* _RTE_PAUSE_H_ */
