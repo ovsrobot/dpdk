@@ -399,6 +399,11 @@ if dpdk_conf.has('RTE_NET_RING')
     fast_tests += [['latencystats_autotest', true]]
     fast_tests += [['pdump_autotest', true]]
 endif
+if dpdk_conf.has('RTE_NET_VIRTIO')
+    test_deps += 'net_virtio'
+    test_sources += 'test_devargs.c'
+    fast_tests += [['devargs_autotest', true]]
+endif
 
 if dpdk_conf.has('RTE_LIB_POWER')
     test_deps += 'power'
