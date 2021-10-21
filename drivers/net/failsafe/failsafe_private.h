@@ -309,6 +309,12 @@ extern int failsafe_mac_from_arg;
 	 : &PRIV(dev)->subs[PRIV(dev)->subs_tx]))
 
 /**
+ * check for fail-safe sub-device valid port
+ */
+#define SUBDEV_VALID_PORTID(s) \
+    rte_eth_dev_is_valid_port(PORT_ID(s))
+
+/**
  * s:   (struct sub_device *)
  * ops: (struct eth_dev_ops) member
  */
