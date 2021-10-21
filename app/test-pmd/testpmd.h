@@ -12,6 +12,10 @@
 #include <rte_gro.h>
 #include <rte_gso.h>
 #include <rte_os_shim.h>
+#include <rte_mbuf_dyn.h>
+#include <rte_flow.h>
+#include <rte_ethdev.h>
+
 #include <cmdline.h>
 #include <sys/queue.h>
 #ifdef RTE_HAS_JANSSON
@@ -339,6 +343,7 @@ extern struct fwd_engine five_tuple_swap_fwd_engine;
 #ifdef RTE_LIBRTE_IEEE1588
 extern struct fwd_engine ieee1588_fwd_engine;
 #endif
+extern struct fwd_engine shared_rxq_engine;
 
 extern struct fwd_engine * fwd_engines[]; /**< NULL terminated array. */
 extern cmdline_parse_inst_t cmd_set_raw;
