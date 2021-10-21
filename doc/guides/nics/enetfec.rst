@@ -82,6 +82,8 @@ driver.
 ENETFEC Features
 ~~~~~~~~~~~~~~~~~
 
+- Basic stats
+- Promiscuous
 - Linux
 - ARMv8
 
