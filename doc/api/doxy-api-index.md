@@ -122,6 +122,8 @@ The public API headers are grouped by topics:
   [VXLAN]              (@ref rte_vxlan.h),
   [Geneve]             (@ref rte_geneve.h),
   [eCPRI]              (@ref rte_ecpri.h)
+  [L2TPv2]             (@ref rte_l2tpv2.h)
+  [PPP]                (@ref rte_ppp.h)
 
 - **QoS**:
   [metering]           (@ref rte_meter.h),
