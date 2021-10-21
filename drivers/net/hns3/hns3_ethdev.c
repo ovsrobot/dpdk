@@ -2707,6 +2707,7 @@ hns3_dev_infos_get(struct rte_eth_dev *eth_dev, struct rte_eth_dev_info *info)
 	if (hns3_dev_get_support(hw, INDEP_TXRX))
 		info->dev_capa = RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP |
 				 RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP;
+	info->dev_capa &= ~RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP;
 
 	if (hns3_dev_get_support(hw, PTP))
 		info->rx_offload_capa |= DEV_RX_OFFLOAD_TIMESTAMP;
