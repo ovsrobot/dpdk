@@ -90,6 +90,11 @@
  *     - flow director filtering mode (but not filtering rules)
  *     - NIC queue statistics mappings
  *
+ * The following configuration may be retained or not
+ * depending on the device capabilities:
+ *
+ *     - flow rules
+ *
  * Any other configuration will not be stored and will need to be re-entered
  * before a call to rte_eth_dev_start().
  *
@@ -1445,6 +1450,8 @@ struct rte_eth_conf {
 #define RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP 0x00000001
 /** Device supports Tx queue setup after device started. */
 #define RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP 0x00000002
+/** Device supports keeping flow rules across restart. */
+#define RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP 0x00000004
 /**@}*/
 
 /*
