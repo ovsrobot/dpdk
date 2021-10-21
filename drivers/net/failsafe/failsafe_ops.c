@@ -371,7 +371,8 @@ fs_rx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
 		close(rxq->event_fd);
 	FOREACH_SUBDEV_STATE(sdev, i, dev, DEV_ACTIVE) {
 		if (ETH(sdev)->data->rx_queues != NULL &&
-		    ETH(sdev)->data->rx_queues[rxq->qid] != NULL)
+			ETH(sdev)->data->rx_queues[rxq->qid] != NULL &&
+			SUBDEV_VALID_PORTID(sdev))
 			SUBOPS(sdev, rx_queue_release)(ETH(sdev), rxq->qid);
 	}
 	dev->data->rx_queues[rxq->qid] = NULL;
@@ -405,6 +406,12 @@ fs_rx_queue_setup(struct rte_eth_dev *dev,
 	fs_lock(dev, 0);
 	if (rx_conf->rx_deferred_start) {
 		FOREACH_SUBDEV_STATE(sdev, i, dev, DEV_PROBED) {
+			if (!SUBDEV_VALID_PORTID(sdev)) {
+				ERROR("%s: Invalid sub-device port_id=%u\n",
+					__func__, PORT_ID(sdev));
+				fs_unlock(dev, 0);
+				return -ENODEV;
+			}
 			if (SUBOPS(sdev, rx_queue_start) == NULL) {
 				ERROR("Rx queue deferred start is not "
 					"supported for subdevice %d", i);
@@ -548,7 +555,8 @@ fs_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
 	fs_lock(dev, 0);
 	FOREACH_SUBDEV_STATE(sdev, i, dev, DEV_ACTIVE) {
 		if (ETH(sdev)->data->tx_queues != NULL &&
-		    ETH(sdev)->data->tx_queues[txq->qid] != NULL)
+			ETH(sdev)->data->tx_queues[txq->qid] != NULL &&
+			SUBDEV_VALID_PORTID(sdev))
 			SUBOPS(sdev, tx_queue_release)(ETH(sdev), txq->qid);
 	}
 	dev->data->tx_queues[txq->qid] = NULL;
@@ -571,6 +579,12 @@ fs_tx_queue_setup(struct rte_eth_dev *dev,
 	fs_lock(dev, 0);
 	if (tx_conf->tx_deferred_start) {
 		FOREACH_SUBDEV_STATE(sdev, i, dev, DEV_PROBED) {
+			if (!SUBDEV_VALID_PORTID(sdev)) {
+				ERROR("%s: Invalid sub-device port_id=%u\n",
+					__func__, PORT_ID(sdev));
+				fs_unlock(dev, 0);
+				return -ENODEV;
+			}
 			if (SUBOPS(sdev, tx_queue_start) == NULL) {
 				ERROR("Tx queue deferred start is not "
 					"supported for subdevice %d", i);
@@ -645,6 +659,12 @@ failsafe_eth_dev_close(struct rte_eth_dev *dev)
 	fs_lock(dev, 0);
 	failsafe_hotplug_alarm_cancel(dev);
 	if (PRIV(dev)->state == DEV_STARTED) {
+		if (!rte_eth_dev_is_valid_port(dev->data->port_id)) {
+			ERROR("%s: Invalid sub-device port_id=%u\n",
+				__func__, dev->data->port_id);
+			fs_unlock(dev, 0);
+			return -ENODEV;
+		}
 		ret = dev->dev_ops->dev_stop(dev);
 		if (ret != 0) {
 			fs_unlock(dev, 0);
@@ -827,6 +847,12 @@ fs_link_update(struct rte_eth_dev *dev,
 
 	fs_lock(dev, 0);
 	FOREACH_SUBDEV_STATE(sdev, i, dev, DEV_ACTIVE) {
+		if (!SUBDEV_VALID_PORTID(sdev)) {
+			ERROR("%s: Invalid Sub-device port_id=%u\n",
+				__func__, PORT_ID(sdev));
+			fs_unlock(dev, 0);
+			return -ENODEV;
+		}
 		DEBUG("Calling link_update on sub_device %d", i);
 		ret = (SUBOPS(sdev, link_update))(ETH(sdev), wait_to_complete);
 		if (ret && ret != -1 && sdev->remove == 0 &&
@@ -1249,6 +1275,15 @@ fs_dev_supported_ptypes_get(struct rte_eth_dev *dev)
 		goto unlock;
 	}
 	edev = ETH(sdev);
+
+	if (!SUBDEV_VALID_PORTID(sdev)) {
+		ERROR("%s: Invalid TX_SUBDEV port_id=%u\n",
+			__func__, PORT_ID(sdev));
+		rte_errno = -ENODEV;
+		ret = NULL;
+		goto unlock;
+	}
+
 	/* ENOTSUP: counts as no supported ptypes */
 	if (SUBOPS(sdev, dev_supported_ptypes_get) == NULL) {
 		ret = NULL;
@@ -1322,6 +1357,12 @@ fs_flow_ctrl_get(struct rte_eth_dev *dev,
 	sdev = TX_SUBDEV(dev);
 	if (sdev == NULL) {
 		ret = 0;
+		goto unlock;
+	}
+	if (!SUBDEV_VALID_PORTID(sdev)) {
+		ERROR("%s: Invalid TX_SUBDEV port_id=%u\n",
+			__func__, PORT_ID(sdev));
+		ret = -ENODEV;
 		goto unlock;
 	}
 	if (SUBOPS(sdev, flow_ctrl_get) == NULL) {
