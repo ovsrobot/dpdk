@@ -1641,6 +1641,7 @@ F: app/test/sample_packet_forward.h
 
 Driver testing tool
 M: Xiaoyun Li <xiaoyun.li@intel.com>
+M: Aman Singh <aman.deep.singh@intel.com>
 T: git://dpdk.org/next/dpdk-next-net
 F: app/test-pmd/
 F: doc/guides/testpmd_app_ug/
