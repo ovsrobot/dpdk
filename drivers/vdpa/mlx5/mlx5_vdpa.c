@@ -535,6 +535,12 @@ mlx5_vdpa_dev_probe(struct mlx5_common_device *cdev)
 		DRV_LOG(ERR, "Failed to allocate VAR %u.", errno);
 		goto error;
 	}
+	priv->err_intr_handle =
+		rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_SHARED);
+	if (!priv->err_intr_handle) {
+		DRV_LOG(ERR, "Fail to allocate intr_handle");
+		goto error;
+	}
 	priv->vdev = rte_vdpa_register_device(cdev->dev, &mlx5_vdpa_ops);
 	if (priv->vdev == NULL) {
 		DRV_LOG(ERR, "Failed to register vDPA device.");
@@ -553,6 +559,8 @@ error:
 	if (priv) {
 		if (priv->var)
 			mlx5_glue->dv_free_var(priv->var);
+		if (priv->err_intr_handle)
+			rte_intr_instance_free(priv->err_intr_handle);
 		rte_free(priv);
 	}
 	return -rte_errno;
@@ -584,6 +592,8 @@ mlx5_vdpa_dev_remove(struct mlx5_common_device *cdev)
 		if (priv->vdev)
 			rte_vdpa_unregister_device(priv->vdev);
 		pthread_mutex_destroy(&priv->vq_config_lock);
+		if (priv->err_intr_handle)
+			rte_intr_instance_free(priv->err_intr_handle);
 		rte_free(priv);
 	}
 	return 0;
