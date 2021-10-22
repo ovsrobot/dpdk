@@ -33,7 +33,27 @@ struct rte_intr_handle;
 /** Interrupt instance could be shared within primary secondary process. */
 #define RTE_INTR_INSTANCE_F_SHARED	0x00000002
 
-#include "rte_eal_interrupts.h"
+#define RTE_MAX_RXTX_INTR_VEC_ID      512
+#define RTE_INTR_VEC_ZERO_OFFSET      0
+#define RTE_INTR_VEC_RXTX_OFFSET      1
+
+/**
+ * The interrupt source type, e.g. UIO, VFIO, ALARM etc.
+ */
+enum rte_intr_handle_type {
+	RTE_INTR_HANDLE_UNKNOWN = 0,  /**< generic unknown handle */
+	RTE_INTR_HANDLE_UIO,          /**< uio device handle */
+	RTE_INTR_HANDLE_UIO_INTX,     /**< uio generic handle */
+	RTE_INTR_HANDLE_VFIO_LEGACY,  /**< vfio device handle (legacy) */
+	RTE_INTR_HANDLE_VFIO_MSI,     /**< vfio device handle (MSI) */
+	RTE_INTR_HANDLE_VFIO_MSIX,    /**< vfio device handle (MSIX) */
+	RTE_INTR_HANDLE_ALARM,        /**< alarm handle */
+	RTE_INTR_HANDLE_EXT,          /**< external handler */
+	RTE_INTR_HANDLE_VDEV,         /**< virtual device */
+	RTE_INTR_HANDLE_DEV_EVENT,    /**< device event handle */
+	RTE_INTR_HANDLE_VFIO_REQ,     /**< VFIO request handle */
+	RTE_INTR_HANDLE_MAX           /**< count of elements */
+};
 
 /** Function to be registered for the specific interrupt */
 typedef void (*rte_intr_callback_fn)(void *cb_arg);
