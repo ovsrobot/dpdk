@@ -180,7 +180,7 @@ dummy_eth_rx_burst(__rte_unused void *rxq,
 		__rte_unused struct rte_mbuf **rx_pkts,
 		__rte_unused uint16_t nb_pkts)
 {
-	RTE_ETHDEV_LOG(ERR, "rx_pkt_burst for not ready port\n");
+	RTE_ETHDEV_LOG(DEBUG, "rx_pkt_burst for not ready port\n");
 	rte_errno = ENOTSUP;
 	return 0;
 }
@@ -190,7 +190,7 @@ dummy_eth_tx_burst(__rte_unused void *txq,
 		__rte_unused struct rte_mbuf **tx_pkts,
 		__rte_unused uint16_t nb_pkts)
 {
-	RTE_ETHDEV_LOG(ERR, "tx_pkt_burst for not ready port\n");
+	RTE_ETHDEV_LOG(DEBUG, "tx_pkt_burst for not ready port\n");
 	rte_errno = ENOTSUP;
 	return 0;
 }
