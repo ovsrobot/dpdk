@@ -206,7 +206,7 @@ eth_dev_fp_ops_reset(struct rte_eth_fp_ops *fpo)
 		.txq = {.data = dummy_data, .clbk = dummy_data,},
 	};
 
-	*fpo = dummy_ops;
+	rte_memcpy(fpo, &dummy_ops, sizeof(struct rte_eth_fp_ops));
 }
 
 void
