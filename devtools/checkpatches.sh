@@ -134,6 +134,15 @@ check_forbidden_additions() { # <patch>
 		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
 		"$1" || res=1
 
+	# refrain from using __reserved which is a reserved keyword in Windows
+	# system headers
+	awk -v FOLDERS="lib drivers app examples" \
+		-v EXPRESSIONS='\\<__reserved\\>' \
+		-v RET_ON_FAIL=1 \
+		-v MESSAGE='Using __reserved' \
+		-f $(dirname $(readlink -f $0))/check-forbidden-tokens.awk \
+		"$1" || res=1
+
 	# SVG must be included with wildcard extension to allow conversion
 	awk -v FOLDERS='doc' \
 		-v EXPRESSIONS='::[[:space:]]*[^[:space:]]*\\.svg' \
