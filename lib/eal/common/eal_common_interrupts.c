@@ -53,10 +53,46 @@ struct rte_intr_handle *rte_intr_instance_alloc(uint32_t flags)
 		return NULL;
 	}
 
+	if (uses_rte_memory) {
+		intr_handle->efds = rte_zmalloc(NULL,
+			RTE_MAX_RXTX_INTR_VEC_ID * sizeof(int), 0);
+	} else {
+		intr_handle->efds = calloc(RTE_MAX_RXTX_INTR_VEC_ID,
+			sizeof(int));
+	}
+	if (intr_handle->efds == NULL) {
+		RTE_LOG(ERR, EAL, "Fail to allocate event fd list\n");
+		rte_errno = ENOMEM;
+		goto fail;
+	}
+
+	if (uses_rte_memory) {
+		intr_handle->elist = rte_zmalloc(NULL,
+			RTE_MAX_RXTX_INTR_VEC_ID * sizeof(struct rte_epoll_event),
+			0);
+	} else {
+		intr_handle->elist = calloc(RTE_MAX_RXTX_INTR_VEC_ID,
+			sizeof(struct rte_epoll_event));
+	}
+	if (intr_handle->elist == NULL) {
+		RTE_LOG(ERR, EAL, "fail to allocate event fd list\n");
+		rte_errno = ENOMEM;
+		goto fail;
+	}
+
 	intr_handle->alloc_flags = flags;
 	intr_handle->nb_intr = RTE_MAX_RXTX_INTR_VEC_ID;
 
 	return intr_handle;
+fail:
+	if (uses_rte_memory) {
+		rte_free(intr_handle->efds);
+		rte_free(intr_handle);
+	} else {
+		free(intr_handle->efds);
+		free(intr_handle);
+	}
+	return NULL;
 }
 
 struct rte_intr_handle *rte_intr_instance_dup(const struct rte_intr_handle *src)
@@ -83,14 +119,69 @@ struct rte_intr_handle *rte_intr_instance_dup(const struct rte_intr_handle *src)
 	return intr_handle;
 }
 
+int rte_intr_event_list_update(struct rte_intr_handle *intr_handle, int size)
+{
+	struct rte_epoll_event *tmp_elist;
+	bool uses_rte_memory;
+	int *tmp_efds;
+
+	CHECK_VALID_INTR_HANDLE(intr_handle);
+
+	if (size == 0) {
+		RTE_LOG(ERR, EAL, "Size can't be zero\n");
+		rte_errno = EINVAL;
+		goto fail;
+	}
+
+	uses_rte_memory =
+		RTE_INTR_INSTANCE_USES_RTE_MEMORY(intr_handle->alloc_flags);
+	if (uses_rte_memory) {
+		tmp_efds = rte_realloc(intr_handle->efds, size * sizeof(int),
+			0);
+	} else {
+		tmp_efds = realloc(intr_handle->efds, size * sizeof(int));
+	}
+	if (tmp_efds == NULL) {
+		RTE_LOG(ERR, EAL, "Failed to realloc the efds list\n");
+		rte_errno = ENOMEM;
+		goto fail;
+	}
+	intr_handle->efds = tmp_efds;
+
+	if (uses_rte_memory) {
+		tmp_elist = rte_realloc(intr_handle->elist,
+			size * sizeof(struct rte_epoll_event), 0);
+	} else {
+		tmp_elist = realloc(intr_handle->elist,
+			size * sizeof(struct rte_epoll_event));
+	}
+	if (tmp_elist == NULL) {
+		RTE_LOG(ERR, EAL, "Failed to realloc the event list\n");
+		rte_errno = ENOMEM;
+		goto fail;
+	}
+	intr_handle->elist = tmp_elist;
+
+	intr_handle->nb_intr = size;
+
+	return 0;
+fail:
+	return -rte_errno;
+}
+
 void rte_intr_instance_free(struct rte_intr_handle *intr_handle)
 {
 	if (intr_handle == NULL)
 		return;
-	if (RTE_INTR_INSTANCE_USES_RTE_MEMORY(intr_handle->alloc_flags))
+	if (RTE_INTR_INSTANCE_USES_RTE_MEMORY(intr_handle->alloc_flags)) {
+		rte_free(intr_handle->efds);
+		rte_free(intr_handle->elist);
 		rte_free(intr_handle);
-	else
+	} else {
+		free(intr_handle->efds);
+		free(intr_handle->elist);
 		free(intr_handle);
+	}
 }
 
 int rte_intr_fd_set(struct rte_intr_handle *intr_handle, int fd)
@@ -239,6 +330,12 @@ int rte_intr_efds_index_get(const struct rte_intr_handle *intr_handle,
 {
 	CHECK_VALID_INTR_HANDLE(intr_handle);
 
+	if (intr_handle->efds == NULL) {
+		RTE_LOG(ERR, EAL, "Event fd list not allocated\n");
+		rte_errno = EFAULT;
+		goto fail;
+	}
+
 	if (index >= intr_handle->nb_intr) {
 		RTE_LOG(ERR, EAL, "Invalid index %d, max limit %d\n", index,
 			intr_handle->nb_intr);
@@ -255,6 +352,12 @@ int rte_intr_efds_index_set(struct rte_intr_handle *intr_handle,
 	int index, int fd)
 {
 	CHECK_VALID_INTR_HANDLE(intr_handle);
+
+	if (intr_handle->efds == NULL) {
+		RTE_LOG(ERR, EAL, "Event fd list not allocated\n");
+		rte_errno = EFAULT;
+		goto fail;
+	}
 
 	if (index >= intr_handle->nb_intr) {
 		RTE_LOG(ERR, EAL, "Invalid size %d, max limit %d\n", index,
@@ -275,6 +378,12 @@ struct rte_epoll_event *rte_intr_elist_index_get(
 {
 	CHECK_VALID_INTR_HANDLE(intr_handle);
 
+	if (intr_handle->elist == NULL) {
+		RTE_LOG(ERR, EAL, "Event list not allocated\n");
+		rte_errno = EFAULT;
+		goto fail;
+	}
+
 	if (index >= intr_handle->nb_intr) {
 		RTE_LOG(ERR, EAL, "Invalid index %d, max limit %d\n", index,
 			intr_handle->nb_intr);
@@ -291,6 +400,12 @@ int rte_intr_elist_index_set(struct rte_intr_handle *intr_handle,
 	int index, struct rte_epoll_event elist)
 {
 	CHECK_VALID_INTR_HANDLE(intr_handle);
+
+	if (intr_handle->elist == NULL) {
+		RTE_LOG(ERR, EAL, "Event list not allocated\n");
+		rte_errno = EFAULT;
+		goto fail;
+	}
 
 	if (index >= intr_handle->nb_intr) {
 		RTE_LOG(ERR, EAL, "Invalid index %d, max limit %d\n", index,
