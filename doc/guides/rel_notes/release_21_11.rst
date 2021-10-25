@@ -197,6 +197,10 @@ New Features
   * Added port representors support on SN1000 SmartNICs
   * Added flow API transfer proxy support
 
+* **Added power monitor API in vhost library.**
+
+  Added an API to support power monitor in vhost library.
+
 * **Updated virtio PMD.**
 
   Add power monitor support in virtio PMD.
