@@ -180,6 +180,12 @@ struct sw_meta {
 	struct ice_adv_rule_info rule_info;
 };
 
+struct sw_rule_query_meta {
+	struct ice_rule_query_data *sw_query_data;
+	/* When redirect, if rule is removed but not added, save meta here */
+	struct sw_meta *sw_meta;
+};
+
 static struct ice_flow_parser ice_switch_dist_parser;
 static struct ice_flow_parser ice_switch_perm_parser;
 
@@ -359,7 +365,7 @@ ice_switch_create(struct ice_adapter *ad,
 	struct ice_pf *pf = &ad->pf;
 	struct ice_hw *hw = ICE_PF_TO_HW(pf);
 	struct ice_rule_query_data rule_added = {0};
-	struct ice_rule_query_data *filter_ptr;
+	struct sw_rule_query_meta *query_meta_ptr = NULL;
 	struct ice_adv_lkup_elem *list =
 		((struct sw_meta *)meta)->list;
 	uint16_t lkups_cnt =
@@ -381,18 +387,30 @@ ice_switch_create(struct ice_adapter *ad,
 	}
 	ret = ice_add_adv_rule(hw, list, lkups_cnt, rule_info, &rule_added);
 	if (!ret) {
-		filter_ptr = rte_zmalloc("ice_switch_filter",
-			sizeof(struct ice_rule_query_data), 0);
-		if (!filter_ptr) {
+		query_meta_ptr = rte_zmalloc("ice_switch_query_meta",
+			sizeof(struct sw_rule_query_meta), 0);
+		if (!query_meta_ptr) {
+			rte_flow_error_set(error, EINVAL,
+				   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
+				   "No memory for ice_switch_query_meta");
+			goto error;
+		}
+
+		query_meta_ptr->sw_query_data =
+			rte_zmalloc("ice_switch_query",
+				    sizeof(struct ice_rule_query_data), 0);
+		if (!query_meta_ptr->sw_query_data) {
 			rte_flow_error_set(error, EINVAL,
 				   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 				   "No memory for ice_switch_filter");
 			goto error;
 		}
-		flow->rule = filter_ptr;
-		rte_memcpy(filter_ptr,
-			&rule_added,
-			sizeof(struct ice_rule_query_data));
+
+		rte_memcpy(query_meta_ptr->sw_query_data,
+			   &rule_added,
+			   sizeof(struct ice_rule_query_data));
+
+		flow->rule = query_meta_ptr;
 	} else {
 		rte_flow_error_set(error, EINVAL,
 			RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
@@ -407,8 +425,26 @@ ice_switch_create(struct ice_adapter *ad,
 error:
 	rte_free(list);
 	rte_free(meta);
+	rte_free(query_meta_ptr);
 
 	return -rte_errno;
+}
+
+static void
+ice_switch_filter_rule_free(struct rte_flow *flow)
+{
+	struct sw_rule_query_meta *query_meta_ptr =
+		(struct sw_rule_query_meta *)flow->rule;
+
+	if (query_meta_ptr) {
+		rte_free(query_meta_ptr->sw_query_data);
+
+		if (query_meta_ptr->sw_meta)
+			rte_free(query_meta_ptr->sw_meta->list);
+
+		rte_free(query_meta_ptr->sw_meta);
+	}
+	rte_free(query_meta_ptr);
 }
 
 static int
@@ -418,12 +454,10 @@ ice_switch_destroy(struct ice_adapter *ad,
 {
 	struct ice_hw *hw = &ad->hw;
 	int ret;
-	struct ice_rule_query_data *filter_ptr;
+	struct sw_rule_query_meta *query_meta_ptr =
+		(struct sw_rule_query_meta *)flow->rule;
 
-	filter_ptr = (struct ice_rule_query_data *)
-		flow->rule;
-
-	if (!filter_ptr) {
+	if (!query_meta_ptr || !query_meta_ptr->sw_query_data) {
 		rte_flow_error_set(error, EINVAL,
 			RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 			"no such flow"
@@ -431,7 +465,7 @@ ice_switch_destroy(struct ice_adapter *ad,
 		return -rte_errno;
 	}
 
-	ret = ice_rem_adv_rule_by_id(hw, filter_ptr);
+	ret = ice_rem_adv_rule_by_id(hw, query_meta_ptr->sw_query_data);
 	if (ret) {
 		rte_flow_error_set(error, EINVAL,
 			RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
@@ -439,14 +473,9 @@ ice_switch_destroy(struct ice_adapter *ad,
 		return -rte_errno;
 	}
 
-	rte_free(filter_ptr);
-	return ret;
-}
+	ice_switch_filter_rule_free(flow);
 
-static void
-ice_switch_filter_rule_free(struct rte_flow *flow)
-{
-	rte_free(flow->rule);
+	return ret;
 }
 
 static bool
@@ -1888,7 +1917,10 @@ ice_switch_redirect(struct ice_adapter *ad,
 		    struct rte_flow *flow,
 		    struct ice_flow_redirect *rd)
 {
-	struct ice_rule_query_data *rdata = flow->rule;
+	struct sw_rule_query_meta *query_meta_ptr =
+		(struct sw_rule_query_meta *)flow->rule;
+	struct ice_rule_query_data *rdata;
+	struct ice_rule_query_data added_rdata = { 0 };
 	struct ice_adv_fltr_mgmt_list_entry *list_itr;
 	struct ice_adv_lkup_elem *lkups_dp = NULL;
 	struct LIST_HEAD_TYPE *list_head;
@@ -1897,6 +1929,12 @@ ice_switch_redirect(struct ice_adapter *ad,
 	struct ice_switch_info *sw;
 	uint16_t lkups_cnt;
 	int ret;
+	int i;
+
+	if (!query_meta_ptr || !query_meta_ptr->sw_query_data)
+		return -EINVAL;
+
+	rdata = query_meta_ptr->sw_query_data;
 
 	if (rdata->vsi_handle != rd->vsi_handle)
 		return 0;
@@ -1936,17 +1974,38 @@ ice_switch_redirect(struct ice_adapter *ad,
 		}
 	}
 
-	if (!lkups_dp)
-		return -EINVAL;
+	if (!lkups_dp) {
+		if (!query_meta_ptr->sw_meta) {
+			PMD_DRV_LOG(ERR, "flow rule %d is not found",
+				    rdata->rule_id);
+			return -EINVAL;
+		}
+		/* if rule is removed but not added, use saved meta */
+		lkups_cnt = query_meta_ptr->sw_meta->lkups_num;
 
-	/* Remove the old rule */
-	ret = ice_rem_adv_rule(hw, list_itr->lkups,
-			       lkups_cnt, &rinfo);
-	if (ret) {
-		PMD_DRV_LOG(ERR, "Failed to delete the old rule %d",
-			    rdata->rule_id);
-		ret = -EINVAL;
-		goto out;
+		lkups_dp = (struct ice_adv_lkup_elem *)ice_malloc(hw,
+				sizeof(*lkups_dp) * lkups_cnt);
+		if (!lkups_dp) {
+			PMD_DRV_LOG(ERR,
+				    "flow rule %d is not found and "
+				    "failed to allocate memory",
+				    rdata->rule_id);
+			return -EINVAL;
+		}
+		for (i = 0; i < lkups_cnt; i++)
+			lkups_dp[i] = query_meta_ptr->sw_meta->list[i];
+
+		rinfo = query_meta_ptr->sw_meta->rule_info;
+	} else {
+		/* Remove the old rule */
+		ret = ice_rem_adv_rule(hw, list_itr->lkups,
+				       lkups_cnt, &rinfo);
+		if (ret) {
+			PMD_DRV_LOG(ERR, "Failed to delete the old rule %d",
+				    rdata->rule_id);
+			ret = -EINVAL;
+			goto out;
+		}
 	}
 
 	/* Update VSI context */
@@ -1954,10 +2013,46 @@ ice_switch_redirect(struct ice_adapter *ad,
 
 	/* Replay the rule */
 	ret = ice_add_adv_rule(hw, lkups_dp, lkups_cnt,
-			       &rinfo, rdata);
+			       &rinfo, &added_rdata);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Failed to replay the rule");
+		/* if rule is removed but not added, save meta */
+		if (!query_meta_ptr->sw_meta) {
+			query_meta_ptr->sw_meta = rte_zmalloc("ice_switch_meta",
+				sizeof(*query_meta_ptr->sw_meta), 0);
+			if (!query_meta_ptr->sw_meta) {
+				PMD_DRV_LOG(ERR,
+					    "Failed to save the rule meta");
+			} else {
+				struct ice_adv_lkup_elem *lkups =
+					rte_zmalloc("ice_switch_meta_lkups",
+						    sizeof(*lkups) * lkups_cnt,
+						    0);
+				if (!lkups) {
+					rte_free(query_meta_ptr->sw_meta);
+					PMD_DRV_LOG(ERR,
+						"Failed to save the rule meta");
+				} else {
+					for (i = 0; i < lkups_cnt; i++)
+						lkups[i] = lkups_dp[i];
+
+					query_meta_ptr->sw_meta->list = lkups;
+					query_meta_ptr->sw_meta->lkups_num =
+						lkups_cnt;
+					query_meta_ptr->sw_meta->rule_info =
+						rinfo;
+				}
+			}
+		}
 		ret = -EINVAL;
+	} else {
+		rte_memcpy(rdata, &added_rdata, sizeof(added_rdata));
+		/* saved meta has been consumed and is no longer needed */
+		if (query_meta_ptr->sw_meta) {
+			rte_free(query_meta_ptr->sw_meta->list);
+			rte_free(query_meta_ptr->sw_meta);
+			query_meta_ptr->sw_meta = NULL;
+		}
 	}
 
 out:
