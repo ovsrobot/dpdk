@@ -197,6 +197,10 @@ New Features
   * Added port representors support on SN1000 SmartNICs
   * Added flow API transfer proxy support
 
+* **Updated virtio PMD.**
+
+  Add power monitor support in virtio PMD.
+
 * **Updated Marvell cnxk crypto PMD.**
 
   * Added AES-CBC SHA1-HMAC support in lookaside protocol (IPsec) for CN10K.
