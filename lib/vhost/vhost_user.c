@@ -149,6 +149,9 @@ async_dma_map(struct rte_vhost_mem_region *region, bool *dma_map_success, bool d
 	uint64_t host_iova;
 	int ret = 0;
 
+	if (!rte_vfio_is_enabled("vfio"))
+		return 0;
+
 	host_iova = rte_mem_virt2iova((void *)(uintptr_t)region->host_user_addr);
 	if (do_map) {
 		/* Add mapped region into the default container of DPDK. */
@@ -176,9 +179,7 @@ async_dma_map(struct rte_vhost_mem_region *region, bool *dma_map_success, bool d
 
 			VHOST_LOG_CONFIG(ERR, "DMA engine map failed\n");
 			return ret;
-
 		}
-
 	} else {
 		/* No need to do vfio unmap if the map failed. */
 		if (!*dma_map_success)
@@ -228,11 +229,8 @@ vhost_backend_cleanup(struct virtio_net *dev)
 		free_mem_region(dev);
 		rte_free(dev->mem);
 		dev->mem = NULL;
-
-		if (dev->async_map_status) {
-			rte_free(dev->async_map_status);
-			dev->async_map_status = NULL;
-		}
+		rte_free(dev->async_map_status);
+		dev->async_map_status = NULL;
 	}
 
 	rte_free(dev->guest_pages);
@@ -689,16 +687,17 @@ out_dev_realloc:
 	dev->mem = mem;
 
 	if (dev->async_copy && rte_vfio_is_enabled("vfio")) {
-		if (dev->async_map_status == NULL) {
-			dev->async_map_status = rte_zmalloc_socket("async-dma-map-status",
-					sizeof(bool) * dev->mem->nregions, 0, node);
-			if (!dev->async_map_status) {
-				VHOST_LOG_CONFIG(ERR,
-					"(%d) failed to realloc dma mapping status on node\n",
-					dev->vid);
-				return dev;
-			}
+		bool *ams;
+
+		ams = rte_realloc_socket(dev->async_map_status, sizeof(*ams) * dev->mem->nregions,
+				0, node);
+		if (!ams) {
+			VHOST_LOG_CONFIG(ERR, "Failed to realloc dma mapping status on node %d\n",
+					node);
+			return dev;
 		}
+
+		dev->async_map_status = ams;
 	}
 
 	gp = rte_realloc_socket(dev->guest_pages, dev->max_guest_pages * sizeof(*gp),
@@ -1294,16 +1293,14 @@ vhost_user_mmap_region(struct virtio_net *dev,
 
 	if (dev->async_copy) {
 		if (add_guest_pages(dev, region, alignment) < 0) {
-			VHOST_LOG_CONFIG(ERR,
-					"adding guest pages to region failed.\n");
+			VHOST_LOG_CONFIG(ERR, "adding guest pages to region failed.\n");
 			return -1;
 		}
 
-		if (rte_vfio_is_enabled("vfio")) {
+		if (dev->async_map_status) {
 			ret = async_dma_map(region, &dev->async_map_status[region_index], true);
 			if (ret) {
-				VHOST_LOG_CONFIG(ERR, "Configure IOMMU for DMA "
-							"engine failed\n");
+				VHOST_LOG_CONFIG(ERR, "Configure IOMMU for DMA engine failed\n");
 				return -1;
 			}
 		}
@@ -1501,10 +1498,8 @@ free_mem_table:
 	free_mem_region(dev);
 	rte_free(dev->mem);
 	dev->mem = NULL;
-	if (dev->async_map_status) {
-		rte_free(dev->async_map_status);
-		dev->async_map_status = NULL;
-	}
+	rte_free(dev->async_map_status);
+	dev->async_map_status = NULL;
 free_guest_pages:
 	rte_free(dev->guest_pages);
 	dev->guest_pages = NULL;
