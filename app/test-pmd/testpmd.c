@@ -65,6 +65,9 @@
 #ifdef RTE_EXEC_ENV_WINDOWS
 #include <process.h>
 #endif
+#ifdef RTE_NET_BOND
+#include <rte_eth_bond.h>
+#endif
 
 #include "testpmd.h"
 
@@ -2995,6 +2998,35 @@ start_port(portid_t pid)
 	return 0;
 }
 
+#ifdef RTE_NET_BOND
+static void
+change_bonding_active_slave_port_status(portid_t bond_pid)
+{
+	portid_t slave_pids[RTE_MAX_ETHPORTS];
+	struct rte_port *port;
+	int num_active_slaves;
+	portid_t slave_pid;
+	int i;
+
+	num_active_slaves = rte_eth_bond_active_slaves_get(bond_pid, slave_pids,
+							   RTE_MAX_ETHPORTS);
+	if (num_active_slaves < 0) {
+		fprintf(stderr, "Failed to get slave list for port = %u\n",
+			bond_pid);
+		return;
+	}
+
+	for (i = 0; i < num_active_slaves; i++) {
+		slave_pid = slave_pids[i];
+		port = &ports[slave_pid];
+		if (rte_atomic16_cmpset(&(port->port_status),
+			RTE_PORT_STARTED, RTE_PORT_STOPPED) == 0)
+			fprintf(stderr, "Port %u can not be set into stopped\n",
+				slave_pid);
+	}
+}
+#endif
+
 void
 stop_port(portid_t pid)
 {
@@ -3051,9 +3083,20 @@ stop_port(portid_t pid)
 		if (port->flow_list)
 			port_flow_flush(pi);
 
-		if (eth_dev_stop_mp(pi) != 0)
-			RTE_LOG(ERR, EAL, "rte_eth_dev_stop failed for port %u\n",
-				pi);
+		if (is_proc_primary()) {
+#ifdef RTE_NET_BOND
+			/*
+			 * Stopping a bond device also stops all active slaves
+			 * under the bond device. If this port is bond device,
+			 * we need to modify the port status of all slaves.
+			 */
+			if (port->bond_flag == 1)
+				change_bonding_active_slave_port_status(pi);
+#endif
+			if (rte_eth_dev_stop(pi) != 0)
+				RTE_LOG(ERR, EAL, "rte_eth_dev_stop failed for port %u\n",
+					pi);
+		}
 
 		if (rte_atomic16_cmpset(&(port->port_status),
 			RTE_PORT_HANDLING, RTE_PORT_STOPPED) == 0)
