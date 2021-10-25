@@ -222,6 +222,7 @@ unsigned int xstats_display_num; /**< Size of extended statistics to show */
  * option. Set flag to exit stats period loop after received SIGINT/SIGTERM.
  */
 uint8_t f_quit;
+uint8_t cl_quit; /* Quit testpmd from cmdline. */
 
 /*
  * Max Rx frame size, set by '--max-pkt-len' parameter.
@@ -615,15 +616,6 @@ eth_dev_start_mp(uint16_t port_id)
 {
 	if (is_proc_primary())
 		return rte_eth_dev_start(port_id);
-
-	return 0;
-}
-
-static int
-eth_dev_stop_mp(uint16_t port_id)
-{
-	if (is_proc_primary())
-		return rte_eth_dev_stop(port_id);
 
 	return 0;
 }
@@ -3132,6 +3124,55 @@ remove_invalid_ports(void)
 	nb_cfg_ports = nb_fwd_ports;
 }
 
+#ifdef RTE_NET_BOND
+static void
+handle_bonding_slave_device(portid_t bond_pid)
+{
+	portid_t slave_pids[RTE_MAX_ETHPORTS];
+	struct rte_port *port;
+	portid_t slave_pid;
+	int num_slaves;
+	int i;
+
+	num_slaves = rte_eth_bond_slaves_get(bond_pid, slave_pids,
+					     RTE_MAX_ETHPORTS);
+	if (num_slaves < 0) {
+		fprintf(stderr, "Failed to get slave list for port = %u\n",
+			bond_pid);
+		return;
+	}
+
+	for (i = 0; i < num_slaves; i++) {
+		slave_pid = slave_pids[i];
+		/* Before removing a slave device, stop the slave device. */
+		if (port_is_started(slave_pid) == 1) {
+			if (rte_eth_dev_stop(slave_pid) != 0)
+				fprintf(stderr, "rte_eth_dev_stop failed for port %u\n",
+					slave_pid);
+
+			port = &ports[slave_pid];
+			if (rte_atomic16_cmpset(&(port->port_status),
+				RTE_PORT_STARTED, RTE_PORT_STOPPED) == 0)
+				fprintf(stderr, "Port %u can not be set into stopped\n",
+					slave_pid);
+		}
+
+		/*
+		 * Remove the slave from a bonded device in case of failing to
+		 * close bond device.
+		 */
+		if (rte_eth_bond_slave_remove(bond_pid, slave_pid) != 0)
+			fprintf(stderr, "Failed to remove slave %u from master port = %u\n",
+				slave_pid, bond_pid);
+		clear_port_slave_flag(slave_pid);
+
+		/* Close slave device when testpmd quit or is killed. */
+		if (cl_quit == 1 || f_quit == 1)
+			rte_eth_dev_close(slave_pid);
+	}
+}
+#endif
+
 void
 close_port(portid_t pid)
 {
@@ -3170,6 +3211,14 @@ close_port(portid_t pid)
 
 		if (is_proc_primary()) {
 			port_flow_flush(pi);
+#ifdef RTE_NET_BOND
+			/*
+			 * If this port is bond device, all slaves under the
+			 * device need to be removed or closed.
+			 */
+			if (port->bond_flag == 1)
+				handle_bonding_slave_device(pi);
+#endif
 			port_flex_item_flush(pi);
 			rte_eth_dev_close(pi);
 		}

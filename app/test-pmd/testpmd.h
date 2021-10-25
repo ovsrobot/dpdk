@@ -27,6 +27,7 @@
 #define RTE_PORT_STARTED        (uint16_t)1
 #define RTE_PORT_CLOSED         (uint16_t)2
 #define RTE_PORT_HANDLING       (uint16_t)3
+extern uint8_t cl_quit;
 
 /*
  * It is used to allocate the memory for hash key.
