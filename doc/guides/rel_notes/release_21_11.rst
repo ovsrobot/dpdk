@@ -201,6 +201,10 @@ New Features
 
   Added an API to support power monitor in vhost library.
 
+* **Updated vhost PMD.**
+
+  Add power monitor support in vhost PMD.
+
 * **Updated virtio PMD.**
 
   Add power monitor support in virtio PMD.
