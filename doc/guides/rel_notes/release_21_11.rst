@@ -189,6 +189,7 @@ New Features
 
   * Added implicit mempool registration to avoid data path hiccups (opt-out).
   * Added NIC offloads for the PMD on Windows (TSO, VLAN strip, CRC keep).
+  * Added support for mlx5 crypto PMD on Windows operating system.
 
 * **Updated Solarflare network PMD.**
 
