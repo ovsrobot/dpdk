@@ -1031,7 +1031,26 @@ ice_dcf_tm_ops_get(struct rte_eth_dev *dev __rte_unused,
 static int
 ice_dcf_dev_reset(struct rte_eth_dev *dev)
 {
+	struct ice_dcf_adapter *ad = dev->data->dev_private;
+	struct iavf_hw *hw = &ad->real_hw.avf;
 	int ret;
+
+	if (!(IAVF_READ_REG(hw, IAVF_VF_ARQLEN1) &
+	      IAVF_VF_ARQLEN1_ARQENABLE_MASK)) {
+		if (!ad->real_hw.resetting)
+			ad->real_hw.resetting = true;
+		PMD_DRV_LOG(ERR, "The DCF has been reset by PF");
+
+		/*
+		 * Do the extra dev uninit/init to make DCF get resource.
+		 * Then the next uninit/init can clean filters successfully.
+		 */
+		ice_dcf_dev_uninit(dev);
+
+		ret = ice_dcf_dev_init(dev);
+		if (ret)
+			return ret;
+	}
 
 	ret = ice_dcf_dev_uninit(dev);
 	if (ret)
