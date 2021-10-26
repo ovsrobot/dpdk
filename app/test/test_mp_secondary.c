@@ -14,7 +14,9 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#ifndef RTE_EXEC_ENV_WINDOWS
 #include <sys/wait.h>
+#endif
 #include <libgen.h>
 #include <dirent.h>
 #include <limits.h>
