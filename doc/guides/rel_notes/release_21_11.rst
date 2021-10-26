@@ -305,6 +305,8 @@ New Features
     * Pcapng format with timestamps and meta-data.
     * Fixes packet capture with stripped VLAN tags.
 
+* **Updated mlx5 compress PMD.**
+  * Added devarg to allow manual setting of Huffman block size.
 
 Removed Items
 -------------
