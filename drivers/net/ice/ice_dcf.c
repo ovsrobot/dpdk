@@ -241,7 +241,7 @@ ice_dcf_get_vf_resource(struct ice_dcf_hw *hw)
 	err = ice_dcf_send_cmd_req_no_irq(hw, VIRTCHNL_OP_GET_VF_RESOURCES,
 					  (uint8_t *)&caps, sizeof(caps));
 	if (err) {
-		PMD_DRV_LOG(ERR, "Failed to send msg OP_GET_VF_RESOURCE");
+		PMD_DRV_LOG(DEBUG, "Failed to send msg OP_GET_VF_RESOURCE");
 		return err;
 	}
 
@@ -249,7 +249,7 @@ ice_dcf_get_vf_resource(struct ice_dcf_hw *hw)
 					  (uint8_t *)hw->vf_res,
 					  ICE_DCF_VF_RES_BUF_SZ, NULL);
 	if (err) {
-		PMD_DRV_LOG(ERR, "Failed to get response of OP_GET_VF_RESOURCE");
+		PMD_DRV_LOG(DEBUG, "Failed to get response of OP_GET_VF_RESOURCE");
 		return -1;
 	}
 
@@ -283,7 +283,7 @@ ice_dcf_get_vf_vsi_map(struct ice_dcf_hw *hw)
 	err = ice_dcf_send_cmd_req_no_irq(hw, VIRTCHNL_OP_DCF_GET_VSI_MAP,
 					  NULL, 0);
 	if (err) {
-		PMD_DRV_LOG(ERR, "Failed to send msg OP_DCF_GET_VSI_MAP");
+		PMD_DRV_LOG(DEBUG, "Failed to send msg OP_DCF_GET_VSI_MAP");
 		return err;
 	}
 
@@ -291,7 +291,7 @@ ice_dcf_get_vf_vsi_map(struct ice_dcf_hw *hw)
 					  hw->arq_buf, ICE_DCF_AQ_BUF_SZ,
 					  &len);
 	if (err) {
-		PMD_DRV_LOG(ERR, "Failed to get response of OP_DCF_GET_VSI_MAP");
+		PMD_DRV_LOG(DEBUG, "Failed to get response of OP_DCF_GET_VSI_MAP");
 		return err;
 	}
 

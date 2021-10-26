@@ -2551,7 +2551,7 @@ ice_flow_redirect(struct ice_adapter *ad,
 			continue;
 		ret = p_flow->engine->redirect(ad, p_flow, rd);
 		if (ret) {
-			PMD_DRV_LOG(ERR, "Failed to redirect flows");
+			PMD_DRV_LOG(DEBUG, "Failed to redirect flows");
 			break;
 		}
 	}

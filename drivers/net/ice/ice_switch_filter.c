@@ -1943,7 +1943,7 @@ ice_switch_redirect(struct ice_adapter *ad,
 	ret = ice_rem_adv_rule(hw, list_itr->lkups,
 			       lkups_cnt, &rinfo);
 	if (ret) {
-		PMD_DRV_LOG(ERR, "Failed to delete the old rule %d",
+		PMD_DRV_LOG(DEBUG, "Failed to delete the old rule %d",
 			    rdata->rule_id);
 		ret = -EINVAL;
 		goto out;
@@ -1956,7 +1956,7 @@ ice_switch_redirect(struct ice_adapter *ad,
 	ret = ice_add_adv_rule(hw, lkups_dp, lkups_cnt,
 			       &rinfo, rdata);
 	if (ret) {
-		PMD_DRV_LOG(ERR, "Failed to replay the rule");
+		PMD_DRV_LOG(DEBUG, "Failed to replay the rule");
 		ret = -EINVAL;
 	}
 
