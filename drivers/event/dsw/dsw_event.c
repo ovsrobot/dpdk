@@ -1400,3 +1400,12 @@ dsw_event_dequeue_burst(void *port, struct rte_event *events, uint16_t num,
 
 	return dequeued;
 }
+
+void dsw_event_maintain(void *port)
+{
+	struct dsw_port *source_port = port;
+	struct dsw_evdev *dsw = source_port->dsw;
+
+	dsw_port_note_op(source_port, 0);
+	dsw_port_bg_process(dsw, source_port);
+}
