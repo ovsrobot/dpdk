@@ -677,6 +677,16 @@ parse_sa_tokens(char **tokens, uint32_t n_tokens,
 			continue;
 		}
 
+		if (strcmp(tokens[ti], "mss") == 0) {
+			INCREMENT_TOKEN_INDEX(ti, n_tokens, status);
+			if (status->status < 0)
+				return;
+			rule->mss = atoi(tokens[ti]);
+			if (status->status < 0)
+				return;
+			continue;
+		}
+
 		if (strcmp(tokens[ti], "fallback") == 0) {
 			struct rte_ipsec_session *fb;
 
