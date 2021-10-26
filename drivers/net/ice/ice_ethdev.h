@@ -318,6 +318,11 @@ struct ice_fdir_filter_conf {
 	uint64_t input_set_o; /* used for non-tunnel or tunnel outer fields */
 	uint64_t input_set_i; /* only for tunnel inner fields */
 	uint32_t mark_flag;
+
+	struct ice_parser_profile *prof;
+	const u8 *pkt_buf;
+	bool parser_ena;
+	u8 pkt_len;
 };
 
 #define ICE_MAX_FDIR_FILTER_NUM		(1024 * 16)
@@ -488,6 +493,17 @@ struct ice_devargs {
 };
 
 /**
+ * Structure to store fdir fv entry.
+ */
+struct ice_fdir_prof_info {
+	struct LIST_ENTRY_TYPE l_entry;
+
+	struct ice_parser_profile prof;
+	u16 ptype;
+	u64 fdir_actived_cnt;
+};
+
+/**
  * Structure to store private data for each PF/VF instance.
  */
 struct ice_adapter {
@@ -509,6 +525,7 @@ struct ice_adapter {
 	struct rte_timecounter rx_tstamp_tc;
 	struct rte_timecounter tx_tstamp_tc;
 	bool ptp_ena;
+	struct LIST_HEAD_TYPE fdir_prof_list;
 #ifdef RTE_ARCH_X86
 	bool rx_use_avx2;
 	bool rx_use_avx512;
