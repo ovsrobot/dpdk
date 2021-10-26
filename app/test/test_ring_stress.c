@@ -43,9 +43,10 @@ test_ring_stress(void)
 	n += test_ring_rts_stress.nb_case;
 	k += run_test(&test_ring_rts_stress);
 
+#ifndef RTE_EXEC_ENV_WINDOWS
 	n += test_ring_hts_stress.nb_case;
 	k += run_test(&test_ring_hts_stress);
-
+#endif
 	n += test_ring_mt_peek_stress.nb_case;
 	k += run_test(&test_ring_mt_peek_stress);
 
