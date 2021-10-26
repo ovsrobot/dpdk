@@ -217,6 +217,10 @@ New Features
   * Added PDCP short MAC-I support.
   * Added raw vector datapath API support.
 
+* **Updated Mellanox mlx5 driver.**
+
+  * Added socket direct mode bonding support.
+
 * **Updated NXP dpaa2_sec crypto PMD.**
 
   * Added PDCP short MAC-I support.
