@@ -1025,10 +1025,42 @@ ice_dcf_tm_ops_get(struct rte_eth_dev *dev __rte_unused,
 	return 0;
 }
 
+static inline void
+ice_dcf_simple_reset(struct rte_eth_dev *eth_dev, struct ice_dcf_hw *hw)
+{
+	ice_dcf_uninit_hw(eth_dev, hw);
+	ice_dcf_init_hw(eth_dev, hw);
+}
+
+/* Check if reset has been triggered by PF */
+static inline bool
+dcf_is_reset(struct rte_eth_dev *dev)
+{
+	struct ice_dcf_adapter *ad = dev->data->dev_private;
+	struct iavf_hw *hw = &ad->real_hw.avf;
+
+	return !(IAVF_READ_REG(hw, IAVF_VF_ARQLEN1) &
+		 IAVF_VF_ARQLEN1_ARQENABLE_MASK);
+}
+
 static int
 ice_dcf_dev_reset(struct rte_eth_dev *dev)
 {
+	struct ice_dcf_adapter *ad = dev->data->dev_private;
+	struct ice_dcf_hw *hw = &ad->real_hw;
 	int ret;
+
+	if (dcf_is_reset(dev)) {
+		if (!ad->real_hw.resetting)
+			ad->real_hw.resetting = true;
+		PMD_DRV_LOG(ERR, "The DCF has been reset by PF");
+
+		/*
+		 * Do the simplified reset to make DCF get AdminQ resource.
+		 * Then the next uninit/init can clean filters successfully.
+		 */
+		ice_dcf_simple_reset(dev, hw);
+	}
 
 	ret = ice_dcf_dev_uninit(dev);
 	if (ret)
