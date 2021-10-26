@@ -7,6 +7,17 @@
 #include <rte_string_fns.h>
 #include <string.h>
 #include "test.h"
+
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_table(void)
+{
+	printf("table not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 #include "test_table.h"
 #include "test_table_pipeline.h"
 #include "test_table_ports.h"
@@ -193,5 +204,7 @@ end:
 
 	return ret;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(table_autotest, test_table);

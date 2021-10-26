@@ -15,6 +15,16 @@
 
 #include "test.h"
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_rcu_qsbr_main(void)
+{
+	printf("rcu_qsbr_main not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 /* Check condition and return an error if true. */
 static uint16_t enabled_core_ids[RTE_MAX_LCORE];
 static unsigned int num_cores;
@@ -686,5 +696,7 @@ test_rcu_qsbr_main(void)
 test_fail:
 	return -1;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(rcu_qsbr_perf_autotest, test_rcu_qsbr_main);
