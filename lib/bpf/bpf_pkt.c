@@ -111,9 +111,9 @@ bpf_eth_cbi_unuse(struct bpf_eth_cbi *cbi)
  * Waits till datapath finished using given callback.
  */
 static void
-bpf_eth_cbi_wait(const struct bpf_eth_cbi *cbi)
+bpf_eth_cbi_wait(struct bpf_eth_cbi *cbi)
 {
-	uint32_t nuse, puse;
+	uint32_t puse;
 
 	/* make sure all previous loads and stores are completed */
 	rte_smp_mb();
@@ -122,11 +122,8 @@ bpf_eth_cbi_wait(const struct bpf_eth_cbi *cbi)
 
 	/* in use, busy wait till current RX/TX iteration is finished */
 	if ((puse & BPF_ETH_CBI_INUSE) != 0) {
-		do {
-			rte_pause();
-			rte_compiler_barrier();
-			nuse = cbi->use;
-		} while (nuse == puse);
+		rte_wait_event(&cbi->use, UINT32_MAX, ==, puse,
+				__ATOMIC_RELAXED);
 	}
 }
 
