@@ -68,6 +68,11 @@ INTERNAL {
 	roc_cpt_lmtline_init;
 	roc_cpt_parse_hdr_dump;
 	roc_cpt_rxc_time_cfg;
+	roc_dpi_dev_init;
+	roc_dpi_dev_fini;
+	roc_dpi_queue_configure;
+	roc_dpi_queue_start;
+	roc_dpi_queue_stop;
 	roc_error_msg_get;
 	roc_hash_sha1_gen;
 	roc_hash_sha256_gen;
