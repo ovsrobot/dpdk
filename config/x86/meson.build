@@ -76,8 +76,10 @@ dpdk_conf.set('RTE_MAX_NUMA_NODES', 32)
 # AMD platform support
 if get_option('cpu_instruction_set') == 'znver3'
     dpdk_conf.set('RTE_MAX_LCORE', 512)
+    dpdk_conf.set('RTE_MEMCPY_AMDEPYC', 1)
 elif get_option('cpu_instruction_set') == 'znver2'
     dpdk_conf.set('RTE_MAX_LCORE', 512)
+    dpdk_conf.set('RTE_MEMCPY_AMDEPYC', 1)
 elif get_option('cpu_instruction_set') == 'znver1'
     dpdk_conf.set('RTE_MAX_LCORE', 256)
 endif
