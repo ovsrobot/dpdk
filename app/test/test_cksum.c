@@ -13,6 +13,16 @@
 
 #include "test.h"
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_cksum(void)
+{
+	printf("cksum not supported, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 #define MEMPOOL_CACHE_SIZE      0
 #define MBUF_DATA_SIZE          256
 #define NB_MBUF                 128
@@ -267,5 +277,7 @@ fail:
 	return -1;
 }
 #undef GOTO_FAIL
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(cksum_autotest, test_cksum);

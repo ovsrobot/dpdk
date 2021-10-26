@@ -28,6 +28,16 @@
 
 #include "test.h"
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_mempool_perf(void)
+{
+	printf("mempool_perf not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 /*
  * Mempool performance
  * =======
@@ -392,5 +402,7 @@ err:
 	rte_mempool_free(default_pool);
 	return ret;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(mempool_perf_autotest, test_mempool_perf);

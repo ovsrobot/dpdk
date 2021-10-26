@@ -2,6 +2,17 @@
  * Copyright(c) 2021 HiSilicon Limited
  * Copyright(c) 2021 Intel Corporation
  */
+#include "test.h"
+
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_dma(void)
+{
+	printf("dma not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
 
 #include <inttypes.h>
 
@@ -13,7 +24,6 @@
 #include <rte_bus_vdev.h>
 #include <rte_dmadev_pmd.h>
 
-#include "test.h"
 #include "test_dmadev_api.h"
 
 #define ERR_RETURN(...) do { print_err(__func__, __LINE__, __VA_ARGS__); return -1; } while (0)
@@ -863,5 +873,7 @@ test_dma(void)
 
 	return 0;
 }
+
+#endif //ifdef RTE_EXEC_ENV_WINDOWS
 
 REGISTER_TEST_COMMAND(dmadev_autotest, test_dma);
