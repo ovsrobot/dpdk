@@ -29,7 +29,7 @@ cnxk_dmadev_info_get(const struct rte_dma_dev *dev,
 	dev_info->nb_vchans = 1;
 	dev_info->dev_capa = RTE_DMA_CAPA_MEM_TO_MEM |
 		RTE_DMA_CAPA_MEM_TO_DEV | RTE_DMA_CAPA_DEV_TO_MEM |
-		RTE_DMA_CAPA_OPS_COPY;
+		RTE_DMA_CAPA_OPS_COPY | RTE_DMA_CAPA_OPS_COPY_SG;
 	dev_info->max_desc = DPI_MAX_DESC;
 	dev_info->min_desc = 1;
 	dev_info->max_sges = DPI_MAX_POINTER;
@@ -294,6 +294,83 @@ cnxk_dmadev_completed(void *dev_private, uint16_t vchan, const uint16_t nb_cpls,
 	return cnt;
 }
 
+static int
+cnxk_dmadev_copy_sg(void *dev_private, uint16_t vchan,
+		    const struct rte_dma_sge *src,
+		    const struct rte_dma_sge *dst,
+		    uint16_t nb_src, uint16_t nb_dst, uint64_t flags)
+{
+	uint64_t cmd[DPI_MAX_CMD_SIZE] = {0};
+	union dpi_instr_hdr_s *header = (union dpi_instr_hdr_s *)&cmd[0];
+	struct cnxk_dpi_vf_s *dpivf = dev_private;
+	const struct rte_dma_sge *fptr, *lptr;
+	struct cnxk_dpi_compl_s *comp_ptr;
+	int num_words = 0;
+	int i, rc;
+
+	RTE_SET_USED(vchan);
+
+	header->s.xtype = dpivf->conf.direction;
+	header->s.pt = DPI_HDR_PT_ZBW_CA;
+	header->s.grp = 0;
+	header->s.tag = 0;
+	header->s.tt = 0;
+	header->s.func = 0;
+	comp_ptr = dpivf->conf.c_desc.compl_ptr[dpivf->conf.c_desc.tail];
+	comp_ptr->cdata = DPI_REQ_CDATA;
+	header->s.ptr = (uint64_t)comp_ptr;
+	STRM_INC(dpivf->conf.c_desc);
+
+	/* pvfs should be set for inbound and outbound only */
+	if (header->s.xtype <= 1)
+		header->s.pvfe = 1;
+	num_words += 4;
+
+	/*
+	 * For inbound case, src pointers are last pointers.
+	 * For all other cases, src pointers are first pointers.
+	 */
+	if (header->s.xtype == DPI_XTYPE_INBOUND) {
+		header->s.nfst = nb_dst & 0xf;
+		header->s.nlst = nb_src & 0xf;
+		fptr = &dst[0];
+		lptr = &src[0];
+		header->s.fport = dpivf->conf.dst_port & 0x3;
+		header->s.lport = dpivf->conf.src_port & 0x3;
+	} else {
+		header->s.nfst = nb_src & 0xf;
+		header->s.nlst = nb_dst & 0xf;
+		fptr = &src[0];
+		lptr = &dst[0];
+		header->s.fport = dpivf->conf.src_port & 0x3;
+		header->s.lport = dpivf->conf.dst_port & 0x3;
+	}
+
+	for (i = 0; i < header->s.nfst; i++) {
+		cmd[num_words++] = (uint64_t)fptr->length;
+		cmd[num_words++] = fptr->addr;
+		fptr++;
+	}
+
+	for (i = 0; i < header->s.nlst; i++) {
+		cmd[num_words++] = (uint64_t)lptr->length;
+		cmd[num_words++] = lptr->addr;
+		lptr++;
+	}
+
+	rc = __dpi_queue_write(&dpivf->rdpi, cmd, num_words);
+	if (!rc) {
+		if (flags & RTE_DMA_OP_FLAG_SUBMIT) {
+			rte_wmb();
+			plt_write64(num_words,
+				    dpivf->rdpi.rbase + DPI_VDMA_DBELL);
+		}
+		dpivf->num_words = num_words;
+	}
+
+	return rc;
+}
+
 static uint16_t
 cnxk_dmadev_completed_status(void *dev_private, uint16_t vchan,
 			     const uint16_t nb_cpls, uint16_t *last_idx,
@@ -369,6 +446,7 @@ cnxk_dmadev_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	dmadev->dev_ops = &cnxk_dmadev_ops;
 
 	dmadev->fp_obj->copy = cnxk_dmadev_copy;
+	dmadev->fp_obj->copy_sg = cnxk_dmadev_copy_sg;
 	dmadev->fp_obj->submit = cnxk_dmadev_submit;
 	dmadev->fp_obj->completed = cnxk_dmadev_completed;
 	dmadev->fp_obj->completed_status = cnxk_dmadev_completed_status;
