@@ -111,7 +111,7 @@ The instruction set will be set automatically by default according to these rule
   a common minimal baseline needed for DPDK.
 
 To override what instruction set will be used, set the ``cpu_instruction_set``
-parameter to the instruction set of your choice (such as ``corei7``, ``power8``, etc.).
+parameter to the instruction set of your choice (such as ``corei7``, ``power8``, ``znver3``, etc.).
 
 ``cpu_instruction_set`` is not used in Arm builds, as setting the instruction set
 without other parameters leads to inferior builds. The way to tailor Arm builds
