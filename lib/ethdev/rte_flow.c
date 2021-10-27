@@ -1335,10 +1335,7 @@ rte_flow_pick_transfer_proxy(uint16_t port_id, uint16_t *proxy_port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	struct rte_eth_dev *dev;
 
-	if (unlikely(ops == NULL))
-		return -rte_errno;
-
-	if (ops->pick_transfer_proxy == NULL) {
+	if (ops == NULL || ops->pick_transfer_proxy == NULL) {
 		*proxy_port_id = port_id;
 		return 0;
 	}
