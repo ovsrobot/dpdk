@@ -248,7 +248,6 @@ fast_tests = [
         ['pflock_autotest', true],
         ['prefetch_autotest', true],
         ['rcu_qsbr_autotest', true],
-        ['red_autotest', true],
         ['rib_autotest', true],
         ['rib6_autotest', true],
         ['ring_autotest', true],
@@ -293,6 +292,8 @@ extra_test_names = [
         'alarm_autotest',
         'cycles_autotest',
         'delay_us_sleep_autotest',
+        # https://bugs.dpdk.org/show_bug.cgi?id=826
+        'red_autotest',
 ]
 
 perf_test_names = [
