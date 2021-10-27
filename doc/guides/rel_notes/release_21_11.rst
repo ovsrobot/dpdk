@@ -305,6 +305,10 @@ New Features
     * Pcapng format with timestamps and meta-data.
     * Fixes packet capture with stripped VLAN tags.
 
+* **IPsec Security Gateway sample application new features.**
+
+  * Added support for telemetry
+
 
 Removed Items
 -------------
