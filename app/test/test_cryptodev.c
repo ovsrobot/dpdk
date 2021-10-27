@@ -7179,7 +7179,7 @@ test_zuc_hash_generate_test_case_9(void)
 static int
 test_zuc_hash_generate_test_case_10(void)
 {
-	return test_zuc_authentication(&zuc_test_case_auth_2080b_mac_128b);
+	return test_zuc_authentication(&zuc_test_case_auth_584b_mac_128b);
 }
 
 static int
