@@ -305,6 +305,11 @@ New Features
     * Pcapng format with timestamps and meta-data.
     * Fixes packet capture with stripped VLAN tags.
 
+* **Updated FIB library API.**
+
+  Added the ``rib_ext_sz`` field to ``rte_fib_conf`` and ``rte_fib6_conf``
+  so that user can specify the size of the rib extension inside the fib.
+
 
 Removed Items
 -------------
