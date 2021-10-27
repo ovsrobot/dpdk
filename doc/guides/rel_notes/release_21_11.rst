@@ -305,6 +305,10 @@ New Features
     * Pcapng format with timestamps and meta-data.
     * Fixes packet capture with stripped VLAN tags.
 
+* **Added optimized Toeplitz hash implementation.**
+
+  Added optimized Toeplitz hash implementation using Galois Fields New Instructions.
+
 
 Removed Items
 -------------
