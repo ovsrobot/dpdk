@@ -1577,6 +1577,9 @@ ice_rx_scan_hw_ring(struct ice_rx_queue *rxq)
 	if (!(stat_err0 & (1 << ICE_RX_FLEX_DESC_STATUS0_DD_S)))
 		return 0;
 
+	if (rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP)
+		rxq->hw_register_set = 1;
+
 	/**
 	 * Scan LOOK_AHEAD descriptors at a time to determine which
 	 * descriptors reference packets that are ready to be received.
@@ -1610,15 +1613,15 @@ ice_rx_scan_hw_ring(struct ice_rx_queue *rxq)
 			ice_rxd_to_vlan_tci(mb, &rxdp[j]);
 			rxq->rxd_to_pkt_fields(rxq, mb, &rxdp[j]);
 #ifndef RTE_LIBRTE_ICE_16BYTE_RX_DESC
-			if (rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
-				ts_ns = ice_tstamp_convert_32b_64b(hw,
+			if (ice_timestamp_dynflag > 0) {
+				ts_ns = ice_tstamp_convert_32b_64b(hw, ad,
+					rxq->hw_register_set,
 					rte_le_to_cpu_32(rxdp[j].wb.flex_ts.ts_high));
-				if (ice_timestamp_dynflag > 0) {
-					*RTE_MBUF_DYNFIELD(mb,
-						ice_timestamp_dynfield_offset,
-						rte_mbuf_timestamp_t *) = ts_ns;
-					mb->ol_flags |= ice_timestamp_dynflag;
-				}
+				rxq->hw_register_set = 0;
+				*RTE_MBUF_DYNFIELD(mb,
+					ice_timestamp_dynfield_offset,
+					rte_mbuf_timestamp_t *) = ts_ns;
+				mb->ol_flags |= ice_timestamp_dynflag;
 			}
 
 			if (ad->ptp_ena && ((mb->packet_type &
@@ -1818,6 +1821,10 @@ ice_recv_scattered_pkts(void *rx_queue,
 	uint64_t ts_ns;
 	struct ice_adapter *ad = rxq->vsi->adapter;
 #endif
+
+	if (rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP)
+		rxq->hw_register_set = 1;
+
 	while (nb_rx < nb_pkts) {
 		rxdp = &rx_ring[rx_id];
 		rx_stat_err0 = rte_le_to_cpu_16(rxdp->wb.status_error0);
@@ -1928,15 +1935,15 @@ ice_recv_scattered_pkts(void *rx_queue,
 		rxq->rxd_to_pkt_fields(rxq, first_seg, &rxd);
 		pkt_flags = ice_rxd_error_to_pkt_flags(rx_stat_err0);
 #ifndef RTE_LIBRTE_ICE_16BYTE_RX_DESC
-		if (rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
-			ts_ns = ice_tstamp_convert_32b_64b(hw,
+		if (ice_timestamp_dynflag > 0) {
+			ts_ns = ice_tstamp_convert_32b_64b(hw, ad,
+				rxq->hw_register_set,
 				rte_le_to_cpu_32(rxd.wb.flex_ts.ts_high));
-			if (ice_timestamp_dynflag > 0) {
-				*RTE_MBUF_DYNFIELD(first_seg,
-					ice_timestamp_dynfield_offset,
-					rte_mbuf_timestamp_t *) = ts_ns;
-				first_seg->ol_flags |= ice_timestamp_dynflag;
-			}
+			rxq->hw_register_set = 0;
+			*RTE_MBUF_DYNFIELD(first_seg,
+				ice_timestamp_dynfield_offset,
+				rte_mbuf_timestamp_t *) = ts_ns;
+			first_seg->ol_flags |= ice_timestamp_dynflag;
 		}
 
 		if (ad->ptp_ena && ((first_seg->packet_type & RTE_PTYPE_L2_MASK)
@@ -2308,6 +2315,10 @@ ice_recv_pkts(void *rx_queue,
 	uint64_t ts_ns;
 	struct ice_adapter *ad = rxq->vsi->adapter;
 #endif
+
+	if (rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP)
+		rxq->hw_register_set = 1;
+
 	while (nb_rx < nb_pkts) {
 		rxdp = &rx_ring[rx_id];
 		rx_stat_err0 = rte_le_to_cpu_16(rxdp->wb.status_error0);
@@ -2359,15 +2370,15 @@ ice_recv_pkts(void *rx_queue,
 		rxq->rxd_to_pkt_fields(rxq, rxm, &rxd);
 		pkt_flags = ice_rxd_error_to_pkt_flags(rx_stat_err0);
 #ifndef RTE_LIBRTE_ICE_16BYTE_RX_DESC
-		if (rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
-			ts_ns = ice_tstamp_convert_32b_64b(hw,
+		if (ice_timestamp_dynflag > 0) {
+			ts_ns = ice_tstamp_convert_32b_64b(hw, ad,
+				rxq->hw_register_set,
 				rte_le_to_cpu_32(rxd.wb.flex_ts.ts_high));
-			if (ice_timestamp_dynflag > 0) {
-				*RTE_MBUF_DYNFIELD(rxm,
-					ice_timestamp_dynfield_offset,
-					rte_mbuf_timestamp_t *) = ts_ns;
-				rxm->ol_flags |= ice_timestamp_dynflag;
-			}
+			rxq->hw_register_set = 0;
+			*RTE_MBUF_DYNFIELD(rxm,
+				ice_timestamp_dynfield_offset,
+				rte_mbuf_timestamp_t *) = ts_ns;
+			rxm->ol_flags |= ice_timestamp_dynflag;
 		}
 
 		if (ad->ptp_ena && ((rxm->packet_type & RTE_PTYPE_L2_MASK) ==
