@@ -1872,11 +1872,12 @@ vfio_dma_mem_map(struct vfio_config *vfio_cfg, uint64_t vaddr, uint64_t iova,
 
 static int
 container_dma_map(struct vfio_config *vfio_cfg, uint64_t vaddr, uint64_t iova,
-		uint64_t len)
+		uint64_t len, uint64_t pagesz)
 {
 	struct user_mem_map *new_map;
 	struct user_mem_maps *user_mem_maps;
 	bool has_partial_unmap;
+	uint64_t chunk_size;
 	int ret = 0;
 
 	user_mem_maps = &vfio_cfg->mem_maps;
@@ -1887,19 +1888,37 @@ container_dma_map(struct vfio_config *vfio_cfg, uint64_t vaddr, uint64_t iova,
 		ret = -1;
 		goto out;
 	}
-	/* map the entry */
-	if (vfio_dma_mem_map(vfio_cfg, vaddr, iova, len, 1)) {
-		/* technically, this will fail if there are currently no devices
-		 * plugged in, even if a device were added later, this mapping
-		 * might have succeeded. however, since we cannot verify if this
-		 * is a valid mapping without having a device attached, consider
-		 * this to be unsupported, because we can't just store any old
-		 * mapping and pollute list of active mappings willy-nilly.
-		 */
-		RTE_LOG(ERR, EAL, "Couldn't map new region for DMA\n");
-		ret = -1;
-		goto out;
+
+	/* technically, mapping will fail if there are currently no devices
+	 * plugged in, even if a device were added later, this mapping might
+	 * have succeeded. however, since we cannot verify if this is a valid
+	 * mapping without having a device attached, consider this to be
+	 * unsupported, because we can't just store any old mapping and pollute
+	 * list of active mappings willy-nilly.
+	 */
+
+	/* if page size was not specified, map the entire segment in one go */
+	if (pagesz == 0) {
+		if (vfio_dma_mem_map(vfio_cfg, vaddr, iova, len, 1)) {
+			RTE_LOG(ERR, EAL, "Couldn't map new region for DMA\n");
+			ret = -1;
+			goto out;
+		}
+	} else {
+		/* otherwise, do mappings page-by-page */
+		uint64_t offset;
+
+		for (offset = 0; offset < len; offset += pagesz) {
+			uint64_t va = vaddr + offset;
+			uint64_t io = iova + offset;
+			if (vfio_dma_mem_map(vfio_cfg, va, io, pagesz, 1)) {
+				RTE_LOG(ERR, EAL, "Couldn't map new region for DMA\n");
+				ret = -1;
+				goto out;
+			}
+		}
 	}
+
 	/* do we have partial unmap support? */
 	has_partial_unmap = vfio_cfg->vfio_iommu_type->partial_unmap;
 
@@ -1908,8 +1927,18 @@ container_dma_map(struct vfio_config *vfio_cfg, uint64_t vaddr, uint64_t iova,
 	new_map->addr = vaddr;
 	new_map->iova = iova;
 	new_map->len = len;
-	/* for IOMMU types supporting partial unmap, we don't need chunking */
-	new_map->chunk = has_partial_unmap ? 0 : len;
+
+	/*
+	 * Chunking essentially serves largely the same purpose as page sizes,
+	 * so for the purposes of this calculation, we treat them as the same.
+	 * The reason we have page sizes is because we want to map things in a
+	 * way that allows us to partially unmap later. Therefore, when IOMMU
+	 * supports partial unmap, page size is irrelevant and can be ignored.
+	 * For IOMMU that don't support partial unmap, page size is equivalent
+	 * to chunk size.
+	 */
+	chunk_size = pagesz == 0 ? len : pagesz;
+	new_map->chunk = has_partial_unmap ? 0 : chunk_size;
 
 	compact_user_maps(user_mem_maps);
 out:
@@ -2179,7 +2208,44 @@ rte_vfio_container_dma_map(int container_fd, uint64_t vaddr, uint64_t iova,
 		return -1;
 	}
 
-	return container_dma_map(vfio_cfg, vaddr, iova, len);
+	/* not having page size means we map entire segment */
+	return container_dma_map(vfio_cfg, vaddr, iova, len, 0);
+}
+
+int
+rte_vfio_container_dma_map_paged(int container_fd, uint64_t vaddr,
+		uint64_t iova, uint64_t len, uint64_t pagesz)
+{
+	struct vfio_config *vfio_cfg;
+	bool va_aligned, iova_aligned, len_aligned, pagesz_aligned;
+
+	/* avoid divide by zero first */
+	if (len == 0 || pagesz == 0) {
+		rte_errno = EINVAL;
+		return -1;
+	}
+	/*
+	 * for direct maps, we leave it up to the kernel to decide whether the
+	 * parameters are valid, but since we are going to map page-by-page and
+	 * are expecting certain guarantees from the parameters we receive, we
+	 * are going to check those here.
+	 */
+	pagesz_aligned = rte_align64pow2(pagesz) == pagesz;
+	len_aligned = (len % pagesz) == 0;
+	va_aligned = RTE_ALIGN(vaddr, pagesz) == pagesz;
+	iova_aligned = RTE_ALIGN(iova, pagesz) == pagesz;
+	if (!pagesz_aligned || !len_aligned || !va_aligned || !iova_aligned) {
+		rte_errno = EINVAL;
+		return -1;
+	}
+
+	vfio_cfg = get_vfio_cfg_by_container_fd(container_fd);
+	if (vfio_cfg == NULL) {
+		RTE_LOG(ERR, EAL, "Invalid VFIO container fd\n");
+		return -1;
+	}
+
+	return container_dma_map(vfio_cfg, vaddr, iova, len, pagesz);
 }
 
 int
@@ -2295,6 +2361,16 @@ rte_vfio_container_dma_map(__rte_unused int container_fd,
 		__rte_unused uint64_t vaddr,
 		__rte_unused uint64_t iova,
 		__rte_unused uint64_t len)
+{
+	return -1;
+}
+
+int
+rte_vfio_container_dma_map_paged(__rte_unused int container_fd,
+		__rte_unused uint64_t vaddr,
+		__rte_unused uint64_t iova,
+		__rte_unused uint64_t len,
+		__rte_unused uint64_t pagesz)
 {
 	return -1;
 }

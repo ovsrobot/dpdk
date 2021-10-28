@@ -485,6 +485,17 @@ rte_vfio_container_dma_map(__rte_unused int container_fd,
 }
 
 int
+rte_vfio_container_dma_map_paged(__rte_unused int container_fd,
+		__rte_unused uint64_t vaddr,
+		__rte_unused uint64_t iova,
+		__rte_unused uint64_t len,
+		__rte_unused uint64_t pagesz)
+{
+	rte_errno = ENOTSUP;
+	return -1;
+}
+
+int
 rte_vfio_container_dma_unmap(__rte_unused int container_fd,
 			__rte_unused uint64_t vaddr,
 			__rte_unused uint64_t iova,

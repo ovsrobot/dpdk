@@ -420,6 +420,7 @@ EXPERIMENTAL {
 	rte_intr_instance_free;
 	rte_intr_type_get;
 	rte_intr_type_set;
+	rte_vfio_container_dma_map_paged;
 };
 
 INTERNAL {

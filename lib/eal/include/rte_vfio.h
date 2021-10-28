@@ -17,6 +17,8 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <rte_compat.h>
+
 /*
  * determine if VFIO is present on the system
  */
@@ -330,6 +332,37 @@ rte_vfio_container_group_unbind(int container_fd, int iommu_group_num);
 int
 rte_vfio_container_dma_map(int container_fd, uint64_t vaddr,
 		uint64_t iova, uint64_t len);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Perform DMA mapping for devices in a container, mapping memory page-by-page.
+ *
+ * @param container_fd
+ *   the specified container fd. Use RTE_VFIO_DEFAULT_CONTAINER_FD to
+ *   use the default container.
+ *
+ * @param vaddr
+ *   Starting virtual address of memory to be mapped.
+ *
+ * @param iova
+ *   Starting IOVA address of memory to be mapped.
+ *
+ * @param len
+ *   Length of memory segment being mapped.
+ *
+ * @param pagesz
+ *   Page size of the underlying memory.
+ *
+ * @return
+ *    0 if successful
+ *   <0 if failed
+ */
+__rte_experimental
+int
+rte_vfio_container_dma_map_paged(int container_fd, uint64_t vaddr,
+		uint64_t iova, uint64_t len, uint64_t pagesz);
 
 /**
  * Perform DMA unmapping for devices in a container.
