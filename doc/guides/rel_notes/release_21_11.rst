@@ -305,6 +305,11 @@ New Features
     * Pcapng format with timestamps and meta-data.
     * Fixes packet capture with stripped VLAN tags.
 
+* **Add new vDPA PMD based on Xilinx devices.**
+
+  Added a new Xilinx vDPA  (``sfc_vdpa``) PMD.
+  See the :doc:`../vdpadevs/sfc` guide for more details on this driver.
+
 
 Removed Items
 -------------
