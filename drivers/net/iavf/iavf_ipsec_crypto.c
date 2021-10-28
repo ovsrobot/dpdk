@@ -509,7 +509,7 @@ iavf_ipsec_crypto_security_association_add(struct iavf_adapter *adapter,
 			htonl(conf->ipsec.tunnel.ipv4.dst_ip.s_addr);
 	} else {
 		uint32_t *v6_dst_addr =
-			conf->ipsec.tunnel.ipv6.dst_addr.s6_addr32;
+			(uint32_t *)conf->ipsec.tunnel.ipv6.dst_addr.s6_addr;
 
 		sa_cfg->virtchnl_ip_type = VIRTCHNL_IPV6;
 
