@@ -7,6 +7,8 @@
 
 #include <stdbool.h>
 
+#include <rte_compat.h>
+
 #include "rte_vhost.h"
 #include "rte_vdpa.h"
 
@@ -88,6 +90,7 @@ struct rte_vdpa_device {
  * @return
  *  vDPA device pointer on success, NULL on failure
  */
+__rte_internal
 struct rte_vdpa_device *
 rte_vdpa_register_device(struct rte_device *rte_dev,
 		struct rte_vdpa_dev_ops *ops);
@@ -100,6 +103,7 @@ rte_vdpa_register_device(struct rte_device *rte_dev,
  * @return
  *  device id on success, -1 on failure
  */
+__rte_internal
 int
 rte_vdpa_unregister_device(struct rte_vdpa_device *dev);
 
@@ -115,6 +119,7 @@ rte_vdpa_unregister_device(struct rte_vdpa_device *dev);
  * @return
  *  0 on success, -1 on failure
  */
+__rte_internal
 int
 rte_vhost_host_notifier_ctrl(int vid, uint16_t qid, bool enable);
 
@@ -132,6 +137,7 @@ rte_vhost_host_notifier_ctrl(int vid, uint16_t qid, bool enable);
  * @return
  *  number of synced used entries on success, -1 on failure
  */
+__rte_internal
 int
 rte_vdpa_relay_vring_used(int vid, uint16_t qid, void *vring_m);
 
