@@ -1,6 +1,7 @@
 DPDK_22 {
 	global:
 
+	rte_frag_table_del_expired_entries;
 	rte_ip_frag_free_death_row;
 	rte_ip_frag_table_create;
 	rte_ip_frag_table_destroy;
@@ -11,10 +12,4 @@ DPDK_22 {
 	rte_ipv6_fragment_packet;
 
 	local: *;
-};
-
-EXPERIMENTAL {
-	global:
-
-	rte_frag_table_del_expired_entries;
 };
