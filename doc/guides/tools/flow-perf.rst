@@ -379,3 +379,6 @@ Actions:
 *       ``--meter``
         Add meter action to all flows actions.
         Currently, 1 meter profile -> N meter rules -> N rte flows.
+
+*       ``--policy-mtr=<str>``
+        Add policy-mtr to create meter with policy and specify policy actions.

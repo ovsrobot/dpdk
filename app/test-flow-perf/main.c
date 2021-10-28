@@ -37,6 +37,7 @@
 #include <rte_mtr.h>
 
 #include "config.h"
+#include "actions_gen.h"
 #include "flow_gen.h"
 
 #define MAX_BATCHES_COUNT          100
@@ -49,10 +50,13 @@ static uint8_t flow_group;
 
 static uint64_t encap_data;
 static uint64_t decap_data;
+static uint64_t all_actions[RTE_COLORS][MAX_ACTIONS_NUM];
+static char *actions_str[RTE_COLORS];
 
 static uint64_t flow_items[MAX_ITEMS_NUM];
 static uint64_t flow_actions[MAX_ACTIONS_NUM];
 static uint64_t flow_attrs[MAX_ATTRS_NUM];
+static uint32_t policy_id[MAX_PORTS];
 static uint8_t items_idx, actions_idx, attrs_idx;
 
 static uint64_t ports_mask;
@@ -62,6 +66,7 @@ static bool delete_flag;
 static bool dump_socket_mem_flag;
 static bool enable_fwd;
 static bool unique_data;
+static bool policy_mtr;
 
 static uint8_t rx_queues_count;
 static uint8_t tx_queues_count;
@@ -142,7 +147,8 @@ usage(char *progname)
 	printf("  --portmask=N: hexadecimal bitmask of ports used\n");
 	printf("  --unique-data: flag to set using unique data for all"
 		" actions that support data, such as header modify and encap actions\n");
-
+	printf("  --policy-mtr=\"g1,g2:y1:r1\": To create meter with specified "
+		"color actions\n");
 	printf("To set flow attributes:\n");
 	printf("  --ingress: set ingress attribute in flows\n");
 	printf("  --egress: set egress attribute in flows\n");
@@ -242,9 +248,10 @@ args_parse(int argc, char **argv)
 	char **argvopt;
 	char *token;
 	char *end;
+	char *arg;
 	int n, opt;
 	int opt_idx;
-	size_t i;
+	size_t i, j, k;
 
 	static const struct option_dict {
 		const char *str;
@@ -652,6 +659,7 @@ args_parse(int argc, char **argv)
 		{ "raw-decap",                  1, 0, 0 },
 		{ "vxlan-encap",                0, 0, 0 },
 		{ "vxlan-decap",                0, 0, 0 },
+		{ "policy-mtr",                 1, 0, 0 },
 	};
 
 	RTE_ETH_FOREACH_DEV(i)
@@ -854,6 +862,46 @@ args_parse(int argc, char **argv)
 						RTE_MAX_LCORE);
 				}
 			}
+			if (strcmp(lgopts[opt_idx].name, "policy-mtr") == 0) {
+				j = 0;
+				k = 0;
+				arg = optarg;
+				policy_mtr = true;
+				token = strsep(&arg, ":\0");
+				while (token != NULL && j < RTE_COLORS) {
+					actions_str[j++] = token;
+					token = strsep(&arg, ":\0");
+				}
+				j = 0;
+				token = strtok(actions_str[0], ",\0");
+				while (token == NULL && j < RTE_COLORS - 1)
+					token = strtok(actions_str[++j], ",\0");
+				while (j < RTE_COLORS && token != NULL) {
+					for (i = 0;
+					     i < RTE_DIM(flow_options); i++) {
+						if (!strcmp(token,
+						    flow_options[i].str)) {
+							all_actions[j][k++] =
+							flow_options[i].mask;
+							break;
+						}
+					}
+					/* Reached last item with no match */
+					if (i >= RTE_DIM(flow_options)) {
+						fprintf(stderr,
+							"Invalid actions "
+							"item: %s\n", token);
+						usage(argv[0]);
+						rte_exit(EXIT_SUCCESS, "Invalid actions item\n");
+					}
+					token = strtok(NULL, ",\0");
+					while (!token && j < RTE_COLORS - 1) {
+						token = strtok(actions_str[++j],
+								",\0");
+						k = 0;
+					}
+				}
+			}
 			break;
 		default:
 			usage(argv[0]);
@@ -965,11 +1013,67 @@ has_meter(void)
 }
 
 static void
+create_meter_policy(void)
+{
+	struct rte_mtr_error error;
+	int ret, port_id;
+	struct rte_mtr_meter_policy_params policy;
+	uint16_t nr_ports;
+	struct rte_flow_action actions[RTE_COLORS][MAX_ACTIONS_NUM];
+	int i;
+
+	memset(actions, 0, sizeof(actions));
+	memset(&policy, 0, sizeof(policy));
+	for (i = 0; i < RTE_COLORS; i++)
+		fill_actions(actions[i], all_actions[i], 0, 0, 0,
+			     0, 0, 0, unique_data, rx_queues_count);
+
+	policy.actions[RTE_COLOR_GREEN] = actions[RTE_COLOR_GREEN];
+	policy.actions[RTE_COLOR_YELLOW] = actions[RTE_COLOR_YELLOW];
+	policy.actions[RTE_COLOR_RED] = actions[RTE_COLOR_RED];
+
+	nr_ports = rte_eth_dev_count_avail();
+	for (port_id = 0; port_id < nr_ports; port_id++) {
+		policy_id[port_id] = port_id + 10;
+		ret = rte_mtr_meter_policy_add(port_id, policy_id[port_id],
+					       &policy, &error);
+		if (ret) {
+			fprintf(stderr, "meter policy add failed port_id %d\n",
+				port_id);
+			policy_id[port_id] = UINT32_MAX;
+		}
+	}
+}
+
+
+static void
+destroy_meter_policy(void)
+{
+	struct rte_mtr_error error;
+	uint16_t nr_ports;
+	int port_id;
+
+	nr_ports = rte_eth_dev_count_avail();
+	for (port_id = 0; port_id < nr_ports; port_id++) {
+		/* If port outside portmask */
+		if (!((ports_mask >> port_id) & 0x1))
+			continue;
+
+		if (rte_mtr_meter_policy_delete
+			(port_id, policy_id[port_id], &error)) {
+			fprintf(stderr, "Port %u del policy error(%d) message: %s\n",
+				port_id, error.type,
+				error.message ? error.message : "(no stated reason)");
+			rte_exit(EXIT_FAILURE, "Error: Destroy meter policy Failed!\n");
+		}
+	}
+}
+
+static void
 create_meter_rule(int port_id, uint32_t counter)
 {
 	int ret;
 	struct rte_mtr_params params;
-	uint32_t default_prof_id = 100;
 	struct rte_mtr_error error;
 
 	memset(&params, 0, sizeof(struct rte_mtr_params));
@@ -979,8 +1083,15 @@ create_meter_rule(int port_id, uint32_t counter)
 	params.dscp_table = NULL;
 
 	/*create meter*/
-	params.meter_profile_id = default_prof_id;
-	ret = rte_mtr_create(port_id, counter, &params, 1, &error);
+	params.meter_profile_id = DEFAULT_METER_PROF_ID;
+
+	if (!policy_mtr) {
+		ret = rte_mtr_create(port_id, counter, &params, 1, &error);
+	} else {
+		params.meter_policy_id = policy_id[port_id];
+		ret = rte_mtr_create(port_id, counter, &params, 0, &error);
+	}
+
 	if (ret != 0) {
 		printf("Port %u create meter idx(%d) error(%d) message: %s\n",
 			port_id, counter, error.type,
@@ -994,11 +1105,17 @@ destroy_meter_rule(int port_id, uint32_t counter)
 {
 	struct rte_mtr_error error;
 
+	if (policy_mtr && policy_id[port_id] != UINT32_MAX) {
+		if (rte_mtr_meter_policy_delete(port_id, policy_id[port_id],
+					&error))
+			fprintf(stderr, "error delete policy %d\n", counter+1);
+		policy_id[port_id] = UINT32_MAX;
+	}
 	if (rte_mtr_destroy(port_id, counter, &error)) {
-		printf("Port %u destroy meter(%d) error(%d) message: %s\n",
-			port_id, counter, error.type,
-			error.message ? error.message : "(no stated reason)");
-		rte_exit(EXIT_FAILURE, "Error in deleting meter rule\n");
+		fprintf(stderr, "Port %u destroy meter(%d) error(%d) message: %s\n",
+		port_id, counter, error.type,
+		error.message ? error.message : "(no stated reason)");
+		rte_exit(EXIT_FAILURE, "Error in deleting meter rule");
 	}
 }
 
@@ -1103,12 +1220,10 @@ create_meter_profile(void)
 		/* If port outside portmask */
 		if (!((ports_mask >> port_id) & 0x1))
 			continue;
-
 		mp.alg = RTE_MTR_SRTCM_RFC2697;
 		mp.srtcm_rfc2697.cir = METER_CIR;
 		mp.srtcm_rfc2697.cbs = METER_CIR / 8;
 		mp.srtcm_rfc2697.ebs = 0;
-
 		ret = rte_mtr_meter_profile_add
 			(port_id, DEFAULT_METER_PROF_ID, &mp, &error);
 		if (ret != 0) {
@@ -1975,16 +2090,22 @@ main(int argc, char **argv)
 
 	printf(":: Flows Count per port: %d\n\n", rules_count);
 
-	if (has_meter())
+	if (has_meter()) {
 		create_meter_profile();
+		if (policy_mtr)
+			create_meter_policy();
+	}
 	rte_eal_mp_remote_launch(run_rte_flow_handler_cores, NULL, CALL_MAIN);
 
 	if (enable_fwd) {
 		init_lcore_info();
 		rte_eal_mp_remote_launch(start_forwarding, NULL, CALL_MAIN);
 	}
-	if (has_meter() && delete_flag)
+	if (has_meter() && delete_flag) {
 		destroy_meter_profile();
+		if (policy_mtr)
+			destroy_meter_policy();
+	}
 
 	RTE_ETH_FOREACH_DEV(port) {
 		rte_flow_flush(port, &error);
