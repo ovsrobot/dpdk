@@ -82,6 +82,7 @@ static uint32_t rules_count;
 static uint32_t rules_batch;
 static uint32_t hairpin_queues_num; /* total hairpin q number - default: 0 */
 static uint32_t nb_lcores;
+static uint64_t meter_profile_values[3]; /* CIR CBS EBS values. */
 
 #define MAX_PKT_BURST    32
 #define LCORE_MODE_PKT    1
@@ -149,6 +150,9 @@ usage(char *progname)
 		" actions that support data, such as header modify and encap actions\n");
 	printf("  --policy-mtr=\"g1,g2:y1:r1\": To create meter with specified "
 		"color actions\n");
+	printf("  --meter-profile=cir,cbs,ebs: set CIR CBS EBS parameters in meter"
+		" profile, default is %d,%d,%d\n", METER_CIR, METER_CIR / 8, 0);
+
 	printf("To set flow attributes:\n");
 	printf("  --ingress: set ingress attribute in flows\n");
 	printf("  --egress: set egress attribute in flows\n");
@@ -660,6 +664,7 @@ args_parse(int argc, char **argv)
 		{ "vxlan-encap",                0, 0, 0 },
 		{ "vxlan-decap",                0, 0, 0 },
 		{ "policy-mtr",                 1, 0, 0 },
+		{ "meter-profile",              1, 0, 0 },
 	};
 
 	RTE_ETH_FOREACH_DEV(i)
@@ -860,6 +865,18 @@ args_parse(int argc, char **argv)
 					rte_exit(EXIT_FAILURE,
 						"Error: cores count must be > 0 and < %d\n",
 						RTE_MAX_LCORE);
+				}
+			}
+			if (strcmp(lgopts[opt_idx].name,
+						"meter-profile") == 0) {
+				arg = optarg;
+				j = 0;
+				token = strsep(&arg, ",\0");
+				while (token != NULL && j < sizeof(
+						meter_profile_values) /
+						sizeof(uint64_t)) {
+					meter_profile_values[j++] = atol(token);
+					token = strsep(&arg, ",\0");
 				}
 			}
 			if (strcmp(lgopts[opt_idx].name, "policy-mtr") == 0) {
@@ -1221,9 +1238,11 @@ create_meter_profile(void)
 		if (!((ports_mask >> port_id) & 0x1))
 			continue;
 		mp.alg = RTE_MTR_SRTCM_RFC2697;
-		mp.srtcm_rfc2697.cir = METER_CIR;
-		mp.srtcm_rfc2697.cbs = METER_CIR / 8;
-		mp.srtcm_rfc2697.ebs = 0;
+		mp.srtcm_rfc2697.cir = meter_profile_values[0] ?
+			meter_profile_values[0] : METER_CIR;
+		mp.srtcm_rfc2697.cbs = meter_profile_values[1] ?
+			meter_profile_values[1] : METER_CIR / 8;
+		mp.srtcm_rfc2697.ebs = meter_profile_values[2];
 		ret = rte_mtr_meter_profile_add
 			(port_id, DEFAULT_METER_PROF_ID, &mp, &error);
 		if (ret != 0) {
