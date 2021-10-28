@@ -20,6 +20,7 @@ extern "C" {
 
 #include <rte_random.h>
 #include <rte_debug.h>
+#include <rte_cycles.h>
 
 #define RTE_DQ_THRESHOLD   16384   /**< Queue length threshold (2^14)
 				     * to start measurement cycle (bytes)
@@ -53,7 +54,7 @@ struct rte_pie_config {
 };
 
 /**
- * RED run-time data
+ * PIE run-time data
  */
 struct rte_pie {
 	uint16_t active;               /**< Flag for activating/deactivating pie */
@@ -74,8 +75,12 @@ struct rte_pie {
  * @brief Initialises run-time data
  *
  * @param pie [in,out] data pointer to PIE runtime data
+ *
+ * @return Operation status
+ * @retval 0 success
+ * @retval !0 error
  */
-void
+int
 __rte_experimental
 rte_pie_rt_data_init(struct rte_pie *pie);
 
@@ -113,7 +118,7 @@ rte_pie_config_init(struct rte_pie_config *pie_cfg,
  * @retval 0 enqueue the packet
  * @retval !0 drop the packet
  */
-static inline int
+static int
 __rte_experimental
 rte_pie_enqueue_empty(const struct rte_pie_config *pie_cfg,
 	struct rte_pie *pie,
@@ -145,7 +150,7 @@ rte_pie_enqueue_empty(const struct rte_pie_config *pie_cfg,
  * @param pie [in, out] data pointer to PIE runtime data
  * @param time [in] current time (measured in cpu cycles)
  */
-static inline void
+static void
 __rte_experimental
 _calc_drop_probability(const struct rte_pie_config *pie_cfg,
 	struct rte_pie *pie, uint64_t time)
@@ -155,7 +160,7 @@ _calc_drop_probability(const struct rte_pie_config *pie_cfg,
 	/* Note: can be implemented using integer multiply.
 	 * DQ_THRESHOLD is power of 2 value.
 	 */
-	double current_qdelay = pie->qlen * (pie->avg_dq_time / RTE_DQ_THRESHOLD);
+	uint64_t current_qdelay = pie->qlen * (pie->avg_dq_time >> 14);
 
 	double p = RTE_ALPHA * (current_qdelay - qdelay_ref) +
 		RTE_BETA * (current_qdelay - pie->qdelay_old);
@@ -181,7 +186,7 @@ _calc_drop_probability(const struct rte_pie_config *pie_cfg,
 	double qdelay = qdelay_ref * 0.5;
 
 	/*  Exponentially decay drop prob when congestion goes away  */
-	if (current_qdelay < qdelay && pie->qdelay_old < qdelay)
+	if ((double)current_qdelay < qdelay && pie->qdelay_old < qdelay)
 		pie->drop_prob *= 0.98;     /* 1 - 1/64 is sufficient */
 
 	/* Bound drop probability */
