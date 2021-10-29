@@ -416,10 +416,10 @@ insert_before(struct rte_thash_ctx *ctx,
 			return ret;
 		}
 	} else if ((next_ent != NULL) && (end > next_ent->offset)) {
-		rte_free(ent);
 		RTE_LOG(ERR, HASH,
 			"Can't add helper %s due to conflict with existing"
 			" helper %s\n", ent->name, next_ent->name);
+		rte_free(ent);
 		return -ENOSPC;
 	}
 	attach_lfsr(ent, cur_ent->lfsr);
@@ -465,10 +465,10 @@ insert_after(struct rte_thash_ctx *ctx,
 	int ret;
 
 	if ((next_ent != NULL) && (end > next_ent->offset)) {
-		rte_free(ent);
 		RTE_LOG(ERR, HASH,
 			"Can't add helper %s due to conflict with existing"
 			" helper %s\n", ent->name, next_ent->name);
+		rte_free(ent);
 		return -EEXIST;
 	}
 
