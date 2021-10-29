@@ -577,6 +577,8 @@ rte_dev_iterator_init(struct rte_dev_iterator *it,
 	struct rte_class *cls = NULL;
 	struct rte_bus *bus = NULL;
 
+	memset(&devargs, 0, sizeof(devargs));
+
 	/* Having both bus_str and cls_str NULL is illegal,
 	 * marking this iterator as invalid unless
 	 * everything goes well.
