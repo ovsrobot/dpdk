@@ -116,7 +116,8 @@ init_shared_mem(void)
 		mz = rte_memzone_lookup(RTE_MBUF_DYN_MZNAME);
 	}
 	if (mz == NULL) {
-		RTE_LOG(ERR, MBUF, "Failed to get mbuf dyn shared memory\n");
+		RTE_LOG(ERR, MBUF, "Failed to get mbuf dyn shared memory: %s (%d)\n",
+			rte_strerror(rte_errno), rte_errno);
 		return -1;
 	}
 
@@ -531,7 +532,7 @@ void rte_mbuf_dyn_dump(FILE *out)
 	size_t i;
 
 	rte_mcfg_tailq_write_lock();
-	if (init_shared_mem() < 0) {
+	if (shm == NULL && init_shared_mem() < 0) {
 		rte_mcfg_tailq_write_unlock();
 		return;
 	}
