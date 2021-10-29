@@ -54,11 +54,10 @@ catch_coredump() {
 }
 
 if [ "$AARCH64" = "true" ]; then
-    # convert the arch specifier
-    if [ "$CC_FOR_BUILD" = "gcc" ]; then
-    	OPTS="$OPTS --cross-file config/arm/arm64_armv8_linux_gcc"
-    elif [ "$CC_FOR_BUILD" = "clang" ]; then
-    	OPTS="$OPTS --cross-file config/arm/arm64_armv8_linux_clang_ubuntu1804"
+    if [ "${CC%%clang}" != "$CC" ]; then
+        OPTS="$OPTS --cross-file config/arm/arm64_armv8_linux_clang_ubuntu1804"
+    else
+        OPTS="$OPTS --cross-file config/arm/arm64_armv8_linux_gcc"
     fi
 fi
 
