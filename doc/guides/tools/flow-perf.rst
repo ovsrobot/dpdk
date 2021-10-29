@@ -100,6 +100,11 @@ The command line options are:
 	Set the number of needed cores to insert/delete rte_flow rules.
 	Default cores count is 1.
 
+*       ``--max-priority=N``
+        Maximum priority level for flows. Flows will be created with the
+        priority attribute set randomly between 0 to N - 1.
+        Default is 0 and maximum is 32.
+
 *	``--meter-profile-alg``
 	Set the traffic metering algorithm.
 	Example: meter-profile-alg=srtcmp, default algorithm is srtcm_rfc2697
