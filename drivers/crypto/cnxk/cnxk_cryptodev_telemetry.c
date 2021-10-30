@@ -1,0 +1,81 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(C) 2021 Marvell.
+ */
+
+#include <rte_cryptodev.h>
+#include <rte_telemetry.h>
+#include <cryptodev_pmd.h>
+
+#include <roc_api.h>
+
+#include "cnxk_cryptodev.h"
+
+#define CRYPTO_CAPS_SZ						   \
+	(RTE_ALIGN_CEIL(sizeof(struct rte_cryptodev_capabilities), \
+					sizeof(uint64_t)) /        \
+	 sizeof(uint64_t))
+
+static int
+crypto_caps_array(struct rte_tel_data *d,
+		  struct rte_cryptodev_capabilities *capabilities)
+{
+	const struct rte_cryptodev_capabilities *dev_caps;
+	uint64_t caps_val[CRYPTO_CAPS_SZ];
+	unsigned int i = 0, j;
+
+	rte_tel_data_start_array(d, RTE_TEL_U64_VAL);
+
+	while ((dev_caps = &capabilities[i++])->op !=
+		RTE_CRYPTO_OP_TYPE_UNDEFINED) {
+		memset(&caps_val, 0, CRYPTO_CAPS_SZ * sizeof(caps_val[0]));
+		rte_memcpy(caps_val, dev_caps, sizeof(capabilities[0]));
+		for (j = 0; j < CRYPTO_CAPS_SZ; j++)
+			rte_tel_data_add_array_u64(d, caps_val[j]);
+	}
+
+	return i;
+}
+
+static int
+cryptodev_tel_handle_sec_caps(const char *cmd __rte_unused, const char *params,
+			      struct rte_tel_data *d)
+{
+	struct rte_tel_data *sec_crypto_caps;
+	struct rte_cryptodev *dev;
+	struct cnxk_cpt_vf *vf;
+	int sec_crypto_caps_n;
+	int dev_id;
+
+	if (!params || strlen(params) == 0 || !isdigit(*params))
+		return -EINVAL;
+
+	dev_id = strtol(params, NULL, 10);
+	if (!rte_cryptodev_is_valid_dev(dev_id))
+		return -EINVAL;
+
+	dev = rte_cryptodev_pmd_get_dev(dev_id);
+	if (!dev) {
+		plt_err("No cryptodev for id %d available", dev_id);
+		return -EINVAL;
+	}
+
+	vf = dev->data->dev_private;
+	rte_tel_data_start_dict(d);
+
+	/* Secure Crypto capabilities */
+	sec_crypto_caps = rte_tel_data_alloc();
+	sec_crypto_caps_n = crypto_caps_array(sec_crypto_caps,
+					      vf->sec_crypto_caps);
+	rte_tel_data_add_dict_container(d, "sec_crypto_caps",
+					sec_crypto_caps, 0);
+	rte_tel_data_add_dict_int(d, "sec_crypto_caps_n", sec_crypto_caps_n);
+
+	return 0;
+}
+
+RTE_INIT(cnxk_cryptodev_init_telemetry)
+{
+	rte_telemetry_register_cmd("/cnxk/cryptodev/sec_caps",
+		cryptodev_tel_handle_sec_caps,
+		"Returns cryptodev capabilities. Parameters: int dev_id");
+}
