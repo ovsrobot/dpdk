@@ -4,8 +4,10 @@
  * Copyright (c) 2020 Samsung Electronics Co., Ltd All Rights Reserved
  */
 
+#include <rte_cryptodev.h>
 #include <rte_malloc.h>
 #include <rte_dev.h>
+#include <rte_telemetry.h>
 #include "rte_compat.h"
 #include "rte_security.h"
 #include "rte_security_driver.h"
@@ -202,4 +204,100 @@ rte_security_capability_get(struct rte_security_ctx *instance,
 	}
 
 	return NULL;
+}
+
+static int
+cryptodev_handle_dev_list(const char *cmd __rte_unused,
+			  const char *params __rte_unused,
+			  struct rte_tel_data *d)
+{
+	int dev_id;
+
+	if (rte_cryptodev_count() < 1)
+		return -1;
+
+	rte_tel_data_start_array(d, RTE_TEL_INT_VAL);
+	for (dev_id = 0; dev_id < RTE_CRYPTO_MAX_DEVS; dev_id++)
+		if (rte_cryptodev_is_valid_dev(dev_id) &&
+			rte_cryptodev_get_sec_ctx(dev_id))
+			rte_tel_data_add_array_int(d, dev_id);
+
+	return 0;
+}
+
+#define SEC_CAPS_SZ						\
+	(RTE_ALIGN_CEIL(sizeof(struct rte_security_capability), \
+			sizeof(uint64_t)) /	sizeof(uint64_t))
+
+static int
+sec_caps_array(struct rte_tel_data *d,
+	       const struct rte_security_capability *capabilities)
+{
+	const struct rte_security_capability *dev_caps;
+	uint64_t caps_val[SEC_CAPS_SZ];
+	unsigned int i = 0, j;
+
+	rte_tel_data_start_array(d, RTE_TEL_U64_VAL);
+
+	while ((dev_caps = &capabilities[i++])->action !=
+	   RTE_SECURITY_ACTION_TYPE_NONE) {
+		memset(&caps_val, 0, SEC_CAPS_SZ * sizeof(caps_val[0]));
+		rte_memcpy(caps_val, dev_caps, sizeof(capabilities[0]));
+		for (j = 0; j < SEC_CAPS_SZ; j++)
+			rte_tel_data_add_array_u64(d, caps_val[j]);
+	}
+
+	return i;
+}
+
+static int
+security_handle_dev_caps(const char *cmd __rte_unused, const char *params,
+			 struct rte_tel_data *d)
+{
+	const struct rte_security_capability *capabilities;
+	struct rte_security_ctx *sec_ctx;
+	struct rte_tel_data *sec_caps;
+	int sec_caps_n;
+	char *end_param;
+	int dev_id;
+
+	if (!params || strlen(params) == 0 || !isdigit(*params))
+		return -EINVAL;
+
+	dev_id = strtoul(params, &end_param, 0);
+	if (*end_param != '\0')
+		CDEV_LOG_ERR("Extra parameters passed to command, ignoring");
+
+	if (!rte_cryptodev_is_valid_dev(dev_id))
+		return -EINVAL;
+
+	rte_tel_data_start_dict(d);
+	sec_caps = rte_tel_data_alloc();
+	if (!sec_caps)
+		return -ENOMEM;
+
+	sec_ctx = (struct rte_security_ctx *)rte_cryptodev_get_sec_ctx(dev_id);
+	if (!sec_ctx)
+		return -EINVAL;
+
+	capabilities = rte_security_capabilities_get(sec_ctx);
+	if (!capabilities)
+		return -EINVAL;
+
+	sec_caps_n = sec_caps_array(sec_caps, capabilities);
+	rte_tel_data_add_dict_container(d, "sec_caps", sec_caps, 0);
+	rte_tel_data_add_dict_int(d, "sec_caps_n", sec_caps_n);
+
+	return 0;
+}
+
+RTE_INIT(security_init_telemetry)
+{
+	rte_telemetry_register_cmd("/security/list",
+		cryptodev_handle_dev_list,
+		"Returns list of available crypto devices by IDs. No parameters.");
+
+	rte_telemetry_register_cmd("/security/caps",
+		security_handle_dev_caps,
+		"Returns security capabilities for a cryptodev. Parameters: int dev_id");
 }
