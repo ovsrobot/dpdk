@@ -68,10 +68,14 @@ intel_ntb_skx = {'Class': '06', 'Vendor': '8086', 'Device': '201c',
 intel_ntb_icx = {'Class': '06', 'Vendor': '8086', 'Device': '347e',
                  'SVendor': None, 'SDevice': None}
 
+hisilicon_dma = {'Class': '08', 'Vendor': '19e5', 'Device': 'a122',
+                 'SVendor': None, 'SDevice': None}
+
 network_devices = [network_class, cavium_pkx, avp_vnic, ifpga_class]
 baseband_devices = [acceleration_class]
 crypto_devices = [encryption_class, intel_processor_class]
-dma_devices = [intel_idxd_spr, intel_ioat_bdw, intel_ioat_icx, intel_ioat_skx]
+dma_devices = [intel_idxd_spr, intel_ioat_bdw, intel_ioat_icx, intel_ioat_skx,
+               hisilicon_dma]
 eventdev_devices = [cavium_sso, cavium_tim, intel_dlb, octeontx2_sso]
 mempool_devices = [cavium_fpa, octeontx2_npa]
 compress_devices = [cavium_zip]
