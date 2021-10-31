@@ -197,6 +197,11 @@ New Features
   * Added port representors support on SN1000 SmartNICs
   * Added flow API transfer proxy support
 
+* **Added Telemetry callback to Security library.**
+
+  Added Telemetry callback function to query security capabilities of
+  Crypto device.
+
 * **Updated Marvell cnxk crypto PMD.**
 
   * Added AES-CBC SHA1-HMAC support in lookaside protocol (IPsec) for CN10K.
