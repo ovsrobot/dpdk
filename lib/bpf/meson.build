@@ -12,6 +12,7 @@ sources = files('bpf.c',
         'bpf_exec.c',
         'bpf_load.c',
         'bpf_pkt.c',
+        'bpf_stub.c',
         'bpf_validate.c')
 
 if arch_subdir == 'x86' and dpdk_conf.get('RTE_ARCH_64')
