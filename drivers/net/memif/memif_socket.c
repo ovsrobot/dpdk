@@ -65,6 +65,9 @@ memif_msg_send_from_queue(struct memif_control_channel *cc)
 	if (e == NULL)
 		return 0;
 
+	if (rte_intr_fd_get(cc->intr_handle) < 0)
+		return -1;
+
 	size = memif_msg_send(rte_intr_fd_get(cc->intr_handle), &e->msg,
 			      e->fd);
 	if (size != sizeof(memif_msg_t)) {
