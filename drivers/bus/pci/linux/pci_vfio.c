@@ -49,6 +49,9 @@ pci_vfio_read_config(const struct rte_intr_handle *intr_handle,
 {
 	int vfio_dev_fd = rte_intr_dev_fd_get(intr_handle);
 
+	if (vfio_dev_fd < 0)
+		return -1;
+
 	return pread64(vfio_dev_fd, buf, len,
 	       VFIO_GET_REGION_ADDR(VFIO_PCI_CONFIG_REGION_INDEX) + offs);
 }
@@ -58,6 +61,9 @@ pci_vfio_write_config(const struct rte_intr_handle *intr_handle,
 		    const void *buf, size_t len, off_t offs)
 {
 	int vfio_dev_fd = rte_intr_dev_fd_get(intr_handle);
+
+	if (vfio_dev_fd < 0)
+		return -1;
 
 	return pwrite64(vfio_dev_fd, buf, len,
 	       VFIO_GET_REGION_ADDR(VFIO_PCI_CONFIG_REGION_INDEX) + offs);
@@ -1012,6 +1018,9 @@ pci_vfio_unmap_resource_primary(struct rte_pci_device *dev)
 	}
 
 #endif
+	if (rte_intr_fd_get(dev->intr_handle) < 0)
+		return -1;
+
 	if (close(rte_intr_fd_get(dev->intr_handle)) < 0) {
 		RTE_LOG(INFO, EAL, "Error when closing eventfd file descriptor for %s\n",
 			pci_addr);
@@ -1114,6 +1123,9 @@ pci_vfio_ioport_read(struct rte_pci_ioport *p,
 	const struct rte_intr_handle *intr_handle = p->dev->intr_handle;
 	int vfio_dev_fd = rte_intr_dev_fd_get(intr_handle);
 
+	if (vfio_dev_fd < 0)
+		return;
+
 	if (pread64(vfio_dev_fd, data,
 		    len, p->base + offset) <= 0)
 		RTE_LOG(ERR, EAL,
@@ -1127,6 +1139,9 @@ pci_vfio_ioport_write(struct rte_pci_ioport *p,
 {
 	const struct rte_intr_handle *intr_handle = p->dev->intr_handle;
 	int vfio_dev_fd = rte_intr_dev_fd_get(intr_handle);
+
+	if (vfio_dev_fd < 0)
+		return;
 
 	if (pwrite64(vfio_dev_fd, data,
 		     len, p->base + offset) <= 0)

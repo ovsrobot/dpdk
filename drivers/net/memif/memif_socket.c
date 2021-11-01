@@ -508,7 +508,8 @@ memif_intr_unregister_handler(struct rte_intr_handle *intr_handle, void *arg)
 	struct memif_control_channel *cc = arg;
 
 	/* close control channel fd */
-	close(rte_intr_fd_get(intr_handle));
+	if (rte_intr_fd_get(intr_handle) >= 0)
+		close(rte_intr_fd_get(intr_handle));
 	/* clear message queue */
 	while ((elt = TAILQ_FIRST(&cc->msg_queue)) != NULL) {
 		TAILQ_REMOVE(&cc->msg_queue, elt, next);
@@ -650,6 +651,9 @@ memif_msg_receive(struct memif_control_channel *cc)
 	mh.msg_iovlen = 1;
 	mh.msg_control = ctl;
 	mh.msg_controllen = sizeof(ctl);
+
+	if (rte_intr_fd_get(cc->intr_handle) < 0)
+		return -1;
 
 	size = recvmsg(rte_intr_fd_get(cc->intr_handle), &mh, 0);
 	if (size != sizeof(memif_msg_t)) {
