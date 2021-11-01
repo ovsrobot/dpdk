@@ -6,6 +6,7 @@
 #include <rte_dmadev_pmd.h>
 
 #include "dpaa_qdma.h"
+#include "dpaa_qdma_logs.h"
 
 static inline int ilog2(int x)
 {
@@ -107,6 +108,7 @@ static struct fsl_qdma_queue
 		for (i = 0; i < queue_num; i++) {
 			if (queue_size[i] > FSL_QDMA_CIRCULAR_DESC_SIZE_MAX ||
 			    queue_size[i] < FSL_QDMA_CIRCULAR_DESC_SIZE_MIN) {
+				DPAA_QDMA_ERR("Get wrong queue-sizes.\n");
 				return NULL;
 			}
 			queue_temp = queue_head + i + (j * queue_num);
@@ -143,6 +145,7 @@ static struct fsl_qdma_queue *fsl_qdma_prep_status_queue(void)
 	status_size = QDMA_STATUS_SIZE;
 	if (status_size > FSL_QDMA_CIRCULAR_DESC_SIZE_MAX ||
 	    status_size < FSL_QDMA_CIRCULAR_DESC_SIZE_MIN) {
+		DPAA_QDMA_ERR("Get wrong status_size.\n");
 		return NULL;
 	}
 
@@ -227,6 +230,7 @@ static int fsl_qdma_reg_init(struct fsl_qdma_engine *fsl_qdma)
 	/* Try to halt the qDMA engine first. */
 	ret = fsl_qdma_halt(fsl_qdma);
 	if (ret) {
+		DPAA_QDMA_ERR("DMA halt failed!");
 		return ret;
 	}
 
@@ -353,6 +357,7 @@ dpaa_qdma_init(struct rte_dma_dev *dmadev)
 
 	ccsr_qdma_fd = open("/dev/mem", O_RDWR);
 	if (unlikely(ccsr_qdma_fd < 0)) {
+		DPAA_QDMA_ERR("Can not open /dev/mem for qdma CCSR map");
 		goto err;
 	}
 
@@ -364,6 +369,8 @@ dpaa_qdma_init(struct rte_dma_dev *dmadev)
 
 	close(ccsr_qdma_fd);
 	if (fsl_qdma->ctrl_base == MAP_FAILED) {
+		DPAA_QDMA_ERR("Can not map CCSR base qdma: Phys: %08" PRIx64
+		       "size %d\n", phys_addr, regs_size);
 		goto err;
 	}
 
@@ -387,6 +394,7 @@ dpaa_qdma_init(struct rte_dma_dev *dmadev)
 
 	ret = fsl_qdma_reg_init(fsl_qdma);
 	if (ret) {
+		DPAA_QDMA_ERR("Can't Initialize the qDMA engine.\n");
 		munmap(fsl_qdma->ctrl_base, regs_size);
 		goto err;
 	}
@@ -411,6 +419,7 @@ dpaa_qdma_probe(__rte_unused struct rte_dpaa_driver *dpaa_drv,
 				      rte_socket_id(),
 				      sizeof(struct fsl_qdma_engine));
 	if (!dmadev) {
+		DPAA_QDMA_ERR("Unable to allocate dmadevice");
 		return -EINVAL;
 	}
 
@@ -456,3 +465,4 @@ static struct rte_dpaa_driver rte_dpaa_qdma_pmd = {
 };
 
 RTE_PMD_REGISTER_DPAA(dpaa_qdma, rte_dpaa_qdma_pmd);
+RTE_LOG_REGISTER_DEFAULT(dpaa_qdma_logtype, INFO);
