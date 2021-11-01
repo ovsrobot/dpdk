@@ -1917,7 +1917,10 @@ ice_switch_redirect(struct ice_adapter *ad,
 		    struct rte_flow *flow,
 		    struct ice_flow_redirect *rd)
 {
-	struct ice_rule_query_data *rdata = flow->rule;
+	struct ice_rule_query_data *rdata;
+	struct ice_switch_filter_conf *filter_conf_ptr =
+		(struct ice_switch_filter_conf *)flow->rule;
+	struct ice_rule_query_data added_rdata = { 0 };
 	struct ice_adv_fltr_mgmt_list_entry *list_itr;
 	struct ice_adv_lkup_elem *lkups_dp = NULL;
 	struct LIST_HEAD_TYPE *list_head;
@@ -1926,6 +1929,8 @@ ice_switch_redirect(struct ice_adapter *ad,
 	struct ice_switch_info *sw;
 	uint16_t lkups_cnt;
 	int ret;
+
+	rdata = &filter_conf_ptr->sw_query_data;
 
 	if (rdata->vsi_handle != rd->vsi_handle)
 		return 0;
@@ -1936,6 +1941,22 @@ ice_switch_redirect(struct ice_adapter *ad,
 
 	if (rd->type != ICE_FLOW_REDIRECT_VSI)
 		return -ENOTSUP;
+
+	if (!filter_conf_ptr->added) {
+		ret = ice_add_adv_rule(hw, filter_conf_ptr->lkups,
+				       filter_conf_ptr->lkups_num,
+				       &filter_conf_ptr->rule_info,
+				       &added_rdata);
+
+		if (ret) {
+			PMD_DRV_LOG(ERR, "Failed to replay the rule again");
+			return -EINVAL;
+		}
+
+		filter_conf_ptr->sw_query_data = added_rdata;
+		filter_conf_ptr->added = true;
+		return 0;
+	}
 
 	list_head = &sw->recp_list[rdata->rid].filt_rules;
 	LIST_FOR_EACH_ENTRY(list_itr, list_head, ice_adv_fltr_mgmt_list_entry,
@@ -1983,10 +2004,14 @@ ice_switch_redirect(struct ice_adapter *ad,
 
 	/* Replay the rule */
 	ret = ice_add_adv_rule(hw, lkups_dp, lkups_cnt,
-			       &rinfo, rdata);
+			       &rinfo,  &added_rdata);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Failed to replay the rule");
+		filter_conf_ptr->added = false;
 		ret = -EINVAL;
+	} else {
+		filter_conf_ptr->sw_query_data = added_rdata;
+		filter_conf_ptr->added = true;
 	}
 
 out:
