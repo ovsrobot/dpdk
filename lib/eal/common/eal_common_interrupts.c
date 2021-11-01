@@ -15,7 +15,7 @@
 /* Macros to check for valid interrupt handle */
 #define CHECK_VALID_INTR_HANDLE(intr_handle) do { \
 	if (intr_handle == NULL) { \
-		RTE_LOG(DEBUG, EAL, "Interrupt instance unallocated\n"); \
+		RTE_LOG(ERR, EAL, "Interrupt instance unallocated\n"); \
 		rte_errno = EINVAL; \
 		goto fail; \
 	} \
@@ -37,7 +37,7 @@ struct rte_intr_handle *rte_intr_instance_alloc(uint32_t flags)
 	 * defined flags.
 	 */
 	if ((flags & ~RTE_INTR_INSTANCE_KNOWN_FLAGS) != 0) {
-		RTE_LOG(DEBUG, EAL, "Invalid alloc flag passed 0x%x\n", flags);
+		RTE_LOG(ERR, EAL, "Invalid alloc flag passed 0x%x\n", flags);
 		rte_errno = EINVAL;
 		return NULL;
 	}
@@ -100,7 +100,7 @@ struct rte_intr_handle *rte_intr_instance_dup(const struct rte_intr_handle *src)
 	struct rte_intr_handle *intr_handle;
 
 	if (src == NULL) {
-		RTE_LOG(DEBUG, EAL, "Source interrupt instance unallocated\n");
+		RTE_LOG(ERR, EAL, "Source interrupt instance unallocated\n");
 		rte_errno = EINVAL;
 		return NULL;
 	}
@@ -129,7 +129,7 @@ int rte_intr_event_list_update(struct rte_intr_handle *intr_handle, int size)
 	CHECK_VALID_INTR_HANDLE(intr_handle);
 
 	if (size == 0) {
-		RTE_LOG(DEBUG, EAL, "Size can't be zero\n");
+		RTE_LOG(ERR, EAL, "Size can't be zero\n");
 		rte_errno = EINVAL;
 		goto fail;
 	}
@@ -253,7 +253,7 @@ int rte_intr_max_intr_set(struct rte_intr_handle *intr_handle,
 	CHECK_VALID_INTR_HANDLE(intr_handle);
 
 	if (max_intr > intr_handle->nb_intr) {
-		RTE_LOG(DEBUG, EAL, "Maximum interrupt vector ID (%d) exceeds "
+		RTE_LOG(ERR, EAL, "Maximum interrupt vector ID (%d) exceeds "
 			"the number of available events (%d)\n", max_intr,
 			intr_handle->nb_intr);
 		rte_errno = ERANGE;
@@ -332,7 +332,7 @@ int rte_intr_efds_index_get(const struct rte_intr_handle *intr_handle,
 	CHECK_VALID_INTR_HANDLE(intr_handle);
 
 	if (index >= intr_handle->nb_intr) {
-		RTE_LOG(DEBUG, EAL, "Invalid index %d, max limit %d\n", index,
+		RTE_LOG(ERR, EAL, "Invalid index %d, max limit %d\n", index,
 			intr_handle->nb_intr);
 		rte_errno = EINVAL;
 		goto fail;
@@ -349,7 +349,7 @@ int rte_intr_efds_index_set(struct rte_intr_handle *intr_handle,
 	CHECK_VALID_INTR_HANDLE(intr_handle);
 
 	if (index >= intr_handle->nb_intr) {
-		RTE_LOG(DEBUG, EAL, "Invalid index %d, max limit %d\n", index,
+		RTE_LOG(ERR, EAL, "Invalid index %d, max limit %d\n", index,
 			intr_handle->nb_intr);
 		rte_errno = ERANGE;
 		goto fail;
@@ -368,7 +368,7 @@ struct rte_epoll_event *rte_intr_elist_index_get(
 	CHECK_VALID_INTR_HANDLE(intr_handle);
 
 	if (index >= intr_handle->nb_intr) {
-		RTE_LOG(DEBUG, EAL, "Invalid index %d, max limit %d\n", index,
+		RTE_LOG(ERR, EAL, "Invalid index %d, max limit %d\n", index,
 			intr_handle->nb_intr);
 		rte_errno = ERANGE;
 		goto fail;
@@ -385,7 +385,7 @@ int rte_intr_elist_index_set(struct rte_intr_handle *intr_handle,
 	CHECK_VALID_INTR_HANDLE(intr_handle);
 
 	if (index >= intr_handle->nb_intr) {
-		RTE_LOG(DEBUG, EAL, "Invalid index %d, max limit %d\n", index,
+		RTE_LOG(ERR, EAL, "Invalid index %d, max limit %d\n", index,
 			intr_handle->nb_intr);
 		rte_errno = ERANGE;
 		goto fail;
@@ -408,7 +408,7 @@ int rte_intr_vec_list_alloc(struct rte_intr_handle *intr_handle,
 		return 0;
 
 	if (size > intr_handle->nb_intr) {
-		RTE_LOG(DEBUG, EAL, "Invalid size %d, max limit %d\n", size,
+		RTE_LOG(ERR, EAL, "Invalid size %d, max limit %d\n", size,
 			intr_handle->nb_intr);
 		rte_errno = ERANGE;
 		goto fail;
@@ -437,7 +437,7 @@ int rte_intr_vec_list_index_get(const struct rte_intr_handle *intr_handle,
 	CHECK_VALID_INTR_HANDLE(intr_handle);
 
 	if (index >= intr_handle->vec_list_size) {
-		RTE_LOG(DEBUG, EAL, "Index %d greater than vec list size %d\n",
+		RTE_LOG(ERR, EAL, "Index %d greater than vec list size %d\n",
 			index, intr_handle->vec_list_size);
 		rte_errno = ERANGE;
 		goto fail;
@@ -454,7 +454,7 @@ int rte_intr_vec_list_index_set(struct rte_intr_handle *intr_handle,
 	CHECK_VALID_INTR_HANDLE(intr_handle);
 
 	if (index >= intr_handle->vec_list_size) {
-		RTE_LOG(DEBUG, EAL, "Index %d greater than vec list size %d\n",
+		RTE_LOG(ERR, EAL, "Index %d greater than vec list size %d\n",
 			index, intr_handle->vec_list_size);
 		rte_errno = ERANGE;
 		goto fail;
