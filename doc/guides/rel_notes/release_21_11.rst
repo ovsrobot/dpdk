@@ -20,6 +20,9 @@ DPDK Release 21.11
       ninja -C build doc
       xdg-open build/doc/guides/html/rel_notes/release_21_11.html
 
+* **Added NXP DPAA DMA driver.**
+
+  * Added a new dmadev driver for NXP DPAA platform.
 
 New Features
 ------------

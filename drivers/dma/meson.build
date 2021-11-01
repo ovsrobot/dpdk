@@ -5,5 +5,6 @@ drivers = [
         'idxd',
         'ioat',
         'skeleton',
+	'dpaa',
 ]
 std_deps = ['dmadev']
