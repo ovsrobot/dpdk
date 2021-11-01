@@ -7,7 +7,7 @@
 # - DPDK_GETMAINTAINER_PATH
 . $(dirname $(readlink -f $0))/load-devel-config
 
-options="--no-tree --no-git-fallback"
+options="--no-tree --no-git-fallback --no-fixes"
 options="$options --no-rolestats"
 
 print_usage () {
