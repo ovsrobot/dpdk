@@ -2011,6 +2011,7 @@ port_flow_validate(portid_t port_id,
 	struct rte_flow_error error;
 	struct port_flow_tunnel *pft = NULL;
 	struct rte_port *port;
+	int ret;
 
 	if (port_id_is_invalid(port_id, ENABLED_WARN) ||
 	    port_id == (portid_t)RTE_PORT_ALL)
@@ -2037,10 +2038,11 @@ port_flow_validate(portid_t port_id,
 		if (pft->actions)
 			actions = pft->actions;
 	}
-	if (rte_flow_validate(port_id, attr, pattern, actions, &error))
-		return port_flow_complain(&error);
+	ret = rte_flow_validate(port_id, attr, pattern, actions, &error);
 	if (tunnel_ops->enabled)
 		port_flow_tunnel_offload_cmd_release(port_id, tunnel_ops, pft);
+	if (ret)
+		return port_flow_complain(&error);
 	printf("Flow rule validated\n");
 	return 0;
 }
