@@ -131,6 +131,8 @@ struct mbox_msghdr {
 	M(TIM_ENABLE_RING, 0x803, tim_enable_ring, tim_ring_req,               \
 	  tim_enable_rsp)                                                      \
 	M(TIM_DISABLE_RING, 0x804, tim_disable_ring, tim_ring_req, msg_rsp)    \
+	M(TIM_GET_MIN_INTVL, 0x805, tim_get_min_intvl, tim_intvl_req,          \
+	  tim_intvl_rsp)                                                       \
 	/* CPT mbox IDs (range 0xA00 - 0xBFF) */                               \
 	M(CPT_LF_ALLOC, 0xA00, cpt_lf_alloc, cpt_lf_alloc_req_msg, msg_rsp)    \
 	M(CPT_LF_FREE, 0xA01, cpt_lf_free, msg_req, msg_rsp)                   \
@@ -143,6 +145,7 @@ struct mbox_msghdr {
 	M(CPT_STATS, 0xA05, cpt_sts_get, cpt_sts_req, cpt_sts_rsp)             \
 	M(CPT_RXC_TIME_CFG, 0xA06, cpt_rxc_time_cfg, cpt_rxc_time_cfg_req,     \
 	  msg_rsp)                                                             \
+	M(CPT_CTX_CACHE_SYNC, 0xA07, cpt_ctx_cache_sync, msg_req, msg_rsp)     \
 	M(CPT_RX_INLINE_LF_CFG, 0xBFE, cpt_rx_inline_lf_cfg,                   \
 	  cpt_rx_inline_lf_cfg_msg, msg_rsp)                                   \
 	M(CPT_GET_CAPS, 0xBFD, cpt_caps_get, msg_req, cpt_caps_rsp_msg)        \
@@ -238,6 +241,12 @@ struct mbox_msghdr {
 	M(NIX_BANDPROF_ALLOC, 0x801d, nix_bandprof_alloc,                      \
 	  nix_bandprof_alloc_req, nix_bandprof_alloc_rsp)                      \
 	M(NIX_BANDPROF_FREE, 0x801e, nix_bandprof_free, nix_bandprof_free_req, \
+	  msg_rsp)                                                             \
+	M(NIX_BANDPROF_GET_HWINFO, 0x801f, nix_bandprof_get_hwinfo, msg_req,   \
+	  nix_bandprof_get_hwinfo_rsp)                                         \
+	M(NIX_CPT_BP_ENABLE, 0x8020, nix_cpt_bp_enable, nix_bp_cfg_req,        \
+	  nix_bp_cfg_rsp)                                                      \
+	M(NIX_CPT_BP_DISABLE, 0x8021, nix_cpt_bp_disable, nix_bp_cfg_req,      \
 	  msg_rsp)
 
 /* Messages initiated by AF (range 0xC00 - 0xDFF) */
@@ -1060,6 +1069,7 @@ struct nix_rx_cfg {
 	struct mbox_msghdr hdr;
 #define NIX_RX_OL3_VERIFY BIT(0)
 #define NIX_RX_OL4_VERIFY BIT(1)
+#define NIX_RX_DROP_RE	  BIT(2)
 	uint8_t __io len_verify; /* Outer L3/L4 len check */
 #define NIX_RX_CSUM_OL4_VERIFY BIT(0)
 	uint8_t __io csum_verify; /* Outer L4 checksum verification */
@@ -1160,6 +1170,12 @@ struct nix_bandprof_free_req {
 	uint8_t __io free_all;
 	uint16_t __io prof_count[NIX_RX_BAND_PROF_LAYER_MAX];
 	uint16_t __io prof_idx[NIX_RX_BAND_PROF_LAYER_MAX][BANDPROF_PER_PFFUNC];
+};
+
+struct nix_bandprof_get_hwinfo_rsp {
+	struct mbox_msghdr hdr;
+	uint16_t __io prof_count[NIX_RX_BAND_PROF_LAYER_MAX];
+	uint32_t __io policer_timeunit;
 };
 
 /* SSO mailbox error codes
@@ -1788,6 +1804,9 @@ struct tim_config_req {
 	uint32_t __io chunksize;
 	uint32_t __io interval;
 	uint8_t __io gpioedge;
+	uint8_t __io rsvd[7];
+	uint64_t __io intervalns;
+	uint64_t __io clockfreq;
 };
 
 struct tim_lf_alloc_rsp {
@@ -1799,6 +1818,18 @@ struct tim_enable_rsp {
 	struct mbox_msghdr hdr;
 	uint64_t __io timestarted;
 	uint32_t __io currentbucket;
+};
+
+struct tim_intvl_req {
+	struct mbox_msghdr hdr;
+	uint8_t __io clocksource;
+	uint64_t __io clockfreq;
+};
+
+struct tim_intvl_rsp {
+	struct mbox_msghdr hdr;
+	uint64_t __io intvl_cyc;
+	uint64_t __io intvl_ns;
 };
 
 struct sdp_node_info {
