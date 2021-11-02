@@ -1206,6 +1206,12 @@ M: Conor Walsh <conor.walsh@intel.com>
 F: drivers/dma/ioat/
 F: doc/guides/dmadevs/ioat.rst
 
+Marvell CNXK DPI DMA
+M: Radha Mohan Chintakuntla <radhac@marvell.com>
+M: Veerasenareddy Burru <vburru@marvell.com>
+F: drivers/dma/cnxk/
+F: doc/guides/dmadevs/cnxk.rst
+
 
 RegEx Drivers
 -------------
