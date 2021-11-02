@@ -86,6 +86,10 @@ New Features
   driver for Intel IOAT devices such as Crystal Beach DMA (CBDMA) on Ice Lake,
   Skylake and Broadwell. This device driver can be used through the generic dmadev API.
 
+* **Added hisilicon dmadev driver implementation.**
+  The hisilicon dmadev driver provide device drivers for the Kunpeng's DMA devices.
+  This device driver can be used through the generic dmadev API.
+
 * **Added support to get all MAC addresses of a device.**
 
   Added ``rte_eth_macaddrs_get`` to allow user to retrieve all Ethernet
