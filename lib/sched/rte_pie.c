@@ -13,7 +13,7 @@
 #pragma warning(disable:2259) /* conversion may lose significant bits */
 #endif
 
-void
+int
 rte_pie_rt_data_init(struct rte_pie *pie)
 {
 	if (pie == NULL) {
@@ -22,6 +22,8 @@ rte_pie_rt_data_init(struct rte_pie *pie)
 
 		if (pie == NULL)
 			RTE_LOG(ERR, SCHED, "%s: Memory allocation fails\n", __func__);
+
+		return -1;
 	}
 
 	pie->active = 0;
@@ -35,6 +37,8 @@ rte_pie_rt_data_init(struct rte_pie *pie)
 	pie->qdelay_old = 0;
 	pie->drop_prob = 0;
 	pie->accu_prob = 0;
+
+	return 0;
 }
 
 int
