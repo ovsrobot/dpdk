@@ -314,6 +314,10 @@ New Features
   overruns in C/C++ programs, and other similar errors, as well as
   printing out detailed debug information whenever an error is detected.
 
+* **Added optimized Toeplitz hash implementation.**
+
+  Added optimized Toeplitz hash implementation using Galois Fields New Instructions.
+
 
 Removed Items
 -------------
