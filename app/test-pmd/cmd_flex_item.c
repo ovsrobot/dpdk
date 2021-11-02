@@ -415,6 +415,8 @@ port_flex_item_flush(portid_t port_id)
 	uint16_t i;
 
 	for (i = 0; i < FLEX_MAX_PARSERS_NUM; i++) {
+		if (flex_items[port_id][i] == NULL)
+			continue;
 		flex_item_destroy(port_id, i);
 		flex_items[port_id][i] = NULL;
 	}
