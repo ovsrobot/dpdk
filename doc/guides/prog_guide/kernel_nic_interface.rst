@@ -56,6 +56,10 @@ can be specified when the module is loaded to control its behavior:
                     off   Interfaces will be created with carrier state set to off.
                     on    Interfaces will be created with carrier state set to on.
                      (charp)
+    parm:           min_scheduling_interval: "Kni thread min scheduling interval (default=100 microseconds):
+                     (long)
+    parm:           max_scheduling_interval: "Kni thread max scheduling interval (default=200 microseconds):
+                     (long)
 
 Loading the ``rte_kni`` kernel module without any optional parameters is
 the typical way a DPDK application gets packets into and out of the kernel
@@ -173,6 +177,35 @@ To set the default carrier state to *off*:
 
 If the ``carrier`` parameter is not specified, the default carrier state
 of KNI interfaces will be set to *off*.
+
+KNI Kthread Scheduling
+~~~~~~~~~~~~~~~~~~~~~~
+
+The ``min_scheduling_interval`` and ``max_scheduling_interval`` parameters
+control the rescheduling interval of the KNI kthreads.
+
+This might be useful if we have use cases in which we require improved
+latency or performance for control plane traffic.
+
+The implementation is backed by Linux hrtimers, and uses ``usleep_range``.
+Hence, it will have the same granularity constraints as Linux hrtimers.
+
+To see more about the Linux hrtimers, you can check the following resource: `Kernel Timers <http://www.kernel.org/doc/Documentation/timers/timers-howto.txt>`_
+
+To set the ``min_scheduling_interval`` to a value of 100 microseconds:
+
+.. code-block:: console
+
+    # insmod <build_dir>/kernel/linux/kni/rte_kni.ko min_scheduling_interval=100
+
+To set the ``max_scheduling_interval`` to a value of 200 microseconds:
+
+.. code-block:: console
+
+    # insmod <build_dir>/kernel/linux/kni/rte_kni.ko max_scheduling_interval=200
+
+If the ``min_scheduling_interval`` and ``max_scheduling_interval`` parameters are
+not specified, the default interval limits will be set to *100* and *200* respectively.
 
 KNI Creation and Deletion
 -------------------------
