@@ -431,6 +431,9 @@ API Changes
   should be provided, and offset for immediate source bitfield is assigned
   from destination one.
 
+* ethdev: All public macros and enumeration constants are prefixed with
+  ``RTE_ETH_`` in a backward compatible way.
+
 * cryptodev: The API rte_cryptodev_pmd_is_valid_dev is modified to
   rte_cryptodev_is_valid_dev as it can be used by the application as
   well as PMD to check whether the device is valid or not.
