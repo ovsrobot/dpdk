@@ -16176,6 +16176,9 @@ cmd_config_per_port_rx_offload_parsed(void *parsed_result,
 		port->dev_conf.rxmode.offloads &= ~single_offload;
 		for (q = 0; q < nb_rx_queues; q++)
 			port->rx_conf[q].offloads &= ~single_offload;
+
+		if (single_offload & 0x80000)
+			port->dev_conf.rxmode.mq_mode &= ~RTE_ETH_MQ_RX_RSS;
 	}
 
 	cmd_reconfig_device_queue(port_id, 1, 1);
