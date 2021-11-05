@@ -322,6 +322,12 @@ New Features
   overruns in C/C++ programs, and other similar errors, as well as
   printing out detailed debug information whenever an error is detected.
 
+* **Increase number of routes configured in l3fwd lpm, em and fib lookups.**
+
+  * Increase number of routes from 8 to 16 for all lookup modes of l3fwd, this
+    helps in validating SoC with more than 8 ethernet devices using l3fwd.
+  * Update EM mode to use RFC2544 reserved IP address space.
+
 
 Removed Items
 -------------
