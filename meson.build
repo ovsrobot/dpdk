@@ -36,6 +36,7 @@ dpdk_drivers = []
 dpdk_extra_ldflags = []
 dpdk_libs_disabled = []
 dpdk_drvs_disabled = []
+dpdk_libs_deps = []
 abi_version_file = files('ABI_VERSION')
 
 if host_machine.cpu_family().startswith('x86')
@@ -96,6 +97,17 @@ configure_file(output: build_cfg,
 
 # build pkg-config files for dpdk
 subdir('buildtools/pkg-config')
+
+# If DPDK is being built as subproject then define
+# variable with the dependency convention
+if meson.is_subproject()
+    libdpdk_dep = declare_dependency(
+        version: meson.project_version(),
+        compile_args : pkg_extra_cflags,
+        dependencies: dpdk_libs_deps,
+        link_args: dpdk_extra_ldflags,
+    )
+endif
 
 # final output, list all the libs and drivers to be built
 # this does not affect any part of the build, for information only.

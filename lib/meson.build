@@ -241,6 +241,11 @@ foreach l:libraries
 
     dpdk_libraries = [shared_lib] + dpdk_libraries
     dpdk_static_libraries = [static_lib] + dpdk_static_libraries
+    if get_option('default_library') == 'static'
+        dpdk_libs_deps += static_dep
+    else
+        dpdk_libs_deps += shared_dep
+    endif
 
     set_variable('shared_rte_' + name, shared_dep)
     set_variable('static_rte_' + name, static_dep)
