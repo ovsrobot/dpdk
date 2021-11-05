@@ -72,8 +72,6 @@ enter_normal_state(struct priority_worker *poll_stats)
 	/* Clear the averages arrays and strs */
 	memset(poll_stats->edpi_av, 0, sizeof(poll_stats->edpi_av));
 	poll_stats->ec = 0;
-	memset(poll_stats->ppi_av, 0, sizeof(poll_stats->ppi_av));
-	poll_stats->pc = 0;
 
 	poll_stats->cur_freq = MED;
 	poll_stats->iter_counter = 0;
@@ -91,8 +89,6 @@ enter_busy_state(struct priority_worker *poll_stats)
 {
 	memset(poll_stats->edpi_av, 0, sizeof(poll_stats->edpi_av));
 	poll_stats->ec = 0;
-	memset(poll_stats->ppi_av, 0, sizeof(poll_stats->ppi_av));
-	poll_stats->pc = 0;
 
 	poll_stats->cur_freq = HGH;
 	poll_stats->iter_counter = 0;
@@ -207,7 +203,7 @@ update_training_stats(struct priority_worker *poll_stats,
 static __rte_always_inline uint32_t
 update_stats(struct priority_worker *poll_stats)
 {
-	uint64_t tot_edpi = 0, tot_ppi = 0;
+	uint64_t tot_edpi = 0;
 	uint32_t j, percent;
 
 	struct priority_worker *s = poll_stats;
@@ -215,10 +211,6 @@ update_stats(struct priority_worker *poll_stats)
 	uint64_t cur_edpi = s->empty_dequeues - s->empty_dequeues_prev;
 
 	s->empty_dequeues_prev = s->empty_dequeues;
-
-	uint64_t ppi = s->num_dequeue_pkts - s->num_dequeue_pkts_prev;
-
-	s->num_dequeue_pkts_prev = s->num_dequeue_pkts;
 
 	if (s->thresh[s->cur_freq].base_edpi < cur_edpi) {
 
@@ -233,11 +225,9 @@ update_stats(struct priority_worker *poll_stats)
 	}
 
 	s->edpi_av[s->ec++ % BINS_AV] = cur_edpi;
-	s->ppi_av[s->pc++ % BINS_AV] = ppi;
 
 	for (j = 0; j < BINS_AV; j++) {
 		tot_edpi += s->edpi_av[j];
-		tot_ppi += s->ppi_av[j];
 	}
 
 	tot_edpi = tot_edpi / BINS_AV;
