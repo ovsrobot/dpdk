@@ -10,7 +10,6 @@ headers = files(
         'rte_thash_gfni.h',
 )
 indirect_headers += files(
-        'rte_crc_arm64.h',
         'rte_thash_x86_gfni.h',
 )
 
