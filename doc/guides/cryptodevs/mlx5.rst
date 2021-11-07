@@ -88,6 +88,7 @@ The mlxreg dedicated tool should be used as follows:
   should not be specified.
 
   All the device ports should set it in order to move to operational mode.
+  For BlueField2, also the internal ports in the ARMs system should be set.
 
 - Query CRYPTO_OPERATIONAL register to make sure the device is in Operational
   mode.
@@ -141,6 +142,8 @@ Supported NICs
 --------------
 
 * Mellanox\ |reg| ConnectX\ |reg|-6 200G MCX654106A-HCAT (2x200G)
+* Mellanox\ |reg| BlueField 2 SmartNIC
+* Mellanox\ |reg| ConnectX\ |reg|-6DX
 
 
 Limitations
@@ -158,7 +161,8 @@ Prerequisites
 Linux Prerequisites
 ~~~~~~~~~~~~~~~~~~~
 
-- Mellanox OFED version: **5.3**
+- Mellanox OFED version: starts at 5.3 for ConnectX6.
+  Mellanox OFED version: 5.5 for ConnectX6DX and BF2.
   see :doc:`../../nics/mlx5` guide for more Mellanox OFED details.
 
 - Compilation can be done also with rdma-core v15+.
