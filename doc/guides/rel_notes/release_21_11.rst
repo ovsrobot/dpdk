@@ -400,6 +400,10 @@ New Features
   overruns in C/C++ programs, and other similar errors, as well as
   printing out detailed debug information whenever an error is detected.
 
+* **Updated mlx5 crypto driver.**
+
+  * Added support for BF2.
+  * Added support for CX6DX.
 
 Removed Items
 -------------
