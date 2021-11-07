@@ -41,8 +41,6 @@ octeontx2_sso = {'Class': '08', 'Vendor': '177d', 'Device': 'a0f9,a0fa',
                  'SVendor': None, 'SDevice': None}
 octeontx2_npa = {'Class': '08', 'Vendor': '177d', 'Device': 'a0fb,a0fc',
                  'SVendor': None, 'SDevice': None}
-octeontx2_dma = {'Class': '08', 'Vendor': '177d', 'Device': 'a081',
-                 'SVendor': None, 'SDevice': None}
 octeontx2_ree = {'Class': '08', 'Vendor': '177d', 'Device': 'a0f4',
                  'SVendor': None, 'SDevice': None}
 cnxk_bphy = {'Class': '08', 'Vendor': '177d', 'Device': 'a089',
@@ -80,8 +78,8 @@ eventdev_devices = [cavium_sso, cavium_tim, intel_dlb, octeontx2_sso]
 mempool_devices = [cavium_fpa, octeontx2_npa]
 compress_devices = [cavium_zip]
 regex_devices = [octeontx2_ree]
-misc_devices = [cnxk_bphy, cnxk_bphy_cgx, cnxk_inl_dev, intel_ntb_skx,
-                intel_ntb_icx, octeontx2_dma]
+misc_devices = [cnxk_bphy, cnxk_bphy_cgx, cnxk_inl_dev,
+                intel_ntb_icx, intel_ntb_skx]
 
 # global dict ethernet devices present. Dictionary indexed by PCI address.
 # Each device within this is itself a dictionary of device properties
