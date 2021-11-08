@@ -14,6 +14,7 @@
 #include <rte_mbuf.h>
 #include <rte_compressdev.h>
 #include <rte_string_fns.h>
+#include <rte_bus_vdev.h>
 
 #include "test_compressdev_test_buffer.h"
 #include "test.h"
@@ -196,6 +197,11 @@ testsuite_setup(void)
 	struct comp_testsuite_params *ts_params = &testsuite_params;
 	uint32_t max_buf_size = 0;
 	unsigned int i;
+
+	if (rte_vdev_init("compress_zlib", NULL) != 0) {
+		RTE_LOG(WARNING, USER1, "not find compress_zlib device\n");
+		return TEST_SKIPPED;
+	}
 
 	if (rte_compressdev_count() == 0) {
 		RTE_LOG(WARNING, USER1, "Need at least one compress device\n");
