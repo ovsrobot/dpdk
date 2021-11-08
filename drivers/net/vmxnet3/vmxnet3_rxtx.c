@@ -1334,9 +1334,11 @@ vmxnet3_v4_rss_configure(struct rte_eth_dev *dev)
 	if (rss_hf & RTE_ETH_RSS_NONFRAG_IPV6_UDP)
 		cmdInfo->setRSSFields |= VMXNET3_RSS_FIELDS_UDPIP6;
 
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD,
 			       VMXNET3_CMD_SET_RSS_FIELDS);
 	ret = VMXNET3_READ_BAR1_REG(hw, VMXNET3_REG_CMD);
+	rte_spinlock_unlock(&hw->cmd_lock);
 
 	if (ret != VMXNET3_SUCCESS) {
 		PMD_DRV_LOG(ERR, "Set RSS fields (v4) failed: %d", ret);

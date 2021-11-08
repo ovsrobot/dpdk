@@ -108,6 +108,7 @@ struct vmxnet3_hw {
 	uint64_t              queueDescPA;
 	uint16_t              queue_desc_len;
 	uint16_t              mtu;
+	rte_spinlock_t        cmd_lock;
 
 	VMXNET3_RSSConf       *rss_conf;
 	uint64_t              rss_confPA;

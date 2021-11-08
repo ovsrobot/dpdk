@@ -252,9 +252,11 @@ eth_vmxnet3_txdata_get(struct vmxnet3_hw *hw)
 {
 	uint16 txdata_desc_size;
 
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD,
 			       VMXNET3_CMD_GET_TXDATA_DESC_SIZE);
 	txdata_desc_size = VMXNET3_READ_BAR1_REG(hw, VMXNET3_REG_CMD);
+	rte_spinlock_unlock(&hw->cmd_lock);
 
 	return (txdata_desc_size < VMXNET3_TXDATA_DESC_MIN_SIZE ||
 		txdata_desc_size > VMXNET3_TXDATA_DESC_MAX_SIZE ||
@@ -285,6 +287,7 @@ eth_vmxnet3_dev_init(struct rte_eth_dev *eth_dev)
 	eth_dev->tx_pkt_burst = &vmxnet3_xmit_pkts;
 	eth_dev->tx_pkt_prepare = vmxnet3_prep_pkts;
 	pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
+	rte_spinlock_init(&hw->cmd_lock);
 
 	/* extra mbuf field is required to guess MSS */
 	vmxnet3_segs_dynfield_offset =
@@ -375,7 +378,9 @@ eth_vmxnet3_dev_init(struct rte_eth_dev *eth_dev)
 		     hw->perm_addr[3], hw->perm_addr[4], hw->perm_addr[5]);
 
 	/* Put device in Quiesce Mode */
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD, VMXNET3_CMD_QUIESCE_DEV);
+	rte_spinlock_unlock(&hw->cmd_lock);
 
 	/* allow untagged pkts */
 	VMXNET3_SET_VFTABLE_ENTRY(hw->shadow_vfta, 0);
@@ -451,9 +456,11 @@ vmxnet3_alloc_intr_resources(struct rte_eth_dev *dev)
 	int nvec = 1; /* for link event */
 
 	/* intr settings */
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD,
 			       VMXNET3_CMD_GET_CONF_INTR);
 	cfg = VMXNET3_READ_BAR1_REG(hw, VMXNET3_REG_CMD);
+	rte_spinlock_unlock(&hw->cmd_lock);
 	hw->intr.type = cfg & 0x3;
 	hw->intr.mask_mode = (cfg >> 2) & 0x3;
 
@@ -910,8 +917,10 @@ vmxnet3_dev_start(struct rte_eth_dev *dev)
 			       VMXNET3_GET_ADDR_HI(hw->sharedPA));
 
 	/* Activate device by register write */
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD, VMXNET3_CMD_ACTIVATE_DEV);
 	ret = VMXNET3_READ_BAR1_REG(hw, VMXNET3_REG_CMD);
+	rte_spinlock_unlock(&hw->cmd_lock);
 
 	if (ret != 0) {
 		PMD_INIT_LOG(ERR, "Device activation: UNSUCCESSFUL");
@@ -921,9 +930,11 @@ vmxnet3_dev_start(struct rte_eth_dev *dev)
 	/* Setup memory region for rx buffers */
 	ret = vmxnet3_dev_setup_memreg(dev);
 	if (ret == 0) {
+		rte_spinlock_lock(&hw->cmd_lock);
 		VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD,
 				       VMXNET3_CMD_REGISTER_MEMREGS);
 		ret = VMXNET3_READ_BAR1_REG(hw, VMXNET3_REG_CMD);
+		rte_spinlock_unlock(&hw->cmd_lock);
 		if (ret != 0)
 			PMD_INIT_LOG(DEBUG,
 				     "Failed in setup memory region cmd\n");
@@ -1027,12 +1038,16 @@ vmxnet3_dev_stop(struct rte_eth_dev *dev)
 	rte_intr_vec_list_free(intr_handle);
 
 	/* quiesce the device first */
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD, VMXNET3_CMD_QUIESCE_DEV);
+	rte_spinlock_unlock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_DSAL, 0);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_DSAH, 0);
 
 	/* reset the device */
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD, VMXNET3_CMD_RESET_DEV);
+	rte_spinlock_unlock(&hw->cmd_lock);
 	PMD_INIT_LOG(DEBUG, "Device reset.");
 
 	vmxnet3_dev_clear_queues(dev);
@@ -1182,7 +1197,9 @@ vmxnet3_hw_stats_save(struct vmxnet3_hw *hw)
 {
 	unsigned int i;
 
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD, VMXNET3_CMD_GET_STATS);
+	rte_spinlock_unlock(&hw->cmd_lock);
 
 	RTE_BUILD_BUG_ON(RTE_ETHDEV_QUEUE_STAT_CNTRS < VMXNET3_MAX_TX_QUEUES);
 
@@ -1285,7 +1302,9 @@ vmxnet3_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 	struct UPT1_TxStats txStats;
 	struct UPT1_RxStats rxStats;
 
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD, VMXNET3_CMD_GET_STATS);
+	rte_spinlock_unlock(&hw->cmd_lock);
 
 	RTE_BUILD_BUG_ON(RTE_ETHDEV_QUEUE_STAT_CNTRS < VMXNET3_MAX_TX_QUEUES);
 	for (i = 0; i < hw->num_tx_queues; i++) {
@@ -1335,7 +1354,9 @@ vmxnet3_dev_stats_reset(struct rte_eth_dev *dev)
 	struct UPT1_TxStats txStats = {0};
 	struct UPT1_RxStats rxStats = {0};
 
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD, VMXNET3_CMD_GET_STATS);
+	rte_spinlock_unlock(&hw->cmd_lock);
 
 	RTE_BUILD_BUG_ON(RTE_ETHDEV_QUEUE_STAT_CNTRS < VMXNET3_MAX_TX_QUEUES);
 
@@ -1443,8 +1464,10 @@ __vmxnet3_dev_link_update(struct rte_eth_dev *dev,
 
 	memset(&link, 0, sizeof(link));
 
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD, VMXNET3_CMD_GET_LINK);
 	ret = VMXNET3_READ_BAR1_REG(hw, VMXNET3_REG_CMD);
+	rte_spinlock_unlock(&hw->cmd_lock);
 
 	if (ret & 0x1)
 		link.link_status = RTE_ETH_LINK_UP;
@@ -1476,7 +1499,9 @@ vmxnet3_dev_set_rxmode(struct vmxnet3_hw *hw, uint32_t feature, int set)
 	else
 		rxConf->rxMode = rxConf->rxMode & (~feature);
 
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD, VMXNET3_CMD_UPDATE_RX_MODE);
+	rte_spinlock_unlock(&hw->cmd_lock);
 }
 
 /* Promiscuous supported only if Vmxnet3_DriverShared is initialized in adapter */
@@ -1489,8 +1514,10 @@ vmxnet3_dev_promiscuous_enable(struct rte_eth_dev *dev)
 	memset(vf_table, 0, VMXNET3_VFT_TABLE_SIZE);
 	vmxnet3_dev_set_rxmode(hw, VMXNET3_RXM_PROMISC, 1);
 
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD,
 			       VMXNET3_CMD_UPDATE_VLAN_FILTERS);
+	rte_spinlock_unlock(&hw->cmd_lock);
 
 	return 0;
 }
@@ -1508,8 +1535,10 @@ vmxnet3_dev_promiscuous_disable(struct rte_eth_dev *dev)
 	else
 		memset(vf_table, 0xff, VMXNET3_VFT_TABLE_SIZE);
 	vmxnet3_dev_set_rxmode(hw, VMXNET3_RXM_PROMISC, 0);
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD,
 			       VMXNET3_CMD_UPDATE_VLAN_FILTERS);
+	rte_spinlock_unlock(&hw->cmd_lock);
 
 	return 0;
 }
@@ -1560,8 +1589,10 @@ vmxnet3_dev_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vid, int on)
 	else
 		VMXNET3_CLEAR_VFTABLE_ENTRY(vf_table, vid);
 
+	rte_spinlock_lock(&hw->cmd_lock);
 	VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD,
 			       VMXNET3_CMD_UPDATE_VLAN_FILTERS);
+	rte_spinlock_unlock(&hw->cmd_lock);
 	return 0;
 }
 
@@ -1579,8 +1610,10 @@ vmxnet3_dev_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 		else
 			devRead->misc.uptFeatures &= ~UPT1_F_RXVLAN;
 
+		rte_spinlock_lock(&hw->cmd_lock);
 		VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD,
 				       VMXNET3_CMD_UPDATE_FEATURE);
+		rte_spinlock_unlock(&hw->cmd_lock);
 	}
 
 	if (mask & RTE_ETH_VLAN_FILTER_MASK) {
@@ -1589,8 +1622,10 @@ vmxnet3_dev_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 		else
 			memset(vf_table, 0xff, VMXNET3_VFT_TABLE_SIZE);
 
+		rte_spinlock_lock(&hw->cmd_lock);
 		VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD,
 				       VMXNET3_CMD_UPDATE_VLAN_FILTERS);
+		rte_spinlock_unlock(&hw->cmd_lock);
 	}
 
 	return 0;
@@ -1622,8 +1657,10 @@ vmxnet3_process_events(struct rte_eth_dev *dev)
 
 	/* Check if there is an error on xmit/recv queues */
 	if (events & (VMXNET3_ECR_TQERR | VMXNET3_ECR_RQERR)) {
+		rte_spinlock_lock(&hw->cmd_lock);
 		VMXNET3_WRITE_BAR1_REG(hw, VMXNET3_REG_CMD,
 				       VMXNET3_CMD_GET_QUEUE_STATUS);
+		rte_spinlock_unlock(&hw->cmd_lock);
 
 		if (hw->tqd_start->status.stopped)
 			PMD_DRV_LOG(ERR, "tq error 0x%x",
