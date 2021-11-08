@@ -27,12 +27,24 @@ enum rte_gpu_state {
 struct rte_gpu;
 typedef int (rte_gpu_close_t)(struct rte_gpu *dev);
 typedef int (rte_gpu_info_get_t)(struct rte_gpu *dev, struct rte_gpu_info *info);
+typedef int (rte_gpu_mem_alloc_t)(struct rte_gpu *dev, size_t size, void **ptr);
+typedef int (rte_gpu_free_t)(struct rte_gpu *dev, void *ptr);
+typedef int (rte_gpu_mem_register_t)(struct rte_gpu *dev, size_t size, void *ptr);
+typedef int (rte_gpu_mem_unregister_t)(struct rte_gpu *dev, void *ptr);
 
 struct rte_gpu_ops {
 	/* Get device info. If NULL, info is just copied. */
 	rte_gpu_info_get_t *dev_info_get;
 	/* Close device or child context. */
 	rte_gpu_close_t *dev_close;
+	/* Allocate memory in device. */
+	rte_gpu_mem_alloc_t *mem_alloc;
+	/* Register CPU memory in device. */
+	rte_gpu_mem_register_t *mem_register;
+	/* Free memory allocated or registered in device. */
+	rte_gpu_free_t *mem_free;
+	/* Unregister CPU memory in device. */
+	rte_gpu_mem_unregister_t *mem_unregister;
 };
 
 struct rte_gpu_mpshared {
