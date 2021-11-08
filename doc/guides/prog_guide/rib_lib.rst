@@ -7,7 +7,7 @@ RIB Library
 The Routing Information Base (RIB) library provides a data store for routing information.
 This library is intended for use in control or management plane applications.
 There are more suitable libraries for use in data plane applications such as
-:ref:`LPM <LPM_Library>` or FIB.
+:ref:`LPM <LPM_Library>` or :ref:`FIB <FIB_Library>`.
 
 
 Implementation details
