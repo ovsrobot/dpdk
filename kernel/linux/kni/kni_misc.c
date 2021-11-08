@@ -41,6 +41,12 @@ static uint32_t multiple_kthread_on;
 static char *carrier;
 uint32_t kni_dflt_carrier;
 
+#ifdef RTE_KNI_PREEMPT_DEFAULT
+/* Kni thread scheduling interval */
+static long min_scheduling_interval = 100; /* us */
+static long max_scheduling_interval = 200; /* us */
+#endif
+
 #define KNI_DEV_IN_USE_BIT_NUM 0 /* Bit number for device in use */
 
 static int kni_net_id;
@@ -130,8 +136,7 @@ kni_thread_single(void *data)
 		up_read(&knet->kni_list_lock);
 #ifdef RTE_KNI_PREEMPT_DEFAULT
 		/* reschedule out for a while */
-		schedule_timeout_interruptible(
-			usecs_to_jiffies(KNI_KTHREAD_RESCHEDULE_INTERVAL));
+		usleep_range(min_scheduling_interval, max_scheduling_interval);
 #endif
 	}
 
@@ -150,8 +155,7 @@ kni_thread_multiple(void *param)
 			kni_net_poll_resp(dev);
 		}
 #ifdef RTE_KNI_PREEMPT_DEFAULT
-		schedule_timeout_interruptible(
-			usecs_to_jiffies(KNI_KTHREAD_RESCHEDULE_INTERVAL));
+		usleep_range(min_scheduling_interval, max_scheduling_interval);
 #endif
 	}
 
@@ -593,6 +597,16 @@ kni_init(void)
 	else
 		pr_debug("Default carrier state set to on.\n");
 
+#ifdef RTE_KNI_PREEMPT_DEFAULT
+	if (min_scheduling_interval < 0 || max_scheduling_interval < 0 ||
+		min_scheduling_interval > KNI_KTHREAD_MAX_RESCHEDULE_INTERVAL ||
+		max_scheduling_interval > KNI_KTHREAD_MAX_RESCHEDULE_INTERVAL ||
+		min_scheduling_interval >= max_scheduling_interval) {
+		pr_err("Invalid parameters for scheduling interval\n");
+		return -EINVAL;
+	}
+#endif
+
 #ifdef HAVE_SIMPLIFIED_PERNET_OPERATIONS
 	rc = register_pernet_subsys(&kni_net_ops);
 #else
@@ -659,3 +673,17 @@ MODULE_PARM_DESC(carrier,
 "\t\ton    Interfaces will be created with carrier state set to on.\n"
 "\t\t"
 );
+
+#ifdef RTE_KNI_PREEMPT_DEFAULT
+module_param(min_scheduling_interval, long, 0644);
+MODULE_PARM_DESC(min_scheduling_interval,
+"\t\tKni thread min scheduling interval (default=100 microseconds):\n"
+"\t\t"
+);
+
+module_param(max_scheduling_interval, long, 0644);
+MODULE_PARM_DESC(max_scheduling_interval,
+"\t\tKni thread max scheduling interval (default=200 microseconds):\n"
+"\t\t"
+);
+#endif
