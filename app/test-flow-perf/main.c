@@ -37,6 +37,7 @@
 #include <rte_mtr.h>
 
 #include "config.h"
+#include "actions_gen.h"
 #include "flow_gen.h"
 
 #define MAX_BATCHES_COUNT          100
@@ -49,10 +50,13 @@ static uint8_t flow_group;
 
 static uint64_t encap_data;
 static uint64_t decap_data;
+static uint64_t all_actions[RTE_COLORS][MAX_ACTIONS_NUM];
+static char *actions_str[RTE_COLORS];
 
 static uint64_t flow_items[MAX_ITEMS_NUM];
 static uint64_t flow_actions[MAX_ACTIONS_NUM];
 static uint64_t flow_attrs[MAX_ATTRS_NUM];
+static uint32_t policy_id[MAX_PORTS];
 static uint8_t items_idx, actions_idx, attrs_idx;
 
 static uint64_t ports_mask;
@@ -63,6 +67,7 @@ static bool delete_flag;
 static bool dump_socket_mem_flag;
 static bool enable_fwd;
 static bool unique_data;
+static bool policy_mtr;
 
 static uint8_t rx_queues_count;
 static uint8_t tx_queues_count;
@@ -126,6 +131,337 @@ static struct multi_cores_pool mc_pool = {
 	.cores_count = 1,
 };
 
+static const struct option_dict {
+	const char *str;
+	const uint64_t mask;
+	uint64_t *map;
+	uint8_t *map_idx;
+
+} flow_options[] = {
+	{
+		.str = "ether",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_ETH),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "ipv4",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_IPV4),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "ipv6",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_IPV6),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "vlan",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_VLAN),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "tcp",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_TCP),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "udp",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_UDP),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "vxlan",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_VXLAN),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "vxlan-gpe",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_VXLAN_GPE),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "gre",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_GRE),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "geneve",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_GENEVE),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "gtp",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_GTP),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "meta",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_META),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "tag",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_TAG),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "icmpv4",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_ICMP),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "icmpv6",
+		.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_ICMP6),
+		.map = &flow_items[0],
+		.map_idx = &items_idx
+	},
+	{
+		.str = "ingress",
+		.mask = INGRESS,
+		.map = &flow_attrs[0],
+		.map_idx = &attrs_idx
+	},
+	{
+		.str = "egress",
+		.mask = EGRESS,
+		.map = &flow_attrs[0],
+		.map_idx = &attrs_idx
+	},
+	{
+		.str = "transfer",
+		.mask = TRANSFER,
+		.map = &flow_attrs[0],
+		.map_idx = &attrs_idx
+	},
+	{
+		.str = "port-id",
+		.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_PORT_ID),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "rss",
+		.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_RSS),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "queue",
+		.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_QUEUE),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "jump",
+		.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_JUMP),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "mark",
+		.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_MARK),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "count",
+		.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_COUNT),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "set-meta",
+		.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_SET_META),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "set-tag",
+		.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_SET_TAG),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "drop",
+		.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_DROP),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "set-src-mac",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_SET_MAC_SRC
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "set-dst-mac",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_SET_MAC_DST
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "set-src-ipv4",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_SET_IPV4_SRC
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "set-dst-ipv4",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_SET_IPV4_DST
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "set-src-ipv6",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_SET_IPV6_SRC
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "set-dst-ipv6",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_SET_IPV6_DST
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "set-src-tp",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_SET_TP_SRC
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "set-dst-tp",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_SET_TP_DST
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "inc-tcp-ack",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_INC_TCP_ACK
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "dec-tcp-ack",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_DEC_TCP_ACK
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "inc-tcp-seq",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_INC_TCP_SEQ
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "dec-tcp-seq",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_DEC_TCP_SEQ
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "set-ttl",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_SET_TTL
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "dec-ttl",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_DEC_TTL
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "set-ipv4-dscp",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_SET_IPV4_DSCP
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "set-ipv6-dscp",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_SET_IPV6_DSCP
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "flag",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_FLAG
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "meter",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_METER
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "vxlan-encap",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_VXLAN_ENCAP
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+	{
+		.str = "vxlan-decap",
+		.mask = FLOW_ACTION_MASK(
+			RTE_FLOW_ACTION_TYPE_VXLAN_DECAP
+		),
+		.map = &flow_actions[0],
+		.map_idx = &actions_idx
+	},
+};
+
 static void
 usage(char *progname)
 {
@@ -148,13 +484,6 @@ usage(char *progname)
 		"and S as seed for pseudo-random number generator\n");
 	printf("  --unique-data: flag to set using unique data for all"
 		" actions that support data, such as header modify and encap actions\n");
-
-	printf("To set flow attributes:\n");
-	printf("  --ingress: set ingress attribute in flows\n");
-	printf("  --egress: set egress attribute in flows\n");
-	printf("  --transfer: set transfer attribute in flows\n");
-	printf("  --group=N: set group for all flows,"
-		" default is %d\n", DEFAULT_GROUP);
 	printf("  --cores=N: to set the number of needed "
 		"cores to insert rte_flow rules, default is 1\n");
 	printf("  --rxq=N: to set the count of receive queues\n");
@@ -165,6 +494,12 @@ usage(char *progname)
 	printf("  --mbuf-cache-size=N: to set the size of mbuf cache\n");
 	printf("  --total-mbuf-count=N: to set the count of total mbuf count\n");
 
+	printf("To set flow attributes:\n");
+	printf("  --ingress: set ingress attribute in flows\n");
+	printf("  --egress: set egress attribute in flows\n");
+	printf("  --transfer: set transfer attribute in flows\n");
+	printf("  --group=N: set group for all flows,"
+		" default is %d\n", DEFAULT_GROUP);
 
 	printf("To set flow items:\n");
 	printf("  --ether: add ether layer in flow items\n");
@@ -229,6 +564,8 @@ usage(char *progname)
 		"ipv6 dscp value to be set is random each flow\n");
 	printf("  --flag: add flag action to flow actions\n");
 	printf("  --meter: add meter action to flow actions\n");
+	printf("  --policy-mtr=\"g1,g2:y1:r1\": To create meter with specified "
+		"color actions\n");
 	printf("  --raw-encap=<data>: add raw encap action to flow actions\n"
 		"Data is the data needed to be encaped\n"
 		"Example: raw-encap=ether,ipv4,udp,vxlan\n");
@@ -242,6 +579,44 @@ usage(char *progname)
 }
 
 static void
+handle_meter_policy(char *prog, char *arg)
+{
+	char *token;
+	size_t i, j, k;
+	j = 0;
+	k = 0;
+	policy_mtr = true;
+	token = strsep(&arg, ":\0");
+	while (token != NULL && j < RTE_COLORS) {
+		actions_str[j++] = token;
+		token = strsep(&arg, ":\0");
+	}
+	j = 0;
+	token = strtok(actions_str[0], ",\0");
+	while (token == NULL && j < RTE_COLORS - 1)
+		token = strtok(actions_str[++j], ",\0");
+	while (j < RTE_COLORS && token != NULL) {
+		for (i = 0; i < RTE_DIM(flow_options); i++) {
+			if (!strcmp(token, flow_options[i].str)) {
+				all_actions[j][k++] = flow_options[i].mask;
+				break;
+			}
+		}
+		/* Reached last item with no match */
+		if (i >= RTE_DIM(flow_options)) {
+			fprintf(stderr, "Invalid actions item: %s\n", token);
+			usage(prog);
+			rte_exit(EXIT_SUCCESS, "Invalid actions item\n");
+		}
+		token = strtok(NULL, ",\0");
+		while (!token && j < RTE_COLORS - 1) {
+			token = strtok(actions_str[++j], ",\0");
+			k = 0;
+		}
+	}
+}
+
+static void
 args_parse(int argc, char **argv)
 {
 	uint64_t pm, seed;
@@ -252,337 +627,6 @@ args_parse(int argc, char **argv)
 	int n, opt;
 	int opt_idx;
 	size_t i;
-
-	static const struct option_dict {
-		const char *str;
-		const uint64_t mask;
-		uint64_t *map;
-		uint8_t *map_idx;
-
-	} flow_options[] = {
-		{
-			.str = "ether",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_ETH),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "ipv4",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_IPV4),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "ipv6",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_IPV6),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "vlan",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_VLAN),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "tcp",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_TCP),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "udp",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_UDP),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "vxlan",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_VXLAN),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "vxlan-gpe",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_VXLAN_GPE),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "gre",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_GRE),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "geneve",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_GENEVE),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "gtp",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_GTP),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "meta",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_META),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "tag",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_TAG),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "icmpv4",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_ICMP),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "icmpv6",
-			.mask = FLOW_ITEM_MASK(RTE_FLOW_ITEM_TYPE_ICMP6),
-			.map = &flow_items[0],
-			.map_idx = &items_idx
-		},
-		{
-			.str = "ingress",
-			.mask = INGRESS,
-			.map = &flow_attrs[0],
-			.map_idx = &attrs_idx
-		},
-		{
-			.str = "egress",
-			.mask = EGRESS,
-			.map = &flow_attrs[0],
-			.map_idx = &attrs_idx
-		},
-		{
-			.str = "transfer",
-			.mask = TRANSFER,
-			.map = &flow_attrs[0],
-			.map_idx = &attrs_idx
-		},
-		{
-			.str = "port-id",
-			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_PORT_ID),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "rss",
-			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_RSS),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "queue",
-			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_QUEUE),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "jump",
-			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_JUMP),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "mark",
-			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_MARK),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "count",
-			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_COUNT),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "set-meta",
-			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_SET_META),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "set-tag",
-			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_SET_TAG),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "drop",
-			.mask = FLOW_ACTION_MASK(RTE_FLOW_ACTION_TYPE_DROP),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "set-src-mac",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_SET_MAC_SRC
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "set-dst-mac",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_SET_MAC_DST
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "set-src-ipv4",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_SET_IPV4_SRC
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "set-dst-ipv4",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_SET_IPV4_DST
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "set-src-ipv6",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_SET_IPV6_SRC
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "set-dst-ipv6",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_SET_IPV6_DST
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "set-src-tp",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_SET_TP_SRC
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "set-dst-tp",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_SET_TP_DST
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "inc-tcp-ack",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_INC_TCP_ACK
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "dec-tcp-ack",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_DEC_TCP_ACK
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "inc-tcp-seq",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_INC_TCP_SEQ
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "dec-tcp-seq",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_DEC_TCP_SEQ
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "set-ttl",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_SET_TTL
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "dec-ttl",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_DEC_TTL
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "set-ipv4-dscp",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_SET_IPV4_DSCP
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "set-ipv6-dscp",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_SET_IPV6_DSCP
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "flag",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_FLAG
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "meter",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_METER
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "vxlan-encap",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_VXLAN_ENCAP
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-		{
-			.str = "vxlan-decap",
-			.mask = FLOW_ACTION_MASK(
-				RTE_FLOW_ACTION_TYPE_VXLAN_DECAP
-			),
-			.map = &flow_actions[0],
-			.map_idx = &actions_idx
-		},
-	};
 
 	static const struct option lgopts[] = {
 		/* Control */
@@ -660,6 +704,7 @@ args_parse(int argc, char **argv)
 		{ "raw-decap",                  1, 0, 0 },
 		{ "vxlan-encap",                0, 0, 0 },
 		{ "vxlan-decap",                0, 0, 0 },
+		{ "policy-mtr",                 1, 0, 0 },
 	};
 
 	RTE_ETH_FOREACH_DEV(i)
@@ -877,6 +922,8 @@ args_parse(int argc, char **argv)
 						RTE_MAX_LCORE);
 				}
 			}
+			if (strcmp(lgopts[opt_idx].name, "policy-mtr") == 0)
+				handle_meter_policy(argv[0], optarg);
 			break;
 		default:
 			usage(argv[0]);
@@ -981,7 +1028,6 @@ print_rules_batches(double *cpu_time_per_batch)
 	}
 }
 
-
 static inline int
 has_meter(void)
 {
@@ -998,11 +1044,66 @@ has_meter(void)
 }
 
 static void
+create_meter_policy(void)
+{
+	struct rte_mtr_error error;
+	int ret, port_id;
+	struct rte_mtr_meter_policy_params policy;
+	uint16_t nr_ports;
+	struct rte_flow_action actions[RTE_COLORS][MAX_ACTIONS_NUM];
+	int i;
+
+	memset(actions, 0, sizeof(actions));
+	memset(&policy, 0, sizeof(policy));
+	nr_ports = rte_eth_dev_count_avail();
+	for (port_id = 0; port_id < nr_ports; port_id++) {
+		for (i = 0; i < RTE_COLORS; i++)
+			fill_actions(actions[i], all_actions[i], 0, 0, 0,
+				     0, 0, 0, unique_data, rx_queues_count,
+				     dst_ports[port_id]);
+		policy.actions[RTE_COLOR_GREEN] = actions[RTE_COLOR_GREEN];
+		policy.actions[RTE_COLOR_YELLOW] = actions[RTE_COLOR_YELLOW];
+		policy.actions[RTE_COLOR_RED] = actions[RTE_COLOR_RED];
+		policy_id[port_id] = port_id + 10;
+		ret = rte_mtr_meter_policy_add(port_id, policy_id[port_id],
+					       &policy, &error);
+		if (ret) {
+			fprintf(stderr, "meter policy add failed port_id %d\n",
+				port_id);
+			policy_id[port_id] = UINT32_MAX;
+		}
+		memset(actions, 0, sizeof(actions));
+	}
+}
+
+static void
+destroy_meter_policy(void)
+{
+	struct rte_mtr_error error;
+	uint16_t nr_ports;
+	int port_id;
+
+	nr_ports = rte_eth_dev_count_avail();
+	for (port_id = 0; port_id < nr_ports; port_id++) {
+		/* If port outside portmask */
+		if (!((ports_mask >> port_id) & 0x1))
+			continue;
+
+		if (rte_mtr_meter_policy_delete
+			(port_id, policy_id[port_id], &error)) {
+			fprintf(stderr, "Port %u del policy error(%d) message: %s\n",
+				port_id, error.type,
+				error.message ? error.message : "(no stated reason)");
+			rte_exit(EXIT_FAILURE, "Error: Destroy meter policy Failed!\n");
+		}
+	}
+}
+
+static void
 create_meter_rule(int port_id, uint32_t counter)
 {
 	int ret;
 	struct rte_mtr_params params;
-	uint32_t default_prof_id = 100;
 	struct rte_mtr_error error;
 
 	memset(&params, 0, sizeof(struct rte_mtr_params));
@@ -1012,8 +1113,15 @@ create_meter_rule(int port_id, uint32_t counter)
 	params.dscp_table = NULL;
 
 	/*create meter*/
-	params.meter_profile_id = default_prof_id;
-	ret = rte_mtr_create(port_id, counter, &params, 1, &error);
+	params.meter_profile_id = DEFAULT_METER_PROF_ID;
+
+	if (!policy_mtr) {
+		ret = rte_mtr_create(port_id, counter, &params, 1, &error);
+	} else {
+		params.meter_policy_id = policy_id[port_id];
+		ret = rte_mtr_create(port_id, counter, &params, 0, &error);
+	}
+
 	if (ret != 0) {
 		printf("Port %u create meter idx(%d) error(%d) message: %s\n",
 			port_id, counter, error.type,
@@ -1027,11 +1135,17 @@ destroy_meter_rule(int port_id, uint32_t counter)
 {
 	struct rte_mtr_error error;
 
+	if (policy_mtr && policy_id[port_id] != UINT32_MAX) {
+		if (rte_mtr_meter_policy_delete(port_id, policy_id[port_id],
+					&error))
+			fprintf(stderr, "error delete policy %d\n", counter+1);
+		policy_id[port_id] = UINT32_MAX;
+	}
 	if (rte_mtr_destroy(port_id, counter, &error)) {
-		printf("Port %u destroy meter(%d) error(%d) message: %s\n",
-			port_id, counter, error.type,
-			error.message ? error.message : "(no stated reason)");
-		rte_exit(EXIT_FAILURE, "Error in deleting meter rule\n");
+		fprintf(stderr, "Port %u destroy meter(%d) error(%d) message: %s\n",
+		port_id, counter, error.type,
+		error.message ? error.message : "(no stated reason)");
+		rte_exit(EXIT_FAILURE, "Error in deleting meter rule");
 	}
 }
 
@@ -1136,12 +1250,10 @@ create_meter_profile(void)
 		/* If port outside portmask */
 		if (!((ports_mask >> port_id) & 0x1))
 			continue;
-
 		mp.alg = RTE_MTR_SRTCM_RFC2697;
 		mp.srtcm_rfc2697.cir = METER_CIR;
 		mp.srtcm_rfc2697.cbs = METER_CIR / 8;
 		mp.srtcm_rfc2697.ebs = 0;
-
 		ret = rte_mtr_meter_profile_add
 			(port_id, DEFAULT_METER_PROF_ID, &mp, &error);
 		if (ret != 0) {
@@ -2012,16 +2124,22 @@ main(int argc, char **argv)
 
 	rte_srand(rand_seed);
 
-	if (has_meter())
+	if (has_meter()) {
 		create_meter_profile();
+		if (policy_mtr)
+			create_meter_policy();
+	}
 	rte_eal_mp_remote_launch(run_rte_flow_handler_cores, NULL, CALL_MAIN);
 
 	if (enable_fwd) {
 		init_lcore_info();
 		rte_eal_mp_remote_launch(start_forwarding, NULL, CALL_MAIN);
 	}
-	if (has_meter() && delete_flag)
+	if (has_meter() && delete_flag) {
 		destroy_meter_profile();
+		if (policy_mtr)
+			destroy_meter_policy();
+	}
 
 	RTE_ETH_FOREACH_DEV(port) {
 		rte_flow_flush(port, &error);
