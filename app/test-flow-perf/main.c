@@ -68,6 +68,7 @@ static bool dump_socket_mem_flag;
 static bool enable_fwd;
 static bool unique_data;
 static bool policy_mtr;
+static bool packet_mode;
 
 static uint8_t rx_queues_count;
 static uint8_t tx_queues_count;
@@ -484,6 +485,7 @@ usage(char *progname)
 		"color actions\n");
 	printf("  --meter-profile=cir,cbs,ebs: set CIR CBS EBS parameters in meter"
 		" profile, default is %d,%d,%d\n", METER_CIR, METER_CIR / 8, 0);
+	printf("  --packet-mode: To enable packet mode for meter profile\n");
 
 	printf("To set flow attributes:\n");
 	printf("  --ingress: set ingress attribute in flows\n");
@@ -704,6 +706,7 @@ args_parse(int argc, char **argv)
 		{ "vxlan-decap",                0, 0, 0 },
 		{ "policy-mtr",                 1, 0, 0 },
 		{ "meter-profile",              1, 0, 0 },
+		{ "packet-mode",                0, 0, 0 },
 	};
 
 	RTE_ETH_FOREACH_DEV(i)
@@ -932,6 +935,8 @@ args_parse(int argc, char **argv)
 					token = strsep(&arg, ",\0");
 				}
 			}
+			if (strcmp(lgopts[opt_idx].name, "packet-mode") == 0)
+				packet_mode = true;
 			if (strcmp(lgopts[opt_idx].name, "policy-mtr") == 0)
 				handle_meter_policy(argv[0], optarg);
 			break;
@@ -1258,6 +1263,7 @@ create_meter_profile(void)
 		mp.srtcm_rfc2697.cbs = meter_profile_values[1] ?
 			meter_profile_values[1] : METER_CIR / 8;
 		mp.srtcm_rfc2697.ebs = meter_profile_values[2];
+		mp.packet_mode = packet_mode;
 		ret = rte_mtr_meter_profile_add
 			(port_id, DEFAULT_METER_PROF_ID, &mp, &error);
 		if (ret != 0) {
