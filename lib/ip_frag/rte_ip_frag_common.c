@@ -135,7 +135,8 @@ rte_frag_table_del_expired_entries(struct rte_ip_frag_tbl *tbl,
 	TAILQ_FOREACH(fp, &tbl->lru, lru)
 		if (max_cycles + fp->start < tms) {
 			/* check that death row has enough space */
-			if (IP_FRAG_DEATH_ROW_MBUF_LEN - dr->cnt >= fp->last_idx)
+			if (RTE_IP_FRAG_DEATH_ROW_MBUF_LEN - dr->cnt >=
+					fp->last_idx)
 				ip_frag_tbl_del(tbl, dr, fp);
 			else
 				return;

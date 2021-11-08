@@ -559,6 +559,9 @@ API Changes
 * fib: Added the ``rib_ext_sz`` field to ``rte_fib_conf`` and ``rte_fib6_conf``
   so that user can specify the size of the RIB extension inside the FIB.
 
+* ip_frag: All macros updated to have ``RTE_IP_FRAG_`` prefix. Obsolete
+  macros are removed. DPDK components updated to use new names.
+
 
 ABI Changes
 -----------
