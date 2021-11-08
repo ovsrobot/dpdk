@@ -285,6 +285,7 @@ New Features
 * **Updated Mellanox mlx5 crypto driver.**
 
   * Added Windows support.
+  * Added support for BF2 and CX6DX.
 
 * **Updated NXP dpaa_sec crypto PMD.**
 
@@ -409,7 +410,6 @@ New Features
   It helps to detect issues like use-after-free, various kinds of buffer
   overruns in C/C++ programs, and other similar errors, as well as
   printing out detailed debug information whenever an error is detected.
-
 
 Removed Items
 -------------
