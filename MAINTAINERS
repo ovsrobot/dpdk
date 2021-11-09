@@ -1377,6 +1377,17 @@ F: drivers/raw/dpaa2_qdma/
 F: doc/guides/rawdevs/dpaa2_qdma.rst
 
 
+
+Dmadev Drivers
+--------------
+
+NXP DPAA DMA
+M: Gagandeep Singh <g.singh@nxp.com>
+M: Nipun Gupta <nipun.gupta@nxp.com>
+F: drivers/dma/dpaa/
+F: doc/guides/dmadevs/dpaa.rst
+
+
 Packet processing
 -----------------
 
