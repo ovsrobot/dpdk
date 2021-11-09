@@ -7,6 +7,10 @@
 
 #include <rte_io.h>
 
+#ifndef BIT
+#define BIT(nr)		(1UL << (nr))
+#endif
+
 #define CORE_NUMBER 4
 #define RETRIES	5
 
