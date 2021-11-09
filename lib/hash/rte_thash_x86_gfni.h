@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#ifdef __GFNI__
+#if defined(__GFNI__) && defined(__AVX512F__)
 #define RTE_THASH_GFNI_DEFINED
 
 #define RTE_THASH_FIRST_ITER_MSK	0x0f0f0f0f0f0e0c08
@@ -56,23 +56,18 @@ static inline __m512i
 __rte_thash_gfni(const uint64_t *mtrx, const uint8_t *tuple,
 	const uint8_t *secondary_tuple, int len)
 {
-	__m512i permute_idx = _mm512_set_epi8(7, 6, 5, 4, 7, 6, 5, 4,
-						6, 5, 4, 3, 6, 5, 4, 3,
-						5, 4, 3, 2, 5, 4, 3, 2,
-						4, 3, 2, 1, 4, 3, 2, 1,
-						3, 2, 1, 0, 3, 2, 1, 0,
-						2, 1, 0, -1, 2, 1, 0, -1,
-						1, 0, -1, -2, 1, 0, -1, -2,
-						0, -1, -2, -3, 0, -1, -2, -3);
-
-	const __m512i rewind_idx = _mm512_set_epi8(0, 0, 0, 0, 0, 0, 0, 0,
-						0, 0, 0, 0, 0, 0, 0, 0,
-						0, 0, 0, 0, 0, 0, 0, 0,
-						0, 0, 0, 0, 0, 0, 0, 0,
-						0, 0, 0, 0, 0, 0, 0, 0,
-						0, 0, 0, 59, 0, 0, 0, 59,
-						0, 0, 59, 58, 0, 0, 59, 58,
-						0, 59, 58, 57, 0, 59, 58, 57);
+	__m512i permute_idx = _mm512_set_epi32(0x7060504, 0x7060504,
+						0x6050403, 0x6050403,
+						0x5040302, 0x5040302,
+						0x4030201, 0x4030201,
+						0x3020100, 0x3020100,
+						0x20100FF, 0x20100FF,
+						0x100FFFE, 0x100FFFE,
+						0xFFFEFD, 0xFFFEFD);
+	const __m512i rewind_idx = _mm512_set_epi32(0, 0, 0, 0, 0, 0, 0, 0,
+							0, 0, 0x3B, 0x3B,
+							0x3B3A, 0x3B3A,
+							0x3B3A39, 0x3B3A39);
 	const __mmask64 rewind_mask = RTE_THASH_REWIND_MSK;
 	const __m512i shift_8 = _mm512_set1_epi8(8);
 	__m512i xor_acc = _mm512_setzero_si512();
