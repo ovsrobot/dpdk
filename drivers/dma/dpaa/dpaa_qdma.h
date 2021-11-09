@@ -10,6 +10,12 @@
 #define CORE_NUMBER 4
 #define RETRIES	5
 
+#ifndef GENMASK
+#define BITS_PER_LONG	(__SIZEOF_LONG__ * 8)
+#define GENMASK(h, l) \
+		(((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
+#endif
+
 #define FSL_QDMA_DMR			0x0
 #define FSL_QDMA_DSR			0x4
 #define FSL_QDMA_DEIER			0xe00
