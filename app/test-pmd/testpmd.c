@@ -3948,6 +3948,7 @@ init_port_dcb_config(portid_t pid,
 	if (retval < 0)
 		return retval;
 	port_conf.rxmode.offloads |= RTE_ETH_RX_OFFLOAD_VLAN_FILTER;
+	port_conf.rxmode.offloads &= ~RTE_ETH_RX_OFFLOAD_RSS_HASH;
 
 	/* re-configure the device . */
 	retval = rte_eth_dev_configure(pid, nb_rxq, nb_rxq, &port_conf);
