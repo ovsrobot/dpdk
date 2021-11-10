@@ -52,7 +52,6 @@ drivers = [
         'ring',
         'sfc',
         'softnic',
-        'szedata2',
         'tap',
         'thunderx',
         'txgbe',
