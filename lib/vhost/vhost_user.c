@@ -144,52 +144,54 @@ get_blk_size(int fd)
 }
 
 static int
-async_dma_map(struct rte_vhost_mem_region *region, bool do_map)
+async_dma_map(struct virtio_net *dev, bool do_map)
 {
-	uint64_t host_iova;
 	int ret = 0;
-
-	host_iova = rte_mem_virt2iova((void *)(uintptr_t)region->host_user_addr);
+	struct guest_page *page;
 	if (do_map) {
-		/* Add mapped region into the default container of DPDK. */
-		ret = rte_vfio_container_dma_map(RTE_VFIO_DEFAULT_CONTAINER_FD,
-						 region->host_user_addr,
-						 host_iova,
-						 region->size);
-		if (ret) {
-			/*
-			 * DMA device may bind with kernel driver, in this case,
-			 * we don't need to program IOMMU manually. However, if no
-			 * device is bound with vfio/uio in DPDK, and vfio kernel
-			 * module is loaded, the API will still be called and return
-			 * with ENODEV/ENOSUP.
-			 *
-			 * DPDK vfio only returns ENODEV/ENOSUP in very similar
-			 * situations(vfio either unsupported, or supported
-			 * but no devices found). Either way, no mappings could be
-			 * performed. We treat it as normal case in async path.
-			 */
-			if (rte_errno == ENODEV || rte_errno == ENOTSUP)
-				return 0;
+		for (uint32_t i = 0; i < dev->nr_guest_pages; i++) {
+			page = &dev->guest_pages[i];
+			ret = rte_vfio_container_dma_map(RTE_VFIO_DEFAULT_CONTAINER_FD,
+							 page->host_user_addr,
+							 page->host_phys_addr,
+							 page->size);
+			if (ret) {
+				/*
+				* DMA device may bind with kernel driver, in this case,
+				* we don't need to program IOMMU manually. However, if no
+				* device is bound with vfio/uio in DPDK, and vfio kernel
+				* module is loaded, the API will still be called and return
+				* with ENODEV/ENOSUP.
+				*
+				* DPDK vfio only returns ENODEV/ENOSUP in very similar
+				* situations(vfio either unsupported, or supported
+				* but no devices found). Either way, no mappings could be
+				* performed. We treat it as normal case in async path.
+				*/
+				if (rte_errno == ENODEV || rte_errno == ENOTSUP)
+					return 0;
 
-			VHOST_LOG_CONFIG(ERR, "DMA engine map failed\n");
-			/* DMA mapping errors won't stop VHST_USER_SET_MEM_TABLE. */
-			return 0;
+				VHOST_LOG_CONFIG(ERR, "DMA engine map failed\n");
+				/* DMA mapping errors won't stop VHST_USER_SET_MEM_TABLE. */
+				return 0;
+			}
 		}
 
 	} else {
-		/* Remove mapped region from the default container of DPDK. */
-		ret = rte_vfio_container_dma_unmap(RTE_VFIO_DEFAULT_CONTAINER_FD,
-						   region->host_user_addr,
-						   host_iova,
-						   region->size);
-		if (ret) {
-			/* like DMA map, ignore the kernel driver case when unmap. */
-			if (rte_errno == EINVAL)
-				return 0;
+		for (uint32_t i = 0; i < dev->nr_guest_pages; i++) {
+			page = &dev->guest_pages[i];
+			ret = rte_vfio_container_dma_unmap(RTE_VFIO_DEFAULT_CONTAINER_FD,
+							   page->host_user_addr,
+							   page->host_phys_addr,
+							   page->size);
+			if (ret) {
+				/* like DMA map, ignore the kernel driver case when unmap. */
+				if (rte_errno == EINVAL)
+					return 0;
 
-			VHOST_LOG_CONFIG(ERR, "DMA engine unmap failed\n");
-			return ret;
+				VHOST_LOG_CONFIG(ERR, "DMA engine unmap failed\n");
+				return ret;
+			}
 		}
 	}
 
@@ -205,12 +207,12 @@ free_mem_region(struct virtio_net *dev)
 	if (!dev || !dev->mem)
 		return;
 
+	if (dev->async_copy && rte_vfio_is_enabled("vfio"))
+		async_dma_map(dev, false);
+
 	for (i = 0; i < dev->mem->nregions; i++) {
 		reg = &dev->mem->regions[i];
 		if (reg->host_user_addr) {
-			if (dev->async_copy && rte_vfio_is_enabled("vfio"))
-				async_dma_map(reg, false);
-
 			munmap(reg->mmap_addr, reg->mmap_size);
 			close(reg->fd);
 		}
@@ -978,7 +980,7 @@ vhost_user_set_vring_base(struct virtio_net **pdev,
 
 static int
 add_one_guest_page(struct virtio_net *dev, uint64_t guest_phys_addr,
-		   uint64_t host_phys_addr, uint64_t size)
+		   uint64_t host_phys_addr, uint64_t host_user_addr, uint64_t size)
 {
 	struct guest_page *page, *last_page;
 	struct guest_page *old_pages;
@@ -1009,6 +1011,7 @@ add_one_guest_page(struct virtio_net *dev, uint64_t guest_phys_addr,
 	page = &dev->guest_pages[dev->nr_guest_pages++];
 	page->guest_phys_addr = guest_phys_addr;
 	page->host_phys_addr  = host_phys_addr;
+	page->host_user_addr = host_user_addr;
 	page->size = size;
 
 	return 0;
@@ -1028,7 +1031,8 @@ add_guest_pages(struct virtio_net *dev, struct rte_vhost_mem_region *reg,
 	size = page_size - (guest_phys_addr & (page_size - 1));
 	size = RTE_MIN(size, reg_size);
 
-	if (add_one_guest_page(dev, guest_phys_addr, host_phys_addr, size) < 0)
+	if (add_one_guest_page(dev, guest_phys_addr, host_phys_addr,
+			       host_user_addr, size) < 0)
 		return -1;
 
 	host_user_addr  += size;
@@ -1040,7 +1044,7 @@ add_guest_pages(struct virtio_net *dev, struct rte_vhost_mem_region *reg,
 		host_phys_addr = rte_mem_virt2iova((void *)(uintptr_t)
 						  host_user_addr);
 		if (add_one_guest_page(dev, guest_phys_addr, host_phys_addr,
-				size) < 0)
+				       host_user_addr, size) < 0)
 			return -1;
 
 		host_user_addr  += size;
@@ -1215,7 +1219,6 @@ vhost_user_mmap_region(struct virtio_net *dev,
 	uint64_t mmap_size;
 	uint64_t alignment;
 	int populate;
-	int ret;
 
 	/* Check for memory_size + mmap_offset overflow */
 	if (mmap_offset >= -region->size) {
@@ -1273,14 +1276,6 @@ vhost_user_mmap_region(struct virtio_net *dev,
 		if (add_guest_pages(dev, region, alignment) < 0) {
 			VHOST_LOG_CONFIG(ERR, "adding guest pages to region failed.\n");
 			return -1;
-		}
-
-		if (rte_vfio_is_enabled("vfio")) {
-			ret = async_dma_map(region, true);
-			if (ret) {
-				VHOST_LOG_CONFIG(ERR, "Configure IOMMU for DMA engine failed\n");
-				return -1;
-			}
 		}
 	}
 
@@ -1419,6 +1414,9 @@ vhost_user_set_mem_table(struct virtio_net **pdev, struct VhostUserMsg *msg,
 
 		dev->mem->nregions++;
 	}
+
+	if (dev->async_copy && rte_vfio_is_enabled("vfio"))
+		async_dma_map(dev, true);
 
 	if (vhost_user_postcopy_register(dev, main_fd, msg) < 0)
 		goto free_mem_table;
