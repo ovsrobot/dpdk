@@ -86,6 +86,42 @@ int rte_thread_equal(rte_thread_t t1, rte_thread_t t2);
 #ifdef RTE_HAS_CPUSET
 
 /**
+ * Set the affinity of thread 'thread_id' to the cpu set
+ * specified by 'cpuset'.
+ *
+ * @param thread_id
+ *    Id of the thread for which to set the affinity.
+ *
+ * @param cpuset
+ *   Pointer to CPU affinity to set.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_set_affinity_by_id(rte_thread_t thread_id,
+		const rte_cpuset_t *cpuset);
+
+/**
+ * Get the affinity of thread 'thread_id' and store it
+ * in 'cpuset'.
+ *
+ * @param thread_id
+ *    Id of the thread for which to get the affinity.
+ *
+ * @param cpuset
+ *   Pointer for storing the affinity value.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_get_affinity_by_id(rte_thread_t thread_id,
+		rte_cpuset_t *cpuset);
+
+/**
  * Initialize the attributes of a thread.
  * These attributes can be passed to the rte_thread_create() function
  * that will create a new thread and set its attributes according to attr.
