@@ -411,7 +411,7 @@ rte_eal_memzone_init(void)
 	}
 
 	rte_rwlock_write_unlock(&mcfg->mlock);
-
+	rte_sort_mempool_ops();
 	return ret;
 }
 

@@ -70,6 +70,37 @@ rte_mempool_register_ops(const struct rte_mempool_ops *h)
 	return ops_index;
 }
 
+
+int rte_sort_mempool_ops(void)
+{
+	/* same with rte_mempool_ops.name */
+	static const char *memops_name[RTE_MEMPOOL_MAX_OPS_IDX] = {
+		"ring_mp_mc", "ring_sp_sc", "ring_mp_sc", "ring_sp_mc",
+		"stack", "lf_stack", "octeontx2_npa", "octeontx_fpavf",
+                "dpaa2", "dpaa", "bucket",
+        };
+	struct rte_mempool_ops_table tmp_mempool_ops_table = {
+		.sl =  rte_mempool_ops_table.sl,
+		.num_ops = rte_mempool_ops_table.num_ops
+	};
+	uint32_t i = 0, j= 0;
+	struct rte_mempool_ops *ops = NULL;
+	for (i = 0; i < 16; i++) {
+		const char* name = memops_name[i];
+		if(name && strlen(name)) {
+			for(j = 0; j < rte_mempool_ops_table.num_ops; j++) {
+				if(strcmp(name, rte_mempool_ops_table.ops[j].name))
+					continue;
+				ops = &rte_mempool_ops_table.ops[j];
+				memcpy(&tmp_mempool_ops_table.ops[i], ops, sizeof(*ops));
+				break;
+			}
+		}
+	}
+	memcpy(&rte_mempool_ops_table, &tmp_mempool_ops_table, sizeof(tmp_mempool_ops_table));
+	return 0;
+}
+
 /* wrapper to allocate an external mempool's private (pool) data. */
 int
 rte_mempool_ops_alloc(struct rte_mempool *mp)

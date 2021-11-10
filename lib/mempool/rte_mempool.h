@@ -928,6 +928,12 @@ rte_mempool_set_ops_byname(struct rte_mempool *mp, const char *name,
 int rte_mempool_register_ops(const struct rte_mempool_ops *ops);
 
 /**
+ * Sort global array rte_mempool_ops_table.ops[] .
+ * Used by rte_eal_memzone_init()
+ */
+int rte_sort_mempool_ops(void);
+
+/**
  * Macro to statically register the ops of a mempool handler.
  * Note that the rte_mempool_register_ops fails silently here when
  * more than RTE_MEMPOOL_MAX_OPS_IDX is registered.
