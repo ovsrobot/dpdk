@@ -220,6 +220,8 @@ for c in gcc clang ; do
 	done
 done
 
+build build-x86-no-optional-libs cc skipABI $use_shared -Ddisable_libs=*
+
 # test compilation with minimal x86 instruction set
 # Set the install path for libraries to "lib" explicitly to prevent problems
 # with pkg-config prefixes if installed in "lib/x86_64-linux-gnu" later.
@@ -258,7 +260,7 @@ export CC="clang"
 build build-arm64-host-clang $f ABI $use_shared
 unset CC
 # some gcc/arm configurations
-for f in $srcdir/config/arm/arm64_[bdo]*gcc ; do
+for f in $srcdir/config/arm/arm64_[do]*gcc ; do
 	export CC="$CCACHE gcc"
 	targetdir=build-$(basename $f | tr '_' '-' | cut -d'-' -f-2)
 	build $targetdir $f skipABI $use_shared
