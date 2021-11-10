@@ -167,6 +167,34 @@ test_thread_attributes_priority(void)
 	return ret;
 }
 
+static void *
+thread_loop_return(void *arg)
+{
+	RTE_SET_USED(arg);
+	return NULL;
+}
+
+static int
+test_thread_detach(void)
+{
+	rte_thread_t threads_ids[THREADS_COUNT];
+	size_t i;
+	int ret = 0;
+
+	for (i = 0; i < THREADS_COUNT; ++i) {
+		ret = rte_thread_create(&threads_ids[i], NULL,
+				thread_loop_return, NULL);
+		RTE_TEST_ASSERT(ret == 0, "Failed to create threads!");
+	}
+
+	for (i = 0; i < THREADS_COUNT; ++i) {
+		ret = rte_thread_detach(threads_ids[i]);
+		RTE_TEST_ASSERT(ret == 0, "Failed to detach thread!");
+	}
+
+	return ret;
+}
+
 static struct unit_test_suite threads_test_suite = {
 	.suite_name = "threads autotest",
 	.setup = NULL,
@@ -175,6 +203,7 @@ static struct unit_test_suite threads_test_suite = {
 			TEST_CASE(test_thread_self),
 			TEST_CASE(test_thread_attributes_affinity),
 			TEST_CASE(test_thread_attributes_priority),
+			TEST_CASE(test_thread_detach),
 			TEST_CASES_END()
 	}
 };
