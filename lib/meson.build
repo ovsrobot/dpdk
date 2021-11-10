@@ -78,17 +78,10 @@ optional_libs = [
         'vhost',
 ]
 
-disabled_libs = []
-opt_disabled_libs = run_command(list_dir_globs, get_option('disable_libs'),
+enable_libs = run_command(list_dir_globs, get_option('enable_libs'),
         check: true).stdout().split()
-foreach l:opt_disabled_libs
-    if not optional_libs.contains(l)
-        warning('Cannot disable mandatory library "@0@"'.format(l))
-        continue
-    endif
-    disabled_libs += l
-endforeach
-
+disable_libs = run_command(list_dir_globs, get_option('disable_libs'),
+        check: true).stdout().split()
 
 default_cflags = machine_args
 default_cflags += ['-DALLOW_EXPERIMENTAL_API']
@@ -97,8 +90,6 @@ default_cflags += ['-DALLOW_INTERNAL_API']
 if cc.has_argument('-Wno-format-truncation')
     default_cflags += '-Wno-format-truncation'
 endif
-
-enabled_libs = [] # used to print summary at the end
 
 foreach l:libraries
     build = true
@@ -123,10 +114,21 @@ foreach l:libraries
         deps += ['eal']
     endif
 
-    if disabled_libs.contains(l)
-        build = false
-        reason = 'explicitly disabled via build config'
+    if optional_libs.contains(l)
+        # check for enabled libraries only if one is set in config
+        if enable_libs.length() != 0 and not enable_libs.contains(l)
+            build = false
+            reason = 'not in enabled libraries build config'
+        elif disable_libs.contains(l)
+            build = false
+            reason = 'explicitly disabled via build config'
+        endif
     else
+        if disable_libs.contains(l)
+            warning('Cannot disable mandatory library "@0@"'.format(l))
+        endif
+    endif
+    if build
         subdir(l)
     endif
     if name != l
@@ -150,7 +152,7 @@ foreach l:libraries
         static_deps += [get_variable('static_rte_' + d)]
     endforeach
 
-    enabled_libs += name
+    dpdk_libs_enabled += name
     dpdk_conf.set('RTE_LIB_' + name.to_upper(), 1)
     install_headers(headers)
     install_headers(indirect_headers)
