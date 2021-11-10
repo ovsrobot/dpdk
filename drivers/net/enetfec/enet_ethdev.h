@@ -5,11 +5,22 @@
 #ifndef __ENETFEC_ETHDEV_H__
 #define __ENETFEC_ETHDEV_H__
 
+#include <rte_ethdev.h>
+
+/* full duplex */
+#define FULL_DUPLEX             0x00
+
+#define PKT_MAX_BUF_SIZE        1984
+#define OPT_FRAME_SIZE         (PKT_MAX_BUF_SIZE << 16)
+
 /*
  * ENETFEC can support 1 rx and tx queue..
  */
 
 #define ENETFEC_MAX_Q		1
+
+#define writel(v, p) ({*(volatile unsigned int *)(p) = (v); })
+#define readl(p) rte_read32(p)
 
 struct enetfec_private {
 	struct rte_eth_dev	*dev;

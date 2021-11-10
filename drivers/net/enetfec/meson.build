@@ -6,4 +6,5 @@ if not is_linux
 	reason = 'only supported on linux'
 endif
 
-sources = files('enet_ethdev.c')
+sources = files('enet_ethdev.c',
+		'enet_uio.c')
