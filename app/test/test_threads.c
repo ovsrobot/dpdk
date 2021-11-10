@@ -195,6 +195,54 @@ test_thread_detach(void)
 	return ret;
 }
 
+struct thread_context {
+	rte_thread_barrier *barrier;
+	int barrier_result;
+};
+
+static void *
+thread_loop_barrier(void *arg)
+{
+	struct thread_context *ctx = arg;
+
+	ctx->barrier_result = rte_thread_barrier_wait(ctx->barrier);
+	if (ctx->barrier_result > 0)
+		rte_log(RTE_LOG_DEBUG, threads_logtype_test, "Failed to wait at barrier!");
+
+	return NULL;
+}
+
+static int
+test_thread_barrier(void)
+{
+	rte_thread_t thread_id;
+	struct thread_context ctx;
+	rte_thread_barrier barrier;
+	int ret = 0;
+	int result = 0;
+
+	ret = rte_thread_barrier_init(&barrier, 2);
+	RTE_TEST_ASSERT(ret == 0, "Failed to initialize barrier!");
+
+	ctx.barrier = &barrier;
+	ret = rte_thread_create(&thread_id, NULL, thread_loop_barrier, &ctx);
+	RTE_TEST_ASSERT(ret == 0, "Failed to create thread!");
+
+	result = rte_thread_barrier_wait(&barrier);
+	RTE_TEST_ASSERT(result <= 0, "Failed to wait at the barrier!");
+
+	ret = rte_thread_join(thread_id, NULL);
+	RTE_TEST_ASSERT(ret == 0, "Failed to join threads!");
+
+	ret = rte_thread_barrier_destroy(&barrier);
+	RTE_TEST_ASSERT(ret == 0, "Failed to destroy barrier!");
+
+	RTE_TEST_ASSERT(ctx.barrier_result <= 0, "Child thread failed to wait at the barrier!");
+	RTE_TEST_ASSERT_NOT_EQUAL(ctx.barrier_result, result, "Threads were not blocked at the barrier!");
+
+	return 0;
+}
+
 static struct unit_test_suite threads_test_suite = {
 	.suite_name = "threads autotest",
 	.setup = NULL,
@@ -204,6 +252,7 @@ static struct unit_test_suite threads_test_suite = {
 			TEST_CASE(test_thread_attributes_affinity),
 			TEST_CASE(test_thread_attributes_priority),
 			TEST_CASE(test_thread_detach),
+			TEST_CASE(test_thread_barrier),
 			TEST_CASES_END()
 	}
 };
