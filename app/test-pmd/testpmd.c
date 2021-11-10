@@ -518,8 +518,10 @@ lcoreid_t bitrate_lcore_id;
 uint8_t bitrate_enabled;
 #endif
 
+#ifdef RTE_LIB_GRO
 struct gro_status gro_ports[RTE_MAX_ETHPORTS];
 uint8_t gro_flush_cycles = GRO_DEFAULT_FLUSH_CYCLES;
+#endif
 
 /*
  * hexadecimal bitmask of RX mq mode can be enabled.
@@ -658,8 +660,10 @@ static void fill_xstats_display_info(void);
  */
 static int all_ports_started(void);
 
+#ifdef RTE_LIB_GSO
 struct gso_status gso_ports[RTE_MAX_ETHPORTS];
 uint16_t gso_max_segment_size = RTE_ETHER_MAX_LEN - RTE_ETHER_CRC_LEN;
+#endif
 
 /* Holds the registered mbuf dynamic flags names. */
 char dynf_names[64][RTE_MBUF_DYN_NAMESIZE];
@@ -1633,8 +1637,12 @@ init_config(void)
 	struct rte_mempool *mbp;
 	unsigned int nb_mbuf_per_pool;
 	lcoreid_t  lc_id;
+#ifdef RTE_LIB_GRO
 	struct rte_gro_param gro_param;
+#endif
+#ifdef RTE_LIB_GSO
 	uint32_t gso_types;
+#endif
 
 	/* Configuration of logical cores. */
 	fwd_lcores = rte_zmalloc("testpmd: fwd_lcores",
@@ -1717,8 +1725,10 @@ init_config(void)
 
 	init_port_config();
 
+#ifdef RTE_LIB_GSO
 	gso_types = RTE_ETH_TX_OFFLOAD_TCP_TSO | RTE_ETH_TX_OFFLOAD_VXLAN_TNL_TSO |
 		RTE_ETH_TX_OFFLOAD_GRE_TNL_TSO | RTE_ETH_TX_OFFLOAD_UDP_TSO;
+#endif
 	/*
 	 * Records which Mbuf pool to use by each logical core, if needed.
 	 */
@@ -1729,6 +1739,7 @@ init_config(void)
 		if (mbp == NULL)
 			mbp = mbuf_pool_find(0, 0);
 		fwd_lcores[lc_id]->mbp = mbp;
+#ifdef RTE_LIB_GSO
 		/* initialize GSO context */
 		fwd_lcores[lc_id]->gso_ctx.direct_pool = mbp;
 		fwd_lcores[lc_id]->gso_ctx.indirect_pool = mbp;
@@ -1736,10 +1747,12 @@ init_config(void)
 		fwd_lcores[lc_id]->gso_ctx.gso_size = RTE_ETHER_MAX_LEN -
 			RTE_ETHER_CRC_LEN;
 		fwd_lcores[lc_id]->gso_ctx.flag = 0;
+#endif
 	}
 
 	fwd_config_setup();
 
+#ifdef RTE_LIB_GRO
 	/* create a gro context for each lcore */
 	gro_param.gro_types = RTE_GRO_TCP_IPV4;
 	gro_param.max_flow_num = GRO_MAX_FLUSH_CYCLES;
@@ -1753,6 +1766,7 @@ init_config(void)
 					"rte_gro_ctx_create() failed\n");
 		}
 	}
+#endif
 }
 
 
