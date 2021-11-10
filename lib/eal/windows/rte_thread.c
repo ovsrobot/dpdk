@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright 2021 Mellanox Technologies, Ltd
+ * Copyright(c) 2021 Microsoft Corporation
  */
 
 #include <rte_common.h>
@@ -11,22 +12,38 @@ struct eal_tls_key {
 	DWORD thread_index;
 };
 
+rte_thread_t
+rte_thread_self(void)
+{
+	rte_thread_t thread_id;
+
+	thread_id.opaque_id = GetCurrentThreadId();
+
+	return thread_id;
+}
+
+int
+rte_thread_equal(rte_thread_t t1, rte_thread_t t2)
+{
+	return t1.opaque_id == t2.opaque_id;
+}
+
 int
 rte_thread_key_create(rte_thread_key *key,
 		__rte_unused void (*destructor)(void *))
 {
+	int ret;
+
 	*key = malloc(sizeof(**key));
 	if ((*key) == NULL) {
 		RTE_LOG(DEBUG, EAL, "Cannot allocate TLS key.\n");
-		rte_errno = ENOMEM;
-		return -1;
+		return ENOMEM;
 	}
 	(*key)->thread_index = TlsAlloc();
 	if ((*key)->thread_index == TLS_OUT_OF_INDEXES) {
-		RTE_LOG_WIN32_ERR("TlsAlloc()");
+		ret = thread_log_last_error("TlsAlloc()");
 		free(*key);
-		rte_errno = ENOEXEC;
-		return -1;
+		return ret;
 	}
 	return 0;
 }
@@ -34,16 +51,16 @@ rte_thread_key_create(rte_thread_key *key,
 int
 rte_thread_key_delete(rte_thread_key key)
 {
-	if (!key) {
+	int ret;
+
+	if (key == NULL) {
 		RTE_LOG(DEBUG, EAL, "Invalid TLS key.\n");
-		rte_errno = EINVAL;
-		return -1;
+		return EINVAL;
 	}
 	if (!TlsFree(key->thread_index)) {
-		RTE_LOG_WIN32_ERR("TlsFree()");
+		ret = thread_log_last_error("TlsFree()");
 		free(key);
-		rte_errno = ENOEXEC;
-		return -1;
+		return ret;
 	}
 	free(key);
 	return 0;
@@ -54,17 +71,14 @@ rte_thread_value_set(rte_thread_key key, const void *value)
 {
 	char *p;
 
-	if (!key) {
+	if (key == NULL) {
 		RTE_LOG(DEBUG, EAL, "Invalid TLS key.\n");
-		rte_errno = EINVAL;
-		return -1;
+		return EINVAL;
 	}
 	/* discard const qualifier */
 	p = (char *) (uintptr_t) value;
 	if (!TlsSetValue(key->thread_index, p)) {
-		RTE_LOG_WIN32_ERR("TlsSetValue()");
-		rte_errno = ENOEXEC;
-		return -1;
+		return thread_log_last_error("TlsSetValue()");
 	}
 	return 0;
 }
@@ -73,16 +87,18 @@ void *
 rte_thread_value_get(rte_thread_key key)
 {
 	void *output;
+	DWORD ret = 0;
 
-	if (!key) {
+	if (key == NULL) {
 		RTE_LOG(DEBUG, EAL, "Invalid TLS key.\n");
 		rte_errno = EINVAL;
 		return NULL;
 	}
 	output = TlsGetValue(key->thread_index);
-	if (GetLastError() != ERROR_SUCCESS) {
-		RTE_LOG_WIN32_ERR("TlsGetValue()");
-		rte_errno = ENOEXEC;
+	ret = GetLastError();
+	if (ret != 0) {
+		RTE_LOG(DEBUG, EAL, "GetLastError()=%lu: TlsGetValue()\n", ret);
+		rte_errno = thread_translate_win32_error(ret);
 		return NULL;
 	}
 	return output;
