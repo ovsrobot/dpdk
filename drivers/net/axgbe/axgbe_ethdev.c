@@ -170,7 +170,7 @@ static const struct axgbe_xstats axgbe_xstats_strings[] = {
 
 /* The set of PCI devices this driver supports */
 #define AMD_PCI_VENDOR_ID       0x1022
-#define AMD_PCI_RV_ROOT_COMPLEX_ID	0x15d0
+#define AMD_PCI_RV_INTERNAL_PCIE_GPP_BRIDGE_ID	0x15db
 #define AMD_PCI_AXGBE_DEVICE_V2A 0x1458
 #define AMD_PCI_AXGBE_DEVICE_V2B 0x1459
 
@@ -2178,9 +2178,9 @@ eth_axgbe_dev_init(struct rte_eth_dev *eth_dev)
 	pdata->pci_dev = pci_dev;
 
 	/*
-	 * Use root complex device ID to differentiate RV AXGBE vs SNOWY AXGBE
+	 * Use Raven Internal PCIe GPP Bridge device ID to differentiate RV AXGBE vs SNOWY AXGBE
 	 */
-	if (pci_search_device(AMD_PCI_RV_ROOT_COMPLEX_ID)) {
+	if (pci_search_device(AMD_PCI_RV_INTERNAL_PCIE_GPP_BRIDGE_ID)) {
 		pdata->xpcs_window_def_reg = PCS_V2_RV_WINDOW_DEF;
 		pdata->xpcs_window_sel_reg = PCS_V2_RV_WINDOW_SELECT;
 	} else {
