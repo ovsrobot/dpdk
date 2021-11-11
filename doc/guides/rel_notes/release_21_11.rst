@@ -295,6 +295,7 @@ New Features
 * **Updated Mellanox mlx5 crypto driver.**
 
   * Added Windows support.
+  * Added support for Bluefield2 and ConnectX6-DX.
 
 * **Updated NXP dpaa_sec crypto PMD.**
 
