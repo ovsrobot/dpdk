@@ -999,10 +999,17 @@ add_one_guest_page(struct virtio_net *dev, uint64_t guest_phys_addr,
 	if (dev->nr_guest_pages > 0) {
 		last_page = &dev->guest_pages[dev->nr_guest_pages - 1];
 		/* merge if the two pages are continuous */
-		if (host_phys_addr == last_page->host_phys_addr +
-				      last_page->size) {
-			last_page->size += size;
-			return 0;
+		if (host_phys_addr == last_page->host_phys_addr + last_page->size) {
+			if (rte_eal_iova_mode() == RTE_IOVA_VA) {
+				last_page->size += size;
+				return 0;
+			}
+
+			if (rte_eal_iova_mode() == RTE_IOVA_PA &&
+				guest_phys_addr == last_page->guest_phys_addr + last_page->size) {
+				last_page->size += size;
+				return 0;
+			}
 		}
 	}
 
