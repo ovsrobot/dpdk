@@ -243,6 +243,110 @@ test_thread_barrier(void)
 	return 0;
 }
 
+RTE_INIT_MUTEX(static_mutex);
+
+struct mutex_loop_args {
+	rte_thread_barrier *barrier;
+	rte_thread_mutex *mutex;
+	unsigned long result_A;
+	unsigned long result_B;
+};
+
+static void *
+thread_loop_mutex_B(void *arg)
+{
+	struct mutex_loop_args *args = arg;
+
+	if (rte_thread_mutex_try_lock(args->mutex) == 0) {
+		rte_thread_barrier_wait(args->barrier);
+		rte_thread_mutex_unlock(args->mutex);
+		args->result_B = 1;
+	} else {
+		rte_thread_barrier_wait(args->barrier);
+		args->result_B = 2;
+	}
+
+	return NULL;
+}
+
+static void *
+thread_loop_mutex_A(void *arg)
+{
+	struct mutex_loop_args *args = arg;
+
+	if (rte_thread_mutex_try_lock(args->mutex) != 0) {
+		rte_thread_barrier_wait(args->barrier);
+		args->result_A = 2;
+	} else {
+		rte_thread_barrier_wait(args->barrier);
+		rte_thread_mutex_unlock(args->mutex);
+		args->result_A = 1;
+	}
+
+	return NULL;
+}
+
+static int
+test_thread_mutex(rte_thread_mutex *pmutex)
+{
+	rte_thread_t thread_A;
+	rte_thread_t thread_B;
+	rte_thread_mutex mutex;
+	rte_thread_barrier barrier;
+	struct mutex_loop_args args;
+	int ret = 0;
+
+	/* If mutex is not statically initialized */
+	if (pmutex == NULL) {
+		ret = rte_thread_mutex_init(&mutex);
+		RTE_TEST_ASSERT(ret == 0, "Failed to initialize mutex!");
+	} else
+		mutex = *pmutex;
+
+	ret = rte_thread_barrier_init(&barrier, 2);
+	RTE_TEST_ASSERT(ret == 0, "Failed to initialize barrier!");
+
+	args.mutex = &mutex;
+	args.barrier = &barrier;
+
+	ret = rte_thread_create(&thread_A, NULL, thread_loop_mutex_A, &args);
+	RTE_TEST_ASSERT(ret == 0, "Failed to create thread!");
+
+	ret = rte_thread_create(&thread_B, NULL, thread_loop_mutex_B, &args);
+	RTE_TEST_ASSERT(ret == 0, "Failed to create thread!");
+
+	ret = rte_thread_join(thread_A, NULL);
+	RTE_TEST_ASSERT(ret == 0, "Failed to join thread!");
+
+	ret = rte_thread_join(thread_B, NULL);
+	RTE_TEST_ASSERT(ret == 0, "Failed to join thread!");
+
+	RTE_TEST_ASSERT(args.result_A != args.result_B, "Mutex failed to be acquired or was acquired by both threads!");
+
+	/* Destroy if dynamically initialized */
+	if (pmutex == NULL) {
+		ret = rte_thread_mutex_destroy(&mutex);
+		RTE_TEST_ASSERT(ret == 0, "Failed to destroy mutex!");
+	}
+
+	ret = rte_thread_barrier_destroy(&barrier);
+	RTE_TEST_ASSERT(ret == 0, "Failed to destroy barrier!");
+
+	return ret;
+}
+
+static int
+test_thread_mutex_static(void)
+{
+	return test_thread_mutex(&static_mutex);
+}
+
+static int
+test_thread_mutex_dynamic(void)
+{
+	return test_thread_mutex(NULL);
+}
+
 static struct unit_test_suite threads_test_suite = {
 	.suite_name = "threads autotest",
 	.setup = NULL,
@@ -253,6 +357,8 @@ static struct unit_test_suite threads_test_suite = {
 			TEST_CASE(test_thread_attributes_priority),
 			TEST_CASE(test_thread_detach),
 			TEST_CASE(test_thread_barrier),
+			TEST_CASE(test_thread_mutex_static),
+			TEST_CASE(test_thread_mutex_dynamic),
 			TEST_CASES_END()
 	}
 };

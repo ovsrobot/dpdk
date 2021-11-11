@@ -54,6 +54,25 @@ typedef struct {
 
 #endif /* RTE_HAS_CPUSET */
 
+#define RTE_DECLARE_MUTEX(private_lock)          rte_thread_mutex private_lock
+
+#define RTE_DEFINE_MUTEX(private_lock)\
+RTE_INIT(__rte_ ## private_lock ## _init)\
+{\
+	RTE_VERIFY(rte_thread_mutex_init(&private_lock) == 0);\
+}
+
+#define RTE_INIT_MUTEX(private_lock)\
+static RTE_DECLARE_MUTEX(private_lock);\
+RTE_DEFINE_MUTEX(private_lock)
+
+/**
+ * Thread mutex representation.
+ */
+typedef struct rte_thread_mutex_tag {
+	void *mutex_id;  /**< mutex identifier */
+} rte_thread_mutex;
+
 /**
  * Returned by rte_thread_barrier_wait() when call is successful.
  */
@@ -313,6 +332,72 @@ int rte_thread_get_priority(rte_thread_t thread_id,
 __rte_experimental
 int rte_thread_set_priority(rte_thread_t thread_id,
 		enum rte_thread_priority priority);
+
+/**
+ * Initializes a mutex.
+ *
+ * @param mutex
+ *    The mutex to be initialized.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_mutex_init(rte_thread_mutex *mutex);
+
+/**
+ * Locks a mutex.
+ *
+ * @param mutex
+ *    The mutex to be locked.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_mutex_lock(rte_thread_mutex *mutex);
+
+/**
+ * Unlocks a mutex.
+ *
+ * @param mutex
+ *    The mutex to be unlocked.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_mutex_unlock(rte_thread_mutex *mutex);
+
+/**
+ * Tries to lock a mutex.If the mutex is already held by a different thread,
+ * the function returns without blocking.
+ *
+ * @param mutex
+ *    The mutex that will be acquired, if not already locked.
+ *
+ * @return
+ *   On success, if the mutex is acquired, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_mutex_try_lock(rte_thread_mutex *mutex);
+
+/**
+ * Releases all resources associated with a mutex.
+ *
+ * @param mutex
+ *    The mutex to be uninitialized.
+ *
+ * @return
+ *   On success, return 0.
+ *   On failure, return a positive errno-style error number.
+ */
+__rte_experimental
+int rte_thread_mutex_destroy(rte_thread_mutex *mutex);
 
 /**
  * Initializes a synchronization barrier.
