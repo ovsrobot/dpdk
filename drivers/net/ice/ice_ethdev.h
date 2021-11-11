@@ -490,6 +490,7 @@ struct ice_devargs {
 	uint8_t proto_xtr[ICE_MAX_QUEUE_NUM];
 	uint8_t pin_idx;
 	uint8_t pps_out_ena;
+	uint16_t max_burst_size;
 };
 
 /**

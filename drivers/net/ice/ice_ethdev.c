@@ -32,6 +32,7 @@
 #define ICE_HW_DEBUG_MASK_ARG     "hw_debug_mask"
 #define ICE_ONE_PPS_OUT_ARG       "pps_out"
 #define ICE_RX_LOW_LATENCY_ARG    "rx_low_latency"
+#define ICE_MAX_BURST_SIZE_ARG    "max_burst_size"
 
 #define ICE_CYCLECOUNTER_MASK  0xffffffffffffffffULL
 
@@ -45,6 +46,7 @@ static const char * const ice_valid_args[] = {
 	ICE_HW_DEBUG_MASK_ARG,
 	ICE_ONE_PPS_OUT_ARG,
 	ICE_RX_LOW_LATENCY_ARG,
+	ICE_MAX_BURST_SIZE_ARG,
 	NULL
 };
 
@@ -1943,6 +1945,25 @@ handle_pps_out_arg(__rte_unused const char *key, const char *value,
 	return 0;
 }
 
+static int
+parse_u16(const char *key, const char *value, void *args)
+{
+	u16 *num = (u16 *)args;
+	u16 tmp;
+
+	errno = 0;
+	tmp = strtoull(value, NULL, 10);
+	if (errno) {
+		PMD_DRV_LOG(WARNING, "%s: \"%s\" is not a valid u16",
+			    key, value);
+		return -1;
+	}
+
+	*num = tmp;
+
+	return 0;
+}
+
 static int ice_parse_devargs(struct rte_eth_dev *dev)
 {
 	struct ice_adapter *ad =
@@ -1991,6 +2012,13 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 
 	ret = rte_kvargs_process(kvlist, ICE_RX_LOW_LATENCY_ARG,
 				 &parse_bool, &ad->devargs.rx_low_latency);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, ICE_MAX_BURST_SIZE_ARG,
+				 &parse_u16, &ad->devargs.max_burst_size);
+	if (ret)
+		goto bail;
 
 bail:
 	rte_kvargs_free(kvlist);
@@ -2198,6 +2226,14 @@ ice_dev_init(struct rte_eth_dev *dev)
 	}
 
 	ice_init_controlq_parameter(hw);
+
+	if (ad->devargs.max_burst_size) {
+		ret = ice_cfg_rl_burst_size(hw, ad->devargs.max_burst_size);
+		if (ret) {
+			PMD_INIT_LOG(ERR, "Failed to configure burst size");
+			return -EINVAL;
+		}
+	}
 
 	ret = ice_init_hw(hw);
 	if (ret) {
