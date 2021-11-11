@@ -885,6 +885,13 @@ args_parse(int argc, char **argv)
 			break;
 		}
 	}
+
+	if (opt_idx != argc) {
+		usage(argv[0]);
+		rte_exit(EXIT_FAILURE,
+			 "Incorrect command line %s\n", argv[opt_idx]);
+	}
+
 	if (rules_count % rules_batch != 0) {
 		rte_exit(EXIT_FAILURE,
 			 "rules_count %% rules_batch should be 0\n");
