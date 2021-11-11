@@ -3614,6 +3614,7 @@ parse_item_list(const char *str, const char *item_name, unsigned int max_items,
 	unsigned int j;
 	int value_ok;
 	char c;
+	int gpu_mbuf = 0;
 
 	/*
 	 * First parse all items in the list and store their value.
@@ -3628,6 +3629,14 @@ parse_item_list(const char *str, const char *item_name, unsigned int max_items,
 			value_ok = 1;
 			continue;
 		}
+		if (c == 'g') {
+			/*
+			 * When this flag is set, mbufs for this segment
+			 * will be created on GPU memory.
+			 */
+			gpu_mbuf = 1;
+			continue;
+		}
 		if (c != ',') {
 			fprintf(stderr, "character %c is not a decimal digit\n", c);
 			return 0;
@@ -3640,6 +3649,8 @@ parse_item_list(const char *str, const char *item_name, unsigned int max_items,
 			parsed_items[nb_item] = value;
 			value_ok = 0;
 			value = 0;
+			mbuf_mem_types[nb_item] = gpu_mbuf ? MBUF_MEM_GPU : MBUF_MEM_CPU;
+			gpu_mbuf = 0;
 		}
 		nb_item++;
 	}
@@ -3648,6 +3659,9 @@ parse_item_list(const char *str, const char *item_name, unsigned int max_items,
 			item_name, nb_item + 1, max_items);
 		return 0;
 	}
+
+	mbuf_mem_types[nb_item] = gpu_mbuf ? MBUF_MEM_GPU : MBUF_MEM_CPU;
+
 	parsed_items[nb_item++] = value;
 	if (! check_unique_values)
 		return nb_item;

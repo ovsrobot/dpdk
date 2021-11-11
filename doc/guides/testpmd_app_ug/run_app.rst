@@ -119,6 +119,9 @@ The command line options are:
     The default value is 2048. If multiple mbuf-size values are specified the
     extra memory pools will be created for allocating mbufs to receive packets
     with buffer splitting features.
+    Providing mbuf size with a 'g' suffix (e.g. ``--mbuf-size=2048g``),
+    will cause the mempool to be created on a GPU memory area allocated.
+    This option is currently limited to iofwd engine with the first GPU.
 
 *   ``--total-num-mbufs=N``
 
