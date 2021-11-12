@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#ifdef __GFNI__
+#if defined(__GFNI__) && defined(__AVX512F__)
 #define RTE_THASH_GFNI_DEFINED
 
 #define RTE_THASH_FIRST_ITER_MSK	0x0f0f0f0f0f0e0c08
@@ -33,7 +33,6 @@ __rte_thash_xor_reduce(__m512i xor_acc, uint32_t *val_1, uint32_t *val_2)
 {
 	__m256i tmp_256_1, tmp_256_2;
 	__m128i tmp128_1, tmp128_2;
-	uint64_t tmp_1, tmp_2;
 
 	tmp_256_1 = _mm512_castsi512_si256(xor_acc);
 	tmp_256_2 = _mm512_extracti32x8_epi32(xor_acc, 1);
@@ -43,12 +42,24 @@ __rte_thash_xor_reduce(__m512i xor_acc, uint32_t *val_1, uint32_t *val_2)
 	tmp128_2 = _mm256_extracti32x4_epi32(tmp_256_1, 1);
 	tmp128_1 = _mm_xor_si128(tmp128_1, tmp128_2);
 
+#ifdef RTE_ARCH_X86_64
+	uint64_t tmp_1, tmp_2;
 	tmp_1 = _mm_extract_epi64(tmp128_1, 0);
 	tmp_2 = _mm_extract_epi64(tmp128_1, 1);
 	tmp_1 ^= tmp_2;
 
 	*val_1 = (uint32_t)tmp_1;
 	*val_2 = (uint32_t)(tmp_1 >> 32);
+#else
+	uint32_t tmp_1, tmp_2;
+	tmp_1 = _mm_extract_epi32(tmp128_1, 0);
+	tmp_2 = _mm_extract_epi32(tmp128_1, 1);
+	tmp_1 ^= _mm_extract_epi32(tmp128_1, 2);
+	tmp_2 ^= _mm_extract_epi32(tmp128_1, 3);
+
+	*val_1 = tmp_1;
+	*val_2 = tmp_2;
+#endif
 }
 
 __rte_internal
@@ -56,23 +67,18 @@ static inline __m512i
 __rte_thash_gfni(const uint64_t *mtrx, const uint8_t *tuple,
 	const uint8_t *secondary_tuple, int len)
 {
-	__m512i permute_idx = _mm512_set_epi8(7, 6, 5, 4, 7, 6, 5, 4,
-						6, 5, 4, 3, 6, 5, 4, 3,
-						5, 4, 3, 2, 5, 4, 3, 2,
-						4, 3, 2, 1, 4, 3, 2, 1,
-						3, 2, 1, 0, 3, 2, 1, 0,
-						2, 1, 0, -1, 2, 1, 0, -1,
-						1, 0, -1, -2, 1, 0, -1, -2,
-						0, -1, -2, -3, 0, -1, -2, -3);
-
-	const __m512i rewind_idx = _mm512_set_epi8(0, 0, 0, 0, 0, 0, 0, 0,
-						0, 0, 0, 0, 0, 0, 0, 0,
-						0, 0, 0, 0, 0, 0, 0, 0,
-						0, 0, 0, 0, 0, 0, 0, 0,
-						0, 0, 0, 0, 0, 0, 0, 0,
-						0, 0, 0, 59, 0, 0, 0, 59,
-						0, 0, 59, 58, 0, 0, 59, 58,
-						0, 59, 58, 57, 0, 59, 58, 57);
+	__m512i permute_idx = _mm512_set_epi32(0x7060504, 0x7060504,
+						0x6050403, 0x6050403,
+						0x5040302, 0x5040302,
+						0x4030201, 0x4030201,
+						0x3020100, 0x3020100,
+						0x20100FF, 0x20100FF,
+						0x100FFFE, 0x100FFFE,
+						0xFFFEFD, 0xFFFEFD);
+	const __m512i rewind_idx = _mm512_set_epi32(0, 0, 0, 0, 0, 0, 0, 0,
+							0, 0, 0x3B, 0x3B,
+							0x3B3A, 0x3B3A,
+							0x3B3A39, 0x3B3A39);
 	const __mmask64 rewind_mask = RTE_THASH_REWIND_MSK;
 	const __m512i shift_8 = _mm512_set1_epi8(8);
 	__m512i xor_acc = _mm512_setzero_si512();
