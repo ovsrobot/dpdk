@@ -1109,6 +1109,19 @@ l3fwd_poll_resource_setup(void)
 				"Invalid max packet length: %u (port %u)\n",
 				max_pkt_len, portid);
 
+		/* Enable Receive side SCATTER, if supported by NIC,
+		 * when jumbo packet is enabled.
+		 */
+		if (dev_info.max_rx_pktlen > RTE_MBUF_DEFAULT_DATAROOM) {
+			if (dev_info.rx_offload_capa &
+			    RTE_ETH_RX_OFFLOAD_SCATTER)
+				local_port_conf.rxmode.offloads |=
+						RTE_ETH_RX_OFFLOAD_SCATTER;
+			else
+				rte_exit(EXIT_FAILURE,
+					 "Max packet length greater than default MBUF size\n");
+		}
+
 		if (dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE)
 			local_port_conf.txmode.offloads |=
 				RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
