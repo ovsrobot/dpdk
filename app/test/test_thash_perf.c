@@ -61,6 +61,8 @@ run_rss_calc(uint32_t *tuples[BATCH_SZ], enum test_rss_type type, int len,
 	}
 	end_tsc = rte_rdtsc_precise();
 
+	RTE_SET_USED(hash);
+
 	return end_tsc - start_tsc;
 }
 
