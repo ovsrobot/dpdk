@@ -294,6 +294,7 @@ vmxnet3_dev_clear_queues(struct rte_eth_dev *dev)
 	}
 }
 
+#ifdef RTE_LIBRTE_VMXNET3_DEBUG_TX
 static int
 vmxnet3_unmap_pkt(uint16_t eop_idx, vmxnet3_tx_queue_t *txq)
 {
@@ -322,24 +323,31 @@ vmxnet3_unmap_pkt(uint16_t eop_idx, vmxnet3_tx_queue_t *txq)
 
 	return completed + 1;
 }
+#endif
 
 static void
 vmxnet3_tq_tx_complete(vmxnet3_tx_queue_t *txq)
 {
+	#ifdef RTE_LIBRTE_VMXNET3_DEBUG_TX
 	int completed = 0;
+	#endif
 	vmxnet3_comp_ring_t *comp_ring = &txq->comp_ring;
 	struct Vmxnet3_TxCompDesc *tcd = (struct Vmxnet3_TxCompDesc *)
 		(comp_ring->base + comp_ring->next2proc);
 
 	while (tcd->gen == comp_ring->gen) {
+		#ifdef RTE_LIBRTE_VMXNET3_DEBUG_TX
 		completed += vmxnet3_unmap_pkt(tcd->txdIdx, txq);
+		#endif
 
 		vmxnet3_comp_ring_adv_next2proc(comp_ring);
 		tcd = (struct Vmxnet3_TxCompDesc *)(comp_ring->base +
 						    comp_ring->next2proc);
 	}
 
+	#ifdef RTE_LIBRTE_VMXNET3_DEBUG_TX
 	PMD_TX_LOG(DEBUG, "Processed %d tx comps & command descs.", completed);
+	#endif
 }
 
 uint16_t
