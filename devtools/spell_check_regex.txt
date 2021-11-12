@@ -1,0 +1,2 @@
+# This file is used to exclude regex patterns from being passed to Aspell.
+# Each line is read as a single pattern.
