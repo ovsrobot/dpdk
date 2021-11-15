@@ -3172,15 +3172,14 @@ ice_set_rx_function(struct rte_eth_dev *dev)
 #ifdef RTE_ARCH_X86
 	struct ice_rx_queue *rxq;
 	int i;
-	int rx_check_ret = -1;
 
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		ad->rx_use_avx512 = false;
 		ad->rx_use_avx2 = false;
-		rx_check_ret = ice_rx_vec_dev_check(dev);
+		ad->rx_vec_path = ice_rx_vec_dev_check(dev);
 		if (ad->ptp_ena)
-			rx_check_ret = -1;
-		if (rx_check_ret >= 0 && ad->rx_bulk_alloc_allowed &&
+			ad->rx_vec_path = -1;
+		if (ad->rx_vec_path >= 0 && ad->rx_bulk_alloc_allowed &&
 		    rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128) {
 			ad->rx_vec_allowed = true;
 			for (i = 0; i < dev->data->nb_rx_queues; i++) {
@@ -3215,7 +3214,8 @@ ice_set_rx_function(struct rte_eth_dev *dev)
 		if (dev->data->scattered_rx) {
 			if (ad->rx_use_avx512) {
 #ifdef CC_AVX512_SUPPORT
-				if (rx_check_ret == ICE_VECTOR_OFFLOAD_PATH) {
+				if (ad->rx_vec_path ==
+				    ICE_VECTOR_OFFLOAD_PATH) {
 					PMD_DRV_LOG(NOTICE,
 						"Using AVX512 OFFLOAD Vector Scattered Rx (port %d).",
 						dev->data->port_id);
@@ -3230,7 +3230,8 @@ ice_set_rx_function(struct rte_eth_dev *dev)
 				}
 #endif
 			} else if (ad->rx_use_avx2) {
-				if (rx_check_ret == ICE_VECTOR_OFFLOAD_PATH) {
+				if (ad->rx_vec_path ==
+				    ICE_VECTOR_OFFLOAD_PATH) {
 					PMD_DRV_LOG(NOTICE,
 						    "Using AVX2 OFFLOAD Vector Scattered Rx (port %d).",
 						    dev->data->port_id);
@@ -3252,7 +3253,8 @@ ice_set_rx_function(struct rte_eth_dev *dev)
 		} else {
 			if (ad->rx_use_avx512) {
 #ifdef CC_AVX512_SUPPORT
-				if (rx_check_ret == ICE_VECTOR_OFFLOAD_PATH) {
+				if (ad->rx_vec_path ==
+				    ICE_VECTOR_OFFLOAD_PATH) {
 					PMD_DRV_LOG(NOTICE,
 						"Using AVX512 OFFLOAD Vector Rx (port %d).",
 						dev->data->port_id);
@@ -3267,7 +3269,8 @@ ice_set_rx_function(struct rte_eth_dev *dev)
 				}
 #endif
 			} else if (ad->rx_use_avx2) {
-				if (rx_check_ret == ICE_VECTOR_OFFLOAD_PATH) {
+				if (ad->rx_vec_path ==
+				    ICE_VECTOR_OFFLOAD_PATH) {
 					PMD_DRV_LOG(NOTICE,
 						    "Using AVX2 OFFLOAD Vector Rx (port %d).",
 						    dev->data->port_id);
