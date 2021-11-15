@@ -32,8 +32,8 @@ Example::
   - If the program is tested using cmdline, you may need to execute the
     "stty echo" command when an error occurs.
 
-ASan is aware of DPDK memory allocations, thanks to added instrumentation.
-This is enabled on x86_64 and arm64 at the moment.
+ASan is aware of DPDK memory allocations, thanks to added instrumentation, and
+is enabled on x86_64, arm64, and PPC64 architectures.
 Other architectures may have to define ASAN_SHADOW_OFFSET.
 
 Example heap-buffer-overflow error
