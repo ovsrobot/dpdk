@@ -61,6 +61,7 @@
 #define CPERF_PMDCC_DELAY_MS	("pmd-cyclecount-delay-ms")
 
 #define MAX_LIST 32
+#define CPERF_IPSEC_OVERHEAD 73
 
 enum cperf_perf_test_type {
 	CPERF_TEST_TYPE_THROUGHPUT,
