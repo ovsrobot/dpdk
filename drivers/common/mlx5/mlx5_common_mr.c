@@ -1414,7 +1414,7 @@ mlx5_get_mempool_ranges(struct rte_mempool *mp, struct mlx5_range **out,
 	int ret;
 
 	/* Collect the pool underlying memory. */
-	ret = (rte_pktmbuf_priv_flags(mp) & RTE_PKTMBUF_POOL_F_PINNED_EXT_BUF) ?
+	ret = mlx5_mempool_is_extmem(mp) ?
 	      mlx5_mempool_get_extmem(mp, &chunks, &chunks_n) :
 	      mlx5_mempool_get_chunks(mp, &chunks, &chunks_n);
 	if (ret < 0)
