@@ -494,6 +494,17 @@ Limitations
     from the reference "Clock Queue" completions,
     the scheduled send timestamps should not be specified with non-zero MSB.
 
+- Flex item API:
+
+  - Hardware support: BlueField 2.
+  - Flex item is supported on PF only.
+  - Hardware limits ``header_length_mask_width`` up to 6 bits.
+  - Firmware supports 8 global sample fields.
+    Each flex item allocates non-shared sample fields from that pool.
+  - Supported flex item can have 1 input link - ``eth`` or ``udp`` and up to 2 output links - ``ipv4`` or ``ipv6``.
+  - Flex item fields (``next_header``, ``next_protocol``, ``samples``) do not participate in RSS hash functions.
+  - In flex item configuration, ``next_header.field_base`` value must be byte aligned (multiple of 8).
+
 Statistics
 ----------
 
@@ -1259,6 +1270,11 @@ Below are some firmware configurations listed.
 - enable realtime timestamp format::
 
    REAL_TIME_CLOCK_ENABLE=1
+
+- enable dynamic flex parser for flex item::
+
+   FLEX_PARSER_PROFILE_ENABLE=4
+   PROG_PARSE_GRAPH=1
 
 Linux Prerequisites
 -------------------
