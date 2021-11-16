@@ -1415,6 +1415,8 @@ vhost_get_monitor_addr(void *rx_queue, struct rte_power_monitor_cond *pmc)
 	int ret;
 	if (vq == NULL)
 		return -EINVAL;
+	if (unlikely(rte_atomic32_read(&vq->allow_queuing) == 0))
+		return -EINVAL;
 	ret = rte_vhost_get_monitor_addr(vq->vid, vq->virtqueue_id,
 			&vhost_pmc);
 	if (ret < 0)
