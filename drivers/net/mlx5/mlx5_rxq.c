@@ -2215,8 +2215,15 @@ mlx5_ind_table_obj_release(struct rte_eth_dev *dev,
 	if (ret)
 		return 1;
 	priv->obj_ops.ind_table_destroy(ind_tbl);
-	for (i = 0; i != ind_tbl->queues_n; ++i)
-		claim_nonzero(mlx5_rxq_deref(dev, ind_tbl->queues[i]));
+	/*
+	 * Refcounts on RX queues are decremented if and only if indirection
+	 * table was attached to RX queues. It will not be the case after
+	 * calling mlx5_dev_stop.
+	 */
+	if (priv->dev_data->dev_started) {
+		for (i = 0; i != ind_tbl->queues_n; ++i)
+			claim_nonzero(mlx5_rxq_deref(dev, ind_tbl->queues[i]));
+	}
 	mlx5_free(ind_tbl);
 	return 0;
 }
