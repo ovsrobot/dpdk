@@ -18,7 +18,7 @@ sources = files('main.c')
 sources += gen_c_files.process(dpdk_chkinc_headers)
 
 deps = []
-foreach l:enabled_libs
+foreach l:dpdk_libs_enabled
     deps += get_variable('static_rte_' + l)
 endforeach
 
