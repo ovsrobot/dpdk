@@ -7,6 +7,7 @@
 
 struct cnxk_gpio {
 	struct cnxk_gpiochip *gpiochip;
+	void *rsp;
 	int num;
 };
 
