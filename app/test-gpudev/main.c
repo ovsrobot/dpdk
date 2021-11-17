@@ -70,7 +70,7 @@ alloc_gpu_memory(uint16_t gpu_id)
 	size_t buf_bytes = 1024;
 	int ret;
 
-	printf("\n=======> TEST: Allocate GPU memory\n\n");
+	printf("\nTEST: Allocate GPU memory\n\n");
 
 	/* Alloc memory on GPU 0 */
 	ptr_1 = rte_gpu_mem_alloc(gpu_id, buf_bytes);
@@ -113,11 +113,18 @@ alloc_gpu_memory(uint16_t gpu_id)
 	}
 	printf("GPU memory 0x%p freed\n", ptr_1);
 
-	printf("\n=======> TEST: PASSED\n");
+	printf("\nTEST: PASSED\n");
 	return 0;
 
 error:
-	printf("\n=======> TEST: FAILED\n");
+
+	if (ptr_1 != NULL)
+		rte_gpu_mem_free(gpu_id, ptr_1);
+
+	if (ptr_2 != NULL)
+		rte_gpu_mem_free(gpu_id, ptr_2);
+
+	printf("\nTEST: FAILED\n");
 	return -1;
 }
 
@@ -128,7 +135,7 @@ register_cpu_memory(uint16_t gpu_id)
 	size_t buf_bytes = 1024;
 	int ret;
 
-	printf("\n=======> TEST: Register CPU memory\n\n");
+	printf("\nTEST: Register CPU memory\n\n");
 
 	/* Alloc memory on CPU visible from GPU 0 */
 	ptr = rte_zmalloc(NULL, buf_bytes, 0);
@@ -161,11 +168,15 @@ register_cpu_memory(uint16_t gpu_id)
 	}
 	printf("CPU memory 0x%p unregistered\n", ptr);
 
-	printf("\n=======> TEST: PASSED\n");
+	printf("\nTEST: PASSED\n");
 	return 0;
 
 error:
-	printf("\n=======> TEST: FAILED\n");
+
+	if (ptr != NULL)
+		rte_gpu_mem_unregister(gpu_id, ptr);
+
+	printf("\nTEST: FAILED\n");
 	return -1;
 }
 
@@ -177,7 +188,7 @@ create_update_comm_flag(uint16_t gpu_id)
 	uint32_t set_val;
 	uint32_t get_val;
 
-	printf("\n=======> TEST: Communication flag\n\n");
+	printf("\nTEST: Communication flag\n\n");
 
 	ret = rte_gpu_comm_create_flag(gpu_id, &devflag, RTE_GPU_COMM_FLAG_CPU);
 	if (ret < 0) {
@@ -223,11 +234,13 @@ create_update_comm_flag(uint16_t gpu_id)
 		goto error;
 	}
 
-	printf("\n=======> TEST: PASSED\n");
+	printf("\nTEST: PASSED\n");
 	return 0;
 
 error:
-	printf("\n=======> TEST: FAILED\n");
+
+	rte_gpu_comm_destroy_flag(&devflag);
+	printf("\nTEST: FAILED\n");
 	return -1;
 }
 
@@ -254,11 +267,11 @@ create_update_comm_list(uint16_t gpu_id)
 {
 	int ret = 0;
 	int i = 0;
-	struct rte_gpu_comm_list *comm_list;
+	struct rte_gpu_comm_list *comm_list = NULL;
 	uint32_t num_comm_items = 1024;
 	struct rte_mbuf *mbufs[10];
 
-	printf("\n=======> TEST: Communication list\n\n");
+	printf("\nTEST: Communication list\n\n");
 
 	comm_list = rte_gpu_comm_create_list(gpu_id, num_comm_items);
 	if (comm_list == NULL) {
@@ -323,11 +336,13 @@ create_update_comm_list(uint16_t gpu_id)
 	for (i = 0; i < 10; i++)
 		rte_free(mbufs[i]);
 
-	printf("\n=======> TEST: PASSED\n");
+	printf("\nTEST: PASSED\n");
 	return 0;
 
 error:
-	printf("\n=======> TEST: FAILED\n");
+
+	rte_gpu_comm_destroy_list(comm_list, num_comm_items);
+	printf("\nTEST: FAILED\n");
 	return -1;
 }
 
