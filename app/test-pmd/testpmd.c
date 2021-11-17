@@ -205,6 +205,13 @@ uint32_t mbuf_data_size_n = 1; /* Number of specified mbuf sizes. */
 uint16_t mbuf_data_size[MAX_SEGS_BUFFER_SPLIT] = {
 	DEFAULT_MBUF_DATA_SIZE
 }; /**< Mbuf data space size. */
+
+/* Mbuf memory types. */
+enum mbuf_mem_type mbuf_mem_types[MAX_SEGS_BUFFER_SPLIT];
+/* Pointers to external memory allocated for mempools. */
+uintptr_t mempools_ext_ptr[MAX_SEGS_BUFFER_SPLIT];
+size_t mempools_ext_size[MAX_SEGS_BUFFER_SPLIT];
+
 uint32_t param_total_num_mbufs = 0;  /**< number of mbufs in all pools - if
                                       * specified on command-line. */
 uint16_t stats_period; /**< Period to show statistics (disabled by default) */
@@ -542,6 +549,12 @@ int proc_id;
  * configure the queues to be polled.
  */
 unsigned int num_procs = 1;
+
+/*
+ * In case of GPU memory external mbufs use, for simplicity,
+ * the first GPU device in the list.
+ */
+int gpu_id = 0;
 
 static void
 eth_rx_metadata_negotiate_mp(uint16_t port_id)
@@ -1103,6 +1116,81 @@ setup_extbuf(uint32_t nb_mbufs, uint16_t mbuf_sz, unsigned int socket_id,
 	return ext_num;
 }
 
+static struct rte_mempool *
+gpu_mbuf_pool_create(uint16_t mbuf_seg_size, unsigned int nb_mbuf,
+			unsigned int socket_id, uint16_t port_id,
+			int gpu_id, uintptr_t *mp_addr, size_t *mp_size)
+{
+	int ret = 0;
+	char pool_name[RTE_MEMPOOL_NAMESIZE];
+	struct rte_eth_dev_info dev_info;
+	struct rte_mempool *rte_mp = NULL;
+	struct rte_pktmbuf_extmem gpu_mem;
+	struct rte_gpu_info ginfo;
+	uint8_t gpu_page_shift = 16;
+	uint32_t gpu_page_size = (1UL << gpu_page_shift);
+
+	if (rte_gpu_count_avail() == 0)
+		rte_exit(EXIT_FAILURE, "No GPU device available.\n");
+
+	if (rte_gpu_info_get(gpu_id, &ginfo))
+		rte_exit(EXIT_FAILURE, "Can't retrieve info about GPU %d - bye\n", gpu_id);
+
+	ret = eth_dev_info_get_print_err(port_id, &dev_info);
+	if (ret != 0)
+		rte_exit(EXIT_FAILURE,
+			"Failed to get device info for port %d\n",
+			port_id);
+
+	mbuf_poolname_build(socket_id, pool_name, sizeof(pool_name), port_id, MBUF_MEM_GPU);
+	if (!is_proc_primary()) {
+		rte_mp = rte_mempool_lookup(pool_name);
+		if (rte_mp == NULL)
+			rte_exit(EXIT_FAILURE,
+				"Get mbuf pool for socket %u failed: %s\n",
+				socket_id, rte_strerror(rte_errno));
+		return rte_mp;
+	}
+
+	TESTPMD_LOG(INFO,
+		"create a new mbuf pool <%s>: n=%u, size=%u, socket=%u GPU device=%s\n",
+		pool_name, nb_mbuf, mbuf_seg_size, socket_id, ginfo.name);
+
+	/* Create an external memory mempool using memory allocated on the GPU. */
+
+	gpu_mem.elt_size = RTE_MBUF_DEFAULT_BUF_SIZE;
+	gpu_mem.buf_len = RTE_ALIGN_CEIL(nb_mbuf * gpu_mem.elt_size, gpu_page_size);
+	gpu_mem.buf_iova = RTE_BAD_IOVA;
+
+	gpu_mem.buf_ptr = rte_gpu_mem_alloc(gpu_id, gpu_mem.buf_len);
+	if (gpu_mem.buf_ptr == NULL)
+		rte_exit(EXIT_FAILURE, "Could not allocate GPU device memory\n");
+
+	ret = rte_extmem_register(gpu_mem.buf_ptr, gpu_mem.buf_len, NULL, gpu_mem.buf_iova, gpu_page_size);
+	if (ret)
+		rte_exit(EXIT_FAILURE, "Unable to register addr 0x%p, ret %d\n", gpu_mem.buf_ptr, ret);
+
+	uint16_t pid = 0;
+
+	RTE_ETH_FOREACH_DEV(pid)
+	{
+		ret = rte_dev_dma_map(dev_info.device, gpu_mem.buf_ptr,
+					  gpu_mem.buf_iova, gpu_mem.buf_len);
+		if (ret)
+			rte_exit(EXIT_FAILURE, "Unable to DMA map addr 0x%p for device %s\n",
+					 gpu_mem.buf_ptr, dev_info.device->name);
+	}
+
+	rte_mp = rte_pktmbuf_pool_create_extbuf(pool_name, nb_mbuf, mb_mempool_cache, 0, mbuf_seg_size, socket_id, &gpu_mem, 1);
+	if (rte_mp == NULL)
+		rte_exit(EXIT_FAILURE, "Creation of GPU mempool <%s> failed\n", pool_name);
+
+	*mp_addr = (uintptr_t) gpu_mem.buf_ptr;
+	*mp_size = (size_t) gpu_mem.buf_len;
+
+	return rte_mp;
+}
+
 /*
  * Configuration initialisation done once at init time.
  */
@@ -1117,7 +1205,7 @@ mbuf_pool_create(uint16_t mbuf_seg_size, unsigned nb_mbuf,
 
 	mb_size = sizeof(struct rte_mbuf) + mbuf_seg_size;
 #endif
-	mbuf_poolname_build(socket_id, pool_name, sizeof(pool_name), size_idx);
+	mbuf_poolname_build(socket_id, pool_name, sizeof(pool_name), size_idx, MBUF_MEM_CPU);
 	if (!is_proc_primary()) {
 		rte_mp = rte_mempool_lookup(pool_name);
 		if (rte_mp == NULL)
@@ -1700,19 +1788,42 @@ init_config(void)
 
 		for (i = 0; i < num_sockets; i++)
 			for (j = 0; j < mbuf_data_size_n; j++)
-				mempools[i * MAX_SEGS_BUFFER_SPLIT + j] =
-					mbuf_pool_create(mbuf_data_size[j],
-							  nb_mbuf_per_pool,
-							  socket_ids[i], j);
+			{
+				if (mbuf_mem_types[j] == MBUF_MEM_GPU) {
+					mempools[i * MAX_SEGS_BUFFER_SPLIT + j] =
+						gpu_mbuf_pool_create(mbuf_data_size[j],
+								nb_mbuf_per_pool,
+								socket_ids[i], j, gpu_id,
+								&(mempools_ext_ptr[i]),
+								&(mempools_ext_size[i]));
+				} else {
+					mempools[i * MAX_SEGS_BUFFER_SPLIT + j] =
+						mbuf_pool_create(mbuf_data_size[j],
+								nb_mbuf_per_pool,
+								socket_ids[i], j);
+				}
+			}
 	} else {
 		uint8_t i;
 
 		for (i = 0; i < mbuf_data_size_n; i++)
-			mempools[i] = mbuf_pool_create
-					(mbuf_data_size[i],
-					 nb_mbuf_per_pool,
-					 socket_num == UMA_NO_CONFIG ?
-					 0 : socket_num, i);
+		{
+			if (mbuf_mem_types[i] == MBUF_MEM_GPU) {
+				mempools[i] =
+					gpu_mbuf_pool_create(mbuf_data_size[i],
+						nb_mbuf_per_pool,
+						socket_num == UMA_NO_CONFIG ? 0 : socket_num,
+						i, gpu_id,
+						&(mempools_ext_ptr[i]),
+						&(mempools_ext_size[i]));
+			} else {
+				mempools[i] = mbuf_pool_create(mbuf_data_size[i],
+							nb_mbuf_per_pool,
+							socket_num == UMA_NO_CONFIG ?
+							0 : socket_num, i);
+			}
+		}
+
 	}
 
 	init_port_config();
@@ -3414,9 +3525,43 @@ pmd_test_exit(void)
 			return;
 		}
 	}
+
 	for (i = 0 ; i < RTE_DIM(mempools) ; i++) {
-		if (mempools[i])
+		if (mempools[i]) {
 			mempool_free_mp(mempools[i]);
+			if (mbuf_mem_types[i] == MBUF_MEM_GPU) {
+				if (mempools_ext_ptr[i] != 0) {
+					ret = rte_extmem_unregister(
+							(void *)mempools_ext_ptr[i],
+							mempools_ext_size[i]);
+
+					if (ret)
+						RTE_LOG(ERR, EAL,
+								"rte_extmem_unregister 0x%p -> %d (rte_errno = %d)\n",
+								(uint8_t *)mempools_ext_ptr[i], ret, rte_errno);
+
+					RTE_ETH_FOREACH_DEV(pt_id) {
+						struct rte_eth_dev_info dev_info;
+						ret = eth_dev_info_get_print_err(pt_id, &dev_info);
+						if (ret != 0)
+							rte_exit(EXIT_FAILURE,
+								"Failed to get device info for port %d\n",
+								pt_id);
+
+						ret = rte_dev_dma_unmap(dev_info.device,
+								(void *)mempools_ext_ptr[i], RTE_BAD_IOVA,
+								mempools_ext_size[i]);
+
+						if (ret)
+							RTE_LOG(ERR, EAL,
+									"rte_dev_dma_unmap 0x%p -> %d (rte_errno = %d)\n",
+									(uint8_t *)mempools_ext_ptr[i], ret, rte_errno);
+					}
+
+					rte_gpu_mem_free(gpu_id, (void *)mempools_ext_ptr[i]);
+				}
+			}
+		}
 	}
 	free(xstats_display);
 

@@ -87,7 +87,10 @@ usage(char* progname)
 	       "in NUMA mode.\n");
 	printf("  --mbuf-size=N,[N1[,..Nn]: set the data size of mbuf to "
 	       "N bytes. If multiple numbers are specified the extra pools "
-	       "will be created to receive with packet split features\n");
+	       "will be created to receive with packet split features\n"
+		   "Use 'g' suffix for GPU memory.\n"
+		   "If no or an unrecognized suffix is provided, CPU is assumed\n");
+
 	printf("  --total-num-mbufs=N: set the number of mbufs to be allocated "
 	       "in mbuf pools.\n");
 	printf("  --max-pkt-len=N: set the maximum size of packet to N bytes.\n");
@@ -595,6 +598,7 @@ launch_args_parse(int argc, char** argv)
 	struct rte_eth_dev_info dev_info;
 	uint16_t rec_nb_pkts;
 	int ret;
+	uint32_t idx = 0;
 
 	static struct option lgopts[] = {
 		{ "help",			0, 0, 0 },
@@ -1543,5 +1547,14 @@ launch_args_parse(int argc, char** argv)
 				  "mp-alloc=anon. mempool no-iova-contig is "
 				  "ignored\n");
 		mempool_flags = 0;
+	}
+
+	for (idx = 0; idx < mbuf_data_size_n; idx++) {
+		if (mbuf_mem_types[idx] == MBUF_MEM_GPU &&
+				strcmp(cur_fwd_eng->fwd_mode_name, "io") != 0) {
+			TESTPMD_LOG(ERR, 
+					"GPU memory mbufs can be used with iofwd engine only\n");
+			rte_exit(EXIT_FAILURE, "Command line is incorrect\n");
+		}
 	}
 }
