@@ -76,6 +76,7 @@ optional_libs = [
         'pdump',
         'power',
         'vhost',
+        'gpudev',
 ]
 
 disabled_libs = []
