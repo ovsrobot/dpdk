@@ -3,3 +3,4 @@
 
 sources = files('main.c')
 deps = ['gpudev', 'ethdev']
+
