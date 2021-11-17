@@ -3619,6 +3619,7 @@ parse_item_list(const char *str, const char *item_name, unsigned int max_items,
 	unsigned int j;
 	int value_ok;
 	char c;
+	int gpu_mbuf = 0;
 
 	/*
 	 * First parse all items in the list and store their value.
@@ -3628,9 +3629,27 @@ parse_item_list(const char *str, const char *item_name, unsigned int max_items,
 	value_ok = 0;
 	for (i = 0; i < strnlen(str, STR_TOKEN_SIZE); i++) {
 		c = str[i];
+
 		if ((c >= '0') && (c <= '9')) {
 			value = (unsigned int) (value * 10 + (c - '0'));
 			value_ok = 1;
+			continue;
+		}
+		if (c == 'g') {
+			/*
+			 * When this flag is set, mbufs for this segment
+			 * will be created on GPU memory.
+			 */
+			if (i < strnlen(str, STR_TOKEN_SIZE) - 1 && str[i+1] != ',') {
+				fprintf(stderr, "input param list is not well formatted\n");
+				return 0;
+			}
+			#ifdef RTE_LIB_GPUDEV
+				gpu_mbuf = 1;
+			#else
+				fprintf(stderr, "gpudev library not built. Can't create mempools in GPU memory.\n");
+				return 0;
+			#endif
 			continue;
 		}
 		if (c != ',') {
@@ -3645,6 +3664,8 @@ parse_item_list(const char *str, const char *item_name, unsigned int max_items,
 			parsed_items[nb_item] = value;
 			value_ok = 0;
 			value = 0;
+			mbuf_mem_types[nb_item] = gpu_mbuf ? MBUF_MEM_GPU : MBUF_MEM_CPU;
+			gpu_mbuf = 0;
 		}
 		nb_item++;
 	}
@@ -3653,12 +3674,15 @@ parse_item_list(const char *str, const char *item_name, unsigned int max_items,
 			item_name, nb_item + 1, max_items);
 		return 0;
 	}
+
+	mbuf_mem_types[nb_item] = gpu_mbuf ? MBUF_MEM_GPU : MBUF_MEM_CPU;
+
 	parsed_items[nb_item++] = value;
 	if (! check_unique_values)
 		return nb_item;
 
 	/*
-	 * Then, check that all values in the list are different.
+	 * Then, check that all values in the list are differents.
 	 * No optimization here...
 	 */
 	for (i = 0; i < nb_item; i++) {
@@ -6874,6 +6898,16 @@ static void cmd_set_fwd_mode_parsed(void *parsed_result,
 				    __rte_unused void *data)
 {
 	struct cmd_set_fwd_mode_result *res = parsed_result;
+	int idx;
+
+	for (idx = 0; idx < MAX_SEGS_BUFFER_SPLIT; idx++) {
+		if (mbuf_mem_types[idx] == MBUF_MEM_GPU &&
+				strcmp(res->mode, "io") != 0) {
+			TESTPMD_LOG(ERR,
+					"GPU memory mbufs can be used with iofwd engine only\n");
+			return;
+		}
+	}
 
 	retry_enabled = 0;
 	set_pkt_forwarding_mode(res->mode);

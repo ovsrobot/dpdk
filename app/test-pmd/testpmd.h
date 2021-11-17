@@ -9,6 +9,9 @@
 
 #include <rte_pci.h>
 #include <rte_bus_pci.h>
+#ifdef RTE_LIB_GPUDEV
+#include <rte_gpudev.h>
+#endif
 #ifdef RTE_LIB_GRO
 #include <rte_gro.h>
 #endif
@@ -484,6 +487,11 @@ extern uint8_t dcb_config;
 extern uint32_t mbuf_data_size_n;
 extern uint16_t mbuf_data_size[MAX_SEGS_BUFFER_SPLIT];
 /**< Mbuf data space size. */
+enum mbuf_mem_type {
+	MBUF_MEM_CPU,
+	MBUF_MEM_GPU
+};
+extern enum mbuf_mem_type mbuf_mem_types[MAX_SEGS_BUFFER_SPLIT];
 extern uint32_t param_total_num_mbufs;
 
 extern uint16_t stats_period;
@@ -731,14 +739,16 @@ current_fwd_lcore(void)
 /* Mbuf Pools */
 static inline void
 mbuf_poolname_build(unsigned int sock_id, char *mp_name,
-		    int name_size, uint16_t idx)
+		    int name_size, uint16_t idx, enum mbuf_mem_type mem_type)
 {
+	const char *suffix = mem_type == MBUF_MEM_GPU ? "_gpu" : "";
+
 	if (!idx)
 		snprintf(mp_name, name_size,
-			 MBUF_POOL_NAME_PFX "_%u", sock_id);
+			 MBUF_POOL_NAME_PFX "_%u%s", sock_id, suffix);
 	else
 		snprintf(mp_name, name_size,
-			 MBUF_POOL_NAME_PFX "_%hu_%hu", (uint16_t)sock_id, idx);
+			 MBUF_POOL_NAME_PFX "_%hu_%hu%s", (uint16_t)sock_id, idx, suffix);
 }
 
 static inline struct rte_mempool *
@@ -746,7 +756,7 @@ mbuf_pool_find(unsigned int sock_id, uint16_t idx)
 {
 	char pool_name[RTE_MEMPOOL_NAMESIZE];
 
-	mbuf_poolname_build(sock_id, pool_name, sizeof(pool_name), idx);
+	mbuf_poolname_build(sock_id, pool_name, sizeof(pool_name), idx, mbuf_mem_types[idx]);
 	return rte_mempool_lookup((const char *)pool_name);
 }
 
