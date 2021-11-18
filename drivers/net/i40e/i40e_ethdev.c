@@ -2591,10 +2591,30 @@ i40e_dev_close(struct rte_eth_dev *dev)
 	int ret;
 	uint8_t aq_fail = 0;
 	int retries = 0;
+	int mask = 0;
+	struct rte_eth_rxmode *rxmode = &dev->data->dev_conf.rxmode;
 
 	PMD_INIT_FUNC_TRACE();
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
+
+	/*
+	 * To avoid global register conflict with kernel driver, need set
+	 * switch configuration back to default, disable double vlan and
+	 * clear the VLAN filters when dev close.
+	 */
+	if (pf->is_outer_vlan_processing &&
+	    (rxmode->offloads & RTE_ETH_RX_OFFLOAD_VLAN_EXTEND)) {
+		mask = RTE_ETH_VLAN_EXTEND_MASK;
+		rxmode->offloads &= ~RTE_ETH_RX_OFFLOAD_VLAN_EXTEND;
+
+		if (rxmode->offloads & RTE_ETH_RX_OFFLOAD_VLAN_FILTER) {
+			mask |= RTE_ETH_VLAN_FILTER_MASK;
+			rxmode->offloads &= ~RTE_ETH_RX_OFFLOAD_VLAN_FILTER;
+		}
+
+		i40e_vlan_offload_set(dev, mask);
+	}
 
 	ret = rte_eth_switch_domain_free(pf->switch_domain_id);
 	if (ret)
@@ -3918,6 +3938,7 @@ i40e_vlan_tpid_set(struct rte_eth_dev *dev,
 	int qinq = dev->data->dev_conf.rxmode.offloads &
 		   RTE_ETH_RX_OFFLOAD_VLAN_EXTEND;
 	int ret = 0;
+	u16 sw_flags = 0, valid_flags = 0;
 
 	if ((vlan_type != RTE_ETH_VLAN_TYPE_INNER &&
 	     vlan_type != RTE_ETH_VLAN_TYPE_OUTER) ||
@@ -3935,15 +3956,28 @@ i40e_vlan_tpid_set(struct rte_eth_dev *dev,
 	/* 802.1ad frames ability is added in NVM API 1.7*/
 	if (hw->flags & I40E_HW_FLAG_802_1AD_CAPABLE) {
 		if (qinq) {
+			if (pf->is_outer_vlan_processing) {
+				sw_flags = I40E_AQ_SET_SWITCH_CFG_OUTER_VLAN;
+				valid_flags = I40E_AQ_SET_SWITCH_CFG_OUTER_VLAN;
+			}
 			if (vlan_type == RTE_ETH_VLAN_TYPE_OUTER)
 				hw->first_tag = rte_cpu_to_le_16(tpid);
 			else if (vlan_type == RTE_ETH_VLAN_TYPE_INNER)
 				hw->second_tag = rte_cpu_to_le_16(tpid);
 		} else {
-			if (vlan_type == RTE_ETH_VLAN_TYPE_OUTER)
-				hw->second_tag = rte_cpu_to_le_16(tpid);
+			if (pf->is_outer_vlan_processing) {
+				sw_flags = 0;
+				valid_flags = I40E_AQ_SET_SWITCH_CFG_OUTER_VLAN;
+			}
+			if (vlan_type == RTE_ETH_VLAN_TYPE_OUTER) {
+				if (pf->is_outer_vlan_processing)
+					hw->first_tag = rte_cpu_to_le_16(tpid);
+				else
+					hw->second_tag = rte_cpu_to_le_16(tpid);
+			}
 		}
-		ret = i40e_aq_set_switch_config(hw, 0, 0, 0, NULL);
+		ret = i40e_aq_set_switch_config(hw, sw_flags,
+						valid_flags, 0, NULL);
 		if (ret != I40E_SUCCESS) {
 			PMD_DRV_LOG(ERR,
 				    "Set switch config failed aq_err: %d",
@@ -4022,9 +4056,12 @@ i40e_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 					   RTE_ETHER_TYPE_VLAN);
 			i40e_vlan_tpid_set(dev, RTE_ETH_VLAN_TYPE_INNER,
 					   RTE_ETHER_TYPE_VLAN);
-		}
-		else
+		} else {
+			if (pf->is_outer_vlan_processing)
+				i40e_vlan_tpid_set(dev, RTE_ETH_VLAN_TYPE_OUTER,
+					   RTE_ETHER_TYPE_QINQ);
 			i40e_vsi_config_double_vlan(vsi, FALSE);
+		}
 	}
 
 	if (mask & RTE_ETH_QINQ_STRIP_MASK) {
@@ -4852,6 +4889,17 @@ i40e_pf_parameter_init(struct rte_eth_dev *dev)
 			"Failed to allocate %u VSIs, which exceeds the hardware maximum %u",
 			vsi_count, hw->func_caps.num_vsis);
 		return -EINVAL;
+	}
+
+	/**
+	 * Enable outer VLAN processing if firmware version is greater
+	 * than v8.3
+	 */
+	if (hw->aq.fw_maj_ver > 8 ||
+	    (hw->aq.fw_maj_ver == 8 && hw->aq.fw_min_ver > 3)) {
+		pf->is_outer_vlan_processing = true;
+	} else {
+		pf->is_outer_vlan_processing = false;
 	}
 
 	return 0;
