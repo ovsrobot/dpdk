@@ -432,6 +432,8 @@ if dpdk_conf.get('RTE_ARCH_32')
     else
         # armv7 build
         dpdk_conf.set('RTE_ARCH_ARMv7', true)
+        dpdk_conf.set('RTE_MAX_LCORE', 128)
+        dpdk_conf.set('RTE_MAX_NUMA_NODES', 8)
         # the minimum architecture supported, armv7-a, needs the following,
         machine_args += '-mfpu=neon'
     endif
