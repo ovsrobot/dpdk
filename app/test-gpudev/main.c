@@ -117,6 +117,10 @@ alloc_gpu_memory(uint16_t gpu_id)
 	return 0;
 
 error:
+
+	rte_gpu_mem_free(gpu_id, ptr_1);
+	rte_gpu_mem_free(gpu_id, ptr_2);
+
 	printf("\n=======> TEST: FAILED\n");
 	return -1;
 }
@@ -165,6 +169,9 @@ register_cpu_memory(uint16_t gpu_id)
 	return 0;
 
 error:
+
+	rte_gpu_mem_unregister(gpu_id, ptr);
+	rte_free(ptr);
 	printf("\n=======> TEST: FAILED\n");
 	return -1;
 }
@@ -227,6 +234,8 @@ create_update_comm_flag(uint16_t gpu_id)
 	return 0;
 
 error:
+
+	rte_gpu_comm_destroy_flag(&devflag);
 	printf("\n=======> TEST: FAILED\n");
 	return -1;
 }
@@ -254,7 +263,7 @@ create_update_comm_list(uint16_t gpu_id)
 {
 	int ret = 0;
 	int i = 0;
-	struct rte_gpu_comm_list *comm_list;
+	struct rte_gpu_comm_list *comm_list = NULL;
 	uint32_t num_comm_items = 1024;
 	struct rte_mbuf *mbufs[10];
 
@@ -327,6 +336,8 @@ create_update_comm_list(uint16_t gpu_id)
 	return 0;
 
 error:
+
+	rte_gpu_comm_destroy_list(comm_list, num_comm_items);
 	printf("\n=======> TEST: FAILED\n");
 	return -1;
 }
