@@ -394,6 +394,7 @@ __rte_alloc_size(2);
  *   0 on success, -rte_errno otherwise:
  *   - ENODEV if invalid dev_id
  *   - ENOTSUP if operation not supported by the driver
+ *   - EINVAL if input ptr is invalid
  *   - EPERM if driver error
  */
 __rte_experimental
@@ -442,6 +443,7 @@ int rte_gpu_mem_register(int16_t dev_id, size_t size, void *ptr);
  *   0 on success, -rte_errno otherwise:
  *   - ENODEV if invalid dev_id
  *   - ENOTSUP if operation not supported by the driver
+ *   - EINVAL if input ptr is invalid
  *   - EPERM if driver error
  */
 __rte_experimental

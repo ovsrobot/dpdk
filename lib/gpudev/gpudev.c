@@ -576,6 +576,11 @@ rte_gpu_mem_free(int16_t dev_id, void *ptr)
 		return -rte_errno;
 	}
 
+	if (ptr == NULL) {
+		rte_errno = EINVAL;
+		return -rte_errno;
+	}
+
 	if (dev->ops.mem_free == NULL) {
 		rte_errno = ENOTSUP;
 		return -rte_errno;
@@ -616,6 +621,11 @@ rte_gpu_mem_unregister(int16_t dev_id, void *ptr)
 	if (dev == NULL) {
 		GPU_LOG(ERR, "unregister mem for invalid device ID %d", dev_id);
 		rte_errno = ENODEV;
+		return -rte_errno;
+	}
+
+	if (ptr == NULL) {
+		rte_errno = EINVAL;
 		return -rte_errno;
 	}
 
