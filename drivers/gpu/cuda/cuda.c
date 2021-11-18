@@ -464,8 +464,10 @@ cuda_dev_info_get(struct rte_gpu *dev, struct rte_gpu_info *info)
 	CUcontext current_ctx;
 	CUcontext input_ctx;
 
-	if (dev == NULL)
-		return -ENODEV;
+	if (dev == NULL) {
+		rte_errno = ENODEV;
+		return -rte_errno;
+	}
 
 	/* Child initialization time probably called by rte_gpu_add_child() */
 	if (dev->mpshared->info.parent != RTE_GPU_ID_NONE &&
@@ -476,7 +478,8 @@ cuda_dev_info_get(struct rte_gpu *dev, struct rte_gpu_info *info)
 			pfn_cuGetErrorString(res, &(err_string));
 			rte_cuda_log(ERR, "cuCtxGetCurrent failed with %s",
 					err_string);
-			return -EPERM;
+			rte_errno = EPERM;
+			return -rte_errno;
 		}
 
 		/* Set child ctx as current ctx */
@@ -486,7 +489,8 @@ cuda_dev_info_get(struct rte_gpu *dev, struct rte_gpu_info *info)
 			pfn_cuGetErrorString(res, &(err_string));
 			rte_cuda_log(ERR, "cuCtxSetCurrent input failed with %s",
 					err_string);
-			return -EPERM;
+			rte_errno = EPERM;
+			return -rte_errno;
 		}
 
 		/*
@@ -505,8 +509,10 @@ cuda_dev_info_get(struct rte_gpu *dev, struct rte_gpu_info *info)
 				(uint32_t)affinityPrm.param.smCount.val;
 
 		ret = rte_gpu_info_get(dev->mpshared->info.parent, &parent_info);
-		if (ret)
-			return -ENODEV;
+		if (ret) {
+			rte_errno = ENODEV;
+			return -rte_errno;
+		}
 		dev->mpshared->info.total_memory = parent_info.total_memory;
 
 		/*
@@ -517,7 +523,8 @@ cuda_dev_info_get(struct rte_gpu *dev, struct rte_gpu_info *info)
 				RTE_CACHE_LINE_SIZE);
 		if (dev->mpshared->dev_private == NULL) {
 			rte_cuda_log(ERR, "Failed to allocate memory for GPU process private");
-			return -EPERM;
+			rte_errno = EPERM;
+			return -rte_errno;
 		}
 
 		private = (struct cuda_info *)dev->mpshared->dev_private;
@@ -527,7 +534,8 @@ cuda_dev_info_get(struct rte_gpu *dev, struct rte_gpu_info *info)
 			pfn_cuGetErrorString(res, &(err_string));
 			rte_cuda_log(ERR, "cuCtxGetDevice failed with %s",
 					err_string);
-			return -EPERM;
+			rte_errno = EPERM;
+			return -rte_errno;
 		}
 
 		res = pfn_cuDeviceGetName(private->gpu_name,
@@ -536,7 +544,8 @@ cuda_dev_info_get(struct rte_gpu *dev, struct rte_gpu_info *info)
 			pfn_cuGetErrorString(res, &(err_string));
 			rte_cuda_log(ERR, "cuDeviceGetName failed with %s",
 					err_string);
-			return -EPERM;
+			rte_errno = EPERM;
+			return -rte_errno;
 		}
 
 		/* Restore original ctx as current ctx */
@@ -545,7 +554,8 @@ cuda_dev_info_get(struct rte_gpu *dev, struct rte_gpu_info *info)
 			pfn_cuGetErrorString(res, &(err_string));
 			rte_cuda_log(ERR, "cuCtxSetCurrent current failed with %s",
 					err_string);
-			return -EPERM;
+			rte_errno = EPERM;
+			return -rte_errno;
 		}
 	}
 
@@ -567,10 +577,14 @@ cuda_mem_alloc(struct rte_gpu *dev, size_t size, void **ptr)
 	CUcontext input_ctx;
 	unsigned int flag = 1;
 
-	if (dev == NULL)
-		return -ENODEV;
-	if (size == 0)
-		return -EINVAL;
+	if (dev == NULL) {
+		rte_errno = ENODEV;
+		return -rte_errno;
+	}
+	if (size == 0) {
+		rte_errno = EINVAL;
+		return -rte_errno;
+	}
 
 	/* Store current ctx */
 	res = pfn_cuCtxGetCurrent(&current_ctx);
@@ -578,7 +592,8 @@ cuda_mem_alloc(struct rte_gpu *dev, size_t size, void **ptr)
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuCtxGetCurrent failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	/* Set child ctx as current ctx */
@@ -588,13 +603,16 @@ cuda_mem_alloc(struct rte_gpu *dev, size_t size, void **ptr)
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuCtxSetCurrent input failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	/* Get next memory list item */
 	mem_alloc_list_tail = mem_list_add_item();
-	if (mem_alloc_list_tail == NULL)
-		return -ENOMEM;
+	if (mem_alloc_list_tail == NULL) {
+		rte_errno = EPERM;
+		return -rte_errno;
+	}
 
 	/* Allocate memory */
 	mem_alloc_list_tail->size = size;
@@ -604,7 +622,8 @@ cuda_mem_alloc(struct rte_gpu *dev, size_t size, void **ptr)
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuCtxSetCurrent current failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	/* GPUDirect RDMA attribute required */
@@ -615,7 +634,8 @@ cuda_mem_alloc(struct rte_gpu *dev, size_t size, void **ptr)
 		rte_cuda_log(ERR, "Could not set SYNC MEMOP attribute for "
 				"GPU memory at  %"PRIu32", err %d",
 				(uint32_t)mem_alloc_list_tail->ptr_d, res);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	mem_alloc_list_tail->pkey = get_hash_from_ptr((void *)mem_alloc_list_tail->ptr_d);
@@ -631,7 +651,8 @@ cuda_mem_alloc(struct rte_gpu *dev, size_t size, void **ptr)
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuCtxSetCurrent current failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	*ptr = (void *)mem_alloc_list_tail->ptr_d;
@@ -649,11 +670,15 @@ cuda_mem_register(struct rte_gpu *dev, size_t size, void *ptr)
 	unsigned int flag = 1;
 	int use_ptr_h = 0;
 
-	if (dev == NULL)
-		return -ENODEV;
+	if (dev == NULL) {
+		rte_errno = ENODEV;
+		return -rte_errno;
+	}
 
-	if (size == 0 || ptr == NULL)
-		return -EINVAL;
+	if (size == 0 || ptr == NULL) {
+		rte_errno = EINVAL;
+		return -rte_errno;
+	}
 
 	/* Store current ctx */
 	res = pfn_cuCtxGetCurrent(&current_ctx);
@@ -661,7 +686,8 @@ cuda_mem_register(struct rte_gpu *dev, size_t size, void *ptr)
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuCtxGetCurrent failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	/* Set child ctx as current ctx */
@@ -671,13 +697,16 @@ cuda_mem_register(struct rte_gpu *dev, size_t size, void *ptr)
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuCtxSetCurrent input failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	/* Get next memory list item */
 	mem_alloc_list_tail = mem_list_add_item();
-	if (mem_alloc_list_tail == NULL)
-		return -ENOMEM;
+	if (mem_alloc_list_tail == NULL) {
+		rte_errno = EPERM;
+		return -rte_errno;
+	}
 
 	/* Allocate memory */
 	mem_alloc_list_tail->size = size;
@@ -693,7 +722,8 @@ cuda_mem_register(struct rte_gpu *dev, size_t size, void *ptr)
 				err_string,
 				mem_alloc_list_tail->ptr_h,
 				mem_alloc_list_tail->size);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	res = pfn_cuDeviceGetAttribute(&(use_ptr_h),
@@ -703,7 +733,8 @@ cuda_mem_register(struct rte_gpu *dev, size_t size, void *ptr)
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuDeviceGetAttribute failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	if (use_ptr_h == 0) {
@@ -713,13 +744,15 @@ cuda_mem_register(struct rte_gpu *dev, size_t size, void *ptr)
 			pfn_cuGetErrorString(res, &(err_string));
 			rte_cuda_log(ERR, "cuMemHostGetDevicePointer failed with %s",
 					err_string);
-			return -EPERM;
+			rte_errno = EPERM;
+			return -rte_errno;
 		}
 
 		if ((uintptr_t)mem_alloc_list_tail->ptr_d !=
 				(uintptr_t)mem_alloc_list_tail->ptr_h) {
 			rte_cuda_log(ERR, "Host input pointer is different wrt GPU registered pointer");
-			return -ENOTSUP;
+			rte_errno = ENOTSUP;
+			return -rte_errno;
 		}
 	} else {
 		mem_alloc_list_tail->ptr_d = (CUdeviceptr)mem_alloc_list_tail->ptr_h;
@@ -732,7 +765,8 @@ cuda_mem_register(struct rte_gpu *dev, size_t size, void *ptr)
 	if (res != 0) {
 		rte_cuda_log(ERR, "Could not set SYNC MEMOP attribute for GPU memory at %"PRIu32
 				", err %d", (uint32_t)mem_alloc_list_tail->ptr_d, res);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	mem_alloc_list_tail->pkey = get_hash_from_ptr((void *)mem_alloc_list_tail->ptr_h);
@@ -747,7 +781,8 @@ cuda_mem_register(struct rte_gpu *dev, size_t size, void *ptr)
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuCtxSetCurrent current failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	return 0;
@@ -761,8 +796,10 @@ cuda_mem_free(struct rte_gpu *dev, void *ptr)
 	const char *err_string;
 	cuda_ptr_key hk;
 
-	if (dev == NULL)
-		return -ENODEV;
+	if (dev == NULL) {
+		rte_errno = ENODEV;
+		return -rte_errno;
+	}
 
 	if (ptr == NULL)
 		return -EINVAL;
@@ -772,7 +809,8 @@ cuda_mem_free(struct rte_gpu *dev, void *ptr)
 	mem_item = mem_list_find_item(hk);
 	if (mem_item == NULL) {
 		rte_cuda_log(ERR, "Memory address 0x%p not found in driver memory", ptr);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	if (mem_item->mtype == GPU_MEM) {
@@ -781,7 +819,8 @@ cuda_mem_free(struct rte_gpu *dev, void *ptr)
 			pfn_cuGetErrorString(res, &(err_string));
 			rte_cuda_log(ERR, "cuMemFree current failed with %s",
 					err_string);
-			return -EPERM;
+			rte_errno = EPERM;
+			return -rte_errno;
 		}
 
 		return mem_list_del_item(hk);
@@ -789,7 +828,8 @@ cuda_mem_free(struct rte_gpu *dev, void *ptr)
 
 	rte_cuda_log(ERR, "Memory type %d not supported", mem_item->mtype);
 
-	return -EPERM;
+	rte_errno = EPERM;
+	return -rte_errno;
 }
 
 static int
@@ -800,8 +840,10 @@ cuda_mem_unregister(struct rte_gpu *dev, void *ptr)
 	const char *err_string;
 	cuda_ptr_key hk;
 
-	if (dev == NULL)
-		return -ENODEV;
+	if (dev == NULL) {
+		rte_errno = ENODEV;
+		return -rte_errno;
+	}
 
 	if (ptr == NULL)
 		return -EINVAL;
@@ -811,7 +853,8 @@ cuda_mem_unregister(struct rte_gpu *dev, void *ptr)
 	mem_item = mem_list_find_item(hk);
 	if (mem_item == NULL) {
 		rte_cuda_log(ERR, "Memory address 0x%p not found in driver memory", ptr);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	if (mem_item->mtype == CPU_REGISTERED) {
@@ -820,7 +863,8 @@ cuda_mem_unregister(struct rte_gpu *dev, void *ptr)
 			pfn_cuGetErrorString(res, &(err_string));
 			rte_cuda_log(ERR, "cuMemHostUnregister current failed with %s",
 					err_string);
-			return -EPERM;
+			rte_errno = EPERM;
+			return -rte_errno;
 		}
 
 		return mem_list_del_item(hk);
@@ -828,14 +872,17 @@ cuda_mem_unregister(struct rte_gpu *dev, void *ptr)
 
 	rte_cuda_log(ERR, "Memory type %d not supported", mem_item->mtype);
 
-	return -EPERM;
+	rte_errno = EPERM;
+	return -rte_errno;
 }
 
 static int
 cuda_dev_close(struct rte_gpu *dev)
 {
-	if (dev == NULL)
-		return -EINVAL;
+	if (dev == NULL) {
+		rte_errno = ENODEV;
+		return -rte_errno;
+	}
 
 	rte_free(dev->mpshared->dev_private);
 
@@ -851,8 +898,10 @@ cuda_wmb(struct rte_gpu *dev)
 	CUcontext input_ctx;
 	struct cuda_info *private;
 
-	if (dev == NULL)
-		return -ENODEV;
+	if (dev == NULL) {
+		rte_errno = ENODEV;
+		return -rte_errno;
+	}
 
 	private = (struct cuda_info *)dev->mpshared->dev_private;
 
@@ -871,7 +920,9 @@ cuda_wmb(struct rte_gpu *dev)
 		 */
 		rte_cuda_log(WARNING, "Can't flush GDR writes with cuFlushGPUDirectRDMAWrites CUDA function."
 				"Application needs to use alternative methods.");
-		return -ENOTSUP;
+
+		rte_errno = ENOTSUP;
+		return -rte_errno;
 	}
 
 	/* Store current ctx */
@@ -880,7 +931,8 @@ cuda_wmb(struct rte_gpu *dev)
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuCtxGetCurrent failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	/* Set child ctx as current ctx */
@@ -890,7 +942,8 @@ cuda_wmb(struct rte_gpu *dev)
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuCtxSetCurrent input failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	res = pfn_cuFlushGPUDirectRDMAWrites(CU_FLUSH_GPU_DIRECT_RDMA_WRITES_TARGET_CURRENT_CTX,
@@ -899,7 +952,8 @@ cuda_wmb(struct rte_gpu *dev)
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuFlushGPUDirectRDMAWrites current failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	/* Restore original ctx as current ctx */
@@ -908,7 +962,8 @@ cuda_wmb(struct rte_gpu *dev)
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuCtxSetCurrent current failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	return 0;
@@ -928,15 +983,18 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 
 	if (pci_dev == NULL) {
 		rte_cuda_log(ERR, "NULL PCI device");
-		return -EINVAL;
+		rte_errno = ENODEV;
+		return -rte_errno;
 	}
 
 	rte_pci_device_name(&pci_dev->addr, dev_name, sizeof(dev_name));
 
 	/* Allocate memory to be used privately by drivers */
 	dev = rte_gpu_allocate(pci_dev->device.name);
-	if (dev == NULL)
-		return -ENODEV;
+	if (dev == NULL) {
+		rte_errno = ENODEV;
+		return -rte_errno;
+	}
 
 	/* Initialize values only for the first CUDA driver call */
 	if (dev->mpshared->info.dev_id == 0) {
@@ -947,13 +1005,15 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 		/* Load libcuda.so library */
 		if (cuda_loader()) {
 			rte_cuda_log(ERR, "CUDA Driver library not found");
-			return -ENOTSUP;
+			rte_errno = ENOTSUP;
+			return -rte_errno;
 		}
 
 		/* Load initial CUDA functions */
 		if (cuda_sym_func_loader()) {
 			rte_cuda_log(ERR, "CUDA functions not found in library");
-			return -ENOTSUP;
+			rte_errno = ENOTSUP;
+			return -rte_errno;
 		}
 
 		/*
@@ -966,7 +1026,8 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 		res = sym_cuDriverGetVersion(&cuda_driver_version);
 		if (res != 0) {
 			rte_cuda_log(ERR, "cuDriverGetVersion failed with %d", res);
-			return -ENOTSUP;
+			rte_errno = ENOTSUP;
+			return -rte_errno;
 		}
 
 		if (cuda_driver_version < CUDA_DRIVER_MIN_VERSION) {
@@ -974,12 +1035,14 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 					"Minimum requirement is %d",
 					cuda_driver_version,
 					CUDA_DRIVER_MIN_VERSION);
-			return -ENOTSUP;
+			rte_errno = ENOTSUP;
+			return -rte_errno;
 		}
 
 		if (cuda_pfn_func_loader()) {
 			rte_cuda_log(ERR, "CUDA PFN functions not found in library");
-			return -ENOTSUP;
+			rte_errno = ENOTSUP;
+			return -rte_errno;
 		}
 	}
 
@@ -993,7 +1056,8 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuDeviceGetByPCIBusId name %s failed with %d: %s",
 				dev->device->name, res, err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	res = pfn_cuDevicePrimaryCtxRetain(&pctx, cu_dev_id);
@@ -1001,19 +1065,22 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuDevicePrimaryCtxRetain name %s failed with %d: %s",
 				dev->device->name, res, err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	res = pfn_cuCtxGetApiVersion(pctx, &cuda_api_version);
 	if (res != 0) {
 		rte_cuda_log(ERR, "cuCtxGetApiVersion failed with %d", res);
-		return -ENOTSUP;
+		rte_errno = ENOTSUP;
+		return -rte_errno;
 	}
 
 	if (cuda_api_version < CUDA_API_MIN_VERSION) {
 		rte_cuda_log(ERR, "CUDA API version found is %d Minimum requirement is %d",
 				cuda_api_version, CUDA_API_MIN_VERSION);
-		return -ENOTSUP;
+		rte_errno = ENOTSUP;
+		return -rte_errno;
 	}
 
 	dev->mpshared->info.context = (uint64_t)pctx;
@@ -1030,7 +1097,8 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuDeviceGetAttribute failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 	dev->mpshared->info.processor_count = (uint32_t)processor_count;
 
@@ -1040,7 +1108,8 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuDeviceTotalMem failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	/*
@@ -1051,7 +1120,8 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 			RTE_CACHE_LINE_SIZE);
 	if (dev->mpshared->dev_private == NULL) {
 		rte_cuda_log(ERR, "Failed to allocate memory for GPU process private");
-		return -ENOMEM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	private = (struct cuda_info *)dev->mpshared->dev_private;
@@ -1063,7 +1133,8 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuDeviceGetName failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	res = pfn_cuDeviceGetAttribute(&(private->gdr_supported),
@@ -1073,7 +1144,8 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 		pfn_cuGetErrorString(res, &(err_string));
 		rte_cuda_log(ERR, "cuDeviceGetAttribute failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	if (private->gdr_supported == 0)
@@ -1088,7 +1160,8 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 		rte_cuda_log(ERR,
 				"cuDeviceGetAttribute failed with %s",
 				err_string);
-		return -EPERM;
+		rte_errno = EPERM;
+		return -rte_errno;
 	}
 
 	if (private->gdr_write_ordering == CU_GPU_DIRECT_RDMA_WRITES_ORDERING_NONE) {
@@ -1099,7 +1172,8 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 			pfn_cuGetErrorString(res, &(err_string));
 			rte_cuda_log(ERR, "cuDeviceGetAttribute failed with %s",
 					err_string);
-			return -EPERM;
+			rte_errno = EPERM;
+			return -rte_errno;
 		}
 
 		if (private->gdr_flush_type != CU_FLUSH_GPU_DIRECT_RDMA_WRITES_OPTION_HOST)
@@ -1129,14 +1203,17 @@ cuda_gpu_remove(struct rte_pci_device *pci_dev)
 	int ret;
 	uint8_t gpu_id;
 
-	if (pci_dev == NULL)
-		return -EINVAL;
+	if (pci_dev == NULL) {
+		rte_errno = ENODEV;
+		return -rte_errno;
+	}
 
 	dev = rte_gpu_get_by_name(pci_dev->device.name);
 	if (dev == NULL) {
 		rte_cuda_log(ERR, "Couldn't find HW dev \"%s\" to uninitialise it",
 				pci_dev->device.name);
-		return -ENODEV;
+		rte_errno = ENODEV;
+		return -rte_errno;
 	}
 	gpu_id = dev->mpshared->info.dev_id;
 
