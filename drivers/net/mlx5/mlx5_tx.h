@@ -1222,6 +1222,11 @@ mlx5_tx_eseg_mdat(struct mlx5_txq_data *__rte_restrict txq,
 		 */
 		copy = tso ? inlen : txq->inlen_mode;
 		copy = tlen >= copy ? 0 : (copy - tlen);
+		/*
+		 * Limit amount of data to be copied to the length of available
+		 * WQE ring buffer space or packet data left to be copied.
+		 */
+		copy = RTE_MIN(part, copy);
 		copy = mlx5_tx_mseg_memcpy(pdst, loc, part, copy, olx);
 		tlen += copy;
 		if (likely(inlen <= tlen) || copy < part) {
