@@ -4323,6 +4323,8 @@ static void bnxt_dev_recover(void *arg)
 
 	/* Clear Error flag so that device re-init should happen */
 	bp->flags &= ~BNXT_FLAG_FATAL_ERROR;
+	PMD_DRV_LOG(INFO, "Port: %u Starting recovery...\n",
+		    bp->eth_dev->data->port_id);
 
 	rc = bnxt_check_fw_ready(bp);
 	if (rc)
@@ -4347,7 +4349,8 @@ static void bnxt_dev_recover(void *arg)
 	if (rc)
 		goto err_start;
 
-	PMD_DRV_LOG(INFO, "Recovered from FW reset\n");
+	PMD_DRV_LOG(INFO, "Port: %u Recovered from FW reset\n",
+		    bp->eth_dev->data->port_id);
 	pthread_mutex_unlock(&bp->err_recovery_lock);
 
 	return;
@@ -4372,6 +4375,8 @@ void bnxt_dev_reset_and_resume(void *arg)
 	int rc;
 
 	bnxt_dev_cleanup(bp);
+	PMD_DRV_LOG(INFO, "Port: %u Finished bnxt_dev_cleanup\n",
+		    bp->eth_dev->data->port_id);
 
 	bnxt_wait_for_device_shutdown(bp);
 
