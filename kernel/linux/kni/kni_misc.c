@@ -245,7 +245,7 @@ kni_check_param(struct kni_dev *kni, struct rte_kni_device_info *dev)
 	return 0;
 }
 
-static int
+static long
 kni_run_thread(struct kni_net *knet, struct kni_dev *kni, uint8_t force_bind)
 {
 	/**
@@ -286,12 +286,12 @@ kni_run_thread(struct kni_net *knet, struct kni_dev *kni, uint8_t force_bind)
 	return 0;
 }
 
-static int
+static long
 kni_ioctl_create(struct net *net, uint32_t ioctl_num,
 		unsigned long ioctl_param)
 {
 	struct kni_net *knet = net_generic(net, kni_net_id);
-	int ret;
+	long ret;
 	struct rte_kni_device_info dev_info;
 	struct net_device *net_dev = NULL;
 	struct kni_dev *kni, *dev, *n;
@@ -416,7 +416,7 @@ kni_ioctl_create(struct net *net, uint32_t ioctl_num,
 
 	ret = register_netdev(net_dev);
 	if (ret) {
-		pr_err("error %i registering device \"%s\"\n",
+		pr_err("error %li registering device \"%s\"\n",
 					ret, dev_info.name);
 		kni->net_dev = NULL;
 		kni_dev_remove(kni);
@@ -437,12 +437,12 @@ kni_ioctl_create(struct net *net, uint32_t ioctl_num,
 	return 0;
 }
 
-static int
+static long
 kni_ioctl_release(struct net *net, uint32_t ioctl_num,
 		unsigned long ioctl_param)
 {
 	struct kni_net *knet = net_generic(net, kni_net_id);
-	int ret = -EINVAL;
+	long ret = -EINVAL;
 	struct kni_dev *dev, *n;
 	struct rte_kni_device_info dev_info;
 
@@ -478,8 +478,8 @@ kni_ioctl_release(struct net *net, uint32_t ioctl_num,
 	return ret;
 }
 
-static int
-kni_ioctl(struct inode *inode, uint32_t ioctl_num, unsigned long ioctl_param)
+static long
+kni_ioctl(struct file *file, uint32_t ioctl_num, unsigned long ioctl_param)
 {
 	int ret = -EINVAL;
 	struct net *net = current->nsproxy->net_ns;
@@ -507,8 +507,8 @@ kni_ioctl(struct inode *inode, uint32_t ioctl_num, unsigned long ioctl_param)
 	return ret;
 }
 
-static int
-kni_compat_ioctl(struct inode *inode, uint32_t ioctl_num,
+static long
+kni_compat_ioctl(struct file *file, uint32_t ioctl_num,
 		unsigned long ioctl_param)
 {
 	/* 32 bits app on 64 bits OS to be supported later */
@@ -521,8 +521,8 @@ static const struct file_operations kni_fops = {
 	.owner = THIS_MODULE,
 	.open = kni_open,
 	.release = kni_release,
-	.unlocked_ioctl = (void *)kni_ioctl,
-	.compat_ioctl = (void *)kni_compat_ioctl,
+	.unlocked_ioctl = kni_ioctl,
+	.compat_ioctl = kni_compat_ioctl,
 };
 
 static struct miscdevice kni_misc = {
