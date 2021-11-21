@@ -21,3 +21,4 @@ HowTo Guides
     debug_troubleshoot
     openwrt
     avx512
+    flex_item
