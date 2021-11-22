@@ -66,10 +66,34 @@ check_rte_flow() # <driver>
 	fi
 }
 
+all_event_drivers()
+{
+	find $rootdir/drivers/event -mindepth 1 -maxdepth 1 -type d |
+	sed 's,.*/,,' |
+	sort
+}
+
+check_event_dev() # <driver>
+{
+	code=$rootdir/drivers/event/$1
+	doc=$rootdir/doc/guides/eventdevs/features/$1.ini
+	[ -d $code ] || return 0
+	[ -f $doc ] || return 0
+	report=$($selfdir/parse-event-support.sh $code $doc)
+	if [ -n "$report" ]; then
+		error "doc out of sync for $1"
+		echo "$report" | sed 's,^,\t,'
+	fi
+}
+
 if [ -z "$trusted_commit" ]; then
 	# check all
 	for driver in $(all_net_drivers); do
 		check_rte_flow $driver
+	done
+
+	for driver in $(all_event_drivers); do
+		check_event_dev $driver
 	done
 	exit $result
 fi
@@ -79,6 +103,17 @@ if has_code_change 'RTE_FLOW_.*_TYPE_' ||
 		has_file_change 'doc/guides/nics/features'; then
 	for driver in $(changed_net_drivers); do
 		check_rte_flow $driver
+	done
+fi
+
+if has_code_change 'RTE_EVENT_DEV_CAP_*' ||
+		has_code_change 'RTE_EVENT_ETH_RX_ADAPTER_CAP_*' ||
+		has_code_change 'RTE_EVENT_ETH_TX_ADAPTER_CAP_*' ||
+		has_code_change 'RTE_EVENT_CRYPTO_ADAPTER_CAP_*' ||
+		has_code_change 'RTE_EVENT_TIMER_ADAPTER_CAP_*' ||
+		has_file_change 'doc/guides/eventdevs/features'; then
+	for driver in $(all_event_drivers); do
+		check_event_dev $driver
 	done
 fi
 exit $result
