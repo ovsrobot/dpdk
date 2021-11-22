@@ -258,6 +258,7 @@ ice_dcf_handle_pf_event_msg(struct ice_dcf_hw *dcf_hw,
 		PMD_DRV_LOG(DEBUG, "VIRTCHNL_EVENT_DCF_VSI_MAP_UPDATE event : VF%u with VSI num %u",
 			    pf_msg->event_data.vf_vsi_map.vf_id,
 			    pf_msg->event_data.vf_vsi_map.vsi_id);
+		__atomic_store_n(&dcf_hw->state_on, false, __ATOMIC_RELAXED);
 		start_vsi_reset_thread(dcf_hw, true,
 				       pf_msg->event_data.vf_vsi_map.vf_id);
 		break;

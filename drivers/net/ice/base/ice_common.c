@@ -1764,12 +1764,14 @@ ice_aq_send_cmd(struct ice_hw *hw, struct ice_aq_desc *desc, void *buf,
 		u16 buf_size, struct ice_sq_cd *cd)
 {
 	if (hw->aq_send_cmd_fn) {
-		enum ice_status status = ICE_ERR_NOT_READY;
+		enum ice_status status;
 		u16 retval = ICE_AQ_RC_OK;
 
 		ice_acquire_lock(&hw->adminq.sq_lock);
-		if (!hw->aq_send_cmd_fn(hw->aq_send_cmd_param, desc,
-					buf, buf_size)) {
+		status = hw->aq_send_cmd_fn(hw->aq_send_cmd_param, desc, buf,
+					    buf_size);
+		switch (status) {
+		case ICE_SUCCESS:
 			retval = LE16_TO_CPU(desc->retval);
 			/* strip off FW internal code */
 			if (retval)
@@ -1778,6 +1780,12 @@ ice_aq_send_cmd(struct ice_hw *hw, struct ice_aq_desc *desc, void *buf,
 				status = ICE_SUCCESS;
 			else
 				status = ICE_ERR_AQ_ERROR;
+			break;
+		case ICE_ERR_NOT_READY:
+			break;
+		default:
+			status = ICE_ERR_AQ_ERROR;
+			break;
 		}
 
 		hw->adminq.sq_last_status = (enum ice_aq_err)retval;

@@ -423,7 +423,11 @@ ice_switch_create(struct ice_adapter *ad,
 
 		flow->rule = filter_conf_ptr;
 	} else {
-		rte_flow_error_set(error, EINVAL,
+		if (ret == ICE_ERR_NOT_READY)
+			ret = -EAGAIN;
+		else
+			ret = -EINVAL;
+		rte_flow_error_set(error, -ret,
 			RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 			"switch filter create flow fail");
 		goto error;
@@ -477,7 +481,11 @@ ice_switch_destroy(struct ice_adapter *ad,
 
 	ret = ice_rem_adv_rule_by_id(hw, &filter_conf_ptr->sw_query_data);
 	if (ret) {
-		rte_flow_error_set(error, EINVAL,
+		if (ret == ICE_ERR_NOT_READY)
+			ret = -EAGAIN;
+		else
+			ret = -EINVAL;
+		rte_flow_error_set(error, -ret,
 			RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 			"fail to destroy switch filter rule");
 		return -rte_errno;
@@ -2023,7 +2031,10 @@ rmv_rule:
 			    rdata->rule_id);
 		filter_conf_ptr->fltr_status =
 			ICE_SW_FLTR_RMV_FAILED_ON_RIDRECT;
-		ret = -EINVAL;
+		if (ret == ICE_ERR_NOT_READY)
+			ret = -EAGAIN;
+		else
+			ret = -EINVAL;
 		goto out;
 	}
 
@@ -2038,7 +2049,10 @@ add_rule:
 		PMD_DRV_LOG(ERR, "Failed to replay the rule");
 		filter_conf_ptr->fltr_status =
 			ICE_SW_FLTR_ADD_FAILED_ON_RIDRECT;
-		ret = -EINVAL;
+		if (ret == ICE_ERR_NOT_READY)
+			ret = -EAGAIN;
+		else
+			ret = -EINVAL;
 	} else {
 		filter_conf_ptr->sw_query_data = added_rdata;
 		/* Save VSI number for failure recover */

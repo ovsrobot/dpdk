@@ -269,6 +269,8 @@ ice_dcf_get_vf_resource(struct ice_dcf_hw *hw)
 	hw->vsi_id = hw->vsi_res->vsi_id;
 	PMD_DRV_LOG(DEBUG, "VSI ID is %u", hw->vsi_id);
 
+	__atomic_store_n(&hw->state_on, true, __ATOMIC_RELAXED);
+
 	return 0;
 }
 
@@ -476,9 +478,12 @@ ice_dcf_send_aq_cmd(void *dcf_hw, struct ice_aq_desc *desc,
 	int err = 0;
 	int i = 0;
 
+	if (!__atomic_load_n(&hw->state_on, __ATOMIC_RELAXED))
+		return ICE_ERR_NOT_READY;
+
 	if ((buf && !buf_size) || (!buf && buf_size) ||
 	    buf_size > ICE_DCF_AQ_BUF_SZ)
-		return -EINVAL;
+		return ICE_ERR_PARAM;
 
 	desc_cmd.v_op = VIRTCHNL_OP_DCF_CMD_DESC;
 	desc_cmd.req_msglen = sizeof(*desc);
@@ -503,7 +508,7 @@ ice_dcf_send_aq_cmd(void *dcf_hw, struct ice_aq_desc *desc,
 
 	if (ice_dcf_vc_cmd_send(hw, &desc_cmd) ||
 	    ice_dcf_vc_cmd_send(hw, &buff_cmd)) {
-		err = -1;
+		err = ICE_ERR_AQ_ERROR;
 		PMD_DRV_LOG(ERR, "fail to send OP_DCF_CMD_DESC/BUFF");
 		goto ret;
 	}
@@ -516,10 +521,15 @@ ice_dcf_send_aq_cmd(void *dcf_hw, struct ice_aq_desc *desc,
 	} while (i++ < ICE_DCF_ARQ_MAX_RETRIES);
 
 	if (desc_cmd.v_ret != IAVF_SUCCESS || buff_cmd.v_ret != IAVF_SUCCESS) {
-		err = -1;
-		PMD_DRV_LOG(ERR,
-			    "No response (%d times) or return failure (desc: %d / buff: %d)",
-			    i, desc_cmd.v_ret, buff_cmd.v_ret);
+		if (!__atomic_load_n(&hw->state_on, __ATOMIC_RELAXED)) {
+			err = ICE_ERR_NOT_READY;
+			PMD_DRV_LOG(ERR, "DCF is not on temporarily");
+		} else {
+			err = ICE_ERR_AQ_ERROR;
+			PMD_DRV_LOG(ERR,
+				    "No response (%d times) or return failure (desc: %d / buff: %d)",
+				    i, desc_cmd.v_ret, buff_cmd.v_ret);
+		}
 	}
 
 ret:
@@ -594,6 +604,7 @@ ice_dcf_init_hw(struct rte_eth_dev *eth_dev, struct ice_dcf_hw *hw)
 	int ret, size;
 
 	hw->resetting = false;
+	__atomic_store_n(&hw->state_on, false, __ATOMIC_RELAXED);
 
 	hw->avf.hw_addr = pci_dev->mem_resource[0].addr;
 	hw->avf.back = hw;
