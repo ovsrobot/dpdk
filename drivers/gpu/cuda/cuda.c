@@ -764,9 +764,6 @@ cuda_mem_free(struct rte_gpu *dev, void *ptr)
 	if (dev == NULL)
 		return -ENODEV;
 
-	if (ptr == NULL)
-		return -EINVAL;
-
 	hk = get_hash_from_ptr((void *)ptr);
 
 	mem_item = mem_list_find_item(hk);
@@ -802,9 +799,6 @@ cuda_mem_unregister(struct rte_gpu *dev, void *ptr)
 
 	if (dev == NULL)
 		return -ENODEV;
-
-	if (ptr == NULL)
-		return -EINVAL;
 
 	hk = get_hash_from_ptr((void *)ptr);
 

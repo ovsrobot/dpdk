@@ -569,6 +569,9 @@ rte_gpu_mem_free(int16_t dev_id, void *ptr)
 {
 	struct rte_gpu *dev;
 
+	if (ptr == NULL)
+		return 0;
+
 	dev = gpu_get_by_id(dev_id);
 	if (dev == NULL) {
 		GPU_LOG(ERR, "free mem for invalid device ID %d", dev_id);
@@ -611,6 +614,9 @@ int
 rte_gpu_mem_unregister(int16_t dev_id, void *ptr)
 {
 	struct rte_gpu *dev;
+
+	if (ptr == NULL)
+		return 0;
 
 	dev = gpu_get_by_id(dev_id);
 	if (dev == NULL) {
