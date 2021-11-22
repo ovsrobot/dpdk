@@ -8644,6 +8644,25 @@ flow_drv_action_validate(struct rte_eth_dev *dev,
 	return fops->action_validate(dev, conf, action, error);
 }
 
+/* Wrapper for driver action_destroy op callback */
+static int
+flow_drv_action_destroy(struct rte_eth_dev *dev,
+			struct rte_flow_action_handle *handle,
+			bool deref_qs,
+			const struct mlx5_flow_driver_ops *fops,
+			struct rte_flow_error *error)
+{
+	static const char err_msg[] = "indirect action destruction unsupported";
+
+	if (!fops->action_destroy) {
+		DRV_LOG(ERR, "port %u %s.", dev->data->port_id, err_msg);
+		rte_flow_error_set(error, ENOTSUP, RTE_FLOW_ERROR_TYPE_ACTION,
+				   NULL, err_msg);
+		return -rte_errno;
+	}
+	return fops->action_destroy(dev, handle, deref_qs, error);
+}
+
 /**
  * Destroys the shared action by handle.
  *
@@ -8665,21 +8684,18 @@ mlx5_action_handle_destroy(struct rte_eth_dev *dev,
 			   struct rte_flow_action_handle *handle,
 			   struct rte_flow_error *error)
 {
-	static const char err_msg[] = "indirect action destruction unsupported";
 	struct rte_flow_attr attr = { .transfer = 0 };
 	const struct mlx5_flow_driver_ops *fops =
 			flow_get_drv_ops(flow_get_drv_type(dev, &attr));
 
-	if (!fops->action_destroy) {
-		DRV_LOG(ERR, "port %u %s.", dev->data->port_id, err_msg);
-		rte_flow_error_set(error, ENOTSUP, RTE_FLOW_ERROR_TYPE_ACTION,
-				   NULL, err_msg);
-		return -rte_errno;
+	if (dev->data->dev_started) {
+		return flow_drv_action_destroy(dev, handle, true, fops, error);
+	} else {
+		return flow_drv_action_destroy(dev, handle, false, fops, error);
 	}
-	return fops->action_destroy(dev, handle, error);
 }
 
-/* Wrapper for driver action_destroy op callback */
+/* Wrapper for driver action_update op callback */
 static int
 flow_drv_action_update(struct rte_eth_dev *dev,
 		       struct rte_flow_action_handle *handle,
@@ -8698,7 +8714,7 @@ flow_drv_action_update(struct rte_eth_dev *dev,
 	return fops->action_update(dev, handle, update, error);
 }
 
-/* Wrapper for driver action_destroy op callback */
+/* Wrapper for driver action_query op callback */
 static int
 flow_drv_action_query(struct rte_eth_dev *dev,
 		      const struct rte_flow_action_handle *handle,
@@ -8845,13 +8861,17 @@ mlx5_action_handle_flush(struct rte_eth_dev *dev)
 	struct rte_flow_error error;
 	struct mlx5_priv *priv = dev->data->dev_private;
 	struct mlx5_shared_action_rss *shared_rss;
+	struct rte_flow_attr attr = { .transfer = 0 };
+	const struct mlx5_flow_driver_ops *fops =
+			flow_get_drv_ops(flow_get_drv_type(dev, &attr));
 	int ret = 0;
 	uint32_t idx;
 
 	ILIST_FOREACH(priv->sh->ipool[MLX5_IPOOL_RSS_SHARED_ACTIONS],
 		      priv->rss_shared_actions, idx, shared_rss, next) {
-		ret |= mlx5_action_handle_destroy(dev,
-		       (struct rte_flow_action_handle *)(uintptr_t)idx, &error);
+		ret |= flow_drv_action_destroy(dev,
+		       (struct rte_flow_action_handle *)(uintptr_t)idx, false,
+		       fops, &error);
 	}
 	return ret;
 }
