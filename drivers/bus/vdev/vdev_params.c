@@ -29,6 +29,9 @@ vdev_dev_match(const struct rte_device *dev,
 	const struct rte_kvargs *kvlist = _kvlist;
 	const char *key = vdev_params_keys[RTE_VDEV_PARAM_NAME];
 
+	/* Iterate all devices if name not specified. */
+	if (kvlist == NULL || rte_kvargs_get(kvlist, key) == NULL)
+		return 0;
 	if (rte_kvargs_get_with_value(kvlist, key, dev->name) == NULL)
 		return -1;
 
