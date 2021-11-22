@@ -1199,6 +1199,7 @@ typedef struct rte_flow_action_handle *(*mlx5_flow_action_create_t)
 typedef int (*mlx5_flow_action_destroy_t)
 				(struct rte_eth_dev *dev,
 				 struct rte_flow_action_handle *action,
+				 bool deref_qs,
 				 struct rte_flow_error *error);
 typedef int (*mlx5_flow_action_update_t)
 			(struct rte_eth_dev *dev,

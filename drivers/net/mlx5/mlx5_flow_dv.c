@@ -14732,7 +14732,7 @@ __flow_dv_action_rss_setup(struct rte_eth_dev *dev,
 error_hrxq_new:
 	err = rte_errno;
 	__flow_dv_action_rss_hrxqs_release(dev, shared_rss);
-	if (!mlx5_ind_table_obj_release(dev, shared_rss->ind_tbl, true))
+	if (!mlx5_ind_table_obj_release(dev, shared_rss->ind_tbl, true, true))
 		shared_rss->ind_tbl = NULL;
 	rte_errno = err;
 	return -rte_errno;
@@ -14839,6 +14839,9 @@ error_rss_init:
  *   Pointer to the Ethernet device structure.
  * @param[in] idx
  *   The shared RSS action object ID to be removed.
+ * @param[in] deref_rxqs
+ *   If true, then dereference any RX queues related to shared RSS action.
+ *   Otherwise, no additional action will be taken.
  * @param[out] error
  *   Perform verbose error reporting if not NULL. Initialized in case of
  *   error only.
@@ -14848,6 +14851,7 @@ error_rss_init:
  */
 static int
 __flow_dv_action_rss_release(struct rte_eth_dev *dev, uint32_t idx,
+			     bool deref_rxqs,
 			     struct rte_flow_error *error)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
@@ -14875,7 +14879,8 @@ __flow_dv_action_rss_release(struct rte_eth_dev *dev, uint32_t idx,
 					  NULL,
 					  "shared rss hrxq has references");
 	queue = shared_rss->ind_tbl->queues;
-	remaining = mlx5_ind_table_obj_release(dev, shared_rss->ind_tbl, true);
+	remaining = mlx5_ind_table_obj_release(dev, shared_rss->ind_tbl, true,
+					       deref_rxqs);
 	if (remaining)
 		return rte_flow_error_set(error, EBUSY,
 					  RTE_FLOW_ERROR_TYPE_ACTION,
@@ -14977,6 +14982,9 @@ flow_dv_action_create(struct rte_eth_dev *dev,
  * @param[out] error
  *   Perform verbose error reporting if not NULL. Initialized in case of
  *   error only.
+ * @param[in] deref_qs
+ *   If true, then dereference any queues related to the shared action object.
+ *   Otherwise, no additional action will be taken.
  *
  * @return
  *   0 on success, otherwise negative errno value.
@@ -14984,6 +14992,7 @@ flow_dv_action_create(struct rte_eth_dev *dev,
 static int
 flow_dv_action_destroy(struct rte_eth_dev *dev,
 		       struct rte_flow_action_handle *handle,
+		       bool deref_qs,
 		       struct rte_flow_error *error)
 {
 	uint32_t act_idx = (uint32_t)(uintptr_t)handle;
@@ -14995,7 +15004,7 @@ flow_dv_action_destroy(struct rte_eth_dev *dev,
 
 	switch (type) {
 	case MLX5_INDIRECT_ACTION_TYPE_RSS:
-		return __flow_dv_action_rss_release(dev, idx, error);
+		return __flow_dv_action_rss_release(dev, idx, deref_qs, error);
 	case MLX5_INDIRECT_ACTION_TYPE_COUNT:
 		cnt = flow_dv_counter_get_by_idx(dev, idx, NULL);
 		if (!__atomic_compare_exchange_n(&cnt->shared_info.refcnt,
