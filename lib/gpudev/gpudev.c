@@ -576,6 +576,9 @@ rte_gpu_mem_free(int16_t dev_id, void *ptr)
 		return -rte_errno;
 	}
 
+	if (ptr == NULL)
+		return 0;
+
 	if (dev->ops.mem_free == NULL) {
 		rte_errno = ENOTSUP;
 		return -rte_errno;
@@ -594,6 +597,9 @@ rte_gpu_mem_register(int16_t dev_id, size_t size, void *ptr)
 		rte_errno = ENODEV;
 		return -rte_errno;
 	}
+
+	if (ptr == NULL)
+		return 0;
 
 	if (dev->ops.mem_register == NULL) {
 		GPU_LOG(ERR, "mem registration not supported");
@@ -618,6 +624,9 @@ rte_gpu_mem_unregister(int16_t dev_id, void *ptr)
 		rte_errno = ENODEV;
 		return -rte_errno;
 	}
+
+	if( ptr == NULL)
+		return 0;
 
 	if (dev->ops.mem_unregister == NULL) {
 		rte_errno = ENOTSUP;
