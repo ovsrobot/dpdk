@@ -442,3 +442,12 @@ Finally, a set of device ops is defined for device specific operations:
 * ``get_notify_area``
 
   Called to get the notify area info of the queue.
+
+Recommended IOVA mode in async datapath
+---------------------------------------
+
+When DMA devices are bound to vfio driver, VA mode is recommended.
+For PA mode, page by page mapping may exceed IOMMU's max capability,
+better to use 1G guest hugepage.
+
+For uio driver, any vfio related error message can be ignored.
