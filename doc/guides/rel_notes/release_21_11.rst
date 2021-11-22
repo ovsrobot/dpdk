@@ -57,14 +57,14 @@ New Features
 
 * **Enabled new devargs parser.**
 
-  * Enabled devargs syntax
-    ``bus=X,paramX=x/class=Y,paramY=y/driver=Z,paramZ=z``
+  * Enabled devargs syntax:
+    ``bus=X,paramX=x/class=Y,paramY=y/driver=Z,paramZ=z``.
   * Added bus-level parsing of the devargs syntax.
   * Kept compatibility with the legacy syntax as parsing fallback.
 
 * **Updated EAL hugetlbfs mount handling for Linux.**
 
-  * Modified to allow ``--huge-dir`` option to specify a sub-directory
+  * Modified EAL to allow ``--huge-dir`` option to specify a sub-directory
     within a hugetlbfs mountpoint.
 
 * **Added dmadev library.**
@@ -82,7 +82,7 @@ New Features
 
 * **Added IDXD dmadev driver implementation.**
 
-  The IDXD dmadev driver provide device drivers for the Intel DSA devices.
+  The IDXD dmadev driver provides device drivers for the Intel DSA devices.
   This device driver can be used through the generic dmadev API.
 
 * **Added IOAT dmadev driver implementation.**
@@ -98,29 +98,34 @@ New Features
 
 * **Added NXP DPAA DMA driver.**
 
-  Added a new dmadev driver for NXP DPAA platform.
+  Added a new dmadev driver for the NXP DPAA platform.
 
 * **Added support to get all MAC addresses of a device.**
 
-  Added ``rte_eth_macaddrs_get`` to allow user to retrieve all Ethernet
-  addresses assigned to given ethernet port.
+  Added ``rte_eth_macaddrs_get`` to allow a user to retrieve all Ethernet
+  addresses assigned to a given Ethernet port.
 
-* **Introduced GPU device class with first features:**
+* **Introduced GPU device class.**
 
-  * Device information
-  * Memory management
-  * Communication flag & list
+  Introduced the GPU device class with initial features:
+
+  * Device information.
+  * Memory management.
+  * Communication flag and list.
 
 * **Added NVIDIA GPU driver implemented with CUDA library.**
 
+  Added NVIDIA GPU driver implemented with CUDA library under the new
+  GPU device interface.
+
 * **Added new RSS offload types for IPv4/L4 checksum in RSS flow.**
 
-  Added macros ETH_RSS_IPV4_CHKSUM and ETH_RSS_L4_CHKSUM, now IPv4 and
-  TCP/UDP/SCTP header checksum field can be used as input set for RSS.
+  Added macros ``ETH_RSS_IPV4_CHKSUM`` and ``ETH_RSS_L4_CHKSUM``. The IPv4 and
+  TCP/UDP/SCTP header checksum field can now be used as input set for RSS.
 
 * **Added L2TPv2 and PPP protocol support in flow API.**
 
-  Added flow pattern items and header formats of L2TPv2 and PPP protocol.
+  Added flow pattern items and header formats for the L2TPv2 and PPP protocols.
 
 * **Added flow flex item.**
 
@@ -146,11 +151,11 @@ New Features
 
   * Added new device capability flag and Rx domain field to switch info.
   * Added share group and share queue ID to Rx queue configuration.
-  * Added testpmd support and dedicate forwarding engine.
+  * Added testpmd support and dedicated forwarding engine.
 
 * **Updated af_packet ethdev driver.**
 
-  * Default VLAN strip behavior was changed. VLAN tag won't be stripped
+  * The default VLAN strip behavior has changed. The VLAN tag won't be stripped
     unless ``DEV_RX_OFFLOAD_VLAN_STRIP`` offload is enabled.
 
 * **Added API to get device configuration in ethdev.**
@@ -159,28 +164,30 @@ New Features
 
 * **Updated AF_XDP PMD.**
 
-  * Disabled secondary process support.
+  * Disabled secondary process support due to insufficient state shared
+    between processes which causes a crash. This will be fixed/re-enabled
+    in the next release.
 
 * **Updated Amazon ENA PMD.**
 
   Updated the Amazon ENA PMD. The new driver version (v2.5.0) introduced
   bug fixes and improvements, including:
 
-  * Support for the tx_free_thresh and rx_free_thresh configuration parameters.
+  * Support for the ``tx_free_thresh`` and ``rx_free_thresh`` configuration parameters.
   * NUMA aware allocations for the queue helper structures.
-  * Watchdog's feature which is checking for missing Tx completions.
+  * A Watchdog feature which is checking for missing Tx completions.
 
 * **Updated Broadcom bnxt PMD.**
 
   * Added flow offload support for Thor.
   * Added TruFlow and AFM SRAM partitioning support.
-  * Implement support for tunnel offload.
+  * Implemented support for tunnel offload.
   * Updated HWRM API to version 1.10.2.68.
-  * Added NAT support for dest IP and port combination.
+  * Added NAT support for destination IP and port combination.
   * Added support for socket redirection.
   * Added wildcard match support for ingress flows.
   * Added support for inner IP header for GRE tunnel flows.
-  * Updated support for RSS action in flow rule.
+  * Updated support for RSS action in flow rules.
   * Removed devargs option for stats accumulation.
 
 * **Updated Cisco enic driver.**
@@ -202,9 +209,9 @@ New Features
 
   * Added protocol agnostic flow offloading support in Flow Director.
   * Added protocol agnostic flow offloading support in RSS hash.
-  * Added 1PPS out support by a devargs.
+  * Added 1PPS out support via devargs.
   * Added IPv4 and L4 (TCP/UDP/SCTP) checksum hash support in RSS flow.
-  * Added DEV_RX_OFFLOAD_TIMESTAMP support.
+  * Added ``DEV_RX_OFFLOAD_TIMESTAMP`` support.
   * Added timesync API support under scalar path.
   * Added DCF reset API support.
 
@@ -225,7 +232,7 @@ New Features
   Updated the Mellanox mlx5 driver with new features and improvements, including:
 
   * Added implicit mempool registration to avoid data path hiccups (opt-out).
-  * Added delay drop support for Rx queue.
+  * Added delay drop support for Rx queues.
   * Added NIC offloads for the PMD on Windows (TSO, VLAN strip, CRC keep).
   * Added socket direct mode bonding support.
 
@@ -275,7 +282,7 @@ New Features
   Added a new Xilinx vDPA  (``sfc_vdpa``) PMD.
   See the :doc:`../vdpadevs/sfc` guide for more details on this driver.
 
-* **Added telemetry callbacks to cryptodev library.**
+* **Added telemetry callbacks to the cryptodev library.**
 
   Added telemetry callback functions which allow a list of crypto devices,
   stats for a crypto device, and other device information to be queried.
@@ -300,7 +307,7 @@ New Features
 
 * **Added support for event crypto adapter on Marvell CN10K and CN9K.**
 
-  * Added event crypto adapter OP_FORWARD mode support.
+  * Added event crypto adapter ``OP_FORWARD`` mode support.
 
 * **Updated Mellanox mlx5 crypto driver.**
 
@@ -309,7 +316,7 @@ New Features
 
 * **Updated NXP dpaa_sec crypto PMD.**
 
-  * Added DES-CBC, AES-XCBC-MAC, AES-CMAC and non-HMAC algo support.
+  * Added DES-CBC, AES-XCBC-MAC, AES-CMAC and non-HMAC algorithm support.
   * Added PDCP short MAC-I support.
   * Added raw vector datapath API support.
 
@@ -322,16 +329,16 @@ New Features
 
   * The IPsec_MB framework was added to share common code between Intel
     SW Crypto PMDs that depend on the intel-ipsec-mb library.
-  * Multiprocess support was added for the consolidated PMDs,
+  * Multiprocess support was added for the consolidated PMDs
     which requires v1.1 of the intel-ipsec-mb library.
-  * The following PMDs were moved into a single source folder,
-    however their usage and EAL options remain unchanged.
+  * The following PMDs were moved into a single source folder
+    while their usage and EAL options remain unchanged.
     * AESNI_MB PMD.
     * AESNI_GCM PMD.
     * KASUMI PMD.
     * SNOW3G PMD.
     * ZUC PMD.
-    * CHACHA20_POLY1305 - A new PMD added.
+    * CHACHA20_POLY1305 - a new PMD.
 
 * **Updated the aesni_mb crypto PMD.**
 
@@ -381,7 +388,7 @@ New Features
 * **Added multi-process support for testpmd.**
 
   Added command-line options to specify total number of processes and
-  current process ID. Each process owns subset of Rx and Tx queues.
+  current process ID. Each process owns a subset of Rx and Tx queues.
 
 * **Updated test-crypto-perf application with new cases.**
 
@@ -404,8 +411,8 @@ New Features
 
 * **Updated l3fwd sample application.**
 
-  * Increased number of routes to 16 for all lookup modes (LPM, EM and FIB),
-    this helps in validating SoC with many ethernet devices.
+  * Increased number of routes to 16 for all lookup modes (LPM, EM and FIB).
+    This helps in validating SoC with many Ethernet devices.
   * Updated EM mode to use RFC2544 reserved IP address space with RFC863
     UDP discard protocol.
 
@@ -431,8 +438,8 @@ New Features
 
 * **Added ASan support.**
 
-  `AddressSanitizer
-  <https://github.com/google/sanitizers/wiki/AddressSanitizer>`_ (ASan)
+  Added ASan/AddressSanitizer support. `AddressSanitizer
+  <https://github.com/google/sanitizers/wiki/AddressSanitizer>`_
   is a widely-used debugging tool to detect memory access errors.
   It helps to detect issues like use-after-free, various kinds of buffer
   overruns in C/C++ programs, and other similar errors, as well as
@@ -454,12 +461,12 @@ Removed Items
 * eal: Removed the deprecated function ``rte_get_master_lcore()``
   and the iterator macro ``RTE_LCORE_FOREACH_SLAVE``.
 
-* eal: The old api arguments that were deprecated for
+* eal: The old API arguments that were deprecated for
   blacklist/whitelist are removed. Users must use the new
   block/allow list arguments.
 
 * mbuf: Removed offload flag ``PKT_RX_EIP_CKSUM_BAD``.
-  ``PKT_RX_OUTER_IP_CKSUM_BAD`` should be used as a replacement.
+  The ``PKT_RX_OUTER_IP_CKSUM_BAD`` flag should be used as a replacement.
 
 * ethdev: Removed the port mirroring API. A more fine-grain flow API
   action ``RTE_FLOW_ACTION_TYPE_SAMPLE`` should be used instead.
@@ -468,9 +475,9 @@ Removed Items
   ``rte_eth_mirror_rule_reset`` along with the associated macros
   ``ETH_MIRROR_*`` are removed.
 
-* ethdev: Removed ``rte_eth_rx_descriptor_done`` API function and its
+* ethdev: Removed the ``rte_eth_rx_descriptor_done()`` API function and its
   driver callback. It is replaced by the more complete function
-  ``rte_eth_rx_descriptor_status``.
+  ``rte_eth_rx_descriptor_status()``.
 
 * ethdev: Removed deprecated ``shared`` attribute of the
   ``struct rte_flow_action_count``. Shared counters should be managed
@@ -548,21 +555,21 @@ API Changes
 
 * ethdev: ``rte_flow_action_modify_data`` structure updated, immediate data
   array is extended, data pointer field is explicitly added to union, the
-  action behavior is defined in more strict fashion and documentation updated.
+  action behavior is defined in a more strict fashion and documentation updated.
   The immediate value behavior has been changed, the entire immediate field
   should be provided, and offset for immediate source bitfield is assigned
-  from destination one.
+  from the destination one.
 
 * vhost: ``rte_vdpa_register_device``, ``rte_vdpa_unregister_device``,
   ``rte_vhost_host_notifier_ctrl`` and ``rte_vdpa_relay_vring_used`` vDPA
   driver interface are marked as internal.
 
-* cryptodev: The API rte_cryptodev_pmd_is_valid_dev is modified to
-  rte_cryptodev_is_valid_dev as it can be used by the application as
-  well as PMD to check whether the device is valid or not.
+* cryptodev: The API ``rte_cryptodev_pmd_is_valid_dev()`` is modified to
+  ``rte_cryptodev_is_valid_dev()`` as it can be used by the application as
+  well as the PMD to check whether the device is valid or not.
 
-* cryptodev: The rte_cryptodev_pmd.* files are renamed as cryptodev_pmd.*
-  as it is for drivers only and should be private to DPDK, and not
+* cryptodev: The ``rte_cryptodev_pmd.*`` files are renamed to ``cryptodev_pmd.*``
+  since they are for drivers only and should be private to DPDK, and not
   installed for app use.
 
 * cryptodev: A ``reserved`` byte from structure ``rte_crypto_op`` was
@@ -590,8 +597,8 @@ API Changes
 * ip_frag: All macros updated to have ``RTE_IP_FRAG_`` prefix.
   Obsolete macros are kept for compatibility.
   DPDK components updated to use new names.
-  Experimental function ``rte_frag_table_del_expired_entries`` was renamed
-  to ``rte_ip_frag_table_del_expired_entries``
+  Experimental function ``rte_frag_table_del_expired_entries()`` was renamed
+  to ``rte_ip_frag_table_del_expired_entries()``
   to comply with other public API naming convention.
 
 
@@ -610,14 +617,14 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
-* ethdev: All enums & macros updated to have ``RTE_ETH`` prefix and structures
+* ethdev: All enums and macros updated to have ``RTE_ETH`` prefix and structures
   updated to have ``rte_eth`` prefix. DPDK components updated to use new names.
 
-* ethdev: Input parameters for ``eth_rx_queue_count_t`` was changed.
-  Instead of pointer to ``rte_eth_dev`` and queue index, now it accepts pointer
-  to internal queue data as input parameter. While this change is transparent
-  to user, it still counts as an ABI change, as ``eth_rx_queue_count_t``
-  is used by  public inline function ``rte_eth_rx_queue_count``.
+* ethdev: The input parameters for ``eth_rx_queue_count_t`` were changed.
+  Instead of a pointer to ``rte_eth_dev`` and queue index, it now accepts a pointer
+  to internal queue data as an input parameter. While this change is transparent
+  to the user, it still counts as an ABI change, as ``eth_rx_queue_count_t``
+  is used by the public inline function ``rte_eth_rx_queue_count``.
 
 * ethdev: Made ``rte_eth_dev``, ``rte_eth_dev_data``, ``rte_eth_rxtx_callback``
   private data structures. ``rte_eth_devices[]`` can't be accessed directly
@@ -663,7 +670,7 @@ ABI Changes
 
 * security: A new structure ``esn`` was added in structure
   ``rte_security_ipsec_xform`` to set an initial ESN value. This permits
-  application to start from an arbitrary ESN value for debug and SA lifetime
+  applications to start from an arbitrary ESN value for debug and SA lifetime
   enforcement purposes.
 
 * security: A new structure ``udp`` was added in structure
@@ -689,7 +696,7 @@ ABI Changes
   ``RTE_LIBRTE_IP_FRAG_MAX_FRAG`` from ``4`` to ``8``.
   This parameter controls maximum number of fragments per packet
   in IP reassembly table. Increasing this value from ``4`` to ``8``
-  will allow to cover common case with jumbo packet size of ``9KB``
+  will allow covering the common case with jumbo packet size of ``9000B``
   and fragments with default frame size ``(1500B)``.
 
 
