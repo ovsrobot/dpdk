@@ -6,16 +6,44 @@
 Kernel NIC Interface
 ====================
 
+.. Note::
+
+   :ref:`virtio_user_as_exceptional_path` alternative is the preferred way for
+   interfacing with the Linux network stack as it is an in-kernel solution and
+   has similar performance expectations.
+
 The DPDK Kernel NIC Interface (KNI) allows userspace applications access to the Linux* control plane.
 
-The benefits of using the DPDK KNI are:
+KNI provides an interface with the kernel network stack and allows management of
+DPDK ports using standard Linux net tools such as ``ethtool``, ``ifconfig`` and
+``tcpdump``.
+
+The main use case of KNI is to get/receive exception packets from/to Linux network
+stack while main datapath IO is done bypassing the networking stack.
+
+There are other alternatives to KNI, all are available in the upstream Linux:
+
+#. :ref:`virtio_user_as_exceptional_path`
+
+#. :ref:`TunTap_PMD` as wrapper to `Linux tun/tap
+   <https://www.kernel.org/doc/Documentation/networking/tuntap.txt>`_
+
+The benefits of using the KNI against alternatives are:
 
 *   Faster than existing Linux TUN/TAP interfaces
     (by eliminating system calls and copy_to_user()/copy_from_user() operations.
 
-*   Allows management of DPDK ports using standard Linux net tools such as ethtool, ifconfig and tcpdump.
+The cons of the KNI are:
 
-*   Allows an interface with the kernel network stack.
+* It is out-of-tree Linux kernel module and it can't be distributed as binary as
+  part of operating system vendor DPDK packages. This makes it harder to
+  consume, although it is always possible to compile it from the source code.
+
+* As it shares memory between userspace and kernelspace, and kernel part
+  directly uses input provided by userspace, it is not safe. This makes hard to
+  upstream the module.
+
+* Only a subset of net devices control commands are supported by KNI.
 
 The components of an application using the DPDK Kernel NIC Interface are shown in :numref:`figure_kernel_nic_intf`.
 
