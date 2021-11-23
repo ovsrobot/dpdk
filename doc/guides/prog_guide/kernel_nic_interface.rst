@@ -7,6 +7,8 @@ Kernel NIC Interface
 ====================
 
 .. Note::
+   KNI kernel module will be moved from main git repository to `dpdk-kmods <https://git.dpdk.org/dpdk-kmods/>`_ repository.
+   There is a long term plan to deprecate the KNI. See :doc:`../rel_notes/deprecation`
 
    :ref:`virtio_user_as_exceptional_path` alternative is the preferred way for
    interfacing with the Linux network stack as it is an in-kernel solution and

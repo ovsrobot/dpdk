@@ -48,6 +48,12 @@ Deprecation Notices
   in the header will not be considered as ABI anymore. This change is inspired
   by the RFC https://patchwork.dpdk.org/project/dpdk/list/?series=17176.
 
+* kni: KNI kernel module will be moved to `dpdk-kmods <https://git.dpdk.org/dpdk-kmods/>`_
+  repository by the `DPDK technical board decision
+  <https://mails.dpdk.org/archives/dev/2021-January/197077.html>`_, on v22.11.
+* kni: will be depreciated, will remove all kni lib, kernel module and example code
+  on v23.11.
+
 * lib: will fix extending some enum/define breaking the ABI. There are multiple
   samples in DPDK that enum/define terminated with a ``.*MAX.*`` value which is
   used by iterators, and arrays holding these values are sized with this
