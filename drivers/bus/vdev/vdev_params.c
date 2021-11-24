@@ -28,11 +28,15 @@ vdev_dev_match(const struct rte_device *dev,
 {
 	const struct rte_kvargs *kvlist = _kvlist;
 	const char *key = vdev_params_keys[RTE_VDEV_PARAM_NAME];
+	const char *name;
 
-	if (rte_kvargs_get_with_value(kvlist, key, dev->name) == NULL)
-		return -1;
-
-	return 0;
+	if (kvlist == NULL)
+		return 0;
+	name = rte_kvargs_get(kvlist, key);
+	if (name == NULL)
+		/* Iterate all devices if name not specified. */
+		return 0;
+	return strcmp(name, dev->name);
 }
 
 void *
