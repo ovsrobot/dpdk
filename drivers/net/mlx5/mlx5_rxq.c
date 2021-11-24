@@ -2264,6 +2264,7 @@ mlx5_ind_table_obj_setup(struct rte_eth_dev *dev,
 			 struct mlx5_ind_table_obj *ind_tbl)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
+	bool dev_started = priv->dev_data->dev_started;
 	uint32_t queues_n = ind_tbl->queues_n;
 	uint16_t *queues = ind_tbl->queues;
 	unsigned int i, j;
@@ -2272,22 +2273,25 @@ mlx5_ind_table_obj_setup(struct rte_eth_dev *dev,
 			       log2above(queues_n) :
 			       log2above(priv->config.ind_table_max_size);
 
-	for (i = 0; i != queues_n; ++i) {
-		if (mlx5_rxq_ref(dev, queues[i]) == NULL) {
-			ret = -rte_errno;
-			goto error;
+	if (dev_started)
+		for (i = 0; i != queues_n; ++i) {
+			if (mlx5_rxq_ref(dev, queues[i]) == NULL) {
+				ret = -rte_errno;
+				goto error;
+			}
 		}
-	}
 	ret = priv->obj_ops.ind_table_new(dev, n, ind_tbl);
 	if (ret)
 		goto error;
 	__atomic_fetch_add(&ind_tbl->refcnt, 1, __ATOMIC_RELAXED);
 	return 0;
 error:
-	err = rte_errno;
-	for (j = 0; j < i; j++)
-		mlx5_rxq_deref(dev, ind_tbl->queues[j]);
-	rte_errno = err;
+	if (dev_started) {
+		err = rte_errno;
+		for (j = 0; j < i; j++)
+			mlx5_rxq_deref(dev, queues[j]);
+		rte_errno = err;
+	}
 	DRV_LOG(DEBUG, "Port %u cannot setup indirection table.",
 		dev->data->port_id);
 	return ret;
