@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: BSD-3-Clause
+/* SPDX-License-Identifier: (BSD-3-Clause OR GPL-2.0)
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
@@ -11,6 +11,13 @@
 #include <rte_ether.h>
 
 #include "ip_frag_common.h"
+
+/* IP options */
+#define RTE_IPOPT_COPY				0x80
+#define RTE_IPOPT_CONTROL			0x00
+#define RTE_IPOPT_END				(0 | RTE_IPOPT_CONTROL)
+#define RTE_IPOPT_NOOP				(1 | RTE_IPOPT_CONTROL)
+#define RTE_IPOPT_COPIED(o)			((o) & RTE_IPOPT_COPY)
 
 /* Fragment Offset */
 #define	RTE_IPV4_HDR_DF_SHIFT			14
@@ -39,6 +46,38 @@ static inline void __free_fragments(struct rte_mbuf *mb[], uint32_t num)
 	uint32_t i;
 	for (i = 0; i != num; i++)
 		rte_pktmbuf_free(mb[i]);
+}
+
+/*
+ *	Options "fragmenting", just fill options not
+ *	allowed in fragments with NOOPs.
+ *	Simple and stupid 8), but the most efficient way.
+ */
+static inline void ip_options_fragment(struct rte_ipv4_hdr *iph)
+{
+	unsigned char *optptr = (unsigned char *)iph +
+	    sizeof(struct rte_ipv4_hdr);
+	int l = (iph->version_ihl & RTE_IPV4_HDR_IHL_MASK) *
+	    RTE_IPV4_IHL_MULTIPLIER - sizeof(struct rte_ipv4_hdr);
+	int optlen;
+
+	while (l > 0) {
+		switch (*optptr) {
+		case RTE_IPOPT_END:
+			return;
+		case RTE_IPOPT_NOOP:
+			l--;
+			optptr++;
+			continue;
+		}
+		optlen = optptr[1];
+		if (optlen < 2 || optlen > l)
+			return;
+		if (!RTE_IPOPT_COPIED(*optptr))
+			memset(optptr, RTE_IPOPT_NOOP, optlen);
+		l -= optlen;
+		optptr += optlen;
+	}
 }
 
 /**
@@ -187,6 +226,17 @@ rte_ipv4_fragment_packet(struct rte_mbuf *pkt_in,
 		__fill_ipv4hdr_frag(out_hdr, in_hdr, header_len,
 		    (uint16_t)out_pkt->pkt_len,
 		    flag_offset, fragment_offset, more_in_segs);
+
+		/*
+		 * ANK: dirty, but effective trick. Upgrade options only if
+		 * the segment to be fragmented was THE FIRST (otherwise,
+		 * options are already fixed) and make it ONCE
+		 * on the initial mbuf, so that all the following fragments
+		 * will inherit fixed options.
+		 */
+		if ((fragment_offset == 0) &&
+			    ((flag_offset & RTE_IPV4_HDR_OFFSET_MASK) == 0))
+			ip_options_fragment(in_hdr);
 
 		fragment_offset = (uint16_t)(fragment_offset +
 		    out_pkt->pkt_len - header_len);
