@@ -2363,6 +2363,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_SECURITY,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Implements OFPAT_SET_MPLS_TTL ("MPLS TTL") as defined by the
 	 * OpenFlow Switch Specification.
 	 *
@@ -2371,6 +2374,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_OF_SET_MPLS_TTL,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Implements OFPAT_DEC_MPLS_TTL ("decrement MPLS TTL") as defined
 	 * by the OpenFlow Switch Specification.
 	 *
@@ -2379,6 +2385,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_OF_DEC_MPLS_TTL,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Implements OFPAT_SET_NW_TTL ("IP TTL") as defined by the OpenFlow
 	 * Switch Specification.
 	 *
@@ -2395,6 +2404,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_OF_DEC_NW_TTL,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Implements OFPAT_COPY_TTL_OUT ("copy TTL "outwards" -- from
 	 * next-to-outermost to outermost") as defined by the OpenFlow
 	 * Switch Specification.
@@ -2404,6 +2416,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_OF_COPY_TTL_OUT,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Implements OFPAT_COPY_TTL_IN ("copy TTL "inwards" -- from
 	 * outermost to next-to-outermost") as defined by the OpenFlow
 	 * Switch Specification.
@@ -2509,6 +2524,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_RAW_DECAP,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Modify IPv4 source address in the outermost IPv4 header.
 	 *
 	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_IPV4,
@@ -2519,6 +2537,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_SET_IPV4_SRC,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Modify IPv4 destination address in the outermost IPv4 header.
 	 *
 	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_IPV4,
@@ -2529,6 +2550,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_SET_IPV4_DST,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Modify IPv6 source address in the outermost IPv6 header.
 	 *
 	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_IPV6,
@@ -2539,6 +2563,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_SET_IPV6_SRC,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Modify IPv6 destination address in the outermost IPv6 header.
 	 *
 	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_IPV6,
@@ -2549,6 +2576,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_SET_IPV6_DST,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Modify source port number in the outermost TCP/UDP header.
 	 *
 	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_TCP
@@ -2560,6 +2590,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_SET_TP_SRC,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Modify destination port number in the outermost TCP/UDP header.
 	 *
 	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_TCP
@@ -2582,6 +2615,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_MAC_SWAP,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Decrease TTL value directly
 	 *
 	 * No associated configuration structure.
@@ -2589,6 +2625,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_DEC_TTL,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Set TTL value
 	 *
 	 * See struct rte_flow_action_set_ttl
@@ -2596,6 +2635,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_SET_TTL,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Set source MAC address from matched flow.
 	 *
 	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_ETH,
@@ -2606,6 +2648,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_SET_MAC_SRC,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Set destination MAC address from matched flow.
 	 *
 	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_ETH,
@@ -2616,6 +2661,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_SET_MAC_DST,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Increase sequence number in the outermost TCP header.
 	 *
 	 * Action configuration specifies the value to increase
@@ -2630,6 +2678,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_INC_TCP_SEQ,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Decrease sequence number in the outermost TCP header.
 	 *
 	 * Action configuration specifies the value to decrease
@@ -2644,6 +2695,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_DEC_TCP_SEQ,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Increase acknowledgment number in the outermost TCP header.
 	 *
 	 * Action configuration specifies the value to increase
@@ -2658,6 +2712,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_INC_TCP_ACK,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Decrease acknowledgment number in the outermost TCP header.
 	 *
 	 * Action configuration specifies the value to decrease
@@ -2672,6 +2729,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_DEC_TCP_ACK,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Set Tag.
 	 *
 	 * Tag is for internal flow usage only and
@@ -2682,6 +2742,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_SET_TAG,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Set metadata on ingress or egress path.
 	 *
 	 * See struct rte_flow_action_set_meta.
@@ -2689,6 +2752,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_SET_META,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Modify IPv4 DSCP in the outermost IP header.
 	 *
 	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_IPV4,
@@ -2699,6 +2765,9 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_SET_IPV4_DSCP,
 
 	/**
+	 * @deprecated
+	 * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+	 *
 	 * Modify IPv6 DSCP in the outermost IP header.
 	 *
 	 * If flow pattern does not define a valid RTE_FLOW_ITEM_TYPE_IPV6,
@@ -3069,6 +3138,9 @@ struct rte_flow_action_security {
 };
 
 /**
+ * @deprecated
+ * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+ *
  * RTE_FLOW_ACTION_TYPE_OF_SET_MPLS_TTL
  *
  * Implements OFPAT_SET_MPLS_TTL ("MPLS TTL") as defined by the OpenFlow
@@ -3079,6 +3151,9 @@ struct rte_flow_action_of_set_mpls_ttl {
 };
 
 /**
+ * @deprecated
+ * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+ *
  * RTE_FLOW_ACTION_TYPE_OF_SET_NW_TTL
  *
  * Implements OFPAT_SET_NW_TTL ("IP TTL") as defined by the OpenFlow Switch
@@ -3253,6 +3328,9 @@ struct rte_flow_action_raw_decap {
 };
 
 /**
+ * @deprecated
+ * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+ *
  * @warning
  * @b EXPERIMENTAL: this structure may change without prior notice
  *
@@ -3268,6 +3346,9 @@ struct rte_flow_action_set_ipv4 {
 };
 
 /**
+ * @deprecated
+ * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+ *
  * @warning
  * @b EXPERIMENTAL: this structure may change without prior notice
  *
@@ -3283,6 +3364,9 @@ struct rte_flow_action_set_ipv6 {
 };
 
 /**
+ * @deprecated
+ * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+ *
  * @warning
  * @b EXPERIMENTAL: this structure may change without prior notice
  *
@@ -3298,6 +3382,9 @@ struct rte_flow_action_set_tp {
 };
 
 /**
+ * @deprecated
+ * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+ *
  * RTE_FLOW_ACTION_TYPE_SET_TTL
  *
  * Set the TTL value directly for IPv4 or IPv6
@@ -3307,6 +3394,9 @@ struct rte_flow_action_set_ttl {
 };
 
 /**
+ * @deprecated
+ * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+ *
  * RTE_FLOW_ACTION_TYPE_SET_MAC
  *
  * Set MAC address from the matched flow
@@ -3316,6 +3406,9 @@ struct rte_flow_action_set_mac {
 };
 
 /**
+ * @deprecated
+ * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+ *
  * @warning
  * @b EXPERIMENTAL: this structure may change without prior notice
  *
@@ -3331,6 +3424,9 @@ struct rte_flow_action_set_tag {
 };
 
 /**
+ * @deprecated
+ * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+ *
  * @warning
  * @b EXPERIMENTAL: this structure may change without prior notice
  *
@@ -3355,6 +3451,9 @@ struct rte_flow_action_set_meta {
 };
 
 /**
+ * @deprecated
+ * @see RTE_FLOW_ACTION_TYPE_MODIFY_FIELD
+ *
  * RTE_FLOW_ACTION_TYPE_SET_IPV4_DSCP
  * RTE_FLOW_ACTION_TYPE_SET_IPV6_DSCP
  *
