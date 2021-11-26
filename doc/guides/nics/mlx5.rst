@@ -1033,7 +1033,7 @@ Driver options
 
   For the MARK action the last 16 values in the full range are reserved for
   internal PMD purposes (to emulate FLAG action). The valid range for the
-  MARK action values is 0-0xFFEF for the 16-bit mode and 0-xFFFFEF
+  MARK action values is 0-0xFFEF for the 16-bit mode and 0-0xFFFFEF
   for the 24-bit mode, the flows with the MARK action value outside
   the specified range will be rejected.
 
