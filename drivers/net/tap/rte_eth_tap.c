@@ -67,6 +67,7 @@
 
 /* IPC key for queue fds sync */
 #define TAP_MP_KEY "tap_mp_sync_queues"
+#define TAP_MP_REQ_START_RXTX "tap_mp_req_start_rxtx"
 
 #define TAP_IOV_DEFAULT_MAX 1024
 
@@ -880,10 +881,50 @@ tap_link_set_up(struct rte_eth_dev *dev)
 	return tap_ioctl(pmd, SIOCSIFFLAGS, &ifr, 1, LOCAL_AND_REMOTE);
 }
 
+static int tap_mp_req_on_rxtx(struct rte_eth_dev *dev)
+{
+	struct rte_mp_msg msg;
+	struct ipc_queues *request_param = (struct ipc_queues *)msg.param;
+	int err;
+	int fd_iterator = 0;
+	struct pmd_process_private *process_private = dev->process_private;
+	int i;
+
+	memset(&msg, 0, sizeof(msg));
+	strcpy(msg.name, TAP_MP_REQ_START_RXTX);
+	strlcpy(request_param->port_name, dev->data->name,
+		sizeof(request_param->port_name));
+	msg.len_param = sizeof(*request_param);
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		msg.fds[fd_iterator++] = process_private->txq_fds[i];
+		msg.num_fds++;
+		request_param->txq_count++;
+	}
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		msg.fds[fd_iterator++] = process_private->rxq_fds[i];
+		msg.num_fds++;
+		request_param->rxq_count++;
+	}
+
+	RTE_ASSERT(request_param->txq_count == dev->data->nb_tx_queues);
+	RTE_ASSERT(request_param->rxq_count == dev->data->nb_rx_queues);
+
+	err = rte_mp_sendmsg(&msg);
+	if (err < 0) {
+		TAP_LOG(ERR, "Failed to send start req to secondary %d",
+			rte_errno);
+		return -1;
+	}
+
+	return 0;
+}
+
 static int
 tap_dev_start(struct rte_eth_dev *dev)
 {
 	int err, i;
+
+	tap_mp_req_on_rxtx(dev);
 
 	err = tap_intr_handle_set(dev, 1);
 	if (err)
@@ -899,6 +940,39 @@ tap_dev_start(struct rte_eth_dev *dev)
 		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
 
 	return err;
+}
+
+static int
+tap_mp_req_start_rxtx(const struct rte_mp_msg *request, __rte_unused const void *peer)
+{
+	struct rte_eth_dev *dev;
+	int ret;
+	uint16_t port_id;
+	const struct ipc_queues *request_param =
+		(const struct ipc_queues *)request->param;
+	int fd_iterator;
+	int queue;
+	struct pmd_process_private *process_private;
+
+	ret = rte_eth_dev_get_port_by_name(request_param->port_name, &port_id);
+	if (ret) {
+		TAP_LOG(ERR, "Failed to get port id for %s",
+			request_param->port_name);
+		return -1;
+	}
+	dev = &rte_eth_devices[port_id];
+	process_private = dev->process_private;
+	dev->data->nb_rx_queues = request_param->rxq_count;
+	dev->data->nb_tx_queues = request_param->txq_count;
+	fd_iterator = 0;
+	RTE_LOG(DEBUG, PMD, "tap_attach rx_q:%d tx_q:%d\n", request_param->rxq_count,
+		request_param->txq_count);
+	for (queue = 0; queue < request_param->txq_count; queue++)
+		process_private->txq_fds[queue] = request->fds[fd_iterator++];
+	for (queue = 0; queue < request_param->rxq_count; queue++)
+		process_private->rxq_fds[queue] = request->fds[fd_iterator++];
+
+	return 0;
 }
 
 /* This function gets called when the current port gets stopped.
@@ -2445,6 +2519,12 @@ rte_pmd_tap_probe(struct rte_vdev_device *dev)
 		ret = tap_mp_attach_queues(name, eth_dev);
 		if (ret != 0)
 			return -1;
+
+		ret = rte_mp_action_register(TAP_MP_REQ_START_RXTX, tap_mp_req_start_rxtx);
+		if (ret < 0 && rte_errno != ENOTSUP)
+			TAP_LOG(ERR, "tap: Failed to register IPC callback: %s",
+				strerror(rte_errno));
+
 		rte_eth_dev_probing_finish(eth_dev);
 		return 0;
 	}
