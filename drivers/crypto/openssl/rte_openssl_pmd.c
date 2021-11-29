@@ -1953,12 +1953,16 @@ process_openssl_rsa_op(struct rte_crypto_op *cop,
 		break;
 
 	case RTE_CRYPTO_ASYM_OP_VERIFY:
-		tmp = rte_malloc(NULL, op->rsa.sign.length, 0);
+		tmp = op->rsa.cipher.data;
 		if (tmp == NULL) {
-			OPENSSL_LOG(ERR, "Memory allocation failed");
-			cop->status = RTE_CRYPTO_OP_STATUS_ERROR;
-			break;
+			tmp = rte_malloc(NULL, op->rsa.sign.length, 0);
+			if (tmp == NULL) {
+				OPENSSL_LOG(ERR, "Memory allocation failed");
+				cop->status = RTE_CRYPTO_OP_STATUS_ERROR;
+				break;
+			}
 		}
+
 		ret = RSA_public_decrypt(op->rsa.sign.length,
 				op->rsa.sign.data,
 				tmp,
@@ -1974,7 +1978,9 @@ process_openssl_rsa_op(struct rte_crypto_op *cop,
 			OPENSSL_LOG(ERR, "RSA sign Verification failed");
 			cop->status = RTE_CRYPTO_OP_STATUS_ERROR;
 		}
-		rte_free(tmp);
+		op->rsa.cipher.length = ret;
+		if (tmp != op->rsa.cipher.data)
+			rte_free(tmp);
 		break;
 
 	default:
