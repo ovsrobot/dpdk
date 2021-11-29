@@ -696,19 +696,22 @@ cnxk_ae_dequeue_rsa_op(struct rte_crypto_op *cop, uint8_t *rptr,
 		break;
 	case RTE_CRYPTO_ASYM_OP_VERIFY:
 		if (rsa->pad == RTE_CRYPTO_RSA_PADDING_NONE) {
-			rsa->sign.length = rsa_ctx->n.length;
-			memcpy(rsa->sign.data, rptr, rsa->sign.length);
+			rsa->cipher.length = rsa_ctx->n.length;
 		} else {
 			/* Get length of signed output */
-			rsa->sign.length =
+			rsa->cipher.length =
 				rte_cpu_to_be_16(*((uint16_t *)rptr));
 			/*
 			 * Offset output data pointer by length field
-			 * (2 bytes) and copy signed data.
+			 * (2 bytes).
 			 */
-			memcpy(rsa->sign.data, rptr + 2, rsa->sign.length);
+			rptr += 2;
 		}
-		if (memcmp(rsa->sign.data, rsa->message.data,
+
+		if (rsa->cipher.data != NULL)
+			memcpy(rsa->cipher.data, rptr, rsa->cipher.length);
+
+		if (memcmp(rptr, rsa->message.data,
 			   rsa->message.length)) {
 			cop->status = RTE_CRYPTO_OP_STATUS_ERROR;
 		}
