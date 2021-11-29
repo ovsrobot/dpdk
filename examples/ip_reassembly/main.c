@@ -244,7 +244,7 @@ static struct rte_lpm6 *socket_lpm6[RTE_MAX_NUMA_NODES];
 #endif /* RTE_LIBRTE_IP_FRAG_TBL_STAT */
 
 /*
- * If number of queued packets reached given threahold, then
+ * If number of queued packets reached given threshold, then
  * send burst of packets on an output interface.
  */
 static inline uint32_t
@@ -877,7 +877,7 @@ setup_queue_tbl(struct rx_queue *rxq, uint32_t lcore, uint32_t queue)
 	 * Plus, each TX queue can hold up to <max_flow_num> packets.
 	 */
 
-	/* mbufs stored int the gragment table. 8< */
+	/* mbufs stored int the fragment table. 8< */
 	nb_mbuf = RTE_MAX(max_flow_num, 2UL * MAX_PKT_BURST) * MAX_FRAG_NUM;
 	nb_mbuf *= (port_conf.rxmode.mtu + RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN
 			+ BUF_SIZE - 1) / BUF_SIZE;
