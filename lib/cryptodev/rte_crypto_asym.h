@@ -461,11 +461,12 @@ struct rte_crypto_rsa_op_param {
 	 * - to be decrypted for RSA private decrypt.
 	 *
 	 * Pointer to output data
-	 * - for RSA public encrypt.
+	 * - for RSA public encrypt/decrypt.
 	 * In this case the underlying array should have been allocated
-	 * with enough memory to hold ciphertext output (i.e. must be
+	 * with enough memory to hold ciphertext/plaintext output (i.e. must be
 	 * at least RSA key size). The cipher.length field should
-	 * be 0 and will be overwritten by the PMD with the encrypted length.
+	 * be 0 and will be overwritten by the PMD with the encrypted/decrypted
+	 * length.
 	 *
 	 * All data is in Octet-string network byte order format.
 	 */
