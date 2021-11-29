@@ -876,20 +876,22 @@ otx2_cpt_asym_rsa_op(struct rte_crypto_op *cop, struct cpt_request_info *req,
 		break;
 	case RTE_CRYPTO_ASYM_OP_VERIFY:
 		if (rsa->pad == RTE_CRYPTO_RSA_PADDING_NONE) {
-			rsa->sign.length = rsa_ctx->n.length;
-			memcpy(rsa->sign.data, req->rptr, rsa->sign.length);
+			rsa->cipher.length = rsa_ctx->n.length;
 		} else {
 			/* Get length of signed output */
-			rsa->sign.length = rte_cpu_to_be_16
+			rsa->cipher.length = rte_cpu_to_be_16
 					  (*((uint16_t *)req->rptr));
 			/*
 			 * Offset output data pointer by length field
-			 * (2 bytes) and copy signed data.
+			 * (2 bytes).
 			 */
-			memcpy(rsa->sign.data, req->rptr + 2,
-			       rsa->sign.length);
+			req->rptr += 2;
 		}
-		if (memcmp(rsa->sign.data, rsa->message.data,
+
+		if (rsa->cipher.data != NULL)
+			memcpy(rsa->cipher.data, req->rptr, rsa->cipher.length);
+
+		if (memcmp(req->rptr, rsa->message.data,
 			   rsa->message.length)) {
 			CPT_LOG_DP_ERR("RSA verification failed");
 			cop->status = RTE_CRYPTO_OP_STATUS_ERROR;
