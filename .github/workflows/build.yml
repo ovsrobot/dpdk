@@ -20,10 +20,10 @@ jobs:
       BUILD_DOCS: ${{ contains(matrix.config.checks, 'doc') }}
       CC: ccache ${{ matrix.config.compiler }}
       DEF_LIB: ${{ matrix.config.library }}
-      LIBABIGAIL_VERSION: libabigail-1.8
+      LIBABIGAIL_VERSION: libabigail-2.0
       MINI: ${{ matrix.config.mini != '' }}
       PPC64LE: ${{ matrix.config.cross == 'ppc64le' }}
-      REF_GIT_TAG: none
+      REF_GIT_TAG: v21.11
       RUN_TESTS: ${{ contains(matrix.config.checks, 'tests') }}
 
     strategy:
@@ -40,7 +40,7 @@ jobs:
           - os: ubuntu-18.04
             compiler: gcc
             library: shared
-            checks: doc+tests
+            checks: abi+doc+tests
           - os: ubuntu-18.04
             compiler: clang
             library: static
