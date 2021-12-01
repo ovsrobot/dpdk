@@ -17,6 +17,16 @@
 
 #include "test.h"
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_hash_perf(void)
+{
+	printf("hash_perf not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 #define MAX_ENTRIES (1 << 19)
 #define KEYS_TO_ADD (MAX_ENTRIES)
 #define ADD_PERCENT 0.75 /* 75% table utilization */
@@ -748,5 +758,7 @@ test_hash_perf(void)
 
 	return 0;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(hash_perf_autotest, test_hash_perf);
