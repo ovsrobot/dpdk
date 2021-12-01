@@ -2,6 +2,8 @@
  * Copyright(c) 2021 HiSilicon Limited
  */
 
+#ifndef RTE_EXEC_ENV_WINDOWS
+
 #include <string.h>
 
 #include <rte_cycles.h>
@@ -572,3 +574,5 @@ test_dma_api(uint16_t dev_id)
 
 	return 0;
 };
+
+#endif /*ifndef RTE_EXEC_ENV_WINDOWS*/

@@ -1,12 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2017 Intel Corporation
 
-if is_windows
-    build = false
-    reason = 'not supported on Windows'
-    subdir_done()
-endif
-
 if not get_option('tests')
     subdir_done()
 endif
@@ -158,34 +152,17 @@ test_sources = files(
 )
 
 test_deps = [
-        'acl',
         'bus_pci',
         'bus_vdev',
-        'bpf',
+        'bitratestats',
         'cfgfile',
         'cmdline',
-        'cryptodev',
-        'distributor',
-        'dmadev',
-        'efd',
         'ethdev',
-        'eventdev',
-        'fib',
-        'flow_classify',
-        'graph',
         'hash',
-        'ipsec',
-        'lpm',
-        'member',
-        'node',
-        'pipeline',
-        'port',
-        'rawdev',
+        'latencystats',
+        'metrics',
         'rcu',
-        'reorder',
-        'rib',
         'ring',
-        'security',
         'stack',
         'telemetry',
         'timer',
@@ -334,38 +311,68 @@ perf_test_names = [
 ]
 
 driver_test_names = [
-        'cryptodev_aesni_mb_autotest',
-        'cryptodev_aesni_gcm_autotest',
-        'cryptodev_cn9k_autotest',
-        'cryptodev_cn10k_autotest',
-        'cryptodev_dpaa_sec_autotest',
-        'cryptodev_dpaa2_sec_autotest',
-        'cryptodev_null_autotest',
-        'cryptodev_octeontx2_autotest',
-        'cryptodev_openssl_autotest',
-        'cryptodev_openssl_asym_autotest',
-        'cryptodev_qat_autotest',
-        'cryptodev_sw_armv8_autotest',
-        'cryptodev_sw_kasumi_autotest',
-        'cryptodev_sw_mvsam_autotest',
-        'cryptodev_sw_snow3g_autotest',
-        'cryptodev_sw_zuc_autotest',
-        'dmadev_autotest',
-        'eventdev_selftest_octeontx',
-        'eventdev_selftest_sw',
-        'rawdev_autotest',
 ]
 
 dump_test_names = [
-        'dump_struct_sizes',
-        'dump_mempool',
-        'dump_malloc_stats',
-        'dump_devargs',
-        'dump_log_types',
-        'dump_ring',
-        'dump_physmem',
-        'dump_memzone',
 ]
+
+if not is_windows
+    test_deps += [
+            'acl',
+            'bpf',
+            'cryptodev',
+            'distributor',
+            'dmadev',
+            'efd',
+            'eventdev',
+            'fib',
+            'flow_classify',
+            'graph',
+            'ipsec',
+            'lpm',
+            'member',
+            'node',
+            'pipeline',
+            'port',
+            'rawdev',
+            'reorder',
+            'rib',
+            'security',
+    ]
+
+    driver_test_names += [
+            'cryptodev_aesni_mb_autotest',
+            'cryptodev_aesni_gcm_autotest',
+            'cryptodev_cn9k_autotest',
+            'cryptodev_cn10k_autotest',
+            'cryptodev_dpaa_sec_autotest',
+            'cryptodev_dpaa2_sec_autotest',
+            'cryptodev_null_autotest',
+            'cryptodev_octeontx2_autotest',
+            'cryptodev_openssl_autotest',
+            'cryptodev_openssl_asym_autotest',
+            'cryptodev_qat_autotest',
+            'cryptodev_sw_armv8_autotest',
+            'cryptodev_sw_kasumi_autotest',
+            'cryptodev_sw_mvsam_autotest',
+            'cryptodev_sw_snow3g_autotest',
+            'cryptodev_sw_zuc_autotest',
+            'eventdev_selftest_octeontx',
+            'eventdev_selftest_sw',
+            'rawdev_autotest',
+    ]
+
+    dump_test_names += [
+            'dump_struct_sizes',
+            'dump_mempool',
+            'dump_malloc_stats',
+            'dump_devargs',
+            'dump_log_types',
+            'dump_ring',
+            'dump_physmem',
+            'dump_memzone',
+    ]
+endif
 
 # The following linkages are an exception to allow running the
 # unit tests without requiring that the developer install the
@@ -385,7 +392,7 @@ if dpdk_conf.has('RTE_LIB_METRICS')
     test_sources += ['test_metrics.c']
     fast_tests += [['metrics_autotest', true]]
 endif
-if dpdk_conf.has('RTE_LIB_TELEMETRY')
+if not is_windows and dpdk_conf.has('RTE_LIB_TELEMETRY')
     test_sources += ['test_telemetry_json.c', 'test_telemetry_data.c']
     fast_tests += [['telemetry_json_autotest', true], ['telemetry_data_autotest', true]]
 endif
