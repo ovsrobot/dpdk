@@ -368,7 +368,7 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	 * Under the circumstance that `rx_tail` wrap back to zero
 	 * and the advance speed of `rx_tail` is greater than `rxrearm_start`,
 	 * `rx_tail` will catch up with `rxrearm_start` and surpass it.
-	 * This may cause some mbufs be reused by applicaion.
+	 * This may cause some mbufs be reused by application.
 	 *
 	 * So we need to make some restrictions to ensure that
 	 * `rx_tail` will not exceed `rxrearm_start`.
