@@ -364,9 +364,6 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	uint8_t vlan_flags;
 	uint16_t udp_p_flag = 0; /* Rx Descriptor UDP header present */
 
-	/* nb_pkts has to be floor-aligned to RTE_IXGBE_DESCS_PER_LOOP */
-	nb_pkts = RTE_ALIGN_FLOOR(nb_pkts, RTE_IXGBE_DESCS_PER_LOOP);
-
 	/* Just the act of getting into the function from the application is
 	 * going to cost about 7 cycles
 	 */
@@ -379,6 +376,21 @@ _recv_raw_pkts_vec(struct ixgbe_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	 */
 	if (rxq->rxrearm_nb > RTE_IXGBE_RXQ_REARM_THRESH)
 		ixgbe_rxq_rearm(rxq);
+
+	/*
+	 * Under the circumstance that `rx_tail` wrap back to zero
+	 * and the advance speed of `rx_tail` is greater than `rxrearm_start`,
+	 * `rx_tail` will catch up with `rxrearm_start` and surpass it.
+	 * This may cause some mbufs be reused by applicaion.
+	 *
+	 * So we need to make some restrictions to ensure that
+	 * `rx_tail` will not exceed `rxrearm_start`.
+	 */
+	if (rxq->rx_tail < rxq->rxrearm_start)
+		nb_pkts = RTE_MIN(nb_pkts, rxq->rxrearm_start - rxq->rx_tail - 1);
+
+	/* nb_pkts has to be floor-aligned to RTE_IXGBE_DESCS_PER_LOOP */
+	nb_pkts = RTE_ALIGN_FLOOR(nb_pkts, RTE_IXGBE_DESCS_PER_LOOP);
 
 	/* Before we start moving massive data around, check to see if
 	 * there is actually a packet available
