@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added functions to calculate UDP/TCP checksum in mbuf.**
+  * Added the following functions to calculate UDP/TCP checksum of packets
+    which can be over multi-segments:
+    - ``rte_ipv4_udptcp_cksum_mbuf()``
+    - ``rte_ipv4_udptcp_cksum_mbuf_verify()``
+    - ``rte_ipv6_udptcp_cksum_mbuf()``
+    - ``rte_ipv6_udptcp_cksum_mbuf_verify()``
 
 Removed Items
 -------------
@@ -84,6 +91,9 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* net: added experimental functions ``rte_ipv4_udptcp_cksum_mbuf()``,
+  ``rte_ipv4_udptcp_cksum_mbuf_verify()``, ``rte_ipv6_udptcp_cksum_mbuf()``,
+  ``rte_ipv6_udptcp_cksum_mbuf_verify()``
 
 ABI Changes
 -----------

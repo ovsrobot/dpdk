@@ -12,3 +12,13 @@ DPDK_22 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	# added in 22.03
+	rte_ipv4_udptcp_cksum_mbuf;
+	rte_ipv4_udptcp_cksum_mbuf_verify;
+	rte_ipv6_udptcp_cksum_mbuf;
+	rte_ipv6_udptcp_cksum_mbuf_verify;
+};
