@@ -1538,9 +1538,21 @@ STATIC s32 ixgbe_supported_sfp_modules_X550em(struct ixgbe_hw *hw, bool *linear)
 	case ixgbe_sfp_type_1g_lha_core1:
 		*linear = false;
 		break;
-	case ixgbe_sfp_type_unknown:
+	/* Copper SFPs are not officially supported for x550em devices, but can
+	 * often be made to work at fixed 1G speeds.  Pretend they're 1g_sx
+	 * modules here to allow g.Fast DSL SFPs to work.
+	 */
 	case ixgbe_sfp_type_1g_cu_core0:
+		EWARN(hw, "Pretending that unsupported 1g_cu SFP is 1g_sx\n");
+		*linear = false;
+		hw->phy.sfp_type = ixgbe_sfp_type_1g_sx_core0;
+		break;
 	case ixgbe_sfp_type_1g_cu_core1:
+		EWARN(hw, "Pretending that unsupported 1g_cu SFP is 1g_sx\n");
+		*linear = false;
+		hw->phy.sfp_type = ixgbe_sfp_type_1g_sx_core1;
+		break;
+	case ixgbe_sfp_type_unknown:
 	default:
 		return IXGBE_ERR_SFP_NOT_SUPPORTED;
 	}
