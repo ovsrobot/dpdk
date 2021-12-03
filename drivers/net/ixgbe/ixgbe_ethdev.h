@@ -24,11 +24,12 @@
 #include <rte_tm_driver.h>
 
 /* need update link, bit flag */
-#define IXGBE_FLAG_NEED_LINK_UPDATE (uint32_t)(1 << 0)
-#define IXGBE_FLAG_MAILBOX          (uint32_t)(1 << 1)
-#define IXGBE_FLAG_PHY_INTERRUPT    (uint32_t)(1 << 2)
-#define IXGBE_FLAG_MACSEC           (uint32_t)(1 << 3)
-#define IXGBE_FLAG_NEED_LINK_CONFIG (uint32_t)(1 << 4)
+#define IXGBE_FLAG_NEED_LINK_UPDATE BIT(0)
+#define IXGBE_FLAG_MAILBOX          BIT(1)
+#define IXGBE_FLAG_PHY_INTERRUPT    BIT(2)
+#define IXGBE_FLAG_MACSEC           BIT(3)
+#define IXGBE_FLAG_NEED_LINK_CONFIG BIT(4)
+#define IXGBE_FLAG_NEED_SFP_SETUP   BIT(5)
 
 /*
  * Defines that were not part of ixgbe_type.h as they are not used by the
@@ -41,7 +42,7 @@
 #define IXGBE_RXDADV_ERR_CKSUM_MSK  3
 #define IXGBE_ADVTXD_MACLEN_SHIFT   9          /* Bit shift for l2_len */
 #define IXGBE_NB_STAT_MAPPING_REGS  32
-#define IXGBE_EXTENDED_VLAN	  (uint32_t)(1 << 26) /* EXTENDED VLAN ENABLE */
+#define IXGBE_EXTENDED_VLAN	    BIT(26)    /* EXTENDED VLAN ENABLE */
 #define IXGBE_VFTA_SIZE 128
 #define IXGBE_HKEY_MAX_INDEX 10
 #define IXGBE_MAX_RX_QUEUE_NUM	128
@@ -223,8 +224,6 @@ struct ixgbe_rte_flow_rss_conf {
 struct ixgbe_interrupt {
 	uint32_t flags;
 	uint32_t mask;
-	/*to save original mask during delayed handler */
-	uint32_t mask_original;
 };
 
 struct ixgbe_stat_mapping_registers {
@@ -506,8 +505,7 @@ struct ixgbe_adapter {
 	 */
 	uint8_t pflink_fullchk;
 	uint8_t mac_ctrl_frame_fwd;
-	rte_atomic32_t link_thread_running;
-	pthread_t link_thread_tid;
+	pthread_t service_thread_tid;
 };
 
 struct ixgbe_vf_representor {

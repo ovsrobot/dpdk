@@ -45,6 +45,8 @@
 
 #include "ixgbe_osdep.h"
 
+#define BIT(a) (1UL << (a))
+
 /* Override this by setting IOMEM in your ixgbe_osdep.h header */
 
 /* Vendor ID */
