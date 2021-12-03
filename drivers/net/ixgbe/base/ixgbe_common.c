@@ -5371,6 +5371,7 @@ out:
 void ixgbe_set_soft_rate_select_speed(struct ixgbe_hw *hw,
 					ixgbe_link_speed speed)
 {
+	enum ixgbe_sfp_cage_status sfp_cage_status;
 	s32 status;
 	u8 rs, eeprom_data;
 
@@ -5385,6 +5386,51 @@ void ixgbe_set_soft_rate_select_speed(struct ixgbe_hw *hw,
 	default:
 		DEBUGOUT("Invalid fixed module speed\n");
 		return;
+	}
+
+	/* Can't set rate on missing devices, skip all I2C access */
+	sfp_cage_status = ixgbe_check_sfp_cage(hw);
+	if (sfp_cage_status == IXGBE_SFP_CAGE_EMPTY ||
+	    sfp_cage_status == IXGBE_SFP_CAGE_NOCAGE) {
+		DEBUGOUT("No SFP\n");
+		return;
+	}
+
+	/* This only applies to SFF-8472 devices, so check that this device has
+	 * a non-zero SFF8472 compliance code @ device 0xA0 byte 94
+	 */
+	status = hw->phy.ops.read_i2c_eeprom(hw,
+					     IXGBE_SFF_SFF_8472_COMP,
+					     &eeprom_data);
+	if (status || !eeprom_data) {
+		DEBUGOUT("Not a SFF-8472 device\n");
+		goto out;
+	}
+
+	/* (read|write)_i2c_byte() don't support the address change mechanism
+	 * outlined in section 8.9 "Addressing Modes" of SFF_8472, so if that
+	 * is a requirement give up
+	 */
+	status = hw->phy.ops.read_i2c_eeprom(hw,
+					     IXGBE_SFF_SFF_8472_SWAP,
+					     &eeprom_data);
+	if (status || (eeprom_data & IXGBE_SFF_ADDRESSING_MODE)) {
+		DEBUGOUT("Address change not supported\n");
+		goto out;
+	}
+	/* Digital diagnostic monitoring must be supported for rate select */
+	if (!(eeprom_data & IXGBE_SFF_DDM_IMPLEMENTED)) {
+		DEBUGOUT("DDM not implemented\n");
+		goto out;
+	}
+
+	/* Finally check if the optional rate select feature is implemented */
+	status = hw->phy.ops.read_i2c_eeprom(hw,
+					     IXGBE_SFF_SFF_8472_EOPT,
+					     &eeprom_data);
+	if (status || !(eeprom_data & IXGBE_SFF_HAVE_RS)) {
+		DEBUGOUT("Rate select not supported");
+		goto out;
 	}
 
 	/* Set RS0 */
