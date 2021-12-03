@@ -1354,7 +1354,7 @@ virtio_dev_rx(struct virtio_net *dev, uint16_t queue_id,
 
 	vq = dev->virtqueue[queue_id];
 
-	rte_spinlock_lock(&vq->access_lock);
+	rte_spinlock_lock(&dev->vq_access_lock[queue_id]);
 
 	if (unlikely(!vq->enabled))
 		goto out_access_unlock;
@@ -1380,7 +1380,7 @@ out:
 		vhost_user_iotlb_rd_unlock(vq);
 
 out_access_unlock:
-	rte_spinlock_unlock(&vq->access_lock);
+	rte_spinlock_unlock(&dev->vq_access_lock[queue_id]);
 
 	return nb_tx;
 }
@@ -1906,11 +1906,11 @@ rte_vhost_poll_enqueue_completed(int vid, uint16_t queue_id,
 		return 0;
 	}
 
-	rte_spinlock_lock(&vq->access_lock);
+	rte_spinlock_lock(&dev->vq_access_lock[queue_id]);
 
 	n_pkts_cpl = vhost_poll_enqueue_completed(dev, queue_id, pkts, count);
 
-	rte_spinlock_unlock(&vq->access_lock);
+	rte_spinlock_unlock(&dev->vq_access_lock[queue_id]);
 
 	return n_pkts_cpl;
 }
@@ -1962,7 +1962,7 @@ virtio_dev_rx_async_submit(struct virtio_net *dev, uint16_t queue_id,
 
 	vq = dev->virtqueue[queue_id];
 
-	rte_spinlock_lock(&vq->access_lock);
+	rte_spinlock_lock(&dev->vq_access_lock[queue_id]);
 
 	if (unlikely(!vq->enabled || !vq->async))
 		goto out_access_unlock;
@@ -1990,7 +1990,7 @@ out:
 		vhost_user_iotlb_rd_unlock(vq);
 
 out_access_unlock:
-	rte_spinlock_unlock(&vq->access_lock);
+	rte_spinlock_unlock(&dev->vq_access_lock[queue_id]);
 
 	return nb_tx;
 }
@@ -2900,7 +2900,7 @@ rte_vhost_dequeue_burst(int vid, uint16_t queue_id,
 
 	vq = dev->virtqueue[queue_id];
 
-	if (unlikely(rte_spinlock_trylock(&vq->access_lock) == 0))
+	if (unlikely(rte_spinlock_trylock(&dev->vq_access_lock[queue_id]) == 0))
 		return 0;
 
 	if (unlikely(!vq->enabled)) {
@@ -2969,7 +2969,7 @@ out:
 		vhost_user_iotlb_rd_unlock(vq);
 
 out_access_unlock:
-	rte_spinlock_unlock(&vq->access_lock);
+	rte_spinlock_unlock(&dev->vq_access_lock[queue_id]);
 
 	if (unlikely(rarp_mbuf != NULL))
 		count += 1;

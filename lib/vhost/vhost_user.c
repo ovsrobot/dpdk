@@ -2899,7 +2899,7 @@ vhost_user_lock_all_queue_pairs(struct virtio_net *dev)
 		struct vhost_virtqueue *vq = dev->virtqueue[i];
 
 		if (vq) {
-			rte_spinlock_lock(&vq->access_lock);
+			rte_spinlock_lock(&dev->vq_access_lock[i]);
 			vq_num++;
 		}
 		i++;
@@ -2916,7 +2916,7 @@ vhost_user_unlock_all_queue_pairs(struct virtio_net *dev)
 		struct vhost_virtqueue *vq = dev->virtqueue[i];
 
 		if (vq) {
-			rte_spinlock_unlock(&vq->access_lock);
+			rte_spinlock_unlock(&dev->vq_access_lock[i]);
 			vq_num++;
 		}
 		i++;

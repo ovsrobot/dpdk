@@ -627,7 +627,7 @@ alloc_vring_queue(struct virtio_net *dev, uint32_t vring_idx)
 
 		dev->virtqueue[i] = vq;
 		init_vring_queue(dev, i);
-		rte_spinlock_init(&vq->access_lock);
+		rte_spinlock_init(&dev->vq_access_lock[i]);
 		vq->avail_wrap_counter = 1;
 		vq->used_wrap_counter = 1;
 		vq->signalled_used_valid = false;
@@ -1325,7 +1325,7 @@ rte_vhost_avail_entries(int vid, uint16_t queue_id)
 	if (!vq)
 		return 0;
 
-	rte_spinlock_lock(&vq->access_lock);
+	rte_spinlock_lock(&dev->vq_access_lock[queue_id]);
 
 	if (unlikely(!vq->enabled || vq->avail == NULL))
 		goto out;
@@ -1333,7 +1333,7 @@ rte_vhost_avail_entries(int vid, uint16_t queue_id)
 	ret = *(volatile uint16_t *)&vq->avail->idx - vq->last_used_idx;
 
 out:
-	rte_spinlock_unlock(&vq->access_lock);
+	rte_spinlock_unlock(&dev->vq_access_lock[queue_id]);
 	return ret;
 }
 
@@ -1417,12 +1417,12 @@ rte_vhost_enable_guest_notification(int vid, uint16_t queue_id, int enable)
 	if (!vq)
 		return -1;
 
-	rte_spinlock_lock(&vq->access_lock);
+	rte_spinlock_lock(&dev->vq_access_lock[queue_id]);
 
 	vq->notif_enable = enable;
 	ret = vhost_enable_guest_notification(dev, vq, enable);
 
-	rte_spinlock_unlock(&vq->access_lock);
+	rte_spinlock_unlock(&dev->vq_access_lock[queue_id]);
 
 	return ret;
 }
@@ -1479,7 +1479,7 @@ rte_vhost_rx_queue_count(int vid, uint16_t qid)
 	if (vq == NULL)
 		return 0;
 
-	rte_spinlock_lock(&vq->access_lock);
+	rte_spinlock_lock(&dev->vq_access_lock[qid]);
 
 	if (unlikely(!vq->enabled || vq->avail == NULL))
 		goto out;
@@ -1487,7 +1487,7 @@ rte_vhost_rx_queue_count(int vid, uint16_t qid)
 	ret = *((volatile uint16_t *)&vq->avail->idx) - vq->last_avail_idx;
 
 out:
-	rte_spinlock_unlock(&vq->access_lock);
+	rte_spinlock_unlock(&dev->vq_access_lock[qid]);
 	return ret;
 }
 
@@ -1721,9 +1721,9 @@ rte_vhost_async_channel_register(int vid, uint16_t queue_id,
 		ops->transfer_data == NULL))
 		return -1;
 
-	rte_spinlock_lock(&vq->access_lock);
+	rte_spinlock_lock(&dev->vq_access_lock[queue_id]);
 	ret = async_channel_register(vid, queue_id, ops);
-	rte_spinlock_unlock(&vq->access_lock);
+	rte_spinlock_unlock(&dev->vq_access_lock[queue_id]);
 
 	return ret;
 }
@@ -1784,7 +1784,7 @@ rte_vhost_async_channel_unregister(int vid, uint16_t queue_id)
 	if (!vq->async)
 		return ret;
 
-	if (!rte_spinlock_trylock(&vq->access_lock)) {
+	if (!rte_spinlock_trylock(&dev->vq_access_lock[queue_id])) {
 		VHOST_LOG_CONFIG(ERR, "Failed to unregister async channel. "
 			"virt queue busy.\n");
 		return -1;
@@ -1799,7 +1799,7 @@ rte_vhost_async_channel_unregister(int vid, uint16_t queue_id)
 
 	vhost_free_async_mem(vq);
 out:
-	rte_spinlock_unlock(&vq->access_lock);
+	rte_spinlock_unlock(&dev->vq_access_lock[queue_id]);
 
 	return ret;
 }
@@ -1856,14 +1856,14 @@ rte_vhost_async_get_inflight(int vid, uint16_t queue_id)
 	if (!vq->async)
 		return ret;
 
-	if (!rte_spinlock_trylock(&vq->access_lock)) {
+	if (!rte_spinlock_trylock(&dev->vq_access_lock[queue_id])) {
 		VHOST_LOG_CONFIG(DEBUG, "Failed to check in-flight packets. "
 			"virt queue busy.\n");
 		return ret;
 	}
 
 	ret = vq->async->pkts_inflight_n;
-	rte_spinlock_unlock(&vq->access_lock);
+	rte_spinlock_unlock(&dev->vq_access_lock[queue_id]);
 
 	return ret;
 }

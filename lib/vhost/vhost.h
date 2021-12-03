@@ -185,9 +185,6 @@ struct vhost_virtqueue {
 	bool			access_ok;
 	bool			ready;
 
-	rte_spinlock_t		access_lock;
-
-
 	union {
 		struct vring_used_elem  *shadow_used_split;
 		struct vring_used_elem_packed *shadow_used_packed;
@@ -384,6 +381,7 @@ struct virtio_net {
 	int			extbuf;
 	int			linearbuf;
 	struct vhost_virtqueue	*virtqueue[VHOST_MAX_QUEUE_PAIRS * 2];
+	rte_spinlock_t		vq_access_lock[VHOST_MAX_QUEUE_PAIRS * 2];
 	struct inflight_mem_info *inflight_info;
 #define IF_NAME_SZ (PATH_MAX > IFNAMSIZ ? PATH_MAX : IFNAMSIZ)
 	char			ifname[IF_NAME_SZ];
