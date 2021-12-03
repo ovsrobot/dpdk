@@ -1228,8 +1228,16 @@ err_eeprom:
 s32 ixgbe_identify_module_generic(struct ixgbe_hw *hw)
 {
 	s32 status = IXGBE_ERR_SFP_NOT_PRESENT;
+	enum ixgbe_sfp_cage_status sfp_cage_status;
 
 	DEBUGFUNC("ixgbe_identify_module_generic");
+
+	sfp_cage_status = ixgbe_check_sfp_cage(hw);
+	if (sfp_cage_status == IXGBE_SFP_CAGE_EMPTY ||
+	    sfp_cage_status == IXGBE_SFP_CAGE_NOCAGE) {
+		hw->phy.sfp_type = ixgbe_sfp_type_not_present;
+		return status;
+	}
 
 	switch (hw->mac.ops.get_media_type(hw)) {
 	case ixgbe_media_type_fiber:

@@ -112,6 +112,14 @@ s32 ixgbe_set_vlvf_generic(struct ixgbe_hw *hw, u32 vlan, u32 vind,
 s32 ixgbe_clear_vfta_generic(struct ixgbe_hw *hw);
 s32 ixgbe_find_vlvf_slot(struct ixgbe_hw *hw, u32 vlan, bool vlvf_bypass);
 
+enum ixgbe_sfp_cage_status {
+	IXGBE_SFP_CAGE_EMPTY = 0,
+	IXGBE_SFP_CAGE_FULL,
+	IXGBE_SFP_CAGE_UNKNOWN = -1,
+	IXGBE_SFP_CAGE_NOCAGE = -2,
+};
+enum ixgbe_sfp_cage_status ixgbe_check_sfp_cage(struct ixgbe_hw *hw);
+
 s32 ixgbe_check_mac_link_generic(struct ixgbe_hw *hw,
 			       ixgbe_link_speed *speed,
 			       bool *link_up, bool link_up_wait_to_complete);
