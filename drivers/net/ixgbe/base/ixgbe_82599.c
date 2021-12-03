@@ -28,6 +28,39 @@ STATIC s32 ixgbe_read_i2c_byte_82599(struct ixgbe_hw *hw, u8 byte_offset,
 STATIC s32 ixgbe_write_i2c_byte_82599(struct ixgbe_hw *hw, u8 byte_offset,
 					u8 dev_addr, u8 data);
 
+/**
+ * ixgbe_check_mac_link_82599_fiber - Determine link and speed status
+ *
+ * @hw: pointer to hardware structure
+ * @speed: pointer to link speed
+ * @link_up: true when link is up
+ * @link_up_wait_to_complete: bool used to wait for link up or not
+ *
+ * Call the generic MAC check_link function, but also take into account the
+ * state of SDP3, which is a GPIO configured as an output driving the TX_DISABLE
+ * pin on the SFP cage.  This prevents reporting a false positive link up in the
+ * case where the link partner is transmitting, but we are not.
+ **/
+STATIC s32 ixgbe_check_mac_link_82599_fiber(struct ixgbe_hw *hw,
+					    ixgbe_link_speed *speed,
+					    bool *link_up,
+					    bool link_up_wait_to_complete)
+{
+	u32 esdp_reg;
+	s32 err;
+
+	DEBUGFUNC("ixgbe_check_mac_link_82599_fiber");
+
+	err = ixgbe_check_mac_link_generic(hw, speed, link_up,
+					   link_up_wait_to_complete);
+
+	esdp_reg = IXGBE_READ_REG(hw, IXGBE_ESDP);
+	if ((esdp_reg & IXGBE_ESDP_SDP3))
+		*link_up = 0;
+
+	return err;
+}
+
 void ixgbe_init_mac_link_ops_82599(struct ixgbe_hw *hw)
 {
 	struct ixgbe_mac_info *mac = &hw->mac;
@@ -51,6 +84,14 @@ void ixgbe_init_mac_link_ops_82599(struct ixgbe_hw *hw)
 		mac->ops.enable_tx_laser = NULL;
 		mac->ops.flap_tx_laser = NULL;
 	}
+
+	/*
+	 * For 82599 SFP+ fiber, make sure that SDP3 (TX_DISABLE to SFP cage)
+	 * isn't asserted.  Either by mac->ops.disable_tx_laser(), or possibly
+	 * management firmware
+	 */
+	if (mac->ops.get_media_type(hw) == ixgbe_media_type_fiber)
+		mac->ops.check_link = ixgbe_check_mac_link_82599_fiber;
 
 	if (hw->phy.multispeed_fiber) {
 		/* Set up dual speed SFP+ support */

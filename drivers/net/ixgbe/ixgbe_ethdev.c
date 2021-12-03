@@ -4216,7 +4216,6 @@ ixgbe_dev_link_update_share(struct rte_eth_dev *dev,
 	bool link_up;
 	int diag;
 	int wait = 1;
-	u32 esdp_reg;
 
 	memset(&link, 0, sizeof(link));
 	link.link_status = RTE_ETH_LINK_DOWN;
@@ -4248,12 +4247,6 @@ ixgbe_dev_link_update_share(struct rte_eth_dev *dev,
 		link.link_speed = RTE_ETH_SPEED_NUM_100M;
 		link.link_duplex = RTE_ETH_LINK_FULL_DUPLEX;
 		return rte_eth_linkstatus_set(dev, &link);
-	}
-
-	if (ixgbe_get_media_type(hw) == ixgbe_media_type_fiber) {
-		esdp_reg = IXGBE_READ_REG(hw, IXGBE_ESDP);
-		if ((esdp_reg & IXGBE_ESDP_SDP3))
-			link_up = 0;
 	}
 
 	if (link_up == 0) {
