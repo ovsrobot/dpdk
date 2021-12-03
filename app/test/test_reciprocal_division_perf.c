@@ -13,6 +13,16 @@
 #include <rte_random.h>
 #include <rte_reciprocal.h>
 
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_reciprocal_division_perf(void)
+{
+	printf("reciprocal_division_perf not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
+
 #define MAX_ITERATIONS	(1ULL << 32)
 #define DIVIDE_ITER	(1ULL << 28)
 
@@ -204,5 +214,7 @@ test_reciprocal_division_perf(void)
 
 	return result;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(reciprocal_division_perf, test_reciprocal_division_perf);
