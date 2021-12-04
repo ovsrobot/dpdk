@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added an API to enable queue based priority flow ctrl(PFC).**
+
+  A new API, ``rte_eth_dev_priority_flow_ctrl_queue_set()``, was added.
+
 
 Removed Items
 -------------
