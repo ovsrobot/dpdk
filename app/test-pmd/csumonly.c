@@ -254,7 +254,10 @@ parse_gtp(struct rte_udp_hdr *udp_hdr,
 	info->l2_len += RTE_ETHER_GTP_HLEN;
 }
 
-/* Parse a vxlan header */
+/*
+ * Parse a vxlan header.
+ * If a tunnel is detected in 'pkt_type' it will be parsed by default as vxlan.
+ */
 static void
 parse_vxlan(struct rte_udp_hdr *udp_hdr,
 	    struct testpmd_offload_info *info,
@@ -912,17 +915,18 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 						RTE_MBUF_F_TX_TUNNEL_VXLAN_GPE;
 					goto tunnel_update;
 				}
+				parse_geneve(udp_hdr, &info);
+				if (info.is_tunnel) {
+					tx_ol_flags |=
+						RTE_MBUF_F_TX_TUNNEL_GENEVE;
+					goto tunnel_update;
+				}
+				/* Always keep last. */
 				parse_vxlan(udp_hdr, &info,
 					    m->packet_type);
 				if (info.is_tunnel) {
 					tx_ol_flags |=
 						RTE_MBUF_F_TX_TUNNEL_VXLAN;
-					goto tunnel_update;
-				}
-				parse_geneve(udp_hdr, &info);
-				if (info.is_tunnel) {
-					tx_ol_flags |=
-						RTE_MBUF_F_TX_TUNNEL_GENEVE;
 					goto tunnel_update;
 				}
 			} else if (info.l4_proto == IPPROTO_GRE) {
