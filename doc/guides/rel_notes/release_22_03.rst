@@ -72,6 +72,7 @@ New Features
   * Added tunnel mode fragment packet tests.
   * Added security stats tests.
   * Added AES-CTR tests.
+  * Added set/copy DF tests.
 
 
 Removed Items
