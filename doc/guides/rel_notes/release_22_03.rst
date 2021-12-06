@@ -69,6 +69,7 @@ New Features
     * IPv6 in IPv4
   * Added IPv4 transport mode tests.
   * Added tunnel mode fragment packet tests.
+  * Added security stats tests.
 
 
 Removed Items
