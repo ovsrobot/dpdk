@@ -60,6 +60,8 @@ New Features
   * Added support for chained operations.
   * Added AES-CBC 128 NULL auth known vector tests.
   * Added AES-CBC 128 HMAC-SHA256 known vector tests.
+  * Added AES-CBC 128 HMAC-SHA384 known vector tests.
+  * Added AES-CBC 128 HMAC-SHA512 known vector tests.
   * Added tunnel mode tests
     * IPv6 in IPv6
     * IPv4 in IPv4
