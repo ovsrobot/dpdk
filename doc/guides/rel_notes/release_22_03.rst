@@ -55,6 +55,24 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated lookaside protocol (IPsec) tests in dpdk-test.**
+
+  * Added support for chained operations.
+  * Added AES-CBC 128 NULL auth known vector tests.
+  * Added AES-CBC 128 HMAC-SHA256 known vector tests.
+  * Added AES-CBC 128 HMAC-SHA384 known vector tests.
+  * Added AES-CBC 128 HMAC-SHA512 known vector tests.
+  * Added NULL cipher AES-XCBC known vector tests.
+  * Added tunnel mode tests
+    * IPv6 in IPv6
+    * IPv4 in IPv4
+    * IPv4 in IPv6
+    * IPv6 in IPv4
+  * Added IPv4 transport mode tests.
+  * Added security stats tests.
+  * Added AES-CTR tests.
+  * Added set/copy DF tests.
+
 
 Removed Items
 -------------
