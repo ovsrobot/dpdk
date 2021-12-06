@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated lookaside protocol (IPsec) tests in dpdk-test.**
+
+  * Added AES-CBC 128 NULL auth known vector tests.
+
 
 Removed Items
 -------------
