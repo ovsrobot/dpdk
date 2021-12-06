@@ -58,6 +58,7 @@ New Features
 * **Updated lookaside protocol (IPsec) tests in dpdk-test.**
 
   * Added AES-CBC 128 NULL auth known vector tests.
+  * Added AES-CBC 128 HMAC-SHA256 known vector tests.
 
 
 Removed Items
