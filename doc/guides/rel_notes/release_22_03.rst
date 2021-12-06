@@ -70,6 +70,7 @@ New Features
   * Added IPv4 transport mode tests.
   * Added tunnel mode fragment packet tests.
   * Added security stats tests.
+  * Added AES-CTR tests.
 
 
 Removed Items
