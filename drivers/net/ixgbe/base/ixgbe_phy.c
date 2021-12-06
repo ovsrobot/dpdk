@@ -1275,6 +1275,7 @@ s32 ixgbe_identify_sfp_module_generic(struct ixgbe_hw *hw)
 	u8 cable_tech = 0;
 	u8 cable_spec = 0;
 	u16 enforce_sfp = 0;
+	u8 id_reads;
 
 	DEBUGFUNC("ixgbe_identify_sfp_module_generic");
 
@@ -1287,12 +1288,34 @@ s32 ixgbe_identify_sfp_module_generic(struct ixgbe_hw *hw)
 	/* LAN ID is needed for I2C access */
 	hw->mac.ops.set_lan_id(hw);
 
-	status = hw->phy.ops.read_i2c_eeprom(hw,
-					     IXGBE_SFF_IDENTIFIER,
-					     &identifier);
+	/* Need to check this a couple of times for a sane value.
+	 *
+	 * SFPs that have a uC slaved to the I2C bus (vs. a dumb EEPROM) can be
+	 * poorly designed such that they will ACK I2C reads and return
+	 * whatever bogus data is in the SRAM (or whatever is backing the target
+	 * device) before things are truly initialized.
+	 *
+	 * In a perfect world devices would NAK I2C requests until they were
+	 * sane, but here we are.
+	 *
+	 * Give such devices a couple tries to get their act together before
+	 * marking the device as unsupported.
+	 */
+	for (id_reads = 0; id_reads < 5; id_reads++) {
+		status = hw->phy.ops.read_i2c_eeprom(hw,
+						     IXGBE_SFF_IDENTIFIER,
+						     &identifier);
 
-	if (status != IXGBE_SUCCESS)
+		DEBUGOUT("status %d, id %d\n", status, identifier);
+		if (!status &&
+		    identifier == IXGBE_SFF_IDENTIFIER_SFP)
+			break;
+	}
+
+	if (status != IXGBE_SUCCESS) {
+		DEBUGOUT("Failed SFF ID read (%d attempts)\n", id_reads);
 		goto err_read_i2c_eeprom;
+	}
 
 	if (identifier != IXGBE_SFF_IDENTIFIER_SFP) {
 		hw->phy.type = ixgbe_phy_sfp_unsupported;
