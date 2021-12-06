@@ -4125,6 +4125,45 @@ static bool ixgbe_need_crosstalk_fix(struct ixgbe_hw *hw)
 }
 
 /**
+ * ixgbe_check_sfp_cage - Find present status of SFP module
+ * @hw: pointer to hardware structure
+ *
+ * Find if a SFP module is present and if this device supports SFPs
+ **/
+enum ixgbe_sfp_cage_status ixgbe_check_sfp_cage(struct ixgbe_hw *hw)
+{
+	enum ixgbe_sfp_cage_status status;
+
+	/* If we're not a fiber/fiber_qsfp, no cage to check */
+	switch (hw->mac.ops.get_media_type(hw)) {
+	case ixgbe_media_type_fiber:
+	case ixgbe_media_type_fiber_qsfp:
+		break;
+	default:
+		return IXGBE_SFP_CAGE_NOCAGE;
+	}
+
+	switch (hw->mac.type) {
+	case ixgbe_mac_82599EB:
+		status = !!(IXGBE_READ_REG(hw, IXGBE_ESDP) &
+			     IXGBE_ESDP_SDP2);
+		break;
+	case ixgbe_mac_X550EM_x:
+	case ixgbe_mac_X550EM_a:
+		/* SDP0 is the active low signal PRSNT#, so invert this */
+		status = !(IXGBE_READ_REG(hw, IXGBE_ESDP) &
+				  IXGBE_ESDP_SDP0);
+		break;
+	default:
+		/* Don't know how to check this device type yet */
+		status = IXGBE_SFP_CAGE_UNKNOWN;
+		break;
+	}
+
+	return status;
+}
+
+/**
  * ixgbe_check_mac_link_generic - Determine link and speed status
  * @hw: pointer to hardware structure
  * @speed: pointer to link speed
@@ -4145,25 +4184,10 @@ s32 ixgbe_check_mac_link_generic(struct ixgbe_hw *hw, ixgbe_link_speed *speed,
 	 * the SFP+ cage is full.
 	 */
 	if (ixgbe_need_crosstalk_fix(hw)) {
-		u32 sfp_cage_full;
+		enum ixgbe_sfp_cage_status sfp_cage_status;
 
-		switch (hw->mac.type) {
-		case ixgbe_mac_82599EB:
-			sfp_cage_full = IXGBE_READ_REG(hw, IXGBE_ESDP) &
-					IXGBE_ESDP_SDP2;
-			break;
-		case ixgbe_mac_X550EM_x:
-		case ixgbe_mac_X550EM_a:
-			sfp_cage_full = IXGBE_READ_REG(hw, IXGBE_ESDP) &
-					IXGBE_ESDP_SDP0;
-			break;
-		default:
-			/* sanity check - No SFP+ devices here */
-			sfp_cage_full = false;
-			break;
-		}
-
-		if (!sfp_cage_full) {
+		sfp_cage_status = ixgbe_check_sfp_cage(hw);
+		if (sfp_cage_status != IXGBE_SFP_CAGE_FULL) {
 			*link_up = false;
 			*speed = IXGBE_LINK_SPEED_UNKNOWN;
 			return IXGBE_SUCCESS;
