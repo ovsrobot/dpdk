@@ -130,6 +130,12 @@ Copy the NUMA header files and lib to the cross compiler's directories:
 Cross Compiling DPDK with GNU toolchain using Meson
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. note::
+
+   The names of gcc binaries in cross files differ from the downloaded
+   ones, which have an extra "-none-" in their name. Please modify the cross
+   file binaries accordingly when using the downloaded cross compilers.
+
 To cross-compile DPDK on a desired target machine we can use the following
 command::
 
@@ -137,12 +143,13 @@ command::
    ninja -C cross-build
 
 For example if the target machine is aarch64 we can use the following
-command::
+command, provided the cross file has been modified accordingly::
 
    meson aarch64-build-gcc --cross-file config/arm/arm64_armv8_linux_gcc
    ninja -C aarch64-build-gcc
 
-If the target machine is aarch32 we can use the following command::
+If the target machine is aarch32 we can use the following command, provided
+the cross file has been modified accordingly::
 
    meson aarch32-build --cross-file config/arm/arm32_armv8_linux_gcc
    ninja -C aarch32-build
