@@ -1,6 +1,17 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2014 Intel Corporation
  */
+#include "test.h"
+
+#ifdef RTE_EXEC_ENV_WINDOWS
+static int
+test_lpm6_perf(void)
+{
+	printf("lpm6_perf not supported on Windows, skipping test\n");
+	return TEST_SKIPPED;
+}
+
+#else
 
 #include <stdio.h>
 #include <stdint.h>
@@ -12,7 +23,6 @@
 #include <rte_memory.h>
 #include <rte_lpm6.h>
 
-#include "test.h"
 #include "test_lpm6_data.h"
 
 #define TEST_LPM_ASSERT(cond) do {                                            \
@@ -159,5 +169,7 @@ test_lpm6_perf(void)
 
 	return 0;
 }
+
+#endif /*ifdef RTE_EXEC_ENV_WINDOWS*/
 
 REGISTER_TEST_COMMAND(lpm6_perf_autotest, test_lpm6_perf);

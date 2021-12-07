@@ -1,12 +1,14 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2020 Samsung Electronics Co., Ltd All Rights Reserved
  */
+#include "test.h"
 
 #include <rte_errno.h>
 #include <rte_log.h>
 #include <rte_memory.h>
 #include <rte_mempool.h>
 #include <rte_ether.h>
+
 #include <rte_security.h>
 #include <rte_security_driver.h>
 
@@ -20,7 +22,7 @@
 #endif
 
 #include <rte_test.h>
-#include "test.h"
+
 
 /**
  * Security

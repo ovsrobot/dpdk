@@ -2,6 +2,8 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#include "test.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,10 +14,7 @@
 #include <rte_os_shim.h>
 #include <rte_random.h>
 #include <rte_malloc.h>
-
 #include <rte_memcpy.h>
-
-#include "test.h"
 
 /*
  * Set this to the maximum buffer size you want to test. If it is 0, then the
