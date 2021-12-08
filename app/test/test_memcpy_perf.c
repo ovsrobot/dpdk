@@ -13,7 +13,6 @@
 #include <rte_os_shim.h>
 #include <rte_random.h>
 #include <rte_malloc.h>
-
 #include <rte_memcpy.h>
 
 #include "test.h"
