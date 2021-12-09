@@ -7702,7 +7702,6 @@ error:
 static int
 parse_hex_string(const char *src, uint8_t *dst, uint32_t *size)
 {
-	uint32_t left = *size;
 	const uint8_t *head = dst;
 
 	/* Check input parameters */
@@ -7711,6 +7710,8 @@ parse_hex_string(const char *src, uint8_t *dst, uint32_t *size)
 		(size == NULL) ||
 		(*size == 0))
 		return -1;
+
+	uint32_t left = *size;
 
 	/* Convert chars to bytes */
 	while (left) {
