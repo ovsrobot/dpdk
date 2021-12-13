@@ -628,16 +628,9 @@ set_sym_session_private_data(struct rte_cryptodev_sym_session *sess,
 }
 
 static inline void *
-get_asym_session_private_data(const struct rte_cryptodev_asym_session *sess,
-		uint8_t driver_id) {
-	return sess->sess_private_data[driver_id];
-}
-
-static inline void
-set_asym_session_private_data(struct rte_cryptodev_asym_session *sess,
-		uint8_t driver_id, void *private_data)
+get_asym_session_private_data(struct rte_cryptodev_asym_session *sess)
 {
-	sess->sess_private_data[driver_id] = private_data;
+	return sess->sess_private_data;
 }
 
 #endif /* _CRYPTODEV_PMD_H_ */

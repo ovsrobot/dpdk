@@ -58,7 +58,6 @@ EXPERIMENTAL {
 	rte_cryptodev_asym_session_clear;
 	rte_cryptodev_asym_session_create;
 	rte_cryptodev_asym_session_free;
-	rte_cryptodev_asym_session_init;
 	rte_cryptodev_asym_xform_capability_check_modlen;
 	rte_cryptodev_asym_xform_capability_check_optype;
 	rte_cryptodev_sym_cpu_crypto_process;
@@ -104,6 +103,11 @@ EXPERIMENTAL {
 	rte_cryptodev_remove_deq_callback;
 	rte_cryptodev_remove_enq_callback;
 
+	# added 22.03
+	rte_cryptodev_asym_session_pool_create;
+	rte_cryptodev_asym_session_get_user_data;
+	rte_cryptodev_asym_session_set_user_data;
+	__rte_cryptodev_trace_asym_session_pool_create;
 };
 
 INTERNAL {

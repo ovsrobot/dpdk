@@ -1120,7 +1120,7 @@ static int
 openssl_pmd_asym_session_configure(struct rte_cryptodev *dev __rte_unused,
 		struct rte_crypto_asym_xform *xform,
 		struct rte_cryptodev_asym_session *sess,
-		struct rte_mempool *mempool)
+		struct rte_mempool *mempool __rte_unused)
 {
 	void *asym_sess_private_data;
 	int ret;
@@ -1130,24 +1130,13 @@ openssl_pmd_asym_session_configure(struct rte_cryptodev *dev __rte_unused,
 		return -EINVAL;
 	}
 
-	if (rte_mempool_get(mempool, &asym_sess_private_data)) {
-		CDEV_LOG_ERR(
-			"Couldn't get object from session mempool");
-		return -ENOMEM;
-	}
-
+	asym_sess_private_data = get_asym_session_private_data(sess);
 	ret = openssl_set_asym_session_parameters(asym_sess_private_data,
 			xform);
 	if (ret != 0) {
 		OPENSSL_LOG(ERR, "failed configure session parameters");
-
-		/* Return session to mempool */
-		rte_mempool_put(mempool, asym_sess_private_data);
 		return ret;
 	}
-
-	set_asym_session_private_data(sess, dev->driver_id,
-			asym_sess_private_data);
 
 	return 0;
 }
@@ -1206,19 +1195,15 @@ static void openssl_reset_asym_session(struct openssl_asym_session *sess)
  * so it doesn't leave key material behind
  */
 static void
-openssl_pmd_asym_session_clear(struct rte_cryptodev *dev,
+openssl_pmd_asym_session_clear(struct rte_cryptodev *dev __rte_unused,
 		struct rte_cryptodev_asym_session *sess)
 {
-	uint8_t index = dev->driver_id;
-	void *sess_priv = get_asym_session_private_data(sess, index);
+	void *sess_priv = get_asym_session_private_data(sess);
 
 	/* Zero out the whole structure */
 	if (sess_priv) {
 		openssl_reset_asym_session(sess_priv);
 		memset(sess_priv, 0, sizeof(struct openssl_asym_session));
-		struct rte_mempool *sess_mp = rte_mempool_from_obj(sess_priv);
-		set_asym_session_private_data(sess, index, NULL);
-		rte_mempool_put(sess_mp, sess_priv);
 	}
 }
 

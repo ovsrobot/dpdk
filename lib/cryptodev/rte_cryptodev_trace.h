@@ -84,6 +84,18 @@ RTE_TRACE_POINT(
 )
 
 RTE_TRACE_POINT(
+	rte_cryptodev_trace_asym_session_pool_create,
+	RTE_TRACE_POINT_ARGS(const char *name, uint32_t nb_elts,
+		uint16_t user_data_size, uint32_t cache_size,
+		void *mempool),
+	rte_trace_point_emit_string(name);
+	rte_trace_point_emit_u32(nb_elts);
+	rte_trace_point_emit_u16(user_data_size);
+	rte_trace_point_emit_u32(cache_size);
+	rte_trace_point_emit_ptr(mempool);
+)
+
+RTE_TRACE_POINT(
 	rte_cryptodev_trace_asym_session_create,
 	RTE_TRACE_POINT_ARGS(void *mempool,
 		struct rte_cryptodev_asym_session *sess),
