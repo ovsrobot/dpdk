@@ -10,6 +10,7 @@
 #include <rte_log.h>
 
 #include <rte_ether.h>
+#include <rte_ip.h>
 
 RTE_LOG_REGISTER(gen_logtype, lib.gen, NOTICE);
 
@@ -136,6 +137,7 @@ rte_gen_tx_burst(struct rte_gen *gen,
 enum GEN_PROTO {
 	GEN_PROTO_INVALID,
 	GEN_PROTO_ETHER,
+	GEN_PROTO_IPV4,
 
 	/* Must be last. */
 	GEN_PROTO_COUNT,
@@ -217,6 +219,140 @@ gen_parser_init(struct gen_parser *parser, struct rte_gen *gen,
 error:
 	free(parser->parse_string);
 	return -ENOMEM;
+}
+
+static void
+gen_log_ipv4(void *data, const char *indent)
+{
+	struct rte_ipv4_hdr *ip = data;
+
+	const char *proto_str;
+	switch (ip->next_proto_id) {
+	case 0:
+		proto_str = "hopopt";
+		break;
+	default:
+		proto_str = "unknown next proto";
+		break;
+	}
+
+	TGEN_LOG_PROTOCOL(DEBUG,
+		"###[ IP ]###\n%sversion = %d\n%sihl = %d\n%stos = %d\n"
+		"%slen = %d\n%sid = %d\n%sflags = 0x%x\n%sfrag = %d\n"
+		"%sttl = %d\n%sproto = %s (%d)\n%schksum 0x%x\n%ssrc = 0x%x\n"
+		"%sdst = 0x%x\n%soptions = %s\n",
+		indent, ip->version_ihl >> 4,
+		indent, ip->version_ihl & RTE_IPV4_HDR_IHL_MASK,
+		indent, ip->type_of_service,
+		indent, rte_be_to_cpu_16(ip->total_length),
+		indent, rte_be_to_cpu_16(ip->packet_id), /* TODO: Scapy ID? */
+		indent, rte_be_to_cpu_16(ip->packet_id), /*TODO: Scapy Flags?*/
+		indent, rte_be_to_cpu_16(ip->fragment_offset),
+		indent, ip->time_to_live,
+		indent, proto_str, ip->next_proto_id,
+		indent, rte_be_to_cpu_16(ip->hdr_checksum),
+		indent, rte_be_to_cpu_32(ip->src_addr),
+		indent, rte_be_to_cpu_32(ip->dst_addr),
+		indent, "notImplemented");
+}
+
+static int32_t
+gen_parse_ipv4_params(char *protocol_str, struct rte_ipv4_hdr *ip)
+{
+	/* Strings to look for. */
+	static const char * const items[] = {
+		"src=",
+		"dst=",
+	};
+	const uint32_t num_items = RTE_DIM(items);
+
+	char *tok_ptr;
+	uint32_t err = 0;
+	uint32_t i;
+	for (i = 0; i < num_items; i++) {
+		/* Print input string into local buffer for processing. */
+		char buffer[1024];
+		int chars_printed = snprintf(buffer, 1024, "%s", protocol_str);
+		if (chars_printed >= 1024)
+			return -1;
+
+		/* Find substring (e.g. src=) if not found skip to next one. */
+		char *start = strstr(buffer, items[i]);
+		char check_previous[32];
+		if (start != NULL) {
+			snprintf(check_previous, 32, "%.1s", start - 1);
+			if (strcmp(&check_previous[0], "(") &&
+						strcmp(&check_previous[0], ","))
+				return -EINVAL;
+		}
+
+		if (!start) {
+			if (!strstr(buffer, ","))
+				continue;
+			else
+				return -EINVAL;
+		}
+		/* get from start of string till first , character. */
+		char *item = strtok_r(start, ",", &tok_ptr);
+
+		if (strcmp(item, items[i]) == 0)
+			return -EINVAL;
+		/* skip past the src= prefix. We know string is long enough as
+		 * otherwise strstr() wouldn't have matched it.
+		 */
+		item = &item[4];
+
+		if (strcmp(items[i], "src=") == 0) {
+			err = rte_ip_parse_addr(item, &ip->src_addr);
+			ip->src_addr = rte_cpu_to_be_32(ip->src_addr);
+		} else {
+			err = rte_ip_parse_addr(item, &ip->dst_addr);
+			ip->dst_addr = rte_cpu_to_be_32(ip->dst_addr);
+		}
+		if (err) {
+			TGEN_LOG(ERR, "parser ip_parse_addr error %d\n", err);
+			return err;
+		}
+	}
+	return 0;
+}
+
+static int32_t
+gen_parse_ipv4(struct gen_parser *parser, char *protocol_str)
+{
+	struct rte_ipv4_hdr *ip = gen_parser_get_data_ptr(parser);
+	memset(ip, 0, sizeof(*ip));
+	ip->version_ihl = RTE_IPV4_VHL_DEF;
+
+	/* default addrs */
+	ip->src_addr = RTE_IPV4(127, 0, 0, 1);
+	ip->dst_addr = RTE_IPV4(127, 0, 0, 1);
+
+	uint32_t err = 0;
+	if (strcmp("IP()", protocol_str))
+		err = gen_parse_ipv4_params(protocol_str, ip);
+
+	if (err) {
+		TGEN_LOG(ERR, "parser parse ipv4 params error %d\n", err);
+		return err;
+	}
+
+	/* Move up write pointer in packet, recurse to next. */
+	enum GEN_PROTO inner;
+	parser->buf_write_offset += rte_ipv4_hdr_len(ip);
+		err = gen_parser_parse_next(parser, &inner);
+	if (err) {
+		TGEN_LOG(ERR, "parser parse next() error %d\n", err);
+		return err;
+	}
+
+	switch (inner) {
+	default:
+		/* Default protocol is hopopt (0). */
+		break;
+	};
+
+	return 0;
 }
 
 static void
@@ -304,7 +440,14 @@ static struct gen_parse_func_t gen_protocols[] = {
 		.proto = GEN_PROTO_ETHER,
 		.parse_func = gen_parse_ether,
 		.log_func = gen_log_ether,
-	}
+	},
+	{
+		.name = "IP(",
+		.proto = GEN_PROTO_IPV4,
+		.parse_func = gen_parse_ipv4,
+		.log_func = gen_log_ipv4,
+	},
+
 };
 
 /* Function to tokenize and parse each segment of a string.
@@ -380,6 +523,7 @@ rte_gen_packet_parse_string(struct rte_gen *gen,
 	if (err) {
 		TGEN_LOG(ERR, "Error in parsing packet string. "
 			"Set \"gen\" log level to debug for more info.\n");
+		rte_pktmbuf_free(parser.mbuf);
 		return -1;
 	}
 
