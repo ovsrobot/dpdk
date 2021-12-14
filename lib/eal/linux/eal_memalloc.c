@@ -663,6 +663,16 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 	ms->iova = iova;
 	ms->socket_id = socket_id;
 
+	if (internal_conf->huge_dont_dump_flag) {
+		if (madvise(addr, alloc_sz, MADV_DONTDUMP)) {
+			RTE_LOG(INFO, EAL, "madvise(%p, %#zx, %d) failed: %s\n",
+					addr, alloc_sz, flags, strerror(rte_errno));
+		} else {
+			RTE_LOG(INFO, EAL, "%s(): madvise(MADV_DONTDUMP) memory success.(len=%#zx)\n",
+					__func__, alloc_sz);
+		}
+	}
+
 	return 0;
 
 mapped:
