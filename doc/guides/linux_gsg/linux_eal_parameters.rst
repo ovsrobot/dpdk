@@ -93,6 +93,10 @@ Memory-related options
 
     Free hugepages back to system exactly as they were originally allocated.
 
+*   ``--memseg-dont-dump``
+
+    Allow to exclude memseg from core dump.
+
 Other options
 ~~~~~~~~~~~~~
 

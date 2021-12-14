@@ -663,6 +663,9 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 	ms->iova = iova;
 	ms->socket_id = socket_id;
 
+	if (internal_conf->memseg_dont_dump_flag)
+		eal_mem_set_dump(addr, alloc_sz, false);
+
 	return 0;
 
 mapped:

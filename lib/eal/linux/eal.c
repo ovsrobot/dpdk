@@ -817,6 +817,10 @@ eal_parse_args(int argc, char **argv)
 			internal_conf->match_allocations = 1;
 			break;
 
+		case OPT_MEMSEG_DONT_DUMP_NUM:
+			internal_conf->memseg_dont_dump_flag = 1;
+			break;
+
 		default:
 			if (opt < OPT_LONG_MIN_NUM && isprint(opt)) {
 				RTE_LOG(ERR, EAL, "Option %c is not supported "
