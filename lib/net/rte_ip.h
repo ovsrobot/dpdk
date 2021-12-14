@@ -427,6 +427,24 @@ rte_ipv4_udptcp_cksum_verify(const struct rte_ipv4_hdr *ipv4_hdr,
 }
 
 /**
+ * IP address parser.
+ *
+ * @param src_ip
+ *   The IP address to be parsed.
+ * @param output_addr
+ *   The array in which the parsed digits will be saved.
+ *
+ * @retval 0
+ *   Success.
+ * @retval -1
+ *   Failure due to invalid input arguments.
+ */
+
+__rte_experimental
+int32_t
+rte_ip_parse_addr(const char *src_ip, uint32_t *output_addr);
+
+/**
  * IPv6 Header
  */
 struct rte_ipv6_hdr {

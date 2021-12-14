@@ -12,3 +12,11 @@ DPDK_22 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	rte_net_skip_ip6_ext;
+	rte_ether_unformat_addr;
+	rte_ip_parse_addr;
+};
