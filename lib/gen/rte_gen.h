@@ -89,11 +89,23 @@ rte_gen_tx_burst(struct rte_gen *gen,
  * @retval 0 Success.
  * @retval -ENOMEM No memory available.
  */
-int32_t
 __rte_experimental
+int32_t
 rte_gen_packet_set_raw(struct rte_gen *gen,
 		       const uint8_t *raw_data,
 		       uint32_t raw_data_size);
+
+/* Parse a string description of a packet.
+ *
+ * The optional out parameter supplies the previously being sent mbuf to
+ * the user to be freed later. If this argument is not provided, then the
+ * mbuf is freed by this function.
+ */
+__rte_experimental
+int32_t
+rte_gen_packet_parse_string(struct rte_gen *gen,
+			    const char *pkt_string,
+			    struct rte_mbuf **old_mbuf_to_user);
 
 #ifdef __cplusplus
 }

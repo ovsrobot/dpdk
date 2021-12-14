@@ -6,4 +6,5 @@ EXPERIMENTAL {
 	rte_gen_rx_burst;
 	rte_gen_tx_burst;
 	rte_gen_packet_set_raw;
+	rte_gen_packet_parse_string;
 };

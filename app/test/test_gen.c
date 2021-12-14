@@ -112,6 +112,34 @@ test_gen_packet_set_raw(void)
 	return 0;
 }
 
+static int
+test_gen_packet_parse_string(void)
+{
+	struct rte_gen *gen = rte_gen_create(mp);
+	TEST_ASSERT_FAIL(gen, "Expected valid pointer after create()");
+
+	struct str_parse_t {
+		const char *str;
+	} pkt_strings[] = {
+		{ .str = "Ether()"},
+		{ .str = "Ether()/"},
+		{ .str = "/Ether()"},
+		{ .str = "/Ether()/"}
+	};
+
+	uint32_t i;
+	for (i = 0; i < RTE_DIM(pkt_strings); i++) {
+		const char *pkt_str = pkt_strings[i].str;
+		int32_t err = rte_gen_packet_parse_string(gen, pkt_str, NULL);
+		TEST_ASSERT_EQUAL(err, 0, "Expected string %s to parse.",
+				pkt_str);
+	}
+
+	rte_gen_destroy(gen);
+	return 0;
+}
+
+
 static struct unit_test_suite gen_suite  = {
 	.suite_name = "gen: packet generator unit test suite",
 	.setup = testsuite_setup,
@@ -121,6 +149,7 @@ static struct unit_test_suite gen_suite  = {
 		TEST_CASE_ST(NULL, NULL, test_gen_basic_rxtx),
 		TEST_CASE_ST(NULL, NULL, test_gen_loop_rxtx),
 		TEST_CASE_ST(NULL, NULL, test_gen_packet_set_raw),
+		TEST_CASE_ST(NULL, NULL, test_gen_packet_parse_string),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
