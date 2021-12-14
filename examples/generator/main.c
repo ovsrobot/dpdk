@@ -40,6 +40,7 @@ struct rte_gen *gen;
 struct gen_args {
 	/* Inputs */
 	struct rte_gen *gen;
+	uint64_t target_tx_pps;
 
 	/* Outputs */
 	uint64_t tx_total_packets;
@@ -205,9 +206,11 @@ lcore_producer(void *arg)
 					"not be optimal.\n", port);
 
 	uint64_t tsc_hz = rte_get_tsc_hz();
+	float tsc_hz_f = (float)tsc_hz;
 	uint64_t last_tsc_reading = 0;
 	uint64_t last_tx_total = 0;
 	uint16_t nb_tx = 0;
+	float tokens = 0;
 
 	/* Ensure all available ports are up before generating packets */
 	uint16_t nb_eth_ports = rte_eth_dev_count_avail();
@@ -221,34 +224,52 @@ lcore_producer(void *arg)
 	if (!done)
 		printf("Generating packets...\n");
 
+	uint64_t token_last_add_tsc = rte_rdtsc();
+
 	/* Run until the application is quit or killed. */
 	while (!done) {
-
 		struct rte_mbuf *bufs[BURST_SIZE];
+		/* Track time since last token add and calculate number
+		 * of tokens to give per second to implement line rate limiting
+		 */
+		uint64_t now = rte_rdtsc();
+		uint64_t tsc_delta = now - token_last_add_tsc;
+		float token_scalar = (float)tsc_delta / tsc_hz_f;
+		float add_tokens = args->target_tx_pps * token_scalar;
+		/* If there are tokens to be added and we haven't exceeded
+		 * the target rate then we add tokens
+		 */
+		if (add_tokens > 1.f) {
+			if (tokens < args->target_tx_pps) {
+				tokens += add_tokens;
+				token_last_add_tsc = now;
+			}
+		}
 		/* Receive packets from gen and then tx them over port */
+		if (tokens >= BURST_SIZE) {
+			RTE_ETH_FOREACH_DEV(port) {
+				int nb_generated = rte_gen_rx_burst(gen, bufs,
+								BURST_SIZE);
 
-		RTE_ETH_FOREACH_DEV(port) {
-			int nb_generated = rte_gen_rx_burst(gen, bufs,
-							BURST_SIZE);
+				uint64_t start_tsc = rte_rdtsc();
+				if (start_tsc > last_tsc_reading + tsc_hz) {
+					args->measured_tx_pps =
+					args->tx_total_packets - last_tx_total;
+					last_tx_total = args->tx_total_packets;
+					last_tsc_reading = start_tsc;
+				}
+				nb_tx = rte_eth_tx_burst(port, 0, bufs,
+								nb_generated);
+				args->tx_total_packets += nb_tx;
+				tokens -= nb_tx;
 
-			uint64_t start_tsc = rte_rdtsc();
-			if (start_tsc > last_tsc_reading + tsc_hz) {
-				args->measured_tx_pps = args->tx_total_packets -
-								last_tx_total;
-				last_tx_total = args->tx_total_packets;
-				last_tsc_reading = start_tsc;
+				uint64_t tx_failed = nb_generated - nb_tx;
+				if (nb_tx != nb_generated) {
+					rte_pktmbuf_free_bulk(&bufs[nb_tx],
+								tx_failed);
+					args->tx_failed += tx_failed;
+				}
 			}
-			nb_tx = rte_eth_tx_burst(port, 0, bufs, nb_generated);
-			args->tx_total_packets += nb_tx;
-
-			uint64_t tx_failed = nb_generated - nb_tx;
-			if (nb_tx != nb_generated) {
-				rte_pktmbuf_free_bulk(&bufs[nb_tx], tx_failed);
-				args->tx_failed += tx_failed;
-			}
-			if (unlikely(nb_tx == 0))
-				continue;
-
 		}
 	}
 	return 0;
@@ -298,7 +319,6 @@ lcore_consumer(void *arg)
 							BURST_SIZE);
 			if (unlikely(nb_rx == 0))
 				continue;
-
 			args->rx_total_packets += nb_rx;
 
 			int nb_sent = rte_gen_tx_burst(gen, bufs,
@@ -333,12 +353,11 @@ tele_gen_mpps(const char *cmd, const char *params, struct rte_tel_data *d)
 	struct gen_args *args = telemetry_userdata.prod;
 	RTE_SET_USED(cmd);
 	if (params) {
-		rte_tel_data_add_dict_int(d, "TEST",
-					(args->measured_tx_pps/1000000));
+		args->target_tx_pps = atoi(params) * 1000000;
+		printf("Packet rate set: %li\n", args->target_tx_pps);
 	}
 	rte_tel_data_start_dict(d);
-	rte_tel_data_add_dict_int(d, "mpps",
-					(args->measured_tx_pps/1000000));
+	rte_tel_data_add_dict_int(d, "mpps", args->target_tx_pps);
 	return 0;
 }
 
@@ -425,6 +444,8 @@ main(int argc, char *argv[])
 		if (lcore_count == 0) {
 			telemetry_userdata.prod =
 						&core_launch_args[lcore_count];
+			/* Default traffic rate */
+			telemetry_userdata.prod->target_tx_pps = 20000000;
 			rte_eal_remote_launch(lcore_producer,
 					      telemetry_userdata.prod,
 					      lcore_id);
