@@ -1101,7 +1101,6 @@ __rte_pktmbuf_copy_hdr(struct rte_mbuf *mdst, const struct rte_mbuf *msrc)
 	mdst->tx_offload = msrc->tx_offload;
 	mdst->hash = msrc->hash;
 	mdst->packet_type = msrc->packet_type;
-	rte_mbuf_dynfield_copy(mdst, msrc);
 }
 
 /**
