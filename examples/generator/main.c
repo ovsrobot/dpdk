@@ -27,9 +27,13 @@ static const struct rte_eth_conf port_conf_default = {
 	.rxmode = {
 		.max_lro_pkt_size = RTE_ETHER_MAX_LEN,
 	},
+	.intr_conf = {
+		.lsc = 1, /**< lsc interrupt */
+	},
 };
 
 static volatile int done;
+static volatile int link_status[RTE_MAX_ETHPORTS];
 static struct rte_mempool *mbuf_pool;
 struct rte_gen *gen;
 
@@ -57,6 +61,30 @@ struct telemetry_userdata {
 static struct telemetry_userdata telemetry_userdata;
 
 static void handle_sigint(int sig);
+
+static int
+link_status_change_cb(uint16_t port_id, enum rte_eth_event_type type,
+		      void *param, void *ret_param)
+{
+	if (unlikely(port_id >= RTE_DIM(link_status)))
+		rte_panic("got LSC interrupt for unknown port id\n");
+
+	RTE_SET_USED(type);
+	RTE_SET_USED(param);
+	RTE_SET_USED(ret_param);
+
+	struct rte_eth_link link;
+	int ret = rte_eth_link_get_nowait(port_id, &link);
+	if (ret < 0) {
+		printf("Failed link get on port %d: %s\n",
+		       port_id, rte_strerror(-ret));
+		return ret;
+	}
+
+	printf("Link status change port %i\n", port_id);
+	link_status[port_id] = link.link_status;
+	return 0;
+}
 
 /* Initializes a given port using global settings and with the RX buffers
  * coming from the mbuf_pool passed as a parameter.
@@ -101,6 +129,9 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 		printf("Not enough threads available\n");
 		return -1;
 	}
+	/* Register the LinkStatusChange callback */
+	rte_eth_dev_callback_register(port, RTE_ETH_EVENT_INTR_LSC,
+				      link_status_change_cb, NULL);
 
 	/* Allocate and set up 1 RX queue per Ethernet port. */
 	for (q = 0; q < rx_rings; q++) {
@@ -140,6 +171,16 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 	if (retval != 0)
 		return retval;
 
+	struct rte_eth_link link;
+	int ret = rte_eth_link_get_nowait(port, &link);
+	if (ret < 0) {
+		printf("Failed link get on port %d: %s\n", port,
+							rte_strerror(-ret));
+		return ret;
+	}
+
+	link_status[port] = link.link_status;
+
 	return 0;
 }
 
@@ -166,12 +207,26 @@ lcore_producer(void *arg)
 	uint64_t tsc_hz = rte_get_tsc_hz();
 	uint64_t last_tsc_reading = 0;
 	uint64_t last_tx_total = 0;
+	uint16_t nb_tx = 0;
+
+	/* Ensure all available ports are up before generating packets */
+	uint16_t nb_eth_ports = rte_eth_dev_count_avail();
+	uint16_t nb_links_up = 0;
+	while (!done && nb_links_up < nb_eth_ports) {
+		if (link_status[nb_links_up])
+			nb_links_up++;
+
+		rte_delay_us_block(100);
+	}
+	if (!done)
+		printf("Generating packets...\n");
 
 	/* Run until the application is quit or killed. */
 	while (!done) {
+
 		struct rte_mbuf *bufs[BURST_SIZE];
-		uint16_t nb_tx = 0;
 		/* Receive packets from gen and then tx them over port */
+
 		RTE_ETH_FOREACH_DEV(port) {
 			int nb_generated = rte_gen_rx_burst(gen, bufs,
 							BURST_SIZE);
@@ -219,8 +274,19 @@ lcore_consumer(void *arg)
 					"polling thread.\n\tPerformance will "
 					"not be optimal.\n", port);
 
+	/* Ensure all available ports are up before generating packets */
+	uint16_t nb_eth_ports = rte_eth_dev_count_avail();
+	uint16_t nb_links_up = 0;
+	while (!done && nb_links_up < nb_eth_ports) {
+		if (link_status[nb_links_up])
+			nb_links_up++;
+
+		rte_delay_us_block(100);
+	}
+
 	/* Run until the application is quit or killed. */
 	while (!done) {
+
 		struct rte_mbuf *bufs[BURST_SIZE];
 
 		/* Receive packets over port and then tx them to gen library
@@ -257,8 +323,6 @@ tele_gen_packet(const char *cmd, const char *params, struct rte_tel_data *d)
 {
 	RTE_SET_USED(cmd);
 	RTE_SET_USED(params);
-	RTE_SET_USED(d);
-
 	rte_tel_data_string(d, "Ether()/IP()");
 	return 0;
 }
