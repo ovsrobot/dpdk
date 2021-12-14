@@ -41,3 +41,18 @@ rte_ip_parse_addr(const char *src_ip, uint32_t *output_addr)
 	free(tok);
 	return ret;
 }
+
+int32_t
+rte_ip_print_addr(uint32_t ip_addr, char *buffer, uint32_t buffer_size)
+{
+	if (buffer == NULL)
+		return -1;
+
+	snprintf(buffer, buffer_size, "%u.%u.%u.%u",
+		(ip_addr >> 24),
+		(ip_addr >> 16) & UINT8_MAX,
+		(ip_addr >> 8) & UINT8_MAX,
+		 ip_addr & UINT8_MAX);
+
+	return 0;
+}
