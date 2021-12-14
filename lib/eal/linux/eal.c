@@ -816,6 +816,9 @@ eal_parse_args(int argc, char **argv)
 		case OPT_MATCH_ALLOCATIONS_NUM:
 			internal_conf->match_allocations = 1;
 			break;
+		case OPT_HUGE_DONT_DUMP_NUM:
+			internal_config->huge_dont_dump_flag = 1;
+			break;
 
 		default:
 			if (opt < OPT_LONG_MIN_NUM && isprint(opt)) {
