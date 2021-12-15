@@ -139,6 +139,9 @@ struct rte_eth_bond_8023ad_conf {
 	uint32_t update_timeout_ms;
 	rte_eth_bond_8023ad_ext_slowrx_fn slowrx_cb;
 	enum rte_bond_8023ad_agg_selection agg_selection;
+	uint8_t lacp_timeout_control;
+	/**< LACPDU.Actor_State.LACP_Timeout flag: 0=Long 1=Short. */
+	uint8_t reserved_8s[3];
 };
 
 struct rte_eth_bond_8023ad_slave_info {
