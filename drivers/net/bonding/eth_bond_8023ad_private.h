@@ -20,7 +20,7 @@
 /** Maximum number of LACP packets from one slave queued in TX ring. */
 #define BOND_MODE_8023AX_SLAVE_TX_PKTS        1
 /**
- * Timeouts deffinitions (5.4.4 in 802.1AX documentation).
+ * Timeouts definitions (6.4.4 in 802.1AX documentation).
  */
 #define BOND_8023AD_FAST_PERIODIC_MS                900
 #define BOND_8023AD_SLOW_PERIODIC_MS              29000
@@ -34,7 +34,7 @@
 /**
  * Interval of showing warning message from state machines. All messages will
  * be held (and gathered together) to prevent flooding.
- * This is no parto of 802.1AX standard.
+ * This is not part of 802.1AX standard.
  */
 #define BOND_8023AD_WARNINGS_PERIOD_MS             1000
 
@@ -83,7 +83,7 @@
 #define PARTNER_STATE_SET(_p, _f) SET_FLAGS((_p)->partner_state, STATE_ ## _f)
 #define PARTNER_STATE_CLR(_p, _f) CLEAR_FLAGS((_p)->partner_state, STATE_ ## _f)
 
-/** Variables associated with each port (5.4.7 in 802.1AX documentation). */
+/** Variables associated with each port (6.4.7 in 802.1AX documentation). */
 struct port {
 	/**
 	 * The operational values of the Actor's state parameters. Bitmask
@@ -124,7 +124,7 @@ struct port {
 	uint64_t wait_while_timer;
 	uint64_t tx_machine_timer;
 	uint64_t tx_marker_timer;
-	/* Agregator parameters */
+	/* Aggregator parameters */
 	/** Used aggregator port ID */
 	uint16_t aggregator_port_id;
 
@@ -280,7 +280,7 @@ bond_mode_8023ad_activate_slave(struct rte_eth_dev *dev, uint16_t port_id);
 /**
  * @internal
  *
- * Denitializes and removes given slave from 802.1AX mode.
+ * Deinitializes and removes given slave from 802.1AX mode.
  *
  * @param dev       Bonded interface.
  * @param slave_num Position of slave in active_slaves array

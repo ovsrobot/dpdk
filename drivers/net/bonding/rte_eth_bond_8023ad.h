@@ -68,7 +68,7 @@ struct port_params {
 	struct rte_ether_addr system;
 	/**< System ID - Slave MAC address, same as bonding MAC address */
 	uint16_t key;
-	/**< Speed information (implementation dependednt) and duplex. */
+	/**< Speed information (implementation dependent) and duplex. */
 	uint16_t port_priority;
 	/**< Priority of this (unused in current implementation) */
 	uint16_t port_number;
@@ -83,7 +83,7 @@ struct lacpdu_actor_partner_params {
 	uint8_t reserved_3[3];
 } __rte_packed __rte_aligned(2);
 
-/** LACPDU structure (5.4.2 in 802.1AX documentation). */
+/** LACPDU structure (6.4.2 in 802.1AX documentation). */
 struct lacpdu {
 	uint8_t subtype;
 	uint8_t version_number;
@@ -153,7 +153,7 @@ struct rte_eth_bond_8023ad_slave_info {
 /**
  * @internal
  *
- * Function returns current configuration of 802.3AX mode.
+ * Function returns current configuration of 802.1AX mode.
  *
  * @param port_id   Bonding device id
  * @param conf		Pointer to timeout structure.
@@ -196,10 +196,6 @@ rte_eth_bond_8023ad_setup(uint16_t port_id,
 int
 rte_eth_bond_8023ad_slave_info(uint16_t port_id, uint16_t slave_id,
 		struct rte_eth_bond_8023ad_slave_info *conf);
-
-#ifdef __cplusplus
-}
-#endif
 
 /**
  * Configure a slave port to start collecting.
@@ -331,4 +327,9 @@ rte_eth_bond_8023ad_agg_selection_get(uint16_t port_id);
 int
 rte_eth_bond_8023ad_agg_selection_set(uint16_t port_id,
 		enum rte_bond_8023ad_agg_selection agg_selection);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* RTE_ETH_BOND_8023AD_H_ */

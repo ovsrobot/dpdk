@@ -207,15 +207,15 @@ show_warnings(uint16_t slave_id)
 	if (warnings & WRN_RX_QUEUE_FULL) {
 		RTE_BOND_LOG(DEBUG,
 			     "Slave %u: failed to enqueue LACP packet into RX ring.\n"
-			     "Receive and transmit functions must be invoked on bonded"
-			     "interface at least 10 times per second or LACP will notwork correctly",
+			     "Receive and transmit functions must be invoked on bonded\n"
+			     "interface at least 10 times per second or LACP will not work correctly",
 			     slave_id);
 	}
 
 	if (warnings & WRN_TX_QUEUE_FULL) {
 		RTE_BOND_LOG(DEBUG,
 			     "Slave %u: failed to enqueue LACP packet into TX ring.\n"
-			     "Receive and transmit functions must be invoked on bonded"
+			     "Receive and transmit functions must be invoked on bonded\n"
 			     "interface at least 10 times per second or LACP will not work correctly",
 			     slave_id);
 	}
@@ -250,7 +250,7 @@ record_default(struct port *port)
 
 /** Function handles rx state machine.
  *
- * This function implements Receive State Machine from point 5.4.12 in
+ * This function implements Receive State Machine from point 6.4.12 in
  * 802.1AX documentation. It should be called periodically.
  *
  * @param lacpdu		LACPDU received.
@@ -384,7 +384,7 @@ rx_machine(struct bond_dev_private *internals, uint16_t slave_id,
 /**
  * Function handles periodic tx state machine.
  *
- * Function implements Periodic Transmission state machine from point 5.4.13
+ * Function implements Periodic Transmission state machine from point 6.4.13
  * in 802.1AX documentation. It should be called periodically.
  *
  * @param port			Port to handle state machine.
@@ -446,7 +446,7 @@ periodic_machine(struct bond_dev_private *internals, uint16_t slave_id)
 /**
  * Function handles mux state machine.
  *
- * Function implements Mux Machine from point 5.4.15 in 802.1AX documentation.
+ * Function implements Mux Machine from point 6.4.15 in 802.1AX documentation.
  * It should be called periodically.
  *
  * @param port			Port to handle state machine.
@@ -549,7 +549,7 @@ mux_machine(struct bond_dev_private *internals, uint16_t slave_id)
 /**
  * Function handles transmit state machine.
  *
- * Function implements Transmit Machine from point 5.4.16 in 802.1AX
+ * Function implements Transmit Machine from point 6.4.16 in 802.1AX
  * documentation.
  *
  * @param port
@@ -1051,14 +1051,14 @@ bond_mode_8023ad_activate_slave(struct rte_eth_dev *bond_dev,
 	struct bond_tx_queue *bd_tx_q;
 	uint16_t q_id;
 
-	/* Given slave mus not be in active list */
+	/* Given slave must not be in active list. */
 	RTE_ASSERT(find_slave_by_id(internals->active_slaves,
 	internals->active_slave_count, slave_id) == internals->active_slave_count);
 	RTE_SET_USED(internals); /* used only for assert when enabled */
 
 	memcpy(&port->actor, &initial, sizeof(struct port_params));
-	/* Standard requires that port ID must be grater than 0.
-	 * Add 1 do get corresponding port_number */
+	/* Standard requires that port ID must be greater than 0.
+	 * Add 1 to get corresponding port_number. */
 	port->actor.port_number = rte_cpu_to_be_16(slave_id + 1);
 
 	memcpy(&port->partner, &initial, sizeof(struct port_params));
@@ -1069,7 +1069,7 @@ bond_mode_8023ad_activate_slave(struct rte_eth_dev *bond_dev,
 	port->partner_state = STATE_LACP_ACTIVE | STATE_AGGREGATION;
 	port->sm_flags = SM_FLAGS_BEGIN;
 
-	/* use this port as agregator */
+	/* Use this port as aggregator. */
 	port->aggregator_port_id = slave_id;
 
 	if (bond_mode_8023ad_register_lacp_mac(slave_id) < 0) {

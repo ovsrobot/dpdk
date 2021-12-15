@@ -158,7 +158,8 @@ const struct rte_flow_attr flow_attr_8023ad = {
 
 int
 bond_ethdev_8023ad_flow_verify(struct rte_eth_dev *bond_dev,
-		uint16_t slave_port) {
+		uint16_t slave_port)
+{
 	struct rte_eth_dev_info slave_info;
 	struct rte_flow_error error;
 	struct bond_dev_private *internals = bond_dev->data->dev_private;
@@ -207,7 +208,8 @@ bond_ethdev_8023ad_flow_verify(struct rte_eth_dev *bond_dev,
 }
 
 int
-bond_8023ad_slow_pkt_hw_filter_supported(uint16_t port_id) {
+bond_8023ad_slow_pkt_hw_filter_supported(uint16_t port_id)
+{
 	struct rte_eth_dev *bond_dev = &rte_eth_devices[port_id];
 	struct bond_dev_private *internals = bond_dev->data->dev_private;
 	struct rte_eth_dev_info bond_info;
@@ -240,8 +242,8 @@ bond_8023ad_slow_pkt_hw_filter_supported(uint16_t port_id) {
 }
 
 int
-bond_ethdev_8023ad_flow_set(struct rte_eth_dev *bond_dev, uint16_t slave_port) {
-
+bond_ethdev_8023ad_flow_set(struct rte_eth_dev *bond_dev, uint16_t slave_port)
+{
 	struct rte_flow_error error;
 	struct bond_dev_private *internals = bond_dev->data->dev_private;
 	struct rte_flow_action_queue lacp_queue_conf = {
@@ -809,7 +811,8 @@ struct bwg_slave {
 };
 
 void
-bond_tlb_activate_slave(struct bond_dev_private *internals) {
+bond_tlb_activate_slave(struct bond_dev_private *internals)
+{
 	int i;
 
 	for (i = 0; i < internals->active_slave_count; i++) {
