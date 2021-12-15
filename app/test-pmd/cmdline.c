@@ -633,6 +633,9 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"set bonding mode IEEE802.3AD aggregator policy (port_id) (agg_name)\n"
 			"	Set Aggregation mode for IEEE802.3AD (mode 4)\n\n"
 
+			"set bonding lacp timeout_ctrl (port_id) (on|off)\n"
+				"Configure LACP partner to use fast|slow periodic tx interval.\n\n"
+
 			"set bonding balance_xmit_policy (port_id) (l2|l23|l34)\n"
 			"	Set the transmit balance policy for bonded device running in balance mode.\n\n"
 
@@ -6192,6 +6195,7 @@ static void lacp_conf_show(struct rte_eth_bond_8023ad_conf *conf)
 		printf("\taggregation mode: invalid\n");
 		break;
 	}
+	printf("\tlacp timeout control: %u\n", conf->lacp_timeout_control);
 
 	printf("\n");
 }
@@ -6862,6 +6866,78 @@ cmdline_parse_inst_t cmd_set_bonding_agg_mode_policy = {
 		}
 };
 
+
+/* *** SET LACP TIMEOUT CONTROL ON BONDED DEVICE *** */
+struct cmd_set_lacp_timeout_control_result {
+	cmdline_fixed_string_t set;
+	cmdline_fixed_string_t bonding;
+	cmdline_fixed_string_t lacp;
+	cmdline_fixed_string_t timeout_ctrl;
+	uint16_t port_id;
+	cmdline_fixed_string_t on_off;
+};
+
+static void
+cmd_set_lacp_timeout_control_parsed(void *parsed_result,
+		__rte_unused struct cmdline *cl,
+		__rte_unused void *data)
+{
+	struct cmd_set_lacp_timeout_control_result *res = parsed_result;
+	struct rte_eth_bond_8023ad_conf port_conf;
+	uint8_t on_off = 0;
+	int ret;
+
+	if (!strcmp(res->on_off, "on"))
+		on_off = 1;
+
+	ret = rte_eth_bond_8023ad_conf_get(res->port_id, &port_conf);
+	if (ret != 0) {
+		fprintf(stderr, "\tGet bonded device %u lacp conf failed\n",
+			res->port_id);
+		return;
+	}
+
+	port_conf.lacp_timeout_control = on_off;
+	ret = rte_eth_bond_8023ad_setup(res->port_id, &port_conf);
+	if (ret != 0)
+		fprintf(stderr, "\tSetup bonded device %u lacp conf failed\n",
+			res->port_id);
+}
+
+cmdline_parse_token_string_t cmd_set_lacp_timeout_control_set =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_lacp_timeout_control_result,
+				set, "set");
+cmdline_parse_token_string_t cmd_set_lacp_timeout_control_bonding =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_lacp_timeout_control_result,
+				bonding, "bonding");
+cmdline_parse_token_string_t cmd_set_lacp_timeout_control_lacp =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_lacp_timeout_control_result,
+				lacp, "lacp");
+cmdline_parse_token_string_t cmd_set_lacp_timeout_control_timeout_ctrl =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_lacp_timeout_control_result,
+				timeout_ctrl, "timeout_ctrl");
+cmdline_parse_token_num_t cmd_set_lacp_timeout_control_port_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_set_lacp_timeout_control_result,
+				port_id, RTE_UINT16);
+cmdline_parse_token_string_t cmd_set_lacp_timeout_control_on_off =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_lacp_timeout_control_result,
+				on_off, "on#off");
+
+cmdline_parse_inst_t cmd_set_lacp_timeout_control = {
+	.f = cmd_set_lacp_timeout_control_parsed,
+	.data = (void *) 0,
+	.help_str = "set bonding lacp timeout_ctrl <port_id> on|off: "
+		"Configure partner to use fast|slow periodic tx interval",
+	.tokens = {
+		(void *)&cmd_set_lacp_timeout_control_set,
+		(void *)&cmd_set_lacp_timeout_control_bonding,
+		(void *)&cmd_set_lacp_timeout_control_lacp,
+		(void *)&cmd_set_lacp_timeout_control_timeout_ctrl,
+		(void *)&cmd_set_lacp_timeout_control_port_id,
+		(void *)&cmd_set_lacp_timeout_control_on_off,
+		NULL
+	}
+};
 
 #endif /* RTE_NET_BOND */
 
@@ -17728,6 +17804,7 @@ cmdline_parse_ctx_t main_ctx[] = {
 	(cmdline_parse_inst_t *) &cmd_set_bond_mon_period,
 	(cmdline_parse_inst_t *) &cmd_set_lacp_dedicated_queues,
 	(cmdline_parse_inst_t *) &cmd_set_bonding_agg_mode_policy,
+	(cmdline_parse_inst_t *) &cmd_set_lacp_timeout_control,
 #endif
 	(cmdline_parse_inst_t *)&cmd_vlan_offload,
 	(cmdline_parse_inst_t *)&cmd_vlan_tpid,
