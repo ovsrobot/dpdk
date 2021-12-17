@@ -321,10 +321,9 @@ kni_net_tx(struct sk_buff *skb, struct net_device *dev)
 	if (kni_fifo_free_count(kni->tx_q) == 0 ||
 			kni_fifo_count(kni->alloc_q) == 0) {
 		/**
-		 * If no free entry in tx_q or no entry in alloc_q,
-		 * drops skb and goes out.
+		 * Tell the caller to requeue, and retry at a later time.
 		 */
-		goto drop;
+		goto requeue;
 	}
 
 	/* dequeue a mbuf from alloc_q */
@@ -371,6 +370,10 @@ drop:
 	dev->stats.tx_dropped++;
 
 	return NETDEV_TX_OK;
+
+requeue:
+	/* Signal the caller to re-transmit at a later time */
+	return NETDEV_TX_BUSY;
 }
 
 /*
