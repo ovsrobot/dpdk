@@ -68,6 +68,7 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* **Removed experimental performance thread example application.**
 
 API Changes
 -----------
