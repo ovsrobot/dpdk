@@ -90,6 +90,9 @@
 /* DPI */
 #include "roc_dpi.h"
 
+/* AES */
+#include "roc_aes.h"
+
 /* HASH computation */
 #include "roc_hash.h"
 
