@@ -1394,6 +1394,156 @@ static int spnic_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 	return 0;
 }
 
+/**
+ * Enable allmulticast mode.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_dev_allmulticast_enable(struct rte_eth_dev *dev)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	u32 rx_mode;
+	int err;
+
+	err = spnic_mutex_lock(&nic_dev->rx_mode_mutex);
+	if (err)
+		return err;
+
+	rx_mode = nic_dev->rx_mode | SPNIC_RX_MODE_MC_ALL;
+
+	err = spnic_set_rx_mode(nic_dev->hwdev, rx_mode);
+	if (err) {
+		(void)spnic_mutex_unlock(&nic_dev->rx_mode_mutex);
+		PMD_DRV_LOG(ERR, "Enable allmulticast failed, error: %d", err);
+		return err;
+	}
+
+	nic_dev->rx_mode = rx_mode;
+
+	(void)spnic_mutex_unlock(&nic_dev->rx_mode_mutex);
+
+	PMD_DRV_LOG(INFO, "Enable allmulticast succeed, nic_dev: %s, port_id: %d",
+		    nic_dev->dev_name, dev->data->port_id);
+	return 0;
+}
+
+/**
+ * Disable allmulticast mode.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_dev_allmulticast_disable(struct rte_eth_dev *dev)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	u32 rx_mode;
+	int err;
+
+	err = spnic_mutex_lock(&nic_dev->rx_mode_mutex);
+	if (err)
+		return err;
+
+	rx_mode = nic_dev->rx_mode & (~SPNIC_RX_MODE_MC_ALL);
+
+	err = spnic_set_rx_mode(nic_dev->hwdev, rx_mode);
+	if (err) {
+		(void)spnic_mutex_unlock(&nic_dev->rx_mode_mutex);
+		PMD_DRV_LOG(ERR, "Disable allmulticast failed, error: %d", err);
+		return err;
+	}
+
+	nic_dev->rx_mode = rx_mode;
+
+	(void)spnic_mutex_unlock(&nic_dev->rx_mode_mutex);
+
+	PMD_DRV_LOG(INFO, "Disable allmulticast succeed, nic_dev: %s, port_id: %d",
+		    nic_dev->dev_name, dev->data->port_id);
+	return 0;
+}
+
+/**
+ * Enable promiscuous mode.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_dev_promiscuous_enable(struct rte_eth_dev *dev)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	u32 rx_mode;
+	int err;
+
+	err = spnic_mutex_lock(&nic_dev->rx_mode_mutex);
+	if (err)
+		return err;
+
+	rx_mode = nic_dev->rx_mode | SPNIC_RX_MODE_PROMISC;
+
+	err = spnic_set_rx_mode(nic_dev->hwdev, rx_mode);
+	if (err) {
+		(void)spnic_mutex_unlock(&nic_dev->rx_mode_mutex);
+		PMD_DRV_LOG(ERR, "Enable promiscuous failed");
+		return err;
+	}
+
+	nic_dev->rx_mode = rx_mode;
+
+	(void)spnic_mutex_unlock(&nic_dev->rx_mode_mutex);
+
+	PMD_DRV_LOG(INFO, "Enable promiscuous, nic_dev: %s, port_id: %d, promisc: %d",
+		    nic_dev->dev_name, dev->data->port_id,
+		    dev->data->promiscuous);
+	return 0;
+}
+
+/**
+ * Disable promiscuous mode.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_dev_promiscuous_disable(struct rte_eth_dev *dev)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	u32 rx_mode;
+	int err;
+
+	err = spnic_mutex_lock(&nic_dev->rx_mode_mutex);
+	if (err)
+		return err;
+
+	rx_mode = nic_dev->rx_mode & (~SPNIC_RX_MODE_PROMISC);
+
+	err = spnic_set_rx_mode(nic_dev->hwdev, rx_mode);
+	if (err) {
+		(void)spnic_mutex_unlock(&nic_dev->rx_mode_mutex);
+		PMD_DRV_LOG(ERR, "Disable promiscuous failed");
+		return err;
+	}
+
+	nic_dev->rx_mode = rx_mode;
+
+	(void)spnic_mutex_unlock(&nic_dev->rx_mode_mutex);
+
+	PMD_DRV_LOG(INFO, "Disable promiscuous, nic_dev: %s, port_id: %d, promisc: %d",
+		    nic_dev->dev_name, dev->data->port_id,
+		    dev->data->promiscuous);
+	return 0;
+}
+
 
 /**
  * Update the RSS hash key and RSS hash type.
@@ -1830,6 +1980,10 @@ static const struct eth_dev_ops spnic_pmd_ops = {
 	.mtu_set                       = spnic_dev_set_mtu,
 	.vlan_filter_set               = spnic_vlan_filter_set,
 	.vlan_offload_set              = spnic_vlan_offload_set,
+	.allmulticast_enable           = spnic_dev_allmulticast_enable,
+	.allmulticast_disable          = spnic_dev_allmulticast_disable,
+	.promiscuous_enable            = spnic_dev_promiscuous_enable,
+	.promiscuous_disable           = spnic_dev_promiscuous_disable,
 	.rss_hash_update               = spnic_rss_hash_update,
 	.rss_hash_conf_get             = spnic_rss_conf_get,
 	.reta_update                   = spnic_rss_reta_update,
@@ -1855,6 +2009,8 @@ static const struct eth_dev_ops spnic_pmd_vf_ops = {
 	.mtu_set                       = spnic_dev_set_mtu,
 	.vlan_filter_set               = spnic_vlan_filter_set,
 	.vlan_offload_set              = spnic_vlan_offload_set,
+	.allmulticast_enable           = spnic_dev_allmulticast_enable,
+	.allmulticast_disable          = spnic_dev_allmulticast_disable,
 	.rss_hash_update               = spnic_rss_hash_update,
 	.rss_hash_conf_get             = spnic_rss_conf_get,
 	.reta_update                   = spnic_rss_reta_update,
