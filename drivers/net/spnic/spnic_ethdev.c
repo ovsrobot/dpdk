@@ -249,6 +249,28 @@ static const struct rte_eth_desc_lim spnic_tx_desc_lim = {
 };
 
 /**
+ * Interrupt handler triggered by NIC for handling specific event
+ *
+ * @param[in] param
+ *   The address of parameter (struct rte_eth_dev *) regsitered before
+ */
+static void spnic_dev_interrupt_handler(void *param)
+{
+	struct rte_eth_dev *dev = param;
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+
+	if (!rte_bit_relaxed_get32(SPNIC_DEV_INTR_EN, &nic_dev->dev_status)) {
+		PMD_DRV_LOG(WARNING,
+			    "Intr is disabled, ignore intr event, dev_name: %s, port_id: %d",
+			    nic_dev->dev_name, dev->data->port_id);
+		return;
+	}
+
+	/* Aeq0 msg handler */
+	spnic_dev_handle_aeq_event(nic_dev->hwdev, param);
+}
+
+/**
  * Ethernet device configuration.
  *
  * Prepare the driver for a given number of TX and RX queues, mtu size
@@ -971,6 +993,46 @@ static void spnic_deinit_mac_addr(struct rte_eth_dev *eth_dev)
 	spnic_delete_mc_addr_list(nic_dev);
 }
 
+int spnic_dev_rx_queue_intr_enable(struct rte_eth_dev *dev,
+				    uint16_t queue_id)
+{
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	u16 msix_intr;
+
+	if (!rte_intr_dp_is_en(intr_handle))
+		return 0;
+
+	if (queue_id >= dev->data->nb_rx_queues)
+		return -EINVAL;
+
+	msix_intr = (u16)(queue_id + RTE_INTR_VEC_RXTX_OFFSET);
+	spnic_set_msix_state(nic_dev->hwdev, msix_intr, SPNIC_MSIX_ENABLE);
+
+	return 0;
+}
+
+int spnic_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
+{
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	u16 msix_intr;
+
+	if (!rte_intr_dp_is_en(intr_handle))
+		return 0;
+
+	if (queue_id >= dev->data->nb_rx_queues)
+		return -EINVAL;
+
+	msix_intr = (u16)(queue_id + RTE_INTR_VEC_RXTX_OFFSET);
+	spnic_set_msix_state(nic_dev->hwdev, msix_intr, SPNIC_MSIX_DISABLE);
+	spnic_misx_intr_clear_resend_bit(nic_dev->hwdev, msix_intr, 1);
+
+	return 0;
+}
+
 static int spnic_set_rxtx_configure(struct rte_eth_dev *dev)
 {
 	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
@@ -1104,6 +1166,108 @@ static void spnic_remove_all_vlanid(struct rte_eth_dev *dev)
 	}
 }
 
+static void spnic_disable_interrupt(struct rte_eth_dev *dev)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+
+	if (!rte_bit_relaxed_get32(SPNIC_DEV_INIT, &nic_dev->dev_status))
+		return;
+
+	/* disable rte interrupt */
+	rte_intr_disable(pci_dev->intr_handle);
+	rte_intr_callback_unregister(pci_dev->intr_handle,
+				     spnic_dev_interrupt_handler, (void *)dev);
+}
+
+static void spnic_enable_interrupt(struct rte_eth_dev *dev)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+
+	if (!rte_bit_relaxed_get32(SPNIC_DEV_INIT, &nic_dev->dev_status))
+		return;
+
+	/* enable rte interrupt */
+	rte_intr_enable(pci_dev->intr_handle);
+	rte_intr_callback_register(pci_dev->intr_handle,
+				   spnic_dev_interrupt_handler, (void *)dev);
+}
+#define SPNIC_TXRX_MSIX_PENDING_LIMIT       2
+#define SPNIC_TXRX_MSIX_COALESC_TIMER       2
+#define SPNIC_TXRX_MSIX_RESEND_TIMER_CFG    7
+
+static int spnic_init_rxq_msix_attr(void *hwdev, u16 msix_index)
+{
+	struct interrupt_info info = { 0 };
+	int err;
+
+	info.lli_set = 0;
+	info.interrupt_coalesc_set = 1;
+	info.pending_limt = SPNIC_TXRX_MSIX_PENDING_LIMIT;
+	info.coalesc_timer_cfg = SPNIC_TXRX_MSIX_COALESC_TIMER;
+	info.resend_timer_cfg = SPNIC_TXRX_MSIX_RESEND_TIMER_CFG;
+
+	info.msix_index = msix_index;
+	err = spnic_set_interrupt_cfg(hwdev, info);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Set msix attr failed, msix_index %d\n",
+			    msix_index);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+static void spnic_deinit_rxq_intr(struct rte_eth_dev *dev)
+{
+	struct rte_intr_handle *intr_handle = dev->intr_handle;
+
+	rte_intr_efd_disable(intr_handle);
+}
+
+static int spnic_init_rxq_intr(struct rte_eth_dev *dev)
+{
+	struct rte_intr_handle *intr_handle = NULL;
+	struct spnic_nic_dev *nic_dev = NULL;
+	struct spnic_rxq *rxq = NULL;
+	u32 nb_rx_queues, i;
+	int err;
+
+	intr_handle = dev->intr_handle;
+	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	if (!dev->data->dev_conf.intr_conf.rxq)
+		return 0;
+
+	if (!rte_intr_cap_multiple(intr_handle)) {
+		PMD_DRV_LOG(ERR, "Rx queue interrupts require MSI-X interrupts"
+			" (vfio-pci driver)\n");
+		return -ENOTSUP;
+	}
+
+	nb_rx_queues = dev->data->nb_rx_queues;
+	err = rte_intr_efd_enable(intr_handle, nb_rx_queues);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Failed to enable event fds for Rx queue interrupts\n");
+		return err;
+	}
+
+	for (i = 0; i < nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+		rxq->dp_intr_en = 1;
+		rxq->msix_entry_idx = (u16)(i + RTE_INTR_VEC_RXTX_OFFSET);
+
+		err = spnic_init_rxq_msix_attr(nic_dev->hwdev,
+						rxq->msix_entry_idx);
+		if (err) {
+			spnic_deinit_rxq_intr(dev);
+			return err;
+		}
+	}
+
+	return 0;
+}
+
 static int spnic_init_sw_rxtxqs(struct spnic_nic_dev *nic_dev)
 {
 	u32 txq_size;
@@ -1165,6 +1329,14 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 
 	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
 
+	spnic_disable_interrupt(eth_dev);
+	err = spnic_init_rxq_intr(eth_dev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init rxq intr fail, eth_dev:%s",
+			    eth_dev->data->name);
+		goto init_rxq_intr_fail;
+	}
+
 	spnic_get_func_rx_buf_size(nic_dev);
 	err = spnic_init_function_table(nic_dev->hwdev, nic_dev->rx_buff_len);
 	if (err) {
@@ -1212,6 +1384,9 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 		goto set_rxtx_config_fail;
 	}
 
+	/* enable dev interrupt */
+	spnic_enable_interrupt(eth_dev);
+
 	err = spnic_start_all_rqs(eth_dev);
 	if (err) {
 		PMD_DRV_LOG(ERR, "Set rx config failed, dev_name: %s",
@@ -1256,6 +1431,7 @@ en_vport_fail:
 		rxq = nic_dev->rxqs[i];
 		spnic_remove_rq_from_rx_queue_list(nic_dev, rxq->q_id);
 		spnic_free_rxq_mbufs(rxq);
+		spnic_dev_rx_queue_intr_disable(eth_dev, rxq->q_id);
 		eth_dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 		eth_dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 	}
@@ -1269,6 +1445,7 @@ set_mtu_fail:
 init_qp_fail:
 get_feature_err:
 init_func_tbl_fail:
+init_rxq_intr_fail:
 
 	return err;
 }
@@ -1374,7 +1551,8 @@ static int spnic_dev_close(struct rte_eth_dev *eth_dev)
 {
 	struct spnic_nic_dev *nic_dev =
 	SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
-	int qid;
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
+	int qid, ret;
 
 	if (rte_bit_relaxed_test_and_set32(SPNIC_DEV_CLOSE, &nic_dev->dev_status)) {
 		PMD_DRV_LOG(WARNING, "Device %s already closed",
@@ -1398,6 +1576,15 @@ static int spnic_dev_close(struct rte_eth_dev *eth_dev)
 	spnic_remove_all_vlanid(eth_dev);
 
 	rte_bit_relaxed_clear32(SPNIC_DEV_INTR_EN, &nic_dev->dev_status);
+	spnic_set_msix_state(nic_dev->hwdev, 0, SPNIC_MSIX_DISABLE);
+	ret = rte_intr_disable(pci_dev->intr_handle);
+	if (ret)
+		PMD_DRV_LOG(ERR, "Device %s disable intr failed: %d",
+			    nic_dev->dev_name, ret);
+
+	(void)rte_intr_callback_unregister(pci_dev->intr_handle,
+					     spnic_dev_interrupt_handler,
+					     (void *)eth_dev);
 
 	/* Destroy rx mode mutex */
 	spnic_mutex_destroy(&nic_dev->rx_mode_mutex);
@@ -2530,6 +2717,8 @@ static const struct eth_dev_ops spnic_pmd_ops = {
 	.tx_queue_setup                = spnic_tx_queue_setup,
 	.rx_queue_release              = spnic_rx_queue_release,
 	.tx_queue_release              = spnic_tx_queue_release,
+	.rx_queue_intr_enable          = spnic_dev_rx_queue_intr_enable,
+	.rx_queue_intr_disable         = spnic_dev_rx_queue_intr_disable,
 	.dev_start                     = spnic_dev_start,
 	.dev_stop                      = spnic_dev_stop,
 	.dev_close                     = spnic_dev_close,
@@ -2565,6 +2754,8 @@ static const struct eth_dev_ops spnic_pmd_vf_ops = {
 	.fw_version_get                = spnic_fw_version_get,
 	.rx_queue_setup                = spnic_rx_queue_setup,
 	.tx_queue_setup                = spnic_tx_queue_setup,
+	.rx_queue_intr_enable          = spnic_dev_rx_queue_intr_enable,
+	.rx_queue_intr_disable         = spnic_dev_rx_queue_intr_disable,
 	.dev_start                     = spnic_dev_start,
 	.link_update                   = spnic_link_update,
 	.rx_queue_release              = spnic_rx_queue_release,
@@ -2820,6 +3011,24 @@ static int spnic_func_init(struct rte_eth_dev *eth_dev)
 		goto init_mpool_fail;
 	}
 
+	/* Register callback func to eal lib */
+	err = rte_intr_callback_register(pci_dev->intr_handle,
+					 spnic_dev_interrupt_handler,
+					 (void *)eth_dev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Register intr callback failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto reg_intr_cb_fail;
+	}
+
+	/* Enable uio/vfio intr/eventfd mapping */
+	err = rte_intr_enable(pci_dev->intr_handle);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Enable rte interrupt failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto enable_intr_fail;
+	}
+
 	spnic_mutex_init(&nic_dev->rx_mode_mutex, NULL);
 
 	rte_bit_relaxed_set32(SPNIC_DEV_INTR_EN, &nic_dev->dev_status);
@@ -2830,6 +3039,13 @@ static int spnic_func_init(struct rte_eth_dev *eth_dev)
 
 	return 0;
 
+enable_intr_fail:
+	(void)rte_intr_callback_unregister(pci_dev->intr_handle,
+					   spnic_dev_interrupt_handler,
+					   (void *)eth_dev);
+
+reg_intr_cb_fail:
+	spnic_copy_mempool_uninit(nic_dev);
 init_mpool_fail:
 set_default_feature_fail:
 	spnic_deinit_mac_addr(eth_dev);
