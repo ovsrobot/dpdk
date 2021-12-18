@@ -30,22 +30,105 @@ int spnic_logtype;
 #define SPNIC_MAX_UC_MAC_ADDRS		128
 #define SPNIC_MAX_MC_MAC_ADDRS		128
 
-static void spnic_delete_mc_addr_list(struct spnic_nic_dev *nic_dev)
+/**
+ * Deinit mac_vlan table in hardware.
+ *
+ * @param[in] eth_dev
+ *   Pointer to ethernet device structure.
+ */
+
+/**
+ * Set ethernet device link state up.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure.
+ */
+static int spnic_dev_set_link_up(struct rte_eth_dev *dev)
 {
-	u16 func_id;
-	u32 i;
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	int err;
 
-	func_id = spnic_global_func_id(nic_dev->hwdev);
+	/* Link status follow phy port status, mpu will open pma */
+	err = spnic_set_port_enable(nic_dev->hwdev, true);
+	if (err)
+		PMD_DRV_LOG(ERR, "Set MAC link up failed, dev_name: %s, port_id: %d",
+			    nic_dev->dev_name, dev->data->port_id);
 
-	for (i = 0; i < SPNIC_MAX_MC_MAC_ADDRS; i++) {
-		if (rte_is_zero_ether_addr(&nic_dev->mc_list[i]))
+	return err;
+}
+
+/**
+ * Set ethernet device link state down.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure.
+ */
+static int spnic_dev_set_link_down(struct rte_eth_dev *dev)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	int err;
+
+	/* Link status follow phy port status, mpu will close pma */
+	err = spnic_set_port_enable(nic_dev->hwdev, false);
+	if (err)
+		PMD_DRV_LOG(ERR, "Set MAC link down failed, dev_name: %s, port_id: %d",
+			    nic_dev->dev_name, dev->data->port_id);
+
+	return err;
+}
+
+/**
+ * Get device physical link information.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[in] wait_to_complete
+ *   Wait for request completion.
+ *
+ * @retval 0 : Link status changed
+ * @retval -1 : Link status not changed.
+ */
+static int spnic_link_update(struct rte_eth_dev *dev, int wait_to_complete)
+{
+#define CHECK_INTERVAL 10  /* 10ms */
+#define MAX_REPEAT_TIME 100  /* 1s (100 * 10ms) in total */
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	struct rte_eth_link link;
+	u8 link_state;
+	unsigned int rep_cnt = MAX_REPEAT_TIME;
+	int ret;
+
+	memset(&link, 0, sizeof(link));
+	do {
+		/* Get link status information from hardware */
+		ret = spnic_get_link_state(nic_dev->hwdev, &link_state);
+		if (ret) {
+			link.link_status = ETH_LINK_DOWN;
+			link.link_speed = ETH_SPEED_NUM_NONE;
+			link.link_duplex = ETH_LINK_HALF_DUPLEX;
+			link.link_autoneg = ETH_LINK_FIXED;
+			goto out;
+		}
+
+		get_port_info(nic_dev->hwdev, link_state, &link);
+
+		if (!wait_to_complete || link.link_status)
 			break;
 
-		spnic_del_mac(nic_dev->hwdev, nic_dev->mc_list[i].addr_bytes,
-			      0, func_id);
-		memset(&nic_dev->mc_list[i], 0, sizeof(struct rte_ether_addr));
-	}
+		rte_delay_ms(CHECK_INTERVAL);
+	} while (rep_cnt--);
+
+out:
+	return rte_eth_linkstatus_set(dev, &link);
 }
+
+static void spnic_delete_mc_addr_list(struct spnic_nic_dev *nic_dev);
 
 /**
  * Deinit mac_vlan table in hardware.
@@ -82,6 +165,122 @@ static void spnic_deinit_mac_addr(struct rte_eth_dev *eth_dev)
 	spnic_delete_mc_addr_list(nic_dev);
 }
 
+static int spnic_init_sw_rxtxqs(struct spnic_nic_dev *nic_dev)
+{
+	u32 txq_size;
+	u32 rxq_size;
+
+	/* Allocate software txq array */
+	txq_size = nic_dev->max_sqs * sizeof(*nic_dev->txqs);
+	nic_dev->txqs = rte_zmalloc("spnic_txqs", txq_size,
+				    RTE_CACHE_LINE_SIZE);
+	if (!nic_dev->txqs) {
+		PMD_DRV_LOG(ERR, "Allocate txqs failed");
+		return -ENOMEM;
+	}
+
+	/* Allocate software rxq array */
+	rxq_size = nic_dev->max_rqs * sizeof(*nic_dev->rxqs);
+	nic_dev->rxqs = rte_zmalloc("spnic_rxqs", rxq_size,
+				    RTE_CACHE_LINE_SIZE);
+	if (!nic_dev->rxqs) {
+		/* Free txqs */
+		rte_free(nic_dev->txqs);
+		nic_dev->txqs = NULL;
+
+		PMD_DRV_LOG(ERR, "Allocate rxqs failed");
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+static void spnic_deinit_sw_rxtxqs(struct spnic_nic_dev *nic_dev)
+{
+	rte_free(nic_dev->txqs);
+	nic_dev->txqs = NULL;
+
+	rte_free(nic_dev->rxqs);
+	nic_dev->rxqs = NULL;
+}
+
+/**
+ * Start the device.
+ *
+ * Initialize function table, rxq and txq context, config rx offload, and enable
+ * vport and port to prepare receiving packets.
+ *
+ * @param[in] eth_dev
+ *   Pointer to ethernet device structure.
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+static int spnic_dev_start(struct rte_eth_dev *eth_dev)
+{
+	struct spnic_nic_dev *nic_dev;
+	int err;
+
+	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
+
+	err = spnic_init_function_table(nic_dev->hwdev, nic_dev->rx_buff_len);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init function table failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto init_func_tbl_fail;
+	}
+
+	/* Set default mtu */
+	err = spnic_set_port_mtu(nic_dev->hwdev, nic_dev->mtu_size);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Set mtu_size[%d] failed, dev_name: %s",
+			    nic_dev->mtu_size, eth_dev->data->name);
+		goto set_mtu_fail;
+	}
+
+
+	/* Update eth_dev link status */
+	if (eth_dev->data->dev_conf.intr_conf.lsc != 0)
+		(void)spnic_link_update(eth_dev, 0);
+
+	rte_bit_relaxed_set32(SPNIC_DEV_START, &nic_dev->dev_status);
+
+	return 0;
+
+set_mtu_fail:
+init_func_tbl_fail:
+
+	return err;
+}
+
+/**
+ * Stop the device.
+ *
+ * Stop phy port and vport, flush pending io request, clean context configure
+ * and free io resourece.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ */
+static int spnic_dev_stop(struct rte_eth_dev *dev)
+{
+	struct spnic_nic_dev *nic_dev;
+	struct rte_eth_link link;
+
+	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	if (!rte_bit_relaxed_test_and_clear32(SPNIC_DEV_START, &nic_dev->dev_status)) {
+		PMD_DRV_LOG(INFO, "Device %s already stopped",
+			    nic_dev->dev_name);
+		return 0;
+	}
+
+	/* Clear recorded link status */
+	memset(&link, 0, sizeof(link));
+	(void)rte_eth_linkstatus_set(dev, &link);
+
+	return 0;
+}
+
 /**
  * Close the device.
  *
@@ -99,11 +298,19 @@ static int spnic_dev_close(struct rte_eth_dev *eth_dev)
 		return 0;
 	}
 
+	spnic_dev_stop(eth_dev);
+
+	spnic_deinit_sw_rxtxqs(nic_dev);
 	spnic_deinit_mac_addr(eth_dev);
 	rte_free(nic_dev->mc_list);
 
 	rte_bit_relaxed_clear32(SPNIC_DEV_INTR_EN, &nic_dev->dev_status);
 
+
+	/* Destroy rx mode mutex */
+	spnic_mutex_destroy(&nic_dev->rx_mode_mutex);
+
+	spnic_free_nic_hwdev(nic_dev->hwdev);
 	spnic_free_hwdev(nic_dev->hwdev);
 
 	eth_dev->dev_ops = NULL;
@@ -113,6 +320,34 @@ static int spnic_dev_close(struct rte_eth_dev *eth_dev)
 
 	return 0;
 }
+
+static int spnic_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	int err = 0;
+
+	PMD_DRV_LOG(INFO, "Set port mtu, port_id: %d, mtu: %d, max_pkt_len: %d",
+		    dev->data->port_id, mtu, SPNIC_MTU_TO_PKTLEN(mtu));
+
+	if (mtu < SPNIC_MIN_MTU_SIZE || mtu > SPNIC_MAX_MTU_SIZE) {
+		PMD_DRV_LOG(ERR, "Invalid mtu: %d, must between %d and %d",
+			    mtu, SPNIC_MIN_MTU_SIZE, SPNIC_MAX_MTU_SIZE);
+		return -EINVAL;
+	}
+
+	err = spnic_set_port_mtu(nic_dev->hwdev, mtu);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Set port mtu failed, err: %d", err);
+		return err;
+	}
+
+	/* Update max frame size */
+	dev->data->dev_conf.rxmode.mtu = SPNIC_MTU_TO_PKTLEN(mtu);
+	nic_dev->mtu_size = mtu;
+
+	return err;
+}
+
 /**
  * Update MAC address
  *
@@ -233,6 +468,23 @@ static int spnic_mac_addr_add(struct rte_eth_dev *dev,
 	return 0;
 }
 
+static void spnic_delete_mc_addr_list(struct spnic_nic_dev *nic_dev)
+{
+	u16 func_id;
+	u32 i;
+
+	func_id = spnic_global_func_id(nic_dev->hwdev);
+
+	for (i = 0; i < SPNIC_MAX_MC_MAC_ADDRS; i++) {
+		if (rte_is_zero_ether_addr(&nic_dev->mc_list[i]))
+			break;
+
+		spnic_del_mac(nic_dev->hwdev, nic_dev->mc_list[i].addr_bytes,
+			      0, func_id);
+		memset(&nic_dev->mc_list[i], 0, sizeof(struct rte_ether_addr));
+	}
+}
+
 /**
  * Set multicast MAC address
  *
@@ -287,7 +539,15 @@ static int spnic_set_mc_addr_list(struct rte_eth_dev *dev,
 
 	return 0;
 }
+
 static const struct eth_dev_ops spnic_pmd_ops = {
+	.dev_set_link_up               = spnic_dev_set_link_up,
+	.dev_set_link_down             = spnic_dev_set_link_down,
+	.link_update                   = spnic_link_update,
+	.dev_start                     = spnic_dev_start,
+	.dev_stop                      = spnic_dev_stop,
+	.dev_close                     = spnic_dev_close,
+	.mtu_set                       = spnic_dev_set_mtu,
 	.mac_addr_set                  = spnic_set_mac_addr,
 	.mac_addr_remove               = spnic_mac_addr_remove,
 	.mac_addr_add                  = spnic_mac_addr_add,
@@ -295,6 +555,11 @@ static const struct eth_dev_ops spnic_pmd_ops = {
 };
 
 static const struct eth_dev_ops spnic_pmd_vf_ops = {
+	.link_update                   = spnic_link_update,
+	.dev_start                     = spnic_dev_start,
+	.dev_stop                      = spnic_dev_stop,
+	.dev_close                     = spnic_dev_close,
+	.mtu_set                       = spnic_dev_set_mtu,
 	.mac_addr_set                  = spnic_set_mac_addr,
 	.mac_addr_remove               = spnic_mac_addr_remove,
 	.mac_addr_add                  = spnic_mac_addr_add,
@@ -337,6 +602,66 @@ static int spnic_init_mac_table(struct rte_eth_dev *eth_dev)
 
 	rte_ether_addr_copy(&eth_dev->data->mac_addrs[0],
 			    &nic_dev->default_addr);
+
+	return 0;
+}
+
+static int spnic_pf_get_default_cos(struct spnic_hwdev *hwdev, u8 *cos_id)
+{
+	u8 default_cos = 0;
+	u8 valid_cos_bitmap;
+	u8 i;
+
+	valid_cos_bitmap = hwdev->cfg_mgmt->svc_cap.cos_valid_bitmap;
+	if (!valid_cos_bitmap) {
+		PMD_DRV_LOG(ERR, "PF has none cos to support\n");
+		return -EFAULT;
+	}
+
+	for (i = 0; i < SPNIC_COS_NUM_MAX; i++) {
+		if (valid_cos_bitmap & BIT(i))
+			/* Find max cos id as default cos */
+			default_cos = i;
+	}
+
+	*cos_id = default_cos;
+
+	return 0;
+}
+
+static int spnic_init_default_cos(struct spnic_nic_dev *nic_dev)
+{
+	u8 cos_id = 0;
+	int err;
+
+	if (!SPNIC_IS_VF(nic_dev->hwdev)) {
+		err = spnic_pf_get_default_cos(nic_dev->hwdev, &cos_id);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Get PF default cos failed, err: %d",
+				    err);
+			return err;
+		}
+	} else {
+		err = spnic_vf_get_default_cos(nic_dev->hwdev, &cos_id);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Get VF default cos failed, err: %d",
+				    err);
+			return err;
+		}
+	}
+
+	nic_dev->default_cos = cos_id;
+	PMD_DRV_LOG(INFO, "Default cos %d", nic_dev->default_cos);
+	return 0;
+}
+
+static int spnic_set_default_hw_feature(struct spnic_nic_dev *nic_dev)
+{
+	int err;
+
+	err = spnic_init_default_cos(nic_dev);
+	if (err)
+		return err;
 
 	return 0;
 }
@@ -411,16 +736,44 @@ static int spnic_func_init(struct rte_eth_dev *eth_dev)
 		goto init_hwdev_fail;
 	}
 
+	nic_dev->max_sqs = spnic_func_max_sqs(nic_dev->hwdev);
+	nic_dev->max_rqs = spnic_func_max_rqs(nic_dev->hwdev);
+
 	if (SPNIC_FUNC_TYPE(nic_dev->hwdev) == TYPE_VF)
 		eth_dev->dev_ops = &spnic_pmd_vf_ops;
 	else
 		eth_dev->dev_ops = &spnic_pmd_ops;
+
+	err = spnic_init_nic_hwdev(nic_dev->hwdev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init nic hwdev failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto init_nic_hwdev_fail;
+	}
+
+	err = spnic_init_sw_rxtxqs(nic_dev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init sw rxqs or txqs failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto init_sw_rxtxqs_fail;
+	}
+
 	err = spnic_init_mac_table(eth_dev);
 	if (err) {
 		PMD_DRV_LOG(ERR, "Init mac table failed, dev_name: %s",
 			    eth_dev->data->name);
 		goto init_mac_table_fail;
 	}
+
+	/* Set hardware feature to default status */
+	err = spnic_set_default_hw_feature(nic_dev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Set hw default features failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto set_default_feature_fail;
+	}
+
+	spnic_mutex_init(&nic_dev->rx_mode_mutex, NULL);
 
 	rte_bit_relaxed_set32(SPNIC_DEV_INTR_EN, &nic_dev->dev_status);
 
@@ -430,7 +783,16 @@ static int spnic_func_init(struct rte_eth_dev *eth_dev)
 
 	return 0;
 
+set_default_feature_fail:
+	spnic_deinit_mac_addr(eth_dev);
+
 init_mac_table_fail:
+	spnic_deinit_sw_rxtxqs(nic_dev);
+
+init_sw_rxtxqs_fail:
+	spnic_free_nic_hwdev(nic_dev->hwdev);
+
+init_nic_hwdev_fail:
 	spnic_free_hwdev(nic_dev->hwdev);
 	eth_dev->dev_ops = NULL;
 
