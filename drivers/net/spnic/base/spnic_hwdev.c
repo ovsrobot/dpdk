@@ -9,7 +9,64 @@
 #include "spnic_mgmt.h"
 #include "spnic_cmd.h"
 #include "spnic_mbox.h"
+#include "spnic_cmdq.h"
 #include "spnic_hwdev.h"
+#include "spnic_hw_comm.h"
+
+enum spnic_pcie_nosnoop {
+	SPNIC_PCIE_SNOOP = 0,
+	SPNIC_PCIE_NO_SNOOP = 1
+};
+
+enum spnic_pcie_tph {
+	SPNIC_PCIE_TPH_DISABLE = 0,
+	SPNIC_PCIE_TPH_ENABLE = 1
+};
+
+#define SPNIC_DMA_ATTR_INDIR_IDX_SHIFT				0
+
+#define SPNIC_DMA_ATTR_INDIR_IDX_MASK				0x3FF
+
+#define SPNIC_DMA_ATTR_INDIR_IDX_SET(val, member)			\
+		(((u32)(val) & SPNIC_DMA_ATTR_INDIR_##member##_MASK) << \
+			SPNIC_DMA_ATTR_INDIR_##member##_SHIFT)
+
+#define SPNIC_DMA_ATTR_INDIR_IDX_CLEAR(val, member)		\
+		((val) & (~(SPNIC_DMA_ATTR_INDIR_##member##_MASK	\
+			<< SPNIC_DMA_ATTR_INDIR_##member##_SHIFT)))
+
+#define SPNIC_DMA_ATTR_ENTRY_ST_SHIFT				0
+#define SPNIC_DMA_ATTR_ENTRY_AT_SHIFT				8
+#define SPNIC_DMA_ATTR_ENTRY_PH_SHIFT				10
+#define SPNIC_DMA_ATTR_ENTRY_NO_SNOOPING_SHIFT			12
+#define SPNIC_DMA_ATTR_ENTRY_TPH_EN_SHIFT			13
+
+#define SPNIC_DMA_ATTR_ENTRY_ST_MASK				0xFF
+#define SPNIC_DMA_ATTR_ENTRY_AT_MASK				0x3
+#define SPNIC_DMA_ATTR_ENTRY_PH_MASK				0x3
+#define SPNIC_DMA_ATTR_ENTRY_NO_SNOOPING_MASK			0x1
+#define SPNIC_DMA_ATTR_ENTRY_TPH_EN_MASK			0x1
+
+#define SPNIC_DMA_ATTR_ENTRY_SET(val, member)			\
+		(((u32)(val) & SPNIC_DMA_ATTR_ENTRY_##member##_MASK) << \
+			SPNIC_DMA_ATTR_ENTRY_##member##_SHIFT)
+
+#define SPNIC_DMA_ATTR_ENTRY_CLEAR(val, member)		\
+		((val) & (~(SPNIC_DMA_ATTR_ENTRY_##member##_MASK	\
+			<< SPNIC_DMA_ATTR_ENTRY_##member##_SHIFT)))
+
+#define SPNIC_PCIE_ST_DISABLE			0
+#define SPNIC_PCIE_AT_DISABLE			0
+#define SPNIC_PCIE_PH_DISABLE			0
+
+#define PCIE_MSIX_ATTR_ENTRY			0
+
+#define SPNIC_CHIP_PRESENT			1
+#define SPNIC_CHIP_ABSENT			0
+
+#define SPNIC_DEAULT_EQ_MSIX_PENDING_LIMIT	0
+#define SPNIC_DEAULT_EQ_MSIX_COALESC_TIMER_CFG	0xFF
+#define SPNIC_DEAULT_EQ_MSIX_RESEND_TIMER_CFG	7
 
 typedef void (*mgmt_event_cb)(void *handle, void *buf_in, u16 in_size,
 			      void *buf_out, u16 *out_size);
@@ -100,6 +157,78 @@ void pf_handle_mgmt_comm_event(void *handle, __rte_unused void *pri_handle,
 	PMD_DRV_LOG(WARNING, "Unsupported mgmt cpu event %d to process", cmd);
 }
 
+/**
+ * Initialize the default dma attributes
+ *
+ * @param[in] hwdev
+ *   The pointer to the private hardware device object
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int dma_attr_table_init(struct spnic_hwdev *hwdev)
+{
+	u32 addr, val, dst_attr;
+
+	/* Use indirect access should set entry_idx first */
+	addr = SPNIC_CSR_DMA_ATTR_INDIR_IDX_ADDR;
+	val = spnic_hwif_read_reg(hwdev->hwif, addr);
+	val = SPNIC_DMA_ATTR_INDIR_IDX_CLEAR(val, IDX);
+
+	val |= SPNIC_DMA_ATTR_INDIR_IDX_SET(PCIE_MSIX_ATTR_ENTRY, IDX);
+
+	spnic_hwif_write_reg(hwdev->hwif, addr, val);
+
+	rte_wmb(); /* Write index before config */
+
+	addr = SPNIC_CSR_DMA_ATTR_TBL_ADDR;
+	val = spnic_hwif_read_reg(hwdev->hwif, addr);
+
+	dst_attr = SPNIC_DMA_ATTR_ENTRY_SET(SPNIC_PCIE_ST_DISABLE, ST)	|
+		SPNIC_DMA_ATTR_ENTRY_SET(SPNIC_PCIE_AT_DISABLE, AT)	|
+		SPNIC_DMA_ATTR_ENTRY_SET(SPNIC_PCIE_PH_DISABLE, PH)	|
+		SPNIC_DMA_ATTR_ENTRY_SET(SPNIC_PCIE_SNOOP, NO_SNOOPING)	|
+		SPNIC_DMA_ATTR_ENTRY_SET(SPNIC_PCIE_TPH_DISABLE, TPH_EN);
+
+	if (val == dst_attr)
+		return 0;
+
+	return spnic_set_dma_attr_tbl(hwdev, PCIE_MSIX_ATTR_ENTRY,
+				      SPNIC_PCIE_ST_DISABLE,
+				      SPNIC_PCIE_AT_DISABLE,
+				      SPNIC_PCIE_PH_DISABLE,
+				      SPNIC_PCIE_SNOOP,
+				      SPNIC_PCIE_TPH_DISABLE);
+}
+
+static int init_aeqs_msix_attr(struct spnic_hwdev *hwdev)
+{
+	struct spnic_aeqs *aeqs = hwdev->aeqs;
+	struct interrupt_info info = {0};
+	struct spnic_eq *eq = NULL;
+	u16 q_id;
+	int err;
+
+	info.lli_set = 0;
+	info.interrupt_coalesc_set = 1;
+	info.pending_limt = SPNIC_DEAULT_EQ_MSIX_PENDING_LIMIT;
+	info.coalesc_timer_cfg = SPNIC_DEAULT_EQ_MSIX_COALESC_TIMER_CFG;
+	info.resend_timer_cfg = SPNIC_DEAULT_EQ_MSIX_RESEND_TIMER_CFG;
+
+	for (q_id = 0; q_id < aeqs->num_aeqs; q_id++) {
+		eq = &aeqs->aeq[q_id];
+		info.msix_index = eq->eq_irq.msix_entry_idx;
+		err = spnic_set_interrupt_cfg(hwdev, info);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Set msix attr for aeq %d failed",
+				q_id);
+			return -EFAULT;
+		}
+	}
+
+	return 0;
+}
+
 static int spnic_comm_pf_to_mgmt_init(struct spnic_hwdev *hwdev)
 {
 	int err;
@@ -122,6 +251,35 @@ static void spnic_comm_pf_to_mgmt_free(struct spnic_hwdev *hwdev)
 		return;
 
 	spnic_pf_to_mgmt_free(hwdev);
+}
+
+static int spnic_comm_cmdqs_init(struct spnic_hwdev *hwdev)
+{
+	int err;
+
+	err = spnic_cmdqs_init(hwdev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init cmd queues failed");
+		return err;
+	}
+
+	err = spnic_set_cmdq_depth(hwdev, SPNIC_CMDQ_DEPTH);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Set cmdq depth failed");
+		goto set_cmdq_depth_err;
+	}
+
+	return 0;
+
+set_cmdq_depth_err:
+	spnic_cmdqs_free(hwdev);
+
+	return err;
+}
+
+static void spnic_comm_cmdqs_free(struct spnic_hwdev *hwdev)
+{
+	spnic_cmdqs_free(hwdev);
 }
 
 static int init_mgmt_channel(struct spnic_hwdev *hwdev)
@@ -164,6 +322,51 @@ static void free_mgmt_channel(struct spnic_hwdev *hwdev)
 	spnic_aeqs_free(hwdev);
 }
 
+#define SPNIC_DEFAULT_WQ_PAGE_SIZE	0x100000
+#define SPNIC_HW_WQ_PAGE_SIZE		0x1000
+
+static int init_cmdqs_channel(struct spnic_hwdev *hwdev)
+{
+	int err;
+
+	err = dma_attr_table_init(hwdev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init dma attr table failed");
+		goto dma_attr_init_err;
+	}
+
+	err = init_aeqs_msix_attr(hwdev);
+	if (err)
+		goto init_aeqs_msix_err;
+
+	/* Set default wq page_size */
+	hwdev->wq_page_size = SPNIC_DEFAULT_WQ_PAGE_SIZE;
+	err = spnic_set_wq_page_size(hwdev, spnic_global_func_id(hwdev),
+				      hwdev->wq_page_size);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Set wq page size failed");
+		goto init_wq_pg_size_err;
+	}
+
+	err = spnic_comm_cmdqs_init(hwdev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init cmd queues failed");
+		goto cmdq_init_err;
+	}
+
+	return 0;
+
+cmdq_init_err:
+	if (SPNIC_FUNC_TYPE(hwdev) != TYPE_VF)
+		spnic_set_wq_page_size(hwdev, spnic_global_func_id(hwdev),
+					SPNIC_HW_WQ_PAGE_SIZE);
+init_wq_pg_size_err:
+init_aeqs_msix_err:
+dma_attr_init_err:
+
+	return err;
+}
+
 static int spnic_init_comm_ch(struct spnic_hwdev *hwdev)
 {
 	int err;
@@ -174,11 +377,23 @@ static int spnic_init_comm_ch(struct spnic_hwdev *hwdev)
 		return err;
 	}
 
+	err = init_cmdqs_channel(hwdev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init cmdq channel failed");
+		goto init_cmdqs_channel_err;
+	}
+
 	return 0;
+
+init_cmdqs_channel_err:
+	free_mgmt_channel(hwdev);
+
+	return err;
 }
 
 static void spnic_uninit_comm_ch(struct spnic_hwdev *hwdev)
 {
+	spnic_comm_cmdqs_free(hwdev);
 	free_mgmt_channel(hwdev);
 }
 
