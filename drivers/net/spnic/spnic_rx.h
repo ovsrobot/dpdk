@@ -110,4 +110,45 @@ struct spnic_rxq {
 	struct spnic_rxq_stats	rxq_stats;
 } __rte_cache_aligned;
 
+int spnic_rx_fill_wqe(struct spnic_rxq *rxq);
+
+u32 spnic_rx_fill_buffers(struct spnic_rxq *rxq);
+
+void spnic_free_rxq_mbufs(struct spnic_rxq *rxq);
+
+void spnic_free_all_rxq_mbufs(struct spnic_nic_dev *nic_dev);
+
+int spnic_start_all_rqs(struct rte_eth_dev *eth_dev);
+/**
+ * Get receive queue local ci
+ *
+ * @param[in] rxq
+ *   Receive queue
+ * @return
+ *   Receive queue local ci
+ */
+static inline u16 spnic_get_rq_local_ci(struct spnic_rxq *rxq)
+{
+	return MASKED_QUEUE_IDX(rxq, rxq->cons_idx);
+}
+
+static inline u16 spnic_get_rq_free_wqebb(struct spnic_rxq *rxq)
+{
+	return rxq->delta - 1;
+}
+
+/**
+ * Update receive queue local ci
+ *
+ * @param[in] rxq
+ *   Receive queue
+ * @param[in] wqe_cnt
+ *   Wqebb counters
+ */
+static inline void spnic_update_rq_local_ci(struct spnic_rxq *rxq,
+					     u16 wqe_cnt)
+{
+	rxq->cons_idx += wqe_cnt;
+	rxq->delta += wqe_cnt;
+}
 #endif /* _SPNIC_RX_H_ */
