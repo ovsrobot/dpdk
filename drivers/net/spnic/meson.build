@@ -6,6 +6,7 @@ objs = [base_objs]
 
 sources = files(
 	'spnic_ethdev.c',
-	)
+	'spnic_io.c',
+)
 
 includes += include_directories('base')
