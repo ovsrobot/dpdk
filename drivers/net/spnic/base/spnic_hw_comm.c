@@ -192,6 +192,31 @@ int spnic_set_wq_page_size(void *hwdev, u16 func_idx, u32 page_size)
 	return 0;
 }
 
+int spnic_func_reset(void *hwdev, u64 reset_flag)
+{
+	struct spnic_reset func_reset;
+	struct spnic_hwif *hwif = ((struct spnic_hwdev *)hwdev)->hwif;
+	u16 out_size = sizeof(func_reset);
+	int err = 0;
+
+	PMD_DRV_LOG(INFO, "Function is reset");
+
+	memset(&func_reset, 0, sizeof(func_reset));
+	func_reset.func_id = SPNIC_HWIF_GLOBAL_IDX(hwif);
+	func_reset.reset_flag = reset_flag;
+	err = spnic_msg_to_mgmt_sync(hwdev, SPNIC_MOD_COMM, MGMT_CMD_FUNC_RESET,
+				     &func_reset, sizeof(func_reset),
+				     &func_reset, &out_size, 0);
+	if (err || !out_size || func_reset.status) {
+		PMD_DRV_LOG(ERR, "Reset func resources failed, err: %d, "
+			    "status: 0x%x, out_size: 0x%x",
+			    err, func_reset.status, out_size);
+		return -EIO;
+	}
+
+	return 0;
+}
+
 int spnic_set_cmdq_depth(void *hwdev, u16 cmdq_depth)
 {
 	struct spnic_cmd_root_ctxt root_ctxt;
@@ -260,4 +285,100 @@ int spnic_set_dma_attr_tbl(struct spnic_hwdev *hwdev, u32 entry_idx, u8 st,
 	}
 
 	return 0;
+}
+
+int spnic_get_mgmt_version(void *hwdev, char *mgmt_ver, int max_mgmt_len)
+{
+	struct spnic_cmd_get_fw_version fw_ver;
+	u16 out_size = sizeof(fw_ver);
+	int err;
+
+	if (!hwdev || !mgmt_ver)
+		return -EINVAL;
+
+	memset(&fw_ver, 0, sizeof(fw_ver));
+	fw_ver.fw_type = SPNIC_FW_VER_TYPE_MPU;
+
+	err = spnic_msg_to_mgmt_sync(hwdev, SPNIC_MOD_COMM,
+				     MGMT_CMD_GET_FW_VERSION,
+				     &fw_ver, sizeof(fw_ver), &fw_ver,
+				     &out_size, 0);
+	if (MSG_TO_MGMT_SYNC_RETURN_ERR(err, out_size, fw_ver.status)) {
+		PMD_DRV_LOG(ERR, "Get mgmt version failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, fw_ver.status, out_size);
+		return -EIO;
+	}
+
+	snprintf(mgmt_ver, max_mgmt_len, "%s", fw_ver.ver);
+
+	return 0;
+}
+
+int spnic_get_board_info(void *hwdev, struct spnic_board_info *info)
+{
+	struct spnic_cmd_board_info board_info;
+	u16 out_size = sizeof(board_info);
+	int err;
+
+	if (!hwdev || !info)
+		return -EINVAL;
+
+	memset(&board_info, 0, sizeof(board_info));
+	err = spnic_msg_to_mgmt_sync(hwdev, SPNIC_MOD_COMM,
+				     MGMT_CMD_GET_BOARD_INFO,
+				     &board_info, sizeof(board_info),
+				     &board_info, &out_size, 0);
+	if (err || board_info.status || !out_size) {
+		PMD_DRV_LOG(ERR, "Get board info failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, board_info.status, out_size);
+		return -EFAULT;
+	}
+
+	memcpy(info, &board_info.info, sizeof(*info));
+
+	return 0;
+}
+
+static int spnic_comm_features_nego(void *hwdev, u8 opcode, u64 *s_feature,
+				     u16 size)
+{
+	struct comm_cmd_feature_nego feature_nego;
+	u16 out_size = sizeof(feature_nego);
+	int err;
+
+	if (!hwdev || !s_feature || size > MAX_FEATURE_QWORD)
+		return -EINVAL;
+
+	memset(&feature_nego, 0, sizeof(feature_nego));
+	feature_nego.func_id = spnic_global_func_id(hwdev);
+	feature_nego.opcode = opcode;
+	if (opcode == MGMT_MSG_CMD_OP_SET)
+		memcpy(feature_nego.s_feature, s_feature, (size * sizeof(u64)));
+
+	err = spnic_msg_to_mgmt_sync(hwdev, SPNIC_MOD_COMM,
+				     MGMT_CMD_FEATURE_NEGO,
+				     &feature_nego, sizeof(feature_nego),
+				     &feature_nego, &out_size, 0);
+	if (err || !out_size || feature_nego.head.status) {
+		PMD_DRV_LOG(ERR, "Failed to negotiate feature, err: %d, status: 0x%x, out size: 0x%x\n",
+			err, feature_nego.head.status, out_size);
+		return -EINVAL;
+	}
+
+	if (opcode == MGMT_MSG_CMD_OP_GET)
+		memcpy(s_feature, feature_nego.s_feature, (size * sizeof(u64)));
+
+	return 0;
+}
+
+int spnic_get_comm_features(void *hwdev, u64 *s_feature, u16 size)
+{
+	return spnic_comm_features_nego(hwdev, MGMT_MSG_CMD_OP_GET, s_feature,
+					 size);
+}
+
+int spnic_set_comm_features(void *hwdev, u64 *s_feature, u16 size)
+{
+	return spnic_comm_features_nego(hwdev, MGMT_MSG_CMD_OP_SET, s_feature,
+					 size);
 }
