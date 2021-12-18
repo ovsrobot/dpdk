@@ -7,6 +7,7 @@
 #include "spnic_hwif.h"
 #include "spnic_eqs.h"
 #include "spnic_mgmt.h"
+#include "spnic_cmd.h"
 #include "spnic_mbox.h"
 #include "spnic_hwdev.h"
 
@@ -18,7 +19,62 @@ struct mgmt_event_handle {
 	mgmt_event_cb proc;
 };
 
+int vf_handle_pf_comm_mbox(void *handle, __rte_unused void *pri_handle,
+			   __rte_unused u16 cmd, __rte_unused void *buf_in,
+			   __rte_unused u16 in_size, __rte_unused void *buf_out,
+			   __rte_unused u16 *out_size)
+{
+	struct spnic_hwdev *hwdev = handle;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	PMD_DRV_LOG(WARNING, "Unsupported pf mbox event %d to process", cmd);
+
+	return 0;
+}
+
+static void fault_event_handler(__rte_unused void *hwdev,
+				__rte_unused void *buf_in,
+				__rte_unused u16 in_size,
+				__rte_unused void *buf_out,
+				__rte_unused u16 *out_size)
+{
+	PMD_DRV_LOG(WARNING, "Unsupported fault event handler");
+}
+
+static void ffm_event_msg_handler(__rte_unused void *hwdev,
+				  void *buf_in, u16 in_size,
+				  __rte_unused void *buf_out, u16 *out_size)
+{
+	struct ffm_intr_info *intr = NULL;
+
+	if (in_size != sizeof(*intr)) {
+		PMD_DRV_LOG(ERR, "Invalid fault event report, length: %d, should be %"PRIu64" ",
+			    in_size, sizeof(*intr));
+		return;
+	}
+
+	intr = buf_in;
+
+	PMD_DRV_LOG(ERR, "node_id: 0x%x, err_type: 0x%x, err_level: %d, "
+		    "err_csr_addr: 0x%08x, err_csr_value: 0x%08x",
+		    intr->node_id, intr->err_type, intr->err_level,
+		    intr->err_csr_addr, intr->err_csr_value);
+
+	*out_size = sizeof(*intr);
+}
+
 const struct mgmt_event_handle mgmt_event_proc[] = {
+	{
+		.cmd	= MGMT_CMD_FAULT_REPORT,
+		.proc	= fault_event_handler,
+	},
+
+	{
+		.cmd	= MGMT_CMD_FFM_SET,
+		.proc	= ffm_event_msg_handler,
+	},
 };
 
 void pf_handle_mgmt_comm_event(void *handle, __rte_unused void *pri_handle,
@@ -44,19 +100,28 @@ void pf_handle_mgmt_comm_event(void *handle, __rte_unused void *pri_handle,
 	PMD_DRV_LOG(WARNING, "Unsupported mgmt cpu event %d to process", cmd);
 }
 
-int vf_handle_pf_comm_mbox(void *handle, __rte_unused void *pri_handle,
-			   __rte_unused u16 cmd, __rte_unused void *buf_in,
-			   __rte_unused u16 in_size, __rte_unused void *buf_out,
-			   __rte_unused u16 *out_size)
+static int spnic_comm_pf_to_mgmt_init(struct spnic_hwdev *hwdev)
 {
-	struct spnic_hwdev *hwdev = handle;
+	int err;
 
-	if (!hwdev)
-		return -EINVAL;
+	/* VF does not support send msg to mgmt directly */
+	if (spnic_func_type(hwdev) == TYPE_VF)
+		return 0;
 
-	PMD_DRV_LOG(WARNING, "Unsupported pf mbox event %d to process", cmd);
+	err = spnic_pf_to_mgmt_init(hwdev);
+	if (err)
+		return err;
 
 	return 0;
+}
+
+static void spnic_comm_pf_to_mgmt_free(struct spnic_hwdev *hwdev)
+{
+	/* VF does not support send msg to mgmt directly */
+	if (spnic_func_type(hwdev) == TYPE_VF)
+		return;
+
+	spnic_pf_to_mgmt_free(hwdev);
 }
 
 static int init_mgmt_channel(struct spnic_hwdev *hwdev)
@@ -69,6 +134,12 @@ static int init_mgmt_channel(struct spnic_hwdev *hwdev)
 		return err;
 	}
 
+	err = spnic_comm_pf_to_mgmt_init(hwdev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init mgmt channel failed");
+		goto msg_init_err;
+	}
+
 	err = spnic_func_to_func_init(hwdev);
 	if (err) {
 		PMD_DRV_LOG(ERR, "Init mailbox channel failed");
@@ -78,6 +149,9 @@ static int init_mgmt_channel(struct spnic_hwdev *hwdev)
 	return 0;
 
 func_to_func_init_err:
+	spnic_comm_pf_to_mgmt_free(hwdev);
+
+msg_init_err:
 	spnic_aeqs_free(hwdev);
 
 	return err;
@@ -86,6 +160,7 @@ func_to_func_init_err:
 static void free_mgmt_channel(struct spnic_hwdev *hwdev)
 {
 	spnic_func_to_func_free(hwdev);
+	spnic_comm_pf_to_mgmt_free(hwdev);
 	spnic_aeqs_free(hwdev);
 }
 
