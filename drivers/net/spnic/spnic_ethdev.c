@@ -1277,6 +1277,123 @@ static int spnic_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
 	return err;
 }
 
+/**
+ * Add or delete vlan id.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[in] vlan_id
+ *   Vlan id is used to filter vlan packets
+ * @param[in] enable
+ *   Disable or enable vlan filter function
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id,
+				 int enable)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	int err = 0;
+	u16 func_id;
+
+	if (vlan_id >= RTE_ETHER_MAX_VLAN_ID)
+		return -EINVAL;
+
+	if (vlan_id == 0)
+		return 0;
+
+	func_id = spnic_global_func_id(nic_dev->hwdev);
+
+	if (enable) {
+		/* If vlanid is already set, just return */
+		if (spnic_find_vlan_filter(nic_dev, vlan_id)) {
+			PMD_DRV_LOG(INFO, "Vlan %u has been added, device: %s",
+				    vlan_id, nic_dev->dev_name);
+			return 0;
+		}
+
+		err = spnic_add_vlan(nic_dev->hwdev, vlan_id, func_id);
+	} else {
+		/* If vlanid can't be found, just return */
+		if (!spnic_find_vlan_filter(nic_dev, vlan_id)) {
+			PMD_DRV_LOG(INFO, "Vlan %u is not in the vlan filter list, device: %s",
+				    vlan_id, nic_dev->dev_name);
+			return 0;
+		}
+
+		err = spnic_del_vlan(nic_dev->hwdev, vlan_id, func_id);
+	}
+
+	if (err) {
+		PMD_DRV_LOG(ERR, "%s vlan failed, func_id: %d, vlan_id: %d, err: %d",
+			    enable ? "Add" : "Remove", func_id, vlan_id, err);
+		return err;
+	}
+
+	spnic_store_vlan_filter(nic_dev, vlan_id, enable);
+
+	PMD_DRV_LOG(INFO, "%s vlan %u succeed, device: %s",
+		    enable ? "Add" : "Remove", vlan_id, nic_dev->dev_name);
+
+	return 0;
+}
+
+/**
+ * Enable or disable vlan offload.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[in] mask
+ *   Definitions used for VLAN setting, vlan filter of vlan strip
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_vlan_offload_set(struct rte_eth_dev *dev, int mask)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	struct rte_eth_rxmode *rxmode = &dev->data->dev_conf.rxmode;
+	bool on;
+	int err;
+
+	/* Enable or disable VLAN filter */
+	if (mask & ETH_VLAN_FILTER_MASK) {
+		on = (rxmode->offloads & DEV_RX_OFFLOAD_VLAN_FILTER) ?
+		     true : false;
+		err = spnic_set_vlan_fliter(nic_dev->hwdev, on);
+		if (err) {
+			PMD_DRV_LOG(ERR, "%s vlan filter failed, device: %s, port_id: %d, err: %d",
+				    on ? "Enable" : "Disable",
+				    nic_dev->dev_name, dev->data->port_id, err);
+			return err;
+		}
+
+		PMD_DRV_LOG(INFO, "%s vlan filter succeed, device: %s, port_id: %d",
+			    on ? "Enable" : "Disable",
+			    nic_dev->dev_name, dev->data->port_id);
+	}
+
+	/* Enable or disable VLAN stripping */
+	if (mask & ETH_VLAN_STRIP_MASK) {
+		on = (rxmode->offloads & DEV_RX_OFFLOAD_VLAN_STRIP) ?
+		     true : false;
+		err = spnic_set_rx_vlan_offload(nic_dev->hwdev, on);
+		if (err) {
+			PMD_DRV_LOG(ERR, "%s vlan strip failed, device: %s, port_id: %d, err: %d",
+				    on ? "Enable" : "Disable",
+				    nic_dev->dev_name, dev->data->port_id, err);
+			return err;
+		}
+
+		PMD_DRV_LOG(INFO, "%s vlan strip succeed, device: %s, port_id: %d",
+			    on ? "Enable" : "Disable",
+			    nic_dev->dev_name, dev->data->port_id);
+	}
+
+	return 0;
+}
+
 
 /**
  * Update the RSS hash key and RSS hash type.
@@ -1711,6 +1828,8 @@ static const struct eth_dev_ops spnic_pmd_ops = {
 	.dev_stop                      = spnic_dev_stop,
 	.dev_close                     = spnic_dev_close,
 	.mtu_set                       = spnic_dev_set_mtu,
+	.vlan_filter_set               = spnic_vlan_filter_set,
+	.vlan_offload_set              = spnic_vlan_offload_set,
 	.rss_hash_update               = spnic_rss_hash_update,
 	.rss_hash_conf_get             = spnic_rss_conf_get,
 	.reta_update                   = spnic_rss_reta_update,
@@ -1734,6 +1853,8 @@ static const struct eth_dev_ops spnic_pmd_vf_ops = {
 	.dev_stop                      = spnic_dev_stop,
 	.dev_close                     = spnic_dev_close,
 	.mtu_set                       = spnic_dev_set_mtu,
+	.vlan_filter_set               = spnic_vlan_filter_set,
+	.vlan_offload_set              = spnic_vlan_offload_set,
 	.rss_hash_update               = spnic_rss_hash_update,
 	.rss_hash_conf_get             = spnic_rss_conf_get,
 	.reta_update                   = spnic_rss_reta_update,

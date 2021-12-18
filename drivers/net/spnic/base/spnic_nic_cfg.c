@@ -294,6 +294,14 @@ static int spnic_config_vlan(void *hwdev, u8 opcode, u16 vlan_id, u16 func_id)
 	return 0;
 }
 
+int spnic_add_vlan(void *hwdev, u16 vlan_id, u16 func_id)
+{
+	if (!hwdev)
+		return -EINVAL;
+
+	return spnic_config_vlan(hwdev, SPNIC_CMD_OP_ADD, vlan_id, func_id);
+}
+
 int spnic_del_vlan(void *hwdev, u16 vlan_id, u16 func_id)
 {
 	if (!hwdev)
