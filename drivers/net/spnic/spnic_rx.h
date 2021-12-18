@@ -273,6 +273,10 @@ void spnic_dump_cqe_status(struct spnic_rxq *rxq, u32 *cqe_done_cnt,
 			    u32 *cqe_hole_cnt, u32 *head_ci,
 			    u32 *head_done);
 
+int spnic_stop_rq(struct rte_eth_dev *eth_dev, struct spnic_rxq *rxq);
+
+int spnic_start_rq(struct rte_eth_dev *eth_dev, struct spnic_rxq *rxq);
+
 int spnic_start_all_rqs(struct rte_eth_dev *eth_dev);
 
 u16 spnic_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, u16 nb_pkts);

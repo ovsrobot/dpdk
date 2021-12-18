@@ -1289,6 +1289,39 @@ int spnic_vf_get_default_cos(void *hwdev, u8 *cos_id)
 	return 0;
 }
 
+int spnic_set_rq_flush(void *hwdev, u16 q_id)
+{
+	struct spnic_cmd_set_rq_flush *rq_flush_msg = NULL;
+	struct spnic_cmd_buf *cmd_buf = NULL;
+	u64 out_param = EIO;
+	int err;
+
+	cmd_buf = spnic_alloc_cmd_buf(hwdev);
+	if (!cmd_buf) {
+		PMD_DRV_LOG(ERR, "Failed to allocate cmd buf\n");
+		return -ENOMEM;
+	}
+
+	cmd_buf->size = sizeof(*rq_flush_msg);
+
+	rq_flush_msg = cmd_buf->buf;
+	rq_flush_msg->local_rq_id = q_id;
+	rq_flush_msg->value = cpu_to_be32(rq_flush_msg->value);
+
+	err = spnic_cmdq_direct_resp(hwdev, SPNIC_MOD_L2NIC,
+				     SPNIC_UCODE_CMD_SET_RQ_FLUSH, cmd_buf,
+				     &out_param, 0);
+	if (err || out_param != 0) {
+		PMD_DRV_LOG(ERR, "Failed to set rq flush, err:%d, out_param: %"PRIu64"",
+			    err, out_param);
+		err = -EFAULT;
+	}
+
+	spnic_free_cmd_buf(cmd_buf);
+
+	return err;
+}
+
 static int _mag_msg_to_mgmt_sync(void *hwdev, u16 cmd, void *buf_in,
 				 u16 in_size, void *buf_out, u16 *out_size)
 {

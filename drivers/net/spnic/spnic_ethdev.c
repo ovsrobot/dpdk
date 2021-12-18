@@ -993,6 +993,80 @@ static void spnic_deinit_mac_addr(struct rte_eth_dev *eth_dev)
 	spnic_delete_mc_addr_list(nic_dev);
 }
 
+static int spnic_dev_rx_queue_start(__rte_unused struct rte_eth_dev *dev,
+				     __rte_unused uint16_t rq_id)
+{
+	struct spnic_rxq *rxq = NULL;
+	int rc;
+
+	if (rq_id < dev->data->nb_rx_queues) {
+		rxq = dev->data->rx_queues[rq_id];
+
+		rc = spnic_start_rq(dev, rxq);
+		if (rc) {
+			PMD_DRV_LOG(ERR, "Start rx queue failed, eth_dev:%s, queue_idx:%d",
+					dev->data->name, rq_id);
+			return rc;
+		}
+
+		dev->data->rx_queue_state[rq_id] = RTE_ETH_QUEUE_STATE_STARTED;
+	}
+
+	return 0;
+}
+
+static int spnic_dev_rx_queue_stop(__rte_unused struct rte_eth_dev *dev,
+				    __rte_unused uint16_t rq_id)
+{
+	struct spnic_rxq *rxq = NULL;
+	int rc;
+
+	if (rq_id < dev->data->nb_rx_queues) {
+		rxq = dev->data->rx_queues[rq_id];
+
+		rc = spnic_stop_rq(dev, rxq);
+		if (rc) {
+			PMD_DRV_LOG(ERR, "Stop rx queue failed, eth_dev:%s, queue_idx:%d",
+					dev->data->name, rq_id);
+			return rc;
+		}
+
+		dev->data->rx_queue_state[rq_id] = RTE_ETH_QUEUE_STATE_STOPPED;
+	}
+
+	return 0;
+}
+
+static int spnic_dev_tx_queue_start(__rte_unused struct rte_eth_dev *dev,
+				     __rte_unused uint16_t sq_id)
+{
+	PMD_DRV_LOG(INFO, "Start tx queue, eth_dev:%s, queue_idx:%d",
+		   dev->data->name, sq_id);
+	dev->data->tx_queue_state[sq_id] = RTE_ETH_QUEUE_STATE_STARTED;
+	return 0;
+}
+
+static int spnic_dev_tx_queue_stop(__rte_unused struct rte_eth_dev *dev,
+				    __rte_unused uint16_t sq_id)
+{
+	struct spnic_txq *txq = NULL;
+	int rc;
+
+	if (sq_id < dev->data->nb_tx_queues) {
+		txq = dev->data->tx_queues[sq_id];
+		rc = spnic_stop_sq(txq);
+		if (rc) {
+			PMD_DRV_LOG(ERR, "Stop tx queue failed, eth_dev:%s, queue_idx:%d",
+				   dev->data->name, sq_id);
+			return rc;
+		}
+
+		dev->data->tx_queue_state[sq_id] = RTE_ETH_QUEUE_STATE_STOPPED;
+	}
+
+	return 0;
+}
+
 int spnic_dev_rx_queue_intr_enable(struct rte_eth_dev *dev,
 				    uint16_t queue_id)
 {
@@ -2717,6 +2791,10 @@ static const struct eth_dev_ops spnic_pmd_ops = {
 	.tx_queue_setup                = spnic_tx_queue_setup,
 	.rx_queue_release              = spnic_rx_queue_release,
 	.tx_queue_release              = spnic_tx_queue_release,
+	.rx_queue_start                = spnic_dev_rx_queue_start,
+	.rx_queue_stop                 = spnic_dev_rx_queue_stop,
+	.tx_queue_start                = spnic_dev_tx_queue_start,
+	.tx_queue_stop                 = spnic_dev_tx_queue_stop,
 	.rx_queue_intr_enable          = spnic_dev_rx_queue_intr_enable,
 	.rx_queue_intr_disable         = spnic_dev_rx_queue_intr_disable,
 	.dev_start                     = spnic_dev_start,
@@ -2756,6 +2834,10 @@ static const struct eth_dev_ops spnic_pmd_vf_ops = {
 	.tx_queue_setup                = spnic_tx_queue_setup,
 	.rx_queue_intr_enable          = spnic_dev_rx_queue_intr_enable,
 	.rx_queue_intr_disable         = spnic_dev_rx_queue_intr_disable,
+	.rx_queue_start                = spnic_dev_rx_queue_start,
+	.rx_queue_stop                 = spnic_dev_rx_queue_stop,
+	.tx_queue_start                = spnic_dev_tx_queue_start,
+	.tx_queue_stop                 = spnic_dev_tx_queue_stop,
 	.dev_start                     = spnic_dev_start,
 	.link_update                   = spnic_link_update,
 	.rx_queue_release              = spnic_rx_queue_release,
