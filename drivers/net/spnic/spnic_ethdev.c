@@ -1846,6 +1846,23 @@ static int spnic_rss_reta_update(struct rte_eth_dev *dev,
 	return err;
 }
 
+static void spnic_rxq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
+			       struct rte_eth_rxq_info *rxq_info)
+{
+	struct spnic_rxq *rxq = dev->data->rx_queues[queue_id];
+
+	rxq_info->mp = rxq->mb_pool;
+	rxq_info->nb_desc = rxq->q_depth;
+}
+
+static void spnic_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
+			       struct rte_eth_txq_info *txq_qinfo)
+{
+	struct spnic_txq *txq = dev->data->tx_queues[queue_id];
+
+	txq_qinfo->nb_desc = txq->q_depth;
+}
+
 /**
  * Update MAC address
  *
@@ -2065,6 +2082,8 @@ static const struct eth_dev_ops spnic_pmd_ops = {
 	.rss_hash_conf_get             = spnic_rss_conf_get,
 	.reta_update                   = spnic_rss_reta_update,
 	.reta_query                    = spnic_rss_reta_query,
+	.rxq_info_get                  = spnic_rxq_info_get,
+	.txq_info_get                  = spnic_txq_info_get,
 	.mac_addr_set                  = spnic_set_mac_addr,
 	.mac_addr_remove               = spnic_mac_addr_remove,
 	.mac_addr_add                  = spnic_mac_addr_add,
@@ -2092,6 +2111,8 @@ static const struct eth_dev_ops spnic_pmd_vf_ops = {
 	.rss_hash_conf_get             = spnic_rss_conf_get,
 	.reta_update                   = spnic_rss_reta_update,
 	.reta_query                    = spnic_rss_reta_query,
+	.rxq_info_get                  = spnic_rxq_info_get,
+	.txq_info_get                  = spnic_txq_info_get,
 	.mac_addr_set                  = spnic_set_mac_addr,
 	.mac_addr_remove               = spnic_mac_addr_remove,
 	.mac_addr_add                  = spnic_mac_addr_add,
