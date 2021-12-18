@@ -5,6 +5,135 @@
 #ifndef _SPNIC_RX_H_
 #define _SPNIC_RX_H_
 
+#define RQ_CQE_OFFOLAD_TYPE_PKT_TYPE_SHIFT		0
+#define RQ_CQE_OFFOLAD_TYPE_PKT_UMBCAST_SHIFT		19
+#define RQ_CQE_OFFOLAD_TYPE_VLAN_EN_SHIFT		21
+#define RQ_CQE_OFFOLAD_TYPE_RSS_TYPE_SHIFT		24
+
+#define RQ_CQE_OFFOLAD_TYPE_PKT_TYPE_MASK		0xFFFU
+#define RQ_CQE_OFFOLAD_TYPE_PKT_UMBCAST_MASK		0x3U
+#define RQ_CQE_OFFOLAD_TYPE_VLAN_EN_MASK		0x1U
+#define RQ_CQE_OFFOLAD_TYPE_RSS_TYPE_MASK		0xFFU
+
+#define RQ_CQE_OFFOLAD_TYPE_GET(val, member)		(((val) >> \
+				RQ_CQE_OFFOLAD_TYPE_##member##_SHIFT) & \
+				RQ_CQE_OFFOLAD_TYPE_##member##_MASK)
+
+#define SPNIC_GET_RX_PKT_TYPE(offload_type)	\
+		RQ_CQE_OFFOLAD_TYPE_GET(offload_type, PKT_TYPE)
+
+#define SPNIC_GET_RX_PKT_UMBCAST(offload_type)	\
+		RQ_CQE_OFFOLAD_TYPE_GET(offload_type, PKT_UMBCAST)
+
+#define SPNIC_GET_RX_VLAN_OFFLOAD_EN(offload_type)	\
+		RQ_CQE_OFFOLAD_TYPE_GET(offload_type, VLAN_EN)
+
+#define SPNIC_GET_RSS_TYPES(offload_type)	\
+		RQ_CQE_OFFOLAD_TYPE_GET(offload_type, RSS_TYPE)
+
+#define RQ_CQE_SGE_VLAN_SHIFT				0
+#define RQ_CQE_SGE_LEN_SHIFT				16
+
+#define RQ_CQE_SGE_VLAN_MASK				0xFFFFU
+#define RQ_CQE_SGE_LEN_MASK				0xFFFFU
+
+#define RQ_CQE_SGE_GET(val, member)			(((val) >> \
+					RQ_CQE_SGE_##member##_SHIFT) & \
+					RQ_CQE_SGE_##member##_MASK)
+
+#define SPNIC_GET_RX_VLAN_TAG(vlan_len)	RQ_CQE_SGE_GET(vlan_len, VLAN)
+
+#define SPNIC_GET_RX_PKT_LEN(vlan_len)		RQ_CQE_SGE_GET(vlan_len, LEN)
+
+#define RQ_CQE_STATUS_CSUM_ERR_SHIFT		0
+#define RQ_CQE_STATUS_NUM_LRO_SHIFT		16
+#define RQ_CQE_STATUS_LRO_PUSH_SHIFT		25
+#define RQ_CQE_STATUS_LRO_ENTER_SHIFT		26
+#define RQ_CQE_STATUS_LRO_INTR_SHIFT		27
+
+#define RQ_CQE_STATUS_BP_EN_SHIFT		30
+#define RQ_CQE_STATUS_RXDONE_SHIFT		31
+#define RQ_CQE_STATUS_DECRY_PKT_SHIFT		29
+#define RQ_CQE_STATUS_FLUSH_SHIFT		28
+
+#define RQ_CQE_STATUS_CSUM_ERR_MASK		0xFFFFU
+#define RQ_CQE_STATUS_NUM_LRO_MASK		0xFFU
+#define RQ_CQE_STATUS_LRO_PUSH_MASK		0X1U
+#define RQ_CQE_STATUS_LRO_ENTER_MASK		0X1U
+#define RQ_CQE_STATUS_LRO_INTR_MASK		0X1U
+#define RQ_CQE_STATUS_BP_EN_MASK		0X1U
+#define RQ_CQE_STATUS_RXDONE_MASK		0x1U
+#define RQ_CQE_STATUS_FLUSH_MASK		0x1U
+#define RQ_CQE_STATUS_DECRY_PKT_MASK		0x1U
+
+#define RQ_CQE_STATUS_GET(val, member)			(((val) >> \
+					RQ_CQE_STATUS_##member##_SHIFT) & \
+					RQ_CQE_STATUS_##member##_MASK)
+
+#define SPNIC_GET_RX_CSUM_ERR(status)	RQ_CQE_STATUS_GET(status, CSUM_ERR)
+
+#define SPNIC_GET_RX_DONE(status)	RQ_CQE_STATUS_GET(status, RXDONE)
+
+#define SPNIC_GET_RX_FLUSH(status)	RQ_CQE_STATUS_GET(status, FLUSH)
+
+#define SPNIC_GET_RX_BP_EN(status)	RQ_CQE_STATUS_GET(status, BP_EN)
+
+#define SPNIC_GET_RX_NUM_LRO(status)	RQ_CQE_STATUS_GET(status, NUM_LRO)
+
+#define SPNIC_RX_IS_DECRY_PKT(status)	RQ_CQE_STATUS_GET(status, DECRY_PKT)
+
+#define RQ_CQE_SUPER_CQE_EN_SHIFT			0
+#define RQ_CQE_PKT_NUM_SHIFT				1
+#define RQ_CQE_PKT_LAST_LEN_SHIFT			6
+#define RQ_CQE_PKT_FIRST_LEN_SHIFT			19
+
+#define RQ_CQE_SUPER_CQE_EN_MASK			0x1
+#define RQ_CQE_PKT_NUM_MASK				0x1FU
+#define RQ_CQE_PKT_FIRST_LEN_MASK			0x1FFFU
+#define RQ_CQE_PKT_LAST_LEN_MASK			0x1FFFU
+
+#define RQ_CQE_PKT_NUM_GET(val, member)			(((val) >> \
+					RQ_CQE_PKT_##member##_SHIFT) & \
+					RQ_CQE_PKT_##member##_MASK)
+#define SPNIC_GET_RQ_CQE_PKT_NUM(pkt_info) RQ_CQE_PKT_NUM_GET(pkt_info, NUM)
+
+#define RQ_CQE_SUPER_CQE_EN_GET(val, member)		(((val) >> \
+					RQ_CQE_##member##_SHIFT) & \
+					RQ_CQE_##member##_MASK)
+#define SPNIC_GET_SUPER_CQE_EN(pkt_info)	\
+	RQ_CQE_SUPER_CQE_EN_GET(pkt_info, SUPER_CQE_EN)
+
+#define RQ_CQE_PKT_LEN_GET(val, member)			(((val) >> \
+						RQ_CQE_PKT_##member##_SHIFT) & \
+						RQ_CQE_PKT_##member##_MASK)
+
+#define RQ_CQE_DECRY_INFO_DECRY_STATUS_SHIFT	8
+#define RQ_CQE_DECRY_INFO_ESP_NEXT_HEAD_SHIFT	0
+
+#define RQ_CQE_DECRY_INFO_DECRY_STATUS_MASK	0xFFU
+#define RQ_CQE_DECRY_INFO_ESP_NEXT_HEAD_MASK	0xFFU
+
+#define RQ_CQE_DECRY_INFO_GET(val, member)		(((val) >> \
+				RQ_CQE_DECRY_INFO_##member##_SHIFT) & \
+				RQ_CQE_DECRY_INFO_##member##_MASK)
+
+#define SPNIC_GET_DECRYPT_STATUS(decry_info)	\
+	RQ_CQE_DECRY_INFO_GET(decry_info, DECRY_STATUS)
+
+#define SPNIC_GET_ESP_NEXT_HEAD(decry_info)	\
+	RQ_CQE_DECRY_INFO_GET(decry_info, ESP_NEXT_HEAD)
+
+/* Rx cqe checksum err */
+#define SPNIC_RX_CSUM_IP_CSUM_ERR	BIT(0)
+#define SPNIC_RX_CSUM_TCP_CSUM_ERR	BIT(1)
+#define SPNIC_RX_CSUM_UDP_CSUM_ERR	BIT(2)
+#define SPNIC_RX_CSUM_IGMP_CSUM_ERR	BIT(3)
+#define SPNIC_RX_CSUM_ICMPv4_CSUM_ERR	BIT(4)
+#define SPNIC_RX_CSUM_ICMPv6_CSUM_ERR	BIT(5)
+#define SPNIC_RX_CSUM_SCTP_CRC_ERR	BIT(6)
+#define SPNIC_RX_CSUM_HW_CHECK_NONE	BIT(7)
+#define SPNIC_RX_CSUM_IPSU_OTHER_ERR	BIT(8)
+
 #define SPNIC_DEFAULT_RX_CSUM_OFFLOAD	0xFFF
 
 #define SPNIC_RSS_OFFLOAD_ALL ( \
@@ -138,7 +267,15 @@ void spnic_free_all_rxq_mbufs(struct spnic_nic_dev *nic_dev);
 int spnic_update_rss_config(struct rte_eth_dev *dev,
 			    struct rte_eth_rss_conf *rss_conf);
 
+int spnic_poll_rq_empty(struct spnic_rxq *rxq);
+
+void spnic_dump_cqe_status(struct spnic_rxq *rxq, u32 *cqe_done_cnt,
+			    u32 *cqe_hole_cnt, u32 *head_ci,
+			    u32 *head_done);
+
 int spnic_start_all_rqs(struct rte_eth_dev *eth_dev);
+
+u16 spnic_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, u16 nb_pkts);
 
 void spnic_add_rq_to_rx_queue_list(struct spnic_nic_dev *nic_dev,
 				    u16 queue_id);
