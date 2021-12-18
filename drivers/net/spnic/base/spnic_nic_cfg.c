@@ -440,6 +440,59 @@ int spnic_flush_qps_res(void *hwdev)
 	return 0;
 }
 
+static int spnic_cfg_hw_pause(void *hwdev, u8 opcode,
+			       struct nic_pause_config *nic_pause)
+{
+	struct spnic_cmd_pause_config pause_info;
+	u16 out_size = sizeof(pause_info);
+	int err;
+
+	memset(&pause_info, 0, sizeof(pause_info));
+
+	pause_info.port_id = spnic_physical_port_id(hwdev);
+	pause_info.opcode = opcode;
+	if (opcode == SPNIC_CMD_OP_SET) {
+		pause_info.auto_neg = nic_pause->auto_neg;
+		pause_info.rx_pause = nic_pause->rx_pause;
+		pause_info.tx_pause = nic_pause->tx_pause;
+	}
+
+	err = l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_CFG_PAUSE_INFO,
+				     &pause_info, sizeof(pause_info),
+				     &pause_info, &out_size);
+	if (err || !out_size || pause_info.msg_head.status) {
+		PMD_DRV_LOG(ERR, "%s pause info failed, err: %d, status: 0x%x, out size: 0x%x\n",
+			    opcode == SPNIC_CMD_OP_SET ? "Set" : "Get",
+			    err, pause_info.msg_head.status, out_size);
+		return -EIO;
+	}
+
+	if (opcode == SPNIC_CMD_OP_GET) {
+		nic_pause->auto_neg = pause_info.auto_neg;
+		nic_pause->rx_pause = pause_info.rx_pause;
+		nic_pause->tx_pause = pause_info.tx_pause;
+	}
+
+	return 0;
+}
+
+int spnic_set_pause_info(void *hwdev, struct nic_pause_config nic_pause)
+{
+	if (!hwdev)
+		return -EINVAL;
+
+	return spnic_cfg_hw_pause(hwdev, SPNIC_CMD_OP_SET, &nic_pause);
+}
+
+int spnic_get_pause_info(void *hwdev, struct nic_pause_config *nic_pause)
+{
+	if (!hwdev || !nic_pause)
+		return -EINVAL;
+
+
+	return spnic_cfg_hw_pause(hwdev, SPNIC_CMD_OP_GET, nic_pause);
+}
+
 static int spnic_set_function_table(void *hwdev, u32 cfg_bitmap,
 				     struct spnic_func_tbl_cfg *cfg)
 {

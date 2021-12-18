@@ -1544,6 +1544,81 @@ static int spnic_dev_promiscuous_disable(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static int spnic_dev_flow_ctrl_get(struct rte_eth_dev *dev,
+				   struct rte_eth_fc_conf *fc_conf)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	struct nic_pause_config nic_pause;
+	int err;
+
+	err = spnic_mutex_lock(&nic_dev->pause_mutuex);
+	if (err)
+		return err;
+
+	memset(&nic_pause, 0, sizeof(nic_pause));
+	err = spnic_get_pause_info(nic_dev->hwdev, &nic_pause);
+	if (err) {
+		(void)spnic_mutex_unlock(&nic_dev->pause_mutuex);
+		return err;
+	}
+
+	if (nic_dev->pause_set || !nic_pause.auto_neg) {
+		nic_pause.rx_pause = nic_dev->nic_pause.rx_pause;
+		nic_pause.tx_pause = nic_dev->nic_pause.tx_pause;
+	}
+
+	fc_conf->autoneg = nic_pause.auto_neg;
+
+	if (nic_pause.tx_pause && nic_pause.rx_pause)
+		fc_conf->mode = RTE_FC_FULL;
+	else if (nic_pause.tx_pause)
+		fc_conf->mode = RTE_FC_TX_PAUSE;
+	else if (nic_pause.rx_pause)
+		fc_conf->mode = RTE_FC_RX_PAUSE;
+	else
+		fc_conf->mode = RTE_FC_NONE;
+
+	(void)spnic_mutex_unlock(&nic_dev->pause_mutuex);
+	return 0;
+}
+
+static int spnic_dev_flow_ctrl_set(struct rte_eth_dev *dev,
+				   struct rte_eth_fc_conf *fc_conf)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	struct nic_pause_config nic_pause;
+	int err;
+
+	err = spnic_mutex_lock(&nic_dev->pause_mutuex);
+	if (err)
+		return err;
+
+	memset(&nic_pause, 0, sizeof(nic_pause));
+	if (((fc_conf->mode & RTE_FC_FULL) == RTE_FC_FULL) ||
+	    (fc_conf->mode & RTE_FC_TX_PAUSE))
+		nic_pause.tx_pause = true;
+
+	if (((fc_conf->mode & RTE_FC_FULL) == RTE_FC_FULL) ||
+	    (fc_conf->mode & RTE_FC_RX_PAUSE))
+		nic_pause.rx_pause = true;
+
+	err = spnic_set_pause_info(nic_dev->hwdev, nic_pause);
+	if (err) {
+		(void)spnic_mutex_unlock(&nic_dev->pause_mutuex);
+		return err;
+	}
+
+	nic_dev->pause_set = true;
+	nic_dev->nic_pause.rx_pause = nic_pause.rx_pause;
+	nic_dev->nic_pause.tx_pause = nic_pause.tx_pause;
+
+	PMD_DRV_LOG(INFO, "Just support set tx or rx pause info, tx: %s, rx: %s\n",
+		    nic_pause.tx_pause ? "on" : "off",
+		    nic_pause.rx_pause ? "on" : "off");
+
+	(void)spnic_mutex_unlock(&nic_dev->pause_mutuex);
+	return 0;
+}
 
 /**
  * Update the RSS hash key and RSS hash type.
@@ -1984,6 +2059,8 @@ static const struct eth_dev_ops spnic_pmd_ops = {
 	.allmulticast_disable          = spnic_dev_allmulticast_disable,
 	.promiscuous_enable            = spnic_dev_promiscuous_enable,
 	.promiscuous_disable           = spnic_dev_promiscuous_disable,
+	.flow_ctrl_get                 = spnic_dev_flow_ctrl_get,
+	.flow_ctrl_set                 = spnic_dev_flow_ctrl_set,
 	.rss_hash_update               = spnic_rss_hash_update,
 	.rss_hash_conf_get             = spnic_rss_conf_get,
 	.reta_update                   = spnic_rss_reta_update,
