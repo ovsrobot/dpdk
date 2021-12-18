@@ -5,7 +5,10 @@
 #include <rte_pci.h>
 #include <rte_bus_pci.h>
 #include <ethdev_pci.h>
+#include <rte_mbuf.h>
 #include <rte_malloc.h>
+#include <rte_memcpy.h>
+#include <rte_mempool.h>
 #include <rte_errno.h>
 #include <rte_ether.h>
 
@@ -27,14 +30,41 @@
 #include "spnic_rx.h"
 #include "spnic_ethdev.h"
 
-/* Driver-specific log messages type */
-int spnic_logtype;
+#define SPNIC_MIN_RX_BUF_SIZE		1024
+
+#define SPNIC_DEFAULT_BURST_SIZE	32
+#define SPNIC_DEFAULT_NB_QUEUES		1
+#define SPNIC_DEFAULT_RING_SIZE		1024
+#define SPNIC_MAX_LRO_SIZE		65536
 
 #define SPNIC_DEFAULT_RX_FREE_THRESH	32
 #define SPNIC_DEFAULT_TX_FREE_THRESH	32
 
-#define SPNIC_MAX_UC_MAC_ADDRS		128
-#define SPNIC_MAX_MC_MAC_ADDRS		128
+/*
+ * Vlan_id is a 12 bit number. The VFTA array is actually a 4096 bit array,
+ * 128 of 32bit elements. 2^5 = 32. The val of lower 5 bits specifies the bit
+ * in the 32bit element. The higher 7 bit val specifies VFTA array index.
+ */
+#define SPNIC_VFTA_BIT(vlan_id)    (1 << ((vlan_id) & 0x1F))
+#define SPNIC_VFTA_IDX(vlan_id)    ((vlan_id) >> 5)
+
+#define SPNIC_LRO_DEFAULT_COAL_PKT_SIZE		32
+#define SPNIC_LRO_DEFAULT_TIME_LIMIT		16
+#define SPNIC_LRO_UNIT_WQE_SIZE			1024 /* Bytes */
+
+/* Driver-specific log messages type */
+int spnic_logtype;
+
+enum spnic_rx_mod {
+	SPNIC_RX_MODE_UC = 1 << 0,
+	SPNIC_RX_MODE_MC = 1 << 1,
+	SPNIC_RX_MODE_BC = 1 << 2,
+	SPNIC_RX_MODE_MC_ALL = 1 << 3,
+	SPNIC_RX_MODE_PROMISC = 1 << 4,
+};
+
+#define SPNIC_DEFAULT_RX_MODE	(SPNIC_RX_MODE_UC | SPNIC_RX_MODE_MC | \
+				SPNIC_RX_MODE_BC)
 
 #define SPNIC_MAX_QUEUE_DEPTH		16384
 #define SPNIC_MIN_QUEUE_DEPTH		128
@@ -638,6 +668,139 @@ static void spnic_deinit_mac_addr(struct rte_eth_dev *eth_dev)
 	spnic_delete_mc_addr_list(nic_dev);
 }
 
+static int spnic_set_rxtx_configure(struct rte_eth_dev *dev)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	struct rte_eth_conf *dev_conf = &dev->data->dev_conf;
+	struct rte_eth_rss_conf *rss_conf = NULL;
+	bool lro_en, vlan_filter, vlan_strip;
+	int max_lro_size, lro_max_pkt_len;
+	int err;
+
+	/* Config rx mode */
+	err = spnic_set_rx_mode(nic_dev->hwdev, SPNIC_DEFAULT_RX_MODE);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Set rx_mode: 0x%x failed",
+			    SPNIC_DEFAULT_RX_MODE);
+		return err;
+	}
+	nic_dev->rx_mode = SPNIC_DEFAULT_RX_MODE;
+
+	/* Config rx checksum offload */
+	if (dev_conf->rxmode.offloads & DEV_RX_OFFLOAD_CHECKSUM)
+		nic_dev->rx_csum_en = SPNIC_DEFAULT_RX_CSUM_OFFLOAD;
+
+	/* Config lro */
+	lro_en = dev_conf->rxmode.offloads & DEV_RX_OFFLOAD_TCP_LRO ?
+		 true : false;
+	max_lro_size = dev->data->dev_conf.rxmode.max_lro_pkt_size;
+	lro_max_pkt_len = max_lro_size / SPNIC_LRO_UNIT_WQE_SIZE ?
+			  max_lro_size / SPNIC_LRO_UNIT_WQE_SIZE : 1;
+
+	PMD_DRV_LOG(INFO, "max_lro_size: %d, rx_buff_len: %d, lro_max_pkt_len: %d mtu: %d",
+		    max_lro_size, nic_dev->rx_buff_len, lro_max_pkt_len,
+		    dev->data->dev_conf.rxmode.mtu);
+
+	err = spnic_set_rx_lro_state(nic_dev->hwdev, lro_en,
+				     SPNIC_LRO_DEFAULT_TIME_LIMIT,
+				     lro_max_pkt_len);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Set lro state failed, err: %d", err);
+		return err;
+	}
+
+	/* Config RSS */
+	if ((dev_conf->rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG) &&
+	    nic_dev->num_rqs > 1) {
+		rss_conf = &(dev_conf->rx_adv_conf.rss_conf);
+		err = spnic_update_rss_config(dev, rss_conf);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Set rss config failed, err: %d", err);
+			return err;
+		}
+	}
+
+	/* Config vlan filter */
+	vlan_filter = dev_conf->rxmode.offloads & DEV_RX_OFFLOAD_VLAN_FILTER ?
+		      true : false;
+
+	err = spnic_set_vlan_fliter(nic_dev->hwdev, vlan_filter);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Config vlan filter failed, device: %s, port_id: %d, err: %d",
+			    nic_dev->dev_name, dev->data->port_id, err);
+		return err;
+	}
+
+	/* Config vlan stripping */
+	vlan_strip = dev_conf->rxmode.offloads & DEV_RX_OFFLOAD_VLAN_STRIP ?
+		     true : false;
+
+	err = spnic_set_rx_vlan_offload(nic_dev->hwdev, vlan_strip);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Config vlan strip failed, device: %s, port_id: %d, err: %d",
+			    nic_dev->dev_name, dev->data->port_id, err);
+		return err;
+	}
+
+	spnic_init_rx_queue_list(nic_dev);
+
+	return 0;
+}
+
+static void spnic_remove_rxtx_configure(struct rte_eth_dev *dev)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	u8 prio_tc[SPNIC_DCB_UP_MAX] = {0};
+
+	spnic_set_rx_mode(nic_dev->hwdev, 0);
+
+	if (nic_dev->rss_state == SPNIC_RSS_ENABLE) {
+		spnic_rss_cfg(nic_dev->hwdev, SPNIC_RSS_DISABLE, 0, prio_tc);
+		spnic_rss_template_free(nic_dev->hwdev);
+	}
+}
+
+static bool spnic_find_vlan_filter(struct spnic_nic_dev *nic_dev,
+				   uint16_t vlan_id)
+{
+	u32 vid_idx, vid_bit;
+
+	vid_idx = SPNIC_VFTA_IDX(vlan_id);
+	vid_bit = SPNIC_VFTA_BIT(vlan_id);
+
+	return (nic_dev->vfta[vid_idx] & vid_bit) ? true : false;
+}
+
+static void spnic_store_vlan_filter(struct spnic_nic_dev *nic_dev,
+				    u16 vlan_id, bool on)
+{
+	u32 vid_idx, vid_bit;
+
+	vid_idx = SPNIC_VFTA_IDX(vlan_id);
+	vid_bit = SPNIC_VFTA_BIT(vlan_id);
+
+	if (on)
+		nic_dev->vfta[vid_idx] |= vid_bit;
+	else
+		nic_dev->vfta[vid_idx] &= ~vid_bit;
+}
+
+static void spnic_remove_all_vlanid(struct rte_eth_dev *dev)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	int vlan_id;
+	u16 func_id;
+
+	func_id = spnic_global_func_id(nic_dev->hwdev);
+
+	for (vlan_id = 1; vlan_id < RTE_ETHER_MAX_VLAN_ID; vlan_id++) {
+		if (spnic_find_vlan_filter(nic_dev, vlan_id)) {
+			spnic_del_vlan(nic_dev->hwdev, vlan_id, func_id);
+			spnic_store_vlan_filter(nic_dev, vlan_id, false);
+		}
+	}
+}
+
 static int spnic_init_sw_rxtxqs(struct spnic_nic_dev *nic_dev)
 {
 	u32 txq_size;
@@ -736,6 +899,14 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 		goto set_mtu_fail;
 	}
 
+	/* Set rx configuration: rss/checksum/rxmode/lro */
+	err = spnic_set_rxtx_configure(eth_dev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Set rx config failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto set_rxtx_config_fail;
+	}
+
 	err = spnic_start_all_rqs(eth_dev);
 	if (err) {
 		PMD_DRV_LOG(ERR, "Set rx config failed, dev_name: %s",
@@ -754,6 +925,9 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 	return 0;
 
 start_rqs_fail:
+	spnic_remove_rxtx_configure(eth_dev);
+
+set_rxtx_config_fail:
 set_mtu_fail:
 	spnic_free_qp_ctxts(nic_dev->hwdev);
 
@@ -793,6 +967,10 @@ static int spnic_dev_stop(struct rte_eth_dev *dev)
 	spnic_flush_txqs(nic_dev);
 
 	spnic_flush_qps_res(nic_dev->hwdev);
+
+	/* Clean RSS table and rx_mode */
+	spnic_remove_rxtx_configure(dev);
+
 	/* Clean root context */
 	spnic_free_qp_ctxts(nic_dev->hwdev);
 
@@ -833,6 +1011,7 @@ static int spnic_dev_close(struct rte_eth_dev *eth_dev)
 	spnic_deinit_sw_rxtxqs(nic_dev);
 	spnic_deinit_mac_addr(eth_dev);
 	rte_free(nic_dev->mc_list);
+	spnic_remove_all_vlanid(eth_dev);
 
 	rte_bit_relaxed_clear32(SPNIC_DEV_INTR_EN, &nic_dev->dev_status);
 

@@ -284,19 +284,240 @@ static inline void spnic_rearm_rxq_mbuf(struct spnic_rxq *rxq)
 #endif
 }
 
+static int spnic_init_rss_key(struct spnic_nic_dev *nic_dev,
+			       struct rte_eth_rss_conf *rss_conf)
+{
+	u8 default_rss_key[SPNIC_RSS_KEY_SIZE] = {
+			 0x6d, 0x5a, 0x56, 0xda, 0x25, 0x5b, 0x0e, 0xc2,
+			 0x41, 0x67, 0x25, 0x3d, 0x43, 0xa3, 0x8f, 0xb0,
+			 0xd0, 0xca, 0x2b, 0xcb, 0xae, 0x7b, 0x30, 0xb4,
+			 0x77, 0xcb, 0x2d, 0xa3, 0x80, 0x30, 0xf2, 0x0c,
+			 0x6a, 0x42, 0xb7, 0x3b, 0xbe, 0xac, 0x01, 0xfa};
+	u8 hashkey[SPNIC_RSS_KEY_SIZE] = {0};
+	int err;
+
+	if (rss_conf->rss_key == NULL ||
+	    rss_conf->rss_key_len > SPNIC_RSS_KEY_SIZE)
+		memcpy(hashkey, default_rss_key, SPNIC_RSS_KEY_SIZE);
+	else
+		memcpy(hashkey, rss_conf->rss_key, rss_conf->rss_key_len);
+
+	err = spnic_rss_set_hash_key(nic_dev->hwdev, hashkey);
+	if (err)
+		return err;
+
+	memcpy(nic_dev->rss_key, hashkey, SPNIC_RSS_KEY_SIZE);
+	return 0;
+}
+
+void spnic_add_rq_to_rx_queue_list(struct spnic_nic_dev *nic_dev,
+				    u16 queue_id)
+{
+	u8 rss_queue_count = nic_dev->num_rss;
+
+	RTE_ASSERT(rss_queue_count <= (RTE_DIM(nic_dev->rx_queue_list) - 1));
+
+	nic_dev->rx_queue_list[rss_queue_count] = (u8)queue_id;
+	nic_dev->num_rss++;
+}
+
+void spnic_init_rx_queue_list(struct spnic_nic_dev *nic_dev)
+{
+	nic_dev->num_rss = 0;
+}
+
+static void spnic_fill_indir_tbl(struct spnic_nic_dev *nic_dev,
+				  u32 *indir_tbl)
+{
+	u8 rss_queue_count = nic_dev->num_rss;
+	int i = 0;
+	int j;
+
+	if (rss_queue_count == 0) {
+		/* delete q_id from indir tbl */
+		for (i = 0; i < SPNIC_RSS_INDIR_SIZE; i++)
+			indir_tbl[i] = 0xFF; /* Invalid value in indir tbl */
+	} else {
+		while (i < SPNIC_RSS_INDIR_SIZE)
+			for (j = 0; (j < rss_queue_count) &&
+				    (i < SPNIC_RSS_INDIR_SIZE); j++)
+				indir_tbl[i++] = nic_dev->rx_queue_list[j];
+	}
+}
+
+int spnic_refill_indir_rqid(struct spnic_rxq *rxq)
+{
+	struct spnic_nic_dev *nic_dev = rxq->nic_dev;
+	u32 *indir_tbl;
+	int err;
+
+	indir_tbl = rte_zmalloc(NULL, SPNIC_RSS_INDIR_SIZE * sizeof(u32), 0);
+	if (!indir_tbl) {
+		PMD_DRV_LOG(ERR, "Alloc indir_tbl mem failed, eth_dev:%s, queue_idx:%d\n",
+			    nic_dev->dev_name, rxq->q_id);
+		return -ENOMEM;
+	}
+
+	/* build indir tbl according to the number of rss queue */
+	spnic_fill_indir_tbl(nic_dev, indir_tbl);
+
+	err = spnic_rss_set_indir_tbl(nic_dev->hwdev, indir_tbl);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Set indrect table failed, eth_dev:%s, queue_idx:%d\n",
+			    nic_dev->dev_name, rxq->q_id);
+		goto out;
+	}
+
+out:
+	rte_free(indir_tbl);
+	return err;
+}
+
+static int spnic_init_rss_type(struct spnic_nic_dev *nic_dev,
+			       struct rte_eth_rss_conf *rss_conf)
+{
+	struct spnic_rss_type rss_type = {0};
+	u64 rss_hf = rss_conf->rss_hf;
+	int err;
+
+	rss_type.ipv4 = (rss_hf & (ETH_RSS_IPV4 | ETH_RSS_FRAG_IPV4)) ? 1 : 0;
+	rss_type.tcp_ipv4 = (rss_hf & ETH_RSS_NONFRAG_IPV4_TCP) ? 1 : 0;
+	rss_type.ipv6 = (rss_hf & (ETH_RSS_IPV6 | ETH_RSS_FRAG_IPV6)) ? 1 : 0;
+	rss_type.ipv6_ext = (rss_hf & ETH_RSS_IPV6_EX) ? 1 : 0;
+	rss_type.tcp_ipv6 = (rss_hf & ETH_RSS_NONFRAG_IPV6_TCP) ? 1 : 0;
+	rss_type.tcp_ipv6_ext = (rss_hf & ETH_RSS_IPV6_TCP_EX) ? 1 : 0;
+	rss_type.udp_ipv4 = (rss_hf & ETH_RSS_NONFRAG_IPV4_UDP) ? 1 : 0;
+	rss_type.udp_ipv6 = (rss_hf & ETH_RSS_NONFRAG_IPV6_UDP) ? 1 : 0;
+
+	err = spnic_set_rss_type(nic_dev->hwdev, rss_type);
+	return err;
+}
+
+int spnic_update_rss_config(struct rte_eth_dev *dev,
+			    struct rte_eth_rss_conf *rss_conf)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	u8 prio_tc[SPNIC_DCB_UP_MAX] = {0};
+	u8 num_tc = 0;
+	int err;
+
+	if (rss_conf->rss_hf == 0) {
+		rss_conf->rss_hf = SPNIC_RSS_OFFLOAD_ALL;
+	} else if ((rss_conf->rss_hf & SPNIC_RSS_OFFLOAD_ALL) == 0) {
+		PMD_DRV_LOG(ERR, "Does't support rss hash type: %"PRIu64"",
+			    rss_conf->rss_hf);
+		return -EINVAL;
+	}
+
+	err = spnic_rss_template_alloc(nic_dev->hwdev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Alloc rss template failed, err: %d", err);
+		return err;
+	}
+
+	err = spnic_init_rss_key(nic_dev, rss_conf);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init rss hash key failed, err: %d", err);
+		goto init_rss_fail;
+	}
+
+	err = spnic_init_rss_type(nic_dev, rss_conf);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init rss hash type failed, err: %d", err);
+		goto init_rss_fail;
+	}
+
+	err = spnic_rss_set_hash_engine(nic_dev->hwdev,
+					 SPNIC_RSS_HASH_ENGINE_TYPE_TOEP);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init rss hash function failed, err: %d", err);
+		goto init_rss_fail;
+	}
+
+	err = spnic_rss_cfg(nic_dev->hwdev, SPNIC_RSS_ENABLE, num_tc,
+			     prio_tc);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Enable rss failed, err: %d", err);
+		goto init_rss_fail;
+	}
+
+	nic_dev->rss_state = SPNIC_RSS_ENABLE;
+	return 0;
+
+init_rss_fail:
+	if (spnic_rss_template_free(nic_dev->hwdev))
+		PMD_DRV_LOG(WARNING, "Free rss template failed");
+
+	return err;
+}
+
+static u8 spnic_find_queue_pos_by_rq_id(u8 *queues, u8 queues_count,
+					 u8 queue_id)
+{
+	u8 pos;
+
+	for (pos = 0; pos < queues_count; pos++) {
+		if (queue_id == queues[pos])
+			break;
+	}
+
+	return pos;
+}
+
+void spnic_remove_rq_from_rx_queue_list(struct spnic_nic_dev *nic_dev,
+					 u16 queue_id)
+{
+	u8 queue_pos;
+	u8 rss_queue_count = nic_dev->num_rss;
+
+	queue_pos = spnic_find_queue_pos_by_rq_id(nic_dev->rx_queue_list,
+						   rss_queue_count,
+						   (u8)queue_id);
+
+	if (queue_pos < rss_queue_count) {
+		rss_queue_count--;
+		memmove(nic_dev->rx_queue_list + queue_pos,
+			nic_dev->rx_queue_list + queue_pos + 1,
+			(rss_queue_count - queue_pos) *
+			sizeof(nic_dev->rx_queue_list[0]));
+	}
+
+	RTE_ASSERT(rss_queue_count < RTE_DIM(nic_dev->rx_queue_list));
+	nic_dev->num_rss = rss_queue_count;
+}
+
 int spnic_start_all_rqs(struct rte_eth_dev *eth_dev)
 {
 	struct spnic_nic_dev *nic_dev = NULL;
 	struct spnic_rxq *rxq = NULL;
+	int err = 0;
 	int i;
 
 	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
 
 	for (i = 0; i < nic_dev->num_rqs; i++) {
 		rxq = eth_dev->data->rx_queues[i];
+		spnic_add_rq_to_rx_queue_list(nic_dev, rxq->q_id);
 		spnic_rearm_rxq_mbuf(rxq);
 		eth_dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
 	}
 
+	if (nic_dev->rss_state == SPNIC_RSS_ENABLE) {
+		err = spnic_refill_indir_rqid(rxq);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Refill rq to indrect table failed, eth_dev:%s, queue_idx:%d err:%d\n",
+				    rxq->nic_dev->dev_name, rxq->q_id, err);
+			goto out;
+		}
+	}
+
 	return 0;
+out:
+	for (i = 0; i < nic_dev->num_rqs; i++) {
+		rxq = eth_dev->data->rx_queues[i];
+		spnic_remove_rq_from_rx_queue_list(nic_dev, rxq->q_id);
+		spnic_free_rxq_mbufs(rxq);
+		eth_dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+	}
+	return err;
 }
