@@ -120,7 +120,6 @@ ixgbe_tx_free_bufs(struct ixgbe_tx_queue *txq)
 	for (i = 0; i < txq->tx_rs_thresh; ++i, ++txep) {
 		/* free buffers one at a time */
 		m = rte_pktmbuf_prefree_seg(txep->mbuf);
-		txep->mbuf = NULL;
 
 		if (unlikely(m == NULL))
 			continue;
