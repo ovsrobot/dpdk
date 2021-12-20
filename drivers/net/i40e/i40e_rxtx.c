@@ -1344,7 +1344,6 @@ i40e_tx_free_bufs(struct i40e_tx_queue *txq)
 			for (j = 0; j != k; j += RTE_I40E_TX_MAX_FREE_BUF_SZ) {
 				for (i = 0; i < RTE_I40E_TX_MAX_FREE_BUF_SZ; ++i, ++txep) {
 					free[i] = txep->mbuf;
-					txep->mbuf = NULL;
 				}
 				rte_mempool_put_bulk(free[0]->pool, (void **)free,
 						RTE_I40E_TX_MAX_FREE_BUF_SZ);
@@ -1354,14 +1353,12 @@ i40e_tx_free_bufs(struct i40e_tx_queue *txq)
 		if (m) {
 			for (i = 0; i < m; ++i, ++txep) {
 				free[i] = txep->mbuf;
-				txep->mbuf = NULL;
 			}
 			rte_mempool_put_bulk(free[0]->pool, (void **)free, m);
 		}
 	} else {
 		for (i = 0; i < txq->tx_rs_thresh; ++i, ++txep) {
 			rte_pktmbuf_free_seg(txep->mbuf);
-			txep->mbuf = NULL;
 		}
 	}
 
