@@ -2893,12 +2893,10 @@ ice_tx_free_bufs(struct ice_tx_queue *txq)
 	if (txq->offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) {
 		for (i = 0; i < txq->tx_rs_thresh; ++i, ++txep) {
 			rte_mempool_put(txep->mbuf->pool, txep->mbuf);
-			txep->mbuf = NULL;
 		}
 	} else {
 		for (i = 0; i < txq->tx_rs_thresh; ++i, ++txep) {
 			rte_pktmbuf_free_seg(txep->mbuf);
-			txep->mbuf = NULL;
 		}
 	}
 
