@@ -1101,9 +1101,7 @@ bond_mode_8023ad_activate_slave(struct rte_eth_dev *bond_dev,
 	}
 
 	snprintf(mem_name, RTE_DIM(mem_name), "slave_port%u_pool", slave_id);
-	port->mbuf_pool = rte_pktmbuf_pool_create(mem_name, total_tx_desc,
-		RTE_MEMPOOL_CACHE_MAX_SIZE >= 32 ?
-			32 : RTE_MEMPOOL_CACHE_MAX_SIZE,
+	port->mbuf_pool = rte_pktmbuf_pool_create(mem_name, total_tx_desc, 0,
 		0, element_size, socket_id);
 
 	/* Any memory allocation failure in initialization is critical because
@@ -1115,7 +1113,7 @@ bond_mode_8023ad_activate_slave(struct rte_eth_dev *bond_dev,
 
 	snprintf(mem_name, RTE_DIM(mem_name), "slave_%u_rx", slave_id);
 	port->rx_ring = rte_ring_create(mem_name,
-			rte_align32pow2(BOND_MODE_8023AX_SLAVE_RX_PKTS), socket_id, 0);
+		BOND_MODE_8023AX_SLAVE_RX_PKTS, socket_id, RING_F_EXACT_SZ);
 
 	if (port->rx_ring == NULL) {
 		rte_panic("Slave %u: Failed to create rx ring '%s': %s\n", slave_id,
@@ -1125,7 +1123,7 @@ bond_mode_8023ad_activate_slave(struct rte_eth_dev *bond_dev,
 	/* TX ring is at least one pkt longer to make room for marker packet. */
 	snprintf(mem_name, RTE_DIM(mem_name), "slave_%u_tx", slave_id);
 	port->tx_ring = rte_ring_create(mem_name,
-			rte_align32pow2(BOND_MODE_8023AX_SLAVE_TX_PKTS + 1), socket_id, 0);
+		BOND_MODE_8023AX_SLAVE_TX_PKTS + 1, socket_id, RING_F_EXACT_SZ);
 
 	if (port->tx_ring == NULL) {
 		rte_panic("Slave %u: Failed to create tx ring '%s': %s\n", slave_id,
