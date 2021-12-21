@@ -868,9 +868,9 @@ bond_mode_8023ad_periodic_cb(void *arg)
 	struct rte_eth_link link_info;
 	struct rte_ether_addr slave_addr;
 	struct rte_mbuf *lacp_pkt = NULL;
+	uint8_t short_timeout_updated = internals->mode4.short_timeout_updated;
 	uint16_t slave_id;
 	uint16_t i;
-
 
 	/* Update link status on each port */
 	for (i = 0; i < internals->active_slave_count; i++) {
@@ -916,6 +916,13 @@ bond_mode_8023ad_periodic_cb(void *arg)
 		slave_id = internals->active_slaves[i];
 		port = &bond_mode_8023ad_ports[slave_id];
 
+		if (short_timeout_updated) {
+			if (internals->mode4.short_timeout_enabled)
+				ACTOR_STATE_SET(port, LACP_SHORT_TIMEOUT);
+			else
+				ACTOR_STATE_CLR(port, LACP_SHORT_TIMEOUT);
+		}
+
 		if ((port->actor.key &
 				rte_cpu_to_be_16(BOND_LINK_FULL_DUPLEX_KEY)) == 0) {
 
@@ -959,6 +966,9 @@ bond_mode_8023ad_periodic_cb(void *arg)
 		SM_FLAG_CLR(port, BEGIN);
 		show_warnings(slave_id);
 	}
+
+	if (short_timeout_updated)
+		internals->mode4.short_timeout_updated = 0;
 
 	rte_eal_alarm_set(internals->mode4.update_timeout_us,
 			bond_mode_8023ad_periodic_cb, arg);
@@ -1054,7 +1064,6 @@ bond_mode_8023ad_activate_slave(struct rte_eth_dev *bond_dev,
 	/* Given slave must not be in active list. */
 	RTE_ASSERT(find_slave_by_id(internals->active_slaves,
 	internals->active_slave_count, slave_id) == internals->active_slave_count);
-	RTE_SET_USED(internals); /* used only for assert when enabled */
 
 	memcpy(&port->actor, &initial, sizeof(struct port_params));
 	/* Standard requires that port ID must be greater than 0.
@@ -1065,7 +1074,9 @@ bond_mode_8023ad_activate_slave(struct rte_eth_dev *bond_dev,
 	memcpy(&port->partner_admin, &initial, sizeof(struct port_params));
 
 	/* default states */
-	port->actor_state = STATE_AGGREGATION | STATE_LACP_ACTIVE | STATE_DEFAULTED;
+	port->actor_state = STATE_AGGREGATION | STATE_LACP_ACTIVE |
+		STATE_DEFAULTED | (internals->mode4.short_timeout_enabled ?
+		STATE_LACP_SHORT_TIMEOUT : 0);
 	port->partner_state = STATE_LACP_ACTIVE | STATE_AGGREGATION;
 	port->sm_flags = SM_FLAGS_BEGIN;
 
@@ -1209,6 +1220,7 @@ bond_mode_8023ad_conf_get(struct rte_eth_dev *dev,
 	struct mode8023ad_private *mode4 = &internals->mode4;
 	uint64_t ms_ticks = rte_get_tsc_hz() / 1000;
 
+	memset(conf, 0, sizeof(*conf));
 	conf->fast_periodic_ms = mode4->fast_periodic_timeout / ms_ticks;
 	conf->slow_periodic_ms = mode4->slow_periodic_timeout / ms_ticks;
 	conf->short_timeout_ms = mode4->short_timeout / ms_ticks;
@@ -1219,6 +1231,7 @@ bond_mode_8023ad_conf_get(struct rte_eth_dev *dev,
 	conf->rx_marker_period_ms = mode4->rx_marker_timeout / ms_ticks;
 	conf->slowrx_cb = mode4->slowrx_cb;
 	conf->agg_selection = mode4->agg_selection;
+	conf->lacp_timeout_control = mode4->short_timeout_enabled;
 }
 
 static void
@@ -1234,6 +1247,7 @@ bond_mode_8023ad_conf_get_default(struct rte_eth_bond_8023ad_conf *conf)
 	conf->update_timeout_ms = BOND_MODE_8023AX_UPDATE_TIMEOUT_MS;
 	conf->slowrx_cb = NULL;
 	conf->agg_selection = AGG_STABLE;
+	conf->lacp_timeout_control = 0;
 }
 
 static void
@@ -1273,6 +1287,11 @@ bond_mode_8023ad_setup(struct rte_eth_dev *dev,
 	bond_mode_8023ad_conf_assign(mode4, conf);
 	mode4->slowrx_cb = conf->slowrx_cb;
 	mode4->agg_selection = AGG_STABLE;
+
+	if (mode4->short_timeout_enabled != conf->lacp_timeout_control) {
+		mode4->short_timeout_enabled = conf->lacp_timeout_control;
+		mode4->short_timeout_updated = 1;
+	}
 
 	if (dev->data->dev_started)
 		bond_mode_8023ad_start(dev);
@@ -1478,7 +1497,8 @@ bond_8023ad_setup_validate(uint16_t port_id,
 				conf->aggregate_wait_timeout_ms == 0 ||
 				conf->tx_period_ms == 0 ||
 				conf->rx_marker_period_ms == 0 ||
-				conf->update_timeout_ms == 0) {
+				conf->update_timeout_ms == 0 ||
+				conf->lacp_timeout_control > 1) {
 			RTE_BOND_LOG(ERR, "given mode 4 configuration is invalid");
 			return -EINVAL;
 		}

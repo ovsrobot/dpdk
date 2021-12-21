@@ -159,7 +159,6 @@ struct mode8023ad_private {
 	uint64_t rx_marker_timeout;
 	uint64_t update_timeout_us;
 	rte_eth_bond_8023ad_ext_slowrx_fn slowrx_cb;
-	uint8_t external_sm;
 	struct rte_ether_addr mac_addr;
 
 	struct rte_eth_link slave_link;
@@ -178,6 +177,8 @@ struct mode8023ad_private {
 		uint16_t tx_qid;
 	} dedicated_queues;
 	enum rte_bond_8023ad_agg_selection agg_selection;
+	uint8_t short_timeout_enabled : 1;
+	uint8_t short_timeout_updated : 1;
 };
 
 /**
