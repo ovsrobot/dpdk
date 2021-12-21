@@ -261,9 +261,9 @@ roc_bphy_irq_handler_set(struct roc_bphy_irq_chip *chip, int irq_num,
 	CPU_SET(curr_cpu, &intr_cpuset);
 	retval = pthread_setaffinity_np(pthread_self(), sizeof(intr_cpuset),
 					&intr_cpuset);
-	if (rc < 0) {
+	if (retval < 0) {
 		plt_err("Failed to set affinity mask");
-		return rc;
+		return retval;
 	}
 
 	irq_usr.isr_base = (uint64_t)roc_bphy_intr_handler;
