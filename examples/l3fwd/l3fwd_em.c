@@ -972,6 +972,13 @@ em_event_main_loop_tx_q_burst_vector(__rte_unused void *dummy)
 	return 0;
 }
 
+/* Load rules from the input file */
+void
+read_config_files_em(void)
+{
+	/* Empty till config file support added to EM */
+}
+
 /* Initialize exact match (hash) parameters. 8< */
 void
 setup_hash(const int socketid)
