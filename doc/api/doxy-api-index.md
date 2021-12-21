@@ -39,6 +39,8 @@ The public API headers are grouped by topics:
 - **device specific**:
   [softnic]            (@ref rte_eth_softnic.h),
   [bond]               (@ref rte_eth_bond.h),
+  [bond_8023ad]        (@ref rte_eth_bond_8023ad.h),
+  [bond_alb]           (@ref rte_eth_bond_alb.h),
   [vhost]              (@ref rte_vhost.h),
   [vdpa]               (@ref rte_vdpa.h),
   [KNI]                (@ref rte_kni.h),
