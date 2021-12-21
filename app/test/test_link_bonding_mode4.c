@@ -235,8 +235,6 @@ add_slave(struct slave_conf *slave, uint8_t start)
 	rte_ether_addr_copy(&slave_mac_default, &addr);
 	addr.addr_bytes[RTE_ETHER_ADDR_LEN - 1] = slave->port_id;
 
-	rte_eth_dev_mac_addr_remove(slave->port_id, &addr);
-
 	TEST_ASSERT_SUCCESS(rte_eth_dev_mac_addr_add(slave->port_id, &addr, 0),
 		"Failed to set slave MAC address");
 
@@ -727,6 +725,66 @@ test_mode4_agg_mode_selection(void)
 			test_params.bonded_port_id);
 	TEST_ASSERT_EQUAL(retval, AGG_COUNT,
 			"Wrong agg mode received from bonding device");
+
+	retval = remove_slaves_and_stop_bonded_device();
+	TEST_ASSERT_SUCCESS(retval, "Test cleanup failed.");
+
+	return TEST_SUCCESS;
+}
+
+static int
+test_mode4_lacp_timeout_control(void)
+{
+	int retval;
+	int iterations;
+	size_t i;
+	struct slave_conf *slave;
+	uint16_t port_id = test_params.bonded_port_id;
+	struct rte_eth_bond_8023ad_conf conf;
+	struct rte_eth_bond_8023ad_slave_info info;
+	uint8_t on_off = 0;
+	uint8_t lacp_timeout_flag = 0;
+
+	retval = initialize_bonded_device_with_slaves(TEST_LACP_SLAVE_COUT, 0);
+	TEST_ASSERT_SUCCESS(retval, "Failed to initialize bonded device");
+
+	/* Iteration 0: Verify that LACP timeout control is off by default.
+	 * Iteration 1: Verify that we can set LACP timeout control.
+	 * Iteration 2: Verify that we can reset LACP timeout control.
+	 */
+	for (iterations = 0; iterations < 3; iterations++) {
+		/* Verify that bond conf has expected timeout control value.*/
+		retval = rte_eth_bond_8023ad_conf_get(port_id, &conf);
+		TEST_ASSERT_SUCCESS(retval, "Failed to get LACP conf");
+		TEST_ASSERT_EQUAL(conf.lacp_timeout_control, on_off,
+			"Wrong LACP timeout control value");
+
+		/* State machine must run to propagate new timeout control
+		 * value to slaves (iterations 1 and 2).
+		 */
+		retval = bond_handshake();
+		TEST_ASSERT_SUCCESS(retval, "Bond handshake failed");
+		retval = bond_handshake();
+		TEST_ASSERT_SUCCESS(retval, "Bond handshake failed");
+
+		/* Verify that slaves' actor states have expected value.*/
+		FOR_EACH_PORT(i, slave) {
+			retval = rte_eth_bond_8023ad_slave_info(port_id,
+				slave->port_id, &info);
+			TEST_ASSERT_SUCCESS(retval,
+				"Failed to get LACP slave info");
+			TEST_ASSERT_EQUAL((info.actor_state &
+				STATE_LACP_SHORT_TIMEOUT), lacp_timeout_flag,
+				" Wrong LACP slave info timeout flag");
+		}
+
+		/* Toggle timeout control. */
+		on_off ^= 1;
+		lacp_timeout_flag ^= STATE_LACP_SHORT_TIMEOUT;
+		conf.lacp_timeout_control = on_off;
+		retval = rte_eth_bond_8023ad_setup(port_id, &conf);
+		TEST_ASSERT_SUCCESS(retval, "Failed to setup LACP conf");
+	}
 
 	retval = remove_slaves_and_stop_bonded_device();
 	TEST_ASSERT_SUCCESS(retval, "Test cleanup failed.");
@@ -1649,6 +1707,12 @@ test_mode4_ext_lacp_wrapper(void)
 	return test_mode4_executor(&test_mode4_ext_lacp);
 }
 
+static int
+test_mode4_lacp_timeout_control_wrapper(void)
+{
+	return test_mode4_executor(&test_mode4_lacp_timeout_control);
+}
+
 static struct unit_test_suite link_bonding_mode4_test_suite  = {
 	.suite_name = "Link Bonding mode 4 Unit Test Suite",
 	.setup = test_setup,
@@ -1665,6 +1729,8 @@ static struct unit_test_suite link_bonding_mode4_test_suite  = {
 				test_mode4_ext_ctrl_wrapper),
 		TEST_CASE_NAMED("test_mode4_ext_lacp",
 				test_mode4_ext_lacp_wrapper),
+		TEST_CASE_NAMED("test_mode4_lacp_timeout_control",
+				test_mode4_lacp_timeout_control_wrapper),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
