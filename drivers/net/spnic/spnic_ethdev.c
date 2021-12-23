@@ -139,6 +139,468 @@ out:
 	return rte_eth_linkstatus_set(dev, &link);
 }
 
+static void spnic_reset_rx_queue(struct rte_eth_dev *dev)
+{
+	struct spnic_rxq *rxq = NULL;
+	struct spnic_nic_dev *nic_dev;
+	int q_id = 0;
+
+	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+
+	for (q_id = 0; q_id < nic_dev->num_rqs; q_id++) {
+		rxq = nic_dev->rxqs[q_id];
+
+		rxq->cons_idx = 0;
+		rxq->prod_idx = 0;
+		rxq->delta = rxq->q_depth;
+		rxq->next_to_update = 0;
+	}
+}
+
+static void spnic_reset_tx_queue(struct rte_eth_dev *dev)
+{
+	struct spnic_nic_dev *nic_dev;
+	struct spnic_txq *txq = NULL;
+	int q_id = 0;
+
+	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+
+	for (q_id = 0; q_id < nic_dev->num_sqs; q_id++) {
+		txq = nic_dev->txqs[q_id];
+
+		txq->cons_idx = 0;
+		txq->prod_idx = 0;
+		txq->owner = 1;
+
+		/* Clear hardware ci */
+		*(u16 *)txq->ci_vaddr_base = 0;
+	}
+}
+
+/**
+ * Create the receive queue.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[in] qid
+ *   Receive queue index.
+ * @param[in] nb_desc
+ *   Number of descriptors for receive queue.
+ * @param[in] socket_id
+ *   Socket index on which memory must be allocated.
+ * @param rx_conf
+ *   Thresholds parameters (unused_).
+ * @param mp
+ *   Memory pool for buffer allocations.
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+static int spnic_rx_queue_setup(struct rte_eth_dev *dev, uint16_t qid,
+			uint16_t nb_desc, unsigned int socket_id,
+			__rte_unused const struct rte_eth_rxconf *rx_conf,
+			struct rte_mempool *mp)
+{
+	struct spnic_nic_dev *nic_dev;
+	struct spnic_rxq *rxq = NULL;
+	const struct rte_memzone *rq_mz = NULL;
+	const struct rte_memzone *cqe_mz = NULL;
+	const struct rte_memzone *pi_mz = NULL;
+	u16 rq_depth, rx_free_thresh;
+	u32 queue_buf_size, mb_buf_size;
+	void *db_addr = NULL;
+	int wqe_count;
+	u32 buf_size;
+	int err;
+
+	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+
+	/* Queue depth must be power of 2, otherwise will be aligned up */
+	rq_depth = (nb_desc & (nb_desc - 1)) ?
+		   ((u16)(1U << (ilog2(nb_desc) + 1))) : nb_desc;
+
+	/*
+	 * Validate number of receive descriptors.
+	 * It must not exceed hardware maximum and minimum.
+	 */
+	if (rq_depth > SPNIC_MAX_QUEUE_DEPTH ||
+	    rq_depth < SPNIC_MIN_QUEUE_DEPTH) {
+		PMD_DRV_LOG(ERR, "RX queue depth is out of range from %d to %d,"
+			    "(nb_desc: %d, q_depth: %d, port: %d queue: %d)",
+			    SPNIC_MIN_QUEUE_DEPTH, SPNIC_MAX_QUEUE_DEPTH,
+			    (int)nb_desc, (int)rq_depth,
+			    (int)dev->data->port_id, (int)qid);
+		return -EINVAL;
+	}
+
+	/*
+	 * The RX descriptor ring will be cleaned after rxq->rx_free_thresh
+	 * descriptors are used or if the number of descriptors required
+	 * to transmit a packet is greater than the number of free RX
+	 * descriptors.
+	 * The following constraints must be satisfied:
+	 *  -rx_free_thresh must be greater than 0.
+	 *  -rx_free_thresh must be less than the size of the ring minus 1.
+	 * When set to zero use default values.
+	 */
+	rx_free_thresh = (u16)((rx_conf->rx_free_thresh) ?
+			rx_conf->rx_free_thresh : SPNIC_DEFAULT_RX_FREE_THRESH);
+	if (rx_free_thresh >= (rq_depth - 1)) {
+		PMD_DRV_LOG(ERR, "rx_free_thresh must be less than the number "
+			    "of RX descriptors minus 1, rx_free_thresh: %u port: %d queue: %d)",
+			    (unsigned int)rx_free_thresh,
+			    (int)dev->data->port_id, (int)qid);
+		return -EINVAL;
+	}
+
+	rxq = rte_zmalloc_socket("spnic_rq", sizeof(struct spnic_rxq),
+				 RTE_CACHE_LINE_SIZE, socket_id);
+	if (!rxq) {
+		PMD_DRV_LOG(ERR, "Allocate rxq[%d] failed, dev_name: %s",
+			    qid, dev->data->name);
+		return -ENOMEM;
+	}
+
+	/* Init rq parameters */
+	rxq->nic_dev = nic_dev;
+	nic_dev->rxqs[qid] = rxq;
+	rxq->mb_pool = mp;
+	rxq->q_id = qid;
+	rxq->next_to_update = 0;
+	rxq->q_depth = rq_depth;
+	rxq->q_mask = rq_depth - 1;
+	rxq->delta = rq_depth;
+	rxq->cons_idx = 0;
+	rxq->prod_idx = 0;
+	rxq->wqe_type = SPNIC_NORMAL_RQ_WQE;
+	rxq->wqebb_shift = SPNIC_RQ_WQEBB_SHIFT + rxq->wqe_type;
+	rxq->wqebb_size = (u16)BIT(rxq->wqebb_shift);
+	rxq->rx_free_thresh = rx_free_thresh;
+	rxq->rxinfo_align_end = rxq->q_depth - rxq->rx_free_thresh;
+	rxq->port_id = dev->data->port_id;
+
+	/* If buf_len used for function table, need to translated */
+	mb_buf_size = rte_pktmbuf_data_room_size(rxq->mb_pool) -
+		      RTE_PKTMBUF_HEADROOM;
+	err = spnic_convert_rx_buf_size(mb_buf_size, &buf_size);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Adjust buf size failed, dev_name: %s",
+			    dev->data->name);
+		goto adjust_bufsize_fail;
+	}
+
+	rxq->buf_len = buf_size;
+	rxq->rx_buff_shift = ilog2(rxq->buf_len);
+
+	pi_mz = rte_eth_dma_zone_reserve(dev, "spnic_rq_pi", qid,
+					 RTE_PGSIZE_4K, RTE_CACHE_LINE_SIZE,
+					 socket_id);
+	if (!pi_mz) {
+		PMD_DRV_LOG(ERR, "Allocate rxq[%d] pi_mz failed, dev_name: %s",
+			    qid, dev->data->name);
+		err = -ENOMEM;
+		goto alloc_pi_mz_fail;
+	}
+	rxq->pi_mz = pi_mz;
+	rxq->pi_dma_addr = pi_mz->iova;
+	rxq->pi_virt_addr = pi_mz->addr;
+
+	/* Rxq doesn't use direct wqe */
+	err = spnic_alloc_db_addr(nic_dev->hwdev, &db_addr, NULL);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Alloc rq doorbell addr failed");
+		goto alloc_db_err_fail;
+	}
+	rxq->db_addr = db_addr;
+
+	queue_buf_size = BIT(rxq->wqebb_shift) * rq_depth;
+	rq_mz = rte_eth_dma_zone_reserve(dev, "spnic_rq_mz", qid,
+					 queue_buf_size, RTE_PGSIZE_256K,
+					 socket_id);
+	if (!rq_mz) {
+		PMD_DRV_LOG(ERR, "Allocate rxq[%d] rq_mz failed, dev_name: %s",
+			    qid, dev->data->name);
+		err = -ENOMEM;
+		goto alloc_rq_mz_fail;
+	}
+
+	memset(rq_mz->addr, 0, queue_buf_size);
+	rxq->rq_mz = rq_mz;
+	rxq->queue_buf_paddr = rq_mz->iova;
+	rxq->queue_buf_vaddr = rq_mz->addr;
+
+	rxq->rx_info = rte_zmalloc_socket("rx_info",
+					  rq_depth * sizeof(*rxq->rx_info),
+					  RTE_CACHE_LINE_SIZE, socket_id);
+	if (!rxq->rx_info) {
+		PMD_DRV_LOG(ERR, "Allocate rx_info failed, dev_name: %s",
+			dev->data->name);
+		err = -ENOMEM;
+		goto alloc_rx_info_fail;
+	}
+
+	cqe_mz = rte_eth_dma_zone_reserve(dev, "spnic_cqe_mz", qid,
+					  rq_depth * sizeof(*rxq->rx_cqe),
+					  RTE_CACHE_LINE_SIZE, socket_id);
+	if (!cqe_mz) {
+		PMD_DRV_LOG(ERR, "Allocate cqe mem zone failed, dev_name: %s",
+			    dev->data->name);
+		err = -ENOMEM;
+		goto alloc_cqe_mz_fail;
+	}
+	memset(cqe_mz->addr, 0, rq_depth * sizeof(*rxq->rx_cqe));
+	rxq->cqe_mz = cqe_mz;
+	rxq->cqe_start_paddr = cqe_mz->iova;
+	rxq->cqe_start_vaddr = cqe_mz->addr;
+	rxq->rx_cqe = (struct spnic_rq_cqe *)rxq->cqe_start_vaddr;
+
+	wqe_count = spnic_rx_fill_wqe(rxq);
+	if (wqe_count != rq_depth) {
+		PMD_DRV_LOG(ERR, "Fill rx wqe failed, wqe_count: %d, dev_name: %s",
+			    wqe_count, dev->data->name);
+		err = -ENOMEM;
+		goto fill_rx_wqe_fail;
+	}
+
+	/* Record rxq pointer in rte_eth rx_queues */
+	dev->data->rx_queues[qid] = rxq;
+
+	return 0;
+
+fill_rx_wqe_fail:
+	rte_memzone_free(rxq->cqe_mz);
+alloc_cqe_mz_fail:
+	rte_free(rxq->rx_info);
+
+alloc_rx_info_fail:
+	rte_memzone_free(rxq->rq_mz);
+
+alloc_rq_mz_fail:
+	spnic_free_db_addr(nic_dev->hwdev, rxq->db_addr, NULL);
+
+alloc_db_err_fail:
+	rte_memzone_free(rxq->pi_mz);
+
+alloc_pi_mz_fail:
+adjust_bufsize_fail:
+
+	rte_free(rxq);
+	nic_dev->rxqs[qid] = NULL;
+
+	return err;
+}
+
+/**
+ * Create the transmit queue.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[in] queue_idx
+ *   Transmit queue index.
+ * @param[in] nb_desc
+ *   Number of descriptors for transmit queue.
+ * @param[in] socket_id
+ *   Socket index on which memory must be allocated.
+ * @param[in] tx_conf
+ *   Tx queue configuration parameters (unused_).
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+static int spnic_tx_queue_setup(struct rte_eth_dev *dev, uint16_t qid,
+			 uint16_t nb_desc, unsigned int socket_id,
+			 __rte_unused const struct rte_eth_txconf *tx_conf)
+{
+	struct spnic_nic_dev *nic_dev;
+	struct spnic_hwdev *hwdev;
+	struct spnic_txq *txq = NULL;
+	const struct rte_memzone *sq_mz = NULL;
+	const struct rte_memzone *ci_mz = NULL;
+	void *db_addr = NULL;
+	u16 sq_depth, tx_free_thresh;
+	u32 queue_buf_size;
+	int err;
+
+	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	hwdev = nic_dev->hwdev;
+
+	/* Queue depth must be power of 2, otherwise will be aligned up */
+	sq_depth = (nb_desc & (nb_desc - 1)) ?
+		   ((u16)(1U << (ilog2(nb_desc) + 1))) : nb_desc;
+
+	/*
+	 * Validate number of transmit descriptors.
+	 * It must not exceed hardware maximum and minimum.
+	 */
+	if (sq_depth > SPNIC_MAX_QUEUE_DEPTH ||
+		sq_depth < SPNIC_MIN_QUEUE_DEPTH) {
+		PMD_DRV_LOG(ERR, "TX queue depth is out of range from %d to %d,"
+			    "(nb_desc: %d, q_depth: %d, port: %d queue: %d)",
+			    SPNIC_MIN_QUEUE_DEPTH, SPNIC_MAX_QUEUE_DEPTH,
+			    (int)nb_desc, (int)sq_depth,
+			    (int)dev->data->port_id, (int)qid);
+		return -EINVAL;
+	}
+
+	/*
+	 * The TX descriptor ring will be cleaned after txq->tx_free_thresh
+	 * descriptors are used or if the number of descriptors required
+	 * to transmit a packet is greater than the number of free TX
+	 * descriptors.
+	 * The following constraints must be satisfied:
+	 *  -tx_free_thresh must be greater than 0.
+	 *  -tx_free_thresh must be less than the size of the ring minus 1.
+	 * When set to zero use default values.
+	 */
+	tx_free_thresh = (u16)((tx_conf->tx_free_thresh) ?
+		tx_conf->tx_free_thresh : SPNIC_DEFAULT_TX_FREE_THRESH);
+	if (tx_free_thresh >= (sq_depth - 1)) {
+		PMD_DRV_LOG(ERR, "tx_free_thresh must be less than the number of tx "
+			    "descriptors minus 1, tx_free_thresh: %u port: %d queue: %d",
+			    (unsigned int)tx_free_thresh,
+			    (int)dev->data->port_id, (int)qid);
+		return -EINVAL;
+	}
+
+	txq = rte_zmalloc_socket("spnic_tx_queue", sizeof(struct spnic_txq),
+				 RTE_CACHE_LINE_SIZE, socket_id);
+	if (!txq) {
+		PMD_DRV_LOG(ERR, "Allocate txq[%d] failed, dev_name: %s",
+			    qid, dev->data->name);
+		return -ENOMEM;
+	}
+	nic_dev->txqs[qid] = txq;
+	txq->nic_dev = nic_dev;
+	txq->q_id = qid;
+	txq->q_depth = sq_depth;
+	txq->q_mask = sq_depth - 1;
+	txq->cons_idx = 0;
+	txq->prod_idx = 0;
+	txq->wqebb_shift = SPNIC_SQ_WQEBB_SHIFT;
+	txq->wqebb_size = (u16)BIT(txq->wqebb_shift);
+	txq->tx_free_thresh = tx_free_thresh;
+	txq->owner = 1;
+	txq->cos = nic_dev->default_cos;
+
+	ci_mz = rte_eth_dma_zone_reserve(dev, "spnic_sq_ci", qid,
+					 SPNIC_CI_Q_ADDR_SIZE,
+					 SPNIC_CI_Q_ADDR_SIZE, socket_id);
+	if (!ci_mz) {
+		PMD_DRV_LOG(ERR, "Allocate txq[%d] ci_mz failed, dev_name: %s",
+			    qid, dev->data->name);
+		err = -ENOMEM;
+		goto alloc_ci_mz_fail;
+	}
+	txq->ci_mz = ci_mz;
+	txq->ci_dma_base = ci_mz->iova;
+	txq->ci_vaddr_base = ci_mz->addr;
+
+	queue_buf_size = BIT(txq->wqebb_shift) * sq_depth;
+	sq_mz = rte_eth_dma_zone_reserve(dev, "spnic_sq_mz", qid,
+					 queue_buf_size, RTE_PGSIZE_256K,
+					 socket_id);
+	if (!sq_mz) {
+		PMD_DRV_LOG(ERR, "Allocate txq[%d] sq_mz failed, dev_name: %s",
+			    qid, dev->data->name);
+		err = -ENOMEM;
+		goto alloc_sq_mz_fail;
+	}
+	memset(sq_mz->addr, 0, queue_buf_size);
+	txq->sq_mz = sq_mz;
+	txq->queue_buf_paddr = sq_mz->iova;
+	txq->queue_buf_vaddr = sq_mz->addr;
+	txq->sq_head_addr = (u64)txq->queue_buf_vaddr;
+	txq->sq_bot_sge_addr = txq->sq_head_addr + queue_buf_size;
+
+	/* Sq doesn't use direct wqe */
+	err = spnic_alloc_db_addr(hwdev, &db_addr, NULL);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Alloc sq doorbell addr failed");
+		goto alloc_db_err_fail;
+	}
+	txq->db_addr = db_addr;
+
+	txq->tx_info = rte_zmalloc_socket("tx_info",
+					  sq_depth * sizeof(*txq->tx_info),
+					  RTE_CACHE_LINE_SIZE, socket_id);
+	if (!txq->tx_info) {
+		PMD_DRV_LOG(ERR, "Allocate tx_info failed, dev_name: %s",
+			    dev->data->name);
+		err = -ENOMEM;
+		goto alloc_tx_info_fail;
+	}
+
+	/* Record txq pointer in rte_eth tx_queues */
+	dev->data->tx_queues[qid] = txq;
+
+	return 0;
+
+alloc_tx_info_fail:
+	spnic_free_db_addr(hwdev, txq->db_addr, NULL);
+
+alloc_db_err_fail:
+	rte_memzone_free(txq->sq_mz);
+
+alloc_sq_mz_fail:
+	rte_memzone_free(txq->ci_mz);
+
+alloc_ci_mz_fail:
+	rte_free(txq);
+
+	return err;
+}
+
+static void spnic_rx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
+{
+	struct spnic_rxq *rxq = dev->data->rx_queues[qid];
+	struct spnic_nic_dev *nic_dev;
+
+	if (!rxq) {
+		PMD_DRV_LOG(WARNING, "Rxq is null when release");
+		return;
+	}
+	nic_dev = rxq->nic_dev;
+
+	spnic_free_rxq_mbufs(rxq);
+
+	rte_memzone_free(rxq->cqe_mz);
+
+	rte_free(rxq->rx_info);
+
+	rte_memzone_free(rxq->rq_mz);
+
+	rte_memzone_free(rxq->pi_mz);
+
+	nic_dev->rxqs[rxq->q_id] = NULL;
+	rte_free(rxq);
+}
+
+static void spnic_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
+{
+	struct spnic_txq *txq = dev->data->tx_queues[qid];
+	struct spnic_nic_dev *nic_dev;
+
+	if (!txq) {
+		PMD_DRV_LOG(WARNING, "Txq is null when release");
+		return;
+	}
+	nic_dev = txq->nic_dev;
+
+	spnic_free_txq_mbufs(txq);
+
+	rte_free(txq->tx_info);
+	txq->tx_info = NULL;
+
+	spnic_free_db_addr(nic_dev->hwdev, txq->db_addr, NULL);
+
+	rte_memzone_free(txq->sq_mz);
+
+	rte_memzone_free(txq->ci_mz);
+
+	nic_dev->txqs[txq->q_id] = NULL;
+	rte_free(txq);
+}
+
 static void spnic_delete_mc_addr_list(struct spnic_nic_dev *nic_dev);
 
 /**
@@ -235,6 +697,7 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 
 	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
 
+	spnic_get_func_rx_buf_size(nic_dev);
 	err = spnic_init_function_table(nic_dev->hwdev, nic_dev->rx_buff_len);
 	if (err) {
 		PMD_DRV_LOG(ERR, "Init function table failed, dev_name: %s",
@@ -253,6 +716,9 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 		goto get_feature_err;
 	}
 
+	/* reset rx and tx queue */
+	spnic_reset_rx_queue(eth_dev);
+	spnic_reset_tx_queue(eth_dev);
 
 	/* Init txq and rxq context */
 	err = spnic_init_qp_ctxts(nic_dev);
@@ -270,6 +736,15 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 		goto set_mtu_fail;
 	}
 
+	err = spnic_start_all_rqs(eth_dev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Set rx config failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto start_rqs_fail;
+	}
+
+	spnic_start_all_sqs(eth_dev);
+
 	/* Update eth_dev link status */
 	if (eth_dev->data->dev_conf.intr_conf.lsc != 0)
 		(void)spnic_link_update(eth_dev, 0);
@@ -278,6 +753,7 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 
 	return 0;
 
+start_rqs_fail:
 set_mtu_fail:
 	spnic_free_qp_ctxts(nic_dev->hwdev);
 
@@ -313,8 +789,16 @@ static int spnic_dev_stop(struct rte_eth_dev *dev)
 	memset(&link, 0, sizeof(link));
 	(void)rte_eth_linkstatus_set(dev, &link);
 
+	/* Flush pending io request */
+	spnic_flush_txqs(nic_dev);
+
+	spnic_flush_qps_res(nic_dev->hwdev);
 	/* Clean root context */
 	spnic_free_qp_ctxts(nic_dev->hwdev);
+
+	/* Free all tx and rx mbufs */
+	spnic_free_all_txq_mbufs(nic_dev);
+	spnic_free_all_rxq_mbufs(nic_dev);
 
 	return 0;
 }
@@ -329,6 +813,7 @@ static int spnic_dev_close(struct rte_eth_dev *eth_dev)
 {
 	struct spnic_nic_dev *nic_dev =
 	SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
+	int qid;
 
 	if (rte_bit_relaxed_test_and_set32(SPNIC_DEV_CLOSE, &nic_dev->dev_status)) {
 		PMD_DRV_LOG(WARNING, "Device %s already closed",
@@ -337,6 +822,13 @@ static int spnic_dev_close(struct rte_eth_dev *eth_dev)
 	}
 
 	spnic_dev_stop(eth_dev);
+
+	/* Release io resource */
+	for (qid = 0; qid < nic_dev->num_sqs; qid++)
+		spnic_tx_queue_release(eth_dev, qid);
+
+	for (qid = 0; qid < nic_dev->num_rqs; qid++)
+		spnic_rx_queue_release(eth_dev, qid);
 
 	spnic_deinit_sw_rxtxqs(nic_dev);
 	spnic_deinit_mac_addr(eth_dev);
@@ -581,6 +1073,10 @@ static const struct eth_dev_ops spnic_pmd_ops = {
 	.dev_set_link_up               = spnic_dev_set_link_up,
 	.dev_set_link_down             = spnic_dev_set_link_down,
 	.link_update                   = spnic_link_update,
+	.rx_queue_setup                = spnic_rx_queue_setup,
+	.tx_queue_setup                = spnic_tx_queue_setup,
+	.rx_queue_release              = spnic_rx_queue_release,
+	.tx_queue_release              = spnic_tx_queue_release,
 	.dev_start                     = spnic_dev_start,
 	.dev_stop                      = spnic_dev_stop,
 	.dev_close                     = spnic_dev_close,
@@ -592,8 +1088,12 @@ static const struct eth_dev_ops spnic_pmd_ops = {
 };
 
 static const struct eth_dev_ops spnic_pmd_vf_ops = {
-	.link_update                   = spnic_link_update,
+	.rx_queue_setup                = spnic_rx_queue_setup,
+	.tx_queue_setup                = spnic_tx_queue_setup,
 	.dev_start                     = spnic_dev_start,
+	.link_update                   = spnic_link_update,
+	.rx_queue_release              = spnic_rx_queue_release,
+	.tx_queue_release              = spnic_tx_queue_release,
 	.dev_stop                      = spnic_dev_stop,
 	.dev_close                     = spnic_dev_close,
 	.mtu_set                       = spnic_dev_set_mtu,
