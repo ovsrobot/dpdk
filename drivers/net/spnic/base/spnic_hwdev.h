@@ -17,11 +17,17 @@ struct spnic_hwdev {
 	uint16_t port_id;
 
 	struct spnic_hwif *hwif;
+	struct spnic_mbox *func_to_func;
 	u8 *chip_fault_stats;
 
 	u16 max_vfs;
 	u16 link_status;
 };
+
+int vf_handle_pf_comm_mbox(void *handle, __rte_unused void *pri_handle,
+			   __rte_unused u16 cmd, __rte_unused void *buf_in,
+			   __rte_unused u16 in_size, __rte_unused void *buf_out,
+			   __rte_unused u16 *out_size);
 
 int spnic_init_hwdev(struct spnic_hwdev *hwdev);
 
