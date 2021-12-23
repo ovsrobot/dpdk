@@ -89,4 +89,7 @@ struct spnic_nic_dev {
 #define SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev) \
 	((struct spnic_nic_dev *)(dev)->data->dev_private)
 
+int spnic_dev_rx_queue_intr_enable(struct rte_eth_dev *dev, uint16_t queue_id);
+int spnic_dev_rx_queue_intr_disable(struct rte_eth_dev *dev,
+				     uint16_t queue_id);
 #endif /* _SPNIC_ETHDEV_H_ */
