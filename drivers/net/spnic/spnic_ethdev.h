@@ -63,6 +63,8 @@ struct spnic_nic_dev {
 	u32 default_cos;
 	u32 rx_csum_en;
 
+	u8 rss_key[SPNIC_RSS_KEY_SIZE];
+
 	u32 dev_status;
 
 	bool pause_set;
