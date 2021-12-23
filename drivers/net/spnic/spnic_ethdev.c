@@ -5,14 +5,23 @@
 #include <rte_pci.h>
 #include <rte_bus_pci.h>
 #include <ethdev_pci.h>
+#include <rte_malloc.h>
 #include <rte_errno.h>
 #include <rte_ether.h>
 
 #include "base/spnic_compat.h"
+#include "base/spnic_cmd.h"
 #include "base/spnic_csr.h"
+#include "base/spnic_wq.h"
+#include "base/spnic_eqs.h"
+#include "base/spnic_mgmt.h"
+#include "base/spnic_cmdq.h"
 #include "base/spnic_hwdev.h"
 #include "base/spnic_hwif.h"
-
+#include "base/spnic_hw_cfg.h"
+#include "base/spnic_hw_comm.h"
+#include "base/spnic_nic_cfg.h"
+#include "base/spnic_nic_event.h"
 #include "spnic_ethdev.h"
 
 /* Driver-specific log messages type */
@@ -20,6 +29,58 @@ int spnic_logtype;
 
 #define SPNIC_MAX_UC_MAC_ADDRS		128
 #define SPNIC_MAX_MC_MAC_ADDRS		128
+
+static void spnic_delete_mc_addr_list(struct spnic_nic_dev *nic_dev)
+{
+	u16 func_id;
+	u32 i;
+
+	func_id = spnic_global_func_id(nic_dev->hwdev);
+
+	for (i = 0; i < SPNIC_MAX_MC_MAC_ADDRS; i++) {
+		if (rte_is_zero_ether_addr(&nic_dev->mc_list[i]))
+			break;
+
+		spnic_del_mac(nic_dev->hwdev, nic_dev->mc_list[i].addr_bytes,
+			      0, func_id);
+		memset(&nic_dev->mc_list[i], 0, sizeof(struct rte_ether_addr));
+	}
+}
+
+/**
+ * Deinit mac_vlan table in hardware.
+ *
+ * @param[in] eth_dev
+ *   Pointer to ethernet device structure.
+ */
+static void spnic_deinit_mac_addr(struct rte_eth_dev *eth_dev)
+{
+	struct spnic_nic_dev *nic_dev =
+				SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
+	u16 func_id = 0;
+	int err;
+	int i;
+
+	func_id = spnic_global_func_id(nic_dev->hwdev);
+
+	for (i = 0; i < SPNIC_MAX_UC_MAC_ADDRS; i++) {
+		if (rte_is_zero_ether_addr(&eth_dev->data->mac_addrs[i]))
+			continue;
+
+		err = spnic_del_mac(nic_dev->hwdev,
+				    eth_dev->data->mac_addrs[i].addr_bytes,
+				    0, func_id);
+		if (err && err != SPNIC_PF_SET_VF_ALREADY)
+			PMD_DRV_LOG(ERR, "Delete mac table failed, dev_name: %s",
+				    eth_dev->data->name);
+
+		memset(&eth_dev->data->mac_addrs[i], 0,
+		       sizeof(struct rte_ether_addr));
+	}
+
+	/* Delete multicast mac addrs */
+	spnic_delete_mc_addr_list(nic_dev);
+}
 
 /**
  * Close the device.
@@ -38,10 +99,244 @@ static int spnic_dev_close(struct rte_eth_dev *eth_dev)
 		return 0;
 	}
 
+	spnic_deinit_mac_addr(eth_dev);
+	rte_free(nic_dev->mc_list);
+
+	rte_bit_relaxed_clear32(SPNIC_DEV_INTR_EN, &nic_dev->dev_status);
+
 	spnic_free_hwdev(nic_dev->hwdev);
+
+	eth_dev->dev_ops = NULL;
 
 	rte_free(nic_dev->hwdev);
 	nic_dev->hwdev = NULL;
+
+	return 0;
+}
+/**
+ * Update MAC address
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[in] addr
+ *   Pointer to MAC address
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_set_mac_addr(struct rte_eth_dev *dev,
+			      struct rte_ether_addr *addr)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	char mac_addr[RTE_ETHER_ADDR_FMT_SIZE];
+	u16 func_id;
+	int err;
+
+	if (!rte_is_valid_assigned_ether_addr(addr)) {
+		rte_ether_format_addr(mac_addr, RTE_ETHER_ADDR_FMT_SIZE, addr);
+		PMD_DRV_LOG(ERR, "Set invalid MAC address %s", mac_addr);
+		return -EINVAL;
+	}
+
+	func_id = spnic_global_func_id(nic_dev->hwdev);
+	err = spnic_update_mac(nic_dev->hwdev,
+				nic_dev->default_addr.addr_bytes,
+				addr->addr_bytes, 0, func_id);
+	if (err)
+		return err;
+
+	rte_ether_addr_copy(addr, &nic_dev->default_addr);
+	rte_ether_format_addr(mac_addr, RTE_ETHER_ADDR_FMT_SIZE,
+			      &nic_dev->default_addr);
+
+	PMD_DRV_LOG(INFO, "Set new MAC address %s", mac_addr);
+
+	return 0;
+}
+
+/**
+ * Remove a MAC address.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[in] index
+ *   MAC address index.
+ */
+static void spnic_mac_addr_remove(struct rte_eth_dev *dev, uint32_t index)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	u16 func_id;
+	int err;
+
+	if (index >= SPNIC_MAX_UC_MAC_ADDRS) {
+		PMD_DRV_LOG(INFO, "Remove MAC index(%u) is out of range",
+			    index);
+		return;
+	}
+
+	func_id = spnic_global_func_id(nic_dev->hwdev);
+	err = spnic_del_mac(nic_dev->hwdev,
+			     dev->data->mac_addrs[index].addr_bytes,
+			     0, func_id);
+	if (err)
+		PMD_DRV_LOG(ERR, "Remove MAC index(%u) failed", index);
+}
+
+/**
+ * Add a MAC address.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[in] mac_addr
+ *   MAC address to register.
+ * @param[in] index
+ *   MAC address index.
+ * @param[in] vmdq
+ *   VMDq pool index to associate address with (unused_).
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_mac_addr_add(struct rte_eth_dev *dev,
+			      struct rte_ether_addr *mac_addr, uint32_t index,
+			      __rte_unused uint32_t vmdq)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	unsigned int i;
+	u16 func_id;
+	int err;
+
+	if (!rte_is_valid_assigned_ether_addr(mac_addr)) {
+		PMD_DRV_LOG(ERR, "Add invalid MAC address");
+		return -EINVAL;
+	}
+
+	if (index >= SPNIC_MAX_UC_MAC_ADDRS) {
+		PMD_DRV_LOG(ERR, "Add MAC index(%u) is out of range", index);
+		return -EINVAL;
+	}
+
+	/* Make sure this address doesn't already be configured */
+	for (i = 0; i < SPNIC_MAX_UC_MAC_ADDRS; i++) {
+		if (rte_is_same_ether_addr(mac_addr,
+			&dev->data->mac_addrs[i])) {
+			PMD_DRV_LOG(ERR, "MAC address is already configured");
+			return -EADDRINUSE;
+		}
+	}
+
+	func_id = spnic_global_func_id(nic_dev->hwdev);
+	err = spnic_set_mac(nic_dev->hwdev, mac_addr->addr_bytes, 0, func_id);
+	if (err)
+		return err;
+
+	return 0;
+}
+
+/**
+ * Set multicast MAC address
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[in] mc_addr_set
+ *   Pointer to multicast MAC address
+ * @param[in] nb_mc_addr
+ *   The number of multicast MAC address to set
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_set_mc_addr_list(struct rte_eth_dev *dev,
+				  struct rte_ether_addr *mc_addr_set,
+				  uint32_t nb_mc_addr)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	char mac_addr[RTE_ETHER_ADDR_FMT_SIZE];
+	u16 func_id;
+	int err;
+	u32 i;
+
+	func_id = spnic_global_func_id(nic_dev->hwdev);
+
+	/* Delete old multi_cast addrs firstly */
+	spnic_delete_mc_addr_list(nic_dev);
+
+	if (nb_mc_addr > SPNIC_MAX_MC_MAC_ADDRS)
+		return -EINVAL;
+
+	for (i = 0; i < nb_mc_addr; i++) {
+		if (!rte_is_multicast_ether_addr(&mc_addr_set[i])) {
+			rte_ether_format_addr(mac_addr, RTE_ETHER_ADDR_FMT_SIZE,
+					      &mc_addr_set[i]);
+			PMD_DRV_LOG(ERR, "Set mc MAC addr failed, addr(%s) invalid",
+				    mac_addr);
+			return -EINVAL;
+		}
+	}
+
+	for (i = 0; i < nb_mc_addr; i++) {
+		err = spnic_set_mac(nic_dev->hwdev, mc_addr_set[i].addr_bytes,
+				    0, func_id);
+		if (err) {
+			spnic_delete_mc_addr_list(nic_dev);
+			return err;
+		}
+
+		rte_ether_addr_copy(&mc_addr_set[i], &nic_dev->mc_list[i]);
+	}
+
+	return 0;
+}
+static const struct eth_dev_ops spnic_pmd_ops = {
+	.mac_addr_set                  = spnic_set_mac_addr,
+	.mac_addr_remove               = spnic_mac_addr_remove,
+	.mac_addr_add                  = spnic_mac_addr_add,
+	.set_mc_addr_list              = spnic_set_mc_addr_list,
+};
+
+static const struct eth_dev_ops spnic_pmd_vf_ops = {
+	.mac_addr_set                  = spnic_set_mac_addr,
+	.mac_addr_remove               = spnic_mac_addr_remove,
+	.mac_addr_add                  = spnic_mac_addr_add,
+	.set_mc_addr_list              = spnic_set_mc_addr_list,
+};
+
+/**
+ * Init mac_vlan table in hardwares.
+ *
+ * @param[in] eth_dev
+ *   Pointer to ethernet device structure.
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_init_mac_table(struct rte_eth_dev *eth_dev)
+{
+	struct spnic_nic_dev *nic_dev =
+		SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
+	u8 addr_bytes[RTE_ETHER_ADDR_LEN];
+	u16 func_id = 0;
+	int err = 0;
+
+	err = spnic_get_default_mac(nic_dev->hwdev, addr_bytes,
+				     RTE_ETHER_ADDR_LEN);
+	if (err)
+		return err;
+
+	rte_ether_addr_copy((struct rte_ether_addr *)addr_bytes,
+			    &eth_dev->data->mac_addrs[0]);
+	if (rte_is_zero_ether_addr(&eth_dev->data->mac_addrs[0]))
+		rte_eth_random_addr(eth_dev->data->mac_addrs[0].addr_bytes);
+
+	func_id = spnic_global_func_id(nic_dev->hwdev);
+	err = spnic_set_mac(nic_dev->hwdev,
+			    eth_dev->data->mac_addrs[0].addr_bytes,
+			    0, func_id);
+	if (err && err != SPNIC_PF_SET_VF_ALREADY)
+		return err;
+
+	rte_ether_addr_copy(&eth_dev->data->mac_addrs[0],
+			    &nic_dev->default_addr);
 
 	return 0;
 }
@@ -63,10 +358,36 @@ static int spnic_func_init(struct rte_eth_dev *eth_dev)
 	}
 
 	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
+	memset(nic_dev, 0, sizeof(*nic_dev));
 	snprintf(nic_dev->dev_name, sizeof(nic_dev->dev_name),
 		 "spnic-%.4x:%.2x:%.2x.%x",
 		 pci_dev->addr.domain, pci_dev->addr.bus,
 		 pci_dev->addr.devid, pci_dev->addr.function);
+
+	/* Alloc mac_addrs */
+	eth_dev->data->mac_addrs = rte_zmalloc("spnic_mac",
+		SPNIC_MAX_UC_MAC_ADDRS * sizeof(struct rte_ether_addr), 0);
+	if (!eth_dev->data->mac_addrs) {
+		PMD_DRV_LOG(ERR, "Allocate %zx bytes to store MAC addresses "
+			    "failed, dev_name: %s",
+			    SPNIC_MAX_UC_MAC_ADDRS *
+			    sizeof(struct rte_ether_addr),
+			    eth_dev->data->name);
+		err = -ENOMEM;
+		goto alloc_eth_addr_fail;
+	}
+
+	nic_dev->mc_list = rte_zmalloc("spnic_mc",
+		SPNIC_MAX_MC_MAC_ADDRS * sizeof(struct rte_ether_addr), 0);
+	if (!nic_dev->mc_list) {
+		PMD_DRV_LOG(ERR, "Allocate %zx bytes to store multicast "
+			    "addresses failed, dev_name: %s",
+			    SPNIC_MAX_MC_MAC_ADDRS *
+			    sizeof(struct rte_ether_addr),
+			    eth_dev->data->name);
+		err = -ENOMEM;
+		goto alloc_mc_list_fail;
+	}
 
 	eth_dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
 	/* Create hardware device */
@@ -90,17 +411,42 @@ static int spnic_func_init(struct rte_eth_dev *eth_dev)
 		goto init_hwdev_fail;
 	}
 
+	if (SPNIC_FUNC_TYPE(nic_dev->hwdev) == TYPE_VF)
+		eth_dev->dev_ops = &spnic_pmd_vf_ops;
+	else
+		eth_dev->dev_ops = &spnic_pmd_ops;
+	err = spnic_init_mac_table(eth_dev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init mac table failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto init_mac_table_fail;
+	}
+
+	rte_bit_relaxed_set32(SPNIC_DEV_INTR_EN, &nic_dev->dev_status);
+
 	rte_bit_relaxed_set32(SPNIC_DEV_INIT, &nic_dev->dev_status);
 	PMD_DRV_LOG(INFO, "Initialize %s in primary succeed",
 		    eth_dev->data->name);
 
 	return 0;
 
+init_mac_table_fail:
+	spnic_free_hwdev(nic_dev->hwdev);
+	eth_dev->dev_ops = NULL;
+
 init_hwdev_fail:
 	rte_free(nic_dev->hwdev);
 	nic_dev->hwdev = NULL;
 
 alloc_hwdev_mem_fail:
+	rte_free(nic_dev->mc_list);
+	nic_dev->mc_list = NULL;
+
+alloc_mc_list_fail:
+	rte_free(eth_dev->data->mac_addrs);
+	eth_dev->data->mac_addrs = NULL;
+
+alloc_eth_addr_fail:
 	PMD_DRV_LOG(ERR, "Initialize %s in primary failed",
 		    eth_dev->data->name);
 	return err;

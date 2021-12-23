@@ -155,3 +155,15 @@ void spnic_free_capability(void *dev)
 {
 	rte_free(((struct spnic_hwdev *)dev)->cfg_mgmt);
 }
+
+u8 spnic_physical_port_id(void *hwdev)
+{
+	struct spnic_hwdev *dev = hwdev;
+
+	if (!dev) {
+		PMD_DRV_LOG(INFO, "Hwdev is NULL for getting physical port id");
+		return 0;
+	}
+
+	return dev->cfg_mgmt->svc_cap.port_id;
+}
