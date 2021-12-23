@@ -902,8 +902,9 @@ run_v4(void)
 				return -ret;
 			}
 		}
-		printf("AVG FIB add %"PRIu64"\n",
-			(rte_rdtsc_precise() - start) / j);
+		if (j != 0)
+			printf("AVG FIB add %"PRIu64"\n",
+				(rte_rdtsc_precise() - start) / j);
 		i += j;
 	}
 
@@ -930,8 +931,9 @@ run_v4(void)
 					return -ret;
 				}
 			}
-			printf("AVG LPM add %"PRIu64"\n",
-				(rte_rdtsc_precise() - start) / j);
+			if (j != 0)
+				printf("AVG LPM add %"PRIu64"\n",
+					(rte_rdtsc_precise() - start) / j);
 			i += j;
 		}
 	}
@@ -984,8 +986,9 @@ run_v4(void)
 		for (j = 0; j < (config.nb_routes - i) / k; j++)
 			rte_fib_delete(fib, rt[i + j].addr, rt[i + j].depth);
 
-		printf("AVG FIB delete %"PRIu64"\n",
-			(rte_rdtsc_precise() - start) / j);
+		if (j != 0)
+			printf("AVG FIB delete %"PRIu64"\n",
+				(rte_rdtsc_precise() - start) / j);
 		i += j;
 	}
 
@@ -996,8 +999,9 @@ run_v4(void)
 				rte_lpm_delete(lpm, rt[i + j].addr,
 					rt[i + j].depth);
 
-			printf("AVG LPM delete %"PRIu64"\n",
-				(rte_rdtsc_precise() - start) / j);
+			if (j != 0)
+				printf("AVG LPM delete %"PRIu64"\n",
+					(rte_rdtsc_precise() - start) / j);
 			i += j;
 		}
 	}
@@ -1097,8 +1101,9 @@ run_v6(void)
 				return -ret;
 			}
 		}
-		printf("AVG FIB add %"PRIu64"\n",
-			(rte_rdtsc_precise() - start) / j);
+		if (j != 0)
+			printf("AVG FIB add %"PRIu64"\n",
+				(rte_rdtsc_precise() - start) / j);
 		i += j;
 	}
 
@@ -1125,8 +1130,9 @@ run_v6(void)
 					return -ret;
 				}
 			}
-			printf("AVG LPM add %"PRIu64"\n",
-				(rte_rdtsc_precise() - start) / j);
+			if (j != 0)
+				printf("AVG LPM add %"PRIu64"\n",
+					(rte_rdtsc_precise() - start) / j);
 			i += j;
 		}
 	}
@@ -1183,8 +1189,9 @@ run_v6(void)
 		for (j = 0; j < (config.nb_routes - i) / k; j++)
 			rte_fib6_delete(fib, rt[i + j].addr, rt[i + j].depth);
 
-		printf("AVG FIB delete %"PRIu64"\n",
-			(rte_rdtsc_precise() - start) / j);
+		if (j != 0)
+			printf("AVG FIB delete %"PRIu64"\n",
+				(rte_rdtsc_precise() - start) / j);
 		i += j;
 	}
 
@@ -1195,8 +1202,9 @@ run_v6(void)
 				rte_lpm6_delete(lpm, rt[i + j].addr,
 					rt[i + j].depth);
 
-			printf("AVG LPM delete %"PRIu64"\n",
-				(rte_rdtsc_precise() - start) / j);
+			if (j != 0)
+				printf("AVG LPM delete %"PRIu64"\n",
+					(rte_rdtsc_precise() - start) / j);
 			i += j;
 		}
 	}
