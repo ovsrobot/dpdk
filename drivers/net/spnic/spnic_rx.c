@@ -486,6 +486,117 @@ void spnic_remove_rq_from_rx_queue_list(struct spnic_nic_dev *nic_dev,
 	nic_dev->num_rss = rss_queue_count;
 }
 
+
+static inline uint64_t spnic_rx_vlan(uint32_t offload_type, uint32_t vlan_len,
+				      uint16_t *vlan_tci)
+{
+	uint16_t vlan_tag;
+
+	vlan_tag = SPNIC_GET_RX_VLAN_TAG(vlan_len);
+	if (!SPNIC_GET_RX_VLAN_OFFLOAD_EN(offload_type) || vlan_tag == 0) {
+		*vlan_tci = 0;
+		return 0;
+	}
+
+	*vlan_tci = vlan_tag;
+
+	return RTE_MBUF_F_RX_VLAN | RTE_MBUF_F_RX_VLAN_STRIPPED;
+}
+
+static inline uint64_t spnic_rx_csum(uint32_t status, struct spnic_rxq *rxq)
+{
+	struct spnic_nic_dev *nic_dev = rxq->nic_dev;
+	uint32_t csum_err;
+	uint64_t flags;
+
+	if (unlikely(!(nic_dev->rx_csum_en & SPNIC_DEFAULT_RX_CSUM_OFFLOAD)))
+		return RTE_MBUF_F_RX_IP_CKSUM_UNKNOWN;
+
+	/* Most case checksum is ok */
+	csum_err = SPNIC_GET_RX_CSUM_ERR(status);
+	if (likely(csum_err == 0))
+		return (RTE_MBUF_F_RX_IP_CKSUM_GOOD | RTE_MBUF_F_RX_L4_CKSUM_GOOD);
+
+	/*
+	 * If bypass bit is set, all other err status indications should be
+	 * ignored
+	 */
+	if (unlikely(csum_err & SPNIC_RX_CSUM_HW_CHECK_NONE))
+		return RTE_MBUF_F_RX_IP_CKSUM_UNKNOWN;
+
+	flags = 0;
+
+	/* IP checksum error */
+	if (csum_err & SPNIC_RX_CSUM_IP_CSUM_ERR) {
+		flags |= RTE_MBUF_F_RX_IP_CKSUM_BAD;
+		rxq->rxq_stats.errors++;
+	}
+
+	/* L4 checksum error */
+	if (csum_err & SPNIC_RX_CSUM_TCP_CSUM_ERR ||
+	    csum_err & SPNIC_RX_CSUM_UDP_CSUM_ERR ||
+	    csum_err & SPNIC_RX_CSUM_SCTP_CRC_ERR) {
+		flags |= RTE_MBUF_F_RX_L4_CKSUM_BAD;
+		rxq->rxq_stats.errors++;
+	}
+
+	if (unlikely(csum_err == SPNIC_RX_CSUM_IPSU_OTHER_ERR))
+		rxq->rxq_stats.other_errors++;
+
+	return flags;
+}
+
+static inline uint64_t spnic_rx_rss_hash(uint32_t offload_type,
+					 uint32_t rss_hash_value,
+					 uint32_t *rss_hash)
+{
+	uint32_t rss_type;
+
+	rss_type = SPNIC_GET_RSS_TYPES(offload_type);
+	if (likely(rss_type != 0)) {
+		*rss_hash = rss_hash_value;
+		return RTE_MBUF_F_RX_RSS_HASH;
+	}
+
+	return 0;
+}
+
+static void spnic_recv_jumbo_pkt(struct spnic_rxq *rxq,
+				 struct rte_mbuf *head_mbuf,
+				 u32 remain_pkt_len)
+{
+	struct rte_mbuf *cur_mbuf = NULL;
+	struct rte_mbuf *rxm = NULL;
+	struct spnic_rx_info *rx_info = NULL;
+	u16 sw_ci, rx_buf_len = rxq->buf_len;
+	u32 pkt_len;
+
+	while (remain_pkt_len > 0) {
+		sw_ci = spnic_get_rq_local_ci(rxq);
+		rx_info = &rxq->rx_info[sw_ci];
+
+		spnic_update_rq_local_ci(rxq, 1);
+
+		pkt_len = remain_pkt_len > rx_buf_len ?
+			rx_buf_len : remain_pkt_len;
+		remain_pkt_len -= pkt_len;
+
+		cur_mbuf = rx_info->mbuf;
+		cur_mbuf->data_len = (u16)pkt_len;
+		cur_mbuf->next = NULL;
+
+		head_mbuf->pkt_len += cur_mbuf->data_len;
+		head_mbuf->nb_segs++;
+
+		if (!rxm)
+			head_mbuf->next = cur_mbuf;
+		else
+			rxm->next = cur_mbuf;
+
+		rxm = cur_mbuf;
+	}
+}
+
 int spnic_start_all_rqs(struct rte_eth_dev *eth_dev)
 {
 	struct spnic_nic_dev *nic_dev = NULL;
@@ -520,4 +631,102 @@ out:
 		eth_dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 	}
 	return err;
+}
+
+u16 spnic_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, u16 nb_pkts)
+{
+	struct spnic_rxq *rxq = rx_queue;
+	struct spnic_rx_info *rx_info = NULL;
+	volatile struct spnic_rq_cqe *rx_cqe = NULL;
+	struct rte_mbuf *rxm = NULL;
+	u16 sw_ci, wqebb_cnt = 0;
+	u32 status, pkt_len, vlan_len, offload_type, hash_value;
+	u32 lro_num;
+	u64 rx_bytes = 0;
+	u16 rx_buf_len, pkts = 0;
+
+	rx_buf_len = rxq->buf_len;
+	sw_ci = spnic_get_rq_local_ci(rxq);
+
+	while (pkts < nb_pkts) {
+		rx_cqe = &rxq->rx_cqe[sw_ci];
+		status = rx_cqe->status;
+		if (!SPNIC_GET_RX_DONE(status))
+			break;
+
+		/* Make sure rx_done is read before packet length */
+		rte_rmb();
+
+		vlan_len = rx_cqe->vlan_len;
+		pkt_len = SPNIC_GET_RX_PKT_LEN(vlan_len);
+
+		rx_info = &rxq->rx_info[sw_ci];
+		rxm = rx_info->mbuf;
+
+		/* 1. Next ci point and prefetch */
+		sw_ci++;
+		sw_ci &= rxq->q_mask;
+
+		/* 2. Prefetch next mbuf first 64B */
+		rte_prefetch0(rxq->rx_info[sw_ci].mbuf);
+
+		/* 3. Jumbo frame process */
+		if (likely(pkt_len <= rx_buf_len)) {
+			rxm->data_len = pkt_len;
+			rxm->pkt_len = pkt_len;
+			wqebb_cnt++;
+		} else {
+			rxm->data_len = rx_buf_len;
+			rxm->pkt_len = rx_buf_len;
+
+			/* If receive jumbo, updating ci will be done by
+			 * spnic_recv_jumbo_pkt function.
+			 */
+			spnic_update_rq_local_ci(rxq, wqebb_cnt + 1);
+			wqebb_cnt = 0;
+			spnic_recv_jumbo_pkt(rxq, rxm, pkt_len - rx_buf_len);
+			sw_ci = spnic_get_rq_local_ci(rxq);
+		}
+
+		rxm->data_off = RTE_PKTMBUF_HEADROOM;
+		rxm->port = rxq->port_id;
+
+		/* 4. Rx checksum offload */
+		rxm->ol_flags |= spnic_rx_csum(status, rxq);
+
+		/* 5. Vlan offload */
+		offload_type = rx_cqe->offload_type;
+		rxm->ol_flags |= spnic_rx_vlan(offload_type, vlan_len,
+						&rxm->vlan_tci);
+		/* 6. RSS */
+		hash_value = rx_cqe->hash_val;
+		rxm->ol_flags |= spnic_rx_rss_hash(offload_type, hash_value,
+						    &rxm->hash.rss);
+		/* 7. LRO */
+		lro_num = SPNIC_GET_RX_NUM_LRO(status);
+		if (unlikely(lro_num != 0)) {
+			rxm->ol_flags |= RTE_MBUF_F_RX_LRO;
+			rxm->tso_segsz = pkt_len / lro_num;
+		}
+
+		rx_cqe->status = 0;
+
+		rx_bytes += pkt_len;
+		rx_pkts[pkts++] = rxm;
+	}
+
+	if (pkts) {
+		/* 8. Update local ci */
+		spnic_update_rq_local_ci(rxq, wqebb_cnt);
+
+		/* Update packet stats */
+		rxq->rxq_stats.packets += pkts;
+		rxq->rxq_stats.bytes += rx_bytes;
+	}
+	rxq->rxq_stats.burst_pkts = pkts;
+
+	/* 9. Rearm mbuf to rxq */
+	spnic_rearm_rxq_mbuf(rxq);
+
+	return pkts;
 }
