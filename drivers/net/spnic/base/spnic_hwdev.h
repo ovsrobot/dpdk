@@ -8,6 +8,21 @@
 #include <rte_ether.h>
 
 #define SPNIC_CHIP_FAULT_SIZE		(110 * 1024)
+struct cfg_mgmt_info;
+struct spnic_hwif;
+struct spnic_aeqs;
+struct spnic_mbox;
+struct spnic_msg_pf_to_mgmt;
+
+struct ffm_intr_info {
+	u8 node_id;
+	/* Error level of the interrupt source */
+	u8 err_level;
+	/* Classification by interrupt source properties */
+	u16 err_type;
+	u32 err_csr_addr;
+	u32 err_csr_value;
+};
 
 struct spnic_hwdev {
 	void *dev_handle; /* Pointer to spnic_nic_dev */
@@ -18,6 +33,9 @@ struct spnic_hwdev {
 
 	struct spnic_hwif *hwif;
 	struct spnic_mbox *func_to_func;
+	struct cfg_mgmt_info *cfg_mgmt;
+	struct spnic_aeqs *aeqs;
+	struct spnic_msg_pf_to_mgmt *pf_to_mgmt;
 	u8 *chip_fault_stats;
 
 	u16 max_vfs;
@@ -28,6 +46,10 @@ int vf_handle_pf_comm_mbox(void *handle, __rte_unused void *pri_handle,
 			   __rte_unused u16 cmd, __rte_unused void *buf_in,
 			   __rte_unused u16 in_size, __rte_unused void *buf_out,
 			   __rte_unused u16 *out_size);
+
+void pf_handle_mgmt_comm_event(void *handle, __rte_unused void *pri_handle,
+			       u16 cmd, void *buf_in, u16 in_size,
+			       void *buf_out, u16 *out_size);
 
 int spnic_init_hwdev(struct spnic_hwdev *hwdev);
 
