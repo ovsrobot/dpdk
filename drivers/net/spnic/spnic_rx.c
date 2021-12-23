@@ -486,6 +486,228 @@ void spnic_remove_rq_from_rx_queue_list(struct spnic_nic_dev *nic_dev,
 	nic_dev->num_rss = rss_queue_count;
 }
 
+static void spnic_rx_queue_release_mbufs(struct spnic_rxq *rxq)
+{
+	u16 sw_ci, ci_mask, free_wqebbs;
+	u16 rx_buf_len;
+	u32 status, vlan_len, pkt_len;
+	u32 pkt_left_len = 0;
+	u32 nr_released = 0;
+	struct spnic_rx_info *rx_info;
+	volatile struct spnic_rq_cqe *rx_cqe;
+
+	sw_ci = spnic_get_rq_local_ci(rxq);
+	rx_info = &rxq->rx_info[sw_ci];
+	rx_cqe = &rxq->rx_cqe[sw_ci];
+	free_wqebbs = (u16)(spnic_get_rq_free_wqebb(rxq) + 1);
+	status = rx_cqe->status;
+	ci_mask = rxq->q_mask;
+
+	while (free_wqebbs < rxq->q_depth) {
+		rx_buf_len = rxq->buf_len;
+		if (pkt_left_len != 0) {
+			/* flush continues jumbo rqe */
+			pkt_left_len = (pkt_left_len <= rx_buf_len) ? 0 :
+				       (pkt_left_len - rx_buf_len);
+		} else if (SPNIC_GET_RX_FLUSH(status)) {
+			/* flush one released rqe */
+			pkt_left_len = 0;
+		} else if (SPNIC_GET_RX_DONE(status)) {
+			/* flush single packet or  first jumbo rqe */
+			vlan_len = rx_cqe->vlan_len;
+			pkt_len = SPNIC_GET_RX_PKT_LEN(vlan_len);
+			pkt_left_len = (pkt_len <= rx_buf_len) ? 0 :
+				       (pkt_len - rx_buf_len);
+		} else {
+			break;
+		}
+
+		rte_pktmbuf_free(rx_info->mbuf);
+
+		rx_info->mbuf = NULL;
+		rx_cqe->status = 0;
+		nr_released++;
+		free_wqebbs++;
+
+		/* see next cqe */
+		sw_ci++;
+		sw_ci &= ci_mask;
+		rx_info = &rxq->rx_info[sw_ci];
+		rx_cqe = &rxq->rx_cqe[sw_ci];
+		status = rx_cqe->status;
+	}
+
+	spnic_update_rq_local_ci(rxq, nr_released);
+}
+
+int spnic_poll_rq_empty(struct spnic_rxq *rxq)
+{
+	unsigned long timeout;
+	int free_wqebb;
+	int err = -EFAULT;
+
+	timeout = msecs_to_jiffies(SPNIC_FLUSH_QUEUE_TIMEOUT) + jiffies;
+	do {
+		free_wqebb = spnic_get_rq_free_wqebb(rxq) + 1;
+		if (free_wqebb == rxq->q_depth) {
+			err = 0;
+			break;
+		}
+		spnic_rx_queue_release_mbufs(rxq);
+		rte_delay_us(1);
+	} while (time_before(jiffies, timeout));
+
+	return err;
+}
+
+void spnic_dump_cqe_status(struct spnic_rxq *rxq, u32 *cqe_done_cnt,
+			    u32 *cqe_hole_cnt, u32 *head_ci,
+			    u32 *head_done)
+{
+	u16 sw_ci;
+	u16 avail_pkts = 0;
+	u16 hit_done = 0;
+	u16 cqe_hole = 0;
+	u32 status;
+	volatile struct spnic_rq_cqe *rx_cqe;
+
+	sw_ci = spnic_get_rq_local_ci(rxq);
+	rx_cqe = &rxq->rx_cqe[sw_ci];
+	status = rx_cqe->status;
+	*head_done = SPNIC_GET_RX_DONE(status);
+	*head_ci = sw_ci;
+
+	for (sw_ci = 0; sw_ci < rxq->q_depth; sw_ci++) {
+		rx_cqe = &rxq->rx_cqe[sw_ci];
+
+		/* test current ci is done */
+		status = rx_cqe->status;
+		if (!SPNIC_GET_RX_DONE(status) ||
+		    !SPNIC_GET_RX_FLUSH(status)) {
+			if (hit_done) {
+				cqe_hole++;
+				hit_done = 0;
+			}
+
+			continue;
+		}
+
+		avail_pkts++;
+		hit_done = 1;
+	}
+
+	*cqe_done_cnt = avail_pkts;
+	*cqe_hole_cnt = cqe_hole;
+}
+
+int spnic_stop_rq(struct rte_eth_dev *eth_dev, struct spnic_rxq *rxq)
+{
+	struct spnic_nic_dev *nic_dev = rxq->nic_dev;
+	u32 cqe_done_cnt = 0;
+	u32 cqe_hole_cnt = 0;
+	u32 head_ci, head_done;
+	int err;
+
+	/* disable rxq intr */
+	spnic_dev_rx_queue_intr_disable(eth_dev, rxq->q_id);
+
+	/* lock dev queue switch  */
+	rte_spinlock_lock(&nic_dev->queue_list_lock);
+
+	spnic_remove_rq_from_rx_queue_list(nic_dev, rxq->q_id);
+
+	if (nic_dev->rss_state == SPNIC_RSS_ENABLE) {
+		err = spnic_refill_indir_rqid(rxq);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Clear rq in indirect table failed, eth_dev:%s, queue_idx:%d\n",
+				    nic_dev->dev_name, rxq->q_id);
+			spnic_add_rq_to_rx_queue_list(nic_dev, rxq->q_id);
+			goto set_indir_failed;
+		}
+	}
+
+	if (nic_dev->num_rss == 0) {
+		err = spnic_set_vport_enable(nic_dev->hwdev, false);
+		if (err) {
+			PMD_DRV_LOG(ERR, "%s Disable vport failed, rc:%d",
+				    nic_dev->dev_name, err);
+			goto set_vport_failed;
+		}
+	}
+
+	/* unlock dev queue list switch  */
+	rte_spinlock_unlock(&nic_dev->queue_list_lock);
+
+	/* Send flush rq cmd to uCode */
+	err = spnic_set_rq_flush(nic_dev->hwdev, rxq->q_id);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Flush rq failed, eth_dev:%s, queue_idx:%d\n",
+			    nic_dev->dev_name, rxq->q_id);
+		goto rq_flush_failed;
+	}
+
+	err = spnic_poll_rq_empty(rxq);
+	if (err) {
+		spnic_dump_cqe_status(rxq, &cqe_done_cnt, &cqe_hole_cnt,
+				       &head_ci, &head_done);
+		PMD_DRV_LOG(ERR, "Poll rq empty timeout, eth_dev:%s, queue_idx:%d, "
+			    "mbuf_left:%d, cqe_done:%d, cqe_hole:%d, cqe[%d].done=%d\n",
+			    nic_dev->dev_name, rxq->q_id,
+			    rxq->q_depth - spnic_get_rq_free_wqebb(rxq),
+			    cqe_done_cnt, cqe_hole_cnt, head_ci, head_done);
+		goto poll_rq_failed;
+	}
+
+	return 0;
+
+poll_rq_failed:
+rq_flush_failed:
+	rte_spinlock_lock(&nic_dev->queue_list_lock);
+set_vport_failed:
+	spnic_add_rq_to_rx_queue_list(nic_dev, rxq->q_id);
+	if (nic_dev->rss_state == SPNIC_RSS_ENABLE)
+		(void)spnic_refill_indir_rqid(rxq);
+set_indir_failed:
+	rte_spinlock_unlock(&nic_dev->queue_list_lock);
+	spnic_dev_rx_queue_intr_enable(eth_dev, rxq->q_id);
+	return err;
+}
+
+int spnic_start_rq(struct rte_eth_dev *eth_dev, struct spnic_rxq *rxq)
+{
+	struct spnic_nic_dev *nic_dev = rxq->nic_dev;
+	int err = 0;
+
+	/* lock dev queue switch  */
+	rte_spinlock_lock(&nic_dev->queue_list_lock);
+
+	spnic_add_rq_to_rx_queue_list(nic_dev, rxq->q_id);
+
+	spnic_rearm_rxq_mbuf(rxq);
+
+	if (nic_dev->rss_state == SPNIC_RSS_ENABLE) {
+		err = spnic_refill_indir_rqid(rxq);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Refill rq to indrect table failed, eth_dev:%s, queue_idx:%d err:%d\n",
+				    nic_dev->dev_name, rxq->q_id, err);
+			spnic_remove_rq_from_rx_queue_list(nic_dev, rxq->q_id);
+		}
+	}
+
+	if (rxq->nic_dev->num_rss == 1) {
+		err = spnic_set_vport_enable(nic_dev->hwdev, true);
+		if (err)
+			PMD_DRV_LOG(ERR, "%s enable vport failed, err:%d",
+				    nic_dev->dev_name, err);
+	}
+
+	/* unlock dev queue list switch  */
+	rte_spinlock_unlock(&nic_dev->queue_list_lock);
+
+	spnic_dev_rx_queue_intr_enable(eth_dev, rxq->q_id);
+
+	return err;
+}
 
 static inline uint64_t spnic_rx_vlan(uint32_t offload_type, uint32_t vlan_len,
 				      uint16_t *vlan_tci)

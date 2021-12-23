@@ -1070,6 +1070,19 @@ int spnic_set_vlan_fliter(void *hwdev, u32 vlan_filter_ctrl);
 int spnic_vf_get_default_cos(void *hwdev, u8 *cos_id);
 
 /**
+ * Flush rx queue resource
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[in] q_id
+ *   rx queue id
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_set_rq_flush(void *hwdev, u16 q_id);
+
+/**
  * Get service feature HW supported
  *
  * @param[in] dev
