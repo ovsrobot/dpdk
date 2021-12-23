@@ -2,6 +2,8 @@
 # Copyright(c) 2021 Ramaxel Memory Technology, Ltd
 
 sources = [
+	'spnic_hwdev.c',
+	'spnic_hwif.c'
 ]
 
 extra_flags = []
