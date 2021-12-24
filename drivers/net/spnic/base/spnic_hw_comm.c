@@ -11,6 +11,7 @@
 #include "spnic_csr.h"
 #include "spnic_hwdev.h"
 #include "spnic_hwif.h"
+#include "spnic_wq.h"
 #include "spnic_mgmt.h"
 #include "spnic_cmdq.h"
 #include "spnic_hw_comm.h"
@@ -27,6 +28,46 @@
 #define	SPNIC_MSIX_CNT_COALESC_TIMER_MASK		0xFFU
 #define	SPNIC_MSIX_CNT_PENDING_MASK			0x1FU
 #define	SPNIC_MSIX_CNT_RESEND_TIMER_MASK		0x7U
+
+#define DEFAULT_RX_BUF_SIZE	((u16)0xB)
+
+enum spnic_rx_buf_size {
+	SPNIC_RX_BUF_SIZE_32B = 0x20,
+	SPNIC_RX_BUF_SIZE_64B = 0x40,
+	SPNIC_RX_BUF_SIZE_96B = 0x60,
+	SPNIC_RX_BUF_SIZE_128B = 0x80,
+	SPNIC_RX_BUF_SIZE_192B = 0xC0,
+	SPNIC_RX_BUF_SIZE_256B = 0x100,
+	SPNIC_RX_BUF_SIZE_384B = 0x180,
+	SPNIC_RX_BUF_SIZE_512B = 0x200,
+	SPNIC_RX_BUF_SIZE_768B = 0x300,
+	SPNIC_RX_BUF_SIZE_1K = 0x400,
+	SPNIC_RX_BUF_SIZE_1_5K = 0x600,
+	SPNIC_RX_BUF_SIZE_2K = 0x800,
+	SPNIC_RX_BUF_SIZE_3K = 0xC00,
+	SPNIC_RX_BUF_SIZE_4K = 0x1000,
+	SPNIC_RX_BUF_SIZE_8K = 0x2000,
+	SPNIC_RX_BUF_SIZE_16K = 0x4000,
+};
+
+const u32 spnic_hw_rx_buf_size[] = {
+	SPNIC_RX_BUF_SIZE_32B,
+	SPNIC_RX_BUF_SIZE_64B,
+	SPNIC_RX_BUF_SIZE_96B,
+	SPNIC_RX_BUF_SIZE_128B,
+	SPNIC_RX_BUF_SIZE_192B,
+	SPNIC_RX_BUF_SIZE_256B,
+	SPNIC_RX_BUF_SIZE_384B,
+	SPNIC_RX_BUF_SIZE_512B,
+	SPNIC_RX_BUF_SIZE_768B,
+	SPNIC_RX_BUF_SIZE_1K,
+	SPNIC_RX_BUF_SIZE_1_5K,
+	SPNIC_RX_BUF_SIZE_2K,
+	SPNIC_RX_BUF_SIZE_3K,
+	SPNIC_RX_BUF_SIZE_4K,
+	SPNIC_RX_BUF_SIZE_8K,
+	SPNIC_RX_BUF_SIZE_16K,
+};
 
 int spnic_get_interrupt_cfg(void *dev, struct interrupt_info *info)
 {
