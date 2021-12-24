@@ -112,8 +112,14 @@ struct spnic_cfg_cmd_dev_cap {
 int spnic_init_capability(void *dev);
 void spnic_free_capability(void *dev);
 
+u16 spnic_func_max_sqs(void *hwdev);
+u16 spnic_func_max_rqs(void *hwdev);
+
 u8 spnic_physical_port_id(void *hwdev);
 
 int cfg_mbx_vf_proc_msg(void *hwdev, void *pri_handle, u16 cmd, void *buf_in,
 			u16 in_size, void *buf_out, u16 *out_size);
+
+bool spnic_support_nic(void *hwdev);
+
 #endif /* _SPNIC_HW_CFG_H_ */

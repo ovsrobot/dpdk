@@ -4,6 +4,7 @@
 
 #ifndef _SPNIC_ETHDEV_H_
 #define _SPNIC_ETHDEV_H_
+#define SPNIC_DEV_NAME_LEN		32
 
 #define SPNIC_UINT32_BIT_SIZE		(CHAR_BIT * sizeof(uint32_t))
 #define SPNIC_VFTA_SIZE			(4096 / SPNIC_UINT32_BIT_SIZE)
@@ -16,7 +17,25 @@ enum spnic_dev_status {
 	SPNIC_DEV_INTR_EN
 };
 
-#define SPNIC_DEV_NAME_LEN		32
+enum nic_feature_cap {
+	NIC_F_CSUM = BIT(0),
+	NIC_F_SCTP_CRC = BIT(1),
+	NIC_F_TSO = BIT(2),
+	NIC_F_LRO = BIT(3),
+	NIC_F_UFO = BIT(4),
+	NIC_F_RSS = BIT(5),
+	NIC_F_RX_VLAN_FILTER = BIT(6),
+	NIC_F_RX_VLAN_STRIP = BIT(7),
+	NIC_F_TX_VLAN_INSERT = BIT(8),
+	NIC_F_VXLAN_OFFLOAD = BIT(9),
+	NIC_F_IPSEC_OFFLOAD = BIT(10),
+	NIC_F_FDIR = BIT(11),
+	NIC_F_PROMISC = BIT(12),
+	NIC_F_ALLMULTI = BIT(13),
+};
+
+#define DEFAULT_DRV_FEATURE		0x3FFF
+
 struct spnic_nic_dev {
 	struct spnic_hwdev *hwdev; /* Hardware device */
 
@@ -53,6 +72,7 @@ struct spnic_nic_dev {
 	struct rte_ether_addr *mc_list;
 
 	char dev_name[SPNIC_DEV_NAME_LEN];
+	u64 feature_cap;
 	u32 vfta[SPNIC_VFTA_SIZE]; /* VLAN bitmap */
 };
 
