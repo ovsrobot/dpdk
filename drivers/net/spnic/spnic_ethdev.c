@@ -9,15 +9,48 @@
 #include <rte_ether.h>
 
 #include "base/spnic_compat.h"
+#include "base/spnic_csr.h"
+#include "base/spnic_hwdev.h"
+#include "base/spnic_hwif.h"
+
 #include "spnic_ethdev.h"
 
 /* Driver-specific log messages type */
 int spnic_logtype;
 
+#define SPNIC_MAX_UC_MAC_ADDRS		128
+#define SPNIC_MAX_MC_MAC_ADDRS		128
+
+/**
+ * Close the device.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ */
+static int spnic_dev_close(struct rte_eth_dev *eth_dev)
+{
+	struct spnic_nic_dev *nic_dev =
+		SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
+
+	if (rte_bit_relaxed_test_and_set32(SPNIC_DEV_CLOSE, &nic_dev->dev_status)) {
+		PMD_DRV_LOG(WARNING, "Device %s already closed",
+			    nic_dev->dev_name);
+		return 0;
+	}
+
+	spnic_free_hwdev(nic_dev->hwdev);
+
+	rte_free(nic_dev->hwdev);
+	nic_dev->hwdev = NULL;
+
+	return 0;
+}
+
 static int spnic_func_init(struct rte_eth_dev *eth_dev)
 {
 	struct spnic_nic_dev *nic_dev = NULL;
 	struct rte_pci_device *pci_dev = NULL;
+	int err;
 
 	pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
 
@@ -35,11 +68,42 @@ static int spnic_func_init(struct rte_eth_dev *eth_dev)
 		 pci_dev->addr.domain, pci_dev->addr.bus,
 		 pci_dev->addr.devid, pci_dev->addr.function);
 
+	eth_dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
+	/* Create hardware device */
+	nic_dev->hwdev = rte_zmalloc("spnic_hwdev", sizeof(*nic_dev->hwdev),
+				     RTE_CACHE_LINE_SIZE);
+	if (!nic_dev->hwdev) {
+		PMD_DRV_LOG(ERR, "Allocate hwdev memory failed, dev_name: %s",
+			    eth_dev->data->name);
+		err = -ENOMEM;
+		goto alloc_hwdev_mem_fail;
+	}
+	nic_dev->hwdev->pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
+	nic_dev->hwdev->dev_handle = nic_dev;
+	nic_dev->hwdev->eth_dev = eth_dev;
+	nic_dev->hwdev->port_id = eth_dev->data->port_id;
+
+	err = spnic_init_hwdev(nic_dev->hwdev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init chip hwdev failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto init_hwdev_fail;
+	}
+
 	rte_bit_relaxed_set32(SPNIC_DEV_INIT, &nic_dev->dev_status);
 	PMD_DRV_LOG(INFO, "Initialize %s in primary succeed",
 		    eth_dev->data->name);
 
 	return 0;
+
+init_hwdev_fail:
+	rte_free(nic_dev->hwdev);
+	nic_dev->hwdev = NULL;
+
+alloc_hwdev_mem_fail:
+	PMD_DRV_LOG(ERR, "Initialize %s in primary failed",
+		    eth_dev->data->name);
+	return err;
 }
 
 static int spnic_dev_init(struct rte_eth_dev *eth_dev)
@@ -66,6 +130,8 @@ static int spnic_dev_uninit(struct rte_eth_dev *dev)
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
+
+	spnic_dev_close(dev);
 
 	return 0;
 }
