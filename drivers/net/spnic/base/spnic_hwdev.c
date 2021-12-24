@@ -5,9 +5,44 @@
 #include "spnic_compat.h"
 #include "spnic_csr.h"
 #include "spnic_hwif.h"
+#include "spnic_eqs.h"
 #include "spnic_mgmt.h"
 #include "spnic_mbox.h"
 #include "spnic_hwdev.h"
+
+typedef void (*mgmt_event_cb)(void *handle, void *buf_in, u16 in_size,
+			      void *buf_out, u16 *out_size);
+
+struct mgmt_event_handle {
+	u16 cmd;
+	mgmt_event_cb proc;
+};
+
+const struct mgmt_event_handle mgmt_event_proc[] = {
+};
+
+void pf_handle_mgmt_comm_event(void *handle, __rte_unused void *pri_handle,
+			       u16 cmd, void *buf_in, u16 in_size,
+			       void *buf_out, u16 *out_size)
+{
+	struct spnic_hwdev *hwdev = handle;
+	u32 i, event_num = RTE_DIM(mgmt_event_proc);
+
+	if (!hwdev)
+		return;
+
+	for (i = 0; i < event_num; i++) {
+		if (cmd == mgmt_event_proc[i].cmd) {
+			if (mgmt_event_proc[i].proc)
+				mgmt_event_proc[i].proc(handle, buf_in, in_size,
+							buf_out, out_size);
+
+			return;
+		}
+	}
+
+	PMD_DRV_LOG(WARNING, "Unsupported mgmt cpu event %d to process", cmd);
+}
 
 int vf_handle_pf_comm_mbox(void *handle, __rte_unused void *pri_handle,
 			   __rte_unused u16 cmd, __rte_unused void *buf_in,
@@ -28,6 +63,12 @@ static int init_mgmt_channel(struct spnic_hwdev *hwdev)
 {
 	int err;
 
+	err = spnic_aeqs_init(hwdev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init async event queues failed");
+		return err;
+	}
+
 	err = spnic_func_to_func_init(hwdev);
 	if (err) {
 		PMD_DRV_LOG(ERR, "Init mailbox channel failed");
@@ -37,6 +78,7 @@ static int init_mgmt_channel(struct spnic_hwdev *hwdev)
 	return 0;
 
 func_to_func_init_err:
+	spnic_aeqs_free(hwdev);
 
 	return err;
 }
@@ -44,8 +86,8 @@ func_to_func_init_err:
 static void free_mgmt_channel(struct spnic_hwdev *hwdev)
 {
 	spnic_func_to_func_free(hwdev);
+	spnic_aeqs_free(hwdev);
 }
-
 
 static int spnic_init_comm_ch(struct spnic_hwdev *hwdev)
 {
