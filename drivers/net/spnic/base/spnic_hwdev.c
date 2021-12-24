@@ -11,6 +11,7 @@
 #include "spnic_mbox.h"
 #include "spnic_wq.h"
 #include "spnic_cmdq.h"
+#include "spnic_hw_cfg.h"
 #include "spnic_hwdev.h"
 #include "spnic_hw_comm.h"
 
@@ -283,6 +284,35 @@ static void spnic_comm_cmdqs_free(struct spnic_hwdev *hwdev)
 	spnic_cmdqs_free(hwdev);
 }
 
+static void spnic_sync_mgmt_func_state(struct spnic_hwdev *hwdev)
+{
+	spnic_set_pf_status(hwdev->hwif, SPNIC_PF_STATUS_ACTIVE_FLAG);
+}
+
+static int __get_func_misc_info(struct spnic_hwdev *hwdev)
+{
+	int err;
+
+	err = spnic_get_board_info(hwdev, &hwdev->board_info);
+	if (err) {
+		/* For the PF/VF of secondary host, return error */
+		if (spnic_pcie_itf_id(hwdev))
+			return err;
+
+		memset(&hwdev->board_info, 0xff,
+		       sizeof(struct spnic_board_info));
+	}
+
+	err = spnic_get_mgmt_version(hwdev, hwdev->mgmt_ver,
+			SPNIC_MGMT_VERSION_MAX_LEN);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Get mgmt cpu version failed");
+		return err;
+	}
+
+	return 0;
+}
+
 static int init_mgmt_channel(struct spnic_hwdev *hwdev)
 {
 	int err;
@@ -375,15 +405,31 @@ static int spnic_init_comm_ch(struct spnic_hwdev *hwdev)
 		return err;
 	}
 
+	err = __get_func_misc_info(hwdev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Get function msic information failed");
+		goto get_func_info_err;
+	}
+
+	err = spnic_func_reset(hwdev, SPNIC_NIC_RES | SPNIC_COMM_RES);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Reset function failed");
+		goto func_reset_err;
+	}
+
 	err = init_cmdqs_channel(hwdev);
 	if (err) {
 		PMD_DRV_LOG(ERR, "Init cmdq channel failed");
 		goto init_cmdqs_channel_err;
 	}
 
+	spnic_sync_mgmt_func_state(hwdev);
+
 	return 0;
 
 init_cmdqs_channel_err:
+func_reset_err:
+get_func_info_err:
 	free_mgmt_channel(hwdev);
 
 	return err;
@@ -391,11 +437,14 @@ init_cmdqs_channel_err:
 
 static void spnic_uninit_comm_ch(struct spnic_hwdev *hwdev)
 {
+	spnic_set_pf_status(hwdev->hwif, SPNIC_PF_STATUS_INIT);
+
 	spnic_comm_cmdqs_free(hwdev);
 
 	if (SPNIC_FUNC_TYPE(hwdev) != TYPE_VF)
 		spnic_set_wq_page_size(hwdev, spnic_global_func_id(hwdev),
 					SPNIC_HW_WQ_PAGE_SIZE);
+
 	free_mgmt_channel(hwdev);
 }
 
@@ -423,7 +472,26 @@ int spnic_init_hwdev(struct spnic_hwdev *hwdev)
 		goto init_comm_ch_err;
 	}
 
+	err = spnic_init_capability(hwdev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init capability failed");
+		goto init_cap_err;
+	}
+
+	err = spnic_set_comm_features(hwdev, hwdev->features,
+				       MAX_FEATURE_QWORD);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Failed to set comm features\n");
+		goto set_feature_err;
+	}
+
 	return 0;
+
+set_feature_err:
+	spnic_free_capability(hwdev);
+
+init_cap_err:
+	spnic_uninit_comm_ch(hwdev);
 
 init_comm_ch_err:
 	spnic_free_hwif(hwdev);
@@ -436,6 +504,8 @@ init_hwif_err:
 
 void spnic_free_hwdev(struct spnic_hwdev *hwdev)
 {
+	spnic_free_capability(hwdev);
+
 	spnic_uninit_comm_ch(hwdev);
 
 	spnic_free_hwif(hwdev);
