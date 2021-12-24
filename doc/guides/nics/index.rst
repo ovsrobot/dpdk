@@ -57,6 +57,7 @@ Network Interface Controller Drivers
     pfe
     qede
     sfc_efx
+    spnic
     softnic
     tap
     thunderx
