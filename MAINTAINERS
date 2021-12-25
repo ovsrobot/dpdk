@@ -919,6 +919,12 @@ F: drivers/net/qede/
 F: doc/guides/nics/qede.rst
 F: doc/guides/nics/features/qede*.ini
 
+Ramaxel SPNIC
+M: Yanling Song <songyl@ramaxel.com>
+F: drivers/net/spnic/
+F: doc/guides/nics/spnic.rst
+F: doc/guides/nics/features/spnic.ini
+
 Solarflare sfc_efx
 M: Andrew Rybchenko <andrew.rybchenko@oktetlabs.ru>
 F: drivers/common/sfc_efx/
