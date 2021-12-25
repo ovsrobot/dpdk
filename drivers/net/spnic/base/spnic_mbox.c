@@ -2,13 +2,13 @@
  * Copyright(c) 2021 Ramaxel Memory Technology, Ltd
  */
 
-#include <rte_atomic.h>
 #include <ethdev_driver.h>
 #include "spnic_compat.h"
 #include "spnic_hwdev.h"
 #include "spnic_csr.h"
-#include "spnic_hwif.h"
 #include "spnic_mgmt.h"
+#include "spnic_hwif.h"
+#include "spnic_eqs.h"
 #include "spnic_mbox.h"
 
 #define SPNIC_MBOX_INT_DST_FUNC_SHIFT				0
@@ -713,7 +713,9 @@ static int spnic_mbox_to_func(struct spnic_mbox *func_to_func,
 	/* Use mbox_resp to hole data which responded from other function */
 	struct spnic_recv_mbox *mbox_for_resp = NULL;
 	struct mbox_msg_info msg_info = {0};
+	struct spnic_eq *aeq = NULL;
 	u16 mbox_rsp_idx;
+	u32 time;
 	int err;
 
 	mbox_rsp_idx = (dst_func == SPNIC_MGMT_SRC_ID) ?
@@ -748,9 +750,19 @@ static int spnic_mbox_to_func(struct spnic_mbox *func_to_func,
 		goto send_err;
 	}
 
+	time = msecs_to_jiffies(timeout ? timeout : SPNIC_MBOX_COMP_TIME);
+	aeq = &func_to_func->hwdev->aeqs->aeq[SPNIC_MBOX_RSP_MSG_AEQ];
+	err = spnic_aeq_poll_msg(aeq, time, NULL);
+	if (err) {
+		set_mbox_to_func_event(func_to_func, EVENT_TIMEOUT);
+		PMD_DRV_LOG(ERR, "Send mailbox message time out");
+		err = -ETIMEDOUT;
+		goto send_err;
+	}
+
 	if (mod != mbox_for_resp->mod || cmd != mbox_for_resp->cmd) {
-		PMD_DRV_LOG(ERR, "Invalid response mbox message, mod: 0x%x, cmd: 0x%x, expect mod: 0x%x, cmd: 0x%x, timeout0x%x\n",
-			    mbox_for_resp->mod, mbox_for_resp->cmd, mod, cmd, timeout);
+		PMD_DRV_LOG(ERR, "Invalid response mbox message, mod: 0x%x, cmd: 0x%x, expect mod: 0x%x, cmd: 0x%x\n",
+			    mbox_for_resp->mod, mbox_for_resp->cmd, mod, cmd);
 		err = -EFAULT;
 		goto send_err;
 	}

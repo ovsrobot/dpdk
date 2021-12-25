@@ -2,6 +2,7 @@
 # Copyright(c) 2021 Ramaxel Memory Technology, Ltd
 
 sources = [
+	'spnic_eqs.c',
 	'spnic_hwdev.c',
 	'spnic_hwif.c',
 	'spnic_mbox.c'
