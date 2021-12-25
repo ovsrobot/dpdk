@@ -591,6 +591,7 @@ int spnic_start_all_rqs(struct rte_eth_dev *eth_dev)
 		rxq = eth_dev->data->rx_queues[i];
 		spnic_add_rq_to_rx_queue_list(nic_dev, rxq->q_id);
 		spnic_rearm_rxq_mbuf(rxq);
+		spnic_dev_rx_queue_intr_enable(eth_dev, rxq->q_id);
 		eth_dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
 	}
 
@@ -609,6 +610,7 @@ out:
 		rxq = eth_dev->data->rx_queues[i];
 		spnic_remove_rq_from_rx_queue_list(nic_dev, rxq->q_id);
 		spnic_free_rxq_mbufs(rxq);
+		spnic_dev_rx_queue_intr_disable(eth_dev, rxq->q_id);
 		eth_dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
 	}
 	return err;
