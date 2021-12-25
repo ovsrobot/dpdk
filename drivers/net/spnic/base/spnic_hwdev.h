@@ -100,6 +100,7 @@ struct spnic_board_info {
 	u32 cfg_addr;
 };
 
+#define MAX_FEATURE_QWORD	4
 struct spnic_hwdev {
 	void *dev_handle; /* Pointer to spnic_nic_dev */
 	void *pci_dev; /* Pointer to rte_pci_device */
@@ -117,7 +118,11 @@ struct spnic_hwdev {
 
 	struct spnic_msg_pf_to_mgmt *pf_to_mgmt;
 	u8 *chip_fault_stats;
+
 	struct spnic_hw_stats hw_stats;
+	struct spnic_board_info board_info;
+	char mgmt_ver[MGMT_VERSION_MAX_LEN];
+	u64 features[MAX_FEATURE_QWORD];
 
 	u16 max_vfs;
 	u16 link_status;
