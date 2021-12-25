@@ -12,6 +12,8 @@
 #define OS_VF_ID_TO_HW(os_vf_id) ((os_vf_id) + 1)
 #define HW_VF_ID_TO_OS(hw_vf_id) ((hw_vf_id) - 1)
 
+#define SPNIC_VLAN_PRIORITY_SHIFT	13
+
 #define SPNIC_DCB_UP_MAX		0x8
 
 #define SPNIC_MAX_NUM_RQ		256
@@ -35,6 +37,38 @@
 #define SPNIC_PF_SET_VF_ALREADY		0x4
 #define SPNIC_MGMT_STATUS_EXIST		0x6
 #define CHECK_IPSU_15BIT		0x8000
+
+#define SPNIC_MGMT_STATUS_TABLE_EMPTY	0xB
+#define SPNIC_MGMT_STATUS_TABLE_FULL	0xC
+
+#define SPNIC_MGMT_CMD_UNSUPPORTED	0xFF
+
+#define SPNIC_MAX_UC_MAC_ADDRS		128
+#define SPNIC_MAX_MC_MAC_ADDRS		128
+
+/* Structures for RSS config */
+#define SPNIC_RSS_INDIR_SIZE		256
+#define SPNIC_RSS_INDIR_CMDQ_SIZE	128
+#define SPNIC_RSS_KEY_SIZE		40
+#define SPNIC_RSS_ENABLE		0x01
+#define SPNIC_RSS_DISABLE		0x00
+
+struct spnic_rss_type {
+	u8 tcp_ipv6_ext;
+	u8 ipv6_ext;
+	u8 tcp_ipv6;
+	u8 ipv6;
+	u8 tcp_ipv4;
+	u8 ipv4;
+	u8 udp_ipv6;
+	u8 udp_ipv4;
+};
+
+enum spnic_rss_hash_type {
+	SPNIC_RSS_HASH_ENGINE_TYPE_XOR = 0,
+	SPNIC_RSS_HASH_ENGINE_TYPE_TOEP,
+	SPNIC_RSS_HASH_ENGINE_TYPE_MAX,
+};
 
 struct spnic_cmd_feature_nego {
 	struct mgmt_msg_head msg_head;
@@ -121,6 +155,29 @@ struct spnic_port_mac_update {
 	u16 rsvd2;
 	u8 new_mac[ETH_ALEN];
 };
+
+#define SPNIC_CMD_OP_ADD	1
+#define SPNIC_CMD_OP_DEL	0
+
+struct spnic_cmd_vlan_config {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u8 opcode;
+	u8 rsvd1;
+	u16 vlan_id;
+	u16 rsvd2;
+};
+
+struct spnic_cmd_set_vlan_filter {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u8 resvd[2];
+	/* Bit0: vlan filter en; bit1: broadcast filter en */
+	u32 vlan_filter_ctrl;
+};
+
 struct spnic_cmd_port_info {
 	struct mgmt_msg_head msg_head;
 
@@ -225,8 +282,108 @@ struct spnic_cmd_set_func_tbl {
 	struct spnic_func_tbl_cfg tbl_cfg;
 };
 
+struct spnic_rx_mode_config {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u16 rsvd1;
+	u32 rx_mode;
+};
+
+struct spnic_cmd_vlan_offload {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u8 vlan_offload;
+	u8 rsvd1[5];
+};
+
 #define SPNIC_CMD_OP_GET	0
 #define SPNIC_CMD_OP_SET	1
+
+struct spnic_cmd_lro_config {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u8 opcode;
+	u8 rsvd1;
+	u8 lro_ipv4_en;
+	u8 lro_ipv6_en;
+	u8 lro_max_pkt_len; /* Unit size is 1K */
+	u8 resv2[13];
+};
+
+struct spnic_cmd_lro_timer {
+	struct mgmt_msg_head msg_head;
+
+	u8 opcode; /* 1: set timer value, 0: get timer value */
+	u8 rsvd1;
+	u16 rsvd2;
+	u32 timer;
+};
+
+struct spnic_rss_template_mgmt {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u8 cmd;
+	u8 template_id;
+	u8 rsvd1[4];
+};
+
+struct spnic_cmd_rss_hash_key {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u8 opcode;
+	u8 rsvd1;
+	u8 key[SPNIC_RSS_KEY_SIZE];
+};
+
+struct spnic_rss_indir_table {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u16 rsvd1;
+	u8 indir[SPNIC_RSS_INDIR_SIZE];
+};
+
+struct nic_rss_indirect_tbl {
+	u32 rsvd[4]; /* Make sure that 16B beyond entry[] */
+	u16 entry[SPNIC_RSS_INDIR_SIZE];
+};
+
+struct nic_rss_context_tbl {
+	u32 rsvd[4];
+	u32 ctx;
+};
+
+struct spnic_rss_context_table {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u16 rsvd1;
+	u32 context;
+};
+
+struct spnic_cmd_rss_engine_type {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u8 opcode;
+	u8 hash_engine;
+	u8 rsvd1[4];
+};
+
+struct spnic_cmd_rss_config {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u8 rss_en;
+	u8 rq_priority_number;
+	u8 prio_tc[SPNIC_DCB_UP_MAX];
+	u32 rsvd1;
+};
 
 enum {
 	SPNIC_IFLA_VF_LINK_STATE_AUTO,	/* Link state of the uplink */
@@ -424,6 +581,50 @@ int spnic_init_nic_hwdev(void *hwdev);
 void spnic_free_nic_hwdev(void *hwdev);
 
 /**
+ * Set function rx mode
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[in] enable
+ *   Rx mode state, 0-disable, 1-enable
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_set_rx_mode(void *hwdev, u32 enable);
+
+/**
+ * Set function vlan offload valid state
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[in] enable
+ *   Rx mode state, 0-disable, 1-enable
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_set_rx_vlan_offload(void *hwdev, u8 en);
+
+/**
+ * Set rx LRO configuration
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[in] lro_en
+ *   LRO enable state, 0-disable, 1-enable
+ * @param[in] lro_timer
+ *   LRO aggregation timeout
+ * @param[in] lro_max_pkt_len
+ *   LRO coalesce packet size(unit size is 1K)
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_set_rx_lro_state(void *hwdev, u8 lro_en, u32 lro_timer,
+			   u32 lro_max_pkt_len);
+
+/**
  * Get port info
  *
  * @param[in] hwdev
@@ -437,6 +638,192 @@ void spnic_free_nic_hwdev(void *hwdev);
 int spnic_get_port_info(void *hwdev, struct nic_port_info *port_info);
 
 int spnic_init_function_table(void *hwdev, u16 rx_buff_len);
+
+/**
+ * Alloc RSS template table
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_rss_template_alloc(void *hwdev);
+
+/**
+ * Free RSS template table
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_rss_template_free(void *hwdev);
+
+/**
+ * Set RSS indirect table
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[in] indir_table
+ *   RSS indirect table
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_rss_set_indir_tbl(void *hwdev, const u32 *indir_table);
+
+/**
+ * Get RSS indirect table
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[out] indir_table
+ *   RSS indirect table
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_rss_get_indir_tbl(void *hwdev, u32 *indir_table);
+
+/**
+ * Set RSS type
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[in] rss_type
+ *   RSS type, including ipv4, tcpv4, ipv6, tcpv6 and etc.
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_set_rss_type(void *hwdev, struct spnic_rss_type rss_type);
+
+/**
+ * Get RSS type
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[out] rss_type
+ *   RSS type, including ipv4, tcpv4, ipv6, tcpv6 and etc.
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_get_rss_type(void *hwdev, struct spnic_rss_type *rss_type);
+
+/**
+ * Get RSS hash engine
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[out] type
+ *   RSS hash engine, pmd driver only supports Toeplitz
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_rss_get_hash_engine(void *hwdev, u8 *type);
+
+/**
+ * Set RSS hash engine
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[in] type
+ *   RSS hash engine, pmd driver only supports Toeplitz
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_rss_set_hash_engine(void *hwdev, u8 type);
+
+/**
+ * Set RSS configuration
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[in] rss_en
+ *   RSS enable lag, 0-disable, 1-enable
+ * @param[in] tc_num
+ *   Number of TC
+ * @param[in] prio_tc
+ *   Priority of TC
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_rss_cfg(void *hwdev, u8 rss_en, u8 tc_num, u8 *prio_tc);
+
+/**
+ * Set RSS hash key
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[in] key
+ *   RSS hash key
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_rss_set_hash_key(void *hwdev, u8 *key);
+
+/**
+ * Get RSS hash key
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[out] key
+ *   RSS hash key
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_rss_get_hash_key(void *hwdev, u8 *key);
+
+/**
+ * Add vlan to hardware
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[in] vlan_id
+ *   Vlan id
+ * @param[in] func_id
+ *   Function id
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_add_vlan(void *hwdev, u16 vlan_id, u16 func_id);
+
+/**
+ * Delete vlan
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[in] vlan_id
+ *   Vlan id
+ * @param[in] func_id
+ *   Function id
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_del_vlan(void *hwdev, u16 vlan_id, u16 func_id);
+
+/**
+ * Set vlan filter
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[in] vlan_filter_ctrl
+ *   Vlan filter enable flag, 0-disable, 1-enable
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_set_vlan_fliter(void *hwdev, u32 vlan_filter_ctrl);
 
 /**
  * Get VF function default cos

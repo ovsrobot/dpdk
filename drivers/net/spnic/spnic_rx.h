@@ -5,6 +5,23 @@
 #ifndef _SPNIC_RX_H_
 #define _SPNIC_RX_H_
 
+#define SPNIC_DEFAULT_RX_CSUM_OFFLOAD	0xFFF
+
+#define SPNIC_RSS_OFFLOAD_ALL ( \
+	ETH_RSS_IPV4 | \
+	ETH_RSS_FRAG_IPV4 | \
+	ETH_RSS_NONFRAG_IPV4_TCP | \
+	ETH_RSS_NONFRAG_IPV4_UDP | \
+	ETH_RSS_NONFRAG_IPV4_OTHER | \
+	ETH_RSS_IPV6 | \
+	ETH_RSS_FRAG_IPV6 | \
+	ETH_RSS_NONFRAG_IPV6_TCP | \
+	ETH_RSS_NONFRAG_IPV6_UDP | \
+	ETH_RSS_NONFRAG_IPV6_OTHER | \
+	ETH_RSS_IPV6_EX | \
+	ETH_RSS_IPV6_TCP_EX | \
+	ETH_RSS_IPV6_UDP_EX)
+
 struct spnic_rxq_stats {
 	u64 packets;
 	u64 bytes;
@@ -118,7 +135,21 @@ void spnic_free_rxq_mbufs(struct spnic_rxq *rxq);
 
 void spnic_free_all_rxq_mbufs(struct spnic_nic_dev *nic_dev);
 
+int spnic_update_rss_config(struct rte_eth_dev *dev,
+			    struct rte_eth_rss_conf *rss_conf);
+
 int spnic_start_all_rqs(struct rte_eth_dev *eth_dev);
+
+void spnic_add_rq_to_rx_queue_list(struct spnic_nic_dev *nic_dev,
+				    u16 queue_id);
+
+int spnic_refill_indir_rqid(struct spnic_rxq *rxq);
+
+void spnic_init_rx_queue_list(struct spnic_nic_dev *nic_dev);
+
+void spnic_remove_rq_from_rx_queue_list(struct spnic_nic_dev *nic_dev,
+					 u16 queue_id);
+
 /**
  * Get receive queue local ci
  *
