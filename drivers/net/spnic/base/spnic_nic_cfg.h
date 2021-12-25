@@ -560,6 +560,31 @@ int spnic_get_link_state(void *hwdev, u8 *link_state);
  */
 int spnic_flush_qps_res(void *hwdev);
 
+/**
+ * Set pause info
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[in] nic_pause
+ *   Pause info
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_set_pause_info(void *hwdev, struct nic_pause_config nic_pause);
+
+/**
+ * Get pause info
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[out] nic_pause
+ *   Pause info
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_get_pause_info(void *hwdev, struct nic_pause_config *nic_pause);
 
 /**
  * Init nic hwdev
