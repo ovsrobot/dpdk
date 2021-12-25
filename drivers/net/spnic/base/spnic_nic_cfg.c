@@ -265,6 +265,227 @@ int spnic_get_port_info(void *hwdev, struct nic_port_info *port_info)
 	return 0;
 }
 
+
+int spnic_get_link_state(void *hwdev, u8 *link_state)
+{
+	struct spnic_cmd_link_state get_link;
+	u16 out_size = sizeof(get_link);
+	int err;
+
+	if (!hwdev || !link_state)
+		return -EINVAL;
+
+	memset(&get_link, 0, sizeof(get_link));
+	get_link.port_id = spnic_physical_port_id(hwdev);
+	err = mag_msg_to_mgmt_sync(hwdev, MAG_CMD_GET_LINK_STATUS, &get_link,
+				   sizeof(get_link), &get_link, &out_size);
+	if (err || !out_size || get_link.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Get link state failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, get_link.msg_head.status, out_size);
+		return -EIO;
+	}
+
+	*link_state = get_link.state;
+
+	return 0;
+}
+
+int spnic_set_vport_enable(void *hwdev, bool enable)
+{
+	struct spnic_vport_state en_state;
+	u16 out_size = sizeof(en_state);
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	memset(&en_state, 0, sizeof(en_state));
+	en_state.func_id = spnic_global_func_id(hwdev);
+	en_state.state = enable ? 1 : 0;
+
+	err = l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_SET_VPORT_ENABLE, &en_state,
+				     sizeof(en_state), &en_state, &out_size);
+	if (err || !out_size || en_state.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Set vport state failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, en_state.msg_head.status, out_size);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int spnic_set_port_enable(void *hwdev, bool enable)
+{
+	struct mag_cmd_set_port_enable en_state;
+	u16 out_size = sizeof(en_state);
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	if (spnic_func_type(hwdev) == TYPE_VF)
+		return 0;
+
+	memset(&en_state, 0, sizeof(en_state));
+	en_state.function_id = spnic_global_func_id(hwdev);
+	en_state.state = enable ? MAG_CMD_TX_ENABLE | MAG_CMD_RX_ENABLE :
+				MAG_CMD_PORT_DISABLE;
+
+	err = mag_msg_to_mgmt_sync(hwdev, MAG_CMD_SET_PORT_ENABLE, &en_state,
+				     sizeof(en_state), &en_state, &out_size);
+	if (err || !out_size || en_state.head.status) {
+		PMD_DRV_LOG(ERR, "Set port state failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, en_state.head.status, out_size);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int spnic_set_function_table(void *hwdev, u32 cfg_bitmap,
+				     struct spnic_func_tbl_cfg *cfg)
+{
+	struct spnic_cmd_set_func_tbl cmd_func_tbl;
+	u16 out_size = sizeof(cmd_func_tbl);
+	int err;
+
+	memset(&cmd_func_tbl, 0, sizeof(cmd_func_tbl));
+	cmd_func_tbl.func_id = spnic_global_func_id(hwdev);
+	cmd_func_tbl.cfg_bitmap = cfg_bitmap;
+	cmd_func_tbl.tbl_cfg = *cfg;
+
+	err = l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_SET_FUNC_TBL,
+				     &cmd_func_tbl, sizeof(cmd_func_tbl),
+				     &cmd_func_tbl, &out_size);
+	if (err || cmd_func_tbl.msg_head.status || !out_size) {
+		PMD_DRV_LOG(ERR, "Set func table failed, bitmap: 0x%x, err: %d, "
+			    "status: 0x%x, out size: 0x%x\n", cfg_bitmap, err,
+			    cmd_func_tbl.msg_head.status, out_size);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+int spnic_init_function_table(void *hwdev, u16 rx_buff_len)
+{
+	struct spnic_func_tbl_cfg func_tbl_cfg;
+	u32 cfg_bitmap = BIT(FUNC_CFG_INIT) | BIT(FUNC_CFG_MTU) |
+			 BIT(FUNC_CFG_RX_BUF_SIZE);
+
+	memset(&func_tbl_cfg, 0, sizeof(func_tbl_cfg));
+	func_tbl_cfg.mtu = 0x3FFF; /* Default, max mtu */
+	func_tbl_cfg.rx_wqe_buf_size = rx_buff_len;
+
+	return spnic_set_function_table(hwdev, cfg_bitmap, &func_tbl_cfg);
+}
+
+int spnic_set_port_mtu(void *hwdev, u16 new_mtu)
+{
+	struct spnic_func_tbl_cfg func_tbl_cfg;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	if (new_mtu < SPNIC_MIN_MTU_SIZE) {
+		PMD_DRV_LOG(ERR, "Invalid mtu size: %ubytes, mtu size < %ubytes",
+			    new_mtu, SPNIC_MIN_MTU_SIZE);
+		return -EINVAL;
+	}
+
+	if (new_mtu > SPNIC_MAX_JUMBO_FRAME_SIZE) {
+		PMD_DRV_LOG(ERR, "Invalid mtu size: %ubytes, mtu size > %ubytes",
+			    new_mtu, SPNIC_MAX_JUMBO_FRAME_SIZE);
+		return -EINVAL;
+	}
+
+	memset(&func_tbl_cfg, 0, sizeof(func_tbl_cfg));
+	func_tbl_cfg.mtu = new_mtu;
+
+	return spnic_set_function_table(hwdev, BIT(FUNC_CFG_MTU),
+					&func_tbl_cfg);
+}
+
+static int spnic_vf_func_init(void *hwdev)
+{
+	struct spnic_cmd_register_vf register_info;
+	u16 out_size = sizeof(register_info);
+	int err;
+
+	if (spnic_func_type(hwdev) != TYPE_VF)
+		return 0;
+
+	memset(&register_info, 0, sizeof(register_info));
+	register_info.op_register = 1;
+	err = l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_VF_REGISTER,
+				     &register_info, sizeof(register_info),
+				     &register_info, &out_size);
+	if (err || register_info.msg_head.status || !out_size) {
+		PMD_DRV_LOG(ERR, "Register VF failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, register_info.msg_head.status, out_size);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+static int spnic_vf_func_free(void *hwdev)
+{
+	struct spnic_cmd_register_vf unregister;
+	u16 out_size = sizeof(unregister);
+	int err;
+
+	if (spnic_func_type(hwdev) != TYPE_VF)
+		return 0;
+
+	memset(&unregister, 0, sizeof(unregister));
+	unregister.op_register = 0;
+	err = l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_VF_REGISTER,
+				     &unregister, sizeof(unregister),
+				     &unregister, &out_size);
+	if (err || unregister.msg_head.status || !out_size) {
+		PMD_DRV_LOG(ERR, "Unregister VF failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, unregister.msg_head.status, out_size);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+int spnic_init_nic_hwdev(void *hwdev)
+{
+	return spnic_vf_func_init(hwdev);
+}
+
+void spnic_free_nic_hwdev(void *hwdev)
+{
+	if (!hwdev)
+		return;
+
+	spnic_vf_func_free(hwdev);
+}
+
+int spnic_vf_get_default_cos(void *hwdev, u8 *cos_id)
+{
+	struct spnic_cmd_vf_dcb_state vf_dcb;
+	u16 out_size = sizeof(vf_dcb);
+	int err;
+
+	memset(&vf_dcb, 0, sizeof(vf_dcb));
+
+	err = l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_VF_COS, &vf_dcb,
+				     sizeof(vf_dcb), &vf_dcb, &out_size);
+	if (err || !out_size || vf_dcb.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Get VF default cos failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, vf_dcb.msg_head.status, out_size);
+		return -EIO;
+	}
+
+	*cos_id = vf_dcb.state.default_cos;
+
+	return 0;
+}
+
 static int _mag_msg_to_mgmt_sync(void *hwdev, u16 cmd, void *buf_in,
 				 u16 in_size, void *buf_out, u16 *out_size)
 {

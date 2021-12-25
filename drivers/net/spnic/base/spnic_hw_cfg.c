@@ -156,6 +156,49 @@ void spnic_free_capability(void *dev)
 	rte_free(((struct spnic_hwdev *)dev)->cfg_mgmt);
 }
 
+/* *
+ * @brief spnic_support_nic - function support nic
+ * @param hwdev: device pointer to hwdev
+ * @retval true: function support nic
+ * @retval false: function not support nic
+ */
+bool spnic_support_nic(void *hwdev)
+{
+	struct spnic_hwdev *dev = (struct spnic_hwdev *)hwdev;
+
+	if (!hwdev)
+		return false;
+
+	if (!IS_NIC_TYPE(dev))
+		return false;
+
+	return true;
+}
+
+u16 spnic_func_max_sqs(void *hwdev)
+{
+	struct spnic_hwdev *dev = hwdev;
+
+	if (!dev) {
+		PMD_DRV_LOG(INFO, "Hwdev is NULL for getting max_sqs");
+		return 0;
+	}
+
+	return dev->cfg_mgmt->svc_cap.nic_cap.max_sqs;
+}
+
+u16 spnic_func_max_rqs(void *hwdev)
+{
+	struct spnic_hwdev *dev = hwdev;
+
+	if (!dev) {
+		PMD_DRV_LOG(INFO, "Hwdev is NULL for getting max_rqs");
+		return 0;
+	}
+
+	return dev->cfg_mgmt->svc_cap.nic_cap.max_rqs;
+}
+
 u8 spnic_physical_port_id(void *hwdev)
 {
 	struct spnic_hwdev *dev = hwdev;
