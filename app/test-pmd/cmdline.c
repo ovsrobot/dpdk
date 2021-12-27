@@ -9825,6 +9825,7 @@ dump_socket_mem(FILE *f)
 	size_t total = 0;
 	size_t alloc = 0;
 	size_t free = 0;
+	size_t greatest_free_size = 0;
 	unsigned int n_alloc = 0;
 	unsigned int n_free = 0;
 	static size_t last_allocs;
@@ -9840,22 +9841,27 @@ dump_socket_mem(FILE *f)
 		free += socket_stats.heap_freesz_bytes;
 		n_alloc += socket_stats.alloc_count;
 		n_free += socket_stats.free_count;
+		greatest_free_size = RTE_MAX(greatest_free_size, socket_stats.greatest_free_size);
 		fprintf(f,
-			"Socket %u: size(M) total: %.6lf alloc: %.6lf(%.3lf%%) free: %.6lf \tcount alloc: %-4u free: %u\n",
+			"Socket %u: size(M) total: %.6lf alloc: %.6lf(%.3lf%%) free: %.6lf max: %.6lf \t"
+			"count alloc: %-4u free: %u\n",
 			i,
 			(double)socket_stats.heap_totalsz_bytes / (1024 * 1024),
 			(double)socket_stats.heap_allocsz_bytes / (1024 * 1024),
 			(double)socket_stats.heap_allocsz_bytes * 100 /
 			(double)socket_stats.heap_totalsz_bytes,
 			(double)socket_stats.heap_freesz_bytes / (1024 * 1024),
+			(double)socket_stats.greatest_free_size / (1024 * 1024),
 			socket_stats.alloc_count,
 			socket_stats.free_count);
 	}
 	fprintf(f,
-		"Total   : size(M) total: %.6lf alloc: %.6lf(%.3lf%%) free: %.6lf \tcount alloc: %-4u free: %u\n",
+		"Total   : size(M) total: %.6lf alloc: %.6lf(%.3lf%%) free: %.6lf max: %.6lf \t"
+		"count alloc: %-4u free: %u\n",
 		(double)total / (1024 * 1024), (double)alloc / (1024 * 1024),
 		total ? ((double)alloc * 100 / (double)total) : 0,
 		(double)free / (1024 * 1024),
+		(double)greatest_free_size / (1024 * 1024),
 		n_alloc, n_free);
 	if (last_allocs)
 		fprintf(stdout, "Memory total change: %.6lf(M), allocation change: %.6lf(M)\n",
