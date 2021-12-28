@@ -10,70 +10,206 @@
 /*
  * Modular exponentiation functionality IDs
  */
-static const uint32_t MOD_EXP_SIZE[][2] = {
-		{ 512,	MATHS_MODEXP_L512 },
-		{ 1024, MATHS_MODEXP_L1024 },
-		{ 1536,	MATHS_MODEXP_L1536 },
-		{ 2048, MATHS_MODEXP_L2048 },
-		{ 2560, MATHS_MODEXP_L2560 },
-		{ 3072, MATHS_MODEXP_L3072 },
-		{ 3584, MATHS_MODEXP_L3584 },
-		{ 4096, MATHS_MODEXP_L4096 }
+
+struct qat_asym_function {
+	uint32_t func_id;
+	uint32_t bytesize;
 };
 
-static const uint32_t MOD_INV_IDS_ODD[][2] = {
-		{ 128,	MATHS_MODINV_ODD_L128 },
-		{ 192,	MATHS_MODINV_ODD_L192 },
-		{ 256,  MATHS_MODINV_ODD_L256 },
-		{ 384,	MATHS_MODINV_ODD_L384 },
-		{ 512,	MATHS_MODINV_ODD_L512 },
-		{ 768,	MATHS_MODINV_ODD_L768 },
-		{ 1024, MATHS_MODINV_ODD_L1024 },
-		{ 1536, MATHS_MODINV_ODD_L1536 },
-		{ 2048, MATHS_MODINV_ODD_L2048 },
-		{ 3072, MATHS_MODINV_ODD_L3072 },
-		{ 4096, MATHS_MODINV_ODD_L4096 },
-};
+static struct qat_asym_function
+get_modexp_function(struct rte_crypto_asym_xform *xform)
+{
+	struct qat_asym_function qat_function = { };
 
-static const uint32_t MOD_INV_IDS_EVEN[][2] = {
-		{ 128,	MATHS_MODINV_EVEN_L128 },
-		{ 192,	MATHS_MODINV_EVEN_L192 },
-		{ 256,	MATHS_MODINV_EVEN_L256 },
-		{ 384,	MATHS_MODINV_EVEN_L384 },
-		{ 512,	MATHS_MODINV_EVEN_L512 },
-		{ 768,	MATHS_MODINV_EVEN_L768 },
-		{ 1024, MATHS_MODINV_EVEN_L1024 },
-		{ 1536, MATHS_MODINV_EVEN_L1536 },
-		{ 2048, MATHS_MODINV_EVEN_L2048 },
-		{ 3072, MATHS_MODINV_EVEN_L3072 },
-		{ 4096, MATHS_MODINV_EVEN_L4096 },
-};
+	if (xform->modex.modulus.length <= 64) {
+		qat_function.func_id = MATHS_MODEXP_L512;
+		qat_function.bytesize = 64;
+	} else if (xform->modex.modulus.length <= 128) {
+		qat_function.func_id = MATHS_MODEXP_L1024;
+		qat_function.bytesize = 128;
+	} else if (xform->modex.modulus.length <= 192) {
+		qat_function.func_id = MATHS_MODEXP_L1536;
+		qat_function.bytesize = 192;
+	} else if (xform->modex.modulus.length <= 256) {
+		qat_function.func_id = MATHS_MODEXP_L2048;
+		qat_function.bytesize = 256;
+	} else if (xform->modex.modulus.length <= 320) {
+		qat_function.func_id = MATHS_MODEXP_L2560;
+		qat_function.bytesize = 320;
+	} else if (xform->modex.modulus.length <= 384) {
+		qat_function.func_id = MATHS_MODEXP_L3072;
+		qat_function.bytesize = 384;
+	} else if (xform->modex.modulus.length <= 448) {
+		qat_function.func_id = MATHS_MODEXP_L3584;
+		qat_function.bytesize = 448;
+	} else if (xform->modex.modulus.length <= 512) {
+		qat_function.func_id = MATHS_MODEXP_L4096;
+		qat_function.bytesize = 512;
+	}
+	return qat_function;
+}
 
-static const uint32_t RSA_ENC_IDS[][2] = {
-		{ 512,	PKE_RSA_EP_512 },
-		{ 1024,	PKE_RSA_EP_1024 },
-		{ 1536,	PKE_RSA_EP_1536 },
-		{ 2048,	PKE_RSA_EP_2048 },
-		{ 3072,	PKE_RSA_EP_3072 },
-		{ 4096,	PKE_RSA_EP_4096 },
-};
+static struct qat_asym_function
+get_modinv_function(struct rte_crypto_asym_xform *xform)
+{
+	struct qat_asym_function qat_function = { };
 
-static const uint32_t RSA_DEC_IDS[][2] = {
-		{ 512,	PKE_RSA_DP1_512 },
-		{ 1024,	PKE_RSA_DP1_1024 },
-		{ 1536,	PKE_RSA_DP1_1536 },
-		{ 2048,	PKE_RSA_DP1_2048 },
-		{ 3072,	PKE_RSA_DP1_3072 },
-		{ 4096,	PKE_RSA_DP1_4096 },
-};
+	if (xform->modinv.modulus.data[
+		xform->modinv.modulus.length - 1] & 0x01) {
+		if (xform->modex.modulus.length <= 16) {
+			qat_function.func_id = MATHS_MODINV_ODD_L128;
+			qat_function.bytesize = 16;
+		} else if (xform->modex.modulus.length <= 24) {
+			qat_function.func_id = MATHS_MODINV_ODD_L192;
+			qat_function.bytesize = 24;
+		} else if (xform->modex.modulus.length <= 32) {
+			qat_function.func_id = MATHS_MODINV_ODD_L256;
+			qat_function.bytesize = 32;
+		} else if (xform->modex.modulus.length <= 48) {
+			qat_function.func_id = MATHS_MODINV_ODD_L384;
+			qat_function.bytesize = 48;
+		} else if (xform->modex.modulus.length <= 64) {
+			qat_function.func_id = MATHS_MODINV_ODD_L512;
+			qat_function.bytesize = 64;
+		} else if (xform->modex.modulus.length <= 96) {
+			qat_function.func_id = MATHS_MODINV_ODD_L768;
+			qat_function.bytesize = 96;
+		} else if (xform->modex.modulus.length <= 128) {
+			qat_function.func_id = MATHS_MODINV_ODD_L1024;
+			qat_function.bytesize = 128;
+		} else if (xform->modex.modulus.length <= 192) {
+			qat_function.func_id = MATHS_MODINV_ODD_L1536;
+			qat_function.bytesize = 192;
+		} else if (xform->modex.modulus.length <= 256) {
+			qat_function.func_id = MATHS_MODINV_ODD_L2048;
+			qat_function.bytesize = 256;
+		} else if (xform->modex.modulus.length <= 384) {
+			qat_function.func_id = MATHS_MODINV_ODD_L3072;
+			qat_function.bytesize = 384;
+		} else if (xform->modex.modulus.length <= 512) {
+			qat_function.func_id = MATHS_MODINV_ODD_L4096;
+			qat_function.bytesize = 512;
+		}
+	} else {
+		if (xform->modex.modulus.length <= 16) {
+			qat_function.func_id = MATHS_MODINV_EVEN_L128;
+			qat_function.bytesize = 16;
+		} else if (xform->modex.modulus.length <= 24) {
+			qat_function.func_id = MATHS_MODINV_EVEN_L192;
+			qat_function.bytesize = 24;
+		} else if (xform->modex.modulus.length <= 32) {
+			qat_function.func_id = MATHS_MODINV_EVEN_L256;
+			qat_function.bytesize = 32;
+		} else if (xform->modex.modulus.length <= 48) {
+			qat_function.func_id = MATHS_MODINV_EVEN_L384;
+			qat_function.bytesize = 48;
+		} else if (xform->modex.modulus.length <= 64) {
+			qat_function.func_id = MATHS_MODINV_EVEN_L512;
+			qat_function.bytesize = 64;
+		} else if (xform->modex.modulus.length <= 96) {
+			qat_function.func_id = MATHS_MODINV_EVEN_L768;
+			qat_function.bytesize = 96;
+		} else if (xform->modex.modulus.length <= 128) {
+			qat_function.func_id = MATHS_MODINV_EVEN_L1024;
+			qat_function.bytesize = 128;
+		} else if (xform->modex.modulus.length <= 192) {
+			qat_function.func_id = MATHS_MODINV_EVEN_L1536;
+			qat_function.bytesize = 192;
+		} else if (xform->modex.modulus.length <= 256) {
+			qat_function.func_id = MATHS_MODINV_EVEN_L2048;
+			qat_function.bytesize = 256;
+		} else if (xform->modex.modulus.length <= 384) {
+			qat_function.func_id = MATHS_MODINV_EVEN_L3072;
+			qat_function.bytesize = 384;
+		} else if (xform->modex.modulus.length <= 512) {
+			qat_function.func_id = MATHS_MODINV_EVEN_L4096;
+			qat_function.bytesize = 512;
+		}
+	}
 
-static const uint32_t RSA_DEC_CRT_IDS[][2] = {
-		{ 512,	PKE_RSA_DP2_512 },
-		{ 1024,	PKE_RSA_DP2_1024 },
-		{ 1536,	PKE_RSA_DP2_1536 },
-		{ 2048,	PKE_RSA_DP2_2048 },
-		{ 3072,	PKE_RSA_DP2_3072 },
-		{ 4096,	PKE_RSA_DP2_4096 },
-};
+	return qat_function;
+}
+
+static struct qat_asym_function
+get_rsa_enc_function(struct rte_crypto_asym_xform *xform)
+{
+	struct qat_asym_function qat_function = { };
+
+	if (xform->rsa.n.length <= 64) {
+		qat_function.func_id = PKE_RSA_EP_512;
+		qat_function.bytesize = 64;
+	} else if (xform->rsa.n.length <= 128) {
+		qat_function.func_id = PKE_RSA_EP_1024;
+		qat_function.bytesize = 128;
+	} else if (xform->rsa.n.length <= 192) {
+		qat_function.func_id = PKE_RSA_EP_1536;
+		qat_function.bytesize = 192;
+	} else if (xform->rsa.n.length <= 256) {
+		qat_function.func_id = PKE_RSA_EP_2048;
+		qat_function.bytesize = 256;
+	} else if (xform->rsa.n.length <= 384) {
+		qat_function.func_id = PKE_RSA_EP_3072;
+		qat_function.bytesize = 384;
+	} else if (xform->rsa.n.length <= 512) {
+		qat_function.func_id = PKE_RSA_EP_4096;
+		qat_function.bytesize = 512;
+	}
+	return qat_function;
+}
+
+static struct qat_asym_function
+get_rsa_dec_function(struct rte_crypto_asym_xform *xform)
+{
+	struct qat_asym_function qat_function = { };
+
+	if (xform->rsa.n.length <= 64) {
+		qat_function.func_id = PKE_RSA_DP1_512;
+		qat_function.bytesize = 64;
+	} else if (xform->rsa.n.length <= 128) {
+		qat_function.func_id = PKE_RSA_DP1_1024;
+		qat_function.bytesize = 128;
+	} else if (xform->rsa.n.length <= 192) {
+		qat_function.func_id = PKE_RSA_DP1_1536;
+		qat_function.bytesize = 192;
+	} else if (xform->rsa.n.length <= 256) {
+		qat_function.func_id = PKE_RSA_DP1_2048;
+		qat_function.bytesize = 256;
+	} else if (xform->rsa.n.length <= 384) {
+		qat_function.func_id = PKE_RSA_DP1_3072;
+		qat_function.bytesize = 384;
+	} else if (xform->rsa.n.length <= 512) {
+		qat_function.func_id = PKE_RSA_DP1_4096;
+		qat_function.bytesize = 512;
+	}
+	return qat_function;
+}
+
+static struct qat_asym_function
+get_rsa_crt_function(struct rte_crypto_asym_xform *xform)
+{
+	struct qat_asym_function qat_function = { };
+	int nlen = xform->rsa.qt.p.length * 2;
+
+	if (nlen <= 64) {
+		qat_function.func_id = PKE_RSA_DP2_512;
+		qat_function.bytesize = 64;
+	} else if (nlen <= 128) {
+		qat_function.func_id = PKE_RSA_DP2_1024;
+		qat_function.bytesize = 128;
+	} else if (nlen <= 192) {
+		qat_function.func_id = PKE_RSA_DP2_1536;
+		qat_function.bytesize = 192;
+	} else if (nlen <= 256) {
+		qat_function.func_id = PKE_RSA_DP2_2048;
+		qat_function.bytesize = 256;
+	} else if (nlen <= 384) {
+		qat_function.func_id = PKE_RSA_DP2_3072;
+		qat_function.bytesize = 384;
+	} else if (nlen <= 512) {
+		qat_function.func_id = PKE_RSA_DP2_4096;
+		qat_function.bytesize = 512;
+	}
+	return qat_function;
+}
 
 #endif
