@@ -72,6 +72,26 @@ qat_sym_cd_auth_set(struct qat_sym_session *cdesc,
 static void
 qat_sym_session_init_common_hdr(struct qat_sym_session *session);
 
+/* AES helper function */
+static int
+aes_encrypt(const uint8_t *key, uint8_t *in, uint8_t *out)
+{
+	int outlen;
+	EVP_CIPHER_CTX *ctx;
+
+	ctx = EVP_CIPHER_CTX_new();
+	if (ctx == NULL) {
+		QAT_LOG(ERR, "EVP_CIPHER_CTX_new error");
+		return -1;
+	}
+	EVP_EncryptInit_ex(ctx, EVP_aes_128_ecb(), NULL, key, NULL);
+	if (!EVP_EncryptUpdate(ctx, out, &outlen, in, 16)) {
+		QAT_LOG(ERR, "EVP_EncryptUpdate error");
+		return -1;
+	}
+	return 0;
+}
+
 /* Req/cd init functions */
 
 static void
@@ -1309,7 +1329,6 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 
 		/* CMAC */
 		if (aes_cmac) {
-			AES_KEY enc_key;
 			uint8_t *in = NULL;
 			uint8_t k0[ICP_QAT_HW_AES_128_KEY_SZ];
 			uint8_t *k1, *k2;
@@ -1327,14 +1346,8 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 			rte_memcpy(in, AES_CMAC_SEED,
 				   ICP_QAT_HW_AES_128_KEY_SZ);
 			rte_memcpy(p_state_buf, auth_key, auth_keylen);
-
-			if (AES_set_encrypt_key(auth_key, auth_keylen << 3,
-				&enc_key) != 0) {
-				rte_free(in);
+			if (aes_encrypt(auth_key, in, k0) < 0)
 				return -EFAULT;
-			}
-
-			AES_encrypt(in, k0, &enc_key);
 
 			k1 = p_state_buf + ICP_QAT_HW_AES_XCBC_MAC_STATE1_SZ;
 			k2 = k1 + ICP_QAT_HW_AES_XCBC_MAC_STATE1_SZ;
@@ -1360,7 +1373,6 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 			uint8_t *in = NULL;
 			uint8_t *out = p_state_buf;
 			int x;
-			AES_KEY enc_key;
 
 			in = rte_zmalloc("working mem for key",
 					ICP_QAT_HW_AES_XCBC_MAC_STATE2_SZ, 16);
@@ -1372,17 +1384,8 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 			rte_memcpy(in, qat_aes_xcbc_key_seed,
 					ICP_QAT_HW_AES_XCBC_MAC_STATE2_SZ);
 			for (x = 0; x < HASH_XCBC_PRECOMP_KEY_NUM; x++) {
-				if (AES_set_encrypt_key(auth_key,
-							auth_keylen << 3,
-							&enc_key) != 0) {
-					rte_free(in -
-					  (x * ICP_QAT_HW_AES_XCBC_MAC_KEY_SZ));
-					memset(out -
-					   (x * ICP_QAT_HW_AES_XCBC_MAC_KEY_SZ),
-					  0, ICP_QAT_HW_AES_XCBC_MAC_STATE2_SZ);
+				if (aes_encrypt(auth_key, in, out) < 0)
 					return -EFAULT;
-				}
-				AES_encrypt(in, out, &enc_key);
 				in += ICP_QAT_HW_AES_XCBC_MAC_KEY_SZ;
 				out += ICP_QAT_HW_AES_XCBC_MAC_KEY_SZ;
 			}
@@ -1395,7 +1398,6 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 		(hash_alg == ICP_QAT_HW_AUTH_ALGO_GALOIS_64)) {
 		uint8_t *in = NULL;
 		uint8_t *out = p_state_buf;
-		AES_KEY enc_key;
 
 		memset(p_state_buf, 0, ICP_QAT_HW_GALOIS_H_SZ +
 				ICP_QAT_HW_GALOIS_LEN_A_SZ +
@@ -1408,11 +1410,8 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 		}
 
 		memset(in, 0, ICP_QAT_HW_GALOIS_H_SZ);
-		if (AES_set_encrypt_key(auth_key, auth_keylen << 3,
-			&enc_key) != 0) {
+		if (aes_encrypt(auth_key, in, out) < 0)
 			return -EFAULT;
-		}
-		AES_encrypt(in, out, &enc_key);
 		*p_state_len = ICP_QAT_HW_GALOIS_H_SZ +
 				ICP_QAT_HW_GALOIS_LEN_A_SZ +
 				ICP_QAT_HW_GALOIS_E_CTR0_SZ;
