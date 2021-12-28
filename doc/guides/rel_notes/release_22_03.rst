@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added support for CPM2.0b devices to Intel QuickAssist Technology PMD.**
+
+  * CPM2.0b (4942) devices are now enabled for QAT.
+
 
 Removed Items
 -------------
