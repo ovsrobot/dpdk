@@ -271,6 +271,37 @@ int spnic_get_default_mac(void *hwdev, u8 *mac_addr, int ether_len)
 	return 0;
 }
 
+static int spnic_config_vlan(void *hwdev, u8 opcode, u16 vlan_id, u16 func_id)
+{
+	struct spnic_cmd_vlan_config vlan_info;
+	u16 out_size = sizeof(vlan_info);
+	int err;
+
+	memset(&vlan_info, 0, sizeof(vlan_info));
+	vlan_info.opcode = opcode;
+	vlan_info.func_id = func_id;
+	vlan_info.vlan_id = vlan_id;
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_CFG_FUNC_VLAN, &vlan_info,
+				     sizeof(vlan_info), &vlan_info, &out_size);
+	if (err || !out_size || vlan_info.msg_head.status) {
+		PMD_DRV_LOG(ERR, "%s vlan failed, err: %d, status: 0x%x, out size: 0x%x",
+			    opcode == SPNIC_CMD_OP_ADD ? "Add" : "Delete",
+			    err, vlan_info.msg_head.status, out_size);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+int spnic_del_vlan(void *hwdev, u16 vlan_id, u16 func_id)
+{
+	if (!hwdev)
+		return -EINVAL;
+
+	return spnic_config_vlan(hwdev, SPNIC_CMD_OP_DEL, vlan_id, func_id);
+}
+
 int spnic_get_port_info(void *hwdev, struct nic_port_info *port_info)
 {
 	struct spnic_cmd_port_info port_msg;
@@ -562,6 +593,500 @@ void spnic_free_nic_hwdev(void *hwdev)
 		return;
 
 	spnic_vf_func_free(hwdev);
+}
+
+int spnic_set_rx_mode(void *hwdev, u32 enable)
+{
+	struct spnic_rx_mode_config rx_mode_cfg;
+	u16 out_size = sizeof(rx_mode_cfg);
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	memset(&rx_mode_cfg, 0, sizeof(rx_mode_cfg));
+	rx_mode_cfg.func_id = spnic_global_func_id(hwdev);
+	rx_mode_cfg.rx_mode = enable;
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_SET_RX_MODE,
+				     &rx_mode_cfg, sizeof(rx_mode_cfg),
+				     &rx_mode_cfg, &out_size);
+	if (err || !out_size || rx_mode_cfg.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Set rx mode failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, rx_mode_cfg.msg_head.status, out_size);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int spnic_set_rx_vlan_offload(void *hwdev, u8 en)
+{
+	struct spnic_cmd_vlan_offload vlan_cfg;
+	u16 out_size = sizeof(vlan_cfg);
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	memset(&vlan_cfg, 0, sizeof(vlan_cfg));
+	vlan_cfg.func_id = spnic_global_func_id(hwdev);
+	vlan_cfg.vlan_offload = en;
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_SET_RX_VLAN_OFFLOAD,
+				     &vlan_cfg, sizeof(vlan_cfg),
+				     &vlan_cfg, &out_size);
+	if (err || !out_size || vlan_cfg.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Set rx vlan offload failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, vlan_cfg.msg_head.status, out_size);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int spnic_set_vlan_fliter(void *hwdev, u32 vlan_filter_ctrl)
+{
+	struct spnic_cmd_set_vlan_filter vlan_filter;
+	u16 out_size = sizeof(vlan_filter);
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	memset(&vlan_filter, 0, sizeof(vlan_filter));
+	vlan_filter.func_id = spnic_global_func_id(hwdev);
+	vlan_filter.vlan_filter_ctrl = vlan_filter_ctrl;
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_SET_VLAN_FILTER_EN,
+				     &vlan_filter, sizeof(vlan_filter),
+				     &vlan_filter, &out_size);
+	if (err || !out_size || vlan_filter.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Failed to set vlan filter, err: %d, status: 0x%x, out size: 0x%x",
+			    err, vlan_filter.msg_head.status, out_size);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int spnic_set_rx_lro(void *hwdev, u8 ipv4_en, u8 ipv6_en,
+			    u8 lro_max_pkt_len)
+{
+	struct spnic_cmd_lro_config lro_cfg;
+	u16 out_size = sizeof(lro_cfg);
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	memset(&lro_cfg, 0, sizeof(lro_cfg));
+	lro_cfg.func_id = spnic_global_func_id(hwdev);
+	lro_cfg.opcode = SPNIC_CMD_OP_SET;
+	lro_cfg.lro_ipv4_en = ipv4_en;
+	lro_cfg.lro_ipv6_en = ipv6_en;
+	lro_cfg.lro_max_pkt_len = lro_max_pkt_len;
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_CFG_RX_LRO, &lro_cfg,
+				     sizeof(lro_cfg), &lro_cfg, &out_size);
+	if (err || !out_size || lro_cfg.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Set lro offload failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, lro_cfg.msg_head.status, out_size);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int spnic_set_rx_lro_timer(void *hwdev, u32 timer_value)
+{
+	struct spnic_cmd_lro_timer lro_timer;
+	u16 out_size = sizeof(lro_timer);
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	memset(&lro_timer, 0, sizeof(lro_timer));
+	lro_timer.opcode = SPNIC_CMD_OP_SET;
+	lro_timer.timer = timer_value;
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_CFG_LRO_TIMER, &lro_timer,
+				     sizeof(lro_timer), &lro_timer, &out_size);
+	if (err || !out_size || lro_timer.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Set lro timer failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, lro_timer.msg_head.status, out_size);
+
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int spnic_set_rx_lro_state(void *hwdev, u8 lro_en, u32 lro_timer,
+			    u32 lro_max_pkt_len)
+{
+	u8 ipv4_en = 0, ipv6_en = 0;
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	ipv4_en = lro_en ? 1 : 0;
+	ipv6_en = lro_en ? 1 : 0;
+
+	PMD_DRV_LOG(INFO, "Set LRO max coalesce packet size to %uK",
+		    lro_max_pkt_len);
+
+	err = spnic_set_rx_lro(hwdev, ipv4_en, ipv6_en, (u8)lro_max_pkt_len);
+	if (err)
+		return err;
+
+	/* We don't set LRO timer for VF */
+	if (spnic_func_type(hwdev) == TYPE_VF)
+		return 0;
+
+	PMD_DRV_LOG(INFO, "Set LRO timer to %u", lro_timer);
+
+	return spnic_set_rx_lro_timer(hwdev, lro_timer);
+}
+
+/* RSS config */
+int spnic_rss_template_alloc(void *hwdev)
+{
+	struct spnic_rss_template_mgmt template_mgmt;
+	u16 out_size = sizeof(template_mgmt);
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	memset(&template_mgmt, 0, sizeof(struct spnic_rss_template_mgmt));
+	template_mgmt.func_id = spnic_global_func_id(hwdev);
+	template_mgmt.cmd = NIC_RSS_CMD_TEMP_ALLOC;
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_RSS_TEMP_MGR,
+				     &template_mgmt, sizeof(template_mgmt),
+				     &template_mgmt, &out_size);
+	if (err || !out_size || template_mgmt.msg_head.status) {
+		if (template_mgmt.msg_head.status ==
+		    SPNIC_MGMT_STATUS_TABLE_FULL) {
+			PMD_DRV_LOG(ERR, "There is no more template available");
+			return -ENOSPC;
+		}
+		PMD_DRV_LOG(ERR, "Alloc rss template failed, err: %d, "
+			    "status: 0x%x, out size: 0x%x",
+			    err, template_mgmt.msg_head.status, out_size);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+int spnic_rss_template_free(void *hwdev)
+{
+	struct spnic_rss_template_mgmt template_mgmt;
+	u16 out_size = sizeof(template_mgmt);
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	memset(&template_mgmt, 0, sizeof(struct spnic_rss_template_mgmt));
+	template_mgmt.func_id = spnic_global_func_id(hwdev);
+	template_mgmt.cmd = NIC_RSS_CMD_TEMP_FREE;
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_RSS_TEMP_MGR,
+				     &template_mgmt, sizeof(template_mgmt),
+				     &template_mgmt, &out_size);
+	if (err || !out_size || template_mgmt.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Free rss template failed, err: %d, "
+			    "status: 0x%x, out size: 0x%x",
+			    err, template_mgmt.msg_head.status, out_size);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+static int spnic_rss_cfg_hash_key(void *hwdev, u8 opcode, u8 *key)
+{
+	struct spnic_cmd_rss_hash_key hash_key;
+	u16 out_size = sizeof(hash_key);
+	int err;
+
+	if (!hwdev || !key)
+		return -EINVAL;
+
+	memset(&hash_key, 0, sizeof(struct spnic_cmd_rss_hash_key));
+	hash_key.func_id = spnic_global_func_id(hwdev);
+	hash_key.opcode = opcode;
+	if (opcode == SPNIC_CMD_OP_SET)
+		memcpy(hash_key.key, key, SPNIC_RSS_KEY_SIZE);
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_CFG_RSS_HASH_KEY,
+				     &hash_key, sizeof(hash_key),
+				     &hash_key, &out_size);
+	if (err || !out_size || hash_key.msg_head.status) {
+		PMD_DRV_LOG(ERR, "%s hash key failed, err: %d, "
+			    "status: 0x%x, out size: 0x%x",
+			    opcode == SPNIC_CMD_OP_SET ? "Set" : "Get",
+			    err, hash_key.msg_head.status, out_size);
+		return -EFAULT;
+	}
+
+	if (opcode == SPNIC_CMD_OP_GET)
+		memcpy(key, hash_key.key, SPNIC_RSS_KEY_SIZE);
+
+	return 0;
+}
+
+int spnic_rss_set_hash_key(void *hwdev, u8 *key)
+{
+	if (!hwdev || !key)
+		return -EINVAL;
+
+	return spnic_rss_cfg_hash_key(hwdev, SPNIC_CMD_OP_SET, key);
+}
+
+int spnic_rss_get_hash_key(void *hwdev, u8 *key)
+{
+	if (!hwdev || !key)
+		return -EINVAL;
+
+	return spnic_rss_cfg_hash_key(hwdev, SPNIC_CMD_OP_GET, key);
+}
+
+int spnic_rss_get_indir_tbl(void *hwdev, u32 *indir_table)
+{
+	struct spnic_cmd_buf *cmd_buf = NULL;
+	u16 *indir_tbl = NULL;
+	int err, i;
+
+	if (!hwdev || !indir_table)
+		return -EINVAL;
+
+	cmd_buf = spnic_alloc_cmd_buf(hwdev);
+	if (!cmd_buf) {
+		PMD_DRV_LOG(ERR, "Allocate cmd buf failed");
+		return -ENOMEM;
+	}
+
+	cmd_buf->size = sizeof(struct nic_rss_indirect_tbl);
+	err = spnic_cmdq_detail_resp(hwdev, SPNIC_MOD_L2NIC,
+				     SPNIC_UCODE_CMD_GET_RSS_INDIR_TABLE,
+				     cmd_buf, cmd_buf, 0);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Get rss indir table failed");
+		spnic_free_cmd_buf(cmd_buf);
+		return err;
+	}
+
+	indir_tbl = (u16 *)cmd_buf->buf;
+	for (i = 0; i < SPNIC_RSS_INDIR_SIZE; i++)
+		indir_table[i] = *(indir_tbl + i);
+
+	spnic_free_cmd_buf(cmd_buf);
+	return 0;
+}
+
+int spnic_rss_set_indir_tbl(void *hwdev, const u32 *indir_table)
+{
+	struct nic_rss_indirect_tbl *indir_tbl = NULL;
+	struct spnic_cmd_buf *cmd_buf = NULL;
+	u32 i, size;
+	u32 *temp = NULL;
+	u64 out_param = 0;
+	int err;
+
+	if (!hwdev || !indir_table)
+		return -EINVAL;
+
+	cmd_buf = spnic_alloc_cmd_buf(hwdev);
+	if (!cmd_buf) {
+		PMD_DRV_LOG(ERR, "Allocate cmd buf failed");
+		return -ENOMEM;
+	}
+
+	cmd_buf->size = sizeof(struct nic_rss_indirect_tbl);
+	indir_tbl = (struct nic_rss_indirect_tbl *)cmd_buf->buf;
+	memset(indir_tbl, 0, sizeof(*indir_tbl));
+
+	for (i = 0; i < SPNIC_RSS_INDIR_SIZE; i++)
+		indir_tbl->entry[i] = (u16)(*(indir_table + i));
+
+	size = (sizeof(indir_tbl->entry)) / (sizeof(u32));
+	temp = (u32 *)indir_tbl->entry;
+	for (i = 0; i < size; i++)
+		temp[i] = cpu_to_be32(temp[i]);
+
+	err = spnic_cmdq_direct_resp(hwdev, SPNIC_MOD_L2NIC,
+				     SPNIC_UCODE_CMD_SET_RSS_INDIR_TABLE,
+				     cmd_buf, &out_param, 0);
+	if (err || out_param != 0) {
+		PMD_DRV_LOG(ERR, "Set rss indir table failed");
+		err = -EFAULT;
+	}
+
+	spnic_free_cmd_buf(cmd_buf);
+	return err;
+}
+
+int spnic_set_rss_type(void *hwdev, struct spnic_rss_type rss_type)
+{
+	struct nic_rss_context_tbl *ctx_tbl = NULL;
+	struct spnic_cmd_buf *cmd_buf = NULL;
+	u32 ctx = 0;
+	u64 out_param = 0;
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	cmd_buf = spnic_alloc_cmd_buf(hwdev);
+	if (!cmd_buf) {
+		PMD_DRV_LOG(ERR, "Allocate cmd buf failed");
+		return -ENOMEM;
+	}
+
+	ctx |= SPNIC_RSS_TYPE_SET(1, VALID) |
+	       SPNIC_RSS_TYPE_SET(rss_type.ipv4, IPV4) |
+	       SPNIC_RSS_TYPE_SET(rss_type.ipv6, IPV6) |
+	       SPNIC_RSS_TYPE_SET(rss_type.ipv6_ext, IPV6_EXT) |
+	       SPNIC_RSS_TYPE_SET(rss_type.tcp_ipv4, TCP_IPV4) |
+	       SPNIC_RSS_TYPE_SET(rss_type.tcp_ipv6, TCP_IPV6) |
+	       SPNIC_RSS_TYPE_SET(rss_type.tcp_ipv6_ext, TCP_IPV6_EXT) |
+	       SPNIC_RSS_TYPE_SET(rss_type.udp_ipv4, UDP_IPV4) |
+	       SPNIC_RSS_TYPE_SET(rss_type.udp_ipv6, UDP_IPV6);
+
+	cmd_buf->size = sizeof(struct nic_rss_context_tbl);
+	ctx_tbl = (struct nic_rss_context_tbl *)cmd_buf->buf;
+	memset(ctx_tbl, 0, sizeof(*ctx_tbl));
+	ctx_tbl->ctx = cpu_to_be32(ctx);
+
+	/* Cfg the RSS context table by command queue */
+	err = spnic_cmdq_direct_resp(hwdev, SPNIC_MOD_L2NIC,
+				     SPNIC_UCODE_CMD_SET_RSS_CONTEXT_TABLE,
+				     cmd_buf, &out_param, 0);
+
+	spnic_free_cmd_buf(cmd_buf);
+
+	if (err || out_param != 0) {
+		PMD_DRV_LOG(ERR, "Set rss context table failed, err: %d", err);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+int spnic_get_rss_type(void *hwdev, struct spnic_rss_type *rss_type)
+{
+	struct spnic_rss_context_table ctx_tbl;
+	u16 out_size = sizeof(ctx_tbl);
+	int err;
+
+	if (!hwdev || !rss_type)
+		return -EINVAL;
+
+	memset(&ctx_tbl, 0, sizeof(struct spnic_rss_context_table));
+	ctx_tbl.func_id = spnic_global_func_id(hwdev);
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_GET_RSS_CTX_TBL,
+				     &ctx_tbl, sizeof(ctx_tbl),
+				     &ctx_tbl, &out_size);
+	if (err || !out_size || ctx_tbl.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Get hash type failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, ctx_tbl.msg_head.status, out_size);
+		return -EFAULT;
+	}
+
+	rss_type->ipv4	       = SPNIC_RSS_TYPE_GET(ctx_tbl.context, IPV4);
+	rss_type->ipv6	       = SPNIC_RSS_TYPE_GET(ctx_tbl.context, IPV6);
+	rss_type->ipv6_ext     = SPNIC_RSS_TYPE_GET(ctx_tbl.context, IPV6_EXT);
+	rss_type->tcp_ipv4     = SPNIC_RSS_TYPE_GET(ctx_tbl.context, TCP_IPV4);
+	rss_type->tcp_ipv6     = SPNIC_RSS_TYPE_GET(ctx_tbl.context, TCP_IPV6);
+	rss_type->tcp_ipv6_ext = SPNIC_RSS_TYPE_GET(ctx_tbl.context,
+						     TCP_IPV6_EXT);
+	rss_type->udp_ipv4     = SPNIC_RSS_TYPE_GET(ctx_tbl.context, UDP_IPV4);
+	rss_type->udp_ipv6     = SPNIC_RSS_TYPE_GET(ctx_tbl.context, UDP_IPV6);
+
+	return 0;
+}
+
+static int spnic_rss_cfg_hash_engine(void *hwdev, u8 opcode, u8 *type)
+{
+	struct spnic_cmd_rss_engine_type hash_type;
+	u16 out_size = sizeof(hash_type);
+	int err;
+
+	if (!hwdev || !type)
+		return -EINVAL;
+
+	memset(&hash_type, 0, sizeof(struct spnic_cmd_rss_engine_type));
+	hash_type.func_id = spnic_global_func_id(hwdev);
+	hash_type.opcode = opcode;
+	if (opcode == SPNIC_CMD_OP_SET)
+		hash_type.hash_engine = *type;
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_CFG_RSS_HASH_ENGINE,
+				     &hash_type, sizeof(hash_type),
+				     &hash_type, &out_size);
+	if (err || !out_size || hash_type.msg_head.status) {
+		PMD_DRV_LOG(ERR, "%s hash engine failed, err: %d, "
+			    "status: 0x%x, out size: 0x%x",
+			    opcode == SPNIC_CMD_OP_SET ? "Set" : "Get",
+			    err, hash_type.msg_head.status, out_size);
+		return -EFAULT;
+	}
+
+	if (opcode == SPNIC_CMD_OP_GET)
+		*type = hash_type.hash_engine;
+
+	return 0;
+}
+
+int spnic_rss_get_hash_engine(void *hwdev, u8 *type)
+{
+	if (!hwdev || !type)
+		return -EINVAL;
+
+	return spnic_rss_cfg_hash_engine(hwdev, SPNIC_CMD_OP_GET, type);
+}
+
+int spnic_rss_set_hash_engine(void *hwdev, u8 type)
+{
+	if (!hwdev)
+		return -EINVAL;
+
+	return spnic_rss_cfg_hash_engine(hwdev, SPNIC_CMD_OP_SET, &type);
+}
+
+int spnic_rss_cfg(void *hwdev, u8 rss_en, u8 tc_num, u8 *prio_tc)
+{
+	struct spnic_cmd_rss_config rss_cfg;
+	u16 out_size = sizeof(rss_cfg);
+	int err;
+
+	/* Ucode requires number of TC should be power of 2 */
+	if (!hwdev || !prio_tc || (tc_num & (tc_num - 1)))
+		return -EINVAL;
+
+	memset(&rss_cfg, 0, sizeof(struct spnic_cmd_rss_config));
+	rss_cfg.func_id = spnic_global_func_id(hwdev);
+	rss_cfg.rss_en = rss_en;
+	rss_cfg.rq_priority_number = tc_num ? (u8)ilog2(tc_num) : 0;
+
+	memcpy(rss_cfg.prio_tc, prio_tc, SPNIC_DCB_UP_MAX);
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_RSS_CFG, &rss_cfg,
+				     sizeof(rss_cfg), &rss_cfg, &out_size);
+	if (err || !out_size || rss_cfg.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Set rss cfg failed, err: %d, "
+			    "status: 0x%x, out size: 0x%x",
+			    err, rss_cfg.msg_head.status, out_size);
+		return -EFAULT;
+	}
+
+	return 0;
 }
 
 int spnic_vf_get_default_cos(void *hwdev, u8 *cos_id)
