@@ -71,12 +71,131 @@ enum spnic_rx_mod {
 #define SPNIC_TXD_ALIGN			1
 #define SPNIC_RXD_ALIGN			1
 
+static const struct rte_eth_desc_lim spnic_rx_desc_lim = {
+	.nb_max = SPNIC_MAX_QUEUE_DEPTH,
+	.nb_min = SPNIC_MIN_QUEUE_DEPTH,
+	.nb_align = SPNIC_RXD_ALIGN,
+};
+
+static const struct rte_eth_desc_lim spnic_tx_desc_lim = {
+	.nb_max = SPNIC_MAX_QUEUE_DEPTH,
+	.nb_min = SPNIC_MIN_QUEUE_DEPTH,
+	.nb_align = SPNIC_TXD_ALIGN,
+};
+
 /**
- * Deinit mac_vlan table in hardware.
+ * Ethernet device configuration.
  *
- * @param[in] eth_dev
+ * Prepare the driver for a given number of TX and RX queues, mtu size
+ * and configure RSS.
+ *
+ * @param[in] dev
  *   Pointer to ethernet device structure.
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure.
  */
+static int spnic_dev_configure(struct rte_eth_dev *dev)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+
+	nic_dev->num_sqs =  dev->data->nb_tx_queues;
+	nic_dev->num_rqs = dev->data->nb_rx_queues;
+
+	nic_dev->mtu_size =
+		SPNIC_PKTLEN_TO_MTU(dev->data->dev_conf.rxmode.mtu);
+
+	if (dev->data->dev_conf.rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG)
+		dev->data->dev_conf.rxmode.offloads |= DEV_RX_OFFLOAD_RSS_HASH;
+
+	return 0;
+}
+
+/**
+ * Get information about the device.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[out] info
+ *   Info structure for ethernet device.
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure.
+ */
+static int spnic_dev_infos_get(struct rte_eth_dev *dev,
+			       struct rte_eth_dev_info *info)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+
+	info->max_rx_queues  = nic_dev->max_rqs;
+	info->max_tx_queues  = nic_dev->max_sqs;
+	info->min_rx_bufsize = SPNIC_MIN_RX_BUF_SIZE;
+	info->max_rx_pktlen  = SPNIC_MAX_JUMBO_FRAME_SIZE;
+	info->max_mac_addrs  = SPNIC_MAX_UC_MAC_ADDRS;
+	info->min_mtu = SPNIC_MIN_MTU_SIZE;
+	info->max_mtu = SPNIC_MAX_MTU_SIZE;
+	info->max_lro_pkt_size = SPNIC_MAX_LRO_SIZE;
+
+	info->rx_queue_offload_capa = 0;
+	info->rx_offload_capa = DEV_RX_OFFLOAD_VLAN_STRIP |
+				DEV_RX_OFFLOAD_IPV4_CKSUM |
+				DEV_RX_OFFLOAD_UDP_CKSUM |
+				DEV_RX_OFFLOAD_TCP_CKSUM |
+				DEV_RX_OFFLOAD_SCTP_CKSUM |
+				DEV_RX_OFFLOAD_VLAN_FILTER |
+				DEV_RX_OFFLOAD_SCATTER |
+				DEV_RX_OFFLOAD_TCP_LRO |
+				DEV_RX_OFFLOAD_RSS_HASH;
+
+	info->tx_queue_offload_capa = 0;
+	info->tx_offload_capa = DEV_TX_OFFLOAD_VLAN_INSERT |
+				DEV_TX_OFFLOAD_IPV4_CKSUM |
+				DEV_TX_OFFLOAD_UDP_CKSUM |
+				DEV_TX_OFFLOAD_TCP_CKSUM |
+				DEV_TX_OFFLOAD_SCTP_CKSUM |
+				DEV_TX_OFFLOAD_OUTER_IPV4_CKSUM |
+				DEV_TX_OFFLOAD_TCP_TSO |
+				DEV_TX_OFFLOAD_MULTI_SEGS;
+
+	info->hash_key_size = SPNIC_RSS_KEY_SIZE;
+	info->reta_size = SPNIC_RSS_INDIR_SIZE;
+	info->flow_type_rss_offloads = SPNIC_RSS_OFFLOAD_ALL;
+
+	info->rx_desc_lim = spnic_rx_desc_lim;
+	info->tx_desc_lim = spnic_tx_desc_lim;
+
+	/* Driver-preferred rx/tx parameters */
+	info->default_rxportconf.burst_size = SPNIC_DEFAULT_BURST_SIZE;
+	info->default_txportconf.burst_size = SPNIC_DEFAULT_BURST_SIZE;
+	info->default_rxportconf.nb_queues = SPNIC_DEFAULT_NB_QUEUES;
+	info->default_txportconf.nb_queues = SPNIC_DEFAULT_NB_QUEUES;
+	info->default_rxportconf.ring_size = SPNIC_DEFAULT_RING_SIZE;
+	info->default_txportconf.ring_size = SPNIC_DEFAULT_RING_SIZE;
+
+	return 0;
+}
+
+static int spnic_fw_version_get(struct rte_eth_dev *dev, char *fw_version,
+				size_t fw_size)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	char mgmt_ver[MGMT_VERSION_MAX_LEN] = { 0 };
+	int err;
+
+	err = spnic_get_mgmt_version(nic_dev->hwdev, mgmt_ver,
+				     SPNIC_MGMT_VERSION_MAX_LEN);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Get fw version failed");
+		return -EIO;
+	}
+
+	if (fw_size < strlen(mgmt_ver) + 1)
+		return (strlen(mgmt_ver) + 1);
+
+	snprintf(fw_version, fw_size, "%s", mgmt_ver);
+
+	return 0;
+}
 
 /**
  * Set ethernet device link state up.
@@ -1332,6 +1451,9 @@ static int spnic_set_mc_addr_list(struct rte_eth_dev *dev,
 }
 
 static const struct eth_dev_ops spnic_pmd_ops = {
+	.dev_configure                 = spnic_dev_configure,
+	.dev_infos_get                 = spnic_dev_infos_get,
+	.fw_version_get                = spnic_fw_version_get,
 	.dev_set_link_up               = spnic_dev_set_link_up,
 	.dev_set_link_down             = spnic_dev_set_link_down,
 	.link_update                   = spnic_link_update,
@@ -1350,6 +1472,9 @@ static const struct eth_dev_ops spnic_pmd_ops = {
 };
 
 static const struct eth_dev_ops spnic_pmd_vf_ops = {
+	.dev_configure                 = spnic_dev_configure,
+	.dev_infos_get                 = spnic_dev_infos_get,
+	.fw_version_get                = spnic_fw_version_get,
 	.rx_queue_setup                = spnic_rx_queue_setup,
 	.tx_queue_setup                = spnic_tx_queue_setup,
 	.dev_start                     = spnic_dev_start,
