@@ -13,6 +13,19 @@ struct spnic_aeqs;
 struct spnic_mbox;
 struct spnic_msg_pf_to_mgmt;
 
+#define MGMT_VERSION_MAX_LEN		32
+
+enum spnic_set_arm_type {
+	SPNIC_SET_ARM_CMDQ,
+	SPNIC_SET_ARM_SQ,
+	SPNIC_SET_ARM_TYPE_NUM
+};
+
+struct spnic_page_addr {
+	void *virt_addr;
+	u64 phys_addr;
+};
+
 struct ffm_intr_info {
 	u8 node_id;
 	/* Error level of the interrupt source */
