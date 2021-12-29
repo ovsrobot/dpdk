@@ -855,8 +855,10 @@ static void spnic_deinit_sw_rxtxqs(struct spnic_nic_dev *nic_dev)
 static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 {
 	struct spnic_nic_dev *nic_dev;
+	struct spnic_rxq *rxq = NULL;
 	u64 nic_features;
 	int err;
+	u16 i;
 
 	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
 
@@ -916,6 +918,22 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 
 	spnic_start_all_sqs(eth_dev);
 
+	/* Open virtual port and ready to start packet receiving */
+	err = spnic_set_vport_enable(nic_dev->hwdev, true);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Enable vport failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto en_vport_fail;
+	}
+
+	/* Open physical port and start packet receiving */
+	err = spnic_set_port_enable(nic_dev->hwdev, true);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Enable physical port failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto en_port_fail;
+	}
+
 	/* Update eth_dev link status */
 	if (eth_dev->data->dev_conf.intr_conf.lsc != 0)
 		(void)spnic_link_update(eth_dev, 0);
@@ -924,6 +942,20 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 
 	return 0;
 
+en_port_fail:
+	(void)spnic_set_vport_enable(nic_dev->hwdev, false);
+
+en_vport_fail:
+	/* Flush tx && rx chip resources in case of setting vport fake fail */
+	(void)spnic_flush_qps_res(nic_dev->hwdev);
+	rte_delay_ms(100);
+	for (i = 0; i < nic_dev->num_rqs; i++) {
+		rxq = nic_dev->rxqs[i];
+		spnic_remove_rq_from_rx_queue_list(nic_dev, rxq->q_id);
+		spnic_free_rxq_mbufs(rxq);
+		eth_dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+		eth_dev->data->tx_queue_state[i] = RTE_ETH_QUEUE_STATE_STOPPED;
+	}
 start_rqs_fail:
 	spnic_remove_rxtx_configure(eth_dev);
 
@@ -951,6 +983,7 @@ static int spnic_dev_stop(struct rte_eth_dev *dev)
 {
 	struct spnic_nic_dev *nic_dev;
 	struct rte_eth_link link;
+	int err;
 
 	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
 	if (!rte_bit_relaxed_test_and_clear32(SPNIC_DEV_START, &nic_dev->dev_status)) {
@@ -958,6 +991,19 @@ static int spnic_dev_stop(struct rte_eth_dev *dev)
 			    nic_dev->dev_name);
 		return 0;
 	}
+
+	/* Stop phy port and vport */
+	err = spnic_set_port_enable(nic_dev->hwdev, false);
+	if (err)
+		PMD_DRV_LOG(WARNING, "Disable phy port failed, error: %d, "
+			    "dev_name: %s, port_id: %d", err, dev->data->name,
+			    dev->data->port_id);
+
+	err = spnic_set_vport_enable(nic_dev->hwdev, false);
+	if (err)
+		PMD_DRV_LOG(WARNING, "Disable vport failed, error: %d, "
+			    "dev_name: %s, port_id: %d", err, dev->data->name,
+			    dev->data->port_id);
 
 	/* Clear recorded link status */
 	memset(&link, 0, sizeof(link));
