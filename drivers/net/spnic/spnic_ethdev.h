@@ -4,6 +4,9 @@
 
 #ifndef _SPNIC_ETHDEV_H_
 #define _SPNIC_ETHDEV_H_
+
+#define SPNIC_COPY_MEMPOOL_DEPTH	128
+#define SPNIC_COPY_MBUF_SIZE		4096
 #define SPNIC_DEV_NAME_LEN		32
 
 #define SPNIC_UINT32_BIT_SIZE		(CHAR_BIT * sizeof(uint32_t))
@@ -15,6 +18,10 @@ enum spnic_dev_status {
 	SPNIC_DEV_CLOSE,
 	SPNIC_DEV_START,
 	SPNIC_DEV_INTR_EN
+};
+
+enum spnic_tx_cvlan_type {
+	SPNIC_TX_TPID0,
 };
 
 enum nic_feature_cap {

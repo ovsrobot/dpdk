@@ -4,6 +4,13 @@
 
 #ifndef _SPNIC_TX_H_
 #define _SPNIC_TX_H_
+#define MAX_SINGLE_SGE_SIZE		65536
+#define SPNIC_NONTSO_PKT_MAX_SGE	38
+#define SPNIC_NONTSO_SEG_NUM_VALID(num)	\
+	((num) <= SPNIC_NONTSO_PKT_MAX_SGE)
+
+#define SPNIC_TSO_PKT_MAX_SGE		127
+#define SPNIC_TSO_SEG_NUM_INVALID(num)	((num) > SPNIC_TSO_PKT_MAX_SGE)
 /* Tx offload info */
 struct spnic_tx_offload_info {
 	u8 outer_l2_len;
