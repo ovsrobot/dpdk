@@ -4,7 +4,6 @@
 
 #include "spnic_compat.h"
 #include "spnic_csr.h"
-#include "spnic_hwif.h"
 #include "spnic_eqs.h"
 #include "spnic_mgmt.h"
 #include "spnic_cmd.h"
@@ -13,6 +12,7 @@
 #include "spnic_cmdq.h"
 #include "spnic_hw_cfg.h"
 #include "spnic_hwdev.h"
+#include "spnic_hwif.h"
 #include "spnic_hw_comm.h"
 
 enum spnic_pcie_nosnoop {
@@ -70,7 +70,7 @@ enum spnic_pcie_tph {
 #define SPNIC_DEAULT_EQ_MSIX_COALESC_TIMER_CFG	0xFF
 #define SPNIC_DEAULT_EQ_MSIX_RESEND_TIMER_CFG	7
 
-typedef void (*mgmt_event_cb)(void *handle, void *buf_in, u16 in_size,
+typedef void (*mgmt_event_cb)(struct spnic_hwdev *hwdev, void *buf_in, u16 in_size,
 			      void *buf_out, u16 *out_size);
 
 struct mgmt_event_handle {
@@ -93,7 +93,7 @@ int spnic_vf_handle_pf_comm_mbox(void *handle, __rte_unused void *pri_handle,
 	return 0;
 }
 
-static void fault_event_handler(__rte_unused void *hwdev,
+static void fault_event_handler(__rte_unused struct spnic_hwdev *hwdev,
 				__rte_unused void *buf_in,
 				__rte_unused u16 in_size,
 				__rte_unused void *buf_out,
@@ -102,7 +102,7 @@ static void fault_event_handler(__rte_unused void *hwdev,
 	PMD_DRV_LOG(WARNING, "Unsupported fault event handler");
 }
 
-static void ffm_event_msg_handler(__rte_unused void *hwdev,
+static void ffm_event_msg_handler(__rte_unused struct spnic_hwdev *hwdev,
 				  void *buf_in, u16 in_size,
 				  __rte_unused void *buf_out, u16 *out_size)
 {

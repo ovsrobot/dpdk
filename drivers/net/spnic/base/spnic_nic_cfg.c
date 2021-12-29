@@ -50,10 +50,10 @@ static const struct vf_msg_handler vf_mag_cmd_handler[] = {
 	},
 };
 
-static int mag_msg_to_mgmt_sync(void *hwdev, u16 cmd, void *buf_in, u16 in_size,
+static int mag_msg_to_mgmt_sync(struct spnic_hwdev *hwdev, u16 cmd, void *buf_in, u16 in_size,
 				void *buf_out, u16 *out_size);
 
-int spnic_l2nic_msg_to_mgmt_sync(void *hwdev, u16 cmd, void *buf_in, u16 in_size,
+int spnic_l2nic_msg_to_mgmt_sync(struct spnic_hwdev *hwdev, u16 cmd, void *buf_in, u16 in_size,
 			   void *buf_out, u16 *out_size)
 {
 	u32 i, cmd_cnt = ARRAY_LEN(vf_cmd_handler);
@@ -75,7 +75,7 @@ int spnic_l2nic_msg_to_mgmt_sync(void *hwdev, u16 cmd, void *buf_in, u16 in_size
 				      in_size, buf_out, out_size, 0);
 }
 
-int spnic_set_ci_table(void *hwdev, struct spnic_sq_attr *attr)
+int spnic_set_ci_table(struct spnic_hwdev *hwdev, struct spnic_sq_attr *attr)
 {
 	struct spnic_cmd_cons_idx_attr cons_idx_attr;
 	u16 out_size = sizeof(cons_idx_attr);
@@ -124,7 +124,7 @@ static int spnic_check_mac_info(u8 status, u16 vlan_id)
 
 #define VLAN_N_VID		4096
 
-int spnic_set_mac(void *hwdev, const u8 *mac_addr, u16 vlan_id, u16 func_id)
+int spnic_set_mac(struct spnic_hwdev *hwdev, const u8 *mac_addr, u16 vlan_id, u16 func_id)
 {
 	struct spnic_port_mac_set mac_info;
 	u16 out_size = sizeof(mac_info);
@@ -166,7 +166,7 @@ int spnic_set_mac(void *hwdev, const u8 *mac_addr, u16 vlan_id, u16 func_id)
 	return 0;
 }
 
-int spnic_del_mac(void *hwdev, const u8 *mac_addr, u16 vlan_id, u16 func_id)
+int spnic_del_mac(struct spnic_hwdev *hwdev, const u8 *mac_addr, u16 vlan_id, u16 func_id)
 {
 	struct spnic_port_mac_set mac_info;
 	u16 out_size = sizeof(mac_info);
@@ -202,7 +202,7 @@ int spnic_del_mac(void *hwdev, const u8 *mac_addr, u16 vlan_id, u16 func_id)
 	return 0;
 }
 
-int spnic_update_mac(void *hwdev, u8 *old_mac, u8 *new_mac, u16 vlan_id,
+int spnic_update_mac(struct spnic_hwdev *hwdev, u8 *old_mac, u8 *new_mac, u16 vlan_id,
 		     u16 func_id)
 {
 	struct spnic_port_mac_update mac_info;
@@ -245,7 +245,7 @@ int spnic_update_mac(void *hwdev, u8 *old_mac, u8 *new_mac, u16 vlan_id,
 	return 0;
 }
 
-int spnic_get_default_mac(void *hwdev, u8 *mac_addr, int ether_len)
+int spnic_get_default_mac(struct spnic_hwdev *hwdev, u8 *mac_addr, int ether_len)
 {
 	struct spnic_port_mac_set mac_info;
 	u16 out_size = sizeof(mac_info);
@@ -271,7 +271,7 @@ int spnic_get_default_mac(void *hwdev, u8 *mac_addr, int ether_len)
 	return 0;
 }
 
-static int spnic_config_vlan(void *hwdev, u8 opcode, u16 vlan_id, u16 func_id)
+static int spnic_config_vlan(struct spnic_hwdev *hwdev, u8 opcode, u16 vlan_id, u16 func_id)
 {
 	struct spnic_cmd_vlan_config vlan_info;
 	u16 out_size = sizeof(vlan_info);
@@ -294,7 +294,7 @@ static int spnic_config_vlan(void *hwdev, u8 opcode, u16 vlan_id, u16 func_id)
 	return 0;
 }
 
-int spnic_add_vlan(void *hwdev, u16 vlan_id, u16 func_id)
+int spnic_add_vlan(struct spnic_hwdev *hwdev, u16 vlan_id, u16 func_id)
 {
 	if (!hwdev)
 		return -EINVAL;
@@ -302,7 +302,7 @@ int spnic_add_vlan(void *hwdev, u16 vlan_id, u16 func_id)
 	return spnic_config_vlan(hwdev, SPNIC_CMD_OP_ADD, vlan_id, func_id);
 }
 
-int spnic_del_vlan(void *hwdev, u16 vlan_id, u16 func_id)
+int spnic_del_vlan(struct spnic_hwdev *hwdev, u16 vlan_id, u16 func_id)
 {
 	if (!hwdev)
 		return -EINVAL;
@@ -310,7 +310,7 @@ int spnic_del_vlan(void *hwdev, u16 vlan_id, u16 func_id)
 	return spnic_config_vlan(hwdev, SPNIC_CMD_OP_DEL, vlan_id, func_id);
 }
 
-int spnic_get_port_info(void *hwdev, struct nic_port_info *port_info)
+int spnic_get_port_info(struct spnic_hwdev *hwdev, struct nic_port_info *port_info)
 {
 	struct spnic_cmd_port_info port_msg;
 	u16 out_size = sizeof(port_msg);
@@ -341,7 +341,7 @@ int spnic_get_port_info(void *hwdev, struct nic_port_info *port_info)
 }
 
 
-int spnic_get_link_state(void *hwdev, u8 *link_state)
+int spnic_get_link_state(struct spnic_hwdev *hwdev, u8 *link_state)
 {
 	struct spnic_cmd_link_state get_link;
 	u16 out_size = sizeof(get_link);
@@ -365,7 +365,7 @@ int spnic_get_link_state(void *hwdev, u8 *link_state)
 	return 0;
 }
 
-int spnic_set_vport_enable(void *hwdev, bool enable)
+int spnic_set_vport_enable(struct spnic_hwdev *hwdev, bool enable)
 {
 	struct spnic_vport_state en_state;
 	u16 out_size = sizeof(en_state);
@@ -389,7 +389,7 @@ int spnic_set_vport_enable(void *hwdev, bool enable)
 	return 0;
 }
 
-int spnic_set_port_enable(void *hwdev, bool enable)
+int spnic_set_port_enable(struct spnic_hwdev *hwdev, bool enable)
 {
 	struct mag_cmd_set_port_enable en_state;
 	u16 out_size = sizeof(en_state);
@@ -417,7 +417,7 @@ int spnic_set_port_enable(void *hwdev, bool enable)
 	return 0;
 }
 
-int spnic_flush_qps_res(void *hwdev)
+int spnic_flush_qps_res(struct spnic_hwdev *hwdev)
 {
 	struct spnic_cmd_clear_qp_resource sq_res;
 	u16 out_size = sizeof(sq_res);
@@ -440,7 +440,7 @@ int spnic_flush_qps_res(void *hwdev)
 	return 0;
 }
 
-static int spnic_cfg_hw_pause(void *hwdev, u8 opcode,
+static int spnic_cfg_hw_pause(struct spnic_hwdev *hwdev, u8 opcode,
 			       struct nic_pause_config *nic_pause)
 {
 	struct spnic_cmd_pause_config pause_info;
@@ -476,7 +476,7 @@ static int spnic_cfg_hw_pause(void *hwdev, u8 opcode,
 	return 0;
 }
 
-int spnic_set_pause_info(void *hwdev, struct nic_pause_config nic_pause)
+int spnic_set_pause_info(struct spnic_hwdev *hwdev, struct nic_pause_config nic_pause)
 {
 	if (!hwdev)
 		return -EINVAL;
@@ -484,7 +484,7 @@ int spnic_set_pause_info(void *hwdev, struct nic_pause_config nic_pause)
 	return spnic_cfg_hw_pause(hwdev, SPNIC_CMD_OP_SET, &nic_pause);
 }
 
-int spnic_get_pause_info(void *hwdev, struct nic_pause_config *nic_pause)
+int spnic_get_pause_info(struct spnic_hwdev *hwdev, struct nic_pause_config *nic_pause)
 {
 	if (!hwdev || !nic_pause)
 		return -EINVAL;
@@ -493,7 +493,7 @@ int spnic_get_pause_info(void *hwdev, struct nic_pause_config *nic_pause)
 	return spnic_cfg_hw_pause(hwdev, SPNIC_CMD_OP_GET, nic_pause);
 }
 
-int spnic_get_vport_stats(void *hwdev, struct spnic_vport_stats *stats)
+int spnic_get_vport_stats(struct spnic_hwdev *hwdev, struct spnic_vport_stats *stats)
 {
 	struct spnic_port_stats_info stats_info;
 	struct spnic_cmd_vport_stats vport_stats;
@@ -522,7 +522,7 @@ int spnic_get_vport_stats(void *hwdev, struct spnic_vport_stats *stats)
 	return 0;
 }
 
-int spnic_get_phy_port_stats(void *hwdev, struct mag_phy_port_stats *stats)
+int spnic_get_phy_port_stats(struct spnic_hwdev *hwdev, struct mag_phy_port_stats *stats)
 {
 	struct mag_cmd_get_port_stat *port_stats = NULL;
 	struct mag_cmd_port_stats_info stats_info;
@@ -555,7 +555,7 @@ out:
 	return err;
 }
 
-int spnic_clear_vport_stats(void *hwdev)
+int spnic_clear_vport_stats(struct spnic_hwdev *hwdev)
 {
 	struct spnic_cmd_clear_vport_stats clear_vport_stats;
 	u16 out_size = sizeof(clear_vport_stats);
@@ -582,7 +582,7 @@ int spnic_clear_vport_stats(void *hwdev)
 	return 0;
 }
 
-int spnic_clear_phy_port_stats(void *hwdev)
+int spnic_clear_phy_port_stats(struct spnic_hwdev *hwdev)
 {
 	struct mag_cmd_clr_port_stat *port_stats = NULL;
 	u16 out_size = sizeof(*port_stats);
@@ -611,7 +611,7 @@ out:
 	return err;
 }
 
-static int spnic_set_function_table(void *hwdev, u32 cfg_bitmap,
+static int spnic_set_function_table(struct spnic_hwdev *hwdev, u32 cfg_bitmap,
 				     struct spnic_func_tbl_cfg *cfg)
 {
 	struct spnic_cmd_set_func_tbl cmd_func_tbl;
@@ -636,7 +636,7 @@ static int spnic_set_function_table(void *hwdev, u32 cfg_bitmap,
 	return 0;
 }
 
-int spnic_init_function_table(void *hwdev, u16 rx_buff_len)
+int spnic_init_function_table(struct spnic_hwdev *hwdev, u16 rx_buff_len)
 {
 	struct spnic_func_tbl_cfg func_tbl_cfg;
 	u32 cfg_bitmap = BIT(FUNC_CFG_INIT) | BIT(FUNC_CFG_MTU) |
@@ -649,7 +649,7 @@ int spnic_init_function_table(void *hwdev, u16 rx_buff_len)
 	return spnic_set_function_table(hwdev, cfg_bitmap, &func_tbl_cfg);
 }
 
-int spnic_set_port_mtu(void *hwdev, u16 new_mtu)
+int spnic_set_port_mtu(struct spnic_hwdev *hwdev, u16 new_mtu)
 {
 	struct spnic_func_tbl_cfg func_tbl_cfg;
 
@@ -675,7 +675,7 @@ int spnic_set_port_mtu(void *hwdev, u16 new_mtu)
 					&func_tbl_cfg);
 }
 
-static int nic_feature_nego(void *hwdev, u8 opcode, u64 *s_feature, u16 size)
+static int nic_feature_nego(struct spnic_hwdev *hwdev, u8 opcode, u64 *s_feature, u16 size)
 {
 	struct spnic_cmd_feature_nego feature_nego;
 	u16 out_size = sizeof(feature_nego);
@@ -705,17 +705,17 @@ static int nic_feature_nego(void *hwdev, u8 opcode, u64 *s_feature, u16 size)
 	return 0;
 }
 
-int spnic_get_feature_from_hw(void *hwdev, u64 *s_feature, u16 size)
+int spnic_get_feature_from_hw(struct spnic_hwdev *hwdev, u64 *s_feature, u16 size)
 {
 	return nic_feature_nego(hwdev, SPNIC_CMD_OP_GET, s_feature, size);
 }
 
-int spnic_set_feature_to_hw(void *hwdev, u64 *s_feature, u16 size)
+int spnic_set_feature_to_hw(struct spnic_hwdev *hwdev, u64 *s_feature, u16 size)
 {
 	return nic_feature_nego(hwdev, SPNIC_CMD_OP_SET, s_feature, size);
 }
 
-static int spnic_vf_func_init(void *hwdev)
+static int spnic_vf_func_init(struct spnic_hwdev *hwdev)
 {
 	struct spnic_cmd_register_vf register_info;
 	u16 out_size = sizeof(register_info);
@@ -738,7 +738,7 @@ static int spnic_vf_func_init(void *hwdev)
 	return 0;
 }
 
-static int spnic_vf_func_free(void *hwdev)
+static int spnic_vf_func_free(struct spnic_hwdev *hwdev)
 {
 	struct spnic_cmd_register_vf unregister;
 	u16 out_size = sizeof(unregister);
@@ -761,12 +761,12 @@ static int spnic_vf_func_free(void *hwdev)
 	return 0;
 }
 
-int spnic_init_nic_hwdev(void *hwdev)
+int spnic_init_nic_hwdev(struct spnic_hwdev *hwdev)
 {
 	return spnic_vf_func_init(hwdev);
 }
 
-void spnic_free_nic_hwdev(void *hwdev)
+void spnic_free_nic_hwdev(struct spnic_hwdev *hwdev)
 {
 	if (!hwdev)
 		return;
@@ -774,7 +774,7 @@ void spnic_free_nic_hwdev(void *hwdev)
 	spnic_vf_func_free(hwdev);
 }
 
-int spnic_set_rx_mode(void *hwdev, u32 enable)
+int spnic_set_rx_mode(struct spnic_hwdev *hwdev, u32 enable)
 {
 	struct spnic_rx_mode_config rx_mode_cfg;
 	u16 out_size = sizeof(rx_mode_cfg);
@@ -799,7 +799,7 @@ int spnic_set_rx_mode(void *hwdev, u32 enable)
 	return 0;
 }
 
-int spnic_set_rx_vlan_offload(void *hwdev, u8 en)
+int spnic_set_rx_vlan_offload(struct spnic_hwdev *hwdev, u8 en)
 {
 	struct spnic_cmd_vlan_offload vlan_cfg;
 	u16 out_size = sizeof(vlan_cfg);
@@ -824,7 +824,7 @@ int spnic_set_rx_vlan_offload(void *hwdev, u8 en)
 	return 0;
 }
 
-int spnic_set_vlan_fliter(void *hwdev, u32 vlan_filter_ctrl)
+int spnic_set_vlan_fliter(struct spnic_hwdev *hwdev, u32 vlan_filter_ctrl)
 {
 	struct spnic_cmd_set_vlan_filter vlan_filter;
 	u16 out_size = sizeof(vlan_filter);
@@ -849,7 +849,7 @@ int spnic_set_vlan_fliter(void *hwdev, u32 vlan_filter_ctrl)
 	return 0;
 }
 
-static int spnic_set_rx_lro(void *hwdev, u8 ipv4_en, u8 ipv6_en,
+static int spnic_set_rx_lro(struct spnic_hwdev *hwdev, u8 ipv4_en, u8 ipv6_en,
 			    u8 lro_max_pkt_len)
 {
 	struct spnic_cmd_lro_config lro_cfg;
@@ -877,7 +877,7 @@ static int spnic_set_rx_lro(void *hwdev, u8 ipv4_en, u8 ipv6_en,
 	return 0;
 }
 
-static int spnic_set_rx_lro_timer(void *hwdev, u32 timer_value)
+static int spnic_set_rx_lro_timer(struct spnic_hwdev *hwdev, u32 timer_value)
 {
 	struct spnic_cmd_lro_timer lro_timer;
 	u16 out_size = sizeof(lro_timer);
@@ -902,7 +902,7 @@ static int spnic_set_rx_lro_timer(void *hwdev, u32 timer_value)
 	return 0;
 }
 
-int spnic_set_rx_lro_state(void *hwdev, u8 lro_en, u32 lro_timer,
+int spnic_set_rx_lro_state(struct spnic_hwdev *hwdev, u8 lro_en, u32 lro_timer,
 			    u32 lro_max_pkt_len)
 {
 	u8 ipv4_en = 0, ipv6_en = 0;
@@ -931,7 +931,7 @@ int spnic_set_rx_lro_state(void *hwdev, u8 lro_en, u32 lro_timer,
 }
 
 /* RSS config */
-int spnic_rss_template_alloc(void *hwdev)
+int spnic_rss_template_alloc(struct spnic_hwdev *hwdev)
 {
 	struct spnic_rss_template_mgmt template_mgmt;
 	u16 out_size = sizeof(template_mgmt);
@@ -962,7 +962,7 @@ int spnic_rss_template_alloc(void *hwdev)
 	return 0;
 }
 
-int spnic_rss_template_free(void *hwdev)
+int spnic_rss_template_free(struct spnic_hwdev *hwdev)
 {
 	struct spnic_rss_template_mgmt template_mgmt;
 	u16 out_size = sizeof(template_mgmt);
@@ -988,7 +988,7 @@ int spnic_rss_template_free(void *hwdev)
 	return 0;
 }
 
-static int spnic_rss_cfg_hash_key(void *hwdev, u8 opcode, u8 *key)
+static int spnic_rss_cfg_hash_key(struct spnic_hwdev *hwdev, u8 opcode, u8 *key)
 {
 	struct spnic_cmd_rss_hash_key hash_key;
 	u16 out_size = sizeof(hash_key);
@@ -1020,7 +1020,7 @@ static int spnic_rss_cfg_hash_key(void *hwdev, u8 opcode, u8 *key)
 	return 0;
 }
 
-int spnic_rss_set_hash_key(void *hwdev, u8 *key)
+int spnic_rss_set_hash_key(struct spnic_hwdev *hwdev, u8 *key)
 {
 	if (!hwdev || !key)
 		return -EINVAL;
@@ -1028,7 +1028,7 @@ int spnic_rss_set_hash_key(void *hwdev, u8 *key)
 	return spnic_rss_cfg_hash_key(hwdev, SPNIC_CMD_OP_SET, key);
 }
 
-int spnic_rss_get_hash_key(void *hwdev, u8 *key)
+int spnic_rss_get_hash_key(struct spnic_hwdev *hwdev, u8 *key)
 {
 	if (!hwdev || !key)
 		return -EINVAL;
@@ -1036,7 +1036,7 @@ int spnic_rss_get_hash_key(void *hwdev, u8 *key)
 	return spnic_rss_cfg_hash_key(hwdev, SPNIC_CMD_OP_GET, key);
 }
 
-int spnic_rss_get_indir_tbl(void *hwdev, u32 *indir_table)
+int spnic_rss_get_indir_tbl(struct spnic_hwdev *hwdev, u32 *indir_table)
 {
 	struct spnic_cmd_buf *cmd_buf = NULL;
 	u16 *indir_tbl = NULL;
@@ -1069,7 +1069,7 @@ int spnic_rss_get_indir_tbl(void *hwdev, u32 *indir_table)
 	return 0;
 }
 
-int spnic_rss_set_indir_tbl(void *hwdev, const u32 *indir_table)
+int spnic_rss_set_indir_tbl(struct spnic_hwdev *hwdev, const u32 *indir_table)
 {
 	struct nic_rss_indirect_tbl *indir_tbl = NULL;
 	struct spnic_cmd_buf *cmd_buf = NULL;
@@ -1111,7 +1111,7 @@ int spnic_rss_set_indir_tbl(void *hwdev, const u32 *indir_table)
 	return err;
 }
 
-int spnic_set_rss_type(void *hwdev, struct spnic_rss_type rss_type)
+int spnic_set_rss_type(struct spnic_hwdev *hwdev, struct spnic_rss_type rss_type)
 {
 	struct nic_rss_context_tbl *ctx_tbl = NULL;
 	struct spnic_cmd_buf *cmd_buf = NULL;
@@ -1158,7 +1158,7 @@ int spnic_set_rss_type(void *hwdev, struct spnic_rss_type rss_type)
 	return 0;
 }
 
-int spnic_get_rss_type(void *hwdev, struct spnic_rss_type *rss_type)
+int spnic_get_rss_type(struct spnic_hwdev *hwdev, struct spnic_rss_type *rss_type)
 {
 	struct spnic_rss_context_table ctx_tbl;
 	u16 out_size = sizeof(ctx_tbl);
@@ -1192,7 +1192,7 @@ int spnic_get_rss_type(void *hwdev, struct spnic_rss_type *rss_type)
 	return 0;
 }
 
-static int spnic_rss_cfg_hash_engine(void *hwdev, u8 opcode, u8 *type)
+static int spnic_rss_cfg_hash_engine(struct spnic_hwdev *hwdev, u8 opcode, u8 *type)
 {
 	struct spnic_cmd_rss_engine_type hash_type;
 	u16 out_size = sizeof(hash_type);
@@ -1224,7 +1224,7 @@ static int spnic_rss_cfg_hash_engine(void *hwdev, u8 opcode, u8 *type)
 	return 0;
 }
 
-int spnic_rss_get_hash_engine(void *hwdev, u8 *type)
+int spnic_rss_get_hash_engine(struct spnic_hwdev *hwdev, u8 *type)
 {
 	if (!hwdev || !type)
 		return -EINVAL;
@@ -1232,7 +1232,7 @@ int spnic_rss_get_hash_engine(void *hwdev, u8 *type)
 	return spnic_rss_cfg_hash_engine(hwdev, SPNIC_CMD_OP_GET, type);
 }
 
-int spnic_rss_set_hash_engine(void *hwdev, u8 type)
+int spnic_rss_set_hash_engine(struct spnic_hwdev *hwdev, u8 type)
 {
 	if (!hwdev)
 		return -EINVAL;
@@ -1240,7 +1240,7 @@ int spnic_rss_set_hash_engine(void *hwdev, u8 type)
 	return spnic_rss_cfg_hash_engine(hwdev, SPNIC_CMD_OP_SET, &type);
 }
 
-int spnic_rss_cfg(void *hwdev, u8 rss_en, u8 tc_num, u8 *prio_tc)
+int spnic_rss_cfg(struct spnic_hwdev *hwdev, u8 rss_en, u8 tc_num, u8 *prio_tc)
 {
 	struct spnic_cmd_rss_config rss_cfg;
 	u16 out_size = sizeof(rss_cfg);
@@ -1268,7 +1268,7 @@ int spnic_rss_cfg(void *hwdev, u8 rss_en, u8 tc_num, u8 *prio_tc)
 	return 0;
 }
 
-int spnic_vf_get_default_cos(void *hwdev, u8 *cos_id)
+int spnic_vf_get_default_cos(struct spnic_hwdev *hwdev, u8 *cos_id)
 {
 	struct spnic_cmd_vf_dcb_state vf_dcb;
 	u16 out_size = sizeof(vf_dcb);
@@ -1289,7 +1289,7 @@ int spnic_vf_get_default_cos(void *hwdev, u8 *cos_id)
 	return 0;
 }
 
-int spnic_set_rq_flush(void *hwdev, u16 q_id)
+int spnic_set_rq_flush(struct spnic_hwdev *hwdev, u16 q_id)
 {
 	struct spnic_cmd_set_rq_flush *rq_flush_msg = NULL;
 	struct spnic_cmd_buf *cmd_buf = NULL;
@@ -1322,7 +1322,7 @@ int spnic_set_rq_flush(void *hwdev, u16 q_id)
 	return err;
 }
 
-static int _mag_msg_to_mgmt_sync(void *hwdev, u16 cmd, void *buf_in,
+static int _mag_msg_to_mgmt_sync(struct spnic_hwdev *hwdev, u16 cmd, void *buf_in,
 				 u16 in_size, void *buf_out, u16 *out_size)
 {
 	u32 i, cmd_cnt = ARRAY_LEN(vf_mag_cmd_handler);
@@ -1340,7 +1340,7 @@ static int _mag_msg_to_mgmt_sync(void *hwdev, u16 cmd, void *buf_in,
 				      in_size, buf_out, out_size, 0);
 }
 
-static int mag_msg_to_mgmt_sync(void *hwdev, u16 cmd, void *buf_in, u16 in_size,
+static int mag_msg_to_mgmt_sync(struct spnic_hwdev *hwdev, u16 cmd, void *buf_in, u16 in_size,
 				void *buf_out, u16 *out_size)
 {
 	return _mag_msg_to_mgmt_sync(hwdev, cmd, buf_in, in_size, buf_out,

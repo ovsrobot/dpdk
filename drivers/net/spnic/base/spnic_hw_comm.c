@@ -69,9 +69,8 @@ const u32 spnic_hw_rx_buf_size[] = {
 	SPNIC_RX_BUF_SIZE_16K,
 };
 
-int spnic_get_interrupt_cfg(void *dev, struct interrupt_info *info)
+int spnic_get_interrupt_cfg(struct spnic_hwdev *hwdev, struct interrupt_info *info)
 {
-	struct spnic_hwdev *hwdev = dev;
 	struct spnic_cmd_msix_config msix_cfg;
 	u16 out_size = sizeof(msix_cfg);
 	int err;
@@ -107,17 +106,16 @@ int spnic_get_interrupt_cfg(void *dev, struct interrupt_info *info)
 /**
  * Set interrupt cfg
  *
- * @param[in] dev
- *   The pointer to the private hardware device object
+ * @param[in] hwdev
+ *   The device pointer to hwdev
  * @param[in] info
  *   Interrupt info
  *
  * @retval zero : Success
  * @retval negative : Failure.
  */
-int spnic_set_interrupt_cfg(void *dev, struct interrupt_info info)
+int spnic_set_interrupt_cfg(struct spnic_hwdev *hwdev, struct interrupt_info info)
 {
-	struct spnic_hwdev *hwdev = dev;
 	struct spnic_cmd_msix_config msix_cfg;
 	struct interrupt_info temp_info;
 	u16 out_size = sizeof(msix_cfg);
@@ -167,7 +165,7 @@ int spnic_set_interrupt_cfg(void *dev, struct interrupt_info info)
 	return 0;
 }
 
-int spnic_set_wq_page_size(void *hwdev, u16 func_idx, u32 page_size)
+int spnic_set_wq_page_size(struct spnic_hwdev *hwdev, u16 func_idx, u32 page_size)
 {
 	struct spnic_cmd_wq_page_size page_size_info;
 	u16 out_size = sizeof(page_size_info);
@@ -192,10 +190,10 @@ int spnic_set_wq_page_size(void *hwdev, u16 func_idx, u32 page_size)
 	return 0;
 }
 
-int spnic_func_reset(void *hwdev, u64 reset_flag)
+int spnic_func_reset(struct spnic_hwdev *hwdev, u64 reset_flag)
 {
 	struct spnic_reset func_reset;
-	struct spnic_hwif *hwif = ((struct spnic_hwdev *)hwdev)->hwif;
+	struct spnic_hwif *hwif = hwdev->hwif;
 	u16 out_size = sizeof(func_reset);
 	int err = 0;
 
@@ -264,7 +262,7 @@ static u16 get_hw_rx_buf_size(u32 rx_buf_sz)
 	return DEFAULT_RX_BUF_SIZE; /* Default 2K */
 }
 
-int spnic_set_root_ctxt(void *hwdev, u32 rq_depth, u32 sq_depth, u16 rx_buf_sz)
+int spnic_set_root_ctxt(struct spnic_hwdev *hwdev, u32 rq_depth, u32 sq_depth, u16 rx_buf_sz)
 {
 	struct spnic_cmd_root_ctxt root_ctxt;
 	u16 out_size = sizeof(root_ctxt);
@@ -294,7 +292,7 @@ int spnic_set_root_ctxt(void *hwdev, u32 rq_depth, u32 sq_depth, u16 rx_buf_sz)
 	return 0;
 }
 
-int spnic_clean_root_ctxt(void *hwdev)
+int spnic_clean_root_ctxt(struct spnic_hwdev *hwdev)
 {
 	struct spnic_cmd_root_ctxt root_ctxt;
 	u16 out_size = sizeof(root_ctxt);
@@ -318,7 +316,7 @@ int spnic_clean_root_ctxt(void *hwdev)
 	return 0;
 }
 
-int spnic_set_cmdq_depth(void *hwdev, u16 cmdq_depth)
+int spnic_set_cmdq_depth(struct spnic_hwdev *hwdev, u16 cmdq_depth)
 {
 	struct spnic_cmd_root_ctxt root_ctxt;
 	u16 out_size = sizeof(root_ctxt);
@@ -388,7 +386,7 @@ int spnic_set_dma_attr_tbl(struct spnic_hwdev *hwdev, u32 entry_idx, u8 st,
 	return 0;
 }
 
-int spnic_get_mgmt_version(void *hwdev, char *mgmt_ver, int max_mgmt_len)
+int spnic_get_mgmt_version(struct spnic_hwdev *hwdev, char *mgmt_ver, int max_mgmt_len)
 {
 	struct spnic_cmd_get_fw_version fw_ver;
 	u16 out_size = sizeof(fw_ver);
@@ -415,7 +413,7 @@ int spnic_get_mgmt_version(void *hwdev, char *mgmt_ver, int max_mgmt_len)
 	return 0;
 }
 
-int spnic_get_board_info(void *hwdev, struct spnic_board_info *info)
+int spnic_get_board_info(struct spnic_hwdev *hwdev, struct spnic_board_info *info)
 {
 	struct spnic_cmd_board_info board_info;
 	u16 out_size = sizeof(board_info);
@@ -440,7 +438,7 @@ int spnic_get_board_info(void *hwdev, struct spnic_board_info *info)
 	return 0;
 }
 
-static int spnic_comm_features_nego(void *hwdev, u8 opcode, u64 *s_feature,
+static int spnic_comm_features_nego(struct spnic_hwdev *hwdev, u8 opcode, u64 *s_feature,
 				     u16 size)
 {
 	struct comm_cmd_feature_nego feature_nego;
@@ -472,13 +470,13 @@ static int spnic_comm_features_nego(void *hwdev, u8 opcode, u64 *s_feature,
 	return 0;
 }
 
-int spnic_get_comm_features(void *hwdev, u64 *s_feature, u16 size)
+int spnic_get_comm_features(struct spnic_hwdev *hwdev, u64 *s_feature, u16 size)
 {
 	return spnic_comm_features_nego(hwdev, MGMT_MSG_CMD_OP_GET, s_feature,
 					 size);
 }
 
-int spnic_set_comm_features(void *hwdev, u64 *s_feature, u16 size)
+int spnic_set_comm_features(struct spnic_hwdev *hwdev, u64 *s_feature, u16 size)
 {
 	return spnic_comm_features_nego(hwdev, MGMT_MSG_CMD_OP_SET, s_feature,
 					 size);

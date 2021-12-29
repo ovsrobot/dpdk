@@ -17,17 +17,17 @@
 
 #include "base/spnic_compat.h"
 #include "base/spnic_cmd.h"
-#include "base/spnic_wq.h"
 #include "base/spnic_mgmt.h"
-#include "base/spnic_cmdq.h"
 #include "base/spnic_hwdev.h"
+#include "base/spnic_wq.h"
+#include "base/spnic_cmdq.h"
 #include "base/spnic_hw_comm.h"
 #include "base/spnic_nic_cfg.h"
 #include "base/spnic_hw_cfg.h"
-#include "spnic_io.h"
 #include "spnic_tx.h"
-#include "spnic_rx.h"
 #include "spnic_ethdev.h"
+#include "spnic_io.h"
+#include "spnic_rx.h"
 
 #define SPNIC_DEAULT_TX_CI_PENDING_LIMIT	0
 #define SPNIC_DEAULT_TX_CI_COALESCING_TIME	0
@@ -616,9 +616,8 @@ static int clean_qp_offload_ctxt(struct spnic_nic_dev *nic_dev)
 		clean_queue_offload_ctxt(nic_dev, SPNIC_QP_CTXT_TYPE_RQ));
 }
 
-void spnic_get_func_rx_buf_size(void *dev)
+void spnic_get_func_rx_buf_size(struct spnic_nic_dev *nic_dev)
 {
-	struct spnic_nic_dev *nic_dev = (struct spnic_nic_dev *)dev;
 	struct spnic_rxq *rxq = NULL;
 	u16 q_id;
 	u16 buf_size = 0;
@@ -639,19 +638,17 @@ void spnic_get_func_rx_buf_size(void *dev)
 }
 
 /* Init qps ctxt and set sq ci attr and arm all sq */
-int spnic_init_qp_ctxts(void *dev)
+int spnic_init_qp_ctxts(struct spnic_nic_dev *nic_dev)
 {
-	struct spnic_nic_dev *nic_dev = NULL;
 	struct spnic_hwdev *hwdev = NULL;
 	struct spnic_sq_attr sq_attr;
 	u32 rq_depth;
 	u16 q_id;
 	int err;
 
-	if (!dev)
+	if (!nic_dev)
 		return -EINVAL;
 
-	nic_dev = (struct spnic_nic_dev *)dev;
 	hwdev = nic_dev->hwdev;
 
 	err = init_sq_ctxts(nic_dev);
@@ -703,7 +700,7 @@ set_cons_idx_table_err:
 	return err;
 }
 
-void spnic_free_qp_ctxts(void *hwdev)
+void spnic_free_qp_ctxts(struct spnic_hwdev *hwdev)
 {
 	if (!hwdev)
 		return;
@@ -711,28 +708,21 @@ void spnic_free_qp_ctxts(void *hwdev)
 	spnic_clean_root_ctxt(hwdev);
 }
 
-void spnic_update_driver_feature(void *dev, u64 s_feature)
+void spnic_update_driver_feature(struct spnic_nic_dev *nic_dev, u64 s_feature)
 {
-	struct spnic_nic_dev *nic_dev = NULL;
-
-	if (!dev)
+	if (!nic_dev)
 		return;
 
-	nic_dev = (struct spnic_nic_dev *)dev;
 	nic_dev->feature_cap = s_feature;
 
 	PMD_DRV_LOG(INFO, "Update nic feature to %" PRIu64 "\n",
 		    nic_dev->feature_cap);
 }
 
-u64 spnic_get_driver_feature(void *dev)
+u64 spnic_get_driver_feature(struct spnic_nic_dev *nic_dev)
 {
-	struct spnic_nic_dev *nic_dev = NULL;
-
-	if (!dev)
+	if (!nic_dev)
 		return -EINVAL;
-
-	nic_dev = (struct spnic_nic_dev *)dev;
 
 	return nic_dev->feature_cap;
 }

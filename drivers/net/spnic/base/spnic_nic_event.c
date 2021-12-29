@@ -6,10 +6,10 @@
 
 #include "spnic_compat.h"
 #include "spnic_cmd.h"
-#include "spnic_hwif.h"
 #include "spnic_hwdev.h"
 #include "spnic_mgmt.h"
 #include "spnic_nic_cfg.h"
+#include "spnic_hwif.h"
 #include "spnic_hwdev.h"
 #include "spnic_nic_event.h"
 
@@ -45,9 +45,8 @@ void spnic_get_port_link_info(struct spnic_hwdev *hwdev, u8 link_state,
 	}
 }
 
-static void spnic_link_event_stats(void *dev, u8 link)
+static void spnic_link_event_stats(struct spnic_hwdev *hwdev, u8 link)
 {
-	struct spnic_hwdev *hwdev = dev;
 	struct link_event_stats *stats = &hwdev->hw_stats.link_event_stats;
 
 	if (link)
@@ -56,14 +55,13 @@ static void spnic_link_event_stats(void *dev, u8 link)
 		__atomic_fetch_add(&stats->link_down_stats, 1, __ATOMIC_RELAXED);
 }
 
-static void link_status_event_handler(void *hwdev, void *buf_in,
+static void link_status_event_handler(struct spnic_hwdev *hwdev, void *buf_in,
 				      __rte_unused u16 in_size,
 				      __rte_unused void *buf_out,
 				      __rte_unused u16 *out_size)
 {
 	struct spnic_cmd_link_state *link_status = NULL;
 	struct rte_eth_link link;
-	struct spnic_hwdev *dev = hwdev;
 	int err;
 
 	link_status = buf_in;
@@ -74,24 +72,24 @@ static void link_status_event_handler(void *hwdev, void *buf_in,
 	spnic_link_event_stats(hwdev, link_status->state);
 
 	/* Link event reported only after set vport enable */
-	spnic_get_port_link_info(dev, link_status->state, &link);
-	err = rte_eth_linkstatus_set((struct rte_eth_dev *)(dev->eth_dev),
+	spnic_get_port_link_info(hwdev, link_status->state, &link);
+	err = rte_eth_linkstatus_set((struct rte_eth_dev *)(hwdev->eth_dev),
 				     &link);
 	if (!err)
-		rte_eth_dev_callback_process(dev->eth_dev,
+		rte_eth_dev_callback_process(hwdev->eth_dev,
 					      RTE_ETH_EVENT_INTR_LSC, NULL);
 }
 
 struct nic_event_handler {
 	u16 cmd;
-	void (*handler)(void *hwdev, void *buf_in, u16 in_size,
+	void (*handler)(struct spnic_hwdev *hwdev, void *buf_in, u16 in_size,
 			void *buf_out, u16 *out_size);
 };
 
 struct nic_event_handler nic_cmd_handler[] = {
 };
 
-static void nic_event_handler(void *hwdev, u16 cmd, void *buf_in, u16 in_size,
+static void nic_event_handler(struct spnic_hwdev *hwdev, u16 cmd, void *buf_in, u16 in_size,
 			      void *buf_out, u16 *out_size)
 {
 	u32 i, size = ARRAY_LEN(nic_cmd_handler);
@@ -119,7 +117,7 @@ static void nic_event_handler(void *hwdev, u16 cmd, void *buf_in, u16 in_size,
  * VF link change event
  * VF fault report event
  */
-int spnic_vf_event_handler(void *hwdev, __rte_unused void *pri_handle,
+int spnic_vf_event_handler(struct spnic_hwdev *hwdev, __rte_unused void *pri_handle,
 			   u16 cmd, void *buf_in, u16 in_size,
 			   void *buf_out, u16 *out_size)
 {
@@ -128,7 +126,7 @@ int spnic_vf_event_handler(void *hwdev, __rte_unused void *pri_handle,
 }
 
 /*  NIC event of PF/PPF handler reported by mgmt cpu */
-void spnic_pf_event_handler(void *hwdev, __rte_unused void *pri_handle,
+void spnic_pf_event_handler(struct spnic_hwdev *hwdev, __rte_unused void *pri_handle,
 			    u16 cmd, void *buf_in, u16 in_size,
 			    void *buf_out, u16 *out_size)
 {
@@ -142,7 +140,7 @@ static struct nic_event_handler mag_cmd_handler[] = {
 	},
 };
 
-static int spnic_mag_event_handler(void *hwdev, u16 cmd, void *buf_in,
+static int spnic_mag_event_handler(struct spnic_hwdev *hwdev, u16 cmd, void *buf_in,
 				   u16 in_size, void *buf_out,
 				   u16 *out_size)
 {
@@ -168,14 +166,14 @@ static int spnic_mag_event_handler(void *hwdev, u16 cmd, void *buf_in,
 	return 0;
 }
 
-int spnic_vf_mag_event_handler(void *hwdev, u16 cmd, void *buf_in, u16 in_size, void *buf_out,
-			       u16 *out_size)
+int spnic_vf_mag_event_handler(struct spnic_hwdev *hwdev, u16 cmd, void *buf_in,
+			       u16 in_size, void *buf_out, u16 *out_size)
 {
 	return spnic_mag_event_handler(hwdev, cmd, buf_in, in_size, buf_out,
 				       out_size);
 }
 
-u8 spnic_nic_sw_aeqe_handler(__rte_unused void *hwdev, u8 event, u8 *data)
+u8 spnic_nic_sw_aeqe_handler(__rte_unused struct spnic_hwdev *hwdev, u8 event, u8 *data)
 {
 	PMD_DRV_LOG(ERR,
 		    "Received nic ucode aeq event type: 0x%x, data: %" PRIu64 "",

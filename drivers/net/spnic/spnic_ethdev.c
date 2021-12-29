@@ -15,20 +15,20 @@
 #include "base/spnic_compat.h"
 #include "base/spnic_cmd.h"
 #include "base/spnic_csr.h"
+#include "base/spnic_hwdev.h"
 #include "base/spnic_wq.h"
 #include "base/spnic_eqs.h"
 #include "base/spnic_mgmt.h"
 #include "base/spnic_cmdq.h"
-#include "base/spnic_hwdev.h"
 #include "base/spnic_hwif.h"
 #include "base/spnic_hw_cfg.h"
 #include "base/spnic_hw_comm.h"
 #include "base/spnic_nic_cfg.h"
 #include "base/spnic_nic_event.h"
+#include "spnic_ethdev.h"
 #include "spnic_io.h"
 #include "spnic_tx.h"
 #include "spnic_rx.h"
-#include "spnic_ethdev.h"
 
 #define SPNIC_MIN_RX_BUF_SIZE		1024
 
@@ -1252,7 +1252,7 @@ static void spnic_enable_interrupt(struct rte_eth_dev *dev)
 #define SPNIC_TXRX_MSIX_COALESC_TIMER       2
 #define SPNIC_TXRX_MSIX_RESEND_TIMER_CFG    7
 
-static int spnic_init_rxq_msix_attr(void *hwdev, u16 msix_index)
+static int spnic_init_rxq_msix_attr(struct spnic_hwdev *hwdev, u16 msix_index)
 {
 	struct interrupt_info info = { 0 };
 	int err;
@@ -1400,9 +1400,9 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 		goto init_func_tbl_fail;
 	}
 
-	nic_features = spnic_get_driver_feature(nic_dev->hwdev);
+	nic_features = spnic_get_driver_feature(nic_dev);
 	nic_features &= DEFAULT_DRV_FEATURE;
-	spnic_update_driver_feature(nic_dev->hwdev, nic_features);
+	spnic_update_driver_feature(nic_dev, nic_features);
 
 	err = spnic_set_feature_to_hw(nic_dev->hwdev, &nic_dev->feature_cap, 1);
 	if (err) {
@@ -2995,7 +2995,6 @@ static int spnic_func_init(struct rte_eth_dev *eth_dev)
 		goto alloc_mc_list_fail;
 	}
 
-	eth_dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
 	/* Create hardware device */
 	nic_dev->hwdev = rte_zmalloc("spnic_hwdev", sizeof(*nic_dev->hwdev),
 				     RTE_CACHE_LINE_SIZE);

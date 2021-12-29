@@ -577,10 +577,10 @@ struct spnic_cmd_set_rq_flush {
 	};
 };
 
-int spnic_l2nic_msg_to_mgmt_sync(void *hwdev, u16 cmd, void *buf_in, u16 in_size,
+int spnic_l2nic_msg_to_mgmt_sync(struct spnic_hwdev *hwdev, u16 cmd, void *buf_in, u16 in_size,
 			   void *buf_out, u16 *out_size);
 
-int spnic_set_ci_table(void *hwdev, struct spnic_sq_attr *attr);
+int spnic_set_ci_table(struct spnic_hwdev *hwdev, struct spnic_sq_attr *attr);
 
 /**
  * Update MAC address to hardware
@@ -599,7 +599,7 @@ int spnic_set_ci_table(void *hwdev, struct spnic_sq_attr *attr);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_update_mac(void *hwdev, u8 *old_mac, u8 *new_mac, u16 vlan_id,
+int spnic_update_mac(struct spnic_hwdev *hwdev, u8 *old_mac, u8 *new_mac, u16 vlan_id,
 		     u16 func_id);
 
 /**
@@ -615,7 +615,7 @@ int spnic_update_mac(void *hwdev, u8 *old_mac, u8 *new_mac, u16 vlan_id,
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_get_default_mac(void *hwdev, u8 *mac_addr, int ether_len);
+int spnic_get_default_mac(struct spnic_hwdev *hwdev, u8 *mac_addr, int ether_len);
 
 /**
  * Set mac address
@@ -632,7 +632,7 @@ int spnic_get_default_mac(void *hwdev, u8 *mac_addr, int ether_len);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_set_mac(void *hwdev, const u8 *mac_addr, u16 vlan_id, u16 func_id);
+int spnic_set_mac(struct spnic_hwdev *hwdev, const u8 *mac_addr, u16 vlan_id, u16 func_id);
 
 /**
  * Delete MAC address
@@ -649,7 +649,7 @@ int spnic_set_mac(void *hwdev, const u8 *mac_addr, u16 vlan_id, u16 func_id);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_del_mac(void *hwdev, const u8 *mac_addr, u16 vlan_id, u16 func_id);
+int spnic_del_mac(struct spnic_hwdev *hwdev, const u8 *mac_addr, u16 vlan_id, u16 func_id);
 
 /**
  * Set function mtu
@@ -662,7 +662,7 @@ int spnic_del_mac(void *hwdev, const u8 *mac_addr, u16 vlan_id, u16 func_id);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_set_port_mtu(void *hwdev, u16 new_mtu);
+int spnic_set_port_mtu(struct spnic_hwdev *hwdev, u16 new_mtu);
 
 /**
  * Set function valid status
@@ -675,7 +675,7 @@ int spnic_set_port_mtu(void *hwdev, u16 new_mtu);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_set_vport_enable(void *hwdev, bool enable);
+int spnic_set_vport_enable(struct spnic_hwdev *hwdev, bool enable);
 
 /**
  * Set port status
@@ -688,7 +688,7 @@ int spnic_set_vport_enable(void *hwdev, bool enable);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_set_port_enable(void *hwdev, bool enable);
+int spnic_set_port_enable(struct spnic_hwdev *hwdev, bool enable);
 
 /**
  * Get link state
@@ -701,7 +701,7 @@ int spnic_set_port_enable(void *hwdev, bool enable);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_get_link_state(void *hwdev, u8 *link_state);
+int spnic_get_link_state(struct spnic_hwdev *hwdev, u8 *link_state);
 
 /**
  * Flush queue pairs resource in hardware
@@ -712,7 +712,7 @@ int spnic_get_link_state(void *hwdev, u8 *link_state);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_flush_qps_res(void *hwdev);
+int spnic_flush_qps_res(struct spnic_hwdev *hwdev);
 
 /**
  * Set pause info
@@ -725,7 +725,7 @@ int spnic_flush_qps_res(void *hwdev);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_set_pause_info(void *hwdev, struct nic_pause_config nic_pause);
+int spnic_set_pause_info(struct spnic_hwdev *hwdev, struct nic_pause_config nic_pause);
 
 /**
  * Get pause info
@@ -738,7 +738,7 @@ int spnic_set_pause_info(void *hwdev, struct nic_pause_config nic_pause);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_get_pause_info(void *hwdev, struct nic_pause_config *nic_pause);
+int spnic_get_pause_info(struct spnic_hwdev *hwdev, struct nic_pause_config *nic_pause);
 
 /**
  * Get function stats
@@ -751,7 +751,7 @@ int spnic_get_pause_info(void *hwdev, struct nic_pause_config *nic_pause);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_get_vport_stats(void *hwdev, struct spnic_vport_stats *stats);
+int spnic_get_vport_stats(struct spnic_hwdev *hwdev, struct spnic_vport_stats *stats);
 
 /**
  * Get port stats
@@ -764,7 +764,7 @@ int spnic_get_vport_stats(void *hwdev, struct spnic_vport_stats *stats);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_get_phy_port_stats(void *hwdev, struct mag_phy_port_stats *stats);
+int spnic_get_phy_port_stats(struct spnic_hwdev *hwdev, struct mag_phy_port_stats *stats);
 
 /**
  * Clear function stats
@@ -777,7 +777,7 @@ int spnic_get_phy_port_stats(void *hwdev, struct mag_phy_port_stats *stats);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_clear_vport_stats(void *hwdev);
+int spnic_clear_vport_stats(struct spnic_hwdev *hwdev);
 
 /**
  * Clear port stats
@@ -790,7 +790,7 @@ int spnic_clear_vport_stats(void *hwdev);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_clear_phy_port_stats(void *hwdev);
+int spnic_clear_phy_port_stats(struct spnic_hwdev *hwdev);
 
 /**
  * Init nic hwdev
@@ -801,7 +801,7 @@ int spnic_clear_phy_port_stats(void *hwdev);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_init_nic_hwdev(void *hwdev);
+int spnic_init_nic_hwdev(struct spnic_hwdev *hwdev);
 
 /**
  * Free nic hwdev
@@ -809,7 +809,7 @@ int spnic_init_nic_hwdev(void *hwdev);
  * @param[in] hwdev
  *   Device pointer to hwdev
  */
-void spnic_free_nic_hwdev(void *hwdev);
+void spnic_free_nic_hwdev(struct spnic_hwdev *hwdev);
 
 /**
  * Set function rx mode
@@ -822,7 +822,7 @@ void spnic_free_nic_hwdev(void *hwdev);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_set_rx_mode(void *hwdev, u32 enable);
+int spnic_set_rx_mode(struct spnic_hwdev *hwdev, u32 enable);
 
 /**
  * Set function vlan offload valid state
@@ -835,7 +835,7 @@ int spnic_set_rx_mode(void *hwdev, u32 enable);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_set_rx_vlan_offload(void *hwdev, u8 en);
+int spnic_set_rx_vlan_offload(struct spnic_hwdev *hwdev, u8 en);
 
 /**
  * Set rx LRO configuration
@@ -852,7 +852,7 @@ int spnic_set_rx_vlan_offload(void *hwdev, u8 en);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_set_rx_lro_state(void *hwdev, u8 lro_en, u32 lro_timer,
+int spnic_set_rx_lro_state(struct spnic_hwdev *hwdev, u8 lro_en, u32 lro_timer,
 			   u32 lro_max_pkt_len);
 
 /**
@@ -866,9 +866,9 @@ int spnic_set_rx_lro_state(void *hwdev, u8 lro_en, u32 lro_timer,
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_get_port_info(void *hwdev, struct nic_port_info *port_info);
+int spnic_get_port_info(struct spnic_hwdev *hwdev, struct nic_port_info *port_info);
 
-int spnic_init_function_table(void *hwdev, u16 rx_buff_len);
+int spnic_init_function_table(struct spnic_hwdev *hwdev, u16 rx_buff_len);
 
 /**
  * Alloc RSS template table
@@ -879,7 +879,7 @@ int spnic_init_function_table(void *hwdev, u16 rx_buff_len);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_rss_template_alloc(void *hwdev);
+int spnic_rss_template_alloc(struct spnic_hwdev *hwdev);
 
 /**
  * Free RSS template table
@@ -890,7 +890,7 @@ int spnic_rss_template_alloc(void *hwdev);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_rss_template_free(void *hwdev);
+int spnic_rss_template_free(struct spnic_hwdev *hwdev);
 
 /**
  * Set RSS indirect table
@@ -903,7 +903,7 @@ int spnic_rss_template_free(void *hwdev);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_rss_set_indir_tbl(void *hwdev, const u32 *indir_table);
+int spnic_rss_set_indir_tbl(struct spnic_hwdev *hwdev, const u32 *indir_table);
 
 /**
  * Get RSS indirect table
@@ -916,7 +916,7 @@ int spnic_rss_set_indir_tbl(void *hwdev, const u32 *indir_table);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_rss_get_indir_tbl(void *hwdev, u32 *indir_table);
+int spnic_rss_get_indir_tbl(struct spnic_hwdev *hwdev, u32 *indir_table);
 
 /**
  * Set RSS type
@@ -929,7 +929,7 @@ int spnic_rss_get_indir_tbl(void *hwdev, u32 *indir_table);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_set_rss_type(void *hwdev, struct spnic_rss_type rss_type);
+int spnic_set_rss_type(struct spnic_hwdev *hwdev, struct spnic_rss_type rss_type);
 
 /**
  * Get RSS type
@@ -942,7 +942,7 @@ int spnic_set_rss_type(void *hwdev, struct spnic_rss_type rss_type);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_get_rss_type(void *hwdev, struct spnic_rss_type *rss_type);
+int spnic_get_rss_type(struct spnic_hwdev *hwdev, struct spnic_rss_type *rss_type);
 
 /**
  * Get RSS hash engine
@@ -955,7 +955,7 @@ int spnic_get_rss_type(void *hwdev, struct spnic_rss_type *rss_type);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_rss_get_hash_engine(void *hwdev, u8 *type);
+int spnic_rss_get_hash_engine(struct spnic_hwdev *hwdev, u8 *type);
 
 /**
  * Set RSS hash engine
@@ -968,7 +968,7 @@ int spnic_rss_get_hash_engine(void *hwdev, u8 *type);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_rss_set_hash_engine(void *hwdev, u8 type);
+int spnic_rss_set_hash_engine(struct spnic_hwdev *hwdev, u8 type);
 
 /**
  * Set RSS configuration
@@ -985,7 +985,7 @@ int spnic_rss_set_hash_engine(void *hwdev, u8 type);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_rss_cfg(void *hwdev, u8 rss_en, u8 tc_num, u8 *prio_tc);
+int spnic_rss_cfg(struct spnic_hwdev *hwdev, u8 rss_en, u8 tc_num, u8 *prio_tc);
 
 /**
  * Set RSS hash key
@@ -998,7 +998,7 @@ int spnic_rss_cfg(void *hwdev, u8 rss_en, u8 tc_num, u8 *prio_tc);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_rss_set_hash_key(void *hwdev, u8 *key);
+int spnic_rss_set_hash_key(struct spnic_hwdev *hwdev, u8 *key);
 
 /**
  * Get RSS hash key
@@ -1011,7 +1011,7 @@ int spnic_rss_set_hash_key(void *hwdev, u8 *key);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_rss_get_hash_key(void *hwdev, u8 *key);
+int spnic_rss_get_hash_key(struct spnic_hwdev *hwdev, u8 *key);
 
 /**
  * Add vlan to hardware
@@ -1026,7 +1026,7 @@ int spnic_rss_get_hash_key(void *hwdev, u8 *key);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_add_vlan(void *hwdev, u16 vlan_id, u16 func_id);
+int spnic_add_vlan(struct spnic_hwdev *hwdev, u16 vlan_id, u16 func_id);
 
 /**
  * Delete vlan
@@ -1041,7 +1041,7 @@ int spnic_add_vlan(void *hwdev, u16 vlan_id, u16 func_id);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_del_vlan(void *hwdev, u16 vlan_id, u16 func_id);
+int spnic_del_vlan(struct spnic_hwdev *hwdev, u16 vlan_id, u16 func_id);
 
 /**
  * Set vlan filter
@@ -1054,7 +1054,7 @@ int spnic_del_vlan(void *hwdev, u16 vlan_id, u16 func_id);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_set_vlan_fliter(void *hwdev, u32 vlan_filter_ctrl);
+int spnic_set_vlan_fliter(struct spnic_hwdev *hwdev, u32 vlan_filter_ctrl);
 
 /**
  * Get VF function default cos
@@ -1067,7 +1067,7 @@ int spnic_set_vlan_fliter(void *hwdev, u32 vlan_filter_ctrl);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_vf_get_default_cos(void *hwdev, u8 *cos_id);
+int spnic_vf_get_default_cos(struct spnic_hwdev *hwdev, u8 *cos_id);
 
 /**
  * Flush rx queue resource
@@ -1080,7 +1080,7 @@ int spnic_vf_get_default_cos(void *hwdev, u8 *cos_id);
  * @retval zero : Success
  * @retval non-zero : Failure
  */
-int spnic_set_rq_flush(void *hwdev, u16 q_id);
+int spnic_set_rq_flush(struct spnic_hwdev *hwdev, u16 q_id);
 
 /**
  * Get service feature HW supported
@@ -1094,7 +1094,7 @@ int spnic_set_rq_flush(void *hwdev, u16 q_id);
  * @retval zero: Success
  * @retval non-zero: Failure
  */
-int spnic_get_feature_from_hw(void *hwdev, u64 *s_feature, u16 size);
+int spnic_get_feature_from_hw(struct spnic_hwdev *hwdev, u64 *s_feature, u16 size);
 
 /**
  * Set service feature driver supported to hardware
@@ -1105,6 +1105,6 @@ int spnic_get_feature_from_hw(void *hwdev, u64 *s_feature, u16 size);
  * @retval zero: Success
  * @retval non-zero: Failure
  */
-int spnic_set_feature_to_hw(void *hwdev, u64 *s_feature, u16 size);
+int spnic_set_feature_to_hw(struct spnic_hwdev *hwdev, u64 *s_feature, u16 size);
 
 #endif /* _SPNIC_NIC_CFG_H_ */

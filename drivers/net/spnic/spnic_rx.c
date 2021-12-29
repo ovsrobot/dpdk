@@ -8,14 +8,14 @@
 
 #include "base/spnic_compat.h"
 #include "base/spnic_cmd.h"
-#include "base/spnic_hwif.h"
 #include "base/spnic_hwdev.h"
+#include "base/spnic_hwif.h"
 #include "base/spnic_wq.h"
 #include "base/spnic_mgmt.h"
 #include "base/spnic_nic_cfg.h"
+#include "spnic_ethdev.h"
 #include "spnic_io.h"
 #include "spnic_rx.h"
-#include "spnic_ethdev.h"
 
 /**
  * Get receive queue wqe

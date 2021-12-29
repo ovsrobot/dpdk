@@ -67,10 +67,9 @@ void *spnic_read_wqe(struct spnic_wq *wq, int num_wqebbs, u16 *cons_idx)
 	return WQ_WQE_ADDR(wq, (u32)(*cons_idx));
 }
 
-int spnic_cmdq_alloc(struct spnic_wq *wq, void *dev, int cmdq_blocks,
+int spnic_cmdq_alloc(struct spnic_wq *wq, struct spnic_hwdev *hwdev, int cmdq_blocks,
 		     u32 wq_buf_size, u32 wqebb_shift, u16 q_depth)
 {
-	struct spnic_hwdev *hwdev = (struct spnic_hwdev *)dev;
 	int i, j;
 	int err;
 

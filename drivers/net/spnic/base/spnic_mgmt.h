@@ -97,13 +97,13 @@ struct spnic_msg_pf_to_mgmt {
 	u16 sync_msg_id;
 };
 
-int spnic_mgmt_msg_aeqe_handler(void *hwdev, u8 *header, u8 size, void *param);
+int spnic_mgmt_msg_aeqe_handler(struct spnic_hwdev *hwdev, u8 *header, u8 size, void *param);
 
 int spnic_pf_to_mgmt_init(struct spnic_hwdev *hwdev);
 
 void spnic_pf_to_mgmt_free(struct spnic_hwdev *hwdev);
 
-int spnic_msg_to_mgmt_sync(void *hwdev, enum spnic_mod_type mod, u16 cmd,
+int spnic_msg_to_mgmt_sync(struct spnic_hwdev *hwdev, enum spnic_mod_type mod, u16 cmd,
 			   void *buf_in, u16 in_size, void *buf_out,
 			   u16 *out_size, u32 timeout);
 

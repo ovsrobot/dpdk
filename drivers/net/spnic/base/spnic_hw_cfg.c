@@ -58,15 +58,15 @@ static void parse_l2nic_res_cap(struct service_cap *cap,
 		    nic_cap->max_sqs, nic_cap->max_rqs);
 }
 
-static void parse_dev_cap(struct spnic_hwdev *dev,
+static void parse_dev_cap(struct spnic_hwdev *hwdev,
 			  struct spnic_cfg_cmd_dev_cap *dev_cap,
 			  enum func_type type)
 {
-	struct service_cap *cap = &dev->cfg_mgmt->svc_cap;
+	struct service_cap *cap = &hwdev->cfg_mgmt->svc_cap;
 
 	parse_pub_res_cap(cap, dev_cap, type);
 
-	if (IS_NIC_TYPE(dev))
+	if (IS_NIC_TYPE(hwdev))
 		parse_l2nic_res_cap(cap, dev_cap);
 }
 
@@ -112,13 +112,11 @@ static int get_dev_cap(struct spnic_hwdev *hwdev)
 	return 0;
 }
 
-int spnic_cfg_mbx_vf_proc_msg(void *hwdev, __rte_unused void *pri_handle, u16 cmd,
+int spnic_cfg_mbx_vf_proc_msg(struct spnic_hwdev *hwdev, __rte_unused void *pri_handle, u16 cmd,
 			__rte_unused void *buf_in, __rte_unused u16 in_size,
 			__rte_unused void *buf_out, __rte_unused u16 *out_size)
 {
-	struct spnic_hwdev *dev = hwdev;
-
-	if (!dev)
+	if (!hwdev)
 		return -EINVAL;
 
 	PMD_DRV_LOG(WARNING,
@@ -127,9 +125,8 @@ int spnic_cfg_mbx_vf_proc_msg(void *hwdev, __rte_unused void *pri_handle, u16 cm
 	return 0;
 }
 
-int spnic_init_capability(void *dev)
+int spnic_init_capability(struct spnic_hwdev *hwdev)
 {
-	struct spnic_hwdev *hwdev = (struct spnic_hwdev *)dev;
 	struct cfg_mgmt_info *cfg_mgmt = NULL;
 	int err;
 
@@ -151,9 +148,9 @@ int spnic_init_capability(void *dev)
 	return err;
 }
 
-void spnic_free_capability(void *dev)
+void spnic_free_capability(struct spnic_hwdev *hwdev)
 {
-	rte_free(((struct spnic_hwdev *)dev)->cfg_mgmt);
+	rte_free(hwdev->cfg_mgmt);
 }
 
 /* *
@@ -162,51 +159,43 @@ void spnic_free_capability(void *dev)
  * @retval true: function support nic
  * @retval false: function not support nic
  */
-bool spnic_support_nic(void *hwdev)
+bool spnic_support_nic(struct spnic_hwdev *hwdev)
 {
-	struct spnic_hwdev *dev = (struct spnic_hwdev *)hwdev;
-
 	if (!hwdev)
 		return false;
 
-	if (!IS_NIC_TYPE(dev))
+	if (!IS_NIC_TYPE(hwdev))
 		return false;
 
 	return true;
 }
 
-u16 spnic_func_max_sqs(void *hwdev)
+u16 spnic_func_max_sqs(struct spnic_hwdev *hwdev)
 {
-	struct spnic_hwdev *dev = hwdev;
-
-	if (!dev) {
+	if (!hwdev) {
 		PMD_DRV_LOG(INFO, "Hwdev is NULL for getting max_sqs");
 		return 0;
 	}
 
-	return dev->cfg_mgmt->svc_cap.nic_cap.max_sqs;
+	return hwdev->cfg_mgmt->svc_cap.nic_cap.max_sqs;
 }
 
-u16 spnic_func_max_rqs(void *hwdev)
+u16 spnic_func_max_rqs(struct spnic_hwdev *hwdev)
 {
-	struct spnic_hwdev *dev = hwdev;
-
-	if (!dev) {
+	if (!hwdev) {
 		PMD_DRV_LOG(INFO, "Hwdev is NULL for getting max_rqs");
 		return 0;
 	}
 
-	return dev->cfg_mgmt->svc_cap.nic_cap.max_rqs;
+	return hwdev->cfg_mgmt->svc_cap.nic_cap.max_rqs;
 }
 
-u8 spnic_physical_port_id(void *hwdev)
+u8 spnic_physical_port_id(struct spnic_hwdev *hwdev)
 {
-	struct spnic_hwdev *dev = hwdev;
-
-	if (!dev) {
+	if (!hwdev) {
 		PMD_DRV_LOG(INFO, "Hwdev is NULL for getting physical port id");
 		return 0;
 	}
 
-	return dev->cfg_mgmt->svc_cap.port_id;
+	return hwdev->cfg_mgmt->svc_cap.port_id;
 }
