@@ -378,6 +378,29 @@ int spnic_set_port_enable(void *hwdev, bool enable)
 	return 0;
 }
 
+int spnic_flush_qps_res(void *hwdev)
+{
+	struct spnic_cmd_clear_qp_resource sq_res;
+	u16 out_size = sizeof(sq_res);
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	memset(&sq_res, 0, sizeof(sq_res));
+	sq_res.func_id = spnic_global_func_id(hwdev);
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_CLEAR_QP_RESOURCE, &sq_res,
+				     sizeof(sq_res), &sq_res, &out_size);
+	if (err || !out_size || sq_res.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Clear sq resources failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, sq_res.msg_head.status, out_size);
+		return -EIO;
+	}
+
+	return 0;
+}
+
 static int spnic_set_function_table(void *hwdev, u32 cfg_bitmap,
 				     struct spnic_func_tbl_cfg *cfg)
 {
