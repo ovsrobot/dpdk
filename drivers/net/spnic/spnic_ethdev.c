@@ -1258,6 +1258,233 @@ static int spnic_dev_set_mtu(struct rte_eth_dev *dev, uint16_t mtu)
 	return err;
 }
 
+
+/**
+ * Update the RSS hash key and RSS hash type.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[in] rss_conf
+ *   RSS configuration data.
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_rss_hash_update(struct rte_eth_dev *dev,
+				 struct rte_eth_rss_conf *rss_conf)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	struct spnic_rss_type rss_type = {0};
+	u64 rss_hf = rss_conf->rss_hf;
+	int err = 0;
+
+	if (nic_dev->rss_state == SPNIC_RSS_DISABLE) {
+		if (rss_hf != 0)
+			return -EINVAL;
+
+		PMD_DRV_LOG(INFO, "RSS is not enabled");
+		return 0;
+	}
+
+	if (rss_conf->rss_key_len > SPNIC_RSS_KEY_SIZE) {
+		PMD_DRV_LOG(ERR, "Invalid RSS key, rss_key_len: %d",
+			    rss_conf->rss_key_len);
+		return -EINVAL;
+	}
+
+	if (rss_conf->rss_key) {
+		err = spnic_rss_set_hash_key(nic_dev->hwdev, nic_dev->rss_key);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Set RSS hash key failed");
+			return err;
+		}
+		memcpy(nic_dev->rss_key, rss_conf->rss_key,
+		       rss_conf->rss_key_len);
+	}
+
+	rss_type.ipv4 = (rss_hf & (ETH_RSS_IPV4 | ETH_RSS_FRAG_IPV4 |
+		ETH_RSS_NONFRAG_IPV4_OTHER)) ? 1 : 0;
+	rss_type.tcp_ipv4 = (rss_hf & ETH_RSS_NONFRAG_IPV4_TCP) ? 1 : 0;
+	rss_type.ipv6 = (rss_hf & (ETH_RSS_IPV6 | ETH_RSS_FRAG_IPV6 |
+		ETH_RSS_NONFRAG_IPV6_OTHER)) ? 1 : 0;
+	rss_type.ipv6_ext = (rss_hf & ETH_RSS_IPV6_EX) ? 1 : 0;
+	rss_type.tcp_ipv6 = (rss_hf & ETH_RSS_NONFRAG_IPV6_TCP) ? 1 : 0;
+	rss_type.tcp_ipv6_ext = (rss_hf & ETH_RSS_IPV6_TCP_EX) ? 1 : 0;
+	rss_type.udp_ipv4 = (rss_hf & ETH_RSS_NONFRAG_IPV4_UDP) ? 1 : 0;
+	rss_type.udp_ipv6 = (rss_hf & ETH_RSS_NONFRAG_IPV6_UDP) ? 1 : 0;
+
+	err = spnic_set_rss_type(nic_dev->hwdev, rss_type);
+	if (err)
+		PMD_DRV_LOG(ERR, "Set RSS type failed");
+
+	return err;
+}
+
+/**
+ * Get the RSS hash configuration.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[out] rss_conf
+ *   RSS configuration data.
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_rss_conf_get(struct rte_eth_dev *dev,
+			      struct rte_eth_rss_conf *rss_conf)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	struct spnic_rss_type rss_type = {0};
+	int err;
+
+	if (!rss_conf)
+		return -EINVAL;
+
+	if (nic_dev->rss_state == SPNIC_RSS_DISABLE) {
+		rss_conf->rss_hf = 0;
+		PMD_DRV_LOG(INFO, "RSS is not enabled");
+		return 0;
+	}
+
+	if (rss_conf->rss_key &&
+	    rss_conf->rss_key_len >= SPNIC_RSS_KEY_SIZE) {
+		/*
+		 * Get RSS key from driver to reduce the frequency of the MPU
+		 * accessing the RSS memory.
+		 */
+		rss_conf->rss_key_len = sizeof(nic_dev->rss_key);
+		memcpy(rss_conf->rss_key, nic_dev->rss_key,
+		       rss_conf->rss_key_len);
+	}
+
+	err = spnic_get_rss_type(nic_dev->hwdev, &rss_type);
+	if (err)
+		return err;
+
+	rss_conf->rss_hf = 0;
+	rss_conf->rss_hf |=  rss_type.ipv4 ? (ETH_RSS_IPV4 |
+		ETH_RSS_FRAG_IPV4 | ETH_RSS_NONFRAG_IPV4_OTHER) : 0;
+	rss_conf->rss_hf |=  rss_type.tcp_ipv4 ? ETH_RSS_NONFRAG_IPV4_TCP : 0;
+	rss_conf->rss_hf |=  rss_type.ipv6 ? (ETH_RSS_IPV6 |
+		ETH_RSS_FRAG_IPV6 | ETH_RSS_NONFRAG_IPV6_OTHER) : 0;
+	rss_conf->rss_hf |=  rss_type.ipv6_ext ? ETH_RSS_IPV6_EX : 0;
+	rss_conf->rss_hf |=  rss_type.tcp_ipv6 ? ETH_RSS_NONFRAG_IPV6_TCP : 0;
+	rss_conf->rss_hf |=  rss_type.tcp_ipv6_ext ? ETH_RSS_IPV6_TCP_EX : 0;
+	rss_conf->rss_hf |=  rss_type.udp_ipv4 ? ETH_RSS_NONFRAG_IPV4_UDP : 0;
+	rss_conf->rss_hf |=  rss_type.udp_ipv6 ? ETH_RSS_NONFRAG_IPV6_UDP : 0;
+
+	return 0;
+}
+
+/**
+ * Get the RETA indirection table.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[out] reta_conf
+ *   Pointer to RETA configuration structure array.
+ * @param[in] reta_size
+ *   Size of the RETA table.
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_rss_reta_query(struct rte_eth_dev *dev,
+				struct rte_eth_rss_reta_entry64 *reta_conf,
+				uint16_t reta_size)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	u32 indirtbl[SPNIC_RSS_INDIR_SIZE] = {0};
+	u16 idx, shift;
+	u16 i;
+	int err;
+
+	if (nic_dev->rss_state == SPNIC_RSS_DISABLE) {
+		PMD_DRV_LOG(INFO, "RSS is not enabled");
+		return 0;
+	}
+
+	if (reta_size != SPNIC_RSS_INDIR_SIZE) {
+		PMD_DRV_LOG(ERR, "Invalid reta size, reta_size: %d", reta_size);
+		return -EINVAL;
+	}
+
+	err = spnic_rss_get_indir_tbl(nic_dev->hwdev, indirtbl);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Get RSS retas table failed, error: %d",
+			    err);
+		return err;
+	}
+
+	for (i = 0; i < reta_size; i++) {
+		idx = i / RTE_RETA_GROUP_SIZE;
+		shift = i % RTE_RETA_GROUP_SIZE;
+		if (reta_conf[idx].mask & (1ULL << shift))
+			reta_conf[idx].reta[shift] = (uint16_t)indirtbl[i];
+	}
+
+	return 0;
+}
+
+/**
+ * Update the RETA indirection table.
+ *
+ * @param[in] dev
+ *   Pointer to ethernet device structure.
+ * @param[in] reta_conf
+ *   Pointer to RETA configuration structure array.
+ * @param[in] reta_size
+ *   Size of the RETA table.
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+static int spnic_rss_reta_update(struct rte_eth_dev *dev,
+				 struct rte_eth_rss_reta_entry64 *reta_conf,
+				 uint16_t reta_size)
+{
+	struct spnic_nic_dev *nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	u32 indirtbl[SPNIC_RSS_INDIR_SIZE] = {0};
+	u16 idx, shift;
+	u16 i;
+	int err;
+
+	if (nic_dev->rss_state == SPNIC_RSS_DISABLE)
+		return 0;
+
+	if (reta_size != SPNIC_RSS_INDIR_SIZE) {
+		PMD_DRV_LOG(ERR, "Invalid reta size, reta_size: %d", reta_size);
+		return -EINVAL;
+	}
+
+	err = spnic_rss_get_indir_tbl(nic_dev->hwdev, indirtbl);
+	if (err)
+		return err;
+
+	/* Update RSS reta table */
+	for (i = 0; i < reta_size; i++) {
+		idx = i / RTE_RETA_GROUP_SIZE;
+		shift = i % RTE_RETA_GROUP_SIZE;
+		if (reta_conf[idx].mask & (1ULL << shift))
+			indirtbl[i] = reta_conf[idx].reta[shift];
+	}
+
+	for (i = 0 ; i < reta_size; i++) {
+		if (indirtbl[i] >= nic_dev->num_rqs) {
+			PMD_DRV_LOG(ERR, "Invalid reta entry, index: %d, num_rqs: %d",
+				    indirtbl[i], nic_dev->num_rqs);
+			return -EFAULT;
+		}
+	}
+
+	err = spnic_rss_set_indir_tbl(nic_dev->hwdev, indirtbl);
+	if (err)
+		PMD_DRV_LOG(ERR, "Set RSS reta table failed");
+
+	return err;
+}
+
 /**
  * Update MAC address
  *
@@ -1465,6 +1692,10 @@ static const struct eth_dev_ops spnic_pmd_ops = {
 	.dev_stop                      = spnic_dev_stop,
 	.dev_close                     = spnic_dev_close,
 	.mtu_set                       = spnic_dev_set_mtu,
+	.rss_hash_update               = spnic_rss_hash_update,
+	.rss_hash_conf_get             = spnic_rss_conf_get,
+	.reta_update                   = spnic_rss_reta_update,
+	.reta_query                    = spnic_rss_reta_query,
 	.mac_addr_set                  = spnic_set_mac_addr,
 	.mac_addr_remove               = spnic_mac_addr_remove,
 	.mac_addr_add                  = spnic_mac_addr_add,
@@ -1484,6 +1715,10 @@ static const struct eth_dev_ops spnic_pmd_vf_ops = {
 	.dev_stop                      = spnic_dev_stop,
 	.dev_close                     = spnic_dev_close,
 	.mtu_set                       = spnic_dev_set_mtu,
+	.rss_hash_update               = spnic_rss_hash_update,
+	.rss_hash_conf_get             = spnic_rss_conf_get,
+	.reta_update                   = spnic_rss_reta_update,
+	.reta_query                    = spnic_rss_reta_query,
 	.mac_addr_set                  = spnic_set_mac_addr,
 	.mac_addr_remove               = spnic_mac_addr_remove,
 	.mac_addr_add                  = spnic_mac_addr_add,
