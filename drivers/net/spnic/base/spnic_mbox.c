@@ -10,6 +10,7 @@
 #include "spnic_mgmt.h"
 #include "spnic_hwif.h"
 #include "spnic_eqs.h"
+#include "spnic_hw_cfg.h"
 #include "spnic_mbox.h"
 #include "spnic_nic_event.h"
 
@@ -149,6 +150,13 @@ static int recv_vf_mbox_handler(struct spnic_mbox *func_to_func,
 					     recv_mbox->cmd, recv_mbox->mbox,
 					     recv_mbox->mbox_len,
 					     buf_out, out_size);
+		break;
+	case SPNIC_MOD_CFGM:
+		err = spnic_cfg_mbx_vf_proc_msg(func_to_func->hwdev,
+					  func_to_func->hwdev->cfg_mgmt,
+					  recv_mbox->cmd, recv_mbox->mbox,
+					  recv_mbox->mbox_len,
+					  buf_out, out_size);
 		break;
 	case SPNIC_MOD_L2NIC:
 		err = spnic_vf_event_handler(func_to_func->hwdev,

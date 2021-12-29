@@ -96,6 +96,18 @@ enum spnic_fw_ver_type {
 	SPNIC_FW_VER_TYPE_CFG,
 };
 
+#define MGMT_MSG_CMD_OP_SET	1
+#define MGMT_MSG_CMD_OP_GET	0
+
+struct comm_cmd_feature_nego {
+	struct mgmt_msg_head head;
+
+	u16 func_id;
+	u8 opcode;	/* 1: set, 0: get */
+	u8 rsvd;
+	u64 s_feature[MAX_FEATURE_QWORD];
+};
+
 struct comm_cmd_dma_attr_config {
 	struct mgmt_msg_head head;
 
@@ -162,6 +174,12 @@ struct interrupt_info {
 	u8 resend_timer_cfg;
 };
 
+int spnic_func_reset(void *hwdev, u64 reset_flag);
+
+int spnic_get_mgmt_version(void *hwdev, char *mgmt_ver, int max_mgmt_len);
+
+int spnic_get_board_info(void *hwdev, struct spnic_board_info *info);
+
 int spnic_get_interrupt_cfg(void *dev, struct interrupt_info *info);
 
 int spnic_set_interrupt_cfg(void *dev, struct interrupt_info info);
@@ -169,6 +187,10 @@ int spnic_set_interrupt_cfg(void *dev, struct interrupt_info info);
 int spnic_set_wq_page_size(void *hwdev, u16 func_idx, u32 page_size);
 
 int spnic_set_cmdq_depth(void *hwdev, u16 cmdq_depth);
+
+int spnic_get_comm_features(void *hwdev, u64 *s_feature, u16 size);
+
+int spnic_set_comm_features(void *hwdev, u64 *s_feature, u16 size);
 
 int spnic_set_dma_attr_tbl(struct spnic_hwdev *hwdev, u32 entry_idx, u8 st,
 			   u8 at, u8 ph, u8 no_snooping, u8 tph_en);
