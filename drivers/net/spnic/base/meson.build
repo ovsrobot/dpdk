@@ -5,7 +5,9 @@ sources = [
 	'spnic_eqs.c',
 	'spnic_hwdev.c',
 	'spnic_hwif.c',
-	'spnic_mbox.c'
+	'spnic_mbox.c',
+	'spnic_mgmt.c',
+	'spnic_nic_event.c'
 ]
 
 extra_flags = []
