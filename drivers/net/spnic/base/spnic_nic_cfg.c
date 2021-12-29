@@ -493,6 +493,124 @@ int spnic_get_pause_info(void *hwdev, struct nic_pause_config *nic_pause)
 	return spnic_cfg_hw_pause(hwdev, SPNIC_CMD_OP_GET, nic_pause);
 }
 
+int spnic_get_vport_stats(void *hwdev, struct spnic_vport_stats *stats)
+{
+	struct spnic_port_stats_info stats_info;
+	struct spnic_cmd_vport_stats vport_stats;
+	u16 out_size = sizeof(vport_stats);
+	int err;
+
+	if (!hwdev || !stats)
+		return -EINVAL;
+
+	memset(&stats_info, 0, sizeof(stats_info));
+	memset(&vport_stats, 0, sizeof(vport_stats));
+
+	stats_info.func_id = spnic_global_func_id(hwdev);
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_GET_VPORT_STAT,
+				     &stats_info, sizeof(stats_info),
+				     &vport_stats, &out_size);
+	if (err || !out_size || vport_stats.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Get function stats failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, vport_stats.msg_head.status, out_size);
+		return -EIO;
+	}
+
+	memcpy(stats, &vport_stats.stats, sizeof(*stats));
+
+	return 0;
+}
+
+int spnic_get_phy_port_stats(void *hwdev, struct mag_phy_port_stats *stats)
+{
+	struct mag_cmd_get_port_stat *port_stats = NULL;
+	struct mag_cmd_port_stats_info stats_info;
+	u16 out_size = sizeof(*port_stats);
+	int err;
+
+	port_stats = rte_zmalloc("port_stats", sizeof(*port_stats), 0);
+	if (!port_stats)
+		return -ENOMEM;
+
+	memset(&stats_info, 0, sizeof(stats_info));
+	stats_info.port_id = spnic_physical_port_id(hwdev);
+
+	err = mag_msg_to_mgmt_sync(hwdev, MAG_CMD_GET_PORT_STAT,
+				   &stats_info, sizeof(stats_info),
+				   port_stats, &out_size);
+	if (err || !out_size || port_stats->head.status) {
+		PMD_DRV_LOG(ERR,
+			"Failed to get port statistics, err: %d, status: 0x%x, out size: 0x%x\n",
+			err, port_stats->head.status, out_size);
+		err = -EIO;
+		goto out;
+	}
+
+	memcpy(stats, &port_stats->counter, sizeof(*stats));
+
+out:
+	rte_free(port_stats);
+
+	return err;
+}
+
+int spnic_clear_vport_stats(void *hwdev)
+{
+	struct spnic_cmd_clear_vport_stats clear_vport_stats;
+	u16 out_size = sizeof(clear_vport_stats);
+	int err;
+
+	if (!hwdev) {
+		PMD_DRV_LOG(ERR, "Hwdev is NULL");
+		return -EINVAL;
+	}
+
+	memset(&clear_vport_stats, 0, sizeof(clear_vport_stats));
+	clear_vport_stats.func_id = spnic_global_func_id(hwdev);
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_CLEAN_VPORT_STAT,
+				     &clear_vport_stats,
+				     sizeof(clear_vport_stats),
+				     &clear_vport_stats, &out_size);
+	if (err || !out_size || clear_vport_stats.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Clear vport stats failed, err: %d, status: 0x%x, out size: 0x%x",
+			    err, clear_vport_stats.msg_head.status, out_size);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int spnic_clear_phy_port_stats(void *hwdev)
+{
+	struct mag_cmd_clr_port_stat *port_stats = NULL;
+	u16 out_size = sizeof(*port_stats);
+	int err;
+
+	port_stats = rte_zmalloc("port_stats", sizeof(*port_stats), 0);
+	if (!port_stats)
+		return -ENOMEM;
+
+	port_stats->port_id = spnic_physical_port_id(hwdev);
+
+	err = mag_msg_to_mgmt_sync(hwdev, MAG_CMD_GET_PORT_STAT,
+				   &port_stats, sizeof(port_stats),
+				   port_stats, &out_size);
+	if (err || !out_size || port_stats->head.status) {
+		PMD_DRV_LOG(ERR,
+			"Failed to get port statistics, err: %d, status: 0x%x, out size: 0x%x\n",
+			err, port_stats->head.status, out_size);
+		err = -EIO;
+		goto out;
+	}
+
+out:
+	rte_free(port_stats);
+
+	return err;
+}
+
 static int spnic_set_function_table(void *hwdev, u32 cfg_bitmap,
 				     struct spnic_func_tbl_cfg *cfg)
 {

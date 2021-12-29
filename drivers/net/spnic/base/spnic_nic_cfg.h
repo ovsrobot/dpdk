@@ -259,6 +259,160 @@ struct spnic_cmd_clear_qp_resource {
 	u16 rsvd1;
 };
 
+struct spnic_port_stats_info {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u16 rsvd1;
+};
+
+struct spnic_vport_stats {
+	u64 tx_unicast_pkts_vport;
+	u64 tx_unicast_bytes_vport;
+	u64 tx_multicast_pkts_vport;
+	u64 tx_multicast_bytes_vport;
+	u64 tx_broadcast_pkts_vport;
+	u64 tx_broadcast_bytes_vport;
+
+	u64 rx_unicast_pkts_vport;
+	u64 rx_unicast_bytes_vport;
+	u64 rx_multicast_pkts_vport;
+	u64 rx_multicast_bytes_vport;
+	u64 rx_broadcast_pkts_vport;
+	u64 rx_broadcast_bytes_vport;
+
+	u64 tx_discard_vport;
+	u64 rx_discard_vport;
+	u64 tx_err_vport;
+	u64 rx_err_vport;
+};
+
+struct spnic_cmd_vport_stats {
+	struct mgmt_msg_head msg_head;
+
+	u32 stats_size;
+	u32 rsvd1;
+	struct spnic_vport_stats stats;
+	u64 rsvd2[6];
+};
+
+struct mag_phy_port_stats {
+	u64 mac_tx_fragment_pkt_num;
+	u64 mac_tx_undersize_pkt_num;
+	u64 mac_tx_undermin_pkt_num;
+	u64 mac_tx_64_oct_pkt_num;
+	u64 mac_tx_65_127_oct_pkt_num;
+	u64 mac_tx_128_255_oct_pkt_num;
+	u64 mac_tx_256_511_oct_pkt_num;
+	u64 mac_tx_512_1023_oct_pkt_num;
+	u64 mac_tx_1024_1518_oct_pkt_num;
+	u64 mac_tx_1519_2047_oct_pkt_num;
+	u64 mac_tx_2048_4095_oct_pkt_num;
+	u64 mac_tx_4096_8191_oct_pkt_num;
+	u64 mac_tx_8192_9216_oct_pkt_num;
+	u64 mac_tx_9217_12287_oct_pkt_num;
+	u64 mac_tx_12288_16383_oct_pkt_num;
+	u64 mac_tx_1519_max_bad_pkt_num;
+	u64 mac_tx_1519_max_good_pkt_num;
+	u64 mac_tx_oversize_pkt_num;
+	u64 mac_tx_jabber_pkt_num;
+	u64 mac_tx_bad_pkt_num;
+	u64 mac_tx_bad_oct_num;
+	u64 mac_tx_good_pkt_num;
+	u64 mac_tx_good_oct_num;
+	u64 mac_tx_total_pkt_num;
+	u64 mac_tx_total_oct_num;
+	u64 mac_tx_uni_pkt_num;
+	u64 mac_tx_multi_pkt_num;
+	u64 mac_tx_broad_pkt_num;
+	u64 mac_tx_pause_num;
+	u64 mac_tx_pfc_pkt_num;
+	u64 mac_tx_pfc_pri0_pkt_num;
+	u64 mac_tx_pfc_pri1_pkt_num;
+	u64 mac_tx_pfc_pri2_pkt_num;
+	u64 mac_tx_pfc_pri3_pkt_num;
+	u64 mac_tx_pfc_pri4_pkt_num;
+	u64 mac_tx_pfc_pri5_pkt_num;
+	u64 mac_tx_pfc_pri6_pkt_num;
+	u64 mac_tx_pfc_pri7_pkt_num;
+	u64 mac_tx_control_pkt_num;
+	u64 mac_tx_err_all_pkt_num;
+	u64 mac_tx_from_app_good_pkt_num;
+	u64 mac_tx_from_app_bad_pkt_num;
+
+	u64 mac_rx_fragment_pkt_num;
+	u64 mac_rx_undersize_pkt_num;
+	u64 mac_rx_undermin_pkt_num;
+	u64 mac_rx_64_oct_pkt_num;
+	u64 mac_rx_65_127_oct_pkt_num;
+	u64 mac_rx_128_255_oct_pkt_num;
+	u64 mac_rx_256_511_oct_pkt_num;
+	u64 mac_rx_512_1023_oct_pkt_num;
+	u64 mac_rx_1024_1518_oct_pkt_num;
+	u64 mac_rx_1519_2047_oct_pkt_num;
+	u64 mac_rx_2048_4095_oct_pkt_num;
+	u64 mac_rx_4096_8191_oct_pkt_num;
+	u64 mac_rx_8192_9216_oct_pkt_num;
+	u64 mac_rx_9217_12287_oct_pkt_num;
+	u64 mac_rx_12288_16383_oct_pkt_num;
+	u64 mac_rx_1519_max_bad_pkt_num;
+	u64 mac_rx_1519_max_good_pkt_num;
+	u64 mac_rx_oversize_pkt_num;
+	u64 mac_rx_jabber_pkt_num;
+	u64 mac_rx_bad_pkt_num;
+	u64 mac_rx_bad_oct_num;
+	u64 mac_rx_good_pkt_num;
+	u64 mac_rx_good_oct_num;
+	u64 mac_rx_total_pkt_num;
+	u64 mac_rx_total_oct_num;
+	u64 mac_rx_uni_pkt_num;
+	u64 mac_rx_multi_pkt_num;
+	u64 mac_rx_broad_pkt_num;
+	u64 mac_rx_pause_num;
+	u64 mac_rx_pfc_pkt_num;
+	u64 mac_rx_pfc_pri0_pkt_num;
+	u64 mac_rx_pfc_pri1_pkt_num;
+	u64 mac_rx_pfc_pri2_pkt_num;
+	u64 mac_rx_pfc_pri3_pkt_num;
+	u64 mac_rx_pfc_pri4_pkt_num;
+	u64 mac_rx_pfc_pri5_pkt_num;
+	u64 mac_rx_pfc_pri6_pkt_num;
+	u64 mac_rx_pfc_pri7_pkt_num;
+	u64 mac_rx_control_pkt_num;
+	u64 mac_rx_sym_err_pkt_num;
+	u64 mac_rx_fcs_err_pkt_num;
+	u64 mac_rx_send_app_good_pkt_num;
+	u64 mac_rx_send_app_bad_pkt_num;
+	u64 mac_rx_unfilter_pkt_num;
+};
+
+struct mag_cmd_port_stats_info {
+	struct mgmt_msg_head head;
+
+	u8 port_id;
+	u8 rsvd0[3];
+};
+
+struct mag_cmd_get_port_stat {
+	struct mgmt_msg_head head;
+
+	struct mag_phy_port_stats counter;
+	u64 rsvd1[15];
+};
+
+struct mag_cmd_clr_port_stat {
+	struct mgmt_msg_head head;
+
+	u8 port_id;
+	u8 rsvd0[3];
+};
+
+struct spnic_cmd_clear_vport_stats {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u16 rsvd;
+};
 
 enum spnic_func_tbl_cfg_bitmap {
 	FUNC_CFG_INIT,
@@ -585,6 +739,58 @@ int spnic_set_pause_info(void *hwdev, struct nic_pause_config nic_pause);
  * @retval non-zero : Failure
  */
 int spnic_get_pause_info(void *hwdev, struct nic_pause_config *nic_pause);
+
+/**
+ * Get function stats
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[out] stats
+ *   Function stats
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_get_vport_stats(void *hwdev, struct spnic_vport_stats *stats);
+
+/**
+ * Get port stats
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[out] stats
+ *   Port stats
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_get_phy_port_stats(void *hwdev, struct mag_phy_port_stats *stats);
+
+/**
+ * Clear function stats
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[out] stats
+ *   Function stats
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_clear_vport_stats(void *hwdev);
+
+/**
+ * Clear port stats
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ * @param[out] stats
+ *   Port stats
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_clear_phy_port_stats(void *hwdev);
 
 /**
  * Init nic hwdev
