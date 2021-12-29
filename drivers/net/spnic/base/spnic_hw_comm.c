@@ -217,6 +217,107 @@ int spnic_func_reset(void *hwdev, u64 reset_flag)
 	return 0;
 }
 
+int spnic_convert_rx_buf_size(u32 rx_buf_sz, u32 *match_sz)
+{
+	u32 i, num_hw_types, best_match_sz;
+
+	if (unlikely(!match_sz || rx_buf_sz < SPNIC_RX_BUF_SIZE_32B))
+		return -EINVAL;
+
+	if (rx_buf_sz >= SPNIC_RX_BUF_SIZE_16K) {
+		best_match_sz =  SPNIC_RX_BUF_SIZE_16K;
+		goto size_matched;
+	}
+
+	num_hw_types = sizeof(spnic_hw_rx_buf_size) /
+		sizeof(spnic_hw_rx_buf_size[0]);
+	best_match_sz = spnic_hw_rx_buf_size[0];
+	for (i = 0; i < num_hw_types; i++) {
+		if (rx_buf_sz == spnic_hw_rx_buf_size[i]) {
+			best_match_sz = spnic_hw_rx_buf_size[i];
+			break;
+		} else if (rx_buf_sz < spnic_hw_rx_buf_size[i]) {
+			break;
+		}
+		best_match_sz = spnic_hw_rx_buf_size[i];
+	}
+
+size_matched:
+	*match_sz = best_match_sz;
+
+	return 0;
+}
+
+static u16 get_hw_rx_buf_size(u32 rx_buf_sz)
+{
+	u16 num_hw_types = sizeof(spnic_hw_rx_buf_size) /
+			   sizeof(spnic_hw_rx_buf_size[0]);
+	u16 i;
+
+	for (i = 0; i < num_hw_types; i++) {
+		if (spnic_hw_rx_buf_size[i] == rx_buf_sz)
+			return i;
+	}
+
+	PMD_DRV_LOG(WARNING, "Chip can't support rx buf size of %d", rx_buf_sz);
+
+	return DEFAULT_RX_BUF_SIZE; /* Default 2K */
+}
+
+int spnic_set_root_ctxt(void *hwdev, u32 rq_depth, u32 sq_depth, u16 rx_buf_sz)
+{
+	struct spnic_cmd_root_ctxt root_ctxt;
+	u16 out_size = sizeof(root_ctxt);
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	memset(&root_ctxt, 0, sizeof(root_ctxt));
+	root_ctxt.func_idx = spnic_global_func_id(hwdev);
+	root_ctxt.set_cmdq_depth = 0;
+	root_ctxt.cmdq_depth = 0;
+	root_ctxt.lro_en = 1;
+	root_ctxt.rq_depth  = (u16)ilog2(rq_depth);
+	root_ctxt.rx_buf_sz = get_hw_rx_buf_size(rx_buf_sz);
+	root_ctxt.sq_depth  = (u16)ilog2(sq_depth);
+
+	err = spnic_msg_to_mgmt_sync(hwdev, SPNIC_MOD_COMM, MGMT_CMD_SET_VAT,
+				     &root_ctxt, sizeof(root_ctxt),
+				     &root_ctxt, &out_size, 0);
+	if (err || !out_size || root_ctxt.status) {
+		PMD_DRV_LOG(ERR, "Set root context failed, err: %d, status: 0x%x, out_size: 0x%x",
+			    err, root_ctxt.status, out_size);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+int spnic_clean_root_ctxt(void *hwdev)
+{
+	struct spnic_cmd_root_ctxt root_ctxt;
+	u16 out_size = sizeof(root_ctxt);
+	int err;
+
+	if (!hwdev)
+		return -EINVAL;
+
+	memset(&root_ctxt, 0, sizeof(root_ctxt));
+	root_ctxt.func_idx = spnic_global_func_id(hwdev);
+
+	err = spnic_msg_to_mgmt_sync(hwdev, SPNIC_MOD_COMM, MGMT_CMD_SET_VAT,
+				     &root_ctxt, sizeof(root_ctxt),
+				     &root_ctxt, &out_size, 0);
+	if (err || !out_size || root_ctxt.status) {
+		PMD_DRV_LOG(ERR, "Clean root context failed, err: %d, status: 0x%x, out_size: 0x%x",
+			    err, root_ctxt.status, out_size);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
 int spnic_set_cmdq_depth(void *hwdev, u16 cmdq_depth)
 {
 	struct spnic_cmd_root_ctxt root_ctxt;

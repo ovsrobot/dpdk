@@ -75,6 +75,42 @@ int spnic_l2nic_msg_to_mgmt_sync(void *hwdev, u16 cmd, void *buf_in, u16 in_size
 				      in_size, buf_out, out_size, 0);
 }
 
+int spnic_set_ci_table(void *hwdev, struct spnic_sq_attr *attr)
+{
+	struct spnic_cmd_cons_idx_attr cons_idx_attr;
+	u16 out_size = sizeof(cons_idx_attr);
+	int err;
+
+	if (!hwdev || !attr)
+		return -EINVAL;
+
+	memset(&cons_idx_attr, 0, sizeof(cons_idx_attr));
+	cons_idx_attr.func_idx = spnic_global_func_id(hwdev);
+	cons_idx_attr.dma_attr_off  = attr->dma_attr_off;
+	cons_idx_attr.pending_limit = attr->pending_limit;
+	cons_idx_attr.coalescing_time  = attr->coalescing_time;
+
+	if (attr->intr_en) {
+		cons_idx_attr.intr_en = attr->intr_en;
+		cons_idx_attr.intr_idx = attr->intr_idx;
+	}
+
+	cons_idx_attr.l2nic_sqn = attr->l2nic_sqn;
+	cons_idx_attr.ci_addr = attr->ci_dma_base;
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_SQ_CI_ATTR_SET,
+				     &cons_idx_attr, sizeof(cons_idx_attr),
+				     &cons_idx_attr, &out_size);
+	if (err || !out_size || cons_idx_attr.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Set ci attribute table failed, err: %d, "
+			    "status: 0x%x, out_size: 0x%x",
+			    err, cons_idx_attr.msg_head.status, out_size);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
 static int spnic_check_mac_info(u8 status, u16 vlan_id)
 {
 	if ((status && status != SPNIC_MGMT_STATUS_EXIST &&
@@ -404,6 +440,46 @@ int spnic_set_port_mtu(void *hwdev, u16 new_mtu)
 
 	return spnic_set_function_table(hwdev, BIT(FUNC_CFG_MTU),
 					&func_tbl_cfg);
+}
+
+static int nic_feature_nego(void *hwdev, u8 opcode, u64 *s_feature, u16 size)
+{
+	struct spnic_cmd_feature_nego feature_nego;
+	u16 out_size = sizeof(feature_nego);
+	int err;
+
+	if (!hwdev || !s_feature || size > MAX_FEATURE_QWORD)
+		return -EINVAL;
+
+	memset(&feature_nego, 0, sizeof(feature_nego));
+	feature_nego.func_id = spnic_global_func_id(hwdev);
+	feature_nego.opcode = opcode;
+	if (opcode == SPNIC_CMD_OP_SET)
+		memcpy(feature_nego.s_feature, s_feature, size * sizeof(u64));
+
+	err = spnic_l2nic_msg_to_mgmt_sync(hwdev, SPNIC_CMD_FEATURE_NEGO,
+				     &feature_nego, sizeof(feature_nego),
+				     &feature_nego, &out_size);
+	if (err || !out_size || feature_nego.msg_head.status) {
+		PMD_DRV_LOG(ERR, "Failed to negotiate nic feature, err:%d, status: 0x%x, out_size: 0x%x\n",
+			    err, feature_nego.msg_head.status, out_size);
+		return -EFAULT;
+	}
+
+	if (opcode == SPNIC_CMD_OP_GET)
+		memcpy(s_feature, feature_nego.s_feature, size * sizeof(u64));
+
+	return 0;
+}
+
+int spnic_get_feature_from_hw(void *hwdev, u64 *s_feature, u16 size)
+{
+	return nic_feature_nego(hwdev, SPNIC_CMD_OP_GET, s_feature, size);
+}
+
+int spnic_set_feature_to_hw(void *hwdev, u64 *s_feature, u16 size)
+{
+	return nic_feature_nego(hwdev, SPNIC_CMD_OP_SET, s_feature, size);
 }
 
 static int spnic_vf_func_init(void *hwdev)
