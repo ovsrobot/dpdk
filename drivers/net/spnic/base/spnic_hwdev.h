@@ -91,13 +91,17 @@ struct spnic_hwdev {
 	void *dev_handle; /* Pointer to spnic_nic_dev */
 	void *pci_dev; /* Pointer to rte_pci_device */
 	void *eth_dev; /* Pointer to rte_eth_dev */
-
+	struct spnic_hwif *hwif;
 	uint16_t port_id;
 
-	struct spnic_hwif *hwif;
+	u32 wq_page_size;
+
 	struct spnic_mbox *func_to_func;
 	struct cfg_mgmt_info *cfg_mgmt;
+
+	struct spnic_cmdqs *cmdqs;
 	struct spnic_aeqs *aeqs;
+
 	struct spnic_msg_pf_to_mgmt *pf_to_mgmt;
 	u8 *chip_fault_stats;
 	struct spnic_hw_stats hw_stats;
