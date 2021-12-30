@@ -22,13 +22,24 @@
 #include "base/spnic_hw_comm.h"
 #include "base/spnic_nic_cfg.h"
 #include "base/spnic_nic_event.h"
+#include "spnic_io.h"
+#include "spnic_tx.h"
+#include "spnic_rx.h"
 #include "spnic_ethdev.h"
 
 /* Driver-specific log messages type */
 int spnic_logtype;
 
+#define SPNIC_DEFAULT_RX_FREE_THRESH	32
+#define SPNIC_DEFAULT_TX_FREE_THRESH	32
+
 #define SPNIC_MAX_UC_MAC_ADDRS		128
 #define SPNIC_MAX_MC_MAC_ADDRS		128
+
+#define SPNIC_MAX_QUEUE_DEPTH		16384
+#define SPNIC_MIN_QUEUE_DEPTH		128
+#define SPNIC_TXD_ALIGN			1
+#define SPNIC_RXD_ALIGN			1
 
 /**
  * Deinit mac_vlan table in hardware.
@@ -219,6 +230,7 @@ static void spnic_deinit_sw_rxtxqs(struct spnic_nic_dev *nic_dev)
 static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 {
 	struct spnic_nic_dev *nic_dev;
+	u64 nic_features;
 	int err;
 
 	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
@@ -230,6 +242,26 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 		goto init_func_tbl_fail;
 	}
 
+	nic_features = spnic_get_driver_feature(nic_dev->hwdev);
+	nic_features &= DEFAULT_DRV_FEATURE;
+	spnic_update_driver_feature(nic_dev->hwdev, nic_features);
+
+	err = spnic_set_feature_to_hw(nic_dev->hwdev, &nic_dev->feature_cap, 1);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Failed to set nic features to hardware, err %d\n",
+			    err);
+		goto get_feature_err;
+	}
+
+
+	/* Init txq and rxq context */
+	err = spnic_init_qp_ctxts(nic_dev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Init qp context failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto init_qp_fail;
+	}
+
 	/* Set default mtu */
 	err = spnic_set_port_mtu(nic_dev->hwdev, nic_dev->mtu_size);
 	if (err) {
@@ -237,7 +269,6 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 			    nic_dev->mtu_size, eth_dev->data->name);
 		goto set_mtu_fail;
 	}
-
 
 	/* Update eth_dev link status */
 	if (eth_dev->data->dev_conf.intr_conf.lsc != 0)
@@ -248,6 +279,10 @@ static int spnic_dev_start(struct rte_eth_dev *eth_dev)
 	return 0;
 
 set_mtu_fail:
+	spnic_free_qp_ctxts(nic_dev->hwdev);
+
+init_qp_fail:
+get_feature_err:
 init_func_tbl_fail:
 
 	return err;
@@ -278,6 +313,9 @@ static int spnic_dev_stop(struct rte_eth_dev *dev)
 	memset(&link, 0, sizeof(link));
 	(void)rte_eth_linkstatus_set(dev, &link);
 
+	/* Clean root context */
+	spnic_free_qp_ctxts(nic_dev->hwdev);
+
 	return 0;
 }
 
@@ -290,7 +328,7 @@ static int spnic_dev_stop(struct rte_eth_dev *dev)
 static int spnic_dev_close(struct rte_eth_dev *eth_dev)
 {
 	struct spnic_nic_dev *nic_dev =
-		SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
+	SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(eth_dev);
 
 	if (rte_bit_relaxed_test_and_set32(SPNIC_DEV_CLOSE, &nic_dev->dev_status)) {
 		PMD_DRV_LOG(WARNING, "Device %s already closed",
@@ -305,7 +343,6 @@ static int spnic_dev_close(struct rte_eth_dev *eth_dev)
 	rte_free(nic_dev->mc_list);
 
 	rte_bit_relaxed_clear32(SPNIC_DEV_INTR_EN, &nic_dev->dev_status);
-
 
 	/* Destroy rx mode mutex */
 	spnic_mutex_destroy(&nic_dev->rx_mode_mutex);
@@ -735,6 +772,12 @@ static int spnic_func_init(struct rte_eth_dev *eth_dev)
 		goto init_hwdev_fail;
 	}
 
+	if (!spnic_support_nic(nic_dev->hwdev)) {
+		PMD_DRV_LOG(ERR, "Hw of %s don't support nic\n",
+			    eth_dev->data->name);
+		goto init_hwdev_fail;
+	}
+
 	nic_dev->max_sqs = spnic_func_max_sqs(nic_dev->hwdev);
 	nic_dev->max_rqs = spnic_func_max_rqs(nic_dev->hwdev);
 
@@ -748,6 +791,13 @@ static int spnic_func_init(struct rte_eth_dev *eth_dev)
 		PMD_DRV_LOG(ERR, "Init nic hwdev failed, dev_name: %s",
 			    eth_dev->data->name);
 		goto init_nic_hwdev_fail;
+	}
+
+	err = spnic_get_feature_from_hw(nic_dev->hwdev, &nic_dev->feature_cap, 1);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Get nic feature from hardware failed, dev_name: %s",
+			    eth_dev->data->name);
+		goto get_cap_fail;
 	}
 
 	err = spnic_init_sw_rxtxqs(nic_dev);
@@ -791,6 +841,7 @@ init_mac_table_fail:
 init_sw_rxtxqs_fail:
 	spnic_free_nic_hwdev(nic_dev->hwdev);
 
+get_cap_fail:
 init_nic_hwdev_fail:
 	spnic_free_hwdev(nic_dev->hwdev);
 	eth_dev->dev_ops = NULL;

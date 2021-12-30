@@ -36,6 +36,15 @@
 #define SPNIC_MGMT_STATUS_EXIST		0x6
 #define CHECK_IPSU_15BIT		0x8000
 
+struct spnic_cmd_feature_nego {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_id;
+	u8 opcode;	/* 1: set, 0: get */
+	u8 rsvd;
+	u64 s_feature[MAX_FEATURE_QWORD];
+};
+
 /* Structures for port info */
 struct nic_port_info {
 	u8 port_type;
@@ -69,6 +78,30 @@ enum nic_speed_level {
 	LINK_SPEED_LEVELS,
 };
 
+struct spnic_sq_attr {
+	u8 dma_attr_off;
+	u8 pending_limit;
+	u8 coalescing_time;
+	u8 intr_en;
+	u16 intr_idx;
+	u32 l2nic_sqn;
+	u64 ci_dma_base;
+};
+
+struct spnic_cmd_cons_idx_attr {
+	struct mgmt_msg_head msg_head;
+
+	u16 func_idx;
+	u8 dma_attr_off;
+	u8 pending_limit;
+	u8 coalescing_time;
+	u8 intr_en;
+	u16 intr_idx;
+	u32 l2nic_sqn;
+	u32 rsvd;
+	u64 ci_addr;
+};
+
 struct spnic_port_mac_set {
 	struct mgmt_msg_head msg_head;
 
@@ -88,7 +121,6 @@ struct spnic_port_mac_update {
 	u16 rsvd2;
 	u8 new_mac[ETH_ALEN];
 };
-
 struct spnic_cmd_port_info {
 	struct mgmt_msg_head msg_head;
 
@@ -193,6 +225,9 @@ struct spnic_cmd_set_func_tbl {
 	struct spnic_func_tbl_cfg tbl_cfg;
 };
 
+#define SPNIC_CMD_OP_GET	0
+#define SPNIC_CMD_OP_SET	1
+
 enum {
 	SPNIC_IFLA_VF_LINK_STATE_AUTO,	/* Link state of the uplink */
 	SPNIC_IFLA_VF_LINK_STATE_ENABLE, /* Link always up */
@@ -222,6 +257,8 @@ struct spnic_cmd_register_vf {
 
 int spnic_l2nic_msg_to_mgmt_sync(void *hwdev, u16 cmd, void *buf_in, u16 in_size,
 			   void *buf_out, u16 *out_size);
+
+int spnic_set_ci_table(void *hwdev, struct spnic_sq_attr *attr);
 
 /**
  * Update MAC address to hardware
@@ -390,4 +427,30 @@ int spnic_init_function_table(void *hwdev, u16 rx_buff_len);
  * @retval non-zero : Failure
  */
 int spnic_vf_get_default_cos(void *hwdev, u8 *cos_id);
+
+/**
+ * Get service feature HW supported
+ *
+ * @param[in] dev
+ *   Device pointer to hwdev
+ * @param[in] size
+ *   s_feature's array size
+ * @param[out] s_feature
+ *   s_feature HW supported
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+int spnic_get_feature_from_hw(void *hwdev, u64 *s_feature, u16 size);
+
+/**
+ * Set service feature driver supported to hardware
+ *
+ * @param[in] dev
+ *   Device pointer to hwdev
+ *
+ * @retval zero: Success
+ * @retval non-zero: Failure
+ */
+int spnic_set_feature_to_hw(void *hwdev, u64 *s_feature, u16 size);
+
 #endif /* _SPNIC_NIC_CFG_H_ */

@@ -180,6 +180,10 @@ int spnic_get_mgmt_version(void *hwdev, char *mgmt_ver, int max_mgmt_len);
 
 int spnic_get_board_info(void *hwdev, struct spnic_board_info *info);
 
+int spnic_set_root_ctxt(void *hwdev, u32 rq_depth, u32 sq_depth, u16 rx_buf_sz);
+
+int spnic_clean_root_ctxt(void *hwdev);
+
 int spnic_get_interrupt_cfg(void *dev, struct interrupt_info *info);
 
 int spnic_set_interrupt_cfg(void *dev, struct interrupt_info info);
@@ -187,6 +191,8 @@ int spnic_set_interrupt_cfg(void *dev, struct interrupt_info info);
 int spnic_set_wq_page_size(void *hwdev, u16 func_idx, u32 page_size);
 
 int spnic_set_cmdq_depth(void *hwdev, u16 cmdq_depth);
+
+int spnic_convert_rx_buf_size(u32 rx_buf_sz, u32 *match_sz);
 
 int spnic_get_comm_features(void *hwdev, u64 *s_feature, u16 size);
 
