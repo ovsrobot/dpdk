@@ -9,6 +9,7 @@
 #include "spnic_mgmt.h"
 #include "spnic_cmd.h"
 #include "spnic_mbox.h"
+#include "spnic_wq.h"
 #include "spnic_cmdq.h"
 #include "spnic_hwdev.h"
 #include "spnic_hw_comm.h"
@@ -322,9 +323,6 @@ static void free_mgmt_channel(struct spnic_hwdev *hwdev)
 	spnic_aeqs_free(hwdev);
 }
 
-#define SPNIC_DEFAULT_WQ_PAGE_SIZE	0x100000
-#define SPNIC_HW_WQ_PAGE_SIZE		0x1000
-
 static int init_cmdqs_channel(struct spnic_hwdev *hwdev)
 {
 	int err;
@@ -394,6 +392,10 @@ init_cmdqs_channel_err:
 static void spnic_uninit_comm_ch(struct spnic_hwdev *hwdev)
 {
 	spnic_comm_cmdqs_free(hwdev);
+
+	if (SPNIC_FUNC_TYPE(hwdev) != TYPE_VF)
+		spnic_set_wq_page_size(hwdev, spnic_global_func_id(hwdev),
+					SPNIC_HW_WQ_PAGE_SIZE);
 	free_mgmt_channel(hwdev);
 }
 
