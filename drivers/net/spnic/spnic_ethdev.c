@@ -970,6 +970,32 @@ init_func_tbl_fail:
 	return err;
 }
 
+static int spnic_copy_mempool_init(struct spnic_nic_dev *nic_dev)
+{
+	nic_dev->cpy_mpool = rte_mempool_lookup(nic_dev->dev_name);
+	if (nic_dev->cpy_mpool == NULL) {
+		nic_dev->cpy_mpool =
+		rte_pktmbuf_pool_create(nic_dev->dev_name,
+					SPNIC_COPY_MEMPOOL_DEPTH, 0, 0,
+					SPNIC_COPY_MBUF_SIZE, rte_socket_id());
+		if (nic_dev->cpy_mpool == NULL) {
+			PMD_DRV_LOG(ERR, "Create copy mempool failed, errno: %d, dev_name: %s",
+				    rte_errno, nic_dev->dev_name);
+			return -ENOMEM;
+		}
+	}
+
+	return 0;
+}
+
+static void spnic_copy_mempool_uninit(struct spnic_nic_dev *nic_dev)
+{
+	if (nic_dev->cpy_mpool != NULL) {
+		rte_mempool_free(nic_dev->cpy_mpool);
+		nic_dev->cpy_mpool = NULL;
+	}
+}
+
 /**
  * Stop the device.
  *
@@ -986,6 +1012,9 @@ static int spnic_dev_stop(struct rte_eth_dev *dev)
 	int err;
 
 	nic_dev = SPNIC_ETH_DEV_TO_PRIVATE_NIC_DEV(dev);
+	if (!nic_dev || !spnic_support_nic(nic_dev->hwdev))
+		return 0;
+
 	if (!rte_bit_relaxed_test_and_clear32(SPNIC_DEV_START, &nic_dev->dev_status)) {
 		PMD_DRV_LOG(INFO, "Device %s already stopped",
 			    nic_dev->dev_name);
@@ -1013,6 +1042,11 @@ static int spnic_dev_stop(struct rte_eth_dev *dev)
 	spnic_flush_txqs(nic_dev);
 
 	spnic_flush_qps_res(nic_dev->hwdev);
+
+	/*
+	 * After set vport disable 100ms, no packets will be send to host
+	 */
+	rte_delay_ms(100);
 
 	/* Clean RSS table and rx_mode */
 	spnic_remove_rxtx_configure(dev);
@@ -1054,6 +1088,7 @@ static int spnic_dev_close(struct rte_eth_dev *eth_dev)
 	for (qid = 0; qid < nic_dev->num_rqs; qid++)
 		spnic_rx_queue_release(eth_dev, qid);
 
+	spnic_copy_mempool_uninit(nic_dev);
 	spnic_deinit_sw_rxtxqs(nic_dev);
 	spnic_deinit_mac_addr(eth_dev);
 	rte_free(nic_dev->mc_list);
@@ -1067,6 +1102,8 @@ static int spnic_dev_close(struct rte_eth_dev *eth_dev)
 	spnic_free_nic_hwdev(nic_dev->hwdev);
 	spnic_free_hwdev(nic_dev->hwdev);
 
+	eth_dev->rx_pkt_burst = NULL;
+	eth_dev->tx_pkt_burst = NULL;
 	eth_dev->dev_ops = NULL;
 
 	rte_free(nic_dev->hwdev);
@@ -1547,6 +1584,13 @@ static int spnic_func_init(struct rte_eth_dev *eth_dev)
 		goto set_default_feature_fail;
 	}
 
+	err = spnic_copy_mempool_init(nic_dev);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Create copy mempool failed, dev_name: %s",
+			 eth_dev->data->name);
+		goto init_mpool_fail;
+	}
+
 	spnic_mutex_init(&nic_dev->rx_mode_mutex, NULL);
 
 	rte_bit_relaxed_set32(SPNIC_DEV_INTR_EN, &nic_dev->dev_status);
@@ -1557,6 +1601,7 @@ static int spnic_func_init(struct rte_eth_dev *eth_dev)
 
 	return 0;
 
+init_mpool_fail:
 set_default_feature_fail:
 	spnic_deinit_mac_addr(eth_dev);
 
@@ -1600,6 +1645,9 @@ static int spnic_dev_init(struct rte_eth_dev *eth_dev)
 		    pci_dev->addr.devid, pci_dev->addr.function,
 		    (rte_eal_process_type() == RTE_PROC_PRIMARY) ?
 		    "primary" : "secondary");
+
+	eth_dev->rx_pkt_burst = spnic_recv_pkts;
+	eth_dev->tx_pkt_burst = spnic_xmit_pkts;
 
 	return spnic_func_init(eth_dev);
 }
