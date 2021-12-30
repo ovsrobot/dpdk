@@ -6,10 +6,12 @@
 #include "spnic_compat.h"
 #include "spnic_hwdev.h"
 #include "spnic_csr.h"
+#include "spnic_cmd.h"
 #include "spnic_mgmt.h"
 #include "spnic_hwif.h"
 #include "spnic_eqs.h"
 #include "spnic_mbox.h"
+#include "spnic_nic_event.h"
 
 #define SPNIC_MBOX_INT_DST_FUNC_SHIFT				0
 #define SPNIC_MBOX_INT_DST_AEQN_SHIFT				10
@@ -147,6 +149,20 @@ static int recv_vf_mbox_handler(struct spnic_mbox *func_to_func,
 					     recv_mbox->cmd, recv_mbox->mbox,
 					     recv_mbox->mbox_len,
 					     buf_out, out_size);
+		break;
+	case SPNIC_MOD_L2NIC:
+		err = spnic_vf_event_handler(func_to_func->hwdev,
+					     func_to_func->hwdev->cfg_mgmt,
+					     recv_mbox->cmd, recv_mbox->mbox,
+					     recv_mbox->mbox_len,
+					     buf_out, out_size);
+		break;
+	case SPNIC_MOD_HILINK:
+		err = spnic_vf_mag_event_handler(func_to_func->hwdev,
+						 recv_mbox->cmd,
+						 recv_mbox->mbox,
+						 recv_mbox->mbox_len,
+						 buf_out, out_size);
 		break;
 	default:
 		PMD_DRV_LOG(ERR, "No handler, mod: %d", recv_mbox->mod);

@@ -12,6 +12,7 @@
 #include "spnic_eqs.h"
 #include "spnic_mgmt.h"
 #include "spnic_mbox.h"
+#include "spnic_nic_event.h"
 
 #define AEQ_CTRL_0_INTR_IDX_SHIFT		0
 #define AEQ_CTRL_0_DMA_ATTR_SHIFT		12
@@ -510,6 +511,39 @@ void spnic_aeqs_free(struct spnic_hwdev *hwdev)
 	rte_free(aeqs);
 }
 
+void spnic_dump_aeq_info(struct spnic_hwdev *hwdev)
+{
+	struct spnic_aeq_elem *aeqe_pos = NULL;
+	struct spnic_eq *eq = NULL;
+	u32 addr, ci, pi, ctrl0, idx;
+	int q_id;
+
+	for (q_id = 0; q_id < hwdev->aeqs->num_aeqs; q_id++) {
+		eq = &hwdev->aeqs->aeq[q_id];
+		/* Indirect access should set q_id first */
+		spnic_hwif_write_reg(eq->hwdev->hwif, SPNIC_AEQ_INDIR_IDX_ADDR,
+				     eq->q_id);
+		rte_wmb(); /* Write index before config */
+
+		addr = SPNIC_CSR_AEQ_CTRL_0_ADDR;
+
+		ctrl0 = spnic_hwif_read_reg(hwdev->hwif, addr);
+
+		idx = spnic_hwif_read_reg(hwdev->hwif,
+					  SPNIC_AEQ_INDIR_IDX_ADDR);
+
+		addr = SPNIC_CSR_AEQ_CONS_IDX_ADDR;
+		ci = spnic_hwif_read_reg(hwdev->hwif, addr);
+		addr = SPNIC_CSR_AEQ_PROD_IDX_ADDR;
+		pi = spnic_hwif_read_reg(hwdev->hwif, addr);
+		aeqe_pos = GET_CURR_AEQ_ELEM(eq);
+		PMD_DRV_LOG(ERR, "Aeq id: %d, idx: %u, ctrl0: 0x%08x, wrap: %d,"
+			    " pi: 0x%x, ci: 0x%08x,  desc: 0x%x", q_id, idx,
+			    ctrl0, eq->wrapped, pi, ci,
+			    be32_to_cpu(aeqe_pos->desc));
+	}
+}
+
 static int aeq_elem_handler(struct spnic_eq *eq, u32 aeqe_desc,
 			    struct spnic_aeq_elem *aeqe_pos, void *param)
 {
@@ -518,12 +552,22 @@ static int aeq_elem_handler(struct spnic_eq *eq, u32 aeqe_desc,
 	u8 size;
 
 	event = EQ_ELEM_DESC_GET(aeqe_desc, TYPE);
+	if (EQ_ELEM_DESC_GET(aeqe_desc, SRC)) {
+		/* SW event uses only the first 8B */
+		memcpy(data, aeqe_pos->aeqe_data, SPNIC_AEQE_DATA_SIZE);
+		spnic_be32_to_cpu(data, SPNIC_AEQE_DATA_SIZE);
+		/* Just support SPNIC_STATELESS_EVENT */
+		return spnic_nic_sw_aeqe_handler(eq->hwdev, event, data);
+	}
 
 	memcpy(data, aeqe_pos->aeqe_data, SPNIC_AEQE_DATA_SIZE);
 	spnic_be32_to_cpu(data, SPNIC_AEQE_DATA_SIZE);
 	size = EQ_ELEM_DESC_GET(aeqe_desc, SIZE);
 
-	if (event == SPNIC_MBX_FROM_FUNC) {
+	if (event == SPNIC_MSG_FROM_MGMT_CPU) {
+		return spnic_mgmt_msg_aeqe_handler(eq->hwdev, data, size,
+						   param);
+	} else if (event == SPNIC_MBX_FROM_FUNC) {
 		return spnic_mbox_func_aeqe_handler(eq->hwdev, data, size,
 						    param);
 	} else {
