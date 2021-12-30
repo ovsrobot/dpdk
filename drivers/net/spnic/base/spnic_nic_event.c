@@ -9,16 +9,39 @@
 #include "spnic_hwif.h"
 #include "spnic_hwdev.h"
 #include "spnic_mgmt.h"
+#include "spnic_nic_cfg.h"
 #include "spnic_hwdev.h"
 #include "spnic_nic_event.h"
 
-static void spnic_get_port_link_info(u8 link_state, struct rte_eth_link *link)
+void spnic_get_port_link_info(struct spnic_hwdev *hwdev, u8 link_state,
+		   struct rte_eth_link *link)
 {
+	uint32_t port_speed[LINK_SPEED_LEVELS] = {ETH_SPEED_NUM_10M,
+					ETH_SPEED_NUM_100M, ETH_SPEED_NUM_1G,
+					ETH_SPEED_NUM_10G, ETH_SPEED_NUM_25G,
+					ETH_SPEED_NUM_40G, ETH_SPEED_NUM_100G};
+	struct nic_port_info port_info = {0};
+	int err;
+
 	if (!link_state) {
 		link->link_status = ETH_LINK_DOWN;
 		link->link_speed = ETH_SPEED_NUM_NONE;
 		link->link_duplex = ETH_LINK_HALF_DUPLEX;
 		link->link_autoneg = ETH_LINK_FIXED;
+	} else {
+		link->link_status = ETH_LINK_UP;
+
+		err = spnic_get_port_info(hwdev, &port_info);
+		if (err) {
+			link->link_speed = ETH_SPEED_NUM_NONE;
+			link->link_duplex = ETH_LINK_FULL_DUPLEX;
+			link->link_autoneg = ETH_LINK_FIXED;
+		} else {
+			link->link_speed = port_speed[port_info.speed %
+						LINK_SPEED_LEVELS];
+			link->link_duplex = port_info.duplex;
+			link->link_autoneg = port_info.autoneg_state;
+		}
 	}
 }
 
@@ -51,7 +74,7 @@ static void link_status_event_handler(void *hwdev, void *buf_in,
 	spnic_link_event_stats(hwdev, link_status->state);
 
 	/* Link event reported only after set vport enable */
-	spnic_get_port_link_info(link_status->state, &link);
+	spnic_get_port_link_info(dev, link_status->state, &link);
 	err = rte_eth_linkstatus_set((struct rte_eth_dev *)(dev->eth_dev),
 				     &link);
 	if (!err)
