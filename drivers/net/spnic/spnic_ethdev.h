@@ -76,6 +76,7 @@ struct spnic_nic_dev {
 
 	bool pause_set;
 	pthread_mutex_t pause_mutuex;
+	struct nic_pause_config nic_pause;
 
 	struct rte_ether_addr default_addr;
 	struct rte_ether_addr *mc_list;
