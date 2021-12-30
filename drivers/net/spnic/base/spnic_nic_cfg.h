@@ -255,6 +255,17 @@ struct spnic_cmd_register_vf {
 	u8 rsvd[39];
 };
 
+
+struct spnic_cmd_set_rq_flush {
+	union {
+		struct {
+			u16 global_rq_id;
+			u16 local_rq_id;
+		};
+		u32 value;
+	};
+};
+
 int spnic_l2nic_msg_to_mgmt_sync(void *hwdev, u16 cmd, void *buf_in, u16 in_size,
 			   void *buf_out, u16 *out_size);
 
@@ -380,6 +391,18 @@ int spnic_set_port_enable(void *hwdev, bool enable);
  * @retval non-zero : Failure
  */
 int spnic_get_link_state(void *hwdev, u8 *link_state);
+
+/**
+ * Flush queue pairs resource in hardware
+ *
+ * @param[in] hwdev
+ *   Device pointer to hwdev
+ *
+ * @retval zero : Success
+ * @retval non-zero : Failure
+ */
+int spnic_flush_qps_res(void *hwdev);
+
 
 /**
  * Init nic hwdev
