@@ -160,9 +160,9 @@ bool spnic_cmdq_idle(struct spnic_cmdq *cmdq)
 		true : false);
 }
 
-struct spnic_cmd_buf *spnic_alloc_cmd_buf(void *hwdev)
+struct spnic_cmd_buf *spnic_alloc_cmd_buf(struct spnic_hwdev *hwdev)
 {
-	struct spnic_cmdqs *cmdqs = ((struct spnic_hwdev *)hwdev)->cmdqs;
+	struct spnic_cmdqs *cmdqs = hwdev->cmdqs;
 	struct spnic_cmd_buf *cmd_buf;
 
 	cmd_buf = rte_zmalloc(NULL, sizeof(*cmd_buf), 0);
@@ -491,7 +491,7 @@ cmdq_unlock:
 	return err;
 }
 
-static int cmdq_params_valid(void *hwdev, struct spnic_cmd_buf *buf_in)
+static int cmdq_params_valid(struct spnic_hwdev *hwdev, struct spnic_cmd_buf *buf_in)
 {
 	if (!buf_in || !hwdev) {
 		PMD_DRV_LOG(ERR, "Invalid CMDQ buffer or hwdev is NULL");
@@ -520,11 +520,11 @@ static int wait_cmdqs_enable(struct spnic_cmdqs *cmdqs)
 	return -EBUSY;
 }
 
-int spnic_cmdq_direct_resp(void *hwdev, enum spnic_mod_type mod, u8 cmd,
+int spnic_cmdq_direct_resp(struct spnic_hwdev *hwdev, enum spnic_mod_type mod, u8 cmd,
 			   struct spnic_cmd_buf *buf_in, u64 *out_param,
 			   u32 timeout)
 {
-	struct spnic_cmdqs *cmdqs = ((struct spnic_hwdev *)hwdev)->cmdqs;
+	struct spnic_cmdqs *cmdqs = hwdev->cmdqs;
 	int err;
 
 	err = cmdq_params_valid(hwdev, buf_in);
@@ -543,11 +543,11 @@ int spnic_cmdq_direct_resp(void *hwdev, enum spnic_mod_type mod, u8 cmd,
 					 mod, cmd, buf_in, out_param, timeout);
 }
 
-int spnic_cmdq_detail_resp(void *hwdev, enum spnic_mod_type mod, u8 cmd,
+int spnic_cmdq_detail_resp(struct spnic_hwdev *hwdev, enum spnic_mod_type mod, u8 cmd,
 			   struct spnic_cmd_buf *buf_in,
 			   struct spnic_cmd_buf *buf_out, u32 timeout)
 {
-	struct spnic_cmdqs *cmdqs = ((struct spnic_hwdev *)hwdev)->cmdqs;
+	struct spnic_cmdqs *cmdqs = hwdev->cmdqs;
 	int err;
 
 	err = cmdq_params_valid(hwdev, buf_in);

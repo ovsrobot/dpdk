@@ -60,7 +60,7 @@ struct service_cap {
 };
 
 struct cfg_mgmt_info {
-	void *hwdev;
+	struct spnic_hwdev *hwdev;
 	struct service_cap svc_cap;
 };
 
@@ -109,17 +109,17 @@ struct spnic_cfg_cmd_dev_cap {
 #define IS_NIC_TYPE(dev) \
 	(((u32)(dev)->cfg_mgmt->svc_cap.chip_svc_type) & CFG_SVC_NIC_BIT0)
 
-int spnic_init_capability(void *dev);
-void spnic_free_capability(void *dev);
+int spnic_init_capability(struct spnic_hwdev *hwdev);
+void spnic_free_capability(struct spnic_hwdev *hwdev);
 
-u16 spnic_func_max_sqs(void *hwdev);
-u16 spnic_func_max_rqs(void *hwdev);
+u16 spnic_func_max_sqs(struct spnic_hwdev *hwdev);
+u16 spnic_func_max_rqs(struct spnic_hwdev *hwdev);
 
-u8 spnic_physical_port_id(void *hwdev);
+u8 spnic_physical_port_id(struct spnic_hwdev *hwdev);
 
-int spnic_cfg_mbx_vf_proc_msg(void *hwdev, void *pri_handle, u16 cmd, void *buf_in,
+int spnic_cfg_mbx_vf_proc_msg(struct spnic_hwdev *hwdev, void *pri_handle, u16 cmd, void *buf_in,
 			u16 in_size, void *buf_out, u16 *out_size);
 
-bool spnic_support_nic(void *hwdev);
+bool spnic_support_nic(struct spnic_hwdev *hwdev);
 
 #endif /* _SPNIC_HW_CFG_H_ */

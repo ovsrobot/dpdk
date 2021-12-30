@@ -35,7 +35,7 @@
 
 #define MGMT_MSG_TIMEOUT			300000 /* Millisecond */
 
-int spnic_msg_to_mgmt_sync(void *hwdev, enum spnic_mod_type mod, u16 cmd,
+int spnic_msg_to_mgmt_sync(struct spnic_hwdev *hwdev, enum spnic_mod_type mod, u16 cmd,
 			   void *buf_in, u16 in_size, void *buf_out,
 			   u16 *out_size, u32 timeout)
 {
@@ -186,7 +186,7 @@ static int recv_mgmt_msg_handler(struct spnic_msg_pf_to_mgmt *pf_to_mgmt,
  * Handler for a mgmt message event
  *
  * @param[in] hwdev
- *   The pointer to the private hardware device object
+ *   The device pointer to hwdev
  * @param[in] header
  *   The header of the message
  * @param[in] size
@@ -197,9 +197,8 @@ static int recv_mgmt_msg_handler(struct spnic_msg_pf_to_mgmt *pf_to_mgmt,
  * @retval zero : When aeqe is response message
  * @retval negative : When wrong message or not last message.
  */
-int spnic_mgmt_msg_aeqe_handler(void *hwdev, u8 *header, u8 size, void *param)
+int spnic_mgmt_msg_aeqe_handler(struct spnic_hwdev *hwdev, u8 *header, u8 size, void *param)
 {
-	struct spnic_hwdev *dev = (struct spnic_hwdev *)hwdev;
 	struct spnic_msg_pf_to_mgmt *pf_to_mgmt = NULL;
 	struct spnic_recv_msg *recv_msg = NULL;
 	bool is_send_dir = false;
@@ -209,7 +208,7 @@ int spnic_mgmt_msg_aeqe_handler(void *hwdev, u8 *header, u8 size, void *param)
 		return spnic_mbox_func_aeqe_handler(hwdev, header, size, param);
 	}
 
-	pf_to_mgmt = dev->pf_to_mgmt;
+	pf_to_mgmt = hwdev->pf_to_mgmt;
 
 	is_send_dir = (SPNIC_MSG_HEADER_GET(*(u64 *)header, DIRECTION) ==
 		       SPNIC_MSG_DIRECT_SEND) ? true : false;

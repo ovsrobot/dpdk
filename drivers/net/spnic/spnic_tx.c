@@ -9,13 +9,13 @@
 
 #include "base/spnic_compat.h"
 #include "base/spnic_cmd.h"
+#include "base/spnic_hwdev.h"
 #include "base/spnic_wq.h"
 #include "base/spnic_mgmt.h"
-#include "base/spnic_hwdev.h"
 #include "base/spnic_nic_cfg.h"
-#include "spnic_io.h"
 #include "spnic_tx.h"
 #include "spnic_ethdev.h"
+#include "spnic_io.h"
 
 #define SPNIC_TX_TASK_WRAPPED		1
 #define SPNIC_TX_BD_DESC_WRAPPED	2

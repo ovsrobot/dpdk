@@ -107,7 +107,7 @@ static inline void spnic_write_db(void *db_addr, u16 q_id, int cos, u8 cflag,
 	rte_write64(*((u64 *)&db), DB_ADDR(db_addr, pi));
 }
 
-void spnic_get_func_rx_buf_size(void *dev);
+void spnic_get_func_rx_buf_size(struct spnic_nic_dev *nic_dev);
 
 /**
  * Init queue pair context
@@ -118,7 +118,7 @@ void spnic_get_func_rx_buf_size(void *dev);
  * @retval zero: Success
  * @retval non-zero: Failure
  */
-int spnic_init_qp_ctxts(void *dev);
+int spnic_init_qp_ctxts(struct spnic_nic_dev *nic_dev);
 
 /**
  * Free queue pair context
@@ -126,7 +126,7 @@ int spnic_init_qp_ctxts(void *dev);
  * @param[in] hwdev
  *   Device pointer to hwdev
  */
-void spnic_free_qp_ctxts(void *hwdev);
+void spnic_free_qp_ctxts(struct spnic_hwdev *hwdev);
 
 /**
  * Update service feature driver supported
@@ -138,7 +138,7 @@ void spnic_free_qp_ctxts(void *hwdev);
  * @retval zero: Success
  * @retval non-zero: Failure
  */
-void spnic_update_driver_feature(void *dev, u64 s_feature);
+void spnic_update_driver_feature(struct spnic_nic_dev *nic_dev, u64 s_feature);
 
 /**
  * Get service feature driver supported
@@ -150,5 +150,5 @@ void spnic_update_driver_feature(void *dev, u64 s_feature);
  * @retval zero: Success
  * @retval non-zero: Failure
  */
-u64 spnic_get_driver_feature(void *dev);
+u64 spnic_get_driver_feature(struct spnic_nic_dev *nic_dev);
 #endif /* _SPNIC_IO_H_ */

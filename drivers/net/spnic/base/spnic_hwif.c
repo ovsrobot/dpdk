@@ -457,7 +457,7 @@ static void free_db_idx(struct spnic_hwif *hwif, u32 idx)
 	rte_spinlock_unlock(&free_db_area->idx_lock);
 }
 
-void spnic_free_db_addr(void *hwdev, const void *db_base,
+void spnic_free_db_addr(struct spnic_hwdev *hwdev, const void *db_base,
 			 __rte_unused void *dwqe_base)
 {
 	struct spnic_hwif *hwif = NULL;
@@ -466,13 +466,13 @@ void spnic_free_db_addr(void *hwdev, const void *db_base,
 	if (!hwdev || !db_base)
 		return;
 
-	hwif = ((struct spnic_hwdev *)hwdev)->hwif;
+	hwif = hwdev->hwif;
 	idx = DB_IDX(db_base, hwif->db_base);
 
 	free_db_idx(hwif, idx);
 }
 
-int spnic_alloc_db_addr(void *hwdev, void **db_base, void **dwqe_base)
+int spnic_alloc_db_addr(struct spnic_hwdev *hwdev, void **db_base, void **dwqe_base)
 {
 	struct spnic_hwif *hwif = NULL;
 	u32 idx;
@@ -481,7 +481,7 @@ int spnic_alloc_db_addr(void *hwdev, void **db_base, void **dwqe_base)
 	if (!hwdev || !db_base)
 		return -EINVAL;
 
-	hwif = ((struct spnic_hwdev *)hwdev)->hwif;
+	hwif = hwdev->hwif;
 
 	err = get_db_idx(hwif, &idx);
 	if (err)
@@ -501,13 +501,13 @@ int spnic_alloc_db_addr(void *hwdev, void **db_base, void **dwqe_base)
  * Set msix state
  *
  * @param[in] hwdev
- *   The pointer to the private hardware device object
+ *   The device pointer to hwdev
  * @param[in] msix_idx
  *   MSIX index
  * @param[in] flag
  *   MSIX state flag, 0-enable, 1-disable
  */
-void spnic_set_msix_state(void *hwdev, u16 msix_idx, enum spnic_msix_state flag)
+void spnic_set_msix_state(struct spnic_hwdev *hwdev, u16 msix_idx, enum spnic_msix_state flag)
 {
 	struct spnic_hwif *hwif = NULL;
 	u32 mask_bits;
@@ -517,7 +517,7 @@ void spnic_set_msix_state(void *hwdev, u16 msix_idx, enum spnic_msix_state flag)
 	if (!hwdev)
 		return;
 
-	hwif = ((struct spnic_hwdev *)hwdev)->hwif;
+	hwif = hwdev->hwif;
 
 	if (flag)
 		mask_bits = SPNIC_MSI_CLR_INDIR_SET(int_msk, INT_MSK_SET);
@@ -539,7 +539,7 @@ static void disable_all_msix(struct spnic_hwdev *hwdev)
 		spnic_set_msix_state(hwdev, i, SPNIC_MSIX_DISABLE);
 }
 
-void spnic_misx_intr_clear_resend_bit(void *hwdev, u16 msix_idx,
+void spnic_misx_intr_clear_resend_bit(struct spnic_hwdev *hwdev, u16 msix_idx,
 					      u8 clear_resend_en)
 {
 	struct spnic_hwif *hwif = NULL;
@@ -548,7 +548,7 @@ void spnic_misx_intr_clear_resend_bit(void *hwdev, u16 msix_idx,
 	if (!hwdev)
 		return;
 
-	hwif = ((struct spnic_hwdev *)hwdev)->hwif;
+	hwif = hwdev->hwif;
 
 	msix_ctrl = SPNIC_MSI_CLR_INDIR_SET(msix_idx, SIMPLE_INDIR_IDX) |
 		    SPNIC_MSI_CLR_INDIR_SET(clear_resend_en, RESEND_TIMER_CLR);
@@ -636,14 +636,13 @@ static void spnic_get_bar_addr(struct spnic_hwdev *hwdev)
  * Initialize the hw interface
  *
  * @param[in] hwdev
- *   The pointer to the private hardware device object
+ *   The device pointer to hwdev
  *
  * @retval zero : Success
  * @retval non-zero : Failure.
  */
-int spnic_init_hwif(void *dev)
+int spnic_init_hwif(struct spnic_hwdev *hwdev)
 {
-	struct spnic_hwdev *hwdev = NULL;
 	struct spnic_hwif *hwif;
 	int err;
 
@@ -652,7 +651,6 @@ int spnic_init_hwif(void *dev)
 	if (!hwif)
 		return -ENOMEM;
 
-	hwdev = (struct spnic_hwdev *)dev;
 	hwdev->hwif = hwif;
 
 	spnic_get_bar_addr(hwdev);
@@ -703,72 +701,70 @@ hwif_ready_err:
 /**
  * Free the hw interface
  *
- * @param[in] dev
- *   The pointer to the private hardware device object
+ * @param[in] hwdev
+ *   The device pointer to hwdev
  */
-void spnic_free_hwif(void *dev)
+void spnic_free_hwif(struct spnic_hwdev *hwdev)
 {
-	struct spnic_hwdev *hwdev = (struct spnic_hwdev *)dev;
-
 	rte_free(hwdev->hwif);
 }
 
-u16 spnic_global_func_id(void *hwdev)
+u16 spnic_global_func_id(struct spnic_hwdev *hwdev)
 {
 	struct spnic_hwif *hwif = NULL;
 
 	if (!hwdev)
 		return 0;
 
-	hwif = ((struct spnic_hwdev *)hwdev)->hwif;
+	hwif = hwdev->hwif;
 
 	return hwif->attr.func_global_idx;
 }
 
-u8 spnic_pf_id_of_vf(void *hwdev)
+u8 spnic_pf_id_of_vf(struct spnic_hwdev *hwdev)
 {
 	struct spnic_hwif *hwif = NULL;
 
 	if (!hwdev)
 		return 0;
 
-	hwif = ((struct spnic_hwdev *)hwdev)->hwif;
+	hwif = hwdev->hwif;
 
 	return hwif->attr.port_to_port_idx;
 }
 
-u8 spnic_pcie_itf_id(void *hwdev)
+u8 spnic_pcie_itf_id(struct spnic_hwdev *hwdev)
 {
 	struct spnic_hwif *hwif = NULL;
 
 	if (!hwdev)
 		return 0;
 
-	hwif = ((struct spnic_hwdev *)hwdev)->hwif;
+	hwif = hwdev->hwif;
 
 	return hwif->attr.pci_intf_idx;
 }
 
-enum func_type spnic_func_type(void *hwdev)
+enum func_type spnic_func_type(struct spnic_hwdev *hwdev)
 {
 	struct spnic_hwif *hwif = NULL;
 
 	if (!hwdev)
 		return 0;
 
-	hwif = ((struct spnic_hwdev *)hwdev)->hwif;
+	hwif = hwdev->hwif;
 
 	return hwif->attr.func_type;
 }
 
-u16 spnic_glb_pf_vf_offset(void *hwdev)
+u16 spnic_glb_pf_vf_offset(struct spnic_hwdev *hwdev)
 {
 	struct spnic_hwif *hwif = NULL;
 
 	if (!hwdev)
 		return 0;
 
-	hwif = ((struct spnic_hwdev *)hwdev)->hwif;
+	hwif = hwdev->hwif;
 
 	return hwif->attr.global_vf_id_of_pf;
 }

@@ -225,7 +225,7 @@ int spnic_reinit_cmdq_ctxts(struct spnic_hwdev *hwdev);
 
 bool spnic_cmdq_idle(struct spnic_cmdq *cmdq);
 
-struct spnic_cmd_buf *spnic_alloc_cmd_buf(void *hwdev);
+struct spnic_cmd_buf *spnic_alloc_cmd_buf(struct spnic_hwdev *hwdev);
 
 void spnic_free_cmd_buf(struct spnic_cmd_buf *cmd_buf);
 
@@ -233,11 +233,11 @@ void spnic_free_cmd_buf(struct spnic_cmd_buf *cmd_buf);
  * PF/VF sends cmd to ucode by cmdq, and return 0 if success.
  * timeout=0, use default timeout.
  */
-int spnic_cmdq_direct_resp(void *hwdev, enum spnic_mod_type mod, u8 cmd,
+int spnic_cmdq_direct_resp(struct spnic_hwdev *hwdev, enum spnic_mod_type mod, u8 cmd,
 			   struct spnic_cmd_buf *buf_in, u64 *out_param,
 			   u32 timeout);
 
-int spnic_cmdq_detail_resp(void *hwdev, enum spnic_mod_type mod, u8 cmd,
+int spnic_cmdq_detail_resp(struct spnic_hwdev *hwdev, enum spnic_mod_type mod, u8 cmd,
 			   struct spnic_cmd_buf *buf_in,
 			   struct spnic_cmd_buf *buf_out, u32 timeout);
 

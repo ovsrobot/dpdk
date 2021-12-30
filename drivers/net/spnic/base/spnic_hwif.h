@@ -118,38 +118,38 @@ u32 spnic_hwif_read_reg(struct spnic_hwif *hwif, u32 reg);
 
 void spnic_hwif_write_reg(struct spnic_hwif *hwif, u32 reg, u32 val);
 
-void spnic_set_msix_state(void *hwdev, u16 msix_idx,
+void spnic_set_msix_state(struct spnic_hwdev *hwdev, u16 msix_idx,
 			  enum spnic_msix_state flag);
 
-void spnic_misx_intr_clear_resend_bit(void *hwdev, u16 msix_idx,
+void spnic_misx_intr_clear_resend_bit(struct spnic_hwdev *hwdev, u16 msix_idx,
 				       u8 clear_resend_en);
 
-u16 spnic_global_func_id(void *hwdev);
+u16 spnic_global_func_id(struct spnic_hwdev *hwdev);
 
-u8 spnic_pf_id_of_vf(void *hwdev);
+u8 spnic_pf_id_of_vf(struct spnic_hwdev *hwdev);
 
-u8 spnic_pcie_itf_id(void *hwdev);
+u8 spnic_pcie_itf_id(struct spnic_hwdev *hwdev);
 
-enum func_type spnic_func_type(void *hwdev);
+enum func_type spnic_func_type(struct spnic_hwdev *hwdev);
 
-u16 spnic_glb_pf_vf_offset(void *hwdev);
+u16 spnic_glb_pf_vf_offset(struct spnic_hwdev *hwdev);
 
 void spnic_set_pf_status(struct spnic_hwif *hwif,
 			 enum spnic_pf_status status);
 
 enum spnic_pf_status spnic_get_pf_status(struct spnic_hwif *hwif);
 
-int spnic_alloc_db_addr(void *hwdev, void **db_base, void **dwqe_base);
+int spnic_alloc_db_addr(struct spnic_hwdev *hwdev, void **db_base, void **dwqe_base);
 
-void spnic_free_db_addr(void *hwdev, const void *db_base,
+void spnic_free_db_addr(struct spnic_hwdev *hwdev, const void *db_base,
 			__rte_unused void *dwqe_base);
 
 void spnic_disable_doorbell(struct spnic_hwif *hwif);
 
 void spnic_enable_doorbell(struct spnic_hwif *hwif);
 
-int spnic_init_hwif(void *dev);
+int spnic_init_hwif(struct spnic_hwdev *hwdev);
 
-void spnic_free_hwif(void *dev);
+void spnic_free_hwif(struct spnic_hwdev *hwdev);
 
 #endif /* _SPNIC_HWIF_H_ */

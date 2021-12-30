@@ -107,7 +107,7 @@ struct spnic_wq {
 
 void spnic_wq_wqe_pg_clear(struct spnic_wq *wq);
 
-int spnic_cmdq_alloc(struct spnic_wq *wq, void *dev, int cmdq_blocks,
+int spnic_cmdq_alloc(struct spnic_wq *wq, struct spnic_hwdev *hwdev, int cmdq_blocks,
 		      u32 wq_buf_size, u32 wqebb_shift, u16 q_depth);
 
 void spnic_cmdq_free(struct spnic_wq *wq, int cmdq_blocks);
