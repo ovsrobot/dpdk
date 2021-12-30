@@ -33,7 +33,8 @@ headers = files(
         'rte_vhost_async.h',
         'rte_vhost_crypto.h',
 )
+
 driver_sdk_headers = files(
         'vdpa_driver.h',
 )
-deps += ['ethdev', 'cryptodev', 'hash', 'pci']
+deps += ['ethdev', 'cryptodev', 'hash', 'pci', 'dmadev']
