@@ -12,6 +12,7 @@
 #include "spnic_eqs.h"
 #include "spnic_mgmt.h"
 #include "spnic_mbox.h"
+#include "spnic_hw_comm.h"
 #include "spnic_nic_event.h"
 
 #define AEQ_CTRL_0_INTR_IDX_SHIFT		0
@@ -647,4 +648,14 @@ int spnic_aeq_poll_msg(struct spnic_eq *eq, u32 timeout, void *param)
 	set_eq_cons_idx(eq, SPNIC_EQ_ARMED);
 
 	return err;
+}
+
+void spnic_dev_handle_aeq_event(struct spnic_hwdev *hwdev, void *param)
+{
+	struct spnic_eq *aeq = &hwdev->aeqs->aeq[0];
+
+	/* Clear resend timer cnt register */
+	spnic_misx_intr_clear_resend_bit(hwdev, aeq->eq_irq.msix_entry_idx,
+					 EQ_MSIX_RESEND_TIMER_CLEAR);
+	(void)spnic_aeq_poll_msg(aeq, 0, param);
 }
