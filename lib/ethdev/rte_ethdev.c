@@ -6503,6 +6503,22 @@ rte_eth_ip_reassembly_conf_set(uint16_t port_id,
 		       (*dev->dev_ops->ip_reassembly_conf_set)(dev, conf));
 }
 
+#define RTE_ETH_IP_REASS_DYNFIELD_NAME "rte_eth_ip_reass_dynfield"
+int rte_eth_ip_reass_dynfield_offset = -1;
+
+int
+rte_eth_ip_reass_dynfield_register(void)
+{
+	static const struct rte_mbuf_dynfield dynfield_desc = {
+		.name = RTE_ETH_IP_REASS_DYNFIELD_NAME,
+		.size = sizeof(rte_eth_ip_reass_dynfield_t),
+		.align = __alignof__(rte_eth_ip_reass_dynfield_t),
+	};
+	rte_eth_ip_reass_dynfield_offset =
+		rte_mbuf_dynfield_register(&dynfield_desc);
+	return rte_eth_ip_reass_dynfield_offset;
+}
+
 RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO);
 
 RTE_INIT(ethdev_init_telemetry)

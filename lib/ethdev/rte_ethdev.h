@@ -5245,6 +5245,63 @@ __rte_experimental
 int rte_eth_ip_reassembly_conf_set(uint16_t port_id,
 				   struct rte_eth_ip_reass_params *conf);
 
+/**
+ * In case of IP reassembly offload failure, ol_flags in mbuf will be set
+ * with RTE_MBUF_F_RX_IPREASSEMBLY_INCOMPLETE and packets will be returned
+ * without alteration. The application can retrieve the attached fragments
+ * using mbuf dynamic field.
+ */
+typedef struct {
+	/**
+	 * Next fragment packet. Application should fetch dynamic field of
+	 * each fragment until a NULL is received and nb_frags is 0.
+	 */
+	struct rte_mbuf *next_frag;
+	/** Time spent(in ms) by HW in waiting for further fragments. */
+	uint16_t time_spent;
+	/** Number of more fragments attached in mbuf dynamic fields. */
+	uint16_t nb_frags;
+} rte_eth_ip_reass_dynfield_t;
+
+extern int rte_eth_ip_reass_dynfield_offset;
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Get pointer to mbuf dynamic field for getting incomplete
+ * reassembled fragments.
+ *
+ * For performance reason, no check is done,
+ * the dynamic field may not be registered.
+ * @see rte_eth_ip_reass_dynfield_is_registered
+ *
+ * @param	mbuf	packet to access
+ * @return pointer to mbuf dynamic field
+ */
+__rte_experimental
+static inline rte_eth_ip_reass_dynfield_t *
+rte_eth_ip_reass_dynfield(struct rte_mbuf *mbuf)
+{
+	return RTE_MBUF_DYNFIELD(mbuf,
+		rte_eth_ip_reass_dynfield_offset,
+		rte_eth_ip_reass_dynfield_t *);
+}
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Check whether the dynamic field is registered.
+ *
+ * @return true if rte_eth_ip_reass_dynfield_register() has been called.
+ */
+__rte_experimental
+static inline bool rte_eth_ip_reass_dynfield_is_registered(void)
+{
+	return rte_eth_ip_reass_dynfield_offset >= 0;
+}
+
 
 #include <rte_ethdev_core.h>
 
