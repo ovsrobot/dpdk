@@ -991,6 +991,22 @@ typedef int (*eth_rx_metadata_negotiate_t)(struct rte_eth_dev *dev,
 				       uint64_t *features);
 
 /**
+ * @internal
+ * Set configuration parameters for enabling IP reassembly offload in hardware.
+ *
+ * @param dev
+ *   Port (ethdev) handle
+ *
+ * @param[in] conf
+ *   Configuration parameters for IP reassembly.
+ *
+ * @return
+ *   Negative errno value on error, zero otherwise
+ */
+typedef int (*eth_ip_reassembly_conf_set_t)(struct rte_eth_dev *dev,
+				       struct rte_eth_ip_reass_params *conf);
+
+/**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
 struct eth_dev_ops {
@@ -1186,6 +1202,9 @@ struct eth_dev_ops {
 	 * kinds of metadata to the PMD
 	 */
 	eth_rx_metadata_negotiate_t rx_metadata_negotiate;
+
+	/** Set IP reassembly configuration */
+	eth_ip_reassembly_conf_set_t ip_reassembly_conf_set;
 };
 
 /**

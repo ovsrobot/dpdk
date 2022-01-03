@@ -5218,6 +5218,34 @@ int rte_eth_representor_info_get(uint16_t port_id,
 __rte_experimental
 int rte_eth_rx_metadata_negotiate(uint16_t port_id, uint64_t *features);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Set IP reassembly configuration parameters if device rx offload
+ * flag (RTE_ETH_RX_OFFLOAD_IP_REASSEMBLY) is enabled and the PMD
+ * supports IP reassembly offload. User should first check the
+ * reass_capa in rte_eth_dev_info before setting the configuration.
+ * The values of configuration parameters must not exceed the device
+ * capabilities. The use of this API is optional and if called, it
+ * should be called before rte_eth_dev_start().
+ *
+ * @param port_id
+ *   The port identifier of the device.
+ * @param conf
+ *   A pointer to rte_eth_ip_reass_params structure.
+ * @return
+ *   - (-ENOTSUP) if offload configuration is not supported by device.
+ *   - (-EINVAL) if offload is not enabled in rte_eth_conf.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-EIO) if device is removed.
+ *   - (0) on success.
+ */
+__rte_experimental
+int rte_eth_ip_reassembly_conf_set(uint16_t port_id,
+				   struct rte_eth_ip_reass_params *conf);
+
+
 #include <rte_ethdev_core.h>
 
 /**
