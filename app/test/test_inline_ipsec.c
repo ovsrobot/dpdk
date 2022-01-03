@@ -853,6 +853,89 @@ test_reassembly_ipv4_nofrag(void) {
 			RTE_SECURITY_IPSEC_TUNNEL_IPV4);
 }
 
+static int
+test_reassembly_ipv4_2frag(void) {
+	struct reassembly_vector ipv4_2frag_case = {
+				.sa_data = &conf_aes_128_gcm,
+				.full_pkt = &pkt_ipv4_udp_p1,
+				.frags[0] = &pkt_ipv4_udp_p1_f1,
+				.frags[1] = &pkt_ipv4_udp_p1_f2,
+
+	};
+	return test_reassembly(&ipv4_2frag_case,
+			RTE_SECURITY_IPSEC_TUNNEL_IPV4);
+}
+
+static int
+test_reassembly_ipv6_2frag(void) {
+	struct reassembly_vector ipv6_2frag_case = {
+				.sa_data = &conf_aes_128_gcm,
+				.full_pkt = &pkt_ipv6_udp_p1,
+				.frags[0] = &pkt_ipv6_udp_p1_f1,
+				.frags[1] = &pkt_ipv6_udp_p1_f2,
+	};
+	return test_reassembly(&ipv6_2frag_case,
+			RTE_SECURITY_IPSEC_TUNNEL_IPV6);
+}
+
+static int
+test_reassembly_ipv4_4frag(void) {
+	struct reassembly_vector ipv4_4frag_case = {
+				.sa_data = &conf_aes_128_gcm,
+				.full_pkt = &pkt_ipv4_udp_p2,
+				.frags[0] = &pkt_ipv4_udp_p2_f1,
+				.frags[1] = &pkt_ipv4_udp_p2_f2,
+				.frags[2] = &pkt_ipv4_udp_p2_f3,
+				.frags[3] = &pkt_ipv4_udp_p2_f4,
+	};
+	return test_reassembly(&ipv4_4frag_case,
+			RTE_SECURITY_IPSEC_TUNNEL_IPV4);
+}
+
+static int
+test_reassembly_ipv6_4frag(void) {
+	struct reassembly_vector ipv6_4frag_case = {
+				.sa_data = &conf_aes_128_gcm,
+				.full_pkt = &pkt_ipv6_udp_p2,
+				.frags[0] = &pkt_ipv6_udp_p2_f1,
+				.frags[1] = &pkt_ipv6_udp_p2_f2,
+				.frags[2] = &pkt_ipv6_udp_p2_f3,
+				.frags[3] = &pkt_ipv6_udp_p2_f4,
+	};
+	return test_reassembly(&ipv6_4frag_case,
+			RTE_SECURITY_IPSEC_TUNNEL_IPV6);
+}
+
+static int
+test_reassembly_ipv4_5frag(void) {
+	struct reassembly_vector ipv4_5frag_case = {
+				.sa_data = &conf_aes_128_gcm,
+				.full_pkt = &pkt_ipv4_udp_p3,
+				.frags[0] = &pkt_ipv4_udp_p3_f1,
+				.frags[1] = &pkt_ipv4_udp_p3_f2,
+				.frags[2] = &pkt_ipv4_udp_p3_f3,
+				.frags[3] = &pkt_ipv4_udp_p3_f4,
+				.frags[4] = &pkt_ipv4_udp_p3_f5,
+	};
+	return test_reassembly(&ipv4_5frag_case,
+			RTE_SECURITY_IPSEC_TUNNEL_IPV4);
+}
+
+static int
+test_reassembly_ipv6_5frag(void) {
+	struct reassembly_vector ipv6_5frag_case = {
+				.sa_data = &conf_aes_128_gcm,
+				.full_pkt = &pkt_ipv6_udp_p3,
+				.frags[0] = &pkt_ipv6_udp_p3_f1,
+				.frags[1] = &pkt_ipv6_udp_p3_f2,
+				.frags[2] = &pkt_ipv6_udp_p3_f3,
+				.frags[3] = &pkt_ipv6_udp_p3_f4,
+				.frags[4] = &pkt_ipv6_udp_p3_f5,
+	};
+	return test_reassembly(&ipv6_5frag_case,
+			RTE_SECURITY_IPSEC_TUNNEL_IPV6);
+}
+
 
 static struct unit_test_suite inline_ipsec_testsuite  = {
 	.suite_name = "Inline IPsec Ethernet Device Unit Test Suite",
@@ -868,6 +951,24 @@ static struct unit_test_suite inline_ipsec_testsuite  = {
 		TEST_CASE_ST(ut_setup_inline_ipsec,
 				ut_teardown_inline_ipsec,
 				test_reassembly_ipv4_nofrag),
+		TEST_CASE_ST(ut_setup_inline_ipsec,
+				ut_teardown_inline_ipsec,
+				test_reassembly_ipv4_2frag),
+		TEST_CASE_ST(ut_setup_inline_ipsec,
+				ut_teardown_inline_ipsec,
+				test_reassembly_ipv6_2frag),
+		TEST_CASE_ST(ut_setup_inline_ipsec,
+				ut_teardown_inline_ipsec,
+				test_reassembly_ipv4_4frag),
+		TEST_CASE_ST(ut_setup_inline_ipsec,
+				ut_teardown_inline_ipsec,
+				test_reassembly_ipv6_4frag),
+		TEST_CASE_ST(ut_setup_inline_ipsec,
+				ut_teardown_inline_ipsec,
+				test_reassembly_ipv4_5frag),
+		TEST_CASE_ST(ut_setup_inline_ipsec,
+				ut_teardown_inline_ipsec,
+				test_reassembly_ipv6_5frag),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
