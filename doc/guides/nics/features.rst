@@ -602,6 +602,18 @@ Supports inner packet L4 checksum.
   ``tx_offload_capa,tx_queue_offload_capa:RTE_ETH_TX_OFFLOAD_OUTER_UDP_CKSUM``.
 
 
+.. _nic_features_ip_reassembly:
+
+IP reassembly
+-------------
+
+Supports IP reassembly in hardware.
+
+* **[uses]     rte_eth_rxconf,rte_eth_rxmode**: ``offloads:RTE_ETH_RX_OFFLOAD_IP_REASSEMBLY``.
+* **[provides] mbuf**: ``mbuf.ol_flags:RTE_MBUF_F_RX_IP_REASSEMBLY_INCOMPLETE``.
+* **[provides] rte_eth_dev_info**: ``reass_capa``.
+
+
 .. _nic_features_shared_rx_queue:
 
 Shared Rx queue
