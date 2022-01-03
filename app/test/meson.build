@@ -74,6 +74,7 @@ test_sources = files(
         'test_hash_readwrite.c',
         'test_hash_perf.c',
         'test_hash_readwrite_lf_perf.c',
+	'test_inline_ipsec.c',
         'test_interrupts.c',
         'test_ipfrag.c',
         'test_ipsec.c',
