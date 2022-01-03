@@ -936,6 +936,50 @@ test_reassembly_ipv6_5frag(void) {
 			RTE_SECURITY_IPSEC_TUNNEL_IPV6);
 }
 
+static int
+test_reassembly_incomplete(void) {
+	/* Negative test case, not sending all fragments. */
+	struct reassembly_vector ipv4_incomplete_case = {
+				.sa_data = &conf_aes_128_gcm,
+				.full_pkt = &pkt_ipv4_udp_p2,
+				.frags[0] = &pkt_ipv4_udp_p2_f1,
+				.frags[1] = &pkt_ipv4_udp_p2_f2,
+				.frags[2] = NULL,
+				.frags[3] = NULL,
+	};
+	return test_reassembly(&ipv4_incomplete_case,
+			RTE_SECURITY_IPSEC_TUNNEL_IPV4);
+}
+
+static int
+test_reassembly_overlap(void) {
+	/* Negative test case, sending 1 fragment twice. */
+	struct reassembly_vector ipv4_overlap_case = {
+				.sa_data = &conf_aes_128_gcm,
+				.full_pkt = &pkt_ipv4_udp_p2,
+				.frags[0] = &pkt_ipv4_udp_p2_f1,
+				.frags[1] = &pkt_ipv4_udp_p2_f2,
+				.frags[2] = &pkt_ipv4_udp_p2_f2, /* overlap */
+				.frags[3] = &pkt_ipv4_udp_p2_f3,
+	};
+	return test_reassembly(&ipv4_overlap_case,
+			RTE_SECURITY_IPSEC_TUNNEL_IPV4);
+}
+
+static int
+test_reassembly_out_of_order(void) {
+	/* Negative test case, sending 1 fragment twice. */
+	struct reassembly_vector ipv4_ooo_case = {
+				.sa_data = &conf_aes_128_gcm,
+				.full_pkt = &pkt_ipv4_udp_p2,
+				.frags[0] = &pkt_ipv4_udp_p2_f4,
+				.frags[1] = &pkt_ipv4_udp_p2_f3,
+				.frags[2] = &pkt_ipv4_udp_p2_f1,
+				.frags[3] = &pkt_ipv4_udp_p2_f2,
+	};
+	return test_reassembly(&ipv4_ooo_case,
+			RTE_SECURITY_IPSEC_TUNNEL_IPV4);
+}
 
 static struct unit_test_suite inline_ipsec_testsuite  = {
 	.suite_name = "Inline IPsec Ethernet Device Unit Test Suite",
@@ -969,6 +1013,15 @@ static struct unit_test_suite inline_ipsec_testsuite  = {
 		TEST_CASE_ST(ut_setup_inline_ipsec,
 				ut_teardown_inline_ipsec,
 				test_reassembly_ipv6_5frag),
+		TEST_CASE_ST(ut_setup_inline_ipsec,
+				ut_teardown_inline_ipsec,
+				test_reassembly_incomplete),
+		TEST_CASE_ST(ut_setup_inline_ipsec,
+				ut_teardown_inline_ipsec,
+				test_reassembly_overlap),
+		TEST_CASE_ST(ut_setup_inline_ipsec,
+				ut_teardown_inline_ipsec,
+				test_reassembly_out_of_order),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
