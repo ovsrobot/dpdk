@@ -461,6 +461,145 @@ create_default_flow(uint16_t port_id)
 struct rte_mbuf **tx_pkts_burst;
 
 static int
+compare_pkt_data(struct rte_mbuf *m, uint8_t *ref, unsigned int tot_len)
+{
+	unsigned int len;
+	unsigned int nb_segs = m->nb_segs;
+	unsigned int matched = 0;
+
+	while (m && nb_segs != 0) {
+		len = tot_len;
+		if (len > m->data_len)
+			len = m->data_len;
+		if (len != 0) {
+			if (memcmp(rte_pktmbuf_mtod(m, char *),
+					ref + matched, len)) {
+				printf("\n====Reassembly case failed: Data Mismatch");
+				rte_hexdump(stdout, "Reassembled",
+					rte_pktmbuf_mtod(m, char *),
+					len);
+				rte_hexdump(stdout, "reference",
+					ref + matched,
+					len);
+				return TEST_FAILED;
+			}
+		}
+		tot_len -= len;
+		matched += len;
+		m = m->next;
+		nb_segs--;
+	}
+	return TEST_SUCCESS;
+}
+
+static int
+test_reassembly(struct reassembly_vector *vector,
+		enum rte_security_ipsec_tunnel_type tun_type)
+{
+	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
+	unsigned i, portid, nb_rx = 0, nb_tx = 0;
+	struct rte_ipsec_session out_ips = {0};
+	struct rte_ipsec_session in_ips = {0};
+	struct rte_eth_dev_info dev_info = {0};
+	int ret = 0;
+
+	/* Initialize mbuf with test vectors. */
+	nb_tx = reass_test_vectors_init(vector);
+
+	portid = lcore_cfg.port;
+	rte_eth_dev_info_get(portid, &dev_info);
+	if (dev_info.reass_capa.max_frags < nb_tx)
+		return TEST_SKIPPED;
+
+	/**
+	 * Set some finite value in timeout incase PMD support much
+	 * more than requied in this app.
+	 */
+	if (dev_info.reass_capa.reass_timeout > APP_REASS_TIMEOUT) {
+		dev_info.reass_capa.reass_timeout = APP_REASS_TIMEOUT;
+		rte_eth_ip_reassembly_conf_set(portid, &dev_info.reass_capa);
+	}
+
+	init_traffic(mbufpool[lcore_cfg.socketid],
+			tx_pkts_burst, vector->frags, nb_tx);
+
+	/* Create Inline IPsec outbound session. */
+	ret = create_inline_ipsec_session(vector->sa_data, portid, &out_ips,
+			RTE_SECURITY_IPSEC_SA_DIR_EGRESS, tun_type);
+	if (ret)
+		return ret;
+	for (i = 0; i < nb_tx; i++) {
+		if (out_ips.security.ol_flags &
+				RTE_SECURITY_TX_OLOAD_NEED_MDATA)
+			rte_security_set_pkt_metadata(out_ips.security.ctx,
+				out_ips.security.ses, tx_pkts_burst[i], NULL);
+		tx_pkts_burst[i]->ol_flags |= RTE_MBUF_F_TX_SEC_OFFLOAD;
+		tx_pkts_burst[i]->l2_len = RTE_ETHER_HDR_LEN;
+	}
+	/* Create Inline IPsec inbound session. */
+	create_inline_ipsec_session(vector->sa_data, portid, &in_ips,
+			RTE_SECURITY_IPSEC_SA_DIR_INGRESS, tun_type);
+	create_default_flow(portid);
+
+	nb_tx = rte_eth_tx_burst(portid, 0, tx_pkts_burst, nb_tx);
+
+	rte_pause();
+
+	do {
+		nb_rx = rte_eth_rx_burst(portid, 0, pkts_burst, MAX_PKT_BURST);
+		for (i = 0; i < nb_rx; i++) {
+			if ((pkts_burst[i]->ol_flags &
+			    RTE_MBUF_F_RX_IPREASSEMBLY_INCOMPLETE) &&
+			    rte_eth_ip_reass_dynfield_is_registered()) {
+				rte_eth_ip_reass_dynfield_t *dynfield[MAX_PKT_BURST];
+				int j = 0;
+
+				dynfield[j] = rte_eth_ip_reass_dynfield(pkts_burst[i]);
+				while ((dynfield[j]->next_frag->ol_flags &
+				    RTE_MBUF_F_RX_IPREASSEMBLY_INCOMPLETE) &&
+				    dynfield[j]->nb_frags > 0) {
+
+					rte_pktmbuf_dump(stdout,
+						dynfield[j]->next_frag,
+						dynfield[j]->next_frag->data_len);
+					j++;
+					dynfield[j] = rte_eth_ip_reass_dynfield(
+						dynfield[j-1]->next_frag);
+				}
+				/**
+				 * IP reassembly offload is incomplete, and
+				 * fragments are listed in dynfield which
+				 * can be reassembled in SW.
+				 */
+				printf("\nHW IP Reassembly failed,"
+					"\nAttempt SW IP Reassembly,"
+					"\nmbuf is chained with fragments.\n");
+			}
+		}
+	} while (nb_rx == 0);
+
+	/* Clear session data. */
+	rte_security_session_destroy(out_ips.security.ctx,
+				     out_ips.security.ses);
+	rte_security_session_destroy(in_ips.security.ctx,
+				     in_ips.security.ses);
+
+	/* Compare results with known vectors. */
+	if (nb_rx == 1) {
+		if (vector->full_pkt->len == pkts_burst[0]->pkt_len)
+			return compare_pkt_data(pkts_burst[0],
+					vector->full_pkt->data,
+					vector->full_pkt->len);
+		else {
+			rte_pktmbuf_dump(stdout, pkts_burst[0],
+					pkts_burst[0]->pkt_len);
+		}
+	}
+
+	return TEST_FAILED;
+}
+
+static int
 test_ipsec(struct reassembly_vector *vector,
 	   enum rte_security_ipsec_sa_direction dir,
 	   enum rte_security_ipsec_tunnel_type tun_type)
@@ -703,6 +842,18 @@ test_ipsec_ipv4_decap_nofrag(void) {
 			RTE_SECURITY_IPSEC_TUNNEL_IPV4);
 }
 
+static int
+test_reassembly_ipv4_nofrag(void) {
+	struct reassembly_vector ipv4_nofrag_case = {
+				.sa_data = &conf_aes_128_gcm,
+				.full_pkt = &pkt_ipv4_plain,
+				.frags[0] = &pkt_ipv4_plain,
+	};
+	return test_reassembly(&ipv4_nofrag_case,
+			RTE_SECURITY_IPSEC_TUNNEL_IPV4);
+}
+
+
 static struct unit_test_suite inline_ipsec_testsuite  = {
 	.suite_name = "Inline IPsec Ethernet Device Unit Test Suite",
 	.setup = testsuite_setup,
@@ -714,6 +865,9 @@ static struct unit_test_suite inline_ipsec_testsuite  = {
 		TEST_CASE_ST(ut_setup_inline_ipsec,
 				ut_teardown_inline_ipsec,
 				test_ipsec_ipv4_decap_nofrag),
+		TEST_CASE_ST(ut_setup_inline_ipsec,
+				ut_teardown_inline_ipsec,
+				test_reassembly_ipv4_nofrag),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
