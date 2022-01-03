@@ -264,6 +264,16 @@ struct rte_security_ipsec_sa_options {
 	 */
 	uint32_t l4_csum_enable : 1;
 
+	/** Enable reassembly on incoming packets.
+	 *
+	 * * 1: Enable driver to try reassembly of encrypted IP packets for
+	 *      this SA, if supported by the driver. This feature will work
+	 *      only if rx_offload RTE_ETH_RX_OFFLOAD_IP_REASSEMBLY is set in
+	 *      inline Ethernet device.
+	 * * 0: Disable reassembly of packets (default).
+	 */
+	uint32_t reass_en : 1;
+
 	/** Reserved bit fields for future extension
 	 *
 	 * User should ensure reserved_opts is cleared as it may change in
@@ -271,7 +281,7 @@ struct rte_security_ipsec_sa_options {
 	 *
 	 * Note: Reduce number of bits in reserved_opts for every new option.
 	 */
-	uint32_t reserved_opts : 18;
+	uint32_t reserved_opts : 17;
 };
 
 /** IPSec security association direction */
