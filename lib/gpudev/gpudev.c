@@ -635,6 +635,53 @@ rte_gpu_mem_unregister(int16_t dev_id, void *ptr)
 }
 
 int
+rte_gpu_mem_pin(int16_t dev_id, size_t size, void *ptr)
+{
+	struct rte_gpu *dev;
+
+	dev = gpu_get_by_id(dev_id);
+	if (dev == NULL) {
+		GPU_LOG(ERR, "pin mem for invalid device ID %d", dev_id);
+		rte_errno = ENODEV;
+		return -rte_errno;
+	}
+
+	if (dev->ops.mem_pin == NULL) {
+		GPU_LOG(ERR, "mem pinning not supported");
+		rte_errno = ENOTSUP;
+		return -rte_errno;
+	}
+
+	if (ptr == NULL || size == 0) /* dry-run  */
+		return 0;
+
+	return GPU_DRV_RET(dev->ops.mem_pin(dev, size, ptr));
+}
+
+int
+rte_gpu_mem_unpin(int16_t dev_id, void *ptr)
+{
+	struct rte_gpu *dev;
+
+	dev = gpu_get_by_id(dev_id);
+	if (dev == NULL) {
+		GPU_LOG(ERR, "unpin mem for invalid device ID %d", dev_id);
+		rte_errno = ENODEV;
+		return -rte_errno;
+	}
+
+	if (dev->ops.mem_unpin == NULL) {
+		rte_errno = ENOTSUP;
+		return -rte_errno;
+	}
+
+	if (ptr == NULL) /* dry-run */
+		return 0;
+
+	return GPU_DRV_RET(dev->ops.mem_unpin(dev, ptr));
+}
+
+int
 rte_gpu_wmb(int16_t dev_id)
 {
 	struct rte_gpu *dev;
