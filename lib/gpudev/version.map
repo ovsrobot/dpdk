@@ -21,7 +21,9 @@ EXPERIMENTAL {
 	rte_gpu_is_valid;
 	rte_gpu_mem_alloc;
 	rte_gpu_mem_free;
+	rte_gpu_mem_pin;
 	rte_gpu_mem_register;
+	rte_gpu_mem_unpin;
 	rte_gpu_mem_unregister;
 	rte_gpu_wmb;
 };
