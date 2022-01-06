@@ -1353,12 +1353,12 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 	 *   cache flush threshold) is flushed to the ring.
 	 */
 
-	/* Add elements back into the cache */
+	/* Add the objects to the cache */
 	rte_memcpy(&cache_objs[0], obj_table, sizeof(void *) * n);
-
 	cache->len += n;
 
 	if (cache->len >= cache->flushthresh) {
+		/* Flush excess objects in the cache to the ring */
 		rte_mempool_ops_enqueue_bulk(mp, &cache->objs[cache->size],
 				cache->len - cache->size);
 		cache->len = cache->size;
@@ -1368,7 +1368,7 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 
 ring_enqueue:
 
-	/* push remaining objects in ring */
+	/* Put the objects into the ring */
 #ifdef RTE_LIBRTE_MEMPOOL_DEBUG
 	if (rte_mempool_ops_enqueue_bulk(mp, obj_table, n) < 0)
 		rte_panic("cannot put objects in mempool\n");
@@ -1460,21 +1460,25 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 			   unsigned int n, struct rte_mempool_cache *cache)
 {
 	int ret;
-	uint32_t index, len;
 	void **cache_objs;
 
-	/* No cache provided or cannot be satisfied from cache */
-	if (unlikely(cache == NULL || n >= cache->size))
+	/* No cache provided or if get would overflow mem allocated for cache */
+	if (unlikely(cache == NULL || n > RTE_MEMPOOL_CACHE_MAX_SIZE))
 		goto ring_dequeue;
 
 	cache_objs = cache->objs;
 
-	/* Can this be satisfied from the cache? */
-	if (cache->len < n) {
-		/* No. Backfill the cache first, and then fill from it */
+	/* Can the request be satisfied from the cache? */
+	if (n <= cache->len) {
+		/* Yes. Simply decrease the cache length */
+		cache->len -= n;
+	} else {
+		/* No. Backfill the cache from the ring first */
+
+		/* Number required to fill the cache + n */
 		uint32_t req = n + (cache->size - cache->len);
 
-		/* How many do we require i.e. number to fill the cache + the request */
+		/* Backfill the cache from the ring */
 		ret = rte_mempool_ops_dequeue_bulk(mp,
 			&cache->objs[cache->len], req);
 		if (unlikely(ret < 0)) {
@@ -1487,14 +1491,12 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 			goto ring_dequeue;
 		}
 
-		cache->len += req;
+		/* Set the length of the backfilled cache - n */
+		cache->len = cache->size;
 	}
 
-	/* Now fill in the response ... */
-	for (index = 0, len = cache->len - 1; index < n; ++index, len--, obj_table++)
-		*obj_table = cache_objs[len];
-
-	cache->len -= n;
+	/* Get the objects from the cache, at the already decreased offset */
+	rte_memcpy(obj_table, &cache_objs[cache->len], sizeof(void *) * n);
 
 	RTE_MEMPOOL_STAT_ADD(mp, get_success_bulk, 1);
 	RTE_MEMPOOL_STAT_ADD(mp, get_success_objs, n);
@@ -1503,7 +1505,7 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 
 ring_dequeue:
 
-	/* get remaining objects from ring */
+	/* Get the objects from the ring */
 	ret = rte_mempool_ops_dequeue_bulk(mp, obj_table, n);
 
 	if (ret < 0) {
