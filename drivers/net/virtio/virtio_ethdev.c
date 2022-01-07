@@ -3041,6 +3041,7 @@ virtio_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 		dev_info->rx_offload_capa |= RTE_ETH_RX_OFFLOAD_SCATTER;
 	if (host_features & (1ULL << VIRTIO_NET_F_GUEST_CSUM)) {
 		dev_info->rx_offload_capa |=
+			RTE_ETH_RX_OFFLOAD_IPV4_CKSUM |
 			RTE_ETH_RX_OFFLOAD_TCP_CKSUM |
 			RTE_ETH_RX_OFFLOAD_UDP_CKSUM;
 	}
@@ -3055,6 +3056,7 @@ virtio_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 				    RTE_ETH_TX_OFFLOAD_VLAN_INSERT;
 	if (host_features & (1ULL << VIRTIO_NET_F_CSUM)) {
 		dev_info->tx_offload_capa |=
+			RTE_ETH_TX_OFFLOAD_IPV4_CKSUM |
 			RTE_ETH_TX_OFFLOAD_UDP_CKSUM |
 			RTE_ETH_TX_OFFLOAD_TCP_CKSUM;
 	}
