@@ -139,6 +139,7 @@ struct nix {
 	uint16_t msixoff;
 	uint8_t rx_pause;
 	uint8_t tx_pause;
+	uint16_t cev;
 	uint64_t rx_cfg;
 	struct dev dev;
 	uint16_t cints;
@@ -376,7 +377,8 @@ int nix_rq_cfg(struct dev *dev, struct roc_nix_rq *rq, uint16_t qints, bool cfg,
 	       bool ena);
 int nix_rq_ena_dis(struct dev *dev, struct roc_nix_rq *rq, bool enable);
 int nix_tm_bp_config_get(struct roc_nix *roc_nix, bool *is_enabled);
-int nix_tm_bp_config_set(struct roc_nix *roc_nix, bool enable);
+int nix_tm_bp_config_set(struct roc_nix *roc_nix, uint16_t sq, uint16_t tc,
+			 bool enable);
 
 /*
  * TM priv utils.
