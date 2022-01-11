@@ -17,6 +17,8 @@
 #include <cuda.h>
 #include <cudaTypedefs.h>
 
+#include "gdrcopy.h"
+
 #define CUDA_DRIVER_MIN_VERSION 11040
 #define CUDA_API_MIN_VERSION 3020
 
@@ -51,6 +53,8 @@ static PFN_cuFlushGPUDirectRDMAWrites pfn_cuFlushGPUDirectRDMAWrites;
 static void *cudalib;
 static unsigned int cuda_api_version;
 static int cuda_driver_version;
+
+static gdr_t gdrc_h;
 
 /* NVIDIA GPU vendor */
 #define NVIDIA_GPU_VENDOR_ID (0x10de)
@@ -144,6 +148,7 @@ struct mem_entry {
 	struct rte_gpu *dev;
 	CUcontext ctx;
 	cuda_ptr_key pkey;
+	gdr_mh_t mh;
 	enum mem_type mtype;
 	struct mem_entry *prev;
 	struct mem_entry *next;
@@ -944,6 +949,87 @@ cuda_wmb(struct rte_gpu *dev)
 }
 
 static int
+cuda_mem_expose(struct rte_gpu *dev, __rte_unused size_t size, void *ptr_in, void **ptr_out)
+{
+	struct mem_entry *mem_item;
+	cuda_ptr_key hk;
+
+	if (dev == NULL)
+		return -ENODEV;
+
+	if (gdrc_h == NULL) {
+		rte_cuda_log(ERR, "GDRCopy not built or loaded. Can't expose GPU memory.");
+		rte_errno = ENOTSUP;
+		return -rte_errno;
+	}
+
+	hk = get_hash_from_ptr((void *)ptr_in);
+
+	mem_item = mem_list_find_item(hk);
+	if (mem_item == NULL) {
+		rte_cuda_log(ERR, "Memory address 0x%p not found in driver memory.", ptr_in);
+		rte_errno = EPERM;
+		return -rte_errno;
+	}
+
+	if (mem_item->mtype == GPU_MEM) {
+		rte_cuda_log(ERR, "Memory address 0x%p is not GPU memory type.", ptr_in);
+		rte_errno = EPERM;
+		return -rte_errno;
+	}
+
+	if (mem_item->size != size)
+		rte_cuda_log(WARNING,
+				"Can't expose memory area with size (%zd) different from original size (%zd).",
+				size, mem_item->size);
+
+	if (gdrcopy_pin(gdrc_h, &(mem_item->mh), (uint64_t)mem_item->ptr_d,
+			mem_item->size, &(mem_item->ptr_h))) {
+		rte_cuda_log(ERR, "Error exposing GPU memory address 0x%p.", ptr_in);
+		rte_errno = EPERM;
+		return -rte_errno;
+	}
+
+	*ptr_out = mem_item->ptr_h;
+
+	return 0;
+}
+
+static int
+cuda_mem_unexpose(struct rte_gpu *dev, void *ptr_in)
+{
+	struct mem_entry *mem_item;
+	cuda_ptr_key hk;
+
+	if (dev == NULL)
+		return -ENODEV;
+
+	if (gdrc_h == NULL) {
+		rte_cuda_log(ERR, "GDRCopy not built or loaded. Can't unexpose GPU memory.");
+		rte_errno = ENOTSUP;
+		return -rte_errno;
+	}
+
+	hk = get_hash_from_ptr((void *)ptr_in);
+
+	mem_item = mem_list_find_item(hk);
+	if (mem_item == NULL) {
+		rte_cuda_log(ERR, "Memory address 0x%p not found in driver memory.", ptr_in);
+		rte_errno = EPERM;
+		return -rte_errno;
+	}
+
+	if (gdrcopy_unpin(gdrc_h, mem_item->mh, (void *)mem_item->ptr_d,
+			mem_item->size)) {
+		rte_cuda_log(ERR, "Error unexposing GPU memory address 0x%p.", ptr_in);
+		rte_errno = EPERM;
+		return -rte_errno;
+	}
+
+	return 0;
+}
+
+static int
 cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_device *pci_dev)
 {
 	struct rte_gpu *dev = NULL;
@@ -1018,6 +1104,19 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 			rte_errno = ENOTSUP;
 			return -rte_errno;
 		}
+
+		gdrc_h = NULL;
+
+		#ifdef DRIVERS_GPU_CUDA_GDRCOPY_H
+			if (gdrcopy_loader())
+				rte_cuda_log(ERR, "GDRCopy shared library not found.\n");
+			else {
+				if (gdrcopy_open(&gdrc_h))
+					rte_cuda_log(ERR, "GDRCopy handler can't be created. Is gdrdrv driver installed and loaded?\n");
+			}
+		#else
+			gdrc_h = NULL;
+		#endif
 	}
 
 	/* Fill HW specific part of device structure */
@@ -1160,6 +1259,8 @@ cuda_gpu_probe(__rte_unused struct rte_pci_driver *pci_drv, struct rte_pci_devic
 	dev->ops.mem_free = cuda_mem_free;
 	dev->ops.mem_register = cuda_mem_register;
 	dev->ops.mem_unregister = cuda_mem_unregister;
+	dev->ops.mem_expose = cuda_mem_expose;
+	dev->ops.mem_unexpose = cuda_mem_unexpose;
 	dev->ops.wmb = cuda_wmb;
 
 	rte_gpu_complete_new(dev);
