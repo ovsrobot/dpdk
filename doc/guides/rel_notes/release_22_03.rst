@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated AF_XDP PMD.**
+
+  * Re-enabled secondary process support. RX/TX is not supported.
+
 
 Removed Items
 -------------
