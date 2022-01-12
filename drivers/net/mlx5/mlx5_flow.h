@@ -324,7 +324,7 @@ enum mlx5_feature_name {
 /*
  * Max priority for ingress\egress flow groups
  * greater than 0 and for any transfer flow group.
- * From user configation: 0 - 21843.
+ * From user configuration: 0 - 21843.
  */
 #define MLX5_NON_ROOT_FLOW_MAX_PRIO	(21843 + 1)
 

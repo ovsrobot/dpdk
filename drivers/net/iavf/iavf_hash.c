@@ -814,7 +814,7 @@ iavf_hash_parse_pattern(const struct rte_flow_item pattern[], uint64_t *phint,
 
 #define REFINE_PROTO_FLD(op, fld) \
 	VIRTCHNL_##op##_PROTO_HDR_FIELD(hdr, VIRTCHNL_PROTO_HDR_##fld)
-#define REPALCE_PROTO_FLD(fld_1, fld_2) \
+#define REPLACE_PROTO_FLD(fld_1, fld_2) \
 do { \
 	REFINE_PROTO_FLD(DEL, fld_1);	\
 	REFINE_PROTO_FLD(ADD, fld_2);	\
@@ -925,10 +925,10 @@ iavf_refine_proto_hdrs_l234(struct virtchnl_proto_hdrs *proto_hdrs,
 			}
 			if (rss_type & RTE_ETH_RSS_L3_PRE64) {
 				if (REFINE_PROTO_FLD(TEST, IPV6_SRC))
-					REPALCE_PROTO_FLD(IPV6_SRC,
+					REPLACE_PROTO_FLD(IPV6_SRC,
 							  IPV6_PREFIX64_SRC);
 				if (REFINE_PROTO_FLD(TEST, IPV6_DST))
-					REPALCE_PROTO_FLD(IPV6_DST,
+					REPLACE_PROTO_FLD(IPV6_DST,
 							  IPV6_PREFIX64_DST);
 			}
 			break;

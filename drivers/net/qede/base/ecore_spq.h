@@ -174,7 +174,7 @@ enum _ecore_status_t ecore_spq_post(struct ecore_hwfn	   *p_hwfn,
 				    u8                     *fw_return_code);
 
 /**
- * @brief ecore_spq_allocate - Alloocates & initializes the SPQ and EQ.
+ * @brief ecore_spq_allocate - Allocates & initializes the SPQ and EQ.
  *
  * @param p_hwfn
  *

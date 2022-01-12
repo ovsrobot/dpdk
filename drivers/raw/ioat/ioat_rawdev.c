@@ -200,7 +200,7 @@ ioat_rawdev_create(const char *name, struct rte_pci_device *dev)
 	ioat->rawdev = rawdev;
 	ioat->mz = mz;
 	ioat->regs = dev->mem_resource[0].addr;
-	ioat->doorbell = &ioat->regs->dmacount;
+	ioat->doorbell = &ioat->regs->dmaccount;
 	ioat->ring_size = 0;
 	ioat->desc_ring = NULL;
 	ioat->status_addr = ioat->mz->iova +

@@ -312,30 +312,30 @@ hns3_dcb_pg_schd_mode_cfg(struct hns3_hw *hw, uint8_t pg_id)
 }
 
 static uint32_t
-hns3_dcb_get_shapping_para(uint8_t ir_b, uint8_t ir_u, uint8_t ir_s,
+hns3_dcb_get_shaping_para(uint8_t ir_b, uint8_t ir_u, uint8_t ir_s,
 			   uint8_t bs_b, uint8_t bs_s)
 {
-	uint32_t shapping_para = 0;
+	uint32_t shaping_para = 0;
 
-	/* If ir_b is zero it means IR is 0Mbps, return zero of shapping_para */
+	/* If ir_b is zero it means IR is 0Mbps, return zero of shaping_para */
 	if (ir_b == 0)
-		return shapping_para;
+		return shaping_para;
 
-	hns3_dcb_set_field(shapping_para, IR_B, ir_b);
-	hns3_dcb_set_field(shapping_para, IR_U, ir_u);
-	hns3_dcb_set_field(shapping_para, IR_S, ir_s);
-	hns3_dcb_set_field(shapping_para, BS_B, bs_b);
-	hns3_dcb_set_field(shapping_para, BS_S, bs_s);
+	hns3_dcb_set_field(shaping_para, IR_B, ir_b);
+	hns3_dcb_set_field(shaping_para, IR_U, ir_u);
+	hns3_dcb_set_field(shaping_para, IR_S, ir_s);
+	hns3_dcb_set_field(shaping_para, BS_B, bs_b);
+	hns3_dcb_set_field(shaping_para, BS_S, bs_s);
 
-	return shapping_para;
+	return shaping_para;
 }
 
 static int
 hns3_dcb_port_shaper_cfg(struct hns3_hw *hw, uint32_t speed)
 {
-	struct hns3_port_shapping_cmd *shap_cfg_cmd;
+	struct hns3_port_shaping_cmd *shap_cfg_cmd;
 	struct hns3_shaper_parameter shaper_parameter;
-	uint32_t shapping_para;
+	uint32_t shaping_para;
 	uint32_t ir_u, ir_b, ir_s;
 	struct hns3_cmd_desc desc;
 	int ret;
@@ -348,21 +348,21 @@ hns3_dcb_port_shaper_cfg(struct hns3_hw *hw, uint32_t speed)
 	}
 
 	hns3_cmd_setup_basic_desc(&desc, HNS3_OPC_TM_PORT_SHAPPING, false);
-	shap_cfg_cmd = (struct hns3_port_shapping_cmd *)desc.data;
+	shap_cfg_cmd = (struct hns3_port_shaping_cmd *)desc.data;
 
 	ir_b = shaper_parameter.ir_b;
 	ir_u = shaper_parameter.ir_u;
 	ir_s = shaper_parameter.ir_s;
-	shapping_para = hns3_dcb_get_shapping_para(ir_b, ir_u, ir_s,
+	shaping_para = hns3_dcb_get_shaping_para(ir_b, ir_u, ir_s,
 						   HNS3_SHAPER_BS_U_DEF,
 						   HNS3_SHAPER_BS_S_DEF);
 
-	shap_cfg_cmd->port_shapping_para = rte_cpu_to_le_32(shapping_para);
+	shap_cfg_cmd->port_shaping_para = rte_cpu_to_le_32(shaping_para);
 
 	/*
 	 * Configure the port_rate and set bit HNS3_TM_RATE_VLD_B of flag
-	 * field in hns3_port_shapping_cmd to require firmware to recalculate
-	 * shapping parameters. And whether the parameters are recalculated
+	 * field in hns3_port_shaping_cmd to require firmware to recalculate
+	 * shaping parameters. And whether the parameters are recalculated
 	 * depends on the firmware version. But driver still needs to
 	 * calculate it and configure to firmware for better compatibility.
 	 */
@@ -385,10 +385,10 @@ hns3_port_shaper_update(struct hns3_hw *hw, uint32_t speed)
 }
 
 static int
-hns3_dcb_pg_shapping_cfg(struct hns3_hw *hw, enum hns3_shap_bucket bucket,
-			 uint8_t pg_id, uint32_t shapping_para, uint32_t rate)
+hns3_dcb_pg_shaping_cfg(struct hns3_hw *hw, enum hns3_shap_bucket bucket,
+			 uint8_t pg_id, uint32_t shaping_para, uint32_t rate)
 {
-	struct hns3_pg_shapping_cmd *shap_cfg_cmd;
+	struct hns3_pg_shaping_cmd *shap_cfg_cmd;
 	enum hns3_opcode_type opcode;
 	struct hns3_cmd_desc desc;
 
@@ -396,15 +396,15 @@ hns3_dcb_pg_shapping_cfg(struct hns3_hw *hw, enum hns3_shap_bucket bucket,
 		 HNS3_OPC_TM_PG_C_SHAPPING;
 	hns3_cmd_setup_basic_desc(&desc, opcode, false);
 
-	shap_cfg_cmd = (struct hns3_pg_shapping_cmd *)desc.data;
+	shap_cfg_cmd = (struct hns3_pg_shaping_cmd *)desc.data;
 
 	shap_cfg_cmd->pg_id = pg_id;
 
-	shap_cfg_cmd->pg_shapping_para = rte_cpu_to_le_32(shapping_para);
+	shap_cfg_cmd->pg_shaping_para = rte_cpu_to_le_32(shaping_para);
 
 	/*
 	 * Configure the pg_rate and set bit HNS3_TM_RATE_VLD_B of flag field in
-	 * hns3_pg_shapping_cmd to require firmware to recalculate shapping
+	 * hns3_pg_shaping_cmd to require firmware to recalculate shaping
 	 * parameters. And whether parameters are recalculated depends on
 	 * the firmware version. But driver still needs to calculate it and
 	 * configure to firmware for better compatibility.
@@ -432,11 +432,11 @@ hns3_pg_shaper_rate_cfg(struct hns3_hw *hw, uint8_t pg_id, uint32_t rate)
 		return ret;
 	}
 
-	shaper_para = hns3_dcb_get_shapping_para(0, 0, 0,
+	shaper_para = hns3_dcb_get_shaping_para(0, 0, 0,
 						 HNS3_SHAPER_BS_U_DEF,
 						 HNS3_SHAPER_BS_S_DEF);
 
-	ret = hns3_dcb_pg_shapping_cfg(hw, HNS3_DCB_SHAP_C_BUCKET, pg_id,
+	ret = hns3_dcb_pg_shaping_cfg(hw, HNS3_DCB_SHAP_C_BUCKET, pg_id,
 				       shaper_para, rate);
 	if (ret) {
 		hns3_err(hw, "config PG CIR shaper parameter fail, ret = %d.",
@@ -447,11 +447,11 @@ hns3_pg_shaper_rate_cfg(struct hns3_hw *hw, uint8_t pg_id, uint32_t rate)
 	ir_b = shaper_parameter.ir_b;
 	ir_u = shaper_parameter.ir_u;
 	ir_s = shaper_parameter.ir_s;
-	shaper_para = hns3_dcb_get_shapping_para(ir_b, ir_u, ir_s,
+	shaper_para = hns3_dcb_get_shaping_para(ir_b, ir_u, ir_s,
 						 HNS3_SHAPER_BS_U_DEF,
 						 HNS3_SHAPER_BS_S_DEF);
 
-	ret = hns3_dcb_pg_shapping_cfg(hw, HNS3_DCB_SHAP_P_BUCKET, pg_id,
+	ret = hns3_dcb_pg_shaping_cfg(hw, HNS3_DCB_SHAP_P_BUCKET, pg_id,
 				       shaper_para, rate);
 	if (ret) {
 		hns3_err(hw, "config PG PIR shaper parameter fail, ret = %d.",
@@ -520,10 +520,10 @@ hns3_dcb_pri_schd_mode_cfg(struct hns3_hw *hw, uint8_t pri_id)
 }
 
 static int
-hns3_dcb_pri_shapping_cfg(struct hns3_hw *hw, enum hns3_shap_bucket bucket,
-			  uint8_t pri_id, uint32_t shapping_para, uint32_t rate)
+hns3_dcb_pri_shaping_cfg(struct hns3_hw *hw, enum hns3_shap_bucket bucket,
+			  uint8_t pri_id, uint32_t shaping_para, uint32_t rate)
 {
-	struct hns3_pri_shapping_cmd *shap_cfg_cmd;
+	struct hns3_pri_shaping_cmd *shap_cfg_cmd;
 	enum hns3_opcode_type opcode;
 	struct hns3_cmd_desc desc;
 
@@ -532,16 +532,16 @@ hns3_dcb_pri_shapping_cfg(struct hns3_hw *hw, enum hns3_shap_bucket bucket,
 
 	hns3_cmd_setup_basic_desc(&desc, opcode, false);
 
-	shap_cfg_cmd = (struct hns3_pri_shapping_cmd *)desc.data;
+	shap_cfg_cmd = (struct hns3_pri_shaping_cmd *)desc.data;
 
 	shap_cfg_cmd->pri_id = pri_id;
 
-	shap_cfg_cmd->pri_shapping_para = rte_cpu_to_le_32(shapping_para);
+	shap_cfg_cmd->pri_shaping_para = rte_cpu_to_le_32(shaping_para);
 
 	/*
 	 * Configure the pri_rate and set bit HNS3_TM_RATE_VLD_B of flag
-	 * field in hns3_pri_shapping_cmd to require firmware to recalculate
-	 * shapping parameters. And whether the parameters are recalculated
+	 * field in hns3_pri_shaping_cmd to require firmware to recalculate
+	 * shaping parameters. And whether the parameters are recalculated
 	 * depends on the firmware version. But driver still needs to
 	 * calculate it and configure to firmware for better compatibility.
 	 */
@@ -567,11 +567,11 @@ hns3_pri_shaper_rate_cfg(struct hns3_hw *hw, uint8_t tc_no, uint32_t rate)
 		return ret;
 	}
 
-	shaper_para = hns3_dcb_get_shapping_para(0, 0, 0,
+	shaper_para = hns3_dcb_get_shaping_para(0, 0, 0,
 						 HNS3_SHAPER_BS_U_DEF,
 						 HNS3_SHAPER_BS_S_DEF);
 
-	ret = hns3_dcb_pri_shapping_cfg(hw, HNS3_DCB_SHAP_C_BUCKET, tc_no,
+	ret = hns3_dcb_pri_shaping_cfg(hw, HNS3_DCB_SHAP_C_BUCKET, tc_no,
 					shaper_para, rate);
 	if (ret) {
 		hns3_err(hw,
@@ -583,11 +583,11 @@ hns3_pri_shaper_rate_cfg(struct hns3_hw *hw, uint8_t tc_no, uint32_t rate)
 	ir_b = shaper_parameter.ir_b;
 	ir_u = shaper_parameter.ir_u;
 	ir_s = shaper_parameter.ir_s;
-	shaper_para = hns3_dcb_get_shapping_para(ir_b, ir_u, ir_s,
+	shaper_para = hns3_dcb_get_shaping_para(ir_b, ir_u, ir_s,
 						 HNS3_SHAPER_BS_U_DEF,
 						 HNS3_SHAPER_BS_S_DEF);
 
-	ret = hns3_dcb_pri_shapping_cfg(hw, HNS3_DCB_SHAP_P_BUCKET, tc_no,
+	ret = hns3_dcb_pri_shaping_cfg(hw, HNS3_DCB_SHAP_P_BUCKET, tc_no,
 					shaper_para, rate);
 	if (ret) {
 		hns3_err(hw,

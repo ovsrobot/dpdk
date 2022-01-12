@@ -2026,7 +2026,7 @@ uint8_t polling_slave_mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x00 };
 int polling_test_slaves[TEST_RR_POLLING_LINK_STATUS_SLAVE_COUNT] = { -1, -1 };
 
 static int
-test_roundrobin_verfiy_polling_slave_link_status_change(void)
+test_roundrobin_verify_polling_slave_link_status_change(void)
 {
 	struct rte_ether_addr *mac_addr =
 		(struct rte_ether_addr *)polling_slave_mac;
@@ -5118,7 +5118,7 @@ static struct unit_test_suite link_bonding_test_suite  = {
 		TEST_CASE(test_roundrobin_verify_promiscuous_enable_disable),
 		TEST_CASE(test_roundrobin_verify_mac_assignment),
 		TEST_CASE(test_roundrobin_verify_slave_link_status_change_behaviour),
-		TEST_CASE(test_roundrobin_verfiy_polling_slave_link_status_change),
+		TEST_CASE(test_roundrobin_verify_polling_slave_link_status_change),
 		TEST_CASE(test_activebackup_tx_burst),
 		TEST_CASE(test_activebackup_rx_burst),
 		TEST_CASE(test_activebackup_verify_promiscuous_enable_disable),

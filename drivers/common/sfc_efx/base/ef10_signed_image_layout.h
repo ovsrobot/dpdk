@@ -35,7 +35,7 @@ enum {
   SIGNED_IMAGE_CHUNK_IMAGE,             /* Bootable binary image */
   SIGNED_IMAGE_CHUNK_REFLASH_TRAILER,   /* Reflash trailer */
   SIGNED_IMAGE_CHUNK_SIGNATURE,         /* Remaining contents of the signed image,
-                                         * including the certifiates and signature */
+                                         * including the certificates and signature */
   NUM_SIGNED_IMAGE_CHUNKS,
 };
 

@@ -259,7 +259,7 @@ mlx5_vdpa_virtq_setup(struct mlx5_vdpa_priv *priv, int index)
 			virtq->counters = mlx5_devx_cmd_create_virtio_q_counters
 							      (priv->cdev->ctx);
 		if (!virtq->counters) {
-			DRV_LOG(ERR, "Failed to create virtq couners for virtq"
+			DRV_LOG(ERR, "Failed to create virtq counters for virtq"
 				" %d.", index);
 			goto error;
 		}
@@ -592,7 +592,7 @@ mlx5_vdpa_virtq_stats_get(struct mlx5_vdpa_priv *priv, int qid,
 			  struct rte_vdpa_stat *stats, unsigned int n)
 {
 	struct mlx5_vdpa_virtq *virtq = &priv->virtqs[qid];
-	struct mlx5_devx_virtio_q_couners_attr attr = {0};
+	struct mlx5_devx_virtio_q_counters_attr attr = {0};
 	int ret;
 
 	if (!virtq->counters) {

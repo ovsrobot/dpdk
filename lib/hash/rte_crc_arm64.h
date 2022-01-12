@@ -61,7 +61,7 @@ crc32c_arm64_u64(uint64_t data, uint32_t init_val)
 }
 
 /**
- * Allow or disallow use of arm64 SIMD instrinsics for CRC32 hash
+ * Allow or disallow use of arm64 SIMD intrinsics for CRC32 hash
  * calculation.
  *
  * @param alg

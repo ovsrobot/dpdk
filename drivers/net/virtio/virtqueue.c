@@ -16,7 +16,7 @@
  * 2) mbuf that hasn't been consumed by backend.
  */
 struct rte_mbuf *
-virtqueue_detach_unused(struct virtqueue *vq)
+virtqueue_detach_unused_cookie(struct virtqueue *vq)
 {
 	struct rte_mbuf *cookie;
 	struct virtio_hw *hw;

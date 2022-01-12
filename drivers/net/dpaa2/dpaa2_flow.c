@@ -1341,7 +1341,7 @@ dpaa2_configure_flow_vlan(struct rte_flow *flow,
 }
 
 static int
-dpaa2_configure_flow_ip_discrimation(
+dpaa2_configure_flow_ip_discrimination(
 	struct dpaa2_dev_priv *priv, struct rte_flow *flow,
 	const struct rte_flow_item *pattern,
 	int *local_cfg,	int *device_configured,
@@ -1447,7 +1447,7 @@ dpaa2_configure_flow_generic_ip(
 	flow->tc_id = group;
 	flow->tc_index = attr->priority;
 
-	ret = dpaa2_configure_flow_ip_discrimation(priv,
+	ret = dpaa2_configure_flow_ip_discrimination(priv,
 			flow, pattern, &local_cfg,
 			device_configured, group);
 	if (ret) {

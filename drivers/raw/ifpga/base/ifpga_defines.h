@@ -753,7 +753,7 @@ struct feature_fme_ifpmon_ch_ctr {
 	union {
 		u64 csr;
 		struct {
-			/* Cache Counter for even addresse */
+			/* Cache Counter for even addresses */
 			u64 cache_counter:48;
 			u16 rsvd:12;		/* Reserved */
 			/* Cache Event being reported */
@@ -1279,7 +1279,7 @@ struct feature_fme_hssi_eth_ctrl {
 			u32 data:32;		/* HSSI data */
 			u16 address:16;		/* HSSI address */
 			/*
-			 * HSSI comamnd
+			 * HSSI command
 			 * 0x0 - No request
 			 * 0x08 - SW register RD request
 			 * 0x10 - SW register WR request
@@ -1595,7 +1595,7 @@ struct feature_port_stp {
  * @FPGA_PR_STATE_OPERATING: FPGA PR done
  */
 enum fpga_pr_states {
-	/* canot determine state states */
+	/* cannot determine state states */
 	FPGA_PR_STATE_UNKNOWN,
 
 	/* write sequence: init, write, complete */

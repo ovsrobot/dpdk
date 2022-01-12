@@ -56,7 +56,7 @@ int rte_dpaa2_vfio_setup_intr(struct rte_intr_handle *intr_handle,
 int fslmc_vfio_setup_group(void);
 int fslmc_vfio_process_group(void);
 char *fslmc_get_container(void);
-int fslmc_get_container_group(int *gropuid);
+int fslmc_get_container_group(int *groupid);
 int rte_fslmc_vfio_dmamap(void);
 int rte_fslmc_vfio_mem_dmamap(uint64_t vaddr, uint64_t iova, uint64_t size);
 

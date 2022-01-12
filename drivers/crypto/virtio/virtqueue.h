@@ -99,7 +99,7 @@ void virtqueue_disable_intr(struct virtqueue *vq);
 /**
  *  Get all mbufs to be freed.
  */
-void virtqueue_detatch_unused(struct virtqueue *vq);
+void virtqueue_detach_unused(struct virtqueue *vq);
 
 static inline int
 virtqueue_full(const struct virtqueue *vq)

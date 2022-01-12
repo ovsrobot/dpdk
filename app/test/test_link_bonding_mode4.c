@@ -58,11 +58,11 @@ static const struct rte_ether_addr slave_mac_default = {
 	{ 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00 }
 };
 
-static const struct rte_ether_addr parnter_mac_default = {
+static const struct rte_ether_addr partner_mac_default = {
 	{ 0x22, 0xBB, 0xFF, 0xBB, 0x00, 0x00 }
 };
 
-static const struct rte_ether_addr parnter_system = {
+static const struct rte_ether_addr partner_system = {
 	{ 0x33, 0xFF, 0xBB, 0xFF, 0x00, 0x00 }
 };
 
@@ -76,7 +76,7 @@ struct slave_conf {
 	uint16_t port_id;
 	uint8_t bonded : 1;
 
-	uint8_t lacp_parnter_state;
+	uint8_t lacp_partner_state;
 };
 
 struct ether_vlan_hdr {
@@ -258,7 +258,7 @@ add_slave(struct slave_conf *slave, uint8_t start)
 	TEST_ASSERT_EQUAL(rte_is_same_ether_addr(&addr, &addr_check), 1,
 			"Slave MAC address is not as expected");
 
-	RTE_VERIFY(slave->lacp_parnter_state == 0);
+	RTE_VERIFY(slave->lacp_partner_state == 0);
 	return 0;
 }
 
@@ -288,7 +288,7 @@ remove_slave(struct slave_conf *slave)
 			test_params.bonded_port_id);
 
 	slave->bonded = 0;
-	slave->lacp_parnter_state = 0;
+	slave->lacp_partner_state = 0;
 	return 0;
 }
 
@@ -501,20 +501,20 @@ make_lacp_reply(struct slave_conf *slave, struct rte_mbuf *pkt)
 	slow_hdr = rte_pktmbuf_mtod(pkt, struct slow_protocol_frame *);
 
 	/* Change source address to partner address */
-	rte_ether_addr_copy(&parnter_mac_default, &slow_hdr->eth_hdr.src_addr);
+	rte_ether_addr_copy(&partner_mac_default, &slow_hdr->eth_hdr.src_addr);
 	slow_hdr->eth_hdr.src_addr.addr_bytes[RTE_ETHER_ADDR_LEN - 1] =
 		slave->port_id;
 
 	lacp = (struct lacpdu *) &slow_hdr->slow_protocol;
 	/* Save last received state */
-	slave->lacp_parnter_state = lacp->actor.state;
+	slave->lacp_partner_state = lacp->actor.state;
 	/* Change it into LACP replay by matching parameters. */
 	memcpy(&lacp->partner.port_params, &lacp->actor.port_params,
 		sizeof(struct port_params));
 
 	lacp->partner.state = lacp->actor.state;
 
-	rte_ether_addr_copy(&parnter_system, &lacp->actor.port_params.system);
+	rte_ether_addr_copy(&partner_system, &lacp->actor.port_params.system);
 	lacp->actor.state = STATE_LACP_ACTIVE |
 						STATE_SYNCHRONIZATION |
 						STATE_AGGREGATION |
@@ -580,7 +580,7 @@ bond_handshake_done(struct slave_conf *slave)
 	const uint8_t expected_state = STATE_LACP_ACTIVE | STATE_SYNCHRONIZATION |
 			STATE_AGGREGATION | STATE_COLLECTING | STATE_DISTRIBUTING;
 
-	return slave->lacp_parnter_state == expected_state;
+	return slave->lacp_partner_state == expected_state;
 }
 
 static unsigned
@@ -1134,7 +1134,7 @@ test_mode4_tx_burst(void)
 
 		if (slave_down_id == slave->port_id) {
 			TEST_ASSERT_EQUAL(normal_cnt + slow_cnt, 0,
-				"slave %u enexpectedly transmitted %u packets",
+				"slave %u unexpectedly transmitted %u packets",
 				normal_cnt + slow_cnt, slave->port_id);
 		} else {
 			TEST_ASSERT_EQUAL(slow_cnt, 0,
@@ -1165,7 +1165,7 @@ init_marker(struct rte_mbuf *pkt, struct slave_conf *slave)
 			&marker_hdr->eth_hdr.dst_addr);
 
 	/* Init source address */
-	rte_ether_addr_copy(&parnter_mac_default,
+	rte_ether_addr_copy(&partner_mac_default,
 			&marker_hdr->eth_hdr.src_addr);
 	marker_hdr->eth_hdr.src_addr.addr_bytes[RTE_ETHER_ADDR_LEN - 1] =
 		slave->port_id;
@@ -1353,7 +1353,7 @@ test_mode4_expired(void)
 	/* After test only expected slave should be in EXPIRED state */
 	FOR_EACH_SLAVE(i, slave) {
 		if (slave == exp_slave)
-			TEST_ASSERT(slave->lacp_parnter_state & STATE_EXPIRED,
+			TEST_ASSERT(slave->lacp_partner_state & STATE_EXPIRED,
 				"Slave %u should be in expired.", slave->port_id);
 		else
 			TEST_ASSERT_EQUAL(bond_handshake_done(slave), 1,
@@ -1392,7 +1392,7 @@ test_mode4_ext_ctrl(void)
 		},
 	};
 
-	rte_ether_addr_copy(&parnter_system, &src_mac);
+	rte_ether_addr_copy(&partner_system, &src_mac);
 	rte_ether_addr_copy(&slow_protocol_mac_addr, &dst_mac);
 
 	initialize_eth_header(&lacpdu.eth_hdr, &src_mac, &dst_mac,
@@ -1446,7 +1446,7 @@ test_mode4_ext_lacp(void)
 		},
 	};
 
-	rte_ether_addr_copy(&parnter_system, &src_mac);
+	rte_ether_addr_copy(&partner_system, &src_mac);
 	rte_ether_addr_copy(&slow_protocol_mac_addr, &dst_mac);
 
 	initialize_eth_header(&lacpdu.eth_hdr, &src_mac, &dst_mac,
@@ -1535,7 +1535,7 @@ check_environment(void)
 		if (port->bonded != 0)
 			env_state |= 0x04;
 
-		if (port->lacp_parnter_state != 0)
+		if (port->lacp_partner_state != 0)
 			env_state |= 0x08;
 
 		if (env_state != 0)

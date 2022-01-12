@@ -551,7 +551,7 @@ bnx2x_bmac_stats_update(struct bnx2x_softc *sc)
 	UPDATE_STAT64(rx_stat_grfrg, rx_stat_etherstatsfragments);
 	UPDATE_STAT64(rx_stat_grjbr, rx_stat_etherstatsjabbers);
 	UPDATE_STAT64(rx_stat_grxcf, rx_stat_maccontrolframesreceived);
-	UPDATE_STAT64(rx_stat_grxpf, rx_stat_xoffstateentered);
+	UPDATE_STAT64(rx_stat_grxpf, rx_stat_xoffsetateentered);
 	UPDATE_STAT64(rx_stat_grxpf, rx_stat_mac_xpf);
 
 	UPDATE_STAT64(tx_stat_gtxpf, tx_stat_outxoffsent);
@@ -586,7 +586,7 @@ bnx2x_bmac_stats_update(struct bnx2x_softc *sc)
 	UPDATE_STAT64(rx_stat_grfrg, rx_stat_etherstatsfragments);
 	UPDATE_STAT64(rx_stat_grjbr, rx_stat_etherstatsjabbers);
 	UPDATE_STAT64(rx_stat_grxcf, rx_stat_maccontrolframesreceived);
-	UPDATE_STAT64(rx_stat_grxpf, rx_stat_xoffstateentered);
+	UPDATE_STAT64(rx_stat_grxpf, rx_stat_xoffsetateentered);
 	UPDATE_STAT64(rx_stat_grxpf, rx_stat_mac_xpf);
 	UPDATE_STAT64(tx_stat_gtxpf, tx_stat_outxoffsent);
 	UPDATE_STAT64(tx_stat_gtxpf, tx_stat_flowcontroldone);
@@ -646,7 +646,7 @@ bnx2x_mstat_stats_update(struct bnx2x_softc *sc)
     ADD_STAT64(stats_rx.rx_grovr, rx_stat_dot3statsframestoolong);
     ADD_STAT64(stats_rx.rx_grfrg, rx_stat_etherstatsfragments);
     ADD_STAT64(stats_rx.rx_grxcf, rx_stat_maccontrolframesreceived);
-    ADD_STAT64(stats_rx.rx_grxpf, rx_stat_xoffstateentered);
+    ADD_STAT64(stats_rx.rx_grxpf, rx_stat_xoffsetateentered);
     ADD_STAT64(stats_rx.rx_grxpf, rx_stat_mac_xpf);
     ADD_STAT64(stats_tx.tx_gtxpf, tx_stat_outxoffsent);
     ADD_STAT64(stats_tx.tx_gtxpf, tx_stat_flowcontroldone);
@@ -729,7 +729,7 @@ bnx2x_emac_stats_update(struct bnx2x_softc *sc)
     UPDATE_EXTEND_STAT(rx_stat_etherstatsfragments);
     UPDATE_EXTEND_STAT(rx_stat_etherstatsjabbers);
     UPDATE_EXTEND_STAT(rx_stat_maccontrolframesreceived);
-    UPDATE_EXTEND_STAT(rx_stat_xoffstateentered);
+    UPDATE_EXTEND_STAT(rx_stat_xoffsetateentered);
     UPDATE_EXTEND_STAT(rx_stat_xonpauseframesreceived);
     UPDATE_EXTEND_STAT(rx_stat_xoffpauseframesreceived);
     UPDATE_EXTEND_STAT(tx_stat_outxonsent);

@@ -39,10 +39,10 @@ qat_comp_dev_config_gen1(struct rte_compressdev *dev,
 			"RTE_PMD_QAT_COMP_IM_BUFFER_SIZE = 0 in config file, so"
 			" QAT device can't be used for Dynamic Deflate.");
 	} else {
-		comp_dev->interm_buff_mz =
+		comp_dev->interim_buff_mz =
 				qat_comp_setup_inter_buffers(comp_dev,
 					RTE_PMD_QAT_COMP_IM_BUFFER_SIZE);
-		if (comp_dev->interm_buff_mz == NULL)
+		if (comp_dev->interim_buff_mz == NULL)
 			return -ENOMEM;
 	}
 

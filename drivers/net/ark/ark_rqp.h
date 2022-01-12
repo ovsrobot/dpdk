@@ -48,10 +48,10 @@ struct ark_rqpace_t {
 	volatile uint32_t cpld_pending_max;
 	volatile uint32_t err_count_other;
 	char eval[4];
-	volatile int lasped;
+	volatile int lapsed;
 };
 
 void ark_rqp_dump(struct ark_rqpace_t *rqp);
 void ark_rqp_stats_reset(struct ark_rqpace_t *rqp);
-int ark_rqp_lasped(struct ark_rqpace_t *rqp);
+int ark_rqp_lapsed(struct ark_rqpace_t *rqp);
 #endif

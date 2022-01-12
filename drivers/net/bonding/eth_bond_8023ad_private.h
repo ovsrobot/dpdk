@@ -124,7 +124,7 @@ struct port {
 	uint64_t wait_while_timer;
 	uint64_t tx_machine_timer;
 	uint64_t tx_marker_timer;
-	/* Agregator parameters */
+	/* Aggregator parameters */
 	/** Used aggregator port ID */
 	uint16_t aggregator_port_id;
 

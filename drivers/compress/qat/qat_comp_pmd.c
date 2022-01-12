@@ -477,7 +477,7 @@ static void
 _qat_comp_dev_config_clear(struct qat_comp_dev_private *comp_dev)
 {
 	/* Free intermediate buffers */
-	if (comp_dev->interm_buff_mz) {
+	if (comp_dev->interim_buff_mz) {
 		char mz_name[RTE_MEMZONE_NAMESIZE];
 		int i = qat_comp_get_num_im_bufs_required(
 				comp_dev->qat_dev->qat_dev_gen);
@@ -488,8 +488,8 @@ _qat_comp_dev_config_clear(struct qat_comp_dev_private *comp_dev)
 					comp_dev->qat_dev->name, i);
 			rte_memzone_free(rte_memzone_lookup(mz_name));
 		}
-		rte_memzone_free(comp_dev->interm_buff_mz);
-		comp_dev->interm_buff_mz = NULL;
+		rte_memzone_free(comp_dev->interim_buff_mz);
+		comp_dev->interim_buff_mz = NULL;
 	}
 
 	/* Free private_xform pool */

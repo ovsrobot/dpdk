@@ -1956,7 +1956,7 @@ ipn3ke_tm_show(struct rte_eth_dev *dev)
 }
 
 static void
-ipn3ke_tm_show_commmit(struct rte_eth_dev *dev)
+ipn3ke_tm_show_commit(struct rte_eth_dev *dev)
 {
 	struct ipn3ke_tm_internals *tm = IPN3KE_DEV_PRIVATE_TO_TM(dev);
 	uint32_t tm_id;
@@ -2013,7 +2013,7 @@ ipn3ke_tm_hierarchy_commit(struct rte_eth_dev *dev,
 					NULL,
 					rte_strerror(EBUSY));
 
-	ipn3ke_tm_show_commmit(dev);
+	ipn3ke_tm_show_commit(dev);
 
 	status = ipn3ke_tm_hierarchy_commit_check(dev, error);
 	if (status) {

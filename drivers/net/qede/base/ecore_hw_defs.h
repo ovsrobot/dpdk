@@ -7,7 +7,7 @@
 #ifndef _ECORE_IGU_DEF_H_
 #define _ECORE_IGU_DEF_H_
 
-/* Fields of IGU PF CONFIGRATION REGISTER */
+/* Fields of IGU PF CONFIGURATION REGISTER */
 /* function enable        */
 #define IGU_PF_CONF_FUNC_EN       (0x1 << 0)
 /* MSI/MSIX enable        */
@@ -21,7 +21,7 @@
 /* simd all ones mode     */
 #define IGU_PF_CONF_SIMD_MODE     (0x1 << 5)
 
-/* Fields of IGU VF CONFIGRATION REGISTER */
+/* Fields of IGU VF CONFIGURATION REGISTER */
 /* function enable        */
 #define IGU_VF_CONF_FUNC_EN        (0x1 << 0)
 /* MSI/MSIX enable        */

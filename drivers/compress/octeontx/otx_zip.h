@@ -66,7 +66,7 @@ extern int octtx_zip_logtype_driver;
 	((_align) * (((x) + (_align) - 1) / (_align)))
 
 /**< ZIP PMD device name */
-#define COMPRESSDEV_NAME_ZIP_PMD	compress_octeonx
+#define COMPRESSDEV_NAME_ZIP_PMD	compress_octeontx
 
 #define ZIP_PMD_LOG(level, fmt, args...) \
 	rte_log(RTE_LOG_ ## level, \

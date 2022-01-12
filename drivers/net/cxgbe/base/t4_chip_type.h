@@ -13,7 +13,7 @@
  *   F  = "0" for PF 0..3; "4".."7" for PF4..7; and "8" for VFs
  *   PP = adapter product designation
  *
- * We use the "version" (V) of the adpater to code the Chip Version above.
+ * We use the "version" (V) of the adapter to code the Chip Version above.
  */
 #define CHELSIO_PCI_ID_VER(devid) ((devid) >> 12)
 #define CHELSIO_PCI_ID_FUNC(devid) (((devid) >> 8) & 0xf)

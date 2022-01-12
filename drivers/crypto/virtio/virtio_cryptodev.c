@@ -862,7 +862,7 @@ virtio_crypto_dev_free_mbufs(struct rte_cryptodev *dev)
 		VIRTIO_CRYPTO_INIT_LOG_DBG("queue_pairs[%d]=%p",
 				i, dev->data->queue_pairs[i]);
 
-		virtqueue_detatch_unused(dev->data->queue_pairs[i]);
+		virtqueue_detach_unused(dev->data->queue_pairs[i]);
 
 		VIRTIO_CRYPTO_INIT_LOG_DBG("After freeing dataq[%d] used and "
 					"unused buf", i);
@@ -1205,7 +1205,7 @@ virtio_crypto_sym_pad_auth_param(
 static int
 virtio_crypto_sym_pad_op_ctrl_req(
 		struct virtio_crypto_op_ctrl_req *ctrl,
-		struct rte_crypto_sym_xform *xform, bool is_chainned,
+		struct rte_crypto_sym_xform *xform, bool is_chained,
 		uint8_t *cipher_key_data, uint8_t *auth_key_data,
 		struct virtio_crypto_session *session)
 {
@@ -1228,7 +1228,7 @@ virtio_crypto_sym_pad_op_ctrl_req(
 				VIRTIO_CRYPTO_MAX_IV_SIZE);
 			return -1;
 		}
-		if (is_chainned)
+		if (is_chained)
 			ret = virtio_crypto_sym_pad_cipher_param(
 				&ctrl->u.sym_create_session.u.chain.para
 						.cipher_param, cipher_xform);

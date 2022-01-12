@@ -129,7 +129,7 @@ opae_bridge_alloc(const char *name, struct opae_bridge_ops *ops, void *data);
 int opae_bridge_reset(struct opae_bridge *br);
 #define opae_bridge_free(br) opae_free(br)
 
-/* OPAE Acceleraotr Data Structure */
+/* OPAE Accelerator Data Structure */
 struct opae_accelerator_ops;
 
 /*
@@ -267,7 +267,7 @@ struct opae_adapter_ops {
 
 TAILQ_HEAD(opae_accelerator_list, opae_accelerator);
 
-#define opae_adapter_for_each_acc(adatper, acc) \
+#define opae_adapter_for_each_acc(adapter, acc) \
 	TAILQ_FOREACH(acc, &adapter->acc_list, node)
 
 #define SHM_PREFIX     "/IFPGA:"

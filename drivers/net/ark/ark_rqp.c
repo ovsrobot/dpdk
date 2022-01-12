@@ -62,7 +62,7 @@ ark_rqp_dump(struct ark_rqpace_t *rqp)
 }
 
 int
-ark_rqp_lasped(struct ark_rqpace_t *rqp)
+ark_rqp_lapsed(struct ark_rqpace_t *rqp)
 {
-	return rqp->lasped;
+	return rqp->lapsed;
 }

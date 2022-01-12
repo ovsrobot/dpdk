@@ -232,7 +232,7 @@ static int hinic_check_ethertype_first_item(const struct rte_flow_item *item,
 }
 
 static int
-hinic_parse_ethertype_aciton(const struct rte_flow_action *actions,
+hinic_parse_ethertype_action(const struct rte_flow_action *actions,
 			const struct rte_flow_action *act,
 			const struct rte_flow_action_queue *act_q,
 			struct rte_eth_ethertype_filter *filter,
@@ -344,7 +344,7 @@ static int cons_parse_ethertype_filter(const struct rte_flow_attr *attr,
 		return -rte_errno;
 	}
 
-	if (hinic_parse_ethertype_aciton(actions, act, act_q, filter, error))
+	if (hinic_parse_ethertype_action(actions, act, act_q, filter, error))
 		return -rte_errno;
 
 	if (hinic_check_ethertype_attr_ele(attr, error))

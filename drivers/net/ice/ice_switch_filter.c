@@ -1649,11 +1649,11 @@ ice_switch_parse_action(struct ice_pf *pf,
 	struct ice_vsi *vsi = pf->main_vsi;
 	struct rte_eth_dev_data *dev_data = pf->adapter->pf.dev_data;
 	const struct rte_flow_action_queue *act_q;
-	const struct rte_flow_action_rss *act_qgrop;
+	const struct rte_flow_action_rss *act_qgroup;
 	uint16_t base_queue, i;
 	const struct rte_flow_action *action;
 	enum rte_flow_action_type action_type;
-	uint16_t valid_qgrop_number[MAX_QGRP_NUM_TYPE] = {
+	uint16_t valid_qgroup_number[MAX_QGRP_NUM_TYPE] = {
 		 2, 4, 8, 16, 32, 64, 128};
 
 	base_queue = pf->base_queue + vsi->base_queue;
@@ -1662,30 +1662,30 @@ ice_switch_parse_action(struct ice_pf *pf,
 		action_type = action->type;
 		switch (action_type) {
 		case RTE_FLOW_ACTION_TYPE_RSS:
-			act_qgrop = action->conf;
-			if (act_qgrop->queue_num <= 1)
+			act_qgroup = action->conf;
+			if (act_qgroup->queue_num <= 1)
 				goto error;
 			rule_info->sw_act.fltr_act =
 				ICE_FWD_TO_QGRP;
 			rule_info->sw_act.fwd_id.q_id =
-				base_queue + act_qgrop->queue[0];
+				base_queue + act_qgroup->queue[0];
 			for (i = 0; i < MAX_QGRP_NUM_TYPE; i++) {
-				if (act_qgrop->queue_num ==
-					valid_qgrop_number[i])
+				if (act_qgroup->queue_num ==
+					valid_qgroup_number[i])
 					break;
 			}
 			if (i == MAX_QGRP_NUM_TYPE)
 				goto error;
-			if ((act_qgrop->queue[0] +
-				act_qgrop->queue_num) >
+			if ((act_qgroup->queue[0] +
+				act_qgroup->queue_num) >
 				dev_data->nb_rx_queues)
 				goto error1;
-			for (i = 0; i < act_qgrop->queue_num - 1; i++)
-				if (act_qgrop->queue[i + 1] !=
-					act_qgrop->queue[i] + 1)
+			for (i = 0; i < act_qgroup->queue_num - 1; i++)
+				if (act_qgroup->queue[i + 1] !=
+					act_qgroup->queue[i] + 1)
 					goto error2;
 			rule_info->sw_act.qgrp_size =
-				act_qgrop->queue_num;
+				act_qgroup->queue_num;
 			break;
 		case RTE_FLOW_ACTION_TYPE_QUEUE:
 			act_q = action->conf;

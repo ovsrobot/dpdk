@@ -321,7 +321,7 @@ meta_fix_freq(struct trace *trace, char *meta)
 static void
 meta_fix_freq_offset(struct trace *trace, char *meta)
 {
-	uint64_t uptime_tickes_floor, uptime_ticks, freq, uptime_sec;
+	uint64_t uptime_ticks_floor, uptime_ticks, freq, uptime_sec;
 	uint64_t offset, offset_s;
 	char *str;
 	int rc;
@@ -329,12 +329,12 @@ meta_fix_freq_offset(struct trace *trace, char *meta)
 	uptime_ticks = trace->uptime_ticks &
 			((1ULL << __RTE_TRACE_EVENT_HEADER_ID_SHIFT) - 1);
 	freq = rte_get_tsc_hz();
-	uptime_tickes_floor = RTE_ALIGN_MUL_FLOOR(uptime_ticks, freq);
+	uptime_ticks_floor = RTE_ALIGN_MUL_FLOOR(uptime_ticks, freq);
 
-	uptime_sec = uptime_tickes_floor / freq;
+	uptime_sec = uptime_ticks_floor / freq;
 	offset_s = trace->epoch_sec - uptime_sec;
 
-	offset = uptime_ticks - uptime_tickes_floor;
+	offset = uptime_ticks - uptime_ticks_floor;
 	offset += trace->epoch_nsec * (freq / NSEC_PER_SEC);
 
 	str = RTE_PTR_ADD(meta, trace->ctf_meta_offset_freq_off_s);

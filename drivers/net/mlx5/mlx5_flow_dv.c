@@ -14538,7 +14538,7 @@ flow_dv_destroy(struct rte_eth_dev *dev, struct rte_flow *flow)
 		else if (dev_handle->split_flow_id &&
 		    !dev_handle->is_meter_flow_id)
 			mlx5_ipool_free(priv->sh->ipool
-					[MLX5_IPOOL_RSS_EXPANTION_FLOW_ID],
+					[MLX5_IPOOL_RSS_EXPANSION_FLOW_ID],
 					dev_handle->split_flow_id);
 		mlx5_ipool_free(priv->sh->ipool[MLX5_IPOOL_MLX5_FLOW],
 			   tmp_idx);
@@ -15311,7 +15311,7 @@ flow_dv_destroy_policy_rules(struct rte_eth_dev *dev,
 			(MLX5_MTR_SUB_POLICY_NUM_SHIFT * i)) &
 			MLX5_MTR_SUB_POLICY_NUM_MASK;
 		for (j = 0; j < sub_policy_num; j++) {
-			sub_policy = mtr_policy->sub_policys[i][j];
+			sub_policy = mtr_policy->sub_policies[i][j];
 			if (sub_policy)
 				__flow_dv_destroy_sub_policy_rules(dev,
 								   sub_policy);
@@ -15649,7 +15649,7 @@ __flow_dv_create_domain_policy_acts(struct rte_eth_dev *dev,
 					(1 << MLX5_SCALE_FLOW_GROUP_BIT),
 				};
 				struct mlx5_flow_meter_sub_policy *sub_policy =
-					mtr_policy->sub_policys[domain][0];
+					mtr_policy->sub_policies[domain][0];
 
 				if (i >= MLX5_MTR_RTE_COLORS)
 					return -rte_mtr_error_set(error,
@@ -16504,7 +16504,7 @@ __flow_dv_create_policy_acts_rules(struct rte_eth_dev *dev,
 						next_fm->policy_id, NULL);
 					MLX5_ASSERT(next_policy);
 					next_sub_policy =
-					next_policy->sub_policys[domain][0];
+					next_policy->sub_policies[domain][0];
 				}
 				tbl_data =
 					container_of(next_sub_policy->tbl_rsc,
@@ -16559,7 +16559,7 @@ flow_dv_create_policy_rules(struct rte_eth_dev *dev,
 			continue;
 		/* Prepare actions list and create policy rules. */
 		if (__flow_dv_create_policy_acts_rules(dev, mtr_policy,
-			mtr_policy->sub_policys[i][0], i)) {
+			mtr_policy->sub_policies[i][0], i)) {
 			DRV_LOG(ERR, "Failed to create policy action "
 				"list per domain.");
 			return -1;
@@ -16898,7 +16898,7 @@ __flow_dv_meter_get_rss_sub_policy(struct rte_eth_dev *dev,
 		for (i = 0; i < MLX5_MTR_RTE_COLORS; i++) {
 			if (rss_desc[i] &&
 			    hrxq_idx[i] !=
-			    mtr_policy->sub_policys[domain][j]->rix_hrxq[i])
+			    mtr_policy->sub_policies[domain][j]->rix_hrxq[i])
 				break;
 		}
 		if (i >= MLX5_MTR_RTE_COLORS) {
@@ -16910,13 +16910,13 @@ __flow_dv_meter_get_rss_sub_policy(struct rte_eth_dev *dev,
 			for (i = 0; i < MLX5_MTR_RTE_COLORS; i++)
 				mlx5_hrxq_release(dev, hrxq_idx[i]);
 			*is_reuse = true;
-			return mtr_policy->sub_policys[domain][j];
+			return mtr_policy->sub_policies[domain][j];
 		}
 	}
 	/* Create sub policy. */
-	if (!mtr_policy->sub_policys[domain][0]->rix_hrxq[0]) {
+	if (!mtr_policy->sub_policies[domain][0]->rix_hrxq[0]) {
 		/* Reuse the first pre-allocated sub_policy. */
-		sub_policy = mtr_policy->sub_policys[domain][0];
+		sub_policy = mtr_policy->sub_policies[domain][0];
 		sub_policy_idx = sub_policy->idx;
 	} else {
 		sub_policy = mlx5_ipool_zmalloc
@@ -16967,7 +16967,7 @@ __flow_dv_meter_get_rss_sub_policy(struct rte_eth_dev *dev,
 			"rules for ingress domain.");
 		goto rss_sub_policy_error;
 	}
-	if (sub_policy != mtr_policy->sub_policys[domain][0]) {
+	if (sub_policy != mtr_policy->sub_policies[domain][0]) {
 		i = (mtr_policy->sub_policy_num >>
 			(MLX5_MTR_SUB_POLICY_NUM_SHIFT * domain)) &
 			MLX5_MTR_SUB_POLICY_NUM_MASK;
@@ -16975,7 +16975,7 @@ __flow_dv_meter_get_rss_sub_policy(struct rte_eth_dev *dev,
 			DRV_LOG(ERR, "No free sub-policy slot.");
 			goto rss_sub_policy_error;
 		}
-		mtr_policy->sub_policys[domain][i] = sub_policy;
+		mtr_policy->sub_policies[domain][i] = sub_policy;
 		i++;
 		mtr_policy->sub_policy_num &= ~(MLX5_MTR_SUB_POLICY_NUM_MASK <<
 			(MLX5_MTR_SUB_POLICY_NUM_SHIFT * domain));
@@ -16989,11 +16989,11 @@ __flow_dv_meter_get_rss_sub_policy(struct rte_eth_dev *dev,
 rss_sub_policy_error:
 	if (sub_policy) {
 		__flow_dv_destroy_sub_policy_rules(dev, sub_policy);
-		if (sub_policy != mtr_policy->sub_policys[domain][0]) {
+		if (sub_policy != mtr_policy->sub_policies[domain][0]) {
 			i = (mtr_policy->sub_policy_num >>
 			(MLX5_MTR_SUB_POLICY_NUM_SHIFT * domain)) &
 			MLX5_MTR_SUB_POLICY_NUM_MASK;
-			mtr_policy->sub_policys[domain][i] = NULL;
+			mtr_policy->sub_policies[domain][i] = NULL;
 			mlx5_ipool_free(priv->sh->ipool[MLX5_IPOOL_MTR_POLICY],
 					sub_policy->idx);
 		}
@@ -17078,11 +17078,11 @@ err_exit:
 		sub_policy = sub_policies[--j];
 		mtr_policy = sub_policy->main_policy;
 		__flow_dv_destroy_sub_policy_rules(dev, sub_policy);
-		if (sub_policy != mtr_policy->sub_policys[domain][0]) {
+		if (sub_policy != mtr_policy->sub_policies[domain][0]) {
 			sub_policy_num = (mtr_policy->sub_policy_num >>
 				(MLX5_MTR_SUB_POLICY_NUM_SHIFT * domain)) &
 				MLX5_MTR_SUB_POLICY_NUM_MASK;
-			mtr_policy->sub_policys[domain][sub_policy_num - 1] =
+			mtr_policy->sub_policies[domain][sub_policy_num - 1] =
 									NULL;
 			sub_policy_num--;
 			mtr_policy->sub_policy_num &=
@@ -17157,7 +17157,7 @@ flow_dv_meter_hierarchy_rule_create(struct rte_eth_dev *dev,
 	if (!next_fm->drop_cnt)
 		goto exit;
 	color_reg_c_idx = mlx5_flow_get_reg_id(dev, MLX5_MTR_COLOR, 0, error);
-	sub_policy = mtr_policy->sub_policys[domain][0];
+	sub_policy = mtr_policy->sub_policies[domain][0];
 	for (i = 0; i < RTE_COLORS; i++) {
 		bool rule_exist = false;
 		struct mlx5_meter_policy_action_container *act_cnt;
@@ -17184,7 +17184,7 @@ flow_dv_meter_hierarchy_rule_create(struct rte_eth_dev *dev,
 		next_policy = mlx5_flow_meter_policy_find(dev,
 						next_fm->policy_id, NULL);
 		MLX5_ASSERT(next_policy);
-		next_sub_policy = next_policy->sub_policys[domain][0];
+		next_sub_policy = next_policy->sub_policies[domain][0];
 		tbl_data = container_of(next_sub_policy->tbl_rsc,
 					struct mlx5_flow_tbl_data_entry, tbl);
 		act_cnt = &mtr_policy->act_cnt[i];
@@ -17277,13 +17277,13 @@ flow_dv_destroy_sub_policy_with_rxq(struct rte_eth_dev *dev,
 			new_policy_num = sub_policy_num;
 			for (j = 0; j < sub_policy_num; j++) {
 				sub_policy =
-					mtr_policy->sub_policys[domain][j];
+					mtr_policy->sub_policies[domain][j];
 				if (sub_policy) {
 					__flow_dv_destroy_sub_policy_rules(dev,
 						sub_policy);
 				if (sub_policy !=
-					mtr_policy->sub_policys[domain][0]) {
-					mtr_policy->sub_policys[domain][j] =
+					mtr_policy->sub_policies[domain][0]) {
+					mtr_policy->sub_policies[domain][j] =
 								NULL;
 					mlx5_ipool_free
 				(priv->sh->ipool[MLX5_IPOOL_MTR_POLICY],
@@ -17303,7 +17303,7 @@ flow_dv_destroy_sub_policy_with_rxq(struct rte_eth_dev *dev,
 			}
 			break;
 		case MLX5_FLOW_FATE_QUEUE:
-			sub_policy = mtr_policy->sub_policys[domain][0];
+			sub_policy = mtr_policy->sub_policies[domain][0];
 			__flow_dv_destroy_sub_policy_rules(dev,
 							   sub_policy);
 			break;
@@ -18045,7 +18045,7 @@ flow_dv_validate_mtr_policy_acts(struct rte_eth_dev *dev,
 			domain_color[i] &= hierarchy_domain;
 		/*
 		 * Non-termination actions only support NIC Tx domain.
-		 * The adjustion should be skipped when there is no
+		 * The adjustment should be skipped when there is no
 		 * action or only END is provided. The default domains
 		 * bit-mask is set to find the MIN intersection.
 		 * The action flags checking should also be skipped.

@@ -25,7 +25,7 @@
 #define MAX_BULK 32
 #define N 65536
 #define TIME_S 5
-#define TEST_RING_FULL_EMTPY_ITER   8
+#define TEST_RING_FULL_EMPTY_ITER   8
 #define N_PORTS             2
 #define N_PKTS              2
 #define N_PKTS_EXT          6

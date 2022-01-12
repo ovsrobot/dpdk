@@ -2871,7 +2871,7 @@ static void virtio_dev_free_mbufs(struct rte_eth_dev *dev)
 			type, i);
 		VIRTQUEUE_DUMP(vq);
 
-		while ((buf = virtqueue_detach_unused(vq)) != NULL) {
+		while ((buf = virtqueue_detach_unused_cookie(vq)) != NULL) {
 			rte_pktmbuf_free(buf);
 			mbuf_num++;
 		}

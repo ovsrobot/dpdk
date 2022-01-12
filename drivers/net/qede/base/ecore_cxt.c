@@ -70,8 +70,8 @@ struct src_ent {
 	u64 next;
 };
 
-#define CDUT_SEG_ALIGNMET 3	/* in 4k chunks */
-#define CDUT_SEG_ALIGNMET_IN_BYTES (1 << (CDUT_SEG_ALIGNMET + 12))
+#define CDUT_SEG_ALIGNMENT 3	/* in 4k chunks */
+#define CDUT_SEG_ALIGNMENT_IN_BYTES (1 << (CDUT_SEG_ALIGNMENT + 12))
 
 #define CONN_CXT_SIZE(p_hwfn) \
 	ALIGNED_TYPE_SIZE(union conn_context, p_hwfn)
@@ -1383,7 +1383,7 @@ static void ecore_cdu_init_pf(struct ecore_hwfn *p_hwfn)
 		 */
 		offset = (ILT_PAGE_IN_BYTES(p_cli->p_size.val) *
 			  (p_cli->pf_blks[CDUT_SEG_BLK(i)].start_line -
-			   p_cli->first.val)) / CDUT_SEG_ALIGNMET_IN_BYTES;
+			   p_cli->first.val)) / CDUT_SEG_ALIGNMENT_IN_BYTES;
 
 		cdu_seg_params = 0;
 		SET_FIELD(cdu_seg_params, CDU_SEG_REG_TYPE, p_seg->type);
@@ -1392,7 +1392,7 @@ static void ecore_cdu_init_pf(struct ecore_hwfn *p_hwfn)
 
 		offset = (ILT_PAGE_IN_BYTES(p_cli->p_size.val) *
 			  (p_cli->pf_blks[CDUT_FL_SEG_BLK(i, PF)].start_line -
-			   p_cli->first.val)) / CDUT_SEG_ALIGNMET_IN_BYTES;
+			   p_cli->first.val)) / CDUT_SEG_ALIGNMENT_IN_BYTES;
 
 		cdu_seg_params = 0;
 		SET_FIELD(cdu_seg_params, CDU_SEG_REG_TYPE, p_seg->type);

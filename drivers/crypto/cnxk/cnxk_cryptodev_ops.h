@@ -65,7 +65,7 @@ struct pending_queue {
 	uint64_t time_out;
 };
 
-struct crypto_adpter_info {
+struct crypto_adapter_info {
 	bool enabled;
 	/**< Set if queue pair is added to crypto adapter */
 	struct rte_mempool *req_mp;
@@ -85,7 +85,7 @@ struct cnxk_cpt_qp {
 	/**< Metabuf info required to support operations on the queue pair */
 	struct roc_cpt_lmtline lmtline;
 	/**< Lmtline information */
-	struct crypto_adpter_info ca;
+	struct crypto_adapter_info ca;
 	/**< Crypto adapter related info */
 };
 

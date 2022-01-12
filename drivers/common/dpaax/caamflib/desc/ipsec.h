@@ -1437,7 +1437,7 @@ cnstr_shdsc_ipsec_new_decap(uint32_t *descbuf, bool ps,
 						CAAM_CMD_SZ)
 
 /**
- * cnstr_shdsc_authenc - authenc-like descriptor
+ * cnstr_shdsc_authentic - authentic-like descriptor
  * @descbuf: pointer to buffer used for descriptor construction
  * @ps: if 36/40bit addressing is desired, this parameter must be true
  * @swap: if true, perform descriptor byte swapping on a 4-byte boundary
@@ -1502,7 +1502,7 @@ cnstr_shdsc_ipsec_new_decap(uint32_t *descbuf, bool ps,
  * Return: size of descriptor written in words or negative number on error
  */
 static inline int
-cnstr_shdsc_authenc(uint32_t *descbuf, bool ps, bool swap,
+cnstr_shdsc_authentic(uint32_t *descbuf, bool ps, bool swap,
 		    enum rta_share_type share,
 		    struct alginfo *cipherdata,
 		    struct alginfo *authdata,

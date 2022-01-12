@@ -856,7 +856,7 @@ eval_mbuf_store(const struct bpf_reg_val *rv, uint32_t opsz)
 	static const struct {
 		size_t off;
 		size_t sz;
-	} mbuf_ro_fileds[] = {
+	} mbuf_ro_fields[] = {
 		{ .off = offsetof(struct rte_mbuf, buf_addr), },
 		{ .off = offsetof(struct rte_mbuf, refcnt), },
 		{ .off = offsetof(struct rte_mbuf, nb_segs), },
@@ -866,13 +866,13 @@ eval_mbuf_store(const struct bpf_reg_val *rv, uint32_t opsz)
 		{ .off = offsetof(struct rte_mbuf, priv_size), },
 	};
 
-	for (i = 0; i != RTE_DIM(mbuf_ro_fileds) &&
-			(mbuf_ro_fileds[i].off + mbuf_ro_fileds[i].sz <=
-			rv->u.max || rv->u.max + opsz <= mbuf_ro_fileds[i].off);
+	for (i = 0; i != RTE_DIM(mbuf_ro_fields) &&
+			(mbuf_ro_fields[i].off + mbuf_ro_fields[i].sz <=
+			rv->u.max || rv->u.max + opsz <= mbuf_ro_fields[i].off);
 			i++)
 		;
 
-	if (i != RTE_DIM(mbuf_ro_fileds))
+	if (i != RTE_DIM(mbuf_ro_fields))
 		return "store to the read-only mbuf field";
 
 	return NULL;

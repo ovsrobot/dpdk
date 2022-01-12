@@ -53,21 +53,21 @@ sfc_tso_outer_udp_fix_len(const struct rte_mbuf *m, uint8_t *tsoh)
 
 static inline void
 sfc_tso_innermost_ip_fix_len(const struct rte_mbuf *m, uint8_t *tsoh,
-			     size_t iph_ofst)
+			     size_t iph_offset)
 {
 	size_t ip_payload_len = m->l4_len + m->tso_segsz;
-	size_t field_ofst;
+	size_t field_offset;
 	rte_be16_t len;
 
 	if (m->ol_flags & RTE_MBUF_F_TX_IPV4) {
-		field_ofst = offsetof(struct rte_ipv4_hdr, total_length);
+		field_offset = offsetof(struct rte_ipv4_hdr, total_length);
 		len = rte_cpu_to_be_16(m->l3_len + ip_payload_len);
 	} else {
-		field_ofst = offsetof(struct rte_ipv6_hdr, payload_len);
+		field_offset = offsetof(struct rte_ipv6_hdr, payload_len);
 		len = rte_cpu_to_be_16(ip_payload_len);
 	}
 
-	rte_memcpy(tsoh + iph_ofst + field_ofst, &len, sizeof(len));
+	rte_memcpy(tsoh + iph_offset + field_offset, &len, sizeof(len));
 }
 
 unsigned int sfc_tso_prepare_header(uint8_t *tsoh, size_t header_len,

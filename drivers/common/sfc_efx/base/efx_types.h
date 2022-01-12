@@ -3,7 +3,7 @@
  * Copyright(c) 2019-2021 Xilinx, Inc.
  * Copyright(c) 2007-2019 Solarflare Communications Inc.
  *
- * Ackowledgement to Fen Systems Ltd.
+ * Acknowledgement to Fen Systems Ltd.
  */
 
 #ifndef	_SYS_EFX_TYPES_H

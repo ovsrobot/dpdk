@@ -22,7 +22,7 @@ virtqueue_disable_intr(struct virtqueue *vq)
 }
 
 void
-virtqueue_detatch_unused(struct virtqueue *vq)
+virtqueue_detach_unused(struct virtqueue *vq)
 {
 	struct rte_crypto_op *cop = NULL;
 

@@ -1666,7 +1666,7 @@ void ecore_resc_free(struct ecore_dev *p_dev)
 /* bitmaps for indicating active traffic classes.
  * Special case for Arrowhead 4 port
  */
-/* 0..3 actualy used, 4 serves OOO, 7 serves high priority stuff (e.g. DCQCN) */
+/* 0..3 actually used, 4 serves OOO, 7 serves high priority stuff (e.g. DCQCN) */
 #define ACTIVE_TCS_BMAP 0x9f
 /* 0..3 actually used, OOO and high priority stuff all use 3 */
 #define ACTIVE_TCS_BMAP_4PORT_K2 0xf

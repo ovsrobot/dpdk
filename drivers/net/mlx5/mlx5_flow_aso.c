@@ -981,13 +981,13 @@ mlx5_aso_ct_sq_enqueue_single(struct mlx5_dev_ctx_shared *sh,
 	MLX5_SET(conn_track_aso, desg, sack_permitted, profile->selective_ack);
 	MLX5_SET(conn_track_aso, desg, challenged_acked,
 		 profile->challenge_ack_passed);
-	/* Heartbeat, retransmission_counter, retranmission_limit_exceeded: 0 */
+	/* Heartbeat, retransmission_counter, retransmission_limit_exceeded: 0 */
 	MLX5_SET(conn_track_aso, desg, heartbeat, 0);
 	MLX5_SET(conn_track_aso, desg, max_ack_window,
 		 profile->max_ack_window);
 	MLX5_SET(conn_track_aso, desg, retransmission_counter, 0);
-	MLX5_SET(conn_track_aso, desg, retranmission_limit_exceeded, 0);
-	MLX5_SET(conn_track_aso, desg, retranmission_limit,
+	MLX5_SET(conn_track_aso, desg, retransmission_limit_exceeded, 0);
+	MLX5_SET(conn_track_aso, desg, retransmission_limit,
 		 profile->retransmission_limit);
 	MLX5_SET(conn_track_aso, desg, reply_direction_tcp_scale,
 		 profile->reply_dir.scale);
@@ -1312,7 +1312,7 @@ mlx5_aso_ct_obj_analyze(struct rte_flow_action_conntrack *profile,
 	profile->max_ack_window = MLX5_GET(conn_track_aso, wdata,
 					   max_ack_window);
 	profile->retransmission_limit = MLX5_GET(conn_track_aso, wdata,
-						 retranmission_limit);
+						 retransmission_limit);
 	profile->last_window = MLX5_GET(conn_track_aso, wdata, last_win);
 	profile->last_direction = MLX5_GET(conn_track_aso, wdata, last_dir);
 	profile->last_index = (enum rte_flow_conntrack_tcp_last_index)

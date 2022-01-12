@@ -181,7 +181,7 @@ mlx5_rxq_info_get(struct rte_eth_dev *dev, uint16_t rx_queue_id,
  *   Rx queue identification.
  *
  * @param mode
- *   Pointer to the burts mode information.
+ *   Pointer to the burst mode information.
  *
  * @return
  *   0 as success, -EINVAL as failure.

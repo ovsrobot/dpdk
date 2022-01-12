@@ -183,7 +183,7 @@ struct ecore_pf_iov {
 	u64			active_vfs[ECORE_VF_ARRAY_LENGTH];
 #endif
 
-	/* Allocate message address continuosuly and split to each VF */
+	/* Allocate message address continuously and split to each VF */
 	void			*mbx_msg_virt_addr;
 	dma_addr_t		mbx_msg_phys_addr;
 	u32			mbx_msg_size;
@@ -198,7 +198,7 @@ struct ecore_pf_iov {
 #ifdef CONFIG_ECORE_SRIOV
 /**
  * @brief Read sriov related information and allocated resources
- *  reads from configuraiton space, shmem, etc.
+ *  reads from configuration space, shmem, etc.
  *
  * @param p_hwfn
  *

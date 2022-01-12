@@ -591,7 +591,7 @@ enum vnic_devcmd_cmd {
 	CMD_CONFIG_GRPINTR = _CMDC(_CMD_DIR_WRITE, _CMD_VTYPE_ENET, 75),
 
 	/*
-	 * Set cq arrary base and size in a list of consective wqs and
+	 * Set cq array base and size in a list of consective wqs and
 	 * rqs for a device
 	 * in: (uint16_t) a0 = the wq relative index in the device.
 	 *		-1 indicates skipping wq configuration

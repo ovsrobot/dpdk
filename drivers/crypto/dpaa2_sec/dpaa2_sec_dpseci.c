@@ -281,7 +281,7 @@ build_proto_fd(dpaa2_sec_session *sess,
 #endif
 
 static inline int
-build_authenc_gcm_sg_fd(dpaa2_sec_session *sess,
+build_authentic_gcm_sg_fd(dpaa2_sec_session *sess,
 		 struct rte_crypto_op *op,
 		 struct qbman_fd *fd, __rte_unused uint16_t bpid)
 {
@@ -426,7 +426,7 @@ build_authenc_gcm_sg_fd(dpaa2_sec_session *sess,
 }
 
 static inline int
-build_authenc_gcm_fd(dpaa2_sec_session *sess,
+build_authentic_gcm_fd(dpaa2_sec_session *sess,
 		     struct rte_crypto_op *op,
 		     struct qbman_fd *fd, uint16_t bpid)
 {
@@ -448,7 +448,7 @@ build_authenc_gcm_fd(dpaa2_sec_session *sess,
 
 	/* TODO we are using the first FLE entry to store Mbuf and session ctxt.
 	 * Currently we donot know which FLE has the mbuf stored.
-	 * So while retreiving we can go back 1 FLE from the FD -ADDR
+	 * So while retrieving we can go back 1 FLE from the FD -ADDR
 	 * to get the MBUF Addr from the previous FLE.
 	 * We can have a better approach to use the inline Mbuf
 	 */
@@ -566,7 +566,7 @@ build_authenc_gcm_fd(dpaa2_sec_session *sess,
 }
 
 static inline int
-build_authenc_sg_fd(dpaa2_sec_session *sess,
+build_authentic_sg_fd(dpaa2_sec_session *sess,
 		 struct rte_crypto_op *op,
 		 struct qbman_fd *fd, __rte_unused uint16_t bpid)
 {
@@ -713,7 +713,7 @@ build_authenc_sg_fd(dpaa2_sec_session *sess,
 }
 
 static inline int
-build_authenc_fd(dpaa2_sec_session *sess,
+build_authentic_fd(dpaa2_sec_session *sess,
 		 struct rte_crypto_op *op,
 		 struct qbman_fd *fd, uint16_t bpid)
 {
@@ -740,7 +740,7 @@ build_authenc_fd(dpaa2_sec_session *sess,
 
 	/* we are using the first FLE entry to store Mbuf.
 	 * Currently we donot know which FLE has the mbuf stored.
-	 * So while retreiving we can go back 1 FLE from the FD -ADDR
+	 * So while retrieving we can go back 1 FLE from the FD -ADDR
 	 * to get the MBUF Addr from the previous FLE.
 	 * We can have a better approach to use the inline Mbuf
 	 */
@@ -1009,7 +1009,7 @@ build_auth_fd(dpaa2_sec_session *sess, struct rte_crypto_op *op,
 	memset(fle, 0, FLE_POOL_BUF_SIZE);
 	/* TODO we are using the first FLE entry to store Mbuf.
 	 * Currently we donot know which FLE has the mbuf stored.
-	 * So while retreiving we can go back 1 FLE from the FD -ADDR
+	 * So while retrieving we can go back 1 FLE from the FD -ADDR
 	 * to get the MBUF Addr from the previous FLE.
 	 * We can have a better approach to use the inline Mbuf
 	 */
@@ -1262,7 +1262,7 @@ build_cipher_fd(dpaa2_sec_session *sess, struct rte_crypto_op *op,
 	memset(fle, 0, FLE_POOL_BUF_SIZE);
 	/* TODO we are using the first FLE entry to store Mbuf.
 	 * Currently we donot know which FLE has the mbuf stored.
-	 * So while retreiving we can go back 1 FLE from the FD -ADDR
+	 * So while retrieving we can go back 1 FLE from the FD -ADDR
 	 * to get the MBUF Addr from the previous FLE.
 	 * We can have a better approach to use the inline Mbuf
 	 */
@@ -1372,10 +1372,10 @@ build_sec_fd(struct rte_crypto_op *op,
 			ret = build_auth_sg_fd(sess, op, fd, bpid);
 			break;
 		case DPAA2_SEC_AEAD:
-			ret = build_authenc_gcm_sg_fd(sess, op, fd, bpid);
+			ret = build_authentic_gcm_sg_fd(sess, op, fd, bpid);
 			break;
 		case DPAA2_SEC_CIPHER_HASH:
-			ret = build_authenc_sg_fd(sess, op, fd, bpid);
+			ret = build_authentic_sg_fd(sess, op, fd, bpid);
 			break;
 #ifdef RTE_LIB_SECURITY
 		case DPAA2_SEC_IPSEC:
@@ -1396,10 +1396,10 @@ build_sec_fd(struct rte_crypto_op *op,
 			ret = build_auth_fd(sess, op, fd, bpid);
 			break;
 		case DPAA2_SEC_AEAD:
-			ret = build_authenc_gcm_fd(sess, op, fd, bpid);
+			ret = build_authentic_gcm_fd(sess, op, fd, bpid);
 			break;
 		case DPAA2_SEC_CIPHER_HASH:
-			ret = build_authenc_fd(sess, op, fd, bpid);
+			ret = build_authentic_fd(sess, op, fd, bpid);
 			break;
 #ifdef RTE_LIB_SECURITY
 		case DPAA2_SEC_IPSEC:
@@ -1568,7 +1568,7 @@ sec_fd_to_mbuf(const struct qbman_fd *fd)
 
 	/* we are using the first FLE entry to store Mbuf.
 	 * Currently we donot know which FLE has the mbuf stored.
-	 * So while retreiving we can go back 1 FLE from the FD -ADDR
+	 * So while retrieving we can go back 1 FLE from the FD -ADDR
 	 * to get the MBUF Addr from the previous FLE.
 	 * We can have a better approach to use the inline Mbuf
 	 */
@@ -1580,7 +1580,7 @@ sec_fd_to_mbuf(const struct qbman_fd *fd)
 	}
 	op = (struct rte_crypto_op *)DPAA2_GET_FLE_ADDR((fle - 1));
 
-	/* Prefeth op */
+	/* Prefetch op */
 	src = op->sym->m_src;
 	rte_prefetch0(src);
 
@@ -2525,7 +2525,7 @@ dpaa2_sec_aead_chain_init(struct rte_cryptodev *dev,
 	priv->flc_desc[0].desc[2] = 0;
 
 	if (session->ctxt_type == DPAA2_SEC_CIPHER_HASH) {
-		bufsize = cnstr_shdsc_authenc(priv->flc_desc[0].desc, 1,
+		bufsize = cnstr_shdsc_authentic(priv->flc_desc[0].desc, 1,
 					      0, SHR_SERIAL,
 					      &cipherdata, &authdata,
 					      session->iv.length,

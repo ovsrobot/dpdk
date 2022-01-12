@@ -227,7 +227,7 @@ static struct feature_driver fme_feature_drvs[] = {
 	&fme_i2c_master_ops),},
 	{FEATURE_DRV(FME_FEATURE_ID_ETH_GROUP, FME_FEATURE_ETH_GROUP,
 	&fme_eth_group_ops),},
-	{0, NULL, NULL}, /* end of arrary */
+	{0, NULL, NULL}, /* end of array */
 };
 
 static struct feature_driver port_feature_drvs[] = {

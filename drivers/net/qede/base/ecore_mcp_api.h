@@ -159,7 +159,7 @@ struct ecore_mcp_rdma_stats {
 	u64 rx_pkts;
 	u64 tx_pkts;
 	u64 rx_bytes;
-	u64 tx_byts;
+	u64 tx_bytes;
 };
 
 enum ecore_mcp_protocol_type {

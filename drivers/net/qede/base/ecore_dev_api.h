@@ -509,7 +509,7 @@ enum ecore_eng {
  *
  * @param p_dev
  *
- * @return enum ecore_eng - L2 affintiy hint
+ * @return enum ecore_eng - L2 affinity hint
  */
 enum ecore_eng ecore_llh_get_l2_affinity_hint(struct ecore_dev *p_dev);
 

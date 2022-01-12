@@ -2290,12 +2290,12 @@ mlx5_devx_cmd_create_virtio_q_counters(void *ctx)
 {
 	uint32_t in[MLX5_ST_SZ_DW(create_virtio_q_counters_in)] = {0};
 	uint32_t out[MLX5_ST_SZ_DW(general_obj_out_cmd_hdr)] = {0};
-	struct mlx5_devx_obj *couners_obj = mlx5_malloc(MLX5_MEM_ZERO,
-						       sizeof(*couners_obj), 0,
+	struct mlx5_devx_obj *counters_obj = mlx5_malloc(MLX5_MEM_ZERO,
+						       sizeof(*counters_obj), 0,
 						       SOCKET_ID_ANY);
 	void *hdr = MLX5_ADDR_OF(create_virtio_q_counters_in, in, hdr);
 
-	if (!couners_obj) {
+	if (!counters_obj) {
 		DRV_LOG(ERR, "Failed to allocate virtio queue counters data.");
 		rte_errno = ENOMEM;
 		return NULL;
@@ -2304,22 +2304,22 @@ mlx5_devx_cmd_create_virtio_q_counters(void *ctx)
 		 MLX5_CMD_OP_CREATE_GENERAL_OBJECT);
 	MLX5_SET(general_obj_in_cmd_hdr, hdr, obj_type,
 		 MLX5_GENERAL_OBJ_TYPE_VIRTIO_Q_COUNTERS);
-	couners_obj->obj = mlx5_glue->devx_obj_create(ctx, in, sizeof(in), out,
+	counters_obj->obj = mlx5_glue->devx_obj_create(ctx, in, sizeof(in), out,
 						      sizeof(out));
-	if (!couners_obj->obj) {
+	if (!counters_obj->obj) {
 		rte_errno = errno;
 		DRV_LOG(ERR, "Failed to create virtio queue counters Obj using"
 			" DevX.");
-		mlx5_free(couners_obj);
+		mlx5_free(counters_obj);
 		return NULL;
 	}
-	couners_obj->id = MLX5_GET(general_obj_out_cmd_hdr, out, obj_id);
-	return couners_obj;
+	counters_obj->id = MLX5_GET(general_obj_out_cmd_hdr, out, obj_id);
+	return counters_obj;
 }
 
 int
-mlx5_devx_cmd_query_virtio_q_counters(struct mlx5_devx_obj *couners_obj,
-				   struct mlx5_devx_virtio_q_couners_attr *attr)
+mlx5_devx_cmd_query_virtio_q_counters(struct mlx5_devx_obj *counters_obj,
+				   struct mlx5_devx_virtio_q_counters_attr *attr)
 {
 	uint32_t in[MLX5_ST_SZ_DW(general_obj_in_cmd_hdr)] = {0};
 	uint32_t out[MLX5_ST_SZ_DW(query_virtio_q_counters_out)] = {0};
@@ -2332,8 +2332,8 @@ mlx5_devx_cmd_query_virtio_q_counters(struct mlx5_devx_obj *couners_obj,
 		 MLX5_CMD_OP_QUERY_GENERAL_OBJECT);
 	MLX5_SET(general_obj_in_cmd_hdr, hdr, obj_type,
 		 MLX5_GENERAL_OBJ_TYPE_VIRTIO_Q_COUNTERS);
-	MLX5_SET(general_obj_in_cmd_hdr, hdr, obj_id, couners_obj->id);
-	ret = mlx5_glue->devx_obj_query(couners_obj->obj, in, sizeof(in), out,
+	MLX5_SET(general_obj_in_cmd_hdr, hdr, obj_id, counters_obj->id);
+	ret = mlx5_glue->devx_obj_query(counters_obj->obj, in, sizeof(in), out,
 					sizeof(out));
 	if (ret) {
 		DRV_LOG(ERR, "Failed to query virtio q counters using DevX.");

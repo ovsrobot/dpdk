@@ -368,7 +368,7 @@ test_classify_run(struct rte_acl_ctx *acx, struct ipv4_7tuple test_data[],
 }
 
 static int
-test_classify_buid(struct rte_acl_ctx *acx,
+test_classify_build(struct rte_acl_ctx *acx,
 	const struct rte_acl_ipv4vlan_rule *rules, uint32_t num)
 {
 	int ret;
@@ -417,7 +417,7 @@ test_classify(void)
 		else
 			rte_acl_reset_rules(acx);
 
-		ret = test_classify_buid(acx, acl_test_rules,
+		ret = test_classify_build(acx, acl_test_rules,
 			RTE_DIM(acl_test_rules));
 		if (ret != 0) {
 			printf("Line %i, iter: %d: "
@@ -552,7 +552,7 @@ test_build_ports_range(void)
 
 	for (i = 0; i != RTE_DIM(test_rules); i++) {
 		rte_acl_reset(acx);
-		ret = test_classify_buid(acx, test_rules, i + 1);
+		ret = test_classify_build(acx, test_rules, i + 1);
 		if (ret != 0) {
 			printf("Line %i, iter: %d: "
 				"Adding rules to ACL context failed!\n",

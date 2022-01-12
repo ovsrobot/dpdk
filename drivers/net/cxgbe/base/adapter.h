@@ -730,7 +730,7 @@ static inline struct mbox_entry *t4_os_list_first_entry(struct mbox_list *head)
 
 /**
  * t4_os_atomic_add_tail - Enqueue list element atomically onto list
- * @new: the entry to be addded to the queue
+ * @new: the entry to be added to the queue
  * @head: current head of the linked list
  * @lock: lock to use to guarantee atomicity
  */

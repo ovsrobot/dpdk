@@ -1026,12 +1026,12 @@ txgbe_vlan_tpid_set(struct rte_eth_dev *dev,
 {
 	struct txgbe_hw *hw = TXGBE_DEV_HW(dev);
 	int ret = 0;
-	uint32_t portctrl, vlan_ext, qinq;
+	uint32_t portctl, vlan_ext, qinq;
 
-	portctrl = rd32(hw, TXGBE_PORTCTL);
+	portctl = rd32(hw, TXGBE_PORTCTL);
 
-	vlan_ext = (portctrl & TXGBE_PORTCTL_VLANEXT);
-	qinq = vlan_ext && (portctrl & TXGBE_PORTCTL_QINQ);
+	vlan_ext = (portctl & TXGBE_PORTCTL_VLANEXT);
+	qinq = vlan_ext && (portctl & TXGBE_PORTCTL_QINQ);
 	switch (vlan_type) {
 	case RTE_ETH_VLAN_TYPE_INNER:
 		if (vlan_ext) {

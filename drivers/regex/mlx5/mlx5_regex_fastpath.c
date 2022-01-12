@@ -226,7 +226,7 @@ complete_umr_wqe(struct mlx5_regex_qp *qp, struct mlx5_regex_hw_qp *qp_obj,
 			 rte_cpu_to_be_32(mkey_job->imkey->id));
 	/* Set UMR WQE control seg. */
 	ucseg->mkey_mask |= rte_cpu_to_be_64(MLX5_WQE_UMR_CTRL_MKEY_MASK_LEN |
-				MLX5_WQE_UMR_CTRL_FLAG_TRNSLATION_OFFSET |
+				MLX5_WQE_UMR_CTRL_FLAG_TRANSLATION_OFFSET |
 				MLX5_WQE_UMR_CTRL_MKEY_MASK_ACCESS_LOCAL_WRITE);
 	ucseg->klm_octowords = rte_cpu_to_be_16(klm_align);
 	/* Set mkey context seg. */

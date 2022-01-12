@@ -18,7 +18,7 @@
 #include <rte_dpaa_logs.h>
 #include <netcfg.h>
 
-/* This data structure contaings all configurations information
+/* This data structure contains all configurations information
  * related to usages of DPA devices.
  */
 static struct netcfg_info *netcfg;
@@ -112,7 +112,7 @@ netcfg_acquire(void)
 
 	netcfg = rte_calloc(NULL, 1, size, 0);
 	if (unlikely(netcfg == NULL)) {
-		DPAA_BUS_LOG(ERR, "Unable to allocat mem for netcfg");
+		DPAA_BUS_LOG(ERR, "Unable to allocate mem for netcfg");
 		goto error;
 	}
 

@@ -2,8 +2,8 @@
  * Copyright(c) 2016-2017 Intel Corporation
  */
 
-#ifndef _CPERF_TEST_VECTRORS_
-#define _CPERF_TEST_VECTRORS_
+#ifndef _CPERF_TEST_VECTORS_
+#define _CPERF_TEST_VECTORS_
 
 #include "cperf_options.h"
 

@@ -2284,7 +2284,7 @@ int t4_config_rss_range(struct adapter *adapter, int mbox, unsigned int viid,
 			 * Grab up to the next 3 Ingress Queue IDs (wrapping
 			 * around the Ingress Queue ID array if necessary) and
 			 * insert them into the firmware RSS command at the
-			 * current 3-tuple position within the commad.
+			 * current 3-tuple position within the command.
 			 */
 			u16 qbuf[3];
 			u16 *qbp = qbuf;
@@ -3919,7 +3919,7 @@ int t4_alloc_vi_func(struct adapter *adap, unsigned int mbox,
  * @mac: the MAC addresses of the VI
  * @rss_size: size of RSS table slice associated with this VI
  *
- * Backwards compatible and convieniance routine to allocate a Virtual
+ * Backwards compatible and convenience routine to allocate a Virtual
  * Interface with a Ethernet Port Application Function and Intrustion
  * Detection System disabled.
  */
@@ -5150,7 +5150,7 @@ int t4_bar2_sge_qregs(struct adapter *adapter, unsigned int qid,
 	 * the BAR2 Queue ID and the hardware will infer the Absolute Queue ID
 	 * from the BAR2 Page and BAR2 Queue ID.
 	 *
-	 * One important censequence of this is that some BAR2 SGE registers
+	 * One important consequence of this is that some BAR2 SGE registers
 	 * have a "Queue ID" field and we can write the BAR2 SGE Queue ID
 	 * there.  But other registers synthesize the SGE Queue ID purely
 	 * from the writes to the registers -- the Write Combined Doorbell
@@ -5467,7 +5467,7 @@ int t4_port_init(struct adapter *adap, int mbox, int pf, int vf)
  *
  * Reads/writes an [almost] arbitrary memory region in the firmware: the
  * firmware memory address and host buffer must be aligned on 32-bit
- * boudaries; the length may be arbitrary.
+ * boundaries; the length may be arbitrary.
  *
  * NOTES:
  *  1. The memory is transferred as a raw byte sequence from/to the

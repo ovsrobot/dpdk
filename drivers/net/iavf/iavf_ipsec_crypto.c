@@ -1334,7 +1334,7 @@ update_aead_capabilities(struct rte_cryptodev_capabilities *scap,
  * capabilities structure.
  */
 int
-iavf_ipsec_crypto_set_security_capabililites(struct iavf_security_ctx
+iavf_ipsec_crypto_set_security_capabilities(struct iavf_security_ctx
 		*iavf_sctx, struct virtchnl_ipsec_cap *vch_cap)
 {
 	struct rte_cryptodev_capabilities *capabilities;
@@ -1524,7 +1524,7 @@ iavf_security_init(struct iavf_adapter *adapter)
 	if (rc)
 		return rc;
 
-	return	iavf_ipsec_crypto_set_security_capabililites(iavf_sctx,
+	return	iavf_ipsec_crypto_set_security_capabilities(iavf_sctx,
 			&capabilities);
 }
 

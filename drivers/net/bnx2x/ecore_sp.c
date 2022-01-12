@@ -2352,11 +2352,11 @@ static int ecore_mcast_get_next_bin(struct ecore_mcast_obj *o, int last)
 	int i, j, inner_start = last % BIT_VEC64_ELEM_SZ;
 
 	for (i = last / BIT_VEC64_ELEM_SZ; i < ECORE_MCAST_VEC_SZ; i++) {
-		if (o->registry.aprox_match.vec[i])
+		if (o->registry.approx_match.vec[i])
 			for (j = inner_start; j < BIT_VEC64_ELEM_SZ; j++) {
 				int cur_bit = j + BIT_VEC64_ELEM_SZ * i;
 				if (BIT_VEC64_TEST_BIT
-				    (o->registry.aprox_match.vec, cur_bit)) {
+				    (o->registry.approx_match.vec, cur_bit)) {
 					return cur_bit;
 				}
 			}
@@ -2379,7 +2379,7 @@ static int ecore_mcast_clear_first_bin(struct ecore_mcast_obj *o)
 	int cur_bit = ecore_mcast_get_next_bin(o, 0);
 
 	if (cur_bit >= 0)
-		BIT_VEC64_CLEAR_BIT(o->registry.aprox_match.vec, cur_bit);
+		BIT_VEC64_CLEAR_BIT(o->registry.approx_match.vec, cur_bit);
 
 	return cur_bit;
 }
@@ -2421,7 +2421,7 @@ static void ecore_mcast_set_one_rule_e2(struct bnx2x_softc *sc __rte_unused,
 	switch (cmd) {
 	case ECORE_MCAST_CMD_ADD:
 		bin = ecore_mcast_bin_from_mac(cfg_data->mac);
-		BIT_VEC64_SET_BIT(o->registry.aprox_match.vec, bin);
+		BIT_VEC64_SET_BIT(o->registry.approx_match.vec, bin);
 		break;
 
 	case ECORE_MCAST_CMD_DEL:
@@ -2812,7 +2812,7 @@ static int ecore_mcast_refresh_registry_e2(struct ecore_mcast_obj *o)
 	uint64_t elem;
 
 	for (i = 0; i < ECORE_MCAST_VEC_SZ; i++) {
-		elem = o->registry.aprox_match.vec[i];
+		elem = o->registry.approx_match.vec[i];
 		for (; elem; cnt++)
 			elem &= elem - 1;
 	}
@@ -2950,7 +2950,7 @@ static void ecore_mcast_hdl_add_e1h(struct bnx2x_softc *sc __rte_unused,
 		     bit);
 
 		/* bookkeeping... */
-		BIT_VEC64_SET_BIT(o->registry.aprox_match.vec, bit);
+		BIT_VEC64_SET_BIT(o->registry.approx_match.vec, bit);
 	}
 }
 
@@ -2998,8 +2998,8 @@ static int ecore_mcast_setup_e1h(struct bnx2x_softc *sc,
 			ECORE_MSG(sc, "Invalidating multicast MACs configuration");
 
 			/* clear the registry */
-			ECORE_MEMSET(o->registry.aprox_match.vec, 0,
-				     sizeof(o->registry.aprox_match.vec));
+			ECORE_MEMSET(o->registry.approx_match.vec, 0,
+				     sizeof(o->registry.approx_match.vec));
 			break;
 
 		case ECORE_MCAST_CMD_RESTORE:
@@ -3016,8 +3016,8 @@ static int ecore_mcast_setup_e1h(struct bnx2x_softc *sc,
 			REG_WR(sc, ECORE_MC_HASH_OFFSET(sc, i), mc_filter[i]);
 	} else
 		/* clear the registry */
-		ECORE_MEMSET(o->registry.aprox_match.vec, 0,
-			     sizeof(o->registry.aprox_match.vec));
+		ECORE_MEMSET(o->registry.approx_match.vec, 0,
+			     sizeof(o->registry.approx_match.vec));
 
 	/* We are done */
 	r->clear_pending(r);
@@ -3025,15 +3025,15 @@ static int ecore_mcast_setup_e1h(struct bnx2x_softc *sc,
 	return ECORE_SUCCESS;
 }
 
-static int ecore_mcast_get_registry_size_aprox(struct ecore_mcast_obj *o)
+static int ecore_mcast_get_registry_size_approx(struct ecore_mcast_obj *o)
 {
-	return o->registry.aprox_match.num_bins_set;
+	return o->registry.approx_match.num_bins_set;
 }
 
-static void ecore_mcast_set_registry_size_aprox(struct ecore_mcast_obj *o,
+static void ecore_mcast_set_registry_size_approx(struct ecore_mcast_obj *o,
 						int n)
 {
-	o->registry.aprox_match.num_bins_set = n;
+	o->registry.approx_match.num_bins_set = n;
 }
 
 int ecore_config_mcast(struct bnx2x_softc *sc,
@@ -3163,9 +3163,9 @@ void ecore_init_mcast_obj(struct bnx2x_softc *sc,
 		mcast_obj->validate = ecore_mcast_validate_e1h;
 		mcast_obj->revert = ecore_mcast_revert_e1h;
 		mcast_obj->get_registry_size =
-		    ecore_mcast_get_registry_size_aprox;
+		    ecore_mcast_get_registry_size_approx;
 		mcast_obj->set_registry_size =
-		    ecore_mcast_set_registry_size_aprox;
+		    ecore_mcast_set_registry_size_approx;
 	} else {
 		mcast_obj->config_mcast = ecore_mcast_setup_e2;
 		mcast_obj->enqueue_cmd = ecore_mcast_enqueue_cmd;
@@ -3177,9 +3177,9 @@ void ecore_init_mcast_obj(struct bnx2x_softc *sc,
 		mcast_obj->validate = ecore_mcast_validate_e2;
 		mcast_obj->revert = ecore_mcast_revert_e2;
 		mcast_obj->get_registry_size =
-		    ecore_mcast_get_registry_size_aprox;
+		    ecore_mcast_get_registry_size_approx;
 		mcast_obj->set_registry_size =
-		    ecore_mcast_set_registry_size_aprox;
+		    ecore_mcast_set_registry_size_approx;
 	}
 }
 

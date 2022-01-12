@@ -27,7 +27,7 @@ extern "C" {
 
 #include "rte_cryptodev_trace_fp.h"
 
-extern const char **rte_cyptodev_names;
+extern const char **rte_cryptodev_names;
 
 /* Logging Macros */
 

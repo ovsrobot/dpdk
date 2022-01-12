@@ -69,14 +69,14 @@ add_specific(struct rte_ipsec_sad *sad, const void *key,
 		int key_type, void *sa)
 {
 	void *tmp_val;
-	int ret, notexist;
+	int ret, nonexistent;
 
 	/* Check if the key is present in the table.
-	 * Need for further accaunting in cnt_arr
+	 * Need for further accounting in cnt_arr
 	 */
 	ret = rte_hash_lookup_with_hash(sad->hash[key_type], key,
 		rte_hash_crc(key, sad->keysize[key_type], sad->init_val));
-	notexist = (ret == -ENOENT);
+	nonexistent = (ret == -ENOENT);
 
 	/* Add an SA to the corresponding table.*/
 	ret = rte_hash_add_key_with_hash_data(sad->hash[key_type], key,
@@ -107,9 +107,9 @@ add_specific(struct rte_ipsec_sad *sad, const void *key,
 	if (ret < 0)
 		return ret;
 	if (key_type == RTE_IPSEC_SAD_SPI_DIP)
-		sad->cnt_arr[ret].cnt_dip += notexist;
+		sad->cnt_arr[ret].cnt_dip += nonexistent;
 	else
-		sad->cnt_arr[ret].cnt_dip_sip += notexist;
+		sad->cnt_arr[ret].cnt_dip_sip += nonexistent;
 
 	return 0;
 }

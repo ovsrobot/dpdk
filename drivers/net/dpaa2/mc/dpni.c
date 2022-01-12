@@ -2746,7 +2746,7 @@ int dpni_set_rx_hash_dist(struct fsl_mc_io *mc_io, uint32_t cmd_flags,
 
 /**
  * dpni_add_custom_tpid() - Configures a distinct Ethertype value (or TPID
- *		value) to indicate VLAN tag in adition to the common TPID values
+ *		value) to indicate VLAN tag in addition to the common TPID values
  *		0x81000 and 0x88A8
  * @mc_io:	Pointer to MC portal's I/O object
  * @cmd_flags:	Command flags; one or more of 'MC_CMD_FLAG_'

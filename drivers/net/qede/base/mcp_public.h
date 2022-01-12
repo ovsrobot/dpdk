@@ -530,7 +530,7 @@ struct public_global {
 	u32 debug_mb_offset;
 	u32 phymod_dbg_mb_offset;
 	struct couple_mode_teaming cmt;
-/* Temperature in Celcius (-255C / +255C), measured every second. */
+/* Temperature in Celsius (-255C / +255C), measured every second. */
 	s32 internal_temperature;
 	u32 mfw_ver;
 	u32 running_bundle_id;
@@ -1968,7 +1968,7 @@ enum MFW_DRV_MSG_TYPE {
 ((u8)((u8 *)(MFW_MB_P(shmem_func)->msg))[msg_id]++;)
 
 struct public_mfw_mb {
-	u32 sup_msgs;       /* Assigend with MFW_DRV_MSG_MAX */
+	u32 sup_msgs;       /* Assigned with MFW_DRV_MSG_MAX */
 /* Incremented by the MFW */
 	u32 msg[MFW_DRV_MSG_MAX_DWORDS(MFW_DRV_MSG_MAX)];
 /* Incremented by the driver */

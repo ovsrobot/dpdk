@@ -1805,7 +1805,7 @@ struct sfc_mae_field_locator {
 	efx_mae_field_id_t		field_id;
 	size_t				size;
 	/* Field offset in the corresponding rte_flow_item_ struct */
-	size_t				ofst;
+	size_t				offset;
 };
 
 static void
@@ -1820,8 +1820,8 @@ sfc_mae_item_build_supp_mask(const struct sfc_mae_field_locator *field_locators,
 	for (i = 0; i < nb_field_locators; ++i) {
 		const struct sfc_mae_field_locator *fl = &field_locators[i];
 
-		SFC_ASSERT(fl->ofst + fl->size <= mask_size);
-		memset(RTE_PTR_ADD(mask_ptr, fl->ofst), 0xff, fl->size);
+		SFC_ASSERT(fl->offset + fl->size <= mask_size);
+		memset(RTE_PTR_ADD(mask_ptr, fl->offset), 0xff, fl->size);
 	}
 }
 
@@ -1843,8 +1843,8 @@ sfc_mae_parse_item(const struct sfc_mae_field_locator *field_locators,
 
 		rc = efx_mae_match_spec_field_set(ctx->match_spec,
 						  fremap[fl->field_id],
-						  fl->size, spec + fl->ofst,
-						  fl->size, mask + fl->ofst);
+						  fl->size, spec + fl->offset,
+						  fl->size, mask + fl->offset);
 		if (rc != 0)
 			break;
 	}
@@ -2387,7 +2387,7 @@ static const struct sfc_mae_field_locator flocs_tunnel[] = {
 		 * for Geneve and NVGRE, too.
 		 */
 		.size = RTE_SIZEOF_FIELD(struct rte_flow_item_vxlan, vni),
-		.ofst = offsetof(struct rte_flow_item_vxlan, vni),
+		.offset = offsetof(struct rte_flow_item_vxlan, vni),
 	},
 };
 
@@ -3297,7 +3297,7 @@ sfc_mae_rule_parse_action_of_set_vlan_pcp(
 
 struct sfc_mae_parsed_item {
 	const struct rte_flow_item	*item;
-	size_t				proto_header_ofst;
+	size_t				proto_header_offset;
 	size_t				proto_header_size;
 };
 
@@ -3316,20 +3316,20 @@ sfc_mae_header_force_item_masks(uint8_t *header_buf,
 		const struct sfc_mae_parsed_item *parsed_item;
 		const struct rte_flow_item *item;
 		size_t proto_header_size;
-		size_t ofst;
+		size_t offset;
 
 		parsed_item = &parsed_items[item_idx];
 		proto_header_size = parsed_item->proto_header_size;
 		item = parsed_item->item;
 
-		for (ofst = 0; ofst < proto_header_size;
-		     ofst += sizeof(rte_be16_t)) {
-			rte_be16_t *wp = RTE_PTR_ADD(header_buf, ofst);
+		for (offset = 0; offset < proto_header_size;
+		     offset += sizeof(rte_be16_t)) {
+			rte_be16_t *wp = RTE_PTR_ADD(header_buf, offset);
 			const rte_be16_t *w_maskp;
 			const rte_be16_t *w_specp;
 
-			w_maskp = RTE_PTR_ADD(item->mask, ofst);
-			w_specp = RTE_PTR_ADD(item->spec, ofst);
+			w_maskp = RTE_PTR_ADD(item->mask, offset);
+			w_specp = RTE_PTR_ADD(item->spec, offset);
 
 			*wp &= ~(*w_maskp);
 			*wp |= (*w_specp & *w_maskp);
@@ -3363,7 +3363,7 @@ sfc_mae_rule_parse_action_vxlan_encap(
 						1 /* VXLAN */];
 	unsigned int nb_parsed_items = 0;
 
-	size_t eth_ethertype_ofst = offsetof(struct rte_ether_hdr, ether_type);
+	size_t eth_ethertype_offset = offsetof(struct rte_ether_hdr, ether_type);
 	uint8_t dummy_buf[RTE_MAX(sizeof(struct rte_ipv4_hdr),
 				  sizeof(struct rte_ipv6_hdr))];
 	struct rte_ipv4_hdr *ipv4 = (void *)dummy_buf;
@@ -3371,8 +3371,8 @@ sfc_mae_rule_parse_action_vxlan_encap(
 	struct rte_vxlan_hdr *vxlan = NULL;
 	struct rte_udp_hdr *udp = NULL;
 	unsigned int nb_vlan_tags = 0;
-	size_t next_proto_ofst = 0;
-	size_t ethertype_ofst = 0;
+	size_t next_proto_offset = 0;
+	size_t ethertype_offset = 0;
 	uint64_t exp_items;
 	int rc;
 
@@ -3444,7 +3444,7 @@ sfc_mae_rule_parse_action_vxlan_encap(
 
 			proto_header_size = sizeof(struct rte_ether_hdr);
 
-			ethertype_ofst = eth_ethertype_ofst;
+			ethertype_offset = eth_ethertype_offset;
 
 			exp_items = RTE_BIT64(RTE_FLOW_ITEM_TYPE_VLAN) |
 				    RTE_BIT64(RTE_FLOW_ITEM_TYPE_IPV4) |
@@ -3458,13 +3458,13 @@ sfc_mae_rule_parse_action_vxlan_encap(
 
 			proto_header_size = sizeof(struct rte_vlan_hdr);
 
-			ethertypep = RTE_PTR_ADD(buf, eth_ethertype_ofst);
+			ethertypep = RTE_PTR_ADD(buf, eth_ethertype_offset);
 			*ethertypep = RTE_BE16(RTE_ETHER_TYPE_QINQ);
 
-			ethertypep = RTE_PTR_ADD(buf, ethertype_ofst);
+			ethertypep = RTE_PTR_ADD(buf, ethertype_offset);
 			*ethertypep = RTE_BE16(RTE_ETHER_TYPE_VLAN);
 
-			ethertype_ofst =
+			ethertype_offset =
 			    bounce_eh->size +
 			    offsetof(struct rte_vlan_hdr, eth_proto);
 
@@ -3482,10 +3482,10 @@ sfc_mae_rule_parse_action_vxlan_encap(
 
 			proto_header_size = sizeof(struct rte_ipv4_hdr);
 
-			ethertypep = RTE_PTR_ADD(buf, ethertype_ofst);
+			ethertypep = RTE_PTR_ADD(buf, ethertype_offset);
 			*ethertypep = RTE_BE16(RTE_ETHER_TYPE_IPV4);
 
-			next_proto_ofst =
+			next_proto_offset =
 			    bounce_eh->size +
 			    offsetof(struct rte_ipv4_hdr, next_proto_id);
 
@@ -3501,10 +3501,10 @@ sfc_mae_rule_parse_action_vxlan_encap(
 
 			proto_header_size = sizeof(struct rte_ipv6_hdr);
 
-			ethertypep = RTE_PTR_ADD(buf, ethertype_ofst);
+			ethertypep = RTE_PTR_ADD(buf, ethertype_offset);
 			*ethertypep = RTE_BE16(RTE_ETHER_TYPE_IPV6);
 
-			next_proto_ofst = bounce_eh->size +
+			next_proto_offset = bounce_eh->size +
 					  offsetof(struct rte_ipv6_hdr, proto);
 
 			ipv6 = (struct rte_ipv6_hdr *)buf_cur;
@@ -3519,7 +3519,7 @@ sfc_mae_rule_parse_action_vxlan_encap(
 
 			proto_header_size = sizeof(struct rte_udp_hdr);
 
-			next_protop = RTE_PTR_ADD(buf, next_proto_ofst);
+			next_protop = RTE_PTR_ADD(buf, next_proto_offset);
 			*next_protop = IPPROTO_UDP;
 
 			udp = (struct rte_udp_hdr *)buf_cur;

@@ -436,7 +436,7 @@ static int hinic_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	if (rc) {
 		PMD_DRV_LOG(ERR, "Create rxq[%d] failed, dev_name: %s, rq_depth: %d",
 			    queue_idx, dev->data->name, rq_depth);
-		goto ceate_rq_fail;
+		goto create_rq_fail;
 	}
 
 	/* mbuf pool must be assigned before setup rx resources */
@@ -484,7 +484,7 @@ setup_rx_res_err:
 adjust_bufsize_fail:
 	hinic_destroy_rq(hwdev, queue_idx);
 
-ceate_rq_fail:
+create_rq_fail:
 	rte_free(rxq);
 
 	return rc;

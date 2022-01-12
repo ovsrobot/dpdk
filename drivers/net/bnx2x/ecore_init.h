@@ -288,7 +288,7 @@ static inline void ecore_dcb_config_qm(struct bnx2x_softc *sc, enum cos_mode mod
  *
  * IMPORTANT REMARKS:
  * 1. the cmng_init struct does not represent the contiguous internal ram
- *    structure. the driver should use the XSTORM_CMNG_PERPORT_VARS_OFFSET
+ *    structure. the driver should use the XSTORM_CMNG_PER_PORT_VARS_OFFSET
  *    offset in order to write the port sub struct and the
  *    PFID_FROM_PORT_AND_VNIC offset for writing the vnic sub struct (in other
  *    words - don't use memcpy!).

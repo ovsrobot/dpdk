@@ -60,7 +60,7 @@ struct qat_comp_dev_private {
 	/**< The pointer to this compression device structure */
 	const struct rte_compressdev_capabilities *qat_dev_capabilities;
 	/* QAT device compression capabilities */
-	const struct rte_memzone *interm_buff_mz;
+	const struct rte_memzone *interim_buff_mz;
 	/**< The device's memory for intermediate buffers */
 	struct rte_mempool *xformpool;
 	/**< The device's pool for qat_comp_xforms */

@@ -481,7 +481,7 @@ void virtqueue_dump(struct virtqueue *vq);
 /**
  *  Get all mbufs to be freed.
  */
-struct rte_mbuf *virtqueue_detach_unused(struct virtqueue *vq);
+struct rte_mbuf *virtqueue_detach_unused_cookie(struct virtqueue *vq);
 
 /* Flush the elements in the used ring. */
 void virtqueue_rxvq_flush(struct virtqueue *vq);

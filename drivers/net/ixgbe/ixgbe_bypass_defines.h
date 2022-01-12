@@ -106,7 +106,7 @@ enum ixgbe_state_t {
 
 #define BYPASS_LOG_EVENT_SHIFT	28
 #define BYPASS_LOG_CLEAR_SHIFT	24 /* bit offset */
-#define IXGBE_DEV_TO_ADPATER(dev) \
+#define IXGBE_DEV_TO_ADAPTER(dev) \
 	((struct ixgbe_adapter *)(dev->data->dev_private))
 
 /* extractions from ixgbe_phy.h */

@@ -375,7 +375,7 @@ cpt_available_lfs_get(struct dev *dev, uint16_t *nb_lf)
 }
 
 int
-cpt_lfs_alloc(struct dev *dev, uint8_t eng_grpmsk, uint8_t blkaddr,
+cpt_lfs_alloc(struct dev *dev, uint8_t eng_grpmask, uint8_t blkaddr,
 	      bool inl_dev_sso)
 {
 	struct cpt_lf_alloc_req_msg *req;
@@ -390,7 +390,7 @@ cpt_lfs_alloc(struct dev *dev, uint8_t eng_grpmsk, uint8_t blkaddr,
 		req->sso_pf_func = nix_inl_dev_pffunc_get();
 	else
 		req->sso_pf_func = idev_sso_pffunc_get();
-	req->eng_grpmsk = eng_grpmsk;
+	req->eng_grpmask = eng_grpmask;
 	req->blkaddr = blkaddr;
 
 	return mbox_process(mbox);
@@ -481,7 +481,7 @@ roc_cpt_dev_configure(struct roc_cpt *roc_cpt, int nb_lf)
 	struct cpt *cpt = roc_cpt_to_cpt_priv(roc_cpt);
 	uint8_t blkaddr[ROC_CPT_MAX_BLKS];
 	struct msix_offset_rsp *rsp;
-	uint8_t eng_grpmsk;
+	uint8_t eng_grpmask;
 	int blknum = 0;
 	int rc, i;
 
@@ -508,11 +508,11 @@ roc_cpt_dev_configure(struct roc_cpt *roc_cpt, int nb_lf)
 	for (i = 0; i < nb_lf; i++)
 		cpt->lf_blkaddr[i] = blkaddr[blknum];
 
-	eng_grpmsk = (1 << roc_cpt->eng_grp[CPT_ENG_TYPE_AE]) |
+	eng_grpmask = (1 << roc_cpt->eng_grp[CPT_ENG_TYPE_AE]) |
 		     (1 << roc_cpt->eng_grp[CPT_ENG_TYPE_SE]) |
 		     (1 << roc_cpt->eng_grp[CPT_ENG_TYPE_IE]);
 
-	rc = cpt_lfs_alloc(&cpt->dev, eng_grpmsk, blkaddr[blknum], false);
+	rc = cpt_lfs_alloc(&cpt->dev, eng_grpmask, blkaddr[blknum], false);
 	if (rc)
 		goto lfs_detach;
 

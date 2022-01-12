@@ -974,7 +974,7 @@ struct ecore_mcast_obj {
 			 *  properly create DEL commands.
 			 */
 			int num_bins_set;
-		} aprox_match;
+		} approx_match;
 
 		struct {
 			ecore_list_t macs;

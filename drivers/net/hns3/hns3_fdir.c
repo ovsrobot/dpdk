@@ -67,7 +67,7 @@ enum HNS3_FD_KEY_TYPE {
 
 enum HNS3_FD_META_DATA {
 	PACKET_TYPE_ID,
-	IP_FRAGEMENT,
+	IP_FRAGMENT,
 	ROCE_TYPE,
 	NEXT_KEY,
 	VLAN_NUMBER,
@@ -84,7 +84,7 @@ struct key_info {
 
 static const struct key_info meta_data_key_info[] = {
 	{PACKET_TYPE_ID, 6},
-	{IP_FRAGEMENT, 1},
+	{IP_FRAGMENT, 1},
 	{ROCE_TYPE, 1},
 	{NEXT_KEY, 5},
 	{VLAN_NUMBER, 2},

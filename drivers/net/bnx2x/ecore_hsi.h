@@ -961,10 +961,10 @@ struct port_feat_cfg {		    /* port 0: 0x454  port 1: 0x4c8 */
 		#define PORT_FEAT_CFG_DCBX_DISABLED                  0x00000000
 		#define PORT_FEAT_CFG_DCBX_ENABLED                   0x00000100
 
-    #define PORT_FEAT_CFG_AUTOGREEEN_MASK               0x00000200
-	    #define PORT_FEAT_CFG_AUTOGREEEN_SHIFT               9
-	    #define PORT_FEAT_CFG_AUTOGREEEN_DISABLED            0x00000000
-	    #define PORT_FEAT_CFG_AUTOGREEEN_ENABLED             0x00000200
+    #define PORT_FEAT_CFG_AUTOGREEN_MASK               0x00000200
+	    #define PORT_FEAT_CFG_AUTOGREEN_SHIFT               9
+	    #define PORT_FEAT_CFG_AUTOGREEN_DISABLED            0x00000000
+	    #define PORT_FEAT_CFG_AUTOGREEN_ENABLED             0x00000200
 
 	#define PORT_FEAT_CFG_STORAGE_PERSONALITY_MASK                0x00000C00
 	#define PORT_FEAT_CFG_STORAGE_PERSONALITY_SHIFT               10
@@ -1070,7 +1070,7 @@ struct port_feat_cfg {		    /* port 0: 0x454  port 1: 0x4c8 */
 	#define PORT_FEATURE_MBA_VLAN_TAG_MASK              0x0000FFFF
 	#define PORT_FEATURE_MBA_VLAN_TAG_SHIFT                      0
 	#define PORT_FEATURE_MBA_VLAN_EN                    0x00010000
-	#define PORT_FEATUTE_BOFM_CFGD_EN                   0x00020000
+	#define PORT_FEATURE_BOFM_CFGD_EN                   0x00020000
 	#define PORT_FEATURE_BOFM_CFGD_FTGT                 0x00040000
 	#define PORT_FEATURE_BOFM_CFGD_VEN                  0x00080000
 
@@ -1183,12 +1183,12 @@ struct shm_dev_info {				/* size */
 
 struct extended_dev_info_shared_cfg {             /* NVRAM OFFSET */
 
-	/*  Threshold in celcius to start using the fan */
+	/*  Threshold in celsius to start using the fan */
 	uint32_t temperature_monitor1;                           /* 0x4000 */
 	#define EXTENDED_DEV_INFO_SHARED_CFG_TEMP_FAN_THRESH_MASK     0x0000007F
 	#define EXTENDED_DEV_INFO_SHARED_CFG_TEMP_FAN_THRESH_SHIFT    0
 
-	/*  Threshold in celcius to shut down the board */
+	/*  Threshold in celsius to shut down the board */
 	#define EXTENDED_DEV_INFO_SHARED_CFG_TEMP_SHUT_THRESH_MASK    0x00007F00
 	#define EXTENDED_DEV_INFO_SHARED_CFG_TEMP_SHUT_THRESH_SHIFT   8
 
@@ -1378,12 +1378,12 @@ struct extended_dev_info_shared_cfg {             /* NVRAM OFFSET */
 	#define EXTENDED_DEV_INFO_SHARED_CFG_REV_ID_CTRL_ACTUAL       0x00001000
 	#define EXTENDED_DEV_INFO_SHARED_CFG_REV_ID_CTRL_FORCE_B0     0x00002000
 	#define EXTENDED_DEV_INFO_SHARED_CFG_REV_ID_CTRL_FORCE_B1     0x00003000
-	/*  Threshold in celcius for max continuous operation */
+	/*  Threshold in celsius for max continuous operation */
 	uint32_t temperature_report;                             /* 0x4014 */
 	#define EXTENDED_DEV_INFO_SHARED_CFG_TEMP_MCOT_MASK           0x0000007F
 	#define EXTENDED_DEV_INFO_SHARED_CFG_TEMP_MCOT_SHIFT          0
 
-	/*  Threshold in celcius for sensor caution */
+	/*  Threshold in celsius for sensor caution */
 	#define EXTENDED_DEV_INFO_SHARED_CFG_TEMP_SCT_MASK            0x00007F00
 	#define EXTENDED_DEV_INFO_SHARED_CFG_TEMP_SCT_SHIFT           8
 
@@ -2172,7 +2172,7 @@ struct eee_remote_vals {
 	uint32_t         rx_tw;
 };
 
-/**** SUPPORT FOR SHMEM ARRRAYS ***
+/**** SUPPORT FOR SHMEM ARRAYS ***
  * The SHMEM HSI is aligned on 32 bit boundaries which makes it difficult to
  * define arrays with storage types smaller then unsigned dwords.
  * The macros below add generic support for SHMEM arrays with numeric elements
@@ -2754,8 +2754,8 @@ struct shmem2_region {
 
 	struct eee_remote_vals eee_remote_vals[PORT_MAX];	/* 0x0110 */
 	uint32_t pf_allocation[E2_FUNC_MAX];			/* 0x0120 */
-	#define PF_ALLOACTION_MSIX_VECTORS_MASK    0x000000ff /* real value, as PCI config space can show only maximum of 64 vectors */
-	#define PF_ALLOACTION_MSIX_VECTORS_SHIFT   0
+	#define PF_ALLOCATION_MSIX_VECTORS_MASK    0x000000ff /* real value, as PCI config space can show only maximum of 64 vectors */
+	#define PF_ALLOCATION_MSIX_VECTORS_SHIFT   0
 
 	/* the status of EEE auto-negotiation
 	 * bits 15:0 the configured tx-lpi entry timer value. Depends on bit 31.
@@ -2940,7 +2940,7 @@ struct emac_stats {
 	uint32_t     rx_stat_xonpauseframesreceived;
 	uint32_t     rx_stat_xoffpauseframesreceived;
 	uint32_t     rx_stat_maccontrolframesreceived;
-	uint32_t     rx_stat_xoffstateentered;
+	uint32_t     rx_stat_xoffsetateentered;
 	uint32_t     rx_stat_dot3statsframestoolong;
 	uint32_t     rx_stat_etherstatsjabbers;
 	uint32_t     rx_stat_etherstatsundersizepkts;
@@ -3378,8 +3378,8 @@ struct mac_stx {
 	uint32_t     rx_stat_mac_xcf_lo;
 
 	/* xoff_state_entered */
-	uint32_t     rx_stat_xoffstateentered_hi;
-	uint32_t     rx_stat_xoffstateentered_lo;
+	uint32_t     rx_stat_xoffsetateentered_hi;
+	uint32_t     rx_stat_xoffsetateentered_lo;
 	/* pause_xon_frames_received */
 	uint32_t     rx_stat_xonpauseframesreceived_hi;
 	uint32_t     rx_stat_xonpauseframesreceived_lo;
@@ -6090,8 +6090,8 @@ struct fw_version {
 	uint32_t flags;
 #define FW_VERSION_OPTIMIZED (0x1 << 0)
 #define FW_VERSION_OPTIMIZED_SHIFT 0
-#define FW_VERSION_BIG_ENDIEN (0x1 << 1)
-#define FW_VERSION_BIG_ENDIEN_SHIFT 1
+#define FW_VERSION_BIG_ENDIAN (0x1 << 1)
+#define FW_VERSION_BIG_ENDIAN_SHIFT 1
 #define FW_VERSION_CHIP_VERSION (0x3 << 2)
 #define FW_VERSION_CHIP_VERSION_SHIFT 2
 #define __FW_VERSION_RESERVED (0xFFFFFFF << 4)
@@ -6407,8 +6407,8 @@ struct pram_fw_version {
 #define PRAM_FW_VERSION_OPTIMIZED_SHIFT 0
 #define PRAM_FW_VERSION_STORM_ID (0x3 << 1)
 #define PRAM_FW_VERSION_STORM_ID_SHIFT 1
-#define PRAM_FW_VERSION_BIG_ENDIEN (0x1 << 3)
-#define PRAM_FW_VERSION_BIG_ENDIEN_SHIFT 3
+#define PRAM_FW_VERSION_BIG_ENDIAN (0x1 << 3)
+#define PRAM_FW_VERSION_BIG_ENDIAN_SHIFT 3
 #define PRAM_FW_VERSION_CHIP_VERSION (0x3 << 4)
 #define PRAM_FW_VERSION_CHIP_VERSION_SHIFT 4
 #define __PRAM_FW_VERSION_RESERVED0 (0x3 << 6)

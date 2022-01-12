@@ -172,7 +172,7 @@ ip_frag_process(struct ip_frag_pkt *fp, struct rte_ip_frag_death_row *dr,
 			mb = ipv6_frag_reassemble(fp);
 	}
 
-	/* errorenous set of fragments. */
+	/* erroneous set of fragments. */
 	if (mb == NULL) {
 
 		/* report an error. */

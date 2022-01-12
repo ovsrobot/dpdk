@@ -815,7 +815,7 @@ qat_comp_create_req_hdr(struct icp_qat_fw_comn_req_hdr *header,
 
 static int
 qat_comp_create_templates(struct qat_comp_xform *qat_xform,
-			  const struct rte_memzone *interm_buff_mz,
+			  const struct rte_memzone *interim_buff_mz,
 			  const struct rte_comp_xform *xform,
 			  const struct qat_comp_stream *stream,
 			  enum rte_comp_op_type op_type,
@@ -923,7 +923,7 @@ qat_comp_create_templates(struct qat_comp_xform *qat_xform,
 
 		comp_req->u1.xlt_pars.inter_buff_ptr =
 				(qat_comp_get_num_im_bufs_required(qat_dev_gen)
-					== 0) ? 0 : interm_buff_mz->iova;
+					== 0) ? 0 : interim_buff_mz->iova;
 	}
 
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
@@ -979,7 +979,7 @@ qat_comp_private_xform_create(struct rte_compressdev *dev,
 
 		if (xform->compress.deflate.huffman == RTE_COMP_HUFFMAN_FIXED ||
 		  ((xform->compress.deflate.huffman == RTE_COMP_HUFFMAN_DEFAULT)
-				   && qat->interm_buff_mz == NULL
+				   && qat->interim_buff_mz == NULL
 				   && im_bufs > 0))
 			qat_xform->qat_comp_request_type =
 					QAT_COMP_REQUEST_FIXED_COMP_STATELESS;
@@ -988,7 +988,7 @@ qat_comp_private_xform_create(struct rte_compressdev *dev,
 				RTE_COMP_HUFFMAN_DYNAMIC ||
 				xform->compress.deflate.huffman ==
 						RTE_COMP_HUFFMAN_DEFAULT) &&
-				(qat->interm_buff_mz != NULL ||
+				(qat->interim_buff_mz != NULL ||
 						im_bufs == 0))
 
 			qat_xform->qat_comp_request_type =
@@ -1007,7 +1007,7 @@ qat_comp_private_xform_create(struct rte_compressdev *dev,
 		qat_xform->checksum_type = xform->decompress.chksum;
 	}
 
-	if (qat_comp_create_templates(qat_xform, qat->interm_buff_mz, xform,
+	if (qat_comp_create_templates(qat_xform, qat->interim_buff_mz, xform,
 				      NULL, RTE_COMP_OP_STATELESS,
 				      qat_dev_gen)) {
 		QAT_LOG(ERR, "QAT: Problem with setting compression");
@@ -1107,7 +1107,7 @@ qat_comp_stream_create(struct rte_compressdev *dev,
 	ptr->qat_xform.qat_comp_request_type = QAT_COMP_REQUEST_DECOMPRESS;
 	ptr->qat_xform.checksum_type = xform->decompress.chksum;
 
-	if (qat_comp_create_templates(&ptr->qat_xform, qat->interm_buff_mz,
+	if (qat_comp_create_templates(&ptr->qat_xform, qat->interim_buff_mz,
 				      xform, ptr, RTE_COMP_OP_STATEFUL,
 				      qat->qat_dev->qat_dev_gen)) {
 		QAT_LOG(ERR, "QAT: problem with creating descriptor template for stream");

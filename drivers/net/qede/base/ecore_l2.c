@@ -2293,7 +2293,7 @@ ecore_get_queue_coalesce(struct ecore_hwfn *p_hwfn, u16 *p_coal,
 		rc = ecore_vf_pf_get_coalesce(p_hwfn, p_coal, p_cid);
 		if (rc != ECORE_SUCCESS)
 			DP_NOTICE(p_hwfn, false,
-				  "Unable to read queue calescing\n");
+				  "Unable to read queue coalescing\n");
 
 		return rc;
 	}

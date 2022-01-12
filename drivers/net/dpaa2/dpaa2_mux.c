@@ -311,11 +311,11 @@ dpaa2_create_dpdmux_device(int vdev_fd __rte_unused,
 		goto init_err;
 	}
 
-	/* The new dpdmux_set/get_resetable() API are available starting with
+	/* The new dpdmux_set/get_resettable() API are available starting with
 	 * DPDMUX_VER_MAJOR==6 and DPDMUX_VER_MINOR==6
 	 */
 	if (maj_ver >= 6 && min_ver >= 6) {
-		ret = dpdmux_set_resetable(&dpdmux_dev->dpdmux, CMD_PRI_LOW,
+		ret = dpdmux_set_resettable(&dpdmux_dev->dpdmux, CMD_PRI_LOW,
 				dpdmux_dev->token,
 				DPDMUX_SKIP_DEFAULT_INTERFACE |
 				DPDMUX_SKIP_UNICAST_RULES |

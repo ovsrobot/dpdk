@@ -1251,7 +1251,7 @@ flow_drv_rxq_flags_set(struct rte_eth_dev *dev,
 			continue;
 		/*
 		 * To support metadata register copy on Tx loopback,
-		 * this must be always enabled (metadata may arive
+		 * this must be always enabled (metadata may arrive
 		 * from other port - not from local flows only.
 		 */
 		if (priv->config.dv_flow_en &&
@@ -4933,7 +4933,7 @@ get_meter_sub_policy(struct rte_eth_dev *dev,
 			attr->transfer ? MLX5_MTR_DOMAIN_TRANSFER :
 				(attr->egress ? MLX5_MTR_DOMAIN_EGRESS :
 						MLX5_MTR_DOMAIN_INGRESS);
-		sub_policy = policy->sub_policys[mtr_domain][0];
+		sub_policy = policy->sub_policies[mtr_domain][0];
 	}
 	if (!sub_policy)
 		rte_flow_error_set(error, EINVAL,
@@ -5301,7 +5301,7 @@ flow_mreg_split_qrss_prep(struct rte_eth_dev *dev,
 		 * IDs.
 		 */
 		mlx5_ipool_malloc(priv->sh->ipool
-				  [MLX5_IPOOL_RSS_EXPANTION_FLOW_ID], &flow_id);
+				  [MLX5_IPOOL_RSS_EXPANSION_FLOW_ID], &flow_id);
 		if (!flow_id)
 			return rte_flow_error_set(error, ENOMEM,
 						  RTE_FLOW_ERROR_TYPE_ACTION,
@@ -5628,7 +5628,7 @@ flow_sample_split_prep(struct rte_eth_dev *dev,
 		if (ret < 0)
 			return ret;
 		mlx5_ipool_malloc(priv->sh->ipool
-				  [MLX5_IPOOL_RSS_EXPANTION_FLOW_ID], &tag_id);
+				  [MLX5_IPOOL_RSS_EXPANSION_FLOW_ID], &tag_id);
 		*set_tag = (struct mlx5_rte_flow_action_set_tag) {
 			.id = ret,
 			.data = tag_id,
@@ -5899,7 +5899,7 @@ exit:
 	 * These ones are included into parent flow list and will be destroyed
 	 * by flow_drv_destroy.
 	 */
-	mlx5_ipool_free(priv->sh->ipool[MLX5_IPOOL_RSS_EXPANTION_FLOW_ID],
+	mlx5_ipool_free(priv->sh->ipool[MLX5_IPOOL_RSS_EXPANSION_FLOW_ID],
 			qrss_id);
 	mlx5_free(ext_actions);
 	return ret;
@@ -5963,7 +5963,7 @@ flow_meter_create_drop_flow_with_org_pattern(struct rte_eth_dev *dev,
  *   suffix flow. The packets make sense only it pass the prefix
  *   meter action.
  *
- * - Reg_C_5 is used for the packet to match betweend prefix and
+ * - Reg_C_5 is used for the packet to match between prefix and
  *   suffix flow.
  *
  * @param dev
@@ -8594,7 +8594,7 @@ mlx5_flow_dev_dump(struct rte_eth_dev *dev, struct rte_flow *flow_idx,
  *   Pointer to the Ethernet device structure.
  * @param[in] context
  *   The address of an array of pointers to the aged-out flows contexts.
- * @param[in] nb_countexts
+ * @param[in] nb_contexts
  *   The length of context array pointers.
  * @param[out] error
  *   Perform verbose error reporting if not NULL. Initialized in case of

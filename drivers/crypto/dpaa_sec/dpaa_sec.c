@@ -628,7 +628,7 @@ dpaa_sec_prep_cdb(dpaa_sec_session *ses)
 		/* Auth_only_len is set as 0 here and it will be
 		 * overwritten in fd for each packet.
 		 */
-		shared_desc_len = cnstr_shdsc_authenc(cdb->sh_desc,
+		shared_desc_len = cnstr_shdsc_authentic(cdb->sh_desc,
 				true, swap, SHR_SERIAL, &alginfo_c, &alginfo_a,
 				ses->iv.length,
 				ses->digest_length, ses->dir);

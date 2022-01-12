@@ -329,7 +329,7 @@ rte_graph_cluster_stats_destroy(struct rte_graph_cluster_stats *stat)
 }
 
 static inline void
-cluster_node_arregate_stats(struct cluster_node *cluster)
+cluster_node_aggregate_stats(struct cluster_node *cluster)
 {
 	uint64_t calls = 0, cycles = 0, objs = 0, realloc_count = 0;
 	struct rte_graph_cluster_node_stats *stat = &cluster->stat;
@@ -373,7 +373,7 @@ rte_graph_cluster_stats_get(struct rte_graph_cluster_stats *stat, bool skip_cb)
 	cluster = stat->clusters;
 
 	for (count = 0; count < stat->max_nodes; count++) {
-		cluster_node_arregate_stats(cluster);
+		cluster_node_aggregate_stats(cluster);
 		if (!skip_cb)
 			rc = stat->fn(!count, (count == stat->max_nodes - 1),
 				      stat->cookie, &cluster->stat);

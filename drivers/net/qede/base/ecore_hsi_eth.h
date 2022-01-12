@@ -445,7 +445,7 @@ struct ystorm_eth_conn_ag_ctx {
 #define YSTORM_ETH_CONN_AG_CTX_RULE3EN_SHIFT              6
 #define YSTORM_ETH_CONN_AG_CTX_RULE4EN_MASK               0x1 /* rule4en */
 #define YSTORM_ETH_CONN_AG_CTX_RULE4EN_SHIFT              7
-	u8 tx_q0_int_coallecing_timeset /* byte2 */;
+	u8 tx_q0_int_coalescing_timeset /* byte2 */;
 	u8 byte3 /* byte3 */;
 	__le16 word0 /* word0 */;
 	__le32 terminate_spqe /* reg0 */;
@@ -525,7 +525,7 @@ struct ustorm_eth_conn_ag_ctx {
 	__le32 reg0 /* reg0 */;
 	__le32 reg1 /* reg1 */;
 	__le32 reg2 /* reg2 */;
-	__le32 tx_int_coallecing_timeset /* reg3 */;
+	__le32 tx_int_coalescing_timeset /* reg3 */;
 	__le16 tx_drv_bd_cons /* word2 */;
 	__le16 rx_drv_cqe_cons /* word3 */;
 };

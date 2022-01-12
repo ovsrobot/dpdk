@@ -7582,7 +7582,7 @@ i40e_aq_set_phy_register_ext(struct i40e_hw *hw,
 					  i40e_aqc_opc_set_phy_register);
 
 	cmd->phy_interface = phy_select;
-	cmd->dev_addres = dev_addr;
+	cmd->dev_address = dev_addr;
 	cmd->reg_address = CPU_TO_LE32(reg_addr);
 	cmd->reg_value = CPU_TO_LE32(reg_val);
 
@@ -7628,7 +7628,7 @@ i40e_aq_get_phy_register_ext(struct i40e_hw *hw,
 					  i40e_aqc_opc_get_phy_register);
 
 	cmd->phy_interface = phy_select;
-	cmd->dev_addres = dev_addr;
+	cmd->dev_address = dev_addr;
 	cmd->reg_address = CPU_TO_LE32(reg_addr);
 
 	if (!page_change)

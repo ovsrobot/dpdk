@@ -281,7 +281,7 @@ int dpdmux_reset(struct fsl_mc_io *mc_io,
 }
 
 /**
- * dpdmux_set_resetable() - Set overall resetable DPDMUX parameters.
+ * dpdmux_set_resettable() - Set overall resettable DPDMUX parameters.
  * @mc_io:	Pointer to MC portal's I/O object
  * @cmd_flags:	Command flags; one or more of 'MC_CMD_FLAG_'
  * @token:	Token of DPDMUX object
@@ -299,7 +299,7 @@ int dpdmux_reset(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-int dpdmux_set_resetable(struct fsl_mc_io *mc_io,
+int dpdmux_set_resettable(struct fsl_mc_io *mc_io,
 				  uint32_t cmd_flags,
 				  uint16_t token,
 				  uint8_t skip_reset_flags)
@@ -321,7 +321,7 @@ int dpdmux_set_resetable(struct fsl_mc_io *mc_io,
 }
 
 /**
- * dpdmux_get_resetable() - Get overall resetable parameters.
+ * dpdmux_get_resettable() - Get overall resettable parameters.
  * @mc_io:	Pointer to MC portal's I/O object
  * @cmd_flags:	Command flags; one or more of 'MC_CMD_FLAG_'
  * @token:	Token of DPDMUX object
@@ -334,7 +334,7 @@ int dpdmux_set_resetable(struct fsl_mc_io *mc_io,
  *
  * Return:	'0' on Success; Error code otherwise.
  */
-int dpdmux_get_resetable(struct fsl_mc_io *mc_io,
+int dpdmux_get_resettable(struct fsl_mc_io *mc_io,
 				  uint32_t cmd_flags,
 				  uint16_t token,
 				  uint8_t *skip_reset_flags)

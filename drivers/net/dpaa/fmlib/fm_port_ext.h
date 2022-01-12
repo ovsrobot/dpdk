@@ -177,7 +177,7 @@ typedef enum ioc_fm_port_counters {
 				/**< BMI OP & HC only statistics counter */
 	e_IOC_FM_PORT_COUNTERS_LENGTH_ERR,
 				/**< BMI non-Rx statistics counter */
-	e_IOC_FM_PORT_COUNTERS_UNSUPPRTED_FORMAT,
+	e_IOC_FM_PORT_COUNTERS_UNSUPPORTED_FORMAT,
 				/**< BMI non-Rx statistics counter */
 	e_IOC_FM_PORT_COUNTERS_DEQ_TOTAL,/**< QMI total QM dequeues counter */
 	e_IOC_FM_PORT_COUNTERS_ENQ_TOTAL,/**< QMI total QM enqueues counter */
@@ -2538,7 +2538,7 @@ typedef enum e_fm_port_counters {
 			/**< BMI OP & HC only statistics counter */
 	e_FM_PORT_COUNTERS_LENGTH_ERR,
 			/**< BMI non-Rx statistics counter */
-	e_FM_PORT_COUNTERS_UNSUPPRTED_FORMAT,
+	e_FM_PORT_COUNTERS_UNSUPPORTED_FORMAT,
 			/**< BMI non-Rx statistics counter */
 	e_FM_PORT_COUNTERS_DEQ_TOTAL,	/**< QMI total QM dequeues counter */
 	e_FM_PORT_COUNTERS_ENQ_TOTAL,	/**< QMI total QM enqueues counter */

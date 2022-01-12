@@ -624,7 +624,7 @@ ioat_dmadev_create(const char *name, struct rte_pci_device *dev)
 	ioat = dmadev->data->dev_private;
 	ioat->dmadev = dmadev;
 	ioat->regs = dev->mem_resource[0].addr;
-	ioat->doorbell = &ioat->regs->dmacount;
+	ioat->doorbell = &ioat->regs->dmaccount;
 	ioat->qcfg.nb_desc = 0;
 	ioat->desc_ring = NULL;
 	ioat->version = ioat->regs->cbver;

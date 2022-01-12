@@ -80,7 +80,7 @@ ixgbe_bypass_init(struct rte_eth_dev *dev)
 	struct ixgbe_adapter *adapter;
 	struct ixgbe_hw *hw;
 
-	adapter = IXGBE_DEV_TO_ADPATER(dev);
+	adapter = IXGBE_DEV_TO_ADAPTER(dev);
 	hw = &adapter->hw;
 
 	/* Only allow BYPASS ops on the first port */
@@ -112,7 +112,7 @@ ixgbe_bypass_state_show(struct rte_eth_dev *dev, u32 *state)
 	s32 ret_val;
 	u32 cmd;
 	u32 by_ctl = 0;
-	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADPATER(dev);
+	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADAPTER(dev);
 
 	hw = &adapter->hw;
 	FUNC_PTR_OR_ERR_RET(adapter->bps.ops.bypass_rw, -ENOTSUP);
@@ -132,7 +132,7 @@ ixgbe_bypass_state_show(struct rte_eth_dev *dev, u32 *state)
 s32
 ixgbe_bypass_state_store(struct rte_eth_dev *dev, u32 *new_state)
 {
-	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADPATER(dev);
+	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADAPTER(dev);
 	struct ixgbe_hw *hw;
 	s32 ret_val;
 
@@ -163,7 +163,7 @@ ixgbe_bypass_event_show(struct rte_eth_dev *dev, u32 event,
 	u32 shift;
 	u32 cmd;
 	u32 by_ctl = 0;
-	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADPATER(dev);
+	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADAPTER(dev);
 
 	hw = &adapter->hw;
 	FUNC_PTR_OR_ERR_RET(adapter->bps.ops.bypass_rw, -ENOTSUP);
@@ -207,7 +207,7 @@ ixgbe_bypass_event_store(struct rte_eth_dev *dev, u32 event,
 	u32 status;
 	u32 off;
 	s32 ret_val;
-	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADPATER(dev);
+	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADAPTER(dev);
 
 	hw = &adapter->hw;
 	FUNC_PTR_OR_ERR_RET(adapter->bps.ops.bypass_set, -ENOTSUP);
@@ -250,7 +250,7 @@ ixgbe_bypass_wd_timeout_store(struct rte_eth_dev *dev, u32 timeout)
 	u32 status;
 	u32 mask;
 	s32 ret_val;
-	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADPATER(dev);
+	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADAPTER(dev);
 
 	hw = &adapter->hw;
 	FUNC_PTR_OR_ERR_RET(adapter->bps.ops.bypass_set, -ENOTSUP);
@@ -282,7 +282,7 @@ ixgbe_bypass_ver_show(struct rte_eth_dev *dev, u32 *ver)
 	u32 cmd;
 	u32 status;
 	s32 ret_val;
-	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADPATER(dev);
+	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADAPTER(dev);
 
 	hw = &adapter->hw;
 	FUNC_PTR_OR_ERR_RET(adapter->bps.ops.bypass_rw, -ENOTSUP);
@@ -317,7 +317,7 @@ ixgbe_bypass_wd_timeout_show(struct rte_eth_dev *dev, u32 *wd_timeout)
 	u32 cmd;
 	u32 wdg;
 	s32 ret_val;
-	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADPATER(dev);
+	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADAPTER(dev);
 
 	hw = &adapter->hw;
 	FUNC_PTR_OR_ERR_RET(adapter->bps.ops.bypass_rw, -ENOTSUP);
@@ -344,7 +344,7 @@ ixgbe_bypass_wd_reset(struct rte_eth_dev *dev)
 	u32 count = 0;
 	s32 ret_val;
 	struct ixgbe_hw *hw;
-	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADPATER(dev);
+	struct ixgbe_adapter *adapter = IXGBE_DEV_TO_ADAPTER(dev);
 
 	hw = &adapter->hw;
 

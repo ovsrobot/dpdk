@@ -21,7 +21,7 @@
  * so we can easily add new arguments.
  * item: Item specification.
  * filter: Partially filled in NIC filter structure.
- * inner_ofst: If zero, this is an outer header. If non-zero, this is
+ * inner_offset: If zero, this is an outer header. If non-zero, this is
  *   the offset into L5 where the header begins.
  * l2_proto_off: offset to EtherType eth or vlan header.
  * l3_proto_off: offset to next protocol field in IPv4 or 6 header.
@@ -29,7 +29,7 @@
 struct copy_item_args {
 	const struct rte_flow_item *item;
 	struct filter_v2 *filter;
-	uint8_t *inner_ofst;
+	uint8_t *inner_offset;
 	uint8_t l2_proto_off;
 	uint8_t l3_proto_off;
 	struct enic *enic;
@@ -504,7 +504,7 @@ enic_copy_item_tcp_v1(struct copy_item_args *arg)
  * we set EtherType and IP proto as necessary.
  */
 static int
-copy_inner_common(struct filter_generic_1 *gp, uint8_t *inner_ofst,
+copy_inner_common(struct filter_generic_1 *gp, uint8_t *inner_offset,
 		  const void *val, const void *mask, uint8_t val_size,
 		  uint8_t proto_off, uint16_t proto_val, uint8_t proto_size)
 {
@@ -512,7 +512,7 @@ copy_inner_common(struct filter_generic_1 *gp, uint8_t *inner_ofst,
 	uint8_t start_off;
 
 	/* No space left in the L5 pattern buffer. */
-	start_off = *inner_ofst;
+	start_off = *inner_offset;
 	if ((start_off + val_size) > FILTER_GENERIC_1_KEY_LEN)
 		return ENOTSUP;
 	l5_mask = gp->layer[FILTER_GENERIC_1_L5].mask;
@@ -537,7 +537,7 @@ copy_inner_common(struct filter_generic_1 *gp, uint8_t *inner_ofst,
 		}
 	}
 	/* All inner headers land in L5 buffer even if their spec is null. */
-	*inner_ofst += val_size;
+	*inner_offset += val_size;
 	return 0;
 }
 
@@ -545,7 +545,7 @@ static int
 enic_copy_item_inner_eth_v2(struct copy_item_args *arg)
 {
 	const void *mask = arg->item->mask;
-	uint8_t *off = arg->inner_ofst;
+	uint8_t *off = arg->inner_offset;
 
 	ENICPMD_FUNC_TRACE();
 	if (!mask)
@@ -560,7 +560,7 @@ static int
 enic_copy_item_inner_vlan_v2(struct copy_item_args *arg)
 {
 	const void *mask = arg->item->mask;
-	uint8_t *off = arg->inner_ofst;
+	uint8_t *off = arg->inner_offset;
 	uint8_t eth_type_off;
 
 	ENICPMD_FUNC_TRACE();
@@ -578,7 +578,7 @@ static int
 enic_copy_item_inner_ipv4_v2(struct copy_item_args *arg)
 {
 	const void *mask = arg->item->mask;
-	uint8_t *off = arg->inner_ofst;
+	uint8_t *off = arg->inner_offset;
 
 	ENICPMD_FUNC_TRACE();
 	if (!mask)
@@ -594,7 +594,7 @@ static int
 enic_copy_item_inner_ipv6_v2(struct copy_item_args *arg)
 {
 	const void *mask = arg->item->mask;
-	uint8_t *off = arg->inner_ofst;
+	uint8_t *off = arg->inner_offset;
 
 	ENICPMD_FUNC_TRACE();
 	if (!mask)
@@ -610,7 +610,7 @@ static int
 enic_copy_item_inner_udp_v2(struct copy_item_args *arg)
 {
 	const void *mask = arg->item->mask;
-	uint8_t *off = arg->inner_ofst;
+	uint8_t *off = arg->inner_offset;
 
 	ENICPMD_FUNC_TRACE();
 	if (!mask)
@@ -625,7 +625,7 @@ static int
 enic_copy_item_inner_tcp_v2(struct copy_item_args *arg)
 {
 	const void *mask = arg->item->mask;
-	uint8_t *off = arg->inner_ofst;
+	uint8_t *off = arg->inner_offset;
 
 	ENICPMD_FUNC_TRACE();
 	if (!mask)
@@ -899,7 +899,7 @@ enic_copy_item_vxlan_v2(struct copy_item_args *arg)
 {
 	const struct rte_flow_item *item = arg->item;
 	struct filter_v2 *enic_filter = arg->filter;
-	uint8_t *inner_ofst = arg->inner_ofst;
+	uint8_t *inner_offset = arg->inner_offset;
 	const struct rte_flow_item_vxlan *spec = item->spec;
 	const struct rte_flow_item_vxlan *mask = item->mask;
 	struct filter_generic_1 *gp = &enic_filter->u.generic_1;
@@ -929,7 +929,7 @@ enic_copy_item_vxlan_v2(struct copy_item_args *arg)
 	memcpy(gp->layer[FILTER_GENERIC_1_L5].val, spec,
 	       sizeof(struct rte_vxlan_hdr));
 
-	*inner_ofst = sizeof(struct rte_vxlan_hdr);
+	*inner_offset = sizeof(struct rte_vxlan_hdr);
 	return 0;
 }
 
@@ -943,7 +943,7 @@ enic_copy_item_raw_v2(struct copy_item_args *arg)
 {
 	const struct rte_flow_item *item = arg->item;
 	struct filter_v2 *enic_filter = arg->filter;
-	uint8_t *inner_ofst = arg->inner_ofst;
+	uint8_t *inner_offset = arg->inner_offset;
 	const struct rte_flow_item_raw *spec = item->spec;
 	const struct rte_flow_item_raw *mask = item->mask;
 	struct filter_generic_1 *gp = &enic_filter->u.generic_1;
@@ -951,7 +951,7 @@ enic_copy_item_raw_v2(struct copy_item_args *arg)
 	ENICPMD_FUNC_TRACE();
 
 	/* Cannot be used for inner packet */
-	if (*inner_ofst)
+	if (*inner_offset)
 		return EINVAL;
 	/* Need both spec and mask */
 	if (!spec || !mask)
@@ -1020,13 +1020,13 @@ item_stacking_valid(enum rte_flow_item_type prev_item,
  */
 static void
 fixup_l5_layer(struct enic *enic, struct filter_generic_1 *gp,
-	       uint8_t inner_ofst)
+	       uint8_t inner_offset)
 {
 	uint8_t layer[FILTER_GENERIC_1_KEY_LEN];
 	uint8_t inner;
 	uint8_t vxlan;
 
-	if (!(inner_ofst > 0 && enic->vxlan))
+	if (!(inner_offset > 0 && enic->vxlan))
 		return;
 	ENICPMD_FUNC_TRACE();
 	vxlan = sizeof(struct rte_vxlan_hdr);
@@ -1034,7 +1034,7 @@ fixup_l5_layer(struct enic *enic, struct filter_generic_1 *gp,
 	       gp->layer[FILTER_GENERIC_1_L5].mask, vxlan);
 	memcpy(gp->layer[FILTER_GENERIC_1_L4].val + sizeof(struct rte_udp_hdr),
 	       gp->layer[FILTER_GENERIC_1_L5].val, vxlan);
-	inner = inner_ofst - vxlan;
+	inner = inner_offset - vxlan;
 	memset(layer, 0, sizeof(layer));
 	memcpy(layer, gp->layer[FILTER_GENERIC_1_L5].mask + vxlan, inner);
 	memcpy(gp->layer[FILTER_GENERIC_1_L5].mask, layer, sizeof(layer));
@@ -1063,7 +1063,7 @@ enic_copy_filter(const struct rte_flow_item pattern[],
 {
 	int ret;
 	const struct rte_flow_item *item = pattern;
-	uint8_t inner_ofst = 0; /* If encapsulated, ofst into L5 */
+	uint8_t inner_offset = 0; /* If encapsulated, offset into L5 */
 	enum rte_flow_item_type prev_item;
 	const struct enic_items *item_info;
 	struct copy_item_args args;
@@ -1075,7 +1075,7 @@ enic_copy_filter(const struct rte_flow_item pattern[],
 	prev_item = 0;
 
 	args.filter = enic_filter;
-	args.inner_ofst = &inner_ofst;
+	args.inner_offset = &inner_offset;
 	args.enic = enic;
 	for (; item->type != RTE_FLOW_ITEM_TYPE_END; item++) {
 		/* Get info about how to validate and copy the item. If NULL
@@ -1087,7 +1087,7 @@ enic_copy_filter(const struct rte_flow_item pattern[],
 		item_info = &cap->item_info[item->type];
 		if (item->type > cap->max_item_type ||
 		    item_info->copy_item == NULL ||
-		    (inner_ofst > 0 && item_info->inner_copy_item == NULL)) {
+		    (inner_offset > 0 && item_info->inner_copy_item == NULL)) {
 			rte_flow_error_set(error, ENOTSUP,
 				RTE_FLOW_ERROR_TYPE_ITEM,
 				NULL, "Unsupported item.");
@@ -1099,7 +1099,7 @@ enic_copy_filter(const struct rte_flow_item pattern[],
 			goto stacking_error;
 
 		args.item = item;
-		copy_fn = inner_ofst > 0 ? item_info->inner_copy_item :
+		copy_fn = inner_offset > 0 ? item_info->inner_copy_item :
 			item_info->copy_item;
 		ret = copy_fn(&args);
 		if (ret)
@@ -1107,7 +1107,7 @@ enic_copy_filter(const struct rte_flow_item pattern[],
 		prev_item = item->type;
 		is_first_item = 0;
 	}
-	fixup_l5_layer(enic, &enic_filter->u.generic_1, inner_ofst);
+	fixup_l5_layer(enic, &enic_filter->u.generic_1, inner_offset);
 
 	return 0;
 
@@ -1319,7 +1319,7 @@ enic_match_action(const struct rte_flow_action *action,
 	return 0;
 }
 
-/** Get the NIC filter capabilties structure */
+/** Get the NIC filter capabilities structure */
 static const struct enic_filter_cap *
 enic_get_filter_cap(struct enic *enic)
 {

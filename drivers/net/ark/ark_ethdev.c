@@ -309,7 +309,7 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 		return -1;
 	}
 	if (ark->sysctrl.t32[3] != 0) {
-		if (ark_rqp_lasped(ark->rqpacing)) {
+		if (ark_rqp_lapsed(ark->rqpacing)) {
 			ARK_PMD_LOG(ERR, "Arkville Evaluation System - "
 				    "Timer has Expired\n");
 			return -1;
@@ -565,7 +565,7 @@ eth_ark_dev_start(struct rte_eth_dev *dev)
 	if (ark->start_pg && (dev->data->port_id == 0)) {
 		pthread_t thread;
 
-		/* Delay packet generatpr start allow the hardware to be ready
+		/* Delay packet generator start allow the hardware to be ready
 		 * This is only used for sanity checking with internal generator
 		 */
 		if (rte_ctrl_thread_create(&thread, "ark-delay-pg", NULL,

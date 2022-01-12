@@ -106,7 +106,7 @@ fill_ipsec_session(struct rte_ipsec_session *ss, struct ipsec_ctx *ctx,
 }
 
 /*
- * group input packets byt the SA they belong to.
+ * group input packets byte the SA they belong to.
  */
 static uint32_t
 sa_group(void *sa_ptr[], struct rte_mbuf *pkts[],

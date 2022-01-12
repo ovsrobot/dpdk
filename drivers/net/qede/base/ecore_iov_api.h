@@ -153,7 +153,7 @@ ecore_iov_get_vf_sw_mbx(struct ecore_hwfn *p_hwfn,
 #endif
 
 /* This struct is part of ecore_dev and contains data relevant to all hwfns;
- * Initialized only if SR-IOV cpabability is exposed in PCIe config space.
+ * Initialized only if SR-IOV capability is exposed in PCIe config space.
  */
 struct ecore_hw_sriov_info {
 	/* standard SRIOV capability fields, mostly for debugging */

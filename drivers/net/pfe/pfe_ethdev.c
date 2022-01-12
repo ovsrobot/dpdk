@@ -845,7 +845,7 @@ err0:
 }
 
 static int
-pfe_get_gemac_if_proprties(struct pfe *pfe,
+pfe_get_gemac_if_properties(struct pfe *pfe,
 		__rte_unused const struct device_node *parent,
 		unsigned int port, unsigned int if_cnt,
 		struct ls1012a_pfe_platform_data *pdata)
@@ -1053,7 +1053,7 @@ pmd_pfe_probe(struct rte_vdev_device *vdev)
 	g_pfe->platform_data.ls1012a_mdio_pdata[0].phy_mask = 0xffffffff;
 
 	for (ii = 0; ii < interface_count; ii++) {
-		pfe_get_gemac_if_proprties(g_pfe, np, ii, interface_count,
+		pfe_get_gemac_if_properties(g_pfe, np, ii, interface_count,
 					   &g_pfe->platform_data);
 	}
 

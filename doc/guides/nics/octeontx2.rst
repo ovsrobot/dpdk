@@ -244,7 +244,7 @@ configure the following features:
 
 Both DWRR and Static Priority(SP) hierarchical scheduling is supported.
 
-Every parent can have atmost 10 SP Children and unlimited DWRR children.
+Every parent can have at most 10 SP Children and unlimited DWRR children.
 
 Both PF & VF supports traffic management API with PF supporting 6 levels
 and VF supporting 5 levels of topology.

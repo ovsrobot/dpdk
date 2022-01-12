@@ -27,7 +27,7 @@ static struct rte_tailq_elem rte_thash_tailq = {
 EAL_REGISTER_TAILQ(rte_thash_tailq)
 
 /**
- * Table of some irreducible polinomials over GF(2).
+ * Table of some irreducible polynomials over GF(2).
  * For lfsr they are represented in BE bit order, and
  * x^0 is masked out.
  * For example, poly x^5 + x^2 + 1 will be represented

@@ -36,7 +36,7 @@ efx_port_init(
 
 	epp->ep_emop->emo_reconfigure(enp);
 
-	/* Pick up current phy capababilities */
+	/* Pick up current phy capabilities */
 	(void) efx_port_poll(enp, NULL);
 
 	/*

@@ -67,7 +67,7 @@ struct ecore_mcp_info {
 	u16 mfw_mb_length;
 	u32 mcp_hist;
 
-	/* Capabilties negotiated with the MFW */
+	/* Capabilities negotiated with the MFW */
 	u32 capabilities;
 };
 

@@ -57,7 +57,7 @@ UPT1_RxStats;
 /* interrupt moderation level */
 #define UPT1_IML_NONE     0 /* no interrupt moderation */
 #define UPT1_IML_HIGHEST  7 /* least intr generated */
-#define UPT1_IML_ADAPTIVE 8 /* adpative intr moderation */
+#define UPT1_IML_ADAPTIVE 8 /* adaptive intr moderation */
 
 /* values for UPT1_RSSConf.hashFunc */
 #define UPT1_RSS_HASH_TYPE_NONE      0x0

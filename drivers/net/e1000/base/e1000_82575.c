@@ -2050,7 +2050,7 @@ STATIC s32 e1000_set_pcie_completion_timeout(struct e1000_hw *hw)
 		goto out;
 
 	/*
-	 * if capababilities version is type 1 we can write the
+	 * if capabilities version is type 1 we can write the
 	 * timeout of 10ms to 200ms through the GCR register
 	 */
 	if (!(gcr & E1000_GCR_CAP_VER2)) {

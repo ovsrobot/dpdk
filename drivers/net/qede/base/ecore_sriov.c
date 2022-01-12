@@ -1034,7 +1034,7 @@ static u8 ecore_iov_alloc_vf_igu_sbs(struct ecore_hwfn *p_hwfn,
  *
  * @brief The function invalidates all the VF entries,
  *        technically this isn't required, but added for
- *        cleaness and ease of debugging incase a VF attempts to
+ *        cleanness and ease of debugging incase a VF attempts to
  *        produce an interrupt after it has been taken down.
  *
  * @param p_hwfn
@@ -3564,7 +3564,7 @@ static void ecore_iov_vf_mbx_ucast_filter(struct ecore_hwfn *p_hwfn,
 	    ECORE_SUCCESS)
 		goto out;
 
-	/* Determine if the unicast filtering is acceptible by PF */
+	/* Determine if the unicast filtering is acceptable by PF */
 	if ((p_bulletin->valid_bitmap & (1 << VLAN_ADDR_FORCED)) &&
 	    (params.type == ECORE_FILTER_VLAN ||
 	     params.type == ECORE_FILTER_MAC_VLAN)) {

@@ -348,7 +348,7 @@ static void ecore_btb_blocks_rt_init(struct ecore_hwfn *p_hwfn,
 				BTB_HEADROOM_BLOCKS;
 
 		/* Find blocks per physical TC. use factor to avoid floating
-		 * arithmethic.
+		 * arithmetic.
 		 */
 		num_tcs_in_port = 0;
 		for (tc = 0; tc < NUM_OF_PHYS_TCS; tc++)
@@ -1964,7 +1964,7 @@ static u8 ecore_calc_cdu_validation_byte(struct ecore_hwfn *p_hwfn,
 	return validation_byte;
 }
 
-/* Calcualte and set validation bytes for session context */
+/* Calculate and set validation bytes for session context */
 void ecore_calc_session_ctx_validation(struct ecore_hwfn *p_hwfn,
 				       void *p_ctx_mem, u16 ctx_size,
 				       u8 ctx_type, u32 cid)
@@ -1984,7 +1984,7 @@ void ecore_calc_session_ctx_validation(struct ecore_hwfn *p_hwfn,
 	*u_val_ptr = ecore_calc_cdu_validation_byte(p_hwfn, ctx_type, 5, cid);
 }
 
-/* Calcualte and set validation bytes for task context */
+/* Calculate and set validation bytes for task context */
 void ecore_calc_task_ctx_validation(struct ecore_hwfn *p_hwfn, void *p_ctx_mem,
 				    u16 ctx_size, u8 ctx_type, u32 tid)
 {

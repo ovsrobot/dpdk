@@ -291,7 +291,7 @@ struct ccp_session {
 		} ut;
 		enum ccp_hash_op op;
 		uint64_t key_length;
-		/**< max hash key size 144 bytes (struct capabilties) */
+		/**< max hash key size 144 bytes (struct capabilities) */
 		uint8_t key[144];
 		/**< max be key size of AES is 32*/
 		uint8_t key_ccp[32];

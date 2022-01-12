@@ -4031,17 +4031,17 @@ static void bnx2x_attn_int_deasserted2(struct bnx2x_softc *sc, uint32_t attn)
 		}
 	}
 
-	if (attn & HW_INTERRUT_ASSERT_SET_2) {
+	if (attn & HW_INTERRUPT_ASSERT_SET_2) {
 		reg_offset = (port ? MISC_REG_AEU_ENABLE1_FUNC_1_OUT_2 :
 			      MISC_REG_AEU_ENABLE1_FUNC_0_OUT_2);
 
 		val = REG_RD(sc, reg_offset);
-		val &= ~(attn & HW_INTERRUT_ASSERT_SET_2);
+		val &= ~(attn & HW_INTERRUPT_ASSERT_SET_2);
 		REG_WR(sc, reg_offset, val);
 
 		PMD_DRV_LOG(ERR, sc,
 			    "FATAL HW block attention set2 0x%x",
-			    (uint32_t) (attn & HW_INTERRUT_ASSERT_SET_2));
+			    (uint32_t) (attn & HW_INTERRUPT_ASSERT_SET_2));
 		rte_panic("HW block attention set2");
 	}
 }
@@ -4061,17 +4061,17 @@ static void bnx2x_attn_int_deasserted1(struct bnx2x_softc *sc, uint32_t attn)
 		}
 	}
 
-	if (attn & HW_INTERRUT_ASSERT_SET_1) {
+	if (attn & HW_INTERRUPT_ASSERT_SET_1) {
 		reg_offset = (port ? MISC_REG_AEU_ENABLE1_FUNC_1_OUT_1 :
 			      MISC_REG_AEU_ENABLE1_FUNC_0_OUT_1);
 
 		val = REG_RD(sc, reg_offset);
-		val &= ~(attn & HW_INTERRUT_ASSERT_SET_1);
+		val &= ~(attn & HW_INTERRUPT_ASSERT_SET_1);
 		REG_WR(sc, reg_offset, val);
 
 		PMD_DRV_LOG(ERR, sc,
 			    "FATAL HW block attention set1 0x%08x",
-			    (uint32_t) (attn & HW_INTERRUT_ASSERT_SET_1));
+			    (uint32_t) (attn & HW_INTERRUPT_ASSERT_SET_1));
 		rte_panic("HW block attention set1");
 	}
 }
@@ -4103,13 +4103,13 @@ static void bnx2x_attn_int_deasserted0(struct bnx2x_softc *sc, uint32_t attn)
 		bnx2x_release_phy_lock(sc);
 	}
 
-	if (attn & HW_INTERRUT_ASSERT_SET_0) {
+	if (attn & HW_INTERRUPT_ASSERT_SET_0) {
 		val = REG_RD(sc, reg_offset);
-		val &= ~(attn & HW_INTERRUT_ASSERT_SET_0);
+		val &= ~(attn & HW_INTERRUPT_ASSERT_SET_0);
 		REG_WR(sc, reg_offset, val);
 
 		rte_panic("FATAL HW block attention set0 0x%lx",
-			  (attn & (unsigned long)HW_INTERRUT_ASSERT_SET_0));
+			  (attn & (unsigned long)HW_INTERRUPT_ASSERT_SET_0));
 	}
 }
 

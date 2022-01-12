@@ -457,7 +457,7 @@ u32 ecore_get_mstorm_eth_vf_prods_offset(struct ecore_hwfn *p_hwfn, u8 vf_id, u8
 void ecore_enable_context_validation(struct ecore_hwfn *p_hwfn,
 				     struct ecore_ptt *p_ptt);
 /**
- * @brief ecore_calc_session_ctx_validation - Calcualte validation byte for
+ * @brief ecore_calc_session_ctx_validation - Calculate validation byte for
  * session context.
  *
  * @param p_hwfn -		HW device data
@@ -473,7 +473,7 @@ void ecore_calc_session_ctx_validation(struct ecore_hwfn *p_hwfn,
 				       u32 cid);
 
 /**
- * @brief ecore_calc_task_ctx_validation - Calcualte validation byte for task
+ * @brief ecore_calc_task_ctx_validation - Calculate validation byte for task
  * context.
  *
  * @param p_hwfn -		HW device data

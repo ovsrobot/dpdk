@@ -155,12 +155,12 @@ int dpdmux_reset(struct fsl_mc_io *mc_io,
  */
 #define DPDMUX_SKIP_MULTICAST_RULES	0x04
 
-int dpdmux_set_resetable(struct fsl_mc_io *mc_io,
+int dpdmux_set_resettable(struct fsl_mc_io *mc_io,
 				  uint32_t cmd_flags,
 				  uint16_t token,
 				  uint8_t skip_reset_flags);
 
-int dpdmux_get_resetable(struct fsl_mc_io *mc_io,
+int dpdmux_get_resettable(struct fsl_mc_io *mc_io,
 				  uint32_t cmd_flags,
 				  uint16_t token,
 				  uint8_t *skip_reset_flags);

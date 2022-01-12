@@ -297,7 +297,7 @@ int do_pr(struct ifpga_hw *hw, u32 port_id, const char *buffer,
 	bts_hdr = (const struct bts_header *)buffer;
 
 	if (is_valid_bts(bts_hdr)) {
-		dev_info(hw, "this is a valid bitsteam..\n");
+		dev_info(hw, "this is a valid bitstream..\n");
 		header_size = sizeof(struct bts_header) +
 			bts_hdr->metadata_len;
 		if (size < header_size)

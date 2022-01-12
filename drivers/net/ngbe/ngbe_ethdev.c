@@ -594,12 +594,12 @@ ngbe_vlan_tpid_set(struct rte_eth_dev *dev,
 {
 	struct ngbe_hw *hw = ngbe_dev_hw(dev);
 	int ret = 0;
-	uint32_t portctrl, vlan_ext, qinq;
+	uint32_t portctl, vlan_ext, qinq;
 
-	portctrl = rd32(hw, NGBE_PORTCTL);
+	portctl = rd32(hw, NGBE_PORTCTL);
 
-	vlan_ext = (portctrl & NGBE_PORTCTL_VLANEXT);
-	qinq = vlan_ext && (portctrl & NGBE_PORTCTL_QINQ);
+	vlan_ext = (portctl & NGBE_PORTCTL_VLANEXT);
+	qinq = vlan_ext && (portctl & NGBE_PORTCTL_QINQ);
 	switch (vlan_type) {
 	case RTE_ETH_VLAN_TYPE_INNER:
 		if (vlan_ext) {

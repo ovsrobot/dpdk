@@ -1296,7 +1296,7 @@ struct cpt_lf_alloc_req_msg {
 
 struct cpt_lf_alloc_rsp_msg {
 	struct mbox_msghdr hdr;
-	uint16_t __otx2_io eng_grpmsk;
+	uint16_t __otx2_io eng_grpmask;
 };
 
 #define CPT_INLINE_INBOUND	0
@@ -1625,7 +1625,7 @@ enum tim_af_status {
 	TIM_AF_INVALID_BSIZE			= -813,
 	TIM_AF_INVALID_ENABLE_PERIODIC		= -814,
 	TIM_AF_INVALID_ENABLE_DONTFREE		= -815,
-	TIM_AF_ENA_DONTFRE_NSET_PERIODIC	= -816,
+	TIM_AF_ENA_DONTFREE_NSET_PERIODIC	= -816,
 	TIM_AF_RING_ALREADY_DISABLED		= -817,
 };
 

@@ -128,7 +128,7 @@ enum {
 
 enum {
 	PARSE_GRAPH_NODE_CAP_LENGTH_MODE_FIXED          = RTE_BIT32(0),
-	PARSE_GRAPH_NODE_CAP_LENGTH_MODE_EXPLISIT_FIELD = RTE_BIT32(1),
+	PARSE_GRAPH_NODE_CAP_LENGTH_MODE_EXPLICIT_FIELD = RTE_BIT32(1),
 	PARSE_GRAPH_NODE_CAP_LENGTH_MODE_BITMASK_FIELD  = RTE_BIT32(2)
 };
 
@@ -491,7 +491,7 @@ struct mlx5_devx_qp_attr {
 	uint32_t mmo:1;
 };
 
-struct mlx5_devx_virtio_q_couners_attr {
+struct mlx5_devx_virtio_q_counters_attr {
 	uint64_t received_desc;
 	uint64_t completed_desc;
 	uint32_t error_cqes;
@@ -697,7 +697,7 @@ struct mlx5_devx_obj *mlx5_devx_cmd_create_virtio_q_counters(void *ctx);
 /**
  * Query virtio queue counters object using DevX API.
  *
- * @param[in] couners_obj
+ * @param[in] counters_obj
  *   Pointer to virtq object structure.
  * @param [in/out] attr
  *   Pointer to virtio queue counters attributes structure.
@@ -706,8 +706,8 @@ struct mlx5_devx_obj *mlx5_devx_cmd_create_virtio_q_counters(void *ctx);
  *   0 on success, a negative errno value otherwise and rte_errno is set.
  */
 __rte_internal
-int mlx5_devx_cmd_query_virtio_q_counters(struct mlx5_devx_obj *couners_obj,
-				  struct mlx5_devx_virtio_q_couners_attr *attr);
+int mlx5_devx_cmd_query_virtio_q_counters(struct mlx5_devx_obj *counters_obj,
+				  struct mlx5_devx_virtio_q_counters_attr *attr);
 __rte_internal
 struct mlx5_devx_obj *mlx5_devx_cmd_create_flow_hit_aso_obj(void *ctx,
 							    uint32_t pd);

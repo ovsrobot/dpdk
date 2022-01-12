@@ -60,7 +60,7 @@ struct rte_ioat_registers {
 	uint8_t		reserved6[0x2];	/* 0x82 */
 	uint8_t		chancmd;	/* 0x84 */
 	uint8_t		reserved3[1];	/* 0x85 */
-	uint16_t	dmacount;	/* 0x86 */
+	uint16_t	dmaccount;	/* 0x86 */
 	uint64_t	chansts;	/* 0x88 */
 	uint64_t	chainaddr;	/* 0x90 */
 	uint64_t	chancmp;	/* 0x98 */

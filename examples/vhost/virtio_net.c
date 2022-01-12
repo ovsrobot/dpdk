@@ -62,7 +62,7 @@ enqueue_pkt(struct vhost_dev *dev, struct rte_vhost_vring *vr,
 	    struct rte_mbuf *m, uint16_t desc_idx)
 {
 	uint32_t desc_avail, desc_offset;
-	uint64_t desc_chunck_len;
+	uint64_t desc_chunk_len;
 	uint32_t mbuf_avail, mbuf_offset;
 	uint32_t cpy_len;
 	struct vring_desc *desc;
@@ -72,10 +72,10 @@ enqueue_pkt(struct vhost_dev *dev, struct rte_vhost_vring *vr,
 	uint16_t nr_desc = 1;
 
 	desc = &vr->desc[desc_idx];
-	desc_chunck_len = desc->len;
+	desc_chunk_len = desc->len;
 	desc_gaddr = desc->addr;
 	desc_addr = rte_vhost_va_from_guest_pa(
-			dev->mem, desc_gaddr, &desc_chunck_len);
+			dev->mem, desc_gaddr, &desc_chunk_len);
 	/*
 	 * Checking of 'desc_addr' placed outside of 'unlikely' macro to avoid
 	 * performance issue with some versions of gcc (4.8.4 and 5.3.0) which
@@ -87,7 +87,7 @@ enqueue_pkt(struct vhost_dev *dev, struct rte_vhost_vring *vr,
 	rte_prefetch0((void *)(uintptr_t)desc_addr);
 
 	/* write virtio-net header */
-	if (likely(desc_chunck_len >= dev->hdr_len)) {
+	if (likely(desc_chunk_len >= dev->hdr_len)) {
 		*(struct virtio_net_hdr *)(uintptr_t)desc_addr = virtio_hdr;
 		desc_offset = dev->hdr_len;
 	} else {
@@ -112,11 +112,11 @@ enqueue_pkt(struct vhost_dev *dev, struct rte_vhost_vring *vr,
 			src += len;
 		}
 
-		desc_chunck_len = desc->len - dev->hdr_len;
+		desc_chunk_len = desc->len - dev->hdr_len;
 		desc_gaddr += dev->hdr_len;
 		desc_addr = rte_vhost_va_from_guest_pa(
 				dev->mem, desc_gaddr,
-				&desc_chunck_len);
+				&desc_chunk_len);
 		if (unlikely(!desc_addr))
 			return -1;
 
@@ -147,28 +147,28 @@ enqueue_pkt(struct vhost_dev *dev, struct rte_vhost_vring *vr,
 				return -1;
 
 			desc = &vr->desc[desc->next];
-			desc_chunck_len = desc->len;
+			desc_chunk_len = desc->len;
 			desc_gaddr = desc->addr;
 			desc_addr = rte_vhost_va_from_guest_pa(
-					dev->mem, desc_gaddr, &desc_chunck_len);
+					dev->mem, desc_gaddr, &desc_chunk_len);
 			if (unlikely(!desc_addr))
 				return -1;
 
 			desc_offset = 0;
 			desc_avail  = desc->len;
-		} else if (unlikely(desc_chunck_len == 0)) {
-			desc_chunck_len = desc_avail;
+		} else if (unlikely(desc_chunk_len == 0)) {
+			desc_chunk_len = desc_avail;
 			desc_gaddr += desc_offset;
 			desc_addr = rte_vhost_va_from_guest_pa(dev->mem,
 					desc_gaddr,
-					&desc_chunck_len);
+					&desc_chunk_len);
 			if (unlikely(!desc_addr))
 				return -1;
 
 			desc_offset = 0;
 		}
 
-		cpy_len = RTE_MIN(desc_chunck_len, mbuf_avail);
+		cpy_len = RTE_MIN(desc_chunk_len, mbuf_avail);
 		rte_memcpy((void *)((uintptr_t)(desc_addr + desc_offset)),
 			rte_pktmbuf_mtod_offset(m, void *, mbuf_offset),
 			cpy_len);
@@ -177,7 +177,7 @@ enqueue_pkt(struct vhost_dev *dev, struct rte_vhost_vring *vr,
 		mbuf_offset += cpy_len;
 		desc_avail  -= cpy_len;
 		desc_offset += cpy_len;
-		desc_chunck_len -= cpy_len;
+		desc_chunk_len -= cpy_len;
 	}
 
 	return 0;
@@ -246,7 +246,7 @@ dequeue_pkt(struct vhost_dev *dev, struct rte_vhost_vring *vr,
 	struct vring_desc *desc;
 	uint64_t desc_addr, desc_gaddr;
 	uint32_t desc_avail, desc_offset;
-	uint64_t desc_chunck_len;
+	uint64_t desc_chunk_len;
 	uint32_t mbuf_avail, mbuf_offset;
 	uint32_t cpy_len;
 	struct rte_mbuf *cur = m, *prev = m;
@@ -258,10 +258,10 @@ dequeue_pkt(struct vhost_dev *dev, struct rte_vhost_vring *vr,
 			(desc->flags & VRING_DESC_F_INDIRECT))
 		return -1;
 
-	desc_chunck_len = desc->len;
+	desc_chunk_len = desc->len;
 	desc_gaddr = desc->addr;
 	desc_addr = rte_vhost_va_from_guest_pa(
-			dev->mem, desc_gaddr, &desc_chunck_len);
+			dev->mem, desc_gaddr, &desc_chunk_len);
 	if (unlikely(!desc_addr))
 		return -1;
 
@@ -275,10 +275,10 @@ dequeue_pkt(struct vhost_dev *dev, struct rte_vhost_vring *vr,
 	 * header.
 	 */
 	desc = &vr->desc[desc->next];
-	desc_chunck_len = desc->len;
+	desc_chunk_len = desc->len;
 	desc_gaddr = desc->addr;
 	desc_addr = rte_vhost_va_from_guest_pa(
-			dev->mem, desc_gaddr, &desc_chunck_len);
+			dev->mem, desc_gaddr, &desc_chunk_len);
 	if (unlikely(!desc_addr))
 		return -1;
 	rte_prefetch0((void *)(uintptr_t)desc_addr);
@@ -290,7 +290,7 @@ dequeue_pkt(struct vhost_dev *dev, struct rte_vhost_vring *vr,
 	mbuf_offset = 0;
 	mbuf_avail  = m->buf_len - RTE_PKTMBUF_HEADROOM;
 	while (1) {
-		cpy_len = RTE_MIN(desc_chunck_len, mbuf_avail);
+		cpy_len = RTE_MIN(desc_chunk_len, mbuf_avail);
 		rte_memcpy(rte_pktmbuf_mtod_offset(cur, void *,
 						   mbuf_offset),
 			(void *)((uintptr_t)(desc_addr + desc_offset)),
@@ -300,7 +300,7 @@ dequeue_pkt(struct vhost_dev *dev, struct rte_vhost_vring *vr,
 		mbuf_offset += cpy_len;
 		desc_avail  -= cpy_len;
 		desc_offset += cpy_len;
-		desc_chunck_len -= cpy_len;
+		desc_chunk_len -= cpy_len;
 
 		/* This desc reaches to its end, get the next one */
 		if (desc_avail == 0) {
@@ -312,22 +312,22 @@ dequeue_pkt(struct vhost_dev *dev, struct rte_vhost_vring *vr,
 				return -1;
 			desc = &vr->desc[desc->next];
 
-			desc_chunck_len = desc->len;
+			desc_chunk_len = desc->len;
 			desc_gaddr = desc->addr;
 			desc_addr = rte_vhost_va_from_guest_pa(
-					dev->mem, desc_gaddr, &desc_chunck_len);
+					dev->mem, desc_gaddr, &desc_chunk_len);
 			if (unlikely(!desc_addr))
 				return -1;
 			rte_prefetch0((void *)(uintptr_t)desc_addr);
 
 			desc_offset = 0;
 			desc_avail  = desc->len;
-		} else if (unlikely(desc_chunck_len == 0)) {
-			desc_chunck_len = desc_avail;
+		} else if (unlikely(desc_chunk_len == 0)) {
+			desc_chunk_len = desc_avail;
 			desc_gaddr += desc_offset;
 			desc_addr = rte_vhost_va_from_guest_pa(dev->mem,
 					desc_gaddr,
-					&desc_chunck_len);
+					&desc_chunk_len);
 			if (unlikely(!desc_addr))
 				return -1;
 

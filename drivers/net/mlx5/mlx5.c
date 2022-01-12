@@ -96,7 +96,7 @@
 
 /*
  * Device parameter to force doorbell register mapping
- * to non-cahed region eliminating the extra write memory barrier.
+ * to non-cached region eliminating the extra write memory barrier.
  */
 #define MLX5_TX_DB_NC "tx_db_nc"
 
@@ -350,7 +350,7 @@ static const struct mlx5_indexed_pool_config mlx5_ipool_cfg[] = {
 		.free = mlx5_free,
 		.type = "rte_flow_ipool",
 	},
-	[MLX5_IPOOL_RSS_EXPANTION_FLOW_ID] = {
+	[MLX5_IPOOL_RSS_EXPANSION_FLOW_ID] = {
 		.size = 0,
 		.need_lock = 1,
 		.type = "mlx5_flow_rss_id_ipool",

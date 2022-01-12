@@ -283,7 +283,7 @@ dma_addr_t ecore_chain_get_pbl_phys(struct ecore_chain *p_chain)
 /**
  * @brief ecore_chain_advance_page -
  *
- * Advance the next element accros pages for a linked chain
+ * Advance the next element across pages for a linked chain
  *
  * @param p_chain
  * @param p_next_elem
@@ -507,7 +507,7 @@ static OSAL_INLINE void *ecore_chain_consume(struct ecore_chain *p_chain)
  *
  * Resets the chain to its start state
  *
- * @param p_chain pointer to a previously allocted chain
+ * @param p_chain pointer to a previously allocated chain
  */
 static OSAL_INLINE void ecore_chain_reset(struct ecore_chain *p_chain)
 {

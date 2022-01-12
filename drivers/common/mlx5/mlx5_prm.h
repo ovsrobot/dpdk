@@ -3112,8 +3112,8 @@ struct mlx5_ifc_conn_track_aso_bits {
 	u8 max_ack_window[0x3];
 	u8 reserved_at_1f8[0x1];
 	u8 retransmission_counter[0x3];
-	u8 retranmission_limit_exceeded[0x1];
-	u8 retranmission_limit[0x3]; /* End of DW15. */
+	u8 retransmission_limit_exceeded[0x1];
+	u8 retransmission_limit[0x3]; /* End of DW15. */
 };
 
 struct mlx5_ifc_conn_track_offload_bits {

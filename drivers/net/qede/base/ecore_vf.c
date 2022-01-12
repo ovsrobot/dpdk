@@ -547,7 +547,7 @@ ecore_vf_hw_prepare(struct ecore_hwfn *p_hwfn,
 		return ECORE_NOMEM;
 	}
 
-	/* Doorbells are tricky; Upper-layer has alreday set the hwfn doorbell
+	/* Doorbells are tricky; Upper-layer has already set the hwfn doorbell
 	 * value, but there are several incompatibily scenarios where that
 	 * would be incorrect and we'd need to override it.
 	 */

@@ -386,7 +386,7 @@ hns3_rm_dev_vlan_table(struct hns3_adapter *hns, uint16_t vlan_id)
 
 static void
 hns3_add_dev_vlan_table(struct hns3_adapter *hns, uint16_t vlan_id,
-			bool writen_to_tbl)
+			bool written_to_tbl)
 {
 	struct hns3_user_vlan_table *vlan_entry;
 	struct hns3_hw *hw = &hns->hw;
@@ -403,7 +403,7 @@ hns3_add_dev_vlan_table(struct hns3_adapter *hns, uint16_t vlan_id,
 		return;
 	}
 
-	vlan_entry->hd_tbl_status = writen_to_tbl;
+	vlan_entry->hd_tbl_status = written_to_tbl;
 	vlan_entry->vlan_id = vlan_id;
 
 	LIST_INSERT_HEAD(&pf->vlan_list, vlan_entry, next);
@@ -438,7 +438,7 @@ static int
 hns3_vlan_filter_configure(struct hns3_adapter *hns, uint16_t vlan_id, int on)
 {
 	struct hns3_hw *hw = &hns->hw;
-	bool writen_to_tbl = false;
+	bool written_to_tbl = false;
 	int ret = 0;
 
 	/*
@@ -458,12 +458,12 @@ hns3_vlan_filter_configure(struct hns3_adapter *hns, uint16_t vlan_id, int on)
 	 */
 	if (hw->port_base_vlan_cfg.state == HNS3_PORT_BASE_VLAN_DISABLE) {
 		ret = hns3_set_port_vlan_filter(hns, vlan_id, on);
-		writen_to_tbl = true;
+		written_to_tbl = true;
 	}
 
 	if (ret == 0) {
 		if (on)
-			hns3_add_dev_vlan_table(hns, vlan_id, writen_to_tbl);
+			hns3_add_dev_vlan_table(hns, vlan_id, written_to_tbl);
 		else
 			hns3_rm_dev_vlan_table(hns, vlan_id);
 	}
@@ -2177,7 +2177,7 @@ hns3_get_copper_port_speed_capa(uint32_t supported_speed)
 }
 
 static uint32_t
-hns3_get_firber_port_speed_capa(uint32_t supported_speed)
+hns3_get_fiber_port_speed_capa(uint32_t supported_speed)
 {
 	uint32_t speed_capa = 0;
 
@@ -2210,7 +2210,7 @@ hns3_get_speed_capa(struct hns3_hw *hw)
 			hns3_get_copper_port_speed_capa(mac->supported_speed);
 	else
 		speed_capa =
-			hns3_get_firber_port_speed_capa(mac->supported_speed);
+			hns3_get_fiber_port_speed_capa(mac->supported_speed);
 
 	if (mac->support_autoneg == 0)
 		speed_capa |= RTE_ETH_LINK_SPEED_FIXED;
@@ -4524,7 +4524,7 @@ hns3_config_all_msix_error(struct hns3_hw *hw, bool enable)
 }
 
 static uint32_t
-hns3_set_firber_default_support_speed(struct hns3_hw *hw)
+hns3_set_fiber_default_support_speed(struct hns3_hw *hw)
 {
 	struct hns3_mac *mac = &hw->mac;
 
@@ -4582,7 +4582,7 @@ hns3_get_port_supported_speed(struct rte_eth_dev *eth_dev)
 		 */
 		if (mac->supported_speed == 0)
 			mac->supported_speed =
-				hns3_set_firber_default_support_speed(hw);
+				hns3_set_fiber_default_support_speed(hw);
 	}
 
 	return 0;

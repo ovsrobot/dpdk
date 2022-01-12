@@ -1398,11 +1398,11 @@
  * ~nig_registers_led_control_blink_traffic_p0.led_control_blink_traffic_p0
  */
 #define NIG_REG_LED_CONTROL_OVERRIDE_TRAFFIC_P0			 0x102f8
-/* [RW 1] Port0: If set along with the led_control_override_trafic_p0 bit;
+/* [RW 1] Port0: If set along with the led_control_override_traffic_p0 bit;
  * turns on the Traffic LED. If the led_control_blink_traffic_p0 bit is also
  * set; the LED will blink with blink rate specified in
  * ~nig_registers_led_control_blink_rate_p0.led_control_blink_rate_p0 and
- * ~nig_regsters_led_control_blink_rate_ena_p0.led_control_blink_rate_ena_p0
+ * ~nig_registers_led_control_blink_rate_ena_p0.led_control_blink_rate_ena_p0
  * fields.
  */
 #define NIG_REG_LED_CONTROL_TRAFFIC_P0				 0x10300
@@ -4570,8 +4570,8 @@
 #define PCICFG_COMMAND_RESERVED			(0x1f<<11)
 #define PCICFG_STATUS_OFFSET				0x06
 #define PCICFG_REVISION_ID_OFFSET			0x08
-#define PCICFG_REVESION_ID_MASK			0xff
-#define PCICFG_REVESION_ID_ERROR_VAL		0xff
+#define PCICFG_REVISION_ID_MASK			0xff
+#define PCICFG_REVISION_ID_ERROR_VAL		0xff
 #define PCICFG_CACHE_LINE_SIZE				0x0c
 #define PCICFG_LATENCY_TIMER				0x0d
 #define PCICFG_HEADER_TYPE				0x0e
@@ -5272,8 +5272,8 @@
 #define MDIO_GP_STATUS_TOP_AN_STATUS1_DUPLEX_STATUS		0x0008
 #define MDIO_GP_STATUS_TOP_AN_STATUS1_CL73_MR_LP_NP_AN_ABLE	0x0010
 #define MDIO_GP_STATUS_TOP_AN_STATUS1_CL73_LP_NP_BAM_ABLE	0x0020
-#define MDIO_GP_STATUS_TOP_AN_STATUS1_PAUSE_RSOLUTION_TXSIDE	0x0040
-#define MDIO_GP_STATUS_TOP_AN_STATUS1_PAUSE_RSOLUTION_RXSIDE	0x0080
+#define MDIO_GP_STATUS_TOP_AN_STATUS1_PAUSE_RESOLUTION_TXSIDE	0x0040
+#define MDIO_GP_STATUS_TOP_AN_STATUS1_PAUSE_RESOLUTION_RXSIDE	0x0080
 #define MDIO_GP_STATUS_TOP_AN_STATUS1_ACTUAL_SPEED_MASK		0x3f00
 #define MDIO_GP_STATUS_TOP_AN_STATUS1_ACTUAL_SPEED_10M		0x0000
 #define MDIO_GP_STATUS_TOP_AN_STATUS1_ACTUAL_SPEED_100M		0x0100

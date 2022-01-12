@@ -1753,7 +1753,7 @@ static int iavf_dev_xstats_get(struct rte_eth_dev *dev,
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
 	struct iavf_vsi *vsi = &vf->vsi;
 	struct virtchnl_eth_stats *pstats = NULL;
-	struct iavf_eth_xstats iavf_xtats = {{0}};
+	struct iavf_eth_xstats iavf_xstats = {{0}};
 
 	if (n < IAVF_NB_XSTATS)
 		return IAVF_NB_XSTATS;
@@ -1766,15 +1766,15 @@ static int iavf_dev_xstats_get(struct rte_eth_dev *dev,
 		return 0;
 
 	iavf_update_stats(vsi, pstats);
-	iavf_xtats.eth_stats = *pstats;
+	iavf_xstats.eth_stats = *pstats;
 
 	if (iavf_ipsec_crypto_supported(adapter))
-		iavf_dev_update_ipsec_xstats(dev, &iavf_xtats.ips_stats);
+		iavf_dev_update_ipsec_xstats(dev, &iavf_xstats.ips_stats);
 
 	/* loop over xstats array and values from pstats */
 	for (i = 0; i < IAVF_NB_XSTATS; i++) {
 		xstats[i].id = i;
-		xstats[i].value = *(uint64_t *)(((char *)&iavf_xtats) +
+		xstats[i].value = *(uint64_t *)(((char *)&iavf_xstats) +
 			rte_iavf_stats_strings[i].offset);
 	}
 

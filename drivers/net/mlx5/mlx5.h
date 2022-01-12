@@ -73,7 +73,7 @@ enum mlx5_ipool_index {
 	MLX5_IPOOL_HRXQ, /* Pool for hrxq resource. */
 	MLX5_IPOOL_MLX5_FLOW, /* Pool for mlx5 flow handle. */
 	MLX5_IPOOL_RTE_FLOW, /* Pool for rte_flow. */
-	MLX5_IPOOL_RSS_EXPANTION_FLOW_ID, /* Pool for Queue/RSS flow ID. */
+	MLX5_IPOOL_RSS_EXPANSION_FLOW_ID, /* Pool for Queue/RSS flow ID. */
 	MLX5_IPOOL_RSS_SHARED_ACTIONS, /* Pool for RSS shared actions. */
 	MLX5_IPOOL_MTR_POLICY, /* Pool for meter policy resource. */
 	MLX5_IPOOL_MAX,
@@ -751,7 +751,7 @@ struct mlx5_flow_meter_policy {
 	/* drop action for red color. */
 	uint16_t sub_policy_num;
 	/* Count sub policy tables, 3 bits per domain. */
-	struct mlx5_flow_meter_sub_policy **sub_policys[MLX5_MTR_DOMAIN_MAX];
+	struct mlx5_flow_meter_sub_policy **sub_policies[MLX5_MTR_DOMAIN_MAX];
 	/* Sub policy table array must be the end of struct. */
 };
 

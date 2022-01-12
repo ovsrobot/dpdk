@@ -105,8 +105,8 @@ struct bnx2x_eth_stats {
     uint32_t rx_stat_bmac_xpf_lo;
     uint32_t rx_stat_bmac_xcf_hi;
     uint32_t rx_stat_bmac_xcf_lo;
-    uint32_t rx_stat_xoffstateentered_hi;
-    uint32_t rx_stat_xoffstateentered_lo;
+    uint32_t rx_stat_xoffsetateentered_hi;
+    uint32_t rx_stat_xoffsetateentered_lo;
     uint32_t rx_stat_xonpauseframesreceived_hi;
     uint32_t rx_stat_xonpauseframesreceived_lo;
     uint32_t rx_stat_xoffpauseframesreceived_hi;

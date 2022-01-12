@@ -696,7 +696,7 @@ __mlx5_flow_meter_policy_delete(struct rte_eth_dev *dev,
 			MLX5_MTR_SUB_POLICY_NUM_MASK;
 		if (sub_policy_num) {
 			for (j = 0; j < sub_policy_num; j++) {
-				sub_policy = mtr_policy->sub_policys[i][j];
+				sub_policy = mtr_policy->sub_policies[i][j];
 				if (sub_policy)
 					mlx5_ipool_free
 					(priv->sh->ipool[MLX5_IPOOL_MTR_POLICY],
@@ -847,10 +847,10 @@ mlx5_flow_meter_policy_add(struct rte_eth_dev *dev,
 			policy_idx = sub_policy_idx;
 			sub_policy->main_policy_id = 1;
 		}
-		mtr_policy->sub_policys[i] =
+		mtr_policy->sub_policies[i] =
 			(struct mlx5_flow_meter_sub_policy **)
 			((uint8_t *)mtr_policy + policy_size);
-		mtr_policy->sub_policys[i][0] = sub_policy;
+		mtr_policy->sub_policies[i][0] = sub_policy;
 		sub_policy_num = (mtr_policy->sub_policy_num >>
 			(MLX5_MTR_SUB_POLICY_NUM_SHIFT * i)) &
 			MLX5_MTR_SUB_POLICY_NUM_MASK;

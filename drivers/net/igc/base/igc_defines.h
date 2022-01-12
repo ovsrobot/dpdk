@@ -632,7 +632,7 @@
 #define IGC_ICS_LSC		IGC_ICR_LSC       /* Link Status Change */
 #define IGC_ICS_RXSEQ		IGC_ICR_RXSEQ     /* Rx sequence error */
 #define IGC_ICS_RXDMT0	IGC_ICR_RXDMT0    /* Rx desc min. threshold */
-#define IGC_ICS_DRSTA		IGC_ICR_DRSTA     /* Device Reset Aserted */
+#define IGC_ICS_DRSTA		IGC_ICR_DRSTA     /* Device Reset Asserted */
 
 /* Extended Interrupt Cause Set */
 #define IGC_EICS_RX_QUEUE0	IGC_EICR_RX_QUEUE0 /* Rx Queue 0 Interrupt */

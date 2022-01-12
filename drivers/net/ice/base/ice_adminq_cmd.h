@@ -2173,7 +2173,7 @@ struct ice_aqc_acl_tbl_actpair {
  * alloc/dealloc action-pair
  */
 struct ice_aqc_acl_generic {
-	/* if alloc_id is below 0x1000 then alllocation failed due to
+	/* if alloc_id is below 0x1000 then allocation failed due to
 	 * unavailable resources, else this is set by FW to identify
 	 * table allocation
 	 */

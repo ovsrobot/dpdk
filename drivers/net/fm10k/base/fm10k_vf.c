@@ -169,7 +169,7 @@ STATIC bool fm10k_is_slot_appropriate_vf(struct fm10k_hw *hw)
 }
 
 #endif
-/* This structure defines the attibutes to be parsed below */
+/* This structure defines the attributes to be parsed below */
 const struct fm10k_tlv_attr fm10k_mac_vlan_msg_attr[] = {
 	FM10K_TLV_ATTR_U32(FM10K_MAC_VLAN_MSG_VLAN),
 	FM10K_TLV_ATTR_BOOL(FM10K_MAC_VLAN_MSG_SET),
@@ -393,7 +393,7 @@ STATIC void fm10k_update_int_moderator_vf(struct fm10k_hw *hw)
 	mbx->ops.enqueue_tx(hw, mbx, msg);
 }
 
-/* This structure defines the attibutes to be parsed below */
+/* This structure defines the attributes to be parsed below */
 const struct fm10k_tlv_attr fm10k_lport_state_msg_attr[] = {
 	FM10K_TLV_ATTR_BOOL(FM10K_LPORT_STATE_MSG_DISABLE),
 	FM10K_TLV_ATTR_U8(FM10K_LPORT_STATE_MSG_XCAST_MODE),
