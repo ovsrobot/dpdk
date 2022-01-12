@@ -12,6 +12,9 @@ defaults:
 jobs:
   build:
     name: ${{ join(matrix.config.*, '-') }}
+    concurrency:
+      group: build-${{ matrix.config.os }}-${{ matrix.config.compiler }}-${{ matrix.config.library }}-${{ matrix.config.cross }}-${{ matrix.config.mini }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     runs-on: ${{ matrix.config.os }}
     env:
       AARCH64: ${{ matrix.config.cross == 'aarch64' }}
