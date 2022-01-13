@@ -2817,6 +2817,9 @@ rxtx_config_display(void)
 				       rx_conf->share_qid);
 			printf("\n");
 		}
+		for (qid = 0; qid < nb_rxq; qid++)
+			if (ports[pid].rxq_state[qid].stopped)
+				printf("    RX queue %d is stopped\n", qid);
 
 		/* per tx queue config only for first queue to be less verbose */
 		for (qid = 0; qid < 1; qid++) {
@@ -2850,6 +2853,9 @@ rxtx_config_display(void)
 			printf("      TX offloads=0x%"PRIx64" - TX RS bit threshold=%d\n",
 				offloads_tmp, tx_rs_thresh_tmp);
 		}
+		for (qid = 0; qid < nb_txq; qid++)
+			if (ports[pid].txq_state[qid].stopped)
+				printf("    TX queue %d is stopped\n", qid);
 	}
 }
 

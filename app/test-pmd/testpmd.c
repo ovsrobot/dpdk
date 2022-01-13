@@ -2152,6 +2152,8 @@ flush_fwd_rx_queues(void)
 		for (rxp = 0; rxp < cur_fwd_config.nb_fwd_ports; rxp++) {
 			for (rxq = 0; rxq < nb_rxq; rxq++) {
 				port_id = fwd_ports_ids[rxp];
+				if (ports[port_id].rxq_state[rxq].stopped)
+					continue;
 				/**
 				* testpmd can stuck in the below do while loop
 				* if rte_eth_rx_burst() always returns nonzero
@@ -2223,8 +2225,20 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 static int
 start_pkt_forward_on_core(void *fwd_arg)
 {
-	run_pkt_fwd_on_lcore((struct fwd_lcore *) fwd_arg,
-			     cur_fwd_config.fwd_eng->packet_fwd);
+	struct fwd_lcore *fc = fwd_arg;
+	struct fwd_stream *fsm = fwd_streams[fc->stream_idx];
+	struct queue_state *rxq = &ports[fsm->rx_port].rxq_state[fsm->rx_queue];
+	struct queue_state *txq = &ports[fsm->tx_port].txq_state[fsm->tx_queue];
+	struct fwd_engine *fwd_engine = cur_fwd_config.fwd_eng;
+	packet_fwd_t packet_fwd;
+
+	/* Check if there will ever be any packets to send. */
+	if (rxq->stopped && (txq->stopped || fwd_engine != &tx_only_engine))
+		return 0;
+	/* Force rxonly mode if RxQ is started, but TxQ is stopped. */
+	packet_fwd = !rxq->stopped && txq->stopped ? rx_only_engine.packet_fwd
+						   : fwd_engine->packet_fwd;
+	run_pkt_fwd_on_lcore(fc, packet_fwd);
 	return 0;
 }
 

@@ -216,6 +216,12 @@ struct xstat_display_info {
 	bool	 allocated;
 };
 
+/** Application state of a queue. */
+struct queue_state {
+	/** The queue is stopped and should not be used. */
+	bool stopped;
+};
+
 /**
  * The data structure associated with each port.
  */
@@ -256,6 +262,10 @@ struct rte_port {
 	uint64_t		mbuf_dynf;
 	const struct rte_eth_rxtx_callback *tx_set_dynf_cb[RTE_MAX_QUEUES_PER_PORT+1];
 	struct xstat_display_info xstats_info;
+	/** Per-Rx-queue state. */
+	struct queue_state rxq_state[RTE_MAX_QUEUES_PER_PORT];
+	/** Per-Tx-queue state. */
+	struct queue_state txq_state[RTE_MAX_QUEUES_PER_PORT];
 };
 
 /**

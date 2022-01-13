@@ -2702,6 +2702,14 @@ cmd_config_rxtx_queue_parsed(void *parsed_result,
 
 	if (ret == -ENOTSUP)
 		fprintf(stderr, "Function not supported in PMD\n");
+	if (ret == 0) {
+		struct rte_port *port;
+		struct queue_state *states;
+
+		port = &ports[res->portid];
+		states = isrx ? port->rxq_state : port->txq_state;
+		states[res->qid].stopped = !isstart;
+	}
 }
 
 cmdline_parse_token_string_t cmd_config_rxtx_queue_port =
