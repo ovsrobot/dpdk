@@ -127,6 +127,13 @@ rte_mempool_op_populate_helper(struct rte_mempool *mp, unsigned int flags,
 		obj = va + off;
 		obj_cb(mp, obj_cb_arg, obj,
 		       (iova == RTE_BAD_IOVA) ? RTE_BAD_IOVA : (iova + off));
+#ifdef RTE_MEMPOOL_INDEX_BASED_LCORE_CACHE
+		/* Store pool base value to calculate indices for index-based
+		 * lcore cache implementation
+		 */
+		if (i == 0)
+			mp->pool_base_value = obj;
+#endif
 		rte_mempool_ops_enqueue_bulk(mp, &obj, 1);
 		off += mp->elt_size + mp->trailer_size;
 	}

@@ -50,6 +50,10 @@
 #include <rte_memcpy.h>
 #include <rte_common.h>
 
+#ifdef RTE_MEMPOOL_INDEX_BASED_LCORE_CACHE
+#include <rte_vect.h>
+#endif
+
 #include "rte_mempool_trace_fp.h"
 
 #ifdef __cplusplus
@@ -239,6 +243,9 @@ struct rte_mempool {
 	int32_t ops_index;
 
 	struct rte_mempool_cache *local_cache; /**< Per-lcore local cache */
+#ifdef RTE_MEMPOOL_INDEX_BASED_LCORE_CACHE
+	void *pool_base_value; /**< Base value to calculate indices */
+#endif
 
 	uint32_t populated_size;         /**< Number of populated objects. */
 	struct rte_mempool_objhdr_list elt_list; /**< List of objects in pool */
@@ -1314,7 +1321,22 @@ rte_mempool_cache_flush(struct rte_mempool_cache *cache,
 	if (cache == NULL || cache->len == 0)
 		return;
 	rte_mempool_trace_cache_flush(cache, mp);
+
+#ifdef RTE_MEMPOOL_INDEX_BASED_LCORE_CACHE
+	unsigned int i;
+	unsigned int cache_len = cache->len;
+	void *obj_table[RTE_MEMPOOL_CACHE_MAX_SIZE * 3];
+	void *base_value = mp->pool_base_value;
+	uint32_t *cache_objs = (uint32_t *) cache->objs;
+	for (i = 0; i < cache_len; i++) {
+		/* Scale by sizeof(uintptr_t) to accommodate 16GB/32GB mempool */
+		cache_objs[i] = cache_objs[i] << 3;
+		obj_table[i] = (void *) RTE_PTR_ADD(base_value, cache_objs[i]);
+	}
+	rte_mempool_ops_enqueue_bulk(mp, obj_table, cache->len);
+#else
 	rte_mempool_ops_enqueue_bulk(mp, cache->objs, cache->len);
+#endif
 	cache->len = 0;
 }
 
@@ -1334,7 +1356,14 @@ static __rte_always_inline void
 rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 			   unsigned int n, struct rte_mempool_cache *cache)
 {
+#ifdef RTE_MEMPOOL_INDEX_BASED_LCORE_CACHE
+	uint32_t *cache_objs;
+	void *base_value;
+	uint32_t i;
+	uint32_t temp_objs[2];
+#else
 	void **cache_objs;
+#endif
 
 	/* increment stat now, adding in mempool always success */
 	RTE_MEMPOOL_STAT_ADD(mp, put_bulk, 1);
@@ -1344,7 +1373,13 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 	if (unlikely(cache == NULL || n > RTE_MEMPOOL_CACHE_MAX_SIZE))
 		goto ring_enqueue;
 
+#ifdef RTE_MEMPOOL_INDEX_BASED_LCORE_CACHE
+	cache_objs = (uint32_t *) cache->objs;
+	cache_objs = &cache_objs[cache->len];
+	base_value = mp->pool_base_value;
+#else
 	cache_objs = &cache->objs[cache->len];
+#endif
 
 	/*
 	 * The cache follows the following algorithm
@@ -1354,13 +1389,50 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 	 */
 
 	/* Add elements back into the cache */
+
+#ifdef RTE_MEMPOOL_INDEX_BASED_LCORE_CACHE
+#if defined __ARM_NEON
+	uint64x2_t v_obj_table;
+	uint64x2_t v_base_value = vdupq_n_u64((uint64_t)base_value);
+	uint32x2_t v_cache_objs;
+
+	for (i = 0; i < (n & ~0x1); i += 2) {
+		v_obj_table = vld1q_u64((const uint64_t *)&obj_table[i]);
+		v_cache_objs = vqmovn_u64(vsubq_u64(v_obj_table, v_base_value));
+
+		/* Scale by sizeof(uintptr_t) to accommodate 16GB/32GB mempool */
+		v_cache_objs = vshr_n_u32(v_cache_objs, 3);
+		vst1_u32(cache_objs + i, v_cache_objs);
+	}
+#else
+	for (i = 0; i < (n & ~0x1); i += 2) {
+		temp_objs[0] = (uint32_t) RTE_PTR_DIFF(obj_table[i], base_value);
+		temp_objs[1] = (uint32_t) RTE_PTR_DIFF(obj_table[i + 1], base_value);
+		/* Scale by sizeof(uintptr_t) to accommodate 16GB/32GB mempool */
+		cache_objs[i] = temp_objs[0] >> 3;
+		cache_objs[i + 1] = temp_objs[1] >> 3;
+	}
+#endif
+	if (n & 0x1) {
+		temp_objs[0] = (uint32_t) RTE_PTR_DIFF(obj_table[i], base_value);
+
+		/* Divide by sizeof(uintptr_t) to accommodate 16G/32G mempool */
+		cache_objs[i] = temp_objs[0] >> 3;
+	}
+#else
 	rte_memcpy(&cache_objs[0], obj_table, sizeof(void *) * n);
+#endif
 
 	cache->len += n;
 
 	if (cache->len >= cache->flushthresh) {
+#ifdef RTE_MEMPOOL_INDEX_BASED_LCORE_CACHE
+		rte_mempool_ops_enqueue_bulk(mp, obj_table + cache->len - cache->size,
+				cache->len - cache->size);
+#else
 		rte_mempool_ops_enqueue_bulk(mp, &cache->objs[cache->size],
 				cache->len - cache->size);
+#endif
 		cache->len = cache->size;
 	}
 
@@ -1461,13 +1533,23 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 {
 	int ret;
 	uint32_t index, len;
+#ifdef RTE_MEMPOOL_INDEX_BASED_LCORE_CACHE
+	uint32_t i;
+	uint32_t *cache_objs;
+	uint32_t objs[2];
+#else
 	void **cache_objs;
-
+#endif
 	/* No cache provided or cannot be satisfied from cache */
 	if (unlikely(cache == NULL || n >= cache->size))
 		goto ring_dequeue;
 
+#ifdef RTE_MEMPOOL_INDEX_BASED_LCORE_CACHE
+	void *base_value = mp->pool_base_value;
+	cache_objs = (uint32_t *) cache->objs;
+#else
 	cache_objs = cache->objs;
+#endif
 
 	/* Can this be satisfied from the cache? */
 	if (cache->len < n) {
@@ -1475,8 +1557,14 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 		uint32_t req = n + (cache->size - cache->len);
 
 		/* How many do we require i.e. number to fill the cache + the request */
+#ifdef RTE_MEMPOOL_INDEX_BASED_LCORE_CACHE
+		void *temp_objs[RTE_MEMPOOL_CACHE_MAX_SIZE * 3]; /**< Cache objects */
+		ret = rte_mempool_ops_dequeue_bulk(mp,
+			temp_objs, req);
+#else
 		ret = rte_mempool_ops_dequeue_bulk(mp,
 			&cache->objs[cache->len], req);
+#endif
 		if (unlikely(ret < 0)) {
 			/*
 			 * In the off chance that we are buffer constrained,
@@ -1487,12 +1575,72 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 			goto ring_dequeue;
 		}
 
+#ifdef RTE_MEMPOOL_INDEX_BASED_LCORE_CACHE
+		len = cache->len;
+		for (i = 0; i < req; ++i, ++len) {
+			cache_objs[len] = (uint32_t) RTE_PTR_DIFF(temp_objs[i],
+								base_value);
+			/* Scale by sizeof(uintptr_t) to accommodate 16GB/32GB mempool */
+			cache_objs[len] = cache_objs[len] >> 3;
+		}
+#endif
+
 		cache->len += req;
 	}
 
 	/* Now fill in the response ... */
+#ifdef RTE_MEMPOOL_INDEX_BASED_LCORE_CACHE
+#if defined __ARM_NEON
+	uint64x2_t v_obj_table;
+	uint64x2_t v_cache_objs;
+	uint64x2_t v_base_value = vdupq_n_u64((uint64_t)base_value);
+
+	for (index = 0, len = cache->len - 1; index < (n & ~0x3); index += 4,
+						len -= 4, obj_table += 4) {
+		v_cache_objs = vmovl_u32(vld1_u32(cache_objs + len - 1));
+		/* Scale by sizeof(uintptr_t) to accommodate 16GB/32GB mempool */
+		v_cache_objs = vshlq_n_u64(v_cache_objs, 3);
+		v_obj_table = vaddq_u64(v_cache_objs, v_base_value);
+		vst1q_u64((uint64_t *)obj_table, v_obj_table);
+		v_cache_objs = vmovl_u32(vld1_u32(cache_objs + len - 3));
+		/* Scale by sizeof(uintptr_t) to accommodate 16GB/32GB mempool */
+		v_cache_objs = vshlq_n_u64(v_cache_objs, 3);
+		v_obj_table = vaddq_u64(v_cache_objs, v_base_value);
+		vst1q_u64((uint64_t *)(obj_table + 2), v_obj_table);
+	}
+	switch (n & 0x3) {
+	case 3:
+		/* Scale by sizeof(uintptr_t) to accommodate 16GB/32GB mempool */
+		objs[0] = cache_objs[len--] << 3;
+		*(obj_table++) = (void *) RTE_PTR_ADD(base_value, objs[0]); /* fallthrough */
+	case 2:
+		/* Scale by sizeof(uintptr_t) to accommodate 16GB/32GB mempool */
+		objs[0] = cache_objs[len--] << 3;
+		*(obj_table++) = (void *) RTE_PTR_ADD(base_value, objs[0]); /* fallthrough */
+	case 1:
+		/* Scale by sizeof(uintptr_t) to accommodate 16GB/32GB mempool */
+		objs[0] = cache_objs[len] << 3;
+		*(obj_table) = (void *) RTE_PTR_ADD(base_value, objs[0]);
+	}
+#else
+	for (index = 0, len = cache->len - 1; index < (n & ~0x1); index += 2,
+						len -= 2, obj_table += 2) {
+		/* Scale by sizeof(uintptr_t) to accommodate 16GB/32GB mempool */
+		objs[0] = cache_objs[len] << 3;
+		objs[1] = cache_objs[len - 1] << 3;
+		*obj_table = (void *) RTE_PTR_ADD(base_value, objs[0]);
+		*(obj_table + 1) = (void *) RTE_PTR_ADD(base_value, objs[1]);
+	}
+
+	if (n & 0x1) {
+		objs[0] = cache_objs[len] << 3;
+		*obj_table = (void *) RTE_PTR_ADD(base_value, objs[0]);
+	}
+#endif
+#else
 	for (index = 0, len = cache->len - 1; index < n; ++index, len--, obj_table++)
 		*obj_table = cache_objs[len];
+#endif
 
 	cache->len -= n;
 
