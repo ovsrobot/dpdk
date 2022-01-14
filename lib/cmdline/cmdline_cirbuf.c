@@ -6,7 +6,6 @@
 
 #include <string.h>
 #include <errno.h>
-#include <stdio.h>
 
 #include "cmdline_cirbuf.h"
 
