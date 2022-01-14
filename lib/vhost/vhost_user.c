@@ -154,7 +154,7 @@ async_dma_map(struct virtio_net *dev, bool do_map)
 			page = &dev->guest_pages[i];
 			ret = rte_vfio_container_dma_map(RTE_VFIO_DEFAULT_CONTAINER_FD,
 							 page->host_user_addr,
-							 page->host_phys_addr,
+							 page->host_iova,
 							 page->size);
 			if (ret) {
 				/*
@@ -182,7 +182,7 @@ async_dma_map(struct virtio_net *dev, bool do_map)
 			page = &dev->guest_pages[i];
 			ret = rte_vfio_container_dma_unmap(RTE_VFIO_DEFAULT_CONTAINER_FD,
 							   page->host_user_addr,
-							   page->host_phys_addr,
+							   page->host_iova,
 							   page->size);
 			if (ret) {
 				/* like DMA map, ignore the kernel driver case when unmap. */
@@ -977,7 +977,7 @@ vhost_user_set_vring_base(struct virtio_net **pdev,
 
 static int
 add_one_guest_page(struct virtio_net *dev, uint64_t guest_phys_addr,
-		   uint64_t host_phys_addr, uint64_t host_user_addr, uint64_t size)
+		   uint64_t host_iova, uint64_t host_user_addr, uint64_t size)
 {
 	struct guest_page *page, *last_page;
 	struct guest_page *old_pages;
@@ -998,7 +998,7 @@ add_one_guest_page(struct virtio_net *dev, uint64_t guest_phys_addr,
 	if (dev->nr_guest_pages > 0) {
 		last_page = &dev->guest_pages[dev->nr_guest_pages - 1];
 		/* merge if the two pages are continuous */
-		if (host_phys_addr == last_page->host_phys_addr + last_page->size
+		if (host_iova == last_page->host_iova + last_page->size
 		    && guest_phys_addr == last_page->guest_phys_addr + last_page->size
 		    && host_user_addr == last_page->host_user_addr + last_page->size) {
 			last_page->size += size;
@@ -1008,7 +1008,7 @@ add_one_guest_page(struct virtio_net *dev, uint64_t guest_phys_addr,
 
 	page = &dev->guest_pages[dev->nr_guest_pages++];
 	page->guest_phys_addr = guest_phys_addr;
-	page->host_phys_addr  = host_phys_addr;
+	page->host_iova  = host_iova;
 	page->host_user_addr = host_user_addr;
 	page->size = size;
 
@@ -1022,14 +1022,14 @@ add_guest_pages(struct virtio_net *dev, struct rte_vhost_mem_region *reg,
 	uint64_t reg_size = reg->size;
 	uint64_t host_user_addr  = reg->host_user_addr;
 	uint64_t guest_phys_addr = reg->guest_phys_addr;
-	uint64_t host_phys_addr;
+	uint64_t host_iova;
 	uint64_t size;
 
-	host_phys_addr = rte_mem_virt2iova((void *)(uintptr_t)host_user_addr);
+	host_iova = rte_mem_virt2iova((void *)(uintptr_t)host_user_addr);
 	size = page_size - (guest_phys_addr & (page_size - 1));
 	size = RTE_MIN(size, reg_size);
 
-	if (add_one_guest_page(dev, guest_phys_addr, host_phys_addr,
+	if (add_one_guest_page(dev, guest_phys_addr, host_iova,
 			       host_user_addr, size) < 0)
 		return -1;
 
@@ -1039,9 +1039,9 @@ add_guest_pages(struct virtio_net *dev, struct rte_vhost_mem_region *reg,
 
 	while (reg_size > 0) {
 		size = RTE_MIN(reg_size, page_size);
-		host_phys_addr = rte_mem_virt2iova((void *)(uintptr_t)
+		host_iova = rte_mem_virt2iova((void *)(uintptr_t)
 						  host_user_addr);
-		if (add_one_guest_page(dev, guest_phys_addr, host_phys_addr,
+		if (add_one_guest_page(dev, guest_phys_addr, host_iova,
 				       host_user_addr, size) < 0)
 			return -1;
 
@@ -1073,11 +1073,11 @@ dump_guest_pages(struct virtio_net *dev)
 		VHOST_LOG_CONFIG(INFO,
 			"guest physical page region %u\n"
 			"\t guest_phys_addr: %" PRIx64 "\n"
-			"\t host_phys_addr : %" PRIx64 "\n"
+			"\t host_iova      : %" PRIx64 "\n"
 			"\t size           : %" PRIx64 "\n",
 			i,
 			page->guest_phys_addr,
-			page->host_phys_addr,
+			page->host_iova,
 			page->size);
 	}
 }
