@@ -8,7 +8,6 @@
  */
 
 #include <stdio.h>
-#include <stdarg.h>
 #include <string.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -22,7 +21,6 @@
 #include <rte_eal_memconfig.h>
 #include <rte_errno.h>
 #include <rte_string_fns.h>
-#include <rte_spinlock.h>
 #include <rte_tailq.h>
 
 #include "rte_ring.h"
