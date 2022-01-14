@@ -10,7 +10,6 @@
 #include <sys/syscall.h>
 
 #include <rte_debug.h>
-#include <rte_atomic.h>
 #include <rte_launch.h>
 #include <rte_log.h>
 #include <rte_eal.h>
