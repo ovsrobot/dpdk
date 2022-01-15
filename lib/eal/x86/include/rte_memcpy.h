@@ -818,25 +818,25 @@ rte_memcpy_aligned(void *dst, const void *src, size_t n)
 {
 	void *ret = dst;
 
-	/* Copy size <= 16 bytes */
+	/* Copy size < 16 bytes */
 	if (n < 16) {
-		if (n & 0x01) {
-			*(uint8_t *)dst = *(const uint8_t *)src;
-			src = (const uint8_t *)src + 1;
-			dst = (uint8_t *)dst + 1;
-		}
-		if (n & 0x02) {
-			*(uint16_t *)dst = *(const uint16_t *)src;
-			src = (const uint16_t *)src + 1;
-			dst = (uint16_t *)dst + 1;
+		if (n & 0x08) {
+			*(uint64_t *)dst = *(const uint64_t *)src;
+			src = (const uint64_t *)src + 1;
+			dst = (uint64_t *)dst + 1;
 		}
 		if (n & 0x04) {
 			*(uint32_t *)dst = *(const uint32_t *)src;
 			src = (const uint32_t *)src + 1;
 			dst = (uint32_t *)dst + 1;
 		}
-		if (n & 0x08)
-			*(uint64_t *)dst = *(const uint64_t *)src;
+		if (n & 0x02) {
+			*(uint16_t *)dst = *(const uint16_t *)src;
+			src = (const uint16_t *)src + 1;
+			dst = (uint16_t *)dst + 1;
+		}
+		if (n & 0x01)
+			*(uint8_t *)dst = *(const uint8_t *)src;
 
 		return ret;
 	}
