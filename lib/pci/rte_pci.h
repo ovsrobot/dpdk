@@ -17,9 +17,7 @@ extern "C" {
 #endif
 
 #include <stdio.h>
-#include <limits.h>
 #include <inttypes.h>
-#include <sys/types.h>
 
 /*
  * Conventional PCI and PCI-X Mode 1 devices have 256 bytes of
