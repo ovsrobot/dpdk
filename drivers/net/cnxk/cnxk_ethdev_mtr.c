@@ -285,7 +285,7 @@ cnxk_nix_mtr_policy_validate(struct rte_eth_dev *dev,
 	static const char *const action_color[] = {"Green", "Yellow", "Red"};
 	bool supported[RTE_COLORS] = {false, false, false};
 	const struct rte_flow_action *action;
-	char message[1024];
+	static char message[1024];
 	uint32_t i;
 
 	RTE_SET_USED(dev);
