@@ -277,6 +277,15 @@ to prevent data leaks from previous users of the same hugepage.
 EAL ensures this behavior by removing existing backing files at startup
 and by recreating them before opening for mapping (as a precaution).
 
+One exception is ``--huge-unlink=never`` mode.
+It is used to speed up EAL initialization, usually on application restart.
+Clearing memory constitutes more than 95% of hugepage mapping time.
+EAL can save it by remapping existing backing files
+with all the data left in the mapped hugepages ("dirty" memory).
+Such segments are marked with ``RTE_MEMSEG_FLAG_DIRTY``.
+Memory allocator detects dirty segments handles them accordingly,
+in particular, it clears memory requested with ``rte_zmalloc*()``.
+
 Anonymous mapping does not allow multi-process architecture,
 but it is free of filename conflicts and leftover files on hugetlbfs.
 If memfd_create(2) is supported both at build and run time,
