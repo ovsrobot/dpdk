@@ -44,6 +44,8 @@ struct simd_bitwidth {
 struct hugepage_file_discipline {
 	/** Unlink files before mapping them to leave no trace in hugetlbfs. */
 	bool unlink_before_mapping;
+	/** Reuse existing files, never delete or re-create them. */
+	bool keep_existing;
 };
 
 /**
