@@ -83,7 +83,7 @@ int t4vf_wr_mbox_core(struct adapter *adapter,
 
 	u32 mbox_ctl = T4VF_CIM_BASE_ADDR + A_CIM_VF_EXT_MAILBOX_CTRL;
 	__be64 cmd_rpl[MBOX_LEN / 8];
-	struct mbox_entry entry;
+	static struct mbox_entry entry;
 	unsigned int delay_idx;
 	u32 v, mbox_data;
 	const __be64 *p;
