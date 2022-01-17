@@ -45,6 +45,83 @@ extern "C" {
 static __rte_always_inline void *
 rte_memcpy(void *dst, const void *src, size_t n);
 
+static __rte_always_inline uint64_t
+rte_load_unaligned_uint64(const void *ptr)
+{
+	struct unaligned_uint64 { uint64_t val; } __rte_packed;
+	return ((const struct unaligned_uint64 *)ptr)->val;
+}
+
+static __rte_always_inline uint32_t
+rte_load_unaligned_uint32(const void *ptr)
+{
+	struct unaligned_uint32 { uint32_t val; } __rte_packed;
+	return ((const struct unaligned_uint32 *)ptr)->val;
+}
+
+static __rte_always_inline uint16_t
+rte_load_unaligned_uint16(const void *ptr)
+{
+	struct unaligned_uint16 { uint16_t val; } __rte_packed;
+	return ((const struct unaligned_uint16 *)ptr)->val;
+}
+
+static __rte_always_inline void
+rte_store_unaligned_uint64(void *ptr, uint64_t val)
+{
+	struct unaligned_uint64 { uint64_t val; } __rte_packed;
+	((struct unaligned_uint64 *)ptr)->val = val;
+}
+
+static __rte_always_inline void
+rte_store_unaligned_uint32(void *ptr, uint32_t val)
+{
+	struct unaligned_uint32 { uint32_t val; } __rte_packed;
+	((struct unaligned_uint32 *)ptr)->val = val;
+}
+
+static __rte_always_inline void
+rte_store_unaligned_uint16(void *ptr, uint16_t val)
+{
+	struct unaligned_uint16 { uint16_t val; } __rte_packed;
+	((struct unaligned_uint16 *)ptr)->val = val;
+}
+
+/**
+ * Copy bytes from one location to another,
+ * locations should not overlap.
+ * Use with unaligned src/dst, and n <= 15.
+ */
+static __rte_always_inline void *
+rte_mov15_or_less_unaligned(void *dst, const void *src, size_t n)
+{
+	void *ret = dst;
+	if (n & 8) {
+		rte_store_unaligned_uint64(
+			dst,
+			rte_load_unaligned_uint64(src));
+		src = ((const uint64_t *)src + 1);
+		dst = ((uint64_t *)dst + 1);
+	}
+	if (n & 4) {
+		rte_store_unaligned_uint32(
+			dst,
+			rte_load_unaligned_uint32(src));
+		src = ((const uint32_t *)src + 1);
+		dst = ((uint32_t *)dst + 1);
+	}
+	if (n & 2) {
+		rte_store_unaligned_uint16(
+			dst,
+			rte_load_unaligned_uint16(src));
+		src = ((const uint16_t *)src + 1);
+		dst = ((uint16_t *)dst + 1);
+	}
+	if (n & 1)
+		*(uint8_t *)dst = *(const uint8_t *)src;
+	return ret;
+}
+
 #if defined __AVX512F__ && defined RTE_MEMCPY_AVX512
 
 #define ALIGNMENT_MASK 0x3F
@@ -171,8 +248,6 @@ rte_mov512blocks(uint8_t *dst, const uint8_t *src, size_t n)
 static __rte_always_inline void *
 rte_memcpy_generic(void *dst, const void *src, size_t n)
 {
-	uintptr_t dstu = (uintptr_t)dst;
-	uintptr_t srcu = (uintptr_t)src;
 	void *ret = dst;
 	size_t dstofss;
 	size_t bits;
@@ -181,24 +256,7 @@ rte_memcpy_generic(void *dst, const void *src, size_t n)
 	 * Copy less than 16 bytes
 	 */
 	if (n < 16) {
-		if (n & 0x01) {
-			*(uint8_t *)dstu = *(const uint8_t *)srcu;
-			srcu = (uintptr_t)((const uint8_t *)srcu + 1);
-			dstu = (uintptr_t)((uint8_t *)dstu + 1);
-		}
-		if (n & 0x02) {
-			*(uint16_t *)dstu = *(const uint16_t *)srcu;
-			srcu = (uintptr_t)((const uint16_t *)srcu + 1);
-			dstu = (uintptr_t)((uint16_t *)dstu + 1);
-		}
-		if (n & 0x04) {
-			*(uint32_t *)dstu = *(const uint32_t *)srcu;
-			srcu = (uintptr_t)((const uint32_t *)srcu + 1);
-			dstu = (uintptr_t)((uint32_t *)dstu + 1);
-		}
-		if (n & 0x08)
-			*(uint64_t *)dstu = *(const uint64_t *)srcu;
-		return ret;
+		return rte_mov15_or_less_unaligned(dst, src, n);
 	}
 
 	/**
@@ -379,8 +437,6 @@ rte_mov128blocks(uint8_t *dst, const uint8_t *src, size_t n)
 static __rte_always_inline void *
 rte_memcpy_generic(void *dst, const void *src, size_t n)
 {
-	uintptr_t dstu = (uintptr_t)dst;
-	uintptr_t srcu = (uintptr_t)src;
 	void *ret = dst;
 	size_t dstofss;
 	size_t bits;
@@ -389,25 +445,7 @@ rte_memcpy_generic(void *dst, const void *src, size_t n)
 	 * Copy less than 16 bytes
 	 */
 	if (n < 16) {
-		if (n & 0x01) {
-			*(uint8_t *)dstu = *(const uint8_t *)srcu;
-			srcu = (uintptr_t)((const uint8_t *)srcu + 1);
-			dstu = (uintptr_t)((uint8_t *)dstu + 1);
-		}
-		if (n & 0x02) {
-			*(uint16_t *)dstu = *(const uint16_t *)srcu;
-			srcu = (uintptr_t)((const uint16_t *)srcu + 1);
-			dstu = (uintptr_t)((uint16_t *)dstu + 1);
-		}
-		if (n & 0x04) {
-			*(uint32_t *)dstu = *(const uint32_t *)srcu;
-			srcu = (uintptr_t)((const uint32_t *)srcu + 1);
-			dstu = (uintptr_t)((uint32_t *)dstu + 1);
-		}
-		if (n & 0x08) {
-			*(uint64_t *)dstu = *(const uint64_t *)srcu;
-		}
-		return ret;
+		return rte_mov15_or_less_unaligned(dst, src, n);
 	}
 
 	/**
@@ -672,8 +710,6 @@ static __rte_always_inline void *
 rte_memcpy_generic(void *dst, const void *src, size_t n)
 {
 	__m128i xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7, xmm8;
-	uintptr_t dstu = (uintptr_t)dst;
-	uintptr_t srcu = (uintptr_t)src;
 	void *ret = dst;
 	size_t dstofss;
 	size_t srcofs;
@@ -682,25 +718,7 @@ rte_memcpy_generic(void *dst, const void *src, size_t n)
 	 * Copy less than 16 bytes
 	 */
 	if (n < 16) {
-		if (n & 0x01) {
-			*(uint8_t *)dstu = *(const uint8_t *)srcu;
-			srcu = (uintptr_t)((const uint8_t *)srcu + 1);
-			dstu = (uintptr_t)((uint8_t *)dstu + 1);
-		}
-		if (n & 0x02) {
-			*(uint16_t *)dstu = *(const uint16_t *)srcu;
-			srcu = (uintptr_t)((const uint16_t *)srcu + 1);
-			dstu = (uintptr_t)((uint16_t *)dstu + 1);
-		}
-		if (n & 0x04) {
-			*(uint32_t *)dstu = *(const uint32_t *)srcu;
-			srcu = (uintptr_t)((const uint32_t *)srcu + 1);
-			dstu = (uintptr_t)((uint32_t *)dstu + 1);
-		}
-		if (n & 0x08) {
-			*(uint64_t *)dstu = *(const uint64_t *)srcu;
-		}
-		return ret;
+		return rte_mov15_or_less_unaligned(dst, src, n);
 	}
 
 	/**
