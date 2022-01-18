@@ -2420,14 +2420,12 @@ port_queue_flow_create(portid_t port_id, queueid_t queue_id,
 		       const struct rte_flow_action *actions)
 {
 	struct rte_flow_q_ops_attr ops_attr = { .drain = drain };
-	struct rte_flow_q_op_res comp = { 0 };
 	struct rte_flow *flow;
 	struct rte_port *port;
 	struct port_flow *pf;
 	struct port_table *pt;
 	uint32_t id = 0;
 	bool found;
-	int ret = 0;
 	struct rte_flow_error error;
 	struct rte_flow_action_age *age = age_action_get(actions);
 
@@ -2477,16 +2475,6 @@ port_queue_flow_create(portid_t port_id, queueid_t queue_id,
 		return port_flow_complain(&error);
 	}
 
-	while (ret == 0) {
-		/* Poisoning to make sure PMDs update it in case of error. */
-		memset(&error, 0x22, sizeof(error));
-		ret = rte_flow_q_dequeue(port_id, queue_id, &comp, 1, &error);
-		if (ret < 0) {
-			printf("Failed to poll queue\n");
-			return -EINVAL;
-		}
-	}
-
 	pf->next = port->flow_list;
 	pf->id = id;
 	pf->flow = flow;
@@ -2501,7 +2489,6 @@ port_queue_flow_destroy(portid_t port_id, queueid_t queue_id,
 			bool drain, uint32_t n, const uint32_t *rule)
 {
 	struct rte_flow_q_ops_attr op_attr = { .drain = drain };
-	struct rte_flow_q_op_res comp = { 0 };
 	struct rte_port *port;
 	struct port_flow **tmp;
 	uint32_t c = 0;
@@ -2537,21 +2524,6 @@ port_queue_flow_destroy(portid_t port_id, queueid_t queue_id,
 				ret = port_flow_complain(&error);
 				continue;
 			}
-
-			while (ret == 0) {
-				/*
-				 * Poisoning to make sure PMD
-				 * update it in case of error.
-				 */
-				memset(&error, 0x44, sizeof(error));
-				ret = rte_flow_q_dequeue(port_id, queue_id,
-							 &comp, 1, &error);
-				if (ret < 0) {
-					printf("Failed to poll queue\n");
-					return -EINVAL;
-				}
-			}
-
 			printf("Flow rule #%u destruction enqueued\n", pf->id);
 			*tmp = pf->next;
 			free(pf);
@@ -2589,6 +2561,52 @@ port_queue_flow_drain(portid_t port_id, queueid_t queue_id)
 		return -EINVAL;
 	}
 	printf("Queue #%u drained\n", queue_id);
+	return ret;
+}
+
+/** Dequeue a queue operation from the queue. */
+int
+port_queue_flow_dequeue(portid_t port_id, queueid_t queue_id)
+{
+	struct rte_port *port;
+	struct rte_flow_q_op_res *res;
+	struct rte_flow_error error;
+	int ret = 0;
+	int success = 0;
+	int i;
+
+	if (port_id_is_invalid(port_id, ENABLED_WARN) ||
+	    port_id == (portid_t)RTE_PORT_ALL)
+		return -EINVAL;
+	port = &ports[port_id];
+
+	if (queue_id >= port->queue_nb) {
+		printf("Queue #%u is invalid\n", queue_id);
+		return -EINVAL;
+	}
+
+	res = malloc(sizeof(struct rte_flow_q_op_res) * port->queue_sz);
+	if (!res) {
+		printf("Failed to allocate memory for dequeue results\n");
+		return -ENOMEM;
+	}
+
+	memset(&error, 0x66, sizeof(error));
+	ret = rte_flow_q_dequeue(port_id, queue_id, res,
+				 port->queue_sz, &error);
+	if (ret < 0) {
+		printf("Failed to dequeue a queue\n");
+		free(res);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < ret; i++) {
+		if (res[i].status == RTE_FLOW_Q_OP_SUCCESS)
+			success++;
+	}
+	printf("Queue #%u dequeued %u operations (%u failed, %u succeeded)\n",
+	       queue_id, ret, ret - success, success);
+	free(res);
 	return ret;
 }
 
