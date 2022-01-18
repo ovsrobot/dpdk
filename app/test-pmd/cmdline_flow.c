@@ -59,6 +59,7 @@ enum index {
 	COMMON_ITEM_TEMPLATE_ID,
 	COMMON_ACTION_TEMPLATE_ID,
 	COMMON_TABLE_ID,
+	COMMON_QUEUE_ID,
 
 	/* TOP-level command. */
 	ADD,
@@ -91,6 +92,7 @@ enum index {
 	ISOLATE,
 	TUNNEL,
 	FLEX,
+	QUEUE,
 
 	/* Flex arguments */
 	FLEX_ITEM_INIT,
@@ -112,6 +114,22 @@ enum index {
 	ACTION_TEMPLATE_DESTROY_ID,
 	ACTION_TEMPLATE_SPEC,
 	ACTION_TEMPLATE_MASK,
+
+	/* Queue arguments. */
+	QUEUE_CREATE,
+	QUEUE_DESTROY,
+
+	/* Queue create arguments. */
+	QUEUE_CREATE_ID,
+	QUEUE_CREATE_DRAIN,
+	QUEUE_TABLE,
+	QUEUE_ITEM_TEMPLATE,
+	QUEUE_ACTION_TEMPLATE,
+	QUEUE_SPEC,
+
+	/* Queue destroy arguments. */
+	QUEUE_DESTROY_ID,
+	QUEUE_DESTROY_DRAIN,
 
 	/* Table arguments. */
 	TABLE_CREATE,
@@ -889,6 +907,8 @@ struct token {
 struct buffer {
 	enum index command; /**< Flow command. */
 	portid_t port; /**< Affected port ID. */
+	queueid_t queue; /** Async queue ID. */
+	bool drain; /** Drain the queue on async oparation */
 	union {
 		struct {
 			struct rte_flow_port_attr port_attr;
@@ -918,6 +938,7 @@ struct buffer {
 			uint32_t action_id;
 		} ia; /* Indirect action query arguments */
 		struct {
+			uint32_t table_id;
 			uint32_t it_id;
 			uint32_t at_id;
 			struct rte_flow_attr attr;
@@ -1063,6 +1084,18 @@ static const enum index next_table_attr[] = {
 
 static const enum index next_table_destroy_attr[] = {
 	TABLE_DESTROY_ID,
+	END,
+	ZERO,
+};
+
+static const enum index next_queue_subcmd[] = {
+	QUEUE_CREATE,
+	QUEUE_DESTROY,
+	ZERO,
+};
+
+static const enum index next_queue_destroy_attr[] = {
+	QUEUE_DESTROY_ID,
 	END,
 	ZERO,
 };
@@ -2116,6 +2149,12 @@ static int parse_table(struct context *, const struct token *,
 static int parse_table_destroy(struct context *, const struct token *,
 			       const char *, unsigned int,
 			       void *, unsigned int);
+static int parse_qo(struct context *, const struct token *,
+		    const char *, unsigned int,
+		    void *, unsigned int);
+static int parse_qo_destroy(struct context *, const struct token *,
+			    const char *, unsigned int,
+			    void *, unsigned int);
 static int parse_tunnel(struct context *, const struct token *,
 			const char *, unsigned int,
 			void *, unsigned int);
@@ -2190,6 +2229,8 @@ static int comp_item_template_id(struct context *, const struct token *,
 static int comp_action_template_id(struct context *, const struct token *,
 				   unsigned int, char *, unsigned int);
 static int comp_table_id(struct context *, const struct token *,
+			 unsigned int, char *, unsigned int);
+static int comp_queue_id(struct context *, const struct token *,
 			 unsigned int, char *, unsigned int);
 
 /** Token definitions. */
@@ -2362,6 +2403,13 @@ static const struct token token_list[] = {
 		.call = parse_int,
 		.comp = comp_table_id,
 	},
+	[COMMON_QUEUE_ID] = {
+		.name = "{queue_id}",
+		.type = "QUEUE_ID",
+		.help = "queue id",
+		.call = parse_int,
+		.comp = comp_queue_id,
+	},
 	/* Top-level command. */
 	[FLOW] = {
 		.name = "flow",
@@ -2383,7 +2431,8 @@ static const struct token token_list[] = {
 			      QUERY,
 			      ISOLATE,
 			      TUNNEL,
-			      FLEX)),
+			      FLEX,
+			      QUEUE)),
 		.call = parse_init,
 	},
 	/* Top-level command. */
@@ -2639,6 +2688,83 @@ static const struct token token_list[] = {
 		.args = ARGS(ARGS_ENTRY_PTR(struct buffer,
 					    args.table.action_id)),
 		.call = parse_table,
+	},
+	/* Top-level command. */
+	[QUEUE] = {
+		.name = "queue",
+		.help = "queue a flow rule operation",
+		.next = NEXT(next_queue_subcmd, NEXT_ENTRY(COMMON_PORT_ID)),
+		.args = ARGS(ARGS_ENTRY(struct buffer, port)),
+		.call = parse_qo,
+	},
+	/* Sub-level commands. */
+	[QUEUE_CREATE] = {
+		.name = "create",
+		.help = "create a flow rule",
+		.next = NEXT(NEXT_ENTRY(QUEUE_TABLE), NEXT_ENTRY(COMMON_QUEUE_ID)),
+		.args = ARGS(ARGS_ENTRY(struct buffer, queue)),
+		.call = parse_qo,
+	},
+	[QUEUE_DESTROY] = {
+		.name = "destroy",
+		.help = "destroy a flow rule",
+		.next = NEXT(NEXT_ENTRY(QUEUE_DESTROY_ID),
+			     NEXT_ENTRY(COMMON_QUEUE_ID)),
+		.args = ARGS(ARGS_ENTRY(struct buffer, queue)),
+		.call = parse_qo_destroy,
+	},
+	/* Queue  arguments. */
+	[QUEUE_TABLE] = {
+		.name = "table",
+		.help = "specify table id",
+		.next = NEXT(NEXT_ENTRY(QUEUE_ITEM_TEMPLATE),
+			     NEXT_ENTRY(COMMON_TABLE_ID)),
+		.args = ARGS(ARGS_ENTRY(struct buffer,
+					args.vc.table_id)),
+		.call = parse_qo,
+	},
+	[QUEUE_ITEM_TEMPLATE] = {
+		.name = "item_template",
+		.help = "specify item template id",
+		.next = NEXT(NEXT_ENTRY(QUEUE_ACTION_TEMPLATE),
+			     NEXT_ENTRY(COMMON_ITEM_TEMPLATE_ID)),
+		.args = ARGS(ARGS_ENTRY(struct buffer,
+					args.vc.it_id)),
+		.call = parse_qo,
+	},
+	[QUEUE_ACTION_TEMPLATE] = {
+		.name = "action_template",
+		.help = "specify action template id",
+		.next = NEXT(NEXT_ENTRY(QUEUE_CREATE_DRAIN),
+			     NEXT_ENTRY(COMMON_ACTION_TEMPLATE_ID)),
+		.args = ARGS(ARGS_ENTRY(struct buffer,
+					args.vc.at_id)),
+		.call = parse_qo,
+	},
+	[QUEUE_CREATE_DRAIN] = {
+		.name = "drain",
+		.help = "drain queue immediately",
+		.next = NEXT(NEXT_ENTRY(ITEM_PATTERN),
+			     NEXT_ENTRY(COMMON_BOOLEAN)),
+		.args = ARGS(ARGS_ENTRY(struct buffer, drain)),
+		.call = parse_qo,
+	},
+	[QUEUE_DESTROY_DRAIN] = {
+		.name = "drain",
+		.help = "drain queue immediately",
+		.next = NEXT(NEXT_ENTRY(QUEUE_DESTROY_ID),
+			     NEXT_ENTRY(COMMON_BOOLEAN)),
+		.args = ARGS(ARGS_ENTRY(struct buffer, drain)),
+		.call = parse_qo_destroy,
+	},
+	[QUEUE_DESTROY_ID] = {
+		.name = "rule",
+		.help = "specify rule id to destroy",
+		.next = NEXT(next_queue_destroy_attr,
+			NEXT_ENTRY(COMMON_UNSIGNED)),
+		.args = ARGS(ARGS_ENTRY_PTR(struct buffer,
+					    args.destroy.rule)),
+		.call = parse_qo_destroy,
 	},
 	/* Top-level command. */
 	[INDIRECT_ACTION] = {
@@ -8154,6 +8280,111 @@ parse_table_destroy(struct context *ctx, const struct token *token,
 	return len;
 }
 
+/** Parse tokens for queue create commands. */
+static int
+parse_qo(struct context *ctx, const struct token *token,
+	 const char *str, unsigned int len,
+	 void *buf, unsigned int size)
+{
+	struct buffer *out = buf;
+
+	/* Token name must match. */
+	if (parse_default(ctx, token, str, len, NULL, 0) < 0)
+		return -1;
+	/* Nothing else to do if there is no buffer. */
+	if (!out)
+		return len;
+	if (!out->command) {
+		if (ctx->curr != QUEUE)
+			return -1;
+		if (sizeof(*out) > size)
+			return -1;
+		out->command = ctx->curr;
+		ctx->objdata = 0;
+		ctx->object = out;
+		ctx->objmask = NULL;
+		out->args.vc.data = (uint8_t *)out + size;
+		return len;
+	}
+	switch (ctx->curr) {
+	case QUEUE_CREATE:
+		out->command = ctx->curr;
+		ctx->objdata = 0;
+		ctx->object = out;
+		ctx->objmask = NULL;
+		return len;
+	case QUEUE_TABLE:
+	case QUEUE_ITEM_TEMPLATE:
+	case QUEUE_ACTION_TEMPLATE:
+	case QUEUE_CREATE_DRAIN:
+		return len;
+	case ITEM_PATTERN:
+		out->args.vc.pattern =
+			(void *)RTE_ALIGN_CEIL((uintptr_t)(out + 1),
+					       sizeof(double));
+		ctx->object = out->args.vc.pattern;
+		ctx->objmask = NULL;
+		return len;
+	case ACTIONS:
+		out->args.vc.actions =
+			(void *)RTE_ALIGN_CEIL((uintptr_t)
+					       (out->args.vc.pattern +
+						out->args.vc.pattern_n),
+					       sizeof(double));
+		ctx->object = out->args.vc.actions;
+		ctx->objmask = NULL;
+		return len;
+	default:
+		return -1;
+	}
+}
+
+/** Parse tokens for queue destroy command. */
+static int
+parse_qo_destroy(struct context *ctx, const struct token *token,
+		 const char *str, unsigned int len,
+		 void *buf, unsigned int size)
+{
+	struct buffer *out = buf;
+	uint32_t *flow_id;
+
+	/* Token name must match. */
+	if (parse_default(ctx, token, str, len, NULL, 0) < 0)
+		return -1;
+	/* Nothing else to do if there is no buffer. */
+	if (!out)
+		return len;
+	if (!out->command || out->command == QUEUE) {
+		if (ctx->curr != QUEUE_DESTROY)
+			return -1;
+		if (sizeof(*out) > size)
+			return -1;
+		out->command = ctx->curr;
+		ctx->objdata = 0;
+		ctx->object = out;
+		ctx->objmask = NULL;
+		out->args.destroy.rule =
+			(void *)RTE_ALIGN_CEIL((uintptr_t)(out + 1),
+					       sizeof(double));
+		return len;
+	}
+	switch (ctx->curr) {
+	case QUEUE_DESTROY_ID:
+		flow_id = out->args.destroy.rule
+				+ out->args.destroy.rule_n++;
+		if ((uint8_t *)flow_id > (uint8_t *)out + size)
+			return -1;
+		ctx->objdata = 0;
+		ctx->object = flow_id;
+		ctx->objmask = NULL;
+		return len;
+	case QUEUE_DESTROY_DRAIN:
+		return len;
+	default:
+		return -1;
+	}
+}
+
 static int
 parse_flex(struct context *ctx, const struct token *token,
 	     const char *str, unsigned int len,
@@ -9193,6 +9424,28 @@ comp_table_id(struct context *ctx, const struct token *token,
 	return i;
 }
 
+/** Complete available queue IDs. */
+static int
+comp_queue_id(struct context *ctx, const struct token *token,
+	      unsigned int ent, char *buf, unsigned int size)
+{
+	unsigned int i = 0;
+	struct rte_port *port;
+
+	(void)token;
+	if (port_id_is_invalid(ctx->port, DISABLED_WARN) ||
+	    ctx->port == (portid_t)RTE_PORT_ALL)
+		return -1;
+	port = &ports[ctx->port];
+	for (i = 0; i < port->queue_nb; i++) {
+		if (buf && i == ent)
+			return snprintf(buf, size, "%u", i);
+	}
+	if (buf)
+		return -1;
+	return i;
+}
+
 /** Internal context. */
 static struct context cmd_flow_context;
 
@@ -9484,6 +9737,17 @@ cmd_flow_parsed(const struct buffer *in)
 		port_flow_table_destroy(in->port,
 					in->args.table_destroy.table_id_n,
 					in->args.table_destroy.table_id);
+		break;
+	case QUEUE_CREATE:
+		port_queue_flow_create(in->port, in->queue, in->drain,
+				       in->args.vc.table_id, in->args.vc.it_id,
+				       in->args.vc.at_id, in->args.vc.pattern,
+				       in->args.vc.actions);
+		break;
+	case QUEUE_DESTROY:
+		port_queue_flow_destroy(in->port, in->queue, in->drain,
+					in->args.destroy.rule_n,
+					in->args.destroy.rule);
 		break;
 	case INDIRECT_ACTION_CREATE:
 		port_action_handle_create(
