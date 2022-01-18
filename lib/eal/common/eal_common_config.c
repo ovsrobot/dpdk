@@ -87,3 +87,12 @@ rte_eal_has_pci(void)
 {
 	return !internal_config.no_pci;
 }
+
+/* Get the EAL base address */
+uint64_t
+rte_eal_get_baseaddr(void)
+{
+	return (internal_config.base_virtaddr != 0) ?
+		       (uint64_t) internal_config.base_virtaddr :
+		       eal_get_baseaddr();
+}
