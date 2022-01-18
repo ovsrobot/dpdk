@@ -3372,6 +3372,10 @@ following sections.
 
    flow drain {port_id} queue {queue_id}
 
+- Dequeue all operations from a queue::
+
+   flow dequeue {port_id} queue {queue_id}
+
 - Create a flow rule::
 
    flow create {port_id}
@@ -3582,6 +3586,23 @@ The usual error message is shown when a queue cannot be drained::
 
    Caught error type [...] ([...]): [...]
 
+Dequeueing flow operations
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``flow dequeue`` asks the underlying device about flow queue operations
+results and return all the processed (successfully or not) operations.
+It is bound to ``rte_flow_q_dequeue()``::
+
+   flow dequeue {port_id} queue {queue_id}
+
+If successful, it will show::
+
+   Queue #[...] dequeued #[...] operations (#[...] failed, #[...] succeeded)
+
+The usual error message is shown when a queue cannot be drained::
+
+   Caught error type [...] ([...]): [...]
+
 Creating a tunnel stub for offload
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -3710,6 +3731,8 @@ Otherwise it will show an error message of the form::
 
 This command uses the same pattern items and actions as ``flow create``,
 their format is described in `Creating flow rules`_.
+
+``flow queue dequeue`` must be called to retrieve the operation status.
 
 Attributes
 ^^^^^^^^^^
@@ -4443,6 +4466,8 @@ It does not report anything for rule IDs that do not exist. The usual error
 message is shown when a rule cannot be destroyed::
 
    Caught error type [...] ([...]): [...]
+
+``flow queue dequeue`` must be called to retrieve the operation status.
 
 Querying flow rules
 ~~~~~~~~~~~~~~~~~~~
