@@ -58,6 +58,14 @@ New Features
 * ethdev: Added ``rte_flow_configure`` API to configure Flow Management
   library, allowing to pre-allocate some resources for better performance.
 
+* ethdev: Added ``rte_flow_table_create`` API to group flow rules with
+  the same flow attributes and common matching patterns and actions
+  defined by ``rte_flow_item_template_create`` and
+  ``rte_flow_action_template_create`` respectively.
+  Corresponding functions to destroy these entities are:
+  ``rte_flow_table_destroy``, ``rte_flow_item_template_destroy``
+  and ``rte_flow_action_template_destroy`` respectively.
+
 Removed Items
 -------------
 
