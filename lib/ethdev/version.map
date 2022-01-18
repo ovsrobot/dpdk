@@ -259,6 +259,12 @@ EXPERIMENTAL {
 
 	# added in 22.03
 	rte_flow_configure;
+	rte_flow_item_template_create;
+	rte_flow_item_template_destroy;
+	rte_flow_action_template_create;
+	rte_flow_action_template_destroy;
+	rte_flow_table_create;
+	rte_flow_table_destroy;
 };
 
 INTERNAL {
