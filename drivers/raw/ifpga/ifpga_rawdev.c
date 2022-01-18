@@ -1787,12 +1787,14 @@ int ifpga_rawdev_partial_reconfigure(struct rte_rawdev *dev, int port,
 void ifpga_rawdev_cleanup(void)
 {
 	struct ifpga_rawdev *dev;
+	struct rte_rawdev *rdev;
 	unsigned int i;
 
 	for (i = 0; i < IFPGA_RAWDEV_NUM; i++) {
 		dev = &ifpga_rawdevices[i];
 		if (dev->rawdev) {
-			rte_rawdev_pmd_release(dev->rawdev);
+			rdev = dev->rawdev;
+			rte_dev_remove(rdev->device);
 			dev->rawdev = NULL;
 		}
 	}
