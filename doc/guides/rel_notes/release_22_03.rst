@@ -55,6 +55,15 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added CNXK GPIO PMD.**
+
+  Added a new rawdevice PMD which allows to manage userspace GPIOs and install
+  custom GPIO interrupt handlers which bypass kernel. This is especially useful
+  for applications, that besides providing standard dataplane functionality
+  want to have fast and low latency access to GPIO pin state.
+
+  See the :doc:`../rawdevs/cnxk_gpio` rawdev guide for more details on this
+  driver.
 
 Removed Items
 -------------
