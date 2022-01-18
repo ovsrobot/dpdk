@@ -55,6 +55,8 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* ethdev: Added ``rte_flow_configure`` API to configure Flow Management
+  library, allowing to pre-allocate some resources for better performance.
 
 Removed Items
 -------------

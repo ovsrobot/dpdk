@@ -4853,6 +4853,69 @@ rte_flow_flex_item_release(uint16_t port_id,
 			   const struct rte_flow_item_flex_handle *handle,
 			   struct rte_flow_error *error);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Flow engine port configuration attributes.
+ */
+__extension__
+struct rte_flow_port_attr {
+	/**
+	 * Version of the struct layout, should be 0.
+	 */
+	uint32_t version;
+	/**
+	 * Number of counter actions pre-configured.
+	 * If set to 0, PMD will allocate counters dynamically.
+	 * @see RTE_FLOW_ACTION_TYPE_COUNT
+	 */
+	uint32_t nb_counters;
+	/**
+	 * Number of aging actions pre-configured.
+	 * If set to 0, PMD will allocate aging dynamically.
+	 * @see RTE_FLOW_ACTION_TYPE_AGE
+	 */
+	uint32_t nb_aging;
+	/**
+	 * Number of traffic metering actions pre-configured.
+	 * If set to 0, PMD will allocate meters dynamically.
+	 * @see RTE_FLOW_ACTION_TYPE_METER
+	 */
+	uint32_t nb_meters;
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Configure flow rules module.
+ * To pre-allocate resources as per the flow port attributes
+ * this configuration function must be called before any flow rule is created.
+ * Must be called only after Ethernet device is configured, but may be called
+ * before or after the device is started as long as there are no flow rules.
+ * No other rte_flow function should be called while this function is invoked.
+ * This function can be called again to change the configuration.
+ * Some PMDs may not support re-configuration at all,
+ * or may only allow increasing the number of resources allocated.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param[in] port_attr
+ *   Port configuration attributes.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *   0 on success, a negative errno value otherwise and rte_errno is set.
+ */
+__rte_experimental
+int
+rte_flow_configure(uint16_t port_id,
+		   const struct rte_flow_port_attr *port_attr,
+		   struct rte_flow_error *error);
+
 #ifdef __cplusplus
 }
 #endif

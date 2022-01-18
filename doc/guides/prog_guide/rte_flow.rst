@@ -3589,6 +3589,43 @@ Return values:
 
 - 0 on success, a negative errno value otherwise and ``rte_errno`` is set.
 
+Rules management configuration
+------------------------------
+
+Configure flow rules management.
+
+An application may provide some hints at the initialization phase about
+rules management configuration and/or expected flow rules characteristics.
+These hints may be used by PMD to pre-allocate resources and configure NIC.
+
+Configuration
+~~~~~~~~~~~~~
+
+This function performs the flow rules management configuration and
+pre-allocates needed resources beforehand to avoid costly allocations later.
+Hints about the expected number of counters or meters in an application,
+for example, allow PMD to prepare and optimize NIC memory layout in advance.
+``rte_flow_configure()`` must be called before any flow rule is created,
+but after an Ethernet device is configured.
+
+.. code-block:: c
+
+   int
+   rte_flow_configure(uint16_t port_id,
+                     const struct rte_flow_port_attr *port_attr,
+                     struct rte_flow_error *error);
+
+Arguments:
+
+- ``port_id``: port identifier of Ethernet device.
+- ``port_attr``: port attributes for flow management library.
+- ``error``: perform verbose error reporting if not NULL. PMDs initialize
+  this structure in case of error only.
+
+Return values:
+
+- 0 on success, a negative errno value otherwise and ``rte_errno`` is set.
+
 .. _flow_isolated_mode:
 
 Flow isolated mode
