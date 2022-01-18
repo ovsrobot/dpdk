@@ -3607,18 +3607,22 @@ Hints about the expected number of counters or meters in an application,
 for example, allow PMD to prepare and optimize NIC memory layout in advance.
 ``rte_flow_configure()`` must be called before any flow rule is created,
 but after an Ethernet device is configured.
+It also creates flow queues for asynchronous flow rules operations via
+queue-based API, see `Asynchronous operations`_ section.
 
 .. code-block:: c
 
    int
    rte_flow_configure(uint16_t port_id,
                      const struct rte_flow_port_attr *port_attr,
+                     const struct rte_flow_queue_attr *queue_attr[],
                      struct rte_flow_error *error);
 
 Arguments:
 
 - ``port_id``: port identifier of Ethernet device.
 - ``port_attr``: port attributes for flow management library.
+- ``queue_attr``: queue attributes for asynchronous operations.
 - ``error``: perform verbose error reporting if not NULL. PMDs initialize
   this structure in case of error only.
 
@@ -3749,6 +3753,160 @@ and item and action templates are created.
 				*it, nb_item_templates,
 				*at, nb_action_templates,
 				*error);
+
+Asynchronous operations
+-----------------------
+
+Flow rules creation/destruction can be done by using lockless flow queues.
+An application configures the number of queues during the initialization stage.
+Then create/destroy operations are enqueued without any locks asynchronously.
+By adopting an asynchronous queue-based approach, the packet processing can
+continue with handling next packets while insertion/destruction of a flow rule
+is processed inside the hardware. The application is expected to poll for
+results later to see if the flow rule is successfully inserted/destroyed.
+User data is returned as part of the result to identify the enqueued operation.
+Polling must be done before the queue is overflowed or periodically.
+Operations can be reordered inside a queue, so the result of the rule creation
+needs to be polled first before enqueueing the destroy operation for the rule.
+Flow handle is valid once the create operation is enqueued and must be
+destroyed even if the operation is not successful and the rule is not inserted.
+
+The asynchronous flow rule insertion logic can be broken into two phases.
+
+1. Initialization stage as shown here:
+
+.. _figure_rte_flow_q_init:
+
+.. figure:: img/rte_flow_q_init.*
+
+2. Main loop as presented on a datapath application example:
+
+.. _figure_rte_flow_q_usage:
+
+.. figure:: img/rte_flow_q_usage.*
+
+Enqueue creation operation
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Enqueueing a flow rule creation operation is similar to simple creation.
+
+.. code-block:: c
+
+	struct rte_flow *
+	rte_flow_q_flow_create(uint16_t port_id,
+				uint32_t queue_id,
+				const struct rte_flow_q_ops_attr *q_ops_attr,
+				struct rte_flow_table *table,
+				const struct rte_flow_item items[],
+				uint8_t item_template_index,
+				const struct rte_flow_action actions[],
+				uint8_t action_template_index,
+				struct rte_flow_error *error);
+
+A valid handle in case of success is returned. It must be destroyed later
+by calling ``rte_flow_q_flow_destroy()`` even if the rule is rejected by HW.
+
+Enqueue destruction operation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Enqueueing a flow rule destruction operation is similar to simple destruction.
+
+.. code-block:: c
+
+	int
+	rte_flow_q_flow_destroy(uint16_t port_id,
+				uint32_t queue_id,
+				const struct rte_flow_q_ops_attr *q_ops_attr,
+				struct rte_flow *flow,
+				struct rte_flow_error *error);
+
+Drain a queue
+~~~~~~~~~~~~~
+
+Function to drain the queue and push all internally stored rules to the NIC.
+
+.. code-block:: c
+
+	int
+	rte_flow_q_drain(uint16_t port_id,
+			uint32_t queue_id,
+			struct rte_flow_error *error);
+
+There is the drain attribute in the queue operation attributes.
+When set, the requested operation must be sent to the HW without any delay.
+If not, multiple operations can be bulked together and not sent to HW right
+away to save SW/HW interactions and prioritize throughput over latency.
+The application must invoke this function to actually push all outstanding
+operations to HW in the latter case.
+
+Dequeue operations
+~~~~~~~~~~~~~~~~~~
+
+Dequeue rte flow operations.
+
+The application must invoke this function in order to complete the asynchronous
+flow rule operation and to receive the flow rule operation status.
+
+.. code-block:: c
+
+	int
+	rte_flow_q_dequeue(uint16_t port_id,
+			uint32_t queue_id,
+			struct rte_flow_q_op_res res[],
+			uint16_t n_res,
+			struct rte_flow_error *error);
+
+Multiple outstanding operations can be dequeued simultaneously.
+User data may be provided during a flow creation/destruction in order
+to distinguish between multiple operations. User data is returned as part
+of the result to provide a method to detect which operation is completed.
+
+Enqueue indirect action creation operation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Asynchronous version of indirect action creation API.
+
+.. code-block:: c
+
+	struct rte_flow_action_handle *
+	rte_flow_q_action_handle_create(uint16_t port_id,
+			uint32_t queue_id,
+			const struct rte_flow_q_ops_attr *q_ops_attr,
+			const struct rte_flow_indir_action_conf *indir_action_conf,
+			const struct rte_flow_action *action,
+			struct rte_flow_error *error);
+
+A valid handle in case of success is returned. It must be destroyed later by
+calling ``rte_flow_q_action_handle_destroy()`` even if the rule is rejected.
+
+Enqueue indirect action destruction operation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Asynchronous version of indirect action destruction API.
+
+.. code-block:: c
+
+	int
+	rte_flow_q_action_handle_destroy(uint16_t port_id,
+			uint32_t queue_id,
+			const struct rte_flow_q_ops_attr *q_ops_attr,
+			struct rte_flow_action_handle *action_handle,
+			struct rte_flow_error *error);
+
+Enqueue indirect action update operation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Asynchronous version of indirect action update API.
+
+.. code-block:: c
+
+	int
+	rte_flow_q_action_handle_update(uint16_t port_id,
+			uint32_t queue_id,
+			const struct rte_flow_q_ops_attr *q_ops_attr,
+			struct rte_flow_action_handle *action_handle,
+			const void *update,
+			struct rte_flow_error *error);
 
 .. _flow_isolated_mode:
 
