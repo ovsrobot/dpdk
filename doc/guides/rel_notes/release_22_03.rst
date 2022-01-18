@@ -66,6 +66,15 @@ New Features
   ``rte_flow_table_destroy``, ``rte_flow_item_template_destroy``
   and ``rte_flow_action_template_destroy`` respectively.
 
+* ethdev: Added ``rte_flow_q_flow_create`` and ``rte_flow_q_flow_destroy`` API
+  to enqueue flow creaion/destruction operations asynchronously as well as
+  ``rte_flow_q_dequeue`` to poll results of these operations and
+  ``rte_flow_q_drain`` to drain the flow queue and pass all operations to NIC.
+  Introduced asynchronous API for indirect actions management as well:
+  ``rte_flow_q_action_handle_create``, ``rte_flow_q_action_handle_destroy`` and
+  ``rte_flow_q_action_handle_update``.
+
+
 Removed Items
 -------------
 
