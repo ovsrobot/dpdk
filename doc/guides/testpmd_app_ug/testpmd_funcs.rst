@@ -3285,8 +3285,8 @@ Flow rules management
 ---------------------
 
 Control of the generic flow API (*rte_flow*) is fully exposed through the
-``flow`` command (validation, creation, destruction, queries and operation
-modes).
+``flow`` command (configuration, validation, creation, destruction, queries
+and operation modes).
 
 Considering *rte_flow* overlaps with all `Filter Functions`_, using both
 features simultaneously may cause undefined side-effects and is therefore
@@ -3308,6 +3308,14 @@ other commands, in particular:
 The first parameter stands for the operation mode. Possible operations and
 their general syntax are described below. They are covered in detail in the
 following sections.
+
+- Configure flow management::
+
+   flow configure {port_id}
+       [queues_number {number}] [queues_size {size}]
+       [counters_number {number}]
+       [aging_counters_number {number}]
+       [meters_number {number}]
 
 - Check whether a flow rule can be created::
 
@@ -3367,6 +3375,28 @@ following sections.
 - Tunnel offload - list port tunnel stubs::
 
    flow tunnel list {port_id}
+
+Configuring flow management library
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``flow configure`` pre-allocates all the needed resources in the underlying
+device to be used later at the flow creation. Flow queues are allocated as well
+for asynchronous flow creation/destruction operations. It is bound to
+``rte_flow_configure()``::
+
+   flow configure {port_id}
+       [queues_number {number}] [queues_size {size}]
+       [counters_number {number}]
+       [aging_counters_number {number}]
+       [meters_number {number}]
+
+If successful, it will show::
+
+   Configure flows on port #[...]: number of queues #[...] with #[...] elements
+
+Otherwise it will show an error message of the form::
+
+   Caught error type [...] ([...]): [...]
 
 Creating a tunnel stub for offload
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
