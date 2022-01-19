@@ -96,6 +96,26 @@ static const struct rte_pci_id pci_id_ark_map[] = {
 	{.vendor_id = 0, /* sentinel */ },
 };
 
+struct ark_caps {
+	bool rqpacing;
+};
+struct ark_dev_caps {
+	uint32_t  device_id;
+	struct ark_caps  caps;
+};
+static const struct ark_dev_caps
+ark_device_caps[] = {
+		     {0x100d, {.rqpacing = true} },
+		     {0x100e, {.rqpacing = true} },
+		     {0x100f, {.rqpacing = true} },
+		     {0x1010, {.rqpacing = false} },
+		     {0x1017, {.rqpacing = true} },
+		     {0x1018, {.rqpacing = true} },
+		     {0x1019, {.rqpacing = true} },
+		     {0x101e, {.rqpacing = false} },
+		     {.device_id = 0,}
+};
+
 static int
 eth_ark_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 		struct rte_pci_device *pci_dev)
@@ -256,6 +276,7 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 	int ret;
 	int port_count = 1;
 	int p;
+	bool rqpacing = false;
 
 	ark->eth_dev = dev;
 
@@ -269,6 +290,15 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 	pci_dev = RTE_ETH_DEV_TO_PCI(dev);
 	rte_eth_copy_pci_info(dev, pci_dev);
 	dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
+
+	p = 0;
+	while (ark_device_caps[p].device_id != 0) {
+		if (pci_dev->id.device_id == ark_device_caps[p].device_id) {
+			rqpacing = ark_device_caps[p].caps.rqpacing;
+			break;
+		}
+		p++;
+	}
 
 	/* Use dummy function until setup */
 	dev->rx_pkt_burst = &eth_ark_recv_pkts_noop;
@@ -288,8 +318,12 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 	ark->pktgen.v  = (void *)&ark->bar0[ARK_PKTGEN_BASE];
 	ark->pktchkr.v  = (void *)&ark->bar0[ARK_PKTCHKR_BASE];
 
-	ark->rqpacing =
-		(struct ark_rqpace_t *)(ark->bar0 + ARK_RCPACING_BASE);
+	if (rqpacing) {
+		ark->rqpacing =
+			(struct ark_rqpace_t *)(ark->bar0 + ARK_RCPACING_BASE);
+	} else {
+		ark->rqpacing = NULL;
+	}
 	ark->started = 0;
 	ark->pkt_dir_v = ARK_PKT_DIR_INIT_VAL;
 
@@ -309,13 +343,15 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 		return -1;
 	}
 	if (ark->sysctrl.t32[3] != 0) {
-		if (ark_rqp_lasped(ark->rqpacing)) {
-			ARK_PMD_LOG(ERR, "Arkville Evaluation System - "
-				    "Timer has Expired\n");
-			return -1;
+		if (ark->rqpacing) {
+			if (ark_rqp_lasped(ark->rqpacing)) {
+				ARK_PMD_LOG(ERR, "Arkville Evaluation System - "
+					    "Timer has Expired\n");
+				return -1;
+			}
+			ARK_PMD_LOG(WARNING, "Arkville Evaluation System - "
+				    "Timer is Running\n");
 		}
-		ARK_PMD_LOG(WARNING, "Arkville Evaluation System - "
-			    "Timer is Running\n");
 	}
 
 	ARK_PMD_LOG(DEBUG,
@@ -499,7 +535,8 @@ ark_config_device(struct rte_eth_dev *dev)
 	ark_ddm_stats_reset(ark->ddm.v);
 
 	ark_ddm_stop(ark->ddm.v, 0);
-	ark_rqp_stats_reset(ark->rqpacing);
+	if (ark->rqpacing)
+		ark_rqp_stats_reset(ark->rqpacing);
 
 	return 0;
 }
@@ -695,7 +732,8 @@ eth_ark_dev_close(struct rte_eth_dev *dev)
 	/*
 	 * TODO This should only be called once for the device during shutdown
 	 */
-	ark_rqp_dump(ark->rqpacing);
+	if (ark->rqpacing)
+		ark_rqp_dump(ark->rqpacing);
 
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		eth_ark_tx_queue_release(dev->data->tx_queues[i]);
