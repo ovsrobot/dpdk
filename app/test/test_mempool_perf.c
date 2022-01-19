@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2014 Intel Corporation
+ * Copyright(c) 2022 SmartShare Systems
  */
 
 #include <string.h>
@@ -55,18 +56,23 @@
  *
  *      - Bulk get from 1 to 32
  *      - Bulk put from 1 to 32
+ *      - Bulk get and put from 1 to 32, compile time constant
  *
  *    - Number of kept objects (*n_keep*)
  *
  *      - 32
  *      - 128
+ *      - 512
  */
 
 #define N 65536
 #define TIME_S 5
 #define MEMPOOL_ELT_SIZE 2048
-#define MAX_KEEP 128
+#define MAX_KEEP 512
 #define MEMPOOL_SIZE ((rte_lcore_count()*(MAX_KEEP+RTE_MEMPOOL_CACHE_MAX_SIZE))-1)
+
+/* Number of pointers fitting into one cache line. */
+#define CACHE_LINE_BURST (RTE_CACHE_LINE_SIZE/sizeof(uintptr_t))
 
 #define LOG_ERR() printf("test failed at %s():%d\n", __func__, __LINE__)
 #define RET_ERR() do {							\
@@ -80,16 +86,16 @@
 	} while (0)
 
 static int use_external_cache;
-static unsigned external_cache_size = RTE_MEMPOOL_CACHE_MAX_SIZE;
+static unsigned int external_cache_size = RTE_MEMPOOL_CACHE_MAX_SIZE;
 
 static uint32_t synchro;
 
 /* number of objects in one bulk operation (get or put) */
-static unsigned n_get_bulk;
-static unsigned n_put_bulk;
+static int n_get_bulk;
+static int n_put_bulk;
 
 /* number of objects retrieved from mempool before putting them back */
-static unsigned n_keep;
+static int n_keep;
 
 /* number of enqueues / dequeues */
 struct mempool_test_stats {
@@ -104,20 +110,43 @@ static struct mempool_test_stats stats[RTE_MAX_LCORE];
  */
 static void
 my_obj_init(struct rte_mempool *mp, __rte_unused void *arg,
-	    void *obj, unsigned i)
+	    void *obj, unsigned int i)
 {
 	uint32_t *objnum = obj;
 	memset(obj, 0, mp->elt_size);
 	*objnum = i;
 }
 
+#define test_loop(x_keep, x_get_bulk, x_put_bulk)		       \
+		for (i = 0; likely(i < (N/x_keep)); i++) {	      \
+			/* get x_keep objects by bulk of x_get_bulk */  \
+			for (idx = 0; idx < x_keep; idx += x_get_bulk) {\
+				ret = rte_mempool_generic_get(mp,       \
+						&obj_table[idx],	\
+						x_get_bulk,	     \
+						cache);		 \
+				if (unlikely(ret < 0)) {		\
+					rte_mempool_dump(stdout, mp);   \
+					GOTO_ERR(ret, out);	     \
+				}				       \
+			}					       \
+									\
+			/* put the objects back by bulk of x_put_bulk */\
+			for (idx = 0; idx < x_keep; idx += x_put_bulk) {\
+				rte_mempool_generic_put(mp,	     \
+						&obj_table[idx],	\
+						x_put_bulk,	     \
+						cache);		 \
+			}					       \
+		}
+
 static int
 per_lcore_mempool_test(void *arg)
 {
-	void *obj_table[MAX_KEEP];
-	unsigned i, idx;
+	void *obj_table[MAX_KEEP] __rte_cache_aligned;
+	int i, idx;
 	struct rte_mempool *mp = arg;
-	unsigned lcore_id = rte_lcore_id();
+	unsigned int lcore_id = rte_lcore_id();
 	int ret = 0;
 	uint64_t start_cycles, end_cycles;
 	uint64_t time_diff = 0, hz = rte_get_timer_hz();
@@ -139,6 +168,9 @@ per_lcore_mempool_test(void *arg)
 		GOTO_ERR(ret, out);
 	if (((n_keep / n_put_bulk) * n_put_bulk) != n_keep)
 		GOTO_ERR(ret, out);
+	/* for constant n, n_get_bulk and n_put_bulk must be the same */
+	if (n_get_bulk < 0 && n_put_bulk != n_get_bulk)
+		GOTO_ERR(ret, out);
 
 	stats[lcore_id].enq_count = 0;
 
@@ -149,30 +181,18 @@ per_lcore_mempool_test(void *arg)
 	start_cycles = rte_get_timer_cycles();
 
 	while (time_diff/hz < TIME_S) {
-		for (i = 0; likely(i < (N/n_keep)); i++) {
-			/* get n_keep objects by bulk of n_bulk */
-			idx = 0;
-			while (idx < n_keep) {
-				ret = rte_mempool_generic_get(mp,
-							      &obj_table[idx],
-							      n_get_bulk,
-							      cache);
-				if (unlikely(ret < 0)) {
-					rte_mempool_dump(stdout, mp);
-					/* in this case, objects are lost... */
-					GOTO_ERR(ret, out);
-				}
-				idx += n_get_bulk;
-			}
-
-			/* put the objects back */
-			idx = 0;
-			while (idx < n_keep) {
-				rte_mempool_generic_put(mp, &obj_table[idx],
-							n_put_bulk,
-							cache);
-				idx += n_put_bulk;
-			}
+		if (n_get_bulk > 0) {
+			test_loop(n_keep, n_get_bulk, n_put_bulk);
+		} else if (n_get_bulk == -1) {
+			test_loop(-n_keep, 1, 1);
+		} else if (n_get_bulk == -4) {
+			test_loop(-n_keep, 4, 4);
+		} else if (n_get_bulk == -(int)CACHE_LINE_BURST) {
+			test_loop(-n_keep, CACHE_LINE_BURST, CACHE_LINE_BURST);
+		} else if (n_get_bulk == -32) {
+			test_loop(-n_keep, 32, 32);
+		} else {
+			GOTO_ERR(ret, out);
 		}
 		end_cycles = rte_get_timer_cycles();
 		time_diff = end_cycles - start_cycles;
@@ -192,10 +212,10 @@ out:
 static int
 launch_cores(struct rte_mempool *mp, unsigned int cores)
 {
-	unsigned lcore_id;
+	unsigned int lcore_id;
 	uint64_t rate;
 	int ret;
-	unsigned cores_save = cores;
+	unsigned int cores_save = cores;
 
 	__atomic_store_n(&synchro, 0, __ATOMIC_RELAXED);
 
@@ -203,10 +223,14 @@ launch_cores(struct rte_mempool *mp, unsigned int cores)
 	memset(stats, 0, sizeof(stats));
 
 	printf("mempool_autotest cache=%u cores=%u n_get_bulk=%u "
-	       "n_put_bulk=%u n_keep=%u ",
+	       "n_put_bulk=%u n_keep=%u constant_n=%s ",
 	       use_external_cache ?
-		   external_cache_size : (unsigned) mp->cache_size,
-	       cores, n_get_bulk, n_put_bulk, n_keep);
+		   external_cache_size : (unsigned int) mp->cache_size,
+	       cores,
+	       n_get_bulk > 0 ? n_get_bulk : -n_get_bulk,
+	       n_put_bulk > 0 ? n_put_bulk : -n_put_bulk,
+	       n_keep > 0 ? n_keep : -n_keep,
+	       n_get_bulk > 0 ? "false" : "true");
 
 	if (rte_mempool_avail_count(mp) != MEMPOOL_SIZE) {
 		printf("mempool is not full\n");
@@ -253,12 +277,13 @@ launch_cores(struct rte_mempool *mp, unsigned int cores)
 static int
 do_one_mempool_test(struct rte_mempool *mp, unsigned int cores)
 {
-	unsigned bulk_tab_get[] = { 1, 4, 32, 0 };
-	unsigned bulk_tab_put[] = { 1, 4, 32, 0 };
-	unsigned keep_tab[] = { 32, 128, 0 };
-	unsigned *get_bulk_ptr;
-	unsigned *put_bulk_ptr;
-	unsigned *keep_ptr;
+	/* Negative n_get_bulk values represent constants in the test. */
+	int bulk_tab_get[] = { 1, 4, CACHE_LINE_BURST, 32, -1, -4, -(int)CACHE_LINE_BURST, -32, 0 };
+	int bulk_tab_put[] = { 1, 4, CACHE_LINE_BURST, 32, 0 };
+	int keep_tab[] = { 32, 128, 512, 0 };
+	int *get_bulk_ptr;
+	int *put_bulk_ptr;
+	int *keep_ptr;
 	int ret;
 
 	for (get_bulk_ptr = bulk_tab_get; *get_bulk_ptr; get_bulk_ptr++) {
@@ -266,13 +291,16 @@ do_one_mempool_test(struct rte_mempool *mp, unsigned int cores)
 			for (keep_ptr = keep_tab; *keep_ptr; keep_ptr++) {
 
 				n_get_bulk = *get_bulk_ptr;
-				n_put_bulk = *put_bulk_ptr;
-				n_keep = *keep_ptr;
+				n_put_bulk = n_get_bulk > 0 ? *put_bulk_ptr : n_get_bulk;
+				n_keep = n_get_bulk > 0 ? *keep_ptr : -*keep_ptr;
 				ret = launch_cores(mp, cores);
 
 				if (ret < 0)
 					return -1;
 			}
+			/* Skip the put loop when n is constant */
+			if (n_get_bulk < 0)
+				break;
 		}
 	}
 	return 0;
