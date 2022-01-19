@@ -5,7 +5,11 @@
 #ifndef _ARK_EXT_H_
 #define _ARK_EXT_H_
 
-#include <ethdev_driver.h>
+#include <stdint.h>
+struct rte_eth_dev;
+struct rte_mbuf;
+struct rte_ether_addr;
+struct rte_eth_stats;
 
 /* The following section lists function prototypes for Arkville's
  * dynamic PMD extension. User's who create an extension
@@ -55,7 +59,7 @@ void rte_pmd_ark_dev_uninit(struct rte_eth_dev *dev, void *user_data);
  *   user argument from dev_init() call.
  * @return (0) if successful.
  */
-uint8_t dev_get_port_count(struct rte_eth_dev *dev, void *user_data);
+uint8_t rte_pmd_ark_dev_get_port_count(struct rte_eth_dev *dev, void *user_data);
 
 /**
  * Extension prototype, optional implementation.

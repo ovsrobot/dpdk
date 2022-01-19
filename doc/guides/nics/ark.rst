@@ -143,7 +143,7 @@ object file contains extension (or hook) functions that are registered
 and then called during PMD operations.
 
 The allowable set of extension functions are defined and documented in
-``ark_ext.h``, only the initialization function,
+``rte_pmd_ark.h``, only the initialization function,
 ``rte_pmd_ark_dev_init()``, is required; all others are optional. The
 following sections give a small extension example along with
 instructions for compiling and using the extension.
@@ -157,7 +157,7 @@ during RX from user meta data coming from FPGA hardware.
 
 .. code-block:: c
 
-   #include <ark_ext.h>
+   #include <rte_pmd_ark.h>
    #include <rte_mbuf.h>
    #include <rte_ethdev.h>
    #include <rte_malloc.h>

@@ -7,6 +7,8 @@ if is_windows
     subdir_done()
 endif
 
+headers = files('rte_pmd_ark.h')
+
 sources = files(
         'ark_ddm.c',
         'ark_ethdev.c',
