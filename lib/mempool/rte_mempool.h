@@ -94,7 +94,8 @@ struct rte_mempool_cache {
 	 * Cache is allocated to this size to allow it to overflow in certain
 	 * cases to avoid needless emptying of cache.
 	 */
-	void *objs[RTE_MEMPOOL_CACHE_MAX_SIZE * 3]; /**< Cache objects */
+	void *objs[RTE_MEMPOOL_CACHE_MAX_SIZE * 2] __rte_cache_aligned;
+	/**< Cache objects */
 } __rte_cache_aligned;
 
 /**
@@ -1334,6 +1335,7 @@ static __rte_always_inline void
 rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 			   unsigned int n, struct rte_mempool_cache *cache)
 {
+	uint32_t index;
 	void **cache_objs;
 
 	/* increment stat now, adding in mempool always success */
@@ -1344,31 +1346,56 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 	if (unlikely(cache == NULL || n > RTE_MEMPOOL_CACHE_MAX_SIZE))
 		goto ring_enqueue;
 
-	cache_objs = &cache->objs[cache->len];
+	/* If the request itself is too big for the cache */
+	if (unlikely(n > cache->flushthresh))
+		goto ring_enqueue;
 
 	/*
 	 * The cache follows the following algorithm
-	 *   1. Add the objects to the cache
-	 *   2. Anything greater than the cache min value (if it crosses the
-	 *   cache flush threshold) is flushed to the ring.
+	 *   1. If the objects cannot be added to the cache without
+	 *   crossing the flush threshold, flush the cache to the ring.
+	 *   2. Add the objects to the cache.
 	 */
 
-	/* Add elements back into the cache */
-	rte_memcpy(&cache_objs[0], obj_table, sizeof(void *) * n);
+	if (cache->len + n <= cache->flushthresh) {
+		cache_objs = &cache->objs[cache->len];
 
-	cache->len += n;
+		cache->len += n;
+	} else {
+		cache_objs = cache->objs;
 
-	if (cache->len >= cache->flushthresh) {
-		rte_mempool_ops_enqueue_bulk(mp, &cache->objs[cache->size],
-				cache->len - cache->size);
-		cache->len = cache->size;
+#ifdef RTE_LIBRTE_MEMPOOL_DEBUG
+		if (rte_mempool_ops_enqueue_bulk(mp, cache_objs, cache->len) < 0)
+			rte_panic("cannot put objects in mempool\n");
+#else
+		rte_mempool_ops_enqueue_bulk(mp, cache_objs, cache->len);
+#endif
+		cache->len = n;
+	}
+
+	/* Add the objects to the cache. */
+	for (index = 0; index < (n & ~0x3); index += 4) {
+		cache_objs[index] = obj_table[index];
+		cache_objs[index + 1] = obj_table[index + 1];
+		cache_objs[index + 2] = obj_table[index + 2];
+		cache_objs[index + 3] = obj_table[index + 3];
+	}
+	switch (n & 0x3) {
+	case 3:
+		cache_objs[index] = obj_table[index];
+		index++; /* fallthrough */
+	case 2:
+		cache_objs[index] = obj_table[index];
+		index++; /* fallthrough */
+	case 1:
+		cache_objs[index] = obj_table[index];
 	}
 
 	return;
 
 ring_enqueue:
 
-	/* push remaining objects in ring */
+	/* Put the objects into the ring */
 #ifdef RTE_LIBRTE_MEMPOOL_DEBUG
 	if (rte_mempool_ops_enqueue_bulk(mp, obj_table, n) < 0)
 		rte_panic("cannot put objects in mempool\n");
@@ -1376,7 +1403,6 @@ ring_enqueue:
 	rte_mempool_ops_enqueue_bulk(mp, obj_table, n);
 #endif
 }
-
 
 /**
  * Put several objects back in the mempool.
