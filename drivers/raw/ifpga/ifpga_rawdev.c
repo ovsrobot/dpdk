@@ -497,7 +497,7 @@ ifpga_rawdev_gsd_handle(__rte_unused void *param)
 	int gsd_enable, ret;
 #define MS 1000
 
-	while (1) {
+	while (ifpga_monitor_start) {
 		gsd_enable = 0;
 		for (i = 0; i < IFPGA_RAWDEV_NUM; i++) {
 			ifpga_rdev = &ifpga_rawdevices[i];
@@ -544,7 +544,9 @@ ifpga_monitor_stop_func(void)
 {
 	int ret;
 
-	if (ifpga_monitor_start == 1) {
+	if ((ifpga_monitor_start == 1) && ifpga_monitor_start_thread) {
+		ifpga_monitor_start = 0;
+
 		ret = pthread_cancel(ifpga_monitor_start_thread);
 		if (ret)
 			IFPGA_RAWDEV_PMD_ERR("Can't cancel the thread");
@@ -552,8 +554,6 @@ ifpga_monitor_stop_func(void)
 		ret = pthread_join(ifpga_monitor_start_thread, NULL);
 		if (ret)
 			IFPGA_RAWDEV_PMD_ERR("Can't join the thread");
-
-		ifpga_monitor_start = 0;
 
 		return ret;
 	}
