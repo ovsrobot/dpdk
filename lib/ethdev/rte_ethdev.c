@@ -6473,6 +6473,87 @@ rte_eth_rx_metadata_negotiate(uint16_t port_id, uint64_t *features)
 		       (*dev->dev_ops->rx_metadata_negotiate)(dev, features));
 }
 
+int
+rte_eth_ip_reassembly_conf_set(uint16_t port_id,
+			       struct rte_eth_ip_reass_params *conf)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (dev->data->dev_configured == 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"Device with port_id=%"PRIu16" is not configured.\n",
+			port_id);
+		return -EINVAL;
+	}
+
+	if (dev->data->dev_started != 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"Device with port_id=%"PRIu16" started,\n"
+			"cannot configure IP reassembly params.\n",
+			port_id);
+		return -EINVAL;
+	}
+
+	if ((dev->data->dev_conf.rxmode.offloads &
+			RTE_ETH_RX_OFFLOAD_IP_REASSEMBLY) == 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"The port (ID=%"PRIu16") is not configured for IP reassembly\n",
+			port_id);
+		return -EINVAL;
+	}
+
+
+	if (conf == NULL) {
+		RTE_ETHDEV_LOG(ERR,
+				"Invalid IP reassembly configuration (NULL)\n");
+		return -EINVAL;
+	}
+
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->ip_reassembly_conf_set,
+				-ENOTSUP);
+	return eth_err(port_id,
+		       (*dev->dev_ops->ip_reassembly_conf_set)(dev, conf));
+}
+
+int
+rte_eth_ip_reassembly_conf_get(uint16_t port_id,
+			       struct rte_eth_ip_reass_params *conf)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (conf == NULL) {
+		RTE_ETHDEV_LOG(ERR, "Cannot get reassembly info to NULL");
+		return -EINVAL;
+	}
+
+	if (dev->data->dev_configured == 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"Device with port_id=%"PRIu16" is not configured.\n",
+			port_id);
+		return -EINVAL;
+	}
+
+	if ((dev->data->dev_conf.rxmode.offloads &
+			RTE_ETH_RX_OFFLOAD_IP_REASSEMBLY) == 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"The port (ID=%"PRIu16") is not configured for IP reassembly\n",
+			port_id);
+		return -EINVAL;
+	}
+
+	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->ip_reassembly_conf_get,
+				-ENOTSUP);
+	memset(conf, 0, sizeof(struct rte_eth_ip_reass_params));
+	return eth_err(port_id,
+		       (*dev->dev_ops->ip_reassembly_conf_get)(dev, conf));
+}
+
 RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO);
 
 RTE_INIT(ethdev_init_telemetry)
