@@ -66,7 +66,7 @@
 	(TAP_GSO_MBUFS_PER_CORE * TAP_GSO_MBUF_CACHE_SIZE)
 
 /* IPC key for queue fds sync */
-#define TAP_MP_KEY "tap_mp_sync_queues"
+#define TAP_MP_REQ_START_RXTX "tap_mp_req_start_rxtx"
 
 #define TAP_IOV_DEFAULT_MAX 1024
 
@@ -880,10 +880,48 @@ tap_link_set_up(struct rte_eth_dev *dev)
 	return tap_ioctl(pmd, SIOCSIFFLAGS, &ifr, 1, LOCAL_AND_REMOTE);
 }
 
+static int tap_mp_req_on_rxtx(struct rte_eth_dev *dev)
+{
+	struct rte_mp_msg msg;
+	struct ipc_queues *request_param = (struct ipc_queues *)msg.param;
+	int err;
+	int fd_iterator = 0;
+	struct pmd_process_private *process_private = dev->process_private;
+	int i;
+
+	memset(&msg, 0, sizeof(msg));
+	strlcpy(msg.name, TAP_MP_REQ_START_RXTX, sizeof(msg.name));
+	strlcpy(request_param->port_name, dev->data->name, sizeof(request_param->port_name));
+	msg.len_param = sizeof(*request_param);
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		msg.fds[fd_iterator++] = process_private->txq_fds[i];
+		msg.num_fds++;
+		request_param->txq_count++;
+	}
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		msg.fds[fd_iterator++] = process_private->rxq_fds[i];
+		msg.num_fds++;
+		request_param->rxq_count++;
+	}
+
+	err = rte_mp_sendmsg(&msg);
+	if (err < 0) {
+		TAP_LOG(ERR, "Failed to send start req to secondary %d",
+			rte_errno);
+		return -1;
+	}
+
+	return 0;
+}
+
 static int
 tap_dev_start(struct rte_eth_dev *dev)
 {
 	int err, i;
+
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		tap_mp_req_on_rxtx(dev);
+	}
 
 	err = tap_intr_handle_set(dev, 1);
 	if (err)
@@ -899,6 +937,34 @@ tap_dev_start(struct rte_eth_dev *dev)
 		dev->data->rx_queue_state[i] = RTE_ETH_QUEUE_STATE_STARTED;
 
 	return err;
+}
+
+static int
+tap_mp_req_start_rxtx(const struct rte_mp_msg *request, __rte_unused const void *peer)
+{
+	struct rte_eth_dev *dev;
+	const struct ipc_queues *request_param =
+		(const struct ipc_queues *)request->param;
+	int fd_iterator;
+	int queue;
+	struct pmd_process_private *process_private;
+
+	dev = rte_get_eth_dev_by_name(request_param->port_name);
+	if (!dev) {
+		TAP_LOG(ERR, "Failed to get dev for %s",
+			request_param->port_name);
+		return -1;
+	}
+	process_private = dev->process_private;
+	fd_iterator = 0;
+	TAP_LOG(DEBUG, "tap_attach rx_q:%d tx_q:%d\n", request_param->rxq_count,
+		request_param->txq_count);
+	for (queue = 0; queue < request_param->txq_count; queue++)
+		process_private->txq_fds[queue] = request->fds[fd_iterator++];
+	for (queue = 0; queue < request_param->rxq_count; queue++)
+		process_private->rxq_fds[queue] = request->fds[fd_iterator++];
+
+	return 0;
 }
 
 /* This function gets called when the current port gets stopped.
@@ -1084,6 +1150,7 @@ tap_dev_close(struct rte_eth_dev *dev)
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
 		rte_free(dev->process_private);
+		rte_mp_action_unregister(TAP_MP_REQ_START_RXTX);
 		return 0;
 	}
 
@@ -1140,8 +1207,6 @@ tap_dev_close(struct rte_eth_dev *dev)
 		internals->ioctl_sock = -1;
 	}
 	rte_free(dev->process_private);
-	if (tap_devices_count == 1)
-		rte_mp_action_unregister(TAP_MP_KEY);
 	tap_devices_count--;
 	/*
 	 * Since TUN device has no more opened file descriptors
@@ -2292,113 +2357,6 @@ leave:
 	return ret;
 }
 
-/* Request queue file descriptors from secondary to primary. */
-static int
-tap_mp_attach_queues(const char *port_name, struct rte_eth_dev *dev)
-{
-	int ret;
-	struct timespec timeout = {.tv_sec = 1, .tv_nsec = 0};
-	struct rte_mp_msg request, *reply;
-	struct rte_mp_reply replies;
-	struct ipc_queues *request_param = (struct ipc_queues *)request.param;
-	struct ipc_queues *reply_param;
-	struct pmd_process_private *process_private = dev->process_private;
-	int queue, fd_iterator;
-
-	/* Prepare the request */
-	memset(&request, 0, sizeof(request));
-	strlcpy(request.name, TAP_MP_KEY, sizeof(request.name));
-	strlcpy(request_param->port_name, port_name,
-		sizeof(request_param->port_name));
-	request.len_param = sizeof(*request_param);
-	/* Send request and receive reply */
-	ret = rte_mp_request_sync(&request, &replies, &timeout);
-	if (ret < 0 || replies.nb_received != 1) {
-		TAP_LOG(ERR, "Failed to request queues from primary: %d",
-			rte_errno);
-		return -1;
-	}
-	reply = &replies.msgs[0];
-	reply_param = (struct ipc_queues *)reply->param;
-	TAP_LOG(DEBUG, "Received IPC reply for %s", reply_param->port_name);
-
-	/* Attach the queues from received file descriptors */
-	if (reply_param->rxq_count + reply_param->txq_count != reply->num_fds) {
-		TAP_LOG(ERR, "Unexpected number of fds received");
-		return -1;
-	}
-
-	dev->data->nb_rx_queues = reply_param->rxq_count;
-	dev->data->nb_tx_queues = reply_param->txq_count;
-	fd_iterator = 0;
-	for (queue = 0; queue < reply_param->rxq_count; queue++)
-		process_private->rxq_fds[queue] = reply->fds[fd_iterator++];
-	for (queue = 0; queue < reply_param->txq_count; queue++)
-		process_private->txq_fds[queue] = reply->fds[fd_iterator++];
-	free(reply);
-	return 0;
-}
-
-/* Send the queue file descriptors from the primary process to secondary. */
-static int
-tap_mp_sync_queues(const struct rte_mp_msg *request, const void *peer)
-{
-	struct rte_eth_dev *dev;
-	struct pmd_process_private *process_private;
-	struct rte_mp_msg reply;
-	const struct ipc_queues *request_param =
-		(const struct ipc_queues *)request->param;
-	struct ipc_queues *reply_param =
-		(struct ipc_queues *)reply.param;
-	uint16_t port_id;
-	int queue;
-	int ret;
-
-	/* Get requested port */
-	TAP_LOG(DEBUG, "Received IPC request for %s", request_param->port_name);
-	ret = rte_eth_dev_get_port_by_name(request_param->port_name, &port_id);
-	if (ret) {
-		TAP_LOG(ERR, "Failed to get port id for %s",
-			request_param->port_name);
-		return -1;
-	}
-	dev = &rte_eth_devices[port_id];
-	process_private = dev->process_private;
-
-	/* Fill file descriptors for all queues */
-	reply.num_fds = 0;
-	reply_param->rxq_count = 0;
-	if (dev->data->nb_rx_queues + dev->data->nb_tx_queues >
-			RTE_MP_MAX_FD_NUM){
-		TAP_LOG(ERR, "Number of rx/tx queues exceeds max number of fds");
-		return -1;
-	}
-
-	for (queue = 0; queue < dev->data->nb_rx_queues; queue++) {
-		reply.fds[reply.num_fds++] = process_private->rxq_fds[queue];
-		reply_param->rxq_count++;
-	}
-	RTE_ASSERT(reply_param->rxq_count == dev->data->nb_rx_queues);
-
-	reply_param->txq_count = 0;
-	for (queue = 0; queue < dev->data->nb_tx_queues; queue++) {
-		reply.fds[reply.num_fds++] = process_private->txq_fds[queue];
-		reply_param->txq_count++;
-	}
-	RTE_ASSERT(reply_param->txq_count == dev->data->nb_tx_queues);
-
-	/* Send reply */
-	strlcpy(reply.name, request->name, sizeof(reply.name));
-	strlcpy(reply_param->port_name, request_param->port_name,
-		sizeof(reply_param->port_name));
-	reply.len_param = sizeof(*reply_param);
-	if (rte_mp_reply(&reply, peer) < 0) {
-		TAP_LOG(ERR, "Failed to reply an IPC request to sync queues");
-		return -1;
-	}
-	return 0;
-}
-
 /* Open a TAP interface device.
  */
 static int
@@ -2442,9 +2400,11 @@ rte_pmd_tap_probe(struct rte_vdev_device *dev)
 			return -1;
 		}
 
-		ret = tap_mp_attach_queues(name, eth_dev);
-		if (ret != 0)
-			return -1;
+		ret = rte_mp_action_register(TAP_MP_REQ_START_RXTX, tap_mp_req_start_rxtx);
+		if (ret < 0 && rte_errno != ENOTSUP)
+			TAP_LOG(ERR, "tap: Failed to register IPC callback: %s",
+				strerror(rte_errno));
+
 		rte_eth_dev_probing_finish(eth_dev);
 		return 0;
 	}
@@ -2492,15 +2452,6 @@ rte_pmd_tap_probe(struct rte_vdev_device *dev)
 
 	TAP_LOG(DEBUG, "Initializing pmd_tap for %s", name);
 
-	/* Register IPC feed callback */
-	if (!tap_devices_count) {
-		ret = rte_mp_action_register(TAP_MP_KEY, tap_mp_sync_queues);
-		if (ret < 0 && rte_errno != ENOTSUP) {
-			TAP_LOG(ERR, "tap: Failed to register IPC callback: %s",
-				strerror(rte_errno));
-			goto leave;
-		}
-	}
 	tap_devices_count++;
 	tap_devices_count_increased = 1;
 	ret = eth_dev_tap_create(dev, tap_name, remote_iface, &user_mac,
@@ -2511,8 +2462,6 @@ leave:
 		TAP_LOG(ERR, "Failed to create pmd for %s as %s",
 			name, tap_name);
 		if (tap_devices_count_increased == 1) {
-			if (tap_devices_count == 1)
-				rte_mp_action_unregister(TAP_MP_KEY);
 			tap_devices_count--;
 		}
 	}
