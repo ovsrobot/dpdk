@@ -128,6 +128,7 @@ DPDK_22 {
 	rte_flow_isolate;
 	rte_flow_query;
 	rte_flow_validate;
+	rte_get_eth_dev_by_name;
 
 	local: *;
 };

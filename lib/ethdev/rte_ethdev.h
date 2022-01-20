@@ -4988,6 +4988,22 @@ int
 rte_eth_dev_get_port_by_name(const char *name, uint16_t *port_id);
 
 /**
+* Get rte_eth_dev from device name. The device name should be specified
+* as below:
+* - PCIe address (Domain:Bus:Device.Function), for example- 0000:2:00.0
+* - SoC device name, for example- fsl-gmac0
+* - vdev dpdk name, for example- net_[pcap0|null0|tap0]
+*
+* @param name
+*  pci address or name of the device
+* @return
+*   - rte_eth_dev if successful
+*   - NULL on failure
+*/
+struct rte_eth_dev*
+rte_get_eth_dev_by_name(const char *name);
+
+/**
 * Get the device name from port ID. The device name is specified as below:
 * - PCIe address (Domain:Bus:Device.Function), for example- 0000:02:00.0
 * - SoC device name, for example- fsl-gmac0
