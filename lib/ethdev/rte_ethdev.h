@@ -1586,6 +1586,7 @@ struct rte_eth_conf {
 #define RTE_ETH_RX_OFFLOAD_RSS_HASH         RTE_BIT64(19)
 #define DEV_RX_OFFLOAD_RSS_HASH             RTE_ETH_RX_OFFLOAD_RSS_HASH
 #define RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT     RTE_BIT64(20)
+#define RTE_ETH_RX_OFFLOAD_IP_REASSEMBLY    RTE_BIT64(21)
 
 #define RTE_ETH_RX_OFFLOAD_CHECKSUM (RTE_ETH_RX_OFFLOAD_IPV4_CKSUM | \
 				 RTE_ETH_RX_OFFLOAD_UDP_CKSUM | \
@@ -1781,6 +1782,33 @@ enum rte_eth_representor_type {
 	RTE_ETH_REPRESENTOR_PF,   /**< representor of Physical Function. */
 };
 
+/* Flag to offload IP reassembly for IPv4 packets. */
+#define RTE_ETH_DEV_REASSEMBLY_F_IPV4 (RTE_BIT32(0))
+/* Flag to offload IP reassembly for IPv6 packets. */
+#define RTE_ETH_DEV_REASSEMBLY_F_IPV6 (RTE_BIT32(1))
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice.
+ *
+ * A structure used to set IP reassembly configuration.
+ *
+ * If RTE_ETH_RX_OFFLOAD_IP_REASSEMBLY flag is set in offloads field,
+ * the PMD will attempt IP reassembly for the received packets as per
+ * properties defined in this structure:
+ *
+ */
+struct rte_eth_ip_reass_params {
+	/** Maximum time in ms which PMD can wait for other fragments. */
+	uint32_t reass_timeout;
+	/** Maximum number of fragments that can be reassembled. */
+	uint16_t max_frags;
+	/**
+	 * Flags to enable reassembly of packet types -
+	 * RTE_ETH_DEV_REASSEMBLY_F_xxx.
+	 */
+	uint16_t flags;
+};
+
 /**
  * A structure used to retrieve the contextual information of
  * an Ethernet device, such as the controlling driver of the
@@ -1841,8 +1869,10 @@ struct rte_eth_dev_info {
 	 * embedded managed interconnect/switch.
 	 */
 	struct rte_eth_switch_info switch_info;
+	/** IP reassembly offload capabilities that a device can support. */
+	struct rte_eth_ip_reass_params reass_capa;
 
-	uint64_t reserved_64s[2]; /**< Reserved for future fields */
+	uint64_t reserved_64s[1]; /**< Reserved for future fields */
 	void *reserved_ptrs[2];   /**< Reserved for future fields */
 };
 
