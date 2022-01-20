@@ -42,6 +42,7 @@ struct reassembly_vector {
 	struct ipsec_test_packet *full_pkt;
 	struct ipsec_test_packet *frags[MAX_FRAGS];
 	uint16_t nb_frags;
+	bool burst;
 };
 
 struct ipsec_test_packet pkt_ipv4_plain = {
