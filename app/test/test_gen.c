@@ -8,6 +8,8 @@
 
 #include "test.h"
 
+#define BURST_MAX 32
+
 static struct rte_mempool *mp;
 
 static int
@@ -36,12 +38,56 @@ test_gen_create(void)
 	return 0;
 }
 
+static int
+test_gen_basic_rxtx(void)
+{
+	struct rte_gen *gen = rte_gen_create(mp);
+	TEST_ASSERT_FAIL(gen, "Expected valid pointer after create()");
+
+	struct rte_mbuf *bufs[BURST_MAX];
+	uint16_t nb_rx = rte_gen_rx_burst(gen, bufs, BURST_MAX);
+	TEST_ASSERT_EQUAL(nb_rx, BURST_MAX, "Expected rx packet burst.");
+
+	uint64_t latency[BURST_MAX];
+	uint16_t nb_tx = rte_gen_tx_burst(gen, bufs, latency, BURST_MAX);
+	TEST_ASSERT_EQUAL(nb_tx, BURST_MAX, "Expected tx packet burst.");
+
+	rte_gen_destroy(gen);
+	return 0;
+}
+
+static int
+test_gen_loop_rxtx(void)
+{
+	struct rte_gen *gen = rte_gen_create(mp);
+	TEST_ASSERT_FAIL(gen, "Expected valid pointer after create()");
+
+	uint32_t total_sent = 0;
+
+	while (total_sent < 1000000) {
+		struct rte_mbuf *bufs[BURST_MAX];
+		uint16_t nb_rx = rte_gen_rx_burst(gen, bufs, BURST_MAX);
+		TEST_ASSERT_EQUAL(nb_rx, BURST_MAX, "Expected rx packet burst.");
+
+		uint64_t latency[BURST_MAX];
+		uint16_t nb_tx = rte_gen_tx_burst(gen, bufs, latency, nb_rx);
+		TEST_ASSERT_EQUAL(nb_tx, BURST_MAX, "Expected tx packet burst.");
+
+		total_sent += nb_tx;
+	}
+
+	rte_gen_destroy(gen);
+	return 0;
+}
+
 static struct unit_test_suite gen_suite  = {
 	.suite_name = "gen: packet generator unit test suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
 	.unit_test_cases = {
 		TEST_CASE_ST(NULL, NULL, test_gen_create),
+		TEST_CASE_ST(NULL, NULL, test_gen_basic_rxtx),
+		TEST_CASE_ST(NULL, NULL, test_gen_loop_rxtx),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };

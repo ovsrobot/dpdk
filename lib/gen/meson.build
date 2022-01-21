@@ -3,3 +3,4 @@
 
 sources = files('rte_gen.c')
 headers = files('rte_gen.h')
+deps += ['mempool', 'mbuf']
