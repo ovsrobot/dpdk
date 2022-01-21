@@ -256,6 +256,8 @@ EXPERIMENTAL {
 	rte_flow_flex_item_create;
 	rte_flow_flex_item_release;
 	rte_flow_pick_transfer_proxy;
+
+	rte_get_eth_dev_by_name;
 };
 
 INTERNAL {
