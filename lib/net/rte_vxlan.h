@@ -24,6 +24,7 @@ extern "C" {
 /** VXLAN default port. */
 #define RTE_VXLAN_DEFAULT_PORT 4789
 #define RTE_VXLAN_GPE_DEFAULT_PORT 4790
+#define RTE_VXLAN_FLAGS_I (1 << 3)
 
 /**
  * VXLAN protocol header.
@@ -31,7 +32,14 @@ extern "C" {
  * Reserved fields (24 bits and 8 bits)
  */
 struct rte_vxlan_hdr {
-	rte_be32_t vx_flags; /**< flag (8) + Reserved (24). */
+	RTE_STD_C11
+	union {
+		struct {
+			uint8_t vx_flag_bits;
+			uint8_t reserved[3];
+		};
+		rte_be32_t vx_flags; /**< flag (8) + Reserved (24). */
+	};
 	rte_be32_t vx_vni;   /**< VNI (24) + Reserved (8). */
 } __rte_packed;
 
