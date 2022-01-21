@@ -12,6 +12,7 @@
 #include <rte_ether.h>
 #include <rte_ip.h>
 #include <rte_udp.h>
+#include <rte_vxlan.h>
 
 RTE_LOG_REGISTER(gen_logtype, lib.gen, NOTICE);
 
@@ -140,6 +141,7 @@ enum GEN_PROTO {
 	GEN_PROTO_ETHER,
 	GEN_PROTO_IPV4,
 	GEN_PROTO_UDP,
+	GEN_PROTO_VXLAN,
 
 	/* Must be last. */
 	GEN_PROTO_COUNT,
@@ -472,6 +474,10 @@ gen_parse_udp(struct gen_parser *parser, char *protocol_str)
 	int err = gen_parser_parse_next(parser, &inner);
 
 	switch (inner) {
+	case GEN_PROTO_VXLAN:
+		udp->src_port = rte_cpu_to_be_16(RTE_VXLAN_DEFAULT_PORT);
+		udp->dst_port = rte_cpu_to_be_16(RTE_VXLAN_DEFAULT_PORT);
+		break;
 	default:
 		/* default to DNS like other packet generation tools */
 		udp->src_port = rte_cpu_to_be_16(53);
@@ -488,6 +494,44 @@ gen_parse_udp(struct gen_parser *parser, char *protocol_str)
 	udp->dgram_len = rte_cpu_to_be_16(dgram_len);
 
 	return err;
+}
+
+static int32_t
+gen_parse_vxlan(struct gen_parser *parser, char *protocol_str)
+{
+	RTE_SET_USED(protocol_str);
+	struct rte_vxlan_hdr *vxlan = gen_parser_get_data_ptr(parser);
+	memset(vxlan, 0, sizeof(*vxlan));
+
+	uint32_t input_vni = 1000;
+	vxlan->vx_vni = rte_cpu_to_be_32(input_vni << 8);
+
+	/* Move up write pointer in packet. */
+	parser->buf_write_offset += sizeof(*vxlan);
+
+	enum GEN_PROTO inner;
+	int err = gen_parser_parse_next(parser, &inner);
+
+	vxlan->vx_flag_bits = RTE_VXLAN_FLAGS_I;
+
+	switch (inner) {
+	default:
+	/* Not supporting VXLAN-GPE and next proto today. */
+	break;
+	}
+
+	return err;
+}
+
+static void
+gen_log_vxlan(void *data, const char *indent)
+{
+	struct rte_vxlan_hdr *vxlan = data;
+
+	GEN_LOG_PROTOCOL(DEBUG,
+			"###[ VXLAN ]###\n%svx_flags= %u\n%svx_vni= %u\n",
+			indent, rte_be_to_cpu_32(vxlan->vx_flags),
+			indent, rte_be_to_cpu_32(vxlan->vx_vni));
 }
 
 /* (Name, Function-pointer) pairs for supported parse types */
@@ -520,6 +564,12 @@ static struct gen_parse_func_t gen_protocols[] = {
 		.proto = GEN_PROTO_UDP,
 		.parse_func = gen_parse_udp,
 		.log_func = gen_log_udp,
+	},
+	{
+		.name = "VXLAN(",
+		.proto = GEN_PROTO_VXLAN,
+		.parse_func = gen_parse_vxlan,
+		.log_func = gen_log_vxlan,
 	}
 
 };
