@@ -68,7 +68,7 @@ static const struct rte_pci_id pci_ifpga_map[] = {
 
 static struct ifpga_rawdev ifpga_rawdevices[IFPGA_RAWDEV_NUM];
 
-static int ifpga_monitor_start;
+static rte_atomic32_t ifpga_monitor_start;
 static pthread_t ifpga_monitor_start_thread;
 
 #define IFPGA_MAX_IRQ 12
@@ -497,7 +497,7 @@ ifpga_rawdev_gsd_handle(__rte_unused void *param)
 	int gsd_enable, ret;
 #define MS 1000
 
-	while (1) {
+	while (rte_atomic32_read(&ifpga_monitor_start)) {
 		gsd_enable = 0;
 		for (i = 0; i < IFPGA_RAWDEV_NUM; i++) {
 			ifpga_rdev = &ifpga_rawdevices[i];
@@ -525,7 +525,7 @@ ifpga_monitor_start_func(void)
 {
 	int ret;
 
-	if (ifpga_monitor_start == 0) {
+	if (!rte_atomic32_read(&ifpga_monitor_start)) {
 		ret = rte_ctrl_thread_create(&ifpga_monitor_start_thread,
 					     "ifpga-monitor", NULL,
 					     ifpga_rawdev_gsd_handle, NULL);
@@ -534,7 +534,7 @@ ifpga_monitor_start_func(void)
 				"Fail to create ifpga monitor thread");
 			return -1;
 		}
-		ifpga_monitor_start = 1;
+		rte_atomic32_set(&ifpga_monitor_start, 1);
 	}
 
 	return 0;
@@ -544,7 +544,9 @@ ifpga_monitor_stop_func(void)
 {
 	int ret;
 
-	if (ifpga_monitor_start == 1) {
+	if (rte_atomic32_read(&ifpga_monitor_start)) {
+		rte_atomic32_set(&ifpga_monitor_start, 0);
+
 		ret = pthread_cancel(ifpga_monitor_start_thread);
 		if (ret)
 			IFPGA_RAWDEV_PMD_ERR("Can't cancel the thread");
@@ -552,8 +554,6 @@ ifpga_monitor_stop_func(void)
 		ret = pthread_join(ifpga_monitor_start_thread, NULL);
 		if (ret)
 			IFPGA_RAWDEV_PMD_ERR("Can't join the thread");
-
-		ifpga_monitor_start = 0;
 
 		return ret;
 	}
