@@ -12,3 +12,9 @@ DPDK_22 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	rte_ip_parse_addr;
+};

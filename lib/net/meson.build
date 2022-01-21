@@ -26,6 +26,7 @@ headers = files(
 sources = files(
         'rte_arp.c',
         'rte_ether.c',
+        'rte_ip.c',
         'rte_net.c',
         'rte_net_crc.c',
 )
