@@ -18,6 +18,7 @@ all_examples = [
         'fips_validation',
         'flow_classify',
         'flow_filtering',
+        'generator',
         'helloworld',
         'ip_fragmentation',
         'ip_pipeline',
