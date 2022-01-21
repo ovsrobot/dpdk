@@ -11,6 +11,7 @@
 
 #include <rte_ether.h>
 #include <rte_ip.h>
+#include <rte_udp.h>
 
 RTE_LOG_REGISTER(gen_logtype, lib.gen, NOTICE);
 
@@ -138,6 +139,7 @@ enum GEN_PROTO {
 	GEN_PROTO_INVALID,
 	GEN_PROTO_ETHER,
 	GEN_PROTO_IPV4,
+	GEN_PROTO_UDP,
 
 	/* Must be last. */
 	GEN_PROTO_COUNT,
@@ -230,6 +232,9 @@ gen_log_ipv4(void *data, const char *indent)
 	switch (ip->next_proto_id) {
 	case 0:
 		proto_str = "hopopt";
+		break;
+	case IPPROTO_UDP:
+		proto_str = "UDP";
 		break;
 	default:
 		proto_str = "unknown next proto";
@@ -351,6 +356,12 @@ gen_parse_ipv4(struct gen_parser *parser, char *protocol_str)
 	}
 
 	switch (inner) {
+	case GEN_PROTO_UDP:
+		ip->next_proto_id = IPPROTO_UDP;
+		struct rte_udp_hdr *udp = gen_parser_get_data_ptr(parser);
+		udp->dgram_cksum = 0;
+		break;
+
 	default:
 		/* Default protocol is hopopt (0). */
 		break;
@@ -430,6 +441,55 @@ gen_parse_ether(struct gen_parser *parser, char *protocol_str)
 	return 0;
 }
 
+static void
+gen_log_udp(void *data, const char *indent)
+{
+	struct rte_udp_hdr *udp = data;
+
+	GEN_LOG_PROTOCOL(DEBUG,
+		"###[ UDP ]###\n%ssport= %u\n%sdport= %u\n%s"
+		"len= %u\n%schksum= %u\n",
+		indent, rte_be_to_cpu_16(udp->src_port),
+		indent,	rte_be_to_cpu_16(udp->dst_port),
+		indent,	rte_be_to_cpu_16(udp->dgram_len),
+		indent,	rte_be_to_cpu_16(udp->dgram_cksum));
+
+}
+
+static int32_t
+gen_parse_udp(struct gen_parser *parser, char *protocol_str)
+{
+	RTE_SET_USED(protocol_str);
+	struct rte_udp_hdr *udp = gen_parser_get_data_ptr(parser);
+	uint32_t pre_udp_len = parser->buf_write_offset;
+	memset(udp, 0, sizeof(*udp));
+
+	/* Move up write pointer in packet. */
+	parser->buf_write_offset += sizeof(*udp);
+
+	/* Recurse and handle inner protocol. */
+	enum GEN_PROTO inner;
+	int err = gen_parser_parse_next(parser, &inner);
+
+	switch (inner) {
+	default:
+		/* default to DNS like other packet generation tools */
+		udp->src_port = rte_cpu_to_be_16(53);
+		udp->dst_port = rte_cpu_to_be_16(53);
+		break;
+	};
+
+	/* Minimum len is the UDP header itself (8 bytes) or more */
+	int32_t total_len = parser->mbuf->data_len;
+	int32_t dgram_len = total_len - pre_udp_len;
+	if (dgram_len < 8)
+		printf("error parsing dgram len, %d\n", dgram_len);
+
+	udp->dgram_len = rte_cpu_to_be_16(dgram_len);
+
+	return err;
+}
+
 /* (Name, Function-pointer) pairs for supported parse types */
 typedef int32_t (*gen_parse_func)(struct gen_parser *parser,
 				char *protocol_str);
@@ -455,6 +515,12 @@ static struct gen_parse_func_t gen_protocols[] = {
 		.parse_func = gen_parse_ipv4,
 		.log_func = gen_log_ipv4,
 	},
+	{
+		.name = "UDP(",
+		.proto = GEN_PROTO_UDP,
+		.parse_func = gen_parse_udp,
+		.log_func = gen_log_udp,
+	}
 
 };
 

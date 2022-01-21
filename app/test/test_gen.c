@@ -137,6 +137,7 @@ test_gen_packet_parse_string(void)
 		{ .str = "Ether()/IP(sr=,dst=5.6.7.8)", .expected_to_fail = 1},
 		{ .str = "Ether()/IP(src=1.2.3.fail,dst=5.6.7.8)",
 					.expected_to_fail = 1},
+		{ .str = "Ether()/IP()/UDP()"},
 	};
 
 	uint32_t i;
