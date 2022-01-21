@@ -85,6 +85,15 @@ rte_gen_tx_burst(struct rte_gen *gen,
 		 uint64_t *pkt_latencies,
 		 const uint16_t nb_pkts);
 
+/* Update the packet being sent to the provided raw data.
+ * @retval 0 Success.
+ * @retval -ENOMEM No memory available.
+ */
+__rte_experimental
+int32_t
+rte_gen_packet_set_raw(struct rte_gen *gen,
+		       const uint8_t *raw_data,
+		       uint32_t raw_data_size);
 
 #ifdef __cplusplus
 }
