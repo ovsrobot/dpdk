@@ -117,26 +117,47 @@ test_gen_packet_parse_string(void)
 {
 	struct rte_gen *gen = rte_gen_create(mp);
 	TEST_ASSERT_FAIL(gen, "Expected valid pointer after create()");
-
 	struct str_parse_t {
 		const char *str;
+		uint32_t expected_to_fail;
 	} pkt_strings[] = {
 		{ .str = "Ether()"},
 		{ .str = "Ether()/"},
 		{ .str = "/Ether()"},
-		{ .str = "/Ether()/"}
+		{ .str = "/Ether()/"},
+		{ .str = "Ether()/IP()"},
+		{ .str = "Ether()/IP(src=1.2.3.4,dst=5.6.7.8)"},
+		{ .str = "Ether()/IP(src=1.2.3.4,dst=192.168.255.255)"},
+		{ .str = "Ether()/IP(dst=172.16.0.9,src=1.2.3.4)"},
+		{ .str = "Ether()/IP(src=1.2.3.4)"},
+		{ .str = "Ether()/IP(srdst=5.6.7.8)", .expected_to_fail = 1},
+		{ .str = "Ether()/IP(src=1.2.3.4,ds=)", .expected_to_fail = 1},
+		{ .str = "Ether()/IP(src=1.2.3.4,dst=)", .expected_to_fail = 1},
+		{ .str = "Ether()/IP(src=,dst=5.6.7.8)", .expected_to_fail = 1},
+		{ .str = "Ether()/IP(sr=,dst=5.6.7.8)", .expected_to_fail = 1},
+		{ .str = "Ether()/IP(src=1.2.3.fail,dst=5.6.7.8)",
+					.expected_to_fail = 1},
 	};
 
 	uint32_t i;
 	for (i = 0; i < RTE_DIM(pkt_strings); i++) {
 		const char *pkt_str = pkt_strings[i].str;
 		int32_t err = rte_gen_packet_parse_string(gen, pkt_str, NULL);
-		TEST_ASSERT_EQUAL(err, 0, "Expected string %s to parse.",
-				pkt_str);
+
+		if (err && pkt_strings[i].expected_to_fail != 1) {
+			printf("Expected string %s to parse.", pkt_str);
+			return -1;
+		}
+		/* False pass if reached with no err when e_t_f = 1 */
+		if (!err && pkt_strings[i].expected_to_fail) {
+			printf("False Pass on string: %s\n", pkt_str);
+			return -1;
+		}
 	}
 
 	rte_gen_destroy(gen);
 	return 0;
+
 }
 
 
