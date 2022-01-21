@@ -17,4 +17,5 @@ EXPERIMENTAL {
 	global:
 
 	rte_ip_parse_addr;
+	rte_ip_print_addr;
 };

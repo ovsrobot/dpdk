@@ -46,7 +46,32 @@ test_rte_ip_parse_addr(void)
 				return -1;
 		}
 	}
+	return 0;
+}
 
+static int
+test_rte_ip_print_addr(void)
+{
+	printf("Running IP printing tests...\n");
+	char buffer[128];
+
+	struct ip_str_t {
+		uint32_t ip_addr;
+		const char *exp_output;
+	} ip_str_tests[] = {
+		{ .ip_addr = 16909060, .exp_output = "1.2.3.4"},
+		{ .ip_addr = 3232301055, . exp_output = "192.168.255.255"},
+		{ .ip_addr = 2886729737, .exp_output = "172.16.0.9"}
+	};
+
+	uint32_t i;
+	for (i = 0; i < RTE_DIM(ip_str_tests); i++) {
+		int32_t err = rte_ip_print_addr(ip_str_tests[i].ip_addr,
+								buffer, 128);
+
+		if (err || strcmp(buffer, ip_str_tests[i].exp_output))
+			return -1;
+	}
 
 	return 0;
 }
@@ -55,6 +80,7 @@ static int
 test_net_tests(void)
 {
 	int ret = test_rte_ip_parse_addr();
+	ret += test_rte_ip_print_addr();
 	return ret;
 }
 

@@ -444,6 +444,26 @@ __rte_experimental
 int32_t
 rte_ip_parse_addr(const char *src_ip, uint32_t *output_addr);
 
+
+/**
+ * Print IP address from 32 bit int into char * buffer.
+ *
+ * @param ip_addr
+ *   ip address to be printed.
+ * @param buffer
+ *   The buffer the string will be saved into.
+ * @param buffer_size
+ *   size of buffer to be used.
+ *
+ * @retval 0
+ *   Success.
+ * @retval -1
+ *   Failure due to invalid input arguments.
+ */
+__rte_experimental
+int32_t
+rte_ip_print_addr(uint32_t ip_addr, char *buffer, uint32_t buffer_size);
+
 /**
  * IPv6 Header
  */
