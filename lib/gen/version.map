@@ -1,0 +1,6 @@
+EXPERIMENTAL {
+	global:
+
+	rte_gen_create;
+	rte_gen_destroy;
+};

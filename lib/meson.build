@@ -35,6 +35,7 @@ libraries = [
         'efd',
         'eventdev',
         'gpudev',
+        'gen',
         'gro',
         'gso',
         'ip_frag',
