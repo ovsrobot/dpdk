@@ -85,6 +85,8 @@ API Changes
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+* eventdev: Added new API ``rte_event_eth_rx_adapter_event_port_get``,
+  to retrieve event port id of eth rx adapter.
 
 
 ABI Changes
