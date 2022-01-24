@@ -1372,6 +1372,8 @@ rte_pktmbuf_free_seg(struct rte_mbuf *m)
  * Free an mbuf, and all its segments in case of chained buffers. Each
  * segment is added back into its original mempool.
  *
+ * If the pointer is NULL, the function does nothing.
+ *
  * @param m
  *   The packet mbuf to be freed. If NULL, the function does nothing.
  */

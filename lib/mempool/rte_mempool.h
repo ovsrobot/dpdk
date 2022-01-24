@@ -1099,6 +1099,8 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
  * memory referenced by the mempool. The objects must not be used by
  * other cores as they will be freed.
  *
+ * If the pointer is NULL, the function does nothing.
+ *
  * @param mp
  *   A pointer to the mempool structure.
  */

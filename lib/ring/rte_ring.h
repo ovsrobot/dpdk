@@ -176,6 +176,8 @@ struct rte_ring *rte_ring_create(const char *name, unsigned int count,
 /**
  * De-allocate all memory used by the ring.
  *
+ * If the pointer is NULL, the function does nothing.
+ *
  * @param r
  *   Ring to free
  */

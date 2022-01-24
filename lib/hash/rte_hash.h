@@ -174,6 +174,9 @@ rte_hash_find_existing(const char *name);
 
 /**
  * De-allocate all memory used by hash table.
+ *
+ * If the pointer is NULL, the function does nothing.
+ *
  * @param h
  *   Hash table to free
  */

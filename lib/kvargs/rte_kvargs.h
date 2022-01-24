@@ -108,6 +108,8 @@ struct rte_kvargs *rte_kvargs_parse_delim(const char *args,
  * Free a rte_kvargs structure previously allocated with
  * rte_kvargs_parse().
  *
+ * If the pointer is NULL, the function does nothing.
+ *
  * @param kvlist
  *   The rte_kvargs structure. No error if NULL.
  */
