@@ -776,8 +776,7 @@ igc_flow_create(struct rte_eth_dev *dev,
 
 	if (ret) {
 		/* check and free the memory */
-		if (flow)
-			rte_free(flow);
+		rte_free(flow);
 
 		rte_flow_error_set(error, -ret,
 				RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
