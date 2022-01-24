@@ -60,6 +60,11 @@ New Features
   Added macros RTE_ETH_RSS_L2TPV2, now L2TPv2 field can be used as
   input set for RSS.
 
+* **Updated Intel iavf driver.**
+
+  Added L2TPv2(include PPP over L2tpv2) RSS hash distribute packets
+  based on outer MAC src address and L2TPv2 session ID.
+
 
 Removed Items
 -------------
