@@ -5501,6 +5501,8 @@ ice_timesync_enable(struct rte_eth_dev *dev)
 	struct ice_hw *hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct ice_adapter *ad =
 			ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	uint64_t start_time;
+	struct timespec system_time;
 	int ret;
 
 	if (dev->data->dev_started && !(dev->data->dev_conf.rxmode.offloads &
@@ -5520,6 +5522,15 @@ ice_timesync_enable(struct rte_eth_dev *dev)
 		if (ret) {
 			PMD_DRV_LOG(ERR,
 				"Failed to write PHC increment time value");
+			return -1;
+		}
+
+		clock_gettime(CLOCK_MONOTONIC, &system_time);
+		start_time = system_time.tv_sec * NSEC_PER_SEC +
+			     system_time.tv_nsec;
+		ret = ice_ptp_init_time(hw, start_time);
+		if (ret) {
+			PMD_DRV_LOG(ERR, "Failed to write PHC initial time");
 			return -1;
 		}
 	}
