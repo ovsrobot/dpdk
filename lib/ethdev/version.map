@@ -256,6 +256,7 @@ EXPERIMENTAL {
 	rte_flow_flex_item_create;
 	rte_flow_flex_item_release;
 	rte_flow_pick_transfer_proxy;
+
 };
 
 INTERNAL {
@@ -282,4 +283,5 @@ INTERNAL {
 	rte_eth_representor_id_get;
 	rte_eth_switch_domain_alloc;
 	rte_eth_switch_domain_free;
+	rte_get_eth_dev_by_name;
 };

@@ -1630,6 +1630,23 @@ rte_eth_hairpin_queue_peer_bind(uint16_t cur_port, uint16_t cur_queue,
 				uint32_t direction);
 
 /**
+* Get rte_eth_dev from device name. The device name should be specified
+* as below:
+* - PCIe address (Domain:Bus:Device.Function), for example- 0000:2:00.0
+* - SoC device name, for example- fsl-gmac0
+* - vdev dpdk name, for example- net_[pcap0|null0|tap0]
+*
+* @param name
+*  pci address or name of the device
+* @return
+*   - rte_eth_dev if successful
+*   - NULL on failure
+*/
+__rte_internal
+struct rte_eth_dev*
+rte_get_eth_dev_by_name(const char *name);
+
+/**
  * @internal
  * Reset the current queue state and configuration to disconnect (unbind) it
  * from the peer queue.
