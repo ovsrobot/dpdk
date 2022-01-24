@@ -63,6 +63,8 @@ New Features
     - ``rte_ipv4_udptcp_cksum_mbuf_verify()``
     - ``rte_ipv6_udptcp_cksum_mbuf()``
     - ``rte_ipv6_udptcp_cksum_mbuf_verify()``
+  * Called ``rte_ipv4/6_udptcp_cksum_mbuf()`` functions in testpmd csum mode
+    to support software UDP/TCP checksum over multiple segments.
 
 Removed Items
 -------------
