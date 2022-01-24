@@ -102,8 +102,7 @@ ipsec_mb_qp_release(struct rte_cryptodev *dev, uint16_t qp_id)
 
 	if (qp != NULL && rte_eal_process_type() == RTE_PROC_PRIMARY) {
 		r = rte_ring_lookup(qp->name);
-		if (r)
-			rte_ring_free(r);
+		rte_ring_free(r);
 
 #if IMB_VERSION(1, 1, 0) > IMB_VERSION_NUM
 		if (qp->mb_mgr)
@@ -291,8 +290,7 @@ qp_setup_cleanup:
 	if (qp->mb_mgr_mz)
 		rte_memzone_free(qp->mb_mgr_mz);
 #endif
-	if (qp)
-		rte_free(qp);
+	rte_free(qp);
 	return ret;
 }
 
