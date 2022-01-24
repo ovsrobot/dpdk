@@ -19,6 +19,7 @@
 #include <rte_ether.h>
 #include <rte_rwlock.h>
 #include <rte_malloc.h>
+#include <rte_dmadev.h>
 
 #include "rte_vhost.h"
 #include "rte_vdpa.h"
@@ -50,6 +51,7 @@
 
 #define VHOST_MAX_ASYNC_IT (MAX_PKT_BURST)
 #define VHOST_MAX_ASYNC_VEC 2048
+#define VHOST_ASYNC_DMA_BATCHING_SIZE 32
 
 #define PACKED_DESC_ENQUEUE_USED_FLAG(w)	\
 	((w) ? (VRING_DESC_F_AVAIL | VRING_DESC_F_USED | VRING_DESC_F_WRITE) : \
@@ -119,6 +121,42 @@ struct vring_used_elem_packed {
 	uint32_t count;
 };
 
+struct async_dma_vchan_info {
+	/* circular array to track if packet copy completes */
+	bool **pkts_completed_flag;
+
+	/* max elements in 'metadata' */
+	uint16_t ring_size;
+	/* ring index mask for 'metadata' */
+	uint16_t ring_mask;
+
+	/* batching copies before a DMA doorbell */
+	uint16_t nr_batching;
+
+	/**
+	 * DMA virtual channel lock. Although it is able to bind DMA
+	 * virtual channels to data plane threads, vhost control plane
+	 * thread could call data plane functions too, thus causing
+	 * DMA device contention.
+	 *
+	 * For example, in VM exit case, vhost control plane thread needs
+	 * to clear in-flight packets before disable vring, but there could
+	 * be anotther data plane thread is enqueuing packets to the same
+	 * vring with the same DMA virtual channel. But dmadev PMD functions
+	 * are lock-free, so the control plane and data plane threads
+	 * could operate the same DMA virtual channel at the same time.
+	 */
+	rte_spinlock_t dma_lock;
+};
+
+struct async_dma_info {
+	uint16_t max_vchans;
+	struct async_dma_vchan_info *vchans;
+};
+
+extern struct async_dma_info dma_copy_track[RTE_DMADEV_DEFAULT_MAX];
+extern uint16_t dma_poll_factor;
+
 /**
  * inflight async packet information
  */
@@ -129,9 +167,6 @@ struct async_inflight_info {
 };
 
 struct vhost_async {
-	/* operation callbacks for DMA */
-	struct rte_vhost_async_channel_ops ops;
-
 	struct rte_vhost_iov_iter iov_iter[VHOST_MAX_ASYNC_IT];
 	struct rte_vhost_iovec iovec[VHOST_MAX_ASYNC_VEC];
 	uint16_t iter_idx;
@@ -139,6 +174,25 @@ struct vhost_async {
 
 	/* data transfer status */
 	struct async_inflight_info *pkts_info;
+	/**
+	 * Packet reorder array. "true" indicates that DMA device
+	 * completes all copies for the packet.
+	 *
+	 * Note that this array could be written by multiple threads
+	 * simultaneously. For example, in the case of thread0 and
+	 * thread1 RX packets from NIC and then enqueue packets to
+	 * vring0 and vring1 with own DMA device DMA0 and DMA1, it's
+	 * possible for thread0 to get completed copies belonging to
+	 * vring1 from DMA0, while thread0 is calling rte_vhost_poll
+	 * _enqueue_completed() for vring0 and thread1 is calling
+	 * rte_vhost_submit_enqueue_burst() for vring1. In this case,
+	 * vq->access_lock cannot protect pkts_cmpl_flag of vring1.
+	 *
+	 * However, since offloading is per-packet basis, each packet
+	 * flag will only be written by one thread. And single byte
+	 * write is atomic, so no lock for pkts_cmpl_flag is needed.
+	 */
+	bool *pkts_cmpl_flag;
 	uint16_t pkts_idx;
 	uint16_t pkts_inflight_n;
 	union {
@@ -198,6 +252,7 @@ struct vhost_virtqueue {
 	/* Record packed ring first dequeue desc index */
 	uint16_t		shadow_last_used_idx;
 
+	uint16_t		batch_copy_max_elems;
 	uint16_t		batch_copy_nb_elems;
 	struct batch_copy_elem	*batch_copy_elems;
 	int			numa_node;
@@ -568,8 +623,7 @@ extern int vhost_data_log_level;
 #define PRINT_PACKET(device, addr, size, header) do {} while (0)
 #endif
 
-#define MAX_VHOST_DEVICE	1024
-extern struct virtio_net *vhost_devices[MAX_VHOST_DEVICE];
+extern struct virtio_net *vhost_devices[RTE_MAX_VHOST_DEVICE];
 
 #define VHOST_BINARY_SEARCH_THRESH 256
 

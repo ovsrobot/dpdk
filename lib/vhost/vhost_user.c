@@ -527,6 +527,8 @@ vhost_user_set_vring_num(struct virtio_net **pdev,
 		return RTE_VHOST_MSG_RESULT_ERR;
 	}
 
+	vq->batch_copy_max_elems = vq->size;
+
 	return RTE_VHOST_MSG_RESULT_OK;
 }
 
