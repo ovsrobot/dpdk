@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added new RSS offload types for L2TPv2 in RSS flow.**
+
+  Added macros RTE_ETH_RSS_L2TPV2, now L2TPv2 field can be used as
+  input set for RSS.
+
 
 Removed Items
 -------------

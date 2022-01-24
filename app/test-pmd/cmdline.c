@@ -2178,7 +2178,7 @@ cmd_config_rss_parsed(void *parsed_result,
 			RTE_ETH_RSS_TCP | RTE_ETH_RSS_UDP | RTE_ETH_RSS_SCTP |
 			RTE_ETH_RSS_L2_PAYLOAD | RTE_ETH_RSS_L2TPV3 | RTE_ETH_RSS_ESP |
 			RTE_ETH_RSS_AH | RTE_ETH_RSS_PFCP | RTE_ETH_RSS_GTPU |
-			RTE_ETH_RSS_ECPRI;
+			RTE_ETH_RSS_ECPRI | RTE_ETH_RSS_L2TPV2;
 	else if (!strcmp(res->value, "eth"))
 		rss_conf.rss_hf = RTE_ETH_RSS_ETH;
 	else if (!strcmp(res->value, "vlan"))
@@ -2256,6 +2256,8 @@ cmd_config_rss_parsed(void *parsed_result,
 		rss_conf.rss_hf = (rss_hf | RTE_ETH_RSS_LEVEL_INNERMOST);
 	} else if (!strcmp(res->value, "default"))
 		use_default = 1;
+	else if (!strcmp(res->value, "l2tpv2"))
+		rss_conf.rss_hf = RTE_ETH_RSS_L2TPV2;
 	else if (isdigit(res->value[0]) && atoi(res->value) > 0 &&
 						atoi(res->value) < 64)
 		rss_conf.rss_hf = 1ULL << atoi(res->value);
@@ -2314,7 +2316,7 @@ cmdline_parse_inst_t cmd_config_rss = {
 	.help_str = "port config all rss "
 		"all|default|eth|vlan|ip|tcp|udp|sctp|ether|port|vxlan|geneve|"
 		"nvgre|vxlan-gpe|l2tpv3|esp|ah|pfcp|ecpri|mpls|none|level-default|"
-		"level-outer|level-inner|ipv4-chksum|<flowtype_id>",
+		"level-outer|level-inner|ipv4-chksum|l2tpv2|<flowtype_id>",
 	.tokens = {
 		(void *)&cmd_config_rss_port,
 		(void *)&cmd_config_rss_keyword,
@@ -2429,7 +2431,7 @@ cmdline_parse_token_string_t cmd_config_rss_hash_key_rss_type =
 				 "ipv6-tcp-ex#ipv6-udp-ex#"
 				 "l3-src-only#l3-dst-only#l4-src-only#l4-dst-only#"
 				 "l2-src-only#l2-dst-only#s-vlan#c-vlan#"
-				 "l2tpv3#esp#ah#pfcp#pppoe#gtpu#ecpri#mpls");
+				 "l2tpv3#esp#ah#pfcp#pppoe#gtpu#ecpri#mpls#l2tpv2");
 cmdline_parse_token_string_t cmd_config_rss_hash_key_value =
 	TOKEN_STRING_INITIALIZER(struct cmd_config_rss_hash_key, key, NULL);
 
@@ -2442,7 +2444,7 @@ cmdline_parse_inst_t cmd_config_rss_hash_key = {
 		"l2-payload|ipv6-ex|ipv6-tcp-ex|ipv6-udp-ex|"
 		"l3-src-only|l3-dst-only|l4-src-only|l4-dst-only|"
 		"l2-src-only|l2-dst-only|s-vlan|c-vlan|"
-		"l2tpv3|esp|ah|pfcp|pppoe|gtpu|ecpri|mpls "
+		"l2tpv3|esp|ah|pfcp|pppoe|gtpu|ecpri|mpls|l2tpv2 "
 		"<string of hex digits (variable length, NIC dependent)>",
 	.tokens = {
 		(void *)&cmd_config_rss_hash_key_port,
