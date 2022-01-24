@@ -62,8 +62,12 @@ New Features
 
 * **Updated Intel iavf driver.**
 
-  Added L2TPv2(include PPP over L2tpv2) RSS hash distribute packets
+  * Added L2TPv2(include PPP over L2tpv2) RSS hash distribute packets
   based on outer MAC src address and L2TPv2 session ID.
+  * Added L2TPv2(include PPP over L2tpv2) FDIR distribute packets
+  based on outer MAC src address and L2TPv2 session ID.
+  * Added PPPoL2TPv2oUDP FDIR distribute packets based on inner IP
+  src/dst address and UDP/TCP src/dst port.
 
 
 Removed Items
