@@ -14,6 +14,8 @@ from os.path import exists, basename
 from os.path import join as path_join
 
 # The PCI base class for all devices
+virtio_blk_class = {'Class': '01', 'Vendor': "1af4", 'Device': '1001',
+                    'SVendor': '8086', 'SDevice': '0002'}
 network_class = {'Class': '02', 'Vendor': None, 'Device': None,
                  'SVendor': None, 'SDevice': None}
 acceleration_class = {'Class': '12', 'Vendor': None, 'Device': None,
@@ -72,6 +74,7 @@ cnxk_npa = {'Class': '08', 'Vendor': '177d', 'Device': 'a0fb,a0fc',
 cn9k_ree = {'Class': '08', 'Vendor': '177d', 'Device': 'a0f4',
                  'SVendor': None, 'SDevice': None}
 
+virtio_blk_devices = [virtio_blk_class]
 network_devices = [network_class, cavium_pkx, avp_vnic, ifpga_class]
 baseband_devices = [acceleration_class]
 crypto_devices = [encryption_class, intel_processor_class]
@@ -587,6 +590,9 @@ def show_status():
     Displays to the user what devices are bound to the igb_uio driver, the
     kernel driver or to no driver'''
 
+    if status_dev in ["virtio_blk", "all"]:
+        show_device_status(virtio_blk_devices, "virtio_blk")
+
     if status_dev in ["net", "all"]:
         show_device_status(network_devices, "Network", if_field=True)
 
@@ -746,6 +752,7 @@ def do_arg_actions():
         if b_flag is not None:
             clear_data()
             # refresh if we have changed anything
+            get_device_details(virtio_blk_devices)
             get_device_details(network_devices)
             get_device_details(baseband_devices)
             get_device_details(crypto_devices)
@@ -769,6 +776,7 @@ def main():
     parse_args()
     check_modules()
     clear_data()
+    get_device_details(virtio_blk_devices)
     get_device_details(network_devices)
     get_device_details(baseband_devices)
     get_device_details(crypto_devices)
