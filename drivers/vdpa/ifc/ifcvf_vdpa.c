@@ -1530,6 +1530,10 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 			internal->hw.blk_cfg->geometry.sectors);
 		DRV_LOG(INFO, "num_queues: 0x%08x",
 			internal->hw.blk_cfg->num_queues);
+
+		/* reset max_queue here, to minimum modification */
+		internal->max_queues = RTE_MIN(IFCVF_MAX_QUEUES,
+			internal->hw.blk_cfg->num_queues);
 	}
 
 	list->internal = internal;
