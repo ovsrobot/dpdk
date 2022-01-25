@@ -2,7 +2,11 @@
  * Copyright(c) 2020 Intel Corporation.
  */
 
+#ifdef RTE_LIBRTE_AF_XDP_PMD_LIBXDP
+#include <xdp/xsk.h>
+#else
 #include <bpf/xsk.h>
+#endif
 #include <linux/version.h>
 #include <poll.h>
 

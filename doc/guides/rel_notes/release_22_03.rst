@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Update AF_XDP PMD**
+
+  * Added support for libxdp >=v1.2.2.
+
 
 Removed Items
 -------------
