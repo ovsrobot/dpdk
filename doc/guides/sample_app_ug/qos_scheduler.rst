@@ -42,8 +42,7 @@ The application is located in the ``qos_sched`` sub-directory.
 .. note::
 
     To get statistics on the sample app using the command line interface as described in the next section,
-    DPDK must be compiled defining *RTE_SCHED_COLLECT_STATS*, which can be done by changing the relevant
-    entry in the ``config/rte_config.h`` file.
+    DPDK must be compiled after defining *RTE_SCHED_COLLECT_STATS* in the ``config/rte_config.h`` file.
 
 Running the Application
 -----------------------
