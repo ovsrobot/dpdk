@@ -189,7 +189,7 @@ io_write64_twopart(u64 val, u32 *lo, u32 *hi)
 	IFCVF_WRITE_REG32(val >> 32, hi);
 }
 
-STATIC int
+int
 ifcvf_hw_enable(struct ifcvf_hw *hw)
 {
 	struct ifcvf_pci_common_cfg *cfg;
@@ -238,7 +238,7 @@ ifcvf_hw_enable(struct ifcvf_hw *hw)
 	return 0;
 }
 
-STATIC void
+void
 ifcvf_hw_disable(struct ifcvf_hw *hw)
 {
 	u32 i;
