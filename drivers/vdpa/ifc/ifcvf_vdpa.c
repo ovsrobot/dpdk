@@ -58,6 +58,7 @@ struct ifcvf_internal {
 	struct rte_vdpa_device *vdev;
 	uint16_t max_queues;
 	uint64_t features;
+	int device_type;
 	rte_atomic32_t started;
 	rte_atomic32_t dev_attached;
 	rte_atomic32_t running;
@@ -73,6 +74,14 @@ struct ifcvf_internal {
 struct internal_list {
 	TAILQ_ENTRY(internal_list) next;
 	struct ifcvf_internal *internal;
+};
+
+/**
+** vdpa decice info includes device features and devcic operation.
+**/
+struct rte_vdpa_dev_info {
+	uint64_t features;
+	struct rte_vdpa_dev_ops *ops;
 };
 
 TAILQ_HEAD(internal_list_head, internal_list);
@@ -1170,6 +1179,50 @@ open_int(const char *key __rte_unused, const char *value, void *extra_args)
 	return 0;
 }
 
+static int16_t
+ifcvf_pci_get_device_type(struct rte_pci_device *pci_dev)
+{
+	uint16_t pci_device_id = pci_dev->id.device_id;
+	uint16_t device_id;
+
+	if (pci_device_id < 0x1000 || pci_device_id > 0x107f) {
+		DRV_LOG(ERR, "Probe device is not a virtio device\n");
+		return -1;
+	}
+
+	if (pci_device_id < 0x1040) {
+		/**
+		** Transitional devices: use the PCI subsystem device id as
+		** virtio device id, same as legacy driver always did.
+		**/
+		device_id = pci_dev->id.subsystem_device_id;
+	} else {
+		/**
+		** Modern devices: simply use PCI device id,
+		** but start from 0x1040.
+		**/
+		device_id = pci_device_id - 0x1040;
+	}
+
+	return device_id;
+}
+
+struct rte_vdpa_dev_info dev_info[] = {
+	{
+		.features = (1ULL << VIRTIO_NET_F_GUEST_ANNOUNCE) |
+			    (1ULL << VIRTIO_NET_F_CTRL_VQ) |
+			    (1ULL << VIRTIO_NET_F_STATUS) |
+			    (1ULL << VHOST_USER_F_PROTOCOL_FEATURES) |
+			    (1ULL << VHOST_F_LOG_ALL),
+		.ops = &ifcvf_ops,
+	},
+	{
+		.features = (1ULL << VHOST_USER_F_PROTOCOL_FEATURES) |
+			    (1ULL << VHOST_F_LOG_ALL),
+		.ops = NULL,
+	},
+};
+
 static int
 ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 		struct rte_pci_device *pci_dev)
@@ -1181,6 +1234,7 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	int sw_fallback_lm = 0;
 	struct rte_kvargs *kvlist = NULL;
 	int ret = 0;
+	int16_t device_id;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
@@ -1230,13 +1284,24 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	internal->configured = 0;
 	internal->max_queues = IFCVF_MAX_QUEUES;
 	features = ifcvf_get_features(&internal->hw);
-	internal->features = (features &
-		~(1ULL << VIRTIO_F_IOMMU_PLATFORM)) |
-		(1ULL << VIRTIO_NET_F_GUEST_ANNOUNCE) |
-		(1ULL << VIRTIO_NET_F_CTRL_VQ) |
-		(1ULL << VIRTIO_NET_F_STATUS) |
-		(1ULL << VHOST_USER_F_PROTOCOL_FEATURES) |
-		(1ULL << VHOST_F_LOG_ALL);
+
+	device_id = ifcvf_pci_get_device_type(pci_dev);
+	if (device_id < 0) {
+		DRV_LOG(ERR, "failed to get device %s type", pci_dev->name);
+		goto error;
+	}
+
+	if (device_id == VIRTIO_ID_NET) {
+		internal->device_type = IFCVF_NET;
+		internal->features = features &
+					~(1ULL << VIRTIO_F_IOMMU_PLATFORM);
+		internal->features |= dev_info[IFCVF_NET].features;
+	} else if (device_id == VIRTIO_ID_BLOCK) {
+		internal->device_type = IFCVF_BLK;
+		internal->features = features &
+					~(1ULL << VIRTIO_F_IOMMU_PLATFORM);
+		internal->features |= dev_info[IFCVF_BLK].features;
+	}
 
 	list->internal = internal;
 
@@ -1248,7 +1313,8 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	}
 	internal->sw_lm = sw_fallback_lm;
 
-	internal->vdev = rte_vdpa_register_device(&pci_dev->device, &ifcvf_ops);
+	internal->vdev = rte_vdpa_register_device(&pci_dev->device,
+				dev_info[internal->device_type].ops);
 	if (internal->vdev == NULL) {
 		DRV_LOG(ERR, "failed to register device %s", pci_dev->name);
 		goto error;
@@ -1314,6 +1380,20 @@ static const struct rte_pci_id pci_id_ifcvf_map[] = {
 	  .device_id = IFCVF_DEVICE_ID,
 	  .subsystem_vendor_id = IFCVF_SUBSYS_VENDOR_ID,
 	  .subsystem_device_id = IFCVF_SUBSYS_DEVICE_ID,
+	},
+
+	{ .class_id = RTE_CLASS_ANY_ID,
+	  .vendor_id = IFCVF_VENDOR_ID,
+	  .device_id = IFCVF_BLK_TRANSITIONAL_DEVICE_ID,
+	  .subsystem_vendor_id = IFCVF_SUBSYS_VENDOR_ID,
+	  .subsystem_device_id = IFCVF_BLK_DEVICE_ID,
+	},
+
+	{ .class_id = RTE_CLASS_ANY_ID,
+	  .vendor_id = IFCVF_VENDOR_ID,
+	  .device_id = IFCVF_BLK_MODERN_DEVICE_ID,
+	  .subsystem_vendor_id = IFCVF_SUBSYS_VENDOR_ID,
+	  .subsystem_device_id = IFCVF_BLK_DEVICE_ID,
 	},
 
 	{ .vendor_id = 0, /* sentinel */
