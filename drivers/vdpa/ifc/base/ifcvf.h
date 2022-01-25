@@ -149,6 +149,7 @@ struct ifcvf_hw {
 	u8     *lm_cfg;
 	struct vring_info vring[IFCVF_MAX_QUEUES * 2];
 	u8 nr_vring;
+	u8 is_blk;
 	struct ifcvf_pci_mem_resource mem_resource[IFCVF_PCI_MAX_RESOURCE];
 };
 

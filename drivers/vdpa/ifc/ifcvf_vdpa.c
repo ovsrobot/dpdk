@@ -1621,11 +1621,13 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 
 	if (device_id == VIRTIO_ID_NET) {
 		internal->device_type = IFCVF_NET;
+		internal->hw.is_blk = IFCVF_NET;
 		internal->features = features &
 					~(1ULL << VIRTIO_F_IOMMU_PLATFORM);
 		internal->features |= dev_info[IFCVF_NET].features;
 	} else if (device_id == VIRTIO_ID_BLOCK) {
 		internal->device_type = IFCVF_BLK;
+		internal->hw.is_blk = IFCVF_BLK;
 		internal->features = features &
 					~(1ULL << VIRTIO_F_IOMMU_PLATFORM);
 		internal->features |= dev_info[IFCVF_BLK].features;
