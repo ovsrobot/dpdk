@@ -53,7 +53,9 @@ struct ifcvf_internal {
 	int vfio_group_fd;
 	int vfio_dev_fd;
 	pthread_t tid;	/* thread for notify relay */
+	pthread_t intr_tid;	/* thread for intr relay */
 	int epfd;
+	int csc_fd;
 	int vid;
 	struct rte_vdpa_device *vdev;
 	uint16_t max_queues;
@@ -622,6 +624,108 @@ unset_notify_relay(struct ifcvf_internal *internal)
 	return 0;
 }
 
+static void
+virtio_interrupt_handler(struct ifcvf_internal *internal)
+{
+	int vid = internal->vid;
+	int ret;
+
+	ret = rte_vhost_slave_config_change(vid, 1);
+	if (ret)
+		DRV_LOG(ERR, "failed to notify the guest about configuration space change.");
+
+	return;
+}
+
+static void *
+intr_relay(void *arg)
+{
+	struct ifcvf_internal *internal = (struct ifcvf_internal *)arg;
+	struct epoll_event csc_event;
+	struct epoll_event ev;
+	uint64_t buf;
+	int nbytes;
+	int csc_fd, csc_val = 0;
+
+	csc_fd = epoll_create(1);
+	if (csc_fd < 0) {
+		DRV_LOG(ERR, "failed to create epoll for config space change.");
+		return NULL;
+	}
+
+	ev.events = EPOLLIN | EPOLLPRI | EPOLLRDHUP | EPOLLHUP;
+	ev.data.fd = rte_intr_fd_get(internal->pdev->intr_handle);
+	if (epoll_ctl(csc_fd, EPOLL_CTL_ADD,
+		rte_intr_fd_get(internal->pdev->intr_handle), &ev) < 0) {
+		DRV_LOG(ERR, "epoll add error: %s", strerror(errno));
+		return NULL;
+	}
+
+	internal->csc_fd = csc_fd;
+
+	for (;;) {
+		csc_val = epoll_wait(csc_fd, &csc_event, 1, -1);
+		if (csc_val < 0) {
+			if (errno == EINTR)
+				continue;
+			DRV_LOG(ERR, "epoll_wait return fail\n");
+			return NULL;
+		} else if (csc_val == 0) {
+			continue;
+		} else {
+			/* csc_val > 0 */
+			nbytes = read(csc_event.data.fd, &buf, 8);
+			if (nbytes < 0) {
+				if (errno == EINTR || errno == EWOULDBLOCK)
+					continue;
+				DRV_LOG(ERR, "Error reading from file descriptor %d: %s\n",
+					csc_event.data.fd,
+					strerror(errno));
+				return NULL;
+			} else if (nbytes == 0) {
+				DRV_LOG(ERR, "Read nothing from file descriptor %d\n",
+					csc_event.data.fd);
+				continue;
+			} else {
+				virtio_interrupt_handler(internal);
+			}
+		}
+	}
+	return NULL;
+}
+
+static int
+setup_intr_relay(struct ifcvf_internal *internal)
+{
+	int ret;
+
+	ret = pthread_create(&internal->intr_tid, NULL, intr_relay,
+			(void *)internal);
+	if (ret) {
+		DRV_LOG(ERR, "failed to create notify relay pthread.");
+		return -1;
+	}
+	return 0;
+}
+
+static int
+unset_intr_relay(struct ifcvf_internal *internal)
+{
+	void *status;
+
+	if (internal->intr_tid) {
+		pthread_cancel(internal->intr_tid);
+		pthread_join(internal->intr_tid, &status);
+	}
+	internal->intr_tid = 0;
+
+	if (internal->csc_fd >= 0)
+		close(internal->csc_fd);
+	internal->csc_fd = -1;
+
+	return 0;
+}
+
 static int
 update_datapath(struct ifcvf_internal *internal)
 {
@@ -648,10 +752,16 @@ update_datapath(struct ifcvf_internal *internal)
 		if (ret)
 			goto err;
 
+		ret = setup_intr_relay(internal);
+		if (ret)
+			goto err;
+
 		rte_atomic32_set(&internal->running, 1);
 	} else if (rte_atomic32_read(&internal->running) &&
 		   (!rte_atomic32_read(&internal->started) ||
 		    !rte_atomic32_read(&internal->dev_attached))) {
+		ret = unset_intr_relay(internal);
+
 		ret = unset_notify_relay(internal);
 		if (ret)
 			goto err;
@@ -969,6 +1079,9 @@ ifcvf_sw_fallback_switchover(struct ifcvf_internal *internal)
 		vdpa_ifcvf_stop(internal);
 	else if (internal->device_type == IFCVF_BLK)
 		vdpa_ifcvf_blk_pause(internal);
+
+	unset_intr_relay(internal);
+
 	vdpa_disable_vfio_intr(internal);
 
 	ret = rte_vhost_host_notifier_ctrl(vid, RTE_VHOST_QUEUE_ALL, false);
