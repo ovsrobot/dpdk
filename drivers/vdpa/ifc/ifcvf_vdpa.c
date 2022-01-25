@@ -1373,6 +1373,16 @@ ifcvf_blk_get_config(int vid, uint8_t *config, uint32_t len)
 }
 
 static int
+ifcvf_blk_set_vring_state(int vid, int vring, int state)
+{
+	RTE_SET_USED(vid);
+	RTE_SET_USED(vring);
+	RTE_SET_USED(state);
+
+	return 0;
+}
+
+static int
 ifcvf_blk_get_protocol_features(struct rte_vdpa_device *vdev,
 	uint64_t *features)
 {
@@ -1390,7 +1400,7 @@ static struct rte_vdpa_dev_ops ifcvf_blk_ops = {
 	.get_protocol_features = ifcvf_blk_get_protocol_features,
 	.dev_conf = ifcvf_dev_config,
 	.dev_close = ifcvf_dev_close,
-	.set_vring_state = NULL,
+	.set_vring_state = ifcvf_blk_set_vring_state,
 	.migration_done = NULL,
 	.get_vfio_group_fd = ifcvf_get_vfio_group_fd,
 	.get_vfio_device_fd = ifcvf_get_vfio_device_fd,
