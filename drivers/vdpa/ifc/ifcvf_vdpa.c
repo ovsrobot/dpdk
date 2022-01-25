@@ -1447,6 +1447,9 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	struct rte_kvargs *kvlist = NULL;
 	int ret = 0;
 	int16_t device_id;
+	__u64 capacity = 0;
+	uint8_t *byte;
+	uint32_t i;
 
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
@@ -1513,6 +1516,32 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 		internal->features = features &
 					~(1ULL << VIRTIO_F_IOMMU_PLATFORM);
 		internal->features |= dev_info[IFCVF_BLK].features;
+
+		/**
+		** cannot read 64-bit register in one attempt,
+		** so read byte by byte.
+		**/
+		for (i = 0; i < sizeof(internal->hw.blk_cfg->capacity); i++) {
+			byte = (uint8_t *)&internal->hw.blk_cfg->capacity + i;
+			capacity |= (__u64)*byte << (i * 8);
+		}
+		DRV_LOG(INFO, "capacity  : %quG", capacity >> 21);
+
+		DRV_LOG(INFO, "size_max  : 0x%08x",
+			internal->hw.blk_cfg->size_max);
+		DRV_LOG(INFO, "seg_max   : 0x%08x",
+			internal->hw.blk_cfg->seg_max);
+		DRV_LOG(INFO, "blk_size  : 0x%08x",
+			internal->hw.blk_cfg->blk_size);
+		DRV_LOG(INFO, "geometry");
+		DRV_LOG(INFO, "    cylinders: %u",
+			internal->hw.blk_cfg->geometry.cylinders);
+		DRV_LOG(INFO, "    heads    : %u",
+			internal->hw.blk_cfg->geometry.heads);
+		DRV_LOG(INFO, "    sectors  : %u",
+			internal->hw.blk_cfg->geometry.sectors);
+		DRV_LOG(INFO, "num_queues: 0x%08x",
+			internal->hw.blk_cfg->num_queues);
 	}
 
 	list->internal = internal;
