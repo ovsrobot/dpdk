@@ -5,7 +5,7 @@
 APP = vdpa
 
 # all source are stored in SRCS-y
-SRCS-y := main.c
+SRCS-y := main.c vdpa_blk_compact.c
 CFLAGS += -DALLOW_EXPERIMENTAL_API
 
 PKGCONF ?= pkg-config

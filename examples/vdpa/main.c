@@ -20,6 +20,7 @@
 #include <cmdline_parse_string.h>
 #include <cmdline_parse_num.h>
 #include <cmdline.h>
+#include "vdpa_blk_compact.h"
 
 #define MAX_PATH_LEN 128
 #define MAX_VDPA_SAMPLE_PORTS 1024
@@ -156,6 +157,7 @@ destroy_device(int vid)
 static const struct rte_vhost_device_ops vdpa_sample_devops = {
 	.new_device = new_device,
 	.destroy_device = destroy_device,
+	.new_connection = rte_vhost_blk_session_install_rte_compat_hooks,
 };
 
 static int
@@ -190,6 +192,12 @@ start_vdpa(struct vdpa_port *vport)
 	if (ret != 0)
 		rte_exit(EXIT_FAILURE,
 			"attach vdpa device failed: %s\n",
+			socket_path);
+
+	if (vdpa_blk_device_set_features_and_protocol(socket_path, vport->dev)
+		< 0)
+		rte_exit(EXIT_FAILURE,
+			"set vhost blk driver features and protocol features failed: %s\n",
 			socket_path);
 
 	if (rte_vhost_driver_start(socket_path) < 0)
