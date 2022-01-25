@@ -738,6 +738,9 @@ prepare_acl_parameter(struct rte_mbuf **pkts_in, struct acl_search_t *acl,
 	acl->num_ipv4 = 0;
 	acl->num_ipv6 = 0;
 
+	memset(acl->res_ipv4, 0, sizeof(acl->res_ipv4));
+	memset(acl->res_ipv6, 0, sizeof(acl->res_ipv6));
+
 	/* Prefetch first packets */
 	for (i = 0; i < PREFETCH_OFFSET && i < nb_rx; i++) {
 		rte_prefetch0(rte_pktmbuf_mtod(
