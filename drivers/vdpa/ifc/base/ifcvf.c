@@ -116,7 +116,7 @@ ifcvf_set_status(struct ifcvf_hw *hw, u8 status)
 	IFCVF_WRITE_REG8(status, &hw->common_cfg->device_status);
 }
 
-STATIC void
+void
 ifcvf_reset(struct ifcvf_hw *hw)
 {
 	ifcvf_set_status(hw, 0);

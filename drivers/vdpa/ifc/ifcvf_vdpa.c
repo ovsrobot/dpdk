@@ -359,23 +359,32 @@ static void
 vdpa_ifcvf_blk_pause(struct ifcvf_internal *internal)
 {
 	struct ifcvf_hw *hw = &internal->hw;
-	struct rte_vhost_vring vq;
 	int i, vid;
 	uint64_t features = 0;
 	uint64_t log_base = 0, log_size = 0;
 	uint64_t len;
+	u32 ring_state = 0;
 
 	vid = internal->vid;
 
 	if (internal->device_type == IFCVF_BLK) {
 		for (i = 0; i < hw->nr_vring; i++) {
-			rte_vhost_get_vhost_vring(internal->vid, i, &vq);
-			while (vq.avail->idx != vq.used->idx) {
-				ifcvf_notify_queue(hw, i);
-				usleep(10);
-			}
-			hw->vring[i].last_avail_idx = vq.avail->idx;
-			hw->vring[i].last_used_idx = vq.used->idx;
+			do {
+				if (hw->lm_cfg != NULL)
+					ring_state = *(u32 *)(hw->lm_cfg +
+						IFCVF_LM_RING_STATE_OFFSET +
+						i * IFCVF_LM_CFG_SIZE);
+				hw->vring[i].last_avail_idx =
+					(u16)(ring_state & IFCVF_16_BIT_MASK);
+				hw->vring[i].last_used_idx =
+					(u16)(ring_state >> 16);
+				if (hw->vring[i].last_avail_idx !=
+					hw->vring[i].last_used_idx) {
+					ifcvf_notify_queue(hw, i);
+					usleep(10);
+				}
+			} while (hw->vring[i].last_avail_idx !=
+				hw->vring[i].last_used_idx);
 		}
 	}
 
@@ -766,7 +775,12 @@ update_datapath(struct ifcvf_internal *internal)
 		if (ret)
 			goto err;
 
-		vdpa_ifcvf_stop(internal);
+		if (internal->device_type == IFCVF_BLK) {
+			vdpa_ifcvf_blk_pause(internal);
+			ifcvf_reset(&internal->hw);
+		} else {
+			vdpa_ifcvf_stop(internal);
+		}
 
 		ret = vdpa_disable_vfio_intr(internal);
 		if (ret)
