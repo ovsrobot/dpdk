@@ -94,6 +94,8 @@ uint32_t hash_entry_number = HASH_ENTRY_NUMBER_DEFAULT;
 
 struct lcore_conf lcore_conf[RTE_MAX_LCORE];
 
+struct parm_cfg parm_config;
+
 struct lcore_params {
 	uint16_t port_id;
 	uint8_t queue_id;
@@ -141,88 +143,65 @@ static struct rte_mempool *vector_pool[RTE_MAX_ETHPORTS];
 static uint8_t lkp_per_socket[NB_SOCKETS];
 
 struct l3fwd_lkp_mode {
+	void  (*read_config_files)(void);
 	void  (*setup)(int);
 	int   (*check_ptype)(int);
 	rte_rx_callback_fn cb_parse_ptype;
 	int   (*main_loop)(void *);
 	void* (*get_ipv4_lookup_struct)(int);
 	void* (*get_ipv6_lookup_struct)(int);
+	void  (*free_routes)(void);
 };
 
 static struct l3fwd_lkp_mode l3fwd_lkp;
 
 static struct l3fwd_lkp_mode l3fwd_em_lkp = {
+	.read_config_files		= read_config_files_em,
 	.setup                  = setup_hash,
 	.check_ptype		= em_check_ptype,
 	.cb_parse_ptype		= em_cb_parse_ptype,
 	.main_loop              = em_main_loop,
 	.get_ipv4_lookup_struct = em_get_ipv4_l3fwd_lookup_struct,
 	.get_ipv6_lookup_struct = em_get_ipv6_l3fwd_lookup_struct,
+	.free_routes			= em_free_routes,
 };
 
 static struct l3fwd_lkp_mode l3fwd_lpm_lkp = {
+	.read_config_files		= read_config_files_lpm,
 	.setup                  = setup_lpm,
 	.check_ptype		= lpm_check_ptype,
 	.cb_parse_ptype		= lpm_cb_parse_ptype,
 	.main_loop              = lpm_main_loop,
 	.get_ipv4_lookup_struct = lpm_get_ipv4_l3fwd_lookup_struct,
 	.get_ipv6_lookup_struct = lpm_get_ipv6_l3fwd_lookup_struct,
+	.free_routes			= lpm_free_routes,
 };
 
 static struct l3fwd_lkp_mode l3fwd_fib_lkp = {
+	.read_config_files		= read_config_files_lpm,
 	.setup                  = setup_fib,
 	.check_ptype            = lpm_check_ptype,
 	.cb_parse_ptype         = lpm_cb_parse_ptype,
 	.main_loop              = fib_main_loop,
 	.get_ipv4_lookup_struct = fib_get_ipv4_l3fwd_lookup_struct,
 	.get_ipv6_lookup_struct = fib_get_ipv6_l3fwd_lookup_struct,
+	.free_routes			= lpm_free_routes,
 };
 
 /*
- * 198.18.0.0/16 are set aside for RFC2544 benchmarking (RFC5735).
- * 198.18.{0-15}.0/24 = Port {0-15}
+ * API's called during initialization to setup ACL/EM/LPM rules.
  */
-const struct ipv4_l3fwd_route ipv4_l3fwd_route_array[] = {
-	{RTE_IPV4(198, 18, 0, 0), 24, 0},
-	{RTE_IPV4(198, 18, 1, 0), 24, 1},
-	{RTE_IPV4(198, 18, 2, 0), 24, 2},
-	{RTE_IPV4(198, 18, 3, 0), 24, 3},
-	{RTE_IPV4(198, 18, 4, 0), 24, 4},
-	{RTE_IPV4(198, 18, 5, 0), 24, 5},
-	{RTE_IPV4(198, 18, 6, 0), 24, 6},
-	{RTE_IPV4(198, 18, 7, 0), 24, 7},
-	{RTE_IPV4(198, 18, 8, 0), 24, 8},
-	{RTE_IPV4(198, 18, 9, 0), 24, 9},
-	{RTE_IPV4(198, 18, 10, 0), 24, 10},
-	{RTE_IPV4(198, 18, 11, 0), 24, 11},
-	{RTE_IPV4(198, 18, 12, 0), 24, 12},
-	{RTE_IPV4(198, 18, 13, 0), 24, 13},
-	{RTE_IPV4(198, 18, 14, 0), 24, 14},
-	{RTE_IPV4(198, 18, 15, 0), 24, 15},
-};
+static void
+l3fwd_set_rule_ipv4_name(const char *optarg)
+{
+	parm_config.rule_ipv4_name = optarg;
+}
 
-/*
- * 2001:200::/48 is IANA reserved range for IPv6 benchmarking (RFC5180).
- * 2001:200:0:{0-f}::/64 = Port {0-15}
- */
-const struct ipv6_l3fwd_route ipv6_l3fwd_route_array[] = {
-	{{32, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 0},
-	{{32, 1, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 1},
-	{{32, 1, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 2},
-	{{32, 1, 2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 3},
-	{{32, 1, 2, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 4},
-	{{32, 1, 2, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 5},
-	{{32, 1, 2, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 6},
-	{{32, 1, 2, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 7},
-	{{32, 1, 2, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 8},
-	{{32, 1, 2, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 9},
-	{{32, 1, 2, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 10},
-	{{32, 1, 2, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 11},
-	{{32, 1, 2, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 12},
-	{{32, 1, 2, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 13},
-	{{32, 1, 2, 0, 0, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 14},
-	{{32, 1, 2, 0, 0, 0, 0, 15, 0, 0, 0, 0, 0, 0, 0, 0}, 64, 15},
-};
+static void
+l3fwd_set_rule_ipv6_name(const char *optarg)
+{
+	parm_config.rule_ipv6_name = optarg;
+}
 
 /*
  * Setup lookup methods for forwarding.
@@ -339,6 +318,8 @@ print_usage(const char *prgname)
 {
 	fprintf(stderr, "%s [EAL options] --"
 		" -p PORTMASK"
+		"  --rule_ipv4=FILE"
+		"  --rule_ipv6=FILE"
 		" [-P]"
 		" [--lookup]"
 		" --config (port,queue,lcore)[,(port,queue,lcore)]"
@@ -381,7 +362,10 @@ print_usage(const char *prgname)
 		"  --event-vector-size: Max vector size if event vectorization is enabled.\n"
 		"  --event-vector-tmo: Max timeout to form vector in nanoseconds if event vectorization is enabled\n"
 		"  -E : Enable exact match, legacy flag please use --lookup=em instead\n"
-		"  -L : Enable longest prefix match, legacy flag please use --lookup=lpm instead\n\n",
+		"  -L : Enable longest prefix match, legacy flag please use --lookup=lpm instead\n"
+		"  --rule_ipv4=FILE: Specify the ipv4 rules entries file.\n"
+		"                    Each rule occupies one line.\n"
+		"  --rule_ipv6=FILE: Specify the ipv6 rules entries file.\n\n",
 		prgname);
 }
 
@@ -596,6 +580,8 @@ static const char short_options[] =
 #define CMD_LINE_OPT_ENABLE_VECTOR "event-vector"
 #define CMD_LINE_OPT_VECTOR_SIZE "event-vector-size"
 #define CMD_LINE_OPT_VECTOR_TMO_NS "event-vector-tmo"
+#define CMD_LINE_OPT_RULE_IPV4 "rule_ipv4"
+#define CMD_LINE_OPT_RULE_IPV6 "rule_ipv6"
 
 enum {
 	/* long options mapped to a short option */
@@ -610,6 +596,8 @@ enum {
 	CMD_LINE_OPT_MAX_PKT_LEN_NUM,
 	CMD_LINE_OPT_HASH_ENTRY_NUM_NUM,
 	CMD_LINE_OPT_PARSE_PTYPE_NUM,
+	CMD_LINE_OPT_RULE_IPV4_NUM,
+	CMD_LINE_OPT_RULE_IPV6_NUM,
 	CMD_LINE_OPT_PARSE_PER_PORT_POOL,
 	CMD_LINE_OPT_MODE_NUM,
 	CMD_LINE_OPT_EVENTQ_SYNC_NUM,
@@ -637,6 +625,8 @@ static const struct option lgopts[] = {
 	{CMD_LINE_OPT_ENABLE_VECTOR, 0, 0, CMD_LINE_OPT_ENABLE_VECTOR_NUM},
 	{CMD_LINE_OPT_VECTOR_SIZE, 1, 0, CMD_LINE_OPT_VECTOR_SIZE_NUM},
 	{CMD_LINE_OPT_VECTOR_TMO_NS, 1, 0, CMD_LINE_OPT_VECTOR_TMO_NS_NUM},
+	{CMD_LINE_OPT_RULE_IPV4,   1, 0, CMD_LINE_OPT_RULE_IPV4_NUM},
+	{CMD_LINE_OPT_RULE_IPV6,   1, 0, CMD_LINE_OPT_RULE_IPV6_NUM},
 	{NULL, 0, 0, 0}
 };
 
@@ -790,6 +780,12 @@ parse_args(int argc, char **argv)
 			break;
 		case CMD_LINE_OPT_VECTOR_TMO_NS_NUM:
 			evt_rsrc->vector_tmo_ns = strtoull(optarg, NULL, 10);
+			break;
+		case CMD_LINE_OPT_RULE_IPV4_NUM:
+			l3fwd_set_rule_ipv4_name(optarg);
+			break;
+		case CMD_LINE_OPT_RULE_IPV6_NUM:
+			l3fwd_set_rule_ipv6_name(optarg);
 			break;
 		default:
 			print_usage(prgname);
@@ -1358,6 +1354,24 @@ l3fwd_event_service_setup(void)
 	}
 }
 
+/* Bypass comment and empty lines */
+int
+is_bypass_line(const char *buff)
+{
+	int i = 0;
+
+	/* comment line */
+	if (buff[0] == COMMENT_LEAD_CHAR)
+		return 1;
+	/* empty line */
+	while (buff[i] != '\0') {
+		if (!isspace(buff[i]))
+			return 0;
+		i++;
+	}
+	return 1;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -1394,6 +1408,9 @@ main(int argc, char **argv)
 
 	/* Setup function pointers for lookup method. */
 	setup_l3fwd_lookup_tables();
+
+	/* Add the config file rules */
+	l3fwd_lkp.read_config_files();
 
 	evt_rsrc->per_port_pool = per_port_pool;
 	evt_rsrc->pkt_pool = pktmbuf_pool;
@@ -1500,6 +1517,9 @@ main(int argc, char **argv)
 			printf(" Done\n");
 		}
 	}
+
+	/* clean up config file routes */
+	l3fwd_lkp.free_routes();
 
 	/* clean up the EAL */
 	rte_eal_cleanup();

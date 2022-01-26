@@ -58,6 +58,30 @@
 #endif
 #define HASH_ENTRY_NUMBER_DEFAULT	16
 
+/*Log file related character defs. */
+#define COMMENT_LEAD_CHAR	('#')
+#define ROUTE_LEAD_CHAR		('R')
+
+#define	IPV6_ADDR_LEN	16
+#define	IPV6_ADDR_U16	(IPV6_ADDR_LEN / sizeof(uint16_t))
+#define	IPV6_ADDR_U32	(IPV6_ADDR_LEN / sizeof(uint32_t))
+
+#define GET_CB_FIELD(in, fd, base, lim, dlm)	do {            \
+	unsigned long val;                                      \
+	char *end;                                              \
+	errno = 0;                                              \
+	val = strtoul((in), &end, (base));                      \
+	if (errno != 0 || end[0] != (dlm) || val > (lim))       \
+		return -EINVAL;                               \
+	(fd) = (typeof(fd))val;                                 \
+	(in) = end + 1;                                         \
+} while (0)
+
+struct parm_cfg {
+	const char *rule_ipv4_name;
+	const char *rule_ipv6_name;
+};
+
 struct mbuf_table {
 	uint16_t len;
 	struct rte_mbuf *m_table[MAX_PKT_BURST];
@@ -95,6 +119,8 @@ extern uint32_t hash_entry_number;
 extern xmm_t val_eth[RTE_MAX_ETHPORTS];
 
 extern struct lcore_conf lcore_conf[RTE_MAX_LCORE];
+
+extern struct parm_cfg parm_config;
 
 /* Send burst of packets on an output interface */
 static inline int
@@ -183,6 +209,12 @@ int
 init_mem(uint16_t portid, unsigned int nb_mbuf);
 
 /* Function pointers for LPM, EM or FIB functionality. */
+void
+read_config_files_lpm(void);
+
+void
+read_config_files_em(void);
+
 void
 setup_lpm(const int socketid);
 
@@ -285,5 +317,14 @@ fib_get_ipv4_l3fwd_lookup_struct(const int socketid);
 
 void *
 fib_get_ipv6_l3fwd_lookup_struct(const int socketid);
+
+void
+em_free_routes(void);
+
+void
+lpm_free_routes(void);
+
+int
+is_bypass_line(const char *buff);
 
 #endif  /* __L3_FWD_H__ */
