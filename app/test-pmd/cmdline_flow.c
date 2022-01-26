@@ -271,6 +271,10 @@ enum index {
 	ITEM_META_DATA,
 	ITEM_GRE_KEY,
 	ITEM_GRE_KEY_VALUE,
+	ITEM_GRE_OPTION,
+	ITEM_GRE_OPTION_CHECKSUM,
+	ITEM_GRE_OPTION_KEY,
+	ITEM_GRE_OPTION_SEQUENCE,
 	ITEM_GTP_PSC,
 	ITEM_GTP_PSC_QFI,
 	ITEM_GTP_PSC_PDU_T,
@@ -1042,6 +1046,7 @@ static const enum index next_item[] = {
 	ITEM_ICMP6_ND_OPT_TLA_ETH,
 	ITEM_META,
 	ITEM_GRE_KEY,
+	ITEM_GRE_OPTION,
 	ITEM_GTP_PSC,
 	ITEM_PPPOES,
 	ITEM_PPPOED,
@@ -1228,6 +1233,14 @@ static const enum index item_gre[] = {
 
 static const enum index item_gre_key[] = {
 	ITEM_GRE_KEY_VALUE,
+	ITEM_NEXT,
+	ZERO,
+};
+
+static const enum index item_gre_option[] = {
+	ITEM_GRE_OPTION_CHECKSUM,
+	ITEM_GRE_OPTION_KEY,
+	ITEM_GRE_OPTION_SEQUENCE,
 	ITEM_NEXT,
 	ZERO,
 };
@@ -3478,6 +3491,38 @@ static const struct token token_list[] = {
 		.next = NEXT(item_gre_key, NEXT_ENTRY(COMMON_UNSIGNED),
 			     item_param),
 		.args = ARGS(ARG_ENTRY_HTON(rte_be32_t)),
+	},
+	[ITEM_GRE_OPTION] = {
+		.name = "gre_option",
+		.help = "match GRE optional fields",
+		.priv = PRIV_ITEM(GRE_OPTION,
+				  sizeof(struct rte_flow_item_gre_opt)),
+		.next = NEXT(item_gre_option),
+		.call = parse_vc,
+	},
+	[ITEM_GRE_OPTION_CHECKSUM] = {
+		.name = "checksum",
+		.help = "match GRE checksum",
+		.next = NEXT(item_gre_option, NEXT_ENTRY(COMMON_UNSIGNED),
+			     item_param),
+		.args = ARGS(ARGS_ENTRY_HTON(struct rte_flow_item_gre_opt,
+					     checksum)),
+	},
+	[ITEM_GRE_OPTION_KEY] = {
+		.name = "key",
+		.help = "match GRE key",
+		.next = NEXT(item_gre_option, NEXT_ENTRY(COMMON_UNSIGNED),
+			     item_param),
+		.args = ARGS(ARGS_ENTRY_HTON(struct rte_flow_item_gre_opt,
+					     key)),
+	},
+	[ITEM_GRE_OPTION_SEQUENCE] = {
+		.name = "sequence",
+		.help = "match GRE sequence",
+		.next = NEXT(item_gre_option, NEXT_ENTRY(COMMON_UNSIGNED),
+			     item_param),
+		.args = ARGS(ARGS_ENTRY_HTON(struct rte_flow_item_gre_opt,
+					     sequence)),
 	},
 	[ITEM_GTP_PSC] = {
 		.name = "gtp_psc",
@@ -9234,6 +9279,20 @@ cmd_set_raw_parsed(const struct buffer *in)
 			size = item->spec ?
 				((const struct rte_flow_item_flex *)
 				item->spec)->length : 0;
+			break;
+		case RTE_FLOW_ITEM_TYPE_GRE_OPTION:
+			size = 0;
+			if (item->spec) {
+				const struct rte_flow_item_gre_opt
+					*opt = item->spec;
+				if (opt->checksum.checksum)
+					size += 4;
+				if (opt->key.key)
+					size += 4;
+				if (opt->sequence.sequence)
+					size += 4;
+			}
+			proto = 0x2F;
 			break;
 		default:
 			fprintf(stderr, "Error - Not supported item\n");
