@@ -136,7 +136,7 @@ ice_dcf_vf_repr_dev_info_get(struct rte_eth_dev *dev,
 		return -EIO;
 
 	dev_info->device = dev->device;
-	dev_info->max_mac_addrs = 1;
+	dev_info->max_mac_addrs = ICE_NUM_MACADDR_MAX;
 	dev_info->max_rx_queues = dcf_hw->vsi_res->num_queue_pairs;
 	dev_info->max_tx_queues = dcf_hw->vsi_res->num_queue_pairs;
 	dev_info->min_rx_bufsize = ICE_BUF_SIZE_MIN;
@@ -514,6 +514,82 @@ ice_dcf_vf_repr_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 	return ret;
 }
 static int
+ice_dcf_repr_add_del_eth_addr(struct ice_dcf_hw *hw,
+			uint16_t vf_id,
+			struct rte_ether_addr *addr,
+			bool add, uint8_t type)
+{
+	struct virtchnl_ether_addr_list *list;
+	struct dcf_virtchnl_cmd args;
+	uint8_t cmd_buffer[sizeof(struct virtchnl_ether_addr_list) +
+			   sizeof(struct virtchnl_ether_addr)];
+	int err;
+
+	list = (struct virtchnl_ether_addr_list *)cmd_buffer;
+	list->vsi_id = hw->vf_vsi_map[vf_id] & ~VIRTCHNL_DCF_VF_VSI_VALID;
+	list->num_elements = 1;
+	list->list[0].type = type;
+	rte_memcpy(list->list[0].addr, addr->addr_bytes,
+	    sizeof(addr->addr_bytes));
+
+	args.v_op = add ? VIRTCHNL_OP_ADD_ETH_ADDR : VIRTCHNL_OP_DEL_ETH_ADDR;
+	args.req_msg = cmd_buffer;
+	args.req_msglen = sizeof(cmd_buffer);
+
+	err = ice_dcf_execute_virtchnl_cmd(hw, &args);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Fail to execute command %s",
+			    add ? "OP_ADD_ETH_ADDR" :  "OP_DEL_ETH_ADDR");
+		return err;
+	}
+
+	return 0;
+}
+
+static int
+ice_dcf_vf_repr_add_mac_addr(struct rte_eth_dev *dev, struct rte_ether_addr *addr,
+		     __rte_unused uint32_t index,
+		     __rte_unused uint32_t pool)
+{
+	struct ice_dcf_vf_repr *repr = dev->data->dev_private;
+	struct ice_dcf_hw *hw = ice_dcf_vf_repr_hw(repr);
+	int err;
+
+	if (rte_is_zero_ether_addr(addr)) {
+		PMD_DRV_LOG(ERR, "Invalid Ethernet Address");
+		return -EINVAL;
+	}
+
+	err = ice_dcf_repr_add_del_eth_addr(hw, repr->vf_id, addr, true, VIRTCHNL_ETHER_ADDR_EXTRA);
+	if (err) {
+		PMD_DRV_LOG(ERR, "fail to add MAC address");
+		return -EIO;
+	}
+
+	repr->mac_num++;
+
+	return 0;
+}
+
+static void
+ice_dcf_vf_repr_del_mac_addr(struct rte_eth_dev *dev, uint32_t index)
+{
+	struct ice_dcf_vf_repr *repr = dev->data->dev_private;
+	struct ice_dcf_hw *hw = ice_dcf_vf_repr_hw(repr);
+	struct rte_ether_addr *addr;
+	int err;
+
+	addr = &dev->data->mac_addrs[index];
+
+	err = ice_dcf_repr_add_del_eth_addr(hw, repr->vf_id, addr,
+					false, VIRTCHNL_ETHER_ADDR_EXTRA);
+	if (err)
+		PMD_DRV_LOG(ERR, "fail to del MAC address");
+
+	repr->mac_num--;
+}
+
+static int
 ice_dcf_add_del_vlan_v2(struct rte_eth_dev *dev, uint16_t vlanid, bool add)
 {
 	struct ice_dcf_vf_repr *repr = dev->data->dev_private;
@@ -581,6 +657,8 @@ static const struct eth_dev_ops ice_dcf_vf_repr_dev_ops = {
 	.vlan_tpid_set        = ice_dcf_vf_repr_vlan_tpid_set,
 	.stats_reset          = ice_dcf_vf_repr_stats_reset,
 	.stats_get            = ice_dcf_vf_repr_stats_get,
+	.mac_addr_add         = ice_dcf_vf_repr_add_mac_addr,
+	.mac_addr_remove      = ice_dcf_vf_repr_del_mac_addr,
 	.vlan_filter_set      = ice_dcf_vf_repr_vlan_filter_set,
 };
 
@@ -596,6 +674,7 @@ ice_dcf_vf_repr_init(struct rte_eth_dev *vf_rep_eth_dev, void *init_param)
 	repr->outer_vlan_info.port_vlan_ena = false;
 	repr->outer_vlan_info.stripping_ena = false;
 	repr->outer_vlan_info.tpid = RTE_ETHER_TYPE_VLAN;
+	repr->mac_num = 1;
 
 	vf_rep_eth_dev->dev_ops = &ice_dcf_vf_repr_dev_ops;
 
