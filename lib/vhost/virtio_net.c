@@ -43,6 +43,54 @@ is_valid_virt_queue_idx(uint32_t idx, int is_tx, uint32_t nr_vring)
 	return (is_tx ^ (idx & 1)) == 0 && idx < nr_vring;
 }
 
+/*
+ * This function must be called with virtqueue's access_lock taken.
+ */
+static inline void
+vhost_queue_stats_update(struct virtio_net *dev, struct vhost_virtqueue *vq,
+		struct rte_mbuf **pkts, uint16_t count)
+{
+	struct virtqueue_stats *stats = &vq->stats;
+	int i;
+
+	if (!(dev->flags & VIRTIO_DEV_STATS_ENABLED))
+		return;
+
+	for (i = 0; i < count; i++) {
+		struct rte_ether_addr *ea;
+		struct rte_mbuf *pkt = pkts[i];
+		uint32_t pkt_len = rte_pktmbuf_pkt_len(pkt);
+
+		stats->packets++;
+		stats->bytes += pkt_len;
+
+		if (pkt_len == 64) {
+			stats->size_bins[1]++;
+		} else if (pkt_len > 64 && pkt_len < 1024) {
+			uint32_t bin;
+
+			/* count zeros, and offset into correct bin */
+			bin = (sizeof(pkt_len) * 8) - __builtin_clz(pkt_len) - 5;
+			stats->size_bins[bin]++;
+		} else {
+			if (pkt_len < 64)
+				stats->size_bins[0]++;
+			else if (pkt_len < 1519)
+				stats->size_bins[6]++;
+			else
+				stats->size_bins[7]++;
+		}
+
+		ea = rte_pktmbuf_mtod(pkt, struct rte_ether_addr *);
+		if (rte_is_multicast_ether_addr(ea)) {
+			if (rte_is_broadcast_ether_addr(ea))
+				stats->broadcast++;
+			else
+				stats->multicast++;
+		}
+	}
+}
+
 static inline void
 do_data_copy_enqueue(struct virtio_net *dev, struct vhost_virtqueue *vq)
 {
@@ -1374,6 +1422,8 @@ virtio_dev_rx(struct virtio_net *dev, uint16_t queue_id,
 		nb_tx = virtio_dev_rx_packed(dev, vq, pkts, count);
 	else
 		nb_tx = virtio_dev_rx_split(dev, vq, pkts, count);
+
+	vhost_queue_stats_update(dev, vq, pkts, nb_tx);
 
 out:
 	if (dev->features & (1ULL << VIRTIO_F_IOMMU_PLATFORM))
@@ -2948,6 +2998,7 @@ rte_vhost_dequeue_burst(int vid, uint16_t queue_id,
 		 * learning table will get updated first.
 		 */
 		pkts[0] = rarp_mbuf;
+		vhost_queue_stats_update(dev, vq, pkts, 1);
 		pkts++;
 		count -= 1;
 	}
@@ -2963,6 +3014,8 @@ rte_vhost_dequeue_burst(int vid, uint16_t queue_id,
 		else
 			count = virtio_dev_tx_split_compliant(dev, vq, mbuf_pool, pkts, count);
 	}
+
+	vhost_queue_stats_update(dev, vq, pkts, count);
 
 out:
 	if (dev->features & (1ULL << VIRTIO_F_IOMMU_PLATFORM))
