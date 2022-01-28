@@ -69,6 +69,10 @@ New Features
 
   The new API ``rte_event_eth_rx_adapter_event_port_get()`` was added.
 
+* **Update AF_XDP PMD**
+
+  * Added support for libxdp >=v1.2.2.
+
 
 Removed Items
 -------------
