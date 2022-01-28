@@ -623,3 +623,27 @@ by application.
 The PMD itself should not call rte_eth_dev_reset(). The PMD can trigger
 the application to handle reset event. It is duty of application to
 handle all synchronization before it calls rte_eth_dev_reset().
+
+Error recovery support
+~~~~~~~~~~~~~~~~~~~~~~
+
+When the PMD detects a FW reset or error condition, it may try to recover
+from the error without needing the application intervention. In such cases,
+PMD would need events to notify the application that it is undergoing
+an error recovery.
+
+The PMD should trigger RTE_ETH_EVENT_ERR_RECOVERING event to notify the
+application that PMD detected a FW reset or FW error condition. PMD may
+try to recover from the error by itself. Data path may be quiesced and
+control path operations may fail during the recovery period. The application
+should stop polling till it receives RTE_ETH_EVENT_RECOVERED event from the PMD.
+
+The PMD should trigger RTE_ETH_EVENT_RECOVERED event to notify the application
+that the it has recovered from the error condition. PMD re-configures the port
+to the state prior to the error condition. Control path and data path are up now.
+Since the device has undergone a reset, flow rules offloaded prior to reset
+may be lost and the application should recreate the rules again.
+
+The PMD should trigger RTE_ETH_EVENT_INTR_RMV event to notify the application
+that it has failed to recover from the error condition. The device may not be
+usable anymore.
