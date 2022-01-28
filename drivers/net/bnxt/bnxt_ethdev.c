@@ -4358,7 +4358,9 @@ static void bnxt_dev_recover(void *arg)
 	PMD_DRV_LOG(INFO, "Port: %u Recovered from FW reset\n",
 		    bp->eth_dev->data->port_id);
 	pthread_mutex_unlock(&bp->err_recovery_lock);
-
+	rte_eth_dev_callback_process(bp->eth_dev,
+				     RTE_ETH_EVENT_RECOVERED,
+				     NULL);
 	return;
 err_start:
 	bnxt_dev_stop(bp->eth_dev);
@@ -4533,6 +4535,10 @@ reset:
 	bnxt_stop_rxtx(bp);
 
 	PMD_DRV_LOG(ERR, "Detected FW dead condition\n");
+
+	rte_eth_dev_callback_process(bp->eth_dev,
+				     RTE_ETH_EVENT_ERR_RECOVERING,
+				     NULL);
 
 	if (bnxt_is_primary_func(bp))
 		wait_msec = info->primary_func_wait_period;
