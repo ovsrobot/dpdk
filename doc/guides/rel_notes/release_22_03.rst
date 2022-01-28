@@ -24,6 +24,21 @@ DPDK Release 22.03
 New Features
 ------------
 
+* **Added error recovery support.**
+
+  Added error recovery support to detect and recover from device errors including:
+
+  * Added new event: ``RTE_ETH_EVENT_ERR_RECOVERING`` for the driver to report
+    that the port is recovering from an error.
+  * Added new event: ``RTE_ETH_EVENT_RECOVERED`` for the driver to report
+    that the port has recovered from an error.
+
+* **Updated Broadcom bnxt driver.**
+
+  Updated the Broadcom bnxt driver with new features and improvements, including:
+
+  * Added support to handle device recovery events.
+
 .. This section should contain new features added in this release.
    Sample format:
 
