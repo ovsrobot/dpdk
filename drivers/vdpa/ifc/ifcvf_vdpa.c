@@ -332,10 +332,67 @@ vdpa_ifcvf_stop(struct ifcvf_internal *internal)
 
 	rte_vhost_get_negotiated_features(vid, &features);
 	if (RTE_VHOST_NEED_LOG(features)) {
-		ifcvf_disable_logging(hw);
-		rte_vhost_get_log_base(internal->vid, &log_base, &log_size);
-		rte_vfio_container_dma_unmap(internal->vfio_container_fd,
-				log_base, IFCVF_LOG_BASE, log_size);
+		if (internal->device_type == IFCVF_NET) {
+			ifcvf_disable_logging(hw);
+			rte_vhost_get_log_base(internal->vid, &log_base,
+				&log_size);
+			rte_vfio_container_dma_unmap(
+				internal->vfio_container_fd, log_base,
+				IFCVF_LOG_BASE, log_size);
+		}
+		/* IFCVF marks dirty memory pages for only packet buffer,
+		 * SW helps to mark the used ring as dirty after device stops.
+		 */
+		for (i = 0; i < hw->nr_vring; i++) {
+			len = IFCVF_USED_RING_LEN(hw->vring[i].size);
+			rte_vhost_log_used_vring(vid, i, 0, len);
+		}
+	}
+}
+
+static void
+vdpa_ifcvf_blk_pause(struct ifcvf_internal *internal)
+{
+	struct ifcvf_hw *hw = &internal->hw;
+	struct rte_vhost_vring vq;
+	int i, vid;
+	uint64_t features = 0;
+	uint64_t log_base = 0, log_size = 0;
+	uint64_t len;
+
+	vid = internal->vid;
+
+	if (internal->device_type == IFCVF_BLK) {
+		for (i = 0; i < hw->nr_vring; i++) {
+			rte_vhost_get_vhost_vring(internal->vid, i, &vq);
+			while (vq.avail->idx != vq.used->idx) {
+				ifcvf_notify_queue(hw, i);
+				usleep(10);
+			}
+			hw->vring[i].last_avail_idx = vq.avail->idx;
+			hw->vring[i].last_used_idx = vq.used->idx;
+		}
+	}
+
+	ifcvf_hw_disable(hw);
+
+	for (i = 0; i < hw->nr_vring; i++)
+		rte_vhost_set_vring_base(vid, i, hw->vring[i].last_avail_idx,
+				hw->vring[i].last_used_idx);
+
+	if (internal->sw_lm)
+		return;
+
+	rte_vhost_get_negotiated_features(vid, &features);
+	if (RTE_VHOST_NEED_LOG(features)) {
+		if (internal->device_type == IFCVF_NET) {
+			ifcvf_disable_logging(hw);
+			rte_vhost_get_log_base(internal->vid, &log_base,
+				&log_size);
+			rte_vfio_container_dma_unmap(
+				internal->vfio_container_fd, log_base,
+				IFCVF_LOG_BASE, log_size);
+		}
 		/*
 		 * IFCVF marks dirty memory pages for only packet buffer,
 		 * SW helps to mark the used ring as dirty after device stops.
@@ -661,15 +718,17 @@ m_ifcvf_start(struct ifcvf_internal *internal)
 		}
 		hw->vring[i].avail = gpa;
 
-		/* Direct I/O for Tx queue, relay for Rx queue */
-		if (i & 1) {
+		/* NETWORK: Direct I/O for Tx queue, relay for Rx queue
+		 * BLK: relay every queue
+		 */
+		if ((i & 1) && (internal->device_type == IFCVF_NET)) {
 			gpa = hva_to_gpa(vid, (uint64_t)(uintptr_t)vq.used);
 			if (gpa == 0) {
 				DRV_LOG(ERR, "Fail to get GPA for used ring.");
 				return -1;
 			}
 			hw->vring[i].used = gpa;
-		} else {
+		} else if (internal->device_type == IFCVF_BLK) {
 			hw->vring[i].used = m_vring_iova +
 				(char *)internal->m_vring[i].used -
 				(char *)internal->m_vring[i].desc;
@@ -688,7 +747,10 @@ m_ifcvf_start(struct ifcvf_internal *internal)
 	}
 	hw->nr_vring = nr_vring;
 
-	return ifcvf_start_hw(&internal->hw);
+	if (internal->device_type == IFCVF_NET)
+		return ifcvf_start_hw(&internal->hw);
+	else if (internal->device_type == IFCVF_BLK)
+		return ifcvf_hw_enable(&internal->hw);
 
 error:
 	for (i = 0; i < nr_vring; i++)
@@ -713,8 +775,10 @@ m_ifcvf_stop(struct ifcvf_internal *internal)
 
 	for (i = 0; i < hw->nr_vring; i++) {
 		/* synchronize remaining new used entries if any */
-		if ((i & 1) == 0)
+		if (((i & 1) == 0 && internal->device_type == IFCVF_NET) ||
+		     internal->device_type == IFCVF_BLK) {
 			update_used_ring(internal, i);
+		}
 
 		rte_vhost_get_vhost_vring(vid, i, &vq);
 		len = IFCVF_USED_RING_LEN(vq.size);
@@ -726,6 +790,8 @@ m_ifcvf_stop(struct ifcvf_internal *internal)
 			(uint64_t)(uintptr_t)internal->m_vring[i].desc,
 			m_vring_iova, size);
 
+		hw->vring[i].last_avail_idx = vq.used->idx;
+		hw->vring[i].last_used_idx = vq.used->idx;
 		rte_vhost_set_vring_base(vid, i, hw->vring[i].last_avail_idx,
 				hw->vring[i].last_used_idx);
 		rte_free(internal->m_vring[i].desc);
@@ -776,17 +842,36 @@ vring_relay(void *arg)
 		}
 	}
 
-	for (qid = 0; qid < q_num; qid += 2) {
-		ev.events = EPOLLIN | EPOLLPRI;
-		/* leave a flag to mark it's for interrupt */
-		ev.data.u64 = 1 | qid << 1 |
-			(uint64_t)internal->intr_fd[qid] << 32;
-		if (epoll_ctl(epfd, EPOLL_CTL_ADD, internal->intr_fd[qid], &ev)
-				< 0) {
-			DRV_LOG(ERR, "epoll add error: %s", strerror(errno));
-			return NULL;
+	if (internal->device_type == IFCVF_NET) {
+		for (qid = 0; qid < q_num; qid += 2) {
+			ev.events = EPOLLIN | EPOLLPRI;
+			/* leave a flag to mark it's for interrupt */
+			ev.data.u64 = 1 | qid << 1 |
+				(uint64_t)internal->intr_fd[qid] << 32;
+			if (epoll_ctl(epfd, EPOLL_CTL_ADD,
+				      internal->intr_fd[qid], &ev)
+					< 0) {
+				DRV_LOG(ERR, "epoll add error: %s",
+					strerror(errno));
+				return NULL;
+			}
+			update_used_ring(internal, qid);
 		}
-		update_used_ring(internal, qid);
+	} else if (internal->device_type == IFCVF_BLK) {
+		for (qid = 0; qid < q_num; qid += 1) {
+			ev.events = EPOLLIN | EPOLLPRI;
+			/* leave a flag to mark it's for interrupt */
+			ev.data.u64 = 1 | qid << 1 |
+				(uint64_t)internal->intr_fd[qid] << 32;
+			if (epoll_ctl(epfd, EPOLL_CTL_ADD,
+				      internal->intr_fd[qid], &ev)
+					< 0) {
+				DRV_LOG(ERR, "epoll add error: %s",
+					strerror(errno));
+				return NULL;
+			}
+			update_used_ring(internal, qid);
+		}
 	}
 
 	/* start relay with a first kick */
@@ -874,7 +959,10 @@ ifcvf_sw_fallback_switchover(struct ifcvf_internal *internal)
 
 	/* stop the direct IO data path */
 	unset_notify_relay(internal);
-	vdpa_ifcvf_stop(internal);
+	if (internal->device_type == IFCVF_NET)
+		vdpa_ifcvf_stop(internal);
+	else if (internal->device_type == IFCVF_BLK)
+		vdpa_ifcvf_blk_pause(internal);
 	vdpa_disable_vfio_intr(internal);
 
 	ret = rte_vhost_host_notifier_ctrl(vid, RTE_VHOST_QUEUE_ALL, false);
