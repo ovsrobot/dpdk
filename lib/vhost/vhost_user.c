@@ -3137,12 +3137,26 @@ skip_to_post_handle:
 	if (!vdpa_dev)
 		goto out;
 
+	if (request != VHOST_USER_SET_VRING_CALL)
+		goto out;
+
 	if (!(dev->flags & VIRTIO_DEV_VDPA_CONFIGURED)) {
 		if (vdpa_dev->ops->dev_conf(dev->vid))
 			VHOST_LOG_CONFIG(ERR,
 					 "Failed to configure vDPA device\n");
 		else
 			dev->flags |= VIRTIO_DEV_VDPA_CONFIGURED;
+	} else {
+		/* when VIRTIO_DEV_VDPA_CONFIGURED already configured
+		 * close the device and config the device again,
+		 * make sure the call fd of each queue is configured correctly.
+		 */
+		if (vdpa_dev->ops->dev_close(dev->vid))
+			VHOST_LOG_CONFIG(ERR,
+					 "Failed to close vDPA device\n");
+		if (vdpa_dev->ops->dev_conf(dev->vid))
+			VHOST_LOG_CONFIG(ERR,
+					 "Failed to re-config vDPA device\n");
 	}
 
 out:
