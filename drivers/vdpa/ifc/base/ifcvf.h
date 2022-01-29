@@ -157,6 +157,9 @@ struct ifcvf_hw {
 int
 ifcvf_init_hw(struct ifcvf_hw *hw, PCI_DEV *dev);
 
+void
+ifcvf_reset(struct ifcvf_hw *hw);
+
 u64
 ifcvf_get_features(struct ifcvf_hw *hw);
 
