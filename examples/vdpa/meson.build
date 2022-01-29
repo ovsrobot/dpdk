@@ -15,4 +15,5 @@ deps += 'vhost'
 allow_experimental_apis = true
 sources = files(
         'main.c',
+	'vdpa_blk_compact.c',
 )
