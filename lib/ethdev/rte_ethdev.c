@@ -6553,6 +6553,34 @@ rte_eth_ip_reassembly_conf_set(uint16_t port_id,
 		       (*dev->dev_ops->ip_reassembly_conf_set)(dev, conf));
 }
 
+int
+rte_eth_ip_reass_dynfield_register(int *field_offset, int *flag_offset)
+{
+	static const struct rte_mbuf_dynfield field_desc = {
+		.name = RTE_ETH_IP_REASS_DYNFIELD_NAME,
+		.size = sizeof(rte_eth_ip_reass_dynfield_t),
+		.align = __alignof__(rte_eth_ip_reass_dynfield_t),
+	};
+	static const struct rte_mbuf_dynflag ip_reass_dynflag = {
+		.name = RTE_ETH_IP_REASS_INCOMPLETE_DYNFLAG_NAME,
+	};
+	int offset;
+
+	offset = rte_mbuf_dynfield_register(&field_desc);
+	if (offset < 0)
+		return -1;
+	if (field_offset != NULL)
+		*field_offset = offset;
+
+	offset = rte_mbuf_dynflag_register(&ip_reass_dynflag);
+	if (offset < 0)
+		return -1;
+	if (flag_offset != NULL)
+		*flag_offset = offset;
+
+	return 0;
+}
+
 RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO);
 
 RTE_INIT(ethdev_init_telemetry)
