@@ -611,6 +611,7 @@ Supports IP reassembly in hardware.
 
 * **[uses]     rte_eth_rxconf,rte_eth_rxmode**: ``offloads:RTE_ETH_RX_OFFLOAD_IP_REASSEMBLY``.
 * **[provides] rte_eth_dev_info**: ``reass_capa``.
+* **[provides] eth_dev_ops**: ``ip_reassembly_conf_get:ip_reassembly_conf_set``.
 
 
 .. _nic_features_shared_rx_queue:
