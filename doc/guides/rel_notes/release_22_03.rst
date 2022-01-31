@@ -73,6 +73,12 @@ New Features
 
   The new API ``rte_event_eth_rx_adapter_event_port_get()`` was added.
 
+* **Added an API to enable queue based priority flow ctrl(PFC).**
+
+  New APIs, ``rte_eth_dev_priority_flow_ctrl_queue_info_get()`` and
+  ``rte_eth_dev_priority_flow_ctrl_queue_configure()``, was added.
+
+
 
 Removed Items
 -------------

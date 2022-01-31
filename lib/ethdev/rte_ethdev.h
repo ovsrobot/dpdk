@@ -1408,6 +1408,48 @@ struct rte_eth_pfc_conf {
 	uint8_t priority;          /**< VLAN User Priority. */
 };
 
+/** Device supports Rx pause for queue based PFC. */
+#define RTE_ETH_PFC_QUEUE_CAPA_RX_PAUSE RTE_BIT64(0)
+/** Device supports Tx pause for queue based PFC. */
+#define RTE_ETH_PFC_QUEUE_CAPA_TX_PAUSE RTE_BIT64(1)
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * A structure used to retrieve information of queue based PFC.
+ */
+struct rte_eth_pfc_queue_info {
+	/**
+	 * Maximum supported traffic class as per PFC (802.1Qbb) specification.
+	 */
+	uint8_t tc_max;
+	/** PFC queue capabilities (RTE_ETH_PFC_QUEUE_CAPA_). */
+	uint64_t capa;
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * A structure used to configure Ethernet priority flow control parameter for
+ * ethdev queues.
+ */
+struct rte_eth_pfc_queue_conf {
+	enum rte_eth_fc_mode mode; /**< Link flow control mode */
+
+	struct {
+		uint16_t tx_qid; /**< Tx queue ID */
+		uint8_t tc; /**< Traffic class as per PFC (802.1Qbb) spec */
+	} rx_pause; /* Valid when (mode == FC_RX_PAUSE || mode == FC_FULL) */
+
+	struct {
+		uint16_t pause_time; /**< Pause quota in the Pause frame */
+		uint16_t rx_qid;     /**< Rx queue ID */
+		uint8_t tc; /**< Traffic class as per PFC (802.1Qbb) spec */
+	} tx_pause; /* Valid when (mode == FC_TX_PAUSE || mode == FC_FULL) */
+};
+
 /**
  * Tunnel type for device-specific classifier configuration.
  * @see rte_eth_udp_tunnel
@@ -4157,6 +4199,53 @@ int rte_eth_dev_priority_flow_ctrl_set(uint16_t port_id,
  */
 int rte_eth_dev_mac_addr_add(uint16_t port_id, struct rte_ether_addr *mac_addr,
 				uint32_t pool);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Retrieve the information for queue based PFC.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param pfc_queue_info
+ *   A pointer to a structure of type *rte_eth_pfc_queue_info* to be filled with
+ *   the information about queue based PFC.
+ * @return
+ *   - (0) if successful.
+ *   - (-ENOTSUP) if support for priority_flow_ctrl_queue_info_get does not exist.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-EINVAL) if bad parameter.
+ */
+__rte_experimental
+int rte_eth_dev_priority_flow_ctrl_queue_info_get(uint16_t port_id,
+				   struct rte_eth_pfc_queue_info *pfc_queue_info);
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Configure the queue based priority flow control for a given queue
+ * for Ethernet device.
+ *
+ * @note When an ethdev port switches to queue based PFC mode, the
+ * unconfigured queues shall be configured by the driver with
+ * default values such as lower priority value for TC etc.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param pfc_queue_conf
+ *   The pointer to the structure of the priority flow control parameters
+ *   for the queue.
+ * @return
+ *   - (0) if successful.
+ *   - (-ENOTSUP) if hardware doesn't support queue based PFC mode.
+ *   - (-ENODEV)  if *port_id* invalid.
+ *   - (-EINVAL)  if bad parameter
+ *   - (-EIO)     if flow control setup queue failure
+ */
+__rte_experimental
+int rte_eth_dev_priority_flow_ctrl_queue_configure(uint16_t port_id,
+			      struct rte_eth_pfc_queue_conf *pfc_queue_conf);
 
 /**
  * Remove a MAC address from the internal array of addresses.
