@@ -64,6 +64,7 @@ New Features
   * Added NULL cipher support in lookaside protocol (IPsec) for CN9K & CN10K.
   * Added AES-XCBC support in lookaside protocol (IPsec) for CN9K & CN10K.
   * Added AES-CMAC support in CN9K & CN10K.
+  * Added ESN and anti-replay support in lookaside protocol (IPsec) for CN10K.
 
 * **Added an API to retrieve event port id of ethdev Rx adapter.**
 
