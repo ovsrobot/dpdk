@@ -69,6 +69,11 @@ New Features
 
   The new API ``rte_event_eth_rx_adapter_event_port_get()`` was added.
 
+* **Updated lookaside protocol (IPsec) tests in dpdk-test.**
+
+  * Added test cases to verify copy and set DSCP with IPv4 and IPv6 tunnels.
+  * Added ESN and anti-replay support.
+
 
 Removed Items
 -------------
