@@ -341,6 +341,8 @@ print_usage(const char *prgname)
 		" [-P]"
 		" [--lookup]"
 		" --config (port,queue,lcore)[,(port,queue,lcore)]"
+		" [--rx-queue-size]"
+		" [--tx-queue-size]"
 		" [--eth-dest=X,MM:MM:MM:MM:MM:MM]"
 		" [--max-pkt-len PKTLEN]"
 		" [--no-numa]"
@@ -360,6 +362,10 @@ print_usage(const char *prgname)
 		"            Default: lpm\n"
 		"            Accepted: em (Exact Match), lpm (Longest Prefix Match), fib (Forwarding Information Base)\n"
 		"  --config (port,queue,lcore): Rx queue configuration\n"
+		"  --rx-queue-size: Rx queue size\n"
+		"            Default: %d\n"
+		"  --tx-queue-size: Tx queue size\n"
+		"            Default: %d\n"
 		"  --eth-dest=X,MM:MM:MM:MM:MM:MM: Ethernet destination for port X\n"
 		"  --max-pkt-len PKTLEN: maximum packet length in decimal (64-9600)\n"
 		"  --no-numa: Disable numa awareness\n"
@@ -381,7 +387,7 @@ print_usage(const char *prgname)
 		"  --event-vector-tmo: Max timeout to form vector in nanoseconds if event vectorization is enabled\n"
 		"  -E : Enable exact match, legacy flag please use --lookup=em instead\n"
 		"  -L : Enable longest prefix match, legacy flag please use --lookup=lpm instead\n\n",
-		prgname);
+		prgname, RTE_TEST_RX_DESC_DEFAULT, RTE_TEST_TX_DESC_DEFAULT);
 }
 
 static int
@@ -525,6 +531,40 @@ parse_mode(const char *optarg)
 }
 
 static void
+parse_rx_queue_size(const char *rx_queue_size_arg)
+{
+	char *end = NULL;
+	uint32_t rx_queue_size;
+
+	/* parse decimal string */
+	rx_queue_size = strtoul(rx_queue_size_arg, &end, 10);
+	if ((rx_queue_size_arg[0] == '\0') || (end == NULL) || (*end != '\0'))
+		return;
+
+	if (rx_queue_size == 0)
+		return;
+
+	nb_rxd = rx_queue_size;
+}
+
+static void
+parse_tx_queue_size(const char *tx_queue_size_arg)
+{
+	char *end = NULL;
+	uint32_t tx_queue_size;
+
+	/* parse decimal string */
+	tx_queue_size = strtoul(tx_queue_size_arg, &end, 10);
+	if ((tx_queue_size_arg[0] == '\0') || (end == NULL) || (*end != '\0'))
+		return;
+
+	if (tx_queue_size == 0)
+		return;
+
+	nb_rxd = tx_queue_size;
+}
+
+static void
 parse_eventq_sched(const char *optarg)
 {
 	struct l3fwd_event_resources *evt_rsrc = l3fwd_get_eventdev_rsrc();
@@ -581,6 +621,8 @@ static const char short_options[] =
 	;
 
 #define CMD_LINE_OPT_CONFIG "config"
+#define CMD_LINE_OPT_RX_QUEUE_SIZE "rx-queue-size"
+#define CMD_LINE_OPT_TX_QUEUE_SIZE "tx-queue-size"
 #define CMD_LINE_OPT_ETH_DEST "eth-dest"
 #define CMD_LINE_OPT_NO_NUMA "no-numa"
 #define CMD_LINE_OPT_IPV6 "ipv6"
@@ -603,6 +645,8 @@ enum {
 	 * conflict with short options */
 	CMD_LINE_OPT_MIN_NUM = 256,
 	CMD_LINE_OPT_CONFIG_NUM,
+	CMD_LINE_OPT_RX_QUEUE_SIZE_NUM,
+	CMD_LINE_OPT_TX_QUEUE_SIZE_NUM,
 	CMD_LINE_OPT_ETH_DEST_NUM,
 	CMD_LINE_OPT_NO_NUMA_NUM,
 	CMD_LINE_OPT_IPV6_NUM,
@@ -621,6 +665,8 @@ enum {
 
 static const struct option lgopts[] = {
 	{CMD_LINE_OPT_CONFIG, 1, 0, CMD_LINE_OPT_CONFIG_NUM},
+	{CMD_LINE_OPT_RX_QUEUE_SIZE, 1, 0, CMD_LINE_OPT_RX_QUEUE_SIZE_NUM},
+	{CMD_LINE_OPT_TX_QUEUE_SIZE, 1, 0, CMD_LINE_OPT_TX_QUEUE_SIZE_NUM},
 	{CMD_LINE_OPT_ETH_DEST, 1, 0, CMD_LINE_OPT_ETH_DEST_NUM},
 	{CMD_LINE_OPT_NO_NUMA, 0, 0, CMD_LINE_OPT_NO_NUMA_NUM},
 	{CMD_LINE_OPT_IPV6, 0, 0, CMD_LINE_OPT_IPV6_NUM},
@@ -712,6 +758,14 @@ parse_args(int argc, char **argv)
 				return -1;
 			}
 			lcore_params = 1;
+			break;
+
+		case CMD_LINE_OPT_RX_QUEUE_SIZE_NUM:
+			parse_rx_queue_size(optarg);
+			break;
+
+		case CMD_LINE_OPT_TX_QUEUE_SIZE_NUM:
+			parse_tx_queue_size(optarg);
 			break;
 
 		case CMD_LINE_OPT_ETH_DEST_NUM:
