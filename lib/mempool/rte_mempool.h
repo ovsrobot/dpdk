@@ -1344,31 +1344,41 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 	if (unlikely(cache == NULL || n > RTE_MEMPOOL_CACHE_MAX_SIZE))
 		goto ring_enqueue;
 
-	cache_objs = &cache->objs[cache->len];
+	/* If the request itself is too big for the cache */
+	if (unlikely(n > cache->flushthresh))
+		goto ring_enqueue;
 
 	/*
 	 * The cache follows the following algorithm
-	 *   1. Add the objects to the cache
-	 *   2. Anything greater than the cache min value (if it crosses the
-	 *   cache flush threshold) is flushed to the ring.
+	 *   1. If the objects cannot be added to the cache without
+	 *   crossing the flush threshold, flush the cache to the ring.
+	 *   2. Add the objects to the cache.
 	 */
 
-	/* Add elements back into the cache */
-	rte_memcpy(&cache_objs[0], obj_table, sizeof(void *) * n);
+	if (cache->len + n <= cache->flushthresh) {
+		cache_objs = &cache->objs[cache->len];
 
-	cache->len += n;
+		cache->len += n;
+	} else {
+		cache_objs = &cache->objs[0];
 
-	if (cache->len >= cache->flushthresh) {
-		rte_mempool_ops_enqueue_bulk(mp, &cache->objs[cache->size],
-				cache->len - cache->size);
-		cache->len = cache->size;
+#ifdef RTE_LIBRTE_MEMPOOL_DEBUG
+		if (rte_mempool_ops_enqueue_bulk(mp, cache_objs, cache->len) < 0)
+			rte_panic("cannot put objects in mempool\n");
+#else
+		rte_mempool_ops_enqueue_bulk(mp, cache_objs, cache->len);
+#endif
+		cache->len = n;
 	}
+
+	/* Add the objects to the cache. */
+	rte_memcpy(cache_objs, obj_table, sizeof(void *) * n);
 
 	return;
 
 ring_enqueue:
 
-	/* push remaining objects in ring */
+	/* Put the objects into the ring */
 #ifdef RTE_LIBRTE_MEMPOOL_DEBUG
 	if (rte_mempool_ops_enqueue_bulk(mp, obj_table, n) < 0)
 		rte_panic("cannot put objects in mempool\n");
