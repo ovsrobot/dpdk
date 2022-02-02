@@ -3332,26 +3332,31 @@ handle_rxa_get_queue_conf(const char *cmd __rte_unused,
 
 	/* Get Rx adapter ID from parameter string */
 	l_params = strdup(params);
+	if (l_params == NULL)
+		return -ENOMEM;
 	token = strtok(l_params, ",");
 	rx_adapter_id = strtoul(token, NULL, 10);
 	RTE_EVENT_ETH_RX_ADAPTER_ID_VALID_OR_ERR_RET(rx_adapter_id, -EINVAL);
 
 	token = strtok(NULL, ",");
-	if (token == NULL || strlen(token) == 0 || !isdigit(*token))
+	if (token == NULL || strlen(token) == 0 || !isdigit(*token)) {
+		free(l_params);
 		return -1;
-
+	}
 	/* Get device ID from parameter string */
 	eth_dev_id = strtoul(token, NULL, 10);
 	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(eth_dev_id, -EINVAL);
 
 	token = strtok(NULL, ",");
-	if (token == NULL || strlen(token) == 0 || !isdigit(*token))
+	if (token == NULL || strlen(token) == 0 || !isdigit(*token)) {
+		free(l_params);
 		return -1;
-
+	}
 	/* Get Rx queue ID from parameter string */
 	rx_queue_id = strtoul(token, NULL, 10);
 	if (rx_queue_id >= rte_eth_devices[eth_dev_id].data->nb_rx_queues) {
 		RTE_EDEV_LOG_ERR("Invalid rx queue_id %u", rx_queue_id);
+		free(l_params);
 		return -EINVAL;
 	}
 
@@ -3359,6 +3364,8 @@ handle_rxa_get_queue_conf(const char *cmd __rte_unused,
 	if (token != NULL)
 		RTE_EDEV_LOG_ERR("Extra parameters passed to eventdev"
 				 " telemetry command, ignoring");
+	/* Parsing parameter finished */
+	free(l_params);
 
 	if (rte_event_eth_rx_adapter_queue_conf_get(rx_adapter_id, eth_dev_id,
 						    rx_queue_id, &queue_conf)) {
@@ -3396,26 +3403,31 @@ handle_rxa_get_queue_stats(const char *cmd __rte_unused,
 
 	/* Get Rx adapter ID from parameter string */
 	l_params = strdup(params);
+	if (l_params == NULL)
+		return -ENOMEM;
 	token = strtok(l_params, ",");
 	rx_adapter_id = strtoul(token, NULL, 10);
 	RTE_EVENT_ETH_RX_ADAPTER_ID_VALID_OR_ERR_RET(rx_adapter_id, -EINVAL);
 
 	token = strtok(NULL, ",");
-	if (token == NULL || strlen(token) == 0 || !isdigit(*token))
+	if (token == NULL || strlen(token) == 0 || !isdigit(*token)) {
+		free(l_params);
 		return -1;
-
+	}
 	/* Get device ID from parameter string */
 	eth_dev_id = strtoul(token, NULL, 10);
 	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(eth_dev_id, -EINVAL);
 
 	token = strtok(NULL, ",");
-	if (token == NULL || strlen(token) == 0 || !isdigit(*token))
+	if (token == NULL || strlen(token) == 0 || !isdigit(*token)) {
+		free(l_params);
 		return -1;
-
+	}
 	/* Get Rx queue ID from parameter string */
 	rx_queue_id = strtoul(token, NULL, 10);
 	if (rx_queue_id >= rte_eth_devices[eth_dev_id].data->nb_rx_queues) {
 		RTE_EDEV_LOG_ERR("Invalid rx queue_id %u", rx_queue_id);
+		free(l_params);
 		return -EINVAL;
 	}
 
@@ -3423,6 +3435,8 @@ handle_rxa_get_queue_stats(const char *cmd __rte_unused,
 	if (token != NULL)
 		RTE_EDEV_LOG_ERR("Extra parameters passed to eventdev"
 				 " telemetry command, ignoring");
+	/* Parsing parameter finished */
+	free(l_params);
 
 	if (rte_event_eth_rx_adapter_queue_stats_get(rx_adapter_id, eth_dev_id,
 						    rx_queue_id, &q_stats)) {
@@ -3458,26 +3472,31 @@ handle_rxa_queue_stats_reset(const char *cmd __rte_unused,
 
 	/* Get Rx adapter ID from parameter string */
 	l_params = strdup(params);
+	if (l_params == NULL)
+		return -ENOMEM;
 	token = strtok(l_params, ",");
 	rx_adapter_id = strtoul(token, NULL, 10);
 	RTE_EVENT_ETH_RX_ADAPTER_ID_VALID_OR_ERR_RET(rx_adapter_id, -EINVAL);
 
 	token = strtok(NULL, ",");
-	if (token == NULL || strlen(token) == 0 || !isdigit(*token))
+	if (token == NULL || strlen(token) == 0 || !isdigit(*token)) {
+		free(l_params);
 		return -1;
-
+	}
 	/* Get device ID from parameter string */
 	eth_dev_id = strtoul(token, NULL, 10);
 	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(eth_dev_id, -EINVAL);
 
 	token = strtok(NULL, ",");
-	if (token == NULL || strlen(token) == 0 || !isdigit(*token))
+	if (token == NULL || strlen(token) == 0 || !isdigit(*token)) {
+		free(l_params);
 		return -1;
-
+	}
 	/* Get Rx queue ID from parameter string */
 	rx_queue_id = strtoul(token, NULL, 10);
 	if (rx_queue_id >= rte_eth_devices[eth_dev_id].data->nb_rx_queues) {
 		RTE_EDEV_LOG_ERR("Invalid rx queue_id %u", rx_queue_id);
+		free(l_params);
 		return -EINVAL;
 	}
 
@@ -3485,6 +3504,8 @@ handle_rxa_queue_stats_reset(const char *cmd __rte_unused,
 	if (token != NULL)
 		RTE_EDEV_LOG_ERR("Extra parameters passed to eventdev"
 				 " telemetry command, ignoring");
+	/* Parsing parameter finished */
+	free(l_params);
 
 	if (rte_event_eth_rx_adapter_queue_stats_reset(rx_adapter_id,
 						       eth_dev_id,
