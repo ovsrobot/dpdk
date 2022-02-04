@@ -27,6 +27,7 @@
 
 #include "l3fwd.h"
 #include "l3fwd_event.h"
+#include "l3fwd_route.h"
 
 #if defined(RTE_ARCH_X86) || defined(__ARM_FEATURE_CRC32)
 #define EM_HASH_CRC 1
@@ -42,13 +43,18 @@
 
 #define IPV6_ADDR_LEN 16
 
-struct ipv4_5tuple {
-	uint32_t ip_dst;
-	uint32_t ip_src;
-	uint16_t port_dst;
-	uint16_t port_src;
-	uint8_t  proto;
-} __rte_packed;
+static struct em_rule *em_route_base_v4;
+static struct em_rule *em_route_base_v6;
+
+enum {
+	CB_FLD_DST_ADDR,
+	CB_FLD_SRC_ADDR,
+	CB_FLD_DST_PORT,
+	CB_FLD_SRC_PORT,
+	CB_FLD_PROTO,
+	CB_FLD_IF_OUT,
+	CB_FLD_MAX
+};
 
 union ipv4_5tuple_host {
 	struct {
@@ -65,14 +71,6 @@ union ipv4_5tuple_host {
 
 #define XMM_NUM_IN_IPV6_5TUPLE 3
 
-struct ipv6_5tuple {
-	uint8_t  ip_dst[IPV6_ADDR_LEN];
-	uint8_t  ip_src[IPV6_ADDR_LEN];
-	uint16_t port_dst;
-	uint16_t port_src;
-	uint8_t  proto;
-} __rte_packed;
-
 union ipv6_5tuple_host {
 	struct {
 		uint16_t pad0;
@@ -86,8 +84,6 @@ union ipv6_5tuple_host {
 	};
 	xmm_t xmm[XMM_NUM_IN_IPV6_5TUPLE];
 };
-
-
 
 struct ipv4_l3fwd_em_route {
 	struct ipv4_5tuple key;
@@ -235,10 +231,6 @@ ipv6_hash_crc(const void *data, __rte_unused uint32_t data_len,
 	return init_val;
 }
 
-#define IPV4_L3FWD_EM_NUM_ROUTES RTE_DIM(ipv4_l3fwd_em_route_array)
-
-#define IPV6_L3FWD_EM_NUM_ROUTES RTE_DIM(ipv6_l3fwd_em_route_array)
-
 static uint8_t ipv4_l3fwd_out_if[L3FWD_HASH_ENTRIES] __rte_cache_aligned;
 static uint8_t ipv6_l3fwd_out_if[L3FWD_HASH_ENTRIES] __rte_cache_aligned;
 
@@ -346,6 +338,214 @@ em_get_ipv6_dst_port(void *ipv6_hdr, uint16_t portid, void *lookup_struct)
 #include "l3fwd_em.h"
 #endif
 
+static int
+em_parse_v6_net(const char *in, uint8_t *v)
+{
+	int32_t rc;
+
+	/* get address. */
+	rc = inet_pton(AF_INET6, in, v);
+	if (rc != 1)
+		return -EINVAL;
+
+	return 0;
+}
+
+static int
+em_parse_v6_rule(char *str, struct em_rule *v)
+{
+	int i, rc;
+	char *s, *sp, *in[CB_FLD_MAX];
+	static const char *dlm = " \t\n";
+	int dim = CB_FLD_MAX;
+	s = str;
+
+	for (i = 0; i != dim; i++, s = NULL) {
+		in[i] = strtok_r(s, dlm, &sp);
+		if (in[i] == NULL)
+			return -EINVAL;
+	}
+
+	rc = em_parse_v6_net(in[CB_FLD_DST_ADDR], v->v6_key.ip_dst);
+	if (rc != 0)
+		return rc;
+	rc = em_parse_v6_net(in[CB_FLD_SRC_ADDR], v->v6_key.ip_src);
+	if (rc != 0)
+		return rc;
+
+	/* source port. */
+	GET_CB_FIELD(in[CB_FLD_SRC_PORT], v->v6_key.port_src, 0, UINT16_MAX, 0);
+	/* destination port. */
+	GET_CB_FIELD(in[CB_FLD_DST_PORT], v->v6_key.port_dst, 0, UINT16_MAX, 0);
+	/* protocol. */
+	GET_CB_FIELD(in[CB_FLD_PROTO], v->v6_key.proto, 0, UINT8_MAX, 0);
+	/* out interface. */
+	GET_CB_FIELD(in[CB_FLD_IF_OUT], v->if_out, 0, UINT8_MAX, 0);
+
+	return 0;
+}
+
+static int
+em_parse_v4_rule(char *str, struct em_rule *v)
+{
+	int i, rc;
+	char *s, *sp, *in[CB_FLD_MAX];
+	static const char *dlm = " \t\n";
+	int dim = CB_FLD_MAX;
+	s = str;
+
+	for (i = 0; i != dim; i++, s = NULL) {
+		in[i] = strtok_r(s, dlm, &sp);
+		if (in[i] == NULL)
+			return -EINVAL;
+	}
+
+	rc = inet_pton(AF_INET, in[CB_FLD_DST_ADDR], &(v->v4_key.ip_dst));
+	v->v4_key.ip_dst = ntohl(v->v4_key.ip_dst);
+	if (rc != 1)
+		return rc;
+
+	rc = inet_pton(AF_INET, in[CB_FLD_SRC_ADDR], &(v->v4_key.ip_src));
+	v->v4_key.ip_src = ntohl(v->v4_key.ip_src);
+	if (rc != 1)
+		return rc;
+
+	/* source port. */
+	GET_CB_FIELD(in[CB_FLD_SRC_PORT], v->v4_key.port_src, 0, UINT16_MAX, 0);
+	/* destination port. */
+	GET_CB_FIELD(in[CB_FLD_DST_PORT], v->v4_key.port_dst, 0, UINT16_MAX, 0);
+	/* protocol. */
+	GET_CB_FIELD(in[CB_FLD_PROTO], v->v4_key.proto, 0, UINT8_MAX, 0);
+	/* out interface. */
+	GET_CB_FIELD(in[CB_FLD_IF_OUT], v->if_out, 0, UINT8_MAX, 0);
+
+	return 0;
+}
+
+static int
+em_add_rules(const char *rule_path,
+		struct em_rule **proute_base,
+		int (*parser)(char *, struct em_rule *))
+{
+	struct em_rule *route_rules;
+	struct em_rule *next;
+	unsigned int route_num = 0;
+	unsigned int route_cnt = 0;
+	char buff[LINE_MAX];
+	FILE *fh;
+	unsigned int i = 0, rule_size = sizeof(*next);
+	int val;
+
+	*proute_base = NULL;
+	fh = fopen(rule_path, "rb");
+	if (fh == NULL)
+		return -EINVAL;
+
+	while ((fgets(buff, LINE_MAX, fh) != NULL)) {
+		if (buff[0] == ROUTE_LEAD_CHAR)
+			route_num++;
+	}
+
+	if (route_num == 0) {
+		fclose(fh);
+		return -EINVAL;
+	}
+
+	val = fseek(fh, 0, SEEK_SET);
+	if (val < 0) {
+		fclose(fh);
+		return -EINVAL;
+	}
+
+	route_rules = calloc(route_num, rule_size);
+
+	if (route_rules == NULL) {
+		fclose(fh);
+		return -EINVAL;
+	}
+
+	i = 0;
+	while (fgets(buff, LINE_MAX, fh) != NULL) {
+		i++;
+		if (is_bypass_line(buff))
+			continue;
+
+		char s = buff[0];
+
+		/* Route entry */
+		if (s == ROUTE_LEAD_CHAR)
+			next = &route_rules[route_cnt];
+
+		/* Illegal line */
+		else {
+			RTE_LOG(ERR, L3FWD,
+				"%s Line %u: should start with leading "
+				"char %c\n",
+				rule_path, i, ROUTE_LEAD_CHAR);
+			fclose(fh);
+			free(route_rules);
+			return -EINVAL;
+		}
+
+		if (parser(buff + 1, next) != 0) {
+			RTE_LOG(ERR, L3FWD,
+				"%s Line %u: parse rules error\n",
+				rule_path, i);
+			fclose(fh);
+			free(route_rules);
+			return -EINVAL;
+		}
+
+		route_cnt++;
+	}
+
+	fclose(fh);
+
+	*proute_base = route_rules;
+
+	return route_cnt;
+}
+
+static int
+em_add_default_v4_rules(void)
+{
+	/* populate the LPM IPv4 table */
+	unsigned int i, rule_size = sizeof(*em_route_base_v4);
+	route_num_v4 = RTE_DIM(ipv4_l3fwd_em_route_array);
+
+	em_route_base_v4 = calloc(route_num_v4, rule_size);
+
+	for (i = 0; i < (unsigned int)route_num_v4; i++) {
+		em_route_base_v4[i].v4_key.ip_dst = ipv4_l3fwd_em_route_array[i].key.ip_dst;
+		em_route_base_v4[i].v4_key.ip_src = ipv4_l3fwd_em_route_array[i].key.ip_src;
+		em_route_base_v4[i].v4_key.port_dst = ipv4_l3fwd_em_route_array[i].key.port_dst;
+		em_route_base_v4[i].v4_key.port_src = ipv4_l3fwd_em_route_array[i].key.port_src;
+		em_route_base_v4[i].v4_key.proto = ipv4_l3fwd_em_route_array[i].key.proto;
+		em_route_base_v4[i].if_out = ipv4_l3fwd_em_route_array[i].if_out;
+	}
+	return 0;
+}
+
+static int
+em_add_default_v6_rules(void)
+{
+	/* populate the LPM IPv6 table */
+	unsigned int i, rule_size = sizeof(*em_route_base_v6);
+	route_num_v6 = RTE_DIM(ipv6_l3fwd_em_route_array);
+
+	em_route_base_v6 = calloc(route_num_v6, rule_size);
+
+	for (i = 0; i < (unsigned int)route_num_v6; i++) {
+		*em_route_base_v6[i].v6_key.ip_dst = *ipv6_l3fwd_em_route_array[i].key.ip_dst;
+		*em_route_base_v6[i].v6_key.ip_src = *ipv6_l3fwd_em_route_array[i].key.ip_src;
+		em_route_base_v6[i].v6_key.port_dst = ipv6_l3fwd_em_route_array[i].key.port_dst;
+		em_route_base_v6[i].v6_key.port_src = ipv6_l3fwd_em_route_array[i].key.port_src;
+		em_route_base_v6[i].v6_key.proto = ipv6_l3fwd_em_route_array[i].key.proto;
+		em_route_base_v6[i].if_out = ipv6_l3fwd_em_route_array[i].if_out;
+	}
+	return 0;
+}
+
 static void
 convert_ipv4_5tuple(struct ipv4_5tuple *key1,
 		union ipv4_5tuple_host *key2)
@@ -382,122 +582,106 @@ convert_ipv6_5tuple(struct ipv6_5tuple *key1,
 #define BIT_8_TO_15 0x0000ff00
 
 static inline void
-populate_ipv4_few_flow_into_table(const struct rte_hash *h)
+populate_ipv4_flow_into_table(const struct rte_hash *h)
 {
-	uint32_t i;
+	int i;
 	int32_t ret;
+	struct rte_eth_dev_info dev_info;
+	char srcbuf[INET6_ADDRSTRLEN];
+	char dstbuf[INET6_ADDRSTRLEN];
 
 	mask0 = (rte_xmm_t){.u32 = {BIT_8_TO_15, ALL_32_BITS,
 				ALL_32_BITS, ALL_32_BITS} };
 
-	for (i = 0; i < IPV4_L3FWD_EM_NUM_ROUTES; i++) {
-		struct ipv4_l3fwd_em_route  entry;
+	for (i = 0; i < route_num_v4; i++) {
+		struct em_rule *entry;
 		union ipv4_5tuple_host newkey;
+		struct in_addr src;
+		struct in_addr dst;
 
-		entry = ipv4_l3fwd_em_route_array[i];
-		convert_ipv4_5tuple(&entry.key, &newkey);
+		if ((1 << em_route_base_v4[i].if_out &
+				enabled_port_mask) == 0)
+			continue;
+
+		entry = &em_route_base_v4[i];
+		convert_ipv4_5tuple(&(entry->v4_key), &newkey);
 		ret = rte_hash_add_key(h, (void *) &newkey);
 		if (ret < 0) {
 			rte_exit(EXIT_FAILURE, "Unable to add entry %" PRIu32
 				" to the l3fwd hash.\n", i);
 		}
-		ipv4_l3fwd_out_if[ret] = entry.if_out;
+		ipv4_l3fwd_out_if[ret] = entry->if_out;
+		ret = rte_eth_dev_info_get(em_route_base_v4[i].if_out,
+				     &dev_info);
+		if (ret != 0)
+			rte_exit(EXIT_FAILURE,
+				"Error during getting device (port %u) info: %s\n",
+				em_route_base_v4[i].if_out, strerror(-ret));
+
+		src.s_addr = htonl(em_route_base_v4[i].v4_key.ip_src);
+		dst.s_addr = htonl(em_route_base_v4[i].v4_key.ip_dst);
+		printf("EM: Adding route %s, %s, %d, %d, %d (%d) [%s]\n",
+			   inet_ntop(AF_INET, &dst, dstbuf, sizeof(dstbuf)),
+		       inet_ntop(AF_INET, &src, srcbuf, sizeof(srcbuf)),
+			   em_route_base_v4[i].v4_key.port_dst,
+			   em_route_base_v4[i].v4_key.port_src,
+			   em_route_base_v4[i].v4_key.proto,
+		       em_route_base_v4[i].if_out, dev_info.device->name);
 	}
 	printf("Hash: Adding 0x%" PRIx64 " keys\n",
-		(uint64_t)IPV4_L3FWD_EM_NUM_ROUTES);
+		(uint64_t)route_num_v4);
 }
 
 #define BIT_16_TO_23 0x00ff0000
 static inline void
-populate_ipv6_few_flow_into_table(const struct rte_hash *h)
+populate_ipv6_flow_into_table(const struct rte_hash *h)
 {
-	uint32_t i;
+	int i;
 	int32_t ret;
+	struct rte_eth_dev_info dev_info;
+	char srcbuf[INET6_ADDRSTRLEN];
+	char dstbuf[INET6_ADDRSTRLEN];
 
 	mask1 = (rte_xmm_t){.u32 = {BIT_16_TO_23, ALL_32_BITS,
 				ALL_32_BITS, ALL_32_BITS} };
 
 	mask2 = (rte_xmm_t){.u32 = {ALL_32_BITS, ALL_32_BITS, 0, 0} };
 
-	for (i = 0; i < IPV6_L3FWD_EM_NUM_ROUTES; i++) {
-		struct ipv6_l3fwd_em_route entry;
+	for (i = 0; i < route_num_v6; i++) {
+		struct em_rule *entry;
 		union ipv6_5tuple_host newkey;
 
-		entry = ipv6_l3fwd_em_route_array[i];
-		convert_ipv6_5tuple(&entry.key, &newkey);
+		if ((1 << em_route_base_v6[i].if_out &
+				enabled_port_mask) == 0)
+			continue;
+
+		entry = &em_route_base_v6[i];
+		convert_ipv6_5tuple(&(entry->v6_key), &newkey);
 		ret = rte_hash_add_key(h, (void *) &newkey);
 		if (ret < 0) {
 			rte_exit(EXIT_FAILURE, "Unable to add entry %" PRIu32
 				" to the l3fwd hash.\n", i);
 		}
-		ipv6_l3fwd_out_if[ret] = entry.if_out;
+		ipv6_l3fwd_out_if[ret] = entry->if_out;
+		ret = rte_eth_dev_info_get(em_route_base_v6[i].if_out,
+				     &dev_info);
+		if (ret != 0)
+			rte_exit(EXIT_FAILURE,
+				"Error during getting device (port %u) info: %s\n",
+				em_route_base_v6[i].if_out, strerror(-ret));
+
+		printf("EM: Adding route %s, %s, %d, %d, %d (%d) [%s]\n",
+			   inet_ntop(AF_INET6, em_route_base_v6[i].v6_key.ip_dst,
+			   dstbuf, sizeof(dstbuf)),
+		       inet_ntop(AF_INET6, em_route_base_v6[i].v6_key.ip_src,
+			   srcbuf, sizeof(srcbuf)),
+			   em_route_base_v6[i].v6_key.port_dst,
+			   em_route_base_v6[i].v6_key.port_src,
+			   em_route_base_v6[i].v6_key.proto,
+		       em_route_base_v6[i].if_out, dev_info.device->name);
 	}
 	printf("Hash: Adding 0x%" PRIx64 "keys\n",
-		(uint64_t)IPV6_L3FWD_EM_NUM_ROUTES);
-}
-
-#define NUMBER_PORT_USED 16
-static inline void
-populate_ipv4_many_flow_into_table(const struct rte_hash *h,
-		unsigned int nr_flow)
-{
-	unsigned i;
-
-	mask0 = (rte_xmm_t){.u32 = {BIT_8_TO_15, ALL_32_BITS,
-				ALL_32_BITS, ALL_32_BITS} };
-
-	for (i = 0; i < nr_flow; i++) {
-		uint8_t port = i % NUMBER_PORT_USED;
-		struct ipv4_l3fwd_em_route entry;
-		union ipv4_5tuple_host newkey;
-
-		uint8_t a = (uint8_t)((port + 1) % BYTE_VALUE_MAX);
-
-		/* Create the ipv4 exact match flow */
-		memset(&entry, 0, sizeof(entry));
-		entry = ipv4_l3fwd_em_route_array[port];
-		entry.key.ip_dst = RTE_IPV4(198, 18, port, a);
-		convert_ipv4_5tuple(&entry.key, &newkey);
-		int32_t ret = rte_hash_add_key(h, (void *) &newkey);
-
-		if (ret < 0)
-			rte_exit(EXIT_FAILURE, "Unable to add entry %u\n", i);
-
-		ipv4_l3fwd_out_if[ret] = (uint8_t) entry.if_out;
-
-	}
-	printf("Hash: Adding 0x%x keys\n", nr_flow);
-}
-
-static inline void
-populate_ipv6_many_flow_into_table(const struct rte_hash *h,
-		unsigned int nr_flow)
-{
-	unsigned i;
-
-	mask1 = (rte_xmm_t){.u32 = {BIT_16_TO_23, ALL_32_BITS,
-				ALL_32_BITS, ALL_32_BITS} };
-	mask2 = (rte_xmm_t){.u32 = {ALL_32_BITS, ALL_32_BITS, 0, 0} };
-
-	for (i = 0; i < nr_flow; i++) {
-		uint8_t port = i % NUMBER_PORT_USED;
-		struct ipv6_l3fwd_em_route entry;
-		union ipv6_5tuple_host newkey;
-
-		/* Create the ipv6 exact match flow */
-		memset(&entry, 0, sizeof(entry));
-		entry = ipv6_l3fwd_em_route_array[port];
-		entry.key.ip_dst[15] = (port + 1) % BYTE_VALUE_MAX;
-		convert_ipv6_5tuple(&entry.key, &newkey);
-		int32_t ret = rte_hash_add_key(h, (void *) &newkey);
-
-		if (ret < 0)
-			rte_exit(EXIT_FAILURE, "Unable to add entry %u\n", i);
-
-		ipv6_l3fwd_out_if[ret] = (uint8_t) entry.if_out;
-
-	}
-	printf("Hash: Adding 0x%x keys\n", nr_flow);
+		(uint64_t)route_num_v6);
 }
 
 /* Requirements:
@@ -972,17 +1156,50 @@ em_event_main_loop_tx_q_burst_vector(__rte_unused void *dummy)
 	return 0;
 }
 
+void
+em_free_routes(void)
+{
+	free(em_route_base_v4);
+	free(em_route_base_v6);
+	em_route_base_v4 = NULL;
+	em_route_base_v6 = NULL;
+	route_num_v4 = 0;
+	route_num_v6 = 0;
+}
+
 /* Load rules from the input file */
 void
 read_config_files_em(void)
 {
-	/* Empty till config file support added to EM */
-}
+	/* ipv4 check */
+	if (parm_config.rule_ipv4_name != NULL &&
+			parm_config.rule_ipv6_name != NULL) {
+		/* ipv4 check */
+		route_num_v4 = em_add_rules(parm_config.rule_ipv4_name,
+					&em_route_base_v4, &em_parse_v4_rule);
+		if (route_num_v4 < 0) {
+			em_free_routes();
+			rte_exit(EXIT_FAILURE, "Failed to add EM IPv4 rules\n");
+		}
 
-void
-em_free_routes(void)
-{
-	/* Empty till config file support added to EM */
+		/* ipv6 check */
+		route_num_v6 = em_add_rules(parm_config.rule_ipv6_name,
+					&em_route_base_v6, &em_parse_v6_rule);
+		if (route_num_v6 < 0) {
+			em_free_routes();
+			rte_exit(EXIT_FAILURE, "Failed to add EM IPv6 rules\n");
+		}
+	} else {
+		RTE_LOG(INFO, L3FWD, "Missing 1 or more rule files, using default instead\n");
+		if (em_add_default_v4_rules() < 0) {
+			em_free_routes();
+			rte_exit(EXIT_FAILURE, "Failed to add default IPv4 rules\n");
+		}
+		if (em_add_default_v6_rules() < 0) {
+			em_free_routes();
+			rte_exit(EXIT_FAILURE, "Failed to add default IPv6 rules\n");
+		}
+	}
 }
 
 /* Initialize exact match (hash) parameters. 8< */
@@ -1029,35 +1246,18 @@ setup_hash(const int socketid)
 			"Unable to create the l3fwd hash on socket %d\n",
 			socketid);
 
-	if (hash_entry_number != HASH_ENTRY_NUMBER_DEFAULT) {
-		/* For testing hash matching with a large number of flows we
-		 * generate millions of IP 5-tuples with an incremented dst
-		 * address to initialize the hash table. */
-		if (ipv6 == 0) {
-			/* populate the ipv4 hash */
-			populate_ipv4_many_flow_into_table(
-				ipv4_l3fwd_em_lookup_struct[socketid],
-				hash_entry_number);
-		} else {
-			/* populate the ipv6 hash */
-			populate_ipv6_many_flow_into_table(
-				ipv6_l3fwd_em_lookup_struct[socketid],
-				hash_entry_number);
-		}
+	/*
+	 * Use data from ipv4/ipv6 l3fwd config file
+	 * directly to initialize the hash table.
+	 */
+	if (ipv6 == 0) {
+		/* populate the ipv4 hash */
+		populate_ipv4_flow_into_table(
+			ipv4_l3fwd_em_lookup_struct[socketid]);
 	} else {
-		/*
-		 * Use data in ipv4/ipv6 l3fwd lookup table
-		 * directly to initialize the hash table.
-		 */
-		if (ipv6 == 0) {
-			/* populate the ipv4 hash */
-			populate_ipv4_few_flow_into_table(
-				ipv4_l3fwd_em_lookup_struct[socketid]);
-		} else {
-			/* populate the ipv6 hash */
-			populate_ipv6_few_flow_into_table(
-				ipv6_l3fwd_em_lookup_struct[socketid]);
-		}
+		/* populate the ipv6 hash */
+		populate_ipv6_flow_into_table(
+			ipv6_l3fwd_em_lookup_struct[socketid]);
 	}
 }
 /* >8 End of initialization of hash parameters. */
