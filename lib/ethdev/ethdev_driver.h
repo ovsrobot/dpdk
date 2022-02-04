@@ -1707,6 +1707,14 @@ int
 rte_eth_hairpin_queue_peer_unbind(uint16_t cur_port, uint16_t cur_queue,
 				  uint32_t direction);
 
+/**
+ * @internal
+ * Register mbuf dynamic field and flag for IP reassembly incomplete case.
+ */
+__rte_internal
+int
+rte_eth_ip_reass_dynfield_register(int *field_offset, int *flag);
+
 
 /*
  * Legacy ethdev API used internally by drivers.

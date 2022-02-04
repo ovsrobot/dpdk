@@ -5292,6 +5292,23 @@ __rte_experimental
 int rte_eth_ip_reassembly_conf_set(uint16_t port_id,
 				   const struct rte_eth_ip_reass_params *conf);
 
+/**
+ * In case of IP reassembly offload failure, ol_flags in mbuf will be
+ * updated with dynamic flag and packets will be returned without alteration.
+ * The application can retrieve the attached fragments using mbuf dynamic field.
+ */
+typedef struct {
+	/**
+	 * Next fragment packet. Application should fetch dynamic field of
+	 * each fragment until a NULL is received and nb_frags is 0.
+	 */
+	struct rte_mbuf *next_frag;
+	/** Time spent(in ms) by HW in waiting for further fragments. */
+	uint16_t time_spent;
+	/** Number of more fragments attached in mbuf dynamic fields. */
+	uint16_t nb_frags;
+} rte_eth_ip_reass_dynfield_t;
+
 
 #include <rte_ethdev_core.h>
 
