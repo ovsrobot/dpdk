@@ -1794,6 +1794,29 @@ enum rte_eth_representor_type {
 	RTE_ETH_REPRESENTOR_PF,   /**< representor of Physical Function. */
 };
 
+/* Flag to offload IP reassembly for IPv4 packets. */
+#define RTE_ETH_DEV_REASSEMBLY_F_IPV4 (RTE_BIT32(0))
+/* Flag to offload IP reassembly for IPv6 packets. */
+#define RTE_ETH_DEV_REASSEMBLY_F_IPV6 (RTE_BIT32(1))
+/**
+ * A structure used to get/set IP reassembly configuration/capability.
+ *
+ * If rte_eth_ip_reassembly_capability_get() returns 0, IP reassembly can be
+ * enabled using rte_eth_ip_reassembly_conf_set() and params values lower than
+ * capability can be set in the PMD.
+ */
+struct rte_eth_ip_reass_params {
+	/** Maximum time in ms which PMD can wait for other fragments. */
+	uint32_t reass_timeout_ms;
+	/** Maximum number of fragments that can be reassembled. */
+	uint16_t max_frags;
+	/**
+	 * Flags to enable reassembly of packet types -
+	 * RTE_ETH_DEV_REASSEMBLY_F_xxx.
+	 */
+	uint16_t flags;
+};
+
 /**
  * A structure used to retrieve the contextual information of
  * an Ethernet device, such as the controlling driver of the
@@ -5201,6 +5224,74 @@ int rte_eth_representor_info_get(uint16_t port_id,
  */
 __rte_experimental
 int rte_eth_rx_metadata_negotiate(uint16_t port_id, uint64_t *features);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Get IP reassembly capabilities supported by the PMD,
+ *
+ * @param port_id
+ *   The port identifier of the device.
+ * @param conf
+ *   A pointer to rte_eth_ip_reass_params structure.
+ * @return
+ *   - (-ENOTSUP) if offload configuration is not supported by device.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-EIO) if device is removed.
+ *   - (0) on success.
+ */
+__rte_experimental
+int rte_eth_ip_reassembly_capability_get(uint16_t port_id,
+					 struct rte_eth_ip_reass_params *conf);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Get IP reassembly configuration parameters currently set in PMD,
+ * if device Rx offload flag (RTE_ETH_RX_OFFLOAD_IP_REASSEMBLY) is
+ * enabled and the PMD supports IP reassembly offload.
+ *
+ * @param port_id
+ *   The port identifier of the device.
+ * @param conf
+ *   A pointer to rte_eth_ip_reass_params structure.
+ * @return
+ *   - (-ENOTSUP) if offload configuration is not supported by device.
+ *   - (-EINVAL) if offload is not enabled in rte_eth_conf.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-EIO) if device is removed.
+ *   - (0) on success.
+ */
+__rte_experimental
+int rte_eth_ip_reassembly_conf_get(uint16_t port_id,
+				   struct rte_eth_ip_reass_params *conf);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Set IP reassembly configuration parameters if the PMD supports IP reassembly
+ * offload. User should first call rte_eth_ip_reassembly_capability_get() to
+ * check the maximum values supported by the PMD before setting the
+ * configuration. The use of this API is mandatory to enable this feature and
+ * should be called before rte_eth_dev_start().
+ *
+ * @param port_id
+ *   The port identifier of the device.
+ * @param conf
+ *   A pointer to rte_eth_ip_reass_params structure.
+ * @return
+ *   - (-ENOTSUP) if offload configuration is not supported by device.
+ *   - (-ENODEV) if *port_id* invalid.
+ *   - (-EIO) if device is removed.
+ *   - (0) on success.
+ */
+__rte_experimental
+int rte_eth_ip_reassembly_conf_set(uint16_t port_id,
+				   const struct rte_eth_ip_reass_params *conf);
+
 
 #include <rte_ethdev_core.h>
 
