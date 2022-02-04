@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2017-2021 Intel Corporation
+ * Copyright(c) 2017-2022 Intel Corporation
  */
 
 #include <rte_cryptodev.h>
@@ -101,6 +101,38 @@ qat_sym_crypto_cap_get_gen4(struct qat_pci_device *qat_dev __rte_unused)
 	capa_info.data = qat_sym_crypto_caps_gen4;
 	capa_info.size = sizeof(qat_sym_crypto_caps_gen4);
 	return capa_info;
+}
+
+static __rte_always_inline void
+enqueue_one_aead_job_gen4(struct qat_sym_session *ctx,
+	struct icp_qat_fw_la_bulk_req *req,
+	struct rte_crypto_va_iova_ptr *iv,
+	struct rte_crypto_va_iova_ptr *digest,
+	struct rte_crypto_va_iova_ptr *aad,
+	union rte_crypto_sym_ofs ofs, uint32_t data_len)
+{
+	if (ctx->is_single_pass && ctx->is_ucs) {
+		struct icp_qat_fw_la_cipher_20_req_params *cipher_param_20 =
+			(void *)&req->serv_specif_rqpars;
+		struct icp_qat_fw_la_cipher_req_params *cipher_param =
+			(void *)&req->serv_specif_rqpars;
+
+		/* QAT GEN4 uses single pass to treat AEAD as cipher
+		 * operation
+		 */
+		qat_set_cipher_iv(cipher_param, iv, ctx->cipher_iv.length,
+				req);
+		cipher_param->cipher_offset = ofs.ofs.cipher.head;
+		cipher_param->cipher_length = data_len -
+				ofs.ofs.cipher.head - ofs.ofs.cipher.tail;
+
+		cipher_param_20->spc_aad_addr = aad->iova;
+		cipher_param_20->spc_auth_res_addr = digest->iova;
+
+		return;
+	}
+
+	enqueue_one_aead_job_gen1(ctx, req, iv, digest, aad, ofs, data_len);
 }
 
 RTE_INIT(qat_sym_crypto_gen4_init)
