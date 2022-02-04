@@ -11,3 +11,17 @@
 ; Ignore generated PMD information strings
 [suppress_variable]
         name_regexp = _pmd_info$
+
+; Ignore fields inserted in place of reserved_opts of rte_security_ipsec_sa_options
+[suppress_type]
+       name = rte_ipsec_sa_prm
+       name = rte_security_ipsec_sa_options
+       has_data_member_inserted_between = {offset_of(reserved_opts), end}
+
+[suppress_type]
+       name = rte_security_capability
+       has_data_member_inserted_between = {offset_of(reserved_opts), (offset_of(reserved_opts) + 18)}
+
+[suppress_type]
+       name = rte_security_session_conf
+       has_data_member_inserted_between = {offset_of(reserved_opts), (offset_of(reserved_opts) + 18)}
