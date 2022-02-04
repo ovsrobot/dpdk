@@ -1,68 +1,118 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2019 Intel Corporation
+ * Copyright(c) 2019 - 2022 Intel Corporation
  */
 
 #include <stdarg.h>
 
-#include "qat_asym.h"
+#include <cryptodev_pmd.h>
+
 #include "icp_qat_fw_pke.h"
 #include "icp_qat_fw.h"
 #include "qat_pke_functionality_arrays.h"
 
-#define qat_asym_sz_2param(arg) (arg, sizeof(arg)/sizeof(*arg))
+#include "qat_device.h"
 
-static int qat_asym_get_sz_and_func_id(const uint32_t arr[][2],
-		size_t arr_sz, size_t *size, uint32_t *func_id)
+#include "qat_logs.h"
+#include "qat_asym.h"
+
+uint8_t qat_asym_driver_id;
+
+struct qat_crypto_gen_dev_ops qat_asym_gen_dev_ops[QAT_N_GENS];
+
+int
+qat_asym_session_configure(struct rte_cryptodev *dev,
+		struct rte_crypto_asym_xform *xform,
+		struct rte_cryptodev_asym_session *sess,
+		struct rte_mempool *mempool)
 {
-	size_t i;
+	int err = 0;
+	void *sess_private_data;
+	struct qat_asym_session *session;
 
-	for (i = 0; i < arr_sz; i++) {
-		if (*size <= arr[i][0]) {
-			*size = arr[i][0];
-			*func_id = arr[i][1];
-			return 0;
+	if (rte_mempool_get(mempool, &sess_private_data)) {
+		QAT_LOG(ERR,
+			"Couldn't get object from session mempool");
+		return -ENOMEM;
+	}
+
+	session = sess_private_data;
+	if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_MODEX) {
+		if (xform->modex.exponent.length == 0 ||
+				xform->modex.modulus.length == 0) {
+			QAT_LOG(ERR, "Invalid mod exp input parameter");
+			err = -EINVAL;
+			goto error;
 		}
+	} else if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_MODINV) {
+		if (xform->modinv.modulus.length == 0) {
+			QAT_LOG(ERR, "Invalid mod inv input parameter");
+			err = -EINVAL;
+			goto error;
+		}
+	} else if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_RSA) {
+		if (xform->rsa.n.length == 0) {
+			QAT_LOG(ERR, "Invalid rsa input parameter");
+			err = -EINVAL;
+			goto error;
+		}
+	} else if (xform->xform_type >= RTE_CRYPTO_ASYM_XFORM_TYPE_LIST_END
+			|| xform->xform_type <= RTE_CRYPTO_ASYM_XFORM_NONE) {
+		QAT_LOG(ERR, "Invalid asymmetric crypto xform");
+		err = -EINVAL;
+		goto error;
+	} else {
+		QAT_LOG(ERR, "Asymmetric crypto xform not implemented");
+		err = -EINVAL;
+		goto error;
 	}
-	return -1;
+
+	session->xform = xform;
+	qat_asym_build_req_tmpl(sess_private_data);
+	set_asym_session_private_data(sess, dev->driver_id,
+		sess_private_data);
+
+	return 0;
+error:
+	rte_mempool_put(mempool, sess_private_data);
+	return err;
 }
 
-static inline void qat_fill_req_tmpl(struct icp_qat_fw_pke_request *qat_req)
+unsigned int
+qat_asym_session_get_private_size(
+		struct rte_cryptodev *dev __rte_unused)
 {
-	memset(qat_req, 0, sizeof(*qat_req));
-	qat_req->pke_hdr.service_type = ICP_QAT_FW_COMN_REQ_CPM_FW_PKE;
-
-	qat_req->pke_hdr.hdr_flags =
-			ICP_QAT_FW_COMN_HDR_FLAGS_BUILD
-			(ICP_QAT_FW_COMN_REQ_FLAG_SET);
+	return RTE_ALIGN_CEIL(sizeof(struct qat_asym_session), 8);
 }
 
-static inline void qat_asym_build_req_tmpl(void *sess_private_data)
+void
+qat_asym_session_clear(struct rte_cryptodev *dev,
+		struct rte_cryptodev_asym_session *sess)
 {
-	struct icp_qat_fw_pke_request *qat_req;
-	struct qat_asym_session *session = sess_private_data;
+	uint8_t index = dev->driver_id;
+	void *sess_priv = get_asym_session_private_data(sess, index);
+	struct qat_asym_session *s = (struct qat_asym_session *)sess_priv;
 
-	qat_req = &session->req_tmpl;
-	qat_fill_req_tmpl(qat_req);
-}
+	if (sess_priv) {
+		memset(s, 0, qat_asym_session_get_private_size(dev));
+		struct rte_mempool *sess_mp = rte_mempool_from_obj(sess_priv);
 
-static size_t max_of(int n, ...)
-{
-	va_list args;
-	size_t len = 0, num;
-	int i;
-
-	va_start(args, n);
-	len = va_arg(args, size_t);
-
-	for (i = 0; i < n - 1; i++) {
-		num = va_arg(args, size_t);
-		if (num > len)
-			len = num;
+		set_asym_session_private_data(sess, index, NULL);
+		rte_mempool_put(sess_mp, sess_priv);
 	}
-	va_end(args);
-
-	return len;
 }
+
+/* An rte_driver is needed in the registration of both the device and the driver
+ * with cryptodev.
+ * The actual qat pci's rte_driver can't be used as its name represents
+ * the whole pci device with all services. Think of this as a holder for a name
+ * for the crypto part of the pci device.
+ */
+static const char qat_asym_drv_name[] = RTE_STR(CRYPTODEV_NAME_QAT_ASYM_PMD);
+static const struct rte_driver cryptodev_qat_asym_driver = {
+	.name = qat_asym_drv_name,
+	.alias = qat_asym_drv_name
+};
+
 
 static void qat_clear_arrays(struct qat_asym_op_cookie *cookie,
 		int in_count, int out_count, int alg_size)
@@ -106,7 +156,230 @@ static void qat_clear_arrays_by_alg(struct qat_asym_op_cookie *cookie,
 	}
 }
 
-static int qat_asym_check_nonzero(rte_crypto_param n)
+static void qat_asym_collect_response(struct rte_crypto_op *rx_op,
+		struct qat_asym_op_cookie *cookie,
+		struct rte_crypto_asym_xform *xform)
+{
+	size_t alg_size, alg_size_in_bytes = 0;
+	struct rte_crypto_asym_op *asym_op = rx_op->asym;
+
+	if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_MODEX) {
+		rte_crypto_param n = xform->modex.modulus;
+
+		alg_size = cookie->alg_size;
+		alg_size_in_bytes = alg_size >> 3;
+		uint8_t *modexp_result = asym_op->modex.result.data;
+
+		if (rx_op->status == RTE_CRYPTO_OP_STATUS_NOT_PROCESSED) {
+			rte_memcpy(modexp_result +
+				(asym_op->modex.result.length -
+					n.length),
+				cookie->output_array[0] + alg_size_in_bytes
+				- n.length, n.length
+				);
+			rx_op->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
+#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
+			QAT_DP_HEXDUMP_LOG(DEBUG, "ModExp result",
+					cookie->output_array[0],
+					alg_size_in_bytes);
+
+#endif
+		}
+	} else if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_MODINV) {
+		rte_crypto_param n = xform->modinv.modulus;
+
+		alg_size = cookie->alg_size;
+		alg_size_in_bytes = alg_size >> 3;
+		uint8_t *modinv_result = asym_op->modinv.result.data;
+
+		if (rx_op->status == RTE_CRYPTO_OP_STATUS_NOT_PROCESSED) {
+			rte_memcpy(modinv_result +
+				(asym_op->modinv.result.length
+				- n.length),
+				cookie->output_array[0] + alg_size_in_bytes
+				- n.length, n.length);
+			rx_op->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
+#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
+			QAT_DP_HEXDUMP_LOG(DEBUG, "ModInv result",
+					cookie->output_array[0],
+					alg_size_in_bytes);
+#endif
+		}
+	} else if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_RSA) {
+
+		alg_size = cookie->alg_size;
+		alg_size_in_bytes = alg_size >> 3;
+		if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_ENCRYPT ||
+				asym_op->rsa.op_type ==
+					RTE_CRYPTO_ASYM_OP_VERIFY) {
+			if (asym_op->rsa.op_type ==
+					RTE_CRYPTO_ASYM_OP_ENCRYPT) {
+				uint8_t *rsa_result = asym_op->rsa.cipher.data;
+
+				rte_memcpy(rsa_result,
+						cookie->output_array[0],
+						alg_size_in_bytes);
+				rx_op->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
+#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
+				QAT_DP_HEXDUMP_LOG(DEBUG, "RSA Encrypted data",
+						cookie->output_array[0],
+						alg_size_in_bytes);
+#endif
+			} else if (asym_op->rsa.op_type ==
+					RTE_CRYPTO_ASYM_OP_VERIFY) {
+				uint8_t *rsa_result = asym_op->rsa.cipher.data;
+
+				switch (asym_op->rsa.pad) {
+				case RTE_CRYPTO_RSA_PADDING_NONE:
+					rte_memcpy(rsa_result,
+							cookie->output_array[0],
+							alg_size_in_bytes);
+					rx_op->status =
+						RTE_CRYPTO_OP_STATUS_SUCCESS;
+#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
+				QAT_DP_HEXDUMP_LOG(DEBUG, "RSA Signature",
+						cookie->output_array[0],
+						alg_size_in_bytes);
+#endif
+					break;
+				default:
+					QAT_LOG(ERR, "Padding not supported");
+					rx_op->status =
+						RTE_CRYPTO_OP_STATUS_ERROR;
+					break;
+				}
+			}
+		} else {
+			if (asym_op->rsa.op_type ==
+					RTE_CRYPTO_ASYM_OP_DECRYPT) {
+				uint8_t *rsa_result = asym_op->rsa.message.data;
+
+				switch (asym_op->rsa.pad) {
+				case RTE_CRYPTO_RSA_PADDING_NONE:
+					rte_memcpy(rsa_result,
+						cookie->output_array[0],
+						alg_size_in_bytes);
+					rx_op->status =
+						RTE_CRYPTO_OP_STATUS_SUCCESS;
+					break;
+				default:
+					QAT_LOG(ERR, "Padding not supported");
+					rx_op->status =
+						RTE_CRYPTO_OP_STATUS_ERROR;
+					break;
+				}
+#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
+				QAT_DP_HEXDUMP_LOG(DEBUG, "RSA Decrypted Message",
+						rsa_result, alg_size_in_bytes);
+#endif
+			} else if (asym_op->rsa.op_type ==
+					RTE_CRYPTO_ASYM_OP_SIGN) {
+				uint8_t *rsa_result = asym_op->rsa.sign.data;
+
+				rte_memcpy(rsa_result,
+						cookie->output_array[0],
+						alg_size_in_bytes);
+				rx_op->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
+#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
+				QAT_DP_HEXDUMP_LOG(DEBUG, "RSA Signature",
+						cookie->output_array[0],
+						alg_size_in_bytes);
+#endif
+			}
+		}
+	}
+	qat_clear_arrays_by_alg(cookie, xform, alg_size_in_bytes);
+}
+
+int
+qat_asym_process_response(void __rte_unused * *op, uint8_t *resp,
+		void *op_cookie, __rte_unused uint64_t *dequeue_err_count)
+{
+	struct qat_asym_session *ctx;
+	struct icp_qat_fw_pke_resp *resp_msg =
+			(struct icp_qat_fw_pke_resp *)resp;
+	struct rte_crypto_op *rx_op = (struct rte_crypto_op *)(uintptr_t)
+			(resp_msg->opaque);
+	struct qat_asym_op_cookie *cookie = op_cookie;
+
+	if (cookie->error) {
+		cookie->error = 0;
+		if (rx_op->status == RTE_CRYPTO_OP_STATUS_NOT_PROCESSED)
+			rx_op->status = RTE_CRYPTO_OP_STATUS_ERROR;
+		QAT_DP_LOG(ERR, "Cookie status returned error");
+	} else {
+		if (ICP_QAT_FW_PKE_RESP_PKE_STAT_GET(
+			resp_msg->pke_resp_hdr.resp_status.pke_resp_flags)) {
+			if (rx_op->status == RTE_CRYPTO_OP_STATUS_NOT_PROCESSED)
+				rx_op->status = RTE_CRYPTO_OP_STATUS_ERROR;
+			QAT_DP_LOG(ERR, "Asymmetric response status"
+					" returned error");
+		}
+		if (resp_msg->pke_resp_hdr.resp_status.comn_err_code) {
+			if (rx_op->status == RTE_CRYPTO_OP_STATUS_NOT_PROCESSED)
+				rx_op->status = RTE_CRYPTO_OP_STATUS_ERROR;
+			QAT_DP_LOG(ERR, "Asymmetric common status"
+					" returned error");
+		}
+	}
+
+	if (rx_op->sess_type == RTE_CRYPTO_OP_WITH_SESSION) {
+		ctx = (struct qat_asym_session *)get_asym_session_private_data(
+			rx_op->asym->session, qat_asym_driver_id);
+		qat_asym_collect_response(rx_op, cookie, ctx->xform);
+	} else if (rx_op->sess_type == RTE_CRYPTO_OP_SESSIONLESS) {
+		qat_asym_collect_response(rx_op, cookie, rx_op->asym->xform);
+	}
+	*op = rx_op;
+
+#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
+	QAT_DP_HEXDUMP_LOG(DEBUG, "resp_msg:", resp_msg,
+			sizeof(struct icp_qat_fw_pke_resp));
+#endif
+
+	return 1;
+}
+
+#define qat_asym_sz_2param(arg) (arg, sizeof(arg)/sizeof(*arg))
+
+static int
+qat_asym_get_sz_and_func_id(const uint32_t arr[][2],
+		size_t arr_sz, size_t *size, uint32_t *func_id)
+{
+	size_t i;
+
+	for (i = 0; i < arr_sz; i++) {
+		if (*size <= arr[i][0]) {
+			*size = arr[i][0];
+			*func_id = arr[i][1];
+			return 0;
+		}
+	}
+	return -1;
+}
+
+static size_t
+max_of(int n, ...)
+{
+	va_list args;
+	size_t len = 0, num;
+	int i;
+
+	va_start(args, n);
+	len = va_arg(args, size_t);
+
+	for (i = 0; i < n - 1; i++) {
+		num = va_arg(args, size_t);
+		if (num > len)
+			len = num;
+	}
+	va_end(args);
+
+	return len;
+}
+
+static int
+qat_asym_check_nonzero(rte_crypto_param n)
 {
 	if (n.length < 8) {
 		/* Not a case for any cryptographic function except for DH
@@ -475,10 +748,9 @@ qat_asym_fill_arrays(struct rte_crypto_asym_op *asym_op,
 }
 
 int
-qat_asym_build_request(void *in_op,
-			uint8_t *out_msg,
-			void *op_cookie,
-			__rte_unused enum qat_device_gen qat_dev_gen)
+qat_asym_build_request(void *in_op, uint8_t *out_msg, void *op_cookie,
+		__rte_unused uint64_t *opaque,
+		__rte_unused enum qat_device_gen dev_gen)
 {
 	struct qat_asym_session *ctx;
 	struct rte_crypto_op *op = (struct rte_crypto_op *)in_op;
@@ -545,263 +817,7 @@ error:
 	return 0;
 }
 
-static void qat_asym_collect_response(struct rte_crypto_op *rx_op,
-		struct qat_asym_op_cookie *cookie,
-		struct rte_crypto_asym_xform *xform)
-{
-	size_t alg_size, alg_size_in_bytes = 0;
-	struct rte_crypto_asym_op *asym_op = rx_op->asym;
-
-	if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_MODEX) {
-		rte_crypto_param n = xform->modex.modulus;
-
-		alg_size = cookie->alg_size;
-		alg_size_in_bytes = alg_size >> 3;
-		uint8_t *modexp_result = asym_op->modex.result.data;
-
-		if (rx_op->status == RTE_CRYPTO_OP_STATUS_NOT_PROCESSED) {
-			rte_memcpy(modexp_result +
-				(asym_op->modex.result.length -
-					n.length),
-				cookie->output_array[0] + alg_size_in_bytes
-				- n.length, n.length
-				);
-			rx_op->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
-#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
-			QAT_DP_HEXDUMP_LOG(DEBUG, "ModExp result",
-					cookie->output_array[0],
-					alg_size_in_bytes);
-
-#endif
-		}
-	} else if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_MODINV) {
-		rte_crypto_param n = xform->modinv.modulus;
-
-		alg_size = cookie->alg_size;
-		alg_size_in_bytes = alg_size >> 3;
-		uint8_t *modinv_result = asym_op->modinv.result.data;
-
-		if (rx_op->status == RTE_CRYPTO_OP_STATUS_NOT_PROCESSED) {
-			rte_memcpy(modinv_result + (asym_op->modinv.result.length
-				- n.length),
-				cookie->output_array[0] + alg_size_in_bytes
-				- n.length, n.length);
-			rx_op->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
-#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
-			QAT_DP_HEXDUMP_LOG(DEBUG, "ModInv result",
-					cookie->output_array[0],
-					alg_size_in_bytes);
-#endif
-		}
-	} else if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_RSA) {
-
-		alg_size = cookie->alg_size;
-		alg_size_in_bytes = alg_size >> 3;
-		if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_ENCRYPT ||
-				asym_op->rsa.op_type ==
-					RTE_CRYPTO_ASYM_OP_VERIFY) {
-			if (asym_op->rsa.op_type ==
-					RTE_CRYPTO_ASYM_OP_ENCRYPT) {
-				uint8_t *rsa_result = asym_op->rsa.cipher.data;
-
-				rte_memcpy(rsa_result,
-						cookie->output_array[0],
-						alg_size_in_bytes);
-				rx_op->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
-#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
-				QAT_DP_HEXDUMP_LOG(DEBUG, "RSA Encrypted data",
-						cookie->output_array[0],
-						alg_size_in_bytes);
-#endif
-			} else if (asym_op->rsa.op_type ==
-					RTE_CRYPTO_ASYM_OP_VERIFY) {
-				uint8_t *rsa_result = asym_op->rsa.cipher.data;
-
-				switch (asym_op->rsa.pad) {
-				case RTE_CRYPTO_RSA_PADDING_NONE:
-					rte_memcpy(rsa_result,
-							cookie->output_array[0],
-							alg_size_in_bytes);
-					rx_op->status =
-						RTE_CRYPTO_OP_STATUS_SUCCESS;
-#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
-				QAT_DP_HEXDUMP_LOG(DEBUG, "RSA Signature",
-						cookie->output_array[0],
-						alg_size_in_bytes);
-#endif
-					break;
-				default:
-					QAT_LOG(ERR, "Padding not supported");
-					rx_op->status =
-						RTE_CRYPTO_OP_STATUS_ERROR;
-					break;
-				}
-			}
-		} else {
-			if (asym_op->rsa.op_type ==
-					RTE_CRYPTO_ASYM_OP_DECRYPT) {
-				uint8_t *rsa_result = asym_op->rsa.message.data;
-
-				switch (asym_op->rsa.pad) {
-				case RTE_CRYPTO_RSA_PADDING_NONE:
-					rte_memcpy(rsa_result,
-						cookie->output_array[0],
-						alg_size_in_bytes);
-					rx_op->status =
-						RTE_CRYPTO_OP_STATUS_SUCCESS;
-					break;
-				default:
-					QAT_LOG(ERR, "Padding not supported");
-					rx_op->status =
-						RTE_CRYPTO_OP_STATUS_ERROR;
-					break;
-				}
-#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
-				QAT_DP_HEXDUMP_LOG(DEBUG, "RSA Decrypted Message",
-						rsa_result, alg_size_in_bytes);
-#endif
-			} else if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_SIGN) {
-				uint8_t *rsa_result = asym_op->rsa.sign.data;
-
-				rte_memcpy(rsa_result,
-						cookie->output_array[0],
-						alg_size_in_bytes);
-				rx_op->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
-#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
-				QAT_DP_HEXDUMP_LOG(DEBUG, "RSA Signature",
-						cookie->output_array[0],
-						alg_size_in_bytes);
-#endif
-			}
-		}
-	}
-	qat_clear_arrays_by_alg(cookie, xform, alg_size_in_bytes);
-}
-
-void
-qat_asym_process_response(void **op, uint8_t *resp,
-		void *op_cookie)
-{
-	struct qat_asym_session *ctx;
-	struct icp_qat_fw_pke_resp *resp_msg =
-			(struct icp_qat_fw_pke_resp *)resp;
-	struct rte_crypto_op *rx_op = (struct rte_crypto_op *)(uintptr_t)
-			(resp_msg->opaque);
-	struct qat_asym_op_cookie *cookie = op_cookie;
-
-	if (cookie->error) {
-		cookie->error = 0;
-		if (rx_op->status == RTE_CRYPTO_OP_STATUS_NOT_PROCESSED)
-			rx_op->status = RTE_CRYPTO_OP_STATUS_ERROR;
-		QAT_DP_LOG(ERR, "Cookie status returned error");
-	} else {
-		if (ICP_QAT_FW_PKE_RESP_PKE_STAT_GET(
-			resp_msg->pke_resp_hdr.resp_status.pke_resp_flags)) {
-			if (rx_op->status == RTE_CRYPTO_OP_STATUS_NOT_PROCESSED)
-				rx_op->status = RTE_CRYPTO_OP_STATUS_ERROR;
-			QAT_DP_LOG(ERR, "Asymmetric response status"
-					" returned error");
-		}
-		if (resp_msg->pke_resp_hdr.resp_status.comn_err_code) {
-			if (rx_op->status == RTE_CRYPTO_OP_STATUS_NOT_PROCESSED)
-				rx_op->status = RTE_CRYPTO_OP_STATUS_ERROR;
-			QAT_DP_LOG(ERR, "Asymmetric common status"
-					" returned error");
-		}
-	}
-
-	if (rx_op->sess_type == RTE_CRYPTO_OP_WITH_SESSION) {
-		ctx = (struct qat_asym_session *)get_asym_session_private_data(
-			rx_op->asym->session, qat_asym_driver_id);
-		qat_asym_collect_response(rx_op, cookie, ctx->xform);
-	} else if (rx_op->sess_type == RTE_CRYPTO_OP_SESSIONLESS) {
-		qat_asym_collect_response(rx_op, cookie, rx_op->asym->xform);
-	}
-	*op = rx_op;
-
-#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
-	QAT_DP_HEXDUMP_LOG(DEBUG, "resp_msg:", resp_msg,
-			sizeof(struct icp_qat_fw_pke_resp));
-#endif
-}
-
-int
-qat_asym_session_configure(struct rte_cryptodev *dev,
-		struct rte_crypto_asym_xform *xform,
-		struct rte_cryptodev_asym_session *sess,
-		struct rte_mempool *mempool)
-{
-	int err = 0;
-	void *sess_private_data;
-	struct qat_asym_session *session;
-
-	if (rte_mempool_get(mempool, &sess_private_data)) {
-		QAT_LOG(ERR,
-			"Couldn't get object from session mempool");
-		return -ENOMEM;
-	}
-
-	session = sess_private_data;
-	if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_MODEX) {
-		if (xform->modex.exponent.length == 0 ||
-				xform->modex.modulus.length == 0) {
-			QAT_LOG(ERR, "Invalid mod exp input parameter");
-			err = -EINVAL;
-			goto error;
-		}
-	} else if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_MODINV) {
-		if (xform->modinv.modulus.length == 0) {
-			QAT_LOG(ERR, "Invalid mod inv input parameter");
-			err = -EINVAL;
-			goto error;
-		}
-	} else if (xform->xform_type == RTE_CRYPTO_ASYM_XFORM_RSA) {
-		if (xform->rsa.n.length == 0) {
-			QAT_LOG(ERR, "Invalid rsa input parameter");
-			err = -EINVAL;
-			goto error;
-		}
-	} else if (xform->xform_type >= RTE_CRYPTO_ASYM_XFORM_TYPE_LIST_END
-			|| xform->xform_type <= RTE_CRYPTO_ASYM_XFORM_NONE) {
-		QAT_LOG(ERR, "Invalid asymmetric crypto xform");
-		err = -EINVAL;
-		goto error;
-	} else {
-		QAT_LOG(ERR, "Asymmetric crypto xform not implemented");
-		err = -EINVAL;
-		goto error;
-	}
-
-	session->xform = xform;
-	qat_asym_build_req_tmpl(sess_private_data);
-	set_asym_session_private_data(sess, dev->driver_id,
-		sess_private_data);
-
-	return 0;
-error:
-	rte_mempool_put(mempool, sess_private_data);
-	return err;
-}
-
-unsigned int qat_asym_session_get_private_size(
-		struct rte_cryptodev *dev __rte_unused)
-{
-	return RTE_ALIGN_CEIL(sizeof(struct qat_asym_session), 8);
-}
-
-void
-qat_asym_session_clear(struct rte_cryptodev *dev,
-		struct rte_cryptodev_asym_session *sess)
-{
-	uint8_t index = dev->driver_id;
-	void *sess_priv = get_asym_session_private_data(sess, index);
-	struct qat_asym_session *s = (struct qat_asym_session *)sess_priv;
-
-	if (sess_priv) {
-		memset(s, 0, qat_asym_session_get_private_size(dev));
-		struct rte_mempool *sess_mp = rte_mempool_from_obj(sess_priv);
-
-		set_asym_session_private_data(sess, index, NULL);
-		rte_mempool_put(sess_mp, sess_priv);
-	}
-}
+static struct cryptodev_driver qat_crypto_drv;
+RTE_PMD_REGISTER_CRYPTO_DRIVER(qat_crypto_drv,
+		cryptodev_qat_asym_driver,
+		qat_asym_driver_id);
