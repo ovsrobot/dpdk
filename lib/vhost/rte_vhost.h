@@ -21,10 +21,6 @@
 extern "C" {
 #endif
 
-/* These are not C++-aware. */
-#include <linux/vhost.h>
-#include <linux/virtio_ring.h>
-#include <linux/virtio_net.h>
 
 #define RTE_VHOST_USER_CLIENT		(1ULL << 0)
 #define RTE_VHOST_USER_NO_RECONNECT	(1ULL << 1)

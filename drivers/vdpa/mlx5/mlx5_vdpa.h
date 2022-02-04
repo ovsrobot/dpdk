@@ -6,6 +6,7 @@
 #define RTE_PMD_MLX5_VDPA_H_
 
 #include <linux/virtio_net.h>
+#include <linux/vhost_types.h>
 #include <sys/queue.h>
 
 #ifdef PEDANTIC

@@ -16,6 +16,8 @@
 #include <rte_kvargs.h>
 #include <rte_vhost.h>
 #include <rte_spinlock.h>
+#include <linux/vhost.h>
+#include <linux/virtio_net.h>
 
 #include "rte_eth_vhost.h"
 

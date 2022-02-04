@@ -24,6 +24,8 @@
 #include <rte_kvargs.h>
 #include <rte_devargs.h>
 
+#include <linux/vhost_types.h>
+
 #include "base/ifcvf.h"
 
 RTE_LOG_REGISTER(ifcvf_vdpa_logtype, pmd.vdpa.ifcvf, NOTICE);
