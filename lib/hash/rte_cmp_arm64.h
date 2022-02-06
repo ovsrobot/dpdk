@@ -2,6 +2,9 @@
  * Copyright(c) 2015 Cavium, Inc
  */
 
+#ifndef _RTE_CMP_ARM64_H_
+#define _RTE_CMP_ARM64_H_
+
 /* Functions to compare multiple of 16 byte keys (up to 128 bytes) */
 static int
 rte_hash_k16_cmp_eq(const void *key1, const void *key2,
@@ -83,3 +86,5 @@ rte_hash_k128_cmp_eq(const void *key1, const void *key2, size_t key_len)
 		rte_hash_k64_cmp_eq((const char *) key1 + 64,
 				(const char *) key2 + 64, key_len);
 }
+
+#endif /* _RTE_CMP_ARM64_H_ */
