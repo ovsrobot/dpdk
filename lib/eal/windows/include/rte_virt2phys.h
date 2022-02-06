@@ -2,6 +2,9 @@
  * Copyright (c) 2020 Dmitry Kozlyuk
  */
 
+#ifndef _RTE_VIRT2PHYS_H_
+#define _RTE_VIRT2PHYS_H_
+
 /**
  * @file virt2phys driver interface
  */
@@ -32,3 +35,5 @@ DEFINE_GUID(GUID_DEVINTERFACE_VIRT2PHYS,
  */
 #define IOCTL_VIRT2PHYS_TRANSLATE CTL_CODE( \
 	VIRT2PHYS_DEVTYPE, 0x800, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+#endif /* _RTE_VIRT2PHYS_H_ */
