@@ -203,4 +203,9 @@ int dpaa2_eth_load_wriop_soft_parser(struct dpaa2_dev_priv *priv,
 		enum dpni_soft_sequence_dest dest);
 int dpaa2_eth_enable_wriop_soft_parser(struct dpaa2_dev_priv *priv,
 		enum dpni_soft_sequence_dest dest);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* _DPAA2_SPARSER_H_ */
