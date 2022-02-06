@@ -186,4 +186,9 @@ static inline void fman_if_disable_all_rx(void)
 	list_for_each_entry(__if, fman_if_list, node)
 		fman_if_disable_rx(__if);
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* __FSL_FMAN_H */
