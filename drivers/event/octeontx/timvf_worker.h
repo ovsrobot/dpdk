@@ -2,6 +2,9 @@
  * Copyright(c) 2017 Cavium, Inc
  */
 
+#ifndef __TIMVF_WORKER_H__
+#define __TIMVF_WORKER_H__
+
 #include <eventdev_pmd.h>
 
 #include <rte_common.h>
@@ -443,3 +446,5 @@ __retry:
 	timr_bkt_dec_lock(bkt);
 	return nb_timers;
 }
+
+#endif /* __TIMVF_WORKER_H__ */
