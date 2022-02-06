@@ -3,6 +3,9 @@
  * All rights reserved.
  */
 
+#ifndef _NETVSC_HN_NVS_H_
+#define _NETVSC_HN_NVS_H_
+
 /*
  * The indirection table message is the largest message
  * received from host, and that is 112 bytes.
@@ -236,3 +239,5 @@ hn_nvs_send_sglist(struct vmbus_channel *chan,
 	return rte_vmbus_chan_send_sglist(chan, sg, sglen, nvs_msg, nvs_msglen,
 					  (uint64_t)sndc, need_sig);
 }
+
+#endif /* _NETVSC_HN_NVS_H_ */
