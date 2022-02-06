@@ -5,6 +5,9 @@
  *
  */
 
+#ifndef _QBMAN_QMAN_H_
+#define _QBMAN_QMAN_H_
+
 #include "qman_priv.h"
 
 /***************************/
@@ -911,3 +914,5 @@ static inline void __qm_isr_write(struct qm_portal *portal, enum qm_isr_reg n,
 	__qm_out(&portal->addr, QM_REG_ISR + (n << 2), val);
 #endif
 }
+
+#endif /* _QBMAN_QMAN_H_ */
