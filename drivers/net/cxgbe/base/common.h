@@ -542,4 +542,9 @@ static inline int t4_memory_rw(struct adapter *adap, int win,
 {
 	return t4_memory_rw_mtype(adap, win, mtype, maddr, len, hbuf, dir);
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* __CHELSIO_COMMON_H */
