@@ -262,4 +262,9 @@ enum {
 	MLX5_MATCH_MISC_PARAMETERS      = 1 << 1,
 	MLX5_MATCH_INNER_HEADERS        = 1 << 2,
 };
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* __MLX5_WIN_DEFS_H__ */

@@ -44,4 +44,8 @@ struct mlx5_devx_clock {
 #define GET_DEVX_CTX(ctx) (((mlx5_context_st *)ctx)->devx_ctx)
 #define GET_OBJ_CTX(obj)  (((mlx5_devx_obj_st *)obj)->devx_ctx)
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* __MLX5_WIN_ETX_H__ */
