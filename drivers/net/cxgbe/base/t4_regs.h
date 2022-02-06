@@ -3,6 +3,9 @@
  * All rights reserved.
  */
 
+#ifndef _CXGBE_T4_REGS_H_
+#define _CXGBE_T4_REGS_H_
+
 #define MYPF_BASE 0x1b000
 #define MYPF_REG(reg_addr) (MYPF_BASE + (reg_addr))
 
@@ -976,3 +979,5 @@
 
 #define LE_3_DB_HASH_MASK_GEN_IPV4_T6_A 0x19eac
 #define LE_4_DB_HASH_MASK_GEN_IPV4_T6_A 0x19eb0
+
+#endif /* _CXGBE_T4_REGS_H_ */
