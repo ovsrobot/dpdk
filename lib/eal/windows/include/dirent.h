@@ -28,6 +28,10 @@
 #include <sys/stat.h>
 #include <errno.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Maximum length of file name */
 #if !defined(PATH_MAX)
 #   define PATH_MAX MAX_PATH
