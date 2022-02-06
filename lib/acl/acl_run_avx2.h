@@ -2,6 +2,9 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#ifndef _ACL_RUN_AVX2_H_
+#define _ACL_RUN_AVX2_H_
+
 #include "acl_run_sse.h"
 
 static const rte_ymm_t ymm_match_mask = {
@@ -253,3 +256,5 @@ search_avx2x16(const struct rte_acl_ctx *ctx, const uint8_t **data,
 
 	return 0;
 }
+
+#endif /* _ACL_RUN_AVX2_H_ */

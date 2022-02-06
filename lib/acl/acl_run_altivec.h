@@ -3,6 +3,9 @@
  * Copyright (C) IBM Corporation 2016.
  */
 
+#ifndef _ACL_RUN_ALTIVEC_H_
+#define _ACL_RUN_ALTIVEC_H_
+
 #include "acl_run.h"
 #include "acl_vect.h"
 
@@ -300,3 +303,5 @@ search_altivec_4(const struct rte_acl_ctx *ctx, const uint8_t **data,
 
 	return 0;
 }
+
+#endif /* _ACL_RUN_ALTIVEC_H_ */

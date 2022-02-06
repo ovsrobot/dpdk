@@ -2,6 +2,9 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#ifndef _ACL_RUN_SSE_H_
+#define _ACL_RUN_SSE_H_
+
 #include "acl_run.h"
 #include "acl_vect.h"
 
@@ -326,3 +329,5 @@ search_sse_4(const struct rte_acl_ctx *ctx, const uint8_t **data,
 
 	return 0;
 }
+
+#endif /* _ACL_RUN_SSE_H_ */
