@@ -2,6 +2,9 @@
  * Copyright(c) 2020 Arm Corporation
  */
 
+#ifndef _VIRTIO_RXTX_PACKED_NEON_H_
+#define _VIRTIO_RXTX_PACKED_NEON_H_
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -291,3 +294,5 @@ virtqueue_dequeue_batch_packed_vec(struct virtnet_rx *rxvq,
 
 	return 0;
 }
+
+#endif /* _VIRTIO_RXTX_PACKED_NEON_H_ */
