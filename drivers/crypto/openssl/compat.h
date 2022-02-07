@@ -192,6 +192,18 @@ get_dsa_priv_key(DSA *dsa, const BIGNUM **priv_key)
 	DSA_get0_key(dsa, NULL, priv_key);
 }
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+/* Known DIGEST names (not a complete list) */
+#define OSSL_DIGEST_NAME_MD5            "MD5"
+#define OSSL_DIGEST_NAME_MD5_SHA1       "MD5-SHA1"
+#define OSSL_DIGEST_NAME_SHA1           "SHA1"
+#define OSSL_DIGEST_NAME_SHA2_224       "SHA2-224"
+#define OSSL_DIGEST_NAME_SHA2_256       "SHA2-256"
+#define OSSL_DIGEST_NAME_SHA2_384       "SHA2-384"
+#define OSSL_DIGEST_NAME_SHA2_512       "SHA2-512"
+
+#endif
+
 #endif /* version < 10100000 */
 
 #endif /* __RTA_COMPAT_H__ */
