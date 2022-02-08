@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added an API to enable queue based priority flow ctrl(PFC).**
+
+  New APIs, ``rte_eth_dev_priority_flow_ctrl_queue_info_get()`` and
+  ``rte_eth_dev_priority_flow_ctrl_queue_configure()``, was added.
+
 * **Updated Cisco enic driver.**
 
   * Added rte_flow support for matching GENEVE packets.
