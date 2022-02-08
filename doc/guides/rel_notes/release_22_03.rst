@@ -72,6 +72,11 @@ New Features
 * **Updated Wangxun ngbe driver.**
 
   * Added support for devices of custom PHY interfaces.
+  * Added LED OEM support.
+
+* **Updated Wangxun txgbe driver.**
+
+  * Added LED OEM support.
 
 * **Added an API to retrieve event port id of ethdev Rx adapter.**
 
