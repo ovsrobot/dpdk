@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added IP reassembly Ethernet offload API, to get and set config.**
+
+  Added IP reassembly offload APIs which provide functions to query IP
+  reassembly capabilities, to set configuration and to get currently set
+  reassembly configuration.
+
 * **Updated Cisco enic driver.**
 
   * Added rte_flow support for matching GENEVE packets.
