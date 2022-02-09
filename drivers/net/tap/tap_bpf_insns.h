@@ -2,6 +2,9 @@
  * Copyright 2017 Mellanox Technologies, Ltd
  */
 
+#ifndef TAP_BPF_INSNS_H
+#define TAP_BPF_INSNS_H
+
 #include <tap_bpf.h>
 
 /* bpf_insn array matching cls_q section. See tap_bpf_program.c file */
@@ -1694,3 +1697,5 @@ static struct bpf_insn l3_l4_hash_insns[] = {
 	{0xbf,    0,    7,        0, 0x00000000},
 	{0x95,    0,    0,        0, 0x00000000},
 };
+
+#endif /* TAP_BPF_INSNS_H */
