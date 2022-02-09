@@ -3238,7 +3238,7 @@ rte_event_eth_rx_adapter_queue_conf_get(uint8_t id,
 			RTE_EVENT_ETH_RX_ADAPTER_QUEUE_FLOW_ID_VALID;
 	queue_conf->servicing_weight = queue_info->wt;
 
-	memcpy(&queue_conf->ev, qi_ev, sizeof(*qi_ev));
+	memcpy(&queue_conf->ev, qi_ev, sizeof(queue_info->event));
 
 	dev = &rte_eventdevs[rx_adapter->eventdev_id];
 	if (dev->dev_ops->eth_rx_adapter_queue_conf_get != NULL) {
