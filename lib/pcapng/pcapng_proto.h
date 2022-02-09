@@ -6,6 +6,9 @@
  * See: https://github.com/pcapng/pcapng/ for the file format.
  */
 
+#ifndef PCAPNG_PROTO_H
+#define PCAPNG_PROTO_H
+
 enum pcapng_block_types {
 	PCAPNG_INTERFACE_BLOCK		= 1,
 	PCAPNG_PACKET_BLOCK,		/* Obsolete */
@@ -127,3 +130,5 @@ enum pcapng_isb_options {
 	PCAPNG_ISB_OSDROP,
 	PCAPNG_ISB_USRDELIV,
 };
+
+#endif /* PCAPNG_PROTO_H */
