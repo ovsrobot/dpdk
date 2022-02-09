@@ -4,6 +4,9 @@
  * www.marvell.com
  */
 
+#ifndef QEDE_SRIOV_H
+#define QEDE_SRIOV_H
+
 void qed_sriov_configure(struct ecore_dev *edev, int num_vfs_param);
 
 enum qed_iov_wq_flag {
@@ -20,3 +23,5 @@ enum qed_iov_wq_flag {
 void qed_inform_vf_link_state(struct ecore_hwfn *hwfn);
 int qed_schedule_iov(struct ecore_hwfn *p_hwfn, enum qed_iov_wq_flag flag);
 void qed_iov_pf_task(void *arg);
+
+#endif /* QEDE_SRIOV_H */
