@@ -2,7 +2,8 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
-
+#ifndef RTE_KNI_FIFO_H
+#define RTE_KNI_FIFO_H
 
 /**
  * @internal when c11 memory model enabled use c11 atomic memory barrier.
@@ -115,3 +116,5 @@ kni_fifo_free_count(struct rte_kni_fifo *fifo)
 	uint32_t fifo_read = __KNI_LOAD_ACQUIRE(&fifo->read);
 	return (fifo_read - fifo_write - 1) & (fifo->len - 1);
 }
+
+#endif /* RTE_KNI_FIFO_H */
