@@ -2,6 +2,9 @@
  * Copyright(c) 2020 Dmitry Kozlyuk
  */
 
+#ifndef RTE_EAL_PAGING_H
+#define RTE_EAL_PAGING_H
+
 #include <stdint.h>
 
 #include <rte_compat.h>
@@ -96,3 +99,5 @@ rte_mem_page_size(void);
 __rte_internal
 int
 rte_mem_lock(const void *virt, size_t size);
+
+#endif /* RTE_EAL_PAGING_H */
