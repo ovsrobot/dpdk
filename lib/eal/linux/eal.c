@@ -879,8 +879,7 @@ rte_eal_init(int argc, char **argv)
 	pthread_t thread_id;
 	static uint32_t run_once;
 	uint32_t has_run = 0;
-	const char *p;
-	static char logid[PATH_MAX];
+	const char *logid = NULL;
 	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
 	char thread_name[RTE_MAX_THREAD_NAME_LEN];
 	bool phys_addrs;
@@ -902,8 +901,12 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
-	p = strrchr(argv[0], '/');
-	strlcpy(logid, p ? p + 1 : argv[0], sizeof(logid));
+	if (argv && argv[0]) {
+		const char *p = strrchr(argv[0], '/');
+
+		logid = p ? p + 1 : argv[0];
+	}
+
 	thread_id = pthread_self();
 
 	eal_reset_internal_config(internal_conf);
