@@ -407,6 +407,7 @@ F: lib/ethdev/rte_flow*
 Traffic Management API - EXPERIMENTAL
 M: Cristian Dumitrescu <cristian.dumitrescu@intel.com>
 T: git://dpdk.org/next/dpdk-next-net
+F: app/test-pmd/cmdline_tm.*
 F: lib/ethdev/rte_tm*
 
 Traffic Metering and Policing API - EXPERIMENTAL
