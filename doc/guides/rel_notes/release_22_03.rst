@@ -80,6 +80,11 @@ New Features
 
   The new API ``rte_event_eth_rx_adapter_event_port_get()`` was added.
 
+* **Updated Intel QuickAssist Technology asymmetric crypto PMD.**
+
+  * ECDSA algorithm is now supported by Intel QuickAssist
+    Technology asymmetric crypto PMD.
+
 
 Removed Items
 -------------
