@@ -84,6 +84,10 @@ New Features
     - YT8521S PHY connects to SFP
   * Added LED OEM support.
 
+* **Updated Wangxun txgbe driver.**
+
+  * Added LED OEM support.
+
 * **Added an API to retrieve event port id of ethdev Rx adapter.**
 
   The new API ``rte_event_eth_rx_adapter_event_port_get()`` was added.
