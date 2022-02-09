@@ -2,6 +2,9 @@
  * Copyright(c) 2016-2017 Intel Corporation
  */
 
+#ifndef RTE_EFD_X86_H
+#define RTE_EFD_X86_H
+
 /* rte_efd_x86.h
  * This file holds all x86 specific EFD functions
  */
@@ -55,3 +58,5 @@ efd_lookup_internal_avx2(const efd_hashfunc_t *group_hash_idx,
 #endif
 
 }
+
+#endif /* RTE_EFD_X86_H */
