@@ -2,6 +2,9 @@
  * Copyright 2021 NXP
  */
 
+#ifndef ENETFEC_UIO_H
+#define ENETFEC_UIO_H
+
 #include "enet_ethdev.h"
 
 /* Prefix path to sysfs directory where UIO device attributes are exported.
@@ -62,3 +65,5 @@ int enetfec_configure(void);
 int config_enetfec_uio(struct enetfec_private *fep);
 void enetfec_uio_init(void);
 void enetfec_cleanup(struct enetfec_private *fep);
+
+#endif /* ENETFEC_UIO_H */
