@@ -1712,8 +1712,7 @@ memif_check_socket_filename(const char *filename)
 		ret = -EINVAL;
 	}
 
-	if (dir != NULL)
-		rte_free(dir);
+	rte_free(dir);
 
 	return ret;
 }
@@ -1884,8 +1883,7 @@ rte_pmd_memif_probe(struct rte_vdev_device *vdev)
 			   log2_ring_size, pkt_buffer_size, secret, ether_addr);
 
 exit:
-	if (kvlist != NULL)
-		rte_kvargs_free(kvlist);
+	rte_kvargs_free(kvlist);
 	return ret;
 }
 
