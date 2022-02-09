@@ -2,6 +2,9 @@
  * Copyright(c) 2016 Intel Corporation
  */
 
+#ifndef I40E_REGS_H
+#define I40E_REGS_H
+
 struct i40e_reg_info {
 	uint32_t base_addr;
 	uint32_t count1;
@@ -966,3 +969,5 @@ static const struct i40e_reg_info i40e_regs_others[] = {
 	{I40E_GLGEN_STAT_CLEAR, 0, 0, 0, 0, "GLGEN_STAT_CLEAR"},
 	{0, 0, 0, 0, 0, NULL}
 };
+
+#endif /* I40E_REGS_H */
