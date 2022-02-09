@@ -96,7 +96,7 @@ RTE_TRACE_POINT(
 RTE_TRACE_POINT(
 	rte_cryptodev_trace_asym_session_create,
 	RTE_TRACE_POINT_ARGS(uint8_t dev_id, void *xforms,
-		void *mempool, struct rte_cryptodev_asym_session *sess),
+		void *mempool, void *sess),
 	rte_trace_point_emit_u8(dev_id);
 	rte_trace_point_emit_ptr(xforms);
 	rte_trace_point_emit_ptr(mempool);
@@ -111,8 +111,7 @@ RTE_TRACE_POINT(
 
 RTE_TRACE_POINT(
 	rte_cryptodev_trace_asym_session_free,
-	RTE_TRACE_POINT_ARGS(uint8_t dev_id,
-		struct rte_cryptodev_asym_session *sess),
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, void *sess),
 	rte_trace_point_emit_u8(dev_id);
 	rte_trace_point_emit_ptr(sess);
 )
