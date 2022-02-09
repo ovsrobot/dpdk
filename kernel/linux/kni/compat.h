@@ -3,6 +3,9 @@
  * Minimal wrappers to allow compiling kni on older kernels.
  */
 
+#ifndef KNI_COMPAT_H
+#define KNI_COMPAT_H
+
 #include <linux/version.h>
 
 #ifndef RHEL_RELEASE_VERSION
@@ -141,3 +144,5 @@
 #if KERNEL_VERSION(5, 9, 0) > LINUX_VERSION_CODE
 #define HAVE_TSK_IN_GUP
 #endif
+
+#endif /* KNI_COMPAT_H */
