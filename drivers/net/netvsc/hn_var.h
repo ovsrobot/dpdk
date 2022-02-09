@@ -6,6 +6,9 @@
  * All rights reserved.
  */
 
+#ifndef NETVSC_HN_VAR_H
+#define NETVSC_HN_VAR_H
+
 #include <rte_eal_paging.h>
 #include <ethdev_driver.h>
 
@@ -283,3 +286,5 @@ int	hn_vf_reta_hash_update(struct rte_eth_dev *dev,
 int	hn_eth_rmv_event_callback(uint16_t port_id,
 				  enum rte_eth_event_type event __rte_unused,
 				  void *cb_arg, void *out __rte_unused);
+
+#endif /* NETVSC_HN_VAR_H */

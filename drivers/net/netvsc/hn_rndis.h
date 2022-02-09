@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+#ifndef NETVSC_HN_RNDIS_H
+#define NETVSC_HN_RNDIS_H
+
 #include "rndis.h"
 
 struct hn_data;
@@ -32,3 +35,5 @@ void hn_rndis_dump(const void *buf);
 #else
 #define hn_rndis_dump(buf)
 #endif
+
+#endif /* NETVSC_HN_RNDIS_H */
