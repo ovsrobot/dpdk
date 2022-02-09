@@ -2,6 +2,9 @@
  * Copyright(c) 2020 Intel Corporation
  */
 
+#ifndef ACL_RUN_AVX512X8_H
+#define ACL_RUN_AVX512X8_H
+
 /*
  * Defines required by "acl_run_avx512_common.h".
  * Note that all of them has to be undefined by the end
@@ -251,3 +254,5 @@ search_avx512x8x2(const struct rte_acl_ctx *ctx, const uint8_t **data,
 #undef _SC_
 #undef _T_mask
 #undef _T_simd
+
+#endif /* ACL_RUN_AVX512X8_H */

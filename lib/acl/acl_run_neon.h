@@ -2,6 +2,9 @@
  * Copyright(c) 2015 Cavium, Inc
  */
 
+#ifndef ACL_RUN_NEON_H
+#define ACL_RUN_NEON_H
+
 #include "acl_run.h"
 #include "acl_vect.h"
 
@@ -259,3 +262,5 @@ search_neon_4(const struct rte_acl_ctx *ctx, const uint8_t **data,
 
 	return 0;
 }
+
+#endif /* ACL_RUN_NEON_H */
