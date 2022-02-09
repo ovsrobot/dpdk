@@ -17,9 +17,12 @@ extern int txgbe_logtype_init;
 		"%s(): " fmt "\n", __func__, ##args)
 
 extern int txgbe_logtype_driver;
-#define PMD_DRV_LOG(level, fmt, args...) \
+#define PMD_TLOG_DRIVER(level, fmt, args...) \
 	rte_log(RTE_LOG_ ## level, txgbe_logtype_driver, \
 		"%s(): " fmt "\n", __func__, ##args)
+
+#define PMD_DRV_LOG(level, fmt, args...) \
+	PMD_TLOG_DRIVER(level, fmt "\n", ## args)
 
 #ifdef RTE_LIBRTE_TXGBE_DEBUG_RX
 extern int txgbe_logtype_rx;
@@ -48,11 +51,11 @@ extern int txgbe_logtype_tx_free;
 #define PMD_TX_FREE_LOG(level, fmt, args...) do { } while (0)
 #endif
 
-#define TLOG_DEBUG(fmt, args...)  PMD_DRV_LOG(DEBUG, fmt, ##args)
+#define TLOG_DEBUG(fmt, args...)  PMD_TLOG_DRIVER(DEBUG, fmt, ##args)
 
 #define DEBUGOUT(fmt, args...)    TLOG_DEBUG(fmt, ##args)
 #define PMD_INIT_FUNC_TRACE()     TLOG_DEBUG(" >>")
-#define DEBUGFUNC(fmt)            TLOG_DEBUG(fmt)
+#define DEBUGFUNC(fmt)            do { } while (0)
 
 extern int txgbe_logtype_bp;
 #define BP_LOG(fmt, args...) \
