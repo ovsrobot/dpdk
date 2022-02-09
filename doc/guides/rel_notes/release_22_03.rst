@@ -85,6 +85,11 @@ New Features
   * ECDSA algorithm is now supported by Intel QuickAssist
     Technology asymmetric crypto PMD.
 
+* **Updated Intel QuickAssist Technology asymmetric crypto PMD.**
+
+  * ECPM algorithm is now supported by Intel QuickAssist
+    Technology asymmetric crypto PMD.
+
 
 Removed Items
 -------------
