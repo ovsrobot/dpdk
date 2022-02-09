@@ -3824,19 +3824,10 @@ void clear_port_slave_flag(portid_t slave_pid)
 uint8_t port_is_bonding_slave(portid_t slave_pid)
 {
 	struct rte_port *port;
-	struct rte_eth_dev_info dev_info;
-	int ret;
 
 	port = &ports[slave_pid];
-	ret = eth_dev_info_get_print_err(slave_pid, &dev_info);
-	if (ret != 0) {
-		TESTPMD_LOG(ERR,
-			"Failed to get device info for port id %d,"
-			"cannot determine if the port is a bonded slave",
-			slave_pid);
-		return 0;
-	}
-	if ((*dev_info.dev_flags & RTE_ETH_DEV_BONDED_SLAVE) || (port->slave_flag == 1))
+
+	if (port->slave_flag == 1)
 		return 1;
 	return 0;
 }
