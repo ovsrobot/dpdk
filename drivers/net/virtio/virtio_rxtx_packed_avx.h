@@ -2,6 +2,9 @@
  * Copyright(c) 2010-2020 Intel Corporation
  */
 
+#ifndef VIRTIO_RXTX_PACKED_AVX_H
+#define VIRTIO_RXTX_PACKED_AVX_H
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -237,3 +240,5 @@ virtqueue_dequeue_batch_packed_vec(struct virtnet_rx *rxvq,
 
 	return 0;
 }
+
+#endif /* VIRTIO_RXTX_PACKED_AVX_H */
