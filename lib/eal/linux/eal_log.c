@@ -46,7 +46,7 @@ static cookie_io_functions_t console_log_func = {
  * once memzones are available.
  */
 int
-eal_log_init(const char *id, int facility)
+eal_log_init(int facility)
 {
 	FILE *log_stream;
 
@@ -54,7 +54,7 @@ eal_log_init(const char *id, int facility)
 	if (log_stream == NULL)
 		return -1;
 
-	openlog(id, LOG_NDELAY | LOG_PID, facility);
+	openlog(NULL, LOG_NDELAY | LOG_PID, facility);
 
 	eal_log_set_default(log_stream);
 

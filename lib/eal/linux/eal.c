@@ -966,8 +966,6 @@ rte_eal_init(int argc, char **argv)
 	pthread_t thread_id;
 	static uint32_t run_once;
 	uint32_t has_run = 0;
-	const char *p;
-	static char logid[PATH_MAX];
 	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
 	char thread_name[RTE_MAX_THREAD_NAME_LEN];
 	bool phys_addrs;
@@ -989,8 +987,6 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
-	p = strrchr(argv[0], '/');
-	strlcpy(logid, p ? p + 1 : argv[0], sizeof(logid));
 	thread_id = pthread_self();
 
 	eal_reset_internal_config(internal_conf);
@@ -1165,7 +1161,7 @@ rte_eal_init(int argc, char **argv)
 #endif
 	}
 
-	if (eal_log_init(logid, internal_conf->syslog_facility) < 0) {
+	if (eal_log_init(internal_conf->syslog_facility) < 0) {
 		rte_eal_init_alert("Cannot init logging.");
 		rte_errno = ENOMEM;
 		__atomic_store_n(&run_once, 0, __ATOMIC_RELAXED);

@@ -11,7 +11,7 @@
 /*
  * Initialize the default log stream.
  */
-int eal_log_init(const char *id, int facility);
+int eal_log_init(int facility);
 
 /*
  * Determine where log data is written when no call to rte_openlog_stream.

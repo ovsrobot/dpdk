@@ -280,7 +280,7 @@ rte_eal_init(int argc, char **argv)
 	enum rte_iova_mode iova_mode;
 	int ret;
 
-	eal_log_init(NULL, 0);
+	eal_log_init(0);
 
 	eal_log_level_parse(argc, argv);
 
