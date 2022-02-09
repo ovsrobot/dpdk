@@ -82,6 +82,7 @@ New Features
     - M88E1512 PHY connects to RJ45
     - M88E1512 PHY connects to RGMII combo
     - YT8521S PHY connects to SFP
+  * Added LED OEM support.
 
 * **Added an API to retrieve event port id of ethdev Rx adapter.**
 
