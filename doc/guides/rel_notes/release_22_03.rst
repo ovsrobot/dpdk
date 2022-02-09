@@ -76,6 +76,13 @@ New Features
   * Added AES-XCBC support in lookaside protocol (IPsec) for CN9K & CN10K.
   * Added AES-CMAC support in CN9K & CN10K.
 
+* **Updated Wangxun ngbe driver.**
+
+  * Added support for devices of custom PHY interfaces.
+    - M88E1512 PHY connects to RJ45
+    - M88E1512 PHY connects to RGMII combo
+    - YT8521S PHY connects to SFP
+
 * **Added an API to retrieve event port id of ethdev Rx adapter.**
 
   The new API ``rte_event_eth_rx_adapter_event_port_get()`` was added.
