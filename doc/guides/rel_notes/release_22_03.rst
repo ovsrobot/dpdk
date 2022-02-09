@@ -80,6 +80,10 @@ New Features
 
   The new API ``rte_event_eth_rx_adapter_event_port_get()`` was added.
 
+* **Added an API for private user data in Asymmetric crypto session.**
+
+  An API was added for getting/setting an Asymmetric crypto session's user data.
+
 
 Removed Items
 -------------
@@ -117,7 +121,7 @@ API Changes
 * cryptodev: The asymmetric session handling was modified to use a single
   mempool object. An API ``rte_cryptodev_asym_session_pool_create`` was added
   to create a mempool with element size big enough to hold the generic asymmetric
-  session header and max size for a device private session data.
+  session header, max size for a device private session data, and user data size.
   The session structure was moved to ``cryptodev_pmd.h``,
   hiding it from applications.
   The API ``rte_cryptodev_asym_session_init`` was removed as the initialization
