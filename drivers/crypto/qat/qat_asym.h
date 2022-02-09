@@ -27,7 +27,7 @@ typedef uint64_t large_int_ptr;
 #define QAT_ASYM_RSA_QT_NUM_IN_PARAMS		6
 
 struct qat_asym_op_cookie {
-	size_t alg_size;
+	size_t alg_bytesize;
 	uint64_t error;
 	rte_iova_t input_addr;
 	rte_iova_t output_addr;
