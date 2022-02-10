@@ -259,7 +259,8 @@ struct mlx5_dev_config {
 	unsigned int l3_vxlan_en:1; /* Enable L3 VXLAN flow creation. */
 	unsigned int vf_nl_en:1; /* Enable Netlink requests in VF mode. */
 	unsigned int dv_esw_en:1; /* Enable E-Switch DV flow. */
-	unsigned int dv_flow_en:1; /* Enable DV flow. */
+	/* Enable DV flow. 1 means SW steering, 2 means HW steering. */
+	unsigned int dv_flow_en:2;
 	unsigned int dv_xmeta_en:2; /* Enable extensive flow metadata. */
 	unsigned int lacp_by_user:1;
 	/* Enable user to manage LACP traffic. */
