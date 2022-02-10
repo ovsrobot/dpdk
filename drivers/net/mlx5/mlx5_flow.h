@@ -41,6 +41,7 @@ enum mlx5_rte_flow_action_type {
 	MLX5_RTE_FLOW_ACTION_TYPE_AGE,
 	MLX5_RTE_FLOW_ACTION_TYPE_COUNT,
 	MLX5_RTE_FLOW_ACTION_TYPE_JUMP,
+	MLX5_RTE_FLOW_ACTION_TYPE_RSS,
 };
 
 #define MLX5_INDIRECT_ACTION_TYPE_OFFSET 30
@@ -1036,6 +1037,13 @@ struct mlx5_action_construct_data {
 	uint32_t idx;  /* Data index. */
 	uint16_t action_src; /* rte_flow_action src offset. */
 	uint16_t action_dst; /* mlx5dr_rule_action dst offset. */
+	union {
+		struct {
+			uint64_t types; /* RSS hash types. */
+			uint32_t level; /* RSS level. */
+			uint32_t idx; /* Shared action index. */
+		} shared_rss;
+	};
 };
 
 /* Flow item template struct. */
@@ -1044,6 +1052,7 @@ struct rte_flow_pattern_template {
 	/* Template attributes. */
 	struct rte_flow_pattern_template_attr attr;
 	struct mlx5dr_match_template *mt; /* mlx5 match template. */
+	uint64_t item_flags; /* Item layer flags. */
 	uint32_t refcnt;  /* Reference counter. */
 };
 
@@ -1426,6 +1435,29 @@ typedef int (*mlx5_flow_q_push_t)
 			 uint32_t queue,
 			 struct rte_flow_error *error);
 
+typedef struct rte_flow_action_handle *(*mlx5_flow_q_action_handle_create_t)
+			(struct rte_eth_dev *dev,
+			 uint32_t queue,
+			 const struct rte_flow_q_ops_attr *attr,
+			 const struct rte_flow_indir_action_conf *conf,
+			 const struct rte_flow_action *action,
+			 struct rte_flow_error *error);
+
+typedef int (*mlx5_flow_q_action_handle_update_t)
+			(struct rte_eth_dev *dev,
+			 uint32_t queue,
+			 const struct rte_flow_q_ops_attr *attr,
+			 struct rte_flow_action_handle *handle,
+			 const void *update,
+			 struct rte_flow_error *error);
+
+typedef int (*mlx5_flow_q_action_handle_destroy_t)
+			(struct rte_eth_dev *dev,
+			 uint32_t queue,
+			 const struct rte_flow_q_ops_attr *attr,
+			 struct rte_flow_action_handle *handle,
+			 struct rte_flow_error *error);
+
 struct mlx5_flow_driver_ops {
 	mlx5_flow_validate_t validate;
 	mlx5_flow_prepare_t prepare;
@@ -1474,6 +1506,9 @@ struct mlx5_flow_driver_ops {
 	mlx5_flow_q_flow_destroy_t q_flow_destroy;
 	mlx5_flow_q_pull_t q_pull;
 	mlx5_flow_q_push_t q_push;
+	mlx5_flow_q_action_handle_create_t q_action_create;
+	mlx5_flow_q_action_handle_update_t q_action_update;
+	mlx5_flow_q_action_handle_destroy_t q_action_destroy;
 };
 
 /* mlx5_flow.c */
@@ -1915,6 +1950,8 @@ void flow_dv_hashfields_set(uint64_t item_flags,
 			    uint64_t *hash_fields);
 void flow_dv_action_rss_l34_hash_adjust(uint64_t rss_types,
 					uint64_t *hash_field);
+uint32_t flow_dv_action_rss_hrxq_lookup(struct rte_eth_dev *dev, uint32_t idx,
+					const uint64_t hash_fields);
 
 struct mlx5_list_entry *flow_hw_grp_create_cb(void *tool_ctx, void *cb_ctx);
 void flow_hw_grp_remove_cb(void *tool_ctx, struct mlx5_list_entry *entry);
@@ -1965,4 +2002,23 @@ mlx5_get_tof(const struct rte_flow_item *items,
 	     enum mlx5_tof_rule_type *rule_type);
 void
 flow_hw_resource_release(struct rte_eth_dev *dev);
+int flow_dv_action_validate(struct rte_eth_dev *dev,
+			    const struct rte_flow_indir_action_conf *conf,
+			    const struct rte_flow_action *action,
+			    struct rte_flow_error *err);
+struct rte_flow_action_handle *flow_dv_action_create(struct rte_eth_dev *dev,
+		      const struct rte_flow_indir_action_conf *conf,
+		      const struct rte_flow_action *action,
+		      struct rte_flow_error *err);
+int flow_dv_action_destroy(struct rte_eth_dev *dev,
+			   struct rte_flow_action_handle *handle,
+			   struct rte_flow_error *error);
+int flow_dv_action_update(struct rte_eth_dev *dev,
+			  struct rte_flow_action_handle *handle,
+			  const void *update,
+			  struct rte_flow_error *err);
+int flow_dv_action_query(struct rte_eth_dev *dev,
+			 const struct rte_flow_action_handle *handle,
+			 void *data,
+			 struct rte_flow_error *error);
 #endif /* RTE_PMD_MLX5_FLOW_H_ */

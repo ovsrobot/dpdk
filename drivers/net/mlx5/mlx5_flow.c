@@ -873,6 +873,26 @@ mlx5_flow_q_push(struct rte_eth_dev *dev,
 		 uint32_t queue,
 		 struct rte_flow_error *error);
 
+static struct rte_flow_action_handle *
+mlx5_flow_q_action_handle_create(struct rte_eth_dev *dev, uint32_t queue,
+				 const struct rte_flow_q_ops_attr *attr,
+				 const struct rte_flow_indir_action_conf *conf,
+				 const struct rte_flow_action *action,
+				 struct rte_flow_error *error);
+
+static int
+mlx5_flow_q_action_handle_update(struct rte_eth_dev *dev, uint32_t queue,
+				 const struct rte_flow_q_ops_attr *attr,
+				 struct rte_flow_action_handle *handle,
+				 const void *update,
+				 struct rte_flow_error *error);
+
+static int
+mlx5_flow_q_action_handle_destroy(struct rte_eth_dev *dev, uint32_t queue,
+				  const struct rte_flow_q_ops_attr *attr,
+				  struct rte_flow_action_handle *handle,
+				  struct rte_flow_error *error);
+
 static const struct rte_flow_ops mlx5_flow_ops = {
 	.validate = mlx5_flow_validate,
 	.create = mlx5_flow_create,
@@ -904,6 +924,9 @@ static const struct rte_flow_ops mlx5_flow_ops = {
 	.q_flow_destroy = mlx5_flow_q_flow_destroy,
 	.q_pull = mlx5_flow_q_pull,
 	.q_push = mlx5_flow_q_push,
+	.q_action_handle_create = mlx5_flow_q_action_handle_create,
+	.q_action_handle_update = mlx5_flow_q_action_handle_update,
+	.q_action_handle_destroy = mlx5_flow_q_action_handle_destroy,
 };
 
 /* Tunnel information. */
@@ -8226,6 +8249,99 @@ mlx5_flow_q_push(struct rte_eth_dev *dev,
 			flow_get_drv_ops(MLX5_FLOW_TYPE_HW);
 
 	return fops->q_push(dev, queue, error);
+}
+
+/**
+ * Create shared action.
+ *
+ * @param[in] dev
+ *   Pointer to the rte_eth_dev structure.
+ * @param[in] queue
+ *   Which queue to be used..
+ * @param[in] attr
+ *   Operation attribute.
+ * @param[in] conf
+ *   Indirect action configuration.
+ * @param[in] action
+ *   rte_flow action detail.
+ * @param[out] error
+ *   Pointer to error structure.
+ *
+ * @return
+ *   Action handle on success, NULL otherwise and rte_errno is set.
+ */
+static struct rte_flow_action_handle *
+mlx5_flow_q_action_handle_create(struct rte_eth_dev *dev, uint32_t queue,
+				 const struct rte_flow_q_ops_attr *attr,
+				 const struct rte_flow_indir_action_conf *conf,
+				 const struct rte_flow_action *action,
+				 struct rte_flow_error *error)
+{
+	const struct mlx5_flow_driver_ops *fops =
+			flow_get_drv_ops(MLX5_FLOW_TYPE_HW);
+
+	return fops->q_action_create(dev, queue, attr, conf, action, error);
+}
+
+/**
+ * Update shared action.
+ *
+ * @param[in] dev
+ *   Pointer to the rte_eth_dev structure.
+ * @param[in] queue
+ *   Which queue to be used..
+ * @param[in] attr
+ *   Operation attribute.
+ * @param[in] handle
+ *   Action handle to be updated.
+ * @param[in] update
+ *   Update value.
+ * @param[out] error
+ *   Pointer to error structure.
+ *
+ * @return
+ *   0 on success, negative value otherwise and rte_errno is set.
+ */
+static int
+mlx5_flow_q_action_handle_update(struct rte_eth_dev *dev, uint32_t queue,
+				 const struct rte_flow_q_ops_attr *attr,
+				 struct rte_flow_action_handle *handle,
+				 const void *update,
+				 struct rte_flow_error *error)
+{
+	const struct mlx5_flow_driver_ops *fops =
+			flow_get_drv_ops(MLX5_FLOW_TYPE_HW);
+
+	return fops->q_action_update(dev, queue, attr, handle, update, error);
+}
+
+/**
+ * Destroy shared action.
+ *
+ * @param[in] dev
+ *   Pointer to the rte_eth_dev structure.
+ * @param[in] queue
+ *   Which queue to be used..
+ * @param[in] attr
+ *   Operation attribute.
+ * @param[in] handle
+ *   Action handle to be destroyed.
+ * @param[out] error
+ *   Pointer to error structure.
+ *
+ * @return
+ *   0 on success, negative value otherwise and rte_errno is set.
+ */
+static int
+mlx5_flow_q_action_handle_destroy(struct rte_eth_dev *dev, uint32_t queue,
+				  const struct rte_flow_q_ops_attr *attr,
+				  struct rte_flow_action_handle *handle,
+				  struct rte_flow_error *error)
+{
+	const struct mlx5_flow_driver_ops *fops =
+			flow_get_drv_ops(MLX5_FLOW_TYPE_HW);
+
+	return fops->q_action_destroy(dev, queue, attr, handle, error);
 }
 
 /**

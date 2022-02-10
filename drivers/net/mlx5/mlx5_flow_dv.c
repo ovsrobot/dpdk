@@ -13838,9 +13838,9 @@ __flow_dv_action_rss_hrxq_set(struct mlx5_shared_action_rss *action,
  * @return
  *   Valid hash RX queue index, otherwise 0.
  */
-static uint32_t
-__flow_dv_action_rss_hrxq_lookup(struct rte_eth_dev *dev, uint32_t idx,
-				 const uint64_t hash_fields)
+uint32_t
+flow_dv_action_rss_hrxq_lookup(struct rte_eth_dev *dev, uint32_t idx,
+			       const uint64_t hash_fields)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 	struct mlx5_shared_action_rss *shared_rss =
@@ -13968,7 +13968,7 @@ flow_dv_apply(struct rte_eth_dev *dev, struct rte_flow *flow,
 			struct mlx5_hrxq *hrxq = NULL;
 			uint32_t hrxq_idx;
 
-			hrxq_idx = __flow_dv_action_rss_hrxq_lookup(dev,
+			hrxq_idx = flow_dv_action_rss_hrxq_lookup(dev,
 						rss_desc->shared_rss,
 						dev_flow->hash_fields);
 			if (hrxq_idx)
@@ -14692,6 +14692,7 @@ __flow_dv_action_rss_setup(struct rte_eth_dev *dev,
 			   struct mlx5_shared_action_rss *shared_rss,
 			   struct rte_flow_error *error)
 {
+	struct mlx5_priv *priv = dev->data->dev_private;
 	struct mlx5_flow_rss_desc rss_desc = { 0 };
 	size_t i;
 	int err;
@@ -14712,6 +14713,8 @@ __flow_dv_action_rss_setup(struct rte_eth_dev *dev,
 	/* Set non-zero value to indicate a shared RSS. */
 	rss_desc.shared_rss = action_idx;
 	rss_desc.ind_tbl = shared_rss->ind_tbl;
+	if (priv->config.dv_flow_en == 2)
+		rss_desc.hws_flags = MLX5DR_ACTION_FLAG_HWS_RX;
 	for (i = 0; i < MLX5_RSS_HASH_FIELDS_LEN; i++) {
 		struct mlx5_hrxq *hrxq;
 		uint64_t hash_fields = mlx5_rss_hash_fields[i];
@@ -14903,7 +14906,7 @@ __flow_dv_action_rss_release(struct rte_eth_dev *dev, uint32_t idx,
  *   A valid shared action handle in case of success, NULL otherwise and
  *   rte_errno is set.
  */
-static struct rte_flow_action_handle *
+struct rte_flow_action_handle *
 flow_dv_action_create(struct rte_eth_dev *dev,
 		      const struct rte_flow_indir_action_conf *conf,
 		      const struct rte_flow_action *action,
@@ -14973,7 +14976,7 @@ flow_dv_action_create(struct rte_eth_dev *dev,
  * @return
  *   0 on success, otherwise negative errno value.
  */
-static int
+int
 flow_dv_action_destroy(struct rte_eth_dev *dev,
 		       struct rte_flow_action_handle *handle,
 		       struct rte_flow_error *error)
@@ -15182,7 +15185,7 @@ __flow_dv_action_ct_update(struct rte_eth_dev *dev, uint32_t idx,
  * @return
  *   0 on success, otherwise negative errno value.
  */
-static int
+int
 flow_dv_action_update(struct rte_eth_dev *dev,
 			struct rte_flow_action_handle *handle,
 			const void *update,
@@ -15896,7 +15899,7 @@ flow_dv_query_count_ptr(struct rte_eth_dev *dev, uint32_t cnt_idx,
 				  "counters are not available");
 }
 
-static int
+int
 flow_dv_action_query(struct rte_eth_dev *dev,
 		     const struct rte_flow_action_handle *handle, void *data,
 		     struct rte_flow_error *error)
@@ -17585,7 +17588,7 @@ flow_dv_counter_allocate(struct rte_eth_dev *dev)
  * @return
  *   0 on success, otherwise negative errno value.
  */
-static int
+int
 flow_dv_action_validate(struct rte_eth_dev *dev,
 			const struct rte_flow_indir_action_conf *conf,
 			const struct rte_flow_action *action,
