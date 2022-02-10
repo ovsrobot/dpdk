@@ -1401,8 +1401,12 @@ ntb_init_hw(struct rte_rawdev *dev, struct rte_pci_device *pci_dev)
 
 	intr_handle = pci_dev->intr_handle;
 	/* Register callback func to eal lib */
-	rte_intr_callback_register(intr_handle,
-				   ntb_dev_intr_handler, dev);
+	ret = rte_intr_callback_register(intr_handle,
+					 ntb_dev_intr_handler, dev);
+	if (ret) {
+		NTB_LOG(ERR, "Unable to register doorbell intr handler.");
+		return ret;
+	}
 
 	ret = rte_intr_efd_enable(intr_handle, hw->db_cnt);
 	if (ret)
