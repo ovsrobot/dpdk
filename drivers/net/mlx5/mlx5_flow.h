@@ -1015,6 +1015,15 @@ struct rte_flow {
 	uint32_t geneve_tlv_option; /**< Holds Geneve TLV option id. > */
 } __rte_packed;
 
+/* Flow item template struct. */
+struct rte_flow_pattern_template {
+	LIST_ENTRY(rte_flow_pattern_template) next;
+	/* Template attributes. */
+	struct rte_flow_pattern_template_attr attr;
+	struct mlx5dr_match_template *mt; /* mlx5 match template. */
+	uint32_t refcnt;  /* Reference counter. */
+};
+
 /*
  * Define list of valid combinations of RX Hash fields
  * (see enum ibv_rx_hash_fields).
@@ -1263,6 +1272,15 @@ typedef int (*mlx5_flow_port_configure_t)
 			 uint16_t nb_queue,
 			 const struct rte_flow_queue_attr *queue_attr[],
 			 struct rte_flow_error *err);
+typedef struct rte_flow_pattern_template *(*mlx5_flow_pattern_template_create_t)
+			(struct rte_eth_dev *dev,
+			 const struct rte_flow_pattern_template_attr *attr,
+			 const struct rte_flow_item items[],
+			 struct rte_flow_error *error);
+typedef int (*mlx5_flow_pattern_template_destroy_t)
+			(struct rte_eth_dev *dev,
+			 struct rte_flow_pattern_template *template,
+			 struct rte_flow_error *error);
 
 struct mlx5_flow_driver_ops {
 	mlx5_flow_validate_t validate;
@@ -1302,6 +1320,8 @@ struct mlx5_flow_driver_ops {
 	mlx5_flow_item_release_t item_release;
 	mlx5_flow_item_update_t item_update;
 	mlx5_flow_port_configure_t configure;
+	mlx5_flow_pattern_template_create_t pattern_template_create;
+	mlx5_flow_pattern_template_destroy_t pattern_template_destroy;
 };
 
 /* mlx5_flow.c */

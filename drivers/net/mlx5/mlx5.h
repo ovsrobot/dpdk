@@ -1500,6 +1500,8 @@ struct mlx5_priv {
 	struct mlx5_flex_item flex_item[MLX5_PORT_FLEX_ITEM_NUM];
 	/* Flex items have been created on the port. */
 	uint32_t flex_item_map; /* Map of allocated flex item elements. */
+	/* Item template list. */
+	LIST_HEAD(flow_hw_itt, rte_flow_pattern_template) flow_hw_itt;
 	struct mlx5dr_context *dr_ctx; /**< HW steering DR context. */
 	uint32_t nb_queue; /* HW steering queue number. */
 	/* HW steering queue polling mechanism job descriptor LIFO. */
