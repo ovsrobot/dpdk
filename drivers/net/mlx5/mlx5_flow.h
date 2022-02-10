@@ -1015,6 +1015,13 @@ struct rte_flow {
 	uint32_t geneve_tlv_option; /**< Holds Geneve TLV option id. > */
 } __rte_packed;
 
+/* HWS flow struct. */
+struct rte_flow_hw {
+	uint32_t idx; /* Flow index from indexed pool. */
+	struct rte_flow_template_table *table; /* The table flow allcated from. */
+	struct mlx5dr_rule rule; /* HWS layer data struct. */
+} __rte_packed;
+
 /* Flow item template struct. */
 struct rte_flow_pattern_template {
 	LIST_ENTRY(rte_flow_pattern_template) next;
@@ -1366,6 +1373,32 @@ typedef int (*mlx5_flow_table_destroy_t)
 			(struct rte_eth_dev *dev,
 			 struct rte_flow_template_table *table,
 			 struct rte_flow_error *error);
+typedef struct rte_flow *(*mlx5_flow_q_flow_create_t)
+			(struct rte_eth_dev *dev,
+			 uint32_t queue,
+			 const struct rte_flow_q_ops_attr *attr,
+			 struct rte_flow_template_table *table,
+			 const struct rte_flow_item items[],
+			 uint8_t pattern_template_index,
+			 const struct rte_flow_action actions[],
+			 uint8_t action_template_index,
+			 struct rte_flow_error *error);
+typedef int (*mlx5_flow_q_flow_destroy_t)
+			(struct rte_eth_dev *dev,
+			 uint32_t queue,
+			 const struct rte_flow_q_ops_attr *attr,
+			 struct rte_flow *flow,
+			 struct rte_flow_error *error);
+typedef int (*mlx5_flow_q_pull_t)
+			(struct rte_eth_dev *dev,
+			 uint32_t queue,
+			 struct rte_flow_q_op_res res[],
+			 uint16_t n_res,
+			 struct rte_flow_error *error);
+typedef int (*mlx5_flow_q_push_t)
+			(struct rte_eth_dev *dev,
+			 uint32_t queue,
+			 struct rte_flow_error *error);
 
 struct mlx5_flow_driver_ops {
 	mlx5_flow_validate_t validate;
@@ -1411,6 +1444,10 @@ struct mlx5_flow_driver_ops {
 	mlx5_flow_actions_template_destroy_t actions_template_destroy;
 	mlx5_flow_table_create_t template_table_create;
 	mlx5_flow_table_destroy_t template_table_destroy;
+	mlx5_flow_q_flow_create_t q_flow_create;
+	mlx5_flow_q_flow_destroy_t q_flow_destroy;
+	mlx5_flow_q_pull_t q_pull;
+	mlx5_flow_q_push_t q_push;
 };
 
 /* mlx5_flow.c */
@@ -1581,6 +1618,8 @@ mlx5_translate_tunnel_etypes(uint64_t pattern_flags)
 	return 0;
 }
 
+int flow_hw_q_flow_flush(struct rte_eth_dev *dev,
+			 struct rte_flow_error *error);
 int mlx5_flow_group_to_table(struct rte_eth_dev *dev,
 			     const struct mlx5_flow_tunnel *tunnel,
 			     uint32_t group, uint32_t *table,
