@@ -1022,6 +1022,7 @@ struct rte_flow_hw {
 	union {
 		/* Jump action. */
 		struct mlx5_hw_jump_action *jump;
+		struct mlx5_hrxq *hrxq; /* TIR action. */
 	};
 	struct rte_flow_template_table *table; /* The table flow allcated from. */
 	struct mlx5dr_rule rule; /* HWS layer data struct. */
@@ -1077,6 +1078,7 @@ struct mlx5_hw_actions {
 	/* Dynamic action list. */
 	LIST_HEAD(act_list, mlx5_action_construct_data) act_list;
 	struct mlx5_hw_jump_action *jump; /* Jump action. */
+	struct mlx5_hrxq *tir; /* TIR action. */
 	uint32_t acts_num:4; /* Total action number. */
 	/* Translated DR action array from action template. */
 	struct mlx5dr_rule_action rule_acts[MLX5_HW_MAX_ACTS];
@@ -1907,6 +1909,11 @@ int flow_dv_query_count_ptr(struct rte_eth_dev *dev, uint32_t cnt_idx,
 int
 flow_dv_query_count(struct rte_eth_dev *dev, uint32_t cnt_idx, void *data,
 		    struct rte_flow_error *error);
+void flow_dv_hashfields_set(uint64_t item_flags,
+			    struct mlx5_flow_rss_desc *rss_desc,
+			    uint64_t *hash_fields);
+void flow_dv_action_rss_l34_hash_adjust(uint64_t rss_types,
+					uint64_t *hash_field);
 
 struct mlx5_list_entry *flow_hw_grp_create_cb(void *tool_ctx, void *cb_ctx);
 void flow_hw_grp_remove_cb(void *tool_ctx, struct mlx5_list_entry *entry);
