@@ -90,6 +90,14 @@ New Features
     ``rte_flow_template_table_destroy``, ``rte_flow_pattern_template_destroy``
     and ``rte_flow_actions_template_destroy``.
 
+  * ethdev: Added ``rte_flow_q_flow_create`` and ``rte_flow_q_flow_destroy``
+    API to enqueue flow creaion/destruction operations asynchronously as well
+    as ``rte_flow_q_pull`` to poll and retrieve results of these operations
+    and ``rte_flow_q_push`` to push all the in-flight operations to the NIC.
+    Introduced asynchronous API for indirect actions management as well:
+    ``rte_flow_q_action_handle_create``, ``rte_flow_q_action_handle_destroy``
+    and ``rte_flow_q_action_handle_update``.
+
 * **Updated AF_XDP PMD**
 
   * Added support for libxdp >=v1.2.2.
