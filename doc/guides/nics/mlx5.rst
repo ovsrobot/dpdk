@@ -508,6 +508,14 @@ Limitations
     from the reference "Clock Queue" completions,
     the scheduled send timestamps should not be specified with non-zero MSB.
 
+- Match on GRE header supports the following fields:
+
+  - c_rsvd0_v: C bit, K bit, S bit
+  - protocol type
+  - Checksum
+  - Key
+  - Sequence
+
 Statistics
 ----------
 
