@@ -3400,6 +3400,10 @@ following sections.
 
    flow push {port_id} queue {queue_id}
 
+- Pull all operations results from a queue::
+
+   flow pull {port_id} queue {queue_id}
+
 - Create a flow rule::
 
    flow create {port_id}
@@ -3632,6 +3636,23 @@ The usual error message is shown when operations cannot be pushed::
 
    Caught error type [...] ([...]): [...]
 
+Pulling flow operations results
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``flow pull`` asks the underlying device about flow queue operations
+results and return all the processed (successfully or not) operations.
+It is bound to ``rte_flow_q_pull()``::
+
+   flow pull {port_id} queue {queue_id}
+
+If successful, it will show::
+
+   Queue #[...] pulled #[...] operations (#[...] failed, #[...] succeeded)
+
+The usual error message is shown when operations results cannot be pulled::
+
+   Caught error type [...] ([...]): [...]
+
 Creating a tunnel stub for offload
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -3761,6 +3782,8 @@ Otherwise it will show an error message of the form::
 
 This command uses the same pattern items and actions as ``flow create``,
 their format is described in `Creating flow rules`_.
+
+``flow queue pull`` must be called to retrieve the operation status.
 
 Attributes
 ^^^^^^^^^^
@@ -4495,6 +4518,8 @@ It does not report anything for rule IDs that do not exist. The usual error
 message is shown when a rule cannot be destroyed::
 
    Caught error type [...] ([...]): [...]
+
+``flow queue pull`` must be called to retrieve the operation status.
 
 Querying flow rules
 ~~~~~~~~~~~~~~~~~~~
