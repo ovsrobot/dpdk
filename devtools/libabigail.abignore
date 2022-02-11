@@ -11,3 +11,8 @@
 ; Ignore generated PMD information strings
 [suppress_variable]
         name_regexp = _pmd_info$
+
+; Ignore changes to rte_crypto_asym_op, asymmetric crypto API
+; is experimental
+[suppress_type]
+        name = rte_crypto_asym_op
