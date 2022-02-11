@@ -44,6 +44,9 @@ This is a Linux-specific PMD, thus the following prerequisites apply:
 
 *  A Linux Kernel (version > v4.18) with XDP sockets configuration enabled;
 *  Both libxdp >=v1.2.2 and libbpf libraries installed, or, libbpf <=v0.6.0
+*  If using libxdp, it requires an environment variable called
+   LIBXDP_OBJECT_PATH to be set to the location of where libxdp placed its bpf
+   object files. This is usually in /usr/local/lib/bpf or /usr/local/lib64/bpf.
 *  A Kernel bound interface to attach to;
 *  For need_wakeup feature, it requires kernel version later than v5.3-rc1;
 *  For PMD zero copy, it requires kernel version later than v5.4-rc1;
@@ -140,5 +143,17 @@ Limitations
   The above defers interrupts for interface ens786f1 and instead schedules its
   NAPI context from a watchdog timer instead of from softirqs. More information
   on this feature can be found at [1].
+
+- **libxdp**
+
+  When using the default program (ie. when the vdev arg 'xdp_prog' is not used),
+  the following logs will appear when an application is launched:
+
+  .. code-block:: console
+
+    libbpf: elf: skipping unrecognized data section(7) .xdp_run_config
+    libbpf: elf: skipping unrecognized data section(8) xdp_metadata
+
+  These logs are not errors and can be ignored.
 
   [1] https://lwn.net/Articles/837010/
