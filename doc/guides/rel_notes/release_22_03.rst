@@ -85,6 +85,11 @@ New Features
   * Added rte_flow support for matching GENEVE packets.
   * Added rte_flow support for matching eCPRI packets.
 
+* **Updated Intel iavf driver.**
+
+  * Added L2TPv2(include PPP over L2TPv2) RSS support based on outer
+    MAC src/dst address and L2TPv2 session ID.
+
 * **Updated Marvell cnxk crypto PMD.**
 
   * Added SHA256-HMAC support in lookaside protocol (IPsec) for CN10K.
