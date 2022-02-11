@@ -82,6 +82,14 @@ New Features
     engine, allowing to pre-allocate some resources for better performance.
     Added ``rte_flow_info_get`` API to retrieve pre-configurable resources.
 
+  * ethdev: Added ``rte_flow_template_table_create`` API to group flow rules
+    with the same flow attributes and common matching patterns and actions
+    defined by ``rte_flow_pattern_template_create`` and
+    ``rte_flow_actions_template_create`` respectively.
+    Corresponding functions to destroy these entities are:
+    ``rte_flow_template_table_destroy``, ``rte_flow_pattern_template_destroy``
+    and ``rte_flow_actions_template_destroy``.
+
 * **Updated AF_XDP PMD**
 
   * Added support for libxdp >=v1.2.2.

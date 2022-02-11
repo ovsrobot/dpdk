@@ -262,6 +262,12 @@ EXPERIMENTAL {
 	rte_eth_dev_priority_flow_ctrl_queue_info_get;
 	rte_flow_info_get;
 	rte_flow_configure;
+	rte_flow_pattern_template_create;
+	rte_flow_pattern_template_destroy;
+	rte_flow_actions_template_create;
+	rte_flow_actions_template_destroy;
+	rte_flow_template_table_create;
+	rte_flow_template_table_destroy;
 };
 
 INTERNAL {
