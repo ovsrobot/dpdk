@@ -99,6 +99,11 @@ New Features
 
   The new API ``rte_event_eth_rx_adapter_event_port_get()`` was added.
 
+* **Added rte_flow support for matching GRE optional fields.**
+
+  * Added ``gre_option`` item in rte_flow to support checksum/key/sequence
+    matching in GRE packets.
+
 * **Updated testpmd.**
 
   * Called ``rte_ipv4/6_udptcp_cksum_mbuf()`` functions in testpmd csum mode
