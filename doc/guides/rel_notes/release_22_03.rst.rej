@@ -1,0 +1,12 @@
+diff a/doc/guides/rel_notes/release_22_03.rst b/doc/guides/rel_notes/release_22_03.rst	(rejected hunks)
+@@ -93,6 +93,10 @@ New Features
+ 
+   * Added L2TPv2(include PPP over L2TPv2) RSS hash distribute packets
+     based on outer MAC src/dst address and L2TPv2 session ID.
++  * Added L2TPv2(include PPP over L2TPv2) FDIR distribute packets
++    based on outer MAC src/dst address and L2TPv2 session ID.
++  * Added PPPoL2TPv2oUDP FDIR distribute packets based on inner IP
++    src/dst address and UDP/TCP src/dst port.
+ 
+ * **Updated Marvell cnxk crypto PMD.**
+ 
