@@ -4853,6 +4853,114 @@ rte_flow_flex_item_release(uint16_t port_id,
 			   const struct rte_flow_item_flex_handle *handle,
 			   struct rte_flow_error *error);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Information about flow engine pre-configurable resources.
+ * The zero value means a resource cannot be pre-configured.
+ *
+ */
+struct rte_flow_port_info {
+	/**
+	 * Maximum number of pre-configurable counter actions.
+	 * @see RTE_FLOW_ACTION_TYPE_COUNT
+	 */
+	uint32_t max_nb_counter_actions;
+	/**
+	 * Maximum number of pre-configurable aging flows actions.
+	 * @see RTE_FLOW_ACTION_TYPE_AGE
+	 */
+	uint32_t max_nb_aging_actions;
+	/**
+	 * Maximum number of pre-configurable traffic metering actions.
+	 * @see RTE_FLOW_ACTION_TYPE_METER
+	 */
+	uint32_t max_nb_meter_actions;
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Get information about flow engine pre-configurable resources.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param[out] port_info
+ *   A pointer to a structure of type *rte_flow_port_info*
+ *   to be filled with the resources information of the port.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *   0 on success, a negative errno value otherwise and rte_errno is set.
+ */
+__rte_experimental
+int
+rte_flow_info_get(uint16_t port_id,
+		  struct rte_flow_port_info *port_info,
+		  struct rte_flow_error *error);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Flow engine pre-configurable resources settings.
+ * The zero value means on demand resource allocations only.
+ *
+ */
+struct rte_flow_port_attr {
+	/**
+	 * Number of counter actions pre-configured.
+	 * @see RTE_FLOW_ACTION_TYPE_COUNT
+	 */
+	uint32_t nb_counter_actions;
+	/**
+	 * Number of aging flows actions pre-configured.
+	 * @see RTE_FLOW_ACTION_TYPE_AGE
+	 */
+	uint32_t nb_aging_actions;
+	/**
+	 * Number of traffic metering actions pre-configured.
+	 * @see RTE_FLOW_ACTION_TYPE_METER
+	 */
+	uint32_t nb_meter_actions;
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Configure the port's flow API engine.
+ *
+ * This API can only be invoked before the application
+ * starts using the rest of the flow library functions.
+ *
+ * The API can be invoked multiple times to change the
+ * settings. The port, however, may reject the changes.
+ *
+ * Parameters in configuration attributes must not exceed
+ * numbers of resources returned by the rte_flow_info_get API.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param[in] port_attr
+ *   Port configuration attributes.
+ * @param[out] error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *   0 on success, a negative errno value otherwise and rte_errno is set.
+ */
+__rte_experimental
+int
+rte_flow_configure(uint16_t port_id,
+		   const struct rte_flow_port_attr *port_attr,
+		   struct rte_flow_error *error);
+
 #ifdef __cplusplus
 }
 #endif

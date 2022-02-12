@@ -76,6 +76,12 @@ New Features
   New APIs, ``rte_eth_dev_priority_flow_ctrl_queue_info_get()`` and
   ``rte_eth_dev_priority_flow_ctrl_queue_configure()``, was added.
 
+* ** Added functions to configure Flow API engine
+
+  * ethdev: Added ``rte_flow_configure`` API to configure Flow Management
+    engine, allowing to pre-allocate some resources for better performance.
+    Added ``rte_flow_info_get`` API to retrieve pre-configurable resources.
+
 * **Updated AF_XDP PMD**
 
   * Added support for libxdp >=v1.2.2.
