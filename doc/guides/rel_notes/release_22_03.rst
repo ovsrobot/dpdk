@@ -109,6 +109,12 @@ New Features
   * Added rte_flow support for matching GENEVE packets.
   * Added rte_flow support for matching eCPRI packets.
 
+* **Updated Mellanox mlx5 driver.**
+
+  Updated the Mellanox mlx5 driver with new features and improvements, including:
+
+  * Support ConnectX-7 capability to schedule traffic sending on timestamp
+
 * **Updated Wangxun ngbe driver.**
 
   * Added support for devices of custom PHY interfaces.
