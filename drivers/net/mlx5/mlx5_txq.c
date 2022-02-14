@@ -108,7 +108,7 @@ mlx5_get_tx_port_offloads(struct rte_eth_dev *dev)
 			     RTE_ETH_TX_OFFLOAD_TCP_CKSUM);
 	if (config->tso)
 		offloads |= RTE_ETH_TX_OFFLOAD_TCP_TSO;
-	if (config->tx_pp)
+	if (config->tx_pp || config->hca_attr.wait_on_time)
 		offloads |= RTE_ETH_TX_OFFLOAD_SEND_ON_TIMESTAMP;
 	if (config->swp) {
 		if (config->swp & MLX5_SW_PARSING_CSUM_CAP)
@@ -1290,7 +1290,14 @@ mlx5_txq_dynf_timestamp_set(struct rte_eth_dev *dev)
 	int off, nbit;
 	unsigned int i;
 	uint64_t mask = 0;
+	uint64_t ts_mask;
 
+	if (priv->config.rt_timestamp || !priv->config.hca_attr.dev_freq_khz)
+		ts_mask = MLX5_TS_MASK_SECS << 32;
+	else
+		ts_mask = rte_align64pow2(MLX5_TS_MASK_SECS * 1000ull *
+					  priv->config.hca_attr.dev_freq_khz);
+	ts_mask = rte_cpu_to_be_64(ts_mask - 1ull);
 	nbit = rte_mbuf_dynflag_lookup
 				(RTE_MBUF_DYNFLAG_TX_TIMESTAMP_NAME, NULL);
 	off = rte_mbuf_dynfield_lookup
@@ -1304,5 +1311,7 @@ mlx5_txq_dynf_timestamp_set(struct rte_eth_dev *dev)
 		data->sh = sh;
 		data->ts_mask = mask;
 		data->ts_offset = off;
+		data->rt_timestamp = priv->config.rt_timestamp;
+		data->rt_timemask = ts_mask;
 	}
 }
