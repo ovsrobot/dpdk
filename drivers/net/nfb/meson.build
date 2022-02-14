@@ -9,6 +9,12 @@ if is_windows
     subdir_done()
 endif
 
+if has_libfdt == 0
+    build = false
+    reason = 'missing dependency, "libfdt"'
+    subdir_done()
+endif
+
 dep = dependency('netcope-common', required: false, method: 'pkg-config')
 reason = 'missing dependency, "libnfb"'
 build = dep.found()
