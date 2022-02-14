@@ -136,6 +136,10 @@ New Features
   * Added AES-CMAC support in CN9K & CN10K.
   * Added ESN and anti-replay support in lookaside protocol (IPsec) for CN10K.
 
+* **Updated Marvell cnxk ethdev PMD.**
+
+  * Added queue based priority flow control support for CN9K & CN10K.
+
 * **Added support for CPM2.0b devices to Intel QuickAssist Technology PMD.**
 
   * CPM2.0b (4942) devices are now enabled for QAT crypto PMD.
