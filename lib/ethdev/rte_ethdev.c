@@ -1799,9 +1799,8 @@ rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 	}
 
 	if (nb_rx_desc > dev_info.rx_desc_lim.nb_max ||
-			nb_rx_desc < dev_info.rx_desc_lim.nb_min ||
-			nb_rx_desc % dev_info.rx_desc_lim.nb_align != 0) {
-
+	    nb_rx_desc < dev_info.rx_desc_lim.nb_min ||
+	    nb_rx_desc % dev_info.rx_desc_lim.nb_align != 0) {
 		RTE_ETHDEV_LOG(ERR,
 			"Invalid value for nb_rx_desc(=%hu), should be: <= %hu, >= %hu, and a product of %hu\n",
 			nb_rx_desc, dev_info.rx_desc_lim.nb_max,
