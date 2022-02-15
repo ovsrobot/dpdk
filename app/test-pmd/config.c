@@ -948,7 +948,7 @@ port_eeprom_display(portid_t port_id)
 }
 
 void
-port_module_eeprom_display(portid_t port_id)
+port_module_eeprom_display(portid_t port_id, uint8_t hex_on)
 {
 	struct rte_eth_dev_module_info minfo;
 	struct rte_dev_eeprom_info einfo;
@@ -1011,7 +1011,27 @@ port_module_eeprom_display(portid_t port_id)
 		return;
 	}
 
-	rte_hexdump(stdout, "hexdump", einfo.data, einfo.length);
+	if (hex_on)
+		rte_hexdump(stdout, "hexdump", einfo.data, einfo.length);
+	else {
+		switch (minfo.type) {
+		case RTE_ETH_MODULE_SFF_8079:
+			sff_8079_show_all(einfo.data);
+			break;
+		case RTE_ETH_MODULE_SFF_8472:
+			sff_8079_show_all(einfo.data);
+			sff_8472_show_all(einfo.data);
+			break;
+		case RTE_ETH_MODULE_SFF_8436:
+		case RTE_ETH_MODULE_SFF_8636:
+			sff_8636_show_all(einfo.data, einfo.length);
+			break;
+		default:
+			printf("Unsupported plug in module, show hex dump.\n");
+			rte_hexdump(stdout, "hexdump", einfo.data, einfo.length);
+		break;
+		}
+	}
 	printf("Finish -- Port: %d MODULE EEPROM length: %d bytes\n", port_id, einfo.length);
 	free(einfo.data);
 }

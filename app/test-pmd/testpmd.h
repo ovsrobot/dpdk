@@ -72,6 +72,8 @@
 #define NUMA_NO_CONFIG 0xFF
 #define UMA_NO_CONFIG  0xFF
 
+#define ARRAY_SIZE(arr) RTE_DIM(arr)
+
 typedef uint8_t  lcoreid_t;
 typedef uint16_t portid_t;
 typedef uint16_t queueid_t;
@@ -850,7 +852,7 @@ void device_infos_display(const char *identifier);
 void port_infos_display(portid_t port_id);
 void port_summary_display(portid_t port_id);
 void port_eeprom_display(portid_t port_id);
-void port_module_eeprom_display(portid_t port_id);
+void port_module_eeprom_display(portid_t port_id, uint8_t hex_on);
 void port_summary_header_display(void);
 void rx_queue_infos_display(portid_t port_idi, uint16_t queue_id);
 void tx_queue_infos_display(portid_t port_idi, uint16_t queue_id);
@@ -1038,6 +1040,15 @@ int eth_macaddr_get_print_err(uint16_t port_id,
 /* Functions to display the set of MAC addresses added to a port*/
 void show_macs(portid_t port_id);
 void show_mcast_macs(portid_t port_id);
+
+/* SFF-8079 Optics diagnostics */
+extern void sff_8079_show_all(const uint8_t *id);
+
+/* SFF-8472 Optics diagnostics */
+extern void sff_8472_show_all(const uint8_t *id);
+
+/* SFF-8636 Optics diagnostics */
+extern void sff_8636_show_all(const uint8_t *id, uint32_t eeprom_len);
 
 /* Functions to manage the set of filtered Multicast MAC addresses */
 void mcast_addr_add(portid_t port_id, struct rte_ether_addr *mc_addr);

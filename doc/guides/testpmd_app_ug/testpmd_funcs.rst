@@ -214,12 +214,19 @@ For example:
      nvgre
      vxlan-gpe
 
-show port (module_eeprom|eeprom)
+show port eeprom
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Display the EEPROM information of a port::
 
-   testpmd> show port (port_id) (module_eeprom|eeprom)
+   testpmd> show port (port_id) eeprom
+
+show port module_eeprom (format|hex)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Display the module EEPROM with specific format or hex dump of a port::
+
+   testpmd> show port (port_id) module_eeprom (format|hex)
 
 show port rss reta
 ~~~~~~~~~~~~~~~~~~
