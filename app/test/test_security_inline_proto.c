@@ -25,6 +25,8 @@
 #define RTE_TEST_TX_DESC_DEFAULT        (1024)
 #define RTE_PORT_ALL            (~(uint16_t)0x0)
 
+#define ENCAP_DECAP_BURST_SZ 33
+
 /*
  * RX and TX Prefetch, Host, and Write-back threshold values should be
  * carefully set for optimal performance. Consult the network
@@ -101,6 +103,8 @@ struct lcore_cfg {
 struct lcore_cfg lcore_cfg;
 
 static uint64_t link_mbps;
+
+static int ip_reassembly_dynfield_offset = -1;
 
 static struct rte_flow *default_flow[RTE_MAX_ETHPORTS];
 
@@ -477,6 +481,294 @@ struct rte_mbuf **tx_pkts_burst;
 struct rte_mbuf **rx_pkts_burst;
 
 static int
+compare_pkt_data(struct rte_mbuf *m, uint8_t *ref, unsigned int tot_len)
+{
+	unsigned int len;
+	unsigned int nb_segs = m->nb_segs;
+	unsigned int matched = 0;
+	struct rte_mbuf *save = m;
+
+	while (m && nb_segs != 0) {
+		len = tot_len;
+		if (len > m->data_len)
+			len = m->data_len;
+		if (len != 0) {
+			if (memcmp(rte_pktmbuf_mtod(m, char *),
+					ref + matched, len)) {
+				printf("\n====Reassembly case failed: Data Mismatch");
+				rte_hexdump(stdout, "Reassembled",
+					rte_pktmbuf_mtod(m, char *),
+					len);
+				rte_hexdump(stdout, "reference",
+					ref + matched,
+					len);
+				return TEST_FAILED;
+			}
+		}
+		tot_len -= len;
+		matched += len;
+		m = m->next;
+		nb_segs--;
+	}
+
+	if (tot_len) {
+		printf("\n====Reassembly case failed: Data Missing %u",
+		       tot_len);
+		printf("\n====nb_segs %u, tot_len %u", nb_segs, tot_len);
+		rte_pktmbuf_dump(stderr, save, -1);
+		return TEST_FAILED;
+	}
+	return TEST_SUCCESS;
+}
+
+static inline bool
+is_ip_reassembly_incomplete(struct rte_mbuf *mbuf)
+{
+	static uint64_t ip_reassembly_dynflag;
+	int ip_reassembly_dynflag_offset;
+
+	if (ip_reassembly_dynflag == 0) {
+		ip_reassembly_dynflag_offset = rte_mbuf_dynflag_lookup(
+			RTE_MBUF_DYNFLAG_IP_REASSEMBLY_INCOMPLETE_NAME, NULL);
+		if (ip_reassembly_dynflag_offset < 0)
+			return false;
+		ip_reassembly_dynflag = RTE_BIT64(ip_reassembly_dynflag_offset);
+	}
+
+	return (mbuf->ol_flags & ip_reassembly_dynflag) != 0;
+}
+
+static void
+free_mbuf(struct rte_mbuf *mbuf)
+{
+	rte_eth_ip_reassembly_dynfield_t dynfield;
+
+	if (!mbuf)
+		return;
+
+	if (!is_ip_reassembly_incomplete(mbuf)) {
+		rte_pktmbuf_free(mbuf);
+	} else {
+		if (ip_reassembly_dynfield_offset < 0)
+			return;
+
+		while (mbuf) {
+			dynfield = *RTE_MBUF_DYNFIELD(mbuf,
+					ip_reassembly_dynfield_offset,
+					rte_eth_ip_reassembly_dynfield_t *);
+			rte_pktmbuf_free(mbuf);
+			mbuf = dynfield.next_frag;
+		}
+	}
+}
+
+
+static int
+get_and_verify_incomplete_frags(struct rte_mbuf *mbuf,
+				struct reassembly_vector *vector)
+{
+	rte_eth_ip_reassembly_dynfield_t *dynfield[MAX_PKT_BURST];
+	int j = 0, ret;
+	/**
+	 * IP reassembly offload is incomplete, and fragments are listed in
+	 * dynfield which can be reassembled in SW.
+	 */
+	printf("\nHW IP Reassembly is not complete; attempt SW IP Reassembly,"
+		"\nMatching with original frags.");
+
+	if (ip_reassembly_dynfield_offset < 0)
+		return -1;
+
+	printf("\ncomparing frag: %d", j);
+	ret = compare_pkt_data(mbuf, vector->frags[j]->data,
+				vector->frags[j]->len);
+	if (ret)
+		return ret;
+	j++;
+	dynfield[j] = RTE_MBUF_DYNFIELD(mbuf, ip_reassembly_dynfield_offset,
+					rte_eth_ip_reassembly_dynfield_t *);
+	printf("\ncomparing frag: %d", j);
+	ret = compare_pkt_data(dynfield[j]->next_frag, vector->frags[j]->data,
+			vector->frags[j]->len);
+	if (ret)
+		return ret;
+
+	while ((dynfield[j]->nb_frags > 1) &&
+			is_ip_reassembly_incomplete(dynfield[j]->next_frag)) {
+		j++;
+		dynfield[j] = RTE_MBUF_DYNFIELD(dynfield[j-1]->next_frag,
+					ip_reassembly_dynfield_offset,
+					rte_eth_ip_reassembly_dynfield_t *);
+		printf("\ncomparing frag: %d", j);
+		ret = compare_pkt_data(dynfield[j]->next_frag,
+				vector->frags[j]->data, vector->frags[j]->len);
+		if (ret)
+			return ret;
+	}
+	return ret;
+}
+
+static int
+test_ipsec_encap_decap(struct reassembly_vector *vector,
+		       enum rte_security_ipsec_tunnel_type tun_type)
+{
+	struct rte_ipsec_session out_ips[ENCAP_DECAP_BURST_SZ] = {0};
+	struct rte_ipsec_session in_ips[ENCAP_DECAP_BURST_SZ] = {0};
+	struct rte_eth_ip_reassembly_params reass_capa = {0};
+	unsigned int nb_tx, burst_sz, nb_sent = 0;
+	unsigned int i, portid, nb_rx = 0, j;
+	struct ipsec_session_data sa_data;
+	int ret = 0;
+
+	burst_sz = vector->burst ? ENCAP_DECAP_BURST_SZ : 1;
+
+	portid = lcore_cfg.port;
+	rte_eth_ip_reassembly_capability_get(portid, &reass_capa);
+	if (reass_capa.max_frags < vector->nb_frags)
+		return TEST_SKIPPED;
+
+	nb_tx = vector->nb_frags * burst_sz;
+	memset(tx_pkts_burst, 0, sizeof(tx_pkts_burst[0]) * nb_tx);
+	memset(rx_pkts_burst, 0, sizeof(rx_pkts_burst[0]) * nb_tx);
+
+	for (i = 0; i < nb_tx; i += vector->nb_frags) {
+		ret = init_traffic(mbufpool[lcore_cfg.socketid],
+				   &tx_pkts_burst[i], vector->frags,
+				   vector->nb_frags);
+		if (ret != vector->nb_frags) {
+			ret = -1;
+			goto out;
+		}
+	}
+
+	for (i = 0; i < burst_sz; i++) {
+		memcpy(&sa_data, vector->sa_data, sizeof(sa_data));
+		/* Update SPI for every new SA */
+		sa_data.ipsec_xform.spi += i;
+
+		/* Create Inline IPsec outbound session. */
+		ret = create_inline_ipsec_session(&sa_data, portid, &out_ips[i],
+						  RTE_SECURITY_IPSEC_SA_DIR_EGRESS,
+						  tun_type);
+		if (ret)
+			goto out;
+	}
+
+	j = 0;
+	for (i = 0; i < nb_tx; i++) {
+		if (out_ips[j].security.ol_flags &
+				RTE_SECURITY_TX_OLOAD_NEED_MDATA)
+			rte_security_set_pkt_metadata(out_ips[j].security.ctx,
+				out_ips[j].security.ses, tx_pkts_burst[i], NULL);
+		tx_pkts_burst[i]->ol_flags |= RTE_MBUF_F_TX_SEC_OFFLOAD;
+		tx_pkts_burst[i]->l2_len = RTE_ETHER_HDR_LEN;
+
+		/* Move to next SA after nb_frags */
+		if ((i + 1) % vector->nb_frags == 0)
+			j++;
+	}
+
+	for (i = 0; i < burst_sz; i++) {
+		memcpy(&sa_data, vector->sa_data, sizeof(sa_data));
+		/* Update SPI for every new SA */
+		sa_data.ipsec_xform.spi += i;
+
+		/* Create Inline IPsec inbound session. */
+		ret = create_inline_ipsec_session(&sa_data, portid, &in_ips[i],
+						  RTE_SECURITY_IPSEC_SA_DIR_INGRESS,
+						  tun_type);
+		if (ret)
+			goto out;
+	}
+
+	/* Retrieve reassembly dynfield offset if available */
+	if (ip_reassembly_dynfield_offset < 0 && vector->nb_frags > 1)
+		ip_reassembly_dynfield_offset = rte_mbuf_dynfield_lookup(
+				RTE_MBUF_DYNFIELD_IP_REASSEMBLY_NAME, NULL);
+
+
+	create_default_flow(portid);
+
+	nb_sent = rte_eth_tx_burst(portid, 0, tx_pkts_burst, nb_tx);
+	if (nb_sent != nb_tx) {
+		ret = -1;
+		printf("\nFailed to tx %u pkts", nb_tx);
+		goto out;
+	}
+
+	rte_delay_ms(100);
+
+	/* Retry few times before giving up */
+	nb_rx = 0;
+	j = 0;
+	do {
+		nb_rx += rte_eth_rx_burst(portid, 0, &rx_pkts_burst[nb_rx],
+					  nb_tx - nb_rx);
+		j++;
+		if (nb_rx >= nb_tx)
+			break;
+		rte_delay_ms(100);
+	} while (j < 5 || !nb_rx);
+
+	/* Check for minimum number of Rx packets expected */
+	if ((vector->nb_frags == 1 && nb_rx != nb_tx) ||
+	    (vector->nb_frags > 1 && nb_rx < burst_sz)) {
+		printf("\nreceived less Rx pkts(%u) pkts\n", nb_rx);
+		ret = TEST_FAILED;
+		goto out;
+	}
+
+	for (i = 0; i < nb_rx; i++) {
+		if (vector->nb_frags > 1 &&
+		    is_ip_reassembly_incomplete(rx_pkts_burst[i])) {
+			ret = get_and_verify_incomplete_frags(rx_pkts_burst[i],
+							      vector);
+			if (ret != TEST_SUCCESS)
+				break;
+			continue;
+		}
+
+		if (rx_pkts_burst[i]->ol_flags &
+		    RTE_MBUF_F_RX_SEC_OFFLOAD_FAILED ||
+		    !(rx_pkts_burst[i]->ol_flags & RTE_MBUF_F_RX_SEC_OFFLOAD)) {
+			printf("\nsecurity offload failed\n");
+			ret = TEST_FAILED;
+			break;
+		}
+
+		if (vector->full_pkt->len != rx_pkts_burst[i]->pkt_len) {
+			printf("\nreassembled/decrypted packet length mismatch\n");
+			ret = TEST_FAILED;
+			break;
+		}
+		ret = compare_pkt_data(rx_pkts_burst[i],
+				       vector->full_pkt->data,
+				       vector->full_pkt->len);
+		if (ret != TEST_SUCCESS)
+			break;
+	}
+
+out:
+	destroy_default_flow(portid);
+
+	/* Clear session data. */
+	for (i = 0; i < burst_sz; i++) {
+		if (out_ips[i].security.ses)
+			rte_security_session_destroy(out_ips[i].security.ctx,
+						     out_ips[i].security.ses);
+		if (in_ips[i].security.ses)
+			rte_security_session_destroy(in_ips[i].security.ctx,
+						     in_ips[i].security.ses);
+	}
+
+	for (i = nb_sent; i < nb_tx; i++)
+		free_mbuf(tx_pkts_burst[i]);
+	for (i = 0; i < nb_rx; i++)
+		free_mbuf(rx_pkts_burst[i]);
+	return ret;
+}
+
+static int
 test_ipsec(struct reassembly_vector *vector,
 	   enum rte_security_ipsec_sa_direction dir,
 	   enum rte_security_ipsec_tunnel_type tun_type)
@@ -732,6 +1024,34 @@ test_ipsec_ipv4_decap_nofrag(void)
 			RTE_SECURITY_IPSEC_TUNNEL_IPV4);
 }
 
+static int
+test_reassembly_ipv4_nofrag(void)
+{
+	struct reassembly_vector ipv4_nofrag_case = {
+				.sa_data = &conf_aes_128_gcm,
+				.full_pkt = &pkt_ipv4_plain,
+				.frags[0] = &pkt_ipv4_plain,
+				.nb_frags = 1,
+	};
+	return test_ipsec_encap_decap(&ipv4_nofrag_case,
+				      RTE_SECURITY_IPSEC_TUNNEL_IPV4);
+}
+
+
+static int
+test_ipsec_ipv4_burst_encap_decap(void)
+{
+	struct reassembly_vector ipv4_nofrag_case = {
+				.sa_data = &conf_aes_128_gcm,
+				.full_pkt = &pkt_ipv4_plain,
+				.frags[0] = &pkt_ipv4_plain,
+				.nb_frags = 1,
+				.burst = true,
+	};
+	return test_ipsec_encap_decap(&ipv4_nofrag_case,
+				      RTE_SECURITY_IPSEC_TUNNEL_IPV4);
+}
+
 static struct unit_test_suite inline_ipsec_testsuite  = {
 	.suite_name = "Inline IPsec Ethernet Device Unit Test Suite",
 	.setup = testsuite_setup,
@@ -743,6 +1063,12 @@ static struct unit_test_suite inline_ipsec_testsuite  = {
 		TEST_CASE_ST(ut_setup_inline_ipsec,
 				ut_teardown_inline_ipsec,
 				test_ipsec_ipv4_decap_nofrag),
+		TEST_CASE_ST(ut_setup_inline_ipsec,
+				ut_teardown_inline_ipsec,
+				test_reassembly_ipv4_nofrag),
+		TEST_CASE_ST(ut_setup_inline_ipsec,
+				ut_teardown_inline_ipsec,
+				test_ipsec_ipv4_burst_encap_decap),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
