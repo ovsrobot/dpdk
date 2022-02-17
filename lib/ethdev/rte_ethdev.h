@@ -2187,8 +2187,12 @@ struct rte_eth_dev_owner {
  * @return
  *   Next valid port ID owned by owner_id, RTE_MAX_ETHPORTS if there is none.
  */
-uint64_t rte_eth_find_next_owned_by(uint16_t port_id,
+uint64_t
+rte_eth_find_next_owned_by(uint16_t port_id,
 		const uint64_t owner_id);
+
+uint64_t
+rte_eth_find_prev_owned_by(uint16_t port_id, const uint64_t owner_id);
 
 /**
  * Macro to iterate over all enabled ethdev ports owned by a specific owner.
@@ -2213,6 +2217,14 @@ uint16_t rte_eth_find_next(uint16_t port_id);
  */
 #define RTE_ETH_FOREACH_DEV(p) \
 	RTE_ETH_FOREACH_DEV_OWNED_BY(p, RTE_ETH_DEV_NO_OWNER)
+
+/**
+ * Macro to iterate over all enabled and ownerless ethdev ports in reverse order, for quit purpose.
+ */
+#define RTE_ETH_FOREACH_DEV_REVERSE(p) \
+	for (p = (rte_eth_dev_count_total() - 1 >= 0) ? (rte_eth_dev_count_total() - 1) : 0; \
+	     p < rte_eth_dev_count_total(); \
+	     p--)
 
 /**
  * Iterates over ethdev ports of a specified device.
