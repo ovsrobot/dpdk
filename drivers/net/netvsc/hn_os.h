@@ -4,3 +4,5 @@
  */
 
 int eth_hn_os_dev_event(void);
+
+void netvsc_hotplug_retry(void *args);
