@@ -23,6 +23,9 @@
  */
 #define UH_SUBCHAN_MASK_SHIFT  8
 
+/* ioctl */
+#define HVIOOPENSUBCHAN     _IOW('h', 14, uint32_t)
+
 const char *driver_name = "hv_uio";
 static void *vmbus_map_addr;
 
@@ -303,4 +306,31 @@ bool vmbus_uio_subchannels_supported(const struct rte_vmbus_device *dev,
 	RTE_SET_USED(dev);
 	RTE_SET_USED(chan);
 	return true;
+}
+
+int vmbus_uio_subchan_open(struct rte_vmbus_device *dev, uint32_t subchan)
+{
+	struct mapped_vmbus_resource *uio_res;
+	int fd, err = 0;
+
+	uio_res = vmbus_uio_find_resource(dev);
+	if (!uio_res) {
+		VMBUS_LOG(ERR, "cannot find uio resource");
+		return -EINVAL;
+	}
+
+	fd = open(uio_res->path, O_RDWR);
+	if (fd < 0) {
+		VMBUS_LOG(ERR, "Cannot open %s: %s",
+				uio_res->path, strerror(errno));
+		return -1;
+	}
+
+	if (ioctl(fd, HVIOOPENSUBCHAN, &subchan)) {
+		VMBUS_LOG(ERR, "open subchan ioctl failed %s: %s",
+				uio_res->path, strerror(errno));
+		err = -1;
+	}
+	close(fd);
+	return err;
 }

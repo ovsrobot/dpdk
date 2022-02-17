@@ -471,3 +471,15 @@ fail:
 	closedir(chan_dir);
 	return err;
 }
+
+/*
+ * This is a stub function and it should always succeed.
+ * The Linux UIO kernel driver opens the subchannels implicitly.
+ */
+int vmbus_uio_subchan_open(struct rte_vmbus_device *dev,
+			   uint32_t subchan)
+{
+	RTE_SET_USED(dev);
+	RTE_SET_USED(subchan);
+	return 0;
+}

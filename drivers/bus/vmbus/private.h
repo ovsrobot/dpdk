@@ -116,6 +116,7 @@ bool vmbus_uio_subchannels_supported(const struct rte_vmbus_device *dev,
 int vmbus_uio_get_subchan(struct vmbus_channel *primary,
 			  struct vmbus_channel **subchan);
 int vmbus_uio_map_rings(struct vmbus_channel *chan);
+int vmbus_uio_subchan_open(struct rte_vmbus_device *device, uint32_t subchan);
 
 void vmbus_br_setup(struct vmbus_br *br, void *buf, unsigned int blen);
 

@@ -365,6 +365,11 @@ int rte_vmbus_max_channels(const struct rte_vmbus_device *device)
 		return 1;
 }
 
+int rte_vmbus_ioctl(struct rte_vmbus_device *device, uint32_t subchan)
+{
+	return vmbus_uio_subchan_open(device, subchan);
+}
+
 /* Setup secondary channel */
 int rte_vmbus_subchan_open(struct vmbus_channel *primary,
 			   struct vmbus_channel **new_chan)

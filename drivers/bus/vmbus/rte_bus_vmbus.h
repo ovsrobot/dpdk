@@ -404,6 +404,16 @@ void rte_vmbus_chan_dump(FILE *f, const struct vmbus_channel *chan);
  */
 void rte_vmbus_unregister(struct rte_vmbus_driver *driver);
 
+/**
+ * Perform IOCTL to VMBUS device
+ *
+ * @param device
+ *	A pointer to a rte_vmbus_device structure
+ * @param subchan
+ *	Count of subchannels to open
+ */
+int rte_vmbus_ioctl(struct rte_vmbus_device *device, uint32_t subchan);
+
 /** Helper for VMBUS device registration from driver instance */
 #define RTE_PMD_REGISTER_VMBUS(nm, vmbus_drv)		\
 	RTE_INIT(vmbusinitfn_ ##nm)			\
