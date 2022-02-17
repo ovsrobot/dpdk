@@ -5,6 +5,7 @@
 
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #include <sys/ioctl.h>
@@ -17,6 +18,7 @@
 #include "private.h"
 
 const char *driver_name = "hv_uio";
+static void *vmbus_map_addr;
 
 /* Check map names with kernel names */
 static const char *map_names[VMBUS_MAX_RESOURCE] = {
@@ -140,3 +142,71 @@ error:
 	vmbus_uio_free_resource(dev, *uio_res);
 	return -1;
 }
+
+static int
+find_max_end_va(const struct rte_memseg_list *msl, void *arg)
+{
+	size_t sz = msl->memseg_arr.len * msl->page_sz;
+	void *end_va = RTE_PTR_ADD(msl->base_va, sz);
+	void **max_va = arg;
+
+	if (*max_va < end_va)
+		*max_va = end_va;
+	return 0;
+}
+
+/*
+ * TODO: this should be part of memseg api.
+ *       code is duplicated from PCI.
+ */
+static void *
+vmbus_find_max_end_va(void)
+{
+	void *va = NULL;
+
+	rte_memseg_list_walk(find_max_end_va, &va);
+	return va;
+}
+
+int
+vmbus_uio_map_resource_by_index(struct rte_vmbus_device *dev, int idx,
+				struct mapped_vmbus_resource *uio_res,
+				int flags)
+{
+	size_t size = dev->resource[idx].len;
+	struct vmbus_map *maps = uio_res->maps;
+	void *mapaddr;
+	off_t offset;
+	int fd;
+
+	/* devname for mmap  */
+	fd = open(uio_res->path, O_RDWR);
+	if (fd < 0) {
+		VMBUS_LOG(ERR, "Cannot open %s: %s",
+			  uio_res->path, strerror(errno));
+		return -1;
+	}
+
+	/* try mapping somewhere close to the end of hugepages */
+	if (vmbus_map_addr == NULL)
+		vmbus_map_addr = vmbus_find_max_end_va();
+
+	/* offset is special in uio it indicates which resource */
+	offset = idx * rte_mem_page_size();
+
+	mapaddr = vmbus_map_resource(vmbus_map_addr, fd, offset, size, flags);
+	close(fd);
+
+	if (mapaddr == MAP_FAILED)
+		return -1;
+
+	dev->resource[idx].addr = mapaddr;
+	vmbus_map_addr = RTE_PTR_ADD(mapaddr, size);
+
+	/* Record result of successful mapping for use by secondary */
+	maps[idx].addr = mapaddr;
+	maps[idx].size = size;
+
+	return 0;
+}
+
