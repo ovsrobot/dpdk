@@ -265,3 +265,18 @@ rte_vmbus_scan(void)
 error:
 	return -1;
 }
+
+void rte_vmbus_irq_mask(struct rte_vmbus_device *device)
+{
+	vmbus_uio_irq_control(device, 1);
+}
+
+void rte_vmbus_irq_unmask(struct rte_vmbus_device *device)
+{
+	vmbus_uio_irq_control(device, 0);
+}
+
+int rte_vmbus_irq_read(struct rte_vmbus_device *device)
+{
+	return vmbus_uio_irq_read(device);
+}

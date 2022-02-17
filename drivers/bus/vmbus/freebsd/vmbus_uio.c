@@ -38,6 +38,34 @@ static const char *map_names[VMBUS_MAX_RESOURCE] = {
 	[HV_SEND_BUF_MAP]  = "send_buf",
 };
 
+/* Control interrupts */
+void vmbus_uio_irq_control(struct rte_vmbus_device *dev, int32_t onoff)
+{
+	if (write(dev->intr_handle.fd, &onoff, sizeof(onoff)) < 0) {
+		VMBUS_LOG(ERR, "cannot write to %d:%s",
+			dev->intr_handle.fd, strerror(errno));
+	}
+}
+
+int vmbus_uio_irq_read(struct rte_vmbus_device *dev)
+{
+	int32_t count;
+	int cc;
+
+	cc = read(dev->intr_handle.fd, &count, sizeof(count));
+	if (cc < (int)sizeof(count)) {
+		if (cc < 0) {
+			VMBUS_LOG(ERR, "IRQ read failed %s",
+				  strerror(errno));
+			return -errno;
+		}
+		VMBUS_LOG(ERR, "can't read IRQ count");
+		return -EINVAL;
+	}
+
+	return count;
+}
+
 void
 vmbus_uio_free_resource(struct rte_vmbus_device *dev,
 		struct mapped_vmbus_resource *uio_res)
