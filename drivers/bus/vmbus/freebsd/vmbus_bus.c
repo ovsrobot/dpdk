@@ -41,6 +41,24 @@ parse_sysfs_uuid(const char *filename, rte_uuid_t uu)
 	return 0;
 }
 
+/* map the resources of a vmbus device in virtual memory */
+int
+rte_vmbus_map_device(struct rte_vmbus_device *dev)
+{
+	if (dev->uio_num < 0) {
+		VMBUS_LOG(DEBUG, "Not managed by UIO driver, skipped");
+		return 1;
+	}
+
+	return vmbus_uio_map_resource(dev);
+}
+
+void
+rte_vmbus_unmap_device(struct rte_vmbus_device *dev)
+{
+	vmbus_uio_unmap_resource(dev);
+}
+
 /* Scan one vmbus entry, and fill the devices list from it. */
 static int
 vmbus_scan_one(const char *name, unsigned int unit_num)
