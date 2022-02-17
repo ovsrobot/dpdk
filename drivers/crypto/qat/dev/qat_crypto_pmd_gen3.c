@@ -258,6 +258,142 @@ enqueue_one_auth_job_gen3(struct qat_sym_session *ctx,
 			ICP_QAT_FW_LA_NO_PROTO);
 }
 
+static int
+qat_sym_build_op_aead_gen3(void *in_op, struct qat_sym_session *ctx,
+		uint8_t *out_msg, void *op_cookie)
+{
+	register struct icp_qat_fw_la_bulk_req *req;
+	struct rte_crypto_op *op = in_op;
+	struct qat_sym_op_cookie *cookie = op_cookie;
+	struct rte_crypto_sgl in_sgl, out_sgl;
+	struct rte_crypto_vec in_vec[QAT_SYM_SGL_MAX_NUMBER],
+			out_vec[QAT_SYM_SGL_MAX_NUMBER];
+	struct rte_crypto_va_iova_ptr cipher_iv;
+	struct rte_crypto_va_iova_ptr aad;
+	struct rte_crypto_va_iova_ptr digest;
+	union rte_crypto_sym_ofs ofs;
+	int32_t total_len;
+
+	in_sgl.vec = in_vec;
+	out_sgl.vec = out_vec;
+
+	req = (struct icp_qat_fw_la_bulk_req *)out_msg;
+	rte_mov128((uint8_t *)req, (const uint8_t *)&(ctx->fw_req));
+
+	ofs.raw = qat_sym_convert_op_to_vec_aead(op, ctx, &in_sgl, &out_sgl,
+			&cipher_iv, &aad, &digest);
+	if (unlikely(ofs.raw == UINT64_MAX)) {
+		op->status = RTE_CRYPTO_OP_STATUS_INVALID_ARGS;
+		return -EINVAL;
+	}
+
+	total_len = qat_sym_build_req_set_data(req, in_op, cookie,
+			in_sgl.vec, in_sgl.num, out_sgl.vec, out_sgl.num);
+	if (unlikely(total_len < 0)) {
+		op->status = RTE_CRYPTO_OP_STATUS_INVALID_ARGS;
+		return -EINVAL;
+	}
+
+	enqueue_one_aead_job_gen3(ctx, req, &cipher_iv, &digest, &aad, ofs,
+		total_len);
+
+#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
+	qat_sym_debug_log_dump(req, ctx, in_sgl.vec, in_sgl.num, &cipher_iv,
+			NULL, &aad, &digest);
+#endif
+
+	return 0;
+}
+
+static int
+qat_sym_build_op_auth_gen3(void *in_op, struct qat_sym_session *ctx,
+		uint8_t *out_msg, void *op_cookie)
+{
+	register struct icp_qat_fw_la_bulk_req *req;
+	struct rte_crypto_op *op = in_op;
+	struct qat_sym_op_cookie *cookie = op_cookie;
+	struct rte_crypto_sgl in_sgl, out_sgl;
+	struct rte_crypto_vec in_vec[QAT_SYM_SGL_MAX_NUMBER],
+			out_vec[QAT_SYM_SGL_MAX_NUMBER];
+	struct rte_crypto_va_iova_ptr auth_iv;
+	struct rte_crypto_va_iova_ptr digest;
+	union rte_crypto_sym_ofs ofs;
+	int32_t total_len;
+
+	in_sgl.vec = in_vec;
+	out_sgl.vec = out_vec;
+
+	req = (struct icp_qat_fw_la_bulk_req *)out_msg;
+	rte_mov128((uint8_t *)req, (const uint8_t *)&(ctx->fw_req));
+
+	ofs.raw = qat_sym_convert_op_to_vec_auth(op, ctx, &in_sgl, &out_sgl,
+			NULL, &auth_iv, &digest);
+	if (unlikely(ofs.raw == UINT64_MAX)) {
+		op->status = RTE_CRYPTO_OP_STATUS_INVALID_ARGS;
+		return -EINVAL;
+	}
+
+	total_len = qat_sym_build_req_set_data(req, in_op, cookie,
+			in_sgl.vec, in_sgl.num, out_sgl.vec, out_sgl.num);
+	if (unlikely(total_len < 0)) {
+		op->status = RTE_CRYPTO_OP_STATUS_INVALID_ARGS;
+		return -EINVAL;
+	}
+
+	enqueue_one_auth_job_gen3(ctx, cookie, req, &digest, &auth_iv,
+			ofs, total_len);
+
+#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
+	qat_sym_debug_log_dump(req, ctx, in_sgl.vec, in_sgl.num, NULL,
+			&auth_iv, NULL, &digest);
+#endif
+
+	return 0;
+}
+
+static int
+qat_sym_crypto_set_session_gen3(void *cdev __rte_unused, void *session)
+{
+	struct qat_sym_session *ctx = session;
+	enum rte_proc_type_t proc_type = rte_eal_process_type();
+	int ret;
+
+	ret = qat_sym_crypto_set_session_gen1(cdev, session);
+	/* special single pass build request for GEN3 */
+	if (ctx->is_single_pass)
+		ctx->build_request[proc_type] = qat_sym_build_op_aead_gen3;
+	else if (ctx->is_single_pass_gmac)
+		ctx->build_request[proc_type] = qat_sym_build_op_auth_gen3;
+
+	if (ret == -ENOTSUP) {
+		/* GEN1 returning -ENOTSUP as it cannot handle some mixed algo,
+		 * this is addressed by GEN3
+		 */
+		if (ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_ZUC_3G_128_EIA3 &&
+				ctx->qat_cipher_alg !=
+				ICP_QAT_HW_CIPHER_ALGO_ZUC_3G_128_EEA3) {
+			qat_sym_session_set_ext_hash_flags_gen2(ctx,
+				1 << ICP_QAT_FW_AUTH_HDR_FLAG_ZUC_EIA3_BITPOS);
+		} else if (ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_SNOW_3G_UIA2 &&
+				ctx->qat_cipher_alg !=
+				ICP_QAT_HW_CIPHER_ALGO_SNOW_3G_UEA2) {
+			qat_sym_session_set_ext_hash_flags_gen2(ctx,
+				1 << ICP_QAT_FW_AUTH_HDR_FLAG_SNOW3G_UIA2_BITPOS);
+		} else if ((ctx->aes_cmac ||
+				ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_NULL) &&
+				(ctx->qat_cipher_alg ==
+				ICP_QAT_HW_CIPHER_ALGO_SNOW_3G_UEA2 ||
+				ctx->qat_cipher_alg ==
+				ICP_QAT_HW_CIPHER_ALGO_ZUC_3G_128_EEA3)) {
+			qat_sym_session_set_ext_hash_flags_gen2(ctx, 0);
+		}
+
+		ret = 0;
+	}
+
+	return ret;
+}
+
 RTE_INIT(qat_sym_crypto_gen3_init)
 {
 	qat_sym_gen_dev_ops[QAT_GEN3].cryptodev_ops = &qat_sym_crypto_ops_gen1;
@@ -265,6 +401,8 @@ RTE_INIT(qat_sym_crypto_gen3_init)
 			qat_sym_crypto_cap_get_gen3;
 	qat_sym_gen_dev_ops[QAT_GEN3].get_feature_flags =
 			qat_sym_crypto_feature_flags_get_gen1;
+	qat_sym_gen_dev_ops[QAT_GEN3].set_session =
+			qat_sym_crypto_set_session_gen3;
 #ifdef RTE_LIB_SECURITY
 	qat_sym_gen_dev_ops[QAT_GEN3].create_security_ctx =
 			qat_sym_create_security_gen1;
@@ -276,4 +414,5 @@ RTE_INIT(qat_asym_crypto_gen3_init)
 	qat_asym_gen_dev_ops[QAT_GEN3].cryptodev_ops = NULL;
 	qat_asym_gen_dev_ops[QAT_GEN3].get_capabilities = NULL;
 	qat_asym_gen_dev_ops[QAT_GEN3].get_feature_flags = NULL;
+	qat_asym_gen_dev_ops[QAT_GEN3].set_session = NULL;
 }
