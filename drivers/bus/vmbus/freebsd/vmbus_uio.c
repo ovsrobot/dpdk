@@ -17,6 +17,12 @@
 
 #include "private.h"
 
+/* Macros to distinguish mmap request
+ * [7-0] - Device memory region
+ * [15-8]- Sub-channel id
+ */
+#define UH_SUBCHAN_MASK_SHIFT  8
+
 const char *driver_name = "hv_uio";
 static void *vmbus_map_addr;
 
@@ -210,3 +216,83 @@ vmbus_uio_map_resource_by_index(struct rte_vmbus_device *dev, int idx,
 	return 0;
 }
 
+static int vmbus_uio_map_primary(struct vmbus_channel *chan,
+				 void **ring_buf, uint32_t *ring_size)
+{
+	struct mapped_vmbus_resource *uio_res;
+
+	uio_res = vmbus_uio_find_resource(chan->device);
+	if (!uio_res) {
+		VMBUS_LOG(ERR, "can not find resources!");
+		return -ENOMEM;
+	}
+
+	if (uio_res->nb_maps < VMBUS_MAX_RESOURCE) {
+		VMBUS_LOG(ERR, "VMBUS: only %u resources found!",
+			  uio_res->nb_maps);
+		return -EINVAL;
+	}
+
+	*ring_size = uio_res->maps[HV_TXRX_RING_MAP].size / 2;
+	*ring_buf  = uio_res->maps[HV_TXRX_RING_MAP].addr;
+	return 0;
+}
+
+static int vmbus_uio_map_subchan(const struct rte_vmbus_device *dev,
+				 struct vmbus_channel *chan,
+				 void **ring_buf, uint32_t *ring_size)
+{
+	char ring_path[PATH_MAX];
+	size_t size;
+	void *mapaddr;
+	off_t offset;
+	int fd;
+
+	snprintf(ring_path, sizeof(ring_path),
+		 "/dev/hv_uio%d", dev->uio_num);
+
+	fd = open(ring_path, O_RDWR);
+	if (fd < 0) {
+		VMBUS_LOG(ERR, "Cannot open %s: %s",
+			  ring_path, strerror(errno));
+		return -errno;
+	}
+
+	/* subchannel rings are of the same size as primary */
+	size = dev->resource[HV_TXRX_RING_MAP].len;
+	offset = (chan->relid << UH_SUBCHAN_MASK_SHIFT) * PAGE_SIZE;
+
+	mapaddr = vmbus_map_resource(vmbus_map_addr, fd,
+				     offset, size, 0);
+	close(fd);
+
+	if (mapaddr == MAP_FAILED)
+		return -EIO;
+
+	*ring_size = size / 2;
+	*ring_buf = mapaddr;
+
+	vmbus_map_addr = RTE_PTR_ADD(mapaddr, size);
+	return 0;
+}
+
+int vmbus_uio_map_rings(struct vmbus_channel *chan)
+{
+	const struct rte_vmbus_device *dev = chan->device;
+	uint32_t ring_size;
+	void *ring_buf;
+	int ret;
+
+	/* Primary channel */
+	if (chan->subchannel_id == 0)
+		ret = vmbus_uio_map_primary(chan, &ring_buf, &ring_size);
+	else
+		ret = vmbus_uio_map_subchan(dev, chan, &ring_buf, &ring_size);
+
+	if (ret)
+		return ret;
+
+	vmbus_br_setup(&chan->txbr, ring_buf, ring_size);
+	vmbus_br_setup(&chan->rxbr, (char *)ring_buf + ring_size, ring_size);
+	return 0;
+}
