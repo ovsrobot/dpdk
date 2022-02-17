@@ -516,6 +516,10 @@ static int hn_subchan_configure(struct hn_data *hv,
 	if (err)
 		return  err;
 
+	err = rte_vmbus_ioctl(hv->vmbus, subchan);
+	if (err)
+		return  err;
+
 	while (subchan > 0) {
 		struct vmbus_channel *new_sc;
 		uint16_t chn_index;
