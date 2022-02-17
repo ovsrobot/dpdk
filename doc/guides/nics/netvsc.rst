@@ -91,6 +91,12 @@ operations:
 
    The dpdk-devbind.py script can not be used since it only handles PCI devices.
 
+On FreeBSD, with hv_uio kernel driver loaded, do the following:
+
+    .. code-block:: console
+
+        devctl set driver -f hn1 hv_uio
+
 
 Prerequisites
 -------------
@@ -100,6 +106,11 @@ The following prerequisites apply:
 *   Linux kernel support for UIO on vmbus is done with the uio_hv_generic driver.
     Full support of multiple queues requires the 4.17 kernel. It is possible
     to use the netvsc PMD with 4.16 kernel but it is limited to a single queue.
+
+*   FreeBSD support for UIO on vmbus is done with hv_uio driver and it is still
+    in `review`_
+
+.. _`review`: https://reviews.freebsd.org/D32184
 
 
 Netvsc PMD arguments
