@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2017-2021 Intel Corporation
+ * Copyright(c) 2017-2022 Intel Corporation
  */
 
 #include <rte_cryptodev.h>
@@ -141,6 +141,121 @@ qat_sym_crypto_cap_get_gen3(struct qat_pci_device *qat_dev __rte_unused)
 	capa_info.data = qat_sym_crypto_caps_gen3;
 	capa_info.size = sizeof(qat_sym_crypto_caps_gen3);
 	return capa_info;
+}
+
+static __rte_always_inline void
+enqueue_one_aead_job_gen3(struct qat_sym_session *ctx,
+	struct icp_qat_fw_la_bulk_req *req,
+	struct rte_crypto_va_iova_ptr *iv,
+	struct rte_crypto_va_iova_ptr *digest,
+	struct rte_crypto_va_iova_ptr *aad,
+	union rte_crypto_sym_ofs ofs, uint32_t data_len)
+{
+	if (ctx->is_single_pass) {
+		struct icp_qat_fw_la_cipher_req_params *cipher_param =
+			(void *)&req->serv_specif_rqpars;
+
+		/* QAT GEN3 uses single pass to treat AEAD as
+		 * cipher operation
+		 */
+		cipher_param = (void *)&req->serv_specif_rqpars;
+
+		qat_set_cipher_iv(cipher_param, iv, ctx->cipher_iv.length, req);
+		cipher_param->cipher_offset = ofs.ofs.cipher.head;
+		cipher_param->cipher_length = data_len - ofs.ofs.cipher.head -
+				ofs.ofs.cipher.tail;
+
+		cipher_param->spc_aad_addr = aad->iova;
+		cipher_param->spc_auth_res_addr = digest->iova;
+
+		return;
+	}
+
+	enqueue_one_aead_job_gen1(ctx, req, iv, digest, aad, ofs, data_len);
+}
+
+static __rte_always_inline void
+enqueue_one_auth_job_gen3(struct qat_sym_session *ctx,
+	struct qat_sym_op_cookie *cookie,
+	struct icp_qat_fw_la_bulk_req *req,
+	struct rte_crypto_va_iova_ptr *digest,
+	struct rte_crypto_va_iova_ptr *auth_iv,
+	union rte_crypto_sym_ofs ofs, uint32_t data_len)
+{
+	struct icp_qat_fw_cipher_cd_ctrl_hdr *cipher_cd_ctrl;
+	struct icp_qat_fw_la_cipher_req_params *cipher_param;
+	uint32_t ver_key_offset;
+	uint32_t auth_data_len = data_len - ofs.ofs.auth.head -
+			ofs.ofs.auth.tail;
+
+	if (!ctx->is_single_pass_gmac ||
+			(auth_data_len > QAT_AES_GMAC_SPC_MAX_SIZE)) {
+		enqueue_one_auth_job_gen1(ctx, req, digest, auth_iv, ofs,
+				data_len);
+		return;
+	}
+
+	cipher_cd_ctrl = (void *) &req->cd_ctrl;
+	cipher_param = (void *)&req->serv_specif_rqpars;
+	ver_key_offset = sizeof(struct icp_qat_hw_auth_setup) +
+			ICP_QAT_HW_GALOIS_128_STATE1_SZ +
+			ICP_QAT_HW_GALOIS_H_SZ + ICP_QAT_HW_GALOIS_LEN_A_SZ +
+			ICP_QAT_HW_GALOIS_E_CTR0_SZ +
+			sizeof(struct icp_qat_hw_cipher_config);
+
+	if (ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_GALOIS_128 ||
+		ctx->qat_hash_alg == ICP_QAT_HW_AUTH_ALGO_GALOIS_64) {
+		/* AES-GMAC */
+		qat_set_cipher_iv(cipher_param, auth_iv, ctx->auth_iv.length,
+				req);
+	}
+
+	/* Fill separate Content Descriptor for this op */
+	rte_memcpy(cookie->opt.spc_gmac.cd_cipher.key,
+			ctx->auth_op == ICP_QAT_HW_AUTH_GENERATE ?
+				ctx->cd.cipher.key :
+				RTE_PTR_ADD(&ctx->cd, ver_key_offset),
+			ctx->auth_key_length);
+	cookie->opt.spc_gmac.cd_cipher.cipher_config.val =
+			ICP_QAT_HW_CIPHER_CONFIG_BUILD(
+				ICP_QAT_HW_CIPHER_AEAD_MODE,
+				ctx->qat_cipher_alg,
+				ICP_QAT_HW_CIPHER_NO_CONVERT,
+				(ctx->auth_op == ICP_QAT_HW_AUTH_GENERATE ?
+					ICP_QAT_HW_CIPHER_ENCRYPT :
+					ICP_QAT_HW_CIPHER_DECRYPT));
+	QAT_FIELD_SET(cookie->opt.spc_gmac.cd_cipher.cipher_config.val,
+			ctx->digest_length,
+			QAT_CIPHER_AEAD_HASH_CMP_LEN_BITPOS,
+			QAT_CIPHER_AEAD_HASH_CMP_LEN_MASK);
+	cookie->opt.spc_gmac.cd_cipher.cipher_config.reserved =
+			ICP_QAT_HW_CIPHER_CONFIG_BUILD_UPPER(auth_data_len);
+
+	/* Update the request */
+	req->cd_pars.u.s.content_desc_addr =
+			cookie->opt.spc_gmac.cd_phys_addr;
+	req->cd_pars.u.s.content_desc_params_sz = RTE_ALIGN_CEIL(
+			sizeof(struct icp_qat_hw_cipher_config) +
+			ctx->auth_key_length, 8) >> 3;
+	req->comn_mid.src_length = data_len;
+	req->comn_mid.dst_length = 0;
+
+	cipher_param->spc_aad_addr = 0;
+	cipher_param->spc_auth_res_addr = digest->iova;
+	cipher_param->spc_aad_sz = auth_data_len;
+	cipher_param->reserved = 0;
+	cipher_param->spc_auth_res_sz = ctx->digest_length;
+
+	req->comn_hdr.service_cmd_id = ICP_QAT_FW_LA_CMD_CIPHER;
+	cipher_cd_ctrl->cipher_cfg_offset = 0;
+	ICP_QAT_FW_COMN_CURR_ID_SET(cipher_cd_ctrl, ICP_QAT_FW_SLICE_CIPHER);
+	ICP_QAT_FW_COMN_NEXT_ID_SET(cipher_cd_ctrl, ICP_QAT_FW_SLICE_DRAM_WR);
+	ICP_QAT_FW_LA_SINGLE_PASS_PROTO_FLAG_SET(
+			req->comn_hdr.serv_specif_flags,
+			ICP_QAT_FW_LA_SINGLE_PASS_PROTO);
+	ICP_QAT_FW_LA_PROTO_SET(
+			req->comn_hdr.serv_specif_flags,
+			ICP_QAT_FW_LA_NO_PROTO);
 }
 
 RTE_INIT(qat_sym_crypto_gen3_init)
