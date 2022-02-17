@@ -52,6 +52,8 @@
 
 #define PARAM_PROC_ID "proc-id"
 #define PARAM_NUM_PROCS "num-procs"
+#define PARAM_RX_OFFLOADS "rx-offloads"
+#define PARAM_RX_MQ_MODE "rx-mq-mode"
 
 /* for each lcore, record the elements of the ports array to use */
 struct lcore_ports{
@@ -69,6 +71,8 @@ struct port_stats{
 
 static int proc_id = -1;
 static unsigned num_procs = 0;
+static uint64_t rx_offloads = RTE_ETH_RX_OFFLOAD_CHECKSUM;
+static enum rte_eth_rx_mq_mode rx_mq_mode = RTE_ETH_MQ_RX_RSS;
 
 static uint16_t ports[RTE_MAX_ETHPORTS];
 static unsigned num_ports = 0;
@@ -84,9 +88,13 @@ smp_usage(const char *prgname, const char *errmsg)
 	printf("\n%s [EAL options] -- -p <port mask> "
 			"--"PARAM_NUM_PROCS" <n>"
 			" --"PARAM_PROC_ID" <id>\n"
+			" --"PARAM_RX_OFFLOADS" <offload>\n"
+			" --"PARAM_RX_MQ_MODE" <mode>\n"
 			"-p         : a hex bitmask indicating what ports are to be used\n"
 			"--num-procs: the number of processes which will be used\n"
 			"--proc-id  : the id of the current process (id < num-procs)\n"
+			"--rx-offloads : rx offload capabilities of ports\n"
+			"--rx-mq-mode : the multi-queue packet distribution mode, e.g. RSS.\n"
 			"\n",
 			prgname);
 	exit(1);
@@ -119,6 +127,8 @@ smp_parse_args(int argc, char **argv)
 	static struct option lgopts[] = {
 			{PARAM_NUM_PROCS, 1, 0, 0},
 			{PARAM_PROC_ID, 1, 0, 0},
+			{PARAM_RX_OFFLOADS, 1, 0, 0},
+			{PARAM_RX_MQ_MODE, 1, 0, 0},
 			{NULL, 0, 0, 0}
 	};
 
@@ -137,6 +147,10 @@ smp_parse_args(int argc, char **argv)
 				num_procs = atoi(optarg);
 			else if (strncmp(lgopts[option_index].name, PARAM_PROC_ID, 7) == 0)
 				proc_id = atoi(optarg);
+			else if (strncmp(lgopts[option_index].name, PARAM_RX_OFFLOADS, 11) == 0)
+				rx_offloads = atoi(optarg);
+			else if (strncmp(lgopts[option_index].name, PARAM_RX_MQ_MODE, 10) == 0)
+				rx_mq_mode = atoi(optarg);
 			break;
 
 		default:
@@ -175,9 +189,9 @@ smp_port_init(uint16_t port, struct rte_mempool *mbuf_pool,
 {
 	struct rte_eth_conf port_conf = {
 			.rxmode = {
-				.mq_mode	= RTE_ETH_MQ_RX_RSS,
+				.mq_mode	= rx_mq_mode,
 				.split_hdr_size = 0,
-				.offloads = RTE_ETH_RX_OFFLOAD_CHECKSUM,
+				.offloads = rx_offloads,
 			},
 			.rx_adv_conf = {
 				.rss_conf = {
