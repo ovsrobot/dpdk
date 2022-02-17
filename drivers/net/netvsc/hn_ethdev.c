@@ -39,6 +39,7 @@
 #include "hn_rndis.h"
 #include "hn_nvs.h"
 #include "ndis.h"
+#include "hn_os.h"
 
 #define HN_TX_OFFLOAD_CAPS (RTE_ETH_TX_OFFLOAD_IPV4_CKSUM | \
 			    RTE_ETH_TX_OFFLOAD_TCP_CKSUM  | \
@@ -1240,11 +1241,9 @@ static int eth_hn_probe(struct rte_vmbus_driver *drv __rte_unused,
 
 	PMD_INIT_FUNC_TRACE();
 
-	ret = rte_dev_event_monitor_start();
-	if (ret) {
-		PMD_DRV_LOG(ERR, "Failed to start device event monitoring");
+	ret = eth_hn_os_dev_event();
+	if (ret)
 		return ret;
-	}
 
 	eth_dev = eth_dev_vmbus_allocate(dev, sizeof(struct hn_data));
 	if (!eth_dev)
