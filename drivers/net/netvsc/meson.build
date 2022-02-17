@@ -7,6 +7,8 @@ if is_windows
     subdir_done()
 endif
 
+includes += include_directories(exec_env)
+
 deps += 'bus_vmbus'
 sources = files(
         'hn_ethdev.c',
@@ -16,3 +18,4 @@ sources = files(
         'hn_vf.c',
 )
 
+subdir(exec_env)
