@@ -121,9 +121,10 @@ System Software
 
 **Required:**
 
-*   Kernel version >= 4.4
+*   Kernel version >= 4.9
 
-    The kernel version required is based on the oldest long term stable kernel available
+    The kernel version required is based on the oldest long term stable
+    kernel (that has not reached end of life)
     at kernel.org when the DPDK version is in development.
     Compatibility for recent distribution kernels will be kept, notably RHEL/CentOS 7.
 
