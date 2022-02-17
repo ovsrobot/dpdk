@@ -296,3 +296,11 @@ int vmbus_uio_map_rings(struct vmbus_channel *chan)
 	vmbus_br_setup(&chan->rxbr, (char *)ring_buf + ring_size, ring_size);
 	return 0;
 }
+
+bool vmbus_uio_subchannels_supported(const struct rte_vmbus_device *dev,
+				     const struct vmbus_channel *chan)
+{
+	RTE_SET_USED(dev);
+	RTE_SET_USED(chan);
+	return true;
+}
