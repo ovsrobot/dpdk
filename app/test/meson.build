@@ -355,6 +355,10 @@ if not is_windows and dpdk_conf.has('RTE_LIB_TELEMETRY')
     test_sources += ['test_telemetry_json.c', 'test_telemetry_data.c']
     fast_tests += [['telemetry_json_autotest', true], ['telemetry_data_autotest', true]]
 endif
+if not is_windows
+    test_sources += ['test_security_inline_proto.c']
+    fast_tests += [['inline_ipsec_autotest', false]]
+endif
 if dpdk_conf.has('RTE_LIB_PIPELINE')
 # pipeline lib depends on port and table libs, so those must be present
 # if pipeline library is.
