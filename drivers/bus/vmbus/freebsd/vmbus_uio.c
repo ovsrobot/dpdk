@@ -308,6 +308,91 @@ bool vmbus_uio_subchannels_supported(const struct rte_vmbus_device *dev,
 	return true;
 }
 
+static bool vmbus_isnew_subchannel(struct vmbus_channel *primary,
+				   uint16_t id)
+{
+	const struct vmbus_channel *c;
+
+	STAILQ_FOREACH(c, &primary->subchannel_list, next) {
+		if (c->relid == id)
+			return false;
+	}
+	return true;
+}
+
+int vmbus_uio_get_subchan(struct vmbus_channel *primary,
+			  struct vmbus_channel **subchan)
+{
+	const struct rte_vmbus_device *dev = primary->device;
+	char sysctlBuffer[PATH_MAX], sysctlVar[PATH_MAX];
+	size_t len = PATH_MAX, sysctl_len;
+	/* nr_schan, relid, subid & monid datatype must match kernel's for sysctl */
+	uint32_t relid, subid, nr_schan, i;
+	uint8_t monid;
+	int err;
+
+	/* get no. of sub-channels opened by hv_uio
+	 * dev.hv_uio.0.subchan_cnt
+	 */
+	snprintf(sysctlVar, len, "dev.%s.%d.subchan_cnt", driver_name,
+		 dev->uio_num);
+	sysctl_len = sizeof(nr_schan);
+	if (sysctlbyname(sysctlVar, &nr_schan, &sysctl_len, NULL, 0) < 0) {
+		VMBUS_LOG(ERR, "could not read %s : %s", sysctlVar,
+				strerror(errno));
+		return -1;
+	}
+
+	/* dev.hv_uio.0.channel.14.sub */
+	snprintf(sysctlBuffer, len, "dev.%s.%d.channel.%u.sub", driver_name,
+		 dev->uio_num, primary->relid);
+	for (i = 1; i <= nr_schan; i++) {
+		/* get relid */
+		snprintf(sysctlVar, len, "%s.%u.chanid", sysctlBuffer, i);
+		sysctl_len = sizeof(relid);
+		if (sysctlbyname(sysctlVar, &relid, &sysctl_len, NULL, 0) < 0) {
+			VMBUS_LOG(ERR, "could not read %s : %s", sysctlVar,
+					strerror(errno));
+			goto error;
+		}
+
+		if (!vmbus_isnew_subchannel(primary, (uint16_t)relid)) {
+			VMBUS_LOG(DEBUG, "skip already found channel: %u",
+					relid);
+			continue;
+		}
+
+		/* get sub-channel id */
+		snprintf(sysctlVar, len, "%s.%u.ch_subidx", sysctlBuffer, i);
+		sysctl_len = sizeof(subid);
+		if (sysctlbyname(sysctlVar, &subid, &sysctl_len, NULL, 0) < 0) {
+			VMBUS_LOG(ERR, "could not read %s : %s", sysctlVar,
+					strerror(errno));
+			goto error;
+		}
+
+		/* get monitor id */
+		snprintf(sysctlVar, len, "%s.%u.monitor_id", sysctlBuffer, i);
+		sysctl_len = sizeof(monid);
+		if (sysctlbyname(sysctlVar, &monid, &sysctl_len, NULL, 0) < 0) {
+			VMBUS_LOG(ERR, "could not read %s : %s", sysctlVar,
+					strerror(errno));
+			goto error;
+		}
+
+		err = vmbus_chan_create(dev, (uint16_t)relid, (uint16_t)subid,
+					monid, subchan);
+		if (err) {
+			VMBUS_LOG(ERR, "subchannel setup failed");
+			return err;
+		}
+		break;
+	}
+	return 0;
+error:
+	return -1;
+}
+
 int vmbus_uio_subchan_open(struct rte_vmbus_device *dev, uint32_t subchan)
 {
 	struct mapped_vmbus_resource *uio_res;
