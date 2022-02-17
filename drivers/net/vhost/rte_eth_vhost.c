@@ -1281,6 +1281,24 @@ eth_dev_info(struct rte_eth_dev *dev,
 				RTE_ETH_TX_OFFLOAD_VLAN_INSERT;
 	dev_info->rx_offload_capa = RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
 
+	if (internal->vid != -1) {
+		uint64_t features = 0;
+		if (rte_vhost_get_negotiated_features(internal->vid, &features) != 0)
+			return 0;
+
+		if (features & (1ULL << VIRTIO_NET_F_CSUM)) {
+			dev_info->tx_offload_capa |= RTE_ETH_TX_OFFLOAD_TCP_CKSUM |
+						RTE_ETH_TX_OFFLOAD_UDP_CKSUM |
+						RTE_ETH_TX_OFFLOAD_IPV4_CKSUM;
+		}
+
+		if (features & (1ULL << VIRTIO_NET_F_GUEST_CSUM)) {
+			dev_info->rx_offload_capa |= RTE_ETH_RX_OFFLOAD_TCP_CKSUM |
+						RTE_ETH_RX_OFFLOAD_UDP_CKSUM |
+						RTE_ETH_RX_OFFLOAD_IPV4_CKSUM;
+		}
+	}
+
 	return 0;
 }
 
