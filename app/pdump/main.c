@@ -931,11 +931,19 @@ dump_packets(void)
 	}
 
 	lcore_id = rte_get_next_lcore(lcore_id, 1, 0);
+	if (lcore_id == RTE_MAX_LCORE) {
+		printf("Invalid core %u for the packet capture!\n", lcore_id);
+		return;
+	}
 
 	for (i = 0; i < num_tuples; i++) {
 		rte_eal_remote_launch(dump_packets_core,
 				&pdump_t[i], lcore_id);
 		lcore_id = rte_get_next_lcore(lcore_id, 1, 0);
+		if (lcore_id == RTE_MAX_LCORE) {
+			printf("Invalid core %u for the capture for the tuple=%d!\n", lcore_id, i);
+			return;
+		}
 
 		if (rte_eal_wait_lcore(lcore_id) < 0)
 			rte_exit(EXIT_FAILURE, "failed to wait\n");
