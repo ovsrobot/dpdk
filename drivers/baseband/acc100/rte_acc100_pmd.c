@@ -833,6 +833,7 @@ acc100_queue_setup(struct rte_bbdev *dev, uint16_t queue_id,
 	}
 	if (d == NULL) {
 		rte_bbdev_log(ERR, "Undefined device");
+		rte_free(q);
 		return -ENODEV;
 	}
 
