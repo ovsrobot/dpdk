@@ -126,8 +126,10 @@ iterate_dir(struct dirent **d, int num, struct dt_dir *dt)
 				 d[loop]->d_name);
 			subdir->parent = dt;
 			ret = process_dir(subdir->node.node.full_name, subdir);
-			if (ret)
+			if (ret) {
+				free(subdir);
 				return ret;
+			}
 			list_add_tail(&subdir->node.list, &dt->subdirs);
 			break;
 		default:
