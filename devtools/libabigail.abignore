@@ -20,3 +20,7 @@
 ; Ignore changes to rte_crypto_asym_op, asymmetric crypto API is experimental
 [suppress_type]
         name = rte_crypto_asym_op
+
+; Ignore name change of rsa qt key type
+[suppress_type]
+        name = rte_crypto_rsa_priv_key_type
