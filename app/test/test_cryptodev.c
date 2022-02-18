@@ -9812,6 +9812,27 @@ test_PDCP_PROTO_all(void)
 }
 
 static int
+test_ipsec_proto_ipv4_ttl_decrement(const void *data __rte_unused)
+{
+	struct ipsec_test_flags flags = {
+		.dec_ttl_or_hop_limit = true
+	};
+
+	return test_ipsec_proto_all(&flags);
+}
+
+static int
+test_ipsec_proto_ipv6_hop_limit_decrement(const void *data __rte_unused)
+{
+	struct ipsec_test_flags flags = {
+		.ipv6 = true,
+		.dec_ttl_or_hop_limit = true
+	};
+
+	return test_ipsec_proto_all(&flags);
+}
+
+static int
 test_docsis_proto_uplink(const void *data)
 {
 	const struct docsis_test_data *d_td = data;
@@ -14808,6 +14829,14 @@ static struct unit_test_suite ipsec_proto_testsuite  = {
 			"Tunnel header set DF 1 (inner 0)",
 			ut_setup_security, ut_teardown,
 			test_ipsec_proto_set_df_1_inner_0),
+		TEST_CASE_NAMED_ST(
+			"Tunnel header IPv4 decrement inner TTL",
+			ut_setup_security, ut_teardown,
+			test_ipsec_proto_ipv4_ttl_decrement),
+		TEST_CASE_NAMED_ST(
+			"Tunnel header IPv6 decrement inner hop limit",
+			ut_setup_security, ut_teardown,
+			test_ipsec_proto_ipv6_hop_limit_decrement),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };

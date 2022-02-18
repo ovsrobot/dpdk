@@ -74,6 +74,7 @@ struct ipsec_test_flags {
 	bool fragment;
 	bool stats_success;
 	enum df_flags df;
+	bool dec_ttl_or_hop_limit;
 };
 
 struct crypto_param {
