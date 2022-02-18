@@ -35,6 +35,10 @@
 
 #endif
 
+#ifndef RTE_SCHED_PORT_N_GRINDERS
+#define RTE_SCHED_PORT_N_GRINDERS 8
+#endif
+
 #define RTE_SCHED_TB_RATE_CONFIG_ERR          (1e-7)
 #define RTE_SCHED_WRR_SHIFT                   3
 #define RTE_SCHED_MAX_QUEUES_PER_TC           RTE_SCHED_BE_QUEUES_PER_PIPE

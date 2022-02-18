@@ -88,12 +88,8 @@
 /* rte_power defines */
 #define RTE_MAX_LCORE_FREQS 64
 
-/* rte_sched defines */
-#undef RTE_SCHED_CMAN
-#undef RTE_SCHED_COLLECT_STATS
-#undef RTE_SCHED_SUBPORT_TC_OV
-#define RTE_SCHED_PORT_N_GRINDERS 8
-#undef RTE_SCHED_VECTOR
+/* KNI defines */
+#define RTE_KNI_PREEMPT_DEFAULT 1
 
 /* rte_graph defines */
 #define RTE_GRAPH_BURST_SIZE 256
