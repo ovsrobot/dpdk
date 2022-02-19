@@ -10,6 +10,9 @@ expression E;
 - if (E != NULL) free(E);
 + free(E);
 |
+- if (E != NULL) rte_acl_free(E);
++ rte_acl_free(E);
+|
 - if (E != NULL) rte_bitmap_free(E);
 + rte_bitmap_free(E);
 |
@@ -18,6 +21,12 @@ expression E;
 |
 - if (E != NULL) rte_hash_free(E);
 + rte_hash_free(E);
+|
+- if (E != NULL) rte_lpm_free(E);
++ rte_lpm_free(E);
+|
+- if (E != NULL) rte_lpm6_free(E);
++ rte_lpm6_free(E);
 |
 - if (E != NULL) rte_ring_free(E);
 + rte_ring_free(E);
