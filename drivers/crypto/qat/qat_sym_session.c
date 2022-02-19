@@ -1410,6 +1410,7 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 		memset(in, 0, ICP_QAT_HW_GALOIS_H_SZ);
 		if (AES_set_encrypt_key(auth_key, auth_keylen << 3,
 			&enc_key) != 0) {
+			rte_free(in);
 			return -EFAULT;
 		}
 		AES_encrypt(in, out, &enc_key);
