@@ -215,6 +215,7 @@ rte_stack_create(const char *name, unsigned int count, int socket_id,
  *
  * @param s
  *   Stack to free
+ *   If NULL then, the function does nothing.
  */
 void
 rte_stack_free(struct rte_stack *s);

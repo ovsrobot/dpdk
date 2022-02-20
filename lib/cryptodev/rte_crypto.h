@@ -339,6 +339,7 @@ __rte_crypto_op_get_priv_data(struct rte_crypto_op *op, uint32_t size)
  * be returned to the mempool.
  *
  * @param	op	symmetric crypto operation
+ * If NULL then, the function does nothing.
  */
 static inline void
 rte_crypto_op_free(struct rte_crypto_op *op)

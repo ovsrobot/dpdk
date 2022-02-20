@@ -146,6 +146,7 @@ rte_efd_create(const char *name, uint32_t max_num_rules, uint32_t key_len,
  *
  * @param table
  *   Table to free
+ *   If NULL then, the function does nothing.
  */
 void
 rte_efd_free(struct rte_efd_table *table);

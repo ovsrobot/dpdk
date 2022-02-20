@@ -243,7 +243,8 @@ rte_intr_instance_alloc(uint32_t flags);
  * resources.
  *
  * @param intr_handle
- *  Interrupt handle address.
+ * Interrupt handle address.
+ * If NULL then, the function does nothing.
  *
  */
 __rte_experimental
@@ -746,6 +747,7 @@ rte_intr_vec_list_index_get(const struct rte_intr_handle *intr_handle,
  *
  * @param intr_handle
  *  pointer to the interrupt handle.
+ *  If NULL then, the function does nothing.
  *
  * @return
  *  - On success, zero

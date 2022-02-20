@@ -471,6 +471,7 @@ rte_comp_op_bulk_alloc(struct rte_mempool *mempool,
  *
  * @param op
  *   Compress operation
+ *   If NULL then, the function does nothing.
  */
 __rte_experimental
 void
