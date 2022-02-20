@@ -375,8 +375,7 @@ table_free(void *table)
 	if (!t)
 		return;
 
-	if (t->acl_ctx)
-		rte_acl_free(t->acl_ctx);
+	rte_acl_free(t->acl_ctx);
 	env_free(t, t->total_size);
 }
 
