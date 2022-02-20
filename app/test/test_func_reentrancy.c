@@ -348,8 +348,7 @@ lpm_clean(unsigned int lcore_id)
 	int i;
 
 	lpm = rte_lpm_find_existing("fr_test_once");
-	if (lpm != NULL)
-		rte_lpm_free(lpm);
+	rte_lpm_free(lpm);
 
 	for (i = 0; i < MAX_LPM_ITER_TIMES; i++) {
 		snprintf(lpm_name, sizeof(lpm_name), "fr_test_%d_%d",  lcore_id, i);
