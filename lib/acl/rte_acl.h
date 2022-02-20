@@ -165,6 +165,7 @@ rte_acl_find_existing(const char *name);
  *
  * @param ctx
  *   ACL context to free
+ *   If NULL then, the function does nothing.
  */
 void
 rte_acl_free(struct rte_acl_ctx *ctx);
