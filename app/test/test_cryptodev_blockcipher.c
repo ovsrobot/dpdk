@@ -811,8 +811,7 @@ error_exit:
 		rte_free(auth_xform);
 	}
 
-	if (op)
-		rte_crypto_op_free(op);
+	rte_crypto_op_free(op);
 
 	rte_pktmbuf_free(obuf);
 

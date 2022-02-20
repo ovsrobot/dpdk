@@ -1451,8 +1451,7 @@ ut_teardown(void)
 	}
 
 	/* free crypto operation structure */
-	if (ut_params->op)
-		rte_crypto_op_free(ut_params->op);
+	rte_crypto_op_free(ut_params->op);
 
 	/*
 	 * free mbuf - both obuf and ibuf are usually the same,
@@ -11653,8 +11652,7 @@ test_multi_session(void)
 			aes_cbc_iv),
 			"Failed to perform decrypt on request number %u.", i);
 		/* free crypto operation structure */
-		if (ut_params->op)
-			rte_crypto_op_free(ut_params->op);
+		rte_crypto_op_free(ut_params->op);
 
 		/*
 		 * free mbuf - both obuf and ibuf are usually the same,
@@ -11797,8 +11795,7 @@ test_multi_session_random_usage(void)
 					ut_paramz[j].iv),
 			"Failed to perform decrypt on request number %u.", i);
 
-		if (ut_paramz[j].ut_params.op)
-			rte_crypto_op_free(ut_paramz[j].ut_params.op);
+		rte_crypto_op_free(ut_paramz[j].ut_params.op);
 
 		/*
 		 * free mbuf - both obuf and ibuf are usually the same,
