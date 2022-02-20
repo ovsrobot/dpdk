@@ -912,6 +912,7 @@ rte_swx_pipeline_flush(struct rte_swx_pipeline *p);
  *
  * @param[in] p
  *   Pipeline handle.
+ *   If NULL then, the function does nothing.
  */
 __rte_experimental
 void
