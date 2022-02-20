@@ -330,6 +330,7 @@ rte_sched_port_config(struct rte_sched_port_params *params);
  *
  * @param port
  *   Handle to port scheduler instance
+ *   If NULL then, the function does nothing.
  */
 void
 rte_sched_port_free(struct rte_sched_port *port);

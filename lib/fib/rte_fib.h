@@ -124,6 +124,7 @@ rte_fib_find_existing(const char *name);
  *
  * @param fib
  *   FIB object handle
+ *   If NULL then, the function does nothing.
  * @return
  *   None
  */

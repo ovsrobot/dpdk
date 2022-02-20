@@ -444,6 +444,7 @@ rte_member_add(const struct rte_member_setsum *setsum, const void *key,
  *
  * @param setsum
  *   Pointer to the set summary.
+ *   If NULL then, the function does nothing.
  */
 void
 rte_member_free(struct rte_member_setsum *setsum);

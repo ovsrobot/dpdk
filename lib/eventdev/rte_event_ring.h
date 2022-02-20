@@ -233,6 +233,7 @@ rte_event_ring_lookup(const char *name);
  *
  * @param r
  *   Ring to free
+ *   If NULL then, the function does nothing.
  */
 void
 rte_event_ring_free(struct rte_event_ring *r);

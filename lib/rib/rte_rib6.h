@@ -320,6 +320,7 @@ rte_rib6_find_existing(const char *name);
  *
  * @param rib
  *   RIB object handle
+ *   If NULL then, the function does nothing.
  * @return
  *   None
  */

@@ -115,6 +115,7 @@ rte_reorder_reset(struct rte_reorder_buffer *b);
  *
  * @param b
  *   reorder buffer instance
+ *   If NULL then, the function does nothing.
  * @return
  *   None
  */

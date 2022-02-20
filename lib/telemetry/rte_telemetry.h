@@ -289,7 +289,7 @@ rte_tel_data_alloc(void);
  *
  * @param data
  *  Pointer to container.
- *.
+ *  If NULL then, the function does nothing.
  */
 void
 rte_tel_data_free(struct rte_tel_data *data);
