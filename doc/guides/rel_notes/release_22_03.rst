@@ -99,6 +99,12 @@ New Features
   The information of these properties is important for debug.
   As the information is private, a dump function is introduced.
 
+* ** Added functions to configure Flow API engine
+
+  * ethdev: Added ``rte_flow_configure`` API to configure Flow Management
+    engine, allowing to pre-allocate some resources for better performance.
+    Added ``rte_flow_info_get`` API to retrieve available resources.
+
 * **Updated AF_XDP PMD**
 
   * Added support for libxdp >=v1.2.2.
