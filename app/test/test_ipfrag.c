@@ -29,9 +29,95 @@ test_ipfrag(void)
 #define NUM_MBUFS 128
 #define BURST 32
 
+/* IP options */
+#define RTE_IPOPT_EOL				0
+#define RTE_IPOPT_NOP				1
+#define RTE_IPOPT_COPIED(v)			((v) & 0x80)
+#define RTE_IPOPT_MAX_LEN			40
+
+#define RTE_IPOPT_MANUAL
+
+#ifdef RTE_IPOPT_MANUAL
+uint8_t expected_first_frag_ipv4_opts[] = {
+	0x07, 0x0b, 0x04, 0x00,
+	0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x83,
+	0x07, 0x04, 0xc0, 0xa8,
+	0xe3, 0x96, 0x00, 0x00,
+};
+
+uint8_t expected_sub_frag_ipv4_opts[] = {
+	0x83, 0x07, 0x04, 0xc0,
+	0xa8, 0xe3, 0x96, 0x00,
+};
+#else
+/**
+ * IPv4 Options
+ */
+struct test_ipv4_opt {
+	__extension__
+	union {
+		uint8_t type;		    /**< option type */
+		struct {
+#if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
+			uint8_t number:5;   /**< option number */
+			uint8_t category:2; /**< option class */
+			uint8_t copied:1;   /**< option copy flag */
+#elif RTE_BYTE_ORDER == RTE_BIG_ENDIAN
+			uint8_t copied:1;   /**< option copy flag */
+			uint8_t category:2; /**< option class */
+			uint8_t number:5;   /**< option number */
+#endif
+		} s_type;
+	};
+	uint8_t length;			    /**< option length */
+	uint8_t pointer;		    /**< option pointer */
+	uint8_t data[37];		    /**< option data */
+} __rte_packed;
+
+struct test_ipv4_opt test_ipv4_opts[] = {
+	{
+		.s_type.copied = 0,
+		.s_type.category = 0,
+		.s_type.number = 7,
+		.length = 11,
+		.pointer = 4,
+	},
+	{
+		.s_type.copied = 1,
+		.s_type.category = 0,
+		.s_type.number = 3,
+		.length = 7,
+		.pointer = 4,
+		.data[0] = 0xc0,
+		.data[1] = 0xa8,
+		.data[2] = 0xe3,
+		.data[3] = 0x96,
+	},
+};
+#endif
+
+struct test_opt_data {
+	bool is_first_frag;		 /**< offset is 0 */
+	uint16_t len;			 /**< option data len */
+	uint8_t data[RTE_IPOPT_MAX_LEN]; /**< option data */
+};
+
 static struct rte_mempool *pkt_pool,
 			  *direct_pool,
 			  *indirect_pool;
+
+static inline void
+hex_to_str(uint8_t *hex, uint16_t len, char *str)
+{
+	int i;
+
+	for (i = 0; i < len; i++) {
+		sprintf(str, "%02x", hex[i]);
+		str += 2;
+	}
+	*str = 0;
+}
 
 static int
 setup_buf_pool(void)
@@ -99,23 +185,78 @@ static void ut_teardown(void)
 {
 }
 
+static inline void
+test_get_ipv4_opt(bool is_first_frag,
+	struct test_opt_data *expected_opt)
+{
+#ifdef RTE_IPOPT_MANUAL
+	if (is_first_frag) {
+		expected_opt->len = sizeof(expected_first_frag_ipv4_opts);
+		rte_memcpy(expected_opt->data, expected_first_frag_ipv4_opts,
+			sizeof(expected_first_frag_ipv4_opts));
+	} else {
+		expected_opt->len = sizeof(expected_sub_frag_ipv4_opts);
+		rte_memcpy(expected_opt->data, expected_sub_frag_ipv4_opts,
+			sizeof(expected_sub_frag_ipv4_opts));
+	}
+#else
+	uint16_t i;
+	uint16_t pos = 0;
+	expected_opt->len = 0;
+
+	for (i = 0; i < RTE_DIM(test_ipv4_opts); i++) {
+		if (unlikely(pos + test_ipv4_opts[i].length >
+				RTE_IPOPT_MAX_LEN))
+			return;
+
+		if (is_first_frag) {
+			rte_memcpy(expected_opt->data + pos, &test_ipv4_opts[i],
+				test_ipv4_opts[i].length);
+			expected_opt->len += test_ipv4_opts[i].length;
+			pos += test_ipv4_opts[i].length;
+		} else {
+			if (test_ipv4_opts[i].s_type.copied) {
+				rte_memcpy(expected_opt->data + pos,
+					&test_ipv4_opts[i],
+					test_ipv4_opts[i].length);
+				expected_opt->len += test_ipv4_opts[i].length;
+				pos += test_ipv4_opts[i].length;
+			}
+		}
+	}
+
+	expected_opt->len = RTE_ALIGN_CEIL(expected_opt->len, 4);
+	memset(expected_opt->data + pos, RTE_IPOPT_EOL,
+		expected_opt->len - pos);
+#endif
+}
+
 static void
-v4_allocate_packet_of(struct rte_mbuf *b, int fill,
-		      size_t s, int df, uint8_t mf, uint16_t off,
-		      uint8_t ttl, uint8_t proto, uint16_t pktid)
+v4_allocate_packet_of(struct rte_mbuf *b, int fill, size_t s,
+	int df, uint8_t mf, uint16_t off, uint8_t ttl, uint8_t proto,
+	uint16_t pktid, bool have_opt, bool is_first_frag)
 {
 	/* Create a packet, 2k bytes long */
 	b->data_off = 0;
 	char *data = rte_pktmbuf_mtod(b, char *);
-	rte_be16_t fragment_offset = 0;	/**< fragmentation offset */
+	rte_be16_t fragment_offset = 0;	/* fragmentation offset */
+	uint16_t iph_len;
+	struct test_opt_data opt;
 
-	memset(data, fill, sizeof(struct rte_ipv4_hdr) + s);
+	opt.len = 0;
+
+	if (have_opt)
+		test_get_ipv4_opt(is_first_frag, &opt);
+
+	iph_len = sizeof(struct rte_ipv4_hdr) + opt.len;
+	memset(data, fill, iph_len + s);
 
 	struct rte_ipv4_hdr *hdr = (struct rte_ipv4_hdr *)data;
 
-	hdr->version_ihl = 0x45; /* standard IP header... */
+	hdr->version_ihl = 0x40; /* ipv4 */
+	hdr->version_ihl += (iph_len / 4);
 	hdr->type_of_service = 0;
-	b->pkt_len = s + sizeof(struct rte_ipv4_hdr);
+	b->pkt_len = s + iph_len;
 	b->data_len = b->pkt_len;
 	hdr->total_length = rte_cpu_to_be_16(b->pkt_len);
 	hdr->packet_id = rte_cpu_to_be_16(pktid);
@@ -142,6 +283,8 @@ v4_allocate_packet_of(struct rte_mbuf *b, int fill,
 	hdr->hdr_checksum = 0;
 	hdr->src_addr = rte_cpu_to_be_32(0x8080808);
 	hdr->dst_addr = rte_cpu_to_be_32(0x8080404);
+
+	rte_memcpy(hdr + 1, opt.data, opt.len);
 }
 
 static void
@@ -198,6 +341,43 @@ test_get_offset(struct rte_mbuf **mb, int32_t len,
 	}
 }
 
+static inline void
+test_get_frag_opt(struct rte_mbuf **mb, int32_t num,
+	struct test_opt_data *opt, int ipv)
+{
+	int32_t i;
+
+	for (i = 0; i < num; i++) {
+		if (ipv == 4) {
+			struct rte_ipv4_hdr *iph =
+			    rte_pktmbuf_mtod(mb[i], struct rte_ipv4_hdr *);
+			uint16_t header_len = (iph->version_ihl &
+				RTE_IPV4_HDR_IHL_MASK) *
+				RTE_IPV4_IHL_MULTIPLIER;
+			uint16_t opt_len = header_len -
+				sizeof(struct rte_ipv4_hdr);
+
+			if ((rte_be_to_cpu_16(iph->fragment_offset) &
+				    RTE_IPV4_HDR_OFFSET_MASK) == 0)
+				opt->is_first_frag = true;
+			else
+				opt->is_first_frag = false;
+
+			if (opt_len && (opt_len <= RTE_IPOPT_MAX_LEN)) {
+				char *iph_opt = rte_pktmbuf_mtod_offset(mb[i],
+				    char *, sizeof(struct rte_ipv4_hdr));
+				opt->len = opt_len;
+				rte_memcpy(opt->data, iph_opt, opt_len);
+			} else {
+				opt->len = RTE_IPOPT_MAX_LEN;
+				memset(opt->data, RTE_IPOPT_EOL,
+				    sizeof(opt->data));
+			}
+			opt++;
+		}
+	}
+}
+
 static int
 test_ip_frag(void)
 {
@@ -217,32 +397,42 @@ test_ip_frag(void)
 		uint16_t pkt_id;
 		int      expected_frags;
 		uint16_t expected_fragment_offset[BURST];
+		bool have_opt;
+		bool is_first_frag;
 	} tests[] = {
 		 {4, 1280, 1400, 0, 0, 0, 64, IPPROTO_ICMP, RND_ID,       2,
-		  {0x2000, 0x009D}},
+		  {0x2000, 0x009D}, 0},
 		 {4, 1280, 1400, 0, 0, 0, 64, IPPROTO_ICMP, 0,            2,
-		  {0x2000, 0x009D}},
+		  {0x2000, 0x009D}, 0},
 		 {4,  600, 1400, 0, 0, 0, 64, IPPROTO_ICMP, RND_ID,       3,
-		  {0x2000, 0x2048, 0x0090}},
+		  {0x2000, 0x2048, 0x0090}, 0},
 		 {4, 4, 1400, 0, 0, 0, 64, IPPROTO_ICMP, RND_ID,    -EINVAL},
 		 {4, 600, 1400, 1, 0, 0, 64, IPPROTO_ICMP, RND_ID, -ENOTSUP},
 		 {4, 600, 1400, 0, 0, 0, 0, IPPROTO_ICMP, RND_ID,         3,
-		  {0x2000, 0x2048, 0x0090}},
+		  {0x2000, 0x2046, 0x008C}, 1, 1},
+		 /* The first fragment */
+		 {4, 68, 104, 0, 1, 0, 0, IPPROTO_ICMP, RND_ID,           5,
+		  {0x2000, 0x2003, 0x2006, 0x2009, 0x200C}, 1, 1},
+		 /* The middle fragment */
 		 {4, 68, 104, 0, 1, 13, 0, IPPROTO_ICMP, RND_ID,          3,
-		  {0x200D, 0x2013, 0x2019}},
-
+		  {0x200D, 0x2012, 0x2017}, 1, 0},
+		 /* The last fragment */
+		 {4, 68, 104, 0, 0, 26, 0, IPPROTO_ICMP, RND_ID,          3,
+		  {0x201A, 0x201F, 0x0024}, 1, 0},
 		 {6, 1280, 1400, 0, 0, 0, 64, IPPROTO_ICMP, RND_ID,       2,
-		  {0x0001, 0x04D0}},
+		  {0x0001, 0x04D0}, 0},
 		 {6, 1300, 1400, 0, 0, 0, 64, IPPROTO_ICMP, RND_ID,       2,
-		  {0x0001, 0x04E0}},
+		  {0x0001, 0x04E0}, 0},
 		 {6, 4, 1400, 0, 0, 0, 64, IPPROTO_ICMP, RND_ID,    -EINVAL},
 		 {6, 1300, 1400, 0, 0, 0, 0, IPPROTO_ICMP, RND_ID,        2,
-		  {0x0001, 0x04E0}},
+		  {0x0001, 0x04E0}, 0},
 	};
 
 	for (i = 0; i < RTE_DIM(tests); i++) {
 		int32_t len = 0;
 		uint16_t fragment_offset[BURST];
+		struct test_opt_data opt_res[BURST];
+		struct test_opt_data opt_exp;
 		uint16_t pktid = tests[i].pkt_id;
 		struct rte_mbuf *pkts_out[BURST];
 		struct rte_mbuf *b = rte_pktmbuf_alloc(pkt_pool);
@@ -261,7 +451,9 @@ test_ip_frag(void)
 					      tests[i].set_of,
 					      tests[i].ttl,
 					      tests[i].proto,
-					      pktid);
+					      pktid,
+					      tests[i].have_opt,
+					      tests[i].is_first_frag);
 		} else if (tests[i].ipv == 6) {
 			v6_allocate_packet_of(b, 0x41414141,
 					      tests[i].pkt_size,
@@ -286,17 +478,21 @@ test_ip_frag(void)
 		if (len > 0) {
 			test_get_offset(pkts_out, len,
 			    fragment_offset, tests[i].ipv);
+			if (tests[i].have_opt)
+				test_get_frag_opt(pkts_out, len,
+					opt_res,
+					tests[i].ipv);
 			test_free_fragments(pkts_out, len);
 		}
 
-		printf("%zd: checking %d with %d\n", i, len,
+		printf("[check frag number]%zd: checking %d with %d\n", i, len,
 		       tests[i].expected_frags);
 		RTE_TEST_ASSERT_EQUAL(len, tests[i].expected_frags,
 				      "Failed case %zd.\n", i);
 
 		if (len > 0) {
 			for (j = 0; j < (size_t)len; j++) {
-				printf("%zd-%zd: checking %d with %d\n",
+				printf("[check offset]%zd-%zd: checking %d with %d\n",
 				    i, j, fragment_offset[j],
 				    rte_cpu_to_be_16(
 					tests[i].expected_fragment_offset[j]));
@@ -304,6 +500,35 @@ test_ip_frag(void)
 				    rte_cpu_to_be_16(
 					tests[i].expected_fragment_offset[j]),
 				    "Failed case %zd.\n", i);
+			}
+
+			if (tests[i].have_opt && (tests[i].ipv == 4)) {
+				for (j = 0; j < (size_t)len; j++) {
+					char opt_res_str[2 *
+						RTE_IPOPT_MAX_LEN + 1];
+					char opt_exp_str[2 *
+						RTE_IPOPT_MAX_LEN + 1];
+
+					test_get_ipv4_opt(
+						opt_res[j].is_first_frag,
+						&opt_exp);
+					hex_to_str(opt_res[j].data,
+						opt_res[j].len,
+						opt_res_str);
+					hex_to_str(opt_exp.data,
+						opt_exp.len,
+						opt_exp_str);
+
+					printf(
+						"[check ipv4 option]%zd-%zd: checking (%u)%s with (%u)%s\n",
+						i, j,
+						opt_res[j].len, opt_res_str,
+						opt_exp.len, opt_exp_str);
+						RTE_TEST_ASSERT_SUCCESS(
+							strcmp(opt_res_str,
+								opt_exp_str),
+						"Failed case %zd.\n", i);
+				}
 			}
 		}
 

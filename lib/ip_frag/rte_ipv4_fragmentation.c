@@ -12,6 +12,12 @@
 
 #include "ip_frag_common.h"
 
+/* IP options */
+#define RTE_IPOPT_EOL				0
+#define RTE_IPOPT_NOP				1
+#define RTE_IPOPT_COPIED(v)			((v) & 0x80)
+#define RTE_IPOPT_MAX_LEN			40
+
 /* Fragment Offset */
 #define	RTE_IPV4_HDR_DF_SHIFT			14
 #define	RTE_IPV4_HDR_MF_SHIFT			13
@@ -21,6 +27,8 @@
 #define	IPV4_HDR_MF_MASK			(1 << RTE_IPV4_HDR_MF_SHIFT)
 
 #define	IPV4_HDR_FO_ALIGN			(1 << RTE_IPV4_HDR_FO_SHIFT)
+
+#define	RTE_IPV4_HDR_MAX_LEN		60
 
 static inline void __fill_ipv4hdr_frag(struct rte_ipv4_hdr *dst,
 		const struct rte_ipv4_hdr *src, uint16_t header_len,
@@ -39,6 +47,50 @@ static inline void __free_fragments(struct rte_mbuf *mb[], uint32_t num)
 	uint32_t i;
 	for (i = 0; i != num; i++)
 		rte_pktmbuf_free(mb[i]);
+}
+
+static inline void __create_ipopt_frag_hdr(uint8_t *iph,
+	uint16_t *ipopt_len, uint8_t *ipopt_frag_hdr)
+{
+	uint16_t len = *ipopt_len;
+	struct rte_ipv4_hdr *iph_opt = (struct rte_ipv4_hdr *)ipopt_frag_hdr;
+
+	*ipopt_len = 0;
+	rte_memcpy(ipopt_frag_hdr, iph, sizeof(struct rte_ipv4_hdr));
+	iph_opt->ihl = sizeof(struct rte_ipv4_hdr) / RTE_IPV4_IHL_MULTIPLIER;
+	ipopt_frag_hdr += sizeof(struct rte_ipv4_hdr);
+
+	if (unlikely(len > RTE_IPOPT_MAX_LEN))
+		return;
+
+	uint8_t *p_opt = iph + sizeof(struct rte_ipv4_hdr);
+
+	while (len > 0) {
+		if (unlikely(*p_opt == RTE_IPOPT_NOP)) {
+			len--;
+			p_opt++;
+			continue;
+		} else if (unlikely(*p_opt == RTE_IPOPT_EOL))
+			break;
+
+		if (unlikely(p_opt[1] < 2 || p_opt[1] > len))
+			break;
+
+		if (RTE_IPOPT_COPIED(*p_opt)) {
+			rte_memcpy(ipopt_frag_hdr + *ipopt_len,
+				p_opt, p_opt[1]);
+			*ipopt_len += p_opt[1];
+		}
+
+		len -= p_opt[1];
+		p_opt += p_opt[1];
+	}
+
+	len = RTE_ALIGN_CEIL(*ipopt_len, RTE_IPV4_IHL_MULTIPLIER);
+	memset(ipopt_frag_hdr + *ipopt_len,
+		RTE_IPOPT_EOL, len - *ipopt_len);
+	*ipopt_len = len;
+	iph_opt->ihl += len / RTE_IPV4_IHL_MULTIPLIER;
 }
 
 /**
@@ -76,6 +128,8 @@ rte_ipv4_fragment_packet(struct rte_mbuf *pkt_in,
 	uint32_t more_in_segs;
 	uint16_t fragment_offset, flag_offset, frag_size, header_len;
 	uint16_t frag_bytes_remaining;
+	uint8_t ipopt_frag_hdr[RTE_IPV4_HDR_MAX_LEN];
+	uint16_t ipopt_len;
 
 	/*
 	 * Formal parameter checking.
@@ -117,6 +171,7 @@ rte_ipv4_fragment_packet(struct rte_mbuf *pkt_in,
 	in_seg_data_pos = header_len;
 	out_pkt_pos = 0;
 	fragment_offset = 0;
+	ipopt_len = header_len - sizeof(struct rte_ipv4_hdr);
 
 	more_in_segs = 1;
 	while (likely(more_in_segs)) {
@@ -188,10 +243,26 @@ rte_ipv4_fragment_packet(struct rte_mbuf *pkt_in,
 		    (uint16_t)out_pkt->pkt_len,
 		    flag_offset, fragment_offset, more_in_segs);
 
-		fragment_offset = (uint16_t)(fragment_offset +
-		    out_pkt->pkt_len - header_len);
+		/* Create a separate IP header to handle frag options. */
+		if (unlikely((fragment_offset == 0) &&
+			    ((flag_offset & RTE_IPV4_HDR_OFFSET_MASK) == 0) &&
+			    (ipopt_len))) {
+			__create_ipopt_frag_hdr((uint8_t *)in_hdr,
+				&ipopt_len, ipopt_frag_hdr);
 
-		out_pkt->l3_len = header_len;
+			fragment_offset = (uint16_t)(fragment_offset +
+				out_pkt->pkt_len - header_len);
+
+			out_pkt->l3_len = header_len;
+
+			header_len = sizeof(struct rte_ipv4_hdr) + ipopt_len;
+			in_hdr = (struct rte_ipv4_hdr *)ipopt_frag_hdr;
+		} else {
+			fragment_offset = (uint16_t)(fragment_offset +
+			    out_pkt->pkt_len - header_len);
+
+			out_pkt->l3_len = header_len;
+		}
 
 		/* Write the fragment to the output list */
 		pkts_out[out_pkt_pos] = out_pkt;
