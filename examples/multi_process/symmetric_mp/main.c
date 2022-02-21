@@ -232,6 +232,20 @@ smp_port_init(uint16_t port, struct rte_mempool *mbuf_pool,
 	}
 
 	retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf);
+	if (retval == -EINVAL) {
+		printf("Maybe port %u don't have csum offloads capabilities, "
+			"so clear csum config and try again.\n", port);
+		port_conf.rxmode.offloads &= ~(RTE_ETH_RX_OFFLOAD_CHECKSUM);
+		retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf);
+	}
+
+	if (retval == -ENOTSUP) {
+		printf("Maybe port %u don't support rss, "
+			"so clear rss config and try again.\n", port);
+		port_conf.rxmode.mq_mode &= ~(RTE_ETH_MQ_RX_RSS);
+		retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf);
+	}
+
 	if (retval < 0)
 		return retval;
 
