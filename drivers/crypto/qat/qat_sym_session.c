@@ -1400,18 +1400,17 @@ static int qat_sym_do_precomputes(enum icp_qat_hw_auth_algo hash_alg,
 		memset(p_state_buf, 0, ICP_QAT_HW_GALOIS_H_SZ +
 				ICP_QAT_HW_GALOIS_LEN_A_SZ +
 				ICP_QAT_HW_GALOIS_E_CTR0_SZ);
+		if (AES_set_encrypt_key(auth_key, auth_keylen << 3,
+			&enc_key) != 0) {
+			return -EFAULT;
+		}
 		in = rte_zmalloc("working mem for key",
 				ICP_QAT_HW_GALOIS_H_SZ, 16);
 		if (in == NULL) {
 			QAT_LOG(ERR, "Failed to alloc memory");
 			return -ENOMEM;
 		}
-
 		memset(in, 0, ICP_QAT_HW_GALOIS_H_SZ);
-		if (AES_set_encrypt_key(auth_key, auth_keylen << 3,
-			&enc_key) != 0) {
-			return -EFAULT;
-		}
 		AES_encrypt(in, out, &enc_key);
 		*p_state_len = ICP_QAT_HW_GALOIS_H_SZ +
 				ICP_QAT_HW_GALOIS_LEN_A_SZ +
