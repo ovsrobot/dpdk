@@ -86,6 +86,7 @@ ulp_fc_mgr_init(struct bnxt_ulp_context *ctxt)
 
 	rc = pthread_mutex_init(&ulp_fc_info->fc_lock, NULL);
 	if (rc) {
+		rte_free(ulp_fc_info);
 		PMD_DRV_LOG(ERR, "Failed to initialize fc mutex\n");
 		goto error;
 	}
