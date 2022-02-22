@@ -2013,6 +2013,7 @@ iavf_search_pattern_match_item(const struct rte_flow_item pattern[],
 	pattern_match_item = rte_zmalloc("iavf_pattern_match_item",
 				sizeof(struct iavf_pattern_match_item), 0);
 	if (!pattern_match_item) {
+		rte_free(items);
 		rte_flow_error_set(error, ENOMEM, RTE_FLOW_ERROR_TYPE_HANDLE,
 				   NULL, "Failed to allocate memory.");
 		return NULL;
