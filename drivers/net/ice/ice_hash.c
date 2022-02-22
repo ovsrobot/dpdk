@@ -658,7 +658,7 @@ ice_hash_parse_raw_pattern(struct ice_adapter *ad,
 	uint8_t spec_len, pkt_len;
 	uint8_t tmp_val = 0;
 	uint8_t tmp_c = 0;
-	int i, j;
+	int i, j, ret = 0;
 
 	raw_spec = item->spec;
 	raw_mask = item->mask;
@@ -675,9 +675,10 @@ ice_hash_parse_raw_pattern(struct ice_adapter *ad,
 		return -ENOMEM;
 
 	msk_buf = rte_zmalloc(NULL, pkt_len, 0);
-	if (!msk_buf)
-		return -ENOMEM;
-
+	if (!msk_buf) {
+		ret = -ENOMEM;
+		goto exit;
+	}
 	/* convert string to int array */
 	for (i = 0, j = 0; i < spec_len; i += 2, j++) {
 		tmp_c = raw_spec->pattern[i];
@@ -713,21 +714,28 @@ ice_hash_parse_raw_pattern(struct ice_adapter *ad,
 			msk_buf[j] = tmp_val * 16 + tmp_c - '0';
 	}
 
-	if (ice_parser_create(&ad->hw, &psr))
-		return -rte_errno;
-	if (ice_parser_run(psr, pkt_buf, pkt_len, &rslt))
-		return -rte_errno;
+	if (ice_parser_create(&ad->hw, &psr)) {
+		ret = -rte_errno;
+		goto exit;
+	}
+	if (ice_parser_run(psr, pkt_buf, pkt_len, &rslt)) {
+		ret = -rte_errno;
+		goto exit;
+	}
 	ice_parser_destroy(psr);
 
 	if (ice_parser_profile_init(&rslt, pkt_buf, msk_buf,
-		pkt_len, ICE_BLK_RSS, true, &prof))
-		return -rte_errno;
+		pkt_len, ICE_BLK_RSS, true, &prof)) {
+		ret = -rte_errno;
+		goto exit;
+	}
 
 	rte_memcpy(&meta->raw.prof, &prof, sizeof(prof));
 
+exit:
 	rte_free(pkt_buf);
 	rte_free(msk_buf);
-	return 0;
+	return ret;
 }
 
 static void
