@@ -139,6 +139,7 @@ bnx2x_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	dma = ring_dma_zone_reserve(dev, "bnx2x_rcq", queue_idx, dma_size, socket_id);
 	if (NULL == dma) {
 		PMD_RX_LOG(ERR, "RCQ  alloc failed");
+		bnx2x_rx_queue_release(rxq);
 		return -ENOMEM;
 	}
 	fp->rx_comp_mapping = rxq->cq_ring_phys_addr = (uint64_t)dma->iova;
