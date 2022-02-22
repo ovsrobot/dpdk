@@ -1920,16 +1920,16 @@ ice_register_parser(struct ice_flow_parser *parser,
 	struct ice_flow_parser_node *existing_node;
 	void *temp;
 
+	list = ice_get_parser_list(parser, ad);
+	if (list == NULL)
+		return -EINVAL;
+
 	parser_node = rte_zmalloc("ice_parser", sizeof(*parser_node), 0);
 	if (parser_node == NULL) {
 		PMD_DRV_LOG(ERR, "Failed to allocate memory.");
 		return -ENOMEM;
 	}
 	parser_node->parser = parser;
-
-	list = ice_get_parser_list(parser, ad);
-	if (list == NULL)
-		return -EINVAL;
 
 	if (ad->devargs.pipe_mode_support) {
 		TAILQ_INSERT_TAIL(list, parser_node, node);
@@ -1961,6 +1961,7 @@ ice_register_parser(struct ice_flow_parser *parser,
 		} else if (parser->engine->type == ICE_FLOW_ENGINE_ACL) {
 			TAILQ_INSERT_HEAD(list, parser_node, node);
 		} else {
+			rte_free(parser_node);
 			return -EINVAL;
 		}
 	}
