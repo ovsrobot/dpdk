@@ -530,7 +530,7 @@ ice_acl_create_filter(struct ice_adapter *ad,
 				   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 				   "failed to set hw configure.");
 		ret = -rte_errno;
-		return ret;
+		goto err_acl_set_input;
 	}
 
 	if (flow_type == ICE_FLTR_PTYPE_NONF_IPV4_OTHER) {
