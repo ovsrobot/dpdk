@@ -810,6 +810,7 @@ dpaa_eth_mbuf_to_sg_fd(struct rte_mbuf *mbuf,
 	}
 	if (temp->buf_len < ((mbuf->nb_segs * sizeof(struct qm_sg_entry))
 				+ temp->data_off)) {
+		rte_pktmbuf_free(temp);
 		DPAA_PMD_ERR("Insufficient space in mbuf for SG entries");
 		return -1;
 	}
