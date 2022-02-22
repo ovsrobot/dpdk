@@ -314,6 +314,10 @@ ntb_rxq_setup(struct rte_rawdev *dev,
 	if (conf_size != sizeof(*rxq_conf))
 		return -EINVAL;
 
+	if (rxq_conf->rx_mp == NULL) {
+		NTB_LOG(ERR, "Invalid null mempool pointer.");
+		return -EINVAL;
+	}
 	/* Allocate the rx queue data structure */
 	rxq = rte_zmalloc_socket("ntb rx queue",
 				 sizeof(struct ntb_rx_queue),
@@ -325,10 +329,6 @@ ntb_rxq_setup(struct rte_rawdev *dev,
 		return -ENOMEM;
 	}
 
-	if (rxq_conf->rx_mp == NULL) {
-		NTB_LOG(ERR, "Invalid null mempool pointer.");
-		return -EINVAL;
-	}
 	rxq->nb_rx_desc = rxq_conf->nb_desc;
 	rxq->mpool = rxq_conf->rx_mp;
 	rxq->port_id = dev->dev_id;
@@ -445,6 +445,7 @@ ntb_txq_setup(struct rte_rawdev *dev,
 		NTB_LOG(ERR, "tx_free_thresh must be less than nb_desc - 3. "
 			"(tx_free_thresh=%u qp_id=%u)", txq->tx_free_thresh,
 			qp_id);
+		ntb_txq_release(txq);
 		return -EINVAL;
 	}
 
