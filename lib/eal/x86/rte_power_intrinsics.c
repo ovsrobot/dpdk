@@ -128,6 +128,14 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 			: "D"(0), /* enter C0.2 */
 			  "a"(tsc_l), "d"(tsc_h));
 
+	cur_value = __get_umwait_val(pmc->addr, pmc->size);
+
+	/* check if core has been waked up by changing monitoring value */
+	if (pmc->fn(cur_value, pmc->opaque) != 0)
+		RTE_LOG(INFO, EAL,
+			"lcore %u is waked up from value change\n",
+			rte_lcore_id());
+
 end:
 	/* erase sleep address */
 	rte_spinlock_lock(&s->lock);
