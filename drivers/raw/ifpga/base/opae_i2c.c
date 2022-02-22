@@ -479,6 +479,7 @@ struct altera_i2c_dev *altera_i2c_probe(void *base)
 
 	if (dev->i2c_param.devid != 0xEE011) {
 		dev_err(dev, "find a invalid i2c master\n");
+		opae_free(dev);
 		return NULL;
 	}
 
@@ -494,8 +495,10 @@ struct altera_i2c_dev *altera_i2c_probe(void *base)
 	dev->i2c_clk = dev->i2c_param.ref_clk * 1000000;
 	dev->xfer = altera_i2c_xfer;
 
-	if (pthread_mutex_init(&dev->lock, NULL))
+	if (pthread_mutex_init(&dev->lock, NULL)) {
+		opae_free(dev);
 		return NULL;
+	}
 	dev->mutex = &dev->lock;
 
 	altera_i2c_hardware_init(dev);

@@ -297,6 +297,7 @@ struct eth_group_device *eth_group_probe(void *base)
 
 	if (eth_group_hw_init(dev)) {
 		dev_err(dev, "eth group hw init fail\n");
+		opae_free(dev);
 		return NULL;
 	}
 

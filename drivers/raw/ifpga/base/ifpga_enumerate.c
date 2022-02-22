@@ -100,12 +100,16 @@ build_info_add_sub_feature(struct build_feature_devs_info *binfo,
 			(unsigned long long)feature->phys_addr, size);
 
 	if (vec_cnt) {
-		if (vec_start + vec_cnt <= vec_start)
+		if (vec_start + vec_cnt <= vec_start) {
+			opae_free(feature);
 			return -EINVAL;
+		}
 
 		ctx = zmalloc(sizeof(*ctx) * vec_cnt);
-		if (!ctx)
+		if (!ctx) {
+			opae_free(feature);
 			return -ENOMEM;
+		}
 
 		for (i = 0; i < vec_cnt; i++) {
 			ctx[i].eventfd = -1;
@@ -130,6 +134,8 @@ build_info_add_sub_feature(struct build_feature_devs_info *binfo,
 		TAILQ_INSERT_TAIL(&hw->port[port_id].feature_list,
 				feature, next);
 	} else {
+		opae_free(feature->ctx);
+		opae_free(feature);
 		return -EFAULT;
 	}
 	return ret;
