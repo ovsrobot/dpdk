@@ -121,6 +121,10 @@ New Features
 
   * Added LED OEM support.
 
+* **Updated Marvell cnxk ethdev PMD.**
+
+  * Added queue based priority flow control support for CN9K & CN10K.
+
 * **Added an API for private user data in asymmetric crypto session.**
 
   An API was added to get/set an asymmetric crypto session's user data.
