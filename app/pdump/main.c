@@ -901,6 +901,15 @@ dump_packets_core(void *arg)
 }
 
 static inline void
+get_next_core(uint32_t *lcore_id)
+{
+	*lcore_id = rte_get_next_lcore(*lcore_id, 1, 0);
+	if (*lcore_id == RTE_MAX_LCORE)
+		rte_exit(EXIT_FAILURE,
+				"Max core limit %u reached for packet capture", *lcore_id);
+}
+
+static inline void
 dump_packets(void)
 {
 	int i;
@@ -930,12 +939,12 @@ dump_packets(void)
 		return;
 	}
 
-	lcore_id = rte_get_next_lcore(lcore_id, 1, 0);
+	get_next_core(&lcore_id);
 
 	for (i = 0; i < num_tuples; i++) {
 		rte_eal_remote_launch(dump_packets_core,
 				&pdump_t[i], lcore_id);
-		lcore_id = rte_get_next_lcore(lcore_id, 1, 0);
+		get_next_core(&lcore_id);
 
 		if (rte_eal_wait_lcore(lcore_id) < 0)
 			rte_exit(EXIT_FAILURE, "failed to wait\n");
