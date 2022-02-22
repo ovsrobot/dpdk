@@ -5374,6 +5374,7 @@ int bnxt_hwrm_func_backing_store_qcaps(struct bnxt *bp)
 			    RTE_CACHE_LINE_SIZE);
 	if (!ctx_pg) {
 		rc = -ENOMEM;
+		rte_free(ctx);
 		goto ctx_err;
 	}
 	for (i = 0; i < tqm_rings; i++, ctx_pg++)
