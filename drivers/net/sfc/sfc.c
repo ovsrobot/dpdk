@@ -1423,8 +1423,10 @@ sfc_hw_switch_id_init(struct sfc_adapter *sa,
 		return ENOMEM;
 
 	rc = efx_nic_get_board_info(sa->nic, &board_info);
-	if (rc != 0)
+	if (rc != 0) {
+		rte_free(id);
 		return rc;
+	}
 
 	memcpy(id->board_sn, board_info.enbi_serial, sizeof(id->board_sn));
 
