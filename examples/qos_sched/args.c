@@ -433,7 +433,7 @@ app_parse_args(int argc, char **argv)
 			return -1;
 		}
 	}
-	app_used_core_mask |= 1u << app_main_core;
+	app_used_core_mask |= 1lu << app_main_core;
 
 	if ((app_used_core_mask != app_eal_core_mask()) ||
 			(app_main_core != rte_get_main_lcore())) {
