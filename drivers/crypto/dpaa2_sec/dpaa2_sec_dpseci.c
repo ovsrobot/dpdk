@@ -2037,12 +2037,15 @@ dpaa2_sec_queue_pair_setup(struct rte_cryptodev *dev, uint16_t qp_id,
 		RTE_CACHE_LINE_SIZE);
 	if (!qp->rx_vq.q_storage) {
 		DPAA2_SEC_ERR("malloc failed for q_storage");
+		rte_free(qp);
 		return -ENOMEM;
 	}
 	memset(qp->rx_vq.q_storage, 0, sizeof(struct queue_storage_info_t));
 
 	if (dpaa2_alloc_dq_storage(qp->rx_vq.q_storage)) {
 		DPAA2_SEC_ERR("Unable to allocate dequeue storage");
+		rte_free(qp->rx_vq.q_storage);
+		rte_free(qp);
 		return -ENOMEM;
 	}
 
