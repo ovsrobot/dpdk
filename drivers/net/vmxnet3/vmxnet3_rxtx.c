@@ -1057,10 +1057,12 @@ vmxnet3_dev_tx_queue_setup(struct rte_eth_dev *dev,
 
 	/* Tx vmxnet ring length should be between 512-4096 */
 	if (nb_desc < VMXNET3_DEF_TX_RING_SIZE) {
+		rte_free(txq);
 		PMD_INIT_LOG(ERR, "VMXNET3 Tx Ring Size Min: %u",
 			     VMXNET3_DEF_TX_RING_SIZE);
 		return -EINVAL;
 	} else if (nb_desc > VMXNET3_TX_RING_MAX_SIZE) {
+		rte_free(txq);
 		PMD_INIT_LOG(ERR, "VMXNET3 Tx Ring Size Max: %u",
 			     VMXNET3_TX_RING_MAX_SIZE);
 		return -EINVAL;
@@ -1084,6 +1086,7 @@ vmxnet3_dev_tx_queue_setup(struct rte_eth_dev *dev,
 	mz = rte_eth_dma_zone_reserve(dev, "txdesc", queue_idx, size,
 				      VMXNET3_RING_BA_ALIGN, socket_id);
 	if (mz == NULL) {
+		rte_free(txq);
 		PMD_INIT_LOG(ERR, "ERROR: Creating queue descriptors zone");
 		return -ENOMEM;
 	}
@@ -1108,6 +1111,7 @@ vmxnet3_dev_tx_queue_setup(struct rte_eth_dev *dev,
 	ring->buf_info = rte_zmalloc("tx_ring_buf_info",
 				     ring->size * sizeof(vmxnet3_buf_info_t), RTE_CACHE_LINE_SIZE);
 	if (ring->buf_info == NULL) {
+		rte_free(txq);
 		PMD_INIT_LOG(ERR, "ERROR: Creating tx_buf_info structure");
 		return -ENOMEM;
 	}
@@ -1163,9 +1167,11 @@ vmxnet3_dev_rx_queue_setup(struct rte_eth_dev *dev,
 
 	/* Rx vmxnet rings length should be between 256-4096 */
 	if (nb_desc < VMXNET3_DEF_RX_RING_SIZE) {
+		rte_free(rxq);
 		PMD_INIT_LOG(ERR, "VMXNET3 Rx Ring Size Min: 256");
 		return -EINVAL;
 	} else if (nb_desc > VMXNET3_RX_RING_MAX_SIZE) {
+		rte_free(rxq);
 		PMD_INIT_LOG(ERR, "VMXNET3 Rx Ring Size Max: 4096");
 		return -EINVAL;
 	} else {
@@ -1195,6 +1201,7 @@ vmxnet3_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	mz = rte_eth_dma_zone_reserve(dev, "rxdesc", queue_idx, size,
 				      VMXNET3_RING_BA_ALIGN, socket_id);
 	if (mz == NULL) {
+		rte_free(rxq);
 		PMD_INIT_LOG(ERR, "ERROR: Creating queue descriptors zone");
 		return -ENOMEM;
 	}
@@ -1233,6 +1240,7 @@ vmxnet3_dev_rx_queue_setup(struct rte_eth_dev *dev,
 					     ring->size * sizeof(vmxnet3_buf_info_t),
 					     RTE_CACHE_LINE_SIZE);
 		if (ring->buf_info == NULL) {
+			rte_free(rxq);
 			PMD_INIT_LOG(ERR, "ERROR: Creating rx_buf_info structure");
 			return -ENOMEM;
 		}
