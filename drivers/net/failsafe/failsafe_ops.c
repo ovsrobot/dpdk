@@ -444,6 +444,7 @@ fs_rx_queue_setup(struct rte_eth_dev *dev,
 	rxq->sdev = PRIV(dev)->subs;
 	ret = rte_intr_efd_enable(intr_handle, 1);
 	if (ret < 0) {
+		rte_free(rxq);
 		fs_unlock(dev, 0);
 		return ret;
 	}
