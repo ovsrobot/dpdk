@@ -117,8 +117,10 @@ mlx5_regex_rules_db_import(struct rte_regexdev *dev,
 	rte_memcpy(ptr, rule_db, rule_db_len);
 	/* Register umem and create rof mkey. */
 	ret = rxp_create_mkey(priv, ptr, rule_db_len, /*access=*/7, &mkey);
-	if (ret < 0)
+	if (ret < 0) {
+		rte_free(ptr);
 		return ret;
+	}
 
 	for (id = 0; id < priv->nb_engines; id++) {
 		ret = mlx5_devx_regex_rules_program(priv->cdev->ctx, id,
