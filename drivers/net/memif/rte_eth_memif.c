@@ -158,6 +158,11 @@ memif_mp_request_regions(struct rte_eth_dev *dev)
 		reply_param = (struct mp_region_msg *)reply->param;
 
 		if (reply_param->size > 0) {
+			if (reply->num_fds < 1) {
+				MIF_LOG(ERR, "Missing file descriptor.");
+				free(reply);
+				return -1;
+			}
 			r = rte_zmalloc("region", sizeof(struct memif_region), 0);
 			if (r == NULL) {
 				MIF_LOG(ERR, "Failed to alloc memif region.");
@@ -165,11 +170,6 @@ memif_mp_request_regions(struct rte_eth_dev *dev)
 				return -ENOMEM;
 			}
 			r->region_size = reply_param->size;
-			if (reply->num_fds < 1) {
-				MIF_LOG(ERR, "Missing file descriptor.");
-				free(reply);
-				return -1;
-			}
 			r->fd = reply->fds[0];
 			r->addr = NULL;
 
@@ -913,8 +913,10 @@ memif_region_init_zc(const struct rte_memseg_list *msl, const struct rte_memseg 
 		r->addr = msl->base_va;
 		r->region_size = ms->len;
 		r->fd = rte_memseg_get_fd(ms);
-		if (r->fd < 0)
+		if (r->fd < 0) {
+			rte_free(r);
 			return -1;
+		}
 		r->pkt_buffer_offset = 0;
 
 		proc_private->regions[proc_private->regions_num - 1] = r;
@@ -1328,6 +1330,7 @@ memif_tx_queue_setup(struct rte_eth_dev *dev,
 	mq->intr_handle = rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_SHARED);
 	if (mq->intr_handle == NULL) {
 		MIF_LOG(ERR, "Failed to allocate intr handle");
+		rte_free(mq);
 		return -ENOMEM;
 	}
 
@@ -1336,11 +1339,15 @@ memif_tx_queue_setup(struct rte_eth_dev *dev,
 	mq->n_pkts = 0;
 	mq->n_bytes = 0;
 
-	if (rte_intr_fd_set(mq->intr_handle, -1))
+	if (rte_intr_fd_set(mq->intr_handle, -1)) {
+		rte_free(mq);
 		return -rte_errno;
+	}
 
-	if (rte_intr_type_set(mq->intr_handle, RTE_INTR_HANDLE_EXT))
+	if (rte_intr_type_set(mq->intr_handle, RTE_INTR_HANDLE_EXT)) {
+		rte_free(mq);
 		return -rte_errno;
+	}
 
 	mq->in_port = dev->data->port_id;
 	dev->data->tx_queues[qid] = mq;
@@ -1369,6 +1376,7 @@ memif_rx_queue_setup(struct rte_eth_dev *dev,
 	mq->intr_handle = rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_SHARED);
 	if (mq->intr_handle == NULL) {
 		MIF_LOG(ERR, "Failed to allocate intr handle");
+		rte_free(mq);
 		return -ENOMEM;
 	}
 
@@ -1376,11 +1384,15 @@ memif_rx_queue_setup(struct rte_eth_dev *dev,
 	mq->n_pkts = 0;
 	mq->n_bytes = 0;
 
-	if (rte_intr_fd_set(mq->intr_handle, -1))
+	if (rte_intr_fd_set(mq->intr_handle, -1)) {
+		rte_free(mq);
 		return -rte_errno;
+	}
 
-	if (rte_intr_type_set(mq->intr_handle, RTE_INTR_HANDLE_EXT))
+	if (rte_intr_type_set(mq->intr_handle, RTE_INTR_HANDLE_EXT)) {
+		rte_free(mq);
 		return -rte_errno;
+	}
 
 	mq->mempool = mb_pool;
 	mq->in_port = dev->data->port_id;
