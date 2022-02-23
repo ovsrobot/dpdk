@@ -3383,12 +3383,12 @@ pmd_test_exit(void)
 #endif
 	if (ports != NULL) {
 		no_link_check = 1;
-		RTE_ETH_FOREACH_DEV(pt_id) {
+		RTE_ETH_FOREACH_DEV_REVERSE(pt_id) {
 			printf("\nStopping port %d...\n", pt_id);
 			fflush(stdout);
 			stop_port(pt_id);
 		}
-		RTE_ETH_FOREACH_DEV(pt_id) {
+		RTE_ETH_FOREACH_DEV_REVERSE(pt_id) {
 			printf("\nShutting down port %d...\n", pt_id);
 			fflush(stdout);
 			close_port(pt_id);
