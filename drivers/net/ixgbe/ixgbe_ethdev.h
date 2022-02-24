@@ -29,6 +29,7 @@
 #define IXGBE_FLAG_PHY_INTERRUPT    (uint32_t)(1 << 2)
 #define IXGBE_FLAG_MACSEC           (uint32_t)(1 << 3)
 #define IXGBE_FLAG_NEED_LINK_CONFIG (uint32_t)(1 << 4)
+#define IXGBE_FLAG_NEED_SFP_SETUP   ((uint32_t)(1 << 5))
 
 /*
  * Defines that were not part of ixgbe_type.h as they are not used by the
@@ -223,8 +224,6 @@ struct ixgbe_rte_flow_rss_conf {
 struct ixgbe_interrupt {
 	uint32_t flags;
 	uint32_t mask;
-	/*to save original mask during delayed handler */
-	uint32_t mask_original;
 };
 
 struct ixgbe_stat_mapping_registers {
@@ -507,7 +506,7 @@ struct ixgbe_adapter {
 	uint8_t pflink_fullchk;
 	uint8_t mac_ctrl_frame_fwd;
 	rte_atomic32_t link_thread_running;
-	pthread_t link_thread_tid;
+	pthread_t service_thread_tid;
 };
 
 struct ixgbe_vf_representor {
@@ -669,6 +668,15 @@ int ixgbe_add_del_ethertype_filter(struct rte_eth_dev *dev,
 int ixgbe_syn_filter_set(struct rte_eth_dev *dev,
 			struct rte_eth_syn_filter *filter,
 			bool add);
+
+enum ixgbe_sfp_cage_status {
+	IXGBE_SFP_CAGE_EMPTY = 0,
+	IXGBE_SFP_CAGE_FULL,
+	IXGBE_SFP_CAGE_UNKNOWN = -1,
+	IXGBE_SFP_CAGE_NOCAGE = -2,
+};
+enum ixgbe_sfp_cage_status ixgbe_check_sfp_cage(struct ixgbe_hw *hw);
+
 
 /**
  * l2 tunnel configuration.
