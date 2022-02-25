@@ -2334,4 +2334,3 @@ iavf_flow_query(struct rte_eth_dev *dev,
 	}
 	return ret;
 }
-

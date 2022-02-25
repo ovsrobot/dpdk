@@ -18284,4 +18284,3 @@ const struct mlx5_flow_driver_ops mlx5_flow_dv_drv_ops = {
 };
 
 #endif /* HAVE_IBV_FLOW_DV_SUPPORT */
-
