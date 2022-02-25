@@ -23,3 +23,4 @@ sources = files(
 )
 
 ext_deps += dep
+cflags += ['-DOPENSSL_API_COMPAT=0x10100000L']

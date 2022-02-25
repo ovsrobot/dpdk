@@ -15,3 +15,4 @@ endif
 deps += 'bus_vdev'
 sources = files('rte_openssl_pmd.c', 'rte_openssl_pmd_ops.c')
 ext_deps += dep
+cflags += ['-DOPENSSL_API_COMPAT=0x10100000L']
