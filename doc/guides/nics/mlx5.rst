@@ -1385,9 +1385,9 @@ managers on most distributions, this PMD requires Ethernet extensions that
 may not be supported at the moment (this is a work in progress).
 
 `Mellanox OFED
-<http://www.mellanox.com/page/products_dyn?product_family=26&mtag=linux>`__ and
+<https://network.nvidia.com/products/infiniband-drivers/linux/mlnx_ofed/>`__ and
 `Mellanox EN
-<http://www.mellanox.com/page/products_dyn?product_family=27&mtag=linux>`__
+<https://network.nvidia.com/products/ethernet-drivers/linux/mlnx_en/>`__
 include the necessary support and should be used in the meantime. For DPDK,
 only libibverbs, libmlx5, mlnx-ofed-kernel packages and firmware updates are
 required from that distribution.
