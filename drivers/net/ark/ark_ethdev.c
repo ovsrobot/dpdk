@@ -441,6 +441,7 @@ ark_config_device(struct rte_eth_dev *dev)
 	 * known state
 	 */
 	ark->start_pg = 0;
+	ark->pg_running = 0;
 	ark->pg = ark_pktgen_init(ark->pktgen.v, 0, 1);
 	if (ark->pg == NULL)
 		return -1;
@@ -562,7 +563,7 @@ eth_ark_dev_start(struct rte_eth_dev *dev)
 	if (ark->start_pg)
 		ark_pktchkr_run(ark->pc);
 
-	if (ark->start_pg && (dev->data->port_id == 0)) {
+	if (ark->start_pg && !ark->pg_running) {
 		pthread_t thread;
 
 		/* Delay packet generatpr start allow the hardware to be ready
@@ -574,6 +575,7 @@ eth_ark_dev_start(struct rte_eth_dev *dev)
 				    "starter thread\n");
 			return -1;
 		}
+		ark->pg_running = 1;
 	}
 
 	if (ark->user_ext.dev_start)
