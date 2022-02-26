@@ -18,10 +18,10 @@ rte_pie_rt_data_init(struct rte_pie *pie)
 		/* Allocate memory to use the PIE data structure */
 		pie = rte_malloc(NULL, sizeof(struct rte_pie), 0);
 
-		if (pie == NULL)
+		if (pie == NULL) {
 			RTE_LOG(ERR, SCHED, "%s: Memory allocation fails\n", __func__);
-
-		return -1;
+			return -1;
+		}
 	}
 
 	pie->active = 0;
