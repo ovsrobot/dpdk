@@ -399,6 +399,7 @@ int
 hns3_dev_rss_hash_update(struct rte_eth_dev *dev,
 			 struct rte_eth_rss_conf *rss_conf)
 {
+	enum rte_eth_rx_mq_mode mq_mode = dev->data->dev_conf.rxmode.mq_mode;
 	struct hns3_adapter *hns = dev->data->dev_private;
 	struct hns3_hw *hw = &hns->hw;
 	struct hns3_rss_tuple_cfg *tuple = &hw->rss_info.rss_tuple_sets;
@@ -407,6 +408,11 @@ hns3_dev_rss_hash_update(struct rte_eth_dev *dev,
 	uint64_t rss_hf = rss_conf->rss_hf;
 	uint8_t *key = rss_conf->rss_key;
 	int ret;
+
+	if (!((uint32_t)mq_mode & RTE_ETH_MQ_RX_RSS_FLAG)) {
+		hns3_err(hw, "multi-queue RSS isn't enabled.");
+		return -EOPNOTSUPP;
+	}
 
 	if (hw->rss_dis_flag)
 		return -EINVAL;
@@ -498,6 +504,7 @@ hns3_dev_rss_reta_update(struct rte_eth_dev *dev,
 			 struct rte_eth_rss_reta_entry64 *reta_conf,
 			 uint16_t reta_size)
 {
+	enum rte_eth_rx_mq_mode mq_mode = dev->data->dev_conf.rxmode.mq_mode;
 	struct hns3_adapter *hns = dev->data->dev_private;
 	struct hns3_hw *hw = &hns->hw;
 	struct hns3_rss_conf *rss_cfg = &hw->rss_info;
@@ -505,6 +512,11 @@ hns3_dev_rss_reta_update(struct rte_eth_dev *dev,
 	uint16_t idx, shift;
 	uint16_t i;
 	int ret;
+
+	if (!((uint32_t)mq_mode & RTE_ETH_MQ_RX_RSS_FLAG)) {
+		hns3_err(hw, "multi-queue RSS isn't enabled.");
+		return -EOPNOTSUPP;
+	}
 
 	if (reta_size != hw->rss_ind_tbl_size) {
 		hns3_err(hw, "The size of hash lookup table configured (%u)"

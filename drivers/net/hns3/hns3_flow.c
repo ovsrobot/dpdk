@@ -1371,6 +1371,7 @@ hns3_parse_rss_filter(struct rte_eth_dev *dev,
 		      const struct rte_flow_action *actions,
 		      struct rte_flow_error *error)
 {
+	enum rte_eth_rx_mq_mode mq_mode = dev->data->dev_conf.rxmode.mq_mode;
 	struct hns3_adapter *hns = dev->data->dev_private;
 	struct hns3_hw *hw = &hns->hw;
 	struct hns3_rss_conf *rss_conf = &hw->rss_info;
@@ -1426,6 +1427,10 @@ hns3_parse_rss_filter(struct rte_eth_dev *dev,
 					  RTE_FLOW_ERROR_TYPE_ACTION_CONF,
 					  &rss->types,
 					  "input RSS types are not supported");
+	if (!((uint32_t)mq_mode & RTE_ETH_MQ_RX_RSS_FLAG))
+		return rte_flow_error_set(error, ENOTSUP,
+					  RTE_FLOW_ERROR_TYPE_ACTION_CONF,
+					  act, "multi-queue RSS isn't enabled");
 
 	act_index++;
 
