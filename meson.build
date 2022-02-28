@@ -12,7 +12,7 @@ project('DPDK', 'C',
             'default_library=static',
             'warning_level=2',
         ],
-        meson_version: '>= 0.49.2'
+        meson_version: '>= 0.55.0'
 )
 
 # check for developer mode

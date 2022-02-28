@@ -24,15 +24,20 @@ binutils_avx512_check = (py3 + files('binutils-avx512-check.py') +
 # select library and object file format
 pmdinfo = py3 + files('gen-pmdinfo-cfile.py') + [meson.current_build_dir()]
 pmdinfogen = py3 + files('pmdinfogen.py')
+ar = ''
+if cc.get_id() == 'gcc' or host_machine.system() != 'windows'
+    ar = 'ar'
+else
+    ar = 'llvm-ar'
+endif
+ar_bin = find_program('ar', required: false)
+if ar_bin.found()
+    ar = ar_bin.full_path()
+endif
+pmdinfo += ar
 if host_machine.system() == 'windows'
-    if cc.get_id() == 'gcc'
-        pmdinfo += 'ar'
-    else
-        pmdinfo += 'llvm-ar'
-    endif
     pmdinfogen += 'coff'
 else
-    pmdinfo += 'ar'
     pmdinfogen += 'elf'
 endif
 
