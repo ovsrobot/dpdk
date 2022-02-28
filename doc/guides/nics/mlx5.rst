@@ -498,9 +498,9 @@ Limitations
 
   - c_rsvd0_v: C bit, K bit, S bit
   - protocol type
-  - checksum
-  - key
-  - sequence
+  - Checksum
+  - Key
+  - Sequence
 
   Matching on checksum and sequence needs OFED 5.6+.
 
@@ -847,10 +847,10 @@ for an additional list of options shared with other mlx5 drivers.
   By default (if the ``tx_pp`` is not specified) send scheduling on timestamps
   feature is disabled.
 
-  Starting with ConnectX-7 the capability to schedule traffic directly
-  on timestamp specified in descriptor is provided,
-  no extra objects are needed anymore and scheduling capability
-  is advertised and handled regardless ``tx_pp`` parameter presence.
+  Starting since ConnectX-7 the capability to schedule traffic directly
+  on timestamp specified in descriptor is provided, no extra objects are
+  needed anymore and scheduling capability is advertised and handled
+  regardless tx_pp parameter presence.
 
 - ``tx_skew`` parameter [int]
 
@@ -963,13 +963,14 @@ for an additional list of options shared with other mlx5 drivers.
   Value 0 means legacy Verbs flow offloading.
 
   Value 1 enables the DV flow steering assuming it is supported by the
-  driver (requires rdma-core 24 or higher).
+  driver (RDMA Core library version is rdma-core-24.0 or higher).
 
-  Value 2 enables the WQE based hardware steering.
-  In this mode, only queue-based flow management is supported.
+  Value 2 enables the WQE based hardware steering. In this mode only
+  the queue-based rte_flow_q flow management is supported.
 
-  It is configured by default to 1 (DV flow steering) if supported.
-  Otherwise, the value is 0 which indicates legacy Verbs flow offloading.
+  Configured by default to 1 DV flow steering if the driver(RDMA CORE library)
+  supported. Otherwise, the value will be 0 which indicates legacy Verbs flow
+  offloading.
 
 - ``dv_esw_en`` parameter [int]
 
@@ -1613,3 +1614,53 @@ both the meters in hierarchy on that flow.
    add port meter policy 0 2 g_actions meter mtr_id M / end y_actions end r_actions drop / end
    create port meter 0 N 2 2 yes 0xffff 1 0
    flow create 0 ingress group 1 pattern eth / end actions meter mtr_id N / end
+
+How to configure a VF as trusted
+--------------------------------
+
+This section demonstrates how to configure a virtual function (VF) interface as trusted.
+Trusted VF is needed to offload rules with rte_flow to a group that is bigger than 0.
+The configuration is done in two parts: driver and FW.
+
+The procedure below is an example of using a ConnectX-5 adapter card (pf0) with 2 VFs:
+
+#. Create 2 VFs on the PF pf0 when in Legacy SR-IOV mode::
+
+   $ echo 2 > /sys/class/net/pf0/device/mlx5_num_vfs
+
+#. Verify the VFs are created:
+
+   .. code-block:: console
+
+      $ lspci | grep Mellanox
+      82:00.0 Ethernet controller: Mellanox Technologies MT27800 Family [ConnectX-5]
+      82:00.1 Ethernet controller: Mellanox Technologies MT27800 Family [ConnectX-5]
+      82:00.2 Ethernet controller: Mellanox Technologies MT27800 Family [ConnectX-5 Virtual Function]
+      82:00.3 Ethernet controller: Mellanox Technologies MT27800 Family [ConnectX-5 Virtual Function]
+
+#. Unbind all VFs. For each VF PCIe, using the following command to unbind the driver::
+
+   $ echo "0000:82:00.2" >> /sys/bus/pci/drivers/mlx5_core/unbind
+
+#. Set the VFs to be trusted for the kernel by using one of the methods below:
+      - Using sysfs file::
+
+        $ echo ON | tee /sys/class/net/pf0/device/sriov/0/trust
+        $ echo ON | tee /sys/class/net/pf0/device/sriov/1/trust
+
+      - Using “ip link” command::
+
+        $ ip link set p0 vf 0 trust on
+        $ ip link set p0 vf 1 trust on
+
+#. Configure all VFs using mlxreg::
+
+   $ mlxreg -d /dev/mst/mt4121_pciconf0 --reg_name VHCA_TRUST_LEVEL --yes --set "all_vhca=0x1,trust_level=0x1"
+
+   .. note::
+
+      Firmware version used must be >= xx.29.1016 and MFT >= 4.18
+
+#. For each VF PCIe, using the following command to bind the driver::
+
+   $ echo "0000:82:00.2" >> /sys/bus/pci/drivers/mlx5_core/bind
