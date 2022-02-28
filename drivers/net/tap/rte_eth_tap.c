@@ -732,7 +732,7 @@ pmd_tx_burst(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 					mbuf_in->l4_len;
 			tso_segsz = mbuf_in->tso_segsz + hdrs_len;
 			if (unlikely(tso_segsz == hdrs_len) ||
-				tso_segsz > *txq->mtu) {
+				tso_segsz > *txq->mtu + mbuf_in->l2_len) {
 				txq->stats.errs++;
 				break;
 			}
