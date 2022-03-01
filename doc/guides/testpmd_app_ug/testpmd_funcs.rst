@@ -2502,6 +2502,26 @@ To cleanup txq mbufs currently cached by driver::
 
 If the value of ``free_cnt`` is 0, driver should free all cached mbufs.
 
+
+port map external RxQ
+~~~~~~~~~~~~~~~~~~~~~
+
+MLX5 internal API for external RxQ mapping management.
+
+Map HW queue index (32 bit) to rte_flow queue index (16 bit) for external RxQ::
+
+   testpmd> port (port_id) ext_rxq map (rte_queue_id) (hw_queue_id)
+
+Unmap external Rx queue rte_flow index mapping::
+
+   testpmd> port (port_id) ext_rxq unmap (rte_queue_id)
+
+where:
+
+* ``rte_queue_id``: queue index in reage [64536, 65535].
+* ``hw_queue_id``: queue index given by HW in queue creation.
+
+
 Device Functions
 ----------------
 
