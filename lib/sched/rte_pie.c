@@ -15,13 +15,8 @@ int
 rte_pie_rt_data_init(struct rte_pie *pie)
 {
 	if (pie == NULL) {
-		/* Allocate memory to use the PIE data structure */
-		pie = rte_malloc(NULL, sizeof(struct rte_pie), 0);
-
-		if (pie == NULL)
-			RTE_LOG(ERR, SCHED, "%s: Memory allocation fails\n", __func__);
-
-		return -1;
+		RTE_LOG(ERR, SCHED, "%s: Invalid addr for pie\n", __func__);
+		return -EINVAL;
 	}
 
 	pie->active = 0;
