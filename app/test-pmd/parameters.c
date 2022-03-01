@@ -92,6 +92,8 @@ usage(char* progname)
 	printf("  --max-pkt-len=N: set the maximum size of packet to N bytes.\n");
 	printf("  --max-lro-pkt-size=N: set the maximum LRO aggregated packet "
 	       "size to N bytes.\n");
+	printf("  --num-procs: the number of processes which will be used\n");
+	printf("  --proc-id  : the id of the current process (id < num-procs)\n");
 #ifdef RTE_LIB_CMDLINE
 	printf("  --eth-peers-configfile=name: config file with ethernet addresses "
 	       "of peer ports.\n");
