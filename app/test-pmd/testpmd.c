@@ -2742,6 +2742,8 @@ start_port(portid_t pid)
 			continue;
 		}
 
+		port->mc_addr_pool = NULL;
+
 		if (port->need_reconfig > 0) {
 			struct rte_eth_conf dev_conf;
 			int k;
@@ -3065,6 +3067,16 @@ stop_port(portid_t pid)
 		if (eth_dev_stop_mp(pi) != 0)
 			RTE_LOG(ERR, EAL, "rte_eth_dev_stop failed for port %u\n",
 				pi);
+		/*
+		 * free the pool of multicast addresses. If it is NULL,
+		 * it means there is no mc addr.Make sure the mc_addr_pool
+		 * is NULL at port init.
+		 */
+		if (port->mc_addr_pool != NULL) {
+			free(port->mc_addr_pool);
+			port->mc_addr_pool = NULL;
+		}
+		port->mc_addr_nb = 0;
 
 		if (port->port_status == RTE_PORT_HANDLING)
 			port->port_status = RTE_PORT_STOPPED;
