@@ -73,3 +73,6 @@ endif
 if dpdk_conf.has('RTE_NET_DPAA')
     deps += ['bus_dpaa', 'mempool_dpaa', 'net_dpaa']
 endif
+if dpdk_conf.has('RTE_NET_MLX5')
+    deps += 'net_mlx5'
+endif

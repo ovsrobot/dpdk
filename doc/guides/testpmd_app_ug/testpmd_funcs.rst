@@ -2127,6 +2127,46 @@ the mode and slave parameters must be given.
    Done
 
 
+port attach with mlx5 socket path
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+MLX5 internal option to attach a port specified by pci address or virtual device
+args and add extra devargs to it, which is imported from external process::
+
+   testpmd> port attach (identifier) mlx5_socket=(path)
+
+where:
+
+* ``identifier``: pci address or virtual device args.
+* ``path``: socket path to import arguments agreed by the external process.
+
+The mlx5 PMD enables to import CTX and PD created outside the PMD.
+It gets as devargs the device's ``cmd_fd`` and ``pd_handle``,
+then using those arguments to import objects.
+See :ref:`mlx5 driver options <mlx5_common_driver_options>` for more information.
+
+When ``cmd_fd`` and ``pd_handle`` arguments are coming from another process,
+the FD must be dup'd before being passed.
+In this function, testpmd initializes IPC socket to get FD using SCM_RIGHTS.
+It gets the external process socket path, then import the ``cmd_fd`` and
+``pd_handle`` arguments and add them to devargs list.
+After updating this, it calls the regular ``port attach`` function
+with extended idevtifier.
+
+For example, to attach a port whose pci address is ``0000:0a:00.0`` and its
+socket path is ``/var/run/import_ipc_socket``.
+
+.. code-block:: console
+
+   testpmd> port attach 0000:0a:00.0 mlx5_socket=/var/run/import_ipc_socket
+   Attaching a new port...
+   testpmd: MLX5 socket path is /var/run/import_ipc_socket
+   testpmd: Attach port with extra devargs 0000:0a:00.0,cmd_fd=40,pd_handle=1
+   EAL: Probe PCI driver: mlx5_pci (15b3:101d) device: 0000:03:00.0 (socket 0)
+   Port 0 is attached. Now total ports is 1
+   Done
+
+
 port detach
 ~~~~~~~~~~~
 

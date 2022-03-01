@@ -11,6 +11,10 @@
 #include <fcntl.h>
 #ifndef RTE_EXEC_ENV_WINDOWS
 #include <sys/mman.h>
+#ifdef RTE_NET_MLX5
+#include <sys/socket.h>
+#include <sys/un.h>
+#endif
 #endif
 #include <sys/types.h>
 #include <errno.h>
@@ -3200,11 +3204,150 @@ reset_port(portid_t pid)
 	printf("Done\n");
 }
 
+#if defined(RTE_NET_MLX5) && !defined(RTE_EXEC_ENV_WINDOWS)
+static const char*
+get_socket_path(char *extend)
+{
+	if (strstr(extend, "mlx5_socket=") == extend) {
+		const char *socket_path = strchr(extend, '=') + 1;
+
+		TESTPMD_LOG(DEBUG, "MLX5 socket path is %s\n", socket_path);
+		return socket_path;
+	}
+
+	TESTPMD_LOG(ERR, "Failed to extract a valid socket path from %s\n",
+		    extend);
+	return NULL;
+}
+
+static int
+attach_port_extend_devargs(char *identifier, char *extend)
+{
+	struct sockaddr_un un = {
+		.sun_family = AF_UNIX,
+	};
+	struct sockaddr_un dst = {
+		.sun_family = AF_UNIX,
+	};
+	int cmd_fd;
+	int pd_handle;
+	struct iovec iov = {
+		.iov_base = &pd_handle,
+		.iov_len = sizeof(int),
+	};
+	union {
+		char buf[CMSG_SPACE(sizeof(int))];
+		struct cmsghdr align;
+	} control;
+	struct msghdr msgh = {
+		.msg_name = &dst,
+		.msg_namelen = sizeof(dst),
+		.msg_iov = NULL,
+		.msg_iovlen = 0,
+	};
+	struct cmsghdr *cmsg;
+	const char *path = get_socket_path(extend + 1);
+	size_t length = 1;
+	int socket_fd;
+	int ret;
+
+	if (path == NULL) {
+		TESTPMD_LOG(ERR, "Invalid devargs extension is specified\n");
+		return -1;
+	}
+
+	/* Initialize IPC channel. */
+	socket_fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+	if (socket_fd < 0) {
+		TESTPMD_LOG(ERR, "Failed to create unix socket: %s\n",
+			    strerror(errno));
+		return -1;
+	}
+	snprintf(un.sun_path, sizeof(un.sun_path), "%s_%d", path, getpid());
+	unlink(un.sun_path); /* May still exist since last run */
+	if (bind(socket_fd, (struct sockaddr *)&un, sizeof(un)) < 0) {
+		TESTPMD_LOG(ERR, "Failed to bind %s: %s\n", un.sun_path,
+			    strerror(errno));
+		close(socket_fd);
+		return -1;
+	}
+
+	strlcpy(dst.sun_path, path, sizeof(dst.sun_path));
+	/* Send the request message. */
+	do {
+		ret = sendmsg(socket_fd, &msgh, 0);
+	} while (ret < 0 && errno == EINTR);
+	if (ret < 0) {
+		TESTPMD_LOG(ERR, "Failed to send request to (%s): %s\n", path,
+			    strerror(errno));
+		close(socket_fd);
+		unlink(un.sun_path);
+		return -1;
+	}
+
+	msgh.msg_iov = &iov;
+	msgh.msg_iovlen = 1;
+	msgh.msg_control = control.buf;
+	msgh.msg_controllen = sizeof(control.buf);
+	do {
+		ret = recvmsg(socket_fd, &msgh, 0);
+	} while (ret < 0);
+	if (ret != sizeof(int) || (msgh.msg_flags & (MSG_TRUNC | MSG_CTRUNC))) {
+		TESTPMD_LOG(ERR, "truncated msg");
+		close(socket_fd);
+		unlink(un.sun_path);
+		return -1;
+	}
+
+	/* Translate the FD. */
+	cmsg = CMSG_FIRSTHDR(&msgh);
+	if (cmsg == NULL || cmsg->cmsg_len != CMSG_LEN(sizeof(int)) ||
+	    cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS) {
+		TESTPMD_LOG(ERR, "Fail to get FD using SCM_RIGHTS mechanism\n");
+		close(socket_fd);
+		unlink(un.sun_path);
+		return -1;
+	}
+	memcpy(&cmd_fd, CMSG_DATA(cmsg), sizeof(int));
+
+	TESTPMD_LOG(DEBUG, "Command FD (%d) and PD handle (%d) "
+		    "are successfully imported from remote process\n",
+		    cmd_fd, pd_handle);
+
+	/* Cleanup IPC channel. */
+	close(socket_fd);
+	unlink(un.sun_path);
+
+	/* Calculate the new length of devargs string. */
+	length += snprintf(NULL, 0, ",cmd_fd=%d,pd_handle=%d",
+			   cmd_fd, pd_handle);
+	/* Extend the devargs string. */
+	snprintf(extend, length, ",cmd_fd=%d,pd_handle=%d", cmd_fd, pd_handle);
+
+	TESTPMD_LOG(DEBUG, "Attach port with extra devargs %s\n", identifier);
+	return 0;
+}
+
+static bool
+is_delimiter_path_spaces(char *extend)
+{
+	while (*extend != '\0') {
+		if (*extend != ' ')
+			return true;
+		extend++;
+	}
+	return false;
+}
+#endif
+
 void
 attach_port(char *identifier)
 {
 	portid_t pi;
 	struct rte_dev_iterator iterator;
+#if defined(RTE_NET_MLX5) && !defined(RTE_EXEC_ENV_WINDOWS)
+	char *extend;
+#endif
 
 	printf("Attaching a new port...\n");
 
@@ -3212,6 +3355,16 @@ attach_port(char *identifier)
 		fprintf(stderr, "Invalid parameters are specified\n");
 		return;
 	}
+
+#if defined(RTE_NET_MLX5) && !defined(RTE_EXEC_ENV_WINDOWS)
+	extend = strchr(identifier, ' ');
+	if (extend != NULL && is_delimiter_path_spaces(extend) &&
+	    attach_port_extend_devargs(identifier, extend) < 0) {
+		TESTPMD_LOG(ERR, "Failed to extend devargs for port %s\n",
+			    identifier);
+		return;
+	}
+#endif
 
 	if (rte_dev_probe(identifier) < 0) {
 		TESTPMD_LOG(ERR, "Failed to attach port %s\n", identifier);

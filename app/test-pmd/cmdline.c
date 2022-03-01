@@ -773,6 +773,12 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"port attach (ident)\n"
 			"    Attach physical or virtual dev by pci address or virtual device name\n\n"
 
+#ifdef RTE_NET_MLX5
+			"port attach (ident) mlx5_socket=(path)\n"
+			"    Attach physical or virtual dev by pci address or virtual device name "
+			"and add \"cmd_fd\" and \"pd_handle\" devargs before attaching\n\n"
+#endif
+
 			"port detach (port_id)\n"
 			"    Detach physical or virtual dev by port_id\n\n"
 
@@ -1379,8 +1385,12 @@ cmdline_parse_token_string_t cmd_operate_attach_port_identifier =
 cmdline_parse_inst_t cmd_operate_attach_port = {
 	.f = cmd_operate_attach_port_parsed,
 	.data = NULL,
-	.help_str = "port attach <identifier>: "
-		"(identifier: pci address or virtual dev name)",
+	.help_str = "port attach <identifier> mlx5_socket=<path>: "
+		"(identifier: pci address or virtual dev name"
+#ifdef RTE_NET_MLX5
+		", path (optional): socket path to get cmd FD and PD handle"
+#endif
+		")",
 	.tokens = {
 		(void *)&cmd_operate_attach_port_port,
 		(void *)&cmd_operate_attach_port_keyword,
