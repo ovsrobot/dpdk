@@ -417,10 +417,11 @@ static uint16_t
 eth_vhost_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 {
 	struct vhost_queue *r = q;
-	uint16_t i, nb_tx = 0;
+	uint16_t i, j, nb_tx = 0;
 	uint16_t nb_send = 0;
 	uint64_t nb_bytes = 0;
 	uint64_t nb_missed = 0;
+	void *data = NULL;
 
 	if (unlikely(rte_atomic32_read(&r->allow_queuing) == 0))
 		return 0;
@@ -483,8 +484,13 @@ eth_vhost_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	for (i = nb_tx; i < nb_bufs; i++)
 		vhost_count_xcast_packets(r, bufs[i]);
 
-	for (i = 0; likely(i < nb_tx); i++)
+	for (i = 0; likely(i < nb_tx); i++) {
+		for (j = 0; j < bufs[i]->nb_segs; j++) {
+			data = rte_pktmbuf_mtod(bufs[i], void *);
+			memset(data, 0, bufs[i]->data_len);
+		}
 		rte_pktmbuf_free(bufs[i]);
+	}
 out:
 	rte_atomic32_set(&r->while_queuing, 0);
 
