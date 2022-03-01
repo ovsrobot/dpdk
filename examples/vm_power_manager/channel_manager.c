@@ -1005,10 +1005,10 @@ channel_manager_exit(void)
 {
 	unsigned i;
 	char mask[RTE_MAX_LCORE];
-	struct virtual_machine_info *vm_info;
+	struct virtual_machine_info *vm_info = LIST_FIRST(&vm_list_head);
 
-	LIST_FOREACH(vm_info, &vm_list_head, vms_info) {
-
+	/* No LIST_FOREACH_SAFE, using while instead. */
+	while (vm_info) {
 		rte_spinlock_lock(&(vm_info->config_spinlock));
 
 		memcpy(mask, (char *)vm_info->channel_mask, RTE_MAX_LCORE);
@@ -1024,6 +1024,8 @@ channel_manager_exit(void)
 
 		LIST_REMOVE(vm_info, vms_info);
 		rte_free(vm_info);
+
+		vm_info = LIST_NEXT((vm_info), vms_info);
 	}
 
 	if (global_hypervisor_available) {
