@@ -61,6 +61,8 @@ usage(char* progname)
 	       "extended statistics to show. Used with --stats-period "
 	       "specified or interactive commands that show Rx/Tx statistics "
 	       "(i.e. 'show port stats').\n");
+	printf("  --num-procs: the number of processes which will be used\n");
+	printf("  --proc-id  : the id of the current process (id < num-procs)\n");
 	printf("  --nb-cores=N: set the number of forwarding cores "
 	       "(1 <= N <= %d).\n", nb_lcores);
 	printf("  --nb-ports=N: set the number of forwarding ports "
