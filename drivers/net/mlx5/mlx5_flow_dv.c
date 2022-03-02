@@ -11183,6 +11183,7 @@ flow_dv_hrxq_prepare(struct rte_eth_dev *dev,
 		     uint32_t *hrxq_idx)
 {
 	struct mlx5_flow_handle *dh = dev_flow->handle;
+	uint32_t shared_rss = rss_desc->shared_rss;
 	struct mlx5_hrxq *hrxq;
 
 	MLX5_ASSERT(rss_desc->queue_num);
@@ -11194,6 +11195,7 @@ flow_dv_hrxq_prepare(struct rte_eth_dev *dev,
 		rss_desc->queue_num = 1;
 	hrxq = mlx5_hrxq_get(dev, rss_desc);
 	*hrxq_idx = hrxq ? hrxq->idx : 0;
+	rss_desc->shared_rss = shared_rss;
 	return hrxq;
 }
 
