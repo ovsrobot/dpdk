@@ -383,14 +383,17 @@ launch_args_parse(int argc, char **argv, char *prgname)
 {
 	int opt, ret;
 	int option_index;
+	bool pdump_flag = false;
 	static struct option long_option[] = {
 		{CMD_LINE_OPT_PDUMP, 1, 0, CMD_LINE_OPT_PDUMP_NUM},
 		{CMD_LINE_OPT_MULTI, 0, 0, CMD_LINE_OPT_MULTI_NUM},
 		{NULL, 0, 0, 0}
 	};
 
-	if (argc == 1)
+	if (argc == 1) {
 		pdump_usage(prgname);
+		return -1;
+	}
 
 	/* Parse command line */
 	while ((opt = getopt_long(argc, argv, " ",
@@ -402,6 +405,7 @@ launch_args_parse(int argc, char **argv, char *prgname)
 				pdump_usage(prgname);
 				return -1;
 			}
+			pdump_flag = true;
 			break;
 		case CMD_LINE_OPT_MULTI_NUM:
 			multiple_core_capture = 1;
@@ -410,6 +414,11 @@ launch_args_parse(int argc, char **argv, char *prgname)
 			pdump_usage(prgname);
 			return -1;
 		}
+	}
+
+	if (pdump_flag == false) {
+		pdump_usage(prgname);
+		return -1;
 	}
 
 	return 0;
@@ -991,11 +1000,9 @@ main(int argc, char **argv)
 	argv += (diag - 2);
 
 	/* parse app arguments */
-	if (argc > 1) {
-		ret = launch_args_parse(argc, argv, argp[0]);
-		if (ret < 0)
-			rte_exit(EXIT_FAILURE, "Invalid argument\n");
-	}
+	ret = launch_args_parse(argc, argv, argp[0]);
+	if (ret < 0)
+		rte_exit(EXIT_FAILURE, "Invalid argument\n");
 
 	/* create mempool, ring and vdevs info */
 	create_mp_ring_vdev();
