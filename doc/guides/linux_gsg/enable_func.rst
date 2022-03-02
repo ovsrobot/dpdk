@@ -1,6 +1,8 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
     Copyright(c) 2010-2014 Intel Corporation.
 
+.. include:: <isonum.txt>
+
 .. _Enabling_Additional_Functionality:
 
 Enabling Additional Functionality
@@ -119,15 +121,15 @@ system objects' permissions should be adjusted:
 Power Management and Power Saving Functionality
 -----------------------------------------------
 
-Enhanced Intel SpeedStep® Technology must be enabled in the platform BIOS if the power management feature of DPDK is to be used.
+Enhanced Intel SpeedStep\ |reg| Technology must be enabled in the platform BIOS if the power management feature of DPDK is to be used.
 Otherwise, the sys file folder ``/sys/devices/system/cpu/cpu0/cpufreq`` will not exist, and the CPU frequency- based power management cannot be used.
 Consult the relevant BIOS documentation to determine how these settings can be accessed.
 
-For example, on some Intel reference platform BIOS variants, the path to Enhanced Intel SpeedStep® Technology is::
+For example, on some Intel reference platform BIOS variants, the path to Enhanced Intel SpeedStep\ |reg| Technology is::
 
    Advanced
      -> Processor Configuration
-     -> Enhanced Intel SpeedStep® Tech
+     -> Enhanced Intel SpeedStep\ |reg| Tech
 
 In addition, C3 and C6 should be enabled as well for power management. The path of C3 and C6 on the same platform BIOS is::
 
@@ -165,10 +167,10 @@ It should be loaded using the insmod command::
 
    See the "Kernel NIC Interface Sample Application" chapter in the *DPDK Sample Applications User Guide* for more details.
 
-Using Linux IOMMU Pass-Through to Run DPDK with Intel® VT-d
------------------------------------------------------------
+Using Linux IOMMU Pass-Through to Run DPDK with Intel\ |reg| VT-d
+------------------------------------------------------------------
 
-To enable Intel® VT-d in a Linux kernel, a number of kernel configuration options must be set. These include:
+To enable Intel\ |reg| VT-d in a Linux kernel, a number of kernel configuration options must be set. These include:
 
 *   ``IOMMU_SUPPORT``
 
@@ -176,7 +178,7 @@ To enable Intel® VT-d in a Linux kernel, a number of kernel configuration optio
 
 *   ``INTEL_IOMMU``
 
-In addition, to run the DPDK with Intel® VT-d, the ``iommu=pt`` kernel parameter must be used when using ``igb_uio`` driver.
+In addition, to run the DPDK with Intel\ |reg| VT-d, the ``iommu=pt`` kernel parameter must be used when using ``igb_uio`` driver.
 This results in pass-through of the DMAR (DMA Remapping) lookup in the host.
 Also, if ``INTEL_IOMMU_DEFAULT_ON`` is not set in the kernel, the ``intel_iommu=on`` kernel parameter must be used too.
 This ensures that the Intel IOMMU is being initialized as expected.

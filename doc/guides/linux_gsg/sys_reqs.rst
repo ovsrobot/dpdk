@@ -1,6 +1,8 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
     Copyright(c) 2010-2014 Intel Corporation.
 
+.. include:: <isonum.txt>
+
 System Requirements
 ===================
 
@@ -8,8 +10,8 @@ This chapter describes the packages required to compile the DPDK.
 
 .. note::
 
-    If the DPDK is being used on an Intel® Communications Chipset 89xx Series platform,
-    please consult the *Intel® Communications Chipset 89xx Series Software for Linux Getting Started Guide*.
+    If the DPDK is being used on an Intel\ |reg| Communications Chipset 89xx Series platform,
+    please consult the *Intel\ |reg| Communications Chipset 89xx Series Software for Linux Getting Started Guide*.
 
 BIOS Setting Prerequisite on x86
 --------------------------------
@@ -72,10 +74,10 @@ Compilation of the DPDK
 
 **Optional Tools:**
 
-*   Intel® C++ Compiler (icc). For installation, additional libraries may be required.
+*   Intel\ |reg| C++ Compiler (icc). For installation, additional libraries may be required.
     See the icc Installation Guide found in the Documentation directory under the compiler installation.
 
-*   IBM® Advance ToolChain for Powerlinux. This is a set of open source development tools and runtime libraries
+*   IBM\ |reg| Advance ToolChain for Powerlinux. This is a set of open source development tools and runtime libraries
     which allows users to take leading edge advantage of IBM's latest POWER hardware features on Linux. To install
     it, see the IBM official installation document.
 
