@@ -612,6 +612,56 @@ ice_dcf_vf_repr_del_mac_addr(struct rte_eth_dev *dev, uint32_t index)
 	repr->mac_num--;
 }
 
+static int
+ice_dcf_add_del_vlan_v2(struct rte_eth_dev *dev, uint16_t vlanid, bool add)
+{
+	struct ice_dcf_vf_repr *repr = dev->data->dev_private;
+	struct ice_dcf_hw *hw = ice_dcf_vf_repr_hw(repr);
+	struct virtchnl_vlan_filter_list_v2 vlan_filter;
+	struct dcf_virtchnl_cmd args;
+	struct virtchnl_vlan *vlan_setting;
+	int err;
+
+	vlan_setting = &vlan_filter.filters[0].outer;
+	memset(&vlan_filter, 0, sizeof(vlan_filter));
+	vlan_filter.vport_id = hw->vf_vsi_map[repr->vf_id] & ~VIRTCHNL_DCF_VF_VSI_VALID;
+	vlan_filter.num_elements = 1;
+	vlan_setting->tpid = RTE_ETHER_TYPE_VLAN;
+	vlan_setting->tci = vlanid;
+
+	memset(&args, 0, sizeof(args));
+	args.v_op = add ? VIRTCHNL_OP_ADD_VLAN_V2 : VIRTCHNL_OP_DEL_VLAN_V2;
+	args.req_msg = (uint8_t *)&vlan_filter;
+	args.req_msglen = sizeof(vlan_filter);
+
+	err = ice_dcf_execute_virtchnl_cmd(hw, &args);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Fail to execute command %s",
+				add ? "OP_ADD_ETH_ADDR" :  "OP_DEL_ETH_ADDR");
+		return err;
+	}
+	return 0;
+}
+
+static int
+ice_dcf_vf_repr_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
+{
+	struct ice_dcf_vf_repr *repr = dev->data->dev_private;
+	int err;
+
+	if (!ice_dcf_vlan_offload_ena(repr)) {
+		PMD_DRV_LOG(ERR, "It is not VLAN_V2");
+		return -ENOTSUP;
+	}
+
+	err = ice_dcf_add_del_vlan_v2(dev, vlan_id, on);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Failed to set vlan filter, err:%d", err);
+		return -ENOTSUP;
+	}
+	return 0;
+}
+
 static const struct eth_dev_ops ice_dcf_vf_repr_dev_ops = {
 	.dev_configure        = ice_dcf_vf_repr_dev_configure,
 	.dev_start            = ice_dcf_vf_repr_dev_start,
@@ -632,6 +682,7 @@ static const struct eth_dev_ops ice_dcf_vf_repr_dev_ops = {
 	.stats_get            = ice_dcf_vf_repr_stats_get,
 	.mac_addr_add         = ice_dcf_vf_repr_add_mac_addr,
 	.mac_addr_remove      = ice_dcf_vf_repr_del_mac_addr,
+	.vlan_filter_set      = ice_dcf_vf_repr_vlan_filter_set,
 };
 
 int
