@@ -128,6 +128,7 @@ eth_kni_start(struct rte_eth_dev *dev)
 	const char *name = dev->device->name + 4; /* remove net_ */
 
 	mb_pool = internals->rx_queues[0].mb_pool;
+	memset(&conf, 0, sizeof(conf));
 	strlcpy(conf.name, name, RTE_KNI_NAMESIZE);
 	conf.force_bind = 0;
 	conf.group_id = port_id;
