@@ -3534,6 +3534,13 @@ rmv_port_callback(void *arg)
 		start_packet_forwarding(0);
 }
 
+static void
+remove_invalid_ports_callback(void *arg)
+{
+	RTE_SET_USED(arg);
+	remove_invalid_ports();
+}
+
 /* This function is used by the interrupt thread */
 static int
 eth_event_callback(portid_t port_id, enum rte_eth_event_type type, void *param,
@@ -3569,6 +3576,10 @@ eth_event_callback(portid_t port_id, enum rte_eth_event_type type, void *param,
 	case RTE_ETH_EVENT_DESTROY:
 		ports[port_id].port_status = RTE_PORT_CLOSED;
 		printf("Port %u is closed\n", port_id);
+		if (rte_eal_alarm_set(100000, remove_invalid_ports_callback,
+				(void *)(intptr_t)port_id))
+			fprintf(stderr,
+				"Could not set up deferred device released\n");
 		break;
 	default:
 		break;
