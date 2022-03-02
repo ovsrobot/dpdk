@@ -10,6 +10,20 @@
 #include "ice_dcf_ethdev.h"
 #include "ice_rxtx.h"
 
+static __rte_always_inline struct ice_dcf_hw *
+ice_dcf_vf_repr_hw(struct ice_dcf_vf_repr *repr)
+{
+	struct ice_dcf_adapter *dcf_adapter =
+			repr->dcf_eth_dev->data->dev_private;
+
+	if (!dcf_adapter) {
+		PMD_DRV_LOG(ERR, "DCF for VF representor has been released\n");
+		return NULL;
+	}
+
+	return &dcf_adapter->real_hw;
+}
+
 static uint16_t
 ice_dcf_vf_repr_rx_burst(__rte_unused void *rxq,
 			 __rte_unused struct rte_mbuf **rx_pkts,
@@ -78,15 +92,36 @@ ice_dcf_vf_repr_tx_queue_setup(__rte_unused struct rte_eth_dev *dev,
 }
 
 static int
-ice_dcf_vf_repr_promiscuous_enable(__rte_unused struct rte_eth_dev *ethdev)
+ice_dcf_vf_repr_promiscuous_enable(struct rte_eth_dev *ethdev)
 {
-	return 0;
+	struct ice_dcf_vf_repr *repr = ethdev->data->dev_private;
+	struct dcf_virtchnl_cmd args;
+	struct virtchnl_promisc_info promisc;
+	struct ice_dcf_hw *hw = ice_dcf_vf_repr_hw(repr);
+	memset(&args, 0, sizeof(args));
+	args.v_op = VIRTCHNL_OP_CONFIG_PROMISCUOUS_MODE;
+	promisc.flags = 0;
+	promisc.vsi_id = hw->vf_vsi_map[repr->vf_id] & ~VIRTCHNL_DCF_VF_VSI_VALID;
+	promisc.flags |= FLAG_VF_UNICAST_PROMISC;
+	args.req_msg = (uint8_t *)&promisc;
+	args.req_msglen = sizeof(promisc);
+	return ice_dcf_execute_virtchnl_cmd(hw, &args);
 }
 
 static int
-ice_dcf_vf_repr_promiscuous_disable(__rte_unused struct rte_eth_dev *ethdev)
+ice_dcf_vf_repr_promiscuous_disable(struct rte_eth_dev *ethdev)
 {
-	return 0;
+	struct ice_dcf_vf_repr *repr = ethdev->data->dev_private;
+	struct dcf_virtchnl_cmd args;
+	struct virtchnl_promisc_info promisc;
+	struct ice_dcf_hw *hw = ice_dcf_vf_repr_hw(repr);
+	memset(&args, 0, sizeof(args));
+	args.v_op = VIRTCHNL_OP_CONFIG_PROMISCUOUS_MODE;
+	promisc.flags = 0;
+	promisc.vsi_id = hw->vf_vsi_map[repr->vf_id] & ~VIRTCHNL_DCF_VF_VSI_VALID;
+	args.req_msg = (uint8_t *)&promisc;
+	args.req_msglen = sizeof(promisc);
+	return ice_dcf_execute_virtchnl_cmd(hw, &args);
 }
 
 static int
@@ -108,19 +143,6 @@ ice_dcf_vf_repr_link_update(__rte_unused struct rte_eth_dev *ethdev,
 	return 0;
 }
 
-static __rte_always_inline struct ice_dcf_hw *
-ice_dcf_vf_repr_hw(struct ice_dcf_vf_repr *repr)
-{
-	struct ice_dcf_adapter *dcf_adapter =
-			repr->dcf_eth_dev->data->dev_private;
-
-	if (!dcf_adapter) {
-		PMD_DRV_LOG(ERR, "DCF for VF representor has been released\n");
-		return NULL;
-	}
-
-	return &dcf_adapter->real_hw;
-}
 
 static int
 ice_dcf_vf_repr_dev_info_get(struct rte_eth_dev *dev,
