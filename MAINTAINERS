@@ -421,6 +421,10 @@ T: git://dpdk.org/next/dpdk-next-crypto
 F: lib/bbdev/
 F: doc/guides/prog_guide/bbdev.rst
 F: drivers/baseband/
+F: drivers/baseband/turbo_sw/
+F: drivers/baseband/fpga_lte_fec/
+F: drivers/baseband/fpga_5gnr_fec/
+F: drivers/baseband/acc100/
 F: doc/guides/bbdevs/
 F: app/test-bbdev/
 F: doc/guides/tools/testbbdev.rst
