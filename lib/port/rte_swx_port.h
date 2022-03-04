@@ -148,6 +148,18 @@ typedef void
 			     struct rte_swx_pkt *pkt);
 
 /**
+ * Output port packet clone and transmit
+ *
+ * @param[in] port
+ *   Output port handle.
+ * @param[in] pkt
+ *   Packet to be transmitted.
+ */
+typedef void
+(*rte_swx_port_out_pkt_clone_tx_t)(void *port,
+				   struct rte_swx_pkt *pkt);
+
+/**
  * Output port flush
  *
  * @param[in] port
@@ -187,6 +199,9 @@ struct rte_swx_port_out_ops {
 
 	/** Packet transmission. Must be non-NULL. */
 	rte_swx_port_out_pkt_tx_t pkt_tx;
+
+	/** Packet clone transmission. Must be non-NULL. */
+	rte_swx_port_out_pkt_clone_tx_t pkt_clone_tx;
 
 	/** Flush. May be NULL. */
 	rte_swx_port_out_flush_t flush;

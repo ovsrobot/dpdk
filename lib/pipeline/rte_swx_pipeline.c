@@ -423,6 +423,7 @@ rte_swx_pipeline_port_out_type_register(struct rte_swx_pipeline *p,
 	CHECK(ops->create, EINVAL);
 	CHECK(ops->free, EINVAL);
 	CHECK(ops->pkt_tx, EINVAL);
+	CHECK(ops->pkt_clone_tx, EINVAL);
 	CHECK(ops->stats_read, EINVAL);
 
 	CHECK(!port_out_type_find(p, name), EEXIST);
@@ -509,6 +510,7 @@ port_out_build(struct rte_swx_pipeline *p)
 		struct port_out_runtime *out = &p->out[port->id];
 
 		out->pkt_tx = port->type->ops.pkt_tx;
+		out->pkt_clone_tx = port->type->ops.pkt_clone_tx;
 		out->flush = port->type->ops.flush;
 		out->obj = port->obj;
 	}

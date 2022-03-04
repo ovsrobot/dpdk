@@ -320,6 +320,40 @@ sink_pkt_tx(void *port, struct rte_swx_pkt *pkt)
 }
 
 static void
+sink_pkt_clone_tx(void *port, struct rte_swx_pkt *pkt)
+{
+	struct sink *p = port;
+	struct rte_mbuf *m = pkt->handle;
+
+	TRACE("[Sink port] Pkt TX (%u bytes at offset %u)\n",
+	      pkt->length,
+	      pkt->offset);
+	if (TRACE_LEVEL)
+		rte_hexdump(stdout, NULL, &pkt->pkt[pkt->offset], pkt->length);
+
+	m->pkt_len = pkt->length;
+	m->data_len = (uint16_t)pkt->length;
+	m->data_off = (uint16_t)pkt->offset;
+
+	p->stats.n_pkts++;
+	p->stats.n_bytes += pkt->length;
+
+#ifdef RTE_PORT_PCAP
+	if (p->f_dump) {
+		struct pcap_pkthdr pcap_pkthdr;
+		uint8_t *m_data = rte_pktmbuf_mtod(m, uint8_t *);
+
+		pcap_pkthdr.len = m->pkt_len;
+		pcap_pkthdr.caplen = m->data_len;
+		gettimeofday(&pcap_pkthdr.ts, NULL);
+
+		pcap_dump((uint8_t *)p->f_dump, &pcap_pkthdr, m_data);
+		pcap_dump_flush(p->f_dump);
+	}
+#endif
+}
+
+static void
 sink_stats_read(void *port, struct rte_swx_port_out_stats *stats)
 {
 	struct sink *p = port;
@@ -337,6 +371,7 @@ struct rte_swx_port_out_ops rte_swx_port_sink_ops = {
 	.create = sink_create,
 	.free = sink_free,
 	.pkt_tx = sink_pkt_tx,
+	.pkt_clone_tx = sink_pkt_clone_tx,
 	.flush = NULL,
 	.stats_read = sink_stats_read,
 };

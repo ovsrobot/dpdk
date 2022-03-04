@@ -104,6 +104,7 @@ TAILQ_HEAD(port_out_tailq, port_out);
 
 struct port_out_runtime {
 	rte_swx_port_out_pkt_tx_t pkt_tx;
+	rte_swx_port_out_pkt_clone_tx_t pkt_clone_tx;
 	rte_swx_port_out_flush_t flush;
 	void *obj;
 };

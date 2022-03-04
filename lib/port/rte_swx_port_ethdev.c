@@ -265,6 +265,34 @@ writer_pkt_tx(void *port, struct rte_swx_pkt *pkt)
 }
 
 static void
+writer_pkt_clone_tx(void *port, struct rte_swx_pkt *pkt)
+{
+	struct writer *p = port;
+	struct rte_mbuf *m = pkt->handle;
+
+	TRACE("[Ethdev TX port %u queue %u] Pkt %d (%u bytes at offset %u) (clone)\n",
+	      (uint32_t)p->params.port_id,
+	      (uint32_t)p->params.queue_id,
+	      p->n_pkts - 1,
+	      pkt->length,
+	      pkt->offset);
+	if (TRACE_LEVEL)
+		rte_hexdump(stdout, NULL, &pkt->pkt[pkt->offset], pkt->length);
+
+	m->pkt_len = pkt->length;
+	m->data_len = (uint16_t)pkt->length;
+	m->data_off = (uint16_t)pkt->offset;
+	rte_mbuf_refcnt_update(m, 1);
+
+	p->stats.n_pkts++;
+	p->stats.n_bytes += pkt->length;
+
+	p->pkts[p->n_pkts++] = m;
+	if (p->n_pkts == (int)p->params.burst_size)
+		__writer_flush(p);
+}
+
+static void
 writer_flush(void *port)
 {
 	struct writer *p = port;
@@ -308,6 +336,7 @@ struct rte_swx_port_out_ops rte_swx_port_ethdev_writer_ops = {
 	.create = writer_create,
 	.free = writer_free,
 	.pkt_tx = writer_pkt_tx,
+	.pkt_clone_tx = writer_pkt_clone_tx,
 	.flush = writer_flush,
 	.stats_read = writer_stats_read,
 };
