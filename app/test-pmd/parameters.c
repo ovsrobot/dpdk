@@ -210,6 +210,8 @@ usage(char* progname)
 	printf("  --hairpin-mode=0xXX: bitmask set the hairpin port mode.\n"
 	       "    0x10 - explicit Tx rule, 0x02 - hairpin ports paired\n"
 	       "    0x01 - hairpin ports loop, 0x00 - hairpin port self\n");
+	printf("  --num-procs: the number of processes which will be used\n");
+	printf("  --proc-id  : the id of the current process (id < num-procs)\n");
 }
 
 #ifdef RTE_LIB_CMDLINE
