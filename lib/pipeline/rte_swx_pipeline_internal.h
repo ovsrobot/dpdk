@@ -110,6 +110,13 @@ struct port_out_runtime {
 };
 
 /*
+ * Packet mirroring.
+ */
+struct mirroring_session {
+	uint32_t port_id;
+};
+
+/*
  * Extern object.
  */
 struct extern_type_member_func {
@@ -227,6 +234,13 @@ enum instruction_type {
 	INSTR_TX,   /* port_out = M */
 	INSTR_TX_I, /* port_out = I */
 	INSTR_DROP,
+
+	/*
+	 * mirror slot_id session_id
+	 * slot_id = MEFT
+	 * session_id = MEFT
+	 */
+	INSTR_MIRROR,
 
 	/* extract h.header */
 	INSTR_HDR_EXTRACT,
@@ -671,6 +685,7 @@ struct instruction {
 	enum instruction_type type;
 	union {
 		struct instr_io io;
+		struct instr_dst_src mirror;
 		struct instr_hdr_validity valid;
 		struct instr_dst_src mov;
 		struct instr_regarray regarray;
@@ -903,6 +918,8 @@ struct thread {
 	/* Packet. */
 	struct rte_swx_pkt pkt;
 	uint8_t *ptr;
+	uint32_t *mirroring_slots;
+	uint64_t mirroring_slots_mask;
 
 	/* Structures. */
 	uint8_t **structs;
@@ -1400,6 +1417,7 @@ struct rte_swx_pipeline {
 
 	struct port_in_runtime *in;
 	struct port_out_runtime *out;
+	struct mirroring_session *mirroring_sessions;
 	struct instruction **action_instructions;
 	action_func_t *action_funcs;
 	struct rte_swx_table_state *table_state;
@@ -1417,6 +1435,8 @@ struct rte_swx_pipeline {
 	uint32_t n_structs;
 	uint32_t n_ports_in;
 	uint32_t n_ports_out;
+	uint32_t n_mirroring_slots;
+	uint32_t n_mirroring_sessions;
 	uint32_t n_extern_objs;
 	uint32_t n_extern_funcs;
 	uint32_t n_actions;
@@ -1512,6 +1532,8 @@ __instr_rx_exec(struct rte_swx_pipeline *p, struct thread *t, const struct instr
 	      pkt_received ? "1 pkt" : "0 pkts",
 	      p->port_id);
 
+	t->mirroring_slots_mask = 0;
+
 	/* Headers. */
 	t->valid_headers = 0;
 	t->n_headers_out = 0;
@@ -1598,6 +1620,29 @@ emit_handler(struct thread *t)
 }
 
 static inline void
+mirroring_handler(struct rte_swx_pipeline *p, struct thread *t, struct rte_swx_pkt *pkt)
+{
+	uint64_t slots_mask = t->mirroring_slots_mask, slot_mask;
+	uint32_t slot_id;
+
+	for (slot_id = 0, slot_mask = 1LLU ; slots_mask; slot_id++, slot_mask <<= 1)
+		if (slot_mask & slots_mask) {
+			struct port_out_runtime *port;
+			struct mirroring_session *session;
+			uint32_t port_id, session_id;
+
+			session_id = t->mirroring_slots[slot_id];
+			session = &p->mirroring_sessions[session_id];
+
+			port_id = session->port_id;
+			port = &p->out[port_id];
+			port->pkt_clone_tx(port->obj, pkt);
+
+			slots_mask &= ~slot_mask;
+		}
+}
+
+static inline void
 __instr_tx_exec(struct rte_swx_pipeline *p, struct thread *t, const struct instruction *ip)
 {
 	uint64_t port_id = METADATA_READ(t, ip->io.io.offset, ip->io.io.n_bits);
@@ -1612,6 +1657,7 @@ __instr_tx_exec(struct rte_swx_pipeline *p, struct thread *t, const struct instr
 	emit_handler(t);
 
 	/* Packet. */
+	mirroring_handler(p, t, pkt);
 	port->pkt_tx(port->obj, pkt);
 }
 
@@ -1630,6 +1676,7 @@ __instr_tx_i_exec(struct rte_swx_pipeline *p, struct thread *t, const struct ins
 	emit_handler(t);
 
 	/* Packet. */
+	mirroring_handler(p, t, pkt);
 	port->pkt_tx(port->obj, pkt);
 }
 
@@ -1649,7 +1696,28 @@ __instr_drop_exec(struct rte_swx_pipeline *p,
 	emit_handler(t);
 
 	/* Packet. */
+	mirroring_handler(p, t, pkt);
 	port->pkt_tx(port->obj, pkt);
+}
+
+static inline void
+__instr_mirror_exec(struct rte_swx_pipeline *p,
+		    struct thread *t,
+		    const struct instruction *ip)
+{
+	uint64_t slot_id = instr_operand_hbo(t, &ip->mirror.dst);
+	uint64_t session_id = instr_operand_hbo(t, &ip->mirror.src);
+
+	slot_id &= p->n_mirroring_slots - 1;
+	session_id &= p->n_mirroring_sessions - 1;
+
+	TRACE("[Thread %2u]: mirror pkt (slot = %u, session = %u)\n",
+	      p->thread_id,
+	      (uint32_t)slot_id,
+	      (uint32_t)session_id);
+
+	t->mirroring_slots[slot_id] = session_id;
+	t->mirroring_slots_mask |= 1LLU << slot_id;
 }
 
 /*
