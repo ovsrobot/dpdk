@@ -61,6 +61,8 @@ usage(char* progname)
 	       "extended statistics to show. Used with --stats-period "
 	       "specified or interactive commands that show Rx/Tx statistics "
 	       "(i.e. 'show port stats').\n");
+	printf("  --num-procs: the total number of symmetric_mp instances that will be run side-by-side\n");
+	printf("  --proc-id  : the id of the current process (id < num-procs) to identify which symmetric_mp instance is being run\n");
 	printf("  --nb-cores=N: set the number of forwarding cores "
 	       "(1 <= N <= %d).\n", nb_lcores);
 	printf("  --nb-ports=N: set the number of forwarding ports "
