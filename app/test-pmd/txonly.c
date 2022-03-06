@@ -504,9 +504,22 @@ tx_only_begin(portid_t pi)
 	return 0;
 }
 
+static int
+tx_only_stream_init(struct fwd_stream *fs)
+{
+	bool tx_stopped;
+	int ret;
+
+	ret = fwd_stream_get_stopped_queues(fs, NULL, &tx_stopped);
+	if (ret == 0)
+		fs->disabled = tx_stopped;
+	return ret;
+}
+
 struct fwd_engine tx_only_engine = {
 	.fwd_mode_name  = "txonly",
 	.port_fwd_begin = tx_only_begin,
 	.port_fwd_end   = NULL,
+	.stream_init    = tx_only_stream_init,
 	.packet_fwd     = pkt_burst_transmit,
 };

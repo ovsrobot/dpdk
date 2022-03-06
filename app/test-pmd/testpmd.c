@@ -1763,6 +1763,37 @@ reconfig(portid_t new_port_id, unsigned socket_id)
 	init_port_config();
 }
 
+int
+fwd_stream_get_stopped_queues(struct fwd_stream *fs, bool *rx, bool *tx)
+{
+	struct rte_eth_rxq_info rx_qinfo;
+	struct rte_eth_txq_info tx_qinfo;
+	int ret;
+
+	if (rx != NULL) {
+		ret = rte_eth_rx_queue_info_get(fs->rx_port, fs->rx_queue,
+						&rx_qinfo);
+		if (ret < 0) {
+			RTE_LOG(ERR, USER1, "Cannot get port %d RX queue %d info: %s\n",
+				fs->rx_port, fs->rx_queue,
+				rte_strerror(rte_errno));
+			return ret;
+		}
+		*rx = rx_qinfo.queue_state == RTE_ETH_QUEUE_STATE_STOPPED;
+	}
+	if (tx != NULL) {
+		ret = rte_eth_tx_queue_info_get(fs->tx_port, fs->tx_queue,
+						&tx_qinfo);
+		if (ret < 0) {
+			TESTPMD_LOG(ERR, "Cannot get port %d TX queue %d info: %s\n",
+				    fs->tx_port, fs->tx_queue,
+				    rte_strerror(rte_errno));
+			return ret;
+		}
+		*tx = tx_qinfo.queue_state == RTE_ETH_QUEUE_STATE_STOPPED;
+	}
+	return 0;
+}
 
 int
 init_fwd_streams(void)
@@ -2155,6 +2186,21 @@ flush_fwd_rx_queues(void)
 	for (j = 0; j < 2; j++) {
 		for (rxp = 0; rxp < cur_fwd_config.nb_fwd_ports; rxp++) {
 			for (rxq = 0; rxq < nb_rxq; rxq++) {
+				struct rte_eth_rxq_info rx_qinfo;
+				int ret;
+
+				ret = rte_eth_rx_queue_info_get(rxp, rxq,
+								&rx_qinfo);
+				if (ret < 0) {
+					TESTPMD_LOG(ERR, "Cannot get port %d RX queue %d info: %s\n",
+						    rxp, rxq,
+						    rte_strerror(rte_errno));
+					return;
+				}
+				if (rx_qinfo.queue_state ==
+				    RTE_ETH_QUEUE_STATE_STOPPED)
+					continue;
+
 				port_id = fwd_ports_ids[rxp];
 				/**
 				* testpmd can stuck in the below do while loop
@@ -2201,7 +2247,8 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 	nb_fs = fc->stream_nb;
 	do {
 		for (sm_id = 0; sm_id < nb_fs; sm_id++)
-			(*pkt_fwd)(fsm[sm_id]);
+			if (!fsm[sm_id]->disabled)
+				(*pkt_fwd)(fsm[sm_id]);
 #ifdef RTE_LIB_BITRATESTATS
 		if (bitrate_enabled != 0 &&
 				bitrate_lcore_id == rte_lcore_id()) {
@@ -2283,6 +2330,7 @@ start_packet_forwarding(int with_tx_first)
 {
 	port_fwd_begin_t port_fwd_begin;
 	port_fwd_end_t  port_fwd_end;
+	stream_init_t stream_init = cur_fwd_eng->stream_init;
 	unsigned int i;
 
 	if (strcmp(cur_fwd_eng->fwd_mode_name, "rxonly") == 0 && !nb_rxq)
@@ -2312,6 +2360,13 @@ start_packet_forwarding(int with_tx_first)
 	pkt_fwd_config_display(&cur_fwd_config);
 	if (!pkt_fwd_shared_rxq_check())
 		return;
+
+	if (stream_init != NULL)
+		for (i = 0; i < cur_fwd_config.nb_fwd_streams; i++)
+			if (stream_init(fwd_streams[i]) < 0) {
+				TESTPMD_LOG(ERR, "Cannot init stream\n");
+				return;
+			}
 
 	port_fwd_begin = cur_fwd_config.fwd_eng->port_fwd_begin;
 	if (port_fwd_begin != NULL) {

@@ -512,9 +512,22 @@ reply_to_icmp_echo_rqsts(struct fwd_stream *fs)
 	get_end_cycles(fs, start_tsc);
 }
 
+static int
+icmpecho_stream_init(struct fwd_stream *fs)
+{
+	bool rx_stopped, tx_stopped;
+	int ret;
+
+	ret = fwd_stream_get_stopped_queues(fs, &rx_stopped, &tx_stopped);
+	if (ret == 0)
+		fs->disabled = rx_stopped || tx_stopped;
+	return ret;
+}
+
 struct fwd_engine icmp_echo_engine = {
 	.fwd_mode_name  = "icmpecho",
 	.port_fwd_begin = NULL,
 	.port_fwd_end   = NULL,
+	.stream_init    = icmpecho_stream_init,
 	.packet_fwd     = reply_to_icmp_echo_rqsts,
 };

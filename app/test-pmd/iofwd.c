@@ -88,9 +88,22 @@ pkt_burst_io_forward(struct fwd_stream *fs)
 	get_end_cycles(fs, start_tsc);
 }
 
+static int
+stream_init_forward(struct fwd_stream *fs)
+{
+	bool rx_stopped, tx_stopped;
+	int ret;
+
+	ret = fwd_stream_get_stopped_queues(fs, &rx_stopped, &tx_stopped);
+	if (ret == 0)
+		fs->disabled = rx_stopped || tx_stopped;
+	return ret;
+}
+
 struct fwd_engine io_fwd_engine = {
 	.fwd_mode_name  = "io",
 	.port_fwd_begin = NULL,
 	.port_fwd_end   = NULL,
+	.stream_init    = stream_init_forward,
 	.packet_fwd     = pkt_burst_io_forward,
 };

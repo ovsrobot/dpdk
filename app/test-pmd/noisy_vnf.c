@@ -277,9 +277,22 @@ noisy_fwd_begin(portid_t pi)
 	return 0;
 }
 
+static int
+stream_init_noisy_vnf(struct fwd_stream *fs)
+{
+	bool rx_stopped, tx_stopped;
+	int ret;
+
+	ret = fwd_stream_get_stopped_queues(fs, &rx_stopped, &tx_stopped);
+	if (ret == 0)
+		fs->disabled = rx_stopped || tx_stopped;
+	return ret;
+}
+
 struct fwd_engine noisy_vnf_engine = {
 	.fwd_mode_name  = "noisy",
 	.port_fwd_begin = noisy_fwd_begin,
 	.port_fwd_end   = noisy_fwd_end,
+	.stream_init    = stream_init_noisy_vnf,
 	.packet_fwd     = pkt_burst_noisy_vnf,
 };

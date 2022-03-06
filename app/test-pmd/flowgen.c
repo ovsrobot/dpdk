@@ -207,9 +207,22 @@ flowgen_begin(portid_t pi)
 	return 0;
 }
 
+static int
+flowgen_stream_init(struct fwd_stream *fs)
+{
+	bool rx_stopped, tx_stopped;
+	int ret;
+
+	ret = fwd_stream_get_stopped_queues(fs, &rx_stopped, &tx_stopped);
+	if (ret == 0)
+		fs->disabled = rx_stopped || tx_stopped;
+	return ret;
+}
+
 struct fwd_engine flow_gen_engine = {
 	.fwd_mode_name  = "flowgen",
 	.port_fwd_begin = flowgen_begin,
 	.port_fwd_end   = NULL,
+	.stream_init    = flowgen_stream_init,
 	.packet_fwd     = pkt_burst_flow_gen,
 };

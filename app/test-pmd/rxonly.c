@@ -68,9 +68,22 @@ pkt_burst_receive(struct fwd_stream *fs)
 	get_end_cycles(fs, start_tsc);
 }
 
+static int
+stream_init_receive(struct fwd_stream *fs)
+{
+	bool rx_stopped;
+	int ret;
+
+	ret = fwd_stream_get_stopped_queues(fs, &rx_stopped, NULL);
+	if (ret == 0)
+		fs->disabled = rx_stopped;
+	return ret;
+}
+
 struct fwd_engine rx_only_engine = {
 	.fwd_mode_name  = "rxonly",
 	.port_fwd_begin = NULL,
 	.port_fwd_end   = NULL,
+	.stream_init    = stream_init_receive,
 	.packet_fwd     = pkt_burst_receive,
 };
