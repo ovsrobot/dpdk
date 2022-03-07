@@ -33,10 +33,12 @@
 #define ETH_PCAP_IFACE_ARG    "iface"
 #define ETH_PCAP_PHY_MAC_ARG  "phy_mac"
 #define ETH_PCAP_INFINITE_RX_ARG  "infinite_rx"
+#define ETH_PCAP_SNAPLEN_ARG  "snaplen"
 
 #define ETH_PCAP_ARG_MAXLEN	64
 
 #define RTE_PMD_PCAP_MAX_QUEUES 16
+#define RTE_PCAP_MIN_SNAPLEN    64
 
 static char errbuf[PCAP_ERRBUF_SIZE];
 static struct timespec start_time;
@@ -99,6 +101,7 @@ struct pmd_process_private {
 	pcap_t *rx_pcap[RTE_PMD_PCAP_MAX_QUEUES];
 	pcap_t *tx_pcap[RTE_PMD_PCAP_MAX_QUEUES];
 	pcap_dumper_t *tx_dumper[RTE_PMD_PCAP_MAX_QUEUES];
+	int snaplen;
 };
 
 struct pmd_devargs {
@@ -110,6 +113,7 @@ struct pmd_devargs {
 		const char *type;
 	} queue[RTE_PMD_PCAP_MAX_QUEUES];
 	int phy_mac;
+	int snaplen;
 };
 
 struct pmd_devargs_all {
@@ -132,6 +136,7 @@ static const char *valid_arguments[] = {
 	ETH_PCAP_IFACE_ARG,
 	ETH_PCAP_PHY_MAC_ARG,
 	ETH_PCAP_INFINITE_RX_ARG,
+	ETH_PCAP_SNAPLEN_ARG,
 	NULL
 };
 
@@ -404,6 +409,12 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		calculate_timestamp(&header.ts);
 		header.len = len;
 		header.caplen = caplen;
+		if (pp->snaplen >= RTE_PCAP_MIN_SNAPLEN) {
+			if ((typeof(pp->snaplen))header.caplen > pp->snaplen) {
+				header.caplen = pp->snaplen;
+				caplen = pp->snaplen;
+			}
+		}
 		/* rte_pktmbuf_read() returns a pointer to the data directly
 		 * in the mbuf (when the mbuf is contiguous) or, otherwise,
 		 * a pointer to temp_data after copying into it.
@@ -512,8 +523,11 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
  * pcap_open_live wrapper function
  */
 static inline int
-open_iface_live(const char *iface, pcap_t **pcap) {
-	*pcap = pcap_open_live(iface, RTE_ETH_PCAP_SNAPLEN,
+open_iface_live(const char *iface, pcap_t **pcap, int snaplen) {
+	int caplen = RTE_ETH_PCAP_SNAPLEN;
+	if (snaplen >= RTE_PCAP_MIN_SNAPLEN)
+		caplen = snaplen;
+	*pcap = pcap_open_live(iface, caplen,
 			RTE_ETH_PCAP_PROMISC, RTE_ETH_PCAP_TIMEOUT, errbuf);
 
 	if (*pcap == NULL) {
@@ -525,9 +539,9 @@ open_iface_live(const char *iface, pcap_t **pcap) {
 }
 
 static int
-open_single_iface(const char *iface, pcap_t **pcap)
+open_single_iface(const char *iface, pcap_t **pcap, int snaplen)
 {
-	if (open_iface_live(iface, pcap) < 0) {
+	if (open_iface_live(iface, pcap, snaplen) < 0) {
 		PMD_LOG(ERR, "Couldn't open interface %s", iface);
 		return -1;
 	}
@@ -536,17 +550,19 @@ open_single_iface(const char *iface, pcap_t **pcap)
 }
 
 static int
-open_single_tx_pcap(const char *pcap_filename, pcap_dumper_t **dumper)
+open_single_tx_pcap(const char *pcap_filename, pcap_dumper_t **dumper, int snaplen)
 {
 	pcap_t *tx_pcap;
-
+	int caplen = RTE_ETH_PCAP_SNAPSHOT_LEN;
+	if (snaplen >= RTE_PCAP_MIN_SNAPLEN)
+		caplen = snaplen;
 	/*
 	 * We need to create a dummy empty pcap_t to use it
 	 * with pcap_dump_open(). We create big enough an Ethernet
 	 * pcap holder.
 	 */
 	tx_pcap = pcap_open_dead_with_tstamp_precision(DLT_EN10MB,
-			RTE_ETH_PCAP_SNAPSHOT_LEN, PCAP_TSTAMP_PRECISION_NANO);
+			caplen, PCAP_TSTAMP_PRECISION_NANO);
 	if (tx_pcap == NULL) {
 		PMD_LOG(ERR, "Couldn't create dead pcap");
 		return -1;
@@ -612,7 +628,7 @@ eth_dev_start(struct rte_eth_dev *dev)
 
 		if (!pp->tx_pcap[0] &&
 			strcmp(tx->type, ETH_PCAP_IFACE_ARG) == 0) {
-			if (open_single_iface(tx->name, &pp->tx_pcap[0]) < 0)
+			if (open_single_iface(tx->name, &pp->tx_pcap[0], pp->snaplen) < 0)
 				return -1;
 			pp->rx_pcap[0] = pp->tx_pcap[0];
 		}
@@ -627,11 +643,11 @@ eth_dev_start(struct rte_eth_dev *dev)
 		if (!pp->tx_dumper[i] &&
 				strcmp(tx->type, ETH_PCAP_TX_PCAP_ARG) == 0) {
 			if (open_single_tx_pcap(tx->name,
-				&pp->tx_dumper[i]) < 0)
+				&pp->tx_dumper[i], pp->snaplen) < 0)
 				return -1;
 		} else if (!pp->tx_pcap[i] &&
 				strcmp(tx->type, ETH_PCAP_TX_IFACE_ARG) == 0) {
-			if (open_single_iface(tx->name, &pp->tx_pcap[i]) < 0)
+			if (open_single_iface(tx->name, &pp->tx_pcap[i], pp->snaplen) < 0)
 				return -1;
 		}
 	}
@@ -647,7 +663,7 @@ eth_dev_start(struct rte_eth_dev *dev)
 			if (open_single_rx_pcap(rx->name, &pp->rx_pcap[i]) < 0)
 				return -1;
 		} else if (strcmp(rx->type, ETH_PCAP_RX_IFACE_ARG) == 0) {
-			if (open_single_iface(rx->name, &pp->rx_pcap[i]) < 0)
+			if (open_single_iface(rx->name, &pp->rx_pcap[i], pp->snaplen) < 0)
 				return -1;
 		}
 	}
@@ -1055,7 +1071,7 @@ open_tx_pcap(const char *key, const char *value, void *extra_args)
 	struct pmd_devargs *dumpers = extra_args;
 	pcap_dumper_t *dumper;
 
-	if (open_single_tx_pcap(pcap_filename, &dumper) < 0)
+	if (open_single_tx_pcap(pcap_filename, &dumper, dumpers->snaplen) < 0)
 		return -1;
 
 	if (add_queue(dumpers, pcap_filename, key, NULL, dumper) < 0) {
@@ -1063,6 +1079,16 @@ open_tx_pcap(const char *key, const char *value, void *extra_args)
 		return -1;
 	}
 
+	return 0;
+}
+
+static int
+parse_uint_value(const char *key, const char *value, void *extra_args)
+{
+	(void)key;
+	char *end;
+	int *val = extra_args;
+	*val = strtoul(value, &end, 10);
 	return 0;
 }
 
@@ -1076,7 +1102,7 @@ open_rx_tx_iface(const char *key, const char *value, void *extra_args)
 	struct pmd_devargs *tx = extra_args;
 	pcap_t *pcap = NULL;
 
-	if (open_single_iface(iface, &pcap) < 0)
+	if (open_single_iface(iface, &pcap, tx->snaplen) < 0)
 		return -1;
 
 	tx->queue[0].pcap = pcap;
@@ -1108,7 +1134,7 @@ open_iface(const char *key, const char *value, void *extra_args)
 	struct pmd_devargs *pmd = extra_args;
 	pcap_t *pcap = NULL;
 
-	if (open_single_iface(iface, &pcap) < 0)
+	if (open_single_iface(iface, &pcap, pmd->snaplen) < 0)
 		return -1;
 	if (add_queue(pmd, iface, key, pcap, NULL) < 0) {
 		pcap_close(pcap);
@@ -1403,6 +1429,7 @@ pmd_pcap_probe(struct rte_vdev_device *dev)
 	struct rte_eth_dev *eth_dev =  NULL;
 	struct pmd_internals *internal;
 	int ret = 0;
+	int snaplen = 0;
 
 	struct pmd_devargs_all devargs_all = {
 		.single_iface = 0,
@@ -1442,6 +1469,12 @@ pmd_pcap_probe(struct rte_vdev_device *dev)
 				valid_arguments);
 		if (kvlist == NULL)
 			return -1;
+	}
+
+	if (rte_kvargs_count(kvlist, ETH_PCAP_SNAPLEN_ARG) == 1) {
+		ret = rte_kvargs_process(kvlist, ETH_PCAP_SNAPLEN_ARG,
+				&parse_uint_value, &snaplen);
+		dumpers.snaplen = snaplen;
 	}
 
 	/*
@@ -1593,7 +1626,7 @@ create_eth:
 			pp->tx_dumper[i] = dumpers.queue[i].dumper;
 			pp->tx_pcap[i] = dumpers.queue[i].pcap;
 		}
-
+		pp->snaplen = snaplen;
 		eth_dev->process_private = pp;
 		eth_dev->rx_pkt_burst = eth_pcap_rx;
 		if (devargs_all.is_tx_pcap)
