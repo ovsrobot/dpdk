@@ -545,13 +545,21 @@ test_node_clone(void)
 {
 	test_main_t *tm = &test_main;
 	uint32_t node_id, dummy_id;
+	uint32_t dummy_id_clone;
 	int i;
 
 	node_id = rte_node_from_name("test_node00");
 	tm->test_node[0].idx = node_id;
 
+#define TEST_NODE_CLONE_NAME "test_node00"
+	dummy_id_clone = rte_node_clone(node_id, TEST_NODE_CLONE_NAME);
+	if (rte_node_is_invalid(dummy_id_clone)) {
+		printf("Got invalid id when clone, Expecting fail\n");
+		return -1;
+	}
+
 	/* Clone with same name, should fail */
-	dummy_id = rte_node_clone(node_id, "test_node00");
+	dummy_id = rte_node_clone(node_id, TEST_NODE_CLONE_NAME);
 	if (!rte_node_is_invalid(dummy_id)) {
 		printf("Got valid id when clone with same name, Expecting fail\n");
 		return -1;
