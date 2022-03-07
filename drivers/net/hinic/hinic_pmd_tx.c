@@ -1144,6 +1144,12 @@ u16 hinic_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, u16 nb_pkts)
 		mbuf_pkt = *tx_pkts++;
 		queue_info = 0;
 
+		if (unlikely(mbuf_pkt->pkt_len == 0)) {
+			rte_pktmbuf_free(mbuf_pkt);
+			txq->txq_stats.off_errs++;
+			continue;
+		}
+
 		/* 1. parse sge and tx offload info from mbuf */
 		if (unlikely(!hinic_get_sge_txoff_info(mbuf_pkt,
 						       &sqe_info, &off_info))) {
