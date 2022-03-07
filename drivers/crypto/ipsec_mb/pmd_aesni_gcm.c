@@ -96,7 +96,9 @@ aesni_gcm_session_configure(IMB_MGR *mb_mgr, void *session,
 		sess->iv.length = auth_xform->auth.iv.length;
 		key_length = auth_xform->auth.key.length;
 		key = auth_xform->auth.key.data;
-		sess->req_digest_length = auth_xform->auth.digest_length;
+		sess->req_digest_length =
+		    RTE_MIN(auth_xform->auth.digest_length,
+				DIGEST_LENGTH_MAX);
 		break;
 	case IPSEC_MB_OP_AEAD_AUTHENTICATED_ENCRYPT:
 	case IPSEC_MB_OP_AEAD_AUTHENTICATED_DECRYPT:
@@ -116,7 +118,9 @@ aesni_gcm_session_configure(IMB_MGR *mb_mgr, void *session,
 		key_length = aead_xform->aead.key.length;
 		key = aead_xform->aead.key.data;
 		sess->aad_length = aead_xform->aead.aad_length;
-		sess->req_digest_length = aead_xform->aead.digest_length;
+		sess->req_digest_length =
+			RTE_MIN(aead_xform->aead.digest_length,
+				DIGEST_LENGTH_MAX);
 		break;
 	default:
 		IPSEC_MB_LOG(
@@ -146,7 +150,7 @@ aesni_gcm_session_configure(IMB_MGR *mb_mgr, void *session,
 	}
 
 	/* Digest check */
-	if (sess->req_digest_length > 16) {
+	if (sess->req_digest_length > DIGEST_LENGTH_MAX) {
 		IPSEC_MB_LOG(ERR, "Invalid digest length");
 		ret = -EINVAL;
 		goto error_exit;
@@ -157,7 +161,7 @@ aesni_gcm_session_configure(IMB_MGR *mb_mgr, void *session,
 	 * the requested number of bytes.
 	 */
 	if (sess->req_digest_length < 4)
-		sess->gen_digest_length = 16;
+		sess->gen_digest_length = DIGEST_LENGTH_MAX;
 	else
 		sess->gen_digest_length = sess->req_digest_length;
 
