@@ -32,6 +32,8 @@
 #define CMD_LINE_OPT_PDUMP_NUM 256
 #define CMD_LINE_OPT_MULTI "multi"
 #define CMD_LINE_OPT_MULTI_NUM 257
+#define CMD_LINE_OPT_FILTER "filter"
+#define CMD_LINE_OPT_FILTER_NUM 258
 #define PDUMP_PORT_ARG "port"
 #define PDUMP_PCI_ARG "device_id"
 #define PDUMP_QUEUE_ARG "queue"
@@ -42,10 +44,16 @@
 #define PDUMP_MSIZE_ARG "mbuf-size"
 #define PDUMP_NUM_MBUFS_ARG "total-num-mbufs"
 
+#define FILTER_PCAP_FILE_SIZE_ARG "size"
+#define FILTER_PCAP_FILE_SIZE_FLAGS   (1 << 0)
+#define FILTER_SNAPLEN_ARG "snaplen"
+#define FILTER_SNAPLEN_FLAGS   (1 << 1)
+
 #define VDEV_NAME_FMT "net_pcap_%s_%d"
 #define VDEV_PCAP_ARGS_FMT "tx_pcap=%s"
 #define VDEV_IFACE_ARGS_FMT "tx_iface=%s"
 #define TX_STREAM_SIZE 64
+#define PCAP_MIN_SNAPLEN 64
 
 #define MP_NAME "pdump_pool_%d"
 
@@ -64,6 +72,7 @@
 #define MAX_LONG_OPT_SZ 64
 #define RING_SIZE 16384
 #define SIZE 256
+#define VDEV_ARGS_SIZE 1024
 #define BURST_SIZE 32
 #define NUM_VDEVS 2
 /* Maximum delay for exiting after primary process. */
@@ -97,6 +106,12 @@ static const char * const valid_pdump_arguments[] = {
 	PDUMP_RING_SIZE_ARG,
 	PDUMP_MSIZE_ARG,
 	PDUMP_NUM_MBUFS_ARG,
+	NULL
+};
+
+static const char * const valid_filter_arguments[] = {
+	FILTER_PCAP_FILE_SIZE_ARG,
+	FILTER_SNAPLEN_ARG,
 	NULL
 };
 
@@ -136,6 +151,14 @@ struct pdump_tuples {
 } __rte_cache_aligned;
 static struct pdump_tuples pdump_t[APP_ARG_TCPDUMP_MAX_TUPLES];
 
+struct pdump_filter {
+	uint64_t filter_flags;
+	uint32_t pcap_file_size;
+	uint16_t snaplen;
+} __rte_cache_aligned;
+static struct pdump_filter filter_t;
+
+static uint32_t pcap_data_size;
 struct parse_val {
 	uint64_t min;
 	uint64_t max;
@@ -160,7 +183,9 @@ pdump_usage(const char *prgname)
 			" tx-dev=<iface or pcap file>,"
 			"[ring-size=<ring size>default:16384],"
 			"[mbuf-size=<mbuf data size>default:2176],"
-			"[total-num-mbufs=<number of mbufs>default:65535]'\n",
+			"[total-num-mbufs=<number of mbufs>default:65535]'"
+			" --"CMD_LINE_OPT_FILTER" "
+			"'[size=<pcap size[K/k/M/m/G/g]>],[snaplen=<pkglen>]'\n",
 			prgname);
 }
 
@@ -240,6 +265,39 @@ parse_uint_value(const char *key, const char *value, void *extra_args)
 		return ret;
 
 	v->val = t;
+	return 0;
+}
+
+static int
+__parse_size(const char *key __rte_unused, const char *value,
+		void *extra_args)
+{
+	const char *str_size = NULL;
+	char *p1, *p2;
+	char *end;
+	int *val = extra_args;
+	int size = 0;
+
+	str_size = strdup(value);
+	p1 = strchr(str_size, 'K');
+	p2 = strchr(str_size, 'k');
+	if (p1 || p2)
+		size = strtoul(str_size, &end, 10) * 1024;
+	else {
+		p1 = strchr(str_size, 'M');
+		p2 = strchr(str_size, 'm');
+		if (p1 || p2)
+			size = strtoul(str_size, &end, 10) * 1024 * 1024;
+		else {
+			p1 = strchr(str_size, 'G');
+			p2 = strchr(str_size, 'g');
+			if (p1 || p2)
+				size = strtoul(str_size, &end, 10) * 1024 * 1024 * 1024;
+			else
+				size = strtoul(str_size, &end, 10);
+		}
+	}
+	*val = (uint32_t)size;
 	return 0;
 }
 
@@ -377,6 +435,46 @@ free_kvlist:
 	return ret;
 }
 
+static int
+parse_filter(const char *optarg)
+{
+	int ret = 0, cnt;
+	struct parse_val v = {0};
+	struct rte_kvargs *kvlist;
+	struct pdump_filter *ft = &filter_t;
+	/* initial check for invalid arguments */
+	kvlist = rte_kvargs_parse(optarg, valid_filter_arguments);
+	if (kvlist == NULL) {
+		printf("--filter=\"%s\": invalid argument passed\n", optarg);
+		return -1;
+	}
+	cnt = rte_kvargs_count(kvlist, FILTER_PCAP_FILE_SIZE_ARG);
+	if (cnt == 1) {
+		ret = rte_kvargs_process(kvlist, FILTER_PCAP_FILE_SIZE_ARG,
+						&__parse_size, &ft->pcap_file_size);
+		if (ret < 0)
+			goto free_kvlist;
+
+		ft->filter_flags |= FILTER_PCAP_FILE_SIZE_FLAGS;
+	}
+
+	cnt = rte_kvargs_count(kvlist, FILTER_SNAPLEN_ARG);
+	if (cnt == 1) {
+		v.min = PCAP_MIN_SNAPLEN;
+		v.max = 65535;
+		ret = rte_kvargs_process(kvlist, FILTER_SNAPLEN_ARG,
+						&parse_uint_value, &v);
+		if (ret < 0)
+			goto free_kvlist;
+		ft->snaplen = (uint32_t)v.val;
+		ft->filter_flags |= FILTER_SNAPLEN_FLAGS;
+	}
+free_kvlist:
+	rte_kvargs_free(kvlist);
+	return ret;
+}
+
+
 /* Parse the argument given in the command line of the application */
 static int
 launch_args_parse(int argc, char **argv, char *prgname)
@@ -386,6 +484,7 @@ launch_args_parse(int argc, char **argv, char *prgname)
 	static struct option long_option[] = {
 		{CMD_LINE_OPT_PDUMP, 1, 0, CMD_LINE_OPT_PDUMP_NUM},
 		{CMD_LINE_OPT_MULTI, 0, 0, CMD_LINE_OPT_MULTI_NUM},
+		{CMD_LINE_OPT_FILTER, 1, 0, CMD_LINE_OPT_FILTER_NUM},
 		{NULL, 0, 0, 0}
 	};
 
@@ -405,6 +504,13 @@ launch_args_parse(int argc, char **argv, char *prgname)
 			break;
 		case CMD_LINE_OPT_MULTI_NUM:
 			multiple_core_capture = 1;
+			break;
+		case CMD_LINE_OPT_FILTER_NUM:
+			ret = parse_filter(optarg);
+			if (ret) {
+				pdump_usage(prgname);
+				return -1;
+			}
 			break;
 		default:
 			pdump_usage(prgname);
@@ -458,9 +564,38 @@ disable_pdump(struct pdump_tuples *pt)
 		rte_pdump_disable(pt->port, pt->queue, pt->dir);
 }
 
+static inline int pdump_filter_pcap_size(struct rte_mbuf **pkts, uint16_t nb_in_deq)
+{
+	int ret = 1;
+	int i = 0;
+	uint32_t data_len = 0;
+
+	if (likely(!(filter_t.filter_flags & FILTER_PCAP_FILE_SIZE_FLAGS)))
+		return 1;
+
+	if (filter_t.filter_flags & FILTER_PCAP_FILE_SIZE_FLAGS) {
+		for (i = 0; i < nb_in_deq; i++) {
+			data_len = rte_pktmbuf_pkt_len(pkts[i]);
+			if (filter_t.filter_flags & FILTER_SNAPLEN_FLAGS) {
+				if (data_len > filter_t.snaplen)
+					data_len = filter_t.snaplen;
+			}
+			pcap_data_size += data_len;
+		}
+		if (pcap_data_size >= filter_t.pcap_file_size) {
+			printf("recv packet total size: %u, will exit...\n",
+				pcap_data_size);
+			ret = 0;
+		}
+	}
+	return ret;
+}
+
+
 static inline void
 pdump_rxtx(struct rte_ring *ring, uint16_t vdev_id, struct pdump_stats *stats)
 {
+	int ret = 0;
 	/* write input packets of port to vdev for pdump */
 	struct rte_mbuf *rxtx_bufs[BURST_SIZE];
 
@@ -468,7 +603,7 @@ pdump_rxtx(struct rte_ring *ring, uint16_t vdev_id, struct pdump_stats *stats)
 	const uint16_t nb_in_deq = rte_ring_dequeue_burst(ring,
 			(void *)rxtx_bufs, BURST_SIZE, NULL);
 	stats->dequeue_pkts += nb_in_deq;
-
+	ret = pdump_filter_pcap_size(rxtx_bufs, nb_in_deq);
 	if (nb_in_deq) {
 		/* then sent on vdev */
 		uint16_t nb_in_txd = rte_eth_tx_burst(
@@ -483,6 +618,8 @@ pdump_rxtx(struct rte_ring *ring, uint16_t vdev_id, struct pdump_stats *stats)
 			stats->freed_pkts += drops;
 		}
 	}
+	if (!ret)
+		quit_signal = 1;
 }
 
 static void
@@ -622,6 +759,52 @@ configure_vdev(uint16_t port_id)
 	return 0;
 }
 
+static int
+get_vdev_rx_args(char *vdev_args, int size, struct pdump_tuples *pt)
+{
+	int args_len = 0;
+	if (!vdev_args || size < 0)
+		return -1;
+	char *str = pt->rx_dev;
+
+	if (pt->rx_vdev_stream_type == IFACE) {
+		args_len += snprintf(vdev_args + args_len, size - args_len,
+				VDEV_IFACE_ARGS_FMT, str);
+	} else {
+		args_len += snprintf(vdev_args + args_len, size - args_len,
+				VDEV_PCAP_ARGS_FMT, str);
+	}
+	if ((filter_t.filter_flags & FILTER_SNAPLEN_FLAGS) &&
+		 filter_t.snaplen >= PCAP_MIN_SNAPLEN) {
+		args_len += snprintf(vdev_args + args_len, size - args_len,
+			","FILTER_SNAPLEN_ARG"=%d", filter_t.snaplen);
+	}
+	return args_len;
+}
+
+
+static int
+get_vdev_tx_args(char *vdev_args, int size, struct pdump_tuples *pt)
+{
+	int args_len = 0;
+	if (!vdev_args || size < 0)
+		return -1;
+	char *str = pt->tx_dev;
+	if (pt->tx_vdev_stream_type == IFACE) {
+		args_len += snprintf(vdev_args + args_len, size - args_len,
+				VDEV_IFACE_ARGS_FMT, str);
+	} else {
+		args_len += snprintf(vdev_args + args_len, size	 - args_len,
+				VDEV_PCAP_ARGS_FMT, str);
+	}
+	if ((filter_t.filter_flags & FILTER_SNAPLEN_FLAGS) &&
+		filter_t.snaplen >= PCAP_MIN_SNAPLEN) {
+		args_len += snprintf(vdev_args + args_len, size	 - args_len,
+			","FILTER_SNAPLEN_ARG"=%d", filter_t.snaplen);
+	}
+	return args_len;
+}
+
 static void
 create_mp_ring_vdev(void)
 {
@@ -630,7 +813,7 @@ create_mp_ring_vdev(void)
 	struct pdump_tuples *pt = NULL;
 	struct rte_mempool *mbuf_pool = NULL;
 	char vdev_name[SIZE];
-	char vdev_args[SIZE];
+	char vdev_args[VDEV_ARGS_SIZE];
 	char ring_name[SIZE];
 	char mempool_name[SIZE];
 
@@ -681,11 +864,7 @@ create_mp_ring_vdev(void)
 			/* create vdevs */
 			snprintf(vdev_name, sizeof(vdev_name),
 				 VDEV_NAME_FMT, RX_STR, i);
-			(pt->rx_vdev_stream_type == IFACE) ?
-			snprintf(vdev_args, sizeof(vdev_args),
-				 VDEV_IFACE_ARGS_FMT, pt->rx_dev) :
-			snprintf(vdev_args, sizeof(vdev_args),
-				 VDEV_PCAP_ARGS_FMT, pt->rx_dev);
+			get_vdev_rx_args(vdev_args, sizeof(vdev_args), pt);
 			if (rte_eal_hotplug_add("vdev", vdev_name,
 						vdev_args) < 0) {
 				cleanup_rings();
@@ -711,11 +890,7 @@ create_mp_ring_vdev(void)
 			else {
 				snprintf(vdev_name, sizeof(vdev_name),
 					 VDEV_NAME_FMT, TX_STR, i);
-				(pt->rx_vdev_stream_type == IFACE) ?
-				snprintf(vdev_args, sizeof(vdev_args),
-					 VDEV_IFACE_ARGS_FMT, pt->tx_dev) :
-				snprintf(vdev_args, sizeof(vdev_args),
-					 VDEV_PCAP_ARGS_FMT, pt->tx_dev);
+				get_vdev_tx_args(vdev_args, sizeof(vdev_args), pt);
 				if (rte_eal_hotplug_add("vdev", vdev_name,
 							vdev_args) < 0) {
 					cleanup_rings();
@@ -751,11 +926,7 @@ create_mp_ring_vdev(void)
 
 			snprintf(vdev_name, sizeof(vdev_name),
 				 VDEV_NAME_FMT, RX_STR, i);
-			(pt->rx_vdev_stream_type == IFACE) ?
-			snprintf(vdev_args, sizeof(vdev_args),
-				 VDEV_IFACE_ARGS_FMT, pt->rx_dev) :
-			snprintf(vdev_args, sizeof(vdev_args),
-				 VDEV_PCAP_ARGS_FMT, pt->rx_dev);
+			get_vdev_rx_args(vdev_args, sizeof(vdev_args), pt);
 			if (rte_eal_hotplug_add("vdev", vdev_name,
 						vdev_args) < 0) {
 				cleanup_rings();
@@ -788,11 +959,7 @@ create_mp_ring_vdev(void)
 
 			snprintf(vdev_name, sizeof(vdev_name),
 				 VDEV_NAME_FMT, TX_STR, i);
-			(pt->tx_vdev_stream_type == IFACE) ?
-			snprintf(vdev_args, sizeof(vdev_args),
-				 VDEV_IFACE_ARGS_FMT, pt->tx_dev) :
-			snprintf(vdev_args, sizeof(vdev_args),
-				 VDEV_PCAP_ARGS_FMT, pt->tx_dev);
+			get_vdev_tx_args(vdev_args, sizeof(vdev_args), pt);
 			if (rte_eal_hotplug_add("vdev", vdev_name,
 						vdev_args) < 0) {
 				cleanup_rings();
