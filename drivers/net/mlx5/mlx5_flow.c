@@ -2553,8 +2553,6 @@ mlx5_flow_validate_item_ipv6(const struct rte_flow_item *item,
 					  RTE_FLOW_ERROR_TYPE_ITEM, item,
 					  "IPv6 cannot follow L2/VLAN layer "
 					  "which ether type is not IPv6");
-	if (mask && mask->hdr.proto == UINT8_MAX && spec)
-		next_proto = spec->hdr.proto;
 	if (item_flags & MLX5_FLOW_LAYER_TUNNEL) {
 		if (next_proto == IPPROTO_IPIP || next_proto == IPPROTO_IPV6)
 			return rte_flow_error_set(error, EINVAL,
@@ -2563,16 +2561,6 @@ mlx5_flow_validate_item_ipv6(const struct rte_flow_item *item,
 						  "multiple tunnel "
 						  "not supported");
 	}
-	if (next_proto == IPPROTO_HOPOPTS  ||
-	    next_proto == IPPROTO_ROUTING  ||
-	    next_proto == IPPROTO_FRAGMENT ||
-	    next_proto == IPPROTO_ESP	   ||
-	    next_proto == IPPROTO_AH	   ||
-	    next_proto == IPPROTO_DSTOPTS)
-		return rte_flow_error_set(error, EINVAL,
-					  RTE_FLOW_ERROR_TYPE_ITEM, item,
-					  "IPv6 proto (next header) should "
-					  "not be set as extension header");
 	if (item_flags & MLX5_FLOW_LAYER_IPIP)
 		return rte_flow_error_set(error, EINVAL,
 					  RTE_FLOW_ERROR_TYPE_ITEM, item,
@@ -2600,6 +2588,21 @@ mlx5_flow_validate_item_ipv6(const struct rte_flow_item *item,
 					MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 	if (ret < 0)
 		return ret;
+	if (mask->hdr.proto != 0 && mask->hdr.proto != 0xff)
+		return rte_flow_error_set(error, EINVAL,
+					  RTE_FLOW_ERROR_TYPE_ITEM_MASK, mask,
+					  "partial mask is not supported for protocol");
+	next_proto = spec->hdr.proto & mask->hdr.proto;
+	if (next_proto == IPPROTO_HOPOPTS  ||
+	    next_proto == IPPROTO_ROUTING  ||
+	    next_proto == IPPROTO_FRAGMENT ||
+	    next_proto == IPPROTO_ESP	   ||
+	    next_proto == IPPROTO_AH	   ||
+	    next_proto == IPPROTO_DSTOPTS)
+		return rte_flow_error_set(error, EINVAL,
+					  RTE_FLOW_ERROR_TYPE_ITEM, item,
+					  "IPv6 proto (next header) should "
+					  "not be set as extension header");
 	return 0;
 }
 
