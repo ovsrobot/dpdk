@@ -206,6 +206,9 @@ post_process_gcm_crypto_op(struct ipsec_mb_qp *qp,
 			op->status = RTE_CRYPTO_OP_STATUS_AUTH_FAILED;
 	} else {
 		if (session->req_digest_length != session->gen_digest_length) {
+			session->req_digest_length =
+				RTE_MIN(session->req_digest_length,
+						DIGEST_LENGTH_MAX);
 			if (session->op ==
 				IPSEC_MB_OP_AEAD_AUTHENTICATED_ENCRYPT)
 				memcpy(op->sym->aead.digest.data,
