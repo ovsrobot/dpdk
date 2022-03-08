@@ -623,6 +623,8 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 		goto resized;
 	}
 
+	eal_mem_set_dump(va, alloc_sz, true);
+
 	/* In linux, hugetlb limitations, like cgroup, are
 	 * enforced at fault time instead of mmap(), even
 	 * with the option of MAP_POPULATE. Kernel will send
