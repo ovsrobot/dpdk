@@ -1050,6 +1050,7 @@ bond_mode_8023ad_activate_slave(struct rte_eth_dev *bond_dev,
 	uint32_t total_tx_desc;
 	struct bond_tx_queue *bd_tx_q;
 	uint16_t q_id;
+	uint32_t cache_size;
 
 	/* Given slave mus not be in active list */
 	RTE_ASSERT(find_slave_by_id(internals->active_slaves,
@@ -1100,11 +1101,12 @@ bond_mode_8023ad_activate_slave(struct rte_eth_dev *bond_dev,
 		total_tx_desc += bd_tx_q->nb_tx_desc;
 	}
 
+	cache_size = RTE_MEMPOOL_CACHE_MAX_SIZE >= 32 ?
+		32 : RTE_MEMPOOL_CACHE_MAX_SIZE;
+	total_tx_desc += rte_lcore_count() * cache_size * RTE_MEMPOOL_CACHE_FLUSHTHRESH_MULTIPLIER;
 	snprintf(mem_name, RTE_DIM(mem_name), "slave_port%u_pool", slave_id);
 	port->mbuf_pool = rte_pktmbuf_pool_create(mem_name, total_tx_desc,
-		RTE_MEMPOOL_CACHE_MAX_SIZE >= 32 ?
-			32 : RTE_MEMPOOL_CACHE_MAX_SIZE,
-		0, element_size, socket_id);
+		cache_size, 0, element_size, socket_id);
 
 	/* Any memory allocation failure in initialization is critical because
 	 * resources can't be free, so reinitialization is impossible. */
