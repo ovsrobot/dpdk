@@ -466,6 +466,26 @@ def unbind_all(dev_list, force=False):
         unbind_one(d, force)
 
 
+def check_iommu():
+    """Check if IOMMU is enabled on system"""
+    if len(os.listdir("/sys/class/iommu")) != 0:
+        return True
+    print("Warning: IOMMU support disabled")
+    return False
+
+
+def enable_noiommu_mode():
+    """Enables the noiommu mode for vfio drivers"""
+    filename = "/sys/module/vfio/parameters/enable_unsafe_noiommu_mode"
+    try:
+        f = open(filename, "w")
+    except:
+        sys.exit("Error: unable to enable noiommu mode, could not open '%s'" % filename)
+    f.write("1")
+    f.close()
+    print("Warning: enabling unsafe no IOMMU mode for vfio drivers")
+
+
 def bind_all(dev_list, driver, force=False):
     """Bind method, takes a list of device locations"""
     global devices
@@ -491,6 +511,11 @@ def bind_all(dev_list, driver, force=False):
         dev_list = map(dev_id_from_dev_name, dev_list)
     except ValueError as ex:
         sys.exit(ex)
+
+    # check for IOMMU support
+    if not check_iommu():
+        if driver == "vfio-pci":
+            enable_noiommu_mode()
 
     for d in dev_list:
         bind_one(d, driver, force)
