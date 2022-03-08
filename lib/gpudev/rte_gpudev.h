@@ -61,6 +61,8 @@ struct rte_gpu_info {
 	size_t total_memory;
 	/* Local NUMA memory ID. -1 if unknown. */
 	int16_t numa_node;
+	/* Get GPU memory page size. */
+	size_t page_size;
 };
 
 /** Flags passed in notification callback. */
