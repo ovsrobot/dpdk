@@ -260,7 +260,9 @@ Limitations
   ol_flags. As the mempool for the external buffer is managed by PMD, all the
   Rx mbufs must be freed before the device is closed. Otherwise, the mempool of
   the external buffers will be freed by PMD and the application which still
-  holds the external buffers may be corrupted.
+  holds the external buffers may be corrupted. User-managed mempools with
+  external pinned data buffers cannot be used in conjunction with MPRQ
+  since packets may be already attached to PMD-managed external buffers.
 
 - If Multi-Packet Rx queue is configured (``mprq_en``) and Rx CQE compression is
   enabled (``rxq_cqe_comp_en``) at the same time, RSS hash result is not fully
