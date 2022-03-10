@@ -850,6 +850,9 @@ get_bbdev_op_size(enum rte_bbdev_op_type type)
 	case RTE_BBDEV_OP_LDPC_ENC:
 		result = sizeof(struct rte_bbdev_enc_op);
 		break;
+	case RTE_BBDEV_OP_FFT:
+		result = sizeof(struct rte_bbdev_fft_op);
+		break;
 	default:
 		break;
 	}
@@ -871,6 +874,10 @@ bbdev_op_init(struct rte_mempool *mempool, void *arg, void *element,
 	} else if (type == RTE_BBDEV_OP_TURBO_ENC ||
 			type == RTE_BBDEV_OP_LDPC_ENC) {
 		struct rte_bbdev_enc_op *op = element;
+		memset(op, 0, mempool->elt_size);
+		op->mempool = mempool;
+	} else if (type == RTE_BBDEV_OP_FFT) {
+		struct rte_bbdev_fft_op *op = element;
 		memset(op, 0, mempool->elt_size);
 		op->mempool = mempool;
 	}
@@ -1123,6 +1130,7 @@ rte_bbdev_op_type_str(enum rte_bbdev_op_type op_type)
 		"RTE_BBDEV_OP_TURBO_ENC",
 		"RTE_BBDEV_OP_LDPC_DEC",
 		"RTE_BBDEV_OP_LDPC_ENC",
+		"RTE_BBDEV_OP_FFT",
 	};
 
 	if (op_type < RTE_BBDEV_OP_TYPE_COUNT)

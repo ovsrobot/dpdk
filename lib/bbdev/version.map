@@ -39,3 +39,13 @@ DPDK_22 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	# added in 22.06
+	rte_bbdev_enqueue_fft_ops;
+	rte_bbdev_dequeue_fft_ops;
+	rte_bbdev_fft_op_alloc_bulk;
+	rte_bbdev_fft_op_free_bulk;
+};
