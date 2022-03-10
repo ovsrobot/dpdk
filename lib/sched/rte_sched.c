@@ -155,6 +155,7 @@ struct rte_sched_subport {
 	uint64_t tc_credits[RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE];
 
 	/* TC oversubscription */
+	uint8_t is_tc_ov_enabled;
 	uint64_t tc_ov_wm;
 	uint64_t tc_ov_wm_min;
 	uint64_t tc_ov_wm_max;
@@ -1166,6 +1167,45 @@ rte_sched_cman_config(struct rte_sched_port *port,
 #endif
 
 int
+rte_sched_subport_tc_ov_config(struct rte_sched_port *port,
+	uint32_t subport_id,
+	bool tc_ov_enable)
+{
+	struct rte_sched_subport *s;
+	struct rte_sched_subport_profile *profile;
+
+	if (port == NULL) {
+		RTE_LOG(ERR, SCHED,
+			"%s: Incorrect value for parameter port\n", __func__);
+		return -EINVAL;
+	}
+
+	if (subport_id >= port->n_subports_per_port) {
+		RTE_LOG(ERR, SCHED,
+			"%s: Incorrect value for parameter subport id\n", __func__);
+		return  -EINVAL;
+	}
+
+	s = port->subports[subport_id];
+	s->is_tc_ov_enabled = tc_ov_enable;
+
+	if (s->is_tc_ov_enabled) {
+		/* TC oversubscription */
+		s->tc_ov_wm_min = port->mtu;
+		s->tc_ov_period_id = 0;
+		s->tc_ov = 0;
+		s->tc_ov_n = 0;
+		s->tc_ov_rate = 0;
+
+		profile = port->subport_profiles + s->profile;
+		s->tc_ov_wm_max = rte_sched_time_ms_to_bytes(profile->tc_period,
+				s->pipe_tc_be_rate_max);
+		s->tc_ov_wm = s->tc_ov_wm_max;
+	}
+	return 0;
+}
+
+int
 rte_sched_subport_config(struct rte_sched_port *port,
 	uint32_t subport_id,
 	struct rte_sched_subport_params *params,
@@ -1317,12 +1357,8 @@ rte_sched_subport_config(struct rte_sched_port *port,
 		for (i = 0; i < RTE_SCHED_PORT_N_GRINDERS; i++)
 			s->grinder_base_bmp_pos[i] = RTE_SCHED_PIPE_INVALID;
 
-		/* TC oversubscription */
-		s->tc_ov_wm_min = port->mtu;
-		s->tc_ov_period_id = 0;
-		s->tc_ov = 0;
-		s->tc_ov_n = 0;
-		s->tc_ov_rate = 0;
+		/* TC over-subscription is disabled by default */
+		s->is_tc_ov_enabled = 0;
 	}
 
 	{
@@ -1342,9 +1378,6 @@ rte_sched_subport_config(struct rte_sched_port *port,
 			else
 				profile->tc_credits_per_period[i] = 0;
 
-		s->tc_ov_wm_max = rte_sched_time_ms_to_bytes(profile->tc_period,
-							s->pipe_tc_be_rate_max);
-		s->tc_ov_wm = s->tc_ov_wm_max;
 		s->profile = subport_profile_id;
 
 	}
@@ -1417,17 +1450,20 @@ rte_sched_pipe_config(struct rte_sched_port *port,
 		double pipe_tc_be_rate =
 			(double) params->tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASS_BE]
 			/ (double) params->tc_period;
-		uint32_t tc_be_ov = s->tc_ov;
 
-		/* Unplug pipe from its subport */
-		s->tc_ov_n -= params->tc_ov_weight;
-		s->tc_ov_rate -= pipe_tc_be_rate;
-		s->tc_ov = s->tc_ov_rate > subport_tc_be_rate;
+		if (s->is_tc_ov_enabled) {
+			uint32_t tc_be_ov = s->tc_ov;
 
-		if (s->tc_ov != tc_be_ov) {
-			RTE_LOG(DEBUG, SCHED,
-				"Subport %u Best-effort TC oversubscription is OFF (%.4lf >= %.4lf)\n",
-				subport_id, subport_tc_be_rate, s->tc_ov_rate);
+			/* Unplug pipe from its subport */
+			s->tc_ov_n -= params->tc_ov_weight;
+			s->tc_ov_rate -= pipe_tc_be_rate;
+			s->tc_ov = s->tc_ov_rate > subport_tc_be_rate;
+
+			if (s->tc_ov != tc_be_ov) {
+				RTE_LOG(DEBUG, SCHED,
+					"Subport %u Best-effort TC oversubscription is OFF (%.4lf >= %.4lf)\n",
+					subport_id, subport_tc_be_rate, s->tc_ov_rate);
+			}
 		}
 
 		/* Reset the pipe */
@@ -1460,19 +1496,22 @@ rte_sched_pipe_config(struct rte_sched_port *port,
 		double pipe_tc_be_rate =
 			(double) params->tc_credits_per_period[RTE_SCHED_TRAFFIC_CLASS_BE]
 			/ (double) params->tc_period;
-		uint32_t tc_be_ov = s->tc_ov;
 
-		s->tc_ov_n += params->tc_ov_weight;
-		s->tc_ov_rate += pipe_tc_be_rate;
-		s->tc_ov = s->tc_ov_rate > subport_tc_be_rate;
+		if (s->is_tc_ov_enabled) {
+			uint32_t tc_be_ov = s->tc_ov;
 
-		if (s->tc_ov != tc_be_ov) {
-			RTE_LOG(DEBUG, SCHED,
-				"Subport %u Best effort TC oversubscription is ON (%.4lf < %.4lf)\n",
-				subport_id, subport_tc_be_rate, s->tc_ov_rate);
+			s->tc_ov_n += params->tc_ov_weight;
+			s->tc_ov_rate += pipe_tc_be_rate;
+			s->tc_ov = s->tc_ov_rate > subport_tc_be_rate;
+
+			if (s->tc_ov != tc_be_ov) {
+				RTE_LOG(DEBUG, SCHED,
+					"Subport %u Best effort TC oversubscription is ON (%.4lf < %.4lf)\n",
+					subport_id, subport_tc_be_rate, s->tc_ov_rate);
+			}
+			p->tc_ov_period_id = s->tc_ov_period_id;
+			p->tc_ov_credits = s->tc_ov_wm;
 		}
-		p->tc_ov_period_id = s->tc_ov_period_id;
-		p->tc_ov_credits = s->tc_ov_wm;
 	}
 
 	return 0;
@@ -2320,6 +2359,45 @@ grinder_credits_update(struct rte_sched_port *port,
 
 	/* Subport TCs */
 	if (unlikely(port->time >= subport->tc_time)) {
+		for (i = 0; i < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; i++)
+			subport->tc_credits[i] = sp->tc_credits_per_period[i];
+
+		subport->tc_time = port->time + sp->tc_period;
+	}
+
+	/* Pipe TCs */
+	if (unlikely(port->time >= pipe->tc_time)) {
+		for (i = 0; i < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; i++)
+			pipe->tc_credits[i] = params->tc_credits_per_period[i];
+		pipe->tc_time = port->time + params->tc_period;
+	}
+}
+
+static inline void
+grinder_credits_update_with_tc_ov(struct rte_sched_port *port,
+	struct rte_sched_subport *subport, uint32_t pos)
+{
+	struct rte_sched_grinder *grinder = subport->grinder + pos;
+	struct rte_sched_pipe *pipe = grinder->pipe;
+	struct rte_sched_pipe_profile *params = grinder->pipe_params;
+	struct rte_sched_subport_profile *sp = grinder->subport_params;
+	uint64_t n_periods;
+	uint32_t i;
+
+	/* Subport TB */
+	n_periods = (port->time - subport->tb_time) / sp->tb_period;
+	subport->tb_credits += n_periods * sp->tb_credits_per_period;
+	subport->tb_credits = RTE_MIN(subport->tb_credits, sp->tb_size);
+	subport->tb_time += n_periods * sp->tb_period;
+
+	/* Pipe TB */
+	n_periods = (port->time - pipe->tb_time) / params->tb_period;
+	pipe->tb_credits += n_periods * params->tb_credits_per_period;
+	pipe->tb_credits = RTE_MIN(pipe->tb_credits, params->tb_size);
+	pipe->tb_time += n_periods * params->tb_period;
+
+	/* Subport TCs */
+	if (unlikely(port->time >= subport->tc_time)) {
 		subport->tc_ov_wm =
 			grinder_tc_ov_credits_update(port, subport, pos);
 
@@ -2347,6 +2425,39 @@ grinder_credits_update(struct rte_sched_port *port,
 
 static inline int
 grinder_credits_check(struct rte_sched_port *port,
+	struct rte_sched_subport *subport, uint32_t pos)
+{
+	struct rte_sched_grinder *grinder = subport->grinder + pos;
+	struct rte_sched_pipe *pipe = grinder->pipe;
+	struct rte_mbuf *pkt = grinder->pkt;
+	uint32_t tc_index = grinder->tc_index;
+	uint64_t pkt_len = pkt->pkt_len + port->frame_overhead;
+	uint64_t subport_tb_credits = subport->tb_credits;
+	uint64_t subport_tc_credits = subport->tc_credits[tc_index];
+	uint64_t pipe_tb_credits = pipe->tb_credits;
+	uint64_t pipe_tc_credits = pipe->tc_credits[tc_index];
+	int enough_credits;
+
+	/* Check pipe and subport credits */
+	enough_credits = (pkt_len <= subport_tb_credits) &&
+		(pkt_len <= subport_tc_credits) &&
+		(pkt_len <= pipe_tb_credits) &&
+		(pkt_len <= pipe_tc_credits);
+
+	if (!enough_credits)
+		return 0;
+
+	/* Update pipe and subport credits */
+	subport->tb_credits -= pkt_len;
+	subport->tc_credits[tc_index] -= pkt_len;
+	pipe->tb_credits -= pkt_len;
+	pipe->tc_credits[tc_index] -= pkt_len;
+
+	return 1;
+}
+
+static inline int
+grinder_credits_check_with_tc_ov(struct rte_sched_port *port,
 	struct rte_sched_subport *subport, uint32_t pos)
 {
 	struct rte_sched_grinder *grinder = subport->grinder + pos;
@@ -2403,8 +2514,13 @@ grinder_schedule(struct rte_sched_port *port,
 	uint32_t pkt_len = pkt->pkt_len + port->frame_overhead;
 	uint32_t be_tc_active;
 
-	if (!grinder_credits_check(port, subport, pos))
-		return 0;
+	if (unlikely(subport->is_tc_ov_enabled)) {
+		if (!grinder_credits_check_with_tc_ov(port, subport, pos))
+			return 0;
+	} else {
+		if (!grinder_credits_check(port, subport, pos))
+			return 0;
+	}
 
 	/* Advance port time */
 	port->time += pkt_len;
@@ -2770,7 +2886,11 @@ grinder_handle(struct rte_sched_port *port,
 						subport->profile;
 
 		grinder_prefetch_tc_queue_arrays(subport, pos);
-		grinder_credits_update(port, subport, pos);
+
+		if (unlikely(subport->is_tc_ov_enabled))
+			grinder_credits_update_with_tc_ov(port, subport, pos);
+		else
+			grinder_credits_update(port, subport, pos);
 
 		grinder->state = e_GRINDER_PREFETCH_MBUF;
 		return 0;
