@@ -1075,7 +1075,6 @@ mlx5_rx_intr_vec_enable(struct rte_eth_dev *dev)
 		/* This rxq obj must not be released in this function. */
 		struct mlx5_rxq_priv *rxq = mlx5_rxq_get(dev, i);
 		struct mlx5_rxq_obj *rxq_obj = rxq ? rxq->ctrl->obj : NULL;
-		int rc;
 
 		/* Skip queues that cannot request interrupts. */
 		if (!rxq_obj || (!rxq_obj->ibv_channel &&
@@ -1097,23 +1096,10 @@ mlx5_rx_intr_vec_enable(struct rte_eth_dev *dev)
 			rte_errno = ENOMEM;
 			return -rte_errno;
 		}
-		rc = mlx5_os_set_nonblock_channel_fd(rxq_obj->fd);
-		if (rc < 0) {
-			rte_errno = errno;
-			DRV_LOG(ERR,
-				"port %u failed to make Rx interrupt file"
-				" descriptor %d non-blocking for queue index"
-				" %d",
-				dev->data->port_id, rxq_obj->fd, i);
-			mlx5_rx_intr_vec_disable(dev);
-			return -rte_errno;
-		}
-
 		if (rte_intr_vec_list_index_set(intr_handle, i,
 					RTE_INTR_VEC_RXTX_OFFSET + count))
 			return -rte_errno;
-		if (rte_intr_efds_index_set(intr_handle, count,
-						   rxq_obj->fd))
+		if (rte_intr_efds_index_set(intr_handle, count, rxq_obj->fd))
 			return -rte_errno;
 		count++;
 	}
