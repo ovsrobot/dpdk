@@ -53,3 +53,28 @@ The following is a list of DPDK documents in the suggested reading order:
 *   **Sample Applications User Guide**: Describes a set of sample applications.
     Each chapter describes a sample application that showcases specific functionality
     and provides instructions on how to compile, run and use the sample application.
+
+*   **Driver Reference Guides**: Provides details on each driver inside a particular category.
+    Separate guides exist for each of:
+
+    * Baseband devices
+
+    * Compression devices
+
+    * Cryptographic accelerator devices
+
+    * DMA devices
+
+    * Event-based scheduling devices
+
+    * General purpose GPU devices
+
+    * Mempool drivers
+
+    * Network (NIC) devices
+
+    * "Raw" devices i.e. those not fitting into any other category
+
+    * Regular expression devices
+
+    * vDPA (vhost data path acceleration) devices
