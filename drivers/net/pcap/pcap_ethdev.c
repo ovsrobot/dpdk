@@ -33,10 +33,12 @@
 #define ETH_PCAP_IFACE_ARG    "iface"
 #define ETH_PCAP_PHY_MAC_ARG  "phy_mac"
 #define ETH_PCAP_INFINITE_RX_ARG  "infinite_rx"
+#define ETH_PCAP_SNAPLEN_ARG  "snaplen"
 
 #define ETH_PCAP_ARG_MAXLEN	64
 
 #define RTE_PMD_PCAP_MAX_QUEUES 16
+#define RTE_PCAP_MIN_SNAPLEN    64
 
 static char errbuf[PCAP_ERRBUF_SIZE];
 static struct timespec start_time;
@@ -93,6 +95,7 @@ struct pmd_internals {
 	int single_iface;
 	int phy_mac;
 	unsigned int infinite_rx;
+	int snaplen;
 };
 
 struct pmd_process_private {
@@ -121,6 +124,14 @@ struct pmd_devargs_all {
 	unsigned int is_rx_pcap;
 	unsigned int is_rx_iface;
 	unsigned int infinite_rx;
+	int snaplen;
+};
+struct pmd_devargs_all devargs_all = {
+	.single_iface = 0,
+	.is_tx_pcap = 0,
+	.is_tx_iface = 0,
+	.infinite_rx = 0,
+	.snaplen = RTE_ETH_PCAP_SNAPSHOT_LEN,
 };
 
 static const char *valid_arguments[] = {
@@ -132,6 +143,7 @@ static const char *valid_arguments[] = {
 	ETH_PCAP_IFACE_ARG,
 	ETH_PCAP_PHY_MAC_ARG,
 	ETH_PCAP_INFINITE_RX_ARG,
+	ETH_PCAP_SNAPLEN_ARG,
 	NULL
 };
 
@@ -384,8 +396,10 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	pcap_dumper_t *dumper;
 	unsigned char temp_data[RTE_ETH_PCAP_SNAPLEN];
 	size_t len, caplen;
-
-	pp = rte_eth_devices[dumper_q->port_id].process_private;
+	struct pmd_internals *internals;
+	struct rte_eth_dev *dev = &rte_eth_devices[dumper_q->port_id];
+	internals = dev->data->dev_private;
+	pp = dev->process_private;
 	dumper = pp->tx_dumper[dumper_q->queue_id];
 
 	if (dumper == NULL || nb_pkts == 0)
@@ -402,6 +416,8 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		}
 
 		calculate_timestamp(&header.ts);
+		if ((typeof(internals->snaplen))caplen > internals->snaplen)
+			caplen = internals->snaplen;
 		header.len = len;
 		header.caplen = caplen;
 		/* rte_pktmbuf_read() returns a pointer to the data directly
@@ -536,7 +552,7 @@ open_single_iface(const char *iface, pcap_t **pcap)
 }
 
 static int
-open_single_tx_pcap(const char *pcap_filename, pcap_dumper_t **dumper)
+open_single_tx_pcap(const char *pcap_filename, pcap_dumper_t **dumper, int snaplen)
 {
 	pcap_t *tx_pcap;
 
@@ -546,7 +562,7 @@ open_single_tx_pcap(const char *pcap_filename, pcap_dumper_t **dumper)
 	 * pcap holder.
 	 */
 	tx_pcap = pcap_open_dead_with_tstamp_precision(DLT_EN10MB,
-			RTE_ETH_PCAP_SNAPSHOT_LEN, PCAP_TSTAMP_PRECISION_NANO);
+			snaplen, PCAP_TSTAMP_PRECISION_NANO);
 	if (tx_pcap == NULL) {
 		PMD_LOG(ERR, "Couldn't create dead pcap");
 		return -1;
@@ -627,7 +643,7 @@ eth_dev_start(struct rte_eth_dev *dev)
 		if (!pp->tx_dumper[i] &&
 				strcmp(tx->type, ETH_PCAP_TX_PCAP_ARG) == 0) {
 			if (open_single_tx_pcap(tx->name,
-				&pp->tx_dumper[i]) < 0)
+				&pp->tx_dumper[i], internals->snaplen) < 0)
 				return -1;
 		} else if (!pp->tx_pcap[i] &&
 				strcmp(tx->type, ETH_PCAP_TX_IFACE_ARG) == 0) {
@@ -1055,7 +1071,7 @@ open_tx_pcap(const char *key, const char *value, void *extra_args)
 	struct pmd_devargs *dumpers = extra_args;
 	pcap_dumper_t *dumper;
 
-	if (open_single_tx_pcap(pcap_filename, &dumper) < 0)
+	if (open_single_tx_pcap(pcap_filename, &dumper, devargs_all.snaplen) < 0)
 		return -1;
 
 	if (add_queue(dumpers, pcap_filename, key, NULL, dumper) < 0) {
@@ -1063,6 +1079,15 @@ open_tx_pcap(const char *key, const char *value, void *extra_args)
 		return -1;
 	}
 
+	return 0;
+}
+
+static int
+parse_uint_value(const char *key __rte_unused, const char *value, void *extra_args)
+{
+	char *end;
+	int *val = extra_args;
+	*val = strtoul(value, &end, 10);
 	return 0;
 }
 
@@ -1325,10 +1350,10 @@ eth_from_pcaps(struct rte_vdev_device *vdev,
 	int ret;
 
 	ret = eth_from_pcaps_common(vdev, devargs_all, &internals, &eth_dev);
-
 	if (ret < 0)
 		return ret;
 
+	internals->snaplen = devargs_all->snaplen;
 	/* store weather we are using a single interface for rx/tx or not */
 	internals->single_iface = single_iface;
 
@@ -1404,13 +1429,6 @@ pmd_pcap_probe(struct rte_vdev_device *dev)
 	struct pmd_internals *internal;
 	int ret = 0;
 
-	struct pmd_devargs_all devargs_all = {
-		.single_iface = 0,
-		.is_tx_pcap = 0,
-		.is_tx_iface = 0,
-		.infinite_rx = 0,
-	};
-
 	name = rte_vdev_device_name(dev);
 	PMD_LOG(INFO, "Initializing pmd_pcap for %s", name);
 
@@ -1442,6 +1460,16 @@ pmd_pcap_probe(struct rte_vdev_device *dev)
 				valid_arguments);
 		if (kvlist == NULL)
 			return -1;
+	}
+
+	if (rte_kvargs_count(kvlist, ETH_PCAP_SNAPLEN_ARG) == 1) {
+		ret = rte_kvargs_process(kvlist, ETH_PCAP_SNAPLEN_ARG,
+				&parse_uint_value, &devargs_all.snaplen);
+		if (ret < 0)
+			goto free_kvlist;
+		if (devargs_all.snaplen < RTE_PCAP_MIN_SNAPLEN ||
+			devargs_all.snaplen >= RTE_ETH_PCAP_SNAPSHOT_LEN)
+			devargs_all.snaplen = RTE_PCAP_MIN_SNAPLEN;
 	}
 
 	/*
@@ -1593,7 +1621,7 @@ create_eth:
 			pp->tx_dumper[i] = dumpers.queue[i].dumper;
 			pp->tx_pcap[i] = dumpers.queue[i].pcap;
 		}
-
+		internal->snaplen = devargs_all.snaplen;
 		eth_dev->process_private = pp;
 		eth_dev->rx_pkt_burst = eth_pcap_rx;
 		if (devargs_all.is_tx_pcap)

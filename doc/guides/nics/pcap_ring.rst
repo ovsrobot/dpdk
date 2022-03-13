@@ -94,6 +94,13 @@ The different stream types are:
 
         iface=eth0
 
+*   snaplen: Defines the length of one packet that will save pcap file.
+    the length of each packets can be snap by set this value.
+    this value between 64 and 65535.
+
+        snaplen=<packet len>
+
+
 Runtime Config Options
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -132,6 +139,13 @@ Runtime Config Options
 
 In this case, one dummy rx queue is created for each tx queue argument passed
 
+ - Receive packets on Tx and set the length of packet, for example::
+
+    --vdev 'net_pcap0,tx_pcap=file_tx.pcap,snaplen=100'
+
+In this case, one dummy rx queue is created for each tx queue argument passed and the length of each packet would not over 100 byte.
+
+
 Examples of Usage
 ^^^^^^^^^^^^^^^^^
 
@@ -140,7 +154,7 @@ Read packets from one pcap file and write them to another:
 .. code-block:: console
 
     ./<build_dir>/app/dpdk-testpmd -l 0-3 -n 4 \
-        --vdev 'net_pcap0,rx_pcap=file_rx.pcap,tx_pcap=file_tx.pcap' \
+        --vdev 'net_pcap0,rx_pcap=file_rx.pcap,tx_pcap=file_tx.pcap,snaplen=100' \
         -- --port-topology=chained
 
 Read packets from a network interface and write them to a pcap file:
