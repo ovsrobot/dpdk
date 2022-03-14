@@ -3136,6 +3136,12 @@ close_port(portid_t pid)
 			continue;
 		}
 
+		if (port->mc_addr_nb != 0) {
+			/* free the pool of multicast addresses. */
+			free(port->mc_addr_pool);
+			port->mc_addr_pool = NULL;
+		}
+
 		if (is_proc_primary()) {
 			port_flow_flush(pi);
 			port_flex_item_flush(pi);
