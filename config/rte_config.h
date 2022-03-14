@@ -90,6 +90,7 @@
 
 /* rte_sched defines */
 #undef RTE_SCHED_CMAN
+#undef RTE_SCHED_SUBPORT_TC_OV
 
 /* rte_graph defines */
 #define RTE_GRAPH_BURST_SIZE 256
