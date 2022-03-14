@@ -9,6 +9,7 @@
 #include <rte_malloc.h>
 #include <rte_errno.h>
 #include <rte_io.h>
+#include <rte_eal_paging.h>
 
 #include <mlx5_common.h>
 
@@ -123,7 +124,10 @@ mlx5_vdpa_virtqs_release(struct mlx5_vdpa_priv *priv)
 		priv->td = NULL;
 	}
 	if (priv->virtq_db_addr) {
-		claim_zero(munmap(priv->virtq_db_addr, priv->var->length));
+		/* Mask out the within page offset for ummap. */
+		claim_zero(munmap((void *)((uint64_t)priv->virtq_db_addr &
+			~(rte_mem_page_size() - 1ULL)),
+			priv->var->length));
 		priv->virtq_db_addr = NULL;
 	}
 	priv->features = 0;
@@ -486,6 +490,10 @@ mlx5_vdpa_virtqs_prepare(struct mlx5_vdpa_priv *priv)
 		priv->virtq_db_addr = NULL;
 		goto error;
 	} else {
+		/* Add within page offset for 64K page system. */
+		priv->virtq_db_addr = (char *)priv->virtq_db_addr +
+			((rte_mem_page_size() - 1) &
+			priv->caps.doorbell_bar_offset);
 		DRV_LOG(DEBUG, "VAR address of doorbell mapping is %p.",
 			priv->virtq_db_addr);
 	}
