@@ -2676,6 +2676,57 @@ STATIC s32 ixgbe_setup_sfi_x550a(struct ixgbe_hw *hw, ixgbe_link_speed *speed)
 				IXGBE_KRM_PMD_FLX_MASK_ST20(hw->bus.lan_id),
 				IXGBE_SB_IOSF_TARGET_KR_PHY, reg_val);
 
+	/* change mode enforcement rules to hybrid */
+	status = mac->ops.read_iosf_sb_reg(hw,
+				IXGBE_KRM_FLX_TMRS_CTRL_ST31(hw->bus.lan_id),
+				IXGBE_SB_IOSF_TARGET_KR_PHY, &reg_val);
+	status |= 0x0400;
+
+	status = mac->ops.write_iosf_sb_reg(hw,
+				IXGBE_KRM_FLX_TMRS_CTRL_ST31(hw->bus.lan_id),
+				IXGBE_SB_IOSF_TARGET_KR_PHY, reg_val);
+				
+	/* manually control the config */
+	status = mac->ops.read_iosf_sb_reg(hw,
+				IXGBE_KRM_LINK_CTRL_1(hw->bus.lan_id),
+				IXGBE_SB_IOSF_TARGET_KR_PHY, &reg_val);
+	status |= 0x20002240;
+
+	status = mac->ops.write_iosf_sb_reg(hw,
+				IXGBE_KRM_LINK_CTRL_1(hw->bus.lan_id),
+				IXGBE_SB_IOSF_TARGET_KR_PHY, reg_val);
+
+	/* move the AN base page values */
+	status = mac->ops.read_iosf_sb_reg(hw,
+				IXGBE_KRM_PCS_KX_AN(hw->bus.lan_id),
+				IXGBE_SB_IOSF_TARGET_KR_PHY, &reg_val);
+	status |= 0x1;
+
+	status = mac->ops.write_iosf_sb_reg(hw,
+				IXGBE_KRM_PCS_KX_AN(hw->bus.lan_id),
+				IXGBE_SB_IOSF_TARGET_KR_PHY, reg_val);
+
+	/* set the AN37 over CB mode */
+	status = mac->ops.read_iosf_sb_reg(hw,
+				IXGBE_KRM_AN_CNTL_4(hw->bus.lan_id),
+				IXGBE_SB_IOSF_TARGET_KR_PHY, &reg_val);
+	status |= 0x20000000;
+
+	status = mac->ops.write_iosf_sb_reg(hw,
+				IXGBE_KRM_AN_CNTL_4(hw->bus.lan_id),
+				IXGBE_SB_IOSF_TARGET_KR_PHY, reg_val);
+
+	/* restart AN manually */
+	status = mac->ops.read_iosf_sb_reg(hw,
+				IXGBE_KRM_LINK_CTRL_1(hw->bus.lan_id),
+				IXGBE_SB_IOSF_TARGET_KR_PHY, &reg_val);
+	status |= IXGBE_KRM_LINK_CTRL_1_TETH_AN_RESTART;
+
+	status = mac->ops.write_iosf_sb_reg(hw,
+				IXGBE_KRM_LINK_CTRL_1(hw->bus.lan_id),
+				IXGBE_SB_IOSF_TARGET_KR_PHY, reg_val);
+
+
 	/* Toggle port SW reset by AN reset. */
 	status = ixgbe_restart_an_internal_phy_x550em(hw);
 
