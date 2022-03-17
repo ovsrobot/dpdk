@@ -113,8 +113,8 @@ Support for this usage scenario is provided using the ``--file-prefix`` paramete
 
 By default, the EAL creates hugepage files on each hugetlbfs filesystem using the rtemap_X filename,
 where X is in the range 0 to the maximum number of hugepages -1.
-Similarly, it creates shared configuration files, memory mapped in each process, using the /var/run/.rte_config filename,
-when run as root (or $HOME/.rte_config when run as a non-root user;
+Similarly, it creates shared configuration files, memory mapped in each process, using the /var/run/dpdk/rte/config filename,
+when run as root (or /run/user/$EUID/dpdk/rte/config when run as a non-root user;
 if filesystem and device permissions are set up to allow this).
 The rte part of the filenames of each of the above is configurable using the file-prefix parameter.
 
