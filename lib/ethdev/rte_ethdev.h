@@ -3828,6 +3828,8 @@ enum rte_eth_event_ipsec_subtype {
 	RTE_ETH_EVENT_IPSEC_SA_TIME_EXPIRY,
 	/** Soft byte expiry of SA */
 	RTE_ETH_EVENT_IPSEC_SA_BYTE_EXPIRY,
+	/** Soft packet expiry of SA */
+	RTE_ETH_EVENT_IPSEC_SA_PKT_EXPIRY,
 	/** Max value of this enum */
 	RTE_ETH_EVENT_IPSEC_MAX
 };
@@ -3849,6 +3851,7 @@ struct rte_eth_event_ipsec_desc {
 	 * - @ref RTE_ETH_EVENT_IPSEC_ESN_OVERFLOW
 	 * - @ref RTE_ETH_EVENT_IPSEC_SA_TIME_EXPIRY
 	 * - @ref RTE_ETH_EVENT_IPSEC_SA_BYTE_EXPIRY
+	 * - @ref RTE_ETH_EVENT_IPSEC_SA_PKT_EXPIRY
 	 *
 	 * @see struct rte_security_session_conf
 	 *
