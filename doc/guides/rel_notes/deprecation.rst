@@ -112,6 +112,14 @@ Deprecation Notices
   session and the private data of session. An opaque pointer can be exposed
   directly to application which can be attached to the ``rte_crypto_op``.
 
+* bbdev: Will fix extending some enum breaking the ABI. Notably
+  deprecating ``RTE_BBDEV_OP_TYPE_COUNT`` terminating the ``rte_bbdev_op_type``
+  and use fixed array size when required to allow for future enum extension.
+  Will also remove some of the inlining when causing ABI future-proof concerns.
+  Will extend API to support new operation type ``RTE_BBDEV_OP_FFT`` as per this
+  RFC https://patchwork.dpdk.org/project/dpdk/list/?series=22111
+  This should be updated in DPDK 22.11.
+
 * security: Hide structure ``rte_security_session`` and expose an opaque
   pointer for the private data to the application which can be attached
   to the packet while enqueuing.
