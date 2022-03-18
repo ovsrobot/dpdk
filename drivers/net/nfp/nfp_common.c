@@ -689,6 +689,8 @@ nfp_net_infos_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 
 	hw = NFP_NET_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
+	dev_info->max_mtu = (uint16_t)hw->max_mtu;
+	dev_info->min_mtu = RTE_ETHER_MIN_MTU;
 	dev_info->max_rx_queues = (uint16_t)hw->max_rx_queues;
 	dev_info->max_tx_queues = (uint16_t)hw->max_tx_queues;
 	dev_info->min_rx_bufsize = RTE_ETHER_MIN_MTU;
@@ -950,6 +952,13 @@ nfp_net_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 		PMD_DRV_LOG(ERR, "port %d must be stopped before configuration",
 			    dev->data->port_id);
 		return -EBUSY;
+	}
+
+	/* the setting mtu is lower than flbufsz */
+	if (mtu > hw->flbufsz) {
+		PMD_DRV_LOG(ERR, "the setting mtu must be lower than current mbufsize of %d",
+			    hw->flbufsz);
+		return -ERANGE;
 	}
 
 	/* writing to configuration space */
