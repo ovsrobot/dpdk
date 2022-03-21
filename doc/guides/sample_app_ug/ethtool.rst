@@ -58,6 +58,7 @@ they do as follows:
 * ``validate``: Check that given MAC address is valid unicast address
 * ``vlan``: Add/remove VLAN id
 * ``quit``: Exit program
+* ``help``: List all available commands
 
 
 Explanation

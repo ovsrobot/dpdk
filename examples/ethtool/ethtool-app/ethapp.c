@@ -57,6 +57,8 @@ cmdline_parse_token_string_t pcmd_stats_token_cmd =
 	TOKEN_STRING_INITIALIZER(struct pcmd_get_params, cmd, "stats");
 cmdline_parse_token_string_t pcmd_drvinfo_token_cmd =
 	TOKEN_STRING_INITIALIZER(struct pcmd_get_params, cmd, "drvinfo");
+cmdline_parse_token_string_t pcmd_list_token_cmd =
+	TOKEN_STRING_INITIALIZER(struct pcmd_get_params, cmd, "help");
 cmdline_parse_token_string_t pcmd_link_token_cmd =
 	TOKEN_STRING_INITIALIZER(struct pcmd_get_params, cmd, "link");
 
@@ -133,6 +135,11 @@ cmdline_parse_token_string_t pcmd_vlan_token_mode =
 cmdline_parse_token_num_t pcmd_vlan_token_vid =
 	TOKEN_NUM_INITIALIZER(struct pcmd_vlan_params, vid, RTE_UINT16);
 
+void
+list_cmd(unsigned int sr, const char *name, const char *format, const char *description)
+{
+	printf("%-4d%-17s%-45s%-50s\n", sr, name, format, description);
+}
 
 static void
 pcmd_quit_callback(__rte_unused void *ptr_params,
@@ -142,6 +149,30 @@ pcmd_quit_callback(__rte_unused void *ptr_params,
 	cmdline_quit(ctx);
 }
 
+static void
+pcmd_list_callback(__rte_unused void *ptr_params,
+	struct cmdline *ctx,
+	__rte_unused void *ptr_data)
+{
+	printf("%-4s%-17s%-45s%-50s\n\n", "Sr.", "Name", "Format", "Description");
+	list_cmd(1, "drvinfo", "drvinfo", "Print driver info");
+	list_cmd(2, "open", "open <port_id>", "Open port");
+	list_cmd(3, "pause", "pause <port_id> <all|tx|rx|none>", "Get/set port pause state");
+	list_cmd(4, "stop", "stop <port_id>", "Stop port");
+	list_cmd(5, "portstats", "portstats <port_id>", "Print port statistics");
+	list_cmd(6, "link", "link", "Print port link states");
+	list_cmd(7, "macaddr", "macaddr <port_id> <mac_addr>", "Gets/sets MAC address");
+	list_cmd(8, "mtu", "mtu <port_id> <mtu_value>", "Set NIC MTU");
+	list_cmd(9, "regs", "regs <port_id> <filename>", "Dump port register(s) to file");
+	list_cmd(10, "ringparam", "ringparam <port_id> <tx_param> <rx_param>", "Get/set ring parameters");
+	list_cmd(11, "rxmode", "rxmode <port_id>", "Toggle port Rx mode");
+	list_cmd(12, "validate", "validate <mac_addr>", "Check that given MAC address is valid unicast address");
+	list_cmd(13, "vlan", "vlan <port_id> <add|del> <vlan_id>", "Add/remove VLAN id");
+	list_cmd(14, "eeprom", "eeprom <port_id> <filename>", "Dump EEPROM to file");
+	list_cmd(15, "module-eeprom", "module-eeprom <port_id> <filename>", "Dump plugin module EEPROM to file");
+	list_cmd(16, "quit", "quit", "Exit program");
+	list_cmd(17, "help", "help", "List all available commands");
+}
 
 static void
 pcmd_drvinfo_callback(__rte_unused void *ptr_params,
@@ -680,6 +711,12 @@ cmdline_parse_inst_t pcmd_drvinfo = {
 	.help_str = "drvinfo\n     Print driver info",
 	.tokens = {(void *)&pcmd_drvinfo_token_cmd, NULL},
 };
+cmdline_parse_inst_t pcmd_list_cmds = {
+	.f = pcmd_list_callback,
+	.data = NULL,
+	.help_str = "help\n     List all available commands",
+	.tokens = {(void *)&pcmd_list_token_cmd, NULL},
+};
 cmdline_parse_inst_t pcmd_link = {
 	.f = pcmd_link_callback,
 	.data = NULL,
@@ -871,6 +908,7 @@ cmdline_parse_inst_t pcmd_vlan = {
 
 
 cmdline_parse_ctx_t list_prompt_commands[] = {
+	(cmdline_parse_inst_t *)&pcmd_list_cmds,
 	(cmdline_parse_inst_t *)&pcmd_drvinfo,
 	(cmdline_parse_inst_t *)&pcmd_eeprom,
 	(cmdline_parse_inst_t *)&pcmd_module_eeprom,
