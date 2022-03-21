@@ -66,8 +66,8 @@ LIST_HEAD(, virtual_machine_info) vm_list_head;
 static struct virtual_machine_info *
 find_domain_by_name(const char *name)
 {
-	struct virtual_machine_info *info;
-	LIST_FOREACH(info, &vm_list_head, vms_info) {
+	struct virtual_machine_info *info, *t_info;
+	RTE_LIST_FOREACH_SAFE(info, &vm_list_head, vms_info, t_info) {
 		if (!strncmp(info->name, name, CHANNEL_MGR_MAX_NAME_LEN-1))
 			return info;
 	}
@@ -1005,9 +1005,9 @@ channel_manager_exit(void)
 {
 	unsigned i;
 	char mask[RTE_MAX_LCORE];
-	struct virtual_machine_info *vm_info;
+	struct virtual_machine_info *vm_info, *t_info;
 
-	LIST_FOREACH(vm_info, &vm_list_head, vms_info) {
+	RTE_LIST_FOREACH_SAFE(vm_info, &vm_list_head, vms_info, t_info) {
 
 		rte_spinlock_lock(&(vm_info->config_spinlock));
 
@@ -1024,6 +1024,7 @@ channel_manager_exit(void)
 
 		LIST_REMOVE(vm_info, vms_info);
 		rte_free(vm_info);
+
 	}
 
 	if (global_hypervisor_available) {
