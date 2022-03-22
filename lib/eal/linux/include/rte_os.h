@@ -25,6 +25,8 @@ extern "C" {
 #define RTE_TAILQ_NEXT(elem, field) TAILQ_NEXT(elem, field)
 #define RTE_STAILQ_HEAD(name, type) STAILQ_HEAD(name, type)
 #define RTE_STAILQ_ENTRY(type) STAILQ_ENTRY(type)
+#define RTE_LIST_FIRST(head) LIST_FIRST(head)
+#define RTE_LIST_NEXT(elem, field) LIST_NEXT(elem, field)
 
 #ifdef CPU_SETSIZE /* may require _GNU_SOURCE */
 typedef cpu_set_t rte_cpuset_t;
@@ -45,6 +47,15 @@ typedef cpu_set_t rte_cpuset_t;
 	CPU_XOR(dst, &tmp, src); \
 } while (0)
 #endif
+
+#ifndef LIST_FOREACH_SAFE
+#define LIST_FOREACH_SAFE(var, head, field, tvar) \
+	for ((var) = RTE_LIST_FIRST(head); \
+		(var) && ((tvar) = RTE_LIST_NEXT((var), field), 1); \
+		(var) = (tvar))
+#endif
+#define RTE_LIST_FOREACH_SAFE(var, head, field, tvar) \
+	LIST_FOREACH_SAFE(var, head, field, tvar)
 
 #ifdef __cplusplus
 }
