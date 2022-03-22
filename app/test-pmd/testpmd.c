@@ -3372,8 +3372,11 @@ detach_devargs(char *identifier)
 void
 pmd_test_exit(void)
 {
+	unsigned int ports[RTE_MAX_ETHPORTS];
+	unsigned int count = 0;
 	portid_t pt_id;
 	unsigned int i;
+	int index;
 	int ret;
 
 	if (test_done == 0)
@@ -3390,15 +3393,30 @@ pmd_test_exit(void)
 #endif
 	if (ports != NULL) {
 		no_link_check = 1;
+		i = 0;
+
+		/* Fetch the valid port id from port list*/
 		RTE_ETH_FOREACH_DEV(pt_id) {
-			printf("\nStopping port %d...\n", pt_id);
-			fflush(stdout);
-			stop_port(pt_id);
+			ports[i] = pt_id;
+			i++;
 		}
-		RTE_ETH_FOREACH_DEV(pt_id) {
-			printf("\nShutting down port %d...\n", pt_id);
+
+		count = i;
+		/*
+		 * Free the port from Reverse order, as general,
+		 * PF port < VF port， VF should be free before PF
+		 * be free.
+		 */
+		for (index = count - 1 ; index >= 0 ; index--) {
+			printf("\nStopping port %d...\n", ports[index]);
 			fflush(stdout);
-			close_port(pt_id);
+			stop_port(ports[index]);
+		}
+
+		for (index = count - 1 ; index >= 0 ; index--) {
+			printf("\nShutting down port %d...\n", ports[index]);
+			fflush(stdout);
+			close_port(ports[index]);
 		}
 	}
 
