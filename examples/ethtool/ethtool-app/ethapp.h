@@ -10,3 +10,4 @@ void unlock_port(int idx_port);
 void mark_port_inactive(int idx_port);
 void mark_port_active(int idx_port);
 void mark_port_newmac(int idx_port);
+void print_cmd_info(unsigned int sr, const char *name, const char *format, const char *description);
