@@ -118,3 +118,27 @@ i.e. ``rte_dma_stats_get()``. The statistics returned for each device instance a
 * ``submitted``: The number of operations submitted to the device.
 * ``completed``: The number of operations which have completed (successful and failed).
 * ``errors``: The number of operations that completed with error.
+
+The dmadev library has support for displaying DMA device information
+through the Telemetry interface. Telemetry commands that can be used
+are shown below.
+
+#. Get the list of available DMA devices by ID::
+
+     --> /dmadev/list
+     {"/dmadev/list": [0, 1]}
+
+#. Get general information from a DMA device::
+
+     --> /dmadev/info,0
+     {"/dmadev/info": {"name": "0000:00:01.0", "nb_vchans": 1,
+     "numa_node": 0}}
+
+#. Get the statistics for a particular DMA device and virtual DMA channel::
+
+     --> /dmadev/stats,0,0
+     {"/dmadev/stats": {"submitted": 0, "completed": 0,
+     "errors": 0}}
+
+For more information on how to use the Telemetry interface, see
+the :doc:`../howto/telemetry`.
