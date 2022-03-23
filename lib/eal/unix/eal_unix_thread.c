@@ -1,20 +1,13 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2019 Intel Corporation
+ * Copyright(c) 2022 Red Hat, Inc.
  */
 
-#include <io.h>
+#include <errno.h>
+#include <unistd.h>
 
-#include <rte_atomic.h>
 #include <rte_debug.h>
-#include <rte_launch.h>
-#include <rte_lcore.h>
-#include <rte_per_lcore.h>
-#include <rte_common.h>
-#include <rte_memory.h>
 
 #include "eal_private.h"
-#include "eal_thread.h"
-#include "eal_windows.h"
 
 void
 eal_thread_wake_worker(unsigned int worker_id)
@@ -25,13 +18,13 @@ eal_thread_wake_worker(unsigned int worker_id)
 	int n;
 
 	do {
-		n = _write(m2w, &c, 1);
+		n = write(m2w, &c, 1);
 	} while (n == 0 || (n < 0 && errno == EINTR));
 	if (n < 0)
 		rte_panic("cannot write on configuration pipe\n");
 
 	do {
-		n = _read(w2m, &c, 1);
+		n = read(w2m, &c, 1);
 	} while (n < 0 && errno == EINTR);
 	if (n <= 0)
 		rte_panic("cannot read on configuration pipe\n");
@@ -47,7 +40,7 @@ eal_thread_wait_command(void)
 
 	m2w = lcore_config[lcore_id].pipe_main2worker[0];
 	do {
-		n = _read(m2w, &c, 1);
+		n = read(m2w, &c, 1);
 	} while (n < 0 && errno == EINTR);
 	if (n <= 0)
 		rte_panic("cannot read on configuration pipe\n");
@@ -63,41 +56,8 @@ eal_thread_ack_command(void)
 
 	w2m = lcore_config[lcore_id].pipe_worker2main[1];
 	do {
-		n = _write(w2m, &c, 1);
+		n = write(w2m, &c, 1);
 	} while (n == 0 || (n < 0 && errno == EINTR));
 	if (n < 0)
 		rte_panic("cannot write on configuration pipe\n");
-}
-
-/* function to create threads */
-int
-eal_thread_create(pthread_t *thread)
-{
-	HANDLE th;
-
-	th = CreateThread(NULL, 0,
-		(LPTHREAD_START_ROUTINE)(ULONG_PTR)eal_thread_loop,
-						NULL, 0, (LPDWORD)thread);
-	if (!th)
-		return -1;
-
-	SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
-	SetThreadPriority(th, THREAD_PRIORITY_NORMAL);
-
-	return 0;
-}
-
-/* get current thread ID */
-int
-rte_sys_gettid(void)
-{
-	return GetCurrentThreadId();
-}
-
-int
-rte_thread_setname(__rte_unused pthread_t id, __rte_unused const char *name)
-{
-	/* TODO */
-	/* This is a stub, not the expected result */
-	return 0;
 }
