@@ -2149,13 +2149,14 @@ bond_ethdev_close(struct rte_eth_dev *dev)
 		return 0;
 
 	RTE_BOND_LOG(INFO, "Closing bonded device %s", dev->device->name);
-	while (internals->slave_count != skipped) {
+	while (skipped < internals->slave_count) {
 		uint16_t port_id = internals->slaves[skipped].port_id;
 
 		if (rte_eth_dev_stop(port_id) != 0) {
 			RTE_BOND_LOG(ERR, "Failed to stop device on port %u",
 				     port_id);
 			skipped++;
+			continue;
 		}
 
 		if (rte_eth_bond_slave_remove(bond_port_id, port_id) != 0) {
