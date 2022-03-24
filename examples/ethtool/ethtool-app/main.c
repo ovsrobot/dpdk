@@ -208,7 +208,7 @@ static int worker_main(__rte_unused void *ptr_data)
 					&ptr_port->mac_addr);
 				if (ret != 0) {
 					rte_spinlock_unlock(&ptr_port->lock);
-					printf("Failed to get MAC address (port %u): %s",
+					printf("Failed to get MAC address (port %i): %s",
 					       ptr_port->idx_port,
 					       rte_strerror(-ret));
 					return ret;
@@ -284,11 +284,11 @@ int main(int argc, char **argv)
 		rte_exit(EXIT_FAILURE, "rte_eal_init(): Failed");
 
 	cnt_ports = rte_eth_dev_count_avail();
-	printf("Number of NICs: %i\n", cnt_ports);
+	printf("Number of NICs: %u\n", cnt_ports);
 	if (cnt_ports == 0)
 		rte_exit(EXIT_FAILURE, "No available NIC ports!\n");
 	if (cnt_ports > MAX_PORTS) {
-		printf("Info: Using only %i of %i ports\n",
+		printf("Info: Using only %u of %i ports\n",
 			cnt_ports, MAX_PORTS
 			);
 		cnt_ports = MAX_PORTS;
