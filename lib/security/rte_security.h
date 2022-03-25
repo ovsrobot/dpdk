@@ -523,6 +523,8 @@ struct rte_security_session {
 	/**< Private session material */
 	uint64_t opaque_data;
 	/**< Opaque user defined data */
+	void *event_mdata;
+	/**< Event request/response information */
 };
 
 /**
@@ -724,6 +726,47 @@ set_sec_session_private_data(struct rte_security_session *sess,
 			     void *private_data)
 {
 	sess->sess_private_data = private_data;
+}
+
+/**
+ * Get event meta data attached to a security session.
+ *
+ * @param	sess		Session pointer allocated by
+ *				*rte_security_session_create*.
+ *
+ * @return
+ *  - On success return pointer to the event crypto meta data which is set
+ *    using *rte_security_session_set_event_mdata*
+ *  - On failure returns NULL.
+ */
+__rte_experimental
+static inline void *
+rte_security_session_get_event_mdata(const struct rte_security_session *sess)
+{
+	return sess->event_mdata;
+}
+
+/**
+ * Attach event crypto meta data to a security session.
+ *
+ * Application can allocate memory for *rte_event_crypto_metadata* and set the
+ * reference pointer using this API which the PMD can retrieve using
+ * *rte_security_session_get_event_mdata*
+ *
+ * The API should be used only in case session is used for event crypto
+ * adapter.
+ *
+ * @param	sess		Session pointer allocated by
+ *				*rte_security_session_create*.
+ * @param	ev_mdata	Pointer to the event crypto meta data
+ *				(aka *union rte_event_crypto_metadata*)
+ */
+__rte_experimental
+static inline void
+rte_security_session_set_event_mdata(struct rte_security_session *sess,
+				     void *ev_mdata)
+{
+	sess->event_mdata = ev_mdata;
 }
 
 /**

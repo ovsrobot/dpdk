@@ -246,9 +246,9 @@ by ``rte_cryptodev_sym_session_get_user_data()`` API.  The
 RTE_EVENT_CRYPTO_ADAPTER_CAP_SESSION_PRIVATE_DATA capability indicates
 whether HW or SW supports this feature.
 
-For security session, ``rte_security_session_set_private_data()`` API
+For security session, ``rte_security_session_set_event_mdata()`` API
 will be used to set request/response data. The same data will be obtained
-by ``rte_security_session_get_private_data()`` API.
+by ``rte_security_session_get_event_mdata()`` API.
 
 For session-less it is mandatory to place the request/response data with
 the ``rte_crypto_op``.
