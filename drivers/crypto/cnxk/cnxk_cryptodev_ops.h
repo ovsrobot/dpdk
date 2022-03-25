@@ -7,6 +7,7 @@
 
 #include <rte_cryptodev.h>
 #include <rte_event_crypto_adapter.h>
+#include <rte_security.h>
 
 #include "roc_api.h"
 
@@ -137,6 +138,10 @@ cnxk_event_crypto_mdata_get(struct rte_crypto_op *op)
 		 op->private_data_offset)
 		ec_mdata = (union rte_event_crypto_metadata
 				    *)((uint8_t *)op + op->private_data_offset);
+	else if (op->sess_type == RTE_CRYPTO_OP_SECURITY_SESSION &&
+		 op->type == RTE_CRYPTO_OP_TYPE_SYMMETRIC)
+		ec_mdata = rte_security_session_get_event_mdata(
+			op->sym->sec_session);
 	else
 		return NULL;
 
