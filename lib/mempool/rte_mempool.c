@@ -48,6 +48,8 @@ static void
 mempool_event_callback_invoke(enum rte_mempool_event event,
 			      struct rte_mempool *mp);
 
+/* CACHE_FLUSHTHRESH_MULTIPLIER is the same as
+ * BONDING_8023AD_CACHE_FLUSHTHRESH_MULTIPLIER in rte_eth_bond_8023ad.c */
 #define CACHE_FLUSHTHRESH_MULTIPLIER 1.5
 #define CALC_CACHE_FLUSHTHRESH(c)	\
 	((typeof(c))((c) * CACHE_FLUSHTHRESH_MULTIPLIER))
