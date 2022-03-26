@@ -3,13 +3,27 @@
 # Copyright(c) 2010-2014 Intel Corporation
 # Copyright(c) 2017 Cavium, Inc. All rights reserved.
 
+import glob
+import os
+
 sockets = []
 cores = []
+numaNodes = []
 core_map = {}
+numa_map = {}
+node_path = "/sys/devices/system/node"
 base_path = "/sys/devices/system/cpu"
-fd = open("{}/kernel_max".format(base_path))
-max_cpus = int(fd.read())
-fd.close()
+max_cpus = 0
+
+if os.path.isdir(base_path):
+    temp_maxCpu = glob.glob(base_path + '/cpu[0-9]*')
+    max_cpus = len(temp_maxCpu)
+
+if os.path.isdir(node_path):
+    temp_numaNodes = glob.glob(node_path + '/node*')
+    for numaId in range(0, int(os.path.basename(temp_numaNodes[-1])[4:]) + 1):
+        numaNodes.append(numaId)
+
 for cpu in range(max_cpus + 1):
     try:
         fd = open("{}/cpu{}/topology/core_id".format(base_path, cpu))
@@ -17,48 +31,52 @@ for cpu in range(max_cpus + 1):
         continue
     core = int(fd.read())
     fd.close()
+
+    tempGet_cpuNuma = glob.glob("{}/cpu{}/node*".format(base_path, cpu))
+    temp_cpuNuma = tempGet_cpuNuma[-1].split("{}/cpu{}/".format(base_path, cpu))[-1]
+    numa = temp_cpuNuma.split("node")[-1]
+
     fd = open("{}/cpu{}/topology/physical_package_id".format(base_path, cpu))
     socket = int(fd.read())
     fd.close()
+
     if core not in cores:
         cores.append(core)
+
     if socket not in sockets:
         sockets.append(socket)
+
     key = (socket, core)
     if key not in core_map:
         core_map[key] = []
     core_map[key].append(cpu)
 
+    key = (socket, numa)
+    if key not in numa_map:
+        numa_map[key] = []
+
+    if (core_map[(socket, core)] not in numa_map[key]):
+        numa_map[key].append(core_map[(socket, core)])
+
 print(format("=" * (47 + len(base_path))))
 print("Core and Socket Information (as reported by '{}')".format(base_path))
 print("{}\n".format("=" * (47 + len(base_path))))
 print("cores = ", cores)
+print("numa nodes per socket = ", numaNodes)
 print("sockets = ", sockets)
 print("")
 
-max_processor_len = len(str(len(cores) * len(sockets) * 2 - 1))
-max_thread_count = len(list(core_map.values())[0])
-max_core_map_len = (max_processor_len * max_thread_count)  \
-                      + len(", ") * (max_thread_count - 1) \
-                      + len('[]') + len('Socket ')
-max_core_id_len = len(str(max(cores)))
+for keys in numa_map:
+  print ("")
+  socket,numa = keys
 
-output = " ".ljust(max_core_id_len + len('Core '))
-for s in sockets:
-    output += " Socket %s" % str(s).ljust(max_core_map_len - len('Socket '))
-print(output)
+  output = " Socket " + str(socket).ljust(3, ' ') + " Numa " + str(numa).zfill(1) + " "
+  #output = " Socket " + str(socket).zfill(1) + " Numa " + str(numa).zfill(1) + " "
+  print(output)
+  print(format("-" * len(output)))
 
-output = " ".ljust(max_core_id_len + len('Core '))
-for s in sockets:
-    output += " --------".ljust(max_core_map_len)
-    output += " "
-print(output)
+  for index,coreSibling in enumerate(numa_map[keys]):
+      print ("Core " + str(index).ljust(3, ' ') + "    " + str(coreSibling))
+      #print ("Core " + str(index).zfill(3) + "    " + str(coreSibling))
+print("")
 
-for c in cores:
-    output = "Core %s" % str(c).ljust(max_core_id_len)
-    for s in sockets:
-        if (s, c) in core_map:
-            output += " " + str(core_map[(s, c)]).ljust(max_core_map_len)
-        else:
-            output += " " * (max_core_map_len + 1)
-    print(output)
