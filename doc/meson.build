@@ -3,6 +3,14 @@
 
 doc_targets = []
 doc_target_names = []
+
+if is_windows
+    if get_option('enable_docs')
+        message('Docs target not supported on windows')
+    endif
+    subdir_done()
+endif
+
 subdir('api')
 subdir('guides')
 
