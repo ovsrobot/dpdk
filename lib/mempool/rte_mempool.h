@@ -52,6 +52,8 @@
 extern "C" {
 #endif
 
+#define RTE_MEMPOOL_CACHE_FLUSHTHRESH_MULTIPLIER 1.5
+
 #define RTE_MEMPOOL_HEADER_COOKIE1  0xbadbadbadadd2e55ULL /**< Header cookie. */
 #define RTE_MEMPOOL_HEADER_COOKIE2  0xf2eef2eedadd2e55ULL /**< Header cookie. */
 #define RTE_MEMPOOL_TRAILER_COOKIE  0xadd2e55badbadbadULL /**< Trailer cookie.*/
