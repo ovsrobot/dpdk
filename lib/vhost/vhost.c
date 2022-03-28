@@ -1887,15 +1887,15 @@ rte_vhost_async_get_inflight(int vid, uint16_t queue_id)
 	if (vq == NULL)
 		return ret;
 
-	if (!vq->async)
-		return ret;
-
 	if (!rte_spinlock_trylock(&vq->access_lock)) {
 		VHOST_LOG_CONFIG(DEBUG,
 			"(%s) failed to check in-flight packets. virtqueue busy.\n",
 			dev->ifname);
 		return ret;
 	}
+
+	if (!vq->async)
+		return ret;
 
 	ret = vq->async->pkts_inflight_n;
 	rte_spinlock_unlock(&vq->access_lock);
