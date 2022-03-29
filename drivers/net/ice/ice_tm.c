@@ -515,6 +515,15 @@ ice_tm_node_add(struct rte_eth_dev *dev, uint32_t node_id,
 		}
 	}
 
+	if (tm_node->priority != 0 && (level_id != ICE_TM_NODE_TYPE_QUEUE ||
+	    level_id != ICE_TM_NODE_TYPE_QGROUP))
+		PMD_DRV_LOG(WARNING, "priority != 0 not supported in level %d",
+			    level_id);
+
+	if (tm_node->weight != 1 && level_id != ICE_TM_NODE_TYPE_QUEUE)
+		PMD_DRV_LOG(WARNING, "weight != 1 not supported in level %d",
+			    level_id);
+
 	/* add the TC or VSI or queue group or queue node */
 	tm_node = rte_zmalloc("ice_tm_node",
 			      sizeof(struct ice_tm_node),
