@@ -4,8 +4,6 @@
  * Copyright 2018-2019 NXP
  */
 
-#ifndef RTE_EXEC_ENV_WINDOWS
-
 #include <time.h>
 
 #include <rte_common.h>
@@ -590,4 +588,3 @@ test_PDCP_PROTO_uplane_decap_all(void)
 	return n - i;
 };
 
-#endif /* !RTE_EXEC_ENV_WINDOWS */
