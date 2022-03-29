@@ -764,6 +764,14 @@ static int ice_hierarchy_commit(struct rte_eth_dev *dev,
 				goto fail_clear;
 			}
 		}
+		priority = 7 - tm_node->priority;
+		ret_val = ice_cfg_node_priority(hw->port_info, qgroup_sched_node, priority);
+		if (ret_val) {
+			error->type = RTE_TM_ERROR_TYPE_NODE_PRIORITY;
+			PMD_DRV_LOG(ERR, "configure queue group %u priority failed",
+				    tm_node->priority);
+			goto fail_clear;
+		}
 		idx_qg++;
 		if (idx_qg >= nb_qg) {
 			idx_qg = 0;
