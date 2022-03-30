@@ -62,9 +62,25 @@ def get_dsa_id(pci):
                 return int(dir[3:])
     sys.exit(f"Could not get device ID for device {pci}")
 
+def parse_wq_opts(dsa_id, q, wq_opts):
+    "Parse the additional user-specified queue configuration"
+    wq_dir = SysfsDir(f'/sys/bus/dsa/devices/dsa{dsa_id}/wq{dsa_id}.{q}')
+    for wq_opt in wq_opts:
+        try:
+            opt, val = wq_opt.split("=")
+        except ValueError:
+            sys.exit("Invalid format, use format 'option=value'")
+        if not os.path.exists(os.path.join(wq_dir.path, f'{opt}')):
+            sys.exit(f"Invalid sysfs node '{opt}', path does not exist")
+        wq_dir.write_values({opt: val})
 
-def configure_dsa(dsa_id, queues, prefix):
+
+def configure_dsa(dsa_id, args):
     "Configure the DSA instance with appropriate number of queues"
+    queues = args.q
+    prefix = args.prefix
+    wq_opts = args.wq_option
+
     dsa_dir = SysfsDir(f"/sys/bus/dsa/devices/dsa{dsa_id}")
 
     max_groups = dsa_dir.read_int("max_groups")
@@ -92,6 +108,11 @@ def configure_dsa(dsa_id, queues, prefix):
                              "max_batch_size": 1024,
                              "size": int(max_work_queues_size / nb_queues)})
 
+    # parse additional user-spcified queue configuration
+    if wq_opts:
+        for q in range(nb_queues):
+            parse_wq_opts(dsa_id, q, wq_opts)
+
     # enable device and then queues
     idxd_dir = SysfsDir(get_drv_dir("idxd"))
     idxd_dir.write_values({"bind": f"dsa{dsa_id}"})
@@ -112,6 +133,8 @@ def main(args):
     arg_p.add_argument('--name-prefix', metavar='prefix', dest='prefix',
                        default="dpdk",
                        help="Prefix for workqueue name to mark for DPDK use [default: 'dpdk']")
+    arg_p.add_argument('--wq-option', action='append',
+                       help="Provide additional config option for queues (format 'x=y')")
     arg_p.add_argument('--reset', action='store_true',
                        help="Reset DSA device and its queues")
     parsed_args = arg_p.parse_args(args[1:])
@@ -121,7 +144,7 @@ def main(args):
     if parsed_args.reset:
         reset_device(dsa_id)
     else:
-        configure_dsa(dsa_id, parsed_args.q, parsed_args.prefix)
+        configure_dsa(dsa_id, parsed_args)
 
 
 if __name__ == "__main__":
