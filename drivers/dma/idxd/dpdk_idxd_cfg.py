@@ -63,8 +63,24 @@ def get_dsa_id(pci):
     sys.exit(f"Could not get device ID for device {pci}")
 
 
-def configure_dsa(dsa_id, queues, prefix):
+def parse_wq_opts(wq_opts):
+    "Parse user-specified queue configuration, creating a dict of options"
+    opt_dict = {}
+    for wq_opt in wq_opts:
+        try:
+            opt, val = wq_opt.split("=")
+        except ValueError:
+            sys.exit("Invalid --wq-option format, use format 'option=value'")
+        opt_dict[opt] = val
+    return opt_dict
+
+
+def configure_dsa(dsa_id, args):
     "Configure the DSA instance with appropriate number of queues"
+    queues = args.q
+    prefix = args.prefix
+    wq_opts = args.wq_option
+
     dsa_dir = SysfsDir(f"/sys/bus/dsa/devices/dsa{dsa_id}")
 
     max_groups = dsa_dir.read_int("max_groups")
@@ -83,14 +99,17 @@ def configure_dsa(dsa_id, queues, prefix):
 
     # configure each queue
     for q in range(nb_queues):
+        default_dict = {"group_id": q % nb_groups,
+                        "type": "user",
+                        "mode": "dedicated",
+                        "name": f"{prefix}_wq{dsa_id}.{q}",
+                        "priority": 1,
+                        "max_batch_size": 1024,
+                        "size": int(max_work_queues_size / nb_queues)}
+        config_dict = parse_wq_opts(wq_opts)
+        write_dict = {**default_dict, **config_dict}
         wq_dir = SysfsDir(os.path.join(dsa_dir.path, f"wq{dsa_id}.{q}"))
-        wq_dir.write_values({"group_id": q % nb_groups,
-                             "type": "user",
-                             "mode": "dedicated",
-                             "name": f"{prefix}_wq{dsa_id}.{q}",
-                             "priority": 1,
-                             "max_batch_size": 1024,
-                             "size": int(max_work_queues_size / nb_queues)})
+        wq_dir.write_values(write_dict)
 
     # enable device and then queues
     idxd_dir = SysfsDir(get_drv_dir("idxd"))
@@ -112,6 +131,8 @@ def main(args):
     arg_p.add_argument('--name-prefix', metavar='prefix', dest='prefix',
                        default="dpdk",
                        help="Prefix for workqueue name to mark for DPDK use [default: 'dpdk']")
+    arg_p.add_argument('--wq-option', action='append',
+                       help="Provide additional config option for queues (format 'x=y')")
     arg_p.add_argument('--reset', action='store_true',
                        help="Reset DSA device and its queues")
     parsed_args = arg_p.parse_args(args[1:])
@@ -121,7 +142,7 @@ def main(args):
     if parsed_args.reset:
         reset_device(dsa_id)
     else:
-        configure_dsa(dsa_id, parsed_args.q, parsed_args.prefix)
+        configure_dsa(dsa_id, parsed_args)
 
 
 if __name__ == "__main__":
