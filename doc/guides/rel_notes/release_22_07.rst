@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added telemetry callbacks to dmadev library.**
+
+  Added telemetry callback functions which allow for a list of DMA devices,
+  stats for a DMA device, and other DMA device information to be queried.
+
 
 Removed Items
 -------------
