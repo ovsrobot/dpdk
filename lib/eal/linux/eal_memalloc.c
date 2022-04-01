@@ -677,6 +677,8 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 				__func__);
 #endif
 
+	eal_mem_set_dump(addr, alloc_sz, true);
+
 	huge_recover_sigbus();
 
 	ms->addr = addr;
