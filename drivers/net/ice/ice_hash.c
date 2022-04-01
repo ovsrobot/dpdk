@@ -656,6 +656,7 @@ ice_hash_parse_raw_pattern(struct ice_adapter *ad,
 	struct ice_parser *psr;
 	uint8_t *pkt_buf, *msk_buf;
 	uint8_t spec_len, pkt_len;
+	uint16_t udp_port = 0;
 	uint8_t tmp_val = 0;
 	uint8_t tmp_c = 0;
 	int i, j;
@@ -715,6 +716,10 @@ ice_hash_parse_raw_pattern(struct ice_adapter *ad,
 
 	if (ice_parser_create(&ad->hw, &psr))
 		return -rte_errno;
+
+	if (ice_get_open_tunnel_port(&ad->hw, TNL_VXLAN, &udp_port))
+		ice_parser_vxlan_tunnel_set(psr, udp_port, true);
+
 	if (ice_parser_run(psr, pkt_buf, pkt_len, &rslt))
 		return -rte_errno;
 	ice_parser_destroy(psr);
