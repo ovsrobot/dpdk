@@ -3713,7 +3713,8 @@ ice_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 			RTE_ETH_RX_OFFLOAD_OUTER_IPV4_CKSUM |
 			RTE_ETH_RX_OFFLOAD_VLAN_EXTEND |
 			RTE_ETH_RX_OFFLOAD_RSS_HASH |
-			RTE_ETH_RX_OFFLOAD_TIMESTAMP;
+			RTE_ETH_RX_OFFLOAD_TIMESTAMP |
+			RTE_ETH_RX_OFFLOAD_HEADER_SPLIT;
 		dev_info->tx_offload_capa |=
 			RTE_ETH_TX_OFFLOAD_QINQ_INSERT |
 			RTE_ETH_TX_OFFLOAD_IPV4_CKSUM |
@@ -3725,7 +3726,7 @@ ice_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 		dev_info->flow_type_rss_offloads |= ICE_RSS_OFFLOAD_ALL;
 	}
 
-	dev_info->rx_queue_offload_capa = 0;
+	dev_info->rx_queue_offload_capa = RTE_ETH_RX_OFFLOAD_HEADER_SPLIT;
 	dev_info->tx_queue_offload_capa = RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
 
 	dev_info->reta_size = pf->hash_lut_size;
@@ -3793,6 +3794,11 @@ ice_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->default_txportconf.nb_queues = 1;
 	dev_info->default_rxportconf.ring_size = ICE_BUF_SIZE_MIN;
 	dev_info->default_txportconf.ring_size = ICE_BUF_SIZE_MIN;
+
+	dev_info->rx_seg_capa.max_nseg = ICE_RX_MAX_NSEG;
+	dev_info->rx_seg_capa.multi_pools = 1;
+	dev_info->rx_seg_capa.offset_allowed = 0;
+	dev_info->rx_seg_capa.offset_align_log2 = 0;
 
 	return 0;
 }
