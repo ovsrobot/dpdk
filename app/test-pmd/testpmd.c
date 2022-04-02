@@ -253,6 +253,8 @@ uint8_t  tx_pkt_nb_segs = 1; /**< Number of segments in TXONLY packets */
 enum tx_pkt_split tx_pkt_split = TX_PKT_SPLIT_OFF;
 /**< Split policy for packets to TX. */
 
+uint8_t rx_pkt_header_split_proto;
+
 uint8_t txonly_multi_flow;
 /**< Whether multiple flows are generated in TXONLY mode. */
 
@@ -2568,7 +2570,8 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 	int ret;
 
 	if (rx_pkt_nb_segs <= 1 ||
-	    (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) == 0) {
+	    (((rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) == 0) &&
+	     ((rx_conf->offloads & RTE_ETH_RX_OFFLOAD_HEADER_SPLIT) == 0))) {
 		rx_conf->rx_seg = NULL;
 		rx_conf->rx_nseg = 0;
 		ret = rte_eth_rx_queue_setup(port_id, rx_queue_id,
@@ -2592,6 +2595,7 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		rx_seg->offset = i < rx_pkt_nb_offs ?
 				   rx_pkt_seg_offsets[i] : 0;
 		rx_seg->mp = mpx ? mpx : mp;
+		rx_seg->proto = rx_pkt_header_split_proto;
 	}
 	rx_conf->rx_nseg = rx_pkt_nb_segs;
 	rx_conf->rx_seg = rx_useg;

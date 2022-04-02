@@ -557,6 +557,8 @@ enum tx_pkt_split {
 
 extern enum tx_pkt_split tx_pkt_split;
 
+extern uint8_t rx_pkt_header_split_proto;
+
 extern uint8_t txonly_multi_flow;
 
 extern uint32_t rxq_share;
