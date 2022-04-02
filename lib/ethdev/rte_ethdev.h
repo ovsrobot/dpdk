@@ -1197,12 +1197,31 @@ struct rte_eth_txmode {
  *     - pool from the last valid element
  *     - the buffer size from this pool
  *     - zero offset
+ *
+ * Header split is a subset of buffer split. The split happens after the
+ * packet header and before the packet payload. For PMDs that do not
+ * support header split configuration by length, the location of the split
+ * needs to be specified by the header protocol type. While for buffer split,
+ * this field should not be configured.
+ *
+ * If RTE_ETH_RX_OFFLOAD_HEADER_SPLIT flag is set in offloads field,
+ * the PMD will split the received packets into two separate regions:
+ * - The header buffer will be allocated from the memory pool,
+ *   specified in the first array element, the second buffer, from the
+ *   pool in the second element.
+ *
+ * - The lengths do not need to be configured in header split.
+ *
+ * - The offsets from the segment description elements specify
+ *   the data offset from the buffer beginning except the first mbuf.
+ *   The first segment offset is added with RTE_PKTMBUF_HEADROOM.
  */
 struct rte_eth_rxseg_split {
 	struct rte_mempool *mp; /**< Memory pool to allocate segment from. */
 	uint16_t length; /**< Segment data length, configures split point. */
 	uint16_t offset; /**< Data offset from beginning of mbuf data buffer. */
-	uint32_t reserved; /**< Reserved field. */
+	uint16_t proto; /**< header protocol type, configures header split point. */
+	uint16_t reserved; /**< Reserved field. */
 };
 
 /**
@@ -1212,7 +1231,7 @@ struct rte_eth_rxseg_split {
  * A common structure used to describe Rx packet segment properties.
  */
 union rte_eth_rxseg {
-	/* The settings for buffer split offload. */
+	/* The settings for buffer split and header split offload. */
 	struct rte_eth_rxseg_split split;
 	/* The other features settings should be added here. */
 };
@@ -1663,6 +1682,31 @@ struct rte_eth_conf {
 			     RTE_ETH_RX_OFFLOAD_VLAN_EXTEND | \
 			     RTE_ETH_RX_OFFLOAD_QINQ_STRIP)
 #define DEV_RX_OFFLOAD_VLAN RTE_DEPRECATED(DEV_RX_OFFLOAD_VLAN) RTE_ETH_RX_OFFLOAD_VLAN
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this enum may change without prior notice.
+ * This enum indicates the header split protocol type
+ */
+enum rte_eth_rx_header_split_protocol_type {
+	RTE_ETH_RX_HEADER_SPLIT_NONE = 0,
+	RTE_ETH_RX_HEADER_SPLIT_MAC,
+	RTE_ETH_RX_HEADER_SPLIT_IPV4,
+	RTE_ETH_RX_HEADER_SPLIT_IPV6,
+	RTE_ETH_RX_HEADER_SPLIT_L3,
+	RTE_ETH_RX_HEADER_SPLIT_TCP,
+	RTE_ETH_RX_HEADER_SPLIT_UDP,
+	RTE_ETH_RX_HEADER_SPLIT_SCTP,
+	RTE_ETH_RX_HEADER_SPLIT_L4,
+	RTE_ETH_RX_HEADER_SPLIT_INNER_MAC,
+	RTE_ETH_RX_HEADER_SPLIT_INNER_IPV4,
+	RTE_ETH_RX_HEADER_SPLIT_INNER_IPV6,
+	RTE_ETH_RX_HEADER_SPLIT_INNER_L3,
+	RTE_ETH_RX_HEADER_SPLIT_INNER_TCP,
+	RTE_ETH_RX_HEADER_SPLIT_INNER_UDP,
+	RTE_ETH_RX_HEADER_SPLIT_INNER_SCTP,
+	RTE_ETH_RX_HEADER_SPLIT_INNER_L4,
+};
 
 /*
  * If new Rx offload capabilities are defined, they also must be

@@ -1661,6 +1661,7 @@ rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 		struct rte_mempool *mpl = rx_seg[seg_idx].mp;
 		uint32_t length = rx_seg[seg_idx].length;
 		uint32_t offset = rx_seg[seg_idx].offset;
+		uint16_t proto = rx_seg[seg_idx].proto;
 
 		if (mpl == NULL) {
 			RTE_ETHDEV_LOG(ERR, "null mempool pointer\n");
@@ -1694,13 +1695,29 @@ rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 		}
 		offset += seg_idx != 0 ? 0 : RTE_PKTMBUF_HEADROOM;
 		*mbp_buf_size = rte_pktmbuf_data_room_size(mpl);
-		length = length != 0 ? length : *mbp_buf_size;
-		if (*mbp_buf_size < length + offset) {
-			RTE_ETHDEV_LOG(ERR,
-				       "%s mbuf_data_room_size %u < %u (segment length=%u + segment offset=%u)\n",
-				       mpl->name, *mbp_buf_size,
-				       length + offset, length, offset);
-			return -EINVAL;
+		if (proto == RTE_ETH_RX_HEADER_SPLIT_NONE) {
+			/* Check buffer split. */
+			length = length != 0 ? length : *mbp_buf_size;
+			if (*mbp_buf_size < length + offset) {
+				RTE_ETHDEV_LOG(ERR,
+					"%s mbuf_data_room_size %u < %u (segment length=%u + segment offset=%u)\n",
+					mpl->name, *mbp_buf_size,
+					length + offset, length, offset);
+				return -EINVAL;
+			}
+		} else {
+			/* Check header split. */
+			if (length != 0) {
+				RTE_ETHDEV_LOG(ERR, "segment length should be set to zero in header split\n");
+				return -EINVAL;
+			}
+			if (*mbp_buf_size < offset) {
+				RTE_ETHDEV_LOG(ERR,
+					"%s mbuf_data_room_size %u < %u segment offset)\n",
+					mpl->name, *mbp_buf_size,
+					offset);
+				return -EINVAL;
+			}
 		}
 	}
 	return 0;
@@ -1778,7 +1795,8 @@ rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		rx_seg = (const struct rte_eth_rxseg_split *)rx_conf->rx_seg;
 		n_seg = rx_conf->rx_nseg;
 
-		if (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) {
+		if (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT ||
+			rx_conf->offloads & RTE_ETH_RX_OFFLOAD_HEADER_SPLIT) {
 			ret = rte_eth_rx_queue_check_split(rx_seg, n_seg,
 							   &mbp_buf_size,
 							   &dev_info);
