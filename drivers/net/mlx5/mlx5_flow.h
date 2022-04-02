@@ -186,6 +186,10 @@ enum mlx5_feature_name {
 #define MLX5_FLOW_ITEM_INNER_FLEX (UINT64_C(1) << 38)
 #define MLX5_FLOW_ITEM_FLEX_TUNNEL (UINT64_C(1) << 39)
 
+/* Port Representor/Represented Port item */
+#define MLX5_FLOW_ITEM_PORT_REPRESENTOR (UINT64_C(1) << 40)
+#define MLX5_FLOW_ITEM_REPRESENTED_PORT (UINT64_C(1) << 41)
+
 /* Outer Masks. */
 #define MLX5_FLOW_LAYER_OUTER_L3 \
 	(MLX5_FLOW_LAYER_OUTER_L3_IPV4 | MLX5_FLOW_LAYER_OUTER_L3_IPV6)
