@@ -15579,6 +15579,8 @@ flow_dv_destroy_mtr_policy_acts(struct rte_eth_dev *dev,
  *   Meter policy struct.
  * @param[in] action
  *   Action specification used to create meter actions.
+ * @param[in] attr
+ *   Pointer to the flow attributes.
  * @param[out] error
  *   Perform verbose error reporting if not NULL. Initialized in case of
  *   error only.
@@ -15590,6 +15592,7 @@ static int
 __flow_dv_create_domain_policy_acts(struct rte_eth_dev *dev,
 			struct mlx5_flow_meter_policy *mtr_policy,
 			const struct rte_flow_action *actions[RTE_COLORS],
+			struct rte_flow_attr *attr,
 			enum mlx5_meter_domain domain,
 			struct rte_mtr_error *error)
 {
@@ -15886,6 +15889,28 @@ __flow_dv_create_domain_policy_acts(struct rte_eth_dev *dev,
 				action_flags |= MLX5_FLOW_ACTION_JUMP;
 				break;
 			}
+			case RTE_FLOW_ACTION_TYPE_MODIFY_FIELD:
+			{
+				if (i >= MLX5_MTR_RTE_COLORS)
+					return -rte_mtr_error_set(error,
+					  ENOTSUP,
+					  RTE_MTR_ERROR_TYPE_METER_POLICY,
+					  NULL,
+					  "cannot create policy modify field for this color");
+				if (flow_dv_convert_action_modify_field
+					(dev, mhdr_res, act, attr, &flow_err))
+					return -rte_mtr_error_set(error,
+					ENOTSUP,
+					RTE_MTR_ERROR_TYPE_METER_POLICY,
+					NULL, "cannot setup policy modify field action");
+				if (!mhdr_res->actions_num)
+					return -rte_mtr_error_set(error,
+					ENOTSUP,
+					RTE_MTR_ERROR_TYPE_METER_POLICY,
+					NULL, "cannot find policy modify field action");
+				action_flags |= MLX5_FLOW_ACTION_MODIFY_FIELD;
+				break;
+			}
 			/*
 			 * No need to check meter hierarchy for Y or R colors
 			 * here since it is done in the validation stage.
@@ -15954,7 +15979,8 @@ __flow_dv_create_domain_policy_acts(struct rte_eth_dev *dev,
 					  RTE_MTR_ERROR_TYPE_METER_POLICY,
 					  NULL, "action type not supported");
 			}
-			if (action_flags & MLX5_FLOW_ACTION_SET_TAG) {
+			if ((action_flags & MLX5_FLOW_ACTION_SET_TAG) ||
+			    (action_flags & MLX5_FLOW_ACTION_MODIFY_FIELD)) {
 				/* create modify action if needed. */
 				dev_flow.dv.group = 1;
 				if (flow_dv_modify_hdr_resource_register
@@ -15962,8 +15988,7 @@ __flow_dv_create_domain_policy_acts(struct rte_eth_dev *dev,
 					return -rte_mtr_error_set(error,
 						ENOTSUP,
 						RTE_MTR_ERROR_TYPE_METER_POLICY,
-						NULL, "cannot register policy "
-						"set tag action");
+						NULL, "cannot register policy set tag/modify field action");
 				act_cnt->modify_hdr =
 					dev_flow.handle->dvh.modify_hdr;
 			}
@@ -15983,6 +16008,8 @@ __flow_dv_create_domain_policy_acts(struct rte_eth_dev *dev,
  *   Meter policy struct.
  * @param[in] action
  *   Action specification used to create meter actions.
+ * @param[in] attr
+ *   Pointer to the flow attributes.
  * @param[out] error
  *   Perform verbose error reporting if not NULL. Initialized in case of
  *   error only.
@@ -15994,6 +16021,7 @@ static int
 flow_dv_create_mtr_policy_acts(struct rte_eth_dev *dev,
 		      struct mlx5_flow_meter_policy *mtr_policy,
 		      const struct rte_flow_action *actions[RTE_COLORS],
+		      struct rte_flow_attr *attr,
 		      struct rte_mtr_error *error)
 {
 	int ret, i;
@@ -16005,7 +16033,7 @@ flow_dv_create_mtr_policy_acts(struct rte_eth_dev *dev,
 			MLX5_MTR_SUB_POLICY_NUM_MASK;
 		if (sub_policy_num) {
 			ret = __flow_dv_create_domain_policy_acts(dev,
-				mtr_policy, actions,
+				mtr_policy, actions, attr,
 				(enum mlx5_meter_domain)i, error);
 			/* Cleaning resource is done in the caller level. */
 			if (ret)
@@ -18175,6 +18203,19 @@ flow_dv_validate_mtr_policy_acts(struct rte_eth_dev *dev,
 				++actions_n;
 				action_flags[i] |=
 				MLX5_FLOW_ACTION_METER_WITH_TERMINATED_POLICY;
+				break;
+			case RTE_FLOW_ACTION_TYPE_MODIFY_FIELD:
+				ret = flow_dv_validate_action_modify_field(dev,
+					action_flags[i], act, attr, &flow_err);
+				if (ret < 0)
+					return -rte_mtr_error_set(error,
+					  ENOTSUP,
+					  RTE_MTR_ERROR_TYPE_METER_POLICY,
+					  NULL, flow_err.message ?
+					  flow_err.message :
+					  "Modify field action validate check fail");
+				++actions_n;
+				action_flags[i] |= MLX5_FLOW_ACTION_MODIFY_FIELD;
 				break;
 			default:
 				return -rte_mtr_error_set(error, ENOTSUP,
