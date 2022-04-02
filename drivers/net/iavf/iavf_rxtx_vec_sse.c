@@ -1219,16 +1219,16 @@ static const struct iavf_txq_ops sse_vec_txq_ops = {
 };
 
 int __rte_cold
-iavf_txq_vec_setup(struct iavf_tx_queue *txq)
+iavf_txq_vec_setup(const struct iavf_txq_ops **txq_ops)
 {
-	txq->ops = &sse_vec_txq_ops;
+	*txq_ops = &sse_vec_txq_ops;
 	return 0;
 }
 
 int __rte_cold
-iavf_rxq_vec_setup(struct iavf_rx_queue *rxq)
+iavf_rxq_vec_setup(struct iavf_rx_queue *rxq, const struct iavf_rxq_ops **rxq_ops)
 {
-	rxq->ops = &sse_vec_rxq_ops;
+	*rxq_ops = &sse_vec_rxq_ops;
 	return iavf_rxq_vec_setup_default(rxq);
 }
 
