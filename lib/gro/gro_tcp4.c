@@ -198,7 +198,7 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 	struct rte_tcp_hdr *tcp_hdr;
 	uint32_t sent_seq;
 	int32_t tcp_dl;
-	uint16_t ip_id, hdr_len, frag_off;
+	uint16_t ip_id, frag_off;
 	uint8_t is_atomic;
 
 	struct tcp4_flow_key key;
@@ -217,7 +217,6 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 	eth_hdr = rte_pktmbuf_mtod(pkt, struct rte_ether_hdr *);
 	ipv4_hdr = (struct rte_ipv4_hdr *)((char *)eth_hdr + pkt->l2_len);
 	tcp_hdr = (struct rte_tcp_hdr *)((char *)ipv4_hdr + pkt->l3_len);
-	hdr_len = pkt->l2_len + pkt->l3_len + pkt->l4_len;
 
 	/*
 	 * Don't process the packet which has FIN, SYN, RST, PSH, URG, ECE
@@ -229,7 +228,7 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 	 * Don't process the packet whose payload length is less than or
 	 * equal to 0.
 	 */
-	tcp_dl = pkt->pkt_len - hdr_len;
+	tcp_dl = rte_be_to_cpu_16(ipv4_hdr->total_length) - (pkt->l3_len + pkt->l4_len);
 	if (tcp_dl <= 0)
 		return -1;
 
