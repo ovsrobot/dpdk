@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added Intel ACC101 baseband PMD.**
+
+  * Added a new baseband PMD for Intel ACC101 device (Mount Cirrus).
+  * See the :doc:`../bbdevs/acc101` for more details.
 
 Removed Items
 -------------

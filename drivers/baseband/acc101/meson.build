@@ -4,3 +4,5 @@
 deps += ['bbdev', 'bus_vdev', 'ring', 'pci', 'bus_pci']
 
 sources = files('rte_acc101_pmd.c')
+
+headers = files('rte_acc101_cfg.h')

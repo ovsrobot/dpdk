@@ -65,6 +65,18 @@
 #define ACC100_QOS_GBR 0
 #endif
 
+#ifdef RTE_BASEBAND_ACC101
+#include <rte_acc101_cfg.h>
+#define ACC101PF_DRIVER_NAME   ("intel_acc101_pf")
+#define ACC101VF_DRIVER_NAME   ("intel_acc101_vf")
+#define ACC101_QMGR_NUM_AQS 16
+#define ACC101_QMGR_NUM_QGS 2
+#define ACC101_QMGR_AQ_DEPTH 5
+#define ACC101_QMGR_INVALID_IDX -1
+#define ACC101_QMGR_RR 1
+#define ACC101_QOS_GBR 0
+#endif
+
 #define OPS_CACHE_SIZE 256U
 #define OPS_POOL_SIZE_MIN 511U /* 0.5K per queue */
 
@@ -763,6 +775,63 @@ add_bbdev_dev(uint8_t dev_id, struct rte_bbdev_info *info,
 		ret = rte_acc100_configure(info->dev_name, &conf);
 		TEST_ASSERT_SUCCESS(ret,
 				"Failed to configure ACC100 PF for bbdev %s",
+				info->dev_name);
+	}
+#endif
+#ifdef RTE_BASEBAND_ACC101
+	if ((get_init_device() == true) &&
+		(!strcmp(info->drv.driver_name, ACC101PF_DRIVER_NAME))) {
+		struct rte_acc101_conf conf;
+		unsigned int i;
+
+		printf("Configure ACC101 FEC Driver %s with default values\n",
+				info->drv.driver_name);
+
+		/* clear default configuration before initialization */
+		memset(&conf, 0, sizeof(struct rte_acc101_conf));
+
+		/* Always set in PF mode for built-in configuration */
+		conf.pf_mode_en = true;
+		for (i = 0; i < RTE_ACC101_NUM_VFS; ++i) {
+			conf.arb_dl_4g[i].gbr_threshold1 = ACC101_QOS_GBR;
+			conf.arb_dl_4g[i].gbr_threshold1 = ACC101_QOS_GBR;
+			conf.arb_dl_4g[i].round_robin_weight = ACC101_QMGR_RR;
+			conf.arb_ul_4g[i].gbr_threshold1 = ACC101_QOS_GBR;
+			conf.arb_ul_4g[i].gbr_threshold1 = ACC101_QOS_GBR;
+			conf.arb_ul_4g[i].round_robin_weight = ACC101_QMGR_RR;
+			conf.arb_dl_5g[i].gbr_threshold1 = ACC101_QOS_GBR;
+			conf.arb_dl_5g[i].gbr_threshold1 = ACC101_QOS_GBR;
+			conf.arb_dl_5g[i].round_robin_weight = ACC101_QMGR_RR;
+			conf.arb_ul_5g[i].gbr_threshold1 = ACC101_QOS_GBR;
+			conf.arb_ul_5g[i].gbr_threshold1 = ACC101_QOS_GBR;
+			conf.arb_ul_5g[i].round_robin_weight = ACC101_QMGR_RR;
+		}
+
+		conf.input_pos_llr_1_bit = true;
+		conf.output_pos_llr_1_bit = true;
+		conf.num_vf_bundles = 1; /**< Number of VF bundles to setup */
+
+		conf.q_ul_4g.num_qgroups = ACC101_QMGR_NUM_QGS;
+		conf.q_ul_4g.first_qgroup_index = ACC101_QMGR_INVALID_IDX;
+		conf.q_ul_4g.num_aqs_per_groups = ACC101_QMGR_NUM_AQS;
+		conf.q_ul_4g.aq_depth_log2 = ACC101_QMGR_AQ_DEPTH;
+		conf.q_dl_4g.num_qgroups = ACC101_QMGR_NUM_QGS;
+		conf.q_dl_4g.first_qgroup_index = ACC101_QMGR_INVALID_IDX;
+		conf.q_dl_4g.num_aqs_per_groups = ACC101_QMGR_NUM_AQS;
+		conf.q_dl_4g.aq_depth_log2 = ACC101_QMGR_AQ_DEPTH;
+		conf.q_ul_5g.num_qgroups = ACC101_QMGR_NUM_QGS;
+		conf.q_ul_5g.first_qgroup_index = ACC101_QMGR_INVALID_IDX;
+		conf.q_ul_5g.num_aqs_per_groups = ACC101_QMGR_NUM_AQS;
+		conf.q_ul_5g.aq_depth_log2 = ACC101_QMGR_AQ_DEPTH;
+		conf.q_dl_5g.num_qgroups = ACC101_QMGR_NUM_QGS;
+		conf.q_dl_5g.first_qgroup_index = ACC101_QMGR_INVALID_IDX;
+		conf.q_dl_5g.num_aqs_per_groups = ACC101_QMGR_NUM_AQS;
+		conf.q_dl_5g.aq_depth_log2 = ACC101_QMGR_AQ_DEPTH;
+
+		/* setup PF with configuration information */
+		ret = rte_acc101_configure(info->dev_name, &conf);
+		TEST_ASSERT_SUCCESS(ret,
+				"Failed to configure ACC101 PF for bbdev %s",
 				info->dev_name);
 	}
 #endif

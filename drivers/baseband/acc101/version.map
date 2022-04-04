@@ -1,3 +1,10 @@
 DPDK_22 {
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	rte_acc101_configure;
+
+};
