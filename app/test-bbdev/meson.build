@@ -23,6 +23,9 @@ endif
 if dpdk_conf.has('RTE_BASEBAND_ACC100')
     deps += ['baseband_acc100']
 endif
+if dpdk_conf.has('RTE_BASEBAND_ACC101')
+    deps += ['baseband_acc101']
+endif
 if dpdk_conf.has('RTE_LIBRTE_PMD_BBDEV_LA12XX')
     deps += ['baseband_la12xx']
 endif

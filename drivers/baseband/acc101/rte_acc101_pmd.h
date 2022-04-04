@@ -7,6 +7,7 @@
 
 #include "acc101_pf_enum.h"
 #include "acc101_vf_enum.h"
+#include "rte_acc101_cfg.h"
 
 /* Helper macro for logging */
 #define rte_bbdev_log(level, fmt, ...) \
@@ -497,6 +498,7 @@ struct acc101_device {
 	 * on how many queues are enabled with configure()
 	 */
 	uint32_t sw_ring_max_depth;
+	struct rte_acc101_conf acc101_conf; /* ACC101 Initial configuration */
 	/* Bitmap capturing which Queues have already been assigned */
 	uint16_t q_assigned_bit_map[ACC101_NUM_QGRPS];
 	bool pf_device; /**< True if this is a PF ACC101 device */
