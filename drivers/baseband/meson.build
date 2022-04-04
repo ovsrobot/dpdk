@@ -7,6 +7,7 @@ endif
 
 drivers = [
         'acc100',
+        'acc101',
         'fpga_5gnr_fec',
         'fpga_lte_fec',
         'la12xx',
