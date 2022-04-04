@@ -62,6 +62,10 @@
  * 128M x 32kB = 4GB addressable memory
  */
 #define ACC101_HARQ_LAYOUT             (128 * 1024 * 1024)
+/* Assume offset for HARQ in memory */
+#define ACC101_HARQ_OFFSET             (32 * 1024)
+#define ACC101_HARQ_OFFSET_SHIFT       15
+#define ACC101_HARQ_OFFSET_MASK        0x7ffffff
 /* Mask used to calculate an index in an Info Ring array (not a byte offset) */
 #define ACC101_INFO_RING_MASK          (ACC101_INFO_RING_NUM_ENTRIES-1)
 /* Number of Virtual Functions ACC101 supports */
@@ -76,6 +80,8 @@
 #define ACC101_GRP_ID_SHIFT    10 /* Queue Index Hierarchy */
 #define ACC101_VF_ID_SHIFT     4  /* Queue Index Hierarchy */
 #define ACC101_QUEUE_ENABLE    0x80000000  /* Bit to mark Queue as Enabled */
+#define ACC101_FDONE    0x80000000
+#define ACC101_SDONE    0x40000000
 
 #define ACC101_NUM_ACCS       5
 #define ACC101_ACCMAP_0       0
@@ -105,6 +111,26 @@
 #define ACC101_COMPANION_PTRS             8
 
 #define ACC101_FCW_VER         2
+#define ACC101_MUX_5GDL_DESC   6
+#define ACC101_CMP_ENC_SIZE    20
+#define ACC101_CMP_DEC_SIZE    24
+#define ACC101_ENC_OFFSET     (32)
+#define ACC101_DEC_OFFSET     (80)
+#define ACC101_EXT_MEM /* Default option with memory external to CPU */
+#define ACC101_HARQ_OFFSET_THRESHOLD 1024
+#define ACC101_LIMIT_DL_MUX_BITS 534
+
+/* Constants from K0 computation from 3GPP 38.212 Table 5.4.2.1-2 */
+#define ACC101_N_ZC_1 66 /* N = 66 Zc for BG 1 */
+#define ACC101_N_ZC_2 50 /* N = 50 Zc for BG 2 */
+#define ACC101_K_ZC_1 22 /* K = 22 Zc for BG 1 */
+#define ACC101_K_ZC_2 10 /* K = 10 Zc for BG 2 */
+#define ACC101_K0_1_1 17 /* K0 fraction numerator for rv 1 and BG 1 */
+#define ACC101_K0_1_2 13 /* K0 fraction numerator for rv 1 and BG 2 */
+#define ACC101_K0_2_1 33 /* K0 fraction numerator for rv 2 and BG 1 */
+#define ACC101_K0_2_2 25 /* K0 fraction numerator for rv 2 and BG 2 */
+#define ACC101_K0_3_1 56 /* K0 fraction numerator for rv 3 and BG 1 */
+#define ACC101_K0_3_2 43 /* K0 fraction numerator for rv 3 and BG 2 */
 
 #define ACC101_LONG_WAIT        1000
 
