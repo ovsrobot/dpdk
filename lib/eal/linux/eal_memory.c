@@ -1875,7 +1875,7 @@ memseg_secondary_init(void)
 		msl = &mcfg->memsegs[msl_idx];
 
 		/* skip empty memseg lists */
-		if (msl->memseg_arr.len == 0)
+		if (msl->memseg_arr.len == 0 || msl->external)
 			continue;
 
 		if (rte_fbarray_attach(&msl->memseg_arr)) {
