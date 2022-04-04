@@ -54,6 +54,10 @@
 /* Values used in writing to the registers */
 #define ACC101_REG_IRQ_EN_ALL          0x1FF83FF  /* Enable all interrupts */
 
+/* ACC101 Specific Dimensioning */
+#define ACC101_SIZE_64MBYTE            (64*1024*1024)
+/* Number of elements in an Info Ring */
+#define ACC101_INFO_RING_NUM_ENTRIES   1024
 /* Number of elements in HARQ layout memory
  * 128M x 32kB = 4GB addressable memory
  */
@@ -88,6 +92,16 @@
 #define ACC101_DMA_MAX_NUM_POINTERS_IN    7
 #define ACC101_DMA_DESC_PADDING           8
 #define ACC101_FCW_PADDING                12
+#define ACC101_DESC_FCW_OFFSET            192
+#define ACC101_DESC_SIZE                  256
+#define ACC101_DESC_OFFSET                (ACC101_DESC_SIZE / 64)
+#define ACC101_FCW_TE_BLEN                32
+#define ACC101_FCW_TD_BLEN                24
+#define ACC101_FCW_LE_BLEN                32
+#define ACC101_FCW_LD_BLEN                36
+#define ACC101_5GUL_SIZE_0                16
+#define ACC101_5GUL_SIZE_1                40
+#define ACC101_5GUL_OFFSET_0              36
 #define ACC101_COMPANION_PTRS             8
 
 #define ACC101_FCW_VER         2
@@ -477,6 +491,38 @@ static const struct acc101_registry_addr vf_reg_addr = {
 	.ddr_range = HWVfDmaDdrBaseRangeRoVf,
 	.pmon_ctrl_a = HWVfPmACntrlRegVf,
 	.pmon_ctrl_b = HWVfPmBCntrlRegVf,
+};
+
+/* Structure associated with each queue. */
+struct __rte_cache_aligned acc101_queue {
+	union acc101_dma_desc *ring_addr;  /* Virtual address of sw ring */
+	rte_iova_t ring_addr_iova;  /* IOVA address of software ring */
+	uint32_t sw_ring_head;  /* software ring head */
+	uint32_t sw_ring_tail;  /* software ring tail */
+	/* software ring size (descriptors, not bytes) */
+	uint32_t sw_ring_depth;
+	/* mask used to wrap enqueued descriptors on the sw ring */
+	uint32_t sw_ring_wrap_mask;
+	/* Virtual address of companion ring */
+	struct acc101_ptrs *companion_ring_addr;
+	/* MMIO register used to enqueue descriptors */
+	void *mmio_reg_enqueue;
+	uint8_t vf_id;  /* VF ID (max = 63) */
+	uint8_t qgrp_id;  /* Queue Group ID */
+	uint16_t aq_id;  /* Atomic Queue ID */
+	uint16_t aq_depth;  /* Depth of atomic queue */
+	uint32_t aq_enqueued;  /* Count how many "batches" have been enqueued */
+	uint32_t aq_dequeued;  /* Count how many "batches" have been dequeued */
+	uint32_t irq_enable;  /* Enable ops dequeue interrupts if set to 1 */
+	struct rte_mempool *fcw_mempool;  /* FCW mempool */
+	enum rte_bbdev_op_type op_type;  /* Type of this Queue: TE or TD */
+	/* Internal Buffers for loopback input */
+	uint8_t *lb_in;
+	uint8_t *lb_out;
+	rte_iova_t lb_in_addr_iova;
+	rte_iova_t lb_out_addr_iova;
+	int8_t *derm_buffer; /* interim buffer for de-rm in SDK */
+	struct acc101_device *d;
 };
 
 /* Private data structure for each ACC101 device */
