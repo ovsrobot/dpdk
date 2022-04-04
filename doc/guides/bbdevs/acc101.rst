@@ -38,6 +38,7 @@ ACC101 5G/4G FEC PMD supports the following BBDEV capabilities:
    - ``RTE_BBDEV_LDPC_HQ_COMBINE_OUT_ENABLE`` :  provides an input for HARQ combining
    - ``RTE_BBDEV_LDPC_INTERNAL_HARQ_MEMORY_IN_ENABLE`` :  HARQ memory input is internal
    - ``RTE_BBDEV_LDPC_INTERNAL_HARQ_MEMORY_OUT_ENABLE`` :  HARQ memory output is internal
+   - ``RTE_BBDEV_LDPC_INTERNAL_HARQ_MEMORY_LOOPBACK`` :  loopback data to/from HARQ memory
    - ``RTE_BBDEV_LDPC_INTERNAL_HARQ_MEMORY_FILLERS`` :  HARQ memory includes the fillers bits
    - ``RTE_BBDEV_LDPC_DEC_SCATTER_GATHER`` :  supports scatter-gather for input/output data
    - ``RTE_BBDEV_LDPC_HARQ_6BIT_COMPRESSION`` :  supports compression of the HARQ input/output
