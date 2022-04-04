@@ -557,8 +557,15 @@ struct acc101_device {
 	void *sw_rings_base;  /* Base addr of un-aligned memory for sw rings */
 	void *sw_rings;  /* 64MBs of 64MB aligned memory for sw rings */
 	rte_iova_t sw_rings_iova;  /* IOVA address of sw_rings */
+	/* Virtual address of the info memory routed to the this function under
+	 * operation, whether it is PF or VF.
+	 * HW may DMA information data at this location asynchronously
+	 */
+	union acc101_info_ring_data *info_ring;
 
 	union acc101_harq_layout_data *harq_layout;
+	/* Virtual Info Ring head */
+	uint16_t info_ring_head;
 	/* Number of bytes available for each queue in device, depending on
 	 * how many queues are enabled with configure()
 	 */
@@ -575,6 +582,14 @@ struct acc101_device {
 	uint16_t q_assigned_bit_map[ACC101_NUM_QGRPS];
 	bool pf_device; /**< True if this is a PF ACC101 device */
 	bool configured; /**< True if this ACC101 device is configured */
+};
+
+/**
+ * Structure with details about RTE_BBDEV_EVENT_DEQUEUE event. It's passed to
+ * the callback function.
+ */
+struct acc101_deq_intr_details {
+	uint16_t queue_id;
 };
 
 #endif /* _RTE_ACC101_PMD_H_ */

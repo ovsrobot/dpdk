@@ -352,6 +352,215 @@ alloc_sw_rings_min_mem(struct rte_bbdev *dev, struct acc101_device *d,
 	free_base_addresses(base_addrs, i);
 }
 
+/*
+ * Find queue_id of a device queue based on details from the Info Ring.
+ * If a queue isn't found UINT16_MAX is returned.
+ */
+static inline uint16_t
+get_queue_id_from_ring_info(struct rte_bbdev_data *data,
+		const union acc101_info_ring_data ring_data)
+{
+	uint16_t queue_id;
+
+	for (queue_id = 0; queue_id < data->num_queues; ++queue_id) {
+		struct acc101_queue *acc101_q =
+				data->queues[queue_id].queue_private;
+		if (acc101_q != NULL && acc101_q->aq_id == ring_data.aq_id &&
+				acc101_q->qgrp_id == ring_data.qg_id &&
+				acc101_q->vf_id == ring_data.vf_id)
+			return queue_id;
+	}
+
+	return UINT16_MAX;
+}
+
+/* Checks PF Info Ring to find the interrupt cause and handles it accordingly */
+static inline void
+acc101_check_ir(struct acc101_device *acc101_dev)
+{
+	volatile union acc101_info_ring_data *ring_data;
+	uint16_t info_ring_head = acc101_dev->info_ring_head;
+	if (acc101_dev->info_ring == NULL)
+		return;
+
+	ring_data = acc101_dev->info_ring + (acc101_dev->info_ring_head &
+			ACC101_INFO_RING_MASK);
+
+	while (ring_data->valid) {
+		if ((ring_data->int_nb < ACC101_PF_INT_DMA_DL_DESC_IRQ) || (
+				ring_data->int_nb >
+				ACC101_PF_INT_DMA_DL5G_DESC_IRQ)) {
+			rte_bbdev_log(WARNING, "InfoRing: ITR:%d Info:0x%x",
+				ring_data->int_nb, ring_data->detailed_info);
+			/* Initialize Info Ring entry and move forward */
+			ring_data->val = 0;
+		}
+		info_ring_head++;
+		ring_data = acc101_dev->info_ring +
+				(info_ring_head & ACC101_INFO_RING_MASK);
+	}
+}
+
+/* Checks PF Info Ring to find the interrupt cause and handles it accordingly */
+static inline void
+acc101_pf_interrupt_handler(struct rte_bbdev *dev)
+{
+	struct acc101_device *acc101_dev = dev->data->dev_private;
+	volatile union acc101_info_ring_data *ring_data;
+	struct acc101_deq_intr_details deq_intr_det;
+
+	ring_data = acc101_dev->info_ring + (acc101_dev->info_ring_head &
+			ACC101_INFO_RING_MASK);
+
+	while (ring_data->valid) {
+
+		rte_bbdev_log_debug(
+				"ACC101 PF Interrupt received, Info Ring data: 0x%x",
+				ring_data->val);
+
+		switch (ring_data->int_nb) {
+		case ACC101_PF_INT_DMA_DL_DESC_IRQ:
+		case ACC101_PF_INT_DMA_UL_DESC_IRQ:
+		case ACC101_PF_INT_DMA_UL5G_DESC_IRQ:
+		case ACC101_PF_INT_DMA_DL5G_DESC_IRQ:
+			deq_intr_det.queue_id = get_queue_id_from_ring_info(
+					dev->data, *ring_data);
+			if (deq_intr_det.queue_id == UINT16_MAX) {
+				rte_bbdev_log(ERR,
+						"Couldn't find queue: aq_id: %u, qg_id: %u, vf_id: %u",
+						ring_data->aq_id,
+						ring_data->qg_id,
+						ring_data->vf_id);
+				return;
+			}
+			rte_bbdev_pmd_callback_process(dev,
+					RTE_BBDEV_EVENT_DEQUEUE, &deq_intr_det);
+			break;
+		default:
+			rte_bbdev_pmd_callback_process(dev,
+					RTE_BBDEV_EVENT_ERROR, NULL);
+			break;
+		}
+
+		/* Initialize Info Ring entry and move forward */
+		ring_data->val = 0;
+		++acc101_dev->info_ring_head;
+		ring_data = acc101_dev->info_ring +
+				(acc101_dev->info_ring_head &
+				ACC101_INFO_RING_MASK);
+	}
+}
+
+/* Checks VF Info Ring to find the interrupt cause and handles it accordingly */
+static inline void
+acc101_vf_interrupt_handler(struct rte_bbdev *dev)
+{
+	struct acc101_device *acc101_dev = dev->data->dev_private;
+	volatile union acc101_info_ring_data *ring_data;
+	struct acc101_deq_intr_details deq_intr_det;
+
+	ring_data = acc101_dev->info_ring + (acc101_dev->info_ring_head &
+			ACC101_INFO_RING_MASK);
+
+	while (ring_data->valid) {
+
+		rte_bbdev_log_debug(
+				"ACC101 VF Interrupt received, Info Ring data: 0x%x",
+				ring_data->val);
+
+		switch (ring_data->int_nb) {
+		case ACC101_VF_INT_DMA_DL_DESC_IRQ:
+		case ACC101_VF_INT_DMA_UL_DESC_IRQ:
+		case ACC101_VF_INT_DMA_UL5G_DESC_IRQ:
+		case ACC101_VF_INT_DMA_DL5G_DESC_IRQ:
+			/* VFs are not aware of their vf_id - it's set to 0 in
+			 * queue structures.
+			 */
+			ring_data->vf_id = 0;
+			deq_intr_det.queue_id = get_queue_id_from_ring_info(
+					dev->data, *ring_data);
+			if (deq_intr_det.queue_id == UINT16_MAX) {
+				rte_bbdev_log(ERR,
+						"Couldn't find queue: aq_id: %u, qg_id: %u",
+						ring_data->aq_id,
+						ring_data->qg_id);
+				return;
+			}
+			rte_bbdev_pmd_callback_process(dev,
+					RTE_BBDEV_EVENT_DEQUEUE, &deq_intr_det);
+			break;
+		default:
+			rte_bbdev_pmd_callback_process(dev,
+					RTE_BBDEV_EVENT_ERROR, NULL);
+			break;
+		}
+
+		/* Initialize Info Ring entry and move forward */
+		ring_data->valid = 0;
+		++acc101_dev->info_ring_head;
+		ring_data = acc101_dev->info_ring + (acc101_dev->info_ring_head
+				& ACC101_INFO_RING_MASK);
+	}
+}
+
+/* Interrupt handler triggered by ACC101 dev for handling specific interrupt */
+static void
+acc101_dev_interrupt_handler(void *cb_arg)
+{
+	struct rte_bbdev *dev = cb_arg;
+	struct acc101_device *acc101_dev = dev->data->dev_private;
+
+	/* Read info ring */
+	if (acc101_dev->pf_device)
+		acc101_pf_interrupt_handler(dev);
+	else
+		acc101_vf_interrupt_handler(dev);
+}
+
+/* Allocate and setup inforing */
+static int
+allocate_info_ring(struct rte_bbdev *dev)
+{
+	struct acc101_device *d = dev->data->dev_private;
+	const struct acc101_registry_addr *reg_addr;
+	rte_iova_t info_ring_iova;
+	uint32_t phys_low, phys_high;
+
+	if (d->info_ring != NULL)
+		return 0; /* Already configured */
+
+	/* Choose correct registry addresses for the device type */
+	if (d->pf_device)
+		reg_addr = &pf_reg_addr;
+	else
+		reg_addr = &vf_reg_addr;
+	/* Allocate InfoRing */
+	if (d->info_ring == NULL)
+		d->info_ring = rte_zmalloc_socket("Info Ring",
+				ACC101_INFO_RING_NUM_ENTRIES *
+				sizeof(*d->info_ring), RTE_CACHE_LINE_SIZE,
+				dev->data->socket_id);
+	if (d->info_ring == NULL) {
+		rte_bbdev_log(ERR,
+				"Failed to allocate Info Ring for %s:%u",
+				dev->device->driver->name,
+				dev->data->dev_id);
+		return -ENOMEM;
+	}
+	info_ring_iova = rte_malloc_virt2iova(d->info_ring);
+
+	/* Setup Info Ring */
+	phys_high = (uint32_t)(info_ring_iova >> 32);
+	phys_low  = (uint32_t)(info_ring_iova);
+	acc101_reg_write(d, reg_addr->info_ring_hi, phys_high);
+	acc101_reg_write(d, reg_addr->info_ring_lo, phys_low);
+	acc101_reg_write(d, reg_addr->info_ring_en, ACC101_REG_IRQ_EN_ALL);
+	d->info_ring_head = (acc101_reg_read(d, reg_addr->info_ring_ptr) &
+			0xFFF) / sizeof(union acc101_info_ring_data);
+	return 0;
+}
+
+
 /* Allocate 64MB memory used for all software rings */
 static int
 acc101_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id)
@@ -359,6 +568,7 @@ acc101_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id)
 	uint32_t phys_low, phys_high, value;
 	struct acc101_device *d = dev->data->dev_private;
 	const struct acc101_registry_addr *reg_addr;
+	int ret;
 
 	if (d->pf_device && !d->acc101_conf.pf_mode_en) {
 		rte_bbdev_log(NOTICE,
@@ -445,6 +655,14 @@ acc101_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id)
 	acc101_reg_write(d, reg_addr->tail_ptrs_dl4g_hi, phys_high);
 	acc101_reg_write(d, reg_addr->tail_ptrs_dl4g_lo, phys_low);
 
+	ret = allocate_info_ring(dev);
+	if (ret < 0) {
+		rte_bbdev_log(ERR, "Failed to allocate info_ring for %s:%u",
+				dev->device->driver->name,
+				dev->data->dev_id);
+		/* Continue */
+	}
+
 	if (d->harq_layout == NULL)
 		d->harq_layout = rte_zmalloc_socket("HARQ Layout",
 				ACC101_HARQ_LAYOUT * sizeof(*d->harq_layout),
@@ -468,13 +686,59 @@ acc101_setup_queues(struct rte_bbdev *dev, uint16_t num_queues, int socket_id)
 	return 0;
 }
 
+static int
+acc101_intr_enable(struct rte_bbdev *dev)
+{
+	int ret;
+	struct acc101_device *d = dev->data->dev_private;
+
+	/* Only MSI are currently supported */
+	if (rte_intr_type_get(dev->intr_handle) == RTE_INTR_HANDLE_VFIO_MSI ||
+			rte_intr_type_get(dev->intr_handle) == RTE_INTR_HANDLE_UIO) {
+
+		ret = allocate_info_ring(dev);
+		if (ret < 0) {
+			rte_bbdev_log(ERR,
+					"Couldn't allocate info ring for device: %s",
+					dev->data->name);
+			return ret;
+		}
+
+		ret = rte_intr_enable(dev->intr_handle);
+		if (ret < 0) {
+			rte_bbdev_log(ERR,
+					"Couldn't enable interrupts for device: %s",
+					dev->data->name);
+			rte_free(d->info_ring);
+			return ret;
+		}
+		ret = rte_intr_callback_register(dev->intr_handle,
+				acc101_dev_interrupt_handler, dev);
+		if (ret < 0) {
+			rte_bbdev_log(ERR,
+					"Couldn't register interrupt callback for device: %s",
+					dev->data->name);
+			rte_free(d->info_ring);
+			return ret;
+		}
+
+		return 0;
+	}
+
+	rte_bbdev_log(ERR, "ACC101 (%s) supports only VFIO MSI interrupts",
+			dev->data->name);
+	return -ENOTSUP;
+}
+
 /* Free memory used for software rings */
 static int
 acc101_dev_close(struct rte_bbdev *dev)
 {
 	struct acc101_device *d = dev->data->dev_private;
+	acc101_check_ir(d);
 	if (d->sw_rings_base != NULL) {
 		rte_free(d->tail_ptrs);
+		rte_free(d->info_ring);
 		rte_free(d->sw_rings_base);
 		rte_free(d->harq_layout);
 		d->sw_rings_base = NULL;
@@ -770,6 +1034,7 @@ acc101_dev_info_get(struct rte_bbdev *dev,
 					RTE_BBDEV_TURBO_CRC_TYPE_24B |
 					RTE_BBDEV_TURBO_HALF_ITERATION_EVEN |
 					RTE_BBDEV_TURBO_EARLY_TERMINATION |
+					RTE_BBDEV_TURBO_DEC_INTERRUPTS |
 					RTE_BBDEV_TURBO_NEG_LLR_1_BIT_IN |
 					RTE_BBDEV_TURBO_DEC_TB_CRC_24B_KEEP |
 					RTE_BBDEV_TURBO_DEC_CRC_24B_DROP |
@@ -790,6 +1055,7 @@ acc101_dev_info_get(struct rte_bbdev *dev,
 					RTE_BBDEV_TURBO_CRC_24B_ATTACH |
 					RTE_BBDEV_TURBO_RV_INDEX_BYPASS |
 					RTE_BBDEV_TURBO_RATE_MATCH |
+					RTE_BBDEV_TURBO_ENC_INTERRUPTS |
 					RTE_BBDEV_TURBO_ENC_SCATTER_GATHER,
 				.num_buffers_src =
 						RTE_BBDEV_TURBO_MAX_CODE_BLOCKS,
@@ -803,7 +1069,8 @@ acc101_dev_info_get(struct rte_bbdev *dev,
 				.capability_flags =
 					RTE_BBDEV_LDPC_RATE_MATCH |
 					RTE_BBDEV_LDPC_CRC_24B_ATTACH |
-					RTE_BBDEV_LDPC_INTERLEAVER_BYPASS,
+					RTE_BBDEV_LDPC_INTERLEAVER_BYPASS |
+					RTE_BBDEV_LDPC_ENC_INTERRUPTS,
 				.num_buffers_src =
 						RTE_BBDEV_LDPC_MAX_CODE_BLOCKS,
 				.num_buffers_dst =
@@ -828,7 +1095,8 @@ acc101_dev_info_get(struct rte_bbdev *dev,
 				RTE_BBDEV_LDPC_DECODE_BYPASS |
 				RTE_BBDEV_LDPC_DEC_SCATTER_GATHER |
 				RTE_BBDEV_LDPC_HARQ_6BIT_COMPRESSION |
-				RTE_BBDEV_LDPC_LLR_COMPRESSION,
+				RTE_BBDEV_LDPC_LLR_COMPRESSION |
+				RTE_BBDEV_LDPC_DEC_INTERRUPTS,
 			.llr_size = 8,
 			.llr_decimals = 1,
 			.num_buffers_src =
@@ -877,15 +1145,45 @@ acc101_dev_info_get(struct rte_bbdev *dev,
 #else
 	dev_info->harq_buffer_size = 0;
 #endif
+	acc101_check_ir(d);
+}
+
+static int
+acc101_queue_intr_enable(struct rte_bbdev *dev, uint16_t queue_id)
+{
+	struct acc101_queue *q = dev->data->queues[queue_id].queue_private;
+
+	if (rte_intr_type_get(dev->intr_handle) != RTE_INTR_HANDLE_VFIO_MSI &&
+			rte_intr_type_get(dev->intr_handle) != RTE_INTR_HANDLE_UIO)
+		return -ENOTSUP;
+
+	q->irq_enable = 1;
+	return 0;
+}
+
+static int
+acc101_queue_intr_disable(struct rte_bbdev *dev, uint16_t queue_id)
+{
+	struct acc101_queue *q = dev->data->queues[queue_id].queue_private;
+
+	if (rte_intr_type_get(dev->intr_handle) != RTE_INTR_HANDLE_VFIO_MSI &&
+			rte_intr_type_get(dev->intr_handle) != RTE_INTR_HANDLE_UIO)
+		return -ENOTSUP;
+
+	q->irq_enable = 0;
+	return 0;
 }
 
 static const struct rte_bbdev_ops acc101_bbdev_ops = {
 	.setup_queues = acc101_setup_queues,
+	.intr_enable = acc101_intr_enable,
 	.close = acc101_dev_close,
 	.info_get = acc101_dev_info_get,
 	.queue_setup = acc101_queue_setup,
 	.queue_release = acc101_queue_release,
 	.queue_stop = acc101_queue_stop,
+	.queue_intr_enable = acc101_queue_intr_enable,
+	.queue_intr_disable = acc101_queue_intr_disable
 };
 
 /* ACC101 PCI PF address map */
@@ -3360,8 +3658,10 @@ dequeue_dec_one_op_cb(struct rte_bbdev_queue_data *q_data,
 			? (1 << RTE_BBDEV_DATA_ERROR) : 0);
 	op->status |= ((rsp.dma_err) ? (1 << RTE_BBDEV_DRV_ERROR) : 0);
 	op->status |= ((rsp.fcw_err) ? (1 << RTE_BBDEV_DRV_ERROR) : 0);
-	if (op->status != 0)
+	if (op->status != 0) {
 		q_data->queue_stats.dequeue_err_count++;
+		acc101_check_ir(q->d);
+	}
 
 	/* CRC invalid if error exists */
 	if (!op->status)
@@ -3418,6 +3718,9 @@ dequeue_ldpc_dec_one_op_cb(struct rte_bbdev_queue_data *q_data,
 	if (op->ldpc_dec.hard_output.length > 0 && !rsp.synd_ok)
 		op->status |= 1 << RTE_BBDEV_SYNDROME_ERROR;
 	op->ldpc_dec.iter_count = (uint8_t) rsp.iter_cnt;
+
+	if (op->status & (1 << RTE_BBDEV_DRV_ERROR))
+		acc101_check_ir(q->d);
 
 	/* Check if this is the last desc in batch (Atomic Queue) */
 	if (desc->req.last_desc_in_batch) {
