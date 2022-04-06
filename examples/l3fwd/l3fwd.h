@@ -7,6 +7,7 @@
 
 #include <rte_ethdev.h>
 #include <rte_vect.h>
+#include <rte_acl.h>
 
 #define DO_RFC_1812_CHECKS
 
@@ -61,6 +62,12 @@
 struct parm_cfg {
 	const char *rule_ipv4_name;
 	const char *rule_ipv6_name;
+	enum rte_acl_classify_alg alg;
+};
+
+struct acl_algorithms {
+	const char *name;
+	enum rte_acl_classify_alg alg;
 };
 
 struct mbuf_table {
@@ -80,6 +87,7 @@ struct lcore_conf {
 	uint16_t tx_port_id[RTE_MAX_ETHPORTS];
 	uint16_t tx_queue_id[RTE_MAX_ETHPORTS];
 	struct mbuf_table tx_mbufs[RTE_MAX_ETHPORTS];
+	struct rte_eth_dev_tx_buffer *tx_buffer[RTE_MAX_ETHPORTS];
 	void *ipv4_lookup_struct;
 	void *ipv6_lookup_struct;
 } __rte_cache_aligned;
@@ -106,6 +114,8 @@ extern xmm_t val_eth[RTE_MAX_ETHPORTS];
 extern struct lcore_conf lcore_conf[RTE_MAX_LCORE];
 
 extern struct parm_cfg parm_config;
+
+extern struct acl_algorithms acl_alg[];
 
 /* Send burst of packets on an output interface */
 static inline int
@@ -190,10 +200,19 @@ is_valid_ipv4_pkt(struct rte_ipv4_hdr *pkt, uint32_t link_len)
 }
 #endif /* DO_RFC_1812_CHECKS */
 
+enum rte_acl_classify_alg
+parse_acl_alg(const char *alg);
+
+int
+usage_acl_alg(char *buf, size_t sz);
+
 int
 init_mem(uint16_t portid, unsigned int nb_mbuf);
 
-/* Function pointers for LPM, EM or FIB functionality. */
+/* Function pointers for ACL, LPM, EM or FIB functionality. */
+void
+setup_acl(const int socketid);
+
 void
 setup_lpm(const int socketid);
 
@@ -204,10 +223,17 @@ void
 setup_fib(const int socketid);
 
 int
+acl_check_ptype(int portid);
+
+int
 em_check_ptype(int portid);
 
 int
 lpm_check_ptype(int portid);
+
+uint16_t
+acl_cb_parse_ptype(uint16_t port, uint16_t queue, struct rte_mbuf *pkts[],
+		  uint16_t nb_pkts, uint16_t max_pkts, void *user_param);
 
 uint16_t
 em_cb_parse_ptype(uint16_t port, uint16_t queue, struct rte_mbuf *pkts[],
@@ -216,6 +242,9 @@ em_cb_parse_ptype(uint16_t port, uint16_t queue, struct rte_mbuf *pkts[],
 uint16_t
 lpm_cb_parse_ptype(uint16_t port, uint16_t queue, struct rte_mbuf *pkts[],
 		   uint16_t nb_pkts, uint16_t max_pkts, void *user_param);
+
+int
+acl_main_loop(__rte_unused void *dummy);
 
 int
 em_main_loop(__rte_unused void *dummy);
@@ -278,7 +307,13 @@ int
 fib_event_main_loop_tx_q_burst_vector(__rte_unused void *dummy);
 
 
-/* Return ipv4/ipv6 fwd lookup struct for LPM, EM or FIB. */
+/* Return ipv4/ipv6 fwd lookup struct for ACL, LPM, EM or FIB. */
+void *
+acl_get_ipv4_l3fwd_lookup_struct(const int socketid);
+
+void *
+acl_get_ipv6_l3fwd_lookup_struct(const int socketid);
+
 void *
 em_get_ipv4_l3fwd_lookup_struct(const int socketid);
 
