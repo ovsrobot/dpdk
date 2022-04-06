@@ -299,6 +299,7 @@ kni_ioctl_create(struct net *net, uint32_t ioctl_num,
 	struct kni_net *knet = net_generic(net, kni_net_id);
 	int ret;
 	struct rte_kni_device_info dev_info;
+	unsigned char mac_addr[ETH_ALEN];
 	struct net_device *net_dev = NULL;
 	struct kni_dev *kni, *dev, *n;
 
@@ -403,10 +404,15 @@ kni_ioctl_create(struct net *net, uint32_t ioctl_num,
 
 	/* if user has provided a valid mac address */
 	if (is_valid_ether_addr(dev_info.mac_addr))
-		memcpy(net_dev->dev_addr, dev_info.mac_addr, ETH_ALEN);
+		memcpy(mac_addr, dev_info.mac_addr, ETH_ALEN);
 	else
 		/* Generate random MAC address. */
-		eth_random_addr(net_dev->dev_addr);
+		eth_random_addr(mac_addr);
+#if KERNEL_VERSION(5, 17, 0) > LINUX_VERSION_CODE
+	memcpy(net_dev->dev_addr, mac_addr, ETH_ALEN);
+#else
+	dev_addr_set(net_dev, mac_addr);
+#endif
 
 	if (dev_info.mtu)
 		net_dev->mtu = dev_info.mtu;
