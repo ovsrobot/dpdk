@@ -780,6 +780,125 @@ ecpm_collect(struct rte_crypto_asym_op *asym_op,
 }
 
 static int
+dh_mod_g2_input(struct rte_crypto_asym_op *asym_op,
+		struct icp_qat_fw_pke_request *qat_req,
+		struct qat_asym_op_cookie *cookie,
+		struct rte_crypto_asym_xform *xform)
+{
+	struct qat_asym_function qat_function;
+	uint32_t alg_bytesize, func_id;
+
+	qat_function = get_dh_g2_function(xform->dh.p.length);
+	func_id = qat_function.func_id;
+	if (qat_function.func_id == 0) {
+		QAT_LOG(ERR, "Cannot obtain functionality id");
+		return -EINVAL;
+	}
+	alg_bytesize = qat_function.bytesize;
+	SET_PKE_LN(asym_op->dh.priv_key, alg_bytesize, 0);
+	SET_PKE_LN(xform->dh.p, alg_bytesize, 1);
+	cookie->alg_bytesize = alg_bytesize;
+	cookie->qat_func_alignsize = alg_bytesize;
+
+	qat_req->pke_hdr.cd_pars.func_id = func_id;
+	qat_req->input_param_count = 2;
+	qat_req->output_param_count = 1;
+
+	HEXDUMP("DH Priv", cookie->input_array[0], alg_bytesize);
+	HEXDUMP("DH p", cookie->input_array[1], alg_bytesize);
+
+	return 0;
+}
+
+static int
+dh_mod_n_input(struct rte_crypto_asym_op *asym_op,
+		struct icp_qat_fw_pke_request *qat_req,
+		struct qat_asym_op_cookie *cookie,
+		struct rte_crypto_asym_xform *xform)
+{
+	struct qat_asym_function qat_function;
+	uint32_t alg_bytesize, func_id;
+
+	qat_function = get_dh_function(xform->dh.p.length);
+	func_id = qat_function.func_id;
+	if (qat_function.func_id == 0) {
+		QAT_LOG(ERR, "Cannot obtain functionality id");
+		return -EINVAL;
+	}
+	alg_bytesize = qat_function.bytesize;
+	if (xform->dh.type == RTE_CRYPTO_ASYM_OP_PUBLIC_KEY_GENERATE) {
+		SET_PKE_LN(xform->dh.g, alg_bytesize, 0);
+		SET_PKE_LN(asym_op->dh.priv_key, alg_bytesize, 1);
+		SET_PKE_LN(xform->dh.p, alg_bytesize, 2);
+	} else {
+		SET_PKE_LN(asym_op->dh.pub_key, alg_bytesize, 0);
+		SET_PKE_LN(asym_op->dh.priv_key, alg_bytesize, 1);
+		SET_PKE_LN(xform->dh.p, alg_bytesize, 2);
+	}
+	cookie->alg_bytesize = alg_bytesize;
+	cookie->qat_func_alignsize = alg_bytesize;
+
+	qat_req->pke_hdr.cd_pars.func_id = func_id;
+	qat_req->input_param_count = 3;
+	qat_req->output_param_count = 1;
+
+	HEXDUMP("ModExp g/priv key", cookie->input_array[0], alg_bytesize);
+	HEXDUMP("ModExp priv/pub", cookie->input_array[1], alg_bytesize);
+	HEXDUMP("ModExp p", cookie->input_array[2], alg_bytesize);
+
+	return 0;
+}
+
+static int
+dh_mod_set_input(struct rte_crypto_asym_op *asym_op,
+		struct icp_qat_fw_pke_request *qat_req,
+		struct qat_asym_op_cookie *cookie,
+		struct rte_crypto_asym_xform *xform)
+{
+	if (xform->dh.type == RTE_CRYPTO_ASYM_OP_PUBLIC_KEY_GENERATE &&
+			xform->dh.g.length == 1 && xform->dh.g.data[0] == 2)
+		return dh_mod_g2_input(asym_op, qat_req, cookie, xform);
+	else
+		return dh_mod_n_input(asym_op, qat_req, cookie, xform);
+}
+
+static int
+dh_set_input(struct rte_crypto_asym_op *asym_op,
+		struct icp_qat_fw_pke_request *qat_req,
+		struct qat_asym_op_cookie *cookie,
+		struct rte_crypto_asym_xform *xform)
+{
+	switch (xform->xform_type) {
+	case RTE_CRYPTO_ASYM_XFORM_DH:
+		return dh_mod_set_input(asym_op, qat_req, cookie, xform);
+	default:
+		QAT_LOG(ERR,
+			"Invalid/unsupported asymmetric crypto xform type");
+		return -1;
+	}
+}
+
+static uint8_t
+dh_collect(struct rte_crypto_asym_op *asym_op,
+		struct qat_asym_op_cookie *cookie,
+		struct rte_crypto_asym_xform *xform)
+{
+	uint8_t *DH;
+	uint32_t alg_bytesize = cookie->alg_bytesize;
+
+	if (xform->dh.type == RTE_CRYPTO_ASYM_OP_PUBLIC_KEY_GENERATE) {
+		DH = asym_op->dh.pub_key.data;
+		asym_op->dh.pub_key.length = alg_bytesize;
+	} else {
+		DH = asym_op->dh.shared_secret.data;
+		asym_op->dh.shared_secret.length = alg_bytesize;
+	}
+	rte_memcpy(DH, cookie->output_array[0], alg_bytesize);
+	HEXDUMP("DH", DH, alg_bytesize);
+	return RTE_CRYPTO_OP_STATUS_SUCCESS;
+}
+
+static int
 asym_set_input(struct rte_crypto_asym_op *asym_op,
 		struct icp_qat_fw_pke_request *qat_req,
 		struct qat_asym_op_cookie *cookie,
@@ -791,6 +910,9 @@ asym_set_input(struct rte_crypto_asym_op *asym_op,
 				cookie, xform);
 	case RTE_CRYPTO_ASYM_XFORM_MODINV:
 		return modinv_set_input(asym_op, qat_req,
+				cookie, xform);
+	case RTE_CRYPTO_ASYM_XFORM_DH:
+		return dh_set_input(asym_op, qat_req,
 				cookie, xform);
 	case RTE_CRYPTO_ASYM_XFORM_RSA:
 		return rsa_set_input(asym_op, qat_req,
@@ -881,6 +1003,8 @@ qat_asym_collect_response(struct rte_crypto_op *op,
 		return modexp_collect(asym_op, cookie, xform);
 	case RTE_CRYPTO_ASYM_XFORM_MODINV:
 		return modinv_collect(asym_op, cookie, xform);
+	case RTE_CRYPTO_ASYM_XFORM_DH:
+		return dh_collect(asym_op, cookie, xform);
 	case RTE_CRYPTO_ASYM_XFORM_RSA:
 		return rsa_collect(asym_op, cookie);
 	case RTE_CRYPTO_ASYM_XFORM_ECDSA:
@@ -994,6 +1118,35 @@ session_set_modinv(struct qat_asym_session *qat_session,
 
 	rte_memcpy(qat_session->xform.modinv.modulus.data, modulus,
 			xform->modinv.modulus.length);
+
+	return 0;
+}
+
+static int
+session_set_dh(struct qat_asym_session *qat_session,
+			struct rte_crypto_asym_xform *xform)
+{
+	uint8_t *g = xform->dh.g.data;
+	uint8_t *p = xform->dh.p.data;
+
+	qat_session->xform.dh.type = xform->dh.type;
+	qat_session->xform.dh.g.data =
+		rte_malloc(NULL, xform->dh.g.length, 0);
+	if (qat_session->xform.dh.g.data == NULL)
+		return -ENOMEM;
+	qat_session->xform.dh.g.length = xform->dh.g.length;
+	qat_session->xform.dh.p.data = rte_malloc(NULL,
+				xform->dh.p.length, 0);
+	if (qat_session->xform.dh.p.data == NULL) {
+		rte_free(qat_session->xform.dh.p.data);
+		return -ENOMEM;
+	}
+	qat_session->xform.dh.p.length = xform->dh.p.length;
+
+	rte_memcpy(qat_session->xform.dh.g.data, g,
+			xform->dh.g.length);
+	rte_memcpy(qat_session->xform.dh.p.data, p,
+			xform->dh.p.length);
 
 	return 0;
 }
@@ -1150,6 +1303,9 @@ qat_asym_session_configure(struct rte_cryptodev *dev __rte_unused,
 	case RTE_CRYPTO_ASYM_XFORM_RSA:
 		ret = session_set_rsa(qat_session, xform);
 		break;
+	case RTE_CRYPTO_ASYM_XFORM_DH:
+		ret = session_set_dh(qat_session, xform);
+		break;
 	case RTE_CRYPTO_ASYM_XFORM_ECDSA:
 	case RTE_CRYPTO_ASYM_XFORM_ECPM:
 		session_set_ecdsa(qat_session, xform);
@@ -1189,6 +1345,15 @@ session_clear_modinv(struct rte_crypto_modinv_xform *modinv)
 }
 
 static void
+session_clear_dh(struct rte_crypto_dh_xform *dh)
+{
+	memset(dh->g.data, 0, dh->g.length);
+	rte_free(dh->g.data);
+	memset(dh->p.data, 0, dh->p.length);
+	rte_free(dh->p.data);
+}
+
+static void
 session_clear_rsa(struct rte_crypto_rsa_xform *rsa)
 {
 	memset(rsa->n.data, 0, rsa->n.length);
@@ -1221,6 +1386,9 @@ session_clear_xform(struct qat_asym_session *qat_session)
 		break;
 	case RTE_CRYPTO_ASYM_XFORM_MODINV:
 		session_clear_modinv(&qat_session->xform.modinv);
+		break;
+	case RTE_CRYPTO_ASYM_XFORM_DH:
+		session_clear_dh(&qat_session->xform.dh);
 		break;
 	case RTE_CRYPTO_ASYM_XFORM_RSA:
 		session_clear_rsa(&qat_session->xform.rsa);

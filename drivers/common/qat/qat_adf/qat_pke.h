@@ -137,6 +137,42 @@ get_modinv_function(struct rte_crypto_asym_xform *xform)
 }
 
 static struct qat_asym_function
+get_dh_g2_function(uint32_t bytesize)
+{
+	struct qat_asym_function qat_function = { };
+
+	if (bytesize <= 256) {
+		qat_function.func_id = PKE_DH_G2_2048;
+		qat_function.bytesize = 256;
+	} else if (bytesize <= 384) {
+		qat_function.func_id = PKE_DH_G2_3072;
+		qat_function.bytesize = 384;
+	} else if (bytesize <= 512) {
+		qat_function.func_id = PKE_DH_G2_4096;
+		qat_function.bytesize = 512;
+	}
+	return qat_function;
+}
+
+static struct qat_asym_function
+get_dh_function(uint32_t bytesize)
+{
+	struct qat_asym_function qat_function = { };
+
+	if (bytesize <= 256) {
+		qat_function.func_id = PKE_DH_2048;
+		qat_function.bytesize = 256;
+	} else if (bytesize <= 384) {
+		qat_function.func_id = PKE_DH_3072;
+		qat_function.bytesize = 384;
+	} else if (bytesize <= 512) {
+		qat_function.func_id = PKE_DH_4096;
+		qat_function.bytesize = 512;
+	}
+	return qat_function;
+}
+
+static struct qat_asym_function
 get_rsa_enc_function(struct rte_crypto_asym_xform *xform)
 {
 	struct qat_asym_function qat_function = { };
