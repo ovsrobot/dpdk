@@ -155,7 +155,6 @@ struct rte_sched_subport {
 	uint64_t tc_credits[RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE];
 
 	/* TC oversubscription */
-	uint8_t is_tc_ov_enabled;
 	uint64_t tc_ov_wm;
 	uint64_t tc_ov_wm_min;
 	uint64_t tc_ov_wm_max;
@@ -214,6 +213,9 @@ struct rte_sched_subport {
 	uint8_t *bmp_array;
 	struct rte_mbuf **queue_array;
 	uint8_t memory[0] __rte_cache_aligned;
+
+	/* TC oversubscription activation */
+	int is_tc_ov_enabled;
 } __rte_cache_aligned;
 
 struct rte_sched_port {
@@ -1187,7 +1189,7 @@ rte_sched_subport_tc_ov_config(struct rte_sched_port *port,
 	}
 
 	s = port->subports[subport_id];
-	s->is_tc_ov_enabled = tc_ov_enable;
+	s->is_tc_ov_enabled = tc_ov_enable ? 1 : 0;
 
 	if (s->is_tc_ov_enabled) {
 		/* TC oversubscription */
@@ -1294,6 +1296,9 @@ rte_sched_subport_config(struct rte_sched_port *port,
 		s->n_pipe_profiles = params->n_pipe_profiles;
 		s->n_max_pipe_profiles = params->n_max_pipe_profiles;
 
+		/* TC over-subscription is disabled by default */
+		s->is_tc_ov_enabled = 0;
+
 #ifdef RTE_SCHED_CMAN
 		if (params->cman_params != NULL) {
 			s->cman_enabled = true;
@@ -1356,9 +1361,6 @@ rte_sched_subport_config(struct rte_sched_port *port,
 
 		for (i = 0; i < RTE_SCHED_PORT_N_GRINDERS; i++)
 			s->grinder_base_bmp_pos[i] = RTE_SCHED_PIPE_INVALID;
-
-		/* TC over-subscription is disabled by default */
-		s->is_tc_ov_enabled = 0;
 	}
 
 	{
@@ -2514,12 +2516,15 @@ grinder_schedule(struct rte_sched_port *port,
 	uint32_t pkt_len = pkt->pkt_len + port->frame_overhead;
 	uint32_t be_tc_active;
 
-	if (unlikely(subport->is_tc_ov_enabled)) {
+	switch (subport->is_tc_ov_enabled) {
+	case 1:
 		if (!grinder_credits_check_with_tc_ov(port, subport, pos))
 			return 0;
-	} else {
+		break;
+	case 0:
 		if (!grinder_credits_check(port, subport, pos))
 			return 0;
+		break;
 	}
 
 	/* Advance port time */
