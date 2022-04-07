@@ -950,7 +950,8 @@ ice_dcf_init_rss(struct ice_dcf_hw *hw)
 #define IAVF_RXDID_COMMS_OVS_1 22
 
 int
-ice_dcf_configure_queues(struct ice_dcf_hw *hw)
+ice_dcf_configure_queues(struct ice_dcf_hw *hw,
+			 uint16_t num_queue_pairs, uint16_t index)
 {
 	struct ice_rx_queue **rxq =
 		(struct ice_rx_queue **)hw->eth_dev->data->rx_queues;
@@ -963,16 +964,16 @@ ice_dcf_configure_queues(struct ice_dcf_hw *hw)
 	int err;
 
 	size = sizeof(*vc_config) +
-	       sizeof(vc_config->qpair[0]) * hw->num_queue_pairs;
+	       sizeof(vc_config->qpair[0]) * num_queue_pairs;
 	vc_config = rte_zmalloc("cfg_queue", size, 0);
 	if (!vc_config)
 		return -ENOMEM;
 
 	vc_config->vsi_id = hw->vsi_res->vsi_id;
-	vc_config->num_queue_pairs = hw->num_queue_pairs;
+	vc_config->num_queue_pairs = num_queue_pairs;
 
-	for (i = 0, vc_qp = vc_config->qpair;
-	     i < hw->num_queue_pairs;
+	for (i = index, vc_qp = vc_config->qpair;
+	     i < index + num_queue_pairs;
 	     i++, vc_qp++) {
 		vc_qp->txq.vsi_id = hw->vsi_res->vsi_id;
 		vc_qp->txq.queue_id = i;

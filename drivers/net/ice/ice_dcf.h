@@ -131,7 +131,8 @@ void ice_dcf_uninit_hw(struct rte_eth_dev *eth_dev, struct ice_dcf_hw *hw);
 int ice_dcf_configure_rss_key(struct ice_dcf_hw *hw);
 int ice_dcf_configure_rss_lut(struct ice_dcf_hw *hw);
 int ice_dcf_init_rss(struct ice_dcf_hw *hw);
-int ice_dcf_configure_queues(struct ice_dcf_hw *hw);
+int ice_dcf_configure_queues(struct ice_dcf_hw *hw,
+			     uint16_t num_queue_pairs, uint16_t index);
 int ice_dcf_request_queues(struct ice_dcf_hw *hw, uint16_t num);
 int ice_dcf_get_max_rss_queue_region(struct ice_dcf_hw *hw);
 int ice_dcf_config_irq_map(struct ice_dcf_hw *hw);
