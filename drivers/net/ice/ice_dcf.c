@@ -63,11 +63,32 @@ ice_dcf_recv_cmd_rsp_no_irq(struct ice_dcf_hw *hw, enum virtchnl_ops op,
 			goto again;
 
 		v_op = rte_le_to_cpu_32(event.desc.cookie_high);
-		if (v_op != op)
-			goto again;
+
+		if (v_op == VIRTCHNL_OP_EVENT) {
+			struct virtchnl_pf_event *vpe =
+				(struct virtchnl_pf_event *)event.msg_buf;
+			switch (vpe->event) {
+			case VIRTCHNL_EVENT_RESET_IMPENDING:
+				hw->resetting = true;
+				if (rsp_msglen)
+					*rsp_msglen = 0;
+				return IAVF_SUCCESS;
+			default:
+				goto again;
+			}
+		} else {
+			/* async reply msg on command issued by vf previously */
+			if (v_op != op) {
+				PMD_DRV_LOG(WARNING,
+					"command mismatch, expect %u, get %u",
+					op, v_op);
+				goto again;
+			}
+		}
 
 		if (rsp_msglen != NULL)
 			*rsp_msglen = event.msg_len;
+
 		return rte_le_to_cpu_32(event.desc.cookie_low);
 
 again:
