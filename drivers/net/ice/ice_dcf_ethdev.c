@@ -318,6 +318,7 @@ static int
 ice_dcf_rx_queue_start(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 {
 	struct ice_dcf_adapter *ad = dev->data->dev_private;
+	struct ice_dcf_hw *dcf_hw = &ad->real_hw;
 	struct iavf_hw *hw = &ad->real_hw.avf;
 	struct ice_rx_queue *rxq;
 	int err = 0;
@@ -340,7 +341,11 @@ ice_dcf_rx_queue_start(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 	IAVF_WRITE_FLUSH(hw);
 
 	/* Ready to switch the queue on */
-	err = ice_dcf_switch_queue(&ad->real_hw, rx_queue_id, true, true);
+	if (!dcf_hw->lv_enabled)
+		err = ice_dcf_switch_queue(dcf_hw, rx_queue_id, true, true);
+	else
+		err = ice_dcf_switch_queue_lv(dcf_hw, rx_queue_id, true, true);
+
 	if (err) {
 		PMD_DRV_LOG(ERR, "Failed to switch RX queue %u on",
 			    rx_queue_id);
@@ -449,6 +454,7 @@ static int
 ice_dcf_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 {
 	struct ice_dcf_adapter *ad = dev->data->dev_private;
+	struct ice_dcf_hw *dcf_hw = &ad->real_hw;
 	struct iavf_hw *hw = &ad->real_hw.avf;
 	struct ice_tx_queue *txq;
 	int err = 0;
@@ -464,7 +470,10 @@ ice_dcf_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 	IAVF_WRITE_FLUSH(hw);
 
 	/* Ready to switch the queue on */
-	err = ice_dcf_switch_queue(&ad->real_hw, tx_queue_id, false, true);
+	if (!dcf_hw->lv_enabled)
+		err = ice_dcf_switch_queue(dcf_hw, tx_queue_id, false, true);
+	else
+		err = ice_dcf_switch_queue_lv(dcf_hw, tx_queue_id, false, true);
 
 	if (err) {
 		PMD_DRV_LOG(ERR, "Failed to switch TX queue %u on",
@@ -651,12 +660,17 @@ ice_dcf_stop_queues(struct rte_eth_dev *dev)
 	struct ice_dcf_hw *hw = &ad->real_hw;
 	struct ice_rx_queue *rxq;
 	struct ice_tx_queue *txq;
-	int ret, i;
+	int i;
 
 	/* Stop All queues */
-	ret = ice_dcf_disable_queues(hw);
-	if (ret)
-		PMD_DRV_LOG(WARNING, "Fail to stop queues");
+	if (!hw->lv_enabled) {
+		if (ice_dcf_disable_queues(hw))
+			PMD_DRV_LOG(WARNING, "Fail to stop queues");
+	} else {
+		if (ice_dcf_disable_queues_lv(hw))
+			PMD_DRV_LOG(WARNING,
+				    "Fail to stop queues for large VF");
+	}
 
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		txq = dev->data->tx_queues[i];
