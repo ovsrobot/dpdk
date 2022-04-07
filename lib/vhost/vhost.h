@@ -177,6 +177,7 @@ extern struct async_dma_info dma_copy_track[RTE_DMADEV_DEFAULT_MAX];
  * inflight async packet information
  */
 struct async_inflight_info {
+	struct virtio_net_hdr nethdr;
 	struct rte_mbuf *mbuf;
 	uint16_t descs; /* num of descs inflight */
 	uint16_t nr_buffers; /* num of buffers inflight for packed ring */
