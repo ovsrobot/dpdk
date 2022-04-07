@@ -375,6 +375,26 @@ enum rte_flow_item_type pattern_eth_ipv4_udp_vxlan_ipv4_icmp[] = {
 	RTE_FLOW_ITEM_TYPE_END,
 };
 
+/* IPv4 VXLAN ANY */
+enum rte_flow_item_type pattern_eth_ipv4_udp_vxlan_any[] = {
+	RTE_FLOW_ITEM_TYPE_ETH,
+	RTE_FLOW_ITEM_TYPE_IPV4,
+	RTE_FLOW_ITEM_TYPE_UDP,
+	RTE_FLOW_ITEM_TYPE_VXLAN,
+	RTE_FLOW_ITEM_TYPE_ANY,
+	RTE_FLOW_ITEM_TYPE_END,
+};
+
+/* IPv6 VXLAN ANY */
+enum rte_flow_item_type pattern_eth_ipv6_udp_vxlan_any[] = {
+	RTE_FLOW_ITEM_TYPE_ETH,
+	RTE_FLOW_ITEM_TYPE_IPV6,
+	RTE_FLOW_ITEM_TYPE_UDP,
+	RTE_FLOW_ITEM_TYPE_VXLAN,
+	RTE_FLOW_ITEM_TYPE_ANY,
+	RTE_FLOW_ITEM_TYPE_END,
+};
+
 /* IPv4 VXLAN MAC IPv4 */
 enum rte_flow_item_type pattern_eth_ipv4_udp_vxlan_eth_ipv4[] = {
 	RTE_FLOW_ITEM_TYPE_ETH,

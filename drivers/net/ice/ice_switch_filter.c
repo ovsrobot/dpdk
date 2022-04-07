@@ -85,6 +85,19 @@
 #define ICE_SW_INSET_DIST_VXLAN_IPV4 ( \
 	ICE_INSET_IPV4_SRC | ICE_INSET_IPV4_DST | ICE_INSET_DMAC | \
 	ICE_INSET_VXLAN_VNI)
+#define ICE_SW_INSET_DIST_IPV4_VXLAN_IPV4 ( \
+	ICE_INSET_IPV4_SRC | ICE_INSET_IPV4_DST | \
+	ICE_INSET_DMAC | ICE_INSET_VXLAN_VNI | \
+	ICE_INSET_TUN_IPV4_SRC | ICE_INSET_TUN_IPV4_DST)
+#define ICE_SW_INSET_DIST_IPV4_VXLAN_IPV6 ( \
+	ICE_INSET_DMAC | ICE_INSET_VXLAN_VNI | \
+	ICE_INSET_IPV6_SRC | ICE_INSET_IPV6_DST)
+#define ICE_SW_INSET_DIST_IPV6_VXLAN_IPV4 ( \
+	ICE_INSET_DMAC | ICE_INSET_VXLAN_VNI | \
+	ICE_INSET_IPV4_SRC | ICE_INSET_IPV4_DST)
+#define ICE_SW_INSET_DIST_IPV6_VXLAN_IPV6 ( \
+	ICE_INSET_DMAC | ICE_INSET_VXLAN_VNI | \
+	ICE_INSET_IPV6_SRC | ICE_INSET_IPV6_DST)
 #define ICE_SW_INSET_DIST_NVGRE_IPV4_TCP ( \
 	ICE_INSET_IPV4_SRC | ICE_INSET_IPV4_DST | \
 	ICE_INSET_TCP_SRC_PORT | ICE_INSET_TCP_DST_PORT | \
@@ -112,6 +125,9 @@
 	ICE_INSET_IPV4_SRC | ICE_INSET_IPV4_DST | \
 	ICE_INSET_UDP_SRC_PORT | ICE_INSET_UDP_DST_PORT | \
 	ICE_INSET_IPV4_TOS)
+#define ICE_SW_INSET_PERM_TUNNEL_IPV6 ( \
+	ICE_INSET_IPV6_SRC | ICE_INSET_IPV6_DST | \
+	ICE_INSET_IPV6_NEXT_HDR | ICE_INSET_IPV6_TC)
 #define ICE_SW_INSET_MAC_PPPOE  ( \
 	ICE_INSET_VLAN_OUTER | ICE_INSET_VLAN_INNER | \
 	ICE_INSET_DMAC | ICE_INSET_ETHERTYPE | ICE_INSET_PPPOE_SESSION)
@@ -217,9 +233,14 @@ ice_pattern_match_item ice_switch_pattern_dist_list[] = {
 	{pattern_eth_ipv6,				ICE_SW_INSET_MAC_IPV6,			ICE_INSET_NONE,				ICE_INSET_NONE},
 	{pattern_eth_ipv6_udp,				ICE_SW_INSET_MAC_IPV6_UDP,		ICE_INSET_NONE,				ICE_INSET_NONE},
 	{pattern_eth_ipv6_tcp,				ICE_SW_INSET_MAC_IPV6_TCP,		ICE_INSET_NONE,				ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_any, ICE_INSET_NONE, ICE_INSET_NONE, ICE_INSET_NONE},
+	{pattern_eth_ipv6_udp_vxlan_any, ICE_INSET_NONE, ICE_INSET_NONE, ICE_INSET_NONE},
 	{pattern_eth_ipv4_udp_vxlan_eth_ipv4,		ICE_INSET_IPV4_DST,			ICE_SW_INSET_DIST_VXLAN_IPV4,		ICE_INSET_NONE},
 	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_udp,	ICE_INSET_IPV4_DST,			ICE_SW_INSET_DIST_VXLAN_IPV4_UDP,	ICE_INSET_NONE},
 	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_tcp,	ICE_INSET_IPV4_DST,			ICE_SW_INSET_DIST_VXLAN_IPV4_TCP,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv6, ICE_SW_INSET_DIST_IPV4_VXLAN_IPV6, ICE_INSET_NONE, ICE_INSET_NONE},
+	{pattern_eth_ipv6_udp_vxlan_eth_ipv4, ICE_SW_INSET_DIST_IPV6_VXLAN_IPV4, ICE_INSET_NONE, ICE_INSET_NONE},
+	{pattern_eth_ipv6_udp_vxlan_eth_ipv6, ICE_SW_INSET_DIST_IPV6_VXLAN_IPV6, ICE_INSET_NONE, ICE_INSET_NONE},
 	{pattern_eth_ipv4_nvgre_eth_ipv4,		ICE_INSET_IPV4_DST,			ICE_SW_INSET_DIST_NVGRE_IPV4,		ICE_INSET_NONE},
 	{pattern_eth_ipv4_nvgre_eth_ipv4_udp,		ICE_INSET_IPV4_DST,			ICE_SW_INSET_DIST_NVGRE_IPV4_UDP,	ICE_INSET_NONE},
 	{pattern_eth_ipv4_nvgre_eth_ipv4_tcp,		ICE_INSET_IPV4_DST,			ICE_SW_INSET_DIST_NVGRE_IPV4_TCP,	ICE_INSET_NONE},
@@ -301,9 +322,14 @@ ice_pattern_match_item ice_switch_pattern_perm_list[] = {
 	{pattern_eth_ipv6,				ICE_SW_INSET_MAC_IPV6,			ICE_INSET_NONE,				ICE_INSET_NONE},
 	{pattern_eth_ipv6_udp,				ICE_SW_INSET_MAC_IPV6_UDP,		ICE_INSET_NONE,				ICE_INSET_NONE},
 	{pattern_eth_ipv6_tcp,				ICE_SW_INSET_MAC_IPV6_TCP,		ICE_INSET_NONE,				ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_any,	ICE_INSET_NONE,	ICE_INSET_NONE,	ICE_INSET_NONE},
+	{pattern_eth_ipv6_udp_vxlan_any,	ICE_INSET_NONE, ICE_INSET_NONE, ICE_INSET_NONE},
 	{pattern_eth_ipv4_udp_vxlan_eth_ipv4,		ICE_INSET_NONE,				ICE_SW_INSET_PERM_TUNNEL_IPV4,		ICE_INSET_NONE},
 	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_udp,	ICE_INSET_NONE,				ICE_SW_INSET_PERM_TUNNEL_IPV4_UDP,	ICE_INSET_NONE},
 	{pattern_eth_ipv4_udp_vxlan_eth_ipv4_tcp,	ICE_INSET_NONE,				ICE_SW_INSET_PERM_TUNNEL_IPV4_TCP,	ICE_INSET_NONE},
+	{pattern_eth_ipv4_udp_vxlan_eth_ipv6, ICE_SW_INSET_DIST_IPV4_VXLAN_IPV6, ICE_INSET_NONE, ICE_INSET_NONE},
+	{pattern_eth_ipv6_udp_vxlan_eth_ipv4, ICE_SW_INSET_DIST_IPV6_VXLAN_IPV4, ICE_INSET_NONE, ICE_INSET_NONE},
+	{pattern_eth_ipv6_udp_vxlan_eth_ipv6, ICE_SW_INSET_DIST_IPV6_VXLAN_IPV6, ICE_INSET_NONE, ICE_INSET_NONE},
 	{pattern_eth_ipv4_nvgre_eth_ipv4,		ICE_INSET_NONE,				ICE_SW_INSET_PERM_TUNNEL_IPV4,		ICE_INSET_NONE},
 	{pattern_eth_ipv4_nvgre_eth_ipv4_udp,		ICE_INSET_NONE,				ICE_SW_INSET_PERM_TUNNEL_IPV4_UDP,	ICE_INSET_NONE},
 	{pattern_eth_ipv4_nvgre_eth_ipv4_tcp,		ICE_INSET_NONE,				ICE_SW_INSET_PERM_TUNNEL_IPV4_TCP,	ICE_INSET_NONE},
@@ -566,6 +592,11 @@ ice_switch_parse_pattern(const struct rte_flow_item pattern[],
 	bool inner_ipv6_valid = 0;
 	bool inner_tcp_valid = 0;
 	bool inner_udp_valid = 0;
+	bool ipv4_ipv4_valid = 0;
+	bool ipv4_ipv6_valid = 0;
+	bool ipv6_ipv4_valid = 0;
+	bool ipv6_ipv6_valid = 0;
+	bool any_valid = 0;
 	uint16_t j, k, t = 0;
 
 	if (*tun_type == ICE_SW_TUN_AND_NON_TUN_QINQ ||
@@ -586,6 +617,7 @@ ice_switch_parse_pattern(const struct rte_flow_item pattern[],
 		switch (item_type) {
 		case RTE_FLOW_ITEM_TYPE_ANY:
 			*tun_type = ICE_SW_TUN_AND_NON_TUN;
+			any_valid = 1;
 			break;
 
 		case RTE_FLOW_ITEM_TYPE_ETH:
@@ -654,6 +686,10 @@ ice_switch_parse_pattern(const struct rte_flow_item pattern[],
 		case RTE_FLOW_ITEM_TYPE_IPV4:
 			ipv4_spec = item->spec;
 			ipv4_mask = item->mask;
+			if (ipv4_valid)
+				ipv4_ipv4_valid = 1;
+			if (ipv6_valid)
+				ipv6_ipv4_valid = 1;
 			if (tunnel_valid) {
 				inner_ipv4_valid = 1;
 				input = &inner_input_set;
@@ -734,6 +770,10 @@ ice_switch_parse_pattern(const struct rte_flow_item pattern[],
 		case RTE_FLOW_ITEM_TYPE_IPV6:
 			ipv6_spec = item->spec;
 			ipv6_mask = item->mask;
+			if (ipv4_valid)
+				ipv4_ipv6_valid = 1;
+			if (ipv6_valid)
+				ipv6_ipv6_valid = 1;
 			if (tunnel_valid) {
 				inner_ipv6_valid = 1;
 				input = &inner_input_set;
@@ -1577,9 +1617,7 @@ ice_switch_parse_pattern(const struct rte_flow_item pattern[],
 	}
 
 	if (*tun_type == ICE_NON_TUN) {
-		if (vxlan_valid)
-			*tun_type = ICE_SW_TUN_VXLAN;
-		else if (nvgre_valid)
+		if (nvgre_valid)
 			*tun_type = ICE_SW_TUN_NVGRE;
 		else if (ipv4_valid && tcp_valid)
 			*tun_type = ICE_SW_IPV4_TCP;
@@ -1589,6 +1627,21 @@ ice_switch_parse_pattern(const struct rte_flow_item pattern[],
 			*tun_type = ICE_SW_IPV6_TCP;
 		else if (ipv6_valid && udp_valid)
 			*tun_type = ICE_SW_IPV6_UDP;
+	}
+
+	if (vxlan_valid) {
+		if (ipv4_ipv4_valid)
+			*tun_type = ICE_SW_TUN_PROFID_IPV4_VXLAN_IPV4;
+		else if (ipv4_ipv6_valid)
+			*tun_type = ICE_SW_TUN_PROFID_IPV4_VXLAN_IPV6;
+		else if (ipv6_ipv4_valid)
+			*tun_type = ICE_SW_TUN_PROFID_IPV6_VXLAN_IPV4;
+		else if (ipv6_ipv6_valid)
+			*tun_type = ICE_SW_TUN_PROFID_IPV6_VXLAN_IPV6;
+		else if (ipv6_valid && any_valid)
+			*tun_type = ICE_SW_TUN_PROFID_IPV6_VXLAN;
+		else if (ipv4_valid && any_valid)
+			*tun_type = ICE_SW_TUN_PROFID_IPV4_VXLAN;
 	}
 
 	if (input_set_byte > MAX_INPUT_SET_BYTE) {
