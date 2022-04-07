@@ -6910,6 +6910,47 @@ static struct ice_protocol_entry ice_prot_id_tbl[ICE_PROTOCOL_LAST] = {
 	{ ICE_VLAN_IN,		ICE_VLAN_OL_HW },
 };
 
+static u16 buildin_recipe_get(struct ice_switch_info *sw,
+			      struct ice_prot_lkup_ext *lkup_exts)
+{
+	int i;
+
+	if (!sw->buildin_recipes)
+		return ICE_MAX_NUM_RECIPES;
+
+	for (i = 10; i < ICE_MAX_NUM_RECIPES; i++) {
+		struct ice_sw_recipe *recp = &sw->buildin_recipes[i];
+		struct ice_fv_word *a = lkup_exts->fv_words;
+		struct ice_fv_word *b = recp->lkup_exts.fv_words;
+		u16 *c = recp->lkup_exts.field_mask;
+		u16 *d = lkup_exts->field_mask;
+		bool found = true;
+		u8 p, q;
+
+		if (!recp->is_root)
+			continue;
+
+		if (recp->lkup_exts.n_val_words != lkup_exts->n_val_words)
+			continue;
+
+		for (p = 0; p < lkup_exts->n_val_words; p++) {
+			for (q = 0; q < recp->lkup_exts.n_val_words; q++) {
+				if (a[p].off == b[q].off &&
+				    a[p].prot_id == b[q].prot_id &&
+				    d[p] == c[q])
+					break;
+			}
+			if (q >= recp->lkup_exts.n_val_words) {
+				found = false;
+				break;
+			}
+		}
+		if (found)
+			return i;
+	}
+	return ICE_MAX_NUM_RECIPES;
+}
+
 /**
  * ice_find_recp - find a recipe
  * @hw: pointer to the hardware structure
@@ -6922,7 +6963,14 @@ static u16 ice_find_recp(struct ice_hw *hw, struct ice_prot_lkup_ext *lkup_exts,
 {
 	bool refresh_required = true;
 	struct ice_sw_recipe *recp;
+	u16 buildin_rid;
 	u8 i;
+
+	if (hw->use_buildin_recipe) {
+		buildin_rid = buildin_recipe_get(hw->switch_info, lkup_exts);
+		if (buildin_rid < ICE_MAX_NUM_RECIPES)
+			return buildin_rid;
+	}
 
 	/* Walk through existing recipes to find a match */
 	recp = hw->switch_info->recp_list;
@@ -9457,8 +9505,10 @@ ice_rem_adv_rule_by_id(struct ice_hw *hw,
 	struct ice_switch_info *sw;
 
 	sw = hw->switch_info;
-	if (!sw->recp_list[remove_entry->rid].recp_created)
+	if (!sw->buildin_recipes[remove_entry->rid].is_root &&
+	    !sw->recp_list[remove_entry->rid].recp_created)
 		return ICE_ERR_PARAM;
+
 	list_head = &sw->recp_list[remove_entry->rid].filt_rules;
 	LIST_FOR_EACH_ENTRY(list_itr, list_head, ice_adv_fltr_mgmt_list_entry,
 			    list_entry) {

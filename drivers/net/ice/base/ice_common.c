@@ -732,6 +732,28 @@ ice_aq_set_mac_cfg(struct ice_hw *hw, u16 max_frame_size, struct ice_sq_cd *cd)
 	return ice_aq_send_cmd(hw, &desc, NULL, 0, cd);
 }
 
+static int ice_buildin_recipe_init(struct ice_hw *hw)
+{
+	struct ice_switch_info *sw = hw->switch_info;
+	struct ice_sw_recipe *recipe;
+
+	sw->buildin_recipes = ice_malloc(hw,
+			sizeof(sw->buildin_recipes[0]) * ICE_MAX_NUM_RECIPES);
+
+	if (!sw->buildin_recipes)
+		return ICE_ERR_NO_MEMORY;
+
+	recipe = &sw->buildin_recipes[10];
+	recipe->is_root = 1;
+
+	recipe->lkup_exts.n_val_words = 1;
+	recipe->lkup_exts.field_mask[0] = 0x00ff;
+	recipe->lkup_exts.fv_words[0].off = 8;
+	recipe->lkup_exts.fv_words[0].prot_id = 32;
+
+	return ICE_SUCCESS;
+}
+
 /**
  * ice_init_fltr_mgmt_struct - initializes filter management list and locks
  * @hw: pointer to the HW struct
@@ -751,6 +773,8 @@ enum ice_status ice_init_fltr_mgmt_struct(struct ice_hw *hw)
 
 	INIT_LIST_HEAD(&sw->vsi_list_map_head);
 	sw->prof_res_bm_init = 0;
+
+	ice_buildin_recipe_init(hw);
 
 	status = ice_init_def_sw_recp(hw, &hw->switch_info->recp_list);
 	if (status) {
@@ -822,6 +846,7 @@ ice_cleanup_fltr_mgmt_single(struct ice_hw *hw, struct ice_switch_info *sw)
 			ice_free(hw, recps[i].root_buf);
 	}
 	ice_rm_sw_replay_rule_info(hw, sw);
+	ice_free(hw, sw->buildin_recipes);
 	ice_free(hw, sw->recp_list);
 	ice_free(hw, sw);
 }

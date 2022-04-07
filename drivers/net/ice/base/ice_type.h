@@ -1107,6 +1107,7 @@ struct ice_switch_info {
 	u16 max_used_prof_index;
 
 	ice_declare_bitmap(prof_res_bm[ICE_MAX_NUM_PROFILES], ICE_MAX_FV_WORDS);
+	struct ice_sw_recipe *buildin_recipes;
 };
 
 /* Port hardware description */
@@ -1263,6 +1264,7 @@ struct ice_hw {
 	ice_declare_bitmap(hw_ptype, ICE_FLOW_PTYPE_MAX);
 	u8 dvm_ena;
 	__le16 io_expander_handle;
+	u8 use_buildin_recipe;
 };
 
 /* Statistics collected by each port, VSI, VEB, and S-channel */
