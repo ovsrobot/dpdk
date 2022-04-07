@@ -1202,6 +1202,13 @@ set_mb_job_params(IMB_JOB *job, struct ipsec_mb_qp *qp,
 	if (op->sym->m_src->nb_segs > 1)
 		sgl = 1;
 
+	if (sgl && (session->cipher.mode != IMB_CIPHER_GCM
+			&& session->cipher.mode != IMB_CIPHER_CHACHA20_POLY1305)) {
+		op->status = RTE_CRYPTO_OP_STATUS_INVALID_ARGS;
+		IPSEC_MB_LOG(ERR, "Device only supports SGL for AES-GCM or CHACHA20_POLY1305 algorithms.");
+		return -1;
+	}
+
 	/* Set crypto operation */
 	job->chain_order = session->chain_order;
 
