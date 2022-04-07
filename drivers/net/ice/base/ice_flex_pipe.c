@@ -1467,6 +1467,10 @@ static void ice_init_pkg_regs(struct ice_hw *hw)
  */
 static enum ice_status ice_chk_pkg_version(struct ice_pkg_ver *pkg_ver)
 {
+	/* 0xFF indicate a custom pkg */
+	if (pkg_ver->major == 0xFF)
+		return ICE_SUCCESS;
+
 	if (pkg_ver->major != ICE_PKG_SUPP_VER_MAJ ||
 	    pkg_ver->minor != ICE_PKG_SUPP_VER_MNR)
 		return ICE_ERR_NOT_SUPPORTED;
