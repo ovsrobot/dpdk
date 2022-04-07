@@ -1808,13 +1808,32 @@ ice_dcf_cap_check_handler(__rte_unused const char *key,
 }
 
 static int
+parse_bool(const char *key, const char *value, void *args)
+{
+	bool *i = (bool *)args;
+	int num = atoi(value);
+
+	if (num != 0 && num != 1) {
+		PMD_DRV_LOG(WARNING,
+			    "invalid value:\"%s\" for key:\"%s\", must be 0 or 1",
+			    value, key);
+		return -1;
+	}
+
+	*i = (bool)num;
+	return 0;
+}
+
+static int
 ice_dcf_cap_selected(struct ice_dcf_adapter *adapter,
 		      struct rte_devargs *devargs)
 {
 	struct ice_adapter *ad = &adapter->parent;
 	struct rte_kvargs *kvlist;
 	const char *key_cap = "cap";
+	const char *key_br = "br";
 	int ret = 0;
+	bool br = 0;
 
 	if (devargs == NULL)
 		return 0;
@@ -1832,6 +1851,11 @@ ice_dcf_cap_selected(struct ice_dcf_adapter *adapter,
 			       &adapter->real_hw.multi_inst) < 0)
 		goto exit;
 
+	/* dcf capability selected when there's a key-value pair: cap=dcf */
+	if (rte_kvargs_process(kvlist, key_br, parse_bool, &br) < 0)
+		goto exit;
+
+	ad->hw.use_buildin_recipe = br;
 	ret = 1;
 
 exit:
@@ -2008,4 +2032,4 @@ static struct rte_pci_driver rte_ice_dcf_pmd = {
 RTE_PMD_REGISTER_PCI(net_ice_dcf, rte_ice_dcf_pmd);
 RTE_PMD_REGISTER_PCI_TABLE(net_ice_dcf, pci_id_ice_dcf_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ice_dcf, "* igb_uio | vfio-pci");
-RTE_PMD_REGISTER_PARAM_STRING(net_ice_dcf, "cap=dcf|mdcf");
+RTE_PMD_REGISTER_PARAM_STRING(net_ice_dcf, "cap=dcf|mdcf br=<1|0>");
