@@ -27,6 +27,7 @@
 #define ICE_PROT_L2TPV3OIP		BIT_ULL(16)
 #define ICE_PROT_PFCP			BIT_ULL(17)
 #define ICE_PROT_NAT_T_ESP		BIT_ULL(18)
+#define ICE_PROT_GRE            BIT_ULL(19)
 
 /* field */
 
@@ -54,6 +55,7 @@
 #define ICE_PFCP_SEID			BIT_ULL(42)
 #define ICE_PFCP_S_FIELD		BIT_ULL(41)
 #define ICE_IP_PK_ID		    BIT_ULL(40)
+#define ICE_RAW_PATTERN			BIT_ULL(39)
 
 /* input set */
 
@@ -104,6 +106,8 @@
 	(ICE_PROT_GTPU | ICE_GTPU_TEID)
 #define ICE_INSET_GTPU_QFI \
 	(ICE_PROT_GTPU | ICE_GTPU_QFI)
+#define ICE_INSET_RAW \
+	(ICE_PROT_GRE | ICE_RAW_PATTERN)
 #define ICE_INSET_PPPOE_SESSION \
 	(ICE_PROT_PPPOE_S | ICE_PPPOE_SESSION)
 #define ICE_INSET_PPPOE_PROTO \
@@ -290,6 +294,11 @@ extern enum rte_flow_item_type pattern_eth_ipv6_nvgre_eth_ipv6_tcp[];
 extern enum rte_flow_item_type pattern_eth_ipv6_nvgre_eth_ipv6_udp[];
 extern enum rte_flow_item_type pattern_eth_ipv6_nvgre_eth_ipv6_sctp[];
 extern enum rte_flow_item_type pattern_eth_ipv6_nvgre_eth_ipv6_icmp6[];
+
+/* IPv4 GRE RAW IPv4 */
+extern enum rte_flow_item_type pattern_eth_ipv4_gre_raw_ipv4[];
+extern enum rte_flow_item_type pattern_eth_ipv4_gre_raw_ipv4_udp[];
+extern enum rte_flow_item_type pattern_eth_ipv4_gre_raw_ipv4_tcp[];
 
 /* IPv4 GTPU (EH) */
 extern enum rte_flow_item_type pattern_eth_ipv4_gtpu[];

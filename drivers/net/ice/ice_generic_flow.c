@@ -1085,6 +1085,33 @@ enum rte_flow_item_type pattern_eth_ipv6_nvgre_eth_ipv6_icmp6[] = {
 	RTE_FLOW_ITEM_TYPE_ICMP6,
 	RTE_FLOW_ITEM_TYPE_END,
 };
+/* IPv4 GRE RAW IPv4 */
+enum rte_flow_item_type pattern_eth_ipv4_gre_raw_ipv4[] = {
+	RTE_FLOW_ITEM_TYPE_ETH,
+	RTE_FLOW_ITEM_TYPE_IPV4,
+	RTE_FLOW_ITEM_TYPE_GRE,
+	RTE_FLOW_ITEM_TYPE_RAW,
+	RTE_FLOW_ITEM_TYPE_IPV4,
+	RTE_FLOW_ITEM_TYPE_END,
+};
+enum rte_flow_item_type pattern_eth_ipv4_gre_raw_ipv4_udp[] = {
+	RTE_FLOW_ITEM_TYPE_ETH,
+	RTE_FLOW_ITEM_TYPE_IPV4,
+	RTE_FLOW_ITEM_TYPE_GRE,
+	RTE_FLOW_ITEM_TYPE_RAW,
+	RTE_FLOW_ITEM_TYPE_IPV4,
+	RTE_FLOW_ITEM_TYPE_UDP,
+	RTE_FLOW_ITEM_TYPE_END,
+};
+enum rte_flow_item_type pattern_eth_ipv4_gre_raw_ipv4_tcp[] = {
+	RTE_FLOW_ITEM_TYPE_ETH,
+	RTE_FLOW_ITEM_TYPE_IPV4,
+	RTE_FLOW_ITEM_TYPE_GRE,
+	RTE_FLOW_ITEM_TYPE_RAW,
+	RTE_FLOW_ITEM_TYPE_IPV4,
+	RTE_FLOW_ITEM_TYPE_TCP,
+	RTE_FLOW_ITEM_TYPE_END,
+};
 
 /*IPv4 GTPU (EH) */
 enum rte_flow_item_type pattern_eth_ipv4_gtpu[] = {
