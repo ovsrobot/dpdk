@@ -1,0 +1,12 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+
+message AclSetupArgs {
+    repeated string args = 1;
+}
+
+service TestpmdAPI {
+    rpc acl_setup (AclSetupArgs) returns (google.protobuf.Empty);
+    rpc acl_search (google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc acl_cleanup_config (google.protobuf.Empty) returns (google.protobuf.Empty);
+}
