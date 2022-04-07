@@ -48,6 +48,8 @@ enum rte_crypto_ec_group {
 	RTE_CRYPTO_EC_GROUP_SECP256R1 = 23,
 	RTE_CRYPTO_EC_GROUP_SECP384R1 = 24,
 	RTE_CRYPTO_EC_GROUP_SECP521R1 = 25,
+	RTE_CRYPTO_EC_GROUP_CURVE25519 = 29,
+	RTE_CRYPTO_EC_GROUP_CURVE448 = 30,
 };
 
 /**
@@ -180,9 +182,17 @@ typedef rte_crypto_param rte_crypto_uint;
  */
 struct rte_crypto_ec_point {
 	rte_crypto_param x;
-	/**< X coordinate */
+	/**<
+	 * X coordinate
+	 * For curve25519 and curve448 - little-endian integer
+	 * otherwise, big-endian integer
+	 */
 	rte_crypto_param y;
-	/**< Y coordinate */
+	/**<
+	 * Y coordinate
+	 * For curve25519 and curve448 - little-endian integer
+	 * otherwise, big-endian integer
+	 */
 };
 
 /**
