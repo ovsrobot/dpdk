@@ -12,6 +12,7 @@
 #define ICE_MAX_VLAN_ID			0xFFF
 #define ICE_IPV6_ETHER_ID		0x86DD
 #define ICE_IPV4_NVGRE_PROTO_ID		0x002F
+#define ICE_IPV6_GRE_PROTO_ID		0x002F
 #define ICE_PPP_IPV6_PROTO_ID		0x0057
 #define ICE_TCP_PROTO_ID		0x06
 #define ICE_GTPU_PROFILE		24
@@ -127,6 +128,34 @@ static const u8 dummy_gre_udp_packet[] = {
 
 	0x00, 0x00, 0x00, 0x00,	/* ICE_UDP_ILOS 76 */
 	0x00, 0x08, 0x00, 0x00,
+};
+
+static const struct ice_dummy_pkt_offsets
+dummy_ipv6_gre_udp_packet_offsets[] = {
+	{ ICE_MAC_OFOS,         0 },
+	{ ICE_ETYPE_OL,         12 },
+	{ ICE_IPV6_OFOS,        14 },
+	{ ICE_GRE,              54 },
+	{ ICE_IPV6_IL,          58 },
+	{ ICE_UDP_ILOS,         98 },
+	{ ICE_PROTOCOL_LAST,    0 },
+};
+
+static const u8 dummy_ipv6_gre_udp_packet[] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x86, 0xdd, 0x60, 0x00,
+	0x00, 0x00, 0x00, 0x36, 0x2f, 0x40, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+	0x86, 0xdd, 0x60, 0x00, 0x00, 0x00, 0x00, 0x0a,
+	0x11, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a,
+	0xff, 0xd8, 0x00, 0x00,
 };
 
 static const struct ice_dummy_pkt_offsets dummy_udp_tun_tcp_packet_offsets[] = {
@@ -8255,8 +8284,13 @@ ice_find_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 			udp = true;
 		else if (lkups[i].type == ICE_TCP_IL)
 			tcp = true;
-		else if (lkups[i].type == ICE_IPV6_OFOS)
+		else if (lkups[i].type == ICE_IPV6_OFOS) {
 			ipv6 = true;
+			if (lkups[i].h_u.ipv6_hdr.next_hdr ==
+			    ICE_IPV6_GRE_PROTO_ID &&
+			    lkups[i].m_u.ipv6_hdr.next_hdr == 0xFF)
+				gre = true;
+		}
 		else if (lkups[i].type == ICE_VLAN_OFOS)
 			vlan = true;
 		else if (lkups[i].type == ICE_ETYPE_OL &&
@@ -8613,6 +8647,13 @@ ice_find_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 		*pkt = dummy_gre_udp_packet;
 		*pkt_len = sizeof(dummy_gre_udp_packet);
 		*offsets = dummy_gre_udp_packet_offsets;
+		return;
+	}
+
+	if (ipv6 && gre) {
+		*pkt = dummy_ipv6_gre_udp_packet;
+		*pkt_len = sizeof(dummy_ipv6_gre_udp_packet);
+		*offsets = dummy_ipv6_gre_udp_packet_offsets;
 		return;
 	}
 
