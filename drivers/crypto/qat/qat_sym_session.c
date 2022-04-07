@@ -6,6 +6,7 @@
 #include <openssl/aes.h>	/* Needed to calculate pre-compute values */
 #include <openssl/md5.h>	/* Needed to calculate pre-compute values */
 #include <openssl/evp.h>	/* Needed for bpi runt block processing */
+#include <intel-ipsec-mb.h>
 
 #include <rte_memcpy.h>
 #include <rte_common.h>
@@ -1057,83 +1058,20 @@ static int qat_hash_get_block_size(enum icp_qat_hw_auth_algo qat_hash_alg)
 	return -EFAULT;
 }
 
-static int partial_hash_sha1(uint8_t *data_in, uint8_t *data_out)
-{
-	SHA_CTX ctx;
-
-	if (!SHA1_Init(&ctx))
-		return -EFAULT;
-	SHA1_Transform(&ctx, data_in);
-	rte_memcpy(data_out, &ctx, SHA_DIGEST_LENGTH);
-	return 0;
-}
-
-static int partial_hash_sha224(uint8_t *data_in, uint8_t *data_out)
-{
-	SHA256_CTX ctx;
-
-	if (!SHA224_Init(&ctx))
-		return -EFAULT;
-	SHA256_Transform(&ctx, data_in);
-	rte_memcpy(data_out, &ctx, SHA256_DIGEST_LENGTH);
-	return 0;
-}
-
-static int partial_hash_sha256(uint8_t *data_in, uint8_t *data_out)
-{
-	SHA256_CTX ctx;
-
-	if (!SHA256_Init(&ctx))
-		return -EFAULT;
-	SHA256_Transform(&ctx, data_in);
-	rte_memcpy(data_out, &ctx, SHA256_DIGEST_LENGTH);
-	return 0;
-}
-
-static int partial_hash_sha384(uint8_t *data_in, uint8_t *data_out)
-{
-	SHA512_CTX ctx;
-
-	if (!SHA384_Init(&ctx))
-		return -EFAULT;
-	SHA512_Transform(&ctx, data_in);
-	rte_memcpy(data_out, &ctx, SHA512_DIGEST_LENGTH);
-	return 0;
-}
-
-static int partial_hash_sha512(uint8_t *data_in, uint8_t *data_out)
-{
-	SHA512_CTX ctx;
-
-	if (!SHA512_Init(&ctx))
-		return -EFAULT;
-	SHA512_Transform(&ctx, data_in);
-	rte_memcpy(data_out, &ctx, SHA512_DIGEST_LENGTH);
-	return 0;
-}
-
-static int partial_hash_md5(uint8_t *data_in, uint8_t *data_out)
-{
-	MD5_CTX ctx;
-
-	if (!MD5_Init(&ctx))
-		return -EFAULT;
-	MD5_Transform(&ctx, data_in);
-	rte_memcpy(data_out, &ctx, MD5_DIGEST_LENGTH);
-
-	return 0;
-}
-
 static int
 partial_hash_compute(enum icp_qat_hw_auth_algo hash_alg,
 		uint8_t *data_in, uint8_t *data_out)
 {
+	IMB_MGR *m;
+	uint32_t *hash_state_out_be32;
+	uint64_t *hash_state_out_be64;
 	int digest_size;
 	uint8_t digest[qat_hash_get_digest_size(
 			ICP_QAT_HW_AUTH_ALGO_DELIMITER)];
-	uint32_t *hash_state_out_be32;
-	uint64_t *hash_state_out_be64;
 	int i;
+
+	hash_state_out_be32 = (uint32_t *)data_out;
+	hash_state_out_be64 = (uint64_t *)data_out;
 
 	/* Initialize to avoid gcc warning */
 	memset(digest, 0, sizeof(digest));
@@ -1141,55 +1079,52 @@ partial_hash_compute(enum icp_qat_hw_auth_algo hash_alg,
 	digest_size = qat_hash_get_digest_size(hash_alg);
 	if (digest_size <= 0)
 		return -EFAULT;
+	m = alloc_mb_mgr(0);
+	if (m == NULL)
+		return -ENOMEM;
 
-	hash_state_out_be32 = (uint32_t *)data_out;
-	hash_state_out_be64 = (uint64_t *)data_out;
+	init_mb_mgr_auto(m, NULL);
 
 	switch (hash_alg) {
 	case ICP_QAT_HW_AUTH_ALGO_SHA1:
-		if (partial_hash_sha1(data_in, digest))
-			return -EFAULT;
+		IMB_SHA1_ONE_BLOCK(m, data_in, digest);
 		for (i = 0; i < digest_size >> 2; i++, hash_state_out_be32++)
 			*hash_state_out_be32 =
 				rte_bswap32(*(((uint32_t *)digest)+i));
 		break;
 	case ICP_QAT_HW_AUTH_ALGO_SHA224:
-		if (partial_hash_sha224(data_in, digest))
-			return -EFAULT;
+		IMB_SHA224_ONE_BLOCK(m, data_in, digest);
 		for (i = 0; i < digest_size >> 2; i++, hash_state_out_be32++)
 			*hash_state_out_be32 =
 				rte_bswap32(*(((uint32_t *)digest)+i));
 		break;
 	case ICP_QAT_HW_AUTH_ALGO_SHA256:
-		if (partial_hash_sha256(data_in, digest))
-			return -EFAULT;
+		IMB_SHA256_ONE_BLOCK(m, data_in, digest);
 		for (i = 0; i < digest_size >> 2; i++, hash_state_out_be32++)
 			*hash_state_out_be32 =
 				rte_bswap32(*(((uint32_t *)digest)+i));
 		break;
 	case ICP_QAT_HW_AUTH_ALGO_SHA384:
-		if (partial_hash_sha384(data_in, digest))
-			return -EFAULT;
+		IMB_SHA384_ONE_BLOCK(m, data_in, digest);
 		for (i = 0; i < digest_size >> 3; i++, hash_state_out_be64++)
 			*hash_state_out_be64 =
 				rte_bswap64(*(((uint64_t *)digest)+i));
 		break;
 	case ICP_QAT_HW_AUTH_ALGO_SHA512:
-		if (partial_hash_sha512(data_in, digest))
-			return -EFAULT;
+		IMB_SHA512_ONE_BLOCK(m, data_in, digest);
 		for (i = 0; i < digest_size >> 3; i++, hash_state_out_be64++)
 			*hash_state_out_be64 =
 				rte_bswap64(*(((uint64_t *)digest)+i));
 		break;
 	case ICP_QAT_HW_AUTH_ALGO_MD5:
-		if (partial_hash_md5(data_in, data_out))
-			return -EFAULT;
+		IMB_MD5_ONE_BLOCK(m, data_in, data_out);
 		break;
 	default:
 		QAT_LOG(ERR, "invalid hash alg %u", hash_alg);
 		return -EFAULT;
 	}
 
+	free_mb_mgr(m);
 	return 0;
 }
 #define HMAC_IPAD_VALUE	0x36

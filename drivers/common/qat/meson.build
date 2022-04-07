@@ -35,6 +35,16 @@ if qat_crypto and not libcrypto.found()
             'missing dependency, libcrypto')
 endif
 
+
+IMB_required_ver = '1.0.0'
+libipsecmb = cc.find_library('IPSec_MB', required: false)
+if not lib.found()
+    build = false
+    reason = 'missing dependency, "libIPSec_MB"'
+else
+    ext_deps += libipsecmb
+endif
+
 # The driver should not build if both compression and crypto are disabled
 #FIXME common code depends on compression files so check only compress!
 if not qat_compress # and not qat_crypto
