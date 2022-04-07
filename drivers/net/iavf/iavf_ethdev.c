@@ -2678,7 +2678,7 @@ static int
 iavf_dcf_cap_check_handler(__rte_unused const char *key,
 			   const char *value, __rte_unused void *opaque)
 {
-	if (strcmp(value, "dcf"))
+	if (strcmp(value, "dcf") && strcmp(value, "mdcf"))
 		return -1;
 
 	return 0;
