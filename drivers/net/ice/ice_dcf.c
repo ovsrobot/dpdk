@@ -681,7 +681,8 @@ ice_dcf_init_hw(struct rte_eth_dev *eth_dev, struct ice_dcf_hw *hw)
 
 	if (ice_dcf_get_vf_vsi_map(hw) < 0) {
 		PMD_INIT_LOG(ERR, "Failed to get VF VSI map");
-		ice_dcf_mode_disable(hw);
+		if (!hw->multi_inst)
+			ice_dcf_mode_disable(hw);
 		goto err_alloc;
 	}
 
@@ -759,8 +760,8 @@ ice_dcf_uninit_hw(struct rte_eth_dev *eth_dev, struct ice_dcf_hw *hw)
 	rte_intr_disable(intr_handle);
 	rte_intr_callback_unregister(intr_handle,
 				     ice_dcf_dev_interrupt_handler, hw);
-
-	ice_dcf_mode_disable(hw);
+	if (!hw->multi_inst)
+		ice_dcf_mode_disable(hw);
 	iavf_shutdown_adminq(&hw->avf);
 
 	rte_free(hw->arq_buf);
@@ -1186,4 +1187,20 @@ err:
 	rte_intr_enable(intr_handle);
 	ice_dcf_enable_irq0(hw);
 	return ret;
+}
+
+int
+ice_dcf_flush_rules(struct ice_dcf_hw *hw)
+{
+	struct dcf_virtchnl_cmd args;
+	int err = 0;
+
+	memset(&args, 0, sizeof(args));
+	args.v_op = VIRTCHNL_OP_DCF_RULE_FLUSH;
+
+	err = ice_dcf_execute_virtchnl_cmd(hw, &args);
+	if (err)
+		PMD_DRV_LOG(WARNING, "fail to execute command OF_DCF_RULE_FLUSH, DCF role must be preempted.");
+
+	return 0;
 }

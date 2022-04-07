@@ -98,6 +98,8 @@ struct ice_dcf_hw {
 	uint16_t vsi_id;
 
 	struct rte_eth_dev *eth_dev;
+	bool multi_inst;
+	bool dcf_replaced;
 	uint8_t *rss_lut;
 	uint8_t *rss_key;
 	uint64_t supported_rxdid;
@@ -142,5 +144,6 @@ void ice_dcf_tm_conf_init(struct rte_eth_dev *dev);
 void ice_dcf_tm_conf_uninit(struct rte_eth_dev *dev);
 int ice_dcf_replay_vf_bw(struct ice_dcf_hw *hw, uint16_t vf_id);
 int ice_dcf_clear_bw(struct ice_dcf_hw *hw);
+int ice_dcf_flush_rules(struct ice_dcf_hw *hw);
 
 #endif /* _ICE_DCF_H_ */

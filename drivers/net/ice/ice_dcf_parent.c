@@ -125,6 +125,9 @@ ice_dcf_vsi_update_service_handler(void *param)
 
 	pthread_detach(pthread_self());
 
+	if (hw->multi_inst)
+		return NULL;
+
 	rte_delay_us(ICE_DCF_VSI_UPDATE_SERVICE_INTERVAL);
 
 	rte_spinlock_lock(&vsi_update_lock);
@@ -268,6 +271,10 @@ ice_dcf_handle_pf_event_msg(struct ice_dcf_hw *dcf_hw,
 				 __ATOMIC_RELAXED);
 		start_vsi_reset_thread(dcf_hw, true,
 				       pf_msg->event_data.vf_vsi_map.vf_id);
+		break;
+	case VIRTCHNL_EVENT_DCF_VSI_INFO:
+		if (dcf_hw->vsi_id != pf_msg->event_data.vf_vsi_map.vsi_id)
+			dcf_hw->dcf_replaced = true;
 		break;
 	default:
 		PMD_DRV_LOG(ERR, "Unknown event received %u", pf_msg->event);
@@ -436,6 +443,7 @@ ice_dcf_init_parent_adapter(struct rte_eth_dev *eth_dev)
 	parent_hw->aq_send_cmd_fn = ice_dcf_send_aq_cmd;
 	parent_hw->aq_send_cmd_param = &adapter->real_hw;
 	parent_hw->dcf_enabled = true;
+	hw->dcf_replaced = false;
 
 	err = ice_dcf_init_parent_hw(parent_hw);
 	if (err) {

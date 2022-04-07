@@ -497,6 +497,7 @@ ice_switch_destroy(struct ice_adapter *ad,
 		struct rte_flow *flow,
 		struct rte_flow_error *error)
 {
+	struct ice_dcf_hw *dcf_hw = ad->hw.aq_send_cmd_param;
 	struct ice_hw *hw = &ad->hw;
 	int ret;
 	struct ice_switch_filter_conf *filter_conf_ptr;
@@ -524,7 +525,7 @@ ice_switch_destroy(struct ice_adapter *ad,
 	}
 
 	ret = ice_rem_adv_rule_by_id(hw, &filter_conf_ptr->sw_query_data);
-	if (ret) {
+	if (ret && !(hw->dcf_enabled && dcf_hw->multi_inst)) {
 		if (ice_dcf_adminq_need_retry(ad))
 			ret = -EAGAIN;
 		else
@@ -537,7 +538,7 @@ ice_switch_destroy(struct ice_adapter *ad,
 	}
 
 	ice_switch_filter_rule_free(flow);
-	return ret;
+	return 0;
 }
 
 static bool

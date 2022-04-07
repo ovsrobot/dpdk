@@ -19,6 +19,7 @@
 #include <rte_malloc.h>
 #include <rte_memzone.h>
 #include <rte_dev.h>
+#include <rte_ethdev.h>
 
 #include <iavf_devids.h>
 
@@ -1789,10 +1790,64 @@ static const struct eth_dev_ops ice_dcf_eth_dev_ops = {
 };
 
 static int
+ice_dcf_cap_check_handler(__rte_unused const char *key,
+			  const char *value, void *opaque)
+{
+	bool *mi = opaque;
+
+	if (!strcmp(value, "dcf")) {
+		*mi = 0;
+		return 0;
+	}
+	if (!strcmp(value, "mdcf")) {
+		*mi = 1;
+		return 0;
+	}
+
+	return -1;
+}
+
+static int
+ice_dcf_cap_selected(struct ice_dcf_adapter *adapter,
+		      struct rte_devargs *devargs)
+{
+	struct ice_adapter *ad = &adapter->parent;
+	struct rte_kvargs *kvlist;
+	const char *key_cap = "cap";
+	int ret = 0;
+
+	if (devargs == NULL)
+		return 0;
+
+	kvlist = rte_kvargs_parse(devargs->args, NULL);
+	if (kvlist == NULL)
+		return 0;
+
+	if (!rte_kvargs_count(kvlist, key_cap))
+		goto exit;
+
+	/* dcf capability selected when there's a key-value pair: cap=dcf */
+	if (rte_kvargs_process(kvlist, key_cap,
+			       ice_dcf_cap_check_handler,
+			       &adapter->real_hw.multi_inst) < 0)
+		goto exit;
+
+	ret = 1;
+
+exit:
+	rte_kvargs_free(kvlist);
+	return ret;
+}
+
+static int
 ice_dcf_dev_init(struct rte_eth_dev *eth_dev)
 {
+	struct rte_pci_device *pci_dev = RTE_DEV_TO_PCI(eth_dev->device);
 	struct ice_dcf_adapter *adapter = eth_dev->data->dev_private;
 	struct ice_adapter *parent_adapter = &adapter->parent;
+
+	if (!ice_dcf_cap_selected(adapter, pci_dev->device.devargs))
+		return 1;
 
 	eth_dev->dev_ops = &ice_dcf_eth_dev_ops;
 	eth_dev->rx_pkt_burst = ice_dcf_recv_pkts;
@@ -1830,45 +1885,6 @@ ice_dcf_dev_uninit(struct rte_eth_dev *eth_dev)
 }
 
 static int
-ice_dcf_cap_check_handler(__rte_unused const char *key,
-			  const char *value, __rte_unused void *opaque)
-{
-	if (strcmp(value, "dcf"))
-		return -1;
-
-	return 0;
-}
-
-static int
-ice_dcf_cap_selected(struct rte_devargs *devargs)
-{
-	struct rte_kvargs *kvlist;
-	const char *key = "cap";
-	int ret = 0;
-
-	if (devargs == NULL)
-		return 0;
-
-	kvlist = rte_kvargs_parse(devargs->args, NULL);
-	if (kvlist == NULL)
-		return 0;
-
-	if (!rte_kvargs_count(kvlist, key))
-		goto exit;
-
-	/* dcf capability selected when there's a key-value pair: cap=dcf */
-	if (rte_kvargs_process(kvlist, key,
-			       ice_dcf_cap_check_handler, NULL) < 0)
-		goto exit;
-
-	ret = 1;
-
-exit:
-	rte_kvargs_free(kvlist);
-	return ret;
-}
-
-static int
 eth_ice_dcf_pci_probe(__rte_unused struct rte_pci_driver *pci_drv,
 		      struct rte_pci_device *pci_dev)
 {
@@ -1879,9 +1895,6 @@ eth_ice_dcf_pci_probe(__rte_unused struct rte_pci_driver *pci_drv,
 	struct rte_eth_dev *dcf_ethdev;
 	uint16_t dcf_vsi_id;
 	int i, ret;
-
-	if (!ice_dcf_cap_selected(pci_dev->device.devargs))
-		return 1;
 
 	ret = rte_eth_devargs_parse(pci_dev->device.devargs->args, &eth_da);
 	if (ret)
@@ -1995,4 +2008,4 @@ static struct rte_pci_driver rte_ice_dcf_pmd = {
 RTE_PMD_REGISTER_PCI(net_ice_dcf, rte_ice_dcf_pmd);
 RTE_PMD_REGISTER_PCI_TABLE(net_ice_dcf, pci_id_ice_dcf_map);
 RTE_PMD_REGISTER_KMOD_DEP(net_ice_dcf, "* igb_uio | vfio-pci");
-RTE_PMD_REGISTER_PARAM_STRING(net_ice_dcf, "cap=dcf");
+RTE_PMD_REGISTER_PARAM_STRING(net_ice_dcf, "cap=dcf|mdcf");

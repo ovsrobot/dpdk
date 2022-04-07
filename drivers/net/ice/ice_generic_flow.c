@@ -17,6 +17,7 @@
 
 #include "ice_ethdev.h"
 #include "ice_generic_flow.h"
+#include "ice_dcf.h"
 
 /**
  * Non-pipeline mode, fdir and switch both used as distributor,
@@ -2533,9 +2534,15 @@ ice_flow_flush(struct rte_eth_dev *dev,
 		struct rte_flow_error *error)
 {
 	struct ice_pf *pf = ICE_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct ice_adapter *ad =
+		ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	struct ice_dcf_hw *hw = ad->hw.aq_send_cmd_param;
 	struct rte_flow *p_flow;
 	void *temp;
 	int ret = 0;
+
+	if (ad->hw.dcf_enabled && hw->dcf_replaced)
+		return ret;
 
 	RTE_TAILQ_FOREACH_SAFE(p_flow, &pf->flow_list, node, temp) {
 		ret = ice_flow_destroy(dev, p_flow, error);
@@ -2546,6 +2553,9 @@ ice_flow_flush(struct rte_eth_dev *dev,
 			return ret;
 		}
 	}
+
+	if (ad->hw.dcf_enabled && hw->multi_inst)
+		return ice_dcf_flush_rules(ad->hw.aq_send_cmd_param);
 
 	return ret;
 }
