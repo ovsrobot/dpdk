@@ -20,6 +20,23 @@ apps = [
         'test-sad',
 ]
 
+if get_option('use_cpp')
+    protoc = find_program('protoc', required : false)
+    protobuf_dep = dependency('protobuf', required : false)
+    grpc_cpp_plugin = find_program('grpc_cpp_plugin', required: false)
+    grpc_python_plugin = find_program('grpc_python_plugin', required: false)
+    grpc_dep = dependency('grpc', required: false)
+    grpcpp_dep = dependency('grpc++', required: false)
+
+    if protoc.found() and dep.found() and grpc_cpp_plugin.found() and grpc_python_plugin.found() and grpc_dep.found() and grpcpp_dep.found()
+        apps += [
+            'test-pmd-api'
+        ]
+    endif
+
+endif
+
+
 default_cflags = machine_args + ['-DALLOW_EXPERIMENTAL_API']
 default_ldflags = []
 if get_option('default_library') == 'static' and not is_windows
