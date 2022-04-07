@@ -164,6 +164,12 @@ enum virtchnl_ops {
 	VIRTCHNL_OP_ENABLE_QUEUES_V2 = 107,
 	VIRTCHNL_OP_DISABLE_QUEUES_V2 = 108,
 	VIRTCHNL_OP_MAP_QUEUE_VECTOR = 111,
+
+	/**
+	 * To reduce the risk for future combability issue,
+	 * set VIRTCHNL_OP_DCF_RULE_FLUSH carefully by using a special value.
+	 */
+	VIRTCHNL_OP_DCF_RULE_FLUSH = 6000,
 	VIRTCHNL_OP_MAX,
 };
 
@@ -1424,6 +1430,12 @@ enum virtchnl_event_codes {
 	VIRTCHNL_EVENT_RESET_IMPENDING,
 	VIRTCHNL_EVENT_PF_DRIVER_CLOSE,
 	VIRTCHNL_EVENT_DCF_VSI_MAP_UPDATE,
+
+	/**
+	 * To reduce the risk for future combability issue,
+	 * set VIRTCHNL_EVENT_DCF_VSI_INFO carefully by using a special value.
+	 */
+	VIRTCHNL_EVENT_DCF_VSI_INFO = 1000,
 };
 
 #define PF_EVENT_SEVERITY_INFO		0
@@ -2200,6 +2212,7 @@ virtchnl_vc_validate_vf_msg(struct virtchnl_version_info *ver, u32 v_opcode,
 		 */
 		valid_len = msglen;
 		break;
+	case VIRTCHNL_OP_DCF_RULE_FLUSH:
 	case VIRTCHNL_OP_DCF_DISABLE:
 	case VIRTCHNL_OP_DCF_GET_VSI_MAP:
 	case VIRTCHNL_OP_DCF_GET_PKG_INFO:
