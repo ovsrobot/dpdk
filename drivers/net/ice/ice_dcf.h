@@ -129,6 +129,7 @@ int ice_dcf_configure_rss_key(struct ice_dcf_hw *hw);
 int ice_dcf_configure_rss_lut(struct ice_dcf_hw *hw);
 int ice_dcf_init_rss(struct ice_dcf_hw *hw);
 int ice_dcf_configure_queues(struct ice_dcf_hw *hw);
+int ice_dcf_request_queues(struct ice_dcf_hw *hw, uint16_t num);
 int ice_dcf_config_irq_map(struct ice_dcf_hw *hw);
 int ice_dcf_switch_queue(struct ice_dcf_hw *hw, uint16_t qid, bool rx, bool on);
 int ice_dcf_disable_queues(struct ice_dcf_hw *hw);

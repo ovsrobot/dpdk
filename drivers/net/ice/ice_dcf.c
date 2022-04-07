@@ -257,7 +257,7 @@ ice_dcf_get_vf_resource(struct ice_dcf_hw *hw)
 	       VIRTCHNL_VF_CAP_ADV_LINK_SPEED | VIRTCHNL_VF_CAP_DCF |
 	       VIRTCHNL_VF_OFFLOAD_VLAN_V2 |
 	       VF_BASE_MODE_OFFLOADS | VIRTCHNL_VF_OFFLOAD_RX_FLEX_DESC |
-	       VIRTCHNL_VF_OFFLOAD_QOS;
+	       VIRTCHNL_VF_OFFLOAD_QOS | VIRTCHNL_VF_OFFLOAD_REQ_QUEUES;
 
 	err = ice_dcf_send_cmd_req_no_irq(hw, VIRTCHNL_OP_GET_VF_RESOURCES,
 					  (uint8_t *)&caps, sizeof(caps));
@@ -468,18 +468,38 @@ ice_dcf_execute_virtchnl_cmd(struct ice_dcf_hw *hw,
 		goto ret;
 	}
 
-	do {
-		if (!cmd->pending)
-			break;
+	switch (cmd->v_op) {
+	case VIRTCHNL_OP_REQUEST_QUEUES:
+		err = ice_dcf_recv_cmd_rsp_no_irq(hw,
+						  VIRTCHNL_OP_REQUEST_QUEUES,
+						  cmd->rsp_msgbuf,
+						  cmd->rsp_buflen,
+						  NULL);
+		if (err != IAVF_SUCCESS || !hw->resetting) {
+			err = -1;
+			PMD_DRV_LOG(ERR,
+				    "Failed to get response of "
+				    "VIRTCHNL_OP_REQUEST_QUEUES %d",
+				    err);
+		}
+		break;
+	default:
+		/* For other virtchnl ops in running time,
+		 * wait for the cmd done flag.
+		 */
+		do {
+			if (!cmd->pending)
+				break;
+			rte_delay_ms(ICE_DCF_ARQ_CHECK_TIME);
+		} while (i++ < ICE_DCF_ARQ_MAX_RETRIES);
 
-		rte_delay_ms(ICE_DCF_ARQ_CHECK_TIME);
-	} while (i++ < ICE_DCF_ARQ_MAX_RETRIES);
-
-	if (cmd->v_ret != IAVF_SUCCESS) {
-		err = -1;
-		PMD_DRV_LOG(ERR,
-			    "No response (%d times) or return failure (%d) for cmd %d",
-			    i, cmd->v_ret, cmd->v_op);
+		if (cmd->v_ret != IAVF_SUCCESS) {
+			err = -1;
+			PMD_DRV_LOG(ERR,
+				    "No response (%d times) or "
+				    "return failure (%d) for cmd %d",
+				    i, cmd->v_ret, cmd->v_op);
+		}
 	}
 
 ret:
@@ -1010,6 +1030,58 @@ ice_dcf_configure_queues(struct ice_dcf_hw *hw)
 
 	rte_free(vc_config);
 	return err;
+}
+
+int
+ice_dcf_request_queues(struct ice_dcf_hw *hw, uint16_t num)
+{
+	struct virtchnl_vf_res_request vfres;
+	struct dcf_virtchnl_cmd args;
+	uint16_t num_queue_pairs;
+	int err;
+
+	if (!(hw->vf_res->vf_cap_flags &
+		VIRTCHNL_VF_OFFLOAD_REQ_QUEUES)) {
+		PMD_DRV_LOG(ERR, "request queues not supported");
+		return -1;
+	}
+
+	if (num == 0) {
+		PMD_DRV_LOG(ERR, "queue number cannot be zero");
+		return -1;
+	}
+	vfres.num_queue_pairs = num;
+
+	memset(&args, 0, sizeof(args));
+	args.v_op = VIRTCHNL_OP_REQUEST_QUEUES;
+
+	args.req_msg = (u8 *)&vfres;
+	args.req_msglen = sizeof(vfres);
+
+	args.rsp_msgbuf = hw->arq_buf;
+	args.rsp_msglen = ICE_DCF_AQ_BUF_SZ;
+	args.rsp_buflen = ICE_DCF_AQ_BUF_SZ;
+
+	/*
+	 * disable interrupt to avoid the admin queue message to be read
+	 * before iavf_read_msg_from_pf.
+	 */
+	rte_intr_disable(hw->eth_dev->intr_handle);
+	err = ice_dcf_execute_virtchnl_cmd(hw, &args);
+	rte_intr_enable(hw->eth_dev->intr_handle);
+	if (err) {
+		PMD_DRV_LOG(ERR, "fail to execute command OP_REQUEST_QUEUES");
+		return err;
+	}
+
+	/* request additional queues failed, return available number */
+	num_queue_pairs = ((struct virtchnl_vf_res_request *)
+				args.rsp_msgbuf)->num_queue_pairs;
+	PMD_DRV_LOG(ERR,
+		    "request queues failed, only %u queues available",
+		    num_queue_pairs);
+
+	return -1;
 }
 
 int
