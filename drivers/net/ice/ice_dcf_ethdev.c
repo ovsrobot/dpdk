@@ -40,6 +40,8 @@ static int
 ice_dcf_dev_udp_tunnel_port_del(struct rte_eth_dev *dev,
 				struct rte_eth_udp_tunnel *udp_tunnel);
 
+static int ice_dcf_queues_req_reset(struct rte_eth_dev *dev, uint16_t num);
+
 static int
 ice_dcf_dev_init(struct rte_eth_dev *eth_dev);
 
@@ -664,12 +666,58 @@ ice_dcf_dev_configure(struct rte_eth_dev *dev)
 {
 	struct ice_dcf_adapter *dcf_ad = dev->data->dev_private;
 	struct ice_adapter *ad = &dcf_ad->parent;
+	struct ice_dcf_hw *hw = &dcf_ad->real_hw;
+	int ret;
+
+	uint16_t num_queue_pairs =
+		RTE_MAX(dev->data->nb_rx_queues, dev->data->nb_tx_queues);
 
 	ad->rx_bulk_alloc_allowed = true;
 	ad->tx_simple_allowed = true;
 
 	if (dev->data->dev_conf.rxmode.mq_mode & RTE_ETH_MQ_RX_RSS_FLAG)
 		dev->data->dev_conf.rxmode.offloads |= RTE_ETH_RX_OFFLOAD_RSS_HASH;
+
+		/* Large VF setting */
+	if (num_queue_pairs > ICE_DCF_MAX_NUM_QUEUES_DFLT) {
+		if (!(hw->vf_res->vf_cap_flags &
+				VIRTCHNL_VF_LARGE_NUM_QPAIRS)) {
+			PMD_DRV_LOG(ERR, "large VF is not supported");
+			return -1;
+		}
+
+		if (num_queue_pairs > ICE_DCF_MAX_NUM_QUEUES_LV) {
+			PMD_DRV_LOG(ERR,
+				"queue pairs number cannot be larger than %u",
+				ICE_DCF_MAX_NUM_QUEUES_LV);
+			return -1;
+		}
+
+		ret = ice_dcf_queues_req_reset(dev, num_queue_pairs);
+		if (ret)
+			return ret;
+
+		ret = ice_dcf_get_max_rss_queue_region(hw);
+		if (ret) {
+			PMD_INIT_LOG(ERR, "get max rss queue region failed");
+			return ret;
+		}
+
+		hw->lv_enabled = true;
+	} else {
+		/* Check if large VF is already enabled. If so, disable and
+		 * release redundant queue resource.
+		 */
+		if (hw->lv_enabled) {
+			ret = ice_dcf_queues_req_reset(dev, num_queue_pairs);
+			if (ret)
+				return ret;
+
+			hw->lv_enabled = false;
+		}
+		/* if large VF is not required, use default rss queue region */
+		hw->max_rss_qregion = ICE_DCF_MAX_NUM_QUEUES_DFLT;
+	}
 
 	return 0;
 }
@@ -682,8 +730,8 @@ ice_dcf_dev_info_get(struct rte_eth_dev *dev,
 	struct ice_dcf_hw *hw = &adapter->real_hw;
 
 	dev_info->max_mac_addrs = DCF_NUM_MACADDR_MAX;
-	dev_info->max_rx_queues = hw->vsi_res->num_queue_pairs;
-	dev_info->max_tx_queues = hw->vsi_res->num_queue_pairs;
+	dev_info->max_rx_queues = ICE_DCF_MAX_NUM_QUEUES_LV;
+	dev_info->max_tx_queues = ICE_DCF_MAX_NUM_QUEUES_LV;
 	dev_info->min_rx_bufsize = ICE_BUF_SIZE_MIN;
 	dev_info->max_rx_pktlen = ICE_FRAME_SIZE_MAX;
 	dev_info->hash_key_size = hw->vf_res->rss_key_size;
@@ -1906,6 +1954,23 @@ ice_dcf_dev_uninit(struct rte_eth_dev *eth_dev)
 	ice_dcf_dev_close(eth_dev);
 
 	return 0;
+}
+
+static int ice_dcf_queues_req_reset(struct rte_eth_dev *dev, uint16_t num)
+{
+	struct ice_dcf_adapter *adapter = dev->data->dev_private;
+	struct ice_dcf_hw *hw = &adapter->real_hw;
+	int ret;
+
+	ret = ice_dcf_request_queues(hw, num);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "request queues from PF failed");
+		return ret;
+	}
+	PMD_DRV_LOG(INFO, "change queue pairs from %u to %u",
+			hw->vsi_res->num_queue_pairs, num);
+
+	return ice_dcf_dev_reset(dev);
 }
 
 static int

@@ -257,7 +257,8 @@ ice_dcf_get_vf_resource(struct ice_dcf_hw *hw)
 	       VIRTCHNL_VF_CAP_ADV_LINK_SPEED | VIRTCHNL_VF_CAP_DCF |
 	       VIRTCHNL_VF_OFFLOAD_VLAN_V2 |
 	       VF_BASE_MODE_OFFLOADS | VIRTCHNL_VF_OFFLOAD_RX_FLEX_DESC |
-	       VIRTCHNL_VF_OFFLOAD_QOS | VIRTCHNL_VF_OFFLOAD_REQ_QUEUES;
+	       VIRTCHNL_VF_OFFLOAD_QOS | VIRTCHNL_VF_OFFLOAD_REQ_QUEUES |
+		   VIRTCHNL_VF_LARGE_NUM_QPAIRS;
 
 	err = ice_dcf_send_cmd_req_no_irq(hw, VIRTCHNL_OP_GET_VF_RESOURCES,
 					  (uint8_t *)&caps, sizeof(caps));
@@ -1083,6 +1084,37 @@ ice_dcf_request_queues(struct ice_dcf_hw *hw, uint16_t num)
 
 	return -1;
 }
+
+int
+ice_dcf_get_max_rss_queue_region(struct ice_dcf_hw *hw)
+{
+	struct dcf_virtchnl_cmd args;
+	uint16_t qregion_width;
+	int err;
+
+	memset(&args, 0, sizeof(args));
+	args.v_op = VIRTCHNL_OP_GET_MAX_RSS_QREGION;
+	args.req_msg = NULL;
+	args.req_msglen = 0;
+	args.rsp_msgbuf = hw->arq_buf;
+	args.rsp_msglen = ICE_DCF_AQ_BUF_SZ;
+	args.rsp_buflen = ICE_DCF_AQ_BUF_SZ;
+
+	err = ice_dcf_execute_virtchnl_cmd(hw, &args);
+	if (err) {
+		PMD_DRV_LOG(ERR,
+			    "Failed to execute command of "
+			    "VIRTCHNL_OP_GET_MAX_RSS_QREGION");
+		return err;
+	}
+
+	qregion_width =	((struct virtchnl_max_rss_qregion *)
+				args.rsp_msgbuf)->qregion_width;
+	hw->max_rss_qregion = (uint16_t)(1 << qregion_width);
+
+	return 0;
+}
+
 
 int
 ice_dcf_config_irq_map(struct ice_dcf_hw *hw)
