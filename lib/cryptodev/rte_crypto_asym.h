@@ -256,8 +256,6 @@ struct rte_crypto_modinv_xform {
  *
  */
 struct rte_crypto_dh_xform {
-	enum rte_crypto_asym_op_type type;
-	/**< Setup xform for key generate or shared secret compute */
 	rte_crypto_uint p;
 	/**< Prime modulus data */
 	rte_crypto_uint g;
@@ -391,6 +389,8 @@ struct rte_crypto_rsa_op_param {
  * @note:
  */
 struct rte_crypto_dh_op_param {
+	enum rte_crypto_asym_op_type op_type;
+	/**< Diffie-Hellman operation phase */
 	rte_crypto_uint pub_key;
 	/**<
 	 * Output generated public key when xform type is
