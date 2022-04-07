@@ -1289,6 +1289,12 @@ set_mb_job_params(IMB_JOB *job, struct ipsec_mb_qp *qp,
 		job->u.CHACHA20_POLY1305.aad = op->sym->aead.aad.data;
 		job->u.CHACHA20_POLY1305.aad_len_in_bytes =
 			session->aead.aad_len;
+		if (sgl) {
+			job->u.CHACHA20_POLY1305.ctx =
+					&session->aead.chacha_sgl_ctx;
+			job->cipher_mode = IMB_CIPHER_CHACHA20_POLY1305_SGL;
+			job->hash_alg = IMB_AUTH_CHACHA20_POLY1305_SGL;
+		}
 		job->enc_keys = session->cipher.expanded_aes_keys.encode;
 		job->dec_keys = session->cipher.expanded_aes_keys.encode;
 		break;
@@ -1394,6 +1400,7 @@ set_mb_job_params(IMB_JOB *job, struct ipsec_mb_qp *qp,
 		break;
 
 	case IMB_AUTH_GCM_SGL:
+	case IMB_AUTH_CHACHA20_POLY1305_SGL:
 		job->hash_start_src_offset_in_bytes = 0;
 		job->msg_len_to_hash_in_bytes = 0;
 		job->iv = rte_crypto_op_ctod_offset(op, uint8_t *,
@@ -1405,7 +1412,6 @@ set_mb_job_params(IMB_JOB *job, struct ipsec_mb_qp *qp,
 			op->sym->aead.data.offset;
 		job->msg_len_to_hash_in_bytes =
 					op->sym->aead.data.length;
-
 		job->iv = rte_crypto_op_ctod_offset(op, uint8_t *,
 				session->iv.offset);
 		break;
@@ -1491,6 +1497,7 @@ set_mb_job_params(IMB_JOB *job, struct ipsec_mb_qp *qp,
 		job->msg_len_to_cipher_in_bytes = op->sym->aead.data.length;
 		break;
 	case IMB_CIPHER_GCM_SGL:
+	case IMB_CIPHER_CHACHA20_POLY1305_SGL:
 		job->msg_len_to_cipher_in_bytes = 0;
 		job->cipher_start_src_offset_in_bytes = 0;
 		break;

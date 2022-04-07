@@ -947,7 +947,10 @@ struct aesni_mb_session {
 		/* * AAD data length */
 		uint16_t aad_len;
 
-		struct gcm_context_data gcm_sgl_ctx;
+		union {
+			struct gcm_context_data gcm_sgl_ctx;
+			struct chacha20_poly1305_context_data chacha_sgl_ctx;
+		};
 	} aead;
 } __rte_cache_aligned;
 
