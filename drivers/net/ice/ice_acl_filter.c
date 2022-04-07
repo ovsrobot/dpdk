@@ -25,6 +25,7 @@
 #include "ice_ethdev.h"
 #include "ice_generic_flow.h"
 #include "base/ice_flow.h"
+#include "ice_dcf_ethdev.h"
 
 #define MAX_ACL_SLOTS_ID 2048
 
@@ -994,8 +995,11 @@ ice_acl_init(struct ice_adapter *ad)
 	struct ice_pf *pf = &ad->pf;
 	struct ice_hw *hw = ICE_PF_TO_HW(pf);
 	struct ice_flow_parser *parser = &ice_acl_parser;
+	struct rte_eth_dev *eth_dev = &rte_eth_devices[ad->pf.dev_data->port_id];
+	struct ice_dcf_adapter *dcf_adapter = eth_dev->data->dev_private;
+	struct ice_dcf_hw *dcf_hw = &dcf_adapter->real_hw;
 
-	if (!ad->hw.dcf_enabled)
+	if (!ad->hw.dcf_enabled || dcf_hw->multi_inst)
 		return 0;
 
 	ret = ice_acl_prof_alloc(hw);
@@ -1041,8 +1045,11 @@ ice_acl_uninit(struct ice_adapter *ad)
 	struct ice_pf *pf = &ad->pf;
 	struct ice_hw *hw = ICE_PF_TO_HW(pf);
 	struct ice_flow_parser *parser = &ice_acl_parser;
+	struct rte_eth_dev *eth_dev = &rte_eth_devices[ad->pf.dev_data->port_id];
+	struct ice_dcf_adapter *dcf_adapter = eth_dev->data->dev_private;
+	struct ice_dcf_hw *dcf_hw = &dcf_adapter->real_hw;
 
-	if (ad->hw.dcf_enabled) {
+	if (ad->hw.dcf_enabled && !dcf_hw->multi_inst) {
 		ice_unregister_parser(parser, ad);
 		ice_deinit_acl(pf);
 		ice_acl_prof_free(hw);
