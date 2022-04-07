@@ -74,6 +74,11 @@ struct ice_dcf_tm_conf {
 	bool committed;
 };
 
+struct ice_dcf_qv_map {
+	uint16_t queue_id;
+	uint16_t vector_id;
+};
+
 struct ice_dcf_hw {
 	struct iavf_hw avf;
 
@@ -108,7 +113,8 @@ struct ice_dcf_hw {
 	uint16_t msix_base;
 	uint16_t nb_msix;
 	uint16_t max_rss_qregion; /* max RSS queue region supported by PF */
-	uint16_t rxq_map[16];
+
+	struct ice_dcf_qv_map *qv_map; /* queue vector mapping */
 	struct virtchnl_eth_stats eth_stats_offset;
 	struct virtchnl_vlan_caps vlan_v2_caps;
 
@@ -136,6 +142,8 @@ int ice_dcf_configure_queues(struct ice_dcf_hw *hw,
 int ice_dcf_request_queues(struct ice_dcf_hw *hw, uint16_t num);
 int ice_dcf_get_max_rss_queue_region(struct ice_dcf_hw *hw);
 int ice_dcf_config_irq_map(struct ice_dcf_hw *hw);
+int ice_dcf_config_irq_map_lv(struct ice_dcf_hw *hw,
+			      uint16_t num, uint16_t index);
 int ice_dcf_switch_queue(struct ice_dcf_hw *hw, uint16_t qid, bool rx, bool on);
 int ice_dcf_disable_queues(struct ice_dcf_hw *hw);
 int ice_dcf_query_stats(struct ice_dcf_hw *hw,

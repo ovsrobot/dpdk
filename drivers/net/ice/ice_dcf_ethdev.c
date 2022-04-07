@@ -144,6 +144,7 @@ ice_dcf_config_rx_queues_irqs(struct rte_eth_dev *dev,
 {
 	struct ice_dcf_adapter *adapter = dev->data->dev_private;
 	struct ice_dcf_hw *hw = &adapter->real_hw;
+	struct ice_dcf_qv_map *qv_map;
 	uint16_t interval, i;
 	int vec;
 
@@ -160,6 +161,14 @@ ice_dcf_config_rx_queues_irqs(struct rte_eth_dev *dev,
 				    dev->data->nb_rx_queues);
 			return -1;
 		}
+	}
+
+	qv_map = rte_zmalloc("qv_map",
+		dev->data->nb_rx_queues * sizeof(struct ice_dcf_qv_map), 0);
+	if (!qv_map) {
+		PMD_DRV_LOG(ERR, "Failed to allocate %d queue-vector map",
+				dev->data->nb_rx_queues);
+		return -1;
 	}
 
 	if (!dev->data->dev_conf.intr_conf.rxq ||
@@ -197,17 +206,22 @@ ice_dcf_config_rx_queues_irqs(struct rte_eth_dev *dev,
 		}
 		IAVF_WRITE_FLUSH(&hw->avf);
 		/* map all queues to the same interrupt */
-		for (i = 0; i < dev->data->nb_rx_queues; i++)
-			hw->rxq_map[hw->msix_base] |= 1 << i;
+		for (i = 0; i < dev->data->nb_rx_queues; i++) {
+			qv_map[i].queue_id = i;
+			qv_map[i].vector_id = hw->msix_base;
+		}
+		hw->qv_map = qv_map;
 	} else {
 		if (!rte_intr_allow_others(intr_handle)) {
 			hw->nb_msix = 1;
 			hw->msix_base = IAVF_MISC_VEC_ID;
 			for (i = 0; i < dev->data->nb_rx_queues; i++) {
-				hw->rxq_map[hw->msix_base] |= 1 << i;
+				qv_map[i].queue_id = i;
+				qv_map[i].vector_id = hw->msix_base;
 				rte_intr_vec_list_index_set(intr_handle,
 							i, IAVF_MISC_VEC_ID);
 			}
+			hw->qv_map = qv_map;
 			PMD_DRV_LOG(DEBUG,
 				    "vector %u are mapping to all Rx queues",
 				    hw->msix_base);
@@ -220,21 +234,44 @@ ice_dcf_config_rx_queues_irqs(struct rte_eth_dev *dev,
 			hw->msix_base = IAVF_MISC_VEC_ID;
 			vec = IAVF_MISC_VEC_ID;
 			for (i = 0; i < dev->data->nb_rx_queues; i++) {
-				hw->rxq_map[vec] |= 1 << i;
+				qv_map[i].queue_id = i;
+				qv_map[i].vector_id = vec;
 				rte_intr_vec_list_index_set(intr_handle,
 								   i, vec++);
 				if (vec >= hw->nb_msix)
 					vec = IAVF_RX_VEC_START;
 			}
+			hw->qv_map = qv_map;
 			PMD_DRV_LOG(DEBUG,
 				    "%u vectors are mapping to %u Rx queues",
 				    hw->nb_msix, dev->data->nb_rx_queues);
 		}
 	}
 
-	if (ice_dcf_config_irq_map(hw)) {
-		PMD_DRV_LOG(ERR, "config interrupt mapping failed");
-		return -1;
+	if (!hw->lv_enabled) {
+		if (ice_dcf_config_irq_map(hw)) {
+			PMD_DRV_LOG(ERR, "config interrupt mapping failed");
+			return -1;
+		}
+	} else {
+		uint16_t num_qv_maps = dev->data->nb_rx_queues;
+		uint16_t index = 0;
+
+		while (num_qv_maps > ICE_DCF_IRQ_MAP_NUM_PER_BUF) {
+			if (ice_dcf_config_irq_map_lv(hw,
+					ICE_DCF_IRQ_MAP_NUM_PER_BUF, index)) {
+				PMD_DRV_LOG(ERR, "config interrupt mapping for large VF failed");
+				return -1;
+			}
+			num_qv_maps -= ICE_DCF_IRQ_MAP_NUM_PER_BUF;
+			index += ICE_DCF_IRQ_MAP_NUM_PER_BUF;
+		}
+
+		if (ice_dcf_config_irq_map_lv(hw, num_qv_maps, index)) {
+			PMD_DRV_LOG(ERR, "config interrupt mapping for large VF failed");
+			return -1;
+		}
+
 	}
 	return 0;
 }
