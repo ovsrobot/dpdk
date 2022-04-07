@@ -31,6 +31,9 @@ endif
 
 # set up some global vars for compiler, platform, configuration, etc.
 cc = meson.get_compiler('c')
+if get_option('use_cpp')
+    cxx = meson.get_compiler('cpp')
+endif
 dpdk_source_root = meson.current_source_dir()
 dpdk_build_root = meson.current_build_dir()
 dpdk_conf = configuration_data()
