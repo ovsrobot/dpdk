@@ -67,6 +67,7 @@ enum ice_sw_tunnel_type {
 	ICE_SW_TUN_VXLAN,	/* VXLAN matches only non-VLAN pkts */
 	ICE_SW_TUN_VXLAN_VLAN,  /* VXLAN matches both VLAN and non-VLAN pkts */
 	ICE_SW_TUN_NVGRE,
+	ICE_SW_TUN_GRE,
 	ICE_SW_TUN_UDP, /* This means all "UDP" tunnel types: VXLAN-GPE, VXLAN
 			 * and GENEVE
 			 */
@@ -231,6 +232,10 @@ enum ice_prot_id {
 #define ICE_TUN_FLAG_VLAN_MASK 0x01
 #define ICE_TUN_FLAG_FV_IND 2
 
+#define ICE_GRE_FLAG_MDID 22
+#define ICE_GRE_FLAG_MDID_OFF (ICE_MDID_SIZE * ICE_GRE_FLAG_MDID)
+#define ICE_GRE_FLAG_MASK 0x01C0
+
 #define ICE_PROTOCOL_MAX_ENTRIES 16
 
 /* Mapping of software defined protocol ID to hardware defined protocol ID */
@@ -371,6 +376,15 @@ struct ice_nvgre {
 	__be32 tni_flow;
 };
 
+struct ice_gre {
+	__be16 flags;
+	__be16 protocol;
+	__be16 chksum;
+	__be16 offset;
+	__be32 key;
+	__be32 seqnum;
+};
+
 union ice_prot_hdr {
 	struct ice_ether_hdr eth_hdr;
 	struct ice_ethtype_hdr ethertype;
@@ -381,6 +395,7 @@ union ice_prot_hdr {
 	struct ice_sctp_hdr sctp_hdr;
 	struct ice_udp_tnl_hdr tnl_hdr;
 	struct ice_nvgre nvgre_hdr;
+	struct ice_gre gre_hdr;
 	struct ice_udp_gtp_hdr gtp_hdr;
 	struct ice_pppoe_hdr pppoe_hdr;
 	struct ice_pfcp_hdr pfcp_hdr;

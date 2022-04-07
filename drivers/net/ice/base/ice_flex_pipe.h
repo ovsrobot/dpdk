@@ -37,7 +37,8 @@ void
 ice_init_prof_result_bm(struct ice_hw *hw);
 enum ice_status
 ice_get_sw_fv_list(struct ice_hw *hw, u8 *prot_ids, u16 ids_cnt,
-		   ice_bitmap_t *bm, struct LIST_HEAD_TYPE *fv_list);
+		   ice_bitmap_t *bm, struct LIST_HEAD_TYPE *fv_list,
+		   struct ice_prot_lkup_ext *lkup_exts);
 enum ice_status
 ice_pkg_buf_unreserve_section(struct ice_buf_build *bld, u16 count);
 u16 ice_pkg_buf_get_free_space(struct ice_buf_build *bld);
