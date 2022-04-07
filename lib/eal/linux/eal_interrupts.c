@@ -1596,6 +1596,9 @@ rte_intr_cap_multiple(struct rte_intr_handle *intr_handle)
 	if (rte_intr_type_get(intr_handle) == RTE_INTR_HANDLE_VDEV)
 		return 1;
 
+	if (rte_intr_type_get(intr_handle) == RTE_INTR_HANDLE_UIO)
+		return 1;
+
 	return 0;
 }
 
