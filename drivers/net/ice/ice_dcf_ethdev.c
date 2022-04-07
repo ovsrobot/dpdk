@@ -1005,6 +1005,15 @@ dcf_add_del_mc_addr_list(struct ice_dcf_hw *hw,
 	uint32_t i;
 	int len, err = 0;
 
+	if (hw->resetting) {
+		if (!add)
+			return 0;
+
+		PMD_DRV_LOG(ERR,
+			    "fail to add multicast MACs for VF resetting");
+		return -EIO;
+	}
+
 	len = sizeof(struct virtchnl_ether_addr_list);
 	len += sizeof(struct virtchnl_ether_addr) * mc_addrs_num;
 
@@ -1643,7 +1652,13 @@ ice_dcf_dev_close(struct rte_eth_dev *dev)
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
-	(void)ice_dcf_dev_stop(dev);
+	if (adapter->parent.pf.adapter_stopped)
+		(void)ice_dcf_dev_stop(dev);
+
+	if (adapter->real_hw.resetting) {
+		ice_dcf_uninit_hw(dev, &adapter->real_hw);
+		ice_dcf_init_hw(dev, &adapter->real_hw);
+	}
 
 	ice_free_queues(dev);
 

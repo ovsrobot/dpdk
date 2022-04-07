@@ -1430,7 +1430,7 @@ ice_dcf_cap_reset(struct rte_eth_dev *eth_dev, struct ice_dcf_hw *hw)
 	int ret;
 
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
-	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 
 	ice_dcf_disable_irq0(hw);
 	rte_intr_disable(intr_handle);
