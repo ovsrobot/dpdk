@@ -115,6 +115,8 @@ enum rte_crypto_asym_op_type {
 	/**< DH Public Key generation operation */
 	RTE_CRYPTO_ASYM_OP_SHARED_SECRET_COMPUTE,
 	/**< DH Shared Secret compute operation */
+	RTE_CRYPTO_ASYM_OP_KEY_VERIFY,
+	/**< DH Public Key Verification */
 	RTE_CRYPTO_ASYM_OP_LIST_END
 };
 
