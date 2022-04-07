@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added vhost async dequeue API to receive pkts from guest.**
+
+  Added vhost async dequeue API which can leverage DMA devices to accelerate
+  receiving pkts from guest.
 
 Removed Items
 -------------
