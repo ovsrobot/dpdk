@@ -1523,6 +1523,80 @@ icp_qat_fw_mmp_ecdsa_verify_gfp_521_input::in in @endlink
  * icp_qat_fw_mmp_kpt_ecdsa_sign_rs_gfp_521_output::r r @endlink @link
  * icp_qat_fw_mmp_kpt_ecdsa_sign_rs_gfp_521_output::s s @endlink
  */
+#define POINT_MULTIPLICATION_C25519 0x0a0634c6
+/**< Functionality ID for ECC curve25519 Variable Point Multiplication [k]P(x),
+ * as specified in RFC7748
+ * @li 2 input parameters : @link
+ * icp_qat_fw_point_multiplication_c25519_input_s::xp xp @endlink @link
+ * icp_qat_fw_point_multiplication_c25519_input_s::k k @endlink
+ * @li 1 output parameters : @link
+ * icp_qat_fw_point_multiplication_c25519_output_s::xr xr @endlink
+ */
+#define GENERATOR_MULTIPLICATION_C25519 0x0a0634d6
+/**< Functionality ID for ECC curve25519 Generator Point Multiplication [k]G(x),
+ * as specified in RFC7748
+ * @li 1 input parameters : @link
+ * icp_qat_fw_generator_multiplication_c25519_input_s::k k @endlink
+ * @li 1 output parameters : @link
+ * icp_qat_fw_generator_multiplication_c25519_output_s::xr xr @endlink
+ */
+#define POINT_MULTIPLICATION_ED25519 0x100b34e6
+/**< Functionality ID for ECC edwards25519 Variable Point Multiplication [k]P,
+ * as specified in RFC8032
+ * @li 3 input parameters : @link
+ * icp_qat_fw_point_multiplication_ed25519_input_s::xp xp @endlink @link
+ * icp_qat_fw_point_multiplication_ed25519_input_s::yp yp @endlink @link
+ * icp_qat_fw_point_multiplication_ed25519_input_s::k k @endlink
+ * @li 2 output parameters : @link
+ * icp_qat_fw_point_multiplication_ed25519_output_s::xr xr @endlink @link
+ * icp_qat_fw_point_multiplication_ed25519_output_s::yr yr @endlink
+ */
+#define GENERATOR_MULTIPLICATION_ED25519 0x100a34f6
+/**< Functionality ID for ECC edwards25519 Generator Point Multiplication [k]G,
+ * as specified in RFC8032
+ * @li 1 input parameters : @link
+ * icp_qat_fw_generator_multiplication_ed25519_input_s::k k @endlink
+ * @li 2 output parameters : @link
+ * icp_qat_fw_generator_multiplication_ed25519_output_s::xr xr @endlink @link
+ * icp_qat_fw_generator_multiplication_ed25519_output_s::yr yr @endlink
+ */
+#define POINT_MULTIPLICATION_C448 0x0c063506
+/**< Functionality ID for ECC curve448 Variable Point Multiplication [k]P(x), as
+ * specified in RFC7748
+ * @li 2 input parameters : @link
+ * icp_qat_fw_point_multiplication_c448_input_s::xp xp @endlink @link
+ * icp_qat_fw_point_multiplication_c448_input_s::k k @endlink
+ * @li 1 output parameters : @link
+ * icp_qat_fw_point_multiplication_c448_output_s::xr xr @endlink
+ */
+#define GENERATOR_MULTIPLICATION_C448 0x0c063516
+/**< Functionality ID for ECC curve448 Generator Point Multiplication [k]G(x),
+ * as specified in RFC7748
+ * @li 1 input parameters : @link
+ * icp_qat_fw_generator_multiplication_c448_input_s::k k @endlink
+ * @li 1 output parameters : @link
+ * icp_qat_fw_generator_multiplication_c448_output_s::xr xr @endlink
+ */
+#define POINT_MULTIPLICATION_ED448 0x1a0b3526
+/**< Functionality ID for ECC edwards448 Variable Point Multiplication [k]P, as
+ * specified in RFC8032
+ * @li 3 input parameters : @link
+ * icp_qat_fw_point_multiplication_ed448_input_s::xp xp @endlink @link
+ * icp_qat_fw_point_multiplication_ed448_input_s::yp yp @endlink @link
+ * icp_qat_fw_point_multiplication_ed448_input_s::k k @endlink
+ * @li 2 output parameters : @link
+ * icp_qat_fw_point_multiplication_ed448_output_s::xr xr @endlink @link
+ * icp_qat_fw_point_multiplication_ed448_output_s::yr yr @endlink
+ */
+#define GENERATOR_MULTIPLICATION_ED448 0x1a0a3536
+/**< Functionality ID for ECC edwards448 Generator Point Multiplication [k]P, as
+ * specified in RFC8032
+ * @li 1 input parameters : @link
+ * icp_qat_fw_generator_multiplication_ed448_input_s::k k @endlink
+ * @li 2 output parameters : @link
+ * icp_qat_fw_generator_multiplication_ed448_output_s::xr xr @endlink @link
+ * icp_qat_fw_generator_multiplication_ed448_output_s::yr yr @endlink
+ */
 
 #define PKE_LIVENESS 0x00000001
 /**< Functionality ID for PKE_LIVENESS
