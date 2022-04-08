@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel iavf driver.**
+
+  * Added Protocol Agnostic Flow Offloading support in AVF Flow Director.
+
 
 Removed Items
 -------------
