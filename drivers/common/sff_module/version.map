@@ -1,0 +1,9 @@
+INTERNAL {
+	global:
+
+	sff_8079_show_all;
+	sff_8472_show_all;
+	sff_8636_show_all;
+
+	local: *;
+};

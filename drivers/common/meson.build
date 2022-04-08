@@ -8,4 +8,5 @@ drivers = [
         'iavf',
         'mvep',
         'octeontx',
+        'sff_module',
 ]
