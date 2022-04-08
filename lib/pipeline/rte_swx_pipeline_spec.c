@@ -558,7 +558,7 @@ struct table_spec {
 static void
 table_spec_free(struct table_spec *s)
 {
-	uintptr_t default_action_name;
+	uintptr_t default_action_name, default_action_args;
 	uint32_t i;
 
 	if (!s)
@@ -593,8 +593,9 @@ table_spec_free(struct table_spec *s)
 	free((void *)default_action_name);
 	s->params.default_action_name = NULL;
 
-	free(s->params.default_action_data);
-	s->params.default_action_data = NULL;
+	default_action_args = (uintptr_t)s->params.default_action_args;
+	free((void *)default_action_args);
+	s->params.default_action_args = NULL;
 
 	free(s->params.action_is_for_table_entries);
 	s->params.action_is_for_table_entries = NULL;
@@ -1339,7 +1340,7 @@ struct learner_spec {
 static void
 learner_spec_free(struct learner_spec *s)
 {
-	uintptr_t default_action_name;
+	uintptr_t default_action_name, default_action_args;
 	uint32_t i;
 
 	if (!s)
@@ -1374,8 +1375,9 @@ learner_spec_free(struct learner_spec *s)
 	free((void *)default_action_name);
 	s->params.default_action_name = NULL;
 
-	free(s->params.default_action_data);
-	s->params.default_action_data = NULL;
+	default_action_args = (uintptr_t)s->params.default_action_args;
+	free((void *)default_action_args);
+	s->params.default_action_args = NULL;
 
 	free(s->params.action_is_for_table_entries);
 	s->params.action_is_for_table_entries = NULL;
