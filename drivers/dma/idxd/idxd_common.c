@@ -597,6 +597,7 @@ idxd_dmadev_create(const char *name, struct rte_device *dev,
 	dmadev->fp_obj->dev_private = idxd;
 
 	idxd->dmadev->state = RTE_DMA_DEV_READY;
+	rte_atomic16_inc(&idxd->u.pci->ref_count);
 
 	return 0;
 
