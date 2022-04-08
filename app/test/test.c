@@ -24,6 +24,7 @@ extern cmdline_parse_ctx_t main_ctx[];
 #include <rte_cycles.h>
 #include <rte_log.h>
 #include <rte_string_fns.h>
+#include <rte_dmadev.h>
 #ifdef RTE_LIB_TIMER
 #include <rte_timer.h>
 #endif
@@ -244,6 +245,11 @@ out:
 #ifdef RTE_LIB_TIMER
 	rte_timer_subsystem_finalize();
 #endif
+
+	/* close all dmadevs */
+	RTE_DMA_FOREACH_DEV(i)
+		rte_dma_close(i);
+
 	rte_eal_cleanup();
 	return ret;
 }
