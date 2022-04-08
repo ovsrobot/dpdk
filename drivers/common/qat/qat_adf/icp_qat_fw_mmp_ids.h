@@ -1524,6 +1524,23 @@ icp_qat_fw_mmp_ecdsa_verify_gfp_521_input::in in @endlink
  * icp_qat_fw_mmp_kpt_ecdsa_sign_rs_gfp_521_output::s s @endlink
  */
 
+#define PKE_ECDSA_SIGN_RS_P256 0x18133566
+/**< Functionality ID for ECC P256 ECDSA Sign RS
+ * @li 3 input parameters : @link icp_qat_fw_mmp_ecdsa_sign_rs_p256_input_s::k k
+ * @endlink @link icp_qat_fw_mmp_ecdsa_sign_rs_p256_input_s::e e @endlink @link
+ * icp_qat_fw_mmp_ecdsa_sign_rs_p256_input_s::d d @endlink
+ * @li 2 output parameters : @link icp_qat_fw_mmp_ecdsa_sign_rs_p256_output_s::r
+ * r @endlink @link icp_qat_fw_mmp_ecdsa_sign_rs_p256_output_s::s s @endlink
+ */
+#define PKE_ECDSA_SIGN_RS_P384 0x1a1335a6
+/**< Functionality ID for ECC P384 ECDSA Sign RS
+ * @li 3 input parameters : @link icp_qat_fw_mmp_ecdsa_sign_rs_p384_input_s::k k
+ * @endlink @link icp_qat_fw_mmp_ecdsa_sign_rs_p384_input_s::e e @endlink @link
+ * icp_qat_fw_mmp_ecdsa_sign_rs_p384_input_s::d d @endlink
+ * @li 2 output parameters : @link icp_qat_fw_mmp_ecdsa_sign_rs_p384_output_s::r
+ * r @endlink @link icp_qat_fw_mmp_ecdsa_sign_rs_p384_output_s::s s @endlink
+ */
+
 #define PKE_LIVENESS 0x00000001
 /**< Functionality ID for PKE_LIVENESS
  * @li 0 input parameter(s)

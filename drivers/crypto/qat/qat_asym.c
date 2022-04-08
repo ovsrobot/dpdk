@@ -574,7 +574,7 @@ rsa_collect(struct rte_crypto_asym_op *asym_op,
 }
 
 static int
-ecdsa_set_input(struct rte_crypto_asym_op *asym_op,
+ecdsa_set_generic_input(struct rte_crypto_asym_op *asym_op,
 		struct icp_qat_fw_pke_request *qat_req,
 		struct qat_asym_op_cookie *cookie,
 		struct rte_crypto_asym_xform *xform)
@@ -672,6 +672,70 @@ ecdsa_set_input(struct rte_crypto_asym_op *asym_op,
 	}
 
 	return 0;
+}
+
+static int
+ecdsa_set_named_input(struct rte_crypto_asym_op *asym_op,
+		struct icp_qat_fw_pke_request *qat_req,
+		struct qat_asym_op_cookie *cookie,
+		struct rte_crypto_asym_xform *xform)
+{
+	struct qat_asym_function qat_function;
+	uint32_t qat_func_alignsize, func_id;
+	int curve_id;
+
+	curve_id = pick_curve(xform);
+	if (curve_id < 0) {
+		QAT_LOG(DEBUG, "Incorrect elliptic curve");
+		return -EINVAL;
+	}
+
+	qat_function = get_ecdsa_named_function(xform);
+	func_id = qat_function.func_id;
+	if (func_id == 0) {
+		QAT_LOG(ERR, "Cannot obtain functionality id");
+		return -EINVAL;
+	}
+	qat_func_alignsize =
+		RTE_ALIGN_CEIL(qat_function.bytesize, 8);
+
+	SET_PKE_LN(asym_op->ecdsa.k, qat_func_alignsize, 0);
+	SET_PKE_LN(asym_op->ecdsa.message, qat_func_alignsize, 1);
+	SET_PKE_LN(asym_op->ecdsa.pkey, qat_func_alignsize, 2);
+
+	cookie->alg_bytesize = curve[curve_id].bytesize;
+	cookie->qat_func_alignsize = qat_func_alignsize;
+	qat_req->pke_hdr.cd_pars.func_id = func_id;
+	qat_req->input_param_count =
+			3;
+	qat_req->output_param_count =
+			2;
+
+	HEXDUMP("k", cookie->input_array[0], qat_func_alignsize);
+	HEXDUMP("e", cookie->input_array[1], qat_func_alignsize);
+	HEXDUMP("d", cookie->input_array[2], qat_func_alignsize);
+
+	return 0;
+}
+
+static int
+ecdsa_set_input(struct rte_crypto_asym_op *asym_op,
+		struct icp_qat_fw_pke_request *qat_req,
+		struct qat_asym_op_cookie *cookie,
+		struct rte_crypto_asym_xform *xform,
+		enum qat_device_gen qat_dev_gen)
+{
+	if (qat_dev_gen >= QAT_GEN4 && asym_op->ecdsa.op_type ==
+			RTE_CRYPTO_ASYM_OP_SIGN &&
+			(xform->ec.curve_id == RTE_CRYPTO_EC_GROUP_SECP256R1
+			|| xform->ec.curve_id ==
+				RTE_CRYPTO_EC_GROUP_SECP384R1)) {
+		return ecdsa_set_named_input(asym_op, qat_req,
+				cookie,	xform);
+	} else {
+		return ecdsa_set_generic_input(asym_op, qat_req,
+				cookie,	xform);
+	}
 }
 
 static uint8_t
@@ -783,7 +847,8 @@ static int
 asym_set_input(struct rte_crypto_asym_op *asym_op,
 		struct icp_qat_fw_pke_request *qat_req,
 		struct qat_asym_op_cookie *cookie,
-		struct rte_crypto_asym_xform *xform)
+		struct rte_crypto_asym_xform *xform,
+		enum qat_device_gen qat_dev_gen)
 {
 	switch (xform->xform_type) {
 	case RTE_CRYPTO_ASYM_XFORM_MODEX:
@@ -797,7 +862,7 @@ asym_set_input(struct rte_crypto_asym_op *asym_op,
 				cookie, xform);
 	case RTE_CRYPTO_ASYM_XFORM_ECDSA:
 		return ecdsa_set_input(asym_op, qat_req,
-				cookie, xform);
+				cookie, xform, qat_dev_gen);
 	case RTE_CRYPTO_ASYM_XFORM_ECPM:
 		return ecpm_set_input(asym_op, qat_req,
 				cookie, xform);
@@ -811,7 +876,7 @@ asym_set_input(struct rte_crypto_asym_op *asym_op,
 static int
 qat_asym_build_request(void *in_op, uint8_t *out_msg, void *op_cookie,
 			__rte_unused uint64_t *opaque,
-			__rte_unused enum qat_device_gen qat_dev_gen)
+			enum qat_device_gen qat_dev_gen)
 {
 	struct rte_crypto_op *op = (struct rte_crypto_op *)in_op;
 	struct rte_crypto_asym_op *asym_op = op->asym;
@@ -845,7 +910,7 @@ qat_asym_build_request(void *in_op, uint8_t *out_msg, void *op_cookie,
 		goto error;
 	}
 	err = asym_set_input(asym_op, qat_req, cookie,
-			xform);
+			xform, qat_dev_gen);
 	if (err) {
 		op->status = RTE_CRYPTO_OP_STATUS_INVALID_ARGS;
 		goto error;
