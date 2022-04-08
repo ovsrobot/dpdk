@@ -194,6 +194,7 @@ New Features
 
   * Added tests to verify IPSec AH in combined mode.
   * Added AH known test vectors for SHA256 HMAC.
+  * Added AH known test vectors for AES-GMAC along with combined mode.
 
 Removed Items
 -------------
