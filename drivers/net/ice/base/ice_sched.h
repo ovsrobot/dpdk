@@ -172,6 +172,9 @@ enum ice_status
 ice_cfg_vsi_q_priority(struct ice_port_info *pi, u16 num_qs, u32 *q_ids,
 		       u8 *q_prio);
 enum ice_status
+ice_cfg_node_priority(struct ice_port_info *pi,
+		      struct ice_sched_node *node, u8 priority);
+enum ice_status
 ice_cfg_vsi_bw_alloc(struct ice_port_info *pi, u16 vsi_handle, u8 ena_tcmap,
 		     enum ice_rl_type rl_type, u8 *bw_alloc);
 enum ice_status

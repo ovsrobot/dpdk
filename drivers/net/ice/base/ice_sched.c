@@ -3614,6 +3614,27 @@ ice_cfg_vsi_q_priority(struct ice_port_info *pi, u16 num_qs, u32 *q_ids,
 }
 
 /**
+ * ice_cfg_node_priority - config priority of node
+ * @pi: port information structure
+ * @node: sched node to configure
+ * @priority: sibling priority
+ *
+ * This function configures node element's sibling priority only.
+ */
+enum ice_status
+ice_cfg_node_priority(struct ice_port_info *pi, struct ice_sched_node *node,
+		      u8 priority)
+{
+	enum ice_status status = ICE_ERR_PARAM;
+
+	ice_acquire_lock(&pi->sched_lock);
+	status = ice_sched_cfg_sibl_node_prio(pi, node, priority);
+	ice_release_lock(&pi->sched_lock);
+
+	return status;
+}
+
+/**
  * ice_cfg_agg_vsi_priority_per_tc - config aggregator's VSI priority per TC
  * @pi: port information structure
  * @agg_id: Aggregator ID
