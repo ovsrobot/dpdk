@@ -298,4 +298,24 @@ get_ecpm_function(struct rte_crypto_asym_xform *xform)
 	return qat_function;
 }
 
+static struct qat_asym_function
+get_ecpm_named_function(struct rte_crypto_asym_xform *xform)
+{
+	struct qat_asym_function qat_function;
+
+	switch (xform->ec.curve_id) {
+	case RTE_CRYPTO_EC_GROUP_SECP256R1:
+		qat_function.func_id = PKE_EC_POINT_MULTIPLICATION_P256;
+		qat_function.bytesize = 32;
+		break;
+	case RTE_CRYPTO_EC_GROUP_SECP384R1:
+		qat_function.func_id = PKE_EC_POINT_MULTIPLICATION_P384;
+		qat_function.bytesize = 48;
+		break;
+	default:
+		qat_function.func_id = 0;
+	}
+	return qat_function;
+}
+
 #endif

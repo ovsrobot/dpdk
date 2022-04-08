@@ -1524,6 +1524,48 @@ icp_qat_fw_mmp_ecdsa_verify_gfp_521_input::in in @endlink
  * icp_qat_fw_mmp_kpt_ecdsa_sign_rs_gfp_521_output::s s @endlink
  */
 
+#define PKE_EC_GENERATOR_MULTIPLICATION_P256 0x12073556
+/**< Functionality ID for ECC P256 Generator Point Multiplication [k]G(x)
+ * @li 1 input parameters : @link
+ * icp_qat_fw_mmp_ec_p256_generator_multiplication_input_s::k k @endlink
+ * @li 2 output parameters : @link
+ * icp_qat_fw_mmp_ec_p256_generator_multiplication_output_s::xr xr @endlink
+ * @link icp_qat_fw_mmp_ec_p256_generator_multiplication_output_s::yr yr
+ * @endlink
+ */
+
+#define PKE_EC_GENERATOR_MULTIPLICATION_P384 0x0b073596
+/**< Functionality ID for ECC P384 Generator Point Multiplication [k]G(x)
+ * @li 1 input parameters : @link
+ * icp_qat_fw_mmp_ec_p384_generator_multiplication_input_s::k k @endlink
+ * @li 2 output parameters : @link
+ * icp_qat_fw_mmp_ec_p384_generator_multiplication_output_s::xr xr @endlink
+ * @link icp_qat_fw_mmp_ec_p384_generator_multiplication_output_s::yr yr
+ * @endlink
+ */
+
+#define PKE_EC_POINT_MULTIPLICATION_P256 0x0a083546
+/**< Functionality ID for ECC P256 Variable Point Multiplication [k]P(x)
+ * @li 3 input parameters : @link
+ * icp_qat_fw_mmp_ec_p256_point_multiplication_input_s::xp xp @endlink @link
+ * icp_qat_fw_mmp_ec_p256_point_multiplication_input_s::yp yp @endlink @link
+ * icp_qat_fw_mmp_ec_p256_point_multiplication_input_s::k k @endlink
+ * @li 2 output parameters : @link
+ * icp_qat_fw_mmp_ec_p256_point_multiplication_output_s::xr xr @endlink @link
+ * icp_qat_fw_mmp_ec_p256_point_multiplication_output_s::yr yr @endlink
+ */
+
+#define PKE_EC_POINT_MULTIPLICATION_P384 0x0b083586
+/**< Functionality ID for ECC P384 Variable Point Multiplication [k]P(x)
+ * @li 3 input parameters : @link
+ * icp_qat_fw_mmp_ec_p384_point_multiplication_input_s::xp xp @endlink @link
+ * icp_qat_fw_mmp_ec_p384_point_multiplication_input_s::yp yp @endlink @link
+ * icp_qat_fw_mmp_ec_p384_point_multiplication_input_s::k k @endlink
+ * @li 2 output parameters : @link
+ * icp_qat_fw_mmp_ec_p384_point_multiplication_output_s::xr xr @endlink @link
+ * icp_qat_fw_mmp_ec_p384_point_multiplication_output_s::yr yr @endlink
+ */
+
 #define PKE_ECDSA_SIGN_RS_P256 0x18133566
 /**< Functionality ID for ECC P256 ECDSA Sign RS
  * @li 3 input parameters : @link icp_qat_fw_mmp_ecdsa_sign_rs_p256_input_s::k k
