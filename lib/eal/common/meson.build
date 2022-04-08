@@ -35,6 +35,7 @@ sources += files(
         'rte_malloc.c',
         'rte_random.c',
         'rte_reciprocal.c',
+	'rte_seqlock.c',
         'rte_service.c',
         'rte_version.c',
 )
