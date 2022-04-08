@@ -474,6 +474,7 @@ struct ice_tm_node {
 	uint32_t weight;
 	uint32_t reference_count;
 	struct ice_tm_node *parent;
+	struct ice_tm_node **children;
 	struct ice_tm_shaper_profile *shaper_profile;
 	struct rte_tm_node_params params;
 };
@@ -482,6 +483,8 @@ struct ice_tm_node {
 enum ice_tm_node_type {
 	ICE_TM_NODE_TYPE_PORT,
 	ICE_TM_NODE_TYPE_TC,
+	ICE_TM_NODE_TYPE_VSI,
+	ICE_TM_NODE_TYPE_QGROUP,
 	ICE_TM_NODE_TYPE_QUEUE,
 	ICE_TM_NODE_TYPE_MAX,
 };
@@ -489,10 +492,14 @@ enum ice_tm_node_type {
 /* Struct to store all the Traffic Manager configuration. */
 struct ice_tm_conf {
 	struct ice_shaper_profile_list shaper_profile_list;
-	struct ice_tm_node *root; /* root node - vf vsi */
+	struct ice_tm_node *root; /* root node - port */
 	struct ice_tm_node_list tc_list; /* node list for all the TCs */
+	struct ice_tm_node_list vsi_list; /* node list for all the VSIs */
+	struct ice_tm_node_list qgroup_list; /* node list for all the queue groups */
 	struct ice_tm_node_list queue_list; /* node list for all the queues */
 	uint32_t nb_tc_node;
+	uint32_t nb_vsi_node;
+	uint32_t nb_qgroup_node;
 	uint32_t nb_queue_node;
 	bool committed;
 };
