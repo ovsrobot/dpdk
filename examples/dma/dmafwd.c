@@ -1097,6 +1097,12 @@ main(int argc, char **argv)
 			rte_ring_free(cfg.ports[i].rx_to_tx_ring);
 	}
 
+	/* close all dmadevs */
+	RTE_DMA_FOREACH_DEV(i) {
+		printf("Closing dmadev %d\n", i);
+		rte_dma_close(i);
+	}
+
 	/* clean up the EAL */
 	rte_eal_cleanup();
 
