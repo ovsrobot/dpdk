@@ -193,6 +193,7 @@ New Features
 * **Updated lookaside protocol (IPsec) tests in dpdk-test.**
 
   * Added tests to verify IPSec AH in combined mode.
+  * Added AH known test vectors for SHA256 HMAC.
 
 Removed Items
 -------------
