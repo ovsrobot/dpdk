@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel ice driver.**
+
+  * Added Tx QoS rate limitation and priority configuration support for queue and queue group.
+  * Added TX QoS queue weight configuration support.
 
 Removed Items
 -------------
