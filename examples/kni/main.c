@@ -75,6 +75,7 @@
 #define KNI_SECOND_PER_DAY      86400
 
 #define KNI_MAX_KTHREAD 32
+#define MIN_ZERO_POLL_COUNT		100
 /*
  * Structure of port parameters
  */
@@ -98,6 +99,8 @@ static struct rte_eth_conf port_conf = {
 	},
 };
 
+/* ethernet addresses of ports */
+static rte_spinlock_t locks[RTE_MAX_ETHPORTS];
 /* Mempool for mbufs */
 static struct rte_mempool * pktmbuf_pool = NULL;
 
@@ -107,6 +110,8 @@ static uint32_t ports_mask = 0;
 static int promiscuous_on = 0;
 /* Monitor link status continually. off by default. */
 static int monitor_links;
+/* rx set in interrupt mode off by default. */
+static int intr_rx_en;
 
 /* Structure type for recording kni interface specific stats */
 struct kni_interface_stats {
@@ -206,7 +211,7 @@ kni_burst_free_mbufs(struct rte_mbuf **pkts, unsigned num)
 /**
  * Interface to burst rx and enqueue mbufs into rx_q
  */
-static void
+static int
 kni_ingress(struct kni_port_params *p)
 {
 	uint8_t i;
@@ -214,9 +219,9 @@ kni_ingress(struct kni_port_params *p)
 	unsigned nb_rx, num;
 	uint32_t nb_kni;
 	struct rte_mbuf *pkts_burst[PKT_BURST_SZ];
-
+	int ret = 0;
 	if (p == NULL)
-		return;
+		return -1;
 
 	nb_kni = p->nb_kni;
 	port_id = p->port_id;
@@ -225,8 +230,10 @@ kni_ingress(struct kni_port_params *p)
 		nb_rx = rte_eth_rx_burst(port_id, 0, pkts_burst, PKT_BURST_SZ);
 		if (unlikely(nb_rx > PKT_BURST_SZ)) {
 			RTE_LOG(ERR, APP, "Error receiving from eth\n");
-			return;
+			return -1;
 		}
+		if (nb_rx == 0)
+			ret = 1;
 		/* Burst tx to kni */
 		num = rte_kni_tx_burst(p->kni[i], pkts_burst, nb_rx);
 		if (num)
@@ -239,6 +246,7 @@ kni_ingress(struct kni_port_params *p)
 			kni_stats[port_id].rx_dropped += nb_rx - num;
 		}
 	}
+	return ret;
 }
 
 /**
@@ -277,12 +285,95 @@ kni_egress(struct kni_port_params *p)
 	}
 }
 
+/**
+ * force polling thread sleep until one-shot rx interrupt triggers
+ * @param port_id
+ *  Port id.
+ * @param queue_id
+ *  Rx queue id.
+ * @return
+ *  0 on success
+ */
+static int
+sleep_until_rx_interrupt(int num, int lcore)
+{
+	/*
+	 * we want to track when we are woken up by traffic so that we can go
+	 * back to sleep again without log spamming. Avoid cache line sharing
+	 * to prevent threads stepping on each others' toes.
+	 */
+	static struct {
+		bool wakeup;
+	} __rte_cache_aligned status[RTE_MAX_LCORE];
+	struct rte_epoll_event event[num];
+	int n, i;
+	uint16_t port_id;
+	uint8_t queue_id;
+	void *data;
+
+	if (status[lcore].wakeup) {
+		RTE_LOG(INFO, APP,
+				"lcore %u sleeps until interrupt triggers\n",
+				rte_lcore_id());
+	}
+
+	n = rte_epoll_wait(RTE_EPOLL_PER_THREAD, event, num, 10);
+	for (i = 0; i < n; i++) {
+		data = event[i].epdata.data;
+		port_id = ((uintptr_t)data) >> CHAR_BIT;
+		queue_id = ((uintptr_t)data) &
+			RTE_LEN2MASK(CHAR_BIT, uint8_t);
+		RTE_LOG(INFO, APP,
+			"lcore %u is waked up from rx interrupt on"
+			" port %d queue %d\n",
+			rte_lcore_id(), port_id, queue_id);
+	}
+	status[lcore].wakeup = n != 0;
+
+	return 0;
+}
+
+static void
+turn_on_off_intr(uint16_t port_id, uint16_t queue_id, bool on)
+{
+	rte_spinlock_lock(&(locks[port_id]));
+	if (on)
+		rte_eth_dev_rx_intr_enable(port_id, queue_id);
+	else
+		rte_eth_dev_rx_intr_disable(port_id, queue_id);
+	rte_spinlock_unlock(&(locks[port_id]));
+}
+
+static int event_register(void)
+{
+	uint8_t queueid;
+	uint16_t portid;
+	uint32_t data;
+	int ret;
+
+	portid = 0;
+	queueid = 0;
+	data = portid << CHAR_BIT | queueid;
+
+	ret = rte_eth_dev_rx_intr_ctl_q(portid, queueid,
+					RTE_EPOLL_PER_THREAD,
+					RTE_INTR_EVENT_ADD,
+					(void *)((uintptr_t)data));
+	if (ret)
+		return ret;
+
+
+	return 0;
+}
+
 static int
 main_loop(__rte_unused void *arg)
 {
 	uint16_t i;
 	int32_t f_stop;
 	int32_t f_pause;
+	int ret = 0;
+	uint32_t zero_rx_packet_count = 0;
 	const unsigned lcore_id = rte_lcore_id();
 	enum lcore_rxtx {
 		LCORE_NONE,
@@ -291,12 +382,19 @@ main_loop(__rte_unused void *arg)
 		LCORE_MAX
 	};
 	enum lcore_rxtx flag = LCORE_NONE;
+	int intr_en = 0;
 
 	RTE_ETH_FOREACH_DEV(i) {
 		if (!kni_port_params_array[i])
 			continue;
+		/* initialize spinlock for each port */
+		rte_spinlock_init(&(locks[i]));
 		if (kni_port_params_array[i]->lcore_rx == (uint8_t)lcore_id) {
 			flag = LCORE_RX;
+			if (intr_rx_en && !event_register())
+				intr_en = 1;
+			else
+				RTE_LOG(INFO, APP, "RX interrupt won't enable.\n");
 			break;
 		} else if (kni_port_params_array[i]->lcore_tx ==
 						(uint8_t)lcore_id) {
@@ -316,7 +414,23 @@ main_loop(__rte_unused void *arg)
 				break;
 			if (f_pause)
 				continue;
-			kni_ingress(kni_port_params_array[i]);
+			ret = kni_ingress(kni_port_params_array[i]);
+			if (ret == 1) {
+				zero_rx_packet_count++;
+				if (zero_rx_packet_count <=
+						MIN_ZERO_POLL_COUNT)
+					continue;
+			} else
+				zero_rx_packet_count = 0;
+
+			if (zero_rx_packet_count > 0) {
+				zero_rx_packet_count = 0;
+				if (unlikely(intr_en)) {
+					turn_on_off_intr(i, 0, 1);
+					sleep_until_rx_interrupt(1, lcore_id);
+					turn_on_off_intr(i, 0, 0);
+				}
+			}
 		}
 	} else if (flag == LCORE_TX) {
 		RTE_LOG(INFO, APP, "Lcore %u is writing to port %d\n",
@@ -341,12 +455,13 @@ main_loop(__rte_unused void *arg)
 static void
 print_usage(const char *prgname)
 {
-	RTE_LOG(INFO, APP, "\nUsage: %s [EAL options] -- -p PORTMASK -P -m "
+	RTE_LOG(INFO, APP, "\nUsage: %s [EAL options] -- -p PORTMASK -P -m -I "
 		   "[--config (port,lcore_rx,lcore_tx,lcore_kthread...)"
 		   "[,(port,lcore_rx,lcore_tx,lcore_kthread...)]]\n"
 		   "    -p PORTMASK: hex bitmask of ports to use\n"
 		   "    -P : enable promiscuous mode\n"
 		   "    -m : enable monitoring of port carrier state\n"
+		   "    -I : enable rx interrupt mode\n"
 		   "    --config (port,lcore_rx,lcore_tx,lcore_kthread...): "
 		   "port and lcore configurations\n",
 	           prgname);
@@ -527,7 +642,7 @@ parse_args(int argc, char **argv)
 	opterr = 0;
 
 	/* Parse command line */
-	while ((opt = getopt_long(argc, argv, "p:Pm", longopts,
+	while ((opt = getopt_long(argc, argv, "p:PmI", longopts,
 						&longindex)) != EOF) {
 		switch (opt) {
 		case 'p':
@@ -538,6 +653,9 @@ parse_args(int argc, char **argv)
 			break;
 		case 'm':
 			monitor_links = 1;
+			break;
+		case 'I':
+			intr_rx_en = 1;
 			break;
 		case 0:
 			if (!strncmp(longopts[longindex].name,
@@ -610,6 +728,8 @@ init_port(uint16_t port)
 	if (dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE)
 		local_port_conf.txmode.offloads |=
 			RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
+	if (intr_rx_en)
+		local_port_conf.intr_conf.rxq = 1;
 	ret = rte_eth_dev_configure(port, 1, 1, &local_port_conf);
 	if (ret < 0)
 		rte_exit(EXIT_FAILURE, "Could not configure port%u (%d)\n",
