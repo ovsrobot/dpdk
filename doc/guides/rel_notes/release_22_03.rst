@@ -190,6 +190,9 @@ New Features
   Crypto producer mode helps to measure performance of OP_NEW and OP_FORWARD
   modes of event crypto adapter.
 
+* **Updated lookaside protocol (IPsec) tests in dpdk-test.**
+
+  * Added tests to verify IPSec AH in combined mode.
 
 Removed Items
 -------------
