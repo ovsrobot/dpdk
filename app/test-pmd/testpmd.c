@@ -45,6 +45,7 @@
 #include <rte_pci.h>
 #include <rte_ether.h>
 #include <rte_ethdev.h>
+#include <rte_dmadev.h>
 #include <rte_dev.h>
 #include <rte_string_fns.h>
 #ifdef RTE_NET_IXGBE
@@ -3400,6 +3401,14 @@ pmd_test_exit(void)
 			fflush(stdout);
 			close_port(pt_id);
 		}
+	}
+
+	/* stop and close all dmadevs */
+	RTE_DMA_FOREACH_DEV(i) {
+		printf("\nStopping and closing dmadev %d...\n", i);
+		fflush(stdout);
+		rte_dma_stop(i);
+		rte_dma_close(i);
 	}
 
 	if (hot_plug) {
