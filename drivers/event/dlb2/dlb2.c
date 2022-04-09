@@ -2742,25 +2742,73 @@ dlb2_event_build_hcws(struct dlb2_port *qm_port,
 						ev[3].event_type,
 					     DLB2_QE_EV_TYPE_WORD + 4);
 
-		/* Store the metadata to memory (use the double-precision
-		 * _mm_storeh_pd because there is no integer function for
-		 * storing the upper 64b):
-		 * qe[0] metadata = sse_qe[0][63:0]
-		 * qe[1] metadata = sse_qe[0][127:64]
-		 * qe[2] metadata = sse_qe[1][63:0]
-		 * qe[3] metadata = sse_qe[1][127:64]
-		 */
-		_mm_storel_epi64((__m128i *)&qe[0].u.opaque_data, sse_qe[0]);
-		_mm_storeh_pd((double *)&qe[1].u.opaque_data,
-			      (__m128d)sse_qe[0]);
-		_mm_storel_epi64((__m128i *)&qe[2].u.opaque_data, sse_qe[1]);
-		_mm_storeh_pd((double *)&qe[3].u.opaque_data,
-			      (__m128d)sse_qe[1]);
+ #ifdef __AVX512VL__
 
-		qe[0].data = ev[0].u64;
-		qe[1].data = ev[1].u64;
-		qe[2].data = ev[2].u64;
-		qe[3].data = ev[3].u64;
+			/*
+			 * 1) Build avx512 QE store and build each
+			 *    QE individually as XMM register
+			 * 2) Merge the 4 XMM registers/QEs into single AVX512
+			 *    register
+			 * 3) Store single avx512 register to &qe[0] (4x QEs
+			 *    stored in 1x store)
+			 */
+
+			__m128i v_qe0 = _mm_setzero_si128();
+			uint64_t meta = _mm_extract_epi64(sse_qe[0], 0);
+			v_qe0 = _mm_insert_epi64(v_qe0, ev[0].u64, 0);
+			v_qe0 = _mm_insert_epi64(v_qe0, meta, 1);
+
+			__m128i v_qe1 = _mm_setzero_si128();
+			meta = _mm_extract_epi64(sse_qe[0], 1);
+			v_qe1 = _mm_insert_epi64(v_qe1, ev[1].u64, 0);
+			v_qe1 = _mm_insert_epi64(v_qe1, meta, 1);
+
+			__m128i v_qe2 = _mm_setzero_si128();
+			meta = _mm_extract_epi64(sse_qe[1], 0);
+			v_qe2 = _mm_insert_epi64(v_qe2, ev[2].u64, 0);
+			v_qe2 = _mm_insert_epi64(v_qe2, meta, 1);
+
+			__m128i v_qe3 = _mm_setzero_si128();
+			meta = _mm_extract_epi64(sse_qe[1], 1);
+			v_qe3 = _mm_insert_epi64(v_qe3, ev[3].u64, 0);
+			v_qe3 = _mm_insert_epi64(v_qe3, meta, 1);
+
+			/* we have 4x XMM registers, one per QE. */
+			__m512i v_all_qes = _mm512_setzero_si512();
+			v_all_qes = _mm512_inserti32x4(v_all_qes, v_qe0, 0);
+			v_all_qes = _mm512_inserti32x4(v_all_qes, v_qe1, 1);
+			v_all_qes = _mm512_inserti32x4(v_all_qes, v_qe2, 2);
+			v_all_qes = _mm512_inserti32x4(v_all_qes, v_qe3, 3);
+
+			/*
+			 * store the 4x QEs in a single register to the scratch
+			 * space of the PMD
+			 */
+			_mm512_store_si512(&qe[0], v_all_qes);
+#else
+			/*
+			 * Store the metadata to memory (use the double-precision
+			 * _mm_storeh_pd because there is no integer function for
+			 * storing the upper 64b):
+			 * qe[0] metadata = sse_qe[0][63:0]
+			 * qe[1] metadata = sse_qe[0][127:64]
+			 * qe[2] metadata = sse_qe[1][63:0]
+			 * qe[3] metadata = sse_qe[1][127:64]
+			 */
+			_mm_storel_epi64((__m128i *)&qe[0].u.opaque_data,
+					 sse_qe[0]);
+			_mm_storeh_pd((double *)&qe[1].u.opaque_data,
+				      (__m128d)sse_qe[0]);
+			_mm_storel_epi64((__m128i *)&qe[2].u.opaque_data,
+					 sse_qe[1]);
+			_mm_storeh_pd((double *)&qe[3].u.opaque_data,
+				      (__m128d)sse_qe[1]);
+
+			qe[0].data = ev[0].u64;
+			qe[1].data = ev[1].u64;
+			qe[2].data = ev[2].u64;
+			qe[3].data = ev[3].u64;
+#endif
 
 		break;
 	case 3:
