@@ -58,6 +58,7 @@ struct dma_port_statistics {
 	uint64_t tx[RTE_MAX_ETHPORTS];
 	uint64_t tx_dropped[RTE_MAX_ETHPORTS];
 	uint64_t copy_dropped[RTE_MAX_ETHPORTS];
+	uint64_t enqueue_dropped[RTE_MAX_ETHPORTS];
 };
 struct dma_port_statistics port_statistics;
 struct total_statistics {
@@ -132,12 +133,14 @@ print_port_stats(uint16_t port_id)
 		"\nPackets sent: %34"PRIu64
 		"\nPackets received: %30"PRIu64
 		"\nPackets dropped on tx: %25"PRIu64
-		"\nPackets dropped on copy: %23"PRIu64,
+		"\nPackets dropped on copy: %23"PRIu64
+		"\nPackets dropped on enqueue: %20"PRIu64,
 		port_id,
 		port_statistics.tx[port_id],
 		port_statistics.rx[port_id],
 		port_statistics.tx_dropped[port_id],
-		port_statistics.copy_dropped[port_id]);
+		port_statistics.copy_dropped[port_id],
+		port_statistics.enqueue_dropped[port_id]);
 }
 
 /* Print out statistics for one dmadev device. */
@@ -227,8 +230,9 @@ print_stats(char *prgname)
 			print_port_stats(port_id);
 
 			delta_ts.total_packets_dropped +=
-				port_statistics.tx_dropped[port_id]
-				+ port_statistics.copy_dropped[port_id];
+				port_statistics.tx_dropped[port_id] +
+				port_statistics.copy_dropped[port_id] +
+				port_statistics.enqueue_dropped[port_id];
 			delta_ts.total_packets_tx +=
 				port_statistics.tx[port_id];
 			delta_ts.total_packets_rx +=
@@ -450,7 +454,7 @@ dma_rx_port(struct rxtx_port_config *rx_config)
 			(void *)&pkts_burst_copy[nb_enq],
 			nb_rx - nb_enq);
 
-		port_statistics.copy_dropped[rx_config->rxtx_port] +=
+		port_statistics.enqueue_dropped[rx_config->rxtx_port] +=
 			(nb_rx - nb_enq);
 	}
 }
