@@ -400,6 +400,10 @@ port_init(uint16_t port)
 
 		return retval;
 	}
+	if (dev_info.max_vmdq_pools == 0) {
+		RTE_LOG(ERR, VHOST_PORT, "Failed to get VMDQ info.\n");
+		return -1;
+	}
 
 	rxconf = &dev_info.default_rxconf;
 	txconf = &dev_info.default_txconf;
