@@ -27,6 +27,12 @@ extern "C" {
 
 struct rte_mbuf;
 
+/* IP options */
+#define RTE_IPV4_IPOPT_EOL       0
+#define RTE_IPV4_IPOPT_NOP       1
+#define RTE_IPV4_IPOPT_COPIED(v) ((v) & 0x80)
+#define RTE_IPV4_IPOPT_MAX_LEN   40
+
 /** death row size (in packets) */
 #define RTE_IP_FRAG_DEATH_ROW_LEN 32
 
