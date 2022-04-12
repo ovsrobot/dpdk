@@ -41,6 +41,7 @@
 #define PLT_MEMZONE_NAMESIZE	 RTE_MEMZONE_NAMESIZE
 #define PLT_STD_C11		 RTE_STD_C11
 #define PLT_PTR_ADD		 RTE_PTR_ADD
+#define PLT_PTR_SUB		 RTE_PTR_SUB
 #define PLT_PTR_DIFF		 RTE_PTR_DIFF
 #define PLT_MAX_RXTX_INTR_VEC_ID RTE_MAX_RXTX_INTR_VEC_ID
 #define PLT_INTR_VEC_RXTX_OFFSET RTE_INTR_VEC_RXTX_OFFSET
@@ -70,12 +71,16 @@
 #define PLT_U32_CAST(val) ((uint32_t)(val))
 #define PLT_U16_CAST(val) ((uint16_t)(val))
 
+/* Add / Sub pointer with scalar and cast to uint64_t */
+#define PLT_PTR_ADD_U64_CAST(__ptr, __x) PLT_U64_CAST(PLT_PTR_ADD(__ptr, __x))
+#define PLT_PTR_SUB_U64_CAST(__ptr, __x) PLT_U64_CAST(PLT_PTR_SUB(__ptr, __x))
+
 /** Divide ceil */
-#define PLT_DIV_CEIL(x, y)			\
-	({					\
-		__typeof(x) __x = x;		\
-		__typeof(y) __y = y;		\
-		(__x + __y - 1) / __y;		\
+#define PLT_DIV_CEIL(x, y)                                                     \
+	({                                                                     \
+		__typeof(x) __x = x;                                           \
+		__typeof(y) __y = y;                                           \
+		(__x + __y - 1) / __y;                                         \
 	})
 
 #define __plt_cache_aligned __rte_cache_aligned
@@ -113,10 +118,11 @@
 #define plt_bitmap_scan			rte_bitmap_scan
 #define plt_bitmap_get_memory_footprint rte_bitmap_get_memory_footprint
 
-#define plt_spinlock_t	    rte_spinlock_t
-#define plt_spinlock_init   rte_spinlock_init
-#define plt_spinlock_lock   rte_spinlock_lock
-#define plt_spinlock_unlock rte_spinlock_unlock
+#define plt_spinlock_t	     rte_spinlock_t
+#define plt_spinlock_init    rte_spinlock_init
+#define plt_spinlock_lock    rte_spinlock_lock
+#define plt_spinlock_unlock  rte_spinlock_unlock
+#define plt_spinlock_trylock rte_spinlock_trylock
 
 #define plt_intr_callback_register   rte_intr_callback_register
 #define plt_intr_callback_unregister rte_intr_callback_unregister
@@ -164,6 +170,10 @@
 #define plt_read64(addr) rte_read64_relaxed((volatile void *)(addr))
 #define plt_write64(val, addr)                                                 \
 	rte_write64_relaxed((val), (volatile void *)(addr))
+
+#define plt_read32(addr) rte_read32_relaxed((volatile void *)(addr))
+#define plt_write32(val, addr)                                                 \
+	rte_write32_relaxed((val), (volatile void *)(addr))
 
 #define plt_wmb()		rte_wmb()
 #define plt_rmb()		rte_rmb()
