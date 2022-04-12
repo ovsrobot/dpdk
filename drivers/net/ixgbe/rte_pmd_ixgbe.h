@@ -586,9 +586,7 @@ int rte_pmd_ixgbe_bypass_wd_reset(uint16_t port);
  *   - (-ENODEV) if *port* invalid.
  *   - (IXGBE_ERR_SWFW_SYNC) If sw/fw semaphore acquisition failed
  */
-__rte_experimental
-int
-rte_pmd_ixgbe_mdio_lock(uint16_t port);
+int rte_pmd_ixgbe_mdio_lock(uint16_t port);
 
 /**
  * Release swfw semaphore lock used for MDIO access
@@ -600,9 +598,7 @@ rte_pmd_ixgbe_mdio_lock(uint16_t port);
  *   - (-ENOTSUP) if hardware doesn't support.
  *   - (-ENODEV) if *port* invalid.
  */
-__rte_experimental
-int
-rte_pmd_ixgbe_mdio_unlock(uint16_t port);
+int rte_pmd_ixgbe_mdio_unlock(uint16_t port);
 
 /**
  * Read PHY register using MDIO without MDIO lock
@@ -622,9 +618,7 @@ rte_pmd_ixgbe_mdio_unlock(uint16_t port);
  *   - (-ENODEV) if *port* invalid.
  *   - (IXGBE_ERR_PHY) If PHY read command failed
  */
-__rte_experimental
-int
-rte_pmd_ixgbe_mdio_unlocked_read(uint16_t port, uint32_t reg_addr,
+int rte_pmd_ixgbe_mdio_unlocked_read(uint16_t port, uint32_t reg_addr,
 				 uint32_t dev_type, uint16_t *phy_data);
 
 /**
@@ -646,9 +640,7 @@ rte_pmd_ixgbe_mdio_unlocked_read(uint16_t port, uint32_t reg_addr,
  *   - (-ENODEV) if *port* invalid.
  *   - (IXGBE_ERR_PHY) If PHY read command failed
  */
-__rte_experimental
-int
-rte_pmd_ixgbe_mdio_unlocked_write(uint16_t port, uint32_t reg_addr,
+int rte_pmd_ixgbe_mdio_unlocked_write(uint16_t port, uint32_t reg_addr,
 				  uint32_t dev_type, uint16_t phy_data);
 
 /**
@@ -725,9 +717,7 @@ enum {
  *   - (-ENODEV) if *port* invalid.
  *   - (-ENOTSUP) if hardware doesn't support this feature.
  */
-__rte_experimental
-int
-rte_pmd_ixgbe_upd_fctrl_sbp(uint16_t port, int enable);
+int rte_pmd_ixgbe_upd_fctrl_sbp(uint16_t port, int enable);
 
 /**
  * Get port fdir info
