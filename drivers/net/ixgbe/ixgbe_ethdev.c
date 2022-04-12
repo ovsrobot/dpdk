@@ -236,9 +236,6 @@ static int ixgbe_dev_interrupt_get_status(struct rte_eth_dev *dev);
 static int ixgbe_dev_interrupt_action(struct rte_eth_dev *dev);
 static void ixgbe_dev_interrupt_handler(void *param);
 static void ixgbe_dev_interrupt_delayed_handler(void *param);
-static void *ixgbe_dev_setup_link_thread_handler(void *param);
-static int ixgbe_dev_wait_setup_link_complete(struct rte_eth_dev *dev,
-					      uint32_t timeout_ms);
 
 static int ixgbe_add_rar(struct rte_eth_dev *dev,
 			struct rte_ether_addr *mac_addr,
@@ -775,6 +772,33 @@ static const struct rte_ixgbe_xstats_name_off rte_ixgbevf_stats_strings[] = {
 #define IXGBEVF_NB_XSTATS (sizeof(rte_ixgbevf_stats_strings) /	\
 		sizeof(rte_ixgbevf_stats_strings[0]))
 
+/**
+ * This function is the same as ixgbe_need_crosstalk_fix() in base/ixgbe_common.c
+ *
+ * ixgbe_need_crosstalk_fix - Determine if we need to do cross talk fix
+ * @hw: pointer to hardware structure
+ *
+ * Contains the logic to identify if we need to verify link for the
+ * crosstalk fix
+ **/
+static bool ixgbe_need_crosstalk_fix(struct ixgbe_hw *hw)
+{
+	/* Does FW say we need the fix */
+	if (!hw->need_crosstalk_fix)
+		return false;
+
+	/* Only consider SFP+ PHYs i.e. media type fiber */
+	switch (ixgbe_get_media_type(hw)) {
+	case ixgbe_media_type_fiber:
+	case ixgbe_media_type_fiber_qsfp:
+		break;
+	default:
+		return false;
+	}
+
+	return true;
+}
+
 /*
  * This function is the same as ixgbe_is_sfp() in base/ixgbe.h.
  */
@@ -1064,6 +1088,306 @@ ixgbe_parse_devargs(struct ixgbe_adapter *adapter,
 	rte_kvargs_free(kvlist);
 }
 
+/**
+ * ixgbe_check_sfp_cage - Find present status of SFP module
+ * @hw: pointer to hardware structure
+ *
+ * Find if a SFP module is present and if this device supports SFPs
+ **/
+enum ixgbe_sfp_cage_status ixgbe_check_sfp_cage(struct ixgbe_hw *hw)
+{
+	enum ixgbe_sfp_cage_status sfp_cage_status;
+
+	/* If we're not a fiber/fiber_qsfp, no cage to check */
+	switch (hw->mac.ops.get_media_type(hw)) {
+	case ixgbe_media_type_fiber:
+	case ixgbe_media_type_fiber_qsfp:
+		break;
+	default:
+		return IXGBE_SFP_CAGE_NOCAGE;
+	}
+
+	switch (hw->mac.type) {
+	case ixgbe_mac_82599EB:
+		sfp_cage_status = !!(IXGBE_READ_REG(hw, IXGBE_ESDP) &
+			     IXGBE_ESDP_SDP2);
+		break;
+	case ixgbe_mac_X550EM_x:
+	case ixgbe_mac_X550EM_a:
+		/* SDP0 is the active low signal PRSNT#, so invert this */
+		sfp_cage_status = !(IXGBE_READ_REG(hw, IXGBE_ESDP) &
+				  IXGBE_ESDP_SDP0);
+		break;
+	default:
+		/* Don't know how to check this device type yet */
+		sfp_cage_status = IXGBE_SFP_CAGE_UNKNOWN;
+		DEBUGOUT("IXGBE_SFP_CAGE_UNKNOWN, unknown mac type %d\n",
+			 hw->mac.type);
+		break;
+	}
+
+	DEBUGOUT("sfp status %d for mac type %d\n", sfp_cage_status, hw->mac.type);
+	return sfp_cage_status;
+}
+
+static s32
+ixgbe_sfp_id_and_setup(struct rte_eth_dev *dev)
+{
+	struct ixgbe_hw *hw =
+		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	enum ixgbe_sfp_cage_status sfp_cage_status;
+	s32 err;
+
+	/* Can't ID or setup SFP if it's not plugged in */
+	sfp_cage_status = ixgbe_check_sfp_cage(hw);
+	if (sfp_cage_status == IXGBE_SFP_CAGE_EMPTY ||
+	    sfp_cage_status == IXGBE_SFP_CAGE_NOCAGE)
+		return IXGBE_ERR_SFP_NOT_PRESENT;
+
+	/* Something's in the cage, ID it */
+	hw->phy.ops.identify_sfp(hw);
+
+	/* Unknown module type, give up */
+	if (hw->phy.sfp_type == ixgbe_sfp_type_unknown) {
+		PMD_DRV_LOG(ERR, "unknown SFP type, giving up");
+		return IXGBE_ERR_SFP_NOT_SUPPORTED;
+	}
+
+	/* This should be a redundant check, since we looked at the
+	 * PRSNT# signal from the cage above, but just in case this is
+	 * an SFP that's slow to respond to I2C pokes correctly, try it
+	 * again later
+	 */
+	if (hw->phy.sfp_type == ixgbe_sfp_type_not_present) {
+		PMD_DRV_LOG(ERR, "IDed SFP as absent but cage PRSNT# active!?");
+		return IXGBE_ERR_SFP_NOT_PRESENT;
+	}
+
+	/* SFP is present and identified, try to set it up */
+	err = hw->mac.ops.setup_sfp(hw);
+	if (err)
+		PMD_DRV_LOG(ERR, "setup_sfp() failed %d", err);
+
+	return err;
+}
+
+static void
+ixgbe_sfp_service(struct rte_eth_dev *dev)
+{
+	struct ixgbe_hw *hw =
+		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ixgbe_interrupt *intr =
+		IXGBE_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
+	enum ixgbe_sfp_cage_status sfp_cage_status;
+	s32 err;
+	u8 sff_id;
+	bool have_int = false;
+
+	/* If there's no module cage, then there's nothing to service */
+	sfp_cage_status = ixgbe_check_sfp_cage(hw);
+	if (sfp_cage_status == IXGBE_SFP_CAGE_NOCAGE) {
+		PMD_DRV_LOG(DEBUG, "No SFP to service\n");
+		return;
+	}
+
+	/* TODO - Even for platforms where ixgbe_check_sfp_cage() gives a clear
+	 * status result, if there's no interrupts, or no interrupt for the SFP
+	 * cage present pin, even if other interrupts exist, then we still need
+	 * to poll here to set the flag.
+	 */
+#ifndef RTE_EXEC_ENV_FREEBSD
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
+	if (rte_intr_allow_others(intr_handle)) {
+		/* check if lsc interrupt is enabled */
+		if (dev->data->dev_conf.intr_conf.lsc)
+			have_int = true;
+	}
+#endif /* #ifdef RTE_EXEC_ENV_FREEBSD */
+
+	if (!have_int && sfp_cage_status == IXGBE_SFP_CAGE_EMPTY) {
+		intr->flags |= IXGBE_FLAG_NEED_SFP_SETUP;
+		PMD_DRV_LOG(DEBUG, "No SFP, no LSC, set NEED_SFP_SETUP\n");
+	}
+
+	/* For platforms that don't have a way to read the PRESENT# signal from
+	 * the SFP cage, fallback to doing an I2C read and seeing if it's ACKed
+	 * to determine if a module is present
+	 */
+	if (sfp_cage_status == IXGBE_SFP_CAGE_UNKNOWN) {
+		PMD_DRV_LOG(DEBUG,
+			    "SFP present unknown (int? %d), try I2C read\n",
+			    have_int);
+
+		/* Rather than calling identify_sfp, which will read a lot of I2C
+		 * registers (and in a slow processor intensive fashion due to
+		 * bit-banging, just read the SFF ID register, which is at a
+		 * common address across SFP/SFP+/QSFP modules and see if
+		 * there's a NACK.  This works since we only expect a NACK if no
+		 * module is present
+		 */
+		err = ixgbe_read_i2c_eeprom(hw, IXGBE_SFF_IDENTIFIER, &sff_id);
+		if (err != IXGBE_SUCCESS) {
+			PMD_DRV_LOG(DEBUG, "Received I2C NAK from SFP, set NEED_SFP_SETUP flag\n");
+			intr->flags |= IXGBE_FLAG_NEED_SFP_SETUP;
+			sfp_cage_status = IXGBE_SFP_CAGE_EMPTY;
+		} else {
+			PMD_DRV_LOG(DEBUG, "SFP ID read ACKed");
+			sfp_cage_status = IXGBE_SFP_CAGE_FULL;
+		}
+	}
+
+	if (sfp_cage_status == IXGBE_SFP_CAGE_EMPTY) {
+		PMD_DRV_LOG(DEBUG, "SFP absent, cage_status %d\n", sfp_cage_status);
+		return;
+	}
+
+	/* No setup requested?	Nothing to do */
+	if (!(intr->flags & IXGBE_FLAG_NEED_SFP_SETUP))
+		return;
+
+	err = ixgbe_sfp_id_and_setup(dev);
+	if (err) {
+		PMD_DRV_LOG(DEBUG, "failed to ID & setup SFP %d", err);
+		return;
+	}
+
+	/* Setup is done, clear the flag, but make sure link config runs for new SFP */
+	intr->flags &= ~IXGBE_FLAG_NEED_SFP_SETUP;
+	intr->flags |= IXGBE_FLAG_NEED_LINK_CONFIG;
+
+	/*
+	 * Since this is a new SFP, clear the old advertised speed mask so we don't
+	 * end up using an old slower rate
+	 */
+	hw->phy.autoneg_advertised = 0;
+}
+
+static void
+ixgbe_link_service(struct rte_eth_dev *dev)
+{
+	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ixgbe_interrupt *intr =
+		IXGBE_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
+	bool link_up, autoneg = false, have_int = false;
+	u32 speed;
+	s32 err;
+
+	/* Test if we have a LSC interrupt for this platform, if not we need to
+	 * manually check the link register since IXGBE_FLAG_NEED_LINK_CONFIG
+	 * will never be set in the interrupt handler
+	 */
+#ifndef RTE_EXEC_ENV_FREEBSD
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
+	if (rte_intr_allow_others(intr_handle)) {
+		/* check if lsc interrupt is enabled */
+		if (dev->data->dev_conf.intr_conf.lsc)
+			have_int = true;
+	}
+#endif /* #ifdef RTE_EXEC_ENV_FREEBSD */
+
+	/* Skip if we still need to setup an SFP, or if no link config requested
+	 */
+	if ((intr->flags & IXGBE_FLAG_NEED_SFP_SETUP) ||
+	    (!(intr->flags & IXGBE_FLAG_NEED_LINK_CONFIG) && have_int))
+		return;
+
+	if (!have_int && !(intr->flags & IXGBE_FLAG_NEED_LINK_CONFIG)) {
+		err = ixgbe_check_link(hw, &speed, &link_up, 0);
+		if (!err && !link_up) {
+			intr->flags |= IXGBE_FLAG_NEED_LINK_CONFIG;
+			PMD_DRV_LOG(DEBUG, "Link down, no LSC, set NEED_LINK_CONFIG\n");
+		} else {
+			return;
+		}
+	}
+
+	speed = hw->phy.autoneg_advertised;
+	if (!speed)
+		ixgbe_get_link_capabilities(hw, &speed, &autoneg);
+
+	err = ixgbe_setup_link(hw, speed, true);
+	if (err) {
+		PMD_DRV_LOG(ERR, "ixgbe_setup_link failed %d", err);
+		return;
+	}
+
+	intr->flags &= ~IXGBE_FLAG_NEED_LINK_CONFIG;
+}
+
+static void
+ixgbe_link_update_service(struct rte_eth_dev *dev)
+{
+	/* Update internal link status, waiting for link */
+	if (!ixgbe_dev_link_update(dev, 0)) {
+		ixgbe_dev_link_status_print(dev);
+		rte_eth_dev_callback_process(dev, RTE_ETH_EVENT_INTR_LSC, NULL);
+	}
+}
+
+/*
+ * Service task thread to handle periodic tasks
+ */
+static void *
+ixgbe_dev_service_thread_handler(void *param)
+{
+	struct rte_eth_dev *dev = (struct rte_eth_dev *)param;
+	struct ixgbe_hw *hw =
+		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	uint64_t start, ticks, service_ms;
+	uint32_t speed;
+	s32 err;
+	bool link_up;
+
+	while (1) {
+		ixgbe_sfp_service(dev);
+		ixgbe_link_service(dev);
+		ixgbe_link_update_service(dev);
+
+		/* Run the service thread handler more frequently when link is
+		 * down to reduce link up latency (every 200ms vs 1s)
+		 *
+		 * Use a number of smaller sleeps to decrease exit latency when
+		 * ixgbe_dev_stop() wants this thread to join
+		 */
+		err = ixgbe_check_link(hw, &speed, &link_up, 0);
+		if (err == IXGBE_SUCCESS && link_up)
+			service_ms = 2000;
+		else
+			service_ms = 100;
+
+		/* Call msec_delay in a loop with several smaller sleeps to
+		 * provide periodic thread cancellation points
+		 */
+		start = rte_get_timer_cycles();
+		ticks = (uint64_t)service_ms * rte_get_timer_hz() / 1E3;
+		while ((rte_get_timer_cycles() - start) < ticks)
+			msec_delay(100);
+	}
+
+	/* Never return */
+	return NULL;
+}
+
+static s32
+eth_ixgbe_check_mac_link_generic(struct ixgbe_hw *hw, ixgbe_link_speed *speed,
+				 bool *link_up, bool link_up_wait_to_complete)
+{
+	if (ixgbe_need_crosstalk_fix(hw)) {
+		enum ixgbe_sfp_cage_status sfp_cage_status;
+
+		sfp_cage_status = ixgbe_check_sfp_cage(hw);
+		if (sfp_cage_status != IXGBE_SFP_CAGE_FULL) {
+			*link_up = false;
+			*speed = IXGBE_LINK_SPEED_UNKNOWN;
+			return IXGBE_SUCCESS;
+		}
+	}
+
+	return ixgbe_check_mac_link_generic(hw, speed, link_up, link_up_wait_to_complete);
+}
+
 /*
  * This function is based on code in ixgbe_attach() in base/ixgbe.c.
  * It returns 0 on success.
@@ -1071,7 +1395,6 @@ ixgbe_parse_devargs(struct ixgbe_adapter *adapter,
 static int
 eth_ixgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 {
-	struct ixgbe_adapter *ad = eth_dev->data->dev_private;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
 	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct ixgbe_hw *hw =
@@ -1086,6 +1409,7 @@ eth_ixgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 		IXGBE_DEV_PRIVATE_TO_FILTER_INFO(eth_dev->data->dev_private);
 	struct ixgbe_bw_conf *bw_conf =
 		IXGBE_DEV_PRIVATE_TO_BW_CONF(eth_dev->data->dev_private);
+	struct ixgbe_mac_info *mac = &hw->mac;
 	uint32_t ctrl_ext;
 	uint16_t csum;
 	int diag, i, ret;
@@ -1126,7 +1450,6 @@ eth_ixgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 		return 0;
 	}
 
-	rte_atomic32_clear(&ad->link_thread_running);
 	ixgbe_parse_devargs(eth_dev->data->dev_private,
 			    pci_dev->device.devargs);
 	rte_eth_copy_pci_info(eth_dev, pci_dev);
@@ -1156,6 +1479,17 @@ eth_ixgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 			"Refer to the Intel(R) Ethernet Adapters and Devices "
 			"User Guide for details on firmware recovery mode.");
 		return -EIO;
+	}
+
+	/* override mac_link_check to check for sfp cage full/empty */
+	switch (hw->mac.type) {
+	case ixgbe_mac_X550EM_x:
+	case ixgbe_mac_X550EM_a:
+	case ixgbe_mac_82599EB:
+		mac->ops.check_link = eth_ixgbe_check_mac_link_generic;
+		break;
+	default:
+		break;
 	}
 
 	/* pick up the PCI bus settings for reporting later */
@@ -1581,7 +1915,6 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 {
 	int diag;
 	uint32_t tc, tcs;
-	struct ixgbe_adapter *ad = eth_dev->data->dev_private;
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
 	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct ixgbe_hw *hw =
@@ -1624,7 +1957,6 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 		return 0;
 	}
 
-	rte_atomic32_clear(&ad->link_thread_running);
 	ixgbevf_parse_devargs(eth_dev->data->dev_private,
 			      pci_dev->device.devargs);
 
@@ -2426,6 +2758,8 @@ ixgbe_dev_configure(struct rte_eth_dev *dev)
 	struct ixgbe_interrupt *intr =
 		IXGBE_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
 	struct ixgbe_adapter *adapter = dev->data->dev_private;
+	struct ixgbe_hw *hw =
+		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	int ret;
 
 	PMD_INIT_FUNC_TRACE();
@@ -2443,6 +2777,10 @@ ixgbe_dev_configure(struct rte_eth_dev *dev)
 
 	/* set flag to update link status after init */
 	intr->flags |= IXGBE_FLAG_NEED_LINK_UPDATE;
+
+	/* set flag to setup SFP after init */
+	if (ixgbe_is_sfp(hw))
+		intr->flags |= IXGBE_FLAG_NEED_SFP_SETUP;
 
 	/*
 	 * Initialize to TRUE. If any of Rx queues doesn't meet the bulk
@@ -2463,13 +2801,24 @@ ixgbe_dev_phy_intr_setup(struct rte_eth_dev *dev)
 		IXGBE_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
 	uint32_t gpie;
 
-	/* only set up it on X550EM_X */
+	/* only set up it on X550EM_X (external PHY interrupt)
+	 * or on X550EM_a_* for SFP_PRSNT# de-assertion (SFP removal)
+	 */
 	if (hw->mac.type == ixgbe_mac_X550EM_x) {
 		gpie = IXGBE_READ_REG(hw, IXGBE_GPIE);
 		gpie |= IXGBE_SDP0_GPIEN_X550EM_x;
 		IXGBE_WRITE_REG(hw, IXGBE_GPIE, gpie);
 		if (hw->phy.type == ixgbe_phy_x550em_ext_t)
 			intr->mask |= IXGBE_EICR_GPI_SDP0_X550EM_x;
+	} else if (hw->mac.type == ixgbe_mac_X550EM_a) {
+		gpie = IXGBE_READ_REG(hw, IXGBE_GPIE);
+		gpie |= IXGBE_SDP0_GPIEN_X550EM_a;
+		IXGBE_WRITE_REG(hw, IXGBE_GPIE, gpie);
+		intr->mask |= IXGBE_EICR_GPI_SDP0_X550EM_a;
+	} else {
+		PMD_DRV_LOG(DEBUG,
+			    "No PHY/SFP interrupt for MAC %d, PHY %d\n",
+			    hw->mac.type, hw->phy.type);
 	}
 }
 
@@ -2592,8 +2941,11 @@ ixgbe_flow_ctrl_enable(struct rte_eth_dev *dev, struct ixgbe_hw *hw)
 static int
 ixgbe_dev_start(struct rte_eth_dev *dev)
 {
+	struct ixgbe_adapter *ad = dev->data->dev_private;
 	struct ixgbe_hw *hw =
 		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ixgbe_interrupt *intr =
+		IXGBE_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
 	struct ixgbe_vf_info *vfinfo =
 		*IXGBE_DEV_PRIVATE_TO_P_VFDATA(dev->data->dev_private);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
@@ -2613,9 +2965,6 @@ ixgbe_dev_start(struct rte_eth_dev *dev)
 		IXGBE_DEV_PRIVATE_TO_MACSEC_SETTING(dev->data->dev_private);
 
 	PMD_INIT_FUNC_TRACE();
-
-	/* Stop the link setup handler before resetting the HW. */
-	ixgbe_dev_wait_setup_link_complete(dev, 0);
 
 	/* disable uio/vfio intr/eventfd mapping */
 	rte_intr_disable(intr_handle);
@@ -2732,12 +3081,6 @@ ixgbe_dev_start(struct rte_eth_dev *dev)
 		}
 	}
 
-	if (ixgbe_is_sfp(hw) && hw->phy.multispeed_fiber) {
-		err = hw->mac.ops.setup_sfp(hw);
-		if (err)
-			goto error;
-	}
-
 	if (hw->mac.ops.get_media_type(hw) == ixgbe_media_type_copper) {
 		/* Turn on the copper */
 		ixgbe_set_phy_power(hw, true);
@@ -2849,6 +3192,20 @@ skip_link_setup:
 	ixgbe_l2_tunnel_conf(dev);
 	ixgbe_filter_restore(dev);
 
+	/* Spawn service thread */
+	if (ixgbe_is_sfp(hw)) {
+		intr->flags |= IXGBE_FLAG_NEED_SFP_SETUP;
+		err = rte_ctrl_thread_create(&ad->service_thread_tid,
+					     "ixgbe-service-thread",
+					     NULL,
+					     ixgbe_dev_service_thread_handler,
+					     dev);
+		if (err) {
+			PMD_DRV_LOG(ERR, "service_thread err");
+			goto error;
+		}
+	}
+
 	if (tm_conf->root && !tm_conf->committed)
 		PMD_DRV_LOG(WARNING,
 			    "please call hierarchy_commit() "
@@ -2858,12 +3215,6 @@ skip_link_setup:
 	err = ixgbe_wait_for_link_up(hw);
 	if (err)
 		goto error;
-
-	/*
-	 * Update link status right before return, because it may
-	 * start link configuration process in a separate thread.
-	 */
-	ixgbe_dev_link_update(dev, 0);
 
 	/* setup the macsec setting register */
 	if (macsec_setting->offload_en)
@@ -2894,13 +3245,21 @@ ixgbe_dev_stop(struct rte_eth_dev *dev)
 	int vf;
 	struct ixgbe_tm_conf *tm_conf =
 		IXGBE_DEV_PRIVATE_TO_TM_CONF(dev->data->dev_private);
+	void *res;
+	s32 err;
 
 	if (hw->adapter_stopped)
 		return 0;
 
 	PMD_INIT_FUNC_TRACE();
 
-	ixgbe_dev_wait_setup_link_complete(dev, 0);
+	/* Cancel the service thread, and wait for it to join */
+	err = pthread_cancel(adapter->service_thread_tid);
+	if (err)
+		PMD_DRV_LOG(ERR, "failed to cancel service thread %d", err);
+	err = pthread_join(adapter->service_thread_tid, &res);
+	if (err)
+		PMD_DRV_LOG(ERR, "failed to join service thread %d", err);
 
 	/* disable interrupts */
 	ixgbe_disable_intr(hw);
@@ -2979,7 +3338,6 @@ ixgbe_dev_set_link_up(struct rte_eth_dev *dev)
 	} else {
 		/* Turn on the laser */
 		ixgbe_enable_tx_laser(hw);
-		ixgbe_dev_link_update(dev, 0);
 	}
 
 	return 0;
@@ -3010,7 +3368,6 @@ ixgbe_dev_set_link_down(struct rte_eth_dev *dev)
 	} else {
 		/* Turn off the laser */
 		ixgbe_disable_tx_laser(hw);
-		ixgbe_dev_link_update(dev, 0);
 	}
 
 	return 0;
@@ -4164,57 +4521,6 @@ out:
 }
 
 /*
- * If @timeout_ms was 0, it means that it will not return until link complete.
- * It returns 1 on complete, return 0 on timeout.
- */
-static int
-ixgbe_dev_wait_setup_link_complete(struct rte_eth_dev *dev, uint32_t timeout_ms)
-{
-#define WARNING_TIMEOUT    9000 /* 9s  in total */
-	struct ixgbe_adapter *ad = dev->data->dev_private;
-	uint32_t timeout = timeout_ms ? timeout_ms : WARNING_TIMEOUT;
-
-	while (rte_atomic32_read(&ad->link_thread_running)) {
-		msec_delay(1);
-		timeout--;
-
-		if (timeout_ms) {
-			if (!timeout)
-				return 0;
-		} else if (!timeout) {
-			/* It will not return until link complete */
-			timeout = WARNING_TIMEOUT;
-			PMD_DRV_LOG(ERR, "IXGBE link thread not complete too long time!");
-		}
-	}
-
-	return 1;
-}
-
-static void *
-ixgbe_dev_setup_link_thread_handler(void *param)
-{
-	struct rte_eth_dev *dev = (struct rte_eth_dev *)param;
-	struct ixgbe_adapter *ad = dev->data->dev_private;
-	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct ixgbe_interrupt *intr =
-		IXGBE_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
-	u32 speed;
-	bool autoneg = false;
-
-	pthread_detach(pthread_self());
-	speed = hw->phy.autoneg_advertised;
-	if (!speed)
-		ixgbe_get_link_capabilities(hw, &speed, &autoneg);
-
-	ixgbe_setup_link(hw, speed, true);
-
-	intr->flags &= ~IXGBE_FLAG_NEED_LINK_CONFIG;
-	rte_atomic32_clear(&ad->link_thread_running);
-	return NULL;
-}
-
-/*
  * In freebsd environment, nic_uio drivers do not support interrupts,
  * rte_intr_callback_register() will fail to register interrupts.
  * We can not make link status to change from down to up by interrupt
@@ -4256,8 +4562,6 @@ ixgbe_dev_link_update_share(struct rte_eth_dev *dev,
 	struct ixgbe_adapter *ad = dev->data->dev_private;
 	struct rte_eth_link link;
 	ixgbe_link_speed link_speed = IXGBE_LINK_SPEED_UNKNOWN;
-	struct ixgbe_interrupt *intr =
-		IXGBE_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
 	bool link_up;
 	int diag;
 	int wait = 1;
@@ -4271,9 +4575,6 @@ ixgbe_dev_link_update_share(struct rte_eth_dev *dev,
 			RTE_ETH_LINK_SPEED_FIXED);
 
 	hw->mac.get_link_status = true;
-
-	if (intr->flags & IXGBE_FLAG_NEED_LINK_CONFIG)
-		return rte_eth_linkstatus_set(dev, &link);
 
 	/* check if it needs to wait to complete, if lsc interrupt is enabled */
 	if (wait_to_complete == 0 || dev->data->dev_conf.intr_conf.lsc != 0)
@@ -4289,7 +4590,7 @@ ixgbe_dev_link_update_share(struct rte_eth_dev *dev,
 	else
 		diag = ixgbe_check_link(hw, &link_speed, &link_up, wait);
 
-	if (diag != 0) {
+	if (diag != 0 || !link_up) {
 		link.link_speed = RTE_ETH_SPEED_NUM_100M;
 		link.link_duplex = RTE_ETH_LINK_FULL_DUPLEX;
 		return rte_eth_linkstatus_set(dev, &link);
@@ -4300,32 +4601,6 @@ ixgbe_dev_link_update_share(struct rte_eth_dev *dev,
 		esdp_reg = IXGBE_READ_REG(hw, IXGBE_ESDP);
 		if ((esdp_reg & IXGBE_ESDP_SDP3))
 			link_up = 0;
-	}
-
-	if (link_up == 0) {
-		if (ixgbe_get_media_type(hw) == ixgbe_media_type_fiber) {
-			ixgbe_dev_wait_setup_link_complete(dev, 0);
-			if (rte_atomic32_test_and_set(&ad->link_thread_running)) {
-				/* To avoid race condition between threads, set
-				 * the IXGBE_FLAG_NEED_LINK_CONFIG flag only
-				 * when there is no link thread running.
-				 */
-				intr->flags |= IXGBE_FLAG_NEED_LINK_CONFIG;
-				if (rte_ctrl_thread_create(&ad->link_thread_tid,
-					"ixgbe-link-handler",
-					NULL,
-					ixgbe_dev_setup_link_thread_handler,
-					dev) < 0) {
-					PMD_DRV_LOG(ERR,
-						"Create link thread failed!");
-					rte_atomic32_clear(&ad->link_thread_running);
-				}
-			} else {
-				PMD_DRV_LOG(ERR,
-					"Other link thread is running now!");
-			}
-		}
-		return rte_eth_linkstatus_set(dev, &link);
 	}
 
 	link.link_status = RTE_ETH_LINK_UP;
@@ -4533,8 +4808,6 @@ ixgbe_dev_interrupt_get_status(struct rte_eth_dev *dev)
 	eicr = IXGBE_READ_REG(hw, IXGBE_EICR);
 	PMD_DRV_LOG(DEBUG, "eicr %x", eicr);
 
-	intr->flags = 0;
-
 	/* set flag for async link update */
 	if (eicr & IXGBE_EICR_LSC)
 		intr->flags |= IXGBE_FLAG_NEED_LINK_UPDATE;
@@ -4549,6 +4822,14 @@ ixgbe_dev_interrupt_get_status(struct rte_eth_dev *dev)
 	    hw->phy.type == ixgbe_phy_x550em_ext_t &&
 	    (eicr & IXGBE_EICR_GPI_SDP0_X550EM_x))
 		intr->flags |= IXGBE_FLAG_PHY_INTERRUPT;
+
+	/* Check for loss of SFP */
+	/* TODO - For platforms that don't have this flag, do we need to set
+	 *  NEED_SFP_SETUP on LSC if we're a SFP platform?
+	 */
+	if (hw->mac.type ==  ixgbe_mac_X550EM_a &&
+	    (eicr & IXGBE_EICR_GPI_SDP0_X550EM_a))
+		intr->flags |= IXGBE_FLAG_NEED_SFP_SETUP;
 
 	return 0;
 }
@@ -4601,11 +4882,13 @@ ixgbe_dev_link_status_print(struct rte_eth_dev *dev)
 static int
 ixgbe_dev_interrupt_action(struct rte_eth_dev *dev)
 {
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct ixgbe_interrupt *intr =
 		IXGBE_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
-	int64_t timeout;
 	struct ixgbe_hw *hw =
 		IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	int64_t timeout;
 
 	PMD_DRV_LOG(DEBUG, "intr action type %d", intr->flags);
 
@@ -4640,16 +4923,14 @@ ixgbe_dev_interrupt_action(struct rte_eth_dev *dev)
 		if (rte_eal_alarm_set(timeout * 1000,
 				      ixgbe_dev_interrupt_delayed_handler, (void *)dev) < 0)
 			PMD_DRV_LOG(ERR, "Error setting alarm");
-		else {
-			/* remember original mask */
-			intr->mask_original = intr->mask;
+		else
 			/* only disable lsc interrupt */
 			intr->mask &= ~IXGBE_EIMS_LSC;
-		}
 	}
 
 	PMD_DRV_LOG(DEBUG, "enable intr immediately");
 	ixgbe_enable_intr(dev);
+	rte_intr_ack(intr_handle);
 
 	return 0;
 }
@@ -4672,8 +4953,6 @@ static void
 ixgbe_dev_interrupt_delayed_handler(void *param)
 {
 	struct rte_eth_dev *dev = (struct rte_eth_dev *)param;
-	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
-	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	struct ixgbe_interrupt *intr =
 		IXGBE_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
 	struct ixgbe_hw *hw =
@@ -4703,13 +4982,10 @@ ixgbe_dev_interrupt_delayed_handler(void *param)
 		intr->flags &= ~IXGBE_FLAG_MACSEC;
 	}
 
-	/* restore original mask */
-	intr->mask = intr->mask_original;
-	intr->mask_original = 0;
+	if (dev->data->dev_conf.intr_conf.lsc != 0)
+		intr->mask |= IXGBE_EICR_LSC;
 
-	PMD_DRV_LOG(DEBUG, "enable intr in delayed handler S[%08x]", eicr);
 	ixgbe_enable_intr(dev);
-	rte_intr_ack(intr_handle);
 }
 
 /**
@@ -5351,9 +5627,6 @@ ixgbevf_dev_start(struct rte_eth_dev *dev)
 
 	PMD_INIT_FUNC_TRACE();
 
-	/* Stop the link setup handler before resetting the HW. */
-	ixgbe_dev_wait_setup_link_complete(dev, 0);
-
 	err = hw->mac.ops.reset_hw(hw);
 
 	/**
@@ -5433,12 +5706,6 @@ ixgbevf_dev_start(struct rte_eth_dev *dev)
 	/* Re-enable interrupt for VF */
 	ixgbevf_intr_enable(dev);
 
-	/*
-	 * Update link status right before return, because it may
-	 * start link configuration process in a separate thread.
-	 */
-	ixgbevf_dev_link_update(dev, 0);
-
 	hw->adapter_stopped = false;
 
 	return 0;
@@ -5456,8 +5723,6 @@ ixgbevf_dev_stop(struct rte_eth_dev *dev)
 		return 0;
 
 	PMD_INIT_FUNC_TRACE();
-
-	ixgbe_dev_wait_setup_link_complete(dev, 0);
 
 	ixgbevf_intr_disable(dev);
 
