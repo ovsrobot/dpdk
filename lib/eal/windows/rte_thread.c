@@ -60,6 +60,16 @@ thread_log_last_error(const char *message)
 	return thread_translate_win32_error(error);
 }
 
+rte_thread_t
+rte_thread_self(void)
+{
+	rte_thread_t thread_id;
+
+	thread_id.opaque_id = GetCurrentThreadId();
+
+	return thread_id;
+}
+
 int
 rte_thread_key_create(rte_thread_key *key,
 		__rte_unused void (*destructor)(void *))
