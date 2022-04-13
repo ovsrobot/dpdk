@@ -56,6 +56,8 @@ ice_pattern_match_item ice_acl_pattern[] = {
 	{pattern_eth_ipv4_sctp,	ICE_ACL_INSET_ETH_IPV4_SCTP,	ICE_INSET_NONE,	ICE_INSET_NONE},
 };
 
+static void ice_acl_prof_free(struct ice_hw *hw);
+
 static int
 ice_acl_prof_alloc(struct ice_hw *hw)
 {
@@ -1007,17 +1009,27 @@ ice_acl_init(struct ice_adapter *ad)
 
 	ret = ice_acl_setup(pf);
 	if (ret)
-		return ret;
+		goto deinit_acl;
 
 	ret = ice_acl_bitmap_init(pf);
 	if (ret)
-		return ret;
+		goto deinit_acl;
 
 	ret = ice_acl_prof_init(pf);
 	if (ret)
-		return ret;
+		goto deinit_acl;
 
-	return ice_register_parser(parser, ad);
+	ret = ice_register_parser(parser, ad);
+	if (ret)
+		goto deinit_acl;
+
+	return 0;
+
+deinit_acl:
+	ice_deinit_acl(pf);
+	ice_acl_prof_free(hw);
+	PMD_DRV_LOG(ERR, "ACL init failed, may not supported!");
+	return ret;
 }
 
 static void
