@@ -23,6 +23,7 @@
 #define ICE_DCF_MAX_NUM_QUEUES_DFLT 16
 #define ICE_DCF_MAX_NUM_QUEUES_LV   256
 #define ICE_DCF_CFG_Q_NUM_PER_BUF   32
+#define ICE_DCF_IRQ_MAP_NUM_PER_BUF 128
 
 struct ice_dcf_queue {
 	uint64_t dummy;
