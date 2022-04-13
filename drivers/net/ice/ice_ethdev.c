@@ -1710,13 +1710,16 @@ ice_load_pkg_type(struct ice_hw *hw)
 
 	/* store the activated package type (OS default or Comms) */
 	if (!strncmp((char *)hw->active_pkg_name, ICE_OS_DEFAULT_PKG_NAME,
-		ICE_PKG_NAME_SIZE))
+		     ICE_PKG_NAME_SIZE)) {
 		package_type = ICE_PKG_TYPE_OS_DEFAULT;
-	else if (!strncmp((char *)hw->active_pkg_name, ICE_COMMS_PKG_NAME,
-		ICE_PKG_NAME_SIZE))
+	} else if (!strncmp((char *)hw->active_pkg_name, ICE_COMMS_PKG_NAME,
+			    ICE_PKG_NAME_SIZE)) {
 		package_type = ICE_PKG_TYPE_COMMS;
-	else
-		package_type = ICE_PKG_TYPE_UNKNOWN;
+	} else {
+		PMD_INIT_LOG(WARNING,
+			     "The package type is not identified, treaded as OS default type");
+		package_type = ICE_PKG_TYPE_OS_DEFAULT;
+	}
 
 	PMD_INIT_LOG(NOTICE, "Active package is: %d.%d.%d.%d, %s (%s VLAN mode)",
 		hw->active_pkg_ver.major, hw->active_pkg_ver.minor,
