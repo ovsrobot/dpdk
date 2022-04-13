@@ -44,6 +44,7 @@ enum ice_protocol_type {
 	ICE_GENEVE,
 	ICE_VXLAN_GPE,
 	ICE_NVGRE,
+	ICE_GRE,
 	ICE_GTP,
 	ICE_PPPOE,
 	ICE_PFCP,
