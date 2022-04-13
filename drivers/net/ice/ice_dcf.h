@@ -15,6 +15,8 @@
 #include "base/ice_type.h"
 #include "ice_logs.h"
 
+#define ICE_DCF_RXTX_QUEUE_CHUNKS_NUM  2
+
 struct dcf_virtchnl_cmd {
 	TAILQ_ENTRY(dcf_virtchnl_cmd) next;
 
@@ -143,7 +145,10 @@ int ice_dcf_config_irq_map(struct ice_dcf_hw *hw);
 int ice_dcf_config_irq_map_lv(struct ice_dcf_hw *hw,
 			      uint16_t num, uint16_t index);
 int ice_dcf_switch_queue(struct ice_dcf_hw *hw, uint16_t qid, bool rx, bool on);
+int ice_dcf_switch_queue_lv(struct ice_dcf_hw *hw,
+			    uint16_t qid, bool rx, bool on);
 int ice_dcf_disable_queues(struct ice_dcf_hw *hw);
+int ice_dcf_disable_queues_lv(struct ice_dcf_hw *hw);
 int ice_dcf_query_stats(struct ice_dcf_hw *hw,
 			struct virtchnl_eth_stats *pstats);
 int ice_dcf_add_del_all_mac_addr(struct ice_dcf_hw *hw,

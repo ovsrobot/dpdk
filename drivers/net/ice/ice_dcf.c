@@ -90,7 +90,6 @@ ice_dcf_recv_cmd_rsp_no_irq(struct ice_dcf_hw *hw, enum virtchnl_ops op,
 			*rsp_msglen = event.msg_len;
 
 		return rte_le_to_cpu_32(event.desc.cookie_low);
-
 again:
 		rte_delay_ms(ICE_DCF_ARQ_CHECK_TIME);
 	} while (i++ < ICE_DCF_ARQ_MAX_RETRIES);
@@ -896,7 +895,7 @@ ice_dcf_init_rss(struct ice_dcf_hw *hw)
 {
 	struct rte_eth_dev *dev = hw->eth_dev;
 	struct rte_eth_rss_conf *rss_conf;
-	uint8_t i, j, nb_q;
+	uint16_t i, j, nb_q;
 	int ret;
 
 	rss_conf = &dev->data->dev_conf.rx_adv_conf.rss_conf;
@@ -1075,6 +1074,12 @@ ice_dcf_request_queues(struct ice_dcf_hw *hw, uint16_t num)
 		return err;
 	}
 
+	/* request queues succeeded, vf is resetting */
+	if (hw->resetting) {
+		PMD_DRV_LOG(INFO, "vf is resetting");
+		return 0;
+	}
+
 	/* request additional queues failed, return available number */
 	num_queue_pairs = ((struct virtchnl_vf_res_request *)
 				args.rsp_msgbuf)->num_queue_pairs;
@@ -1185,7 +1190,8 @@ ice_dcf_config_irq_map_lv(struct ice_dcf_hw *hw,
 	args.req_msg = (u8 *)map_info;
 	args.req_msglen = len;
 	args.rsp_msgbuf = hw->arq_buf;
-	args.req_msglen = ICE_DCF_AQ_BUF_SZ;
+	args.rsp_msglen = ICE_DCF_AQ_BUF_SZ;
+	args.rsp_buflen = ICE_DCF_AQ_BUF_SZ;
 	err = ice_dcf_execute_virtchnl_cmd(hw, &args);
 	if (err)
 		PMD_DRV_LOG(ERR, "fail to execute command OP_MAP_QUEUE_VECTOR");
@@ -1226,6 +1232,50 @@ ice_dcf_switch_queue(struct ice_dcf_hw *hw, uint16_t qid, bool rx, bool on)
 }
 
 int
+ice_dcf_switch_queue_lv(struct ice_dcf_hw *hw, uint16_t qid, bool rx, bool on)
+{
+	struct virtchnl_del_ena_dis_queues *queue_select;
+	struct virtchnl_queue_chunk *queue_chunk;
+	struct dcf_virtchnl_cmd args;
+	int err, len;
+
+	len = sizeof(struct virtchnl_del_ena_dis_queues);
+	queue_select = rte_zmalloc("queue_select", len, 0);
+	if (!queue_select)
+		return -ENOMEM;
+
+	queue_chunk = queue_select->chunks.chunks;
+	queue_select->chunks.num_chunks = 1;
+	queue_select->vport_id = hw->vsi_res->vsi_id;
+
+	if (rx) {
+		queue_chunk->type = VIRTCHNL_QUEUE_TYPE_RX;
+		queue_chunk->start_queue_id = qid;
+		queue_chunk->num_queues = 1;
+	} else {
+		queue_chunk->type = VIRTCHNL_QUEUE_TYPE_TX;
+		queue_chunk->start_queue_id = qid;
+		queue_chunk->num_queues = 1;
+	}
+
+	if (on)
+		args.v_op = VIRTCHNL_OP_ENABLE_QUEUES_V2;
+	else
+		args.v_op = VIRTCHNL_OP_DISABLE_QUEUES_V2;
+	args.req_msg = (u8 *)queue_select;
+	args.req_msglen = len;
+	args.rsp_msgbuf = hw->arq_buf;
+	args.rsp_msglen = ICE_DCF_AQ_BUF_SZ;
+	args.rsp_buflen = ICE_DCF_AQ_BUF_SZ;
+	err = ice_dcf_execute_virtchnl_cmd(hw, &args);
+	if (err)
+		PMD_DRV_LOG(ERR, "Failed to execute command of %s",
+			    on ? "OP_ENABLE_QUEUES_V2" : "OP_DISABLE_QUEUES_V2");
+	rte_free(queue_select);
+	return err;
+}
+
+int
 ice_dcf_disable_queues(struct ice_dcf_hw *hw)
 {
 	struct virtchnl_queue_select queue_select;
@@ -1251,6 +1301,49 @@ ice_dcf_disable_queues(struct ice_dcf_hw *hw)
 		PMD_DRV_LOG(ERR,
 			    "Failed to execute command of OP_DISABLE_QUEUES");
 
+	return err;
+}
+
+int
+ice_dcf_disable_queues_lv(struct ice_dcf_hw *hw)
+{
+	struct virtchnl_del_ena_dis_queues *queue_select;
+	struct virtchnl_queue_chunk *queue_chunk;
+	struct dcf_virtchnl_cmd args;
+	int err, len;
+
+	len = sizeof(struct virtchnl_del_ena_dis_queues) +
+		  sizeof(struct virtchnl_queue_chunk) *
+		  (ICE_DCF_RXTX_QUEUE_CHUNKS_NUM - 1);
+	queue_select = rte_zmalloc("queue_select", len, 0);
+	if (!queue_select)
+		return -ENOMEM;
+
+	queue_chunk = queue_select->chunks.chunks;
+	queue_select->chunks.num_chunks = ICE_DCF_RXTX_QUEUE_CHUNKS_NUM;
+	queue_select->vport_id = hw->vsi_res->vsi_id;
+
+	queue_chunk[VIRTCHNL_QUEUE_TYPE_TX].type = VIRTCHNL_QUEUE_TYPE_TX;
+	queue_chunk[VIRTCHNL_QUEUE_TYPE_TX].start_queue_id = 0;
+	queue_chunk[VIRTCHNL_QUEUE_TYPE_TX].num_queues =
+					hw->eth_dev->data->nb_tx_queues;
+
+	queue_chunk[VIRTCHNL_QUEUE_TYPE_RX].type = VIRTCHNL_QUEUE_TYPE_RX;
+	queue_chunk[VIRTCHNL_QUEUE_TYPE_RX].start_queue_id = 0;
+	queue_chunk[VIRTCHNL_QUEUE_TYPE_RX].num_queues =
+					hw->eth_dev->data->nb_rx_queues;
+
+	args.v_op = VIRTCHNL_OP_DISABLE_QUEUES_V2;
+	args.req_msg = (u8 *)queue_select;
+	args.req_msglen = len;
+	args.rsp_msgbuf = hw->arq_buf;
+	args.rsp_msglen = ICE_DCF_AQ_BUF_SZ;
+	args.rsp_buflen = ICE_DCF_AQ_BUF_SZ;
+	err = ice_dcf_execute_virtchnl_cmd(hw, &args);
+	if (err)
+		PMD_DRV_LOG(ERR,
+			    "Failed to execute command of OP_DISABLE_QUEUES_V2");
+	rte_free(queue_select);
 	return err;
 }
 
