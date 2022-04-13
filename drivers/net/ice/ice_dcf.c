@@ -1115,7 +1115,6 @@ ice_dcf_get_max_rss_queue_region(struct ice_dcf_hw *hw)
 	return 0;
 }
 
-
 int
 ice_dcf_config_irq_map(struct ice_dcf_hw *hw)
 {
@@ -1132,13 +1131,14 @@ ice_dcf_config_irq_map(struct ice_dcf_hw *hw)
 		return -ENOMEM;
 
 	map_info->num_vectors = hw->nb_msix;
-	for (i = 0; i < hw->nb_msix; i++) {
-		vecmap = &map_info->vecmap[i];
+	for (i = 0; i < hw->eth_dev->data->nb_rx_queues; i++) {
+		vecmap =
+		  &map_info->vecmap[hw->qv_map[i].vector_id - hw->msix_base];
 		vecmap->vsi_id = hw->vsi_res->vsi_id;
 		vecmap->rxitr_idx = 0;
-		vecmap->vector_id = hw->msix_base + i;
+		vecmap->vector_id = hw->qv_map[i].vector_id;
 		vecmap->txq_map = 0;
-		vecmap->rxq_map = hw->rxq_map[hw->msix_base + i];
+		vecmap->rxq_map |= 1 << hw->qv_map[i].queue_id;
 	}
 
 	memset(&args, 0, sizeof(args));
@@ -1149,6 +1149,46 @@ ice_dcf_config_irq_map(struct ice_dcf_hw *hw)
 	err = ice_dcf_execute_virtchnl_cmd(hw, &args);
 	if (err)
 		PMD_DRV_LOG(ERR, "fail to execute command OP_CONFIG_IRQ_MAP");
+
+	rte_free(map_info);
+	return err;
+}
+
+int
+ice_dcf_config_irq_map_lv(struct ice_dcf_hw *hw,
+		       uint16_t num, uint16_t index)
+{
+	struct virtchnl_queue_vector_maps *map_info;
+	struct virtchnl_queue_vector *qv_maps;
+	struct dcf_virtchnl_cmd args;
+	int len, i, err;
+	int count = 0;
+
+	len = sizeof(struct virtchnl_queue_vector_maps) +
+	      sizeof(struct virtchnl_queue_vector) * (num - 1);
+
+	map_info = rte_zmalloc("map_info", len, 0);
+	if (!map_info)
+		return -ENOMEM;
+
+	map_info->vport_id = hw->vsi_res->vsi_id;
+	map_info->num_qv_maps = num;
+	for (i = index; i < index + map_info->num_qv_maps; i++) {
+		qv_maps = &map_info->qv_maps[count++];
+		qv_maps->itr_idx = VIRTCHNL_ITR_IDX_0;
+		qv_maps->queue_type = VIRTCHNL_QUEUE_TYPE_RX;
+		qv_maps->queue_id = hw->qv_map[i].queue_id;
+		qv_maps->vector_id = hw->qv_map[i].vector_id;
+	}
+
+	args.v_op = VIRTCHNL_OP_MAP_QUEUE_VECTOR;
+	args.req_msg = (u8 *)map_info;
+	args.req_msglen = len;
+	args.rsp_msgbuf = hw->arq_buf;
+	args.req_msglen = ICE_DCF_AQ_BUF_SZ;
+	err = ice_dcf_execute_virtchnl_cmd(hw, &args);
+	if (err)
+		PMD_DRV_LOG(ERR, "fail to execute command OP_MAP_QUEUE_VECTOR");
 
 	rte_free(map_info);
 	return err;
