@@ -12,6 +12,7 @@
 #define ICE_MAX_VLAN_ID			0xFFF
 #define ICE_IPV6_ETHER_ID		0x86DD
 #define ICE_IPV4_NVGRE_PROTO_ID		0x002F
+#define ICE_IPV4_GRE_PROTO_ID		0x002F
 #define ICE_IPV6_GRE_PROTO_ID		0x002F
 #define ICE_PPP_IPV6_PROTO_ID		0x0057
 #define ICE_TCP_PROTO_ID		0x06
@@ -158,6 +159,188 @@ static const u8 dummy_ipv6_gre_udp_packet[] = {
 	0xff, 0xd8, 0x00, 0x00,
 };
 
+static const struct ice_dummy_pkt_offsets
+dummy_gre_rfc1701_c1k1_tcp_packet_offsets[] = {
+	{ ICE_MAC_OFOS,         0 },
+	{ ICE_ETYPE_OL,         12 },
+	{ ICE_IPV4_OFOS,        14 },
+	{ ICE_GRE,              34 },
+	{ ICE_IPV4_IL,          50 },
+	{ ICE_TCP_IL,           70 },
+	{ ICE_PROTOCOL_LAST,    0 },
+};
+
+static const u8 dummy_gre_rfc1701_c1k1_tcp_packet[] = {
+	0x00, 0x00, 0x00, 0x00, /* ICE_MAC_OFOS 0 */
+	0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00,
+
+	0x08, 0x00,             /* ICE_ETYPE_OL 12 */
+
+	0x45, 0x00, 0x00, 0x4e, /* ICE_IPV4_OFOS 14 */
+	0x00, 0x01, 0x00, 0x00,
+	0x40, 0x2f, 0x7c, 0x7e,
+	0x7f, 0x00, 0x00, 0x01,
+	0x7f, 0x00, 0x00, 0x01,
+
+	0xb0, 0x00, 0x08, 0x00, /* ICE_GRE 34 */
+	0x46, 0x1e, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00,
+
+	0x45, 0x00, 0x00, 0x2a, /* ICE_IPV4_IL 50 */
+	0x00, 0x01, 0x00, 0x00,
+	0x40, 0x06, 0x7c, 0xcb,
+	0x7f, 0x00, 0x00, 0x01,
+	0x7f, 0x00, 0x00, 0x01,
+
+	0x00, 0x14, 0x00, 0x50, /* ICE_TCP_IL 70 */
+	0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00,
+	0x50, 0x02, 0x20, 0x00,
+	0x91, 0x7a, 0x00, 0x00,
+
+	0x00, 0x00,
+};
+
+static const struct ice_dummy_pkt_offsets
+dummy_gre_rfc1701_c1k1_udp_packet_offsets[] = {
+	{ ICE_MAC_OFOS,         0 },
+	{ ICE_ETYPE_OL,         12 },
+	{ ICE_IPV4_OFOS,        14 },
+	{ ICE_GRE,              34 },
+	{ ICE_IPV4_IL,          50 },
+	{ ICE_UDP_ILOS,         70 },
+	{ ICE_PROTOCOL_LAST,    0 },
+};
+
+static const u8 dummy_gre_rfc1701_c1k1_udp_packet[] = {
+	0x00, 0x00, 0x00, 0x00, /* ICE_MAC_OFOS 0 */
+	0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00,
+
+	0x08, 0x00,             /* ICE_ETYPE_OL 12 */
+
+	0x45, 0x00, 0x00, 0x42, /* ICE_IPV4_OFOS 14 */
+	0x00, 0x01, 0x00, 0x00,
+	0x40, 0x2f, 0x7c, 0x8a,
+	0x7f, 0x00, 0x00, 0x01,
+	0x7f, 0x00, 0x00, 0x01,
+
+	0xb0, 0x00, 0x08, 0x00, /* ICE_GRE 34 */
+	0x46, 0x1d, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00,
+
+	0x45, 0x00, 0x00, 0x1e, /* ICE_IPV4_IL 50 */
+	0x00, 0x01, 0x00, 0x00,
+	0x40, 0x11, 0x7c, 0xcc,
+	0x7f, 0x00, 0x00, 0x01,
+	0x7f, 0x00, 0x00, 0x01,
+
+	0x00, 0x35, 0x00, 0x35, /* ICE_UDP_ILOS 70 */
+	0x00, 0x0a, 0x01, 0x6e,
+
+	0x00, 0x00,
+};
+
+static const struct ice_dummy_pkt_offsets
+dummy_gre_rfc1701_c0k1_tcp_packet_offsets[] = {
+	{ ICE_MAC_OFOS,         0 },
+	{ ICE_ETYPE_OL,         12 },
+	{ ICE_IPV4_OFOS,        14 },
+	{ ICE_GRE,              34 },
+	{ ICE_IPV4_IL,          46 },
+	{ ICE_TCP_IL,           66 },
+	{ ICE_PROTOCOL_LAST,    0 },
+};
+
+static const u8 dummy_gre_rfc1701_c0k1_tcp_packet[] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x45, 0x00,
+	0x00, 0x4a, 0x00, 0x01, 0x00, 0x00, 0x40, 0x2f,
+	0x7c, 0x82, 0x7f, 0x00, 0x00, 0x01, 0x7f, 0x00,
+	0x00, 0x01, 0x30, 0x00, 0x08, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x45, 0x00,
+	0x00, 0x2a, 0x00, 0x01, 0x00, 0x00, 0x40, 0x06,
+	0x7c, 0xcb, 0x7f, 0x00, 0x00, 0x01, 0x7f, 0x00,
+	0x00, 0x01, 0x00, 0x14, 0x00, 0x50, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x50, 0x02,
+	0x20, 0x00, 0x91, 0x7a, 0x00, 0x00, 0x00, 0x00,
+};
+
+static const struct ice_dummy_pkt_offsets
+dummy_gre_rfc1701_c0k1_udp_packet_offsets[] = {
+	{ ICE_MAC_OFOS,         0 },
+	{ ICE_ETYPE_OL,         12 },
+	{ ICE_IPV4_OFOS,        14 },
+	{ ICE_GRE,              34 },
+	{ ICE_IPV4_IL,          46 },
+	{ ICE_UDP_ILOS,         66 },
+	{ ICE_PROTOCOL_LAST,    0 },
+};
+
+static const u8 dummy_gre_rfc1701_c0k1_udp_packet[] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x45, 0x00,
+	0x00, 0x3e, 0x00, 0x01, 0x00, 0x00, 0x40, 0x2f,
+	0x7c, 0x8e, 0x7f, 0x00, 0x00, 0x01, 0x7f, 0x00,
+	0x00, 0x01, 0x30, 0x00, 0x08, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x45, 0x00,
+	0x00, 0x1e, 0x00, 0x01, 0x00, 0x00, 0x40, 0x11,
+	0x7c, 0xcc, 0x7f, 0x00, 0x00, 0x01, 0x7f, 0x00,
+	0x00, 0x01, 0x00, 0x35, 0x00, 0x35, 0x00, 0x0a,
+	0x01, 0x6e, 0x00, 0x00,
+};
+
+static const struct ice_dummy_pkt_offsets
+dummy_gre_rfc1701_c0k0_tcp_packet_offsets[] = {
+	{ ICE_MAC_OFOS,         0 },
+	{ ICE_ETYPE_OL,         12 },
+	{ ICE_IPV4_OFOS,        14 },
+	{ ICE_GRE,              34 },
+	{ ICE_IPV4_IL,          42 },
+	{ ICE_TCP_IL,           62 },
+	{ ICE_PROTOCOL_LAST,    0 },
+};
+
+static const u8 dummy_gre_rfc1701_c0k0_tcp_packet[] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x45, 0x00,
+	0x00, 0x46, 0x00, 0x01, 0x00, 0x00, 0x40, 0x2f,
+	0x7c, 0x86, 0x7f, 0x00, 0x00, 0x01, 0x7f, 0x00,
+	0x00, 0x01, 0x10, 0x00, 0x08, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x45, 0x00, 0x00, 0x2a, 0x00, 0x01,
+	0x00, 0x00, 0x40, 0x06, 0x7c, 0xcb, 0x7f, 0x00,
+	0x00, 0x01, 0x7f, 0x00, 0x00, 0x01, 0x00, 0x14,
+	0x00, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x50, 0x02, 0x20, 0x00, 0x91, 0x7a,
+	0x00, 0x00, 0x00, 0x00,
+};
+
+static const struct ice_dummy_pkt_offsets
+dummy_gre_rfc1701_c0k0_udp_packet_offsets[] = {
+	{ ICE_MAC_OFOS,         0 },
+	{ ICE_ETYPE_OL,         12 },
+	{ ICE_IPV4_OFOS,        14 },
+	{ ICE_GRE,              34 },
+	{ ICE_IPV4_IL,          42 },
+	{ ICE_UDP_ILOS,         62 },
+	{ ICE_PROTOCOL_LAST,    0 },
+};
+
+static const u8 dummy_gre_rfc1701_c0k0_udp_packet[] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x45, 0x00,
+	0x00, 0x3a, 0x00, 0x01, 0x00, 0x00, 0x40, 0x2f,
+	0x7c, 0x92, 0x7f, 0x00, 0x00, 0x01, 0x7f, 0x00,
+	0x00, 0x01, 0x10, 0x00, 0x08, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x45, 0x00, 0x00, 0x1e, 0x00, 0x01,
+	0x00, 0x00, 0x40, 0x11, 0x7c, 0xcc, 0x7f, 0x00,
+	0x00, 0x01, 0x7f, 0x00, 0x00, 0x01, 0x00, 0x35,
+	0x00, 0x35, 0x00, 0x0a, 0x01, 0x6e, 0x00, 0x00,
+};
+
 static const struct ice_dummy_pkt_offsets dummy_udp_tun_tcp_packet_offsets[] = {
 	{ ICE_MAC_OFOS,		0 },
 	{ ICE_ETYPE_OL,		12 },
@@ -173,7 +356,7 @@ static const struct ice_dummy_pkt_offsets dummy_udp_tun_tcp_packet_offsets[] = {
 };
 
 static const u8 dummy_udp_tun_tcp_packet[] = {
-	0x00, 0x00, 0x00, 0x00,  /* ICE_MAC_OFOS 0 */
+	0x00, 0x00, 0x00, 0x00, /* ICE_MAC_OFOS 0 */
 	0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00,
 
@@ -224,7 +407,7 @@ static const struct ice_dummy_pkt_offsets dummy_udp_tun_udp_packet_offsets[] = {
 };
 
 static const u8 dummy_udp_tun_udp_packet[] = {
-	0x00, 0x00, 0x00, 0x00,  /* ICE_MAC_OFOS 0 */
+	0x00, 0x00, 0x00, 0x00, /* ICE_MAC_OFOS 0 */
 	0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00,
 
@@ -6892,6 +7075,7 @@ static const struct ice_prot_ext_tbl_entry ice_prot_ext[ICE_PROTOCOL_LAST] = {
 	{ ICE_GENEVE,		{ 8, 10, 12, 14 } },
 	{ ICE_VXLAN_GPE,	{ 8, 10, 12, 14 } },
 	{ ICE_NVGRE,		{ 0, 2, 4, 6 } },
+	{ ICE_GRE,              { 0, 2, 4, 6, 8, 10, 12, 14 } },
 	{ ICE_GTP,		{ 8, 10, 12, 14, 16, 18, 20, 22 } },
 	{ ICE_PPPOE,		{ 0, 2, 4, 6 } },
 	{ ICE_PFCP,		{ 8, 10, 12, 14, 16, 18, 20, 22 } },
@@ -6927,6 +7111,7 @@ static struct ice_protocol_entry ice_prot_id_tbl[ICE_PROTOCOL_LAST] = {
 	{ ICE_GENEVE,		ICE_UDP_OF_HW },
 	{ ICE_VXLAN_GPE,	ICE_UDP_OF_HW },
 	{ ICE_NVGRE,		ICE_GRE_OF_HW },
+	{ ICE_GRE,              ICE_GRE_OF_HW },
 	{ ICE_GTP,		ICE_UDP_OF_HW },
 	{ ICE_PPPOE,		ICE_PPPOE_HW },
 	{ ICE_PFCP,		ICE_UDP_ILOS_HW },
@@ -7065,6 +7250,7 @@ ice_fill_valid_words(struct ice_adv_lkup_elem *rule,
 		     struct ice_prot_lkup_ext *lkup_exts)
 {
 	u8 j, word, prot_id, ret_val;
+	u8 extra_byte = 0;
 
 	if (!ice_prot_type_to_id(rule->type, &prot_id))
 		return 0;
@@ -7077,8 +7263,15 @@ ice_fill_valid_words(struct ice_adv_lkup_elem *rule,
 			/* No more space to accommodate */
 			if (word >= ICE_MAX_CHAIN_WORDS)
 				return 0;
+			if (rule->type == ICE_GRE) {
+				if (ice_prot_ext[rule->type].offs[j] == 0) {
+					if (((u16 *)&rule->h_u)[j] == 0x20)
+						extra_byte = 4;
+					continue;
+				}
+			}
 			lkup_exts->fv_words[word].off =
-				ice_prot_ext[rule->type].offs[j];
+				ice_prot_ext[rule->type].offs[j] - extra_byte;
 			lkup_exts->fv_words[word].prot_id =
 				ice_prot_id_tbl[rule->type].protocol_id;
 			lkup_exts->field_mask[word] =
@@ -7622,10 +7815,12 @@ ice_create_recipe_group(struct ice_hw *hw, struct ice_sw_recipe *rm,
  * @lkups_cnt: number of protocols
  * @bm: bitmap of field vectors to consider
  * @fv_list: pointer to a list that holds the returned field vectors
+ * @lkup_exts: lookup elements
  */
 static enum ice_status
 ice_get_fv(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
-	   ice_bitmap_t *bm, struct LIST_HEAD_TYPE *fv_list)
+	   ice_bitmap_t *bm, struct LIST_HEAD_TYPE *fv_list,
+	   struct ice_prot_lkup_ext *lkup_exts)
 {
 	enum ice_status status;
 	u8 *prot_ids;
@@ -7645,7 +7840,8 @@ ice_get_fv(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 		}
 
 	/* Find field vectors that include all specified protocol types */
-	status = ice_get_sw_fv_list(hw, prot_ids, lkups_cnt, bm, fv_list);
+	status = ice_get_sw_fv_list(hw, prot_ids, lkups_cnt, bm, fv_list,
+				    lkup_exts);
 
 free_mem:
 	ice_free(hw, prot_ids);
@@ -7681,6 +7877,10 @@ static bool ice_tun_type_match_word(enum ice_sw_tunnel_type tun_type, u16 *mask)
 		*mask = ICE_TUN_FLAG_MASK;
 		return true;
 
+	case ICE_SW_TUN_GRE:
+		*mask = ICE_GRE_FLAG_MASK;
+		return true;
+
 	case ICE_SW_TUN_GENEVE_VLAN:
 	case ICE_SW_TUN_VXLAN_VLAN:
 		*mask = ICE_TUN_FLAG_MASK & ~ICE_TUN_FLAG_VLAN_MASK;
@@ -7702,6 +7902,12 @@ ice_add_special_words(struct ice_adv_rule_info *rinfo,
 		      struct ice_prot_lkup_ext *lkup_exts)
 {
 	u16 mask;
+	u8 has_gre_key = 0;
+	u8 i;
+
+	for (i = 0; i < lkup_exts->n_val_words; i++)
+		if (lkup_exts->fv_words[i].prot_id == 0x40)
+			has_gre_key = 1;
 
 	/* If this is a tunneled packet, then add recipe index to match the
 	 * tunnel bit in the packet metadata flags.
@@ -7713,6 +7919,13 @@ ice_add_special_words(struct ice_adv_rule_info *rinfo,
 			lkup_exts->fv_words[word].prot_id = ICE_META_DATA_ID_HW;
 			lkup_exts->fv_words[word].off = ICE_TUN_FLAG_MDID_OFF;
 			lkup_exts->field_mask[word] = mask;
+
+			if (rinfo->tun_type == ICE_SW_TUN_GRE)
+				lkup_exts->fv_words[word].off =
+						ICE_GRE_FLAG_MDID_OFF;
+
+			if (!has_gre_key)
+				lkup_exts->field_mask[word] = 0x0140;
 		} else {
 			return ICE_ERR_MAX_LIMIT;
 		}
@@ -7752,6 +7965,9 @@ ice_get_compat_fv_bitmap(struct ice_hw *hw, struct ice_adv_rule_info *rinfo,
 		prof_type = ICE_PROF_TUN_UDP;
 		break;
 	case ICE_SW_TUN_NVGRE:
+		prof_type = ICE_PROF_TUN_GRE;
+		break;
+	case ICE_SW_TUN_GRE:
 		prof_type = ICE_PROF_TUN_GRE;
 		break;
 	case ICE_SW_TUN_PPPOE:
@@ -8079,7 +8295,8 @@ ice_add_adv_recipe(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 	 */
 	ice_get_compat_fv_bitmap(hw, rinfo, fv_bitmap);
 
-	status = ice_get_fv(hw, lkups, lkups_cnt, fv_bitmap, &rm->fv_list);
+	status = ice_get_fv(hw, lkups, lkups_cnt, fv_bitmap, &rm->fv_list,
+			    lkup_exts);
 	if (status)
 		goto err_unroll;
 
@@ -8228,6 +8445,8 @@ ice_find_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 		      const struct ice_dummy_pkt_offsets **offsets)
 {
 	bool tcp = false, udp = false, ipv6 = false, vlan = false;
+	bool gre_c_bit = false;
+	bool gre_k_bit = false;
 	bool gre = false, mpls = false;
 	u16 i;
 
@@ -8245,6 +8464,17 @@ ice_find_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 		}
 		else if (lkups[i].type == ICE_VLAN_OFOS)
 			vlan = true;
+		else if (lkups[i].type == ICE_GRE) {
+			if (lkups[i].h_u.gre_hdr.flags & 0x20)
+				gre_k_bit = true;
+			if (lkups[i].h_u.gre_hdr.flags & 0x80)
+				gre_c_bit = true;
+		} else if (lkups[i].type == ICE_IPV4_OFOS &&
+			 lkups[i].h_u.ipv4_hdr.protocol ==
+				ICE_IPV4_GRE_PROTO_ID &&
+			 lkups[i].m_u.ipv4_hdr.protocol ==
+				0xFF)
+			gre = true;
 		else if (lkups[i].type == ICE_ETYPE_OL &&
 			 lkups[i].h_u.ethertype.ethtype_id ==
 				CPU_TO_BE16(ICE_IPV6_ETHER_ID) &&
@@ -8650,6 +8880,46 @@ ice_find_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 		return;
 	}
 
+	if (tun_type == ICE_SW_TUN_GRE && tcp) {
+		if (gre_c_bit && gre_k_bit) {
+			*pkt = dummy_gre_rfc1701_c1k1_tcp_packet;
+			*pkt_len = sizeof(dummy_gre_rfc1701_c1k1_tcp_packet);
+			*offsets = dummy_gre_rfc1701_c1k1_tcp_packet_offsets;
+			return;
+		}
+		if (!gre_c_bit && gre_k_bit) {
+			*pkt = dummy_gre_rfc1701_c0k1_tcp_packet;
+			*pkt_len = sizeof(dummy_gre_rfc1701_c0k1_tcp_packet);
+			*offsets = dummy_gre_rfc1701_c0k1_tcp_packet_offsets;
+			return;
+		}
+
+		*pkt = dummy_gre_rfc1701_c0k0_tcp_packet;
+		*pkt_len = sizeof(dummy_gre_rfc1701_c0k0_tcp_packet);
+		*offsets = dummy_gre_rfc1701_c0k0_tcp_packet_offsets;
+		return;
+	}
+
+	if (tun_type == ICE_SW_TUN_GRE) {
+		if (gre_c_bit && gre_k_bit) {
+			*pkt = dummy_gre_rfc1701_c1k1_udp_packet;
+			*pkt_len = sizeof(dummy_gre_rfc1701_c1k1_udp_packet);
+			*offsets = dummy_gre_rfc1701_c1k1_udp_packet_offsets;
+			return;
+		}
+		if (!gre_c_bit && gre_k_bit) {
+			*pkt = dummy_gre_rfc1701_c0k1_udp_packet;
+			*pkt_len = sizeof(dummy_gre_rfc1701_c0k1_udp_packet);
+			*offsets = dummy_gre_rfc1701_c0k1_udp_packet_offsets;
+			return;
+		}
+
+		*pkt = dummy_gre_rfc1701_c0k0_udp_packet;
+		*pkt_len = sizeof(dummy_gre_rfc1701_c0k0_udp_packet);
+		*offsets = dummy_gre_rfc1701_c0k0_udp_packet_offsets;
+		return;
+	}
+
 	if (tun_type == ICE_SW_TUN_VXLAN || tun_type == ICE_SW_TUN_GENEVE ||
 	    tun_type == ICE_SW_TUN_VXLAN_GPE || tun_type == ICE_SW_TUN_UDP ||
 	    tun_type == ICE_SW_TUN_PROFID_IPV4_VXLAN ||
@@ -8800,6 +9070,9 @@ ice_fill_adv_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 		case ICE_NVGRE:
 			len = sizeof(struct ice_nvgre);
 			break;
+		case ICE_GRE:
+			len = sizeof(struct ice_gre);
+			break;
 		case ICE_VXLAN:
 		case ICE_GENEVE:
 		case ICE_VXLAN_GPE:
@@ -8832,6 +9105,20 @@ ice_fill_adv_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 		/* the length should be a word multiple */
 		if (len % ICE_BYTES_PER_WORD)
 			return ICE_ERR_CFG;
+
+		if (lkups[i].type == ICE_GRE) {
+			if (lkups[i].h_u.gre_hdr.flags == 0x20)
+				offset -= 4;
+
+			for (j = 1; j < len / sizeof(u16); j++)
+				if (((u16 *)&lkups[i].m_u)[j])
+					((u16 *)(pkt + offset))[j] =
+						(((u16 *)(pkt + offset))[j] &
+						 ~((u16 *)&lkups[i].m_u)[j]) |
+						(((u16 *)&lkups[i].h_u)[j] &
+						 ((u16 *)&lkups[i].m_u)[j]);
+			continue;
+		}
 
 		/* We have the offset to the header start, the length, the
 		 * caller's header values and mask. Use this information to
@@ -9420,8 +9707,11 @@ ice_rem_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 			return ICE_ERR_CFG;
 
 		count = ice_fill_valid_words(&lkups[i], &lkup_exts);
-		if (!count)
+		if (!count) {
+			if (lkups[i].type == ICE_GRE)
+				continue;
 			return ICE_ERR_CFG;
+		}
 	}
 
 	/* Create any special protocol/offset pairs, such as looking at tunnel

@@ -1851,6 +1851,7 @@ ice_get_sw_fv_bitmap(struct ice_hw *hw, enum ice_prof_type req_profs,
  * @ids_cnt: lookup/protocol count
  * @bm: bitmap of field vectors to consider
  * @fv_list: Head of a list
+ * @lkup_exts: lookup elements
  *
  * Finds all the field vector entries from switch block that contain
  * a given protocol ID and returns a list of structures of type
@@ -1861,7 +1862,8 @@ ice_get_sw_fv_bitmap(struct ice_hw *hw, enum ice_prof_type req_profs,
  */
 enum ice_status
 ice_get_sw_fv_list(struct ice_hw *hw, u8 *prot_ids, u16 ids_cnt,
-		   ice_bitmap_t *bm, struct LIST_HEAD_TYPE *fv_list)
+		   ice_bitmap_t *bm, struct LIST_HEAD_TYPE *fv_list,
+		   struct ice_prot_lkup_ext *lkup_exts)
 {
 	struct ice_sw_fv_list_entry *fvl;
 	struct ice_sw_fv_list_entry *tmp;
@@ -1892,29 +1894,26 @@ ice_get_sw_fv_list(struct ice_hw *hw, u8 *prot_ids, u16 ids_cnt,
 		if (!ice_is_bit_set(bm, (u16)offset))
 			continue;
 
-		for (i = 0; i < ids_cnt; i++) {
+		int found = 1;
+		for (i = 0; i < lkup_exts->n_val_words; i++) {
 			int j;
 
-			/* This code assumes that if a switch field vector line
-			 * has a matching protocol, then this line will contain
-			 * the entries necessary to represent every field in
-			 * that protocol header.
-			 */
 			for (j = 0; j < hw->blk[ICE_BLK_SW].es.fvw; j++)
-				if (fv->ew[j].prot_id == prot_ids[i])
+				if (fv->ew[j].prot_id ==
+				    lkup_exts->fv_words[i].prot_id &&
+				    fv->ew[j].off == lkup_exts->fv_words[i].off)
 					break;
 			if (j >= hw->blk[ICE_BLK_SW].es.fvw)
-				break;
-			if (i + 1 == ids_cnt) {
-				fvl = (struct ice_sw_fv_list_entry *)
-					ice_malloc(hw, sizeof(*fvl));
-				if (!fvl)
-					goto err;
-				fvl->fv_ptr = fv;
-				fvl->profile_id = offset;
-				LIST_ADD(&fvl->list_entry, fv_list);
-				break;
-			}
+				found = 0;
+		}
+		if (found) {
+			fvl = (struct ice_sw_fv_list_entry *)
+				ice_malloc(hw, sizeof(*fvl));
+			if (!fvl)
+				goto err;
+			fvl->fv_ptr = fv;
+			fvl->profile_id = offset;
+			LIST_ADD(&fvl->list_entry, fv_list);
 		}
 	} while (fv);
 	if (LIST_EMPTY(fv_list))
