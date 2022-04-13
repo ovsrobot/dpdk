@@ -1163,3 +1163,27 @@ ice_dcf_add_del_all_mac_addr(struct ice_dcf_hw *hw,
 	rte_free(list);
 	return err;
 }
+
+int
+ice_dcf_cap_reset(struct rte_eth_dev *eth_dev, struct ice_dcf_hw *hw)
+{
+	int ret;
+
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
+	struct rte_intr_handle *intr_handle = &pci_dev->intr_handle;
+
+	ice_dcf_disable_irq0(hw);
+	rte_intr_disable(intr_handle);
+	rte_intr_callback_unregister(intr_handle, ice_dcf_dev_interrupt_handler,
+				     hw);
+	ret = ice_dcf_mode_disable(hw);
+	if (ret)
+		goto err;
+	ret = ice_dcf_get_vf_resource(hw);
+err:
+	rte_intr_callback_register(intr_handle, ice_dcf_dev_interrupt_handler,
+				   hw);
+	rte_intr_enable(intr_handle);
+	ice_dcf_enable_irq0(hw);
+	return ret;
+}
