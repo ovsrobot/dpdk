@@ -175,6 +175,10 @@ extern enum rte_flow_item_type pattern_eth_ipv6_icmp6[];
 extern enum rte_flow_item_type pattern_eth_vlan_ipv6_icmp6[];
 extern enum rte_flow_item_type pattern_eth_qinq_ipv6_icmp6[];
 
+/* IPv4/IPv6 VXLAN ANY */
+extern enum rte_flow_item_type pattern_eth_ipv4_udp_vxlan_any[];
+extern enum rte_flow_item_type pattern_eth_ipv6_udp_vxlan_any[];
+
 /* IPv4 VXLAN IPv4 */
 extern enum rte_flow_item_type pattern_eth_ipv4_udp_vxlan_ipv4[];
 extern enum rte_flow_item_type pattern_eth_ipv4_udp_vxlan_ipv4_udp[];
