@@ -196,6 +196,22 @@
 #define ICE_SW_INSET_GTPU_IPV6_TCP ( \
 	ICE_SW_INSET_GTPU_IPV6 | ICE_INSET_TCP_SRC_PORT | \
 	ICE_INSET_TCP_DST_PORT)
+#define ICE_SW_INSET_DIST_GRE_RAW_IPV4 ( \
+	ICE_INSET_IPV4_SRC | ICE_INSET_IPV4_DST | \
+	ICE_INSET_RAW)
+#define ICE_SW_INSET_DIST_GRE_RAW_IPV4_TCP ( \
+	ICE_INSET_IPV4_SRC | ICE_INSET_IPV4_DST | \
+	ICE_INSET_TCP_SRC_PORT | ICE_INSET_TCP_DST_PORT | \
+	ICE_INSET_RAW)
+#define ICE_SW_INSET_DIST_GRE_RAW_IPV4_UDP ( \
+	ICE_INSET_IPV4_SRC | ICE_INSET_IPV4_DST | \
+	ICE_INSET_UDP_SRC_PORT | ICE_INSET_UDP_DST_PORT | \
+	ICE_INSET_RAW)
+
+#define CUSTOM_GRE_KEY_OFFSET	4
+#define GRE_CFLAG		0x80
+#define GRE_KFLAG		0x20
+#define GRE_SFLAG		0x10
 
 struct sw_meta {
 	struct ice_adv_lkup_elem *list;
@@ -317,6 +333,9 @@ ice_pattern_match_item ice_switch_pattern_dist_list[] = {
 	{pattern_eth_ipv6_gtpu_eh_ipv6_udp,		ICE_SW_INSET_MAC_GTPU_EH_OUTER,		ICE_SW_INSET_GTPU_IPV6_UDP,		ICE_INSET_NONE},
 	{pattern_eth_ipv6_gtpu_ipv6_tcp,		ICE_SW_INSET_MAC_GTPU_OUTER,		ICE_SW_INSET_GTPU_IPV6_TCP,		ICE_INSET_NONE},
 	{pattern_eth_ipv6_gtpu_eh_ipv6_tcp,		ICE_SW_INSET_MAC_GTPU_EH_OUTER,		ICE_SW_INSET_GTPU_IPV6_TCP,		ICE_INSET_NONE},
+	{pattern_eth_ipv4_gre_raw_ipv4,			ICE_SW_INSET_DIST_GRE_RAW_IPV4,		ICE_INSET_NONE,		ICE_INSET_NONE},
+	{pattern_eth_ipv4_gre_raw_ipv4_tcp,		ICE_SW_INSET_DIST_GRE_RAW_IPV4_TCP,		ICE_INSET_NONE,		ICE_INSET_NONE},
+	{pattern_eth_ipv4_gre_raw_ipv4_udp,		ICE_SW_INSET_DIST_GRE_RAW_IPV4_UDP,		ICE_INSET_NONE,		ICE_INSET_NONE},
 };
 
 static struct
@@ -608,6 +627,11 @@ ice_switch_parse_pattern(const struct rte_flow_item pattern[],
 	bool ipv6_ipv6_valid = 0;
 	bool any_valid = 0;
 	uint16_t j, k, t = 0;
+	uint16_t c_rsvd0_ver = 0;
+	bool gre_valid = 0;
+
+#define set_cur_item_einval(msg) \
+	rte_flow_error_set(error, EINVAL, RTE_FLOW_ERROR_TYPE_ITEM, item, (msg))
 
 	if (*tun_type == ICE_SW_TUN_AND_NON_TUN_QINQ ||
 	    *tun_type == ICE_NON_TUN_QINQ)
@@ -1099,6 +1123,70 @@ ice_switch_parse_pattern(const struct rte_flow_item pattern[],
 				t++;
 			}
 			break;
+
+		case RTE_FLOW_ITEM_TYPE_GRE: {
+			const struct rte_flow_item_gre *gre_spec = item->spec;
+			const struct rte_flow_item_gre *gre_mask = item->mask;
+
+			gre_valid = 1;
+			tunnel_valid = 1;
+			if (gre_spec && gre_mask) {
+				list[t].type = ICE_GRE;
+				if (gre_mask->c_rsvd0_ver) {
+					/* GRE RFC1701 */
+					list[t].h_u.gre_hdr.flags =
+							gre_spec->c_rsvd0_ver;
+					list[t].m_u.gre_hdr.flags =
+							gre_mask->c_rsvd0_ver;
+					c_rsvd0_ver = gre_spec->c_rsvd0_ver &
+						      gre_mask->c_rsvd0_ver;
+				}
+			}
+			break;
+		}
+
+		case RTE_FLOW_ITEM_TYPE_RAW: {
+			const struct rte_flow_item_raw *raw_spec;
+			char *endp = NULL;
+			unsigned long key;
+			char s[sizeof("0x12345678")];
+
+			raw_spec = item->spec;
+
+			if (list[t].type != ICE_GRE)
+				return set_cur_item_einval("RAW must follow GRE.");
+
+			if (!(c_rsvd0_ver & GRE_KFLAG)) {
+				if (!raw_spec)
+					break;
+
+				return set_cur_item_einval("Invalid pattern! k_bit is 0 while raw pattern exists.");
+			}
+
+			if (!raw_spec)
+				return set_cur_item_einval("Invalid pattern! k_bit is 1 while raw pattern doesn't exist.");
+
+			if ((c_rsvd0_ver & GRE_CFLAG) == GRE_CFLAG &&
+			    raw_spec->offset != CUSTOM_GRE_KEY_OFFSET)
+				return set_cur_item_einval("Invalid pattern! c_bit is 1 while offset is not 4.");
+
+			if (raw_spec->length >= sizeof(s))
+				return set_cur_item_einval("Invalid key");
+
+			memcpy(s, raw_spec->pattern, raw_spec->length);
+			s[raw_spec->length] = '\0';
+			key = strtol(s, &endp, 16);
+			if (*endp != '\0' || key > UINT32_MAX)
+				return set_cur_item_einval("Invalid key");
+
+			list[t].h_u.gre_hdr.key = (uint32_t)key;
+			list[t].m_u.gre_hdr.key = UINT32_MAX;
+			*input |= ICE_INSET_RAW;
+			input_set_byte += 2;
+			t++;
+
+			break;
+		}
 
 		case RTE_FLOW_ITEM_TYPE_VLAN:
 			vlan_spec = item->spec;
@@ -1633,6 +1721,8 @@ ice_switch_parse_pattern(const struct rte_flow_item pattern[],
 	if (*tun_type == ICE_NON_TUN) {
 		if (nvgre_valid)
 			*tun_type = ICE_SW_TUN_NVGRE;
+		else if (gre_valid)
+			*tun_type = ICE_SW_TUN_GRE;
 		else if (ipv4_valid && tcp_valid)
 			*tun_type = ICE_SW_IPV4_TCP;
 		else if (ipv4_valid && udp_valid)
