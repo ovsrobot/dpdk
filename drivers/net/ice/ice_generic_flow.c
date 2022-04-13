@@ -1864,6 +1864,12 @@ ice_register_flow_engine(struct ice_flow_engine *engine)
 	TAILQ_INSERT_TAIL(&engine_list, engine, node);
 }
 
+static void
+ice_unregister_flow_engine(struct ice_flow_engine *engine)
+{
+	TAILQ_REMOVE(&engine_list, engine, node);
+}
+
 int
 ice_flow_init(struct ice_adapter *ad)
 {
@@ -1887,9 +1893,18 @@ ice_flow_init(struct ice_adapter *ad)
 
 		ret = engine->init(ad);
 		if (ret) {
-			PMD_INIT_LOG(ERR, "Failed to initialize engine %d",
-					engine->type);
-			return ret;
+			/**
+			 * ACL may not supported in kernel driver,
+			 * so just unregister the engine.
+			 */
+			if (engine->type == ICE_FLOW_ENGINE_ACL) {
+				ice_unregister_flow_engine(engine);
+			} else {
+				PMD_INIT_LOG(ERR,
+					     "Failed to initialize engine %d",
+					     engine->type);
+				return ret;
+			}
 		}
 	}
 	return 0;
@@ -1976,7 +1991,7 @@ ice_register_parser(struct ice_flow_parser *parser,
 
 	list = ice_get_parser_list(parser, ad);
 	if (list == NULL)
-		return -EINVAL;
+		goto err;
 
 	if (ad->devargs.pipe_mode_support) {
 		TAILQ_INSERT_TAIL(list, parser_node, node);
@@ -1988,7 +2003,7 @@ ice_register_parser(struct ice_flow_parser *parser,
 				    ICE_FLOW_ENGINE_ACL) {
 					TAILQ_INSERT_AFTER(list, existing_node,
 							   parser_node, node);
-					goto DONE;
+					return 0;
 				}
 			}
 			TAILQ_INSERT_HEAD(list, parser_node, node);
@@ -1999,7 +2014,7 @@ ice_register_parser(struct ice_flow_parser *parser,
 				    ICE_FLOW_ENGINE_SWITCH) {
 					TAILQ_INSERT_AFTER(list, existing_node,
 							   parser_node, node);
-					goto DONE;
+					return 0;
 				}
 			}
 			TAILQ_INSERT_HEAD(list, parser_node, node);
@@ -2008,11 +2023,14 @@ ice_register_parser(struct ice_flow_parser *parser,
 		} else if (parser->engine->type == ICE_FLOW_ENGINE_ACL) {
 			TAILQ_INSERT_HEAD(list, parser_node, node);
 		} else {
-			return -EINVAL;
+			goto err;
 		}
 	}
-DONE:
 	return 0;
+err:
+	rte_free(parser_node);
+	PMD_DRV_LOG(ERR, "%s failed.", __func__);
+	return -EINVAL;
 }
 
 void
