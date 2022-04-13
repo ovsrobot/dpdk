@@ -755,6 +755,7 @@ enum ice_status ice_init_fltr_mgmt_struct(struct ice_hw *hw)
 	status = ice_init_def_sw_recp(hw, &hw->switch_info->recp_list);
 	if (status) {
 		ice_free(hw, hw->switch_info);
+		hw->switch_info = NULL;
 		return status;
 	}
 	return ICE_SUCCESS;
@@ -823,7 +824,6 @@ ice_cleanup_fltr_mgmt_single(struct ice_hw *hw, struct ice_switch_info *sw)
 	}
 	ice_rm_sw_replay_rule_info(hw, sw);
 	ice_free(hw, sw->recp_list);
-	ice_free(hw, sw);
 }
 
 /**
@@ -833,6 +833,8 @@ ice_cleanup_fltr_mgmt_single(struct ice_hw *hw, struct ice_switch_info *sw)
 void ice_cleanup_fltr_mgmt_struct(struct ice_hw *hw)
 {
 	ice_cleanup_fltr_mgmt_single(hw, hw->switch_info);
+	ice_free(hw, hw->switch_info);
+	hw->switch_info = NULL;
 }
 
 /**
