@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright 2021 Mellanox Technologies, Ltd
+ * Copyright (C) 2022 Microsoft Corporation
  */
 
 #include <rte_common.h>
@@ -10,6 +11,54 @@
 struct eal_tls_key {
 	DWORD thread_index;
 };
+
+/* Translates the most common error codes related to threads */
+static int
+thread_translate_win32_error(DWORD error)
+{
+	switch (error) {
+	case ERROR_SUCCESS:
+		return 0;
+
+	case ERROR_INVALID_PARAMETER:
+		return EINVAL;
+
+	case ERROR_INVALID_HANDLE:
+		return EFAULT;
+
+	case ERROR_NOT_ENOUGH_MEMORY:
+		/* FALLTHROUGH */
+	case ERROR_NO_SYSTEM_RESOURCES:
+		return ENOMEM;
+
+	case ERROR_PRIVILEGE_NOT_HELD:
+		/* FALLTHROUGH */
+	case ERROR_ACCESS_DENIED:
+		return EACCES;
+
+	case ERROR_ALREADY_EXISTS:
+		return EEXIST;
+
+	case ERROR_POSSIBLE_DEADLOCK:
+		return EDEADLK;
+
+	case ERROR_INVALID_FUNCTION:
+		/* FALLTHROUGH */
+	case ERROR_CALL_NOT_IMPLEMENTED:
+		return ENOSYS;
+	}
+
+	return EINVAL;
+}
+
+static int
+thread_log_last_error(const char *message)
+{
+	DWORD error = GetLastError();
+	RTE_LOG(DEBUG, EAL, "GetLastError()=%lu: %s\n", error, message);
+
+	return thread_translate_win32_error(error);
+}
 
 int
 rte_thread_key_create(rte_thread_key *key,
