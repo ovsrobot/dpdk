@@ -2923,14 +2923,14 @@ port_flow_flush(portid_t port_id)
 
 	port = &ports[port_id];
 
-	if (port->flow_list == NULL)
-		return ret;
-
 	/* Poisoning to make sure PMDs update it in case of error. */
 	memset(&error, 0x44, sizeof(error));
 	if (rte_flow_flush(port_id, &error)) {
 		port_flow_complain(&error);
 	}
+
+	if (port->flow_list == NULL)
+		return ret;
 
 	while (port->flow_list) {
 		struct port_flow *pf = port->flow_list->next;
