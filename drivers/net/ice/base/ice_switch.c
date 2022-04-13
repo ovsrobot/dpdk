@@ -8568,6 +8568,12 @@ ice_find_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 	}
 
 	if (tun_type == ICE_SW_IPV4_TCP) {
+		if (vlan && tcp) {
+			*pkt = dummy_vlan_tcp_packet;
+			*pkt_len = sizeof(dummy_vlan_tcp_packet);
+			*offsets = dummy_vlan_tcp_packet_offsets;
+			return;
+		}
 		*pkt = dummy_tcp_packet;
 		*pkt_len = sizeof(dummy_tcp_packet);
 		*offsets = dummy_tcp_packet_offsets;
@@ -8575,6 +8581,12 @@ ice_find_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 	}
 
 	if (tun_type == ICE_SW_IPV4_UDP) {
+		if (vlan && udp) {
+			*pkt = dummy_vlan_udp_packet;
+			*pkt_len = sizeof(dummy_vlan_udp_packet);
+			*offsets = dummy_vlan_udp_packet_offsets;
+			return;
+		}
 		*pkt = dummy_udp_packet;
 		*pkt_len = sizeof(dummy_udp_packet);
 		*offsets = dummy_udp_packet_offsets;
