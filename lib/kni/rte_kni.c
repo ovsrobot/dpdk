@@ -375,26 +375,19 @@ va2pa_all(struct rte_mbuf *mbuf)
 }
 
 static void
-obj_free(struct rte_mempool *mp __rte_unused, void *opaque, void *obj,
-		unsigned obj_idx __rte_unused)
-{
-	struct rte_mbuf *m = obj;
-	void *mbuf_phys = opaque;
-
-	if (va2pa(m) == mbuf_phys)
-		rte_pktmbuf_free(m);
-}
-
-static void
-kni_free_fifo_phy(struct rte_mempool *mp, struct rte_kni_fifo *fifo)
+kni_free_fifo_phy(struct rte_kni_fifo *fifo)
 {
 	void *mbuf_phys;
 	int ret;
+	struct rte_mbuf *m;
 
 	do {
 		ret = kni_fifo_get(fifo, &mbuf_phys, 1);
-		if (ret)
-			rte_mempool_obj_iter(mp, obj_free, mbuf_phys);
+		if (ret) {
+			m = (struct rte_mbuf *)
+				rte_mem_iova2virt((rte_iova_t)mbuf_phys);
+			rte_pktmbuf_free(m);
+		}
 	} while (ret);
 }
 
@@ -440,7 +433,7 @@ rte_kni_release(struct rte_kni *kni)
 	if (kni_fifo_count(kni->rx_q))
 		RTE_LOG(ERR, KNI, "Fail to free all Rx-q items\n");
 
-	kni_free_fifo_phy(kni->pktmbuf_pool, kni->alloc_q);
+	kni_free_fifo_phy(kni->alloc_q);
 	kni_free_fifo(kni->tx_q);
 	kni_free_fifo(kni->free_q);
 
