@@ -22,6 +22,7 @@
 #define ICE_DCF_ETH_MAX_LEN (RTE_ETHER_MTU + ICE_DCF_ETH_OVERHEAD)
 #define ICE_DCF_MAX_NUM_QUEUES_DFLT 16
 #define ICE_DCF_MAX_NUM_QUEUES_LV   256
+#define ICE_DCF_CFG_Q_NUM_PER_BUF   32
 
 struct ice_dcf_queue {
 	uint64_t dummy;
