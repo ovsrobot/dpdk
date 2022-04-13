@@ -31,6 +31,7 @@
 #define ICE_PPP_IPV4_PROTO	0x0021
 #define ICE_PPP_IPV6_PROTO	0x0057
 #define ICE_IPV4_PROTO_NVGRE	0x002F
+#define ICE_IPV6_PROTO_NVGRE    0x002F
 #define ICE_SW_PRI_BASE 6
 
 #define ICE_SW_INSET_ETHER ( \
@@ -803,6 +804,10 @@ ice_switch_parse_pattern(const struct rte_flow_item pattern[],
 						break;
 					}
 				}
+				if ((ipv6_spec->hdr.proto &
+				     ipv6_mask->hdr.proto) ==
+				    ICE_IPV6_PROTO_NVGRE)
+					*tun_type = ICE_SW_TUN_AND_NON_TUN;
 				if (ipv6_mask->hdr.proto)
 					*input |= ICE_INSET_IPV6_NEXT_HDR;
 				if (ipv6_mask->hdr.hop_limits)
