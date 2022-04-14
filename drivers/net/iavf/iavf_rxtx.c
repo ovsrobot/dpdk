@@ -2822,12 +2822,12 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 		if (vf->vf_res->vf_cap_flags &
 			VIRTCHNL_VF_OFFLOAD_RX_FLEX_DESC)
 			use_flex = true;
-
-		for (i = 0; i < dev->data->nb_rx_queues; i++) {
-			rxq = dev->data->rx_queues[i];
-			(void)iavf_rxq_vec_setup(rxq);
+		if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+			for (i = 0; i < dev->data->nb_rx_queues; i++) {
+				rxq = dev->data->rx_queues[i];
+				(void)iavf_rxq_vec_setup(rxq);
+			}
 		}
-
 		if (dev->data->scattered_rx) {
 			if (!use_avx512) {
 				PMD_DRV_LOG(DEBUG,
@@ -3002,20 +3002,21 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 		}
 #endif
 
-		for (i = 0; i < dev->data->nb_tx_queues; i++) {
-			txq = dev->data->tx_queues[i];
-			if (!txq)
-				continue;
+		if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+			for (i = 0; i < dev->data->nb_tx_queues; i++) {
+				txq = dev->data->tx_queues[i];
+				if (!txq)
+					continue;
 #ifdef CC_AVX512_SUPPORT
-			if (use_avx512)
-				iavf_txq_vec_setup_avx512(txq);
-			else
-				iavf_txq_vec_setup(txq);
+				if (use_avx512)
+					iavf_txq_vec_setup_avx512(txq);
+				else
+					iavf_txq_vec_setup(txq);
 #else
-			iavf_txq_vec_setup(txq);
+				iavf_txq_vec_setup(txq);
 #endif
+			}
 		}
-
 		return;
 	}
 
