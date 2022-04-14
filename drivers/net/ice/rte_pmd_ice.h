@@ -149,7 +149,6 @@ extern uint64_t rte_net_ice_dynflag_proto_xtr_ip_offset_mask;
  * @return
  *   True if registered, false otherwise.
  */
-__rte_experimental
 static __rte_always_inline int
 rte_net_ice_dynf_proto_xtr_metadata_avail(void)
 {
