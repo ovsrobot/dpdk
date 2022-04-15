@@ -12100,25 +12100,12 @@ static void
 i40e_set_mac_max_frame(struct rte_eth_dev *dev, uint16_t size)
 {
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	uint32_t rep_cnt = MAX_REPEAT_TIME;
-	struct rte_eth_link link;
 	enum i40e_status_code status;
 
-	do {
-		update_link_reg(hw, &link);
-		if (link.link_status)
-			break;
-
-		rte_delay_ms(CHECK_INTERVAL);
-	} while (--rep_cnt);
-
-	if (link.link_status) {
-		status = i40e_aq_set_mac_config(hw, size, TRUE, 0, false, NULL);
-		if (status != I40E_SUCCESS)
-			PMD_DRV_LOG(ERR, "Failed to set max frame size at port level");
-	} else {
-		PMD_DRV_LOG(ERR, "Set max frame size at port level not applicable on link down");
-	}
+	status = i40e_aq_set_mac_config(hw, size, TRUE, 0, false, NULL);
+	if (status)
+		PMD_DRV_LOG(ERR, "Failed to set max frame size at port level");
+	return;
 }
 
 RTE_LOG_REGISTER_SUFFIX(i40e_logtype_init, init, NOTICE);
