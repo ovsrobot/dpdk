@@ -95,6 +95,14 @@ if [ "$MINI" = "true" ]; then
     OPTS="$OPTS -Denable_drivers=net/null"
     OPTS="$OPTS -Ddisable_libs=*"
 fi
+
+if [ "$ASAN" = "true" ]; then
+    OPTS="$OPTS -Db_sanitize=address"
+    if [ "${CC%%clang}" != "$CC" ]; then
+        OPTS="$OPTS -Db_lundef=false"
+    fi
+fi
+
 meson build --werror $OPTS
 ninja -C build
 
