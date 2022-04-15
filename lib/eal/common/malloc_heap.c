@@ -860,6 +860,7 @@ malloc_heap_free(struct malloc_elem *elem)
 	size_t len, aligned_len, page_sz;
 	struct rte_memseg_list *msl;
 	unsigned int i, n_segs, before_space, after_space;
+	bool unmapped_pages = false;
 	int ret;
 	const struct internal_config *internal_conf =
 		eal_get_internal_configuration();
@@ -999,6 +1000,13 @@ malloc_heap_free(struct malloc_elem *elem)
 
 		/* don't care if any of this fails */
 		malloc_heap_free_pages(aligned_start, aligned_len);
+		/*
+		 * Clear any poisoning in ASan for the associated pages so that
+		 * next time EAL maps those pages, the allocator can access
+		 * them.
+		 */
+		asan_set_zone(aligned_start, aligned_len, 0x00);
+		unmapped_pages = true;
 
 		request_sync();
 	} else {
@@ -1032,7 +1040,9 @@ malloc_heap_free(struct malloc_elem *elem)
 
 	rte_mcfg_mem_write_unlock();
 free_unlock:
-	asan_set_freezone(asan_ptr, asan_data_len);
+	/* Poison memory range if belonging to some still mapped pages. */
+	if (!unmapped_pages)
+		asan_set_freezone(asan_ptr, asan_data_len);
 
 	rte_spinlock_unlock(&(heap->lock));
 	return ret;
