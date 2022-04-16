@@ -5558,7 +5558,7 @@ eth_dev_handle_port_xstats(const char *cmd __rte_unused,
 	if (!rte_eth_dev_is_valid_port(port_id))
 		return -1;
 
-	num_xstats = rte_eth_xstats_get(port_id, NULL, 0);
+	num_xstats = rte_eth_xstats_get_names(port_id, NULL, 0);
 	if (num_xstats < 0)
 		return -1;
 
