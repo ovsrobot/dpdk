@@ -105,6 +105,10 @@ EXPERIMENTAL {
 	rte_cryptodev_asym_session_pool_create;
 	rte_cryptodev_asym_session_set_user_data;
 	__rte_cryptodev_trace_asym_session_pool_create;
+
+	#added in 22.07
+	rte_cryptodev_session_event_mdata_get;
+	rte_cryptodev_session_event_mdata_set;
 };
 
 INTERNAL {
