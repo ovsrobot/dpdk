@@ -10,9 +10,12 @@
 #include <rte_power_intrinsics.h>
 
 #include "rte_power_pmd_mgmt.h"
+#include "power_common.h"
 
 unsigned int emptypoll_max;
 unsigned int pause_duration;
+unsigned int scale_freq_min[RTE_MAX_LCORE];
+unsigned int scale_freq_max[RTE_MAX_LCORE];
 
 /* store some internal state */
 static struct pmd_conf_data {
@@ -694,8 +697,65 @@ rte_power_pmd_mgmt_get_pause_duration(void)
 	return pause_duration;
 }
 
+int
+rte_power_pmd_mgmt_set_scaling_freq_min(unsigned int lcore, unsigned int min)
+{
+	if (lcore >= RTE_MAX_LCORE) {
+		RTE_LOG(ERR, POWER, "Invalid lcore ID: %u\n", lcore);
+		rte_errno = EINVAL;
+		return -1;
+	}
+	scale_freq_min[lcore] = min;
+
+	return 0;
+}
+
+int
+rte_power_pmd_mgmt_set_scaling_freq_max(unsigned int lcore, unsigned int max)
+{
+	if (lcore >= RTE_MAX_LCORE) {
+		RTE_LOG(ERR, POWER, "Invalid lcore ID: %u\n", lcore);
+		rte_errno = EINVAL;
+		return -1;
+	}
+	scale_freq_max[lcore] = max;
+
+	return 0;
+}
+
+int
+rte_power_pmd_mgmt_get_scaling_freq_min(unsigned int lcore)
+{
+	if (lcore >= RTE_MAX_LCORE) {
+		RTE_LOG(ERR, POWER, "Invalid lcore ID: %u\n", lcore);
+		rte_errno = EINVAL;
+		return -1;
+	}
+
+	if (scale_freq_max[lcore] == 0)
+		RTE_LOG(DEBUG, POWER, "Scaling freq min config not set. Using sysfs min freq.\n");
+
+	return scale_freq_min[lcore];
+}
+
+int
+rte_power_pmd_mgmt_get_scaling_freq_max(unsigned int lcore)
+{
+	if (lcore >= RTE_MAX_LCORE) {
+		RTE_LOG(ERR, POWER, "Invalid lcore ID: %u\n", lcore);
+		rte_errno = EINVAL;
+		return -1;
+	}
+
+	if (scale_freq_max[lcore] == UINT32_MAX)
+		RTE_LOG(DEBUG, POWER, "Scaling freq max config not set. Using sysfs max freq.\n");
+
+	return scale_freq_max[lcore];
+}
+
 RTE_INIT(rte_power_ethdev_pmgmt_init) {
 	size_t i;
+	int j;
 
 	/* initialize all tailqs */
 	for (i = 0; i < RTE_DIM(lcore_cfgs); i++) {
@@ -706,4 +766,9 @@ RTE_INIT(rte_power_ethdev_pmgmt_init) {
 	/* initialize config defaults */
 	emptypoll_max = 512;
 	pause_duration = 1;
+	/* scaling defaults out of range to ensure not used unless set by user or app */
+	for (j = 0; j < RTE_MAX_LCORE; j++) {
+		scale_freq_min[j] = 0;
+		scale_freq_max[j] = UINT32_MAX;
+	}
 }
