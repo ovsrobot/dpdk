@@ -105,6 +105,7 @@ struct ice_dcf_hw {
 
 	uint16_t msix_base;
 	uint16_t nb_msix;
+	uint16_t max_rss_qregion; /* max RSS queue region supported by PF */
 	uint16_t rxq_map[16];
 	struct virtchnl_eth_stats eth_stats_offset;
 	struct virtchnl_vlan_caps vlan_v2_caps;
@@ -114,6 +115,8 @@ struct ice_dcf_hw {
 	uint32_t link_speed;
 
 	bool resetting;
+	/* Indicate large VF support enabled or not */
+	bool lv_enabled;
 };
 
 int ice_dcf_execute_virtchnl_cmd(struct ice_dcf_hw *hw,
@@ -128,6 +131,7 @@ int ice_dcf_configure_rss_lut(struct ice_dcf_hw *hw);
 int ice_dcf_init_rss(struct ice_dcf_hw *hw);
 int ice_dcf_configure_queues(struct ice_dcf_hw *hw);
 int ice_dcf_request_queues(struct ice_dcf_hw *hw, uint16_t num);
+int ice_dcf_get_max_rss_queue_region(struct ice_dcf_hw *hw);
 int ice_dcf_config_irq_map(struct ice_dcf_hw *hw);
 int ice_dcf_switch_queue(struct ice_dcf_hw *hw, uint16_t qid, bool rx, bool on);
 int ice_dcf_disable_queues(struct ice_dcf_hw *hw);
