@@ -137,6 +137,7 @@ int ice_dcf_add_del_all_mac_addr(struct ice_dcf_hw *hw,
 				 uint8_t type);
 int ice_dcf_link_update(struct rte_eth_dev *dev,
 		    __rte_unused int wait_to_complete);
+int ice_dcf_cap_reset(struct rte_eth_dev *eth_dev, struct ice_dcf_hw *hw);
 void ice_dcf_tm_conf_init(struct rte_eth_dev *dev);
 void ice_dcf_tm_conf_uninit(struct rte_eth_dev *dev);
 int ice_dcf_replay_vf_bw(struct ice_dcf_hw *hw, uint16_t vf_id);
