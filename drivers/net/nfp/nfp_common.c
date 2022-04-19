@@ -968,19 +968,18 @@ nfp_net_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 	int ret;
 
 	hw = NFP_NET_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	new_ctrl = 0;
+	new_ctrl = hw->ctrl;
 
-	/* Enable vlan strip if it is not configured yet */
-	if ((mask & RTE_ETH_VLAN_STRIP_OFFLOAD) &&
-	    !(hw->ctrl & NFP_NET_CFG_CTRL_RXVLAN))
-		new_ctrl = hw->ctrl | NFP_NET_CFG_CTRL_RXVLAN;
+	if (mask & RTE_ETH_VLAN_STRIP_OFFLOAD) {
+		/* Disable vlan strip just if it is configured */
+		if (hw->ctrl & NFP_NET_CFG_CTRL_RXVLAN)
+			new_ctrl = new_ctrl & ~NFP_NET_CFG_CTRL_RXVLAN;
+		/* Enable vlan strip if it is not configured yet */
+		else
+			new_ctrl = new_ctrl | NFP_NET_CFG_CTRL_RXVLAN;
+	}
 
-	/* Disable vlan strip just if it is configured */
-	if (!(mask & RTE_ETH_VLAN_STRIP_OFFLOAD) &&
-	    (hw->ctrl & NFP_NET_CFG_CTRL_RXVLAN))
-		new_ctrl = hw->ctrl & ~NFP_NET_CFG_CTRL_RXVLAN;
-
-	if (new_ctrl == 0)
+	if (new_ctrl == hw->ctrl)
 		return 0;
 
 	update = NFP_NET_CFG_UPDATE_GEN;
