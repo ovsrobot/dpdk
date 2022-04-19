@@ -513,6 +513,8 @@ ice_dcf_dev_start(struct rte_eth_dev *dev)
 	struct rte_intr_handle *intr_handle = dev->intr_handle;
 	struct ice_adapter *ad = &dcf_ad->parent;
 	struct ice_dcf_hw *hw = &dcf_ad->real_hw;
+	uint16_t num_queue_pairs;
+	uint16_t index = 0;
 	int ret;
 
 	if (hw->resetting) {
@@ -531,6 +533,7 @@ ice_dcf_dev_start(struct rte_eth_dev *dev)
 
 	hw->num_queue_pairs = RTE_MAX(dev->data->nb_rx_queues,
 				      dev->data->nb_tx_queues);
+	num_queue_pairs = hw->num_queue_pairs;
 
 	ret = ice_dcf_init_rx_queues(dev);
 	if (ret) {
@@ -546,7 +549,20 @@ ice_dcf_dev_start(struct rte_eth_dev *dev)
 		}
 	}
 
-	ret = ice_dcf_configure_queues(hw);
+	/* If needed, send configure queues msg multiple times to make the
+	 * adminq buffer length smaller than the 4K limitation.
+	 */
+	while (num_queue_pairs > ICE_DCF_CFG_Q_NUM_PER_BUF) {
+		if (ice_dcf_configure_queues(hw,
+				ICE_DCF_CFG_Q_NUM_PER_BUF, index) != 0) {
+			PMD_DRV_LOG(ERR, "configure queues failed");
+			goto err_queue;
+		}
+		num_queue_pairs -= ICE_DCF_CFG_Q_NUM_PER_BUF;
+		index += ICE_DCF_CFG_Q_NUM_PER_BUF;
+	}
+
+	ret = ice_dcf_configure_queues(hw, num_queue_pairs, index);
 	if (ret) {
 		PMD_DRV_LOG(ERR, "Fail to config queues");
 		return ret;
@@ -586,7 +602,7 @@ ice_dcf_dev_start(struct rte_eth_dev *dev)
 
 
 	dev->data->dev_link.link_status = RTE_ETH_LINK_UP;
-
+err_queue:
 	return 0;
 }
 
