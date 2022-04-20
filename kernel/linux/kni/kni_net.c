@@ -441,7 +441,11 @@ kni_net_rx_normal(struct kni_dev *kni)
 		skb->ip_summed = CHECKSUM_UNNECESSARY;
 
 		/* Call netif interface */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
+		netif_rx(skb);
+#else
 		netif_rx_ni(skb);
+#endif
 
 		/* Update statistics */
 		dev->stats.rx_bytes += len;
