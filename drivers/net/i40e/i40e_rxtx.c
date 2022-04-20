@@ -2767,10 +2767,6 @@ i40e_reset_tx_queue(struct i40e_tx_queue *txq)
 
 	prev = (uint16_t)(txq->nb_tx_desc - 1);
 	for (i = 0; i < txq->nb_tx_desc; i++) {
-		volatile struct i40e_tx_desc *txd = &txq->tx_ring[i];
-
-		txd->cmd_type_offset_bsz =
-			rte_cpu_to_le_64(I40E_TX_DESC_DTYPE_DESC_DONE);
 		txe[i].mbuf =  NULL;
 		txe[i].last_id = i;
 		txe[prev].next_id = i;
