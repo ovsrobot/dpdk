@@ -89,6 +89,168 @@ i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 	I40E_PCI_REG_WC_WRITE(rxq->qrx_tail, rx_id);
 }
 
+static inline void
+i40e_rxq_direct_rearm(struct i40e_rx_queue *rxq)
+{
+	struct rte_eth_dev *dev;
+	struct i40e_tx_queue *txq;
+	volatile union i40e_rx_desc *rxdp;
+	struct i40e_tx_entry *txep;
+	struct i40e_rx_entry *rxep;
+	uint16_t tx_port_id, tx_queue_id;
+	uint16_t rx_id;
+	struct rte_mbuf *mb0, *mb1, *m;
+	__m128i hdr_room = _mm_set_epi64x(RTE_PKTMBUF_HEADROOM,
+			RTE_PKTMBUF_HEADROOM);
+	__m128i dma_addr0, dma_addr1;
+	__m128i vaddr0, vaddr1;
+	uint16_t i, n;
+	uint16_t nb_rearm = 0;
+
+	rxdp = rxq->rx_ring + rxq->rxrearm_start;
+	rxep = &rxq->sw_ring[rxq->rxrearm_start];
+
+	tx_port_id = rxq->direct_rxrearm_port;
+	tx_queue_id = rxq->direct_rxrearm_queue;
+	dev = &rte_eth_devices[tx_port_id];
+	txq = dev->data->tx_queues[tx_queue_id];
+
+	/* check Rx queue is able to take in the whole
+	 * batch of free mbufs from Tx queue
+	 */
+	if (rxq->rxrearm_nb > txq->tx_rs_thresh) {
+		/* check DD bits on threshold descriptor */
+		if ((txq->tx_ring[txq->tx_next_dd].cmd_type_offset_bsz &
+				rte_cpu_to_le_64(I40E_TXD_QW1_DTYPE_MASK)) !=
+				rte_cpu_to_le_64(I40E_TX_DESC_DTYPE_DESC_DONE)) {
+			goto mempool_bulk;
+		}
+
+		n = txq->tx_rs_thresh;
+
+		/* first buffer to free from S/W ring is at index
+		 * tx_next_dd - (tx_rs_thresh-1)
+		 */
+		txep = &txq->sw_ring[txq->tx_next_dd - (n - 1)];
+
+		if (txq->offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) {
+			/* directly put mbufs from Tx to Rx,
+			 * and initialize the mbufs in vector
+			 */
+			for (i = 0; i < n; i++, rxep++, txep++) {
+				rxep[0].mbuf = txep[0].mbuf;
+
+				/* Initialize rxdp descs */
+				mb0 = txep[0].mbuf;
+
+				/* load buf_addr(lo 64bit) and buf_iova(hi 64bit) */
+				RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, buf_iova) !=
+						offsetof(struct rte_mbuf, buf_addr) + 8);
+				vaddr0 = _mm_loadu_si128((__m128i *)&mb0->buf_addr);
+
+				/* convert pa to dma_addr hdr/data */
+				dma_addr0 = _mm_unpackhi_epi64(vaddr0, vaddr0);
+
+				/* add headroom to pa values */
+				dma_addr0 = _mm_add_epi64(dma_addr0, hdr_room);
+
+				/* flush desc with pa dma_addr */
+				_mm_store_si128((__m128i *)&rxdp++->read, dma_addr0);
+			}
+		} else {
+			for (i = 0; i < n; i++) {
+				m = rte_pktmbuf_prefree_seg(txep[i].mbuf);
+				if (m != NULL) {
+					rxep[i].mbuf = m;
+
+					/* load buf_addr(lo 64bit) and buf_iova(hi 64bit) */
+					RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, buf_iova) !=
+							offsetof(struct rte_mbuf, buf_addr) + 8);
+					vaddr0 = _mm_loadu_si128((__m128i *)&m->buf_addr);
+
+					/* convert pa to dma_addr hdr/data */
+					dma_addr0 = _mm_unpackhi_epi64(vaddr0, vaddr0);
+
+					/* add headroom to pa values */
+					dma_addr0 = _mm_add_epi64(dma_addr0, hdr_room);
+
+					/* flush desc with pa dma_addr */
+					_mm_store_si128((__m128i *)&rxdp++->read, dma_addr0);
+					nb_rearm++;
+				}
+			}
+			n = nb_rearm;
+		}
+
+		/* update counters for Tx */
+		txq->nb_tx_free = (uint16_t)(txq->nb_tx_free + txq->tx_rs_thresh);
+		txq->tx_next_dd = (uint16_t)(txq->tx_next_dd + txq->tx_rs_thresh);
+		if (txq->tx_next_dd >= txq->nb_tx_desc)
+			txq->tx_next_dd = (uint16_t)(txq->tx_rs_thresh - 1);
+	} else {
+mempool_bulk:
+		/* if TX did not free bufs into Rx sw-ring,
+		 * get new bufs from mempool
+		 */
+		n = RTE_I40E_RXQ_REARM_THRESH;
+		/* Pull 'n' more MBUFs into the software ring */
+		if (rte_mempool_get_bulk(rxq->mp, (void *)rxep, n) < 0) {
+			if (rxq->rxrearm_nb + n >= rxq->nb_rx_desc) {
+				dma_addr0 = _mm_setzero_si128();
+				for (i = 0; i < RTE_I40E_DESCS_PER_LOOP; i++) {
+					rxep[i].mbuf = &rxq->fake_mbuf;
+					_mm_store_si128((__m128i *)&rxdp[i].read,
+							dma_addr0);
+				}
+			}
+			rte_eth_devices[rxq->port_id].data->rx_mbuf_alloc_failed +=
+				RTE_I40E_RXQ_REARM_THRESH;
+			return;
+		}
+
+		/* Initialize the mbufs in vector, process 2 mbufs in one loop */
+		for (i = 0; i < RTE_I40E_RXQ_REARM_THRESH; i += 2, rxep += 2) {
+			mb0 = rxep[0].mbuf;
+			mb1 = rxep[1].mbuf;
+
+			/* load buf_addr(lo 64bit) and buf_iova(hi 64bit) */
+			RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, buf_iova) !=
+					offsetof(struct rte_mbuf, buf_addr) + 8);
+			vaddr0 = _mm_loadu_si128((__m128i *)&mb0->buf_addr);
+			vaddr1 = _mm_loadu_si128((__m128i *)&mb1->buf_addr);
+
+			/* convert pa to dma_addr hdr/data */
+			dma_addr0 = _mm_unpackhi_epi64(vaddr0, vaddr0);
+			dma_addr1 = _mm_unpackhi_epi64(vaddr1, vaddr1);
+
+			/* add headroom to pa values */
+			dma_addr0 = _mm_add_epi64(dma_addr0, hdr_room);
+			dma_addr1 = _mm_add_epi64(dma_addr1, hdr_room);
+
+			/* flush desc with pa dma_addr */
+			_mm_store_si128((__m128i *)&rxdp++->read, dma_addr0);
+			_mm_store_si128((__m128i *)&rxdp++->read, dma_addr1);
+		}
+	}
+
+	/* Update the descriptor initializer index */
+	rxq->rxrearm_start += n;
+	rx_id = rxq->rxrearm_start - 1;
+
+	if (unlikely(rxq->rxrearm_start >= rxq->nb_rx_desc)) {
+		rxq->rxrearm_start = rxq->rxrearm_start - rxq->nb_rx_desc;
+		if (!rxq->rxrearm_start)
+			rx_id = rxq->nb_rx_desc - 1;
+		else
+			rx_id = rxq->rxrearm_start - 1;
+	}
+
+	rxq->rxrearm_nb -= n;
+
+	/* Update the tail pointer on the NIC */
+	I40E_PCI_REG_WRITE_RELAXED(rxq->qrx_tail, rx_id);
+}
+
 #ifndef RTE_LIBRTE_I40E_16BYTE_RX_DESC
 /* SSE version of FDIR mark extraction for 4 32B descriptors at a time */
 static inline __m128i
@@ -394,8 +556,12 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	/* See if we need to rearm the RX queue - gives the prefetch a bit
 	 * of time to act
 	 */
-	if (rxq->rxrearm_nb > RTE_I40E_RXQ_REARM_THRESH)
-		i40e_rxq_rearm(rxq);
+	if (rxq->rxrearm_nb > RTE_I40E_RXQ_REARM_THRESH) {
+		if (rxq->direct_rxrearm_enable)
+			i40e_rxq_direct_rearm(rxq);
+		else
+			i40e_rxq_rearm(rxq);
+	}
 
 	/* Before we start moving massive data around, check to see if
 	 * there is actually a packet available

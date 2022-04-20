@@ -102,6 +102,8 @@ struct i40e_rx_queue {
 
 	uint16_t rxrearm_nb;	/**< number of remaining to be re-armed */
 	uint16_t rxrearm_start;	/**< the idx we start the re-arming from */
+	uint16_t direct_rxrearm_port; /** device TX port ID for direct re-arm mode */
+	uint16_t direct_rxrearm_queue; /** TX queue index for direct re-arm mode */
 	uint64_t mbuf_initializer; /**< value to init mbufs */
 
 	uint16_t port_id; /**< device port ID */
@@ -121,6 +123,8 @@ struct i40e_rx_queue {
 	uint16_t rx_using_sse; /**<flag indicate the usage of vPMD for rx */
 	uint8_t dcb_tc;         /**< Traffic class of rx queue */
 	uint64_t offloads; /**< Rx offload flags of RTE_ETH_RX_OFFLOAD_* */
+	/**<  0 if direct re-arm mode disabled, 1 when enabled */
+	bool direct_rxrearm_enable;
 	const struct rte_memzone *mz;
 };
 

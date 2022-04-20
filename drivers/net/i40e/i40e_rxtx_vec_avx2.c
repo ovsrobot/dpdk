@@ -25,6 +25,12 @@ i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 	return i40e_rxq_rearm_common(rxq, false);
 }
 
+static __rte_always_inline void
+i40e_rxq_direct_rearm(struct i40e_rx_queue *rxq)
+{
+	return i40e_rxq_direct_rearm_common(rxq, false);
+}
+
 #ifndef RTE_LIBRTE_I40E_16BYTE_RX_DESC
 /* Handles 32B descriptor FDIR ID processing:
  * rxdp: receive descriptor ring, required to load 2nd 16B half of each desc
@@ -128,8 +134,12 @@ _recv_raw_pkts_vec_avx2(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 	/* See if we need to rearm the RX queue - gives the prefetch a bit
 	 * of time to act
 	 */
-	if (rxq->rxrearm_nb > RTE_I40E_RXQ_REARM_THRESH)
-		i40e_rxq_rearm(rxq);
+	if (rxq->rxrearm_nb > RTE_I40E_RXQ_REARM_THRESH) {
+		if (rxq->direct_rxrearm_enable)
+			i40e_rxq_direct_rearm(rxq);
+		else
+			i40e_rxq_rearm(rxq);
+	}
 
 	/* Before we start moving massive data around, check to see if
 	 * there is actually a packet available
