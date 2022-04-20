@@ -2140,6 +2140,20 @@ rte_eth_tx_hairpin_queue_setup(uint16_t port_id, uint16_t tx_queue_id,
 }
 
 int
+rte_eth_direct_rxrearm_map(uint16_t rx_port_id, uint16_t rx_queue_id,
+		uint16_t tx_port_id, uint16_t tx_queue_id)
+{
+	struct rte_eth_dev *dev;
+
+	dev = &rte_eth_devices[rx_port_id];
+	(*dev->dev_ops->rx_queue_direct_rearm_enable)(dev, rx_queue_id);
+	(*dev->dev_ops->rx_queue_direct_rearm_map)(dev, rx_queue_id,
+			tx_port_id, tx_queue_id);
+
+	return 0;
+}
+
+int
 rte_eth_hairpin_bind(uint16_t tx_port, uint16_t rx_port)
 {
 	struct rte_eth_dev *dev;

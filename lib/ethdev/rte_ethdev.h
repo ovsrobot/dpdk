@@ -5192,6 +5192,37 @@ int rte_eth_dev_hairpin_capability_get(uint16_t port_id,
 
 /**
  * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Enable direct re-arm mode. In this mode the RX queue will be re-armed using
+ * buffers that have completed transmission on the transmit side.
+ *
+ * @note
+ *   It is assumed that the buffers have completed transmission belong to the
+ *   mempool used at the receive side, and have refcnt = 1.
+ *
+ * @param rx_port_id
+ *   Port identifying the receive side.
+ * @param rx_queue_id
+ *   The index of the receive queue identifying the receive side.
+ *   The value must be in the range [0, nb_rx_queue - 1] previously supplied
+ *   to rte_eth_dev_configure().
+ * @param tx_port_id
+ *   Port identifying the transmit side.
+ * @param tx_queue_id
+ *   The index of the transmit queue identifying the transmit side.
+ *   The value must be in the range [0, nb_tx_queue - 1] previously supplied
+ *   to rte_eth_dev_configure().
+ *
+ * @return
+ *   - (0) if successful.
+ */
+__rte_experimental
+int rte_eth_direct_rxrearm_map(uint16_t rx_port_id, uint16_t rx_queue_id,
+			       uint16_t tx_port_id, uint16_t tx_queue_id);
+
+/**
+ * @warning
  * @b EXPERIMENTAL: this structure may change without prior notice.
  *
  * Ethernet device representor ID range entry

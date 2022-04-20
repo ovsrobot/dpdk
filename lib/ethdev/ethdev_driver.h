@@ -485,6 +485,16 @@ typedef int (*eth_rx_enable_intr_t)(struct rte_eth_dev *dev,
 typedef int (*eth_rx_disable_intr_t)(struct rte_eth_dev *dev,
 				    uint16_t rx_queue_id);
 
+/** @internal Enable direct rearm of a receive queue of an Ethernet device. */
+typedef int (*eth_rx_direct_rearm_enable_t)(struct rte_eth_dev *dev,
+						uint16_t queue_id);
+
+/**< @internal map Rx/Tx queue of direct rearm mode */
+typedef int (*eth_rx_direct_rearm_map_t)(struct rte_eth_dev *dev,
+					uint16_t rx_queue_id,
+					uint16_t tx_port_id,
+					uint16_t tx_queue_id);
+
 /** @internal Release memory resources allocated by given Rx/Tx queue. */
 typedef void (*eth_queue_release_t)(struct rte_eth_dev *dev,
 				    uint16_t queue_id);
@@ -1151,6 +1161,11 @@ struct eth_dev_ops {
 	eth_rx_enable_intr_t       rx_queue_intr_enable;
 	/** Disable Rx queue interrupt */
 	eth_rx_disable_intr_t      rx_queue_intr_disable;
+
+	/** Enable Rx queue direct rearm mode */
+	eth_rx_direct_rearm_enable_t rx_queue_direct_rearm_enable;
+	/** Map Rx/Tx queue for direct rearm mode */
+	eth_rx_direct_rearm_map_t  rx_queue_direct_rearm_map;
 
 	eth_tx_queue_setup_t       tx_queue_setup;/**< Set up device Tx queue */
 	eth_queue_release_t        tx_queue_release; /**< Release Tx queue */
