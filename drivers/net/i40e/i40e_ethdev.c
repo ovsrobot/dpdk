@@ -369,6 +369,13 @@ static int i40e_dev_rx_queue_intr_enable(struct rte_eth_dev *dev,
 static int i40e_dev_rx_queue_intr_disable(struct rte_eth_dev *dev,
 					  uint16_t queue_id);
 
+static int i40e_dev_rx_queue_direct_rearm_enable(struct rte_eth_dev *dev,
+						uint16_t queue_id);
+static int i40e_dev_rx_queue_direct_rearm_map(struct rte_eth_dev *dev,
+						uint16_t rx_queue_id,
+						uint16_t tx_port_id,
+						uint16_t tx_queue_id);
+
 static int i40e_get_regs(struct rte_eth_dev *dev,
 			 struct rte_dev_reg_info *regs);
 
@@ -477,6 +484,8 @@ static const struct eth_dev_ops i40e_eth_dev_ops = {
 	.rx_queue_setup               = i40e_dev_rx_queue_setup,
 	.rx_queue_intr_enable         = i40e_dev_rx_queue_intr_enable,
 	.rx_queue_intr_disable        = i40e_dev_rx_queue_intr_disable,
+	.rx_queue_direct_rearm_enable = i40e_dev_rx_queue_direct_rearm_enable,
+	.rx_queue_direct_rearm_map    = i40e_dev_rx_queue_direct_rearm_map,
 	.rx_queue_release             = i40e_dev_rx_queue_release,
 	.tx_queue_setup               = i40e_dev_tx_queue_setup,
 	.tx_queue_release             = i40e_dev_tx_queue_release,
@@ -11104,6 +11113,31 @@ i40e_dev_rx_queue_intr_disable(struct rte_eth_dev *dev, uint16_t queue_id)
 						   I40E_RX_VEC_START),
 			       I40E_PFINT_DYN_CTLN_ITR_INDX_MASK);
 	I40E_WRITE_FLUSH(hw);
+
+	return 0;
+}
+
+static int i40e_dev_rx_queue_direct_rearm_enable(struct rte_eth_dev *dev,
+			uint16_t queue_id)
+{
+	struct i40e_rx_queue *rxq;
+
+	rxq = dev->data->rx_queues[queue_id];
+	rxq->direct_rxrearm_enable = 1;
+
+	return 0;
+}
+
+static int i40e_dev_rx_queue_direct_rearm_map(struct rte_eth_dev *dev,
+				uint16_t rx_queue_id, uint16_t tx_port_id,
+				uint16_t tx_queue_id)
+{
+	struct i40e_rx_queue *rxq;
+
+	rxq = dev->data->rx_queues[rx_queue_id];
+
+	rxq->direct_rxrearm_port = tx_port_id;
+	rxq->direct_rxrearm_queue = tx_queue_id;
 
 	return 0;
 }
