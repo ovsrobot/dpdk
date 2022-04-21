@@ -1330,6 +1330,13 @@ F: drivers/baseband/la12xx/
 F: doc/guides/bbdevs/la12xx.rst
 F: doc/guides/bbdevs/features/la12xx.ini
 
+Atomic Rules ARK
+M: Shepard Siegel <shepard.siegel@atomicrules.com>
+M: Ed Czeck <ed.czeck@atomicrules.com>
+M: John Miller <john.miller@atomicrules.com>
+F: drivers/baseband/ark/
+F: doc/guides/bbdevs/ark.rst
+
 
 GPU Drivers
 -----------
