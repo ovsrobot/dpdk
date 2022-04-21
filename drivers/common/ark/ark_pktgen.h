@@ -5,6 +5,8 @@
 #ifndef _ARK_PKTGEN_H_
 #define _ARK_PKTGEN_H_
 
+#include <rte_common.h>
+#include <rte_compat.h>
 #include <stdint.h>
 #include <inttypes.h>
 
@@ -51,30 +53,55 @@ struct ark_pkt_gen_inst {
 };
 
 /*  packet generator functions */
+__rte_internal
 ark_pkt_gen_t ark_pktgen_init(void *arg, int ord, int l2_mode);
+__rte_internal
 void ark_pktgen_uninit(ark_pkt_gen_t handle);
+__rte_internal
 void ark_pktgen_run(ark_pkt_gen_t handle);
+__rte_internal
 void ark_pktgen_pause(ark_pkt_gen_t handle);
+__rte_internal
 uint32_t ark_pktgen_paused(ark_pkt_gen_t handle);
+__rte_internal
 uint32_t ark_pktgen_is_gen_forever(ark_pkt_gen_t handle);
+__rte_internal
 uint32_t ark_pktgen_is_running(ark_pkt_gen_t handle);
+__rte_internal
 uint32_t ark_pktgen_tx_done(ark_pkt_gen_t handle);
+__rte_internal
 void ark_pktgen_reset(ark_pkt_gen_t handle);
+__rte_internal
 void ark_pktgen_wait_done(ark_pkt_gen_t handle);
+__rte_internal
 uint32_t ark_pktgen_get_pkts_sent(ark_pkt_gen_t handle);
+__rte_internal
 void ark_pktgen_set_payload_byte(ark_pkt_gen_t handle, uint32_t b);
+__rte_internal
 void ark_pktgen_set_pkt_spacing(ark_pkt_gen_t handle, uint32_t x);
+__rte_internal
 void ark_pktgen_set_pkt_size_min(ark_pkt_gen_t handle, uint32_t x);
+__rte_internal
 void ark_pktgen_set_pkt_size_max(ark_pkt_gen_t handle, uint32_t x);
+__rte_internal
 void ark_pktgen_set_pkt_size_incr(ark_pkt_gen_t handle, uint32_t x);
+__rte_internal
 void ark_pktgen_set_num_pkts(ark_pkt_gen_t handle, uint32_t x);
+__rte_internal
 void ark_pktgen_set_src_mac_addr(ark_pkt_gen_t handle, uint64_t mac_addr);
+__rte_internal
 void ark_pktgen_set_dst_mac_addr(ark_pkt_gen_t handle, uint64_t mac_addr);
+__rte_internal
 void ark_pktgen_set_eth_type(ark_pkt_gen_t handle, uint32_t x);
+__rte_internal
 void ark_pktgen_set_hdr_dW(ark_pkt_gen_t handle, uint32_t *hdr);
+__rte_internal
 void ark_pktgen_set_start_offset(ark_pkt_gen_t handle, uint32_t x);
+__rte_internal
 void ark_pktgen_parse(char *argv);
+__rte_internal
 void ark_pktgen_setup(ark_pkt_gen_t handle);
+__rte_internal
 void *ark_pktgen_delay_start(void *arg);
 
 #endif

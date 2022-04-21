@@ -5,9 +5,10 @@
 #include <stdint.h>
 #include <inttypes.h>
 
+#include <rte_malloc.h>
+
 #include "ark_pktdir.h"
-#include "ark_global.h"
-#include "ark_logs.h"
+#include "ark_common.h"
 
 
 ark_pkt_dir_t

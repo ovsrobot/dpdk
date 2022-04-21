@@ -4,7 +4,7 @@
 
 #include <unistd.h>
 
-#include "ark_logs.h"
+#include "ark_common.h"
 #include "ark_udm.h"
 
 static_assert(sizeof(struct ark_rx_meta) == 32, "Unexpected struct size ark_rx_meta");

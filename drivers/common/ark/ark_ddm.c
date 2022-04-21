@@ -4,7 +4,7 @@
 
 #include <unistd.h>
 
-#include "ark_logs.h"
+#include "ark_common.h"
 #include "ark_ddm.h"
 
 static_assert(sizeof(union ark_tx_meta) == 8, "Unexpected struct size ark_tx_meta");

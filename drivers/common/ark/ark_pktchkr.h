@@ -5,6 +5,8 @@
 #ifndef _ARK_PKTCHKR_H_
 #define _ARK_PKTCHKR_H_
 
+#include <rte_common.h>
+#include <rte_compat.h>
 #include <stdint.h>
 #include <inttypes.h>
 
@@ -64,25 +66,45 @@ struct ark_pkt_chkr_inst {
 };
 
 /*  packet checker functions */
+__rte_internal
 ark_pkt_chkr_t ark_pktchkr_init(void *addr, int ord, int l2_mode);
+__rte_internal
 void ark_pktchkr_uninit(ark_pkt_chkr_t handle);
+__rte_internal
 void ark_pktchkr_run(ark_pkt_chkr_t handle);
+__rte_internal
 int ark_pktchkr_stopped(ark_pkt_chkr_t handle);
+__rte_internal
 void ark_pktchkr_stop(ark_pkt_chkr_t handle);
+__rte_internal
 int ark_pktchkr_is_running(ark_pkt_chkr_t handle);
+__rte_internal
 int ark_pktchkr_get_pkts_sent(ark_pkt_chkr_t handle);
+__rte_internal
 void ark_pktchkr_set_payload_byte(ark_pkt_chkr_t handle, uint32_t b);
+__rte_internal
 void ark_pktchkr_set_pkt_size_min(ark_pkt_chkr_t handle, uint32_t x);
+__rte_internal
 void ark_pktchkr_set_pkt_size_max(ark_pkt_chkr_t handle, uint32_t x);
+__rte_internal
 void ark_pktchkr_set_pkt_size_incr(ark_pkt_chkr_t handle, uint32_t x);
+__rte_internal
 void ark_pktchkr_set_num_pkts(ark_pkt_chkr_t handle, uint32_t x);
+__rte_internal
 void ark_pktchkr_set_src_mac_addr(ark_pkt_chkr_t handle, uint64_t mac_addr);
+__rte_internal
 void ark_pktchkr_set_dst_mac_addr(ark_pkt_chkr_t handle, uint64_t mac_addr);
+__rte_internal
 void ark_pktchkr_set_eth_type(ark_pkt_chkr_t handle, uint32_t x);
+__rte_internal
 void ark_pktchkr_set_hdr_dW(ark_pkt_chkr_t handle, uint32_t *hdr);
+__rte_internal
 void ark_pktchkr_parse(char *args);
+__rte_internal
 void ark_pktchkr_setup(ark_pkt_chkr_t handle);
+__rte_internal
 void ark_pktchkr_dump_stats(ark_pkt_chkr_t handle);
+__rte_internal
 int ark_pktchkr_wait_done(ark_pkt_chkr_t handle);
 
 #endif

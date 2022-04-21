@@ -136,30 +136,48 @@ struct ark_udm_t {
 };
 
 
+__rte_internal
 int ark_udm_verify(struct ark_udm_t *udm);
+__rte_internal
 int ark_udm_stop(struct ark_udm_t *udm, int wait);
+__rte_internal
 void ark_udm_start(struct ark_udm_t *udm);
+__rte_internal
 int ark_udm_reset(struct ark_udm_t *udm);
+__rte_internal
 void ark_udm_configure(struct ark_udm_t *udm,
 		       uint32_t headroom,
 		       uint32_t dataroom,
 		       uint32_t write_interval_ns);
+__rte_internal
 void ark_udm_write_addr(struct ark_udm_t *udm, rte_iova_t addr);
+__rte_internal
 void ark_udm_stats_reset(struct ark_udm_t *udm);
+__rte_internal
 void ark_udm_dump_stats(struct ark_udm_t *udm, const char *msg);
+__rte_internal
 void ark_udm_dump_queue_stats(struct ark_udm_t *udm, const char *msg,
 			      uint16_t qid);
+__rte_internal
 void ark_udm_dump(struct ark_udm_t *udm, const char *msg);
+__rte_internal
 void ark_udm_dump_perf(struct ark_udm_t *udm, const char *msg);
+__rte_internal
 void ark_udm_dump_setup(struct ark_udm_t *udm, uint16_t q_id);
+__rte_internal
 int ark_udm_is_flushed(struct ark_udm_t *udm);
 
 /* Per queue data */
+__rte_internal
 uint64_t ark_udm_dropped(struct ark_udm_t *udm);
+__rte_internal
 uint64_t ark_udm_bytes(struct ark_udm_t *udm);
+__rte_internal
 uint64_t ark_udm_packets(struct ark_udm_t *udm);
 
+__rte_internal
 void ark_udm_queue_stats_reset(struct ark_udm_t *udm);
+__rte_internal
 void ark_udm_queue_enable(struct ark_udm_t *udm, int enable);
 
 #endif

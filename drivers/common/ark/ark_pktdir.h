@@ -5,6 +5,8 @@
 #ifndef _ARK_PKTDIR_H_
 #define _ARK_PKTDIR_H_
 
+#include <rte_common.h>
+#include <rte_compat.h>
 #include <stdint.h>
 
 #define ARK_PKT_DIR_INIT_VAL 0x0110
@@ -32,10 +34,15 @@ struct ark_pkt_dir_inst {
 	volatile struct ark_pkt_dir_regs *regs;
 };
 
+__rte_internal
 ark_pkt_dir_t ark_pktdir_init(void *base);
+__rte_internal
 void ark_pktdir_uninit(ark_pkt_dir_t handle);
+__rte_internal
 void ark_pktdir_setup(ark_pkt_dir_t handle, uint32_t v);
+__rte_internal
 uint32_t ark_pktdir_stall_cnt(ark_pkt_dir_t handle);
+__rte_internal
 uint32_t ark_pktdir_status(ark_pkt_dir_t handle);
 
 #endif
