@@ -9,7 +9,6 @@
 #include <sys/queue.h>
 
 #include <rte_malloc.h>
-#include <rte_spinlock.h>
 
 /* Number of free lists per heap, grouped by size. */
 #define RTE_HEAP_NUM_FREELISTS  13

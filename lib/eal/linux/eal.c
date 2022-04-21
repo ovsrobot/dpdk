@@ -34,7 +34,6 @@
 #include <rte_service_component.h>
 #include <rte_log.h>
 #include <rte_string_fns.h>
-#include <rte_cpuflags.h>
 #include <rte_bus.h>
 #include <rte_version.h>
 #include <malloc_heap.h>
