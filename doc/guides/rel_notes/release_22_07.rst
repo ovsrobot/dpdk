@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added protocol based input color for meter.**
+
+  Added new APIs ``rte_mtr_color_in_protocol_priority_set()``,
+  ``rte_mtr_meter_vlan_table_update()`` and updated ``struct rte_mtr_params``
+  and ``struct rte_mtr_capabilities`` to support protocol based
+  input color for meter.
+
 
 Removed Items
 -------------
@@ -102,6 +109,9 @@ ABI Changes
 
 * No ABI change that would break compatibility with 21.11.
 
+* Experimental structures ``struct rte_mtr_params``
+  and ``struct rte_mtr_capabilities`` updated to support
+  protocol based input color for meter.
 
 Known Issues
 ------------

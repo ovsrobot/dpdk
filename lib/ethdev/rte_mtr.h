@@ -214,6 +214,52 @@ struct rte_mtr_meter_policy_params {
 };
 
 /**
+ * Input color protocol method
+ */
+enum rte_mtr_color_in_protocol {
+	/**
+	 * If the input packet has at least one VLAN label, its input color is
+	 * detected by the outermost VLAN DEI(1bit), PCP(3 bits)
+	 * indexing into the struct rte_mtr_params::vlan_table.
+	 * Otherwise, the *default_input_color* is applied.
+	 *
+	 * @see struct rte_mtr_params::default_input_color
+	 * @see struct rte_mtr_params::vlan_table
+	 */
+	RTE_MTR_COLOR_IN_PROTO_OUTER_VLAN = RTE_BIT64(0),
+	/**
+	 * If the input packet has at least one VLAN label, its input color is
+	 * detected by the innermost VLAN DEI(1bit), PCP(3 bits)
+	 * indexing into the struct rte_mtr_params::vlan_table.
+	 * Otherwise, the *default_input_color* is applied.
+	 *
+	 * @see struct rte_mtr_params::default_input_color
+	 * @see struct rte_mtr_params::vlan_table
+	 */
+	RTE_MTR_COLOR_IN_PROTO_INNER_VLAN = RTE_BIT64(1),
+	/**
+	 * If the input packet is IPv4 or IPv6, its input color is detected by
+	 * the outermost DSCP field indexing into the
+	 * struct rte_mtr_params::dscp_table.
+	 * Otherwise, the *default_input_color* is applied.
+	 *
+	 * @see struct rte_mtr_params::default_input_color
+	 * @see struct rte_mtr_params::dscp_table
+	 */
+	RTE_MTR_COLOR_IN_PROTO_OUTER_DSCP = RTE_BIT64(2),
+	/**
+	 * If the input packet is IPv4 or IPv6, its input color is detected by
+	 * the innermost DSCP field indexing into the
+	 * struct rte_mtr_params::dscp_table.
+	 * Otherwise, the *default_input_color* is applied.
+	 *
+	 * @see struct rte_mtr_params::default_input_color
+	 * @see struct rte_mtr_params::dscp_table
+	 */
+	RTE_MTR_COLOR_IN_PROTO_INNER_DSCP = RTE_BIT64(3),
+};
+
+/**
  * Parameters for each traffic metering & policing object
  *
  * @see enum rte_mtr_stats_type
@@ -233,20 +279,58 @@ struct rte_mtr_params {
 	 */
 	int use_prev_mtr_color;
 
-	/** Meter input color. When non-NULL: it points to a pre-allocated and
+	/** Meter input color based on IP DSCP protocol field.
+	 *
+	 * Valid when *input_color_proto_mask* set to any of the following
+	 * RTE_MTR_COLOR_IN_PROTO_OUTER_DSCP,
+	 * RTE_MTR_COLOR_IN_PROTO_INNER_DSCP
+	 *
+	 * When non-NULL: it points to a pre-allocated and
 	 * pre-populated table with exactly 64 elements providing the input
 	 * color for each value of the IPv4/IPv6 Differentiated Services Code
-	 * Point (DSCP) input packet field. When NULL: it is equivalent to
-	 * setting this parameter to an all-green populated table (i.e. table
-	 * with all the 64 elements set to green color). The color blind mode
-	 * is configured by setting *use_prev_mtr_color* to 0 and *dscp_table*
-	 * to either NULL or to an all-green populated table. When
-	 * *use_prev_mtr_color* is non-zero value or when *dscp_table* contains
-	 * at least one yellow or red color element, then the color aware mode
-	 * is configured.
+	 * Point (DSCP) input packet field.
+	 *
+	 * When NULL: it is equivalent to setting this parameter to an all-green
+	 * populated table (i.e. table with all the 64 elements set to green
+	 * color). The color blind mode is configured by setting
+	 * *use_prev_mtr_color* to 0 and *dscp_table* to either NULL or to an
+	 * all-green populated table.
+	 *
+	 * When *use_prev_mtr_color* is non-zero value or when *dscp_table*
+	 * contains at least one yellow or red color element, then the color
+	 * aware mode is configured.
+	 *
+	 * @see enum rte_mtr_color_in_protocol::RTE_MTR_COLOR_IN_PROTO_OUTER_DSCP
+	 * @see enum rte_mtr_color_in_protocol::RTE_MTR_COLOR_IN_PROTO_INNER_DSCP
+	 * @see struct rte_mtr_params::input_color_proto_mask
 	 */
 	enum rte_color *dscp_table;
-
+	/** Meter input color based on VLAN DEI(1bit), PCP(3 bits) protocol
+	 * fields.
+	 *
+	 * Valid when *input_color_proto_mask* set to any of the following
+	 * RTE_MTR_COLOR_IN_PROTO_OUTER_VLAN,
+	 * RTE_MTR_COLOR_IN_PROTO_INNER_VLAN
+	 *
+	 * When non-NULL: it points to a pre-allocated and pre-populated
+	 * table with exactly 16 elements providing the input color for
+	 * each value of the DEI(1bit), PCP(3 bits) input packet field.
+	 *
+	 * When NULL: it is equivalent to setting this parameter to an
+	 * all-green populated table (i.e. table with
+	 * all the 16 elements set to green color). The color blind mode
+	 * is configured by setting *use_prev_mtr_color* to 0 and
+	 * *vlan_table* to either NULL or to an all-green populated table.
+	 *
+	 * When *use_prev_mtr_color* is non-zero value
+	 * or when *vlan_table* contains at least one yellow or
+	 * red color element, then the color aware mode is configured.
+	 *
+	 * @see enum rte_mtr_color_in_protocol::RTE_MTR_COLOR_IN_PROTO_OUTER_VLAN
+	 * @see enum rte_mtr_color_in_protocol::RTE_MTR_COLOR_IN_PROTO_INNER_VLAN
+	 * @see struct rte_mtr_params::input_color_proto_mask
+	 */
+	enum rte_color *vlan_table;
 	/** Non-zero to enable the meter, zero to disable the meter at the time
 	 * of MTR object creation. Ignored when the meter profile indicated by
 	 * *meter_profile_id* is set to NONE.
@@ -261,6 +345,25 @@ struct rte_mtr_params {
 
 	/** Meter policy ID. @see rte_mtr_meter_policy_add() */
 	uint32_t meter_policy_id;
+
+	/** Set of input color protocols to be enabled.
+	 *
+	 * Set value to zero to configure as color blind mode.
+	 *
+	 * When multiple bits set then rte_mtr_color_in_protocol_priority_set()
+	 * shall be used to set the priority, in the order, in which protocol
+	 * to be used to find the inpput color.
+	 *
+	 * @see enum rte_mtr_color_in_protocol
+	 * @see rte_mtr_color_in_protocol_priority_set()
+	 */
+	uint64_t input_color_proto_mask;
+
+	/** Input color to be set for the input packet when none of the
+	 * enabled input color methods is applicable to the input packet.
+	 * Ignored when this when *input_color_proto_mask* set to zero.
+	 */
+	enum rte_color default_input_color;
 };
 
 /**
@@ -417,6 +520,16 @@ struct rte_mtr_capabilities {
 	 * @see enum rte_mtr_stats_type
 	 */
 	uint64_t stats_mask;
+
+	/** Set of supported input color protocol.
+	 * @see enum rte_mtr_color_in_protocol
+	 */
+	uint64_t input_color_proto_mask;
+
+	/** When non-zero, it indicates that driver supports separate
+	 * input color table for given ethdev port.
+	 */
+	int separate_input_color_table_per_port;
 };
 
 /**
@@ -832,6 +945,59 @@ rte_mtr_meter_dscp_table_update(uint16_t port_id,
 	enum rte_color *dscp_table,
 	struct rte_mtr_error *error);
 
+/**
+ * MTR object VLAN table update
+ *
+ * @param[in] port_id
+ *   The port identifier of the Ethernet device.
+ * @param[in] mtr_id
+ *   MTR object ID. Needs to be valid.
+ * @param[in] vlan_table
+ *   When non-NULL: it points to a pre-allocated and pre-populated table with
+ *   exactly 16 elements providing the input color for each value of the
+ *   each value of the DEI(1bit), PCP(3 bits) input packet field.
+ *   When NULL: it is equivalent to setting this parameter to an "all-green"
+ *   populated table (i.e. table with all the 16 elements set to green color).
+ * @param[out] error
+ *   Error details. Filled in only on error, when not NULL.
+ * @return
+ *   0 on success, non-zero error code otherwise.
+ */
+__rte_experimental
+int
+rte_mtr_meter_vlan_table_update(uint16_t port_id, uint32_t mtr_id,
+				enum rte_color *vlan_table,
+				struct rte_mtr_error *error);
+/**
+ * Set the priority for input color protocol
+ *
+ * When multiple bits set in struct rte_mtr_params::input_color_proto_mask
+ * then this API shall be used to set the priority, in the order, in
+ * which protocol to be used to find the input color.
+ *
+ * @param[in] port_id
+ *   The port identifier of the Ethernet device.
+ * @param[in] mtr_id
+ *   MTR object ID. Needs to be valid.
+ * @param[in] proto
+ *   Input color protocol to apply priority.
+ *   MTR object's *input_color_proto_mask* should be configured
+ *   with proto value.
+ * @param[in] priority
+ *   Input color protocol priority. Value zero indicates
+ *   the highest priority.
+ * @param[out] error
+ *   Error details. Filled in only on error, when not NULL.
+ * @return
+ *   0 on success, non-zero error code otherwise.
+ *
+ * @see rte_mtr_params::input_color_proto_mask
+ */
+__rte_experimental
+int
+rte_mtr_color_in_protocol_priority_set(uint16_t port_id, uint32_t mtr_id,
+	enum rte_mtr_color_in_protocol proto, uint32_t priority,
+	struct rte_mtr_error *error);
 /**
  * MTR object enabled statistics counters update
  *
