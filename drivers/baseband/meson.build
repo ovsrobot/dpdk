@@ -6,6 +6,7 @@ if is_windows
 endif
 
 drivers = [
+        'ark',
         'acc100',
         'fpga_5gnr_fec',
         'fpga_lte_fec',
