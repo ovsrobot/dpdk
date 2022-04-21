@@ -3,12 +3,12 @@
 
 # For SUSE build check function arguments of ndo_tx_timeout API
 # Ref: https://jira.devtools.intel.com/browse/DPDK-29263
-kmod_cflags = ''
+kmod_cflags = '-DABI_VERSION_MAJOR=@0@'.format(abi_version.split('.')[0])
 file_path = kernel_source_dir + '/include/linux/netdevice.h'
 run_cmd = run_command('grep', 'ndo_tx_timeout', file_path, check: false)
 
 if run_cmd.stdout().contains('txqueue') == true
-   kmod_cflags = '-DHAVE_ARG_TX_QUEUE'
+   kmod_cflags += ' -DHAVE_ARG_TX_QUEUE'
 endif
 
 

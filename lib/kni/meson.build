@@ -14,3 +14,4 @@ endif
 sources = files('rte_kni.c')
 headers = files('rte_kni.h', 'rte_kni_common.h')
 deps += ['ethdev', 'pci']
+cflags += ['-DABI_VERSION_MAJOR=@0@'.format(abi_version.split('.')[0])]

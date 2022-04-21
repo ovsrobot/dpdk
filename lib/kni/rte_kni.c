@@ -22,6 +22,7 @@
 #include <rte_eal_memconfig.h>
 #include <rte_kni_common.h>
 #include "rte_kni_fifo.h"
+#include "rte_kni_abi.h"
 
 #define MAX_MBUF_BURST_NUM            32
 
@@ -111,6 +112,19 @@ rte_kni_init(unsigned int max_kni_ifaces __rte_unused)
 				"Can not open /dev/%s\n", KNI_DEVICE);
 			return -1;
 		}
+	}
+
+	uint16_t abi_version;
+	int ret = ioctl(kni_fd, RTE_KNI_IOCTL_ABI_VERSION, &abi_version);
+	if (ret < 0) {
+		RTE_LOG(ERR, KNI, "Cannot verify rte_kni kmod ABI version: ioctl failed\n");
+		return -1;
+	}
+	if (abi_version != ABI_VERSION_MAJOR) {
+		RTE_LOG(ERR, KNI,
+				"rte_kni kmod ABI version mismatch: "
+				"need %" PRIu16 " got %" PRIu16 "\n", ABI_VERSION_MAJOR, abi_version);
+		return -1;
 	}
 
 	return 0;
@@ -255,6 +269,7 @@ rte_kni_alloc(struct rte_mempool *pktmbuf_pool,
 		kni->ops.port_id = UINT16_MAX;
 
 	memset(&dev_info, 0, sizeof(dev_info));
+    dev_info.abi_version_magic = RTE_KNI_ABI_VERSION_MAGIC;
 	dev_info.core_id = conf->core_id;
 	dev_info.force_bind = conf->force_bind;
 	dev_info.group_id = conf->group_id;
@@ -408,6 +423,8 @@ rte_kni_release(struct rte_kni *kni)
 
 	if (!kni)
 		return -1;
+
+    dev_info.abi_version_magic = RTE_KNI_ABI_VERSION_MAGIC;
 
 	kni_list = RTE_TAILQ_CAST(rte_kni_tailq.head, rte_kni_list);
 
