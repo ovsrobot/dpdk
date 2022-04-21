@@ -7,12 +7,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <sys/types.h>
 #include <sys/queue.h>
 #include <unistd.h>
-#include <linux/vhost.h>
 #include <linux/virtio_net.h>
-#include <sys/socket.h>
 #include <linux/if.h>
 
 #include <rte_log.h>
