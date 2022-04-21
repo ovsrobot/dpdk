@@ -3,6 +3,7 @@
 
 std_deps = ['eal']
 drivers = [
+        'ark',
         'cpt',
         'dpaax',
         'iavf',
