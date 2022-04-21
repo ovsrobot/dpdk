@@ -2,6 +2,10 @@
  * Copyright(c) 2016-2021 Atomic Rules LLC
  */
 
+#include <unistd.h>
+#include <sys/stat.h>
+#include <dlfcn.h>
+
 #include "ark_common.h"
 #include "ark_bbdev_common.h"
 #include "ark_bbdev_custom.h"
@@ -9,6 +13,7 @@
 #include "ark_mpu.h"
 #include "ark_rqp.h"
 #include "ark_udm.h"
+#include "ark_bbext.h"
 
 #include <rte_bbdev.h>
 #include <rte_bbdev_pmd.h>
@@ -22,6 +27,7 @@
 
 #define DRIVER_NAME baseband_ark
 
+int ark_common_logtype;
 RTE_LOG_REGISTER_DEFAULT(ark_bbdev_logtype, DEBUG);
 
 #define ARK_SYSCTRL_BASE  0x0
@@ -62,9 +68,77 @@ ark_device_caps[] = {
 /* Forward declarations */
 static const struct rte_bbdev_ops ark_bbdev_pmd_ops;
 
+static int
+check_for_ext(struct ark_bbdevice *ark)
+{
+	/* Get the env */
+	const char *dllpath = getenv("ARK_BBEXT_PATH");
+
+	if (dllpath == NULL) {
+		ARK_PMD_LOG(DEBUG, "EXT NO dll path specified\n");
+		return 0;
+	}
+	ARK_PMD_LOG(NOTICE, "EXT found dll path at %s\n", dllpath);
+
+	/* Open and load the .so */
+	ark->d_handle = dlopen(dllpath, RTLD_LOCAL | RTLD_LAZY);
+	if (ark->d_handle == NULL) {
+		ARK_PMD_LOG(ERR, "Could not load user extension %s\n",
+			    dllpath);
+		return -1;
+	}
+	ARK_PMD_LOG(DEBUG, "SUCCESS: loaded user extension %s\n",
+			    dllpath);
+
+	/* Get the entry points */
+	ark->user_ext.dev_init =
+		(void *(*)(struct rte_bbdev *, void *))
+		dlsym(ark->d_handle, "rte_pmd_ark_bbdev_init");
+
+	ark->user_ext.dev_uninit =
+		(int (*)(struct rte_bbdev *, void *))
+		dlsym(ark->d_handle, "rte_pmd_ark_dev_uninit");
+	ark->user_ext.dev_start =
+		(int (*)(struct rte_bbdev *, void *))
+		dlsym(ark->d_handle, "rte_pmd_ark_bbdev_start");
+	ark->user_ext.dev_stop =
+		(int (*)(struct rte_bbdev *, void *))
+		dlsym(ark->d_handle, "rte_pmd_ark_bbdev_stop");
+	ark->user_ext.dequeue_ldpc_dec  =
+		(int (*)(struct rte_bbdev *,
+			 struct rte_bbdev_dec_op *,
+			 uint32_t *,
+			 void *))
+		dlsym(ark->d_handle, "rte_pmd_ark_bbdev_dequeue_ldpc_dec");
+	ark->user_ext.enqueue_ldpc_dec  =
+		(int (*)(struct rte_bbdev *,
+			 struct rte_bbdev_dec_op *,
+			 uint32_t *,
+			 uint8_t *,
+			 void *))
+		dlsym(ark->d_handle, "rte_pmd_ark_bbdev_enqueue_ldpc_dec");
+	ark->user_ext.dequeue_ldpc_enc  =
+		(int (*)(struct rte_bbdev *,
+			 struct rte_bbdev_enc_op *,
+			 uint32_t *,
+			 void *))
+		dlsym(ark->d_handle, "rte_pmd_ark_bbdev_dequeue_ldpc_enc");
+	ark->user_ext.enqueue_ldpc_enc  =
+		(int (*)(struct rte_bbdev *,
+			 struct rte_bbdev_enc_op *,
+			 uint32_t *,
+			 uint8_t *,
+			 void *))
+		dlsym(ark->d_handle, "rte_pmd_ark_bbdev_enqueue_ldpc_enc");
+
+	return 0;
+}
+
 
 /* queue */
 struct ark_bbdev_queue {
+	struct ark_bbdevice *ark_bbdev;
+
 	struct rte_ring *active_ops;  /* Ring for processed packets */
 
 	/* RX components */
@@ -182,6 +256,7 @@ ark_bb_q_setup(struct rte_bbdev *bbdev, uint16_t q_id,
 		return -ENOMEM;
 	}
 	bbdev->data->queues[q_id].queue_private = q;
+	q->ark_bbdev = ark_bb;
 
 	/* RING */
 	snprintf(ring_name, RTE_RING_NAMESIZE, RTE_STR(DRIVER_NAME) "%u:%u",
@@ -272,6 +347,11 @@ ark_bbdev_start(struct rte_bbdev *bbdev)
 	ARK_BBDEV_LOG(DEBUG, "Starting device %u", bbdev->data->dev_id);
 	if (ark_bb->started)
 		return 0;
+
+	/* User start hook */
+	if (ark_bb->user_ext.dev_start)
+		ark_bb->user_ext.dev_start(bbdev,
+					ark_bb->user_data);
 
 	/* start UDM */
 	ark_udm_start(ark_bb->udm.v);
@@ -368,6 +448,12 @@ ark_bbdev_stop(struct rte_bbdev *bbdev)
 		ark_pktchkr_dump_stats(ark_bb->pc);
 		ark_pktchkr_stop(ark_bb->pc);
 	}
+
+	/* User stop hook */
+	if (ark_bb->user_ext.dev_stop)
+		ark_bb->user_ext.dev_stop(bbdev,
+					  ark_bb->user_data);
+
 }
 
 static int
@@ -574,10 +660,15 @@ ark_bb_enqueue_ldpc_dec_one_op(struct ark_bbdev_queue *q,
 	uint32_t meta[5] = {0};
 	uint8_t meta_cnt = 0;
 
-	/* User's meta move from bbdev op to Arkville HW */
-	if (ark_bb_user_enqueue_ldpc_dec(this_op, meta, &meta_cnt)) {
-		ARK_BBDEV_LOG(ERR, "%s failed", __func__);
-		return 1;
+	if (q->ark_bbdev->user_ext.enqueue_ldpc_dec) {
+		if (q->ark_bbdev->user_ext.enqueue_ldpc_dec(q->ark_bbdev->bbdev,
+							    this_op,
+							    meta,
+							    &meta_cnt,
+							    q->ark_bbdev->user_data)) {
+			ARK_BBDEV_LOG(ERR, "%s failed", __func__);
+			return 1;
+		}
 	}
 
 	return ark_bb_enqueue_common(q, m_in, m_out, offset, meta, meta_cnt);
@@ -652,8 +743,18 @@ ark_bb_dequeue_ldpc_dec_ops(struct rte_bbdev_queue_data *q_data,
 		}
 
 		usermeta = meta->user_meta;
+
 		/* User's meta move from Arkville HW to bbdev OP */
-		ark_bb_user_dequeue_ldpc_dec(this_op, usermeta);
+		if (q->ark_bbdev->user_ext.dequeue_ldpc_dec) {
+			if (q->ark_bbdev->user_ext.dequeue_ldpc_dec(q->ark_bbdev->bbdev,
+								    this_op,
+								    usermeta,
+								    q->ark_bbdev->user_data)) {
+				ARK_BBDEV_LOG(ERR, "%s failed", __func__);
+				return 1;
+			}
+		}
+
 		nb++;
 		cons_index++;
 		if (nb >= nb_ops)
@@ -682,9 +783,15 @@ ark_bb_enqueue_ldpc_enc_one_op(struct ark_bbdev_queue *q,
 	uint8_t meta_cnt = 0;
 
 	/* User's meta move from bbdev op to Arkville HW */
-	if (ark_bb_user_enqueue_ldpc_enc(this_op, meta, &meta_cnt)) {
-		ARK_BBDEV_LOG(ERR, "%s failed", __func__);
-		return 1;
+	if (q->ark_bbdev->user_ext.enqueue_ldpc_enc) {
+		if (q->ark_bbdev->user_ext.enqueue_ldpc_enc(q->ark_bbdev->bbdev,
+							    this_op,
+							    meta,
+							    &meta_cnt,
+							    q->ark_bbdev->user_data)) {
+			ARK_BBDEV_LOG(ERR, "%s failed", __func__);
+			return 1;
+		}
 	}
 
 	return ark_bb_enqueue_common(q, m_in, m_out, offset, meta, meta_cnt);
@@ -759,7 +866,16 @@ ark_bb_dequeue_ldpc_enc_ops(struct rte_bbdev_queue_data *q_data,
 		}
 
 		/* User's meta move from Arkville HW to bbdev OP */
-		ark_bb_user_dequeue_ldpc_enc(this_op, usermeta);
+		if (q->ark_bbdev->user_ext.dequeue_ldpc_enc) {
+			if (q->ark_bbdev->user_ext.dequeue_ldpc_enc(q->ark_bbdev->bbdev,
+								    this_op,
+								    usermeta,
+								    q->ark_bbdev->user_data)) {
+				ARK_BBDEV_LOG(ERR, "%s failed", __func__);
+				return 1;
+			}
+		}
+
 		nb++;
 		cons_index++;
 		if (nb >= nb_ops)
@@ -773,6 +889,7 @@ ark_bb_dequeue_ldpc_enc_ops(struct rte_bbdev_queue_data *q_data,
 
 	return nb;
 }
+
 
 /**************************************************************************/
 /*
@@ -829,7 +946,7 @@ ark_bb_config_device(struct ark_bbdevice *ark_bb)
 	ark_udm_stop(ark_bb->udm.v, 0);
 	ark_udm_configure(ark_bb->udm.v,
 			  RTE_PKTMBUF_HEADROOM,
-			  bbdev->data->queues[q_id]->dataroom,
+			  RTE_MBUF_DEFAULT_DATAROOM,
 			  ARK_RX_WRITE_TIME_NS);
 
 
@@ -875,6 +992,7 @@ ark_bbdev_init(struct rte_bbdev *bbdev, struct rte_pci_driver *pci_drv)
 	struct rte_pci_device *pci_dev = RTE_DEV_TO_PCI(bbdev->device);
 	bool rqpacing = false;
 	int p;
+	ark_bb->bbdev = bbdev;
 
 	RTE_SET_USED(pci_drv);
 
@@ -904,6 +1022,10 @@ ark_bbdev_init(struct rte_bbdev *bbdev, struct rte_pci_driver *pci_drv)
 			(struct ark_rqpace_t *)(ark_bb->bar0 + ARK_RCPACING_BASE);
 	else
 		ark_bb->rqpacing = NULL;
+
+	/* Check to see if there is an extension that we need to load */
+	if (check_for_ext(ark_bb))
+		return -1;
 
 	ark_bb->started = 0;
 
@@ -1032,7 +1154,9 @@ ark_bbdev_remove(struct rte_pci_device *pci_dev)
 				"Device %i failed to close during remove: %i",
 				bbdev->data->dev_id, ret);
 
-	return rte_bbdev_release(bbdev);
+	ret = rte_bbdev_release(bbdev);
+
+	return ret;
 }
 
 /* Operation for the PMD */

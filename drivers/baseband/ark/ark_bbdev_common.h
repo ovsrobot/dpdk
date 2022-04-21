@@ -8,6 +8,7 @@
 #include "ark_pktchkr.h"
 #include "ark_pktdir.h"
 #include "ark_pktgen.h"
+#include "ark_bbext.h"
 
 #define ARK_MAX_ARG_LEN 256
 
@@ -51,6 +52,9 @@ struct ark_bbdevice {
 	/* Application Bar needed for extensions */
 	uint8_t *a_bar;
 
+	/* rte baseband device */
+	struct rte_bbdev *bbdev;
+
 	/* Arkville hardware block offsets */
 	def_ptr(sys_ctrl, sysctrl);
 	def_ptr(pkt_gen, pktgen);
@@ -75,6 +79,10 @@ struct ark_bbdevice {
 
 	int started;
 	unsigned int max_nb_queues;  /**< Max number of queues */
+
+	void *d_handle;
+	struct arkbb_user_ext user_ext;
+	void *user_data;
 
 };
 
