@@ -200,7 +200,6 @@ extern "C" {
 
 #include <rte_common.h>
 #include <rte_dev.h>
-#include <rte_mbuf.h>
 
 #define RTE_REGEXDEV_NAME_MAX_LEN RTE_DEV_NAME_MAX_LEN
 
