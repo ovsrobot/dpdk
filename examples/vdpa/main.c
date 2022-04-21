@@ -20,6 +20,7 @@
 #include <cmdline_parse_string.h>
 #include <cmdline_parse_num.h>
 #include <cmdline.h>
+#include "vdpa_blk_compact.h"
 
 #define MAX_PATH_LEN 128
 #define MAX_VDPA_SAMPLE_PORTS 1024
@@ -41,6 +42,7 @@ static char iface[MAX_PATH_LEN];
 static int devcnt;
 static int interactive;
 static int client_mode;
+static int isblk;
 
 /* display usage */
 static void
@@ -49,7 +51,8 @@ vdpa_usage(const char *prgname)
 	printf("Usage: %s [EAL options] -- "
 				 "	--interactive|-i: run in interactive mode.\n"
 				 "	--iface <path>: specify the path prefix of the socket files, e.g. /tmp/vhost-user-.\n"
-				 "	--client: register a vhost-user socket as client mode.\n",
+				 "	--client: register a vhost-user socket as client mode.\n"
+				 "	--isblk: device is a block device, e.g. virtio_blk device.\n",
 				 prgname);
 }
 
@@ -61,6 +64,7 @@ parse_args(int argc, char **argv)
 		{"iface", required_argument, NULL, 0},
 		{"interactive", no_argument, &interactive, 1},
 		{"client", no_argument, &client_mode, 1},
+		{"isblk", no_argument, &isblk, 1},
 		{NULL, 0, 0, 0},
 	};
 	int opt, idx;
@@ -159,6 +163,52 @@ static const struct rte_vhost_device_ops vdpa_sample_devops = {
 };
 
 static int
+vdpa_blk_device_set_features_and_protocol(const char *path)
+{
+	uint64_t protocol_features = 0;
+	int ret;
+
+	ret = rte_vhost_driver_set_features(path, VHOST_BLK_FEATURES_BASE);
+	if (ret != 0) {
+		RTE_LOG(ERR, VDPA,
+			"rte_vhost_driver_set_features for %s failed.\n",
+			path);
+		goto out;
+	}
+
+	ret = rte_vhost_driver_disable_features(path,
+		VHOST_VDPA_BLK_DISABLED_FEATURES);
+	if (ret != 0) {
+		RTE_LOG(ERR, VDPA,
+			"rte_vhost_driver_disable_features for %s failed.\n",
+			path);
+		goto out;
+	}
+
+	ret = rte_vhost_driver_get_protocol_features(path, &protocol_features);
+	if (ret != 0) {
+		RTE_LOG(ERR, VDPA,
+			"rte_vhost_driver_get_protocol_features for %s failed.\n",
+			path);
+		goto out;
+	}
+
+	protocol_features |= (1ULL << VHOST_USER_PROTOCOL_F_CONFIG);
+	protocol_features |= (1ULL << VHOST_USER_PROTOCOL_F_LOG_SHMFD);
+
+	ret = rte_vhost_driver_set_protocol_features(path, protocol_features);
+	if (ret != 0) {
+		RTE_LOG(ERR, VDPA,
+			"rte_vhost_driver_set_protocol_features for %s failed.\n",
+			path);
+		goto out;
+	}
+
+out:
+	return ret;
+}
+
+static int
 start_vdpa(struct vdpa_port *vport)
 {
 	int ret;
@@ -191,6 +241,15 @@ start_vdpa(struct vdpa_port *vport)
 		rte_exit(EXIT_FAILURE,
 			"attach vdpa device failed: %s\n",
 			socket_path);
+
+	if (isblk) {
+		RTE_LOG(NOTICE, VDPA, "is a blk device\n");
+		ret = vdpa_blk_device_set_features_and_protocol(socket_path);
+		if (ret != 0)
+			rte_exit(EXIT_FAILURE,
+				"set vhost blk driver features and protocol features failed: %s\n",
+				socket_path);
+	}
 
 	if (rte_vhost_driver_start(socket_path) < 0)
 		rte_exit(EXIT_FAILURE,
