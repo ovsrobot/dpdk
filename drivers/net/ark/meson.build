@@ -7,15 +7,13 @@ if is_windows
     subdir_done()
 endif
 
+deps += ['common_ark']
+
 sources = files(
-        'ark_ddm.c',
         'ark_ethdev.c',
         'ark_ethdev_rx.c',
         'ark_ethdev_tx.c',
-        'ark_mpu.c',
-        'ark_pktchkr.c',
-        'ark_pktdir.c',
-        'ark_pktgen.c',
-        'ark_rqp.c',
-        'ark_udm.c',
+        'ark_ethdev_logs.c',
 )
+
+includes += include_directories('../../common/ark')
