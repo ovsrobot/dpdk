@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel QuickAssist Technology (QAT) crypto PMD.**
+
+  * Added support for secp384r1 elliptic curve.
+
 
 Removed Items
 -------------
