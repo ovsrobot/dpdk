@@ -259,7 +259,7 @@ static const struct rte_security_capability cn10k_eth_sec_capabilities[] = {
 			.proto = RTE_SECURITY_IPSEC_SA_PROTO_ESP,
 			.mode = RTE_SECURITY_IPSEC_SA_MODE_TUNNEL,
 			.direction = RTE_SECURITY_IPSEC_SA_DIR_INGRESS,
-			.replay_win_sz_max = ROC_AR_WIN_SIZE_MAX,
+			.replay_win_sz_max = ROC_NIX_INL_OT_IPSEC_AR_WIN_SZ_MAX,
 			.options = {
 				.udp_encap = 1,
 				.udp_ports_verify = 1,
@@ -284,7 +284,7 @@ static const struct rte_security_capability cn10k_eth_sec_capabilities[] = {
 			.proto = RTE_SECURITY_IPSEC_SA_PROTO_ESP,
 			.mode = RTE_SECURITY_IPSEC_SA_MODE_TUNNEL,
 			.direction = RTE_SECURITY_IPSEC_SA_DIR_EGRESS,
-			.replay_win_sz_max = ROC_AR_WIN_SIZE_MAX,
+			.replay_win_sz_max = ROC_NIX_INL_OT_IPSEC_AR_WIN_SZ_MAX,
 			.options = {
 				.iv_gen_disable = 1,
 				.udp_encap = 1,
@@ -309,7 +309,7 @@ static const struct rte_security_capability cn10k_eth_sec_capabilities[] = {
 			.proto = RTE_SECURITY_IPSEC_SA_PROTO_ESP,
 			.mode = RTE_SECURITY_IPSEC_SA_MODE_TRANSPORT,
 			.direction = RTE_SECURITY_IPSEC_SA_DIR_EGRESS,
-			.replay_win_sz_max = ROC_AR_WIN_SIZE_MAX,
+			.replay_win_sz_max = ROC_NIX_INL_OT_IPSEC_AR_WIN_SZ_MAX,
 			.options = {
 				.iv_gen_disable = 1,
 				.udp_encap = 1,
@@ -333,7 +333,7 @@ static const struct rte_security_capability cn10k_eth_sec_capabilities[] = {
 			.proto = RTE_SECURITY_IPSEC_SA_PROTO_ESP,
 			.mode = RTE_SECURITY_IPSEC_SA_MODE_TRANSPORT,
 			.direction = RTE_SECURITY_IPSEC_SA_DIR_INGRESS,
-			.replay_win_sz_max = ROC_AR_WIN_SIZE_MAX,
+			.replay_win_sz_max = ROC_NIX_INL_OT_IPSEC_AR_WIN_SZ_MAX,
 			.options = {
 				.udp_encap = 1,
 				.udp_ports_verify = 1,
@@ -658,7 +658,7 @@ cn10k_eth_sec_session_create(void *device,
 		}
 
 		inb_sa_dptr = (struct roc_ot_ipsec_inb_sa *)dev->inb.sa_dptr;
-		memset(inb_sa_dptr, 0, sizeof(struct roc_ot_ipsec_inb_sa));
+		memset(inb_sa_dptr, 0, ROC_NIX_INL_OT_IPSEC_INB_HW_SZ);
 
 		/* Fill inbound sa params */
 		rc = cnxk_ot_ipsec_inb_sa_fill(inb_sa_dptr, ipsec, crypto,
@@ -701,7 +701,7 @@ cn10k_eth_sec_session_create(void *device,
 		/* Sync session in context cache */
 		rc = roc_nix_inl_ctx_write(&dev->nix, inb_sa_dptr, eth_sec->sa,
 					   eth_sec->inb,
-					   sizeof(struct roc_ot_ipsec_inb_sa));
+					   ROC_NIX_INL_OT_IPSEC_INB_HW_SZ);
 		if (rc)
 			goto mempool_put;
 
@@ -731,7 +731,7 @@ cn10k_eth_sec_session_create(void *device,
 		rlens = &outb_priv->rlens;
 
 		outb_sa_dptr = (struct roc_ot_ipsec_outb_sa *)dev->outb.sa_dptr;
-		memset(outb_sa_dptr, 0, sizeof(struct roc_ot_ipsec_outb_sa));
+		memset(outb_sa_dptr, 0, ROC_NIX_INL_OT_IPSEC_OUTB_HW_SZ);
 
 		/* Fill outbound sa params */
 		rc = cnxk_ot_ipsec_outb_sa_fill(outb_sa_dptr, ipsec, crypto);
@@ -795,7 +795,7 @@ cn10k_eth_sec_session_create(void *device,
 		/* Sync session in context cache */
 		rc = roc_nix_inl_ctx_write(&dev->nix, outb_sa_dptr, eth_sec->sa,
 					   eth_sec->inb,
-					   sizeof(struct roc_ot_ipsec_outb_sa));
+					   ROC_NIX_INL_OT_IPSEC_OUTB_HW_SZ);
 		if (rc)
 			goto mempool_put;
 	}
@@ -846,21 +846,23 @@ cn10k_eth_sec_session_destroy(void *device, struct rte_security_session *sess)
 	if (eth_sec->inb) {
 		/* Disable SA */
 		sa_dptr = dev->inb.sa_dptr;
+		memset(sa_dptr, 0, ROC_NIX_INL_OT_IPSEC_INB_HW_SZ);
 		roc_ot_ipsec_inb_sa_init(sa_dptr, true);
 
 		roc_nix_inl_ctx_write(&dev->nix, sa_dptr, eth_sec->sa,
 				      eth_sec->inb,
-				      sizeof(struct roc_ot_ipsec_inb_sa));
+				      ROC_NIX_INL_OT_IPSEC_INB_HW_SZ);
 		TAILQ_REMOVE(&dev->inb.list, eth_sec, entry);
 		dev->inb.nb_sess--;
 	} else {
 		/* Disable SA */
 		sa_dptr = dev->outb.sa_dptr;
+		memset(sa_dptr, 0, ROC_NIX_INL_OT_IPSEC_OUTB_HW_SZ);
 		roc_ot_ipsec_outb_sa_init(sa_dptr);
 
 		roc_nix_inl_ctx_write(&dev->nix, sa_dptr, eth_sec->sa,
 				      eth_sec->inb,
-				      sizeof(struct roc_ot_ipsec_outb_sa));
+				      ROC_NIX_INL_OT_IPSEC_OUTB_HW_SZ);
 		/* Release Outbound SA index */
 		cnxk_eth_outb_sa_idx_put(dev, eth_sec->sa_idx);
 		TAILQ_REMOVE(&dev->outb.list, eth_sec, entry);
