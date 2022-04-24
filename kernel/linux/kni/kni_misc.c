@@ -17,6 +17,7 @@
 #include <net/netns/generic.h>
 
 #include <rte_kni_common.h>
+#include <rte_kni_abi.h>
 
 #include "compat.h"
 #include "kni_dev.h"
@@ -237,9 +238,23 @@ kni_release(struct inode *inode, struct file *file)
 }
 
 static int
+kni_check_abi_version_magic(uint16_t abi_version_magic)
+{
+	if (abi_version_magic != RTE_KNI_ABI_VERSION_MAGIC) {
+		pr_err("KNI kmod ABI incompatible with librte_kni -- %u\n",
+				RTE_KNI_ABI_VERSION_FROM_MAGIC(abi_version_magic));
+		return -1;
+	}
+	return 0;
+}
+
+static int
 kni_check_param(struct kni_dev *kni, struct rte_kni_device_info *dev)
 {
 	if (!kni || !dev)
+		return -1;
+
+	if (kni_check_abi_version_magic(dev->abi_version_magic) < 0)
 		return -1;
 
 	/* Check if network name has been used */
@@ -301,10 +316,17 @@ kni_ioctl_create(struct net *net, uint32_t ioctl_num,
 	struct rte_kni_device_info dev_info;
 	struct net_device *net_dev = NULL;
 	struct kni_dev *kni, *dev, *n;
+	uint16_t abi_version_magic;
 
 	pr_info("Creating kni...\n");
 	/* Check the buffer size, to avoid warning */
 	if (_IOC_SIZE(ioctl_num) > sizeof(dev_info))
+		return -EINVAL;
+
+	/* perform abi check ahead of copy, to avoid possible violation */
+	if (copy_from_user(&abi_version_magic, (void *)ioctl_param, sizeof(uint16_t)))
+		return -EFAULT;
+	if (kni_check_abi_version_magic(abi_version_magic) < 0)
 		return -EINVAL;
 
 	/* Copy kni info from user space */
@@ -451,8 +473,15 @@ kni_ioctl_release(struct net *net, uint32_t ioctl_num,
 	int ret = -EINVAL;
 	struct kni_dev *dev, *n;
 	struct rte_kni_device_info dev_info;
+	uint16_t abi_version_magic;
 
 	if (_IOC_SIZE(ioctl_num) > sizeof(dev_info))
+		return -EINVAL;
+
+	/* perform abi check ahead of copy, to avoid possible violation */
+	if (copy_from_user(&abi_version_magic, (void *)ioctl_param, sizeof(uint16_t)))
+		return -EFAULT;
+	if (kni_check_abi_version_magic(abi_version_magic) < 0)
 		return -EINVAL;
 
 	if (copy_from_user(&dev_info, (void *)ioctl_param, sizeof(dev_info)))
@@ -484,6 +513,16 @@ kni_ioctl_release(struct net *net, uint32_t ioctl_num,
 	return ret;
 }
 
+static int
+kni_ioctl_abi_version(struct net *net, uint32_t ioctl_num,
+		unsigned long ioctl_param)
+{
+	uint16_t abi_version = ABI_VERSION_MAJOR;
+	if (copy_to_user((void *)ioctl_param, &abi_version, sizeof(uint16_t)))
+		return -EFAULT;
+	return 0;
+}
+
 static long
 kni_ioctl(struct file *file, unsigned int ioctl_num, unsigned long ioctl_param)
 {
@@ -504,6 +543,9 @@ kni_ioctl(struct file *file, unsigned int ioctl_num, unsigned long ioctl_param)
 		break;
 	case _IOC_NR(RTE_KNI_IOCTL_RELEASE):
 		ret = kni_ioctl_release(net, ioctl_num, ioctl_param);
+		break;
+	case _IOC_NR(RTE_KNI_IOCTL_ABI_VERSION):
+		ret = kni_ioctl_abi_version(net, ioctl_num, ioctl_param);
 		break;
 	default:
 		pr_debug("IOCTL default\n");

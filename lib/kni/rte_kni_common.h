@@ -102,6 +102,8 @@ struct rte_kni_mbuf {
  */
 
 struct rte_kni_device_info {
+	uint16_t abi_version_magic;
+
 	char name[RTE_KNI_NAMESIZE];  /**< Network device name for KNI */
 
 	phys_addr_t tx_phys;
@@ -139,6 +141,7 @@ struct rte_kni_device_info {
 #define RTE_KNI_IOCTL_TEST    _IOWR(0, 1, int)
 #define RTE_KNI_IOCTL_CREATE  _IOWR(0, 2, struct rte_kni_device_info)
 #define RTE_KNI_IOCTL_RELEASE _IOWR(0, 3, struct rte_kni_device_info)
+#define RTE_KNI_IOCTL_ABI_VERSION _IOWR(0, 4, uint16_t)
 
 #ifdef __cplusplus
 }
