@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Marvell cnxk crypto PMD.**
+
+  * Added AH mode support in lookaside protocol (IPsec) for CN9K & CN10K.
+
 
 Removed Items
 -------------
