@@ -61,6 +61,7 @@ usage(char *progname)
 		" --pdcp-sn-sz N: set PDCP SN size N <5/7/12/15/18>\n"
 		" --pdcp-domain DOMAIN: set PDCP domain <control/user>\n"
 		" --pdcp-ses-hfn-en: enable session based fixed HFN\n"
+		" --enable-sdap: enable sdap\n"
 		" --docsis-hdr-sz: set DOCSIS header size\n"
 #endif
 		" -h: prints this help\n",
@@ -536,6 +537,15 @@ parse_silent(struct cperf_options *opts,
 }
 
 static int
+parse_enable_sdap(struct cperf_options *opts,
+		const char *arg __rte_unused)
+{
+	opts->pdcp_sdap = 1;
+
+	return 0;
+}
+
+static int
 parse_cipher_algo(struct cperf_options *opts, const char *arg)
 {
 
@@ -865,6 +875,7 @@ static struct option lgopts[] = {
 	{ CPERF_PDCP_SN_SZ, required_argument, 0, 0 },
 	{ CPERF_PDCP_DOMAIN, required_argument, 0, 0 },
 	{ CPERF_PDCP_SES_HFN_EN, no_argument, 0, 0 },
+	{ CPERF_ENABLE_SDAP, no_argument, 0, 0 },
 	{ CPERF_DOCSIS_HDR_SZ, required_argument, 0, 0 },
 #endif
 	{ CPERF_CSV, no_argument, 0, 0},
@@ -978,6 +989,7 @@ cperf_opts_parse_long(int opt_idx, struct cperf_options *opts)
 		{ CPERF_PDCP_SN_SZ,	parse_pdcp_sn_sz },
 		{ CPERF_PDCP_DOMAIN,	parse_pdcp_domain },
 		{ CPERF_PDCP_SES_HFN_EN,	parse_pdcp_ses_hfn_en },
+		{ CPERF_ENABLE_SDAP,	parse_enable_sdap },
 		{ CPERF_DOCSIS_HDR_SZ,	parse_docsis_hdr_sz },
 #endif
 		{ CPERF_CSV,		parse_csv_friendly},
