@@ -1527,13 +1527,7 @@ rss_config_display(struct rte_flow_action_rss *rss_conf)
 		printf("  none\n");
 		return;
 	}
-	for (i = 0; rss_type_table[i].str; i++) {
-		if ((rss_conf->types &
-		    rss_type_table[i].rss_type) ==
-		    rss_type_table[i].rss_type &&
-		    rss_type_table[i].rss_type != 0)
-			printf("  %s\n", rss_type_table[i].str);
-	}
+	show_rss_types(rss_conf->types);
 }
 
 static struct port_indirect_action *
@@ -3733,13 +3727,7 @@ port_rss_hash_conf_show(portid_t port_id, int show_rss_key)
 		return;
 	}
 	printf("RSS functions:\n ");
-	for (i = 0; rss_type_table[i].str; i++) {
-		if (rss_type_table[i].rss_type == 0)
-			continue;
-		if ((rss_hf & rss_type_table[i].rss_type) == rss_type_table[i].rss_type)
-			printf("%s ", rss_type_table[i].str);
-	}
-	printf("\n");
+	show_rss_types(rss_hf);
 	if (!show_rss_key)
 		return;
 	printf("RSS key:\n");
