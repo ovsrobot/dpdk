@@ -253,6 +253,8 @@ uint8_t  tx_pkt_nb_segs = 1; /**< Number of segments in TXONLY packets */
 enum tx_pkt_split tx_pkt_split = TX_PKT_SPLIT_OFF;
 /**< Split policy for packets to TX. */
 
+uint32_t rx_pkt_buffer_split_proto;
+
 uint8_t txonly_multi_flow;
 /**< Whether multiple flows are generated in TXONLY mode. */
 
@@ -2586,12 +2588,11 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		mp_n = (i > mbuf_data_size_n) ? mbuf_data_size_n - 1 : i;
 		mpx = mbuf_pool_find(socket_id, mp_n);
 		/* Handle zero as mbuf data buffer size. */
-		rx_seg->length = rx_pkt_seg_lengths[i] ?
-				   rx_pkt_seg_lengths[i] :
-				   mbuf_data_size[mp_n];
+		rx_seg->length = rx_pkt_seg_lengths[i];
 		rx_seg->offset = i < rx_pkt_nb_offs ?
 				   rx_pkt_seg_offsets[i] : 0;
 		rx_seg->mp = mpx ? mpx : mp;
+		rx_seg->proto = rx_pkt_buffer_split_proto;
 	}
 	rx_conf->rx_nseg = rx_pkt_nb_segs;
 	rx_conf->rx_seg = rx_useg;

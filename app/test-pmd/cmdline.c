@@ -866,6 +866,12 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"     Enable or disable a per port Rx offloading"
 			" on all Rx queues of a port\n\n"
 
+			"port config <port_id> buffer_split mac|ipv4|ipv6|l3|tcp|udp|sctp|l4|"
+			"inner_mac|inner_ipv4|inner_ipv6|inner_l3|inner_tcp|"
+			"inner_udp|inner_sctp|inner_l4\n"
+			"     Configure protocol type for buffer split"
+			" on all Rx queues of a port\n\n"
+
 			"port (port_id) rxq (queue_id) rx_offload vlan_strip|"
 			"ipv4_cksum|udp_cksum|tcp_cksum|tcp_lro|qinq_strip|"
 			"outer_ipv4_cksum|macsec_strip|header_split|"
@@ -16353,6 +16359,117 @@ cmdline_parse_inst_t cmd_config_per_port_rx_offload = {
 	}
 };
 
+/* config a per port buffer split protocol */
+struct cmd_config_per_port_buffer_split_protocol_result {
+	cmdline_fixed_string_t port;
+	cmdline_fixed_string_t config;
+	uint16_t port_id;
+	cmdline_fixed_string_t buffer_split;
+	cmdline_fixed_string_t protocol;
+};
+
+cmdline_parse_token_string_t cmd_config_per_port_buffer_split_protocol_result_port =
+	TOKEN_STRING_INITIALIZER
+		(struct cmd_config_per_port_buffer_split_protocol_result,
+		 port, "port");
+cmdline_parse_token_string_t cmd_config_per_port_buffer_split_protocol_result_config =
+	TOKEN_STRING_INITIALIZER
+		(struct cmd_config_per_port_buffer_split_protocol_result,
+		 config, "config");
+cmdline_parse_token_num_t cmd_config_per_port_buffer_split_protocol_result_port_id =
+	TOKEN_NUM_INITIALIZER
+		(struct cmd_config_per_port_buffer_split_protocol_result,
+		 port_id, RTE_UINT16);
+cmdline_parse_token_string_t cmd_config_per_port_buffer_split_protocol_result_buffer_split =
+	TOKEN_STRING_INITIALIZER
+		(struct cmd_config_per_port_buffer_split_protocol_result,
+		 buffer_split, "buffer_split");
+cmdline_parse_token_string_t cmd_config_per_port_buffer_split_protocol_result_protocol =
+	TOKEN_STRING_INITIALIZER
+		(struct cmd_config_per_port_buffer_split_protocol_result,
+		 protocol, "mac#ipv4#ipv6#l3#tcp#udp#sctp#l4#"
+			   "inner_mac#inner_ipv4#inner_ipv6#inner_l3#inner_tcp#"
+			   "inner_udp#inner_sctp#inner_l4");
+
+static void
+cmd_config_per_port_buffer_split_protocol_parsed(void *parsed_result,
+				__rte_unused struct cmdline *cl,
+				__rte_unused void *data)
+{
+	struct cmd_config_per_port_buffer_split_protocol_result *res = parsed_result;
+	portid_t port_id = res->port_id;
+	struct rte_port *port = &ports[port_id];
+	uint32_t protocol;
+
+	if (port_id_is_invalid(port_id, ENABLED_WARN))
+		return;
+
+	if (port->port_status != RTE_PORT_STOPPED) {
+		fprintf(stderr,
+			"Error: Can't config offload when Port %d is not stopped\n",
+			port_id);
+		return;
+	}
+
+	if (!strcmp(res->protocol, "mac"))
+		protocol = RTE_PTYPE_L2_ETHER;
+	else if (!strcmp(res->protocol, "ipv4"))
+		protocol = RTE_PTYPE_L3_IPV4;
+	else if (!strcmp(res->protocol, "ipv6"))
+		protocol = RTE_PTYPE_L3_IPV6;
+	else if (!strcmp(res->protocol, "l3"))
+		protocol = RTE_PTYPE_L3_IPV4|RTE_PTYPE_L3_IPV6;
+	else if (!strcmp(res->protocol, "tcp"))
+		protocol = RTE_PTYPE_L4_TCP;
+	else if (!strcmp(res->protocol, "udp"))
+		protocol = RTE_PTYPE_L4_UDP;
+	else if (!strcmp(res->protocol, "sctp"))
+		protocol = RTE_PTYPE_L4_SCTP;
+	else if (!strcmp(res->protocol, "l4"))
+		protocol = RTE_PTYPE_L4_TCP|RTE_PTYPE_L4_UDP|RTE_PTYPE_L4_SCTP;
+	else if (!strcmp(res->protocol, "inner_mac"))
+		protocol = RTE_PTYPE_INNER_L2_ETHER;
+	else if (!strcmp(res->protocol, "inner_ipv4"))
+		protocol = RTE_PTYPE_INNER_L3_IPV4;
+	else if (!strcmp(res->protocol, "inner_ipv6"))
+		protocol = RTE_PTYPE_INNER_L3_IPV6;
+	else if (!strcmp(res->protocol, "inner_l3"))
+		protocol = RTE_PTYPE_INNER_L3_IPV4|RTE_PTYPE_INNER_L3_IPV6;
+	else if (!strcmp(res->protocol, "inner_tcp"))
+		protocol = RTE_PTYPE_INNER_L4_TCP;
+	else if (!strcmp(res->protocol, "inner_udp"))
+		protocol = RTE_PTYPE_INNER_L4_UDP;
+	else if (!strcmp(res->protocol, "inner_sctp"))
+		protocol = RTE_PTYPE_INNER_L4_SCTP;
+	else if (!strcmp(res->protocol, "inner_l4"))
+		protocol = RTE_PTYPE_INNER_L4_TCP|RTE_PTYPE_INNER_L4_UDP|RTE_PTYPE_INNER_L4_SCTP;
+	else {
+		fprintf(stderr, "Unknown protocol name: %s\n", res->protocol);
+		return;
+	}
+
+	rx_pkt_buffer_split_proto = protocol;
+	rx_pkt_nb_segs = 2;
+
+	cmd_reconfig_device_queue(port_id, 1, 1);
+}
+
+cmdline_parse_inst_t cmd_config_per_port_buffer_split_protocol = {
+	.f = cmd_config_per_port_buffer_split_protocol_parsed,
+	.data = NULL,
+	.help_str = "port config <port_id> buffer_split mac|ipv4|ipv6|l3|tcp|udp|sctp|l4|"
+		    "inner_mac|inner_ipv4|inner_ipv6|inner_l3|inner_tcp|"
+		    "inner_udp|inner_sctp|inner_l4",
+	.tokens = {
+		(void *)&cmd_config_per_port_buffer_split_protocol_result_port,
+		(void *)&cmd_config_per_port_buffer_split_protocol_result_config,
+		(void *)&cmd_config_per_port_buffer_split_protocol_result_port_id,
+		(void *)&cmd_config_per_port_buffer_split_protocol_result_buffer_split,
+		(void *)&cmd_config_per_port_buffer_split_protocol_result_protocol,
+		NULL,
+	}
+};
+
 /* Enable/Disable a per queue offloading */
 struct cmd_config_per_queue_rx_offload_result {
 	cmdline_fixed_string_t port;
@@ -18071,6 +18188,7 @@ cmdline_parse_ctx_t main_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_rx_offload_get_capa,
 	(cmdline_parse_inst_t *)&cmd_rx_offload_get_configuration,
 	(cmdline_parse_inst_t *)&cmd_config_per_port_rx_offload,
+	(cmdline_parse_inst_t *)&cmd_config_per_port_buffer_split_protocol,
 	(cmdline_parse_inst_t *)&cmd_config_per_queue_rx_offload,
 	(cmdline_parse_inst_t *)&cmd_tx_offload_get_capa,
 	(cmdline_parse_inst_t *)&cmd_tx_offload_get_configuration,
