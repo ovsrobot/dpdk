@@ -14,6 +14,7 @@ sources = files(
         'ethdev_sff_telemetry.c',
         'sff_common.c',
         'sff_8079.c',
+        'sff_8472.c',
 )
 
 headers = files(
