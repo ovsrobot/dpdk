@@ -1661,6 +1661,7 @@ rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 		struct rte_mempool *mpl = rx_seg[seg_idx].mp;
 		uint32_t length = rx_seg[seg_idx].length;
 		uint32_t offset = rx_seg[seg_idx].offset;
+		uint32_t proto = rx_seg[seg_idx].proto;
 
 		if (mpl == NULL) {
 			RTE_ETHDEV_LOG(ERR, "null mempool pointer\n");
@@ -1694,13 +1695,34 @@ rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 		}
 		offset += seg_idx != 0 ? 0 : RTE_PKTMBUF_HEADROOM;
 		*mbp_buf_size = rte_pktmbuf_data_room_size(mpl);
-		length = length != 0 ? length : *mbp_buf_size;
-		if (*mbp_buf_size < length + offset) {
-			RTE_ETHDEV_LOG(ERR,
-				       "%s mbuf_data_room_size %u < %u (segment length=%u + segment offset=%u)\n",
-				       mpl->name, *mbp_buf_size,
-				       length + offset, length, offset);
-			return -EINVAL;
+		if (proto == 0) {
+			length = length != 0 ? length : *mbp_buf_size;
+			if (*mbp_buf_size < length + offset) {
+				RTE_ETHDEV_LOG(ERR,
+					"%s mbuf_data_room_size %u < %u (segment length=%u + segment offset=%u)\n",
+					mpl->name, *mbp_buf_size,
+					length + offset, length, offset);
+				return -EINVAL;
+			}
+		} else {
+			/* Ensure n_seg is 2 in protocol based buffer split. */
+			if (n_seg != 2)	{
+				RTE_ETHDEV_LOG(ERR, "number of buffer split protocol segments should be 2.\n");
+				return -EINVAL;
+			}
+			/* Length and protocol are exclusive here, so make sure length is 0 in protocol
+			based buffer split. */
+			if (length != 0) {
+				RTE_ETHDEV_LOG(ERR, "segment length should be set to zero in buffer split\n");
+				return -EINVAL;
+			}
+			if (*mbp_buf_size < offset) {
+				RTE_ETHDEV_LOG(ERR,
+						"%s mbuf_data_room_size %u < %u segment offset)\n",
+						mpl->name, *mbp_buf_size,
+						offset);
+				return -EINVAL;
+			}
 		}
 	}
 	return 0;

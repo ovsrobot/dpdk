@@ -1187,6 +1187,9 @@ struct rte_eth_txmode {
  *   mbuf) the following data will be pushed to the next segment
  *   up to its own length, and so on.
  *
+ *
+ * - The proto in the elements defines the split position of received packets.
+ *
  * - If the length in the segment description element is zero
  *   the actual buffer size will be deduced from the appropriate
  *   memory pool properties.
@@ -1197,12 +1200,21 @@ struct rte_eth_txmode {
  *     - pool from the last valid element
  *     - the buffer size from this pool
  *     - zero offset
+ *
+ * - Length based buffer split:
+ *     - mp, length, offset should be configured.
+ *     - The proto should not be configured in length split. Zero default.
+ *
+ * - Protocol based buffer split:
+ *     - mp, offset, proto should be configured.
+ *     - The length should not be configured in protocol split. Zero default.
+ *
  */
 struct rte_eth_rxseg_split {
 	struct rte_mempool *mp; /**< Memory pool to allocate segment from. */
 	uint16_t length; /**< Segment data length, configures split point. */
 	uint16_t offset; /**< Data offset from beginning of mbuf data buffer. */
-	uint32_t reserved; /**< Reserved field. */
+	uint32_t proto; /**< Protocol of buffer split, determines protocol split point. */
 };
 
 /**
@@ -1663,6 +1675,7 @@ struct rte_eth_conf {
 			     RTE_ETH_RX_OFFLOAD_VLAN_EXTEND | \
 			     RTE_ETH_RX_OFFLOAD_QINQ_STRIP)
 #define DEV_RX_OFFLOAD_VLAN RTE_DEPRECATED(DEV_RX_OFFLOAD_VLAN) RTE_ETH_RX_OFFLOAD_VLAN
+
 
 /*
  * If new Rx offload capabilities are defined, they also must be
