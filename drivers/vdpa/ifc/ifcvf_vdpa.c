@@ -1300,6 +1300,15 @@ ifcvf_blk_get_protocol_features(struct rte_vdpa_device *vdev,
 	return 0;
 }
 
+static int
+ifcvf_blk_get_device_type(struct rte_vdpa_device *vdev,
+	uint32_t *type)
+{
+	RTE_SET_USED(vdev);
+	*type = VDPA_DEVICE_TYPE_BLK;
+	return 0;
+}
+
 static struct rte_vdpa_dev_ops ifcvf_blk_ops = {
 	.get_queue_num = ifcvf_get_queue_num,
 	.get_features = ifcvf_get_vdpa_features,
@@ -1313,6 +1322,7 @@ static struct rte_vdpa_dev_ops ifcvf_blk_ops = {
 	.get_vfio_device_fd = ifcvf_get_vfio_device_fd,
 	.get_notify_area = ifcvf_get_notify_area,
 	.get_config = ifcvf_blk_get_config,
+	.get_dev_type = ifcvf_blk_get_device_type,
 };
 
 struct rte_vdpa_dev_info dev_info[] = {
