@@ -87,6 +87,8 @@ EXPERIMENTAL {
 
 	# added in 22.03
 	rte_vhost_async_dma_configure;
+
+	rte_vhost_driver_get_vdpa_dev_type;
 };
 
 INTERNAL {
