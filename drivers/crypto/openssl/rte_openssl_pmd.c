@@ -1696,12 +1696,7 @@ process_openssl_dh_op(struct rte_crypto_op *cop,
 	BIGNUM *priv_key = NULL;
 	int ret = 0;
 
-	if (sess->u.dh.key_op &
-			(1 << RTE_CRYPTO_ASYM_OP_SHARED_SECRET_COMPUTE)) {
-		/* compute shared secret using peer public key
-		 * and current private key
-		 * shared secret = peer_key ^ priv_key mod p
-		 */
+	if (op->op_type == RTE_CRYPTO_ASYM_OP_SHARED_SECRET_COMPUTE) {
 		BIGNUM *peer_key = NULL;
 
 		/* copy private key and peer key and compute shared secret */
@@ -1735,10 +1730,6 @@ process_openssl_dh_op(struct rte_crypto_op *cop,
 		if (ret < 0) {
 			cop->status = RTE_CRYPTO_OP_STATUS_ERROR;
 			BN_free(peer_key);
-			/* priv key is already loaded into dh,
-			 * let's not free that directly here.
-			 * DH_free() will auto free it later.
-			 */
 			return 0;
 		}
 		cop->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
@@ -1747,50 +1738,12 @@ process_openssl_dh_op(struct rte_crypto_op *cop,
 		return 0;
 	}
 
-	/*
-	 * other options are public and private key generations.
-	 *
-	 * if user provides private key,
-	 * then first set DH with user provided private key
-	 */
-	if ((sess->u.dh.key_op &
-			(1 << RTE_CRYPTO_ASYM_OP_PUBLIC_KEY_GENERATE)) &&
-			!(sess->u.dh.key_op &
-			(1 << RTE_CRYPTO_ASYM_OP_PRIVATE_KEY_GENERATE))) {
-		/* generate public key using user-provided private key
-		 * pub_key = g ^ priv_key mod p
-		 */
-
-		/* load private key into DH */
-		priv_key = BN_bin2bn(op->priv_key.data,
-				op->priv_key.length,
-				priv_key);
-		if (priv_key == NULL) {
-			cop->status = RTE_CRYPTO_OP_STATUS_NOT_PROCESSED;
-			return -1;
-		}
-		ret = set_dh_priv_key(dh_key, priv_key);
-		if (ret) {
-			OPENSSL_LOG(ERR, "Failed to set private key\n");
-			cop->status = RTE_CRYPTO_OP_STATUS_ERROR;
-			BN_free(priv_key);
-			return 0;
-		}
-	}
-
-	/* generate public and private key pair.
-	 *
-	 * if private key already set, generates only public key.
-	 *
-	 * if private key is not already set, then set it to random value
-	 * and update internal private key.
-	 */
 	if (!DH_generate_key(dh_key)) {
 		cop->status = RTE_CRYPTO_OP_STATUS_ERROR;
 		return 0;
 	}
 
-	if (sess->u.dh.key_op & (1 << RTE_CRYPTO_ASYM_OP_PUBLIC_KEY_GENERATE)) {
+	if (op->op_type == RTE_CRYPTO_ASYM_OP_PUBLIC_KEY_GENERATE) {
 		const BIGNUM *pub_key = NULL;
 
 		OPENSSL_LOG(DEBUG, "%s:%d update public key\n",
@@ -1804,8 +1757,7 @@ process_openssl_dh_op(struct rte_crypto_op *cop,
 				op->pub_key.data);
 	}
 
-	if (sess->u.dh.key_op &
-			(1 << RTE_CRYPTO_ASYM_OP_PRIVATE_KEY_GENERATE)) {
+	if (op->op_type == RTE_CRYPTO_ASYM_OP_PRIVATE_KEY_GENERATE) {
 		const BIGNUM *priv_key = NULL;
 
 		OPENSSL_LOG(DEBUG, "%s:%d updated priv key\n",
