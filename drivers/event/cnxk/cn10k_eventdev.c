@@ -57,6 +57,7 @@ cn10k_sso_init_hws_mem(void *arg, uint8_t port_id)
 	ws->swtag_req = 0;
 	ws->gw_wdata = cn10k_sso_gw_mode_wdata(dev);
 	ws->lmt_base = dev->sso.lmt_base;
+	ws->gw_rdata = (SSO_TT_EMPTY << 32) | BIT_ULL(35);
 
 	return ws;
 }
@@ -567,9 +568,15 @@ cn10k_sso_port_unlink(struct rte_eventdev *event_dev, void *port,
 static int
 cn10k_sso_start(struct rte_eventdev *event_dev)
 {
+	struct cnxk_sso_evdev *dev = cnxk_sso_pmd_priv(event_dev);
 	int rc;
 
 	rc = cn10k_sso_updt_tx_adptr_data(event_dev);
+	if (rc < 0)
+		return rc;
+
+	rc = roc_sso_hws_config_lsw(&dev->sso, SSO_LSW_MODE_WAITW,
+				    SSOW_LSW_WQE_RELEASE_IMMED);
 	if (rc < 0)
 		return rc;
 
@@ -755,6 +762,10 @@ cn10k_sso_tx_adapter_queue_add(uint8_t id, const struct rte_eventdev *event_dev,
 	struct cnxk_sso_evdev *dev = cnxk_sso_pmd_priv(event_dev);
 	uint64_t tx_offloads;
 	int rc;
+
+	rc = roc_nix_sched_lmt_enable(&cnxk_eth_dev->nix);
+	if (rc < 0)
+		return -EINVAL;
 
 	RTE_SET_USED(id);
 	rc = cnxk_sso_tx_adapter_queue_add(event_dev, eth_dev, tx_queue_id);

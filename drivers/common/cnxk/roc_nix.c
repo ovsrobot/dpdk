@@ -140,6 +140,25 @@ roc_nix_max_pkt_len(struct roc_nix *roc_nix)
 }
 
 int
+roc_nix_sched_lmt_enable(struct roc_nix *roc_nix)
+{
+	struct nix *nix = roc_nix_to_nix_priv(roc_nix);
+	struct mbox *mbox = (&nix->dev)->mbox;
+	struct lmtst_tbl_setup_req *req;
+
+	req = mbox_alloc_msg_lmtst_tbl_setup(mbox);
+	if (req == NULL)
+		return -ENOSPC;
+	req->pcifunc = 0;
+	req->ssow_pf_func = dev_get_pf(idev_sso_pffunc_get()) << 8;
+	req->ssow_pf_func |=
+		(uint64_t)(dev_get_func(idev_sso_pffunc_get()) & 0xFF);
+	req->sched_ena = 1;
+
+	return mbox_process(mbox);
+}
+
+int
 roc_nix_lf_alloc(struct roc_nix *roc_nix, uint32_t nb_rxq, uint32_t nb_txq,
 		 uint64_t rx_cfg)
 {

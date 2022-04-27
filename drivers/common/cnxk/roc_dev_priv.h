@@ -55,6 +55,12 @@ dev_get_pf(uint16_t pf_func)
 }
 
 static inline int
+dev_get_func(uint16_t pf_func)
+{
+	return (pf_func >> RVU_PFVF_FUNC_SHIFT) & RVU_PFVF_FUNC_MASK;
+}
+
+static inline int
 dev_pf_func(int pf, int vf)
 {
 	return (pf << RVU_PFVF_PF_SHIFT) | ((vf << RVU_PFVF_FUNC_SHIFT) + 1);

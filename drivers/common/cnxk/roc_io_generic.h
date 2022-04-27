@@ -99,6 +99,13 @@ roc_lmt_submit_steorl(uint64_t data, plt_iova_t io_address)
 }
 
 static __plt_always_inline void
+roc_lmt_submit_stsmaxl(uint64_t data, plt_iova_t io_address)
+{
+	PLT_SET_USED(data);
+	PLT_SET_USED(io_address);
+}
+
+static __plt_always_inline void
 roc_lmt_mov(void *out, const void *in, const uint32_t lmtext)
 {
 	PLT_SET_USED(in);

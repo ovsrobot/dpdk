@@ -904,4 +904,8 @@ int __roc_api roc_nix_mcast_mcam_entry_write(struct roc_nix *roc_nix,
 					     uint64_t action);
 int __roc_api roc_nix_mcast_mcam_entry_ena_dis(struct roc_nix *roc_nix,
 					       uint32_t index, bool enable);
+
+/* SSO */
+int __roc_api roc_nix_sched_lmt_enable(struct roc_nix *roc_nix);
+
 #endif /* _ROC_NIX_H_ */

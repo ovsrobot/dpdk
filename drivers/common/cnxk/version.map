@@ -230,6 +230,7 @@ INTERNAL {
 	roc_nix_rx_drop_re_set;
 	roc_nix_rx_queue_intr_disable;
 	roc_nix_rx_queue_intr_enable;
+	roc_nix_sched_lmt_enable;
 	roc_nix_sq_dump;
 	roc_nix_sq_fini;
 	roc_nix_sq_head_tail_get;
@@ -348,6 +349,7 @@ INTERNAL {
 	roc_sso_hwgrp_set_priority;
 	roc_sso_hwgrp_stats_get;
 	roc_sso_hws_base_get;
+	roc_sso_hws_config_lsw;
 	roc_sso_hws_link;
 	roc_sso_hws_stats_get;
 	roc_sso_hws_unlink;

@@ -345,6 +345,29 @@ roc_sso_hwgrp_stats_get(struct roc_sso *roc_sso, uint8_t hwgrp,
 }
 
 int
+roc_sso_hws_config_lsw(struct roc_sso *roc_sso, uint8_t lsw_mode,
+		       uint8_t wqe_release_mode)
+{
+	struct dev *dev = &roc_sso_to_sso_priv(roc_sso)->dev;
+	struct ssow_config_lsw *req;
+
+	if (lsw_mode > SSOW_LSW_MODE_IMMED ||
+	    wqe_release_mode > SSOW_LSW_WQE_RELEASE_IMMED)
+		return -EINVAL;
+
+	req = mbox_alloc_msg_ssow_config_lsw(dev->mbox);
+	if (req == NULL)
+		return -ENOSPC;
+
+	req->lsw_mode = lsw_mode;
+	req->wqe_release = wqe_release_mode;
+	if (mbox_process(dev->mbox) < 0)
+		return -EIO;
+
+	return 0;
+}
+
+int
 roc_sso_hwgrp_hws_link_status(struct roc_sso *roc_sso, uint8_t hws,
 			      uint16_t hwgrp)
 {

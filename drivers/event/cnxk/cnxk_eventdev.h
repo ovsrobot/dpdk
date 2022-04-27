@@ -129,13 +129,13 @@ struct cn10k_sso_hws {
 	void *lookup_mem;
 	uint32_t gw_wdata;
 	uint8_t swtag_req;
-	uint8_t hws_id;
 	/* Add Work Fastpath data */
 	uint64_t xaq_lmt __rte_cache_aligned;
 	uint64_t *fc_mem;
 	uintptr_t grp_base;
 	/* Tx Fastpath data */
 	uintptr_t lmt_base __rte_cache_aligned;
+	uint8_t hws_id;
 	uint64_t lso_tun_fmt;
 	uint8_t tx_adptr_data[];
 } __rte_cache_aligned;

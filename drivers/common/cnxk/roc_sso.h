@@ -102,6 +102,8 @@ int __roc_api roc_sso_hws_link(struct roc_sso *roc_sso, uint8_t hws,
 			       uint16_t hwgrp[], uint16_t nb_hwgrp);
 int __roc_api roc_sso_hws_unlink(struct roc_sso *roc_sso, uint8_t hws,
 				 uint16_t hwgrp[], uint16_t nb_hwgrp);
+int __roc_api roc_sso_hws_config_lsw(struct roc_sso *roc_sso, uint8_t lsw_mode,
+				     uint8_t wqe_release_mode);
 int __roc_api roc_sso_hwgrp_hws_link_status(struct roc_sso *roc_sso,
 					    uint8_t hws, uint16_t hwgrp);
 uintptr_t __roc_api roc_sso_hws_base_get(struct roc_sso *roc_sso, uint8_t hws);

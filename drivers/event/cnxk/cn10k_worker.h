@@ -580,11 +580,18 @@ cn10k_sso_tx_one(struct cn10k_sso_hws *ws, struct rte_mbuf *m, uint64_t *cmd,
 	else
 		pa = txq->io_addr | ((segdw - 1) << 4);
 
-	if (!CNXK_TAG_IS_HEAD(ws->gw_rdata) && !sched_type)
-		ws->gw_rdata = roc_sso_hws_head_wait(ws->base);
+	if (flags & NIX_TX_VWQE_F ||
+	    CNXK_TT_FROM_TAG(ws->gw_rdata) == SSO_TT_EMPTY) {
+		if (!CNXK_TAG_IS_HEAD(ws->gw_rdata) && !sched_type)
+			ws->gw_rdata = roc_sso_hws_head_wait(ws->base);
 
-	cn10k_sso_txq_fc_wait(txq);
-	roc_lmt_submit_steorl(lmt_id, pa);
+		cn10k_sso_txq_fc_wait(txq);
+		roc_lmt_submit_steorl(lmt_id, pa);
+	} else {
+		cn10k_sso_txq_fc_wait(txq);
+		roc_lmt_submit_stsmaxl(
+			(uint64_t)lmt_id | (uint64_t)ws->hws_id << 16, pa);
+	}
 }
 
 static __rte_always_inline void
@@ -616,7 +623,7 @@ cn10k_sso_vwqe_split_tx(struct cn10k_sso_hws *ws, struct rte_mbuf **mbufs,
 			for (j = 0; j < 4; j++)
 				cn10k_sso_tx_one(ws, mbufs[i + j], cmd, lmt_id,
 						 lmt_addr, sched_type, txq_data,
-						 flags);
+						 flags | NIX_TX_VWQE_F);
 		} else {
 			txq = (struct cn10k_eth_txq
 				       *)(txq_data[(txq_data[port[0]] >> 48) +
@@ -632,7 +639,7 @@ cn10k_sso_vwqe_split_tx(struct cn10k_sso_hws *ws, struct rte_mbuf **mbufs,
 
 	for (i = 0; i < scalar; i++) {
 		cn10k_sso_tx_one(ws, mbufs[i], cmd, lmt_id, lmt_addr,
-				 sched_type, txq_data, flags);
+				 sched_type, txq_data, flags | NIX_TX_VWQE_F);
 	}
 }
 

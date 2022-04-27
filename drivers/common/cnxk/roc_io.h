@@ -155,6 +155,14 @@ roc_lmt_submit_steorl(uint64_t data, plt_iova_t io_address)
 }
 
 static __plt_always_inline void
+roc_lmt_submit_stsmaxl(uint64_t data, plt_iova_t io_address)
+{
+	asm volatile(".cpu  generic+lse\n"
+		     "stsmaxl %x[d], [%[rs]]" ::[d] "r"(data),
+		     [rs] "r"(io_address));
+}
+
+static __plt_always_inline void
 roc_lmt_mov(void *out, const void *in, const uint32_t lmtext)
 {
 	volatile const __uint128_t *src128 = (const __uint128_t *)in;
