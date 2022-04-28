@@ -2218,9 +2218,6 @@ ipn3ke_rpst_xstats_get
 	struct ipn3ke_rpst_hw_port_stats hw_stats;
 	struct rte_eth_stats stats;
 
-	if (!xstats)
-		return 0;
-
 	if (!ethdev) {
 		IPN3KE_AFU_PMD_ERR("ethernet device to get statistics is NULL");
 		return -EINVAL;
@@ -2258,7 +2255,7 @@ ipn3ke_rpst_xstats_get
 	port_id = atoi(ch);
 
 	count = ipn3ke_rpst_xstats_calc_num();
-	if (n < count)
+	if (xstats == NULL || n < count)
 		return count;
 
 	if (hw->retimer.mac_type == IFPGA_RAWDEV_RETIMER_MAC_TYPE_25GE_25GAUI) {
