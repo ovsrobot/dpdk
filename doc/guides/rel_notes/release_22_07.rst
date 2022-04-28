@@ -64,6 +64,8 @@ New Features
 
   * Added support for promiscuous mode on Windows.
   * Added support for MTU on Windows.
+  * Added new item (ESP).
+  * Added RSS for ESP.
 
 
 Removed Items
