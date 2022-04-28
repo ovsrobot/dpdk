@@ -1629,7 +1629,7 @@ mrvl_xstats_get(struct rte_eth_dev *dev,
 	unsigned int i;
 
 	if (!stats)
-		return 0;
+		return RTE_DIM(mrvl_xstats_tbl);
 
 	pp2_ppio_get_statistics(priv->ppio, &ppio_stats, 0);
 	for (i = 0; i < n && i < RTE_DIM(mrvl_xstats_tbl); i++) {
