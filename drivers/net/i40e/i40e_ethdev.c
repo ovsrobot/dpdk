@@ -12104,20 +12104,18 @@ i40e_set_mac_max_frame(struct rte_eth_dev *dev, uint16_t size)
 	struct rte_eth_link link;
 	enum i40e_status_code status;
 
-	do {
-		update_link_reg(hw, &link);
+	if (hw->mac.type == I40E_MAC_XL710) { /* I40E_MAC_XL710 */
+		do {
+			update_link_reg(hw, &link);
+			if (link.link_status)
+				break;
+			rte_delay_ms(CHECK_INTERVAL);
+		} while (--rep_cnt);
+
 		if (link.link_status)
-			break;
-
-		rte_delay_ms(CHECK_INTERVAL);
-	} while (--rep_cnt);
-
-	if (link.link_status) {
+			status = i40e_aq_set_mac_config(hw, size, TRUE, 0, false, NULL);
+	} else {/* I40E_MAC_X722 */
 		status = i40e_aq_set_mac_config(hw, size, TRUE, 0, false, NULL);
-		if (status != I40E_SUCCESS)
-			PMD_DRV_LOG(ERR, "Failed to set max frame size at port level");
-	} else {
-		PMD_DRV_LOG(ERR, "Set max frame size at port level not applicable on link down");
 	}
 }
 
