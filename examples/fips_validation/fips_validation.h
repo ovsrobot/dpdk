@@ -259,6 +259,12 @@ parse_test_hmac_json_init(void);
 
 int
 parse_test_hmac_json_algorithm(void);
+
+int
+parse_test_cmac_json_init(void);
+
+int
+parser_read_cmac_direction_str(const char *key, char *src, struct fips_val *val);
 #endif /* RTE_HAS_JANSSON */
 
 int
