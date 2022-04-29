@@ -460,6 +460,8 @@ fips_test_parse_one_json_vector_set(void)
 		info.algo = FIPS_TEST_ALGO_AES_GCM;
 	if (strstr(algo_str, "HMAC"))
 		info.algo = FIPS_TEST_ALGO_HMAC;
+	if (strstr(algo_str, "CMAC"))
+		info.algo = FIPS_TEST_ALGO_AES_CMAC;
 	else
 		return -EINVAL;
 
@@ -470,7 +472,6 @@ int
 fips_test_parse_one_json_group(void)
 {
 	int ret, i;
-	json_int_t val;
 	json_t *param;
 
 	if (info.interim_callbacks) {
@@ -478,8 +479,20 @@ fips_test_parse_one_json_group(void)
 		for (i = 0; info.interim_callbacks[i].key != NULL; i++) {
 			param = json_object_get(json_info.json_test_group,
 					info.interim_callbacks[i].key);
-			val = json_integer_value(param);
-			snprintf(json_value, 255, "%"JSON_INTEGER_FORMAT, val);
+			switch (json_typeof(param)) {
+			case JSON_STRING:
+				snprintf(json_value, 256, "%s", json_string_value(param));
+				break;
+
+			case JSON_INTEGER:
+				snprintf(json_value, 255, "%"JSON_INTEGER_FORMAT,
+						json_integer_value(param));
+				break;
+
+			default:
+				return -EINVAL;
+			}
+
 			/* First argument is blank because the key
 			 * is not included in the string being parsed.
 			 */
@@ -669,6 +682,18 @@ parser_read_uint32_bit_val(const char *key, char *src, struct fips_val *val)
 		return ret;
 
 	val->len /= 8;
+
+	return 0;
+}
+
+int
+parser_read_cmac_direction_str(__rte_unused const char *key, char *src,
+		__rte_unused struct fips_val *val)
+{
+	if (strcmp(src, "gen") == 0)
+		info.op = FIPS_TEST_ENC_AUTH_GEN;
+	else if (strcmp(src, "ver") == 0)
+		info.op = FIPS_TEST_DEC_AUTH_VERIF;
 
 	return 0;
 }
