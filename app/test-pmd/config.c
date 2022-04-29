@@ -66,8 +66,6 @@
 
 #define NS_PER_SEC 1E9
 
-static char *flowtype_to_str(uint16_t flow_type);
-
 static const struct {
 	enum tx_pkt_split split;
 	const char *name;
@@ -669,6 +667,20 @@ print_dev_capabilities(uint64_t capabilities)
 	}
 }
 
+static void
+show_rss_types(uint64_t rss_hf)
+{
+	uint16_t i;
+
+	for (i = 0; rss_type_table[i].str; i++) {
+		if (rss_type_table[i].rss_type == 0)
+			continue;
+		if ((rss_hf & rss_type_table[i].rss_type) == rss_type_table[i].rss_type)
+			printf("%s ", rss_type_table[i].str);
+	}
+	printf("\n");
+}
+
 void
 port_infos_display(portid_t port_id)
 {
@@ -773,20 +785,8 @@ port_infos_display(portid_t port_id)
 	if (!dev_info.flow_type_rss_offloads)
 		printf("No RSS offload flow type is supported.\n");
 	else {
-		uint16_t i;
-		char *p;
-
-		printf("Supported RSS offload flow types:\n");
-		for (i = RTE_ETH_FLOW_UNKNOWN + 1;
-		     i < sizeof(dev_info.flow_type_rss_offloads) * CHAR_BIT; i++) {
-			if (!(dev_info.flow_type_rss_offloads & (1ULL << i)))
-				continue;
-			p = flowtype_to_str(i);
-			if (p)
-				printf("  %s\n", p);
-			else
-				printf("  user defined %d\n", i);
-		}
+		printf("Supported RSS offload:\n");
+		show_rss_types(dev_info.flow_type_rss_offloads);
 	}
 
 	printf("Minimum size of RX buffer: %u\n", dev_info.min_rx_bufsize);
@@ -5512,6 +5512,8 @@ set_record_burst_stats(uint8_t on_off)
 	record_burst_stats = on_off;
 }
 
+#if defined(RTE_NET_I40E) || defined(RTE_NET_IXGBE)
+
 static char*
 flowtype_to_str(uint16_t flow_type)
 {
@@ -5554,8 +5556,6 @@ flowtype_to_str(uint16_t flow_type)
 
 	return NULL;
 }
-
-#if defined(RTE_NET_I40E) || defined(RTE_NET_IXGBE)
 
 static inline void
 print_fdir_mask(struct rte_eth_fdir_masks *mask)
