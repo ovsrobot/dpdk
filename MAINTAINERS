@@ -262,6 +262,11 @@ M: Joyce Kong <joyce.kong@arm.com>
 F: lib/eal/include/generic/rte_ticketlock.h
 F: app/test/test_ticketlock.c
 
+Sequence Lock
+M: Mattias Rönnblom <mattias.ronnblom@ericsson.com>
+F: lib/eal/include/rte_seqlock.h
+F: app/test/test_seqlock.c
+
 Pseudo-random Number Generation
 M: Mattias Rönnblom <mattias.ronnblom@ericsson.com>
 F: lib/eal/include/rte_random.h

@@ -55,6 +55,20 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added Sequence Lock.**
+
+  Added a new synchronization primitive: the sequence lock
+  (seqlock). A seqlock allows for low overhead, parallel reads. The
+  DPDK seqlock uses a spinlock to serialize multiple writing threads.
+
+  In particular, seqlocks are useful for protecting data structures
+  which are read very frequently, by threads running on many different
+  cores, and modified relatively infrequently.
+
+  One way to think about seqlocks is that they provide means to
+  perform atomic operations on data objects larger than what the
+  native atomic machine instructions allow for.
+
 * **Updated Intel iavf driver.**
 
   * Added Tx QoS queue rate limitation support.
