@@ -671,6 +671,12 @@ enum rte_flow_item_type {
 	 * See struct rte_flow_item_gre_opt.
 	 */
 	RTE_FLOW_ITEM_TYPE_GRE_OPTION,
+	/**
+	 * Matches Meter Color.
+	 *
+	 * See struct rte_flow_item_meter_color.
+	 */
+	RTE_FLOW_ITEM_TYPE_METER_COLOR,
 };
 
 /**
@@ -1987,6 +1993,26 @@ static const struct rte_flow_item_ppp rte_flow_item_ppp_mask = {
 		.ctrl = 0xff,
 		.proto_id = RTE_BE16(0xffff),
 	}
+};
+#endif
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
+ * RTE_FLOW_ITEM_TYPE_METER_COLOR
+ *
+ * Matches a meter color set in the packet meta-data
+ * (i.e. struct rte_mbuf::sched::color).
+ */
+struct rte_flow_item_meter_color {
+		enum rte_color color; /**< Packet color. */
+};
+
+/** Default mask for RTE_FLOW_ITEM_TYPE_METER_COLOR. */
+#ifndef __cplusplus
+static const struct rte_flow_item_meter_color rte_flow_item_meter_color_mask = {
+		.color = RTE_COLORS,
 };
 #endif
 
