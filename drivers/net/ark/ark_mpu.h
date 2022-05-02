@@ -15,6 +15,8 @@
  * there is minimal documentation.
  */
 
+#define ARK_MPU_MODID 0x2055504d
+#define ARK_MPU_MODVER 0x37313232
 /*
  * MPU hardware structures
  * These are overlay structures to a memory mapped FPGA device.  These
@@ -113,7 +115,6 @@ int ark_mpu_configure(struct ark_mpu_t *mpu, rte_iova_t ring,
 
 void ark_mpu_dump(struct ark_mpu_t *mpu, const char *msg, uint16_t idx);
 void ark_mpu_dump_setup(struct ark_mpu_t *mpu, uint16_t qid);
-void ark_mpu_reset_stats(struct ark_mpu_t *mpu);
 
 /*  this action is in a performance critical path */
 static inline void
