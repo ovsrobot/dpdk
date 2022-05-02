@@ -40,17 +40,24 @@ union ark_tx_meta {
  */
 #define ARK_DDM_CFG 0x0000
 /* Set unique HW ID for hardware version */
-#define ARK_DDM_CONST3 (0x334d4444)
-#define ARK_DDM_CONST2 (0x324d4444)
-#define ARK_DDM_CONST1 (0xfacecafe)
+#define ARK_DDM_MODID 0x204d4444
+#define ARK_DDM_MODVER 0x37313232
 
 struct ark_ddm_cfg_t {
+	union {
+		char id[4];
+		uint32_t idnum;
+	};
+	union {
+		char ver[4];
+		uint32_t vernum;
+		volatile uint32_t tlp_stats_clear;
+	};
 	uint32_t r0;
-	volatile uint32_t tlp_stats_clear;
-	uint32_t const0;
 	volatile uint32_t tag_max;
 	volatile uint32_t command;
-	volatile uint32_t stop_flushed;
+	uint32_t write_index_interval;	/* 4ns each */
+	volatile uint64_t qflow;
 };
 
 #define ARK_DDM_STATS 0x0020
@@ -108,7 +115,7 @@ struct ark_ddm_cpld_ps_t {
 #define ARK_DDM_SETUP  0x00e0
 struct ark_ddm_setup_t {
 	rte_iova_t cons_write_index_addr;
-	uint32_t write_index_interval;	/* 4ns each */
+	volatile uint32_t qcommand;
 	volatile uint32_t cons_index;
 };
 
@@ -141,17 +148,12 @@ struct ark_ddm_t {
 
 /* DDM function prototype */
 int ark_ddm_verify(struct ark_ddm_t *ddm);
-void ark_ddm_start(struct ark_ddm_t *ddm);
-int ark_ddm_stop(struct ark_ddm_t *ddm, const int wait);
-void ark_ddm_reset(struct ark_ddm_t *ddm);
 void ark_ddm_stats_reset(struct ark_ddm_t *ddm);
-void ark_ddm_setup(struct ark_ddm_t *ddm, rte_iova_t cons_addr,
-		   uint32_t interval);
+void ark_ddm_queue_setup(struct ark_ddm_t *ddm, rte_iova_t cons_addr);
 void ark_ddm_dump_stats(struct ark_ddm_t *ddm, const char *msg);
-void ark_ddm_dump(struct ark_ddm_t *ddm, const char *msg);
-int ark_ddm_is_stopped(struct ark_ddm_t *ddm);
 uint64_t ark_ddm_queue_byte_count(struct ark_ddm_t *ddm);
 uint64_t ark_ddm_queue_pkt_count(struct ark_ddm_t *ddm);
 void ark_ddm_queue_reset_stats(struct ark_ddm_t *ddm);
+void ark_ddm_queue_enable(struct ark_ddm_t *ddm, int enable);
 
 #endif
