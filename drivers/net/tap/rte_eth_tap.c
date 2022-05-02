@@ -2612,14 +2612,19 @@ static int
 rte_pmd_tap_remove(struct rte_vdev_device *dev)
 {
 	struct rte_eth_dev *eth_dev = NULL;
+	struct pmd_internals *pmd;
+	struct rte_intr_handle *intr_handle;
 
 	/* find the ethdev entry */
 	eth_dev = rte_eth_dev_allocated(rte_vdev_device_name(dev));
 	if (!eth_dev)
 		return 0;
 
+	pmd = eth_dev->data->dev_private;
+	intr_handle = pmd->intr_handle;
 	tap_dev_close(eth_dev);
 	rte_eth_dev_release_port(eth_dev);
+	rte_intr_instance_free(intr_handle);
 
 	return 0;
 }
