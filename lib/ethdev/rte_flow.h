@@ -33,6 +33,7 @@
 #include <rte_bitops.h>
 #include <rte_mbuf.h>
 #include <rte_mbuf_dyn.h>
+#include <rte_mtr.h>
 #include <rte_meter.h>
 #include <rte_gtp.h>
 #include <rte_l2tpv2.h>
@@ -2908,6 +2909,13 @@ enum rte_flow_action_type {
 	 * @see struct rte_flow_action_ethdev
 	 */
 	RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT,
+	/**
+	 * Extended Traffic metering and policing (MTR).
+	 *
+	 * See struct rte_flow_action_meter_ext.
+	 * See file rte_mtr.h for MTR object configuration.
+	 */
+	RTE_FLOW_ACTION_TYPE_METER_EXT,
 };
 
 /**
@@ -3152,6 +3160,20 @@ struct rte_flow_action_port_id {
  */
 struct rte_flow_action_meter {
 	uint32_t mtr_id; /**< MTR object ID created with rte_mtr_create(). */
+};
+
+/**
+ * RTE_FLOW_ACTION_TYPE_METER_EXT
+ *
+ * Traffic metering and policing (MTR).
+ *
+ * Meters an IP packet stream and marks its packets either
+ * green, yellow, or red for future processing, according to a policy.
+ */
+struct rte_flow_action_meter_ext {
+	uint32_t mtr_id; /**< MTR object ID. */
+	struct rte_meter_profile *profile; /**< MTR profile. */
+	struct rte_mtr_params *params; /**< MTR parameters. */
 };
 
 /**
