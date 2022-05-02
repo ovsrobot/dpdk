@@ -90,16 +90,16 @@ Using Linux Core Isolation to Reduce Context Switches
 -----------------------------------------------------
 
 While the threads used by a DPDK application are pinned to logical cores on the system,
-it is possible for the Linux scheduler to run other tasks on those cores also.
-To help prevent additional workloads from running on those cores,
-it is possible to use the ``isolcpus`` Linux kernel parameter to isolate them from the general Linux scheduler.
+it is possible for the Linux scheduler to run other tasks on those cores.
+To help prevent additional workloads, timers, rcu processing and IRQs from running on those cores, it is possible to use
+the Linux kernel parameters ``isolcpus``, ``nohz_full``, ``irqaffinity`` to isolate them from the general Linux scheduler tasks.
 
-For example, if DPDK applications are to run on logical cores 2, 4 and 6,
+For example, if a given CPU has 0-7 cores and DPDK applications are to run on logical cores 2, 4 and 6,
 the following should be added to the kernel parameter list:
 
 .. code-block:: console
 
-    isolcpus=2,4,6
+    isolcpus=2,4,6 nohz_full=2,4,6 irqaffinity=0,1,3,5,7
 
 .. _High_Precision_Event_Timer:
 
