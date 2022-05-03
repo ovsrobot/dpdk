@@ -103,6 +103,10 @@ static int
 vmxnet3_rss_reta_query(struct rte_eth_dev *dev,
 		       struct rte_eth_rss_reta_entry64 *reta_conf,
 		       uint16_t reta_size);
+static int
+vmxnet3_hw_ver_get(struct rte_eth_dev *dev,
+		   char *fw_version, size_t fw_size);
+
 static int vmxnet3_dev_rx_queue_intr_enable(struct rte_eth_dev *dev,
 						uint16_t queue_id);
 static int vmxnet3_dev_rx_queue_intr_disable(struct rte_eth_dev *dev,
@@ -147,6 +151,7 @@ static const struct eth_dev_ops vmxnet3_eth_dev_ops = {
 	.rx_queue_intr_disable = vmxnet3_dev_rx_queue_intr_disable,
 	.reta_update          = vmxnet3_rss_reta_update,
 	.reta_query           = vmxnet3_rss_reta_query,
+	.fw_version_get       = vmxnet3_hw_ver_get,
 };
 
 struct vmxnet3_xstats_name_off {
@@ -1763,4 +1768,20 @@ vmxnet3_rss_reta_query(struct rte_eth_dev *dev,
 	}
 
 	return 0;
+}
+
+static int
+vmxnet3_hw_ver_get(struct rte_eth_dev *dev,
+		   char *fw_version, size_t fw_size)
+{
+	int ret;
+	struct vmxnet3_hw *hw = dev->data->dev_private;
+
+	ret = snprintf(fw_version, fw_size, "v%d", hw->version);
+
+	ret += 1; /* add the size of '\0' */
+	if (fw_size < (uint32_t)ret)
+		return ret;
+	else
+		return 0;
 }
