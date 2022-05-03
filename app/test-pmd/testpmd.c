@@ -66,6 +66,9 @@
 #ifdef RTE_EXEC_ENV_WINDOWS
 #include <process.h>
 #endif
+#ifdef RTE_NET_BOND
+#include <rte_eth_bond.h>
+#endif
 
 #include "testpmd.h"
 
@@ -597,11 +600,57 @@ eth_dev_configure_mp(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 	return 0;
 }
 
+#ifdef RTE_NET_BOND
+static int
+change_bonding_slave_port_status(portid_t bond_pid, bool is_stop)
+{
+	portid_t slave_pids[RTE_MAX_ETHPORTS];
+	struct rte_port *port;
+	int num_slaves;
+	portid_t slave_pid;
+	int i;
+
+	num_slaves = rte_eth_bond_slaves_get(bond_pid, slave_pids,
+						RTE_MAX_ETHPORTS);
+	if (num_slaves < 0) {
+		fprintf(stderr, "Failed to get slave list for port = %u\n",
+			bond_pid);
+		return num_slaves;
+	}
+
+	for (i = 0; i < num_slaves; i++) {
+		slave_pid = slave_pids[i];
+		port = &ports[slave_pid];
+		port->port_status =
+			is_stop ? RTE_PORT_STOPPED : RTE_PORT_STARTED;
+	}
+
+	return 0;
+}
+#endif
+
 static int
 eth_dev_start_mp(uint16_t port_id)
 {
-	if (is_proc_primary())
-		return rte_eth_dev_start(port_id);
+	int ret;
+
+	if (is_proc_primary()) {
+		ret = rte_eth_dev_start(port_id);
+		if (ret != 0)
+			return ret;
+
+#ifdef RTE_NET_BOND
+		struct rte_port *port = &ports[port_id];
+
+		/*
+		 * Starting a bonded port also starts all slaves under the bonded
+		 * device. So if this port is bond device, we need to modify the
+		 * port status of these slaves.
+		 */
+		if (port->bond_flag == 1)
+			return change_bonding_slave_port_status(port_id, false);
+#endif
+	}
 
 	return 0;
 }
@@ -609,8 +658,25 @@ eth_dev_start_mp(uint16_t port_id)
 static int
 eth_dev_stop_mp(uint16_t port_id)
 {
-	if (is_proc_primary())
-		return rte_eth_dev_stop(port_id);
+	int ret;
+
+	if (is_proc_primary()) {
+		ret = rte_eth_dev_stop(port_id);
+		if (ret != 0)
+			return ret;
+
+#ifdef RTE_NET_BOND
+		struct rte_port *port = &ports[port_id];
+
+		/*
+		 * Stopping a bonded port also stops all slaves under the bonded
+		 * device. So if this port is bond device, we need to modify the
+		 * port status of these slaves.
+		 */
+		if (port->bond_flag == 1)
+			return change_bonding_slave_port_status(port_id, true);
+#endif
+	}
 
 	return 0;
 }
