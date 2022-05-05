@@ -65,6 +65,11 @@ New Features
   * Added support for promiscuous mode on Windows.
   * Added support for MTU on Windows.
 
+* **Added scalar version of the LPM library.**
+
+  * Added scalar implementation of ``rte_lpm_lookupx4``. This is a fall-back
+    implementation for platforms that don't support vector operations.
+
 
 Removed Items
 -------------
