@@ -141,3 +141,8 @@ foreach flag: dpdk_flags
 endforeach
 message('Using machine args: @0@'.format(machine_args))
 
+# Enable work-around for ring unit tests in debug mode which fail to link
+# properly due to bad code generation by GCC.
+if get_option('optimization') == '0' or get_option('optimization') == 'g'
+    add_project_arguments('-DRTE_RISCV_WO_DISABLE_RING_TESTS', language: 'c')
+endif

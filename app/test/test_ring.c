@@ -955,6 +955,7 @@ fail:
 	return -1;
 }
 
+#if !defined(RTE_RISCV_WO_DISABLE_RING_TESTS)
 /*
  * Test default, single element, bulk and burst APIs
  */
@@ -1189,6 +1190,7 @@ test_fail:
 	rte_ring_free(exact_sz_r);
 	return -1;
 }
+#endif
 
 static int
 test_ring(void)
@@ -1200,12 +1202,18 @@ test_ring(void)
 	if (test_ring_negative_tests() < 0)
 		goto test_fail;
 
+/* Disable the following tests on RISC-V in debug mode. This is a work-around
+ * GCC bug for RISC-V which fails to generate proper jumps for loops with large
+ * bodies.
+ */
+#if !defined(RTE_RISCV_WO_DISABLE_RING_TESTS)
 	/* Some basic operations */
 	if (test_ring_basic_ex() < 0)
 		goto test_fail;
 
 	if (test_ring_with_exact_size() < 0)
 		goto test_fail;
+#endif
 
 	/* Burst and bulk operations with sp/sc, mp/mc and default.
 	 * The test cases are split into smaller test cases to

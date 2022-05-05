@@ -76,7 +76,8 @@ New Features
   * Debug build of ``app/test/dpdk-test`` fails currently on RISC-V due to
     seemingly invalid loop and goto jump code generation by GCC in
     ``test_ring.c`` where extensive inlining increases the code size beyond the
-    capability of the generated instruction (JAL: +/-1MB PC-relative).
+    capability of the generated instruction (JAL: +/-1MB PC-relative). The
+    workaround is to disable ``test_ring_basic_ex()`` and ``test_ring_with_exact_size()`` on RISC-V on ``-O0`` or ``-Og``.
 
 * **Updated Intel iavf driver.**
 
