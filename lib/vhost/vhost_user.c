@@ -3113,6 +3113,8 @@ skip_to_post_handle:
 		send_vhost_reply(dev, fd, &ctx);
 	} else if (ret == RTE_VHOST_MSG_RESULT_ERR) {
 		VHOST_LOG_CONFIG(ERR, "(%s) vhost message handling failed.\n", dev->ifname);
+		if (unlock_required)
+			vhost_user_unlock_all_queue_pairs(dev);
 		return -1;
 	}
 
