@@ -5499,6 +5499,7 @@ eth_dev_handle_port_stats(const char *cmd __rte_unused,
 		struct rte_tel_data *d)
 {
 	struct rte_eth_stats stats;
+	struct rte_eth_dev *dev;
 	int port_id, ret;
 
 	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
@@ -5507,6 +5508,7 @@ eth_dev_handle_port_stats(const char *cmd __rte_unused,
 	port_id = atoi(params);
 	if (!rte_eth_dev_is_valid_port(port_id))
 		return -1;
+	dev = &rte_eth_devices[port_id];
 
 	ret = rte_eth_stats_get(port_id, &stats);
 	if (ret < 0)
@@ -5521,11 +5523,13 @@ eth_dev_handle_port_stats(const char *cmd __rte_unused,
 	ADD_DICT_STAT(stats, ierrors);
 	ADD_DICT_STAT(stats, oerrors);
 	ADD_DICT_STAT(stats, rx_nombuf);
-	eth_dev_add_port_queue_stats(d, stats.q_ipackets, "q_ipackets");
-	eth_dev_add_port_queue_stats(d, stats.q_opackets, "q_opackets");
-	eth_dev_add_port_queue_stats(d, stats.q_ibytes, "q_ibytes");
-	eth_dev_add_port_queue_stats(d, stats.q_obytes, "q_obytes");
-	eth_dev_add_port_queue_stats(d, stats.q_errors, "q_errors");
+	if (dev->data->dev_flags & RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS) {
+		eth_dev_add_port_queue_stats(d, stats.q_ipackets, "q_ipackets");
+		eth_dev_add_port_queue_stats(d, stats.q_opackets, "q_opackets");
+		eth_dev_add_port_queue_stats(d, stats.q_ibytes, "q_ibytes");
+		eth_dev_add_port_queue_stats(d, stats.q_obytes, "q_obytes");
+		eth_dev_add_port_queue_stats(d, stats.q_errors, "q_errors");
+	}
 
 	return 0;
 }
