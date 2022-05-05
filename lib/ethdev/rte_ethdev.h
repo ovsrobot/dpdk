@@ -3174,7 +3174,8 @@ int rte_eth_xstats_get_names(uint16_t port_id,
  * @param xstats
  *   A pointer to a table of structure of type *rte_eth_xstat*
  *   to be filled with device statistics ids and values.
- *   This parameter can be set to NULL if n is 0.
+ *   This parameter can be set to NULL if n is 0; If set to NULL, the
+ *   function returns the required number of elements.
  * @param n
  *   The size of the xstats array (number of elements).
  * @return
