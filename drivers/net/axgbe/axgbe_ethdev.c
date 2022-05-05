@@ -1014,7 +1014,7 @@ axgbe_dev_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *stats,
 	unsigned int i;
 
 	if (!stats)
-		return 0;
+		return AXGBE_XSTATS_COUNT;
 
 	axgbe_read_mmc_stats(pdata);
 
