@@ -5,6 +5,11 @@ if not is_linux
     build = false
     reason = 'only supported on Linux'
 endif
+if arch_subdir == 'riscv'
+		build = false
+		reason = 'riscv arch not supported'
+		subdir_done()
+endif
 
 sources = files(
         'memif_socket.c',

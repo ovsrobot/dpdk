@@ -55,6 +55,29 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added initial RISC-V architecture support.***
+
+  Added EAL implementation for RISC-V architecture. The initial device the
+  porting was tested on is a HiFive Unmatched development board based on the
+  SiFive Freedom U740 SoC. In theory this implementation should work with any
+  ``rv64gc`` ISA compatible implementation with MMU supporting a reasonable
+  address space size (U740 uses sv39 MMU).
+
+  * Verified with meson tests. ``fast-tests`` suite passing with default config.
+  * Verified PMD operation with Intel x520-DA2 NIC (``ixgbe``) and ``test-pmd``
+    application. Packet transfer checked using all UIO drivers available for
+    non-IOMMU platforms: ``uio_pci_generic``, ``vfio-pci noiommu`` and
+    ``igb_uio``.
+  * The ``i40e`` PMD driver is disabled on RISC-V as ``rv64gc`` ISA has no
+    vector operations.
+  * RISCV support is currently limited to Linux.
+  * Clang compilation currently not supported due to issues with relocation
+    relaxation.
+  * Debug build of ``app/test/dpdk-test`` fails currently on RISC-V due to
+    seemingly invalid loop and goto jump code generation by GCC in
+    ``test_ring.c`` where extensive inlining increases the code size beyond the
+    capability of the generated instruction (JAL: +/-1MB PC-relative).
+
 * **Updated Intel iavf driver.**
 
   * Added Tx QoS queue rate limitation support.
