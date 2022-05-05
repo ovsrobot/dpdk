@@ -434,7 +434,7 @@ ice_switch_create(struct ice_adapter *ad,
 		flow->rule = filter_conf_ptr;
 	} else {
 		if (ice_dcf_adminq_need_retry(ad))
-			ret = -EAGAIN;
+			ret = -EBUSY;
 		else
 			ret = -EINVAL;
 

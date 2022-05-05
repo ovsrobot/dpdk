@@ -544,7 +544,8 @@ ice_dcf_handle_vsi_update_event(struct ice_dcf_hw *hw)
 
 	for (;;) {
 		if (ice_dcf_get_vf_resource(hw) == 0 &&
-		    ice_dcf_get_vf_vsi_map(hw) >= 0) {
+		    ice_dcf_get_vf_vsi_map(hw) >= 0 &&
+		    ice_dcf_check_reset_done(hw) == 0) {
 			err = 0;
 			break;
 		}
