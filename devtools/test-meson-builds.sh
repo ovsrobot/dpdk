@@ -275,6 +275,12 @@ for f in $srcdir/config/ppc/ppc* ; do
 	build $targetdir $f ABI $use_shared
 done
 
+# RISC-V configurations
+for f in $srcdir/config/riscv/riscv* ; do
+	targetdir=build-$(basename $f | tr '_' '-' | cut -d'-' -f-2)
+	build $targetdir $f ABI $use_shared
+done
+
 # Test installation of the x86-generic target, to be used for checking
 # the sample apps build using the pkg-config file for cflags and libs
 load_env cc
