@@ -245,6 +245,10 @@ foreach subpath:subdirs
 
         set_variable('shared_@0@'.format(lib_name), shared_dep)
         set_variable('static_@0@'.format(lib_name), static_dep)
+        # for drivers, we only need to add dependency objects for static libs,
+        # shared lib drivers are not linked in
+        dpdk_static_lib_deps += static_dep
+
         dependency_name = ''.join(lib_name.split('rte_'))
         if developer_mode
             message('drivers/@0@: Defining dependency "@1@"'.format(
