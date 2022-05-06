@@ -1035,9 +1035,6 @@ iavf_dev_stop(struct rte_eth_dev *dev)
 	iavf_add_del_mc_addr_list(adapter, vf->mc_addrs, vf->mc_addrs_num,
 				  false);
 
-	/* free iAVF security device context all related resources */
-	iavf_security_ctx_destroy(adapter);
-
 	adapter->stopped = 1;
 	dev->data->dev_started = 0;
 
@@ -2624,6 +2621,9 @@ iavf_dev_close(struct rte_eth_dev *dev)
 		return 0;
 
 	ret = iavf_dev_stop(dev);
+
+	/* free iAVF security device context all related resources */
+	iavf_security_ctx_destroy(adapter);
 
 	iavf_flow_flush(dev, NULL);
 	iavf_flow_uninit(adapter);
