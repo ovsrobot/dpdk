@@ -5,6 +5,8 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
+#include <features.h>
 
 #include <rte_common.h>
 #include <rte_cycles.h>
@@ -222,3 +224,40 @@ rte_eal_timer_init(void)
 	set_tsc_freq();
 	return 0;
 }
+
+#ifndef RTE_ARCH_PPC_64
+uint64_t
+no_ppc_get_timebase_freq(void)
+{
+	static uint64_t base;
+	#if defined(__LINUX__)
+	if (!base) {
+		FILE *f = fopen("/proc/cpuinfo", "rb");
+		if (f) {
+			ssize_t nr;
+			/* virtually always big enough to hold the line */
+			char buf[512];
+			while (fgets(buf, sizeof(buf), f)) {
+				char *ret = strstr(buf, "timebase");
+				if (!ret) {
+					continue;
+				}
+				ret += sizeof("timebase") - 1;
+				ret = strchr(ret, ':');
+				if (!ret) {
+					continue;
+				}
+				base = strtoul(ret + 1, 0, 10);
+				break;
+			}
+			fclose(f);
+		}
+	}
+	#elif defined(_WIN32) || defined(_WIN64)
+	/* windows code here */
+	#elif defined(RTE_EXEC_ENV_FREEBSD)
+	/* freebsd code here */
+	#endif
+	return base;
+}
+#endif

@@ -743,4 +743,11 @@ int eal_asprintf(char **buffer, const char *format, ...);
 		eal_asprintf(buffer, format, ##__VA_ARGS__)
 #endif
 
+/**
+ * Function for systems with no __ppc_get_timebase_freq function.
+ */
+#ifndef RTE_ARCH_PPC_64
+uint64_t no_ppc_get_timebase_freq(void);
+#endif
+
 #endif /* _EAL_PRIVATE_H_ */
