@@ -34,7 +34,7 @@ struct rte_pcapng {
 };
 
 /* For converting TSC cycles to PCAPNG ns format */
-struct pcapng_time {
+static struct pcapng_time {
 	uint64_t ns;
 	uint64_t cycles;
 } pcapng_time;
@@ -53,7 +53,21 @@ static uint64_t pcapng_tsc_to_ns(uint64_t cycles)
 {
 	uint64_t delta;
 
+	/* With a TSC frequency of 2.5GHz, delta * NSEC_PER_SEC will
+	 * wrap in under 8 seconds. Once half that time has elapsed
+	 * reread the system clock and TSC to ensure wrapping does not
+	 * occur.
+	 */
 	delta = cycles - pcapng_time.cycles;
+	if (delta > ((1ULL << 63) / NSEC_PER_SEC)) {
+		pcapng_init();
+		if (cycles > pcapng_time.cycles)
+			delta = cycles - pcapng_time.cycles;
+		else {
+			delta = pcapng_time.cycles - cycles;
+			return pcapng_time.ns - (delta * NSEC_PER_SEC) / rte_get_tsc_hz();
+		}
+	}
 	return pcapng_time.ns + (delta * NSEC_PER_SEC) / rte_get_tsc_hz();
 }
 
