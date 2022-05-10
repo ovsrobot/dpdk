@@ -70,6 +70,11 @@ New Features
   * Added AH mode support in lookaside protocol (IPsec) for CN9K & CN10K.
   * Added AES-GMAC support in lookaside protocol (IPsec) for CN9K & CN10K.
 
+* **Added scalar version of the LPM library.**
+
+  * Added scalar implementation of ``rte_lpm_lookupx4``. This is a fall-back
+    implementation for platforms that don't support vector operations.
+
 
 Removed Items
 -------------
