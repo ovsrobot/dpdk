@@ -855,6 +855,11 @@ x86-64
 
 Support 64bits x86 architecture.
 
+rv64
+----
+
+Support 64-bit RISC-V architecture.
+
 
 .. _nic_features_usage_doc:
 
