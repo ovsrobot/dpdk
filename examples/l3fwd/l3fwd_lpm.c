@@ -248,7 +248,7 @@ lpm_process_event_pkt(const struct lcore_conf *lconf, struct rte_mbuf *mbuf)
 		if (is_valid_ipv4_pkt(ipv4_hdr, mbuf->pkt_len)
 				< 0) {
 			mbuf->port = BAD_PORT;
-			continue;
+			return mbuf->port;
 		}
 		/* Update time to live and header checksum */
 		--(ipv4_hdr->time_to_live);
