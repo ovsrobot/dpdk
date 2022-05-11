@@ -1118,7 +1118,7 @@ mlx5_sysfs_switch_info(unsigned int ifindex, struct mlx5_switch_info *info)
 	bool port_switch_id_set = false;
 	bool device_dir = false;
 	char c;
-	int ret;
+	char *ret;
 
 	if (!if_indextoname(ifindex, ifname)) {
 		rte_errno = errno;
@@ -1134,9 +1134,9 @@ mlx5_sysfs_switch_info(unsigned int ifindex, struct mlx5_switch_info *info)
 
 	file = fopen(phys_port_name, "rb");
 	if (file != NULL) {
-		ret = fscanf(file, "%" RTE_STR(IF_NAMESIZE) "s", port_name);
+		ret = fgets(port_name, IF_NAMESIZE, file);
 		fclose(file);
-		if (ret == 1)
+		if (ret != NULL)
 			mlx5_translate_port_name(port_name, &data);
 	}
 	file = fopen(phys_switch_id, "rb");
