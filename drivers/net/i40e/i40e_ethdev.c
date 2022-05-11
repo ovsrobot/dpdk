@@ -12102,23 +12102,25 @@ i40e_set_mac_max_frame(struct rte_eth_dev *dev, uint16_t size)
 	struct i40e_hw *hw = I40E_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	uint32_t rep_cnt = MAX_REPEAT_TIME;
 	struct rte_eth_link link;
-	enum i40e_status_code status;
+	enum i40e_status_code status = I40E_ERR_DEVICE_NOT_SUPPORTED;
+	bool can_be_set = true;
 
-	do {
-		update_link_reg(hw, &link);
-		if (link.link_status)
-			break;
-
-		rte_delay_ms(CHECK_INTERVAL);
-	} while (--rep_cnt);
-
-	if (link.link_status) {
-		status = i40e_aq_set_mac_config(hw, size, TRUE, 0, false, NULL);
-		if (status != I40E_SUCCESS)
-			PMD_DRV_LOG(ERR, "Failed to set max frame size at port level");
-	} else {
-		PMD_DRV_LOG(ERR, "Set max frame size at port level not applicable on link down");
+	/* I40E_MEDIA_TYPE_BASET link up can be ignored */
+	if (hw->phy.media_type != I40E_MEDIA_TYPE_BASET) {
+		do {
+			update_link_reg(hw, &link);
+			if (link.link_status)
+				break;
+			rte_delay_ms(CHECK_INTERVAL);
+		} while (--rep_cnt);
+		can_be_set = link.link_status != 0;
 	}
+
+	if (can_be_set)
+		status = i40e_aq_set_mac_config(hw, size, TRUE, 0, false, NULL);
+
+	if (status != I40E_SUCCESS)
+		PMD_DRV_LOG(ERR, "Failed to set max frame size at port level");
 }
 
 RTE_LOG_REGISTER_SUFFIX(i40e_logtype_init, init, NOTICE);
