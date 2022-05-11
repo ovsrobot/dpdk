@@ -81,13 +81,11 @@ struct rte_sched_queue {
 
 struct rte_sched_queue_extra {
 	struct rte_sched_queue_stats stats;
-#ifdef RTE_SCHED_CMAN
 	RTE_STD_C11
 	union {
 		struct rte_red red;
 		struct rte_pie pie;
 	};
-#endif
 };
 
 enum grinder_state {
@@ -179,7 +177,6 @@ struct rte_sched_subport {
 	/* Pipe queues size */
 	uint16_t qsize[RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE];
 
-#ifdef RTE_SCHED_CMAN
 	bool cman_enabled;
 	enum rte_sched_cman_mode cman;
 
@@ -188,7 +185,6 @@ struct rte_sched_subport {
 		struct rte_red_config red_config[RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE][RTE_COLORS];
 		struct rte_pie_config pie_config[RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE];
 	};
-#endif
 
 	/* Scheduling loop detection */
 	uint32_t pipe_loop;
@@ -1081,7 +1077,6 @@ rte_sched_free_memory(struct rte_sched_port *port, uint32_t n_subports)
 	rte_free(port);
 }
 
-#ifdef RTE_SCHED_CMAN
 static int
 rte_sched_red_config(struct rte_sched_port *port,
 	struct rte_sched_subport *s,
@@ -1161,9 +1156,11 @@ rte_sched_cman_config(struct rte_sched_port *port,
 	else if (params->cman_params->cman_mode == RTE_SCHED_CMAN_PIE)
 		return rte_sched_pie_config(port, s, params, n_subports);
 
+	else if (params->cman_params->cman_mode == RTE_SCHED_CMAN_NONE)
+		return 1;
+
 	return -EINVAL;
 }
-#endif
 
 int
 rte_sched_subport_config(struct rte_sched_port *port,
@@ -1254,19 +1251,20 @@ rte_sched_subport_config(struct rte_sched_port *port,
 		s->n_pipe_profiles = params->n_pipe_profiles;
 		s->n_max_pipe_profiles = params->n_max_pipe_profiles;
 
-#ifdef RTE_SCHED_CMAN
+		s->cman_enabled = false;
+
 		if (params->cman_params != NULL) {
-			s->cman_enabled = true;
 			status = rte_sched_cman_config(port, s, params, n_subports);
 			if (status) {
-				RTE_LOG(NOTICE, SCHED,
-					"%s: CMAN configuration fails\n", __func__);
-				return status;
+				if (status != 1) {
+					RTE_LOG(NOTICE, SCHED,
+						"%s: CMAN configuration fails\n", __func__);
+					return status;
+				}
+			} else {
+				s->cman_enabled = true;
 			}
-		} else {
-			s->cman_enabled = false;
 		}
-#endif
 
 		/* Scheduling loop detection */
 		s->pipe_loop = RTE_SCHED_PIPE_INVALID;
@@ -1825,13 +1823,9 @@ rte_sched_port_update_queue_stats_on_drop(struct rte_sched_subport *subport,
 
 	qe->stats.n_pkts_dropped += 1;
 	qe->stats.n_bytes_dropped += pkt_len;
-#ifdef RTE_SCHED_CMAN
 	if (subport->cman_enabled)
 		qe->stats.n_pkts_cman_dropped += n_pkts_cman_dropped;
-#endif
 }
-
-#ifdef RTE_SCHED_CMAN
 
 static inline int
 rte_sched_port_cman_drop(struct rte_sched_port *port,
@@ -1901,29 +1895,6 @@ uint32_t qindex, uint32_t pkt_len, uint64_t time) {
 		rte_pie_dequeue(pie, pkt_len, time);
 	}
 }
-
-#else
-
-static inline int rte_sched_port_cman_drop(struct rte_sched_port *port __rte_unused,
-	struct rte_sched_subport *subport __rte_unused,
-	struct rte_mbuf *pkt __rte_unused,
-	uint32_t qindex __rte_unused,
-	uint16_t qlen __rte_unused)
-{
-	return 0;
-}
-
-#define rte_sched_port_red_set_queue_empty_timestamp(port, subport, qindex)
-
-static inline void
-rte_sched_port_pie_dequeue(struct rte_sched_subport *subport __rte_unused,
-	uint32_t qindex __rte_unused,
-	uint32_t pkt_len __rte_unused,
-	uint64_t time __rte_unused) {
-	/* do-nothing when RTE_SCHED_CMAN not defined */
-}
-
-#endif /* RTE_SCHED_CMAN */
 
 #ifdef RTE_SCHED_DEBUG
 

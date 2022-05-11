@@ -201,7 +201,6 @@ static struct rte_sched_subport_profile_params
 	},
 };
 
-#ifdef RTE_SCHED_CMAN
 struct rte_sched_cman_params cman_params = {
 	.cman_mode = RTE_SCHED_CMAN_RED,
 	.red_params = {
@@ -271,7 +270,6 @@ struct rte_sched_cman_params cman_params = {
 		[12][2] = {.min_th = 32, .max_th = 64, .maxp_inv = 10, .wq_log2 = 9},
 	},
 };
-#endif /* RTE_SCHED_CMAN */
 
 struct rte_sched_subport_params subport_params[MAX_SCHED_SUBPORTS] = {
 	{
@@ -281,9 +279,7 @@ struct rte_sched_subport_params subport_params[MAX_SCHED_SUBPORTS] = {
 		.n_pipe_profiles = sizeof(pipe_profiles) /
 			sizeof(struct rte_sched_pipe_params),
 		.n_max_pipe_profiles = MAX_SCHED_PIPE_PROFILES,
-#ifdef RTE_SCHED_CMAN
 		.cman_params = &cman_params,
-#endif /* RTE_SCHED_CMAN */
 	},
 };
 

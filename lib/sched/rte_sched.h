@@ -126,6 +126,7 @@ extern "C" {
  * information, refer RFC8033.
  */
 enum rte_sched_cman_mode {
+	RTE_SCHED_CMAN_NONE, /**< no RED|PIE cfg available */
 	RTE_SCHED_CMAN_RED, /**< Random Early Detection (RED) */
 	RTE_SCHED_CMAN_PIE, /**< Proportional Integral Controller Enhanced (PIE) */
 };
