@@ -486,10 +486,17 @@ main_loop(__rte_unused void *args)
 	}
 	printf("Total packets inject to prime ports = %u\n", idx);
 
-	packets_per_second = (link_mbps * 1000 * 1000) /
-		((PACKET_SIZE + FRAME_GAP + MAC_PREAMBLE) * CHAR_BIT);
-	printf("Each port will do %"PRIu64" packets per second\n",
-	       packets_per_second);
+	if (link_mbps != RTE_ETH_SPEED_NUM_UNKNOWN) {
+		packets_per_second = (link_mbps * 1000 * 1000) /
+			((PACKET_SIZE + FRAME_GAP + MAC_PREAMBLE) * CHAR_BIT);
+		printf("Each port will do %"PRIu64" packets per second\n",
+		       packets_per_second);
+		total_packets = RTE_TEST_DURATION * conf->nb_ports * packets_per_second;
+	} else {
+		/* We don't know the speed. Pretend it is 10G */
+		packets_per_second = ((uint64_t)RTE_ETH_SPEED_NUM_10G * 1000 * 1000) /
+			((PACKET_SIZE + FRAME_GAP + MAC_PREAMBLE) * CHAR_BIT);
+	}
 
 	total_packets = RTE_TEST_DURATION * conf->nb_ports * packets_per_second;
 	printf("Test will stop after at least %"PRIu64" packets received\n",
