@@ -824,6 +824,7 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 	void **gro_ctx;
 	uint16_t gro_pkts_num;
 	uint8_t gro_enable;
+	struct rte_ipv4_hdr *ipv4_hdr;
 #endif
 	uint16_t nb_rx;
 	uint16_t nb_tx;
@@ -1100,6 +1101,17 @@ tunnel_update:
 						&pkts_burst[nb_rx],
 						gro_pkts_num);
 				fs->gro_times = 0;
+			}
+		}
+
+		for (i = 0; i < nb_rx; i++) {
+			if ((pkts_burst[i]->ol_flags & RTE_MBUF_F_TX_IPV4) &&
+				(tx_offloads & RTE_ETH_TX_OFFLOAD_IPV4_CKSUM) == 0) {
+				ipv4_hdr = rte_pktmbuf_mtod_offset(pkts_burst[i],
+							struct rte_ipv4_hdr *,
+							pkts_burst[i]->l2_len);
+				ipv4_hdr->hdr_checksum = 0;
+				ipv4_hdr->hdr_checksum = rte_ipv4_cksum(ipv4_hdr);
 			}
 		}
 	}
