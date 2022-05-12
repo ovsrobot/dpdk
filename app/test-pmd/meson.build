@@ -67,6 +67,9 @@ endif
 if dpdk_conf.has('RTE_NET_I40E')
     deps += 'net_i40e'
 endif
+if dpdk_conf.has('RTE_NET_ICE')
+    deps += 'net_ice'
+endif
 if dpdk_conf.has('RTE_NET_IXGBE')
     deps += 'net_ixgbe'
 endif
