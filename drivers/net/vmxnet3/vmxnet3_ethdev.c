@@ -103,6 +103,10 @@ static int
 vmxnet3_rss_reta_query(struct rte_eth_dev *dev,
 		       struct rte_eth_rss_reta_entry64 *reta_conf,
 		       uint16_t reta_size);
+static int
+vmxnet3_hw_ver_get(struct rte_eth_dev *dev,
+		   char *fw_version, size_t fw_size);
+
 static int vmxnet3_dev_rx_queue_intr_enable(struct rte_eth_dev *dev,
 						uint16_t queue_id);
 static int vmxnet3_dev_rx_queue_intr_disable(struct rte_eth_dev *dev,
@@ -124,27 +128,28 @@ static const struct eth_dev_ops vmxnet3_eth_dev_ops = {
 	.dev_stop             = vmxnet3_dev_stop,
 	.dev_close            = vmxnet3_dev_close,
 	.dev_reset            = vmxnet3_dev_reset,
+	.link_update          = vmxnet3_dev_link_update,
 	.promiscuous_enable   = vmxnet3_dev_promiscuous_enable,
 	.promiscuous_disable  = vmxnet3_dev_promiscuous_disable,
 	.allmulticast_enable  = vmxnet3_dev_allmulticast_enable,
 	.allmulticast_disable = vmxnet3_dev_allmulticast_disable,
-	.link_update          = vmxnet3_dev_link_update,
-	.stats_get            = vmxnet3_dev_stats_get,
-	.xstats_get_names     = vmxnet3_dev_xstats_get_names,
-	.xstats_get           = vmxnet3_dev_xstats_get,
-	.stats_reset          = vmxnet3_dev_stats_reset,
 	.mac_addr_set         = vmxnet3_mac_addr_set,
+	.mtu_set              = vmxnet3_dev_mtu_set,
+	.stats_get            = vmxnet3_dev_stats_get,
+	.stats_reset          = vmxnet3_dev_stats_reset,
+	.xstats_get           = vmxnet3_dev_xstats_get,
+	.xstats_get_names     = vmxnet3_dev_xstats_get_names,
+	.fw_version_get       = vmxnet3_hw_ver_get,
 	.dev_infos_get        = vmxnet3_dev_info_get,
 	.dev_supported_ptypes_get = vmxnet3_dev_supported_ptypes_get,
-	.mtu_set              = vmxnet3_dev_mtu_set,
 	.vlan_filter_set      = vmxnet3_dev_vlan_filter_set,
 	.vlan_offload_set     = vmxnet3_dev_vlan_offload_set,
 	.rx_queue_setup       = vmxnet3_dev_rx_queue_setup,
 	.rx_queue_release     = vmxnet3_dev_rx_queue_release,
-	.tx_queue_setup       = vmxnet3_dev_tx_queue_setup,
-	.tx_queue_release     = vmxnet3_dev_tx_queue_release,
 	.rx_queue_intr_enable = vmxnet3_dev_rx_queue_intr_enable,
 	.rx_queue_intr_disable = vmxnet3_dev_rx_queue_intr_disable,
+	.tx_queue_setup       = vmxnet3_dev_tx_queue_setup,
+	.tx_queue_release     = vmxnet3_dev_tx_queue_release,
 	.reta_update          = vmxnet3_rss_reta_update,
 	.reta_query           = vmxnet3_rss_reta_query,
 };
@@ -1763,4 +1768,20 @@ vmxnet3_rss_reta_query(struct rte_eth_dev *dev,
 	}
 
 	return 0;
+}
+
+static int
+vmxnet3_hw_ver_get(struct rte_eth_dev *dev,
+		   char *fw_version, size_t fw_size)
+{
+	int ret;
+	struct vmxnet3_hw *hw = dev->data->dev_private;
+
+	ret = snprintf(fw_version, fw_size, "v%d", hw->version);
+
+	ret += 1; /* add the size of '\0' */
+	if (fw_size < (uint32_t)ret)
+		return ret;
+	else
+		return 0;
 }
