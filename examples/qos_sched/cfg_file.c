@@ -229,12 +229,14 @@ cfg_load_subport_profile(struct rte_cfgfile *cfg,
 	return 0;
 }
 
-#ifdef RTE_SCHED_CMAN
 void set_subport_cman_params(struct rte_sched_subport_params *subport_p,
 					struct rte_sched_cman_params cman_p)
 {
 	int j, k;
 	subport_p->cman_params->cman_mode = cman_p.cman_mode;
+
+	if (subport_p->cman_params->cman_mode == RTE_SCHED_CMAN_NONE)
+		return;
 
 	for (j = 0; j < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; j++) {
 		if (subport_p->cman_params->cman_mode ==
@@ -261,7 +263,6 @@ void set_subport_cman_params(struct rte_sched_subport_params *subport_p,
 		}
 	}
 }
-#endif
 
 int
 cfg_load_subport(struct rte_cfgfile *cfg, struct rte_sched_subport_params *subport_params)
@@ -276,11 +277,13 @@ cfg_load_subport(struct rte_cfgfile *cfg, struct rte_sched_subport_params *subpo
 	memset(active_queues, 0, sizeof(active_queues));
 	n_active_queues = 0;
 
-#ifdef RTE_SCHED_CMAN
 	struct rte_sched_cman_params cman_params = {
-		.cman_mode = RTE_SCHED_CMAN_RED,
 		.red_params = { },
 	};
+
+	if (cman_params.cman_mode != RTE_SCHED_CMAN_NONE) {
+		cman_params.cman_mode = RTE_SCHED_CMAN_NONE;
+	}
 
 	if (rte_cfgfile_has_section(cfg, "red")) {
 		cman_params.cman_mode = RTE_SCHED_CMAN_RED;
@@ -387,7 +390,6 @@ cfg_load_subport(struct rte_cfgfile *cfg, struct rte_sched_subport_params *subpo
 
 		}
 	}
-#endif /* RTE_SCHED_CMAN */
 
 	for (i = 0; i < MAX_SCHED_SUBPORTS; i++) {
 		char sec_name[CFG_NAME_LEN];
@@ -465,9 +467,7 @@ cfg_load_subport(struct rte_cfgfile *cfg, struct rte_sched_subport_params *subpo
 					}
 				}
 			}
-#ifdef RTE_SCHED_CMAN
 			set_subport_cman_params(subport_params+i, cman_params);
-#endif
 		}
 	}
 

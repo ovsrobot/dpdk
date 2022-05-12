@@ -17,7 +17,6 @@ static uint32_t n_subport_profiles;
 static struct rte_sched_pipe_params
 	pipe_profile[TMGR_PIPE_PROFILE_MAX];
 
-#ifdef RTE_SCHED_CMAN
 static struct rte_sched_cman_params cman_params = {
 	.red_params = {
 		/* Traffic Class 0 Colors Green / Yellow / Red */
@@ -86,7 +85,6 @@ static struct rte_sched_cman_params cman_params = {
 		[12][2] = {.min_th = 32, .max_th = 64, .maxp_inv = 10, .wq_log2 = 9},
 		},
 };
-#endif /* RTE_SCHED_CMAN */
 
 static uint32_t n_pipe_profiles;
 
@@ -96,9 +94,7 @@ static const struct rte_sched_subport_params subport_params_default = {
 	.pipe_profiles = pipe_profile,
 	.n_pipe_profiles = 0, /* filled at run time */
 	.n_max_pipe_profiles = RTE_DIM(pipe_profile),
-#ifdef RTE_SCHED_CMAN
 	.cman_params = &cman_params,
-#endif /* RTE_SCHED_CMAN */
 };
 
 static struct tmgr_port_list tmgr_port_list;
