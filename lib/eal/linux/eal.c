@@ -1144,8 +1144,69 @@ rte_eal_init(int argc, char **argv)
 		lcore_config[i].state = WAIT;
 
 		/* create a thread for each lcore */
-		ret = pthread_create(&lcore_config[i].thread_id, NULL,
-				     eal_thread_loop, (void *)(uintptr_t)i);
+		if (internal_conf->huge_worker_stack_size == 0) {
+			ret = pthread_create(&lcore_config[i].thread_id, NULL,
+					     eal_thread_loop,
+					     (void *)(uintptr_t)i);
+		} else {
+			/* Allocate NUMA aware stack memory and set
+			 * pthread attributes
+			 */
+			pthread_attr_t attr;
+			size_t stack_size;
+			void *stack_ptr;
+
+			if (pthread_attr_init(&attr) != 0) {
+				rte_eal_init_alert("Cannot init pthread "
+						   "attributes");
+				rte_errno = EFAULT;
+				return -1;
+			}
+			if (internal_conf->huge_worker_stack_size ==
+			    USE_OS_STACK_SIZE) {
+				if (pthread_attr_getstacksize(&attr,
+							      &stack_size) != 0) {
+					rte_errno = EFAULT;
+					return -1;
+				}
+			} else {
+				stack_size =
+					internal_conf->huge_worker_stack_size;
+			}
+			stack_ptr =
+				rte_zmalloc_socket("lcore_stack",
+						   stack_size,
+						   stack_size,
+						   rte_lcore_to_socket_id(i));
+
+			if (stack_ptr == NULL) {
+				rte_eal_init_alert("Cannot allocate stack "
+						   "memory for worker lcore");
+				rte_errno = ENOMEM;
+				return -1;
+			}
+
+			if (pthread_attr_setstack(&attr,
+						  stack_ptr,
+						  stack_size) != 0) {
+				rte_eal_init_alert("Cannot set pthread "
+						   "stack attributes");
+				rte_errno = EFAULT;
+				return -1;
+			}
+
+			/* create a thread for each lcore */
+			ret = pthread_create(&lcore_config[i].thread_id, &attr,
+					     eal_thread_loop,
+					     (void *)(uintptr_t)i);
+
+			if (pthread_attr_destroy(&attr) != 0) {
+				rte_eal_init_alert("Cannot destroy pthread "
+						   "attributes");
+				rte_errno = EFAULT;
+				return -1;
+			}
+		}
 		if (ret != 0)
 			rte_panic("Cannot create thread\n");
 

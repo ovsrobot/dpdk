@@ -48,6 +48,9 @@ struct hugepage_file_discipline {
 	bool unlink_existing;
 };
 
+/** Worker hugepage stack size should default to OS value. */
+#define USE_OS_STACK_SIZE ((size_t)~0)
+
 /**
  * internal configuration
  */
@@ -102,6 +105,7 @@ struct internal_config {
 	unsigned int no_telemetry; /**< true to disable Telemetry */
 	struct simd_bitwidth max_simd_bitwidth;
 	/**< max simd bitwidth path to use */
+	size_t huge_worker_stack_size; /**< worker thread stack size in KiB */
 };
 
 void eal_reset_internal_config(struct internal_config *internal_cfg);
