@@ -70,6 +70,11 @@ New Features
   * Added AH mode support in lookaside protocol (IPsec) for CN9K & CN10K.
   * Added AES-GMAC support in lookaside protocol (IPsec) for CN9K & CN10K.
 
+* **Added security inline protocol (IPsec) tests in dpdk-test.**
+
+  Added various functional test cases in dpdk-test to verify
+  inline IPsec protocol offload using loopback interface.
+
 
 Removed Items
 -------------
