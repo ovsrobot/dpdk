@@ -1183,6 +1183,56 @@ err_dh:
 	}
 	case RTE_CRYPTO_ASYM_XFORM_DSA:
 	{
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+		BIGNUM *p = NULL, *g = NULL;
+		BIGNUM *q = NULL, *priv_key = NULL;
+		BIGNUM *pub_key = BN_new();
+		BN_zero(pub_key);
+		OSSL_PARAM_BLD *param_bld = NULL;
+
+		p = BN_bin2bn((const unsigned char *)
+				xform->dsa.p.data,
+				xform->dsa.p.length,
+				p);
+
+		g = BN_bin2bn((const unsigned char *)
+				xform->dsa.g.data,
+				xform->dsa.g.length,
+				g);
+
+		q = BN_bin2bn((const unsigned char *)
+				xform->dsa.q.data,
+				xform->dsa.q.length,
+				q);
+		if (!p || !q || !g)
+			goto err_dsa;
+
+		priv_key = BN_bin2bn((const unsigned char *)
+				xform->dsa.x.data,
+				xform->dsa.x.length,
+				priv_key);
+		if (priv_key == NULL)
+			goto err_dsa;
+
+		param_bld = OSSL_PARAM_BLD_new();
+		if (!param_bld) {
+			OPENSSL_LOG(ERR, "failed to allocate resources\n");
+			goto err_dsa;
+		}
+
+		if (!OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_P, p)
+			|| !OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_G, g)
+			|| !OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_FFC_Q, q)
+			|| !OSSL_PARAM_BLD_push_BN(param_bld, OSSL_PKEY_PARAM_PRIV_KEY, priv_key)) {
+			OSSL_PARAM_BLD_free(param_bld);
+			OPENSSL_LOG(ERR, "failed to allocate resources\n");
+			goto err_dsa;
+		}
+		asym_session->xfrm_type = RTE_CRYPTO_ASYM_XFORM_DSA;
+		asym_session->u.s.param_bld = param_bld;
+
+		break;
+#else
 		BIGNUM *p = NULL, *g = NULL;
 		BIGNUM *q = NULL, *priv_key = NULL;
 		BIGNUM *pub_key = BN_new();
@@ -1242,7 +1292,7 @@ err_dh:
 		asym_session->u.s.dsa = dsa;
 		asym_session->xfrm_type = RTE_CRYPTO_ASYM_XFORM_DSA;
 		break;
-
+#endif
 err_dsa:
 		BN_free(p);
 		BN_free(q);
@@ -1335,8 +1385,12 @@ static void openssl_reset_asym_session(struct openssl_asym_session *sess)
 #endif
 		break;
 	case RTE_CRYPTO_ASYM_XFORM_DSA:
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+		sess->u.s.param_bld = NULL;
+#else
 		if (sess->u.s.dsa)
 			DSA_free(sess->u.s.dsa);
+#endif
 		break;
 	default:
 		break;
