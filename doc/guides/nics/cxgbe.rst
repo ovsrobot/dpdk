@@ -838,3 +838,31 @@ to configure the mtu of all the ports with a single command.
 
      testpmd> port stop all
      testpmd> port config all max-pkt-len 9000
+
+Hardware Configuration and Debugging
+------------------------------------
+
+Firmware Configuration File
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To enable or disable Chelsio NIC features before firmware initialization,
+the Chelsio firmware configuration file can be placed in following
+directory. The CXGBE PMD will search and pick up the firmware
+configuration file during the Chelsio NIC probe, before initializing
+the firmware.
+
+.. code-block:: console
+
+   cp <path_to_config_file>/t6-config.txt /lib/firmware/cxgb4/t6-config.txt
+
+The firmware configuration file is mainly intended to be used to debug
+firmware initialization failures. It can also be used to redistribute
+NIC resources from disabled physical functions (PFs) to main PF before
+initializing firmware.
+
+.. warning::
+
+   Note that the Chelsio firmware configuration file contains very low
+   level details that is specific to the Chelsio NIC. Hence, the
+   firmware configuration file must not be modified without expert
+   guidance from Chelsio support team.
