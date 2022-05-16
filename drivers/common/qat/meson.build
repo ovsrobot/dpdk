@@ -87,3 +87,4 @@ if qat_crypto
     ext_deps += libcrypto
     cflags += ['-DBUILD_QAT_SYM', '-DBUILD_QAT_ASYM']
 endif
+cflags += ['-DOPENSSL_API_COMPAT=0x10100000L']
