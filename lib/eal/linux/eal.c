@@ -857,6 +857,64 @@ is_iommu_enabled(void)
 	return n > 2;
 }
 
+static int
+eal_worker_thread_create(struct internal_config *internal_conf,
+			 int lcore_id)
+{
+	pthread_attr_t attr;
+	size_t stack_size;
+	void *stack_ptr;
+	int ret;
+
+	if (internal_conf->huge_worker_stack_size == 0)
+		return pthread_create(&lcore_config[lcore_id].thread_id,
+				      NULL,
+				      eal_thread_loop,
+				      (void *)(uintptr_t)lcore_id);
+
+	/* Allocate NUMA aware stack memory and set pthread attributes */
+	if (pthread_attr_init(&attr) != 0) {
+		rte_eal_init_alert("Cannot init pthread attributes");
+		rte_errno = EFAULT;
+		return -1;
+	}
+	if (internal_conf->huge_worker_stack_size == WORKER_STACK_SIZE_FROM_OS) {
+		if (pthread_attr_getstacksize(&attr, &stack_size) != 0) {
+			rte_errno = EFAULT;
+			return -1;
+		}
+	} else {
+		stack_size = internal_conf->huge_worker_stack_size;
+	}
+	stack_ptr = rte_zmalloc_socket("lcore_stack",
+				       stack_size,
+				       stack_size,
+				       rte_lcore_to_socket_id(lcore_id));
+
+	if (stack_ptr == NULL) {
+		rte_eal_init_alert("Cannot allocate worker lcore stack memory");
+		rte_errno = ENOMEM;
+		return -1;
+	}
+
+	if (pthread_attr_setstack(&attr, stack_ptr, stack_size) != 0) {
+		rte_eal_init_alert("Cannot set pthread stack attributes");
+		rte_errno = EFAULT;
+		return -1;
+	}
+
+	ret = pthread_create(&lcore_config[lcore_id].thread_id, &attr,
+			     eal_thread_loop,
+			     (void *)(uintptr_t)lcore_id);
+
+	if (pthread_attr_destroy(&attr) != 0) {
+		rte_eal_init_alert("Cannot destroy pthread attributes");
+		rte_errno = EFAULT;
+		return -1;
+	}
+	return ret;
+}
+
 /* Launch threads, called at application init(). */
 int
 rte_eal_init(int argc, char **argv)
@@ -1144,8 +1202,7 @@ rte_eal_init(int argc, char **argv)
 		lcore_config[i].state = WAIT;
 
 		/* create a thread for each lcore */
-		ret = pthread_create(&lcore_config[i].thread_id, NULL,
-				     eal_thread_loop, (void *)(uintptr_t)i);
+		ret = eal_worker_thread_create(internal_conf, i);
 		if (ret != 0)
 			rte_panic("Cannot create thread\n");
 
