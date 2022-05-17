@@ -90,16 +90,41 @@ Using Linux Core Isolation to Reduce Context Switches
 -----------------------------------------------------
 
 While the threads used by a DPDK application are pinned to logical cores on the system,
-it is possible for the Linux scheduler to run other tasks on those cores also.
-To help prevent additional workloads from running on those cores,
-it is possible to use the ``isolcpus`` Linux kernel parameter to isolate them from the general Linux scheduler.
+it is possible for the Linux scheduler to run other tasks on those cores.
+To help prevent additional workloads, timers, rcu processing and IRQs from running on those cores, it is possible to use
+the Linux kernel parameters ``isolcpus``, ``nohz_full``, ``irqaffinity`` to isolate them from the general Linux scheduler tasks.
 
-For example, if DPDK applications are to run on logical cores 2, 4 and 6,
+For example, if a given CPU has 0-7 cores and DPDK applications are to run on logical cores 2, 4 and 6,
 the following should be added to the kernel parameter list:
 
 .. code-block:: console
 
-    isolcpus=2,4,6
+    isolcpus=2,4,6 nohz_full=2,4,6 irqaffinity=0,1,3,5,7
+
+.. Note::
+
+         More detailed information about the above parameters can be found at
+         https://www.kernel.org/doc/html/latest/timers/no_hz.html
+         https://www.kernel.org/doc/html/latest/core-api/irq/
+         https://www.kernel.org/doc/html/latest/admin-guide/kernel-parameters.html
+
+
+For more fine grained control over resource management and performance tuning one can look
+into ``Linux cgroups``.
+
+Cpusets using cgroups::
+
+   https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v1/cpusets.html
+
+Systemd (CPUAffinity)::
+
+   https://www.freedesktop.org/software/systemd/man/systemd.exec.html
+
+Also, see::
+
+   https://man7.org/linux/man-pages/man7/cpuset.7.html
+   https://www.suse.com/c/cpu-isolation-practical-example-part-5/
+   https://www.rcannings.com/systemd-core-isolation/
 
 .. _High_Precision_Event_Timer:
 
