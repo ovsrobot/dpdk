@@ -648,6 +648,17 @@ rte_eal_intr_init(void)
 	return ret;
 }
 
+void
+rte_eal_intr_destroy()
+{
+	/* cancel the host thread */
+	pthread_cancel(intr_thread);
+	pthread_join(intr_thread, NULL);
+
+	close(kq);
+	kq = -1;
+}
+
 int
 rte_intr_rx_ctl(struct rte_intr_handle *intr_handle,
 		int epfd, int op, unsigned int vec, void *data)
