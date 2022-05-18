@@ -412,9 +412,17 @@ fill_sg_comp_from_iov(sg_comp_t *list,
 				(bufs[j].size - from_offset) : size;
 			from_offset = 0;
 		} else {
+/* FIXME */
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 120000)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
 			e_dma_addr = bufs[j].dma_addr;
 			e_len = (size > bufs[j].size) ?
 				bufs[j].size : size;
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 120000)
+#pragma GCC diagnostic pop
+#endif
 		}
 
 		to->u.s.len[i % 4] = rte_cpu_to_be_16(e_len);
