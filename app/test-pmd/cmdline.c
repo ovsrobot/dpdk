@@ -60,6 +60,9 @@
 #ifdef RTE_NET_I40E
 #include <rte_pmd_i40e.h>
 #endif
+#ifdef RTE_NET_ICE
+#include <rte_pmd_ice.h>
+#endif
 #ifdef RTE_NET_BNXT
 #include <rte_pmd_bnxt.h>
 #endif
@@ -653,6 +656,9 @@ static void cmd_help_long_parsed(void *parsed_result,
 
 			"set link-down port (port_id)\n"
 			"	Set link down for a port.\n\n"
+
+			"ddp dump (port_id) (config_path)\n"
+			"    Dump a runtime configure on a port\n\n"
 
 			"ddp add (port_id) (profile_path[,backup_profile_path])\n"
 			"    Load a profile package on a port\n\n"
@@ -14467,6 +14473,75 @@ cmdline_parse_inst_t cmd_strict_link_prio = {
 	},
 };
 
+/* Dump device ddp package, only for ice PF */
+struct cmd_ddp_dump_result {
+	cmdline_fixed_string_t ddp;
+	cmdline_fixed_string_t add;
+	portid_t port_id;
+	char filepath[];
+};
+
+cmdline_parse_token_string_t cmd_ddp_dump_ddp =
+	TOKEN_STRING_INITIALIZER(struct cmd_ddp_dump_result, ddp, "ddp");
+cmdline_parse_token_string_t cmd_ddp_dump_dump =
+	TOKEN_STRING_INITIALIZER(struct cmd_ddp_dump_result, add, "dump");
+cmdline_parse_token_num_t cmd_ddp_dump_port_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_ddp_dump_result, port_id, RTE_UINT16);
+cmdline_parse_token_string_t cmd_ddp_dump_filepath =
+	TOKEN_STRING_INITIALIZER(struct cmd_ddp_dump_result, filepath, NULL);
+
+static void
+cmd_ddp_dump_parsed(
+	void *parsed_result,
+	__rte_unused struct cmdline *cl,
+	__rte_unused void *data)
+{
+	struct cmd_ddp_dump_result *res = parsed_result;
+	uint8_t *buff;
+	uint32_t size;
+	int ret = -ENOTSUP;
+
+#define ICE_BUFF_SIZE	0x000c9000
+	size = ICE_BUFF_SIZE;
+	buff = (uint8_t *)malloc(ICE_BUFF_SIZE);
+	if (buff) {
+#ifdef RTE_NET_ICE
+		ret = rte_pmd_ice_dump_package(res->port_id, &buff, &size);
+#endif
+		switch (ret) {
+		case 0:
+			save_file(res->filepath, buff, size);
+			break;
+		case -EINVAL:
+			fprintf(stderr, "Invalid buffer size\n");
+			break;
+		case -ENOTSUP:
+			fprintf(stderr,
+				"Device doesn't support "
+				"dump DDP runtime configure.\n");
+			break;
+		default:
+			fprintf(stderr,
+				"Failed to dump DDP runtime configure,"
+				" error: (%s)\n", strerror(-ret));
+		}
+	}
+	free(buff);
+}
+
+cmdline_parse_inst_t cmd_ddp_dump = {
+	.f = cmd_ddp_dump_parsed,
+	.data = NULL,
+	.help_str = "ddp dump <port_id> <config_path>",
+	.tokens = {
+		(void *)&cmd_ddp_dump_ddp,
+		(void *)&cmd_ddp_dump_dump,
+		(void *)&cmd_ddp_dump_port_id,
+		(void *)&cmd_ddp_dump_filepath,
+		NULL,
+	},
+};
+
 /* Load dynamic device personalization*/
 struct cmd_ddp_add_result {
 	cmdline_fixed_string_t ddp;
@@ -18021,6 +18096,7 @@ cmdline_parse_ctx_t main_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_ddp_del,
 	(cmdline_parse_inst_t *)&cmd_ddp_get_list,
 	(cmdline_parse_inst_t *)&cmd_ddp_get_info,
+	(cmdline_parse_inst_t *)&cmd_ddp_dump,
 	(cmdline_parse_inst_t *)&cmd_cfg_input_set,
 	(cmdline_parse_inst_t *)&cmd_clear_input_set,
 	(cmdline_parse_inst_t *)&cmd_show_vf_stats,
