@@ -90,6 +90,7 @@ EXPERIMENTAL {
 
 	# added in 22.07
 	rte_vhost_async_get_inflight_thread_unsafe;
+	rte_vhost_driver_get_vdpa_dev_type;
 
 };
 

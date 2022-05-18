@@ -117,6 +117,9 @@ extern "C" {
 
 #define RTE_MAX_VHOST_DEVICE	1024
 
+#define VDPA_DEVICE_TYPE_NET 0
+#define VDPA_DEVICE_TYPE_BLK 1
+
 struct rte_vdpa_device;
 
 /**
@@ -484,6 +487,20 @@ rte_vhost_driver_detach_vdpa_device(const char *path);
  */
 struct rte_vdpa_device *
 rte_vhost_driver_get_vdpa_device(const char *path);
+
+/**
+ * Get the device type of the vdpa device.
+ *
+ * @param path
+ *  The vhost-user socket file path
+ * @param type
+ *  the device type of the vdpa device
+ * @return
+ *  0 on success, -1 on failure
+ */
+__rte_experimental
+int
+rte_vhost_driver_get_vdpa_dev_type(const char *path, uint32_t *type);
 
 /**
  * Set the feature bits the vhost-user driver supports.

@@ -104,6 +104,10 @@ New Features
   * ``RTE_EVENT_QUEUE_ATTR_WEIGHT``
   * ``RTE_EVENT_QUEUE_ATTR_AFFINITY``
 
+* **Added vhost API to get the device type of a vDPA device.**
+
+  Added an API which can get the device type of vDPA device.
+
 
 Removed Items
 -------------
