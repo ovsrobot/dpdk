@@ -3411,6 +3411,32 @@ This action is meant to use the same structure as `Action: PORT_REPRESENTOR`_.
 
 See also `Item: REPRESENTED_PORT`_.
 
+Action: ``METER_MARK``
+^^^^^^^^^^^^^^^^^^^^^^
+
+Meters an IP packet stream and marks its packets with colors.
+
+Applies a stage of metering only. Unlike the ``METER`` action,
+no policing is performed and the ``METER_COLOR`` item may be used later.
+The profle object has to be created using the rte_mtr_profile_create() API.
+The ID of the profile object may be specified as an action parameter.
+Or PMD-specific profile configuration may be used to save the time to calculate
+the profile configuration via rte_mtr_profile_calculate() API.
+
+.. _table_rte_flow_action_meter_mark:
+
+.. table:: METER_MARK
+
+   +------------------+----------------------+
+   | Field            | Value                |
+   +==================+======================+
+   | ``mode``         | Meter profile mode   |
+   +------------------+----------------------+
+   | ``profile_id``   | Meter profile ID     |
+   +------------------+----------------------+
+   | ``profile_cfg``  | Meter profile config |
+   +------------------+----------------------+
+
 Negative types
 ~~~~~~~~~~~~~~
 
