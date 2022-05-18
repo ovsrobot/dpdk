@@ -3714,6 +3714,7 @@ enum rte_flow_field_id {
 	RTE_FLOW_FIELD_META,		/**< Metadata value. */
 	RTE_FLOW_FIELD_POINTER,		/**< Memory pointer. */
 	RTE_FLOW_FIELD_VALUE,		/**< Immediate value. */
+	RTE_FLOW_FIELD_METER_COLOR,	/**< Meter Color Marker. */
 };
 
 /**
