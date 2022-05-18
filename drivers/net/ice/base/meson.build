@@ -40,6 +40,11 @@ if (toolchain == 'gcc' and cc.version().version_compare('>=11.0.0'))
     error_cflags += ['-Wno-array-bounds']
 endif
 
+# FIXME
+if (toolchain == 'gcc' and cc.version().version_compare('>=12.0.0'))
+    error_cflags += ['-Wno-stringop-overflow']
+endif
+
 if is_windows and cc.get_id() != 'clang'
     cflags += ['-fno-asynchronous-unwind-tables']
 endif
