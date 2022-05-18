@@ -525,6 +525,30 @@ rte_mtr_meter_profile_delete(uint16_t port_id,
 	struct rte_mtr_error *error);
 
 /**
+ * Meter profile calculate
+ *
+ * Calculate CIR, CBS and EBS values for a given meter profile ID.
+ * Convert user-provided values to PMD-specific configuration.
+ *
+ * @param[in] port_id
+ *   The port identifier of the Ethernet device.
+ * @param[in] meter_profile_id
+ *   Meter profile ID. Needs to be the valid.
+ * @param[out] meter_profile_cfg
+ *   Meter profile configuration filled by PMD.
+ * @param[out] error
+ *   Error details. Filled in only on error, when not NULL.
+ * @return
+ *   0 on success, non-zero error code otherwise.
+ */
+__rte_experimental
+int
+rte_mtr_meter_profile_calculate(uint16_t port_id,
+	uint32_t meter_profile_id,
+	void *meter_profile_cfg,
+	struct rte_mtr_error *error);
+
+/**
  * Check whether a meter policy can be created on a given port.
  *
  * The meter policy is validated for correctness and

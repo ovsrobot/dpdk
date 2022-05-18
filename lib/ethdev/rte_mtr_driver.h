@@ -41,6 +41,12 @@ typedef int (*rte_mtr_meter_profile_delete_t)(struct rte_eth_dev *dev,
 	uint32_t meter_profile_id,
 	struct rte_mtr_error *error);
 
+/** @internal MTR meter profile calculate. */
+typedef int (*rte_mtr_meter_profile_calculate_t)(struct rte_eth_dev *dev,
+	uint32_t meter_profile_id,
+	void *meter_profile_cfg,
+	struct rte_mtr_error *error);
+
 /** @internal MTR meter policy validate. */
 typedef int (*rte_mtr_meter_policy_validate_t)(struct rte_eth_dev *dev,
 	struct rte_mtr_meter_policy_params *policy,
@@ -156,6 +162,9 @@ struct rte_mtr_ops {
 
 	/** MTR object meter policy update */
 	rte_mtr_meter_policy_update_t meter_policy_update;
+
+	/** MTR meter profile calculate */
+	rte_mtr_meter_profile_calculate_t meter_profile_calculate;
 };
 
 /**

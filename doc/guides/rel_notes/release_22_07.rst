@@ -64,6 +64,7 @@ New Features
 
   * Added METER_COLOR item to match Color Marker set by a Meter.
   * Added ability to set Color Marker via modify_field Flow API.
+  * Added Meter API to calculate a profile configuration values.
 
 * **Updated Intel iavf driver.**
 

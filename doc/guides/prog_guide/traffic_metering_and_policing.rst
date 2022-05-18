@@ -105,3 +105,5 @@ traffic meter and policing library.
    * Adding one (or multiple) actions of the type ``RTE_FLOW_ACTION_TYPE_METER``
      to the list of meter actions (``struct rte_mtr_meter_policy_params::actions``)
      specified per color as show in :numref:`figure_rte_mtr_chaining`.
+#.  Traffic metering algorithm configuration may be converted to the PDM-specific
+   values using ``rte_mtr_meter_profile_calculate()`` API function for reuse.

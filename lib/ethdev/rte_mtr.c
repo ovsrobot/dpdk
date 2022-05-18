@@ -91,6 +91,18 @@ rte_mtr_meter_profile_delete(uint16_t port_id,
 		meter_profile_id, error);
 }
 
+/** MTR meter profile calculate */
+int
+rte_mtr_meter_profile_calculate(uint16_t port_id,
+	uint32_t meter_profile_id,
+	void *meter_profile_cfg,
+	struct rte_mtr_error *error)
+{
+	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	return RTE_MTR_FUNC(port_id, meter_profile_calculate)(dev,
+		meter_profile_id, meter_profile_cfg, error);
+}
+
 /* MTR meter policy validate */
 int
 rte_mtr_meter_policy_validate(uint16_t port_id,
