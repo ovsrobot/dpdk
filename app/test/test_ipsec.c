@@ -554,24 +554,28 @@ struct rte_ipv4_hdr ipv4_outer  = {
 };
 
 static struct rte_mbuf *
-setup_test_string(struct rte_mempool *mpool,
-		const char *string, size_t len, uint8_t blocksize)
+setup_test_string(struct rte_mempool *mpool, const char *string,
+	size_t string_len, size_t len)
 {
 	struct rte_mbuf *m = rte_pktmbuf_alloc(mpool);
-	size_t t_len = len - (blocksize ? (len % blocksize) : 0);
 
 	if (m) {
 		memset(m->buf_addr, 0, m->buf_len);
-		char *dst = rte_pktmbuf_append(m, t_len);
+		char *dst = rte_pktmbuf_append(m, len);
 
 		if (!dst) {
 			rte_pktmbuf_free(m);
 			return NULL;
 		}
-		if (string != NULL)
-			rte_memcpy(dst, string, t_len);
-		else
-			memset(dst, 0, t_len);
+		if (string != NULL) {
+			size_t off;
+
+			for (off = 0; off + string_len < len; off += string_len)
+				rte_memcpy(&dst[off], string, string_len);
+			rte_memcpy(&dst[off], string, len % string_len);
+		} else {
+			memset(dst, 0, len);
+		}
 	}
 
 	return m;
@@ -1365,7 +1369,8 @@ test_ipsec_crypto_outb_burst_null_null(int i)
 	/* Generate input mbuf data */
 	for (j = 0; j < num_pkts && rc == 0; j++) {
 		ut_params->ibuf[j] = setup_test_string(ts_params->mbuf_pool,
-			null_plain_data, test_cfg[i].pkt_sz, 0);
+			null_plain_data, sizeof(null_plain_data),
+			test_cfg[i].pkt_sz);
 		if (ut_params->ibuf[j] == NULL)
 			rc = TEST_FAILED;
 		else {
@@ -1483,7 +1488,8 @@ test_ipsec_inline_crypto_inb_burst_null_null(int i)
 			/* Generate test mbuf data */
 			ut_params->obuf[j] = setup_test_string(
 				ts_params->mbuf_pool,
-				null_plain_data, test_cfg[i].pkt_sz, 0);
+				null_plain_data, sizeof(null_plain_data),
+				test_cfg[i].pkt_sz);
 			if (ut_params->obuf[j] == NULL)
 				rc = TEST_FAILED;
 		}
@@ -1551,16 +1557,17 @@ test_ipsec_inline_proto_inb_burst_null_null(int i)
 
 	/* Generate inbound mbuf data */
 	for (j = 0; j < num_pkts && rc == 0; j++) {
-		ut_params->ibuf[j] = setup_test_string(
-			ts_params->mbuf_pool,
-			null_plain_data, test_cfg[i].pkt_sz, 0);
+		ut_params->ibuf[j] = setup_test_string(ts_params->mbuf_pool,
+			null_plain_data, sizeof(null_plain_data),
+			test_cfg[i].pkt_sz);
 		if (ut_params->ibuf[j] == NULL)
 			rc = TEST_FAILED;
 		else {
 			/* Generate test mbuf data */
 			ut_params->obuf[j] = setup_test_string(
 				ts_params->mbuf_pool,
-				null_plain_data, test_cfg[i].pkt_sz, 0);
+				null_plain_data, sizeof(null_plain_data),
+				test_cfg[i].pkt_sz);
 			if (ut_params->obuf[j] == NULL)
 				rc = TEST_FAILED;
 		}
@@ -1660,7 +1667,8 @@ test_ipsec_inline_crypto_outb_burst_null_null(int i)
 	/* Generate test mbuf data */
 	for (j = 0; j < num_pkts && rc == 0; j++) {
 		ut_params->ibuf[j] = setup_test_string(ts_params->mbuf_pool,
-			null_plain_data, test_cfg[i].pkt_sz, 0);
+			null_plain_data, sizeof(null_plain_data),
+			test_cfg[i].pkt_sz);
 		if (ut_params->ibuf[0] == NULL)
 			rc = TEST_FAILED;
 
@@ -1738,15 +1746,16 @@ test_ipsec_inline_proto_outb_burst_null_null(int i)
 	/* Generate test mbuf data */
 	for (j = 0; j < num_pkts && rc == 0; j++) {
 		ut_params->ibuf[j] = setup_test_string(ts_params->mbuf_pool,
-			null_plain_data, test_cfg[i].pkt_sz, 0);
+			null_plain_data, sizeof(null_plain_data),
+			test_cfg[i].pkt_sz);
 		if (ut_params->ibuf[0] == NULL)
 			rc = TEST_FAILED;
 
 		if (rc == 0) {
 			/* Generate test tunneled mbuf data for comparison */
 			ut_params->obuf[j] = setup_test_string(
-					ts_params->mbuf_pool,
-					null_plain_data, test_cfg[i].pkt_sz, 0);
+				ts_params->mbuf_pool, null_plain_data,
+				sizeof(null_plain_data), test_cfg[i].pkt_sz);
 			if (ut_params->obuf[j] == NULL)
 				rc = TEST_FAILED;
 		}
@@ -1815,7 +1824,8 @@ test_ipsec_lksd_proto_inb_burst_null_null(int i)
 	for (j = 0; j < num_pkts && rc == 0; j++) {
 		/* packet with sequence number 0 is invalid */
 		ut_params->ibuf[j] = setup_test_string(ts_params->mbuf_pool,
-			null_encrypted_data, test_cfg[i].pkt_sz, 0);
+			null_encrypted_data, sizeof(null_encrypted_data),
+			 test_cfg[i].pkt_sz);
 		if (ut_params->ibuf[j] == NULL)
 			rc = TEST_FAILED;
 	}
