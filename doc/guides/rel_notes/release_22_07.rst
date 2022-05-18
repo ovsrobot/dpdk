@@ -60,6 +60,10 @@ New Features
   Added an API which can get the number of in-flight packets in
   vhost async data path without using lock.
 
+* **Extended Metering and Marking support in the Flow API.**
+
+  * Added METER_COLOR item to match Color Marker set by a Meter.
+
 * **Updated Intel iavf driver.**
 
   * Added Tx QoS queue rate limitation support.
