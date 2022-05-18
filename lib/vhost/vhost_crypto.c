@@ -576,16 +576,16 @@ copy_data(void *dst_data, struct vhost_crypto_data_req *vc_req,
 	uint32_t to_copy;
 	uint8_t *data = dst_data;
 	uint8_t *src;
-	int left = size;
+	uint32_t left = size;
 
-	to_copy = RTE_MIN(desc->len, (uint32_t)left);
+	to_copy = RTE_MIN(desc->len, left);
 	dlen = to_copy;
 	src = IOVA_TO_VVA(uint8_t *, vc_req, desc->addr, &dlen,
 			VHOST_ACCESS_RO);
-	if (unlikely(!src || !dlen))
+	if (unlikely(!src || !dlen || dlen > left))
 		return -1;
 
-	rte_memcpy((uint8_t *)data, src, dlen);
+	rte_memcpy(data, src, dlen);
 	data += dlen;
 
 	if (unlikely(dlen < to_copy)) {
