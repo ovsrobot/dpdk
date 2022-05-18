@@ -44,6 +44,11 @@ error_cflags = [
         '-Wno-sometimes-uninitialized',
         '-Wno-pointer-bool-conversion',
 ]
+# FIXME
+if (toolchain == 'gcc' and cc.version().version_compare('>=12.0.0'))
+    error_cflags += ['-Wno-array-bounds']
+endif
+
 c_args = cflags
 foreach flag: error_cflags
         if cc.has_argument(flag)
