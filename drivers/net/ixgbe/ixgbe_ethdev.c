@@ -4131,48 +4131,89 @@ out:
 	return ret_val;
 }
 
+static void
+ixgbe_link_service(struct rte_eth_dev *dev)
+{
+	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ixgbe_interrupt *intr =
+		IXGBE_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
+	bool link_up, autoneg = false, have_int = false;
+	u32 speed;
+	s32 err;
+
+	/* Test if we have a LSC interrupt for this platform, if not we need to
+	 * manually check the link register since IXGBE_FLAG_NEED_LINK_CONFIG
+	 * will never be set in the interrupt handler
+	 */
+#ifndef RTE_EXEC_ENV_FREEBSD
+	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
+	if (rte_intr_allow_others(intr_handle)) {
+		/* check if LSC interrupt is enabled */
+		if (dev->data->dev_conf.intr_conf.lsc)
+			have_int = true;
+	}
+#endif /* #ifdef RTE_EXEC_ENV_FREEBSD */
+
+	/* Skip if we still need to setup an SFP, or if no link config requested
+	 */
+	if ((intr->flags & IXGBE_FLAG_NEED_SFP_SETUP) ||
+	    (!(intr->flags & IXGBE_FLAG_NEED_LINK_CONFIG) && have_int))
+		return;
+
+	if (!have_int && !(intr->flags & IXGBE_FLAG_NEED_LINK_CONFIG)) {
+		err = ixgbe_check_link(hw, &speed, &link_up, 0);
+		if (!err && !link_up) {
+			intr->flags |= IXGBE_FLAG_NEED_LINK_CONFIG;
+			PMD_DRV_LOG(DEBUG, "Link down, no LSC, set NEED_LINK_CONFIG\n");
+		} else {
+			return;
+		}
+	}
+
+	speed = hw->phy.autoneg_advertised;
+	if (!speed)
+		ixgbe_get_link_capabilities(hw, &speed, &autoneg);
+
+	err = ixgbe_setup_link(hw, speed, true);
+	if (err) {
+		PMD_DRV_LOG(ERR, "ixgbe_setup_link failed %d\n", err);
+		return;
+	}
+
+	intr->flags &= ~IXGBE_FLAG_NEED_LINK_CONFIG;
+}
+
 static void *
 ixgbe_dev_setup_link_thread_handler(void *param)
 {
 	struct rte_eth_dev *dev = (struct rte_eth_dev *)param;
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-	struct ixgbe_interrupt *intr =
-		IXGBE_DEV_PRIVATE_TO_INTR(dev->data->dev_private);
 	u32 speed, start, ticks, service_ms;
 	s32 err;
-	bool link_up, autoneg = false;
+	bool link_up  = false;
 
 	pthread_detach(pthread_self());
 
 	while (1) {
-		service_ms = 100;
-		if (intr->flags & IXGBE_FLAG_NEED_LINK_CONFIG) {
-			speed = hw->phy.autoneg_advertised;
+		ixgbe_link_service(dev);
 
-			if (!speed)
-				ixgbe_get_link_capabilities(hw, &speed, &autoneg);
-
-			err = ixgbe_setup_link(hw, speed, true);
-
-			if (err == IXGBE_SUCCESS)
-				err = ixgbe_check_link(hw, &speed, &link_up, 0);
-
-			/* Run the service thread handler more frequently when link is
-			 * down to reduce link up latency (every 200ms vs 1s)
-			 *
-			 * Use a number of smaller sleeps to decrease exit latency when
-			 * ixgbe_dev_stop() wants this thread to join
-			 */
-			if (err == IXGBE_SUCCESS && link_up) {
-				service_ms = 2000;
-				intr->flags &= ~IXGBE_FLAG_NEED_LINK_CONFIG;
-			}
-
-			if (!ixgbe_dev_link_update(dev, 0)) {
-				ixgbe_dev_link_status_print(dev);
-				rte_eth_dev_callback_process(dev, RTE_ETH_EVENT_INTR_LSC, NULL);
-			}
+		if (!ixgbe_dev_link_update(dev, 0)) {
+			ixgbe_dev_link_status_print(dev);
+			rte_eth_dev_callback_process(dev, RTE_ETH_EVENT_INTR_LSC, NULL);
 		}
+		/* Run the service thread handler more frequently when link is
+		 * down to reduce link up latency (every 200ms vs 1s)
+		 *
+		 * Use a number of smaller sleeps to decrease exit latency when
+		 * ixgbe_dev_stop() wants this thread to join
+		 */
+
+		err = ixgbe_check_link(hw, &speed, &link_up, 0);
+		if (err == IXGBE_SUCCESS && link_up)
+			service_ms = 2000;
+		else
+			service_ms = 100;
 
 		/* Call msec_delay in a loop with several smaller sleeps to
 		 * provide periodic thread cancellation points
