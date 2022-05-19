@@ -1020,13 +1020,8 @@ iavf_dev_start(struct rte_eth_dev *dev)
 	}
 
 	if (dev->data->dev_conf.rxmode.offloads &
-	    RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
-		if (iavf_get_phc_time(adapter)) {
-			PMD_DRV_LOG(ERR, "get physical time failed");
-			goto err_mac;
-		}
-		adapter->hw_time_update = rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
-	}
+	    RTE_ETH_RX_OFFLOAD_TIMESTAMP)
+		rte_spinlock_init(&vf->phc_time_aq_lock);
 
 	return 0;
 

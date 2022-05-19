@@ -886,6 +886,16 @@ iavf_dev_rx_queue_start(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 			RTE_ETH_QUEUE_STATE_STARTED;
 	}
 
+	if (dev->data->dev_conf.rxmode.offloads &
+	    RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
+		rte_spinlock_init(&vf->phc_time_aq_lock);
+		if (iavf_get_phc_time(rxq)) {
+			PMD_DRV_LOG(ERR, "get physical time failed");
+			return err;
+		}
+		rxq->hw_time_update = rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
+	}
+
 	return err;
 }
 
@@ -1422,6 +1432,7 @@ iavf_recv_pkts_flex_rxd(void *rx_queue,
 	uint64_t dma_addr;
 	uint64_t pkt_flags;
 	const uint32_t *ptype_tbl;
+	uint64_t ts_ns;
 
 	nb_rx = 0;
 	nb_hold = 0;
@@ -1430,15 +1441,13 @@ iavf_recv_pkts_flex_rxd(void *rx_queue,
 	rx_ring = rxq->rx_ring;
 	ptype_tbl = rxq->vsi->adapter->ptype_tbl;
 
-	struct iavf_adapter *ad = rxq->vsi->adapter;
-	uint64_t ts_ns;
-
 	if (rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
 		uint64_t sw_cur_time = rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
-		if (sw_cur_time - ad->hw_time_update > 4) {
-			if (iavf_get_phc_time(ad))
+
+		if (sw_cur_time - rxq->hw_time_update > 4) {
+			if (iavf_get_phc_time(rxq))
 				PMD_DRV_LOG(ERR, "get physical time failed");
-			ad->hw_time_update = sw_cur_time;
+			rxq->hw_time_update = sw_cur_time;
 		}
 	}
 
@@ -1505,11 +1514,11 @@ iavf_recv_pkts_flex_rxd(void *rx_queue,
 		pkt_flags = iavf_flex_rxd_error_to_pkt_flags(rx_stat_err0);
 
 		if (iavf_timestamp_dynflag > 0) {
-			ts_ns = iavf_tstamp_convert_32b_64b(ad->phc_time,
+			ts_ns = iavf_tstamp_convert_32b_64b(rxq->phc_time,
 				rte_le_to_cpu_32(rxd.wb.flex_ts.ts_high));
 
-			ad->phc_time = ts_ns;
-			ad->hw_time_update = rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
+			rxq->phc_time = ts_ns;
+			rxq->hw_time_update = rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
 
 			*RTE_MBUF_DYNFIELD(rxm,
 				iavf_timestamp_dynfield_offset,
@@ -1545,7 +1554,6 @@ iavf_recv_scattered_pkts_flex_rxd(void *rx_queue, struct rte_mbuf **rx_pkts,
 	uint16_t rx_stat_err0;
 	uint64_t dma_addr;
 	uint64_t pkt_flags;
-	struct iavf_adapter *ad = rxq->vsi->adapter;
 	uint64_t ts_ns;
 
 	volatile union iavf_rx_desc *rx_ring = rxq->rx_ring;
@@ -1554,10 +1562,11 @@ iavf_recv_scattered_pkts_flex_rxd(void *rx_queue, struct rte_mbuf **rx_pkts,
 
 	if (rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
 		uint64_t sw_cur_time = rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
-		if (sw_cur_time - ad->hw_time_update > 4) {
-			if (iavf_get_phc_time(ad))
+
+		if (sw_cur_time - rxq->hw_time_update > 4) {
+			if (iavf_get_phc_time(rxq))
 				PMD_DRV_LOG(ERR, "get physical time failed");
-			ad->hw_time_update = sw_cur_time;
+			rxq->hw_time_update = sw_cur_time;
 		}
 	}
 
@@ -1674,11 +1683,11 @@ iavf_recv_scattered_pkts_flex_rxd(void *rx_queue, struct rte_mbuf **rx_pkts,
 		pkt_flags = iavf_flex_rxd_error_to_pkt_flags(rx_stat_err0);
 
 		if (iavf_timestamp_dynflag > 0) {
-			ts_ns = iavf_tstamp_convert_32b_64b(ad->phc_time,
+			ts_ns = iavf_tstamp_convert_32b_64b(rxq->phc_time,
 				rte_le_to_cpu_32(rxd.wb.flex_ts.ts_high));
 
-			ad->phc_time = ts_ns;
-			ad->hw_time_update = rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
+			rxq->phc_time = ts_ns;
+			rxq->hw_time_update = rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
 
 			*RTE_MBUF_DYNFIELD(first_seg,
 				iavf_timestamp_dynfield_offset,
@@ -1881,7 +1890,6 @@ iavf_rx_scan_hw_ring_flex_rxd(struct iavf_rx_queue *rxq,
 	int32_t nb_staged = 0;
 	uint64_t pkt_flags;
 	const uint32_t *ptype_tbl = rxq->vsi->adapter->ptype_tbl;
-	struct iavf_adapter *ad = rxq->vsi->adapter;
 	uint64_t ts_ns;
 
 	rxdp = (volatile union iavf_rx_flex_desc *)&rxq->rx_ring[rxq->rx_tail];
@@ -1895,10 +1903,11 @@ iavf_rx_scan_hw_ring_flex_rxd(struct iavf_rx_queue *rxq,
 
 	if (rxq->offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
 		uint64_t sw_cur_time = rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
-		if (sw_cur_time - ad->hw_time_update > 4) {
-			if (iavf_get_phc_time(ad))
+
+		if (sw_cur_time - rxq->hw_time_update > 4) {
+			if (iavf_get_phc_time(rxq))
 				PMD_DRV_LOG(ERR, "get physical time failed");
-			ad->hw_time_update = sw_cur_time;
+			rxq->hw_time_update = sw_cur_time;
 		}
 	}
 
@@ -1959,11 +1968,12 @@ iavf_rx_scan_hw_ring_flex_rxd(struct iavf_rx_queue *rxq,
 			pkt_flags = iavf_flex_rxd_error_to_pkt_flags(stat_err0);
 
 			if (iavf_timestamp_dynflag > 0) {
-				ts_ns = iavf_tstamp_convert_32b_64b(ad->phc_time,
+				ts_ns = iavf_tstamp_convert_32b_64b(rxq->phc_time,
 					rte_le_to_cpu_32(rxdp[j].wb.flex_ts.ts_high));
 
-				ad->phc_time = ts_ns;
-				ad->hw_time_update = rte_get_timer_cycles() / (rte_get_timer_hz() / 1000);
+				rxq->phc_time = ts_ns;
+				rxq->hw_time_update = rte_get_timer_cycles() /
+					(rte_get_timer_hz() / 1000);
 
 				*RTE_MBUF_DYNFIELD(mb,
 					iavf_timestamp_dynfield_offset,
