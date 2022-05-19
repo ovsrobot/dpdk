@@ -6,6 +6,7 @@ if is_windows
 endif
 
 drivers = [
+        'afu_mf',
         'cnxk_bphy',
         'cnxk_gpio',
         'dpaa2_cmdif',
