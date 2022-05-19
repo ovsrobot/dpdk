@@ -517,6 +517,14 @@ struct ixgbe_vf_representor {
 	struct rte_eth_dev *pf_ethdev;
 };
 
+enum ixgbe_sfp_cage_status {
+	IXGBE_SFP_CAGE_EMPTY = 0,
+	IXGBE_SFP_CAGE_FULL,
+	IXGBE_SFP_CAGE_UNKNOWN = -1,
+	IXGBE_SFP_CAGE_NOCAGE = -2,
+};
+enum ixgbe_sfp_cage_status ixgbe_check_sfp_cage(struct ixgbe_hw *hw);
+
 int ixgbe_vf_representor_init(struct rte_eth_dev *ethdev, void *init_params);
 int ixgbe_vf_representor_uninit(struct rte_eth_dev *ethdev);
 
