@@ -585,7 +585,7 @@ copy_data(void *dst_data, struct vhost_crypto_data_req *vc_req,
 	if (unlikely(!src || !dlen))
 		return -1;
 
-	rte_memcpy((uint8_t *)data, src, dlen);
+	memcpy((uint8_t *)data, src, dlen);
 	data += dlen;
 
 	if (unlikely(dlen < to_copy)) {
