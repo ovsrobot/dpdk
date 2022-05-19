@@ -2017,9 +2017,9 @@ static const struct iavf_txq_ops avx512_vec_txq_ops = {
 };
 
 int __rte_cold
-iavf_txq_vec_setup_avx512(struct iavf_tx_queue *txq)
+iavf_txq_vec_setup_avx512(const struct iavf_txq_ops **txq_ops)
 {
-	txq->ops = &avx512_vec_txq_ops;
+	*txq_ops = &avx512_vec_txq_ops;
 	return 0;
 }
 

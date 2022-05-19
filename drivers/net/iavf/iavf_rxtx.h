@@ -660,8 +660,8 @@ uint16_t iavf_xmit_pkts_vec_avx2(void *tx_queue, struct rte_mbuf **tx_pkts,
 int iavf_get_monitor_addr(void *rx_queue, struct rte_power_monitor_cond *pmc);
 int iavf_rx_vec_dev_check(struct rte_eth_dev *dev);
 int iavf_tx_vec_dev_check(struct rte_eth_dev *dev);
-int iavf_rxq_vec_setup(struct iavf_rx_queue *rxq);
-int iavf_txq_vec_setup(struct iavf_tx_queue *txq);
+int iavf_rxq_vec_setup(struct iavf_rx_queue *rxq, const struct iavf_rxq_ops **rxq_ops);
+int iavf_txq_vec_setup(const struct iavf_txq_ops **txq_ops);
 uint16_t iavf_recv_pkts_vec_avx512(void *rx_queue, struct rte_mbuf **rx_pkts,
 				   uint16_t nb_pkts);
 uint16_t iavf_recv_pkts_vec_avx512_offload(void *rx_queue,
@@ -690,7 +690,7 @@ uint16_t iavf_xmit_pkts_vec_avx512(void *tx_queue, struct rte_mbuf **tx_pkts,
 uint16_t iavf_xmit_pkts_vec_avx512_offload(void *tx_queue,
 					   struct rte_mbuf **tx_pkts,
 					   uint16_t nb_pkts);
-int iavf_txq_vec_setup_avx512(struct iavf_tx_queue *txq);
+int iavf_txq_vec_setup_avx512(const struct iavf_txq_ops **txq_ops);
 
 uint8_t iavf_proto_xtr_type_to_rxdid(uint8_t xtr_type);
 
