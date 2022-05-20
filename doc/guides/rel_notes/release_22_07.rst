@@ -104,6 +104,10 @@ New Features
   * ``RTE_EVENT_QUEUE_ATTR_WEIGHT``
   * ``RTE_EVENT_QUEUE_ATTR_AFFINITY``
 
+* **Updated Atomic Rules' Arkville PMD.**
+
+  Added support for virtual functions and new Atomic Rules PCI device
+  IDs ``0x101a, 0x101b, 0x101c``.
 
 Removed Items
 -------------
