@@ -121,7 +121,6 @@ ice_dcf_vsi_update_service_handler(void *param)
 	struct ice_dcf_hw *hw = reset_param->dcf_hw;
 	struct ice_dcf_adapter *adapter =
 		container_of(hw, struct ice_dcf_adapter, real_hw);
-	struct ice_adapter *parent_adapter = &adapter->parent;
 
 	pthread_detach(pthread_self());
 
@@ -130,8 +129,6 @@ ice_dcf_vsi_update_service_handler(void *param)
 	rte_spinlock_lock(&vsi_update_lock);
 
 	if (!ice_dcf_handle_vsi_update_event(hw)) {
-		__atomic_store_n(&parent_adapter->dcf_state_on, true,
-				 __ATOMIC_RELAXED);
 		ice_dcf_update_vf_vsi_map(&adapter->parent.hw,
 					  hw->num_vfs, hw->vf_vsi_map);
 	}
