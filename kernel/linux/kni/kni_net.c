@@ -441,7 +441,7 @@ kni_net_rx_normal(struct kni_dev *kni)
 		skb->ip_summed = CHECKSUM_UNNECESSARY;
 
 		/* Call netif interface */
-		netif_rx_ni(skb);
+		netif_rx(skb);
 
 		/* Update statistics */
 		dev->stats.rx_bytes += len;
@@ -779,7 +779,7 @@ kni_net_set_mac(struct net_device *netdev, void *p)
 		return -EADDRNOTAVAIL;
 
 	memcpy(req.mac_addr, addr->sa_data, netdev->addr_len);
-	memcpy(netdev->dev_addr, addr->sa_data, netdev->addr_len);
+	memcpy((void *)(netdev->dev_addr), addr->sa_data, netdev->addr_len);
 
 	ret = kni_net_process_request(netdev, &req);
 
