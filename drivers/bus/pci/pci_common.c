@@ -265,11 +265,22 @@ rte_pci_probe_one_driver(struct rte_pci_driver *dr,
 			dr->driver.name, dev->id.vendor_id, dev->id.device_id,
 			loc->domain, loc->bus, loc->devid, loc->function,
 			dev->device.numa_node);
+
+	/*
+	 * After the driver probe is executed, the callback in application will
+	 * be called. The callback in application may call some APIs which use
+	 * dev->device.driver to get some driver information. If the driver
+	 * pointer isn't pointed to driver->driver here, a segfault will occur.
+	 */
+	if (!already_probed)
+		dev->device.driver = &dr->driver;
+
 	/* call the driver probe() function */
 	ret = dr->probe(dr, dev);
 	if (already_probed)
 		return ret; /* no rollback if already succeeded earlier */
 	if (ret) {
+		dev->device.driver = NULL;
 		dev->driver = NULL;
 		if ((dr->drv_flags & RTE_PCI_DRV_NEED_MAPPING) &&
 			/* Don't unmap if device is unsupported and
@@ -282,8 +293,6 @@ rte_pci_probe_one_driver(struct rte_pci_driver *dr,
 		dev->vfio_req_intr_handle = NULL;
 		rte_intr_instance_free(dev->intr_handle);
 		dev->intr_handle = NULL;
-	} else {
-		dev->device.driver = &dr->driver;
 	}
 
 	return ret;
