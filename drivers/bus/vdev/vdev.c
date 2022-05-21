@@ -209,9 +209,16 @@ vdev_probe_all_drivers(struct rte_vdev_device *dev)
 		return -1;
 	}
 
+	/*
+	 * After the driver probe is executed, the callback in application will
+	 * be called. The callback in application may call some APIs which use
+	 * dev->device.driver to get some driver information. If the driver
+	 * pointer isn't pointed to driver->driver here, a segfault will occur.
+	 */
+	dev->device.driver = &driver->driver;
 	ret = driver->probe(dev);
-	if (ret == 0)
-		dev->device.driver = &driver->driver;
+	if (ret != 0)
+		dev->device.driver = NULL;
 	return ret;
 }
 
