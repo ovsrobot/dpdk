@@ -648,6 +648,18 @@ rte_eal_intr_init(void)
 	return ret;
 }
 
+void
+rte_eal_intr_destroy(void)
+{
+	/* cancel the host thread to wait/handle the interrupt */
+	pthread_cancel(intr_thread);
+	pthread_join(intr_thread, NULL);
+
+	/* close kqueue */
+	close(kq);
+	kq = -1;
+}
+
 int
 rte_intr_rx_ctl(struct rte_intr_handle *intr_handle,
 		int epfd, int op, unsigned int vec, void *data)

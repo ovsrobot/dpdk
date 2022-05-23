@@ -1199,6 +1199,18 @@ rte_eal_intr_init(void)
 	return ret;
 }
 
+void
+rte_eal_intr_destroy(void)
+{
+	/* cancel the host thread to wait/handle the interrupt */
+	pthread_cancel(intr_thread);
+	pthread_join(intr_thread, NULL);
+
+	/* close the pipe used by epoll */
+	close(intr_pipe.writefd);
+	close(intr_pipe.readfd);
+}
+
 static void
 eal_intr_proc_rxtx_intr(int fd, const struct rte_intr_handle *intr_handle)
 {
