@@ -125,3 +125,7 @@ Deprecation Notices
   applications should be updated to use the ``dmadev`` library instead,
   with the underlying HW-functionality being provided by the ``ioat`` or
   ``idxd`` dma drivers
+
+* ethdev: After bit-field header split was removed, the ``RTE_ETH_RX_OFFLOAD_HEADER_SPLIT``
+offload and the ``split_hdr_size`` field in structure ``rte_eth_rxmode`` to enable header
+split offload are not supported in any PMDs. They will be removed in DPDK 22.11.
