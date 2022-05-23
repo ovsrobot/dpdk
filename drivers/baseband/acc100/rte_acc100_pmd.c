@@ -1295,6 +1295,14 @@ is_acc100(struct acc100_queue *q)
 	return (q->d->device_variant == ACC100_VARIANT);
 }
 
+#ifdef RTE_LIBRTE_BBDEV_DEBUG
+static inline bool
+validate_op_required(struct acc100_queue *q)
+{
+	return is_acc100(q);
+}
+#endif
+
 /* Fill in a frame control word for LDPC decoding. */
 static inline void
 acc100_fcw_ld_fill(struct rte_bbdev_dec_op *op, struct acc100_fcw_ld *fcw,
@@ -2182,8 +2190,10 @@ acc100_dma_enqueue(struct acc100_queue *q, uint16_t n,
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
 /* Validates turbo encoder parameters */
 static inline int
-validate_enc_op(struct rte_bbdev_enc_op *op)
+validate_enc_op(struct rte_bbdev_enc_op *op, struct acc100_queue *q)
 {
+	if (!validate_op_required(q))
+		return 0;
 	struct rte_bbdev_op_turbo_enc *turbo_enc = &op->turbo_enc;
 	struct rte_bbdev_op_enc_turbo_cb_params *cb = NULL;
 	struct rte_bbdev_op_enc_turbo_tb_params *tb = NULL;
@@ -2320,8 +2330,10 @@ validate_enc_op(struct rte_bbdev_enc_op *op)
 }
 /* Validates LDPC encoder parameters */
 static inline int
-validate_ldpc_enc_op(struct rte_bbdev_enc_op *op)
+validate_ldpc_enc_op(struct rte_bbdev_enc_op *op, struct acc100_queue *q)
 {
+	if (!validate_op_required(q))
+		return 0;
 	struct rte_bbdev_op_ldpc_enc *ldpc_enc = &op->ldpc_enc;
 
 	if (op->mempool == NULL) {
@@ -2373,8 +2385,10 @@ validate_ldpc_enc_op(struct rte_bbdev_enc_op *op)
 
 /* Validates LDPC decoder parameters */
 static inline int
-validate_ldpc_dec_op(struct rte_bbdev_dec_op *op)
+validate_ldpc_dec_op(struct rte_bbdev_dec_op *op, struct acc100_queue *q)
 {
+	if (!validate_op_required(q))
+		return 0;
 	struct rte_bbdev_op_ldpc_dec *ldpc_dec = &op->ldpc_dec;
 
 	if (op->mempool == NULL) {
@@ -2429,7 +2443,7 @@ enqueue_enc_one_op_cb(struct acc100_queue *q, struct rte_bbdev_enc_op *op,
 
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
 	/* Validate op structure */
-	if (validate_enc_op(op) == -1) {
+	if (validate_enc_op(op, q) == -1) {
 		rte_bbdev_log(ERR, "Turbo encoder validation failed");
 		return -EINVAL;
 	}
@@ -2483,7 +2497,7 @@ enqueue_ldpc_enc_n_op_cb(struct acc100_queue *q, struct rte_bbdev_enc_op **ops,
 
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
 	/* Validate op structure */
-	if (validate_ldpc_enc_op(ops[0]) == -1) {
+	if (validate_ldpc_enc_op(ops[0], q) == -1) {
 		rte_bbdev_log(ERR, "LDPC encoder validation failed");
 		return -EINVAL;
 	}
@@ -2545,7 +2559,7 @@ enqueue_ldpc_enc_one_op_cb(struct acc100_queue *q, struct rte_bbdev_enc_op *op,
 
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
 	/* Validate op structure */
-	if (validate_ldpc_enc_op(op) == -1) {
+	if (validate_ldpc_enc_op(op, q) == -1) {
 		rte_bbdev_log(ERR, "LDPC encoder validation failed");
 		return -EINVAL;
 	}
@@ -2602,7 +2616,7 @@ enqueue_enc_one_op_tb(struct acc100_queue *q, struct rte_bbdev_enc_op *op,
 
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
 	/* Validate op structure */
-	if (validate_enc_op(op) == -1) {
+	if (validate_enc_op(op, q) == -1) {
 		rte_bbdev_log(ERR, "Turbo encoder validation failed");
 		return -EINVAL;
 	}
@@ -2675,8 +2689,10 @@ enqueue_enc_one_op_tb(struct acc100_queue *q, struct rte_bbdev_enc_op *op,
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
 /* Validates turbo decoder parameters */
 static inline int
-validate_dec_op(struct rte_bbdev_dec_op *op)
+validate_dec_op(struct rte_bbdev_dec_op *op, struct acc100_queue *q)
 {
+	if (!validate_op_required(q))
+		return 0;
 	struct rte_bbdev_op_turbo_dec *turbo_dec = &op->turbo_dec;
 	struct rte_bbdev_op_dec_turbo_cb_params *cb = NULL;
 	struct rte_bbdev_op_dec_turbo_tb_params *tb = NULL;
@@ -2822,7 +2838,7 @@ enqueue_dec_one_op_cb(struct acc100_queue *q, struct rte_bbdev_dec_op *op,
 
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
 	/* Validate op structure */
-	if (validate_dec_op(op) == -1) {
+	if (validate_dec_op(op, q) == -1) {
 		rte_bbdev_log(ERR, "Turbo decoder validation failed");
 		return -EINVAL;
 	}
@@ -3047,7 +3063,7 @@ enqueue_ldpc_dec_one_op_cb(struct acc100_queue *q, struct rte_bbdev_dec_op *op,
 
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
 	/* Validate op structure */
-	if (validate_ldpc_dec_op(op) == -1) {
+	if (validate_ldpc_dec_op(op, q) == -1) {
 		rte_bbdev_log(ERR, "LDPC decoder validation failed");
 		return -EINVAL;
 	}
@@ -3151,7 +3167,7 @@ enqueue_ldpc_dec_one_op_tb(struct acc100_queue *q, struct rte_bbdev_dec_op *op,
 
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
 	/* Validate op structure */
-	if (validate_ldpc_dec_op(op) == -1) {
+	if (validate_ldpc_dec_op(op, q) == -1) {
 		rte_bbdev_log(ERR, "LDPC decoder validation failed");
 		return -EINVAL;
 	}
@@ -3241,7 +3257,7 @@ enqueue_dec_one_op_tb(struct acc100_queue *q, struct rte_bbdev_dec_op *op,
 
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
 	/* Validate op structure */
-	if (validate_dec_op(op) == -1) {
+	if (validate_dec_op(op, q) == -1) {
 		rte_bbdev_log(ERR, "Turbo decoder validation failed");
 		return -EINVAL;
 	}
