@@ -60,6 +60,24 @@ New Features
   Added an API which can get the number of in-flight packets in
   vhost async data path without using lock.
 
+* **Added Sequence Lock.**
+
+  Added a new synchronization primitive: the sequence lock
+  (seqlock). A seqlock allows for low overhead, parallel reads. The
+  DPDK seqlock uses a spinlock to serialize multiple writing threads.
+
+  In particular, seqlocks are useful for protecting data structures
+  which are read very frequently, by threads running on many different
+  cores, and modified relatively infrequently.
+
+  One way to think about seqlocks is that they provide means to
+  perform atomic operations on data objects larger than what the
+  native atomic machine instructions allow for.
+
+  In cases where there is only a single writer, or writer-writer
+  synchronization is performed by some means external to the seqlock,
+  direct use of the underlying sequence counter may be more suitable.
+
 * **Updated Intel iavf driver.**
 
   * Added Tx QoS queue rate limitation support.
