@@ -282,6 +282,11 @@ The following is an overview of some key Vhost API functions:
   Clear inflight packets which are submitted to DMA engine in vhost async data
   path. Completed packets are returned to applications through ``pkts``.
 
+* ``rte_vhost_driver_get_vdpa_dev_type(path, type)``
+
+  Get device type of vDPA device, such as VDPA_DEVICE_TYPE_NET,
+  VDPA_DEVICE_TYPE_BLK.
+
 Vhost-user Implementations
 --------------------------
 
