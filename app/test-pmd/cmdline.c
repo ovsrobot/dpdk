@@ -69,6 +69,9 @@
 #include "bpf_cmd.h"
 
 static struct cmdline *testpmd_cl;
+static cmdline_parse_ctx_t *main_ctx;
+static TAILQ_HEAD(, testpmd_commands) commands_head =
+	TAILQ_HEAD_INITIALIZER(commands_head);
 
 static void cmd_reconfig_device_queue(portid_t id, uint8_t dev, uint8_t queue);
 
@@ -93,7 +96,8 @@ static void cmd_help_brief_parsed(__rte_unused void *parsed_result,
 		"    help registers                  : Reading and setting port registers.\n"
 		"    help filters                    : Filters configuration help.\n"
 		"    help traffic_management         : Traffic Management commands.\n"
-		"    help devices                    : Device related cmds.\n"
+		"    help devices                    : Device related commands.\n"
+		"    help drivers                    : Driver specific commands.\n"
 		"    help all                        : All of the above sections.\n\n"
 	);
 
@@ -1177,6 +1181,21 @@ static void cmd_help_long_parsed(void *parsed_result,
 		);
 	}
 
+	if (show_all || !strcmp(res->section, "drivers")) {
+		struct testpmd_commands *c;
+		unsigned int i;
+
+		cmdline_printf(
+			cl,
+			"\n"
+			"Driver specific:\n"
+			"----------------\n"
+		);
+		TAILQ_FOREACH(c, &commands_head, next) {
+			for (i = 0; c->commands[i].ctx != NULL; i++)
+				cmdline_printf(cl, "%s\n", c->commands[i].help);
+		}
+	}
 }
 
 static cmdline_parse_token_string_t cmd_help_long_help =
@@ -1184,14 +1203,14 @@ static cmdline_parse_token_string_t cmd_help_long_help =
 
 static cmdline_parse_token_string_t cmd_help_long_section =
 	TOKEN_STRING_INITIALIZER(struct cmd_help_long_result, section,
-			"all#control#display#config#"
-			"ports#registers#filters#traffic_management#devices");
+		"all#control#display#config#ports#registers#"
+		"filters#traffic_management#devices#drivers");
 
 static cmdline_parse_inst_t cmd_help_long = {
 	.f = cmd_help_long_parsed,
 	.data = NULL,
 	.help_str = "help all|control|display|config|ports|register|"
-		"filters|traffic_management|devices: "
+		"filters|traffic_management|devices|drivers: "
 		"Show help",
 	.tokens = {
 		(void *)&cmd_help_long_help,
@@ -17800,7 +17819,7 @@ static cmdline_parse_inst_t cmd_show_port_flow_transfer_proxy = {
 /* ******************************************************************************** */
 
 /* list of instructions */
-static cmdline_parse_ctx_t main_ctx[] = {
+static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_help_brief,
 	(cmdline_parse_inst_t *)&cmd_help_long,
 	(cmdline_parse_inst_t *)&cmd_quit,
@@ -18086,6 +18105,59 @@ static cmdline_parse_ctx_t main_ctx[] = {
 	NULL,
 };
 
+void
+testpmd_add_commands(struct testpmd_commands *c)
+{
+	TAILQ_INSERT_TAIL(&commands_head, c, next);
+}
+
+int
+init_cmdline(void)
+{
+	struct testpmd_commands *c;
+	cmdline_parse_ctx_t *ctx;
+	unsigned int count = 0;
+	unsigned int i;
+
+	/* initialize non-constant commands */
+	cmd_set_fwd_mode_init();
+	cmd_set_fwd_retry_mode_init();
+
+	main_ctx = NULL;
+	for (i = 0; builtin_ctx[i] != NULL; i++) {
+		ctx = realloc(main_ctx, (count + i + 1) * sizeof(*ctx));
+		if (ctx == NULL)
+			goto err;
+		main_ctx = ctx;
+		main_ctx[count + i] = builtin_ctx[i];
+	}
+	count += i;
+
+	TAILQ_FOREACH(c, &commands_head, next) {
+		for (i = 0; c->commands[i].ctx != NULL; i++) {
+			ctx = realloc(main_ctx, (count + i + 1) * sizeof(*ctx));
+			if (ctx == NULL)
+				goto err;
+			main_ctx = ctx;
+			main_ctx[count + i] = c->commands[i].ctx;
+		}
+		count += i;
+	}
+
+	/* cmdline expects a NULL terminated array */
+	ctx = realloc(main_ctx, (count + 1) * sizeof(*ctx));
+	if (ctx == NULL)
+		goto err;
+	main_ctx = ctx;
+	main_ctx[count] = NULL;
+	count += 1;
+
+	return 0;
+err:
+	free(main_ctx);
+	return -1;
+}
+
 /* read cmdline commands from file */
 void
 cmdline_read_from_file(const char *filename)
@@ -18113,9 +18185,6 @@ void
 prompt(void)
 {
 	int ret;
-	/* initialize non-constant commands */
-	cmd_set_fwd_mode_init();
-	cmd_set_fwd_retry_mode_init();
 
 	testpmd_cl = cmdline_stdin_new(main_ctx, "testpmd> ");
 	if (testpmd_cl == NULL)
