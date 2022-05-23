@@ -930,51 +930,12 @@ set drop enable bit for all queues::
 
    testpmd> set all queues drop (port_id) (on|off)
 
-set split drop enable (for VF)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-set split drop enable bit for VF from PF::
-
-   testpmd> set vf split drop (port_id) (vf_id) (on|off)
-
 set mac antispoof (for VF)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Set mac antispoof for a VF from the PF::
 
    testpmd> set vf mac antispoof  (port_id) (vf_id) (on|off)
-
-set macsec offload
-~~~~~~~~~~~~~~~~~~
-
-Enable/disable MACsec offload::
-
-   testpmd> set macsec offload (port_id) on encrypt (on|off) replay-protect (on|off)
-   testpmd> set macsec offload (port_id) off
-
-set macsec sc
-~~~~~~~~~~~~~
-
-Configure MACsec secure connection (SC)::
-
-   testpmd> set macsec sc (tx|rx) (port_id) (mac) (pi)
-
-.. note::
-
-   The pi argument is ignored for tx.
-   Check the NIC Datasheet for hardware limits.
-
-set macsec sa
-~~~~~~~~~~~~~
-
-Configure MACsec secure association (SA)::
-
-   testpmd> set macsec sa (tx|rx) (port_id) (idx) (an) (pn) (key)
-
-.. note::
-
-   The IDX value must be 0 or 1.
-   Check the NIC Datasheet for hardware limits.
 
 vlan set stripq
 ~~~~~~~~~~~~~~~
@@ -1383,13 +1344,6 @@ Set the allmulti mode for a port or for all ports::
    testpmd> set allmulti (port_id|all) (on|off)
 
 Same as the ifconfig (8) option. Controls how multicast packets are handled.
-
-set tc tx min bandwidth
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Set all TCs' TX min relative bandwidth (%) globally for all PF and VFs::
-
-   testpmd> set tc tx min-bandwidth (port_id) (bw1, bw2, ...)
 
 set flow_ctrl rx
 ~~~~~~~~~~~~~~~~
@@ -5360,3 +5314,4 @@ See:
 
 - :doc:`../prog_guide/link_bonding_poll_mode_drv_lib`
 - :doc:`../nics/i40e`
+- :doc:`../nics/ixgbe`
