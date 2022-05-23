@@ -437,16 +437,6 @@ uint32_t event_print_mask = (UINT32_C(1) << RTE_ETH_EVENT_UNKNOWN) |
  */
 int do_mlockall = 0;
 
-/*
- * NIC bypass mode configuration options.
- */
-
-#if defined RTE_NET_IXGBE && defined RTE_LIBRTE_IXGBE_BYPASS
-/* The NIC bypass watchdog timeout. */
-uint32_t bypass_timeout = RTE_PMD_IXGBE_BYPASS_TMT_OFF;
-#endif
-
-
 #ifdef RTE_LIB_LATENCYSTATS
 
 /*
@@ -3811,10 +3801,6 @@ init_port_config(void)
 		ret = eth_macaddr_get_print_err(pid, &port->eth_addr);
 		if (ret != 0)
 			return;
-
-#if defined RTE_NET_IXGBE && defined RTE_LIBRTE_IXGBE_BYPASS
-		rte_pmd_ixgbe_bypass_init(pid);
-#endif
 
 		if (lsc_interrupt && (*port->dev_info.dev_flags & RTE_ETH_DEV_INTR_LSC))
 			port->dev_conf.intr_conf.lsc = 1;
