@@ -1186,7 +1186,7 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 	}
 
 	if (dev_conf->rxmode.mtu == 0)
-		dev->data->dev_conf.rxmode.mtu = RTE_ETHER_MTU;
+		dev->data->dev_conf.rxmode.mtu = dev_info.default_mtu;
 
 	ret = eth_dev_validate_mtu(port_id, &dev_info,
 			dev->data->dev_conf.rxmode.mtu);
@@ -3126,6 +3126,7 @@ rte_eth_dev_info_get(uint16_t port_id, struct rte_eth_dev_info *dev_info)
 	dev_info->min_mtu = RTE_ETHER_MIN_LEN - RTE_ETHER_HDR_LEN -
 		RTE_ETHER_CRC_LEN;
 	dev_info->max_mtu = UINT16_MAX;
+	dev_info->default_mtu = RTE_ETHER_MTU;
 
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->dev_infos_get, -ENOTSUP);
 	diag = (*dev->dev_ops->dev_infos_get)(dev, dev_info);

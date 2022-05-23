@@ -1861,6 +1861,7 @@ struct rte_eth_dev_info {
 		Use if_indextoname() to translate into an interface name. */
 	uint16_t min_mtu;	/**< Minimum MTU allowed */
 	uint16_t max_mtu;	/**< Maximum MTU allowed */
+	uint16_t default_mtu;
 	const uint32_t *dev_flags; /**< Device flags */
 	uint32_t min_rx_bufsize; /**< Minimum size of Rx buffer. */
 	uint32_t max_rx_pktlen; /**< Maximum configurable length of Rx pkt. */
