@@ -6,5 +6,5 @@ EXPERIMENTAL {
 	global:
 
 	rte_acc100_configure;
-
+	rte_acc101_configure;
 };

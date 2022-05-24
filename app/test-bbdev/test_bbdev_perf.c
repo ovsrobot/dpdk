@@ -63,6 +63,8 @@
 #define ACC100_QMGR_INVALID_IDX -1
 #define ACC100_QMGR_RR 1
 #define ACC100_QOS_GBR 0
+#define ACC101PF_DRIVER_NAME   ("intel_acc101_pf")
+#define ACC101VF_DRIVER_NAME   ("intel_acc101_vf")
 #endif
 
 #define OPS_CACHE_SIZE 256U
@@ -711,11 +713,12 @@ add_bbdev_dev(uint8_t dev_id, struct rte_bbdev_info *info,
 #endif
 #ifdef RTE_BASEBAND_ACC100
 	if ((get_init_device() == true) &&
-		(!strcmp(info->drv.driver_name, ACC100PF_DRIVER_NAME))) {
+			((!strcmp(info->drv.driver_name, ACC100PF_DRIVER_NAME)) ||
+			(!strcmp(info->drv.driver_name, ACC101PF_DRIVER_NAME)))) {
 		struct rte_acc100_conf conf;
 		unsigned int i;
 
-		printf("Configure ACC100 FEC Driver %s with default values\n",
+		printf("Configure ACC100/ACC101 FEC Driver %s with default values\n",
 				info->drv.driver_name);
 
 		/* clear default configuration before initialization */
@@ -760,10 +763,17 @@ add_bbdev_dev(uint8_t dev_id, struct rte_bbdev_info *info,
 		conf.q_dl_5g.aq_depth_log2 = ACC100_QMGR_AQ_DEPTH;
 
 		/* setup PF with configuration information */
-		ret = rte_acc100_configure(info->dev_name, &conf);
-		TEST_ASSERT_SUCCESS(ret,
-				"Failed to configure ACC100 PF for bbdev %s",
-				info->dev_name);
+		if (!strcmp(info->drv.driver_name, ACC100PF_DRIVER_NAME)) {
+			ret = rte_acc100_configure(info->dev_name, &conf);
+			TEST_ASSERT_SUCCESS(ret,
+					"Failed to configure ACC100 PF for bbdev %s",
+					info->dev_name);
+		} else {
+			ret = rte_acc101_configure(info->dev_name, &conf);
+			TEST_ASSERT_SUCCESS(ret,
+					"Failed to configure ACC101 PF for bbdev %s",
+					info->dev_name);
+		}
 	}
 #endif
 	/* Let's refresh this now this is configured */
