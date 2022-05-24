@@ -103,6 +103,7 @@ eal_long_options[] = {
 	{OPT_TELEMETRY,         0, NULL, OPT_TELEMETRY_NUM        },
 	{OPT_NO_TELEMETRY,      0, NULL, OPT_NO_TELEMETRY_NUM     },
 	{OPT_FORCE_MAX_SIMD_BITWIDTH, 1, NULL, OPT_FORCE_MAX_SIMD_BITWIDTH_NUM},
+	{OPT_HUGE_WORKER_STACK, 2, NULL, OPT_HUGE_WORKER_STACK_NUM     },
 
 	{0,                     0, NULL, 0                        }
 };
@@ -1618,6 +1619,26 @@ eal_parse_huge_unlink(const char *arg, struct hugepage_file_discipline *out)
 	return -1;
 }
 
+static int
+eal_parse_huge_worker_stack(const char *arg, size_t *huge_worker_stack_size)
+{
+	size_t worker_stack_size;
+	char *end;
+
+	if (arg == NULL || arg[0] == '\0') {
+		*huge_worker_stack_size = WORKER_STACK_SIZE_FROM_OS;
+		return 0;
+	}
+	errno = 0;
+	worker_stack_size = strtoul(arg, &end, 10);
+	if (errno || end == NULL || worker_stack_size == 0 ||
+	    worker_stack_size >= (size_t)-1 / 1024)
+		return -1;
+
+	*huge_worker_stack_size = worker_stack_size * 1024;
+	return 0;
+}
+
 int
 eal_parse_common_option(int opt, const char *optarg,
 			struct internal_config *conf)
@@ -1917,6 +1938,15 @@ eal_parse_common_option(int opt, const char *optarg,
 		if (eal_parse_simd_bitwidth(optarg) < 0) {
 			RTE_LOG(ERR, EAL, "invalid parameter for --"
 					OPT_FORCE_MAX_SIMD_BITWIDTH "\n");
+			return -1;
+		}
+		break;
+
+	case OPT_HUGE_WORKER_STACK_NUM:
+		if (eal_parse_huge_worker_stack(optarg,
+						&conf->huge_worker_stack_size) < 0) {
+			RTE_LOG(ERR, EAL, "invalid parameter for --"
+				OPT_HUGE_WORKER_STACK"\n");
 			return -1;
 		}
 		break;
@@ -2235,5 +2265,10 @@ eal_common_usage(void)
 	       "  --"OPT_NO_PCI"            Disable PCI\n"
 	       "  --"OPT_NO_HPET"           Disable HPET\n"
 	       "  --"OPT_NO_SHCONF"         No shared config (mmap'd files)\n"
+	       "  --"OPT_HUGE_WORKER_STACK"[=size]\n"
+	       "                      Allocate worker thread stacks from\n"
+	       "                      hugepage memory. Size is in units of\n"
+	       "                      kbytes and defaults to system thread\n"
+	       "                      stack size if not specified.\n"
 	       "\n", RTE_MAX_LCORE);
 }

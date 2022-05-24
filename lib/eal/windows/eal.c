@@ -416,6 +416,12 @@ rte_eal_init(int argc, char **argv)
 		config->main_lcore, (uintptr_t)pthread_self(), cpuset,
 		ret == 0 ? "" : "...");
 
+	if (internal_conf->huge_worker_stack_size != 0) {
+		rte_eal_init_alert("Hugepage worker stacks not supported");
+		rte_errno = ENOTSUP;
+		return -1;
+	}
+
 	RTE_LCORE_FOREACH_WORKER(i) {
 
 		/*
