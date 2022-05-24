@@ -155,6 +155,12 @@ struct fwd_stream {
 	struct pkt_burst_stats rx_burst_stats;
 	struct pkt_burst_stats tx_burst_stats;
 	struct fwd_lcore *lcore; /**< Lcore being scheduled. */
+
+	uint64_t pre_rx;
+	uint64_t pre_tx;
+	uint64_t pre_cycles;
+	uint64_t rx_pps;
+	uint64_t tx_pps;
 };
 
 /**
