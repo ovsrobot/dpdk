@@ -104,6 +104,11 @@ New Features
   * ``RTE_EVENT_QUEUE_ATTR_WEIGHT``
   * ``RTE_EVENT_QUEUE_ATTR_AFFINITY``
 
+* **Added security inline protocol (IPsec) tests in dpdk-test.**
+
+  Added various functional test cases in dpdk-test to verify
+  inline IPsec protocol offload using loopback interface.
+
 
 Removed Items
 -------------
