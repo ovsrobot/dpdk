@@ -60,6 +60,10 @@ New Features
   Added an API which can get the number of in-flight packets in
   vhost async data path without using lock.
 
+* **Added vhost API to get the device type of a vDPA device.**
+
+  Added an API which can get the device type of vDPA device.
+
 * **Updated Intel iavf driver.**
 
   * Added Tx QoS queue rate limitation support.
