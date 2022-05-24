@@ -104,6 +104,11 @@ New Features
   * ``RTE_EVENT_QUEUE_ATTR_WEIGHT``
   * ``RTE_EVENT_QUEUE_ATTR_AFFINITY``
 
+* ** Added function get random floating point number.**
+
+  Added the function ``rte_rand_float()`` to provide a pseudo-random
+  floating point number.
+
 
 Removed Items
 -------------

@@ -65,6 +65,23 @@ rte_rand(void);
 uint64_t
 rte_rand_max(uint64_t upper_bound);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Generates a pseudo-random floating point number.
+ *
+ * This function returns a nonnegative double-precison floating random
+ * number uniformly distributed over the interval [0.0, 1.0).
+ *
+ * If called from lcore threads, this function is thread-safe.
+ *
+ * @return
+ *   A pseudo-random value between 0 and 1.0.
+ */
+__rte_experimental
+double rte_rand_float(void);
+
 #ifdef __cplusplus
 }
 #endif
