@@ -85,6 +85,24 @@ rte_bus_probe(void)
 	return 0;
 }
 
+/* Clean up all devices of all buses */
+int
+rte_bus_cleanup(void)
+{
+	int ret;
+	struct rte_bus *bus;
+
+	TAILQ_FOREACH(bus, &rte_bus_list, next) {
+		if (bus->cleanup == NULL)
+			continue;
+		ret = bus->cleanup();
+		if (ret)
+			RTE_LOG(ERR, EAL, "Bus (%s) cleanup failed.\n", bus->name);
+	}
+
+	return 0;
+}
+
 /* Dump information of a single bus */
 static int
 bus_dump_one(FILE *f, struct rte_bus *bus)

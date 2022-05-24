@@ -394,6 +394,37 @@ pci_probe(void)
 	return (probed && probed == failed) ? -1 : 0;
 }
 
+static int
+pci_cleanup(void)
+{
+	struct rte_pci_device *dev = NULL;
+	int ret = 0;
+
+	FOREACH_DEVICE_ON_PCIBUS(dev) {
+		struct rte_pci_addr *loc = &dev->addr;
+		struct rte_pci_driver *drv = dev->driver;
+
+		if (loc == NULL || drv == NULL)
+			continue;
+
+		RTE_LOG(DEBUG, EAL,
+				"Clean up PCI driver: %s (%x:%x) device: "PCI_PRI_FMT" (socket %i)\n",
+				drv->driver.name, dev->id.vendor_id, dev->id.device_id,
+				loc->domain, loc->bus, loc->devid, loc->function,
+				dev->device.numa_node);
+
+		ret = drv->remove(dev);
+		if (ret < 0) {
+			RTE_LOG(ERR, EAL, "Cleanup for device "PCI_PRI_FMT" failed\n",
+					dev->addr.domain, dev->addr.bus, dev->addr.devid,
+					dev->addr.function);
+			rte_errno = errno;
+		}
+	}
+
+	return ret;
+}
+
 /* dump one device */
 static int
 pci_dump_one_device(FILE *f, struct rte_pci_device *dev)
@@ -813,6 +844,7 @@ struct rte_pci_bus rte_pci_bus = {
 	.bus = {
 		.scan = rte_pci_scan,
 		.probe = pci_probe,
+		.cleanup = pci_cleanup,
 		.find_device = pci_find_device,
 		.plug = pci_plug,
 		.unplug = pci_unplug,
