@@ -46,6 +46,9 @@
 /* Device parameter to enable RX completion queue compression. */
 #define MLX5_RXQ_CQE_COMP_EN "rxq_cqe_comp_en"
 
+/* Device parameter to enable RX completion entry padding to 128B. */
+#define MLX5_RXQ_CQE_PAD_EN "rxq_cqe_pad_en"
+
 /* Device parameter to enable padding Rx packet to cacheline size. */
 #define MLX5_RXQ_PKT_PAD_EN "rxq_pkt_pad_en"
 
@@ -2176,7 +2179,9 @@ mlx5_port_args_check_handler(const char *key, const char *val, void *opaque)
 		}
 		config->cqe_comp = !!tmp;
 		config->cqe_comp_fmt = tmp;
-	} else if (strcmp(MLX5_RXQ_PKT_PAD_EN, key) == 0) {
+	} else if (strcmp(MLX5_RXQ_CQE_PAD_EN, key) == 0) {
+		config->cqe_pad = !!tmp;
+ 	} else if (strcmp(MLX5_RXQ_PKT_PAD_EN, key) == 0) {
 		config->hw_padding = !!tmp;
 	} else if (strcmp(MLX5_RX_MPRQ_EN, key) == 0) {
 		config->mprq.enabled = !!tmp;
@@ -2352,6 +2357,12 @@ mlx5_port_args_config(struct mlx5_priv *priv, struct mlx5_kvargs_ctrl *mkvlist,
 	}
 	DRV_LOG(DEBUG, "Rx CQE compression is %ssupported.",
 		config->cqe_comp ? "" : "not ");
+	if (config->cqe_pad && !dev_cap->cqe_pad) {
+		DRV_LOG(WARNING, "Rx CQE padding isn't supported.");
+		config->cqe_pad = 0;
+	} else if (config->cqe_pad) {
+		DRV_LOG(INFO, "Rx CQE padding is enabled.");
+	}
 	if ((config->std_delay_drop || config->hp_delay_drop) &&
 	    !dev_cap->rq_delay_drop_en) {
 		config->std_delay_drop = 0;

@@ -200,7 +200,7 @@ mlx5_rxq_ibv_cq_create(struct mlx5_rxq_priv *rxq)
 			priv->dev_data->port_id);
 	}
 #ifdef HAVE_IBV_MLX5_MOD_CQE_128B_PAD
-	if (RTE_CACHE_LINE_SIZE == 128) {
+	if (priv->config.cqe_pad) {
 		cq_attr.mlx5.comp_mask |= MLX5DV_CQ_INIT_ATTR_MASK_FLAGS;
 		cq_attr.mlx5.flags |= MLX5DV_CQ_INIT_ATTR_FLAGS_CQE_PAD;
 	}

@@ -298,6 +298,11 @@ mlx5_os_capabilities_prepare(struct mlx5_dev_ctx_shared *sh)
 		DRV_LOG(DEBUG, "Device supports Multi-Packet RQ.");
 	}
 #endif
+#ifdef HAVE_IBV_MLX5_MOD_CQE_128B_PAD
+	/* Whether device supports 128B Rx CQE padding. */
+	sh->dev_cap.cqe_pad = RTE_CACHE_LINE_SIZE == 128 &&
+		(dv_attr.flags & MLX5DV_CONTEXT_FLAGS_CQE_128B_PAD);
+#endif
 #ifdef HAVE_IBV_DEVICE_TUNNEL_SUPPORT
 	if (dv_attr.comp_mask & MLX5DV_CONTEXT_MASK_TUNNEL_OFFLOADS) {
 		sh->dev_cap.tunnel_en = dv_attr.tunnel_offloads_caps &

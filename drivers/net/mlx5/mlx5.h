@@ -140,6 +140,7 @@ struct mlx5_dev_cap {
 	uint32_t txpp_en:1; /* Tx packet pacing is supported. */
 	uint32_t mpls_en:1; /* MPLS over GRE/UDP is supported. */
 	uint32_t cqe_comp:1; /* CQE compression is supported. */
+	uint32_t cqe_pad:1; /* CQE padding is supported. */
 	uint32_t hw_csum:1; /* Checksum offload is supported. */
 	uint32_t hw_padding:1; /* End alignment padding is supported. */
 	uint32_t dest_tir:1; /* Whether advanced DR API is available. */
@@ -264,6 +265,7 @@ struct mlx5_port_config {
 	unsigned int hw_vlan_insert:1; /* VLAN insertion in WQE is supported. */
 	unsigned int hw_padding:1; /* End alignment padding is supported. */
 	unsigned int cqe_comp:1; /* CQE compression is enabled. */
+	unsigned int cqe_pad:1; /* CQE padding is enabled. */
 	unsigned int cqe_comp_fmt:3; /* CQE compression format. */
 	unsigned int rx_vec_en:1; /* Rx vector is enabled. */
 	unsigned int std_delay_drop:1; /* Enable standard Rxq delay drop. */
