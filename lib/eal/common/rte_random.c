@@ -6,6 +6,9 @@
 #include <x86intrin.h>
 #endif
 #include <unistd.h>
+#ifdef RTE_LIBEAL_USE_IEEE754
+#include <ieee754.h>
+#endif
 
 #include <rte_branch_prediction.h>
 #include <rte_cycles.h>
@@ -171,6 +174,44 @@ rte_rand_max(uint64_t upper_bound)
 	} while (unlikely(res >= upper_bound));
 
 	return res;
+}
+
+double
+rte_drand(void)
+{
+	struct rte_rand_state *state = __rte_rand_get_state();
+	uint64_t rand64 = __rte_rand_lfsr258(state);
+#ifdef RTE_LIBEAL_USE_IEEE754
+	union ieee754_double u = {
+		.ieee = {
+			.negative = 0,
+			.exponent = IEEE754_DOUBLE_BIAS,
+		},
+	};
+
+	/* Take 64 bit random value and put it into the mantissa
+	 * This uses direct access to IEEE format to avoid doing
+	 * any direct floating point math here.
+	 */
+	u.ieee.mantissa0 = rand64 >> 32;
+	u.ieee.mantissa1 = rand64;
+
+	return u.d - 1.0;
+#else
+	/* Slower method requiring floating point divide
+	 *
+	 * The double mantissa only has 53 bits, so we uniformly mask off the
+	 * high 11 bits and then floating-point divide by 2^53 to achieve a
+	 * result in [0, 1).
+	 *
+	 * We are not allowed to emit 1.0, so denom must be one greater than
+	 * the possible range of the preceeding step.
+	 */
+	static const uint64_t denom = (uint64_t)1 << 53;
+
+	rand64 &= denom - 1;
+	return (double)rand64 / denom;
+#endif
 }
 
 static uint64_t

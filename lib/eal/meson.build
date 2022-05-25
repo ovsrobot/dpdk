@@ -32,3 +32,6 @@ endif
 if cc.has_function('getentropy', prefix : '#include <unistd.h>')
     cflags += '-DRTE_LIBEAL_USE_GETENTROPY'
 endif
+if cc.has_header_symbol('ieee754.h', 'union ieee754_double')
+    cflags += '-DRTE_LIBEAL_USE_IEEE754'
+endif
