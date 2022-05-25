@@ -2901,9 +2901,9 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
 
 #ifdef RTE_ARCH_X86
+	int check_ret;
 	struct iavf_rx_queue *rxq;
 	int i;
-	int check_ret;
 	bool use_avx2 = false;
 	bool use_avx512 = false;
 	bool use_flex = false;
@@ -3025,7 +3025,23 @@ iavf_set_rx_function(struct rte_eth_dev *dev)
 
 		return;
 	}
+#elif defined RTE_ARCH_ARM
+	int check_ret;
+	struct iavf_rx_queue *rxq;
+	int i;
 
+	check_ret = iavf_rx_vec_dev_check(dev);
+	if (check_ret >= 0 &&
+	    rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128) {
+		PMD_DRV_LOG(DEBUG, "Using a Vector Rx callback (port=%d).",
+			    dev->data->port_id);
+		for (i = 0; i < dev->data->nb_rx_queues; i++) {
+			rxq = dev->data->rx_queues[i];
+			(void)iavf_rxq_vec_setup(rxq);
+		}
+		dev->rx_pkt_burst = iavf_recv_pkts_vec;
+		return;
+	}
 #endif
 	if (dev->data->scattered_rx) {
 		PMD_DRV_LOG(DEBUG, "Using a Scattered Rx callback (port=%d).",
