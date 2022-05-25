@@ -147,6 +147,32 @@ const struct rss_type_info rss_type_table[] = {
 	{ NULL, 0 },
 };
 
+static const char *
+rsstype_to_str(uint64_t rss_type)
+{
+	int i;
+
+	for (i = 0; rss_type_table[i].str != NULL; i++) {
+		if (rss_type_table[i].rss_type == rss_type)
+			return rss_type_table[i].str;
+	}
+
+	return NULL;
+}
+
+static uint64_t
+str_to_rsstype(const char *str)
+{
+	int i;
+
+	for (i = 0; rss_type_table[i].str != NULL; i++) {
+		if (!strcmp(rss_type_table[i].str, str))
+			return rss_type_table[i].rss_type;
+	}
+
+	return 0;
+}
+
 static const struct {
 	enum rte_eth_fec_mode mode;
 	const char *name;
@@ -779,19 +805,21 @@ port_infos_display(portid_t port_id)
 	if (!dev_info.flow_type_rss_offloads)
 		printf("No RSS offload flow type is supported.\n");
 	else {
+		uint64_t rss_types = dev_info.flow_type_rss_offloads;
 		uint16_t i;
-		char *p;
 
 		printf("Supported RSS offload flow types:\n");
-		for (i = RTE_ETH_FLOW_UNKNOWN + 1;
-		     i < sizeof(dev_info.flow_type_rss_offloads) * CHAR_BIT; i++) {
-			if (!(dev_info.flow_type_rss_offloads & (1ULL << i)))
-				continue;
-			p = flowtype_to_str(i);
-			if (p)
-				printf("  %s\n", p);
-			else
-				printf("  user defined %d\n", i);
+		for (i = 0; rss_types != 0; i++) {
+			if (rss_types & 1) {
+				uint64_t rss_type = 1ULL << i;
+				const char *p = rsstype_to_str(rss_type);
+
+				if (p)
+					printf("  %s\n", p);
+				else
+					printf("  user defined 0x%"PRIx64"\n", rss_type);
+			}
+			rss_types >>= 1;
 		}
 	}
 
@@ -1547,6 +1575,7 @@ port_flow_complain(struct rte_flow_error *error)
 static void
 rss_config_display(struct rte_flow_action_rss *rss_conf)
 {
+	uint64_t rss_types;
 	uint8_t i;
 
 	if (rss_conf == NULL) {
@@ -1582,16 +1611,23 @@ rss_config_display(struct rte_flow_action_rss *rss_conf)
 	}
 
 	printf(" types:\n");
-	if (rss_conf->types == 0) {
+	rss_types = rss_conf->types;
+	if (rss_types == 0) {
 		printf("  none\n");
 		return;
 	}
-	for (i = 0; rss_type_table[i].str; i++) {
-		if ((rss_conf->types &
-		    rss_type_table[i].rss_type) ==
-		    rss_type_table[i].rss_type &&
-		    rss_type_table[i].rss_type != 0)
-			printf("  %s\n", rss_type_table[i].str);
+
+	for (i = 0; rss_types != 0; i++) {
+		if (rss_types & 1) {
+			uint64_t rss_type = 1ULL << i;
+			const char *p = rsstype_to_str(rss_type);
+
+			if (p)
+				printf("  %s\n", p);
+			else
+				printf("  user defined 0x%"PRIx64"\n", rss_type);
+		}
+		rss_types >>= 1;
 	}
 }
 
@@ -3792,11 +3828,16 @@ port_rss_hash_conf_show(portid_t port_id, int show_rss_key)
 		return;
 	}
 	printf("RSS functions:\n ");
-	for (i = 0; rss_type_table[i].str; i++) {
-		if (rss_type_table[i].rss_type == 0)
-			continue;
-		if ((rss_hf & rss_type_table[i].rss_type) == rss_type_table[i].rss_type)
-			printf("%s ", rss_type_table[i].str);
+	for (i = 0; rss_hf != 0; i++) {
+		if (rss_hf & 1) {
+			uint64_t rss_type = 1ULL << i;
+			const char *p = rsstype_to_str(rss_type);
+			if (p)
+				printf("%s ", p);
+			else
+				printf("0x%"PRIx64" ", rss_type);
+		}
+		rss_hf >>= 1;
 	}
 	printf("\n");
 	if (!show_rss_key)
@@ -3813,15 +3854,10 @@ port_rss_hash_key_update(portid_t port_id, char rss_type[], uint8_t *hash_key,
 {
 	struct rte_eth_rss_conf rss_conf;
 	int diag;
-	unsigned int i;
 
 	rss_conf.rss_key = NULL;
 	rss_conf.rss_key_len = 0;
-	rss_conf.rss_hf = 0;
-	for (i = 0; rss_type_table[i].str; i++) {
-		if (!strcmp(rss_type_table[i].str, rss_type))
-			rss_conf.rss_hf = rss_type_table[i].rss_type;
-	}
+	rss_conf.rss_hf = str_to_rsstype(rss_type);
 	diag = rte_eth_dev_rss_hash_conf_get(port_id, &rss_conf);
 	if (diag == 0) {
 		rss_conf.rss_key = hash_key;
