@@ -54,6 +54,7 @@ they do as follows:
 * ``regs``: Dump port register(s) to file
 * ``ringparam``: Get/set ring parameters
 * ``rxmode``: Toggle port Rx mode
+* ``set promisc``: Enable/Disable promiscuous mode on ports
 * ``stop``: Stop port
 * ``validate``: Check that given MAC address is valid unicast address
 * ``vlan``: Add/remove VLAN id
