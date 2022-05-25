@@ -56,3 +56,12 @@
 ; Ignore libabigail false-positive in clang builds, after moving code.
 [suppress_function]
 	name = rte_eal_remote_launch
+
+; Ignore field inserted to rte_bus, adding cleanup function
+[suppress_type]
+        name = rte_bus
+        has_data_member_inserted_at = end
+
+; Ignore changes to internally used structs containing rte_bus
+[suppress_type]
+        name = rte_pci_bus, rte_vmbus_bus, rte_vdev_bus
