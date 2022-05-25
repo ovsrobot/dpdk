@@ -113,6 +113,11 @@ New Features
   * Added PPPoL2TPv2oUDP FDIR distribute packets based on inner IP
     src/dst address and UDP/TCP src/dst port.
 
+* **Updated Intel igc driver.**
+
+  Added Intel Foxville I226 devices in ``igc`` driver. See the
+  doc:`../nics/igc` NIC guide for more details.
+
 * **Updated Marvell cnxk ethdev PMD.**
 
   * Added queue based priority flow control support for CN9K and CN10K.
