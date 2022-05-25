@@ -129,6 +129,8 @@ New Features
   Updated testpmd application to output log errors and warnings to stderr
   instead of stdout.
 
+* **Added vmxnet3 version 5 support.**
+
 
 API Changes
 -----------
