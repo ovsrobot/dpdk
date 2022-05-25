@@ -6,6 +6,7 @@
 #include <x86intrin.h>
 #endif
 #include <unistd.h>
+#include <ieee754.h>
 
 #include <rte_branch_prediction.h>
 #include <rte_cycles.h>
@@ -171,6 +172,29 @@ rte_rand_max(uint64_t upper_bound)
 	} while (unlikely(res >= upper_bound));
 
 	return res;
+}
+
+double
+rte_drand(void)
+{
+	struct rte_rand_state *state = __rte_rand_get_state();
+	union ieee754_double u = {
+		.ieee = {
+			.negative = 0,
+			.exponent = IEEE754_DOUBLE_BIAS,
+		},
+	};
+	uint64_t val;
+
+	/* Take 64 bit random value and put it into the mantissa
+	 * This uses direct access to IEEE format to avoid doing
+	 * any direct floating point math here.
+	 */
+	val = __rte_rand_lfsr258(state);
+	u.ieee.mantissa0 = val >> 32;
+	u.ieee.mantissa1 = val;
+
+	return u.d - 1.0;
 }
 
 static uint64_t
