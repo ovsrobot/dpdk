@@ -131,6 +131,8 @@ New Features
 
 * **Added vmxnet3 version 5 support.**
 
+* **Added RETA query and RETA update support for vmxnet3.**
+
 
 API Changes
 -----------
