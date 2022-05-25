@@ -805,6 +805,7 @@ port_infos_display(portid_t port_id)
 	else {
 		uint64_t rss_types = dev_info.flow_type_rss_offloads;
 		uint16_t i;
+		uint16_t len = 0;
 
 		printf("Supported RSS offload flow types:\n");
 		for (i = 0; rss_types != 0; i++) {
@@ -813,12 +814,21 @@ port_infos_display(portid_t port_id)
 				const char *p = rsstype_to_str(rss_type);
 
 				if (p)
-					printf("  %s\n", p);
+					printf("  %s", p);
 				else
-					printf("  user defined 0x%"PRIx64"\n", rss_type);
+					printf("  user defined 0x%"PRIx64, rss_type);
+
+				len++;
+				/* wrap on every 6 items */
+				if (len == 6) {
+					printf("\n");
+					len = 0;
+				}
 			}
 			rss_types >>= 1;
 		}
+		if (len)
+			printf("\n");
 	}
 
 	printf("Minimum size of RX buffer: %u\n", dev_info.min_rx_bufsize);
