@@ -133,6 +133,14 @@ New Features
 
 * **Added RETA query and RETA update support for vmxnet3.**
 
+* **Added vmxnet3 version 6 supports with some new features.**
+
+  * Increased max MTU up to 9190
+  * Increased max number of queues, both for Rx and Tx
+  * Removes power-of-two limitations
+  * Extended interrupt structures, required implementation for additional number
+of queues
+
 
 API Changes
 -----------
