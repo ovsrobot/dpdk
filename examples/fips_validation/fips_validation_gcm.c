@@ -344,6 +344,7 @@ parse_test_gcm_json_init(void)
 
 	direction_obj = json_object_get(json_info.json_test_group, DIR_JSON_STR);
 	direction_str = json_string_value(direction_obj);
+	info.interim_info.gcm_data.gen_iv = 0;
 
 	if (strcmp(direction_str, OP_ENC_JSON_STR) == 0) {
 		json_t *ivGen_obj = json_object_get(json_info.json_test_group, IVGEN_JSON_STR);
