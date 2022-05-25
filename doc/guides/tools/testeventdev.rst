@@ -195,9 +195,20 @@ The following are the application command-line options:
 
 * ``--per_port_pool``
 
-        Configure unique mempool per ethernet device, the size of each pool
-        is equal to `pool_sz`.
-        Only applicable for pipeline_atq` and `pipeline_queue` tests.
+       Configure unique mempool per ethernet device, the size of each pool
+       is equal to `pool_sz`.
+       Only applicable for `pipeline_atq` and `pipeline_queue` tests.
+
+* ``--tx_first``
+
+       Transmit given number of packets across all the ethernet device that
+       are enabled in the test.
+       Only applicable for `pipeline_atq` and `pipeline_queue` tests.
+
+* ``--tx_pkt_sz``
+
+       Packet size to use for `--tx_first`.
+       Only applicable for `pipeline_atq` and `pipeline_queue` tests.
 
 
 Eventdev Tests
@@ -667,6 +678,8 @@ Supported application command line options are following::
         --vector_size
         --vector_tmo_ns
         --per_port_pool
+        --tx_first
+        --tx_pkt_sz
 
 
 .. Note::
@@ -771,6 +784,8 @@ Supported application command line options are following::
         --vector_size
         --vector_tmo_ns
         --per_port_pool
+        --tx_first
+        --tx_pkt_sz
 
 
 .. Note::
