@@ -804,7 +804,7 @@ prepare_aes_xform(struct rte_crypto_sym_xform *xform)
 		RTE_LOG(ERR, USER1, "PMD %s key length %u IV length %u\n",
 				info.device_name, cipher_xform->key.length,
 				cipher_xform->iv.length);
-		return -EPERM;
+		return -ENOTSUP;
 	}
 
 	return 0;
@@ -852,7 +852,7 @@ prepare_tdes_xform(struct rte_crypto_sym_xform *xform)
 		RTE_LOG(ERR, USER1, "PMD %s key length %u IV length %u\n",
 				info.device_name, cipher_xform->key.length,
 				cipher_xform->iv.length);
-		return -EPERM;
+		return -ENOTSUP;
 	}
 
 	return 0;
@@ -889,7 +889,7 @@ prepare_hmac_xform(struct rte_crypto_sym_xform *xform)
 		RTE_LOG(ERR, USER1, "PMD %s key length %u IV length %u\n",
 				info.device_name, auth_xform->key.length,
 				auth_xform->digest_length);
-		return -EPERM;
+		return -ENOTSUP;
 	}
 
 	return 0;
@@ -935,7 +935,7 @@ prepare_gcm_xform(struct rte_crypto_sym_xform *xform)
 				aead_xform->digest_length,
 				aead_xform->aad_length,
 				aead_xform->iv.length);
-		return -EPERM;
+		return -ENOTSUP;
 	}
 
 	return 0;
@@ -980,7 +980,7 @@ prepare_gmac_xform(struct rte_crypto_sym_xform *xform)
 				info.device_name, auth_xform->key.length,
 				auth_xform->digest_length,
 				auth_xform->iv.length);
-		return -EPERM;
+		return -ENOTSUP;
 	}
 
 	return 0;
@@ -1018,7 +1018,7 @@ prepare_cmac_xform(struct rte_crypto_sym_xform *xform)
 		RTE_LOG(ERR, USER1, "PMD %s key length %u IV length %u\n",
 				info.device_name, auth_xform->key.length,
 				auth_xform->digest_length);
-		return -EPERM;
+		return -ENOTSUP;
 	}
 
 	return 0;
@@ -1064,7 +1064,7 @@ prepare_ccm_xform(struct rte_crypto_sym_xform *xform)
 				aead_xform->digest_length,
 				aead_xform->aad_length,
 				aead_xform->iv.length);
-		return -EPERM;
+		return -ENOTSUP;
 	}
 
 	return 0;
@@ -1099,7 +1099,7 @@ prepare_sha_xform(struct rte_crypto_sym_xform *xform)
 		RTE_LOG(ERR, USER1, "PMD %s key length %u digest length %u\n",
 				info.device_name, auth_xform->key.length,
 				auth_xform->digest_length);
-		return -EPERM;
+		return -ENOTSUP;
 	}
 
 	return 0;
@@ -1139,7 +1139,7 @@ prepare_xts_xform(struct rte_crypto_sym_xform *xform)
 		RTE_LOG(ERR, USER1, "PMD %s key length %u IV length %u\n",
 				info.device_name, cipher_xform->key.length,
 				cipher_xform->iv.length);
-		return -EPERM;
+		return -ENOTSUP;
 	}
 
 	return 0;
@@ -1254,7 +1254,7 @@ fips_generic_test(void)
 
 	ret = fips_run_test();
 	if (ret < 0) {
-		if (ret == -EPERM || ret == -ENOTSUP) {
+		if (ret == -ENOTSUP) {
 			fprintf(info.fp_wr, "Bypass\n\n");
 			return 0;
 		}
@@ -1291,7 +1291,7 @@ fips_generic_test(void)
 		fprintf(info.fp_wr, "\n");
 	free(val.val);
 
-	return 0;
+	return 1;
 }
 
 static int
@@ -1460,7 +1460,7 @@ fips_mct_tdes_test(void)
 
 	free(val.val);
 
-	return 0;
+	return 1;
 }
 
 static int
@@ -1539,7 +1539,7 @@ fips_mct_aes_ecb_test(void)
 
 	free(val.val);
 
-	return 0;
+	return 1;
 }
 static int
 fips_mct_aes_test(void)
@@ -1647,7 +1647,7 @@ fips_mct_aes_test(void)
 
 	free(val.val);
 
-	return 0;
+	return 1;
 }
 
 static int
@@ -1733,7 +1733,7 @@ fips_mct_sha_test(void)
 
 	free(val.val);
 
-	return 0;
+	return 1;
 }
 
 
@@ -1848,18 +1848,15 @@ fips_test_one_file(void)
 		}
 
 		ret = fips_test_parse_one_case();
-		switch (ret) {
-		case 0:
-			ret = test_ops.test();
-			if (ret == 0)
-				break;
-			RTE_LOG(ERR, USER1, "Error %i: test block\n",
+		if (ret < 0) {
+			RTE_LOG(ERR, USER1, "Error %i: Parse block\n",
 					ret);
 			goto error_one_case;
-		case 1:
-			break;
-		default:
-			RTE_LOG(ERR, USER1, "Error %i: Parse block\n",
+		}
+
+		ret = test_ops.test();
+		if (ret < 0) {
+			RTE_LOG(ERR, USER1, "Error %i: test block\n",
 					ret);
 			goto error_one_case;
 		}
@@ -1909,22 +1906,21 @@ fips_test_one_test_case(void)
 	int ret;
 
 	ret = fips_test_parse_one_json_case();
-
-	switch (ret) {
-	case 0:
-		ret = test_ops.test();
-		if (ret == 0)
-			break;
-		RTE_LOG(ERR, USER1, "Error %i: test block\n",
-				ret);
-		break;
-	case 1:
-		break;
-	default:
+	if (ret < 0) {
 		RTE_LOG(ERR, USER1, "Error %i: Parse block\n",
 				ret);
+		goto exit;
 	}
-	return 0;
+
+	ret = test_ops.test();
+	if (ret < 0) {
+		RTE_LOG(ERR, USER1, "Error %i: test block\n",
+				ret);
+		goto exit;
+	}
+
+exit:
+	return ret;
 }
 
 static int
@@ -1969,8 +1965,8 @@ fips_test_one_test_group(void)
 	tests_size = json_array_size(tests);
 	for (test_idx = 0; test_idx < tests_size; test_idx++) {
 		json_info.json_test_case = json_array_get(tests, test_idx);
-		fips_test_one_test_case();
-		json_array_append_new(write_tests, json_info.json_write_case);
+		if (fips_test_one_test_case() > 0)
+			json_array_append_new(write_tests, json_info.json_write_case);
 	}
 
 	return 0;
