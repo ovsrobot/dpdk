@@ -101,6 +101,22 @@ To guarantee the constraint, capabilities in dev_conf.rxmode.offloads will be ch
 
 fdir_conf->mode will also be checked.
 
+Runtime Options
+^^^^^^^^^^^^^^^^^^
+
+The following ``devargs`` options can be enabled at runtime. They must
+be passed as part of EAL arguments. For example,
+
+.. code-block:: console
+
+   dpdk-testpmd -a af:10.0,cu_sfp_as_sx=1 -- -i
+
+- ``cu_sfp_as_sx`` (default **0**)
+
+  This option is used to allow the X550 devices to treat 1G Cu SFPs as
+  1G SX SFPs, since this usually works.  By default, 1G Cu SFPs are not
+  supported by Intel for the X550.
+
 VF Runtime Options
 ^^^^^^^^^^^^^^^^^^
 

@@ -1538,9 +1538,19 @@ STATIC s32 ixgbe_supported_sfp_modules_X550em(struct ixgbe_hw *hw, bool *linear)
 	case ixgbe_sfp_type_1g_lha_core1:
 		*linear = false;
 		break;
-	case ixgbe_sfp_type_unknown:
 	case ixgbe_sfp_type_1g_cu_core0:
+		if (hw->cu_sfp_as_sx == 1) {
+			EWARN(hw, "WARNING: Treating Cu SFP modules as SX modules is unsupported by Intel and may cause unstable operation or damage to the module or the adapter.  Intel Corporation is not responsible for any harm caused by using Cu modules in this way with this adapter.\n");
+			*linear = false;
+			hw->phy.sfp_type = ixgbe_sfp_type_1g_sx_core0;
+		}
 	case ixgbe_sfp_type_1g_cu_core1:
+		if (hw->cu_sfp_as_sx == 1) {
+			EWARN(hw, "WARNING: Treating Cu SFP modules as SX modules is unsupported by Intel and may cause unstable operation or damage to the module or the adapter.  Intel Corporation is not responsible for any harm caused by using Cu modules in this way with this adapter.\n");
+			*linear = false;
+			hw->phy.sfp_type = ixgbe_sfp_type_1g_sx_core1;
+		}
+	case ixgbe_sfp_type_unknown:
 	default:
 		return IXGBE_ERR_SFP_NOT_SUPPORTED;
 	}

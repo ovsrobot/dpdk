@@ -498,6 +498,9 @@ struct ixgbe_adapter {
 	struct rte_timecounter      tx_tstamp_tc;
  	struct ixgbe_tm_conf        tm_conf;
 
+	/* For treating CU SFPs as SX (Unsupported by Intel) */
+	uint8_t cu_sfp_as_sx;
+
 	/* For RSS reta table update */
 	uint8_t rss_reta_updated;
 

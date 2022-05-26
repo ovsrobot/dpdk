@@ -4190,6 +4190,7 @@ struct ixgbe_hw {
 	bool allow_unsupported_sfp;
 	bool wol_enabled;
 	bool need_crosstalk_fix;
+	bool cu_sfp_as_sx;
 };
 
 #define ixgbe_call_func(hw, func, params, error) \

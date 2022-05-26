@@ -129,9 +129,15 @@
 #define IXGBE_DMATXCTL_VT_MASK                 0xFFFF0000
 
 #define IXGBEVF_DEVARG_PFLINK_FULLCHK		"pflink_fullchk"
+#define IXGBE_DEVARG_CU_SFP_AS_SX		"cu_sfp_as_sx"
 
 static const char * const ixgbevf_valid_arguments[] = {
 	IXGBEVF_DEVARG_PFLINK_FULLCHK,
+	NULL
+};
+
+static const char * const ixgbe_valid_arguments[] = {
+	IXGBE_DEVARG_CU_SFP_AS_SX,
 	NULL
 };
 
@@ -185,6 +191,8 @@ static int ixgbe_fw_version_get(struct rte_eth_dev *dev, char *fw_version,
 static int ixgbe_dev_info_get(struct rte_eth_dev *dev,
 			      struct rte_eth_dev_info *dev_info);
 static const uint32_t *ixgbe_dev_supported_ptypes_get(struct rte_eth_dev *dev);
+static int devarg_handle_int(const char *key, const char *value,
+			     void *extra_args);
 static int ixgbevf_dev_info_get(struct rte_eth_dev *dev,
 				struct rte_eth_dev_info *dev_info);
 static int ixgbe_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
@@ -1032,6 +1040,29 @@ ixgbe_swfw_lock_reset(struct ixgbe_hw *hw)
 	ixgbe_release_swfw_semaphore(hw, mask);
 }
 
+static void
+ixgbe_parse_devargs(struct ixgbe_adapter *adapter,
+		    struct rte_devargs *devargs)
+{
+	struct rte_kvargs *kvlist;
+	uint16_t cu_sfp_as_sx;
+
+	if (devargs == NULL)
+		return;
+
+	kvlist = rte_kvargs_parse(devargs->args, ixgbe_valid_arguments);
+	if (kvlist == NULL)
+		return;
+
+	if (rte_kvargs_count(kvlist, IXGBE_DEVARG_CU_SFP_AS_SX) == 1 &&
+	    rte_kvargs_process(kvlist, IXGBE_DEVARG_CU_SFP_AS_SX,
+			       devarg_handle_int, &cu_sfp_as_sx) == 0 &&
+	    cu_sfp_as_sx == 1)
+		adapter->cu_sfp_as_sx = 1;
+
+	rte_kvargs_free(kvlist);
+}
+
 /*
  * This function is based on code in ixgbe_attach() in base/ixgbe.c.
  * It returns 0 on success.
@@ -1095,6 +1126,8 @@ eth_ixgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	}
 
 	rte_atomic32_clear(&ad->link_thread_running);
+	ixgbe_parse_devargs(eth_dev->data->dev_private,
+			    pci_dev->device.devargs);
 	rte_eth_copy_pci_info(eth_dev, pci_dev);
 	eth_dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
 
