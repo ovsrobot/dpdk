@@ -21,6 +21,7 @@
 #include "afu_mf_rawdev.h"
 #include "n3000_afu.h"
 #include "he_lbk.h"
+#include "he_mem.h"
 
 #define AFU_MF_PMD_RAWDEV_NAME rawdev_afu_mf
 
@@ -28,6 +29,7 @@ static const struct rte_afu_uuid afu_uuid_map[] = {
 	{ N3000_AFU_UUID_L, N3000_AFU_UUID_H },
 	{ HE_LBK_UUID_L, HE_LBK_UUID_H },
 	{ HE_MEM_LBK_UUID_L, HE_MEM_LBK_UUID_H },
+	{ HE_MEM_TG_UUID_L, HE_MEM_TG_UUID_H },
 	{ 0, 0 /* sentinel */ }
 };
 
@@ -35,6 +37,7 @@ static struct afu_mf_drv *afu_table[] = {
 	&n3000_afu_drv,
 	&he_lbk_drv,
 	&he_mem_lbk_drv,
+	&he_mem_tg_drv,
 	NULL
 };
 
