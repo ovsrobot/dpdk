@@ -30,6 +30,24 @@ extern int afu_mf_pmd_logtype;
 #define AFU_MF_PMD_WARN(fmt, args...) \
 	AFU_MF_PMD_LOG(WARNING, fmt, ## args)
 
+#define CLS_TO_SIZE(n)  ((n) << 6)  /* get size of n cache lines */
+#define SIZE_TO_CLS(s)  ((s) >> 6)  /* convert size to number of cache lines */
+#define MHZ(f)  ((f) * 1000000)
+
+#define dsm_poll_timeout(addr, val, cond, invl, timeout) \
+({                                                       \
+	uint64_t __wait = 0;                                 \
+	uint64_t __invl = (invl);                            \
+	uint64_t __timeout = (timeout);                      \
+	for (; __wait <= __timeout; __wait += __invl) {      \
+		(val) = *(addr);                                 \
+		if (cond)                                        \
+			break;                                       \
+		rte_delay_ms(__invl);                            \
+	}                                                    \
+	(cond) ? 0 : 1;                                      \
+})
+
 struct afu_mf_rawdev;
 
 struct afu_mf_ops {

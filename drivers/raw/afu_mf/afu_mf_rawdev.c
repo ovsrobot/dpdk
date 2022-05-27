@@ -17,15 +17,19 @@
 #include <rte_memzone.h>
 #include <rte_rawdev_pmd.h>
 
+#include "rte_pmd_afu.h"
 #include "afu_mf_rawdev.h"
+#include "n3000_afu.h"
 
 #define AFU_MF_PMD_RAWDEV_NAME rawdev_afu_mf
 
 static const struct rte_afu_uuid afu_uuid_map[] = {
+	{ N3000_AFU_UUID_L, N3000_AFU_UUID_H },
 	{ 0, 0 /* sentinel */ }
 };
 
 static struct afu_mf_drv *afu_table[] = {
+	&n3000_afu_drv,
 	NULL
 };
 
