@@ -35,6 +35,7 @@ extern "C" {
 #define RTE_MEMZONE_1GB            0x00000002   /**< Use 1GB pages. */
 #define RTE_MEMZONE_16MB           0x00000100   /**< Use 16MB pages. */
 #define RTE_MEMZONE_16GB           0x00000200   /**< Use 16GB pages. */
+#define RTE_MEMZONE_32MB	   0x00000400	/**< Use 32MB pages. */
 #define RTE_MEMZONE_256KB          0x00010000   /**< Use 256KB pages. */
 #define RTE_MEMZONE_256MB          0x00020000   /**< Use 256MB pages. */
 #define RTE_MEMZONE_512MB          0x00040000   /**< Use 512MB pages. */
