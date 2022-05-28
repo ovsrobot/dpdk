@@ -269,6 +269,15 @@ F: lib/eal/include/rte_random.h
 F: lib/eal/common/rte_random.c
 F: app/test/test_rand_perf.c
 
+LoongArch
+M: Min Zhou <zhoumin@loongson.cn>
+F: config/loongarch/
+F: lib/eal/loongarch/
+F: lib/*/*_lsx.*
+F: drivers/*/*/*_lsx.*
+F: app/*/*_lsx.*
+F: examples/*/*_lsx.*
+
 ARM v7
 M: Jan Viktorin <viktorin@rehivetech.com>
 M: Ruifeng Wang <ruifeng.wang@arm.com>
