@@ -16,6 +16,7 @@ indirect_headers += files(
         'rte_lpm_neon.h',
         'rte_lpm_sse.h',
         'rte_lpm_sve.h',
+        'rte_lpm_lsx.h',
 )
 deps += ['hash']
 deps += ['rcu']
