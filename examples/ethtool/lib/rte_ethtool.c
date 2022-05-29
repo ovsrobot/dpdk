@@ -373,44 +373,6 @@ rte_ethtool_net_vlan_rx_kill_vid(uint16_t port_id, uint16_t vid)
 	return rte_eth_dev_vlan_filter(port_id, vid, 0);
 }
 
-/*
- * The set_rx_mode provides driver-specific rx mode setting.
- * This implementation implements rx mode setting based upon
- * ixgbe/igb drivers. Further improvement is to provide a
- * callback op field over struct rte_eth_dev::dev_ops so each
- * driver can register device-specific implementation
- */
-int
-rte_ethtool_net_set_rx_mode(uint16_t port_id)
-{
-	uint16_t num_vfs;
-	struct rte_eth_dev_info dev_info;
-	uint16_t vf;
-	int ret;
-
-	ret = rte_eth_dev_info_get(port_id, &dev_info);
-	if (ret != 0)
-		return ret;
-
-	num_vfs = dev_info.max_vfs;
-
-	/* Set VF vf_rx_mode, VF unsupport status is discard */
-	for (vf = 0; vf < num_vfs; vf++) {
-#ifdef RTE_NET_IXGBE
-		rte_pmd_ixgbe_set_vf_rxmode(port_id, vf,
-			RTE_ETH_VMDQ_ACCEPT_UNTAG, 0);
-#endif
-	}
-
-	/* Enable Rx vlan filter, VF unsupported status is discard */
-	ret = rte_eth_dev_set_vlan_offload(port_id, RTE_ETH_VLAN_FILTER_MASK);
-	if (ret != 0)
-		return ret;
-
-	return 0;
-}
-
-
 int
 rte_ethtool_get_ringparam(uint16_t port_id,
 	struct ethtool_ringparam *ring_param)

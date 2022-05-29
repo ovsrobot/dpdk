@@ -22,5 +22,7 @@ deps += 'bus_pci'
 if dpdk_conf.has('RTE_NET_IXGBE')
     deps += 'net_ixgbe'
 endif
-
+if dpdk_conf.has('RTE_NET_BNXT')
+    deps += 'net_bnxt'
+endif
 allow_experimental_apis = true
