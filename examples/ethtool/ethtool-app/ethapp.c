@@ -13,8 +13,16 @@
 #include "ethapp.h"
 
 #define EEPROM_DUMP_CHUNKSIZE 1024
+typedef uint16_t portid_t;
 
-
+/* *** PROMISC_MODE *** */
+struct cmd_set_promisc_mode_result {
+	cmdline_fixed_string_t set;
+	cmdline_fixed_string_t promisc;
+	cmdline_fixed_string_t port_all; /* valid if "allports" argument == 1 */
+	uint16_t port_num;               /* valid if "allports" argument == 0 */
+	cmdline_fixed_string_t mode;
+};
 struct pcmd_get_params {
 	cmdline_fixed_string_t cmd;
 };
@@ -133,6 +141,22 @@ cmdline_parse_token_string_t pcmd_vlan_token_mode =
 cmdline_parse_token_num_t pcmd_vlan_token_vid =
 	TOKEN_NUM_INITIALIZER(struct pcmd_vlan_params, vid, RTE_UINT16);
 
+/* promisc mode */
+
+cmdline_parse_token_string_t cmd_setpromisc_set =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_promisc_mode_result, set, "set");
+cmdline_parse_token_string_t cmd_setpromisc_promisc =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_promisc_mode_result, promisc,
+				 "promisc");
+cmdline_parse_token_string_t cmd_setpromisc_portall =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_promisc_mode_result, port_all,
+				 "all");
+cmdline_parse_token_num_t cmd_setpromisc_portnum =
+	TOKEN_NUM_INITIALIZER(struct cmd_set_promisc_mode_result, port_num,
+			      RTE_UINT16);
+cmdline_parse_token_string_t cmd_setpromisc_mode =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_promisc_mode_result, mode,
+				 "on#off");
 
 static void
 pcmd_quit_callback(__rte_unused void *ptr_params,
@@ -142,6 +166,30 @@ pcmd_quit_callback(__rte_unused void *ptr_params,
 	cmdline_quit(ctx);
 }
 
+static void pcmd_set_promisc_mode_parsed(void *ptr_params,
+					__rte_unused struct cmdline *ctx,
+					void *allports)
+{
+	struct cmd_set_promisc_mode_result *res = ptr_params;
+	int enable;
+	portid_t i;
+	if (!strcmp(res->mode, "on"))
+		enable = 1;
+	else
+		enable = 0;
+
+	/* all ports */
+	if (allports) {
+		RTE_ETH_FOREACH_DEV(i)
+			eth_set_promisc_mode(i, enable);
+	} else {
+		eth_set_promisc_mode(res->port_num, enable);
+	}
+	if (enable)
+		printf("Promisc mode Enabled\n");
+	else
+		printf("Promisc mode Disabled\n");
+}
 
 static void
 pcmd_drvinfo_callback(__rte_unused void *ptr_params,
@@ -869,6 +917,31 @@ cmdline_parse_inst_t pcmd_vlan = {
 	},
 };
 
+cmdline_parse_inst_t cmd_set_promisc_mode_all = {
+	.f = pcmd_set_promisc_mode_parsed,
+	.data = (void *)1,
+	.help_str = "set promisc all <on|off>\n     Set promisc mode for all ports",
+	.tokens = {
+		(void *)&cmd_setpromisc_set,
+		(void *)&cmd_setpromisc_promisc,
+		(void *)&cmd_setpromisc_portall,
+		(void *)&cmd_setpromisc_mode,
+		NULL,
+	},
+};
+
+cmdline_parse_inst_t cmd_set_promisc_mode_one = {
+	.f = pcmd_set_promisc_mode_parsed,
+	.data = (void *)0,
+	.help_str = "set promisc <port_id> <on|off>\n     Set promisc mode on port_id",
+	.tokens = {
+		(void *)&cmd_setpromisc_set,
+		(void *)&cmd_setpromisc_promisc,
+		(void *)&cmd_setpromisc_portnum,
+		(void *)&cmd_setpromisc_mode,
+		NULL,
+	},
+};
 
 cmdline_parse_ctx_t list_prompt_commands[] = {
 	(cmdline_parse_inst_t *)&pcmd_drvinfo,
@@ -886,6 +959,8 @@ cmdline_parse_ctx_t list_prompt_commands[] = {
 	(cmdline_parse_inst_t *)&pcmd_ringparam,
 	(cmdline_parse_inst_t *)&pcmd_ringparam_set,
 	(cmdline_parse_inst_t *)&pcmd_rxmode,
+	(cmdline_parse_inst_t *)&cmd_set_promisc_mode_one,
+	(cmdline_parse_inst_t *)&cmd_set_promisc_mode_all,
 	(cmdline_parse_inst_t *)&pcmd_stop,
 	(cmdline_parse_inst_t *)&pcmd_validate,
 	(cmdline_parse_inst_t *)&pcmd_vlan,
