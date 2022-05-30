@@ -104,6 +104,10 @@ New Features
   * ``RTE_EVENT_QUEUE_ATTR_WEIGHT``
   * ``RTE_EVENT_QUEUE_ATTR_AFFINITY``
 
+* **Updated Wangxun ngbe driver.**
+
+  * Added support for yt8531s PHY.
+
 
 Removed Items
 -------------
