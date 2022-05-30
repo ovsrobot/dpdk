@@ -93,6 +93,7 @@ struct pmd_internals {
 	int single_iface;
 	int phy_mac;
 	unsigned int infinite_rx;
+	int is_mtu_set;
 };
 
 struct pmd_process_private {
@@ -278,11 +279,13 @@ eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	const u_char *packet;
 	struct rte_mbuf *mbuf;
 	struct pcap_rx_queue *pcap_q = queue;
+	struct rte_eth_dev *dev = &rte_eth_devices[pcap_q->port_id];
+	struct pmd_internals *internals = dev->data->dev_private;
 	uint16_t num_rx = 0;
 	uint32_t rx_bytes = 0;
 	pcap_t *pcap;
 
-	pp = rte_eth_devices[pcap_q->port_id].process_private;
+	pp = dev->process_private;
 	pcap = pp->rx_pcap[pcap_q->queue_id];
 
 	if (unlikely(pcap == NULL || nb_pkts == 0))
@@ -300,6 +303,13 @@ eth_pcap_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		mbuf = rte_pktmbuf_alloc(pcap_q->mb_pool);
 		if (unlikely(mbuf == NULL)) {
 			pcap_q->rx_stat.rx_nombuf++;
+			break;
+		}
+
+		if (unlikely(header.caplen > dev->data->mtu) &&
+				internals->is_mtu_set) {
+			pcap_q->rx_stat.err_pkts++;
+			rte_pktmbuf_free(mbuf);
 			break;
 		}
 
@@ -378,6 +388,8 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	struct rte_mbuf *mbuf;
 	struct pmd_process_private *pp;
 	struct pcap_tx_queue *dumper_q = queue;
+	struct rte_eth_dev *dev = &rte_eth_devices[dumper_q->port_id];
+	struct pmd_internals *internals = dev->data->dev_private;
 	uint16_t num_tx = 0;
 	uint32_t tx_bytes = 0;
 	struct pcap_pkthdr header;
@@ -385,7 +397,7 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	unsigned char temp_data[RTE_ETH_PCAP_SNAPLEN];
 	size_t len, caplen;
 
-	pp = rte_eth_devices[dumper_q->port_id].process_private;
+	pp = dev->process_private;
 	dumper = pp->tx_dumper[dumper_q->queue_id];
 
 	if (dumper == NULL || nb_pkts == 0)
@@ -396,6 +408,13 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	for (i = 0; i < nb_pkts; i++) {
 		mbuf = bufs[i];
 		len = caplen = rte_pktmbuf_pkt_len(mbuf);
+
+		if (unlikely(len > dev->data->mtu) &&
+				internals->is_mtu_set) {
+			rte_pktmbuf_free(mbuf);
+			continue;
+		}
+
 		if (unlikely(!rte_pktmbuf_is_contiguous(mbuf) &&
 				len > sizeof(temp_data))) {
 			caplen = sizeof(temp_data);
@@ -464,13 +483,15 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	struct rte_mbuf *mbuf;
 	struct pmd_process_private *pp;
 	struct pcap_tx_queue *tx_queue = queue;
+	struct rte_eth_dev *dev = &rte_eth_devices[tx_queue->port_id];
+	struct pmd_internals *internals = dev->data->dev_private;
 	uint16_t num_tx = 0;
 	uint32_t tx_bytes = 0;
 	pcap_t *pcap;
 	unsigned char temp_data[RTE_ETH_PCAP_SNAPLEN];
 	size_t len;
 
-	pp = rte_eth_devices[tx_queue->port_id].process_private;
+	pp = dev->process_private;
 	pcap = pp->tx_pcap[tx_queue->queue_id];
 
 	if (unlikely(nb_pkts == 0 || pcap == NULL))
@@ -479,6 +500,13 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	for (i = 0; i < nb_pkts; i++) {
 		mbuf = bufs[i];
 		len = rte_pktmbuf_pkt_len(mbuf);
+
+		if (unlikely(len > dev->data->mtu) &&
+				internals->is_mtu_set) {
+			rte_pktmbuf_free(mbuf);
+			continue;
+		}
+
 		if (unlikely(!rte_pktmbuf_is_contiguous(mbuf) &&
 				len > sizeof(temp_data))) {
 			PMD_LOG(ERR,
@@ -807,6 +835,14 @@ eth_stats_reset(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static int eth_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
+{
+	PMD_LOG(INFO, "mtu set %s %u\n", dev->device->name, mtu);
+	struct pmd_internals *internals = dev->data->dev_private;
+	internals->is_mtu_set = 1;
+	return 0;
+}
+
 static inline void
 infinite_rx_ring_free(struct rte_ring *pkts)
 {
@@ -1004,6 +1040,7 @@ static const struct eth_dev_ops ops = {
 	.link_update = eth_link_update,
 	.stats_get = eth_stats_get,
 	.stats_reset = eth_stats_reset,
+	.mtu_set = eth_mtu_set,
 };
 
 static int
@@ -1233,6 +1270,7 @@ pmd_init_internals(struct rte_vdev_device *vdev,
 		.addr_bytes = { 0x02, 0x70, 0x63, 0x61, 0x70, iface_idx++ }
 	};
 	(*internals)->phy_mac = 0;
+	(*internals)->is_mtu_set = 0;
 	data = (*eth_dev)->data;
 	data->nb_rx_queues = (uint16_t)nb_rx_queues;
 	data->nb_tx_queues = (uint16_t)nb_tx_queues;
