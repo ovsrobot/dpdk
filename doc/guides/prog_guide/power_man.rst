@@ -258,6 +258,12 @@ API Overview for Ethernet PMD Power Management
 * **Set Emptypoll Max**: Set the number of empty polls to wait before entering
   sleep state.
 
+* **Get Pause Duration**: Get the configured duration (ms) to be used in the
+  Pause callback.
+
+* **Set Pause Duration**: Set the duration of the pause (ms) used in the Pause
+  mode callback.
+
 References
 ----------
 
