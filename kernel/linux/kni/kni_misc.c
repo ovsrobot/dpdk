@@ -403,10 +403,10 @@ kni_ioctl_create(struct net *net, uint32_t ioctl_num,
 
 	/* if user has provided a valid mac address */
 	if (is_valid_ether_addr(dev_info.mac_addr))
-		memcpy(net_dev->dev_addr, dev_info.mac_addr, ETH_ALEN);
+		memcpy((unsigned char *)net_dev->dev_addr, dev_info.mac_addr, ETH_ALEN);
 	else
 		/* Generate random MAC address. */
-		eth_random_addr(net_dev->dev_addr);
+		eth_random_addr((uint8_t *)net_dev->dev_addr);
 
 	if (dev_info.mtu)
 		net_dev->mtu = dev_info.mtu;

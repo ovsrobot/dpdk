@@ -779,7 +779,7 @@ kni_net_set_mac(struct net_device *netdev, void *p)
 		return -EADDRNOTAVAIL;
 
 	memcpy(req.mac_addr, addr->sa_data, netdev->addr_len);
-	memcpy(netdev->dev_addr, addr->sa_data, netdev->addr_len);
+	memcpy((unsigned char *)netdev->dev_addr, addr->sa_data, netdev->addr_len);
 
 	ret = kni_net_process_request(netdev, &req);
 
