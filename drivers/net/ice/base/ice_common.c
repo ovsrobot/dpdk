@@ -2127,7 +2127,7 @@ ice_aq_alloc_free_res(struct ice_hw *hw, u16 num_entries,
 
 	cmd->num_entries = CPU_TO_LE16(num_entries);
 
-	return ice_aq_send_cmd(hw, &desc, buf, buf_size, cd);
+	return ice_aq_retry_send_cmd(hw, &desc, buf, buf_size, cd);
 }
 
 /**

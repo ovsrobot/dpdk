@@ -552,4 +552,9 @@ enum ice_status
 ice_update_recipe_lkup_idx(struct ice_hw *hw,
 			   struct ice_update_recipe_lkup_idx_params *params);
 void ice_change_proto_id_to_dvm(void);
+
+/* Retry sending adminQ command */
+enum ice_status
+ice_aq_retry_send_cmd(struct ice_hw *hw, struct ice_aq_desc *desc,
+			void *buf, u16 buf_size, struct ice_sq_cd *cd);
 #endif /* _ICE_SWITCH_H_ */

@@ -18,6 +18,9 @@
 #define ICE_ETH_P_8021Q			0x8100
 #define ICE_MPLS_ETHER_ID		0x8847
 
+#define ICE_DCF_ADMINQ_MAX_RETRIES	20
+#define ICE_DCF_ADMINQ_CHECK_TIME	2   /* msecs */
+
 /* Dummy ethernet header needed in the ice_aqc_sw_rules_elem
  * struct to configure any switch filter rules.
  * {DA (6 bytes), SA(6 bytes),
@@ -3296,7 +3299,7 @@ ice_aq_sw_rules(struct ice_hw *hw, void *rule_list, u16 rule_list_sz,
 	desc.flags |= CPU_TO_LE16(ICE_AQ_FLAG_RD);
 	desc.params.sw_rules.num_rules_fltr_entry_index =
 		CPU_TO_LE16(num_rules);
-	status = ice_aq_send_cmd(hw, &desc, rule_list, rule_list_sz, cd);
+	status = ice_aq_retry_send_cmd(hw, &desc, rule_list, rule_list_sz, cd);
 	if (opc != ice_aqc_opc_add_sw_rules &&
 	    hw->adminq.sq_last_status == ICE_AQ_RC_ENOENT)
 		status = ICE_ERR_DOES_NOT_EXIST;
@@ -3331,7 +3334,7 @@ ice_aq_add_recipe(struct ice_hw *hw,
 
 	buf_size = num_recipes * sizeof(*s_recipe_list);
 
-	return ice_aq_send_cmd(hw, &desc, s_recipe_list, buf_size, cd);
+	return ice_aq_retry_send_cmd(hw, &desc, s_recipe_list, buf_size, cd);
 }
 
 /**
@@ -3373,7 +3376,7 @@ ice_aq_get_recipe(struct ice_hw *hw,
 
 	buf_size = *num_recipes * sizeof(*s_recipe_list);
 
-	status = ice_aq_send_cmd(hw, &desc, s_recipe_list, buf_size, cd);
+	status = ice_aq_retry_send_cmd(hw, &desc, s_recipe_list, buf_size, cd);
 	*num_recipes = LE16_TO_CPU(cmd->num_sub_recipes);
 
 	return status;
@@ -3462,7 +3465,7 @@ ice_aq_map_recipe_to_profile(struct ice_hw *hw, u32 profile_id, u8 *r_bitmap,
 	ice_memcpy(cmd->recipe_assoc, r_bitmap, sizeof(cmd->recipe_assoc),
 		   ICE_NONDMA_TO_NONDMA);
 
-	return ice_aq_send_cmd(hw, &desc, NULL, 0, cd);
+	return ice_aq_retry_send_cmd(hw, &desc, NULL, 0, cd);
 }
 
 /**
@@ -3486,7 +3489,7 @@ ice_aq_get_recipe_to_profile(struct ice_hw *hw, u32 profile_id, u8 *r_bitmap,
 	ice_fill_dflt_direct_cmd_desc(&desc, ice_aqc_opc_get_recipe_to_profile);
 	cmd->profile_id = CPU_TO_LE16(profile_id);
 
-	status = ice_aq_send_cmd(hw, &desc, NULL, 0, cd);
+	status = ice_aq_retry_send_cmd(hw, &desc, NULL, 0, cd);
 	if (!status)
 		ice_memcpy(r_bitmap, cmd->recipe_assoc,
 			   sizeof(cmd->recipe_assoc), ICE_NONDMA_TO_NONDMA);
@@ -4119,7 +4122,6 @@ ice_update_vsi_list_rule(struct ice_hw *hw, u16 *vsi_handle_arr, u16 num_vsi,
 	s_rule->pdata.vsi_list.index = CPU_TO_LE16(vsi_list_id);
 
 	status = ice_aq_sw_rules(hw, s_rule, s_rule_size, 1, opc, NULL);
-
 exit:
 	ice_free(hw, s_rule);
 	return status;
@@ -9581,4 +9583,36 @@ void ice_rm_sw_replay_rule_info(struct ice_hw *hw, struct ice_switch_info *sw)
 void ice_rm_all_sw_replay_rule_info(struct ice_hw *hw)
 {
 	ice_rm_sw_replay_rule_info(hw, hw->switch_info);
+}
+
+/**
+ * ice_aq_retry_send_cmd - helper function to retry sending FW Admin Queue commands
+ * @hw: pointer to the HW struct
+ * @desc: descriptor describing the command
+ * @buf: buffer to use for indirect commands (NULL for direct commands)
+ * @buf_size: size of buffer for indirect commands (0 for direct commands)
+ * @cd: pointer to command details structure
+ *
+ * Retry sending FW Admin Queue commands to the FW Admin Queue if fail to send and
+ * DCF function is enabled.
+ */
+enum ice_status
+ice_aq_retry_send_cmd(struct ice_hw *hw, struct ice_aq_desc *desc,
+		void *buf, u16 buf_size, struct ice_sq_cd *cd)
+{
+	enum ice_status status;
+	int i = 0;
+
+	for (;;) {
+		status = ice_aq_send_cmd(hw, desc, buf, buf_size, cd);
+		if (status == 0 || !hw->dcf_enabled)
+			break;
+
+		if (++i >= ICE_DCF_ADMINQ_MAX_RETRIES)
+			break;
+
+		rte_delay_ms(ICE_DCF_ADMINQ_CHECK_TIME);
+	}
+
+	return status;
 }
