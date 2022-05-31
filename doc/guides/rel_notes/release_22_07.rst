@@ -104,6 +104,9 @@ New Features
   * ``RTE_EVENT_QUEUE_ATTR_WEIGHT``
   * ``RTE_EVENT_QUEUE_ATTR_AFFINITY``
 
+* **Added Intel ACC101 baseband PMD.**
+
+  * Added a new baseband PMD for Intel ACC101 device.
 
 Removed Items
 -------------
