@@ -30,6 +30,7 @@ extern "C" {
 #define RTE_PGSIZE_256K (1ULL << 18)
 #define RTE_PGSIZE_2M   (1ULL << 21)
 #define RTE_PGSIZE_16M  (1ULL << 24)
+#define RTE_PGSIZE_32M  (1ULL << 25)
 #define RTE_PGSIZE_256M (1ULL << 28)
 #define RTE_PGSIZE_512M (1ULL << 29)
 #define RTE_PGSIZE_1G   (1ULL << 30)
