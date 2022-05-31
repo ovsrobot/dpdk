@@ -93,7 +93,7 @@ union bpf_attr {
 #  define __NR_bpf 321
 # elif defined(__arm__)
 #  define __NR_bpf 386
-# elif defined(__aarch64__)
+# elif defined(__aarch64__) || defined(__loongarch__)
 #  define __NR_bpf 280
 # elif defined(__sparc__)
 #  define __NR_bpf 349
