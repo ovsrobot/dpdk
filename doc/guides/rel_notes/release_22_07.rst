@@ -60,6 +60,14 @@ New Features
   Added an API which can get the number of in-flight packets in
   vhost async data path without using lock.
 
+* **Added initial RISC-V architecture support.***
+
+  Added EAL implementation for RISC-V architecture. The initial device the
+  porting was tested on is a HiFive Unmatched development board based on the
+  SiFive Freedom U740 SoC. In theory this implementation should work with any
+  ``rv64gc`` ISA compatible implementation with MMU supporting a reasonable
+  address space size (U740 uses sv39 MMU).
+
 * **Updated Intel iavf driver.**
 
   * Added Tx QoS queue rate limitation support.
