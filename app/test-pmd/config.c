@@ -4818,6 +4818,87 @@ show_rx_pkt_segments(void)
 		printf("%hu\n", rx_pkt_seg_lengths[i]);
 	}
 }
+static const char *get_ptype_str(uint32_t ptype)
+{
+	switch (ptype) {
+	case RTE_PTYPE_L2_ETHER:
+		return "mac";
+	case RTE_PTYPE_L3_IPV4:
+		return "ipv4";
+	case RTE_PTYPE_L3_IPV6:
+		return "ipv6";
+	case RTE_PTYPE_L3_IPV6|RTE_PTYPE_L3_IPV4:
+		return "l3";
+	case RTE_PTYPE_L4_TCP:
+		return "tcp";
+	case RTE_PTYPE_L4_UDP:
+		return "udp";
+	case RTE_PTYPE_L4_SCTP:
+		return "sctp";
+	case RTE_PTYPE_L4_TCP|RTE_PTYPE_L4_UDP|RTE_PTYPE_L4_SCTP:
+		return "l4";
+	case RTE_PTYPE_INNER_L2_ETHER:
+		return "inner_mac";
+	case RTE_PTYPE_INNER_L3_IPV4:
+		return "inner_ipv4";
+	case RTE_PTYPE_INNER_L3_IPV6:
+		return "inner_ipv6";
+	case RTE_PTYPE_INNER_L4_TCP:
+		return "inner_tcp";
+	case RTE_PTYPE_INNER_L4_UDP:
+		return "inner_udp";
+	case RTE_PTYPE_INNER_L4_SCTP:
+		return "inner_sctp";
+	default:
+		return "unknown";
+	}
+}
+void
+show_rx_pkt_hdrs(void)
+{
+	uint32_t i, n;
+
+	n = rx_pkt_nb_segs;
+	printf("Number of segments: %u\n", n);
+	if (n) {
+		printf("Packet segs: ");
+		for (i = 0; i != n - 1; i++)
+			printf("%s, ", get_ptype_str(rx_pkt_hdr_protos[i]));
+		printf("%s\n", rx_pkt_hdr_protos[i] == 0 ? "payload" :
+						get_ptype_str(rx_pkt_hdr_protos[i]));
+	}
+}
+void
+set_rx_pkt_hdrs(unsigned int *seg_hdrs, unsigned int nb_segs)
+{
+	unsigned int i;
+
+	if (nb_segs >= MAX_SEGS_BUFFER_SPLIT) {
+		printf("nb segments per RX packets=%u >= "
+		       "MAX_SEGS_BUFFER_SPLIT - ignored\n", nb_segs);
+		return;
+	}
+
+	/*
+	 * No extra check here, the segment length will be checked by PMD
+	 * in the extended queue setup.
+	 */
+	for (i = 0; i < nb_segs; i++) {
+		if (!(seg_hdrs[i] & RTE_BUFFER_SPLIT_PROTO_HDR_MASK)) {
+			printf("ptype [%u]=%u > is not supported - give up\n",
+			       i, seg_hdrs[i]);
+			return;
+		}
+	}
+
+	for (i = 0; i < nb_segs; i++)
+		rx_pkt_hdr_protos[i] = (uint32_t) seg_hdrs[i];
+	/*
+	 * We calculate the number of hdrs, but payload is not included,
+	 * so rx_pkt_nb_segs would increase 1.
+	 */
+	rx_pkt_nb_segs = (uint8_t) nb_segs + 1;
+}
 
 void
 set_rx_pkt_segments(unsigned int *seg_lengths, unsigned int nb_segs)
