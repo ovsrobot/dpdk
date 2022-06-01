@@ -1,5 +1,5 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
-    Copyright(c) 2010-2014 Intel Corporation.
+    Copyright(c) 2010-2022 Intel Corporation.
 
 .. _multi_process_app:
 
@@ -111,7 +111,7 @@ How the Application Works
 The core of this example application is based on using two queues and a single memory pool in shared memory.
 These three objects are created at startup by the primary process,
 since the secondary process cannot create objects in memory as it cannot reserve memory zones,
-and the secondary process then uses lookup functions to attach to these objects as it starts up.
+thus the secondary process uses lookup functions to attach to these objects as it starts up.
 
 .. literalinclude:: ../../../examples/multi_process/simple_mp/main.c
         :language: c
@@ -119,25 +119,25 @@ and the secondary process then uses lookup functions to attach to these objects 
         :end-before: >8 End of ring structure.
         :dedent: 1
 
-Note, however, that the named ring structure used as send_ring in the primary process is the recv_ring in the secondary process.
+Note, that the named ring structure used as send_ring in the primary process is the recv_ring in the secondary process.
 
 Once the rings and memory pools are all available in both the primary and secondary processes,
 the application simply dedicates two threads to sending and receiving messages respectively.
-The receive thread simply dequeues any messages on the receive ring, prints them,
-and frees the buffer space used by the messages back to the memory pool.
-The send thread makes use of the command-prompt library to interactively request user input for messages to send.
-Once a send command is issued by the user, a buffer is allocated from the memory pool, filled in with the message contents,
-then enqueued on the appropriate rte_ring.
+The receiver thread simply dequeues any messages on the receive ring and prints out in terminal,
+then the buffer space used by the messages is released back to the memory pool.
+The sender thread makes use of the command-prompt library to interactively request user input for messages to send.
+Once a send command is issued, the message contents are put into a buffer that was allocated from the memory pool,
+which is then enqueued on the appropriate rte_ring.
 
 Symmetric Multi-process Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The second example of DPDK multi-process support demonstrates how a set of processes can run in parallel,
-with each process performing the same set of packet- processing operations.
-(Since each process is identical in functionality to the others,
-we refer to this as symmetric multi-processing, to differentiate it from asymmetric multi- processing -
-such as a client-server mode of operation seen in the next example,
-where different processes perform different tasks, yet co-operate to form a packet-processing system.)
+The second DPDK multi-process example demonstrates how a set of processes can run in parallel,
+where each process is performing the same set of packet-processing operations.
+(As each process is identical in functionality to the others,
+we refer to this as symmetric multi-processing. In the asymmetric multi-processing example,
+the different client-server mode processes perform different tasks,
+yet co-operate to form a packet-processing system.)
 The following diagram shows the data-flow through the application, using two processes.
 
 .. _figure_sym_multi_proc_app:
@@ -155,9 +155,8 @@ Similarly, each process writes outgoing packets to a different TX queue on each 
 Running the Application
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-As with the simple_mp example, the first instance of the symmetric_mp process must be run as the primary instance,
-though with a number of other application- specific parameters also provided after the EAL arguments.
-These additional parameters are:
+The first instance of the symmetric_mp process must be run as the primary instance,
+with the following application parameters:
 
 *   -p <portmask>, where portmask is a hexadecimal bitmask of what ports on the system are to be used.
     For example: -p 3 to use ports 0 and 1 only.
@@ -169,7 +168,7 @@ These additional parameters are:
     This identifies which symmetric_mp instance is being run, so that each process can read a unique receive queue on each network port.
 
 The secondary symmetric_mp instances must also have these parameters specified,
-and the first two must be the same as those passed to the primary instance, or errors result.
+and the <portmask> and <N> parameters need to be configured with the same values as the primary instance.
 
 For example, to run a set of four symmetric_mp instances, running on lcores 1-4,
 all performing level-2 forwarding of packets between ports 0 and 1,
@@ -202,7 +201,7 @@ How the Application Works
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The initialization calls in both the primary and secondary instances are the same for the most part,
-calling the rte_eal_init(), 1 G and 10 G driver initialization and then probing devices.
+calling the rte_eal_init(), 1G and 10G driver initialization and then probing devices.
 Thereafter, the initialization done depends on whether the process is configured as a primary or secondary instance.
 
 In the primary instance, a memory pool is created for the packet mbufs and the network ports to be used are initialized -
@@ -217,7 +216,7 @@ therefore will be accessible by the secondary process as it initializes.
         :dedent: 1
 
 In the secondary instance, rather than initializing the network ports, the port information exported by the primary process is used,
-giving the secondary process access to the hardware and software rings for each network port.
+giving the secondary process is able to access to the hardware and software rings for each network port.
 Similarly, the memory pool of mbufs is accessed by doing a lookup for it by name:
 
 .. code-block:: c
@@ -234,7 +233,7 @@ Client-Server Multi-process Example
 The third example multi-process application included with the DPDK shows how one can
 use a client-server type multi-process design to do packet processing.
 In this example, a single server process performs the packet reception from the ports being used and
-distributes these packets using round-robin ordering among a set of client  processes,
+distributes these packets using round-robin ordering among a set of client processes,
 which perform the actual packet processing.
 In this case, the client applications just perform level-2 forwarding of packets by sending each packet out on a different network port.
 
@@ -250,8 +249,8 @@ The following diagram shows the data-flow through the application, using two cli
 Running the Application
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-The server process must be run initially as the primary process to set up all memory structures for use by the clients.
-In addition to the EAL parameters, the application- specific parameters are:
+The server process must be run initially as the primary process to set up all memory structures for use by the client processes.
+In addition to the EAL parameters, the application-specific parameters are:
 
 *   -p <portmask >, where portmask is a hexadecimal bitmask of what ports on the system are to be used.
     For example: -p 3 to use ports 0 and 1 only.
@@ -285,23 +284,23 @@ the following commands could be used:
 How the Application Works
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The server process performs the network port and data structure initialization much as the symmetric multi-process application does when run as primary.
-One additional enhancement in this sample application is that the server process stores its port configuration data in a memory zone in hugepage shared memory.
-This eliminates the need for the client processes to have the portmask parameter passed into them on the command line,
-as is done for the symmetric multi-process application, and therefore eliminates mismatched parameters as a potential source of errors.
+The server process performs the network port and data structure initialization similar to the primary symmetric multi-process application.
+The server process stores port configuration data in a memory zone in hugepage shared memory, this eliminates
+the need for the client processes to have the same portmask parameter in the command line.
+This enhancement can be done for the symmetric multi-process application in the future.
 
 In the same way that the server process is designed to be run as a primary process instance only,
 the client processes are designed to be run as secondary instances only.
-They have no code to attempt to create shared memory objects.
-Instead, handles to all needed rings and memory pools are obtained via calls to rte_ring_lookup() and rte_mempool_lookup().
-The network ports for use by the processes are obtained by loading the network port drivers and probing the PCI bus,
-which will, as in the symmetric multi-process example,
-automatically get access to the network ports using the settings already configured by the primary/server process.
+The client process does not support creating shared memory objects.
+Instead, the client process can access required rings and memory pools via rte_ring_lookup() and rte_mempool_lookup() function calls.
+The available network ports use by the processes are obtained by loading the network port drivers and probing the PCI bus.
+Same as the implementation in the symmetric multi-process example, the client process automatically gets
+access to the network ports settings where configured by the primary/server process.
 
-Once all applications are initialized, the server operates by reading packets from each network port in turn and
+Once all applications are initialized, the server operates by reading packets from each network port in turns and
 distributing those packets to the client queues (software rings, one for each client process) in round-robin order.
 On the client side, the packets are read from the rings in as big of bursts as possible, then routed out to a different network port.
-The routing used is very simple. All packets received on the first NIC port are transmitted back out on the second port and vice versa.
+The routing used is very simple, all packets received on the first NIC port are transmitted back out on the second port and vice versa.
 Similarly, packets are routed between the 3rd and 4th network ports and so on.
 The sending of packets is done by writing the packets directly to the network ports; they are not transferred back via the server process.
 
