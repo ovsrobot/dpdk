@@ -1707,7 +1707,7 @@ rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 			}
 		} else {
 			/* Split after specified protocol header. */
-			if (proto_hdr & RTE_BUFFER_SPLIT_PROTO_HDR_MASK) {
+			if (!(proto_hdr & RTE_BUFFER_SPLIT_PROTO_HDR_MASK)) {
 				RTE_ETHDEV_LOG(ERR,
 					"Protocol header %u not supported)\n",
 					proto_hdr);
