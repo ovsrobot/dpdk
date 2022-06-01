@@ -394,6 +394,29 @@ pci_probe(void)
 	return (probed && probed == failed) ? -1 : 0;
 }
 
+static int
+pci_cleanup(void)
+{
+	struct rte_pci_device *dev = NULL;
+	int error = 0;
+
+	FOREACH_DEVICE_ON_PCIBUS(dev) {
+		struct rte_pci_driver *drv = dev->driver;
+		int ret = 0;
+
+		if (drv == NULL || drv->remove == NULL)
+			continue;
+
+		ret = drv->remove(dev);
+		if (ret < 0) {
+			rte_errno = errno;
+			error = -1;
+		}
+	}
+
+	return error;
+}
+
 /* dump one device */
 static int
 pci_dump_one_device(FILE *f, struct rte_pci_device *dev)
@@ -813,6 +836,7 @@ struct rte_pci_bus rte_pci_bus = {
 	.bus = {
 		.scan = rte_pci_scan,
 		.probe = pci_probe,
+		.cleanup = pci_cleanup,
 		.find_device = pci_find_device,
 		.plug = pci_plug,
 		.unplug = pci_unplug,

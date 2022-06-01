@@ -569,6 +569,29 @@ vdev_probe(void)
 	return ret;
 }
 
+static int
+vdev_cleanup(void)
+{
+	struct rte_vdev_device *dev;
+	int error = 0;
+
+	TAILQ_FOREACH(dev, &vdev_device_list, next) {
+		const struct rte_vdev_driver *drv;
+		int ret = 0;
+
+		drv = container_of(dev->device.driver, const struct rte_vdev_driver, driver);
+
+		if (drv == NULL || drv->remove == NULL)
+			continue;
+
+		ret = drv->remove(dev);
+		if (ret < 0)
+			error = -1;
+	}
+
+	return error;
+}
+
 struct rte_device *
 rte_vdev_find_device(const struct rte_device *start, rte_dev_cmp_t cmp,
 		     const void *data)
@@ -627,6 +650,7 @@ vdev_get_iommu_class(void)
 static struct rte_bus rte_vdev_bus = {
 	.scan = vdev_scan,
 	.probe = vdev_probe,
+	.cleanup = vdev_cleanup,
 	.find_device = rte_vdev_find_device,
 	.plug = vdev_plug,
 	.unplug = vdev_unplug,
