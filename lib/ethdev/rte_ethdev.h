@@ -1187,6 +1187,9 @@ struct rte_eth_txmode {
  *   mbuf) the following data will be pushed to the next segment
  *   up to its own length, and so on.
  *
+ * - The proto_hdrs in the elements define the split position of
+ *   received packets.
+ *
  * - If the length in the segment description element is zero
  *   the actual buffer size will be deduced from the appropriate
  *   memory pool properties.
@@ -1197,13 +1200,36 @@ struct rte_eth_txmode {
  *     - pool from the last valid element
  *     - the buffer size from this pool
  *     - zero offset
+ *
+ * - Length based buffer split:
+ *     - mp, length, offset should be configured.
+ *     - The proto_hdr field should not be configured.
+ *
+ * - Protocol header based buffer split:
+ *     - mp, offset, proto_hdr should be configured.
+ *     - The length field should not be configured.
  */
 struct rte_eth_rxseg_split {
 	struct rte_mempool *mp; /**< Memory pool to allocate segment from. */
 	uint16_t length; /**< Segment data length, configures split point. */
 	uint16_t offset; /**< Data offset from beginning of mbuf data buffer. */
-	uint32_t reserved; /**< Reserved field. */
+	uint32_t proto_hdr; /**< Inner/outer L2/L3/L4 protocol header, configures split point. */
 };
+
+/* Buffer split protocol header capability. */
+#define RTE_BUFFER_SPLIT_PROTO_HDR_MASK ( \
+	RTE_PTYPE_L2_ETHER | \
+	RTE_PTYPE_L3_IPV4 | \
+	RTE_PTYPE_L3_IPV6 | \
+	RTE_PTYPE_L4_TCP | \
+	RTE_PTYPE_L4_UDP | \
+	RTE_PTYPE_L4_SCTP | \
+	RTE_PTYPE_INNER_L2_ETHER | \
+	RTE_PTYPE_INNER_L3_IPV4 | \
+	RTE_PTYPE_INNER_L3_IPV6 | \
+	RTE_PTYPE_INNER_L4_TCP | \
+	RTE_PTYPE_INNER_L4_UDP | \
+	RTE_PTYPE_INNER_L4_SCTP)
 
 /**
  * @warning

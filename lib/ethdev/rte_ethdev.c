@@ -1661,6 +1661,7 @@ rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 		struct rte_mempool *mpl = rx_seg[seg_idx].mp;
 		uint32_t length = rx_seg[seg_idx].length;
 		uint32_t offset = rx_seg[seg_idx].offset;
+		uint32_t proto_hdr = rx_seg[seg_idx].proto_hdr;
 
 		if (mpl == NULL) {
 			RTE_ETHDEV_LOG(ERR, "null mempool pointer\n");
@@ -1694,13 +1695,38 @@ rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 		}
 		offset += seg_idx != 0 ? 0 : RTE_PKTMBUF_HEADROOM;
 		*mbp_buf_size = rte_pktmbuf_data_room_size(mpl);
-		length = length != 0 ? length : *mbp_buf_size;
-		if (*mbp_buf_size < length + offset) {
-			RTE_ETHDEV_LOG(ERR,
-				       "%s mbuf_data_room_size %u < %u (segment length=%u + segment offset=%u)\n",
-				       mpl->name, *mbp_buf_size,
-				       length + offset, length, offset);
-			return -EINVAL;
+		if (proto_hdr == RTE_PTYPE_UNKNOWN) {
+			/* Split at fixed length. */
+			length = length != 0 ? length : *mbp_buf_size;
+			if (*mbp_buf_size < length + offset) {
+				RTE_ETHDEV_LOG(ERR,
+					"%s mbuf_data_room_size %u < %u (segment length=%u + segment offset=%u)\n",
+					mpl->name, *mbp_buf_size,
+					length + offset, length, offset);
+				return -EINVAL;
+			}
+		} else {
+			/* Split after specified protocol header. */
+			if (proto_hdr & RTE_BUFFER_SPLIT_PROTO_HDR_MASK) {
+				RTE_ETHDEV_LOG(ERR,
+					"Protocol header %u not supported)\n",
+					proto_hdr);
+				return -EINVAL;
+			}
+
+			if (length != 0) {
+				RTE_ETHDEV_LOG(ERR, "segment length should be set to zero in protocol header "
+					       "based buffer split\n");
+				return -EINVAL;
+			}
+
+			if (*mbp_buf_size < offset) {
+				RTE_ETHDEV_LOG(ERR,
+						"%s mbuf_data_room_size %u < %u segment offset)\n",
+						mpl->name, *mbp_buf_size,
+						offset);
+				return -EINVAL;
+			}
 		}
 	}
 	return 0;
