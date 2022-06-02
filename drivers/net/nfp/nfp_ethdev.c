@@ -462,6 +462,7 @@ nfp_net_ethdev_ops_mount(struct nfp_net_hw *hw, struct rte_eth_dev *eth_dev)
 	switch (NFD_CFG_CLASS_VER_of(hw->ver)) {
 	case NFP_NET_CFG_VERSION_DP_NFD3:
 		eth_dev->dev_ops = &nfp_net_nfd3_eth_dev_ops;
+		eth_dev->tx_pkt_burst = &nfp_net_nfd3_xmit_pkts;
 		break;
 	case NFP_NET_CFG_VERSION_DP_NFDK:
 		if (NFD_CFG_MAJOR_VERSION_of(hw->ver) < 5) {
@@ -470,6 +471,7 @@ nfp_net_ethdev_ops_mount(struct nfp_net_hw *hw, struct rte_eth_dev *eth_dev)
 			return -EINVAL;
 		}
 		eth_dev->dev_ops = &nfp_net_nfdk_eth_dev_ops;
+		eth_dev->tx_pkt_burst = &nfp_net_nfdk_xmit_pkts;
 		break;
 	default:
 		PMD_DRV_LOG(ERR, "The version of firmware is not correct.");
@@ -478,7 +480,6 @@ nfp_net_ethdev_ops_mount(struct nfp_net_hw *hw, struct rte_eth_dev *eth_dev)
 
 	eth_dev->rx_queue_count = nfp_net_rx_queue_count;
 	eth_dev->rx_pkt_burst = &nfp_net_recv_pkts;
-	eth_dev->tx_pkt_burst = &nfp_net_nfd3_xmit_pkts;
 
 	return 0;
 }

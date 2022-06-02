@@ -359,6 +359,9 @@ int nfp_net_nfdk_tx_queue_setup(struct rte_eth_dev *dev,
 		const struct rte_eth_txconf *tx_conf);
 void nfp_net_nfdk_tx_queue_release(struct rte_eth_dev *dev, uint16_t queue_idx);
 void nfp_net_nfdk_reset_tx_queue(struct nfp_net_txq *txq);
+uint16_t nfp_net_nfdk_xmit_pkts(void *tx_queue,
+		struct rte_mbuf **tx_pkts,
+		uint16_t nb_pkts);
 
 #endif /* _NFP_RXTX_H_ */
 /*
