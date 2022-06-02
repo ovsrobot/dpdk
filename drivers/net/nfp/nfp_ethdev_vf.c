@@ -287,7 +287,7 @@ nfp_netvf_init(struct rte_eth_dev *eth_dev)
 		RTE_LOG(ERR, PMD, "device %s can not be used: restricted dma "
 			"mask to 40 bits!\n", pci_dev->device.name);
 		return -ENODEV;
-	};
+	}
 
 	hw = NFP_NET_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);
 
@@ -295,6 +295,32 @@ nfp_netvf_init(struct rte_eth_dev *eth_dev)
 	eth_dev->rx_queue_count = nfp_net_rx_queue_count;
 	eth_dev->rx_pkt_burst = &nfp_net_recv_pkts;
 	eth_dev->tx_pkt_burst = &nfp_net_nfd3_xmit_pkts;
+
+	hw->ctrl_bar = (uint8_t *)pci_dev->mem_resource[0].addr;
+	if (hw->ctrl_bar == NULL) {
+		PMD_DRV_LOG(ERR,
+			"hw->ctrl_bar is NULL. BAR0 not configured");
+		return -ENODEV;
+	}
+
+	PMD_INIT_LOG(DEBUG, "ctrl bar: %p", hw->ctrl_bar);
+
+	hw->ver = nn_cfg_readl(hw, NFP_NET_CFG_VERSION);
+
+	switch (NFD_CFG_CLASS_VER_of(hw->ver)) {
+	case NFP_NET_CFG_VERSION_DP_NFD3:
+		break;
+	case NFP_NET_CFG_VERSION_DP_NFDK:
+		if (NFD_CFG_MAJOR_VERSION_of(hw->ver) < 5) {
+			PMD_DRV_LOG(ERR, "NFDK must use ABI 5 or newer,found: %d",
+				NFD_CFG_MAJOR_VERSION_of(hw->ver));
+			return -EINVAL;
+		}
+		break;
+	default:
+		PMD_DRV_LOG(ERR, "The version of firmware is not correct.");
+		return -EINVAL;
+	}
 
 	/* For secondary processes, the primary has done all the work */
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
@@ -311,15 +337,6 @@ nfp_netvf_init(struct rte_eth_dev *eth_dev)
 		     pci_dev->id.vendor_id, pci_dev->id.device_id,
 		     pci_dev->addr.domain, pci_dev->addr.bus,
 		     pci_dev->addr.devid, pci_dev->addr.function);
-
-	hw->ctrl_bar = (uint8_t *)pci_dev->mem_resource[0].addr;
-	if (hw->ctrl_bar == NULL) {
-		PMD_DRV_LOG(ERR,
-			"hw->ctrl_bar is NULL. BAR0 not configured");
-		return -ENODEV;
-	}
-
-	PMD_INIT_LOG(DEBUG, "ctrl bar: %p", hw->ctrl_bar);
 
 	hw->max_rx_queues = nn_cfg_readl(hw, NFP_NET_CFG_MAX_RXRINGS);
 	hw->max_tx_queues = nn_cfg_readl(hw, NFP_NET_CFG_MAX_TXRINGS);
