@@ -123,7 +123,17 @@ nfp_net_start(struct rte_eth_dev *dev)
 	if (rxmode->mq_mode & RTE_ETH_MQ_RX_RSS) {
 		nfp_net_rss_config_default(dev);
 		update |= NFP_NET_CFG_UPDATE_RSS;
-		new_ctrl |= NFP_NET_CFG_CTRL_RSS;
+		switch (NFD_CFG_CLASS_VER_of(hw->ver)) {
+		case NFP_NET_CFG_VERSION_DP_NFD3:
+			new_ctrl |= NFP_NET_CFG_CTRL_RSS;
+			break;
+		case NFP_NET_CFG_VERSION_DP_NFDK:
+			new_ctrl |= NFP_NET_CFG_CTRL_RSS2;
+			break;
+		default:
+			PMD_INIT_LOG(ERR, "nfp_net: no fw version match");
+			return -ENODEV;
+		}
 	}
 
 	/* Enable device */
