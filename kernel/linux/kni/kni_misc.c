@@ -299,6 +299,7 @@ kni_ioctl_create(struct net *net, uint32_t ioctl_num,
 	struct kni_net *knet = net_generic(net, kni_net_id);
 	int ret;
 	struct rte_kni_device_info dev_info;
+	unsigned char mac_addr[ETH_ALEN];
 	struct net_device *net_dev = NULL;
 	struct kni_dev *kni, *dev, *n;
 
@@ -403,10 +404,15 @@ kni_ioctl_create(struct net *net, uint32_t ioctl_num,
 
 	/* if user has provided a valid mac address */
 	if (is_valid_ether_addr(dev_info.mac_addr))
-		memcpy(net_dev->dev_addr, dev_info.mac_addr, ETH_ALEN);
+		ether_addr_copy(mac_addr, dev_info.mac_addr);
 	else
 		/* Generate random MAC address. */
-		eth_random_addr(net_dev->dev_addr);
+		eth_random_addr(mac_addr);
+#ifdef HAVE_DEV_ADDR_SHADOW
+	dev_addr_set(net_dev, mac_addr);
+#else
+	ether_addr_copy(net_dev->dev_addr, mac_addr);
+#endif
 
 	if (dev_info.mtu)
 		net_dev->mtu = dev_info.mtu;
