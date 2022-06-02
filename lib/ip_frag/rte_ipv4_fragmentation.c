@@ -100,6 +100,11 @@ static inline uint16_t __create_ipopt_frag_hdr(uint8_t *iph,
  *   MBUF pool used for allocating direct buffers for the output fragments.
  * @param pool_indirect
  *   MBUF pool used for allocating indirect buffers for the output fragments.
+ *   If pool_indirect == pool_direct,this means that the fragment will adapt
+ *   to DEV_TX_OFFLOAD_MBUF_FAST_FREE offload.
+ *   DEV_TX_OFFLOAD_MBUF_FAST_FREE: Device supports optimization
+ *   for fast release of mbufs. When set application must guarantee that
+ *   per-queue all mbufs comes from the same mempool and has refcnt = 1.
  * @return
  *   Upon successful completion - number of output fragments placed
  *   in the pkts_out array.
@@ -121,6 +126,7 @@ rte_ipv4_fragment_packet(struct rte_mbuf *pkt_in,
 	uint16_t frag_bytes_remaining;
 	uint8_t ipopt_frag_hdr[IPV4_HDR_MAX_LEN];
 	uint16_t ipopt_len;
+	bool is_fast_frag_mode = true;
 
 	/*
 	 * Formal parameter checking.
@@ -130,6 +136,9 @@ rte_ipv4_fragment_packet(struct rte_mbuf *pkt_in,
 	    unlikely(pool_direct == NULL) || unlikely(pool_indirect == NULL) ||
 	    unlikely(mtu_size < RTE_ETHER_MIN_MTU))
 		return -EINVAL;
+
+	if (pool_indirect == pool_direct)
+		is_fast_frag_mode = false;
 
 	in_hdr = rte_pktmbuf_mtod(pkt_in, struct rte_ipv4_hdr *);
 	header_len = (in_hdr->version_ihl & RTE_IPV4_HDR_IHL_MASK) *
@@ -188,30 +197,45 @@ rte_ipv4_fragment_packet(struct rte_mbuf *pkt_in,
 		out_seg_prev = out_pkt;
 		more_out_segs = 1;
 		while (likely(more_out_segs && more_in_segs)) {
-			struct rte_mbuf *out_seg = NULL;
 			uint32_t len;
 
-			/* Allocate indirect buffer */
-			out_seg = rte_pktmbuf_alloc(pool_indirect);
-			if (unlikely(out_seg == NULL)) {
-				rte_pktmbuf_free(out_pkt);
-				__free_fragments(pkts_out, out_pkt_pos);
-				return -ENOMEM;
-			}
-			out_seg_prev->next = out_seg;
-			out_seg_prev = out_seg;
-
-			/* Prepare indirect buffer */
-			rte_pktmbuf_attach(out_seg, in_seg);
 			len = frag_bytes_remaining;
 			if (len > (in_seg->data_len - in_seg_data_pos)) {
 				len = in_seg->data_len - in_seg_data_pos;
 			}
-			out_seg->data_off = in_seg->data_off + in_seg_data_pos;
-			out_seg->data_len = (uint16_t)len;
+
+			if (is_fast_frag_mode) {
+				struct rte_mbuf *out_seg = NULL;
+				/* Allocate indirect buffer */
+				out_seg = rte_pktmbuf_alloc(pool_indirect);
+				if (unlikely(out_seg == NULL)) {
+					rte_pktmbuf_free(out_pkt);
+					__free_fragments(pkts_out, out_pkt_pos);
+					return -ENOMEM;
+				}
+				out_seg_prev->next = out_seg;
+				out_seg_prev = out_seg;
+
+				/* Prepare indirect buffer */
+				rte_pktmbuf_attach(out_seg, in_seg);
+
+				out_seg->data_off = in_seg->data_off +
+					in_seg_data_pos;
+				out_seg->data_len = (uint16_t)len;
+				out_pkt->nb_segs += 1;
+			} else {
+				rte_memcpy(
+				    rte_pktmbuf_mtod_offset(out_pkt, char *,
+					    out_pkt->pkt_len),
+				    rte_pktmbuf_mtod_offset(in_seg, char *,
+					    in_seg_data_pos),
+				    len);
+				out_pkt->data_len = (uint16_t)(len +
+				    out_pkt->data_len);
+			}
+
 			out_pkt->pkt_len = (uint16_t)(len +
 			    out_pkt->pkt_len);
-			out_pkt->nb_segs += 1;
 			in_seg_data_pos += len;
 			frag_bytes_remaining -= len;
 
