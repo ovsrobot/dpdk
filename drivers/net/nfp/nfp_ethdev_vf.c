@@ -143,7 +143,7 @@ error:
 }
 
 static int
-nfp_netvf_stop(struct rte_eth_dev *dev)
+nfp_netvf_nfd3_stop(struct rte_eth_dev *dev)
 {
 	struct nfp_net_txq *this_tx_q;
 	struct nfp_net_rxq *this_rx_q;
@@ -156,7 +156,7 @@ nfp_netvf_stop(struct rte_eth_dev *dev)
 	/* Clear queues */
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		this_tx_q = (struct nfp_net_txq *)dev->data->tx_queues[i];
-		nfp_net_reset_tx_queue(this_tx_q);
+		nfp_net_nfd3_reset_tx_queue(this_tx_q);
 	}
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
@@ -182,7 +182,7 @@ nfp_netvf_set_link_down(struct rte_eth_dev *dev __rte_unused)
 
 /* Reset and stop device. The device can not be restarted. */
 static int
-nfp_netvf_close(struct rte_eth_dev *dev)
+nfp_netvf_nfd3_close(struct rte_eth_dev *dev)
 {
 	struct rte_pci_device *pci_dev;
 	struct nfp_net_txq *this_tx_q;
@@ -206,8 +206,8 @@ nfp_netvf_close(struct rte_eth_dev *dev)
 	/* Clear queues */
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		this_tx_q =  (struct nfp_net_txq *)dev->data->tx_queues[i];
-		nfp_net_reset_tx_queue(this_tx_q);
-		nfp_net_tx_queue_release(dev, i);
+		nfp_net_nfd3_reset_tx_queue(this_tx_q);
+		nfp_net_nfd3_tx_queue_release(dev, i);
 	}
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
@@ -236,13 +236,13 @@ nfp_netvf_close(struct rte_eth_dev *dev)
 }
 
 /* Initialise and register VF driver with DPDK Application */
-static const struct eth_dev_ops nfp_netvf_eth_dev_ops = {
+static const struct eth_dev_ops nfp_netvf_nfd3_eth_dev_ops = {
 	.dev_configure		= nfp_net_configure,
 	.dev_start		= nfp_netvf_start,
-	.dev_stop		= nfp_netvf_stop,
+	.dev_stop		= nfp_netvf_nfd3_stop,
 	.dev_set_link_up	= nfp_netvf_set_link_up,
 	.dev_set_link_down	= nfp_netvf_set_link_down,
-	.dev_close		= nfp_netvf_close,
+	.dev_close		= nfp_netvf_nfd3_close,
 	.promiscuous_enable	= nfp_net_promisc_enable,
 	.promiscuous_disable	= nfp_net_promisc_disable,
 	.link_update		= nfp_net_link_update,
@@ -259,8 +259,8 @@ static const struct eth_dev_ops nfp_netvf_eth_dev_ops = {
 	.rss_hash_conf_get	= nfp_net_rss_hash_conf_get,
 	.rx_queue_setup		= nfp_net_rx_queue_setup,
 	.rx_queue_release	= nfp_net_rx_queue_release,
-	.tx_queue_setup		= nfp_net_tx_queue_setup,
-	.tx_queue_release	= nfp_net_tx_queue_release,
+	.tx_queue_setup		= nfp_net_nfd3_tx_queue_setup,
+	.tx_queue_release	= nfp_net_nfd3_tx_queue_release,
 	.rx_queue_intr_enable   = nfp_rx_queue_intr_enable,
 	.rx_queue_intr_disable  = nfp_rx_queue_intr_disable,
 };
@@ -291,10 +291,10 @@ nfp_netvf_init(struct rte_eth_dev *eth_dev)
 
 	hw = NFP_NET_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);
 
-	eth_dev->dev_ops = &nfp_netvf_eth_dev_ops;
+	eth_dev->dev_ops = &nfp_netvf_nfd3_eth_dev_ops;
 	eth_dev->rx_queue_count = nfp_net_rx_queue_count;
 	eth_dev->rx_pkt_burst = &nfp_net_recv_pkts;
-	eth_dev->tx_pkt_burst = &nfp_net_xmit_pkts;
+	eth_dev->tx_pkt_burst = &nfp_net_nfd3_xmit_pkts;
 
 	/* For secondary processes, the primary has done all the work */
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
@@ -467,7 +467,7 @@ static const struct rte_pci_id pci_id_nfp_vf_net_map[] = {
 static int nfp_vf_pci_uninit(struct rte_eth_dev *eth_dev)
 {
 	/* VF cleanup, just free private port data */
-	return nfp_netvf_close(eth_dev);
+	return nfp_netvf_nfd3_close(eth_dev);
 }
 
 static int eth_nfp_vf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,

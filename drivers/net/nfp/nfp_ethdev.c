@@ -179,7 +179,7 @@ error:
 
 /* Stop device: disable rx and tx functions to allow for reconfiguring. */
 static int
-nfp_net_stop(struct rte_eth_dev *dev)
+nfp_net_nfd3_stop(struct rte_eth_dev *dev)
 {
 	int i;
 	struct nfp_net_hw *hw;
@@ -195,7 +195,7 @@ nfp_net_stop(struct rte_eth_dev *dev)
 	/* Clear queues */
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		this_tx_q = (struct nfp_net_txq *)dev->data->tx_queues[i];
-		nfp_net_reset_tx_queue(this_tx_q);
+		nfp_net_nfd3_reset_tx_queue(this_tx_q);
 	}
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
@@ -251,7 +251,7 @@ nfp_net_set_link_down(struct rte_eth_dev *dev)
 
 /* Reset and stop device. The device can not be restarted. */
 static int
-nfp_net_close(struct rte_eth_dev *dev)
+nfp_net_nfd3_close(struct rte_eth_dev *dev)
 {
 	struct nfp_net_hw *hw;
 	struct rte_pci_device *pci_dev;
@@ -279,8 +279,8 @@ nfp_net_close(struct rte_eth_dev *dev)
 	/* Clear queues */
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		this_tx_q = (struct nfp_net_txq *)dev->data->tx_queues[i];
-		nfp_net_reset_tx_queue(this_tx_q);
-		nfp_net_tx_queue_release(dev, i);
+		nfp_net_nfd3_reset_tx_queue(this_tx_q);
+		nfp_net_nfd3_tx_queue_release(dev, i);
 	}
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
@@ -329,13 +329,13 @@ nfp_net_close(struct rte_eth_dev *dev)
 }
 
 /* Initialise and register driver with DPDK Application */
-static const struct eth_dev_ops nfp_net_eth_dev_ops = {
+static const struct eth_dev_ops nfp_net_nfd3_eth_dev_ops = {
 	.dev_configure		= nfp_net_configure,
 	.dev_start		= nfp_net_start,
-	.dev_stop		= nfp_net_stop,
+	.dev_stop		= nfp_net_nfd3_stop,
 	.dev_set_link_up	= nfp_net_set_link_up,
 	.dev_set_link_down	= nfp_net_set_link_down,
-	.dev_close		= nfp_net_close,
+	.dev_close		= nfp_net_nfd3_close,
 	.promiscuous_enable	= nfp_net_promisc_enable,
 	.promiscuous_disable	= nfp_net_promisc_disable,
 	.link_update		= nfp_net_link_update,
@@ -352,8 +352,8 @@ static const struct eth_dev_ops nfp_net_eth_dev_ops = {
 	.rss_hash_conf_get	= nfp_net_rss_hash_conf_get,
 	.rx_queue_setup		= nfp_net_rx_queue_setup,
 	.rx_queue_release	= nfp_net_rx_queue_release,
-	.tx_queue_setup		= nfp_net_tx_queue_setup,
-	.tx_queue_release	= nfp_net_tx_queue_release,
+	.tx_queue_setup		= nfp_net_nfd3_tx_queue_setup,
+	.tx_queue_release	= nfp_net_nfd3_tx_queue_release,
 	.rx_queue_intr_enable   = nfp_rx_queue_intr_enable,
 	.rx_queue_intr_disable  = nfp_rx_queue_intr_disable,
 };
@@ -401,10 +401,10 @@ nfp_net_init(struct rte_eth_dev *eth_dev)
 	PMD_INIT_LOG(DEBUG, "Working with physical port number: %d, "
 			"NFP internal port number: %d", port, hw->nfp_idx);
 
-	eth_dev->dev_ops = &nfp_net_eth_dev_ops;
+	eth_dev->dev_ops = &nfp_net_nfd3_eth_dev_ops;
 	eth_dev->rx_queue_count = nfp_net_rx_queue_count;
 	eth_dev->rx_pkt_burst = &nfp_net_recv_pkts;
-	eth_dev->tx_pkt_burst = &nfp_net_xmit_pkts;
+	eth_dev->tx_pkt_burst = &nfp_net_nfd3_xmit_pkts;
 
 	/* For secondary processes, the primary has done all the work */
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
@@ -970,10 +970,10 @@ nfp_pf_secondary_init(struct rte_pci_device *pci_dev)
 			return -ENODEV;
 		}
 		eth_dev->process_private = cpp;
-		eth_dev->dev_ops = &nfp_net_eth_dev_ops;
+		eth_dev->dev_ops = &nfp_net_nfd3_eth_dev_ops;
 		eth_dev->rx_queue_count = nfp_net_rx_queue_count;
 		eth_dev->rx_pkt_burst = &nfp_net_recv_pkts;
-		eth_dev->tx_pkt_burst = &nfp_net_xmit_pkts;
+		eth_dev->tx_pkt_burst = &nfp_net_nfd3_xmit_pkts;
 		rte_eth_dev_probing_finish(eth_dev);
 	}
 
