@@ -214,6 +214,58 @@ nfp_netvf_nfd3_close(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static int
+nfp_netvf_nfdk_stop(struct rte_eth_dev *dev)
+{
+	PMD_INIT_LOG(DEBUG, "Stop");
+
+	nfp_net_disable_queues(dev);
+
+	/* Clear queues */
+	nfp_net_nfdk_stop_tx_queue(dev);
+
+	nfp_net_stop_rx_queue(dev);
+
+	return 0;
+}
+
+static int
+nfp_netvf_nfdk_close(struct rte_eth_dev *dev)
+{
+	struct rte_pci_device *pci_dev;
+
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return 0;
+
+	PMD_INIT_LOG(DEBUG, "Close");
+
+	pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+
+	/*
+	 * We assume that the DPDK application is stopping all the
+	 * threads/queues before calling the device close function.
+	 */
+
+	nfp_net_disable_queues(dev);
+
+	/* Clear queues */
+	nfp_net_nfdk_close_tx_queue(dev);
+
+	nfp_net_close_rx_queue(dev);
+
+	rte_intr_disable(pci_dev->intr_handle);
+
+	/* unregister callback func from eal lib */
+	rte_intr_callback_unregister(pci_dev->intr_handle,
+				nfp_net_dev_interrupt_handler,
+				(void *)dev);
+
+	/* Cancel possible impending LSC work here before releasing the port*/
+	rte_eal_alarm_cancel(nfp_net_dev_interrupt_delayed_handler, (void *)dev);
+
+	return 0;
+}
+
 /* Initialise and register VF driver with DPDK Application */
 static const struct eth_dev_ops nfp_netvf_nfd3_eth_dev_ops = {
 	.dev_configure		= nfp_net_configure,
@@ -247,10 +299,10 @@ static const struct eth_dev_ops nfp_netvf_nfd3_eth_dev_ops = {
 static const struct eth_dev_ops nfp_netvf_nfdk_eth_dev_ops = {
 	.dev_configure		= nfp_net_configure,
 	.dev_start		= nfp_netvf_start,
-	.dev_stop		= nfp_netvf_nfd3_stop,
+	.dev_stop		= nfp_netvf_nfdk_stop,
 	.dev_set_link_up	= nfp_netvf_set_link_up,
 	.dev_set_link_down	= nfp_netvf_set_link_down,
-	.dev_close		= nfp_netvf_nfd3_close,
+	.dev_close		= nfp_netvf_nfdk_close,
 	.promiscuous_enable	= nfp_net_promisc_enable,
 	.promiscuous_disable	= nfp_net_promisc_disable,
 	.link_update		= nfp_net_link_update,
@@ -498,7 +550,13 @@ static const struct rte_pci_id pci_id_nfp_vf_net_map[] = {
 static int nfp_vf_pci_uninit(struct rte_eth_dev *eth_dev)
 {
 	/* VF cleanup, just free private port data */
-	return nfp_netvf_nfd3_close(eth_dev);
+	struct nfp_net_hw *hw;
+
+	hw = NFP_NET_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);
+	if (NFD_CFG_CLASS_VER_of(hw->ver) == NFP_NET_CFG_VERSION_DP_NFD3)
+		return nfp_netvf_nfd3_close(eth_dev);
+	else
+		return nfp_netvf_nfdk_close(eth_dev);
 }
 
 static int eth_nfp_vf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,

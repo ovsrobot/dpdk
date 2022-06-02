@@ -309,6 +309,94 @@ nfp_net_nfd3_close(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static int
+nfp_net_nfdk_stop(struct rte_eth_dev *dev)
+{
+	struct nfp_net_hw *hw;
+
+	PMD_INIT_LOG(DEBUG, "Stop");
+
+	hw = NFP_NET_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+
+	nfp_net_disable_queues(dev);
+
+	/* Clear queues */
+	nfp_net_nfdk_stop_tx_queue(dev);
+
+	nfp_net_stop_rx_queue(dev);
+
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+		/* Configure the physical port down */
+		nfp_eth_set_configured(hw->cpp, hw->nfp_idx, 0);
+	else
+		nfp_eth_set_configured(dev->process_private, hw->nfp_idx, 0);
+
+	return 0;
+}
+
+static int
+nfp_net_nfdk_close(struct rte_eth_dev *dev)
+{
+	int i;
+	struct nfp_net_hw *hw;
+	struct rte_pci_device *pci_dev;
+	struct nfp_pf_dev *pf_dev;
+
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+		return 0;
+
+	PMD_INIT_LOG(DEBUG, "Close");
+
+	pf_dev = NFP_NET_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	hw = NFP_NET_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	pci_dev = RTE_ETH_DEV_TO_PCI(dev);
+
+	/*
+	 * We assume that the DPDK application is stopping all the
+	 * threads/queues before calling the device close function.
+	 */
+
+	nfp_net_disable_queues(dev);
+
+	/* Clear queues */
+	nfp_net_nfdk_close_tx_queue(dev);
+
+	nfp_net_close_rx_queue(dev);
+
+	/* Cancel possible impending LSC work here before releasing the port*/
+	rte_eal_alarm_cancel(nfp_net_dev_interrupt_delayed_handler, (void *)dev);
+
+	/* Only free PF resources after all physical ports have been closed */
+	/* Mark this port as unused and free device priv resources*/
+	nn_cfg_writeb(hw, NFP_NET_CFG_LSC, 0xff);
+	pf_dev->ports[hw->idx] = NULL;
+	rte_eth_dev_release_port(dev);
+
+	for (i = 0; i < pf_dev->total_phyports; i++) {
+		/* Check to see if ports are still in use */
+		if (pf_dev->ports[i])
+			return 0;
+	}
+
+	/* Now it is safe to free all PF resources */
+	PMD_INIT_LOG(INFO, "Freeing PF resources");
+	nfp_cpp_area_free(pf_dev->ctrl_area);
+	nfp_cpp_area_free(pf_dev->hwqueues_area);
+	free(pf_dev->hwinfo);
+	free(pf_dev->sym_tbl);
+	nfp_cpp_free(pf_dev->cpp);
+	rte_free(pf_dev);
+
+	rte_intr_disable(pci_dev->intr_handle);
+
+	/* unregister callback func from eal lib */
+	rte_intr_callback_unregister(pci_dev->intr_handle,
+				nfp_net_dev_interrupt_handler,
+				(void *)dev);
+
+	return 0;
+}
+
 /* Initialise and register driver with DPDK Application */
 static const struct eth_dev_ops nfp_net_nfd3_eth_dev_ops = {
 	.dev_configure		= nfp_net_configure,
@@ -342,10 +430,10 @@ static const struct eth_dev_ops nfp_net_nfd3_eth_dev_ops = {
 static const struct eth_dev_ops nfp_net_nfdk_eth_dev_ops = {
 	.dev_configure		= nfp_net_configure,
 	.dev_start		= nfp_net_start,
-	.dev_stop		= nfp_net_nfd3_stop,
+	.dev_stop		= nfp_net_nfdk_stop,
 	.dev_set_link_up	= nfp_net_set_link_up,
 	.dev_set_link_down	= nfp_net_set_link_down,
-	.dev_close		= nfp_net_nfd3_close,
+	.dev_close		= nfp_net_nfdk_close,
 	.promiscuous_enable	= nfp_net_promisc_enable,
 	.promiscuous_disable	= nfp_net_promisc_disable,
 	.link_update		= nfp_net_link_update,
