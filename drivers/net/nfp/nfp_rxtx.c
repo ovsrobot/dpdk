@@ -987,3 +987,156 @@ xmit_end:
 
 	return i;
 }
+
+static void
+nfp_net_nfdk_tx_queue_release_mbufs(struct nfp_net_txq *txq)
+{
+	uint32_t i;
+
+	if (txq->ktxbufs == NULL)
+		return;
+
+	for (i = 0; i < txq->tx_count; i++) {
+		if (txq->ktxbufs[i].mbuf) {
+			rte_pktmbuf_free_seg(txq->ktxbufs[i].mbuf);
+			txq->ktxbufs[i].mbuf = NULL;
+		}
+	}
+}
+
+void
+nfp_net_nfdk_tx_queue_release(struct rte_eth_dev *dev, uint16_t queue_idx)
+{
+	struct nfp_net_txq *txq = dev->data->tx_queues[queue_idx];
+
+	if (txq) {
+		nfp_net_nfdk_tx_queue_release_mbufs(txq);
+		rte_free(txq->ktxbufs);
+		rte_free(txq);
+	}
+}
+
+void
+nfp_net_nfdk_reset_tx_queue(struct nfp_net_txq *txq)
+{
+	nfp_net_nfdk_tx_queue_release_mbufs(txq);
+	txq->wr_p = 0;
+	txq->rd_p = 0;
+}
+
+int
+nfp_net_nfdk_tx_queue_setup(struct rte_eth_dev *dev,
+		uint16_t queue_idx,
+		uint16_t nb_desc,
+		unsigned int socket_id,
+		const struct rte_eth_txconf *tx_conf)
+{
+	const struct rte_memzone *tz;
+	struct nfp_net_txq *txq;
+	uint16_t tx_free_thresh;
+	struct nfp_net_hw *hw;
+	uint32_t tx_desc_sz;
+
+	hw = NFP_NET_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+
+	PMD_INIT_FUNC_TRACE();
+
+	/* Validating number of descriptors */
+	tx_desc_sz = nb_desc * sizeof(struct nfp_net_nfdk_tx_desc);
+	if (((NFDK_TX_DESC_PER_SIMPLE_PKT * tx_desc_sz) % NFP_ALIGN_RING_DESC) != 0 ||
+	    ((NFDK_TX_DESC_PER_SIMPLE_PKT * nb_desc) % NFDK_TX_DESC_BLOCK_CNT) != 0 ||
+	      nb_desc > NFP_NET_MAX_TX_DESC || nb_desc < NFP_NET_MIN_TX_DESC) {
+		PMD_DRV_LOG(ERR, "Wrong nb_desc value");
+		return -EINVAL;
+	}
+
+	tx_free_thresh = (uint16_t)((tx_conf->tx_free_thresh) ?
+				tx_conf->tx_free_thresh :
+				DEFAULT_TX_FREE_THRESH);
+
+	if (tx_free_thresh > (nb_desc)) {
+		PMD_DRV_LOG(ERR,
+			"tx_free_thresh must be less than the number of TX "
+			"descriptors. (tx_free_thresh=%u port=%d "
+			"queue=%d)", (unsigned int)tx_free_thresh,
+			dev->data->port_id, (int)queue_idx);
+		return -(EINVAL);
+	}
+
+	/*
+	 * Free memory prior to re-allocation if needed. This is the case after
+	 * calling nfp_net_stop
+	 */
+	if (dev->data->tx_queues[queue_idx]) {
+		PMD_TX_LOG(DEBUG, "Freeing memory prior to re-allocation %d",
+				queue_idx);
+		nfp_net_nfdk_tx_queue_release(dev, queue_idx);
+		dev->data->tx_queues[queue_idx] = NULL;
+	}
+
+	/* Allocating tx queue data structure */
+	txq = rte_zmalloc_socket("ethdev TX queue", sizeof(struct nfp_net_txq),
+			RTE_CACHE_LINE_SIZE, socket_id);
+	if (txq == NULL) {
+		PMD_DRV_LOG(ERR, "Error allocating tx dma");
+		return -ENOMEM;
+	}
+
+	/*
+	 * Allocate TX ring hardware descriptors. A memzone large enough to
+	 * handle the maximum ring size is allocated in order to allow for
+	 * resizing in later calls to the queue setup function.
+	 */
+	tz = rte_eth_dma_zone_reserve(dev, "tx_ring", queue_idx,
+				sizeof(struct nfp_net_nfdk_tx_desc) *
+				NFDK_TX_DESC_PER_SIMPLE_PKT *
+				NFP_NET_MAX_TX_DESC, NFP_MEMZONE_ALIGN,
+				socket_id);
+	if (tz == NULL) {
+		PMD_DRV_LOG(ERR, "Error allocating tx dma");
+		nfp_net_nfdk_tx_queue_release(dev, queue_idx);
+		return -ENOMEM;
+	}
+
+	txq->tx_count = nb_desc * NFDK_TX_DESC_PER_SIMPLE_PKT;
+	txq->tx_free_thresh = tx_free_thresh;
+	txq->tx_pthresh = tx_conf->tx_thresh.pthresh;
+	txq->tx_hthresh = tx_conf->tx_thresh.hthresh;
+	txq->tx_wthresh = tx_conf->tx_thresh.wthresh;
+
+	/* queue mapping based on firmware configuration */
+	txq->qidx = queue_idx;
+	txq->tx_qcidx = queue_idx * hw->stride_tx;
+	txq->qcp_q = hw->tx_bar + NFP_QCP_QUEUE_OFF(txq->tx_qcidx);
+
+	txq->port_id = dev->data->port_id;
+
+	/* Saving physical and virtual addresses for the TX ring */
+	txq->dma = (uint64_t)tz->iova;
+	txq->ktxds = (struct nfp_net_nfdk_tx_desc *)tz->addr;
+
+	/* mbuf pointers array for referencing mbufs linked to TX descriptors */
+	txq->ktxbufs = rte_zmalloc_socket("txq->ktxbufs",
+				sizeof(*txq->ktxbufs) * txq->tx_count,
+				RTE_CACHE_LINE_SIZE, socket_id);
+
+	if (txq->ktxbufs == NULL) {
+		nfp_net_nfdk_tx_queue_release(dev, queue_idx);
+		return -ENOMEM;
+	}
+	PMD_TX_LOG(DEBUG, "ktxbufs=%p hw_ring=%p dma_addr=0x%" PRIx64,
+		txq->ktxbufs, txq->ktxds, (unsigned long)txq->dma);
+
+	nfp_net_nfdk_reset_tx_queue(txq);
+
+	dev->data->tx_queues[queue_idx] = txq;
+	txq->hw = hw;
+	/*
+	 * Telling the HW about the physical address of the TX ring and number
+	 * of descriptors in log2 format
+	 */
+	nn_cfg_writeq(hw, NFP_NET_CFG_TXR_ADDR(queue_idx), txq->dma);
+	nn_cfg_writeb(hw, NFP_NET_CFG_TXR_SZ(queue_idx), rte_log2_u32(txq->tx_count));
+
+	return 0;
+}
