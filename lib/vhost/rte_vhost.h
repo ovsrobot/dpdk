@@ -154,7 +154,7 @@ struct rte_vhost_inflight_info_split {
 	uint16_t desc_num;
 	uint16_t last_inflight_io;
 	uint16_t used_idx;
-	struct rte_vhost_inflight_desc_split desc[0];
+	struct rte_vhost_inflight_desc_split desc[];
 };
 
 struct rte_vhost_inflight_desc_packed {
@@ -181,7 +181,7 @@ struct rte_vhost_inflight_info_packed {
 	uint8_t used_wrap_counter;
 	uint8_t old_used_wrap_counter;
 	uint8_t padding[7];
-	struct rte_vhost_inflight_desc_packed desc[0];
+	struct rte_vhost_inflight_desc_packed desc[];
 };
 
 struct rte_vhost_resubmit_desc {
