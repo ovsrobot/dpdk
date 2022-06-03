@@ -67,6 +67,18 @@ typedef int (*rte_bus_scan_t)(void);
 typedef int (*rte_bus_probe_t)(void);
 
 /**
+ * Implementation specific cleanup function which is responsible for cleaning up
+ * devices on that bus with applicable drivers.
+ *
+ * This is called while iterating over each registered bus.
+ *
+ * @return
+ * 0 for successful cleanup
+ * !0 for any error during cleanup
+ */
+typedef int (*rte_bus_cleanup_t)(void);
+
+/**
  * Device iterator to find a device on a bus.
  *
  * This function returns an rte_device if one of those held by the bus
@@ -277,6 +289,7 @@ struct rte_bus {
 				/**< handle hot-unplug failure on the bus */
 	rte_bus_sigbus_handler_t sigbus_handler;
 					/**< handle sigbus error on the bus */
+	rte_bus_cleanup_t cleanup;   /**< Cleanup devices on bus */
 
 };
 
