@@ -548,6 +548,7 @@ lpm_event_main_loop_tx_q_burst_vector(__rte_unused void *dummy)
 	return 0;
 }
 
+/* Initialize lpm (longest prefix match) parameters. 8< */
 void
 setup_lpm(const int socketid)
 {
@@ -645,6 +646,7 @@ setup_lpm(const int socketid)
 		       route_base_v6[i].if_out, dev_info.device->name);
 	}
 }
+/* >8 End of initialization of lpm parameters. */
 
 int
 lpm_check_ptype(int portid)

@@ -7,6 +7,7 @@
 
 #include "l3fwd_sse.h"
 
+/* Optimized IPv4 tuple acquire. 8< */
 static __rte_always_inline void
 get_ipv4_5tuple(struct rte_mbuf *m0, __m128i mask0,
 		union ipv4_5tuple_host *key)
@@ -18,6 +19,7 @@ get_ipv4_5tuple(struct rte_mbuf *m0, __m128i mask0,
 
 	key->xmm = _mm_and_si128(tmpdata0, mask0);
 }
+/* >8 End of optimized IPv4 tuple acquire. */
 
 static inline void
 get_ipv6_5tuple(struct rte_mbuf *m0, __m128i mask0,

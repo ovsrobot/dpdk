@@ -190,7 +190,7 @@ In this command:
 
 *   The --mode option defines PMD to be used for packet I/O.
 
-*   The --eventq-sched option enables synchronization menthod of event queue so that packets will be scheduled accordingly.
+*   The --eventq-sched option enables synchronization method of event queue so that packets will be scheduled accordingly.
 
 If application uses S/W scheduler, it uses following DPDK services:
 
@@ -290,36 +290,20 @@ for the convenience to execute hash performance test on 4M/8M/16M flows.
     which is used to specify the total hash entry number for all used ports in hash performance test,
     can be specified with --hash-entry-num VALUE in command line, being its default value 4.
 
-.. code-block:: c
-
-    #if (APP_LOOKUP_METHOD == APP_LOOKUP_EXACT_MATCH)
-
-        static void
-        setup_hash(int socketid)
-        {
-            // ...
-
-            if (ipv6 == 0) {
-                /* populate the ipv4 hash */
-                populate_ipv4_flow_into_table(
-                    ipv4_l3fwd_em_lookup_struct[socketid]);
-            } else {
-                /* populate the ipv6 hash */
-                populate_ipv6_flow_into_table(
-                    ipv6_l3fwd_em_lookup_struct[socketid]);
-            }
-        }
-    #endif
+.. literalinclude:: ../../../examples/l3fwd/l3fwd_em.c
+    :language: c
+    :start-after: Initialize exact match (hash) parameters. 8<
+    :end-before: >8 End of initialization of hash parameters.
 
 LPM Initialization
 ~~~~~~~~~~~~~~~~~~
 
 The LPM object is created and loaded with the pre-configured entries read from a global array.
 
-.. literalinclude:: ../../../examples/l3fwd/l3fwd_em.c
+.. literalinclude:: ../../../examples/l3fwd/l3fwd_lpm.c
     :language: c
-    :start-after: Initialize exact match (hash) parameters. 8<
-    :end-before: >8 End of initialization of hash parameters.
+    :start-after: Initialize lpm (longest prefix match) parameters. 8<
+    :end-before: >8 End of initialization of lpm parameters.
 
 FIB Initialization
 ~~~~~~~~~~~~~~~~~~
@@ -337,62 +321,39 @@ the full setup function including the IPv6 setup can be seen in the app code.
 Packet Forwarding for Hash-based Lookups
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For each input packet, the packet forwarding operation is done by the l3fwd_simple_forward()
-or simple_ipv4_fwd_4pkts() function for IPv4 packets or the simple_ipv6_fwd_4pkts() function for IPv6 packets.
-The l3fwd_simple_forward() function provides the basic functionality for both IPv4 and IPv6 packet forwarding
+For each input packet, the packet forwarding operation is done by the l3fwd_em_simple_forward()
+where the l3fwd_em_handle_ipv4() function handles IPv4 packets and the l3fwd_em_handle_ipv6() function handles IPv6 packets.
+The l3fwd_em_simple_forward() function provides the basic functionality for both IPv4 and IPv6 packet forwarding
 for any number of burst packets received,
 and the packet forwarding decision (that is, the identification of the output interface for the packet)
-for hash-based lookups is done by the  get_ipv4_dst_port() or get_ipv6_dst_port() function.
-The get_ipv4_dst_port() function is shown below:
+for hash-based lookups is done by the  em_get_ipv4_dst_port() or em_get_ipv6_dst_port() function.
+The em_get_ipv4_dst_port() function is shown below:
 
 .. literalinclude:: ../../../examples/l3fwd/l3fwd_em.c
    :language: c
    :start-after: Performing hash-based lookups. 8<
    :end-before: >8 End of performing hash-based lookups.
 
-The get_ipv6_dst_port() function is similar to the get_ipv4_dst_port() function.
+The em_get_ipv6_dst_port() function is similar to the em_get_ipv4_dst_port() function.
 
-The simple_ipv4_fwd_4pkts() and simple_ipv6_fwd_4pkts() function are optimized for continuous 4 valid ipv4 and ipv6 packets,
-they leverage the multiple buffer optimization to boost the performance of forwarding packets with the exact match on hash table.
-The key code snippet of simple_ipv4_fwd_4pkts() is shown below:
+The get_ipv4_5tuple() and get_ipv6_5tuple() function are optimized for continuous valid ipv4 and ipv6 packets,
+along with em_get_dst_port_ipv4xN() and em_get_dst_port_ipv6xN() they leverage the multiple buffer
+optimization to boost the performance of forwarding packets with the exact match on hash table.
+The key code snippet of get_ipv4_5tuple() is shown below:
 
-.. code-block:: c
+.. literalinclude:: ../../../examples/l3fwd/l3fwd_em_hlm_sse.h
+   :language: c
+   :start-after: Optimized IPv4 tuple acquire. 8<
+   :end-before: >8 End of optimized IPv4 tuple acquire.
 
-    static inline void
-    simple_ipv4_fwd_4pkts(struct rte_mbuf* m[4], uint16_t portid, struct lcore_conf *qconf)
-    {
-        // ...
-
-        data[0] = _mm_loadu_si128(( m128i*)(rte_pktmbuf_mtod(m[0], unsigned char *) + sizeof(struct rte_ether_hdr) + offsetof(struct rte_ipv4_hdr, time_to_live)));
-        data[1] = _mm_loadu_si128(( m128i*)(rte_pktmbuf_mtod(m[1], unsigned char *) + sizeof(struct rte_ether_hdr) + offsetof(struct rte_ipv4_hdr, time_to_live)));
-        data[2] = _mm_loadu_si128(( m128i*)(rte_pktmbuf_mtod(m[2], unsigned char *) + sizeof(struct rte_ether_hdr) + offsetof(struct rte_ipv4_hdr, time_to_live)));
-        data[3] = _mm_loadu_si128(( m128i*)(rte_pktmbuf_mtod(m[3], unsigned char *) + sizeof(struct rte_ether_hdr) + offsetof(struct rte_ipv4_hdr, time_to_live)));
-
-        key[0].xmm = _mm_and_si128(data[0], mask0);
-        key[1].xmm = _mm_and_si128(data[1], mask0);
-        key[2].xmm = _mm_and_si128(data[2], mask0);
-        key[3].xmm = _mm_and_si128(data[3], mask0);
-
-        const void *key_array[4] = {&key[0], &key[1], &key[2],&key[3]};
-
-        rte_hash_lookup_bulk(qconf->ipv4_lookup_struct, &key_array[0], 4, ret);
-
-        dst_port[0] = (ret[0] < 0)? portid:ipv4_l3fwd_out_if[ret[0]];
-        dst_port[1] = (ret[1] < 0)? portid:ipv4_l3fwd_out_if[ret[1]];
-        dst_port[2] = (ret[2] < 0)? portid:ipv4_l3fwd_out_if[ret[2]];
-        dst_port[3] = (ret[3] < 0)? portid:ipv4_l3fwd_out_if[ret[3]];
-
-        // ...
-    }
-
-The simple_ipv6_fwd_4pkts() function is similar to the simple_ipv4_fwd_4pkts() function.
+The get_ipv6_5tuple() function is similar to the get_ipv4_5tuple() function.
 
 Known issue: IP packets with extensions or IP packets which are not TCP/UDP cannot work well at this mode.
 
 Packet Forwarding for LPM-based Lookups
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For each input packet, the packet forwarding operation is done by the l3fwd_simple_forward() function,
+For each input packet, the packet forwarding operation is done by the l3fwd_lpm_simple_forward() function,
 but the packet forwarding decision (that is, the identification of the output interface for the packet)
 for LPM-based lookups is done by the get_ipv4_dst_port() function below:
 
