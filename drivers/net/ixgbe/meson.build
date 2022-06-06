@@ -29,6 +29,8 @@ if arch_subdir == 'x86'
     endif
 elif arch_subdir == 'arm'
     sources += files('ixgbe_rxtx_vec_neon.c')
+elif arch_subdir == 'loongarch'
+    sources += files('ixgbe_rxtx_vec_lsx.c')
 endif
 
 includes += include_directories('base')
