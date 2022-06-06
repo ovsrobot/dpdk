@@ -1990,6 +1990,8 @@ fwd_stream_stats_display(streamid_t stream_id)
 {
 	struct fwd_stream *fs;
 	static const char *fwd_top_stats_border = "-------";
+	uint64_t diff_pkts_rx, diff_pkts_tx, diff_cycles;
+	uint64_t pps_rx, pps_tx;
 
 	fs = fwd_streams[stream_id];
 	if ((fs->rx_packets == 0) && (fs->tx_packets == 0) &&
@@ -2003,6 +2005,21 @@ fwd_stream_stats_display(streamid_t stream_id)
 	       " TX-dropped: %-14"PRIu64,
 	       fs->rx_packets, fs->tx_packets, fs->fwd_dropped);
 
+	diff_pkts_rx = fs->rx_packets - fs->pre_rx;
+	diff_pkts_tx = fs->tx_packets - fs->pre_tx;
+	diff_cycles = fs->pre_cycles;
+
+	fs->pre_rx = fs->rx_packets;
+	fs->pre_tx = fs->tx_packets;
+	fs->pre_cycles = rte_rdtsc();
+	if (diff_cycles > 0)
+		diff_cycles = fs->pre_cycles - diff_cycles;
+
+	pps_rx = diff_cycles > 0 ?
+		(double)diff_pkts_rx * rte_get_tsc_hz() / diff_cycles : 0;
+	pps_tx = diff_cycles > 0 ?
+		(double)diff_pkts_tx * rte_get_tsc_hz() / diff_cycles : 0;
+
 	/* if checksum mode */
 	if (cur_fwd_eng == &csum_fwd_engine) {
 		printf("  RX- bad IP checksum: %-14"PRIu64
@@ -2015,6 +2032,11 @@ fwd_stream_stats_display(streamid_t stream_id)
 	} else {
 		printf("\n");
 	}
+
+	printf("\n  Throughput (since last show)\n");
+	printf("  Rx-pps: %12"PRIu64"\n  Tx-pps: %12"PRIu64"\n", pps_rx, pps_tx);
+	fs->rx_pps = pps_rx;
+	fs->tx_pps = pps_tx;
 
 	if (record_burst_stats) {
 		pkt_burst_stats_display("RX", &fs->rx_burst_stats);
@@ -2043,6 +2065,8 @@ fwd_stats_display(void)
 	uint64_t fwd_cycles = 0;
 	uint64_t total_recv = 0;
 	uint64_t total_xmit = 0;
+	uint64_t total_rx_pps = 0;
+	uint64_t total_tx_pps = 0;
 	struct rte_port *port;
 	streamid_t sm_id;
 	portid_t pt_id;
@@ -2054,10 +2078,9 @@ fwd_stats_display(void)
 	for (sm_id = 0; sm_id < cur_fwd_config.nb_fwd_streams; sm_id++) {
 		struct fwd_stream *fs = fwd_streams[sm_id];
 
-		if (cur_fwd_config.nb_fwd_streams >
+		fwd_stream_stats_display(sm_id);
+		if (cur_fwd_config.nb_fwd_streams ==
 		    cur_fwd_config.nb_fwd_ports) {
-			fwd_stream_stats_display(sm_id);
-		} else {
 			ports_stats[fs->tx_port].tx_stream = fs;
 			ports_stats[fs->rx_port].rx_stream = fs;
 		}
@@ -2073,7 +2096,14 @@ fwd_stats_display(void)
 
 		if (record_core_cycles)
 			fwd_cycles += fs->core_cycles;
+
+		total_rx_pps += fs->rx_pps;
+		total_tx_pps += fs->tx_pps;
 	}
+
+	printf("\n  Total Rx-pps: %12"PRIu64"  Tx-pps: %12"PRIu64"\n",
+	       total_rx_pps, total_tx_pps);
+
 	for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
 		pt_id = fwd_ports_ids[i];
 		port = &ports[pt_id];
@@ -2200,6 +2230,11 @@ fwd_stats_reset(void)
 		fs->rx_bad_l4_csum = 0;
 		fs->rx_bad_outer_l4_csum = 0;
 		fs->rx_bad_outer_ip_csum = 0;
+		fs->pre_rx = 0;
+		fs->pre_tx = 0;
+		fs->pre_cycles = 0;
+		fs->rx_pps = 0;
+		fs->tx_pps = 0;
 
 		memset(&fs->rx_burst_stats, 0, sizeof(fs->rx_burst_stats));
 		memset(&fs->tx_burst_stats, 0, sizeof(fs->tx_burst_stats));

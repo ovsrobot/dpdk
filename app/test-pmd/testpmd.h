@@ -164,6 +164,12 @@ struct fwd_stream {
 	struct pkt_burst_stats rx_burst_stats;
 	struct pkt_burst_stats tx_burst_stats;
 	struct fwd_lcore *lcore; /**< Lcore being scheduled. */
+
+	uint64_t pre_rx; /**< previously recorded received packets */
+	uint64_t pre_tx; /**< previously recorded transmitted packets */
+	uint64_t pre_cycles; /**< previously recorded processor's time-stamp counter cycles */
+	uint64_t rx_pps; /**< throughput of received packets in pps */
+	uint64_t tx_pps; /**< throughput of transmitted packets in pps */
 };
 
 /**
