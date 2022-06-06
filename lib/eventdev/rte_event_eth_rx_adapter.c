@@ -6,6 +6,7 @@
 #include <sys/epoll.h>
 #endif
 #include <unistd.h>
+#include <limits.h>
 
 #include <rte_cycles.h>
 #include <rte_common.h>
@@ -43,6 +44,8 @@
 #define INIT_FD		-1
 
 #define RXA_ADAPTER_ARRAY "rte_event_eth_rx_adapter_array"
+
+#define INVALID_INSTANCE_ID UINT8_MAX
 
 /*
  * Used to store port and queue ID of interrupting Rx queue
@@ -251,7 +254,13 @@ struct eth_rx_queue_info {
 	struct rte_event_eth_rx_adapter_stats *stats;
 };
 
+struct event_eth_rxa_inst_info {
+	uint8_t rxa_inst_id;
+};
+
+static int rxa_array_sz;
 static struct event_eth_rx_adapter **event_eth_rx_adapter;
+static struct event_eth_rxa_inst_info **event_eth_rxa_inst_info;
 
 /* Enable dynamic timestamp field in mbuf */
 static uint64_t event_eth_rx_timestamp_dynflag;
@@ -1421,9 +1430,13 @@ rte_event_eth_rx_adapter_init(void)
 	const char *name = RXA_ADAPTER_ARRAY;
 	const struct rte_memzone *mz;
 	unsigned int sz;
+	uint8_t i;
 
 	sz = sizeof(*event_eth_rx_adapter) *
 	    RTE_EVENT_ETH_RX_ADAPTER_MAX_INSTANCE;
+	rxa_array_sz = sz;
+
+	sz += RTE_MAX_ETHPORTS * sizeof(*event_eth_rxa_inst_info);
 	sz = RTE_ALIGN(sz, RTE_CACHE_LINE_SIZE);
 
 	mz = rte_memzone_lookup(name);
@@ -1438,6 +1451,16 @@ rte_event_eth_rx_adapter_init(void)
 	}
 
 	event_eth_rx_adapter = mz->addr;
+
+	/* event_eth_rxa_inst_info array starts after rxa array */
+	event_eth_rxa_inst_info = (struct event_eth_rxa_inst_info **)
+					((uint64_t)event_eth_rx_adapter +
+					 rxa_array_sz);
+
+	/* Reset the rxa instance pointers */
+	for (i = 0; i < RTE_MAX_ETHPORTS; i++)
+		event_eth_rxa_inst_info[i] = NULL;
+
 	return 0;
 }
 
@@ -1445,12 +1468,20 @@ static int
 rxa_memzone_lookup(void)
 {
 	const struct rte_memzone *mz;
+	unsigned int rxa_array_sz;
 
 	if (event_eth_rx_adapter == NULL) {
 		mz = rte_memzone_lookup(RXA_ADAPTER_ARRAY);
 		if (mz == NULL)
 			return -ENOMEM;
 		event_eth_rx_adapter = mz->addr;
+
+		/* event_eth_rxa_inst_info array starts after rxa array */
+		rxa_array_sz = sizeof(*event_eth_rx_adapter) *
+				RTE_EVENT_ETH_RX_ADAPTER_MAX_INSTANCE;
+		event_eth_rxa_inst_info = (struct event_eth_rxa_inst_info **)
+					       ((uint64_t)event_eth_rx_adapter +
+					       rxa_array_sz);
 	}
 
 	return 0;
@@ -1950,6 +1981,7 @@ rxa_sw_del(struct event_eth_rx_adapter *rx_adapter,
 	int pollq;
 	int intrq;
 	int sintrq;
+	uint16_t eth_dev_id = dev_info->dev->data->port_id;
 
 
 	if (rx_adapter->nb_queues == 0)
@@ -1993,6 +2025,11 @@ rxa_sw_del(struct event_eth_rx_adapter *rx_adapter,
 		dev_info->rx_queue[rx_queue_id].event_buf = NULL;
 		dev_info->rx_queue[rx_queue_id].stats = NULL;
 	}
+
+	/* unset rxa_inst_id for rx_queue_id */
+	if (event_eth_rxa_inst_info[eth_dev_id])
+		event_eth_rxa_inst_info[eth_dev_id][rx_queue_id].rxa_inst_id =
+							INVALID_INSTANCE_ID;
 }
 
 static int
@@ -2084,6 +2121,33 @@ rxa_add_queue(struct event_eth_rx_adapter *rx_adapter,
 				dev_info->next_q_idx = 0;
 		}
 	}
+
+	/* Allocate storage to store rxa_inst_id for rxq */
+	if (event_eth_rxa_inst_info[eth_dev_id] == NULL) {
+		uint16_t n, i;
+		struct event_eth_rxa_inst_info *i_info;
+
+		n = rte_eth_devices[eth_dev_id].data->nb_rx_queues;
+
+		i_info = rte_zmalloc_socket("event_eth_rxa_inst_info",
+				n * sizeof(struct event_eth_rxa_inst_info),
+				0,
+				rx_adapter->socket_id);
+		if (i_info == NULL) {
+			RTE_EDEV_LOG_ERR("Failed to allocate storage for "
+					 "event_eth_rxa_inst_info");
+			return -ENOMEM;
+		}
+
+		for (i = 0; i < n; i++)
+			i_info[i].rxa_inst_id = INVALID_INSTANCE_ID;
+
+		event_eth_rxa_inst_info[eth_dev_id] = i_info;
+	}
+
+	/* store rxa id for rx_queue_id in event_eth_rxa_inst_info */
+	event_eth_rxa_inst_info[eth_dev_id][rx_queue_id].rxa_inst_id =
+								rx_adapter->id;
 
 	if (!rx_adapter->use_queue_event_buf)
 		return 0;
@@ -2523,6 +2587,10 @@ int
 rte_event_eth_rx_adapter_free(uint8_t id)
 {
 	struct event_eth_rx_adapter *rx_adapter;
+	uint16_t eth_dev_id;
+
+	if (rxa_memzone_lookup())
+		return -ENOMEM;
 
 	RTE_EVENT_ETH_RX_ADAPTER_ID_VALID_OR_ERR_RET(id, -EINVAL);
 
@@ -2544,6 +2612,13 @@ rte_event_eth_rx_adapter_free(uint8_t id)
 	rte_free(rx_adapter);
 	event_eth_rx_adapter[id] = NULL;
 
+	for (eth_dev_id = 0; eth_dev_id < RTE_MAX_ETHPORTS; eth_dev_id++) {
+		if (event_eth_rxa_inst_info[eth_dev_id]) {
+			rte_free(event_eth_rxa_inst_info[eth_dev_id]);
+			event_eth_rxa_inst_info[eth_dev_id] = NULL;
+		}
+	}
+
 	rte_eventdev_trace_eth_rx_adapter_free(id);
 	return 0;
 }
@@ -2560,6 +2635,9 @@ rte_event_eth_rx_adapter_queue_add(uint8_t id,
 	struct rte_eventdev *dev;
 	struct eth_device_info *dev_info;
 	struct rte_event_eth_rx_adapter_vector_limits limits;
+
+	if (rxa_memzone_lookup())
+		return -ENOMEM;
 
 	RTE_EVENT_ETH_RX_ADAPTER_ID_VALID_OR_ERR_RET(id, -EINVAL);
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(eth_dev_id, -EINVAL);
@@ -2726,6 +2804,9 @@ rte_event_eth_rx_adapter_queue_del(uint8_t id, uint16_t eth_dev_id,
 	uint32_t *rx_wrr = NULL;
 	int num_intr_vec;
 
+	if (rxa_memzone_lookup())
+		return -ENOMEM;
+
 	RTE_EVENT_ETH_RX_ADAPTER_ID_VALID_OR_ERR_RET(id, -EINVAL);
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(eth_dev_id, -EINVAL);
 
@@ -2832,6 +2913,7 @@ unlock_ret:
 
 	rte_eventdev_trace_eth_rx_adapter_queue_del(id, eth_dev_id,
 		rx_queue_id, ret);
+
 	return ret;
 }
 
@@ -3282,6 +3364,49 @@ rte_event_eth_rx_adapter_queue_conf_get(uint8_t id,
 						queue_conf);
 		return ret;
 	}
+
+	return 0;
+}
+
+int
+rte_event_eth_rx_adapter_instance_get(uint16_t eth_dev_id,
+				      uint16_t rx_queue_id,
+				      uint8_t *rxa_inst_id)
+{
+	uint8_t inst_id;
+
+	if (rxa_memzone_lookup())
+		return -ENOMEM;
+
+	if (eth_dev_id >= rte_eth_dev_count_avail()) {
+		RTE_EDEV_LOG_ERR("Invalid ethernet port id %u", eth_dev_id);
+		return -EINVAL;
+	}
+
+	if (rx_queue_id >= rte_eth_devices[eth_dev_id].data->nb_rx_queues) {
+		RTE_EDEV_LOG_ERR("Invalid Rx queue %u", rx_queue_id);
+		return -EINVAL;
+	}
+
+	if (rxa_inst_id == NULL) {
+		RTE_EDEV_LOG_ERR("rxa_inst_id cannot be NULL");
+		return -EINVAL;
+	}
+
+	if (event_eth_rxa_inst_info[eth_dev_id] == NULL) {
+		RTE_EDEV_LOG_ERR("No valid rxa instance for eth_dev_id %u",
+				 eth_dev_id);
+		return -EINVAL;
+	}
+
+	inst_id = event_eth_rxa_inst_info[eth_dev_id][rx_queue_id].rxa_inst_id;
+	if (inst_id == INVALID_INSTANCE_ID) {
+		RTE_EDEV_LOG_ERR("Invalid rxa instance for eth_dev_id %u, "
+				 "rx_queue_id %u", eth_dev_id, rx_queue_id);
+		return -EINVAL;
+	}
+
+	*rxa_inst_id = inst_id;
 
 	return 0;
 }
