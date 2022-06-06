@@ -39,3 +39,9 @@ DPDK_22 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	rte_bbdev_device_status_str;
+};

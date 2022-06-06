@@ -223,6 +223,21 @@ rte_bbdev_queue_start(uint16_t dev_id, uint16_t queue_id);
 int
 rte_bbdev_queue_stop(uint16_t dev_id, uint16_t queue_id);
 
+/**
+ * Flags indicate the status of the device
+ */
+enum rte_bbdev_device_status {
+	RTE_BBDEV_DEV_NOSTATUS,        /**< Nothing to report */
+	RTE_BBDEV_DEV_RESET,           /**< Device in reset and unconfigure state */
+	RTE_BBDEV_DEV_CONFIGURED,      /**< Device is configured and ready to use */
+	RTE_BBDEV_DEV_ACTIVE,          /**< Device is configured and VF is being used */
+	RTE_BBDEV_DEV_FATAL_ERR,       /**< Device has hit a fatal uncorrectable error */
+	RTE_BBDEV_DEV_RESTART_REQ,     /**< Device requires application to restart */
+	RTE_BBDEV_DEV_RECONFIG_REQ,    /**< Device requires application to reconfig queues */
+	RTE_BBDEV_DEV_CORRECT_ERR,     /**< Warning of a correctable error event happened */
+	RTE_BBDEV_DEV_COUNT
+};
+
 /** Device statistics. */
 struct rte_bbdev_stats {
 	uint64_t enqueued_count;  /**< Count of all operations enqueued */
@@ -298,6 +313,8 @@ struct rte_bbdev_driver_info {
 	const struct rte_bbdev_op_cap *capabilities;
 	/** Device cpu_flag requirements */
 	const enum rte_cpu_flag_t *cpu_flag_reqs;
+	/** Device Status */
+	enum rte_bbdev_device_status device_status;
 };
 
 /** Macro used at end of bbdev PMD list */
@@ -826,6 +843,20 @@ rte_bbdev_queue_intr_disable(uint16_t dev_id, uint16_t queue_id);
 int
 rte_bbdev_queue_intr_ctl(uint16_t dev_id, uint16_t queue_id, int epfd, int op,
 		void *data);
+
+/**
+ * Converts device status from enum to string
+ *
+ * @param status
+ *   Device status as enum
+ *
+ * @returns
+ *   Operation type as string or NULL if op_type is invalid
+ *
+ */
+__rte_experimental
+const char*
+rte_bbdev_device_status_str(enum rte_bbdev_device_status status);
 
 #ifdef __cplusplus
 }
