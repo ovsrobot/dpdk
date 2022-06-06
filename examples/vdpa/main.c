@@ -518,6 +518,10 @@ main(int argc, char *argv[])
 		vdpa_sample_quit();
 	}
 
+	RTE_DEV_FOREACH(dev, "class=vdpa", &dev_iter) {
+		rte_dev_remove(dev);
+	}
+
 	/* clean up the EAL */
 	rte_eal_cleanup();
 
