@@ -492,6 +492,12 @@ int
 rte_dev_dma_unmap(struct rte_device *dev, void *addr, uint64_t iova,
 		  size_t len);
 
+#define RTE_DEV_FOREACH_SAFE(dev, devstr, it, tdev) \
+	for (rte_dev_iterator_init(it, devstr), \
+		(dev) = rte_dev_iterator_next(it); \
+		(dev) && ((tdev) = rte_dev_iterator_next(it), 1); \
+		(dev) = (tdev))
+
 #ifdef __cplusplus
 }
 #endif
