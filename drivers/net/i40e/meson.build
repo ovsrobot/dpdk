@@ -75,6 +75,8 @@ elif arch_subdir == 'ppc'
        sources += files('i40e_rxtx_vec_altivec.c')
 elif arch_subdir == 'arm'
        sources += files('i40e_rxtx_vec_neon.c')
+elif arch_subdir == 'loongarch'
+       sources += files('i40e_rxtx_vec_lsx.c')
 endif
 
 headers = files('rte_pmd_i40e.h')
