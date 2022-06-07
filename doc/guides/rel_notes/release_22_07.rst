@@ -122,6 +122,7 @@ New Features
   * Added support for promiscuous mode on Windows.
   * Added support for MTU on Windows.
   * Added matching and RSS on IPsec ESP.
+  * Added matching on represented port.
 
 * **Updated VMware vmxnet3 networking driver.**
 
