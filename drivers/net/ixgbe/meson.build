@@ -1,6 +1,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2017 Intel Corporation
 
+if arch_subdir == 'riscv'
+		build = false
+		reason = 'riscv arch not supported'
+		subdir_done()
+endif
+
 cflags += ['-DRTE_LIBRTE_IXGBE_BYPASS']
 
 subdir('base')
