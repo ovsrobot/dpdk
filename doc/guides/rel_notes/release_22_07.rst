@@ -181,6 +181,9 @@ New Features
   This is a fall-back implementation for platforms that
   don't support vector operations.
 
+* **Updated Atomic Rules' Arkville PMD.**
+
+  A firmware version update to Arkville 22.07 is required.
 
 Removed Items
 -------------
