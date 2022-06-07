@@ -66,6 +66,8 @@
 
 #define NS_PER_SEC 1E9
 
+#define MAX_CHAR_NUM_PER_LINE 64
+
 static const struct {
 	enum tx_pkt_split split;
 	const char *name;
@@ -198,6 +200,8 @@ const struct rss_type_info rss_type_table[] = {
 static void
 rss_types_display(uint64_t rss_types)
 {
+	uint16_t total_len = 0;
+	uint16_t str_len = 0;
 	uint16_t i;
 
 	if (rss_types == 0)
@@ -206,9 +210,18 @@ rss_types_display(uint64_t rss_types)
 	for (i = 0; rss_type_table[i].str; i++) {
 		if (rss_type_table[i].rss_type == 0)
 			continue;
+
 		if ((rss_types & rss_type_table[i].rss_type) ==
-						rss_type_table[i].rss_type)
+						rss_type_table[i].rss_type) {
+			/* contain two blanks */
+			str_len = strlen(rss_type_table[i].str) + 2;
+			if (total_len + str_len > MAX_CHAR_NUM_PER_LINE) {
+				printf("\n");
+				total_len = 0;
+			}
 			printf("  %s", rss_type_table[i].str);
+			total_len += str_len;
+		}
 	}
 }
 
@@ -766,6 +779,38 @@ rss_offload_to_str(uint64_t rss_offload)
 	return NULL;
 }
 
+static void
+rss_offload_types_display(uint64_t rss_offload_types)
+{
+#define USER_DEFINED_DISPLAY_STR_LEN 23
+
+	uint16_t total_len = 0;
+	uint16_t str_len = 0;
+	uint64_t rss_offload;
+	uint16_t i;
+
+	for (i = 0; i < sizeof(rss_offload_types) * CHAR_BIT; i++) {
+		rss_offload = RTE_BIT64(i);
+		if ((rss_offload_types & rss_offload) != 0) {
+			const char *p = rss_offload_to_str(rss_offload);
+
+			str_len = p ? strlen(p) : USER_DEFINED_DISPLAY_STR_LEN;
+			str_len += 2; /* add two blanks */
+			if (total_len + str_len >= MAX_CHAR_NUM_PER_LINE) {
+				total_len = 0;
+				printf("\n");
+			}
+
+			if (p)
+				printf("  %s", p);
+			else
+				printf("  user defined 0x%"PRIx64"",
+				       rss_offload);
+			total_len += str_len;
+		}
+	}
+}
+
 void
 port_infos_display(portid_t port_id)
 {
@@ -870,22 +915,9 @@ port_infos_display(portid_t port_id)
 	if (!dev_info.flow_type_rss_offloads)
 		printf("No RSS offload flow type is supported.\n");
 	else {
-		uint64_t rss_offload_types = dev_info.flow_type_rss_offloads;
-		uint16_t i;
-
 		printf("Supported RSS offload flow types:\n");
-		for (i = 0; i < sizeof(rss_offload_types) * CHAR_BIT; i++) {
-			uint64_t rss_offload = RTE_BIT64(i);
-			if ((rss_offload_types & rss_offload) != 0) {
-				const char *p =
-					rss_offload_to_str(rss_offload);
-				if (p)
-					printf("  %s\n", p);
-				else
-					printf("  user defined 0x%"PRIx64"\n",
-					       rss_offload);
-			}
-		}
+		rss_offload_types_display(dev_info.flow_type_rss_offloads);
+		printf("\n");
 	}
 
 	printf("Minimum size of RX buffer: %u\n", dev_info.min_rx_bufsize);
