@@ -93,6 +93,7 @@ Features
 - Connection tracking.
 - Sub-Function representors.
 - Sub-Function.
+- Modify IPv4/IPv6 ECN field.
 
 
 Limitations
