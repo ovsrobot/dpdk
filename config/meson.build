@@ -273,7 +273,12 @@ warning_flags = [
 ]
 if cc.get_id() == 'gcc' and cc.version().version_compare('>=10.0')
 # FIXME: Bugzilla 396
-    warning_flags += '-Wno-zero-length-bounds'
+    warning_flags += [
+      '-Wno-zero-length-bounds',
+      '-Wno-stringop-overflow',
+      '-Wno-array-bounds',
+      '-Wno-format-overflow',
+      ]
 endif
 if not dpdk_conf.get('RTE_ARCH_64')
 # for 32-bit, don't warn about casting a 32-bit pointer to 64-bit int - it's fine!!
