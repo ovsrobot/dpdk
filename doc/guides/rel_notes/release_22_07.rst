@@ -93,6 +93,13 @@ New Features
 
   Added an API which can get the device type of vDPA device.
 
+
+* **Updated Amazon ena driver.**
+
+  The new driver version (v2.7.0) includes:
+
+  * Added fast mbuf free feature support.
+
 * **Updated Intel iavf driver.**
 
   * Added Tx QoS queue rate limitation support.
