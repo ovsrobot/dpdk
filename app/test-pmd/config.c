@@ -66,8 +66,6 @@
 
 #define NS_PER_SEC 1E9
 
-static char *flowtype_to_str(uint16_t flow_type);
-
 static const struct {
 	enum tx_pkt_split split;
 	const char *name;
@@ -196,6 +194,36 @@ const struct rss_type_info rss_type_table[] = {
 	{ "l2tpv2", RTE_ETH_RSS_L2TPV2 },
 	{ NULL, 0 },
 };
+
+static void
+rss_types_display(uint64_t rss_types)
+{
+	uint16_t i;
+
+	if (rss_types == 0)
+		return;
+
+	for (i = 0; rss_type_table[i].str; i++) {
+		if (rss_type_table[i].rss_type == 0)
+			continue;
+		if ((rss_types & rss_type_table[i].rss_type) ==
+						rss_type_table[i].rss_type)
+			printf("  %s", rss_type_table[i].str);
+	}
+}
+
+static uint64_t
+str_to_rsstypes(const char *str)
+{
+	uint16_t i;
+
+	for (i = 0; rss_type_table[i].str != NULL; i++) {
+		if (strcmp(rss_type_table[i].str, str) == 0)
+			return rss_type_table[i].rss_type;
+	}
+
+	return 0;
+}
 
 static const struct {
 	enum rte_eth_fec_mode mode;
@@ -1651,13 +1679,7 @@ rss_config_display(struct rte_flow_action_rss *rss_conf)
 		printf("  none\n");
 		return;
 	}
-	for (i = 0; rss_type_table[i].str; i++) {
-		if ((rss_conf->types &
-		    rss_type_table[i].rss_type) ==
-		    rss_type_table[i].rss_type &&
-		    rss_type_table[i].rss_type != 0)
-			printf("  %s\n", rss_type_table[i].str);
-	}
+	rss_types_display(rss_conf->types);
 }
 
 static struct port_indirect_action *
@@ -3887,13 +3909,8 @@ port_rss_hash_conf_show(portid_t port_id, int show_rss_key)
 		printf("RSS disabled\n");
 		return;
 	}
-	printf("RSS functions:\n ");
-	for (i = 0; rss_type_table[i].str; i++) {
-		if (rss_type_table[i].rss_type == 0)
-			continue;
-		if ((rss_hf & rss_type_table[i].rss_type) == rss_type_table[i].rss_type)
-			printf("%s ", rss_type_table[i].str);
-	}
+	printf("RSS functions:\n");
+	rss_types_display(rss_hf);
 	printf("\n");
 	if (!show_rss_key)
 		return;
@@ -3909,15 +3926,10 @@ port_rss_hash_key_update(portid_t port_id, char rss_type[], uint8_t *hash_key,
 {
 	struct rte_eth_rss_conf rss_conf;
 	int diag;
-	unsigned int i;
 
 	rss_conf.rss_key = NULL;
 	rss_conf.rss_key_len = 0;
-	rss_conf.rss_hf = 0;
-	for (i = 0; rss_type_table[i].str; i++) {
-		if (!strcmp(rss_type_table[i].str, rss_type))
-			rss_conf.rss_hf = rss_type_table[i].rss_type;
-	}
+	rss_conf.rss_hf = str_to_rsstypes(rss_type);
 	diag = rte_eth_dev_rss_hash_conf_get(port_id, &rss_conf);
 	if (diag == 0) {
 		rss_conf.rss_key = hash_key;
@@ -5669,6 +5681,7 @@ set_record_burst_stats(uint8_t on_off)
 	record_burst_stats = on_off;
 }
 
+#if defined(RTE_NET_I40E) || defined(RTE_NET_IXGBE)
 static char*
 flowtype_to_str(uint16_t flow_type)
 {
@@ -5711,8 +5724,6 @@ flowtype_to_str(uint16_t flow_type)
 
 	return NULL;
 }
-
-#if defined(RTE_NET_I40E) || defined(RTE_NET_IXGBE)
 
 static inline void
 print_fdir_mask(struct rte_eth_fdir_masks *mask)
