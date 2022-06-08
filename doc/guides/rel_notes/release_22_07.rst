@@ -88,6 +88,12 @@ New Features
     * SFF-8472 revision 12.0
     * SFF-8636 revision 2.7
 
+* **Added Rx queue available descriptors threshold and event.**
+
+  Added ethdev API and corresponding driver operations to set Rx queue
+  available descriptors threshold and query for queues with reached
+  threshold when a new event RTE_ETH_EVENT_RX_AVAIL_THRESH is received.
+
 * **Added vhost API to get the number of in-flight packets.**
 
   Added an API which can get the number of in-flight packets in

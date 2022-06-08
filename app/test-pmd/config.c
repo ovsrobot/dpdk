@@ -6392,3 +6392,12 @@ show_mcast_macs(portid_t port_id)
 		printf("  %s\n", buf);
 	}
 }
+
+int
+set_rxq_avail_thresh(portid_t port_id, uint16_t queue_id, uint8_t avail_thresh)
+{
+	if (port_id_is_invalid(port_id, ENABLED_WARN))
+		return -EINVAL;
+
+	return rte_eth_rx_avail_thresh_set(port_id, queue_id, avail_thresh);
+}

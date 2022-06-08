@@ -2021,6 +2021,15 @@ Set fec mode for a specific port::
 
   testpmd> set port (port_id) fec_mode auto|off|rs|baser
 
+Set Rx queue available descriptors threshold
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Set available descriptors threshold for a specific Rx queue of port::
+
+  testpmd> set port (port_id) rxq (queue_id) avail_thresh (0..99)
+
+Use 0 value to disable the threshold and corresponding event.
+
 Config Sample actions list
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
