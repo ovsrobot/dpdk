@@ -38,6 +38,9 @@ static gro_tbl_pkt_count_fn tbl_pkt_count_fn[RTE_GRO_TYPE_MAX_NUM] = {
 		((ptype & RTE_PTYPE_L4_UDP) == RTE_PTYPE_L4_UDP) && \
 		(RTE_ETH_IS_TUNNEL_PKT(ptype) == 0))
 
+#define IS_IPV4_FRAGMENT(ptype) (RTE_ETH_IS_IPV4_HDR(ptype) && \
+		((ptype & RTE_PTYPE_L4_FRAG) == RTE_PTYPE_L4_FRAG))
+
 #define IS_IPV4_VXLAN_TCP4_PKT(ptype) (RTE_ETH_IS_IPV4_HDR(ptype) && \
 		((ptype & RTE_PTYPE_L4_UDP) == RTE_PTYPE_L4_UDP) && \
 		((ptype & RTE_PTYPE_TUNNEL_VXLAN) == \
@@ -240,7 +243,28 @@ rte_gro_reassemble_burst(struct rte_mbuf **pkts,
 		 * The timestamp is ignored, since all packets
 		 * will be flushed from the tables.
 		 */
-		if (IS_IPV4_VXLAN_TCP4_PKT(pkts[i]->packet_type) &&
+		if (IS_IPV4_FRAGMENT(pkts[i]->packet_type)) {
+			struct rte_ipv4_hdr ip4h_copy;
+			const struct rte_ipv4_hdr *ip4h = rte_pktmbuf_read(pkts[i], pkts[i]->l2_len,
+                                                               sizeof(*ip4h), &ip4h_copy);
+			if (ip4h->next_proto_id == IPPROTO_UDP && do_udp4_gro) {
+				ret = gro_udp4_reassemble(pkts[i],
+							&udp_tbl, 0);
+				if (ret > 0)
+					nb_after_gro--;
+				else if (ret < 0)
+					unprocess_pkts[unprocess_num++] = pkts[i];
+			} else if (ip4h->next_proto_id == IPPROTO_TCP && do_tcp4_gro) {
+				ret = gro_tcp4_reassemble(pkts[i],
+						&tcp_tbl, 0);
+				if (ret > 0)
+					nb_after_gro--;
+				else if (ret < 0)
+					unprocess_pkts[unprocess_num++] = pkts[i];
+			} else {
+				unprocess_pkts[unprocess_num++] = pkts[i];
+			}
+		} else if (IS_IPV4_VXLAN_TCP4_PKT(pkts[i]->packet_type) &&
 				do_vxlan_tcp_gro) {
 			ret = gro_vxlan_tcp4_reassemble(pkts[i],
 							&vxlan_tcp_tbl, 0);
@@ -349,7 +373,22 @@ rte_gro_reassemble(struct rte_mbuf **pkts,
 	current_time = rte_rdtsc();
 
 	for (i = 0; i < nb_pkts; i++) {
-		if (IS_IPV4_VXLAN_TCP4_PKT(pkts[i]->packet_type) &&
+		if (IS_IPV4_FRAGMENT(pkts[i]->packet_type)) {
+			struct rte_ipv4_hdr ip4h_copy;
+			const struct rte_ipv4_hdr *ip4h = rte_pktmbuf_read(pkts[i], pkts[i]->l2_len,
+                                                               sizeof(*ip4h), &ip4h_copy);
+			if (ip4h->next_proto_id == IPPROTO_UDP && do_udp4_gro) {
+				if (gro_udp4_reassemble(pkts[i], udp_tbl,
+						current_time) < 0)
+					unprocess_pkts[unprocess_num++] = pkts[i];
+			} else if (ip4h->next_proto_id == IPPROTO_TCP && do_tcp4_gro) {
+				if (gro_tcp4_reassemble(pkts[i], tcp_tbl,
+						current_time) < 0)
+					unprocess_pkts[unprocess_num++] = pkts[i];
+			} else {
+				unprocess_pkts[unprocess_num++] = pkts[i];
+			}
+		} else if (IS_IPV4_VXLAN_TCP4_PKT(pkts[i]->packet_type) &&
 				do_vxlan_tcp_gro) {
 			if (gro_vxlan_tcp4_reassemble(pkts[i], vxlan_tcp_tbl,
 						current_time) < 0)
