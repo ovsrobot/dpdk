@@ -712,10 +712,10 @@ rte_event_eth_rx_adapter_event_port_get(uint8_t id, uint8_t *event_port_id);
  *  Port identifier of Ethernet device.
  *
  * @param rx_queue_id
- *  Ethernet device receive queue index
+ *  Ethernet device receive queue index.
  *
  * @param[out] rxa_inst_id
- *  RX adapter instance identifier.
+ *  Pointer to store RX adapter instance identifier.
  *
  * @return
  *  - 0: Success
