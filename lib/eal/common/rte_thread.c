@@ -6,6 +6,12 @@
 #include <rte_thread.h>
 
 int
+rte_thread_equal(rte_thread_t t1, rte_thread_t t2)
+{
+	return t1.opaque_id == t2.opaque_id;
+}
+
+int
 rte_thread_attr_init(rte_thread_attr_t *attr)
 {
 	RTE_VERIFY(attr != NULL);

@@ -428,6 +428,7 @@ EXPERIMENTAL {
 	rte_thread_attr_set_priority;
 	rte_thread_create;
 	rte_thread_detach;
+	rte_thread_equal;
 	rte_thread_get_affinity_by_id;
 	rte_thread_get_priority;
 	rte_thread_join;
