@@ -13,7 +13,10 @@ sources = files(
         'ice_rxtx.c',
         'ice_switch_filter.c',
         'ice_tm.c',
+        'ice_ddp_package.c'
 )
+
+testpmd_sources = files('ice_testpmd.c')
 
 deps += ['hash', 'net', 'common_iavf']
 includes += include_directories('base', '../../common/iavf')
