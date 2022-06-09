@@ -55,7 +55,7 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
-* **Added initial RISC-V architecture support.***
+* **Added initial RISC-V architecture support.**
 
   Added EAL implementation for RISC-V architecture.
   The initial device the porting was tested on is
