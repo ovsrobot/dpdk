@@ -1724,11 +1724,11 @@ do_tx(struct lcore_info *li, uint16_t cnt, uint16_t tx_port,
 static char *
 pretty_number(uint64_t n, char *buf)
 {
-	char p[6][4];
+	char p[7][4];
 	int i = 0;
 	int off = 0;
 
-	while (n > 1000) {
+	while (n >= 1000) {
 		sprintf(p[i], "%03d", (int)(n % 1000));
 		n /= 1000;
 		i += 1;
