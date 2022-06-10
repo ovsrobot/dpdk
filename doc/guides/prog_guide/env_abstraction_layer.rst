@@ -732,6 +732,19 @@ controlled with tools like taskset (Linux) or cpuset (FreeBSD),
 - with affinity restricted to 2-3, the Control Threads will end up on
   CPU 2 (main lcore, which is the default when no CPU is available).
 
+Signal Safety
+~~~~~~~~~~~~~
+
+The DPDK functions in general can not be safely called from a signal handler.
+Most functions are not async-signal-safe because they can acquire locks
+and other resources that make them nonrentrant.
+
+To avoid problems with unsafe functions, can be avoided if required
+signals are blocked and a mechanism such as signalfd (Linux) is used
+to convert the asynchronous signals into messages that are processed
+by a EAL thread.
+
+
 .. _known_issue_label:
 
 Known Issues
