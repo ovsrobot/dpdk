@@ -227,7 +227,7 @@ static int n3000_bulk_write(struct intel_max10_device *dev, uint32_t addr,
 	for (i = 0; i < n; i++) {
 		p = i << 2;
 		v = *(uint32_t *)(buf + p);
-		ret = max10_reg_write(dev, addr + p, v);
+		ret = max10_sys_raw_write(dev, addr + p, v);
 		if (ret < 0) {
 			dev_err(dev,
 				"Failed to write to staging area 0x%08x [e:%d]\n",
@@ -490,7 +490,7 @@ static int n3000_reload_bmc(struct intel_max10_device *dev, int page)
 			CONFIG_SEL_S(page) | REBOOT_REQ);
 	} else {
 		val = (page == 0) ? 0x1 : 0x3;
-		ret = max10_reg_write(dev, IFPGA_DUAL_CFG_CTRL1, val);
+		ret = max10_sys_raw_write(dev, IFPGA_DUAL_CFG_CTRL1, val);
 		if (ret < 0) {
 			dev_err(dev,
 				"Failed to write to dual config1 register [e:%d]\n",
@@ -498,7 +498,7 @@ static int n3000_reload_bmc(struct intel_max10_device *dev, int page)
 			goto end;
 		}
 
-		ret = max10_reg_write(dev, IFPGA_DUAL_CFG_CTRL0, 0x1);
+		ret = max10_sys_raw_write(dev, IFPGA_DUAL_CFG_CTRL0, 0x1);
 		if (ret < 0) {
 			if (ret == -EIO) {
 				ret = 0;
@@ -584,7 +584,7 @@ static const struct ifpga_sec_ops n3000_sec_ops = {
 	.get_hw_errinfo = n3000_get_hw_errinfo,
 };
 
-int init_sec_mgr(struct ifpga_fme_hw *fme)
+int init_sec_mgr(struct ifpga_fme_hw *fme, enum fpga_sec_type type)
 {
 	struct ifpga_hw *hw = NULL;
 	opae_share_data *sd = NULL;
@@ -621,6 +621,7 @@ int init_sec_mgr(struct ifpga_fme_hw *fme)
 
 	smgr->fme = fme;
 	smgr->max10_dev = fme->max10_dev;
+	smgr->type = type;
 
 	return 0;
 }

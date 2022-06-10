@@ -55,6 +55,12 @@
 #define IFPGA_RSU_ERR_WEAROUT		-7
 #define IFPGA_RSU_ERR_FILE_READ		-8
 
+/* Supported fpga secure manager types */
+enum fpga_sec_type {
+	N3000BMC_SEC,
+	N6000BMC_SEC
+};
+
 struct ifpga_sec_mgr;
 
 struct ifpga_sec_ops {
@@ -80,9 +86,10 @@ struct ifpga_sec_mgr {
 	unsigned int *rsu_control;
 	unsigned int *rsu_status;
 	const struct ifpga_sec_ops *ops;
+	enum fpga_sec_type type;
 };
 
-int init_sec_mgr(struct ifpga_fme_hw *fme);
+int init_sec_mgr(struct ifpga_fme_hw *fme, enum fpga_sec_type type);
 void release_sec_mgr(struct ifpga_fme_hw *fme);
 int fpga_update_flash(struct ifpga_fme_hw *fme, const char *image,
 	uint64_t *status);
