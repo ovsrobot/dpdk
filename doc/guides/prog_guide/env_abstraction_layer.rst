@@ -797,6 +797,16 @@ Known Issues
 
   The debug statistics of rte_ring, rte_mempool and rte_timer are not supported in an unregistered non-EAL pthread.
 
++ locking
+
+  If a pthread, that is not pinned to an lcore acquires a lock such as a
+  DPDK based lock (rte_spinlock, rte_rwlock, rte_ticketlock, rte_mcslock)
+  then there is a possibility of large application delays.
+  The problem is that if a thread is scheduled off the CPU while it holds
+  a lock, then other threads will waste time spinning on the lock until
+  the lock holder is once more rescheduled and releases the lock.
+
+
 cgroup control
 ~~~~~~~~~~~~~~
 
