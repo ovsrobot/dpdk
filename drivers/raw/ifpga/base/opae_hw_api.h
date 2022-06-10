@@ -59,7 +59,13 @@ struct opae_manager_ops {
 	int (*update_flash)(struct opae_manager *mgr, const char *image,
 			u64 *status);
 	int (*stop_flash_update)(struct opae_manager *mgr, int force);
-	int (*reload)(struct opae_manager *mgr, int type, int page);
+	int (*reload)(struct opae_manager *mgr, char *str);
+	int (*available_images)(struct opae_manager *mgr, char *buf,
+			size_t size);
+	int (*get_poc_images)(struct opae_manager *mgr, char *buf,
+			size_t size);
+	int (*set_poc_image)(struct opae_manager *mgr, char *str);
+	int (*read_flash)(struct opae_manager *mgr, u32 address, u32 size, void *buf);
 };
 
 /* networking management ops in FME */
@@ -368,5 +374,9 @@ int opae_mgr_get_uuid(struct opae_manager *mgr, struct uuid *uuid);
 int opae_mgr_update_flash(struct opae_manager *mgr, const char *image,
 		uint64_t *status);
 int opae_mgr_stop_flash_update(struct opae_manager *mgr, int force);
-int opae_mgr_reload(struct opae_manager *mgr, int type, int page);
+int opae_mgr_reload(struct opae_manager *mgr, char *str);
+int opae_mgr_available_images(struct opae_manager *mgr, char *buf, size_t size);
+int opae_mgr_set_poc_image(struct opae_manager *mgr, char *str);
+int opae_mgr_get_poc_images(struct opae_manager *mgr, char *buf, size_t size);
+int opae_mgr_read_flash(struct opae_manager *mgr, u32 address, u32 size, void *buf);
 #endif /* _OPAE_HW_API_H_*/

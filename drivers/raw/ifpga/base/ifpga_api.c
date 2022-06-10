@@ -261,11 +261,42 @@ static int ifpga_mgr_stop_flash_update(struct opae_manager *mgr, int force)
 	return fpga_stop_flash_update(fme, force);
 }
 
-static int ifpga_mgr_reload(struct opae_manager *mgr, int type, int page)
+static int ifpga_mgr_reload(struct opae_manager *mgr, char *str)
 {
 	struct ifpga_fme_hw *fme = mgr->data;
 
-	return fpga_reload(fme, type, page);
+	return fpga_reload(fme, str);
+}
+
+static int ifpga_available_images(struct opae_manager *mgr, char *buf,
+	size_t size)
+{
+	struct ifpga_fme_hw *fme = mgr->data;
+
+	return fpga_available_images(fme, buf, size);
+}
+
+static int ifpga_mgr_set_poc_image(struct opae_manager *mgr, char *str)
+{
+	struct ifpga_fme_hw *fme = mgr->data;
+
+	return fpga_set_poc_image(fme, str);
+}
+
+static int ifpga_mgr_get_poc_images(struct opae_manager *mgr, char *buf,
+	size_t size)
+{
+	struct ifpga_fme_hw *fme = mgr->data;
+
+	return fpga_get_poc_images(fme, buf, size);
+}
+
+static int ifpga_mgr_read_flash(struct opae_manager *mgr, u32 address,
+		u32 size, void *buf)
+{
+	struct ifpga_fme_hw *fme = mgr->data;
+
+	return fme_mgr_read_flash(fme, address, size, buf);
 }
 
 struct opae_manager_ops ifpga_mgr_ops = {
@@ -277,6 +308,10 @@ struct opae_manager_ops ifpga_mgr_ops = {
 	.update_flash = ifpga_mgr_update_flash,
 	.stop_flash_update = ifpga_mgr_stop_flash_update,
 	.reload = ifpga_mgr_reload,
+	.available_images = ifpga_available_images,
+	.get_poc_images = ifpga_mgr_get_poc_images,
+	.set_poc_image = ifpga_mgr_set_poc_image,
+	.read_flash = ifpga_mgr_read_flash
 };
 
 static int ifpga_mgr_read_mac_rom(struct opae_manager *mgr, int offset,

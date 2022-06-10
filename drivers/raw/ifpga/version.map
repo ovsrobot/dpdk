@@ -16,3 +16,14 @@ DPDK_22 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	# added in 22.07
+	rte_pmd_ifpga_image_load;
+	rte_pmd_ifpga_get_available_images;
+	rte_pmd_ifpga_set_poc_image;
+	rte_pmd_ifpga_get_poc_images;
+	rte_pmd_ifpga_read_flash;
+};

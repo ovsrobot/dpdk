@@ -21,6 +21,8 @@ extern "C" {
 #include <stdint.h>
 
 #define IFPGA_MAX_PORT_NUM   4
+#define IFPGA_N3000_ID    0x0B30
+#define IFPGA_N6000_ID    0xBCCE
 
 /**
  * UUID data structure.
@@ -216,6 +218,7 @@ rte_pmd_ifpga_reboot_try(uint16_t dev_id);
  *   - (-ENODEV) if dev_id is invalid.
  *   - (-EINVAL) if bad parameter.
  *   - (-EBUSY) if failed to access BMC register.
+ *   - (-EOPNOTSUPP) if the specific image load not supported.
  */
 int
 rte_pmd_ifpga_reload(uint16_t dev_id, int type, int page);
@@ -252,6 +255,120 @@ rte_pmd_ifpga_partial_reconfigure(uint16_t dev_id, int port, const char *file);
  */
 void
 rte_pmd_ifpga_cleanup(void);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Set which image to load for specified Intel FPGA device at power on
+ *
+ * @param dev_id
+ *    The raw device ID of specified Intel FPGA device.
+ * @param str
+ *    name of the image to load from flash.
+ * @return
+ *   - (0) if successful.
+ *   - (-ENODEV) if dev_id is invalid.
+ *   - (-EINVAL) if bad parameter.
+ *   - (-EBUSY) if failed to access BMC register.
+ *   - (-EOPNOTSUPP) if the specific image load not supported.
+ */
+__rte_experimental
+int
+rte_pmd_ifpga_set_poc_image(uint16_t dev_id, char *str);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Get available load image supported by specified Intel FPGA device
+ *
+ * @param dev_id
+ *    The raw device ID of specified Intel FPGA device.
+ * @param buf
+ *    a space separated list of image type name will be filled in this buffer.
+ *    buffer pointer can be NULL.
+ * @param size
+ *    when buf pointer is not NULL, indicate the size of the buffer.
+ * @return
+ *   - (0) no available load image type.
+ *   - (>0) string length of the list including the terminating null character.
+ *   - (-ENODEV) if dev_id is invalid.
+ *   - (-EINVAL) if bad parameter.
+ *   - (-EBUSY) if failed to access BMC register.
+ */
+__rte_experimental
+int
+rte_pmd_ifpga_get_poc_images(uint16_t dev_id, char *buf, size_t size);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Trigger image load of specified Intel FPGA device
+ *
+ * @param dev_id
+ *    The raw device ID of specified Intel FPGA device.
+ * @param str
+ *    name of the image to load from flash.
+ * @return
+ *   - (0) if successful.
+ *   - (-ENODEV) if dev_id is invalid.
+ *   - (-EINVAL) if bad parameter.
+ *   - (-EBUSY) if failed to access BMC register.
+ *   - (-EOPNOTSUPP) if the specific image load not supported.
+ */
+__rte_experimental
+int
+rte_pmd_ifpga_image_load(uint16_t dev_id, char *str);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Get available load image supported by specified Intel FPGA device
+ *
+ * @param dev_id
+ *    The raw device ID of specified Intel FPGA device.
+ * @param buf
+ *    a space separated list of image type name will be filled in this buffer.
+ *    buffer pointer can be NULL.
+ * @param size
+ *    when buf pointer is not NULL, indicate the size of the buffer.
+ * @return
+ *   - (0) no available load image type.
+ *   - (>0) string length of the list including the terminating null character.
+ *   - (-ENODEV) if dev_id is invalid.
+ *   - (-EINVAL) if bad parameter.
+ *   - (-EBUSY) if failed to access BMC register.
+ */
+__rte_experimental
+int
+rte_pmd_ifpga_get_available_images(uint16_t dev_id, char *buf, size_t size);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Read out flash content on specified Intel FPGA device
+ *
+ * @param dev_id
+ *   The raw device ID of specified Intel FPGA device.
+ * @param address
+ *   The start address of the flash.
+ * @param size
+ *   The size of flash which want to read out.
+ * @param buf
+ *   The read buffer.
+ * @return
+ *   - (0) if successful.
+ *   - (-EINVAL) if bad parameter or operation failed.
+ *   - (-ENOMEM) if no available flash memory to access.
+ */
+__rte_experimental
+int
+rte_pmd_ifpga_read_flash(uint16_t dev_id, uint32_t address, uint32_t size,
+	void *buf);
 
 #ifdef __cplusplus
 }

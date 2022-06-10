@@ -1055,18 +1055,94 @@ int opae_mgr_stop_flash_update(struct opae_manager *mgr, int force)
 /**
  * opae_mgr_reload -  reload FPGA.
  * @mgr: targeted manager
- * @type: FPGA type
- * @page: reload from which page
+ * @str: name of reload image type
  *
  * Return: 0 on success, otherwise error code.
  */
-int opae_mgr_reload(struct opae_manager *mgr, int type, int page)
+int opae_mgr_reload(struct opae_manager *mgr, char *str)
 {
 	if (!mgr)
 		return -EINVAL;
 
 	if (mgr->ops && mgr->ops->reload)
-		return mgr->ops->reload(mgr, type, page);
+		return mgr->ops->reload(mgr, str);
+
+	return -ENOENT;
+}
+
+/**
+ * opae_mgr_available_images -  get available load image types.
+ * @mgr: targeted manager
+ * @buf: buffer to fill with image type list
+ * @size: size of the buffer
+ *
+ * Return: 0 or positive value on success, otherwise error code.
+ */
+int opae_mgr_available_images(struct opae_manager *mgr, char *buf, size_t size)
+{
+	if (!mgr)
+		return -EINVAL;
+
+	if (mgr->ops && mgr->ops->available_images)
+		return mgr->ops->available_images(mgr, buf, size);
+
+	return -ENOENT;
+}
+
+/**
+ * opae_mgr_get_poc_images -  get available power_on_images.
+ * @mgr: targeted manager
+ * @buf: buffer to fill with image type list
+ * @size: size of the buffer
+ *
+ * Return: 0 or positive value on success, otherwise error code.
+ */
+int opae_mgr_get_poc_images(struct opae_manager *mgr, char *buf, size_t size)
+{
+	if (!mgr)
+		return -EINVAL;
+
+	if (mgr->ops && mgr->ops->get_poc_images)
+		return mgr->ops->get_poc_images(mgr, buf, size);
+
+	return -ENOENT;
+}
+
+/**
+ * opae_mgr_set_poc_image -  configure the FPGA power_on_image.
+ * @mgr: targeted manager
+ * @str: name of power_on_image
+ *
+ * Return: 0 on success, otherwise error code.
+ */
+int opae_mgr_set_poc_image(struct opae_manager *mgr, char *str)
+{
+	if (!mgr)
+		return -EINVAL;
+
+	if (mgr->ops && mgr->ops->set_poc_image)
+		return mgr->ops->set_poc_image(mgr, str);
+
+	return -ENOENT;
+}
+
+/**
+ * opae_mgr_read_flash -  read flash content
+ * @mgr: targeted manager
+ * @address: the start address of flash
+ * @size: the size of flash
+ * @buf: the read buffer
+ *
+ * Return: 0 on success, otherwise error code.
+ */
+int opae_mgr_read_flash(struct opae_manager *mgr, u32 address,
+		u32 size, void *buf)
+{
+	if (!mgr)
+		return -EINVAL;
+
+	if (mgr->ops && mgr->ops->read_flash)
+		return mgr->ops->read_flash(mgr, address, size, buf);
 
 	return -ENOENT;
 }

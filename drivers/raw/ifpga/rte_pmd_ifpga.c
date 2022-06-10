@@ -6,6 +6,7 @@
 #include <rte_bus_pci.h>
 #include <rte_rawdev.h>
 #include <rte_rawdev_pmd.h>
+#include "base/opae_hw_api.h"
 #include "rte_pmd_ifpga.h"
 #include "ifpga_rawdev.h"
 #include "base/ifpga_api.h"
@@ -390,8 +391,60 @@ rte_pmd_ifpga_reboot_try(uint16_t dev_id)
 	return 0;
 }
 
+static int
+get_image_load_string(struct opae_adapter *adapter, int type, int page,
+	char *str, size_t size)
+{
+	struct opae_adapter_data_pci *pci_data = NULL;
+
+	pci_data = (struct opae_adapter_data_pci *)adapter->data;
+	if (!pci_data || (pci_data->type != OPAE_FPGA_PCI))
+		return -EINVAL;
+
+	if (type == 0) {
+		if (pci_data->device_id == IFPGA_N3000_ID) {
+			if (page == 0)
+				snprintf(str, size, "fpga_factory");
+			else
+				snprintf(str, size, "fpga_user");
+		} else if (pci_data->device_id == IFPGA_N6000_ID) {
+			if (page == 0)
+				snprintf(str, size, "fpga_factory");
+			else if (page == 1)
+				snprintf(str, size, "fpga_user1");
+			else if (page == 2)
+				snprintf(str, size, "fpga_user2");
+			else
+				snprintf(str, size, "sdm");
+		}
+	} else {
+		if (page == 0)
+			snprintf(str, size, "bmc_factory");
+		else
+			snprintf(str, size, "bmc_user");
+	}
+
+	return 0;
+}
+
 int
 rte_pmd_ifpga_reload(uint16_t dev_id, int type, int page)
+{
+	struct opae_adapter *adapter = NULL;
+	char str[RTE_RAWDEV_NAME_MAX_LEN] = {0};
+
+	adapter = get_opae_adapter(dev_id);
+	if (!adapter)
+		return -ENODEV;
+
+	if (get_image_load_string(adapter, type, page, str, sizeof(str)))
+		return -EINVAL;
+
+	return opae_mgr_reload(adapter->mgr, str);
+}
+
+int
+rte_pmd_ifpga_image_load(uint16_t dev_id, char *str)
 {
 	struct opae_adapter *adapter = NULL;
 
@@ -399,7 +452,43 @@ rte_pmd_ifpga_reload(uint16_t dev_id, int type, int page)
 	if (!adapter)
 		return -ENODEV;
 
-	return opae_mgr_reload(adapter->mgr, type, page);
+	return opae_mgr_reload(adapter->mgr, str);
+}
+
+int
+rte_pmd_ifpga_get_available_images(uint16_t dev_id, char *buf, size_t size)
+{
+	struct opae_adapter *adapter = NULL;
+
+	adapter = get_opae_adapter(dev_id);
+	if (!adapter)
+		return -ENODEV;
+
+	return opae_mgr_available_images(adapter->mgr, buf, size);
+}
+
+int
+rte_pmd_ifpga_set_poc_image(uint16_t dev_id, char *str)
+{
+	struct opae_adapter *adapter = NULL;
+
+	adapter = get_opae_adapter(dev_id);
+	if (!adapter)
+		return -ENODEV;
+
+	return opae_mgr_set_poc_image(adapter->mgr, str);
+}
+
+int
+rte_pmd_ifpga_get_poc_images(uint16_t dev_id, char *buf, size_t size)
+{
+	struct opae_adapter *adapter = NULL;
+
+	adapter = get_opae_adapter(dev_id);
+	if (!adapter)
+		return -ENODEV;
+
+	return opae_mgr_get_poc_images(adapter->mgr, buf, size);
 }
 
 const struct rte_pci_bus *
@@ -420,6 +509,19 @@ rte_pmd_ifpga_partial_reconfigure(uint16_t dev_id, int port, const char *file)
 	}
 
 	return ifpga_rawdev_partial_reconfigure(dev, port, file);
+}
+
+int
+rte_pmd_ifpga_read_flash(uint16_t dev_id, uint32_t address, uint32_t size,
+		void *buf)
+{
+	struct opae_adapter *adapter;
+
+	adapter = get_opae_adapter(dev_id);
+	if (!adapter)
+		return -ENODEV;
+
+	return opae_mgr_read_flash(adapter->mgr, address, size, buf);
 }
 
 void
