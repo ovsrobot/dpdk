@@ -19,6 +19,59 @@ sources = files(
         'dlb2_selftest.c',
 )
 
+# compile AVX512 version if:
+# we are building 64-bit binary (checked above) AND binutils
+# can generate proper code
+
+if binutils_ok
+
+    # compile AVX512 version if either:
+    # a. we have AVX512 supported in minimum instruction set
+    #    baseline
+    # b. it's not minimum instruction set, but supported by
+    #    compiler
+    #
+    # in former case, just add avx512 C file to files list
+    # in latter case, compile c file to static lib, using correct
+    # compiler flags, and then have the .o file from static lib
+    # linked into main lib.
+
+    # check if all required flags already enabled (variant a).
+    dlb2_avx512_flags = ['__AVX512F__', '__AVX512VL__',
+                         '__AVX512CD__', '__AVX512BW__']
+
+    dlb2_avx512_on = true
+    foreach f:dlb2_avx512_flags
+
+        if cc.get_define(f, args: machine_args) == ''
+            dlb2_avx512_on = false
+        endif
+    endforeach
+
+    if dlb2_avx512_on == true
+
+        sources += files('dlb2_avx512.c')
+        cflags += '-DCC_AVX512_SUPPORT'
+
+    elif cc.has_multi_arguments('-mavx512f', '-mavx512vl',
+                                '-mavx512cd', '-mavx512bw')
+
+        cflags += '-DCC_AVX512_SUPPORT'
+        avx512_tmplib = static_library('avx512_tmp',
+                               'dlb2_avx512.c',
+			       dependencies: [static_rte_eal,
+			                      static_rte_eventdev],
+                               c_args: cflags +
+                                       ['-mavx512f', '-mavx512vl',
+                                        '-mavx512cd', '-mavx512bw'])
+        objs += avx512_tmplib.extract_objects('dlb2_avx512.c')
+    else
+        sources += files('dlb2_sve.c')
+    endif
+else
+        sources += files('dlb2_sve.c')
+endif
+
 headers = files('rte_pmd_dlb2.h')
 
 deps += ['mbuf', 'mempool', 'ring', 'pci', 'bus_pci']
