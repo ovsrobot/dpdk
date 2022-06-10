@@ -1,7 +1,7 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
     Copyright(c) 2016 Intel Corporation.
 
-.. _virtio_user_as_exceptional_path:
+.. _virtio_user_as_exception_path:
 
 Virtio_user as Exception Path
 =============================
@@ -39,11 +39,11 @@ This solution has a number of advantages over alternatives such as KNI:
     on the polling DPDK threads.
 
 The overview of an application using virtio-user as exception path is shown
-in :numref:`figure_virtio_user_as_exceptional_path`.
+in :numref:`figure_virtio_user_as_exception_path`.
 
-.. _figure_virtio_user_as_exceptional_path:
+.. _figure_virtio_user_as_exception_path:
 
-.. figure:: img/virtio_user_as_exceptional_path.*
+.. figure:: img/virtio_user_as_exception_path.*
 
    Overview of a DPDK app using virtio-user as exception path
 
