@@ -1122,7 +1122,10 @@ rte_bbdev_op_type_str(enum rte_bbdev_op_type op_type)
 		"RTE_BBDEV_OP_TURBO_DEC",
 		"RTE_BBDEV_OP_TURBO_ENC",
 		"RTE_BBDEV_OP_LDPC_DEC",
-		"RTE_BBDEV_OP_LDPC_ENC",
+		"RTE_BBDEV_OP_RESERVED_1",
+		"RTE_BBDEV_OP_RESERVED_2",
+		"RTE_BBDEV_OP_RESERVED_3",
+		"RTE_BBDEV_OP_RESERVED_4",
 	};
 
 	if (op_type < RTE_BBDEV_OP_TYPE_COUNT)
