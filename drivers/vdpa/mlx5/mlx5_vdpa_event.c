@@ -395,6 +395,7 @@ mlx5_vdpa_err_event_setup(struct mlx5_vdpa_priv *priv)
 		rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_SHARED);
 	if (priv->err_intr_handle == NULL) {
 		DRV_LOG(ERR, "Fail to allocate intr_handle");
+		rte_errno = ENOMEM;
 		goto error;
 	}
 	if (rte_intr_fd_set(priv->err_intr_handle, priv->err_chnl->fd))
