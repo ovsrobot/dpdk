@@ -134,6 +134,25 @@ int rte_thread_detach(rte_thread_t thread_id);
 __rte_experimental
 rte_thread_t rte_thread_self(void);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Check if 2 thread ids are equal.
+ *
+ * @param t1
+ *   First thread id.
+ *
+ * @param t2
+ *   Second thread id.
+ *
+ * @return
+ *   If the ids are equal, return nonzero.
+ *   Otherwise, return 0.
+ */
+__rte_experimental
+int rte_thread_equal(rte_thread_t t1, rte_thread_t t2);
+
 #ifdef RTE_HAS_CPUSET
 
 /**
