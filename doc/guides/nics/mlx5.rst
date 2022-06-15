@@ -1727,3 +1727,49 @@ which can be installed from OFED mstflint package.
 Meson detects ``libmtcr_ul`` existence at configure stage.
 If the library is detected, the application must link with ``-lmtcr_ul``,
 as done by the pkg-config file libdpdk.pc.
+
+How to use available descriptor threshold and Host Shaper
+---------------------------------------------------------
+
+There is a command to configure available descriptor threshold in testpmd.
+Testpmd also contains sample logic to handle available descriptor threshold event.
+The typical workflow is: testpmd configure available descriptor threshold for Rx queues, enable
+avail_thresh_triggered in host shaper and register a callback, when traffic from host is
+too high and Rx queue emptiness is below available descriptor threshold, PMD receives an event and
+firmware configures a 100Mbps shaper on host port automatically, then PMD call
+the callback registered previously, which will delay a while to let Rx queue
+empty, then disable host shaper.
+
+Let's assume we have a simple BlueField 2 setup: port 0 is uplink, port 1
+is VF representor. Each port has 2 Rx queues.
+In order to control traffic from host to ARM, we can enable available descriptor threshold in testpmd by:
+
+.. code-block:: console
+
+   testpmd> mlx5 set port 1 host_shaper avail_thresh_triggered 1 rate 0
+   testpmd> set port 1 rxq 0 avail_thresh 70
+   testpmd> set port 1 rxq 1 avail_thresh 70
+
+The first command disables current host shaper, and enables available descriptor threshold triggered mode.
+The other commands configure available descriptor threshold to 70% of Rx queue size for both Rx queues,
+When traffic from host is too high, you can see testpmd console prints log
+about available descriptor threshold event receiving, then host shaper is disabled.
+The traffic rate from host is controlled and less drop happens in Rx queues.
+
+The threshold event and shaper can be disabled like this:
+
+.. code-block:: console
+
+   testpmd> mlx5 set port 1 host_shaper avail_thresh_triggered 0 rate 0
+   testpmd> set port 1 rxq 0 avail_thresh 0
+   testpmd> set port 1 rxq 1 avail_thresh 0
+
+It's recommended an application disables available descriptor threshold and avail_thresh_triggered before exit,
+if it enables them before.
+
+We can also configure the shaper with a value, the rate unit is 100Mbps, below
+command sets current shaper to 5Gbps and disables avail_thresh_triggered.
+
+.. code-block:: console
+
+   testpmd> mlx5 set port 1 host_shaper avail_thresh_triggered 0 rate 50

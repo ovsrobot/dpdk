@@ -68,4 +68,8 @@ if get_option('buildtype').contains('debug')
 else
     cflags += [ '-UPEDANTIC' ]
 endif
+
+testpmd_sources += files('mlx5_testpmd.c')
+testpmd_drivers_deps += 'net_mlx5'
+
 subdir(exec_env)
