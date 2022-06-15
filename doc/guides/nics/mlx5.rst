@@ -465,7 +465,9 @@ Limitations
     TCP or UDP, must be in the rule pattern as well::
 
       flow create 0 ingress pattern integrity level is 0 value mask l3_ok value spec l3_ok / eth / ipv6 / end …
-      or
+
+    Negative integrity flows are not supported. i.e.
+
       flow create 0 ingress pattern integrity level is 0 value mask l4_ok value spec 0 / eth / ipv4 proto is udp / end …
 
 - Connection tracking:
