@@ -27,7 +27,7 @@ def read_socket(sock, buf_len, echo=True):
     """ Read data from socket and return it in JSON format """
     reply = sock.recv(buf_len).decode()
     try:
-        ret = json.loads(reply)
+        ret = json.loads(reply, strict=False)
     except json.JSONDecodeError:
         print("Error in reply: ", reply)
         sock.close()
