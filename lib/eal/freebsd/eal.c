@@ -72,6 +72,8 @@ struct lcore_config lcore_config[RTE_MAX_LCORE];
 /* used by rte_rdtsc() */
 int rte_cycles_vmware_tsc_map;
 
+/* used to judge the running status of the eal */
+static uint32_t run_once;
 
 int
 eal_clean_runtime_dir(void)
@@ -574,12 +576,22 @@ static void rte_eal_init_alert(const char *msg)
 	RTE_LOG(ERR, EAL, "%s\n", msg);
 }
 
+static void warn_parent(void)
+{
+	RTE_LOG(WARNING, EAL, "DPDK won't work in the child process\n");
+}
+
+static void scratch_child(void)
+{
+	/* Scratch run_once so that a call to rte_eal_cleanup won't crash... */
+	__atomic_store_n(&run_once, 0, __ATOMIC_RELAXED);
+}
+
 /* Launch threads, called at application init(). */
 int
 rte_eal_init(int argc, char **argv)
 {
 	int i, fctret, ret;
-	static uint32_t run_once;
 	uint32_t has_run = 0;
 	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
 	char thread_name[RTE_MAX_THREAD_NAME_LEN];
@@ -883,6 +895,8 @@ rte_eal_init(int argc, char **argv)
 
 	eal_mcfg_complete();
 
+	pthread_atfork(NULL, warn_parent, scratch_child);
+
 	return fctret;
 }
 
@@ -891,8 +905,13 @@ rte_eal_cleanup(void)
 {
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
+
+	if (__atomic_load_n(&run_once, __ATOMIC_RELAXED) == 0)
+		return 0;
+
 	rte_service_finalize();
 	rte_mp_channel_cleanup();
+	rte_eal_intr_destroy();
 	/* after this point, any DPDK pointers will become dangling */
 	rte_eal_memory_detach();
 	rte_eal_alarm_cleanup();
