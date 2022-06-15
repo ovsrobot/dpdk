@@ -3202,6 +3202,15 @@ remove_invalid_ports(void)
 	nb_cfg_ports = nb_fwd_ports;
 }
 
+static void
+flush_port_owned_resources(portid_t pi)
+{
+	mcast_addr_pool_destroy(pi);
+	port_flow_flush(pi);
+	port_flex_item_flush(pi);
+	port_action_handle_flush(pi);
+}
+
 void
 close_port(portid_t pid)
 {
@@ -3238,10 +3247,7 @@ close_port(portid_t pid)
 		}
 
 		if (is_proc_primary()) {
-			mcast_addr_pool_destroy(pi);
-			port_flow_flush(pi);
-			port_flex_item_flush(pi);
-			port_action_handle_flush(pi);
+			flush_port_owned_resources(pi);
 			rte_eth_dev_close(pi);
 		}
 
@@ -3386,7 +3392,7 @@ detach_device(struct rte_device *dev)
 					sibling);
 				return;
 			}
-			port_flow_flush(sibling);
+			flush_port_owned_resources(sibling);
 		}
 	}
 
@@ -3453,7 +3459,7 @@ detach_devargs(char *identifier)
 				rte_devargs_reset(&da);
 				return;
 			}
-			port_flow_flush(port_id);
+			flush_port_owned_resources(port_id);
 		}
 	}
 
