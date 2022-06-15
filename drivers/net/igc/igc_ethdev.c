@@ -1234,6 +1234,9 @@ eth_igc_dev_init(struct rte_eth_dev *dev)
 	dev->rx_queue_count = eth_igc_rx_queue_count;
 	dev->rx_descriptor_status = eth_igc_rx_descriptor_status;
 	dev->tx_descriptor_status = eth_igc_tx_descriptor_status;
+	dev->rx_pkt_burst = &igc_recv_pkts;
+	dev->tx_pkt_burst = &igc_xmit_pkts;
+	dev->tx_pkt_prepare = &eth_igc_prep_pkts;
 
 	/*
 	 * for secondary processes, we don't initialize any further as primary

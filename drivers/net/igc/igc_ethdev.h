@@ -263,6 +263,11 @@ struct igc_adapter {
 #define IGC_DEV_PRIVATE_FLOW_LIST(_dev) \
 	(&((struct igc_adapter *)(_dev)->data->dev_private)->flow_list)
 
+uint16_t igc_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts);
+uint16_t igc_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
+uint16_t eth_igc_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
+								uint16_t nb_pkts);
+
 static inline void
 igc_read_reg_check_set_bits(struct igc_hw *hw, uint32_t reg, uint32_t bits)
 {
