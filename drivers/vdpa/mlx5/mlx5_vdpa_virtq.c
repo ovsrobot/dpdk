@@ -93,22 +93,10 @@ mlx5_vdpa_virtqs_cleanup(struct mlx5_vdpa_priv *priv)
 static int
 mlx5_vdpa_virtq_unset(struct mlx5_vdpa_virtq *virtq)
 {
-	int ret = -EAGAIN;
+	int ret;
 
-	if (rte_intr_fd_get(virtq->intr_handle) >= 0) {
-		while (ret == -EAGAIN) {
-			ret = rte_intr_callback_unregister(virtq->intr_handle,
-					mlx5_vdpa_virtq_kick_handler, virtq);
-			if (ret == -EAGAIN) {
-				DRV_LOG(DEBUG, "Try again to unregister fd %d of virtq %hu interrupt",
-					rte_intr_fd_get(virtq->intr_handle),
-					virtq->index);
-				usleep(MLX5_VDPA_INTR_RETRIES_USEC);
-			}
-		}
-		rte_intr_fd_set(virtq->intr_handle, -1);
-	}
-	rte_intr_instance_free(virtq->intr_handle);
+	mlx5_os_interrupt_handler_destroy(virtq->intr_handle,
+					  mlx5_vdpa_virtq_kick_handler, virtq);
 	if (virtq->virtq) {
 		ret = mlx5_vdpa_virtq_stop(virtq->priv, virtq->index);
 		if (ret)
@@ -365,34 +353,12 @@ reuse:
 	virtq->priv = priv;
 	rte_write32(virtq->index, priv->virtq_db_addr);
 	/* Setup doorbell mapping. */
-	virtq->intr_handle =
-		rte_intr_instance_alloc(RTE_INTR_INSTANCE_F_SHARED);
+	virtq->intr_handle = mlx5_os_interrupt_handler_create(
+				  RTE_INTR_INSTANCE_F_SHARED, false,
+				  vq.kickfd, mlx5_vdpa_virtq_kick_handler, virtq);
 	if (virtq->intr_handle == NULL) {
 		DRV_LOG(ERR, "Fail to allocate intr_handle");
 		goto error;
-	}
-
-	if (rte_intr_fd_set(virtq->intr_handle, vq.kickfd))
-		goto error;
-
-	if (rte_intr_fd_get(virtq->intr_handle) == -1) {
-		DRV_LOG(WARNING, "Virtq %d kickfd is invalid.", index);
-	} else {
-		if (rte_intr_type_set(virtq->intr_handle, RTE_INTR_HANDLE_EXT))
-			goto error;
-
-		if (rte_intr_callback_register(virtq->intr_handle,
-					       mlx5_vdpa_virtq_kick_handler,
-					       virtq)) {
-			rte_intr_fd_set(virtq->intr_handle, -1);
-			DRV_LOG(ERR, "Failed to register virtq %d interrupt.",
-				index);
-			goto error;
-		} else {
-			DRV_LOG(DEBUG, "Register fd %d interrupt for virtq %d.",
-				rte_intr_fd_get(virtq->intr_handle),
-				index);
-		}
 	}
 	/* Subscribe virtq error event. */
 	virtq->version++;
