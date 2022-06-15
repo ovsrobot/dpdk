@@ -552,8 +552,8 @@ struct mlx5_umr_wqe {
 	struct mlx5_wqe_umr_cseg ucseg;
 	struct mlx5_wqe_mkey_cseg mkc;
 	union {
-		struct mlx5_wqe_dseg kseg[0];
-		struct mlx5_wqe_umr_bsf_seg bsf[0];
+		struct mlx5_wqe_dseg kseg[];
+		struct mlx5_wqe_umr_bsf_seg bsf[];
 	};
 } __rte_packed;
 

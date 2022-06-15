@@ -500,25 +500,25 @@ struct inline_ipsec_msg {
 
 	union {
 		/* IPsec request */
-		struct virtchnl_ipsec_sa_cfg sa_cfg[0];
-		struct virtchnl_ipsec_sp_cfg sp_cfg[0];
-		struct virtchnl_ipsec_sa_update sa_update[0];
-		struct virtchnl_ipsec_sa_destroy sa_destroy[0];
-		struct virtchnl_ipsec_sp_destroy sp_destroy[0];
+		struct virtchnl_ipsec_sa_cfg sa_cfg[];
+		struct virtchnl_ipsec_sp_cfg sp_cfg[];
+		struct virtchnl_ipsec_sa_update sa_update [];
+		struct virtchnl_ipsec_sa_destroy sa_destroy[];
+		struct virtchnl_ipsec_sp_destroy sp_destroy[];
 
 		/* IPsec response */
-		struct virtchnl_ipsec_sa_cfg_resp sa_cfg_resp[0];
-		struct virtchnl_ipsec_sp_cfg_resp sp_cfg_resp[0];
-		struct virtchnl_ipsec_cap ipsec_cap[0];
-		struct virtchnl_ipsec_status ipsec_status[0];
+		struct virtchnl_ipsec_sa_cfg_resp sa_cfg_resp[];
+		struct virtchnl_ipsec_sp_cfg_resp sp_cfg_resp[];
+		struct virtchnl_ipsec_cap ipsec_cap[];
+		struct virtchnl_ipsec_status ipsec_status[];
 		/* response to del_sa, del_sp, update_sa */
-		struct virtchnl_ipsec_resp ipsec_resp[0];
+		struct virtchnl_ipsec_resp ipsec_resp[];
 
 		/* IPsec event (no req_id is required) */
-		struct virtchnl_ipsec_event event[0];
+		struct virtchnl_ipsec_event event[];
 
 		/* Reserved */
-		struct virtchnl_ipsec_sa_read sa_read[0];
+		struct virtchnl_ipsec_sa_read sa_read[];
 	} ipsec_data;
 } __rte_packed;
 
