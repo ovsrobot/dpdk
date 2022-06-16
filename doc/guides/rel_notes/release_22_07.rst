@@ -152,6 +152,7 @@ New Features
   * Added support for MTU on Windows.
   * Added matching and RSS on IPsec ESP.
   * Added Rx queue available descriptor threshold support.
+  * Added host shaper support.
 
 * **Updated VMware vmxnet3 networking driver.**
 
