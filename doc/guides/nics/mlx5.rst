@@ -93,6 +93,7 @@ Features
 - Connection tracking.
 - Sub-Function representors.
 - Sub-Function.
+- Rx queue available descriptor threshold configuration.
 
 
 Limitations
@@ -520,6 +521,9 @@ Limitations
 
 - The NIC egress flow rules on representor port are not supported.
 
+- Available descriptor threshold:
+
+  - Doesn't support shared Rx queue and Hairpin Rx queue.
 
 Statistics
 ----------
@@ -1680,3 +1684,11 @@ The procedure below is an example of using a ConnectX-5 adapter card (pf0) with 
 #. For each VF PCIe, using the following command to bind the driver::
 
    $ echo "0000:82:00.2" >> /sys/bus/pci/drivers/mlx5_core/bind
+
+Available descriptor threshold introduction
+-------------------------------------------
+
+Available descriptor threshold is a per Rx queue attribute, it should be configured as
+a percentage of the Rx queue size.
+When Rx queue available descriptors for hardware are below the threshold, an event is sent to PMD.
+

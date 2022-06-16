@@ -151,6 +151,7 @@ New Features
   * Added support for promiscuous mode on Windows.
   * Added support for MTU on Windows.
   * Added matching and RSS on IPsec ESP.
+  * Added Rx queue available descriptor threshold support.
 
 * **Updated VMware vmxnet3 networking driver.**
 
