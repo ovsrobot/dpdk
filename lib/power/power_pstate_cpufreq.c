@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <limits.h>
 #include <errno.h>
-#include <inttypes.h>
 
 #include <rte_memcpy.h>
 

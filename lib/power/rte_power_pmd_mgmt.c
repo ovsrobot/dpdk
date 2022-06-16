@@ -4,10 +4,8 @@
 
 #include <rte_lcore.h>
 #include <rte_cycles.h>
-#include <rte_cpuflags.h>
 #include <rte_malloc.h>
 #include <rte_ethdev.h>
-#include <rte_power_intrinsics.h>
 
 #include "rte_power_pmd_mgmt.h"
 #include "power_common.h"
