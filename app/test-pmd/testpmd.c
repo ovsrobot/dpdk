@@ -421,6 +421,9 @@ static const char * const eth_event_desc[] = {
 	[RTE_ETH_EVENT_DESTROY] = "device released",
 	[RTE_ETH_EVENT_FLOW_AGED] = "flow aged",
 	[RTE_ETH_EVENT_RX_AVAIL_THRESH] = "RxQ available descriptors threshold reached",
+	[RTE_ETH_EVENT_ERR_RECOVERING] = "error recovering",
+	[RTE_ETH_EVENT_RECOVER_SUCCESS] = "error recover successful",
+	[RTE_ETH_EVENT_RECOVER_FAILED] = "error recover failed",
 	[RTE_ETH_EVENT_MAX] = NULL,
 };
 
@@ -435,7 +438,10 @@ uint32_t event_print_mask = (UINT32_C(1) << RTE_ETH_EVENT_UNKNOWN) |
 			    (UINT32_C(1) << RTE_ETH_EVENT_IPSEC) |
 			    (UINT32_C(1) << RTE_ETH_EVENT_MACSEC) |
 			    (UINT32_C(1) << RTE_ETH_EVENT_INTR_RMV) |
-			    (UINT32_C(1) << RTE_ETH_EVENT_FLOW_AGED);
+			    (UINT32_C(1) << RTE_ETH_EVENT_FLOW_AGED) |
+			    (UINT32_C(1) << RTE_ETH_EVENT_ERR_RECOVERING) |
+			    (UINT32_C(1) << RTE_ETH_EVENT_RECOVER_SUCCESS) |
+			    (UINT32_C(1) << RTE_ETH_EVENT_RECOVER_FAILED);
 /*
  * Decide if all memory are locked for performance.
  */
