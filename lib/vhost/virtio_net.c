@@ -3538,6 +3538,7 @@ rte_vhost_async_try_dequeue_burst(int vid, uint16_t queue_id,
 		 * learning table will get updated first.
 		 */
 		pkts[0] = rarp_mbuf;
+		vhost_queue_stats_update(dev, vq, pkts, 1);
 		pkts++;
 		count -= 1;
 	}
@@ -3562,6 +3563,7 @@ rte_vhost_async_try_dequeue_burst(int vid, uint16_t queue_id,
 							    count, dma_id, vchan_id);
 
 	*nr_inflight = vq->async->pkts_inflight_n;
+	vhost_queue_stats_update(dev, vq, pkts, count);
 
 out:
 	if (dev->features & (1ULL << VIRTIO_F_IOMMU_PLATFORM))
