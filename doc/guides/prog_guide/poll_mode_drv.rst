@@ -627,3 +627,35 @@ by application.
 The PMD itself should not call rte_eth_dev_reset(). The PMD can trigger
 the application to handle reset event. It is duty of application to
 handle all synchronization before it calls rte_eth_dev_reset().
+
+Error Recovery Notification
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Some PMDs (e.g. hns3) could detect hardware or firmware errors, and try to
+recover from the errors. In this process, the PMD sets the data path pointers
+to dummy functions (which will prevent the crash), and also make sure the
+control path operations failed with retcode -EBUSY.
+
+Also in this process, from the perspective of application, services are
+affected. For example, the Rx/Tx bust APIs cannot receive and send packets,
+and the control plane API return failure.
+
+In some service scenarios, application needs to be aware of the event to
+determine whether to migrate services. So three events was introduced.
+
+The PMD must trigger RTE_ETH_EVENT_ERR_RECOVERING event to notify the
+application that it detected a hardware or firmware error and tries to recover.
+
+The PMD must trigger RTE_ETH_EVENT_RECOVER_SUCCESS event to notify the
+application that it has recovered from the error. And PMD already re-configures
+the port to the state prior to the error.
+
+The PMD must trigger RTE_ETH_EVENT_RECOVER_FAILED event to notify the
+application that it has failed to recover from the error. The port may not be
+usable anymore.
+
+.. note::
+        The error recovery of these events is mainly performed by the PMD.
+        Unlike the RTE_ETH_EVENT_INTR_RESET which the error recovery is
+        performed by the application. The PMD must ensure that the above two
+        error handling methods cannot be used at the same time.

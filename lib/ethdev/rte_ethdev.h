@@ -3928,6 +3928,12 @@ enum rte_eth_event_type {
 	 * @see rte_eth_rx_avail_thresh_set()
 	 */
 	RTE_ETH_EVENT_RX_AVAIL_THRESH,
+	/** Port recovering from a hardware or firmware error */
+	RTE_ETH_EVENT_ERR_RECOVERING,
+	/** Port recovers successful from the error */
+	RTE_ETH_EVENT_RECOVER_SUCCESS,
+	/** Port recovers failed from the error */
+	RTE_ETH_EVENT_RECOVER_FAILED,
 	RTE_ETH_EVENT_MAX       /**< max value of this enum */
 };
 

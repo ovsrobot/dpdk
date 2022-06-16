@@ -108,6 +108,17 @@ New Features
 
   Added an API which can get the device type of vDPA device.
 
+* **Added error recover notification.**
+
+  Added error recover notification to application including:
+
+  * Added new event: ``RTE_ETH_EVENT_ERR_RECOVERING`` for the PMD to report
+    that the port is recovering from an error.
+  * Added new event: ``RTE_ETH_EVENT_RECOVER_SUCCESS`` for the PMD to report
+    that the port recover successful from an error.
+  * Added new event: ``RTE_ETH_EVENT_RECOVER_FAILED`` for the PMD to report
+    that the prot recover failed from an error.
+
 * **Updated Amazon ena driver.**
 
   The new driver version (v2.7.0) includes:
