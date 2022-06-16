@@ -4,7 +4,6 @@
 
 #include <stddef.h>
 
-#include <rte_jhash.h>
 #include <rte_hash_crc.h>
 
 #include "ip_frag_common.h"
