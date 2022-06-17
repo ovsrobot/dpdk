@@ -22,7 +22,6 @@ extern "C" {
 #include <rte_debug.h>
 #include <rte_errno.h>
 #include <rte_memzone.h>
-#include <rte_spinlock.h>
 
 #define RTE_TAILQ_STACK_NAME "RTE_STACK"
 #define RTE_STACK_MZ_PREFIX "STK_"
