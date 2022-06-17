@@ -162,9 +162,22 @@ __rte_raw_cksum(const void *buf, size_t len, uint32_t sum)
 {
 	/* extend strict-aliasing rules */
 	typedef uint16_t __attribute__((__may_alias__)) u16_p;
-	const u16_p *u16_buf = (const u16_p *)buf;
-	const u16_p *end = u16_buf + len / sizeof(*u16_buf);
+	const u16_p *u16_buf;
+	const u16_p *end;
 
+	/* if buffer is unaligned, keeping it byte order independent */
+	if (unlikely((uintptr_t)buf & 1)) {
+		uint16_t first = 0;
+		if (unlikely(len == 0))
+			return 0;
+		((unsigned char *)&first)[1] = *(const unsigned char *)buf;
+		sum += first;
+		buf = (const void *)((uintptr_t)buf + 1);
+		len--;
+	}
+
+	u16_buf = (const u16_p *)buf;
+	end = u16_buf + len / sizeof(*u16_buf);
 	for (; u16_buf != end; ++u16_buf)
 		sum += *u16_buf;
 
