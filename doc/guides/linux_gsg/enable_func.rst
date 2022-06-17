@@ -13,13 +13,58 @@ Enabling Additional Functionality
 Running DPDK Applications Without Root Privileges
 -------------------------------------------------
 
-In order to run DPDK as non-root, the following Linux filesystem objects'
-permissions should be adjusted to ensure that the Linux account being used to
-run the DPDK application has access to them:
+The following sections describe generic requirements and configuration
+for running DPDK applications as non-root.
+There may be additional requirements documented for some drivers.
 
-*   All directories which serve as hugepage mount points, for example, ``/dev/hugepages``
+Hugepages
+~~~~~~~~~
 
-*   If the HPET is to be used,  ``/dev/hpet``
+Hugepages must be reserved as root before runing the application as non-root,
+for example::
+
+  sudo dpdk-hugepages.py --reserve 1G
+
+If multi-process is not required, running with ``--in-memory``
+bypasses the need to access hugepage mount point and files within it.
+Otherwise, hugepage directory must be made accessible
+for writing to the unprivileged user.
+A good way for managing multiple applications using hugepages
+is to mount the filesystem with group permissions
+and add a supplementary group to each application or container.
+
+One option is to use the script provided by this project::
+
+  export HUGEDIR=$HOME/huge-1G
+  mkdir -p $HUGEDIR
+  sudo dpdk-hugepages.py --mount --directory $HUGEDIR --owner `id -u`:`id -g`
+
+In production environment, the OS can manage mount points
+(`systemd example <https://github.com/systemd/systemd/blob/main/units/dev-hugepages.mount>`_).
+
+The ``hugetlb`` filesystem has additional options to guarantee or limit
+the amount of memory that is possible to allocate using the mount point.
+Refer to the `documentation <https://www.kernel.org/doc/Documentation/vm/hugetlbpage.txt>`_.
+
+If the driver requires using physical addresses (PA),
+the executable file must be granted additional capabilities:
+
+* ``SYS_ADMIN`` to read ``/proc/self/pagemaps``
+* ``IPC_LOCK`` to lock hugepages in memory
+
+.. code-block:: console
+
+   setcap cap_ipc_lock,cap_sys_admin+ep <executable>
+
+If physical addresses are not accessible,
+the following message will appear during EAL initialization::
+
+  EAL: rte_mem_virt2phy(): cannot open /proc/self/pagemap: Permission denied
+
+It is harmless in case PA are not needed.
+
+Resource Limits
+~~~~~~~~~~~~~~~
 
 When running as non-root user, there may be some additional resource limits
 that are imposed by the system. Specifically, the following resource limits may
@@ -34,7 +79,15 @@ need to be adjusted in order to ensure normal DPDK operation:
 The above limits can usually be adjusted by editing
 ``/etc/security/limits.conf`` file, and rebooting.
 
-Additionally, depending on which kernel driver is in use, the relevant
+See `Hugepage Mapping <hugepage_mapping>`_
+secton to learn how these limits affect EAL.
+
+Device Control
+~~~~~~~~~~~~~~
+
+If the HPET is to be used, ``/dev/hpet`` permissions must be adjusted.
+
+Depending on which kernel driver is in use, the relevant
 resources also should be accessible by the user running the DPDK application.
 
 For ``vfio-pci`` kernel driver, the following Linux file system objects'
@@ -64,6 +117,8 @@ system objects' permissions should be adjusted:
        /sys/class/uio/uio0/device/config
        /sys/class/uio/uio0/device/resource*
 
+For ``virtio`` PMD in legacy mode, ``SYS_RAWIO`` capability is required
+for ``iopl()`` call to enable access to PCI IO ports.
 
 Power Management and Power Saving Functionality
 -----------------------------------------------
