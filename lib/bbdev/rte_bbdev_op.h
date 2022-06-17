@@ -748,7 +748,7 @@ enum rte_bbdev_op_type {
 	RTE_BBDEV_OP_TURBO_ENC,  /**< Turbo encode */
 	RTE_BBDEV_OP_LDPC_DEC,  /**< LDPC decode */
 	RTE_BBDEV_OP_LDPC_ENC,  /**< LDPC encode */
-	RTE_BBDEV_OP_TYPE_COUNT,  /**< Count of different op types */
+	RTE_BBDEV_OP_TYPE_PADDED_MAX = 8,  /**< Maximum op type number including padding */
 };
 
 /** Bit indexes of possible errors reported through status field */
