@@ -488,3 +488,12 @@ For PA mode, page by page mapping may exceed IOMMU's max capability,
 better to use 1G guest hugepage.
 
 For UIO driver, any VFIO related error message can be ignored.
+
+Async enqueue API usage
+-----------------------
+
+In async enqueue path, rte_vhost_poll_enqueue_completed() needs to be
+called in time. Otherwise, calling rte_vhost_submit_enqueue_burst()
+all the time will cause the DMA ring to be full, which will result
+in packet loss eventually.
+
