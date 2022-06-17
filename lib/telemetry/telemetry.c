@@ -215,6 +215,94 @@ container_to_json(const struct rte_tel_data *d, char *out_buf, size_t buf_len)
 	return used;
 }
 
+static bool
+json_is_special_char(char ch)
+{
+	static unsigned char is_spec[256] = { 0 };
+	static bool init_once;
+
+	if (!init_once) {
+		is_spec['\"'] = 1;
+		is_spec['\\'] = 1;
+		is_spec['/'] = 1;
+		is_spec['\b'] = 1;
+		is_spec['\f'] = 1;
+		is_spec['\n'] = 1;
+		is_spec['\r'] = 1;
+		is_spec['\t'] = 1;
+		init_once = true;
+	}
+
+	return (bool)is_spec[(unsigned char)ch];
+}
+
+static size_t
+json_escape_special_char(char *buf, const char ch)
+{
+	size_t used = 0;
+
+	switch (ch) {
+	case '\"':
+		buf[used++] = '\\';
+		buf[used++] = '\"';
+		break;
+	case '\\':
+		buf[used++] = '\\';
+		buf[used++] = '\\';
+		break;
+	case '/':
+		buf[used++] = '\\';
+		buf[used++] = '/';
+		break;
+	case '\b':
+		buf[used++] = '\\';
+		buf[used++] = 'b';
+		break;
+	case '\f':
+		buf[used++] = '\\';
+		buf[used++] = 'f';
+		break;
+	case '\n':
+		buf[used++] = '\\';
+		buf[used++] = 'n';
+		break;
+	case '\r':
+		buf[used++] = '\\';
+		buf[used++] = 'r';
+		break;
+	case '\t':
+		buf[used++] = '\\';
+		buf[used++] = 't';
+		break;
+	default:
+		break;
+	}
+
+	return used;
+}
+
+static size_t
+json_format_string(char *buf, size_t len, const char *str)
+{
+	size_t used = 0;
+
+	while (*str) {
+		if (unlikely(len < used + 2)) {
+			TMTY_LOG(WARNING, "Insufficient buffer when json format string\n");
+			break;
+		}
+
+		if (json_is_special_char(*str))
+			used += json_escape_special_char(buf + used, *str);
+		else
+			buf[used++] = *str;
+
+		str++;
+	}
+
+	return used;
+}
+
 static void
 output_json(const char *cmd, const struct rte_tel_data *d, int s)
 {
@@ -232,9 +320,11 @@ output_json(const char *cmd, const struct rte_tel_data *d, int s)
 				MAX_CMD_LEN, cmd ? cmd : "none");
 		break;
 	case RTE_TEL_STRING:
-		used = snprintf(out_buf, sizeof(out_buf), "{\"%.*s\":\"%.*s\"}",
-				MAX_CMD_LEN, cmd,
-				RTE_TEL_MAX_SINGLE_STRING_LEN, d->data.str);
+		used = snprintf(out_buf, sizeof(out_buf), "{\"%.*s\":\"",
+				MAX_CMD_LEN, cmd);
+		used += json_format_string(out_buf + used,
+				sizeof(out_buf) - used - 3, d->data.str);
+		used += snprintf(out_buf + used, sizeof(out_buf) - used, "\"}");
 		break;
 	case RTE_TEL_DICT:
 		prefix_used = snprintf(out_buf, sizeof(out_buf), "{\"%.*s\":",
