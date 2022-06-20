@@ -494,8 +494,14 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		 */
 		ret = pcap_sendpacket(pcap,
 			rte_pktmbuf_read(mbuf, 0, len, temp_data), len);
-		if (unlikely(ret != 0))
-			break;
+		if (unlikely(ret != 0)) {
+			if (errno == EMSGSIZE) {
+				rte_pktmbuf_free(mbuf);
+				continue;
+			} else {
+				break;
+			}
+		}
 		num_tx++;
 		tx_bytes += len;
 		rte_pktmbuf_free(mbuf);
