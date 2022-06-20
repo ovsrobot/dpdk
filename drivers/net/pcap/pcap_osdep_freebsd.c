@@ -57,3 +57,10 @@ osdep_iface_mac_get(const char *if_name, struct rte_ether_addr *mac)
 	rte_free(buf);
 	return 0;
 }
+
+int
+osdep_iface_mtu_set(__rte_unused const char *if_name, __rte_unused uint16_t mtu)
+{
+	PMD_LOG(ERR, "mtu set not supported on freebsd\n");
+	return -ENOTSUP;
+}

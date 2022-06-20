@@ -215,6 +215,9 @@ New Features
   Merged l3fwd-acl code into l3fwd as l3fwd-acl contains duplicate
   and common functions to l3fwd.
 
+* **Updated pcap driver.**
+
+ * Added support for MTU on Linux network interfaces.
 
 Removed Items
 -------------

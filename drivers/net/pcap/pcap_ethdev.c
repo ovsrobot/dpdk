@@ -807,6 +807,47 @@ eth_stats_reset(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static int
+eth_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
+{
+	unsigned int i;
+	struct pmd_internals *internals = dev->data->dev_private;
+	int is_supported = 0;
+	int is_err = 0;
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		struct pcap_rx_queue *queue = &internals->rx_queue[i];
+
+		if ((strcmp(queue->type, ETH_PCAP_IFACE_ARG) == 0) ||
+				(strcmp(queue->type, ETH_PCAP_RX_IFACE_ARG) == 0) ||
+				(strcmp(queue->type, ETH_PCAP_RX_IFACE_IN_ARG) == 0)) {
+			is_supported = 1;
+			if (osdep_iface_mtu_set(queue->name, mtu) < 0)
+				is_err = 1;
+		}
+	}
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		struct pcap_tx_queue *queue = &internals->tx_queue[i];
+
+		if ((strcmp(queue->type, ETH_PCAP_IFACE_ARG) == 0) ||
+				(strcmp(queue->type, ETH_PCAP_TX_IFACE_ARG) == 0)) {
+			is_supported = 1;
+			if (osdep_iface_mtu_set(queue->name, mtu) < 0)
+				is_err = 1;
+		}
+	}
+
+	if (!is_supported)
+		return -ENOTSUP;
+
+	if (is_err)
+		return -1;
+
+	PMD_LOG(INFO, "MTU set %s %u\n", dev->device->name, mtu);
+	return 0;
+}
+
 static inline void
 infinite_rx_ring_free(struct rte_ring *pkts)
 {
@@ -1004,6 +1045,7 @@ static const struct eth_dev_ops ops = {
 	.link_update = eth_link_update,
 	.stats_get = eth_stats_get,
 	.stats_reset = eth_stats_reset,
+	.mtu_set = eth_mtu_set,
 };
 
 static int
