@@ -54,7 +54,7 @@ struct queue_stat {
 	volatile unsigned long rx_nombuf;
 };
 
-struct queue_missed_stat {
+struct queue_pcap_stat {
 	/* last value retrieved from pcap */
 	unsigned int pcap;
 	/* stores values lost by pcap stop or rollover */
@@ -63,12 +63,19 @@ struct queue_missed_stat {
 	unsigned long reset;
 };
 
+enum {
+	QUEUE_PCAP_STAT_FIRST = 0,
+	QUEUE_PCAP_STAT_MISSED = QUEUE_PCAP_STAT_FIRST,
+	QUEUE_PCAP_STAT_ERROR,
+	QUEUE_PCAP_STAT_NUM
+};
+
 struct pcap_rx_queue {
 	uint16_t port_id;
 	uint16_t queue_id;
 	struct rte_mempool *mb_pool;
 	struct queue_stat rx_stat;
-	struct queue_missed_stat missed_stat;
+	struct queue_pcap_stat queue_pcap_stat[QUEUE_PCAP_STAT_NUM];
 	char name[PATH_MAX];
 	char type[ETH_PCAP_ARG_MAXLEN];
 
@@ -144,54 +151,62 @@ static struct rte_eth_link pmd_link = {
 
 RTE_LOG_REGISTER_DEFAULT(eth_pcap_logtype, NOTICE);
 
-static struct queue_missed_stat*
-queue_missed_stat_update(struct rte_eth_dev *dev, unsigned int qid)
+static struct queue_pcap_stat*
+queue_pcap_stat_update(struct rte_eth_dev *dev, unsigned int qid, int type)
 {
 	struct pmd_internals *internals = dev->data->dev_private;
-	struct queue_missed_stat *missed_stat =
-			&internals->rx_queue[qid].missed_stat;
+	struct queue_pcap_stat *queue_pcap_stat =
+			&internals->rx_queue[qid].queue_pcap_stat[type];
 	const struct pmd_process_private *pp = dev->process_private;
 	pcap_t *pcap = pp->rx_pcap[qid];
 	struct pcap_stat stat;
+	u_int value;
 
 	if (!pcap || (pcap_stats(pcap, &stat) != 0))
-		return missed_stat;
+		return queue_pcap_stat;
 
+	value = (type == QUEUE_PCAP_STAT_ERROR) ? stat.ps_ifdrop : stat.ps_drop;
 	/* rollover check - best effort fixup assuming single rollover */
-	if (stat.ps_drop < missed_stat->pcap)
-		missed_stat->mnemonic += UINT_MAX;
-	missed_stat->pcap = stat.ps_drop;
+	if (value < queue_pcap_stat->pcap)
+		queue_pcap_stat->mnemonic += UINT_MAX;
+	queue_pcap_stat->pcap = value;
 
-	return missed_stat;
+	return queue_pcap_stat;
 }
 
 static void
-queue_missed_stat_on_stop_update(struct rte_eth_dev *dev, unsigned int qid)
+queue_pcap_stat_on_stop_update(struct rte_eth_dev *dev, unsigned int qid)
 {
-	struct queue_missed_stat *missed_stat =
-			queue_missed_stat_update(dev, qid);
+	int type;
+	struct queue_pcap_stat *queue_pcap_stat;
 
-	missed_stat->mnemonic += missed_stat->pcap;
-	missed_stat->pcap = 0;
+	for (type = QUEUE_PCAP_STAT_FIRST; type < QUEUE_PCAP_STAT_NUM; type++) {
+		queue_pcap_stat = queue_pcap_stat_update(dev, qid, type);
+		queue_pcap_stat->mnemonic += queue_pcap_stat->pcap;
+		queue_pcap_stat->pcap = 0;
+	}
 }
 
 static void
-queue_missed_stat_reset(struct rte_eth_dev *dev, unsigned int qid)
+queue_pcap_stat_reset(struct rte_eth_dev *dev, unsigned int qid)
 {
-	struct queue_missed_stat *missed_stat =
-			queue_missed_stat_update(dev, qid);
+	int type;
+	struct queue_pcap_stat *queue_pcap_stat;
 
-	missed_stat->reset = missed_stat->pcap;
-	missed_stat->mnemonic = 0;
+	for (type = QUEUE_PCAP_STAT_FIRST; type < QUEUE_PCAP_STAT_NUM; type++) {
+		queue_pcap_stat = queue_pcap_stat_update(dev, qid, type);
+		queue_pcap_stat->reset = queue_pcap_stat->pcap;
+		queue_pcap_stat->mnemonic = 0;
+	}
 }
 
 static unsigned long
-queue_missed_stat_get(struct rte_eth_dev *dev, unsigned int qid)
+queue_pcap_stat_get(struct rte_eth_dev *dev, unsigned int qid, int type)
 {
-	const struct queue_missed_stat *missed_stat =
-			queue_missed_stat_update(dev, qid);
+	const struct queue_pcap_stat *queue_pcap_stat =
+			queue_pcap_stat_update(dev, qid, type);
 
-	return missed_stat->pcap + missed_stat->mnemonic - missed_stat->reset;
+	return queue_pcap_stat->pcap + queue_pcap_stat->mnemonic - queue_pcap_stat->reset;
 }
 
 static int
@@ -684,7 +699,7 @@ eth_dev_stop(struct rte_eth_dev *dev)
 
 	/* Special iface case. Single pcap is open and shared between tx/rx. */
 	if (internals->single_iface) {
-		queue_missed_stat_on_stop_update(dev, 0);
+		queue_pcap_stat_on_stop_update(dev, 0);
 		if (pp->tx_pcap[0] != NULL) {
 			pcap_close(pp->tx_pcap[0]);
 			pp->tx_pcap[0] = NULL;
@@ -707,7 +722,7 @@ eth_dev_stop(struct rte_eth_dev *dev)
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		if (pp->rx_pcap[i] != NULL) {
-			queue_missed_stat_on_stop_update(dev, i);
+			queue_pcap_stat_on_stop_update(dev, i);
 			pcap_close(pp->rx_pcap[i]);
 			pp->rx_pcap[i] = NULL;
 		}
@@ -766,7 +781,8 @@ eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		rx_err_total += internal->rx_queue[i].rx_stat.err_pkts;
 		rx_packets_total += stats->q_ipackets[i];
 		rx_bytes_total += stats->q_ibytes[i];
-		rx_missed_total += queue_missed_stat_get(dev, i);
+		rx_missed_total += queue_pcap_stat_get(dev, i, QUEUE_PCAP_STAT_MISSED);
+		rx_err_total += queue_pcap_stat_get(dev, i, QUEUE_PCAP_STAT_ERROR);
 	}
 
 	for (i = 0; i < RTE_ETHDEV_QUEUE_STAT_CNTRS &&
@@ -801,7 +817,7 @@ eth_stats_reset(struct rte_eth_dev *dev)
 		internal->rx_queue[i].rx_stat.bytes = 0;
 		internal->rx_queue[i].rx_stat.err_pkts = 0;
 		internal->rx_queue[i].rx_stat.rx_nombuf = 0;
-		queue_missed_stat_reset(dev, i);
+		queue_pcap_stat_reset(dev, i);
 	}
 
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
