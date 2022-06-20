@@ -552,6 +552,7 @@ eth_txgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	const struct rte_memzone *mz;
 	uint32_t ctrl_ext;
 	uint16_t csum;
+	u32 ssid = 0;
 	int err, i, ret;
 
 	PMD_INIT_FUNC_TRACE();
@@ -594,6 +595,17 @@ eth_txgbe_dev_init(struct rte_eth_dev *eth_dev, void *init_params __rte_unused)
 	/* Vendor and Device ID need to be set before init of shared code */
 	hw->device_id = pci_dev->id.device_id;
 	hw->vendor_id = pci_dev->id.vendor_id;
+	if (pci_dev->id.subsystem_vendor_id == PCI_VENDOR_ID_WANGXUN) {
+		hw->subsystem_device_id = pci_dev->id.subsystem_device_id;
+	} else {
+		ssid = txgbe_flash_read_dword(hw, 0xFFFDC);
+		if (ssid == 0x1) {
+			PMD_INIT_LOG(ERR,
+				"Read of internal subsystem device id failed\n");
+			return -ENODEV;
+		}
+		hw->subsystem_device_id = (u16)ssid >> 8 | (u16)ssid << 8;
+	}
 	hw->hw_addr = (void *)pci_dev->mem_resource[0].addr;
 	hw->allow_unsupported_sfp = 1;
 
