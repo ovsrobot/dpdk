@@ -3491,17 +3491,34 @@ pmd_test_exit(void)
 		}
 	}
 #endif
+	portid_t ethports[RTE_MAX_ETHPORTS];
+	int count;
+	int index;
 	if (ports != NULL) {
 		no_link_check = 1;
+		count = 0;
+
+		/* Fetch the valid port id from port list*/
 		RTE_ETH_FOREACH_DEV(pt_id) {
-			printf("\nStopping port %d...\n", pt_id);
-			fflush(stdout);
-			stop_port(pt_id);
+			ethports[count] = pt_id;
+			count++;
 		}
-		RTE_ETH_FOREACH_DEV(pt_id) {
-			printf("\nShutting down port %d...\n", pt_id);
+
+		/*
+		 * Free the port from Reverse order, as general,
+		 * PF port < VF port， VF should be free before PF
+		 * be free.
+		 */
+		for (index = count - 1 ; index >= 0 ; index--) {
+			printf("\nStopping port %d...\n", ethports[index]);
 			fflush(stdout);
-			close_port(pt_id);
+			stop_port(ethports[index]);
+		}
+
+		for (index = count - 1 ; index >= 0 ; index--) {
+			printf("\nShutting down port %d...\n", ethports[index]);
+			fflush(stdout);
+			close_port(ethports[index]);
 		}
 	}
 
