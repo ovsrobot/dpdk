@@ -75,7 +75,7 @@ if [ "$PPC64LE" = "true" ]; then
 fi
 
 if [ "$RISCV64" = "true" ]; then
-    cross_file=config/riscv/riscv64_linux_gcc
+    cross_file=config/riscv/riscv64_linux_gcc_ubuntu
 fi
 
 if [ -n "$cross_file" ]; then

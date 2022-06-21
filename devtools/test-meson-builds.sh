@@ -265,7 +265,7 @@ f=$srcdir/config/ppc/ppc64le-power8-linux-gcc
 build build-ppc64-power8-gcc $f ABI $use_shared
 
 # generic RISC-V
-f=$srcdir/config/riscv/riscv64_linux_gcc
+f=$srcdir/config/riscv/riscv64_linux_gcc_ubuntu
 build build-riscv64-generic-gcc $f ABI $use_shared
 
 # Test installation of the x86-generic target, to be used for checking

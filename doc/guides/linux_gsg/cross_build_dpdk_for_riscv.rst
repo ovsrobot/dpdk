@@ -74,7 +74,7 @@ To cross-compile DPDK for a desired target machine use the following command::
 For example if the target machine is a generic rv64gc RISC-V, use the following
 command::
 
-   meson riscv64-build-gcc --cross-file config/riscv/riscv64_linux_gcc
+   meson riscv64-build-gcc --cross-file config/riscv/riscv64_linux_gcc_ubuntu
    ninja -C riscv64-build-gcc
 
 If riscv-gnu-toolchain is used, binary names should be updated to match. Update
@@ -106,7 +106,7 @@ Supported cross-compilation targets
 
 Currently the following targets are supported:
 
-* Generic rv64gc ISA: ``config/riscv/riscv64_linux_gcc``
+* Generic rv64gc ISA: ``config/riscv/riscv64_linux_gcc_ubuntu``
 
 * SiFive U740 SoC: ``config/riscv/riscv64_sifive_u740_linux_gcc``
 
