@@ -215,6 +215,10 @@ New Features
   Merged l3fwd-acl code into l3fwd as l3fwd-acl contains duplicate
   and common functions to l3fwd.
 
+* **Update Openssl PMD with 3.0 EVP API.**
+
+  Update Openssl PMD deprecated APIs to EVP APIs where supported in Openssl
+  3.0 lib.
 
 Removed Items
 -------------
