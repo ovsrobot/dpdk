@@ -218,6 +218,20 @@ implementer_qualcomm = {
     }
 }
 
+implementer_phytium = {
+    'description': 'PHYTIUM',
+    'flags': [
+        ['RTE_MACHINE', '"armv8a"'],
+        ['RTE_USE_C11_MEM_MODEL', true],
+        ['RTE_CACHE_LINE_SIZE', 64],
+        ['RTE_MAX_LCORE', 64],
+        ['RTE_MAX_NUMA_NODES', 8]
+    ],
+    'part_number_config': {
+        '0x662': {'machine_args':  ['-march=armv8-a+crc']}
+    }
+}
+
 ## Arm implementers (ID from MIDR in Arm Architecture Reference Manual)
 implementers = {
     'generic': implementer_generic,
@@ -225,7 +239,8 @@ implementers = {
     '0x43': implementer_cavium,
     '0x48': implementer_hisilicon,
     '0x50': implementer_ampere,
-    '0x51': implementer_qualcomm
+    '0x51': implementer_qualcomm,
+    '0x70': implementer_phytium
 }
 
 # SoC specific armv8 flags have the highest priority
@@ -378,6 +393,13 @@ soc_thunderxt83 = {
     'part_number': '0xa3'
 }
 
+soc_ft2000plus = {
+    'description': 'PHYTIUM ft2000plus',
+    'implementer': '0x70',
+    'part_number': '0x662',
+    'numa': true
+}
+
 '''
 Start of SoCs list
 generic:         Generic un-optimized build for armv8 aarch64 execution mode.
@@ -398,6 +420,7 @@ stingray:        Broadcom Stingray
 thunderx2:       Marvell ThunderX2 T99
 thunderxt88:     Marvell ThunderX T88
 thunderxt83:     Marvell ThunderX T83
+ft2000plus:  PHYTIUM ft2000plus
 End of SoCs list
 '''
 # The string above is included in the documentation, keep it in sync with the
@@ -421,6 +444,7 @@ socs = {
     'thunderx2': soc_thunderx2,
     'thunderxt88': soc_thunderxt88,
     'thunderxt83': soc_thunderxt83,
+    'ft2000plus': soc_ft2000plus,
 }
 
 dpdk_conf.set('RTE_ARCH_ARM', 1)
