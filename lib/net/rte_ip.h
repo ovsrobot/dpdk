@@ -162,20 +162,41 @@ __rte_raw_cksum(const void *buf, size_t len, uint32_t sum)
 {
 	/* extend strict-aliasing rules */
 	typedef uint16_t __attribute__((__may_alias__)) u16_p;
-	const u16_p *u16_buf = (const u16_p *)buf;
-	const u16_p *end = u16_buf + len / sizeof(*u16_buf);
+	const u16_p *u16_buf;
+	const u16_p *end;
+	uint32_t bsum = 0;
+	const bool unaligned = (uintptr_t)buf & 1;
 
+	/* if buffer is unaligned, keeping it byte order independent */
+	if (unlikely(unaligned)) {
+		uint16_t first = 0;
+		if (unlikely(len == 0))
+			return 0;
+		((unsigned char *)&first)[1] = *(const unsigned char *)buf;
+		bsum += first;
+		buf = (const void *)((uintptr_t)buf + 1);
+		len--;
+	}
+
+	/* aligned access for compiler auto-vectorization */
+	u16_buf = (const u16_p *)buf;
+	end = u16_buf + len / sizeof(*u16_buf);
 	for (; u16_buf != end; ++u16_buf)
-		sum += *u16_buf;
+		bsum += *u16_buf;
 
 	/* if length is odd, keeping it byte order independent */
 	if (unlikely(len % 2)) {
 		uint16_t left = 0;
 		*(unsigned char *)&left = *(const unsigned char *)end;
-		sum += left;
+		bsum += left;
 	}
 
-	return sum;
+	/* if buffer is unaligned, swap the checksum bytes */
+	if (unlikely(unaligned)) {
+		bsum = (bsum & 0xFF00FF00) >> 8 | (bsum & 0x00FF00FF) << 8;
+	}
+
+	return sum + bsum;
 }
 
 /**
