@@ -3,7 +3,7 @@ import time
 from pexpect import pxssh
 
 from .exception import SSHConnectionException, SSHSessionDeadException, TimeoutException
-from .utils import GREEN, RED
+from .utils import GREEN, RED, parallel_lock
 
 """
 Module handles ssh sessions to TG and SUT.
@@ -12,7 +12,7 @@ Implements send_expect function to send commands and get output data.
 
 
 class SSHPexpect:
-    def __init__(self, node, username, password):
+    def __init__(self, node, username, password, sut_id):
         self.magic_prompt = "MAGIC PROMPT"
         self.logger = None
 
@@ -20,11 +20,18 @@ class SSHPexpect:
         self.username = username
         self.password = password
 
-        self._connect_host()
+        self._connect_host(sut_id=sut_id)
 
-    def _connect_host(self):
+    @parallel_lock(num=8)
+    def _connect_host(self, sut_id=0):
         """
         Create connection to assigned node.
+        Parameter sut_id will be used in parallel_lock thus can assure
+        isolated locks for each node.
+        Parallel ssh connections are limited to MaxStartups option in SSHD
+        configuration file. By default concurrent number is 10, so default
+        threads number is limited to 8 which less than 10. Lock number can
+        be modified along with MaxStartups value.
         """
         retry_times = 10
         try:
