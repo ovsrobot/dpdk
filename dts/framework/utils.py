@@ -2,8 +2,21 @@
 # Copyright(c) 2010-2014 Intel Corporation
 #
 
+import sys
 import threading
 from functools import wraps
+
+
+def create_parallel_locks(num_suts):
+    """
+    Create thread lock dictionary based on SUTs number
+    """
+    global locks_info
+    locks_info = []
+    for _ in range(num_suts):
+        lock_info = dict()
+        lock_info["update_lock"] = threading.RLock()
+        locks_info.append(lock_info)
 
 
 def parallel_lock(num=1):
@@ -90,3 +103,26 @@ def RED(text):
 
 def GREEN(text):
     return "\x1B[" + "32;1m" + str(text) + "\x1B[" + "0m"
+
+
+def check_dts_python_version():
+    if (
+        sys.version_info.major < 3
+        or (sys.version_info.major == 3 and sys.version_info.minor < 6)
+        or (
+            sys.version_info.major == 3
+            and sys.version_info.minor == 6
+            and sys.version_info.micro < 9
+        )
+    ):
+        print(
+            RED(
+                (
+                    "WARNING: Dts running node python version is lower than python 3.6, "
+                    "it is deprecated for use in DTS, "
+                    "and will not work in future releases."
+                )
+            ),
+            file=sys.stderr,
+        )
+        print(RED("Please use Python >= 3.6.9 instead"), file=sys.stderr)
