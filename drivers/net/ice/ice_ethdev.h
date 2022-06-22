@@ -360,6 +360,14 @@ struct ice_fdir_fltr_pattern {
 		struct ice_fdir_v6 v6;
 	} ip, mask;
 
+	union {
+		struct ice_fdir_v4 v4;
+		struct ice_fdir_v6 v6;
+	} ip_outer, mask_outer;
+
+	struct ice_fdir_udp_vxlan vxlan_data;
+	struct ice_fdir_udp_vxlan vxlan_mask;
+
 	struct ice_fdir_udp_gtp gtpu_data;
 	struct ice_fdir_udp_gtp gtpu_mask;
 

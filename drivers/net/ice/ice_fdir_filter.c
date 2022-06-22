@@ -1245,11 +1245,19 @@ ice_fdir_extract_fltr_key(struct ice_fdir_fltr_pattern *key,
 	key->flow_type = input->flow_type;
 	rte_memcpy(&key->ip, &input->ip, sizeof(key->ip));
 	rte_memcpy(&key->mask, &input->mask, sizeof(key->mask));
+
+	rte_memcpy(&key->ip_outer, &input->ip_outer, sizeof(key->ip_outer));
+	rte_memcpy(&key->mask_outer, &input->mask_outer, sizeof(key->mask_outer));
+
 	rte_memcpy(&key->ext_data, &input->ext_data, sizeof(key->ext_data));
 	rte_memcpy(&key->ext_mask, &input->ext_mask, sizeof(key->ext_mask));
 
 	rte_memcpy(&key->ext_data_outer, &input->ext_data_outer, sizeof(key->ext_data_outer));
 	rte_memcpy(&key->ext_mask_outer, &input->ext_mask_outer, sizeof(key->ext_mask_outer));
+
+	rte_memcpy(&key->vxlan_data, &input->vxlan_data, sizeof(key->vxlan_data));
+	rte_memcpy(&key->vxlan_mask, &input->vxlan_mask, sizeof(key->vxlan_mask));
+
 	rte_memcpy(&key->gtpu_data, &input->gtpu_data, sizeof(key->gtpu_data));
 	rte_memcpy(&key->gtpu_mask, &input->gtpu_mask, sizeof(key->gtpu_mask));
 
@@ -2052,23 +2060,31 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 			if (ipv4_mask->hdr.dst_addr &&
 				ipv4_mask->hdr.dst_addr != UINT32_MAX)
 				return -rte_errno;
+			/* Mask for IPv4 tos not supported */
+			if (ipv4_mask->hdr.type_of_service &&
+			    ipv4_mask->hdr.type_of_service != UINT8_MAX)
+				return -rte_errno;
 
-			if (ipv4_mask->hdr.dst_addr == UINT32_MAX)
+			if (ipv4_mask->hdr.dst_addr == UINT32_MAX) {
 				*input_set |= ICE_INSET_IPV4_DST;
-			if (ipv4_mask->hdr.src_addr == UINT32_MAX)
+				p_v4->dst_ip = ipv4_spec->hdr.dst_addr;
+			}
+			if (ipv4_mask->hdr.src_addr == UINT32_MAX) {
 				*input_set |= ICE_INSET_IPV4_SRC;
-			if (ipv4_mask->hdr.time_to_live == UINT8_MAX)
+				p_v4->src_ip = ipv4_spec->hdr.src_addr;
+			}
+			if (ipv4_mask->hdr.time_to_live == UINT8_MAX) {
 				*input_set |= ICE_INSET_IPV4_TTL;
-			if (ipv4_mask->hdr.next_proto_id == UINT8_MAX)
+				p_v4->ttl = ipv4_spec->hdr.time_to_live;
+			}
+			if (ipv4_mask->hdr.next_proto_id == UINT8_MAX) {
 				*input_set |= ICE_INSET_IPV4_PROTO;
-			if (ipv4_mask->hdr.type_of_service == UINT8_MAX)
+				p_v4->proto = ipv4_spec->hdr.next_proto_id;
+			}
+			if (ipv4_mask->hdr.type_of_service == UINT8_MAX) {
 				*input_set |= ICE_INSET_IPV4_TOS;
-
-			p_v4->dst_ip = ipv4_spec->hdr.dst_addr;
-			p_v4->src_ip = ipv4_spec->hdr.src_addr;
-			p_v4->ttl = ipv4_spec->hdr.time_to_live;
-			p_v4->proto = ipv4_spec->hdr.next_proto_id;
-			p_v4->tos = ipv4_spec->hdr.type_of_service;
+				p_v4->tos = ipv4_spec->hdr.type_of_service;
+			}
 
 			/* fragment Ipv4:
 			 * spec is 0x2000, mask is 0x2000
@@ -2114,27 +2130,35 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 			}
 
 			if (!memcmp(ipv6_mask->hdr.src_addr, ipv6_addr_mask,
-				    RTE_DIM(ipv6_mask->hdr.src_addr)))
+				    RTE_DIM(ipv6_mask->hdr.src_addr))) {
 				*input_set |= ICE_INSET_IPV6_SRC;
+				rte_memcpy(&p_v6->src_ip,
+					   ipv6_spec->hdr.src_addr, 16);
+			}
 			if (!memcmp(ipv6_mask->hdr.dst_addr, ipv6_addr_mask,
-				    RTE_DIM(ipv6_mask->hdr.dst_addr)))
+				    RTE_DIM(ipv6_mask->hdr.dst_addr))) {
 				*input_set |= ICE_INSET_IPV6_DST;
+				rte_memcpy(&p_v6->dst_ip,
+					   ipv6_spec->hdr.dst_addr, 16);
+			}
 
 			if ((ipv6_mask->hdr.vtc_flow &
 			     rte_cpu_to_be_32(ICE_IPV6_TC_MASK))
-			    == rte_cpu_to_be_32(ICE_IPV6_TC_MASK))
+			    == rte_cpu_to_be_32(ICE_IPV6_TC_MASK)) {
 				*input_set |= ICE_INSET_IPV6_TC;
-			if (ipv6_mask->hdr.proto == UINT8_MAX)
+				vtc_flow_cpu = rte_be_to_cpu_32(ipv6_spec->hdr.vtc_flow);
+				p_v6->tc = (uint8_t)(vtc_flow_cpu >>
+						ICE_FDIR_IPV6_TC_OFFSET);
+			}
+			if (ipv6_mask->hdr.proto == UINT8_MAX) {
 				*input_set |= ICE_INSET_IPV6_NEXT_HDR;
-			if (ipv6_mask->hdr.hop_limits == UINT8_MAX)
+				p_v6->proto = ipv6_spec->hdr.proto;
+			}
+			if (ipv6_mask->hdr.hop_limits == UINT8_MAX) {
 				*input_set |= ICE_INSET_IPV6_HOP_LIMIT;
+				p_v6->hlim = ipv6_spec->hdr.hop_limits;
+			}
 
-			rte_memcpy(&p_v6->dst_ip, ipv6_spec->hdr.dst_addr, 16);
-			rte_memcpy(&p_v6->src_ip, ipv6_spec->hdr.src_addr, 16);
-			vtc_flow_cpu = rte_be_to_cpu_32(ipv6_spec->hdr.vtc_flow);
-			p_v6->tc = (uint8_t)(vtc_flow_cpu >> ICE_FDIR_IPV6_TC_OFFSET);
-			p_v6->proto = ipv6_spec->hdr.proto;
-			p_v6->hlim = ipv6_spec->hdr.hop_limits;
 			break;
 		case RTE_FLOW_ITEM_TYPE_IPV6_FRAG_EXT:
 			l3 = RTE_FLOW_ITEM_TYPE_IPV6_FRAG_EXT;
@@ -2210,12 +2234,16 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 			/* Get filter info */
 			if (l3 == RTE_FLOW_ITEM_TYPE_IPV4) {
 				assert(p_v4);
-				p_v4->dst_port = tcp_spec->hdr.dst_port;
-				p_v4->src_port = tcp_spec->hdr.src_port;
+				if (*input_set & ICE_INSET_TCP_SRC_PORT)
+					p_v4->src_port = tcp_spec->hdr.src_port;
+				if (*input_set & ICE_INSET_TCP_DST_PORT)
+					p_v4->dst_port = tcp_spec->hdr.dst_port;
 			} else if (l3 == RTE_FLOW_ITEM_TYPE_IPV6) {
 				assert(p_v6);
-				p_v6->dst_port = tcp_spec->hdr.dst_port;
-				p_v6->src_port = tcp_spec->hdr.src_port;
+				if (*input_set & ICE_INSET_TCP_SRC_PORT)
+					p_v6->src_port = tcp_spec->hdr.src_port;
+				if (*input_set & ICE_INSET_TCP_DST_PORT)
+					p_v6->dst_port = tcp_spec->hdr.dst_port;
 			}
 			break;
 		case RTE_FLOW_ITEM_TYPE_UDP:
@@ -2257,12 +2285,16 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 			/* Get filter info */
 			if (l3 == RTE_FLOW_ITEM_TYPE_IPV4) {
 				assert(p_v4);
-				p_v4->dst_port = udp_spec->hdr.dst_port;
-				p_v4->src_port = udp_spec->hdr.src_port;
+				if (*input_set & ICE_INSET_UDP_SRC_PORT)
+					p_v4->src_port = udp_spec->hdr.src_port;
+				if (*input_set & ICE_INSET_UDP_DST_PORT)
+					p_v4->dst_port = udp_spec->hdr.dst_port;
 			} else if (l3 == RTE_FLOW_ITEM_TYPE_IPV6) {
 				assert(p_v6);
-				p_v6->src_port = udp_spec->hdr.src_port;
-				p_v6->dst_port = udp_spec->hdr.dst_port;
+				if (*input_set & ICE_INSET_UDP_SRC_PORT)
+					p_v6->src_port = udp_spec->hdr.src_port;
+				if (*input_set & ICE_INSET_UDP_DST_PORT)
+					p_v6->dst_port = udp_spec->hdr.dst_port;
 			}
 			break;
 		case RTE_FLOW_ITEM_TYPE_SCTP:
@@ -2302,12 +2334,20 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 			/* Get filter info */
 			if (l3 == RTE_FLOW_ITEM_TYPE_IPV4) {
 				assert(p_v4);
-				p_v4->dst_port = sctp_spec->hdr.dst_port;
-				p_v4->src_port = sctp_spec->hdr.src_port;
+				if (*input_set & ICE_INSET_SCTP_SRC_PORT)
+					p_v4->src_port =
+						sctp_spec->hdr.src_port;
+				if (*input_set & ICE_INSET_SCTP_DST_PORT)
+					p_v4->dst_port =
+						sctp_spec->hdr.dst_port;
 			} else if (l3 == RTE_FLOW_ITEM_TYPE_IPV6) {
 				assert(p_v6);
-				p_v6->dst_port = sctp_spec->hdr.dst_port;
-				p_v6->src_port = sctp_spec->hdr.src_port;
+				if (*input_set & ICE_INSET_SCTP_SRC_PORT)
+					p_v6->src_port =
+						sctp_spec->hdr.src_port;
+				if (*input_set & ICE_INSET_SCTP_DST_PORT)
+					p_v6->dst_port =
+						sctp_spec->hdr.dst_port;
 			}
 			break;
 		case RTE_FLOW_ITEM_TYPE_VOID:
@@ -2329,10 +2369,10 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 				return -rte_errno;
 			}
 
-			if (vxlan_mask->hdr.vx_vni)
+			if (vxlan_mask->hdr.vx_vni) {
 				*input_set |= ICE_INSET_VXLAN_VNI;
-
-			filter->input.vxlan_data.vni = vxlan_spec->hdr.vx_vni;
+				filter->input.vxlan_data.vni = vxlan_spec->hdr.vx_vni;
+			}
 
 			break;
 		case RTE_FLOW_ITEM_TYPE_GTPU:
@@ -2354,10 +2394,10 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 				return -rte_errno;
 			}
 
-			if (gtp_mask->teid == UINT32_MAX)
+			if (gtp_mask->teid == UINT32_MAX) {
 				input_set_o |= ICE_INSET_GTPU_TEID;
-
-			filter->input.gtpu_data.teid = gtp_spec->teid;
+				filter->input.gtpu_data.teid = gtp_spec->teid;
+			}
 			break;
 		case RTE_FLOW_ITEM_TYPE_GTP_PSC:
 			tunnel_type = ICE_FDIR_TUNNEL_TYPE_GTPU_EH;
@@ -2367,11 +2407,11 @@ ice_fdir_parse_pattern(__rte_unused struct ice_adapter *ad,
 			if (!(gtp_psc_spec && gtp_psc_mask))
 				break;
 
-			if (gtp_psc_mask->hdr.qfi == 0x3F)
+			if (gtp_psc_mask->hdr.qfi == 0x3F) {
 				input_set_o |= ICE_INSET_GTPU_QFI;
-
-			filter->input.gtpu_data.qfi =
-				gtp_psc_spec->hdr.qfi;
+				filter->input.gtpu_data.qfi =
+					gtp_psc_spec->hdr.qfi;
+			}
 			break;
 		case RTE_FLOW_ITEM_TYPE_ESP:
 			if (l3 == RTE_FLOW_ITEM_TYPE_IPV4 &&
