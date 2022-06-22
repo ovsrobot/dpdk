@@ -285,8 +285,7 @@ mlx5_vdpa_virtq_setup(struct mlx5_vdpa_priv *priv, int index)
 		if (virtq->umems[i].obj)
 			claim_zero(mlx5_glue->devx_umem_dereg
 				   (virtq->umems[i].obj));
-		if (virtq->umems[i].buf)
-			rte_free(virtq->umems[i].buf);
+		rte_free(virtq->umems[i].buf);
 		virtq->umems[i].size = 0;
 		virtq->umems[i].obj = NULL;
 		virtq->umems[i].buf = NULL;
