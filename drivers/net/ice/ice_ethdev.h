@@ -366,6 +366,9 @@ struct ice_fdir_fltr_pattern {
 	struct ice_fdir_extra ext_data;
 	struct ice_fdir_extra ext_mask;
 
+	struct ice_fdir_extra ext_data_outer;
+	struct ice_fdir_extra ext_mask_outer;
+
 	enum ice_fdir_tunnel_type tunnel_type;
 };
 

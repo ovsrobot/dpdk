@@ -919,6 +919,7 @@ ice_fdir_input_set_parse(uint64_t inset, enum ice_flow_field *field)
 		enum ice_flow_field fld;
 	};
 	static const struct ice_inset_map ice_inset_map[] = {
+		{ICE_INSET_SMAC, ICE_FLOW_FIELD_IDX_ETH_SA},
 		{ICE_INSET_DMAC, ICE_FLOW_FIELD_IDX_ETH_DA},
 		{ICE_INSET_ETHERTYPE, ICE_FLOW_FIELD_IDX_ETH_TYPE},
 		{ICE_INSET_IPV4_SRC, ICE_FLOW_FIELD_IDX_IPV4_SA},
@@ -1247,6 +1248,8 @@ ice_fdir_extract_fltr_key(struct ice_fdir_fltr_pattern *key,
 	rte_memcpy(&key->ext_data, &input->ext_data, sizeof(key->ext_data));
 	rte_memcpy(&key->ext_mask, &input->ext_mask, sizeof(key->ext_mask));
 
+	rte_memcpy(&key->ext_data_outer, &input->ext_data_outer, sizeof(key->ext_data_outer));
+	rte_memcpy(&key->ext_mask_outer, &input->ext_mask_outer, sizeof(key->ext_mask_outer));
 	rte_memcpy(&key->gtpu_data, &input->gtpu_data, sizeof(key->gtpu_data));
 	rte_memcpy(&key->gtpu_mask, &input->gtpu_mask, sizeof(key->gtpu_mask));
 
