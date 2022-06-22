@@ -2850,7 +2850,7 @@ virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	if (dropped)
 		rte_pktmbuf_free_bulk(&pkts[i - 1], count - i + 1);
 
-	vq->last_avail_idx += i;
+	vq->last_avail_idx += i - 1;
 
 	do_data_copy_dequeue(vq);
 	if (unlikely(i < count))
