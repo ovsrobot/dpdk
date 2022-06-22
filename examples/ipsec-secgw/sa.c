@@ -1841,7 +1841,10 @@ sa_check_offloads(uint16_t port_id, uint64_t *rx_offloads,
 				if (rule->mss)
 					*tx_offloads |=
 						RTE_ETH_TX_OFFLOAD_TCP_TSO;
-				*tx_offloads |= RTE_ETH_TX_OFFLOAD_IPV4_CKSUM;
+				if (dev_info.tx_offload_capa &
+						RTE_ETH_TX_OFFLOAD_IPV4_CKSUM)
+					*tx_offloads |=
+						RTE_ETH_TX_OFFLOAD_IPV4_CKSUM;
 			}
 			break;
 		default:
