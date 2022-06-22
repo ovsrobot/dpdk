@@ -32,6 +32,7 @@ struct rte_stats_bitrates *rte_stats_bitrate_create(void);
  *
  * @param bitrate_data
  *   Pointer allocated by rte_stats_bitrate_create()
+ *   If pointer is NULL, no operation is performed.
  */
 void rte_stats_bitrate_free(struct rte_stats_bitrates *bitrate_data);
 

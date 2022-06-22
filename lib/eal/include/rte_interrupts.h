@@ -243,7 +243,8 @@ rte_intr_instance_alloc(uint32_t flags);
  * resources.
  *
  * @param intr_handle
- *  Interrupt handle address.
+ *  Interrupt handle allocated with rte_intr_instance_alloc().
+ *  If handle is NULL, no operation is performed.
  *
  */
 __rte_experimental
