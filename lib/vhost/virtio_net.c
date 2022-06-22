@@ -2850,11 +2850,11 @@ virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	if (dropped)
 		rte_pktmbuf_free_bulk(&pkts[i - 1], count - i + 1);
 
-	vq->last_avail_idx += i;
+	vq->last_avail_idx += i - dropped;
 
 	do_data_copy_dequeue(vq);
-	if (unlikely(i < count))
-		vq->shadow_used_idx = i;
+	if (unlikely((i - dropped) < count))
+		vq->shadow_used_idx = i - dropped;
 	if (likely(vq->shadow_used_idx)) {
 		flush_shadow_used_ring_split(dev, vq);
 		vhost_vring_call_split(dev, vq);
