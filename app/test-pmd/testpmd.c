@@ -3007,6 +3007,18 @@ start_port(portid_t pid)
 			if (setup_hairpin_queues(pi, p_pi, cnt_pi) != 0)
 				return -1;
 		}
+
+		if (port->need_reconfig_queues > 0 && !is_proc_primary()) {
+			struct rte_eth_rxconf *rx_conf;
+			for (qi = 0; qi < nb_rxq; qi++) {
+				rx_conf = &(port->rxq[qi].conf);
+				ports[pi].rxq[qi].state =
+					rx_conf->rx_deferred_start ?
+					RTE_ETH_QUEUE_STATE_STOPPED :
+					RTE_ETH_QUEUE_STATE_STARTED;
+			}
+		}
+
 		configure_rxtx_dump_callbacks(verbose_level);
 		if (clear_ptypes) {
 			diag = rte_eth_dev_set_ptypes(pi, RTE_PTYPE_UNKNOWN,
