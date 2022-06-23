@@ -3674,6 +3674,68 @@ error:
 	return ret;
 }
 
+static int
+handle_rxa_instance_get(const char *cmd __rte_unused,
+			const char *params,
+			struct rte_tel_data *d)
+{
+	uint8_t instance_id;
+	uint16_t rx_queue_id;
+	int eth_dev_id, ret = -1;
+	char *token, *l_params;
+
+	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
+		return -1;
+
+	l_params = strdup(params);
+	if (l_params == NULL)
+		return -ENOMEM;
+	token = strtok(l_params, ",");
+	RTE_EVENT_ETH_RX_ADAPTER_TOKEN_VALID_OR_GOTO_ERR_RET(token, -1);
+
+	/* Get device ID from parameter string */
+	eth_dev_id = strtoul(token, NULL, 10);
+	RTE_ETH_VALID_PORTID_OR_GOTO_ERR_RET(eth_dev_id, -EINVAL);
+
+	token = strtok(NULL, ",");
+	RTE_EVENT_ETH_RX_ADAPTER_TOKEN_VALID_OR_GOTO_ERR_RET(token, -1);
+
+	/* Get Rx queue ID from parameter string */
+	rx_queue_id = strtoul(token, NULL, 10);
+	if (rx_queue_id >= rte_eth_devices[eth_dev_id].data->nb_rx_queues) {
+		RTE_EDEV_LOG_ERR("Invalid rx queue_id %u", rx_queue_id);
+		ret = -EINVAL;
+		goto error;
+	}
+
+	token = strtok(NULL, "\0");
+	if (token != NULL)
+		RTE_EDEV_LOG_ERR("Extra parameters passed to eventdev"
+				 " telemetry command, ignoring");
+
+	/* Parsing parameter finished */
+	free(l_params);
+
+	if (rte_event_eth_rx_adapter_instance_get(eth_dev_id,
+						  rx_queue_id,
+						  &instance_id)) {
+		RTE_EDEV_LOG_ERR("Failed to get RX adapter instance ID "
+				 " for rx_queue_id = %d", rx_queue_id);
+		return -1;
+	}
+
+	rte_tel_data_start_dict(d);
+	rte_tel_data_add_dict_u64(d, "eth_dev_id", eth_dev_id);
+	rte_tel_data_add_dict_u64(d, "rx_queue_id", rx_queue_id);
+	rte_tel_data_add_dict_u64(d, "rxa_instance_id", instance_id);
+
+	return 0;
+
+error:
+	free(l_params);
+	return ret;
+}
+
 RTE_INIT(rxa_init_telemetry)
 {
 	rte_telemetry_register_cmd("/eventdev/rxa_stats",
@@ -3695,4 +3757,8 @@ RTE_INIT(rxa_init_telemetry)
 	rte_telemetry_register_cmd("/eventdev/rxa_queue_stats_reset",
 		handle_rxa_queue_stats_reset,
 		"Reset Rx queue stats. Parameter: rxa_id, dev_id, queue_id");
+
+	rte_telemetry_register_cmd("/eventdev/rxa_rxq_instance_get",
+		handle_rxa_instance_get,
+		"Returns Rx adapter instance id. Parameter: dev_id, queue_id");
 }
