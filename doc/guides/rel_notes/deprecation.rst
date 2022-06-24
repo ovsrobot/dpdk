@@ -107,6 +107,11 @@ Deprecation Notices
   alternative is implemented.
   The legacy actions should be removed in DPDK 22.11.
 
+* ethdev: The enum ``rte_eth_event_ipsec_subtype`` would be extended to add
+  new subtype values ``RTE_ETH_EVENT_IPSEC_SA_PKT_EXPIRY``,
+  ``RTE_ETH_EVENT_IPSEC_SA_BYTE_HARD_EXPIRY`` and
+  ``RTE_ETH_EVENT_IPSEC_SA_PKT_HARD_EXPIRY`` in DPDK 22.11.
+
 * cryptodev: Hide structures ``rte_cryptodev_sym_session`` and
   ``rte_cryptodev_asym_session`` to remove unnecessary indirection between
   session and the private data of session. An opaque pointer can be exposed
