@@ -10,10 +10,7 @@ endif
 sources = files('rte_eth_af_xdp.c')
 
 xdp_dep = dependency('libxdp', version : '>=1.2.2', required: false, method: 'pkg-config')
-bpf_dep = dependency('libbpf', required: false, method: 'pkg-config')
-if not bpf_dep.found()
-    bpf_dep = cc.find_library('bpf', required: false)
-endif
+bpf_dep = dependency('libbpf', version : '<=0.7.0', required: false, method: 'pkg-config')
 
 if cc.has_header('linux/if_xdp.h')
     if xdp_dep.found() and cc.has_header('xdp/xsk.h')
@@ -29,7 +26,7 @@ if cc.has_header('linux/if_xdp.h')
             endif
         else
             build = false
-            reason = 'missing dependency, libbpf'
+            reason = 'missing dependency, libbpf <= v0.7.0'
         endif
     elif bpf_dep.found() and cc.has_header('bpf/xsk.h') and cc.has_header('bpf/bpf.h')
         # libxdp not found. Rely solely on libbpf for xsk functionality
