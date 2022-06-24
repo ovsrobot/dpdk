@@ -125,3 +125,6 @@ Deprecation Notices
   applications should be updated to use the ``dmadev`` library instead,
   with the underlying HW-functionality being provided by the ``ioat`` or
   ``idxd`` dma drivers
+
+* eventdev: The function pointer declaration ``eventdev_stop_flush_t`` will be
+  renamed to ``rte_eventdev_stop_flush_t`` in DPDK 22.11.
