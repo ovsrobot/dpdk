@@ -136,7 +136,8 @@ In order to enable this virtual bbdev PMD, the user may:
   FlexRAN SDK libraries were installed. And ``DIR_WIRELESS_SDK`` to the path
   where the libraries were extracted.
 
-* Tune the meson build option pointing the location of the FlexRAN SDK libraries ``flexran_sdk``
+* Point pkgconfig towards these libraries so that they can be automatically found by meson with the
+right dependency. If not DPDK will still compile but the related functionality would be stubbed out.
 
 Example:
 
@@ -144,8 +145,9 @@ Example:
 
     export FLEXRAN_SDK=<path-to-workspace>/FlexRAN-FEC-SDK-19-04/sdk/build-avx2-icc/install
     export DIR_WIRELESS_SDK=<path-to-workspace>/FlexRAN-FEC-SDK-19-04/sdk/build-avx2-icc/
+    export PKG_CONFIG_PATH=$DIR_WIRELESS_SDK/pkgcfg:$PKG_CONFIG_PATH
     cd build
-    meson configure -Dflexran_sdk=<path-to-workspace>/FlexRAN-FEC-SDK-19-04/sdk/build-avx512-icc/install
+    meson configure
 
 * For AVX512 machines with SDK libraries installed then both 4G and 5G can be enabled for full real time FEC capability.
   For AVX2 machines it is possible to only enable the 4G libraries and the PMD capabilities will be limited to 4G FEC.
