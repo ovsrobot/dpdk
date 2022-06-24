@@ -60,7 +60,7 @@ tx_syscall_needed(struct xsk_ring_prod *q __rte_unused)
 }
 #endif
 
-#ifdef RTE_NET_AF_XDP_LIBBPF_OBJ_OPEN
+#ifdef RTE_NET_AF_XDP_LIBBPF_V070
 static int load_program(const char *prog_path, struct bpf_object **obj)
 {
 	struct bpf_program *prog;
@@ -85,6 +85,23 @@ out:
 	bpf_object__close(*obj);
 	return -1;
 }
+
+static int
+remove_xdp_program(int ifindex)
+{
+	uint32_t curr_prog_id = 0;
+
+	if (bpf_xdp_query_id(ifindex, XDP_FLAGS_UPDATE_IF_NOEXIST,
+				&curr_prog_id))
+		return -1;
+
+	return bpf_xdp_detach(ifindex, XDP_FLAGS_UPDATE_IF_NOEXIST, NULL);
+}
+
+static int link_xdp_prog_with_dev(int ifindex, int fd, __u32 flags)
+{
+	return bpf_xdp_attach(ifindex, fd, flags, NULL);
+}
 #else
 static int load_program(const char *prog_path, struct bpf_object **obj)
 {
@@ -95,5 +112,22 @@ static int load_program(const char *prog_path, struct bpf_object **obj)
 		return -1;
 
 	return prog_fd;
+}
+
+static int
+remove_xdp_program(int ifindex)
+{
+	uint32_t curr_prog_id = 0;
+
+	if (bpf_get_link_xdp_id(ifindex, &curr_prog_id,
+				XDP_FLAGS_UPDATE_IF_NOEXIST))
+		return -1;
+
+	return bpf_set_link_xdp_fd(ifindex, -1, XDP_FLAGS_UPDATE_IF_NOEXIST);
+}
+
+static int link_xdp_prog_with_dev(int ifindex, int fd, __u32 flags)
+{
+	return bpf_set_link_xdp_fd(ifindex, fd, flags);
 }
 #endif

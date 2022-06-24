@@ -10,10 +10,7 @@ endif
 sources = files('rte_eth_af_xdp.c')
 
 xdp_dep = dependency('libxdp', version : '>=1.2.2', required: false, method: 'pkg-config')
-bpf_dep = dependency('libbpf', required: false, method: 'pkg-config')
-if not bpf_dep.found()
-    bpf_dep = cc.find_library('bpf', required: false)
-endif
+bpf_dep = dependency('libbpf', version : '<=0.8.0', required: false, method: 'pkg-config')
 
 if cc.has_header('linux/if_xdp.h')
     if xdp_dep.found() and cc.has_header('xdp/xsk.h')
@@ -25,7 +22,7 @@ if cc.has_header('linux/if_xdp.h')
             bpf_ver_dep = dependency('libbpf', version : '>=0.7.0',
                                  required: false, method: 'pkg-config')
             if bpf_ver_dep.found()
-                cflags += ['-DRTE_NET_AF_XDP_LIBBPF_OBJ_OPEN']
+                cflags += ['-DRTE_NET_AF_XDP_LIBBPF_V070']
             endif
         else
             build = false

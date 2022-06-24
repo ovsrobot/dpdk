@@ -864,20 +864,6 @@ eth_stats_reset(struct rte_eth_dev *dev)
 }
 
 static void
-remove_xdp_program(struct pmd_internals *internals)
-{
-	uint32_t curr_prog_id = 0;
-
-	if (bpf_get_link_xdp_id(internals->if_index, &curr_prog_id,
-				XDP_FLAGS_UPDATE_IF_NOEXIST)) {
-		AF_XDP_LOG(ERR, "bpf_get_link_xdp_id failed\n");
-		return;
-	}
-	bpf_set_link_xdp_fd(internals->if_index, -1,
-			XDP_FLAGS_UPDATE_IF_NOEXIST);
-}
-
-static void
 xdp_umem_destroy(struct xsk_umem_info *umem)
 {
 #if defined(XDP_UMEM_UNALIGNED_CHUNK_FLAG)
@@ -929,7 +915,8 @@ eth_dev_close(struct rte_eth_dev *dev)
 	 */
 	dev->data->mac_addrs = NULL;
 
-	remove_xdp_program(internals);
+	if (remove_xdp_program(internals->if_index))
+		AF_XDP_LOG(ERR, "Error while removing XDP program.\n");
 
 	if (internals->shared_umem) {
 		struct internal_list *list;
@@ -1195,7 +1182,7 @@ load_custom_xdp_prog(const char *prog_path, int if_index, struct bpf_map **map)
 	}
 
 	/* Link the program with the given network device */
-	ret = bpf_set_link_xdp_fd(if_index, prog_fd,
+	ret = link_xdp_prog_with_dev(if_index, prog_fd,
 					XDP_FLAGS_UPDATE_IF_NOEXIST);
 	if (ret) {
 		AF_XDP_LOG(ERR, "Failed to set prog fd %d on interface\n",
