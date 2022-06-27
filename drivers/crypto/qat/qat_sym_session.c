@@ -111,12 +111,12 @@ bpi_cipher_ctx_init(enum rte_crypto_cipher_algorithm cryptodev_algo,
 		const uint8_t *key, uint16_t key_length, void **ctx)
 {
 	const EVP_CIPHER *algo = NULL;
-	int ret;
+	int ret = 0;
 	*ctx = EVP_CIPHER_CTX_new();
 
 	if (*ctx == NULL) {
 		ret = -ENOMEM;
-		goto ctx_init_err;
+		return ret;
 	}
 
 	if (cryptodev_algo == RTE_CRYPTO_CIPHER_DES_DOCSISBPI)
@@ -130,14 +130,9 @@ bpi_cipher_ctx_init(enum rte_crypto_cipher_algorithm cryptodev_algo,
 	/* IV will be ECB encrypted whether direction is encrypt or decrypt*/
 	if (EVP_EncryptInit_ex(*ctx, algo, NULL, key, 0) != 1) {
 		ret = -EINVAL;
-		goto ctx_init_err;
+		return ret;
 	}
 
-	return 0;
-
-ctx_init_err:
-	if (*ctx != NULL)
-		EVP_CIPHER_CTX_free(*ctx);
 	return ret;
 }
 
