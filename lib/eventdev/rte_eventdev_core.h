@@ -20,6 +20,13 @@ typedef uint16_t (*event_enqueue_burst_t)(void *port,
 					  uint16_t nb_events);
 /**< @internal Enqueue burst of events on port of a device */
 
+typedef uint16_t (*event_enqueue_queue_burst_t)(void *port, uint8_t queue_id,
+						const struct rte_event ev[],
+						uint16_t nb_events);
+/**< @internal Enqueue burst of events on port of a device to a specific
+ * event queue.
+ */
+
 typedef uint16_t (*event_dequeue_t)(void *port, struct rte_event *ev,
 				    uint64_t timeout_ticks);
 /**< @internal Dequeue event from port of a device */
@@ -65,7 +72,9 @@ struct rte_event_fp_ops {
 	/**< PMD Tx adapter enqueue same destination function. */
 	event_crypto_adapter_enqueue_t ca_enqueue;
 	/**< PMD Crypto adapter enqueue function. */
-	uintptr_t reserved[6];
+	event_enqueue_queue_burst_t enqueue_new_same_dest;
+	/**< PMD enqueue burst new function to same destination queue. */
+	uintptr_t reserved[5];
 } __rte_cache_aligned;
 
 extern struct rte_event_fp_ops rte_event_fp_ops[RTE_EVENT_MAX_DEVS];

@@ -178,7 +178,10 @@ struct rte_eventdev {
 	/**< Pointer to PMD eth Tx adapter enqueue function. */
 	event_crypto_adapter_enqueue_t ca_enqueue;
 
-	uint64_t reserved_64s[4]; /**< Reserved for future fields */
+	event_enqueue_queue_burst_t enqueue_new_same_dest;
+	/**< PMD enqueue burst queue new function to same destination queue. */
+
+	uint64_t reserved_64s[3]; /**< Reserved for future fields */
 	void *reserved_ptrs[3];	  /**< Reserved for future fields */
 } __rte_cache_aligned;
 

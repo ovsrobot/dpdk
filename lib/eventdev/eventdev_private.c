@@ -25,6 +25,17 @@ dummy_event_enqueue_burst(__rte_unused void *port,
 }
 
 static uint16_t
+dummy_event_enqueue_queue_burst(__rte_unused void *port,
+				__rte_unused uint8_t queue,
+				__rte_unused const struct rte_event ev[],
+				__rte_unused uint16_t nb_events)
+{
+	RTE_EDEV_LOG_ERR(
+		"event enqueue burst requested for unconfigured event device");
+	return 0;
+}
+
+static uint16_t
 dummy_event_dequeue(__rte_unused void *port, __rte_unused struct rte_event *ev,
 		    __rte_unused uint64_t timeout_ticks)
 {
@@ -90,6 +101,7 @@ event_dev_fp_ops_reset(struct rte_event_fp_ops *fp_op)
 		.enqueue_burst = dummy_event_enqueue_burst,
 		.enqueue_new_burst = dummy_event_enqueue_burst,
 		.enqueue_forward_burst = dummy_event_enqueue_burst,
+		.enqueue_new_same_dest = dummy_event_enqueue_queue_burst,
 		.dequeue = dummy_event_dequeue,
 		.dequeue_burst = dummy_event_dequeue_burst,
 		.maintain = dummy_event_maintain,
@@ -111,6 +123,7 @@ event_dev_fp_ops_set(struct rte_event_fp_ops *fp_op,
 	fp_op->enqueue_burst = dev->enqueue_burst;
 	fp_op->enqueue_new_burst = dev->enqueue_new_burst;
 	fp_op->enqueue_forward_burst = dev->enqueue_forward_burst;
+	fp_op->enqueue_new_same_dest = dev->enqueue_new_same_dest;
 	fp_op->dequeue = dev->dequeue;
 	fp_op->dequeue_burst = dev->dequeue_burst;
 	fp_op->maintain = dev->maintain;
