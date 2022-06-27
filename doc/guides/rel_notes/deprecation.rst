@@ -125,3 +125,8 @@ Deprecation Notices
   applications should be updated to use the ``dmadev`` library instead,
   with the underlying HW-functionality being provided by the ``ioat`` or
   ``idxd`` dma drivers
+
+* eventdev: The structure ``rte_event_dev_info`` will be extended to include the
+  max enqueue burst size of new events supported by the underlying event device.
+  A new field ``max_event_port_enqueue_new_burst`` will be added to the structure
+  ``rte_event_dev_info`` in DPDK 22.11.
