@@ -432,6 +432,7 @@ EXPERIMENTAL {
 	# added in 22.11
 	rte_thread_create;
 	rte_thread_detach;
+	rte_thread_equal;
 	rte_thread_join;
 };
 
