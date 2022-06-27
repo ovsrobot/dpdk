@@ -74,6 +74,10 @@ do {\
 	} \
 } while (0)
 
+/* enable dynamic timestamp field in mbuf */
+uint64_t event_eth_tx_timestamp_dynflag;
+int event_eth_tx_timestamp_dynfield_offset = -1;
+
 /* Tx retry callback structure */
 struct txa_retry {
 	/* Ethernet port id */
@@ -197,7 +201,7 @@ static int
 txa_dev_id_array_init(void)
 {
 	if (txa_dev_id_array == NULL) {
-		int i;
+		int i, ret;
 
 		txa_dev_id_array = txa_memzone_array_get("txa_adapter_array",
 					sizeof(int),
@@ -207,6 +211,16 @@ txa_dev_id_array_init(void)
 
 		for (i = 0; i < RTE_EVENT_ETH_TX_ADAPTER_MAX_INSTANCE; i++)
 			txa_dev_id_array[i] = TXA_INVALID_DEV_ID;
+
+		/* Register mbuf dynamic timestamp field */
+		ret = rte_mbuf_dyn_tx_timestamp_register(
+				&event_eth_tx_timestamp_dynfield_offset,
+				&event_eth_tx_timestamp_dynflag);
+		if (ret != 0) {
+			RTE_EDEV_LOG_ERR("Error registering timestamp "
+					 "field/flag");
+			return -ENOMEM;
+		}
 	}
 
 	return 0;

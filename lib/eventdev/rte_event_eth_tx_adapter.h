@@ -77,8 +77,18 @@ extern "C" {
 #include <stdint.h>
 
 #include <rte_mbuf.h>
+#include <rte_mbuf_dyn.h>
 
 #include "rte_eventdev.h"
+
+extern int event_eth_tx_timestamp_dynfield_offset;
+
+static inline rte_mbuf_timestamp_t *
+rte_event_eth_tx_timestamp_dynfield(struct rte_mbuf *mbuf)
+{
+	return RTE_MBUF_DYNFIELD(mbuf,
+		event_eth_tx_timestamp_dynfield_offset, rte_mbuf_timestamp_t *);
+}
 
 /**
  * Adapter configuration structure
