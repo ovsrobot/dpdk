@@ -3,7 +3,6 @@
  */
 
 #include <string.h>
-#include <pthread.h>
 
 #include <rte_thread.h>
 #include <rte_debug.h>
@@ -79,12 +78,11 @@ test_thread_create_detach(void)
 static int
 test_thread_priority(void)
 {
-	pthread_t id;
 	rte_thread_t thread_id;
 	enum rte_thread_priority priority;
 
 	thread_id_ready = 0;
-	RTE_TEST_ASSERT(pthread_create(&id, NULL, thread_main, &thread_id) == 0,
+	RTE_TEST_ASSERT(rte_thread_create(&thread_id, NULL, thread_main, NULL) == 0,
 		"Failed to create thread");
 
 	while (__atomic_load_n(&thread_id_ready, __ATOMIC_ACQUIRE) == 0)
@@ -131,13 +129,12 @@ test_thread_priority(void)
 static int
 test_thread_affinity(void)
 {
-	pthread_t id;
 	rte_thread_t thread_id;
 	rte_cpuset_t cpuset0;
 	rte_cpuset_t cpuset1;
 
 	thread_id_ready = 0;
-	RTE_TEST_ASSERT(pthread_create(&id, NULL, thread_main, &thread_id) == 0,
+	RTE_TEST_ASSERT(rte_thread_create(&thread_id, NULL, thread_main, NULL) == 0,
 		"Failed to create thread");
 
 	while (__atomic_load_n(&thread_id_ready, __ATOMIC_ACQUIRE) == 0)
