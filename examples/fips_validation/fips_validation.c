@@ -463,7 +463,9 @@ fips_test_parse_one_json_vector_set(void)
 	else if (strstr(algo_str, "CMAC"))
 		info.algo = FIPS_TEST_ALGO_AES_CMAC;
 	else if (strstr(algo_str, "AES-CBC"))
-		info.algo = FIPS_TEST_ALGO_AES;
+		info.algo = FIPS_TEST_ALGO_AES_CBC;
+	else if (strstr(algo_str, "AES-XTS"))
+		info.algo = FIPS_TEST_ALGO_AES_XTS;
 	else
 		return -EINVAL;
 

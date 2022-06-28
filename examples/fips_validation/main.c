@@ -1781,6 +1781,7 @@ static int
 init_test_ops(void)
 {
 	switch (info.algo) {
+	case FIPS_TEST_ALGO_AES_CBC:
 	case FIPS_TEST_ALGO_AES:
 		test_ops.prepare_op = prepare_cipher_op;
 		test_ops.prepare_xform  = prepare_aes_xform;
@@ -1988,6 +1989,10 @@ fips_test_one_test_group(void)
 	case FIPS_TEST_ALGO_AES_CMAC:
 		ret = parse_test_cmac_json_init();
 		break;
+	case FIPS_TEST_ALGO_AES_XTS:
+		ret = parse_test_xts_json_init();
+		break;
+	case FIPS_TEST_ALGO_AES_CBC:
 	case FIPS_TEST_ALGO_AES:
 		ret = parse_test_aes_json_init();
 		break;
