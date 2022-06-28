@@ -125,3 +125,16 @@ Deprecation Notices
   applications should be updated to use the ``dmadev`` library instead,
   with the underlying HW-functionality being provided by the ``ioat`` or
   ``idxd`` dma drivers
+
+* pci: Update ``rte_pci_device`` and ``rte_pci_driver`` to add region based
+  memory mapping support. There could be a requirement to mmap specific memory
+  region only. Using this mechanism, pci device can be mapped for
+  a given BAR at a given offset of given size.
+
+  ``rte_pci_device`` will be added with following field
+  ``regions[PCI_MAX_RESOURCE][PCI_MAX_REGION_PER_RESOURCE];``. This field will
+  specify the regions which are mapped for a given BAR.
+
+  ``rte_pci_driver`` will be added with ``rte_pci_region_map *regions`` and
+  ``valid_bars[PCI_MAX_RESOURCE]``. Using these fields, driver can propagate
+  its region information which are required to be mmap.
