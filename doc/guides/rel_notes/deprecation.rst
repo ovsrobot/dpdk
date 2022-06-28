@@ -125,3 +125,9 @@ Deprecation Notices
   applications should be updated to use the ``dmadev`` library instead,
   with the underlying HW-functionality being provided by the ``ioat`` or
   ``idxd`` dma drivers
+
+* eventdev/timer: The structure ``rte_event_timer_adapter_stats`` will be
+  extended by adding a new field, ``evtim_drop_count``. This stat will
+  represent the number of times an event_timer expiry event is dropped
+  by the timer adapter. This field will be used by a future patch adding
+  support for periodic mode to the software timer adapter in DPDK 22.11.
