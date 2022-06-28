@@ -107,7 +107,8 @@ New Features
 * **Added vhost async dequeue API to receive packets from guest.**
 
   Added vhost async dequeue API which can leverage DMA devices to
-  accelerate receiving packets from guest.
+  accelerate receiving packets from guest. Split virtqueue and packed
+  virtqueue are both supported.
 
 * **Added thread-safe version of in-flight packet clear API in vhost library.**
 
