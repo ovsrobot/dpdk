@@ -345,7 +345,7 @@ rx_desc_get_pkt_info(struct igc_rx_queue *rxq, struct rte_mbuf *rxm,
 	rxm->packet_type = rx_desc_pkt_info_to_pkt_type(pkt_info);
 }
 
-static uint16_t
+uint16_t
 igc_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 {
 	struct igc_rx_queue * const rxq = rx_queue;
@@ -1071,8 +1071,6 @@ igc_rx_init(struct rte_eth_dev *dev)
 	uint16_t i;
 	int ret;
 
-	dev->rx_pkt_burst = igc_recv_pkts;
-
 	/*
 	 * Make sure receives are disabled while setting
 	 * up the descriptor ring.
@@ -1397,7 +1395,7 @@ eth_igc_rx_queue_setup(struct rte_eth_dev *dev,
 }
 
 /* prepare packets for transmit */
-static uint16_t
+uint16_t
 eth_igc_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 		uint16_t nb_pkts)
 {
@@ -1604,7 +1602,7 @@ tx_desc_cksum_flags_to_olinfo(uint64_t ol_flags)
 	return tmp;
 }
 
-static uint16_t
+uint16_t
 igc_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 {
 	struct igc_tx_queue * const txq = tx_queue;
@@ -2030,8 +2028,6 @@ int eth_igc_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 		txq->sw_ring, txq->tx_ring, txq->tx_ring_phys_addr);
 
 	igc_reset_tx_queue(txq);
-	dev->tx_pkt_burst = igc_xmit_pkts;
-	dev->tx_pkt_prepare = &eth_igc_prep_pkts;
 	dev->data->tx_queues[queue_idx] = txq;
 	txq->offloads = tx_conf->offloads;
 
