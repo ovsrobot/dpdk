@@ -1735,7 +1735,7 @@ rte_pmd_vhost_probe(struct rte_vdev_device *dev)
 			goto out_free;
 	}
 
-	if (legacy_ol_flags == 0)
+	if (legacy_ol_flags == 1)
 		flags |= RTE_VHOST_USER_NET_COMPLIANT_OL_FLAGS;
 
 	if (dev->device.numa_node == SOCKET_ID_ANY)
