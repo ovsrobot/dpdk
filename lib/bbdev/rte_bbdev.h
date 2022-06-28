@@ -458,6 +458,8 @@ struct rte_bbdev_data {
 	int socket_id;  /**< NUMA socket that device is on */
 	bool started;  /**< Device run-time state */
 	uint16_t process_cnt;  /** Counter of processes using the device */
+	rte_rwlock_t lock_enq; /**< lock protection for the Enqueue */
+	rte_rwlock_t lock_deq; /**< lock protection for the Dequeue */
 };
 
 /* Forward declarations */
