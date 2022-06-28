@@ -45,7 +45,8 @@ Prerequisites
 This is a Linux-specific PMD, thus the following prerequisites apply:
 
 *  A Linux Kernel (version > v4.18) with XDP sockets configuration enabled;
-*  Both libxdp >=v1.2.2 and libbpf libraries installed, or, libbpf <=v0.6.0
+*  Both libxdp >=v1.2.2 and libbpf <=v0.8.0 libraries installed, or, libbpf
+   <=v0.6.0.
 *  If using libxdp, it requires an environment variable called
    LIBXDP_OBJECT_PATH to be set to the location of where libxdp placed its bpf
    object files. This is usually in /usr/local/lib/bpf or /usr/local/lib64/bpf.

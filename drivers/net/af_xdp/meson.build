@@ -25,7 +25,7 @@ if cc.has_header('linux/if_xdp.h')
             bpf_ver_dep = dependency('libbpf', version : '>=0.7.0',
                                  required: false, method: 'pkg-config')
             if bpf_ver_dep.found()
-                cflags += ['-DRTE_NET_AF_XDP_LIBBPF_OBJ_OPEN']
+                cflags += ['-DRTE_NET_AF_XDP_LIBBPF_V070']
             endif
         else
             build = false

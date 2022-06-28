@@ -125,6 +125,10 @@ New Features
   * Added new devargs option ``max_conf_threads``
     defining the number of management threads for parallel configurations.
 
+* **Updated AF_XDP PMD.**
+
+  * Made compatible with libbpf v0.8.0 (when used with libxdp).
+
 * **Updated Amazon ena driver.**
 
   The new driver version (v2.7.0) includes:
