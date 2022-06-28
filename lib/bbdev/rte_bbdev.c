@@ -723,6 +723,8 @@ get_stats_from_queues(struct rte_bbdev *dev, struct rte_bbdev_stats *stats)
 		stats->dequeued_count += q_stats->dequeued_count;
 		stats->enqueue_err_count += q_stats->enqueue_err_count;
 		stats->dequeue_err_count += q_stats->dequeue_err_count;
+		stats->enqueue_warn_count += q_stats->enqueue_warn_count;
+		stats->dequeue_warn_count += q_stats->dequeue_warn_count;
 	}
 	rte_bbdev_log_debug("Got stats on %u", dev->data->dev_id);
 }

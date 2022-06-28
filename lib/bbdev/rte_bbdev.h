@@ -224,6 +224,19 @@ int
 rte_bbdev_queue_stop(uint16_t dev_id, uint16_t queue_id);
 
 /**
+ * Flags indicate the reason why a previous enqueue may not have
+ * consummed all requested operations
+ * In case of multiple reasons the latter superdes a previous one
+ */
+enum rte_bbdev_enqueue_status {
+	RTE_BBDEV_ENQ_STATUS_NONE,             /**< Nothing to report */
+	RTE_BBDEV_ENQ_STATUS_QUEUE_FULL,       /**< Not enough room in queue */
+	RTE_BBDEV_ENQ_STATUS_RING_FULL,        /**< Not enough room in ring */
+	RTE_BBDEV_ENQ_STATUS_INVALID_OP,       /**< Operation was rejected as invalid */
+	RTE_BBDEV_ENQ_STATUS_PADDED_MAX = 6,   /**< Maximum enq status number including padding */
+};
+
+/**
  * Flags indicate the status of the device
  */
 enum rte_bbdev_device_status {
@@ -246,6 +259,12 @@ struct rte_bbdev_stats {
 	uint64_t enqueue_err_count;
 	/** Total error count on operations dequeued */
 	uint64_t dequeue_err_count;
+	/** Total warning count on operations enqueued */
+	uint64_t enqueue_warn_count;
+	/** Total warning count on operations dequeued */
+	uint64_t dequeue_warn_count;
+	/** Total enqueue status count based on rte_bbdev_enqueue_status enum */
+	uint64_t enqueue_status_count[RTE_BBDEV_ENQ_STATUS_PADDED_MAX];
 	/** CPU cycles consumed by the (HW/SW) accelerator device to offload
 	 *  the enqueue request to its internal queues.
 	 *  - For a HW device this is the cycles consumed in MMIO write
