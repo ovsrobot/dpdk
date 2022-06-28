@@ -125,3 +125,9 @@ Deprecation Notices
   applications should be updated to use the ``dmadev`` library instead,
   with the underlying HW-functionality being provided by the ``ioat`` or
   ``idxd`` dma drivers
+
+* eventdev: The function ``rte_event_crypto_adapter_queue_pair_add`` will
+  accept configuration of type ``rte_event_crypto_adapter_queue_conf`` instead
+  of ``rte_event``, similar to ``rte_event_eth_rx_adapter_queue_add`` signature.
+  Event will be one of the configuration fields, together with additional
+  vector parameters.
