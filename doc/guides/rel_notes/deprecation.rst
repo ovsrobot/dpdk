@@ -125,3 +125,10 @@ Deprecation Notices
   applications should be updated to use the ``dmadev`` library instead,
   with the underlying HW-functionality being provided by the ``ioat`` or
   ``idxd`` dma drivers
+
+* eventdev: The structure ``rte_event_vector`` will be modified to include
+  ``elem_offset:12`` bits taken from ``rsvd:15``. The ``elem_offset`` defines
+  the offset into the vector array from which valid elements are present.
+  The difference between ``rte_event_vector::nb_elem`` and
+  ``rte_event_vector::elem_offset`` gives the number of valid elements left to
+  process from the ``rte_event_vector::elem_offset``.
