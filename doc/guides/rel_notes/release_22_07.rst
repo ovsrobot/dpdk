@@ -261,6 +261,10 @@ New Features
   Merged l3fwd-acl code into l3fwd as l3fwd-acl contains duplicate
   and common functions to l3fwd.
 
+* **Testpmd RSS type 'ether' renamed to 'l2-payload'.**
+
+  Rename RSS type 'ether' to 'l2-payload' for "port config all rss xx"
+  command.
 
 Removed Items
 -------------
