@@ -125,3 +125,6 @@ Deprecation Notices
   applications should be updated to use the ``dmadev`` library instead,
   with the underlying HW-functionality being provided by the ``ioat`` or
   ``idxd`` dma drivers
+
+* raw/dpaa2_cmdif/: The ``dpaa2_cmdif`` rawdev driver will be deprecated
+  in 22.11, as it is no longer in use, no active user known.
