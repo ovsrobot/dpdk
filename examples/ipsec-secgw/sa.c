@@ -1522,9 +1522,11 @@ fill_ipsec_session(struct rte_ipsec_session *ss, struct rte_ipsec_sa *sa)
 
 	ss->sa = sa;
 
-	rc = rte_ipsec_session_prepare(ss);
-	if (rc != 0)
-		memset(ss, 0, sizeof(*ss));
+	if (ss->security.ses != NULL) {
+		rc = rte_ipsec_session_prepare(ss);
+		if (rc != 0)
+			memset(ss, 0, sizeof(*ss));
+	}
 
 	return rc;
 }
