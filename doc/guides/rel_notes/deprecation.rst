@@ -125,3 +125,7 @@ Deprecation Notices
   applications should be updated to use the ``dmadev`` library instead,
   with the underlying HW-functionality being provided by the ``ioat`` or
   ``idxd`` dma drivers
+
+* examples/kni: The ``kni`` kernel module and library are not recommended for use by new applications -
+  other technologies such as virtio-user are recommended instead.
+  Because of this, the example application for kni is deprecated and will be removed in a future release.
