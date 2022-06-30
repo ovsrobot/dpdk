@@ -1056,8 +1056,10 @@ rte_pktmbuf_attach_extbuf(struct rte_mbuf *m, void *buf_addr,
 	RTE_ASSERT(shinfo->free_cb != NULL);
 
 	m->buf_addr = buf_addr;
-	m->buf_iova = buf_iova;
 	m->buf_len = buf_len;
+
+	if (!RTE_MBUF_HAS_DYNFIELD2(m))
+		m->buf_iova = buf_iova;
 
 	m->data_len = 0;
 	m->data_off = 0;
@@ -1087,6 +1089,10 @@ static inline void
 rte_mbuf_dynfield_copy(struct rte_mbuf *mdst, const struct rte_mbuf *msrc)
 {
 	memcpy(&mdst->dynfield1, msrc->dynfield1, sizeof(mdst->dynfield1));
+
+	if (RTE_MBUF_HAS_DYNFIELD2(mdst))
+		memcpy(&mdst->dynfield2, &msrc->dynfield2,
+		       sizeof(mdst->dynfield2));
 }
 
 /* internal */
@@ -1143,9 +1149,11 @@ static inline void rte_pktmbuf_attach(struct rte_mbuf *mi, struct rte_mbuf *m)
 
 	mi->data_off = m->data_off;
 	mi->data_len = m->data_len;
-	mi->buf_iova = m->buf_iova;
 	mi->buf_addr = m->buf_addr;
 	mi->buf_len = m->buf_len;
+
+	if (!RTE_MBUF_HAS_DYNFIELD2(mi))
+		mi->buf_iova = m->buf_iova;
 
 	mi->next = NULL;
 	mi->pkt_len = mi->data_len;
@@ -1245,11 +1253,13 @@ static inline void rte_pktmbuf_detach(struct rte_mbuf *m)
 
 	m->priv_size = priv_size;
 	m->buf_addr = (char *)m + mbuf_size;
-	m->buf_iova = rte_mempool_virt2iova(m) + mbuf_size;
 	m->buf_len = (uint16_t)buf_len;
 	rte_pktmbuf_reset_headroom(m);
 	m->data_len = 0;
 	m->ol_flags = 0;
+
+	if (!RTE_MBUF_HAS_DYNFIELD2(m))
+		m->buf_iova = rte_mempool_virt2iova(m) + mbuf_size;
 }
 
 /**

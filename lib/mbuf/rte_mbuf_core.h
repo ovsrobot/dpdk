@@ -504,6 +504,8 @@ extern "C" {
 #define RTE_MBUF_F_INDIRECT    (1ULL << 62) /**< Indirect attached mbuf */
 #define IND_ATTACHED_MBUF RTE_DEPRECATED(IND_ATTACHED_MBUF) RTE_MBUF_F_INDIRECT
 
+#define RTE_MBUF_F_DYNFIELD2	(1ULL << 63) /**< dynfield2 mbuf field enabled */
+
 /** Alignment constraint of mbuf private area. */
 #define RTE_MBUF_PRIV_ALIGN 8
 
@@ -579,13 +581,18 @@ struct rte_mbuf {
 	RTE_MARKER cacheline0;
 
 	void *buf_addr;           /**< Virtual address of segment buffer. */
-	/**
-	 * Physical address of segment buffer.
-	 * Force alignment to 8-bytes, so as to ensure we have the exact
-	 * same mbuf cacheline0 layout for 32-bit and 64-bit. This makes
-	 * working on vector drivers easier.
-	 */
-	rte_iova_t buf_iova __rte_aligned(sizeof(rte_iova_t));
+	RTE_STD_C11
+	union {
+		/**
+		 * Physical address of segment buffer if IOVA mode is not VA.
+		 * Force alignment to 8-bytes, so as to ensure we have the exact
+		 * same mbuf cacheline0 layout for 32-bit and 64-bit. This makes
+		 * working on vector drivers easier.
+		 */
+		rte_iova_t buf_iova __rte_aligned(sizeof(rte_iova_t));
+		/* Reserved for dynamic field if IOVA mode is VA. */
+		uint64_t dynfield2;
+	};
 
 	/* next 8 bytes are initialised on RX descriptor rearm */
 	RTE_MARKER64 rearm_data;
@@ -802,6 +809,14 @@ struct rte_mbuf_ext_shared_info {
  */
 #define RTE_MBUF_DIRECT(mb) \
 	(!((mb)->ol_flags & (RTE_MBUF_F_INDIRECT | RTE_MBUF_F_EXTERNAL)))
+
+/**
+ *
+ * Retrurns TRUE if given mbuf has dynfield2 field enabled, or FALSE otherwise.
+ *
+ * dynfield2 field can be enabled if IOVA mode is configured as VA.
+ */
+#define RTE_MBUF_HAS_DYNFIELD2(mb) (!!((mb)->ol_flags & RTE_MBUF_F_DYNFIELD2))
 
 /** Uninitialized or unspecified port. */
 #define RTE_MBUF_PORT_INVALID UINT16_MAX

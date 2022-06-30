@@ -101,6 +101,10 @@ rte_pktmbuf_init(struct rte_mempool *mp,
 	m->port = RTE_MBUF_PORT_INVALID;
 	rte_mbuf_refcnt_set(m, 1);
 	m->next = NULL;
+
+	/* enable dynfield2 if IOVA mode is VA */
+	if (rte_eal_iova_mode() == RTE_IOVA_VA)
+		m->ol_flags = RTE_MBUF_F_DYNFIELD2;
 }
 
 /*
@@ -205,6 +209,10 @@ __rte_pktmbuf_init_extmem(struct rte_mempool *mp,
 	m->ol_flags = RTE_MBUF_F_EXTERNAL;
 	rte_mbuf_refcnt_set(m, 1);
 	m->next = NULL;
+
+	/* enable dynfield2 if IOVA mode is VA */
+	if (rte_eal_iova_mode() == RTE_IOVA_VA)
+		m->ol_flags |= RTE_MBUF_F_DYNFIELD2;
 
 	/* init external buffer shared info items */
 	shinfo = RTE_PTR_ADD(m, mbuf_size);
