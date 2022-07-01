@@ -177,9 +177,6 @@ uint16_t mana_rx_burst_removed(void *dpdk_rxq, struct rte_mbuf **pkts,
 uint16_t mana_tx_burst_removed(void *dpdk_rxq, struct rte_mbuf **pkts,
 			       uint16_t pkts_n);
 
-void *mana_alloc_verbs_buf(size_t size, void *data);
-void mana_free_verbs_buf(void *ptr, void *data);
-
 /** Request timeout for IPC. */
 #define MANA_MP_REQ_TIMEOUT_SEC 5
 
