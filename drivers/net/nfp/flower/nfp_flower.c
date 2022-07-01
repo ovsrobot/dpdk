@@ -21,6 +21,7 @@
 #include "../nfpcore/nfp_nsp.h"
 #include "nfp_flower.h"
 #include "nfp_flower_ovs_compat.h"
+#include "nfp_flower_ctrl.h"
 
 #define MAX_PKT_BURST 32
 #define MEMPOOL_CACHE_SIZE 512
@@ -216,7 +217,21 @@ static const struct eth_dev_ops nfp_flower_pf_dev_ops = {
 	.link_update            = nfp_flower_pf_link_update,
 };
 
+static int
+nfp_flower_ctrl_vnic_service(void *arg)
+{
+	struct nfp_app_flower *app_flower = arg;
+
+	nfp_flower_ctrl_vnic_poll(app_flower);
+
+	return 0;
+}
+
 static struct rte_service_spec flower_services[NFP_FLOWER_SERVICE_MAX] = {
+	[NFP_FLOWER_SERVICE_CTRL] = {
+		.name         = "flower_ctrl_vnic_service",
+		.callback     = nfp_flower_ctrl_vnic_service,
+	},
 };
 
 static int
