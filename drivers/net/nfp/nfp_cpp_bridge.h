@@ -24,8 +24,8 @@
 #define NFP_IOCTL 'n'
 #define NFP_IOCTL_CPP_IDENTIFICATION _IOW(NFP_IOCTL, 0x8f, uint32_t)
 
-void nfp_register_cpp_service(struct nfp_cpp *cpp);
-int32_t nfp_cpp_bridge_service_func(void *args);
+int nfp_map_service(uint32_t service_id);
+int nfp_enable_cpp_service(struct nfp_cpp *cpp);
 
 #endif /* _NFP_CPP_BRIDGE_H_ */
 /*
