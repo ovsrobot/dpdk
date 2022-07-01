@@ -1,0 +1,54 @@
+..  SPDX-License-Identifier: BSD-3-Clause
+    Copyright 2022 Microsoft Corporation
+
+MANA poll mode driver library
+=============================
+
+The MANA poll mode driver library (**librte_net_mana**) implements support
+for Microsoft Azure Network Adatper VF in SR-IOV context.
+
+Features
+--------
+
+Features of the MANA Ethdev PMD are:
+
+Prerequisites
+-------------
+
+This driver relies on external libraries and kernel drivers for resources
+allocations and initialization. The following dependencies are not part of
+DPDK and must be installed separately:
+
+- **libibverbs** (provided by rdma-core package)
+
+  User space verbs framework used by librte_net_mana. This library provides
+  a generic interface between the kernel and low-level user space drivers
+  such as libmana.
+
+  It allows slow and privileged operations (context initialization, hardware
+  resources allocations) to be managed by the kernel and fast operations to
+  never leave user space.
+
+- **libmana** (provided by rdma-core package)
+
+  Low-level user space driver library for Microsoft Azure Network Adatper
+  devices, it is automatically loaded by libibverbs.
+
+- **Kernel modules**
+
+  They provide the kernel-side verbs API and low level device drivers that
+  manage actual hardware initialization and resources sharing with user
+  space processes.
+
+  Unlike most other PMDs, these modules must remain loaded and bound to
+  their devices:
+
+  - mana: Ethernet device driver that provides kernel network interfaces.
+  - mana_ib: InifiniBand device driver.
+  - ib_uverbs: user space driver for verbs (entry point for libibverbs).
+
+Driver compilation and testing
+------------------------------
+
+Refer to the document :ref:`compiling and testing a PMD for a NIC <pmd_build_and_test>`
+for details.
