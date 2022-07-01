@@ -139,6 +139,7 @@ struct mcast_group_params {
 	uint16_t port_mask;
 };
 
+/* Create the mcast group table. 8< */
 static struct mcast_group_params mcast_group_table[] = {
 		{RTE_IPV4(224,0,0,101), 0x1},
 		{RTE_IPV4(224,0,0,102), 0x2},
@@ -156,6 +157,7 @@ static struct mcast_group_params mcast_group_table[] = {
 		{RTE_IPV4(224,0,0,114), 0xE},
 		{RTE_IPV4(224,0,0,115), 0xF},
 };
+/* >8 End of create mcast group table. */
 
 /* Send burst of packets on an output interface */
 static void

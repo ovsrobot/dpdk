@@ -22,7 +22,13 @@ There are two key differences from the L2 Forwarding sample application:
 
 The lookup method is the Four-byte Key (FBK) hash-based method.
 The lookup table is composed of pairs of destination IPv4 address (the FBK)
-and a port mask associated with that IPv4 address.
+and a port mask associated with that IPv4 address. By default, the following IP addresses and their respective
+port masks are added:
+
+.. literalinclude:: ../../../examples/ipv4_multicast/main.c
+    :language: c
+    :start-after: Create the mcast group table. 8<
+    :end-before: >8 End of create mcast group table.
 
 .. note::
 
