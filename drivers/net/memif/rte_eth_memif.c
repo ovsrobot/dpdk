@@ -341,67 +341,111 @@ eth_memif_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	if (cur_slot == last_slot)
 		goto refill;
 	n_slots = last_slot - cur_slot;
+	if (likely(mbuf_size >= pmd->cfg.pkt_buffer_size)) {
+		while (n_slots && n_rx_pkts < nb_pkts) {
+			mbuf_head = rte_pktmbuf_alloc(mq->mempool);
+			if (unlikely(mbuf_head == NULL))
+				goto no_free_bufs;
+			mbuf = mbuf_head;
 
-	while (n_slots && n_rx_pkts < nb_pkts) {
-		mbuf_head = rte_pktmbuf_alloc(mq->mempool);
-		if (unlikely(mbuf_head == NULL))
-			goto no_free_bufs;
-		mbuf = mbuf_head;
-		mbuf->port = mq->in_port;
-		dst_off = 0;
+next_slot1:
+			mbuf->port = mq->in_port;
+			s0 = cur_slot & mask;
+			d0 = &ring->desc[s0];
 
-next_slot:
-		s0 = cur_slot & mask;
-		d0 = &ring->desc[s0];
+			cp_len = d0->length;
 
-		src_len = d0->length;
-		src_off = 0;
+			rte_pktmbuf_data_len(mbuf) = cp_len;
+			rte_pktmbuf_pkt_len(mbuf) = cp_len;
+			if (mbuf != mbuf_head)
+				rte_pktmbuf_pkt_len(mbuf_head) += cp_len;
 
-		do {
-			dst_len = mbuf_size - dst_off;
-			if (dst_len == 0) {
-				dst_off = 0;
-				dst_len = mbuf_size;
+			rte_memcpy(rte_pktmbuf_mtod(mbuf, void *),
+				(uint8_t *)memif_get_buffer(proc_private, d0), cp_len);
 
-				/* store pointer to tail */
+			cur_slot++;
+			n_slots--;
+
+			if (d0->flags & MEMIF_DESC_FLAG_NEXT) {
 				mbuf_tail = mbuf;
 				mbuf = rte_pktmbuf_alloc(mq->mempool);
 				if (unlikely(mbuf == NULL))
 					goto no_free_bufs;
-				mbuf->port = mq->in_port;
 				ret = memif_pktmbuf_chain(mbuf_head, mbuf_tail, mbuf);
 				if (unlikely(ret < 0)) {
 					MIF_LOG(ERR, "number-of-segments-overflow");
 					rte_pktmbuf_free(mbuf);
 					goto no_free_bufs;
 				}
+				goto next_slot1;
 			}
-			cp_len = RTE_MIN(dst_len, src_len);
 
-			rte_pktmbuf_data_len(mbuf) += cp_len;
-			rte_pktmbuf_pkt_len(mbuf) = rte_pktmbuf_data_len(mbuf);
-			if (mbuf != mbuf_head)
-				rte_pktmbuf_pkt_len(mbuf_head) += cp_len;
+			mq->n_bytes += rte_pktmbuf_pkt_len(mbuf_head);
+			*bufs++ = mbuf_head;
+			n_rx_pkts++;
+		}
+	} else {
+		while (n_slots && n_rx_pkts < nb_pkts) {
+			mbuf_head = rte_pktmbuf_alloc(mq->mempool);
+			if (unlikely(mbuf_head == NULL))
+				goto no_free_bufs;
+			mbuf = mbuf_head;
+			mbuf->port = mq->in_port;
 
-			rte_memcpy(rte_pktmbuf_mtod_offset(mbuf, void *,
-							   dst_off),
-				(uint8_t *)memif_get_buffer(proc_private, d0) +
-				src_off, cp_len);
+next_slot2:
+			s0 = cur_slot & mask;
+			d0 = &ring->desc[s0];
 
-			src_off += cp_len;
-			dst_off += cp_len;
-			src_len -= cp_len;
-		} while (src_len);
+			src_len = d0->length;
+			dst_off = 0;
+			src_off = 0;
 
-		cur_slot++;
-		n_slots--;
+			do {
+				dst_len = mbuf_size - dst_off;
+				if (dst_len == 0) {
+					dst_off = 0;
+					dst_len = mbuf_size;
 
-		if (d0->flags & MEMIF_DESC_FLAG_NEXT)
-			goto next_slot;
+					/* store pointer to tail */
+					mbuf_tail = mbuf;
+					mbuf = rte_pktmbuf_alloc(mq->mempool);
+					if (unlikely(mbuf == NULL))
+						goto no_free_bufs;
+					mbuf->port = mq->in_port;
+					ret = memif_pktmbuf_chain(mbuf_head, mbuf_tail, mbuf);
+					if (unlikely(ret < 0)) {
+						MIF_LOG(ERR, "number-of-segments-overflow");
+						rte_pktmbuf_free(mbuf);
+						goto no_free_bufs;
+					}
+				}
+				cp_len = RTE_MIN(dst_len, src_len);
 
-		mq->n_bytes += rte_pktmbuf_pkt_len(mbuf_head);
-		*bufs++ = mbuf_head;
-		n_rx_pkts++;
+				rte_pktmbuf_data_len(mbuf) += cp_len;
+				rte_pktmbuf_pkt_len(mbuf) = rte_pktmbuf_data_len(mbuf);
+				if (mbuf != mbuf_head)
+					rte_pktmbuf_pkt_len(mbuf_head) += cp_len;
+
+				rte_memcpy(rte_pktmbuf_mtod_offset(mbuf, void *,
+								   dst_off),
+					(uint8_t *)memif_get_buffer(proc_private, d0) +
+					src_off, cp_len);
+
+				src_off += cp_len;
+				dst_off += cp_len;
+				src_len -= cp_len;
+			} while (src_len);
+
+			cur_slot++;
+			n_slots--;
+
+			if (d0->flags & MEMIF_DESC_FLAG_NEXT)
+				goto next_slot2;
+
+			mq->n_bytes += rte_pktmbuf_pkt_len(mbuf_head);
+			*bufs++ = mbuf_head;
+			n_rx_pkts++;
+		}
 	}
 
 no_free_bufs:
@@ -693,7 +737,6 @@ no_free_slots:
 	mq->n_pkts += n_tx_pkts;
 	return n_tx_pkts;
 }
-
 
 static int
 memif_tx_one_zc(struct pmd_process_private *proc_private, struct memif_queue *mq,
