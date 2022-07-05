@@ -818,6 +818,21 @@ Known Issues
 
   The debug statistics of rte_ring, rte_mempool and rte_timer are not supported in an unregistered non-EAL pthread.
 
++ signal safety
+
+  The DPDK library is not designed to be async-signal-safe.
+  Except where explicitly stated otherwise [#]_, the DPDK functions are nonreentrant and are unsafe to call from a signal handler.
+
+.. [#] Only the function ``rte_dump_stack()`` can safely be called from signal handler in this version of DPDK.
+
+.. note::
+  The kinds of issues that make DPDK functions unsafe can be understood when
+  one considers that much of the code in DPDK uses locks and other shared
+  resources. If a device driver holding a ``rte_spinlock`` is interrupted
+  by a signal and control operation is then performed that would acquire
+  the same lock, a deadlock would result.
+
+
 cgroup control
 ~~~~~~~~~~~~~~
 
