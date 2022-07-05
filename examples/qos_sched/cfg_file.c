@@ -23,6 +23,8 @@
 uint32_t active_queues[RTE_SCHED_QUEUES_PER_PIPE];
 uint32_t n_active_queues;
 
+struct rte_sched_cman_params cman_params;
+
 int
 cfg_load_port(struct rte_cfgfile *cfg, struct rte_sched_port_params *port_params)
 {
@@ -229,40 +231,6 @@ cfg_load_subport_profile(struct rte_cfgfile *cfg,
 	return 0;
 }
 
-#ifdef RTE_SCHED_CMAN
-void set_subport_cman_params(struct rte_sched_subport_params *subport_p,
-					struct rte_sched_cman_params cman_p)
-{
-	int j, k;
-	subport_p->cman_params->cman_mode = cman_p.cman_mode;
-
-	for (j = 0; j < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; j++) {
-		if (subport_p->cman_params->cman_mode ==
-					RTE_SCHED_CMAN_RED) {
-			for (k = 0; k < RTE_COLORS; k++) {
-				subport_p->cman_params->red_params[j][k].min_th =
-					cman_p.red_params[j][k].min_th;
-				subport_p->cman_params->red_params[j][k].max_th =
-					cman_p.red_params[j][k].max_th;
-				subport_p->cman_params->red_params[j][k].maxp_inv =
-					cman_p.red_params[j][k].maxp_inv;
-				subport_p->cman_params->red_params[j][k].wq_log2 =
-					cman_p.red_params[j][k].wq_log2;
-			}
-		} else {
-			subport_p->cman_params->pie_params[j].qdelay_ref =
-				cman_p.pie_params[j].qdelay_ref;
-			subport_p->cman_params->pie_params[j].dp_update_interval =
-				cman_p.pie_params[j].dp_update_interval;
-			subport_p->cman_params->pie_params[j].max_burst =
-				cman_p.pie_params[j].max_burst;
-			subport_p->cman_params->pie_params[j].tailq_th =
-				cman_p.pie_params[j].tailq_th;
-		}
-	}
-}
-#endif
-
 int
 cfg_load_subport(struct rte_cfgfile *cfg, struct rte_sched_subport_params *subport_params)
 {
@@ -276,11 +244,7 @@ cfg_load_subport(struct rte_cfgfile *cfg, struct rte_sched_subport_params *subpo
 	memset(active_queues, 0, sizeof(active_queues));
 	n_active_queues = 0;
 
-#ifdef RTE_SCHED_CMAN
-	struct rte_sched_cman_params cman_params = {
-		.cman_mode = RTE_SCHED_CMAN_RED,
-		.red_params = { },
-	};
+	subport_params->cman_params = NULL;
 
 	if (rte_cfgfile_has_section(cfg, "red")) {
 		cman_params.cman_mode = RTE_SCHED_CMAN_RED;
@@ -387,7 +351,6 @@ cfg_load_subport(struct rte_cfgfile *cfg, struct rte_sched_subport_params *subpo
 
 		}
 	}
-#endif /* RTE_SCHED_CMAN */
 
 	for (i = 0; i < MAX_SCHED_SUBPORTS; i++) {
 		char sec_name[CFG_NAME_LEN];
@@ -465,9 +428,7 @@ cfg_load_subport(struct rte_cfgfile *cfg, struct rte_sched_subport_params *subpo
 					}
 				}
 			}
-#ifdef RTE_SCHED_CMAN
-			set_subport_cman_params(subport_params+i, cman_params);
-#endif
+			subport_params[i].cman_params = &cman_params;
 		}
 	}
 
