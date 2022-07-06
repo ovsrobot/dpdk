@@ -146,6 +146,7 @@ mlx4_tx_uar_init_secondary(struct rte_eth_dev *dev, int fd)
 		if (ret)
 			goto error;
 	}
+	close(fd);
 	return 0;
 error:
 	/* Rollback. */
@@ -155,6 +156,7 @@ error:
 			continue;
 		txq_uar_uninit_secondary(txq);
 	} while (i--);
+	close(fd);
 	return -rte_errno;
 }
 
