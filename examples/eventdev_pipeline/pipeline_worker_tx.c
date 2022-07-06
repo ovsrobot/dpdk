@@ -764,7 +764,9 @@ init_adapters(uint16_t nb_ports)
 
 	ret = rte_event_dev_info_get(evdev_id, &dev_info);
 	adptr_services = rte_zmalloc(NULL, sizeof(struct rx_adptr_services), 0);
-
+	if (adptr_services == NULL) {
+		return -ENOMEM;
+	}
 	struct rte_event_port_conf adptr_p_conf = {
 		.dequeue_depth = cdata.worker_cq_depth,
 		.enqueue_depth = 64,
