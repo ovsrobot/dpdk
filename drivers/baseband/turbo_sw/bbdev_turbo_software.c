@@ -256,6 +256,17 @@ info_get(struct rte_bbdev *dev, struct rte_bbdev_driver_info *dev_info)
 	dev_info->data_endianness = RTE_LITTLE_ENDIAN;
 	dev_info->device_status = RTE_BBDEV_DEV_NOT_SUPPORTED;
 
+	const struct rte_bbdev_op_cap *op_cap = bbdev_capabilities;
+	int num_op_type = 0;
+	for (; op_cap->type != RTE_BBDEV_OP_NONE; ++op_cap)
+		num_op_type++;
+	op_cap = bbdev_capabilities;
+	if (num_op_type > 0) {
+		int num_queue_per_type = dev_info->max_num_queues / num_op_type;
+		for (; op_cap->type != RTE_BBDEV_OP_NONE; ++op_cap)
+			dev_info->num_queues[op_cap->type] = num_queue_per_type;
+	}
+
 	rte_bbdev_log_debug("got device info from %u\n", dev->data->dev_id);
 }
 
