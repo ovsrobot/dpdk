@@ -638,6 +638,7 @@ mlx5_tx_uar_init_secondary(struct rte_eth_dev *dev, int fd)
 		if (ret)
 			goto error;
 	}
+	close(fd);
 	return 0;
 error:
 	/* Rollback. */
@@ -648,6 +649,7 @@ error:
 		txq_ctrl = container_of(txq, struct mlx5_txq_ctrl, txq);
 		txq_uar_uninit_secondary(txq_ctrl);
 	} while (i--);
+	close(fd);
 	return -rte_errno;
 }
 
