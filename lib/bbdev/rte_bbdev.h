@@ -407,6 +407,8 @@ struct rte_bbdev_queue_data {
 	struct rte_bbdev_stats queue_stats;  /**< Queue statistics */
 	enum rte_bbdev_enqueue_status enqueue_status; /**< Enqueue status when op is rejected */
 	bool started;  /**< Queue state */
+	rte_rwlock_t lock_enq; /**< lock protection for the Enqueue */
+	rte_rwlock_t lock_deq; /**< lock protection for the Dequeue */
 };
 
 /** @internal Enqueue encode operations for processing on queue of a device. */
