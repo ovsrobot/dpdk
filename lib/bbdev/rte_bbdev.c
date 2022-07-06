@@ -25,6 +25,8 @@
 
 /* Number of supported operation types */
 #define BBDEV_OP_TYPE_COUNT 5
+/* Number of supported device status */
+#define BBDEV_DEV_STATUS_COUNT 9
 
 /* BBDev library logging ID */
 RTE_LOG_REGISTER_DEFAULT(bbdev_logtype, NOTICE);
@@ -1130,5 +1132,27 @@ rte_bbdev_op_type_str(enum rte_bbdev_op_type op_type)
 		return op_types[op_type];
 
 	rte_bbdev_log(ERR, "Invalid operation type");
+	return NULL;
+}
+
+const char *
+rte_bbdev_device_status_str(enum rte_bbdev_device_status status)
+{
+	static const char * const dev_sta_string[] = {
+		"RTE_BBDEV_DEV_NOSTATUS",
+		"RTE_BBDEV_DEV_NOT_SUPPORTED",
+		"RTE_BBDEV_DEV_RESET",
+		"RTE_BBDEV_DEV_CONFIGURED",
+		"RTE_BBDEV_DEV_ACTIVE",
+		"RTE_BBDEV_DEV_FATAL_ERR",
+		"RTE_BBDEV_DEV_RESTART_REQ",
+		"RTE_BBDEV_DEV_RECONFIG_REQ",
+		"RTE_BBDEV_DEV_CORRECT_ERR",
+	};
+
+	if (status < BBDEV_DEV_STATUS_COUNT)
+		return dev_sta_string[status];
+
+	rte_bbdev_log(ERR, "Invalid device status");
 	return NULL;
 }
