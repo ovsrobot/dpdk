@@ -474,7 +474,7 @@ ice_dcf_send_aq_cmd(void *dcf_hw, struct ice_aq_desc *desc,
 	struct dcf_virtchnl_cmd desc_cmd, buff_cmd;
 	struct ice_dcf_hw *hw = dcf_hw;
 	int err = 0;
-	int i = 0;
+	int i, j = 0;
 
 	if ((buf && !buf_size) || (!buf && buf_size) ||
 	    buf_size > ICE_DCF_AQ_BUF_SZ)
@@ -501,25 +501,33 @@ ice_dcf_send_aq_cmd(void *dcf_hw, struct ice_aq_desc *desc,
 	ice_dcf_vc_cmd_set(hw, &desc_cmd);
 	ice_dcf_vc_cmd_set(hw, &buff_cmd);
 
-	if (ice_dcf_vc_cmd_send(hw, &desc_cmd) ||
-	    ice_dcf_vc_cmd_send(hw, &buff_cmd)) {
-		err = -1;
-		PMD_DRV_LOG(ERR, "fail to send OP_DCF_CMD_DESC/BUFF");
-		goto ret;
-	}
-
 	do {
-		if (!desc_cmd.pending && !buff_cmd.pending)
+		if (ice_dcf_vc_cmd_send(hw, &desc_cmd) ||
+		    ice_dcf_vc_cmd_send(hw, &buff_cmd)) {
+			err = -1;
+			PMD_DRV_LOG(ERR, "fail to send OP_DCF_CMD_DESC/BUFF");
+			goto ret;
+		}
+
+		i = 0;
+		do {
+			if (!desc_cmd.pending && !buff_cmd.pending)
+				break;
+
+			rte_delay_ms(ICE_DCF_ARQ_CHECK_TIME);
+		} while (i++ < ICE_DCF_ARQ_MAX_RETRIES);
+
+		if (desc_cmd.v_ret != IAVF_ERR_NOT_READY && buff_cmd.v_ret != IAVF_ERR_NOT_READY)
 			break;
 
 		rte_delay_ms(ICE_DCF_ARQ_CHECK_TIME);
-	} while (i++ < ICE_DCF_ARQ_MAX_RETRIES);
+	} while (j++ < ICE_DCF_ARQ_MAX_RETRIES);
 
 	if (desc_cmd.v_ret != IAVF_SUCCESS || buff_cmd.v_ret != IAVF_SUCCESS) {
 		err = -1;
 		PMD_DRV_LOG(ERR,
-			    "No response (%d times) or return failure (desc: %d / buff: %d)",
-			    i, desc_cmd.v_ret, buff_cmd.v_ret);
+			    "No response (%d times) or return failure (desc: %d / buff: %d)"
+			    " after retry %d times cmd", i, desc_cmd.v_ret, buff_cmd.v_ret, j);
 	}
 
 ret:
