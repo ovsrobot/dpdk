@@ -969,10 +969,10 @@ it will fail and return the info "Conflict with the first rule's input set",
 which means the current rule's input set conflicts with the first rule's.
 Remove the first rule if want to change the input set of the PCTYPE.
 
-Disable QinQ is not supported when FW >= 8.4
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+To use VLAN functions, need to enable QinQ when FW >= 8.4
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If upgrade FW to version 8.4 and higher, enable QinQ by default and disable QinQ is not supported.
+If upgrade FW to version 8.4 and higher, when using VLAN functions, need to enable QinQ.
 
 
 Example of getting best performance with l3fwd example
