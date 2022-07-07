@@ -10,9 +10,9 @@ MLX5 Ethernet Poll Mode Driver
 The mlx5 Ethernet poll mode driver library (**librte_net_mlx5**) provides support
 for **Mellanox ConnectX-4**, **Mellanox ConnectX-4 Lx** , **Mellanox
 ConnectX-5**, **Mellanox ConnectX-6**, **Mellanox ConnectX-6 Dx**, **Mellanox
-ConnectX-6 Lx**, **Mellanox BlueField** and **Mellanox BlueField-2** families
-of 10/25/40/50/100/200 Gb/s adapters as well as their virtual functions (VF)
-in SR-IOV context.
+ConnectX-6 Lx**, **Mellanox BlueField**, **NVIDIA BlueField-2** and
+**NVIDIA ConnectX-7** families of 10/25/40/50/100/200 Gb/s adapters
+as well as their virtual functions (VF) in SR-IOV context.
 
 
 Design
@@ -1130,6 +1130,7 @@ The following Mellanox device families are supported by the same mlx5 driver:
   - ConnectX-6
   - ConnectX-6 Dx
   - ConnectX-6 Lx
+  - ConnectX-7
   - BlueField
   - BlueField-2
 
@@ -1161,7 +1162,8 @@ Below are detailed device names:
 * Mellanox\ |reg| ConnectX\ |reg|-6 Dx EN 100G MCX623106AN-CDAT (2x100G)
 * Mellanox\ |reg| ConnectX\ |reg|-6 Dx EN 200G MCX623105AN-VDAT (1x200G)
 * Mellanox\ |reg| ConnectX\ |reg|-6 Lx EN 25G MCX631102AN-ADAT (2x25G)
-
+* NVIDIA |reg| ConnectX\ |reg|-7 200G CX713106AE-HEA_QP1_Ax (2x200G)
+* NVIDIA |reg| BlueField\ |reg|-2 25G MBF2H332A-AEEOT_A1 (2x25G)
 
 Sub-Function
 ------------

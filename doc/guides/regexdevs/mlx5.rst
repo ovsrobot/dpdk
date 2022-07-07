@@ -7,7 +7,7 @@ MLX5 RegEx Driver
 =================
 
 The mlx5 RegEx (Regular Expression) driver library
-(**librte_regex_mlx5**) provides support for **Mellanox BlueField-2**
+(**librte_regex_mlx5**) provides support for **NVIDIA BlueField-2**
 families of 25/50/100/200 Gb/s adapters.
 
 Design
