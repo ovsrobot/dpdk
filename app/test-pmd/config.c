@@ -1693,6 +1693,7 @@ rss_config_display(struct rte_flow_action_rss *rss_conf)
 		return;
 	}
 	rss_types_display(rss_conf->types, TESTPMD_RSS_TYPES_CHAR_NUM_PER_LINE);
+	printf("\n");
 }
 
 static struct port_indirect_action *
