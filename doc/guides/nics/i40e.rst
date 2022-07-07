@@ -969,11 +969,14 @@ it will fail and return the info "Conflict with the first rule's input set",
 which means the current rule's input set conflicts with the first rule's.
 Remove the first rule if want to change the input set of the PCTYPE.
 
-Disable QinQ is not supported when FW >= 8.4
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Vlan related feature miss when FW >= 8.4
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If upgrade FW to version 8.4 and higher, enable QinQ by default and disable QinQ is not supported.
-
+If upgrade FW to version 8.4 and higher, some vlan related issue exist:
+1. vlan tci input set not work
+2. tpid set fail
+3. need enable qinq before use vlan filter
+4. outer vlan strip fail
 
 Example of getting best performance with l3fwd example
 ------------------------------------------------------
