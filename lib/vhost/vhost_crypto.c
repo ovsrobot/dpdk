@@ -574,12 +574,11 @@ copy_data_from_desc(void *dst, struct vhost_crypto_data_req *vc_req,
 
 	remain = RTE_MIN(desc->len, size);
 	addr = desc->addr;
-	do {
-		uint64_t len;
-		void *src;
 
-		len = remain;
-		src = IOVA_TO_VVA(void *, vc_req, addr, &len, VHOST_ACCESS_RO);
+	while (remain) {
+		uint64_t len = remain;
+		void *src = IOVA_TO_VVA(void *, vc_req, addr, &len, VHOST_ACCESS_RO);
+
 		if (unlikely(src == NULL || len == 0))
 			return 0;
 
@@ -588,7 +587,7 @@ copy_data_from_desc(void *dst, struct vhost_crypto_data_req *vc_req,
 		/* cast is needed for 32-bit architecture */
 		dst = RTE_PTR_ADD(dst, (size_t)len);
 		addr += len;
-	} while (unlikely(remain != 0));
+	}
 
 	return RTE_MIN(desc->len, size);
 }
