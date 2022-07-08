@@ -363,9 +363,15 @@ service_runner_do_callback(struct rte_service_spec_impl *s,
 		uint64_t start = rte_rdtsc();
 		s->spec.callback(userdata);
 		uint64_t end = rte_rdtsc();
-		s->cycles_spent += end - start;
+		uint64_t cycles = end - start;
 		cs->calls_per_service[service_idx]++;
-		s->calls++;
+		if (service_mt_safe(s)) {
+			__atomic_fetch_add(&s->cycles_spent, cycles, __ATOMIC_RELAXED);
+			__atomic_fetch_add(&s->calls, 1, __ATOMIC_RELAXED);
+		} else {
+			s->cycles_spent += cycles;
+			s->calls++;
+		}
 	} else
 		s->spec.callback(userdata);
 }
