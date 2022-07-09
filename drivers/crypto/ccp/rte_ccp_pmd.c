@@ -301,6 +301,9 @@ cryptodev_ccp_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	};
 
 	sha_ctx = (void *)rte_malloc(NULL, SHA512_DIGEST_SIZE, 64);
+	if (sha_ctx == NULL) {
+		return -ENOMEM;
+	}
 	if (ccp_pmd_init_done) {
 		RTE_LOG(INFO, PMD, "CCP PMD already initialized\n");
 		return -EFAULT;
