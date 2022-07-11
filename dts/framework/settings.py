@@ -7,6 +7,9 @@
 import os
 import re
 
+# Default session timeout.
+TIMEOUT: int = 15
+
 DEFAULT_CONFIG_FILE_PATH: str = "./conf.yaml"
 
 # DTS global environment variables
