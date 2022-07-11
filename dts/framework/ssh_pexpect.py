@@ -12,7 +12,7 @@ from pexpect import pxssh
 from .exception import (SSHConnectionException, SSHSessionDeadException,
                         TimeoutException)
 from .logger import DTSLOG
-from .utils import GREEN, RED
+from .utils import GREEN, RED, parallel_lock
 
 """
 Module handles ssh sessions to TG and SUT.
@@ -33,6 +33,7 @@ class SSHPexpect:
         username: str,
         password: Optional[str],
         logger: DTSLOG,
+        sut_id: int,
     ):
         self.magic_prompt = "MAGIC PROMPT"
         self.logger = logger
@@ -42,11 +43,18 @@ class SSHPexpect:
         self.password = password or ""
         self.logger.info(f"ssh {self.username}@{self.node}")
 
-        self._connect_host()
+        self._connect_host(sut_id=sut_id)
 
-    def _connect_host(self) -> None:
+    @parallel_lock(num=8)
+    def _connect_host(self, sut_id: int = 0) -> None:
         """
         Create connection to assigned node.
+        Parameter sut_id will be used in parallel_lock thus can assure
+        isolated locks for each node.
+        Parallel ssh connections are limited to MaxStartups option in SSHD
+        configuration file. By default concurrent number is 10, so default
+        threads number is limited to 8 which less than 10. Lock number can
+        be modified along with MaxStartups value.
         """
         retry_times = 10
         try:
