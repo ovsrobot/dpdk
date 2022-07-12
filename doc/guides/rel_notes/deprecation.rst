@@ -107,6 +107,13 @@ Deprecation Notices
   alternative is implemented.
   The legacy actions should be removed in DPDK 22.11.
 
+* vdpa: The vDPA API should not try to manipulate or export
+  any ``rte_device`` object, which belongs to the bus layer.
+  The function ``rte_vdpa_get_rte_device()`` will be deprecated in 23.07,
+  when its usage will be replaced with ``rte_vdpa_get_device_name()``.
+  The new function should enter in 22.11 and get promoted to stable in 23.07.
+  The target is to remove ``rte_vdpa_get_rte_device()`` in 23.11.
+
 * cryptodev: Hide structures ``rte_cryptodev_sym_session`` and
   ``rte_cryptodev_asym_session`` to remove unnecessary indirection between
   session and the private data of session. An opaque pointer can be exposed
