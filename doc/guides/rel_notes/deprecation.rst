@@ -125,3 +125,9 @@ Deprecation Notices
   applications should be updated to use the ``dmadev`` library instead,
   with the underlying HW-functionality being provided by the ``ioat`` or
   ``idxd`` dma drivers
+
+* bus: The ``dev->device.numa_node`` field is set by the bus driver for
+  each device it manages to indicate on which NUMA node this device
+  lies. When this information is unknown, the assigned value is not
+  consistent across the bus drivers. In v22.11, the value will be set
+  to -1 in this case.
