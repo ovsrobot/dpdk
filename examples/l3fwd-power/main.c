@@ -15,6 +15,8 @@
 #include <unistd.h>
 #include <signal.h>
 #include <math.h>
+#include <dirent.h>
+#include <fnmatch.h>
 
 #include <rte_common.h>
 #include <rte_byteorder.h>
@@ -47,6 +49,7 @@
 #include <rte_metrics.h>
 #include <rte_telemetry.h>
 #include <rte_power_pmd_mgmt.h>
+#include <rte_power_uncore.h>
 
 #include "perf_core.h"
 #include "main.h"
@@ -71,6 +74,7 @@
 
 #ifndef APP_LOOKUP_METHOD
 #define APP_LOOKUP_METHOD             APP_LOOKUP_LPM
+
 #endif
 
 #if (APP_LOOKUP_METHOD == APP_LOOKUP_EXACT_MATCH)
@@ -83,7 +87,7 @@
 
 #ifndef IPv6_BYTES
 #define IPv6_BYTES_FMT "%02x%02x:%02x%02x:%02x%02x:%02x%02x:"\
-                       "%02x%02x:%02x%02x:%02x%02x:%02x%02x"
+					   "%02x%02x:%02x%02x:%02x%02x:%02x%02x"
 #define IPv6_BYTES(addr) \
 	addr[0],  addr[1], addr[2],  addr[3], \
 	addr[4],  addr[5], addr[6],  addr[7], \
@@ -134,8 +138,13 @@
 
 #define NUM_TELSTATS RTE_DIM(telstats_strings)
 
+#define UNCORE_FREQUENCY_DIR "/sys/devices/system/cpu/intel_uncore_frequency"
+
 static uint16_t nb_rxd = RTE_TEST_RX_DESC_DEFAULT;
 static uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
+
+/* Max number of nodes times dies available on uncore */
+#define MAX_DIE_NODES (RTE_MAX_NUMA_DIE * RTE_MAX_NUMA_NODES)
 
 /* ethernet addresses of ports */
 static struct rte_ether_addr ports_eth_addr[RTE_MAX_ETHPORTS];
@@ -145,6 +154,8 @@ static rte_spinlock_t locks[RTE_MAX_ETHPORTS];
 
 /* mask of enabled ports */
 static uint32_t enabled_port_mask = 0;
+/* if uncore frequency was enabled without errors */
+static int enabled_uncore;
 /* Ports set in promiscuous mode off by default. */
 static int promiscuous_on = 0;
 /* NUMA is enabled by default. */
@@ -164,6 +175,13 @@ int telstats_index;
 struct telstats_name {
 	char name[RTE_ETH_XSTATS_NAME_SIZE];
 };
+
+struct uncore_info {
+	unsigned int pkg;
+	unsigned int die;
+};
+
+struct uncore_info ui[MAX_DIE_NODES];
 
 /* telemetry stats to be reported */
 const struct telstats_name telstats_strings[] = {
@@ -557,9 +575,9 @@ static void
 print_ipv6_key(struct ipv6_5tuple key)
 {
 	printf( "IP dst = " IPv6_BYTES_FMT ", IP src = " IPv6_BYTES_FMT ", "
-	        "port dst = %d, port src = %d, proto = %d\n",
-	        IPv6_BYTES(key.ip_dst), IPv6_BYTES(key.ip_src),
-	        key.port_dst, key.port_src, key.proto);
+			"port dst = %d, port src = %d, proto = %d\n",
+			IPv6_BYTES(key.ip_dst), IPv6_BYTES(key.ip_src),
+			key.port_dst, key.port_src, key.proto);
 }
 
 static inline uint16_t
@@ -674,9 +692,9 @@ parse_ptype_one(struct rte_mbuf *m)
 
 static uint16_t
 cb_parse_ptype(uint16_t port __rte_unused, uint16_t queue __rte_unused,
-	       struct rte_mbuf *pkts[], uint16_t nb_pkts,
-	       uint16_t max_pkts __rte_unused,
-	       void *user_param __rte_unused)
+		   struct rte_mbuf *pkts[], uint16_t nb_pkts,
+		   uint16_t max_pkts __rte_unused,
+		   void *user_param __rte_unused)
 {
 	unsigned int i;
 
@@ -797,8 +815,8 @@ power_idle_heuristic(uint32_t zero_rx_packet_count)
 
 static inline enum freq_scale_hint_t
 power_freq_scaleup_heuristic(unsigned lcore_id,
-			     uint16_t port_id,
-			     uint16_t queue_id)
+				 uint16_t port_id,
+				 uint16_t queue_id)
 {
 	uint32_t rxq_count = rte_eth_rx_queue_count(port_id, queue_id);
 /**
@@ -1051,7 +1069,7 @@ start_rx:
 			 * less as possible.
 			 */
 			for (i = 1,
-			    lcore_idle_hint = qconf->rx_queue_list[0].idle_hint;
+				lcore_idle_hint = qconf->rx_queue_list[0].idle_hint;
 					i < qconf->n_rx_queue; ++i) {
 				rx_queue = &(qconf->rx_queue_list[i]);
 				if (rx_queue->idle_hint < lcore_idle_hint)
@@ -1616,6 +1634,9 @@ print_usage(const char *prgname)
 		"  [--max-pkt-len PKTLEN]\n"
 		"  -p PORTMASK: hexadecimal bitmask of ports to configure\n"
 		"  -P: enable promiscuous mode\n"
+		"  -u: set min frequency for uncore\n"
+		"  -U: set max frequency for uncore\n"
+		"  -i (frequency index): set frequency index for uncore\n"
 		"  --config (port,queue,lcore): rx queues configuration\n"
 		"  --high-perf-cores CORELIST: list of high performance cores\n"
 		"  --perf-config: similar as config, cores specified as indices"
@@ -1670,6 +1691,112 @@ static int parse_max_pkt_len(const char *pktlen)
 		return -1;
 
 	return len;
+}
+
+static int
+parse_uncore_dir(void)
+{
+	DIR *d;
+	struct dirent *dir;
+	char pkg[3], die[3];
+	unsigned int count = 0;
+	static const char filter[] = "*freq_khz*";
+
+	d = opendir(UNCORE_FREQUENCY_DIR);
+	if (!d) {
+		RTE_LOG(ERR, EAL, "Unable to open uncore frequency directory");
+		return -1;
+	}
+
+	else {
+		/* Loop through every file name in uncore frequency dir extracting
+		 * pkg + die numbers from file names.
+		 */
+		while ((dir = readdir(d)) != NULL) {
+			if (fnmatch(filter, dir->d_name, 0) > 0) {
+				/* Extract pkg + die numbers from string 'package_XX_die_XX' */
+				sprintf(pkg, "%c%c", dir->d_name[8], dir->d_name[9]);
+				sprintf(die, "%c%c", dir->d_name[15], dir->d_name[16]);
+				ui[count].pkg = atoi(pkg);
+				ui[count].die = atoi(die);
+				count++;
+			}
+		}
+		closedir(d);
+	}
+	return(count);
+}
+
+static int
+parse_uncore_min_max(const char *choice)
+{
+	int ret = 0, total_files, i;
+	unsigned int die, pkg;
+	total_files = parse_uncore_dir();
+
+	if (total_files < 1)
+		return -1;
+
+	for (i = 0; i < total_files; i++) {
+		die = ui[i].die;
+		pkg = ui[i].pkg;
+		rte_power_uncore_init(pkg, die);
+		if (!strncmp(choice, "max", 3)) {
+			ret = rte_power_uncore_freq_max(pkg, die);
+			if (ret == -1)
+				RTE_LOG(INFO, L3FWD_POWER, "Unable to set max uncore value for pkg %02u die %02u\n"\
+				, pkg, die);
+		}
+
+		else if (!strncmp(choice, "min", 3)) {
+			ret = rte_power_uncore_freq_min(pkg, die);
+			if (ret == -1) {
+				RTE_LOG(INFO, L3FWD_POWER, "Unable to set min uncore value for pkg %02u die %02u\n"\
+				, pkg, die);
+				return ret;
+			}
+		} else {
+			RTE_LOG(INFO, L3FWD_POWER, "Uncore choice provided invalid\n");
+			return -1;
+		}
+	}
+
+	RTE_LOG(INFO, L3FWD_POWER, "Successfully set max/min uncore frequency.\n");
+	return ret;
+}
+
+static int
+parse_uncore_index(const char *choice)
+{
+	int ret = 0, total_files, i;
+	unsigned int  die, pkg;
+	total_files = parse_uncore_dir();
+
+	if (total_files < 1)
+		return -1;
+
+	for (i = 0; i < total_files; i++) {
+		die = ui[i].die;
+		pkg = ui[i].pkg;
+		rte_power_uncore_init(pkg, die);
+
+		int frequency_index = atoi(choice);
+		int freq_array_len = rte_power_uncore_get_num_freqs(pkg, die);
+		if (frequency_index > freq_array_len) {
+			RTE_LOG(INFO, L3FWD_POWER, \
+			"Frequency index given out of range, please choose a value from 0 to %d.\n" \
+			, freq_array_len);
+			return -1;
+		}
+		ret = rte_power_set_uncore_freq(pkg, die, frequency_index);
+		if (ret == -1) {
+			RTE_LOG(INFO, L3FWD_POWER, \
+			"Unable to set uncore index value for pkg %02u die %02u\n", pkg, die);
+			return ret;
+		}
+	}
+	RTE_LOG(INFO, L3FWD_POWER, "Successfully set freq index for uncore\n");
+	return ret;
 }
 
 static int
@@ -1861,10 +1988,12 @@ parse_args(int argc, char **argv)
 		{CMD_LINE_OPT_SCALE_FREQ_MAX, 1, 0, 0},
 		{NULL, 0, 0, 0}
 	};
+	const char *min = "min";
+	const char *max = "max";
 
 	argvopt = argv;
 
-	while ((opt = getopt_long(argc, argvopt, "p:l:m:h:P",
+	while ((opt = getopt_long(argc, argvopt, "p:l:m:h:P:u U i:",
 				lgopts, &option_index)) != EOF) {
 
 		switch (opt) {
@@ -1892,6 +2021,30 @@ parse_args(int argc, char **argv)
 		case 'h':
 			limit = parse_max_pkt_len(optarg);
 			freq_tlb[HGH] = limit;
+			break;
+		case 'u':
+			enabled_uncore = parse_uncore_min_max(min);
+			if (enabled_uncore < 0) {
+				printf("Unable to reach min uncore value\n");
+				print_usage(prgname);
+				return -1;
+			}
+			break;
+		case 'U':
+			enabled_uncore = parse_uncore_min_max(max);
+			if (enabled_uncore < 0) {
+				printf("Unable to reach max uncore value\n");
+				print_usage(prgname);
+				return -1;
+			}
+			break;
+		case 'i':
+			enabled_uncore = parse_uncore_index(optarg);
+			if (enabled_uncore < 0) {
+				printf("Unable to reach uncore index value\n");
+				print_usage(prgname);
+				return -1;
+			}
 			break;
 		/* long options */
 		case 0:
@@ -2003,8 +2156,8 @@ parse_args(int argc, char **argv)
 			}
 
 			if (!strncmp(lgopts[option_index].name,
-				     CMD_LINE_OPT_PARSE_PTYPE,
-				     sizeof(CMD_LINE_OPT_PARSE_PTYPE))) {
+					 CMD_LINE_OPT_PARSE_PTYPE,
+					 sizeof(CMD_LINE_OPT_PARSE_PTYPE))) {
 				printf("soft parse-ptype is enabled\n");
 				parse_ptype = 1;
 			}
@@ -2262,7 +2415,7 @@ check_all_ports_link_status(uint32_t port_mask)
 				rte_eth_link_to_str(link_status_text,
 					sizeof(link_status_text), &link);
 				printf("Port %d %s\n", portid,
-				       link_status_text);
+					   link_status_text);
 				continue;
 			}
 			/* clear all_ports_up flag if any link down */
@@ -2365,6 +2518,8 @@ static int
 deinit_power_library(void)
 {
 	unsigned int lcore_id;
+	int i, total_files;
+	total_files = parse_uncore_dir();
 	int ret = 0;
 
 	RTE_LCORE_FOREACH(lcore_id) {
@@ -2377,6 +2532,9 @@ deinit_power_library(void)
 			return ret;
 		}
 	}
+
+	for (i = 0; i < total_files; i++)
+		rte_power_uncore_exit(ui[i].pkg, ui[i].die);
 	return ret;
 }
 
@@ -2734,7 +2892,7 @@ main(int argc, char **argv)
 					"err=%d, port=%d\n", ret, portid);
 
 		ret = rte_eth_dev_adjust_nb_rx_tx_desc(portid, &nb_rxd,
-						       &nb_txd);
+							   &nb_txd);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE,
 				 "Cannot adjust number of descriptors: err=%d, port=%d\n",
@@ -2791,7 +2949,7 @@ main(int argc, char **argv)
 			txconf = &dev_info.default_txconf;
 			txconf->offloads = local_port_conf.txmode.offloads;
 			ret = rte_eth_tx_queue_setup(portid, queueid, nb_txd,
-						     socketid, txconf);
+							 socketid, txconf);
 			if (ret < 0)
 				rte_exit(EXIT_FAILURE,
 					"rte_eth_tx_queue_setup: err=%d, "
