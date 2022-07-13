@@ -48,6 +48,15 @@ Deprecation Notices
   in the header will not be considered as ABI anymore. This change is inspired
   by the RFC https://patchwork.dpdk.org/project/dpdk/list/?series=17176.
 
+* kni: The KNI kernel module and library are not recommended for use by new
+  applications - other technologies such as virtio-user are recommended instead.
+  The KNI kernel module and library will be removed from DPDK 23.11,
+  following the DPDK technical board
+  `decision <https://mails.dpdk.org/archives/dev/2021-January/197077.html>`_
+  and `refinement <http://mails.dpdk.org/archives/dev/2022-June/243596.html>`_.
+  The first steps are to add deprecation warnings
+  and to remove the example application from 22.11.
+
 * lib: will fix extending some enum/define breaking the ABI. There are multiple
   samples in DPDK that enum/define terminated with a ``.*MAX.*`` value which is
   used by iterators, and arrays holding these values are sized with this
