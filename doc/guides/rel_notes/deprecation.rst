@@ -125,3 +125,8 @@ Deprecation Notices
   applications should be updated to use the ``dmadev`` library instead,
   with the underlying HW-functionality being provided by the ``ioat`` or
   ``idxd`` dma drivers
+
+* ethdev: The function ``rte_eth_set_queue_rate_limit`` takes ``rate`` in Mbps.
+  This parameter declared as uint16_t, queue rate limited to 64Gbps. ``rate``
+  parameter will be modified to uint32_t in DPDK 22.11 so that it can work for
+  more than 64Gbps.
