@@ -125,3 +125,9 @@ Deprecation Notices
   applications should be updated to use the ``dmadev`` library instead,
   with the underlying HW-functionality being provided by the ``ioat`` or
   ``idxd`` dma drivers
+
+* drivers/octeontx_ep: rename octeontx_ep driver
+
+  Current driver name ``octeontx_ep`` was to support OcteonTX line of products.
+  It will be renamed to ``octeon_ep`` in DPDK 22.11 to apply for all
+  Octeon EP products: OcteonTX + future Octeon chipsets.
