@@ -21,12 +21,14 @@ sources = files(
         'rte_power.c',
         'rte_power_empty_poll.c',
         'rte_power_pmd_mgmt.c',
+        'rte_power_uncore.c',
 )
 headers = files(
         'rte_power.h',
         'rte_power_empty_poll.h',
         'rte_power_pmd_mgmt.h',
         'rte_power_guest_channel.h',
+        'rte_power_uncore.h',
 )
 if cc.has_argument('-Wno-cast-qual')
     cflags += '-Wno-cast-qual'

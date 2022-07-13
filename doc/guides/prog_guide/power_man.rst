@@ -276,6 +276,33 @@ API Overview for Ethernet PMD Power Management
 * **Set Scaling Max Freq**: Set the maximum frequency (kHz) to be used in Frequency
   Scaling mode.
 
+Uncore API
+----------
+
+Abstract
+~~~~~~~~
+Up to 60% power saving can be achieved by reducing the uncore frequency to its lowest value.
+With later kernels, there is now a sysfs entry to allow adjustment of uncore frequency.
+This manipulates the contest of MSR 0x620, which sets min/max of the uncore for the SKU.
+
+
+API Overview for Uncore
+~~~~~~~~~~~~~~~~~~~~~~~
+* **Uncore Power Init**: Initialise uncore power, populate frequency array and record
+  original min & max for pkg & die.
+
+* **Uncore Power Exit**: Exit uncore power, restoring original min & max for pkg & die.
+
+* **Get Uncore Power Freq**: Get current uncore freq index for pkg & die.
+
+* **Set Uncore Power Freq**: Set min & max uncore freq index for pkg & die (min and max will be the same).
+
+* **Uncore Power Max**: Set max uncore freq index for pkg & die.
+
+* **Uncore Power Min**: Set min uncore freq index for pkg & die.
+
+* **Get Num Freqs**: Get the number of frequencies in the index array.
+
 References
 ----------
 
