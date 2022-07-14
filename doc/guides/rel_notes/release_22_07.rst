@@ -55,10 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
-* **Added initial RISC-V architecture support.***
+* **Added initial RISC-V architecture support.**
 
   Added EAL implementation for RISC-V architecture.
-  The initial device the porting was tested on is
+  The initial device the porting was tested on was
   a HiFive Unmatched development board based on the SiFive Freedom U740 SoC.
   In theory this implementation should work
   with any ``rv64gc`` ISA compatible implementation
@@ -70,7 +70,7 @@ New Features
   (seqlock). A seqlock allows for low overhead, parallel reads. The
   DPDK seqlock uses a spinlock to serialize multiple writing threads.
 
-* ** Added function get random floating point number.**
+* **Added function get random floating point number.**
 
   Added the function ``rte_drand()`` to provide a pseudo-random
   floating point number.
@@ -87,7 +87,7 @@ New Features
 * **Added Rx queue available descriptors threshold and event.**
 
   Added ethdev API and corresponding driver operations to set Rx queue
-  available descriptors threshold and query for queues with reached
+  available descriptors threshold and query for queues that have reached the
   threshold when a new event ``RTE_ETH_EVENT_RX_AVAIL_THRESH`` is received.
 
 * **Added telemetry for module EEPROM.**
@@ -102,22 +102,22 @@ New Features
 * **Added vhost API to get the number of in-flight packets.**
 
   Added an API which can get the number of in-flight packets in
-  vhost async data path without using lock.
+  the vhost async data path without using lock.
 
 * **Added vhost async dequeue API to receive packets from guest.**
 
   Added vhost async dequeue API which can leverage DMA devices to
-  accelerate receiving packets from guest.
-  Split virtqueue and packed virtqueue are both supported.
+  accelerate receiving packets from a guest.
+  Both split and packed virtqueues are supported.
 
 * **Added thread-safe version of in-flight packet clear API in vhost library.**
 
   Added an API which can clear the in-flight packets submitted to
-  the async channel in a thread-safe manner in the vhost async data path.
+  the async channel in a thread-safe manner, in the vhost async data path.
 
 * **Added vhost API to get the device type of a vDPA device.**
 
-  Added an API which can get the device type of vDPA device.
+  Added an API which can get the device type of vDPA devices.
 
 * **Updated NVIDIA mlx5 vDPA driver.**
 
@@ -126,9 +126,9 @@ New Features
   * Added new devargs option ``max_conf_threads``
     defining the number of management threads for parallel configurations.
 
-* **Updated Amazon ena driver.**
+* **Updated Amazon ENA driver.**
 
-  The new driver version (v2.7.0) includes:
+  Updated the Amazon ENA driver version to v2.7.0 with new features:
 
   * Added fast mbuf free feature support.
   * Added ``enable_llq`` device argument for controlling the PMD LLQ
@@ -136,15 +136,21 @@ New Features
 
 * **Updated Atomic Rules' Arkville PMD.**
 
+  Updated the Atomic Rules' Arkville PMD with the following changes:
+
   * A firmware version update to Arkville 22.07 is required.
   * Added support for Atomic Rules PCI device IDs ``0x101a, 0x101b, 0x101c``.
   * Added PMD support for virtual functions and vfio_pci driver.
 
 * **Updated HiSilicon hns3 driver.**
 
+  Updated the HiSilicon hns3 driver with the following change:
+
   * Added support for backplane media type.
 
 * **Updated Intel iavf driver.**
+
+  Updated the Intel iavf driver with the following changes:
 
   * Added Tx QoS queue rate limitation support.
   * Added quanta size configuration support.
@@ -152,6 +158,8 @@ New Features
   * Added Protocol Agnostic Flow Offloading support in AVF FDIR and RSS.
 
 * **Updated Intel ice driver.**
+
+  Updated the Intel ice driver with the following changes:
 
  * Added support for RSS RETA configure in DCF mode.
  * Added support for RSS HASH configure in DCF mode.
@@ -166,9 +174,11 @@ New Features
 * **Updated Intel igc driver.**
 
   Added Intel Foxville I226 devices in ``igc`` driver.
-  See the doc:`../nics/igc` NIC guide for more details.
+  See the :doc:`../nics/igc` NIC guide for more details.
 
 * **Updated Mellanox mlx5 driver.**
+
+  Updated Mellanox mlx5 driver with the following changes:
 
   * Added support for promiscuous mode on Windows.
   * Added support for MTU on Windows.
@@ -180,10 +190,14 @@ New Features
 
 * **Updated Netronome nfp driver.**
 
+  Updated Netronome nfp driver with the following changes:
+
   * Added support for NFP3800 NIC.
   * Added support for firmware with NFDk.
 
 * **Updated VMware vmxnet3 networking driver.**
+
+  Updated VMware vmxnet3 networking driver with the following changes:
 
   * Added version 5 support.
   * Added RETA query and RETA update support.
@@ -196,12 +210,16 @@ New Features
 
 * **Updated Wangxun ngbe driver.**
 
+  Updated Wangxun ngbe driver with the following changes:
+
   * Added support for yt8531s PHY.
   * Added support for OEM subsystem vendor ID.
   * Added autoneg on/off for external PHY SFI mode.
   * Added support for yt8521s/yt8531s PHY SGMII to RGMII mode.
 
 * **Updated Wangxun txgbe driver.**
+
+  Updated Wangxun txgbe driver with the following changes:
 
   * Added support for OEM subsystem vendor ID.
 
@@ -217,12 +235,15 @@ New Features
 
 * **Updated Marvell cnxk crypto driver.**
 
+  Updated the Marvell cnxk crypto driver with the following changes:
+
   * Added AH mode support in lookaside protocol (IPsec) for CN9K & CN10K.
   * Added AES-GMAC support in lookaside protocol (IPsec) for CN9K & CN10K.
 
 * **Updated Intel QuickAssist Technology (QAT) crypto PMD.**
 
-  * Added support for secp384r1 elliptic curve.
+  Updated Intel QuickAssist Technology (QAT) crypto PMD for add
+  support for secp384r1 elliptic curve.
 
 * **Added Intel ACC101 baseband PMD.**
 
@@ -241,7 +262,7 @@ New Features
 
 * **Added new queues attributes weight and affinity in eventdev.**
 
-  Defined new event queue attributes weight and affinity as below:
+  Defined new event queue attributes weight and affinity:
 
   * ``RTE_EVENT_QUEUE_ATTR_WEIGHT``
   * ``RTE_EVENT_QUEUE_ATTR_AFFINITY``
