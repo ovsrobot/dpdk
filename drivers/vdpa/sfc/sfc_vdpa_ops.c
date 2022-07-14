@@ -258,8 +258,8 @@ sfc_vdpa_virtq_start(struct sfc_vdpa_ops_data *ops_data, int vq_num)
 	vq_cfg.evvc_used_ring_addr  = vring.used;
 	vq_cfg.evvc_vq_size = vring.size;
 
-	vq_dyncfg.evvd_vq_pidx = vring.last_used_idx;
-	vq_dyncfg.evvd_vq_cidx = vring.last_avail_idx;
+	vq_dyncfg.evvd_vq_used_idx  = vring.last_used_idx;
+	vq_dyncfg.evvd_vq_avail_idx = vring.last_avail_idx;
 
 	/* MSI-X vector is function-relative */
 	vq_cfg.evvc_msix_vector = RTE_INTR_VEC_RXTX_OFFSET + vq_num;
