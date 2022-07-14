@@ -440,6 +440,20 @@ if get_option('b_sanitize') == 'address' or get_option('b_sanitize') == 'address
     endif
 endif
 
+if get_option('static_analyzer')
+    if cc.get_id() == 'gcc' and cc.version().version_compare('>=10.1.0')
+        add_project_arguments('-fanalyzer', language: 'c')
+    elif cc.get_id() == 'clang' and cc.version().version_compare('>=9.0.1')
+        add_project_arguments('--analyze', language: 'c')
+        add_project_arguments('-Xanalyzer', language: 'c')
+        add_project_arguments('-analyzer-output=text', language: 'c')
+    elif cc.get_id() == 'gcc' or cc.get_id() == 'clang'
+        error('Static analysis not supported for current gcc/clang version.')
+    else
+        error('Compiler does not support static analysis')
+    endif
+endif
+
 if get_option('default_library') == 'both'
     error( '''
  Unsupported value "both" for "default_library" option.

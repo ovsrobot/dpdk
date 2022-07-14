@@ -76,4 +76,5 @@ Programmer's Guide
     lto
     profile_app
     asan
+    static_analyzer
     glossary
