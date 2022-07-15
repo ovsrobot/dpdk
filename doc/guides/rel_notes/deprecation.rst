@@ -158,3 +158,10 @@ Deprecation Notices
   applications should be updated to use the ``dmadev`` library instead,
   with the underlying HW-functionality being provided by the ``ioat`` or
   ``idxd`` dma drivers
+
+* ethdev: Since no single PMD supports ``RTE_ETH_RX_OFFLOAD_HEADER_SPLIT`` offload
+and the ``split_hdr_size`` field in structure ``rte_eth_rxmode`` to enable per-port
+header split as they were designed, they will be removed in DPDK 22.11.
+After DPDK 22.11 LTS, the ``RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT`` can still be
+used for per-queue Rx packet split offload, and it is configured
+by ``rte_eth_rxseg_split``.
