@@ -17,6 +17,7 @@ sources += files(
         'eal_common_hexdump.c',
         'eal_common_interrupts.c',
         'eal_common_launch.c',
+        'eal_common_lcore_telemetry.c',
         'eal_common_lcore.c',
         'eal_common_log.c',
         'eal_common_mcfg.c',
