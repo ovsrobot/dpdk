@@ -984,7 +984,7 @@ cmd_pipeline_port_out(char **tokens,
 }
 
 static const char cmd_pipeline_build_help[] =
-"pipeline <pipeline_name> build <spec_file>\n";
+"pipeline <pipeline_name> build <lib_file>\n";
 
 static void
 cmd_pipeline_build(char **tokens,
@@ -994,9 +994,6 @@ cmd_pipeline_build(char **tokens,
 	void *obj)
 {
 	struct pipeline *p = NULL;
-	FILE *spec = NULL;
-	uint32_t err_line;
-	const char *err_msg;
 	int status;
 
 	if (n_tokens != 4) {
@@ -1010,20 +1007,9 @@ cmd_pipeline_build(char **tokens,
 		return;
 	}
 
-	spec = fopen(tokens[3], "r");
-	if (!spec) {
-		snprintf(out, out_size, "Cannot open file %s.\n", tokens[3]);
-		return;
-	}
-
-	status = rte_swx_pipeline_build_from_spec(p->p,
-		spec,
-		&err_line,
-		&err_msg);
-	fclose(spec);
+	status = rte_swx_pipeline_build_from_lib(p->p, tokens[3]);
 	if (status) {
-		snprintf(out, out_size, "Error %d at line %u: %s\n.",
-			status, err_line, err_msg);
+		snprintf(out, out_size, "Pipeline build error (%d).", status);
 		return;
 	}
 
