@@ -56,6 +56,8 @@ elif host_machine.cpu_family().startswith('ppc')
     arch_subdir = 'ppc'
 elif host_machine.cpu_family().startswith('riscv')
     arch_subdir = 'riscv'
+elif host_machine.cpu_family().startswith('loongarch')
+    arch_subdir = 'loongarch'
 endif
 
 # configure the build, and make sure configs here and in config folder are
