@@ -174,7 +174,7 @@ const char *memif_version(void);
 #define __NR_memfd_create 1073742143
 #elif defined __arm__
 #define __NR_memfd_create 385
-#elif defined __aarch64__
+#elif defined __aarch64__ || defined __loongarch__
 #define __NR_memfd_create 279
 #elif defined __powerpc__
 #define __NR_memfd_create 360
