@@ -7992,7 +7992,7 @@
 #define	MC_CMD_SENSOR_SET_LIMS_IN_SENSOR_LEN 4
 /*            Enum values, see field(s): */
 /*               MC_CMD_SENSOR_INFO/MC_CMD_SENSOR_INFO_OUT/MASK */
-/* interpretation is is sensor-specific. */
+/* interpretation is sensor-specific. */
 #define	MC_CMD_SENSOR_SET_LIMS_IN_LOW0_OFST 4
 #define	MC_CMD_SENSOR_SET_LIMS_IN_LOW0_LEN 4
 /* interpretation is is sensor-specific. */
