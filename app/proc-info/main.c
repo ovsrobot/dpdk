@@ -39,6 +39,7 @@
 #include <rte_cryptodev.h>
 #include <rte_tm.h>
 #include <rte_hexdump.h>
+#include <rte_version.h>
 
 /* Maximum long option length for option parsing. */
 #define MAX_LONG_OPT_SZ 64
@@ -102,6 +103,8 @@ static char *mempool_iter_name;
 /**< Enable dump regs. */
 static uint32_t enable_dump_regs;
 static char *dump_regs_file_prefix;
+/* Enable show version. */
+static uint32_t enable_shw_version;
 
 /**< display usage */
 static void
@@ -130,6 +133,7 @@ proc_info_usage(const char *prgname)
 		"  --show-crypto: to display crypto information\n"
 		"  --show-ring[=name]: to display ring information\n"
 		"  --show-mempool[=name]: to display mempool information\n"
+		"  --show-version: to display DPDK version and firmware version\n"
 		"  --iter-mempool=name: iterate mempool elements to display content\n"
 		"  --dump-regs=file-prefix: dump registers to file with the file-prefix\n",
 		prgname);
@@ -242,6 +246,7 @@ proc_info_parse_args(int argc, char **argv)
 		{"show-mempool", optional_argument, NULL, 0},
 		{"iter-mempool", required_argument, NULL, 0},
 		{"dump-regs", required_argument, NULL, 0},
+		{"show-version", 0, NULL, 0},
 		{NULL, 0, 0, 0}
 	};
 
@@ -313,7 +318,9 @@ proc_info_parse_args(int argc, char **argv)
 					"dump-regs", MAX_LONG_OPT_SZ)) {
 				enable_dump_regs = 1;
 				dump_regs_file_prefix = optarg;
-			}
+			} else if (!strncmp(long_option[option_index].name,
+					"show-version", MAX_LONG_OPT_SZ))
+				enable_shw_version = 1;
 			break;
 		case 1:
 			/* Print xstat single value given by name*/
@@ -1476,6 +1483,35 @@ dump_regs(char *file_prefix)
 	}
 }
 
+static void show_version(void)
+{
+#define ETHDEV_FWVERS_LEN 32
+
+	char fw_version[ETHDEV_FWVERS_LEN];
+	int i;
+
+	snprintf(bdr_str, MAX_STRING_LEN, " show - version ");
+	STATS_BDR_STR(10, bdr_str);
+	printf("DPDK version: %s\n", rte_version());
+
+	RTE_ETH_FOREACH_DEV(i) {
+		/* Skip if port is not in mask */
+		if ((enabled_port_mask & (1ul << i)) == 0)
+			continue;
+
+		if (!rte_eth_dev_is_valid_port(i)) {
+			printf("Error: Invalid port number %u\n", i);
+			continue;
+		}
+
+		if (rte_eth_dev_fw_version_get(i, fw_version,
+							ETHDEV_FWVERS_LEN) == 0)
+			printf("Firmware version: %s\n", fw_version);
+		else
+			printf("Firmware version: %s\n", "not available");
+	}
+}
+
 int
 main(int argc, char **argv)
 {
@@ -1589,7 +1625,8 @@ main(int argc, char **argv)
 		iter_mempool(mempool_iter_name);
 	if (enable_dump_regs)
 		dump_regs(dump_regs_file_prefix);
-
+	if (enable_shw_version)
+		show_version();
 	RTE_ETH_FOREACH_DEV(i)
 		rte_eth_dev_close(i);
 
