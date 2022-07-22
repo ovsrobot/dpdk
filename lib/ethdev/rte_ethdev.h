@@ -3356,7 +3356,7 @@ int rte_eth_macaddrs_get(uint16_t port_id, struct rte_ether_addr *ma,
 /**
  * Retrieve the contextual information of an Ethernet device.
  *
- * As part of this function, a number of of fields in dev_info will be
+ * As part of this function, a number of fields in dev_info will be
  * initialized as follows:
  *
  * rx_desc_lim = lim
