@@ -408,7 +408,7 @@ dma_rx_port(struct rxtx_port_config *rx_config)
 		nb_rx = rte_eth_rx_burst(rx_config->rxtx_port, i,
 			pkts_burst, MAX_PKT_BURST);
 
-		if (nb_rx == 0)
+		if (nb_rx == 0 && copy_mode != COPY_MODE_DMA_NUM)
 			continue;
 
 		port_statistics.rx[rx_config->rxtx_port] += nb_rx;
