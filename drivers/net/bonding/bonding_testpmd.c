@@ -413,7 +413,7 @@ static void cmd_show_bonding_config_parsed(void *parsed_result,
 	__rte_unused struct cmdline *cl, __rte_unused void *data)
 {
 	struct cmd_show_bonding_config_result *res = parsed_result;
-	int bonding_mode, agg_mode;
+	int bonding_mode, agg_mode, tx_prepare_flag;
 	portid_t slaves[RTE_MAX_ETHPORTS];
 	int num_slaves, num_active_slaves;
 	int primary_id;
@@ -428,6 +428,10 @@ static void cmd_show_bonding_config_parsed(void *parsed_result,
 		return;
 	}
 	printf("\tBonding mode: %d\n", bonding_mode);
+
+	/* Display the Tx-prepare flag. */
+	tx_prepare_flag = rte_eth_bond_tx_prepare_get(port_id);
+	printf("\tTx-prepare state: %s\n", tx_prepare_flag == 1 ? "on" : "off");
 
 	if (bonding_mode == BONDING_MODE_BALANCE ||
 		bonding_mode == BONDING_MODE_8023AD) {
@@ -962,6 +966,68 @@ static cmdline_parse_inst_t cmd_set_bonding_agg_mode_policy = {
 	}
 };
 
+struct cmd_set_bonding_tx_prepare_result {
+	cmdline_fixed_string_t set;
+	cmdline_fixed_string_t bonding;
+	cmdline_fixed_string_t tx_prepare;
+	portid_t port_id;
+	cmdline_fixed_string_t mode;
+};
+
+static void
+cmd_set_bonding_tx_prepare_parsed(void *parsed_result,
+		__rte_unused  struct cmdline *cl,
+		__rte_unused void *data)
+{
+	struct cmd_set_bonding_tx_prepare_result *res = parsed_result;
+	portid_t port_id = res->port_id;
+
+	if (!strcmp(res->mode, "enable")) {
+		if (rte_eth_bond_tx_prepare_set(port_id, true) == 0)
+			printf("Tx prepare for bonding device enabled\n");
+		else
+			printf("Enabling bonding device Tx prepare "
+					"on port %d failed\n", port_id);
+	} else if (!strcmp(res->mode, "disable")) {
+		if (rte_eth_bond_tx_prepare_set(port_id, false) == 0)
+			printf("Tx prepare for bonding device disabled\n");
+		else
+			printf("Disabling bonding device Tx prepare "
+					"on port %d failed\n", port_id);
+	}
+}
+
+static cmdline_parse_token_string_t cmd_setbonding_tx_prepare_set =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_tx_prepare_result,
+			set, "set");
+static cmdline_parse_token_string_t cmd_setbonding_tx_prepare_bonding =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_tx_prepare_result,
+			bonding, "bonding");
+static cmdline_parse_token_string_t cmd_setbonding_tx_prepare_tx_prepare =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_tx_prepare_result,
+			tx_prepare, "tx_prepare");
+static cmdline_parse_token_num_t cmd_setbonding_tx_prepare_port_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_set_bonding_tx_prepare_result,
+			port_id, RTE_UINT16);
+static cmdline_parse_token_string_t cmd_setbonding_tx_prepare_mode =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_bonding_tx_prepare_result,
+			mode, "enable#disable");
+
+static cmdline_parse_inst_t cmd_set_bond_tx_prepare = {
+		.f = cmd_set_bonding_tx_prepare_parsed,
+		.help_str = "set bonding tx_prepare <port_id> enable|disable: "
+			"Enable/disable tx_prepare for port_id",
+		.data = NULL,
+		.tokens = {
+			(void *)&cmd_setbonding_tx_prepare_set,
+			(void *)&cmd_setbonding_tx_prepare_bonding,
+			(void *)&cmd_setbonding_tx_prepare_tx_prepare,
+			(void *)&cmd_setbonding_tx_prepare_port_id,
+			(void *)&cmd_setbonding_tx_prepare_mode,
+			NULL
+		}
+};
+
 static struct testpmd_driver_commands bonding_cmds = {
 	.commands = {
 	{
@@ -1023,6 +1089,11 @@ static struct testpmd_driver_commands bonding_cmds = {
 		&cmd_set_bonding_agg_mode_policy,
 		"set bonding mode IEEE802.3AD aggregator policy (port_id) (agg_name)\n"
 		"	Set Aggregation mode for IEEE802.3AD (mode 4)\n",
+	},
+	{
+		&cmd_set_bond_tx_prepare,
+		"set bonding tx_prepare <port_id> (enable|disable)\n"
+		"	Enable/disable tx_prepare for bonded device\n",
 	},
 	{ NULL, NULL },
 	},

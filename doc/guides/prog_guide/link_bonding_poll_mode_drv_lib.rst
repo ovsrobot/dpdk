@@ -623,6 +623,15 @@ Enable one of the specific aggregators mode when in mode 4 (link-aggregation-802
    testpmd> set bonding agg_mode (port_id) (bandwidth|count|stable)
 
 
+set bonding tx_prepare
+~~~~~~~~~~~~~~~~~~~~~~
+
+Enable Tx prepare on bonding devices to help the slave devices prepare the packets for
+some HW offloading (e.g. checksum and TSO)::
+
+   testpmd> set bonding tx_prepare (port_id) (enable|disable)
+
+
 show bonding config
 ~~~~~~~~~~~~~~~~~~~
 
