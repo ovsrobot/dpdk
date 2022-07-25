@@ -70,11 +70,18 @@ int
 rte_telemetry_register_cmd(const char *cmd, telemetry_cb fn, const char *help)
 {
 	struct cmd_callback *new_callbacks;
+	const char *cmdp = cmd;
 	int i = 0;
 
 	if (strlen(cmd) >= MAX_CMD_LEN || fn == NULL || cmd[0] != '/'
 			|| strlen(help) >= RTE_TEL_MAX_STRING_LEN)
 		return -EINVAL;
+
+	while (*cmdp != '\0') {
+		if (!isalnum(*cmdp) && *cmdp != '_' && *cmdp != '/')
+			return -EINVAL;
+		cmdp++;
+	}
 
 	rte_spinlock_lock(&callback_sl);
 	new_callbacks = realloc(callbacks, sizeof(callbacks[0]) * (num_callbacks + 1));
