@@ -117,6 +117,7 @@ struct bond_dev_private {
 	uint16_t user_defined_primary_port;
 	/**< Flag for whether primary port is user defined or not */
 
+	uint8_t tx_prepare_enabled;
 	uint8_t balance_xmit_policy;
 	/**< Transmit policy - l2 / l23 / l34 for operation in balance mode */
 	burst_xmit_hash_t burst_xmit_hash;

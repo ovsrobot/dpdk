@@ -1070,3 +1070,35 @@ rte_eth_bond_link_up_prop_delay_get(uint16_t bonded_port_id)
 
 	return internals->link_up_delay_ms;
 }
+
+int
+rte_eth_bond_tx_prepare_set(uint16_t bonded_port_id, bool en)
+{
+	struct bond_dev_private *internals;
+
+	if (valid_bonded_port_id(bonded_port_id) != 0)
+		return -1;
+
+	internals = rte_eth_devices[bonded_port_id].data->dev_private;
+	if (internals->mode == BONDING_MODE_BROADCAST) {
+		RTE_BOND_LOG(ERR, "Mode broadcast don't support to configure Tx-prepare");
+		return -ENOTSUP;
+	}
+
+	internals->tx_prepare_enabled = en ? 1 : 0;
+
+	return 0;
+}
+
+int
+rte_eth_bond_tx_prepare_get(uint16_t bonded_port_id)
+{
+	struct bond_dev_private *internals;
+
+	if (valid_bonded_port_id(bonded_port_id) != 0)
+		return -1;
+
+	internals = rte_eth_devices[bonded_port_id].data->dev_private;
+
+	return internals->tx_prepare_enabled;
+}

@@ -359,6 +359,11 @@ The link status of a bonded device is dictated by that of its slaves, if all
 slave device link status are down or if all slaves are removed from the link
 bonding device then the link status of the bonding device will go down.
 
+Unlike normal PMD drivers, the Tx prepare for the bonding driver is controlled
+by ``rte_eth_bond_tx_prepare_set`` (all bond modes except mode 3 (broadcast)
+are supported). The ``rte_eth_bond_tx_prepare_get`` for querying the enabling
+status is provided.
+
 It is also possible to configure / query the configuration of the control
 parameters of a bonded device using the provided APIs
 ``rte_eth_bond_mode_set/ get``, ``rte_eth_bond_primary_set/get``,

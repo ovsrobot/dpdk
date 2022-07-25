@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added Tx prepare for bonding driver.**
+
+  * Added ``rte_eth_bond_tx_prepare_set`` to set whether enable Tx prepare for bonded port.
+    All bond modes except mode 3 (broadcast) are supported.
+  * Added ``rte_eth_bond_tx_prepare_get`` to get whether Tx prepare enabled for bonded port.
+
 
 Removed Items
 -------------

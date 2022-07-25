@@ -343,6 +343,30 @@ rte_eth_bond_link_up_prop_delay_set(uint16_t bonded_port_id,
 int
 rte_eth_bond_link_up_prop_delay_get(uint16_t bonded_port_id);
 
+/**
+ * Set whether enable Tx-prepare (rte_eth_tx_prepare) for bonded port
+ *
+ * @param bonded_port_id      Bonded device id
+ * @param en                  Enable flag
+ *
+ * @return
+ *   0 on success, negative value otherwise.
+ */
+__rte_experimental
+int
+rte_eth_bond_tx_prepare_set(uint16_t bonded_port_id, bool en);
+
+/**
+ * Get whether Tx-prepare (rte_eth_tx_prepare) is enabled for bonded port
+ *
+ * @param bonded_port_id      Bonded device id
+ *
+ * @return
+ *   0-disabled, 1-enabled, negative value otherwise.
+ */
+__rte_experimental
+int
+rte_eth_bond_tx_prepare_get(uint16_t bonded_port_id);
 
 #ifdef __cplusplus
 }
