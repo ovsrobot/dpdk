@@ -3356,34 +3356,11 @@ int rte_eth_macaddrs_get(uint16_t port_id, struct rte_ether_addr *ma,
 /**
  * Retrieve the contextual information of an Ethernet device.
  *
- * As part of this function, a number of of fields in dev_info will be
- * initialized as follows:
+ * The device information about driver, descriptors limits,
+ * capabilities, flags,  and queues is returned.
  *
- * rx_desc_lim = lim
- * tx_desc_lim = lim
- *
- * Where lim is defined within the rte_eth_dev_info_get as
- *
- *  const struct rte_eth_desc_lim lim = {
- *      .nb_max = UINT16_MAX,
- *      .nb_min = 0,
- *      .nb_align = 1,
- *	.nb_seg_max = UINT16_MAX,
- *	.nb_mtu_seg_max = UINT16_MAX,
- *  };
- *
- * device = dev->device
- * min_mtu = RTE_ETHER_MIN_LEN - RTE_ETHER_HDR_LEN - RTE_ETHER_CRC_LEN
- * max_mtu = UINT16_MAX
- *
- * The following fields will be populated if support for dev_infos_get()
- * exists for the device and the rte_eth_dev 'dev' has been populated
- * successfully with a call to it:
- *
- * driver_name = dev->device->driver->name
- * nb_rx_queues = dev->data->nb_rx_queues
- * nb_tx_queues = dev->data->nb_tx_queues
- * dev_flags = &dev->data->dev_flags
+ * The fields are populated with generic values that then are
+ * overriden by the device driver specific values.
  *
  * @param port_id
  *   The port identifier of the Ethernet device.
