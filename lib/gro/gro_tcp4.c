@@ -220,10 +220,10 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 	hdr_len = pkt->l2_len + pkt->l3_len + pkt->l4_len;
 
 	/*
-	 * Don't process the packet which has FIN, SYN, RST, PSH, URG, ECE
+	 * Don't process the packet which has FIN, SYN, RST, URG, ECE
 	 * or CWR set.
 	 */
-	if (tcp_hdr->tcp_flags != RTE_TCP_ACK_FLAG)
+	if (tcp_hdr->tcp_flags & (~(RTE_TCP_ACK_FLAG | RTE_TCP_PSH_FLAG)))
 		return -1;
 	/*
 	 * Don't process the packet whose payload length is less than or

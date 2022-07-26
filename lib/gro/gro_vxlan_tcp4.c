@@ -326,10 +326,10 @@ gro_vxlan_tcp4_reassemble(struct rte_mbuf *pkt,
 	tcp_hdr = (struct rte_tcp_hdr *)((char *)ipv4_hdr + pkt->l3_len);
 
 	/*
-	 * Don't process the packet which has FIN, SYN, RST, PSH, URG,
+	 * Don't process the packet which has FIN, SYN, RST, URG,
 	 * ECE or CWR set.
 	 */
-	if (tcp_hdr->tcp_flags != RTE_TCP_ACK_FLAG)
+	if (tcp_hdr->tcp_flags & (~(RTE_TCP_ACK_FLAG | RTE_TCP_PSH_FLAG)))
 		return -1;
 
 	hdr_len = pkt->outer_l2_len + pkt->outer_l3_len + pkt->l2_len +
