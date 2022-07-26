@@ -377,7 +377,7 @@ i40e_init_flx_pld(struct i40e_pf *pf)
 	if ((flex_pit2).src_offset < \
 		(flex_pit1).src_offset + (flex_pit1).size) { \
 		PMD_DRV_LOG(ERR, "src_offset should be not" \
-			" less than than previous offset" \
+			" less than previous offset" \
 			" + previous FSIZE."); \
 		return -EINVAL; \
 	} \

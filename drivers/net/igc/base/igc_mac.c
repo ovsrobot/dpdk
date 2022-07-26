@@ -587,7 +587,7 @@ void igc_update_mc_addr_list_generic(struct igc_hw *hw,
  *  @hw: pointer to the HW structure
  *
  *  In certain situations, a system BIOS may report that the PCIx maximum
- *  memory read byte count (MMRBC) value is higher than than the actual
+ *  memory read byte count (MMRBC) value is higher than the actual
  *  value. We check the PCIx command register with the current PCIx status
  *  register.
  **/
