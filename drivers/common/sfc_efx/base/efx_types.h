@@ -399,7 +399,7 @@ extern int fix_lint;
  *
  *   (_element) << 4
  *
- * The result will contain the relevant bits filled in in the range
+ * The result will contain the relevant bits filled in the range
  * [0,high-low), with garbage in bits [high-low+1,...).
  */
 #define	EFX_EXTRACT_NATIVE(_element, _min, _max, _low, _high)		\
