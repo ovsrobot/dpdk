@@ -905,6 +905,7 @@ txa_service_queue_del(uint8_t id,
 
 	txa_service_queue_array_free(txa, port_id);
 
+	rte_service_component_runstate_set(txa->service_id, txa->nb_queues);
 ret_unlock:
 	rte_spinlock_unlock(&txa->tx_lock);
 	return 0;
