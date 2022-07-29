@@ -91,6 +91,10 @@ struct gve_tx_queue {
 	struct gve_queue_page_list *qpl;
 	struct gve_tx_iovec *iov_ring;
 
+	/* Stats */
+	uint64_t packets;
+	uint64_t bytes;
+
 	uint16_t port_id;
 	uint16_t queue_id;
 
@@ -128,6 +132,12 @@ struct gve_rx_queue {
 
 	/* only valid for GQI_QPL queue format */
 	struct gve_queue_page_list *qpl;
+
+	/* stats */
+	uint64_t no_mbufs;
+	uint64_t errors;
+	uint64_t packets;
+	uint64_t bytes;
 
 	struct gve_priv *hw;
 	const struct rte_memzone *qres_mz;
