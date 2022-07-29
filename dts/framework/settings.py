@@ -40,6 +40,7 @@ def _env_arg(envvar: str) -> Any:
 @dataclass(slots=True, frozen=True)
 class _Settings:
     config_file_path: str
+    timeout: float
 
 
 def _get_parser() -> argparse.ArgumentParser:
@@ -52,6 +53,15 @@ def _get_parser() -> argparse.ArgumentParser:
         help="[DTS_CFG_FILE] configuration file that describes the test cases, SUTs and targets",
     )
 
+    parser.add_argument(
+        "-t",
+        "--timeout",
+        action=_env_arg("DTS_TIMEOUT"),
+        default=15,
+        required=False,
+        help="[DTS_TIMEOUT] The default timeout for all DTS operations except for compiling DPDK.",
+    )
+
     return parser
 
 
@@ -59,6 +69,7 @@ def _get_settings() -> _Settings:
     args = _get_parser().parse_args()
     return _Settings(
         config_file_path=args.config_file,
+        timeout=float(args.timeout),
     )
 
 
