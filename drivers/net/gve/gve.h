@@ -27,6 +27,9 @@
 #define GVE_DEFAULT_TX_FREE_THRESH  256
 #define GVE_TX_MAX_FREE_SZ          512
 
+#define GVE_MIN_BUF_SIZE	    1024
+#define GVE_MAX_RX_PKTLEN	    65535
+
 /* PTYPEs are always 10 bits. */
 #define GVE_NUM_PTYPES	1024
 
