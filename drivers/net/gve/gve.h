@@ -25,6 +25,7 @@
 
 #define GVE_DEFAULT_RX_FREE_THRESH  512
 #define GVE_DEFAULT_TX_FREE_THRESH  256
+#define GVE_TX_MAX_FREE_SZ          512
 
 /* PTYPEs are always 10 bits. */
 #define GVE_NUM_PTYPES	1024
@@ -43,6 +44,18 @@ struct gve_queue_page_list {
 union gve_tx_desc {
 	struct gve_tx_pkt_desc pkt; /* first desc for a packet */
 	struct gve_tx_seg_desc seg; /* subsequent descs for a packet */
+};
+
+/* Offload features */
+union gve_tx_offload {
+	uint64_t data;
+	struct {
+		uint64_t l2_len:7; /* L2 (MAC) Header Length. */
+		uint64_t l3_len:9; /* L3 (IP) Header Length. */
+		uint64_t l4_len:8; /* L4 Header Length. */
+		uint64_t tso_segsz:16; /* TCP TSO segment size */
+		/* uint64_t unused : 24; */
+	};
 };
 
 struct gve_tx_iovec {
@@ -297,5 +310,9 @@ void gve_rx_queue_release(void *rxq);
 void gve_stop_tx_queues(struct rte_eth_dev *dev);
 
 void gve_stop_rx_queues(struct rte_eth_dev *dev);
+
+uint16_t gve_rx_burst(void *rxq, struct rte_mbuf **rx_pkts, uint16_t nb_pkts);
+
+uint16_t gve_tx_burst(void *txq, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
 
 #endif /* _GVE_H_ */
