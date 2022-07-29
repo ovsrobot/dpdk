@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added GVE net PMD**
+
+  Added the new ``gve`` net driver for Google Virtual Ethernet devices.
+  See the :doc:`../nics/gve` NIC guide for more details on this new driver.
 
 Removed Items
 -------------
