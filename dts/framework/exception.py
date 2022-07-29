@@ -55,3 +55,17 @@ class SSHSessionDeadException(Exception):
 
     def __str__(self) -> str:
         return f"SSH session with {self.host} has died"
+
+
+class ConfigParseException(Exception):
+    """
+    Configuration file parse failure exception.
+    """
+
+    config: str
+
+    def __init__(self, conf_file: str):
+        self.config = conf_file
+
+    def __str__(self) -> str:
+        return f"Failed to parse config file [{self.config}]"
