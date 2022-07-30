@@ -1097,6 +1097,12 @@ mlx5_devx_drop_action_destroy(struct rte_eth_dev *dev)
 		mlx5_devx_ind_table_destroy(hrxq->ind_table);
 	if (priv->drop_queue.rxq->devx_rq.rq != NULL)
 		mlx5_rxq_devx_obj_drop_release(dev);
+#ifdef HAVE_IBV_FLOW_DV_SUPPORT
+	if (hrxq->action != NULL) {
+		mlx5_glue->destroy_flow_action(hrxq->action);
+		hrxq->action = NULL;
+	}
+#endif
 }
 
 /**
