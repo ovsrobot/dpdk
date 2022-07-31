@@ -2701,12 +2701,15 @@ desc_to_mbuf(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	if (unlikely(buf_len < dev->vhost_hlen)) {
 		buf_offset = dev->vhost_hlen - buf_len;
 		vec_idx++;
+		if (unlikely(vec_idx >= nr_vec))
+			goto error;
 		buf_addr = buf_vec[vec_idx].buf_addr;
 		buf_iova = buf_vec[vec_idx].buf_iova;
 		buf_len = buf_vec[vec_idx].buf_len;
 		buf_avail  = buf_len - buf_offset;
 	} else if (buf_len == dev->vhost_hlen) {
-		if (unlikely(++vec_idx >= nr_vec))
+		vec_idx++;
+		if (unlikely(vec_idx >= nr_vec))
 			goto error;
 		buf_addr = buf_vec[vec_idx].buf_addr;
 		buf_iova = buf_vec[vec_idx].buf_iova;
