@@ -2917,9 +2917,16 @@ virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 						vq->last_avail_idx + i,
 						&nr_vec, buf_vec,
 						&head_idx, &buf_len,
-						VHOST_ACCESS_RO) < 0))
+						VHOST_ACCESS_RO) < 0)) {
+			dropped += 1;
+			i++;
 			break;
-
+		}
+		if (unlikely(nr_vec < 1 || nr_vec >= BUF_VECTOR_MAX)) {
+			dropped += 1;
+			i++;
+			break;
+		}
 		update_shadow_used_ring_split(vq, head_idx, 0);
 
 		err = virtio_dev_pktmbuf_prep(dev, pkts[i], buf_len);
