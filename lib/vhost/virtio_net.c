@@ -1153,7 +1153,7 @@ mbuf_to_desc(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	struct virtio_net_hdr_mrg_rxbuf tmp_hdr, *hdr = NULL;
 	struct vhost_async *async = vq->async;
 
-	if (unlikely(m == NULL))
+	if (unlikely(m == NULL) || nr_vec == 0)
 		return -1;
 
 	buf_addr = buf_vec[vec_idx].buf_addr;
@@ -2673,6 +2673,9 @@ desc_to_mbuf(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	struct vhost_async *async = vq->async;
 	struct async_inflight_info *pkts_info;
 
+	if (unlikely(nr_vec == 0))
+		return -1;
+
 	buf_addr = buf_vec[vec_idx].buf_addr;
 	buf_iova = buf_vec[vec_idx].buf_iova;
 	buf_len = buf_vec[vec_idx].buf_len;
@@ -2917,9 +2920,11 @@ virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 						vq->last_avail_idx + i,
 						&nr_vec, buf_vec,
 						&head_idx, &buf_len,
-						VHOST_ACCESS_RO) < 0))
+						VHOST_ACCESS_RO) < 0)) {
+			dropped += 1;
+			i++;
 			break;
-
+		}
 		update_shadow_used_ring_split(vq, head_idx, 0);
 
 		err = virtio_dev_pktmbuf_prep(dev, pkts[i], buf_len);
