@@ -564,7 +564,7 @@ sw_timer_adapter_caps_get(const struct rte_eventdev *dev, uint64_t flags,
 {
 	RTE_SET_USED(dev);
 	RTE_SET_USED(flags);
-	*caps = 0;
+	*caps = RTE_EVENT_TIMER_ADAPTER_CAP_PERIODIC;
 
 	/* Use default SW ops */
 	*ops = NULL;
