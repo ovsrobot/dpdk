@@ -8,6 +8,57 @@
 #include "idpf_ethdev.h"
 #include "idpf_rxtx.h"
 
+const uint32_t *
+idpf_dev_supported_ptypes_get(struct rte_eth_dev *dev __rte_unused)
+{
+	static const uint32_t ptypes[] = {
+		RTE_PTYPE_L2_ETHER,
+		RTE_PTYPE_L3_IPV4_EXT_UNKNOWN,
+		RTE_PTYPE_L3_IPV6_EXT_UNKNOWN,
+		RTE_PTYPE_L4_FRAG,
+		RTE_PTYPE_L4_NONFRAG,
+		RTE_PTYPE_L4_UDP,
+		RTE_PTYPE_L4_TCP,
+		RTE_PTYPE_L4_SCTP,
+		RTE_PTYPE_L4_ICMP,
+		RTE_PTYPE_UNKNOWN
+	};
+
+	return ptypes;
+}
+
+static inline uint32_t
+idpf_get_default_pkt_type(uint16_t ptype)
+{
+	static const uint32_t type_table[IDPF_MAX_PKT_TYPE]
+		__rte_cache_aligned = {
+		[1] = RTE_PTYPE_L2_ETHER,
+		[22] = RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV4 | RTE_PTYPE_L4_FRAG,
+		[23] = RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV4,
+		[24] = RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV4 | RTE_PTYPE_L4_UDP,
+		[26] = RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV4 | RTE_PTYPE_L4_TCP,
+		[27] = RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV4 | RTE_PTYPE_L4_SCTP,
+		[28] = RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV4 | RTE_PTYPE_L4_ICMP,
+		[88] = RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV6 | RTE_PTYPE_L4_FRAG,
+		[89] = RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV6,
+		[90] = RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV6 | RTE_PTYPE_L4_UDP,
+		[92] = RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV6 | RTE_PTYPE_L4_TCP,
+		[93] = RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV6 | RTE_PTYPE_L4_SCTP,
+		[94] = RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV6 | RTE_PTYPE_L4_ICMP,
+	};
+
+	return type_table[ptype];
+}
+
+void __rte_cold
+idpf_set_default_ptype_table(struct rte_eth_dev *dev __rte_unused)
+{
+	int i;
+
+	for (i = 0; i < IDPF_MAX_PKT_TYPE; i++)
+		adapter->ptype_tbl[i] = idpf_get_default_pkt_type(i);
+}
+
 static inline int
 check_rx_thresh(uint16_t nb_desc, uint16_t thresh)
 {

@@ -178,5 +178,8 @@ void idpf_dev_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid);
 
 void idpf_stop_queues(struct rte_eth_dev *dev);
 
+void idpf_set_default_ptype_table(struct rte_eth_dev *dev);
+const uint32_t *idpf_dev_supported_ptypes_get(struct rte_eth_dev *dev);
+
 #endif /* _IDPF_RXTX_H_ */
 

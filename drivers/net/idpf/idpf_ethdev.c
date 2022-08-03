@@ -32,6 +32,7 @@ static int idpf_dev_info_get(struct rte_eth_dev *dev,
 			     struct rte_eth_dev_info *dev_info);
 
 static const struct eth_dev_ops idpf_eth_dev_ops = {
+	.dev_supported_ptypes_get	= idpf_dev_supported_ptypes_get,
 	.dev_configure			= idpf_dev_configure,
 	.dev_start			= idpf_dev_start,
 	.dev_stop			= idpf_dev_stop,
@@ -487,6 +488,8 @@ idpf_adapter_init(struct rte_eth_dev *dev)
 
 	if (adapter->initialized)
 		return 0;
+
+	idpf_set_default_ptype_table(dev);
 
 	hw->hw_addr = (void *)pci_dev->mem_resource[0].addr;
 	hw->hw_addr_len = pci_dev->mem_resource[0].len;
