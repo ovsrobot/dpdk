@@ -987,21 +987,16 @@ rte_timer_stop_all(uint32_t timer_data_id, unsigned int *walk_lcores,
 		walk_lcore = walk_lcores[i];
 		priv_timer = &timer_data->priv_timer[walk_lcore];
 
-		rte_spinlock_lock(&priv_timer->list_lock);
-
 		for (tim = priv_timer->pending_head.sl_next[0];
 		     tim != NULL;
 		     tim = next_tim) {
 			next_tim = tim->sl_next[0];
 
-			/* Call timer_stop with lock held */
-			__rte_timer_stop(tim, 1, timer_data);
+			__rte_timer_stop(tim, 0, timer_data);
 
 			if (f)
 				f(tim, f_arg);
 		}
-
-		rte_spinlock_unlock(&priv_timer->list_lock);
 	}
 
 	return 0;
