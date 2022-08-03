@@ -907,6 +907,12 @@ error:
 static void
 mlx5_devx_tir_destroy(struct mlx5_hrxq *hrxq)
 {
+#if defined(HAVE_IBV_FLOW_DV_SUPPORT) || !defined(HAVE_INFINIBAND_VERBS_H)
+	if (hrxq->hws_flags)
+		mlx5dr_action_destroy(hrxq->action);
+	else
+		mlx5_glue->destroy_flow_action(hrxq->action);
+#endif
 	claim_zero(mlx5_devx_cmd_destroy(hrxq->tir));
 }
 

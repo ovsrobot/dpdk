@@ -2861,12 +2861,6 @@ __mlx5_hrxq_remove(struct rte_eth_dev *dev, struct mlx5_hrxq *hrxq)
 {
 	struct mlx5_priv *priv = dev->data->dev_private;
 
-#ifdef HAVE_IBV_FLOW_DV_SUPPORT
-	if (hrxq->hws_flags)
-		mlx5dr_action_destroy(hrxq->action);
-	else
-		mlx5_glue->destroy_flow_action(hrxq->action);
-#endif
 	priv->obj_ops.hrxq_destroy(hrxq);
 	if (!hrxq->standalone) {
 		mlx5_ind_table_obj_release(dev, hrxq->ind_table,
