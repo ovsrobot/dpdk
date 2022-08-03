@@ -28,6 +28,8 @@ static int idpf_dev_configure(struct rte_eth_dev *dev);
 static int idpf_dev_start(struct rte_eth_dev *dev);
 static int idpf_dev_stop(struct rte_eth_dev *dev);
 static int idpf_dev_close(struct rte_eth_dev *dev);
+static int idpf_dev_info_get(struct rte_eth_dev *dev,
+			     struct rte_eth_dev_info *dev_info);
 
 static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.dev_configure			= idpf_dev_configure,
@@ -42,7 +44,76 @@ static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.rx_queue_release		= idpf_dev_rx_queue_release,
 	.tx_queue_setup			= idpf_tx_queue_setup,
 	.tx_queue_release		= idpf_dev_tx_queue_release,
+	.dev_infos_get			= idpf_dev_info_get,
 };
+
+static int
+idpf_dev_info_get(__rte_unused struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
+{
+	dev_info->max_rx_queues = adapter->caps->max_rx_q;
+	dev_info->max_tx_queues = adapter->caps->max_tx_q;
+	dev_info->min_rx_bufsize = IDPF_MIN_BUF_SIZE;
+	dev_info->max_rx_pktlen = IDPF_MAX_FRAME_SIZE;
+
+	dev_info->max_mtu = dev_info->max_rx_pktlen - IDPF_ETH_OVERHEAD;
+	dev_info->min_mtu = RTE_ETHER_MIN_MTU;
+
+	dev_info->max_mac_addrs = IDPF_NUM_MACADDR_MAX;
+	dev_info->dev_capa = RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP |
+		RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP;
+	dev_info->rx_offload_capa =
+		RTE_ETH_RX_OFFLOAD_VLAN_STRIP		|
+		RTE_ETH_RX_OFFLOAD_QINQ_STRIP		|
+		RTE_ETH_RX_OFFLOAD_IPV4_CKSUM		|
+		RTE_ETH_RX_OFFLOAD_UDP_CKSUM		|
+		RTE_ETH_RX_OFFLOAD_TCP_CKSUM		|
+		RTE_ETH_RX_OFFLOAD_OUTER_IPV4_CKSUM	|
+		RTE_ETH_RX_OFFLOAD_SCATTER		|
+		RTE_ETH_RX_OFFLOAD_VLAN_FILTER		|
+		RTE_ETH_RX_OFFLOAD_RSS_HASH;
+
+	dev_info->tx_offload_capa =
+		RTE_ETH_TX_OFFLOAD_VLAN_INSERT		|
+		RTE_ETH_TX_OFFLOAD_QINQ_INSERT		|
+		RTE_ETH_TX_OFFLOAD_IPV4_CKSUM		|
+		RTE_ETH_TX_OFFLOAD_UDP_CKSUM		|
+		RTE_ETH_TX_OFFLOAD_TCP_CKSUM		|
+		RTE_ETH_TX_OFFLOAD_SCTP_CKSUM		|
+		RTE_ETH_TX_OFFLOAD_OUTER_IPV4_CKSUM	|
+		RTE_ETH_TX_OFFLOAD_TCP_TSO		|
+		RTE_ETH_TX_OFFLOAD_VXLAN_TNL_TSO	|
+		RTE_ETH_TX_OFFLOAD_GRE_TNL_TSO		|
+		RTE_ETH_TX_OFFLOAD_IPIP_TNL_TSO		|
+		RTE_ETH_TX_OFFLOAD_GENEVE_TNL_TSO	|
+		RTE_ETH_TX_OFFLOAD_MULTI_SEGS		|
+		RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
+
+	dev_info->default_rxconf = (struct rte_eth_rxconf) {
+		.rx_free_thresh = IDPF_DEFAULT_RX_FREE_THRESH,
+		.rx_drop_en = 0,
+		.offloads = 0,
+	};
+
+	dev_info->default_txconf = (struct rte_eth_txconf) {
+		.tx_free_thresh = IDPF_DEFAULT_TX_FREE_THRESH,
+		.tx_rs_thresh = IDPF_DEFAULT_TX_RS_THRESH,
+		.offloads = 0,
+	};
+
+	dev_info->rx_desc_lim = (struct rte_eth_desc_lim) {
+		.nb_max = IDPF_MAX_RING_DESC,
+		.nb_min = IDPF_MIN_RING_DESC,
+		.nb_align = IDPF_ALIGN_RING_DESC,
+	};
+
+	dev_info->tx_desc_lim = (struct rte_eth_desc_lim) {
+		.nb_max = IDPF_MAX_RING_DESC,
+		.nb_min = IDPF_MIN_RING_DESC,
+		.nb_align = IDPF_ALIGN_RING_DESC,
+	};
+
+	return 0;
+}
 
 static int
 idpf_init_vport_req_info(__rte_unused struct rte_eth_dev *dev)
