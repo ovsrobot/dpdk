@@ -227,6 +227,8 @@ int idpf_switch_queue(struct idpf_vport *vport, uint16_t qid,
 		      bool rx, bool on);
 int idpf_ena_dis_queues(struct idpf_vport *vport, bool enable);
 int idpf_ena_dis_vport(struct idpf_vport *vport, bool enable);
+int idpf_query_stats(struct idpf_vport *vport,
+			struct virtchnl2_vport_stats **pstats);
 
 #endif /* _IDPF_ETHDEV_H_ */
 
