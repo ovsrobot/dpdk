@@ -12,6 +12,7 @@
 #include <rte_dev.h>
 
 #include "idpf_ethdev.h"
+#include "idpf_rxtx.h"
 
 #define REPRESENTOR		"representor"
 
@@ -33,10 +34,18 @@ static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.dev_start			= idpf_dev_start,
 	.dev_stop			= idpf_dev_stop,
 	.dev_close			= idpf_dev_close,
+	.rx_queue_start			= idpf_rx_queue_start,
+	.rx_queue_stop			= idpf_rx_queue_stop,
+	.tx_queue_start			= idpf_tx_queue_start,
+	.tx_queue_stop			= idpf_tx_queue_stop,
+	.rx_queue_setup			= idpf_rx_queue_setup,
+	.rx_queue_release		= idpf_dev_rx_queue_release,
+	.tx_queue_setup			= idpf_tx_queue_setup,
+	.tx_queue_release		= idpf_dev_tx_queue_release,
 };
 
 static int
-idpf_init_vport_req_info(struct rte_eth_dev *dev)
+idpf_init_vport_req_info(__rte_unused struct rte_eth_dev *dev)
 {
 	struct virtchnl2_create_vport *vport_info;
 	uint16_t idx = adapter->next_vport_idx;
@@ -194,6 +203,39 @@ idpf_dev_configure(struct rte_eth_dev *dev)
 }
 
 static int
+idpf_start_queues(struct rte_eth_dev *dev)
+{
+	struct idpf_rx_queue *rxq;
+	struct idpf_tx_queue *txq;
+	int err = 0;
+	int i;
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		txq = dev->data->tx_queues[i];
+		if (!txq || txq->tx_deferred_start)
+			continue;
+		err = idpf_tx_queue_start(dev, i);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Fail to start Tx queue %u", i);
+			return err;
+		}
+	}
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+		if (!rxq || rxq->rx_deferred_start)
+			continue;
+		err = idpf_rx_queue_start(dev, i);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Fail to start Rx queue %u", i);
+			return err;
+		}
+	}
+
+	return err;
+}
+
+static int
 idpf_dev_start(struct rte_eth_dev *dev)
 {
 	struct idpf_vport *vport =
@@ -203,6 +245,11 @@ idpf_dev_start(struct rte_eth_dev *dev)
 
 	vport->stopped = 0;
 
+	if (idpf_start_queues(dev)) {
+		PMD_DRV_LOG(ERR, "Failed to start queues");
+		goto err_mtu;
+	}
+
 	if (idpf_ena_dis_vport(vport, true)) {
 		PMD_DRV_LOG(ERR, "Failed to enable vport");
 		goto err_vport;
@@ -211,6 +258,8 @@ idpf_dev_start(struct rte_eth_dev *dev)
 	return 0;
 
 err_vport:
+	idpf_stop_queues(dev);
+err_mtu:
 	return -1;
 }
 
@@ -227,6 +276,8 @@ idpf_dev_stop(struct rte_eth_dev *dev)
 
 	if (idpf_ena_dis_vport(vport, false))
 		PMD_DRV_LOG(ERR, "disable vport failed");
+
+	idpf_stop_queues(dev);
 
 	vport->stopped = 1;
 	dev->data->dev_started = 0;
