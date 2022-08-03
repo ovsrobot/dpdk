@@ -47,6 +47,20 @@
 #define IDPF_ETH_OVERHEAD \
 	(RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN + IDPF_VLAN_TAG_SIZE * 2)
 
+#define IDPF_RSS_OFFLOAD_ALL ( \
+	RTE_ETH_RSS_IPV4		| \
+	RTE_ETH_RSS_FRAG_IPV4		| \
+	RTE_ETH_RSS_NONFRAG_IPV4_TCP	| \
+	RTE_ETH_RSS_NONFRAG_IPV4_UDP	| \
+	RTE_ETH_RSS_NONFRAG_IPV4_SCTP	| \
+	RTE_ETH_RSS_NONFRAG_IPV4_OTHER	| \
+	RTE_ETH_RSS_IPV6		| \
+	RTE_ETH_RSS_FRAG_IPV6		| \
+	RTE_ETH_RSS_NONFRAG_IPV6_TCP	| \
+	RTE_ETH_RSS_NONFRAG_IPV6_UDP	| \
+	RTE_ETH_RSS_NONFRAG_IPV6_SCTP	| \
+	RTE_ETH_RSS_NONFRAG_IPV6_OTHER)
+
 #ifndef ETH_ADDR_LEN
 #define ETH_ADDR_LEN		6
 #endif
@@ -202,6 +216,9 @@ int idpf_check_api_version(struct idpf_adapter *adapter);
 int idpf_get_caps(struct idpf_adapter *adapter);
 int idpf_create_vport(__rte_unused struct rte_eth_dev *dev);
 int idpf_destroy_vport(struct idpf_vport *vport);
+int idpf_set_rss_key(struct idpf_vport *vport);
+int idpf_set_rss_lut(struct idpf_vport *vport);
+int idpf_set_rss_hash(struct idpf_vport *vport);
 int idpf_config_rxqs(struct idpf_vport *vport);
 int idpf_config_rxq(struct idpf_vport *vport, uint16_t rxq_id);
 int idpf_config_txqs(struct idpf_vport *vport);
@@ -212,3 +229,4 @@ int idpf_ena_dis_queues(struct idpf_vport *vport, bool enable);
 int idpf_ena_dis_vport(struct idpf_vport *vport, bool enable);
 
 #endif /* _IDPF_ETHDEV_H_ */
+

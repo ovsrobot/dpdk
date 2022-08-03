@@ -85,6 +85,7 @@ idpf_dev_info_get(__rte_unused struct rte_eth_dev *dev, struct rte_eth_dev_info 
 	dev_info->max_mtu = dev_info->max_rx_pktlen - IDPF_ETH_OVERHEAD;
 	dev_info->min_mtu = RTE_ETHER_MIN_MTU;
 
+	dev_info->flow_type_rss_offloads = IDPF_RSS_OFFLOAD_ALL;
 	dev_info->max_mac_addrs = IDPF_NUM_MACADDR_MAX;
 	dev_info->dev_capa = RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP |
 		RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP;
@@ -294,11 +295,100 @@ idpf_init_vport(struct rte_eth_dev *dev)
 }
 
 static int
+idpf_config_rss(struct idpf_vport *vport)
+{
+	int ret;
+
+	ret = idpf_set_rss_key(vport);
+	if (ret) {
+		PMD_INIT_LOG(ERR, "Failed to configure RSS key");
+		return ret;
+	}
+
+	ret = idpf_set_rss_lut(vport);
+	if (ret) {
+		PMD_INIT_LOG(ERR, "Failed to configure RSS lut");
+		return ret;
+	}
+
+	ret = idpf_set_rss_hash(vport);
+	if (ret) {
+		PMD_INIT_LOG(ERR, "Failed to configure RSS hash");
+		return ret;
+	}
+
+	return ret;
+}
+
+static int
+idpf_init_rss(struct idpf_vport *vport)
+{
+	struct rte_eth_rss_conf *rss_conf;
+	uint16_t i, nb_q, lut_size;
+	int ret = 0;
+
+	rss_conf = &vport->dev_data->dev_conf.rx_adv_conf.rss_conf;
+	nb_q = vport->num_rx_q;
+
+	vport->rss_key = (uint8_t *)rte_zmalloc("rss_key",
+					     vport->rss_key_size, 0);
+	if (!vport->rss_key) {
+		PMD_INIT_LOG(ERR, "Failed to allocate RSS key");
+		ret = -ENOMEM;
+		goto err_key;
+	}
+
+	lut_size = vport->rss_lut_size;
+	vport->rss_lut = (uint32_t *)rte_zmalloc("rss_lut",
+					      sizeof(uint32_t) * lut_size, 0);
+	if (!vport->rss_lut) {
+		PMD_INIT_LOG(ERR, "Failed to allocate RSS lut");
+		ret = -ENOMEM;
+		goto err_lut;
+	}
+
+	if (!rss_conf->rss_key) {
+		for (i = 0; i < vport->rss_key_size; i++)
+			vport->rss_key[i] = (uint8_t)rte_rand();
+	} else {
+		rte_memcpy(vport->rss_key, rss_conf->rss_key,
+			   RTE_MIN(rss_conf->rss_key_len,
+				   vport->rss_key_size));
+	}
+
+	for (i = 0; i < lut_size; i++)
+		vport->rss_lut[i] = i % nb_q;
+
+	vport->rss_hf = IECM_DEFAULT_RSS_HASH_EXPANDED;
+
+	ret = idpf_config_rss(vport);
+	if (ret) {
+		PMD_INIT_LOG(ERR, "Failed to configure RSS");
+		goto err_cfg;
+	}
+
+	return ret;
+
+err_cfg:
+	rte_free(vport->rss_lut);
+	vport->rss_lut = NULL;
+err_lut:
+	rte_free(vport->rss_key);
+	vport->rss_key = NULL;
+err_key:
+	return ret;
+}
+
+static int
 idpf_dev_configure(struct rte_eth_dev *dev)
 {
 	struct idpf_vport *vport =
 		(struct idpf_vport *)dev->data->dev_private;
 	int ret = 0;
+
+	if (dev->data->dev_conf.rxmode.mq_mode & RTE_ETH_MQ_RX_RSS_FLAG)
+		dev->data->dev_conf.rxmode.offloads |=
+			RTE_ETH_RX_OFFLOAD_RSS_HASH;
 
 	ret = idpf_init_vport_req_info(dev);
 	if (ret) {
@@ -320,6 +410,14 @@ idpf_dev_configure(struct rte_eth_dev *dev)
 
 	rte_ether_addr_copy((struct rte_ether_addr *)vport->default_mac_addr,
 			    &dev->data->mac_addrs[0]);
+
+	if (adapter->caps->rss_caps) {
+		ret = idpf_init_rss(vport);
+		if (ret) {
+			PMD_INIT_LOG(ERR, "Failed to init rss");
+			return ret;
+		}
+	}
 
 	return ret;
 }
@@ -421,6 +519,16 @@ idpf_dev_close(struct rte_eth_dev *dev)
 
 	idpf_dev_stop(dev);
 	idpf_destroy_vport(vport);
+
+	if (vport->rss_lut) {
+		rte_free(vport->rss_lut);
+		vport->rss_lut = NULL;
+	}
+
+	if (vport->rss_key) {
+		rte_free(vport->rss_key);
+		vport->rss_key = NULL;
+	}
 
 	return 0;
 }
