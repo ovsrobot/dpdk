@@ -114,6 +114,10 @@ struct idpf_tx_entry {
 	uint16_t last_id;
 };
 
+struct idpf_tx_vec_entry {
+	struct rte_mbuf *mbuf;
+};
+
 /* Structure associated with each TX queue. */
 struct idpf_tx_queue {
 	const struct rte_memzone *mz;		/* memzone for Tx ring */
@@ -205,8 +209,12 @@ uint16_t idpf_singleq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 				uint16_t nb_pkts);
 uint16_t idpf_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 			       uint16_t nb_pkts);
+uint16_t idpf_singleq_xmit_pkts_avx512(void *tx_queue, struct rte_mbuf **tx_pkts,
+				      uint16_t nb_pkts);
+int idpf_singleq_tx_vec_setup_avx512(struct idpf_tx_queue *txq);
 uint16_t idpf_prep_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 			uint16_t nb_pkts);
+int idpf_singleq_rx_vec_setup(struct idpf_rx_queue *rxq);
 
 void idpf_stop_queues(struct rte_eth_dev *dev);
 

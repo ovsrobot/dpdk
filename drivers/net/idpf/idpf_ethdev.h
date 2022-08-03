@@ -164,6 +164,11 @@ struct idpf_adapter {
 
 	bool initialized;
 	bool stopped;
+
+	bool rx_vec_allowed;
+	bool tx_vec_allowed;
+	bool rx_use_avx512;
+	bool tx_use_avx512;
 };
 
 extern struct idpf_adapter *adapter;

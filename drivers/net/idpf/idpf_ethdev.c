@@ -147,6 +147,11 @@ idpf_dev_info_get(__rte_unused struct rte_eth_dev *dev, struct rte_eth_dev_info 
 		.nb_align = IDPF_ALIGN_RING_DESC,
 	};
 
+	dev_info->default_rxportconf.burst_size = IDPF_RX_MAX_BURST;
+	dev_info->default_txportconf.burst_size = IDPF_TX_MAX_BURST;
+	dev_info->default_rxportconf.nb_queues = 1;
+	dev_info->default_txportconf.nb_queues = 1;
+
 	return 0;
 }
 
