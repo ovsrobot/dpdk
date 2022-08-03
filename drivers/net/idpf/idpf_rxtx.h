@@ -42,6 +42,25 @@
 #define IDPF_TSO_MAX_SEG	UINT8_MAX
 #define IDPF_TX_MAX_MTU_SEG     8
 
+#define IDPF_TX_CKSUM_OFFLOAD_MASK (		\
+		RTE_MBUF_F_TX_IP_CKSUM |	\
+		RTE_MBUF_F_TX_L4_MASK |		\
+		RTE_MBUF_F_TX_TCP_SEG)
+
+#define IDPF_TX_OFFLOAD_MASK (			\
+		RTE_MBUF_F_TX_OUTER_IPV6 |	\
+		RTE_MBUF_F_TX_OUTER_IPV4 |	\
+		RTE_MBUF_F_TX_IPV6 |		\
+		RTE_MBUF_F_TX_IPV4 |		\
+		RTE_MBUF_F_TX_VLAN |		\
+		RTE_MBUF_F_TX_IP_CKSUM |	\
+		RTE_MBUF_F_TX_L4_MASK |		\
+		RTE_MBUF_F_TX_TCP_SEG |		\
+		RTE_ETH_TX_OFFLOAD_SECURITY)
+
+#define IDPF_TX_OFFLOAD_NOTSUP_MASK \
+		(RTE_MBUF_F_TX_OFFLOAD_MASK ^ IDPF_TX_OFFLOAD_MASK)
+
 struct idpf_rx_queue {
 	struct idpf_adapter *adapter;	/* the adapter this queue belongs to */
 	struct rte_mempool *mp;		/* mbuf pool to populate Rx ring */
@@ -176,7 +195,23 @@ int idpf_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id);
 int idpf_tx_queue_stop(struct rte_eth_dev *dev, uint16_t tx_queue_id);
 void idpf_dev_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid);
 
+uint16_t idpf_singleq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
+				uint16_t nb_pkts);
+uint16_t idpf_splitq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
+			       uint16_t nb_pkts);
+uint16_t idpf_singleq_recv_pkts_avx512(void *tx_queue, struct rte_mbuf **tx_pkts,
+				       uint16_t nb_pkts);
+uint16_t idpf_singleq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
+				uint16_t nb_pkts);
+uint16_t idpf_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
+			       uint16_t nb_pkts);
+uint16_t idpf_prep_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
+			uint16_t nb_pkts);
+
 void idpf_stop_queues(struct rte_eth_dev *dev);
+
+void idpf_set_rx_function(struct rte_eth_dev *dev);
+void idpf_set_tx_function(struct rte_eth_dev *dev);
 
 void idpf_set_default_ptype_table(struct rte_eth_dev *dev);
 const uint32_t *idpf_dev_supported_ptypes_get(struct rte_eth_dev *dev);

@@ -14,12 +14,16 @@
 #include "idpf_ethdev.h"
 #include "idpf_rxtx.h"
 
+#define IDPF_TX_SINGLE_Q	"tx_single"
+#define IDPF_RX_SINGLE_Q	"rx_single"
 #define REPRESENTOR		"representor"
 
 struct idpf_adapter *adapter;
 uint16_t used_vecs_num;
 
 static const char * const idpf_valid_args[] = {
+	IDPF_TX_SINGLE_Q,
+	IDPF_RX_SINGLE_Q,
 	REPRESENTOR,
 	NULL
 };
@@ -157,6 +161,30 @@ idpf_init_vport_req_info(__rte_unused struct rte_eth_dev *dev)
 		(struct virtchnl2_create_vport *)adapter->vport_req_info[idx];
 
 	vport_info->vport_type = rte_cpu_to_le_16(VIRTCHNL2_VPORT_TYPE_DEFAULT);
+	if (!adapter->txq_model) {
+		vport_info->txq_model =
+			rte_cpu_to_le_16(VIRTCHNL2_QUEUE_MODEL_SPLIT);
+		vport_info->num_tx_q = dev->data->nb_tx_queues;
+		vport_info->num_tx_complq =
+			dev->data->nb_tx_queues * IDPF_TX_COMPLQ_PER_GRP;
+	} else {
+		vport_info->txq_model =
+			rte_cpu_to_le_16(VIRTCHNL2_QUEUE_MODEL_SINGLE);
+		vport_info->num_tx_q = dev->data->nb_tx_queues;
+		vport_info->num_tx_complq = 0;
+	}
+	if (!adapter->rxq_model) {
+		vport_info->rxq_model =
+			rte_cpu_to_le_16(VIRTCHNL2_QUEUE_MODEL_SPLIT);
+		vport_info->num_rx_q = dev->data->nb_rx_queues;
+		vport_info->num_rx_bufq =
+			dev->data->nb_rx_queues * IDPF_RX_BUFQ_PER_GRP;
+	} else {
+		vport_info->rxq_model =
+			rte_cpu_to_le_16(VIRTCHNL2_QUEUE_MODEL_SINGLE);
+		vport_info->num_rx_q = dev->data->nb_rx_queues;
+		vport_info->num_rx_bufq = 0;
+	}
 
 	return 0;
 }
@@ -344,6 +372,9 @@ idpf_dev_start(struct rte_eth_dev *dev)
 		goto err_mtu;
 	}
 
+	idpf_set_rx_function(dev);
+	idpf_set_tx_function(dev);
+
 	if (idpf_ena_dis_vport(vport, true)) {
 		PMD_DRV_LOG(ERR, "Failed to enable vport");
 		goto err_vport;
@@ -394,11 +425,31 @@ idpf_dev_close(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static int
+parse_bool(const char *key, const char *value, void *args)
+{
+	int *i = (int *)args;
+	char *end;
+	int num;
+
+	num = strtoul(value, &end, 10);
+
+	if (num != 0 && num != 1) {
+		PMD_DRV_LOG(WARNING, "invalid value:\"%s\" for key:\"%s\", "
+			"value must be 0 or 1",
+			value, key);
+		return -1;
+	}
+
+	*i = num;
+	return 0;
+}
+
 static int idpf_parse_devargs(struct rte_eth_dev *dev)
 {
 	struct rte_devargs *devargs = dev->device->devargs;
 	struct rte_kvargs *kvlist;
-	int ret = 0;
+	int ret;
 
 	if (!devargs)
 		return 0;
@@ -409,6 +460,17 @@ static int idpf_parse_devargs(struct rte_eth_dev *dev)
 		return -EINVAL;
 	}
 
+	ret = rte_kvargs_process(kvlist, IDPF_TX_SINGLE_Q, &parse_bool,
+				 &adapter->txq_model);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, IDPF_RX_SINGLE_Q, &parse_bool,
+				 &adapter->rxq_model);
+	if (ret)
+		goto bail;
+
+bail:
 	rte_kvargs_free(kvlist);
 	return ret;
 }
@@ -637,8 +699,11 @@ idpf_dev_init(struct rte_eth_dev *dev, __rte_unused void *init_params)
 	/* for secondary processes, we don't initialise any further as primary
 	 * has already done this work.
 	 */
-	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		idpf_set_rx_function(dev);
+		idpf_set_tx_function(dev);
 		return ret;
+	}
 
 	ret = idpf_adapter_init(dev);
 	if (ret) {
