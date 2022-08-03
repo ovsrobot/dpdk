@@ -84,6 +84,10 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* ethdev: Removed deprecated Flow Director configuration from device
+  configuration (``dev_conf.fdir_conf``). Moved corresponding structures
+  to internal API since some drivers still use it internally.
+
 
 ABI Changes
 -----------
