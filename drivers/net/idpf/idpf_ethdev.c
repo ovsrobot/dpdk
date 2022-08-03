@@ -513,6 +513,87 @@ idpf_dev_configure(struct rte_eth_dev *dev)
 }
 
 static int
+idpf_config_rx_queues_irqs(struct rte_eth_dev *dev)
+{
+	struct idpf_vport *vport =
+		(struct idpf_vport *)dev->data->dev_private;
+	struct virtchnl2_queue_vector *qv_map;
+	struct iecm_hw *hw = &adapter->hw;
+	uint32_t dynctl_reg_start;
+	uint32_t itrn_reg_start;
+	uint32_t dynctl_val, itrn_val;
+	uint16_t i;
+
+	qv_map = rte_zmalloc("qv_map",
+			dev->data->nb_rx_queues *
+			sizeof(struct virtchnl2_queue_vector), 0);
+	if (!qv_map) {
+		PMD_DRV_LOG(ERR, "Failed to allocate %d queue-vector map",
+			    dev->data->nb_rx_queues);
+		goto qv_map_alloc_err;
+	}
+
+	/* Rx interrupt disabled, Map interrupt only for writeback */
+
+	/* The capability flags adapter->caps->other_caps here should be
+	 * compared with bit VIRTCHNL2_CAP_WB_ON_ITR. The if condition should
+	 * be updated when the FW can return correct flag bits.
+	 */
+	if (adapter->caps->other_caps) {
+		dynctl_reg_start = vport->recv_vectors->vchunks.vchunks->dynctl_reg_start;
+		itrn_reg_start = vport->recv_vectors->vchunks.vchunks->itrn_reg_start;
+		dynctl_val = IECM_READ_REG(hw, dynctl_reg_start);
+		PMD_DRV_LOG(DEBUG, "Value of dynctl_reg_start is 0x%x", dynctl_val);
+		itrn_val = IECM_READ_REG(hw, itrn_reg_start);
+		PMD_DRV_LOG(DEBUG, "Value of itrn_reg_start is 0x%x", itrn_val);
+		/* Force write-backs by setting WB_ON_ITR bit in DYN_CTL
+		 * register. WB_ON_ITR and INTENA are mutually exclusive
+		 * bits. Setting WB_ON_ITR bits means TX and RX Descs
+		 * are writen back based on ITR expiration irrespective
+		 * of INTENA setting.
+		 */
+		/* TBD: need to tune INTERVAL value for better performance. */
+		if (itrn_val)
+			IECM_WRITE_REG(hw,
+				       dynctl_reg_start,
+				       VIRTCHNL2_ITR_IDX_0  <<
+				       PF_GLINT_DYN_CTL_ITR_INDX_S |
+				       PF_GLINT_DYN_CTL_WB_ON_ITR_M |
+				       itrn_val <<
+				       PF_GLINT_DYN_CTL_INTERVAL_S);
+		else
+			IECM_WRITE_REG(hw,
+				       dynctl_reg_start,
+				       VIRTCHNL2_ITR_IDX_0  <<
+				       PF_GLINT_DYN_CTL_ITR_INDX_S |
+				       PF_GLINT_DYN_CTL_WB_ON_ITR_M |
+				       IDPF_DFLT_INTERVAL <<
+				       PF_GLINT_DYN_CTL_INTERVAL_S);
+	}
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		/* map all queues to the same vector */
+		qv_map[i].queue_id = vport->chunks_info.rx_start_qid + i;
+		qv_map[i].vector_id =
+			vport->recv_vectors->vchunks.vchunks->start_vector_id;
+	}
+	vport->qv_map = qv_map;
+
+	if (idpf_config_irq_map_unmap(vport, true)) {
+		PMD_DRV_LOG(ERR, "config interrupt mapping failed");
+		goto config_irq_map_err;
+	}
+
+	return 0;
+
+config_irq_map_err:
+	rte_free(vport->qv_map);
+	vport->qv_map = NULL;
+
+qv_map_alloc_err:
+	return -1;
+}
+
+static int
 idpf_start_queues(struct rte_eth_dev *dev)
 {
 	struct idpf_rx_queue *rxq;
@@ -550,6 +631,9 @@ idpf_dev_start(struct rte_eth_dev *dev)
 {
 	struct idpf_vport *vport =
 		(struct idpf_vport *)dev->data->dev_private;
+	uint16_t num_allocated_vectors =
+		adapter->caps->num_allocated_vectors;
+	uint16_t req_vecs_num;
 
 	PMD_INIT_FUNC_TRACE();
 
@@ -561,6 +645,23 @@ idpf_dev_start(struct rte_eth_dev *dev)
 	}
 
 	vport->max_pkt_len = dev->data->mtu + IDPF_ETH_OVERHEAD;
+
+	req_vecs_num = IDPF_DFLT_Q_VEC_NUM;
+	if (req_vecs_num + used_vecs_num > num_allocated_vectors) {
+		PMD_DRV_LOG(ERR, "The accumulated request vectors' number should be less than %d",
+			    num_allocated_vectors);
+		goto err_mtu;
+	}
+	if (idpf_alloc_vectors(vport, req_vecs_num)) {
+		PMD_DRV_LOG(ERR, "Failed to allocate interrupt vectors");
+		goto err_mtu;
+	}
+	used_vecs_num += req_vecs_num;
+
+	if (idpf_config_rx_queues_irqs(dev)) {
+		PMD_DRV_LOG(ERR, "Failed to configure irqs");
+		goto err_mtu;
+	}
 
 	if (idpf_start_queues(dev)) {
 		PMD_DRV_LOG(ERR, "Failed to start queues");
@@ -603,6 +704,12 @@ idpf_dev_stop(struct rte_eth_dev *dev)
 
 	idpf_stop_queues(dev);
 
+	if (idpf_config_irq_map_unmap(vport, false))
+		PMD_DRV_LOG(ERR, "config interrupt unmapping failed");
+
+	if (idpf_dealloc_vectors(vport))
+		PMD_DRV_LOG(ERR, "deallocate interrupt vectors failed");
+
 	vport->stopped = 1;
 	dev->data->dev_started = 0;
 
@@ -629,6 +736,16 @@ idpf_dev_close(struct rte_eth_dev *dev)
 	if (vport->rss_key) {
 		rte_free(vport->rss_key);
 		vport->rss_key = NULL;
+	}
+
+	if (vport->recv_vectors) {
+		rte_free(vport->recv_vectors);
+		vport->recv_vectors = NULL;
+	}
+
+	if (vport->qv_map) {
+		rte_free(vport->qv_map);
+		vport->qv_map = NULL;
 	}
 
 	return 0;

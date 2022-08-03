@@ -119,6 +119,11 @@ struct idpf_vport {
 	uint8_t *rss_key;
 	uint64_t rss_hf;
 
+	/* MSIX info*/
+	struct virtchnl2_queue_vector *qv_map; /* queue vector mapping */
+	uint16_t max_vectors;
+	struct virtchnl2_alloc_vectors *recv_vectors;
+
 	/* Chunk info */
 	struct idpf_chunks_info chunks_info;
 
@@ -229,6 +234,9 @@ int idpf_ena_dis_queues(struct idpf_vport *vport, bool enable);
 int idpf_ena_dis_vport(struct idpf_vport *vport, bool enable);
 int idpf_query_stats(struct idpf_vport *vport,
 			struct virtchnl2_vport_stats **pstats);
+int idpf_config_irq_map_unmap(struct idpf_vport *vport, bool map);
+int idpf_alloc_vectors(struct idpf_vport *vport, uint16_t num_vectors);
+int idpf_dealloc_vectors(struct idpf_vport *vport);
 
 #endif /* _IDPF_ETHDEV_H_ */
 
