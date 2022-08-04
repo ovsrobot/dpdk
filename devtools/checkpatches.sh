@@ -10,6 +10,7 @@
 . $(dirname $(readlink -f $0))/load-devel-config
 
 VALIDATE_NEW_API=$(dirname $(readlink -f $0))/check-symbol-change.sh
+VALIDATE_TRACE_FUNC=$(dirname $(readlink -f $0))/check-trace-func.sh
 
 # Enable codespell by default. This can be overwritten from a config file.
 # Codespell can also be enabled by setting DPDK_CHECKPATCH_CODESPELL to a valid path
@@ -332,6 +333,14 @@ check () { # <patch> <commit> <title>
 
 	! $verbose || printf '\nChecking release notes updates:\n'
 	report=$(check_release_notes "$tmpinput")
+	if [ $? -ne 0 ] ; then
+		$headline_printed || print_headline "$3"
+		printf '%s\n' "$report"
+		ret=1
+	fi
+
+	! $verbose || printf '\nChecking API additions with trace function call :\n'
+	report=$($VALIDATE_TRACE_FUNC "$tmpinput")
 	if [ $? -ne 0 ] ; then
 		$headline_printed || print_headline "$3"
 		printf '%s\n' "$report"
