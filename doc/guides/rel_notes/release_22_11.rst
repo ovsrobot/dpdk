@@ -109,6 +109,9 @@ API Changes
 * ethdev: Removed deprecated ``RTE_FC_*`` defines. Use corresponding
   defines with ``RTE_ETH_FC_`` prefix instead.
 
+* ethdev: Removed deprecated ``ETH_VLAN_*`` and ``ETH_QINQ_`` defines.
+  Use corresponding defines with ``RTE_`` prefix instead.
+
 
 ABI Changes
 -----------
