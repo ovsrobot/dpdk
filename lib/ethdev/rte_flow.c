@@ -13,6 +13,7 @@
 #include <rte_string_fns.h>
 #include <rte_mbuf_dyn.h>
 #include "rte_ethdev.h"
+#include "rte_ethdev_trace.h"
 #include "rte_flow_driver.h"
 #include "rte_flow.h"
 
@@ -284,6 +285,7 @@ rte_flow_dynf_metadata_register(void)
 		goto error;
 	rte_flow_dynf_metadata_offs = offset;
 	rte_flow_dynf_metadata_mask = RTE_BIT64(flag);
+	rte_flow_trace_dynf_metadata_register(offset, RTE_BIT64(flag));
 	return 0;
 
 error:
@@ -357,6 +359,7 @@ rte_flow_validate(uint16_t port_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	int ret;
 
+	rte_flow_trace_validate(port_id, attr, pattern, actions);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (likely(!!ops->validate)) {
@@ -382,6 +385,7 @@ rte_flow_create(uint16_t port_id,
 	struct rte_flow *flow;
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_create(port_id, attr, pattern, actions);
 	if (unlikely(!ops))
 		return NULL;
 	if (likely(!!ops->create)) {
@@ -407,6 +411,7 @@ rte_flow_destroy(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	int ret;
 
+	rte_flow_trace_destroy(port_id, flow);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (likely(!!ops->destroy)) {
@@ -429,6 +434,7 @@ rte_flow_flush(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	int ret;
 
+	rte_flow_trace_flush(port_id);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (likely(!!ops->flush)) {
@@ -454,6 +460,7 @@ rte_flow_query(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	int ret;
 
+	rte_flow_trace_query(port_id, flow, action, data);
 	if (!ops)
 		return -rte_errno;
 	if (likely(!!ops->query)) {
@@ -477,6 +484,7 @@ rte_flow_isolate(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	int ret;
 
+	rte_flow_trace_isolate(port_id, set);
 	if (!ops)
 		return -rte_errno;
 	if (likely(!!ops->isolate)) {
@@ -506,6 +514,7 @@ rte_flow_error_set(struct rte_flow_error *error,
 		};
 	}
 	rte_errno = code;
+	rte_flow_trace_error_set(error, code, type, cause, message);
 	return -code;
 }
 
@@ -1004,6 +1013,7 @@ rte_flow_conv(enum rte_flow_conv_op op,
 	      const void *src,
 	      struct rte_flow_error *error)
 {
+	rte_flow_trace_conv(op, dst, size, src);
 	switch (op) {
 		const struct rte_flow_attr *attr;
 
@@ -1069,6 +1079,7 @@ rte_flow_copy(struct rte_flow_desc *desc, size_t len,
 
 	RTE_BUILD_BUG_ON(sizeof(struct rte_flow_desc) <
 			 sizeof(struct rte_flow_conv_rule));
+	rte_flow_trace_copy(desc, len, attr, items, actions);
 	if (dst_size &&
 	    (&dst->pattern != &desc->items ||
 	     &dst->actions != &desc->actions ||
@@ -1099,6 +1110,7 @@ rte_flow_dev_dump(uint16_t port_id, struct rte_flow *flow,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	int ret;
 
+	rte_flow_trace_dev_dump(port_id, flow);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (likely(!!ops->dev_dump)) {
@@ -1120,6 +1132,7 @@ rte_flow_get_aged_flows(uint16_t port_id, void **contexts,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	int ret;
 
+	rte_flow_trace_get_aged_flows(port_id, contexts, nb_contexts);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (likely(!!ops->get_aged_flows)) {
@@ -1142,6 +1155,7 @@ rte_flow_action_handle_create(uint16_t port_id,
 	struct rte_flow_action_handle *handle;
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_action_handle_create(port_id, conf, action);
 	if (unlikely(!ops))
 		return NULL;
 	if (unlikely(!ops->action_handle_create)) {
@@ -1165,6 +1179,7 @@ rte_flow_action_handle_destroy(uint16_t port_id,
 	int ret;
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_action_handle_destroy(port_id, handle);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (unlikely(!ops->action_handle_destroy))
@@ -1185,6 +1200,7 @@ rte_flow_action_handle_update(uint16_t port_id,
 	int ret;
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_action_handle_update(port_id, handle, update);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (unlikely(!ops->action_handle_update))
@@ -1205,6 +1221,7 @@ rte_flow_action_handle_query(uint16_t port_id,
 	int ret;
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_action_handle_query(port_id, handle, data);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (unlikely(!ops->action_handle_query))
@@ -1226,6 +1243,7 @@ rte_flow_tunnel_decap_set(uint16_t port_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_tunnel_decap_set(port_id, tunnel, actions, num_of_actions);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (likely(!!ops->tunnel_decap_set)) {
@@ -1249,6 +1267,7 @@ rte_flow_tunnel_match(uint16_t port_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_tunnel_match(port_id, tunnel, items, num_of_items);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (likely(!!ops->tunnel_match)) {
@@ -1271,6 +1290,7 @@ rte_flow_get_restore_info(uint16_t port_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_get_restore_info(port_id, m, restore_info);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (likely(!!ops->get_restore_info)) {
@@ -1293,6 +1313,7 @@ rte_flow_tunnel_action_decap_release(uint16_t port_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_tunnel_action_decap_release(port_id, actions, num_of_actions);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (likely(!!ops->tunnel_action_decap_release)) {
@@ -1316,6 +1337,7 @@ rte_flow_tunnel_item_release(uint16_t port_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_tunnel_item_release(port_id, items, num_of_items);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (likely(!!ops->tunnel_item_release)) {
@@ -1336,6 +1358,7 @@ rte_flow_pick_transfer_proxy(uint16_t port_id, uint16_t *proxy_port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	struct rte_eth_dev *dev;
 
+	rte_flow_trace_pick_transfer_proxy(port_id, proxy_port_id);
 	if (unlikely(ops == NULL))
 		return -rte_errno;
 
@@ -1360,6 +1383,7 @@ rte_flow_flex_item_create(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	struct rte_flow_item_flex_handle *handle;
 
+	rte_flow_trace_flex_item_create(port_id, conf);
 	if (unlikely(!ops))
 		return NULL;
 	if (unlikely(!ops->flex_item_create)) {
@@ -1383,6 +1407,7 @@ rte_flow_flex_item_release(uint16_t port_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_flex_item_release(port_id, handle);
 	if (unlikely(!ops || !ops->flex_item_release))
 		return rte_flow_error_set(error, ENOTSUP,
 					  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
@@ -1400,6 +1425,7 @@ rte_flow_info_get(uint16_t port_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_info_get(port_id, port_info, queue_info);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (dev->data->dev_configured == 0) {
@@ -1433,6 +1459,7 @@ rte_flow_configure(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	int ret;
 
+	rte_flow_trace_configure(port_id, port_attr, nb_queue, queue_attr);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (dev->data->dev_configured == 0) {
@@ -1476,6 +1503,8 @@ rte_flow_pattern_template_create(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	struct rte_flow_pattern_template *template;
 
+	rte_flow_trace_pattern_template_create(port_id, template_attr,
+					       pattern);
 	if (unlikely(!ops))
 		return NULL;
 	if (dev->data->flow_configured == 0) {
@@ -1526,6 +1555,7 @@ rte_flow_pattern_template_destroy(uint16_t port_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_pattern_template_destroy(port_id, pattern_template);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (unlikely(pattern_template == NULL))
@@ -1553,6 +1583,8 @@ rte_flow_actions_template_create(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	struct rte_flow_actions_template *template;
 
+	rte_flow_trace_actions_template_create(port_id, template_attr, actions,
+					       masks);
 	if (unlikely(!ops))
 		return NULL;
 	if (dev->data->flow_configured == 0) {
@@ -1612,6 +1644,7 @@ rte_flow_actions_template_destroy(uint16_t port_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_actions_template_destroy(port_id, actions_template);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (unlikely(actions_template == NULL))
@@ -1641,6 +1674,11 @@ rte_flow_template_table_create(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	struct rte_flow_template_table *table;
 
+	rte_flow_trace_template_table_create(port_id, table_attr,
+					     pattern_templates,
+					     nb_pattern_templates,
+					     actions_templates,
+					     nb_actions_templates);
 	if (unlikely(!ops))
 		return NULL;
 	if (dev->data->flow_configured == 0) {
@@ -1702,6 +1740,7 @@ rte_flow_template_table_destroy(uint16_t port_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_template_table_destroy(port_id, template_table);
 	if (unlikely(!ops))
 		return -rte_errno;
 	if (unlikely(template_table == NULL))
@@ -1734,6 +1773,9 @@ rte_flow_async_create(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	struct rte_flow *flow;
 
+	rte_flow_trace_async_create(port_id, queue_id, op_attr, template_table,
+				    pattern, pattern_template_index, actions,
+				    actions_template_index, user_data);
 	flow = ops->async_create(dev, queue_id,
 				 op_attr, template_table,
 				 pattern, pattern_template_index,
@@ -1755,6 +1797,8 @@ rte_flow_async_destroy(uint16_t port_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_async_destroy(port_id, queue_id, op_attr, flow,
+				     user_data);
 	return flow_err(port_id,
 			ops->async_destroy(dev, queue_id,
 					   op_attr, flow,
@@ -1770,6 +1814,7 @@ rte_flow_push(uint16_t port_id,
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 
+	rte_flow_trace_push(port_id, queue_id);
 	return flow_err(port_id,
 			ops->push(dev, queue_id, error),
 			error);
@@ -1786,6 +1831,7 @@ rte_flow_pull(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	int ret;
 
+	rte_flow_trace_pull(port_id, queue_id, res, n_res);
 	ret = ops->pull(dev, queue_id, res, n_res, error);
 	return ret ? ret : flow_err(port_id, ret, error);
 }
@@ -1803,6 +1849,9 @@ rte_flow_async_action_handle_create(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	struct rte_flow_action_handle *handle;
 
+	rte_flow_trace_async_action_handle_create(port_id, queue_id, op_attr,
+						  indir_action_conf, action,
+						  user_data);
 	handle = ops->async_action_handle_create(dev, queue_id, op_attr,
 					     indir_action_conf, action, user_data, error);
 	if (handle == NULL)
@@ -1822,6 +1871,8 @@ rte_flow_async_action_handle_destroy(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	int ret;
 
+	rte_flow_trace_async_action_handle_destroy(port_id, queue_id, op_attr,
+						   action_handle, user_data);
 	ret = ops->async_action_handle_destroy(dev, queue_id, op_attr,
 					   action_handle, user_data, error);
 	return flow_err(port_id, ret, error);
@@ -1840,6 +1891,9 @@ rte_flow_async_action_handle_update(uint16_t port_id,
 	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
 	int ret;
 
+	rte_flow_trace_async_action_handle_update(port_id, queue_id, op_attr,
+						  action_handle, update,
+						  user_data);
 	ret = ops->async_action_handle_update(dev, queue_id, op_attr,
 					  action_handle, update, user_data, error);
 	return flow_err(port_id, ret, error);
