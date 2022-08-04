@@ -95,6 +95,10 @@ API Changes
   RETA size specification. Use corresponding defines with ``RTE_`` prefix
   instead.
 
+* ethdev: Removed deprecated ``DEV_RX_OFFLOAD_*`` and ``DEV_TX_OFFLOAD_``
+  defines. Use corresponding defines with ``RTE_ETH_RX_OFFLOAD_`` and
+  ``RTE_ETH_TX_OFFLOAD_`` prefix instead.
+
 
 ABI Changes
 -----------
