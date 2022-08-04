@@ -5,6 +5,7 @@
 #include <rte_kvargs.h>
 #include <rte_malloc.h>
 
+#include "rte_ethdev_trace.h"
 #include "ethdev_driver.h"
 #include "ethdev_private.h"
 
@@ -113,6 +114,7 @@ rte_eth_dev_allocate(const char *name)
 unlock:
 	rte_spinlock_unlock(&eth_dev_shared_data->ownership_lock);
 
+	rte_ethdev_trace_allocate(name, eth_dev);
 	return eth_dev;
 }
 
@@ -121,6 +123,7 @@ rte_eth_dev_allocated(const char *name)
 {
 	struct rte_eth_dev *ethdev;
 
+	rte_ethdev_trace_allocated(name);
 	eth_dev_shared_data_prepare();
 
 	rte_spinlock_lock(&eth_dev_shared_data->ownership_lock);
@@ -162,6 +165,7 @@ rte_eth_dev_attach_secondary(const char *name)
 	}
 
 	rte_spinlock_unlock(&eth_dev_shared_data->ownership_lock);
+	rte_ethdev_trace_attach_secondary(name, eth_dev);
 	return eth_dev;
 }
 
@@ -173,6 +177,7 @@ rte_eth_dev_callback_process(struct rte_eth_dev *dev,
 	struct rte_eth_dev_callback dev_cb;
 	int rc = 0;
 
+	rte_ethdev_trace_callback_process(dev, event, ret_param);
 	rte_spinlock_lock(&eth_dev_cb_lock);
 	TAILQ_FOREACH(cb_lst, &(dev->link_intr_cbs), next) {
 		if (cb_lst->cb_fn == NULL || cb_lst->event != event)
@@ -195,6 +200,7 @@ rte_eth_dev_callback_process(struct rte_eth_dev *dev,
 void
 rte_eth_dev_probing_finish(struct rte_eth_dev *dev)
 {
+	rte_ethdev_trace_probing_finish(dev);
 	if (dev == NULL)
 		return;
 
@@ -214,6 +220,7 @@ rte_eth_dev_probing_finish(struct rte_eth_dev *dev)
 int
 rte_eth_dev_release_port(struct rte_eth_dev *eth_dev)
 {
+	rte_ethdev_trace_release_port(eth_dev);
 	if (eth_dev == NULL)
 		return -EINVAL;
 
@@ -264,6 +271,9 @@ rte_eth_dev_create(struct rte_device *device, const char *name,
 	struct rte_eth_dev *ethdev;
 	int retval;
 
+	rte_ethdev_trace_create(device, name, priv_data_size,
+				ethdev_bus_specific_init, bus_init_params,
+				ethdev_init, init_params);
 	RTE_FUNC_PTR_OR_ERR_RET(*ethdev_init, -EINVAL);
 
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
@@ -324,6 +334,7 @@ rte_eth_dev_destroy(struct rte_eth_dev *ethdev,
 {
 	int ret;
 
+	rte_ethdev_trace_destroy(ethdev, ethdev_uninit);
 	ethdev = rte_eth_dev_allocated(ethdev->data->name);
 	if (!ethdev)
 		return -ENODEV;
@@ -342,6 +353,7 @@ rte_eth_dev_get_by_name(const char *name)
 {
 	uint16_t pid;
 
+	rte_ethdev_trace_get_by_name(name);
 	if (rte_eth_dev_get_port_by_name(name, &pid))
 		return NULL;
 
@@ -351,6 +363,7 @@ rte_eth_dev_get_by_name(const char *name)
 int
 rte_eth_dev_is_rx_hairpin_queue(struct rte_eth_dev *dev, uint16_t queue_id)
 {
+	rte_ethdev_trace_is_rx_hairpin_queue(dev, queue_id);
 	if (dev->data->rx_queue_state[queue_id] == RTE_ETH_QUEUE_STATE_HAIRPIN)
 		return 1;
 	return 0;
@@ -359,6 +372,7 @@ rte_eth_dev_is_rx_hairpin_queue(struct rte_eth_dev *dev, uint16_t queue_id)
 int
 rte_eth_dev_is_tx_hairpin_queue(struct rte_eth_dev *dev, uint16_t queue_id)
 {
+	rte_ethdev_trace_is_tx_hairpin_queue(dev, queue_id);
 	if (dev->data->tx_queue_state[queue_id] == RTE_ETH_QUEUE_STATE_HAIRPIN)
 		return 1;
 	return 0;
@@ -367,6 +381,7 @@ rte_eth_dev_is_tx_hairpin_queue(struct rte_eth_dev *dev, uint16_t queue_id)
 void
 rte_eth_dev_internal_reset(struct rte_eth_dev *dev)
 {
+	rte_ethdev_trace_internal_reset(dev, dev->data->dev_started);
 	if (dev->data->dev_started) {
 		RTE_ETHDEV_LOG(ERR, "Port %u must be stopped to allow reset\n",
 			dev->data->port_id);
@@ -451,6 +466,7 @@ rte_eth_devargs_parse(const char *dargs, struct rte_eth_devargs *eth_da)
 	unsigned int i;
 	int result = 0;
 
+	rte_eth_trace_devargs_parse(dargs, eth_da);
 	memset(eth_da, 0, sizeof(*eth_da));
 
 	result = eth_dev_devargs_tokenise(&args, dargs);
@@ -495,6 +511,7 @@ rte_eth_dma_zone_free(const struct rte_eth_dev *dev, const char *ring_name,
 	const struct rte_memzone *mz;
 	int rc = 0;
 
+	rte_eth_trace_dma_zone_free(dev, ring_name, queue_id);
 	rc = eth_dev_dma_mzone_name(z_name, sizeof(z_name), dev->data->port_id,
 			queue_id, ring_name);
 	if (rc >= RTE_MEMZONE_NAMESIZE) {
@@ -520,6 +537,7 @@ rte_eth_dma_zone_reserve(const struct rte_eth_dev *dev, const char *ring_name,
 	const struct rte_memzone *mz;
 	int rc;
 
+	rte_eth_trace_dma_zone_reserve(dev, ring_name, queue_id, size, align, socket_id);
 	rc = eth_dev_dma_mzone_name(z_name, sizeof(z_name), dev->data->port_id,
 			queue_id, ring_name);
 	if (rc >= RTE_MEMZONE_NAMESIZE) {
@@ -553,6 +571,8 @@ rte_eth_hairpin_queue_peer_bind(uint16_t cur_port, uint16_t cur_queue,
 {
 	struct rte_eth_dev *dev;
 
+	rte_eth_trace_hairpin_queue_peer_bind(cur_port, cur_queue, peer_info,
+					      direction);
 	if (peer_info == NULL)
 		return -EINVAL;
 
@@ -571,6 +591,7 @@ rte_eth_hairpin_queue_peer_unbind(uint16_t cur_port, uint16_t cur_queue,
 {
 	struct rte_eth_dev *dev;
 
+	rte_eth_trace_hairpin_queue_peer_unbind(cur_port, cur_queue, direction);
 	/* No need to check the validity again. */
 	dev = &rte_eth_devices[cur_port];
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->hairpin_queue_peer_unbind,
@@ -588,6 +609,8 @@ rte_eth_hairpin_queue_peer_update(uint16_t peer_port, uint16_t peer_queue,
 {
 	struct rte_eth_dev *dev;
 
+	rte_eth_trace_hairpin_queue_peer_update(peer_port, peer_queue, cur_info,
+						peer_info, direction);
 	/* Current queue information is not mandatory. */
 	if (peer_info == NULL)
 		return -EINVAL;
@@ -626,6 +649,8 @@ rte_eth_ip_reassembly_dynfield_register(int *field_offset, int *flag_offset)
 	if (flag_offset != NULL)
 		*flag_offset = offset;
 
+	rte_eth_trace_ip_reassembly_dynfield_register(*field_offset,
+						      *flag_offset);
 	return 0;
 }
 
@@ -729,6 +754,8 @@ rte_eth_representor_id_get(uint16_t port_id,
 	}
 out:
 	free(info);
+	rte_eth_trace_representor_id_get(port_id, type, controller, pf,
+					 representor_port, *repr_id);
 	return ret;
 }
 
@@ -745,6 +772,7 @@ rte_eth_switch_domain_alloc(uint16_t *domain_id)
 			eth_dev_switch_domains[i].state =
 				RTE_ETH_SWITCH_DOMAIN_ALLOCATED;
 			*domain_id = i;
+			rte_eth_trace_switch_domain_alloc(*domain_id);
 			return 0;
 		}
 	}
@@ -755,6 +783,7 @@ rte_eth_switch_domain_alloc(uint16_t *domain_id)
 int
 rte_eth_switch_domain_free(uint16_t domain_id)
 {
+	rte_eth_trace_switch_domain_free(domain_id);
 	if (domain_id == RTE_ETH_DEV_SWITCH_DOMAIN_ID_INVALID ||
 		domain_id >= RTE_MAX_ETHPORTS)
 		return -EINVAL;

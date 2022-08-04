@@ -520,6 +520,28 @@ EXPERIMENTAL {
 	__rte_tm_trace_shared_wred_context_delete;
 	__rte_tm_trace_wred_profile_add;
 	__rte_tm_trace_wred_profile_delete;
+	__rte_ethdev_trace_allocate;
+	__rte_ethdev_trace_allocated;
+	__rte_ethdev_trace_attach_secondary;
+	__rte_ethdev_trace_callback_process;
+	__rte_ethdev_trace_create;
+	__rte_ethdev_trace_destroy;
+	__rte_ethdev_trace_get_by_name;
+	__rte_ethdev_trace_is_rx_hairpin_queue;
+	__rte_ethdev_trace_is_tx_hairpin_queue;
+	__rte_ethdev_trace_probing_finish;
+	__rte_ethdev_trace_release_port;
+	__rte_ethdev_trace_internal_reset;
+	__rte_eth_trace_devargs_parse;
+	__rte_eth_trace_dma_zone_free;
+	__rte_eth_trace_dma_zone_reserve;
+	__rte_eth_trace_hairpin_queue_peer_bind;
+	__rte_eth_trace_hairpin_queue_peer_unbind;
+	__rte_eth_trace_hairpin_queue_peer_update;
+	__rte_eth_trace_ip_reassembly_dynfield_register;
+	__rte_eth_trace_representor_id_get;
+	__rte_eth_trace_switch_domain_alloc;
+	__rte_eth_trace_switch_domain_free;
 };
 
 INTERNAL {

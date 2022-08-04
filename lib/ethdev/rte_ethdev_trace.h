@@ -17,6 +17,7 @@ extern "C" {
 
 #include <rte_trace_point.h>
 
+#include "ethdev_driver.h"
 #include "rte_ethdev.h"
 #include "rte_mtr.h"
 #include "rte_tm.h"
@@ -2132,6 +2133,205 @@ RTE_TRACE_POINT(
 	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t wred_profile_id),
 	rte_trace_point_emit_u16(port_id);
 	rte_trace_point_emit_u32(wred_profile_id);
+)
+
+RTE_TRACE_POINT(
+	rte_ethdev_trace_allocate,
+	RTE_TRACE_POINT_ARGS(const char *name, struct rte_eth_dev *eth_dev),
+	rte_trace_point_emit_string(name);
+	rte_trace_point_emit_u16(eth_dev->data->nb_rx_queues);
+	rte_trace_point_emit_u16(eth_dev->data->nb_tx_queues);
+	rte_trace_point_emit_u16(eth_dev->data->mtu);
+	rte_trace_point_emit_u16(eth_dev->data->port_id);
+	rte_trace_point_emit_int(eth_dev->state);
+)
+
+RTE_TRACE_POINT(
+	rte_ethdev_trace_allocated,
+	RTE_TRACE_POINT_ARGS(const char *name),
+	rte_trace_point_emit_string(name);
+)
+
+RTE_TRACE_POINT(
+	rte_ethdev_trace_attach_secondary,
+	RTE_TRACE_POINT_ARGS(const char *name, struct rte_eth_dev *eth_dev),
+	rte_trace_point_emit_string(name);
+	rte_trace_point_emit_u16(eth_dev->data->nb_rx_queues);
+	rte_trace_point_emit_u16(eth_dev->data->nb_tx_queues);
+	rte_trace_point_emit_u16(eth_dev->data->mtu);
+	rte_trace_point_emit_u16(eth_dev->data->port_id);
+	rte_trace_point_emit_int(eth_dev->state);
+)
+
+RTE_TRACE_POINT(
+	rte_ethdev_trace_callback_process,
+	RTE_TRACE_POINT_ARGS(struct rte_eth_dev *dev,
+		enum rte_eth_event_type event,
+		void *ret_param),
+	rte_trace_point_emit_ptr(dev);
+	rte_trace_point_emit_int(event);
+	rte_trace_point_emit_ptr(ret_param);
+)
+
+RTE_TRACE_POINT(
+	rte_ethdev_trace_create,
+	RTE_TRACE_POINT_ARGS(struct rte_device *device, const char *name,
+		size_t priv_data_size,
+		ethdev_bus_specific_init bus_specific_init,
+		void *bus_init_params, ethdev_init_t ethdev_init,
+		void *init_params),
+	rte_trace_point_emit_ptr(device);
+	rte_trace_point_emit_string(name);
+	rte_trace_point_emit_size_t(priv_data_size);
+	rte_trace_point_emit_ptr(bus_specific_init);
+	rte_trace_point_emit_ptr(bus_init_params);
+	rte_trace_point_emit_ptr(ethdev_init);
+	rte_trace_point_emit_ptr(init_params);
+)
+
+RTE_TRACE_POINT(
+	rte_ethdev_trace_destroy,
+	RTE_TRACE_POINT_ARGS(struct rte_eth_dev *ethdev, ethdev_uninit_t ethdev_uninit),
+	rte_trace_point_emit_ptr(ethdev);
+	rte_trace_point_emit_ptr(ethdev_uninit);
+)
+
+RTE_TRACE_POINT(
+	rte_ethdev_trace_get_by_name,
+	RTE_TRACE_POINT_ARGS(const char *name),
+	rte_trace_point_emit_string(name);
+)
+
+RTE_TRACE_POINT(
+	rte_ethdev_trace_is_rx_hairpin_queue,
+	RTE_TRACE_POINT_ARGS(struct rte_eth_dev *dev, uint16_t queue_id),
+	rte_trace_point_emit_ptr(dev);
+	rte_trace_point_emit_u16(queue_id);
+)
+
+RTE_TRACE_POINT(
+	rte_ethdev_trace_is_tx_hairpin_queue,
+	RTE_TRACE_POINT_ARGS(struct rte_eth_dev *dev, uint16_t queue_id),
+	rte_trace_point_emit_ptr(dev);
+	rte_trace_point_emit_u16(queue_id);
+)
+
+RTE_TRACE_POINT(
+	rte_ethdev_trace_probing_finish,
+	RTE_TRACE_POINT_ARGS(struct rte_eth_dev *dev),
+	rte_trace_point_emit_ptr(dev);
+)
+
+RTE_TRACE_POINT(
+	rte_ethdev_trace_release_port,
+	RTE_TRACE_POINT_ARGS(struct rte_eth_dev *eth_dev),
+	rte_trace_point_emit_ptr(eth_dev);
+)
+
+RTE_TRACE_POINT(
+	rte_ethdev_trace_internal_reset,
+	RTE_TRACE_POINT_ARGS(struct rte_eth_dev *dev,
+		uint8_t dev_started),
+	rte_trace_point_emit_ptr(dev);
+	rte_trace_point_emit_u8(dev_started);
+)
+
+RTE_TRACE_POINT(
+	rte_eth_trace_devargs_parse,
+	RTE_TRACE_POINT_ARGS(const char *devargs, struct rte_eth_devargs *eth_devargs),
+	rte_trace_point_emit_string(devargs);
+	rte_trace_point_emit_ptr(eth_devargs);
+	rte_trace_point_emit_u16(eth_devargs->nb_mh_controllers);
+	rte_trace_point_emit_u16(eth_devargs->nb_ports);
+	rte_trace_point_emit_u16(eth_devargs->nb_representor_ports);
+)
+
+RTE_TRACE_POINT(
+	rte_eth_trace_dma_zone_free,
+	RTE_TRACE_POINT_ARGS(const struct rte_eth_dev *eth_dev, const char *name,
+		uint16_t queue_id),
+	rte_trace_point_emit_ptr(eth_dev);
+	rte_trace_point_emit_string(name);
+	rte_trace_point_emit_u16(queue_id);
+)
+
+RTE_TRACE_POINT(
+	rte_eth_trace_dma_zone_reserve,
+	RTE_TRACE_POINT_ARGS(const struct rte_eth_dev *eth_dev, const char *name,
+		uint16_t queue_id, size_t size, unsigned int align,
+		int socket_id),
+	rte_trace_point_emit_ptr(eth_dev);
+	rte_trace_point_emit_string(name);
+	rte_trace_point_emit_u16(queue_id);
+	rte_trace_point_emit_size_t(size);
+	rte_trace_point_emit_u32(align);
+	rte_trace_point_emit_int(socket_id);
+)
+
+RTE_TRACE_POINT(
+	rte_eth_trace_hairpin_queue_peer_bind,
+	RTE_TRACE_POINT_ARGS(uint16_t cur_port, uint16_t cur_queue,
+		struct rte_hairpin_peer_info *peer_info,
+		uint32_t direction),
+	rte_trace_point_emit_u16(cur_port);
+	rte_trace_point_emit_u16(cur_queue);
+	rte_trace_point_emit_ptr(peer_info);
+	rte_trace_point_emit_u32(direction);
+)
+
+RTE_TRACE_POINT(
+	rte_eth_trace_hairpin_queue_peer_unbind,
+	RTE_TRACE_POINT_ARGS(uint16_t cur_port, uint16_t cur_queue,
+		uint32_t direction),
+	rte_trace_point_emit_u16(cur_port);
+	rte_trace_point_emit_u16(cur_queue);
+	rte_trace_point_emit_u32(direction);
+)
+
+RTE_TRACE_POINT(
+	rte_eth_trace_hairpin_queue_peer_update,
+	RTE_TRACE_POINT_ARGS(uint16_t peer_port, uint16_t peer_queue,
+		struct rte_hairpin_peer_info *cur_info,
+		struct rte_hairpin_peer_info *peer_info,
+		uint32_t direction),
+	rte_trace_point_emit_u16(peer_port);
+	rte_trace_point_emit_u16(peer_queue);
+	rte_trace_point_emit_ptr(cur_info);
+	rte_trace_point_emit_ptr(peer_info);
+	rte_trace_point_emit_u32(direction);
+)
+
+RTE_TRACE_POINT(
+	rte_eth_trace_ip_reassembly_dynfield_register,
+	RTE_TRACE_POINT_ARGS(int field_offset, int flag_offset),
+	rte_trace_point_emit_int(field_offset);
+	rte_trace_point_emit_int(flag_offset);
+)
+
+RTE_TRACE_POINT(
+	rte_eth_trace_representor_id_get,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id,
+		enum rte_eth_representor_type type,
+		int controller, int pf, int representor_port,
+		uint16_t repr_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_int(type);
+	rte_trace_point_emit_int(controller);
+	rte_trace_point_emit_int(pf);
+	rte_trace_point_emit_int(representor_port);
+	rte_trace_point_emit_u16(repr_id);
+)
+
+RTE_TRACE_POINT(
+	rte_eth_trace_switch_domain_alloc,
+	RTE_TRACE_POINT_ARGS(uint16_t domain_id),
+	rte_trace_point_emit_u16(domain_id);
+)
+
+RTE_TRACE_POINT(
+	rte_eth_trace_switch_domain_free,
+	RTE_TRACE_POINT_ARGS(uint16_t domain_id),
+	rte_trace_point_emit_u16(domain_id);
 )
 
 #ifdef __cplusplus

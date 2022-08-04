@@ -731,3 +731,69 @@ RTE_TRACE_POINT_REGISTER(rte_tm_trace_wred_profile_add,
 
 RTE_TRACE_POINT_REGISTER(rte_tm_trace_wred_profile_delete,
 	lib.ethdev.tm.wred_profile_delete)
+
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_allocate,
+	lib.ethdev.allocate)
+
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_allocated,
+	lib.ethdev.allocated)
+
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_attach_secondary,
+	lib.ethdev.attach_secondary)
+
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_callback_process,
+	lib.ethdev.callback_process)
+
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_create,
+	lib.ethdev_create)
+
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_destroy,
+	lib.ethdev.destroy)
+
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_get_by_name,
+	lib.ethdev.get_by_name)
+
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_is_rx_hairpin_queue,
+	lib.ethdev.is_rx_hairpin_queue)
+
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_is_tx_hairpin_queue,
+	lib.ethdev.is_tx_hairpin_queue)
+
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_probing_finish,
+	lib.ethdev.probing_finish)
+
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_release_port,
+	lib.ethdev.release_port)
+
+RTE_TRACE_POINT_REGISTER(rte_ethdev_trace_internal_reset,
+	lib.ethdev.internal_reset)
+
+RTE_TRACE_POINT_REGISTER(rte_eth_trace_devargs_parse,
+	lib.ethdev.devargs_parse)
+
+RTE_TRACE_POINT_REGISTER(rte_eth_trace_dma_zone_free,
+	lib.ethdev.dma_zone_free)
+
+RTE_TRACE_POINT_REGISTER(rte_eth_trace_dma_zone_reserve,
+	lib.ethdev.dma_zone_reserve)
+
+RTE_TRACE_POINT_REGISTER(rte_eth_trace_hairpin_queue_peer_bind,
+	lib.ethdev.hairpin_queue_peer_bind)
+
+RTE_TRACE_POINT_REGISTER(rte_eth_trace_hairpin_queue_peer_unbind,
+	lib.ethdev.hairpin_queue_peer_unbind)
+
+RTE_TRACE_POINT_REGISTER(rte_eth_trace_hairpin_queue_peer_update,
+	lib.ethdev.hairpin_queue_peer_update)
+
+RTE_TRACE_POINT_REGISTER(rte_eth_trace_ip_reassembly_dynfield_register,
+	lib.ethdev.ip_reassembly_dynfield_register)
+
+RTE_TRACE_POINT_REGISTER(rte_eth_trace_representor_id_get,
+	lib.ethdev.representor_id_get)
+
+RTE_TRACE_POINT_REGISTER(rte_eth_trace_switch_domain_alloc,
+	lib.ethdev.switch_domain_alloc)
+
+RTE_TRACE_POINT_REGISTER(rte_eth_trace_switch_domain_free,
+	lib.ethdev.switch_domain_free)
