@@ -84,6 +84,10 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* ethdev: Removed deprecated ``ETH_LINK_SPEED_*``, ``ETH_SPEED_NUM_*`` and
+  ``ETH_LINK_*`` (duplex-related) defines. Use corresponding defines
+  with ``RTE_`` prefix instead.
+
 
 ABI Changes
 -----------
