@@ -471,6 +471,25 @@ EXPERIMENTAL {
 	__rte_flow_trace_tunnel_item_release;
 	__rte_flow_trace_tunnel_match;
 	__rte_flow_trace_validate;
+	__rte_mtr_trace_capabilities_get;
+	__rte_mtr_trace_color_in_protocol_get;
+	__rte_mtr_trace_color_in_protocol_priority_get;
+	__rte_mtr_trace_color_in_protocol_set;
+	__rte_mtr_trace_create;
+	__rte_mtr_trace_destroy;
+	__rte_mtr_trace_meter_disable;
+	__rte_mtr_trace_meter_dscp_table_update;
+	__rte_mtr_trace_meter_enable;
+	__rte_mtr_trace_meter_policy_add;
+	__rte_mtr_trace_meter_policy_delete;
+	__rte_mtr_trace_meter_policy_update;
+	__rte_mtr_trace_meter_policy_validate;
+	__rte_mtr_trace_meter_profile_add;
+	__rte_mtr_trace_meter_profile_delete;
+	__rte_mtr_trace_meter_profile_update;
+	__rte_mtr_trace_meter_vlan_table_update;
+	__rte_mtr_trace_stats_read;
+	__rte_mtr_trace_stats_update;
 };
 
 INTERNAL {

@@ -6,6 +6,7 @@
 
 #include <rte_errno.h>
 #include "rte_ethdev.h"
+#include "rte_ethdev_trace.h"
 #include "rte_mtr_driver.h"
 #include "rte_mtr.h"
 
@@ -63,6 +64,7 @@ rte_mtr_capabilities_get(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_capabilities_get(port_id, cap);
 	return RTE_MTR_FUNC(port_id, capabilities_get)(dev,
 		cap, error);
 }
@@ -75,6 +77,7 @@ rte_mtr_meter_profile_add(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_meter_profile_add(port_id, meter_profile_id, profile);
 	return RTE_MTR_FUNC(port_id, meter_profile_add)(dev,
 		meter_profile_id, profile, error);
 }
@@ -86,6 +89,7 @@ rte_mtr_meter_profile_delete(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_meter_profile_delete(port_id, meter_profile_id);
 	return RTE_MTR_FUNC(port_id, meter_profile_delete)(dev,
 		meter_profile_id, error);
 }
@@ -97,6 +101,10 @@ rte_mtr_meter_policy_validate(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	int i;
+
+	for (i = 0; i < RTE_COLORS; i++)
+		rte_mtr_trace_meter_policy_validate(port_id, policy->actions[i]);
 	return RTE_MTR_FUNC(port_id, meter_policy_validate)(dev,
 		policy, error);
 }
@@ -109,6 +117,11 @@ rte_mtr_meter_policy_add(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	int i;
+
+	for (i = 0; i < RTE_COLORS; i++)
+		rte_mtr_trace_meter_policy_add(port_id, policy_id,
+					       policy->actions[i]);
 	return RTE_MTR_FUNC(port_id, meter_policy_add)(dev,
 		policy_id, policy, error);
 }
@@ -120,6 +133,7 @@ rte_mtr_meter_policy_delete(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_meter_policy_delete(port_id, policy_id);
 	return RTE_MTR_FUNC(port_id, meter_policy_delete)(dev,
 		policy_id, error);
 }
@@ -133,6 +147,7 @@ rte_mtr_create(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_create(port_id, mtr_id, params, shared);
 	return RTE_MTR_FUNC(port_id, create)(dev,
 		mtr_id, params, shared, error);
 }
@@ -144,6 +159,7 @@ rte_mtr_destroy(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_destroy(port_id, mtr_id);
 	return RTE_MTR_FUNC(port_id, destroy)(dev,
 		mtr_id, error);
 }
@@ -155,6 +171,7 @@ rte_mtr_meter_enable(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_meter_enable(port_id, mtr_id);
 	return RTE_MTR_FUNC(port_id, meter_enable)(dev,
 		mtr_id, error);
 }
@@ -166,6 +183,7 @@ rte_mtr_meter_disable(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_meter_disable(port_id, mtr_id);
 	return RTE_MTR_FUNC(port_id, meter_disable)(dev,
 		mtr_id, error);
 }
@@ -178,6 +196,7 @@ rte_mtr_meter_profile_update(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_meter_profile_update(port_id, mtr_id, meter_profile_id);
 	return RTE_MTR_FUNC(port_id, meter_profile_update)(dev,
 		mtr_id, meter_profile_id, error);
 }
@@ -190,6 +209,7 @@ rte_mtr_meter_policy_update(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_meter_policy_update(port_id, mtr_id, meter_policy_id);
 	return RTE_MTR_FUNC(port_id, meter_policy_update)(dev,
 		mtr_id, meter_policy_id, error);
 }
@@ -202,6 +222,7 @@ rte_mtr_meter_dscp_table_update(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_meter_dscp_table_update(port_id, mtr_id, dscp_table);
 	return RTE_MTR_FUNC(port_id, meter_dscp_table_update)(dev,
 		mtr_id, dscp_table, error);
 }
@@ -214,6 +235,7 @@ rte_mtr_meter_vlan_table_update(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_meter_vlan_table_update(port_id, mtr_id, vlan_table);
 	return RTE_MTR_FUNC(port_id, meter_vlan_table_update)(dev,
 		mtr_id, vlan_table, error);
 }
@@ -227,6 +249,7 @@ rte_mtr_color_in_protocol_set(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_color_in_protocol_set(port_id, mtr_id, proto, priority);
 	return RTE_MTR_FUNC(port_id, in_proto_set)(dev,
 		mtr_id, proto, priority, error);
 }
@@ -239,6 +262,7 @@ rte_mtr_color_in_protocol_get(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_color_in_protocol_get(port_id, mtr_id);
 	return RTE_MTR_FUNC(port_id, in_proto_get)(dev,
 		mtr_id, proto_mask, error);
 }
@@ -252,6 +276,7 @@ rte_mtr_color_in_protocol_priority_get(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_color_in_protocol_priority_get(port_id, mtr_id, proto);
 	return RTE_MTR_FUNC(port_id, in_proto_prio_get)(dev,
 		mtr_id, proto, priority, error);
 }
@@ -264,6 +289,7 @@ rte_mtr_stats_update(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_stats_update(port_id, mtr_id, stats_mask);
 	return RTE_MTR_FUNC(port_id, stats_update)(dev,
 		mtr_id, stats_mask, error);
 }
@@ -278,6 +304,7 @@ rte_mtr_stats_read(uint16_t port_id,
 	struct rte_mtr_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_mtr_trace_stats_read(port_id, mtr_id, stats, stats_mask, clear);
 	return RTE_MTR_FUNC(port_id, stats_read)(dev,
 		mtr_id, stats, stats_mask, clear, error);
 }
