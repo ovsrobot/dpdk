@@ -88,6 +88,9 @@ API Changes
   ``ETH_LINK_*`` (duplex-related) defines. Use corresponding defines
   with ``RTE_`` prefix instead.
 
+* ethdev: Removed deprecated ``ETH_MQ_RX_*`` and ``ETH_MQ_TX_*`` defines.
+  Use corresponding defines with ``RTE_`` prefix instead.
+
 
 ABI Changes
 -----------
