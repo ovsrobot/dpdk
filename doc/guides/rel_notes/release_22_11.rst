@@ -106,6 +106,9 @@ API Changes
 * ethdev: Removed deprecated ``RTE_TUNNEL_*`` defines. Use corresponding
   defines with ``RTE_ETH_TUNNEL_`` prefix instead.
 
+* ethdev: Removed deprecated ``RTE_FC_*`` defines. Use corresponding
+  defines with ``RTE_ETH_FC_`` prefix instead.
+
 
 ABI Changes
 -----------
