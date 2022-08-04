@@ -5,6 +5,7 @@
 #include <rte_debug.h>
 
 #include "rte_ethdev.h"
+#include "rte_ethdev_trace.h"
 #include "ethdev_driver.h"
 #include "ethdev_private.h"
 
@@ -291,6 +292,8 @@ rte_eth_call_rx_callbacks(uint16_t port_id, uint16_t queue_id,
 {
 	const struct rte_eth_rxtx_callback *cb = opaque;
 
+	rte_eth_trace_call_rx_callbacks(port_id, queue_id, rx_pkts, nb_rx,
+					nb_pkts, opaque);
 	while (cb != NULL) {
 		nb_rx = cb->fn.rx(port_id, queue_id, rx_pkts, nb_rx,
 				nb_pkts, cb->param);
@@ -306,6 +309,8 @@ rte_eth_call_tx_callbacks(uint16_t port_id, uint16_t queue_id,
 {
 	const struct rte_eth_rxtx_callback *cb = opaque;
 
+	rte_eth_trace_call_tx_callbacks(port_id, queue_id, tx_pkts, nb_pkts,
+					opaque);
 	while (cb != NULL) {
 		nb_pkts = cb->fn.tx(port_id, queue_id, tx_pkts, nb_pkts,
 				cb->param);
