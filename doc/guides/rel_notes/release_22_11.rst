@@ -115,6 +115,9 @@ API Changes
 * ethdev: Removed deprecated ``ETH_NUM_RECEIVE_MAC_ADDR`` define.
   Use corresponding define with ``RTE_`` prefix instead.
 
+* ethdev: Removed deprecated ``PKT_{R,T}X_DYNF_METADATA`` defines.
+  Use corresponding defines ``RTE_MBUF_DYNFLAG_{R,T}X_METADATA`` instead.
+
 
 ABI Changes
 -----------
