@@ -84,6 +84,9 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* mbuf: Removed deprecated ``PKT_*`` flags.
+  Use corresponding flags with ``RTE_MBUF_F_`` prefix instead.
+
 
 ABI Changes
 -----------
