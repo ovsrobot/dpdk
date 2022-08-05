@@ -365,6 +365,24 @@ def bind_one(dev_id, driver, force):
         unbind_one(dev_id, force)
         dev["Driver_str"] = ""  # clear driver string
 
+    # For kernels >= 5.19 driver_override must be written, or device
+    # can not be bind from dpdk driver to other specified driver.
+    filename = "/sys/bus/pci/devices/%s/driver_override" % dev_id
+    if exists(filename):
+        try:
+            f = open(filename, "w")
+        except OSError as err:
+            print("Error: bind failed for %s - Cannot open %s: %s"
+                  % (dev_id, filename, err), file=sys.stderr)
+            return
+        try:
+            f.write("%s" % driver)
+            f.close()
+        except OSError as err:
+            print("Error: bind failed for %s - Cannot write driver %s to "
+                  "PCI ID: %s" % (dev_id, driver, err), file=sys.stderr)
+            return
+
     # For kernels >= 3.15 driver_override can be used to specify the driver
     # for a device rather than relying on the driver to provide a positive
     # match of the device.  The existing process of looking up
@@ -372,23 +390,8 @@ def bind_one(dev_id, driver, force):
     # will erroneously bind other devices too which has the additional burden
     # of unbinding those devices
     if driver in dpdk_drivers:
-        filename = "/sys/bus/pci/devices/%s/driver_override" % dev_id
-        if exists(filename):
-            try:
-                f = open(filename, "w")
-            except OSError as err:
-                print("Error: bind failed for %s - Cannot open %s: %s"
-                      % (dev_id, filename, err), file=sys.stderr)
-                return
-            try:
-                f.write("%s" % driver)
-                f.close()
-            except OSError as err:
-                print("Error: bind failed for %s - Cannot write driver %s to "
-                      "PCI ID: %s" % (dev_id, driver, err), file=sys.stderr)
-                return
         # For kernels < 3.15 use new_id to add PCI id's to the driver
-        else:
+        if not exists(filename):
             filename = "/sys/bus/pci/drivers/%s/new_id" % driver
             try:
                 f = open(filename, "w")
@@ -431,23 +434,6 @@ def bind_one(dev_id, driver, force):
         if saved_driver is not None:  # restore any previous driver
             bind_one(dev_id, saved_driver, force)
         return
-
-    # For kernels > 3.15 driver_override is used to bind a device to a driver.
-    # Before unbinding it, overwrite driver_override with empty string so that
-    # the device can be bound to any other driver
-    filename = "/sys/bus/pci/devices/%s/driver_override" % dev_id
-    if exists(filename):
-        try:
-            f = open(filename, "w")
-        except OSError as err:
-            sys.exit("Error: unbind failed for %s - Cannot open %s: %s"
-                     % (dev_id, filename, err))
-        try:
-            f.write("\00")
-            f.close()
-        except OSError as err:
-            sys.exit("Error: unbind failed for %s - Cannot write %s: %s"
-                     % (dev_id, filename, err))
 
 
 def unbind_all(dev_list, force=False):
