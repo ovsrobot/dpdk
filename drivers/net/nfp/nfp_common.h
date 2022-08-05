@@ -448,6 +448,9 @@ void nfp_net_close_tx_queue(struct rte_eth_dev *dev);
 #define NFP_APP_PRIV_TO_APP_NIC(app_priv)\
 	((struct nfp_app_nic *)app_priv)
 
+#define NFP_APP_PRIV_TO_APP_FLOWER(app_priv)\
+	((struct nfp_app_flower *)app_priv)
+
 #endif /* _NFP_COMMON_H_ */
 /*
  * Local variables:
