@@ -10,6 +10,8 @@
 #ifndef _RTE_RING_ELEM_PVT_H_
 #define _RTE_RING_ELEM_PVT_H_
 
+#include <rte_memcpy.h>
+
 static __rte_always_inline void
 __rte_ring_enqueue_elems_32(struct rte_ring *r, const uint32_t size,
 		uint32_t idx, const void *obj_table, uint32_t n)
@@ -97,20 +99,20 @@ __rte_ring_enqueue_elems_128(struct rte_ring *r, uint32_t prod_head,
 	const rte_int128_t *obj = (const rte_int128_t *)obj_table;
 	if (likely(idx + n <= size)) {
 		for (i = 0; i < (n & ~0x1); i += 2, idx += 2)
-			memcpy((void *)(ring + idx),
+			rte_memcpy((void *)(ring + idx),
 				(const void *)(obj + i), 32);
 		switch (n & 0x1) {
 		case 1:
-			memcpy((void *)(ring + idx),
+			rte_memcpy((void *)(ring + idx),
 				(const void *)(obj + i), 16);
 		}
 	} else {
 		for (i = 0; idx < size; i++, idx++)
-			memcpy((void *)(ring + idx),
+			rte_memcpy((void *)(ring + idx),
 				(const void *)(obj + i), 16);
 		/* Start at the beginning */
 		for (idx = 0; i < n; i++, idx++)
-			memcpy((void *)(ring + idx),
+			rte_memcpy((void *)(ring + idx),
 				(const void *)(obj + i), 16);
 	}
 }
@@ -231,17 +233,17 @@ __rte_ring_dequeue_elems_128(struct rte_ring *r, uint32_t prod_head,
 	rte_int128_t *obj = (rte_int128_t *)obj_table;
 	if (likely(idx + n <= size)) {
 		for (i = 0; i < (n & ~0x1); i += 2, idx += 2)
-			memcpy((void *)(obj + i), (void *)(ring + idx), 32);
+			rte_memcpy((void *)(obj + i), (void *)(ring + idx), 32);
 		switch (n & 0x1) {
 		case 1:
-			memcpy((void *)(obj + i), (void *)(ring + idx), 16);
+			rte_memcpy((void *)(obj + i), (void *)(ring + idx), 16);
 		}
 	} else {
 		for (i = 0; idx < size; i++, idx++)
-			memcpy((void *)(obj + i), (void *)(ring + idx), 16);
+			rte_memcpy((void *)(obj + i), (void *)(ring + idx), 16);
 		/* Start at the beginning */
 		for (idx = 0; i < n; i++, idx++)
-			memcpy((void *)(obj + i), (void *)(ring + idx), 16);
+			rte_memcpy((void *)(obj + i), (void *)(ring + idx), 16);
 	}
 }
 
