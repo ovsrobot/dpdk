@@ -1551,6 +1551,7 @@ iavf_fdir_parse(struct iavf_adapter *ad,
 		uint32_t array_len,
 		const struct rte_flow_item pattern[],
 		const struct rte_flow_action actions[],
+		uint32_t priority,
 		void **meta,
 		struct rte_flow_error *error)
 {
@@ -1560,6 +1561,9 @@ iavf_fdir_parse(struct iavf_adapter *ad,
 	int ret;
 
 	memset(filter, 0, sizeof(*filter));
+
+	if (priority >= 1)
+		return -rte_errno;
 
 	item = iavf_search_pattern_match_item(pattern, array, array_len, error);
 	if (!item)
