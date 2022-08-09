@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Marvell cnxk crypto driver.**
+
+  * Added AES-CCM support in lookaside protocol (IPsec) for CN9K & CN10K.
+
 
 Removed Items
 -------------
