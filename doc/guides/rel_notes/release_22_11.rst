@@ -88,6 +88,9 @@ API Changes
 ABI Changes
 -----------
 
+* eventdev: Added ``weight`` and ``affinity`` fields to ``rte_event_queue_conf``
+  structure.
+
 .. This section should contain ABI changes. Sample format:
 
    * sample: Add a short 1-2 sentence description of the ABI change
