@@ -1739,6 +1739,12 @@ M: Reshma Pattan <reshma.pattan@intel.com>
 F: app/proc-info/
 F: doc/guides/tools/proc_info.rst
 
+Security performance tool
+M: Anoob Joseph <anoobj@marvell.com>
+T: git://dpdk.org/next/dpdk-next-crypto
+F: app/test-security-perf/
+F: doc/guides/tools/securityperf.rst
+
 
 Other Example Applications
 --------------------------
