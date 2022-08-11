@@ -100,6 +100,11 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+   * ethdev: Removed the Rx offload flag ``RTE_ETH_RX_OFFLOAD_HEADER_SPLIT``
+     and field ``split_hdr_size`` from the structure ``rte_eth_rxmode`` used
+     to configure header split. Instead, user can still use
+     ``RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT`` for per-queue packet split
+     offlod, which is configured by ``rte_eth_rxseg_split``.
 
 Known Issues
 ------------
