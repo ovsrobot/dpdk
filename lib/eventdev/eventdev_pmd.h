@@ -77,6 +77,9 @@ extern "C" {
 #define RTE_EVENT_CRYPTO_ADAPTER_SW_CAP \
 		RTE_EVENT_CRYPTO_ADAPTER_CAP_SESSION_PRIVATE_DATA
 
+#define RTE_EVENT_TIMER_ADAPTER_SW_CAP \
+	RTE_EVENT_TIMER_ADAPTER_CAP_PERIODIC
+
 /**< Ethernet Rx adapter cap to return If the packet transfers from
  * the ethdev to eventdev use a SW service function
  */
