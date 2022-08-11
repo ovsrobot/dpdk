@@ -408,6 +408,8 @@ int rte_ethtool_get_ringparam(uint16_t port_id,
 int rte_ethtool_set_ringparam(uint16_t port_id,
 	struct ethtool_ringparam *ring_param);
 
+int
+eth_set_promisc_mode(uint16_t port, int enable);
 
 #ifdef __cplusplus
 }

@@ -19,6 +19,30 @@
 
 
 int
+eth_set_promisc_mode(uint16_t port, int enable)
+{
+	int ret;
+
+
+	if (enable)
+		ret = rte_eth_promiscuous_enable(port);
+	else
+		ret = rte_eth_promiscuous_disable(port);
+
+	if (ret != 0) {
+		fprintf(stderr,
+			"Error during %s promiscuous mode for port %u: %s\n",
+			enable ? "enabling" : "disabling",
+			port, rte_strerror(-ret));
+			return 0;
+	} else
+		return 1;
+}
+
+
+
+
+int
 rte_ethtool_get_drvinfo(uint16_t port_id, struct ethtool_drvinfo *drvinfo)
 {
 	struct rte_eth_dev_info dev_info;
