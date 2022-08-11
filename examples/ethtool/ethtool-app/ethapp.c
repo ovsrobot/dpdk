@@ -8,12 +8,30 @@
 #include <cmdline_parse_etheraddr.h>
 #include <cmdline_socket.h>
 #include <cmdline.h>
-
+#ifdef RTE_NET_IXGBE
+#include <rte_pmd_ixgbe.h>
+#endif
+#ifdef RTE_NET_BNXT
+#include <rte_pmd_bnxt.h>
+#endif
 #include "rte_ethtool.h"
 #include "ethapp.h"
 
 #define EEPROM_DUMP_CHUNKSIZE 1024
 
+typedef uint16_t portid_t;
+
+/* *** CONFIGURE VF RECEIVE MODE *** */
+struct cmd_set_vf_rxmode {
+	cmdline_fixed_string_t set;
+	cmdline_fixed_string_t port;
+	portid_t port_id;
+	cmdline_fixed_string_t vf;
+	uint8_t vf_id;
+	cmdline_fixed_string_t what;
+	cmdline_fixed_string_t mode;
+	cmdline_fixed_string_t on;
+};
 
 struct pcmd_get_params {
 	cmdline_fixed_string_t cmd;
@@ -65,8 +83,6 @@ cmdline_parse_token_string_t pcmd_open_token_cmd =
 	TOKEN_STRING_INITIALIZER(struct pcmd_int_params, cmd, "open");
 cmdline_parse_token_string_t pcmd_stop_token_cmd =
 	TOKEN_STRING_INITIALIZER(struct pcmd_int_params, cmd, "stop");
-cmdline_parse_token_string_t pcmd_rxmode_token_cmd =
-	TOKEN_STRING_INITIALIZER(struct pcmd_int_params, cmd, "rxmode");
 cmdline_parse_token_string_t pcmd_portstats_token_cmd =
 	TOKEN_STRING_INITIALIZER(struct pcmd_int_params, cmd, "portstats");
 cmdline_parse_token_num_t pcmd_int_token_port =
@@ -133,6 +149,31 @@ cmdline_parse_token_string_t pcmd_vlan_token_mode =
 cmdline_parse_token_num_t pcmd_vlan_token_vid =
 	TOKEN_NUM_INITIALIZER(struct pcmd_vlan_params, vid, RTE_UINT16);
 
+/* rxmode */
+cmdline_parse_token_string_t cmd_set_vf_rxmode_set =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_vf_rxmode,
+				 set, "set");
+cmdline_parse_token_string_t cmd_set_vf_rxmode_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_vf_rxmode,
+				 port, "port");
+cmdline_parse_token_num_t cmd_set_vf_rxmode_portid =
+	TOKEN_NUM_INITIALIZER(struct cmd_set_vf_rxmode,
+			      port_id, RTE_UINT16);
+cmdline_parse_token_string_t cmd_set_vf_rxmode_vf =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_vf_rxmode,
+				 vf, "vf");
+cmdline_parse_token_num_t cmd_set_vf_rxmode_vfid =
+	TOKEN_NUM_INITIALIZER(struct cmd_set_vf_rxmode,
+			      vf_id, RTE_UINT8);
+cmdline_parse_token_string_t cmd_set_vf_rxmode_what =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_vf_rxmode,
+				 what, "rxmode");
+cmdline_parse_token_string_t cmd_set_vf_rxmode_mode =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_vf_rxmode,
+				 mode, "AUPE#ROPE#BAM#MPE");
+cmdline_parse_token_string_t cmd_set_vf_rxmode_on =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_vf_rxmode,
+				 on, "on#off");
 
 static void
 pcmd_quit_callback(__rte_unused void *ptr_params,
@@ -142,7 +183,6 @@ pcmd_quit_callback(__rte_unused void *ptr_params,
 	cmdline_quit(ctx);
 }
 
-
 static void
 pcmd_drvinfo_callback(__rte_unused void *ptr_params,
 	__rte_unused struct cmdline *ctx,
@@ -150,7 +190,6 @@ pcmd_drvinfo_callback(__rte_unused void *ptr_params,
 {
 	struct ethtool_drvinfo info;
 	uint16_t id_port;
-
 	RTE_ETH_FOREACH_DEV(id_port) {
 		memset(&info, 0, sizeof(info));
 		if (rte_ethtool_get_drvinfo(id_port, &info)) {
@@ -447,26 +486,57 @@ pcmd_stop_callback(__rte_unused void *ptr_params,
 		printf("Port %i: Error stopping device\n", params->port);
 }
 
-
 static void
-pcmd_rxmode_callback(void *ptr_params,
-	__rte_unused struct cmdline *ctx,
-	__rte_unused void *ptr_data)
+pcmd_rxmode_callback(void *parsed_result,
+		       __rte_unused struct cmdline *cl,
+		       __rte_unused void *data)
 {
-	struct pcmd_intstr_params *params = ptr_params;
-	int stat;
+	int ret = -ENOTSUP;
+	uint16_t vf_rxmode = 0;
+	struct cmd_set_vf_rxmode *res = parsed_result;
 
-	if (!rte_eth_dev_is_valid_port(params->port)) {
-		printf("Error: Invalid port number %i\n", params->port);
-		return;
+	int is_on = (strcmp(res->on, "on") == 0) ? 1 : 0;
+	if (!strcmp(res->what, "rxmode")) {
+		if (!strcmp(res->mode, "AUPE"))
+			vf_rxmode |= RTE_ETH_VMDQ_ACCEPT_UNTAG;
+		else if (!strcmp(res->mode, "ROPE"))
+			vf_rxmode |= RTE_ETH_VMDQ_ACCEPT_HASH_UC;
+		else if (!strcmp(res->mode, "BAM"))
+			vf_rxmode |= RTE_ETH_VMDQ_ACCEPT_BROADCAST;
+		else if (!strncmp(res->mode, "MPE", 3))
+			vf_rxmode |= RTE_ETH_VMDQ_ACCEPT_MULTICAST;
 	}
-	stat = rte_ethtool_net_set_rx_mode(params->port);
-	if (stat == 0)
-		return;
-	else if (stat == -ENOTSUP)
-		printf("Port %i: Operation not supported\n", params->port);
-	else
-		printf("Port %i: Error setting rx mode\n", params->port);
+
+	RTE_SET_USED(is_on);
+	RTE_SET_USED(vf_rxmode);
+
+#ifdef RTE_NET_IXGBE
+	if (ret == -ENOTSUP) {
+		ret = rte_pmd_ixgbe_set_vf_rxmode(res->port_id, res->vf_id,
+						  vf_rxmode, (uint8_t)is_on);
+		if (ret == -ENOTSUP)
+			printf("ixgbe not supported\n");
+	}
+#endif
+#ifdef RTE_NET_BNXT
+	if (ret == -ENOTSUP) {
+		ret = rte_pmd_bnxt_set_vf_rxmode(res->port_id, res->vf_id,
+						 vf_rxmode, (uint8_t)is_on);
+		if (ret == -ENOTSUP)
+			printf("bnxt not supported\n");
+	}
+#endif
+	int ret_offload = -ENOTSUP;
+	if (!strcmp(res->mode, "AUPE")) {
+		ret_offload = rte_eth_dev_set_vlan_offload(res->port_id, RTE_ETH_VLAN_FILTER_MASK);
+		if (ret_offload == -ENOTSUP)
+			printf("Port %i: VLAN Filter setting mask not supported\n", res->port_id);
+	}
+	if (ret < 0)
+		fprintf(stderr,
+			"bad VF receive mode parameter, return code = %d\n", ret);
+	else if (ret == 0)
+		printf("Successful\n");
 }
 
 
@@ -763,16 +833,25 @@ cmdline_parse_inst_t pcmd_stop = {
 		NULL
 	},
 };
-cmdline_parse_inst_t pcmd_rxmode = {
+
+cmdline_parse_inst_t cmd_set_vf_rxmode = {
 	.f = pcmd_rxmode_callback,
 	.data = NULL,
-	.help_str = "rxmode <port_id>\n     Toggle port Rx mode",
+	.help_str = "set port <port_id> vf <vf_id> rxmode "
+		"AUPE|ROPE|BAM|MPE on|off",
 	.tokens = {
-		(void *)&pcmd_rxmode_token_cmd,
-		(void *)&pcmd_int_token_port,
-		NULL
+		(void *)&cmd_set_vf_rxmode_set,
+		(void *)&cmd_set_vf_rxmode_port,
+		(void *)&cmd_set_vf_rxmode_portid,
+		(void *)&cmd_set_vf_rxmode_vf,
+		(void *)&cmd_set_vf_rxmode_vfid,
+		(void *)&cmd_set_vf_rxmode_what,
+		(void *)&cmd_set_vf_rxmode_mode,
+		(void *)&cmd_set_vf_rxmode_on,
+		NULL,
 	},
 };
+
 cmdline_parse_inst_t pcmd_macaddr_get = {
 	.f = pcmd_macaddr_callback,
 	.data = NULL,
@@ -869,7 +948,6 @@ cmdline_parse_inst_t pcmd_vlan = {
 	},
 };
 
-
 cmdline_parse_ctx_t list_prompt_commands[] = {
 	(cmdline_parse_inst_t *)&pcmd_drvinfo,
 	(cmdline_parse_inst_t *)&pcmd_eeprom,
@@ -885,7 +963,7 @@ cmdline_parse_ctx_t list_prompt_commands[] = {
 	(cmdline_parse_inst_t *)&pcmd_regs,
 	(cmdline_parse_inst_t *)&pcmd_ringparam,
 	(cmdline_parse_inst_t *)&pcmd_ringparam_set,
-	(cmdline_parse_inst_t *)&pcmd_rxmode,
+	(cmdline_parse_inst_t *)&cmd_set_vf_rxmode,
 	(cmdline_parse_inst_t *)&pcmd_stop,
 	(cmdline_parse_inst_t *)&pcmd_validate,
 	(cmdline_parse_inst_t *)&pcmd_vlan,
