@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added new ethdev API for PMD to get buffer split supported protocol types.**
+
+  Added ``rte_eth_buffer_split_get_supported_hdr_ptypes()``, to get supported
+  header protocols of a PMD to split.
+
 
 Removed Items
 -------------
