@@ -926,6 +926,11 @@ enum ice_status ice_init_hw(struct ice_hw *hw)
 	if (status)
 		goto err_unroll_cqinit;
 
+	/* Tell the Firmware to shut down the AdminQ to avoid possible error
+	 * when process was killed abnormally.
+	 */
+	ice_aq_q_shutdown(hw, true);
+
 	status = ice_init_nvm(hw);
 	if (status)
 		goto err_unroll_cqinit;
