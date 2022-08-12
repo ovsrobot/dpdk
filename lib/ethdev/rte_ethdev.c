@@ -1635,7 +1635,55 @@ rte_eth_dev_is_removed(uint16_t port_id)
 }
 
 static int
-rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
+rte_eth_rx_queue_check_sort(const struct rte_eth_rxseg *rx_seg,
+			     uint16_t n_seg, uint32_t *mbp_buf_size,
+			     const struct rte_eth_dev_info *dev_info)
+{
+	const struct rte_eth_rxseg_capa *seg_capa = &dev_info->rx_seg_capa;
+	uint16_t seg_idx;
+
+	if (!seg_capa->multi_pools || n_seg > seg_capa->max_npool) {
+		RTE_ETHDEV_LOG(ERR,
+			       "Invalid capabilities, multi_pools:%d differnt length segments %u exceed supported %u\n",
+			       seg_capa->multi_pools, n_seg, seg_capa->max_nseg);
+		return -EINVAL;
+	}
+
+	for (seg_idx = 0; seg_idx < n_seg; seg_idx++) {
+		struct rte_mempool *mpl = rx_seg[seg_idx].sort.mp;
+		uint32_t length = rx_seg[seg_idx].sort.length;
+
+		if (mpl == NULL) {
+			RTE_ETHDEV_LOG(ERR, "null mempool pointer\n");
+			return -EINVAL;
+		}
+
+		if (mpl->private_data_size <
+			sizeof(struct rte_pktmbuf_pool_private)) {
+			RTE_ETHDEV_LOG(ERR,
+				       "%s private_data_size %u < %u\n",
+				       mpl->name, mpl->private_data_size,
+				       (unsigned int)sizeof
+					(struct rte_pktmbuf_pool_private));
+			return -ENOSPC;
+		}
+
+		*mbp_buf_size = rte_pktmbuf_data_room_size(mpl);
+		length = length != 0 ? length : (*mbp_buf_size - RTE_PKTMBUF_HEADROOM);
+		if (*mbp_buf_size < length + RTE_PKTMBUF_HEADROOM) {
+			RTE_ETHDEV_LOG(ERR,
+				       "%s mbuf_data_room_size %u < %u))\n",
+				       mpl->name, *mbp_buf_size,
+				       length);
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
+static int
+rte_eth_rx_queue_check_split(const struct rte_eth_rxseg *rx_seg,
 			     uint16_t n_seg, uint32_t *mbp_buf_size,
 			     const struct rte_eth_dev_info *dev_info)
 {
@@ -1654,12 +1702,12 @@ rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 	 * Check the sizes and offsets against buffer sizes
 	 * for each segment specified in extended configuration.
 	 */
-	mp_first = rx_seg[0].mp;
+	mp_first = rx_seg[0].split.mp;
 	offset_mask = RTE_BIT32(seg_capa->offset_align_log2) - 1;
 	for (seg_idx = 0; seg_idx < n_seg; seg_idx++) {
-		struct rte_mempool *mpl = rx_seg[seg_idx].mp;
-		uint32_t length = rx_seg[seg_idx].length;
-		uint32_t offset = rx_seg[seg_idx].offset;
+		struct rte_mempool *mpl = rx_seg[seg_idx].split.mp;
+		uint32_t length = rx_seg[seg_idx].split.length;
+		uint32_t offset = rx_seg[seg_idx].split.offset;
 
 		if (mpl == NULL) {
 			RTE_ETHDEV_LOG(ERR, "null mempool pointer\n");
@@ -1693,7 +1741,11 @@ rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 		}
 		offset += seg_idx != 0 ? 0 : RTE_PKTMBUF_HEADROOM;
 		*mbp_buf_size = rte_pktmbuf_data_room_size(mpl);
-		length = length != 0 ? length : *mbp_buf_size;
+		/* On segment length == 0, update segment's length with
+		 * the pool's length - headeroom space, to make sure enough
+		 * space is accomidate for header.
+		 **/
+		length = length != 0 ? length : (*mbp_buf_size - RTE_PKTMBUF_HEADROOM);
 		if (*mbp_buf_size < length + offset) {
 			RTE_ETHDEV_LOG(ERR,
 				       "%s mbuf_data_room_size %u < %u (segment length=%u + segment offset=%u)\n",
@@ -1764,7 +1816,6 @@ rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 			return -EINVAL;
 		}
 	} else {
-		const struct rte_eth_rxseg_split *rx_seg;
 		uint16_t n_seg;
 
 		/* Extended multi-segment configuration check. */
@@ -1774,13 +1825,27 @@ rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 			return -EINVAL;
 		}
 
-		rx_seg = (const struct rte_eth_rxseg_split *)rx_conf->rx_seg;
 		n_seg = rx_conf->rx_nseg;
 
 		if (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) {
-			ret = rte_eth_rx_queue_check_split(rx_seg, n_seg,
-							   &mbp_buf_size,
-							   &dev_info);
+			ret = -1; /* To make sure at least one of below conditions becomes true */
+
+			/* Check both NIX and application supports buffer-split capability */
+			if (dev_info.rx_seg_capa.mode_split &&
+			    rx_conf->mode_flag == RTE_ETH_RXSEG_MODE_SPLIT) {
+				ret = rte_eth_rx_queue_check_split(rx_conf->rx_seg, n_seg,
+								   &mbp_buf_size,
+								   &dev_info);
+			}
+
+			/* Check both NIX and application supports pool-sort capability */
+			if (dev_info.rx_seg_capa.mode_sort &&
+			    rx_conf->mode_flag == RTE_ETH_RXSEG_MODE_SORT) {
+				ret = rte_eth_rx_queue_check_sort(rx_conf->rx_seg, n_seg,
+								  &mbp_buf_size,
+								  &dev_info);
+			}
+
 			if (ret != 0)
 				return ret;
 		} else {
