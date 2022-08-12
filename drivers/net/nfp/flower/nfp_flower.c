@@ -22,6 +22,7 @@
 #include "nfp_flower.h"
 #include "nfp_flower_ovs_compat.h"
 #include "nfp_flower_ctrl.h"
+#include "nfp_flower_representor.h"
 
 #define MAX_PKT_BURST 32
 #define MEMPOOL_CACHE_SIZE 512
@@ -720,8 +721,13 @@ nfp_init_app_flower(struct nfp_pf_dev *pf_dev)
 	unsigned int numa_node;
 	struct nfp_net_hw *pf_hw;
 	struct nfp_net_hw *ctrl_hw;
+	struct rte_pci_device *pci_dev;
 	struct nfp_app_flower *app_flower;
+	struct rte_eth_devargs eth_da = {
+		.nb_representor_ports = 0
+	};
 
+	pci_dev = pf_dev->pci_dev;
 	numa_node = rte_socket_id();
 
 	/* Allocate memory for the Flower app */
@@ -812,6 +818,59 @@ nfp_init_app_flower(struct nfp_pf_dev *pf_dev)
 	ret = nfp_flower_enable_services(app_flower);
 	if (ret != 0) {
 		ret = -ESRCH;
+		goto ctrl_vnic_cleanup;
+	}
+
+	/* Allocate a switch domain for the flower app */
+	if (app_flower->switch_domain_id == RTE_ETH_DEV_SWITCH_DOMAIN_ID_INVALID &&
+			rte_eth_switch_domain_alloc(&app_flower->switch_domain_id)) {
+		PMD_INIT_LOG(WARNING,
+				"failed to allocate switch domain for device");
+	}
+
+	/* Now parse PCI device args passed for representor info */
+	if (pci_dev->device.devargs != NULL) {
+		ret = rte_eth_devargs_parse(pci_dev->device.devargs->args,
+				&eth_da);
+		if (ret != 0) {
+			PMD_INIT_LOG(ERR, "devarg parse failed");
+			goto ctrl_vnic_cleanup;
+		}
+	}
+
+	if (eth_da.nb_representor_ports == 0) {
+		PMD_INIT_LOG(DEBUG, "No representor port need to create.");
+		ret = 0;
+		goto done;
+	}
+
+	/* There always exist phy repr */
+	if (eth_da.nb_representor_ports < app_flower->nfp_eth_table->count) {
+		PMD_INIT_LOG(DEBUG, "Should also create phy representor port.");
+		ret = -ERANGE;
+		goto ctrl_vnic_cleanup;
+	}
+
+	/* Only support VF representor creation via the command line */
+	if (eth_da.type != RTE_ETH_REPRESENTOR_VF) {
+		PMD_INIT_LOG(ERR, "Unsupported representor type: %s",
+				pci_dev->device.devargs->args);
+		ret = -ENOTSUP;
+		goto ctrl_vnic_cleanup;
+	}
+
+	/* Fill in flower app with repr counts */
+	app_flower->num_phyport_reprs = (uint8_t)app_flower->nfp_eth_table->count;
+	app_flower->num_vf_reprs = eth_da.nb_representor_ports -
+			app_flower->nfp_eth_table->count;
+
+	PMD_INIT_LOG(INFO, "%d number of VF reprs", app_flower->num_vf_reprs);
+	PMD_INIT_LOG(INFO, "%d number of phyport reprs", app_flower->num_phyport_reprs);
+
+	ret = nfp_flower_repr_alloc(app_flower);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR,
+			"representors allocation for NFP_REPR_TYPE_VF error");
 		goto ctrl_vnic_cleanup;
 	}
 
