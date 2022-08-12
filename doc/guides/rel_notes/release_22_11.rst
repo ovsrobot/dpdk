@@ -59,6 +59,10 @@ New Features
 
   * Added support for flow action REPRESENTED_PORT.
 
+* **Updated cnxk PMD.**
+
+  * Added support for flow action REPRESENTED_PORT.
+
 
 Removed Items
 -------------
