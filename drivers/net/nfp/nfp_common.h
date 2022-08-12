@@ -111,6 +111,11 @@ struct nfp_net_adapter;
 #include <linux/types.h>
 #include <rte_io.h>
 
+/* Firmware application ID's */
+enum nfp_app_id {
+	NFP_APP_CORE_NIC               = 0x1,
+};
+
 /* nfp_qcp_ptr - Read or Write Pointer of a queue */
 enum nfp_qcp_ptr {
 	NFP_QCP_READ_PTR = 0,
@@ -121,8 +126,10 @@ struct nfp_pf_dev {
 	/* Backpointer to associated pci device */
 	struct rte_pci_device *pci_dev;
 
-	/* Array of physical ports belonging to this PF */
-	struct nfp_net_hw *ports[NFP_MAX_PHYPORTS];
+	enum nfp_app_id app_id;
+
+	/* Pointer to the app running on the PF */
+	void *app_priv;
 
 	/* Current values for control */
 	uint32_t ctrl;
@@ -151,14 +158,26 @@ struct nfp_pf_dev {
 	struct nfp_cpp_area *msix_area;
 
 	uint8_t *hw_queues;
-	uint8_t total_phyports;
-	bool	multiport;
 
 	union eth_table_entry *eth_table;
 
 	struct nfp_hwinfo *hwinfo;
 	struct nfp_rtsym_table *sym_tbl;
 	uint32_t nfp_cpp_service_id;
+};
+
+struct nfp_app_nic {
+	/* Backpointer to the PF device */
+	struct nfp_pf_dev *pf_dev;
+
+	/*
+	 * Array of physical ports belonging to the this CoreNIC app
+	 * This is really a list of vNIC's. One for each physical port
+	 */
+	struct nfp_net_hw *ports[NFP_MAX_PHYPORTS];
+
+	bool multiport;
+	uint8_t total_phyports;
 };
 
 struct nfp_net_hw {
@@ -370,6 +389,17 @@ nfp_pci_queue(struct rte_pci_device *pdev, uint16_t queue)
 		return NFP_PCIE_QUEUE(NFP_PCIE_QCP_PF_OFFSET, queue,
 				NFP_PCIE_QUEUE_NFP3800_MASK);
 	}
+}
+
+static inline struct nfp_app_nic *
+nfp_app_nic_priv_get(struct nfp_pf_dev *pf_dev)
+{
+	if (pf_dev == NULL)
+		return NULL;
+	else if (pf_dev->app_id != NFP_APP_CORE_NIC)
+		return NULL;
+	else
+		return (struct nfp_app_nic *)pf_dev->app_priv;
 }
 
 /* Prototypes for common NFP functions */
