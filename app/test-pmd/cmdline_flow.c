@@ -249,8 +249,6 @@ enum index {
 	ITEM_INVERT,
 	ITEM_ANY,
 	ITEM_ANY_NUM,
-	ITEM_VF,
-	ITEM_VF_ID,
 	ITEM_PHY_PORT,
 	ITEM_PHY_PORT_INDEX,
 	ITEM_PORT_ID,
@@ -1277,7 +1275,6 @@ static const enum index next_item[] = {
 	ITEM_VOID,
 	ITEM_INVERT,
 	ITEM_ANY,
-	ITEM_VF,
 	ITEM_PHY_PORT,
 	ITEM_PORT_ID,
 	ITEM_MARK,
@@ -1344,12 +1341,6 @@ static const enum index item_fuzzy[] = {
 
 static const enum index item_any[] = {
 	ITEM_ANY_NUM,
-	ITEM_NEXT,
-	ZERO,
-};
-
-static const enum index item_vf[] = {
-	ITEM_VF_ID,
 	ITEM_NEXT,
 	ZERO,
 };
@@ -3458,19 +3449,6 @@ static const struct token token_list[] = {
 		.help = "number of layers covered",
 		.next = NEXT(item_any, NEXT_ENTRY(COMMON_UNSIGNED), item_param),
 		.args = ARGS(ARGS_ENTRY(struct rte_flow_item_any, num)),
-	},
-	[ITEM_VF] = {
-		.name = "vf",
-		.help = "match traffic from/to a virtual function ID",
-		.priv = PRIV_ITEM(VF, sizeof(struct rte_flow_item_vf)),
-		.next = NEXT(item_vf),
-		.call = parse_vc,
-	},
-	[ITEM_VF_ID] = {
-		.name = "id",
-		.help = "VF ID",
-		.next = NEXT(item_vf, NEXT_ENTRY(COMMON_UNSIGNED), item_param),
-		.args = ARGS(ARGS_ENTRY(struct rte_flow_item_vf, id)),
 	},
 	[ITEM_PHY_PORT] = {
 		.name = "phy_port",
@@ -10668,9 +10646,6 @@ flow_item_default_mask(const struct rte_flow_item *item)
 	switch (item->type) {
 	case RTE_FLOW_ITEM_TYPE_ANY:
 		mask = &rte_flow_item_any_mask;
-		break;
-	case RTE_FLOW_ITEM_TYPE_VF:
-		mask = &rte_flow_item_vf_mask;
 		break;
 	case RTE_FLOW_ITEM_TYPE_PORT_ID:
 		mask = &rte_flow_item_port_id_mask;
