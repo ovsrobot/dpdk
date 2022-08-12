@@ -27,6 +27,7 @@
 #define DEFAULT_FLBUF_SIZE 9216
 
 #define PF_VNIC_NB_DESC 1024
+#define CTRL_VNIC_NB_DESC 512
 
 static const struct rte_eth_rxconf rx_conf = {
 	.rx_free_thresh = DEFAULT_RX_FREE_THRESH,
@@ -204,6 +205,11 @@ static const struct eth_dev_ops nfp_flower_pf_vnic_ops = {
 	.dev_start              = nfp_flower_pf_start,
 	.dev_stop               = nfp_flower_pf_stop,
 	.dev_close              = nfp_flower_pf_close,
+};
+
+static const struct eth_dev_ops nfp_flower_ctrl_vnic_ops = {
+	.dev_infos_get          = nfp_net_infos_get,
+	.dev_configure          = nfp_net_configure,
 };
 
 static struct rte_service_spec flower_services[NFP_FLOWER_SERVICE_MAX] = {
@@ -504,6 +510,132 @@ done:
 	return ret;
 }
 
+static void
+nfp_flower_cleanup_ctrl_vnic(struct nfp_net_hw *hw)
+{
+	uint32_t i;
+	struct nfp_app_flower *app_flower;
+
+	app_flower = nfp_app_flower_priv_get(hw->pf_dev);
+
+	for (i = 0; i < hw->max_tx_queues; i++)
+		nfp_net_tx_queue_release(hw->eth_dev, i);
+
+	for (i = 0; i < hw->max_rx_queues; i++)
+		nfp_net_rx_queue_release(hw->eth_dev, i);
+
+	rte_mempool_free(app_flower->ctrl_pktmbuf_pool);
+	rte_eth_dev_release_port(hw->eth_dev);
+}
+
+static int
+nfp_flower_init_ctrl_vnic(struct nfp_net_hw *hw)
+{
+	uint32_t i;
+	int ret = 0;
+	uint16_t n_txq;
+	uint16_t n_rxq;
+	uint16_t port_id;
+	unsigned int numa_node;
+	struct rte_mempool *mp;
+	struct nfp_pf_dev *pf_dev;
+	struct rte_eth_dev *eth_dev;
+	struct nfp_app_flower *app_flower;
+
+	static const struct rte_eth_conf port_conf = {
+		.rxmode = {
+			.mq_mode = RTE_ETH_MQ_RX_NONE,
+		},
+		.txmode = {
+			.mq_mode = RTE_ETH_MQ_TX_NONE,
+		},
+	};
+
+	/* Set up some pointers here for ease of use */
+	pf_dev = hw->pf_dev;
+	app_flower = nfp_app_flower_priv_get(pf_dev);
+
+	ret = nfp_flower_init_vnic_common(hw, "ctrl_vnic");
+	if (ret != 0)
+		goto done;
+
+	/* Allocate memory for the eth_dev of the vNIC */
+	hw->eth_dev = rte_eth_dev_allocate("nfp_ctrl_vnic");
+	if (hw->eth_dev == NULL) {
+		ret = -ENOMEM;
+		goto done;
+	}
+
+	/* Grab the pointer to the newly created rte_eth_dev here */
+	eth_dev = hw->eth_dev;
+
+	numa_node = rte_socket_id();
+
+	/* Fill in some of the eth_dev fields */
+	eth_dev->device = &pf_dev->pci_dev->device;
+	eth_dev->data->dev_private = hw;
+
+	/* Create a mbuf pool for the ctrl vNIC */
+	app_flower->ctrl_pktmbuf_pool = rte_pktmbuf_pool_create("ctrl_mbuf_pool",
+			4 * CTRL_VNIC_NB_DESC, 64, 0, 9216, numa_node);
+	if (app_flower->ctrl_pktmbuf_pool == NULL) {
+		PMD_INIT_LOG(ERR, "create mbuf pool for ctrl vnic failed");
+		ret = -ENOMEM;
+		goto port_release;
+	}
+
+	mp = app_flower->ctrl_pktmbuf_pool;
+
+	eth_dev->dev_ops = &nfp_flower_ctrl_vnic_ops;
+	rte_eth_dev_probing_finish(eth_dev);
+
+	/* Configure the ctrl vNIC device */
+	n_rxq = hw->max_rx_queues;
+	n_txq = hw->max_tx_queues;
+	port_id = hw->eth_dev->data->port_id;
+
+	ret = rte_eth_dev_configure(port_id, n_rxq, n_txq, &port_conf);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR, "Could not configure ctrl vNIC device %d", ret);
+		goto mempool_cleanup;
+	}
+
+	/* Set up the Rx queues */
+	for (i = 0; i < n_rxq; i++) {
+		ret = nfp_net_rx_queue_setup(eth_dev, i, CTRL_VNIC_NB_DESC, numa_node,
+				&rx_conf, mp);
+		if (ret) {
+			PMD_INIT_LOG(ERR, "Configure ctrl vNIC Rx queue %d failed", i);
+			goto rx_queue_cleanup;
+		}
+	}
+
+	/* Set up the Tx queues */
+	for (i = 0; i < n_txq; i++) {
+		ret = nfp_net_nfd3_tx_queue_setup(eth_dev, i, CTRL_VNIC_NB_DESC, numa_node,
+				&tx_conf);
+		if (ret) {
+			PMD_INIT_LOG(ERR, "Configure ctrl vNIC Tx queue %d failed", i);
+			goto tx_queue_cleanup;
+		}
+	}
+
+	return 0;
+
+tx_queue_cleanup:
+	for (i = 0; i < n_txq; i++)
+		nfp_net_tx_queue_release(eth_dev, i);
+rx_queue_cleanup:
+	for (i = 0; i < n_rxq; i++)
+		nfp_net_rx_queue_release(eth_dev, i);
+mempool_cleanup:
+	rte_mempool_free(mp);
+port_release:
+	rte_eth_dev_release_port(hw->eth_dev);
+done:
+	return ret;
+}
+
 static int
 nfp_flower_start_pf_vnic(struct nfp_net_hw *hw)
 {
@@ -522,12 +654,57 @@ nfp_flower_start_pf_vnic(struct nfp_net_hw *hw)
 	return 0;
 }
 
+static int
+nfp_flower_start_ctrl_vnic(struct nfp_net_hw *hw)
+{
+	int ret;
+	uint32_t update;
+	uint32_t new_ctrl;
+	struct rte_eth_dev *dev;
+
+	dev = hw->eth_dev;
+
+	/* Disabling queues just in case... */
+	nfp_net_disable_queues(dev);
+
+	/* Enabling the required queues in the device */
+	nfp_net_enable_queues(dev);
+
+	/* Writing configuration parameters in the device */
+	nfp_net_params_setup(hw);
+
+	new_ctrl = NFP_NET_CFG_CTRL_ENABLE;
+	update = NFP_NET_CFG_UPDATE_GEN | NFP_NET_CFG_UPDATE_RING |
+		 NFP_NET_CFG_UPDATE_MSIX;
+
+	rte_wmb();
+
+	/* If an error when reconfig we avoid to change hw state */
+	ret = nfp_net_reconfig(hw, new_ctrl, update);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR, "Failed to reconfig ctrl vnic");
+		return -EIO;
+	}
+
+	hw->ctrl = new_ctrl;
+
+	/* Setup the freelist ring */
+	ret = nfp_net_rx_freelist_setup(dev);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR, "Error with flower ctrl vNIC freelist setup");
+		return -EIO;
+	}
+
+	return 0;
+}
+
 int
 nfp_init_app_flower(struct nfp_pf_dev *pf_dev)
 {
 	int ret;
 	unsigned int numa_node;
 	struct nfp_net_hw *pf_hw;
+	struct nfp_net_hw *ctrl_hw;
 	struct nfp_app_flower *app_flower;
 
 	numa_node = rte_socket_id();
@@ -573,30 +750,64 @@ nfp_init_app_flower(struct nfp_pf_dev *pf_dev)
 	pf_hw->pf_dev = pf_dev;
 	pf_hw->cpp = pf_dev->cpp;
 
+	/* The ctrl vNIC struct comes directly after the PF one */
+	app_flower->ctrl_hw = pf_hw + 1;
+	ctrl_hw = app_flower->ctrl_hw;
+
+	/* Map the ctrl vNIC ctrl bar */
+	ctrl_hw->ctrl_bar = nfp_rtsym_map(pf_dev->sym_tbl, "_pf0_net_ctrl_bar",
+		32768, &ctrl_hw->ctrl_area);
+	if (ctrl_hw->ctrl_bar == NULL) {
+		PMD_INIT_LOG(ERR, "Cloud not map the ctrl vNIC ctrl bar");
+		ret = -ENODEV;
+		goto pf_cpp_area_cleanup;
+	}
+
+	/* Now populate the ctrl vNIC */
+	ctrl_hw->pf_dev = pf_dev;
+	ctrl_hw->cpp = pf_dev->cpp;
+
 	ret = nfp_flower_init_pf_vnic(app_flower->pf_hw);
 	if (ret != 0) {
 		PMD_INIT_LOG(ERR, "Could not initialize flower PF vNIC");
-		goto pf_cpp_area_cleanup;
+		goto ctrl_cpp_area_cleanup;
+	}
+
+	ret = nfp_flower_init_ctrl_vnic(app_flower->ctrl_hw);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR, "Could not initialize flower ctrl vNIC");
+		goto pf_vnic_cleanup;
 	}
 
 	/* Start the PF vNIC */
 	ret = nfp_flower_start_pf_vnic(app_flower->pf_hw);
 	if (ret != 0) {
 		PMD_INIT_LOG(ERR, "Could not start flower PF vNIC");
-		goto pf_vnic_cleanup;
+		goto ctrl_vnic_cleanup;
+	}
+
+	/* Start the ctrl vNIC */
+	ret = nfp_flower_start_ctrl_vnic(app_flower->ctrl_hw);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR, "Could not start flower ctrl vNIC");
+		goto ctrl_vnic_cleanup;
 	}
 
 	/* Start up flower services */
 	ret = nfp_flower_enable_services(app_flower);
 	if (ret != 0) {
 		ret = -ESRCH;
-		goto pf_vnic_cleanup;
+		goto ctrl_vnic_cleanup;
 	}
 
 	return 0;
 
+ctrl_vnic_cleanup:
+	nfp_flower_cleanup_ctrl_vnic(app_flower->ctrl_hw);
 pf_vnic_cleanup:
 	nfp_flower_cleanup_pf_vnic(app_flower->pf_hw);
+ctrl_cpp_area_cleanup:
+	nfp_cpp_area_free(ctrl_hw->ctrl_area);
 pf_cpp_area_cleanup:
 	nfp_cpp_area_free(pf_dev->ctrl_area);
 eth_tbl_cleanup:
