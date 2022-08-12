@@ -82,6 +82,9 @@ Removed Items
 * ethdev: removed ``RTE_FLOW_ITEM_TYPE_VF``;
   use ``RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT``.
 
+* ethdev: removed ``RTE_FLOW_ITEM_TYPE_PHY_PORT``;
+  use ``RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT``.
+
 
 API Changes
 -----------
