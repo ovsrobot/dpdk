@@ -1205,15 +1205,52 @@ struct rte_eth_rxseg_split {
 };
 
 /**
+ * The pool sort capability allows PMD to choose a memory pool based on the
+ * packet's length. So, basically, PMD programs HW for receiving packets from
+ * different pools, based on the packet's length.
+ *
+ * This is often useful for saving the memory where the application can create
+ * a different pool to steer the specific size of the packet, thus enabling
+ * effective use of memory.
+ */
+struct rte_eth_rxseg_sort {
+	struct rte_mempool *mp; /**< Memory pool to allocate packets from. */
+	uint16_t length; /**< Packet data length. */
+	uint32_t reserved; /**< Reserved field. */
+};
+
+enum rte_eth_rxseg_mode {
+	/**
+	 * Buffer split mode: PMD split the received packets into multiple segments.
+	 * @see struct rte_eth_rxseg_split
+	 */
+	RTE_ETH_RXSEG_MODE_SPLIT = RTE_BIT64(0),
+	/**
+	 * Pool sort mode: PMD to chooses a memory pool based on the packet's length.
+	 * @see struct rte_eth_rxseg_sort
+	 */
+	RTE_ETH_RXSEG_MODE_SORT  = RTE_BIT64(1),
+};
+
+/**
  * @warning
  * @b EXPERIMENTAL: this structure may change without prior notice.
  *
  * A common structure used to describe Rx packet segment properties.
  */
-union rte_eth_rxseg {
+struct rte_eth_rxseg {
+
+	/**
+	 * PMD may support more than one rxseg mode. This allows application
+	 * to chose which mode to enable.
+	 */
+	enum rte_eth_rxseg_mode mode_flag;
+
 	/* The settings for buffer split offload. */
 	struct rte_eth_rxseg_split split;
-	/* The other features settings should be added here. */
+
+	/*The settings for packet sort offload. */
+	struct rte_eth_rxseg_sort sort;
 };
 
 /**
@@ -1246,7 +1283,7 @@ struct rte_eth_rxconf {
 	 * The supported capabilities of receiving segmentation is reported
 	 * in rte_eth_dev_info.rx_seg_capa field.
 	 */
-	union rte_eth_rxseg *rx_seg;
+	struct rte_eth_rxseg *rx_seg;
 
 	uint64_t reserved_64s[2]; /**< Reserved for future fields */
 	void *reserved_ptrs[2];   /**< Reserved for future fields */
@@ -1831,6 +1868,9 @@ struct rte_eth_rxseg_capa {
 	uint32_t offset_allowed:1; /**< Supports buffer offsets. */
 	uint32_t offset_align_log2:4; /**< Required offset alignment. */
 	uint16_t max_nseg; /**< Maximum amount of segments to split. */
+	/* < Maximum amount of pools that PMD can sort based on packet/segment lengths */
+	uint16_t max_npool;
+	enum rte_eth_rxseg_mode mode_flag; /**< supported rxseg  modes */
 	uint16_t reserved; /**< Reserved field. */
 };
 
