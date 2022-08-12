@@ -87,6 +87,14 @@ API Changes
 * ethdev: promoted ``rte_eth_rx_metadata_negotiate()``
   from experimental to stable.
 
+* ethdev: promoted the following flow primitives
+  from experimental to stable:
+
+  - ``RTE_FLOW_ACTION_TYPE_PORT_REPRESENTOR``
+  - ``RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT``
+  - ``RTE_FLOW_ITEM_TYPE_PORT_REPRESENTOR``
+  - ``RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT``
+
 
 ABI Changes
 -----------
