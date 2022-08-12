@@ -38,6 +38,8 @@
 #include "nfp_ctrl.h"
 #include "nfp_cpp_bridge.h"
 
+#include "flower/nfp_flower.h"
+
 static int
 nfp_net_pf_read_mac(struct nfp_app_nic *app_nic, int port)
 {
@@ -837,7 +839,8 @@ app_cleanup:
 }
 
 static int
-nfp_pf_init(struct rte_pci_device *pci_dev)
+nfp_pf_init(struct rte_pci_device *pci_dev,
+		struct rte_pci_driver *pci_drv)
 {
 	int ret;
 	int err = 0;
@@ -965,6 +968,16 @@ nfp_pf_init(struct rte_pci_device *pci_dev)
 			goto hwqueues_cleanup;
 		}
 		break;
+	case NFP_APP_FLOWER_NIC:
+		PMD_INIT_LOG(INFO, "Initializing Flower");
+		pci_dev->device.driver = &pci_drv->driver;
+		ret = nfp_init_app_flower(pf_dev);
+		if (ret != 0) {
+			PMD_INIT_LOG(ERR, "Could not initialize Flower!");
+			pci_dev->device.driver = NULL;
+			goto hwqueues_cleanup;
+		}
+		break;
 	default:
 		PMD_INIT_LOG(ERR, "Unsupported Firmware loaded");
 		ret = -EINVAL;
@@ -972,7 +985,12 @@ nfp_pf_init(struct rte_pci_device *pci_dev)
 	}
 
 	/* register the CPP bridge service here for primary use */
-	nfp_register_cpp_service(pf_dev->cpp);
+	ret = nfp_enable_cpp_service(pf_dev->cpp, pf_dev->app_id);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR, "Enable cpp service failed.");
+		ret = -EINVAL;
+		goto hwqueues_cleanup;
+	}
 
 	return 0;
 
@@ -1096,6 +1114,14 @@ nfp_pf_secondary_init(struct rte_pci_device *pci_dev)
 			goto sym_tbl_cleanup;
 		}
 		break;
+	case NFP_APP_FLOWER_NIC:
+		PMD_INIT_LOG(INFO, "Initializing Flower");
+		ret = nfp_secondary_init_app_flower(cpp);
+		if (ret != 0) {
+			PMD_INIT_LOG(ERR, "Could not initialize Flower!");
+			goto sym_tbl_cleanup;
+		}
+		break;
 	default:
 		PMD_INIT_LOG(ERR, "Unsupported Firmware loaded");
 		ret = -EINVAL;
@@ -1106,7 +1132,11 @@ nfp_pf_secondary_init(struct rte_pci_device *pci_dev)
 		goto sym_tbl_cleanup;
 
 	/* Register the CPP bridge service for the secondary too */
-	nfp_register_cpp_service(cpp);
+	ret = nfp_enable_cpp_service(cpp, app_id);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR, "Enable cpp service failed.");
+		ret = -EINVAL;
+	}
 
 sym_tbl_cleanup:
 	free(sym_tbl);
@@ -1115,11 +1145,11 @@ sym_tbl_cleanup:
 }
 
 static int
-nfp_pf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
+nfp_pf_pci_probe(struct rte_pci_driver *pci_drv,
 		struct rte_pci_device *dev)
 {
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY)
-		return nfp_pf_init(dev);
+		return nfp_pf_init(dev, pci_drv);
 	else
 		return nfp_pf_secondary_init(dev);
 }
