@@ -69,6 +69,13 @@ cnxk_nix_info_get(struct rte_eth_dev *eth_dev, struct rte_eth_dev_info *devinfo)
 	devinfo->dev_capa = RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP |
 			    RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP |
 			    RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP;
+
+	devinfo->rx_seg_capa = (struct rte_eth_rxseg_capa){
+		.mode_sort = 1,
+		.multi_pools = 1,
+		.max_npool = CNXK_NIX_NUM_POOLS_MAX,
+	};
+
 	return 0;
 }
 

@@ -537,6 +537,64 @@ cnxk_nix_tx_queue_release(struct rte_eth_dev *eth_dev, uint16_t qid)
 	plt_free(txq_sp);
 }
 
+static int
+cnxk_nix_process_rx_conf(const struct rte_eth_rxconf *rx_conf,
+			 struct rte_mempool **lpb_pool, struct rte_mempool **spb_pool,
+			 uint16_t *lpb_len, uint16_t *spb_len)
+{
+	struct rte_eth_rxseg_sort rx_seg0;
+	struct rte_eth_rxseg_sort rx_seg1;
+	const char *platform_ops;
+	struct rte_mempool_ops *ops;
+
+	if (*lpb_pool || !rx_conf->rx_seg || rx_conf->rx_nseg != CNXK_NIX_NUM_POOLS_MAX ||
+	    !rx_conf->rx_seg[0].sort.mp || !rx_conf->rx_seg[1].sort.mp) {
+		plt_err("invalid arguments");
+		return -EINVAL;
+	}
+
+	rx_seg0 = rx_conf->rx_seg[0].sort;
+	rx_seg1 = rx_conf->rx_seg[1].sort;
+
+	if (rx_seg0.length >= rx_seg0.mp->elt_size || rx_seg1.length >= rx_seg1.mp->elt_size) {
+		plt_err("mismatch in packet length & pool length seg0_len:%u pool0_len:%u"\
+			"seg1_len:%u pool1_len:%u", rx_seg0.length, rx_seg0.mp->elt_size,
+			rx_seg1.length, rx_seg1.mp->elt_size);
+		return -EINVAL;
+	}
+
+	if (rx_seg0.length > rx_seg1.length) {
+		*lpb_pool = rx_seg0.mp;
+		*spb_pool = rx_seg1.mp;
+
+		*lpb_len = rx_seg0.length;
+		*spb_len = rx_seg1.length;
+	} else {
+		*lpb_pool = rx_seg1.mp;
+		*spb_pool = rx_seg0.mp;
+
+		*lpb_len = rx_seg1.length;
+		*spb_len = rx_seg0.length;
+	}
+
+	if ((*spb_pool)->pool_id == 0) {
+		plt_err("Invalid pool_id");
+		return -EINVAL;
+	}
+
+	platform_ops = rte_mbuf_platform_mempool_ops();
+	ops = rte_mempool_get_ops((*spb_pool)->ops_index);
+	if (strncmp(ops->name, platform_ops, RTE_MEMPOOL_OPS_NAMESIZE)) {
+		plt_err("mempool ops should be of cnxk_npa type");
+		return -EINVAL;
+	}
+
+	plt_info("spb_pool:%s lpb_pool:%s lpb_len:%u spb_len:%u\n", (*spb_pool)->name,
+		 (*lpb_pool)->name, *lpb_len, *spb_len);
+
+	return 0;
+}
+
 int
 cnxk_nix_rx_queue_setup(struct rte_eth_dev *eth_dev, uint16_t qid,
 			uint32_t nb_desc, uint16_t fp_rx_q_sz,
@@ -553,6 +611,10 @@ cnxk_nix_rx_queue_setup(struct rte_eth_dev *eth_dev, uint16_t qid,
 	uint16_t first_skip;
 	int rc = -EINVAL;
 	size_t rxq_sz;
+	uint16_t lpb_len = 0;
+	uint16_t spb_len = 0;
+	struct rte_mempool *lpb_pool = mp;
+	struct rte_mempool *spb_pool = NULL;
 
 	/* Sanity checks */
 	if (rx_conf->rx_deferred_start == 1) {
@@ -560,15 +622,22 @@ cnxk_nix_rx_queue_setup(struct rte_eth_dev *eth_dev, uint16_t qid,
 		goto fail;
 	}
 
+	if (dev->rx_offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) {
+		rc = cnxk_nix_process_rx_conf(rx_conf, &lpb_pool, &spb_pool,
+					      &lpb_len, &spb_len);
+		if (rc)
+			goto fail;
+	}
+
 	platform_ops = rte_mbuf_platform_mempool_ops();
 	/* This driver needs cnxk_npa mempool ops to work */
-	ops = rte_mempool_get_ops(mp->ops_index);
+	ops = rte_mempool_get_ops(lpb_pool->ops_index);
 	if (strncmp(ops->name, platform_ops, RTE_MEMPOOL_OPS_NAMESIZE)) {
 		plt_err("mempool ops should be of cnxk_npa type");
 		goto fail;
 	}
 
-	if (mp->pool_id == 0) {
+	if (lpb_pool->pool_id == 0) {
 		plt_err("Invalid pool_id");
 		goto fail;
 	}
@@ -585,13 +654,13 @@ cnxk_nix_rx_queue_setup(struct rte_eth_dev *eth_dev, uint16_t qid,
 	/* Its a no-op when inline device is not used */
 	if (dev->rx_offloads & RTE_ETH_RX_OFFLOAD_SECURITY ||
 	    dev->tx_offloads & RTE_ETH_TX_OFFLOAD_SECURITY)
-		roc_nix_inl_dev_xaq_realloc(mp->pool_id);
+		roc_nix_inl_dev_xaq_realloc(lpb_pool->pool_id);
 
 	/* Increase CQ size to Aura size to avoid CQ overflow and
 	 * then CPT buffer leak.
 	 */
 	if (dev->rx_offloads & RTE_ETH_RX_OFFLOAD_SECURITY)
-		nb_desc = nix_inl_cq_sz_clamp_up(nix, mp, nb_desc);
+		nb_desc = nix_inl_cq_sz_clamp_up(nix, lpb_pool, nb_desc);
 
 	/* Setup ROC CQ */
 	cq = &dev->cqs[qid];
@@ -606,22 +675,28 @@ cnxk_nix_rx_queue_setup(struct rte_eth_dev *eth_dev, uint16_t qid,
 	/* Setup ROC RQ */
 	rq = &dev->rqs[qid];
 	rq->qid = qid;
-	rq->aura_handle = mp->pool_id;
+	rq->aura_handle = lpb_pool->pool_id;
 	rq->flow_tag_width = 32;
 	rq->sso_ena = false;
 
 	/* Calculate first mbuf skip */
 	first_skip = (sizeof(struct rte_mbuf));
 	first_skip += RTE_PKTMBUF_HEADROOM;
-	first_skip += rte_pktmbuf_priv_size(mp);
+	first_skip += rte_pktmbuf_priv_size(lpb_pool);
 	rq->first_skip = first_skip;
 	rq->later_skip = sizeof(struct rte_mbuf);
-	rq->lpb_size = mp->elt_size;
 	rq->lpb_drop_ena = !(dev->rx_offloads & RTE_ETH_RX_OFFLOAD_SECURITY);
+	rq->lpb_size = lpb_len ? lpb_len : lpb_pool->elt_size;
 
 	/* Enable Inline IPSec on RQ, will not be used for Poll mode */
 	if (roc_nix_inl_inb_is_enabled(nix))
 		rq->ipsech_ena = true;
+
+	if (spb_pool) {
+		rq->spb_ena = 1;
+		rq->spb_aura_handle = spb_pool->pool_id;
+		rq->spb_size = spb_len;
+	}
 
 	rc = roc_nix_rq_init(&dev->nix, rq, !!eth_dev->data->dev_started);
 	if (rc) {
@@ -645,7 +720,7 @@ cnxk_nix_rx_queue_setup(struct rte_eth_dev *eth_dev, uint16_t qid,
 	/* Queue config should reflect global offloads */
 	rxq_sp->qconf.conf.rx.offloads = dev->rx_offloads;
 	rxq_sp->qconf.nb_desc = nb_desc;
-	rxq_sp->qconf.mp = mp;
+	rxq_sp->qconf.mp = lpb_pool;
 	rxq_sp->tc = 0;
 	rxq_sp->tx_pause = (dev->fc_cfg.mode == RTE_ETH_FC_FULL ||
 			    dev->fc_cfg.mode == RTE_ETH_FC_TX_PAUSE);
@@ -664,7 +739,7 @@ cnxk_nix_rx_queue_setup(struct rte_eth_dev *eth_dev, uint16_t qid,
 			goto free_mem;
 	}
 
-	plt_nix_dbg("rq=%d pool=%s nb_desc=%d->%d", qid, mp->name, nb_desc,
+	plt_nix_dbg("rq=%d pool=%s nb_desc=%d->%d", qid, lpb_pool->name, nb_desc,
 		    cq->nb_desc);
 
 	/* Store start of fast path area */
