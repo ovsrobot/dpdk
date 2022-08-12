@@ -411,6 +411,9 @@ uint8_t clear_ptypes = true;
 /* Hairpin ports configuration mode. */
 uint16_t hairpin_mode;
 
+/* send Rxseg mode */
+uint8_t rxseg_mode = RTE_ETH_RXSEG_MODE_SPLIT;
+
 /* Pretty printing of ethdev events */
 static const char * const eth_event_desc[] = {
 	[RTE_ETH_EVENT_UNKNOWN] = "unknown",
@@ -2656,7 +2659,7 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 	       uint16_t nb_rx_desc, unsigned int socket_id,
 	       struct rte_eth_rxconf *rx_conf, struct rte_mempool *mp)
 {
-	union rte_eth_rxseg rx_useg[MAX_SEGS_BUFFER_SPLIT] = {};
+	struct rte_eth_rxseg rx_useg[MAX_SEGS_BUFFER_SPLIT] = {};
 	unsigned int i, mp_n;
 	int ret;
 
@@ -2670,24 +2673,38 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		goto exit;
 	}
 	for (i = 0; i < rx_pkt_nb_segs; i++) {
-		struct rte_eth_rxseg_split *rx_seg = &rx_useg[i].split;
+		struct rte_eth_rxseg_split *rx_split = &rx_useg[i].split;
+		struct rte_eth_rxseg_sort  *rx_sort = &rx_useg[i].sort;
 		struct rte_mempool *mpx;
+
 		/*
 		 * Use last valid pool for the segments with number
 		 * exceeding the pool index.
 		 */
 		mp_n = (i >= mbuf_data_size_n) ? mbuf_data_size_n - 1 : i;
 		mpx = mbuf_pool_find(socket_id, mp_n);
-		/* Handle zero as mbuf data buffer size. */
-		rx_seg->length = rx_pkt_seg_lengths[i] ?
-				   rx_pkt_seg_lengths[i] :
-				   mbuf_data_size[mp_n];
-		rx_seg->offset = i < rx_pkt_nb_offs ?
-				   rx_pkt_seg_offsets[i] : 0;
-		rx_seg->mp = mpx ? mpx : mp;
+		if (rxseg_mode == RTE_ETH_RXSEG_MODE_SPLIT) {
+			/**
+			 * On Segment length zero, update length as,
+			 *      buffer size - headroom size
+			 * to make sure enough space is accomidate for header.
+			 */
+			rx_split->length = rx_pkt_seg_lengths[i] ?
+					   rx_pkt_seg_lengths[i] :
+					   mbuf_data_size[mp_n] - RTE_PKTMBUF_HEADROOM;
+			rx_split->offset = i < rx_pkt_nb_offs ?
+					   rx_pkt_seg_offsets[i] : 0;
+			rx_split->mp = mpx ? mpx : mp;
+		} else if (rxseg_mode == RTE_ETH_RXSEG_MODE_SORT) {
+			rx_sort->length = rx_pkt_seg_lengths[i] ?
+					   rx_pkt_seg_lengths[i] :
+					   mbuf_data_size[mp_n] - RTE_PKTMBUF_HEADROOM;
+			rx_sort->mp = mpx ? mpx : mp;
+		}
 	}
 	rx_conf->rx_nseg = rx_pkt_nb_segs;
 	rx_conf->rx_seg = rx_useg;
+	rx_conf->mode_flag = (enum rte_eth_rxseg_mode)rxseg_mode;
 	ret = rte_eth_rx_queue_setup(port_id, rx_queue_id, nb_rx_desc,
 				    socket_id, rx_conf, NULL);
 	rx_conf->rx_seg = NULL;
