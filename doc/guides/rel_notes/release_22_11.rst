@@ -84,6 +84,9 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* ethdev: promoted ``rte_eth_rx_metadata_negotiate()``
+  from experimental to stable.
+
 
 ABI Changes
 -----------
