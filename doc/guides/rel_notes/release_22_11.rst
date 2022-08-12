@@ -76,6 +76,9 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* ethdev: removed ``RTE_FLOW_ITEM_TYPE_PF``;
+  use ``RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT``.
+
 
 API Changes
 -----------
@@ -121,6 +124,8 @@ ABI Changes
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+
+* ethdev: enum ``RTE_FLOW_ITEM`` was affected by deprecation procedure.
 
 
 Known Issues
