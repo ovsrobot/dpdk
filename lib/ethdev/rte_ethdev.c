@@ -1635,9 +1635,10 @@ rte_eth_dev_is_removed(uint16_t port_id)
 }
 
 static int
-rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
-			     uint16_t n_seg, uint32_t *mbp_buf_size,
-			     const struct rte_eth_dev_info *dev_info)
+rte_eth_rx_queue_check_split(uint16_t port_id,
+			const struct rte_eth_rxseg_split *rx_seg,
+			uint16_t n_seg, uint32_t *mbp_buf_size,
+			const struct rte_eth_dev_info *dev_info)
 {
 	const struct rte_eth_rxseg_capa *seg_capa = &dev_info->rx_seg_capa;
 	struct rte_mempool *mp_first;
@@ -1660,6 +1661,7 @@ rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 		struct rte_mempool *mpl = rx_seg[seg_idx].mp;
 		uint32_t length = rx_seg[seg_idx].length;
 		uint32_t offset = rx_seg[seg_idx].offset;
+		uint32_t proto_hdr = rx_seg[seg_idx].proto_hdr;
 
 		if (mpl == NULL) {
 			RTE_ETHDEV_LOG(ERR, "null mempool pointer\n");
@@ -1693,13 +1695,44 @@ rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 		}
 		offset += seg_idx != 0 ? 0 : RTE_PKTMBUF_HEADROOM;
 		*mbp_buf_size = rte_pktmbuf_data_room_size(mpl);
-		length = length != 0 ? length : *mbp_buf_size;
-		if (*mbp_buf_size < length + offset) {
-			RTE_ETHDEV_LOG(ERR,
-				       "%s mbuf_data_room_size %u < %u (segment length=%u + segment offset=%u)\n",
-				       mpl->name, *mbp_buf_size,
-				       length + offset, length, offset);
-			return -EINVAL;
+
+		int ret = rte_eth_buffer_split_get_supported_hdr_ptypes(port_id, NULL, 0);
+		if (ret <= 0) {
+			/* Split at fixed length. */
+			length = length != 0 ? length : *mbp_buf_size;
+			if (*mbp_buf_size < length + offset) {
+				RTE_ETHDEV_LOG(ERR,
+					"%s mbuf_data_room_size %u < %u (segment length=%u + segment offset=%u)\n",
+					mpl->name, *mbp_buf_size,
+					length + offset, length, offset);
+				return -EINVAL;
+			}
+		} else {
+			/* Split after specified protocol header. */
+			uint32_t ptypes[ret];
+			int i;
+
+			ret = rte_eth_buffer_split_get_supported_hdr_ptypes(port_id, ptypes, ret);
+			for (i = 0; i < ret; i++)
+				if (ptypes[i] & proto_hdr)
+					break;
+
+			if (i == ret) {
+#define PTYPE_NAMESIZE	256
+				char ptype_name[PTYPE_NAMESIZE];
+				rte_get_ptype_name(proto_hdr, ptype_name, sizeof(ptype_name));
+				RTE_ETHDEV_LOG(ERR,
+					"Protocol header %s is not supported.\n",
+					ptype_name);
+				return -EINVAL;
+			}
+			if (*mbp_buf_size < offset) {
+				RTE_ETHDEV_LOG(ERR,
+						"%s mbuf_data_room_size %u < %u segment offset)\n",
+						mpl->name, *mbp_buf_size,
+						offset);
+				return -EINVAL;
+			}
 		}
 	}
 	return 0;
@@ -1778,7 +1811,7 @@ rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		n_seg = rx_conf->rx_nseg;
 
 		if (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) {
-			ret = rte_eth_rx_queue_check_split(rx_seg, n_seg,
+			ret = rte_eth_rx_queue_check_split(port_id, rx_seg, n_seg,
 							   &mbp_buf_size,
 							   &dev_info);
 			if (ret != 0)

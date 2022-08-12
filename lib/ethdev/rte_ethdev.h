@@ -1175,6 +1175,9 @@ struct rte_eth_txmode {
  *   specified in the first array element, the second buffer, from the
  *   pool in the second element, and so on.
  *
+ * - The proto_hdrs in the elements define the split position of
+ *   received packets.
+ *
  * - The offsets from the segment description elements specify
  *   the data offset from the buffer beginning except the first mbuf.
  *   The first segment offset is added with RTE_PKTMBUF_HEADROOM.
@@ -1196,12 +1199,24 @@ struct rte_eth_txmode {
  *     - pool from the last valid element
  *     - the buffer size from this pool
  *     - zero offset
+ *
+ * - Length based buffer split:
+ *     - mp, length, offset should be configured.
+ *     - The proto_hdr field will be ignored.
+ *
+ * - Protocol header based buffer split:
+ *     - mp, offset, proto_hdr should be configured.
+ *     - The length field will be ignored.
  */
 struct rte_eth_rxseg_split {
 	struct rte_mempool *mp; /**< Memory pool to allocate segment from. */
 	uint16_t length; /**< Segment data length, configures split point. */
 	uint16_t offset; /**< Data offset from beginning of mbuf data buffer. */
-	uint32_t reserved; /**< Reserved field. */
+	/**
+	 * Supported ptype of a specific pmd, configures split point.
+	 * It should be defined by RTE_PTYPE_*.
+	 */
+	uint32_t proto_hdr;
 };
 
 /**
