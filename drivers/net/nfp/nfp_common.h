@@ -402,6 +402,17 @@ nfp_app_nic_priv_get(struct nfp_pf_dev *pf_dev)
 		return (struct nfp_app_nic *)pf_dev->app_priv;
 }
 
+static inline struct nfp_app_flower *
+nfp_app_flower_priv_get(struct nfp_pf_dev *pf_dev)
+{
+	if (pf_dev == NULL)
+		return NULL;
+	else if (pf_dev->app_id != NFP_APP_FLOWER_NIC)
+		return NULL;
+	else
+		return (struct nfp_app_flower *)pf_dev->app_priv;
+}
+
 /* Prototypes for common NFP functions */
 int nfp_net_reconfig(struct nfp_net_hw *hw, uint32_t ctrl, uint32_t update);
 int nfp_net_configure(struct rte_eth_dev *dev);
