@@ -95,6 +95,9 @@ API Changes
   - ``RTE_FLOW_ITEM_TYPE_PORT_REPRESENTOR``
   - ``RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT``
 
+* ethdev: promoted ``rte_flow_pick_transfer_proxy()``
+  from experimental to stable.
+
 
 ABI Changes
 -----------
