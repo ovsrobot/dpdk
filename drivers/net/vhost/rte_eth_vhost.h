@@ -14,6 +14,8 @@ extern "C" {
 
 #include <rte_vhost.h>
 
+extern bool async_tx_poll_completed;
+
 /*
  * Event description.
  */
@@ -51,6 +53,18 @@ int rte_eth_vhost_get_queue_event(uint16_t port_id,
  *  - On failure, a negative value.
  */
 int rte_eth_vhost_get_vid_from_port_id(uint16_t port_id);
+
+/**
+ * Ask Tx side to poll completed packets
+ *
+ * @param flag
+ *  flag.
+ */
+static __rte_always_inline void
+rte_eth_vhost_async_tx_poll_completed(bool enable)
+{
+	async_tx_poll_completed = enable;
+}
 
 #ifdef __cplusplus
 }
