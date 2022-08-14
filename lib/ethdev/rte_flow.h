@@ -35,6 +35,7 @@
 #include <rte_l2tpv2.h>
 #include <rte_ppp.h>
 #include <rte_gre.h>
+#include <rte_macsec.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -668,6 +669,13 @@ enum rte_flow_item_type {
 	 * See struct rte_flow_item_gre_opt.
 	 */
 	RTE_FLOW_ITEM_TYPE_GRE_OPTION,
+
+	/**
+	 * Matches MACsec Ethernet Header.
+	 *
+	 * See struct rte_flow_item_macsec.
+	 */
+	RTE_FLOW_ITEM_TYPE_MACSEC,
 };
 
 /**
@@ -1213,6 +1221,16 @@ struct rte_flow_item_gre_opt {
 	struct rte_gre_hdr_opt_key key;
 	struct rte_gre_hdr_opt_sequence sequence;
 };
+
+/**
+ * RTE_FLOW_ITEM_TYPE_MACSEC.
+ *
+ * Matches MACsec header.
+ */
+struct rte_flow_item_macsec {
+	struct rte_macsec_hdr macsec_hdr;
+};
+
 
 /**
  * RTE_FLOW_ITEM_TYPE_FUZZY

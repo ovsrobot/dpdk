@@ -3865,6 +3865,61 @@ int
 rte_eth_tx_done_cleanup(uint16_t port_id, uint16_t queue_id, uint32_t free_cnt);
 
 /**
+ * Subtypes for MACsec offload event(@ref RTE_ETH_EVENT_MACSEC) raised by
+ * Ethernet device.
+ */
+enum rte_eth_macsec_event_subtype {
+	RTE_ETH_MACSEC_SUBEVENT_UNKNOWN,
+	/* subevents of RTE_ETH_MACSEC_EVENT_SECTAG_VAL_ERR sectag validation events
+	 * RTE_ETH_MACSEC_EVENT_RX_SECTAG_V_EQ1
+	 *	Validation check: SecTag.TCI.V = 1
+	 * RTE_ETH_MACSEC_EVENT_RX_SECTAG_E_EQ0_C_EQ1
+	 *	Validation check: SecTag.TCI.E = 0 && SecTag.TCI.C = 1
+	 * RTE_ETH_MACSEC_EVENT_RX_SECTAG_SL_GTE48
+	 *	Validation check: SecTag.SL >= 'd48
+	 * RTE_ETH_MACSEC_EVENT_RX_SECTAG_ES_EQ1_SC_EQ1
+	 *	Validation check: SecTag.TCI.ES = 1 && SecTag.TCI.SC = 1
+	 * RTE_ETH_MACSEC_EVENT_RX_SECTAG_SC_EQ1_SCB_EQ1
+	 *	Validation check: SecTag.TCI.SC = 1 && SecTag.TCI.SCB = 1
+	 */
+	RTE_ETH_MACSEC_SUBEVENT_RX_SECTAG_V_EQ1,
+	RTE_ETH_MACSEC_SUBEVENT_RX_SECTAG_E_EQ0_C_EQ1,
+	RTE_ETH_MACSEC_SUBEVENT_RX_SECTAG_SL_GTE48,
+	RTE_ETH_MACSEC_SUBEVENT_RX_SECTAG_ES_EQ1_SC_EQ1,
+	RTE_ETH_MACSEC_SUBEVENT_RX_SECTAG_SC_EQ1_SCB_EQ1,
+};
+
+enum rte_eth_macsec_event_type {
+	RTE_ETH_MACSEC_EVENT_UNKNOWN,
+	RTE_ETH_MACSEC_EVENT_SECTAG_VAL_ERR,
+	RTE_ETH_MACSEC_EVENT_RX_SA_PN_HARD_EXP,
+	RTE_ETH_MACSEC_EVENT_RX_SA_PN_SOFT_EXP,
+	RTE_ETH_MACSEC_EVENT_TX_SA_PN_HARD_EXP,
+	RTE_ETH_MACSEC_EVENT_TX_SA_PN_SOFT_EXP,
+	/* Notifies Invalid SA event */
+	RTE_ETH_MACSEC_EVENT_SA_NOT_VALID,
+};
+
+/**
+ * Descriptor for @ref RTE_ETH_EVENT_MACSEC event. Used by eth dev to send extra
+ * information of the MACsec offload event.
+ */
+struct rte_eth_event_macsec_desc {
+	enum rte_eth_macsec_event_type type;
+	enum rte_eth_macsec_event_subtype subtype;
+	/**
+	 * Event specific metadata.
+	 *
+	 * For the following events, *userdata* registered
+	 * with the *rte_security_session* would be returned
+	 * as metadata,
+	 *
+	 * @see struct rte_security_session_conf
+	 */
+	uint64_t metadata;
+};
+
+/**
  * Subtypes for IPsec offload event(@ref RTE_ETH_EVENT_IPSEC) raised by
  * eth device.
  */
