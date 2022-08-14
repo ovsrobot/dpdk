@@ -1864,6 +1864,43 @@ rte_vhost_async_channel_unregister_thread_unsafe(int vid, uint16_t queue_id)
 }
 
 int
+rte_vhost_async_dma_unconfigure(int16_t dma_id, uint16_t vchan_id)
+{
+	struct rte_dma_info info;
+	void *pkts_cmpl_flag_addr;
+
+	if (!rte_dma_is_valid(dma_id)) {
+		VHOST_LOG_CONFIG("dma", ERR, "DMA %d is not found.\n", dma_id);
+		return -1;
+	}
+
+	if (rte_dma_info_get(dma_id, &info) != 0) {
+		VHOST_LOG_CONFIG("dma", ERR, "Fail to get DMA %d information.\n", dma_id);
+		return -1;
+	}
+
+	if (vchan_id >= info.max_vchans) {
+		VHOST_LOG_CONFIG("dma", ERR, "Invalid DMA %d vChannel %u.\n", dma_id, vchan_id);
+		return -1;
+	}
+
+	pkts_cmpl_flag_addr = dma_copy_track[dma_id].vchans[vchan_id].pkts_cmpl_flag_addr;
+	if (pkts_cmpl_flag_addr) {
+		rte_free(pkts_cmpl_flag_addr);
+		pkts_cmpl_flag_addr = NULL;
+	}
+
+	if (dma_copy_track[dma_id].vchans) {
+		rte_free(dma_copy_track[dma_id].vchans);
+		dma_copy_track[dma_id].vchans = NULL;
+	}
+
+	dma_copy_track[dma_id].nr_vchans--;
+
+	return 0;
+}
+
+int
 rte_vhost_async_dma_configure(int16_t dma_id, uint16_t vchan_id)
 {
 	struct rte_dma_info info;

@@ -323,6 +323,11 @@ The following is an overview of some key Vhost API functions:
   Get device type of vDPA device, such as VDPA_DEVICE_TYPE_NET,
   VDPA_DEVICE_TYPE_BLK.
 
+* ``rte_vhost_async_dma_unconfigure(dma_id, vchan_id)``
+
+  Clear DMA vChannels finished to use. This function needs to
+  be called after async unregister.
+
 Vhost-user Implementations
 --------------------------
 

@@ -55,6 +55,8 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added vhost API to unconfigure DMA vchannels.**
+  Added an API which helps to unconfigure DMA vchannels.
 
 Removed Items
 -------------
