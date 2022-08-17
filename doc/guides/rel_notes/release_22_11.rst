@@ -60,6 +60,11 @@ New Features
    Added SM4 encryption algorithm to the Cryptodev API.
    Supported modes are ECB, CBC and CTR.
 
+* **Added SM3 hash algorithm.**
+
+   Added SM3 hash algorithm to the Cryptodev API.
+
+
 Removed Items
 -------------
 
