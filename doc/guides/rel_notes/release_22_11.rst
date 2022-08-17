@@ -64,6 +64,10 @@ New Features
 
    Added SM3 hash algorithm to the Cryptodev API.
 
+* **Updated the Intel QuickAssist Technology (QAT) symmetric crypto PMD.**
+
+   Added SM4 encryption algorithm to the QAT PMD.
+   Supported modes are ECB, CBC and CTR.
 
 Removed Items
 -------------
