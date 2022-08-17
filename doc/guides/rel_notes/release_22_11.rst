@@ -69,6 +69,9 @@ New Features
    Added SM4 encryption algorithm to the QAT PMD.
    Supported modes are ECB, CBC and CTR.
 
+   Added SM3 hash algorithm to the QAT PMD.
+
+
 Removed Items
 -------------
 

@@ -687,6 +687,10 @@ qat_sym_session_configure_auth(struct rte_cryptodev *dev,
 	session->digest_length = auth_xform->digest_length;
 
 	switch (auth_xform->algo) {
+	case RTE_CRYPTO_AUTH_SM3:
+		session->qat_hash_alg = ICP_QAT_HW_AUTH_ALGO_SM3;
+		session->auth_mode = ICP_QAT_HW_AUTH_MODE2;
+		break;
 	case RTE_CRYPTO_AUTH_SHA1:
 		session->qat_hash_alg = ICP_QAT_HW_AUTH_ALGO_SHA1;
 		session->auth_mode = ICP_QAT_HW_AUTH_MODE0;
@@ -1092,6 +1096,8 @@ static int qat_hash_get_block_size(enum icp_qat_hw_auth_algo qat_hash_alg)
 		return ICP_QAT_HW_AES_BLK_SZ;
 	case ICP_QAT_HW_AUTH_ALGO_MD5:
 		return MD5_CBLOCK;
+	case ICP_QAT_HW_AUTH_ALGO_SM3:
+		return 64;
 	case ICP_QAT_HW_AUTH_ALGO_DELIMITER:
 		/* return maximum block size in this case */
 		return SHA512_CBLOCK;
@@ -2035,7 +2041,7 @@ int qat_sym_cd_auth_set(struct qat_sym_session *cdesc,
 		|| cdesc->is_cnt_zero
 			)
 		hash->auth_counter.counter = 0;
-	else {
+	else if (cdesc->auth_mode == ICP_QAT_HW_AUTH_MODE1) {
 		int block_size = qat_hash_get_block_size(cdesc->qat_hash_alg);
 
 		if (block_size < 0)
@@ -2048,7 +2054,19 @@ int qat_sym_cd_auth_set(struct qat_sym_session *cdesc,
 	/*
 	 * cd_cur_ptr now points at the state1 information.
 	 */
+	uint8_t state1[] = {
+		0x73, 0x80, 0x16, 0x6f, 0x49, 0x14, 0xb2, 0xb9,
+		0x17, 0x24, 0x42, 0xd7, 0xda, 0x8a, 0x06, 0x00,
+		0xa9, 0x6f, 0x30, 0xbc, 0x16, 0x31, 0x38, 0xaa,
+		0xe3, 0x8d, 0xee, 0x4d, 0xb0, 0xfb, 0x0e, 0x4e
+	};
 	switch (cdesc->qat_hash_alg) {
+	case ICP_QAT_HW_AUTH_ALGO_SM3:
+		rte_memcpy(cdesc->cd_cur_ptr, state1,
+				sizeof(state1));
+		state1_size = 32;
+		state2_size = 32;
+		break;
 	case ICP_QAT_HW_AUTH_ALGO_SHA1:
 		if (cdesc->auth_mode == ICP_QAT_HW_AUTH_MODE0) {
 			/* Plain SHA-1 */
