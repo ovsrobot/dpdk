@@ -146,6 +146,11 @@ test_sources = files(
         'test_trace_perf.c',
         'test_version.c',
         'virtual_pmd.c',
+        'test_cryptodev_asym_common.c',
+        'test_cryptodev_asym_vectors.c',
+        'test_cryptodev_asym_rsa.c',
+        'test_cryptodev_asym_rsa_creator.c',
+        'test_cryptodev_asym_creator.c'
 )
 
 test_deps = enabled_libs
