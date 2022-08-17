@@ -368,6 +368,7 @@ static int qat_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 			{ SYM_ENQ_THRESHOLD_NAME, 0 },
 			{ ASYM_ENQ_THRESHOLD_NAME, 0 },
 			{ COMP_ENQ_THRESHOLD_NAME, 0 },
+			{ "DISABLE SLICE", 0},
 			{ NULL, 0 },
 	};
 
@@ -388,6 +389,17 @@ static int qat_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 			"Cannot reset ring pairs, does pf driver supports pf2vf comms?"
 			);
 		return -ENODEV;
+	}
+
+	if (qat_pci_dev->qat_dev_gen == QAT_GEN3) {
+		uint32_t capa = 0;
+		const uint32_t offset = 0x4c;
+
+		if (rte_pci_read_config(pci_dev, &capa, 4, offset) < 0) {
+			RTE_LOG(ERR, EAL,
+				"Cannot read slice configuration\n");
+		}
+		qat_dev_cmd_param[4].val |= (0x400 & capa) | (0x800 & capa);
 	}
 
 	sym_ret = qat_sym_dev_create(qat_pci_dev, qat_dev_cmd_param);
