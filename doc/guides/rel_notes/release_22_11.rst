@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added SM4 encryption algorithm in ECB, CBC and CTR mode.**
+
+   Added SM4 encryption algorithm to the Cryptodev API.
+   Supported modes are ECB, CBC and CTR.
 
 Removed Items
 -------------
