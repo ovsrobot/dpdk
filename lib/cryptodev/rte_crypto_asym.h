@@ -182,6 +182,7 @@ enum rte_crypto_rsa_priv_key_type {
 	/**< RSA private key is in quintuple format
 	 * See rte_crypto_rsa_priv_key_qt
 	 */
+	RTE_RSA_KEY_TYPE_LIST_END,
 };
 
 /**
