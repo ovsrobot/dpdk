@@ -116,6 +116,8 @@ enum rte_crypto_asym_xform_type {
 	/**< Elliptic Curve Diffie Hellman */
 	RTE_CRYPTO_ASYM_XFORM_ECPM,
 	/**< Elliptic Curve Point Multiplication */
+	RTE_CRYPTO_ASYM_XFORM_EC_POINT_VERIFY,
+	/**< Elliptic Curve Point Verification */
 	RTE_CRYPTO_ASYM_XFORM_TYPE_LIST_END
 	/**< End of list */
 };
@@ -607,6 +609,14 @@ struct rte_crypto_ecpm_op_param {
 };
 
 /**
+ * Structure for EC point verification operation
+ */
+struct rte_crypto_ec_point_verify_op {
+	struct rte_crypto_ec_point p;
+	/**< x and y coordinates of point to be verified */
+};
+
+/**
  * Asymmetric crypto transform data
  *
  * Structure describing asym xforms.
@@ -666,6 +676,7 @@ struct rte_crypto_asym_op {
 		struct rte_crypto_dsa_op_param dsa;
 		struct rte_crypto_ecdsa_op_param ecdsa;
 		struct rte_crypto_ecpm_op_param ecpm;
+		struct rte_crypto_ec_point_verify_op ecp_verify;
 	};
 	uint16_t flags;
 	/**<
