@@ -52,6 +52,17 @@ int rte_eth_vhost_get_queue_event(uint16_t port_id,
  */
 int rte_eth_vhost_get_vid_from_port_id(uint16_t port_id);
 
+/**
+ * By default, rte_vhost_poll_enqueue_completed() is called in Rx path.
+ * This function enables Tx path, rather than Rx path, to poll completed
+ * packets for vhost async enqueue operations. Note that virtio may never
+ * receive DMA completed packets if there are no more Tx operations.
+ *
+ * @param enable
+ *  True indicates Tx path to call rte_vhost_poll_enqueue_completed().
+ */
+void rte_eth_vhost_async_tx_poll_completed(bool enable);
+
 #ifdef __cplusplus
 }
 #endif
