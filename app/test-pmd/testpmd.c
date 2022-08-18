@@ -75,6 +75,8 @@
 
 #include "testpmd.h"
 
+#include <ethdev_driver.h>
+
 #ifndef MAP_HUGETLB
 /* FreeBSD may not have MAP_HUGETLB (in fact, it probably doesn't) */
 #define HUGE_FLAG (0x40000)
@@ -2402,9 +2404,23 @@ start_packet_forwarding(int with_tx_first)
 	if (!pkt_fwd_shared_rxq_check())
 		return;
 
-	if (stream_init != NULL)
-		for (i = 0; i < cur_fwd_config.nb_fwd_streams; i++)
+	if (stream_init != NULL) {
+		for (i = 0; i < cur_fwd_config.nb_fwd_streams; i++) {
+			if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+				struct fwd_stream *fs = fwd_streams[i];
+				struct rte_eth_dev_data *dev_rx_data, *dev_tx_data;
+
+				dev_rx_data = (&rte_eth_devices[fs->rx_port])->data;
+				dev_tx_data = (&rte_eth_devices[fs->tx_port])->data;
+
+				uint8_t rx_state = dev_rx_data->rx_queue_state[fs->rx_port];
+				ports[fs->rx_port].rxq[fs->rx_queue].state = rx_state;
+				uint8_t tx_state = dev_tx_data->tx_queue_state[fs->tx_port];
+				ports[fs->tx_port].txq[fs->tx_queue].state = tx_state;
+			}
 			stream_init(fwd_streams[i]);
+		}
+	}
 
 	port_fwd_begin = cur_fwd_config.fwd_eng->port_fwd_begin;
 	if (port_fwd_begin != NULL) {
