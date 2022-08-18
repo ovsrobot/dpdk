@@ -976,7 +976,6 @@ If FW version >= 8.4, there'll be some Vlan related issues:
 
 #. TCI input set for QinQ  is invalid.
 #. Fail to configure TPID for QinQ.
-#. Need to enable QinQ before enabling Vlan filter.
 #. Fail to strip outer Vlan.
 
 Example of getting best performance with l3fwd example
