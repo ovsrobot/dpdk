@@ -613,7 +613,7 @@ bond_handshake(void)
 
 	/* Exchange LACP frames */
 	all_slaves_done = 0;
-	for (i = 0; i < 30 && all_slaves_done == 0; ++i) {
+	for (i = 0; i < 60 && all_slaves_done == 0; ++i) {
 		rte_delay_ms(delay);
 
 		all_slaves_done = 1;
