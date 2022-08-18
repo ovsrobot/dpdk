@@ -1523,6 +1523,9 @@ main(int argc, char **argv)
 
 	if (mem_info) {
 		meminfo_display();
+		ret = rte_eal_cleanup();
+		if (ret != 0)
+			printf("Error from rte_eal_cleanup(), %d\n", ret);
 		return 0;
 	}
 
