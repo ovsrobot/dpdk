@@ -2190,6 +2190,178 @@ test_ecpm_all_curve(void)
 	return overall_status;
 }
 
+/*
+ * ECDSA Signature generation function
+ */
+static int
+test_ecdsa_sign(const void *input_vector)
+{
+	const struct crypto_testsuite_ecdsa_params *test_vector = input_vector;
+	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
+	struct rte_mempool *op_mpool = ts_params->op_mpool;
+	struct rte_crypto_op *op;
+	struct rte_crypto_op *result_op = NULL;
+	struct rte_crypto_asym_xform xform = {
+		.next = NULL,
+		.xform_type = RTE_CRYPTO_ASYM_XFORM_ECDSA,
+		.ec.curve_id = test_vector->curve
+	};
+	uint8_t R[test_vector->sign_r.length];
+	uint8_t S[test_vector->sign_s.length];
+	const uint8_t dev_id = ts_params->valid_devs[0];
+
+	op = rte_crypto_op_alloc(op_mpool, RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
+	if (op == NULL) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Failed to allocate asymmetric crypto operation struct\n"
+			);
+		return TEST_FAILED;
+	}
+	/*
+	 * Set input data
+	 * - Sessionless operation, no session will be created. User is
+	 * responsible for taking care of xform lifetime -> in case of ECDSA
+	 * no keys are stored in xform so it is not security crucial to clear
+	 * data, although it is recommended to clear xform anyway.
+	 * - Generation of signature pair R, S.
+	 * - Message is a digest of message to be signed.
+	 * - k is a random integer in interval (1, n - 1)
+	 * - pkey is a private key
+	 */
+	op->sess_type = RTE_CRYPTO_OP_SESSIONLESS;
+	op->asym->xform = &xform;
+	op->asym->ecdsa.op_type = RTE_CRYPTO_ASYM_OP_SIGN;
+	op->asym->ecdsa.message.data = test_vector->digest.data;
+	op->asym->ecdsa.message.length = test_vector->digest.length;
+	op->asym->ecdsa.k.data = test_vector->scalar.data;
+	op->asym->ecdsa.k.length = test_vector->scalar.length;
+	op->asym->ecdsa.pkey.data = test_vector->pkey.data;
+	op->asym->ecdsa.pkey.length = test_vector->pkey.length;
+
+	/*
+	 * Set output data
+	 * Signature pair R, S. Positive integers.
+	 */
+	op->asym->ecdsa.r.data = R;
+	op->asym->ecdsa.s.data = S;
+
+	/* Sending packet for signature generation */
+	if (rte_cryptodev_enqueue_burst(dev_id, 0, &op, 1) != 1) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Error sending packet for operation\n");
+		return TEST_FAILED;
+	}
+	/* Waiting for packet to be dequeued */
+	while (rte_cryptodev_dequeue_burst(dev_id, 0, &result_op, 1) == 0)
+		rte_pause();
+
+	if (result_op == NULL) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Failed to process asym crypto op\n");
+		return TEST_FAILED;
+	}
+
+	if (result_op->status != RTE_CRYPTO_OP_STATUS_SUCCESS) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"ECDSA generation failed.\n");
+		return TEST_FAILED;
+	}
+
+	/* Generated signature R, S */
+	debug_hexdump(stdout, "R:", result_op->asym->ecdsa.r.data,
+			result_op->asym->ecdsa.r.length);
+	debug_hexdump(stdout, "S:", result_op->asym->ecdsa.s.data,
+			result_op->asym->ecdsa.s.length);
+
+	return TEST_SUCCESS;
+}
+
+/*
+ * ECDSA Signature verification function
+ */
+static int
+test_ecdsa_verify(const void *input_vector)
+{
+	const struct crypto_testsuite_ecdsa_params *test_vector = input_vector;
+	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
+	struct rte_mempool *op_mpool = ts_params->op_mpool;
+	struct rte_crypto_op *op;
+	struct rte_crypto_op *result_op = NULL;
+	struct rte_crypto_asym_xform xform = {
+		.next = NULL,
+		.xform_type = RTE_CRYPTO_ASYM_XFORM_ECDSA,
+		.ec.curve_id = test_vector->curve
+	};
+	const uint8_t dev_id = ts_params->valid_devs[0];
+
+	op = rte_crypto_op_alloc(op_mpool, RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
+	if (op == NULL) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Failed to allocate asymmetric crypto operation struct\n"
+			);
+		return TEST_FAILED;
+	}
+	/*
+	 * Set input data
+	 * - Sessionless operation, no session will be created. User is
+	 * responsible for taking care of xform lifetime -> in case of
+	 * ECDSA no keys are stored in xform so it is not security crucial to
+	 * clear data, although it is recommended to clear xform anyway.
+	 * - Verification of signature pair R, S.
+	 * - Message is a digest of message that was signed.
+	 * - q is a public key
+	 */
+	op->sess_type = RTE_CRYPTO_OP_SESSIONLESS;
+	op->asym->xform = &xform;
+	op->asym->ecdsa.op_type = RTE_CRYPTO_ASYM_OP_VERIFY;
+	op->asym->ecdsa.message.data = test_vector->digest.data;
+	op->asym->ecdsa.message.length = test_vector->digest.length;
+	op->asym->ecdsa.q.x.data = test_vector->pubkey_qx.data;
+	op->asym->ecdsa.q.x.length = test_vector->pubkey_qx.length;
+	op->asym->ecdsa.q.y.data = test_vector->pubkey_qy.data;
+	op->asym->ecdsa.q.y.length = test_vector->pubkey_qx.length;
+	op->asym->ecdsa.r.data =  test_vector->sign_r.data;
+	op->asym->ecdsa.r.length =  test_vector->sign_r.length;
+	op->asym->ecdsa.s.data =  test_vector->sign_s.data;
+	op->asym->ecdsa.s.length =  test_vector->sign_s.length;
+
+	/* Sending packet for signature generation */
+	if (rte_cryptodev_enqueue_burst(dev_id, 0, &op, 1) != 1) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Error sending packet for operation\n");
+		return TEST_FAILED;
+	}
+	/* Waiting for packet to be dequeued */
+	while (rte_cryptodev_dequeue_burst(dev_id, 0, &result_op, 1) == 0)
+		rte_pause();
+
+	if (result_op == NULL) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Failed to process asym crypto op\n");
+		return TEST_FAILED;
+	}
+
+	/*
+	 * If result_op->status equals RTE_CRYPTO_OP_STATUS_SUCCESS
+	 * signature was verified correctly
+	 */
+	if (result_op->status != RTE_CRYPTO_OP_STATUS_SUCCESS) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"ECDSA verify failed.\n");
+		return TEST_FAILED;
+	}
+
+	return TEST_SUCCESS;
+}
+
 static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 	.suite_name = "Crypto Device OPENSSL ASYM Unit Test Suite",
 	.setup = testsuite_setup,
@@ -2218,6 +2390,30 @@ static struct unit_test_suite cryptodev_qat_asym_testsuite  = {
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
 	.unit_test_cases = {
+		TEST_CASE_NAMED_WITH_DATA(
+			"Test - ECDSA secp256r1 signature generation",
+			ut_setup_asym, ut_teardown_asym,
+			test_ecdsa_sign, &ecdsa_param_secp256r1),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Test - ECDSA secp256r1 signature verification",
+			ut_setup_asym, ut_teardown_asym,
+			test_ecdsa_verify, &ecdsa_param_secp256r1),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Test - ECDSA secp384r1 signature generation",
+			ut_setup_asym, ut_teardown_asym,
+			test_ecdsa_sign, &ecdsa_param_secp384r1),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Test - ECDSA secp384r1 signature verification",
+			ut_setup_asym, ut_teardown_asym,
+			test_ecdsa_verify, &ecdsa_param_secp384r1),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Test - ECDSA secp521r1 signature generation",
+			ut_setup_asym, ut_teardown_asym,
+			test_ecdsa_sign, &ecdsa_param_secp521r1),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Test - ECDSA secp521r1 signature verification",
+			ut_setup_asym, ut_teardown_asym,
+			test_ecdsa_verify, &ecdsa_param_secp521r1),
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_one_by_one),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
