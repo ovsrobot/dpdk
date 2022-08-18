@@ -23,6 +23,7 @@
 #include "test_cryptodev_rsa_test_vectors.h"
 #include "test_cryptodev_asym_util.h"
 #include "test.h"
+#include "test_cryptodev_ecdh_vectors.h"
 
 #define TEST_NUM_BUFS 10
 #define TEST_NUM_SESSIONS 4
@@ -2362,6 +2363,358 @@ test_ecdsa_verify(const void *input_vector)
 	return TEST_SUCCESS;
 }
 
+/*
+ * This function is split into 3 steps: STEP1, STEP1.5, STEP2
+ * Steps 1 and 2 are just DH steps (Public key and shared secret generation).
+ * Step 1.5 is Public Key verification (if point belongs to elliptic curve)
+ */
+static int
+test_ecdh(const void *input_vector)
+{
+	const struct ECDH_test_vector *test_vector = input_vector;
+	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
+	struct rte_mempool *op_mpool = ts_params->op_mpool;
+	struct rte_crypto_asym_xform xform = {
+		.next = NULL,
+		.xform_type = RTE_CRYPTO_ASYM_XFORM_ECDH,
+		.ec.curve_id = test_vector->curve_id
+	};
+	const uint8_t dev_id = ts_params->valid_devs[0];
+
+	uint8_t alice_x[test_vector->curve_bytesize],
+		alice_y[test_vector->curve_bytesize];
+	uint8_t bob_x[test_vector->curve_bytesize],
+		bob_y[test_vector->curve_bytesize];
+	uint8_t alice_xZ[test_vector->curve_bytesize],
+		alice_yZ[test_vector->curve_bytesize];
+	uint8_t bob_xZ[test_vector->curve_bytesize],
+		bob_yZ[test_vector->curve_bytesize];
+	struct rte_crypto_op *alice_op = NULL, *bob_op = NULL;
+
+	alice_op = rte_crypto_op_alloc(op_mpool,
+		RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
+	bob_op = rte_crypto_op_alloc(op_mpool,
+		RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
+
+	/*
+	 * STEP 1a:
+	 * Generate Alice public key
+	 */
+
+	alice_op->sess_type = RTE_CRYPTO_OP_SESSIONLESS;
+	alice_op->asym->xform = &xform;
+	alice_op->asym->ecdh.ke_type = RTE_CRYPTO_ASYM_KE_PUB_KEY_GENERATE;
+	alice_op->asym->ecdh.priv_key = test_vector->alice_d;
+	alice_op->asym->ecdh.pub_key.x.data = alice_x;
+	alice_op->asym->ecdh.pub_key.y.data = alice_y;
+
+	if (rte_cryptodev_enqueue_burst(dev_id, 0, &alice_op, 1) != 1) {
+		RTE_LOG(ERR, USER1, "Error sending packet for sign\n");
+		return -1;
+	}
+
+	while (rte_cryptodev_dequeue_burst(dev_id, 0, &alice_op, 1) == 0)
+		rte_pause();
+
+	if (alice_op->asym->ecdh.pub_key.x.length !=
+			test_vector->alice_q.x.length) {
+		RTE_LOG(ERR, USER1,
+				"Incorrect Alice public key length (X coeff) Received length = %lu Expeceted length = %lu\n",
+				test_vector->alice_q.x.length,
+				alice_op->asym->ecdh.pub_key.x.length
+			);
+		goto error;
+	}
+	if (alice_op->asym->ecdh.pub_key.y.length !=
+			test_vector->alice_q.y.length) {
+		RTE_LOG(ERR, USER1,
+				"Incorrect Alice public key length (Y coeff) Received length = %lu Expeceted length = %lu\n",
+					test_vector->alice_q.y.length,
+					alice_op->asym->ecdh.pub_key.y.length
+				);
+		goto error;
+	}
+	if (memcmp(alice_op->asym->ecdh.pub_key.x.data,
+			test_vector->alice_q.x.data,
+			test_vector->alice_q.x.length)
+	) {
+		RTE_LOG(ERR, USER1, "Incorrect Alice public key X\n");
+		debug_hexdump(stdout, "Generated PublicKey x (Alice):",
+			alice_op->asym->ecdh.pub_key.x.data,
+			alice_op->asym->ecdh.pub_key.x.length);
+		goto error;
+	}
+	if (memcmp(alice_op->asym->ecdh.pub_key.y.data,
+			test_vector->alice_q.y.data,
+			test_vector->alice_q.y.length)
+	) {
+		RTE_LOG(ERR, USER1, "Incorrect Alice public key Y\n");
+		debug_hexdump(stdout, "Generated PublicKey y (Alice):",
+				alice_op->asym->ecdh.pub_key.y.data,
+				alice_op->asym->ecdh.pub_key.y.length);
+		goto error;
+	}
+
+
+	/*
+	 * STEP 1b:
+	 * Generate Bob public key
+	 */
+
+	bob_op->sess_type = RTE_CRYPTO_OP_SESSIONLESS;
+	bob_op->asym->xform = &xform;
+	bob_op->asym->ecdh.ke_type = RTE_CRYPTO_ASYM_KE_PUB_KEY_GENERATE;
+	bob_op->asym->ecdh.priv_key = test_vector->bob_d;
+	bob_op->asym->ecdh.pub_key.x.data = bob_x;
+	bob_op->asym->ecdh.pub_key.y.data = bob_y;
+
+	if (rte_cryptodev_enqueue_burst(dev_id, 0, &bob_op, 1) != 1) {
+		RTE_LOG(ERR, USER1, "Error sending packet for sign\n");
+		goto error;
+	}
+
+	while (rte_cryptodev_dequeue_burst(dev_id, 0, &bob_op, 1) == 0)
+		rte_pause();
+
+	if (bob_op->asym->ecdh.pub_key.x.length !=
+			test_vector->bob_q.x.length) {
+		RTE_LOG(ERR, USER1,
+			"Incorrect Bob's public key length (X coeff) Received length = %lu Expeceted length = %lu\n",
+			test_vector->bob_q.x.length,
+			bob_op->asym->ecdh.pub_key.x.length
+		);
+		goto error;
+	}
+	if (bob_op->asym->ecdh.pub_key.y.length !=
+			test_vector->bob_q.y.length) {
+		RTE_LOG(ERR, USER1,
+			"Incorrect Bob's public key length (Y coeff) Received length = %lu Expeceted length = %lu\n",
+			test_vector->bob_q.y.length,
+			bob_op->asym->ecdh.pub_key.y.length
+		);
+		goto error;
+	}
+	if (memcmp(bob_op->asym->ecdh.pub_key.x.data,
+			test_vector->bob_q.x.data,
+			test_vector->bob_q.x.length)
+	) {
+		RTE_LOG(ERR, USER1, "Incorrect Bob's public key X\n");
+		debug_hexdump(stdout,
+			"Generated PublicKey x (bob):",
+			bob_op->asym->ecdh.pub_key.x.data,
+			bob_op->asym->ecdh.pub_key.x.length
+		);
+		goto error;
+	}
+	if (memcmp(bob_op->asym->ecdh.pub_key.y.data,
+			test_vector->bob_q.y.data,
+			test_vector->bob_q.y.length)
+	) {
+		RTE_LOG(ERR, USER1, "Incorrect Bob's public key Y\n");
+		debug_hexdump(stdout,
+			"Generated PublicKey y (bob):",
+			bob_op->asym->ecdh.pub_key.y.data,
+			bob_op->asym->ecdh.pub_key.y.length
+		);
+		goto error;
+	}
+
+	/*
+	 * STEP 1.5a:
+	 * Alice verifies Bob's public key, reusing op, other parameters
+	 * then already set, only what Alice needs to do is to set public
+	 * key of Bob and change key exchange type to VERIFY.
+	 */
+
+	alice_op->asym->ecdh.ke_type = RTE_CRYPTO_ASYM_KE_PUB_KEY_VERIFY;
+	alice_op->asym->ecdh.pub_key.x.data = bob_x;
+	alice_op->asym->ecdh.pub_key.x.length =
+		bob_op->asym->ecdh.pub_key.x.length;
+	alice_op->asym->ecdh.pub_key.y.data = bob_y;
+	alice_op->asym->ecdh.pub_key.y.length =
+		bob_op->asym->ecdh.pub_key.y.length;
+
+	if (rte_cryptodev_enqueue_burst(dev_id, 0, &alice_op, 1) != 1) {
+		RTE_LOG(ERR, USER1, "Error sending packet for sign\n");
+		goto error;
+	}
+
+	while (rte_cryptodev_dequeue_burst(dev_id, 0, &alice_op, 1) == 0)
+		rte_pause();
+
+	if (alice_op->status != RTE_CRYPTO_OP_STATUS_SUCCESS) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Failed to verify Bob's public key, it does not belongs to curve points\n"
+			);
+		return TEST_FAILED;
+	}
+
+	/*
+	 * STEP 1.5b:
+	 * Bob verifies Alice's public key, reusing op, other parameters
+	 * then already set, only what Bob needs to do is to set public
+	 * key of Alice and change key exchange type to VERIFY.
+	 */
+
+	bob_op->asym->ecdh.ke_type = RTE_CRYPTO_ASYM_KE_PUB_KEY_VERIFY;
+	bob_op->asym->ecdh.pub_key.x.data = alice_x;
+	bob_op->asym->ecdh.pub_key.x.length =
+		alice_op->asym->ecdh.pub_key.x.length;
+	bob_op->asym->ecdh.pub_key.y.data = alice_y;
+	bob_op->asym->ecdh.pub_key.y.length =
+		alice_op->asym->ecdh.pub_key.y.length;
+
+	if (rte_cryptodev_enqueue_burst(dev_id, 0, &bob_op, 1) != 1) {
+		RTE_LOG(ERR, USER1, "Error sending packet for sign\n");
+		goto error;
+	}
+
+	while (rte_cryptodev_dequeue_burst(dev_id, 0, &bob_op, 1) == 0)
+		rte_pause();
+
+	if (bob_op->status != RTE_CRYPTO_OP_STATUS_SUCCESS) {
+		RTE_LOG(ERR, USER1,
+				"line %u FAILED: %s", __LINE__,
+				"Failed to verify Alice's public key, it does not belongs to curve points\n"
+			);
+		goto error;
+	}
+
+	/*
+	 * STEP 2a:
+	 * Alice generates shared secret Z, since Bob's public key was already
+	 * set when doing verification only key exchange type need to be
+	 * changed, and setting place where Z will be copied by the PMD.
+	 */
+
+	alice_op->asym->ecdh.ke_type = RTE_CRYPTO_ASYM_KE_SHARED_SECRET_COMPUTE;
+	alice_op->asym->ecdh.shared_secret.x.data = alice_xZ;
+	alice_op->asym->ecdh.shared_secret.y.data = alice_yZ;
+
+	if (rte_cryptodev_enqueue_burst(dev_id, 0, &alice_op, 1) != 1) {
+		RTE_LOG(ERR, USER1, "Error sending packet for sign\n");
+		goto error;
+	}
+	while (rte_cryptodev_dequeue_burst(dev_id, 0, &alice_op, 1) == 0)
+		rte_pause();
+
+	if (alice_op->asym->ecdh.shared_secret.x.length !=
+			test_vector->Z.x.length) {
+		RTE_LOG(ERR, USER1,
+				"Incorrect Alice's shared secret length X Received = %lu Expected = %lu\n",
+				alice_op->asym->ecdh.shared_secret.x.length,
+				test_vector->Z.x.length
+		);
+		goto error;
+	}
+	if (alice_op->asym->ecdh.shared_secret.y.length !=
+			test_vector->Z.y.length) {
+		RTE_LOG(ERR, USER1,
+				"Incorrect Alice's shared secret length Y Received = %lu Expected = %lu\n",
+				alice_op->asym->ecdh.shared_secret.y.length,
+				test_vector->Z.y.length
+		);
+		goto error;
+	}
+
+	if (memcmp(alice_op->asym->ecdh.shared_secret.x.data,
+			test_vector->Z.x.data,
+			test_vector->Z.x.length)
+	) {
+		RTE_LOG(ERR, USER1, "Incorrect Alice's shared secret X\n");
+		debug_hexdump(stdout,
+			"Generated SharedSecret x (Alice):",
+			alice_op->asym->ecdh.shared_secret.x.data,
+			alice_op->asym->ecdh.shared_secret.x.length
+		);
+		goto error;
+	}
+	if (memcmp(alice_op->asym->ecdh.shared_secret.y.data,
+			test_vector->Z.y.data,
+			test_vector->Z.y.length)
+	) {
+		RTE_LOG(ERR, USER1, "Incorrect Alice's shared secret Y\n");
+		debug_hexdump(stdout,
+			"Generated SharedSecret y (Alice):",
+			alice_op->asym->ecdh.shared_secret.y.data,
+			alice_op->asym->ecdh.shared_secret.y.length
+		);
+		goto error;
+	}
+
+	/*
+	 * STEP 2b:
+	 * Bob generates shared secret Z, since Alice's public key was already
+	 * set when doing verification only key exchange type need to be
+	 * changed, and setting place where Z will be copied by the PMD.
+	 */
+
+	bob_op->asym->ecdh.ke_type = RTE_CRYPTO_ASYM_KE_SHARED_SECRET_COMPUTE;
+	bob_op->asym->ecdh.shared_secret.x.data = bob_xZ;
+	bob_op->asym->ecdh.shared_secret.y.data = bob_yZ;
+
+	if (rte_cryptodev_enqueue_burst(dev_id, 0, &bob_op, 1) != 1) {
+		RTE_LOG(ERR, USER1, "Error sending packet for sign\n");
+		goto error;
+	}
+
+	while (rte_cryptodev_dequeue_burst(dev_id, 0, &bob_op, 1) == 0)
+		rte_pause();
+
+	if (bob_op->asym->ecdh.shared_secret.x.length !=
+			test_vector->Z.x.length) {
+		RTE_LOG(ERR, USER1,
+				"Incorrect Bob's shared secret length X Received = %lu Expected = %lu\n",
+				bob_op->asym->ecdh.shared_secret.x.length,
+				test_vector->Z.x.length
+		);
+		goto error;
+	}
+	if (bob_op->asym->ecdh.shared_secret.y.length !=
+			test_vector->Z.y.length) {
+		RTE_LOG(ERR, USER1,
+				"Incorrect Bob's shared secret length Y Received = %lu Expected = %lu\n",
+				bob_op->asym->ecdh.shared_secret.y.length,
+				test_vector->Z.y.length
+		);
+		goto error;
+	}
+
+	if (memcmp(bob_op->asym->ecdh.shared_secret.x.data,
+			test_vector->Z.x.data,
+			test_vector->Z.x.length)
+	) {
+		RTE_LOG(ERR, USER1, "Incorrect Bob's shared secret X\n");
+		debug_hexdump(stdout,
+			"Generated SharedSecret x (Bob):",
+			bob_op->asym->ecdh.shared_secret.x.data,
+			bob_op->asym->ecdh.shared_secret.x.length
+		);
+		goto error;
+	}
+	if (memcmp(bob_op->asym->ecdh.shared_secret.y.data,
+			test_vector->Z.y.data,
+			test_vector->Z.y.length)
+	) {
+		RTE_LOG(ERR, USER1, "Incorrect Bob's shared secret Y\n");
+		debug_hexdump(stdout,
+			"Generated SharedSecret y (Bob):",
+			bob_op->asym->ecdh.shared_secret.y.data,
+			bob_op->asym->ecdh.shared_secret.y.length
+		);
+		goto error;
+	}
+
+	/* Both shared secret where correctly verified -> Test passed */
+
+	return TEST_SUCCESS;
+error:
+	rte_crypto_op_free(alice_op);
+	rte_crypto_op_free(bob_op);
+	return TEST_FAILED;
+}
+
 static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 	.suite_name = "Crypto Device OPENSSL ASYM Unit Test Suite",
 	.setup = testsuite_setup,
@@ -2390,6 +2743,10 @@ static struct unit_test_suite cryptodev_qat_asym_testsuite  = {
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
 	.unit_test_cases = {
+		TEST_CASE_NAMED_WITH_DATA(
+			"Test - ECDH secp256r1, RFC 5114 256 Random",
+			ut_setup_asym, ut_teardown_asym,
+			test_ecdh, &rfc5114_secp256r1),
 		TEST_CASE_NAMED_WITH_DATA(
 			"Test - ECDSA secp256r1 signature generation",
 			ut_setup_asym, ut_teardown_asym,
