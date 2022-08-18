@@ -593,7 +593,11 @@ struct rte_crypto_ecdsa_op_param {
  */
 struct rte_crypto_ecpm_op_param {
 	struct rte_crypto_ec_point p;
-	/**< x and y coordinates of input point */
+	/**<
+	 * x and y coordinates of input point,
+	 * in case both x.data and y.data are set to NULL
+	 * selected ellitpic curve generator point is used
+	 */
 
 	struct rte_crypto_ec_point r;
 	/**< x and y coordinates of resultant point */
