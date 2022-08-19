@@ -1817,6 +1817,11 @@ init_test_ops(void)
 		else
 			test_ops.test = fips_generic_test;
 		break;
+	case FIPS_TEST_ALGO_AES_GMAC:
+		test_ops.prepare_op = prepare_auth_op;
+		test_ops.prepare_xform = prepare_gmac_xform;
+		test_ops.test = fips_generic_test;
+		break;
 	case FIPS_TEST_ALGO_AES_GCM:
 		test_ops.prepare_op = prepare_aead_op;
 		test_ops.prepare_xform = prepare_gcm_xform;
@@ -1994,6 +1999,7 @@ fips_test_one_test_group(void)
 	json_object_set_new(json_info.json_write_group, "tests", write_tests);
 
 	switch (info.algo) {
+	case FIPS_TEST_ALGO_AES_GMAC:
 	case FIPS_TEST_ALGO_AES_GCM:
 		ret = parse_test_gcm_json_init();
 		break;
