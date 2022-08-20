@@ -26,6 +26,19 @@
 int dlb2_resource_init(struct dlb2_hw *hw, enum dlb2_hw_ver ver);
 
 /**
+ * dlb2_resource_probe() - probe hw resources
+ * @hw: pointer to struct dlb2_hw.
+ *
+ * This function probes hw resources for best port allocation to producer
+ * cores.
+ *
+ * Return:
+ * Returns 0 upon success, <0 otherwise.
+ */
+int dlb2_resource_probe(struct dlb2_hw *hw, const void *probe_args);
+
+
+/**
  * dlb2_clr_pmcsr_disable() - power on bulk of DLB 2.0 logic
  * @hw: dlb2_hw handle for a particular device.
  * @ver: device version.

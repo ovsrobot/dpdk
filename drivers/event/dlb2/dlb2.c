@@ -294,6 +294,23 @@ dlb2_string_to_int(int *result, const char *str)
 }
 
 static int
+set_producer_coremask(const char *key __rte_unused,
+		      const char *value,
+		      void *opaque)
+{
+	const char **mask_str = opaque;
+
+	if (value == NULL || opaque == NULL) {
+		DLB2_LOG_ERR("NULL pointer\n");
+		return -EINVAL;
+	}
+
+	*mask_str = value;
+
+	return 0;
+}
+
+static int
 set_numa_node(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *socket_id = opaque;
@@ -1785,6 +1802,9 @@ dlb2_hw_create_dir_port(struct dlb2_eventdev *dlb2,
 	} else
 		credit_high_watermark = enqueue_depth;
 
+	if (ev_port->conf.event_port_cfg & RTE_EVENT_PORT_CFG_HINT_PRODUCER)
+		cfg.is_producer = 1;
+
 	/* Per QM values */
 
 	ret = dlb2_iface_dir_port_create(handle, &cfg,  dlb2->poll_mode);
@@ -1979,6 +1999,10 @@ dlb2_eventdev_port_setup(struct rte_eventdev *dev,
 	}
 	ev_port->enq_retries = port_conf->enqueue_depth / sw_credit_quanta;
 
+	/* Save off port config for reconfig */
+	ev_port->conf = *port_conf;
+
+
 	/*
 	 * Create port
 	 */
@@ -2004,9 +2028,6 @@ dlb2_eventdev_port_setup(struct rte_eventdev *dev,
 			return ret;
 		}
 	}
-
-	/* Save off port config for reconfig */
-	ev_port->conf = *port_conf;
 
 	ev_port->id = ev_port_id;
 	ev_port->enq_configured = true;
@@ -4700,6 +4721,7 @@ dlb2_parse_params(const char *params,
 					     DLB2_CQ_WEIGHT,
 					     DLB2_PORT_COS,
 					     DLB2_COS_BW,
+					     DLB2_PRODUCER_COREMASK,
 					     NULL };
 
 	if (params != NULL && params[0] != '\0') {
@@ -4880,6 +4902,18 @@ dlb2_parse_params(const char *params,
 				return ret;
 			}
 
+
+			ret = rte_kvargs_process(kvlist,
+						 DLB2_PRODUCER_COREMASK,
+						 set_producer_coremask,
+						 &dlb2_args->producer_coremask);
+			if (ret != 0) {
+				DLB2_LOG_ERR(
+					"%s: Error parsing producer coremask",
+					name);
+				rte_kvargs_free(kvlist);
+				return ret;
+			}
 
 			rte_kvargs_free(kvlist);
 		}
