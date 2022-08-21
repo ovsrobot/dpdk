@@ -31,6 +31,7 @@ test_macros(int __rte_unused unused_parm)
 
 	uintptr_t unused = 0;
 	unsigned int smaller = SMALLER, bigger  = BIGGER;
+	uint32_t arr[3];
 
 	RTE_SET_USED(unused);
 
@@ -41,6 +42,16 @@ test_macros(int __rte_unused unused_parm)
 		FAIL_MACRO(RTE_PTR_ADD);
 	if ((uintptr_t)RTE_PTR_SUB(BIGGER, PTR_DIFF) != SMALLER)
 		FAIL_MACRO(RTE_PTR_SUB);
+	if (RTE_PTR_ADD(arr + 1, sizeof(arr[0])) != &arr[2])
+		FAIL_MACRO(RTE_PTR_ADD);
+	if (RTE_PTR_SUB(arr + 1, sizeof(arr[0])) != &arr[0])
+		FAIL_MACRO(RTE_PTR_SUB);
+	if (RTE_PTR_ALIGN_FLOOR(arr + 2, 4) != &arr[2])
+		FAIL_MACRO(RTE_PTR_ALIGN_FLOOR);
+	if (RTE_PTR_ALIGN_CEIL(arr + 2, 4) != &arr[2])
+		FAIL_MACRO(RTE_PTR_ALIGN_CEIL);
+	if (RTE_PTR_ALIGN(arr + 2, 4) != &arr[2])
+		FAIL_MACRO(RTE_PTR_ALIGN);
 	if (RTE_PTR_DIFF(BIGGER, SMALLER) != PTR_DIFF)
 		FAIL_MACRO(RTE_PTR_DIFF);
 	if (RTE_MAX(SMALLER, BIGGER) != BIGGER)
