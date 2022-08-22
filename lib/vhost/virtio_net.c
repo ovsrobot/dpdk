@@ -1837,6 +1837,7 @@ virtio_dev_rx_async_packed(struct virtio_net *dev, struct vhost_virtqueue *vq,
 {
 	struct buf_vector buf_vec[BUF_VECTOR_MAX];
 
+	memset(buf_vec, 0, sizeof(buf_vec));
 	if (unlikely(vhost_enqueue_async_packed(dev, vq, pkt, buf_vec,
 					nr_descs, nr_buffers) < 0)) {
 		VHOST_LOG_DATA(dev->ifname, DEBUG, "failed to get enough desc from vring\n");
