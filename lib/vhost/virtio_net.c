@@ -3462,6 +3462,7 @@ virtio_dev_tx_async_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 				allocerr_warned = true;
 			}
 			dropped = true;
+			slot_idx--;
 			break;
 		}
 
@@ -3652,6 +3653,12 @@ virtio_dev_tx_async_packed(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		if (unlikely(virtio_dev_tx_async_single_packed(dev, vq, mbuf_pool, pkt,
 				slot_idx, legacy_ol_flags))) {
 			rte_pktmbuf_free_bulk(&pkts_prealloc[pkt_idx], count - pkt_idx);
+
+			if (slot_idx == 0)
+				slot_idx = vq->size - 1;
+			else
+				slot_idx--;
+
 			break;
 		}
 
@@ -3679,8 +3686,13 @@ virtio_dev_tx_async_packed(struct virtio_net *dev, struct vhost_virtqueue *vq,
 			async->buffer_idx_packed += vq->size - pkt_err;
 
 		while (pkt_err-- > 0) {
-			rte_pktmbuf_free(pkts_info[slot_idx % vq->size].mbuf);
-			slot_idx--;
+			rte_pktmbuf_free(pkts_info[slot_idx].mbuf);
+			descs_err += pkts_info[slot_idx].descs;
+
+			if (slot_idx == 0)
+				slot_idx = vq->size - 1;
+			else
+				slot_idx--;
 		}
 
 		/* recover available ring */
