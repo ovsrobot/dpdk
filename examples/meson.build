@@ -15,6 +15,7 @@ all_examples = [
         'dma',
         'ethtool',
         'eventdev_pipeline',
+	'eventdev_producer_consumer',
         'fips_validation',
         'flow_classify',
         'flow_filtering',
