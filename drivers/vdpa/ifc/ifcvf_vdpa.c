@@ -290,6 +290,8 @@ vdpa_ifcvf_start(struct ifcvf_internal *internal)
 	rte_vhost_get_negotiated_features(vid, &hw->req_features);
 
 	for (i = 0; i < nr_vring; i++) {
+		if (!hw->vring[i].enable)
+			continue;
 		rte_vhost_get_vhost_vring(vid, i, &vq);
 		gpa = hva_to_gpa(vid, (uint64_t)(uintptr_t)vq.desc);
 		if (gpa == 0) {
@@ -505,6 +507,8 @@ notify_relay(void *arg)
 
 	vring.kickfd = -1;
 	for (qid = 0; qid < q_num; qid++) {
+		if (!hw->vring[qid].enable)
+			continue;
 		ev.events = EPOLLIN | EPOLLPRI;
 		rte_vhost_get_vhost_vring(internal->vid, qid, &vring);
 		ev.data.u64 = qid | (uint64_t)vring.kickfd << 32;
