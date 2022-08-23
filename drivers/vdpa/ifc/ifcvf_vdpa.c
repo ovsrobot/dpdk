@@ -1286,8 +1286,6 @@ ifcvf_set_vring_state(int vid, int vring, int state)
 	struct internal_list *list;
 	struct ifcvf_internal *internal;
 	struct ifcvf_hw *hw;
-	struct ifcvf_pci_common_cfg *cfg;
-	int ret = 0;
 
 	vdev = rte_vhost_get_vdpa_device(vid);
 	list = find_internal_resource_by_vdev(vdev);
@@ -1303,27 +1301,20 @@ ifcvf_set_vring_state(int vid, int vring, int state)
 	}
 
 	hw = &internal->hw;
+
+	hw->vring[vring].enable = !!state;
+
 	if (!internal->configured)
 		goto exit;
 
-	cfg = hw->common_cfg;
-	IFCVF_WRITE_REG16(vring, &cfg->queue_select);
-	IFCVF_WRITE_REG16(!!state, &cfg->queue_enable);
+	/* close data path */
+	rte_atomic32_set(&internal->dev_attached, 0);
+	update_datapath(internal);
 
-	if (!state && hw->vring[vring].enable) {
-		ret = vdpa_disable_vfio_intr(internal);
-		if (ret)
-			return ret;
-	}
-
-	if (state && !hw->vring[vring].enable) {
-		ret = vdpa_enable_vfio_intr(internal, false);
-		if (ret)
-			return ret;
-	}
-
+	/* restart data path */
+	rte_atomic32_set(&internal->dev_attached, 1);
+	update_datapath(internal);
 exit:
-	hw->vring[vring].enable = !!state;
 	return 0;
 }
 
