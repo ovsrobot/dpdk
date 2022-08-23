@@ -26,6 +26,18 @@
 
 #include "base/ifcvf.h"
 
+/**
+** RTE_MAX() and RTE_MIN() cannot be used since braced-group within
+** expression allowed only inside a function, but MAX() is used as
+** a number of elements in array.
+**/
+#ifndef MAX
+#define MAX(v1, v2)	((v1) > (v2) ? (v1) : (v2))
+#endif
+#ifndef MIN
+#define MIN(v1, v2)	((v1) < (v2) ? (v1) : (v2))
+#endif
+
 RTE_LOG_REGISTER(ifcvf_vdpa_logtype, pmd.vdpa.ifcvf, NOTICE);
 #define DRV_LOG(level, fmt, args...) \
 	rte_log(RTE_LOG_ ## level, ifcvf_vdpa_logtype, \
@@ -1559,7 +1571,6 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	}
 
 	internal->configured = 0;
-	internal->max_queues = IFCVF_MAX_QUEUES;
 	features = ifcvf_get_features(&internal->hw);
 
 	device_id = ifcvf_pci_get_device_type(pci_dev);
@@ -1570,6 +1581,8 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 
 	if (device_id == VIRTIO_ID_NET) {
 		internal->hw.device_type = IFCVF_NET;
+		internal->max_queues = MIN(IFCVF_MAX_QUEUES,
+			(internal->hw.common_cfg->num_queues - 1)/2);
 		internal->features = features &
 					~(1ULL << VIRTIO_F_IOMMU_PLATFORM);
 		internal->features |= dev_info[IFCVF_NET].features;
@@ -1608,6 +1621,9 @@ ifcvf_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 		DRV_LOG(DEBUG, "    sectors  : %u",
 			internal->hw.blk_cfg->geometry.sectors);
 		DRV_LOG(DEBUG, "num_queues: 0x%08x",
+			internal->hw.blk_cfg->num_queues);
+
+		internal->max_queues = MIN(IFCVF_MAX_QUEUES,
 			internal->hw.blk_cfg->num_queues);
 	}
 
