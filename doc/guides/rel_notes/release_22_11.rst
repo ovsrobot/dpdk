@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated the aesni_mb crypto PMD.**
+
+  * Added support for 8-byte and 16-byte tags for ZUC-EIA3-256.
+
 
 Removed Items
 -------------
