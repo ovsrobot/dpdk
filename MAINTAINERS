@@ -311,6 +311,12 @@ F: config/riscv/
 F: doc/guides/linux_gsg/cross_build_dpdk_for_riscv.rst
 F: lib/eal/riscv/
 
+LoongArch
+M: Min Zhou <zhoumin@loongson.cn>
+F: config/loongarch/
+F: doc/guides/linux_gsg/cross_build_dpdk_for_loongarch.rst
+F: lib/eal/loongarch/
+
 Intel x86
 M: Bruce Richardson <bruce.richardson@intel.com>
 M: Konstantin Ananyev <konstantin.v.ananyev@yandex.ru>

@@ -848,6 +848,12 @@ rv64
 Support 64-bit RISC-V architecture.
 
 
+LoongArch64
+-----------
+
+Support 64-bit LoongArch architecture.
+
+
 x86-32
 ------
 

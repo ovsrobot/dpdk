@@ -15,6 +15,7 @@ Getting Started Guide for Linux
     build_dpdk
     cross_build_dpdk_for_arm64
     cross_build_dpdk_for_riscv
+    cross_build_dpdk_for_loongarch
     linux_drivers
     build_sample_apps
     linux_eal_parameters
