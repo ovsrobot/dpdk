@@ -78,6 +78,15 @@ if [ "$RISCV64" = "true" ]; then
     cross_file=config/riscv/riscv64_linux_gcc
 fi
 
+if [ "$LOONGARCH64" = "true" ]; then
+	cross_tools_dir="/tmp/loongarch64-cross-tools"
+	rm -rf $cross_tools_dir
+	mkdir $cross_tools_dir
+	tar -xf /tmp/loongarch64-clfs-5.1-cross-tools-gcc-glibc.tar.xz -C $cross_tools_dir --strip-components 1
+	export PATH=$PATH:$cross_tools_dir/bin
+	cross_file=config/loongarch/loongarch_loongarch64_linux_gcc
+fi
+
 if [ -n "$cross_file" ]; then
     OPTS="$OPTS --cross-file $cross_file"
 fi
