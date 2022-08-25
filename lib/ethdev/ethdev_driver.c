@@ -206,9 +206,9 @@ rte_eth_dev_probing_finish(struct rte_eth_dev *dev)
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
 		eth_dev_fp_ops_setup(rte_eth_fp_ops + dev->data->port_id, dev);
 
-	rte_eth_dev_callback_process(dev, RTE_ETH_EVENT_NEW, NULL);
 
 	dev->state = RTE_ETH_DEV_ATTACHED;
+	rte_eth_dev_callback_process(dev, RTE_ETH_EVENT_NEW, NULL);
 }
 
 int
