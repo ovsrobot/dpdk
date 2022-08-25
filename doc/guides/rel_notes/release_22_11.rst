@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added SGL support to AESNI_MB PMD.**
+
+  Added support for SGL to AESNI_MB PMD. Support for inplace,
+  OOP SGL in SGL out, OOP LB in SGL out, and OOP SGL in LB out added.
 
 Removed Items
 -------------
