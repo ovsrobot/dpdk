@@ -3706,14 +3706,15 @@ eth_event_callback(portid_t port_id, enum rte_eth_event_type type, void *param,
 		fflush(stdout);
 	}
 
+	if (port_id_is_invalid(port_id, DISABLED_WARN))
+		return 0;
+
 	switch (type) {
 	case RTE_ETH_EVENT_NEW:
 		ports[port_id].need_setup = 1;
 		ports[port_id].port_status = RTE_PORT_HANDLING;
 		break;
 	case RTE_ETH_EVENT_INTR_RMV:
-		if (port_id_is_invalid(port_id, DISABLED_WARN))
-			break;
 		if (rte_eal_alarm_set(100000,
 				rmv_port_callback, (void *)(intptr_t)port_id))
 			fprintf(stderr,
