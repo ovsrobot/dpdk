@@ -4,6 +4,7 @@
 #ifdef RTE_EXEC_ENV_FREEBSD
 	#define _WITH_GETLINE
 #endif
+#include <ctype.h>
 #include <stdio.h>
 
 #include <rte_malloc.h>

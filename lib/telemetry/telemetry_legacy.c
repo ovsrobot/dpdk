@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2020 Intel Corporation
  */
+#include <ctype.h>
 
 #ifndef RTE_EXEC_ENV_WINDOWS
 #include <unistd.h>

@@ -3,6 +3,7 @@
  * All rights reserved.
  */
 
+#include <ctype.h>
 #include <string.h>
 #include <inttypes.h>
 #include <stdbool.h>
