@@ -3,7 +3,7 @@
  * Copyright(c) 2014 6WIND S.A.
  * All rights reserved.
  */
-
+#include <unistd.h>
 #include <time.h>
 
 #include <pcap.h>
@@ -38,6 +38,8 @@
 
 #define RTE_PMD_PCAP_MAX_QUEUES 16
 
+#define ETH_PCAP_SYNC_THRESHOLD 0x20000000
+
 static char errbuf[PCAP_ERRBUF_SIZE];
 static struct timespec start_time;
 static uint64_t start_cycles;
@@ -46,6 +48,8 @@ static uint8_t iface_idx;
 
 static uint64_t timestamp_rx_dynflag;
 static int timestamp_dynfield_offset = -1;
+
+RTE_DEFINE_PER_LCORE(uint64_t, _pcap_cached_bytes);
 
 struct queue_stat {
 	volatile unsigned long pkts;
@@ -143,6 +147,16 @@ static struct rte_eth_link pmd_link = {
 };
 
 RTE_LOG_REGISTER_DEFAULT(eth_pcap_logtype, NOTICE);
+
+static inline void
+pcap_dumper_data_sync(pcap_dumper_t *dumper, uint32_t bytes)
+{
+	RTE_PER_LCORE(_pcap_cached_bytes) += bytes;
+	if (unlikely(RTE_PER_LCORE(_pcap_cached_bytes) > ETH_PCAP_SYNC_THRESHOLD)) {
+		if (!fdatasync(fileno(pcap_dump_file(dumper))))
+			RTE_PER_LCORE(_pcap_cached_bytes) = 0;
+	}
+}
 
 static struct queue_missed_stat*
 queue_missed_stat_update(struct rte_eth_dev *dev, unsigned int qid)
@@ -421,7 +435,7 @@ eth_pcap_tx_dumper(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	 * process stops and to make sure the pcap file is actually written,
 	 * we flush the pcap dumper within each burst.
 	 */
-	pcap_dump_flush(dumper);
+	pcap_dumper_data_sync(dumper, tx_bytes);
 	dumper_q->tx_stat.pkts += num_tx;
 	dumper_q->tx_stat.bytes += tx_bytes;
 	dumper_q->tx_stat.err_pkts += nb_pkts - num_tx;
