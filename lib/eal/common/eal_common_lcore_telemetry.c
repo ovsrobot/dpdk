@@ -19,6 +19,8 @@ int __rte_lcore_telemetry_enabled;
 
 #ifdef RTE_LCORE_POLL_BUSYNESS
 
+#include "eal_private.h"
+
 struct lcore_telemetry {
 	int poll_busyness;
 	/**< Calculated poll busyness (gets set/returned by the API) */
@@ -254,6 +256,48 @@ lcore_handle_poll_busyness(const char *cmd __rte_unused,
 	return 0;
 }
 
+static int
+lcore_handle_cpuset(const char *cmd __rte_unused,
+		    const char *params __rte_unused,
+		    struct rte_tel_data *d)
+{
+	char corenum[64];
+	int i;
+
+	rte_tel_data_start_dict(d);
+
+	RTE_LCORE_FOREACH(i) {
+		const struct lcore_config *cfg = &lcore_config[i];
+		const rte_cpuset_t *cpuset = &cfg->cpuset;
+		struct rte_tel_data *ld;
+		unsigned int cpu;
+
+		if (!rte_lcore_is_enabled(i))
+			continue;
+
+		/* create an array of integers */
+		ld = rte_tel_data_alloc();
+		if (ld == NULL)
+			return -ENOMEM;
+		rte_tel_data_start_array(ld, RTE_TEL_INT_VAL);
+
+		/* add cpu ID's from cpuset to the array */
+		for (cpu = 0; cpu < CPU_SETSIZE; cpu++) {
+			if (!CPU_ISSET(cpu, cpuset))
+				continue;
+			rte_tel_data_add_array_int(ld, cpu);
+		}
+
+		/* add array to the per-lcore container */
+		snprintf(corenum, sizeof(corenum), "%d", i);
+
+		/* tell telemetry library to free this array automatically */
+		rte_tel_data_add_dict_container(d, corenum, ld, 0);
+	}
+
+	return 0;
+}
+
 RTE_INIT(lcore_init_telemetry)
 {
 	__rte_lcore_telemetry_enabled = true;
@@ -268,6 +312,9 @@ RTE_INIT(lcore_init_telemetry)
 
 	rte_telemetry_register_cmd("/eal/lcore/poll_busyness_disable", lcore_poll_busyness_disable,
 				   "disable lcore poll busyness measurement");
+
+	rte_telemetry_register_cmd("/eal/lcore/cpuset", lcore_handle_cpuset,
+				   "list physical core affinity for each lcore");
 }
 
 #else
