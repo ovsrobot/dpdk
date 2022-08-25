@@ -432,8 +432,16 @@ static void
 signal_exit_now(int sigtype)
 {
 
-	if (sigtype == SIGINT)
+	if (sigtype == SIGINT) {
+#if defined(RTE_ARCH_ARM64)
+	/**
+	 * wake_up api does not need input parameter on Arm,
+	 * so 0 is meaningless here.
+	 */
+		rte_power_monitor_wakeup(0);
+#endif
 		quit_signal = true;
+	}
 
 }
 
@@ -2885,6 +2893,25 @@ main(int argc, char **argv)
 						"Error setting scaling freq max: err=%d, lcore %d\n",
 							ret, lcore_id);
 
+#if defined(RTE_ARCH_ARM64)
+				/* Ensure the main lcore does not enter the power-monitor state,
+				 * so that it can be used to wake up other lcores on ARM.
+				 * This is due to WFE instruction has no timeout wake-up mechanism,
+				 * and if users want to exit actively, the main lcore is needed
+				 * to send SEV instruction to wake up other lcores.
+				 */
+				unsigned int main_lcore = rte_get_main_lcore();
+				if (lcore_id != main_lcore ||
+						pmgmt_type != RTE_POWER_MGMT_TYPE_MONITOR) {
+					ret = rte_power_ethdev_pmgmt_queue_enable(
+							lcore_id, portid, queueid,
+							pmgmt_type);
+					if (ret < 0)
+						rte_exit(EXIT_FAILURE,
+							"rte_power_ethdev_pmgmt_queue_enable: err=%d, port=%d\n",
+							ret, portid);
+				}
+#else
 				ret = rte_power_ethdev_pmgmt_queue_enable(
 						lcore_id, portid, queueid,
 						pmgmt_type);
@@ -2892,6 +2919,7 @@ main(int argc, char **argv)
 					rte_exit(EXIT_FAILURE,
 						"rte_power_ethdev_pmgmt_queue_enable: err=%d, port=%d\n",
 							ret, portid);
+#endif
 			}
 		}
 	}
