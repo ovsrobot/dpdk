@@ -2,6 +2,7 @@
  * Copyright(c) 2017 Intel Corporation.
  * All rights reserved.
  */
+#include <ctype.h>
 #if defined(LINUX)
 #include <sys/epoll.h>
 #endif

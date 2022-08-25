@@ -3,6 +3,7 @@
  * Copyright(c) 2021 Intel Corporation
  */
 
+#include <ctype.h>
 #include <inttypes.h>
 
 #include <rte_eal.h>

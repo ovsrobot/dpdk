@@ -2,6 +2,7 @@
  * Copyright(c) 2010-2018 Intel Corporation
  */
 
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
