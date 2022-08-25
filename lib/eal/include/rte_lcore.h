@@ -415,6 +415,86 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 		const pthread_attr_t *attr,
 		void *(*start_routine)(void *), void *arg);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Read poll busyness value corresponding to an lcore.
+ *
+ * @param lcore_id
+ *   Lcore to read poll busyness value for.
+ * @return
+ *   - value between 0 and 100 on success
+ *   - -1 if lcore is not active
+ *   - -EINVAL if lcore is invalid
+ *   - -ENOMEM if not enough memory available
+ *   - -ENOTSUP if not supported
+ */
+__rte_experimental
+int
+rte_lcore_poll_busyness(unsigned int lcore_id);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Check if lcore poll busyness telemetry is enabled.
+ *
+ * @return
+ *   - 1 if lcore telemetry is enabled
+ *   - 0 if lcore telemetry is disabled
+ *   - -ENOTSUP if not lcore telemetry supported
+ */
+__rte_experimental
+int
+rte_lcore_poll_busyness_enabled(void);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Enable or disable poll busyness telemetry.
+ *
+ * @param enable
+ *   1 to enable, 0 to disable
+ */
+__rte_experimental
+void
+rte_lcore_poll_busyness_enabled_set(int enable);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Lcore telemetry timestamping function.
+ *
+ * @param nb_rx
+ *   Number of buffers processed by lcore.
+ */
+__rte_experimental
+void
+__rte_lcore_telemetry_timestamp(uint16_t nb_rx);
+
+/** @internal lcore telemetry enabled status */
+extern int __rte_lcore_telemetry_enabled;
+
+/**
+ * Call lcore telemetry timestamp function.
+ *
+ * @param nb_rx
+ *   Number of buffers processed by lcore.
+ */
+#ifdef RTE_LCORE_POLL_BUSYNESS
+#define RTE_LCORE_TELEMETRY_TIMESTAMP(nb_rx)                    \
+	do {                                                    \
+		if (__rte_lcore_telemetry_enabled)              \
+			__rte_lcore_telemetry_timestamp(nb_rx); \
+	} while (0)
+#else
+#define RTE_LCORE_TELEMETRY_TIMESTAMP(nb_rx) \
+	while (0)
+#endif
+
 #ifdef __cplusplus
 }
 #endif

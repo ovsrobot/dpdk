@@ -379,6 +379,7 @@ __rte_ring_do_dequeue_elem(struct rte_ring *r, void *obj_table,
 end:
 	if (available != NULL)
 		*available = entries - n;
+	RTE_LCORE_TELEMETRY_TIMESTAMP(n);
 	return n;
 }
 

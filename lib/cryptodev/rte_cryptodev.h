@@ -1915,6 +1915,8 @@ rte_cryptodev_dequeue_burst(uint8_t dev_id, uint16_t qp_id,
 		rte_rcu_qsbr_thread_offline(list->qsbr, 0);
 	}
 #endif
+
+	RTE_LCORE_TELEMETRY_TIMESTAMP(nb_ops);
 	return nb_ops;
 }
 

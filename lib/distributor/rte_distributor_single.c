@@ -31,8 +31,13 @@ rte_distributor_request_pkt_single(struct rte_distributor_single *d,
 	union rte_distributor_buffer_single *buf = &d->bufs[worker_id];
 	int64_t req = (((int64_t)(uintptr_t)oldpkt) << RTE_DISTRIB_FLAG_BITS)
 			| RTE_DISTRIB_GET_BUF;
-	RTE_WAIT_UNTIL_MASKED(&buf->bufptr64, RTE_DISTRIB_FLAGS_MASK,
-		==, 0, __ATOMIC_RELAXED);
+
+	while (!((__atomic_load_n(&buf->bufptr64, __ATOMIC_RELAXED)
+			& RTE_DISTRIB_FLAGS_MASK) == 0)) {
+		rte_pause();
+		/* this was an empty poll */
+		RTE_LCORE_TELEMETRY_TIMESTAMP(0);
+	}
 
 	/* Sync with distributor on GET_BUF flag. */
 	__atomic_store_n(&(buf->bufptr64), req, __ATOMIC_RELEASE);
@@ -59,8 +64,11 @@ rte_distributor_get_pkt_single(struct rte_distributor_single *d,
 {
 	struct rte_mbuf *ret;
 	rte_distributor_request_pkt_single(d, worker_id, oldpkt);
-	while ((ret = rte_distributor_poll_pkt_single(d, worker_id)) == NULL)
+	while ((ret = rte_distributor_poll_pkt_single(d, worker_id)) == NULL) {
 		rte_pause();
+		/* this was an empty poll */
+		RTE_LCORE_TELEMETRY_TIMESTAMP(0);
+	}
 	return ret;
 }
 

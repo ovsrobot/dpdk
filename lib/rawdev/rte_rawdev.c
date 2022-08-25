@@ -16,6 +16,7 @@
 #include <rte_common.h>
 #include <rte_malloc.h>
 #include <rte_telemetry.h>
+#include <rte_lcore.h>
 
 #include "rte_rawdev.h"
 #include "rte_rawdev_pmd.h"
@@ -226,12 +227,15 @@ rte_rawdev_dequeue_buffers(uint16_t dev_id,
 			   rte_rawdev_obj_t context)
 {
 	struct rte_rawdev *dev;
+	int nb_ops;
 
 	RTE_RAWDEV_VALID_DEVID_OR_ERR_RET(dev_id, -EINVAL);
 	dev = &rte_rawdevs[dev_id];
 
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dev_ops->dequeue_bufs, -ENOTSUP);
-	return (*dev->dev_ops->dequeue_bufs)(dev, buffers, count, context);
+	nb_ops = (*dev->dev_ops->dequeue_bufs)(dev, buffers, count, context);
+	RTE_LCORE_TELEMETRY_TIMESTAMP(nb_ops);
+	return nb_ops;
 }
 
 int
