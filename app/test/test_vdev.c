@@ -8,7 +8,7 @@
 
 #include <rte_common.h>
 #include <rte_kvargs.h>
-#include <rte_bus.h>
+#include <bus_driver.h>
 #include <bus_vdev_driver.h>
 
 #include "test.h"
