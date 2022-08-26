@@ -59,7 +59,7 @@ pci_devargs_lookup(const struct rte_pci_addr *pci_addr)
 }
 
 void
-pci_name_set(struct rte_pci_device *dev)
+pci_common_set(struct rte_pci_device *dev)
 {
 	struct rte_devargs *devargs;
 
@@ -80,6 +80,19 @@ pci_name_set(struct rte_pci_device *dev)
 	else
 		/* Otherwise, it uses the internal, canonical form. */
 		dev->device.name = dev->name;
+
+	if (asprintf(&dev->bus_info, "vendor_id=%"PRIx16", device_id=%"PRIx16,
+			dev->id.vendor_id, dev->id.device_id) != -1)
+		dev->device.bus_info = dev->bus_info;
+}
+
+void
+pci_free(struct rte_pci_device *dev)
+{
+	if (dev == NULL)
+		return;
+	free(dev->bus_info);
+	free(dev);
 }
 
 /* map a particular resource from a file */
@@ -604,7 +617,7 @@ pci_unplug(struct rte_device *dev)
 	if (ret == 0) {
 		rte_pci_remove_device(pdev);
 		rte_devargs_remove(dev->devargs);
-		free(pdev);
+		pci_free(pdev);
 	}
 	return ret;
 }
