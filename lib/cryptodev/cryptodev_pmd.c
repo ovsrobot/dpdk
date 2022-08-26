@@ -3,6 +3,8 @@
  */
 
 #include <sys/queue.h>
+
+#include <rte_dev.h>
 #include <rte_errno.h>
 #include <rte_string_fns.h>
 #include <rte_malloc.h>
