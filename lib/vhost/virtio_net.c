@@ -26,6 +26,8 @@
 
 #define MAX_BATCH_LEN 256
 
+#define CPU_COPY_THRESHOLD_LEN 256
+
 static __rte_always_inline uint16_t
 async_poll_dequeue_completed(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		struct rte_mbuf **pkts, uint16_t count, int16_t dma_id,
@@ -119,8 +121,8 @@ vhost_async_dma_transfer_one(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		return -1;
 
 	for (i = 0; i < nr_segs; i++) {
-		copy_idx = rte_dma_copy(dma_id, vchan_id, (rte_iova_t)iov[i].src_addr,
-				(rte_iova_t)iov[i].dst_addr, iov[i].len, RTE_DMA_OP_FLAG_LLC);
+		copy_idx = rte_dma_copy(dma_id, vchan_id, (rte_iova_t)iov[i].src_iov_addr,
+				(rte_iova_t)iov[i].dst_iov_addr, iov[i].len, RTE_DMA_OP_FLAG_LLC);
 		/**
 		 * Since all memory is pinned and DMA vChannel
 		 * ring has enough space, failure should be a
@@ -149,6 +151,21 @@ vhost_async_dma_transfer_one(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	return nr_segs;
 }
 
+static __rte_always_inline int64_t
+vhost_async_cpu_transfer_one(struct vhost_virtqueue *vq, uint16_t flag_idx,
+		struct vhost_iov_iter *pkt)
+{
+	struct vhost_iovec *iov = pkt->iov;
+	uint32_t nr_segs = pkt->nr_segs;
+
+	for (uint16_t i = 0; i < nr_segs; i++)
+		rte_memcpy(iov[i].dst_virt_addr, iov[i].src_virt_addr, iov[i].len);
+
+	vq->async->pkts_cmpl_flag[flag_idx] = true;
+
+	return 0;
+}
+
 static __rte_always_inline uint16_t
 vhost_async_dma_transfer(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		int16_t dma_id, uint16_t vchan_id, uint16_t head_idx,
@@ -161,8 +178,13 @@ vhost_async_dma_transfer(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	rte_spinlock_lock(&dma_info->dma_lock);
 
 	for (pkt_idx = 0; pkt_idx < nr_pkts; pkt_idx++) {
-		ret = vhost_async_dma_transfer_one(dev, vq, dma_id, vchan_id, head_idx,
-				&pkts[pkt_idx]);
+		if (pkts[pkt_idx].nr_len > CPU_COPY_THRESHOLD_LEN) {
+			ret = vhost_async_dma_transfer_one(dev, vq, dma_id, vchan_id, head_idx,
+					&pkts[pkt_idx]);
+		} else {
+			ret = vhost_async_cpu_transfer_one(vq, head_idx, &pkts[pkt_idx]);
+		}
+
 		if (unlikely(ret < 0))
 			break;
 
@@ -1002,13 +1024,14 @@ async_iter_initialize(struct virtio_net *dev, struct vhost_async *async)
 	iter = async->iov_iter + async->iter_idx;
 	iter->iov = async->iovec + async->iovec_idx;
 	iter->nr_segs = 0;
+	iter->nr_len = 0;
 
 	return 0;
 }
 
 static __rte_always_inline int
 async_iter_add_iovec(struct virtio_net *dev, struct vhost_async *async,
-		void *src, void *dst, size_t len)
+		void *src_iova, void *dst_iova, void *src_addr, void *dst_addr, size_t len)
 {
 	struct vhost_iov_iter *iter;
 	struct vhost_iovec *iovec;
@@ -1027,8 +1050,10 @@ async_iter_add_iovec(struct virtio_net *dev, struct vhost_async *async,
 	iter = async->iov_iter + async->iter_idx;
 	iovec = async->iovec + async->iovec_idx;
 
-	iovec->src_addr = src;
-	iovec->dst_addr = dst;
+	iovec->src_iov_addr = src_iova;
+	iovec->dst_iov_addr = dst_iova;
+	iovec->src_virt_addr = src_addr;
+	iovec->dst_virt_addr = dst_addr;
 	iovec->len = len;
 
 	iter->nr_segs++;
@@ -1051,6 +1076,7 @@ async_iter_cancel(struct vhost_async *async)
 	iter = async->iov_iter + async->iter_idx;
 	async->iovec_idx -= iter->nr_segs;
 	iter->nr_segs = 0;
+	iter->nr_len = 0;
 	iter->iov = NULL;
 }
 
@@ -1064,13 +1090,18 @@ async_iter_reset(struct vhost_async *async)
 static __rte_always_inline int
 async_fill_seg(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		struct rte_mbuf *m, uint32_t mbuf_offset,
-		uint64_t buf_iova, uint32_t cpy_len, bool to_desc)
+		uint64_t buf_iova, uint64_t buf_addr, uint32_t cpy_len, bool to_desc)
 {
 	struct vhost_async *async = vq->async;
 	uint64_t mapped_len;
 	uint32_t buf_offset = 0;
-	void *src, *dst;
+	void *src_iova, *dst_iova;
+	void *src_addr, *dst_addr;
 	void *host_iova;
+	struct vhost_iov_iter *iter;
+
+	iter = async->iov_iter + async->iter_idx;
+	iter->nr_len += cpy_len;
 
 	while (cpy_len) {
 		host_iova = (void *)(uintptr_t)gpa_to_first_hpa(dev,
@@ -1083,14 +1114,21 @@ async_fill_seg(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		}
 
 		if (to_desc) {
-			src = (void *)(uintptr_t)rte_pktmbuf_iova_offset(m, mbuf_offset);
-			dst = host_iova;
+			src_iova = (void *)(uintptr_t)rte_pktmbuf_iova_offset(m, mbuf_offset);
+			dst_iova = host_iova;
+
+			src_addr = rte_pktmbuf_mtod_offset(m, void *, mbuf_offset);
+			dst_addr = (void *)(uintptr_t)(buf_addr + buf_offset);
 		} else {
-			src = host_iova;
-			dst = (void *)(uintptr_t)rte_pktmbuf_iova_offset(m, mbuf_offset);
+			src_iova = host_iova;
+			dst_iova = (void *)(uintptr_t)rte_pktmbuf_iova_offset(m, mbuf_offset);
+
+			src_addr = (void *)(uintptr_t)(buf_addr + buf_offset);
+			dst_addr = rte_pktmbuf_mtod_offset(m, void *, mbuf_offset);
 		}
 
-		if (unlikely(async_iter_add_iovec(dev, async, src, dst, (size_t)mapped_len)))
+		if (unlikely(async_iter_add_iovec(dev, async, src_iova, dst_iova,
+						src_addr, dst_addr, (size_t)mapped_len)))
 			return -1;
 
 		cpy_len -= (uint32_t)mapped_len;
@@ -1239,7 +1277,8 @@ mbuf_to_desc(struct virtio_net *dev, struct vhost_virtqueue *vq,
 
 		if (is_async) {
 			if (async_fill_seg(dev, vq, m, mbuf_offset,
-					   buf_iova + buf_offset, cpy_len, true) < 0)
+					   buf_iova + buf_offset, buf_addr + buf_offset,
+					   cpy_len, true) < 0)
 				goto error;
 		} else {
 			sync_fill_seg(dev, vq, m, mbuf_offset,
@@ -2737,7 +2776,8 @@ desc_to_mbuf(struct virtio_net *dev, struct vhost_virtqueue *vq,
 
 		if (is_async) {
 			if (async_fill_seg(dev, vq, cur, mbuf_offset,
-					   buf_iova + buf_offset, cpy_len, false) < 0)
+					   buf_iova + buf_offset, buf_addr + buf_offset,
+					   cpy_len, false) < 0)
 				goto error;
 		} else if (likely(hdr && cur == m)) {
 			rte_memcpy(rte_pktmbuf_mtod_offset(cur, void *, mbuf_offset),
