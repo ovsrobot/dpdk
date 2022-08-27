@@ -7,6 +7,12 @@ if arch_subdir == 'riscv'
     subdir_done()
 endif
 
+if arch_subdir == 'loongarch'
+    build = false
+    reason = 'not supported on LoongArch'
+    subdir_done()
+endif
+
 cflags += ['-DPF_DRIVER',
     '-DVF_DRIVER',
     '-DINTEGRATED_VF',
