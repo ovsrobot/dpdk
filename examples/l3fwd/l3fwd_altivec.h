@@ -222,4 +222,32 @@ send_packets_multi(struct lcore_conf *qconf, struct rte_mbuf **pkts_burst,
 	}
 }
 
+static __rte_always_inline uint16_t
+process_dst_port(uint16_t *dst_ports, uint16_t nb_elem)
+{
+	uint16_t i = 0, res;
+
+	while (nb_elem > 7) {
+		__vector unsigned short dp = vec_splats((short)dst_ports[0]);
+		__vector unsigned short dp1;
+
+		dp1 = *((__vector unsigned short *)&dst_ports[i]);
+		res = vec_all_eq(dp1, dp);
+		if (!res)
+			return BAD_PORT;
+
+		nb_elem -= 8;
+		i += 8;
+	}
+
+	while (nb_elem) {
+		if (dst_ports[i] != dst_ports[0])
+			return BAD_PORT;
+		nb_elem--;
+		i++;
+	}
+
+	return dst_ports[0];
+}
+
 #endif /* _L3FWD_ALTIVEC_H_ */
