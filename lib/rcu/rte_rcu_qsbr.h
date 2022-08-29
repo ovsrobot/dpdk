@@ -37,6 +37,10 @@ extern "C" {
 #include <rte_atomic.h>
 #include <rte_ring.h>
 
+#if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
+#include <inttypes.h>
+#endif
+
 extern int rte_rcu_log_type;
 
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
