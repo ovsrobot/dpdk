@@ -1153,7 +1153,7 @@ mbuf_to_desc(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	struct virtio_net_hdr_mrg_rxbuf tmp_hdr, *hdr = NULL;
 	struct vhost_async *async = vq->async;
 
-	if (unlikely(m == NULL))
+	if (unlikely(m == NULL || nr_vec == 0))
 		return -1;
 
 	buf_addr = buf_vec[vec_idx].buf_addr;
@@ -2672,6 +2672,9 @@ desc_to_mbuf(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	uint16_t vec_idx = 0;
 	struct vhost_async *async = vq->async;
 	struct async_inflight_info *pkts_info;
+
+	if (unlikely(nr_vec == 0))
+		return -1;
 
 	buf_addr = buf_vec[vec_idx].buf_addr;
 	buf_iova = buf_vec[vec_idx].buf_iova;
