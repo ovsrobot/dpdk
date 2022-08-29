@@ -9,5 +9,7 @@ endif
 
 sources = files(
         'gve_adminq.c',
+        'gve_rx.c',
+        'gve_tx.c',
         'gve_ethdev.c',
 )
