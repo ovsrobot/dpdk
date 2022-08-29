@@ -5,6 +5,7 @@
  * Copyright(C) 2022 Intel Corporation
  */
 
+#include "gve.h"
 #include "gve_adminq.h"
 #include "gve_register.h"
 
