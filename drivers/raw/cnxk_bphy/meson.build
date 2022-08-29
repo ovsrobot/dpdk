@@ -10,3 +10,4 @@ sources = files(
         'cnxk_bphy_irq.c',
 )
 headers = files('rte_pmd_bphy.h')
+pmd_iova_as_va = true

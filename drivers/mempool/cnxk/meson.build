@@ -17,3 +17,4 @@ sources = files(
 )
 
 deps += ['eal', 'mbuf', 'kvargs', 'bus_pci', 'common_cnxk', 'mempool']
+pmd_iova_as_va = true

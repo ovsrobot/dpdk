@@ -86,3 +86,4 @@ sources += files('cnxk_telemetry_bphy.c',
 )
 
 deps += ['bus_pci', 'net', 'telemetry']
+pmd_iova_as_va = true

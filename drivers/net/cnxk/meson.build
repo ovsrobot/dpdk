@@ -194,3 +194,4 @@ foreach flag: extra_flags
 endforeach
 
 headers = files('rte_pmd_cnxk.h')
+pmd_iova_as_va = true
