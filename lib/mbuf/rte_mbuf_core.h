@@ -579,15 +579,23 @@ struct rte_mbuf {
 	RTE_MARKER cacheline0;
 
 	void *buf_addr;           /**< Virtual address of segment buffer. */
-	/**
-	 * Physical address of segment buffer.
-	 * This field is invalid if the build is configured to use only
-	 * virtual address as IOVA (i.e. RTE_IOVA_AS_VA is defined).
-	 * Force alignment to 8-bytes, so as to ensure we have the exact
-	 * same mbuf cacheline0 layout for 32-bit and 64-bit. This makes
-	 * working on vector drivers easier.
-	 */
-	rte_iova_t buf_iova __rte_aligned(sizeof(rte_iova_t));
+	RTE_STD_C11
+	union {
+		/**
+		 * Physical address of segment buffer.
+		 * This field is invalid if the build is configured to use only
+		 * virtual address as IOVA (i.e. RTE_IOVA_AS_VA is defined).
+		 * Force alignment to 8-bytes, so as to ensure we have the exact
+		 * same mbuf cacheline0 layout for 32-bit and 64-bit. This makes
+		 * working on vector drivers easier.
+		 */
+		rte_iova_t buf_iova __rte_aligned(sizeof(rte_iova_t));
+		/**
+		 * Reserved for dynamic field in builds where physical address
+		 * field is invalid.
+		 */
+		uint64_t dynfield2;
+	};
 
 	/* next 8 bytes are initialised on RX descriptor rearm */
 	RTE_MARKER64 rearm_data;

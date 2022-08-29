@@ -128,6 +128,8 @@ init_shared_mem(void)
 		 */
 		memset(shm, 0, sizeof(*shm));
 		mark_free(dynfield1);
+		if (rte_is_iova_as_va_build())
+			mark_free(dynfield2);
 
 		/* init free_flags */
 		for (mask = RTE_MBUF_F_FIRST_FREE; mask <= RTE_MBUF_F_LAST_FREE; mask <<= 1)
