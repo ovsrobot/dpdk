@@ -17,3 +17,4 @@ endif
 ext_deps += dep
 deps += ['bus_vdev']
 sources = files('rte_armv8_pmd.c', 'rte_armv8_pmd_ops.c')
+pmd_iova_as_va = true

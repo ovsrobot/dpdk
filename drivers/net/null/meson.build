@@ -8,3 +8,4 @@ if is_windows
 endif
 
 sources = files('rte_eth_null.c')
+pmd_iova_as_va = true

@@ -27,3 +27,4 @@ sources = files(
         'failsafe_ops.c',
         'failsafe_rxtx.c',
 )
+pmd_iova_as_va = true

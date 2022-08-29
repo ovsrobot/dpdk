@@ -3,3 +3,4 @@
 
 sources = files('skeleton_eventdev.c')
 deps += ['bus_pci', 'bus_vdev']
+pmd_iova_as_va = true

@@ -9,3 +9,4 @@ sources = files(
         'opdl_test.c',
 )
 deps += ['bus_vdev']
+pmd_iova_as_va = true
