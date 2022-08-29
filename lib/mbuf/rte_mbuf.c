@@ -89,7 +89,7 @@ rte_pktmbuf_init(struct rte_mempool *mp,
 	/* start of buffer is after mbuf structure and priv data */
 	m->priv_size = priv_size;
 	m->buf_addr = (char *)m + mbuf_size;
-	m->buf_iova = rte_mempool_virt2iova(m) + mbuf_size;
+	rte_mbuf_iova_set(m, rte_mempool_virt2iova(m) + mbuf_size);
 	m->buf_len = (uint16_t)buf_len;
 
 	/* keep some headroom between start of buffer and data */
@@ -187,8 +187,8 @@ __rte_pktmbuf_init_extmem(struct rte_mempool *mp,
 	RTE_ASSERT(ctx->off + ext_mem->elt_size <= ext_mem->buf_len);
 
 	m->buf_addr = RTE_PTR_ADD(ext_mem->buf_ptr, ctx->off);
-	m->buf_iova = ext_mem->buf_iova == RTE_BAD_IOVA ?
-		      RTE_BAD_IOVA : (ext_mem->buf_iova + ctx->off);
+	rte_mbuf_iova_set(m, ext_mem->buf_iova == RTE_BAD_IOVA ? RTE_BAD_IOVA :
+								 (ext_mem->buf_iova + ctx->off));
 
 	ctx->off += ext_mem->elt_size;
 	if (ctx->off + ext_mem->elt_size > ext_mem->buf_len) {
@@ -388,7 +388,7 @@ int rte_mbuf_check(const struct rte_mbuf *m, int is_header,
 		*reason = "bad mbuf pool";
 		return -1;
 	}
-	if (m->buf_iova == 0) {
+	if (m->buf_iova == 0 && !rte_is_iova_as_va_build()) {
 		*reason = "bad IO addr";
 		return -1;
 	}

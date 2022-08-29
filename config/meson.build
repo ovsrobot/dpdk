@@ -309,6 +309,9 @@ endif
 if get_option('mbuf_refcnt_atomic')
     dpdk_conf.set('RTE_MBUF_REFCNT_ATOMIC', true)
 endif
+if get_option('iova_as_va')
+    dpdk_conf.set('RTE_IOVA_AS_VA', true)
+endif
 
 compile_time_cpuflags = []
 subdir(arch_subdir)

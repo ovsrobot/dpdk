@@ -921,6 +921,23 @@ __rte_noreturn void
 rte_exit(int exit_code, const char *format, ...)
 	__rte_format_printf(2, 3);
 
+/**
+ * Check if build is configured to use IOVA as VA.
+ *
+ * @return
+ *   1 if true, 0 otherwise
+ *
+ */
+static inline int
+rte_is_iova_as_va_build(void)
+{
+#ifdef RTE_IOVA_AS_VA
+	return 1;
+#else
+	return 0;
+#endif
+}
+
 #ifdef __cplusplus
 }
 #endif
