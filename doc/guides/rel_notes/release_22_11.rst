@@ -23,6 +23,14 @@ DPDK Release 22.11
 
 New Features
 ------------
+* **Added adapter instance get API**
+
+* Added ``rte_event_eth_rx_adapter_instance_get`` to get
+  rx adapter instance id for specified ethernet device id and
+  rx queue index.
+* Added ``rte_event_eth_tx_adapter_instance_get`` to get the
+  tx adapter instance id for specified ethernet device id and
+  tx queue index.
 
 .. This section should contain new features added in this release.
    Sample format:
