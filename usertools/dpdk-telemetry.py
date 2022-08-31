@@ -161,22 +161,27 @@ def readline_complete(text, state):
     return matches[state]
 
 
-readline.parse_and_bind('tab: complete')
-readline.set_completer(readline_complete)
-readline.set_completer_delims(readline.get_completer_delims().replace('/', ''))
+def main():
+    readline.parse_and_bind('tab: complete')
+    readline.set_completer(readline_complete)
+    readline.set_completer_delims(readline.get_completer_delims().replace('/', ''))
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-f', '--file-prefix', default=DEFAULT_PREFIX,
-                    help='Provide file-prefix for DPDK runtime directory')
-parser.add_argument('-i', '--instance', default='0', type=int,
-                    help='Provide instance number for DPDK application')
-parser.add_argument('-l', '--list', action="store_true", default=False,
-                    help='List all possible file-prefixes and exit')
-args = parser.parse_args()
-if args.list:
-    list_fp()
-    sys.exit(0)
-sock_path = os.path.join(get_dpdk_runtime_dir(args.file_prefix), SOCKET_NAME)
-if args.instance > 0:
-    sock_path += ":{}".format(args.instance)
-handle_socket(args, sock_path)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--file-prefix', default=DEFAULT_PREFIX,
+                        help='Provide file-prefix for DPDK runtime directory')
+    parser.add_argument('-i', '--instance', default='0', type=int,
+                        help='Provide instance number for DPDK application')
+    parser.add_argument('-l', '--list', action="store_true", default=False,
+                        help='List all possible file-prefixes and exit')
+    args = parser.parse_args()
+    if args.list:
+        list_fp()
+        sys.exit(0)
+    sock_path = os.path.join(get_dpdk_runtime_dir(args.file_prefix), SOCKET_NAME)
+    if args.instance > 0:
+        sock_path += ":{}".format(args.instance)
+    handle_socket(args, sock_path)
+
+
+if __name__ == '__main__':
+    main()
