@@ -580,6 +580,8 @@ rte_compressdev_dequeue_burst(uint8_t dev_id, uint16_t qp_id,
 	nb_ops = (*dev->dequeue_burst)
 			(dev->data->queue_pairs[qp_id], ops, nb_ops);
 
+	RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(nb_ops);
+
 	return nb_ops;
 }
 
