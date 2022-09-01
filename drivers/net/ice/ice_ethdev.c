@@ -103,6 +103,10 @@ static int ice_dev_set_link_up(struct rte_eth_dev *dev);
 static int ice_dev_set_link_down(struct rte_eth_dev *dev);
 static int ice_dev_led_on(struct rte_eth_dev *dev);
 static int ice_dev_led_off(struct rte_eth_dev *dev);
+static int ice_dev_flow_ctrl_get(struct rte_eth_dev *dev,
+				 struct rte_eth_fc_conf *fc_conf);
+static int ice_dev_flow_ctrl_set(struct rte_eth_dev *dev,
+				 struct rte_eth_fc_conf *fc_conf);
 
 static int ice_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
 static int ice_vlan_offload_set(struct rte_eth_dev *dev, int mask);
@@ -229,6 +233,8 @@ static const struct eth_dev_ops ice_eth_dev_ops = {
 	.dev_set_link_down            = ice_dev_set_link_down,
 	.dev_led_on                   = ice_dev_led_on,
 	.dev_led_off                  = ice_dev_led_off,
+	.flow_ctrl_get                = ice_dev_flow_ctrl_get,
+	.flow_ctrl_set                = ice_dev_flow_ctrl_set,
 	.rx_queue_start               = ice_rx_queue_start,
 	.rx_queue_stop                = ice_rx_queue_stop,
 	.tx_queue_start               = ice_tx_queue_start,
@@ -4046,6 +4052,108 @@ ice_dev_led_off(struct rte_eth_dev *dev)
 	int status = ice_aq_set_port_id_led(hw->port_info, true, NULL);
 
 	return status == ICE_SUCCESS ? 0 : -ENOTSUP;
+}
+
+static int
+ice_dev_flow_ctrl_get(struct rte_eth_dev *dev, struct rte_eth_fc_conf *fc_conf)
+{
+	struct ice_hw *hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ice_aqc_get_phy_caps_data *pcaps;
+	int tx_pause, rx_pause;
+	int status;
+
+	pcaps = (struct ice_aqc_get_phy_caps_data *)
+		ice_malloc(hw, sizeof(*pcaps));
+	if (!pcaps)
+		return -ENOMEM;
+
+	status = ice_aq_get_phy_caps(hw->port_info, false,
+			ICE_AQC_REPORT_ACTIVE_CFG, pcaps, NULL);
+	if(status)
+		goto out;
+
+	fc_conf->autoneg = ice_is_phy_caps_an_enabled(pcaps);
+	tx_pause = !!(pcaps->caps & ICE_AQC_PHY_EN_TX_LINK_PAUSE);
+	rx_pause = !!(pcaps->caps & ICE_AQC_PHY_EN_RX_LINK_PAUSE);
+
+	if (rx_pause && tx_pause)
+		fc_conf->mode = RTE_ETH_FC_FULL;
+	else if (rx_pause)
+		fc_conf->mode = RTE_ETH_FC_RX_PAUSE;
+	else if (tx_pause)
+		fc_conf->mode = RTE_ETH_FC_TX_PAUSE;
+	else
+		fc_conf->mode = RTE_ETH_FC_NONE;
+
+out:
+	ice_free(hw, pcaps);
+	return status;
+}
+
+static int
+ice_dev_flow_ctrl_set(struct rte_eth_dev *dev, struct rte_eth_fc_conf *fc_conf)
+{
+	struct ice_hw *hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+	struct ice_port_info *pi = hw->port_info;
+	struct ice_link_status *ls = &pi->phy.link_info;
+	bool link_up = !!(ls->link_info & ICE_AQ_LINK_UP);
+	struct ice_aqc_get_phy_caps_data *pcaps;
+	u8 aq_failures;
+	int status;
+
+	pcaps = (struct ice_aqc_get_phy_caps_data *)
+		ice_malloc(hw, sizeof(*pcaps));
+	if (!pcaps)
+		return -ENOMEM;
+
+	status = ice_aq_get_phy_caps(hw->port_info, false,
+			ICE_AQC_REPORT_ACTIVE_CFG, pcaps, NULL);
+	if(status) {
+		status = -EIO;
+		goto out;
+	}
+	if(fc_conf->autoneg != ice_is_phy_caps_an_enabled(pcaps)) {
+		status = -ENOTSUP;
+		goto out;
+	}
+
+	switch(fc_conf->mode) {
+		case RTE_ETH_FC_FULL:
+			pi->fc.req_mode = ICE_FC_FULL;
+			break;
+		case RTE_ETH_FC_RX_PAUSE:
+			pi->fc.req_mode = ICE_FC_RX_PAUSE;
+			break;
+		case RTE_ETH_FC_TX_PAUSE:
+			pi->fc.req_mode = ICE_FC_TX_PAUSE;
+			break;
+		case RTE_ETH_FC_NONE:
+			pi->fc.req_mode = ICE_FC_NONE;
+			break;
+	}
+
+	status = ice_set_fc(pi, &aq_failures, link_up);
+
+	if (aq_failures & ICE_SET_FC_AQ_FAIL_GET) {
+		PMD_DRV_LOG(ERR,
+			    "port %d fc set failed on get, err %d aq status %i\n",
+			    dev->data->port_id, status, hw->adminq.sq_last_status);
+		status = -EIO;
+	} else if (aq_failures & ICE_SET_FC_AQ_FAIL_SET) {
+		PMD_DRV_LOG(ERR,
+			    "port %d fc set failed on set, err %d aq status %i\n",
+			    dev->data->port_id, status, hw->adminq.sq_last_status);
+		status = -EIO;
+	} else if (aq_failures & ICE_SET_FC_AQ_FAIL_UPDATE) {
+		PMD_DRV_LOG(ERR,
+			    "port %d fc set failed on update, err %d aq status %i\n",
+			    dev->data->port_id, status, hw->adminq.sq_last_status);
+		status = -EIO;
+	}
+
+out:
+	ice_free(hw, pcaps);
+	return status;
 }
 
 static int
