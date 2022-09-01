@@ -1288,6 +1288,12 @@ vhost_enqueue_single_packed(struct virtio_net *dev,
 	else
 		max_tries = 1;
 
+	/* To avoid GCC-12 warning.
+	 * GCC-12 is not evaluating sizeof at compile time.
+	 */
+	if (unlikely(size == 0))
+		return -1;
+
 	while (size > 0) {
 		/*
 		 * if we tried all available ring items, and still
@@ -1793,6 +1799,12 @@ vhost_enqueue_async_packed(struct virtio_net *dev,
 		max_tries = vq->size - 1;
 	else
 		max_tries = 1;
+
+	/* To avoid GCC-12 warning.
+	 * GCC-12 is not evaluating sizeof at compile time.
+	 */
+	if (unlikely(size == 0))
+		return -1;
 
 	while (size > 0) {
 		/*
