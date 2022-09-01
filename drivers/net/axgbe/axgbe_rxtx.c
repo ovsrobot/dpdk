@@ -381,19 +381,6 @@ next_desc:
 		}
 
 		mbuf = rxq->sw_ring[idx];
-		/* Check for any errors and free mbuf*/
-		err = AXGMAC_GET_BITS_LE(desc->write.desc3,
-					 RX_NORMAL_DESC3, ES);
-		error_status = 0;
-		if (unlikely(err)) {
-			error_status = desc->write.desc3 & AXGBE_ERR_STATUS;
-			if ((error_status != AXGBE_L3_CSUM_ERR)
-					&& (error_status != AXGBE_L4_CSUM_ERR)) {
-				rxq->errors++;
-				rte_pktmbuf_free(mbuf);
-				goto err_set;
-			}
-		}
 		rte_prefetch1(rte_pktmbuf_mtod(mbuf, void *));
 
 		if (!AXGMAC_GET_BITS_LE(desc->write.desc3,
@@ -406,6 +393,25 @@ next_desc:
 			pkt_len = AXGMAC_GET_BITS_LE(desc->write.desc3,
 					RX_NORMAL_DESC3, PL);
 			data_len = pkt_len - rxq->crc_len;
+			/* Check for any errors and free mbuf*/
+			err = AXGMAC_GET_BITS_LE(desc->write.desc3,
+					RX_NORMAL_DESC3, ES);
+			error_status = 0;
+			if (unlikely(err)) {
+				error_status = desc->write.desc3 &
+					AXGBE_ERR_STATUS;
+				if ((error_status != AXGBE_L3_CSUM_ERR) &&
+						(error_status !=
+						 AXGBE_L4_CSUM_ERR)) {
+					rxq->errors++;
+					rte_pktmbuf_free(mbuf);
+					rte_pktmbuf_free(first_seg);
+					first_seg = NULL;
+					eop = 0;
+					goto err_set;
+				}
+			}
+
 		}
 
 		if (first_seg != NULL) {
