@@ -84,6 +84,10 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* **Updated Wangxun ngbe driver.**
+
+  * Added support to set device link down/up.
+
 
 ABI Changes
 -----------
