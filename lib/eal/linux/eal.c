@@ -1364,6 +1364,7 @@ rte_eal_cleanup(void)
 	rte_mp_channel_cleanup();
 	rte_trace_save();
 	eal_trace_fini();
+	lcore_telemetry_free();
 	/* after this point, any DPDK pointers will become dangling */
 	rte_eal_memory_detach();
 	eal_mp_dev_hotplug_cleanup();

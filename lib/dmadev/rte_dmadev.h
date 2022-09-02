@@ -149,6 +149,7 @@
 #include <rte_bitops.h>
 #include <rte_common.h>
 #include <rte_compat.h>
+#include <rte_lcore.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -1027,7 +1028,7 @@ rte_dma_completed(int16_t dev_id, uint16_t vchan, const uint16_t nb_cpls,
 		  uint16_t *last_idx, bool *has_error)
 {
 	struct rte_dma_fp_object *obj = &rte_dma_fp_objs[dev_id];
-	uint16_t idx;
+	uint16_t idx, nb_ops;
 	bool err;
 
 #ifdef RTE_DMADEV_DEBUG
@@ -1050,8 +1051,10 @@ rte_dma_completed(int16_t dev_id, uint16_t vchan, const uint16_t nb_cpls,
 		has_error = &err;
 
 	*has_error = false;
-	return (*obj->completed)(obj->dev_private, vchan, nb_cpls, last_idx,
-				 has_error);
+	nb_ops = (*obj->completed)(obj->dev_private, vchan, nb_cpls, last_idx,
+				   has_error);
+	RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(nb_ops);
+	return nb_ops;
 }
 
 /**
@@ -1090,7 +1093,7 @@ rte_dma_completed_status(int16_t dev_id, uint16_t vchan,
 			 enum rte_dma_status_code *status)
 {
 	struct rte_dma_fp_object *obj = &rte_dma_fp_objs[dev_id];
-	uint16_t idx;
+	uint16_t idx, nb_ops;
 
 #ifdef RTE_DMADEV_DEBUG
 	if (!rte_dma_is_valid(dev_id) || nb_cpls == 0 || status == NULL)
@@ -1101,8 +1104,10 @@ rte_dma_completed_status(int16_t dev_id, uint16_t vchan,
 	if (last_idx == NULL)
 		last_idx = &idx;
 
-	return (*obj->completed_status)(obj->dev_private, vchan, nb_cpls,
+	nb_ops = (*obj->completed_status)(obj->dev_private, vchan, nb_cpls,
 					last_idx, status);
+	RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(nb_ops);
+	return nb_ops;
 }
 
 /**

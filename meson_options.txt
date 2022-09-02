@@ -20,6 +20,8 @@ option('enable_driver_sdk', type: 'boolean', value: false, description:
        'Install headers to build drivers.')
 option('enable_kmods', type: 'boolean', value: false, description:
        'build kernel modules')
+option('enable_lcore_poll_busyness', type: 'boolean', value: false, description:
+       'enable collection of lcore poll busyness telemetry')
 option('examples', type: 'string', value: '', description:
        'Comma-separated list of examples to build by default')
 option('flexran_sdk', type: 'string', value: '', description:
