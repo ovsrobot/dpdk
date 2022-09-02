@@ -1205,6 +1205,21 @@ struct rte_eth_rxseg_split {
 };
 
 /**
+ * The pool sort capability allows PMD to choose a memory pool based on the
+ * packet's length. So, basically, PMD programs HW for receiving packets from
+ * different pools, based on the packet's length.
+ *
+ * This is often useful for saving the memory where the application can create
+ * a different pool to steer the specific size of the packet, thus enabling
+ * effective use of memory.
+ */
+struct rte_eth_rxseg_sort {
+	struct rte_mempool *mp; /**< Memory pool to allocate packets from. */
+	uint16_t length; /**< Packet data length. */
+	uint32_t reserved; /**< Reserved field. */
+};
+
+/**
  * @warning
  * @b EXPERIMENTAL: this structure may change without prior notice.
  *
@@ -1213,7 +1228,9 @@ struct rte_eth_rxseg_split {
 union rte_eth_rxseg {
 	/* The settings for buffer split offload. */
 	struct rte_eth_rxseg_split split;
-	/* The other features settings should be added here. */
+
+	/*The settings for packet sort offload. */
+	struct rte_eth_rxseg_sort sort;
 };
 
 /**
@@ -1633,6 +1650,7 @@ struct rte_eth_conf {
 #define RTE_ETH_RX_OFFLOAD_OUTER_UDP_CKSUM  RTE_BIT64(18)
 #define RTE_ETH_RX_OFFLOAD_RSS_HASH         RTE_BIT64(19)
 #define RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT     RTE_BIT64(20)
+#define RTE_ETH_RX_OFFLOAD_BUFFER_SORT      RTE_BIT64(21)
 
 #define DEV_RX_OFFLOAD_VLAN_STRIP       RTE_DEPRECATED(DEV_RX_OFFLOAD_VLAN_STRIP)       RTE_ETH_RX_OFFLOAD_VLAN_STRIP
 #define DEV_RX_OFFLOAD_IPV4_CKSUM       RTE_DEPRECATED(DEV_RX_OFFLOAD_IPV4_CKSUM)       RTE_ETH_RX_OFFLOAD_IPV4_CKSUM
@@ -1827,10 +1845,14 @@ struct rte_eth_switch_info {
  */
 struct rte_eth_rxseg_capa {
 	__extension__
+	uint32_t mode_split : 1; /**< Supports buffer split capability @see struct rte_eth_rxseg_split */
+	uint32_t mode_sort : 1; /**< Supports pool sort capability @see struct rte_eth_rxseg_sort */
 	uint32_t multi_pools:1; /**< Supports receiving to multiple pools.*/
 	uint32_t offset_allowed:1; /**< Supports buffer offsets. */
 	uint32_t offset_align_log2:4; /**< Required offset alignment. */
 	uint16_t max_nseg; /**< Maximum amount of segments to split. */
+	/* < Maximum amount of pools that PMD can sort based on packet/segment lengths */
+	uint16_t max_npool;
 	uint16_t reserved; /**< Reserved field. */
 };
 
