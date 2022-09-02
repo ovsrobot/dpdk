@@ -44,6 +44,8 @@
 #define CNXK_NIX_RX_DEFAULT_RING_SZ 4096
 /* Max supported SQB count */
 #define CNXK_NIX_TX_MAX_SQB 512
+/* LPB & SPB */
+#define CNXK_NIX_NUM_POOLS_MAX 2
 
 /* If PTP is enabled additional SEND MEM DESC is required which
  * takes 2 words, hence max 7 iova address are possible
@@ -83,7 +85,7 @@
 	 RTE_ETH_RX_OFFLOAD_OUTER_IPV4_CKSUM | RTE_ETH_RX_OFFLOAD_SCATTER |    \
 	 RTE_ETH_RX_OFFLOAD_OUTER_UDP_CKSUM | RTE_ETH_RX_OFFLOAD_RSS_HASH |    \
 	 RTE_ETH_RX_OFFLOAD_TIMESTAMP | RTE_ETH_RX_OFFLOAD_VLAN_STRIP |        \
-	 RTE_ETH_RX_OFFLOAD_SECURITY)
+	 RTE_ETH_RX_OFFLOAD_BUFFER_SORT | RTE_ETH_RX_OFFLOAD_SECURITY)
 
 #define RSS_IPV4_ENABLE                                                        \
 	(RTE_ETH_RSS_IPV4 | RTE_ETH_RSS_FRAG_IPV4 |                            \
