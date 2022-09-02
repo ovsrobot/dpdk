@@ -247,6 +247,7 @@ uint16_t rx_pkt_seg_lengths[MAX_SEGS_BUFFER_SPLIT];
 uint8_t  rx_pkt_nb_segs; /**< Number of segments to split */
 uint16_t rx_pkt_seg_offsets[MAX_SEGS_BUFFER_SPLIT];
 uint8_t  rx_pkt_nb_offs; /**< Number of specified offsets */
+uint32_t rx_pkt_hdr_protos[MAX_SEGS_BUFFER_SPLIT];
 
 /*
  * Configuration of packet segments used by the "txonly" processing engine.
@@ -2685,6 +2686,7 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		rx_seg->offset = i < rx_pkt_nb_offs ?
 				   rx_pkt_seg_offsets[i] : 0;
 		rx_seg->mp = mpx ? mpx : mp;
+		rx_seg->proto_hdr = rx_pkt_hdr_protos[i];
 	}
 	rx_conf->rx_nseg = rx_pkt_nb_segs;
 	rx_conf->rx_seg = rx_useg;
