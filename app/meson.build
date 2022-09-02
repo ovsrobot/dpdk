@@ -3,6 +3,7 @@
 
 apps = [
         'dumpcap',
+        'l2reflect',
         'pdump',
         'proc-info',
         'test-acl',
