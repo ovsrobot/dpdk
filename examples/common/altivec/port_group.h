@@ -26,12 +26,19 @@ port_groupx4(uint16_t pn[FWDSTEP + 1], uint16_t *lp,
 		uint16_t u16[FWDSTEP + 1];
 		uint64_t u64;
 	} *pnum = (void *)pn;
+	union u_vec {
+		__vector unsigned short v_us;
+		unsigned short s[8];
+	};
 
+	union u_vec res;
 	int32_t v;
 
-	v = vec_any_eq(dp1, dp2);
+	dp1 = (__vector unsigned short)vec_cmpeq(dp1, dp2);
+	res.v_us = dp1;
 
-
+	v = (res.s[0] & 0x1) | (res.s[1] & 0x2) | (res.s[2] & 0x4) |
+	    (res.s[3] & 0x8);
 	/* update last port counter. */
 	lp[0] += gptbl[v].lpv;
 
