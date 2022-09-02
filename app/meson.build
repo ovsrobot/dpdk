@@ -44,7 +44,7 @@ foreach app:apps
     subdir(name)
 
     if build
-        dep_objs = []
+        dep_objs = ext_deps
         foreach d:deps
             var_name = get_option('default_library') + '_rte_' + d
             if not is_variable(var_name)
