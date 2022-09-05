@@ -376,6 +376,11 @@ struct vhost_msg {
  #define VIRTIO_F_VERSION_1 32
 #endif
 
+/* This feature indicates that the driver can reset a queue individually. */
+#ifndef VIRTIO_F_RING_RESET
+#define VIRTIO_F_RING_RESET 40
+#endif
+
 /* Declare packed ring related bits for older kernels */
 #ifndef VIRTIO_F_RING_PACKED
 
@@ -438,7 +443,8 @@ struct vring_packed_desc_event {
 				(1ULL << VIRTIO_NET_F_MTU)  | \
 				(1ULL << VIRTIO_F_IN_ORDER) | \
 				(1ULL << VIRTIO_F_IOMMU_PLATFORM) | \
-				(1ULL << VIRTIO_F_RING_PACKED))
+				(1ULL << VIRTIO_F_RING_PACKED)	| \
+				(1ULL << VIRTIO_F_RING_RESET))
 
 
 struct guest_page {
