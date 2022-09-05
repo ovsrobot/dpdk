@@ -1307,6 +1307,33 @@ idpf_ena_dis_vport(struct idpf_vport *vport, bool enable)
 
 	return err;
 }
+
+int
+idpf_query_stats(struct idpf_vport *vport,
+		struct virtchnl2_vport_stats **pstats)
+{
+	struct idpf_adapter *adapter = vport->adapter;
+	struct virtchnl2_vport vc_vport;
+	struct idpf_cmd_info args;
+	int err;
+
+	vc_vport.vport_id = vport->vport_id;
+	args.ops = VIRTCHNL2_OP_GET_STATS;
+	args.in_args = (u8 *)&vc_vport;
+	args.in_args_size = sizeof(vc_vport);
+	args.out_buffer = adapter->mbx_resp;
+	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
+
+	err = idpf_execute_vc_cmd(adapter, &args);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_GET_STATS");
+		*pstats = NULL;
+		return err;
+	}
+	*pstats = (struct virtchnl2_vport_stats *)args.out_buffer;
+	return 0;
+}
+
 int
 idpf_query_ptype_info(struct idpf_adapter *adapter)
 {

@@ -35,6 +35,9 @@ static int idpf_dev_close(struct rte_eth_dev *dev);
 static int idpf_dev_info_get(struct rte_eth_dev *dev,
 			     struct rte_eth_dev_info *dev_info);
 static int idpf_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
+static int idpf_dev_stats_get(struct rte_eth_dev *dev,
+			struct rte_eth_stats *stats);
+static int idpf_dev_stats_reset(struct rte_eth_dev *dev);
 
 int
 idpf_dev_link_update(struct rte_eth_dev *dev,
@@ -73,6 +76,8 @@ static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.dev_infos_get			= idpf_dev_info_get,
 	.link_update			= idpf_dev_link_update,
 	.mtu_set			= idpf_dev_mtu_set,
+	.stats_get			= idpf_dev_stats_get,
+	.stats_reset			= idpf_dev_stats_reset,
 };
 
 static int
@@ -161,6 +166,75 @@ idpf_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu __rte_unused)
 		PMD_DRV_LOG(ERR, "port must be stopped before configuration");
 		return -EBUSY;
 	}
+
+	return 0;
+}
+
+static void
+idpf_stat_update(uint64_t *offset, uint64_t *stat)
+{
+	*stat = *stat - *offset;
+}
+
+
+static void
+idpf_update_stats(struct virtchnl2_vport_stats *oes, struct virtchnl2_vport_stats *nes)
+{
+	idpf_stat_update(&oes->rx_bytes, &nes->rx_bytes);
+	idpf_stat_update(&oes->rx_unicast, &nes->rx_unicast);
+	idpf_stat_update(&oes->rx_multicast, &nes->rx_multicast);
+	idpf_stat_update(&oes->rx_broadcast, &nes->rx_broadcast);
+	idpf_stat_update(&oes->rx_discards, &nes->rx_discards);
+	idpf_stat_update(&oes->tx_bytes, &nes->tx_bytes);
+	idpf_stat_update(&oes->tx_unicast, &nes->tx_unicast);
+	idpf_stat_update(&oes->tx_multicast, &nes->tx_multicast);
+	idpf_stat_update(&oes->tx_broadcast, &nes->tx_broadcast);
+	idpf_stat_update(&oes->tx_errors, &nes->tx_errors);
+	idpf_stat_update(&oes->tx_discards, &nes->tx_discards);
+}
+
+static int
+idpf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+	struct virtchnl2_vport_stats *pstats = NULL;
+	int ret;
+
+	ret = idpf_query_stats(vport, &pstats);
+	if (ret == 0) {
+		uint8_t crc_stats_len = (dev->data->dev_conf.rxmode.offloads &
+					 RTE_ETH_RX_OFFLOAD_KEEP_CRC) ? 0 :
+					 RTE_ETHER_CRC_LEN;
+		idpf_update_stats(&vport->eth_stats_offset, pstats);
+		stats->ipackets = pstats->rx_unicast + pstats->rx_multicast +
+				pstats->rx_broadcast - pstats->rx_discards;
+		stats->opackets = pstats->tx_broadcast + pstats->tx_multicast +
+						pstats->tx_unicast;
+		stats->imissed = pstats->rx_discards;
+		stats->oerrors = pstats->tx_errors + pstats->tx_discards;
+		stats->ibytes = pstats->rx_bytes;
+		stats->ibytes -= stats->ipackets * crc_stats_len;
+		stats->obytes = pstats->tx_bytes;
+	} else {
+		PMD_DRV_LOG(ERR, "Get statistics failed");
+	}
+	return ret;
+}
+
+
+static int
+idpf_dev_stats_reset(struct rte_eth_dev *dev)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+	struct virtchnl2_vport_stats *pstats = NULL;
+	int ret;
+
+	ret = idpf_query_stats(vport, &pstats);
+	if (ret != 0)
+		return ret;
+
+	/* set stats offset base on current values */
+	vport->eth_stats_offset = *pstats;
 
 	return 0;
 }
@@ -508,6 +582,10 @@ idpf_dev_start(struct rte_eth_dev *dev)
 		goto err_vport;
 	}
 
+	if (idpf_dev_stats_reset(dev)) {
+		PMD_DRV_LOG(ERR, "Failed to reset stats");
+		goto err_vport;
+	}
 	return 0;
 
 err_vport:
