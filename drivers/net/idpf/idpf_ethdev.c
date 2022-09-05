@@ -12,6 +12,8 @@
 #include "idpf_ethdev.h"
 #include "idpf_rxtx.h"
 
+#define IDPF_TX_SINGLE_Q	"tx_single"
+#define IDPF_RX_SINGLE_Q	"rx_single"
 #define IDPF_VPORT		"vport"
 
 struct idpf_adapter_list adapter_list;
@@ -20,6 +22,8 @@ bool adapter_list_init;
 uint64_t idpf_timestamp_dynflag;
 
 static const char * const idpf_valid_args[] = {
+	IDPF_TX_SINGLE_Q,
+	IDPF_RX_SINGLE_Q,
 	IDPF_VPORT,
 	NULL
 };
@@ -367,6 +371,9 @@ idpf_dev_start(struct rte_eth_dev *dev)
 		goto err_mtu;
 	}
 
+	idpf_set_rx_function(dev);
+	idpf_set_tx_function(dev);
+
 	if (idpf_ena_dis_vport(vport, true)) {
 		PMD_DRV_LOG(ERR, "Failed to enable vport");
 		goto err_vport;
@@ -392,6 +399,8 @@ idpf_dev_stop(struct rte_eth_dev *dev)
 
 	if (idpf_ena_dis_vport(vport, false))
 		PMD_DRV_LOG(ERR, "disable vport failed");
+
+	idpf_stop_queues(dev);
 
 	vport->stopped = 1;
 	dev->data->dev_started = 0;
@@ -520,6 +529,26 @@ parse_vport(const char *key, const char *value, void *args)
 }
 
 static int
+parse_bool(const char *key, const char *value, void *args)
+{
+	int *i = (int *)args;
+	char *end;
+	int num;
+
+	num = strtoul(value, &end, 10);
+
+	if (num != 0 && num != 1) {
+		PMD_INIT_LOG(ERR, "invalid value:\"%s\" for key:\"%s\", "
+			"value must be 0 or 1",
+			value, key);
+		return -1;
+	}
+
+	*i = num;
+	return 0;
+}
+
+static int
 idpf_parse_devargs(struct rte_pci_device *pci_dev, struct idpf_adapter *adapter)
 {
 	struct rte_devargs *devargs = pci_dev->device.devargs;
@@ -537,7 +566,20 @@ idpf_parse_devargs(struct rte_pci_device *pci_dev, struct idpf_adapter *adapter)
 
 	ret = rte_kvargs_process(kvlist, IDPF_VPORT, &parse_vport,
 		adapter);
+	if (ret)
+		goto bail;
 
+	ret = rte_kvargs_process(kvlist, IDPF_TX_SINGLE_Q, &parse_bool,
+				 &adapter->txq_model);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, IDPF_RX_SINGLE_Q, &parse_bool,
+				 &adapter->rxq_model);
+	if (ret)
+		goto bail;
+
+bail:
 	rte_kvargs_free(kvlist);
 	return ret;
 }
@@ -763,8 +805,11 @@ idpf_dev_init(struct rte_eth_dev *dev, void *init_params)
 	/* for secondary processes, we don't initialise any further as primary
 	 * has already done this work.
 	 */
-	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		idpf_set_rx_function(dev);
+		idpf_set_tx_function(dev);
 		return ret;
+	}
 
 	dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
 
