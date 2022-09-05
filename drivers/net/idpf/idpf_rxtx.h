@@ -15,6 +15,41 @@
 #include "base/virtchnl2_lan_desc.h"
 #include "idpf_ethdev.h"
 
+/* MTS */
+#define GLTSYN_CMD_SYNC_0_0	(PF_TIMESYNC_BASE + 0x0)
+#define PF_GLTSYN_SHTIME_0_0	(PF_TIMESYNC_BASE + 0x4)
+#define PF_GLTSYN_SHTIME_L_0	(PF_TIMESYNC_BASE + 0x8)
+#define PF_GLTSYN_SHTIME_H_0	(PF_TIMESYNC_BASE + 0xC)
+#define GLTSYN_ART_L_0		(PF_TIMESYNC_BASE + 0x10)
+#define GLTSYN_ART_H_0		(PF_TIMESYNC_BASE + 0x14)
+#define PF_GLTSYN_SHTIME_0_1	(PF_TIMESYNC_BASE + 0x24)
+#define PF_GLTSYN_SHTIME_L_1	(PF_TIMESYNC_BASE + 0x28)
+#define PF_GLTSYN_SHTIME_H_1	(PF_TIMESYNC_BASE + 0x2C)
+#define PF_GLTSYN_SHTIME_0_2	(PF_TIMESYNC_BASE + 0x44)
+#define PF_GLTSYN_SHTIME_L_2	(PF_TIMESYNC_BASE + 0x48)
+#define PF_GLTSYN_SHTIME_H_2	(PF_TIMESYNC_BASE + 0x4C)
+#define PF_GLTSYN_SHTIME_0_3	(PF_TIMESYNC_BASE + 0x64)
+#define PF_GLTSYN_SHTIME_L_3	(PF_TIMESYNC_BASE + 0x68)
+#define PF_GLTSYN_SHTIME_H_3	(PF_TIMESYNC_BASE + 0x6C)
+
+#define PF_TIMESYNC_BAR4_BASE	0x0E400000
+#define GLTSYN_ENA		(PF_TIMESYNC_BAR4_BASE + 0x90)
+#define GLTSYN_CMD		(PF_TIMESYNC_BAR4_BASE + 0x94)
+#define GLTSYC_TIME_L		(PF_TIMESYNC_BAR4_BASE + 0x104)
+#define GLTSYC_TIME_H		(PF_TIMESYNC_BAR4_BASE + 0x108)
+
+#define GLTSYN_CMD_SYNC_0_4	(PF_TIMESYNC_BAR4_BASE + 0x110)
+#define PF_GLTSYN_SHTIME_L_4	(PF_TIMESYNC_BAR4_BASE + 0x118)
+#define PF_GLTSYN_SHTIME_H_4	(PF_TIMESYNC_BAR4_BASE + 0x11C)
+#define GLTSYN_INCVAL_L		(PF_TIMESYNC_BAR4_BASE + 0x150)
+#define GLTSYN_INCVAL_H		(PF_TIMESYNC_BAR4_BASE + 0x154)
+#define GLTSYN_SHADJ_L		(PF_TIMESYNC_BAR4_BASE + 0x158)
+#define GLTSYN_SHADJ_H		(PF_TIMESYNC_BAR4_BASE + 0x15C)
+
+#define GLTSYN_CMD_SYNC_0_5	(PF_TIMESYNC_BAR4_BASE + 0x130)
+#define PF_GLTSYN_SHTIME_L_5	(PF_TIMESYNC_BAR4_BASE + 0x138)
+#define PF_GLTSYN_SHTIME_H_5	(PF_TIMESYNC_BAR4_BASE + 0x13C)
+
 /* In QLEN must be whole number of 32 descriptors. */
 #define IDPF_ALIGN_RING_DESC	32
 #define IDPF_MIN_RING_DESC	32
@@ -65,6 +100,8 @@
 #define IDPF_GET_PTYPE_SIZE(p) \
 	(sizeof(struct virtchnl2_ptype) + \
 	(((p)->proto_id_count ? ((p)->proto_id_count - 1) : 0) * sizeof((p)->proto_id[0])))
+
+extern uint64_t idpf_timestamp_dynflag;
 
 struct idpf_rx_queue {
 	struct idpf_adapter *adapter;	/* the adapter this queue belongs to */
@@ -231,5 +268,55 @@ void idpf_set_tx_function(struct rte_eth_dev *dev);
 
 const uint32_t *idpf_dev_supported_ptypes_get(struct rte_eth_dev *dev);
 
-#endif /* _IDPF_RXTX_H_ */
+#define IDPF_TIMESYNC_REG_WRAP_GUARD_BAND  10000
+/* Helper function to convert a 32b nanoseconds timestamp to 64b. */
+static inline uint64_t
+idpf_tstamp_convert_32b_64b(struct iecm_hw *hw, struct idpf_adapter *ad,
+			    uint32_t flag, uint32_t in_timestamp)
+{
+/* TODO: timestamp for ACC */
+#ifdef RTE_ARCH_ARM64
+	return 0;
+#endif /* RTE_ARCH_ARM64 */
 
+#ifdef RTE_ARCH_X86_64
+	const uint64_t mask = 0xFFFFFFFF;
+	uint32_t hi, lo, lo2, delta;
+	uint64_t ns;
+
+	if (flag) {
+		IECM_WRITE_REG(hw, GLTSYN_CMD_SYNC_0_0, PF_GLTSYN_CMD_SYNC_SHTIME_EN_M);
+		IECM_WRITE_REG(hw, GLTSYN_CMD_SYNC_0_0, PF_GLTSYN_CMD_SYNC_EXEC_CMD_M |
+			       PF_GLTSYN_CMD_SYNC_SHTIME_EN_M);
+		lo = IECM_READ_REG(hw, PF_GLTSYN_SHTIME_L_0);
+		hi = IECM_READ_REG(hw, PF_GLTSYN_SHTIME_H_0);
+		/*
+		 * On typical system, the delta between lo and lo2 is ~1000ns,
+		 * so 10000 seems a large-enough but not overly-big guard band.
+		 */
+		if (lo > (UINT32_MAX - IDPF_TIMESYNC_REG_WRAP_GUARD_BAND))
+			lo2 = IECM_READ_REG(hw, PF_GLTSYN_SHTIME_L_0);
+		else
+			lo2 = lo;
+
+		if (lo2 < lo) {
+			lo = IECM_READ_REG(hw, PF_GLTSYN_SHTIME_L_0);
+			hi = IECM_READ_REG(hw, PF_GLTSYN_SHTIME_H_0);
+		}
+
+		ad->time_hw = ((uint64_t)hi << 32) | lo;
+	}
+
+	delta = (in_timestamp - (uint32_t)(ad->time_hw & mask));
+	if (delta > (mask / 2)) {
+		delta = ((uint32_t)(ad->time_hw & mask) - in_timestamp);
+		ns = ad->time_hw - delta;
+	} else {
+		ns = ad->time_hw + delta;
+	}
+
+	return ns;
+#endif /* RTE_ARCH_X86_64 */
+}
+
+#endif /* _IDPF_RXTX_H_ */
