@@ -679,6 +679,102 @@ idpf_destroy_vport(struct idpf_vport *vport)
 	return err;
 }
 
+int
+idpf_set_rss_key(struct idpf_vport *vport)
+{
+	struct idpf_adapter *adapter = vport->adapter;
+	struct virtchnl2_rss_key *rss_key;
+	struct idpf_cmd_info args;
+	int len, err;
+
+	len = sizeof(*rss_key) + sizeof(rss_key->key[0]) *
+		(vport->rss_key_size - 1);
+	rss_key = rte_zmalloc("rss_key", len, 0);
+	if (!rss_key)
+		return -ENOMEM;
+
+	rss_key->vport_id = vport->vport_id;
+	rss_key->key_len = vport->rss_key_size;
+	rte_memcpy(rss_key->key, vport->rss_key,
+		   sizeof(rss_key->key[0]) * vport->rss_key_size);
+
+	memset(&args, 0, sizeof(args));
+	args.ops = VIRTCHNL2_OP_SET_RSS_KEY;
+	args.in_args = (uint8_t *)rss_key;
+	args.in_args_size = len;
+	args.out_buffer = adapter->mbx_resp;
+	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
+
+	err = idpf_execute_vc_cmd(adapter, &args);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_SET_RSS_KEY");
+		return err;
+	}
+
+	rte_free(rss_key);
+	return err;
+}
+
+int
+idpf_set_rss_lut(struct idpf_vport *vport)
+{
+	struct idpf_adapter *adapter = vport->adapter;
+	struct virtchnl2_rss_lut *rss_lut;
+	struct idpf_cmd_info args;
+	int len, err;
+
+	len = sizeof(*rss_lut) + sizeof(rss_lut->lut[0]) *
+		(vport->rss_lut_size - 1);
+	rss_lut = rte_zmalloc("rss_lut", len, 0);
+	if (!rss_lut)
+		return -ENOMEM;
+
+	rss_lut->vport_id = vport->vport_id;
+	rss_lut->lut_entries = vport->rss_lut_size;
+	rte_memcpy(rss_lut->lut, vport->rss_lut,
+		   sizeof(rss_lut->lut[0]) * vport->rss_lut_size);
+
+	memset(&args, 0, sizeof(args));
+	args.ops = VIRTCHNL2_OP_SET_RSS_LUT;
+	args.in_args = (uint8_t *)rss_lut;
+	args.in_args_size = len;
+	args.out_buffer = adapter->mbx_resp;
+	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
+
+	err = idpf_execute_vc_cmd(adapter, &args);
+	if (err)
+		PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_SET_RSS_LUT");
+
+	rte_free(rss_lut);
+	return err;
+}
+
+int
+idpf_set_rss_hash(struct idpf_vport *vport)
+{
+	struct idpf_adapter *adapter = vport->adapter;
+	struct virtchnl2_rss_hash rss_hash;
+	struct idpf_cmd_info args;
+	int err;
+
+	memset(&rss_hash, 0, sizeof(rss_hash));
+	rss_hash.ptype_groups = vport->rss_hf;
+	rss_hash.vport_id = vport->vport_id;
+
+	memset(&args, 0, sizeof(args));
+	args.ops = VIRTCHNL2_OP_SET_RSS_HASH;
+	args.in_args = (uint8_t *)&rss_hash;
+	args.in_args_size = sizeof(rss_hash);
+	args.out_buffer = adapter->mbx_resp;
+	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
+
+	err = idpf_execute_vc_cmd(adapter, &args);
+	if (err)
+		PMD_DRV_LOG(ERR, "Failed to execute command of OP_SET_RSS_HASH");
+
+	return err;
+}
+
 #define IDPF_RX_BUF_STRIDE		64
 int
 idpf_config_rxqs(struct idpf_vport *vport)
