@@ -610,7 +610,7 @@ init_vring_queue(struct virtio_net *dev, uint32_t vring_idx)
 	vhost_user_iotlb_init(dev, vring_idx);
 }
 
-static void
+void
 reset_vring_queue(struct virtio_net *dev, uint32_t vring_idx)
 {
 	struct vhost_virtqueue *vq;

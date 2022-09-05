@@ -791,6 +791,7 @@ get_device(int vid)
 
 int vhost_new_device(void);
 void cleanup_device(struct virtio_net *dev, int destroy);
+void reset_vring_queue(struct virtio_net *dev, uint32_t vring_idx);
 void reset_device(struct virtio_net *dev);
 void vhost_destroy_device(int);
 void vhost_destroy_device_notify(struct virtio_net *dev);

@@ -2771,6 +2771,30 @@ vhost_user_set_status(struct virtio_net **pdev,
 	return RTE_VHOST_MSG_RESULT_OK;
 }
 
+static int
+vhost_user_reset_vring(struct virtio_net **pdev,
+			struct vhu_msg_context *ctx __rte_unused,
+			int main_fd __rte_unused)
+{
+	struct virtio_net *dev = *pdev;
+	int index = (int)ctx->msg.payload.state.index;
+
+	VHOST_LOG_CONFIG(dev->ifname, INFO, "reset queue: queue idx: %d\n", index);
+
+	if (!(dev->features & (1ULL << VIRTIO_F_RING_RESET))) {
+		return RTE_VHOST_MSG_RESULT_ERR;
+	}
+
+	dev->virtqueue[index]->enabled = false;
+	reset_vring_queue(dev, index);
+
+	ctx->msg.payload.state.num = 0;
+	ctx->msg.size = sizeof(ctx->msg.payload.u64);
+	ctx->fd_num = 0;
+
+	return RTE_VHOST_MSG_RESULT_REPLY;
+}
+
 #define VHOST_MESSAGE_HANDLERS \
 VHOST_MESSAGE_HANDLER(VHOST_USER_NONE, NULL, false) \
 VHOST_MESSAGE_HANDLER(VHOST_USER_GET_FEATURES, vhost_user_get_features, false) \
@@ -2803,7 +2827,8 @@ VHOST_MESSAGE_HANDLER(VHOST_USER_POSTCOPY_END, vhost_user_postcopy_end, false) \
 VHOST_MESSAGE_HANDLER(VHOST_USER_GET_INFLIGHT_FD, vhost_user_get_inflight_fd, false) \
 VHOST_MESSAGE_HANDLER(VHOST_USER_SET_INFLIGHT_FD, vhost_user_set_inflight_fd, true) \
 VHOST_MESSAGE_HANDLER(VHOST_USER_SET_STATUS, vhost_user_set_status, false) \
-VHOST_MESSAGE_HANDLER(VHOST_USER_GET_STATUS, vhost_user_get_status, false)
+VHOST_MESSAGE_HANDLER(VHOST_USER_GET_STATUS, vhost_user_get_status, false) \
+VHOST_MESSAGE_HANDLER(VHOST_USER_RESET_VRING, vhost_user_reset_vring, false)
 
 #define VHOST_MESSAGE_HANDLER(id, handler, accepts_fd) \
 	[id] = { #id, handler, accepts_fd },

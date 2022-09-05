@@ -60,6 +60,7 @@ typedef enum VhostUserRequest {
 	VHOST_USER_SET_INFLIGHT_FD = 32,
 	VHOST_USER_SET_STATUS = 39,
 	VHOST_USER_GET_STATUS = 40,
+	VHOST_USER_RESET_VRING = 41
 } VhostUserRequest;
 
 typedef enum VhostUserSlaveRequest {
