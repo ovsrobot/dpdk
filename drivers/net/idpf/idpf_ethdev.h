@@ -217,6 +217,8 @@ _atomic_set_cmd(struct idpf_adapter *adapter, enum virtchnl_ops ops)
 }
 
 struct idpf_adapter *idpf_find_adapter(struct rte_pci_device *pci_dev);
+int idpf_dev_link_update(struct rte_eth_dev *dev,
+			 __rte_unused int wait_to_complete);
 void idpf_handle_virtchnl_msg(struct rte_eth_dev *dev);
 int idpf_check_api_version(struct idpf_adapter *adapter);
 int idpf_get_pkt_type(struct idpf_adapter *adapter);
