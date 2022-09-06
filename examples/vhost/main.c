@@ -1624,6 +1624,13 @@ destroy_device(int vid)
 		dma_bind[vid].dmas[VIRTIO_TXQ].async_enabled = false;
 	}
 
+	for (i = 0; i < dma_count; i++) {
+		if (rte_vhost_async_dma_unconfigure(dmas_id[i], 0) < 0) {
+			RTE_LOG(ERR, VHOST_PORT, "Failed to unconfigure DMA in vhost.\n");
+			rte_exit(EXIT_FAILURE, "Cannot use given DMA device\n");
+		}
+	}
+
 	rte_free(vdev);
 }
 
