@@ -17,6 +17,7 @@
 #include <rte_mbuf_dyn.h>
 #include <rte_bus_vdev.h>
 #include <rte_os_shim.h>
+#include <rte_alarm.h>
 
 #include "pcap_osdep.h"
 
@@ -664,6 +665,25 @@ status_up:
 	return 0;
 }
 
+static void eth_pcap_dumper_release(void *arg)
+{
+	pcap_dump_close((pcap_dumper_t *)arg);
+}
+
+static void
+eth_pcap_dumper_close(pcap_dumper_t *dumper)
+{
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		/*
+		 * Delay 30 seconds before releasing dumper to wait for file sync
+		 * to complete to avoid blocking alarm thread in PRIMARY process
+		 */
+		rte_eal_alarm_set(30000000, eth_pcap_dumper_release, dumper);
+	} else {
+		rte_eal_alarm_set(1, eth_pcap_dumper_release, dumper);
+	}
+}
+
 /*
  * This function gets called when the current port gets stopped.
  * Is the only place for us to close all the tx streams dumpers.
@@ -689,7 +709,7 @@ eth_dev_stop(struct rte_eth_dev *dev)
 
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		if (pp->tx_dumper[i] != NULL) {
-			pcap_dump_close(pp->tx_dumper[i]);
+			eth_pcap_dumper_close(pp->tx_dumper[i]);
 			pp->tx_dumper[i] = NULL;
 		}
 
