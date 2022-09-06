@@ -23,6 +23,7 @@
 
 struct virtio_net *vhost_devices[RTE_MAX_VHOST_DEVICE];
 pthread_mutex_t vhost_dev_lock = PTHREAD_MUTEX_INITIALIZER;
+static rte_spinlock_t vhost_dma_lock = RTE_SPINLOCK_INITIALIZER;
 
 struct vhost_vq_stats_name_off {
 	char name[RTE_VHOST_STATS_NAME_SIZE];
@@ -1870,19 +1871,20 @@ rte_vhost_async_dma_configure(int16_t dma_id, uint16_t vchan_id)
 	void *pkts_cmpl_flag_addr;
 	uint16_t max_desc;
 
+	rte_spinlock_lock(&vhost_dma_lock);
 	if (!rte_dma_is_valid(dma_id)) {
 		VHOST_LOG_CONFIG("dma", ERR, "DMA %d is not found.\n", dma_id);
-		return -1;
+		goto error;
 	}
 
 	if (rte_dma_info_get(dma_id, &info) != 0) {
 		VHOST_LOG_CONFIG("dma", ERR, "Fail to get DMA %d information.\n", dma_id);
-		return -1;
+		goto error;
 	}
 
 	if (vchan_id >= info.max_vchans) {
 		VHOST_LOG_CONFIG("dma", ERR, "Invalid DMA %d vChannel %u.\n", dma_id, vchan_id);
-		return -1;
+		goto error;
 	}
 
 	if (!dma_copy_track[dma_id].vchans) {
@@ -1894,7 +1896,7 @@ rte_vhost_async_dma_configure(int16_t dma_id, uint16_t vchan_id)
 			VHOST_LOG_CONFIG("dma", ERR,
 				"Failed to allocate vchans for DMA %d vChannel %u.\n",
 				dma_id, vchan_id);
-			return -1;
+			goto error;
 		}
 
 		dma_copy_track[dma_id].vchans = vchans;
@@ -1903,6 +1905,7 @@ rte_vhost_async_dma_configure(int16_t dma_id, uint16_t vchan_id)
 	if (dma_copy_track[dma_id].vchans[vchan_id].pkts_cmpl_flag_addr) {
 		VHOST_LOG_CONFIG("dma", INFO, "DMA %d vChannel %u already registered.\n",
 			dma_id, vchan_id);
+		rte_spinlock_unlock(&vhost_dma_lock);
 		return 0;
 	}
 
@@ -1920,7 +1923,7 @@ rte_vhost_async_dma_configure(int16_t dma_id, uint16_t vchan_id)
 			rte_free(dma_copy_track[dma_id].vchans);
 			dma_copy_track[dma_id].vchans = NULL;
 		}
-		return -1;
+		goto error;
 	}
 
 	dma_copy_track[dma_id].vchans[vchan_id].pkts_cmpl_flag_addr = pkts_cmpl_flag_addr;
@@ -1928,7 +1931,12 @@ rte_vhost_async_dma_configure(int16_t dma_id, uint16_t vchan_id)
 	dma_copy_track[dma_id].vchans[vchan_id].ring_mask = max_desc - 1;
 	dma_copy_track[dma_id].nr_vchans++;
 
+	rte_spinlock_unlock(&vhost_dma_lock);
 	return 0;
+
+error:
+	rte_spinlock_unlock(&vhost_dma_lock);
+	return -1;
 }
 
 int
@@ -2115,6 +2123,57 @@ int rte_vhost_vring_stats_reset(int vid, uint16_t queue_id)
 	rte_spinlock_unlock(&vq->access_lock);
 
 	return 0;
+}
+
+int
+rte_vhost_async_dma_unconfigure(int16_t dma_id, uint16_t vchan_id)
+{
+	struct rte_dma_info info;
+	uint16_t max_desc;
+	int i;
+
+	rte_spinlock_lock(&vhost_dma_lock);
+	if (!rte_dma_is_valid(dma_id)) {
+		VHOST_LOG_CONFIG("dma", ERR, "DMA %d is not found.\n", dma_id);
+		goto error;
+	}
+
+	if (rte_dma_info_get(dma_id, &info) != 0) {
+		VHOST_LOG_CONFIG("dma", ERR, "Fail to get DMA %d information.\n", dma_id);
+		goto error;
+	}
+
+	if (vchan_id >= info.max_vchans) {
+		VHOST_LOG_CONFIG("dma", ERR, "Invalid DMA %d vChannel %u.\n", dma_id, vchan_id);
+		goto error;
+	}
+
+	max_desc = info.max_desc;
+	for (i = 0; i < max_desc; i++) {
+		if (dma_copy_track[dma_id].vchans[vchan_id].pkts_cmpl_flag_addr[i] != NULL) {
+			rte_free(dma_copy_track[dma_id].vchans[vchan_id].pkts_cmpl_flag_addr[i]);
+			dma_copy_track[dma_id].vchans[vchan_id].pkts_cmpl_flag_addr[i] = NULL;
+		}
+	}
+
+	if (dma_copy_track[dma_id].vchans[vchan_id].pkts_cmpl_flag_addr != NULL) {
+		rte_free(dma_copy_track[dma_id].vchans[vchan_id].pkts_cmpl_flag_addr);
+		dma_copy_track[dma_id].vchans[vchan_id].pkts_cmpl_flag_addr = NULL;
+	}
+
+	if (dma_copy_track[dma_id].vchans != NULL) {
+		rte_free(dma_copy_track[dma_id].vchans);
+		dma_copy_track[dma_id].vchans = NULL;
+	}
+
+	dma_copy_track[dma_id].nr_vchans--;
+
+	rte_spinlock_unlock(&vhost_dma_lock);
+	return 0;
+
+error:
+	rte_spinlock_unlock(&vhost_dma_lock);
+	return -1;
 }
 
 RTE_LOG_REGISTER_SUFFIX(vhost_config_log_level, config, INFO);
