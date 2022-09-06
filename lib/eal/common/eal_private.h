@@ -153,6 +153,13 @@ int rte_eal_tailqs_init(void);
 int rte_eal_intr_init(void);
 
 /**
+ * Destroy interrupt handling thread.
+ *
+ * This function is private to EAL.
+ */
+void rte_eal_intr_destroy(void);
+
+/**
  * Close the default log stream
  *
  * This function is private to EAL.

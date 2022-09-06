@@ -72,6 +72,8 @@ struct lcore_config lcore_config[RTE_MAX_LCORE];
 /* used by rte_rdtsc() */
 int rte_cycles_vmware_tsc_map;
 
+/* used to judge if is forked */
+static int is_forked;
 
 int
 eal_clean_runtime_dir(void)
@@ -574,6 +576,11 @@ static void rte_eal_init_alert(const char *msg)
 	RTE_LOG(ERR, EAL, "%s\n", msg);
 }
 
+static void mark_forked(void)
+{
+	is_forked++;
+}
+
 /* Launch threads, called at application init(). */
 int
 rte_eal_init(int argc, char **argv)
@@ -883,16 +890,22 @@ rte_eal_init(int argc, char **argv)
 
 	eal_mcfg_complete();
 
+	pthread_atfork(NULL, NULL, mark_forked);
+
 	return fctret;
 }
 
 int
 rte_eal_cleanup(void)
 {
+	if (is_forked)
+		return 0;
+
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 	rte_service_finalize();
 	rte_mp_channel_cleanup();
+	rte_eal_intr_destroy();
 	rte_trace_save();
 	eal_trace_fini();
 	/* after this point, any DPDK pointers will become dangling */
