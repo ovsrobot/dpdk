@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+   * **Updated Netronome nfp driver.**
+     Added the support of flower firmware.
+     Added the flower service infrastructure.
 
 Removed Items
 -------------
