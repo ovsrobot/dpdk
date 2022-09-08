@@ -58,6 +58,7 @@ New Features
    * **Updated Netronome nfp driver.**
      Added the support of flower firmware.
      Added the flower service infrastructure.
+     Added the control message interactive channels between PMD and firmware.
 
 Removed Items
 -------------

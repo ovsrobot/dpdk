@@ -20,6 +20,7 @@
 #include "../nfpcore/nfp_nsp.h"
 #include "nfp_flower.h"
 #include "nfp_flower_ovs_compat.h"
+#include "nfp_flower_ctrl.h"
 
 #define MAX_PKT_BURST 32
 #define MEMPOOL_CACHE_SIZE 512
@@ -707,6 +708,8 @@ nfp_flower_ctrl_vnic_service(void *arg)
 		PMD_INIT_LOG(ERR, "Could not start flower ctrl vNIC");
 		goto ctrl_vnic_cleanup;
 	}
+
+	nfp_flower_ctrl_vnic_poll(app_fw_flower);
 
 	return 0;
 
