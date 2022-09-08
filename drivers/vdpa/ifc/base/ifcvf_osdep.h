@@ -16,6 +16,7 @@
 
 #define WARNINGOUT(S, args...)  RTE_LOG(WARNING, PMD, S, ##args)
 #define DEBUGOUT(S, args...)    RTE_LOG(DEBUG, PMD, S, ##args)
+#define ERROUT(S, args...)      RTE_LOG(ERR, PMD, S, ##args)
 #define STATIC                  static
 
 #define msec_delay(x)	rte_delay_us_sleep(1000 * (x))
