@@ -21,6 +21,7 @@
 #include "nfp_flower.h"
 #include "nfp_flower_ovs_compat.h"
 #include "nfp_flower_ctrl.h"
+#include "nfp_flower_representor.h"
 
 #define MAX_PKT_BURST 32
 #define MEMPOOL_CACHE_SIZE 512
@@ -706,6 +707,12 @@ nfp_flower_ctrl_vnic_service(void *arg)
 	ret = nfp_flower_start_ctrl_vnic(app_fw_flower->ctrl_hw);
 	if (ret != 0) {
 		PMD_INIT_LOG(ERR, "Could not start flower ctrl vNIC");
+		goto ctrl_vnic_cleanup;
+	}
+
+	ret = nfp_flower_repr_create(app_fw_flower);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR, "Could not create representor port");
 		goto ctrl_vnic_cleanup;
 	}
 
