@@ -290,6 +290,8 @@ vdpa_ifcvf_start(struct ifcvf_internal *internal)
 	rte_vhost_get_negotiated_features(vid, &hw->req_features);
 
 	for (i = 0; i < nr_vring; i++) {
+		if (!hw->vring[i].enable)
+			continue;
 		rte_vhost_get_vhost_vring(vid, i, &vq);
 		gpa = hva_to_gpa(vid, (uint64_t)(uintptr_t)vq.desc);
 		if (gpa == 0) {
@@ -505,6 +507,8 @@ notify_relay(void *arg)
 
 	vring.kickfd = -1;
 	for (qid = 0; qid < q_num; qid++) {
+		if (!hw->vring[qid].enable)
+			continue;
 		ev.events = EPOLLIN | EPOLLPRI;
 		rte_vhost_get_vhost_vring(internal->vid, qid, &vring);
 		ev.data.u64 = qid | (uint64_t)vring.kickfd << 32;
@@ -1064,6 +1068,8 @@ ifcvf_dev_config(int vid)
 	struct rte_vdpa_device *vdev;
 	struct internal_list *list;
 	struct ifcvf_internal *internal;
+	struct ifcvf_hw *hw;
+	uint16_t i;
 
 	vdev = rte_vhost_get_vdpa_device(vid);
 	list = find_internal_resource_by_vdev(vdev);
@@ -1077,11 +1083,17 @@ ifcvf_dev_config(int vid)
 	rte_atomic32_set(&internal->dev_attached, 1);
 	update_datapath(internal);
 
-	if (rte_vhost_host_notifier_ctrl(vid, RTE_VHOST_QUEUE_ALL, true) != 0)
-		DRV_LOG(NOTICE, "vDPA (%s): software relay is used.",
+	hw = &internal->hw;
+	for (i = 0; i < hw->nr_vring; i++) {
+		if (!hw->vring[i].enable)
+			continue;
+		if (rte_vhost_host_notifier_ctrl(vid, i, true) != 0)
+			DRV_LOG(NOTICE, "vDPA (%s): software relay is used.",
 				vdev->device->name);
+	}
 
 	internal->configured = 1;
+	DRV_LOG(INFO, "vDPA device %s is configured", vdev->device->name);
 	return 0;
 }
 

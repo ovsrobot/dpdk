@@ -249,6 +249,9 @@ ifcvf_hw_enable(struct ifcvf_hw *hw)
 
 	ifcvf_enable_multiqueue(hw);
 	for (i = 0; i < hw->nr_vring; i++) {
+		if (!hw->vring[i].enable)
+			continue;
+
 		IFCVF_WRITE_REG16(i, &cfg->queue_select);
 		io_write64_twopart(hw->vring[i].desc, &cfg->queue_desc_lo,
 				&cfg->queue_desc_hi);
@@ -283,7 +286,8 @@ ifcvf_hw_enable(struct ifcvf_hw *hw)
 		notify_off = IFCVF_READ_REG16(&cfg->queue_notify_off);
 		hw->notify_addr[i] = (void *)((u8 *)hw->notify_base +
 				notify_off * hw->notify_off_multiplier);
-		IFCVF_WRITE_REG16(1, &cfg->queue_enable);
+		if (hw->vring[i].enable)
+			IFCVF_WRITE_REG16(1, &cfg->queue_enable);
 	}
 
 	return 0;
