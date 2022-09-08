@@ -1451,6 +1451,25 @@ vq_is_ready(struct virtio_net *dev, struct vhost_virtqueue *vq)
 #define VIRTIO_BUILTIN_NUM_VQS_TO_BE_READY 2u
 
 static int
+virtio_has_queue_ready(struct virtio_net *dev)
+{
+	struct vhost_virtqueue *vq;
+	uint32_t i, nr_vring = dev->nr_vring;
+
+	if (!dev->nr_vring)
+		return 0;
+
+	for (i = 0; i < nr_vring; i++) {
+		vq = dev->virtqueue[i];
+
+		if (vq_is_ready(dev, vq))
+			return 1;
+	}
+
+	return 0;
+}
+
+static int
 virtio_is_ready(struct virtio_net *dev)
 {
 	struct vhost_virtqueue *vq;
@@ -3167,8 +3186,32 @@ unlock:
 	if (unlock_required)
 		vhost_user_unlock_all_queue_pairs(dev);
 
-	if (ret != 0 || !virtio_is_ready(dev))
+	if (ret != 0)
 		goto out;
+
+	vdpa_dev = dev->vdpa_dev;
+	if (vdpa_dev) {
+		if (vdpa_dev->ops->get_dev_type) {
+			ret = vdpa_dev->ops->get_dev_type(vdpa_dev, &vdpa_type);
+			if (ret) {
+				VHOST_LOG_CONFIG(dev->ifname, ERR,
+					"failed to get vdpa dev type.\n");
+				ret = -1;
+				goto out;
+			}
+		} else {
+			vdpa_type = RTE_VHOST_VDPA_DEVICE_TYPE_NET;
+		}
+	}
+
+	if (!virtio_is_ready(dev)) {
+		if (vdpa_type == RTE_VHOST_VDPA_DEVICE_TYPE_BLK) {
+			if (!virtio_has_queue_ready(dev))
+				goto out;
+		} else {
+			goto out;
+		}
+	}
 
 	/*
 	 * Virtio is now ready. If not done already, it is time
@@ -3181,20 +3224,9 @@ unlock:
 			dev->flags |= VIRTIO_DEV_RUNNING;
 	}
 
-	vdpa_dev = dev->vdpa_dev;
 	if (!vdpa_dev)
 		goto out;
 
-	if (vdpa_dev->ops->get_dev_type) {
-		ret = vdpa_dev->ops->get_dev_type(vdpa_dev, &vdpa_type);
-		if (ret) {
-			VHOST_LOG_CONFIG(dev->ifname, ERR, "failed to get vdpa dev type.\n");
-			ret = -1;
-			goto out;
-		}
-	} else {
-		vdpa_type = RTE_VHOST_VDPA_DEVICE_TYPE_NET;
-	}
 	if (vdpa_type == RTE_VHOST_VDPA_DEVICE_TYPE_BLK
 		&& request != VHOST_USER_SET_VRING_CALL)
 		goto out;
