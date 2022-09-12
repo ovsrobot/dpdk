@@ -240,7 +240,7 @@ static void select_interface(const char *arg)
 {
 	uint16_t port;
 
-	if (strcmp(arg, "*"))
+	if (!strcmp(arg, "*"))
 		select_all_interfaces();
 	else if (rte_eth_dev_get_port_by_name(arg, &port) == 0)
 		add_interface(port, arg);
