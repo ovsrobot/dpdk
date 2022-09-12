@@ -2088,10 +2088,16 @@ vhost_user_get_vring_base(struct virtio_net **pdev,
 {
 	struct virtio_net *dev = *pdev;
 	struct vhost_virtqueue *vq = dev->virtqueue[ctx->msg.payload.state.index];
+	uint32_t i, num_live_vring = 0;
 	uint64_t val;
 
-	/* We have to stop the queue (virtio) if it is running. */
-	vhost_destroy_device_notify(dev);
+	/* Stop the device when vq is the last active queue */
+	for (i = 0; i < dev->nr_vring; i++)
+		if (dev->virtqueue[i]->access_ok)
+			num_live_vring++;
+
+	if (num_live_vring == 1 && vq->access_ok)
+		vhost_destroy_device_notify(dev);
 
 	dev->flags &= ~VIRTIO_DEV_READY;
 	dev->flags &= ~VIRTIO_DEV_VDPA_CONFIGURED;
