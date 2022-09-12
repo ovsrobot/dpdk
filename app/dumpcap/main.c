@@ -323,7 +323,7 @@ static void parse_opts(int argc, char **argv)
 	int option_index, c;
 
 	for (;;) {
-		c = getopt_long(argc, argv, "a:b:c:dDf:ghi:nN:pPqs:vw:",
+		c = getopt_long(argc, argv, "a:b:c:dDf:ghi:nN:m:pPqs:vw:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -392,6 +392,9 @@ static void parse_opts(int argc, char **argv)
 		case 'v':
 			printf("%s\n", version());
 			exit(0);
+		case 'm':
+			/* Handled before dpdk_init */
+			break;
 		default:
 			fprintf(stderr, "Invalid option: %s\n",
 				argv[optind - 1]);
@@ -507,10 +510,10 @@ report_packet_stats(dumpcap_out_t out)
  * typical EAL command line arguments.
  * We don't want to expose all the DPDK internals to the user.
  */
-static void dpdk_init(void)
+static void dpdk_init(const char * const prefix)
 {
-	static const char * const args[] = {
-		"dumpcap", "--proc-type", "secondary",
+		const char * const args[] = {
+		"dumpcap", "--proc-type", "secondary", "--file-prefix", prefix,
 		"--log-level", "notice"
 
 	};
@@ -787,7 +790,17 @@ int main(int argc, char **argv)
 	progname = argv[0];
 
 	parse_opts(argc, argv);
-	dpdk_init();
+	char prefix[256];
+	strcpy(prefix, "rte");
+
+	printf("\nIMP:: Please provide -m file_prefix as first argument in case non-default mp_socket path is to be setup (e.g. ./dpdk-dumpcap -m wls_0)\n\n");
+	/* In order to use mp_socket path other than default, give -m as first argument. */
+	if (argc >= 3) {
+		if (strncmp(argv[1], "-m", 2) == 0)
+			strncpy(prefix, argv[2], sizeof(prefix));
+	}
+
+	dpdk_init(prefix);
 
 	if (filter_str)
 		compile_filter();
