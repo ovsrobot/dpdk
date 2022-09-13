@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/queue.h>
@@ -5645,6 +5646,46 @@ eth_dev_handle_port_xstats(const char *cmd __rte_unused,
 }
 
 static int
+eth_dev_handle_port_dump_priv(const char *cmd __rte_unused,
+			const char *params,
+			struct rte_tel_data *d)
+{
+	char *buf, *end_param;
+	int port_id, ret;
+	FILE *f;
+
+	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
+		return -EINVAL;
+
+	port_id = strtoul(params, &end_param, 0);
+	if (*end_param != '\0')
+		RTE_ETHDEV_LOG(NOTICE,
+			"Extra parameters passed to ethdev telemetry command, ignoring");
+	if (!rte_eth_dev_is_valid_port(port_id))
+		return -EINVAL;
+
+	buf = calloc(sizeof(char), RTE_TEL_MAX_SINGLE_STRING_LEN);
+	if (buf == NULL)
+		return -ENOMEM;
+
+	f = fmemopen(buf, RTE_TEL_MAX_SINGLE_STRING_LEN - 1, "w+");
+	if (f == NULL) {
+		free(buf);
+		return -EINVAL;
+	}
+
+	ret = rte_eth_dev_priv_dump(port_id, f);
+	fclose(f);
+	if (ret == 0) {
+		rte_tel_data_start_dict(d);
+		rte_tel_data_string(d, buf);
+	}
+
+	free(buf);
+	return 0;
+}
+
+static int
 eth_dev_handle_port_link_status(const char *cmd __rte_unused,
 		const char *params,
 		struct rte_tel_data *d)
@@ -5927,6 +5968,8 @@ RTE_INIT(ethdev_init_telemetry)
 			"Returns the common stats for a port. Parameters: int port_id");
 	rte_telemetry_register_cmd("/ethdev/xstats", eth_dev_handle_port_xstats,
 			"Returns the extended stats for a port. Parameters: int port_id");
+	rte_telemetry_register_cmd("/ethdev/dump_priv", eth_dev_handle_port_dump_priv,
+			"Returns dump private information for a port. Parameters: int port_id");
 	rte_telemetry_register_cmd("/ethdev/link_status",
 			eth_dev_handle_port_link_status,
 			"Returns the link status for a port. Parameters: int port_id");
