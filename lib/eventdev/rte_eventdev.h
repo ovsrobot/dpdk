@@ -2153,6 +2153,7 @@ rte_event_dequeue_burst(uint8_t dev_id, uint8_t port_id, struct rte_event ev[],
 			uint16_t nb_events, uint64_t timeout_ticks)
 {
 	const struct rte_event_fp_ops *fp_ops;
+	uint16_t nb_evts;
 	void *port;
 
 	fp_ops = &rte_event_fp_ops[dev_id];
@@ -2175,10 +2176,13 @@ rte_event_dequeue_burst(uint8_t dev_id, uint8_t port_id, struct rte_event ev[],
 	 * requests nb_events as const one
 	 */
 	if (nb_events == 1)
-		return (fp_ops->dequeue)(port, ev, timeout_ticks);
+		nb_evts = (fp_ops->dequeue)(port, ev, timeout_ticks);
 	else
-		return (fp_ops->dequeue_burst)(port, ev, nb_events,
-					       timeout_ticks);
+		nb_evts = (fp_ops->dequeue_burst)(port, ev, nb_events,
+					timeout_ticks);
+
+	RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(nb_evts);
+	return nb_evts;
 }
 
 #define RTE_EVENT_DEV_MAINT_OP_FLUSH          (1 << 0)
