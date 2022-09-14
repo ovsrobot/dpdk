@@ -74,6 +74,8 @@ test_sources = files(
         'test_ipsec_perf.c',
         'test_kni.c',
         'test_kvargs.c',
+        'test_lcore_poll_busyness_api.c',
+        'test_lcore_poll_busyness_perf.c',
         'test_lcores.c',
         'test_logs.c',
         'test_lpm.c',
@@ -192,6 +194,7 @@ fast_tests = [
         ['interrupt_autotest', true, true],
         ['ipfrag_autotest', false, true],
         ['lcores_autotest', true, true],
+        ['lcore_poll_busyness_autotest', true, true],
         ['logs_autotest', true, true],
         ['lpm_autotest', true, true],
         ['lpm6_autotest', true, true],
@@ -292,6 +295,7 @@ perf_test_names = [
         'trace_perf_autotest',
         'ipsec_perf_autotest',
         'thash_perf_autotest',
+        'lcore_poll_busyness_perf_autotest'
 ]
 
 driver_test_names = [
