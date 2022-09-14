@@ -88,6 +88,9 @@ API Changes
 ABI Changes
 -----------
 
+* eventdev: Added ``evtim_drop_count`` field to ``rte_event_timer_adapter_stats``
+  structure.
+
 .. This section should contain ABI changes. Sample format:
 
    * sample: Add a short 1-2 sentence description of the ABI change
