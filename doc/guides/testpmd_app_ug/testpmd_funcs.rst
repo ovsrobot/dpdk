@@ -4189,6 +4189,8 @@ This section lists supported actions and their attributes, if any.
 
   - ``ethdev_port_id {unsigned}``: ethdev port ID
 
+- ``send_to_kernel``: send packets to kernel.
+
 Destroying flow rules
 ~~~~~~~~~~~~~~~~~~~~~
 
