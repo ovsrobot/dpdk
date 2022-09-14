@@ -28,6 +28,7 @@ extern "C" {
 #include <stdbool.h>
 
 #include <rte_cpuflags.h>
+#include <rte_lcore.h>
 
 #include "rte_bbdev_op.h"
 
@@ -599,7 +600,9 @@ rte_bbdev_dequeue_enc_ops(uint16_t dev_id, uint16_t queue_id,
 {
 	struct rte_bbdev *dev = &rte_bbdev_devices[dev_id];
 	struct rte_bbdev_queue_data *q_data = &dev->data->queues[queue_id];
-	return dev->dequeue_enc_ops(q_data, ops, num_ops);
+	const uint16_t nb_ops = dev->dequeue_enc_ops(q_data, ops, num_ops);
+	RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(nb_ops);
+	return nb_ops;
 }
 
 /**
@@ -631,7 +634,9 @@ rte_bbdev_dequeue_dec_ops(uint16_t dev_id, uint16_t queue_id,
 {
 	struct rte_bbdev *dev = &rte_bbdev_devices[dev_id];
 	struct rte_bbdev_queue_data *q_data = &dev->data->queues[queue_id];
-	return dev->dequeue_dec_ops(q_data, ops, num_ops);
+	const uint16_t nb_ops = dev->dequeue_dec_ops(q_data, ops, num_ops);
+	RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(nb_ops);
+	return nb_ops;
 }
 
 
@@ -662,7 +667,9 @@ rte_bbdev_dequeue_ldpc_enc_ops(uint16_t dev_id, uint16_t queue_id,
 {
 	struct rte_bbdev *dev = &rte_bbdev_devices[dev_id];
 	struct rte_bbdev_queue_data *q_data = &dev->data->queues[queue_id];
-	return dev->dequeue_ldpc_enc_ops(q_data, ops, num_ops);
+	const uint16_t nb_ops = dev->dequeue_ldpc_enc_ops(q_data, ops, num_ops);
+	RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(nb_ops);
+	return nb_ops;
 }
 
 /**
@@ -692,7 +699,9 @@ rte_bbdev_dequeue_ldpc_dec_ops(uint16_t dev_id, uint16_t queue_id,
 {
 	struct rte_bbdev *dev = &rte_bbdev_devices[dev_id];
 	struct rte_bbdev_queue_data *q_data = &dev->data->queues[queue_id];
-	return dev->dequeue_ldpc_dec_ops(q_data, ops, num_ops);
+	const uint16_t nb_ops = dev->dequeue_ldpc_dec_ops(q_data, ops, num_ops);
+	RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(nb_ops);
+	return nb_ops;
 }
 
 /** Definitions of device event types */

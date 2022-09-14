@@ -424,6 +424,13 @@ EXPERIMENTAL {
 	rte_thread_self;
 	rte_thread_set_affinity_by_id;
 	rte_thread_set_priority;
+
+	# added in 22.11
+	__rte_lcore_poll_busyness_timestamp;
+	__rte_lcore_poll_telemetry_enabled;
+	rte_lcore_poll_busyness;
+	rte_lcore_poll_busyness_enabled;
+	rte_lcore_poll_busyness_enabled_set;
 };
 
 INTERNAL {

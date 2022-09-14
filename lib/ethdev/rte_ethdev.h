@@ -5675,6 +5675,8 @@ rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id,
 #endif
 
 	rte_ethdev_trace_rx_burst(port_id, queue_id, (void **)rx_pkts, nb_rx);
+
+	RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(nb_rx);
 	return nb_rx;
 }
 

@@ -56,6 +56,8 @@ rte_distributor_request_pkt(struct rte_distributor *d,
 
 		while (rte_rdtsc() < t)
 			rte_pause();
+		/* this was an empty poll */
+		RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(0);
 	}
 
 	/*
@@ -134,24 +136,29 @@ rte_distributor_get_pkt(struct rte_distributor *d,
 
 	if (unlikely(d->alg_type == RTE_DIST_ALG_SINGLE)) {
 		if (return_count <= 1) {
+			uint16_t cnt;
 			pkts[0] = rte_distributor_get_pkt_single(d->d_single,
-				worker_id, return_count ? oldpkt[0] : NULL);
-			return (pkts[0]) ? 1 : 0;
-		} else
-			return -EINVAL;
+								 worker_id,
+								 return_count ? oldpkt[0] : NULL);
+			cnt = (pkts[0] != NULL) ? 1 : 0;
+			RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(cnt);
+			return cnt;
+		}
+		return -EINVAL;
 	}
 
 	rte_distributor_request_pkt(d, worker_id, oldpkt, return_count);
 
-	count = rte_distributor_poll_pkt(d, worker_id, pkts);
-	while (count == -1) {
+	while ((count = rte_distributor_poll_pkt(d, worker_id, pkts)) == -1) {
 		uint64_t t = rte_rdtsc() + 100;
 
 		while (rte_rdtsc() < t)
 			rte_pause();
 
-		count = rte_distributor_poll_pkt(d, worker_id, pkts);
+		/* this was an empty poll */
+		RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(0);
 	}
+	RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(count);
 	return count;
 }
 

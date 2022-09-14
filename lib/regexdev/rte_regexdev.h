@@ -1530,6 +1530,7 @@ rte_regexdev_dequeue_burst(uint8_t dev_id, uint16_t qp_id,
 			   struct rte_regex_ops **ops, uint16_t nb_ops)
 {
 	struct rte_regexdev *dev = &rte_regex_devices[dev_id];
+	uint16_t deq_ops;
 #ifdef RTE_LIBRTE_REGEXDEV_DEBUG
 	RTE_REGEXDEV_VALID_DEV_ID_OR_ERR_RET(dev_id, -EINVAL);
 	RTE_FUNC_PTR_OR_ERR_RET(*dev->dequeue, -ENOTSUP);
@@ -1538,7 +1539,9 @@ rte_regexdev_dequeue_burst(uint8_t dev_id, uint16_t qp_id,
 		return -EINVAL;
 	}
 #endif
-	return (*dev->dequeue)(dev, qp_id, ops, nb_ops);
+	deq_ops = (*dev->dequeue)(dev, qp_id, ops, nb_ops);
+	RTE_LCORE_POLL_BUSYNESS_TIMESTAMP(deq_ops);
+	return deq_ops;
 }
 
 #ifdef __cplusplus

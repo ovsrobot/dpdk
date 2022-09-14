@@ -25,6 +25,9 @@ subdir(arch_subdir)
 deps += ['kvargs']
 if not is_windows
     deps += ['telemetry']
+else
+	# core poll busyness telemetry depends on telemetry library
+	dpdk_conf.set('RTE_LCORE_POLL_BUSYNESS', false)
 endif
 if dpdk_conf.has('RTE_USE_LIBBSD')
     ext_deps += libbsd
