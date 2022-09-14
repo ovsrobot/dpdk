@@ -4,7 +4,7 @@
 
 #include <inttypes.h>
 
-#include <rte_bus_vdev.h>
+#include <bus_vdev_driver.h>
 #include <rte_cycles.h>
 #include <rte_eal.h>
 #include <rte_kvargs.h>

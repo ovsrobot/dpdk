@@ -10,7 +10,7 @@
 #include <dirent.h>
 
 #include <rte_common.h>
-#include <rte_bus_vdev.h>
+#include <bus_vdev_driver.h>
 #include <rte_malloc.h>
 #include <rte_ring.h>
 #include <rte_kvargs.h>
