@@ -4,7 +4,7 @@
 
 #include <string.h>
 
-#include <rte_dev.h>
+#include <dev_driver.h>
 #include <rte_kvargs.h>
 #include <rte_errno.h>
 
