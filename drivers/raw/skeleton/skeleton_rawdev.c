@@ -76,7 +76,8 @@ static int skeleton_rawdev_configure(const struct rte_rawdev *dev,
 
 	SKELETON_PMD_FUNC_TRACE();
 
-	RTE_FUNC_PTR_OR_ERR_RET(dev, -EINVAL);
+	if (dev == NULL)
+		return -EINVAL;
 
 	if (config == NULL || config_size != sizeof(*skeldev_conf)) {
 		SKELETON_PMD_ERR("Invalid configuration");
@@ -106,7 +107,8 @@ static int skeleton_rawdev_start(struct rte_rawdev *dev)
 
 	SKELETON_PMD_FUNC_TRACE();
 
-	RTE_FUNC_PTR_OR_ERR_RET(dev, -EINVAL);
+	if (dev == NULL)
+		return -EINVAL;
 
 	skeldev = skeleton_rawdev_get_priv(dev);
 
@@ -169,7 +171,8 @@ static int skeleton_rawdev_close(struct rte_rawdev *dev)
 
 	SKELETON_PMD_FUNC_TRACE();
 
-	RTE_FUNC_PTR_OR_ERR_RET(dev, -EINVAL);
+	if (dev == NULL)
+		return -EINVAL;
 
 	skeldev = skeleton_rawdev_get_priv(dev);
 
@@ -212,7 +215,8 @@ static int skeleton_rawdev_reset(struct rte_rawdev *dev)
 
 	SKELETON_PMD_FUNC_TRACE();
 
-	RTE_FUNC_PTR_OR_ERR_RET(dev, -EINVAL);
+	if (dev == NULL)
+		return -EINVAL;
 
 	skeldev = skeleton_rawdev_get_priv(dev);
 
@@ -295,7 +299,8 @@ static int skeleton_rawdev_queue_release(struct rte_rawdev *dev,
 
 	SKELETON_PMD_FUNC_TRACE();
 
-	RTE_FUNC_PTR_OR_ERR_RET(dev, -EINVAL);
+	if (dev == NULL)
+		return -EINVAL;
 
 	skeldev = skeleton_rawdev_get_priv(dev);
 
@@ -317,7 +322,8 @@ static uint16_t skeleton_rawdev_queue_count(struct rte_rawdev *dev)
 
 	SKELETON_PMD_FUNC_TRACE();
 
-	RTE_FUNC_PTR_OR_ERR_RET(dev, -EINVAL);
+	if (dev == NULL)
+		return -EINVAL;
 
 	skeldev = skeleton_rawdev_get_priv(dev);
 	return skeldev->num_queues;
@@ -468,7 +474,8 @@ static int skeleton_rawdev_firmware_status_get(struct rte_rawdev *dev,
 
 	skeldev = skeleton_rawdev_get_priv(dev);
 
-	RTE_FUNC_PTR_OR_ERR_RET(dev, -EINVAL);
+	if (dev == NULL)
+		return -EINVAL;
 
 	if (status_info)
 		memcpy(status_info, &skeldev->fw.firmware_state,
