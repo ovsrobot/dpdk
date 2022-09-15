@@ -1717,6 +1717,8 @@ slave_configure(struct rte_eth_dev *bonded_eth_dev,
 
 	slave_eth_dev->data->dev_conf.rxmode.mtu =
 			bonded_eth_dev->data->dev_conf.rxmode.mtu;
+	slave_eth_dev->data->dev_conf.link_speeds =
+			bonded_eth_dev->data->dev_conf.link_speeds;
 
 	slave_eth_dev->data->dev_conf.txmode.offloads |=
 		bonded_eth_dev->data->dev_conf.txmode.offloads;
