@@ -18,8 +18,20 @@ enum nfp_flower_service {
  */
 #define FLOWER_PKT_DATA_OFFSET 8
 
+#define MAX_FLOWER_PHYPORTS 8
+#define MAX_FLOWER_VFS 64
+
 /* The flower application's private structure */
 struct nfp_app_fw_flower {
+	/* switch domain for this app */
+	uint16_t switch_domain_id;
+
+	/* Number of VF representors */
+	uint8_t num_vf_reprs;
+
+	/* Number of phyport representors */
+	uint8_t num_phyport_reprs;
+
 	/* List of rte_service ID's */
 	uint32_t service_ids[NFP_FLOWER_SERVICE_MAX];
 
@@ -43,6 +55,12 @@ struct nfp_app_fw_flower {
 
 	/* Ctrl vNIC Tx counter */
 	uint64_t ctrl_vnic_tx_count;
+
+	/* Array of phyport representors */
+	struct nfp_flower_representor *phy_reprs[MAX_FLOWER_PHYPORTS];
+
+	/* Array of VF representors */
+	struct nfp_flower_representor *vf_reprs[MAX_FLOWER_VFS];
 };
 
 int nfp_init_app_fw_flower(struct nfp_pf_dev *pf_dev);
