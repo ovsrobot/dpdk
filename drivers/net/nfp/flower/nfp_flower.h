@@ -7,6 +7,7 @@
 #define _NFP_FLOWER_H_
 
 enum nfp_flower_service {
+	NFP_FLOWER_SERVICE_PF,
 	NFP_FLOWER_SERVICE_CTRL,
 	NFP_FLOWER_SERVICE_MAX,
 };
