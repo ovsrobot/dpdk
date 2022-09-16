@@ -198,6 +198,35 @@ io_write64_twopart(u64 val, u32 *lo, u32 *hi)
 	IFCVF_WRITE_REG32(val >> 32, hi);
 }
 
+STATIC void
+ifcvf_enable_multiqueue(struct ifcvf_hw *hw)
+{
+	u8 *mq_cfg;
+	int qid;
+	int nr_queue_pair = 0;
+
+	for (qid = 0; qid < hw->nr_vring; qid++) {
+		if (!hw->vring[qid].enable)
+			continue;
+		nr_queue_pair++;
+	}
+
+	if (nr_queue_pair == 0) {
+		WARNINGOUT("no enabled vring\n");
+		return;
+	}
+
+	if (hw->device_type == IFCVF_NET)
+		nr_queue_pair = (nr_queue_pair + 1) / 2;
+
+	mq_cfg = hw->mq_cfg;
+	if (mq_cfg) {
+		*(u32 *)mq_cfg = nr_queue_pair;
+		RTE_LOG(INFO, PMD, "%d queue pairs are enabled\n",
+			nr_queue_pair);
+	}
+}
+
 STATIC int
 ifcvf_hw_enable(struct ifcvf_hw *hw)
 {
@@ -215,6 +244,7 @@ ifcvf_hw_enable(struct ifcvf_hw *hw)
 		return -1;
 	}
 
+	ifcvf_enable_multiqueue(hw);
 	for (i = 0; i < hw->nr_vring; i++) {
 		IFCVF_WRITE_REG16(i, &cfg->queue_select);
 		io_write64_twopart(hw->vring[i].desc, &cfg->queue_desc_lo,
