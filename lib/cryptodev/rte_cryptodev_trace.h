@@ -18,6 +18,7 @@ extern "C" {
 #include <rte_trace_point.h>
 
 #include "rte_cryptodev.h"
+#include "cryptodev_pmd.h"
 
 RTE_TRACE_POINT(
 	rte_cryptodev_trace_configure,
@@ -136,6 +137,428 @@ RTE_TRACE_POINT(
 	RTE_TRACE_POINT_ARGS(uint8_t dev_id, void *sess),
 	rte_trace_point_emit_u8(dev_id);
 	rte_trace_point_emit_ptr(sess);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_callback_register,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id,
+		enum rte_cryptodev_event_type event, const void *cb_fn),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_int(event);
+	rte_trace_point_emit_ptr(cb_fn);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_callback_unregister,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id,
+		enum rte_cryptodev_event_type event, const void *cb_fn),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_int(event);
+	rte_trace_point_emit_ptr(cb_fn);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_device_count_by_driver,
+	RTE_TRACE_POINT_ARGS(uint8_t driver_id, uint8_t dev_count),
+	rte_trace_point_emit_u8(driver_id);
+	rte_trace_point_emit_u8(dev_count);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_devices_get,
+	RTE_TRACE_POINT_ARGS(const char *driver_name, uint8_t count),
+	rte_trace_point_emit_string(driver_name);
+	rte_trace_point_emit_u8(count);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_driver_id_get,
+	RTE_TRACE_POINT_ARGS(const char *name),
+	rte_trace_point_emit_string(name);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_driver_name_get,
+	RTE_TRACE_POINT_ARGS(uint8_t driver_id, const char *name),
+	rte_trace_point_emit_u8(driver_id);
+	rte_trace_point_emit_string(name);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_get_aead_algo_enum,
+	RTE_TRACE_POINT_ARGS(const char *algo_string),
+	rte_trace_point_emit_string(algo_string);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_get_auth_algo_enum,
+	RTE_TRACE_POINT_ARGS(const char *algo_string),
+	rte_trace_point_emit_string(algo_string);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_get_cipher_algo_enum,
+	RTE_TRACE_POINT_ARGS(const char *algo_string),
+	rte_trace_point_emit_string(algo_string);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_get_dev_id,
+	RTE_TRACE_POINT_ARGS(const char *name),
+	rte_trace_point_emit_string(name);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_get_feature_name,
+	RTE_TRACE_POINT_ARGS(uint64_t flag),
+	rte_trace_point_emit_u64(flag);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_get_sec_ctx,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id),
+	rte_trace_point_emit_u8(dev_id);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_info_get,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id),
+	rte_trace_point_emit_u8(dev_id);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_is_valid_dev,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id),
+	rte_trace_point_emit_u8(dev_id);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_name_get,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, const char *name),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_string(name);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_queue_pair_count,
+	RTE_TRACE_POINT_ARGS(const struct rte_cryptodev *dev),
+	rte_trace_point_emit_ptr(dev);
+	rte_trace_point_emit_string(dev->data->name);
+	rte_trace_point_emit_u8(dev->data->socket_id);
+	rte_trace_point_emit_u8(dev->data->dev_id);
+	rte_trace_point_emit_u16(dev->data->nb_queue_pairs);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_socket_id,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, const char *name, int socket_id),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_string(name);
+	rte_trace_point_emit_int(socket_id);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_stats_get,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id,
+		const struct rte_cryptodev_stats *stats),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_u64(stats->enqueued_count);
+	rte_trace_point_emit_u64(stats->dequeued_count);
+	rte_trace_point_emit_u64(stats->enqueue_err_count);
+	rte_trace_point_emit_u64(stats->dequeue_err_count);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_stats_reset,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id),
+	rte_trace_point_emit_u8(dev_id);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_sym_capability_check_aead,
+	RTE_TRACE_POINT_ARGS(
+		const struct rte_cryptodev_symmetric_capability *capability,
+		uint16_t key_size, uint16_t digest_size, uint16_t aad_size,
+		uint16_t iv_size),
+	rte_trace_point_emit_ptr(capability);
+	rte_trace_point_emit_int(capability->xform_type);
+	rte_trace_point_emit_u16(key_size);
+	rte_trace_point_emit_u16(digest_size);
+	rte_trace_point_emit_u16(aad_size);
+	rte_trace_point_emit_u16(iv_size);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_sym_capability_check_auth,
+	RTE_TRACE_POINT_ARGS(
+		const struct rte_cryptodev_symmetric_capability *capability,
+		uint16_t key_size, uint16_t digest_size, uint16_t iv_size),
+	rte_trace_point_emit_ptr(capability);
+	rte_trace_point_emit_int(capability->xform_type);
+	rte_trace_point_emit_u16(key_size);
+	rte_trace_point_emit_u16(digest_size);
+	rte_trace_point_emit_u16(iv_size);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_sym_capability_check_cipher,
+	RTE_TRACE_POINT_ARGS(
+		const struct rte_cryptodev_symmetric_capability *capability,
+		uint16_t key_size, uint16_t iv_size),
+	rte_trace_point_emit_ptr(capability);
+	rte_trace_point_emit_int(capability->xform_type);
+	rte_trace_point_emit_u16(key_size);
+	rte_trace_point_emit_u16(iv_size);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_sym_capability_get,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, const char *driver_name,
+		uint8_t driver_id, int idx_type),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_string(driver_name);
+	rte_trace_point_emit_u8(driver_id);
+	rte_trace_point_emit_int(idx_type);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_sym_get_private_session_size,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, uint32_t priv_sess_size),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_u32(priv_sess_size);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_asym_capability_get,
+	RTE_TRACE_POINT_ARGS(const char *driver_name, uint8_t driver_id,
+		int idx_type),
+	rte_trace_point_emit_string(driver_name);
+	rte_trace_point_emit_u8(driver_id);
+	rte_trace_point_emit_int(idx_type);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_asym_get_private_session_size,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, uint32_t priv_sess_size),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_u32(priv_sess_size);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_asym_get_xform_enum,
+	RTE_TRACE_POINT_ARGS(const char *xform_string),
+	rte_trace_point_emit_string(xform_string);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_asym_xform_capability_check_modlen,
+	RTE_TRACE_POINT_ARGS(const void *capability, uint16_t modlen),
+	rte_trace_point_emit_ptr(capability);
+	rte_trace_point_emit_u16(modlen);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_sym_cpu_crypto_process,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, const void *sess),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_ptr(sess);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_sym_get_existing_header_session_size,
+	RTE_TRACE_POINT_ARGS(struct rte_cryptodev_sym_session *sess),
+	rte_trace_point_emit_ptr(sess);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_sym_session_get_user_data,
+	RTE_TRACE_POINT_ARGS(const void *sess),
+	rte_trace_point_emit_ptr(sess);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_sym_session_set_user_data,
+	RTE_TRACE_POINT_ARGS(const void *sess, const void *data, uint16_t size),
+	rte_trace_point_emit_ptr(sess);
+	rte_trace_point_emit_ptr(data);
+	rte_trace_point_emit_u16(size);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_get_qp_status,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, uint16_t queue_pair_id),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_u16(queue_pair_id);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_configure_raw_dp_ctx,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, uint16_t qp_id, int sess_type),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_u16(qp_id);
+	rte_trace_point_emit_int(sess_type);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_get_raw_dp_ctx_size,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id),
+	rte_trace_point_emit_u8(dev_id);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_add_deq_callback,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, uint16_t qp_id, const void *cb_fn),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_u16(qp_id);
+	rte_trace_point_emit_ptr(cb_fn);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_add_enq_callback,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, uint16_t qp_id, const void *cb_fn),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_u16(qp_id);
+	rte_trace_point_emit_ptr(cb_fn);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_remove_deq_callback,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, uint16_t qp_id, const void *fn),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_u16(qp_id);
+	rte_trace_point_emit_ptr(fn);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_remove_enq_callback,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, uint16_t qp_id, const void *fn),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_u16(qp_id);
+	rte_trace_point_emit_ptr(fn);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_asym_session_get_user_data,
+	RTE_TRACE_POINT_ARGS(const void *sess),
+	rte_trace_point_emit_ptr(sess);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_asym_session_set_user_data,
+	RTE_TRACE_POINT_ARGS(const void *sess, const void *data, uint16_t size),
+	rte_trace_point_emit_ptr(sess);
+	rte_trace_point_emit_ptr(data);
+	rte_trace_point_emit_u16(size);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_session_event_mdata_set,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id, const void *sess, int op_type,
+		int sess_type, const void *ev_mdata, uint16_t size),
+	rte_trace_point_emit_u8(dev_id);
+	rte_trace_point_emit_ptr(sess);
+	rte_trace_point_emit_int(op_type);
+	rte_trace_point_emit_int(sess_type);
+	rte_trace_point_emit_ptr(ev_mdata);
+	rte_trace_point_emit_u16(size);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_allocate_driver,
+	RTE_TRACE_POINT_ARGS(const char *name),
+	rte_trace_point_emit_string(name);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_pmd_allocate,
+	RTE_TRACE_POINT_ARGS(const struct rte_cryptodev *cryptodev),
+	rte_trace_point_emit_ptr(cryptodev);
+	rte_trace_point_emit_string(cryptodev->data->name);
+	rte_trace_point_emit_u8(cryptodev->data->socket_id);
+	rte_trace_point_emit_u8(cryptodev->data->dev_id);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_pmd_callback_process,
+	RTE_TRACE_POINT_ARGS(struct rte_cryptodev *dev,
+		enum rte_cryptodev_event_type event),
+	rte_trace_point_emit_ptr(dev);
+	rte_trace_point_emit_string(dev->data->name);
+	rte_trace_point_emit_u8(dev->data->socket_id);
+	rte_trace_point_emit_u8(dev->data->dev_id);
+	rte_trace_point_emit_int(event);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_pmd_create,
+	RTE_TRACE_POINT_ARGS(const char *name, int socket_id,
+		const void *cryptodev),
+	rte_trace_point_emit_string(name);
+	rte_trace_point_emit_int(socket_id);
+	rte_trace_point_emit_ptr(cryptodev);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_pmd_create_dev_name,
+	RTE_TRACE_POINT_ARGS(const char *dev_name_prefix),
+	rte_trace_point_emit_string(dev_name_prefix);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_pmd_destroy,
+	RTE_TRACE_POINT_ARGS(const struct rte_cryptodev *cryptodev),
+	rte_trace_point_emit_ptr(cryptodev);
+	rte_trace_point_emit_string(cryptodev->data->name);
+	rte_trace_point_emit_u8(cryptodev->data->socket_id);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_pmd_get_dev,
+	RTE_TRACE_POINT_ARGS(uint8_t dev_id),
+	rte_trace_point_emit_u8(dev_id);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_pmd_get_named_dev,
+	RTE_TRACE_POINT_ARGS(const char *name),
+	rte_trace_point_emit_string(name);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_pmd_parse_input_args,
+	RTE_TRACE_POINT_ARGS(char *name, int socket_id,
+		uint32_t max_nb_queue_pairs),
+	rte_trace_point_emit_string(name);
+	rte_trace_point_emit_int(socket_id);
+	rte_trace_point_emit_u32(max_nb_queue_pairs);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_pmd_probing_finish,
+	RTE_TRACE_POINT_ARGS(const struct rte_cryptodev *cryptodev),
+	rte_trace_point_emit_ptr(cryptodev);
+	rte_trace_point_emit_string(cryptodev->data->name);
+	rte_trace_point_emit_u8(cryptodev->data->socket_id);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_pmd_release_device,
+	RTE_TRACE_POINT_ARGS(const struct rte_cryptodev *cryptodev),
+	rte_trace_point_emit_ptr(cryptodev);
+	rte_trace_point_emit_string(cryptodev->data->name);
+	rte_trace_point_emit_u8(cryptodev->data->socket_id);
+	rte_trace_point_emit_u8(cryptodev->data->dev_id);
+)
+
+RTE_TRACE_POINT(
+	rte_cryptodev_trace_op_pool_create,
+	RTE_TRACE_POINT_ARGS(const char *name, int socket_id, int type,
+		uint32_t nb_elts, const void *mp),
+	rte_trace_point_emit_string(name);
+	rte_trace_point_emit_int(socket_id);
+	rte_trace_point_emit_int(type);
+	rte_trace_point_emit_u32(nb_elts);
+	rte_trace_point_emit_ptr(mp);
 )
 
 #ifdef __cplusplus

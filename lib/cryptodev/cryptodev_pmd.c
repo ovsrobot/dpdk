@@ -8,6 +8,7 @@
 #include <rte_malloc.h>
 
 #include "cryptodev_pmd.h"
+#include "rte_cryptodev_trace.h"
 
 /**
  * Parse name from argument
@@ -84,6 +85,9 @@ rte_cryptodev_pmd_parse_input_args(
 	}
 
 free_kvlist:
+	rte_cryptodev_trace_pmd_parse_input_args(params->name,
+		params->socket_id, params->max_nb_queue_pairs);
+
 	rte_kvargs_free(kvlist);
 	return ret;
 }
@@ -135,6 +139,8 @@ rte_cryptodev_pmd_create(const char *name,
 	/* initialise user call-back tail queue */
 	TAILQ_INIT(&(cryptodev->link_intr_cbs));
 
+	rte_cryptodev_trace_pmd_create(name, params->socket_id, cryptodev);
+
 	return cryptodev;
 }
 
@@ -143,6 +149,8 @@ rte_cryptodev_pmd_destroy(struct rte_cryptodev *cryptodev)
 {
 	int retval;
 	void *dev_priv = cryptodev->data->dev_private;
+
+	rte_cryptodev_trace_pmd_destroy(cryptodev);
 
 	CDEV_LOG_INFO("Closing crypto device %s", cryptodev->device->name);
 
@@ -166,6 +174,9 @@ rte_cryptodev_pmd_probing_finish(struct rte_cryptodev *cryptodev)
 {
 	if (cryptodev == NULL)
 		return;
+
+	rte_cryptodev_trace_pmd_probing_finish(cryptodev);
+
 	/*
 	 * for secondary process, at that point we expect device
 	 * to be already 'usable', so shared data and all function
@@ -231,6 +242,8 @@ cryptodev_fp_ops_set(struct rte_crypto_fp_ops *fp_ops,
 void *
 rte_cryptodev_session_event_mdata_get(struct rte_crypto_op *op)
 {
+	rte_cryptodev_trace_session_event_mdata_get(op->type);
+
 	if (op->type == RTE_CRYPTO_OP_TYPE_SYMMETRIC &&
 			op->sess_type == RTE_CRYPTO_OP_WITH_SESSION)
 		return rte_cryptodev_sym_session_get_user_data(op->sym->session);

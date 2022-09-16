@@ -31,6 +31,12 @@ RTE_TRACE_POINT_FP(
 	rte_trace_point_emit_u16(nb_ops);
 )
 
+RTE_TRACE_POINT_FP(
+	rte_cryptodev_trace_session_event_mdata_get,
+	RTE_TRACE_POINT_ARGS(uint8_t type),
+	rte_trace_point_emit_u8(type);
+)
+
 #ifdef __cplusplus
 }
 #endif
