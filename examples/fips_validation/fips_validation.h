@@ -35,6 +35,7 @@
 enum fips_test_algorithms {
 		FIPS_TEST_ALGO_AES = 0,
 		FIPS_TEST_ALGO_AES_CBC,
+		FIPS_TEST_ALGO_AES_CTR,
 		FIPS_TEST_ALGO_AES_GCM,
 		FIPS_TEST_ALGO_AES_CMAC,
 		FIPS_TEST_ALGO_AES_CCM,
@@ -105,6 +106,7 @@ enum fips_aesavs_test_types {
 	AESAVS_TYPE_MMT,
 	AESAVS_TYPE_MCT,
 	AESAVS_TYPE_AFT,
+	AESAVS_TYPE_CTR,
 };
 
 enum fips_tdes_test_types {
