@@ -622,6 +622,7 @@ bond_ethdev_tx_user_wrap(struct bond_tx_queue *bd_tx_q, uint16_t slave_port_id,
 		rte_pktmbuf_free(fail_pkts[i]);
 	}
 
+	bd_tx_q->prepare_fails += fail_cnt;
 	if (fail_cnt == nb_pkts)
 		return nb_pkts;
 tx_burst:
@@ -2423,6 +2424,8 @@ bond_ethdev_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 	bd_tx_q->nb_tx_desc = nb_tx_desc;
 	memcpy(&(bd_tx_q->tx_conf), tx_conf, sizeof(bd_tx_q->tx_conf));
 
+	bd_tx_q->prepare_fails = 0;
+
 	dev->data->tx_queues[tx_queue_id] = bd_tx_q;
 
 	return 0;
@@ -2633,6 +2636,7 @@ bond_ethdev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
 	struct bond_dev_private *internals = dev->data->dev_private;
 	struct rte_eth_stats slave_stats;
+	struct bond_tx_queue *bd_tx_q;
 	int i, j;
 
 	for (i = 0; i < internals->slave_count; i++) {
@@ -2654,7 +2658,12 @@ bond_ethdev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 			stats->q_obytes[j] += slave_stats.q_obytes[j];
 			stats->q_errors[j] += slave_stats.q_errors[j];
 		}
+	}
 
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		bd_tx_q = (struct bond_tx_queue *)dev->data->tx_queues[i];
+		if (bd_tx_q)
+			stats->oerrors += bd_tx_q->prepare_fails;
 	}
 
 	return 0;
@@ -2664,6 +2673,7 @@ static int
 bond_ethdev_stats_reset(struct rte_eth_dev *dev)
 {
 	struct bond_dev_private *internals = dev->data->dev_private;
+	struct bond_tx_queue *bd_tx_q;
 	int i;
 	int err;
 	int ret;
@@ -2672,6 +2682,12 @@ bond_ethdev_stats_reset(struct rte_eth_dev *dev)
 		ret = rte_eth_stats_reset(internals->slaves[i].port_id);
 		if (ret != 0)
 			err = ret;
+	}
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		bd_tx_q = (struct bond_tx_queue *)dev->data->tx_queues[i];
+		if (bd_tx_q)
+			bd_tx_q->prepare_fails = 0;
 	}
 
 	return err;

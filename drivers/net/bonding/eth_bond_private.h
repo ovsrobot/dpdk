@@ -72,6 +72,13 @@ struct bond_tx_queue {
 	/**< Number of TX descriptors available for the queue */
 	struct rte_eth_txconf tx_conf;
 	/**< Copy of TX configuration structure for queue */
+
+	/*
+	 * The following fields are statistical value, and maybe update
+	 * at runtime, so start with one new cache line.
+	 */
+	uint64_t prepare_fails __rte_cache_aligned;
+	/**< Tx prepare fail cnt */
 };
 
 /** Bonded slave devices structure */
