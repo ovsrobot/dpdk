@@ -117,6 +117,7 @@ struct bond_dev_private {
 	uint16_t user_defined_primary_port;
 	/**< Flag for whether primary port is user defined or not */
 
+	uint8_t tx_prepare_enabled;
 	uint8_t balance_xmit_policy;
 	/**< Transmit policy - l2 / l23 / l34 for operation in balance mode */
 	burst_xmit_hash_t burst_xmit_hash;
@@ -257,6 +258,11 @@ slave_remove(struct bond_dev_private *internals,
 void
 slave_add(struct bond_dev_private *internals,
 		struct rte_eth_dev *slave_eth_dev);
+
+uint16_t
+bond_ethdev_tx_ctrl_wrap(struct bond_dev_private *internals,
+			uint16_t slave_port_id, uint16_t queue_id,
+			struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
 
 void
 burst_xmit_l2_hash(struct rte_mbuf **buf, uint16_t nb_pkts,

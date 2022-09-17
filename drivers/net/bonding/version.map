@@ -31,3 +31,8 @@ DPDK_23 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	rte_eth_bond_tx_prepare_get;
+	rte_eth_bond_tx_prepare_set;
+};

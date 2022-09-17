@@ -559,6 +559,76 @@ bond_ethdev_rx_burst_alb(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	return nb_recv_pkts;
 }
 
+/** This function is used to transmit internally generated mbufs. */
+uint16_t
+bond_ethdev_tx_ctrl_wrap(struct bond_dev_private *internals,
+			 uint16_t slave_port_id, uint16_t queue_id,
+			 struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
+{
+	uint16_t nb_pre = nb_pkts;
+
+	if (internals->tx_prepare_enabled)
+		nb_pre = rte_eth_tx_prepare(slave_port_id, queue_id, tx_pkts,
+					    nb_pkts);
+
+	return rte_eth_tx_burst(slave_port_id, queue_id, tx_pkts, nb_pre);
+}
+
+/**
+ * This function is used to transmit the mbufs input by the user.
+ * If the tx-prepare is enabled, the mbufs that fail with tx-prepare will be
+ * freed internally.
+ */
+static inline uint16_t
+bond_ethdev_tx_user_wrap(struct bond_tx_queue *bd_tx_q, uint16_t slave_port_id,
+		    struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
+{
+	struct bond_dev_private *internals = bd_tx_q->dev_private;
+	uint16_t queue_id = bd_tx_q->queue_id;
+	struct rte_mbuf *fail_pkts[nb_pkts];
+	uint8_t fail_mark[nb_pkts];
+	uint16_t nb_pre, index;
+	uint16_t fail_cnt = 0;
+	int i;
+
+	if (!internals->tx_prepare_enabled)
+		goto tx_burst;
+
+	nb_pre = rte_eth_tx_prepare(slave_port_id, queue_id, tx_pkts, nb_pkts);
+	if (nb_pre == nb_pkts)
+		goto tx_burst;
+
+	fail_pkts[fail_cnt++] = tx_pkts[nb_pre];
+	memset(fail_mark, 0, sizeof(fail_mark));
+	fail_mark[nb_pre] = 1;
+	for (i = nb_pre + 1; i < nb_pkts; /* update in inner loop */) {
+		nb_pre = rte_eth_tx_prepare(slave_port_id, queue_id,
+					    tx_pkts + i, nb_pkts - i);
+		if (nb_pre == nb_pkts - i)
+			break;
+		fail_pkts[fail_cnt++] = tx_pkts[i + nb_pre];
+		fail_mark[i + nb_pre] = 1;
+		i += nb_pre + 1;
+	}
+
+	/* move tx-prepare OK mbufs to the end */
+	for (i = index = nb_pkts - 1; i >= 0; i--) {
+		if (!fail_mark[i])
+			tx_pkts[index--] = tx_pkts[i];
+	}
+	/* move tx-prepare fail mbufs to the begin, and free them */
+	for (i = 0; i < fail_cnt; i++) {
+		tx_pkts[i] = fail_pkts[i];
+		rte_pktmbuf_free(fail_pkts[i]);
+	}
+
+	if (fail_cnt == nb_pkts)
+		return nb_pkts;
+tx_burst:
+	return fail_cnt + rte_eth_tx_burst(slave_port_id, queue_id,
+				tx_pkts + fail_cnt, nb_pkts - fail_cnt);
+}
+
 static uint16_t
 bond_ethdev_tx_burst_round_robin(void *queue, struct rte_mbuf **bufs,
 		uint16_t nb_pkts)
@@ -602,8 +672,9 @@ bond_ethdev_tx_burst_round_robin(void *queue, struct rte_mbuf **bufs,
 	/* Send packet burst on each slave device */
 	for (i = 0; i < num_of_slaves; i++) {
 		if (slave_nb_pkts[i] > 0) {
-			num_tx_slave = rte_eth_tx_burst(slaves[i], bd_tx_q->queue_id,
-					slave_bufs[i], slave_nb_pkts[i]);
+			num_tx_slave = bond_ethdev_tx_user_wrap(bd_tx_q,
+					slaves[i], slave_bufs[i],
+					slave_nb_pkts[i]);
 
 			/* if tx burst fails move packets to end of bufs */
 			if (unlikely(num_tx_slave < slave_nb_pkts[i])) {
@@ -635,8 +706,8 @@ bond_ethdev_tx_burst_active_backup(void *queue,
 	if (internals->active_slave_count < 1)
 		return 0;
 
-	return rte_eth_tx_burst(internals->current_primary_port, bd_tx_q->queue_id,
-			bufs, nb_pkts);
+	return bond_ethdev_tx_user_wrap(bd_tx_q,
+			internals->current_primary_port, bufs, nb_pkts);
 }
 
 static inline uint16_t
@@ -951,8 +1022,8 @@ bond_ethdev_tx_burst_tlb(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 #endif
 		}
 
-		num_tx_total += rte_eth_tx_burst(slaves[i], bd_tx_q->queue_id,
-				bufs + num_tx_total, nb_pkts - num_tx_total);
+		num_tx_total += bond_ethdev_tx_user_wrap(bd_tx_q, slaves[i],
+					bufs + num_tx_total, nb_pkts - num_tx_total);
 
 		if (num_tx_total == nb_pkts)
 			break;
@@ -1064,8 +1135,9 @@ bond_ethdev_tx_burst_alb(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	/* Send ARP packets on proper slaves */
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++) {
 		if (slave_bufs_pkts[i] > 0) {
-			num_send = rte_eth_tx_burst(i, bd_tx_q->queue_id,
-					slave_bufs[i], slave_bufs_pkts[i]);
+			num_send = bond_ethdev_tx_ctrl_wrap(internals, i,
+					bd_tx_q->queue_id, slave_bufs[i],
+					slave_bufs_pkts[i]);
 			for (j = 0; j < slave_bufs_pkts[i] - num_send; j++) {
 				bufs[nb_pkts - 1 - num_not_send - j] =
 						slave_bufs[i][nb_pkts - 1 - j];
@@ -1088,7 +1160,8 @@ bond_ethdev_tx_burst_alb(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	/* Send update packets on proper slaves */
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++) {
 		if (update_bufs_pkts[i] > 0) {
-			num_send = rte_eth_tx_burst(i, bd_tx_q->queue_id, update_bufs[i],
+			num_send = bond_ethdev_tx_ctrl_wrap(internals, i,
+					bd_tx_q->queue_id, update_bufs[i],
 					update_bufs_pkts[i]);
 			for (j = num_send; j < update_bufs_pkts[i]; j++) {
 				rte_pktmbuf_free(update_bufs[i][j]);
@@ -1158,9 +1231,8 @@ tx_burst_balance(void *queue, struct rte_mbuf **bufs, uint16_t nb_bufs,
 		if (slave_nb_bufs[i] == 0)
 			continue;
 
-		slave_tx_count = rte_eth_tx_burst(slave_port_ids[i],
-				bd_tx_q->queue_id, slave_bufs[i],
-				slave_nb_bufs[i]);
+		slave_tx_count = bond_ethdev_tx_user_wrap(bd_tx_q,
+			slave_port_ids[i], slave_bufs[i], slave_nb_bufs[i]);
 
 		total_tx_count += slave_tx_count;
 
@@ -1243,8 +1315,9 @@ tx_burst_8023ad(void *queue, struct rte_mbuf **bufs, uint16_t nb_bufs,
 
 		if (rte_ring_dequeue(port->tx_ring,
 				     (void **)&ctrl_pkt) != -ENOENT) {
-			slave_tx_count = rte_eth_tx_burst(slave_port_ids[i],
-					bd_tx_q->queue_id, &ctrl_pkt, 1);
+			slave_tx_count = bond_ethdev_tx_ctrl_wrap(internals,
+					slave_port_ids[i], bd_tx_q->queue_id,
+					&ctrl_pkt, 1);
 			/*
 			 * re-enqueue LAG control plane packets to buffering
 			 * ring if transmission fails so the packet isn't lost.

@@ -636,8 +636,8 @@ tx_machine(struct bond_dev_private *internals, uint16_t slave_id)
 			return;
 		}
 	} else {
-		uint16_t pkts_sent = rte_eth_tx_burst(slave_id,
-				internals->mode4.dedicated_queues.tx_qid,
+		uint16_t pkts_sent = bond_ethdev_tx_ctrl_wrap(internals,
+				slave_id, internals->mode4.dedicated_queues.tx_qid,
 				&lacp_pkt, 1);
 		if (pkts_sent != 1) {
 			rte_pktmbuf_free(lacp_pkt);
@@ -1371,8 +1371,8 @@ bond_mode_8023ad_handle_slow_pkt(struct bond_dev_private *internals,
 			}
 		} else {
 			/* Send packet directly to the slow queue */
-			uint16_t tx_count = rte_eth_tx_burst(slave_id,
-					internals->mode4.dedicated_queues.tx_qid,
+			uint16_t tx_count = bond_ethdev_tx_ctrl_wrap(internals,
+					slave_id, internals->mode4.dedicated_queues.tx_qid,
 					&pkt, 1);
 			if (tx_count != 1) {
 				/* reset timer */
