@@ -543,7 +543,6 @@ cnxk_sso_start(struct rte_eventdev *event_dev, cnxk_sso_hws_reset_t reset_fn,
 		qos[i].hwgrp = dev->qos_parse_data[i].queue;
 		qos[i].iaq_prcnt = dev->qos_parse_data[i].iaq_prcnt;
 		qos[i].taq_prcnt = dev->qos_parse_data[i].taq_prcnt;
-		qos[i].xaq_prcnt = dev->qos_parse_data[i].xaq_prcnt;
 	}
 	rc = roc_sso_hwgrp_qos_config(&dev->sso, qos, dev->qos_queue_cnt,
 				      dev->xae_cnt);
@@ -620,7 +619,7 @@ parse_queue_param(char *value, void *opaque)
 	}
 
 	if (val != (&queue_qos.iaq_prcnt + 1)) {
-		plt_err("Invalid QoS parameter expected [Qx-XAQ-TAQ-IAQ]");
+		plt_err("Invalid QoS parameter expected [Qx-TAQ-IAQ]");
 		return;
 	}
 
@@ -668,9 +667,8 @@ parse_sso_kvargs_dict(const char *key, const char *value, void *opaque)
 {
 	RTE_SET_USED(key);
 
-	/* Dict format [Qx-XAQ-TAQ-IAQ][Qz-XAQ-TAQ-IAQ] use '-' cause ','
-	 * isn't allowed. Everything is expressed in percentages, 0 represents
-	 * default.
+	/* Dict format [Qx-TAQ-IAQ][Qz-TAQ-IAQ] use '-' cause ',' isn't allowed.
+	 * Everything is expressed in percentages, 0 represents default.
 	 */
 	parse_qos_list(value, opaque);
 
