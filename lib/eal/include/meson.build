@@ -10,6 +10,7 @@ headers += files(
         'rte_branch_prediction.h',
         'rte_bus.h',
         'rte_class.h',
+        'rte_cman.h',
         'rte_common.h',
         'rte_compat.h',
         'rte_debug.h',

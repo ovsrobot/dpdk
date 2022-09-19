@@ -7,6 +7,7 @@ sources = files(
         'ethdev_profile.c',
         'ethdev_trace_points.c',
         'rte_class_eth.c',
+        'rte_cman.c',
         'rte_ethdev.c',
         'rte_flow.c',
         'rte_mtr.c',
