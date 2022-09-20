@@ -230,10 +230,3 @@ Deprecation Notices
 
 * raw/ifgpa: The function ``rte_pmd_ifpga_get_pci_bus`` will be removed
   in DPDK 22.11.
-
-* raw/ioat: The ``ioat`` rawdev driver has been deprecated, since it's
-  functionality is provided through the new ``dmadev`` infrastructure.
-  To continue to use hardware previously supported by the ``ioat`` rawdev driver,
-  applications should be updated to use the ``dmadev`` library instead,
-  with the underlying HW-functionality being provided by the ``ioat`` or
-  ``idxd`` dma drivers
