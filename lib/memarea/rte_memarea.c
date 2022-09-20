@@ -116,6 +116,7 @@ rte_memarea_create(const struct rte_memarea_param *init)
 	TAILQ_INIT(&priv->elem_list);
 	TAILQ_INIT(&priv->free_list);
 	priv->area_addr = addr;
+	priv->top_addr = (void *)((uintptr_t)addr + init->total_sz - 1);
 	elem = addr;
 	elem->size = init->total_sz - sizeof(struct memarea_elem);
 	elem->cookie = MEMAREA_FREE_ELEM_COOKIE;
@@ -183,6 +184,15 @@ memarea_add_node(struct memarea_private *priv, struct memarea_elem *elem, size_t
 	elem->size = align_size;
 }
 
+static inline void *
+memarea_alloc_backup(struct memarea_private *priv, size_t size, uint32_t cookie)
+{
+	void *ptr = rte_memarea_alloc(priv->init.bak_memarea, size, cookie);
+	if (unlikely(ptr == NULL))
+		priv->bak_alloc_fails++;
+	return ptr;
+}
+
 void *
 rte_memarea_alloc(struct rte_memarea *ma, size_t size, uint32_t cookie)
 {
@@ -206,6 +216,8 @@ rte_memarea_alloc(struct rte_memarea *ma, size_t size, uint32_t cookie)
 		ptr = (void *)((uintptr_t)elem + sizeof(struct memarea_elem));
 		break;
 	}
+	if (ptr == NULL && priv->init.bak_memarea != NULL)
+		ptr = memarea_alloc_backup(priv, size, cookie);
 	if (unlikely(ptr == NULL))
 		priv->alloc_fails++;
 	memarea_unlock(priv);
@@ -264,6 +276,12 @@ rte_memarea_update_refcnt(struct rte_memarea *ma, void *ptr, int16_t value)
 	struct memarea_private *priv = ma->private_data;
 
 	memarea_lock(priv);
+	if (ptr < priv->area_addr || ptr > priv->top_addr) {
+		rte_memarea_update_refcnt(priv->init.bak_memarea, ptr, value);
+		memarea_unlock(priv);
+		return;
+	}
+
 	if (unlikely(elem->refcnt <= 0 || elem->refcnt + value < 0)) {
 		RTE_LOG(ERR, MEMAREA,
 			"memarea cookie: %u curr refcnt: %d update refcnt: %d check fail!\n",
@@ -274,6 +292,7 @@ rte_memarea_update_refcnt(struct rte_memarea *ma, void *ptr, int16_t value)
 		memarea_unlock(priv);
 		return;
 	}
+
 	elem->refcnt += value;
 	if (elem->refcnt == 0)
 		memarea_free_elem(priv, elem);
@@ -351,10 +370,13 @@ rte_memarea_dump(struct rte_memarea *ma, FILE *f, bool dump_all)
 		fprintf(f, "  source-user-memarea: %s\n", memarea_name(priv->init.user_memarea));
 	fprintf(f, "  total-size: 0x%lx\n", priv->init.total_sz);
 	fprintf(f, "  mt-safe: %s\n", priv->init.mt_safe ? "yes" : "no");
+	if (priv->init.bak_memarea)
+		fprintf(f, "  backup-memarea-name: %s\n", memarea_name(priv->init.bak_memarea));
 	fprintf(f, "  total-regions: %u\n", memarea_elem_list_num(priv));
 	fprintf(f, "  total-free-regions: %u\n", memarea_free_list_num(priv));
 	fprintf(f, "  alloc_fails: %" PRIu64 "\n", priv->alloc_fails);
 	fprintf(f, "  refcnt_check_fails: %" PRIu64 "\n", priv->refcnt_check_fails);
+	fprintf(f, "  backup_alloc_fails: %" PRIu64 "\n", priv->bak_alloc_fails);
 	if (dump_all)
 		memarea_dump_all(priv, f);
 	memarea_unlock(priv);
