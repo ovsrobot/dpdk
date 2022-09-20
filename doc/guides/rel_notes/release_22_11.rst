@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added support for queue based async query in rte_flow.**
+
+  Added new API ``rte_flow_async_action_handle_query()``, to query the
+  action asynchronously.
+
 
 Removed Items
 -------------

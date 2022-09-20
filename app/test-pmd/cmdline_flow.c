@@ -145,6 +145,7 @@ enum index {
 	QUEUE_INDIRECT_ACTION_CREATE,
 	QUEUE_INDIRECT_ACTION_UPDATE,
 	QUEUE_INDIRECT_ACTION_DESTROY,
+	QUEUE_INDIRECT_ACTION_QUERY,
 
 	/* Queue indirect action create arguments */
 	QUEUE_INDIRECT_ACTION_CREATE_ID,
@@ -160,6 +161,9 @@ enum index {
 	/* Queue indirect action destroy arguments */
 	QUEUE_INDIRECT_ACTION_DESTROY_ID,
 	QUEUE_INDIRECT_ACTION_DESTROY_POSTPONE,
+
+	/* Queue indirect action query arguments */
+	QUEUE_INDIRECT_ACTION_QUERY_POSTPONE,
 
 	/* Push arguments. */
 	PUSH_QUEUE,
@@ -1171,6 +1175,7 @@ static const enum index next_qia_subcmd[] = {
 	QUEUE_INDIRECT_ACTION_CREATE,
 	QUEUE_INDIRECT_ACTION_UPDATE,
 	QUEUE_INDIRECT_ACTION_DESTROY,
+	QUEUE_INDIRECT_ACTION_QUERY,
 	ZERO,
 };
 
@@ -1193,6 +1198,12 @@ static const enum index next_qia_update_attr[] = {
 static const enum index next_qia_destroy_attr[] = {
 	QUEUE_INDIRECT_ACTION_DESTROY_POSTPONE,
 	QUEUE_INDIRECT_ACTION_DESTROY_ID,
+	END,
+	ZERO,
+};
+
+static const enum index next_qia_query_attr[] = {
+	QUEUE_INDIRECT_ACTION_QUERY_POSTPONE,
 	END,
 	ZERO,
 };
@@ -3013,6 +3024,14 @@ static const struct token token_list[] = {
 		.next = NEXT(next_qia_destroy_attr),
 		.call = parse_qia_destroy,
 	},
+	[QUEUE_INDIRECT_ACTION_QUERY] = {
+		.name = "query",
+		.help = "query indirect action",
+		.next = NEXT(next_qia_query_attr,
+			     NEXT_ENTRY(COMMON_INDIRECT_ACTION_ID)),
+		.args = ARGS(ARGS_ENTRY(struct buffer, args.vc.attr.group)),
+		.call = parse_qia,
+	},
 	/* Indirect action destroy arguments. */
 	[QUEUE_INDIRECT_ACTION_DESTROY_POSTPONE] = {
 		.name = "postpone",
@@ -3035,6 +3054,14 @@ static const struct token token_list[] = {
 		.name = "postpone",
 		.help = "postpone update operation",
 		.next = NEXT(next_qia_update_attr,
+			     NEXT_ENTRY(COMMON_BOOLEAN)),
+		.args = ARGS(ARGS_ENTRY(struct buffer, postpone)),
+	},
+	/* Indirect action update arguments. */
+	[QUEUE_INDIRECT_ACTION_QUERY_POSTPONE] = {
+		.name = "postpone",
+		.help = "postpone query operation",
+		.next = NEXT(next_qia_query_attr,
 			     NEXT_ENTRY(COMMON_BOOLEAN)),
 		.args = ARGS(ARGS_ENTRY(struct buffer, postpone)),
 	},
@@ -6682,6 +6709,8 @@ parse_qia(struct context *ctx, const struct token *token,
 			(void *)RTE_ALIGN_CEIL((uintptr_t)(out + 1),
 					       sizeof(double));
 		out->args.vc.attr.group = UINT32_MAX;
+		/* fallthrough */
+	case QUEUE_INDIRECT_ACTION_QUERY:
 		out->command = ctx->curr;
 		ctx->objdata = 0;
 		ctx->object = out;
@@ -10508,6 +10537,11 @@ cmd_flow_parsed(const struct buffer *in)
 						in->queue, in->postpone,
 						in->args.vc.attr.group,
 						in->args.vc.actions);
+		break;
+	case QUEUE_INDIRECT_ACTION_QUERY:
+		port_queue_action_handle_query(in->port,
+					       in->queue, in->postpone,
+					       in->args.vc.attr.group);
 		break;
 	case INDIRECT_ACTION_CREATE:
 		port_action_handle_create(
