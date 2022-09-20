@@ -4902,6 +4902,11 @@ struct rte_flow_port_info {
 	 * @see RTE_FLOW_ACTION_TYPE_METER
 	 */
 	uint32_t max_nb_meters;
+	/**
+	 * Maximum number connection trackings.
+	 * @see RTE_FLOW_ACTION_TYPE_CONNTRACK
+	 */
+	uint32_t max_nb_conn_tracks;
 };
 
 /**
@@ -4971,6 +4976,11 @@ struct rte_flow_port_attr {
 	 * @see RTE_FLOW_ACTION_TYPE_METER
 	 */
 	uint32_t nb_meters;
+	/**
+	 * Number of connection trackings to configure.
+	 * @see RTE_FLOW_ACTION_TYPE_CONNTRACK
+	 */
+	uint32_t nb_conn_tracks;
 };
 
 /**
