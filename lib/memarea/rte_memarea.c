@@ -2,6 +2,7 @@
  * Copyright(c) 2022 HiSilicon Limited
  */
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <sys/queue.h>
 
@@ -277,4 +278,86 @@ rte_memarea_update_refcnt(struct rte_memarea *ma, void *ptr, int16_t value)
 	if (elem->refcnt == 0)
 		memarea_free_elem(priv, elem);
 	memarea_unlock(priv);
+}
+
+static const char *
+memarea_source_name(enum rte_memarea_source source)
+{
+	if (source == RTE_MEMAREA_SOURCE_SYSTEM_API)
+		return "system-api";
+	else if (source == RTE_MEMAREA_SOURCE_USER_ADDR)
+		return "user-addr";
+	else if (source == RTE_MEMAREA_SOURCE_USER_MEMAREA)
+		return "user-memarea";
+	else
+		return "unknown";
+}
+
+static const char *
+memarea_name(struct rte_memarea *ma)
+{
+	struct memarea_private *priv = ma->private_data;
+	return priv->init.name;
+}
+
+static uint32_t
+memarea_elem_list_num(struct memarea_private *priv)
+{
+	struct memarea_elem *elem;
+	uint32_t num = 0;
+
+	TAILQ_FOREACH(elem, &priv->elem_list, elem_node)
+		num++;
+
+	return num;
+}
+
+static uint32_t
+memarea_free_list_num(struct memarea_private *priv)
+{
+	struct memarea_elem *elem;
+	uint32_t num = 0;
+
+	TAILQ_FOREACH(elem, &priv->free_list, free_node)
+		num++;
+
+	return num;
+}
+
+static void
+memarea_dump_all(struct memarea_private *priv, FILE *f)
+{
+	struct memarea_elem *elem;
+
+	fprintf(f, "  regions:\n");
+	TAILQ_FOREACH(elem, &priv->elem_list, elem_node)
+		fprintf(f, "    size: 0x%lx cookie: %u refcnt: %d\n",
+			elem->size, elem->cookie, elem->refcnt);
+}
+
+int
+rte_memarea_dump(struct rte_memarea *ma, FILE *f, bool dump_all)
+{
+	struct memarea_private *priv;
+
+	if (ma == NULL || f == NULL)
+		return -EINVAL;
+
+	priv = ma->private_data;
+	memarea_lock(priv);
+	fprintf(f, "memarea name: %s\n", priv->init.name);
+	fprintf(f, "  source: %s\n", memarea_source_name(priv->init.source));
+	if (priv->init.source == RTE_MEMAREA_SOURCE_USER_MEMAREA)
+		fprintf(f, "  source-user-memarea: %s\n", memarea_name(priv->init.user_memarea));
+	fprintf(f, "  total-size: 0x%lx\n", priv->init.total_sz);
+	fprintf(f, "  mt-safe: %s\n", priv->init.mt_safe ? "yes" : "no");
+	fprintf(f, "  total-regions: %u\n", memarea_elem_list_num(priv));
+	fprintf(f, "  total-free-regions: %u\n", memarea_free_list_num(priv));
+	fprintf(f, "  alloc_fails: %" PRIu64 "\n", priv->alloc_fails);
+	fprintf(f, "  refcnt_check_fails: %" PRIu64 "\n", priv->refcnt_check_fails);
+	if (dump_all)
+		memarea_dump_all(priv, f);
+	memarea_unlock(priv);
+
+	return 0;
 }
