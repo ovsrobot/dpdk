@@ -1635,9 +1635,10 @@ rte_eth_dev_is_removed(uint16_t port_id)
 }
 
 static int
-rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
-			     uint16_t n_seg, uint32_t *mbp_buf_size,
-			     const struct rte_eth_dev_info *dev_info)
+rte_eth_rx_queue_check_split(uint16_t port_id,
+			const struct rte_eth_rxseg_split *rx_seg,
+			uint16_t n_seg, uint32_t *mbp_buf_size,
+			const struct rte_eth_dev_info *dev_info)
 {
 	const struct rte_eth_rxseg_capa *seg_capa = &dev_info->rx_seg_capa;
 	struct rte_mempool *mp_first;
@@ -1660,6 +1661,7 @@ rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 		struct rte_mempool *mpl = rx_seg[seg_idx].mp;
 		uint32_t length = rx_seg[seg_idx].length;
 		uint32_t offset = rx_seg[seg_idx].offset;
+		uint32_t proto_hdr = rx_seg[seg_idx].proto_hdr;
 
 		if (mpl == NULL) {
 			RTE_ETHDEV_LOG(ERR, "null mempool pointer\n");
@@ -1693,13 +1695,63 @@ rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 		}
 		offset += seg_idx != 0 ? 0 : RTE_PKTMBUF_HEADROOM;
 		*mbp_buf_size = rte_pktmbuf_data_room_size(mpl);
-		length = length != 0 ? length : *mbp_buf_size;
-		if (*mbp_buf_size < length + offset) {
-			RTE_ETHDEV_LOG(ERR,
-				       "%s mbuf_data_room_size %u < %u (segment length=%u + segment offset=%u)\n",
-				       mpl->name, *mbp_buf_size,
-				       length + offset, length, offset);
-			return -EINVAL;
+
+		if (proto_hdr > 0) {
+			/* Split based on protocol headers. */
+
+			/* skip the payload */
+			if (proto_hdr == RTE_PTYPE_ALL_MASK)
+				continue;
+
+			int ptype_cnt;
+
+			ptype_cnt = rte_eth_buffer_split_get_supported_hdr_ptypes(port_id, NULL, 0);
+			if (ptype_cnt <= 0) {
+				RTE_ETHDEV_LOG(ERR,
+					"Port %u failed to supported buffer split header protocols\n",
+					port_id);
+				return -EINVAL;
+			}
+
+			uint32_t ptypes[ptype_cnt];
+			int i;
+
+			ptype_cnt = rte_eth_buffer_split_get_supported_hdr_ptypes(port_id,
+										ptypes, ptype_cnt);
+			if (ptype_cnt < 0) {
+				RTE_ETHDEV_LOG(ERR,
+					"Port %u failed to supported buffer split header protocols\n",
+					port_id);
+				return -EINVAL;
+			}
+
+			for (i = 0; i < ptype_cnt; i++)
+				if (ptypes[i] == proto_hdr)
+					break;
+			if (i == ptype_cnt) {
+				RTE_ETHDEV_LOG(ERR,
+					"Requested Rx split header protocols 0x%x is not supported.\n",
+					proto_hdr);
+				return -EINVAL;
+			}
+
+			if (*mbp_buf_size < offset) {
+				RTE_ETHDEV_LOG(ERR,
+						"%s mbuf_data_room_size %u < %u segment offset)\n",
+						mpl->name, *mbp_buf_size,
+						offset);
+				return -EINVAL;
+			}
+		} else {
+			/* Split at fixed length. */
+			length = length != 0 ? length : *mbp_buf_size;
+			if (*mbp_buf_size < length + offset) {
+				RTE_ETHDEV_LOG(ERR,
+					"%s mbuf_data_room_size %u < %u (segment length=%u + segment offset=%u)\n",
+					mpl->name, *mbp_buf_size,
+					length + offset, length, offset);
+				return -EINVAL;
+			}
 		}
 	}
 	return 0;
@@ -1778,7 +1830,7 @@ rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		n_seg = rx_conf->rx_nseg;
 
 		if (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) {
-			ret = rte_eth_rx_queue_check_split(rx_seg, n_seg,
+			ret = rte_eth_rx_queue_check_split(port_id, rx_seg, n_seg,
 							   &mbp_buf_size,
 							   &dev_info);
 			if (ret != 0)
