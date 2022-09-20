@@ -14735,6 +14735,12 @@ flow_dv_fate_resource_release(struct rte_eth_dev *dev,
 		flow_dv_port_id_action_resource_release(dev,
 				handle->rix_port_id_action);
 		break;
+	case MLX5_FLOW_FATE_SEND_TO_KERNEL:
+		/* In case of send_to_kernel action the actual release of
+		 * resource is done when all shared DR resources are released
+		 * since this resource is created once and always reused.
+		 */
+		break;
 	default:
 		DRV_LOG(DEBUG, "Incorrect fate action:%d", handle->fate_action);
 		break;
