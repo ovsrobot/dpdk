@@ -183,7 +183,7 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"show (rxq|txq) info (port_id) (queue_id)\n"
 			"    Display information for configured RX/TX queue.\n\n"
 
-			"show config (rxtx|cores|fwd|rxoffs|rxpkts|txpkts)\n"
+			"show config (rxtx|cores|fwd|rxoffs|rxpkts|rxhdrs|txpkts)\n"
 			"    Display the given configuration.\n\n"
 
 			"read rxd (port_id) (queue_id) (rxd_id)\n"
@@ -306,6 +306,15 @@ static void cmd_help_long_parsed(void *parsed_result,
 			" packets on receiving if split feature is engaged."
 			" Affects only the queues configured with split"
 			" offloads.\n\n"
+
+			"set rxhdrs (eth[,ipv4])*\n"
+			"    Set the protocol hdr of each segment to scatter"
+			" packets on receiving if split feature is engaged."
+			" Affects only the queues configured with split"
+			" offloads.\n"
+			"    Supported values: eth|ipv4|ipv6|tcp|udp|sctp|"
+			"inner_eth|inner_ipv4|inner_ipv6|inner_tcp|inner_udp|"
+			"inner_sctp\n\n"
 
 			"set txpkts (x[,y]*)\n"
 			"    Set the length of each segment of TXONLY"
@@ -3456,6 +3465,68 @@ static cmdline_parse_inst_t cmd_stop = {
 	},
 };
 
+static unsigned int
+get_ptype(char *value)
+{
+	uint32_t protocol;
+
+	if (!strcmp(value, "eth"))
+		protocol = RTE_PTYPE_L2_ETHER;
+	else if (!strcmp(value, "ipv4"))
+		protocol = RTE_PTYPE_L3_IPV4;
+	else if (!strcmp(value, "ipv6"))
+		protocol = RTE_PTYPE_L3_IPV6;
+	else if (!strcmp(value, "tcp"))
+		protocol = RTE_PTYPE_L4_TCP;
+	else if (!strcmp(value, "udp"))
+		protocol = RTE_PTYPE_L4_UDP;
+	else if (!strcmp(value, "sctp"))
+		protocol = RTE_PTYPE_L4_SCTP;
+	else if (!strcmp(value, "inner_eth"))
+		protocol = RTE_PTYPE_INNER_L2_ETHER;
+	else if (!strcmp(value, "inner_ipv4"))
+		protocol = RTE_PTYPE_INNER_L3_IPV4;
+	else if (!strcmp(value, "inner_ipv6"))
+		protocol = RTE_PTYPE_INNER_L3_IPV6;
+	else if (!strcmp(value, "inner_tcp"))
+		protocol = RTE_PTYPE_INNER_L4_TCP;
+	else if (!strcmp(value, "inner_udp"))
+		protocol = RTE_PTYPE_INNER_L4_UDP;
+	else if (!strcmp(value, "inner_sctp"))
+		protocol = RTE_PTYPE_INNER_L4_SCTP;
+	else {
+		fprintf(stderr, "Unsupported protocol: %s\n", value);
+		protocol = RTE_PTYPE_UNKNOWN;
+	}
+
+	return protocol;
+}
+/* *** SET RXHDRSLIST *** */
+
+unsigned int
+parse_hdrs_list(const char *str, const char *item_name, unsigned int max_items,
+				unsigned int *parsed_items, int check_hdrs_sequence)
+{
+	unsigned int nb_item;
+	char *cur;
+	char *tmp;
+
+	nb_item = 0;
+	char *str2 = strdup(str);
+	cur = strtok_r(str2, ",", &tmp);
+	while (cur != NULL) {
+		parsed_items[nb_item] = get_ptype(cur);
+		cur = strtok_r(NULL, ",", &tmp);
+		nb_item++;
+	}
+	if (nb_item > max_items)
+		fprintf(stderr, "Number of %s = %u > %u (maximum items)\n",
+			item_name, nb_item + 1, max_items);
+	free(str2);
+	if (!check_hdrs_sequence)
+		return nb_item;
+	return nb_item;
+}
 /* *** SET CORELIST and PORTLIST CONFIGURATION *** */
 
 unsigned int
@@ -3825,6 +3896,50 @@ static cmdline_parse_inst_t cmd_set_rxpkts = {
 	},
 };
 
+/* *** SET SEGMENT HEADERS OF RX PACKETS SPLIT *** */
+struct cmd_set_rxhdrs_result {
+	cmdline_fixed_string_t set;
+	cmdline_fixed_string_t rxhdrs;
+	cmdline_fixed_string_t values;
+};
+
+static void
+cmd_set_rxhdrs_parsed(void *parsed_result,
+		      __rte_unused struct cmdline *cl,
+		      __rte_unused void *data)
+{
+	struct cmd_set_rxhdrs_result *res;
+	unsigned int seg_hdrs[MAX_SEGS_BUFFER_SPLIT];
+	unsigned int nb_segs;
+
+	res = parsed_result;
+	nb_segs = parse_hdrs_list(res->values, "segment hdrs",
+				  MAX_SEGS_BUFFER_SPLIT, seg_hdrs, 0);
+	if (nb_segs > 0)
+		set_rx_pkt_hdrs(seg_hdrs, nb_segs);
+	cmd_reconfig_device_queue(RTE_PORT_ALL, 0, 1);
+}
+static cmdline_parse_token_string_t cmd_set_rxhdrs_set =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_rxhdrs_result,
+				set, "set");
+static cmdline_parse_token_string_t cmd_set_rxhdrs_rxhdrs =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_rxhdrs_result,
+				rxhdrs, "rxhdrs");
+static cmdline_parse_token_string_t cmd_set_rxhdrs_values =
+	TOKEN_STRING_INITIALIZER(struct cmd_set_rxhdrs_result,
+				values, NULL);
+
+static cmdline_parse_inst_t cmd_set_rxhdrs = {
+	.f = cmd_set_rxhdrs_parsed,
+	.data = NULL,
+	.help_str = "set rxhdrs <eth[,ipv4]*>",
+	.tokens = {
+		(void *)&cmd_set_rxhdrs_set,
+		(void *)&cmd_set_rxhdrs_rxhdrs,
+		(void *)&cmd_set_rxhdrs_values,
+		NULL,
+	},
+};
 /* *** SET SEGMENT LENGTHS OF TXONLY PACKETS *** */
 
 struct cmd_set_txpkts_result {
@@ -6918,6 +7033,8 @@ static void cmd_showcfg_parsed(void *parsed_result,
 		show_rx_pkt_offsets();
 	else if (!strcmp(res->what, "rxpkts"))
 		show_rx_pkt_segments();
+	else if (!strcmp(res->what, "rxhdrs"))
+		show_rx_pkt_hdrs();
 	else if (!strcmp(res->what, "txpkts"))
 		show_tx_pkt_segments();
 	else if (!strcmp(res->what, "txtimes"))
@@ -6930,12 +7047,12 @@ static cmdline_parse_token_string_t cmd_showcfg_port =
 	TOKEN_STRING_INITIALIZER(struct cmd_showcfg_result, cfg, "config");
 static cmdline_parse_token_string_t cmd_showcfg_what =
 	TOKEN_STRING_INITIALIZER(struct cmd_showcfg_result, what,
-				 "rxtx#cores#fwd#rxoffs#rxpkts#txpkts#txtimes");
+				 "rxtx#cores#fwd#rxoffs#rxpkts#rxhdrs#txpkts#txtimes");
 
 static cmdline_parse_inst_t cmd_showcfg = {
 	.f = cmd_showcfg_parsed,
 	.data = NULL,
-	.help_str = "show config rxtx|cores|fwd|rxoffs|rxpkts|txpkts|txtimes",
+	.help_str = "show config rxtx|cores|fwd|rxoffs|rxpkts|rxhdrs|txpkts|txtimes",
 	.tokens = {
 		(void *)&cmd_showcfg_show,
 		(void *)&cmd_showcfg_port,
@@ -14166,6 +14283,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_set_log,
 	(cmdline_parse_inst_t *)&cmd_set_rxoffs,
 	(cmdline_parse_inst_t *)&cmd_set_rxpkts,
+	(cmdline_parse_inst_t *)&cmd_set_rxhdrs,
 	(cmdline_parse_inst_t *)&cmd_set_txpkts,
 	(cmdline_parse_inst_t *)&cmd_set_txsplit,
 	(cmdline_parse_inst_t *)&cmd_set_txtimes,
