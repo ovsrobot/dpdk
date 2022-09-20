@@ -35,6 +35,16 @@ failed.
 
 The ``rte_memarea_destroy()`` function is used to destroy a memarea object.
 
+The ``rte_memarea_alloc()`` function is used to alloc one memory region from
+the memarea object.
+
+The ``rte_memarea_free()`` function is used to free one memory region which
+allocated by ``rte_memarea_alloc()``.
+
+The ``rte_memarea_update_refcnt()`` function is used to update the memory
+region's reference count, if the count reaches zero, the memory region will
+be freed to memarea object.
+
 Reference
 ---------
 
