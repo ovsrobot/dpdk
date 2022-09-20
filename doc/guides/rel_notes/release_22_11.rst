@@ -55,6 +55,12 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added memarea library.**
+
+  The memarea library is an allocator of variable-size objects, it is oriented
+  towards the application layer, which could provides 'region-based memory
+  management' function.
+
 
 Removed Items
 -------------
