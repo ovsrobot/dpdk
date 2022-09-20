@@ -69,6 +69,18 @@ mempool. For invalid or no mempool name, whole list is dump.
 The iter-mempool parameter iterates and displays mempool elements specified
 by name. For invalid or no mempool name no elements are displayed.
 
+**--show-port-private**
+The show-port-private parameter displays ports private information.
+
+**--show-version**
+The show-version parameter displays DPDK version and ethdev firmware version.
+
+**--show-rss-reta**
+The show-rss-reta parameter displays ports rss redirection table.
+
+**--show-module-info**
+The show-module-info parameter displays ports module eeprom information.
+
 Limitations
 -----------
 
