@@ -40,6 +40,12 @@ test_memarea_init_def_param(struct rte_memarea_param *init)
 	init->mt_safe = 1;
 }
 
+static void
+test_memarea_fill_allocated_region(void *ptr, size_t size)
+{
+	memset(ptr, 0xff, size);
+}
+
 static int
 test_memarea_create_bad_param(void)
 {
@@ -98,9 +104,9 @@ test_memarea_create_bad_param(void)
 static int
 test_memarea_create_destroy(void)
 {
+	struct rte_memarea *ma, *user_ma;
 	struct rte_memarea_param init;
 	uint8_t user_buffer[MEMAREA_TEST_DEFAULT_SIZE + RTE_CACHE_LINE_SIZE];
-	struct rte_memarea *ma;
 
 	/* test for create with system API */
 	test_memarea_init_def_param(&init);
@@ -118,6 +124,138 @@ test_memarea_create_destroy(void)
 	RTE_TEST_ASSERT(ma != NULL, "Expected Non-NULL");
 	rte_memarea_destroy(ma);
 
+	/* test for create with user-memarea */
+	test_memarea_init_def_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_SYSTEM_API;
+	user_ma = rte_memarea_create(&init);
+	RTE_TEST_ASSERT(user_ma != NULL, "Expected Non-NULL");
+	test_memarea_init_def_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_USER_MEMAREA;
+	init.total_sz = init.total_sz >> 1;
+	init.user_memarea = user_ma;
+	ma = rte_memarea_create(&init);
+	RTE_TEST_ASSERT(ma != NULL, "Expected Non-NULL");
+	rte_memarea_destroy(ma);
+	rte_memarea_destroy(user_ma);
+
+	return 0;
+}
+
+static int
+test_memarea_alloc_fail(void)
+{
+	struct rte_memarea_param init;
+	struct rte_memarea *ma;
+	void *ptr[2];
+
+	test_memarea_init_def_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_SYSTEM_API;
+	init.total_sz = MEMAREA_TEST_DEFAULT_SIZE;
+	ma = rte_memarea_create(&init);
+	RTE_TEST_ASSERT(ma != NULL, "Expected Non-NULL");
+
+	/* test alloc fail with big size */
+	ptr[0] = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE, 0);
+	RTE_TEST_ASSERT(ptr[0] == NULL, "Expected NULL");
+
+	/* test alloc fail when second fail */
+	ptr[0] = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE >> 1, 0);
+	RTE_TEST_ASSERT(ptr[0] != NULL, "Expected Non-NULL");
+	test_memarea_fill_allocated_region(ptr[0], MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	ptr[1] = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE >> 1, 0);
+	RTE_TEST_ASSERT(ptr[1] == NULL, "Expected NULL");
+	rte_memarea_free(ma, ptr[0]);
+	ptr[1] = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE >> 1, 0);
+	RTE_TEST_ASSERT(ptr[1] != NULL, "Expected Non-NULL");
+	test_memarea_fill_allocated_region(ptr[1], MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	rte_memarea_free(ma, ptr[1]);
+
+	rte_memarea_destroy(ma);
+
+	return 0;
+}
+
+static int
+test_memarea_free_fail(void)
+{
+	struct rte_memarea_param init;
+	struct rte_memarea *ma;
+	void *ptr;
+
+	/* prepare env */
+	test_memarea_init_def_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_SYSTEM_API;
+	init.total_sz = MEMAREA_TEST_DEFAULT_SIZE;
+	ma = rte_memarea_create(&init);
+	RTE_TEST_ASSERT(ma != NULL, "Expected Non-NULL");
+
+	/* test invalid parameters with update-refcnt */
+	rte_memarea_update_refcnt(NULL, (void *)(uintptr_t)1, 0);
+	rte_memarea_update_refcnt(ma, NULL, 0);
+	rte_memarea_update_refcnt(NULL, NULL, 0);
+
+	/* test free with refcnt fail */
+	ptr = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE >> 1, 0);
+	RTE_TEST_ASSERT(ptr != NULL, "Expected Non-NULL");
+	test_memarea_fill_allocated_region(ptr, MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	rte_memarea_free(ma, ptr);
+	rte_memarea_free(ma, ptr);
+
+	/* test update refcnt with fail */
+	ptr = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE >> 1, 0);
+	RTE_TEST_ASSERT(ptr != NULL, "Expected Non-NULL");
+	test_memarea_fill_allocated_region(ptr, MEMAREA_TEST_DEFAULT_SIZE >> 1);
+	rte_memarea_update_refcnt(ma, ptr, -2);
+	ptr = rte_memarea_alloc(ma, MEMAREA_TEST_DEFAULT_SIZE >> 1, 0);
+	RTE_TEST_ASSERT(ptr == NULL, "Expected NULL");
+
+	rte_memarea_destroy(ma);
+
+	return 0;
+}
+
+static int
+test_memarea_alloc_free(void)
+{
+#define ALLOC_MAX_NUM	8
+	struct rte_memarea_param init;
+	struct rte_memarea *ma;
+	void *ptr[ALLOC_MAX_NUM];
+	int i;
+
+	/* prepare env */
+	test_memarea_init_def_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_SYSTEM_API;
+	init.total_sz = MEMAREA_TEST_DEFAULT_SIZE;
+	ma = rte_memarea_create(&init);
+	RTE_TEST_ASSERT(ma != NULL, "Expected Non-NULL");
+	memset(ptr, 0, sizeof(ptr));
+
+	/* test random alloc and free */
+	for (i = 0; i < ALLOC_MAX_NUM; i++)
+		ptr[i] = rte_memarea_alloc(ma, 1, 0);
+
+	/* test merge left */
+	rte_memarea_free(ma, ptr[0]);
+	rte_memarea_free(ma, ptr[1]);
+
+	/* test merge right */
+	rte_memarea_free(ma, ptr[7]);
+	rte_memarea_free(ma, ptr[6]);
+
+	/* test merge left and right */
+	rte_memarea_free(ma, ptr[3]);
+	rte_memarea_free(ma, ptr[2]);
+
+	/* test merge remains */
+	rte_memarea_free(ma, ptr[4]);
+	rte_memarea_free(ma, ptr[5]);
+
+	/* test free NULL */
+	rte_memarea_free(ma, ptr[6]);
+
+	rte_memarea_destroy(ma);
+
 	return 0;
 }
 
@@ -126,6 +264,9 @@ test_memarea(void)
 {
 	MEMAREA_TEST_API_RUN(test_memarea_create_bad_param);
 	MEMAREA_TEST_API_RUN(test_memarea_create_destroy);
+	MEMAREA_TEST_API_RUN(test_memarea_alloc_fail);
+	MEMAREA_TEST_API_RUN(test_memarea_free_fail);
+	MEMAREA_TEST_API_RUN(test_memarea_alloc_free);
 	return 0;
 }
 
