@@ -26,6 +26,9 @@ The main features are as follows:
 
 * It supports MT-safe as long as it's specified at creation time.
 
+* It provides backup memory mechanism, the memory object could use another
+  memarea object as a backup.
+
 Library API Overview
 --------------------
 

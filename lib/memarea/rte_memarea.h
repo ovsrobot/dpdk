@@ -41,6 +41,8 @@
  *      specified, all the functions of the memarea API are lock-free, and
  *      assume to not be invoked in parallel on different logical cores to work
  *      on the same memarea object.
+ *   f) It provides backup memory mechanism, the memarea object could use
+ *      another memarea object as a backup.
  */
 
 #include <stdbool.h>
@@ -87,6 +89,10 @@ struct rte_memarea_param {
 		 */
 		struct rte_memarea *user_memarea;
 	};
+	/** Backup memarea, which is used to handle the scenario where the
+	 * current memarea object allocation failure.
+	 */
+	struct rte_memarea *bak_memarea;
 };
 
 /**
