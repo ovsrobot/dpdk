@@ -590,11 +590,14 @@ struct rte_mbuf {
 		 * working on vector drivers easier.
 		 */
 		rte_iova_t buf_iova __rte_aligned(sizeof(rte_iova_t));
+#if RTE_IOVA_AS_VA
 		/**
-		 * Reserved for dynamic field in builds where physical address
-		 * field is invalid.
+		 * Next segment of scattered packet.
+		 * This field is valid when physical address field is invalid.
+		 * Otherwise next pointer in the second cache line will be used.
 		 */
-		uint64_t dynfield2;
+		struct rte_mbuf *next;
+#endif
 	};
 
 	/* next 8 bytes are initialised on RX descriptor rearm */
@@ -711,11 +714,21 @@ struct rte_mbuf {
 	/* second cache line - fields only used in slow path or on TX */
 	RTE_MARKER cacheline1 __rte_cache_min_aligned;
 
-	/**
-	 * Next segment of scattered packet. Must be NULL in the last segment or
-	 * in case of non-segmented packet.
-	 */
-	struct rte_mbuf *next;
+	RTE_STD_C11
+	union {
+#if !RTE_IOVA_AS_VA
+		/**
+		 * Next segment of scattered packet. Must be NULL in the last
+		 * segment or in case of non-segmented packet.
+		 */
+		struct rte_mbuf *next;
+#endif
+		/**
+		 * Reserved for dynamic field when the next pointer is in first
+		 * cache line (i.e. RTE_IOVA_AS_VA is 1).
+		 */
+		uint64_t dynfield2;
+	};
 
 	/* fields to support TX offloads */
 	RTE_STD_C11
