@@ -4,3 +4,4 @@
 sources = files('rte_mempool_stack.c')
 
 deps += ['stack']
+pmd_iova_as_va = true

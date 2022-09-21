@@ -12,3 +12,4 @@ sources = files(
 )
 
 deps += ['hash']
+pmd_iova_as_va = true

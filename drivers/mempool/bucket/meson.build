@@ -12,3 +12,4 @@ if is_windows
 endif
 
 sources = files('rte_mempool_bucket.c')
+pmd_iova_as_va = true

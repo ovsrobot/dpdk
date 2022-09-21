@@ -5,3 +5,4 @@ deps += ['dmadev', 'kvargs', 'ring', 'bus_vdev']
 sources = files(
         'skeleton_dmadev.c',
 )
+pmd_iova_as_va = true

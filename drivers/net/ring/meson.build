@@ -9,3 +9,4 @@ endif
 
 sources = files('rte_eth_ring.c')
 headers = files('rte_eth_ring.h')
+pmd_iova_as_va = true

@@ -2,3 +2,4 @@
 # Copyright(c) 2017 Intel Corporation
 
 sources = files('rte_mempool_ring.c')
+pmd_iova_as_va = true

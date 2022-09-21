@@ -9,3 +9,4 @@ sources = files(
         'sw_evdev.c',
 )
 deps += ['hash', 'bus_vdev']
+pmd_iova_as_va = true
