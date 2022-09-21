@@ -53,6 +53,7 @@ enum index {
 	COMMON_GROUP_ID,
 	COMMON_PRIORITY_LEVEL,
 	COMMON_INDIRECT_ACTION_ID,
+	COMMON_PROFILE_ID,
 	COMMON_POLICY_ID,
 	COMMON_FLEX_HANDLE,
 	COMMON_FLEX_TOKEN,
@@ -508,6 +509,11 @@ enum index {
 	ACTION_METER_COLOR_YELLOW,
 	ACTION_METER_COLOR_RED,
 	ACTION_METER_ID,
+	ACTION_METER_MARK,
+	ACTION_METER_PROFILE,
+	ACTION_METER_PROFILE_ID2PTR,
+	ACTION_METER_POLICY,
+	ACTION_METER_POLICY_ID2PTR,
 	ACTION_OF_SET_MPLS_TTL,
 	ACTION_OF_SET_MPLS_TTL_MPLS_TTL,
 	ACTION_OF_DEC_MPLS_TTL,
@@ -1835,6 +1841,7 @@ static const enum index next_action[] = {
 	ACTION_PORT_ID,
 	ACTION_METER,
 	ACTION_METER_COLOR,
+	ACTION_METER_MARK,
 	ACTION_OF_SET_MPLS_TTL,
 	ACTION_OF_DEC_MPLS_TTL,
 	ACTION_OF_SET_NW_TTL,
@@ -1947,6 +1954,13 @@ static const enum index action_meter[] = {
 
 static const enum index action_meter_color[] = {
 	ACTION_METER_COLOR_TYPE,
+	ACTION_NEXT,
+	ZERO,
+};
+
+static const enum index action_meter_mark[] = {
+	ACTION_METER_PROFILE,
+	ACTION_METER_POLICY,
 	ACTION_NEXT,
 	ZERO,
 };
@@ -2389,6 +2403,14 @@ static int parse_mp(struct context *, const struct token *,
 static int parse_meter_color(struct context *ctx, const struct token *token,
 			     const char *str, unsigned int len, void *buf,
 			     unsigned int size);
+static int parse_meter_profile_id2ptr(struct context *ctx,
+				      const struct token *token,
+				      const char *str, unsigned int len,
+				      void *buf, unsigned int size);
+static int parse_meter_policy_id2ptr(struct context *ctx,
+				     const struct token *token,
+				     const char *str, unsigned int len,
+				     void *buf, unsigned int size);
 static int comp_none(struct context *, const struct token *,
 		     unsigned int, char *, unsigned int);
 static int comp_boolean(struct context *, const struct token *,
@@ -2547,6 +2569,13 @@ static const struct token token_list[] = {
 		.name = "{indirect_action_id}",
 		.type = "INDIRECT_ACTION_ID",
 		.help = "indirect action id",
+		.call = parse_int,
+		.comp = comp_none,
+	},
+	[COMMON_PROFILE_ID] = {
+		.name = "{profile_id}",
+		.type = "PROFILE_ID",
+		.help = "profile id",
 		.call = parse_int,
 		.comp = comp_none,
 	},
@@ -5427,6 +5456,42 @@ static const struct token token_list[] = {
 		.next = NEXT(action_meter, NEXT_ENTRY(COMMON_UNSIGNED)),
 		.args = ARGS(ARGS_ENTRY(struct rte_flow_action_meter, mtr_id)),
 		.call = parse_vc_conf,
+	},
+	[ACTION_METER_MARK] = {
+		.name = "meter_mark",
+		.help = "meter the directed packets using profile and policy",
+		.priv = PRIV_ACTION(METER_MARK,
+				    sizeof(struct rte_flow_action_meter_mark)),
+		.next = NEXT(action_meter_mark),
+		.call = parse_vc,
+	},
+	[ACTION_METER_PROFILE] = {
+		.name = "mtr_profile",
+		.help = "meter profile id to use",
+		.next = NEXT(NEXT_ENTRY(ACTION_METER_PROFILE_ID2PTR)),
+		.args = ARGS(ARGS_ENTRY_ARB(0, sizeof(uint32_t))),
+	},
+	[ACTION_METER_PROFILE_ID2PTR] = {
+		.name = "{mtr_profile_id}",
+		.type = "PROFILE_ID",
+		.help = "meter profile id",
+		.next = NEXT(action_meter_mark),
+		.call = parse_meter_profile_id2ptr,
+		.comp = comp_none,
+	},
+	[ACTION_METER_POLICY] = {
+		.name = "mtr_policy",
+		.help = "meter policy id to use",
+		.next = NEXT(NEXT_ENTRY(ACTION_METER_POLICY_ID2PTR)),
+		ARGS(ARGS_ENTRY_ARB(0, sizeof(uint32_t))),
+	},
+	[ACTION_METER_POLICY_ID2PTR] = {
+		.name = "{mtr_policy_id}",
+		.type = "POLICY_ID",
+		.help = "meter policy id",
+		.next = NEXT(action_meter_mark),
+		.call = parse_meter_policy_id2ptr,
+		.comp = comp_none,
 	},
 	[ACTION_OF_SET_MPLS_TTL] = {
 		.name = "of_set_mpls_ttl",
@@ -9743,6 +9808,68 @@ parse_ia_id2ptr(struct context *ctx, const struct token *token,
 	if (action) {
 		action->conf = port_action_handle_get_by_id(ctx->port, id);
 		ret = (action->conf) ? ret : -1;
+	}
+	return ret;
+}
+
+static int
+parse_meter_profile_id2ptr(struct context *ctx, const struct token *token,
+			   const char *str, unsigned int len,
+			   void *buf, unsigned int size)
+{
+	struct rte_flow_action *action = ctx->object;
+	struct rte_flow_action_meter_mark *meter;
+	struct rte_flow_meter_profile *profile = NULL;
+	uint32_t id;
+	int ret;
+
+	(void)buf;
+	(void)size;
+	ctx->objdata = 0;
+	ctx->object = &id;
+	ctx->objmask = NULL;
+	ret = parse_int(ctx, token, str, len, ctx->object, sizeof(id));
+	ctx->object = action;
+	if (ret != (int)len)
+		return ret;
+	/* set meter profile */
+	if (action) {
+		meter = (struct rte_flow_action_meter_mark *)
+				(uintptr_t)(action->conf);
+		profile = port_meter_profile_get_by_id(ctx->port, id);
+		meter->profile = profile;
+		ret = (profile) ? ret : -1;
+	}
+	return ret;
+}
+
+static int
+parse_meter_policy_id2ptr(struct context *ctx, const struct token *token,
+			  const char *str, unsigned int len,
+			  void *buf, unsigned int size)
+{
+	struct rte_flow_action *action = ctx->object;
+	struct rte_flow_action_meter_mark *meter;
+	struct rte_flow_meter_policy *policy = NULL;
+	uint32_t id;
+	int ret;
+
+	(void)buf;
+	(void)size;
+	ctx->objdata = 0;
+	ctx->object = &id;
+	ctx->objmask = NULL;
+	ret = parse_int(ctx, token, str, len, ctx->object, sizeof(id));
+	ctx->object = action;
+	if (ret != (int)len)
+		return ret;
+	/* set meter policy */
+	if (action) {
+		meter = (struct rte_flow_action_meter_mark *)
+				(uintptr_t)(action->conf);
+		policy = port_meter_policy_get_by_id(ctx->port, id);
+		meter->policy = policy;
+		ret = (policy) ? ret : -1;
 	}
 	return ret;
 }

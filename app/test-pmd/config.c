@@ -2316,6 +2316,32 @@ port_meter_policy_add(portid_t port_id, uint32_t policy_id,
 	return ret;
 }
 
+/** Get port meter profile */
+struct rte_flow_meter_profile *
+port_meter_profile_get_by_id(portid_t port_id, uint32_t id)
+{
+	struct rte_mtr_error error;
+	struct rte_flow_meter_profile *profile;
+
+	profile = rte_mtr_meter_profile_get(port_id, id, &error);
+	if (!profile)
+		print_mtr_err_msg(&error);
+	return profile;
+}
+
+/** Get port meter policy */
+struct rte_flow_meter_policy *
+port_meter_policy_get_by_id(portid_t port_id, uint32_t id)
+{
+	struct rte_mtr_error error;
+	struct rte_flow_meter_policy *policy;
+
+	policy = rte_mtr_meter_policy_get(port_id, id, &error);
+	if (!policy)
+		print_mtr_err_msg(&error);
+	return policy;
+}
+
 /** Validate flow rule. */
 int
 port_flow_validate(portid_t port_id,
