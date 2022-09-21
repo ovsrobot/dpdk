@@ -458,6 +458,9 @@ enum index {
 	ITEM_PPP_ADDR,
 	ITEM_PPP_CTRL,
 	ITEM_PPP_PROTO_ID,
+	ITEM_METER,
+	ITEM_METER_COLOR,
+	ITEM_METER_COLOR_NAME,
 
 	/* Validate/create actions. */
 	ACTIONS,
@@ -797,6 +800,10 @@ static const char *const modify_field_ids[] = {
 	"vxlan_vni", "geneve_vni", "gtp_teid",
 	"tag", "mark", "meta", "pointer", "value",
 	"ipv4_ecn", "ipv6_ecn", NULL
+};
+
+static const char *const meter_colors[] = {
+	"green", "yellow", "red", "all", NULL
 };
 
 /** Maximum number of subsequent tokens and arguments on the stack. */
@@ -1332,6 +1339,7 @@ static const enum index next_item[] = {
 	ITEM_FLEX,
 	ITEM_L2TPV2,
 	ITEM_PPP,
+	ITEM_METER,
 	END_SET,
 	ZERO,
 };
@@ -1800,6 +1808,12 @@ static const enum index item_ppp[] = {
 	ITEM_PPP_ADDR,
 	ITEM_PPP_CTRL,
 	ITEM_PPP_PROTO_ID,
+	ITEM_NEXT,
+	ZERO,
+};
+
+static const enum index item_meter[] = {
+	ITEM_METER_COLOR,
 	ITEM_NEXT,
 	ZERO,
 };
@@ -2372,6 +2386,9 @@ static int parse_ia_id2ptr(struct context *ctx, const struct token *token,
 static int parse_mp(struct context *, const struct token *,
 		    const char *, unsigned int,
 		    void *, unsigned int);
+static int parse_meter_color(struct context *ctx, const struct token *token,
+			     const char *str, unsigned int len, void *buf,
+			     unsigned int size);
 static int comp_none(struct context *, const struct token *,
 		     unsigned int, char *, unsigned int);
 static int comp_boolean(struct context *, const struct token *,
@@ -2402,6 +2419,8 @@ static int comp_table_id(struct context *, const struct token *,
 			 unsigned int, char *, unsigned int);
 static int comp_queue_id(struct context *, const struct token *,
 			 unsigned int, char *, unsigned int);
+static int comp_meter_color(struct context *, const struct token *,
+			    unsigned int, char *, unsigned int);
 
 /** Token definitions. */
 static const struct token token_list[] = {
@@ -5063,6 +5082,29 @@ static const struct token token_list[] = {
 			     item_param),
 		.args = ARGS(ARGS_ENTRY(struct rte_flow_item_ppp,
 					hdr.proto_id)),
+	},
+	[ITEM_METER] = {
+		.name = "meter",
+		.help = "match meter color",
+		.priv = PRIV_ITEM(METER_COLOR,
+				  sizeof(struct rte_flow_item_meter_color)),
+		.next = NEXT(item_meter),
+		.call = parse_vc,
+	},
+	[ITEM_METER_COLOR] = {
+		.name = "color",
+		.help = "meter color",
+		.next = NEXT(item_meter,
+			     NEXT_ENTRY(ITEM_METER_COLOR_NAME),
+			     item_param),
+		.args = ARGS(ARGS_ENTRY(struct rte_flow_item_meter_color,
+					color)),
+	},
+	[ITEM_METER_COLOR_NAME] = {
+		.name = "color_name",
+		.help = "meter color name",
+		.call = parse_meter_color,
+		.comp = comp_meter_color,
 	},
 	/* Validate/create actions. */
 	[ACTIONS] = {
@@ -9867,6 +9909,30 @@ parse_flex_handle(struct context *ctx, const struct token *token,
 	return ret;
 }
 
+/** Parse Meter color name */
+static int
+parse_meter_color(struct context *ctx, const struct token *token,
+		  const char *str, unsigned int len, void *buf,
+		  unsigned int size)
+{
+	struct rte_flow_item_meter_color *meter_color;
+	unsigned int i;
+
+	(void)token;
+	(void)buf;
+	(void)size;
+	for (i = 0; meter_colors[i]; ++i)
+		if (!strcmp_partial(meter_colors[i], str, len))
+			break;
+	if (!meter_colors[i])
+		return -1;
+	if (!ctx->object)
+		return len;
+	meter_color = ctx->object;
+	meter_color->color = (enum rte_color)i;
+	return len;
+}
+
 /** No completion. */
 static int
 comp_none(struct context *ctx, const struct token *token,
@@ -10156,6 +10222,20 @@ comp_queue_id(struct context *ctx, const struct token *token,
 	if (buf)
 		return -1;
 	return i;
+}
+
+/** Complete available Meter colors. */
+static int
+comp_meter_color(struct context *ctx, const struct token *token,
+		 unsigned int ent, char *buf, unsigned int size)
+{
+	RTE_SET_USED(ctx);
+	RTE_SET_USED(token);
+	if (!buf)
+		return RTE_DIM(meter_colors);
+	if (ent < RTE_DIM(meter_colors) - 1)
+		return strlcpy(buf, meter_colors[ent], size);
+	return -1;
 }
 
 /** Internal context. */
@@ -10772,6 +10852,9 @@ flow_item_default_mask(const struct rte_flow_item *item)
 		break;
 	case RTE_FLOW_ITEM_TYPE_PPP:
 		mask = &rte_flow_item_ppp_mask;
+		break;
+	case RTE_FLOW_ITEM_TYPE_METER_COLOR:
+		mask = &rte_flow_item_meter_color_mask;
 		break;
 	default:
 		break;
