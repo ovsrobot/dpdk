@@ -2903,6 +2903,15 @@ enum rte_flow_action_type {
 	 * @see struct rte_flow_action_ethdev
 	 */
 	RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT,
+
+	/**
+	 * Traffic metering and marking (MTR).
+	 * the entity represented by the given ethdev.
+	 *
+	 * @see struct rte_flow_action_meter_mark
+	 * See file rte_mtr.h for MTR profile object configuration.
+	 */
+	RTE_FLOW_ACTION_TYPE_METER_MARK,
 };
 
 /**
@@ -3772,6 +3781,25 @@ struct rte_flow_action_modify_field {
 	struct rte_flow_action_modify_data dst; /**< Destination field. */
 	struct rte_flow_action_modify_data src; /**< Source field. */
 	uint32_t width; /**< Number of bits to use from a source field. */
+};
+
+/**
+ * RTE_FLOW_ACTION_TYPE_METER_MARK
+ *
+ * Traffic metering and marking (MTR).
+ *
+ * Meters a packet stream and marks its packets either
+ * green, yellow, or red according to the specified profile.
+ * The policy is optional and may be specified for defining
+ * subsequent actions based on a color assigned by MTR.
+ * Alternatively, the METER_COLOR item may be used for this.
+ */
+struct rte_flow_action_meter_mark {
+
+	/**< Profile config retrieved with rte_mtr_profile_get(). */
+	struct rte_flow_meter_profile *profile;
+	/**< Policy config retrieved with rte_mtr_policy_get(). */
+	struct rte_flow_meter_policy *policy;
 };
 
 /* Mbuf dynamic field offset for metadata. */

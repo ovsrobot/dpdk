@@ -60,6 +60,7 @@ New Features
   * Added METER_COLOR item to match Color Marker set by a Meter.
   * Added ability to set Color Marker via modify_field Flow API.
   * Added Meter API to get a pointer to profile/policy by their ID.
+  * Added METER_MARK action for Metering with lockless profile/policy access.
 
 Removed Items
 -------------
