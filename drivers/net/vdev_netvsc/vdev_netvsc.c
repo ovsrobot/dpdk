@@ -764,7 +764,6 @@ static struct rte_vdev_driver vdev_netvsc_vdev = {
 };
 
 RTE_PMD_REGISTER_VDEV(VDEV_NETVSC_DRIVER, vdev_netvsc_vdev);
-RTE_PMD_REGISTER_ALIAS(VDEV_NETVSC_DRIVER, eth_vdev_netvsc);
 RTE_PMD_REGISTER_PARAM_STRING(net_vdev_netvsc,
 			      VDEV_NETVSC_ARG_IFACE "=<string> "
 			      VDEV_NETVSC_ARG_MAC "=<string> "

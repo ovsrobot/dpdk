@@ -2639,7 +2639,6 @@ static struct rte_vdev_driver pmd_tap_drv = {
 
 RTE_PMD_REGISTER_VDEV(net_tap, pmd_tap_drv);
 RTE_PMD_REGISTER_VDEV(net_tun, pmd_tun_drv);
-RTE_PMD_REGISTER_ALIAS(net_tap, eth_tap);
 RTE_PMD_REGISTER_PARAM_STRING(net_tun,
 			      ETH_TAP_IFACE_ARG "=<string> ");
 RTE_PMD_REGISTER_PARAM_STRING(net_tap,

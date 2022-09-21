@@ -1778,7 +1778,6 @@ static struct rte_vdev_driver pmd_vhost_drv = {
 };
 
 RTE_PMD_REGISTER_VDEV(net_vhost, pmd_vhost_drv);
-RTE_PMD_REGISTER_ALIAS(net_vhost, eth_vhost);
 RTE_PMD_REGISTER_PARAM_STRING(net_vhost,
 	"iface=<ifc> "
 	"queues=<int> "
