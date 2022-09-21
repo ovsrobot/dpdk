@@ -210,15 +210,18 @@ rte_trace_regexp(const char *regex, bool enable)
 		return -EINVAL;
 
 	STAILQ_FOREACH(tp, &tp_list, next) {
-		if (regexec(&r, tp->name, 0, NULL, 0) == 0) {
-			if (enable)
-				rc = rte_trace_point_enable(tp->handle);
-			else
-				rc = rte_trace_point_disable(tp->handle);
-			found = 1;
+		if (regexec(&r, tp->name, 0, NULL, 0) != 0)
+			continue;
+
+		if (enable)
+			rc = rte_trace_point_enable(tp->handle);
+		else
+			rc = rte_trace_point_disable(tp->handle);
+		if (rc < 0) {
+			found = 0;
+			break;
 		}
-		if (rc < 0)
-			return rc;
+		found = 1;
 	}
 	regfree(&r);
 
