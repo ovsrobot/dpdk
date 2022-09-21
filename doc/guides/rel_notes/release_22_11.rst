@@ -58,6 +58,7 @@ New Features
 * **Extended Metering and Marking support in the Flow API.**
 
   * Added METER_COLOR item to match Color Marker set by a Meter.
+  * Added ability to set Color Marker via modify_field Flow API.
 
 Removed Items
 -------------
