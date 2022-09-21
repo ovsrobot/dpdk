@@ -314,13 +314,17 @@ trace_dir_default_path_get(char *dir_path)
 	return 0;
 }
 
-int
+static int
 trace_mkdir(void)
 {
 	struct trace *trace = trace_obj_get();
 	char session[TRACE_DIR_STR_LEN];
+	static bool already_done;
 	char *dir_path;
 	int rc;
+
+	if (already_done)
+		return 0;
 
 	if (!trace->dir_offset) {
 		dir_path = calloc(1, sizeof(trace->dir));
@@ -364,7 +368,8 @@ trace_mkdir(void)
 		return -rte_errno;
 	}
 
-	RTE_LOG(INFO, EAL, "Trace dir: %s\n", trace->dir);
+	RTE_LOG(DEBUG, EAL, "Trace dir: %s\n", trace->dir);
+	already_done = true;
 	return 0;
 }
 
@@ -374,6 +379,10 @@ trace_meta_save(struct trace *trace)
 	char file_name[PATH_MAX];
 	FILE *f;
 	int rc;
+
+	rc = trace_mkdir();
+	if (rc < 0)
+		return rc;
 
 	rc = snprintf(file_name, PATH_MAX, "%s/metadata", trace->dir);
 	if (rc < 0)
@@ -405,6 +414,10 @@ trace_mem_save(struct trace *trace, struct __rte_trace_header *hdr,
 	char file_name[PATH_MAX];
 	FILE *f;
 	int rc;
+
+	rc = trace_mkdir();
+	if (rc < 0)
+		return rc;
 
 	rc = snprintf(file_name, PATH_MAX, "%s/channel0_%d", trace->dir, cnt);
 	if (rc < 0)
