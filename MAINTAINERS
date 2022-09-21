@@ -1562,6 +1562,7 @@ Memarea - EXPERIMENTAL
 M: Chengwen Feng <fengchengwen@huawei.com>
 F: lib/memarea
 F: doc/guides/prog_guide/memarea_lib.rst
+F: app/test/test_memarea*
 
 Membership - EXPERIMENTAL
 M: Yipeng Wang <yipeng1.wang@intel.com>
