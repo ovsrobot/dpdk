@@ -146,7 +146,7 @@ static inline uint16_t rte_pktmbuf_priv_size(struct rte_mempool *mp);
 static inline rte_iova_t
 rte_mbuf_data_iova(const struct rte_mbuf *mb)
 {
-	return mb->buf_iova + mb->data_off;
+	return (RTE_IOVA_AS_VA ? (uint64_t)mb->buf_addr : mb->buf_iova) + mb->data_off;
 }
 
 /**
@@ -164,7 +164,7 @@ rte_mbuf_data_iova(const struct rte_mbuf *mb)
 static inline rte_iova_t
 rte_mbuf_data_iova_default(const struct rte_mbuf *mb)
 {
-	return mb->buf_iova + RTE_PKTMBUF_HEADROOM;
+	return (RTE_IOVA_AS_VA ? (uint64_t)mb->buf_addr : mb->buf_iova) + RTE_PKTMBUF_HEADROOM;
 }
 
 /**
@@ -467,6 +467,13 @@ rte_mbuf_ext_refcnt_update(struct rte_mbuf_ext_shared_info *shinfo,
 
 	return __atomic_add_fetch(&shinfo->refcnt, (uint16_t)value,
 				 __ATOMIC_ACQ_REL);
+}
+
+static inline void
+rte_mbuf_iova_set(struct rte_mbuf *m, rte_iova_t iova)
+{
+	if (!RTE_IOVA_AS_VA)
+		m->buf_iova = iova;
 }
 
 /** Mbuf prefetch */
@@ -1056,7 +1063,7 @@ rte_pktmbuf_attach_extbuf(struct rte_mbuf *m, void *buf_addr,
 	RTE_ASSERT(shinfo->free_cb != NULL);
 
 	m->buf_addr = buf_addr;
-	m->buf_iova = buf_iova;
+	rte_mbuf_iova_set(m, buf_iova);
 	m->buf_len = buf_len;
 
 	m->data_len = 0;
@@ -1143,7 +1150,7 @@ static inline void rte_pktmbuf_attach(struct rte_mbuf *mi, struct rte_mbuf *m)
 
 	mi->data_off = m->data_off;
 	mi->data_len = m->data_len;
-	mi->buf_iova = m->buf_iova;
+	rte_mbuf_iova_set(mi, m->buf_iova);
 	mi->buf_addr = m->buf_addr;
 	mi->buf_len = m->buf_len;
 
@@ -1245,7 +1252,7 @@ static inline void rte_pktmbuf_detach(struct rte_mbuf *m)
 
 	m->priv_size = priv_size;
 	m->buf_addr = (char *)m + mbuf_size;
-	m->buf_iova = rte_mempool_virt2iova(m) + mbuf_size;
+	rte_mbuf_iova_set(m, rte_mempool_virt2iova(m) + mbuf_size);
 	m->buf_len = (uint16_t)buf_len;
 	rte_pktmbuf_reset_headroom(m);
 	m->data_len = 0;

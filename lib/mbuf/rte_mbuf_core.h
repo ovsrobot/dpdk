@@ -581,6 +581,8 @@ struct rte_mbuf {
 	void *buf_addr;           /**< Virtual address of segment buffer. */
 	/**
 	 * Physical address of segment buffer.
+	 * This field is invalid if the build is configured to use only
+	 * virtual address as IOVA (i.e. RTE_IOVA_AS_VA is 1).
 	 * Force alignment to 8-bytes, so as to ensure we have the exact
 	 * same mbuf cacheline0 layout for 32-bit and 64-bit. This makes
 	 * working on vector drivers easier.
@@ -848,8 +850,12 @@ struct rte_mbuf_ext_shared_info {
  * @param o
  *   The offset into the data to calculate address from.
  */
+#if RTE_IOVA_AS_VA
+#define rte_pktmbuf_iova_offset(m, o) rte_pktmbuf_mtod_offset(m, rte_iova_t, o)
+#else
 #define rte_pktmbuf_iova_offset(m, o) \
 	(rte_iova_t)((m)->buf_iova + (m)->data_off + (o))
+#endif
 
 /**
  * A macro that returns the IO address that points to the start of the
@@ -858,7 +864,11 @@ struct rte_mbuf_ext_shared_info {
  * @param m
  *   The packet mbuf.
  */
+#if RTE_IOVA_AS_VA
+#define rte_pktmbuf_iova(m) rte_pktmbuf_mtod(m, rte_iova_t)
+#else
 #define rte_pktmbuf_iova(m) rte_pktmbuf_iova_offset(m, 0)
+#endif
 
 #ifdef __cplusplus
 }
