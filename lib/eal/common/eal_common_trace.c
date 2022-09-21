@@ -231,7 +231,7 @@ rte_trace_point_lookup(const char *name)
 		return NULL;
 
 	STAILQ_FOREACH(tp, &tp_list, next)
-		if (strncmp(tp->name, name, TRACE_POINT_NAME_SIZE) == 0)
+		if (strcmp(tp->name, name) == 0)
 			return tp->handle;
 
 	return NULL;
@@ -488,10 +488,7 @@ __rte_trace_point_register(rte_trace_point_t *handle, const char *name,
 	}
 
 	/* Initialize the trace point */
-	if (rte_strscpy(tp->name, name, TRACE_POINT_NAME_SIZE) < 0) {
-		trace_err("name is too long");
-		goto free;
-	}
+	tp->name = name;
 
 	/* Copy the accumulated fields description and clear it for the next
 	 * trace point.
@@ -513,8 +510,7 @@ __rte_trace_point_register(rte_trace_point_t *handle, const char *name,
 
 	/* All Good !!! */
 	return 0;
-free:
-	free(tp);
+
 fail:
 	if (trace.register_errno == 0)
 		trace.register_errno = rte_errno;
