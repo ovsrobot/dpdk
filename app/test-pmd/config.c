@@ -2066,6 +2066,7 @@ port_action_handle_update(portid_t port_id, uint32_t id,
 	if (!pia)
 		return -EINVAL;
 	switch (pia->type) {
+	case RTE_FLOW_ACTION_TYPE_AGE:
 	case RTE_FLOW_ACTION_TYPE_CONNTRACK:
 		update = action->conf;
 		break;
@@ -2905,6 +2906,8 @@ port_queue_action_handle_update(portid_t port_id,
 	struct rte_port *port;
 	struct rte_flow_error error;
 	struct rte_flow_action_handle *action_handle;
+	struct port_indirect_action *pia;
+	const void *update;
 
 	action_handle = port_action_handle_get_by_id(port_id, id);
 	if (!action_handle)
@@ -2916,8 +2919,21 @@ port_queue_action_handle_update(portid_t port_id,
 		return -EINVAL;
 	}
 
+	pia = action_get_by_id(port_id, id);
+	if (!pia)
+		return -EINVAL;
+
+	switch (pia->type) {
+	case RTE_FLOW_ACTION_TYPE_AGE:
+		update = action->conf;
+		break;
+	default:
+		update = action;
+		break;
+	}
+
 	if (rte_flow_async_action_handle_update(port_id, queue_id, &attr,
-				    action_handle, action, NULL, &error)) {
+				    action_handle, update, NULL, &error)) {
 		return port_flow_complain(&error);
 	}
 	printf("Indirect action #%u update queued\n", id);
