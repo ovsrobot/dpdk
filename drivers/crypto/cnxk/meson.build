@@ -31,3 +31,5 @@ if get_option('buildtype').contains('debug')
 else
     cflags += [ '-ULA_IPSEC_DEBUG' ]
 endif
+
+pmd_iova_as_va = true

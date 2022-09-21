@@ -3,3 +3,4 @@
 
 deps += ['bus_pci', 'common_cnxk', 'dmadev']
 sources = files('cnxk_dmadev.c')
+pmd_iova_as_va = true

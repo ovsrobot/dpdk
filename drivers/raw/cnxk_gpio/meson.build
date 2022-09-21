@@ -9,3 +9,4 @@ sources = files(
         'cnxk_gpio_selftest.c',
 )
 headers = files('rte_pmd_cnxk_gpio.h')
+pmd_iova_as_va = true
