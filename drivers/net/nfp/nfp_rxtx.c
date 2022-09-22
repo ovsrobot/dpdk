@@ -281,8 +281,9 @@ nfp_net_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 	struct rte_mbuf *new_mb;
 	uint16_t nb_hold;
 	uint64_t dma_addr;
-	int avail;
+	uint16_t avail;
 
+	avail = 0;
 	rxq = rx_queue;
 	if (unlikely(rxq == NULL)) {
 		/*
@@ -290,11 +291,10 @@ nfp_net_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 		 * enabled. But the queue needs to be configured
 		 */
 		RTE_LOG_DP(ERR, PMD, "RX Bad queue\n");
-		return -EINVAL;
+		return avail;
 	}
 
 	hw = rxq->hw;
-	avail = 0;
 	nb_hold = 0;
 
 	while (avail < nb_pkts) {
@@ -360,7 +360,8 @@ nfp_net_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 				hw->rx_offset,
 				rxq->mbuf_size - hw->rx_offset,
 				mb->data_len);
-			return -EINVAL;
+			rte_pktmbuf_free(mb);
+			break;
 		}
 
 		/* Filling the received mbuf with packet info */
