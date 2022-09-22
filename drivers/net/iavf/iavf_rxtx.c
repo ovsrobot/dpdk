@@ -2875,7 +2875,8 @@ iavf_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 
 		/* Check condition for nb_segs > IAVF_TX_MAX_MTU_SEG. */
 		if (!(ol_flags & RTE_MBUF_F_TX_TCP_SEG)) {
-			if (m->nb_segs > IAVF_TX_MAX_MTU_SEG) {
+			if (m->nb_segs > IAVF_TX_MAX_MTU_SEG ||
+				m->pkt_len > IAVF_FRAME_SIZE_MAX) {
 				rte_errno = EINVAL;
 				return i;
 			}
@@ -2888,6 +2889,13 @@ iavf_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 
 		if (ol_flags & IAVF_TX_OFFLOAD_NOTSUP_MASK) {
 			rte_errno = ENOTSUP;
+			return i;
+		}
+
+		/* check the size of packet */
+		if (m->pkt_len < IAVF_TX_MIN_PKT_LEN) {
+			rte_errno = EINVAL;
+			PMD_DRV_LOG(ERR, "INVALID mbuf: bad pkt_len=[%hu]", m->pkt_len);
 			return i;
 		}
 
