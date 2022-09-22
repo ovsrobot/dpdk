@@ -1008,10 +1008,6 @@ swtim_stop(const struct rte_event_timer_adapter *adapter)
 	if (ret < 0)
 		return ret;
 
-	/* Wait for the service to complete its final iteration */
-	while (rte_service_may_be_active(sw->service_id))
-		rte_pause();
-
 	return 0;
 }
 
