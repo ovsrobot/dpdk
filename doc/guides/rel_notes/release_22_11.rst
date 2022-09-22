@@ -84,6 +84,14 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* bbdev: Added new operation for FFT processing with notably the new functions
+  ``rte_bbdev_enqueue_fft_ops`` and ``rte_bbdev_dequeue_fft_ops`` and related structures.
+
+* bbdev: Updated enums such as ``rte_bbdev_op_type`` to include padding and to allow for
+  futureproof enum insertion.
+
+* bbdev: Updated structures to allow for new parameters for device status, queue topology and
+  queue status being exposed using ``rte_bbdev_enqueue_status `` and ``rte_bbdev_device_status``.
 
 ABI Changes
 -----------
