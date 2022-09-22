@@ -924,6 +924,8 @@ port_infos_display(portid_t port_id)
 	}
 	if (dev_info.err_handle_mode == RTE_ETH_ERROR_HANDLE_MODE_PASSIVE)
 		printf("Device error handling mode: passive\n");
+	else if (dev_info.err_handle_mode == RTE_ETH_ERROR_HANDLE_MODE_PROACTIVE)
+		printf("Device error handling mode: proactive\n");
 }
 
 void

@@ -55,6 +55,18 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added proactive error handling mode for ethdev.**
+
+  Added proactive error handling mode for ethdev, and three event were
+  introduced:
+
+  * Added new event: ``RTE_ETH_EVENT_ERR_RECOVERING`` for the PMD to report
+    that the port is recovering from an error.
+  * Added new event: ``RTE_ETH_EVENT_RECOVER_SUCCESS`` for the PMD to report
+    that the port recover successful from an error.
+  * Added new event: ``RTE_ETH_EVENT_RECOVER_FAILED`` for the PMD to report
+    that the prot recover failed from an error.
+
 
 Removed Items
 -------------
