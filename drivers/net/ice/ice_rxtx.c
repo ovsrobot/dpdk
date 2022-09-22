@@ -3477,6 +3477,19 @@ ice_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 			return i;
 		}
 
+		/* check the size of packet */
+		if (!(ol_flags & RTE_MBUF_F_TX_TCP_SEG) &&
+			m->pkt_len > ICE_FRAME_SIZE_MAX) {
+			rte_errno = EINVAL;
+			PMD_DRV_LOG(ERR, "INVALID mbuf: bad pkt_len=[%hu]", m->pkt_len);
+			return i;
+		}
+		if (m->pkt_len < ICE_TX_MIN_PKT_LEN) {
+			rte_errno = EINVAL;
+			PMD_DRV_LOG(ERR, "INVALID mbuf: bad pkt_len=[%hu]", m->pkt_len);
+			return i;
+		}
+
 #ifdef RTE_ETHDEV_DEBUG_TX
 		ret = rte_validate_tx_offload(m);
 		if (ret != 0) {
