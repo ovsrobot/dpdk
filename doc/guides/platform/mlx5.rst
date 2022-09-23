@@ -4,8 +4,15 @@
 
 .. include:: <isonum.txt>
 
-MLX5 Common Driver
-==================
+NVIDIA MLX5 Common Driver
+=========================
+
+.. note::
+
+   NVIDIA acquired Mellanox Technologies in 2020.
+   The DPDK documentation and code might still include instances
+   of or references to Mellanox trademarks (like BlueField and ConnectX)
+   that are now NVIDIA trademarks.
 
 The mlx5 common driver library (**librte_common_mlx5**) provides support for
 **NVIDIA ConnectX-4**, **NVIDIA ConnectX-4 Lx**, **NVIDIA ConnectX-5**,
@@ -16,8 +23,8 @@ The mlx5 common driver library (**librte_common_mlx5**) provides support for
 Information and documentation for these adapters can be found on the
 `NVIDIA website <https://www.nvidia.com/en-us/networking/>`_.
 Help is also provided by the
-`Mellanox community <http://community.mellanox.com/welcome>`_.
-In addition, there is a `web section dedicated to the Poll Mode Driver
+`NVIDIA Networking forum <https://forums.developer.nvidia.com/c/infrastructure/369/>`_.
+In addition, there is a `web section dedicated to DPDK
 <https://developer.nvidia.com/networking/dpdk>`_.
 
 
@@ -107,7 +114,7 @@ The following dependencies are not part of DPDK and must be installed separately
 
 - **libmlx5**
 
-  Low-level user space driver library for Mellanox devices,
+  Low-level user space driver library for NVIDIA devices,
   it is automatically loaded by ``libibverbs``.
 
   This library basically implements send/receive calls to the hardware queues.
@@ -121,20 +128,20 @@ The following dependencies are not part of DPDK and must be installed separately
   Unlike most other PMDs, these modules must remain loaded and bound to
   their devices:
 
-  - ``mlx5_core``: hardware driver managing Mellanox devices
+  - ``mlx5_core``: hardware driver managing NVIDIA devices
     and related Ethernet kernel network devices.
   - ``mlx5_ib``: InfiniBand device driver.
   - ``ib_uverbs``: user space driver for Verbs (entry point for ``libibverbs``).
 
 - **Firmware update**
 
-  Mellanox OFED/EN releases include firmware updates.
+  NVIDIA MLNX_OFED/EN releases include firmware updates.
 
   Because each release provides new features, these updates must be applied to
   match the kernel modules and libraries they come with.
 
 Libraries and kernel modules can be provided either by the Linux distribution,
-or by installing Mellanox OFED/EN which provides compatibility with older kernels.
+or by installing NVIDIA MLNX_OFED/EN which provides compatibility with older kernels.
 
 
 Upstream Dependencies
@@ -159,15 +166,15 @@ It is possible to build rdma-core as static libraries starting with version 21::
     ninja
 
 
-Mellanox OFED/EN
-^^^^^^^^^^^^^^^^
+NVIDIA MLNX_OFED/EN
+^^^^^^^^^^^^^^^^^^^
 
 The kernel modules and libraries are packaged with other tools
-in Mellanox OFED or Mellanox EN.
+in NVIDIA MLNX_OFED or NVIDIA MLNX_EN.
 The minimal supported versions are:
 
-- Mellanox OFED version: **4.5** and above.
-- Mellanox EN version: **4.5** and above.
+- NVIDIA MLNX_OFED version: **4.5** and above.
+- NVIDIA MLNX_EN version: **4.5** and above.
 - Firmware version:
 
   - ConnectX-4: **12.21.1000** and above.
@@ -182,13 +189,13 @@ The minimal supported versions are:
   - BlueField-2: **24.28.1002** and above.
 
 The firmware, the libraries libibverbs, libmlx5, and mlnx-ofed-kernel modules
-are packaged in `Mellanox OFED
+are packaged in `NVIDIA MLNX_OFED
 <https://network.nvidia.com/products/infiniband-drivers/linux/mlnx_ofed/>`_.
 After downloading, it can be installed with this command::
 
    ./mlnxofedinstall --dpdk
 
-`Mellanox EN
+`NVIDIA EN
 <https://network.nvidia.com/products/ethernet-drivers/linux/mlnx_en/>`_
 is a smaller package including what is needed for DPDK.
 After downloading, it can be installed with this command::
@@ -201,7 +208,7 @@ After installing, the firmware version can be checked::
 
 .. note::
 
-   Several versions of Mellanox OFED/EN are available. Installing the version
+   Several versions of NVIDIA MLNX_OFED/EN are available. Installing the version
    this DPDK release was developed and tested against is strongly recommended.
    Please check the "Tested Platforms" section in the :doc:`../../rel_notes/index`.
 
