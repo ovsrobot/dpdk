@@ -1829,6 +1829,13 @@ slave_start(struct rte_eth_dev *bonded_eth_dev,
 				slave_eth_dev->data->port_id, errval);
 		}
 
+		errval = rte_eth_dev_start(slave_eth_dev->data->port_id);
+		if (errval != 0) {
+			RTE_BOND_LOG(ERR, "rte_eth_dev_start: port=%u, err (%d)",
+					slave_eth_dev->data->port_id, errval);
+			return -1;
+		}
+
 		errval = bond_ethdev_8023ad_flow_set(bonded_eth_dev,
 				slave_eth_dev->data->port_id);
 		if (errval != 0) {
@@ -1840,11 +1847,13 @@ slave_start(struct rte_eth_dev *bonded_eth_dev,
 	}
 
 	/* Start device */
-	errval = rte_eth_dev_start(slave_eth_dev->data->port_id);
-	if (errval != 0) {
-		RTE_BOND_LOG(ERR, "rte_eth_dev_start: port=%u, err (%d)",
-				slave_eth_dev->data->port_id, errval);
-		return -1;
+	if (!slave_eth_dev->data->dev_started) {
+		errval = rte_eth_dev_start(slave_eth_dev->data->port_id);
+		if (errval != 0) {
+			RTE_BOND_LOG(ERR, "rte_eth_dev_start: port=%u, err (%d)",
+					slave_eth_dev->data->port_id, errval);
+			return -1;
+		}
 	}
 
 	/* If RSS is enabled for bonding, synchronize RETA */
