@@ -71,6 +71,10 @@ New Features
   User can choose length or protocol header to configure buffer split
   according to NIC's capability.
 
+* **Updated Intel ice driver.**
+
+  Added protocol based buffer split support in scalar path.
+
 
 Removed Items
 -------------
