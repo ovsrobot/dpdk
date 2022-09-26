@@ -55,10 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Extended Metering and Marking support in the Flow API.**
+
+  * Added METER_COLOR item to match Color Marker set by a Meter.
+
 * **Updated Wangxun ngbe driver.**
 
   * Added support to set device link down/up.
-
 
 Removed Items
 -------------
