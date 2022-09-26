@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Netronome nfp driver.**
+
+  Add the needed data structures and logics to support the offload of rte_flow:
+
+    * Added the support of flower firmware.
+    * Added the flower service infrastructure.
+
 * **Updated Wangxun ngbe driver.**
 
   * Added support to set device link down/up.
