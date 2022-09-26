@@ -1401,11 +1401,6 @@ F: doc/guides/rawdevs/ntb.rst
 F: examples/ntb/
 F: doc/guides/sample_app_ug/ntb.rst
 
-NXP DPAA2 CMDIF
-M: Gagandeep Singh <g.singh@nxp.com>
-F: drivers/raw/dpaa2_cmdif/
-F: doc/guides/rawdevs/dpaa2_cmdif.rst
-
 
 Packet processing
 -----------------

@@ -13,7 +13,6 @@ application through rawdev API.
 
     cnxk_bphy
     cnxk_gpio
-    dpaa2_cmdif
     ifpga
     ioat
     ntb

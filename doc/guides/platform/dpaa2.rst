@@ -36,11 +36,7 @@ Common Offload HW Block Drivers
 
    See :doc:`../eventdevs/dpaa2` for NXP dpaa2 eventdev driver information.
 
-4. **Rawdev AIOP CMDIF Driver**
-
-   See :doc:`../rawdevs/dpaa2_cmdif` for NXP dpaa2 AIOP command interface driver information.
-
-5. **DMA Driver**
+4. **DMA Driver**
 
    See :doc:`../dmadevs/dpaa2` for NXP dpaa2 QDMA driver information.
 
