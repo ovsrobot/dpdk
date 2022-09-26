@@ -58,6 +58,7 @@ def _env_arg(env_var: str) -> Any:
 class _Settings:
     config_file_path: str
     verbose: bool
+    timeout: float
 
 
 def _get_parser() -> argparse.ArgumentParser:
@@ -82,6 +83,16 @@ def _get_parser() -> argparse.ArgumentParser:
         "to the console.",
     )
 
+    parser.add_argument(
+        "-t",
+        "--timeout",
+        action=_env_arg("DTS_TIMEOUT"),
+        default=15,
+        required=False,
+        help="[DTS_TIMEOUT] The default timeout for all DTS operations except for "
+        "compiling DPDK.",
+    )
+
     return parser
 
 
@@ -90,6 +101,7 @@ def _get_settings() -> _Settings:
     return _Settings(
         config_file_path=parsed_args.config_file,
         verbose=(parsed_args.verbose == "Y"),
+        timeout=float(parsed_args.timeout),
     )
 
 
