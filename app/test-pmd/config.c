@@ -4746,6 +4746,94 @@ show_rx_pkt_segments(void)
 	}
 }
 
+static const char *get_ptype_str(uint32_t ptype)
+{
+	switch (ptype) {
+	case RTE_PTYPE_L2_ETHER:
+		return "eth";
+	case RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV4_EXT_UNKNOWN:
+		return "eth-ipv4";
+	case RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV6_EXT_UNKNOWN:
+		return "eth-ipv6";
+	case RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_L4_TCP:
+		return "eth-ipv4-tcp";
+	case RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_L4_TCP:
+		return "eth-ipv6-tcp";
+	case RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_L4_UDP:
+		return "eth-ipv4-udp";
+	case RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_L4_UDP:
+		return "eth-ipv6-udp";
+	case RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_L4_SCTP:
+		return "eth-ipv4-sctp";
+	case RTE_PTYPE_L2_ETHER | RTE_PTYPE_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_L4_SCTP:
+		return "eth-ipv6-sctp";
+	case RTE_PTYPE_TUNNEL_GRENAT | RTE_PTYPE_INNER_L2_ETHER:
+		return "grenat-eth";
+	case RTE_PTYPE_TUNNEL_GRENAT|RTE_PTYPE_INNER_L2_ETHER|RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN:
+		return "grenat-eth-ipv4";
+	case RTE_PTYPE_TUNNEL_GRENAT|RTE_PTYPE_INNER_L2_ETHER|RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN:
+		return "grenat-eth-ipv6";
+	case RTE_PTYPE_TUNNEL_GRENAT | RTE_PTYPE_INNER_L2_ETHER |
+		RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP:
+		return "grenat-eth-ipv4-tcp";
+	case RTE_PTYPE_TUNNEL_GRENAT | RTE_PTYPE_INNER_L2_ETHER |
+		RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP:
+		return "grenat-eth-ipv6-tcp";
+	case RTE_PTYPE_TUNNEL_GRENAT | RTE_PTYPE_INNER_L2_ETHER |
+		RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_UDP:
+		return "grenat-eth-ipv4-udp";
+	case RTE_PTYPE_TUNNEL_GRENAT | RTE_PTYPE_INNER_L2_ETHER |
+		RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_UDP:
+		return "grenat-eth-ipv6-udp";
+	case RTE_PTYPE_TUNNEL_GRENAT | RTE_PTYPE_INNER_L2_ETHER |
+		RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP:
+		return "grenat-eth-ipv4-sctp";
+	case RTE_PTYPE_TUNNEL_GRENAT | RTE_PTYPE_INNER_L2_ETHER |
+		RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP:
+		return "grenat-eth-ipv6-sctp";
+	default:
+		return "unsupported";
+	}
+}
+
+void
+show_rx_pkt_hdrs(void)
+{
+	uint32_t i, n;
+
+	n = rx_pkt_nb_segs;
+	printf("Number of segments: %u\n", n);
+	if (n) {
+		printf("Packet segs: ");
+		for (i = 0; i < n - 1; i++)
+			printf("%s, ", get_ptype_str(rx_pkt_hdr_protos[i]));
+		printf("payload\n");
+	}
+}
+
+void
+set_rx_pkt_hdrs(unsigned int *seg_hdrs, unsigned int nb_segs)
+{
+	unsigned int i;
+
+	if (nb_segs + 1 > MAX_SEGS_BUFFER_SPLIT) {
+		printf("nb segments per RX packets=%u > "
+		       "MAX_SEGS_BUFFER_SPLIT - ignored\n", nb_segs + 1);
+		return;
+	}
+
+	memset(rx_pkt_hdr_protos, 0, sizeof(rx_pkt_hdr_protos));
+
+	for (i = 0; i < nb_segs; i++)
+		rx_pkt_hdr_protos[i] = (uint32_t)seg_hdrs[i];
+	rx_pkt_hdr_protos[nb_segs] = RTE_PTYPE_ALL_MASK;
+	/*
+	 * We calculate the number of hdrs, but payload is not included,
+	 * so rx_pkt_nb_segs would increase 1.
+	 */
+	rx_pkt_nb_segs = nb_segs + 1;
+}
+
 void
 set_rx_pkt_segments(unsigned int *seg_lengths, unsigned int nb_segs)
 {
