@@ -2453,6 +2453,9 @@ ice_dev_stop(struct rte_eth_dev *dev)
 	struct rte_intr_handle *intr_handle = pci_dev->intr_handle;
 	uint16_t i;
 
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+               return 0;
+
 	/* avoid stopping again */
 	if (pf->adapter_stopped)
 		return 0;
@@ -3690,6 +3693,9 @@ static int
 ice_dev_reset(struct rte_eth_dev *dev)
 {
 	int ret;
+
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+                return -ENOTSUP;
 
 	if (dev->data->sriov.active)
 		return -ENOTSUP;
