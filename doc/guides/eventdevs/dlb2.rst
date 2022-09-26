@@ -414,3 +414,22 @@ Note that the weight may not exceed the maximum CQ depth.
        --allow ea:00.0,cq_weight=all:<weight>
        --allow ea:00.0,cq_weight=qidA-qidB:<weight>
        --allow ea:00.0,cq_weight=qid:<weight>
+
+Default LDB Port Allocation
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For optimal load balancing ports that map to one or more QIDs in common
+should not be in numerical sequence. The port->QID mapping is application
+dependent, but the driver interleaves port IDs as much as possible to
+reduce the likelihood of sequential ports mapping to the same QID(s).
+
+Hence, DLB uses an initial allocation of Port IDs to maximize the
+average distance between an ID and its immediate neighbors. (i.e.the
+distance from 1 to 0 and to 2, the distance from 2 to 1 and to 3, etc.).
+Initial port allocation option can be passed through devarg. If y (or Y)
+inial port allocation will be used, otherwise initial port allocation
+won't be used.
+
+    .. code-block:: console
+
+       --allow ea:00.0,default_port_allocation=<y/Y>
