@@ -276,6 +276,44 @@ API Overview for Ethernet PMD Power Management
 * **Set Scaling Max Freq**: Set the maximum frequency (kHz) to be used in Frequency
   Scaling mode.
 
+Uncore API
+----------
+
+Abstract
+~~~~~~~~
+
+Uncore is a term used by Intel to describe the functions of a microprocessor that are
+not in the core, but which must be closely connected to the core to achieve high performance;
+L3 cache, on-die memory controller, etc.
+Significant power savings can be achieved by reducing the uncore frequency to its lowest value.
+
+The Linux kernel provides the driver “intel-uncore-frequency" to control the uncore frequency limits
+for x86 platform. The driver is available from kernel version 5.6 and above.
+Also CONFIG_INTEL_UNCORE_FREQ_CONTROL will need to be enabled in the kernel, which was added in 5.6.
+This manipulates the contest of MSR 0x620, which sets min/max of the uncore for the SKU.
+
+
+API Overview for Uncore
+~~~~~~~~~~~~~~~~~~~~~~~
+* **Uncore Power Init**: Initialise uncore power, populate frequency array and record
+  original min & max for pkg & die.
+
+* **Uncore Power Exit**: Exit uncore power, restoring original min & max for pkg & die.
+
+* **Get Uncore Power Freq**: Get current uncore freq index for pkg & die.
+
+* **Set Uncore Power Freq**: Set min & max uncore freq index for pkg & die (min and max will be the same).
+
+* **Uncore Power Max**: Set max uncore freq index for pkg & die.
+
+* **Uncore Power Min**: Set min uncore freq index for pkg & die.
+
+* **Get Num Freqs**: Get the number of frequencies in the index array.
+
+* **Get Num Pkgs**: Get the number of packages (CPUs) on the system.
+
+* **Get Num Dies**: Get the number of die's on a given package.
+
 References
 ----------
 

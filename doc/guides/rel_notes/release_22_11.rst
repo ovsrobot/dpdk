@@ -67,6 +67,11 @@ New Features
 
   * Added support to set device link down/up.
 
+* **Added uncore frequency control API to the power library.**
+
+  Add api to allow uncore frequency adjustment. This is done through
+  manipulating related uncore frequency control sysfs entries to
+  adjust the minimum and maximum uncore frequency values.
 
 Removed Items
 -------------
