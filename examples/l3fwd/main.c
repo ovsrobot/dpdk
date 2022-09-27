@@ -91,6 +91,20 @@ uint32_t enabled_port_mask;
 int ipv6; /**< ipv6 is false by default. */
 uint32_t hash_entry_number = HASH_ENTRY_NUMBER_DEFAULT;
 
+/* Used for direct rearm mode */
+bool enabled_direct_rearm;/**< Flag to enable direct rearm mode. */
+uint8_t direct_rearm_entry_number; /**< Number of entry for direct rearm map. */
+/**< Direct rearm config parameters. */
+uint16_t direct_rearm_config[MAX_DIRECT_REARM_ENTRY_NUMBER][4];
+/**< Enable direct rearm flag for Rx queue . */
+bool queue_enabled_direct_rearm[RTE_MAX_ETHPORTS][MAX_DIRECT_REARM_QUEUE_PER_PORT];
+/**< Matrix for Rx queue mapping Tx port in direct rearm mode. */
+uint16_t direct_rearm_map_tx_port[RTE_MAX_ETHPORTS][MAX_DIRECT_REARM_QUEUE_PER_PORT];
+/**< Matrix for Rx queue mapping Tx queue in direct rearm mode. */
+uint16_t direct_rearm_map_tx_queue[RTE_MAX_ETHPORTS][MAX_DIRECT_REARM_QUEUE_PER_PORT];
+/**< Matrix for Rx queue mapping entry idx in direct rearm mode. */
+uint8_t direct_rearm_entry_idx[RTE_MAX_ETHPORTS][MAX_DIRECT_REARM_QUEUE_PER_PORT];
+
 struct lcore_conf lcore_conf[RTE_MAX_LCORE];
 
 struct parm_cfg parm_config;
@@ -403,6 +417,7 @@ print_usage(const char *prgname)
 		" [--mode]"
 		" [--eventq-sched]"
 		" [--event-vector [--event-vector-size SIZE] [--event-vector-tmo NS]]"
+		" --direct-rearm (rx_port, rx_queue, tx_port, tx_queue)[,(rx_port, rx_queue, tx_port, tx_queue)]"
 		" [-E]"
 		" [-L]\n\n"
 
@@ -436,6 +451,7 @@ print_usage(const char *prgname)
 		"  --event-vector:  Enable event vectorization.\n"
 		"  --event-vector-size: Max vector size if event vectorization is enabled.\n"
 		"  --event-vector-tmo: Max timeout to form vector in nanoseconds if event vectorization is enabled\n"
+		"  --direct-rearm (rx_port, rx_queue, tx_port, tx_queue): Put Tx queue sw-ring buffers into Rx queue\n"
 		"  -E : Enable exact match, legacy flag please use --lookup=em instead\n"
 		"  -L : Enable longest prefix match, legacy flag please use --lookup=lpm instead\n"
 		"  --rule_ipv4=FILE: Specify the ipv4 rules entries file.\n"
@@ -670,6 +686,53 @@ parse_lookup(const char *optarg)
 	return 0;
 }
 
+static int
+parse_direct_rearm(const char *q_arg)
+{
+	char s[256];
+	const char *p, *p0 = q_arg;
+	char *end;
+	enum fieldnames {
+		FLD_RX_PORT = 0,
+		FLD_RX_QUEUE,
+		FLD_TX_PORT,
+		FLD_TX_QUEUE,
+		_NUM_FLD
+	};
+	unsigned long int_fld[_NUM_FLD];
+	char *str_fld[_NUM_FLD];
+	int i;
+	unsigned int size;
+
+	while ((p = strchr(p0, '(')) != NULL) {
+		++p;
+		p0 = strchr(p, ')');
+		if (p0 == NULL)
+			return -1;
+
+		size = p0 - p;
+		if (size >= sizeof(s))
+			return -1;
+
+		snprintf(s, sizeof(s), "%.*s", size, p);
+		if (rte_strsplit(s, sizeof(s), str_fld, _NUM_FLD, ',') != _NUM_FLD)
+			return -1;
+		for (i = 0; i < _NUM_FLD; i++) {
+			errno = 0;
+			int_fld[i] = strtoul(str_fld[i], &end, 0);
+			if (errno != 0 || end == str_fld[i] || int_fld[i] > 255)
+				return -1;
+		}
+
+		direct_rearm_config[direct_rearm_entry_number][0] = int_fld[FLD_RX_PORT];
+		direct_rearm_config[direct_rearm_entry_number][1] = int_fld[FLD_RX_QUEUE];
+		direct_rearm_config[direct_rearm_entry_number][2] = int_fld[FLD_TX_PORT];
+		direct_rearm_config[direct_rearm_entry_number][3] = int_fld[FLD_TX_QUEUE];
+		++direct_rearm_entry_number;
+	}
+	return 0;
+}
+
 #define MAX_JUMBO_PKT_LEN  9600
 
 static const char short_options[] =
@@ -696,6 +759,7 @@ static const char short_options[] =
 #define CMD_LINE_OPT_ENABLE_VECTOR "event-vector"
 #define CMD_LINE_OPT_VECTOR_SIZE "event-vector-size"
 #define CMD_LINE_OPT_VECTOR_TMO_NS "event-vector-tmo"
+#define CMD_LINE_OPT_DIRECT_REARM "direct-rearm"
 #define CMD_LINE_OPT_RULE_IPV4 "rule_ipv4"
 #define CMD_LINE_OPT_RULE_IPV6 "rule_ipv6"
 #define CMD_LINE_OPT_ALG "alg"
@@ -725,7 +789,8 @@ enum {
 	CMD_LINE_OPT_LOOKUP_NUM,
 	CMD_LINE_OPT_ENABLE_VECTOR_NUM,
 	CMD_LINE_OPT_VECTOR_SIZE_NUM,
-	CMD_LINE_OPT_VECTOR_TMO_NS_NUM
+	CMD_LINE_OPT_VECTOR_TMO_NS_NUM,
+	CMD_LINE_OPT_DIRECT_REARM_NUM
 };
 
 static const struct option lgopts[] = {
@@ -747,6 +812,7 @@ static const struct option lgopts[] = {
 	{CMD_LINE_OPT_ENABLE_VECTOR, 0, 0, CMD_LINE_OPT_ENABLE_VECTOR_NUM},
 	{CMD_LINE_OPT_VECTOR_SIZE, 1, 0, CMD_LINE_OPT_VECTOR_SIZE_NUM},
 	{CMD_LINE_OPT_VECTOR_TMO_NS, 1, 0, CMD_LINE_OPT_VECTOR_TMO_NS_NUM},
+	{CMD_LINE_OPT_DIRECT_REARM, 1, 0, CMD_LINE_OPT_DIRECT_REARM_NUM},
 	{CMD_LINE_OPT_RULE_IPV4,   1, 0, CMD_LINE_OPT_RULE_IPV4_NUM},
 	{CMD_LINE_OPT_RULE_IPV6,   1, 0, CMD_LINE_OPT_RULE_IPV6_NUM},
 	{CMD_LINE_OPT_ALG,   1, 0, CMD_LINE_OPT_ALG_NUM},
@@ -911,6 +977,15 @@ parse_args(int argc, char **argv)
 			break;
 		case CMD_LINE_OPT_VECTOR_TMO_NS_NUM:
 			evt_rsrc->vector_tmo_ns = strtoull(optarg, NULL, 10);
+			break;
+		case CMD_LINE_OPT_DIRECT_REARM_NUM:
+			enabled_direct_rearm = 1;
+			ret = parse_direct_rearm(optarg);
+			if (ret) {
+				fprintf(stderr, "Invalid direct rearm map\n");
+				print_usage(prgname);
+				return -1;
+				}
 			break;
 		case CMD_LINE_OPT_RULE_IPV4_NUM:
 			l3fwd_set_rule_ipv4_name(optarg);
@@ -1591,6 +1666,23 @@ main(int argc, char **argv)
 			queueid = qconf->rx_queue_list[queue].queue_id;
 			if (prepare_ptype_parser(portid, queueid) == 0)
 				rte_exit(EXIT_FAILURE, "ptype check fails\n");
+		}
+	}
+
+	if (enabled_direct_rearm) {
+		uint16_t rx_port, tx_port;
+		uint8_t rx_queue, tx_queue;
+		uint8_t m = 0;
+		while (m < direct_rearm_entry_number) {
+			rx_port = direct_rearm_config[m][0];
+			rx_queue = direct_rearm_config[m][1];
+			tx_port = direct_rearm_config[m][2];
+			tx_queue = direct_rearm_config[m][3];
+			queue_enabled_direct_rearm[rx_port][rx_queue] = 1;
+			direct_rearm_map_tx_port[rx_port][rx_queue] = tx_port;
+			direct_rearm_map_tx_queue[rx_port][rx_queue] = tx_queue;
+			direct_rearm_entry_idx[rx_port][rx_queue] = m;
+			m++;
 		}
 	}
 

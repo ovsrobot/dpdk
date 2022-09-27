@@ -150,6 +150,8 @@ lpm_main_loop(__rte_unused void *dummy)
 	int i, nb_rx;
 	uint16_t portid;
 	uint8_t queueid;
+	uint8_t idx;
+	struct rte_eth_txq_data txq_data[MAX_DIRECT_REARM_ENTRY_NUMBER];
 	struct lcore_conf *qconf;
 	const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) /
 		US_PER_S * BURST_TX_DRAIN_US;
@@ -173,6 +175,20 @@ lpm_main_loop(__rte_unused void *dummy)
 		RTE_LOG(INFO, L3FWD,
 			" -- lcoreid=%u portid=%u rxqueueid=%hhu\n",
 			lcore_id, portid, queueid);
+	}
+
+	if (enabled_direct_rearm) {
+		uint16_t tx_portid;
+		uint8_t tx_queueid;
+
+		for (i = 0; i < n_rx_q; i++) {
+			portid = qconf->rx_queue_list[i].port_id;
+			queueid = qconf->rx_queue_list[i].queue_id;
+			tx_portid = direct_rearm_map_tx_port[portid][queueid];
+			tx_queueid = direct_rearm_map_tx_queue[portid][queueid];
+			idx = direct_rearm_entry_idx[portid][queueid];
+			rte_eth_tx_queue_data_get(tx_portid, tx_queueid, &(txq_data[idx]));
+		}
 	}
 
 	cur_tsc = rte_rdtsc();
@@ -205,6 +221,12 @@ lpm_main_loop(__rte_unused void *dummy)
 		for (i = 0; i < n_rx_q; ++i) {
 			portid = qconf->rx_queue_list[i].port_id;
 			queueid = qconf->rx_queue_list[i].queue_id;
+
+			if (queue_enabled_direct_rearm[portid][queueid]) {
+				idx = direct_rearm_entry_idx[portid][queueid];
+				rte_eth_rx_direct_rearm(portid, queueid, &(txq_data[idx]));
+			}
+
 			nb_rx = rte_eth_rx_burst(portid, queueid, pkts_burst,
 				MAX_PKT_BURST);
 			if (nb_rx == 0)

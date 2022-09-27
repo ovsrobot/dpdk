@@ -57,6 +57,10 @@
 #endif
 #define HASH_ENTRY_NUMBER_DEFAULT	16
 
+/* MAX number of direct rearm mapping entry */
+#define MAX_DIRECT_REARM_ENTRY_NUMBER   16
+#define MAX_DIRECT_REARM_QUEUE_PER_PORT 8
+
 struct parm_cfg {
 	const char *rule_ipv4_name;
 	const char *rule_ipv6_name;
@@ -113,6 +117,14 @@ extern struct lcore_conf lcore_conf[RTE_MAX_LCORE];
 extern struct parm_cfg parm_config;
 
 extern struct acl_algorithms acl_alg[];
+
+/* Used in direct rearm mode */
+extern bool enabled_direct_rearm;
+extern uint8_t direct_rearm_entry_number;
+extern bool queue_enabled_direct_rearm[RTE_MAX_ETHPORTS][MAX_DIRECT_REARM_QUEUE_PER_PORT];
+extern uint16_t direct_rearm_map_tx_port[RTE_MAX_ETHPORTS][MAX_DIRECT_REARM_QUEUE_PER_PORT];
+extern uint16_t direct_rearm_map_tx_queue[RTE_MAX_ETHPORTS][MAX_DIRECT_REARM_QUEUE_PER_PORT];
+extern uint8_t direct_rearm_entry_idx[RTE_MAX_ETHPORTS][MAX_DIRECT_REARM_QUEUE_PER_PORT];
 
 /* Send burst of packets on an output interface */
 static inline int
