@@ -204,6 +204,9 @@ API Changes
   Names for the telemetry commands are now similarly limited.
   The parameters for telemetry commands are unaffected by this change.
 
+* vhost: Removed deprecated ``rte_vhost_gpa_to_vva`` and
+  ``rte_vhost_get_queue_num`` helpers.
+
 * raw/ifgpa: The function ``rte_pmd_ifpga_get_pci_bus`` has been removed.
 
 
