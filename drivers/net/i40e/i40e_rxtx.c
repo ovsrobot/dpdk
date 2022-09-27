@@ -3197,6 +3197,24 @@ i40e_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 	qinfo->conf.offloads = txq->offloads;
 }
 
+void
+i40e_txq_data_get(struct rte_eth_dev *dev, uint16_t queue_id,
+			struct rte_eth_txq_data *txq_data)
+{
+	struct i40e_tx_queue *txq;
+
+	txq = dev->data->tx_queues[queue_id];
+
+	txq_data->offloads = &txq->offloads;
+	txq_data->tx_sw_ring = txq->sw_ring;
+	txq_data->tx_ring = txq->tx_ring;
+	txq_data->tx_next_dd = &txq->tx_next_dd;
+	txq_data->nb_tx_free = &txq->nb_tx_free;
+	txq_data->nb_tx_desc = txq->nb_tx_desc;
+	txq_data->tx_rs_thresh = txq->tx_rs_thresh;
+	txq_data->tx_free_thresh = txq->tx_free_thresh;
+}
+
 #ifdef RTE_ARCH_X86
 static inline bool
 get_avx_supported(bool request_avx512)
@@ -3321,6 +3339,7 @@ i40e_set_rx_function(struct rte_eth_dev *dev)
 			PMD_INIT_LOG(DEBUG, "Using Vector Rx (port %d).",
 				     dev->data->port_id);
 			dev->rx_pkt_burst = i40e_recv_pkts_vec;
+			dev->rx_direct_rearm = i40e_direct_rearm_vec;
 		}
 #endif /* RTE_ARCH_X86 */
 	} else if (!dev->data->scattered_rx && ad->rx_bulk_alloc_allowed) {

@@ -762,3 +762,96 @@ i40e_rx_vec_dev_conf_condition_check(struct rte_eth_dev *dev)
 {
 	return i40e_rx_vec_dev_conf_condition_check_default(dev);
 }
+
+uint16_t
+i40e_direct_rearm_vec(void *rx_queue, struct rte_eth_txq_data *txq_data)
+{
+	struct i40e_rx_queue *rxq = rx_queue;
+	struct i40e_rx_entry *rxep;
+	struct i40e_tx_entry *txep;
+	volatile union i40e_rx_desc *rxdp;
+	volatile struct i40e_tx_desc *tx_ring;
+	struct rte_mbuf *m;
+	uint16_t rx_id;
+	uint64x2_t dma_addr;
+	uint64_t paddr;
+	uint16_t i, n;
+	uint16_t nb_rearm;
+
+	if (rxq->rxrearm_nb > txq_data->tx_rs_thresh &&
+			*txq_data->nb_tx_free < txq_data->tx_free_thresh) {
+		tx_ring = txq_data->tx_ring;
+		/* check DD bits on threshold descriptor */
+		if ((tx_ring[*txq_data->tx_next_dd].cmd_type_offset_bsz &
+				rte_cpu_to_le_64(I40E_TXD_QW1_DTYPE_MASK)) !=
+				rte_cpu_to_le_64(I40E_TX_DESC_DTYPE_DESC_DONE)) {
+			return 0;
+		}
+		n = txq_data->tx_rs_thresh;
+
+		/* first buffer to free from S/W ring is at index
+		 * tx_next_dd - (tx_rs_thresh-1)
+		 */
+		txep = txq_data->tx_sw_ring;
+		txep += *txq_data->tx_next_dd - (txq_data->tx_rs_thresh - 1);
+		rxep = &rxq->sw_ring[rxq->rxrearm_start];
+		rxdp = rxq->rx_ring + rxq->rxrearm_start;
+
+		if (*txq_data->offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) {
+			/* directly put mbufs from Tx to Rx,
+			 * and initialize the mbufs in vector
+			 */
+			for (i = 0; i < n; i++, rxep++, txep++) {
+				rxep[0].mbuf = txep[0].mbuf;
+
+				/* Initialize rxdp descs */
+				m = txep[0].mbuf;
+				paddr = m->buf_iova + RTE_PKTMBUF_HEADROOM;
+				dma_addr = vdupq_n_u64(paddr);
+				/* flush desc with pa dma_addr */
+				vst1q_u64((uint64_t *)&rxdp++->read, dma_addr);
+			}
+		} else {
+			for (i = 0, nb_rearm = 0; i < n; i++) {
+				m = rte_pktmbuf_prefree_seg(txep[i].mbuf);
+				if (m != NULL) {
+					rxep[i].mbuf = m;
+
+					/* Initialize rxdp descs */
+					paddr = m->buf_iova + RTE_PKTMBUF_HEADROOM;
+					dma_addr = vdupq_n_u64(paddr);
+					/* flush desc with pa dma_addr */
+					vst1q_u64((uint64_t *)&rxdp++->read, dma_addr);
+					nb_rearm++;
+				}
+			}
+			n = nb_rearm;
+		}
+
+		/* update counters for Tx */
+		*txq_data->nb_tx_free = *txq_data->nb_tx_free + txq_data->tx_rs_thresh;
+		*txq_data->tx_next_dd = *txq_data->tx_next_dd + txq_data->tx_rs_thresh;
+		if (*txq_data->tx_next_dd >= txq_data->nb_tx_desc)
+			*txq_data->tx_next_dd = txq_data->tx_rs_thresh - 1;
+
+		/* Update the descriptor initializer index */
+		rxq->rxrearm_start += n;
+		rx_id = rxq->rxrearm_start - 1;
+
+		if (unlikely(rxq->rxrearm_start >= rxq->nb_rx_desc)) {
+			rxq->rxrearm_start = rxq->rxrearm_start - rxq->nb_rx_desc;
+			if (!rxq->rxrearm_start)
+				rx_id = rxq->nb_rx_desc - 1;
+			else
+				rx_id = rxq->rxrearm_start - 1;
+		}
+		rxq->rxrearm_nb -= n;
+
+		rte_io_wmb();
+		/* Update the tail pointer on the NIC */
+		I40E_PCI_REG_WRITE_RELAXED(rxq->qrx_tail, rx_id);
+		return n;
+	}
+
+	return 0;
+}

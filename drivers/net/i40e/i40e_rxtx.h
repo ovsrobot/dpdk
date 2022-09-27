@@ -216,6 +216,8 @@ uint16_t i40e_simple_prep_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 			       uint16_t nb_pkts);
 uint16_t i40e_prep_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 		uint16_t nb_pkts);
+uint16_t i40e_direct_rearm_vec(void *rx_queue,
+			  struct rte_eth_txq_data *txq_data);
 int i40e_tx_queue_init(struct i40e_tx_queue *txq);
 int i40e_rx_queue_init(struct i40e_rx_queue *rxq);
 void i40e_free_tx_resources(struct i40e_tx_queue *txq);
