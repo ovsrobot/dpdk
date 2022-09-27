@@ -1667,6 +1667,23 @@ struct rte_eth_txq_info {
 	uint8_t queue_state;        /**< one of RTE_ETH_QUEUE_STATE_*. */
 } __rte_cache_min_aligned;
 
+/**
+ * @internal
+ * Structure used to hold pointers to internal ethdev Tx data.
+ * The main purpose is to load and store Tx queue data in direct rearm mode.
+ */
+struct rte_eth_txq_data {
+	uint64_t *offloads;
+	void *tx_sw_ring;
+	volatile void *tx_ring;
+	uint16_t *tx_next_dd;
+	uint16_t *nb_tx_free;
+	uint16_t nb_tx_desc;
+	uint16_t tx_rs_thresh;
+	uint16_t tx_free_thresh;
+} __rte_cache_min_aligned;
+
+
 /* Generic Burst mode flag definition, values can be ORed. */
 
 /**
@@ -4434,6 +4451,27 @@ int rte_eth_remove_tx_callback(uint16_t port_id, uint16_t queue_id,
 		const struct rte_eth_rxtx_callback *user_cb);
 
 /**
+ * Get the address which Tx data is stored.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param queue_id
+ *   The Tx queue on the Ethernet device for which information
+ *   will be retrieved.
+ * @param txq_data
+ *   A pointer to a structure of type *rte_eth_txq_data* to be filled.
+ *
+ * @return
+ *   - 0: Success
+ *   - -ENODEV:  If *port_id* is invalid.
+ *   - -ENOTSUP: routine is not supported by the device PMD.
+ *   - -EINVAL:  The queue_id is out of range.
+ */
+__rte_experimental
+int rte_eth_tx_queue_data_get(uint16_t port_id, uint16_t queue_id,
+		struct rte_eth_txq_data *txq_data);
+
+/**
  * Retrieve information about given port's Rx queue.
  *
  * @param port_id
@@ -5922,6 +5960,63 @@ rte_eth_tx_buffer(uint16_t port_id, uint16_t queue_id,
 		return 0;
 
 	return rte_eth_tx_buffer_flush(port_id, queue_id, buffer);
+}
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Put Tx buffers into Rx sw-ring and rearm descs.
+ *
+ * @param port_id
+ *   Port identifying the receive side.
+ * @param queue_id
+ *   The index of the transmit queue identifying the receive side.
+ *   The value must be in the range [0, nb_rx_queue - 1] previously supplied
+ *   to rte_eth_dev_configure().
+ * @param txq_data
+ *   A pointer to a structure of type *rte_eth_txq_data* to be filled.
+ * @return
+ *   The number of direct-rearmed buffers.
+ */
+__rte_experimental
+static __rte_always_inline uint16_t
+rte_eth_rx_direct_rearm(uint16_t port_id, uint16_t queue_id,
+		struct rte_eth_txq_data *txq_data)
+{
+	uint16_t nb_rearm;
+	struct rte_eth_fp_ops *p;
+	void *qd;
+
+#ifdef RTE_ETHDEV_DEBUG_RX
+	if (port_id >= RTE_MAX_ETHPORTS ||
+			queue_id >= RTE_MAX_QUEUES_PER_PORT) {
+		RTE_ETHDEV_LOG(ERR,
+			"Invalid port_id=%u or queue_id=%u\n",
+			port_id, queue_id);
+		return 0;
+	}
+#endif
+
+	p = &rte_eth_fp_ops[port_id];
+	qd = p->rxq.data[queue_id];
+
+#ifdef RTE_ETHDEV_DEBUG_RX
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, 0);
+
+	if (qd == NULL) {
+		RTE_ETHDEV_LOG(ERR, "Invalid Rx queue_id=%u for port_id=%u\n",
+			queue_id, port_id);
+		return 0;
+	}
+
+	if (!p->rx_direct_rearm)
+		return -ENOTSUP;
+#endif
+
+	nb_rearm = p->rx_direct_rearm(qd, txq_data);
+
+	return nb_rearm;
 }
 
 #ifdef __cplusplus

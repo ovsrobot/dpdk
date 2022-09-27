@@ -276,6 +276,7 @@ eth_dev_fp_ops_setup(struct rte_eth_fp_ops *fpo,
 	fpo->rx_queue_count = dev->rx_queue_count;
 	fpo->rx_descriptor_status = dev->rx_descriptor_status;
 	fpo->tx_descriptor_status = dev->tx_descriptor_status;
+	fpo->rx_direct_rearm = dev->rx_direct_rearm;
 
 	fpo->rxq.data = dev->data->rx_queues;
 	fpo->rxq.clbk = (void **)(uintptr_t)dev->post_rx_burst_cbs;

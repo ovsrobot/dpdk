@@ -56,6 +56,9 @@ typedef int (*eth_rx_descriptor_status_t)(void *rxq, uint16_t offset);
 /** @internal Check the status of a Tx descriptor */
 typedef int (*eth_tx_descriptor_status_t)(void *txq, uint16_t offset);
 
+/** @internal Put Tx buffers into Rx sw-ring and rearm descs */
+typedef uint16_t (*eth_rx_direct_rearm_t)(void *rxq, struct rte_eth_txq_data *txq_data);
+
 /**
  * @internal
  * Structure used to hold opaque pointers to internal ethdev Rx/Tx
@@ -90,6 +93,8 @@ struct rte_eth_fp_ops {
 	eth_rx_queue_count_t rx_queue_count;
 	/** Check the status of a Rx descriptor. */
 	eth_rx_descriptor_status_t rx_descriptor_status;
+	/** Put Tx buffers into Rx sw-ring and rearm descs */
+	eth_rx_direct_rearm_t rx_direct_rearm;
 	/** Rx queues data. */
 	struct rte_ethdev_qdata rxq;
 	uintptr_t reserved1[3];

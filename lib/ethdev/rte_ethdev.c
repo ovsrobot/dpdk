@@ -1648,6 +1648,43 @@ rte_eth_dev_is_removed(uint16_t port_id)
 	return ret;
 }
 
+int
+rte_eth_tx_queue_data_get(uint16_t port_id, uint16_t queue_id,
+			struct rte_eth_txq_data *txq_data)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (queue_id >= dev->data->nb_tx_queues) {
+		RTE_ETHDEV_LOG(ERR, "Invalid Tx queue_id=%u\n", queue_id);
+		return -EINVAL;
+	}
+
+	if (txq_data == NULL) {
+		RTE_ETHDEV_LOG(ERR, "Cannot get ethdev port %u Tx queue %u data to NULL\n",
+			port_id, queue_id);
+		return -EINVAL;
+	}
+
+	if (dev->data->tx_queues == NULL ||
+			dev->data->tx_queues[queue_id] == NULL) {
+		RTE_ETHDEV_LOG(ERR,
+			   "Tx queue %"PRIu16" of device with port_id=%"
+			   PRIu16" has not been setup\n",
+			   queue_id, port_id);
+		return -EINVAL;
+	}
+
+	if (*dev->dev_ops->txq_data_get == NULL)
+		return -ENOTSUP;
+
+	dev->dev_ops->txq_data_get(dev, queue_id, txq_data);
+
+	return 0;
+}
+
 static int
 rte_eth_rx_queue_check_split(const struct rte_eth_rxseg_split *rx_seg,
 			     uint16_t n_seg, uint32_t *mbp_buf_size,
