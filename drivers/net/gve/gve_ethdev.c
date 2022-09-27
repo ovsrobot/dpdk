@@ -583,6 +583,11 @@ gve_dev_init(struct rte_eth_dev *eth_dev)
 	if (err)
 		return err;
 
+	if (gve_is_gqi(priv)) {
+		eth_dev->rx_pkt_burst = gve_rx_burst;
+		eth_dev->tx_pkt_burst = gve_tx_burst;
+	}
+
 	eth_dev->data->mac_addrs = rte_zmalloc("gve_mac", sizeof(struct rte_ether_addr), 0);
 	if (!eth_dev->data->mac_addrs) {
 		PMD_DRV_LOG(ERR, "Failed to allocate memory to store mac address");
