@@ -59,6 +59,11 @@ New Features
 
   * Added support to set device link down/up.
 
+* **Added GVE net PMD**
+
+  * Added the new ``gve`` net driver for Google Virtual Ethernet devices.
+  * See the :doc:`../nics/gve` NIC guide for more details on this new driver.
+
 
 Removed Items
 -------------
