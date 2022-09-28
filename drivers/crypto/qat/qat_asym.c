@@ -906,6 +906,8 @@ qat_asym_process_response(void **out_op, uint8_t *resp,
 					" returned error");
 		}
 	}
+	if (op->status == RTE_CRYPTO_OP_STATUS_ERROR)
+		goto finalize;
 
 	switch (op->sess_type) {
 	case RTE_CRYPTO_OP_WITH_SESSION:
@@ -923,9 +925,10 @@ qat_asym_process_response(void **out_op, uint8_t *resp,
 	if (op->status == RTE_CRYPTO_OP_STATUS_NOT_PROCESSED) {
 		op->status = qat_asym_collect_response(op,
 					cookie, xform);
-		cleanup(cookie, xform, cookie->alg_bytesize);
 	}
 
+finalize:
+	cleanup(cookie, xform, cookie->alg_bytesize);
 	*out_op = op;
 	HEXDUMP("resp_msg:", resp_msg, sizeof(struct icp_qat_fw_pke_resp));
 
