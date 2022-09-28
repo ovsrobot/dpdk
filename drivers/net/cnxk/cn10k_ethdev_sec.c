@@ -9,6 +9,7 @@
 #include <rte_pmd_cnxk.h>
 
 #include <cn10k_ethdev.h>
+#include <cn10k_ethdev_mcs.h>
 #include <cnxk_security.h>
 #include <roc_priv.h>
 
@@ -601,7 +602,9 @@ cn10k_eth_sec_session_create(void *device,
 	if (conf->action_type != RTE_SECURITY_ACTION_TYPE_INLINE_PROTOCOL)
 		return -ENOTSUP;
 
-	if (conf->protocol != RTE_SECURITY_PROTOCOL_IPSEC)
+	if (conf->protocol == RTE_SECURITY_PROTOCOL_MACSEC)
+		return cn10k_eth_macsec_session_create(dev, conf, sess, mempool);
+	else if (conf->protocol != RTE_SECURITY_PROTOCOL_IPSEC)
 		return -ENOTSUP;
 
 	if (rte_security_dynfield_register() < 0)
@@ -1058,9 +1061,15 @@ cn10k_eth_sec_ops_override(void)
 	init_once = 1;
 
 	/* Update platform specific ops */
+	cnxk_eth_sec_ops.macsec_sa_create = cn10k_eth_macsec_sa_create;
+	cnxk_eth_sec_ops.macsec_sc_create = cn10k_eth_macsec_sc_create;
+	cnxk_eth_sec_ops.macsec_sa_destroy = cn10k_eth_macsec_sa_destroy;
+	cnxk_eth_sec_ops.macsec_sc_destroy = cn10k_eth_macsec_sc_destroy;
 	cnxk_eth_sec_ops.session_create = cn10k_eth_sec_session_create;
 	cnxk_eth_sec_ops.session_destroy = cn10k_eth_sec_session_destroy;
 	cnxk_eth_sec_ops.capabilities_get = cn10k_eth_sec_capabilities_get;
 	cnxk_eth_sec_ops.session_update = cn10k_eth_sec_session_update;
 	cnxk_eth_sec_ops.session_stats_get = cn10k_eth_sec_session_stats_get;
+	cnxk_eth_sec_ops.macsec_sc_stats_get = cn10k_eth_macsec_sc_stats_get;
+	cnxk_eth_sec_ops.macsec_sa_stats_get = cn10k_eth_macsec_sa_stats_get;
 }

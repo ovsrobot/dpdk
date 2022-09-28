@@ -2,6 +2,7 @@
  * Copyright(C) 2020 Marvell.
  */
 #include <cnxk_flow.h>
+#include "cn10k_ethdev_mcs.h"
 #include "cn10k_flow.h"
 #include "cn10k_ethdev.h"
 #include "cn10k_rx.h"
@@ -133,6 +134,7 @@ cn10k_flow_create(struct rte_eth_dev *eth_dev, const struct rte_flow_attr *attr,
 	const struct rte_flow_action *act_q = NULL;
 	struct roc_npc *npc = &dev->npc;
 	struct roc_npc_flow *flow;
+	void *mcs_flow = NULL;
 	int vtag_actions = 0;
 	uint32_t req_act = 0;
 	int i, rc;
@@ -184,6 +186,18 @@ cn10k_flow_create(struct rte_eth_dev *eth_dev, const struct rte_flow_attr *attr,
 			}
 			break;
 		}
+	}
+
+	if (actions[0].type == RTE_FLOW_ACTION_TYPE_SECURITY &&
+			cnxk_eth_macsec_sess_get_by_sess(dev, actions[0].conf) != NULL) {
+		rc = cn10k_mcs_flow_configure(eth_dev, attr, pattern, actions, error, &mcs_flow);
+		if (rc) {
+			rte_flow_error_set(error, rc,
+					RTE_FLOW_ERROR_TYPE_ACTION, NULL,
+					"Failed to configure mcs flow");
+			return NULL;
+		}
+		return (struct rte_flow *)mcs_flow;
 	}
 
 	flow = cnxk_flow_create(eth_dev, attr, pattern, actions, error);

@@ -337,6 +337,21 @@ struct cnxk_eth_dev_sec_outb {
 	rte_spinlock_t lock;
 };
 
+/* MACsec session private data */
+struct cnxk_macsec_sess {
+	/* List entry */
+	TAILQ_ENTRY(cnxk_macsec_sess) entry;
+
+	/* Back pointer to session */
+	struct rte_security_session *sess;
+	enum rte_security_macsec_direction dir;
+	uint64_t sci;
+	uint8_t secy_id;
+	uint8_t sc_id;
+	uint8_t flow_id;
+};
+TAILQ_HEAD(cnxk_macsec_sess_list, cnxk_macsec_sess);
+
 struct cnxk_eth_dev {
 	/* ROC NIX */
 	struct roc_nix nix;
@@ -437,6 +452,10 @@ struct cnxk_eth_dev {
 	/* Reassembly dynfield/flag offsets */
 	int reass_dynfield_off;
 	int reass_dynflag_bit;
+
+	/* MCS device */
+	struct cnxk_mcs_dev *mcs_dev;
+	struct cnxk_macsec_sess_list mcs_list;
 };
 
 struct cnxk_eth_rxq_sp {
@@ -648,6 +667,18 @@ cnxk_eth_sec_sess_get_by_sess(struct cnxk_eth_dev *dev,
 			      struct rte_security_session *sess);
 int cnxk_nix_inl_meta_pool_cb(uint64_t *aura_handle, uint32_t buf_sz, uint32_t nb_bufs,
 			      bool destroy);
+
+struct cnxk_mcs_dev * cnxk_mcs_dev_init(uint8_t mcs_idx);
+void cnxk_mcs_dev_fini(struct cnxk_mcs_dev *mcs_dev);
+
+struct cnxk_macsec_sess *
+cnxk_eth_macsec_sess_get_by_sess(struct cnxk_eth_dev *dev,
+				 const struct rte_security_session *sess);
+int cn10k_mcs_flow_configure(struct rte_eth_dev *eth_dev,
+			     const struct rte_flow_attr *attr,
+			     const struct rte_flow_item pattern[],
+			     const struct rte_flow_action actions[],
+			     struct rte_flow_error *error, void **mcs_flow);
 
 /* Other private functions */
 int nix_recalc_mtu(struct rte_eth_dev *eth_dev);

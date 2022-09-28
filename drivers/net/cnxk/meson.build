@@ -106,6 +106,7 @@ sources += files(
 # CN10K
 sources += files(
         'cn10k_ethdev.c',
+        'cn10k_ethdev_mcs.c',
         'cn10k_ethdev_sec.c',
         'cn10k_flow.c',
         'cn10k_rx_select.c',
