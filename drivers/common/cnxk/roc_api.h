@@ -106,4 +106,7 @@
 /* NIX Inline dev */
 #include "roc_nix_inl.h"
 
+/* MACsec */
+#include "roc_mcs.h"
+
 #endif /* _ROC_API_H_ */
