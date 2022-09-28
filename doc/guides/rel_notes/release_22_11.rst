@@ -80,6 +80,10 @@ New Features
   * Added ``rte_event_eth_tx_adapter_instance_get`` to get Tx adapter
     instance ID for specified ethernet device ID and Tx queue index.
 
+* **Added ShangMi 4 (SM4) encryption algorithm in ECB, CBC and CTR mode to the cryptodev.**
+
+   Added ``RTE_CRYPTO_CIPHER_SM4_ECB``, ``RTE_CRYPTO_CIPHER_SM4_CBC``,
+   ``RTE_CRYPTO_CIPHER_SM4_CTR`` to the cipher algorithm list in the cryptodev.
 
 Removed Items
 -------------
