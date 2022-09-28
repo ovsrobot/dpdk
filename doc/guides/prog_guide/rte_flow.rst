@@ -3611,6 +3611,13 @@ the maximum number of flow rules is defined at table creation time.
 Any flow rule creation beyond the maximum table size is rejected.
 Application may create another table to accommodate more rules in this case.
 
+Attribute: transfer_mode
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is an optional table attribute and meaningless if `Attribute: Transfer`
+is not specified. It doesn't expose any matching criteria but just as a hint
+to indicate PMD where to bound the rules.
+
 .. code-block:: c
 
    struct rte_flow_template_table *
