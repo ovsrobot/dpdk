@@ -80,6 +80,11 @@ New Features
   * Added ``rte_event_eth_tx_adapter_instance_get`` to get Tx adapter
     instance ID for specified ethernet device ID and Tx queue index.
 
+* **Added uncore frequency control API to the power library.**
+
+  Add api to allow uncore frequency adjustment. This is done through
+  manipulating related uncore frequency control sysfs entries to
+  adjust the minimum and maximum uncore frequency values.
 
 Removed Items
 -------------
