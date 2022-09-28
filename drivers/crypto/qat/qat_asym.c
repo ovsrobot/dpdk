@@ -505,21 +505,19 @@ rsa_collect(struct rte_crypto_asym_op *asym_op,
 
 		if (asym_op->rsa.op_type ==
 				RTE_CRYPTO_ASYM_OP_ENCRYPT) {
-			uint8_t *rsa_result = asym_op->rsa.cipher.data;
-
-			rte_memcpy(rsa_result,
+			rte_memcpy(asym_op->rsa.cipher.data,
 					cookie->output_array[0],
 					alg_bytesize);
+			asym_op->rsa.cipher.length = alg_bytesize;
 			HEXDUMP("RSA Encrypted data", cookie->output_array[0],
 				alg_bytesize);
 		} else {
-			uint8_t *rsa_result = asym_op->rsa.cipher.data;
-
 			switch (asym_op->rsa.padding.type) {
 			case RTE_CRYPTO_RSA_PADDING_NONE:
-				rte_memcpy(rsa_result,
+				rte_memcpy(asym_op->rsa.cipher.data,
 						cookie->output_array[0],
 						alg_bytesize);
+				asym_op->rsa.cipher.length = alg_bytesize;
 				HEXDUMP("RSA signature",
 					cookie->output_array[0],
 					alg_bytesize);
@@ -531,13 +529,12 @@ rsa_collect(struct rte_crypto_asym_op *asym_op,
 		}
 	} else {
 		if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_DECRYPT) {
-			uint8_t *rsa_result = asym_op->rsa.message.data;
-
 			switch (asym_op->rsa.padding.type) {
 			case RTE_CRYPTO_RSA_PADDING_NONE:
-				rte_memcpy(rsa_result,
+				rte_memcpy(asym_op->rsa.message.data,
 					cookie->output_array[0],
 					alg_bytesize);
+				asym_op->rsa.message.length = alg_bytesize;
 				HEXDUMP("RSA Decrypted Message",
 					cookie->output_array[0],
 					alg_bytesize);
@@ -547,11 +544,10 @@ rsa_collect(struct rte_crypto_asym_op *asym_op,
 				return RTE_CRYPTO_OP_STATUS_ERROR;
 			}
 		} else {
-			uint8_t *rsa_result = asym_op->rsa.sign.data;
-
-			rte_memcpy(rsa_result,
-					cookie->output_array[0],
-					alg_bytesize);
+			rte_memcpy(asym_op->rsa.sign.data,
+				cookie->output_array[0],
+				alg_bytesize);
+			asym_op->rsa.sign.length = alg_bytesize;
 			HEXDUMP("RSA Signature", cookie->output_array[0],
 				alg_bytesize);
 		}
