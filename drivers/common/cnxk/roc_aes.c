@@ -206,3 +206,20 @@ roc_aes_xcbc_key_derive(const uint8_t *auth_key, uint8_t *derived_key)
 
 	cipher(k3, derived_key, aes_ks);
 }
+
+void
+roc_aes_hash_key_derive(const uint8_t *key, uint16_t len, uint8_t hash_key[])
+{
+	uint32_t aes_ks[KEY_SCHEDULE_LEN] = {0};
+	uint8_t data[16] = {0x0};
+	int i;
+
+	if (len == 16) {
+		aes_key_expand(key, aes_ks);
+		cipher(data, hash_key, aes_ks);
+		for (i = 0; i < 16; i++)
+			plt_info(" 0x%x", hash_key[i]);
+	} else {
+		plt_err("\n AES-256 key conversion not supported");
+	}
+}
