@@ -656,6 +656,283 @@ test_inline_macsec_encap_all(const void *data __rte_unused)
 }
 
 static int
+test_inline_macsec_decap_all(const void *data __rte_unused)
+{
+	const struct mcs_test_vector *cur_td;
+	struct mcs_test_opts opts = {0};
+	int err, all_err = 0;
+	int i, size;
+
+	opts.val_frames = RTE_SECURITY_MACSEC_VALIDATE_STRICT;
+	opts.sa_in_use = 1;
+	opts.nb_td = 1;
+	opts.sectag_insert_mode = 1;
+	opts.mtu = RTE_ETHER_MTU;
+
+	size = (sizeof(list_mcs_cipher_vectors) / sizeof((list_mcs_cipher_vectors)[0]));
+
+	for (i = 0; i < size; i++) {
+		cur_td = &list_mcs_cipher_vectors[i];
+		err = test_macsec(&cur_td, MCS_DECAP, &opts);
+		if (err) {
+			printf("\nCipher Auth Decryption case %d failed", cur_td->test_idx);
+			err = -1;
+		} else {
+			printf("\nCipher Auth Decryption case %d Passed", cur_td->test_idx);
+			err = 0;
+		}
+		all_err += err;
+	}
+	printf("\n%s: Success: %d, Failure: %d\n", __func__, size + all_err, -all_err);
+
+	return all_err;
+}
+
+static int
+test_inline_macsec_auth_only_all(const void *data __rte_unused)
+{
+	const struct mcs_test_vector *cur_td;
+	struct mcs_test_opts opts = {0};
+	int err, all_err = 0;
+	int i, size;
+
+	opts.val_frames = RTE_SECURITY_MACSEC_VALIDATE_STRICT;
+	opts.protect_frames = true;
+	opts.sa_in_use = 1;
+	opts.nb_td = 1;
+	opts.sectag_insert_mode = 1;
+	opts.mtu = RTE_ETHER_MTU;
+
+	size = (sizeof(list_mcs_integrity_vectors) / sizeof((list_mcs_integrity_vectors)[0]));
+
+	for (i = 0; i < size; i++) {
+		cur_td = &list_mcs_integrity_vectors[i];
+		err = test_macsec(&cur_td, MCS_AUTH_ONLY, &opts);
+		if (err) {
+			printf("\nAuth Generate case %d failed", cur_td->test_idx);
+			err = -1;
+		} else {
+			printf("\nAuth Generate case %d Passed", cur_td->test_idx);
+			err = 0;
+		}
+		all_err += err;
+	}
+	printf("\n%s: Success: %d, Failure: %d\n", __func__, size + all_err, -all_err);
+
+	return all_err;
+}
+
+static int
+test_inline_macsec_verify_only_all(const void *data __rte_unused)
+{
+	const struct mcs_test_vector *cur_td;
+	struct mcs_test_opts opts = {0};
+	int err, all_err = 0;
+	int i, size;
+
+	opts.val_frames = RTE_SECURITY_MACSEC_VALIDATE_STRICT;
+	opts.sa_in_use = 1;
+	opts.nb_td = 1;
+	opts.sectag_insert_mode = 1;
+	opts.mtu = RTE_ETHER_MTU;
+
+	size = (sizeof(list_mcs_integrity_vectors) / sizeof((list_mcs_integrity_vectors)[0]));
+
+	for (i = 0; i < size; i++) {
+		cur_td = &list_mcs_integrity_vectors[i];
+		err = test_macsec(&cur_td, MCS_VERIFY_ONLY, &opts);
+		if (err) {
+			printf("\nAuth Verify case %d failed", cur_td->test_idx);
+			err = -1;
+		} else {
+			printf("\nAuth Verify case %d Passed", cur_td->test_idx);
+			err = 0;
+		}
+		all_err += err;
+	}
+	printf("\n%s: Success: %d, Failure: %d\n", __func__, size + all_err, -all_err);
+
+	return all_err;
+}
+
+static int
+test_inline_macsec_encap_decap_all(const void *data __rte_unused)
+{
+	const struct mcs_test_vector *cur_td;
+	struct mcs_test_opts opts = {0};
+	int err, all_err = 0;
+	int i, size;
+
+	opts.val_frames = RTE_SECURITY_MACSEC_VALIDATE_STRICT;
+	opts.protect_frames = true;
+	opts.sa_in_use = 1;
+	opts.nb_td = 1;
+	opts.sectag_insert_mode = 1;
+	opts.mtu = RTE_ETHER_MTU;
+
+	size = (sizeof(list_mcs_cipher_vectors) / sizeof((list_mcs_cipher_vectors)[0]));
+
+	for (i = 0; i < size; i++) {
+		cur_td = &list_mcs_cipher_vectors[i];
+		err = test_macsec(&cur_td, MCS_ENCAP_DECAP, &opts);
+		if (err) {
+			printf("\nCipher Auth Encap-decap case %d failed", cur_td->test_idx);
+			err = -1;
+		} else {
+			printf("\nCipher Auth Encap-decap case %d Passed", cur_td->test_idx);
+			err = 0;
+		}
+		all_err += err;
+	}
+	printf("\n%s: Success: %d, Failure: %d\n", __func__, size + all_err, -all_err);
+
+	return all_err;
+}
+
+
+static int
+test_inline_macsec_auth_verify_all(const void *data __rte_unused)
+{
+	const struct mcs_test_vector *cur_td;
+	struct mcs_test_opts opts = {0};
+	int err, all_err = 0;
+	int i, size;
+
+	opts.val_frames = RTE_SECURITY_MACSEC_VALIDATE_STRICT;
+	opts.protect_frames = true;
+	opts.sa_in_use = 1;
+	opts.nb_td = 1;
+	opts.sectag_insert_mode = 1;
+	opts.mtu = RTE_ETHER_MTU;
+
+	size = (sizeof(list_mcs_integrity_vectors) / sizeof((list_mcs_integrity_vectors)[0]));
+
+	for (i = 0; i < size; i++) {
+		cur_td = &list_mcs_integrity_vectors[i];
+		err = test_macsec(&cur_td, MCS_AUTH_VERIFY, &opts);
+		if (err) {
+			printf("\nAuth Generate + Verify case %d failed", cur_td->test_idx);
+			err = -1;
+		} else {
+			printf("\nAuth Generate + Verify case %d Passed", cur_td->test_idx);
+			err = 0;
+		}
+		all_err += err;
+	}
+	printf("\n%s: Success: %d, Failure: %d\n", __func__, size + all_err, -all_err);
+
+	return all_err;
+}
+
+static int
+test_inline_macsec_multi_flow(const void *data __rte_unused)
+{
+	const struct mcs_test_vector *tv[MCS_MAX_FLOWS];
+	struct mcs_test_vector iter[MCS_MAX_FLOWS];
+	struct mcs_test_opts opts = {0};
+	int i, err;
+
+	opts.val_frames = RTE_SECURITY_MACSEC_VALIDATE_STRICT;
+	opts.protect_frames = true;
+	opts.sa_in_use = 1;
+	opts.nb_td = MCS_MAX_FLOWS;
+	opts.sectag_insert_mode = 1;
+	opts.mtu = RTE_ETHER_MTU;
+
+	for (i = 0; i < MCS_MAX_FLOWS; i++) {
+		memcpy(&iter[i].sa_key.data, sa_key, MCS_MULTI_FLOW_TD_KEY_SZ);
+		memcpy(&iter[i].plain_pkt.data, eth_addrs[i], 2 * RTE_ETHER_ADDR_LEN);
+		memcpy(&iter[i].plain_pkt.data[2 * RTE_ETHER_ADDR_LEN], plain_user_data,
+		       MCS_MULTI_FLOW_TD_PLAIN_DATA_SZ);
+		memcpy(&iter[i].secure_pkt.data, eth_addrs[i], 2 * RTE_ETHER_ADDR_LEN);
+		memcpy(&iter[i].secure_pkt.data[2 * RTE_ETHER_ADDR_LEN], secure_user_data,
+		       MCS_MULTI_FLOW_TD_SECURE_DATA_SZ);
+		iter[i].sa_key.len = MCS_MULTI_FLOW_TD_KEY_SZ;
+		iter[i].hash_key.len = MCS_MULTI_FLOW_TD_KEY_SZ;
+		iter[i].plain_pkt.len = MCS_MULTI_FLOW_TD_PLAIN_DATA_SZ +
+					(2 * RTE_ETHER_ADDR_LEN);
+		iter[i].secure_pkt.len = MCS_MULTI_FLOW_TD_SECURE_DATA_SZ +
+					(2 * RTE_ETHER_ADDR_LEN);
+		iter[i].alg = RTE_SECURITY_MACSEC_ALG_GCM_128;
+		iter[i].ssci = 0x0;
+		iter[i].xpn = 0x0;
+		tv[i] = (const struct mcs_test_vector *)&iter[i];
+	}
+	err = test_macsec(tv, MCS_ENCAP_DECAP, &opts);
+	if (err) {
+		printf("\nCipher Auth Encryption multi flow failed");
+		err = -1;
+	} else {
+		printf("\nCipher Auth Encryption multi flow Passed");
+		err = 0;
+	}
+	return err;
+}
+
+static int
+test_inline_macsec_with_vlan(const void *data __rte_unused)
+{
+	const struct mcs_test_vector *cur_td;
+	struct mcs_test_opts opts = {0};
+	int err, all_err = 0;
+	int i, size;
+
+	opts.val_frames = RTE_SECURITY_MACSEC_VALIDATE_STRICT;
+	opts.protect_frames = true;
+	opts.sa_in_use = 1;
+	opts.nb_td = 1;
+	opts.mtu = RTE_ETHER_MTU;
+
+	size = (sizeof(list_mcs_vlan_vectors) / sizeof((list_mcs_vlan_vectors)[0]));
+
+	for (i = 0; i < size; i++) {
+		cur_td = &list_mcs_vlan_vectors[i];
+		if (i == 0) {
+			opts.sectag_insert_mode = 1;
+		} else if (i == 1) {
+			opts.sectag_insert_mode = 0; /* offset from special E-type */
+			opts.nb_vlan = 1;
+		} else if (i == 2) {
+			opts.sectag_insert_mode = 0; /* offset from special E-type */
+			opts.nb_vlan = 2;
+		}
+		err = test_macsec(&cur_td, MCS_ENCAP, &opts);
+		if (err) {
+			printf("\n VLAN Encap case %d failed", cur_td->test_idx);
+			err = -1;
+		} else {
+			printf("\n VLAN Encap case %d passed", cur_td->test_idx);
+			err = 0;
+		}
+		all_err += err;
+	}
+	for (i = 0; i < size; i++) {
+		cur_td = &list_mcs_vlan_vectors[i];
+		if (i == 0) {
+			opts.sectag_insert_mode = 1;
+		} else if (i == 1) {
+			opts.sectag_insert_mode = 0; /* offset from special E-type */
+			opts.nb_vlan = 1;
+		} else if (i == 2) {
+			opts.sectag_insert_mode = 0; /* offset from special E-type */
+			opts.nb_vlan = 2;
+		}
+		err = test_macsec(&cur_td, MCS_DECAP, &opts);
+		if (err) {
+			printf("\n VLAN Decap case %d failed", cur_td->test_idx);
+			err = -1;
+		} else {
+			printf("\n VLAN Decap case %d passed", cur_td->test_idx);
+			err = 0;
+		}
+		all_err += err;
+	}
+
+	printf("\n%s: Success: %d, Failure: %d\n", __func__, (2 * size) + all_err, -all_err);
+	return all_err;
+}
+
+static int
 ut_setup_inline_macsec(void)
 {
 	int ret;
@@ -804,6 +1081,34 @@ static struct unit_test_suite inline_macsec_testsuite  = {
 			"MACsec encap(Cipher+Auth) known vector",
 			ut_setup_inline_macsec, ut_teardown_inline_macsec,
 			test_inline_macsec_encap_all),
+		TEST_CASE_NAMED_ST(
+			"MACsec decap(De-cipher+verify) known vector",
+			ut_setup_inline_macsec, ut_teardown_inline_macsec,
+			test_inline_macsec_decap_all),
+		TEST_CASE_NAMED_ST(
+			"MACsec auth only known vector",
+			ut_setup_inline_macsec, ut_teardown_inline_macsec,
+			test_inline_macsec_auth_only_all),
+		TEST_CASE_NAMED_ST(
+			"MACsec verify only known vector",
+			ut_setup_inline_macsec, ut_teardown_inline_macsec,
+			test_inline_macsec_verify_only_all),
+		TEST_CASE_NAMED_ST(
+			"MACsec encap + decap known vector",
+			ut_setup_inline_macsec, ut_teardown_inline_macsec,
+			test_inline_macsec_encap_decap_all),
+		TEST_CASE_NAMED_ST(
+			"MACsec auth + verify known vector",
+			ut_setup_inline_macsec, ut_teardown_inline_macsec,
+			test_inline_macsec_auth_verify_all),
+		TEST_CASE_NAMED_ST(
+			"MACsec Encap + decap Multi flow",
+			ut_setup_inline_macsec, ut_teardown_inline_macsec,
+			test_inline_macsec_multi_flow),
+		TEST_CASE_NAMED_ST(
+			"MACsec Encap and decap with VLAN",
+			ut_setup_inline_macsec, ut_teardown_inline_macsec,
+			test_inline_macsec_with_vlan),
 
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	},
