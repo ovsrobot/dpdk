@@ -5078,6 +5078,13 @@ struct rte_flow_template_table_attr {
 	 * Maximum number of flow rules that this table holds.
 	 */
 	uint32_t nb_flows;
+	/**
+	 * 0 means bidirection,
+	 * 0x1 origin uplink,
+	 * 0x2 origin vport,
+	 * N/A both set.
+	 */
+	uint32_t transfer_mode:2;
 };
 
 /**
