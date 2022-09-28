@@ -85,6 +85,11 @@ New Features
    Added ``RTE_CRYPTO_CIPHER_SM4_ECB``, ``RTE_CRYPTO_CIPHER_SM4_CBC``,
    ``RTE_CRYPTO_CIPHER_SM4_CTR`` to the cipher algorithm list in the cryptodev.
 
+* **Added ShangMi 3 (SM3) hash algorithm to the cryptodev.**
+
+   Added ``RTE_CRYPTO_AUTH_SM3`` to the auth algorithm list in the cryptodev.
+
+
 Removed Items
 -------------
 
