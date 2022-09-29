@@ -96,6 +96,11 @@ New Features
   * Added ``rte_event_eth_tx_adapter_queue_stop`` to stop the Tx Adapter
     from enqueueing any packets to the Tx queue.
 
+* **Added new ethdev API for PMD to get buffer split supported protocol types.**
+
+  * Added ``rte_eth_buffer_split_get_supported_hdr_ptypes()``, to get supported
+    header protocols of a PMD to split.
+
 
 Removed Items
 -------------
