@@ -605,6 +605,7 @@ enum index {
 	ACTION_PORT_REPRESENTOR_PORT_ID,
 	ACTION_REPRESENTED_PORT,
 	ACTION_REPRESENTED_PORT_ETHDEV_PORT_ID,
+	ACTION_SEND_TO_KERNEL,
 };
 
 /** Maximum size for pattern in struct rte_flow_item_raw. */
@@ -1851,6 +1852,7 @@ static const enum index next_action[] = {
 	ACTION_CONNTRACK_UPDATE,
 	ACTION_PORT_REPRESENTOR,
 	ACTION_REPRESENTED_PORT,
+	ACTION_SEND_TO_KERNEL,
 	ZERO,
 };
 
@@ -6253,6 +6255,13 @@ static const struct token token_list[] = {
 		.name = "r_actions",
 		.help = "submit a list of associated actions for red",
 		.next = NEXT(next_action),
+	},
+	[ACTION_SEND_TO_KERNEL] = {
+		.name = "send_to_kernel",
+		.help = "send packets to kernel",
+		.priv = PRIV_ACTION(SEND_TO_KERNEL, 0),
+		.next = NEXT(NEXT_ENTRY(ACTION_NEXT)),
+		.call = parse_vc,
 	},
 
 	/* Top-level command. */

@@ -2766,6 +2766,18 @@ enum rte_flow_action_type {
 	 * @see struct rte_flow_action_ethdev
 	 */
 	RTE_FLOW_ACTION_TYPE_REPRESENTED_PORT,
+
+	/**
+	 * Send packets to the kernel, without going to userspace at all.
+	 * The packets will be received by the kernel driver sharing
+	 * the same device as the DPDK port on which this action is
+	 * configured. This action is mostly suits bifurcated driver
+	 * model.
+	 * This is an ingress non-transfer action only.
+	 *
+	 * No associated configuration structure.
+	 */
+	RTE_FLOW_ACTION_TYPE_SEND_TO_KERNEL,
 };
 
 /**
