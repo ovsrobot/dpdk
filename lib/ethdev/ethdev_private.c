@@ -27,6 +27,18 @@ eth_dev_to_id(const struct rte_eth_dev *dev)
 	return dev - rte_eth_devices;
 }
 
+int32_t
+eth_check_err(struct rte_eth_dev *dev, int ret)
+{
+	if (ret == 0)
+		return 0;
+
+	if (rte_eth_dev_is_removed(eth_dev_to_id(dev)))
+		return -EIO;
+
+	return ret;
+}
+
 struct rte_eth_dev *
 eth_find_device(const struct rte_eth_dev *start, rte_eth_cmp_t cmp,
 		const void *data)

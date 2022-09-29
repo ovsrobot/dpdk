@@ -81,6 +81,12 @@ New Features
   * Added AES-CCM support in lookaside protocol (IPsec) for CN9K & CN10K.
   * Added AES & DES DOCSIS algorithm support in lookaside crypto for CN9K.
 
+* **Added support for congestion management for ethdev.**
+
+  Added new APIs ``rte_eth_cman_config_init()``, ``rte_eth_cman_config_get()``,
+  ``rte_eth_cman_config_set()``, ``rte_eth_cman_info_get()``
+  to support congestion management.
+
 * **Added eventdev adapter instance get API.**
 
   * Added ``rte_event_eth_rx_adapter_instance_get`` to get Rx adapter

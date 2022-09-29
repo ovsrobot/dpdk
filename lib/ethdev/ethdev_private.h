@@ -69,4 +69,6 @@ void eth_dev_txq_release(struct rte_eth_dev *dev, uint16_t qid);
 int eth_dev_rx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues);
 int eth_dev_tx_queue_config(struct rte_eth_dev *dev, uint16_t nb_queues);
 
+int32_t eth_check_err(struct rte_eth_dev *dev, int ret);
+
 #endif /* _ETH_PRIVATE_H_ */
