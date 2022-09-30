@@ -101,10 +101,6 @@ Deprecation Notices
 * ethdev: Items and actions ``PF``, ``VF``, ``PHY_PORT``, ``PORT_ID`` are
   deprecated as hard-to-use / ambiguous and will be removed in DPDK 22.11.
 
-* ethdev: The use of attributes ``ingress`` / ``egress`` in "transfer" flows
-  is deprecated as ambiguous with respect to the embedded switch. The use of
-  these attributes will become invalid starting from DPDK 22.11.
-
 * ethdev: Actions ``OF_SET_MPLS_TTL``, ``OF_DEC_MPLS_TTL``, ``OF_SET_NW_TTL``,
   ``OF_COPY_TTL_OUT``, ``OF_COPY_TTL_IN`` are deprecated as not supported by
   any PMD, so they will be removed in DPDK 22.11.

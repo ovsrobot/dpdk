@@ -243,6 +243,10 @@ API Changes
 
 * raw/ifgpa: The function ``rte_pmd_ifpga_get_pci_bus`` has been removed.
 
+* ethdev: Banned the use of attributes ``ingress``/``egress`` in "transfer"
+  flows, as the final step of deprecation process that had been started
+  in DPDK 21.11. See items ``PORT_REPRESENTOR``, ``REPRESENTED_PORT``.
+
 
 ABI Changes
 -----------
