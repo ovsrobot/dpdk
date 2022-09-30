@@ -96,6 +96,13 @@ New Features
   * Added ``rte_event_eth_tx_adapter_queue_stop`` to stop the Tx Adapter
     from enqueueing any packets to the Tx queue.
 
+* **Added initial LoongArch architecture support.**
+
+  * Added EAL implementation for LoongArch architecture. The initial devices
+    the porting was tested on included Loongson 3A5000, Loongson 3C5000 and
+    Loongson 3C5000L. In theory this implementation should work with any target
+    based on ``LoongArch`` ISA.
+
 
 Removed Items
 -------------
