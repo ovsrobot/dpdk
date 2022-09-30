@@ -48,6 +48,12 @@ extern "C" {
 /* LDPC:  Maximum number of Code Blocks in Transport Block.*/
 #define RTE_BBDEV_LDPC_MAX_CODE_BLOCKS (256)
 
+/*
+ * Maximum size to be used to manage the enum rte_bbdev_op_type including padding for future
+ * enum insertion
+ */
+#define RTE_BBDEV_OP_TYPE_SIZE_MAX 8
+
 /** Flags for turbo decoder operation and capability structure */
 enum rte_bbdev_op_td_flag_bitmasks {
 	/** If sub block de-interleaving is to be performed. */
@@ -741,14 +747,16 @@ struct rte_bbdev_op_cap_ldpc_enc {
 	uint16_t num_buffers_dst;
 };
 
-/** Different operation types supported by the device */
+/** Different operation types supported by the device
+ *  The related macro RTE_BBDEV_OP_TYPE_SIZE_MAX can be used as an absolute maximum for
+ *  notably sizing array while allowing for future enumeration insertion.
+ */
 enum rte_bbdev_op_type {
 	RTE_BBDEV_OP_NONE,  /**< Dummy operation that does nothing */
 	RTE_BBDEV_OP_TURBO_DEC,  /**< Turbo decode */
 	RTE_BBDEV_OP_TURBO_ENC,  /**< Turbo encode */
 	RTE_BBDEV_OP_LDPC_DEC,  /**< LDPC decode */
 	RTE_BBDEV_OP_LDPC_ENC,  /**< LDPC encode */
-	RTE_BBDEV_OP_TYPE_COUNT,  /**< Count of different op types */
 };
 
 /** Bit indexes of possible errors reported through status field */
