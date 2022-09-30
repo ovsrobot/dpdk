@@ -22,6 +22,7 @@ jobs:
       CC: ccache ${{ matrix.config.compiler }}
       DEF_LIB: ${{ matrix.config.library }}
       LIBABIGAIL_VERSION: libabigail-1.8
+      LOONGARCH64: ${{ matrix.config.cross == 'loongarch64' }}
       MINGW: ${{ matrix.config.cross == 'mingw' }}
       MINI: ${{ matrix.config.mini != '' }}
       PPC64LE: ${{ matrix.config.cross == 'ppc64le' }}
@@ -67,6 +68,10 @@ jobs:
             compiler: gcc
             library: shared
             cross: aarch64
+          - os: ubuntu-20.04
+            compiler: gcc
+            library: shared
+            cross: loongarch64
           - os: ubuntu-20.04
             compiler: gcc
             library: static
@@ -118,7 +123,7 @@ jobs:
       run: sudo apt install -y ccache libnuma-dev python3-setuptools
         python3-wheel python3-pip python3-pyelftools ninja-build libbsd-dev
         libpcap-dev libibverbs-dev libcrypto++-dev libfdt-dev libjansson-dev
-        libarchive-dev
+        libarchive-dev wget
     - name: Install libabigail build dependencies if no cache is available
       if: env.ABI_CHECKS == 'true' && steps.libabigail-cache.outputs.cache-hit != 'true'
       run: sudo apt install -y autoconf automake libtool pkg-config libxml2-dev
@@ -138,6 +143,9 @@ jobs:
     - name: Install riscv64 cross compiling packages
       if: env.RISCV64 == 'true'
       run: sudo apt install -y crossbuild-essential-riscv64
+    - name: Install loongarch64 cross compiling packages
+      if: env.LOONGARCH64 == 'true'
+      run: sudo wget -P /tmp/ https://github.com/loongson/build-tools/releases/download/2022.08.11/loongarch64-clfs-5.1-cross-tools-gcc-glibc.tar.xz
     - name: Install test tools packages
       if: env.AARCH64 != 'true' || env.PPC64LE != 'true' || env.RISCV64 != 'true' || env.RUN_TESTS == 'true'
       run: sudo apt install -y gdb jq

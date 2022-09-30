@@ -66,6 +66,16 @@ if [ "$AARCH64" = "true" ]; then
     fi
 fi
 
+if [ "$LOONGARCH64" = "true" ]; then
+	cross_tools_tar="/tmp/loongarch64-clfs-5.1-cross-tools-gcc-glibc.tar.xz"
+	cross_tools_dir="/tmp/loongarch64-cross-tools"
+	rm -rf $cross_tools_dir
+	mkdir $cross_tools_dir
+	tar -xf $cross_tools_tar -C $cross_tools_dir --strip-components 1
+	export PATH=$PATH:$cross_tools_dir/bin
+	cross_file=config/loongarch/loongarch_loongarch64_linux_gcc
+fi
+
 if [ "$MINGW" = "true" ]; then
     cross_file=config/x86/cross-mingw
 fi
