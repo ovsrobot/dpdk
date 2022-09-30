@@ -967,7 +967,6 @@ rte_bbdev_enc_op_alloc_bulk(struct rte_mempool *mempool,
 		struct rte_bbdev_enc_op **ops, uint16_t num_ops)
 {
 	struct rte_bbdev_op_pool_private *priv;
-	int ret;
 
 	/* Check type */
 	priv = (struct rte_bbdev_op_pool_private *)
@@ -977,11 +976,7 @@ rte_bbdev_enc_op_alloc_bulk(struct rte_mempool *mempool,
 		return -EINVAL;
 
 	/* Get elements */
-	ret = rte_mempool_get_bulk(mempool, (void **)ops, num_ops);
-	if (unlikely(ret < 0))
-		return ret;
-
-	return 0;
+	return rte_mempool_get_bulk(mempool, (void **)ops, num_ops);
 }
 
 /**
@@ -1003,7 +998,6 @@ rte_bbdev_dec_op_alloc_bulk(struct rte_mempool *mempool,
 		struct rte_bbdev_dec_op **ops, uint16_t num_ops)
 {
 	struct rte_bbdev_op_pool_private *priv;
-	int ret;
 
 	/* Check type */
 	priv = (struct rte_bbdev_op_pool_private *)
@@ -1013,11 +1007,7 @@ rte_bbdev_dec_op_alloc_bulk(struct rte_mempool *mempool,
 		return -EINVAL;
 
 	/* Get elements */
-	ret = rte_mempool_get_bulk(mempool, (void **)ops, num_ops);
-	if (unlikely(ret < 0))
-		return ret;
-
-	return 0;
+	return rte_mempool_get_bulk(mempool, (void **)ops, num_ops);
 }
 
 /**
@@ -1040,20 +1030,14 @@ rte_bbdev_fft_op_alloc_bulk(struct rte_mempool *mempool,
 		struct rte_bbdev_fft_op **ops, uint16_t num_ops)
 {
 	struct rte_bbdev_op_pool_private *priv;
-	int ret;
 
 	/* Check type */
-	priv = (struct rte_bbdev_op_pool_private *)
-			rte_mempool_get_priv(mempool);
+	priv = (struct rte_bbdev_op_pool_private *) rte_mempool_get_priv(mempool);
 	if (unlikely(priv->type != RTE_BBDEV_OP_FFT))
 		return -EINVAL;
 
 	/* Get elements */
-	ret = rte_mempool_get_bulk(mempool, (void **)ops, num_ops);
-	if (unlikely(ret < 0))
-		return ret;
-
-	return 0;
+	return rte_mempool_get_bulk(mempool, (void **)ops, num_ops);
 }
 
 /**
