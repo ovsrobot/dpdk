@@ -539,6 +539,24 @@ enum rte_cryptodev_event_type {
 	RTE_CRYPTODEV_EVENT_MAX		/**< max value of this enum */
 };
 
+/* Request types for IPC. */
+enum rte_cryptodev_mp_req_type {
+	RTE_CRYPTODEV_MP_REQ_NONE,
+	RTE_CRYPTODEV_MP_REQ_QP_SET,
+	RTE_CRYPTODEV_MP_REQ_QP_FREE
+};
+
+/* Parameters for IPC. */
+struct rte_cryptodev_mp_param {
+	enum rte_cryptodev_mp_req_type type;
+	int dev_id;
+	int qp_id;
+	int socket_id;
+	uint16_t process_id;
+	struct rte_cryptodev_qp_conf *queue_conf;
+	int result;
+};
+
 /** Crypto device queue pair configuration structure. */
 struct rte_cryptodev_qp_conf {
 	uint32_t nb_descriptors; /**< Number of descriptors per queue pair */
@@ -768,6 +786,25 @@ rte_cryptodev_close(uint8_t dev_id);
 extern int
 rte_cryptodev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id,
 		const struct rte_cryptodev_qp_conf *qp_conf, int socket_id);
+
+/**
+ * Register multi process request IPC handler
+ *
+ * @return
+ *   - 0: Success registered
+ *	 - 1: Failed registration failed
+ *	 - -EINVAL: device was not configured
+ */
+__rte_experimental
+int
+rte_cryptodev_mp_request_register(void);
+
+/**
+ * Unregister multi process unrequest IPC handler
+ */
+__rte_experimental
+void
+rte_cryptodev_mp_request_unregister(void);
 
 /**
  * Get the status of queue pairs setup on a specific crypto device

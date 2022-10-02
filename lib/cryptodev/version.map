@@ -109,6 +109,10 @@ EXPERIMENTAL {
 	#added in 22.07
 	rte_cryptodev_session_event_mdata_set;
 	rte_crypto_asym_ke_strings;
+
+	#added in 22.11
+	rte_cryptodev_mp_request_register;
+	rte_cryptodev_mp_request_unregister;
 };
 
 INTERNAL {

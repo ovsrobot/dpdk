@@ -78,7 +78,8 @@ struct rte_cryptodev_data {
 	void **queue_pairs;
 	/** Number of device queue pairs. */
 	uint16_t nb_queue_pairs;
-
+	/** Array of process id used for queue pairs **/
+	uint16_t *qp_in_use_by_pid;
 	/** PMD-specific private data */
 	void *dev_private;
 } __rte_cache_aligned;
