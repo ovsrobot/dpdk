@@ -748,7 +748,7 @@ struct rte_bbdev_op_cap_ldpc_enc {
 	uint16_t num_buffers_dst;
 };
 
-/** Different operation types supported by the device
+/** Different operation types supported by the device.
  *  The related macro RTE_BBDEV_OP_TYPE_SIZE_MAX can be used as an absolute maximum for
  *  notably sizing array while allowing for future enumeration insertion.
  */
