@@ -322,7 +322,7 @@ ABI Changes
   macro is added.
 
 * bbdev: Structure ``rte_bbdev_driver_info`` was updated to add new parameters
-  for device status using ``rte_bbdev_device_status``.
+  for queue topology, device status using ``rte_bbdev_device_status``.
 
 Known Issues
 ------------

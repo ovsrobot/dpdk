@@ -122,9 +122,6 @@ Deprecation Notices
 
 * bbdev: Will extend API to support new operation type ``RTE_BBDEV_OP_FFT`` as per
   this `RFC <https://patches.dpdk.org/project/dpdk/list/?series=22111>`__.
-  New members will be added in ``rte_bbdev_driver_info`` to expose
-  PMD queue topology inspired by
-  this `RFC <https://patches.dpdk.org/project/dpdk/list/?series=22076>`__.
   This should be updated in DPDK 22.11.
 
 * cryptodev: Hide structures ``rte_cryptodev_sym_session`` and
