@@ -139,10 +139,6 @@ Deprecation Notices
   which got error interrupt to the application,
   so that application can reset that particular queue pair.
 
-* security: Hide structure ``rte_security_session`` and expose an opaque
-  pointer for the private data to the application which can be attached
-  to the packet while enqueuing.
-
 * eventdev: The function ``rte_event_crypto_adapter_queue_pair_add`` will
   accept configuration of type ``rte_event_crypto_adapter_queue_conf`` instead
   of ``rte_event``, similar to ``rte_event_eth_rx_adapter_queue_add`` signature.
