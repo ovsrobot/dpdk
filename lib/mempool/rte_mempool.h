@@ -1445,38 +1445,71 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 	uint32_t index, len;
 	void **cache_objs;
 
-	/* No cache provided or cannot be satisfied from cache */
-	if (unlikely(cache == NULL || n >= cache->size))
+	/* No cache provided or if get would overflow mem allocated for cache */
+	if (unlikely(cache == NULL || n > RTE_MEMPOOL_CACHE_MAX_SIZE))
 		goto ring_dequeue;
 
-	cache_objs = cache->objs;
+	cache_objs = &cache->objs[cache->len];
 
-	/* Can this be satisfied from the cache? */
-	if (cache->len < n) {
-		/* No. Backfill the cache first, and then fill from it */
-		uint32_t req = n + (cache->size - cache->len);
+	if (n <= cache->len) {
+		/* The entire request can be satisfied from the cache. */
+		cache->len -= n;
+		for (index = 0; index < n; index++)
+			*obj_table++ = *--cache_objs;
 
-		/* How many do we require i.e. number to fill the cache + the request */
-		ret = rte_mempool_ops_dequeue_bulk(mp,
-			&cache->objs[cache->len], req);
-		if (unlikely(ret < 0)) {
-			/*
-			 * In the off chance that we are buffer constrained,
-			 * where we are not able to allocate cache + n, go to
-			 * the ring directly. If that fails, we are truly out of
-			 * buffers.
-			 */
-			goto ring_dequeue;
-		}
+		RTE_MEMPOOL_STAT_ADD(mp, get_success_bulk, 1);
+		RTE_MEMPOOL_STAT_ADD(mp, get_success_objs, n);
 
-		cache->len += req;
+		return 0;
 	}
 
-	/* Now fill in the response ... */
-	for (index = 0, len = cache->len - 1; index < n; ++index, len--, obj_table++)
-		*obj_table = cache_objs[len];
+	/* Satisfy the first part of the request by depleting the cache. */
+	len = cache->len;
+	for (index = 0; index < len; index++)
+		*obj_table++ = *--cache_objs;
 
-	cache->len -= n;
+	/* Number of objects remaining to satisfy the request. */
+	len = n - len;
+
+	/* Fill the cache from the ring; fetch size + remaining objects. */
+	ret = rte_mempool_ops_dequeue_bulk(mp, cache->objs,
+			cache->size + len);
+	if (unlikely(ret < 0)) {
+		/*
+		 * We are buffer constrained, and not able to allocate
+		 * cache + remaining.
+		 * Do not fill the cache, just satisfy the remaining part of
+		 * the request directly from the ring.
+		 */
+		ret = rte_mempool_ops_dequeue_bulk(mp, obj_table, len);
+		if (unlikely(ret < 0)) {
+			/*
+			 * That also failed.
+			 * No further action is required to roll the first
+			 * part of the request back into the cache, as both
+			 * cache->len and the objects in the cache are intact.
+			 */
+			RTE_MEMPOOL_STAT_ADD(mp, get_fail_bulk, 1);
+			RTE_MEMPOOL_STAT_ADD(mp, get_fail_objs, n);
+
+			return ret;
+		}
+
+		/* Commit that the cache was emptied. */
+		cache->len = 0;
+
+		RTE_MEMPOOL_STAT_ADD(mp, get_success_bulk, 1);
+		RTE_MEMPOOL_STAT_ADD(mp, get_success_objs, n);
+
+		return 0;
+	}
+
+	cache_objs = &cache->objs[cache->size + len];
+
+	/* Satisfy the remaining part of the request from the filled cache. */
+	cache->len = cache->size;
+	for (index = 0; index < len; index++)
+		*obj_table++ = *--cache_objs;
 
 	RTE_MEMPOOL_STAT_ADD(mp, get_success_bulk, 1);
 	RTE_MEMPOOL_STAT_ADD(mp, get_success_objs, n);
@@ -1485,7 +1518,7 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 
 ring_dequeue:
 
-	/* get remaining objects from ring */
+	/* Get the objects from the ring. */
 	ret = rte_mempool_ops_dequeue_bulk(mp, obj_table, n);
 
 	if (ret < 0) {
