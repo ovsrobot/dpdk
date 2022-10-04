@@ -319,6 +319,9 @@ ABI Changes
 * eventdev: Added ``weight`` and ``affinity`` fields
   to ``rte_event_queue_conf`` structure.
 
+* bbdev: enum ``rte_bbdev_op_type`` was affected to remove ``RTE_BBDEV_OP_TYPE_COUNT``
+  and to allow for futureproof enum insertion a padded ``RTE_BBDEV_OP_TYPE_SIZE_MAX``
+  macro is added.
 
 Known Issues
 ------------
