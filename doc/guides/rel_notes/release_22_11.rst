@@ -102,6 +102,11 @@ New Features
   * Added AES-CCM support in lookaside protocol (IPsec) for CN9K & CN10K.
   * Added AES & DES DOCSIS algorithm support in lookaside crypto for CN9K.
 
+* **Added SGL support to AESNI_MB PMD.**
+
+  Added support for SGL to AESNI_MB PMD. Support for inplace,
+  OOP SGL in SGL out, OOP LB in SGL out, and OOP SGL in LB out added.
+
 * **Added eventdev adapter instance get API.**
 
   * Added ``rte_event_eth_rx_adapter_instance_get`` to get Rx adapter
