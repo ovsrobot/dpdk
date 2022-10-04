@@ -415,7 +415,7 @@ ipsec_mb_get_session_private(struct ipsec_mb_qp *qp, struct rte_crypto_op *op)
 	uint32_t driver_id = ipsec_mb_get_driver_id(qp->pmd_type);
 	struct rte_crypto_sym_op *sym_op = op->sym;
 	uint8_t sess_type = op->sess_type;
-	void *_sess;
+	struct rte_cryptodev_sym_session *_sess;
 	void *_sess_private_data = NULL;
 	struct ipsec_mb_internals *pmd_data = &ipsec_mb_pmds[qp->pmd_type];
 
@@ -426,8 +426,12 @@ ipsec_mb_get_session_private(struct ipsec_mb_qp *qp, struct rte_crypto_op *op)
 							    driver_id);
 	break;
 	case RTE_CRYPTO_OP_SESSIONLESS:
-		if (!qp->sess_mp ||
-		    rte_mempool_get(qp->sess_mp, (void **)&_sess))
+		if (!qp->sess_mp)
+			return NULL;
+
+		_sess = rte_cryptodev_sym_session_create(qp->sess_mp);
+
+		if (!_sess)
 			return NULL;
 
 		if (!qp->sess_mp_priv ||
@@ -443,7 +447,7 @@ ipsec_mb_get_session_private(struct ipsec_mb_qp *qp, struct rte_crypto_op *op)
 			sess = NULL;
 		}
 
-		sym_op->session = (struct rte_cryptodev_sym_session *)_sess;
+		sym_op->session = _sess;
 		set_sym_session_private_data(sym_op->session, driver_id,
 					     _sess_private_data);
 	break;

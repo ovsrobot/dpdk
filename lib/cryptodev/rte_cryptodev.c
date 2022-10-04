@@ -2187,6 +2187,7 @@ rte_cryptodev_sym_session_free(struct rte_cryptodev_sym_session *sess)
 
 	/* Return session to mempool */
 	sess_mp = rte_mempool_from_obj(sess);
+	memset(sess, 0, rte_cryptodev_sym_get_existing_header_session_size(sess));
 	rte_mempool_put(sess_mp, sess);
 
 	rte_cryptodev_trace_sym_session_free(sess);
