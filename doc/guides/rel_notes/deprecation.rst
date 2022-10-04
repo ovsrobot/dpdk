@@ -120,10 +120,6 @@ Deprecation Notices
   ``RTE_ETH_EVENT_IPSEC_SA_BYTE_HARD_EXPIRY`` and
   ``RTE_ETH_EVENT_IPSEC_SA_PKT_HARD_EXPIRY`` in DPDK 22.11.
 
-* bbdev: Will extend API to support new operation type ``RTE_BBDEV_OP_FFT`` as per
-  this `RFC <https://patches.dpdk.org/project/dpdk/list/?series=22111>`__.
-  This should be updated in DPDK 22.11.
-
 * cryptodev: Hide structures ``rte_cryptodev_sym_session`` and
   ``rte_cryptodev_asym_session`` to remove unnecessary indirection between
   session and the private data of session. An opaque pointer can be exposed
