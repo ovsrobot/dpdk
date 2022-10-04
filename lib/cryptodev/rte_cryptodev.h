@@ -967,7 +967,7 @@ rte_cryptodev_asym_session_pool_create(const char *name, uint32_t nb_elts,
  * @param   dev_id   ID of device that we want the session to be used on
  * @param   xforms   Symmetric crypto transform operations to apply on flow
  *                   processed with this session
- * @param   mempool  Mempool where the private data is allocated.
+ * @param   mp       Mempool where the private data is allocated.
  *
  * @return
  *  - On success return pointer to sym-session.
