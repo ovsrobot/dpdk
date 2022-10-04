@@ -123,6 +123,16 @@ New Features
   into single event containing ``rte_event_vector``
   whose event type is ``RTE_EVENT_TYPE_CRYPTODEV_VECTOR``.
 
+* **Rewritten dpdk-pmdinfo.py script.**
+
+  The ``dpdk-pmdinfo.py`` script was rewritten to produce valid JSON only.
+  PCI-IDs parsing has been removed.
+  To get a similar output to the (now removed) ``-r/--raw`` flag, you may use the following command:
+
+  .. code-block:: sh
+
+     strings $dpdk_binary_or_driver | sed -n 's/^PMD_INFO_STRING= //p'
+
 
 Removed Items
 -------------
