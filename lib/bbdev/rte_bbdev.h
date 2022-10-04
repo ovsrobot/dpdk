@@ -289,6 +289,10 @@ struct rte_bbdev_driver_info {
 
 	/** Maximum number of queues supported by the device */
 	unsigned int max_num_queues;
+	/** Maximum number of queues supported per operation type */
+	unsigned int num_queues[RTE_BBDEV_OP_TYPE_SIZE_MAX];
+	/** Priority level supported per operation type */
+	unsigned int queue_priority[RTE_BBDEV_OP_TYPE_SIZE_MAX];
 	/** Queue size limit (queue size must also be power of 2) */
 	uint32_t queue_size_lim;
 	/** Set if device off-loads operation to hardware  */
@@ -851,7 +855,7 @@ rte_bbdev_queue_intr_ctl(uint16_t dev_id, uint16_t queue_id, int epfd, int op,
  *   Device status as enum.
  *
  * @returns
- *   Operation type as string or NULL if op_type is invalid.
+ *   Device status as string or NULL if invalid.
  *
  */
 __rte_experimental
