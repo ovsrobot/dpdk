@@ -36,6 +36,7 @@ sources += files(
         'rte_random.c',
         'rte_reciprocal.c',
         'rte_service.c',
+        'rte_thread.c',
         'rte_version.c',
 )
 if is_linux or is_windows
