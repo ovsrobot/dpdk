@@ -14,7 +14,7 @@ RTE_LOG_REGISTER(threads_logtype_test, test.threads, INFO);
 
 static uint32_t thread_id_ready;
 
-static void *
+static uint32_t
 thread_main(void *arg)
 {
 	*(rte_thread_t *)arg = rte_thread_self();
@@ -23,7 +23,55 @@ thread_main(void *arg)
 	while (__atomic_load_n(&thread_id_ready, __ATOMIC_ACQUIRE) == 1)
 		;
 
-	return NULL;
+	return 0;
+}
+
+static int
+test_thread_create_join(void)
+{
+	rte_thread_t thread_id;
+	rte_thread_t thread_main_id;
+
+	thread_id_ready = 0;
+	RTE_TEST_ASSERT(rte_thread_create(&thread_id, NULL, thread_main, &thread_main_id) == 0,
+		"Failed to create thread.");
+
+	while (__atomic_load_n(&thread_id_ready, __ATOMIC_ACQUIRE) == 0)
+		;
+
+	RTE_TEST_ASSERT(rte_thread_equal(thread_id, thread_main_id) != 0,
+		"Unexpected thread id.");
+
+	__atomic_store_n(&thread_id_ready, 2, __ATOMIC_RELEASE);
+
+	RTE_TEST_ASSERT(rte_thread_join(thread_id, NULL) == 0,
+		"Failed to join thread.");
+
+	return 0;
+}
+
+static int
+test_thread_create_detach(void)
+{
+	rte_thread_t thread_id;
+	rte_thread_t thread_main_id;
+
+	thread_id_ready = 0;
+	RTE_TEST_ASSERT(rte_thread_create(&thread_id, NULL, thread_main,
+		&thread_main_id) == 0, "Failed to create thread.");
+
+	while (__atomic_load_n(&thread_id_ready, __ATOMIC_ACQUIRE) == 0)
+		;
+
+	RTE_TEST_ASSERT(rte_thread_equal(thread_id, thread_main_id) != 0,
+		"Unexpected thread id.");
+
+	__atomic_store_n(&thread_id_ready, 2, __ATOMIC_RELEASE);
+
+	RTE_TEST_ASSERT(rte_thread_detach(thread_id) == 0,
+		"Failed to detach thread.");
+
+	return 0;
 }
 
 static int
@@ -123,6 +171,8 @@ static struct unit_test_suite threads_test_suite = {
 	.setup = NULL,
 	.teardown = NULL,
 	.unit_test_cases = {
+		TEST_CASE(test_thread_create_join),
+		TEST_CASE(test_thread_create_detach),
 		TEST_CASE(test_thread_affinity),
 		TEST_CASE(test_thread_priority),
 		TEST_CASES_END()
