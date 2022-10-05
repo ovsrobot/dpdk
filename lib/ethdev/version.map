@@ -288,6 +288,7 @@ EXPERIMENTAL {
 
 	# added in 22.11
 	rte_flow_async_action_handle_query;
+	rte_eth_buffer_split_get_supported_hdr_ptypes;
 };
 
 INTERNAL {
