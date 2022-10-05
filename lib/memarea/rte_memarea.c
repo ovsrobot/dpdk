@@ -2,6 +2,7 @@
  * Copyright(c) 2022 HiSilicon Limited
  */
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/queue.h>
@@ -297,4 +298,88 @@ rte_memarea_update_refcnt(struct rte_memarea *ma, void *ptr, int16_t value)
 	if (elem->refcnt == 0)
 		memarea_free_elem(ma, elem);
 	memarea_unlock(ma);
+}
+
+static const char *
+memarea_source_name(enum rte_memarea_source source)
+{
+	if (source == RTE_MEMAREA_SOURCE_RTE_MEMORY)
+		return "rte-memory";
+	else if (source == RTE_MEMAREA_SOURCE_SYSTEM_API)
+		return "system-api";
+	else if (source == RTE_MEMAREA_SOURCE_USER_ADDR)
+		return "user-addr";
+	else if (source == RTE_MEMAREA_SOURCE_USER_MEMAREA)
+		return "user-memarea";
+	else
+		return "unknown";
+}
+
+static const char *
+memarea_alg_name(enum rte_memarea_alg alg)
+{
+	if (alg == RTE_MEMAREA_ALG_DEFAULT)
+		return "default";
+	else
+		return "unknown";
+}
+
+static uint32_t
+memarea_elem_list_num(struct rte_memarea *ma)
+{
+	struct memarea_elem *elem;
+	uint32_t num = 0;
+
+	TAILQ_FOREACH(elem, &ma->elem_list, elem_node)
+		num++;
+
+	return num;
+}
+
+static uint32_t
+memarea_free_list_num(struct rte_memarea *ma)
+{
+	struct memarea_elem *elem;
+	uint32_t num = 0;
+
+	TAILQ_FOREACH(elem, &ma->free_list, free_node)
+		num++;
+
+	return num;
+}
+
+static void
+memarea_dump_all(struct rte_memarea *ma, FILE *f)
+{
+	struct memarea_elem *elem;
+
+	fprintf(f, "  regions:\n");
+	TAILQ_FOREACH(elem, &ma->elem_list, elem_node)
+		fprintf(f, "    size: 0x%zx cookie: 0x%x refcnt: %d\n",
+			elem->size, elem->cookie, elem->refcnt);
+}
+
+int
+rte_memarea_dump(struct rte_memarea *ma, FILE *f, bool dump_all)
+{
+	if (ma == NULL || f == NULL)
+		return -EINVAL;
+
+	memarea_lock(ma);
+	fprintf(f, "memarea name: %s\n", ma->init.name);
+	fprintf(f, "  source: %s\n", memarea_source_name(ma->init.source));
+	if (ma->init.source == RTE_MEMAREA_SOURCE_USER_MEMAREA)
+		fprintf(f, "  source-user-memarea: %s\n", ma->init.user_memarea->init.name);
+	fprintf(f, "  algorithm: %s\n", memarea_alg_name(ma->init.alg));
+	fprintf(f, "  total-size: 0x%zx\n", ma->init.total_sz);
+	fprintf(f, "  mt-safe: %s\n", ma->init.mt_safe ? "yes" : "no");
+	fprintf(f, "  total-regions: %u\n", memarea_elem_list_num(ma));
+	fprintf(f, "  total-free-regions: %u\n", memarea_free_list_num(ma));
+	fprintf(f, "  alloc_fails: %" PRIu64 "\n", ma->alloc_fails);
+	fprintf(f, "  refcnt_check_fails: %" PRIu64 "\n", ma->refcnt_check_fails);
+	if (dump_all)
+		memarea_dump_all(ma, f);
+	memarea_unlock(ma);
+
+	return 0;
 }

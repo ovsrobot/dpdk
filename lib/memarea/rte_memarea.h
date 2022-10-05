@@ -194,6 +194,27 @@ void rte_memarea_free(struct rte_memarea *ma, void *ptr);
 __rte_experimental
 void rte_memarea_update_refcnt(struct rte_memarea *ma, void *ptr, int16_t value);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Dump memarea.
+ *
+ * Dump one memarea.
+ *
+ * @param ma
+ *   The pointer of memarea.
+ * @param f
+ *   The file to write the output to.
+ * @param dump_all
+ *   Indicate whether to dump the allocated and free memory objects information.
+ *
+ * @return
+ *   0 on success. Otherwise negative value is returned.
+ */
+__rte_experimental
+int rte_memarea_dump(struct rte_memarea *ma, FILE *f, bool dump_all);
+
 #ifdef __cplusplus
 }
 #endif
