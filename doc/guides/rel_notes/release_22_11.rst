@@ -127,6 +127,10 @@ New Features
 
   * Added ``rte_eth_buffer_split_get_supported_hdr_ptypes()``, to get supported
     header protocols of a PMD to split.
+  * Ethdev: The ``reserved`` field in the ``rte_eth_rxseg_split`` structure is
+    replaced with ``proto_hdr`` to support protocol header based buffer split.
+    User can choose length or protocol header to configure buffer split
+    according to NIC's capability.
 
 
 Removed Items

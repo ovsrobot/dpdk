@@ -994,6 +994,9 @@ struct rte_eth_txmode {
  *   specified in the first array element, the second buffer, from the
  *   pool in the second element, and so on.
  *
+ * - The proto_hdrs in the elements define the split position of
+ *   received packets.
+ *
  * - The offsets from the segment description elements specify
  *   the data offset from the buffer beginning except the first mbuf.
  *   The first segment offset is added with RTE_PKTMBUF_HEADROOM.
@@ -1015,12 +1018,41 @@ struct rte_eth_txmode {
  *     - pool from the last valid element
  *     - the buffer size from this pool
  *     - zero offset
+ *
+ * - Length based buffer split:
+ *     - mp, length, offset should be configured.
+ *     - The proto_hdr field must be 0.
+ *
+ * - Protocol header based buffer split:
+ *     - mp, offset, proto_hdr should be configured.
+ *     - The length field must be 0.
+ *     - The proto_hdr field in the last segment should be 0.
+ *
+ * - For Protocol header based buffer split, if the received packets
+ *   don't exactly match all protocol headers in the elements, packets
+ *   will not be split.
+ *   These packets will be put into:
+ *     - pool from the last valid element
+ *     - the buffer size from this pool
+ *     - zero offset
  */
 struct rte_eth_rxseg_split {
 	struct rte_mempool *mp; /**< Memory pool to allocate segment from. */
 	uint16_t length; /**< Segment data length, configures split point. */
 	uint16_t offset; /**< Data offset from beginning of mbuf data buffer. */
-	uint32_t reserved; /**< Reserved field. */
+	/**
+	 * Proto_hdr defines a bit mask of the protocol sequence as RTE_PTYPE_*,
+	 * configures split point. The last RTE_PTYPE* in the mask indicates the
+	 * split position.
+	 *
+	 * If one protocol header is defined to split packets into two segments,
+	 * for non-tunneling packets, the complete protocol sequence should be defined.
+	 * For tunneling packets, for simplicity, only the tunnel and inner part of
+	 * comple protocol sequence is required.
+	 * If several protocol headers are defined to split packets into multi-segments,
+	 * the repeated parts of adjacent segments should be omitted.
+	 */
+	uint32_t proto_hdr;
 };
 
 /**
