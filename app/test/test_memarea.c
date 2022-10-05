@@ -274,7 +274,39 @@ test_memarea_alloc_free(void)
 	rte_memarea_free(ma, ptr[5]);
 
 	/* test free NULL */
-	rte_memarea_free(ma, ptr[6]);
+	rte_memarea_free(ma, NULL);
+
+	rte_memarea_destroy(ma);
+
+	return 0;
+}
+
+static int
+test_memarea_dump(void)
+{
+	struct rte_memarea_param init;
+	struct rte_memarea *ma;
+	int ret;
+
+	/* prepare env */
+	test_memarea_init_def_param(&init);
+	init.source = RTE_MEMAREA_SOURCE_SYSTEM_API;
+	init.total_sz = MEMAREA_TEST_DEFAULT_SIZE;
+	ma = rte_memarea_create(&init);
+	RTE_TEST_ASSERT(ma != NULL, "Expected Non-NULL");
+
+	/* test for invalid parameters */
+	ret = rte_memarea_dump(NULL, stderr, false);
+	RTE_TEST_ASSERT(ret == -EINVAL, "Expected EINVAL");
+	ret = rte_memarea_dump(ma, NULL, false);
+	RTE_TEST_ASSERT(ret == -EINVAL, "Expected EINVAL");
+
+	/* test for dump */
+	(void)rte_memarea_alloc(ma, 1, 0);
+	(void)rte_memarea_alloc(ma, 1, 0);
+	(void)rte_memarea_alloc(ma, 1, 0);
+	ret = rte_memarea_dump(ma, stderr, true);
+	RTE_TEST_ASSERT(ret == 0, "Expected ZERO");
 
 	rte_memarea_destroy(ma);
 
@@ -289,6 +321,7 @@ test_memarea(void)
 	MEMAREA_TEST_API_RUN(test_memarea_alloc_fail);
 	MEMAREA_TEST_API_RUN(test_memarea_free_fail);
 	MEMAREA_TEST_API_RUN(test_memarea_alloc_free);
+	MEMAREA_TEST_API_RUN(test_memarea_dump);
 	return 0;
 }
 
