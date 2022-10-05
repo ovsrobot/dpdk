@@ -6,6 +6,11 @@ if is_windows
     reason = 'not supported on Windows'
     subdir_done()
 endif
+if not dpdk_conf.has('kni')
+    build = false
+    reason = 'needs deprecated lib, "kni"'
+    subdir_done()
+endif
 
 deps += 'kni'
 sources = files('rte_eth_kni.c')

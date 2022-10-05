@@ -85,6 +85,7 @@ optional_libs = [
         'vhost',
 ]
 
+deprecated_libs = ['kni']
 disabled_libs = []
 opt_disabled_libs = run_command(list_dir_globs, get_option('disable_libs'),
         check: true).stdout().split()
@@ -133,7 +134,13 @@ foreach l:libraries
     if disabled_libs.contains(l)
         build = false
         reason = 'explicitly disabled via build config'
+        if deprecated_libs.contains(l)
+            reason += ' (deprecated lib)'
+        endif
     else
+        if deprecated_libs.contains(l)
+            warning('Enabling deprecated library, "@0@"'.format(l))
+        endif
         subdir(l)
     endif
     if name != l
