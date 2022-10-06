@@ -1444,6 +1444,38 @@ rte_pktmbuf_copy(const struct rte_mbuf *m, struct rte_mempool *mp,
 		 uint32_t offset, uint32_t length);
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Create a full copy of a given packet mbuf,
+ * using non-temporal memory access as specified by flags.
+ *
+ * Copies all the data from a given packet mbuf to a newly allocated
+ * set of mbufs. The private data are is not copied.
+ *
+ * @param m
+ *   The packet mbuf to be copied.
+ * @param mp
+ *   The mempool from which the "clone" mbufs are allocated.
+ * @param offset
+ *   The number of bytes to skip before copying.
+ *   If the mbuf does not have that many bytes, it is an error
+ *   and NULL is returned.
+ * @param length
+ *   The upper limit on bytes to copy.  Passing UINT32_MAX
+ *   means all data (after offset).
+ * @param flags
+ *   Non-temporal memory access hints for rte_memcpy_ex.
+ * @return
+ *   - The pointer to the new "clone" mbuf on success.
+ *   - NULL if allocation fails.
+ */
+__rte_experimental
+struct rte_mbuf *
+rte_pktmbuf_copy_ex(const struct rte_mbuf *m, struct rte_mempool *mp,
+		    uint32_t offset, uint32_t length, const uint64_t flags);
+
+/**
  * Adds given value to the refcnt of all packet mbuf segments.
  *
  * Walks through all segments of given packet mbuf and for each of them

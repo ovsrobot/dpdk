@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2014 Intel Corporation
+ * Copyright(c) 2022 SmartShare Systems
  */
 
 #include <stdint.h>
@@ -15,6 +16,7 @@
 #include <rte_malloc.h>
 
 #include <rte_memcpy.h>
+#include <rte_atomic.h>
 
 #include "test.h"
 
@@ -27,8 +29,8 @@
 /* List of buffer sizes to test */
 #if TEST_VALUE_RANGE == 0
 static size_t buf_sizes[] = {
-	1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 15, 16, 17, 31, 32, 33, 63, 64, 65, 127, 128,
-	129, 191, 192, 193, 255, 256, 257, 319, 320, 321, 383, 384, 385, 447, 448,
+	1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 15, 16, 17, 31, 32, 33, 40, 48, 60, 63, 64, 65, 80, 92, 124,
+	127, 128, 129, 140, 152, 191, 192, 193, 255, 256, 257, 319, 320, 321, 383, 384, 385, 447, 448,
 	449, 511, 512, 513, 767, 768, 769, 1023, 1024, 1025, 1518, 1522, 1536, 1600,
 	2048, 2560, 3072, 3584, 4096, 4608, 5120, 5632, 6144, 6656, 7168, 7680, 8192
 };
@@ -59,6 +61,10 @@ static size_t buf_sizes[TEST_VALUE_RANGE];
 #else
 #define ALIGNMENT_UNIT          16
 #endif
+
+/* Non-temporal memcpy source and destination address alignment */
+#define ALIGNED_FLAGS ((ALIGNMENT_UNIT << RTE_MEMOPS_F_SRCA_SHIFT) | \
+        (ALIGNMENT_UNIT << RTE_MEMOPS_F_DSTA_SHIFT);
 
 /*
  * Pointers used in performance tests. The two large buffers are for uncached
@@ -172,15 +178,20 @@ do_uncached_write(uint8_t *dst, int is_dst_cached,
 do {                                                                        \
     unsigned int iter, t;                                                   \
     size_t dst_addrs[TEST_BATCH_SIZE], src_addrs[TEST_BATCH_SIZE];          \
-    uint64_t start_time, total_time = 0;                                    \
-    uint64_t total_time2 = 0;                                               \
+    uint64_t start_time;                                                    \
+    uint64_t total_time_rte = 0, total_time_std = 0;                        \
+    uint64_t total_time_ntd = 0, total_time_nts = 0, total_time_nt = 0;     \
+    const uint64_t flags = ((dst_uoffset == 0) ?                            \
+            (ALIGNMENT_UNIT << RTE_MEMOPS_F_DSTA_SHIFT) : 0) |              \
+            ((src_uoffset == 0) ?                                           \
+            (ALIGNMENT_UNIT << RTE_MEMOPS_F_SRCA_SHIFT) : 0);               \
     for (iter = 0; iter < (TEST_ITERATIONS / TEST_BATCH_SIZE); iter++) {    \
         fill_addr_arrays(dst_addrs, is_dst_cached, dst_uoffset,             \
                          src_addrs, is_src_cached, src_uoffset);            \
         start_time = rte_rdtsc();                                           \
         for (t = 0; t < TEST_BATCH_SIZE; t++)                               \
             rte_memcpy(dst+dst_addrs[t], src+src_addrs[t], size);           \
-        total_time += rte_rdtsc() - start_time;                             \
+        total_time_rte += rte_rdtsc() - start_time;                         \
     }                                                                       \
     for (iter = 0; iter < (TEST_ITERATIONS / TEST_BATCH_SIZE); iter++) {    \
         fill_addr_arrays(dst_addrs, is_dst_cached, dst_uoffset,             \
@@ -188,11 +199,49 @@ do {                                                                        \
         start_time = rte_rdtsc();                                           \
         for (t = 0; t < TEST_BATCH_SIZE; t++)                               \
             memcpy(dst+dst_addrs[t], src+src_addrs[t], size);               \
-        total_time2 += rte_rdtsc() - start_time;                            \
+        total_time_std += rte_rdtsc() - start_time;                         \
     }                                                                       \
-    printf("%3.0f -", (double)total_time  / TEST_ITERATIONS);                 \
-    printf("%3.0f",   (double)total_time2 / TEST_ITERATIONS);                 \
-    printf("(%6.2f%%) ", ((double)total_time - total_time2)*100/total_time2); \
+    if (!(is_dst_cached && is_src_cached)) {                                    \
+        for (iter = 0; iter < (TEST_ITERATIONS / TEST_BATCH_SIZE); iter++) {    \
+            fill_addr_arrays(dst_addrs, is_dst_cached, dst_uoffset,             \
+                             src_addrs, is_src_cached, src_uoffset);            \
+            start_time = rte_rdtsc();                                           \
+            for (t = 0; t < TEST_BATCH_SIZE; t++)                               \
+                rte_memcpy_ex(dst+dst_addrs[t], src+src_addrs[t], size,         \
+                        flags | RTE_MEMOPS_F_DST_NT);                           \
+            total_time_ntd += rte_rdtsc() - start_time;                         \
+        }                                                                       \
+        for (iter = 0; iter < (TEST_ITERATIONS / TEST_BATCH_SIZE); iter++) {    \
+            fill_addr_arrays(dst_addrs, is_dst_cached, dst_uoffset,             \
+                             src_addrs, is_src_cached, src_uoffset);            \
+            start_time = rte_rdtsc();                                           \
+            for (t = 0; t < TEST_BATCH_SIZE; t++)                               \
+                rte_memcpy_ex(dst+dst_addrs[t], src+src_addrs[t], size,         \
+                        flags | RTE_MEMOPS_F_SRC_NT);                           \
+            total_time_nts += rte_rdtsc() - start_time;                         \
+        }                                                                       \
+        for (iter = 0; iter < (TEST_ITERATIONS / TEST_BATCH_SIZE); iter++) {    \
+            fill_addr_arrays(dst_addrs, is_dst_cached, dst_uoffset,             \
+                             src_addrs, is_src_cached, src_uoffset);            \
+            start_time = rte_rdtsc();                                           \
+            for (t = 0; t < TEST_BATCH_SIZE; t++)                               \
+                rte_memcpy_ex(dst+dst_addrs[t], src+src_addrs[t], size,         \
+                        flags | RTE_MEMOPS_F_DST_NT | RTE_MEMOPS_F_SRC_NT);     \
+            total_time_nt += rte_rdtsc() - start_time;                          \
+        }                                                                       \
+    }                                                                           \
+    printf(" %4.0f-", (double)total_time_rte / TEST_ITERATIONS);                                \
+    printf("%4.0f",   (double)total_time_std / TEST_ITERATIONS);                                \
+    printf("(%+4.0f%%)", ((double)total_time_rte - total_time_std)*100/total_time_std);         \
+    if (!(is_dst_cached && is_src_cached)) {                                                    \
+        printf(" %4.0f", (double)total_time_ntd / TEST_ITERATIONS);                             \
+        printf(" %4.0f", (double)total_time_nts / TEST_ITERATIONS);                             \
+        printf(" %4.0f", (double)total_time_nt / TEST_ITERATIONS);                              \
+        if (total_time_nt / total_time_std > 9)                                                 \
+            printf("(*%4.1f)", (double)total_time_nt/total_time_std);                           \
+        else                                                                                    \
+            printf("(%+4.0f%%)", ((double)total_time_nt - total_time_std)*100/total_time_std);  \
+    }                                                                                           \
 } while (0)
 
 /* Run aligned memcpy tests for each cached/uncached permutation */
@@ -224,9 +273,11 @@ do {                                                                     \
 /* Run memcpy tests for constant length */
 #define ALL_PERF_TEST_FOR_CONSTANT                                      \
 do {                                                                    \
-    TEST_CONSTANT(6U); TEST_CONSTANT(64U); TEST_CONSTANT(128U);         \
+    TEST_CONSTANT(4U); TEST_CONSTANT(6U); TEST_CONSTANT(8U);            \
+    TEST_CONSTANT(16U); TEST_CONSTANT(64U); TEST_CONSTANT(128U);        \
     TEST_CONSTANT(192U); TEST_CONSTANT(256U); TEST_CONSTANT(512U);      \
     TEST_CONSTANT(768U); TEST_CONSTANT(1024U); TEST_CONSTANT(1536U);    \
+    TEST_CONSTANT(2048U);                                               \
 } while (0)
 
 /* Run all memcpy tests for aligned constant cases */
@@ -290,13 +341,14 @@ perf_test(void)
 	/* See function comment */
 	do_uncached_write(large_buf_write, 0, small_buf_read, 1, SMALL_BUFFER_SIZE);
 
-	printf("\n** rte_memcpy() - memcpy perf. tests (C = compile-time constant) **\n"
-		   "======= ================= ================= ================= =================\n"
-		   "   Size   Cache to cache     Cache to mem      Mem to cache        Mem to mem\n"
-		   "(bytes)          (ticks)          (ticks)           (ticks)           (ticks)\n"
-		   "------- ----------------- ----------------- ----------------- -----------------");
+	printf("\n** rte_memcpy(RTE)/memcpy(STD)/rte_memcpy_ex(NTD/NTS/NT) - memcpy perf. tests (C = compile-time constant) **\n"
+		   "======= ================ ====================================== ====================================== ======================================\n"
+		   "   Size  Cache to cache               Cache to mem                           Mem to cache                            Mem to mem\n"
+		   "(bytes)         (ticks)                    (ticks)                                (ticks)                               (ticks)\n"
+		   "         RTE- STD(diff%%)  RTE- STD(diff%%)  NTD  NTS   NT(diff%%)  RTE- STD(diff%%)  NTD  NTS   NT(diff%%)  RTE- STD(diff%%)  NTD  NTS   NT(diff%%)\n"
+		   "------- ---------------- -------------------------------------- -------------------------------------- --------------------------------------");
 
-	printf("\n================================= %2dB aligned =================================",
+	printf("\n================================================================ %2dB aligned ===============================================================",
 		ALIGNMENT_UNIT);
 	/* Do aligned tests where size is a variable */
 	timespec_get(&tv_begin, TIME_UTC);
@@ -304,28 +356,28 @@ perf_test(void)
 	timespec_get(&tv_end, TIME_UTC);
 	time_aligned = (double)(tv_end.tv_sec - tv_begin.tv_sec)
 		+ ((double)tv_end.tv_nsec - tv_begin.tv_nsec) / NS_PER_S;
-	printf("\n------- ----------------- ----------------- ----------------- -----------------");
+	printf("\n------- ---------------- -------------------------------------- -------------------------------------- --------------------------------------");
 	/* Do aligned tests where size is a compile-time constant */
 	timespec_get(&tv_begin, TIME_UTC);
 	perf_test_constant_aligned();
 	timespec_get(&tv_end, TIME_UTC);
 	time_aligned_const = (double)(tv_end.tv_sec - tv_begin.tv_sec)
 		+ ((double)tv_end.tv_nsec - tv_begin.tv_nsec) / NS_PER_S;
-	printf("\n================================== Unaligned ==================================");
+	printf("\n================================================================= Unaligned =================================================================");
 	/* Do unaligned tests where size is a variable */
 	timespec_get(&tv_begin, TIME_UTC);
 	perf_test_variable_unaligned();
 	timespec_get(&tv_end, TIME_UTC);
 	time_unaligned = (double)(tv_end.tv_sec - tv_begin.tv_sec)
 		+ ((double)tv_end.tv_nsec - tv_begin.tv_nsec) / NS_PER_S;
-	printf("\n------- ----------------- ----------------- ----------------- -----------------");
+	printf("\n------- ---------------- -------------------------------------- -------------------------------------- --------------------------------------");
 	/* Do unaligned tests where size is a compile-time constant */
 	timespec_get(&tv_begin, TIME_UTC);
 	perf_test_constant_unaligned();
 	timespec_get(&tv_end, TIME_UTC);
 	time_unaligned_const = (double)(tv_end.tv_sec - tv_begin.tv_sec)
 		+ ((double)tv_end.tv_nsec - tv_begin.tv_nsec) / NS_PER_S;
-	printf("\n======= ================= ================= ================= =================\n\n");
+	printf("\n======= ================ ====================================== ====================================== ======================================\n\n");
 
 	printf("Test Execution Time (seconds):\n");
 	printf("Aligned variable copy size   = %8.3f\n", time_aligned);

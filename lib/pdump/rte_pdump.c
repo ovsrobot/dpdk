@@ -124,7 +124,8 @@ pdump_copy(uint16_t port_id, uint16_t queue,
 					    pkts[i], mp, cbs->snaplen,
 					    ts, direction);
 		else
-			p = rte_pktmbuf_copy(pkts[i], mp, 0, cbs->snaplen);
+			p = rte_pktmbuf_copy_ex(pkts[i], mp, 0, cbs->snaplen,
+						RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT);
 
 		if (unlikely(p == NULL))
 			__atomic_fetch_add(&stats->nombuf, 1, __ATOMIC_RELAXED);
@@ -133,6 +134,9 @@ pdump_copy(uint16_t port_id, uint16_t queue,
 	}
 
 	__atomic_fetch_add(&stats->accepted, d_pkts, __ATOMIC_RELAXED);
+
+	/* Flush non-temporal stores regarding the packet copies. */
+	rte_wmb();
 
 	ring_enq = rte_ring_enqueue_burst(ring, (void *)dup_bufs, d_pkts, NULL);
 	if (unlikely(ring_enq < d_pkts)) {

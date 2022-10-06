@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2014 Intel Corporation
+ * Copyright(c) 2022 SmartShare Systems
  */
 
 #include <stdint.h>
@@ -36,6 +37,19 @@ static size_t buf_sizes[TEST_VALUE_RANGE];
 /* Data is aligned on this many bytes (power of 2) */
 #define ALIGNMENT_UNIT          32
 
+const uint64_t nt_mode_flags[4] = {
+	0,
+	RTE_MEMOPS_F_SRC_NT,
+	RTE_MEMOPS_F_DST_NT,
+	RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT
+};
+const char * const nt_mode_str[4] = { 
+	"none",
+	"src",
+	"dst",
+	"src+dst"
+};
+
 
 /*
  * Create two buffers, and initialise one with random values. These are copied
@@ -44,12 +58,13 @@ static size_t buf_sizes[TEST_VALUE_RANGE];
  * changed.
  */
 static int
-test_single_memcpy(unsigned int off_src, unsigned int off_dst, size_t size)
+test_single_memcpy(unsigned int off_src, unsigned int off_dst, size_t size, unsigned int nt_mode)
 {
 	unsigned int i;
 	uint8_t dest[SMALL_BUFFER_SIZE + ALIGNMENT_UNIT];
 	uint8_t src[SMALL_BUFFER_SIZE + ALIGNMENT_UNIT];
 	void * ret;
+	const uint64_t flags = nt_mode_flags[nt_mode];
 
 	/* Setup buffers */
 	for (i = 0; i < SMALL_BUFFER_SIZE + ALIGNMENT_UNIT; i++) {
@@ -58,18 +73,23 @@ test_single_memcpy(unsigned int off_src, unsigned int off_dst, size_t size)
 	}
 
 	/* Do the copy */
-	ret = rte_memcpy(dest + off_dst, src + off_src, size);
-	if (ret != (dest + off_dst)) {
-		printf("rte_memcpy() returned %p, not %p\n",
-		       ret, dest + off_dst);
+	if (nt_mode) {
+		rte_memcpy_ex(dest + off_dst, src + off_src, size, flags);
+	} else {
+		ret = rte_memcpy(dest + off_dst, src + off_src, size);
+		if (ret != (dest + off_dst)) {
+			printf("rte_memcpy() returned %p, not %p\n",
+			       ret, dest + off_dst);
+		}
 	}
 
 	/* Check nothing before offset is affected */
 	for (i = 0; i < off_dst; i++) {
 		if (dest[i] != 0) {
-			printf("rte_memcpy() failed for %u bytes (offsets=%u,%u): "
+			printf("rte_memcpy%s() failed for %u bytes (offsets=%u,%u nt=%s): "
 			       "[modified before start of dst].\n",
-			       (unsigned)size, off_src, off_dst);
+			       nt_mode ? "_ex" : "",
+			       (unsigned int)size, off_src, off_dst, nt_mode_str[nt_mode]);
 			return -1;
 		}
 	}
@@ -77,9 +97,11 @@ test_single_memcpy(unsigned int off_src, unsigned int off_dst, size_t size)
 	/* Check everything was copied */
 	for (i = 0; i < size; i++) {
 		if (dest[i + off_dst] != src[i + off_src]) {
-			printf("rte_memcpy() failed for %u bytes (offsets=%u,%u): "
-			       "[didn't copy byte %u].\n",
-			       (unsigned)size, off_src, off_dst, i);
+			printf("rte_memcpy%s() failed for %u bytes (offsets=%u,%u nt=%s): "
+			       "[didn't copy byte %u: 0x%02x!=0x%02x].\n",
+			       nt_mode ? "_ex" : "",
+			       (unsigned int)size, off_src, off_dst, nt_mode_str[nt_mode], i,
+			       dest[i + off_dst], src[i + off_src]);
 			return -1;
 		}
 	}
@@ -87,9 +109,10 @@ test_single_memcpy(unsigned int off_src, unsigned int off_dst, size_t size)
 	/* Check nothing after copy was affected */
 	for (i = size; i < SMALL_BUFFER_SIZE; i++) {
 		if (dest[i + off_dst] != 0) {
-			printf("rte_memcpy() failed for %u bytes (offsets=%u,%u): "
+			printf("rte_memcpy%s() failed for %u bytes (offsets=%u,%u nt=%s): "
 			       "[copied too many].\n",
-			       (unsigned)size, off_src, off_dst);
+			       nt_mode ? "_ex" : "",
+			       (unsigned int)size, off_src, off_dst, nt_mode_str[nt_mode]);
 			return -1;
 		}
 	}
@@ -102,16 +125,22 @@ test_single_memcpy(unsigned int off_src, unsigned int off_dst, size_t size)
 static int
 func_test(void)
 {
-	unsigned int off_src, off_dst, i;
+	unsigned int off_src, off_dst, i, nt_mode;
 	int ret;
 
-	for (off_src = 0; off_src < ALIGNMENT_UNIT; off_src++) {
-		for (off_dst = 0; off_dst < ALIGNMENT_UNIT; off_dst++) {
-			for (i = 0; i < RTE_DIM(buf_sizes); i++) {
-				ret = test_single_memcpy(off_src, off_dst,
-				                         buf_sizes[i]);
-				if (ret != 0)
-					return -1;
+	for (nt_mode = 0; nt_mode < 4; nt_mode++) {
+		for (off_src = 0; off_src < ALIGNMENT_UNIT; off_src++) {
+			for (off_dst = 0; off_dst < ALIGNMENT_UNIT; off_dst++) {
+				for (i = 0; i < RTE_DIM(buf_sizes); i++) {
+					printf("TEST: rte_memcpy%s(offsets=%u,%u size=%zu nt=%s)\n",
+					       nt_mode ? "_ex" : "",
+					       off_src, off_dst, buf_sizes[i],
+					       nt_mode_str[nt_mode]);
+					ret = test_single_memcpy(off_src, off_dst,
+					                         buf_sizes[i], nt_mode);
+					if (ret != 0)
+						return -1;
+				}
 			}
 		}
 	}
