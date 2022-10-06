@@ -1517,6 +1517,43 @@ behavior as librte_net_mlx4::
    > port config all rss all
    > port start all
 
+Notes for hairpin
+-----------------
+
+NVIDIA Connect-X and BlueField devices support specifying memory
+placement for hairpin Rx and Tx queues. This feature requires OFED 5.8.
+
+By default, data buffers and packet descriptors for hairpin queues are placed
+in device memory which is shared with other resources (e.g. flow rules).
+
+Starting with DPDK 22.11 and OFED 5.8 applications are allowed to:
+
+#. Place data buffers and Rx packet descriptors in dedicated device memory.
+   Application can request that configuration through ``use_locked_device_memory``
+   configuration option.
+
+   Placing data buffers and Rx packet descriptors in dedicated device memory
+   can decrease latency on hairpinned traffic, since traffic processing
+   for the hairpin queue will not be memory starved.
+
+   However, reserving device memory for hairpin Rx queues may decrease throughput
+   under heavy load, since less resources will be available on device.
+
+   This option is supported only for Rx hairpin queues.
+
+#. Place Tx packet descriptors in host memory.
+   Application can request that configuration through ``use_rte_memory``
+   configuration option.
+
+   Placing Tx packet descritors in host memory can increase traffic throughput.
+   This results in more resources available on the device for other purposes,
+   which reduces memory contention on device.
+   Side effect of this option is visible increase in latency, since each packet
+   incurs additional PCI transactions.
+
+   This option is supported only for Tx hairpin queues.
+
+
 Usage example
 -------------
 
