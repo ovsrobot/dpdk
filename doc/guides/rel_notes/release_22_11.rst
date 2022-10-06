@@ -123,6 +123,12 @@ New Features
   into single event containing ``rte_event_vector``
   whose event type is ``RTE_EVENT_TYPE_CRYPTODEV_VECTOR``.
 
+* **Added Intel uncore frequency control API to the power library.**
+
+  Add API to allow uncore frequency adjustment. This is done through
+  manipulating related uncore frequency control sysfs entries to
+  adjust the minimum and maximum uncore frequency values, which works on
+  Linux with Intel hardware only.
 
 Removed Items
 -------------
