@@ -37,6 +37,25 @@ RTE_TRACE_POINT_FP(
 	rte_trace_point_emit_u16(nb_pkts);
 )
 
+RTE_TRACE_POINT_FP(
+	rte_eth_trace_call_rx_callbacks,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint16_t queue_id,
+		uint16_t nb_rx, uint16_t nb_pkts),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u16(queue_id);
+	rte_trace_point_emit_u16(nb_rx);
+	rte_trace_point_emit_u16(nb_pkts);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_eth_trace_call_tx_callbacks,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint16_t queue_id,
+		uint16_t nb_pkts),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u16(queue_id);
+	rte_trace_point_emit_u16(nb_pkts);
+)
+
 #ifdef __cplusplus
 }
 #endif
