@@ -539,6 +539,9 @@ The command line options are:
 
     The default value is 0. Hairpin will use single port mode and implicit Tx flow mode.
 
+*   ``--nic_to_pmd_rx_metadata``
+
+    Enable passing Rx metadata to PMD.
 
 Testpmd Multi-Process Command-line Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
