@@ -66,6 +66,16 @@ New Features
   Added new function ``rte_flow_async_action_handle_query()``,
   to query the action asynchronously.
 
+* **Added hairpin memory configurations options in ethdev API.**
+
+  Added new configuration flags for hairpin queues in ``rte_eth_hairpin_conf``:
+
+  * ``use_locked_device_memory``
+  * ``use_rte_memory``
+  * ``force_memory``
+
+  Each flag has a corresponding capability flag in ``rte_eth_hairpin_queue_cap`` struct.
+
 * **Updated Intel iavf driver.**
 
   * Added flow subscription support.
