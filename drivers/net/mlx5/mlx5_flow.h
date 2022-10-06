@@ -17,6 +17,8 @@
 #include <mlx5_prm.h>
 
 #include "mlx5.h"
+#include "hws/mlx5dr.h"
+#include "hws/mlx5dr_rule.h"
 
 /* E-Switch Manager port, used for rte_flow_item_port_id. */
 #define MLX5_PORT_ESW_MGR UINT32_MAX

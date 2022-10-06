@@ -1107,7 +1107,7 @@ flow_hw_async_flow_create(struct rte_eth_dev *dev,
 				  actions, rule_acts, &acts_num);
 	ret = mlx5dr_rule_create(table->matcher,
 				 pattern_template_index, items,
-				 rule_acts, acts_num,
+				 action_template_index, rule_acts,
 				 &rule_attr, &flow->rule);
 	if (likely(!ret))
 		return (struct rte_flow *)flow;
@@ -1498,7 +1498,7 @@ flow_hw_table_create(struct rte_eth_dev *dev,
 		tbl->its[i] = item_templates[i];
 	}
 	tbl->matcher = mlx5dr_matcher_create
-		(tbl->grp->tbl, mt, nb_item_templates, &matcher_attr);
+		(tbl->grp->tbl, mt, nb_item_templates, NULL, 0, &matcher_attr);
 	if (!tbl->matcher)
 		goto it_error;
 	tbl->nb_item_templates = nb_item_templates;

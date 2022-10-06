@@ -34,6 +34,7 @@
 #include "mlx5_os.h"
 #include "mlx5_autoconf.h"
 #if defined(HAVE_IBV_FLOW_DV_SUPPORT) || !defined(HAVE_INFINIBAND_VERBS_H)
+#include "hws/mlx5dr.h"
 #endif
 
 #define MLX5_SH(dev) (((struct mlx5_priv *)(dev)->data->dev_private)->sh)
