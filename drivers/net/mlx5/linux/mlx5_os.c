@@ -1543,8 +1543,11 @@ err_secondary:
 	rte_rwlock_init(&priv->ind_tbls_lock);
 	if (priv->vport_meta_mask)
 		flow_hw_set_port_info(eth_dev);
-	if (priv->sh->config.dv_flow_en == 2)
+	if (priv->sh->config.dv_flow_en == 2) {
+		/* Only HWS requires this information. */
+		flow_hw_init_tags_set(eth_dev);
 		return eth_dev;
+	}
 	/* Port representor shares the same max priority with pf port. */
 	if (!priv->sh->flow_priority_check_flag) {
 		/* Supported Verbs flow priority number detection. */
