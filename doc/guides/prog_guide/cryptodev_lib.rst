@@ -1180,6 +1180,27 @@ Asymmetric Crypto Device API
 The cryptodev Library API is described in the
 `DPDK API Reference <https://doc.dpdk.org/api/>`_
 
+Multi-process IPC request register support
+------------------------------------------
+As some cryptode PMDs have multiprocess support, the queue-pairs used in the
+secondary process are required to be configured by the primary process first.
+The cryptodev IPC request handler provide an alternative way to setup
+queue-pair from the secondary process via IPC messages in the runtime.
+
+The ``rte_cryptodev_mp_request_register`` function, called in primary process,
+register the ``ret_cryptodev_ipc_request`` function for IPC message request
+handling between primary and secondary process.
+The supported IPC request types are:
+
+.. code-block:: c
+    RTE_CRYPTODEV_MP_REQ_QP_SET
+    RTE_CRYPTODEV_MP_REQ_QP_FREE
+
+It up to the secondary process to fill-in required params in order to allow
+``rte_cryptodev_queue_pair_setup`` setup a queue-pair correctly.
+A new ``qp_in_used_pid`` param stores the PID to provide the ownership of the
+queue-pair so that only the PID matched queue-pair free request is allowed
+in the future.
 
 Device Statistics
 -----------------

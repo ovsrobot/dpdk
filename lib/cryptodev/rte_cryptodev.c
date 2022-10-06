@@ -49,6 +49,9 @@ struct rte_crypto_fp_ops rte_crypto_fp_ops[RTE_CRYPTO_MAX_DEVS];
 /* spinlock for crypto device callbacks */
 static rte_spinlock_t rte_cryptodev_cb_lock = RTE_SPINLOCK_INITIALIZER;
 
+/* crypto queue pair config */
+#define CRYPTODEV_MP_REQ "cryptodev_mp_request"
+
 /**
  * The user application callback description.
  *
@@ -1047,6 +1050,9 @@ rte_cryptodev_pmd_release_device(struct rte_cryptodev *cryptodev)
 			return ret;
 	}
 
+	if (cryptodev->data->qp_in_use_by_pid)
+		rte_free(cryptodev->data->qp_in_use_by_pid);
+
 	ret = rte_cryptodev_data_free(dev_id, &cryptodev_globals.data[dev_id]);
 	if (ret < 0)
 		return ret;
@@ -1135,6 +1141,21 @@ rte_cryptodev_queue_pairs_config(struct rte_cryptodev *dev, uint16_t nb_qpairs,
 
 	}
 	dev->data->nb_queue_pairs = nb_qpairs;
+
+	if (dev->data->qp_in_use_by_pid == NULL) {
+		dev->data->qp_in_use_by_pid = rte_zmalloc_socket(
+				"cryptodev->qp_in_use_by_pid",
+				sizeof(dev->data->qp_in_use_by_pid[0]) *
+				dev_info.max_nb_queue_pairs,
+				RTE_CACHE_LINE_SIZE, socket_id);
+		if (dev->data->qp_in_use_by_pid == NULL) {
+			CDEV_LOG_ERR("failed to get memory for qp meta data, "
+							"nb_queues %u",
+							nb_qpairs);
+			return -(ENOMEM);
+		}
+	}
+
 	return 0;
 }
 
@@ -1399,6 +1420,78 @@ rte_cryptodev_queue_pair_setup(uint8_t dev_id, uint16_t queue_pair_id,
 	rte_cryptodev_trace_queue_pair_setup(dev_id, queue_pair_id, qp_conf);
 	return (*dev->dev_ops->queue_pair_setup)(dev, queue_pair_id, qp_conf,
 			socket_id);
+}
+
+static int
+rte_cryptodev_ipc_request(const struct rte_mp_msg *mp_msg, const void *peer)
+{
+	struct rte_mp_msg mp_res;
+	struct rte_cryptodev_mp_param *resp_param =
+		(struct rte_cryptodev_mp_param *)mp_res.param;
+	const struct rte_cryptodev_mp_param *req_param =
+		(const struct rte_cryptodev_mp_param *)mp_msg->param;
+
+	int ret;
+	struct rte_cryptodev *dev;
+	uint16_t *qp_in_used_by_pid;
+	int dev_id = req_param->dev_id;
+	int qp_id = req_param->qp_id;
+	struct rte_cryptodev_qp_conf *queue_conf = req_param->queue_conf;
+
+	resp_param->result = -EINVAL;
+	if (!rte_cryptodev_is_valid_dev(dev_id)) {
+		CDEV_LOG_ERR("Invalid dev_id=%d", dev_id);
+		goto out;
+	}
+
+	if (!rte_cryptodev_get_qp_status(dev_id, qp_id))
+		goto out;
+
+	dev = &rte_crypto_devices[dev_id];
+	qp_in_used_by_pid = dev->data->qp_in_use_by_pid;
+
+	switch (req_param->type) {
+	case RTE_CRYPTODEV_MP_REQ_QP_SET:
+		ret = rte_cryptodev_queue_pair_setup(dev_id, qp_id,
+				queue_conf, req_param->socket_id);
+		if (!ret)
+			qp_in_used_by_pid[qp_id] = req_param->process_id;
+		resp_param->result = ret;
+		break;
+	case RTE_CRYPTODEV_MP_REQ_QP_FREE:
+		if (qp_in_used_by_pid[qp_id] != req_param->process_id) {
+			CDEV_LOG_ERR("Unable to release qp_id=%d", qp_id);
+			goto out;
+		}
+
+		ret = (*dev->dev_ops->queue_pair_release)(dev, qp_id);
+		if (!ret)
+			qp_in_used_by_pid[qp_id] = 0;
+
+		resp_param->result = ret;
+		break;
+	default:
+		CDEV_LOG_ERR("invalid mp request type\n");
+	}
+
+out:
+	ret = rte_mp_reply(&mp_res, peer);
+	return ret;
+}
+
+int
+rte_cryptodev_mp_request_register(void)
+{
+	RTE_ASSERT(rte_eal_process_type() == RTE_PROC_PRIMARY);
+	return rte_mp_action_register(CRYPTODEV_MP_REQ,
+				rte_cryptodev_ipc_request);
+}
+
+void
+rte_cryptodev_mp_request_unregister(void)
+{
+	RTE_ASSERT(rte_eal_process_type() == RTE_PROC_PRIMARY);
+	rte_mp_action_unregister(CRYPTODEV_MP_REQ);
 }
 
 struct rte_cryptodev_cb *
