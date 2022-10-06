@@ -1006,6 +1006,18 @@ flow_items_to_tunnel(const struct rte_flow_item items[])
 	return items[0].spec;
 }
 
+/* HW steering flow attributes. */
+struct mlx5_flow_attr {
+	uint32_t port_id; /* Port index. */
+	uint32_t group; /* Flow group. */
+	uint32_t priority; /* Original Priority. */
+	/* rss level, used by priority adjustment. */
+	uint32_t rss_level;
+	/* Action flags, used by priority adjustment. */
+	uint32_t act_flags;
+	uint32_t tbl_type; /* Flow table type. */
+};
+
 /* Flow structure. */
 struct rte_flow {
 	uint32_t dev_handles;
@@ -2122,4 +2134,9 @@ int mlx5_flow_get_item_vport_id(struct rte_eth_dev *dev,
 				bool *all_ports,
 				struct rte_flow_error *error);
 
+int flow_dv_translate_items_hws(const struct rte_flow_item *items,
+				struct mlx5_flow_attr *attr, void *key,
+				uint32_t key_type, uint64_t *item_flags,
+				uint8_t *match_criteria,
+				struct rte_flow_error *error);
 #endif /* RTE_PMD_MLX5_FLOW_H_ */

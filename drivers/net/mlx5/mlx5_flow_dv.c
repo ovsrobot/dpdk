@@ -13230,6 +13230,99 @@ flow_dv_translate_items(struct rte_eth_dev *dev,
 }
 
 /**
+ * Fill the HW steering flow with DV spec.
+ *
+ * @param[in] items
+ *   Pointer to the list of items.
+ * @param[in] attr
+ *   Pointer to the flow attributes.
+ * @param[in] key
+ *   Pointer to the flow matcher key.
+ * @param[in] key_type
+ *   Key type.
+ * @param[in, out] item_flags
+ *   Pointer to the flow item flags.
+ * @param[out] error
+ *   Pointer to the error structure.
+ *
+ * @return
+ *   0 on success, a negative errno value otherwise and rte_errno is set.
+ */
+int
+flow_dv_translate_items_hws(const struct rte_flow_item *items,
+			    struct mlx5_flow_attr *attr, void *key,
+			    uint32_t key_type, uint64_t *item_flags,
+			    uint8_t *match_criteria,
+			    struct rte_flow_error *error)
+{
+	struct mlx5_flow_rss_desc rss_desc = { .level = attr->rss_level };
+	struct rte_flow_attr rattr = {
+		.group = attr->group,
+		.priority = attr->priority,
+		.ingress = !!(attr->tbl_type == MLX5DR_TABLE_TYPE_NIC_RX),
+		.egress = !!(attr->tbl_type == MLX5DR_TABLE_TYPE_NIC_TX),
+		.transfer = !!(attr->tbl_type == MLX5DR_TABLE_TYPE_FDB),
+	};
+	struct mlx5_dv_matcher_workspace wks = {
+		.action_flags = attr->act_flags,
+		.item_flags = item_flags ? *item_flags : 0,
+		.external = 0,
+		.next_protocol = 0xff,
+		.attr = &rattr,
+		.rss_desc = &rss_desc,
+	};
+	int ret;
+
+	for (; items->type != RTE_FLOW_ITEM_TYPE_END; items++) {
+		if (!mlx5_flow_os_item_supported(items->type))
+			return rte_flow_error_set(error, ENOTSUP,
+						  RTE_FLOW_ERROR_TYPE_ITEM,
+						  NULL, "item not supported");
+		ret = flow_dv_translate_items(&rte_eth_devices[attr->port_id],
+			items, &wks, key, key_type,  NULL);
+		if (ret)
+			return ret;
+	}
+	if (wks.item_flags & MLX5_FLOW_LAYER_VXLAN_GPE) {
+		flow_dv_translate_item_vxlan_gpe(key,
+						 wks.tunnel_item,
+						 wks.item_flags,
+						 key_type);
+	} else if (wks.item_flags & MLX5_FLOW_LAYER_GENEVE) {
+		flow_dv_translate_item_geneve(key,
+					      wks.tunnel_item,
+					      wks.item_flags,
+					      key_type);
+	} else if (wks.item_flags & MLX5_FLOW_LAYER_GRE) {
+		if (wks.tunnel_item->type == RTE_FLOW_ITEM_TYPE_GRE) {
+			flow_dv_translate_item_gre(key,
+						   wks.tunnel_item,
+						   wks.item_flags,
+						   key_type);
+		} else if (wks.tunnel_item->type == RTE_FLOW_ITEM_TYPE_GRE_OPTION) {
+			flow_dv_translate_item_gre_option(key,
+							  wks.tunnel_item,
+							  wks.gre_item,
+							  wks.item_flags,
+							  key_type);
+		} else if (wks.tunnel_item->type == RTE_FLOW_ITEM_TYPE_NVGRE) {
+			flow_dv_translate_item_nvgre(key,
+						     wks.tunnel_item,
+						     wks.item_flags,
+						     key_type);
+		} else {
+			MLX5_ASSERT(false);
+		}
+	}
+
+	if (match_criteria)
+		*match_criteria = flow_dv_matcher_enable(key);
+	if (item_flags)
+		*item_flags = wks.item_flags;
+	return 0;
+}
+
+/**
  * Fill the SW steering flow with DV spec.
  *
  * @param[in] dev
