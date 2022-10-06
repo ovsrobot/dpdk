@@ -87,6 +87,13 @@ New Features
   Added MACsec transform for rte_security session and added new API
   to configure security associations (SA) and secure channels (SC).
 
+* **Added MP IPC request register function in cryptodev **
+
+  Added new functions ``rte_cryptodev_mp_request_register`` and
+  ``rte_cryptodev_mp_request_unregister``
+  The function helps the primary process to register IPC action that allow
+  secondary process to request cryptodev queue pairs setups via IPC messages.
+
 * **Added new algorithms to cryptodev.**
 
   * Added symmetric hash algorithm ShangMi 3 (SM3).
@@ -122,7 +129,6 @@ New Features
   Added support to aggregate crypto operations processed by event crypto adapter
   into single event containing ``rte_event_vector``
   whose event type is ``RTE_EVENT_TYPE_CRYPTODEV_VECTOR``.
-
 
 Removed Items
 -------------
