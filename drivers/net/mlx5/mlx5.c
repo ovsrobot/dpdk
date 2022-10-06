@@ -1945,6 +1945,7 @@ mlx5_dev_close(struct rte_eth_dev *dev)
 #if defined(HAVE_IBV_FLOW_DV_SUPPORT) || !defined(HAVE_INFINIBAND_VERBS_H)
 	flow_hw_resource_release(dev);
 #endif
+	flow_hw_clear_port_info(dev);
 	if (priv->rxq_privs != NULL) {
 		/* XXX race condition if mlx5_rx_burst() is still running. */
 		rte_delay_us_sleep(1000);
