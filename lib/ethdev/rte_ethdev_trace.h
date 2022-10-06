@@ -19,6 +19,7 @@ extern "C" {
 
 #include "rte_ethdev.h"
 #include "rte_mtr.h"
+#include "rte_tm.h"
 
 RTE_TRACE_POINT(
 	rte_ethdev_trace_configure,
@@ -1890,6 +1891,288 @@ RTE_TRACE_POINT(
 	rte_trace_point_emit_u32(mtr_id);
 	rte_trace_point_emit_int(proto);
 	rte_trace_point_emit_u32(priority);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_capabilities_get,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id,
+		struct rte_tm_capabilities *cap),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_ptr(cap);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_get_number_of_leaf_nodes,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t n_leaf_nodes,
+		struct rte_tm_error *error),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(n_leaf_nodes);
+	rte_trace_point_emit_int(error->type);
+	rte_trace_point_emit_string(error->message);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_hierarchy_commit,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, int clear_on_fail),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_int(clear_on_fail);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_level_capabilities_get,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t level_id,
+		struct rte_tm_level_capabilities *cap),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(level_id);
+	rte_trace_point_emit_ptr(cap);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_mark_ip_dscp,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, int mark_green,
+		int mark_yellow, int mark_red),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_int(mark_green);
+	rte_trace_point_emit_int(mark_yellow);
+	rte_trace_point_emit_int(mark_red);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_mark_ip_ecn,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, int mark_green,
+		int mark_yellow, int mark_red),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_int(mark_green);
+	rte_trace_point_emit_int(mark_yellow);
+	rte_trace_point_emit_int(mark_red);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_mark_vlan_dei,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, int mark_green,
+		int mark_yellow, int mark_red),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_int(mark_green);
+	rte_trace_point_emit_int(mark_yellow);
+	rte_trace_point_emit_int(mark_red);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_add,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		uint32_t parent_node_id, uint32_t priority,
+		uint32_t weight, uint32_t level_id,
+		struct rte_tm_node_params *params),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_u32(parent_node_id);
+	rte_trace_point_emit_u32(priority);
+	rte_trace_point_emit_u32(weight);
+	rte_trace_point_emit_u32(level_id);
+	rte_trace_point_emit_ptr(params);
+	rte_trace_point_emit_u32(params->shaper_profile_id);
+	rte_trace_point_emit_u32(params->n_shared_shapers);
+	rte_trace_point_emit_u64(params->stats_mask);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_capabilities_get,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		struct rte_tm_node_capabilities *cap),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_ptr(cap);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_cman_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		enum rte_tm_cman_mode cman),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_int(cman);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_delete,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_parent_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		uint32_t parent_node_id, uint32_t priority,
+		uint32_t weight),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_u32(parent_node_id);
+	rte_trace_point_emit_u32(priority);
+	rte_trace_point_emit_u32(weight);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_resume,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_shaper_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		uint32_t shaper_profile_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_u32(shaper_profile_id);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_shared_shaper_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		uint32_t shared_shaper_id, int add),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_u32(shared_shaper_id);
+	rte_trace_point_emit_int(add);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_shared_wred_context_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		uint32_t shared_wred_context_id, int add),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_u32(shared_wred_context_id);
+	rte_trace_point_emit_int(add);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_stats_read,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		struct rte_tm_node_stats *stats,
+		uint64_t *stats_mask, int clear),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_ptr(stats);
+	rte_trace_point_emit_ptr(stats_mask);
+	rte_trace_point_emit_int(clear);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_stats_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		uint64_t stats_mask),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_u64(stats_mask);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_suspend,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_type_get,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		int *is_leaf),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_ptr(is_leaf);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_wfq_weight_mode_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		int *wfq_weight_mode, uint32_t n_sp_priorities),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_ptr(wfq_weight_mode);
+	rte_trace_point_emit_u32(n_sp_priorities);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_node_wred_context_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		uint32_t wred_profile_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_u32(wred_profile_id);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_shaper_profile_add,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t shaper_profile_id,
+		struct rte_tm_shaper_params *profile),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(shaper_profile_id);
+	rte_trace_point_emit_ptr(profile);
+	rte_trace_point_emit_u64(profile->committed.rate);
+	rte_trace_point_emit_u64(profile->committed.size);
+	rte_trace_point_emit_u64(profile->peak.rate);
+	rte_trace_point_emit_u64(profile->peak.size);
+	rte_trace_point_emit_i32(profile->pkt_length_adjust);
+	rte_trace_point_emit_int(profile->packet_mode);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_shaper_profile_delete,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t shaper_profile_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(shaper_profile_id);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_shared_shaper_add_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t shared_shaper_id,
+		uint32_t shaper_profile_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(shared_shaper_id);
+	rte_trace_point_emit_u32(shaper_profile_id);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_shared_shaper_delete,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t shared_shaper_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(shared_shaper_id);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_shared_wred_context_add_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t shared_wred_context_id,
+		uint32_t wred_profile_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(shared_wred_context_id);
+	rte_trace_point_emit_u32(wred_profile_id);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_shared_wred_context_delete,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t shared_wred_context_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(shared_wred_context_id);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_wred_profile_add,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t wred_profile_id,
+		struct rte_tm_wred_params *profile),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(wred_profile_id);
+	rte_trace_point_emit_ptr(profile);
+	rte_trace_point_emit_int(profile->packet_mode);
+)
+
+RTE_TRACE_POINT(
+	rte_tm_trace_wred_profile_delete,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t wred_profile_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(wred_profile_id);
 )
 
 #ifdef __cplusplus
