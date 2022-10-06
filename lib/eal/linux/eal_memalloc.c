@@ -679,6 +679,9 @@ alloc_seg(struct rte_memseg *ms, void *addr, int socket_id,
 
 	huge_recover_sigbus();
 
+	close(fd);
+	fd_list[list_idx].fds[seg_idx] = -1;
+
 	ms->addr = addr;
 	ms->hugepage_sz = alloc_sz;
 	ms->len = alloc_sz;
