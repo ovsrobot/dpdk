@@ -192,6 +192,14 @@ User Cases
 ----------
 The mechanism can applied to any device which is based on polling. e.g. NIC, FPGA.
 
+
+Removal Note
+------------
+
+The experimental empty poll APIs will be removed from the library in a future
+DPDK release.
+
+
 Ethernet PMD Power Management API
 ---------------------------------
 
