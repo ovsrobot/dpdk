@@ -47,5 +47,6 @@ EXPERIMENTAL {
 	global:
 
 	rte_pktmbuf_pool_create_extbuf;
+	rte_pktmbuf_copy_ex;
 
 };

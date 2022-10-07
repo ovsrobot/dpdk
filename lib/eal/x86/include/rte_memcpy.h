@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2010-2014 Intel Corporation
+ * Copyright(c) 2022 SmartShare Systems
  */
 
 #ifndef _RTE_MEMCPY_X86_64_H_
@@ -17,6 +18,10 @@
 #include <rte_vect.h>
 #include <rte_common.h>
 #include <rte_config.h>
+#include <rte_debug.h>
+
+#define RTE_MEMCPY_EX_ARCH_DEFINED
+#include "generic/rte_memcpy.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -866,6 +871,1204 @@ rte_memcpy(void *dst, const void *src, size_t n)
 		return rte_memcpy_aligned(dst, src, n);
 	else
 		return rte_memcpy_generic(dst, src, n);
+}
+
+/*
+ * Advanced/Non-Temporal Memory Operations.
+ */
+
+/**
+ * @internal
+ * Workaround for _mm_stream_load_si128() missing const in the parameter.
+ */
+__rte_internal
+static __rte_always_inline
+__m128i _mm_stream_load_si128_const(const __m128i * const mem_addr)
+{
+#if defined(RTE_TOOLCHAIN_GCC)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
+#endif
+	return _mm_stream_load_si128(mem_addr);
+#if defined(RTE_TOOLCHAIN_GCC)
+#pragma GCC diagnostic pop
+#endif
+}
+
+/**
+ * @internal
+ * Memory copy from non-temporal source area.
+ *
+ * @note
+ * Performance is optimal when source pointer is 16 byte aligned.
+ *
+ * @param dst
+ *   Pointer to the destination memory area.
+ * @param src
+ *   Pointer to the non-temporal source memory area.
+ * @param len
+ *   Number of bytes to copy.
+ * @param flags
+ *   Hints for memory access.
+ *   Any of the RTE_MEMOPS_F_(LEN|SRC)<n>A flags.
+ *   The RTE_MEMOPS_F_SRC_NT flag must be set.
+ *   The RTE_MEMOPS_F_DST_NT flag must be clear.
+ *   The RTE_MEMOPS_F_DST<n>A flags are ignored.
+ *   Must be constant at build time.
+ */
+__rte_internal
+static __rte_always_inline
+__attribute__((__nonnull__(1, 2)))
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+__attribute__((__access__(write_only, 1, 3), __access__(read_only, 2, 3)))
+#endif
+void rte_memcpy_nts(void *__rte_restrict dst, const void *__rte_restrict src, size_t len,
+		const uint64_t flags)
+{
+	register __m128i    xmm0, xmm1, xmm2, xmm3;
+
+#ifndef RTE_TOOLCHAIN_CLANG /* Clang doesn't support using __builtin_constant_p() like this. */
+	RTE_BUILD_BUG_ON(!__builtin_constant_p(flags));
+#endif /* !RTE_TOOLCHAIN_CLANG */
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_SRCA_MASK) || rte_is_aligned(src,
+			(flags & RTE_MEMOPS_F_SRCA_MASK) >> RTE_MEMOPS_F_SRCA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_LENA_MASK) || (len &
+			((flags & RTE_MEMOPS_F_LENA_MASK) >> RTE_MEMOPS_F_LENA_SHIFT) - 1) == 0);
+
+	RTE_ASSERT((flags & (RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT)) == RTE_MEMOPS_F_SRC_NT);
+
+	if (unlikely(len == 0))
+		return;
+
+	/* If source is not 16 byte aligned, then copy first part of data via bounce buffer,
+	 * to achieve 16 byte alignment of source pointer.
+	 * This invalidates the source, destination and length alignment flags, and
+	 * potentially makes the destination pointer unaligned.
+	 *
+	 * Omitted if source is known to be 16 byte aligned.
+	 */
+	if (!((flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A)) {
+		/* Source is not known to be 16 byte aligned, but might be. */
+		/** How many bytes is source offset from 16 byte alignment (floor rounding). */
+		const size_t    offset = (uintptr_t)src & 15;
+
+		if (offset) {
+			/* Source is not 16 byte aligned. */
+			char            buffer[16] __rte_aligned(16);
+			/** How many bytes is source away from 16 byte alignment
+			 * (ceiling rounding).
+			 */
+			const size_t    first = 16 - offset;
+
+			xmm0 = _mm_stream_load_si128_const(RTE_PTR_SUB(src, offset));
+			_mm_store_si128((void *)buffer, xmm0);
+
+			/* Test for short length.
+			 *
+			 * Omitted if length is known to be >= 16.
+			 */
+			if (!(__builtin_constant_p(len) && len >= 16) &&
+					unlikely(len <= first)) {
+				/* Short length. */
+				rte_mov15_or_less(dst, RTE_PTR_ADD(buffer, offset), len);
+				return;
+			}
+
+			/* Copy until source pointer is 16 byte aligned. */
+			rte_mov15_or_less(dst, RTE_PTR_ADD(buffer, offset), first);
+			src = RTE_PTR_ADD(src, first);
+			dst = RTE_PTR_ADD(dst, first);
+			len -= first;
+		}
+	}
+
+	/* Source pointer is now 16 byte aligned. */
+	RTE_ASSERT(rte_is_aligned(src, 16));
+
+	/* Copy large portion of data in chunks of 64 byte. */
+	while (len >= 64) {
+		xmm0 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 0 * 16));
+		xmm1 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 1 * 16));
+		xmm2 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 2 * 16));
+		xmm3 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 3 * 16));
+		_mm_storeu_si128(RTE_PTR_ADD(dst, 0 * 16), xmm0);
+		_mm_storeu_si128(RTE_PTR_ADD(dst, 1 * 16), xmm1);
+		_mm_storeu_si128(RTE_PTR_ADD(dst, 2 * 16), xmm2);
+		_mm_storeu_si128(RTE_PTR_ADD(dst, 3 * 16), xmm3);
+		src = RTE_PTR_ADD(src, 64);
+		dst = RTE_PTR_ADD(dst, 64);
+		len -= 64;
+	}
+
+	/* Copy following 32 and 16 byte portions of data.
+	 *
+	 * Omitted if source is known to be 16 byte aligned (so the alignment
+	 * flags are still valid)
+	 * and length is known to be respectively 64 or 32 byte aligned.
+	 */
+	if (!(((flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A) &&
+			((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN64A)) &&
+			(len & 32)) {
+		xmm0 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 0 * 16));
+		xmm1 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 1 * 16));
+		_mm_storeu_si128(RTE_PTR_ADD(dst, 0 * 16), xmm0);
+		_mm_storeu_si128(RTE_PTR_ADD(dst, 1 * 16), xmm1);
+		src = RTE_PTR_ADD(src, 32);
+		dst = RTE_PTR_ADD(dst, 32);
+	}
+	if (!(((flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A) &&
+			((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN32A)) &&
+			(len & 16)) {
+		xmm2 = _mm_stream_load_si128_const(src);
+		_mm_storeu_si128(dst, xmm2);
+		src = RTE_PTR_ADD(src, 16);
+		dst = RTE_PTR_ADD(dst, 16);
+	}
+
+	/* Copy remaining data, 15 byte or less, if any, via bounce buffer.
+	 *
+	 * Omitted if source is known to be 16 byte aligned (so the alignment
+	 * flags are still valid) and length is known to be 16 byte aligned.
+	 */
+	if (!(((flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A) &&
+			((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN16A)) &&
+			(len & 15)) {
+		char    buffer[16] __rte_aligned(16);
+
+		xmm3 = _mm_stream_load_si128_const(src);
+		_mm_store_si128((void *)buffer, xmm3);
+		rte_mov15_or_less(dst, buffer, len & 15);
+	}
+}
+
+/**
+ * @internal
+ * Memory copy to non-temporal destination area.
+ *
+ * @note
+ * If the destination and/or length is unaligned, the first and/or last copied
+ * bytes will be stored in the destination memory area using temporal access.
+ * @note
+ * Performance is optimal when destination pointer is 16 byte aligned.
+ *
+ * @param dst
+ *   Pointer to the non-temporal destination memory area.
+ * @param src
+ *   Pointer to the source memory area.
+ * @param len
+ *   Number of bytes to copy.
+ * @param flags
+ *   Hints for memory access.
+ *   Any of the RTE_MEMOPS_F_(LEN|DST)<n>A flags.
+ *   The RTE_MEMOPS_F_SRC_NT flag must be clear.
+ *   The RTE_MEMOPS_F_DST_NT flag must be set.
+ *   The RTE_MEMOPS_F_SRC<n>A flags are ignored.
+ *   Must be constant at build time.
+ */
+__rte_internal
+static __rte_always_inline
+__attribute__((__nonnull__(1, 2)))
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+__attribute__((__access__(write_only, 1, 3), __access__(read_only, 2, 3)))
+#endif
+void rte_memcpy_ntd(void *__rte_restrict dst, const void *__rte_restrict src, size_t len,
+		const uint64_t flags)
+{
+#ifndef RTE_TOOLCHAIN_CLANG /* Clang doesn't support using __builtin_constant_p() like this. */
+	RTE_BUILD_BUG_ON(!__builtin_constant_p(flags));
+#endif /* !RTE_TOOLCHAIN_CLANG */
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_DSTA_MASK) || rte_is_aligned(dst,
+			(flags & RTE_MEMOPS_F_DSTA_MASK) >> RTE_MEMOPS_F_DSTA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_LENA_MASK) || (len &
+			((flags & RTE_MEMOPS_F_LENA_MASK) >> RTE_MEMOPS_F_LENA_SHIFT) - 1) == 0);
+
+	RTE_ASSERT((flags & (RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT)) == RTE_MEMOPS_F_DST_NT);
+
+	if (unlikely(len == 0))
+		return;
+
+	if (((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST16A) ||
+			len >= 16) {
+		/* Length >= 16 and/or destination is known to be 16 byte aligned. */
+		register __m128i    xmm0, xmm1, xmm2, xmm3;
+
+		/* If destination is not 16 byte aligned, then copy first part of data,
+		 * to achieve 16 byte alignment of destination pointer.
+		 * This invalidates the source, destination and length alignment flags, and
+		 * potentially makes the source pointer unaligned.
+		 *
+		 * Omitted if destination is known to be 16 byte aligned.
+		 */
+		if (!((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST16A)) {
+			/* Destination is not known to be 16 byte aligned, but might be. */
+			/** How many bytes is destination offset from 16 byte alignment
+			 * (floor rounding).
+			 */
+			const size_t    offset = (uintptr_t)dst & 15;
+
+			if (offset) {
+				/* Destination is not 16 byte aligned. */
+				/** How many bytes is destination away from 16 byte alignment
+				 * (ceiling rounding).
+				 */
+				const size_t    first = 16 - offset;
+
+				if (((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST4A) ||
+						(offset & 3) == 0) {
+					/* Destination is (known to be) 4 byte aligned. */
+					int32_t r0, r1, r2;
+
+					/* Copy until destination pointer is 16 byte aligned. */
+					if (first & 8) {
+						memcpy(&r0, RTE_PTR_ADD(src, 0 * 4), 4);
+						memcpy(&r1, RTE_PTR_ADD(src, 1 * 4), 4);
+						_mm_stream_si32(RTE_PTR_ADD(dst, 0 * 4), r0);
+						_mm_stream_si32(RTE_PTR_ADD(dst, 1 * 4), r1);
+						src = RTE_PTR_ADD(src, 8);
+						dst = RTE_PTR_ADD(dst, 8);
+						len -= 8;
+					}
+					if (first & 4) {
+						memcpy(&r2, src, 4);
+						_mm_stream_si32(dst, r2);
+						src = RTE_PTR_ADD(src, 4);
+						dst = RTE_PTR_ADD(dst, 4);
+						len -= 4;
+					}
+				} else {
+					/* Destination is not 4 byte aligned. */
+					/* Copy until destination pointer is 16 byte aligned. */
+					rte_mov15_or_less(dst, src, first);
+					src = RTE_PTR_ADD(src, first);
+					dst = RTE_PTR_ADD(dst, first);
+					len -= first;
+				}
+			}
+		}
+
+		/* Destination pointer is now 16 byte aligned. */
+		RTE_ASSERT(rte_is_aligned(dst, 16));
+
+		/* Copy large portion of data in chunks of 64 byte. */
+		while (len >= 64) {
+			xmm0 = _mm_loadu_si128(RTE_PTR_ADD(src, 0 * 16));
+			xmm1 = _mm_loadu_si128(RTE_PTR_ADD(src, 1 * 16));
+			xmm2 = _mm_loadu_si128(RTE_PTR_ADD(src, 2 * 16));
+			xmm3 = _mm_loadu_si128(RTE_PTR_ADD(src, 3 * 16));
+			_mm_stream_si128(RTE_PTR_ADD(dst, 0 * 16), xmm0);
+			_mm_stream_si128(RTE_PTR_ADD(dst, 1 * 16), xmm1);
+			_mm_stream_si128(RTE_PTR_ADD(dst, 2 * 16), xmm2);
+			_mm_stream_si128(RTE_PTR_ADD(dst, 3 * 16), xmm3);
+			src = RTE_PTR_ADD(src, 64);
+			dst = RTE_PTR_ADD(dst, 64);
+			len -= 64;
+		}
+
+		/* Copy following 32 and 16 byte portions of data.
+		 *
+		 * Omitted if destination is known to be 16 byte aligned (so the alignment
+		 * flags are still valid)
+		 * and length is known to be respectively 64 or 32 byte aligned.
+		 */
+		if (!(((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST16A) &&
+				((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN64A)) &&
+				(len & 32)) {
+			xmm0 = _mm_loadu_si128(RTE_PTR_ADD(src, 0 * 16));
+			xmm1 = _mm_loadu_si128(RTE_PTR_ADD(src, 1 * 16));
+			_mm_stream_si128(RTE_PTR_ADD(dst, 0 * 16), xmm0);
+			_mm_stream_si128(RTE_PTR_ADD(dst, 1 * 16), xmm1);
+			src = RTE_PTR_ADD(src, 32);
+			dst = RTE_PTR_ADD(dst, 32);
+		}
+		if (!(((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST16A) &&
+				((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN32A)) &&
+				(len & 16)) {
+			xmm2 = _mm_loadu_si128(src);
+			_mm_stream_si128(dst, xmm2);
+			src = RTE_PTR_ADD(src, 16);
+			dst = RTE_PTR_ADD(dst, 16);
+		}
+	} else {
+		/* Length <= 15, and
+		 * destination is not known to be 16 byte aligned (but might be).
+		 */
+		/* If destination is not 4 byte aligned, then
+		 * use normal copy and return.
+		 *
+		 * Omitted if destination is known to be 4 byte aligned.
+		 */
+		if (!((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST4A) &&
+				!rte_is_aligned(dst, 4)) {
+			/* Destination is not 4 byte aligned. Non-temporal store is unavailable. */
+			rte_mov15_or_less(dst, src, len);
+			return;
+		}
+		/* Destination is (known to be) 4 byte aligned. Proceed. */
+	}
+
+	/* Destination pointer is now 4 byte (or 16 byte) aligned. */
+	RTE_ASSERT(rte_is_aligned(dst, 4));
+
+	/* Copy following 8 and 4 byte portions of data.
+	 *
+	 * Omitted if destination is known to be 16 byte aligned (so the alignment
+	 * flags are still valid)
+	 * and length is known to be respectively 16 or 8 byte aligned.
+	 */
+	if (!(((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST16A) &&
+			((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN16A)) &&
+			(len & 8)) {
+		int32_t r0, r1;
+
+		memcpy(&r0, RTE_PTR_ADD(src, 0 * 4), 4);
+		memcpy(&r1, RTE_PTR_ADD(src, 1 * 4), 4);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 0 * 4), r0);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 1 * 4), r1);
+		src = RTE_PTR_ADD(src, 8);
+		dst = RTE_PTR_ADD(dst, 8);
+	}
+	if (!(((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST16A) &&
+			((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN8A)) &&
+			(len & 4)) {
+		int32_t r2;
+
+		memcpy(&r2, src, 4);
+		_mm_stream_si32(dst, r2);
+		src = RTE_PTR_ADD(src, 4);
+		dst = RTE_PTR_ADD(dst, 4);
+	}
+
+	/* Copy remaining 2 and 1 byte portions of data.
+	 *
+	 * Omitted if destination is known to be 16 byte aligned (so the alignment
+	 * flags are still valid)
+	 * and length is known to be respectively 4 and 2 byte aligned.
+	 */
+	if (!(((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST16A) &&
+			((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN4A)) &&
+			(len & 2)) {
+		int16_t r3;
+
+		memcpy(&r3, src, 2);
+		*(int16_t *)dst = r3;
+		src = RTE_PTR_ADD(src, 2);
+		dst = RTE_PTR_ADD(dst, 2);
+	}
+	if (!(((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST16A) &&
+			((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN2A)) &&
+			(len & 1))
+		*(char *)dst = *(const char *)src;
+}
+
+/**
+ * @internal
+ * Non-temporal memory copy of 15 or less byte
+ * from 16 byte aligned source via bounce buffer.
+ * The memory areas must not overlap.
+ *
+ * @param dst
+ *   Pointer to the non-temporal destination memory area.
+ * @param src
+ *   Pointer to the non-temporal source memory area.
+ *   Must be 16 byte aligned.
+ * @param len
+ *   Only the 4 least significant bits of this parameter are used.
+ *   The 4 least significant bits of this holds the number of remaining bytes to copy.
+ * @param flags
+ *   Hints for memory access.
+ */
+__rte_internal
+static __rte_always_inline
+__attribute__((__nonnull__(1, 2)))
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+__attribute__((__access__(write_only, 1, 3), __access__(read_only, 2, 3)))
+#endif
+void rte_memcpy_nt_15_or_less_s16a(void *__rte_restrict dst,
+		const void *__rte_restrict src, size_t len, const uint64_t flags)
+{
+	int32_t             buffer[4] __rte_aligned(16);
+	register __m128i    xmm0;
+
+#ifndef RTE_TOOLCHAIN_CLANG /* Clang doesn't support using __builtin_constant_p() like this. */
+	RTE_BUILD_BUG_ON(!__builtin_constant_p(flags));
+#endif /* !RTE_TOOLCHAIN_CLANG */
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_DSTA_MASK) || rte_is_aligned(dst,
+			(flags & RTE_MEMOPS_F_DSTA_MASK) >> RTE_MEMOPS_F_DSTA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_SRCA_MASK) || rte_is_aligned(src,
+			(flags & RTE_MEMOPS_F_SRCA_MASK) >> RTE_MEMOPS_F_SRCA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_LENA_MASK) || (len &
+			((flags & RTE_MEMOPS_F_LENA_MASK) >> RTE_MEMOPS_F_LENA_SHIFT) - 1) == 0);
+
+	RTE_ASSERT((flags & (RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT)) ==
+			(RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT));
+	RTE_ASSERT(rte_is_aligned(src, 16));
+
+	if ((len & 15) == 0) return;
+
+	/* Non-temporal load into bounce buffer. */
+	xmm0 = _mm_stream_load_si128_const(src);
+	_mm_store_si128((void *)buffer, xmm0);
+
+	/* Store from bounce buffer. */
+	if (((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST4A) ||
+			rte_is_aligned(dst, 4)) {
+		/* Destination is (known to be) 4 byte aligned. */
+		src = (const void *)buffer;
+		if (len & 8) {
+			if ((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST8A) {
+				/* Destination is known to be 8 byte aligned. */
+				_mm_stream_si64(dst, *(const int64_t *)src);
+			} else {
+				_mm_stream_si32(RTE_PTR_ADD(dst, 0), buffer[0]);
+				_mm_stream_si32(RTE_PTR_ADD(dst, 4), buffer[1]);
+			}
+			src = RTE_PTR_ADD(src, 8);
+			dst = RTE_PTR_ADD(dst, 8);
+		}
+		if (!((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN8A) &&
+				(len & 4)) {
+			_mm_stream_si32(dst, *(const int32_t *)src);
+			src = RTE_PTR_ADD(src, 4);
+			dst = RTE_PTR_ADD(dst, 4);
+		}
+
+		/* Non-temporal store is unavailble for the remaining 3 byte or less. */
+		if (!((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN4A) &&
+				(len & 2)) {
+			*(int16_t *)dst = *(const int16_t *)src;
+			src = RTE_PTR_ADD(src, 2);
+			dst = RTE_PTR_ADD(dst, 2);
+		}
+		if (!((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN2A) &&
+				(len & 1)) {
+			*(char *)dst = *(const char *)src;
+		}
+	} else {
+		/* Destination is not 4 byte aligned. Non-temporal store is unavailable. */
+		rte_mov15_or_less(dst, (const void *)buffer, len & 15);
+	}
+}
+
+/**
+ * @internal
+ * 16 byte aligned addresses non-temporal memory copy.
+ * The memory areas must not overlap.
+ *
+ * @param dst
+ *   Pointer to the non-temporal destination memory area.
+ *   Must be 16 byte aligned.
+ * @param src
+ *   Pointer to the non-temporal source memory area.
+ *   Must be 16 byte aligned.
+ * @param len
+ *   Number of bytes to copy.
+ * @param flags
+ *   Hints for memory access.
+ */
+__rte_internal
+static __rte_always_inline
+__attribute__((__nonnull__(1, 2)))
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+__attribute__((__access__(write_only, 1, 3), __access__(read_only, 2, 3)))
+#endif
+void rte_memcpy_nt_d16s16a(void *__rte_restrict dst, const void *__rte_restrict src, size_t len,
+		const uint64_t flags)
+{
+	register __m128i    xmm0, xmm1, xmm2, xmm3;
+
+#ifndef RTE_TOOLCHAIN_CLANG /* Clang doesn't support using __builtin_constant_p() like this. */
+	RTE_BUILD_BUG_ON(!__builtin_constant_p(flags));
+#endif /* !RTE_TOOLCHAIN_CLANG */
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_DSTA_MASK) || rte_is_aligned(dst,
+			(flags & RTE_MEMOPS_F_DSTA_MASK) >> RTE_MEMOPS_F_DSTA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_SRCA_MASK) || rte_is_aligned(src,
+			(flags & RTE_MEMOPS_F_SRCA_MASK) >> RTE_MEMOPS_F_SRCA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_LENA_MASK) || (len &
+			((flags & RTE_MEMOPS_F_LENA_MASK) >> RTE_MEMOPS_F_LENA_SHIFT) - 1) == 0);
+
+	RTE_ASSERT((flags & (RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT)) ==
+			(RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT));
+	RTE_ASSERT(rte_is_aligned(dst, 16));
+	RTE_ASSERT(rte_is_aligned(src, 16));
+
+	if (unlikely(len == 0))
+		return;
+
+	/* Copy large portion of data in chunks of 64 byte. */
+	while (len >= 64) {
+		xmm0 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 0 * 16));
+		xmm1 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 1 * 16));
+		xmm2 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 2 * 16));
+		xmm3 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 3 * 16));
+		_mm_stream_si128(RTE_PTR_ADD(dst, 0 * 16), xmm0);
+		_mm_stream_si128(RTE_PTR_ADD(dst, 1 * 16), xmm1);
+		_mm_stream_si128(RTE_PTR_ADD(dst, 2 * 16), xmm2);
+		_mm_stream_si128(RTE_PTR_ADD(dst, 3 * 16), xmm3);
+		src = RTE_PTR_ADD(src, 64);
+		dst = RTE_PTR_ADD(dst, 64);
+		len -= 64;
+	}
+
+	/* Copy following 32 and 16 byte portions of data.
+	 *
+	 * Omitted if length is known to be respectively 64 or 32 byte aligned.
+	 */
+	if (!((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN64A) &&
+			(len & 32)) {
+		xmm0 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 0 * 16));
+		xmm1 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 1 * 16));
+		_mm_stream_si128(RTE_PTR_ADD(dst, 0 * 16), xmm0);
+		_mm_stream_si128(RTE_PTR_ADD(dst, 1 * 16), xmm1);
+		src = RTE_PTR_ADD(src, 32);
+		dst = RTE_PTR_ADD(dst, 32);
+	}
+	if (!((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN32A) &&
+			(len & 16)) {
+		xmm2 = _mm_stream_load_si128_const(src);
+		_mm_stream_si128(dst, xmm2);
+		src = RTE_PTR_ADD(src, 16);
+		dst = RTE_PTR_ADD(dst, 16);
+	}
+
+	/* Copy remaining data, 15 byte or less, via bounce buffer.
+	 *
+	 * Omitted if length is known to be 16 byte aligned.
+	 */
+	if (!((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN16A))
+		rte_memcpy_nt_15_or_less_s16a(dst, src, len,
+				(flags & ~(RTE_MEMOPS_F_DSTA_MASK | RTE_MEMOPS_F_SRCA_MASK)) |
+				(((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST16A) ?
+				flags : RTE_MEMOPS_F_DST16A) |
+				(((flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A) ?
+				flags : RTE_MEMOPS_F_SRC16A));
+}
+
+/**
+ * @internal
+ * 8/16 byte aligned destination/source addresses non-temporal memory copy.
+ * The memory areas must not overlap.
+ *
+ * @param dst
+ *   Pointer to the non-temporal destination memory area.
+ *   Must be 8 byte aligned.
+ * @param src
+ *   Pointer to the non-temporal source memory area.
+ *   Must be 16 byte aligned.
+ * @param len
+ *   Number of bytes to copy.
+ * @param flags
+ *   Hints for memory access.
+ */
+__rte_internal
+static __rte_always_inline
+__attribute__((__nonnull__(1, 2)))
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+__attribute__((__access__(write_only, 1, 3), __access__(read_only, 2, 3)))
+#endif
+void rte_memcpy_nt_d8s16a(void *__rte_restrict dst, const void *__rte_restrict src, size_t len,
+		const uint64_t flags)
+{
+	int64_t             buffer[8] __rte_cache_aligned /* at least __rte_aligned(16) */;
+	register __m128i    xmm0, xmm1, xmm2, xmm3;
+
+#ifndef RTE_TOOLCHAIN_CLANG /* Clang doesn't support using __builtin_constant_p() like this. */
+	RTE_BUILD_BUG_ON(!__builtin_constant_p(flags));
+#endif /* !RTE_TOOLCHAIN_CLANG */
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_DSTA_MASK) || rte_is_aligned(dst,
+			(flags & RTE_MEMOPS_F_DSTA_MASK) >> RTE_MEMOPS_F_DSTA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_SRCA_MASK) || rte_is_aligned(src,
+			(flags & RTE_MEMOPS_F_SRCA_MASK) >> RTE_MEMOPS_F_SRCA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_LENA_MASK) || (len &
+			((flags & RTE_MEMOPS_F_LENA_MASK) >> RTE_MEMOPS_F_LENA_SHIFT) - 1) == 0);
+
+	RTE_ASSERT((flags & (RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT)) ==
+			(RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT));
+	RTE_ASSERT(rte_is_aligned(dst, 8));
+	RTE_ASSERT(rte_is_aligned(src, 16));
+
+	if (unlikely(len == 0))
+		return;
+
+	/* Copy large portion of data in chunks of 64 byte. */
+	while (len >= 64) {
+		xmm0 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 0 * 16));
+		xmm1 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 1 * 16));
+		xmm2 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 2 * 16));
+		xmm3 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 3 * 16));
+		_mm_store_si128((void *)&buffer[0 * 2], xmm0);
+		_mm_store_si128((void *)&buffer[1 * 2], xmm1);
+		_mm_store_si128((void *)&buffer[2 * 2], xmm2);
+		_mm_store_si128((void *)&buffer[3 * 2], xmm3);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 0 * 8), buffer[0]);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 1 * 8), buffer[1]);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 2 * 8), buffer[2]);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 3 * 8), buffer[3]);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 4 * 8), buffer[4]);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 5 * 8), buffer[5]);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 6 * 8), buffer[6]);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 7 * 8), buffer[7]);
+		src = RTE_PTR_ADD(src, 64);
+		dst = RTE_PTR_ADD(dst, 64);
+		len -= 64;
+	}
+
+	/* Copy following 32 and 16 byte portions of data.
+	 *
+	 * Omitted if length is known to be respectively 64 or 32 byte aligned.
+	 */
+	if (!((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN64A) &&
+			(len & 32)) {
+		xmm0 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 0 * 16));
+		xmm1 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 1 * 16));
+		_mm_store_si128((void *)&buffer[0 * 2], xmm0);
+		_mm_store_si128((void *)&buffer[1 * 2], xmm1);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 0 * 8), buffer[0]);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 1 * 8), buffer[1]);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 2 * 8), buffer[2]);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 3 * 8), buffer[3]);
+		src = RTE_PTR_ADD(src, 32);
+		dst = RTE_PTR_ADD(dst, 32);
+	}
+	if (!((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN32A) &&
+			(len & 16)) {
+		xmm2 = _mm_stream_load_si128_const(src);
+		_mm_store_si128((void *)&buffer[2 * 2], xmm2);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 0 * 8), buffer[4]);
+		_mm_stream_si64(RTE_PTR_ADD(dst, 1 * 8), buffer[5]);
+		src = RTE_PTR_ADD(src, 16);
+		dst = RTE_PTR_ADD(dst, 16);
+	}
+
+	/* Copy remaining data, 15 byte or less, via bounce buffer.
+	 *
+	 * Omitted if length is known to be 16 byte aligned.
+	 */
+	if (!((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN16A))
+		rte_memcpy_nt_15_or_less_s16a(dst, src, len,
+				(flags & ~(RTE_MEMOPS_F_DSTA_MASK | RTE_MEMOPS_F_SRCA_MASK)) |
+				(((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST8A) ?
+				flags : RTE_MEMOPS_F_DST8A) |
+				(((flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A) ?
+				flags : RTE_MEMOPS_F_SRC16A));
+}
+
+/**
+ * @internal
+ * 4/16 byte aligned destination/source addresses non-temporal memory copy.
+ * The memory areas must not overlap.
+ *
+ * @param dst
+ *   Pointer to the non-temporal destination memory area.
+ *   Must be 4 byte aligned.
+ * @param src
+ *   Pointer to the non-temporal source memory area.
+ *   Must be 16 byte aligned.
+ * @param len
+ *   Number of bytes to copy.
+ * @param flags
+ *   Hints for memory access.
+ */
+__rte_internal
+static __rte_always_inline
+__attribute__((__nonnull__(1, 2)))
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+__attribute__((__access__(write_only, 1, 3), __access__(read_only, 2, 3)))
+#endif
+void rte_memcpy_nt_d4s16a(void *__rte_restrict dst, const void *__rte_restrict src, size_t len,
+		const uint64_t flags)
+{
+	int32_t             buffer[16] __rte_cache_aligned /* at least __rte_aligned(16) */;
+	register __m128i    xmm0, xmm1, xmm2, xmm3;
+
+#ifndef RTE_TOOLCHAIN_CLANG /* Clang doesn't support using __builtin_constant_p() like this. */
+	RTE_BUILD_BUG_ON(!__builtin_constant_p(flags));
+#endif /* !RTE_TOOLCHAIN_CLANG */
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_DSTA_MASK) || rte_is_aligned(dst,
+			(flags & RTE_MEMOPS_F_DSTA_MASK) >> RTE_MEMOPS_F_DSTA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_SRCA_MASK) || rte_is_aligned(src,
+			(flags & RTE_MEMOPS_F_SRCA_MASK) >> RTE_MEMOPS_F_SRCA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_LENA_MASK) || (len &
+			((flags & RTE_MEMOPS_F_LENA_MASK) >> RTE_MEMOPS_F_LENA_SHIFT) - 1) == 0);
+
+	RTE_ASSERT((flags & (RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT)) ==
+			(RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT));
+	RTE_ASSERT(rte_is_aligned(dst, 4));
+	RTE_ASSERT(rte_is_aligned(src, 16));
+
+	if (unlikely(len == 0))
+		return;
+
+	/* Copy large portion of data in chunks of 64 byte. */
+	while (len >= 64) {
+		xmm0 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 0 * 16));
+		xmm1 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 1 * 16));
+		xmm2 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 2 * 16));
+		xmm3 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 3 * 16));
+		_mm_store_si128((void *)&buffer[0 * 4], xmm0);
+		_mm_store_si128((void *)&buffer[1 * 4], xmm1);
+		_mm_store_si128((void *)&buffer[2 * 4], xmm2);
+		_mm_store_si128((void *)&buffer[3 * 4], xmm3);
+		_mm_stream_si32(RTE_PTR_ADD(dst,  0 * 4), buffer[0]);
+		_mm_stream_si32(RTE_PTR_ADD(dst,  1 * 4), buffer[1]);
+		_mm_stream_si32(RTE_PTR_ADD(dst,  2 * 4), buffer[2]);
+		_mm_stream_si32(RTE_PTR_ADD(dst,  3 * 4), buffer[3]);
+		_mm_stream_si32(RTE_PTR_ADD(dst,  4 * 4), buffer[4]);
+		_mm_stream_si32(RTE_PTR_ADD(dst,  5 * 4), buffer[5]);
+		_mm_stream_si32(RTE_PTR_ADD(dst,  6 * 4), buffer[6]);
+		_mm_stream_si32(RTE_PTR_ADD(dst,  7 * 4), buffer[7]);
+		_mm_stream_si32(RTE_PTR_ADD(dst,  8 * 4), buffer[8]);
+		_mm_stream_si32(RTE_PTR_ADD(dst,  9 * 4), buffer[9]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 10 * 4), buffer[10]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 11 * 4), buffer[11]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 12 * 4), buffer[12]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 13 * 4), buffer[13]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 14 * 4), buffer[14]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 15 * 4), buffer[15]);
+		src = RTE_PTR_ADD(src, 64);
+		dst = RTE_PTR_ADD(dst, 64);
+		len -= 64;
+	}
+
+	/* Copy following 32 and 16 byte portions of data.
+	 *
+	 * Omitted if length is known to be respectively 64 or 32 byte aligned.
+	 */
+	if (!((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN64A) &&
+			(len & 32)) {
+		xmm0 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 0 * 16));
+		xmm1 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 1 * 16));
+		_mm_store_si128((void *)&buffer[0 * 4], xmm0);
+		_mm_store_si128((void *)&buffer[1 * 4], xmm1);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 0 * 4), buffer[0]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 1 * 4), buffer[1]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 2 * 4), buffer[2]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 3 * 4), buffer[3]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 4 * 4), buffer[4]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 5 * 4), buffer[5]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 6 * 4), buffer[6]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 7 * 4), buffer[7]);
+		src = RTE_PTR_ADD(src, 32);
+		dst = RTE_PTR_ADD(dst, 32);
+	}
+	if (!((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN32A) &&
+			(len & 16)) {
+		xmm2 = _mm_stream_load_si128_const(src);
+		_mm_store_si128((void *)&buffer[2 * 4], xmm2);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 0 * 4), buffer[8]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 1 * 4), buffer[9]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 2 * 4), buffer[10]);
+		_mm_stream_si32(RTE_PTR_ADD(dst, 3 * 4), buffer[11]);
+		src = RTE_PTR_ADD(src, 16);
+		dst = RTE_PTR_ADD(dst, 16);
+	}
+
+	/* Copy remaining data, 15 byte or less, via bounce buffer.
+	 *
+	 * Omitted if length is known to be 16 byte aligned.
+	 */
+	if (!((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN16A))
+		rte_memcpy_nt_15_or_less_s16a(dst, src, len,
+				(flags & ~(RTE_MEMOPS_F_DSTA_MASK | RTE_MEMOPS_F_SRCA_MASK)) |
+				(((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST4A) ?
+				flags : RTE_MEMOPS_F_DST4A) |
+				(((flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A) ?
+				flags : RTE_MEMOPS_F_SRC16A));
+}
+
+/**
+ * @internal
+ * 4 byte aligned addresses (non-temporal) memory copy.
+ * The memory areas must not overlap.
+ *
+ * @param dst
+ *   Pointer to the (non-temporal) destination memory area.
+ *   Must be 4 byte aligned if using non-temporal store.
+ * @param src
+ *   Pointer to the (non-temporal) source memory area.
+ *   Must be 4 byte aligned if using non-temporal load.
+ * @param len
+ *   Number of bytes to copy.
+ * @param flags
+ *   Hints for memory access.
+ */
+__rte_internal
+static __rte_always_inline
+__attribute__((__nonnull__(1, 2)))
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+__attribute__((__access__(write_only, 1, 3), __access__(read_only, 2, 3)))
+#endif
+void rte_memcpy_nt_d4s4a(void *__rte_restrict dst, const void *__rte_restrict src, size_t len,
+		const uint64_t flags)
+{
+	/** How many bytes is source offset from 16 byte alignment (floor rounding). */
+	const size_t    offset = (flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A ?
+			0 : (uintptr_t)src & 15;
+
+#ifndef RTE_TOOLCHAIN_CLANG /* Clang doesn't support using __builtin_constant_p() like this. */
+	RTE_BUILD_BUG_ON(!__builtin_constant_p(flags));
+#endif /* !RTE_TOOLCHAIN_CLANG */
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_DSTA_MASK) || rte_is_aligned(dst,
+			(flags & RTE_MEMOPS_F_DSTA_MASK) >> RTE_MEMOPS_F_DSTA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_SRCA_MASK) || rte_is_aligned(src,
+			(flags & RTE_MEMOPS_F_SRCA_MASK) >> RTE_MEMOPS_F_SRCA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_LENA_MASK) || (len &
+			((flags & RTE_MEMOPS_F_LENA_MASK) >> RTE_MEMOPS_F_LENA_SHIFT) - 1) == 0);
+
+	RTE_ASSERT((flags & (RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT)) ==
+			(RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT));
+	RTE_ASSERT(rte_is_aligned(dst, 4));
+	RTE_ASSERT(rte_is_aligned(src, 4));
+
+	if (unlikely(len == 0))
+		return;
+
+	if (offset == 0) {
+		/* Source is 16 byte aligned. */
+		/* Copy everything, using upgraded source alignment flags. */
+		rte_memcpy_nt_d4s16a(dst, src, len,
+				(flags & ~RTE_MEMOPS_F_SRCA_MASK) | RTE_MEMOPS_F_SRC16A);
+	} else {
+		/* Source is not 16 byte aligned, so make it 16 byte aligned. */
+		int32_t             buffer[4] __rte_aligned(16);
+		const size_t        first = 16 - offset;
+		register __m128i    xmm0;
+
+		/* First, copy first part of data in chunks of 4 byte,
+		 * to achieve 16 byte alignment of source.
+		 * This invalidates the source, destination and length alignment flags, and
+		 * potentially makes the destination pointer 16 byte unaligned/aligned.
+		 */
+
+		/** Copy from 16 byte aligned source pointer (floor rounding). */
+		xmm0 = _mm_stream_load_si128_const(RTE_PTR_SUB(src, offset));
+		_mm_store_si128((void *)buffer, xmm0);
+
+		if (unlikely(len + offset <= 16)) {
+			/* Short length. */
+			if (((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN4A) ||
+					(len & 3) == 0) {
+				/* Length is 4 byte aligned. */
+				switch (len) {
+				case 1 * 4:
+					/* Offset can be 1 * 4, 2 * 4 or 3 * 4. */
+					_mm_stream_si32(RTE_PTR_ADD(dst, 0 * 4),
+							buffer[offset / 4]);
+					break;
+				case 2 * 4:
+					/* Offset can be 1 * 4 or 2 * 4. */
+					_mm_stream_si32(RTE_PTR_ADD(dst, 0 * 4),
+							buffer[offset / 4]);
+					_mm_stream_si32(RTE_PTR_ADD(dst, 1 * 4),
+							buffer[offset / 4 + 1]);
+					break;
+				case 3 * 4:
+					/* Offset can only be 1 * 4. */
+					_mm_stream_si32(RTE_PTR_ADD(dst, 0 * 4), buffer[1]);
+					_mm_stream_si32(RTE_PTR_ADD(dst, 1 * 4), buffer[2]);
+					_mm_stream_si32(RTE_PTR_ADD(dst, 2 * 4), buffer[3]);
+					break;
+				}
+			} else {
+				/* Length is not 4 byte aligned. */
+				rte_mov15_or_less(dst, RTE_PTR_ADD(buffer, offset), len);
+			}
+			return;
+		}
+
+		switch (first) {
+		case 1 * 4:
+			_mm_stream_si32(RTE_PTR_ADD(dst, 0 * 4), buffer[3]);
+			break;
+		case 2 * 4:
+			_mm_stream_si32(RTE_PTR_ADD(dst, 0 * 4), buffer[2]);
+			_mm_stream_si32(RTE_PTR_ADD(dst, 1 * 4), buffer[3]);
+			break;
+		case 3 * 4:
+			_mm_stream_si32(RTE_PTR_ADD(dst, 0 * 4), buffer[1]);
+			_mm_stream_si32(RTE_PTR_ADD(dst, 1 * 4), buffer[2]);
+			_mm_stream_si32(RTE_PTR_ADD(dst, 2 * 4), buffer[3]);
+			break;
+		}
+
+		src = RTE_PTR_ADD(src, first);
+		dst = RTE_PTR_ADD(dst, first);
+		len -= first;
+
+		/* Source pointer is now 16 byte aligned. */
+		RTE_ASSERT(rte_is_aligned(src, 16));
+
+		/* Then, copy the rest, using corrected alignment flags. */
+		if (rte_is_aligned(dst, 16))
+			rte_memcpy_nt_d16s16a(dst, src, len, (flags &
+					~(RTE_MEMOPS_F_DSTA_MASK | RTE_MEMOPS_F_SRCA_MASK |
+					RTE_MEMOPS_F_LENA_MASK)) |
+					RTE_MEMOPS_F_DST16A | RTE_MEMOPS_F_SRC16A |
+					(((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN4A) ?
+					RTE_MEMOPS_F_LEN4A : (flags & RTE_MEMOPS_F_LEN2A)));
+		else if (rte_is_aligned(dst, 8))
+			rte_memcpy_nt_d8s16a(dst, src, len, (flags &
+					~(RTE_MEMOPS_F_DSTA_MASK | RTE_MEMOPS_F_SRCA_MASK |
+					RTE_MEMOPS_F_LENA_MASK)) |
+					RTE_MEMOPS_F_DST8A | RTE_MEMOPS_F_SRC16A |
+					(((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN4A) ?
+					RTE_MEMOPS_F_LEN4A : (flags & RTE_MEMOPS_F_LEN2A)));
+		else
+			rte_memcpy_nt_d4s16a(dst, src, len, (flags &
+					~(RTE_MEMOPS_F_DSTA_MASK | RTE_MEMOPS_F_SRCA_MASK |
+					RTE_MEMOPS_F_LENA_MASK)) |
+					RTE_MEMOPS_F_DST4A | RTE_MEMOPS_F_SRC16A |
+					(((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN4A) ?
+					RTE_MEMOPS_F_LEN4A : (flags & RTE_MEMOPS_F_LEN2A)));
+	}
+}
+
+#ifndef RTE_MEMCPY_NT_BUFSIZE
+
+#include <lib/mbuf/rte_mbuf_core.h>
+
+/** Bounce buffer size for non-temporal memcpy.
+ *
+ * Must be 2^N and >= 128.
+ * The actual buffer will be slightly larger, due to added padding.
+ * The default is chosen to be able to handle a non-segmented packet.
+ */
+#define RTE_MEMCPY_NT_BUFSIZE RTE_MBUF_DEFAULT_DATAROOM
+
+#endif  /* RTE_MEMCPY_NT_BUFSIZE */
+
+/**
+ * @internal
+ * Non-temporal memory copy via bounce buffer.
+ *
+ * @note
+ * If the destination and/or length is unaligned, the first and/or last copied
+ * bytes will be stored in the destination memory area using temporal access.
+ *
+ * @param dst
+ *   Pointer to the non-temporal destination memory area.
+ * @param src
+ *   Pointer to the non-temporal source memory area.
+ * @param len
+ *   Number of bytes to copy.
+ *   Must be <= RTE_MEMCPY_NT_BUFSIZE.
+ * @param flags
+ *   Hints for memory access.
+ */
+__rte_internal
+static __rte_always_inline
+__attribute__((__nonnull__(1, 2)))
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+__attribute__((__access__(write_only, 1, 3), __access__(read_only, 2, 3)))
+#endif
+void rte_memcpy_nt_buf(void *__rte_restrict dst, const void *__rte_restrict src, size_t len,
+		const uint64_t flags)
+{
+	/** Cache line aligned bounce buffer with preceding and trailing padding.
+	 *
+	 * The preceding padding is one cache line, so the data area itself
+	 * is cache line aligned.
+	 * The trailing padding is 16 bytes, leaving room for the trailing bytes
+	 * of a 16 byte store operation.
+	 */
+	char			buffer[RTE_CACHE_LINE_SIZE + RTE_MEMCPY_NT_BUFSIZE +  16]
+				__rte_cache_aligned;
+	/** Pointer to bounce buffer's aligned data area. */
+	char		* const buf0 = &buffer[RTE_CACHE_LINE_SIZE];
+	void		       *buf;
+	/** Number of bytes to copy from source, incl. any extra preceding bytes. */
+	size_t			srclen;
+	register __m128i	xmm0, xmm1, xmm2, xmm3;
+
+#ifndef RTE_TOOLCHAIN_CLANG /* Clang doesn't support using __builtin_constant_p() like this. */
+	RTE_BUILD_BUG_ON(!__builtin_constant_p(flags));
+#endif /* !RTE_TOOLCHAIN_CLANG */
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_DSTA_MASK) || rte_is_aligned(dst,
+			(flags & RTE_MEMOPS_F_DSTA_MASK) >> RTE_MEMOPS_F_DSTA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_SRCA_MASK) || rte_is_aligned(src,
+			(flags & RTE_MEMOPS_F_SRCA_MASK) >> RTE_MEMOPS_F_SRCA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_LENA_MASK) || (len &
+			((flags & RTE_MEMOPS_F_LENA_MASK) >> RTE_MEMOPS_F_LENA_SHIFT) - 1) == 0);
+
+	RTE_ASSERT((flags & (RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT)) ==
+			(RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT));
+	RTE_ASSERT(len <= RTE_MEMCPY_NT_BUFSIZE);
+
+	if (unlikely(len == 0))
+		return;
+
+	/* Step 1:
+	 * Copy data from the source to the bounce buffer's aligned data area,
+	 * using aligned non-temporal load from the source,
+	 * and unaligned store in the bounce buffer.
+	 *
+	 * If the source is unaligned, the additional bytes preceding the data will be copied
+	 * to the padding area preceding the bounce buffer's aligned data area.
+	 * Similarly, if the source data ends at an unaligned address, the additional bytes
+	 * trailing the data will be copied to the padding area trailing the bounce buffer's
+	 * aligned data area.
+	 */
+
+	/* Adjust for extra preceding bytes, unless source is known to be 16 byte aligned. */
+	if ((flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A) {
+		buf = buf0;
+		srclen = len;
+	} else {
+		/** How many bytes is source offset from 16 byte alignment (floor rounding). */
+		const size_t offset = (uintptr_t)src & 15;
+
+		buf = RTE_PTR_SUB(buf0, offset);
+		src = RTE_PTR_SUB(src, offset);
+		srclen = len + offset;
+	}
+
+	/* Copy large portion of data from source to bounce buffer in chunks of 64 byte. */
+	while (srclen >= 64) {
+		xmm0 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 0 * 16));
+		xmm1 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 1 * 16));
+		xmm2 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 2 * 16));
+		xmm3 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 3 * 16));
+		_mm_storeu_si128(RTE_PTR_ADD(buf, 0 * 16), xmm0);
+		_mm_storeu_si128(RTE_PTR_ADD(buf, 1 * 16), xmm1);
+		_mm_storeu_si128(RTE_PTR_ADD(buf, 2 * 16), xmm2);
+		_mm_storeu_si128(RTE_PTR_ADD(buf, 3 * 16), xmm3);
+		src = RTE_PTR_ADD(src, 64);
+		buf = RTE_PTR_ADD(buf, 64);
+		srclen -= 64;
+	}
+
+	/* Copy remaining 32 and 16 byte portions of data from source to bounce buffer.
+	 *
+	 * Omitted if source is known to be 16 byte aligned (so the length alignment
+	 * flags are still valid)
+	 * and length is known to be respectively 64 or 32 byte aligned.
+	 */
+	if (!(((flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A) &&
+			((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN64A)) &&
+			(srclen & 32)) {
+		xmm0 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 0 * 16));
+		xmm1 = _mm_stream_load_si128_const(RTE_PTR_ADD(src, 1 * 16));
+		_mm_storeu_si128(RTE_PTR_ADD(buf, 0 * 16), xmm0);
+		_mm_storeu_si128(RTE_PTR_ADD(buf, 1 * 16), xmm1);
+		src = RTE_PTR_ADD(src, 32);
+		buf = RTE_PTR_ADD(buf, 32);
+	}
+	if (!(((flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A) &&
+			((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN32A)) &&
+			(srclen & 16)) {
+		xmm2 = _mm_stream_load_si128_const(src);
+		_mm_storeu_si128(buf, xmm2);
+		src = RTE_PTR_ADD(src, 16);
+		buf = RTE_PTR_ADD(buf, 16);
+	}
+	/* Copy any trailing bytes of data from source to bounce buffer.
+	 *
+	 * Omitted if source is known to be 16 byte aligned (so the length alignment
+	 * flags are still valid)
+	 * and length is known to be 16 byte aligned.
+	 */
+	if (!(((flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A) &&
+			((flags & RTE_MEMOPS_F_LENA_MASK) >= RTE_MEMOPS_F_LEN16A)) &&
+			(srclen & 15)) {
+		xmm3 = _mm_stream_load_si128_const(src);
+		_mm_storeu_si128(buf, xmm3);
+	}
+
+	/* Step 2:
+	 * Copy from the aligned bounce buffer to the non-temporal destination.
+	 */
+	rte_memcpy_ntd(dst, buf0, len,
+			(flags & ~(RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_SRCA_MASK)) |
+			(RTE_CACHE_LINE_SIZE << RTE_MEMOPS_F_SRCA_SHIFT));
+}
+
+/**
+ * @internal
+ * Non-temporal memory copy.
+ * The memory areas must not overlap.
+ *
+ * @note
+ * If the destination and/or length is unaligned, some copied bytes will be
+ * stored in the destination memory area using temporal access.
+ *
+ * @param dst
+ *   Pointer to the non-temporal destination memory area.
+ * @param src
+ *   Pointer to the non-temporal source memory area.
+ * @param len
+ *   Number of bytes to copy.
+ * @param flags
+ *   Hints for memory access.
+ */
+__rte_internal
+static __rte_always_inline
+__attribute__((__nonnull__(1, 2)))
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+__attribute__((__access__(write_only, 1, 3), __access__(read_only, 2, 3)))
+#endif
+void rte_memcpy_nt_generic(void *__rte_restrict dst, const void *__rte_restrict src, size_t len,
+		const uint64_t flags)
+{
+#ifndef RTE_TOOLCHAIN_CLANG /* Clang doesn't support using __builtin_constant_p() like this. */
+	RTE_BUILD_BUG_ON(!__builtin_constant_p(flags));
+#endif /* !RTE_TOOLCHAIN_CLANG */
+
+	while (len > RTE_MEMCPY_NT_BUFSIZE) {
+		rte_memcpy_nt_buf(dst, src, RTE_MEMCPY_NT_BUFSIZE,
+				(flags & ~RTE_MEMOPS_F_LENA_MASK) | RTE_MEMOPS_F_LEN128A);
+		dst = RTE_PTR_ADD(dst, RTE_MEMCPY_NT_BUFSIZE);
+		src = RTE_PTR_ADD(src, RTE_MEMCPY_NT_BUFSIZE);
+		len -= RTE_MEMCPY_NT_BUFSIZE;
+	}
+	rte_memcpy_nt_buf(dst, src, len, flags);
+}
+
+/* Implementation. Refer to function declaration for documentation. */
+__rte_experimental
+static __rte_always_inline
+__attribute__((__nonnull__(1, 2)))
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100000)
+__attribute__((__access__(write_only, 1, 3), __access__(read_only, 2, 3)))
+#endif
+void rte_memcpy_ex(void *__rte_restrict dst, const void *__rte_restrict src, size_t len,
+		const uint64_t flags)
+{
+#ifndef RTE_TOOLCHAIN_CLANG /* Clang doesn't support using __builtin_constant_p() like this. */
+	RTE_BUILD_BUG_ON(!__builtin_constant_p(flags));
+#endif /* !RTE_TOOLCHAIN_CLANG */
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_DSTA_MASK) || rte_is_aligned(dst,
+			(flags & RTE_MEMOPS_F_DSTA_MASK) >> RTE_MEMOPS_F_DSTA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_SRCA_MASK) || rte_is_aligned(src,
+			(flags & RTE_MEMOPS_F_SRCA_MASK) >> RTE_MEMOPS_F_SRCA_SHIFT));
+	RTE_ASSERT(!(flags & RTE_MEMOPS_F_LENA_MASK) || (len &
+			((flags & RTE_MEMOPS_F_LENA_MASK) >> RTE_MEMOPS_F_LENA_SHIFT) - 1) == 0);
+
+	if ((flags & (RTE_MEMOPS_F_DST_NT | RTE_MEMOPS_F_SRC_NT)) ==
+			(RTE_MEMOPS_F_DST_NT | RTE_MEMOPS_F_SRC_NT)) {
+		/* Copy between non-temporal source and destination. */
+		if ((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST16A &&
+				(flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A)
+			rte_memcpy_nt_d16s16a(dst, src, len, flags);
+		else if ((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST8A &&
+				(flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A)
+			rte_memcpy_nt_d8s16a(dst, src, len, flags);
+		else if ((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST4A &&
+				(flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC16A)
+			rte_memcpy_nt_d4s16a(dst, src, len, flags);
+		else if ((flags & RTE_MEMOPS_F_DSTA_MASK) >= RTE_MEMOPS_F_DST4A &&
+				(flags & RTE_MEMOPS_F_SRCA_MASK) >= RTE_MEMOPS_F_SRC4A)
+			rte_memcpy_nt_d4s4a(dst, src, len, flags);
+		else if (len <= RTE_MEMCPY_NT_BUFSIZE)
+			rte_memcpy_nt_buf(dst, src, len, flags);
+		else
+			rte_memcpy_nt_generic(dst, src, len, flags);
+	} else if (flags & RTE_MEMOPS_F_SRC_NT) {
+		/* Copy from non-temporal source. */
+		rte_memcpy_nts(dst, src, len, flags);
+	} else if (flags & RTE_MEMOPS_F_DST_NT) {
+		/* Copy to non-temporal destination. */
+		rte_memcpy_ntd(dst, src, len, flags);
+	} else
+		rte_memcpy(dst, src, len);
 }
 
 #undef ALIGNMENT_MASK

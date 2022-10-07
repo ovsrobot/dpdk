@@ -466,7 +466,8 @@ rte_pcapng_copy(uint16_t port_id, uint32_t queue,
 	orig_len = rte_pktmbuf_pkt_len(md);
 
 	/* Take snapshot of the data */
-	mc = rte_pktmbuf_copy(md, mp, 0, length);
+	mc = rte_pktmbuf_copy_ex(md, mp, 0, length,
+				 RTE_MEMOPS_F_SRC_NT | RTE_MEMOPS_F_DST_NT);
 	if (unlikely(mc == NULL))
 		return NULL;
 
