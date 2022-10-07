@@ -55,3 +55,5 @@ else
     build = false
     reason = 'missing header, "linux/if_xdp.h"'
 endif
+
+pmd_supports_disable_iova_as_pa = true
