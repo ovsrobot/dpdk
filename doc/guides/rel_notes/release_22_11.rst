@@ -385,6 +385,9 @@ ABI Changes
 * eventdev: Added ``weight`` and ``affinity`` fields
   to ``rte_event_queue_conf`` structure.
 
+* mbuf: Replaced ``buf_iova`` field with ``next`` field and added a new field
+  ``dynfield2`` at its place in second cacheline if ``RTE_IOVA_AS_PA`` is 0.
+
 
 Known Issues
 ------------
