@@ -761,9 +761,11 @@ prepare_aes_xform(struct rte_crypto_sym_xform *xform)
 	struct rte_crypto_cipher_xform *cipher_xform = &xform->cipher;
 
 	xform->type = RTE_CRYPTO_SYM_XFORM_CIPHER;
-
 	if (info.interim_info.aes_data.cipher_algo == RTE_CRYPTO_CIPHER_AES_CBC)
 		cipher_xform->algo = RTE_CRYPTO_CIPHER_AES_CBC;
+	else if (info.interim_info.aes_data.cipher_algo ==
+			RTE_CRYPTO_CIPHER_AES_CTR)
+		cipher_xform->algo = RTE_CRYPTO_CIPHER_AES_CTR;
 	else
 		cipher_xform->algo = RTE_CRYPTO_CIPHER_AES_ECB;
 
@@ -772,7 +774,8 @@ prepare_aes_xform(struct rte_crypto_sym_xform *xform)
 			RTE_CRYPTO_CIPHER_OP_DECRYPT;
 	cipher_xform->key.data = vec.cipher_auth.key.val;
 	cipher_xform->key.length = vec.cipher_auth.key.len;
-	if (cipher_xform->algo == RTE_CRYPTO_CIPHER_AES_CBC) {
+	if (cipher_xform->algo == RTE_CRYPTO_CIPHER_AES_CBC ||
+			cipher_xform->algo == RTE_CRYPTO_CIPHER_AES_CTR) {
 		cipher_xform->iv.length = vec.iv.len;
 		cipher_xform->iv.offset = IV_OFF;
 	} else {
@@ -1784,6 +1787,7 @@ init_test_ops(void)
 {
 	switch (info.algo) {
 	case FIPS_TEST_ALGO_AES_CBC:
+	case FIPS_TEST_ALGO_AES_CTR:
 	case FIPS_TEST_ALGO_AES:
 		test_ops.prepare_op = prepare_cipher_op;
 		test_ops.prepare_xform  = prepare_aes_xform;
@@ -1995,6 +1999,7 @@ fips_test_one_test_group(void)
 		ret = parse_test_xts_json_init();
 		break;
 	case FIPS_TEST_ALGO_AES_CBC:
+	case FIPS_TEST_ALGO_AES_CTR:
 	case FIPS_TEST_ALGO_AES:
 		ret = parse_test_aes_json_init();
 		break;
