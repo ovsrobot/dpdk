@@ -135,6 +135,7 @@ rte_memarea_create(const struct rte_memarea_param *init)
 	ma->top_addr = RTE_PTR_ADD(addr, init->total_sz - 1);
 	elem = addr;
 	elem->size = init->total_sz - sizeof(struct memarea_elem);
+	elem->magic = MEMAREA_ELEM_MAGIC_NUM;
 	elem->cookie = MEMAREA_FREE_ELEM_COOKIE;
 	elem->refcnt = 0;
 	TAILQ_INSERT_TAIL(&ma->elem_list, elem, elem_node);
@@ -192,6 +193,7 @@ memarea_add_node(struct rte_memarea *ma, struct memarea_elem *elem, size_t need_
 	new_elem = (struct memarea_elem *)RTE_PTR_ADD(elem, sizeof(struct memarea_elem) +
 							    align_size);
 	new_elem->size = elem->size - align_size - sizeof(struct memarea_elem);
+	new_elem->magic = MEMAREA_ELEM_MAGIC_NUM;
 	new_elem->cookie = MEMAREA_FREE_ELEM_COOKIE;
 	new_elem->refcnt = 0;
 	TAILQ_INSERT_AFTER(&ma->elem_list, elem, new_elem, elem_node);
@@ -219,6 +221,8 @@ rte_memarea_alloc(struct rte_memarea *ma, size_t size, uint32_t cookie)
 
 	memarea_lock(ma);
 	TAILQ_FOREACH(elem, &ma->free_list, free_node) {
+		if (unlikely(elem->magic != MEMAREA_ELEM_MAGIC_NUM))
+			break;
 		if (elem->size < size)
 			continue;
 		if (memarea_whether_add_node(elem->size, size))
@@ -251,6 +255,7 @@ memarea_merge_node(struct rte_memarea *ma, struct memarea_elem *curr,
 {
 	curr->size += next->size + sizeof(struct memarea_elem);
 	next->size = 0;
+	next->magic = ~MEMAREA_ELEM_MAGIC_NUM;
 	next->cookie = 0;
 	TAILQ_REMOVE(&ma->elem_list, next, elem_node);
 	if (del_next_from_free)
@@ -293,6 +298,13 @@ rte_memarea_update_refcnt(struct rte_memarea *ma, void *ptr, int16_t value)
 		return;
 
 	memarea_lock(ma);
+	if (unlikely(elem->magic != MEMAREA_ELEM_MAGIC_NUM)) {
+		RTE_LOG(ERR, MEMAREA, "memarea: %s magic: 0x%x check fail!\n",
+			ma->init.name, elem->magic);
+		memarea_unlock(ma);
+		return;
+	}
+
 	if (unlikely(ptr < ma->area_addr || ptr > ma->top_addr)) {
 		rte_memarea_update_refcnt(ma->init.bak_memarea, ptr, value);
 		memarea_unlock(ma);
@@ -346,8 +358,11 @@ memarea_elem_list_num(struct rte_memarea *ma)
 	struct memarea_elem *elem;
 	uint32_t num = 0;
 
-	TAILQ_FOREACH(elem, &ma->elem_list, elem_node)
+	TAILQ_FOREACH(elem, &ma->elem_list, elem_node) {
+		if (elem->magic != MEMAREA_ELEM_MAGIC_NUM)
+			break;
 		num++;
+	}
 
 	return num;
 }
@@ -358,8 +373,11 @@ memarea_free_list_num(struct rte_memarea *ma)
 	struct memarea_elem *elem;
 	uint32_t num = 0;
 
-	TAILQ_FOREACH(elem, &ma->free_list, free_node)
+	TAILQ_FOREACH(elem, &ma->free_list, free_node) {
+		if (elem->magic != MEMAREA_ELEM_MAGIC_NUM)
+			break;
 		num++;
+	}
 
 	return num;
 }
@@ -370,9 +388,14 @@ memarea_dump_all(struct rte_memarea *ma, FILE *f)
 	struct memarea_elem *elem;
 
 	fprintf(f, "  regions:\n");
-	TAILQ_FOREACH(elem, &ma->elem_list, elem_node)
+	TAILQ_FOREACH(elem, &ma->elem_list, elem_node) {
+		if (elem->magic != MEMAREA_ELEM_MAGIC_NUM) {
+			fprintf(f, "    magic: 0x%x check fail!\n", elem->magic);
+			break;
+		}
 		fprintf(f, "    size: 0x%zx cookie: 0x%x refcnt: %d\n",
 			elem->size, elem->cookie, elem->refcnt);
+	}
 }
 
 int

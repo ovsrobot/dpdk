@@ -7,10 +7,12 @@
 
 #include <rte_memarea.h>
 
+#define MEMAREA_ELEM_MAGIC_NUM		0xbeef1234
 #define MEMAREA_FREE_ELEM_COOKIE	0xFFFFFFFF
 
 struct memarea_elem {
 	size_t   size;
+	uint32_t magic;
 	uint32_t cookie;
 	int32_t  refcnt; /* Non-zero indicates that it has been allocated */
 	TAILQ_ENTRY(memarea_elem) elem_node;
