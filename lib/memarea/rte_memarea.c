@@ -132,6 +132,7 @@ rte_memarea_create(const struct rte_memarea_param *init)
 	TAILQ_INIT(&ma->elem_list);
 	TAILQ_INIT(&ma->free_list);
 	ma->area_addr = addr;
+	ma->top_addr = RTE_PTR_ADD(addr, init->total_sz - 1);
 	elem = addr;
 	elem->size = init->total_sz - sizeof(struct memarea_elem);
 	elem->cookie = MEMAREA_FREE_ELEM_COOKIE;
@@ -198,6 +199,15 @@ memarea_add_node(struct rte_memarea *ma, struct memarea_elem *elem, size_t need_
 	elem->size = align_size;
 }
 
+static inline void *
+memarea_alloc_backup(struct rte_memarea *ma, size_t size, uint32_t cookie)
+{
+	void *ptr = rte_memarea_alloc(ma->init.bak_memarea, size, cookie);
+	if (unlikely(ptr == NULL))
+		ma->bak_alloc_fails++;
+	return ptr;
+}
+
 void *
 rte_memarea_alloc(struct rte_memarea *ma, size_t size, uint32_t cookie)
 {
@@ -219,6 +229,8 @@ rte_memarea_alloc(struct rte_memarea *ma, size_t size, uint32_t cookie)
 		ptr = RTE_PTR_ADD(elem, sizeof(struct memarea_elem));
 		break;
 	}
+	if (unlikely(ptr == NULL && ma->init.bak_memarea != NULL))
+		ptr = memarea_alloc_backup(ma, size, cookie);
 	if (unlikely(ptr == NULL))
 		ma->alloc_fails++;
 	memarea_unlock(ma);
@@ -281,6 +293,12 @@ rte_memarea_update_refcnt(struct rte_memarea *ma, void *ptr, int16_t value)
 		return;
 
 	memarea_lock(ma);
+	if (unlikely(ptr < ma->area_addr || ptr > ma->top_addr)) {
+		rte_memarea_update_refcnt(ma->init.bak_memarea, ptr, value);
+		memarea_unlock(ma);
+		return;
+	}
+
 	if (unlikely(elem->refcnt <= 0 || elem->refcnt + value < 0)) {
 		RTE_LOG(ERR, MEMAREA,
 			"memarea: %s cookie: 0x%x curr refcnt: %d update refcnt: %d check fail!\n",
@@ -371,10 +389,14 @@ rte_memarea_dump(struct rte_memarea *ma, FILE *f, bool dump_all)
 	fprintf(f, "  algorithm: %s\n", memarea_alg_name(ma->init.alg));
 	fprintf(f, "  total-size: 0x%zx\n", ma->init.total_sz);
 	fprintf(f, "  mt-safe: %s\n", ma->init.mt_safe ? "yes" : "no");
+	if (ma->init.bak_memarea)
+		fprintf(f, "  backup-memarea-name: %s\n", ma->init.bak_memarea->init.name);
 	fprintf(f, "  total-regions: %u\n", memarea_elem_list_num(ma));
 	fprintf(f, "  total-free-regions: %u\n", memarea_free_list_num(ma));
 	fprintf(f, "  alloc_fails: %" PRIu64 "\n", ma->alloc_fails);
 	fprintf(f, "  refcnt_check_fails: %" PRIu64 "\n", ma->refcnt_check_fails);
+	if (ma->init.bak_memarea)
+		fprintf(f, "  backup_alloc_fails: %" PRIu64 "\n", ma->bak_alloc_fails);
 	if (dump_all)
 		memarea_dump_all(ma, f);
 	memarea_unlock(ma);
