@@ -139,6 +139,62 @@ struct rte_memarea *rte_memarea_create(const struct rte_memarea_param *init);
 __rte_experimental
 void rte_memarea_destroy(struct rte_memarea *ma);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Allocate memory from memarea.
+ *
+ * Allocate one memory object from the memarea.
+ *
+ * @param ma
+ *   The pointer of memarea.
+ * @param size
+ *   The memory size to be allocated.
+ * @param cookie
+ *   User-provided footprint which could used to debug memory leak.
+ *
+ * @return
+ *   Non-NULL on success. Otherwise NULL is returned.
+ */
+__rte_experimental
+void *rte_memarea_alloc(struct rte_memarea *ma, size_t size, uint32_t cookie);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Free memory to memarea.
+ *
+ * Free one memory object to the memarea.
+ *
+ * @param ma
+ *   The pointer of memarea.
+ * @param ptr
+ *   The pointer of memory object which need be freed.
+ */
+__rte_experimental
+void rte_memarea_free(struct rte_memarea *ma, void *ptr);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Update memory's refcnt.
+ *
+ * Update one memory object's refcnt.
+ * When refcnt is updated to be zero, the memory object is freed.
+ *
+ * @param ma
+ *   The pointer of memarea.
+ * @param ptr
+ *   The pointer of memory object which need be updated refcnt.
+ * @param value
+ *   The value which need be updated.
+ */
+__rte_experimental
+void rte_memarea_update_refcnt(struct rte_memarea *ma, void *ptr, int16_t value);
+
 #ifdef __cplusplus
 }
 #endif
