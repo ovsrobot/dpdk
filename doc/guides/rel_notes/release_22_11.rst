@@ -196,6 +196,10 @@ New Features
   * Supported protocol-based buffer split using added ``proto_hdr``
     in structure ``rte_eth_rxseg_split``.
 
+* **Updated Intel ice driver.**
+
+  * Added protocol based buffer split support in scalar path.
+
 
 Removed Items
 -------------
