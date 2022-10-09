@@ -296,6 +296,7 @@ EXPERIMENTAL {
 	rte_flow_async_action_handle_query;
 	rte_mtr_meter_policy_get;
 	rte_mtr_meter_profile_get;
+	rte_eth_buffer_split_get_supported_hdr_ptypes;
 };
 
 INTERNAL {

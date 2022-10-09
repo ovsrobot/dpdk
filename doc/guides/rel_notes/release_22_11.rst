@@ -189,6 +189,11 @@ New Features
   into single event containing ``rte_event_vector``
   whose event type is ``RTE_EVENT_TYPE_CRYPTODEV_VECTOR``.
 
+* **Added protocol header based buffer split.**
+
+  * Added ``rte_eth_buffer_split_get_supported_hdr_ptypes()``, to get supported
+    header protocols of a PMD to split.
+
 
 Removed Items
 -------------
