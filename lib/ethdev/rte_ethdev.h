@@ -1630,6 +1630,20 @@ enum rte_eth_representor_type {
 };
 
 /**
+ * Ethernet device error handling mode.
+ */
+__rte_experimental
+enum rte_eth_err_handle_mode {
+	/** No error handling modes are supported. */
+	RTE_ETH_ERROR_HANDLE_MODE_NONE,
+	/** Passive error handling, after the PMD detect that a reset is
+	 * required, the PMD reports @see RTE_ETH_EVENT_INTR_RESET event, and
+	 * application invoke @see rte_eth_dev_reset to recover the port.
+	 */
+	RTE_ETH_ERROR_HANDLE_MODE_PASSIVE,
+};
+
+/**
  * A structure used to retrieve the contextual information of
  * an Ethernet device, such as the controlling driver of the
  * device, etc...
@@ -1689,8 +1703,12 @@ struct rte_eth_dev_info {
 	 * embedded managed interconnect/switch.
 	 */
 	struct rte_eth_switch_info switch_info;
+	/** Supported error handling mode. @see enum rte_eth_err_handle_mode */
+	uint8_t err_handle_mode;
 
-	uint64_t reserved_64s[2]; /**< Reserved for future fields */
+	uint8_t reserved_8;       /**< Reserved for future fields  */
+	uint16_t reserved_16s[3]; /**< Reserved for future fields  */
+	uint64_t reserved_64;     /**< Reserved for future fields */
 	void *reserved_ptrs[2];   /**< Reserved for future fields */
 };
 
