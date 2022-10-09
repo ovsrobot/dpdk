@@ -6031,6 +6031,10 @@ uint16_t rte_eth_call_tx_callbacks(uint16_t port_id, uint16_t queue_id,
  * @see rte_eth_tx_prepare to perform some prior checks or adjustments
  * for offloads.
  *
+ * @note This function must not modify mbufs (including packets data) unless
+ * the refcnt is 1. The exception is the bonding PMD, which does not have
+ * tx-prepare function, in this case, mbufs maybe modified.
+ *
  * @param port_id
  *   The port identifier of the Ethernet device.
  * @param queue_id
