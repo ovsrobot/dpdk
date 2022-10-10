@@ -171,7 +171,7 @@ New Features
     * Set the IP address of IPv4 and IPv6
     * Set the port number
     * Set the TTL
-    * Set the DSCP of IPv4
+    * Set the DSCP of IPv4 and IPv6
 
 * **Updated NXP dpaa2 driver.**
 
