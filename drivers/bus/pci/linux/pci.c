@@ -480,15 +480,18 @@ error:
 }
 
 #if defined(RTE_ARCH_X86)
+
 bool
 pci_device_iommu_support_va(const struct rte_pci_device *dev)
 {
 #define VTD_CAP_MGAW_SHIFT	16
 #define VTD_CAP_MGAW_MASK	(0x3fULL << VTD_CAP_MGAW_SHIFT)
+#define RD_AMD_CAP_VASIZE_SHIFT 15
+#define RD_AMD_CAP_VASIZE_MASK  (0x7F << RD_AMD_CAP_VASIZE_SHIFT)
 	const struct rte_pci_addr *addr = &dev->addr;
 	char filename[PATH_MAX];
 	FILE *fp;
-	uint64_t mgaw, vtd_cap_reg = 0;
+	uint64_t mgaw, cap_reg = 0;
 
 	snprintf(filename, sizeof(filename),
 		 "%s/" PCI_PRI_FMT "/iommu/intel-iommu/cap",
@@ -496,26 +499,36 @@ pci_device_iommu_support_va(const struct rte_pci_device *dev)
 		 addr->function);
 
 	fp = fopen(filename, "r");
-	if (fp == NULL) {
-		/* We don't have an Intel IOMMU, assume VA supported */
-		if (errno == ENOENT)
-			return true;
+	if (fp != NULL) {
+		/* We have an Intel IOMMU */
+		if (fscanf(fp, "%" PRIx64, &cap_reg) != 1) {
+			   RTE_LOG(ERR, EAL, "%s(): can't read %s\n", __func__, filename);
+			fclose(fp);
+			return false;
+		}
 
-		RTE_LOG(ERR, EAL, "%s(): can't open %s: %s\n",
-			__func__, filename, strerror(errno));
-		return false;
-	}
-
-	/* We have an Intel IOMMU */
-	if (fscanf(fp, "%" PRIx64, &vtd_cap_reg) != 1) {
-		RTE_LOG(ERR, EAL, "%s(): can't read %s\n", __func__, filename);
 		fclose(fp);
-		return false;
+		mgaw = ((cap_reg & VTD_CAP_MGAW_MASK) >> VTD_CAP_MGAW_SHIFT) + 1;
 	}
+	else {
+		snprintf(filename, sizeof(filename),
+			 "%s/" PCI_PRI_FMT "/iommu/amd-iommu/cap",
+			  rte_pci_get_sysfs_path(), addr->domain, addr->bus, addr->devid,
+			  addr->function);
 
-	fclose(fp);
+		fp = fopen(filename, "r");
+		if (fp != NULL) {
+			/* We have an Amd IOMMU */
+			if (fscanf(fp, "%" PRIx64, &cap_reg) != 1) {
+				   RTE_LOG(ERR, EAL, "%s(): can't read %s\n", __func__, filename);
+				fclose(fp);
+				return false;
+			}
 
-	mgaw = ((vtd_cap_reg & VTD_CAP_MGAW_MASK) >> VTD_CAP_MGAW_SHIFT) + 1;
+			fclose(fp);
+			mgaw = ((cap_reg & RD_AMD_CAP_VASIZE_MASK) >> RD_AMD_CAP_VASIZE_SHIFT) + 1;
+		}
+	}
 
 	/*
 	 * Assuming there is no limitation by now. We can not know at this point
