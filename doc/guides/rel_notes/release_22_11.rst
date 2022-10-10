@@ -159,6 +159,7 @@ New Features
     * IPv6
     * TCP
     * UDP
+    * SCTP
 
   Add the support of rte_flow actions as follow:
 
