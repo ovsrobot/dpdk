@@ -157,6 +157,7 @@ New Features
     * Single VLAN
     * IPv4
     * IPv6
+    * TCP
 
   Add the support of rte_flow actions as follow:
 
