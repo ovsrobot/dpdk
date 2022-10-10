@@ -166,6 +166,7 @@ New Features
     * Count
     * Drop
     * TTL decrement
+    * Set the MAC address
 
 * **Updated NXP dpaa2 driver.**
 
