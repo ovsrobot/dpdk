@@ -443,6 +443,10 @@ API Changes
 
 * raw/ifgpa: The function ``rte_pmd_ifpga_get_pci_bus`` has been removed.
 
+* vhost: Promoted ``rte_vhost_vring_stats_get()``,
+  ``rte_vhost_vring_stats_get_names()`` and ``rte_vhost_vring_stats_reset()``
+  from experimental to stable.
+
 
 ABI Changes
 -----------
