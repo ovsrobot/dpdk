@@ -155,6 +155,12 @@ New Features
 
     * Ethernet
 
+  Add the support of rte_flow actions as follow:
+
+    * Count
+    * Drop
+    * TTL decrement
+
 * **Updated NXP dpaa2 driver.**
 
   * Added support for flow action REPRESENTED_PORT.
