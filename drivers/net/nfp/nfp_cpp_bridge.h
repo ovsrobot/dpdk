@@ -16,8 +16,6 @@
 #ifndef _NFP_CPP_BRIDGE_H_
 #define _NFP_CPP_BRIDGE_H_
 
-#include "nfp_common.h"
-
 #define NFP_CPP_MEMIO_BOUNDARY	(1 << 20)
 #define NFP_BRIDGE_OP_READ	20
 #define NFP_BRIDGE_OP_WRITE	30

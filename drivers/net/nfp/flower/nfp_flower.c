@@ -10,9 +10,9 @@
 #include <ethdev_pci.h>
 #include <ethdev_driver.h>
 
+#include "../nfp_ctrl.h"
 #include "../nfp_common.h"
 #include "../nfp_logs.h"
-#include "../nfp_ctrl.h"
 #include "../nfp_cpp_bridge.h"
 #include "../nfp_rxtx.h"
 #include "../nfpcore/nfp_mip.h"

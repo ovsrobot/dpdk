@@ -37,6 +37,7 @@
 #include "nfpcore/nfp_rtsym.h"
 #include "nfpcore/nfp_nsp.h"
 
+#include "nfp_ctrl.h"
 #include "nfp_common.h"
 #include "nfp_ctrl.h"
 #include "nfp_rxtx.h"
@@ -1368,6 +1369,38 @@ nfp_net_close_tx_queue(struct rte_eth_dev *dev)
 		nfp_net_reset_tx_queue(this_tx_q);
 		nfp_net_tx_queue_release(dev, i);
 	}
+}
+
+int
+nfp_net_set_vxlan_port(struct nfp_net_hw *hw,
+		size_t idx,
+		uint16_t port)
+{
+	int ret;
+	uint32_t i;
+
+	if (idx > NFP_NET_N_VXLAN_PORTS) {
+		PMD_DRV_LOG(ERR, "The idx value is out of range.");
+		return -ERANGE;
+	}
+
+	hw->vxlan_ports[idx] = port;
+
+	for (i = 0; i < NFP_NET_N_VXLAN_PORTS; i += 2) {
+		nn_cfg_writel(hw, NFP_NET_CFG_VXLAN_PORT + i * sizeof(port),
+			(hw->vxlan_ports[i + 1] << 16) | hw->vxlan_ports[i]);
+	}
+
+	rte_spinlock_lock(&hw->reconfig_lock);
+
+	nn_cfg_writel(hw, NFP_NET_CFG_UPDATE, NFP_NET_CFG_UPDATE_VXLAN);
+	rte_wmb();
+
+	ret = __nfp_net_reconfig(hw, NFP_NET_CFG_UPDATE_VXLAN);
+
+	rte_spinlock_unlock(&hw->reconfig_lock);
+
+	return ret;
 }
 
 RTE_LOG_REGISTER_SUFFIX(nfp_logtype_init, init, NOTICE);
