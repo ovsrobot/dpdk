@@ -809,6 +809,10 @@ rte_vhost_driver_get_protocol_features(const char *path,
 	*protocol_features = vsocket->protocol_features
 		& vdpa_protocol_features;
 
+	/* Get the unique features of vdpa */
+	if (vdpa_protocol_features & (1ULL << VHOST_USER_PROTOCOL_F_CONFIG))
+		*protocol_features |= (1ULL << VHOST_USER_PROTOCOL_F_CONFIG);
+
 unlock_exit:
 	pthread_mutex_unlock(&vhost_user.mutex);
 	return ret;
