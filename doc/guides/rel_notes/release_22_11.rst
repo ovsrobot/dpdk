@@ -63,6 +63,12 @@ New Features
   In theory this implementation should work with any target based on
   ``LoongArch`` ISA.
 
+* **Added memarea library.**
+
+  The memarea library is an allocator of variable-size objects, it is oriented
+  towards the application layer, which could provides 'region-based memory
+  management' function.
+
 * **Added support for multiple mbuf pools per ethdev Rx queue.**
 
   The capability allows application to provide many mempools
