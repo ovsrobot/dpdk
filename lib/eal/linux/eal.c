@@ -77,6 +77,8 @@ struct lcore_config lcore_config[RTE_MAX_LCORE];
 /* used by rte_rdtsc() */
 int rte_cycles_vmware_tsc_map;
 
+/* mark process is forked */
+static uint32_t forked_flag;
 
 int
 eal_clean_runtime_dir(void)
@@ -955,6 +957,18 @@ out:
 	return ret;
 }
 
+static void
+mark_forked(void)
+{
+	__atomic_add_fetch(&forked_flag, 1, __ATOMIC_RELAXED);
+}
+
+static uint32_t
+is_forked(void)
+{
+	return __atomic_load_n(&forked_flag, __ATOMIC_RELAXED);
+}
+
 /* Launch threads, called at application init(). */
 int
 rte_eal_init(int argc, char **argv)
@@ -1331,6 +1345,8 @@ rte_eal_init(int argc, char **argv)
 
 	eal_mcfg_complete();
 
+	pthread_atfork(NULL, NULL, mark_forked);
+
 	return fctret;
 }
 
@@ -1354,6 +1370,9 @@ mark_freeable(const struct rte_memseg_list *msl, const struct rte_memseg *ms,
 int
 rte_eal_cleanup(void)
 {
+	if (is_forked())
+		return 0;
+
 	/* if we're in a primary process, we need to mark hugepages as freeable
 	 * so that finalization can release them back to the system.
 	 */
@@ -1369,6 +1388,7 @@ rte_eal_cleanup(void)
 	vfio_mp_sync_cleanup();
 #endif
 	rte_mp_channel_cleanup();
+	rte_eal_intr_destroy();
 	eal_bus_cleanup();
 	rte_trace_save();
 	eal_trace_fini();

@@ -73,6 +73,8 @@ struct lcore_config lcore_config[RTE_MAX_LCORE];
 /* used by rte_rdtsc() */
 int rte_cycles_vmware_tsc_map;
 
+/* mark process is forked */
+static uint32_t forked_flag;
 
 int
 eal_clean_runtime_dir(void)
@@ -575,6 +577,18 @@ static void rte_eal_init_alert(const char *msg)
 	RTE_LOG(ERR, EAL, "%s\n", msg);
 }
 
+static void
+mark_forked(void)
+{
+	__atomic_add_fetch(&forked_flag, 1, __ATOMIC_RELAXED);
+}
+
+static uint32_t
+is_forked(void)
+{
+	return __atomic_load_n(&forked_flag, __ATOMIC_RELAXED);
+}
+
 /* Launch threads, called at application init(). */
 int
 rte_eal_init(int argc, char **argv)
@@ -884,16 +898,22 @@ rte_eal_init(int argc, char **argv)
 
 	eal_mcfg_complete();
 
+	pthread_atfork(NULL, NULL, mark_forked);
+
 	return fctret;
 }
 
 int
 rte_eal_cleanup(void)
 {
+	if (is_forked())
+		return 0;
+
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 	rte_service_finalize();
 	rte_mp_channel_cleanup();
+	rte_eal_intr_destroy();
 	eal_bus_cleanup();
 	rte_trace_save();
 	eal_trace_fini();
