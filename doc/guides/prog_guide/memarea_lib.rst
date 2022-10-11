@@ -33,6 +33,16 @@ returns the pointer to the created memarea or ``NULL`` if the creation failed.
 
 The ``rte_memarea_destroy()`` function is used to destroy a memarea.
 
+The ``rte_memarea_alloc()`` function is used to alloc one memory object from
+the memarea.
+
+The ``rte_memarea_free()`` function is used to free one memory object which
+allocated by ``rte_memarea_alloc()``.
+
+The ``rte_memarea_update_refcnt()`` function is used to update the memory
+object's reference count, if the count reaches zero, the memory object will
+be freed to memarea.
+
 Reference
 ---------
 
