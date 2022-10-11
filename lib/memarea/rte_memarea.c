@@ -132,9 +132,11 @@ rte_memarea_create(const struct rte_memarea_param *init)
 	TAILQ_INIT(&ma->elem_list);
 	TAILQ_INIT(&ma->free_list);
 	ma->area_addr = addr;
+	ma->top_addr = RTE_PTR_ADD(addr, init->total_sz - 1);
 	elem = addr;
 	TAILQ_INSERT_TAIL(&ma->elem_list, elem, elem_node);
 	TAILQ_INSERT_TAIL(&ma->free_list, elem, free_node);
+	elem->owner = NULL;
 	elem->size = init->total_sz - sizeof(struct memarea_elem);
 	elem->magic = MEMAREA_AVAILABLE_ELEM_MAGIC;
 	elem->cookie = MEMAREA_AVAILABLE_ELEM_COOKIE;
@@ -154,11 +156,41 @@ memarea_free_area(struct rte_memarea *ma)
 		rte_memarea_free(ma->init.src_memarea, ma->area_addr);
 }
 
+static inline void memarea_lock(struct rte_memarea *ma);
+static inline void memarea_unlock(struct rte_memarea *ma);
+static inline void memarea_free_elem(struct rte_memarea *ma, struct memarea_elem *elem);
+
+static void
+memarea_free_owner_objs(struct rte_memarea *ma, struct rte_memarea *owner)
+{
+	struct memarea_elem *elem, *tmp_elem;
+
+	memarea_lock(ma);
+	/* The TAILQ_FOREACH_SAFE is undefined in sys/queue.h, so extend it here. */
+	for (elem = TAILQ_FIRST(&ma->elem_list);
+	     elem && (tmp_elem = TAILQ_NEXT(elem, elem_node), 1);
+	     elem = tmp_elem) {
+		if (elem->owner != owner)
+			continue;
+		elem->refcnt = 0;
+		memarea_free_elem(ma, elem);
+	}
+	if (ma->init.bak_memarea != NULL)
+		memarea_free_owner_objs(ma->init.bak_memarea, owner);
+	memarea_unlock(ma);
+}
+
 void
 rte_memarea_destroy(struct rte_memarea *ma)
 {
 	if (ma == NULL)
 		return;
+	if (ma->init.bak_memarea != NULL) {
+		/* Some objects are allocated from backup memarea, these objects need to be
+		 * freed when the memarea is destroyed.
+		 */
+		memarea_free_owner_objs(ma->init.bak_memarea, ma);
+	}
 	memarea_free_area(ma);
 	rte_free(ma);
 }
@@ -191,6 +223,7 @@ memarea_add_node(struct rte_memarea *ma, struct memarea_elem *elem, size_t need_
 	struct memarea_elem *new_elem;
 	new_elem = (struct memarea_elem *)RTE_PTR_ADD(elem, sizeof(struct memarea_elem) +
 							    align_size);
+	new_elem->owner = NULL;
 	new_elem->size = elem->size - align_size - sizeof(struct memarea_elem);
 	new_elem->magic = MEMAREA_AVAILABLE_ELEM_MAGIC;
 	new_elem->cookie = MEMAREA_AVAILABLE_ELEM_COOKIE;
@@ -198,6 +231,23 @@ memarea_add_node(struct rte_memarea *ma, struct memarea_elem *elem, size_t need_
 	TAILQ_INSERT_AFTER(&ma->elem_list, elem, new_elem, elem_node);
 	TAILQ_INSERT_AFTER(&ma->free_list, elem, new_elem, free_node);
 	elem->size = align_size;
+}
+
+static inline void
+memarea_mark_owner(struct rte_memarea *ma, void *ptr)
+{
+	struct memarea_elem *elem;
+	elem = (struct memarea_elem *)RTE_PTR_SUB(ptr, sizeof(struct memarea_elem));
+	elem->owner = ma;
+}
+
+static inline void *
+memarea_alloc_backup(struct rte_memarea *ma, size_t size, uint32_t cookie)
+{
+	void *ptr = rte_memarea_alloc(ma->init.bak_memarea, size, cookie);
+	if (unlikely(ptr == NULL))
+		ma->bak_alloc_fails++;
+	return ptr;
 }
 
 void *
@@ -224,7 +274,11 @@ rte_memarea_alloc(struct rte_memarea *ma, size_t size, uint32_t cookie)
 		ptr = RTE_PTR_ADD(elem, sizeof(struct memarea_elem));
 		break;
 	}
-	if (unlikely(ptr == NULL))
+	if (unlikely(ptr == NULL && ma->init.bak_memarea != NULL))
+		ptr = memarea_alloc_backup(ma, size, cookie);
+	if (likely(ptr != NULL))
+		memarea_mark_owner(ma, ptr);
+	else
 		ma->alloc_fails++;
 	memarea_unlock(ma);
 
@@ -261,6 +315,7 @@ memarea_free_elem(struct rte_memarea *ma, struct memarea_elem *elem)
 {
 	struct memarea_elem *prev, *next;
 	bool merged = false;
+	elem->owner = NULL;
 	prev = TAILQ_PREV(elem, memarea_elem_list, elem_node);
 	next = TAILQ_NEXT(elem, elem_node);
 	if (prev != NULL && prev->refcnt == 0) {
@@ -292,6 +347,12 @@ rte_memarea_update_refcnt(struct rte_memarea *ma, void *ptr, int16_t value)
 	if (unlikely(elem->magic != MEMAREA_ALLOCATED_ELEM_MAGIC)) {
 		RTE_LOG(ERR, MEMAREA, "memarea: %s magic: 0x%x check fail!\n",
 			ma->init.name, elem->magic);
+		memarea_unlock(ma);
+		return;
+	}
+
+	if (unlikely(ptr < ma->area_addr || ptr > ma->top_addr)) {
+		rte_memarea_update_refcnt(ma->init.bak_memarea, ptr, value);
 		memarea_unlock(ma);
 		return;
 	}
@@ -399,10 +460,14 @@ rte_memarea_dump(struct rte_memarea *ma, FILE *f, bool dump_all)
 	fprintf(f, "  algorithm: %s\n", memarea_alg_name(ma->init.alg));
 	fprintf(f, "  total-size: 0x%zx\n", ma->init.total_sz);
 	fprintf(f, "  mt-safe: %s\n", ma->init.mt_safe ? "yes" : "no");
+	if (ma->init.bak_memarea)
+		fprintf(f, "  backup-memarea-name: %s\n", ma->init.bak_memarea->init.name);
 	fprintf(f, "  total-regions: %u\n", memarea_elem_list_num(ma));
 	fprintf(f, "  total-free-regions: %u\n", memarea_free_list_num(ma));
 	fprintf(f, "  alloc_fails: %" PRIu64 "\n", ma->alloc_fails);
 	fprintf(f, "  refcnt_check_fails: %" PRIu64 "\n", ma->refcnt_check_fails);
+	if (ma->init.bak_memarea)
+		fprintf(f, "  backup_alloc_fails: %" PRIu64 "\n", ma->bak_alloc_fails);
 	if (dump_all)
 		memarea_dump_all(ma, f);
 	memarea_unlock(ma);

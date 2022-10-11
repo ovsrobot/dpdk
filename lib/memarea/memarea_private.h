@@ -14,6 +14,7 @@
 struct memarea_elem {
 	TAILQ_ENTRY(memarea_elem) elem_node;
 	TAILQ_ENTRY(memarea_elem) free_node;
+	struct rte_memarea       *owner;
 	size_t   size;
 	uint32_t magic;
 	uint32_t cookie;
@@ -26,11 +27,13 @@ struct rte_memarea {
 	struct rte_memarea_param init;
 	rte_spinlock_t           lock;
 	void                    *area_addr;
+	void                    *top_addr;
 	struct memarea_elem_list elem_list;
 	struct memarea_elem_list free_list;
 
 	uint64_t alloc_fails;
 	uint64_t refcnt_check_fails;
+	uint64_t bak_alloc_fails;
 } __rte_cache_aligned;
 
 #endif /* MEMAREA_PRIVATE_H */
