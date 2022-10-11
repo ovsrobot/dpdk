@@ -7,10 +7,12 @@
 #include <rte_cycles.h>
 #include <rte_errno.h>
 #include <rte_malloc.h>
+#include <rte_memarea.h>
 #include <rte_memzone.h>
 
 #include "test.h"
 
+#define PERFTEST_MAX_RUNS	10000
 #define TEST_LOG(level, ...) RTE_LOG(level, USER1, __VA_ARGS__)
 
 typedef void * (alloc_t)(const char *name, size_t size, unsigned int align);
@@ -147,10 +149,52 @@ memzone_free(void *addr)
 	rte_memzone_free((struct rte_memzone *)addr);
 }
 
+static struct rte_memarea *test_ma;
+
+static int
+memarea_pre_env(void)
+{
+	struct rte_memarea_param init = { 0 };
+	snprintf(init.name, sizeof(init.name), "perftest");
+	init.source = RTE_MEMAREA_SOURCE_HEAP;
+	init.alg = RTE_MEMAREA_ALG_NEXTFIT;
+	init.total_sz = PERFTEST_MAX_RUNS * KB * 66; /* test for max 64KB (add 2KB for meta) */
+	init.mt_safe = 1;
+	init.numa_socket = SOCKET_ID_ANY;
+	init.bak_memarea = NULL;
+	test_ma = rte_memarea_create(&init);
+	if (test_ma == NULL) {
+		fprintf(stderr, "memarea create failed, skip memarea perftest!\n");
+		return -1;
+	}
+	return 0;
+}
+
+static void
+memarea_clear_env(void)
+{
+	rte_memarea_destroy(test_ma);
+	test_ma = NULL;
+}
+
+static void *
+memarea_alloc(const char *name, size_t size, unsigned int align)
+{
+	RTE_SET_USED(name);
+	RTE_SET_USED(align);
+	return rte_memarea_alloc(test_ma, size, 0);
+}
+
+static void
+memarea_free(void *addr)
+{
+	rte_memarea_free(test_ma, addr);
+}
+
 static int
 test_malloc_perf(void)
 {
-	static const size_t MAX_RUNS = 10000;
+	static const size_t MAX_RUNS = PERFTEST_MAX_RUNS;
 
 	double memset_us_gb = 0;
 
@@ -167,6 +211,15 @@ test_malloc_perf(void)
 	if (test_alloc_perf("rte_memzone_reserve", memzone_alloc, memzone_free,
 			NULL, memset_us_gb, RTE_MAX_MEMZONE - 1) < 0)
 		return -1;
+
+	if (memarea_pre_env() < 0)
+		return 0;
+	if (test_alloc_perf("rte_memarea", memarea_alloc, memarea_free,
+			memset, memset_us_gb, MAX_RUNS) < 0) {
+		memarea_clear_env();
+		return -1;
+	}
+	memarea_clear_env();
 
 	return 0;
 }
