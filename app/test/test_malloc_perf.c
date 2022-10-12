@@ -147,6 +147,78 @@ memzone_free(void *addr)
 	rte_memzone_free((struct rte_memzone *)addr);
 }
 
+#ifndef RTE_EXEC_ENV_WINDOWS
+#include <rte_memarea.h>
+
+static struct rte_memarea *test_ma;
+
+static int
+memarea_pre_env(void)
+{
+	struct rte_memarea_param init;
+
+	memset(&init, 0, sizeof(init));
+	snprintf(init.name, sizeof(init.name), "perftest");
+	init.source = RTE_MEMAREA_SOURCE_HEAP;
+	init.alg = RTE_MEMAREA_ALG_NEXTFIT;
+	init.total_sz = GB;
+	init.mt_safe = 1;
+	init.numa_socket = SOCKET_ID_ANY;
+
+	test_ma = rte_memarea_create(&init);
+	if (test_ma == NULL) {
+		fprintf(stderr, "memarea create failed, skip memarea perftest!\n");
+		return -1;
+	}
+	return 0;
+}
+
+static void
+memarea_clear_env(void)
+{
+	rte_memarea_destroy(test_ma);
+	test_ma = NULL;
+}
+
+static void *
+memarea_alloc(const char *name, size_t size, unsigned int align)
+{
+	RTE_SET_USED(name);
+	RTE_SET_USED(align);
+	return rte_memarea_alloc(test_ma, size, 0);
+}
+
+static void
+memarea_free(void *addr)
+{
+	rte_memarea_free(test_ma, addr);
+}
+
+static int
+memarea_perftest(double memset_gb_us, size_t max_runs)
+{
+	if (memarea_pre_env() < 0)
+		return 0;
+
+	if (test_alloc_perf("rte_memarea", memarea_alloc, memarea_free,
+			memset, memset_gb_us, max_runs) < 0) {
+		memarea_clear_env();
+		return -1;
+	}
+
+	memarea_clear_env();
+	return 0;
+}
+#else
+static int
+memarea_perftest(double memset_gb_us, size_t max_runs)
+{
+	RTE_SET_USED(memset_gb_us);
+	RTE_SET_USED(max_runs);
+	return 0;
+}
+#endif /* !RTE_EXEC_ENV_WINDOWS */
+
 static int
 test_malloc_perf(void)
 {
@@ -166,6 +238,9 @@ test_malloc_perf(void)
 
 	if (test_alloc_perf("rte_memzone_reserve", memzone_alloc, memzone_free,
 			NULL, memset_us_gb, RTE_MAX_MEMZONE - 1) < 0)
+		return -1;
+
+	if (memarea_perftest(memset_us_gb, MAX_RUNS) < 0)
 		return -1;
 
 	return 0;
