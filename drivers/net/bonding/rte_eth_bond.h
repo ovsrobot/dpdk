@@ -99,7 +99,7 @@ extern "C" {
  *	Port Id of created rte_eth_dev on success, negative value otherwise
  */
 int
-rte_eth_bond_create(const char *name, uint8_t mode, uint8_t socket_id);
+rte_eth_bond_create(const char *name, uint8_t mode, int socket_id);
 
 /**
  * Free a bonded rte_eth_dev device

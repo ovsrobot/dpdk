@@ -148,7 +148,7 @@ deactivate_slave(struct rte_eth_dev *eth_dev, uint16_t port_id)
 }
 
 int
-rte_eth_bond_create(const char *name, uint8_t mode, uint8_t socket_id)
+rte_eth_bond_create(const char *name, uint8_t mode, int socket_id)
 {
 	struct bond_dev_private *internals;
 	struct rte_eth_dev *bond_dev;
