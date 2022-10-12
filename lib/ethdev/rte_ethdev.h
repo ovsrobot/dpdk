@@ -1700,6 +1700,12 @@ enum rte_eth_err_handle_mode {
 	 * application invoke @see rte_eth_dev_reset to recover the port.
 	 */
 	RTE_ETH_ERROR_HANDLE_MODE_PASSIVE,
+	/** Proactive error handling, after the PMD detect that a reset is
+	 * required, the PMD reports @see RTE_ETH_EVENT_ERR_RECOVERING event,
+	 * and do recovery internally, finally, reports the recovery result
+	 * event (@see RTE_ETH_EVENT_RECOVERY_*).
+	 */
+	RTE_ETH_ERROR_HANDLE_MODE_PROACTIVE,
 };
 
 /**
@@ -3886,6 +3892,59 @@ enum rte_eth_event_type {
 	 * @see rte_eth_rx_avail_thresh_set()
 	 */
 	RTE_ETH_EVENT_RX_AVAIL_THRESH,
+	/** Port recovering from a hardware or firmware error.
+	 * If PMD supports proactive error recovery, it should trigger this
+	 * event to notify application that it detected an error and the
+	 * recovery is being started. Upon receiving the event, the application
+	 * should not invoke any control path APIs (such as
+	 * rte_eth_dev_configure/rte_eth_dev_stop...) until receiving
+	 * RTE_ETH_EVENT_RECOVERY_SUCCESS or RTE_ETH_EVENT_RECOVERY_FAILED
+	 * event.
+	 * The PMD will set the data path pointers to dummy functions, and
+	 * re-set the data patch pointers to non-dummy functions before reports
+	 * RTE_ETH_EVENT_RECOVERY_SUCCESS event. It means that the application
+	 * cannot send or receive any packets during this period.
+	 * @note Before the PMD reports the recovery result, the PMD may report
+	 * the RTE_ETH_EVENT_ERR_RECOVERING event again, because a larger error
+	 * may occur during the recovery.
+	 */
+	RTE_ETH_EVENT_ERR_RECOVERING,
+	/** Port recovers successful from the error.
+	 * The PMD already re-configures the port, and the effect is the same as
+	 * that of the restart operation.
+	 * a) the following operation will be retained: (alphabetically)
+	 *    - DCB configuration
+	 *    - FEC configuration
+	 *    - Flow control configuration
+	 *    - LRO configuration
+	 *    - LSC configuration
+	 *    - MTU
+	 *    - Mac address (default and those supplied by MAC address array)
+	 *    - Promiscuous and allmulticast mode
+	 *    - PTP configuration
+	 *    - Queue (Rx/Tx) settings
+	 *    - Queue statistics mappings
+	 *    - RSS configuration by rte_eth_dev_rss_xxx() family
+	 *    - Rx checksum configuration
+	 *    - Rx interrupt settings
+	 *    - Traffic management configuration
+	 *    - VLAN configuration (including filtering, tpid, strip, pvid)
+	 *    - VMDq configuration
+	 * b) the following configuration maybe retained or not depending on the
+	 *    device capabilities:
+	 *    - flow rules
+	 *      @see RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP
+	 *    - shared flow objects
+	 *      @see RTE_ETH_DEV_CAPA_FLOW_SHARED_OBJECT_KEEP
+	 * c) the other configuration will not be stored and will need to be
+	 *    re-configured.
+	 */
+	RTE_ETH_EVENT_RECOVERY_SUCCESS,
+	/** Port recovers failed from the error.
+	 * It means that the port should not usable anymore. The application
+	 * should close the port.
+	 */
+	RTE_ETH_EVENT_RECOVERY_FAILED,
 	RTE_ETH_EVENT_MAX       /**< max value of this enum */
 };
 
