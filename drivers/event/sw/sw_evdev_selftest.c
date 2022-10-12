@@ -1525,10 +1525,11 @@ xstats_id_reset_tests(struct test *t)
 				dev_names[i], dev_expected[i], val);
 			goto fail;
 		}
-		/* reset to zero */
+		/* reset to zero: note API requires uint32_t not unsigned int */
+		uint32_t reset_id = id;
 		int reset_ret = rte_event_dev_xstats_reset(evdev,
 						RTE_EVENT_DEV_XSTATS_DEVICE, 0,
-						&id,
+						&reset_id,
 						1);
 		if (reset_ret) {
 			printf("%d: failed to reset successfully\n", __LINE__);
@@ -1647,10 +1648,11 @@ xstats_id_reset_tests(struct test *t)
 				port_expected[i], id);
 			failed = 1;
 		}
-		/* reset to zero */
+		/* reset to zero: note API requires uint32_t not unsigned int */
+		uint32_t reset_id = id;
 		int reset_ret = rte_event_dev_xstats_reset(evdev,
 						RTE_EVENT_DEV_XSTATS_PORT, PORT,
-						&id,
+						&reset_id,
 						1);
 		if (reset_ret) {
 			printf("%d: failed to reset successfully\n", __LINE__);
@@ -1762,10 +1764,11 @@ xstats_id_reset_tests(struct test *t)
 				queue_names[i], queue_expected[i], val);
 			failed = 1;
 		}
-		/* reset to zero */
+		/* reset to zero: note API requires uint32_t not unsigned int */
+		uint32_t reset_id = id;
 		int reset_ret = rte_event_dev_xstats_reset(evdev,
 						RTE_EVENT_DEV_XSTATS_QUEUE,
-						queue, &id, 1);
+						queue, &reset_id, 1);
 		if (reset_ret) {
 			printf("%d: failed to reset successfully\n", __LINE__);
 			failed = 1;
