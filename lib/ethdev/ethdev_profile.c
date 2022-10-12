@@ -3,6 +3,7 @@
  */
 
 #include "ethdev_profile.h"
+#include "ethdev_driver.h"
 
 /**
  * This conditional block enables Ethernet device profiling with
