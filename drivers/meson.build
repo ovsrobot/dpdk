@@ -95,6 +95,7 @@ foreach subpath:subdirs
         objs = []
         cflags = default_cflags
         includes = [include_directories(drv_path)]
+        dpdk_includes += [include_directories(drv_path)]
         # set up internal deps. Drivers can append/override as necessary
         deps = std_deps
         # ext_deps: Stores external library dependency got
