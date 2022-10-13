@@ -73,6 +73,7 @@ static int total_num_mbufs = NUM_MBUFS_DEFAULT;
 
 struct dma_for_vhost dma_bind[RTE_MAX_VHOST_DEVICE];
 int16_t dmas_id[RTE_DMADEV_DEFAULT_MAX];
+int16_t dma_ref_count[RTE_DMADEV_DEFAULT_MAX];
 static int dma_count;
 
 /* mask of enabled ports */
@@ -371,6 +372,7 @@ open_dma(const char *value)
 done:
 		(dma_info + socketid)->dmas[vring_id].dev_id = dev_id;
 		(dma_info + socketid)->async_flag |= async_flag;
+		dma_ref_count[dev_id]++;
 		i++;
 	}
 out:
@@ -1562,6 +1564,27 @@ vhost_clear_queue(struct vhost_dev *vdev, uint16_t queue_id)
 	}
 }
 
+static void
+vhost_clear_async(struct vhost_dev *vdev, int vid, uint16_t queue_id)
+{
+	int16_t dma_id;
+
+	if (dma_bind[vid].dmas[queue_id].async_enabled) {
+		vhost_clear_queue(vdev, queue_id);
+		rte_vhost_async_channel_unregister(vid, queue_id);
+		dma_bind[vid].dmas[queue_id].async_enabled = false;
+
+		dma_id = dma_bind[vid2socketid[vdev->vid]].dmas[queue_id].dev_id;
+		dma_ref_count[dma_id]--;
+
+		if (dma_ref_count[dma_id] == 0) {
+			if (rte_vhost_async_dma_unconfigure(dma_id, 0) < 0)
+				RTE_LOG(ERR, VHOST_CONFIG,
+				       "Failed to unconfigure DMA %d in vhost.\n", dma_id);
+		}
+	}
+}
+
 /*
  * Remove a device from the specific data core linked list and from the
  * main linked list. Synchronization  occurs through the use of the
@@ -1618,17 +1641,8 @@ destroy_device(int vid)
 		"(%d) device has been removed from data core\n",
 		vdev->vid);
 
-	if (dma_bind[vid].dmas[VIRTIO_RXQ].async_enabled) {
-		vhost_clear_queue(vdev, VIRTIO_RXQ);
-		rte_vhost_async_channel_unregister(vid, VIRTIO_RXQ);
-		dma_bind[vid].dmas[VIRTIO_RXQ].async_enabled = false;
-	}
-
-	if (dma_bind[vid].dmas[VIRTIO_TXQ].async_enabled) {
-		vhost_clear_queue(vdev, VIRTIO_TXQ);
-		rte_vhost_async_channel_unregister(vid, VIRTIO_TXQ);
-		dma_bind[vid].dmas[VIRTIO_TXQ].async_enabled = false;
-	}
+	vhost_clear_async(vdev, vid, VIRTIO_RXQ);
+	vhost_clear_async(vdev, vid, VIRTIO_TXQ);
 
 	rte_free(vdev);
 }
@@ -1689,8 +1703,6 @@ vhost_async_channel_register(int vid)
 
 	return rx_ret | tx_ret;
 }
-
-
 
 /*
  * A new device is added to a data core. First the device is added to the main linked list
