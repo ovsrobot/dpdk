@@ -454,6 +454,11 @@ API Changes
 
 * raw/ifgpa: The function ``rte_pmd_ifpga_get_pci_bus`` has been removed.
 
+* eventdev: The datatype of the ID parameter in the functions
+  ``rte_event_dev_xstats_names_get``, ``rte_event_dev_xstats_get``,
+  ``rte_event_dev_xstats_by_name_get`` and ``rte_event_dev_xstats_reset``
+  is changed to ``uint64_t`` from ``unsigned int`` and ``uint32_t``.
+
 
 ABI Changes
 -----------
