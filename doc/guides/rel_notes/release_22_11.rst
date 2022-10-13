@@ -236,6 +236,10 @@ New Features
 
      strings $dpdk_binary_or_driver | sed -n 's/^PMD_INFO_STRING= //p'
 
+* **Added DMA vChannel unconfiguration for async vhost.**
+
+  * Added support to unconfigure DMA vChannels that have been unregistered.
+
 
 Removed Items
 -------------
