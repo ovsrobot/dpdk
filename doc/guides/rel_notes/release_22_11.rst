@@ -142,6 +142,8 @@ New Features
 
 * **Added Microsoft mana driver.**
 
+  Disabled by default because of missing dependency.
+
 * **Updated Netronome nfp driver.**
 
   Added the needed data structures and logics to support flow API offload:

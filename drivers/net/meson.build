@@ -34,7 +34,6 @@ drivers = [
         'ixgbe',
         'kni',
         'liquidio',
-        'mana',
         'memif',
         'mlx4',
         'mlx5',
