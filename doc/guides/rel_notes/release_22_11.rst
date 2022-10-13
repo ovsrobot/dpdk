@@ -454,6 +454,9 @@ API Changes
 
 * raw/ifgpa: The function ``rte_pmd_ifpga_get_pci_bus`` has been removed.
 
+* eventdev: The function pointer definition ``eventdev_stop_flush_t`` is
+  renamed to ``rte_eventdev_stop_flush_t`` to avoid conflicts with application
+  symbols.
 
 ABI Changes
 -----------
@@ -496,6 +499,13 @@ ABI Changes
 * eventdev: Added ``weight`` and ``affinity`` fields
   to ``rte_event_queue_conf`` structure.
 
+* eventdev: The field ``*u64s`` in the structure ``rte_event_vector`` is replaced
+  with ``u64s`` as the field is supposed to hold array of uint64_t values.
+
+* eventdev: The structure ``rte_event_vector`` was updated to include a new bit
+  field ``elem_offset:12`` the bits are taken from the bitfield ``rsvd:15``.
+  The element offset defines the offset into the vector array at
+  which valid elements start.
 
 Known Issues
 ------------
