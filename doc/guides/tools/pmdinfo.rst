@@ -37,8 +37,8 @@ Arguments
 
 .. option:: ELF_FILE
 
-   DPDK application binary or dynamic library.
-   Any linked ``librte_*.so`` library (as reported by ``ldd``) will also be analyzed.
+   Executable DPDK application binary or dynamic library.
+   Any linked ``librte_*.so`` library (as reported by ``ld.so``) will also be analyzed.
    Can be specified multiple times.
 
 Environment Variables

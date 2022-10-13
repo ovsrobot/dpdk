@@ -97,9 +97,9 @@ def parse_args() -> argparse.Namespace:
         "elf_files",
         metavar="ELF_FILE",
         nargs="+",
-        type=existing_file,
+        type=executable_elf_file,
         help="""
-        DPDK application binary or dynamic library.
+        Executable DPDK application binary or dynamic library.
         """,
     )
     return parser.parse_args()
@@ -180,14 +180,24 @@ def get_plugin_libs(binaries: Iterable[Path]) -> Iterator[Path]:
 
 
 # ----------------------------------------------------------------------------
-def existing_file(value: str) -> Path:
+def executable_elf_file(value: str) -> Path:
     """
-    Argparse type= callback to ensure an argument points to a valid file path.
+    Argparse type= callback to ensure an argument points to a valid ELF file
+    path which can be executed.
     """
-    path = Path(value)
-    if not path.is_file():
-        raise argparse.ArgumentTypeError(f"{value}: No such file")
-    return path
+    try:
+        with open(value, "rb") as f:
+            elf = ELFFile(f)
+            if elf.header.e_type not in ("ET_DYN", "ET_EXEC"):
+                raise ELFError(f"unknown type: {elf.header.e_type!r}")
+        if not os.access(value, os.X_OK):
+            raise OSError("is not executable")
+    except ELFError as e:
+        raise argparse.ArgumentTypeError(f"{value}: invalid ELF: {e}") from e
+    except OSError as e:
+        raise argparse.ArgumentTypeError(f"{value}: {e}") from e
+
+    return Path(value)
 
 
 # ----------------------------------------------------------------------------
@@ -270,7 +280,7 @@ def get_elf_strings(path: Path, section: str, prefix: str) -> Iterator[str]:
 
 
 # ----------------------------------------------------------------------------
-LDD_LIB_RE = re.compile(
+LOADED_OBJECT_RE = re.compile(
     r"""
     ^                  # beginning of line
     \t                 # tab
@@ -290,14 +300,16 @@ def get_needed_libs(path: Path) -> Iterator[Path]:
     """
     Extract the dynamic library dependencies from an ELF executable.
     """
+    env = os.environ.copy()
+    env["LD_TRACE_LOADED_OBJECTS"] = "1"
     with subprocess.Popen(
-        ["ldd", str(path)], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        [str(path)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
     ) as proc:
         out, err = proc.communicate()
         if proc.returncode != 0:
             err = err.decode("utf-8").splitlines()[-1].strip()
             raise Exception(f"cannot read ELF file: {err}")
-        for match in LDD_LIB_RE.finditer(out.decode("utf-8")):
+        for match in LOADED_OBJECT_RE.finditer(out.decode("utf-8")):
             libname, libpath = match.groups()
             if libname.startswith("librte_"):
                 libpath = Path(libpath)
