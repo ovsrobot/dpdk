@@ -106,6 +106,7 @@ valid_name(const char *name)
 			['a' ... 'z'] = 1,
 			['_'] = 1,
 			['/'] = 1,
+			['.'] = 1,
 	};
 	while (*name != '\0') {
 		if ((size_t)*name >= RTE_DIM(allowed) || allowed[(int)*name] == 0)
