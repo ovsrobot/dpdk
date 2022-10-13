@@ -55,35 +55,19 @@ class RemoteSession(ABC):
         self._connect()
         self.logger.info(f"Connection to {self.username}@{self.hostname} successful.")
 
-    def send_command(self, command: str, timeout: float = SETTINGS.timeout) -> str:
-        self.logger.info(f"Sending: {command}")
-        out = self._send_command(command, timeout)
-        self.logger.debug(f"Received from {command}: {out}")
-        self._history_add(command=command, output=out)
-        return out
-
-    def close(self, force: bool = False) -> None:
-        self.logger.logger_exit()
-        self._close(force)
-
-    def _history_add(self, command: str, output: str) -> None:
-        self.history.append(
-            HistoryRecord(name=self.name, command=command, output=output)
-        )
-
-    @abstractmethod
-    def is_alive(self) -> bool:
-        """
-        Check whether the session is still responding.
-        """
-        pass
-
     @abstractmethod
     def _connect(self) -> None:
         """
         Create connection to assigned node.
         """
         pass
+
+    def send_command(self, command: str, timeout: float = SETTINGS.timeout) -> str:
+        self.logger.info(f"Sending: {command}")
+        out = self._send_command(command, timeout)
+        self.logger.debug(f"Received from {command}: {out}")
+        self._history_add(command=command, output=out)
+        return out
 
     @abstractmethod
     def _send_command(self, command: str, timeout: float) -> str:
@@ -92,9 +76,25 @@ class RemoteSession(ABC):
         """
         pass
 
+    def _history_add(self, command: str, output: str) -> None:
+        self.history.append(
+            HistoryRecord(name=self.name, command=command, output=output)
+        )
+
+    def close(self, force: bool = False) -> None:
+        self.logger.logger_exit()
+        self._close(force)
+
     @abstractmethod
     def _close(self, force: bool = False) -> None:
         """
         Close the remote session, freeing all used resources.
+        """
+        pass
+
+    @abstractmethod
+    def is_alive(self) -> bool:
+        """
+        Check whether the session is still responding.
         """
         pass
