@@ -627,3 +627,44 @@ by application.
 The PMD itself should not call rte_eth_dev_reset(). The PMD can trigger
 the application to handle reset event. It is duty of application to
 handle all synchronization before it calls rte_eth_dev_reset().
+
+The above error handling mode is known as ``RTE_ETH_ERROR_HANDLE_MODE_PASSIVE``.
+
+Proactive Error Handling Mode
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This mode is known as ``RTE_ETH_ERROR_HANDLE_MODE_PROACTIVE``, different from
+the application invokes recovery in PASSIVE mode, the PMD automatically recovers
+from error in PROACTIVE mode, and only a small amount of work is required for
+the application.
+
+During error detection and automatic recovery, the PMD sets the data path
+pointers to dummy functions (which will prevent the crash), and also make sure
+the control path operations failed with retcode -EBUSY.
+
+Because the PMD recovers automatically, the application can only sense that the
+data flow is disconnected for a while and the control API returns an error in
+this period.
+
+In order to sense the error happening/recovering, as well as restore some
+additional configuration, three events were introduced:
+
+* RTE_ETH_EVENT_ERR_RECOVERING: used to notify the application that it detected
+  an error and the recovery is being started. Upon receiving the event, the
+  application should not invoke any control path APIs until receiving
+  RTE_ETH_EVENT_RECOVERY_SUCCESS or RTE_ETH_EVENT_RECOVERY_FAILED event.
+
+* RTE_ETH_EVENT_RECOVERY_SUCCESS: used to notify the application that it
+  recovers successful from the error, the PMD already re-configures the port,
+  and the effect is the same as that of the restart operation.
+
+* RTE_ETH_EVENT_RECOVERY_FAILED: used to notify the application that it
+  recovers failed from the error, the port should not usable anymore. the
+  application should close the port.
+
+.. note::
+        * Before the PMD reports the recovery result, the PMD may report the
+          ``RTE_ETH_EVENT_ERR_RECOVERING`` event again, because a larger error
+          may occur during the recovery.
+        * The error handling mode supported by the PMD can be reported through
+          the ``rte_eth_dev_info_get`` API.
