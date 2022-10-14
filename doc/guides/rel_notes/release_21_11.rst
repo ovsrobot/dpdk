@@ -680,7 +680,7 @@ Tested Platforms
       * Firmware version: 0x61bf0001
       * Device id (pf/vf): 8086:10fb / 8086:10ed
       * Driver version(in-tree): 5.1.0-k (ixgbe)
-      * Driver version(out-tree): 5.13.4 (ixgbe)
+      * Driver version(out of tree): 5.13.4 (ixgbe)
 
     * Intel\ |reg| Ethernet Converged Network Adapter X710-DA4 (4x10G)
 

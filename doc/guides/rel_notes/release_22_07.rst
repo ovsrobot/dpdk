@@ -276,7 +276,9 @@ Tested Platforms
 
       * Firmware version: 4.00 0x80011845 1.3236.0
       * Device id (pf/vf): 8086:1593 / 8086:1889
-      * Driver version: 1.9.5_dirty (ice)
+      * Driver version(out of tree): 1.9.5_dirty (ice)
+      * Driver version(in-tree): 5.15.0-27-generic (ice/Ubuntu 22.04)
+      * Driver version(in-tree): 4.18.0-305.19.1.el8_4.x86_64 (ice/RHEL8.4)
       * OS Default DDP: 1.3.30.0
       * COMMS DDP: 1.3.37.0
       * Wireless Edge DDP: 1.3.10.0
@@ -302,42 +304,42 @@ Tested Platforms
 
       * Firmware version: 0x61bf0001
       * Device id (pf/vf): 8086:10fb / 8086:10ed
-      * Driver version(out-tree): 5.15.2 (ixgbe)
+      * Driver version(out of tree): 5.15.2 (ixgbe)
       * Driver version(in-tree): 5.15.0-27-generic (ixgbe)
 
     * Intel\ |reg| Ethernet Converged Network Adapter X710-DA4 (4x10G)
 
       * Firmware version: 8.70 0x8000c3d5 1.3179.0
       * Device id (pf/vf): 8086:1572 / 8086:154c
-      * Driver version(out-tree): 2.19.3 (i40e)
+      * Driver version(out of tree): 2.19.3 (i40e)
       * Driver version(in-tree): 5.15.0-27-generic (i40e)
 
     * Intel\ |reg| Corporation Ethernet Connection X722 for 10GbE SFP+ (2x10G)
 
       * Firmware version: 5.60 0x800035cb 1.3179.0
       * Device id (pf/vf): 8086:37d0 / 8086:37cd
-      * Driver version(out-tree): 2.19.3 (i40e)
+      * Driver version(out of tree): 2.19.3 (i40e)
       * Driver version(in-tree): 5.13.0-30-generic (i40e)
 
     * Intel\ |reg| Corporation Ethernet Connection X722 for 10GBASE-T
 
       * Firmware version: 5.60 0x8000357f 1.2935.0
       * Device id (pf/vf): 8086:37d2 / 8086:37cd
-      * Driver version(out-tree): 2.19.3 (i40e)
+      * Driver version(out of tree): 2.19.3 (i40e)
       * Driver version(in-tree): 5.13.0-30-generic (i40e)
 
     * Intel\ |reg| Ethernet Converged Network Adapter XXV710-DA2 (2x25G)
 
       * Firmware version: 8.70 0x8000c3eb 1.3179.0
       * Device id (pf/vf): 8086:158b / 8086:154c
-      * Driver version(out-tree): 2.19.3 (i40e)
+      * Driver version(out of tree): 2.19.3 (i40e)
       * Driver version(in-tree): 5.15.0-27-generic (i40e)
 
     * Intel\ |reg| Ethernet Converged Network Adapter XL710-QDA2 (2X40G)
 
       * Firmware version(PF): 8.70 0x8000c40f 1.3179.0
       * Device id (pf/vf): 8086:1583 / 8086:154c
-      * Driver version(out-tree): 2.19.3 (i40e)
+      * Driver version(out of tree): 2.19.3 (i40e)
       * Driver version(in-tree): 5.15.0-27-generic (i40e)
 
     * Intel\ |reg| Ethernet Converged Network Adapter X710-T2L
