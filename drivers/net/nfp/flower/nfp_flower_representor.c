@@ -8,7 +8,6 @@
 
 #include "../nfp_common.h"
 #include "../nfp_logs.h"
-#include "../nfp_ctrl.h"
 #include "../nfp_rxtx.h"
 #include "../nfpcore/nfp_mip.h"
 #include "../nfpcore/nfp_rtsym.h"

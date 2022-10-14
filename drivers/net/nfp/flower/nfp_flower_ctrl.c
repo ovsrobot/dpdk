@@ -8,7 +8,6 @@
 
 #include "../nfp_common.h"
 #include "../nfp_logs.h"
-#include "../nfp_ctrl.h"
 #include "../nfp_rxtx.h"
 #include "nfp_flower.h"
 #include "nfp_flower_ctrl.h"
