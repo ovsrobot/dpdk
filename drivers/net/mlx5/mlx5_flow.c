@@ -7108,7 +7108,7 @@ mlx5_flow_create_devx_sq_miss_flow(struct rte_eth_dev *dev, uint32_t txq)
 	struct rte_flow_item_port_id port_spec = {
 		.id = MLX5_PORT_ESW_MGR,
 	};
-	struct mlx5_rte_flow_item_tx_queue txq_spec = {
+	struct mlx5_rte_flow_item_sq txq_spec = {
 		.queue = txq,
 	};
 	struct rte_flow_item pattern[] = {
@@ -7118,7 +7118,7 @@ mlx5_flow_create_devx_sq_miss_flow(struct rte_eth_dev *dev, uint32_t txq)
 		},
 		{
 			.type = (enum rte_flow_item_type)
-				MLX5_RTE_FLOW_ITEM_TYPE_TX_QUEUE,
+				MLX5_RTE_FLOW_ITEM_TYPE_SQ,
 			.spec = &txq_spec,
 		},
 		{
@@ -7504,16 +7504,16 @@ mlx5_ctrl_flow_source_queue(struct rte_eth_dev *dev,
 		.egress = 1,
 		.priority = 0,
 	};
-	struct mlx5_rte_flow_item_tx_queue queue_spec = {
+	struct mlx5_rte_flow_item_sq queue_spec = {
 		.queue = queue,
 	};
-	struct mlx5_rte_flow_item_tx_queue queue_mask = {
+	struct mlx5_rte_flow_item_sq queue_mask = {
 		.queue = UINT32_MAX,
 	};
 	struct rte_flow_item items[] = {
 		{
 			.type = (enum rte_flow_item_type)
-				MLX5_RTE_FLOW_ITEM_TYPE_TX_QUEUE,
+				MLX5_RTE_FLOW_ITEM_TYPE_SQ,
 			.spec = &queue_spec,
 			.last = NULL,
 			.mask = &queue_mask,
