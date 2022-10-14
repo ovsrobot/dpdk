@@ -33,7 +33,7 @@ def read_socket(sock, buf_len, echo=True):
         sock.close()
         raise
     if echo:
-        print(json.dumps(ret))
+        print(json.dumps(ret, indent=4))
     return ret
 
 
