@@ -114,6 +114,15 @@ rte_lcore_to_socket_id(unsigned int lcore_id)
 	return lcore_config[lcore_id].socket_id;
 }
 
+int
+rte_lcore_to_thread_id(int lcore_id, pthread_t *thread_id) {
+	if (unlikely(lcore_id < 0 || lcore_id >= RTE_MAX_LCORE))
+		return -1;
+
+	*thread_id = lcore_config[lcore_id].thread_id;
+	return 0;
+}
+
 static int
 socket_id_cmp(const void *a, const void *b)
 {
