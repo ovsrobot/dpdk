@@ -111,6 +111,9 @@ unsigned int rte_get_next_lcore(unsigned int i, int skip_main, int wrap)
 unsigned int
 rte_lcore_to_socket_id(unsigned int lcore_id)
 {
+	if (unlikely(lcore_id >= RTE_MAX_LCORE))
+		return -1;
+
 	return lcore_config[lcore_id].socket_id;
 }
 
