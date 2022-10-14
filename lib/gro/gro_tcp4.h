@@ -134,6 +134,8 @@ void gro_tcp4_tbl_destroy(void *tbl);
  *  Pointer pointing to the TCP/IPv4 reassembly table
  * @start_time
  *  The time when the packet is inserted into the table
+ * @flags
+ *  Functional flags for GRO
  *
  * @return
  *  - Return a positive value if the packet is merged.
@@ -143,7 +145,8 @@ void gro_tcp4_tbl_destroy(void *tbl);
  */
 int32_t gro_tcp4_reassemble(struct rte_mbuf *pkt,
 		struct gro_tcp4_tbl *tbl,
-		uint64_t start_time);
+		uint64_t start_time,
+		uint16_t flags);
 
 /**
  * This function flushes timeout packets in a TCP/IPv4 reassembly table,
@@ -210,7 +213,8 @@ merge_two_tcp4_packets(struct gro_tcp4_item *item,
 		uint16_t l2_offset)
 {
 	struct rte_mbuf *pkt_head, *pkt_tail, *lastseg;
-	uint16_t hdr_len, l2_len;
+	struct rte_tcp_hdr *head_tcp_hdr, *tail_tcp_hdr;
+	uint16_t hdr_len, l2_len, l3_offset;
 
 	if (cmp > 0) {
 		pkt_head = item->firstseg;
@@ -221,12 +225,21 @@ merge_two_tcp4_packets(struct gro_tcp4_item *item,
 	}
 
 	/* check if the IPv4 packet length is greater than the max value */
-	hdr_len = l2_offset + pkt_head->l2_len + pkt_head->l3_len +
-		pkt_head->l4_len;
+	l3_offset = l2_offset + pkt_head->l2_len + pkt_head->l3_len;
+	hdr_len = l3_offset + pkt_head->l4_len;
 	l2_len = l2_offset > 0 ? pkt_head->outer_l2_len : pkt_head->l2_len;
 	if (unlikely(pkt_head->pkt_len - l2_len + pkt_tail->pkt_len -
 				hdr_len > MAX_IPV4_PKT_LENGTH))
 		return 0;
+
+	/* merge push flag to pkt_head */
+	tail_tcp_hdr = rte_pktmbuf_mtod_offset(pkt_tail,
+				struct rte_tcp_hdr *, l3_offset);
+	if (tail_tcp_hdr->tcp_flags & RTE_TCP_PSH_FLAG) {
+		head_tcp_hdr = rte_pktmbuf_mtod_offset(pkt_head,
+					struct rte_tcp_hdr *, l3_offset);
+		head_tcp_hdr->tcp_flags |= RTE_TCP_PSH_FLAG;
+	}
 
 	/* remove the packet header for the tail packet */
 	rte_pktmbuf_adj(pkt_tail, hdr_len);

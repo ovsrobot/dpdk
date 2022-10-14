@@ -39,6 +39,7 @@ extern "C" {
 #define RTE_GRO_IPV4_VXLAN_UDP_IPV4 (1ULL << RTE_GRO_IPV4_VXLAN_UDP_IPV4_INDEX)
 /**< VxLAN UDP/IPv4 GRO flag. */
 
+#define RTE_GRO_TCP_PUSH_IGNORE  0x01
 /**
  * Structure used to create GRO context objects or used to pass
  * application-determined parameters to rte_gro_reassemble_burst().
@@ -54,6 +55,10 @@ struct rte_gro_param {
 	/**< socket index for allocating GRO related data structures,
 	 * like reassembly tables. When use rte_gro_reassemble_burst(),
 	 * applications don't need to set this value.
+	 */
+	uint16_t flags;
+	/**< Functional flags for GRO, For example,
+	 * merge TCP packets with push flag.
 	 */
 };
 

@@ -7,6 +7,7 @@
 #include <rte_ethdev.h>
 #include <rte_udp.h>
 
+#include "rte_gro.h"
 #include "gro_vxlan_tcp4.h"
 
 void *
@@ -287,7 +288,8 @@ update_vxlan_header(struct gro_vxlan_tcp4_item *item)
 int32_t
 gro_vxlan_tcp4_reassemble(struct rte_mbuf *pkt,
 		struct gro_vxlan_tcp4_tbl *tbl,
-		uint64_t start_time)
+		uint64_t start_time,
+		uint16_t flags)
 {
 	struct rte_ether_hdr *outer_eth_hdr, *eth_hdr;
 	struct rte_ipv4_hdr *outer_ipv4_hdr, *ipv4_hdr;
@@ -304,7 +306,7 @@ gro_vxlan_tcp4_reassemble(struct rte_mbuf *pkt,
 	uint32_t i, max_flow_num, remaining_flow_num;
 	int cmp;
 	uint16_t hdr_len;
-	uint8_t find;
+	uint8_t find, tcp_flags;
 
 	/*
 	 * Don't process the packet whose TCP header length is greater
@@ -326,10 +328,13 @@ gro_vxlan_tcp4_reassemble(struct rte_mbuf *pkt,
 	tcp_hdr = (struct rte_tcp_hdr *)((char *)ipv4_hdr + pkt->l3_len);
 
 	/*
-	 * Don't process the packet which has FIN, SYN, RST, PSH, URG,
-	 * ECE or CWR set.
+	 * Don't process the packet which has FIN, SYN, RST, URG, ECE
+	 * or CWR set, the PSH flag is ignored at the user's discretion.
 	 */
-	if (tcp_hdr->tcp_flags != RTE_TCP_ACK_FLAG)
+	tcp_flags = tcp_hdr->tcp_flags & (~(RTE_TCP_ACK_FLAG));
+	if (flags & RTE_GRO_TCP_PUSH_IGNORE)
+		tcp_flags = tcp_flags & (~(RTE_TCP_PSH_FLAG));
+	if (tcp_flags)
 		return -1;
 
 	hdr_len = pkt->outer_l2_len + pkt->outer_l3_len + pkt->l2_len +

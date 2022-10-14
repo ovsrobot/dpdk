@@ -77,6 +77,8 @@ struct gro_ctx {
 	uint64_t gro_types;
 	/* reassembly tables */
 	void *tbls[RTE_GRO_TYPE_MAX_NUM];
+	/**< Functional flags for GRO */
+	uint16_t flags;
 };
 
 void *
@@ -116,6 +118,7 @@ rte_gro_ctx_create(const struct rte_gro_param *param)
 		gro_types |= gro_type_flag;
 	}
 	gro_ctx->gro_types = param->gro_types;
+	gro_ctx->flags = param->flags;
 
 	return gro_ctx;
 }
@@ -245,7 +248,8 @@ rte_gro_reassemble_burst(struct rte_mbuf **pkts,
 		if (IS_IPV4_VXLAN_TCP4_PKT(pkts[i]->packet_type) &&
 				do_vxlan_tcp_gro) {
 			ret = gro_vxlan_tcp4_reassemble(pkts[i],
-							&vxlan_tcp_tbl, 0);
+							&vxlan_tcp_tbl, 0,
+							param->flags);
 			if (ret > 0)
 				/* Merge successfully */
 				nb_after_gro--;
@@ -262,7 +266,7 @@ rte_gro_reassemble_burst(struct rte_mbuf **pkts,
 				unprocess_pkts[unprocess_num++] = pkts[i];
 		} else if (IS_IPV4_TCP_PKT(pkts[i]->packet_type) &&
 				do_tcp4_gro) {
-			ret = gro_tcp4_reassemble(pkts[i], &tcp_tbl, 0);
+			ret = gro_tcp4_reassemble(pkts[i], &tcp_tbl, 0, param->flags);
 			if (ret > 0)
 				/* merge successfully */
 				nb_after_gro--;
@@ -354,7 +358,7 @@ rte_gro_reassemble(struct rte_mbuf **pkts,
 		if (IS_IPV4_VXLAN_TCP4_PKT(pkts[i]->packet_type) &&
 				do_vxlan_tcp_gro) {
 			if (gro_vxlan_tcp4_reassemble(pkts[i], vxlan_tcp_tbl,
-						current_time) < 0)
+						current_time, gro_ctx->flags) < 0)
 				unprocess_pkts[unprocess_num++] = pkts[i];
 		} else if (IS_IPV4_VXLAN_UDP4_PKT(pkts[i]->packet_type) &&
 				do_vxlan_udp_gro) {
@@ -364,7 +368,7 @@ rte_gro_reassemble(struct rte_mbuf **pkts,
 		} else if (IS_IPV4_TCP_PKT(pkts[i]->packet_type) &&
 				do_tcp4_gro) {
 			if (gro_tcp4_reassemble(pkts[i], tcp_tbl,
-						current_time) < 0)
+						current_time, gro_ctx->flags) < 0)
 				unprocess_pkts[unprocess_num++] = pkts[i];
 		} else if (IS_IPV4_UDP_PKT(pkts[i]->packet_type) &&
 				do_udp4_gro) {

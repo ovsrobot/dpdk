@@ -108,6 +108,8 @@ void gro_vxlan_tcp4_tbl_destroy(void *tbl);
  *  Pointer pointing to the VxLAN reassembly table
  * @start_time
  *  The time when the packet is inserted into the table
+ * @flags
+ *  Functional flags for GRO
  *
  * @return
  *  - Return a positive value if the packet is merged.
@@ -117,7 +119,8 @@ void gro_vxlan_tcp4_tbl_destroy(void *tbl);
  */
 int32_t gro_vxlan_tcp4_reassemble(struct rte_mbuf *pkt,
 		struct gro_vxlan_tcp4_tbl *tbl,
-		uint64_t start_time);
+		uint64_t start_time,
+		uint16_t flags);
 
 /**
  * This function flushes timeout packets in the VxLAN reassembly table,
