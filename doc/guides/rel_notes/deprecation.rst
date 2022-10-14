@@ -96,3 +96,10 @@ Deprecation Notices
   to have another parameter ``qp_id`` to return the queue pair ID
   which got error interrupt to the application,
   so that application can reset that particular queue pair.
+
+* eal/treewide: currently socket_id's use many different data types
+  throughout the codebase. This complicates compiling DPDK-based
+  applications with enabled -Wconversion. Fix this, by changing
+  all occurences to the return type of rte_socket_id().
+  DPDK 23.11 should receive a batch cleanup to a single, consistent
+  data type.
