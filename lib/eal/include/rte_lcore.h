@@ -171,6 +171,20 @@ rte_lcore_to_socket_id(unsigned int lcore_id);
  */
 int rte_lcore_to_cpu_id(int lcore_id);
 
+/**
+ * Get the ID of the thread of the specified lcore
+ *
+ * @param lcore_id
+ *   the targeted lcore, which MUST be between 0 and RTE_MAX_LCORE-1.
+ * @param thread_id
+ *   the thread id is returned in this argument if lcore_id is in range
+ * @return
+ *   0 on success, or -1 if out of range
+ */
+__rte_experimental
+int
+rte_lcore_to_thread_id(int lcore_id, pthread_t *thread_id);
+
 #ifdef RTE_HAS_CPUSET
 
 /**
