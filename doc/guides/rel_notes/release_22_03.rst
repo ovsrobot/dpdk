@@ -278,7 +278,9 @@ Tested Platforms
 
          * Firmware version: 3.22 0x8000d83c 1.3146.0
          * Device id (pf/vf): 8086:1593 / 8086:1889
-         * Driver version: 1.8.3_2_g5c2ff303 (ice)
+         * Driver version(out-tree): 1.8.3_2_g5c2ff303 (ice)
+         * Driver version(in-tree): 0.8.2-k (ice/Ubuntu 20.04.3 LTS)
+         * Driver version(in-tree): 4.18.0-305.19.1.el8_4.x86_64 (ice/RHEL8.4)
          * OS Default DDP: 1.3.28.0
          * COMMS DDP: 1.3.35.0
          * Wireless Edge DDP: 1.3.8.0
