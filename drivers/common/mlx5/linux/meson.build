@@ -229,6 +229,8 @@ foreach arg:has_member_args
 endforeach
 configure_file(output : 'mlx5_autoconf.h', configuration : config)
 
+MLX5_HAVE_IBV_FLOW_DV_SUPPORT=config.get('HAVE_IBV_FLOW_DV_SUPPORT')
+
 # Build Glue Library
 if dlopen_ibverbs
     dlopen_name = 'mlx5_glue'

@@ -14,7 +14,6 @@ sources = files(
         'mlx5.c',
         'mlx5_ethdev.c',
         'mlx5_flow.c',
-        'mlx5_dr.c',
         'mlx5_flow_meter.c',
         'mlx5_flow_dv.c',
         'mlx5_flow_hw.c',
@@ -72,3 +71,7 @@ endif
 testpmd_sources += files('mlx5_testpmd.c')
 
 subdir(exec_env)
+
+if MLX5_HAVE_IBV_FLOW_DV_SUPPORT
+	subdir('hws')
+endif
