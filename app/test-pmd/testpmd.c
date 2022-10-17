@@ -2647,10 +2647,16 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 	       struct rte_eth_rxconf *rx_conf, struct rte_mempool *mp)
 {
 	union rte_eth_rxseg rx_useg[MAX_SEGS_BUFFER_SPLIT] = {};
+	struct rte_mempool *rx_mempool[MAX_MEMPOOL] = {};
 	unsigned int i, mp_n;
 	int ret;
 
-	if (rx_pkt_nb_segs <= 1 ||
+	/* For multiple mempools per Rx queue support,
+	 * rx_pkt_nb_segs greater than 1 and
+	 * Rx offload flag, RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT won't be set.
+	 * @see rte_eth_rxconf::rx_mempools
+	 */
+	if (rx_pkt_nb_segs <= 1 &&
 	    (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) == 0) {
 		rx_conf->rx_seg = NULL;
 		rx_conf->rx_nseg = 0;
@@ -2668,20 +2674,30 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		 */
 		mp_n = (i >= mbuf_data_size_n) ? mbuf_data_size_n - 1 : i;
 		mpx = mbuf_pool_find(socket_id, mp_n);
-		/* Handle zero as mbuf data buffer size. */
-		rx_seg->offset = i < rx_pkt_nb_offs ?
-				   rx_pkt_seg_offsets[i] : 0;
-		rx_seg->mp = mpx ? mpx : mp;
-		if (rx_pkt_hdr_protos[i] != 0 && rx_pkt_seg_lengths[i] == 0) {
-			rx_seg->proto_hdr = rx_pkt_hdr_protos[i];
+
+		if (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) {
+			/* Handle zero as mbuf data buffer size. */
+			rx_seg->offset = i < rx_pkt_nb_offs ?
+					   rx_pkt_seg_offsets[i] : 0;
+			rx_seg->mp = mpx ? mpx : mp;
+			if (rx_pkt_hdr_protos[i] != 0 && rx_pkt_seg_lengths[i] == 0) {
+				rx_seg->proto_hdr = rx_pkt_hdr_protos[i];
+			} else {
+				rx_seg->length = rx_pkt_seg_lengths[i] ?
+						 rx_pkt_seg_lengths[i] :
+						 mbuf_data_size[mp_n];
+			}
 		} else {
-			rx_seg->length = rx_pkt_seg_lengths[i] ?
-					rx_pkt_seg_lengths[i] :
-					mbuf_data_size[mp_n];
+			rx_mempool[i] = mpx ? mpx : mp;
 		}
 	}
-	rx_conf->rx_nseg = rx_pkt_nb_segs;
-	rx_conf->rx_seg = rx_useg;
+	if (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) {
+		rx_conf->rx_nseg = rx_pkt_nb_segs;
+		rx_conf->rx_seg = rx_useg;
+	} else {
+		rx_conf->rx_mempools = rx_mempool;
+		rx_conf->rx_nmempool = rx_pkt_nb_segs;
+	}
 	ret = rte_eth_rx_queue_setup(port_id, rx_queue_id, nb_rx_desc,
 				    socket_id, rx_conf, NULL);
 	rx_conf->rx_seg = NULL;
