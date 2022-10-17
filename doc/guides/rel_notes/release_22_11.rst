@@ -225,6 +225,12 @@ New Features
   sysfs entries to adjust the minimum and maximum uncore frequency values,
   which works on Linux with Intel hardware only.
 
+* **Added non-blocking notify API to the vhost library.**
+
+  Added ``rte_vhost_vring_call_nonblock`` API to notify the guest that
+  used descriptors have been added to the vring in non-blocking way. User
+  should check the return value of this API and try again if needed.
+
 * **Rewritten pmdinfo script.**
 
   The ``dpdk-pmdinfo.py`` script was rewritten to produce valid JSON only.
