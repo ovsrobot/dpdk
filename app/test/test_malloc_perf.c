@@ -7,6 +7,7 @@
 #include <rte_cycles.h>
 #include <rte_errno.h>
 #include <rte_malloc.h>
+#include <rte_memarea.h>
 #include <rte_memzone.h>
 
 #include "test.h"
@@ -19,6 +20,8 @@ typedef void * (memset_t)(void *addr, int value, size_t size);
 
 static const uint64_t KB = 1 << 10;
 static const uint64_t GB = 1 << 30;
+
+static struct rte_memarea *ma_perftest_handle;
 
 static double
 tsc_to_us(uint64_t tsc, size_t runs)
@@ -147,6 +150,80 @@ memzone_free(void *addr)
 	rte_memzone_free((struct rte_memzone *)addr);
 }
 
+static const char *
+memarea_perftest_source_name(enum rte_memarea_source source)
+{
+	if (source == RTE_MEMAREA_SOURCE_HEAP)
+		return "heap";
+	else if (source == RTE_MEMAREA_SOURCE_LIBC)
+		return "libc";
+	else
+		return "unknown";
+}
+
+static int
+memarea_perftest_pre_env(enum rte_memarea_source source)
+{
+	struct rte_memarea_param init;
+
+	memset(&init, 0, sizeof(init));
+	snprintf(init.name, sizeof(init.name), "perftest");
+	init.source = source;
+	init.alg = RTE_MEMAREA_ALG_NEXTFIT;
+	init.total_sz = GB;
+	init.mt_safe = 1;
+	init.numa_socket = SOCKET_ID_ANY;
+
+	ma_perftest_handle = rte_memarea_create(&init);
+	if (ma_perftest_handle == NULL) {
+		fprintf(stderr, "memarea create failed, skip memarea source: %s perftest!\n",
+			memarea_perftest_source_name(source));
+		return -1;
+	}
+	return 0;
+}
+
+static void
+memarea_perftest_clear_env(void)
+{
+	rte_memarea_destroy(ma_perftest_handle);
+	ma_perftest_handle = NULL;
+}
+
+static void *
+memarea_perftest_alloc(const char *name, size_t size, unsigned int align)
+{
+	RTE_SET_USED(name);
+	RTE_SET_USED(align);
+	return rte_memarea_alloc(ma_perftest_handle, size, 0);
+}
+
+static void
+memarea_perftest_free(void *addr)
+{
+	rte_memarea_free(ma_perftest_handle, addr);
+}
+
+static int
+memarea_perftest(enum rte_memarea_source source, double memset_gb_us, size_t max_runs)
+{
+	char test_name[64] = { 0 };
+
+	if (memarea_perftest_pre_env(source) < 0)
+		return 0;
+
+	snprintf(test_name, sizeof(test_name), "rte_memarea.%s",
+		 memarea_perftest_source_name(source));
+	if (test_alloc_perf(test_name, memarea_perftest_alloc, memarea_perftest_free,
+			memset, memset_gb_us, max_runs) < 0) {
+		memarea_perftest_clear_env();
+		return -1;
+	}
+
+	memarea_perftest_clear_env();
+	return 0;
+}
+
 static int
 test_malloc_perf(void)
 {
@@ -166,6 +243,11 @@ test_malloc_perf(void)
 
 	if (test_alloc_perf("rte_memzone_reserve", memzone_alloc, memzone_free,
 			NULL, memset_us_gb, RTE_MAX_MEMZONE - 1) < 0)
+		return -1;
+
+	if (memarea_perftest(RTE_MEMAREA_SOURCE_HEAP, memset_us_gb, MAX_RUNS) < 0)
+		return -1;
+	if (memarea_perftest(RTE_MEMAREA_SOURCE_LIBC, memset_us_gb, MAX_RUNS) < 0)
 		return -1;
 
 	return 0;
