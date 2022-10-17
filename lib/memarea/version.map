@@ -1,8 +1,11 @@
 EXPERIMENTAL {
 	global:
 
+	rte_memarea_alloc;
 	rte_memarea_create;
 	rte_memarea_destroy;
+	rte_memarea_free;
+	rte_memarea_refcnt_update;
 
 	local: *;
 };
