@@ -138,6 +138,7 @@ New Features
   * Added support for advertising packet types.
   * Added support for descriptor status functions.
   * Added Q-in-CMB feature controlled by devarg ionic_cmb.
+  * Added optimized handlers for non-scattered Rx and Tx.
 
 * **Updated Intel iavf driver.**
 
