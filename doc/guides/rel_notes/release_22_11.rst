@@ -167,6 +167,7 @@ New Features
     * Drop
     * TTL decrement
     * Set the MAC address
+    * POP and PUSH VLAN
 
 * **Updated NXP dpaa2 driver.**
 
