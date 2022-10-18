@@ -30,6 +30,8 @@ static int idpf_dev_configure(struct rte_eth_dev *dev);
 static int idpf_dev_start(struct rte_eth_dev *dev);
 static int idpf_dev_stop(struct rte_eth_dev *dev);
 static int idpf_dev_close(struct rte_eth_dev *dev);
+static int idpf_dev_info_get(struct rte_eth_dev *dev,
+			     struct rte_eth_dev_info *dev_info);
 static void idpf_adapter_rel(struct idpf_adapter *adapter);
 
 static const struct eth_dev_ops idpf_eth_dev_ops = {
@@ -45,7 +47,55 @@ static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.rx_queue_release		= idpf_dev_rx_queue_release,
 	.tx_queue_setup			= idpf_tx_queue_setup,
 	.tx_queue_release		= idpf_dev_tx_queue_release,
+	.dev_infos_get			= idpf_dev_info_get,
 };
+
+static int
+idpf_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+	struct idpf_adapter *adapter = vport->adapter;
+
+	dev_info->max_rx_queues = adapter->caps->max_rx_q;
+	dev_info->max_tx_queues = adapter->caps->max_tx_q;
+	dev_info->min_rx_bufsize = IDPF_MIN_BUF_SIZE;
+	dev_info->max_rx_pktlen = IDPF_MAX_FRAME_SIZE;
+
+	dev_info->max_mac_addrs = IDPF_NUM_MACADDR_MAX;
+	dev_info->dev_capa = RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP |
+		RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP;
+
+	dev_info->default_rxconf = (struct rte_eth_rxconf) {
+		.rx_free_thresh = IDPF_DEFAULT_RX_FREE_THRESH,
+		.rx_drop_en = 0,
+		.offloads = 0,
+	};
+
+	dev_info->default_txconf = (struct rte_eth_txconf) {
+		.tx_free_thresh = IDPF_DEFAULT_TX_FREE_THRESH,
+		.tx_rs_thresh = IDPF_DEFAULT_TX_RS_THRESH,
+		.offloads = 0,
+	};
+
+	dev_info->rx_desc_lim = (struct rte_eth_desc_lim) {
+		.nb_max = IDPF_MAX_RING_DESC,
+		.nb_min = IDPF_MIN_RING_DESC,
+		.nb_align = IDPF_ALIGN_RING_DESC,
+	};
+
+	dev_info->tx_desc_lim = (struct rte_eth_desc_lim) {
+		.nb_max = IDPF_MAX_RING_DESC,
+		.nb_min = IDPF_MIN_RING_DESC,
+		.nb_align = IDPF_ALIGN_RING_DESC,
+	};
+
+	dev_info->default_rxportconf.burst_size = IDPF_RX_MAX_BURST;
+	dev_info->default_txportconf.burst_size = IDPF_TX_MAX_BURST;
+	dev_info->default_rxportconf.nb_queues = 1;
+	dev_info->default_txportconf.nb_queues = 1;
+
+	return 0;
+}
 
 static int
 idpf_init_vport_req_info(struct rte_eth_dev *dev)
