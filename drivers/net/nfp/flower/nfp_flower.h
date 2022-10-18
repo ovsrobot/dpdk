@@ -51,6 +51,8 @@ struct nfp_app_fw_flower {
 
 	/* PF representor */
 	struct nfp_flower_representor *pf_repr;
+
+	struct nfp_flow_priv *flow_priv;
 };
 
 int nfp_init_app_fw_flower(struct nfp_pf_dev *pf_dev);
