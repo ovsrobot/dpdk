@@ -204,6 +204,7 @@ _atomic_set_cmd(struct idpf_adapter *adapter, enum virtchnl_ops ops)
 struct idpf_adapter *idpf_find_adapter(struct rte_pci_device *pci_dev);
 void idpf_handle_virtchnl_msg(struct rte_eth_dev *dev);
 int idpf_vc_check_api_version(struct idpf_adapter *adapter);
+int idpf_get_pkt_type(struct idpf_adapter *adapter);
 int idpf_vc_get_caps(struct idpf_adapter *adapter);
 int idpf_vc_create_vport(struct rte_eth_dev *dev);
 int idpf_vc_destroy_vport(struct idpf_vport *vport);
@@ -215,6 +216,7 @@ int idpf_switch_queue(struct idpf_vport *vport, uint16_t qid,
 		      bool rx, bool on);
 int idpf_vc_ena_dis_queues(struct idpf_vport *vport, bool enable);
 int idpf_vc_ena_dis_vport(struct idpf_vport *vport, bool enable);
+int idpf_vc_query_ptype_info(struct idpf_adapter *adapter);
 int idpf_read_one_msg(struct idpf_adapter *adapter, uint32_t ops,
 		      uint16_t buf_len, uint8_t *buf);
 

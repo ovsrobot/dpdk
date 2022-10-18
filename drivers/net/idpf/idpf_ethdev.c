@@ -35,6 +35,7 @@ static int idpf_dev_info_get(struct rte_eth_dev *dev,
 static void idpf_adapter_rel(struct idpf_adapter *adapter);
 
 static const struct eth_dev_ops idpf_eth_dev_ops = {
+	.dev_supported_ptypes_get	= idpf_dev_supported_ptypes_get,
 	.dev_configure			= idpf_dev_configure,
 	.dev_start			= idpf_dev_start,
 	.dev_stop			= idpf_dev_stop,
@@ -628,6 +629,12 @@ idpf_adapter_init(struct rte_pci_device *pci_dev, struct idpf_adapter *adapter)
 
 	if (idpf_vc_check_api_version(adapter)) {
 		PMD_INIT_LOG(ERR, "Failed to check api version");
+		goto err_api;
+	}
+
+	ret = idpf_get_pkt_type(adapter);
+	if (ret) {
+		PMD_INIT_LOG(ERR, "Failed to set ptype table");
 		goto err_api;
 	}
 
