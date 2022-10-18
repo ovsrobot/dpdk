@@ -34,6 +34,26 @@ static int idpf_dev_info_get(struct rte_eth_dev *dev,
 			     struct rte_eth_dev_info *dev_info);
 static void idpf_adapter_rel(struct idpf_adapter *adapter);
 
+int
+idpf_dev_link_update(struct rte_eth_dev *dev,
+		     __rte_unused int wait_to_complete)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+	struct rte_eth_link new_link;
+
+	memset(&new_link, 0, sizeof(new_link));
+
+	new_link.link_speed = RTE_ETH_SPEED_NUM_NONE;
+
+	new_link.link_duplex = RTE_ETH_LINK_FULL_DUPLEX;
+	new_link.link_status = vport->link_up ? RTE_ETH_LINK_UP :
+		RTE_ETH_LINK_DOWN;
+	new_link.link_autoneg = !(dev->data->dev_conf.link_speeds &
+				  RTE_ETH_LINK_SPEED_FIXED);
+
+	return rte_eth_linkstatus_set(dev, &new_link);
+}
+
 static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.dev_supported_ptypes_get	= idpf_dev_supported_ptypes_get,
 	.dev_configure			= idpf_dev_configure,
@@ -49,6 +69,7 @@ static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.tx_queue_setup			= idpf_tx_queue_setup,
 	.tx_queue_release		= idpf_dev_tx_queue_release,
 	.dev_infos_get			= idpf_dev_info_get,
+	.link_update			= idpf_dev_link_update,
 };
 
 static int
