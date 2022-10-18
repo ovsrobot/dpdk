@@ -48,6 +48,7 @@ struct trace_arg {
 };
 
 struct trace {
+	char *rootdir;
 	char *dir;
 	int register_errno;
 	uint32_t status;
@@ -100,6 +101,7 @@ void trace_uuid_generate(void);
 int trace_metadata_create(void);
 void trace_metadata_destroy(void);
 char *trace_metadata_fixup_field(const char *field);
+int trace_dir_default_path_get(void);
 int trace_epoch_time_save(void);
 void trace_mem_free(void);
 void trace_mem_per_thread_free(void);

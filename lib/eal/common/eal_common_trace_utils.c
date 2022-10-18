@@ -87,9 +87,10 @@ trace_uuid_generate(void)
 }
 
 static int
-trace_session_name_generate(char **trace_dir)
+trace_dir_name_generate(char **trace_dir)
 {
 	char date[sizeof("YYYY-mm-dd-AM-HH-MM-SS")];
+	struct trace *trace = trace_obj_get();
 	struct tm *tm_result;
 	time_t tm;
 
@@ -106,28 +107,14 @@ trace_session_name_generate(char **trace_dir)
 		goto fail;
 	}
 
-	if (asprintf(trace_dir, "%s-%s", eal_get_hugefile_prefix(), date) == -1)
+	if (asprintf(trace_dir, "%s/%s-%s", trace->rootdir,
+			eal_get_hugefile_prefix(), date) == -1)
 		goto fail;
 
 	return 0;
 fail:
 	rte_errno = errno;
 	return -1;
-}
-
-static int
-trace_dir_update(const char *str)
-{
-	struct trace *trace = trace_obj_get();
-	char *dir;
-	int rc;
-
-	rc = asprintf(&dir, "%s%s", trace->dir != NULL ? trace->dir : "", str);
-	if (rc != -1) {
-		free(trace->dir);
-		trace->dir = dir;
-	}
-	return rc;
 }
 
 int
@@ -240,17 +227,16 @@ eal_trace_mode_args_save(const char *val)
 int
 eal_trace_dir_args_save(char const *val)
 {
-	char *dir_path;
-	int rc;
+	struct trace *trace = trace_obj_get();
 
-	if (asprintf(&dir_path, "%s/", val) == -1) {
+	free(trace->rootdir);
+	trace->rootdir = strdup(val);
+	if (trace->rootdir == NULL) {
 		trace_err("failed to copy directory: %s", strerror(errno));
 		return -ENOMEM;
 	}
 
-	rc = trace_dir_update(dir_path);
-	free(dir_path);
-	return rc;
+	return 0;
 }
 
 int
@@ -275,9 +261,10 @@ trace_epoch_time_save(void)
 	return 0;
 }
 
-static int
-trace_dir_default_path_get(char **dir_path)
+int
+trace_dir_default_path_get(void)
 {
+	struct trace *trace = trace_obj_get();
 	struct passwd *pwd;
 	char *home_dir;
 
@@ -293,7 +280,7 @@ trace_dir_default_path_get(char **dir_path)
 	}
 
 	/* Append dpdk-traces to directory */
-	if (asprintf(dir_path, "%s/dpdk-traces/", home_dir) == -1)
+	if (asprintf(&trace->rootdir, "%s/dpdk-traces", home_dir) == -1)
 		return -ENOMEM;
 
 	return 0;
@@ -303,53 +290,47 @@ static int
 trace_mkdir(void)
 {
 	struct trace *trace = trace_obj_get();
-	static bool already_done;
-	char *session;
+	unsigned int try;
+	char *trace_dir;
 	int rc;
 
-	if (already_done)
-		return 0;
-
-	if (trace->dir == NULL) {
-		char *dir_path;
-
-		rc = trace_dir_default_path_get(&dir_path);
-		if (rc < 0) {
-			trace_err("fail to get default path");
-			return rc;
-		}
-
-		rc = trace_dir_update(dir_path);
-		free(dir_path);
-		if (rc < 0)
-			return rc;
-	}
-
 	/* Create the path if it t exist, no "mkdir -p" available here */
-	rc = mkdir(trace->dir, 0700);
+	rc = mkdir(trace->rootdir, 0700);
 	if (rc < 0 && errno != EEXIST) {
-		trace_err("mkdir %s failed [%s]", trace->dir, strerror(errno));
+		trace_err("mkdir %s failed [%s]", trace->rootdir, strerror(errno));
 		rte_errno = errno;
 		return -rte_errno;
 	}
 
-	rc = trace_session_name_generate(&session);
+	rc = trace_dir_name_generate(&trace_dir);
 	if (rc < 0)
 		return rc;
-	rc = trace_dir_update(session);
-	free(session);
-	if (rc < 0)
-		return rc;
+	rc = mkdir(trace_dir, 0700);
+	if (rc == 0)
+		goto out;
 
-	rc = mkdir(trace->dir, 0700);
-	if (rc < 0) {
-		trace_err("mkdir %s failed [%s]", trace->dir, strerror(errno));
-		rte_errno = errno;
-		return -rte_errno;
+	/* 1000 tries are definitely enough :-) */
+	for (try = 1; try < 1000; try++) {
+		char *trace_dir_suffix;
+
+		if (asprintf(&trace_dir_suffix, "%s.%u", trace_dir, try) == -1)
+			continue;
+		rc = mkdir(trace_dir_suffix, 0700);
+		if (rc == 0) {
+			free(trace_dir);
+			trace_dir = trace_dir_suffix;
+			goto out;
+		}
+		free(trace_dir_suffix);
 	}
 
+	trace_err("mkdir %s failed [%s]", trace->dir, strerror(errno));
+	rte_errno = errno;
+	return -rte_errno;
+out:
+	free(trace->dir);
+	trace->dir = trace_dir;
 	RTE_LOG(INFO, EAL, "Trace dir: %s\n", trace->dir);
-	already_done = true;
 	return 0;
 }
 

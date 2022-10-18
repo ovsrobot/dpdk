@@ -66,6 +66,9 @@ eal_trace_init(void)
 	if (trace_metadata_create() < 0)
 		goto fail;
 
+	if (trace.rootdir == NULL && trace_dir_default_path_get() < 0)
+		goto free_meta;
+
 	/* Save current epoch timestamp for future use */
 	if (trace_epoch_time_save() < 0)
 		goto free_meta;
@@ -91,6 +94,10 @@ eal_trace_fini(void)
 	trace_mem_free();
 	trace_metadata_destroy();
 	eal_trace_args_free();
+	free(trace.rootdir);
+	trace.rootdir = NULL;
+	free(trace.dir);
+	trace.dir = NULL;
 }
 
 bool
