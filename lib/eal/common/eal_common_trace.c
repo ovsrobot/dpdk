@@ -12,6 +12,7 @@
 #include <rte_lcore.h>
 #include <rte_per_lcore.h>
 #include <rte_string_fns.h>
+#include <rte_telemetry.h>
 
 #include "eal_trace.h"
 
@@ -527,4 +528,81 @@ fail:
 		trace.register_errno = rte_errno;
 
 	return -rte_errno;
+}
+
+static int
+trace_telemetry_enable(const char *cmd __rte_unused,
+	const char *params, struct rte_tel_data *d)
+{
+	unsigned int count;
+
+	if (params == NULL || strlen(params) == 0)
+		return -1;
+	rte_tel_data_start_dict(d);
+	count = __atomic_load_n(&trace.status, __ATOMIC_RELAXED);
+	rte_trace_pattern(params, true);
+	rte_tel_data_add_dict_int(d, "Count",
+		__atomic_load_n(&trace.status, __ATOMIC_RELAXED) - count);
+	return 0;
+
+}
+
+static int
+trace_telemetry_disable(const char *cmd __rte_unused,
+	const char *params, struct rte_tel_data *d)
+{
+	unsigned int count;
+
+	if (params == NULL || strlen(params) == 0)
+		return -1;
+	rte_tel_data_start_dict(d);
+	count = __atomic_load_n(&trace.status, __ATOMIC_RELAXED);
+	rte_trace_pattern(params, false);
+	rte_tel_data_add_dict_int(d, "Count",
+		count - __atomic_load_n(&trace.status, __ATOMIC_RELAXED));
+	return 0;
+
+}
+
+static int
+trace_telemetry_list(const char *cmd __rte_unused,
+	const char *params, struct rte_tel_data *d)
+{
+	struct trace_point *tp;
+
+	rte_tel_data_start_dict(d);
+	STAILQ_FOREACH(tp, &tp_list, next) {
+		if (params != NULL && fnmatch(params, tp->name, 0) != 0)
+			continue;
+
+		rte_tel_data_add_dict_string(d, tp->name,
+			rte_trace_point_is_enabled(tp->handle) ?  "Enabled" : "Disabled");
+	}
+
+	return 0;
+}
+
+static int
+trace_telemetry_save(const char *cmd __rte_unused,
+	const char *params __rte_unused, struct rte_tel_data *d)
+{
+	struct trace *trace = trace_obj_get();
+
+	rte_tel_data_start_dict(d);
+	rte_tel_data_add_dict_string(d, "Status", rte_trace_save() == 0 ? "OK" : "KO");
+	rte_tel_data_add_dict_string(d, "Path", trace->dir);
+
+	return 0;
+}
+
+RTE_INIT(trace_telemetry)
+{
+	rte_telemetry_register_cmd("/trace/enable", trace_telemetry_enable,
+		"Enable trace points matching the provided pattern. Parameters: string pattern.");
+	rte_telemetry_register_cmd("/trace/disable", trace_telemetry_disable,
+		"Disable trace points matching the provided pattern. Parameters: string pattern.");
+	rte_telemetry_register_cmd("/trace/list", trace_telemetry_list,
+		"List trace points. Parameters: string pattern.");
+	rte_telemetry_register_cmd("/trace/save", trace_telemetry_save,
+		"Save current traces. Takes no parameter.");
 }
