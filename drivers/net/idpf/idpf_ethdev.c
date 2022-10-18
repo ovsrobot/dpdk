@@ -69,13 +69,25 @@ idpf_init_vport_req_info(struct rte_eth_dev *dev)
 		(struct virtchnl2_create_vport *)adapter->vport_req_info[idx];
 
 	vport_info->vport_type = rte_cpu_to_le_16(VIRTCHNL2_VPORT_TYPE_DEFAULT);
-	if (adapter->txq_model) {
+	if (!adapter->txq_model) {
+		vport_info->txq_model =
+			rte_cpu_to_le_16(VIRTCHNL2_QUEUE_MODEL_SPLIT);
+		vport_info->num_tx_q = IDPF_DEFAULT_TXQ_NUM;
+		vport_info->num_tx_complq =
+			IDPF_DEFAULT_TXQ_NUM * IDPF_TX_COMPLQ_PER_GRP;
+	} else {
 		vport_info->txq_model =
 			rte_cpu_to_le_16(VIRTCHNL2_QUEUE_MODEL_SINGLE);
 		vport_info->num_tx_q = IDPF_DEFAULT_TXQ_NUM;
 		vport_info->num_tx_complq = 0;
 	}
-	if (adapter->rxq_model) {
+	if (!adapter->rxq_model) {
+		vport_info->rxq_model =
+			rte_cpu_to_le_16(VIRTCHNL2_QUEUE_MODEL_SPLIT);
+		vport_info->num_rx_q = IDPF_DEFAULT_RXQ_NUM;
+		vport_info->num_rx_bufq =
+			IDPF_DEFAULT_RXQ_NUM * IDPF_RX_BUFQ_PER_GRP;
+	} else {
 		vport_info->rxq_model =
 			rte_cpu_to_le_16(VIRTCHNL2_QUEUE_MODEL_SINGLE);
 		vport_info->num_rx_q = IDPF_DEFAULT_RXQ_NUM;
@@ -113,7 +125,9 @@ idpf_init_vport(struct rte_eth_dev *dev)
 	vport->txq_model = vport_info->txq_model;
 	vport->rxq_model = vport_info->rxq_model;
 	vport->num_tx_q = vport_info->num_tx_q;
+	vport->num_tx_complq = vport_info->num_tx_complq;
 	vport->num_rx_q = vport_info->num_rx_q;
+	vport->num_rx_bufq = vport_info->num_rx_bufq;
 	vport->max_mtu = vport_info->max_mtu;
 	rte_memcpy(vport->default_mac_addr,
 		   vport_info->default_mac_addr, ETH_ALEN);
@@ -135,6 +149,22 @@ idpf_init_vport(struct rte_eth_dev *dev)
 			vport->chunks_info.rx_qtail_start =
 				vport_info->chunks.chunks[i].qtail_reg_start;
 			vport->chunks_info.rx_qtail_spacing =
+				vport_info->chunks.chunks[i].qtail_reg_spacing;
+		} else if (vport_info->chunks.chunks[i].type ==
+			 VIRTCHNL2_QUEUE_TYPE_TX_COMPLETION) {
+			vport->chunks_info.tx_compl_start_qid =
+				vport_info->chunks.chunks[i].start_queue_id;
+			vport->chunks_info.tx_compl_qtail_start =
+				vport_info->chunks.chunks[i].qtail_reg_start;
+			vport->chunks_info.tx_compl_qtail_spacing =
+				vport_info->chunks.chunks[i].qtail_reg_spacing;
+		} else if (vport_info->chunks.chunks[i].type ==
+			 VIRTCHNL2_QUEUE_TYPE_RX_BUFFER) {
+			vport->chunks_info.rx_buf_start_qid =
+				vport_info->chunks.chunks[i].start_queue_id;
+			vport->chunks_info.rx_buf_qtail_start =
+				vport_info->chunks.chunks[i].qtail_reg_start;
+			vport->chunks_info.rx_buf_qtail_spacing =
 				vport_info->chunks.chunks[i].qtail_reg_spacing;
 		}
 	}

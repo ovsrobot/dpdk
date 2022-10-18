@@ -97,7 +97,10 @@ release_txq_mbufs(struct idpf_tx_queue *txq)
 		return;
 	}
 
-	if (!txq->sw_nb_desc) {
+	if (txq->sw_nb_desc) {
+		/* For split queue model, descriptor ring */
+		nb_desc = txq->sw_nb_desc;
+	} else {
 		/* For single queue model */
 		nb_desc = txq->nb_tx_desc;
 	}
@@ -125,6 +128,21 @@ idpf_rx_queue_release(void *rxq)
 	if (!q)
 		return;
 
+	/* Split queue */
+	if (q->bufq1 && q->bufq2) {
+		q->bufq1->ops->release_mbufs(q->bufq1);
+		rte_free(q->bufq1->sw_ring);
+		rte_memzone_free(q->bufq1->mz);
+		rte_free(q->bufq1);
+		q->bufq2->ops->release_mbufs(q->bufq2);
+		rte_free(q->bufq2->sw_ring);
+		rte_memzone_free(q->bufq2->mz);
+		rte_free(q->bufq2);
+		rte_memzone_free(q->mz);
+		rte_free(q);
+		return;
+	}
+
 	/* Single queue */
 	q->ops->release_mbufs(q);
 	rte_free(q->sw_ring);
@@ -145,6 +163,65 @@ idpf_tx_queue_release(void *txq)
 	rte_free(q->sw_ring);
 	rte_memzone_free(q->mz);
 	rte_free(q);
+}
+
+static inline void
+reset_split_rx_descq(struct idpf_rx_queue *rxq)
+{
+	uint16_t len;
+	uint32_t i;
+
+	if (!rxq)
+		return;
+
+	len = rxq->nb_rx_desc + IDPF_RX_MAX_BURST;
+
+	for (i = 0; i < len * sizeof(struct virtchnl2_rx_flex_desc_adv_nic_3);
+	     i++)
+		((volatile char *)rxq->rx_ring)[i] = 0;
+
+	rxq->rx_tail = 0;
+	rxq->expected_gen_id = 1;
+}
+
+static inline void
+reset_split_rx_bufq(struct idpf_rx_queue *rxq)
+{
+	uint16_t len;
+	uint32_t i;
+
+	if (!rxq)
+		return;
+
+	len = rxq->nb_rx_desc + IDPF_RX_MAX_BURST;
+
+	for (i = 0; i < len * sizeof(struct virtchnl2_splitq_rx_buf_desc);
+	     i++)
+		((volatile char *)rxq->rx_ring)[i] = 0;
+
+	memset(&rxq->fake_mbuf, 0x0, sizeof(rxq->fake_mbuf));
+
+	for (i = 0; i < IDPF_RX_MAX_BURST; i++)
+		rxq->sw_ring[rxq->nb_rx_desc + i] = &rxq->fake_mbuf;
+
+	/* The next descriptor id which can be received. */
+	rxq->rx_next_avail = 0;
+
+	/* The next descriptor id which can be refilled. */
+	rxq->rx_tail = 0;
+	/* The number of descriptors which can be refilled. */
+	rxq->nb_rx_hold = rxq->nb_rx_desc - 1;
+
+	rxq->bufq1 = NULL;
+	rxq->bufq2 = NULL;
+}
+
+static inline void
+reset_split_rx_queue(struct idpf_rx_queue *rxq)
+{
+	reset_split_rx_descq(rxq);
+	reset_split_rx_bufq(rxq->bufq1);
+	reset_split_rx_bufq(rxq->bufq2);
 }
 
 static inline void
@@ -177,6 +254,58 @@ reset_single_rx_queue(struct idpf_rx_queue *rxq)
 	rxq->pkt_last_seg = NULL;
 	rxq->rxrearm_start = 0;
 	rxq->rxrearm_nb = 0;
+}
+
+static inline void
+reset_split_tx_descq(struct idpf_tx_queue *txq)
+{
+	struct idpf_tx_entry *txe;
+	uint32_t i, size;
+	uint16_t prev;
+
+	if (!txq) {
+		PMD_DRV_LOG(DEBUG, "Pointer to txq is NULL");
+		return;
+	}
+
+	size = sizeof(struct idpf_flex_tx_sched_desc) * txq->nb_tx_desc;
+	for (i = 0; i < size; i++)
+		((volatile char *)txq->desc_ring)[i] = 0;
+
+	txe = txq->sw_ring;
+	prev = (uint16_t)(txq->sw_nb_desc - 1);
+	for (i = 0; i < txq->sw_nb_desc; i++) {
+		txe[i].mbuf = NULL;
+		txe[i].last_id = i;
+		txe[prev].next_id = i;
+		prev = i;
+	}
+
+	txq->tx_tail = 0;
+	txq->nb_used = 0;
+
+	/* Use this as next to clean for split desc queue */
+	txq->last_desc_cleaned = 0;
+	txq->sw_tail = 0;
+	txq->nb_free = txq->nb_tx_desc - 1;
+}
+
+static inline void
+reset_split_tx_complq(struct idpf_tx_queue *cq)
+{
+	uint32_t i, size;
+
+	if (!cq) {
+		PMD_DRV_LOG(DEBUG, "Pointer to complq is NULL");
+		return;
+	}
+
+	size = sizeof(struct idpf_splitq_tx_compl_desc) * cq->nb_tx_desc;
+	for (i = 0; i < size; i++)
+		((volatile char *)cq->compl_ring)[i] = 0;
+
+	cq->tx_tail = 0;
+	cq->expected_gen_id = 1;
 }
 
 static inline void
@@ -214,6 +343,224 @@ reset_single_tx_queue(struct idpf_tx_queue *txq)
 
 	txq->next_dd = txq->rs_thresh - 1;
 	txq->next_rs = txq->rs_thresh - 1;
+}
+
+static int
+idpf_rx_split_bufq_setup(struct rte_eth_dev *dev, struct idpf_rx_queue *bufq,
+			 uint16_t queue_idx, uint16_t rx_free_thresh,
+			 uint16_t nb_desc, unsigned int socket_id,
+			 const struct rte_eth_rxconf *rx_conf,
+			 struct rte_mempool *mp)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+	struct idpf_adapter *adapter = vport->adapter;
+	struct idpf_hw *hw = &adapter->hw;
+	const struct rte_memzone *mz;
+	uint32_t ring_size;
+	uint16_t len;
+
+	bufq->mp = mp;
+	bufq->nb_rx_desc = nb_desc;
+	bufq->rx_free_thresh = rx_free_thresh;
+	bufq->queue_id = vport->chunks_info.rx_buf_start_qid + queue_idx;
+	bufq->port_id = dev->data->port_id;
+	bufq->rx_deferred_start = rx_conf->rx_deferred_start;
+	bufq->rx_hdr_len = 0;
+	bufq->adapter = adapter;
+
+	len = rte_pktmbuf_data_room_size(bufq->mp) - RTE_PKTMBUF_HEADROOM;
+	bufq->rx_buf_len = len;
+
+	/* Allocate the software ring. */
+	len = nb_desc + IDPF_RX_MAX_BURST;
+	bufq->sw_ring =
+		rte_zmalloc_socket("idpf rx bufq sw ring",
+				   sizeof(struct rte_mbuf *) * len,
+				   RTE_CACHE_LINE_SIZE,
+				   socket_id);
+	if (!bufq->sw_ring) {
+		PMD_INIT_LOG(ERR, "Failed to allocate memory for SW ring");
+		return -ENOMEM;
+	}
+
+	/* Allocate a liitle more to support bulk allocate. */
+	len = nb_desc + IDPF_RX_MAX_BURST;
+	ring_size = RTE_ALIGN(len *
+			      sizeof(struct virtchnl2_splitq_rx_buf_desc),
+			      IDPF_DMA_MEM_ALIGN);
+	mz = rte_eth_dma_zone_reserve(dev, "rx_buf_ring", queue_idx,
+				      ring_size, IDPF_RING_BASE_ALIGN,
+				      socket_id);
+	if (!mz) {
+		PMD_INIT_LOG(ERR, "Failed to reserve DMA memory for RX buffer queue.");
+		rte_free(bufq->sw_ring);
+		return -ENOMEM;
+	}
+
+	/* Zero all the descriptors in the ring. */
+	memset(mz->addr, 0, ring_size);
+	bufq->rx_ring_phys_addr = mz->iova;
+	bufq->rx_ring = mz->addr;
+
+	bufq->mz = mz;
+	reset_split_rx_bufq(bufq);
+	bufq->q_set = true;
+	bufq->qrx_tail = hw->hw_addr + (vport->chunks_info.rx_buf_qtail_start +
+			 queue_idx * vport->chunks_info.rx_buf_qtail_spacing);
+	bufq->ops = &def_rxq_ops;
+
+	/* TODO: allow bulk or vec */
+
+	return 0;
+}
+
+static int
+idpf_rx_split_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
+			  uint16_t nb_desc, unsigned int socket_id,
+			  const struct rte_eth_rxconf *rx_conf,
+			  struct rte_mempool *mp)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+	struct idpf_adapter *adapter = vport->adapter;
+	struct idpf_rx_queue *rxq;
+	struct idpf_rx_queue *bufq1, *bufq2;
+	const struct rte_memzone *mz;
+	uint16_t rx_free_thresh;
+	uint32_t ring_size;
+	uint16_t qid;
+	uint16_t len;
+	uint64_t offloads;
+	int ret;
+
+	PMD_INIT_FUNC_TRACE();
+
+	offloads = rx_conf->offloads | dev->data->dev_conf.rxmode.offloads;
+
+	if (nb_desc % IDPF_ALIGN_RING_DESC != 0 ||
+	    nb_desc > IDPF_MAX_RING_DESC ||
+	    nb_desc < IDPF_MIN_RING_DESC) {
+		PMD_INIT_LOG(ERR, "Number (%u) of receive descriptors is invalid", nb_desc);
+		return -EINVAL;
+	}
+
+	/* Check free threshold */
+	rx_free_thresh = (rx_conf->rx_free_thresh == 0) ?
+		IDPF_DEFAULT_RX_FREE_THRESH :
+		rx_conf->rx_free_thresh;
+	if (check_rx_thresh(nb_desc, rx_free_thresh))
+		return -EINVAL;
+
+	/* Free memory if needed */
+	if (dev->data->rx_queues[queue_idx]) {
+		idpf_rx_queue_release(dev->data->rx_queues[queue_idx]);
+		dev->data->rx_queues[queue_idx] = NULL;
+	}
+
+	/* Setup Rx description queue */
+	rxq = rte_zmalloc_socket("idpf rxq",
+				 sizeof(struct idpf_rx_queue),
+				 RTE_CACHE_LINE_SIZE,
+				 socket_id);
+	if (!rxq) {
+		PMD_INIT_LOG(ERR, "Failed to allocate memory for rx queue data structure");
+		return -ENOMEM;
+	}
+
+	rxq->mp = mp;
+	rxq->nb_rx_desc = nb_desc;
+	rxq->rx_free_thresh = rx_free_thresh;
+	rxq->queue_id = vport->chunks_info.rx_start_qid + queue_idx;
+	rxq->port_id = dev->data->port_id;
+	rxq->rx_deferred_start = rx_conf->rx_deferred_start;
+	rxq->rx_hdr_len = 0;
+	rxq->adapter = adapter;
+	rxq->offloads = offloads;
+
+	len = rte_pktmbuf_data_room_size(rxq->mp) - RTE_PKTMBUF_HEADROOM;
+	rxq->rx_buf_len = len;
+
+	len = rxq->nb_rx_desc + IDPF_RX_MAX_BURST;
+	ring_size = RTE_ALIGN(len *
+			      sizeof(struct virtchnl2_rx_flex_desc_adv_nic_3),
+			      IDPF_DMA_MEM_ALIGN);
+	mz = rte_eth_dma_zone_reserve(dev, "rx_cpmpl_ring", queue_idx,
+				      ring_size, IDPF_RING_BASE_ALIGN,
+				      socket_id);
+
+	if (!mz) {
+		PMD_INIT_LOG(ERR, "Failed to reserve DMA memory for RX");
+		ret = -ENOMEM;
+		goto free_rxq;
+	}
+
+	/* Zero all the descriptors in the ring. */
+	memset(mz->addr, 0, ring_size);
+	rxq->rx_ring_phys_addr = mz->iova;
+	rxq->rx_ring = mz->addr;
+
+	rxq->mz = mz;
+	reset_split_rx_descq(rxq);
+
+	/* TODO: allow bulk or vec */
+
+	/* setup Rx buffer queue */
+	bufq1 = rte_zmalloc_socket("idpf bufq1",
+				   sizeof(struct idpf_rx_queue),
+				   RTE_CACHE_LINE_SIZE,
+				   socket_id);
+	if (!bufq1) {
+		PMD_INIT_LOG(ERR, "Failed to allocate memory for rx buffer queue 1.");
+		ret = -ENOMEM;
+		goto free_mz;
+	}
+	qid = 2 * queue_idx;
+	ret = idpf_rx_split_bufq_setup(dev, bufq1, qid, rx_free_thresh,
+				       nb_desc, socket_id, rx_conf, mp);
+	if (ret) {
+		PMD_INIT_LOG(ERR, "Failed to setup buffer queue 1");
+		ret = -EINVAL;
+		goto free_bufq1;
+	}
+	rxq->bufq1 = bufq1;
+
+	bufq2 = rte_zmalloc_socket("idpf bufq2",
+				   sizeof(struct idpf_rx_queue),
+				   RTE_CACHE_LINE_SIZE,
+				   socket_id);
+	if (!bufq2) {
+		PMD_INIT_LOG(ERR, "Failed to allocate memory for rx buffer queue 2.");
+		rte_free(bufq1->sw_ring);
+		rte_memzone_free(bufq1->mz);
+		ret = -ENOMEM;
+		goto free_bufq1;
+	}
+	qid = 2 * queue_idx + 1;
+	ret = idpf_rx_split_bufq_setup(dev, bufq2, qid, rx_free_thresh,
+				       nb_desc, socket_id, rx_conf, mp);
+	if (ret) {
+		PMD_INIT_LOG(ERR, "Failed to setup buffer queue 2");
+		rte_free(bufq1->sw_ring);
+		rte_memzone_free(bufq1->mz);
+		ret = -EINVAL;
+		goto free_bufq2;
+	}
+	rxq->bufq2 = bufq2;
+
+	rxq->q_set = true;
+	dev->data->rx_queues[queue_idx] = rxq;
+
+	return 0;
+
+free_bufq2:
+	rte_free(bufq2);
+free_bufq1:
+	rte_free(bufq1);
+free_mz:
+	rte_memzone_free(mz);
+free_rxq:
+	rte_free(rxq);
+
+	return ret;
 }
 
 static int
@@ -335,7 +682,138 @@ idpf_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 		return idpf_rx_single_queue_setup(dev, queue_idx, nb_desc,
 						  socket_id, rx_conf, mp);
 	else
-		return -1;
+		return idpf_rx_split_queue_setup(dev, queue_idx, nb_desc,
+						 socket_id, rx_conf, mp);
+}
+
+static int
+idpf_tx_split_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
+			  uint16_t nb_desc, unsigned int socket_id,
+			  const struct rte_eth_txconf *tx_conf)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+	struct idpf_adapter *adapter = vport->adapter;
+	struct idpf_hw *hw = &adapter->hw;
+	struct idpf_tx_queue *txq, *cq;
+	const struct rte_memzone *mz;
+	uint32_t ring_size;
+	uint16_t tx_rs_thresh, tx_free_thresh;
+	uint64_t offloads;
+
+	PMD_INIT_FUNC_TRACE();
+
+	offloads = tx_conf->offloads | dev->data->dev_conf.txmode.offloads;
+
+	if (nb_desc % IDPF_ALIGN_RING_DESC != 0 ||
+	    nb_desc > IDPF_MAX_RING_DESC ||
+	    nb_desc < IDPF_MIN_RING_DESC) {
+		PMD_INIT_LOG(ERR, "Number (%u) of transmit descriptors is invalid",
+			     nb_desc);
+		return -EINVAL;
+	}
+
+	tx_rs_thresh = (uint16_t)((tx_conf->tx_rs_thresh) ?
+		tx_conf->tx_rs_thresh : IDPF_DEFAULT_TX_RS_THRESH);
+	tx_free_thresh = (uint16_t)((tx_conf->tx_free_thresh) ?
+		tx_conf->tx_free_thresh : IDPF_DEFAULT_TX_FREE_THRESH);
+	if (check_tx_thresh(nb_desc, tx_rs_thresh, tx_free_thresh))
+		return -EINVAL;
+
+	/* Free memory if needed. */
+	if (dev->data->tx_queues[queue_idx]) {
+		idpf_tx_queue_release(dev->data->tx_queues[queue_idx]);
+		dev->data->tx_queues[queue_idx] = NULL;
+	}
+
+	/* Allocate the TX queue data structure. */
+	txq = rte_zmalloc_socket("idpf split txq",
+				 sizeof(struct idpf_tx_queue),
+				 RTE_CACHE_LINE_SIZE,
+				 socket_id);
+	if (!txq) {
+		PMD_INIT_LOG(ERR, "Failed to allocate memory for tx queue structure");
+		return -ENOMEM;
+	}
+
+	txq->nb_tx_desc = nb_desc;
+	txq->rs_thresh = tx_rs_thresh;
+	txq->free_thresh = tx_free_thresh;
+	txq->queue_id = vport->chunks_info.tx_start_qid + queue_idx;
+	txq->port_id = dev->data->port_id;
+	txq->offloads = offloads;
+	txq->tx_deferred_start = tx_conf->tx_deferred_start;
+
+	/* Allocate software ring */
+	txq->sw_nb_desc = 2 * nb_desc;
+	txq->sw_ring =
+		rte_zmalloc_socket("idpf split tx sw ring",
+				   sizeof(struct idpf_tx_entry) *
+				   txq->sw_nb_desc,
+				   RTE_CACHE_LINE_SIZE,
+				   socket_id);
+	if (!txq->sw_ring) {
+		PMD_INIT_LOG(ERR, "Failed to allocate memory for SW TX ring");
+		rte_free(txq);
+		return -ENOMEM;
+	}
+
+	/* Allocate TX hardware ring descriptors. */
+	ring_size = sizeof(struct idpf_flex_tx_sched_desc) * txq->nb_tx_desc;
+	ring_size = RTE_ALIGN(ring_size, IDPF_DMA_MEM_ALIGN);
+	mz = rte_eth_dma_zone_reserve(dev, "split_tx_ring", queue_idx,
+				      ring_size, IDPF_RING_BASE_ALIGN,
+				      socket_id);
+	if (!mz) {
+		PMD_INIT_LOG(ERR, "Failed to reserve DMA memory for TX");
+		rte_free(txq->sw_ring);
+		rte_free(txq);
+		return -ENOMEM;
+	}
+	txq->tx_ring_phys_addr = mz->iova;
+	txq->desc_ring = (struct idpf_flex_tx_sched_desc *)mz->addr;
+
+	txq->mz = mz;
+	reset_split_tx_descq(txq);
+	txq->qtx_tail = hw->hw_addr + (vport->chunks_info.tx_qtail_start +
+			queue_idx * vport->chunks_info.tx_qtail_spacing);
+	txq->ops = &def_txq_ops;
+
+	/* Allocate the TX completion queue data structure. */
+	txq->complq = rte_zmalloc_socket("idpf splitq cq",
+					 sizeof(struct idpf_tx_queue),
+					 RTE_CACHE_LINE_SIZE,
+					 socket_id);
+	cq = txq->complq;
+	if (!cq) {
+		PMD_INIT_LOG(ERR, "Failed to allocate memory for tx queue structure");
+		return -ENOMEM;
+	}
+	cq->nb_tx_desc = 2 * nb_desc;
+	cq->queue_id = vport->chunks_info.tx_compl_start_qid + queue_idx;
+	cq->port_id = dev->data->port_id;
+	cq->txqs = dev->data->tx_queues;
+	cq->tx_start_qid = vport->chunks_info.tx_start_qid;
+
+	ring_size = sizeof(struct idpf_splitq_tx_compl_desc) * cq->nb_tx_desc;
+	ring_size = RTE_ALIGN(ring_size, IDPF_DMA_MEM_ALIGN);
+	mz = rte_eth_dma_zone_reserve(dev, "tx_split_compl_ring", queue_idx,
+				      ring_size, IDPF_RING_BASE_ALIGN,
+				      socket_id);
+	if (!mz) {
+		PMD_INIT_LOG(ERR, "Failed to reserve DMA memory for TX completion queue");
+		rte_free(txq->sw_ring);
+		rte_free(txq);
+		return -ENOMEM;
+	}
+	cq->tx_ring_phys_addr = mz->iova;
+	cq->compl_ring = (struct idpf_splitq_tx_compl_desc *)mz->addr;
+	cq->mz = mz;
+	reset_split_tx_complq(cq);
+
+	txq->q_set = true;
+	dev->data->tx_queues[queue_idx] = txq;
+
+	return 0;
 }
 
 static int
@@ -447,7 +925,8 @@ idpf_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 		return idpf_tx_single_queue_setup(dev, queue_idx, nb_desc,
 						  socket_id, tx_conf);
 	else
-		return -1;
+		return idpf_tx_split_queue_setup(dev, queue_idx, nb_desc,
+						 socket_id, tx_conf);
 }
 
 void
