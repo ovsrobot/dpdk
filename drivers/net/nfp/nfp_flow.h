@@ -23,6 +23,13 @@
 #define NFP_FLOWER_LAYER2_GENEVE_OP (1 << 6)
 #define NFP_FLOWER_LAYER2_TUN_IPV6  (1 << 7)
 
+/* Compressed HW representation of TCP Flags */
+#define NFP_FL_TCP_FLAG_FIN         (1 << 0)
+#define NFP_FL_TCP_FLAG_SYN         (1 << 1)
+#define NFP_FL_TCP_FLAG_RST         (1 << 2)
+#define NFP_FL_TCP_FLAG_PSH         (1 << 3)
+#define NFP_FL_TCP_FLAG_URG         (1 << 4)
+
 #define NFP_FL_META_FLAG_MANAGE_MASK    (1 << 7)
 
 #define NFP_FLOWER_MASK_VLAN_CFI        (1 << 12)
