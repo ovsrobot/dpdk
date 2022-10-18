@@ -211,6 +211,9 @@ int idpf_vc_config_rxqs(struct idpf_vport *vport);
 int idpf_vc_config_rxq(struct idpf_vport *vport, uint16_t rxq_id);
 int idpf_vc_config_txqs(struct idpf_vport *vport);
 int idpf_vc_config_txq(struct idpf_vport *vport, uint16_t txq_id);
+int idpf_switch_queue(struct idpf_vport *vport, uint16_t qid,
+		      bool rx, bool on);
+int idpf_vc_ena_dis_queues(struct idpf_vport *vport, bool enable);
 int idpf_vc_ena_dis_vport(struct idpf_vport *vport, bool enable);
 int idpf_read_one_msg(struct idpf_adapter *adapter, uint32_t ops,
 		      uint16_t buf_len, uint8_t *buf);
