@@ -4922,15 +4922,6 @@ static const char *get_ptype_str(uint32_t ptype)
 	else if ((ptype & RTE_PTYPE_L2_ETHER) == RTE_PTYPE_L2_ETHER)
 		return "eth";
 
-	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP)) ==
-		(RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP))
-		return "inner-ipv4-tcp";
-	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_UDP)) ==
-		(RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_UDP))
-		return "inner-ipv4-udp";
-	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP)) ==
-		(RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP))
-		return "inner-ipv4-sctp";
 	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP)) ==
 		(RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP))
 		return "inner-ipv6-tcp";
@@ -4940,18 +4931,27 @@ static const char *get_ptype_str(uint32_t ptype)
 	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP)) ==
 		(RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP))
 		return "inner-ipv6-sctp";
+	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP)) ==
+		(RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP))
+		return "inner-ipv4-tcp";
+	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_UDP)) ==
+		(RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_UDP))
+		return "inner-ipv4-udp";
+	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP)) ==
+		(RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP))
+		return "inner-ipv4-sctp";
 	else if ((ptype & RTE_PTYPE_INNER_L4_TCP) == RTE_PTYPE_INNER_L4_TCP)
 		return "inner-tcp";
 	else if ((ptype & RTE_PTYPE_INNER_L4_UDP) == RTE_PTYPE_INNER_L4_UDP)
 		return "inner-udp";
 	else if ((ptype & RTE_PTYPE_INNER_L4_SCTP) == RTE_PTYPE_INNER_L4_SCTP)
 		return "inner-sctp";
+	else if ((ptype & RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN) ==
+		RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN)
+		return "inner-ipv6";
 	else if ((ptype & RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN) ==
 		RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN)
 		return "inner-ipv4";
-	else if ((ptype & RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN) ==
-		RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN)
-		return "inner-ipv6";
 	else if ((ptype & RTE_PTYPE_INNER_L2_ETHER) == RTE_PTYPE_INNER_L2_ETHER)
 		return "inner-eth";
 	else if ((ptype & RTE_PTYPE_TUNNEL_GRENAT) == RTE_PTYPE_TUNNEL_GRENAT)
