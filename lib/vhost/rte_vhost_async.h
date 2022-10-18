@@ -266,6 +266,26 @@ rte_vhost_async_try_dequeue_burst(int vid, uint16_t queue_id,
 	struct rte_mempool *mbuf_pool, struct rte_mbuf **pkts, uint16_t count,
 	int *nr_inflight, int16_t dma_id, uint16_t vchan_id);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice.
+ *
+ * Unconfigure DMA vChannels in Vhost asynchronous data path.
+ * This function should be called after the DMA vChannel has been unregistered.
+ * After this function is called, the specified DMA device should no longer
+ * be used by the Vhost library.
+ *
+ * @param dma_id
+ *  the identifier of DMA device
+ * @param vchan_id
+ *  the identifier of virtual DMA channel
+ * @return
+ *  0 on success, and -1 on failure
+ */
+__rte_experimental
+int
+rte_vhost_async_dma_unconfigure(int16_t dma_id, uint16_t vchan_id);
+
 #ifdef __cplusplus
 }
 #endif
