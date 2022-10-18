@@ -3857,6 +3857,10 @@ ice_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 		.nb_align = ICE_ALIGN_RING_DESC,
 	};
 
+	dev_info->dev_capa =
+		RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP |
+		RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP;
+
 	dev_info->speed_capa = RTE_ETH_LINK_SPEED_10M |
 			       RTE_ETH_LINK_SPEED_100M |
 			       RTE_ETH_LINK_SPEED_1G |
