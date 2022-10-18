@@ -154,6 +154,7 @@ New Features
   Add the support of rte_flow pattern items as follow:
 
     * Ethernet
+    * Single VLAN
 
   Add the support of rte_flow actions as follow:
 
