@@ -168,7 +168,7 @@ New Features
     * TTL decrement
     * Set the MAC address
     * POP and PUSH VLAN
-    * Set the IP address of IPv4
+    * Set the IP address of IPv4 and IPv6
 
 * **Updated NXP dpaa2 driver.**
 
