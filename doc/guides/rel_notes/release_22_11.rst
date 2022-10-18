@@ -158,6 +158,7 @@ New Features
     * IPv4
     * IPv6
     * TCP
+    * UDP
 
   Add the support of rte_flow actions as follow:
 
