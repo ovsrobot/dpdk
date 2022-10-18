@@ -10,13 +10,18 @@
 #include <rte_dev.h>
 
 #include "idpf_ethdev.h"
+#include "idpf_rxtx.h"
 
+#define IDPF_TX_SINGLE_Q	"tx_single"
+#define IDPF_RX_SINGLE_Q	"rx_single"
 #define IDPF_VPORT		"vport"
 
 struct idpf_adapter_list adapter_list;
 bool adapter_list_init;
 
 static const char * const idpf_valid_args[] = {
+	IDPF_TX_SINGLE_Q,
+	IDPF_RX_SINGLE_Q,
 	IDPF_VPORT,
 	NULL
 };
@@ -32,6 +37,10 @@ static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.dev_start			= idpf_dev_start,
 	.dev_stop			= idpf_dev_stop,
 	.dev_close			= idpf_dev_close,
+	.rx_queue_setup			= idpf_rx_queue_setup,
+	.rx_queue_release		= idpf_dev_rx_queue_release,
+	.tx_queue_setup			= idpf_tx_queue_setup,
+	.tx_queue_release		= idpf_dev_tx_queue_release,
 };
 
 static int
@@ -60,6 +69,18 @@ idpf_init_vport_req_info(struct rte_eth_dev *dev)
 		(struct virtchnl2_create_vport *)adapter->vport_req_info[idx];
 
 	vport_info->vport_type = rte_cpu_to_le_16(VIRTCHNL2_VPORT_TYPE_DEFAULT);
+	if (adapter->txq_model) {
+		vport_info->txq_model =
+			rte_cpu_to_le_16(VIRTCHNL2_QUEUE_MODEL_SINGLE);
+		vport_info->num_tx_q = IDPF_DEFAULT_TXQ_NUM;
+		vport_info->num_tx_complq = 0;
+	}
+	if (adapter->rxq_model) {
+		vport_info->rxq_model =
+			rte_cpu_to_le_16(VIRTCHNL2_QUEUE_MODEL_SINGLE);
+		vport_info->num_rx_q = IDPF_DEFAULT_RXQ_NUM;
+		vport_info->num_rx_bufq = 0;
+	}
 
 	return 0;
 }
@@ -89,6 +110,8 @@ idpf_init_vport(struct rte_eth_dev *dev)
 	int i;
 
 	vport->vport_id = vport_info->vport_id;
+	vport->txq_model = vport_info->txq_model;
+	vport->rxq_model = vport_info->rxq_model;
 	vport->num_tx_q = vport_info->num_tx_q;
 	vport->num_rx_q = vport_info->num_rx_q;
 	vport->max_mtu = vport_info->max_mtu;
@@ -128,6 +151,12 @@ idpf_init_vport(struct rte_eth_dev *dev)
 static int
 idpf_dev_configure(__rte_unused struct rte_eth_dev *dev)
 {
+	if (dev->data->nb_tx_queues > IDPF_DEFAULT_TXQ_NUM ||
+	    dev->data->nb_rx_queues > IDPF_DEFAULT_RXQ_NUM) {
+		PMD_INIT_LOG(ERR, "Invalid queue number.");
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
@@ -292,6 +321,25 @@ parse_vport(const char *key, const char *value, void *args)
 }
 
 static int
+parse_bool(const char *key, const char *value, void *args)
+{
+	int *i = (int *)args;
+	char *end;
+	int num;
+
+	num = strtoul(value, &end, 10);
+
+	if (num != 0 && num != 1) {
+		PMD_INIT_LOG(ERR, "invalid value:\"%s\" for key:\"%s\", value must be 0 or 1",
+			value, key);
+		return -1;
+	}
+
+	*i = num;
+	return 0;
+}
+
+static int
 idpf_parse_devargs(struct rte_pci_device *pci_dev, struct idpf_adapter *adapter)
 {
 	struct rte_devargs *devargs = pci_dev->device.devargs;
@@ -309,6 +357,16 @@ idpf_parse_devargs(struct rte_pci_device *pci_dev, struct idpf_adapter *adapter)
 
 	ret = rte_kvargs_process(kvlist, IDPF_VPORT, &parse_vport,
 				 adapter);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, IDPF_TX_SINGLE_Q, &parse_bool,
+				 &adapter->txq_model);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, IDPF_RX_SINGLE_Q, &parse_bool,
+				 &adapter->rxq_model);
 	if (ret)
 		goto bail;
 

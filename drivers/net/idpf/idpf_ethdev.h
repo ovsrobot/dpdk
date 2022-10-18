@@ -83,6 +83,8 @@ struct idpf_chunks_info {
 struct idpf_vport {
 	struct idpf_adapter *adapter; /* Backreference to associated adapter */
 	uint16_t vport_id;
+	uint32_t txq_model;
+	uint32_t rxq_model;
 	uint16_t num_tx_q;
 	uint16_t num_rx_q;
 
@@ -113,6 +115,9 @@ struct idpf_adapter {
 	volatile enum virtchnl_ops pend_cmd; /* pending command not finished */
 	uint32_t cmd_retval; /* return value of the cmd response from ipf */
 	uint8_t *mbx_resp; /* buffer to store the mailbox response from ipf */
+
+	uint32_t txq_model;
+	uint32_t rxq_model;
 
 	/* Vport info */
 	uint8_t **vport_req_info;
@@ -191,6 +196,10 @@ int idpf_vc_check_api_version(struct idpf_adapter *adapter);
 int idpf_vc_get_caps(struct idpf_adapter *adapter);
 int idpf_vc_create_vport(struct rte_eth_dev *dev);
 int idpf_vc_destroy_vport(struct idpf_vport *vport);
+int idpf_vc_config_rxqs(struct idpf_vport *vport);
+int idpf_vc_config_rxq(struct idpf_vport *vport, uint16_t rxq_id);
+int idpf_vc_config_txqs(struct idpf_vport *vport);
+int idpf_vc_config_txq(struct idpf_vport *vport, uint16_t txq_id);
 int idpf_vc_ena_dis_vport(struct idpf_vport *vport, bool enable);
 int idpf_read_one_msg(struct idpf_adapter *adapter, uint32_t ops,
 		      uint16_t buf_len, uint8_t *buf);
