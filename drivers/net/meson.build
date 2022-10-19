@@ -28,6 +28,7 @@ drivers = [
         'i40e',
         'iavf',
         'ice',
+        'idpf',
         'igc',
         'ionic',
         'ipn3ke',
