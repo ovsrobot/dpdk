@@ -1269,6 +1269,47 @@ idpf_stop_queues(struct rte_eth_dev *dev)
 	}
 }
 
+#define IDPF_RX_FLEX_DESC_ADV_STATUS0_XSUM_S			\
+	(BIT(VIRTCHNL2_RX_FLEX_DESC_ADV_STATUS0_XSUM_IPE_S) |	\
+	 BIT(VIRTCHNL2_RX_FLEX_DESC_ADV_STATUS0_XSUM_L4E_S) |	\
+	 BIT(VIRTCHNL2_RX_FLEX_DESC_ADV_STATUS0_XSUM_EIPE_S) |	\
+	 BIT(VIRTCHNL2_RX_FLEX_DESC_ADV_STATUS0_XSUM_EUDPE_S))
+
+static inline uint64_t
+idpf_splitq_rx_csum_offload(uint8_t err)
+{
+	uint64_t flags = 0;
+
+	if (unlikely(!(err & BIT(VIRTCHNL2_RX_FLEX_DESC_ADV_STATUS0_L3L4P_S))))
+		return flags;
+
+	if (likely((err & IDPF_RX_FLEX_DESC_ADV_STATUS0_XSUM_S) == 0)) {
+		flags |= (RTE_MBUF_F_RX_IP_CKSUM_GOOD |
+			  RTE_MBUF_F_RX_L4_CKSUM_GOOD);
+		return flags;
+	}
+
+	if (unlikely(err & BIT(VIRTCHNL2_RX_FLEX_DESC_ADV_STATUS0_XSUM_IPE_S)))
+		flags |= RTE_MBUF_F_RX_IP_CKSUM_BAD;
+	else
+		flags |= RTE_MBUF_F_RX_IP_CKSUM_GOOD;
+
+	if (unlikely(err & BIT(VIRTCHNL2_RX_FLEX_DESC_ADV_STATUS0_XSUM_L4E_S)))
+		flags |= RTE_MBUF_F_RX_L4_CKSUM_BAD;
+	else
+		flags |= RTE_MBUF_F_RX_L4_CKSUM_GOOD;
+
+	if (unlikely(err & BIT(VIRTCHNL2_RX_FLEX_DESC_ADV_STATUS0_XSUM_EIPE_S)))
+		flags |= RTE_MBUF_F_RX_OUTER_IP_CKSUM_BAD;
+
+	if (unlikely(err & BIT(VIRTCHNL2_RX_FLEX_DESC_ADV_STATUS0_XSUM_EUDPE_S)))
+		flags |= RTE_MBUF_F_RX_OUTER_L4_CKSUM_BAD;
+	else
+		flags |= RTE_MBUF_F_RX_OUTER_L4_CKSUM_GOOD;
+
+	return flags;
+}
+
 static void
 idpf_split_rx_bufq_refill(struct idpf_rx_queue *rx_bufq)
 {
@@ -1343,9 +1384,11 @@ idpf_splitq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 	uint16_t pktlen_gen_bufq_id;
 	struct idpf_rx_queue *rxq;
 	const uint32_t *ptype_tbl;
+	uint8_t status_err0_qw1;
 	struct rte_mbuf *rxm;
 	uint16_t rx_id_bufq1;
 	uint16_t rx_id_bufq2;
+	uint64_t pkt_flags;
 	uint16_t pkt_len;
 	uint16_t bufq_id;
 	uint16_t gen_id;
@@ -1419,6 +1462,11 @@ idpf_splitq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 			ptype_tbl[(rte_le_to_cpu_16(rx_desc->ptype_err_fflags0) &
 				   VIRTCHNL2_RX_FLEX_DESC_ADV_PTYPE_M) >>
 				  VIRTCHNL2_RX_FLEX_DESC_ADV_PTYPE_S];
+
+		status_err0_qw1 = rx_desc->status_err0_qw1;
+		pkt_flags = idpf_splitq_rx_csum_offload(status_err0_qw1);
+
+		rxm->ol_flags |= pkt_flags;
 
 		rx_pkts[nb_rx++] = rxm;
 	}
@@ -1496,6 +1544,49 @@ idpf_split_tx_free(struct idpf_tx_queue *cq)
 	cq->tx_tail = next;
 }
 
+/* Check if the context descriptor is needed for TX offloading */
+static inline uint16_t
+idpf_calc_context_desc(uint64_t flags)
+{
+	if (flags & RTE_MBUF_F_TX_TCP_SEG)
+		return 1;
+
+	return 0;
+}
+
+/* set TSO context descriptor
+ */
+static inline void
+idpf_set_splitq_tso_ctx(struct rte_mbuf *mbuf,
+			union idpf_tx_offload tx_offload,
+			volatile union idpf_flex_tx_ctx_desc *ctx_desc)
+{
+	uint16_t cmd_dtype;
+	uint32_t tso_len;
+	uint8_t hdr_len;
+
+	if (!tx_offload.l4_len) {
+		PMD_TX_LOG(DEBUG, "L4 length set to 0");
+		return;
+	}
+
+	hdr_len = tx_offload.l2_len +
+		tx_offload.l3_len +
+		tx_offload.l4_len;
+	cmd_dtype = IDPF_TX_DESC_DTYPE_FLEX_TSO_CTX |
+		IDPF_TX_FLEX_CTX_DESC_CMD_TSO;
+	tso_len = mbuf->pkt_len - hdr_len;
+
+	ctx_desc->tso.qw1.cmd_dtype = rte_cpu_to_le_16(cmd_dtype);
+	ctx_desc->tso.qw0.hdr_len = hdr_len;
+	ctx_desc->tso.qw0.mss_rt =
+		rte_cpu_to_le_16((uint16_t)mbuf->tso_segsz &
+				 IDPF_TXD_FLEX_CTX_MSS_RT_M);
+	ctx_desc->tso.qw0.flex_tlen =
+		rte_cpu_to_le_32(tso_len &
+				 IDPF_TXD_FLEX_CTX_MSS_RT_M);
+}
+
 uint16_t
 idpf_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 		      uint16_t nb_pkts)
@@ -1504,11 +1595,14 @@ idpf_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 	volatile struct idpf_flex_tx_sched_desc *txr;
 	volatile struct idpf_flex_tx_sched_desc *txd;
 	struct idpf_tx_entry *sw_ring;
+	union idpf_tx_offload tx_offload = {0};
 	struct idpf_tx_entry *txe, *txn;
 	uint16_t nb_used, tx_id, sw_id;
 	struct rte_mbuf *tx_pkt;
 	uint16_t nb_to_clean;
 	uint16_t nb_tx = 0;
+	uint64_t ol_flags;
+	uint16_t nb_ctx;
 
 	if (unlikely(!txq) || unlikely(!txq->q_started))
 		return nb_tx;
@@ -1538,8 +1632,29 @@ idpf_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 
 		if (txq->nb_free < tx_pkt->nb_segs)
 			break;
-		nb_used = tx_pkt->nb_segs;
 
+		ol_flags = tx_pkt->ol_flags;
+		tx_offload.l2_len = tx_pkt->l2_len;
+		tx_offload.l3_len = tx_pkt->l3_len;
+		tx_offload.l4_len = tx_pkt->l4_len;
+		tx_offload.tso_segsz = tx_pkt->tso_segsz;
+		/* Calculate the number of context descriptors needed. */
+		nb_ctx = idpf_calc_context_desc(ol_flags);
+		nb_used = tx_pkt->nb_segs + nb_ctx;
+
+		/* context descriptor */
+		if (nb_ctx) {
+			volatile union idpf_flex_tx_ctx_desc *ctx_desc =
+			(volatile union idpf_flex_tx_ctx_desc *)&txr[tx_id];
+
+			if (ol_flags & RTE_MBUF_F_TX_TCP_SEG)
+				idpf_set_splitq_tso_ctx(tx_pkt, tx_offload,
+							ctx_desc);
+
+			tx_id++;
+			if (tx_id == txq->nb_tx_desc)
+				tx_id = 0;
+		}
 
 		do {
 			txd = &txr[tx_id];
@@ -1566,6 +1681,8 @@ idpf_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 
 		if (unlikely(!(tx_id % 32)))
 			txd->qw1.cmd_dtype |= IDPF_TXD_FLEX_FLOW_CMD_RE;
+		if (ol_flags & IDPF_TX_CKSUM_OFFLOAD_MASK)
+			txd->qw1.cmd_dtype |= IDPF_TXD_FLEX_FLOW_CMD_CS_EN;
 		txq->nb_free = (uint16_t)(txq->nb_free - nb_used);
 		txq->nb_used = (uint16_t)(txq->nb_used + nb_used);
 	}
@@ -1578,6 +1695,48 @@ idpf_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 	}
 
 	return nb_tx;
+}
+
+#define IDPF_RX_FLEX_DESC_STATUS0_XSUM_S			\
+	(BIT(VIRTCHNL2_RX_FLEX_DESC_STATUS0_XSUM_IPE_S) |	\
+	 BIT(VIRTCHNL2_RX_FLEX_DESC_STATUS0_XSUM_L4E_S) |	\
+	 BIT(VIRTCHNL2_RX_FLEX_DESC_STATUS0_XSUM_EIPE_S) |	\
+	 BIT(VIRTCHNL2_RX_FLEX_DESC_STATUS0_XSUM_EUDPE_S))
+
+/* Translate the rx descriptor status and error fields to pkt flags */
+static inline uint64_t
+idpf_rxd_to_pkt_flags(uint16_t status_error)
+{
+	uint64_t flags = 0;
+
+	if (unlikely(!(status_error & BIT(VIRTCHNL2_RX_FLEX_DESC_STATUS0_L3L4P_S))))
+		return flags;
+
+	if (likely((status_error & IDPF_RX_FLEX_DESC_STATUS0_XSUM_S) == 0)) {
+		flags |= (RTE_MBUF_F_RX_IP_CKSUM_GOOD |
+			  RTE_MBUF_F_RX_L4_CKSUM_GOOD);
+		return flags;
+	}
+
+	if (unlikely(status_error & BIT(VIRTCHNL2_RX_FLEX_DESC_STATUS0_XSUM_IPE_S)))
+		flags |= RTE_MBUF_F_RX_IP_CKSUM_BAD;
+	else
+		flags |= RTE_MBUF_F_RX_IP_CKSUM_GOOD;
+
+	if (unlikely(status_error & BIT(VIRTCHNL2_RX_FLEX_DESC_STATUS0_XSUM_L4E_S)))
+		flags |= RTE_MBUF_F_RX_L4_CKSUM_BAD;
+	else
+		flags |= RTE_MBUF_F_RX_L4_CKSUM_GOOD;
+
+	if (unlikely(status_error & BIT(VIRTCHNL2_RX_FLEX_DESC_STATUS0_XSUM_EIPE_S)))
+		flags |= RTE_MBUF_F_RX_OUTER_IP_CKSUM_BAD;
+
+	if (unlikely(status_error & BIT(VIRTCHNL2_RX_FLEX_DESC_STATUS0_XSUM_EUDPE_S)))
+		flags |= RTE_MBUF_F_RX_OUTER_L4_CKSUM_BAD;
+	else
+		flags |= RTE_MBUF_F_RX_OUTER_L4_CKSUM_GOOD;
+
+	return flags;
 }
 
 static inline void
@@ -1613,6 +1772,7 @@ idpf_singleq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 	struct rte_mbuf *rxm;
 	struct rte_mbuf *nmb;
 	uint16_t rx_status0;
+	uint64_t pkt_flags;
 	uint64_t dma_addr;
 	uint16_t nb_rx;
 
@@ -1682,9 +1842,12 @@ idpf_singleq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 		rxm->data_len = rx_packet_len;
 		rxm->port = rxq->port_id;
 		rxm->ol_flags = 0;
+		pkt_flags = idpf_rxd_to_pkt_flags(rx_status0);
 		rxm->packet_type =
 			ptype_tbl[(uint8_t)(rte_cpu_to_le_16(rxd.flex_nic_wb.ptype_flex_flags0) &
 				VIRTCHNL2_RX_FLEX_DESC_PTYPE_M)];
+
+		rxm->ol_flags |= pkt_flags;
 
 
 		rx_pkts[nb_rx++] = rxm;
@@ -1741,6 +1904,31 @@ idpf_xmit_cleanup(struct idpf_tx_queue *txq)
 	return 0;
 }
 
+/* set TSO context descriptor
+ * support IP -> L4 and IP -> IP -> L4
+ */
+static inline uint64_t
+idpf_set_tso_ctx(struct rte_mbuf *mbuf, union idpf_tx_offload tx_offload)
+{
+	uint64_t ctx_desc = 0;
+	uint32_t cd_cmd, hdr_len, cd_tso_len;
+
+	if (!tx_offload.l4_len) {
+		PMD_TX_LOG(DEBUG, "L4 length set to 0");
+		return ctx_desc;
+	}
+
+	hdr_len = tx_offload.l2_len + tx_offload.l3_len + tx_offload.l4_len;
+
+	cd_cmd = IDPF_TX_CTX_DESC_TSO;
+	cd_tso_len = mbuf->pkt_len - hdr_len;
+	ctx_desc |= ((uint64_t)cd_cmd << IDPF_TXD_CTX_QW1_CMD_S) |
+		     ((uint64_t)cd_tso_len << IDPF_TXD_CTX_QW1_TSO_LEN_S) |
+		     ((uint64_t)mbuf->tso_segsz << IDPF_TXD_CTX_QW1_MSS_S);
+
+	return ctx_desc;
+}
+
 /* TX function */
 uint16_t
 idpf_singleq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
@@ -1748,14 +1936,17 @@ idpf_singleq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 {
 	volatile struct idpf_flex_tx_desc *txd;
 	volatile struct idpf_flex_tx_desc *txr;
+	union idpf_tx_offload tx_offload = {0};
 	struct idpf_tx_entry *txe, *txn;
 	struct idpf_tx_entry *sw_ring;
 	struct idpf_tx_queue *txq;
 	struct rte_mbuf *tx_pkt;
 	struct rte_mbuf *m_seg;
 	uint64_t buf_dma_addr;
+	uint64_t ol_flags;
 	uint16_t tx_last;
 	uint16_t nb_used;
+	uint16_t nb_ctx;
 	uint16_t td_cmd;
 	uint16_t tx_id;
 	uint16_t nb_tx;
@@ -1782,11 +1973,19 @@ idpf_singleq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 		tx_pkt = *tx_pkts++;
 		RTE_MBUF_PREFETCH_TO_FREE(txe->mbuf);
 
+		ol_flags = tx_pkt->ol_flags;
+		tx_offload.l2_len = tx_pkt->l2_len;
+		tx_offload.l3_len = tx_pkt->l3_len;
+		tx_offload.l4_len = tx_pkt->l4_len;
+		tx_offload.tso_segsz = tx_pkt->tso_segsz;
+		/* Calculate the number of context descriptors needed. */
+		nb_ctx = idpf_calc_context_desc(ol_flags);
+
 		/* The number of descriptors that must be allocated for
 		 * a packet equals to the number of the segments of that
 		 * packet plus 1 context descriptor if needed.
 		 */
-		nb_used = (uint16_t)(tx_pkt->nb_segs);
+		nb_used = (uint16_t)(tx_pkt->nb_segs + nb_ctx);
 		tx_last = (uint16_t)(tx_id + nb_used - 1);
 
 		/* Circular ring */
@@ -1814,6 +2013,28 @@ idpf_singleq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 			}
 		}
 
+		if (nb_ctx) {
+			/* Setup TX context descriptor if required */
+			volatile union idpf_flex_tx_ctx_desc *ctx_txd =
+				(volatile union idpf_flex_tx_ctx_desc *)
+							&txr[tx_id];
+
+			txn = &sw_ring[txe->next_id];
+			RTE_MBUF_PREFETCH_TO_FREE(txn->mbuf);
+			if (txe->mbuf) {
+				rte_pktmbuf_free_seg(txe->mbuf);
+				txe->mbuf = NULL;
+			}
+
+			/* TSO enabled */
+			if (ol_flags & RTE_MBUF_F_TX_TCP_SEG)
+				idpf_set_splitq_tso_ctx(tx_pkt, tx_offload,
+							ctx_txd);
+
+			txe->last_id = tx_last;
+			tx_id = txe->next_id;
+			txe = txn;
+		}
 
 		m_seg = tx_pkt;
 		do {
@@ -1896,11 +2117,23 @@ idpf_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 			return i;
 		}
 
+		if (ol_flags & IDPF_TX_OFFLOAD_NOTSUP_MASK) {
+			rte_errno = ENOTSUP;
+			return i;
+		}
+
 		if (m->pkt_len < IDPF_MIN_FRAME_SIZE) {
 			rte_errno = EINVAL;
 			return i;
 		}
 
+#ifdef RTE_LIBRTE_ETHDEV_DEBUG
+		ret = rte_validate_tx_offload(m);
+		if (ret != 0) {
+			rte_errno = -ret;
+			return i;
+		}
+#endif
 		ret = rte_net_intel_cksum_prepare(m);
 		if (ret != 0) {
 			rte_errno = -ret;
