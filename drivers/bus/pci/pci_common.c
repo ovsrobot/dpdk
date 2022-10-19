@@ -456,6 +456,16 @@ pci_cleanup(void)
 		}
 		dev->driver = NULL;
 		dev->device.driver = NULL;
+
+		/* free interrupt handles */
+		rte_intr_instance_free(dev->intr_handle);
+		dev->intr_handle = NULL;
+		rte_intr_instance_free(dev->vfio_req_intr_handle);
+		dev->vfio_req_intr_handle = NULL;
+
+		free(dev->bus_info);
+		dev->bus_info = NULL;
+
 		free(dev);
 	}
 
