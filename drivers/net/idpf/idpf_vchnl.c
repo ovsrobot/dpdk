@@ -21,6 +21,7 @@
 #include <rte_dev.h>
 
 #include "idpf_ethdev.h"
+#include "idpf_rxtx.h"
 
 #include "idpf_prototype.h"
 
@@ -465,6 +466,254 @@ idpf_vc_destroy_vport(struct idpf_vport *vport)
 		PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_DESTROY_VPORT");
 		return err;
 	}
+
+	return err;
+}
+
+#define IDPF_RX_BUF_STRIDE		64
+int
+idpf_vc_config_rxqs(struct idpf_vport *vport)
+{
+	struct idpf_adapter *adapter = vport->adapter;
+	struct idpf_rx_queue **rxq =
+		(struct idpf_rx_queue **)vport->dev_data->rx_queues;
+	struct virtchnl2_config_rx_queues *vc_rxqs = NULL;
+	struct virtchnl2_rxq_info *rxq_info;
+	struct idpf_cmd_info args;
+	uint16_t total_qs, num_qs;
+	int size, err, i;
+	int k = 0;
+
+	total_qs = vport->num_rx_q;
+	while (total_qs) {
+		if (total_qs > adapter->max_rxq_per_msg) {
+			num_qs = adapter->max_rxq_per_msg;
+			total_qs -= adapter->max_rxq_per_msg;
+		} else {
+			num_qs = total_qs;
+			total_qs = 0;
+		}
+
+		size = sizeof(*vc_rxqs) + (num_qs - 1) *
+			sizeof(struct virtchnl2_rxq_info);
+		vc_rxqs = rte_zmalloc("cfg_rxqs", size, 0);
+		if (vc_rxqs == NULL) {
+			PMD_DRV_LOG(ERR, "Failed to allocate virtchnl2_config_rx_queues");
+			err = -ENOMEM;
+			break;
+		}
+		vc_rxqs->vport_id = vport->vport_id;
+		vc_rxqs->num_qinfo = num_qs;
+		if (vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE) {
+			for (i = 0; i < num_qs; i++, k++) {
+				rxq_info = &vc_rxqs->qinfo[i];
+				rxq_info->dma_ring_addr = rxq[k]->rx_ring_phys_addr;
+				rxq_info->type = VIRTCHNL2_QUEUE_TYPE_RX;
+				rxq_info->queue_id = rxq[k]->queue_id;
+				rxq_info->model = VIRTCHNL2_QUEUE_MODEL_SINGLE;
+				rxq_info->data_buffer_size = rxq[k]->rx_buf_len;
+				rxq_info->max_pkt_size = vport->max_pkt_len;
+
+				rxq_info->desc_ids = VIRTCHNL2_RXDID_2_FLEX_SQ_NIC_M;
+				rxq_info->qflags |= VIRTCHNL2_RX_DESC_SIZE_32BYTE;
+
+				rxq_info->ring_len = rxq[k]->nb_rx_desc;
+			}
+		} else {
+			return -1;
+		}
+		memset(&args, 0, sizeof(args));
+		args.ops = VIRTCHNL2_OP_CONFIG_RX_QUEUES;
+		args.in_args = (uint8_t *)vc_rxqs;
+		args.in_args_size = size;
+		args.out_buffer = adapter->mbx_resp;
+		args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
+
+		err = idpf_execute_vc_cmd(adapter, &args);
+		rte_free(vc_rxqs);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_CONFIG_RX_QUEUES");
+			break;
+		}
+	}
+
+	return err;
+}
+
+int
+idpf_vc_config_rxq(struct idpf_vport *vport, uint16_t rxq_id)
+{
+	struct idpf_adapter *adapter = vport->adapter;
+	struct idpf_rx_queue **rxq =
+		(struct idpf_rx_queue **)vport->dev_data->rx_queues;
+	struct virtchnl2_config_rx_queues *vc_rxqs = NULL;
+	struct virtchnl2_rxq_info *rxq_info;
+	struct idpf_cmd_info args;
+	uint16_t num_qs;
+	int size, err;
+
+	if (vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE)
+		num_qs = IDPF_RXQ_PER_GRP;
+	else
+		num_qs = IDPF_RXQ_PER_GRP + IDPF_RX_BUFQ_PER_GRP;
+
+	size = sizeof(*vc_rxqs) + (num_qs - 1) *
+		sizeof(struct virtchnl2_rxq_info);
+	vc_rxqs = rte_zmalloc("cfg_rxqs", size, 0);
+	if (vc_rxqs == NULL) {
+		PMD_DRV_LOG(ERR, "Failed to allocate virtchnl2_config_rx_queues");
+		err = -ENOMEM;
+		return err;
+	}
+	vc_rxqs->vport_id = vport->vport_id;
+	vc_rxqs->num_qinfo = num_qs;
+	if (vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE) {
+		rxq_info = &vc_rxqs->qinfo[0];
+		rxq_info->dma_ring_addr = rxq[rxq_id]->rx_ring_phys_addr;
+		rxq_info->type = VIRTCHNL2_QUEUE_TYPE_RX;
+		rxq_info->queue_id = rxq[rxq_id]->queue_id;
+		rxq_info->model = VIRTCHNL2_QUEUE_MODEL_SINGLE;
+		rxq_info->data_buffer_size = rxq[rxq_id]->rx_buf_len;
+		rxq_info->max_pkt_size = vport->max_pkt_len;
+
+		rxq_info->desc_ids = VIRTCHNL2_RXDID_2_FLEX_SQ_NIC_M;
+		rxq_info->qflags |= VIRTCHNL2_RX_DESC_SIZE_32BYTE;
+
+		rxq_info->ring_len = rxq[rxq_id]->nb_rx_desc;
+	}  else {
+		return -1;
+	}
+
+	memset(&args, 0, sizeof(args));
+	args.ops = VIRTCHNL2_OP_CONFIG_RX_QUEUES;
+	args.in_args = (uint8_t *)vc_rxqs;
+	args.in_args_size = size;
+	args.out_buffer = adapter->mbx_resp;
+	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
+
+	err = idpf_execute_vc_cmd(adapter, &args);
+	rte_free(vc_rxqs);
+	if (err)
+		PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_CONFIG_RX_QUEUES");
+
+	return err;
+}
+
+int
+idpf_vc_config_txqs(struct idpf_vport *vport)
+{
+	struct idpf_adapter *adapter = vport->adapter;
+	struct idpf_tx_queue **txq =
+		(struct idpf_tx_queue **)vport->dev_data->tx_queues;
+	struct virtchnl2_config_tx_queues *vc_txqs = NULL;
+	struct virtchnl2_txq_info *txq_info;
+	struct idpf_cmd_info args;
+	uint16_t total_qs, num_qs;
+	int size, err, i;
+	int k = 0;
+
+	total_qs = vport->num_tx_q;
+	while (total_qs) {
+		if (total_qs > adapter->max_txq_per_msg) {
+			num_qs = adapter->max_txq_per_msg;
+			total_qs -= adapter->max_txq_per_msg;
+		} else {
+			num_qs = total_qs;
+			total_qs = 0;
+		}
+		size = sizeof(*vc_txqs) + (num_qs - 1) *
+			sizeof(struct virtchnl2_txq_info);
+		vc_txqs = rte_zmalloc("cfg_txqs", size, 0);
+		if (vc_txqs == NULL) {
+			PMD_DRV_LOG(ERR, "Failed to allocate virtchnl2_config_tx_queues");
+			err = -ENOMEM;
+			break;
+		}
+		vc_txqs->vport_id = vport->vport_id;
+		vc_txqs->num_qinfo = num_qs;
+		if (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE) {
+			for (i = 0; i < num_qs; i++, k++) {
+				txq_info = &vc_txqs->qinfo[i];
+				txq_info->dma_ring_addr = txq[k]->tx_ring_phys_addr;
+				txq_info->type = VIRTCHNL2_QUEUE_TYPE_TX;
+				txq_info->queue_id = txq[k]->queue_id;
+				txq_info->model = VIRTCHNL2_QUEUE_MODEL_SINGLE;
+				txq_info->sched_mode = VIRTCHNL2_TXQ_SCHED_MODE_QUEUE;
+				txq_info->ring_len = txq[k]->nb_tx_desc;
+			}
+		} else {
+			return -1;
+		}
+
+		memset(&args, 0, sizeof(args));
+		args.ops = VIRTCHNL2_OP_CONFIG_TX_QUEUES;
+		args.in_args = (uint8_t *)vc_txqs;
+		args.in_args_size = size;
+		args.out_buffer = adapter->mbx_resp;
+		args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
+
+		err = idpf_execute_vc_cmd(adapter, &args);
+		rte_free(vc_txqs);
+		if (err) {
+			PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_CONFIG_TX_QUEUES");
+			break;
+		}
+	}
+
+	return err;
+}
+
+int
+idpf_vc_config_txq(struct idpf_vport *vport, uint16_t txq_id)
+{
+	struct idpf_adapter *adapter = vport->adapter;
+	struct idpf_tx_queue **txq =
+		(struct idpf_tx_queue **)vport->dev_data->tx_queues;
+	struct virtchnl2_config_tx_queues *vc_txqs = NULL;
+	struct virtchnl2_txq_info *txq_info;
+	struct idpf_cmd_info args;
+	uint16_t num_qs;
+	int size, err;
+
+	if (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE)
+		num_qs = IDPF_TXQ_PER_GRP;
+	else
+		num_qs = IDPF_TXQ_PER_GRP + IDPF_TX_COMPLQ_PER_GRP;
+
+	size = sizeof(*vc_txqs) + (num_qs - 1) *
+		sizeof(struct virtchnl2_txq_info);
+	vc_txqs = rte_zmalloc("cfg_txqs", size, 0);
+	if (vc_txqs == NULL) {
+		PMD_DRV_LOG(ERR, "Failed to allocate virtchnl2_config_tx_queues");
+		err = -ENOMEM;
+		return err;
+	}
+	vc_txqs->vport_id = vport->vport_id;
+	vc_txqs->num_qinfo = num_qs;
+
+	if (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE) {
+		txq_info = &vc_txqs->qinfo[0];
+		txq_info->dma_ring_addr = txq[txq_id]->tx_ring_phys_addr;
+		txq_info->type = VIRTCHNL2_QUEUE_TYPE_TX;
+		txq_info->queue_id = txq[txq_id]->queue_id;
+		txq_info->model = VIRTCHNL2_QUEUE_MODEL_SINGLE;
+		txq_info->sched_mode = VIRTCHNL2_TXQ_SCHED_MODE_QUEUE;
+		txq_info->ring_len = txq[txq_id]->nb_tx_desc;
+	} else {
+		return -1;
+	}
+
+	memset(&args, 0, sizeof(args));
+	args.ops = VIRTCHNL2_OP_CONFIG_TX_QUEUES;
+	args.in_args = (uint8_t *)vc_txqs;
+	args.in_args_size = size;
+	args.out_buffer = adapter->mbx_resp;
+	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
+
+	err = idpf_execute_vc_cmd(adapter, &args);
+	rte_free(vc_txqs);
+	if (err)
+		PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_CONFIG_TX_QUEUES");
 
 	return err;
 }
