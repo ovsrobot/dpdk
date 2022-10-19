@@ -238,6 +238,20 @@ _ice_recv_raw_pkts_vec_avx2(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 			RTE_MBUF_F_RX_VLAN | RTE_MBUF_F_RX_VLAN_STRIPPED,
 			RTE_MBUF_F_RX_RSS_HASH, 0);
 
+	const __m256i l2tag2_flags_shuf =
+		_mm256_set_epi8(0, 0, 0, 0,
+				0, 0, 0, 0,
+				0, 0, 0, 0,
+				0, 0, 0, 0,
+				/* end up 128-bits */
+				0, 0, 0, 0,
+				0, 0, 0, 0,
+				0, 0, 0, 0,
+				0, 0,
+				RTE_MBUF_F_RX_VLAN |
+				RTE_MBUF_F_RX_VLAN_STRIPPED,
+				0);
+
 	RTE_SET_USED(avx_aligned); /* for 32B descriptors we don't use this */
 
 	uint16_t i, received;
@@ -474,7 +488,7 @@ _ice_recv_raw_pkts_vec_avx2(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 			 * will cause performance drop to get into this context.
 			 */
 			if (rxq->vsi->adapter->pf.dev_data->dev_conf.rxmode.offloads &
-					RTE_ETH_RX_OFFLOAD_RSS_HASH) {
+					(RTE_ETH_RX_OFFLOAD_RSS_HASH | RTE_ETH_RX_OFFLOAD_VLAN)) {
 				/* load bottom half of every 32B desc */
 				const __m128i raw_desc_bh7 =
 					_mm_load_si128
@@ -529,33 +543,99 @@ _ice_recv_raw_pkts_vec_avx2(struct ice_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 				 * to shift the 32b RSS hash value to the
 				 * highest 32b of each 128b before mask
 				 */
-				__m256i rss_hash6_7 =
-					_mm256_slli_epi64(raw_desc_bh6_7, 32);
-				__m256i rss_hash4_5 =
-					_mm256_slli_epi64(raw_desc_bh4_5, 32);
-				__m256i rss_hash2_3 =
-					_mm256_slli_epi64(raw_desc_bh2_3, 32);
-				__m256i rss_hash0_1 =
-					_mm256_slli_epi64(raw_desc_bh0_1, 32);
+				if (rxq->vsi->adapter->pf.dev_data->dev_conf.rxmode.offloads &
+						RTE_ETH_RX_OFFLOAD_RSS_HASH) {
+					__m256i rss_hash6_7 =
+						_mm256_slli_epi64(raw_desc_bh6_7, 32);
+					__m256i rss_hash4_5 =
+						_mm256_slli_epi64(raw_desc_bh4_5, 32);
+					__m256i rss_hash2_3 =
+						_mm256_slli_epi64(raw_desc_bh2_3, 32);
+					__m256i rss_hash0_1 =
+						_mm256_slli_epi64(raw_desc_bh0_1, 32);
 
-				__m256i rss_hash_msk =
-					_mm256_set_epi32(0xFFFFFFFF, 0, 0, 0,
-							 0xFFFFFFFF, 0, 0, 0);
+					__m256i rss_hash_msk =
+						_mm256_set_epi32(0xFFFFFFFF, 0, 0, 0,
+								0xFFFFFFFF, 0, 0, 0);
 
-				rss_hash6_7 = _mm256_and_si256
-						(rss_hash6_7, rss_hash_msk);
-				rss_hash4_5 = _mm256_and_si256
-						(rss_hash4_5, rss_hash_msk);
-				rss_hash2_3 = _mm256_and_si256
-						(rss_hash2_3, rss_hash_msk);
-				rss_hash0_1 = _mm256_and_si256
-						(rss_hash0_1, rss_hash_msk);
+					rss_hash6_7 = _mm256_and_si256
+							(rss_hash6_7, rss_hash_msk);
+					rss_hash4_5 = _mm256_and_si256
+							(rss_hash4_5, rss_hash_msk);
+					rss_hash2_3 = _mm256_and_si256
+							(rss_hash2_3, rss_hash_msk);
+					rss_hash0_1 = _mm256_and_si256
+							(rss_hash0_1, rss_hash_msk);
 
-				mb6_7 = _mm256_or_si256(mb6_7, rss_hash6_7);
-				mb4_5 = _mm256_or_si256(mb4_5, rss_hash4_5);
-				mb2_3 = _mm256_or_si256(mb2_3, rss_hash2_3);
-				mb0_1 = _mm256_or_si256(mb0_1, rss_hash0_1);
-			} /* if() on RSS hash parsing */
+					mb6_7 = _mm256_or_si256(mb6_7, rss_hash6_7);
+					mb4_5 = _mm256_or_si256(mb4_5, rss_hash4_5);
+					mb2_3 = _mm256_or_si256(mb2_3, rss_hash2_3);
+					mb0_1 = _mm256_or_si256(mb0_1, rss_hash0_1);
+				} /* if() on RSS hash parsing */
+
+				if (rxq->vsi->adapter->pf.dev_data->dev_conf.rxmode.offloads &
+						RTE_ETH_RX_OFFLOAD_VLAN) {
+					/* merge the status/error-1 bits into one register */
+					const __m256i status1_4_7 =
+							_mm256_unpacklo_epi32(raw_desc_bh6_7,
+							raw_desc_bh4_5);
+					const __m256i status1_0_3 =
+							_mm256_unpacklo_epi32(raw_desc_bh2_3,
+							raw_desc_bh0_1);
+
+					const __m256i status1_0_7 =
+							_mm256_unpacklo_epi64(status1_4_7,
+							status1_0_3);
+
+					const __m256i l2tag2p_flag_mask =
+							_mm256_set1_epi32(1 << 11);
+
+					__m256i l2tag2p_flag_bits =
+							_mm256_and_si256
+							(status1_0_7, l2tag2p_flag_mask);
+
+					l2tag2p_flag_bits =
+							_mm256_srli_epi32(l2tag2p_flag_bits,
+									11);
+
+					__m256i vlan_flags = _mm256_setzero_si256();
+					vlan_flags =
+							_mm256_shuffle_epi8(l2tag2_flags_shuf,
+							l2tag2p_flag_bits);
+
+					/* merge with vlan_flags */
+					mbuf_flags = _mm256_or_si256
+							(mbuf_flags, vlan_flags);
+
+					/* L2TAG2_2 */
+					__m256i vlan_tci6_7 =
+							_mm256_slli_si256(raw_desc_bh6_7, 4);
+					__m256i vlan_tci4_5 =
+							_mm256_slli_si256(raw_desc_bh4_5, 4);
+					__m256i vlan_tci2_3 =
+							_mm256_slli_si256(raw_desc_bh2_3, 4);
+					__m256i vlan_tci0_1 =
+							_mm256_slli_si256(raw_desc_bh0_1, 4);
+
+					const __m256i vlan_tci_msk =
+							_mm256_set_epi32(0, 0xFFFF0000, 0, 0,
+							0, 0xFFFF0000, 0, 0);
+
+					vlan_tci6_7 = _mm256_and_si256
+									(vlan_tci6_7, vlan_tci_msk);
+					vlan_tci4_5 = _mm256_and_si256
+									(vlan_tci4_5, vlan_tci_msk);
+					vlan_tci2_3 = _mm256_and_si256
+									(vlan_tci2_3, vlan_tci_msk);
+					vlan_tci0_1 = _mm256_and_si256
+									(vlan_tci0_1, vlan_tci_msk);
+
+					mb6_7 = _mm256_or_si256(mb6_7, vlan_tci6_7);
+					mb4_5 = _mm256_or_si256(mb4_5, vlan_tci4_5);
+					mb2_3 = _mm256_or_si256(mb2_3, vlan_tci2_3);
+					mb0_1 = _mm256_or_si256(mb0_1, vlan_tci0_1);
+				}
+			}
 #endif
 		}
 
