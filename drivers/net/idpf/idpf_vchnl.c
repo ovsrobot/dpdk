@@ -1134,6 +1134,113 @@ idpf_vc_config_txq(struct idpf_vport *vport, uint16_t txq_id)
 	return err;
 }
 
+int
+idpf_vc_config_irq_map_unmap(struct idpf_vport *vport, bool map)
+{
+	struct idpf_adapter *adapter = vport->adapter;
+	struct virtchnl2_queue_vector_maps *map_info;
+	struct virtchnl2_queue_vector *vecmap;
+	uint16_t nb_rxq = vport->dev_data->nb_rx_queues;
+	struct idpf_cmd_info args;
+	int len, i, err = 0;
+
+	len = sizeof(struct virtchnl2_queue_vector_maps) +
+		(nb_rxq - 1) * sizeof(struct virtchnl2_queue_vector);
+
+	map_info = rte_zmalloc("map_info", len, 0);
+	if (!map_info)
+		return -ENOMEM;
+
+	map_info->vport_id = vport->vport_id;
+	map_info->num_qv_maps = nb_rxq;
+	for (i = 0; i < nb_rxq; i++) {
+		vecmap = &map_info->qv_maps[i];
+		vecmap->queue_id = vport->qv_map[i].queue_id;
+		vecmap->vector_id = vport->qv_map[i].vector_id;
+		vecmap->itr_idx = VIRTCHNL2_ITR_IDX_0;
+		vecmap->queue_type = VIRTCHNL2_QUEUE_TYPE_RX;
+	}
+
+	args.ops = map ? VIRTCHNL2_OP_MAP_QUEUE_VECTOR :
+		VIRTCHNL2_OP_UNMAP_QUEUE_VECTOR;
+	args.in_args = (u8 *)map_info;
+	args.in_args_size = len;
+	args.out_buffer = adapter->mbx_resp;
+	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
+	err = idpf_execute_vc_cmd(adapter, &args);
+	if (err)
+		PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_%s_QUEUE_VECTOR",
+			    map ? "MAP" : "UNMAP");
+
+	rte_free(map_info);
+	return err;
+}
+
+int
+idpf_vc_alloc_vectors(struct idpf_vport *vport, uint16_t num_vectors)
+{
+	struct idpf_adapter *adapter = vport->adapter;
+	struct virtchnl2_alloc_vectors *alloc_vec;
+	struct idpf_cmd_info args;
+	int err, len;
+
+	len = sizeof(struct virtchnl2_alloc_vectors) +
+		(num_vectors - 1) * sizeof(struct virtchnl2_vector_chunk);
+	alloc_vec = rte_zmalloc("alloc_vec", len, 0);
+	if (!alloc_vec)
+		return -ENOMEM;
+
+	alloc_vec->num_vectors = num_vectors;
+
+	args.ops = VIRTCHNL2_OP_ALLOC_VECTORS;
+	args.in_args = (u8 *)alloc_vec;
+	args.in_args_size = sizeof(struct virtchnl2_alloc_vectors);
+	args.out_buffer = adapter->mbx_resp;
+	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
+	err = idpf_execute_vc_cmd(adapter, &args);
+	if (err)
+		PMD_DRV_LOG(ERR, "Failed to execute command VIRTCHNL2_OP_ALLOC_VECTORS");
+
+	if (!vport->recv_vectors) {
+		vport->recv_vectors = rte_zmalloc("recv_vectors", len, 0);
+		if (!vport->recv_vectors) {
+			rte_free(alloc_vec);
+			return -ENOMEM;
+		}
+	}
+
+	rte_memcpy(vport->recv_vectors, args.out_buffer, len);
+	rte_free(alloc_vec);
+	return err;
+}
+
+int
+idpf_vc_dealloc_vectors(struct idpf_vport *vport)
+{
+	struct idpf_adapter *adapter = vport->adapter;
+	struct virtchnl2_alloc_vectors *alloc_vec;
+	struct virtchnl2_vector_chunks *vcs;
+	struct idpf_cmd_info args;
+	int err, len;
+
+	alloc_vec = vport->recv_vectors;
+	vcs = &alloc_vec->vchunks;
+
+	len = sizeof(struct virtchnl2_vector_chunks) +
+		(vcs->num_vchunks - 1) * sizeof(struct virtchnl2_vector_chunk);
+
+	args.ops = VIRTCHNL2_OP_DEALLOC_VECTORS;
+	args.in_args = (u8 *)vcs;
+	args.in_args_size = len;
+	args.out_buffer = adapter->mbx_resp;
+	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
+	err = idpf_execute_vc_cmd(adapter, &args);
+	if (err)
+		PMD_DRV_LOG(ERR, "Failed to execute command VIRTCHNL2_OP_DEALLOC_VECTORS");
+
+	return err;
+}
+
 static int
 idpf_vc_ena_dis_one_queue(struct idpf_vport *vport, uint16_t qid,
 			  uint32_t type, bool on)
