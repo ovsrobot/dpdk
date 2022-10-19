@@ -313,6 +313,9 @@ idpf_dev_start(struct rte_eth_dev *dev)
 		goto err_mtu;
 	}
 
+	idpf_set_rx_function(dev);
+	idpf_set_tx_function(dev);
+
 	if (idpf_vc_ena_dis_vport(vport, true)) {
 		PMD_DRV_LOG(ERR, "Failed to enable vport");
 		goto err_vport;
@@ -764,8 +767,11 @@ idpf_dev_init(struct rte_eth_dev *dev, void *init_params)
 	/* for secondary processes, we don't initialise any further as primary
 	 * has already done this work.
 	 */
-	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		idpf_set_rx_function(dev);
+		idpf_set_tx_function(dev);
 		return ret;
+	}
 
 	dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
 
