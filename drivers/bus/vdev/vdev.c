@@ -54,6 +54,12 @@ static rte_spinlock_t vdev_custom_scan_lock = RTE_SPINLOCK_INITIALIZER;
 void
 rte_vdev_register(struct rte_vdev_driver *driver)
 {
+	/* For net driver vdevs, add an automatic alias using "eth" prefix */
+	if (strncmp(driver->driver.name, "net_", 4) == 0 && driver->driver.alias == NULL) {
+		char *alias = strdup(driver->driver.name);
+		memcpy(alias, "eth_", 4);
+		driver->driver.alias = alias;
+	}
 	TAILQ_INSERT_TAIL(&vdev_driver_list, driver, next);
 }
 
