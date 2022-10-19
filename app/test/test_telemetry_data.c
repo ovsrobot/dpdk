@@ -354,6 +354,84 @@ test_array_with_array_u64_values(void)
 }
 
 static int
+test_case_array_bool(void)
+{
+	int i;
+
+	rte_tel_data_start_array(&response_data, RTE_TEL_BOOL_VAL);
+	for (i = 0; i < 5; i++)
+		rte_tel_data_add_array_bool(&response_data, (i % 2) == 0);
+	return CHECK_OUTPUT("[true,false,true,false,true]");
+}
+
+static int
+test_case_add_dict_bool(void)
+{
+	int i = 0;
+	char name_of_value[8];
+
+	rte_tel_data_start_dict(&response_data);
+
+	for (i = 0; i < 5; i++) {
+		sprintf(name_of_value, "dict_%d", i);
+		rte_tel_data_add_dict_bool(&response_data, name_of_value,
+			(i % 2) == 0);
+	}
+	return CHECK_OUTPUT("{\"dict_0\":true,\"dict_1\":false,\"dict_2\":true,"
+		"\"dict_3\":false,\"dict_4\":true}");
+}
+
+static int
+test_dict_with_array_bool_values(void)
+{
+	int i;
+
+	struct rte_tel_data *child_data = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data, RTE_TEL_BOOL_VAL);
+
+	struct rte_tel_data *child_data2 = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data2, RTE_TEL_BOOL_VAL);
+
+	rte_tel_data_start_dict(&response_data);
+
+	for (i = 0; i < 10; i++) {
+		rte_tel_data_add_array_bool(child_data, (i % 2) == 0);
+		rte_tel_data_add_array_bool(child_data2, (i % 2) == 1);
+	}
+
+	rte_tel_data_add_dict_container(&response_data, "dict_0",
+	 child_data, 0);
+	rte_tel_data_add_dict_container(&response_data, "dict_1",
+	 child_data2, 0);
+
+	return CHECK_OUTPUT("{\"dict_0\":[true,false,true,false,true,false,true,false,true,false],"
+		"\"dict_1\":[false,true,false,true,false,true,false,true,false,true]}");
+}
+
+static int
+test_array_with_array_bool_values(void)
+{
+	int i;
+
+	struct rte_tel_data *child_data = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data, RTE_TEL_BOOL_VAL);
+
+	struct rte_tel_data *child_data2 = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data2, RTE_TEL_BOOL_VAL);
+
+	rte_tel_data_start_array(&response_data, RTE_TEL_CONTAINER);
+
+	for (i = 0; i < 5; i++) {
+		rte_tel_data_add_array_bool(child_data, (i % 2) == 0);
+		rte_tel_data_add_array_bool(child_data2, (i % 2) == 1);
+	}
+	rte_tel_data_add_array_container(&response_data, child_data, 0);
+	rte_tel_data_add_array_container(&response_data, child_data2, 0);
+
+	return CHECK_OUTPUT("[[true,false,true,false,true],[false,true,false,true,false]]");
+}
+
+static int
 test_string_char_escaping(void)
 {
 	rte_tel_data_string(&response_data, "hello,\nworld\n");
@@ -428,15 +506,21 @@ telemetry_data_autotest(void)
 			test_null_return,
 			test_simple_string,
 			test_case_array_string,
-			test_case_array_int, test_case_array_u64,
-			test_case_add_dict_int, test_case_add_dict_u64,
+			test_case_array_int,
+			test_case_array_u64,
+			test_case_array_bool,
+			test_case_add_dict_int,
+			test_case_add_dict_u64,
+			test_case_add_dict_bool,
 			test_case_add_dict_string,
 			test_dict_with_array_int_values,
 			test_dict_with_array_u64_values,
+			test_dict_with_array_bool_values,
 			test_dict_with_array_string_values,
 			test_dict_with_dict_values,
 			test_array_with_array_int_values,
 			test_array_with_array_u64_values,
+			test_array_with_array_bool_values,
 			test_array_with_array_string_values,
 			test_string_char_escaping,
 			test_array_char_escaping,

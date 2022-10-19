@@ -5,6 +5,9 @@
 #ifndef _TELEMETRY_DATA_H_
 #define _TELEMETRY_DATA_H_
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "rte_telemetry.h"
 
 enum tel_container_types {
@@ -15,6 +18,7 @@ enum tel_container_types {
 	RTE_TEL_ARRAY_INT,    /** array of signed, 32-bit int values */
 	RTE_TEL_ARRAY_U64,    /** array of unsigned 64-bit int values */
 	RTE_TEL_ARRAY_CONTAINER, /** array of container structs */
+	RTE_TEL_ARRAY_BOOL,   /** array of boolean values */
 };
 
 struct container {
@@ -30,6 +34,7 @@ union tel_value {
 	char sval[RTE_TEL_MAX_STRING_LEN];
 	int ival;
 	uint64_t u64val;
+	bool boolval;
 	struct container container;
 };
 

@@ -16,10 +16,11 @@ int
 rte_tel_data_start_array(struct rte_tel_data *d, enum rte_tel_value_type type)
 {
 	enum tel_container_types array_types[] = {
-			RTE_TEL_ARRAY_STRING, /* RTE_TEL_STRING_VAL = 0 */
-			RTE_TEL_ARRAY_INT,    /* RTE_TEL_INT_VAL = 1 */
-			RTE_TEL_ARRAY_U64,    /* RTE_TEL_u64_VAL = 2 */
-			RTE_TEL_ARRAY_CONTAINER, /* RTE_TEL_CONTAINER = 3 */
+		[RTE_TEL_STRING_VAL] = RTE_TEL_ARRAY_STRING,
+		[RTE_TEL_INT_VAL] = RTE_TEL_ARRAY_INT,
+		[RTE_TEL_U64_VAL] = RTE_TEL_ARRAY_U64,
+		[RTE_TEL_CONTAINER] = RTE_TEL_ARRAY_CONTAINER,
+		[RTE_TEL_BOOL_VAL] = RTE_TEL_ARRAY_BOOL,
 	};
 	d->type = array_types[type];
 	d->data_len = 0;
@@ -81,13 +82,25 @@ rte_tel_data_add_array_u64(struct rte_tel_data *d, uint64_t x)
 }
 
 int
+rte_tel_data_add_array_bool(struct rte_tel_data *d, bool x)
+{
+	if (d->type != RTE_TEL_ARRAY_BOOL)
+		return -EINVAL;
+	if (d->data_len >= RTE_TEL_MAX_ARRAY_ENTRIES)
+		return -ENOSPC;
+	d->data.array[d->data_len++].boolval = x;
+	return 0;
+}
+
+int
 rte_tel_data_add_array_container(struct rte_tel_data *d,
 		struct rte_tel_data *val, int keep)
 {
 	if (d->type != RTE_TEL_ARRAY_CONTAINER ||
 			(val->type != RTE_TEL_ARRAY_U64
 			&& val->type != RTE_TEL_ARRAY_INT
-			&& val->type != RTE_TEL_ARRAY_STRING))
+			&& val->type != RTE_TEL_ARRAY_STRING
+			&& val->type != RTE_TEL_ARRAY_BOOL))
 		return -EINVAL;
 	if (d->data_len >= RTE_TEL_MAX_ARRAY_ENTRIES)
 		return -ENOSPC;
@@ -180,6 +193,26 @@ rte_tel_data_add_dict_u64(struct rte_tel_data *d,
 }
 
 int
+rte_tel_data_add_dict_bool(struct rte_tel_data *d,
+		const char *name, bool val)
+{
+	struct tel_dict_entry *e = &d->data.dict[d->data_len];
+	if (d->type != RTE_TEL_DICT)
+		return -EINVAL;
+	if (d->data_len >= RTE_TEL_MAX_DICT_ENTRIES)
+		return -ENOSPC;
+
+	if (!valid_name(name))
+		return -EINVAL;
+
+	d->data_len++;
+	e->type = RTE_TEL_BOOL_VAL;
+	e->value.boolval = val;
+	const size_t bytes = strlcpy(e->name, name, RTE_TEL_MAX_STRING_LEN);
+	return bytes < RTE_TEL_MAX_STRING_LEN ? 0 : E2BIG;
+}
+
+int
 rte_tel_data_add_dict_container(struct rte_tel_data *d, const char *name,
 		struct rte_tel_data *val, int keep)
 {
@@ -188,6 +221,7 @@ rte_tel_data_add_dict_container(struct rte_tel_data *d, const char *name,
 	if (d->type != RTE_TEL_DICT || (val->type != RTE_TEL_ARRAY_U64
 			&& val->type != RTE_TEL_ARRAY_INT
 			&& val->type != RTE_TEL_ARRAY_STRING
+			&& val->type != RTE_TEL_ARRAY_BOOL
 			&& val->type != RTE_TEL_DICT))
 		return -EINVAL;
 	if (d->data_len >= RTE_TEL_MAX_DICT_ENTRIES)

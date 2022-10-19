@@ -168,7 +168,9 @@ container_to_json(const struct rte_tel_data *d, char *out_buf, size_t buf_len)
 	unsigned int i;
 
 	if (d->type != RTE_TEL_DICT && d->type != RTE_TEL_ARRAY_U64 &&
-		d->type != RTE_TEL_ARRAY_INT && d->type != RTE_TEL_ARRAY_STRING)
+			d->type != RTE_TEL_ARRAY_INT &&
+			d->type != RTE_TEL_ARRAY_STRING &&
+			d->type != RTE_TEL_ARRAY_BOOL)
 		return snprintf(out_buf, buf_len, "null");
 
 	used = rte_tel_json_empty_array(out_buf, buf_len, 0);
@@ -187,6 +189,11 @@ container_to_json(const struct rte_tel_data *d, char *out_buf, size_t buf_len)
 			used = rte_tel_json_add_array_string(out_buf,
 				buf_len, used,
 				d->data.array[i].sval);
+	if (d->type == RTE_TEL_ARRAY_BOOL)
+		for (i = 0; i < d->data_len; i++)
+			used = rte_tel_json_add_array_bool(out_buf,
+				buf_len, used,
+				d->data.array[i].boolval);
 	if (d->type == RTE_TEL_DICT)
 		for (i = 0; i < d->data_len; i++) {
 			const struct tel_dict_entry *v = &d->data.dict[i];
@@ -205,6 +212,11 @@ container_to_json(const struct rte_tel_data *d, char *out_buf, size_t buf_len)
 				used = rte_tel_json_add_obj_u64(out_buf,
 						buf_len, used,
 						v->name, v->value.u64val);
+				break;
+			case RTE_TEL_BOOL_VAL:
+				used = rte_tel_json_add_obj_bool(out_buf,
+						buf_len, used,
+						v->name, v->value.boolval);
 				break;
 			case RTE_TEL_CONTAINER:
 			{
@@ -273,6 +285,11 @@ output_json(const char *cmd, const struct rte_tel_data *d, int s)
 						buf_len, used,
 						v->name, v->value.u64val);
 				break;
+			case RTE_TEL_BOOL_VAL:
+				used = rte_tel_json_add_obj_bool(cb_data_buf,
+						buf_len, used,
+						v->name, v->value.boolval);
+				break;
 			case RTE_TEL_CONTAINER:
 			{
 				char temp[buf_len];
@@ -294,6 +311,7 @@ output_json(const char *cmd, const struct rte_tel_data *d, int s)
 	case RTE_TEL_ARRAY_STRING:
 	case RTE_TEL_ARRAY_INT:
 	case RTE_TEL_ARRAY_U64:
+	case RTE_TEL_ARRAY_BOOL:
 	case RTE_TEL_ARRAY_CONTAINER:
 		used = rte_tel_json_empty_array(cb_data_buf, buf_len, 0);
 		for (i = 0; i < d->data_len; i++)
@@ -310,6 +328,10 @@ output_json(const char *cmd, const struct rte_tel_data *d, int s)
 				used = rte_tel_json_add_array_u64(cb_data_buf,
 						buf_len, used,
 						d->data.array[i].u64val);
+			else if (d->type == RTE_TEL_ARRAY_BOOL)
+				used = rte_tel_json_add_array_bool(cb_data_buf,
+						buf_len, used,
+						d->data.array[i].boolval);
 			else if (d->type == RTE_TEL_ARRAY_CONTAINER) {
 				char temp[buf_len];
 				const struct container *rec_data =
