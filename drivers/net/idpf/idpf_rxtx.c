@@ -1310,6 +1310,32 @@ idpf_splitq_rx_csum_offload(uint8_t err)
 	return flags;
 }
 
+#define IDPF_RX_FLEX_DESC_ADV_HASH1_S	0
+#define IDPF_RX_FLEX_DESC_ADV_HASH2_S	16
+#define IDPF_RX_FLEX_DESC_ADV_HASH3_S	24
+
+static inline uint64_t
+idpf_splitq_rx_rss_offload(struct rte_mbuf *mb,
+			   volatile struct virtchnl2_rx_flex_desc_adv_nic_3 *rx_desc)
+{
+	uint8_t status_err0_qw0;
+	uint64_t flags = 0;
+
+	status_err0_qw0 = rx_desc->status_err0_qw0;
+
+	if (status_err0_qw0 & BIT(VIRTCHNL2_RX_FLEX_DESC_ADV_STATUS0_RSS_VALID_S)) {
+		flags |= RTE_MBUF_F_RX_RSS_HASH;
+		mb->hash.rss = (rte_le_to_cpu_16(rx_desc->hash1) <<
+				IDPF_RX_FLEX_DESC_ADV_HASH1_S) |
+				((uint32_t)(rx_desc->ff2_mirrid_hash2.hash2) <<
+				IDPF_RX_FLEX_DESC_ADV_HASH2_S) |
+				((uint32_t)(rx_desc->hash3) <<
+				IDPF_RX_FLEX_DESC_ADV_HASH3_S);
+	}
+
+	return flags;
+}
+
 static void
 idpf_split_rx_bufq_refill(struct idpf_rx_queue *rx_bufq)
 {
@@ -1465,6 +1491,7 @@ idpf_splitq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 
 		status_err0_qw1 = rx_desc->status_err0_qw1;
 		pkt_flags = idpf_splitq_rx_csum_offload(status_err0_qw1);
+		pkt_flags |= idpf_splitq_rx_rss_offload(rxm, rx_desc);
 
 		rxm->ol_flags |= pkt_flags;
 
