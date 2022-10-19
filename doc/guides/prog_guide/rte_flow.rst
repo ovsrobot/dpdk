@@ -2737,7 +2737,7 @@ Otherwise, RTE_FLOW_ERROR_TYPE_ACTION error will be returned.
 Action: ``AGE``
 ^^^^^^^^^^^^^^^
 
-Set ageing timeout configuration to a flow.
+Set aging timeout configuration to a flow.
 
 Event RTE_ETH_EVENT_FLOW_AGED will be reported if
 timeout passed without any matching on the flow.
@@ -2756,8 +2756,8 @@ timeout passed without any matching on the flow.
    | ``context``  | user input flow context         |
    +--------------+---------------------------------+
 
-Query structure to retrieve ageing status information of a
-shared AGE action, or a flow rule using the AGE action:
+Query structure to retrieve aging status information of an
+indirect AGE action, or a flow rule using the AGE action:
 
 .. _table_rte_flow_query_age:
 
@@ -2772,6 +2772,25 @@ shared AGE action, or a flow rule using the AGE action:
    +------------------------------+-----+----------------------------------------+
    | ``sec_since_last_hit``       | out | Seconds since last traffic hit         |
    +------------------------------+-----+----------------------------------------+
+
+Update structure to modify the parameters of an indirect AGE action.
+The update structure is used by ``rte_flow_action_handle_update()`` function.
+
+.. _table_rte_flow_update_age:
+
+.. table:: AGE update
+
+   +-------------------+--------------------------------------------------------------+
+   | Field             | Value                                                        |
+   +===================+==============================================================+
+   | ``reserved``      | 6 bits reserved, must be zero                                |
+   +-------------------+--------------------------------------------------------------+
+   | ``timeout_valid`` | 1 bit, timeout value is valid                                |
+   +-------------------+--------------------------------------------------------------+
+   | ``timeout``       | 24 bits timeout value                                        |
+   +-------------------+--------------------------------------------------------------+
+   | ``touch``         | 1 bit, touch the AGE action to set ``sec_since_last_hit`` 0  |
+   +-------------------+--------------------------------------------------------------+
 
 Action: ``SAMPLE``
 ^^^^^^^^^^^^^^^^^^
