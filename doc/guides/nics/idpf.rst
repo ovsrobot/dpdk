@@ -45,6 +45,28 @@ Runtime Config Options
   Then idpf PMD will create 3 vports (ethdevs) for device ca:00.0.
   NOTE: This parameter is MUST, otherwise there'll be no any ethdev created.
 
+- ``rx_single`` (default ``0``)
+
+  There're two queue modes supported by Intel® IPU Ethernet ES2000 Series, single queue
+  mode and split queue mode for Rx queue. User can choose Rx queue mode by the ``devargs``
+  parameter ``rx_single``.
+
+    -a ca:00.0,rx_single=1
+
+  Then idpf PMD will configure Rx queue with single queue mode. Otherwise, split queue
+  mode is chosen by default.
+
+- ``tx_single`` (default ``0``)
+
+  There're two queue modes supported by Intel® IPU Ethernet ES2000 Series, single queue
+  mode and split queue mode for Tx queue. User can choose Tx queue mode by the ``devargs``
+  parameter ``tx_single``.
+
+    -a ca:00.0,tx_single=1
+
+  Then idpf PMD will configure Tx queue with single queue mode. Otherwise, split queue
+  mode is chosen by default.
+
 Driver compilation and testing
 ------------------------------
 
