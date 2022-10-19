@@ -539,7 +539,10 @@ Limitations
 
     - WQE based high scaling and safer flow insertion/destruction.
     - Set ``dv_flow_en`` to 2 in order to enable HW steering.
-    - Async queue-based ``rte_flow_q`` APIs supported only.
+    - Async queue-based ``rte_flow_async`` APIs supported only.
+    - NIC ConnectX-5 and before are not supported.
+    - Partial match with item template is not supported.
+    - IPv6 5-tuple matching is not supported.
 
 - Match on GRE header supports the following fields:
 

@@ -8,6 +8,7 @@ dlopen_ibverbs = (get_option('ibverbs_link') == 'dlopen')
 LIB_GLUE_BASE = 'librte_common_mlx5_glue.so'
 LIB_GLUE_VERSION = abi_version
 LIB_GLUE = LIB_GLUE_BASE + '.' + LIB_GLUE_VERSION
+MLX5_HAVE_IBV_FLOW_DV_SUPPORT = false
 if dlopen_ibverbs
     dpdk_conf.set('RTE_IBVERBS_LINK_DLOPEN', 1)
     cflags += [
@@ -230,6 +231,8 @@ foreach arg:has_member_args
     config.set(arg[0], cc.has_member(arg[2], arg[3], prefix : file_prefix, dependencies: libs))
 endforeach
 configure_file(output : 'mlx5_autoconf.h', configuration : config)
+
+MLX5_HAVE_IBV_FLOW_DV_SUPPORT=config.get('HAVE_IBV_FLOW_DV_SUPPORT')
 
 # Build Glue Library
 if dlopen_ibverbs

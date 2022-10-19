@@ -225,6 +225,10 @@ New Features
   sysfs entries to adjust the minimum and maximum uncore frequency values,
   which works on Linux with Intel hardware only.
 
+* **Updated Nvidia mlx5 driver.**
+
+  * Added fully support for queue based async HW steering to the PMD.
+
 * **Rewritten pmdinfo script.**
 
   The ``dpdk-pmdinfo.py`` script was rewritten to produce valid JSON only.
