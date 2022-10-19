@@ -4133,6 +4133,7 @@ cmd_vlan_offload_parsed(void *parsed_result,
 	else
 		vlan_extend_set(port_id, on);
 
+	cmd_reconfig_device_queue(port_id, 1, 1);
 	return;
 }
 
