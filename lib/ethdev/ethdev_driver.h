@@ -116,7 +116,12 @@ struct rte_eth_dev_data {
 
 	uint64_t rx_mbuf_alloc_failed; /**< Rx ring mbuf allocation failures */
 
-	/** Device Ethernet link address. @see rte_eth_dev_release_port() */
+	/**
+	 * Device Ethernet link address. The index zero of the array is as the
+	 * index of the default address, and other indexes can't be the same
+	 * as the address corresponding to index 0.
+	 * @see rte_eth_dev_release_port()
+	 */
 	struct rte_ether_addr *mac_addrs;
 	/** Bitmap associating MAC addresses to pools */
 	uint64_t mac_pool_sel[RTE_ETH_NUM_RECEIVE_MAC_ADDR];
