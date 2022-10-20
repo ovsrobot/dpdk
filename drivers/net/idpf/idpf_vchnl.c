@@ -831,6 +831,156 @@ idpf_vc_config_txq(struct idpf_vport *vport, uint16_t txq_id)
 	return err;
 }
 
+static int
+idpf_vc_ena_dis_one_queue(struct idpf_vport *vport, uint16_t qid,
+			  uint32_t type, bool on)
+{
+	struct idpf_adapter *adapter = vport->adapter;
+	struct virtchnl2_del_ena_dis_queues *queue_select;
+	struct virtchnl2_queue_chunk *queue_chunk;
+	struct idpf_cmd_info args;
+	int err, len;
+
+	len = sizeof(struct virtchnl2_del_ena_dis_queues);
+	queue_select = rte_zmalloc("queue_select", len, 0);
+	if (!queue_select)
+		return -ENOMEM;
+
+	queue_chunk = queue_select->chunks.chunks;
+	queue_select->chunks.num_chunks = 1;
+	queue_select->vport_id = vport->vport_id;
+
+	queue_chunk->type = type;
+	queue_chunk->start_queue_id = qid;
+	queue_chunk->num_queues = 1;
+
+	args.ops = on ? VIRTCHNL2_OP_ENABLE_QUEUES :
+		VIRTCHNL2_OP_DISABLE_QUEUES;
+	args.in_args = (u8 *)queue_select;
+	args.in_args_size = len;
+	args.out_buffer = adapter->mbx_resp;
+	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
+	err = idpf_execute_vc_cmd(adapter, &args);
+	if (err)
+		PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_%s_QUEUES",
+			    on ? "ENABLE" : "DISABLE");
+
+	rte_free(queue_select);
+	return err;
+}
+
+int
+idpf_switch_queue(struct idpf_vport *vport, uint16_t qid,
+		     bool rx, bool on)
+{
+	uint32_t type;
+	int err, queue_id;
+
+	/* switch txq/rxq */
+	type = rx ? VIRTCHNL2_QUEUE_TYPE_RX : VIRTCHNL2_QUEUE_TYPE_TX;
+
+	if (type == VIRTCHNL2_QUEUE_TYPE_RX)
+		queue_id = vport->chunks_info.rx_start_qid + qid;
+	else
+		queue_id = vport->chunks_info.tx_start_qid + qid;
+	err = idpf_vc_ena_dis_one_queue(vport, queue_id, type, on);
+	if (err)
+		return err;
+
+	/* switch tx completion queue */
+	if (!rx && vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT) {
+		type = VIRTCHNL2_QUEUE_TYPE_TX_COMPLETION;
+		queue_id = vport->chunks_info.tx_compl_start_qid + qid;
+		err = idpf_vc_ena_dis_one_queue(vport, queue_id, type, on);
+		if (err)
+			return err;
+	}
+
+	/* switch rx buffer queue */
+	if (rx && vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT) {
+		type = VIRTCHNL2_QUEUE_TYPE_RX_BUFFER;
+		queue_id = vport->chunks_info.rx_buf_start_qid + 2 * qid;
+		err = idpf_vc_ena_dis_one_queue(vport, queue_id, type, on);
+		if (err)
+			return err;
+		queue_id++;
+		err = idpf_vc_ena_dis_one_queue(vport, queue_id, type, on);
+		if (err)
+			return err;
+	}
+
+	return err;
+}
+
+#define IDPF_RXTX_QUEUE_CHUNKS_NUM	2
+int
+idpf_vc_ena_dis_queues(struct idpf_vport *vport, bool enable)
+{
+	struct idpf_adapter *adapter = vport->adapter;
+	struct virtchnl2_del_ena_dis_queues *queue_select;
+	struct virtchnl2_queue_chunk *queue_chunk;
+	uint32_t type;
+	struct idpf_cmd_info args;
+	uint16_t num_chunks;
+	int err, len;
+
+	num_chunks = IDPF_RXTX_QUEUE_CHUNKS_NUM;
+	if (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT)
+		num_chunks++;
+	if (vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT)
+		num_chunks++;
+
+	len = sizeof(struct virtchnl2_del_ena_dis_queues) +
+		sizeof(struct virtchnl2_queue_chunk) * (num_chunks - 1);
+	queue_select = rte_zmalloc("queue_select", len, 0);
+	if (queue_select == NULL)
+		return -ENOMEM;
+
+	queue_chunk = queue_select->chunks.chunks;
+	queue_select->chunks.num_chunks = num_chunks;
+	queue_select->vport_id = vport->vport_id;
+
+	type = VIRTCHNL_QUEUE_TYPE_RX;
+	queue_chunk[type].type = type;
+	queue_chunk[type].start_queue_id = vport->chunks_info.rx_start_qid;
+	queue_chunk[type].num_queues = vport->num_rx_q;
+
+	type = VIRTCHNL2_QUEUE_TYPE_TX;
+	queue_chunk[type].type = type;
+	queue_chunk[type].start_queue_id = vport->chunks_info.tx_start_qid;
+	queue_chunk[type].num_queues = vport->num_tx_q;
+
+	if (vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT) {
+		type = VIRTCHNL2_QUEUE_TYPE_RX_BUFFER;
+		queue_chunk[type].type = type;
+		queue_chunk[type].start_queue_id =
+			vport->chunks_info.rx_buf_start_qid;
+		queue_chunk[type].num_queues = vport->num_rx_bufq;
+	}
+
+	if (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT) {
+		type = VIRTCHNL2_QUEUE_TYPE_TX_COMPLETION;
+		queue_chunk[type].type = type;
+		queue_chunk[type].start_queue_id =
+			vport->chunks_info.tx_compl_start_qid;
+		queue_chunk[type].num_queues = vport->num_tx_complq;
+	}
+
+	args.ops = enable ? VIRTCHNL2_OP_ENABLE_QUEUES :
+		VIRTCHNL2_OP_DISABLE_QUEUES;
+	args.in_args = (u8 *)queue_select;
+	args.in_args_size = len;
+	args.out_buffer = adapter->mbx_resp;
+	args.out_size = IDPF_DFLT_MBX_BUF_SIZE;
+	err = idpf_execute_vc_cmd(adapter, &args);
+	if (err)
+		PMD_DRV_LOG(ERR, "Failed to execute command of VIRTCHNL2_OP_%s_QUEUES",
+			    enable ? "ENABLE" : "DISABLE");
+
+	rte_free(queue_select);
+	return err;
+}
+
 int
 idpf_vc_ena_dis_vport(struct idpf_vport *vport, bool enable)
 {
