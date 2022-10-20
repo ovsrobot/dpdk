@@ -296,6 +296,75 @@ qp_setup_cleanup:
 	return ret;
 }
 
+int
+ipsec_mb_ipc_request(const struct rte_mp_msg *mp_msg, const void *peer)
+{
+	struct rte_mp_msg mp_res;
+	struct ipsec_mb_mp_param *resp_param =
+		(struct ipsec_mb_mp_param *)mp_res.param;
+	const struct ipsec_mb_mp_param *req_param =
+		(const struct ipsec_mb_mp_param *)mp_msg->param;
+
+	int ret;
+	struct rte_cryptodev *dev;
+	struct ipsec_mb_qp *qp;
+	int dev_id = req_param->dev_id;
+	int qp_id = req_param->qp_id;
+	struct rte_cryptodev_qp_conf *queue_conf =
+		(struct rte_cryptodev_qp_conf *)req_param->queue_conf;
+
+	resp_param->result = -EINVAL;
+	if (!rte_cryptodev_is_valid_dev(dev_id)) {
+		CDEV_LOG_ERR("Invalid dev_id=%d", dev_id);
+		goto out;
+	}
+
+	dev = rte_cryptodev_pmd_get_dev(dev_id);
+	switch (req_param->type) {
+	case RTE_IPSEC_MB_MP_REQ_QP_SET:
+		qp = dev->data->queue_pairs[qp_id];
+		if (qp)	{
+			CDEV_LOG_DEBUG("qp %d on dev %d is initialised", qp_id, dev_id);
+			goto out;
+		}
+
+		ret = ipsec_mb_qp_setup(dev, qp_id,	queue_conf, req_param->socket_id);
+		if (!ret) {
+			qp = dev->data->queue_pairs[qp_id];
+			if (!qp) {
+				CDEV_LOG_DEBUG("qp %d on dev %d is not initialised",
+					qp_id, dev_id);
+				goto out;
+			}
+			qp->qp_in_used_by_pid = req_param->process_id;
+		}
+		resp_param->result = ret;
+		break;
+	case RTE_IPSEC_MB_MP_REQ_QP_FREE:
+		qp = dev->data->queue_pairs[qp_id];
+		if (!qp) {
+			CDEV_LOG_DEBUG("qp %d on dev %d is not initialised",
+				qp_id, dev_id);
+			goto out;
+		}
+
+		if (qp->qp_in_used_by_pid != req_param->process_id) {
+			CDEV_LOG_ERR("Unable to release qp_id=%d", qp_id);
+			goto out;
+		}
+
+		qp->qp_in_used_by_pid = 0;
+		resp_param->result = ipsec_mb_qp_release(dev, qp_id);
+		break;
+	default:
+		CDEV_LOG_ERR("invalid mp request type\n");
+	}
+
+out:
+	ret = rte_mp_reply(&mp_res, peer);
+	return ret;
+}
+
 /** Return the size of the specific pmd session structure */
 unsigned
 ipsec_mb_sym_session_get_size(struct rte_cryptodev *dev)
