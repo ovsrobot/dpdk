@@ -225,6 +225,11 @@ New Features
   sysfs entries to adjust the minimum and maximum uncore frequency values,
   which works on Linux with Intel hardware only.
 
+* **Added DMA vChannel unconfiguration for async vhost.**
+
+  Added support to unconfigure DMA vChannels that are no longer used
+  by the Vhost library.
+
 * **Rewritten pmdinfo script.**
 
   The ``dpdk-pmdinfo.py`` script was rewritten to produce valid JSON only.
