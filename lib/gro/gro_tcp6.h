@@ -2,26 +2,27 @@
  * Copyright(c) 2017 Intel Corporation
  */
 
-#ifndef _GRO_TCP4_H_
-#define _GRO_TCP4_H_
+#ifndef _GRO_TCP6_H_
+#define _GRO_TCP6_H_
 
 #define INVALID_ARRAY_INDEX 0xffffffffUL
-#define GRO_TCP4_TBL_MAX_ITEM_NUM (1024UL * 1024UL)
+#define GRO_TCP6_TBL_MAX_ITEM_NUM (1024UL * 1024UL)
 
-/* Header fields representing a TCP/IPv4 flow */
-struct tcp4_flow_key {
+/* Header fields representing a TCP/IPv6 flow */
+struct tcp6_flow_key {
 	struct rte_ether_addr eth_saddr;
 	struct rte_ether_addr eth_daddr;
-	uint32_t ip_src_addr;
-	uint32_t ip_dst_addr;
+	uint8_t  src_addr[16];
+	uint8_t  dst_addr[16];
 
 	uint32_t recv_ack;
 	uint16_t src_port;
 	uint16_t dst_port;
 };
 
-struct gro_tcp4_flow {
-	struct tcp4_flow_key key;
+struct gro_tcp6_flow {
+	struct tcp6_flow_key key;
+	rte_be32_t vtc_flow;
 	/*
 	 * The index of the first packet in the flow.
 	 * INVALID_ARRAY_INDEX indicates an empty flow.
@@ -30,13 +31,13 @@ struct gro_tcp4_flow {
 };
 
 /*
- * TCP/IPv4 reassembly table structure.
+ * TCP/IPv6 reassembly table structure.
  */
-struct gro_tcp4_tbl {
+struct gro_tcp6_tbl {
 	/* item array */
 	struct gro_tcp_item *items;
 	/* flow array */
-	struct gro_tcp4_flow *flows;
+	struct gro_tcp6_flow *flows;
 	/* current item number */
 	uint32_t item_num;
 	/* current flow num */
@@ -48,12 +49,12 @@ struct gro_tcp4_tbl {
 };
 
 /**
- * This function creates a TCP/IPv4 reassembly table.
+ * This function creates a TCP/IPv6 reassembly table.
  *
  * @param socket_id
- *  Socket index for allocating the TCP/IPv4 reassemble table
+ *  Socket index for allocating the TCP/IPv6 reassemble table
  * @param max_flow_num
- *  The maximum number of flows in the TCP/IPv4 GRO table
+ *  The maximum number of flows in the TCP/IPv6 GRO table
  * @param max_item_per_flow
  *  The maximum number of packets per flow
  *
@@ -61,20 +62,20 @@ struct gro_tcp4_tbl {
  *  - Return the table pointer on success.
  *  - Return NULL on failure.
  */
-void *gro_tcp4_tbl_create(uint16_t socket_id,
+void *gro_tcp6_tbl_create(uint16_t socket_id,
 		uint16_t max_flow_num,
 		uint16_t max_item_per_flow);
 
 /**
- * This function destroys a TCP/IPv4 reassembly table.
+ * This function destroys a TCP/IPv6 reassembly table.
  *
  * @param tbl
- *  Pointer pointing to the TCP/IPv4 reassembly table.
+ *  Pointer pointing to the TCP/IPv6 reassembly table.
  */
-void gro_tcp4_tbl_destroy(void *tbl);
+void gro_tcp6_tbl_destroy(void *tbl);
 
 /**
- * This function merges a TCP/IPv4 packet. It doesn't process the packet,
+ * This function merges a TCP/IPv6 packet. It doesn't process the packet,
  * which has SYN, FIN, RST, PSH, CWR, ECE or URG set, or doesn't have
  * payload.
  *
@@ -88,7 +89,7 @@ void gro_tcp4_tbl_destroy(void *tbl);
  * @param pkt
  *  Packet to reassemble
  * @param tbl
- *  Pointer pointing to the TCP/IPv4 reassembly table
+ *  Pointer pointing to the TCP/IPv6 reassembly table
  * @start_time
  *  The time when the packet is inserted into the table
  *
@@ -98,8 +99,8 @@ void gro_tcp4_tbl_destroy(void *tbl);
  *  - Return a negative value for invalid parameters or no available
  *    space in the table.
  */
-int32_t gro_tcp4_reassemble(struct rte_mbuf *pkt,
-		struct gro_tcp4_tbl *tbl,
+int32_t gro_tcp6_reassemble(struct rte_mbuf *pkt,
+		struct gro_tcp6_tbl *tbl,
 		uint64_t start_time);
 
 /**
@@ -120,7 +121,7 @@ int32_t gro_tcp4_reassemble(struct rte_mbuf *pkt,
  * @return
  *  The number of flushed packets
  */
-uint16_t gro_tcp4_tbl_timeout_flush(struct gro_tcp4_tbl *tbl,
+uint16_t gro_tcp6_tbl_timeout_flush(struct gro_tcp6_tbl *tbl,
 		uint64_t flush_timestamp,
 		struct rte_mbuf **out,
 		uint16_t nb_out);
@@ -135,21 +136,15 @@ uint16_t gro_tcp4_tbl_timeout_flush(struct gro_tcp4_tbl *tbl,
  * @return
  *  The number of packets in the table
  */
-uint32_t gro_tcp4_tbl_pkt_count(void *tbl);
+uint32_t gro_tcp6_tbl_pkt_count(void *tbl);
 
 /*
  * Check if two TCP/IPv4 packets belong to the same flow.
  */
 static inline int
-is_same_tcp4_flow(struct tcp4_flow_key k1, struct tcp4_flow_key k2)
+is_same_tcp6_flow(struct tcp6_flow_key k1, struct tcp6_flow_key k2)
 {
-	return (rte_is_same_ether_addr(&k1.eth_saddr, &k2.eth_saddr) &&
-			rte_is_same_ether_addr(&k1.eth_daddr, &k2.eth_daddr) &&
-			(k1.ip_src_addr == k2.ip_src_addr) &&
-			(k1.ip_dst_addr == k2.ip_dst_addr) &&
-			(k1.recv_ack == k2.recv_ack) &&
-			(k1.src_port == k2.src_port) &&
-			(k1.dst_port == k2.dst_port));
+	return (!memcmp(&k1, &k2, sizeof(struct tcp6_flow_key)));
 }
 
 #endif
