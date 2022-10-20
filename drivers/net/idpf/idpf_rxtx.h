@@ -44,9 +44,6 @@
 #define IDPF_MAX_TSO_FRAME_SIZE	262143
 #define IDPF_TX_MAX_MTU_SEG     10
 
-#define IDPF_TX_OFFLOAD_NOTSUP_MASK \
-		(RTE_MBUF_F_TX_OFFLOAD_MASK ^ IDPF_TX_OFFLOAD_MASK)
-
 #define IDPF_GET_PTYPE_SIZE(p) \
 	(sizeof(struct virtchnl2_ptype) + \
 	(((p)->proto_id_count ? ((p)->proto_id_count - 1) : 0) * sizeof((p)->proto_id[0])))
@@ -191,7 +188,20 @@ int idpf_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id);
 int idpf_tx_queue_stop(struct rte_eth_dev *dev, uint16_t tx_queue_id);
 void idpf_dev_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid);
 
+uint16_t idpf_singleq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
+				uint16_t nb_pkts);
+uint16_t idpf_splitq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
+			       uint16_t nb_pkts);
+uint16_t idpf_singleq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
+				uint16_t nb_pkts);
+uint16_t idpf_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
+			       uint16_t nb_pkts);
+uint16_t idpf_prep_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
+			uint16_t nb_pkts);
 void idpf_stop_queues(struct rte_eth_dev *dev);
+
+void idpf_set_rx_function(struct rte_eth_dev *dev);
+void idpf_set_tx_function(struct rte_eth_dev *dev);
 
 const uint32_t *idpf_dev_supported_ptypes_get(struct rte_eth_dev *dev);
 
