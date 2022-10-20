@@ -25,6 +25,8 @@
 
 #define NFP_FL_META_FLAG_MANAGE_MASK    (1 << 7)
 
+#define NFP_FLOWER_MASK_VLAN_CFI        (1 << 12)
+
 #define NFP_MASK_TABLE_ENTRIES          1024
 
 /* The maximum action list size (in bytes) supported by the NFP. */
