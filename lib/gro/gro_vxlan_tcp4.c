@@ -7,6 +7,7 @@
 #include <rte_ethdev.h>
 #include <rte_udp.h>
 
+#include "gro_tcp.h"
 #include "gro_vxlan_tcp4.h"
 
 void *
@@ -248,7 +249,7 @@ merge_two_vxlan_tcp4_packets(struct gro_vxlan_tcp4_item *item,
 		uint16_t outer_ip_id,
 		uint16_t ip_id)
 {
-	if (merge_two_tcp4_packets(&item->inner_item, pkt, cmp, sent_seq,
+	if (merge_two_tcp_packets(&item->inner_item, pkt, cmp, sent_seq,
 				ip_id, pkt->outer_l2_len +
 				pkt->outer_l3_len)) {
 		/* Update the outer IPv4 ID to the large value. */
