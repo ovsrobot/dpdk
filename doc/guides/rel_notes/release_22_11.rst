@@ -151,6 +151,8 @@ New Features
   * Added the control message interactive channels between PMD and firmware.
   * Added the support of representor port.
 
+  Add the support of rte_flow pattern items.
+
 * **Updated NXP dpaa2 driver.**
 
   * Added support for flow action REPRESENTED_PORT.
