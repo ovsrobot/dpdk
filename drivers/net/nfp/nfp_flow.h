@@ -6,9 +6,35 @@
 #ifndef _NFP_FLOW_H_
 #define _NFP_FLOW_H_
 
+#include <ethdev_driver.h>
+
+#define NFP_FLOWER_LAYER_EXT_META   (1 << 0)
+#define NFP_FLOWER_LAYER_PORT       (1 << 1)
+#define NFP_FLOWER_LAYER_MAC        (1 << 2)
+#define NFP_FLOWER_LAYER_TP         (1 << 3)
+#define NFP_FLOWER_LAYER_IPV4       (1 << 4)
+#define NFP_FLOWER_LAYER_IPV6       (1 << 5)
+#define NFP_FLOWER_LAYER_CT         (1 << 6)
+#define NFP_FLOWER_LAYER_VXLAN      (1 << 7)
+
+#define NFP_FLOWER_LAYER2_GRE       (1 << 0)
+#define NFP_FLOWER_LAYER2_QINQ      (1 << 4)
+#define NFP_FLOWER_LAYER2_GENEVE    (1 << 5)
+#define NFP_FLOWER_LAYER2_GENEVE_OP (1 << 6)
+#define NFP_FLOWER_LAYER2_TUN_IPV6  (1 << 7)
+
 #define NFP_FL_META_FLAG_MANAGE_MASK    (1 << 7)
 
 #define NFP_MASK_TABLE_ENTRIES          1024
+
+/* The maximum action list size (in bytes) supported by the NFP. */
+#define NFP_FL_MAX_A_SIZ                1216
+
+/* The firmware expects lengths in units of long words */
+#define NFP_FL_LW_SIZ                   2
+
+/* Tunnel ports */
+#define NFP_FL_PORT_TYPE_TUN            0x50000000
 
 enum nfp_flower_tun_type {
 	NFP_FL_TUN_NONE   = 0,
@@ -75,6 +101,7 @@ struct nfp_fl_stats {
 
 struct nfp_flow_priv {
 	uint32_t hash_seed; /**< Hash seed for hash tables in this structure. */
+	uint64_t flower_version; /**< Flow version, always increase. */
 	/* mask hash table */
 	struct nfp_fl_mask_id mask_ids; /**< Entry for mask hash table */
 	struct rte_hash *mask_table; /**< Hash table to store mask ids. */
@@ -98,5 +125,6 @@ struct rte_flow {
 
 int nfp_flow_priv_init(struct nfp_pf_dev *pf_dev);
 void nfp_flow_priv_uninit(struct nfp_pf_dev *pf_dev);
+int nfp_net_flow_ops_get(struct rte_eth_dev *dev, const struct rte_flow_ops **ops);
 
 #endif /* _NFP_FLOW_H_ */
