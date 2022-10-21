@@ -236,6 +236,12 @@ New Features
 
      strings $dpdk_binary_or_driver | sed -n 's/^PMD_INFO_STRING= //p'
 
+* **Added IDPF PMD [*EXPERIMENTAL*].**
+
+  Added the new ``idpf`` net driver for Intel® Infrastructure Processing Unit
+  (Intel® IPU) E2000.
+  See the :doc:`../nics/idpf` NIC guide for more details on this new driver.
+
 
 Removed Items
 -------------
