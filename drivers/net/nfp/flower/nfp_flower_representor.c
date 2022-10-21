@@ -415,6 +415,9 @@ nfp_flower_repr_stats_reset(struct rte_eth_dev *ethdev)
 static int
 nfp_flower_repr_promiscuous_enable(struct rte_eth_dev *dev)
 {
+	int ret;
+	uint32_t update;
+	uint32_t new_ctrl;
 	struct nfp_net_hw *pf_hw;
 	struct nfp_flower_representor *repr;
 
@@ -431,12 +434,23 @@ nfp_flower_repr_promiscuous_enable(struct rte_eth_dev *dev)
 		return 0;
 	}
 
-	return nfp_net_promisc_enable(pf_hw->eth_dev);
+	new_ctrl = pf_hw->ctrl | NFP_NET_CFG_CTRL_PROMISC;
+	update = NFP_NET_CFG_UPDATE_GEN;
+	ret = nfp_net_reconfig(pf_hw, new_ctrl, update);
+	if (ret < 0)
+		return ret;
+
+	pf_hw->ctrl = new_ctrl;
+
+	return 0;
 }
 
 static int
 nfp_flower_repr_promiscuous_disable(struct rte_eth_dev *dev)
 {
+	int ret;
+	uint32_t update;
+	uint32_t new_ctrl;
 	struct nfp_net_hw *pf_hw;
 	struct nfp_flower_representor *repr;
 
@@ -448,7 +462,15 @@ nfp_flower_repr_promiscuous_disable(struct rte_eth_dev *dev)
 		return 0;
 	}
 
-	return nfp_net_promisc_disable(pf_hw->eth_dev);
+	new_ctrl = pf_hw->ctrl & ~NFP_NET_CFG_CTRL_PROMISC;
+	update = NFP_NET_CFG_UPDATE_GEN;
+	ret = nfp_net_reconfig(pf_hw, new_ctrl, update);
+	if (ret < 0)
+		return ret;
+
+	pf_hw->ctrl = new_ctrl;
+
+	return 0;
 }
 
 static int
