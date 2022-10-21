@@ -73,11 +73,18 @@ enum idpf_vc_result {
 struct idpf_chunks_info {
 	uint32_t tx_start_qid;
 	uint32_t rx_start_qid;
+	/* Valid only if split queue model */
+	uint32_t tx_compl_start_qid;
+	uint32_t rx_buf_start_qid;
 
 	uint64_t tx_qtail_start;
 	uint32_t tx_qtail_spacing;
 	uint64_t rx_qtail_start;
 	uint32_t rx_qtail_spacing;
+	uint64_t tx_compl_qtail_start;
+	uint32_t tx_compl_qtail_spacing;
+	uint64_t rx_buf_qtail_start;
+	uint32_t rx_buf_qtail_spacing;
 };
 
 struct idpf_vport {
@@ -86,7 +93,11 @@ struct idpf_vport {
 	uint32_t txq_model;
 	uint32_t rxq_model;
 	uint16_t num_tx_q;
+	/* valid only if txq_model is split Q */
+	uint16_t num_tx_complq;
 	uint16_t num_rx_q;
+	/* valid only if rxq_model is split Q */
+	uint16_t num_rx_bufq;
 
 	uint16_t max_mtu;
 	uint8_t default_mac_addr[VIRTCHNL_ETH_LENGTH_OF_ADDRESS];

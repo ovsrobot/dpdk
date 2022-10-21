@@ -481,11 +481,11 @@ idpf_vc_config_rxqs(struct idpf_vport *vport)
 	struct virtchnl2_rxq_info *rxq_info;
 	struct idpf_cmd_info args;
 	uint16_t total_qs, num_qs;
-	int size, i;
+	int size, i, j;
 	int err = 0;
 	int k = 0;
 
-	total_qs = vport->num_rx_q;
+	total_qs = vport->num_rx_q + vport->num_rx_bufq;
 	while (total_qs) {
 		if (total_qs > adapter->max_rxq_per_msg) {
 			num_qs = adapter->max_rxq_per_msg;
@@ -521,7 +521,46 @@ idpf_vc_config_rxqs(struct idpf_vport *vport)
 				rxq_info->ring_len = rxq[k]->nb_rx_desc;
 			}
 		} else {
-			return -1;
+			for (i = 0; i < num_qs / 3; i++, k++) {
+				/* Rx queue */
+				rxq_info = &vc_rxqs->qinfo[i * 3];
+				rxq_info->dma_ring_addr =
+					rxq[k]->rx_ring_phys_addr;
+				rxq_info->type = VIRTCHNL2_QUEUE_TYPE_RX;
+				rxq_info->queue_id = rxq[k]->queue_id;
+				rxq_info->model = VIRTCHNL2_QUEUE_MODEL_SPLIT;
+				rxq_info->data_buffer_size = rxq[k]->rx_buf_len;
+				rxq_info->max_pkt_size = vport->max_pkt_len;
+
+				rxq_info->desc_ids = VIRTCHNL2_RXDID_2_FLEX_SPLITQ_M;
+				rxq_info->qflags |= VIRTCHNL2_RX_DESC_SIZE_32BYTE;
+
+				rxq_info->ring_len = rxq[k]->nb_rx_desc;
+				rxq_info->rx_bufq1_id = rxq[k]->bufq1->queue_id;
+				rxq_info->rx_bufq2_id = rxq[k]->bufq2->queue_id;
+				rxq_info->rx_buffer_low_watermark = 64;
+
+				/* Buffer queue */
+				for (j = 1; j <= IDPF_RX_BUFQ_PER_GRP; j++) {
+					struct idpf_rx_queue *bufq = j == 1 ?
+						rxq[k]->bufq1 : rxq[k]->bufq2;
+					rxq_info = &vc_rxqs->qinfo[i * 3 + j];
+					rxq_info->dma_ring_addr =
+						bufq->rx_ring_phys_addr;
+					rxq_info->type =
+						VIRTCHNL2_QUEUE_TYPE_RX_BUFFER;
+					rxq_info->queue_id = bufq->queue_id;
+					rxq_info->model = VIRTCHNL2_QUEUE_MODEL_SPLIT;
+					rxq_info->data_buffer_size = bufq->rx_buf_len;
+					rxq_info->desc_ids =
+						VIRTCHNL2_RXDID_2_FLEX_SPLITQ_M;
+					rxq_info->ring_len = bufq->nb_rx_desc;
+
+					rxq_info->buffer_notif_stride =
+						IDPF_RX_BUF_STRIDE;
+					rxq_info->rx_buffer_low_watermark = 64;
+				}
+			}
 		}
 		memset(&args, 0, sizeof(args));
 		args.ops = VIRTCHNL2_OP_CONFIG_RX_QUEUES;
@@ -551,7 +590,7 @@ idpf_vc_config_rxq(struct idpf_vport *vport, uint16_t rxq_id)
 	struct virtchnl2_rxq_info *rxq_info;
 	struct idpf_cmd_info args;
 	uint16_t num_qs;
-	int size, err;
+	int size, err, i;
 
 	if (vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE)
 		num_qs = IDPF_RXQ_PER_GRP;
@@ -582,7 +621,39 @@ idpf_vc_config_rxq(struct idpf_vport *vport, uint16_t rxq_id)
 
 		rxq_info->ring_len = rxq[rxq_id]->nb_rx_desc;
 	}  else {
-		return -1;
+		/* Rx queue */
+		rxq_info = &vc_rxqs->qinfo[0];
+		rxq_info->dma_ring_addr = rxq[rxq_id]->rx_ring_phys_addr;
+		rxq_info->type = VIRTCHNL2_QUEUE_TYPE_RX;
+		rxq_info->queue_id = rxq[rxq_id]->queue_id;
+		rxq_info->model = VIRTCHNL2_QUEUE_MODEL_SPLIT;
+		rxq_info->data_buffer_size = rxq[rxq_id]->rx_buf_len;
+		rxq_info->max_pkt_size = vport->max_pkt_len;
+
+		rxq_info->desc_ids = VIRTCHNL2_RXDID_2_FLEX_SPLITQ_M;
+		rxq_info->qflags |= VIRTCHNL2_RX_DESC_SIZE_32BYTE;
+
+		rxq_info->ring_len = rxq[rxq_id]->nb_rx_desc;
+		rxq_info->rx_bufq1_id = rxq[rxq_id]->bufq1->queue_id;
+		rxq_info->rx_bufq2_id = rxq[rxq_id]->bufq2->queue_id;
+		rxq_info->rx_buffer_low_watermark = 64;
+
+		/* Buffer queue */
+		for (i = 1; i <= IDPF_RX_BUFQ_PER_GRP; i++) {
+			struct idpf_rx_queue *bufq =
+				i == 1 ? rxq[rxq_id]->bufq1 : rxq[rxq_id]->bufq2;
+			rxq_info = &vc_rxqs->qinfo[i];
+			rxq_info->dma_ring_addr = bufq->rx_ring_phys_addr;
+			rxq_info->type = VIRTCHNL2_QUEUE_TYPE_RX_BUFFER;
+			rxq_info->queue_id = bufq->queue_id;
+			rxq_info->model = VIRTCHNL2_QUEUE_MODEL_SPLIT;
+			rxq_info->data_buffer_size = bufq->rx_buf_len;
+			rxq_info->desc_ids = VIRTCHNL2_RXDID_2_FLEX_SPLITQ_M;
+			rxq_info->ring_len = bufq->nb_rx_desc;
+
+			rxq_info->buffer_notif_stride = IDPF_RX_BUF_STRIDE;
+			rxq_info->rx_buffer_low_watermark = 64;
+		}
 	}
 
 	memset(&args, 0, sizeof(args));
@@ -614,7 +685,7 @@ idpf_vc_config_txqs(struct idpf_vport *vport)
 	int err = 0;
 	int k = 0;
 
-	total_qs = vport->num_tx_q;
+	total_qs = vport->num_tx_q + vport->num_tx_complq;
 	while (total_qs) {
 		if (total_qs > adapter->max_txq_per_msg) {
 			num_qs = adapter->max_txq_per_msg;
@@ -644,7 +715,29 @@ idpf_vc_config_txqs(struct idpf_vport *vport)
 				txq_info->ring_len = txq[k]->nb_tx_desc;
 			}
 		} else {
-			return -1;
+			for (i = 0; i < num_qs / 2; i++, k++) {
+				/* txq info */
+				txq_info = &vc_txqs->qinfo[2 * i];
+				txq_info->dma_ring_addr = txq[k]->tx_ring_phys_addr;
+				txq_info->type = VIRTCHNL2_QUEUE_TYPE_TX;
+				txq_info->queue_id = txq[k]->queue_id;
+				txq_info->model = VIRTCHNL2_QUEUE_MODEL_SPLIT;
+				txq_info->sched_mode = VIRTCHNL2_TXQ_SCHED_MODE_FLOW;
+				txq_info->ring_len = txq[k]->nb_tx_desc;
+				txq_info->tx_compl_queue_id =
+					txq[k]->complq->queue_id;
+				txq_info->relative_queue_id = txq_info->queue_id;
+
+				/* tx completion queue info */
+				txq_info = &vc_txqs->qinfo[2 * i + 1];
+				txq_info->dma_ring_addr =
+					txq[k]->complq->tx_ring_phys_addr;
+				txq_info->type = VIRTCHNL2_QUEUE_TYPE_TX_COMPLETION;
+				txq_info->queue_id = txq[k]->complq->queue_id;
+				txq_info->model = VIRTCHNL2_QUEUE_MODEL_SPLIT;
+				txq_info->sched_mode = VIRTCHNL2_TXQ_SCHED_MODE_FLOW;
+				txq_info->ring_len = txq[k]->complq->nb_tx_desc;
+			}
 		}
 
 		memset(&args, 0, sizeof(args));
@@ -702,7 +795,25 @@ idpf_vc_config_txq(struct idpf_vport *vport, uint16_t txq_id)
 		txq_info->sched_mode = VIRTCHNL2_TXQ_SCHED_MODE_QUEUE;
 		txq_info->ring_len = txq[txq_id]->nb_tx_desc;
 	} else {
-		return -1;
+		/* txq info */
+		txq_info = &vc_txqs->qinfo[0];
+		txq_info->dma_ring_addr = txq[txq_id]->tx_ring_phys_addr;
+		txq_info->type = VIRTCHNL2_QUEUE_TYPE_TX;
+		txq_info->queue_id = txq[txq_id]->queue_id;
+		txq_info->model = VIRTCHNL2_QUEUE_MODEL_SPLIT;
+		txq_info->sched_mode = VIRTCHNL2_TXQ_SCHED_MODE_FLOW;
+		txq_info->ring_len = txq[txq_id]->nb_tx_desc;
+		txq_info->tx_compl_queue_id = txq[txq_id]->complq->queue_id;
+		txq_info->relative_queue_id = txq_info->queue_id;
+
+		/* tx completion queue info */
+		txq_info = &vc_txqs->qinfo[1];
+		txq_info->dma_ring_addr = txq[txq_id]->complq->tx_ring_phys_addr;
+		txq_info->type = VIRTCHNL2_QUEUE_TYPE_TX_COMPLETION;
+		txq_info->queue_id = txq[txq_id]->complq->queue_id;
+		txq_info->model = VIRTCHNL2_QUEUE_MODEL_SPLIT;
+		txq_info->sched_mode = VIRTCHNL2_TXQ_SCHED_MODE_FLOW;
+		txq_info->ring_len = txq[txq_id]->complq->nb_tx_desc;
 	}
 
 	memset(&args, 0, sizeof(args));
