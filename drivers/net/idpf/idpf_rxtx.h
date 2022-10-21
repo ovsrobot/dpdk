@@ -44,6 +44,25 @@
 #define IDPF_MAX_TSO_FRAME_SIZE	262143
 #define IDPF_TX_MAX_MTU_SEG     10
 
+#define IDPF_TX_CKSUM_OFFLOAD_MASK (		\
+		RTE_MBUF_F_TX_IP_CKSUM |	\
+		RTE_MBUF_F_TX_L4_MASK |		\
+		RTE_MBUF_F_TX_TCP_SEG)
+
+#define IDPF_TX_OFFLOAD_MASK (			\
+		RTE_MBUF_F_TX_OUTER_IPV6 |	\
+		RTE_MBUF_F_TX_OUTER_IPV4 |	\
+		RTE_MBUF_F_TX_IPV6 |		\
+		RTE_MBUF_F_TX_IPV4 |		\
+		RTE_MBUF_F_TX_VLAN |		\
+		RTE_MBUF_F_TX_IP_CKSUM |	\
+		RTE_MBUF_F_TX_L4_MASK |		\
+		RTE_MBUF_F_TX_TCP_SEG |		\
+		RTE_ETH_TX_OFFLOAD_SECURITY)
+
+#define IDPF_TX_OFFLOAD_NOTSUP_MASK \
+		(RTE_MBUF_F_TX_OFFLOAD_MASK ^ IDPF_TX_OFFLOAD_MASK)
+
 #define IDPF_GET_PTYPE_SIZE(p) \
 	(sizeof(struct virtchnl2_ptype) + \
 	(((p)->proto_id_count ? ((p)->proto_id_count - 1) : 0) * sizeof((p)->proto_id[0])))
