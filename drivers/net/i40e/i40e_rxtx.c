@@ -169,7 +169,9 @@ i40e_rxd_error_to_pkt_flags(uint64_t qword)
 
 #define I40E_RX_ERR_BITS 0x3f
 	if (likely((error_bits & I40E_RX_ERR_BITS) == 0)) {
-		flags |= (RTE_MBUF_F_RX_IP_CKSUM_GOOD | RTE_MBUF_F_RX_L4_CKSUM_GOOD);
+		flags |= (RTE_MBUF_F_RX_IP_CKSUM_GOOD |
+			RTE_MBUF_F_RX_L4_CKSUM_GOOD |
+			RTE_MBUF_F_RX_OUTER_L4_CKSUM_GOOD);
 		return flags;
 	}
 
@@ -185,6 +187,8 @@ i40e_rxd_error_to_pkt_flags(uint64_t qword)
 
 	if (unlikely(error_bits & (1 << I40E_RX_DESC_ERROR_EIPE_SHIFT)))
 		flags |= RTE_MBUF_F_RX_OUTER_IP_CKSUM_BAD;
+	else
+		flags |= RTE_MBUF_F_RX_OUTER_L4_CKSUM_GOOD;
 
 	return flags;
 }
