@@ -21,6 +21,10 @@
 #define IDPF_DEFAULT_TX_RS_THRESH	32
 #define IDPF_DEFAULT_TX_FREE_THRESH	32
 
+#define IDPF_GET_PTYPE_SIZE(p) \
+	(sizeof(struct virtchnl2_ptype) + \
+	(((p)->proto_id_count ? ((p)->proto_id_count - 1) : 0) * sizeof((p)->proto_id[0])))
+
 struct idpf_rx_queue {
 	struct idpf_adapter *adapter;	/* the adapter this queue belongs to */
 	struct rte_mempool *mp;		/* mbuf pool to populate Rx ring */
@@ -137,4 +141,7 @@ int idpf_tx_queue_stop(struct rte_eth_dev *dev, uint16_t tx_queue_id);
 void idpf_dev_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid);
 
 void idpf_stop_queues(struct rte_eth_dev *dev);
+
+const uint32_t *idpf_dev_supported_ptypes_get(struct rte_eth_dev *dev);
+
 #endif /* _IDPF_RXTX_H_ */

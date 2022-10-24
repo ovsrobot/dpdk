@@ -47,6 +47,8 @@
 
 #define IDPF_NUM_MACADDR_MAX	64
 
+#define IDPF_MAX_PKT_TYPE	1024
+
 #define IDPF_VLAN_TAG_SIZE	4
 #define IDPF_ETH_OVERHEAD \
 	(RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN + IDPF_VLAN_TAG_SIZE * 2)
@@ -141,6 +143,8 @@ struct idpf_adapter {
 	uint32_t max_rxq_per_msg;
 	uint32_t max_txq_per_msg;
 
+	uint32_t ptype_tbl[IDPF_MAX_PKT_TYPE] __rte_cache_min_aligned;
+
 	bool stopped;
 };
 
@@ -202,6 +206,7 @@ int idpf_dev_link_update(struct rte_eth_dev *dev,
 			 __rte_unused int wait_to_complete);
 void idpf_handle_virtchnl_msg(struct rte_eth_dev *dev);
 int idpf_vc_check_api_version(struct idpf_adapter *adapter);
+int idpf_get_pkt_type(struct idpf_adapter *adapter);
 int idpf_vc_get_caps(struct idpf_adapter *adapter);
 int idpf_vc_create_vport(struct idpf_adapter *adapter);
 int idpf_vc_destroy_vport(struct idpf_vport *vport);
@@ -213,6 +218,7 @@ int idpf_switch_queue(struct idpf_vport *vport, uint16_t qid,
 		      bool rx, bool on);
 int idpf_vc_ena_dis_queues(struct idpf_vport *vport, bool enable);
 int idpf_vc_ena_dis_vport(struct idpf_vport *vport, bool enable);
+int idpf_vc_query_ptype_info(struct idpf_adapter *adapter);
 int idpf_read_one_msg(struct idpf_adapter *adapter, uint32_t ops,
 		      uint16_t buf_len, uint8_t *buf);
 
