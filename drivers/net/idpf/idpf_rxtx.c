@@ -120,6 +120,51 @@ static const struct idpf_txq_ops def_txq_ops = {
 	.release_mbufs = release_txq_mbufs,
 };
 
+static void
+idpf_rx_queue_release(void *rxq)
+{
+	struct idpf_rx_queue *q = (struct idpf_rx_queue *)rxq;
+
+	if (q == NULL)
+		return;
+
+	/* Split queue */
+	if (q->bufq1 != NULL && q->bufq2 != NULL) {
+		q->bufq1->ops->release_mbufs(q->bufq1);
+		rte_free(q->bufq1->sw_ring);
+		rte_memzone_free(q->bufq1->mz);
+		rte_free(q->bufq1);
+		q->bufq2->ops->release_mbufs(q->bufq2);
+		rte_free(q->bufq2->sw_ring);
+		rte_memzone_free(q->bufq2->mz);
+		rte_free(q->bufq2);
+		rte_memzone_free(q->mz);
+		rte_free(q);
+		return;
+	}
+
+	/* Single queue */
+	q->ops->release_mbufs(q);
+	rte_free(q->sw_ring);
+	rte_memzone_free(q->mz);
+	rte_free(q);
+}
+
+static void
+idpf_tx_queue_release(void *txq)
+{
+	struct idpf_tx_queue *q = (struct idpf_tx_queue *)txq;
+
+	if (q == NULL)
+		return;
+
+	rte_free(q->complq);
+	q->ops->release_mbufs(q);
+	rte_free(q->sw_ring);
+	rte_memzone_free(q->mz);
+	rte_free(q);
+}
+
 static inline void
 reset_split_rx_descq(struct idpf_rx_queue *rxq)
 {
@@ -401,6 +446,12 @@ idpf_rx_split_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	if (check_rx_thresh(nb_desc, rx_free_thresh) != 0)
 		return -EINVAL;
 
+	/* Free memory if needed */
+	if (dev->data->rx_queues[queue_idx] != NULL) {
+		idpf_rx_queue_release(dev->data->rx_queues[queue_idx]);
+		dev->data->rx_queues[queue_idx] = NULL;
+	}
+
 	/* Setup Rx description queue */
 	rxq = rte_zmalloc_socket("idpf rxq",
 				 sizeof(struct idpf_rx_queue),
@@ -541,6 +592,12 @@ idpf_rx_single_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	if (check_rx_thresh(nb_desc, rx_free_thresh) != 0)
 		return -EINVAL;
 
+	/* Free memory if needed */
+	if (dev->data->rx_queues[queue_idx] != NULL) {
+		idpf_rx_queue_release(dev->data->rx_queues[queue_idx]);
+		dev->data->rx_queues[queue_idx] = NULL;
+	}
+
 	/* Setup Rx description queue */
 	rxq = rte_zmalloc_socket("idpf rxq",
 				 sizeof(struct idpf_rx_queue),
@@ -653,6 +710,12 @@ idpf_tx_split_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 		tx_conf->tx_free_thresh : IDPF_DEFAULT_TX_FREE_THRESH);
 	if (check_tx_thresh(nb_desc, tx_rs_thresh, tx_free_thresh) != 0)
 		return -EINVAL;
+
+	/* Free memory if needed. */
+	if (dev->data->tx_queues[queue_idx] != NULL) {
+		idpf_tx_queue_release(dev->data->tx_queues[queue_idx]);
+		dev->data->tx_queues[queue_idx] = NULL;
+	}
 
 	/* Allocate the TX queue data structure. */
 	txq = rte_zmalloc_socket("idpf split txq",
@@ -775,6 +838,12 @@ idpf_tx_single_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 		tx_conf->tx_free_thresh : IDPF_DEFAULT_TX_FREE_THRESH);
 	if (check_tx_thresh(nb_desc, tx_rs_thresh, tx_free_thresh) != 0)
 		return -EINVAL;
+
+	/* Free memory if needed. */
+	if (dev->data->tx_queues[queue_idx] != NULL) {
+		idpf_tx_queue_release(dev->data->tx_queues[queue_idx]);
+		dev->data->tx_queues[queue_idx] = NULL;
+	}
 
 	/* Allocate the TX queue data structure. */
 	txq = rte_zmalloc_socket("idpf txq",
@@ -1122,6 +1191,18 @@ idpf_tx_queue_stop(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 	dev->data->tx_queue_state[tx_queue_id] = RTE_ETH_QUEUE_STATE_STOPPED;
 
 	return 0;
+}
+
+void
+idpf_dev_rx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
+{
+	idpf_rx_queue_release(dev->data->rx_queues[qid]);
+}
+
+void
+idpf_dev_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
+{
+	idpf_tx_queue_release(dev->data->tx_queues[qid]);
 }
 
 void
