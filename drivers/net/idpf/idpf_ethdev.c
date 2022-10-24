@@ -34,6 +34,7 @@ static int idpf_dev_stop(struct rte_eth_dev *dev);
 static int idpf_dev_close(struct rte_eth_dev *dev);
 static int idpf_dev_info_get(struct rte_eth_dev *dev,
 			     struct rte_eth_dev_info *dev_info);
+static int idpf_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu);
 static void idpf_adapter_rel(struct idpf_adapter *adapter);
 
 int
@@ -72,6 +73,7 @@ static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.tx_queue_release		= idpf_dev_tx_queue_release,
 	.dev_infos_get			= idpf_dev_info_get,
 	.link_update			= idpf_dev_link_update,
+	.mtu_set			= idpf_dev_mtu_set,
 };
 
 static int
@@ -118,6 +120,18 @@ idpf_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 		.nb_align = IDPF_ALIGN_RING_DESC,
 	};
 
+
+	return 0;
+}
+
+static int
+idpf_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu __rte_unused)
+{
+	/* mtu setting is forbidden if port is start */
+	if (dev->data->dev_started) {
+		PMD_DRV_LOG(ERR, "port must be stopped before configuration");
+		return -EBUSY;
+	}
 
 	return 0;
 }
@@ -209,6 +223,7 @@ idpf_init_vport(struct rte_eth_dev *dev)
 	vport->num_tx_complq = vport_info->num_tx_complq;
 	vport->num_rx_q = vport_info->num_rx_q;
 	vport->num_rx_bufq = vport_info->num_rx_bufq;
+	vport->max_mtu = vport_info->max_mtu;
 	rte_memcpy(vport->default_mac_addr,
 		   vport_info->default_mac_addr, ETH_ALEN);
 	vport->sw_idx = idx;
