@@ -33,6 +33,7 @@ Network Interface Controller Drivers
     hns3
     i40e
     ice
+    idpf
     igb
     igc
     ionic
