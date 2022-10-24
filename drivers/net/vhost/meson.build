@@ -9,4 +9,5 @@ endif
 
 deps += 'vhost'
 sources = files('rte_eth_vhost.c')
+testpmd_sources = files('vhost_testpmd.c')
 headers = files('rte_eth_vhost.h')
