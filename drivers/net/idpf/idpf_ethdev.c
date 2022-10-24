@@ -61,6 +61,8 @@ static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.dev_start			= idpf_dev_start,
 	.dev_stop			= idpf_dev_stop,
 	.dev_close			= idpf_dev_close,
+	.rx_queue_start			= idpf_rx_queue_start,
+	.tx_queue_start			= idpf_tx_queue_start,
 	.rx_queue_setup			= idpf_rx_queue_setup,
 	.tx_queue_setup			= idpf_tx_queue_setup,
 	.dev_infos_get			= idpf_dev_info_get,
@@ -270,18 +272,22 @@ idpf_start_queues(struct rte_eth_dev *dev)
 		txq = dev->data->tx_queues[i];
 		if (txq == NULL || txq->tx_deferred_start)
 			continue;
-
-		PMD_DRV_LOG(ERR, "Start Tx queues not supported yet");
-		return -ENOTSUP;
+		err = idpf_tx_queue_start(dev, i);
+		if (err != 0) {
+			PMD_DRV_LOG(ERR, "Fail to start Tx queue %u", i);
+			return err;
+		}
 	}
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		rxq = dev->data->rx_queues[i];
 		if (rxq == NULL || rxq->rx_deferred_start)
 			continue;
-
-		PMD_DRV_LOG(ERR, "Start Rx queues not supported yet");
-		return -ENOTSUP;
+		err = idpf_rx_queue_start(dev, i);
+		if (err != 0) {
+			PMD_DRV_LOG(ERR, "Fail to start Rx queue %u", i);
+			return err;
+		}
 	}
 
 	return err;
