@@ -10,6 +10,7 @@
 #include <rte_dev.h>
 
 #include "idpf_ethdev.h"
+#include "idpf_rxtx.h"
 
 #define IDPF_TX_SINGLE_Q	"tx_single"
 #define IDPF_RX_SINGLE_Q	"rx_single"
@@ -36,6 +37,7 @@ static void idpf_adapter_rel(struct idpf_adapter *adapter);
 static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.dev_configure			= idpf_dev_configure,
 	.dev_close			= idpf_dev_close,
+	.tx_queue_setup			= idpf_tx_queue_setup,
 	.dev_infos_get			= idpf_dev_info_get,
 };
 
@@ -54,10 +56,22 @@ idpf_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->min_mtu = RTE_ETHER_MIN_MTU;
 
 	dev_info->max_mac_addrs = IDPF_NUM_MACADDR_MAX;
-	dev_info->dev_capa = 0;
+	dev_info->dev_capa = RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP;
 	dev_info->rx_offload_capa = 0;
-
 	dev_info->tx_offload_capa = 0;
+
+	dev_info->default_txconf = (struct rte_eth_txconf) {
+		.tx_free_thresh = IDPF_DEFAULT_TX_FREE_THRESH,
+		.tx_rs_thresh = IDPF_DEFAULT_TX_RS_THRESH,
+		.offloads = 0,
+	};
+
+	dev_info->tx_desc_lim = (struct rte_eth_desc_lim) {
+		.nb_max = IDPF_MAX_RING_DESC,
+		.nb_min = IDPF_MIN_RING_DESC,
+		.nb_align = IDPF_ALIGN_RING_DESC,
+	};
+
 
 	return 0;
 }
