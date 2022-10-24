@@ -105,6 +105,9 @@ struct idpf_vport {
 	/* Chunk info */
 	struct idpf_chunks_info chunks_info;
 
+	/* Event from ipf */
+	bool link_up;
+
 	uint16_t devarg_id;
 };
 
@@ -195,6 +198,8 @@ atomic_set_cmd(struct idpf_adapter *adapter, enum virtchnl_ops ops)
 }
 
 struct idpf_adapter *idpf_find_adapter(struct rte_pci_device *pci_dev);
+int idpf_dev_link_update(struct rte_eth_dev *dev,
+			 __rte_unused int wait_to_complete);
 void idpf_handle_virtchnl_msg(struct rte_eth_dev *dev);
 int idpf_vc_check_api_version(struct idpf_adapter *adapter);
 int idpf_vc_get_caps(struct idpf_adapter *adapter);

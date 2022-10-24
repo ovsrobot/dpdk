@@ -29,17 +29,42 @@ static const char * const idpf_valid_args[] = {
 };
 
 static int idpf_dev_configure(struct rte_eth_dev *dev);
+static int idpf_dev_start(struct rte_eth_dev *dev);
+static int idpf_dev_stop(struct rte_eth_dev *dev);
 static int idpf_dev_close(struct rte_eth_dev *dev);
 static int idpf_dev_info_get(struct rte_eth_dev *dev,
 			     struct rte_eth_dev_info *dev_info);
 static void idpf_adapter_rel(struct idpf_adapter *adapter);
 
+int
+idpf_dev_link_update(struct rte_eth_dev *dev,
+		     __rte_unused int wait_to_complete)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+	struct rte_eth_link new_link;
+
+	memset(&new_link, 0, sizeof(new_link));
+
+	new_link.link_speed = RTE_ETH_SPEED_NUM_NONE;
+
+	new_link.link_duplex = RTE_ETH_LINK_FULL_DUPLEX;
+	new_link.link_status = vport->link_up ? RTE_ETH_LINK_UP :
+		RTE_ETH_LINK_DOWN;
+	new_link.link_autoneg = !(dev->data->dev_conf.link_speeds &
+				  RTE_ETH_LINK_SPEED_FIXED);
+
+	return rte_eth_linkstatus_set(dev, &new_link);
+}
+
 static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.dev_configure			= idpf_dev_configure,
+	.dev_start			= idpf_dev_start,
+	.dev_stop			= idpf_dev_stop,
 	.dev_close			= idpf_dev_close,
 	.rx_queue_setup			= idpf_rx_queue_setup,
 	.tx_queue_setup			= idpf_tx_queue_setup,
 	.dev_infos_get			= idpf_dev_info_get,
+	.link_update			= idpf_dev_link_update,
 };
 
 static int
@@ -229,6 +254,70 @@ idpf_dev_configure(struct rte_eth_dev *dev)
 {
 	if ((dev->data->dev_conf.rxmode.mq_mode & RTE_ETH_MQ_RX_RSS_FLAG) != 0)
 		PMD_INIT_LOG(ERR, "RSS is not supported.");
+
+	return 0;
+}
+
+static int
+idpf_start_queues(struct rte_eth_dev *dev)
+{
+	struct idpf_rx_queue *rxq;
+	struct idpf_tx_queue *txq;
+	int err = 0;
+	int i;
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		txq = dev->data->tx_queues[i];
+		if (txq == NULL || txq->tx_deferred_start)
+			continue;
+
+		PMD_DRV_LOG(ERR, "Start Tx queues not supported yet");
+		return -ENOTSUP;
+	}
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+		if (rxq == NULL || rxq->rx_deferred_start)
+			continue;
+
+		PMD_DRV_LOG(ERR, "Start Rx queues not supported yet");
+		return -ENOTSUP;
+	}
+
+	return err;
+}
+
+static int
+idpf_dev_start(struct rte_eth_dev *dev)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+
+	if (dev->data->mtu > vport->max_mtu) {
+		PMD_DRV_LOG(ERR, "MTU should be less than %d", vport->max_mtu);
+		return -1;
+	}
+
+	vport->max_pkt_len = dev->data->mtu + IDPF_ETH_OVERHEAD;
+
+	if (idpf_start_queues(dev) != 0) {
+		PMD_DRV_LOG(ERR, "Failed to start queues");
+		return -1;
+	}
+
+	if (idpf_vc_ena_dis_vport(vport, true) != 0) {
+		PMD_DRV_LOG(ERR, "Failed to enable vport");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
+idpf_dev_stop(struct rte_eth_dev *dev)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+
+	idpf_vc_ena_dis_vport(vport, false);
 
 	return 0;
 }
