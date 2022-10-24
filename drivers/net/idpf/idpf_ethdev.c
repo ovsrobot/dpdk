@@ -94,7 +94,7 @@ idpf_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->dev_capa = RTE_ETH_DEV_CAPA_RUNTIME_RX_QUEUE_SETUP |
 		RTE_ETH_DEV_CAPA_RUNTIME_TX_QUEUE_SETUP;
 	dev_info->rx_offload_capa = 0;
-	dev_info->tx_offload_capa = 0;
+	dev_info->tx_offload_capa = RTE_ETH_TX_OFFLOAD_MULTI_SEGS;
 
 	dev_info->default_rxconf = (struct rte_eth_rxconf) {
 		.rx_free_thresh = IDPF_DEFAULT_RX_FREE_THRESH,
@@ -331,6 +331,7 @@ idpf_dev_start(struct rte_eth_dev *dev)
 	}
 
 	idpf_set_rx_function(dev);
+	idpf_set_tx_function(dev);
 
 	if (idpf_vc_ena_dis_vport(vport, true) != 0) {
 		PMD_DRV_LOG(ERR, "Failed to enable vport");

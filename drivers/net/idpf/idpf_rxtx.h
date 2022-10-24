@@ -144,9 +144,17 @@ uint16_t idpf_singleq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 				uint16_t nb_pkts);
 uint16_t idpf_splitq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 			       uint16_t nb_pkts);
+uint16_t idpf_singleq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
+				uint16_t nb_pkts);
+uint16_t idpf_splitq_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
+			       uint16_t nb_pkts);
+uint16_t idpf_prep_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
+			uint16_t nb_pkts);
 void idpf_stop_queues(struct rte_eth_dev *dev);
 
 void idpf_set_rx_function(struct rte_eth_dev *dev);
+void idpf_set_tx_function(struct rte_eth_dev *dev);
+
 const uint32_t *idpf_dev_supported_ptypes_get(struct rte_eth_dev *dev);
 
 #endif /* _IDPF_RXTX_H_ */
