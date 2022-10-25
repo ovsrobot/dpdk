@@ -92,6 +92,10 @@ eal_trace_fini(void)
 	trace_mem_free();
 	trace_metadata_destroy();
 	eal_trace_args_free();
+	free(trace.rootdir);
+	trace.rootdir = NULL;
+	free(trace.dir);
+	trace.dir = NULL;
 }
 
 bool

@@ -48,6 +48,7 @@ struct trace_arg {
 };
 
 struct trace {
+	char *rootdir;
 	char *dir;
 	int register_errno;
 	uint32_t status;
