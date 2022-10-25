@@ -9244,8 +9244,8 @@ flow_dv_translate_item_vxlan(struct rte_eth_dev *dev,
 	uint16_t dport;
 	struct mlx5_priv *priv = dev->data->dev_private;
 	const struct rte_flow_item_vxlan nic_mask = {
-		.vni = "\xff\xff\xff",
-		.rsvd1 = 0xff,
+		.hdr.vni = "\xff\xff\xff",
+		.hdr.rsvd1 = 0xff,
 	};
 
 	if (inner) {
@@ -9287,12 +9287,12 @@ flow_dv_translate_item_vxlan(struct rte_eth_dev *dev,
 		misc_m = MLX5_ADDR_OF(fte_match_param,
 				      matcher, misc_parameters);
 		misc_v = MLX5_ADDR_OF(fte_match_param, key, misc_parameters);
-		size = sizeof(vxlan_m->vni);
+		size = sizeof(vxlan_m->hdr.vni);
 		vni_m = MLX5_ADDR_OF(fte_match_set_misc, misc_m, vxlan_vni);
 		vni_v = MLX5_ADDR_OF(fte_match_set_misc, misc_v, vxlan_vni);
-		memcpy(vni_m, vxlan_m->vni, size);
+		memcpy(vni_m, vxlan_m->hdr.vni, size);
 		for (i = 0; i < size; ++i)
-			vni_v[i] = vni_m[i] & vxlan_v->vni[i];
+			vni_v[i] = vni_m[i] & vxlan_v->hdr.vni[i];
 		return;
 	}
 	misc5_m = MLX5_ADDR_OF(fte_match_param, matcher, misc_parameters_5);
@@ -9303,18 +9303,18 @@ flow_dv_translate_item_vxlan(struct rte_eth_dev *dev,
 	tunnel_header_m = (uint32_t *)MLX5_ADDR_OF(fte_match_set_misc5,
 						   misc5_m,
 						   tunnel_header_1);
-	*tunnel_header_v = (vxlan_v->vni[0] & vxlan_m->vni[0]) |
-			   (vxlan_v->vni[1] & vxlan_m->vni[1]) << 8 |
-			   (vxlan_v->vni[2] & vxlan_m->vni[2]) << 16;
+	*tunnel_header_v = (vxlan_v->hdr.vni[0] & vxlan_m->hdr.vni[0]) |
+			   (vxlan_v->hdr.vni[1] & vxlan_m->hdr.vni[1]) << 8 |
+			   (vxlan_v->hdr.vni[2] & vxlan_m->hdr.vni[2]) << 16;
 	if (*tunnel_header_v)
-		*tunnel_header_m = vxlan_m->vni[0] |
-			vxlan_m->vni[1] << 8 |
-			vxlan_m->vni[2] << 16;
+		*tunnel_header_m = vxlan_m->hdr.vni[0] |
+			vxlan_m->hdr.vni[1] << 8 |
+			vxlan_m->hdr.vni[2] << 16;
 	else
 		*tunnel_header_m = 0x0;
-	*tunnel_header_v |= (vxlan_v->rsvd1 & vxlan_m->rsvd1) << 24;
-	if (vxlan_v->rsvd1 & vxlan_m->rsvd1)
-		*tunnel_header_m |= vxlan_m->rsvd1 << 24;
+	*tunnel_header_v |= (vxlan_v->hdr.rsvd1 & vxlan_m->hdr.rsvd1) << 24;
+	if (vxlan_v->hdr.rsvd1 & vxlan_m->hdr.rsvd1)
+		*tunnel_header_m |= vxlan_m->hdr.rsvd1 << 24;
 }
 
 /**
@@ -9349,7 +9349,7 @@ flow_dv_translate_item_vxlan_gpe(void *matcher, void *key,
 		MLX5_ADDR_OF(fte_match_set_misc3, misc_m, outer_vxlan_gpe_vni);
 	char *vni_v =
 		MLX5_ADDR_OF(fte_match_set_misc3, misc_v, outer_vxlan_gpe_vni);
-	int i, size = sizeof(vxlan_m->vni);
+	int i, size = sizeof(vxlan_m->hdr.vni);
 	uint8_t flags_m = 0xff;
 	uint8_t flags_v = 0xc;
 	uint8_t m_protocol, v_protocol;
@@ -9366,17 +9366,17 @@ flow_dv_translate_item_vxlan_gpe(void *matcher, void *key,
 		if (!vxlan_m)
 			vxlan_m = &rte_flow_item_vxlan_gpe_mask;
 	}
-	memcpy(vni_m, vxlan_m->vni, size);
+	memcpy(vni_m, vxlan_m->hdr.vni, size);
 	for (i = 0; i < size; ++i)
-		vni_v[i] = vni_m[i] & vxlan_v->vni[i];
-	if (vxlan_m->flags) {
-		flags_m = vxlan_m->flags;
-		flags_v = vxlan_v->flags;
+		vni_v[i] = vni_m[i] & vxlan_v->hdr.vni[i];
+	if (vxlan_m->hdr.flags) {
+		flags_m = vxlan_m->hdr.flags;
+		flags_v = vxlan_v->hdr.flags;
 	}
 	MLX5_SET(fte_match_set_misc3, misc_m, outer_vxlan_gpe_flags, flags_m);
 	MLX5_SET(fte_match_set_misc3, misc_v, outer_vxlan_gpe_flags, flags_v);
-	m_protocol = vxlan_m->protocol;
-	v_protocol = vxlan_v->protocol;
+	m_protocol = vxlan_m->hdr.proto;
+	v_protocol = vxlan_v->hdr.proto;
 	if (!m_protocol) {
 		/* Force next protocol to ensure next headers parsing. */
 		if (pattern_flags & MLX5_FLOW_LAYER_INNER_L2)
