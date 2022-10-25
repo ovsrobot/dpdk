@@ -3536,7 +3536,7 @@ pmd_test_exit(void)
 	}
 #endif
 	if (ports != NULL) {
-		no_link_check = 1;
+		no_link_check = 0;
 		RTE_ETH_FOREACH_DEV(pt_id) {
 			printf("\nStopping port %d...\n", pt_id);
 			fflush(stdout);
@@ -3663,7 +3663,7 @@ rmv_port_callback(void *arg)
 		need_to_start = 1;
 		stop_packet_forwarding();
 	}
-	no_link_check = 1;
+	no_link_check = 0;
 	stop_port(port_id);
 	no_link_check = org_no_link_check;
 
