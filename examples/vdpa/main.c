@@ -43,16 +43,18 @@ static char iface[MAX_PATH_LEN];
 static int devcnt;
 static int interactive;
 static int client_mode;
+static int iommu_support;
 
 /* display usage */
 static void
 vdpa_usage(const char *prgname)
 {
-	printf("Usage: %s [EAL options] -- "
-				 "	--interactive|-i: run in interactive mode.\n"
-				 "	--iface <path>: specify the path prefix of the socket files, e.g. /tmp/vhost-user-.\n"
-				 "	--client: register a vhost-user socket as client mode.\n",
-				 prgname);
+	const char *usage_str = "	--interactive|-i: run in interactive mode.\n"
+				"	--iface <path>: specify the path prefix of the socket files, e.g. /tmp/vhost-user-.\n"
+				"	--client: register a vhost-user socket as client mode.\n"
+				"	--iommu-support: use guest vIOMMU to protect vhost.\n";
+
+	fprintf(stderr, "Usage: %s [EAL options] --\n%s", prgname, usage_str);
 }
 
 static int
@@ -63,6 +65,7 @@ parse_args(int argc, char **argv)
 		{"iface", required_argument, NULL, 0},
 		{"interactive", no_argument, &interactive, 1},
 		{"client", no_argument, &client_mode, 1},
+		{"iommu-support", no_argument, &iommu_support, 1},
 		{NULL, 0, 0, 0},
 	};
 	int opt, idx;
@@ -220,6 +223,10 @@ start_vdpa(struct vdpa_port *vport)
 			socket_path);
 		return -1;
 	}
+
+	if (iommu_support)
+		vport->flags |= RTE_VHOST_USER_IOMMU_SUPPORT;
+
 	ret = rte_vhost_driver_register(socket_path, vport->flags);
 	if (ret != 0)
 		rte_exit(EXIT_FAILURE,
