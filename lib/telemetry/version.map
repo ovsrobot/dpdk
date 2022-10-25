@@ -19,7 +19,17 @@ DPDK_23 {
 	local: *;
 };
 
+EXPERIMENTAL {
+	global:
+
+	# added in 22.11
+	rte_tel_data_add_array_bool;
+	rte_tel_data_add_dict_bool;
+};
+
 INTERNAL {
+	global:
+
 	rte_telemetry_legacy_register;
 	rte_telemetry_init;
 };

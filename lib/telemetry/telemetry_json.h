@@ -7,6 +7,7 @@
 
 #include <inttypes.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <rte_common.h>
 #include <rte_telemetry.h>
@@ -159,6 +160,21 @@ rte_tel_json_add_array_u64(char *buf, const int len, const int used,
 	return ret == 0 ? used : end + ret;
 }
 
+/* Appends a boolean into the JSON array in the provided buffer. */
+static inline int
+rte_tel_json_add_array_bool(char *buf, const int len, const int used,
+		bool val)
+{
+	int ret, end = used - 1; /* strip off final delimiter */
+	if (used <= 2) /* assume empty, since minimum is '[]' */
+		return __json_snprintf(buf, len, "[%s]",
+				val ? "true" : "false");
+
+	ret = __json_snprintf(buf + end, len - end, ",%s]",
+			val ? "true" : "false");
+	return ret == 0 ? used : end + ret;
+}
+
 /*
  * Add a new element with raw JSON value to the JSON array stored in the
  * provided buffer.
@@ -190,6 +206,24 @@ rte_tel_json_add_obj_u64(char *buf, const int len, const int used,
 
 	ret = __json_snprintf(buf + end, len - end, ",\"%s\":%"PRIu64"}",
 			name, val);
+	return ret == 0 ? used : end + ret;
+}
+
+/**
+ * Add a new element with boolean value to the JSON object stored in the
+ * provided buffer.
+ */
+static inline int
+rte_tel_json_add_obj_bool(char *buf, const int len, const int used,
+		const char *name, bool val)
+{
+	int ret, end = used - 1;
+	if (used <= 2) /* assume empty, since minimum is '{}' */
+		return __json_snprintf(buf, len, "{\"%s\":%s}", name,
+				val ? "true" : "false");
+
+	ret = __json_snprintf(buf + end, len - end, ",\"%s\":%s}",
+			name, val ? "true" : "false");
 	return ret == 0 ? used : end + ret;
 }
 

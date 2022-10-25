@@ -2,6 +2,7 @@
  * Copyright(c) 2018 Intel Corporation
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <rte_compat.h>
@@ -46,6 +47,7 @@ enum rte_tel_value_type {
 	RTE_TEL_INT_VAL,    /** a signed 32-bit int value */
 	RTE_TEL_U64_VAL,    /** an unsigned 64-bit int value */
 	RTE_TEL_CONTAINER, /** a container struct */
+	RTE_TEL_BOOL_VAL,   /** a boolean value */
 };
 
 /**
@@ -156,6 +158,22 @@ rte_tel_data_add_array_container(struct rte_tel_data *d,
 		struct rte_tel_data *val, int keep);
 
 /**
+ * Add a boolean to an array.
+ * The array must have been started by rte_tel_data_start_array() with
+ * RTE_TEL_BOOL_VAL as the type parameter.
+ *
+ * @param d
+ *   The data structure passed to the callback
+ * @param x
+ *   The boolean value to be returned in the array
+ * @return
+ *   0 on success, negative errno on error
+ */
+__rte_experimental
+int
+rte_tel_data_add_array_bool(struct rte_tel_data *d, bool x);
+
+/**
  * Add a string value to a dictionary.
  * The dict must have been started by rte_tel_data_start_dict().
  *
@@ -232,6 +250,24 @@ rte_tel_data_add_dict_u64(struct rte_tel_data *d,
 int
 rte_tel_data_add_dict_container(struct rte_tel_data *d, const char *name,
 		struct rte_tel_data *val, int keep);
+
+/**
+ * Add a boolean value to a dictionary.
+ * The dict must have been started by rte_tel_data_start_dict().
+ *
+ * @param d
+ *   The data structure passed to the callback
+ * @param name
+ *   The name the value is to be stored under in the dict
+ *   Must contain only alphanumeric characters or the symbols: '_' or '/'
+ * @param val
+ *   The boolean value to be stored in the dict
+ * @return
+ *   0 on success, negative errno on error, E2BIG on string truncation of name.
+ */
+__rte_experimental
+int
+rte_tel_data_add_dict_bool(struct rte_tel_data *d, const char *name, bool val);
 
 /**
  * This telemetry callback is used when registering a telemetry command.
