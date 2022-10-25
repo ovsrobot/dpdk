@@ -68,7 +68,7 @@ rte_tel_data_start_array(struct rte_tel_data *d, enum rte_tel_value_type type);
  *
  * Dictionaries consist of key-values pairs to be returned, where the keys,
  * or names, are strings and the values can be any of the types supported by telemetry.
- * Name strings may only contain alphanumeric characters as well as '_' or '/'
+ * Name strings may only contain alphanumeric characters as well as '_', '/' or '.'
  *
  * @param d
  *   The data structure passed to the callback
@@ -181,7 +181,7 @@ rte_tel_data_add_array_bool(struct rte_tel_data *d, bool x);
  *   The data structure passed to the callback
  * @param name
  *   The name the value is to be stored under in the dict
- *   Must contain only alphanumeric characters or the symbols: '_' or '/'
+ *   Must contain only alphanumeric characters or the symbols: '_', '/' or '.'
  * @param val
  *   The string to be stored in the dict
  * @return
@@ -200,7 +200,7 @@ rte_tel_data_add_dict_string(struct rte_tel_data *d, const char *name,
  *   The data structure passed to the callback
  * @param name
  *   The name the value is to be stored under in the dict
- *   Must contain only alphanumeric characters or the symbols: '_' or '/'
+ *   Must contain only alphanumeric characters or the symbols: '_', '/' or '.'
  * @param val
  *   The number to be stored in the dict
  * @return
@@ -217,7 +217,7 @@ rte_tel_data_add_dict_int(struct rte_tel_data *d, const char *name, int val);
  *   The data structure passed to the callback
  * @param name
  *   The name the value is to be stored under in the dict
- *   Must contain only alphanumeric characters or the symbols: '_' or '/'
+ *   Must contain only alphanumeric characters or the symbols: '_', '/' or '.'
  * @param val
  *   The number to be stored in the dict
  * @return
@@ -237,7 +237,7 @@ rte_tel_data_add_dict_u64(struct rte_tel_data *d,
  *   The data structure passed to the callback
  * @param name
  *   The name the value is to be stored under in the dict.
- *   Must contain only alphanumeric characters or the symbols: '_' or '/'
+ *   Must contain only alphanumeric characters or the symbols: '_', '/' or '.'
  * @param val
  *   The pointer to the container to be stored in the dict.
  * @param keep
