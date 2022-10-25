@@ -233,6 +233,45 @@ This section steps you through the details of generating trace and viewing it.
 
     babeltrace $HOME/dpdk-traces/rte-yyyy-mm-dd-[AP]M-hh-mm-ss/
 
+Configuring traces on a running DPDK application
+------------------------------------------------
+
+The DPDK trace library can be configured using the Telemetry interface.
+
+Examples::
+
+  --> /trace/list,lib.ethdev.*
+  {"/trace/list": {"lib.ethdev.configure": false,
+      "lib.ethdev.rxq.setup": false,
+      "lib.ethdev.txq.setup": false,
+      "lib.ethdev.start": false,
+      "lib.ethdev.stop": false,
+      "lib.ethdev.close": false,
+      "lib.ethdev.rx.burst": false,
+      "lib.ethdev.tx.burst": false}}
+
+  --> /trace/enable,lib.ethdev.st*
+  {"/trace/enable": {"Count": 2}}
+  --> /trace/enable,lib.ethdev.st*
+  {"/trace/enable": {"Count": 0}}
+
+  --> /trace/list,lib.ethdev.*
+  {"/trace/list": {"lib.ethdev.configure": false,
+      "lib.ethdev.rxq.setup": false,
+      "lib.ethdev.txq.setup": false,
+      "lib.ethdev.start": true,
+      "lib.ethdev.stop": true,
+      "lib.ethdev.close": false,
+      "lib.ethdev.rx.burst": false,
+      "lib.ethdev.tx.burst": false}}
+
+  --> /trace/save
+  {"/trace/save": {"Status": "OK",
+      "Path": ".../dpdk-traces/rte-2022-10-12-AM-10-51-48"}}
+
+For more information on how to use the Telemetry interface, see
+the :doc:`../howto/telemetry`.
+
 Implementation details
 ----------------------
 
