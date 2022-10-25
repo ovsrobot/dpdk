@@ -644,17 +644,17 @@ flow_dv_convert_action_modify_mac
 	memset(&eth, 0, sizeof(eth));
 	memset(&eth_mask, 0, sizeof(eth_mask));
 	if (action->type == RTE_FLOW_ACTION_TYPE_SET_MAC_SRC) {
-		memcpy(&eth.src.addr_bytes, &conf->mac_addr,
-		       sizeof(eth.src.addr_bytes));
-		memcpy(&eth_mask.src.addr_bytes,
-		       &rte_flow_item_eth_mask.src.addr_bytes,
-		       sizeof(eth_mask.src.addr_bytes));
+		memcpy(&eth.hdr.src_addr.addr_bytes, &conf->mac_addr,
+		       sizeof(eth.hdr.src_addr.addr_bytes));
+		memcpy(&eth_mask.hdr.src_addr.addr_bytes,
+		       &rte_flow_item_eth_mask.hdr.src_addr.addr_bytes,
+		       sizeof(eth_mask.hdr.src_addr.addr_bytes));
 	} else {
-		memcpy(&eth.dst.addr_bytes, &conf->mac_addr,
-		       sizeof(eth.dst.addr_bytes));
-		memcpy(&eth_mask.dst.addr_bytes,
-		       &rte_flow_item_eth_mask.dst.addr_bytes,
-		       sizeof(eth_mask.dst.addr_bytes));
+		memcpy(&eth.hdr.dst_addr.addr_bytes, &conf->mac_addr,
+		       sizeof(eth.hdr.dst_addr.addr_bytes));
+		memcpy(&eth_mask.hdr.dst_addr.addr_bytes,
+		       &rte_flow_item_eth_mask.hdr.dst_addr.addr_bytes,
+		       sizeof(eth_mask.hdr.dst_addr.addr_bytes));
 	}
 	item.spec = &eth;
 	item.mask = &eth_mask;
@@ -2303,8 +2303,8 @@ flow_dv_validate_item_vlan(const struct rte_flow_item *item,
 {
 	const struct rte_flow_item_vlan *mask = item->mask;
 	const struct rte_flow_item_vlan nic_mask = {
-		.tci = RTE_BE16(UINT16_MAX),
-		.inner_type = RTE_BE16(UINT16_MAX),
+		.hdr.vlan_tci = RTE_BE16(UINT16_MAX),
+		.hdr.eth_proto = RTE_BE16(UINT16_MAX),
 		.has_more_vlan = 1,
 	};
 	const int tunnel = !!(item_flags & MLX5_FLOW_LAYER_TUNNEL);
@@ -2332,7 +2332,7 @@ flow_dv_validate_item_vlan(const struct rte_flow_item *item,
 					MLX5_ITEM_RANGE_NOT_ACCEPTED, error);
 	if (ret)
 		return ret;
-	if (!tunnel && mask->tci != RTE_BE16(0x0fff)) {
+	if (!tunnel && mask->hdr.vlan_tci != RTE_BE16(0x0fff)) {
 		struct mlx5_priv *priv = dev->data->dev_private;
 
 		if (priv->vmwa_context) {
@@ -2871,9 +2871,9 @@ flow_dev_get_vlan_info_from_items(const struct rte_flow_item *items,
 				  struct rte_vlan_hdr *vlan)
 {
 	const struct rte_flow_item_vlan nic_mask = {
-		.tci = RTE_BE16(MLX5DV_FLOW_VLAN_PCP_MASK |
+		.hdr.vlan_tci = RTE_BE16(MLX5DV_FLOW_VLAN_PCP_MASK |
 				MLX5DV_FLOW_VLAN_VID_MASK),
-		.inner_type = RTE_BE16(0xffff),
+		.hdr.eth_proto = RTE_BE16(0xffff),
 	};
 
 	if (items == NULL)
@@ -2895,23 +2895,23 @@ flow_dev_get_vlan_info_from_items(const struct rte_flow_item *items,
 		if (!vlan_m)
 			vlan_m = &nic_mask;
 		/* Only full match values are accepted */
-		if ((vlan_m->tci & MLX5DV_FLOW_VLAN_PCP_MASK_BE) ==
+		if ((vlan_m->hdr.vlan_tci & MLX5DV_FLOW_VLAN_PCP_MASK_BE) ==
 		     MLX5DV_FLOW_VLAN_PCP_MASK_BE) {
 			vlan->vlan_tci &= ~MLX5DV_FLOW_VLAN_PCP_MASK;
 			vlan->vlan_tci |=
-				rte_be_to_cpu_16(vlan_v->tci &
+				rte_be_to_cpu_16(vlan_v->hdr.vlan_tci &
 						 MLX5DV_FLOW_VLAN_PCP_MASK_BE);
 		}
-		if ((vlan_m->tci & MLX5DV_FLOW_VLAN_VID_MASK_BE) ==
+		if ((vlan_m->hdr.vlan_tci & MLX5DV_FLOW_VLAN_VID_MASK_BE) ==
 		     MLX5DV_FLOW_VLAN_VID_MASK_BE) {
 			vlan->vlan_tci &= ~MLX5DV_FLOW_VLAN_VID_MASK;
 			vlan->vlan_tci |=
-				rte_be_to_cpu_16(vlan_v->tci &
+				rte_be_to_cpu_16(vlan_v->hdr.vlan_tci &
 						 MLX5DV_FLOW_VLAN_VID_MASK_BE);
 		}
-		if (vlan_m->inner_type == nic_mask.inner_type)
-			vlan->eth_proto = rte_be_to_cpu_16(vlan_v->inner_type &
-							   vlan_m->inner_type);
+		if (vlan_m->hdr.eth_proto == nic_mask.hdr.eth_proto)
+			vlan->eth_proto = rte_be_to_cpu_16(vlan_v->hdr.eth_proto &
+							   vlan_m->hdr.eth_proto);
 	}
 }
 
@@ -2961,8 +2961,8 @@ flow_dv_validate_action_push_vlan(struct rte_eth_dev *dev,
 					  "push vlan action for VF representor "
 					  "not supported on NIC table");
 	if (vlan_m &&
-	    (vlan_m->tci & MLX5DV_FLOW_VLAN_PCP_MASK_BE) &&
-	    (vlan_m->tci & MLX5DV_FLOW_VLAN_PCP_MASK_BE) !=
+	    (vlan_m->hdr.vlan_tci & MLX5DV_FLOW_VLAN_PCP_MASK_BE) &&
+	    (vlan_m->hdr.vlan_tci & MLX5DV_FLOW_VLAN_PCP_MASK_BE) !=
 		MLX5DV_FLOW_VLAN_PCP_MASK_BE &&
 	    !(action_flags & MLX5_FLOW_ACTION_OF_SET_VLAN_PCP) &&
 	    !(mlx5_flow_find_action
@@ -2974,8 +2974,8 @@ flow_dv_validate_action_push_vlan(struct rte_eth_dev *dev,
 					  "push VLAN action cannot figure out "
 					  "PCP value");
 	if (vlan_m &&
-	    (vlan_m->tci & MLX5DV_FLOW_VLAN_VID_MASK_BE) &&
-	    (vlan_m->tci & MLX5DV_FLOW_VLAN_VID_MASK_BE) !=
+	    (vlan_m->hdr.vlan_tci & MLX5DV_FLOW_VLAN_VID_MASK_BE) &&
+	    (vlan_m->hdr.vlan_tci & MLX5DV_FLOW_VLAN_VID_MASK_BE) !=
 		MLX5DV_FLOW_VLAN_VID_MASK_BE &&
 	    !(action_flags & MLX5_FLOW_ACTION_OF_SET_VLAN_VID) &&
 	    !(mlx5_flow_find_action
@@ -7076,10 +7076,10 @@ flow_dv_validate(struct rte_eth_dev *dev, const struct rte_flow_attr *attr,
 			if (items->mask != NULL && items->spec != NULL) {
 				ether_type =
 					((const struct rte_flow_item_eth *)
-					 items->spec)->type;
+					 items->spec)->hdr.ether_type;
 				ether_type &=
 					((const struct rte_flow_item_eth *)
-					 items->mask)->type;
+					 items->mask)->hdr.ether_type;
 				ether_type = rte_be_to_cpu_16(ether_type);
 			} else {
 				ether_type = 0;
@@ -7095,10 +7095,10 @@ flow_dv_validate(struct rte_eth_dev *dev, const struct rte_flow_attr *attr,
 			if (items->mask != NULL && items->spec != NULL) {
 				ether_type =
 					((const struct rte_flow_item_vlan *)
-					 items->spec)->inner_type;
+					 items->spec)->hdr.eth_proto;
 				ether_type &=
 					((const struct rte_flow_item_vlan *)
-					 items->mask)->inner_type;
+					 items->mask)->hdr.eth_proto;
 				ether_type = rte_be_to_cpu_16(ether_type);
 			} else {
 				ether_type = 0;
@@ -8356,9 +8356,9 @@ flow_dv_translate_item_eth(void *matcher, void *key,
 	const struct rte_flow_item_eth *eth_m = item->mask;
 	const struct rte_flow_item_eth *eth_v = item->spec;
 	const struct rte_flow_item_eth nic_mask = {
-		.dst.addr_bytes = "\xff\xff\xff\xff\xff\xff",
-		.src.addr_bytes = "\xff\xff\xff\xff\xff\xff",
-		.type = RTE_BE16(0xffff),
+		.hdr.dst_addr.addr_bytes = "\xff\xff\xff\xff\xff\xff",
+		.hdr.src_addr.addr_bytes = "\xff\xff\xff\xff\xff\xff",
+		.hdr.ether_type = RTE_BE16(0xffff),
 		.has_vlan = 0,
 	};
 	void *hdrs_m;
@@ -8380,17 +8380,17 @@ flow_dv_translate_item_eth(void *matcher, void *key,
 		hdrs_v = MLX5_ADDR_OF(fte_match_param, key, outer_headers);
 	}
 	memcpy(MLX5_ADDR_OF(fte_match_set_lyr_2_4, hdrs_m, dmac_47_16),
-	       &eth_m->dst, sizeof(eth_m->dst));
+	       &eth_m->hdr.dst_addr, sizeof(eth_m->hdr.dst_addr));
 	/* The value must be in the range of the mask. */
 	l24_v = MLX5_ADDR_OF(fte_match_set_lyr_2_4, hdrs_v, dmac_47_16);
-	for (i = 0; i < sizeof(eth_m->dst); ++i)
-		l24_v[i] = eth_m->dst.addr_bytes[i] & eth_v->dst.addr_bytes[i];
+	for (i = 0; i < sizeof(eth_m->hdr.dst_addr); ++i)
+		l24_v[i] = eth_m->hdr.dst_addr.addr_bytes[i] & eth_v->hdr.dst_addr.addr_bytes[i];
 	memcpy(MLX5_ADDR_OF(fte_match_set_lyr_2_4, hdrs_m, smac_47_16),
-	       &eth_m->src, sizeof(eth_m->src));
+	       &eth_m->hdr.src_addr, sizeof(eth_m->hdr.src_addr));
 	l24_v = MLX5_ADDR_OF(fte_match_set_lyr_2_4, hdrs_v, smac_47_16);
 	/* The value must be in the range of the mask. */
-	for (i = 0; i < sizeof(eth_m->dst); ++i)
-		l24_v[i] = eth_m->src.addr_bytes[i] & eth_v->src.addr_bytes[i];
+	for (i = 0; i < sizeof(eth_m->hdr.dst_addr); ++i)
+		l24_v[i] = eth_m->hdr.src_addr.addr_bytes[i] & eth_v->hdr.src_addr.addr_bytes[i];
 	/*
 	 * HW supports match on one Ethertype, the Ethertype following the last
 	 * VLAN tag of the packet (see PRM).
@@ -8399,10 +8399,10 @@ flow_dv_translate_item_eth(void *matcher, void *key,
 	 * ethertype, and use ip_version field instead.
 	 * eCPRI over Ether layer will use type value 0xAEFE.
 	 */
-	if (eth_m->type == 0xFFFF) {
+	if (eth_m->hdr.ether_type == 0xFFFF) {
 		/* Set cvlan_tag mask for any single\multi\un-tagged case. */
 		MLX5_SET(fte_match_set_lyr_2_4, hdrs_m, cvlan_tag, 1);
-		switch (eth_v->type) {
+		switch (eth_v->hdr.ether_type) {
 		case RTE_BE16(RTE_ETHER_TYPE_VLAN):
 			MLX5_SET(fte_match_set_lyr_2_4, hdrs_v, cvlan_tag, 1);
 			return;
@@ -8432,9 +8432,9 @@ flow_dv_translate_item_eth(void *matcher, void *key,
 		}
 	}
 	MLX5_SET(fte_match_set_lyr_2_4, hdrs_m, ethertype,
-		 rte_be_to_cpu_16(eth_m->type));
+		 rte_be_to_cpu_16(eth_m->hdr.ether_type));
 	l24_v = MLX5_ADDR_OF(fte_match_set_lyr_2_4, hdrs_v, ethertype);
-	*(uint16_t *)(l24_v) = eth_m->type & eth_v->type;
+	*(uint16_t *)(l24_v) = eth_m->hdr.ether_type & eth_v->hdr.ether_type;
 }
 
 /**
@@ -8478,7 +8478,7 @@ flow_dv_translate_item_vlan(struct mlx5_flow *dev_flow,
 		 */
 		if (vlan_v)
 			dev_flow->handle->vf_vlan.tag =
-					rte_be_to_cpu_16(vlan_v->tci) & 0x0fff;
+					rte_be_to_cpu_16(vlan_v->hdr.vlan_tci) & 0x0fff;
 	}
 	/*
 	 * When VLAN item exists in flow, mark packet as tagged,
@@ -8492,8 +8492,8 @@ flow_dv_translate_item_vlan(struct mlx5_flow *dev_flow,
 		return;
 	if (!vlan_m)
 		vlan_m = &rte_flow_item_vlan_mask;
-	tci_m = rte_be_to_cpu_16(vlan_m->tci);
-	tci_v = rte_be_to_cpu_16(vlan_m->tci & vlan_v->tci);
+	tci_m = rte_be_to_cpu_16(vlan_m->hdr.vlan_tci);
+	tci_v = rte_be_to_cpu_16(vlan_m->hdr.vlan_tci & vlan_v->hdr.vlan_tci);
 	MLX5_SET(fte_match_set_lyr_2_4, hdrs_m, first_vid, tci_m);
 	MLX5_SET(fte_match_set_lyr_2_4, hdrs_v, first_vid, tci_v);
 	MLX5_SET(fte_match_set_lyr_2_4, hdrs_m, first_cfi, tci_m >> 12);
@@ -8504,8 +8504,8 @@ flow_dv_translate_item_vlan(struct mlx5_flow *dev_flow,
 	 * HW is optimized for IPv4/IPv6. In such cases, avoid setting
 	 * ethertype, and use ip_version field instead.
 	 */
-	if (vlan_m->inner_type == 0xFFFF) {
-		switch (vlan_v->inner_type) {
+	if (vlan_m->hdr.eth_proto == 0xFFFF) {
+		switch (vlan_v->hdr.eth_proto) {
 		case RTE_BE16(RTE_ETHER_TYPE_VLAN):
 			MLX5_SET(fte_match_set_lyr_2_4, hdrs_m, svlan_tag, 1);
 			MLX5_SET(fte_match_set_lyr_2_4, hdrs_v, svlan_tag, 1);
@@ -8529,9 +8529,9 @@ flow_dv_translate_item_vlan(struct mlx5_flow *dev_flow,
 		return;
 	}
 	MLX5_SET(fte_match_set_lyr_2_4, hdrs_m, ethertype,
-		 rte_be_to_cpu_16(vlan_m->inner_type));
+		 rte_be_to_cpu_16(vlan_m->hdr.eth_proto));
 	MLX5_SET(fte_match_set_lyr_2_4, hdrs_v, ethertype,
-		 rte_be_to_cpu_16(vlan_m->inner_type & vlan_v->inner_type));
+		 rte_be_to_cpu_16(vlan_m->hdr.eth_proto & vlan_v->hdr.eth_proto));
 }
 
 /**
