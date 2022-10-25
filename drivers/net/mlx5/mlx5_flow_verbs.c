@@ -959,10 +959,10 @@ flow_verbs_translate_item_gre(struct mlx5_flow *dev_flow,
 		if (!mask)
 			mask = &rte_flow_item_gre_mask;
 	}
-	tunnel.val.c_ks_res0_ver = spec->c_rsvd0_ver;
-	tunnel.val.protocol = spec->protocol;
-	tunnel.mask.c_ks_res0_ver = mask->c_rsvd0_ver;
-	tunnel.mask.protocol = mask->protocol;
+	tunnel.val.c_ks_res0_ver = *(const uint16_t*)&spec->hdr;
+	tunnel.val.protocol = spec->hdr.proto;
+	tunnel.mask.c_ks_res0_ver = *(const uint16_t*)&mask->hdr;
+	tunnel.mask.protocol = mask->hdr.proto;
 	/* Remove unwanted bits from values. */
 	tunnel.val.c_ks_res0_ver &= tunnel.mask.c_ks_res0_ver;
 	tunnel.val.key &= tunnel.mask.key;

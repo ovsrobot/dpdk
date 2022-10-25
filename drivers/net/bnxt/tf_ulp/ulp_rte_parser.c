@@ -1461,16 +1461,10 @@ ulp_rte_gre_hdr_handler(const struct rte_flow_item *item,
 		return BNXT_TF_RC_ERROR;
 	}
 
-	size = sizeof(((struct rte_flow_item_gre *)NULL)->c_rsvd0_ver);
+	size = sizeof(((struct rte_flow_item_gre *)NULL)->hdr.proto);
 	ulp_rte_prsr_fld_mask(params, &idx, size,
-			      ulp_deference_struct(gre_spec, c_rsvd0_ver),
-			      ulp_deference_struct(gre_mask, c_rsvd0_ver),
-			      ULP_PRSR_ACT_DEFAULT);
-
-	size = sizeof(((struct rte_flow_item_gre *)NULL)->protocol);
-	ulp_rte_prsr_fld_mask(params, &idx, size,
-			      ulp_deference_struct(gre_spec, protocol),
-			      ulp_deference_struct(gre_mask, protocol),
+			      ulp_deference_struct(gre_spec, hdr.proto),
+			      ulp_deference_struct(gre_mask, hdr.proto),
 			      ULP_PRSR_ACT_DEFAULT);
 
 	/* Update the hdr_bitmap with GRE */

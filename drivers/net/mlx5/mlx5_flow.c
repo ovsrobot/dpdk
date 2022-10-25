@@ -304,7 +304,7 @@ mlx5_flow_expand_rss_item_complete(const struct rte_flow_item *item)
 		ret = mlx5_ethertype_to_item_type(spec, mask, true);
 		break;
 	case RTE_FLOW_ITEM_TYPE_GRE:
-		MLX5_XSET_ITEM_MASK_SPEC(gre, protocol);
+		MLX5_XSET_ITEM_MASK_SPEC(gre, hdr.proto);
 		ret = mlx5_ethertype_to_item_type(spec, mask, true);
 		break;
 	case RTE_FLOW_ITEM_TYPE_VXLAN_GPE:
@@ -2987,8 +2987,7 @@ mlx5_flow_validate_item_gre_key(const struct rte_flow_item *item,
 	if (!gre_mask)
 		gre_mask = &rte_flow_item_gre_mask;
 	gre_spec = gre_item->spec;
-	if (gre_spec && (gre_mask->c_rsvd0_ver & RTE_BE16(0x2000)) &&
-			 !(gre_spec->c_rsvd0_ver & RTE_BE16(0x2000)))
+	if (gre_spec && (gre_mask->hdr.k) && !(gre_spec->hdr.k))
 		return rte_flow_error_set(error, EINVAL,
 					  RTE_FLOW_ERROR_TYPE_ITEM, item,
 					  "Key bit must be on");
@@ -3063,21 +3062,18 @@ mlx5_flow_validate_item_gre_option(struct rte_eth_dev *dev,
 	if (!gre_mask)
 		gre_mask = &rte_flow_item_gre_mask;
 	if (mask->checksum_rsvd.checksum)
-		if (gre_spec && (gre_mask->c_rsvd0_ver & RTE_BE16(0x8000)) &&
-				 !(gre_spec->c_rsvd0_ver & RTE_BE16(0x8000)))
+		if (gre_spec && (gre_mask->hdr.c) && !(gre_spec->hdr.c))
 			return rte_flow_error_set(error, EINVAL,
 						  RTE_FLOW_ERROR_TYPE_ITEM,
 						  item,
 						  "Checksum bit must be on");
 	if (mask->key.key)
-		if (gre_spec && (gre_mask->c_rsvd0_ver & RTE_BE16(0x2000)) &&
-				 !(gre_spec->c_rsvd0_ver & RTE_BE16(0x2000)))
+		if (gre_spec && (gre_mask->hdr.k) && !(gre_spec->hdr.k))
 			return rte_flow_error_set(error, EINVAL,
 						  RTE_FLOW_ERROR_TYPE_ITEM,
 						  item, "Key bit must be on");
 	if (mask->sequence.sequence)
-		if (gre_spec && (gre_mask->c_rsvd0_ver & RTE_BE16(0x1000)) &&
-				 !(gre_spec->c_rsvd0_ver & RTE_BE16(0x1000)))
+		if (gre_spec && (gre_mask->hdr.s) && !(gre_spec->hdr.s))
 			return rte_flow_error_set(error, EINVAL,
 						  RTE_FLOW_ERROR_TYPE_ITEM,
 						  item,
@@ -3128,8 +3124,10 @@ mlx5_flow_validate_item_gre(const struct rte_flow_item *item,
 	const struct rte_flow_item_gre *mask = item->mask;
 	int ret;
 	const struct rte_flow_item_gre nic_mask = {
-		.c_rsvd0_ver = RTE_BE16(0xB000),
-		.protocol = RTE_BE16(UINT16_MAX),
+		.hdr.c = 1,
+		.hdr.k = 1,
+		.hdr.s = 1,
+		.hdr.proto = RTE_BE16(UINT16_MAX),
 	};
 
 	if (target_protocol != 0xff && target_protocol != IPPROTO_GRE)
@@ -3157,7 +3155,7 @@ mlx5_flow_validate_item_gre(const struct rte_flow_item *item,
 		return ret;
 #ifndef HAVE_MLX5DV_DR
 #ifndef HAVE_IBV_DEVICE_MPLS_SUPPORT
-	if (spec && (spec->protocol & mask->protocol))
+	if (spec && (spec->hdr.proto & mask->hdr.proto))
 		return rte_flow_error_set(error, ENOTSUP,
 					  RTE_FLOW_ERROR_TYPE_ITEM, item,
 					  "without MPLS support the"

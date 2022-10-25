@@ -1069,19 +1069,29 @@ static const struct rte_flow_item_mpls rte_flow_item_mpls_mask = {
  *
  * Matches a GRE header.
  */
+RTE_STD_C11
 struct rte_flow_item_gre {
-	/**
-	 * Checksum (1b), reserved 0 (12b), version (3b).
-	 * Refer to RFC 2784.
-	 */
-	rte_be16_t c_rsvd0_ver;
-	rte_be16_t protocol; /**< Protocol type. */
+	union {
+		struct {
+			/*
+			 * These are old fields kept for compatibility.
+			 * Please prefer hdr field below.
+			 */
+			/**
+			 * Checksum (1b), reserved 0 (12b), version (3b).
+			 * Refer to RFC 2784.
+			 */
+			rte_be16_t c_rsvd0_ver;
+			rte_be16_t protocol; /**< Protocol type. */
+		};
+		struct rte_gre_hdr hdr; /**< GRE header definition. */
+	};
 };
 
 /** Default mask for RTE_FLOW_ITEM_TYPE_GRE. */
 #ifndef __cplusplus
 static const struct rte_flow_item_gre rte_flow_item_gre_mask = {
-	.protocol = RTE_BE16(0xffff),
+	.hdr.proto = RTE_BE16(UINT16_MAX),
 };
 #endif
 

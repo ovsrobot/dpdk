@@ -173,10 +173,10 @@ add_gre(struct rte_flow_item *items,
 	__rte_unused struct additional_para para)
 {
 	static struct rte_flow_item_gre gre_spec = {
-		.protocol = RTE_BE16(RTE_ETHER_TYPE_TEB),
+		.hdr.proto = RTE_BE16(RTE_ETHER_TYPE_TEB),
 	};
 	static struct rte_flow_item_gre gre_mask = {
-		.protocol = RTE_BE16(0xffff),
+		.hdr.proto = RTE_BE16(0xffff),
 	};
 
 	items[items_counter].type = RTE_FLOW_ITEM_TYPE_GRE;

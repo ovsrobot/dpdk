@@ -9019,8 +9019,8 @@ flow_dv_translate_item_gre(void *matcher, void *key,
 		if (!gre_m)
 			gre_m = &rte_flow_item_gre_mask;
 	}
-	gre_crks_rsvd0_ver_m.value = rte_be_to_cpu_16(gre_m->c_rsvd0_ver);
-	gre_crks_rsvd0_ver_v.value = rte_be_to_cpu_16(gre_v->c_rsvd0_ver);
+	gre_crks_rsvd0_ver_m.value = rte_be_to_cpu_16(*(const uint16_t*)&gre_m->hdr);
+	gre_crks_rsvd0_ver_v.value = rte_be_to_cpu_16(*(const uint16_t*)&gre_v->hdr);
 	MLX5_SET(fte_match_set_misc, misc_m, gre_c_present,
 		 gre_crks_rsvd0_ver_m.c_present);
 	MLX5_SET(fte_match_set_misc, misc_v, gre_c_present,
@@ -9036,8 +9036,8 @@ flow_dv_translate_item_gre(void *matcher, void *key,
 	MLX5_SET(fte_match_set_misc, misc_v, gre_s_present,
 		 gre_crks_rsvd0_ver_v.s_present &
 		 gre_crks_rsvd0_ver_m.s_present);
-	protocol_m = rte_be_to_cpu_16(gre_m->protocol);
-	protocol_v = rte_be_to_cpu_16(gre_v->protocol);
+	protocol_m = rte_be_to_cpu_16(gre_m->hdr.proto);
+	protocol_v = rte_be_to_cpu_16(gre_v->hdr.proto);
 	if (!protocol_m) {
 		/* Force next protocol to prevent matchers duplication */
 		protocol_v = mlx5_translate_tunnel_etypes(pattern_flags);
@@ -9101,8 +9101,8 @@ flow_dv_translate_item_gre_option(void *matcher, void *key,
 		if (!gre_m)
 			gre_m = &rte_flow_item_gre_mask;
 	}
-	protocol_v = gre_v->protocol;
-	protocol_m = gre_m->protocol;
+	protocol_v = gre_v->hdr.proto;
+	protocol_m = gre_m->hdr.proto;
 	if (!protocol_m) {
 		/* Force next protocol to prevent matchers duplication */
 		uint16_t ether_type =
@@ -9112,8 +9112,8 @@ flow_dv_translate_item_gre_option(void *matcher, void *key,
 			protocol_m = UINT16_MAX;
 		}
 	}
-	c_rsvd0_ver_v = gre_v->c_rsvd0_ver;
-	c_rsvd0_ver_m = gre_m->c_rsvd0_ver;
+	c_rsvd0_ver_v = *(const uint16_t*)&gre_v->hdr;
+	c_rsvd0_ver_m = *(const uint16_t*)&gre_m->hdr;
 	if (option_m->sequence.sequence) {
 		c_rsvd0_ver_v |= RTE_BE16(0x1000);
 		c_rsvd0_ver_m |= RTE_BE16(0x1000);
@@ -9183,12 +9183,14 @@ flow_dv_translate_item_nvgre(void *matcher, void *key,
 
 	/* For NVGRE, GRE header fields must be set with defined values. */
 	const struct rte_flow_item_gre gre_spec = {
-		.c_rsvd0_ver = RTE_BE16(0x2000),
-		.protocol = RTE_BE16(RTE_ETHER_TYPE_TEB)
+		.hdr.k = 1,
+		.hdr.proto = RTE_BE16(RTE_ETHER_TYPE_TEB)
 	};
 	const struct rte_flow_item_gre gre_mask = {
-		.c_rsvd0_ver = RTE_BE16(0xB000),
-		.protocol = RTE_BE16(UINT16_MAX),
+		.hdr.c = 1,
+		.hdr.k = 1,
+		.hdr.s = 1,
+		.hdr.proto = RTE_BE16(UINT16_MAX),
 	};
 	const struct rte_flow_item gre_item = {
 		.spec = &gre_spec,
