@@ -10,6 +10,7 @@
 #else
 #include <intel-ipsec-mb.h>
 #endif
+#include <rte_cryptodev.h>
 #include <cryptodev_pmd.h>
 #include <bus_vdev_driver.h>
 
@@ -24,6 +25,9 @@
 
 /* Maximum length for memzone name */
 #define IPSEC_MB_MAX_MZ_NAME 32
+
+/* ipsec mb multi-process queue pair config */
+#define IPSEC_MB_MP_MSG "ipsec_mb_mp_msg"
 
 enum ipsec_mb_vector_mode {
 	IPSEC_MB_NOT_SUPPORTED = 0,
@@ -62,6 +66,8 @@ extern int ipsec_mb_logtype_driver;
 #define IPSEC_MB_LOG(level, fmt, ...)                                         \
 	rte_log(RTE_LOG_##level, ipsec_mb_logtype_driver,                     \
 		"%s() line %u: " fmt "\n", __func__, __LINE__, ##__VA_ARGS__)
+
+#define IPSEC_MB_MP_SHARED_MZ_NAME		"IPSEC_MB_MP_SHARED_MZ"
 
 /** All supported device types */
 enum ipsec_mb_pmd_types {
@@ -149,10 +155,50 @@ struct ipsec_mb_qp {
 	IMB_MGR *mb_mgr;
 	/* Multi buffer manager */
 	const struct rte_memzone *mb_mgr_mz;
+	/** The process id used for queue pairs **/
+	uint16_t qp_in_used_by_pid;
 	/* Shared memzone for storing mb_mgr */
 	__extension__ uint8_t additional_data[];
 	/**< Storing PMD specific additional data */
 };
+
+/** Request types for IPC. */
+enum ipsec_mb_mp_req_type {
+	RTE_IPSEC_MB_MP_REQ_NONE, /**< unknown event type */
+	RTE_IPSEC_MB_MP_REQ_QP_SET, /**< Queue pair setup request */
+	RTE_IPSEC_MB_MP_REQ_QP_FREE /**< Queue pair free request */
+};
+
+/* multi-process shared data */
+struct ipsec_mb_mp_shared_data {
+	struct rte_cryptodev_qp_conf qp_conf;
+};
+
+/** Parameters for IPC. */
+struct ipsec_mb_mp_param {
+	enum ipsec_mb_mp_req_type type; /**< IPC request type */
+	int dev_id;
+	/**< The identifier of the device */
+	int qp_id;
+	/**< The index of the queue pair to be configured */
+	int socket_id;
+	/**< Socket to allocate resources on */
+	uint16_t process_id;
+	/**< The pid who send out the requested */
+	uint32_t nb_descriptors;
+	/**< Number of descriptors per queue pair */
+	void *mp_session;
+	/**< The mempool for creating session in sessionless mode */
+	int result;
+	/**< The request result for response message */
+};
+
+/* memzone for multi-process shared data */
+const struct rte_memzone *ipsec_mb_mp_mz;
+struct ipsec_mb_mp_shared_data *mp_shared_data;
+
+int
+ipsec_mb_ipc_request(const struct rte_mp_msg *mp_msg, const void *peer);
 
 static __rte_always_inline void *
 ipsec_mb_get_qp_private_data(struct ipsec_mb_qp *qp)
