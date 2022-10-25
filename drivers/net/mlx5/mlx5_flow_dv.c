@@ -2391,9 +2391,9 @@ flow_dv_validate_item_gtp(struct rte_eth_dev *dev,
 	const struct rte_flow_item_gtp *spec = item->spec;
 	const struct rte_flow_item_gtp *mask = item->mask;
 	const struct rte_flow_item_gtp nic_mask = {
-		.v_pt_rsv_flags = MLX5_GTP_FLAGS_MASK,
-		.msg_type = 0xff,
-		.teid = RTE_BE32(0xffffffff),
+		.hdr.gtp_hdr_info = MLX5_GTP_FLAGS_MASK,
+		.hdr.msg_type = 0xff,
+		.hdr.teid = RTE_BE32(0xffffffff),
 	};
 
 	if (!priv->sh->cdev->config.hca_attr.tunnel_stateless_gtp)
@@ -2411,7 +2411,7 @@ flow_dv_validate_item_gtp(struct rte_eth_dev *dev,
 					  "no outer UDP layer found");
 	if (!mask)
 		mask = &rte_flow_item_gtp_mask;
-	if (spec && spec->v_pt_rsv_flags & ~MLX5_GTP_FLAGS_MASK)
+	if (spec && spec->hdr.gtp_hdr_info & ~MLX5_GTP_FLAGS_MASK)
 		return rte_flow_error_set(error, ENOTSUP,
 					  RTE_FLOW_ERROR_TYPE_ITEM, item,
 					  "Match is supported for GTP"
@@ -2462,8 +2462,8 @@ flow_dv_validate_item_gtp_psc(const struct rte_flow_item *item,
 	gtp_mask = gtp_item->mask ? gtp_item->mask : &rte_flow_item_gtp_mask;
 	/* GTP spec and E flag is requested to match zero. */
 	if (gtp_spec &&
-		(gtp_mask->v_pt_rsv_flags &
-		~gtp_spec->v_pt_rsv_flags & MLX5_GTP_EXT_HEADER_FLAG))
+		(gtp_mask->hdr.gtp_hdr_info &
+		~gtp_spec->hdr.gtp_hdr_info & MLX5_GTP_EXT_HEADER_FLAG))
 		return rte_flow_error_set
 			(error, ENOTSUP, RTE_FLOW_ERROR_TYPE_ITEM, item,
 			 "GTP E flag must be 1 to match GTP PSC");
@@ -10298,16 +10298,16 @@ flow_dv_translate_item_gtp(void *matcher, void *key,
 	if (!gtp_m)
 		gtp_m = &rte_flow_item_gtp_mask;
 	MLX5_SET(fte_match_set_misc3, misc3_m, gtpu_msg_flags,
-		 gtp_m->v_pt_rsv_flags);
+		 gtp_m->hdr.gtp_hdr_info);
 	MLX5_SET(fte_match_set_misc3, misc3_v, gtpu_msg_flags,
-		 gtp_v->v_pt_rsv_flags & gtp_m->v_pt_rsv_flags);
-	MLX5_SET(fte_match_set_misc3, misc3_m, gtpu_msg_type, gtp_m->msg_type);
+		 gtp_v->hdr.gtp_hdr_info & gtp_m->hdr.gtp_hdr_info);
+	MLX5_SET(fte_match_set_misc3, misc3_m, gtpu_msg_type, gtp_m->hdr.msg_type);
 	MLX5_SET(fte_match_set_misc3, misc3_v, gtpu_msg_type,
-		 gtp_v->msg_type & gtp_m->msg_type);
+		 gtp_v->hdr.msg_type & gtp_m->hdr.msg_type);
 	MLX5_SET(fte_match_set_misc3, misc3_m, gtpu_teid,
-		 rte_be_to_cpu_32(gtp_m->teid));
+		 rte_be_to_cpu_32(gtp_m->hdr.teid));
 	MLX5_SET(fte_match_set_misc3, misc3_v, gtpu_teid,
-		 rte_be_to_cpu_32(gtp_v->teid & gtp_m->teid));
+		 rte_be_to_cpu_32(gtp_v->hdr.teid & gtp_m->hdr.teid));
 }
 
 /**
