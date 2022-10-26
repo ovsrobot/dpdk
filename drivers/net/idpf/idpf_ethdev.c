@@ -59,7 +59,9 @@ static const struct eth_dev_ops idpf_eth_dev_ops = {
 	.dev_stop			= idpf_dev_stop,
 	.dev_close			= idpf_dev_close,
 	.rx_queue_start			= idpf_rx_queue_start,
+	.rx_queue_stop			= idpf_rx_queue_stop,
 	.tx_queue_start			= idpf_tx_queue_start,
+	.tx_queue_stop			= idpf_tx_queue_stop,
 	.rx_queue_setup			= idpf_rx_queue_setup,
 	.tx_queue_setup			= idpf_tx_queue_setup,
 	.dev_infos_get			= idpf_dev_info_get,
@@ -347,22 +349,26 @@ idpf_dev_start(struct rte_eth_dev *dev)
 
 	if (dev->data->mtu > vport->max_mtu) {
 		PMD_DRV_LOG(ERR, "MTU should be less than %d", vport->max_mtu);
-		return -1;
+		goto err_mtu;
 	}
 
 	vport->max_pkt_len = dev->data->mtu + IDPF_ETH_OVERHEAD;
 
 	if (idpf_start_queues(dev) != 0) {
 		PMD_DRV_LOG(ERR, "Failed to start queues");
-		return -1;
+		goto err_mtu;
 	}
 
 	if (idpf_vc_ena_dis_vport(vport, true) != 0) {
 		PMD_DRV_LOG(ERR, "Failed to enable vport");
-		return -1;
+		goto err_vport;
 	}
 
 	return 0;
+err_vport:
+	idpf_stop_queues(dev);
+err_mtu:
+	return -1;
 }
 
 static int
@@ -371,6 +377,8 @@ idpf_dev_stop(struct rte_eth_dev *dev)
 	struct idpf_vport *vport = dev->data->dev_private;
 
 	idpf_vc_ena_dis_vport(vport, false);
+
+	idpf_stop_queues(dev);
 
 	return 0;
 }
