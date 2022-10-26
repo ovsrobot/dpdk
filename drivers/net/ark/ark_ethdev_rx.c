@@ -6,7 +6,7 @@
 
 #include "ark_ethdev_rx.h"
 #include "ark_global.h"
-#include "ark_logs.h"
+#include "ark_ethdev_logs.h"
 #include "ark_mpu.h"
 #include "ark_udm.h"
 
@@ -82,7 +82,7 @@ eth_ark_rx_hw_setup(struct rte_eth_dev *dev,
 
 	/* Verify HW */
 	if (ark_mpu_verify(queue->mpu, sizeof(rte_iova_t))) {
-		ARK_PMD_LOG(ERR, "Illegal configuration rx queue\n");
+		ARK_ETHDEV_LOG(ERR, "Illegal configuration rx queue\n");
 		return -1;
 	}
 
@@ -134,19 +134,19 @@ eth_ark_dev_rx_queue_setup(struct rte_eth_dev *dev,
 
 	if (rx_conf != NULL && warning1 == 0) {
 		warning1 = 1;
-		ARK_PMD_LOG(NOTICE,
+		ARK_ETHDEV_LOG(NOTICE,
 			    "Arkville ignores rte_eth_rxconf argument.\n");
 	}
 
 	if (RTE_PKTMBUF_HEADROOM < ARK_RX_META_SIZE) {
-		ARK_PMD_LOG(ERR,
+		ARK_ETHDEV_LOG(ERR,
 			    "Error: DPDK Arkville requires head room > %d bytes (%s)\n",
 			    ARK_RX_META_SIZE, __func__);
 		return -1;		/* ERROR CODE */
 	}
 
 	if (!rte_is_power_of_2(nb_desc)) {
-		ARK_PMD_LOG(ERR,
+		ARK_ETHDEV_LOG(ERR,
 			    "DPDK Arkville configuration queue size must be power of two %u (%s)\n",
 			    nb_desc, __func__);
 		return -1;		/* ERROR CODE */
@@ -158,7 +158,7 @@ eth_ark_dev_rx_queue_setup(struct rte_eth_dev *dev,
 				   64,
 				   socket_id);
 	if (queue == 0) {
-		ARK_PMD_LOG(ERR, "Failed to allocate memory in %s\n", __func__);
+		ARK_ETHDEV_LOG(ERR, "Failed to allocate memory in %s\n", __func__);
 		return -ENOMEM;
 	}
 
@@ -186,7 +186,7 @@ eth_ark_dev_rx_queue_setup(struct rte_eth_dev *dev,
 				   socket_id);
 
 	if (queue->reserve_q == 0 || queue->paddress_q == 0) {
-		ARK_PMD_LOG(ERR,
+		ARK_ETHDEV_LOG(ERR,
 			    "Failed to allocate queue memory in %s\n",
 			    __func__);
 		rte_free(queue->reserve_q);
@@ -209,7 +209,7 @@ eth_ark_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	status = eth_ark_rx_seed_mbufs(queue);
 
 	if (queue->seed_index != nb_desc) {
-		ARK_PMD_LOG(ERR, "Failed to allocate %u mbufs for RX queue %d\n",
+		ARK_ETHDEV_LOG(ERR, "Failed to allocate %u mbufs for RX queue %d\n",
 			    nb_desc, qidx);
 		status = -1;
 	}
@@ -220,7 +220,7 @@ eth_ark_dev_rx_queue_setup(struct rte_eth_dev *dev,
 	if (unlikely(status != 0)) {
 		struct rte_mbuf **mbuf;
 
-		ARK_PMD_LOG(ERR, "Failed to initialize RX queue %d %s\n",
+		ARK_ETHDEV_LOG(ERR, "Failed to initialize RX queue %d %s\n",
 			    qidx,
 			    __func__);
 		/* Free the mbufs allocated */
@@ -279,7 +279,7 @@ eth_ark_recv_pkts(void *rx_queue,
 
 			if ((meta->pkt_len > (1024 * 16)) ||
 			    (meta->pkt_len == 0)) {
-				ARK_PMD_LOG(DEBUG, "RX: Bad Meta Q: %u"
+				ARK_ETHDEV_LOG(DEBUG, "RX: Bad Meta Q: %u"
 					   " cons: %" PRIU32
 					   " prod: %" PRIU32
 					   " seed_index %" PRIU32
@@ -290,7 +290,7 @@ eth_ark_recv_pkts(void *rx_queue,
 					   queue->seed_index);
 
 
-				ARK_PMD_LOG(DEBUG, "       :  UDM"
+				ARK_ETHDEV_LOG(DEBUG, "       :  UDM"
 					   " prod: %" PRIU32
 					   " len: %u\n",
 					   queue->udm->rt_cfg.prod_idx,
@@ -458,7 +458,7 @@ eth_ark_rx_seed_mbufs(struct ark_rx_queue *queue)
 	int status = rte_pktmbuf_alloc_bulk(queue->mb_pool, mbufs, nb);
 
 	if (unlikely(status != 0)) {
-		ARK_PMD_LOG(NOTICE,
+		ARK_ETHDEV_LOG(NOTICE,
 			    "Could not allocate %u mbufs from pool"
 			    " for RX queue %u;"
 			    " %u free buffers remaining in queue\n",
@@ -591,8 +591,8 @@ ark_ethdev_rx_dump(const char *name, struct ark_rx_queue *queue)
 {
 	if (queue == NULL)
 		return;
-	ARK_PMD_LOG(DEBUG, "RX QUEUE %d -- %s", queue->phys_qid, name);
-	ARK_PMD_LOG(DEBUG, ARK_SU32 ARK_SU32 ARK_SU32 ARK_SU32 "\n",
+	ARK_ETHDEV_LOG(DEBUG, "RX QUEUE %d -- %s", queue->phys_qid, name);
+	ARK_ETHDEV_LOG(DEBUG, ARK_SU32 ARK_SU32 ARK_SU32 ARK_SU32 "\n",
 			"queue_size", queue->queue_size,
 			"seed_index", queue->seed_index,
 			"prod_index", queue->prod_index,
@@ -615,15 +615,15 @@ dump_mbuf_data(struct rte_mbuf *mbuf, uint16_t lo, uint16_t hi)
 {
 	uint16_t i, j;
 
-	ARK_PMD_LOG(DEBUG, " MBUF: %p len %d, off: %d\n",
+	ARK_ETHDEV_LOG(DEBUG, " MBUF: %p len %d, off: %d\n",
 		    mbuf, mbuf->pkt_len, mbuf->data_off);
 	for (i = lo; i < hi; i += 16) {
 		uint8_t *dp = RTE_PTR_ADD(mbuf->buf_addr, i);
 
-		ARK_PMD_LOG(DEBUG, "  %6d:  ", i);
+		ARK_ETHDEV_LOG(DEBUG, "  %6d:  ", i);
 		for (j = 0; j < 16; j++)
-			ARK_PMD_LOG(DEBUG, " %02x", dp[j]);
+			ARK_ETHDEV_LOG(DEBUG, " %02x", dp[j]);
 
-		ARK_PMD_LOG(DEBUG, "\n");
+		ARK_ETHDEV_LOG(DEBUG, "\n");
 	}
 }

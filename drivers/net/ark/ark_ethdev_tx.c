@@ -8,7 +8,7 @@
 #include "ark_global.h"
 #include "ark_mpu.h"
 #include "ark_ddm.h"
-#include "ark_logs.h"
+#include "ark_ethdev_logs.h"
 
 #define ARK_TX_META_SIZE   32
 #define ARK_TX_META_OFFSET (RTE_PKTMBUF_HEADROOM - ARK_TX_META_SIZE)
@@ -166,7 +166,7 @@ eth_ark_xmit_pkts(void *vtxq, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 	}
 
 	if (ARK_DEBUG_CORE && nb != nb_pkts) {
-		ARK_PMD_LOG(DEBUG, "TX: Failure to send:"
+		ARK_ETHDEV_LOG(DEBUG, "TX: Failure to send:"
 			   " req: %" PRIU32
 			   " sent: %" PRIU32
 			   " prod: %" PRIU32
@@ -232,7 +232,7 @@ eth_ark_tx_queue_setup(struct rte_eth_dev *dev,
 	int qidx = queue_idx;
 
 	if (!rte_is_power_of_2(nb_desc)) {
-		ARK_PMD_LOG(ERR,
+		ARK_ETHDEV_LOG(ERR,
 			    "DPDK Arkville configuration queue size"
 			    " must be power of two %u (%s)\n",
 			    nb_desc, __func__);
@@ -248,7 +248,7 @@ eth_ark_tx_queue_setup(struct rte_eth_dev *dev,
 				   64,
 				   socket_id);
 	if (queue == 0) {
-		ARK_PMD_LOG(ERR, "Failed to allocate tx "
+		ARK_ETHDEV_LOG(ERR, "Failed to allocate tx "
 			    "queue memory in %s\n",
 			    __func__);
 		return -ENOMEM;
@@ -275,7 +275,7 @@ eth_ark_tx_queue_setup(struct rte_eth_dev *dev,
 				   socket_id);
 
 	if (queue->meta_q == 0 || queue->bufs == 0) {
-		ARK_PMD_LOG(ERR, "Failed to allocate "
+		ARK_ETHDEV_LOG(ERR, "Failed to allocate "
 			    "queue memory in %s\n", __func__);
 		rte_free(queue->meta_q);
 		rte_free(queue->bufs);

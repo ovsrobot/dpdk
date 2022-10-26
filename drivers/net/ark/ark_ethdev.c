@@ -11,7 +11,7 @@
 #include <rte_kvargs.h>
 
 #include "ark_global.h"
-#include "ark_logs.h"
+#include "ark_ethdev_logs.h"
 #include "ark_ethdev_tx.h"
 #include "ark_ethdev_rx.h"
 #include "ark_mpu.h"
@@ -102,26 +102,6 @@ static const struct rte_pci_id pci_id_ark_map[] = {
 	{.vendor_id = 0, /* sentinel */ },
 };
 
-/*
- * This structure is used to statically define the capabilities
- * of supported devices.
- * Capabilities:
- *  rqpacing -
- * Some HW variants require that PCIe read-requests be correctly throttled.
- * This is called "rqpacing" and has to do with credit and flow control
- * on certain Arkville implementations.
- */
-struct ark_caps {
-	bool rqpacing;
-	bool isvf;
-};
-struct ark_dev_caps {
-	uint32_t  device_id;
-	struct ark_caps  caps;
-};
-#define SET_DEV_CAPS(id, rqp, vf)			\
-	{id, {.rqpacing = rqp, .isvf = vf} }
-
 static const struct ark_dev_caps
 ark_device_caps[] = {
 		     SET_DEV_CAPS(0x100d, true, false),
@@ -211,26 +191,26 @@ check_for_ext(struct ark_adapter *ark)
 	const char *dllpath = getenv("ARK_EXT_PATH");
 
 	if (dllpath == NULL) {
-		ARK_PMD_LOG(DEBUG, "EXT NO dll path specified\n");
+		ARK_ETHDEV_LOG(DEBUG, "EXT NO dll path specified\n");
 		return 0;
 	}
-	ARK_PMD_LOG(NOTICE, "EXT found dll path at %s\n", dllpath);
+	ARK_ETHDEV_LOG(NOTICE, "EXT found dll path at %s\n", dllpath);
 
 	/* Open and load the .so */
 	ark->d_handle = dlopen(dllpath, RTLD_LOCAL | RTLD_LAZY);
 	if (ark->d_handle == NULL) {
-		ARK_PMD_LOG(ERR, "Could not load user extension %s\n",
+		ARK_ETHDEV_LOG(ERR, "Could not load user extension %s\n",
 			    dllpath);
 		return -1;
 	}
-	ARK_PMD_LOG(DEBUG, "SUCCESS: loaded user extension %s\n",
+	ARK_ETHDEV_LOG(DEBUG, "SUCCESS: loaded user extension %s\n",
 			    dllpath);
 
 	/* Get the entry points */
 	ark->user_ext.dev_init =
 		(void *(*)(struct rte_eth_dev *, void *, int))
 		dlsym(ark->d_handle, "rte_pmd_ark_dev_init");
-	ARK_PMD_LOG(DEBUG, "device ext init pointer = %p\n",
+	ARK_ETHDEV_LOG(DEBUG, "device ext init pointer = %p\n",
 		      ark->user_ext.dev_init);
 	ark->user_ext.dev_get_port_count =
 		(int (*)(struct rte_eth_dev *, void *))
@@ -303,7 +283,7 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 
 	ark->eth_dev = dev;
 
-	ARK_PMD_LOG(DEBUG, "\n");
+	ARK_ETHDEV_LOG(DEBUG, "\n");
 
 	/* Check to see if there is an extension that we need to load */
 	ret = check_for_ext(ark);
@@ -351,15 +331,15 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 	ark->started = 0;
 	ark->pkt_dir_v = ARK_PKT_DIR_INIT_VAL;
 
-	ARK_PMD_LOG(INFO, "Sys Ctrl Const = 0x%x  HW Commit_ID: %08x\n",
+	ARK_ETHDEV_LOG(INFO, "Sys Ctrl Const = 0x%x  HW Commit_ID: %08x\n",
 		      ark->sysctrl.t32[4],
 		      rte_be_to_cpu_32(ark->sysctrl.t32[0x20 / 4]));
-	ARK_PMD_LOG(NOTICE, "Arkville HW Commit_ID: %08x\n",
+	ARK_ETHDEV_LOG(NOTICE, "Arkville HW Commit_ID: %08x\n",
 		    rte_be_to_cpu_32(ark->sysctrl.t32[0x20 / 4]));
 
 	/* If HW sanity test fails, return an error */
 	if (ark->sysctrl.t32[4] != 0xcafef00d) {
-		ARK_PMD_LOG(ERR,
+		ARK_ETHDEV_LOG(ERR,
 			    "HW Sanity test has failed, expected constant"
 			    " 0x%x, read 0x%x (%s)\n",
 			    0xcafef00d,
@@ -369,16 +349,16 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 	if (ark->sysctrl.t32[3] != 0) {
 		if (ark->rqpacing) {
 			if (ark_rqp_lasped(ark->rqpacing)) {
-				ARK_PMD_LOG(ERR, "Arkville Evaluation System - "
+				ARK_ETHDEV_LOG(ERR, "Arkville Evaluation System - "
 					    "Timer has Expired\n");
 				return -1;
 			}
-			ARK_PMD_LOG(WARNING, "Arkville Evaluation System - "
+			ARK_ETHDEV_LOG(WARNING, "Arkville Evaluation System - "
 				    "Timer is Running\n");
 		}
 	}
 
-	ARK_PMD_LOG(DEBUG,
+	ARK_ETHDEV_LOG(DEBUG,
 		    "HW Sanity test has PASSED, expected constant"
 		    " 0x%x, read 0x%x (%s)\n",
 		    0xcafef00d, ark->sysctrl.t32[4], __func__);
@@ -393,7 +373,7 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 
 	dev->data->mac_addrs = rte_zmalloc("ark", RTE_ETHER_ADDR_LEN, 0);
 	if (!dev->data->mac_addrs) {
-		ARK_PMD_LOG(ERR,
+		ARK_ETHDEV_LOG(ERR,
 			    "Failed to allocated memory for storing mac address"
 			    );
 	}
@@ -402,7 +382,7 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 		ark->user_data[dev->data->port_id] =
 			ark->user_ext.dev_init(dev, ark->a_bar, 0);
 		if (!ark->user_data[dev->data->port_id]) {
-			ARK_PMD_LOG(WARNING,
+			ARK_ETHDEV_LOG(WARNING,
 				    "Failed to initialize PMD extension!"
 				    " continuing without it\n");
 			memset(&ark->user_ext, 0, sizeof(struct ark_user_ext));
@@ -413,7 +393,7 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 	if (pci_dev->device.devargs)
 		ret = eth_ark_check_args(ark, pci_dev->device.devargs->args);
 	else
-		ARK_PMD_LOG(INFO, "No Device args found\n");
+		ARK_ETHDEV_LOG(INFO, "No Device args found\n");
 
 	if (ret)
 		goto error;
@@ -444,7 +424,7 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 		/* reserve an ethdev entry */
 		eth_dev = rte_eth_dev_allocate(name);
 		if (!eth_dev) {
-			ARK_PMD_LOG(ERR,
+			ARK_ETHDEV_LOG(ERR,
 				    "Could not allocate eth_dev for port %d\n",
 				    p);
 			goto error;
@@ -462,7 +442,7 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 		eth_dev->data->mac_addrs = rte_zmalloc(name,
 						RTE_ETHER_ADDR_LEN, 0);
 		if (!eth_dev->data->mac_addrs) {
-			ARK_PMD_LOG(ERR,
+			ARK_ETHDEV_LOG(ERR,
 				    "Memory allocation for MAC failed!"
 				    " Exiting.\n");
 			goto error;
@@ -608,7 +588,7 @@ eth_ark_dev_start(struct rte_eth_dev *dev)
 
 		if (rte_ctrl_thread_create(&thread, tname, NULL,
 					   ark_pktgen_delay_start, ark->pg)) {
-			ARK_PMD_LOG(ERR, "Could not create pktgen "
+			ARK_ETHDEV_LOG(ERR, "Could not create pktgen "
 				    "starter thread\n");
 			return -1;
 		}
@@ -657,7 +637,7 @@ eth_ark_dev_stop(struct rte_eth_dev *dev)
 		status = eth_ark_tx_queue_stop(dev, i);
 		if (status != 0) {
 			uint16_t port = dev->data->port_id;
-			ARK_PMD_LOG(ERR,
+			ARK_ETHDEV_LOG(ERR,
 				    "tx_queue stop anomaly"
 				    " port %u, queue %u\n",
 				    port, i);
@@ -757,7 +737,7 @@ eth_ark_dev_info_get(struct rte_eth_dev *dev,
 static int
 eth_ark_dev_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 {
-	ARK_PMD_LOG(DEBUG, "link status = %d\n",
+	ARK_ETHDEV_LOG(DEBUG, "link status = %d\n",
 			dev->data->dev_link.link_status);
 	struct ark_adapter *ark = dev->data->dev_private;
 
@@ -892,20 +872,20 @@ static inline int
 process_pktdir_arg(const char *key, const char *value,
 		   void *extra_args)
 {
-	ARK_PMD_LOG(DEBUG, "key = %s, value = %s\n",
+	ARK_ETHDEV_LOG(DEBUG, "key = %s, value = %s\n",
 		    key, value);
 	struct ark_adapter *ark =
 		(struct ark_adapter *)extra_args;
 
 	ark->pkt_dir_v = strtol(value, NULL, 16);
-	ARK_PMD_LOG(DEBUG, "pkt_dir_v = 0x%x\n", ark->pkt_dir_v);
+	ARK_ETHDEV_LOG(DEBUG, "pkt_dir_v = 0x%x\n", ark->pkt_dir_v);
 	return 0;
 }
 
 static inline int
 process_file_args(const char *key, const char *value, void *extra_args)
 {
-	ARK_PMD_LOG(DEBUG, "key = %s, value = %s\n",
+	ARK_ETHDEV_LOG(DEBUG, "key = %s, value = %s\n",
 		    key, value);
 	char *args = (char *)extra_args;
 
@@ -916,7 +896,7 @@ process_file_args(const char *key, const char *value, void *extra_args)
 	int first = 1;
 
 	if (file == NULL) {
-		ARK_PMD_LOG(ERR, "Unable to open "
+		ARK_ETHDEV_LOG(ERR, "Unable to open "
 			    "config file %s\n", value);
 		return -1;
 	}
@@ -924,7 +904,7 @@ process_file_args(const char *key, const char *value, void *extra_args)
 	while (fgets(line, sizeof(line), file)) {
 		size += strlen(line);
 		if (size >= ARK_MAX_ARG_LEN) {
-			ARK_PMD_LOG(ERR, "Unable to parse file %s args, "
+			ARK_ETHDEV_LOG(ERR, "Unable to parse file %s args, "
 				    "parameter list is too long\n", value);
 			fclose(file);
 			return -1;
@@ -936,7 +916,7 @@ process_file_args(const char *key, const char *value, void *extra_args)
 			strncat(args, line, ARK_MAX_ARG_LEN);
 		}
 	}
-	ARK_PMD_LOG(DEBUG, "file = %s\n", args);
+	ARK_ETHDEV_LOG(DEBUG, "file = %s\n", args);
 	fclose(file);
 	return 0;
 }
@@ -958,7 +938,7 @@ eth_ark_check_args(struct ark_adapter *ark, const char *params)
 
 	for (k_idx = 0; k_idx < kvlist->count; k_idx++) {
 		pair = &kvlist->pairs[k_idx];
-		ARK_PMD_LOG(DEBUG, "**** Arg passed to PMD = %s:%s\n",
+		ARK_ETHDEV_LOG(DEBUG, "**** Arg passed to PMD = %s:%s\n",
 			     pair->key,
 			     pair->value);
 	}
@@ -967,7 +947,7 @@ eth_ark_check_args(struct ark_adapter *ark, const char *params)
 			       ARK_PKTDIR_ARG,
 			       &process_pktdir_arg,
 			       ark) != 0) {
-		ARK_PMD_LOG(ERR, "Unable to parse arg %s\n", ARK_PKTDIR_ARG);
+		ARK_ETHDEV_LOG(ERR, "Unable to parse arg %s\n", ARK_PKTDIR_ARG);
 		goto free_kvlist;
 	}
 
@@ -975,7 +955,7 @@ eth_ark_check_args(struct ark_adapter *ark, const char *params)
 			       ARK_PKTGEN_ARG,
 			       &process_file_args,
 			       ark->pkt_gen_args) != 0) {
-		ARK_PMD_LOG(ERR, "Unable to parse arg %s\n", ARK_PKTGEN_ARG);
+		ARK_ETHDEV_LOG(ERR, "Unable to parse arg %s\n", ARK_PKTGEN_ARG);
 		goto free_kvlist;
 	}
 
@@ -983,7 +963,7 @@ eth_ark_check_args(struct ark_adapter *ark, const char *params)
 			       ARK_PKTCHKR_ARG,
 			       &process_file_args,
 			       ark->pkt_chkr_args) != 0) {
-		ARK_PMD_LOG(ERR, "Unable to parse arg %s\n", ARK_PKTCHKR_ARG);
+		ARK_ETHDEV_LOG(ERR, "Unable to parse arg %s\n", ARK_PKTCHKR_ARG);
 		goto free_kvlist;
 	}
 
@@ -991,13 +971,13 @@ eth_ark_check_args(struct ark_adapter *ark, const char *params)
 		ret = 0;
 		goto free_kvlist;
 	}
-	ARK_PMD_LOG(INFO, "packet director set to 0x%x\n", ark->pkt_dir_v);
+	ARK_ETHDEV_LOG(INFO, "packet director set to 0x%x\n", ark->pkt_dir_v);
 	/* Setup the packet director */
 	ark_pktdir_setup(ark->pd, ark->pkt_dir_v);
 
 	/* Setup the packet generator */
 	if (ark->pkt_gen_args[0]) {
-		ARK_PMD_LOG(DEBUG, "Setting up the packet generator\n");
+		ARK_ETHDEV_LOG(DEBUG, "Setting up the packet generator\n");
 		ark_pktgen_parse(ark->pkt_gen_args);
 		ark_pktgen_reset(ark->pg);
 		ark_pktgen_setup(ark->pg);
