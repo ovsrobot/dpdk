@@ -23,16 +23,19 @@
  * Some HW variants require that PCIe read-requests be correctly throttled.
  * This is called "rqpacing" and has to do with credit and flow control
  * on certain Arkville implementations.
+ *  isvf -
+ * Some HW variants support sr-iov virtual functions.
  */
 struct ark_caps {
 	bool rqpacing;
+	bool isvf;
 };
 struct ark_dev_caps {
 	uint32_t  device_id;
 	struct ark_caps  caps;
 };
-#define SET_DEV_CAPS(id, rqp) \
-	{id, {.rqpacing = rqp} }
+#define SET_DEV_CAPS(id, rqp, vf)		\
+	{id, {.rqpacing = rqp, .isvf = vf} }
 
 /* Format specifiers for string data pairs */
 #define ARK_SU32  "\n\t%-20s    %'20" PRIU32
