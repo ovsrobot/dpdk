@@ -103,13 +103,21 @@ struct ark_ddm_t {
 };
 
 /* DDM function prototype */
+__rte_internal
 int ark_ddm_verify(struct ark_ddm_t *ddm);
+__rte_internal
 void ark_ddm_stats_reset(struct ark_ddm_t *ddm);
+__rte_internal
 void ark_ddm_queue_setup(struct ark_ddm_t *ddm, rte_iova_t cons_addr);
+__rte_internal
 void ark_ddm_dump_stats(struct ark_ddm_t *ddm, const char *msg);
+__rte_internal
 uint64_t ark_ddm_queue_byte_count(struct ark_ddm_t *ddm);
+__rte_internal
 uint64_t ark_ddm_queue_pkt_count(struct ark_ddm_t *ddm);
+__rte_internal
 void ark_ddm_queue_reset_stats(struct ark_ddm_t *ddm);
+__rte_internal
 void ark_ddm_queue_enable(struct ark_ddm_t *ddm, int enable);
 
 #endif

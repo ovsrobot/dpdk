@@ -52,7 +52,10 @@ struct ark_rqpace_t {
 	volatile uint32_t cmpl_errors;
 };
 
+__rte_internal
 void ark_rqp_dump(struct ark_rqpace_t *rqp);
+__rte_internal
 void ark_rqp_stats_reset(struct ark_rqpace_t *rqp);
+__rte_internal
 int ark_rqp_lasped(struct ark_rqpace_t *rqp);
 #endif

@@ -80,14 +80,20 @@ struct ark_mpu_t {
 uint16_t ark_api_num_queues(struct ark_mpu_t *mpu);
 uint16_t ark_api_num_queues_per_port(struct ark_mpu_t *mpu,
 				     uint16_t ark_ports);
+__rte_internal
 int ark_mpu_verify(struct ark_mpu_t *mpu, uint32_t obj_size);
+__rte_internal
 void ark_mpu_stop(struct ark_mpu_t *mpu);
+__rte_internal
 void ark_mpu_start(struct ark_mpu_t *mpu);
+__rte_internal
 int ark_mpu_reset(struct ark_mpu_t *mpu);
+__rte_internal
 int ark_mpu_configure(struct ark_mpu_t *mpu, rte_iova_t ring,
 		      uint32_t ring_size, int is_tx);
-
+__rte_internal
 void ark_mpu_dump(struct ark_mpu_t *mpu, const char *msg, uint16_t idx);
+__rte_internal
 void ark_mpu_dump_setup(struct ark_mpu_t *mpu, uint16_t qid);
 
 /*  this action is in a performance critical path */
