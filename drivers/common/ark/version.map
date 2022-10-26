@@ -1,18 +1,21 @@
-DPDK_22 {
-	local: *;
-};
-
-INTERNAL {
+EXTERNAL {
 	global:
 
 	ark_api_num_queues;
 	ark_api_num_queues_per_port;
+
+};
+
+INTERNAL {
+	global:
 
 	ark_ddm_dump_stats;
 	ark_ddm_queue_byte_count;
 	ark_ddm_queue_pkt_count;
 	ark_ddm_queue_reset_stats;
 	ark_ddm_stats_reset;
+	ark_ddm_queue_setup;
+	ark_ddm_queue_enable;
 	ark_ddm_verify;
 
 	ark_mpu_configure;
