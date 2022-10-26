@@ -9,7 +9,7 @@
 #include <rte_malloc.h>
 
 #include "ark_pktchkr.h"
-#include "ark_logs.h"
+#include "ark_common.h"
 
 static int set_arg(char *arg, char *val);
 static int ark_pktchkr_is_gen_forever(ark_pkt_chkr_t handle);

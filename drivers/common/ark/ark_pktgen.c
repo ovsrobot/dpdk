@@ -10,7 +10,7 @@
 #include <rte_malloc.h>
 
 #include "ark_pktgen.h"
-#include "ark_logs.h"
+#include "ark_common.h"
 
 #define ARK_MAX_STR_LEN 64
 union OPTV {

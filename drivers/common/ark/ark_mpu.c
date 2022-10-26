@@ -4,7 +4,7 @@
 
 #include <unistd.h>
 
-#include "ark_logs.h"
+#include "ark_common.h"
 #include "ark_mpu.h"
 
 uint16_t

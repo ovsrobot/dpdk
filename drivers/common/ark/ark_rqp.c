@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 #include "ark_rqp.h"
-#include "ark_logs.h"
+#include "ark_common.h"
 
 /* ************************************************************************* */
 void

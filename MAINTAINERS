@@ -642,6 +642,7 @@ M: Shepard Siegel <shepard.siegel@atomicrules.com>
 M: Ed Czeck <ed.czeck@atomicrules.com>
 M: John Miller <john.miller@atomicrules.com>
 F: drivers/net/ark/
+F: drivers/common/ark/
 F: doc/guides/nics/ark.rst
 F: doc/guides/nics/features/ark.ini
 
