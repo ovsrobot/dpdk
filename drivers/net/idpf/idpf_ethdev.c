@@ -22,6 +22,8 @@ rte_spinlock_t idpf_adapter_lock;
 struct idpf_adapter_list idpf_adapter_list;
 bool idpf_adapter_list_init;
 
+uint64_t idpf_timestamp_dynflag;
+
 static const char * const idpf_valid_args[] = {
 	IDPF_TX_SINGLE_Q,
 	IDPF_RX_SINGLE_Q,
@@ -98,7 +100,8 @@ idpf_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->tx_offload_capa =
 		RTE_ETH_TX_OFFLOAD_TCP_TSO		|
 		RTE_ETH_TX_OFFLOAD_MULTI_SEGS		|
-		RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
+		RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE	|
+		RTE_ETH_RX_OFFLOAD_TIMESTAMP;
 
 	dev_info->default_txconf = (struct rte_eth_txconf) {
 		.tx_free_thresh = IDPF_DEFAULT_TX_FREE_THRESH,
