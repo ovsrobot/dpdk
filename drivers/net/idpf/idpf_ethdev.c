@@ -88,6 +88,8 @@ idpf_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 
 	dev_info->max_mac_addrs = IDPF_NUM_MACADDR_MAX;
 
+	dev_info->tx_offload_capa = RTE_ETH_TX_OFFLOAD_MULTI_SEGS;
+
 	dev_info->default_txconf = (struct rte_eth_txconf) {
 		.tx_free_thresh = IDPF_DEFAULT_TX_FREE_THRESH,
 		.tx_rs_thresh = IDPF_DEFAULT_TX_RS_THRESH,
@@ -376,6 +378,7 @@ idpf_dev_start(struct rte_eth_dev *dev)
 	}
 
 	idpf_set_rx_function(dev);
+	idpf_set_tx_function(dev);
 
 	if (idpf_vc_ena_dis_vport(vport, true) != 0) {
 		PMD_DRV_LOG(ERR, "Failed to enable vport");
