@@ -375,6 +375,8 @@ idpf_dev_start(struct rte_eth_dev *dev)
 		goto err_mtu;
 	}
 
+	idpf_set_rx_function(dev);
+
 	if (idpf_vc_ena_dis_vport(vport, true) != 0) {
 		PMD_DRV_LOG(ERR, "Failed to enable vport");
 		goto err_vport;
