@@ -22,8 +22,6 @@
 
 #include "idpf_ethdev.h"
 
-#define IDPF_CTLQ_LEN	64
-
 static int
 idpf_vc_clean(struct idpf_adapter *adapter)
 {
