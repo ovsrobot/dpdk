@@ -188,6 +188,19 @@ update_header(struct gro_tcp4_item *item)
 			pkt->l2_len);
 }
 
+static inline void
+update_tcp_hdr_flags(struct rte_tcp_hdr *tcp_hdr, struct rte_mbuf *pkt)
+{
+	struct rte_ether_hdr *eth_hdr;
+	struct rte_ipv4_hdr *ipv4_hdr;
+	struct rte_tcp_hdr *merged_tcp_hdr;
+
+	eth_hdr = rte_pktmbuf_mtod(pkt, struct rte_ether_hdr *);
+	ipv4_hdr = (struct rte_ipv4_hdr *)((char *)eth_hdr + pkt->l2_len);
+	merged_tcp_hdr = (struct rte_tcp_hdr *)((char *)ipv4_hdr + pkt->l3_len);
+	merged_tcp_hdr->tcp_flags |= tcp_hdr->tcp_flags;
+}
+
 int32_t
 gro_tcp4_reassemble(struct rte_mbuf *pkt,
 		struct gro_tcp4_tbl *tbl,
@@ -206,6 +219,7 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 	uint32_t i, max_flow_num, remaining_flow_num;
 	int cmp;
 	uint8_t find;
+	uint32_t start_idx;
 
 	/*
 	 * Don't process the packet whose TCP header length is greater
@@ -218,13 +232,6 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 	ipv4_hdr = (struct rte_ipv4_hdr *)((char *)eth_hdr + pkt->l2_len);
 	tcp_hdr = (struct rte_tcp_hdr *)((char *)ipv4_hdr + pkt->l3_len);
 	hdr_len = pkt->l2_len + pkt->l3_len + pkt->l4_len;
-
-	/*
-	 * Don't process the packet which has FIN, SYN, RST, PSH, URG, ECE
-	 * or CWR set.
-	 */
-	if (tcp_hdr->tcp_flags != RTE_TCP_ACK_FLAG)
-		return -1;
 
 	/* trim the tail padding bytes */
 	ip_tlen = rte_be_to_cpu_16(ipv4_hdr->total_length);
@@ -264,10 +271,28 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 		if (tbl->flows[i].start_index != INVALID_ARRAY_INDEX) {
 			if (is_same_tcp4_flow(tbl->flows[i].key, key)) {
 				find = 1;
+				start_idx = tbl->flows[i].start_index;
 				break;
 			}
 			remaining_flow_num--;
 		}
+	}
+
+	if (tcp_hdr->tcp_flags != RTE_TCP_ACK_FLAG) {
+		/*
+		 * Check and try merging the current TCP segment with the previous
+		 * TCP segment if the TCP header does not contain RST and SYN flag
+		 * There are cases where the last segment is sent with FIN|PSH|ACK
+		 * which should also be considered for merging with previous segments.
+		 */
+		if (find && !(tcp_hdr->tcp_flags & (RTE_TCP_RST_FLAG|RTE_TCP_SYN_FLAG)))
+			/*
+			 * Since PSH flag is set, start time will be set to 0 so it will be flushed
+			 * immediately.
+			 */
+			tbl->items[start_idx].start_time = 0;
+		else
+			return -1;
 	}
 
 	/*
@@ -304,8 +329,12 @@ gro_tcp4_reassemble(struct rte_mbuf *pkt,
 				is_atomic);
 		if (cmp) {
 			if (merge_two_tcp4_packets(&(tbl->items[cur_idx]),
-						pkt, cmp, sent_seq, ip_id, 0))
+						pkt, cmp, sent_seq, ip_id, 0)) {
+				if (tbl->items[cur_idx].start_time == 0)
+					update_tcp_hdr_flags(tcp_hdr, tbl->items[cur_idx].firstseg);
 				return 1;
+			}
+
 			/*
 			 * Fail to merge the two packets, as the packet
 			 * length is greater than the max value. Store
