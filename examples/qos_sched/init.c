@@ -286,10 +286,18 @@ app_load_cfg_profile(const char *profile)
 	if (file == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot load configuration profile %s\n", profile);
 
-	cfg_load_port(file, &port_params);
-	cfg_load_subport(file, subport_params);
-	cfg_load_subport_profile(file, subport_profile);
-	cfg_load_pipe(file, pipe_profiles);
+	if (cfg_load_port(file, &port_params)) {
+		rte_exit(EXIT_FAILURE, "Invalid port configuration\n");
+	}
+	if (cfg_load_subport(file, subport_params)) {
+		rte_exit (EXIT_FAILURE, "Invalid subport configuration\n");
+	}
+	if (cfg_load_subport_profile(file, subport_profile)) {
+		rte_exit(EXIT_FAILURE, "Invalid subport profile configuration\n");
+	}
+	if (cfg_load_pipe(file, pipe_profiles)) {
+		rte_exit(EXIT_FAILURE, "Invalid pipe profile configuration\n");
+	}
 
 	rte_cfgfile_close(file);
 
