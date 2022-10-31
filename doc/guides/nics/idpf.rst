@@ -64,3 +64,22 @@ Refer to the document :ref:`compiling and testing a PMD for a NIC <pmd_build_and
 for details.
 
 
+Features
+--------
+
+Vector PMD
+~~~~~~~~~~
+
+Vector path for RX and TX path are selected automatically. The paths
+are chosen based on 2 conditions.
+
+- ``CPU``
+  On the X86 platform, the driver checks if the CPU supports AVX512.
+  If the CPU supports AVX512 and EAL argument ``--force-max-simd-bitwidth``
+  is set to 512, AVX512 paths will be chosen.
+
+- ``Offload features``
+  The supported HW offload features are described in the document idpf.ini,
+  A value "P" means the offload feature is not supported by vector path.
+  If any not supported features are used, idpf vector PMD is disabled and the
+  scalar paths are chosen.
