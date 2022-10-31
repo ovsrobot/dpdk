@@ -7,7 +7,6 @@ if not is_linux
     subdir_done()
 endif
 
-fmt_name = 'mlx5_compress'
 deps += ['common_mlx5', 'eal', 'compressdev']
 if not ('mlx5' in common_drivers)
     # avoid referencing undefined variables from common/mlx5

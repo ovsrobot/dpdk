@@ -7,7 +7,6 @@ if not (is_linux or is_windows)
     subdir_done()
 endif
 
-fmt_name = 'mlx5_crypto'
 deps += ['common_mlx5', 'eal', 'cryptodev']
 if not ('mlx5' in common_drivers)
     # avoid referencing undefined variables from common/mlx5
