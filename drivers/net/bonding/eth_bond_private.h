@@ -184,6 +184,8 @@ struct bond_dev_private {
 
 	void *vlan_filter_bmpmem;		/* enabled vlan filter bitmap */
 	struct rte_bitmap *vlan_filter_bmp;
+
+	bool kvargs_processing_is_done;
 };
 
 extern const struct eth_dev_ops default_dev_ops;
