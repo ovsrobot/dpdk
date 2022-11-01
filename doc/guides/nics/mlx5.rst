@@ -106,6 +106,7 @@ Features
 - Sub-Function representors.
 - Sub-Function.
 - Matching on represented port.
+- Matching on port representor ID.
 
 
 Limitations
