@@ -283,10 +283,17 @@ rte_gro_reassemble_burst(struct rte_mbuf **pkts,
 	if ((nb_after_gro < nb_pkts)
 		 || (unprocess_num < nb_pkts)) {
 		i = 0;
+		/* Copy unprocessed packets */
+		if (unprocess_num > 0) {
+			memcpy(&pkts[i], unprocess_pkts,
+					sizeof(struct rte_mbuf *) *
+					unprocess_num);
+			i = unprocess_num;
+		}
 		/* Flush all packets from the tables */
 		if (do_vxlan_tcp_gro) {
-			i = gro_vxlan_tcp4_tbl_timeout_flush(&vxlan_tcp_tbl,
-					0, pkts, nb_pkts);
+			i += gro_vxlan_tcp4_tbl_timeout_flush(&vxlan_tcp_tbl,
+					0, &pkts[i], nb_pkts - i);
 		}
 
 		if (do_vxlan_udp_gro) {
@@ -304,13 +311,6 @@ rte_gro_reassemble_burst(struct rte_mbuf **pkts,
 			i += gro_udp4_tbl_timeout_flush(&udp_tbl, 0,
 					&pkts[i], nb_pkts - i);
 		}
-		/* Copy unprocessed packets */
-		if (unprocess_num > 0) {
-			memcpy(&pkts[i], unprocess_pkts,
-					sizeof(struct rte_mbuf *) *
-					unprocess_num);
-		}
-		nb_after_gro = i + unprocess_num;
 	}
 
 	return nb_after_gro;
