@@ -191,6 +191,7 @@ New Features
     - Support of counter.
     - Support of meter.
     - Support of modify fields.
+  * Added support of matching on port representor ID.
 
 * **Updated NXP dpaa2 driver.**
 
