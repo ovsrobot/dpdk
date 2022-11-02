@@ -110,6 +110,14 @@ The power management mechanism is used to save power when performing L3 forwardi
 Empty Poll API
 --------------
 
+Removal Warning
+~~~~~~~~~~~~~~~
+
+The experimental empty poll APIs will be removed from the library in a future
+DPDK release. The empty poll mechanism is superseded by the power pmd modes
+i.e. monitor, pause and scale.
+
+
 Abstract
 ~~~~~~~~
 
@@ -191,6 +199,7 @@ API Overview for Empty Poll Power Management
 User Cases
 ----------
 The mechanism can applied to any device which is based on polling. e.g. NIC, FPGA.
+
 
 Ethernet PMD Power Management API
 ---------------------------------
