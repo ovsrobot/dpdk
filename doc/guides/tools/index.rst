@@ -18,5 +18,6 @@ DPDK Tools User Guides
     testbbdev
     cryptoperf
     comp_perf
+    securityperf
     testeventdev
     testregex
