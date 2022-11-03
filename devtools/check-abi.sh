@@ -35,21 +35,22 @@ else
 fi
 
 error=
-for dump in $(find $refdir -name "*.dump"); do
-	name=$(basename $dump)
-	if grep -q "; SKIP_LIBRARY=${name%.dump}\>" $(dirname $0)/libabigail.abignore; then
+for lib in $(find $refdir -name "*.so.*" -a ! -type l); do
+	name=$(basename $lib)
+	if grep -q "; SKIP_LIBRARY=${name%.so.*}\>" $(dirname $0)/libabigail.abignore; then
 		echo "Skipped $name" >&2
 		continue
 	fi
-	dump2=$(find $newdir -name $name)
-	if [ -z "$dump2" ] || [ ! -e "$dump2" ]; then
+	# Look for a library with the same major ABI version
+	lib2=$(find $newdir -name "${name%.*}.*" -a ! -type l)
+	if [ -z "$lib2" ] || [ ! -e "$lib2" ]; then
 		echo "Error: cannot find $name in $newdir" >&2
 		error=1
 		continue
 	fi
-	abidiff $ABIDIFF_OPTIONS $dump $dump2 || {
+	abidiff $ABIDIFF_OPTIONS $lib $lib2 || {
 		abiret=$?
-		echo "Error: ABI issue reported for 'abidiff $ABIDIFF_OPTIONS $dump $dump2'" >&2
+		echo "Error: ABI issue reported for 'abidiff $ABIDIFF_OPTIONS $lib $lib2'" >&2
 		error=1
 		echo
 		if [ $(($abiret & 3)) -ne 0 ]; then
