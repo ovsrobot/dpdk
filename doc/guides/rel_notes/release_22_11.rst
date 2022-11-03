@@ -312,6 +312,12 @@ New Features
 
      strings $dpdk_binary_or_driver | sed -n 's/^PMD_INFO_STRING= //p'
 
+* **Added security performance test application.**
+
+  Added new application to test ``rte_security`` session create/destroy
+  performance.
+  See the :doc:`../tools/securityperf` for more details.
+
 
 Removed Items
 -------------
