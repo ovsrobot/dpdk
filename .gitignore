@@ -33,8 +33,10 @@ GRTAGS
 tags
 TAGS
 
-# ignore python bytecode files
-*.pyc
+# python byte-compiled/optimized/dll files
+__pycache__/
+*.py[cod]
+*$py.class
 
 # ignore default build directory, and directories from test-meson-builds.sh
 build
