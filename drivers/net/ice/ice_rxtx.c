@@ -2113,6 +2113,10 @@ ice_recv_scattered_pkts(void *rx_queue,
 			} else
 				rxm->data_len = (uint16_t)(rx_packet_len -
 							   RTE_ETHER_CRC_LEN);
+		} else if (rx_packet_len == 0) {
+			rte_pktmbuf_free_seg(rxm);
+			first_seg->nb_segs--;
+			last_seg->next = NULL;
 		}
 
 		first_seg->port = rxq->port_id;
@@ -2905,6 +2909,35 @@ ice_calc_pkt_desc(struct rte_mbuf *tx_pkt)
 	return count;
 }
 
+/*Check the number of valid mbufs and free the invalid mbufs*/
+static inline uint16_t
+ice_check_mbuf(struct rte_mbuf *tx_pkt)
+{
+	struct rte_mbuf *txd = tx_pkt;
+	struct rte_mbuf *txd_removal = NULL;
+	struct rte_mbuf *txd_pre = NULL;
+	uint16_t count = 0;
+	uint16_t removal = 0;
+
+	while (txd != NULL) {
+		if (removal == 1 || txd->data_len == 0) {
+			txd_removal = txd;
+			txd = txd->next;
+			if (removal == 0) {
+				removal = 1;
+				txd_pre->next = NULL;
+			}
+			rte_pktmbuf_free_seg(txd_removal);
+		} else {
+			++count;
+			txd_pre = txd;
+			txd = txd->next;
+		}
+	}
+
+	return count;
+}
+
 uint16_t
 ice_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 {
@@ -2962,11 +2995,27 @@ ice_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 		 * the mbuf data size exceeds max data size that hw allows
 		 * per tx desc.
 		 */
-		if (ol_flags & RTE_MBUF_F_TX_TCP_SEG)
+		if (ol_flags & RTE_MBUF_F_TX_TCP_SEG) {
 			nb_used = (uint16_t)(ice_calc_pkt_desc(tx_pkt) +
 					     nb_ctx);
-		else
+		} else {
+			nb_used = ice_check_mbuf(tx_pkt);
+			if (nb_used == 0) {
+				PMD_TX_LOG(ERR,
+				"Check packets is empty "
+				"(port=%d queue=%d)\n",
+				txq->port_id, txq->queue_id);
+				continue;
+			} else if (nb_used < tx_pkt->nb_segs) {
+				PMD_TX_LOG(WRINING,
+				"Check packets valid num ="
+				"%4u total num = %4u (port=%d queue=%d)\n",
+				nb_used, tx_pkt->nb_segs, txq->port_id, txq->queue_id);
+				tx_pkt->nb_segs = nb_used;
+			}
 			nb_used = (uint16_t)(tx_pkt->nb_segs + nb_ctx);
+		}
+
 		tx_last = (uint16_t)(tx_id + nb_used - 1);
 
 		/* Circular ring */
