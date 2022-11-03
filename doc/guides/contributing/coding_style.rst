@@ -851,7 +851,13 @@ Python Code
 All Python code should be compliant with
 `PEP8 (Style Guide for Python Code) <https://www.python.org/dev/peps/pep-0008/>`_.
 
-The ``pep8`` tool can be used for testing compliance with the guidelines.
+The ``pep8`` tool can be used for testing compliance with the guidelines. Note that the
+maximum line length is 88, as that is a good compromise between shorter files, usability
+with other tools (side-by-side diffs, docs, presentations) and disability accommodation.
+More in `Black's documentation
+<https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html#line-length>`_.
+
+..
 
 Integrating with the Build System
 ---------------------------------
