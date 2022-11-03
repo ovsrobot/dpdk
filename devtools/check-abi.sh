@@ -37,6 +37,10 @@ fi
 error=
 for dump in $(find $refdir -name "*.dump"); do
 	name=$(basename $dump)
+	if grep -q "; SKIP_LIBRARY=${name%.dump}\>" $(dirname $0)/libabigail.abignore; then
+		echo "Skipped $name" >&2
+		continue
+	fi
 	dump2=$(find $newdir -name $name)
 	if [ -z "$dump2" ] || [ ! -e "$dump2" ]; then
 		echo "Error: cannot find $name in $newdir" >&2
