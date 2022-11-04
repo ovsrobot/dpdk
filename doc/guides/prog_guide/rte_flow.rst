@@ -3605,6 +3605,21 @@ and pattern and actions templates are created.
                    &actions_templates, nb_actions_templ,
                    &error);
 
+Table Attribute: Specialize
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Application can help optimizing underlayer resources and insertion rate
+by specializing template table.
+Specialization is done by providing hints
+in the template table attribute ``specialize``.
+
+This attribute is not mandatory for each PMD to implement.
+If a hint is not supported, it will be silently ignored,
+and no special optimization is done.
+
+If a table is specialized, the application should make sure the rules
+comply with the table attribute.
+
 Asynchronous operations
 -----------------------
 

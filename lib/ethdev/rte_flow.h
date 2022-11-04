@@ -5190,6 +5190,34 @@ struct rte_flow_template_table;
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice.
  *
+ * Special optional flags for template table attribute.
+ * Each bit stands for a table specialization
+ * offering a potential optimization at PMD layer.
+ * PMD can ignore the unsupported bits silently.
+ */
+enum rte_flow_template_table_specialize {
+	/**
+	 * Specialize table for transfer flows which come only from wire.
+	 * It allows PMD not to allocate resources for non-wire originated traffic.
+	 * This bit is not a matching criteria, just an optimization hint.
+	 * Flow rules which match non-wire originated traffic will be missed
+	 * if the hint is supported.
+	 */
+	RTE_FLOW_TRANSFER_WIRE_ORIG = RTE_BIT32(0),
+	/**
+	 * Specialize table for transfer flows which come only from vport (e.g. VF, SF).
+	 * It allows PMD not to allocate resources for non-vport originated traffic.
+	 * This bit is not a matching criteria, just an optimization hint.
+	 * Flow rules which match non-vport originated traffic will be missed
+	 * if the hint is supported.
+	 */
+	RTE_FLOW_TRANSFER_VPORT_ORIG = RTE_BIT32(1),
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
  * Table attributes.
  */
 struct rte_flow_template_table_attr {
@@ -5201,6 +5229,10 @@ struct rte_flow_template_table_attr {
 	 * Maximum number of flow rules that this table holds.
 	 */
 	uint32_t nb_flows;
+	/**
+	 * Optional hint flags for PMD optimization.
+	 */
+	enum rte_flow_template_table_specialize specialize;
 };
 
 /**

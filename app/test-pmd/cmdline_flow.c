@@ -184,6 +184,8 @@ enum index {
 	TABLE_INGRESS,
 	TABLE_EGRESS,
 	TABLE_TRANSFER,
+	TABLE_TRANSFER_WIRE_ORIG,
+	TABLE_TRANSFER_VPORT_ORIG,
 	TABLE_RULES_NUMBER,
 	TABLE_PATTERN_TEMPLATE,
 	TABLE_ACTIONS_TEMPLATE,
@@ -1158,6 +1160,8 @@ static const enum index next_table_attr[] = {
 	TABLE_INGRESS,
 	TABLE_EGRESS,
 	TABLE_TRANSFER,
+	TABLE_TRANSFER_WIRE_ORIG,
+	TABLE_TRANSFER_VPORT_ORIG,
 	TABLE_RULES_NUMBER,
 	TABLE_PATTERN_TEMPLATE,
 	TABLE_ACTIONS_TEMPLATE,
@@ -2930,6 +2934,18 @@ static const struct token token_list[] = {
 	[TABLE_TRANSFER] = {
 		.name = "transfer",
 		.help = "affect rule to transfer",
+		.next = NEXT(next_table_attr),
+		.call = parse_table,
+	},
+	[TABLE_TRANSFER_WIRE_ORIG] = {
+		.name = "wire_orig",
+		.help = "affect rule direction to transfer",
+		.next = NEXT(next_table_attr),
+		.call = parse_table,
+	},
+	[TABLE_TRANSFER_VPORT_ORIG] = {
+		.name = "vport_orig",
+		.help = "affect rule direction to transfer",
 		.next = NEXT(next_table_attr),
 		.call = parse_table,
 	},
@@ -8992,6 +9008,16 @@ parse_table(struct context *ctx, const struct token *token,
 		return len;
 	case TABLE_TRANSFER:
 		out->args.table.attr.flow_attr.transfer = 1;
+		return len;
+	case TABLE_TRANSFER_WIRE_ORIG:
+		if (!out->args.table.attr.flow_attr.transfer)
+			return -1;
+		out->args.table.attr.specialize = RTE_FLOW_TRANSFER_WIRE_ORIG;
+		return len;
+	case TABLE_TRANSFER_VPORT_ORIG:
+		if (!out->args.table.attr.flow_attr.transfer)
+			return -1;
+		out->args.table.attr.specialize = RTE_FLOW_TRANSFER_VPORT_ORIG;
 		return len;
 	default:
 		return -1;
