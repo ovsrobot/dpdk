@@ -4188,15 +4188,11 @@ acc100_dequeue_ldpc_enc(struct rte_bbdev_queue_data *q_data,
 	struct rte_bbdev_enc_op *op;
 	union acc_dma_desc *desc;
 
-	if (q == NULL)
-		return 0;
 #ifdef RTE_LIBRTE_BBDEV_DEBUG
 	if (unlikely(ops == 0))
 		return 0;
 #endif
 	desc = q->ring_addr + (q->sw_ring_tail & q->sw_ring_wrap_mask);
-	if (unlikely(desc == NULL))
-		return 0;
 	op = desc->req.op_addr;
 	if (unlikely(ops == NULL || op == NULL))
 		return 0;
