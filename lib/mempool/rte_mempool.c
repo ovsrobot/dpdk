@@ -1286,6 +1286,15 @@ rte_mempool_dump(FILE *f, struct rte_mempool *mp)
 		sum.get_success_blks += mp->stats[lcore_id].get_success_blks;
 		sum.get_fail_blks += mp->stats[lcore_id].get_fail_blks;
 	}
+	if (mp->cache_size != 0) {
+		/* Add the statistics stored in the mempool caches. */
+		for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
+			sum.put_bulk += mp->local_cache[lcore_id].stats.put_bulk;
+			sum.put_objs += mp->local_cache[lcore_id].stats.put_objs;
+			sum.get_success_bulk += mp->local_cache[lcore_id].stats.get_success_bulk;
+			sum.get_success_objs += mp->local_cache[lcore_id].stats.get_success_objs;
+		}
+	}
 	fprintf(f, "  stats:\n");
 	fprintf(f, "    put_bulk=%"PRIu64"\n", sum.put_bulk);
 	fprintf(f, "    put_objs=%"PRIu64"\n", sum.put_objs);
