@@ -123,6 +123,11 @@ F: buildtools/symlink-drivers-solibs.py
 F: devtools/test-meson-builds.sh
 F: devtools/check-meson.py
 
+DTS
+M: Lijuan Tu <lijuan.tu@intel.com>
+M: Owen Hilyard <ohilyard@iol.unh.edu>
+F: dts/
+
 Public CI
 M: Aaron Conole <aconole@redhat.com>
 M: Michael Santana <maicolgabriel@hotmail.com>
