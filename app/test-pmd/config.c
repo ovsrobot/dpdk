@@ -5070,73 +5070,72 @@ show_rx_pkt_segments(void)
 
 static const char *get_ptype_str(uint32_t ptype)
 {
-	if ((ptype & (RTE_PTYPE_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_L4_TCP)) ==
-		(RTE_PTYPE_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_L4_TCP))
+	switch (ptype & (RTE_PTYPE_L3_MASK | RTE_PTYPE_L4_MASK)) {
+	case RTE_PTYPE_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_L4_TCP:
 		return "ipv4-tcp";
-	else if ((ptype & (RTE_PTYPE_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_L4_UDP)) ==
-		(RTE_PTYPE_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_L4_UDP))
+	case RTE_PTYPE_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_L4_UDP:
 		return "ipv4-udp";
-	else if ((ptype & (RTE_PTYPE_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_L4_SCTP)) ==
-		(RTE_PTYPE_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_L4_SCTP))
+	case RTE_PTYPE_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_L4_SCTP:
 		return "ipv4-sctp";
-	else if ((ptype & (RTE_PTYPE_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_L4_TCP)) ==
-		(RTE_PTYPE_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_L4_TCP))
+	case RTE_PTYPE_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_L4_TCP:
 		return "ipv6-tcp";
-	else if ((ptype & (RTE_PTYPE_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_L4_UDP)) ==
-		(RTE_PTYPE_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_L4_UDP))
+	case RTE_PTYPE_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_L4_UDP:
 		return "ipv6-udp";
-	else if ((ptype & (RTE_PTYPE_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_L4_SCTP)) ==
-		(RTE_PTYPE_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_L4_SCTP))
+	case RTE_PTYPE_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_L4_SCTP:
 		return "ipv6-sctp";
-	else if ((ptype & RTE_PTYPE_L4_TCP) == RTE_PTYPE_L4_TCP)
+	case RTE_PTYPE_L4_TCP:
 		return "tcp";
-	else if ((ptype & RTE_PTYPE_L4_UDP) == RTE_PTYPE_L4_UDP)
+	case RTE_PTYPE_L4_UDP:
 		return "udp";
-	else if ((ptype & RTE_PTYPE_L4_SCTP) == RTE_PTYPE_L4_SCTP)
+	case RTE_PTYPE_L4_SCTP:
 		return "sctp";
-	else if ((ptype & RTE_PTYPE_L3_IPV4_EXT_UNKNOWN) == RTE_PTYPE_L3_IPV4_EXT_UNKNOWN)
+	case RTE_PTYPE_L3_IPV4_EXT_UNKNOWN:
 		return "ipv4";
-	else if ((ptype & RTE_PTYPE_L3_IPV6_EXT_UNKNOWN) == RTE_PTYPE_L3_IPV6_EXT_UNKNOWN)
+	case RTE_PTYPE_L3_IPV6_EXT_UNKNOWN:
 		return "ipv6";
-	else if ((ptype & RTE_PTYPE_L2_ETHER) == RTE_PTYPE_L2_ETHER)
-		return "eth";
+	}
 
-	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP)) ==
-		(RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP))
-		return "inner-ipv4-tcp";
-	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_UDP)) ==
-		(RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_UDP))
-		return "inner-ipv4-udp";
-	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP)) ==
-		(RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP))
-		return "inner-ipv4-sctp";
-	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP)) ==
-		(RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP))
+	switch (ptype & RTE_PTYPE_L2_MASK) {
+	case RTE_PTYPE_L2_ETHER:
+		return "eth";
+	}
+
+	switch (ptype & (RTE_PTYPE_INNER_L3_MASK | RTE_PTYPE_INNER_L4_MASK)) {
+	case RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP:
 		return "inner-ipv6-tcp";
-	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_UDP)) ==
-		(RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_UDP))
+	case RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_UDP:
 		return "inner-ipv6-udp";
-	else if ((ptype & (RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP)) ==
-		(RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP))
+	case RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP:
 		return "inner-ipv6-sctp";
-	else if ((ptype & RTE_PTYPE_INNER_L4_TCP) == RTE_PTYPE_INNER_L4_TCP)
+	case RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_TCP:
+		return "inner-ipv4-tcp";
+	case RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_UDP:
+		return "inner-ipv4-udp";
+	case RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN | RTE_PTYPE_INNER_L4_SCTP:
+		return "inner-ipv4-sctp";
+	case RTE_PTYPE_INNER_L4_TCP:
 		return "inner-tcp";
-	else if ((ptype & RTE_PTYPE_INNER_L4_UDP) == RTE_PTYPE_INNER_L4_UDP)
+	case RTE_PTYPE_INNER_L4_UDP:
 		return "inner-udp";
-	else if ((ptype & RTE_PTYPE_INNER_L4_SCTP) == RTE_PTYPE_INNER_L4_SCTP)
+	case RTE_PTYPE_INNER_L4_SCTP:
 		return "inner-sctp";
-	else if ((ptype & RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN) ==
-		RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN)
-		return "inner-ipv4";
-	else if ((ptype & RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN) ==
-		RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN)
+	case RTE_PTYPE_INNER_L3_IPV6_EXT_UNKNOWN:
 		return "inner-ipv6";
-	else if ((ptype & RTE_PTYPE_INNER_L2_ETHER) == RTE_PTYPE_INNER_L2_ETHER)
+	case RTE_PTYPE_INNER_L3_IPV4_EXT_UNKNOWN:
+		return "inner-ipv4";
+	}
+
+	switch (ptype & RTE_PTYPE_INNER_L2_MASK) {
+	case RTE_PTYPE_INNER_L2_ETHER:
 		return "inner-eth";
-	else if ((ptype & RTE_PTYPE_TUNNEL_GRENAT) == RTE_PTYPE_TUNNEL_GRENAT)
+	}
+
+	switch (ptype & RTE_PTYPE_TUNNEL_MASK) {
+	case RTE_PTYPE_TUNNEL_GRENAT:
 		return "grenat";
-	else
-		return "unsupported";
+	}
+
+	return "unsupported";
 }
 
 void
