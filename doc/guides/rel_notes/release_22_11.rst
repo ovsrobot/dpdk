@@ -243,6 +243,10 @@ New Features
   Added a new crypto driver for the UADK library. See the
   :doc:`../cryptodevs/uadk` guide for more details on this new driver.
 
+* **Updated ipsec_mb crypto driver.**
+
+  Added SNOW-3G and ZUC support for ARM platform.
+
 * **Added bbdev operation for FFT processing.**
 
   Added a new operation type in bbdev for FFT processing with new functions
