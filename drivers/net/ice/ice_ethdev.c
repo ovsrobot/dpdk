@@ -4501,6 +4501,8 @@ ice_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 	struct ice_pf *pf = ICE_DEV_PRIVATE_TO_PF(dev->data->dev_private);
 	struct ice_vsi *vsi = pf->main_vsi;
 	struct rte_eth_rxmode *rxmode;
+	size_t queue_idx;
+	struct ice_rx_queue *rxq;
 
 	rxmode = &dev->data->dev_conf.rxmode;
 	if (mask & RTE_ETH_VLAN_FILTER_MASK) {
@@ -4515,6 +4517,11 @@ ice_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 			ice_vsi_config_vlan_stripping(vsi, true);
 		else
 			ice_vsi_config_vlan_stripping(vsi, false);
+	}
+
+	for (queue_idx = 0; queue_idx < dev->data->nb_rx_queues; queue_idx++) {
+		rxq = dev->data->rx_queues[queue_idx];
+		rxq->offloads = rxmode->offloads;
 	}
 
 	return 0;

@@ -1227,6 +1227,8 @@ dcf_dev_vlan_offload_set_v2(struct rte_eth_dev *dev, int mask)
 	struct ice_dcf_hw *hw = &adapter->real_hw;
 	bool enable;
 	int err;
+	size_t queue_idx;
+	struct ice_rx_queue *rxq;
 
 	if (mask & RTE_ETH_VLAN_FILTER_MASK) {
 		enable = !!(rxmode->offloads & RTE_ETH_RX_OFFLOAD_VLAN_FILTER);
@@ -1243,6 +1245,11 @@ dcf_dev_vlan_offload_set_v2(struct rte_eth_dev *dev, int mask)
 			err = 0;
 		if (err)
 			return -EIO;
+	}
+
+	for (queue_idx = 0; queue_idx < dev->data->nb_rx_queues; queue_idx++) {
+		rxq = dev->data->rx_queues[queue_idx];
+		rxq->offloads = rxmode->offloads;
 	}
 
 	return 0;
@@ -1287,6 +1294,8 @@ dcf_dev_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 	struct ice_dcf_adapter *adapter = dev->data->dev_private;
 	struct ice_dcf_hw *hw = &adapter->real_hw;
 	int err;
+	size_t queue_idx;
+	struct ice_rx_queue *rxq;
 
 	if (hw->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_VLAN_V2)
 		return dcf_dev_vlan_offload_set_v2(dev, mask);
@@ -1305,6 +1314,12 @@ dcf_dev_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 		if (err)
 			return -EIO;
 	}
+
+	for (queue_idx = 0; queue_idx < dev->data->nb_rx_queues; queue_idx++) {
+		rxq = dev->data->rx_queues[queue_idx];
+		rxq->offloads = dev_conf->rxmode.offloads;
+	}
+
 	return 0;
 }
 
