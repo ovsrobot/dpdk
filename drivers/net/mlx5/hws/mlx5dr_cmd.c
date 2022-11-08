@@ -674,6 +674,7 @@ mlx5dr_cmd_sq_create(struct ibv_context *ctx,
 	MLX5_SET(sqc, sqc, cqn, attr->cqn);
 	MLX5_SET(sqc, sqc, flush_in_error_en, 1);
 	MLX5_SET(sqc, sqc, non_wire, 1);
+	MLX5_SET(sqc, sqc, ts_format, attr->ts_format);
 	MLX5_SET(wq, wqc, wq_type, MLX5_WQ_TYPE_CYCLIC);
 	MLX5_SET(wq, wqc, pd, attr->pdn);
 	MLX5_SET(wq, wqc, uar_page, attr->page_id);
@@ -681,6 +682,7 @@ mlx5dr_cmd_sq_create(struct ibv_context *ctx,
 	MLX5_SET(wq, wqc, log_wq_sz, attr->log_wq_sz);
 	MLX5_SET(wq, wqc, dbr_umem_id, attr->dbr_id);
 	MLX5_SET(wq, wqc, wq_umem_id, attr->wq_id);
+
 
 	devx_obj->obj = mlx5_glue->devx_obj_create(ctx, in, sizeof(in), out, sizeof(out));
 	if (!devx_obj->obj) {
@@ -762,6 +764,11 @@ int mlx5dr_cmd_query_caps(struct ibv_context *ctx,
 	caps->definer_format_sup =
 		MLX5_GET64(query_hca_cap_out, out,
 			   capability.cmd_hca_cap.match_definer_format_supported);
+
+	caps->rq_ts_format = MLX5_GET(query_hca_cap_out, out,
+				      capability.cmd_hca_cap.rq_ts_format);
+	caps->sq_ts_format = MLX5_GET(query_hca_cap_out, out,
+				      capability.cmd_hca_cap.sq_ts_format);
 
 	MLX5_SET(query_hca_cap_in, in, op_mod,
 		 MLX5_GET_HCA_CAP_OP_MOD_GENERAL_DEVICE_2 |

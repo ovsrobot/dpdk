@@ -492,6 +492,9 @@ static int mlx5dr_send_ring_create_sq_obj(struct mlx5dr_context *ctx,
 	attr.dbr_id = sq->db_umem->umem_id;
 	attr.wq_id = sq->buf_umem->umem_id;
 	attr.log_wq_sz = log_wq_sz;
+	attr.ts_format = (ctx->caps->sq_ts_format == MLX5_HCA_CAP_TIMESTAMP_FORMAT_FR) ?
+			 MLX5_QPC_TIMESTAMP_FORMAT_FREE_RUNNING :
+			 MLX5_QPC_TIMESTAMP_FORMAT_DEFAULT;
 
 	sq->obj = mlx5dr_cmd_sq_create(ctx->ibv_ctx, &attr);
 	if (!sq->obj)

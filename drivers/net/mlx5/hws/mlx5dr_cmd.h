@@ -121,6 +121,7 @@ struct mlx5dr_cmd_sq_create_attr {
 	uint32_t dbr_id;
 	uint32_t wq_id;
 	uint32_t log_wq_sz;
+	uint32_t ts_format;
 };
 
 struct mlx5dr_cmd_query_ft_caps {
@@ -161,6 +162,8 @@ struct mlx5dr_cmd_query_caps {
 	uint8_t log_header_modify_argument_max_alloc;
 	uint64_t definer_format_sup;
 	uint32_t trivial_match_definer;
+	uint8_t rq_ts_format;
+	uint8_t sq_ts_format;
 	char fw_ver[64];
 };
 
