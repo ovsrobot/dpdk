@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <poll.h>
 
 #include <sys/queue.h>
 #include <sys/stat.h>
@@ -4251,26 +4252,11 @@ print_stats(void)
 static void
 signal_handler(int signum)
 {
-	if (signum == SIGINT || signum == SIGTERM) {
-		fprintf(stderr, "\nSignal %d received, preparing to exit...\n",
-			signum);
-#ifdef RTE_LIB_PDUMP
-		/* uninitialize packet capture framework */
-		rte_pdump_uninit();
-#endif
-#ifdef RTE_LIB_LATENCYSTATS
-		if (latencystats_enabled != 0)
-			rte_latencystats_uninit();
-#endif
-		force_quit();
-		/* Set flag to indicate the force termination. */
-		f_quit = 1;
-		/* exit with the expected status */
-#ifndef RTE_EXEC_ENV_WINDOWS
-		signal(signum, SIG_DFL);
-		kill(getpid(), signum);
-#endif
-	}
+	fprintf(stderr, "\nSignal %d %s received, preparing to exit...\n",
+		signum, strsignal(signum));
+
+	/* Set flag to indicate the force termination. */
+	f_quit = 1;
 }
 
 int
@@ -4280,9 +4266,14 @@ main(int argc, char** argv)
 	portid_t port_id;
 	uint16_t count;
 	int ret;
+	struct sigaction sa = {
+		.sa_handler = signal_handler,
+		.sa_flags = 0,
+	};
 
-	signal(SIGINT, signal_handler);
-	signal(SIGTERM, signal_handler);
+	/* Want read() to be interrupted not restarted */
+	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGTERM, &sa, NULL);
 
 	testpmd_logtype = rte_log_register("testpmd");
 	if (testpmd_logtype < 0)
@@ -4476,14 +4467,25 @@ main(int argc, char** argv)
 				prev_time = cur_time;
 				rte_delay_us_sleep(US_PER_S);
 			}
+		} else {
+			printf("Press enter to exit\n");
+			rc = read(0, &c, 1);
+			if (rc < 0 && errno != EINTR)
+				fprintf(stderr, "Read stdin failed: %s\n",
+					strerror(errno));
 		}
-
-		printf("Press enter to exit\n");
-		rc = read(0, &c, 1);
-		pmd_test_exit();
-		if (rc < 0)
-			return 1;
+		stop_packet_forwarding();
+		force_quit();
 	}
+
+#ifdef RTE_LIB_PDUMP
+	/* uninitialize packet capture framework */
+	rte_pdump_uninit();
+#endif
+#ifdef RTE_LIB_LATENCYSTATS
+	if (latencystats_enabled != 0)
+		rte_latencystats_uninit();
+#endif
 
 	ret = rte_eal_cleanup();
 	if (ret != 0)
