@@ -1683,7 +1683,7 @@ igb_read_stats_registers(struct e1000_hw *hw, struct e1000_hw_stats *stats)
 	uint64_t old_rpthc = stats->rpthc;
 	uint64_t old_hgptc = stats->hgptc;
 
-	if(hw->phy.media_type == e1000_media_type_copper ||
+	if (hw->phy.media_type == e1000_media_type_copper ||
 	    (E1000_READ_REG(hw, E1000_STATUS) & E1000_STATUS_LU)) {
 		stats->symerrs +=
 		    E1000_READ_REG(hw,E1000_SYMERRS);
@@ -3500,10 +3500,10 @@ static void igbvf_set_vfta_all(struct rte_eth_dev *dev, bool on)
 
 	for (i = 0; i < IGB_VFTA_SIZE; i++){
 		vfta = shadow_vfta->vfta[i];
-		if(vfta){
+		if (vfta) {
 			mask = 1;
 			for (j = 0; j < 32; j++){
-				if(vfta & mask)
+				if (vfta & mask)
 					igbvf_set_vfta(hw,
 						(uint16_t)((i<<5)+j), on);
 				mask<<=1;
@@ -3528,7 +3528,7 @@ igbvf_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
 
 	/*vind is not used in VF driver, set to 0, check ixgbe_set_vfta_vf*/
 	ret = igbvf_set_vfta(hw, vlan_id, !!on);
-	if(ret){
+	if (ret) {
 		PMD_INIT_LOG(ERR, "Unable to set VF vlan");
 		return ret;
 	}

@@ -2276,7 +2276,7 @@ igb_dev_mq_rx_configure(struct rte_eth_dev *dev)
 		/* 011b Def_Q ignore, according to VT_CTL.DEF_PL */
 		mrqc |= 0x3 << E1000_MRQC_DEF_Q_SHIFT;
 		E1000_WRITE_REG(hw, E1000_MRQC, mrqc);
-	} else if(RTE_ETH_DEV_SRIOV(dev).active == 0) {
+	} else if (RTE_ETH_DEV_SRIOV(dev).active == 0) {
 		/*
 		 * SRIOV inactive scheme
 		 */
