@@ -350,7 +350,7 @@ timer_get_prev_entries(uint64_t time_val, unsigned tim_lcore,
 {
 	unsigned lvl = priv_timer[tim_lcore].curr_skiplist_depth;
 	prev[lvl] = &priv_timer[tim_lcore].pending_head;
-	while(lvl != 0) {
+	while (lvl != 0) {
 		lvl--;
 		prev[lvl] = prev[lvl+1];
 		while (prev[lvl]->sl_next[lvl] &&
