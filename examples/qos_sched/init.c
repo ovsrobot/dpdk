@@ -323,7 +323,7 @@ int app_init(void)
 		rte_exit(EXIT_FAILURE, "Invalid configuration profile\n");
 
 	/* Initialize each active flow */
-	for(i = 0; i < nb_pfc; i++) {
+	for (i = 0; i < nb_pfc; i++) {
 		uint32_t socket = rte_lcore_to_socket_id(qos_conf[i].rx_core);
 		struct rte_ring *ring;
 
