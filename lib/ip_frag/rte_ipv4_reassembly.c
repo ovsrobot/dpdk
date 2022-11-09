@@ -34,7 +34,7 @@ ipv4_frag_reassemble(struct ip_frag_pkt *fp)
 		for (i = n; i != IP_FIRST_FRAG_IDX && ofs != first_len; i--) {
 
 			/* previous fragment found. */
-			if(fp->frags[i].ofs + fp->frags[i].len == ofs) {
+			if (fp->frags[i].ofs + fp->frags[i].len == ofs) {
 
 				RTE_ASSERT(curr_idx != i);
 
