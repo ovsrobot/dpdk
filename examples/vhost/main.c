@@ -1491,7 +1491,7 @@ switch_worker(void *arg __rte_unused)
 		}
 	}
 
-	while(1) {
+	while (1) {
 		drain_mbuf_table(tx_q);
 		drain_vhost_table();
 		/*
@@ -1583,7 +1583,7 @@ destroy_device(int vid)
 		return;
 	/*set the remove flag. */
 	vdev->remove = 1;
-	while(vdev->ready != DEVICE_SAFE_REMOVE) {
+	while (vdev->ready != DEVICE_SAFE_REMOVE) {
 		rte_pause();
 	}
 
@@ -1816,7 +1816,7 @@ print_stats(__rte_unused void *arg)
 	const char clr[] = { 27, '[', '2', 'J', '\0' };
 	const char top_left[] = { 27, '[', '1', ';', '1', 'H','\0' };
 
-	while(1) {
+	while (1) {
 		sleep(enable_stats);
 
 		/* Clear screen and move to top left */
