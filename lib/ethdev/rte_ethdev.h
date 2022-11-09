@@ -2701,10 +2701,14 @@ int rte_eth_dev_tx_queue_stop(uint16_t port_id, uint16_t tx_queue_id);
  * On success, all basic functions exported by the Ethernet API (link status,
  * receive/transmit, and so on) can be invoked.
  *
+ * If the port depends on another one being started,
+ * PMDs might return (-EAGAIN) to notify about such requirement.
+ *
  * @param port_id
  *   The port identifier of the Ethernet device.
  * @return
  *   - 0: Success, Ethernet device started.
+ *   - -EAGAIN: If it depends on another port to be started first.
  *   - <0: Error code of the driver device start function.
  */
 int rte_eth_dev_start(uint16_t port_id);
@@ -2713,10 +2717,15 @@ int rte_eth_dev_start(uint16_t port_id);
  * Stop an Ethernet device. The device can be restarted with a call to
  * rte_eth_dev_start()
  *
+ * If the port provides some resources for other ports
+ * and it cannot be stopped before them,
+ * PMDs might return (-EBUSY) to notify about such requirement.
+ *
  * @param port_id
  *   The port identifier of the Ethernet device.
  * @return
  *   - 0: Success, Ethernet device stopped.
+ *   - -EBUSY: If it depends on another port to be stopped first.
  *   - <0: Error code of the driver device stop function.
  */
 int rte_eth_dev_stop(uint16_t port_id);
