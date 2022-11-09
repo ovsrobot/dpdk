@@ -180,8 +180,8 @@ get_default_hp_size(void)
 	FILE *fd = fopen(proc_meminfo, "r");
 	if (fd == NULL)
 		rte_panic("Cannot open %s\n", proc_meminfo);
-	while(fgets(buffer, sizeof(buffer), fd)){
-		if (strncmp(buffer, str_hugepagesz, hugepagesz_len) == 0){
+	while (fgets(buffer, sizeof(buffer), fd)) {
+		if (strncmp(buffer, str_hugepagesz, hugepagesz_len) == 0) {
 			size = rte_str_to_size(&buffer[hugepagesz_len]);
 			break;
 		}
@@ -231,7 +231,7 @@ get_hugepage_dir(uint64_t hugepage_sz, char *hugedir, int len)
 	if (default_size == 0)
 		default_size = get_default_hp_size();
 
-	while (fgets(buf, sizeof(buf), fd)){
+	while (fgets(buf, sizeof(buf), fd)) {
 		const char *pagesz_str;
 
 		if (rte_strsplit(buf, sizeof(buf), splitstr, _FIELDNAME_MAX,

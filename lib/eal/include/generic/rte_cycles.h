@@ -94,7 +94,7 @@ static inline uint64_t
 rte_get_timer_cycles(void)
 {
 #ifdef RTE_LIBEAL_USE_HPET
-	switch(eal_timer_source) {
+	switch (eal_timer_source) {
 	case EAL_TIMER_TSC:
 #endif
 		return rte_get_tsc_cycles();
@@ -116,7 +116,7 @@ static inline uint64_t
 rte_get_timer_hz(void)
 {
 #ifdef RTE_LIBEAL_USE_HPET
-	switch(eal_timer_source) {
+	switch (eal_timer_source) {
 	case EAL_TIMER_TSC:
 #endif
 		return rte_get_tsc_hz();
