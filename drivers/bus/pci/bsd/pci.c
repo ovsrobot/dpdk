@@ -368,7 +368,7 @@ rte_pci_scan(void)
 		}
 
 		dev_count += conf_io.num_matches;
-	} while(conf_io.status == PCI_GETCONF_MORE_DEVS);
+	} while (conf_io.status == PCI_GETCONF_MORE_DEVS);
 
 	close(fd);
 
