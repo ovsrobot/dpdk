@@ -96,7 +96,7 @@ int bnx2x_ilog2(int x)
 	int log = 0;
 	x >>= 1;
 
-	while(x) {
+	while (x) {
 		log++;
 		x >>= 1;
 	}
