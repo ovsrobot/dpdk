@@ -2730,11 +2730,12 @@ parse_reta_config(const char *str,
 
 	while ((p = strchr(p0,'(')) != NULL) {
 		++p;
-		if((p0 = strchr(p,')')) == NULL)
+		p0 = strchr(p, ')');
+		if (p0 == NULL)
 			return -1;
 
 		size = p0 - p;
-		if(size >= sizeof(s))
+		if (size >= sizeof(s))
 			return -1;
 
 		snprintf(s, sizeof(s), "%.*s", size, p);
@@ -3242,15 +3243,15 @@ cmd_config_thresh_parsed(void *parsed_result,
 
 	if (!strcmp(res->name, "txpt"))
 		tx_pthresh = res->value;
-	else if(!strcmp(res->name, "txht"))
+	else if (!strcmp(res->name, "txht"))
 		tx_hthresh = res->value;
-	else if(!strcmp(res->name, "txwt"))
+	else if (!strcmp(res->name, "txwt"))
 		tx_wthresh = res->value;
-	else if(!strcmp(res->name, "rxpt"))
+	else if (!strcmp(res->name, "rxpt"))
 		rx_pthresh = res->value;
-	else if(!strcmp(res->name, "rxht"))
+	else if (!strcmp(res->name, "rxht"))
 		rx_hthresh = res->value;
-	else if(!strcmp(res->name, "rxwt"))
+	else if (!strcmp(res->name, "rxwt"))
 		rx_wthresh = res->value;
 	else {
 		fprintf(stderr, "Unknown parameter\n");
@@ -4088,8 +4089,8 @@ cmd_vlan_offload_parsed(void *parsed_result,
 	len = strnlen(str, STR_TOKEN_SIZE);
 	i = 0;
 	/* Get port_id first */
-	while(i < len){
-		if(str[i] == ',')
+	while (i < len) {
+		if (str[i] == ',')
 			break;
 
 		i++;
@@ -4097,7 +4098,7 @@ cmd_vlan_offload_parsed(void *parsed_result,
 	str[i]='\0';
 	tmp = strtoul(str, NULL, 0);
 	/* If port_id greater that what portid_t can represent, return */
-	if(tmp >= RTE_MAX_ETHPORTS)
+	if (tmp >= RTE_MAX_ETHPORTS)
 		return;
 	port_id = (portid_t)tmp;
 
@@ -4108,17 +4109,17 @@ cmd_vlan_offload_parsed(void *parsed_result,
 
 	if (!strcmp(res->what, "strip"))
 		rx_vlan_strip_set(port_id,  on);
-	else if(!strcmp(res->what, "stripq")){
+	else if (!strcmp(res->what, "stripq")) {
 		uint16_t queue_id = 0;
 
 		/* No queue_id, return */
-		if(i + 1 >= len) {
+		if (i + 1 >= len) {
 			fprintf(stderr, "must specify (port,queue_id)\n");
 			return;
 		}
 		tmp = strtoul(str + i + 1, NULL, 0);
 		/* If queue_id greater that what 16-bits can represent, return */
-		if(tmp > 0xffff)
+		if (tmp > 0xffff)
 			return;
 
 		queue_id = (uint16_t)tmp;
@@ -7207,7 +7208,7 @@ static void cmd_mac_addr_parsed(void *parsed_result,
 		ret = rte_eth_dev_mac_addr_remove(res->port_num, &res->address);
 
 	/* check the return value and print it if is < 0 */
-	if(ret < 0)
+	if (ret < 0)
 		fprintf(stderr, "mac_addr_cmd error: (%s)\n", strerror(-ret));
 
 }
@@ -7780,7 +7781,7 @@ static void cmd_vf_mac_addr_parsed(void *parsed_result,
 						res->vf_num);
 #endif
 
-	if(ret < 0)
+	if (ret < 0)
 		fprintf(stderr, "vf_mac_addr_cmd error: (%s)\n", strerror(-ret));
 
 }
