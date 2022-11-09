@@ -89,6 +89,7 @@ rte_auxiliary_probe_one_driver(struct rte_auxiliary_driver *drv,
 {
 	enum rte_iova_mode iova_mode;
 	int ret;
+	bool already_probed;
 
 	if (drv == NULL || dev == NULL)
 		return -EINVAL;
@@ -114,6 +115,13 @@ rte_auxiliary_probe_one_driver(struct rte_auxiliary_driver *drv,
 		AUXILIARY_LOG(ERR, "Driver %s expecting VA IOVA mode but current mode is PA, not initializing",
 			      drv->driver.name);
 		return -EINVAL;
+	}
+
+	already_probed = rte_dev_is_probed(&dev->device);
+	if (already_probed) {
+		RTE_LOG(DEBUG, EAL, "Device %s is already probed on auxiliary bus\n",
+			dev->device.name);
+		return -EEXIST;
 	}
 
 	/* Allocate interrupt instance */
