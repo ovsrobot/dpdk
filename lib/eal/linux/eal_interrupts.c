@@ -1073,7 +1073,7 @@ eal_intr_handle_interrupts(int pfd, unsigned totalfds)
 	struct epoll_event events[totalfds];
 	int nfds = 0;
 
-	for(;;) {
+	for (;;) {
 		nfds = epoll_wait(pfd, events, totalfds,
 			EAL_INTR_EPOLL_WAIT_FOREVER);
 		/* epoll_wait fail */
