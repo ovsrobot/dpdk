@@ -120,7 +120,7 @@ static unsigned refcnt_lcore[RTE_MAX_LCORE];
 		printf("mbuf test FAILED (l.%d): <" str ">\n",		\
 		       __LINE__,  ##__VA_ARGS__);			\
 		goto fail;						\
-} while(0)
+} while (0)
 
 /*
  * test data manipulation in mbuf with non-ascii data
@@ -154,7 +154,7 @@ test_pktmbuf_with_non_ascii_data(struct rte_mempool *pktmbuf_pool)
 	return 0;
 
 fail:
-	if(m) {
+	if (m) {
 		rte_pktmbuf_free(m);
 	}
 	return -1;
@@ -701,12 +701,12 @@ test_pktmbuf_pool(struct rte_mempool *pktmbuf_pool)
 	}
 	struct rte_mbuf *extra = NULL;
 	extra = rte_pktmbuf_alloc(pktmbuf_pool);
-	if(extra != NULL) {
+	if (extra != NULL) {
 		printf("Error pool not empty");
 		ret = -1;
 	}
 	extra = rte_pktmbuf_clone(m[0], pktmbuf_pool);
-	if(extra != NULL) {
+	if (extra != NULL) {
 		printf("Error pool not empty");
 		ret = -1;
 	}
@@ -966,7 +966,7 @@ test_pktmbuf_free_segment(struct rte_mempool *pktmbuf_pool)
 			struct rte_mbuf *mb, *mt;
 
 			mb = m[i];
-			while(mb != NULL) {
+			while (mb != NULL) {
 				mt = mb;
 				mb = mb->next;
 				rte_pktmbuf_free_seg(mt);
@@ -1195,7 +1195,7 @@ verify_mbuf_check_panics(struct rte_mbuf *buf)
 		return -1;
 	}
 	wait(&status);
-	if(status == 0)
+	if (status == 0)
 		return -1;
 
 	return 0;

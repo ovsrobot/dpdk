@@ -47,7 +47,7 @@ print_route_distribution(const struct rules_tbl_entry *table, uint32_t n)
 	printf("--------------------------- \n");
 
 	/* Count depths. */
-	for(i = 1; i <= 128; i++) {
+	for (i = 1; i <= 128; i++) {
 		unsigned depth_counter = 0;
 		double percent_hits;
 

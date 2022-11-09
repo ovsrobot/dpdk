@@ -86,8 +86,8 @@ test_align_overlap_per_lcore(__rte_unused void *arg)
 			ret = -1;
 			break;
 		}
-		for(j = 0; j < 1000 ; j++) {
-			if( *(char *)p1 != 0) {
+		for (j = 0; j < 1000 ; j++) {
+			if ( *(char *)p1 != 0) {
 				printf("rte_zmalloc didn't zero the allocated memory\n");
 				ret = -1;
 			}
@@ -157,8 +157,8 @@ test_reordered_free_per_lcore(__rte_unused void *arg)
 			ret = -1;
 			break;
 		}
-		for(j = 0; j < 1000 ; j++) {
-			if( *(char *)p1 != 0) {
+		for (j = 0; j < 1000 ; j++) {
+			if ( *(char *)p1 != 0) {
 				printf("rte_zmalloc didn't zero the allocated memory\n");
 				ret = -1;
 			}
@@ -331,12 +331,12 @@ test_multi_alloc_statistics(void)
 	/* After freeing both allocations check stats return to original */
 	rte_malloc_get_socket_stats(socket, &post_stats);
 
-	if(second_stats.heap_totalsz_bytes != first_stats.heap_totalsz_bytes) {
+	if (second_stats.heap_totalsz_bytes != first_stats.heap_totalsz_bytes) {
 		printf("Incorrect heap statistics: Total size \n");
 		return -1;
 	}
 	/* Check allocated size is equal to two additions plus overhead */
-	if(second_stats.heap_allocsz_bytes !=
+	if (second_stats.heap_allocsz_bytes !=
 			size + overhead + first_stats.heap_allocsz_bytes) {
 		printf("Incorrect heap statistics: Allocated size \n");
 		return -1;
@@ -495,7 +495,7 @@ test_realloc_socket(int socket)
 		return -1;
 	}
 	/* calc an alignment we don't already have */
-	while(RTE_PTR_ALIGN(ptr7, new_align) == ptr7)
+	while (RTE_PTR_ALIGN(ptr7, new_align) == ptr7)
 		new_align *= 2;
 	char *ptr8 = rte_realloc_socket(ptr7, size7, new_align, socket);
 	if (!ptr8){
