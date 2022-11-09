@@ -12,6 +12,7 @@
 #ifndef RTE_EXEC_ENV_WINDOWS
 #include <sys/mman.h>
 #endif
+#include <sys/select.h>
 #include <sys/types.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -4251,26 +4252,11 @@ print_stats(void)
 static void
 signal_handler(int signum)
 {
-	if (signum == SIGINT || signum == SIGTERM) {
-		fprintf(stderr, "\nSignal %d received, preparing to exit...\n",
-			signum);
-#ifdef RTE_LIB_PDUMP
-		/* uninitialize packet capture framework */
-		rte_pdump_uninit();
-#endif
-#ifdef RTE_LIB_LATENCYSTATS
-		if (latencystats_enabled != 0)
-			rte_latencystats_uninit();
-#endif
-		force_quit();
-		/* Set flag to indicate the force termination. */
-		f_quit = 1;
-		/* exit with the expected status */
-#ifndef RTE_EXEC_ENV_WINDOWS
-		signal(signum, SIG_DFL);
-		kill(getpid(), signum);
-#endif
-	}
+	fprintf(stderr, "\nSignal %d %s received, preparing to exit...\n",
+		signum, strsignal(signum));
+
+	/* Set flag to indicate the force termination. */
+	f_quit = 1;
 }
 
 int
@@ -4449,9 +4435,6 @@ main(int argc, char** argv)
 	} else
 #endif
 	{
-		char c;
-		int rc;
-
 		f_quit = 0;
 
 		printf("No commandline core given, start packet forwarding\n");
@@ -4476,14 +4459,36 @@ main(int argc, char** argv)
 				prev_time = cur_time;
 				rte_delay_us_sleep(US_PER_S);
 			}
-		}
+		} else {
+			char c;
+			fd_set fds;
 
-		printf("Press enter to exit\n");
-		rc = read(0, &c, 1);
-		pmd_test_exit();
-		if (rc < 0)
-			return 1;
+			printf("Press enter to exit\n");
+
+			FD_ZERO(&fds);
+			FD_SET(0, &fds);
+
+			if (select(1, &fds, NULL, NULL, NULL) <= 0) {
+				fprintf(stderr, "Select failed: %s\n",
+					strerror(errno));
+			} else if (read(0, &c, 1) <= 0) {
+				fprintf(stderr,
+					"Read stdin failed: %s\n",
+					strerror(errno));
+			}
+		}
+		stop_packet_forwarding();
+		force_quit();
 	}
+
+#ifdef RTE_LIB_PDUMP
+	/* uninitialize packet capture framework */
+	rte_pdump_uninit();
+#endif
+#ifdef RTE_LIB_LATENCYSTATS
+	if (latencystats_enabled != 0)
+		rte_latencystats_uninit();
+#endif
 
 	ret = rte_eal_cleanup();
 	if (ret != 0)
