@@ -73,20 +73,17 @@ cmdline_parse_string(cmdline_parse_token_hdr_t *tk, const char *buf, void *res,
 			token_len = get_token_len(str);
 
 			/* if token is too big... */
-			if (token_len >= STR_TOKEN_SIZE - 1) {
+			if (token_len >= STR_TOKEN_SIZE - 1)
 				continue;
-			}
 
-			if ( strncmp(buf, str, token_len) ) {
+			if (strncmp(buf, str, token_len))
 				continue;
-			}
 
-			if ( !cmdline_isendoftoken(*(buf+token_len)) ) {
+			if (!cmdline_isendoftoken(*(buf+token_len)))
 				continue;
-			}
 
 			break;
-		} while ( (str = get_next_token(str)) != NULL );
+		} while ((str = get_next_token(str)) != NULL);
 
 		if (!str)
 			return -1;
@@ -108,7 +105,7 @@ cmdline_parse_string(cmdline_parse_token_hdr_t *tk, const char *buf, void *res,
 	/* unspecified string (unknown single token) */
 	else {
 		token_len = 0;
-		while(!cmdline_isendoftoken(buf[token_len]) &&
+		while (!cmdline_isendoftoken(buf[token_len]) &&
 		      token_len < (STR_TOKEN_SIZE-1))
 			token_len++;
 
@@ -149,9 +146,9 @@ int cmdline_complete_get_nb_string(cmdline_parse_token_hdr_t *tk)
 		return 0;
 
 	str = sd->str;
-	while( (str = get_next_token(str)) != NULL ) {
+	while ((str = get_next_token(str)) != NULL)
 		ret++;
-	}
+
 	return ret;
 }
 
