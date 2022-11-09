@@ -42,7 +42,7 @@ parse_obj_list(cmdline_parse_token_hdr_t *tk, const char *buf, void *res,
 	if (res && ressize < sizeof(struct object *))
 		return -1;
 
-	while(!cmdline_isendoftoken(buf[token_len]))
+	while (!cmdline_isendoftoken(buf[token_len]))
 		token_len++;
 
 	SLIST_FOREACH(o, tkd->list, next) {
