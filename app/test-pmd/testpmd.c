@@ -2406,7 +2406,7 @@ start_packet_forwarding(int with_tx_first)
 
 	test_done = 0;
 
-	if(!no_flush_rx)
+	if (!no_flush_rx)
 		flush_fwd_rx_queues();
 
 	rxtx_config_display();

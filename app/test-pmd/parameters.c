@@ -306,11 +306,11 @@ parse_portnuma_config(const char *q_arg)
 	/* reset from value set at definition */
 	while ((p = strchr(p0,'(')) != NULL) {
 		++p;
-		if((p0 = strchr(p,')')) == NULL)
+		if ((p0 = strchr(p,')')) == NULL)
 			return -1;
 
 		size = p0 - p;
-		if(size >= sizeof(s))
+		if (size >= sizeof(s))
 			return -1;
 
 		snprintf(s, sizeof(s), "%.*s", size, p);
@@ -366,11 +366,11 @@ parse_ringnuma_config(const char *q_arg)
 	/* reset from value set at definition */
 	while ((p = strchr(p0,'(')) != NULL) {
 		++p;
-		if((p0 = strchr(p,')')) == NULL)
+		if ((p0 = strchr(p,')')) == NULL)
 			return -1;
 
 		size = p0 - p;
-		if(size >= sizeof(s))
+		if (size >= sizeof(s))
 			return -1;
 
 		snprintf(s, sizeof(s), "%.*s", size, p);
