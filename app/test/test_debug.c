@@ -53,7 +53,7 @@ test_panic(void)
 		return -1;
 	}
 	wait(&status);
-	if(status == 0){
+	if (status == 0) {
 		printf("Child process terminated normally!\n");
 		return -1;
 	} else
@@ -84,7 +84,7 @@ test_exit_val(int exit_val)
 	}
 	wait(&status);
 	printf("Child process status: %d\n", status);
-	if(!WIFEXITED(status) || WEXITSTATUS(status) != (uint8_t)exit_val){
+	if (!WIFEXITED(status) || WEXITSTATUS(status) != (uint8_t)exit_val) {
 		printf("Child process terminated with incorrect status (expected = %d)!\n",
 				exit_val);
 		return -1;

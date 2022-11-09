@@ -724,12 +724,12 @@ static int test_five_keys(void)
 	}
 
 	/* Lookup */
-	for(i = 0; i < 5; i++)
+	for (i = 0; i < 5; i++)
 		key_array[i] = &keys[i];
 
 	ret = rte_hash_lookup_bulk(handle, &key_array[0], 5, (int32_t *)pos);
-	if(ret == 0)
-		for(i = 0; i < 5; i++) {
+	if (ret == 0)
+		for (i = 0; i < 5; i++) {
 			print_key_info("Lkp", key_array[i], pos[i]);
 			RETURN_IF_ERROR(pos[i] != expected_pos[i],
 					"failed to find key (pos[%u]=%d)", i, pos[i]);
