@@ -4392,8 +4392,11 @@ main(int argc, char** argv)
 		}
 	}
 
-	if (!no_device_start && start_port(RTE_PORT_ALL) != 0)
-		rte_exit(EXIT_FAILURE, "Start ports failed\n");
+	if (!no_device_start && start_port(RTE_PORT_ALL) != 0) {
+		fprintf(stderr, "Start ports failed\n");
+		if (!interactive)
+			goto eal_out;
+	}
 
 	/* set all ports to promiscuous mode by default */
 	RTE_ETH_FOREACH_DEV(port_id) {
@@ -4485,6 +4488,7 @@ main(int argc, char** argv)
 			return 1;
 	}
 
+eal_out:
 	ret = rte_eal_cleanup();
 	if (ret != 0)
 		rte_exit(EXIT_FAILURE,
