@@ -1787,11 +1787,11 @@ parse_config(const char *q_arg)
 
 	while ((p = strchr(p0,'(')) != NULL) {
 		++p;
-		if((p0 = strchr(p,')')) == NULL)
+		if ((p0 = strchr(p,')')) == NULL)
 			return -1;
 
 		size = p0 - p;
-		if(size >= sizeof(s))
+		if (size >= sizeof(s))
 			return -1;
 
 		snprintf(s, sizeof(s), "%.*s", size, p);
@@ -2946,7 +2946,7 @@ main(int argc, char **argv)
 		fflush(stdout);
 
 		/* init RX queues */
-		for(queue = 0; queue < qconf->n_rx_queue; ++queue) {
+		for (queue = 0; queue < qconf->n_rx_queue; ++queue) {
 			struct rte_eth_rxconf rxq_conf;
 
 			portid = qconf->rx_queue_list[queue].port_id;
