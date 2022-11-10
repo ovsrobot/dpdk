@@ -5,6 +5,7 @@
 
 #include <rte_atomic.h>
 #include <rte_debug.h>
+#include <rte_ethdev.h>
 #include <rte_mbuf.h>
 #include <ethdev_driver.h>
 
@@ -44,9 +45,13 @@ failsafe_set_burst_fn(struct rte_eth_dev *dev, int force_safe)
 		DEBUG("Using safe RX bursts%s",
 		      (force_safe ? " (forced)" : ""));
 		dev->rx_pkt_burst = &failsafe_rx_burst;
+		rte_eth_fp_ops[dev->data->port_id].rx_pkt_burst =
+			&failsafe_rx_burst;
 	} else if (!need_safe && safe_set) {
 		DEBUG("Using fast RX bursts");
 		dev->rx_pkt_burst = &failsafe_rx_burst_fast;
+		rte_eth_fp_ops[dev->data->port_id].rx_pkt_burst =
+			&failsafe_rx_burst_fast;
 	}
 	need_safe = force_safe || fs_tx_unsafe(TX_SUBDEV(dev));
 	safe_set = (dev->tx_pkt_burst == &failsafe_tx_burst);
@@ -54,9 +59,13 @@ failsafe_set_burst_fn(struct rte_eth_dev *dev, int force_safe)
 		DEBUG("Using safe TX bursts%s",
 		      (force_safe ? " (forced)" : ""));
 		dev->tx_pkt_burst = &failsafe_tx_burst;
+		rte_eth_fp_ops[dev->data->port_id].tx_pkt_burst =
+			&failsafe_tx_burst;
 	} else if (!need_safe && safe_set) {
 		DEBUG("Using fast TX bursts");
 		dev->tx_pkt_burst = &failsafe_tx_burst_fast;
+		rte_eth_fp_ops[dev->data->port_id].tx_pkt_burst =
+			&failsafe_tx_burst_fast;
 	}
 	rte_wmb();
 }
