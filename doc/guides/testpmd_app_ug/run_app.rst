@@ -369,6 +369,10 @@ The command line options are:
 
     Generate multiple flows in txonly mode.
 
+*   ``--txonly-tso-mss=N```
+
+    Enable TSO offload and generate TCP packets with specified MSS in txonly mode.
+
 *   ``--rxq-share=[X]``
 
     Create queues in shared Rx queue mode if device supports.
