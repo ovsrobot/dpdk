@@ -3645,6 +3645,22 @@ ice_set_tx_function_flag(struct rte_eth_dev *dev, struct ice_tx_queue *txq)
 #define ICE_MIN_TSO_MSS            64
 #define ICE_MAX_TSO_MSS            9728
 #define ICE_MAX_TSO_FRAME_SIZE     262144
+
+/*Check for invalid mbuf*/
+static inline uint16_t
+ice_check_mbuf(struct rte_mbuf *tx_pkt)
+{
+	struct rte_mbuf *txd = tx_pkt;
+
+	while (txd != NULL) {
+		if (txd->data_len == 0)
+			return -1;
+		txd = txd->next;
+	}
+
+	return 0;
+}
+
 uint16_t
 ice_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 	      uint16_t nb_pkts)
@@ -3655,6 +3671,7 @@ ice_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 	struct ice_tx_queue *txq = tx_queue;
 	struct rte_eth_dev *dev = &rte_eth_devices[txq->port_id];
 	uint16_t max_frame_size = dev->data->mtu + ICE_ETH_OVERHEAD;
+	uint16_t nb_used;
 
 	for (i = 0; i < nb_pkts; i++) {
 		m = tx_pkts[i];
@@ -3689,6 +3706,13 @@ ice_prep_pkts(__rte_unused void *tx_queue, struct rte_mbuf **tx_pkts,
 		ret = rte_net_intel_cksum_prepare(m);
 		if (ret != 0) {
 			rte_errno = -ret;
+			return i;
+		}
+
+		if (!(ol_flags & RTE_MBUF_F_TX_TCP_SEG) &&
+			ice_check_mbuf(m)) {
+			rte_errno = EINVAL;
+			PMD_DRV_LOG(ERR, "INVALID mbuf:	last mbuf data_len=[0]");
 			return i;
 		}
 	}
