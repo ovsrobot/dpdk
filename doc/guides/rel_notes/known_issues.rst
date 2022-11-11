@@ -906,3 +906,26 @@ Vhost multi-queue reconnection failed with QEMU version 4.2.0 to 5.1.0
 
 **Driver/Module**:
    Virtual Device Poll Mode Driver (PMD).
+
+IAVF inserts VLAN tag incorrectly on AVX-512 Tx path
+----------------------------------------------------------------------
+
+**Description**
+   When the kernel driver requests the VF to use the L2TAG2 field of the Tx context
+   descriptor to insert the hardware offload VLAN tag, AVX-512 Tx path cannot handle
+   this case correctly due to its lack of support for the Tx context descriptor.
+
+**Implication**
+   The VLAN tag will be inserted to the wrong location(inner of QinQ) on AVX-512 Tx
+   path. That is inconsistent with the behavior of PF(outer of QinQ). The ice kernel
+   driver's version newer than 1.8.9 requests to use L2TAG2 and has this issue.
+
+**Resolution/Workaround**:
+   Set the parameter `--force-max-simd-bitwidth` as 64/128/256 to avoid selecting AVX-512
+   Tx path
+
+**Affected Environment/Platform**:
+   ALL.
+
+**Driver/Module**:
+   Poll Mode Driver (PMD).
