@@ -2596,8 +2596,8 @@ ice_dev_close(struct rte_eth_dev *dev)
 	rte_intr_disable(intr_handle);
 
 	/* unregister callback func from eal lib */
-	rte_intr_callback_unregister(intr_handle,
-				     ice_interrupt_handler, dev);
+	rte_intr_callback_unregister_sync(intr_handle,
+					  ice_interrupt_handler, dev);
 
 	return ret;
 }
