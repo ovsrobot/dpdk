@@ -3113,6 +3113,19 @@ main(int argc, char **argv)
 	if (app_mode == APP_MODE_EMPTY_POLL || app_mode == APP_MODE_TELEMETRY)
 		launch_timer(rte_lcore_id());
 
+	/* wake up all worker cores from sleeping state */
+	if (pmgmt_type == RTE_POWER_MGMT_TYPE_MONITOR) {
+		for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
+			if (rte_lcore_is_enabled(lcore_id) == 0)
+				continue;
+
+			if (lcore_id == rte_get_main_lcore())
+				continue;
+
+			rte_power_monitor_wakeup(lcore_id);
+		}
+	}
+
 	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		if (rte_eal_wait_lcore(lcore_id) < 0)
 			return -1;
