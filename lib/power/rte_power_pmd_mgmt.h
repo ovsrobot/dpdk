@@ -52,6 +52,7 @@ enum rte_power_pmd_mgmt_type {
  *   The power management scheme to use for specified Rx queue.
  * @return
  *   0 on success
+ *   EPERM main core cannot be supported on ARM
  *   <0 on error
  */
 __rte_experimental

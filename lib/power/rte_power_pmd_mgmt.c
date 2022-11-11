@@ -490,6 +490,18 @@ rte_power_ethdev_pmgmt_queue_enable(unsigned int lcore_id, uint16_t port_id,
 	rte_rx_callback_fn clb;
 	int ret;
 
+#if defined(RTE_ARCH_ARM64)
+	/* Ensure the main lcore does not enter the power-monitor state,
+	 * so that it can be used to wake up other lcores on ARM.
+	 * This is due to WFE instruction has no timeout wake-up mechanism,
+	 * and if users want to exit actively, the main lcore is needed
+	 * to send SEV instruction to wake up other lcores.
+	 */
+	if (lcore_id == rte_get_main_lcore() &&
+			mode == RTE_POWER_MGMT_TYPE_MONITOR)
+		return EPERM;
+#endif
+
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -EINVAL);
 
 	if (queue_id >= RTE_MAX_QUEUES_PER_PORT || lcore_id >= RTE_MAX_LCORE) {
