@@ -143,6 +143,7 @@ test_sources = files(
         'test_timer_racecond.c',
         'test_timer_secondary.c',
         'test_ticketlock.c',
+        'test_pmu.c',
         'test_trace.c',
         'test_trace_register.c',
         'test_trace_perf.c',

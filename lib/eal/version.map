@@ -432,6 +432,8 @@ EXPERIMENTAL {
 	rte_thread_set_priority;
 
 	# added in 22.11
+	rte_pmu_add_event; # WINDOWS_NO_EXPORT
+	rte_pmu_read; # WINDOWS_NO_EXPORT
 	rte_thread_attr_get_affinity;
 	rte_thread_attr_init;
 	rte_thread_attr_set_affinity;
@@ -483,4 +485,5 @@ INTERNAL {
 	rte_mem_map;
 	rte_mem_page_size;
 	rte_mem_unmap;
+	rte_pmu_enable_group;
 };
