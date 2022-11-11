@@ -20,6 +20,9 @@ extern "C" {
 #include <rte_branch_prediction.h>
 #include <rte_lcore.h>
 #include <rte_log.h>
+#if defined(RTE_ARCH_ARM64)
+#include <rte_pmu_pmc.h>
+#endif
 
 /**
  * @file

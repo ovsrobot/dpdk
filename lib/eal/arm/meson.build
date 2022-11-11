@@ -9,3 +9,7 @@ sources += files(
         'rte_hypervisor.c',
         'rte_power_intrinsics.c',
 )
+
+if is_linux
+    sources += files('rte_pmu.c')
+endif
