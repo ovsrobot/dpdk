@@ -25,8 +25,11 @@ static inline void rte_pause(void)
 
 #ifdef RTE_WAIT_UNTIL_EQUAL_ARCH_DEFINED
 
-/* Send an event to quit WFE. */
+/* Send a local event to quit WFE. */
 #define __RTE_ARM_SEVL() { asm volatile("sevl" : : : "memory"); }
+
+/* Send a global event to quit WFE for all cores. */
+#define __RTE_ARM_SEV() { asm volatile("sev" : : : "memory"); }
 
 /* Put processor into low power WFE(Wait For Event) state. */
 #define __RTE_ARM_WFE() { asm volatile("wfe" : : : "memory"); }
