@@ -432,6 +432,7 @@ EXPERIMENTAL {
 	rte_thread_set_priority;
 
 	# added in 22.11
+	__rte_eal_trace_pmu_read; # WINDOWS_NO_EXPORT
 	rte_pmu_add_event; # WINDOWS_NO_EXPORT
 	rte_pmu_read; # WINDOWS_NO_EXPORT
 	rte_thread_attr_get_affinity;

@@ -18,6 +18,7 @@
 #include <rte_tailq.h>
 
 #include "pmu_private.h"
+#include "eal_trace.h"
 
 #define EVENT_SOURCE_DEVICES_PATH "/sys/bus/event_source/devices"
 
@@ -402,10 +403,69 @@ rte_pmu_add_event(const char *name)
 	return event->index;
 }
 
+static void
+add_events(const char *pattern)
+{
+	char *token, *copy;
+	int ret;
+
+	copy = strdup(pattern);
+	if (!copy)
+		return;
+
+	token = strtok(copy, ",");
+	while (token) {
+		ret = rte_pmu_add_event(token);
+		if (ret < 0)
+			RTE_LOG(ERR, EAL, "failed to add %s event\n", token);
+
+		token = strtok(NULL, ",");
+	}
+
+	free(copy);
+}
+
+static void
+add_events_by_pattern(const char *pattern)
+{
+	regmatch_t rmatch;
+	char buf[BUFSIZ];
+	unsigned int num;
+	regex_t reg;
+
+	/* events are matched against occurrences of e=ev1[,ev2,..] pattern */
+	if (regcomp(&reg, "e=([_[:alnum:]-],?)+", REG_EXTENDED))
+		return;
+
+	for (;;) {
+		if (regexec(&reg, pattern, 1, &rmatch, 0))
+			break;
+
+		num = rmatch.rm_eo - rmatch.rm_so;
+		if (num > sizeof(buf))
+			num = sizeof(buf);
+
+		/* skip e= pattern prefix */
+		memcpy(buf, pattern + rmatch.rm_so + 2, num - 2);
+		buf[num] = '\0';
+		add_events(buf);
+
+		pattern += rmatch.rm_eo;
+	}
+
+	regfree(&reg);
+}
+
 void
 eal_pmu_init(void)
 {
+	struct trace_arg *arg;
+	struct trace *trace;
 	int ret;
+
+	trace = trace_obj_get();
+	if (!trace)
+		RTE_LOG(WARNING, EAL, "tracing not initialized\n");
 
 	pmu = rte_calloc(NULL, 1, sizeof(*pmu), RTE_CACHE_LINE_SIZE);
 	if (!pmu) {
@@ -427,6 +487,9 @@ eal_pmu_init(void)
 		RTE_LOG(ERR, EAL, "failed to setup arch for PMU\n");
 		goto out;
 	}
+
+	STAILQ_FOREACH(arg, &trace->args, next)
+		add_events_by_pattern(arg->val);
 
 	return;
 out:
