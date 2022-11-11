@@ -3006,6 +3006,18 @@ main(int argc, char **argv)
 						"Error setting scaling freq max: err=%d, lcore %d\n",
 							ret, lcore_id);
 
+#if defined(RTE_ARCH_ARM64)
+				/* Ensure the main lcore does not enter the power-monitor state,
+				 * so that it can be used to wake up other lcores on ARM.
+				 * This is due to WFE instruction has no timeout wake-up mechanism,
+				 * and if users want to exit actively, the main lcore is needed
+				 * to send SEV instruction to wake up other lcores.
+				 */
+				unsigned int main_lcore = rte_get_main_lcore();
+				if (lcore_id == main_lcore &&
+						pmgmt_type == RTE_POWER_MGMT_TYPE_MONITOR)
+					continue;
+#endif
 				ret = rte_power_ethdev_pmgmt_queue_enable(
 						lcore_id, portid, queueid,
 						pmgmt_type);
@@ -3112,6 +3124,19 @@ main(int argc, char **argv)
 
 	if (app_mode == APP_MODE_EMPTY_POLL || app_mode == APP_MODE_TELEMETRY)
 		launch_timer(rte_lcore_id());
+
+	/* wake up all worker cores from sleeping state */
+	if (pmgmt_type == RTE_POWER_MGMT_TYPE_MONITOR) {
+		for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
+			if (rte_lcore_is_enabled(lcore_id) == 0)
+				continue;
+
+			if (lcore_id == rte_get_main_lcore())
+				continue;
+
+			rte_power_monitor_wakeup(lcore_id);
+		}
+	}
 
 	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		if (rte_eal_wait_lcore(lcore_id) < 0)
