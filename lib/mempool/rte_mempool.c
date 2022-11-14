@@ -804,9 +804,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	int socket_id, unsigned flags)
 {
 	char mz_name[RTE_MEMZONE_NAMESIZE];
-	struct rte_mempool_list *mempool_list;
 	struct rte_mempool *mp = NULL;
-	struct rte_tailq_entry *te = NULL;
 	const struct rte_memzone *mz = NULL;
 	size_t mempool_size;
 	unsigned int mz_flags = RTE_MEMZONE_1GB|RTE_MEMZONE_SIZE_HINT_ONLY;
@@ -825,8 +823,6 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	RTE_BUILD_BUG_ON((offsetof(struct rte_mempool, stats) &
 			  RTE_CACHE_LINE_MASK) != 0);
 #endif
-
-	mempool_list = RTE_TAILQ_CAST(rte_mempool_tailq.head, rte_mempool_list);
 
 	/* asked for zero items */
 	if (n == 0) {
@@ -872,14 +868,6 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	private_data_size = (private_data_size +
 			     RTE_MEMPOOL_ALIGN_MASK) & (~RTE_MEMPOOL_ALIGN_MASK);
 
-
-	/* try to allocate tailq entry */
-	te = rte_zmalloc("MEMPOOL_TAILQ_ENTRY", sizeof(*te), 0);
-	if (te == NULL) {
-		RTE_LOG(ERR, MEMPOOL, "Cannot allocate tailq entry!\n");
-		goto exit_unlock;
-	}
-
 	mempool_size = RTE_MEMPOOL_HEADER_SIZE(mp, cache_size);
 	mempool_size += private_data_size;
 	mempool_size = RTE_ALIGN_CEIL(mempool_size, RTE_MEMPOOL_ALIGN);
@@ -914,7 +902,6 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	mp->private_data_size = private_data_size;
 	STAILQ_INIT(&mp->elt_list);
 	STAILQ_INIT(&mp->mem_list);
-
 	/*
 	 * local_cache pointer is set even if cache_size is zero.
 	 * The local_cache points to just past the elt_pa[] array.
@@ -928,12 +915,6 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 			mempool_cache_init(&mp->local_cache[lcore_id],
 					   cache_size);
 	}
-
-	te->data = mp;
-
-	rte_mcfg_tailq_write_lock();
-	TAILQ_INSERT_TAIL(mempool_list, te, next);
-	rte_mcfg_tailq_write_unlock();
 	rte_mcfg_mempool_write_unlock();
 
 	rte_mempool_trace_create_empty(name, n, elt_size, cache_size,
@@ -942,7 +923,6 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 
 exit_unlock:
 	rte_mcfg_mempool_write_unlock();
-	rte_free(te);
 	rte_mempool_free(mp);
 	return NULL;
 }
@@ -957,11 +937,22 @@ rte_mempool_create(const char *name, unsigned n, unsigned elt_size,
 {
 	int ret;
 	struct rte_mempool *mp;
+	struct rte_mempool_list *mempool_list;
+	struct rte_tailq_entry *te = NULL;
+
+	/* try to allocate tailq entry */
+	te = rte_zmalloc("MEMPOOL_TAILQ_ENTRY", sizeof(*te), 0);
+	if (te == NULL) {
+		RTE_LOG(ERR, MEMPOOL, "Cannot allocate tailq entry!\n");
+		return NULL;
+	}
 
 	mp = rte_mempool_create_empty(name, n, elt_size, cache_size,
 		private_data_size, socket_id, flags);
-	if (mp == NULL)
+	if (mp == NULL) {
+		rte_free(te);
 		return NULL;
+	}
 
 	/*
 	 * Since we have 4 combinations of the SP/SC/MP/MC examine the flags to
@@ -990,12 +981,19 @@ rte_mempool_create(const char *name, unsigned n, unsigned elt_size,
 	if (obj_init)
 		rte_mempool_obj_iter(mp, obj_init, obj_init_arg);
 
+	te->data = mp;
+	mempool_list = RTE_TAILQ_CAST(rte_mempool_tailq.head, rte_mempool_list);
+	rte_mcfg_tailq_write_lock();
+	TAILQ_INSERT_TAIL(mempool_list, te, next);
+	rte_mcfg_tailq_write_unlock();
+
 	rte_mempool_trace_create(name, n, elt_size, cache_size,
 		private_data_size, mp_init, mp_init_arg, obj_init,
 		obj_init_arg, flags, mp);
 	return mp;
 
  fail:
+	rte_free(te);
 	rte_mempool_free(mp);
 	return NULL;
 }
