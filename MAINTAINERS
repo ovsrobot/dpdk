@@ -534,6 +534,11 @@ F: drivers/raw/skeleton/
 F: app/test/test_rawdev.c
 F: doc/guides/prog_guide/rawdev.rst
 
+ML device API - EXPERIMENTAL
+M: Srikanth Yalavarthi <syalavarthi@marvell.com>
+F: lib/mldev/
+F: doc/guides/prog_guide/mldev.rst
+
 
 Memory Pool Drivers
 -------------------

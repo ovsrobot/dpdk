@@ -30,6 +30,7 @@ Programmer's Guide
     regexdev
     dmadev
     gpudev
+    mldev
     rte_security
     rawdev
     link_bonding_poll_mode_drv_lib
