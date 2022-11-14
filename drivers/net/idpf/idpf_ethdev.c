@@ -605,6 +605,9 @@ idpf_dev_stop(struct rte_eth_dev *dev)
 {
 	struct idpf_vport *vport = dev->data->dev_private;
 
+	if (vport->stopped == 1)
+		return 0;
+
 	idpf_vc_ena_dis_vport(vport, false);
 
 	idpf_stop_queues(dev);
@@ -612,6 +615,8 @@ idpf_dev_stop(struct rte_eth_dev *dev)
 	idpf_vc_config_irq_map_unmap(vport, false);
 
 	idpf_vc_dealloc_vectors(vport);
+
+	vport->stopped = 1;
 
 	return 0;
 }
@@ -621,6 +626,8 @@ idpf_dev_close(struct rte_eth_dev *dev)
 {
 	struct idpf_vport *vport = dev->data->dev_private;
 	struct idpf_adapter *adapter = vport->adapter;
+
+	idpf_dev_stop(dev);
 
 	idpf_vc_destroy_vport(vport);
 
