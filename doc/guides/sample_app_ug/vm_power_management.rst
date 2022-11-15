@@ -255,11 +255,10 @@ To build just the ``vm_power_manager`` application using ``meson``/``ninja``:
 .. code-block:: console
 
    cd dpdk
-   meson build
-   cd build
-   ninja
+   meson setup build
+   ninja -C build
    meson configure -Dexamples=vm_power_manager
-   ninja
+   ninja -C build
 
 The resulting binary is ``dpdk/build/examples/dpdk-vm_power_manager``.
 
@@ -494,11 +493,10 @@ To build just the ``vm_power_manager`` application using ``meson``/``ninja``:
 .. code-block:: console
 
    cd dpdk
-   meson build
-   cd build
-   ninja
+   meson setup build
+   ninja -C build
    meson configure -Dexamples=vm_power_manager/guest_cli
-   ninja
+   ninja -C build
 
 The resulting binary is ``dpdk/build/examples/guest_cli``.
 

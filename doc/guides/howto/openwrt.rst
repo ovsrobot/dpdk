@@ -100,8 +100,8 @@ first.
     ar = 'x86_64-openwrt-linux-ar'
     strip = 'x86_64-openwrt-linux-strip'
 
-    meson builddir --cross-file openwrt-cross
-    ninja -C builddir
+    meson setup build --cross-file openwrt-cross
+    ninja -C build
 
 Running DPDK application on OpenWrt
 -----------------------------------

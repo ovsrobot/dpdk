@@ -9,7 +9,7 @@ Summary
 For many platforms, compiling and installing DPDK should work using the
 following set of commands::
 
-	meson build
+	meson setup build
 	cd build
 	ninja
 	ninja install
@@ -57,7 +57,7 @@ Configuring the Build
 ----------------------
 
 To configure a build, run the meson tool, passing the path to the directory
-to be used for the build e.g. ``meson build``, as shown above. If calling
+to be used for the build e.g. ``meson setup build``, as shown above. If calling
 meson from somewhere other than the root directory of the DPDK project the
 path to the root directory should be passed as the first parameter, and the
 build path as the second. For example, to build DPDK in /tmp/dpdk-build::
