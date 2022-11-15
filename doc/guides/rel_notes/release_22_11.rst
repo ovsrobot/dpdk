@@ -240,7 +240,15 @@ New Features
 
 * **Updated ipsec_mb crypto driver.**
 
-  Added SNOW-3G and ZUC support for ARM platform.
+  * Added SNOW-3G and ZUC support for ARM platform.
+  * Added Intel IPsec MB v1.3 library support, see the following guides for
+    more details:
+    :doc:`../cryptodevs/aesni_gcm`
+    :doc:`../cryptodevs/aesni_mb`
+    :doc:`../cryptodevs/chacha20_poly1305`
+    :doc:`../cryptodevs/kasumi`
+    :doc:`../cryptodevs/snow3g`
+    :doc:`../cryptodevs/zuc`
 
 * **Added UADK crypto driver.**
 
