@@ -32,8 +32,8 @@ implementer_generic = {
     'flags': [
         ['RTE_MACHINE', '"armv8a"'],
         ['RTE_USE_C11_MEM_MODEL', true],
-        ['RTE_MAX_LCORE', 256],
-        ['RTE_MAX_NUMA_NODES', 4]
+        ['RTE_MAX_LCORE', 1280],
+        ['RTE_MAX_NUMA_NODES', 32]
     ],
     'part_number_config': {
         'generic': {
@@ -271,7 +271,8 @@ implementers = {
 soc_generic = {
     'description': 'Generic un-optimized build for armv8 aarch64 exec mode',
     'implementer': 'generic',
-    'part_number': 'generic'
+    'part_number': 'generic',
+    'numa': true
 }
 
 soc_generic_aarch32 = {
