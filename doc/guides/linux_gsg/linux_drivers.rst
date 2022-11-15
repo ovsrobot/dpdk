@@ -12,12 +12,12 @@ Linux Drivers
 
 Different PMDs may require different kernel drivers in order to work properly.
 Depending on the PMD being used, a corresponding kernel driver should be loaded,
-and network ports should be bound to that driver.
+and network ports or other hardware devices should be bound to that driver.
 
 .. _linux_gsg_binding_kernel:
 
-Binding and Unbinding Network Ports to/from the Kernel Modules
---------------------------------------------------------------
+Binding and Unbinding to/from the Kernel Modules
+------------------------------------------------
 
 .. note::
 
