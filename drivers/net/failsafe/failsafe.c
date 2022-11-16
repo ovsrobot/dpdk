@@ -361,6 +361,9 @@ rte_pmd_failsafe_probe(struct rte_vdev_device *vdev)
 			if (sdev->devargs.name[0] == '\0')
 				continue;
 
+			if (!rte_eth_dev_is_valid_port(PORT_ID(sdev)))
+				continue;
+
 			/* rebuild devargs to be able to get the bus name. */
 			ret = rte_devargs_parse(&devargs,
 						sdev->devargs.name);
