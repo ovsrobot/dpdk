@@ -109,6 +109,22 @@ RTE_TRACE_POINT_FP(
 	rte_trace_point_emit_ptr(mempool);
 )
 
+RTE_TRACE_POINT_FP(
+	rte_mempool_trace_cache_zc_put_bulk,
+	RTE_TRACE_POINT_ARGS(void *cache, void *mempool, uint32_t nb_objs),
+	rte_trace_point_emit_ptr(cache);
+	rte_trace_point_emit_ptr(mempool);
+	rte_trace_point_emit_u32(nb_objs);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_mempool_trace_cache_zc_get_bulk,
+	RTE_TRACE_POINT_ARGS(void *cache, void *mempool, uint32_t nb_objs),
+	rte_trace_point_emit_ptr(cache);
+	rte_trace_point_emit_ptr(mempool);
+	rte_trace_point_emit_u32(nb_objs);
+)
+
 #ifdef __cplusplus
 }
 #endif

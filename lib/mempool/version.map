@@ -63,6 +63,10 @@ EXPERIMENTAL {
 	__rte_mempool_trace_ops_alloc;
 	__rte_mempool_trace_ops_free;
 	__rte_mempool_trace_set_ops_byname;
+
+	# added in 23.03
+	__rte_mempool_trace_cache_zc_put_bulk;
+	__rte_mempool_trace_cache_zc_get_bulk;
 };
 
 INTERNAL {

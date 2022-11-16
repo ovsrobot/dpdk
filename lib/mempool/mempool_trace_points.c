@@ -77,3 +77,9 @@ RTE_TRACE_POINT_REGISTER(rte_mempool_trace_ops_free,
 
 RTE_TRACE_POINT_REGISTER(rte_mempool_trace_set_ops_byname,
 	lib.mempool.set.ops.byname)
+
+RTE_TRACE_POINT_REGISTER(rte_mempool_trace_cache_zc_put_bulk,
+	lib.mempool.cache.zc.put.bulk)
+
+RTE_TRACE_POINT_REGISTER(rte_mempool_trace_cache_zc_get_bulk,
+	lib.mempool.cache.zc.get.bulk)
