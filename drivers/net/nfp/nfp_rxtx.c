@@ -1064,6 +1064,7 @@ nfp_net_nfdk_tx_maybe_close_block(struct nfp_net_txq *txq, struct rte_mbuf *pkt)
 	if (unlikely(n_descs > NFDK_TX_DESC_GATHER_MAX))
 		return -EINVAL;
 
+	/* Under count by 1 (don't count meta) for the round down to work out */
 	n_descs += !!(pkt->ol_flags & RTE_MBUF_F_TX_TCP_SEG);
 
 	if (round_down(txq->wr_p, NFDK_TX_DESC_BLOCK_CNT) !=
@@ -1180,6 +1181,7 @@ nfp_net_nfdk_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pk
 	/* Sending packets */
 	while ((npkts < nb_pkts) && free_descs) {
 		uint32_t type, dma_len, dlen_type, tmp_dlen;
+		uint32_t tmp_hlen;
 		int nop_descs, used_descs;
 
 		pkt = *(tx_pkts + npkts);
@@ -1218,8 +1220,23 @@ nfp_net_nfdk_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pk
 		} else {
 			type = NFDK_DESC_TX_TYPE_GATHER;
 		}
+
+		/* Implicitly truncates to chunk in below logic */
 		dma_len -= 1;
-		dlen_type = (NFDK_DESC_TX_DMA_LEN_HEAD & dma_len) |
+
+		/*
+		 * We will do our best to pass as much data as we can in descriptor
+		 * and we need to make sure the first descriptor includes whole
+		 * head since there is limitation in firmware side. Sometimes the
+		 * value of dma_len bitwise and NFDK_DESC_TX_DMA_LEN_HEAD will less
+		 * than packet head len.
+		 */
+		if (dma_len > NFDK_DESC_TX_DMA_LEN_HEAD)
+			tmp_hlen = NFDK_DESC_TX_DMA_LEN_HEAD;
+		else
+			tmp_hlen = dma_len;
+
+		dlen_type = (NFDK_DESC_TX_DMA_LEN_HEAD & tmp_hlen) |
 			(NFDK_DESC_TX_TYPE_HEAD & (type << 12));
 		ktxds->dma_len_type = rte_cpu_to_le_16(dlen_type);
 		dma_addr = rte_mbuf_data_iova(pkt);
@@ -1229,10 +1246,18 @@ nfp_net_nfdk_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pk
 		ktxds->dma_addr_lo = rte_cpu_to_le_32(dma_addr & 0xffffffff);
 		ktxds++;
 
+		/*
+		 * Preserve the original dlen_type, this way below the EOP logic
+		 * can use dlen_type.
+		 */
 		tmp_dlen = dlen_type & NFDK_DESC_TX_DMA_LEN_HEAD;
 		dma_len -= tmp_dlen;
 		dma_addr += tmp_dlen + 1;
 
+		/*
+		 * The rest of the data (if any) will be in larger dma descritors
+		 * and is handled with the dma_len loop.
+		 */
 		while (pkt) {
 			if (*lmbuf)
 				rte_pktmbuf_free_seg(*lmbuf);
