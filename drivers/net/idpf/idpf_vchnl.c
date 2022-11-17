@@ -1197,6 +1197,9 @@ idpf_vc_dealloc_vectors(struct idpf_vport *vport)
 	int err, len;
 
 	alloc_vec = vport->recv_vectors;
+	if (alloc_vec == NULL)
+		return -EINVAL;
+
 	vcs = &alloc_vec->vchunks;
 
 	len = sizeof(struct virtchnl2_vector_chunks) +
