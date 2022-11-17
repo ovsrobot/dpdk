@@ -2655,16 +2655,22 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 	union rte_eth_rxseg rx_useg[MAX_SEGS_BUFFER_SPLIT] = {};
 	struct rte_mempool *rx_mempool[MAX_MEMPOOL] = {};
 	struct rte_mempool *mpx;
+	struct rte_eth_dev_info dev_info;
 	unsigned int i, mp_n;
 	uint32_t prev_hdrs = 0;
 	int ret;
 
+	ret = rte_eth_dev_info_get(port_id, &dev_info);
+	if (ret != 0)
+		return ret;
+
 	/* Verify Rx queue configuration is single pool and segment or
 	 * multiple pool/segment.
+	 * @see rte_eth_dev_info::max_rx_mempools
 	 * @see rte_eth_rxconf::rx_mempools
 	 * @see rte_eth_rxconf::rx_seg
 	 */
-	if (!(mbuf_data_size_n > 1) && !(rx_pkt_nb_segs > 1 ||
+	if (!(dev_info.max_rx_mempools != 0) && !(rx_pkt_nb_segs > 1 ||
 	    ((rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) != 0))) {
 		/* Single pool/segment configuration */
 		rx_conf->rx_seg = NULL;
