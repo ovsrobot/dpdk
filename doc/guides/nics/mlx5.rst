@@ -278,6 +278,9 @@ Limitations
 - No Tx metadata go to the E-Switch steering domain for the Flow group 0.
   The flows within group 0 and set metadata action are rejected by hardware.
 
+- The driver rounds down the ``max_lro_pkt_size`` value in the port
+  configuration to a multiple of 256 due to HW limitation.
+
 .. note::
 
    MAC addresses not already present in the bridge table of the associated
