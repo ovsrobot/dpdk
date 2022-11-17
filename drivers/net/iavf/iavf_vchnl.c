@@ -36,7 +36,6 @@ struct iavf_event_element {
 	struct rte_eth_dev *dev;
 	enum rte_eth_event_type event;
 	void *param;
-	size_t param_alloc_size;
 	uint8_t param_alloc_data[0];
 };
 
@@ -80,7 +79,7 @@ iavf_dev_event_handle(void *param __rte_unused)
 		TAILQ_FOREACH_SAFE(pos, &pending, next, save_next) {
 			TAILQ_REMOVE(&pending, pos, next);
 			rte_eth_dev_callback_process(pos->dev, pos->event, pos->param);
-			rte_free(pos);
+			free(pos);
 		}
 	}
 
@@ -94,14 +93,13 @@ iavf_dev_event_post(struct rte_eth_dev *dev,
 {
 	struct iavf_event_handler *handler = &event_handler;
 	char notify_byte;
-	struct iavf_event_element *elem = rte_malloc(NULL, sizeof(*elem) + param_alloc_size, 0);
+	struct iavf_event_element *elem = malloc(sizeof(*elem) + param_alloc_size);
 	if (!elem)
 		return;
 
 	elem->dev = dev;
 	elem->event = event;
 	elem->param = param;
-	elem->param_alloc_size = param_alloc_size;
 	if (param && param_alloc_size) {
 		rte_memcpy(elem->param_alloc_data, param, param_alloc_size);
 		elem->param = elem->param_alloc_data;
@@ -165,7 +163,7 @@ iavf_dev_event_handler_fini(void)
 	struct iavf_event_element *pos, *save_next;
 	TAILQ_FOREACH_SAFE(pos, &handler->pending, next, save_next) {
 		TAILQ_REMOVE(&handler->pending, pos, next);
-		rte_free(pos);
+		free(pos);
 	}
 }
 
