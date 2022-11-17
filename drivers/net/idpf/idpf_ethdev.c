@@ -372,13 +372,6 @@ idpf_dev_configure(struct rte_eth_dev *dev)
 		return -ENOTSUP;
 	}
 
-	if ((dev->data->nb_rx_queues == 1 && conf->rxmode.mq_mode != RTE_ETH_MQ_RX_NONE) ||
-	    (dev->data->nb_rx_queues > 1 && conf->rxmode.mq_mode != RTE_ETH_MQ_RX_RSS)) {
-		PMD_INIT_LOG(ERR, "Multi-queue packet distribution mode %d is not supported",
-			     conf->rxmode.mq_mode);
-		return -ENOTSUP;
-	}
-
 	if (conf->txmode.mq_mode != RTE_ETH_MQ_TX_NONE) {
 		PMD_INIT_LOG(ERR, "Multi-queue TX mode %d is not supported",
 			     conf->txmode.mq_mode);
