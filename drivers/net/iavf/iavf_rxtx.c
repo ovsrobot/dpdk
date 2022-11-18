@@ -2453,7 +2453,8 @@ iavf_fill_ctx_desc_tunnelling_field(volatile uint64_t *qw0,
 		 * Shall be set only if L4TUNT = 01b and EIPT is not zero
 		 */
 		if (!(eip_typ & IAVF_TX_CTX_EXT_IP_NONE) &&
-		    (eip_typ & IAVF_TXD_CTX_UDP_TUNNELING))
+		    (eip_typ & IAVF_TXD_CTX_UDP_TUNNELING) &&
+			(m->ol_flags & RTE_MBUF_F_TX_OUTER_UDP_CKSUM))
 			eip_typ |= IAVF_TXD_CTX_QW0_L4T_CS_MASK;
 	}
 
