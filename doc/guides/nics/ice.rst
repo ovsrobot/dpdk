@@ -395,3 +395,20 @@ file is used by both the kernel driver and the DPDK PMD.
 
       Windows support: The DDP package is not supported on Windows so,
       loading of the package is disabled on Windows.
+
+ice: Rx path is not supported after PF or DCF add vlan offload
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If pmd does not enable Vlan offload during initialization, it will
+automatically select Rx paths that do not support offload. Even if
+Vlan offload is subsequently enabled through the API, Vlan offload
+will not work because the selected Rx path does not support Vlan
+offload.
+
+Rx path dynamic routing is not supported. When the offload features is
+switched, the queue needs to be reconfigured, then takes effect. It would
+take additional workload for the network card to deal with.
+
+When applying VLAN offload on the PF or DCF, it must be configured
+firstly by the startup parameters.
+
