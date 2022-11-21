@@ -589,6 +589,7 @@ extern uint32_t max_rx_pkt_len;
 extern uint32_t rx_pkt_hdr_protos[MAX_SEGS_BUFFER_SPLIT];
 extern uint16_t rx_pkt_seg_lengths[MAX_SEGS_BUFFER_SPLIT];
 extern uint8_t  rx_pkt_nb_segs; /**< Number of segments to split */
+extern uint8_t multi_rx_mempool; /**< Enables multi-mempool feature. */
 extern uint16_t rx_pkt_seg_offsets[MAX_SEGS_BUFFER_SPLIT];
 extern uint8_t  rx_pkt_nb_offs; /**< Number of specified offsets */
 
