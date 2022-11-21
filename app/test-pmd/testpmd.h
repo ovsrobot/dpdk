@@ -464,6 +464,7 @@ enum dcb_mode_enable
 extern uint8_t xstats_hide_zero; /**< Hide zero values for xstats display */
 
 /* globals used for configuration */
+extern uint8_t multi_mempool; /**< Enables multi-mempool feature. */
 extern uint8_t record_core_cycles; /**< Enables measurement of CPU cycles */
 extern uint8_t record_burst_stats; /**< Enables display of RX and TX bursts */
 extern uint16_t verbose_level; /**< Drives messages being displayed, if any. */

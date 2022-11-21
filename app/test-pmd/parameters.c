@@ -700,6 +700,7 @@ launch_args_parse(int argc, char** argv)
 		{ "rx-mq-mode",                 1, 0, 0 },
 		{ "record-core-cycles",         0, 0, 0 },
 		{ "record-burst-stats",         0, 0, 0 },
+		{ "multi-mempool",              0, 0, 0 },
 		{ PARAM_NUM_PROCS,              1, 0, 0 },
 		{ PARAM_PROC_ID,                1, 0, 0 },
 		{ 0, 0, 0, 0 },
@@ -1449,6 +1450,8 @@ launch_args_parse(int argc, char** argv)
 				record_core_cycles = 1;
 			if (!strcmp(lgopts[opt_idx].name, "record-burst-stats"))
 				record_burst_stats = 1;
+			if (!strcmp(lgopts[opt_idx].name, "multi-mempool"))
+				multi_mempool = 1;
 			if (!strcmp(lgopts[opt_idx].name, PARAM_NUM_PROCS))
 				num_procs = atoi(optarg);
 			if (!strcmp(lgopts[opt_idx].name, PARAM_PROC_ID))

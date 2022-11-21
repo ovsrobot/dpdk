@@ -497,6 +497,11 @@ uint8_t record_burst_stats;
  */
 uint32_t rxq_share;
 
+/*
+ * Multi-mempool support, disabled by default.
+ */
+uint8_t multi_mempool;
+
 unsigned int num_sockets = 0;
 unsigned int socket_ids[RTE_MAX_NUMA_NODES];
 
@@ -2655,28 +2660,23 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 	union rte_eth_rxseg rx_useg[MAX_SEGS_BUFFER_SPLIT] = {};
 	struct rte_mempool *rx_mempool[MAX_MEMPOOL] = {};
 	struct rte_mempool *mpx;
+	struct rte_eth_dev_info dev_info;
 	unsigned int i, mp_n;
 	uint32_t prev_hdrs = 0;
 	int ret;
 
+	ret = rte_eth_dev_info_get(port_id, &dev_info);
+	if (ret != 0)
+		return ret;
+
 	/* Verify Rx queue configuration is single pool and segment or
 	 * multiple pool/segment.
+	 * @see rte_eth_dev_info::max_rx_mempools
 	 * @see rte_eth_rxconf::rx_mempools
 	 * @see rte_eth_rxconf::rx_seg
 	 */
-	if (!(mbuf_data_size_n > 1) && !(rx_pkt_nb_segs > 1 ||
-	    ((rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) != 0))) {
-		/* Single pool/segment configuration */
-		rx_conf->rx_seg = NULL;
-		rx_conf->rx_nseg = 0;
-		ret = rte_eth_rx_queue_setup(port_id, rx_queue_id,
-					     nb_rx_desc, socket_id,
-					     rx_conf, mp);
-		goto exit;
-	}
-
-	if (rx_pkt_nb_segs > 1 ||
-	    rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT) {
+	if ((rx_pkt_nb_segs > 1) &&
+	    (rx_conf->offloads & RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT)) {
 		/* multi-segment configuration */
 		for (i = 0; i < rx_pkt_nb_segs; i++) {
 			struct rte_eth_rxseg_split *rx_seg = &rx_useg[i].split;
@@ -2701,7 +2701,14 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		}
 		rx_conf->rx_nseg = rx_pkt_nb_segs;
 		rx_conf->rx_seg = rx_useg;
-	} else {
+		rx_conf->rx_mempools = NULL;
+		rx_conf->rx_nmempool = 0;
+		ret = rte_eth_rx_queue_setup(port_id, rx_queue_id, nb_rx_desc,
+				    socket_id, rx_conf, NULL);
+		rx_conf->rx_seg = NULL;
+		rx_conf->rx_nseg = 0;
+	} else if ((multi_mempool == 1) && (dev_info.max_rx_mempools != 0) &&
+		  (mbuf_data_size_n > 1)) {
 		/* multi-pool configuration */
 		for (i = 0; i < mbuf_data_size_n; i++) {
 			mpx = mbuf_pool_find(socket_id, i);
@@ -2709,14 +2716,23 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 		}
 		rx_conf->rx_mempools = rx_mempool;
 		rx_conf->rx_nmempool = mbuf_data_size_n;
-	}
-	ret = rte_eth_rx_queue_setup(port_id, rx_queue_id, nb_rx_desc,
+		rx_conf->rx_seg = NULL;
+		rx_conf->rx_nseg = 0;
+		ret = rte_eth_rx_queue_setup(port_id, rx_queue_id, nb_rx_desc,
 				    socket_id, rx_conf, NULL);
-	rx_conf->rx_seg = NULL;
-	rx_conf->rx_nseg = 0;
-	rx_conf->rx_mempools = NULL;
-	rx_conf->rx_nmempool = 0;
-exit:
+		rx_conf->rx_mempools = NULL;
+		rx_conf->rx_nmempool = 0;
+	} else {
+		/* Single pool/segment configuration */
+		rx_conf->rx_seg = NULL;
+		rx_conf->rx_nseg = 0;
+		rx_conf->rx_mempools = NULL;
+		rx_conf->rx_nmempool = 0;
+		ret = rte_eth_rx_queue_setup(port_id, rx_queue_id, nb_rx_desc,
+				    socket_id, rx_conf, mp);
+	}
+
+
 	ports[port_id].rxq[rx_queue_id].state = rx_conf->rx_deferred_start ?
 						RTE_ETH_QUEUE_STATE_STOPPED :
 						RTE_ETH_QUEUE_STATE_STARTED;
