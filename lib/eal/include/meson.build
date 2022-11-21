@@ -36,6 +36,7 @@ headers += files(
         'rte_pci_dev_features.h',
         'rte_per_lcore.h',
         'rte_pflock.h',
+        'rte_pmu.h',
         'rte_random.h',
         'rte_reciprocal.h',
         'rte_seqcount.h',

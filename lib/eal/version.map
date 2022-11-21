@@ -440,6 +440,10 @@ EXPERIMENTAL {
 	rte_thread_detach;
 	rte_thread_equal;
 	rte_thread_join;
+
+	# added in 23.03
+	rte_pmu_add_event; # WINDOWS_NO_EXPORT
+	rte_pmu_read; # WINDOWS_NO_EXPORT
 };
 
 INTERNAL {
@@ -483,4 +487,5 @@ INTERNAL {
 	rte_mem_map;
 	rte_mem_page_size;
 	rte_mem_unmap;
+	rte_pmu_enable_group;
 };
