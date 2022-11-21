@@ -75,3 +75,6 @@ RTE_TRACE_POINT_REGISTER(rte_eal_trace_intr_enable,
 	lib.eal.intr.enable)
 RTE_TRACE_POINT_REGISTER(rte_eal_trace_intr_disable,
 	lib.eal.intr.disable)
+
+RTE_TRACE_POINT_REGISTER(rte_eal_trace_pmu_read,
+	lib.eal.pmu.read)
