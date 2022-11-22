@@ -323,6 +323,8 @@ alloc_pages_on_heap(struct malloc_heap *heap, uint64_t pg_sz, size_t elt_size,
 
 	map_addr = ms[0]->addr;
 	msl = rte_mem_virt2memseg_list(map_addr);
+	if (msl == NULL)
+		return NULL;
 
 	/* check if we wanted contiguous memory but didn't get it */
 	if (contig && !eal_memalloc_is_contig(msl, map_addr, alloc_sz)) {
