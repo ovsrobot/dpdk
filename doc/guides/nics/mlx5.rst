@@ -426,6 +426,8 @@ Limitations
   - LRO packet aggregation is performed by HW only for packet size larger than
     ``lro_min_mss_size``. This value is reported on device start, when debug
     mode is enabled.
+  - The driver rounds down the ``max_lro_pkt_size`` value in the port configuration
+    to a multiple of 256 due to HW limitation.
 
 - CRC:
 
