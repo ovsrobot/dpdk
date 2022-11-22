@@ -41,7 +41,7 @@ memzone_lookup_thread_unsafe(const char *name)
 	i = rte_fbarray_find_next_used(arr, 0);
 	while (i >= 0) {
 		mz = rte_fbarray_get(arr, i);
-		if (mz->addr != NULL &&
+		if ((mz != NULL) && (mz->addr != NULL) &&
 				!strncmp(name, mz->name, RTE_MEMZONE_NAMESIZE))
 			return mz;
 		i = rte_fbarray_find_next_used(arr, i + 1);
@@ -358,6 +358,10 @@ dump_memzone(const struct rte_memzone *mz, void *arg)
 	fprintf(f, "physical segments used:\n");
 	ms_idx = RTE_PTR_DIFF(mz->addr, msl->base_va) / page_sz;
 	ms = rte_fbarray_get(&msl->memseg_arr, ms_idx);
+	if (ms == NULL) {
+		RTE_LOG(DEBUG, EAL, "Skipping bad memzone\n");
+		return;
+	}
 
 	do {
 		fprintf(f, "  addr: %p iova: 0x%" PRIx64 " "
