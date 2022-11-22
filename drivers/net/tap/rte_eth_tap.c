@@ -2340,6 +2340,9 @@ rte_pmd_tun_probe(struct rte_vdev_device *dev)
 	struct rte_eth_dev *eth_dev;
 
 	name = rte_vdev_device_name(dev);
+	if (name == NULL)
+		return -1;
+
 	params = rte_vdev_device_args(dev);
 	memset(remote_iface, 0, RTE_ETH_NAME_MAX_LEN);
 
