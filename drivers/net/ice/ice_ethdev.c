@@ -4013,9 +4013,9 @@ ice_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 			      RTE_ETH_LINK_SPEED_FIXED);
 
 out:
-	ice_atomic_write_link_status(dev, &link);
 	if (link.link_status == old.link_status)
 		return -1;
+	ice_atomic_write_link_status(dev, &link);
 
 	return 0;
 }
