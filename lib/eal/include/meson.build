@@ -5,6 +5,7 @@ includes += include_directories('.')
 
 headers += files(
         'rte_alarm.h',
+        'rte_bitcount.h',
         'rte_bitmap.h',
         'rte_bitops.h',
         'rte_branch_prediction.h',
