@@ -148,6 +148,9 @@ Make your planned changes in the cloned ``dpdk`` repo. Here are some guidelines 
 
 * Follow the :ref:`coding_style` guidelines.
 
+* If you are a new contributor, or if your mail address changed, please update the ``.mailmap`` file.
+  This will help other developers when they want to contact you on changes you contributed to.
+
 * If you add new files or directories you should add your name to the ``MAINTAINERS`` file.
 
 * Initial submission of new PMDs should be prepared against a corresponding repo.
