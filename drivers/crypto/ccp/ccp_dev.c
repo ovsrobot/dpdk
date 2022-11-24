@@ -683,13 +683,11 @@ ccp_probe_devices(struct rte_pci_device *pci_dev,
 {
 	int dev_cnt = 0;
 	int ccp_type = 0;
-	struct dirent *d;
 	DIR *dir;
 	int ret = 0;
 	int module_idx = 0;
-	uint16_t domain;
-	uint8_t bus, devid, function;
 	char dirname[PATH_MAX];
+	char name[RTE_CRYPTODEV_NAME_MAX_LEN];
 
 	module_idx = ccp_check_pci_uio_module();
 	if (module_idx < 0)
@@ -700,21 +698,15 @@ ccp_probe_devices(struct rte_pci_device *pci_dev,
 	dir = opendir(SYSFS_PCI_DEVICES);
 	if (dir == NULL)
 		return -1;
-	while ((d = readdir(dir)) != NULL) {
-		if (d->d_name[0] == '.')
-			continue;
-		if (ccp_parse_pci_addr_format(d->d_name, sizeof(d->d_name),
-					&domain, &bus, &devid, &function) != 0)
-			continue;
-		snprintf(dirname, sizeof(dirname), "%s/%s",
-			     SYSFS_PCI_DEVICES, d->d_name);
-		if (is_ccp_device(dirname, ccp_id, &ccp_type)) {
-			printf("CCP : Detected CCP device with ID = 0x%x\n",
-			       ccp_id[ccp_type].device_id);
-			ret = ccp_probe_device(ccp_type, pci_dev);
-			if (ret == 0)
-				dev_cnt++;
-		}
+	rte_pci_device_name(&pci_dev->addr, name, sizeof(name));
+	snprintf(dirname, sizeof(dirname), "%s/%s",
+		     SYSFS_PCI_DEVICES, name);
+	if (is_ccp_device(dirname, ccp_id, &ccp_type)) {
+		printf("CCP : Detected CCP device with ID = 0x%x\n",
+		       ccp_id[ccp_type].device_id);
+		ret = ccp_probe_device(ccp_type, pci_dev);
+		if (ret == 0)
+			dev_cnt++;
 	}
 	closedir(dir);
 	return dev_cnt;

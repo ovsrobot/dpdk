@@ -19,7 +19,6 @@
 /**
  * Global static parameter used to find if CCP device is already initialized.
  */
-static unsigned int ccp_pmd_init_done;
 uint8_t ccp_cryptodev_driver_id;
 uint8_t cryptodev_cnt;
 extern void *sha_ctx;
@@ -199,7 +198,6 @@ cryptodev_ccp_remove(struct rte_pci_device *pci_dev)
 	if (dev == NULL)
 		return -ENODEV;
 
-	ccp_pmd_init_done = 0;
 	rte_free(sha_ctx);
 
 	RTE_LOG(INFO, PMD, "Closing ccp device %s on numa socket %u\n",
@@ -288,10 +286,6 @@ cryptodev_ccp_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	};
 
 	sha_ctx = (void *)rte_malloc(NULL, SHA512_DIGEST_SIZE, 64);
-	if (ccp_pmd_init_done) {
-		RTE_LOG(INFO, PMD, "CCP PMD already initialized\n");
-		return -EFAULT;
-	}
 	rte_pci_device_name(&pci_dev->addr, name, sizeof(name));
 	if (name[0] == '\0')
 		return -EINVAL;
@@ -310,7 +304,6 @@ cryptodev_ccp_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	rc = cryptodev_ccp_create(name, pci_dev, &init_params, pci_drv);
 	if (rc)
 		return rc;
-	ccp_pmd_init_done = 1;
 	return 0;
 }
 
