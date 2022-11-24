@@ -104,7 +104,7 @@ struct output_buffer {
 static void print_stats(void);
 
 /*
- * Initialises a given port using global settings and with the rx buffers
+ * Initialises a given port using global settings and with the Rx buffers
  * coming from the mbuf_pool passed as parameter
  */
 static inline int
@@ -259,12 +259,7 @@ lcore_rx(struct lcore_params *p)
 		}
 		app_stats.rx.rx_pkts += nb_rx;
 
-		/*
-		 * Swap the following two lines if you want the rx traffic
-		 * to go directly to tx, no distribution.
-		 */
 		struct rte_ring *out_ring = p->rx_dist_ring;
-		/* struct rte_ring *out_ring = p->dist_tx_ring; */
 
 		uint16_t sent = rte_ring_enqueue_burst(out_ring,
 				(void *)bufs, nb_rx, NULL);
@@ -282,7 +277,7 @@ lcore_rx(struct lcore_params *p)
 	}
 	if (power_lib_initialised)
 		rte_power_exit(rte_lcore_id());
-	printf("\nCore %u exiting rx task.\n", rte_lcore_id());
+	printf("\nCore %u exiting Rx task.\n", rte_lcore_id());
 	/* set distributor threads quit flag */
 	quit_signal_dist = 1;
 	return 0;
@@ -305,11 +300,11 @@ lcore_rx_and_distributor(struct lcore_params *p)
 		if (rte_eth_dev_socket_id(port) > 0 &&
 				rte_eth_dev_socket_id(port) != socket_id)
 			printf("WARNING, port %u is on remote NUMA node to "
-					"RX thread.\n\tPerformance will not "
+					"Rx thread.\n\tPerformance will not "
 					"be optimal.\n", port);
 	}
 
-	printf("\nCore %u doing packet RX and Distributor.\n", rte_lcore_id());
+	printf("\nCore %u doing packet Rx and Distributor.\n", rte_lcore_id());
 	port = 0;
 	while (!quit_signal_rx) {
 
@@ -329,8 +324,8 @@ lcore_rx_and_distributor(struct lcore_params *p)
 		app_stats.rx.rx_pkts += nb_rx;
 
 		/*
-		 * Run the distributor on the rx core. Returned
-		 * packets are then send straight to the tx core.
+		 * Run the distributor on the Rx core. Returned
+		 * packets are then send straight to the Tx core.
 		 */
 		rte_distributor_process(d, bufs, nb_rx);
 		const uint16_t nb_ret = rte_distributor_returned_pkts(d,
@@ -360,8 +355,8 @@ lcore_rx_and_distributor(struct lcore_params *p)
 	}
 	if (power_lib_initialised)
 		rte_power_exit(rte_lcore_id());
-	printf("\nCore %u exiting rx task.\n", rte_lcore_id());
-	/* set tx threads quit flag */
+	printf("\nCore %u exiting Rx task.\n", rte_lcore_id());
+	/* set Tx threads quit flag */
 	quit_signal = 1;
 	/* set worker threads quit flag */
 	quit_signal_work = 1;
@@ -448,7 +443,7 @@ lcore_distributor(struct lcore_params *p)
 	if (power_lib_initialised)
 		rte_power_exit(rte_lcore_id());
 	printf("\nCore %u exiting distributor task.\n", rte_lcore_id());
-	/* set tx threads quit flag */
+	/* set Tx threads quit flag */
 	quit_signal = 1;
 	/* set worker threads quit flag */
 	quit_signal_work = 1;
@@ -478,7 +473,7 @@ lcore_tx(struct rte_ring *in_r)
 					"be optimal.\n", port);
 	}
 
-	printf("\nCore %u doing packet TX.\n", rte_lcore_id());
+	printf("\nCore %u doing packet Tx.\n", rte_lcore_id());
 	while (!quit_signal) {
 
 		RTE_ETH_FOREACH_DEV(port) {
@@ -524,7 +519,7 @@ lcore_tx(struct rte_ring *in_r)
 	}
 	if (power_lib_initialised)
 		rte_power_exit(rte_lcore_id());
-	printf("\nCore %u exiting tx task.\n", rte_lcore_id());
+	printf("\nCore %u exiting Tx task.\n", rte_lcore_id());
 	return 0;
 }
 
@@ -532,7 +527,7 @@ static void
 int_handler(int sig_num)
 {
 	printf("Exiting on signal %d\n", sig_num);
-	/* set quit flag for rx thread to exit */
+	/* set quit flag for Rx thread to exit */
 	quit_signal_rx = 1;
 }
 
@@ -698,7 +693,7 @@ print_usage(const char *prgname)
 {
 	printf("%s [EAL options] -- -p PORTMASK [-c]\n"
 			"  -p PORTMASK: hexadecimal bitmask of ports to configure\n"
-			"  -c: Combines the RX core with the distribution core\n",
+			"  -c: Combines the Rx core with the distribution core\n",
 			prgname);
 }
 
@@ -798,11 +793,11 @@ main(int argc, char *argv[])
 		rte_exit(EXIT_FAILURE, "Invalid distributor parameters\n");
 
 	if (enable_lcore_rx_distributor) {
-	/* RX and distributor combined, 3 fixed function cores (stat, TX, at least 1 worker) */
+	/* Rx and distributor combined, 3 fixed function cores (stat, Tx, at least 1 worker) */
 		min_cores = 4;
 		num_workers = rte_lcore_count() - 3;
 	} else {
-	/* separate RX and distributor, 3 fixed function cores (stat, TX, at least 1 worker) */
+	/* separate Rx and distributor, 3 fixed function cores (stat, Tx, at least 1 worker) */
 		min_cores = 5;
 		num_workers = rte_lcore_count() - 4;
 	}
@@ -811,8 +806,8 @@ main(int argc, char *argv[])
 		rte_exit(EXIT_FAILURE, "Error, This application needs at "
 				"least 4 logical cores to run:\n"
 				"1 lcore for stats (can be core 0)\n"
-				"1 or 2 lcore for packet RX and distribution\n"
-				"1 lcore for packet TX\n"
+				"1 or 2 lcore for packet Rx and distribution\n"
+				"1 lcore for packet Tx\n"
 				"and at least 1 lcore for worker threads\n");
 
 	if (init_power_library() == 0)
@@ -875,13 +870,13 @@ main(int argc, char *argv[])
 
 	if (power_lib_initialised) {
 		/*
-		 * Here we'll pre-assign lcore ids to the rx, tx and
+		 * Here we'll pre-assign lcore ids to the Rx, Tx and
 		 * distributor workloads if there's higher frequency
 		 * on those cores e.g. if Turbo Boost is enabled.
 		 * It's also worth mentioning that it will assign cores in a
 		 * specific order, so that if there's less than three
 		 * available, the higher frequency cores will go to the
-		 * distributor first, then rx, then tx.
+		 * distributor first, then Rx, then Tx.
 		 */
 		RTE_LCORE_FOREACH_WORKER(lcore_id) {
 
@@ -939,18 +934,18 @@ main(int argc, char *argv[])
 	}
 
 	if (enable_lcore_rx_distributor)
-		printf(" tx id %d, rx id %d\n",
+		printf(" Tx id %d, Rx id %d\n",
 			tx_core_id,
 			rx_core_id);
 	else
-		printf(" tx id %d, dist id %d, rx id %d\n",
+		printf(" Tx id %d, dist id %d, Rx id %d\n",
 			tx_core_id,
 			distr_core_id,
 			rx_core_id);
 
 	/*
 	 * Kick off all the worker threads first, avoiding the pre-assigned
-	 * lcore_ids for tx, rx and distributor workloads.
+	 * lcore_ids for Tx, Rx and distributor workloads.
 	 */
 	RTE_LCORE_FOREACH_WORKER(lcore_id) {
 		if (lcore_id == (unsigned int)distr_core_id ||
@@ -970,7 +965,7 @@ main(int argc, char *argv[])
 				p, lcore_id);
 	}
 
-	/* Start tx core */
+	/* Start Tx core */
 	rte_eal_remote_launch((lcore_function_t *)lcore_tx,
 			dist_tx_ring, tx_core_id);
 
@@ -978,7 +973,7 @@ main(int argc, char *argv[])
 	struct lcore_params *pd = NULL;
 	if (!enable_lcore_rx_distributor) {
 		pd = rte_malloc(NULL, sizeof(*pd), 0);
-		if (!pd)
+		if (pd == NULL)
 			rte_panic("malloc failure\n");
 		*pd = (struct lcore_params){worker_id++, d,
 			rx_dist_ring, dist_tx_ring, mbuf_pool};
@@ -986,7 +981,7 @@ main(int argc, char *argv[])
 				pd, distr_core_id);
 	}
 
-	/* Start rx core */
+	/* Start Rx core */
 	struct lcore_params *pr =
 		rte_malloc(NULL, sizeof(*pr), 0);
 	if (!pr)
