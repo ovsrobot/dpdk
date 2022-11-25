@@ -2464,6 +2464,8 @@ ice_flow_create(struct rte_eth_dev *dev,
 		struct rte_flow_error *error)
 {
 	struct ice_pf *pf = ICE_DEV_PRIVATE_TO_PF(dev->data->dev_private);
+	struct ice_adapter *ad =
+			ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	struct rte_flow *flow = NULL;
 	int ret;
 	struct ice_flow_engine *engine = NULL;
@@ -2474,6 +2476,14 @@ ice_flow_create(struct rte_eth_dev *dev,
 				   RTE_FLOW_ERROR_TYPE_HANDLE, NULL,
 				   "Failed to allocate memory");
 		return flow;
+	}
+
+	if (ad->devargs.mac_filter_disable == 1) {
+		if ((pattern[0].type == RTE_FLOW_ITEM_TYPE_ANY)
+			&& (actions[0].type == RTE_FLOW_ACTION_TYPE_DROP)) {
+			flow->rule = NULL;
+			return flow;
+		}
 	}
 
 	rte_spinlock_lock(&pf->flow_ops_lock);
@@ -2505,6 +2515,11 @@ ice_flow_destroy(struct rte_eth_dev *dev,
 	struct ice_adapter *ad =
 		ICE_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
 	int ret = 0;
+
+	if ((ad->devargs.mac_filter_disable == 1)
+		&& (flow->rule == NULL)) {
+		return 0;
+	}
 
 	if (!flow || !flow->engine || !flow->engine->destroy) {
 		rte_flow_error_set(error, EINVAL,

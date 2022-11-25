@@ -28,6 +28,7 @@
 /* devargs */
 #define ICE_SAFE_MODE_SUPPORT_ARG "safe-mode-support"
 #define ICE_PIPELINE_MODE_SUPPORT_ARG  "pipeline-mode-support"
+#define ICE_MAC_FILTER_DISABLE  "mac-filter-disable"
 #define ICE_PROTO_XTR_ARG         "proto_xtr"
 #define ICE_FIELD_OFFS_ARG		  "field_offs"
 #define ICE_FIELD_NAME_ARG		  "field_name"
@@ -49,6 +50,7 @@ static const char * const ice_valid_args[] = {
 	ICE_HW_DEBUG_MASK_ARG,
 	ICE_ONE_PPS_OUT_ARG,
 	ICE_RX_LOW_LATENCY_ARG,
+	ICE_MAC_FILTER_DISABLE,
 	NULL
 };
 
@@ -962,8 +964,13 @@ ice_add_mac_filter(struct ice_vsi *vsi, struct rte_ether_addr *mac_addr)
 	struct ice_mac_filter *f;
 	struct LIST_HEAD_TYPE list_head;
 	struct ice_hw *hw = ICE_VSI_TO_HW(vsi);
+	struct ice_adapter *ad = (struct ice_adapter *)hw->back;
 	int ret = 0;
 
+	if (ad->devargs.mac_filter_disable == 1) {
+		PMD_DRV_LOG(ERR, "This MAC filter is disabled.");
+		return 0;
+	}
 	/* If it's added and configured, return */
 	f = ice_find_mac_filter(vsi, mac_addr);
 	if (f) {
@@ -2072,6 +2079,11 @@ static int ice_parse_devargs(struct rte_eth_dev *dev)
 
 	ret = rte_kvargs_process(kvlist, ICE_PIPELINE_MODE_SUPPORT_ARG,
 				 &parse_bool, &ad->devargs.pipe_mode_support);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, ICE_MAC_FILTER_DISABLE,
+				&parse_bool, &ad->devargs.mac_filter_disable);
 	if (ret)
 		goto bail;
 
@@ -6050,6 +6062,7 @@ RTE_PMD_REGISTER_PARAM_STRING(net_ice,
 			      ICE_PROTO_XTR_ARG "=[queue:]<vlan|ipv4|ipv6|ipv6_flow|tcp|ip_offset>"
 			      ICE_SAFE_MODE_SUPPORT_ARG "=<0|1>"
 			      ICE_PIPELINE_MODE_SUPPORT_ARG "=<0|1>"
+			      ICE_MAC_FILTER_DISABLE "=<0|1>"
 			      ICE_RX_LOW_LATENCY_ARG "=<0|1>");
 
 RTE_LOG_REGISTER_SUFFIX(ice_logtype_init, init, NOTICE);
