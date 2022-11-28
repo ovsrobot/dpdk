@@ -111,18 +111,19 @@ See :ref:`linux_gsg_binding_kernel` section for more details, notably with regar
 generic kernel modules binding and VF enablement.
 More details on usage model is captured in the :ref:`pf_bb_config_acc100` section.
 
+Device configuration
+~~~~~~~~~~~~~~~~~~~~
 
-Configure the VFs through PF
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The PCI virtual functions must be configured before working or getting assigned
-to VMs/Containers. The configuration involves allocating the number of hardware
+The device must be configured to work properly.
+The configuration involves allocating the number of hardware
 queues, priorities, load balance, bandwidth and other settings necessary for the
 device to perform FEC functions.
 
 This configuration needs to be executed at least once after reboot or PCI FLR and can
-be achieved by using the functions ``rte_acc10x_configure()``,
+be achieved by either using ``pf_bb_config`` or the function ``rte_acc10x_configure()``,
 which sets up the parameters defined in the compatible ``acc100_conf`` structure.
+This is the method used in the bbdev-test test application.
+
 
 Test Application
 ----------------
