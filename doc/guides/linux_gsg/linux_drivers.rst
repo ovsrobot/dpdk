@@ -12,12 +12,12 @@ Linux Drivers
 
 Different PMDs may require different kernel drivers in order to work properly.
 Depending on the PMD being used, a corresponding kernel driver should be loaded,
-and network ports should be bound to that driver.
+and network ports or other hardware devices should be bound to that driver.
 
 .. _linux_gsg_binding_kernel:
 
-Binding and Unbinding Network Ports to/from the Kernel Modules
---------------------------------------------------------------
++Binding and Unbinding to/from the Kernel Modules
++------------------------------------------------
 
 .. note::
 
@@ -39,7 +39,7 @@ For such PMDs, any network ports or other hardware under Linux* control will be 
 To bind ports to the ``vfio-pci`` module
 for DPDK use, or to return ports to Linux control,
 a utility script called ``dpdk-devbind.py`` is provided in the ``usertools`` subdirectory.
-This utility can be used to provide a view of the current state of the network ports on the system,
+This utility can be used to provide a view of the current state of the devices on the system,
 and to bind and unbind those ports from the different kernel modules,
 including the VFIO and UIO modules.
 The following are some examples of how the script can be used.
@@ -65,10 +65,10 @@ should be loaded into the kernel before running the ``dpdk-devbind.py`` script.
 .. note::
 
    While any user can run the ``dpdk-devbind.py`` script
-   to view the status of the network ports,
-   binding or unbinding network ports requires root privileges.
+   to view the status of the devices,
+   binding or unbinding devices requires root privileges.
 
-To see the status of all network ports on the system:
+To see the status of all devices on the system:
 
 .. code-block:: console
 
