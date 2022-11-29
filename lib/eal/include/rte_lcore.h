@@ -329,6 +329,35 @@ int
 rte_lcore_iterate(rte_lcore_iterate_cb cb, void *arg);
 
 /**
+ * Callback to allow applications to report CPU usage.
+ *
+ * @param [in] lcore_id
+ *   The lcore to consider.
+ * @param [out] busy_cycles
+ *   The number of busy CPU cycles since the application start.
+ * @param [out] total_cycles
+ *   The total number of CPU cycles since the application start.
+ * @return
+ *   - 0 if both busy and total were set correctly.
+ *   - a negative value if the information is not available or if any error occurred.
+ */
+typedef int (*rte_lcore_usage_cb)(
+	unsigned int lcore_id, uint64_t *busy_cycles, uint64_t *total_cycles);
+
+/**
+ * Register a callback from an application to be called in rte_lcore_dump()
+ * and the /eal/lcore/info telemetry endpoint handler.
+ *
+ * Applications are expected to report the amount of busy and total CPU cycles
+ * since their startup.
+ *
+ * @param cb
+ *   The callback function.
+ */
+__rte_experimental
+void rte_lcore_register_usage_cb(rte_lcore_usage_cb cb);
+
+/**
  * List all lcores.
  *
  * @param f
