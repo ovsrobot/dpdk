@@ -13,6 +13,10 @@ test_pmu_read(void)
 	int tries = 10;
 	int event = -1;
 
+#if defined(RTE_ARCH_ARM64)
+	event = rte_pmu_add_event("cpu_cycles");
+#endif
+
 	while (tries--)
 		val += rte_pmu_read(event);
 
