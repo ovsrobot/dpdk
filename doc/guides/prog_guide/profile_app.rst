@@ -16,6 +16,11 @@ that information, perf being an example here. Though in some scenarios, eg. when
 isolated (nohz_full) and run dedicated tasks, using perf is less than ideal. In such cases one can
 read specific events directly from application via ``rte_pmu_read()``.
 
+Alternatively tracing library can be used which offers dedicated tracepoint
+``rte_eal_trace_pmu_event()``.
+
+Refer to :doc:`../prog_guide/trace_lib` for more details.
+
 Profiling on x86
 ----------------
 
