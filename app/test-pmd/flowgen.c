@@ -196,7 +196,7 @@ pkt_burst_flow_gen(struct fwd_stream *fs)
 
 	RTE_PER_LCORE(_next_flow) = next_flow;
 
-	get_end_cycles(fs, start_tsc);
+	get_end_cycles(fs, start_tsc, nb_tx);
 }
 
 static int
