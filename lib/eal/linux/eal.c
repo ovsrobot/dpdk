@@ -53,6 +53,7 @@
 #include "eal_options.h"
 #include "eal_vfio.h"
 #include "hotplug_mp.h"
+#include "pmu_private.h"
 
 #define MEMSIZE_IF_NO_HUGE_PAGE (64ULL * 1024ULL * 1024ULL)
 
@@ -1206,6 +1207,8 @@ rte_eal_init(int argc, char **argv)
 		return -1;
 	}
 
+	eal_pmu_init();
+
 	if (rte_eal_tailqs_init() < 0) {
 		rte_eal_init_alert("Cannot init tail queues for objects");
 		rte_errno = EFAULT;
@@ -1372,6 +1375,7 @@ rte_eal_cleanup(void)
 	eal_bus_cleanup();
 	rte_trace_save();
 	eal_trace_fini();
+	eal_pmu_fini();
 	/* after this point, any DPDK pointers will become dangling */
 	rte_eal_memory_detach();
 	eal_mp_dev_hotplug_cleanup();
