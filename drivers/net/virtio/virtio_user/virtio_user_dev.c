@@ -17,6 +17,7 @@
 #include <rte_alarm.h>
 #include <rte_string_fns.h>
 #include <rte_eal_memconfig.h>
+#include <rte_malloc.h>
 
 #include "vhost.h"
 #include "virtio_user_dev.h"
@@ -58,8 +59,8 @@ virtio_user_kick_queue(struct virtio_user_dev *dev, uint32_t queue_sel)
 	int ret;
 	struct vhost_vring_file file;
 	struct vhost_vring_state state;
-	struct vring *vring = &dev->vrings[queue_sel];
-	struct vring_packed *pq_vring = &dev->packed_vrings[queue_sel];
+	struct vring *vring = &dev->vrings.split[queue_sel];
+	struct vring_packed *pq_vring = &dev->vrings.packed[queue_sel];
 	struct vhost_vring_addr addr = {
 		.index = queue_sel,
 		.log_guest_addr = 0,
@@ -297,18 +298,6 @@ virtio_user_dev_init_max_queue_pairs(struct virtio_user_dev *dev, uint32_t user_
 		PMD_DRV_LOG(ERR, "(%s) Failed to get max queue pairs from device", dev->path);
 
 		return ret;
-	}
-
-	if (dev->max_queue_pairs > VIRTIO_MAX_VIRTQUEUE_PAIRS) {
-		/*
-		 * If the device supports control queue, the control queue
-		 * index is max_virtqueue_pairs * 2. Disable MQ if it happens.
-		 */
-		PMD_DRV_LOG(ERR, "(%s) Device advertises too many queues (%u, max supported %u)",
-				dev->path, dev->max_queue_pairs, VIRTIO_MAX_VIRTQUEUE_PAIRS);
-		dev->max_queue_pairs = 1;
-
-		return -1;
 	}
 
 	return 0;
@@ -579,6 +568,86 @@ virtio_user_dev_setup(struct virtio_user_dev *dev)
 	return 0;
 }
 
+static int
+virtio_user_alloc_vrings(struct virtio_user_dev *dev)
+{
+	int i, size, nr_vrings;
+
+	nr_vrings = dev->max_queue_pairs * 2;
+	if (dev->hw_cvq)
+		nr_vrings++;
+
+	dev->callfds = rte_zmalloc("virtio_user_dev", nr_vrings * sizeof(*dev->callfds), 0);
+	if (!dev->callfds) {
+		PMD_INIT_LOG(ERR, "(%s) Failed to alloc callfds", dev->path);
+		return -1;
+	}
+
+	dev->kickfds = rte_zmalloc("virtio_user_dev", nr_vrings * sizeof(*dev->kickfds), 0);
+	if (!dev->kickfds) {
+		PMD_INIT_LOG(ERR, "(%s) Failed to alloc kickfds", dev->path);
+		goto free_callfds;
+	}
+
+	for (i = 0; i < nr_vrings; i++) {
+		dev->callfds[i] = -1;
+		dev->kickfds[i] = -1;
+	}
+
+	size = RTE_MAX(sizeof(*dev->vrings.split), sizeof(*dev->vrings.packed));
+	dev->vrings.ptr = rte_zmalloc("virtio_user_dev", nr_vrings * size, 0);
+	if (!dev->vrings.ptr) {
+		PMD_INIT_LOG(ERR, "(%s) Failed to alloc vrings metadata", dev->path);
+		goto free_kickfds;
+	}
+
+	dev->packed_queues = rte_zmalloc("virtio_user_dev",
+			nr_vrings * sizeof(*dev->packed_queues), 0);
+	if (!dev->packed_queues) {
+		PMD_INIT_LOG(ERR, "(%s) Failed to alloc packed queues metadata", dev->path);
+		goto free_vrings;
+	}
+
+	dev->qp_enabled = rte_zmalloc("virtio_user_dev",
+			dev->max_queue_pairs * sizeof(*dev->qp_enabled), 0);
+	if (!dev->qp_enabled) {
+		PMD_INIT_LOG(ERR, "(%s) Failed to alloc QP enable states", dev->path);
+		goto free_packed_queues;
+	}
+
+	return 0;
+
+free_packed_queues:
+	rte_free(dev->packed_queues);
+	dev->packed_queues = NULL;
+free_vrings:
+	rte_free(dev->vrings.ptr);
+	dev->vrings.ptr = NULL;
+free_kickfds:
+	rte_free(dev->kickfds);
+	dev->kickfds = NULL;
+free_callfds:
+	rte_free(dev->callfds);
+	dev->callfds = NULL;
+
+	return -1;
+}
+
+static void
+virtio_user_free_vrings(struct virtio_user_dev *dev)
+{
+	rte_free(dev->qp_enabled);
+	dev->qp_enabled = NULL;
+	rte_free(dev->packed_queues);
+	dev->packed_queues = NULL;
+	rte_free(dev->vrings.ptr);
+	dev->vrings.ptr = NULL;
+	rte_free(dev->kickfds);
+	dev->kickfds = NULL;
+	rte_free(dev->callfds);
+	dev->callfds = NULL;
+}
+
 /* Use below macro to filter features from vhost backend */
 #define VIRTIO_USER_SUPPORTED_FEATURES			\
 	(1ULL << VIRTIO_NET_F_MAC		|	\
@@ -607,15 +676,9 @@ virtio_user_dev_init(struct virtio_user_dev *dev, char *path, uint16_t queues,
 		     enum virtio_user_backend_type backend_type)
 {
 	uint64_t backend_features;
-	int i;
 
 	pthread_mutex_init(&dev->mutex, NULL);
 	strlcpy(dev->path, path, PATH_MAX);
-
-	for (i = 0; i < VIRTIO_MAX_VIRTQUEUES; i++) {
-		dev->kickfds[i] = -1;
-		dev->callfds[i] = -1;
-	}
 
 	dev->started = 0;
 	dev->queue_pairs = 1; /* mq disabled by default */
@@ -661,9 +724,14 @@ virtio_user_dev_init(struct virtio_user_dev *dev, char *path, uint16_t queues,
 	if (dev->max_queue_pairs > 1)
 		cq = 1;
 
+	if (virtio_user_alloc_vrings(dev) < 0) {
+		PMD_INIT_LOG(ERR, "(%s) Failed to allocate vring metadata", dev->path);
+		goto destroy;
+	}
+
 	if (virtio_user_dev_init_notify(dev) < 0) {
 		PMD_INIT_LOG(ERR, "(%s) Failed to init notifiers", dev->path);
-		goto destroy;
+		goto free_vrings;
 	}
 
 	if (virtio_user_fill_intr_handle(dev) < 0) {
@@ -722,6 +790,8 @@ virtio_user_dev_init(struct virtio_user_dev *dev, char *path, uint16_t queues,
 
 notify_uninit:
 	virtio_user_dev_uninit_notify(dev);
+free_vrings:
+	virtio_user_free_vrings(dev);
 destroy:
 	dev->ops->destroy(dev);
 
@@ -741,6 +811,8 @@ virtio_user_dev_uninit(struct virtio_user_dev *dev)
 	rte_mem_event_callback_unregister(VIRTIO_USER_MEM_EVENT_CLB_NAME, dev);
 
 	virtio_user_dev_uninit_notify(dev);
+
+	virtio_user_free_vrings(dev);
 
 	free(dev->ifname);
 
@@ -897,7 +969,7 @@ static void
 virtio_user_handle_cq_packed(struct virtio_user_dev *dev, uint16_t queue_idx)
 {
 	struct virtio_user_queue *vq = &dev->packed_queues[queue_idx];
-	struct vring_packed *vring = &dev->packed_vrings[queue_idx];
+	struct vring_packed *vring = &dev->vrings.packed[queue_idx];
 	uint16_t n_descs, flags;
 
 	/* Perform a load-acquire barrier in desc_is_avail to
@@ -931,7 +1003,7 @@ virtio_user_handle_cq_split(struct virtio_user_dev *dev, uint16_t queue_idx)
 	uint16_t avail_idx, desc_idx;
 	struct vring_used_elem *uep;
 	uint32_t n_descs;
-	struct vring *vring = &dev->vrings[queue_idx];
+	struct vring *vring = &dev->vrings.split[queue_idx];
 
 	/* Consume avail ring, using used ring idx as first one */
 	while (__atomic_load_n(&vring->used->idx, __ATOMIC_RELAXED)
