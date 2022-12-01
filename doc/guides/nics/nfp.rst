@@ -213,3 +213,74 @@ PF vNIC.
 The ctrl vNIC service handling various control message, like the creation and
 configuration of representor port, the pattern and action of flow rules, the
 statistics of flow rules, and so on.
+
+Supported APIs
+--------------
+
+rte_flow APIs
+~~~~~~~~~~~~~
+
+Listed below are the rte_flow functions supported:
+* ``rte_flow_ops_get``
+* ``rte_flow_validate``
+* ``rte_flow_create``
+* ``rte_flow_destroy``
+* ``rte_flow_flush``
+* ``nfp_flow_query``
+* ``rte_flow_tunnel_action_decap_release``
+* ``rte_flow_tunnel_decap_set``
+* ``rte_flow_tunnel_item_release``
+* ``rte_flow_tunnel_match``
+
+rte_flow Items
+~~~~~~~~~~~~~~
+
+Refer to "Table 1.2 rte_flow items availability in networking drivers" in
+`Overview of Networking Drivers <https://doc.dpdk.org/guides/nics/overview.html>`.
+
+Listed below are the rte_flow items supported:
+
+* ``eth``
+* ``geneve``
+* ``gre``
+* ``gre_key``
+* ``ipv4``
+* ``ipv6``
+* ``port_id``
+* ``sctp``
+* ``tcp``
+* ``udp``
+* ``vlan``
+* ``vxlan``
+
+rte_flow Actions
+~~~~~~~~~~~~~~~~
+
+Refer to "Table 1.3 rte_flow actions availability in networking drivers" in
+`Overview of Networking Drivers <https://doc.dpdk.org/guides/nics/overview.html>`.
+
+Listed below are the rte_flow actions supported:
+
+* ``count``
+* ``drop``
+* ``jump``
+* ``of_pop_vlan``
+* ``of_push_vlan``
+* ``of_set_vlan_pcp``
+* ``of_set_vlan_vid``
+* ``raw_decap``
+* ``raw_encap``
+* ``port_id``
+* ``set_ipv4_dscp``
+* ``set_ipv4_dst``
+* ``set_ipv4_src``
+* ``set_ipv6_dscp``
+* ``set_ipv6_dst``
+* ``set_ipv6_src``
+* ``set_mac_dst``
+* ``set_mac_src``
+* ``set_tp_dst``
+* ``set_tp_src``
+* ``set_ttl``
+* ``vxlan_decap``
+* ``vxlan_encap``
