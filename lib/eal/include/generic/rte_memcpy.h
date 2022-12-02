@@ -11,6 +11,8 @@
  * Functions for vectorised implementation of memcpy().
  */
 
+#include <rte_common.h>
+
 /**
  * Copy 16 bytes from one location to another using optimised
  * instructions. The locations should not overlap.
@@ -108,6 +110,9 @@ rte_mov256(uint8_t *dst, const uint8_t *src);
  * @return
  *   Pointer to the destination data.
  */
+__rte_nonnull(1, 2)
+__rte_access(write_only, 1, 3)
+__rte_access(read_only, 2, 3)
 static void *
 rte_memcpy(void *dst, const void *src, size_t n);
 

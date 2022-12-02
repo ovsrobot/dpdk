@@ -150,6 +150,32 @@ typedef uint16_t unaligned_uint16_t;
 #endif
 
 /**
+ * Check pointer arguments at compile-time.
+ *
+ * @param ...
+ *    Comma separated list of parameter indexes of pointer arguments.
+ */
+#define __rte_nonnull(...) \
+	__attribute__((nonnull(__VA_ARGS__)))
+
+/**
+ * Tells compiler about the access mode of a pointer argument.
+ *
+ * @param access_mode
+ *    Access mode: read_only, read_write, write_only, or none.
+ * @param ref_index
+ *    Parameter index of pointer argument.
+ * @param size_index (optional)
+ *    Parameter index of size argument.
+ */
+#if defined(RTE_CC_IS_GNU) && (GCC_VERSION >= 100400)
+#define __rte_access(access_mode, ...) \
+	__attribute__((access(access_mode, __VA_ARGS__)))
+#else
+#define __rte_access(access_mode, ...)
+#endif
+
+/**
  * Tells compiler that the function returns a value that points to
  * memory, where the size is given by the one or two arguments.
  * Used by compiler to validate object size.

@@ -125,6 +125,9 @@ rte_mov256(uint8_t *dst, const uint8_t *src)
 	memcpy((dst), (src), (n)) :          \
 	rte_memcpy_func((dst), (src), (n)); })
 
+__rte_nonnull(1, 2)
+__rte_access(write_only, 1, 3)
+__rte_access(read_only, 2, 3)
 static inline void *
 rte_memcpy_func(void *dst, const void *src, size_t n)
 {
@@ -290,6 +293,9 @@ rte_mov256(uint8_t *dst, const uint8_t *src)
 	memcpy(dst, src, 256);
 }
 
+__rte_nonnull(1, 2)
+__rte_access(write_only, 1, 3)
+__rte_access(read_only, 2, 3)
 static inline void *
 rte_memcpy(void *dst, const void *src, size_t n)
 {
