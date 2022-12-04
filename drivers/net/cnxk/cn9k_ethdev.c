@@ -72,8 +72,10 @@ nix_tx_offload_flags(struct rte_eth_dev *eth_dev)
 			 offsetof(struct rte_mbuf, buf_addr) + 24);
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pkt_len) !=
 			 offsetof(struct rte_mbuf, ol_flags) + 12);
+/*
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, tx_offload) !=
 			 offsetof(struct rte_mbuf, pool) + 2 * sizeof(void *));
+*/
 
 	if (conf & RTE_ETH_TX_OFFLOAD_VLAN_INSERT ||
 	    conf & RTE_ETH_TX_OFFLOAD_QINQ_INSERT)
