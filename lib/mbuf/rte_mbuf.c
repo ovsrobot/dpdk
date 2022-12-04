@@ -123,10 +123,10 @@ rte_pktmbuf_free_pinned_extmem(void *addr, void *opaque)
 
 	rte_mbuf_ext_refcnt_set(m->shinfo, 1);
 	m->ol_flags = RTE_MBUF_F_EXTERNAL;
-	if (m->next != NULL)
-		m->next = NULL;
-	if (m->nb_segs != 1)
+	if (m->nb_segs != 1) {
 		m->nb_segs = 1;
+		m->next = NULL;
+	}
 	rte_mbuf_raw_free(m);
 }
 
@@ -427,7 +427,7 @@ int rte_mbuf_check(const struct rte_mbuf *m, int is_header,
 		}
 		nb_segs -= 1;
 		pkt_len -= m->data_len;
-	} while ((m = m->next) != NULL);
+	} while ((m = ((m->nb_segs == 1) ? NULL : m->next)) != NULL);
 
 	if (nb_segs) {
 		*reason = "bad nb_segs";
@@ -495,7 +495,7 @@ void rte_pktmbuf_free_bulk(struct rte_mbuf **mbufs, unsigned int count)
 		__rte_mbuf_sanity_check(m, 1);
 
 		do {
-			m_next = m->next;
+			m_next = (m->nb_segs == 1) ? NULL : m->next;
 			__rte_pktmbuf_free_seg_via_array(m,
 					pending, &nb_pending,
 					RTE_PKTMBUF_FREE_PENDING_SZ);
@@ -511,7 +511,7 @@ void rte_pktmbuf_free_bulk(struct rte_mbuf **mbufs, unsigned int count)
 struct rte_mbuf *
 rte_pktmbuf_clone(struct rte_mbuf *md, struct rte_mempool *mp)
 {
-	struct rte_mbuf *mc, *mi, **prev;
+	struct rte_mbuf *mc, *mi, *prev;
 	uint32_t pktlen;
 	uint16_t nseg;
 
@@ -520,19 +520,21 @@ rte_pktmbuf_clone(struct rte_mbuf *md, struct rte_mempool *mp)
 		return NULL;
 
 	mi = mc;
-	prev = &mi->next;
+	prev = mi;
 	pktlen = md->pkt_len;
 	nseg = 0;
 
 	do {
 		nseg++;
 		rte_pktmbuf_attach(mi, md);
-		*prev = mi;
-		prev = &mi->next;
-	} while ((md = md->next) != NULL &&
+		prev->nb_segs = 2;
+		prev->next = mi;
+		prev = mi;
+	} while ((md = ((md->nb_segs == 1) ? NULL : md->next)) != NULL &&
 	    (mi = rte_pktmbuf_alloc(mp)) != NULL);
 
-	*prev = NULL;
+	prev->nb_segs = 1;
+	prev->next = NULL;
 	mc->nb_segs = nseg;
 	mc->pkt_len = pktlen;
 
@@ -565,9 +567,9 @@ __rte_pktmbuf_linearize(struct rte_mbuf *mbuf)
 	mbuf->data_len = (uint16_t)(mbuf->pkt_len);
 
 	/* Append data from next segments to the first one */
-	m = mbuf->next;
+	m = (mbuf->nb_segs == 1) ? NULL : mbuf->next;
 	while (m != NULL) {
-		m_next = m->next;
+		m_next = (m->nb_segs == 1) ? NULL : m->next;
 
 		seg_len = rte_pktmbuf_data_len(m);
 		rte_memcpy(buffer, rte_pktmbuf_mtod(m, char *), seg_len);
@@ -589,7 +591,7 @@ rte_pktmbuf_copy(const struct rte_mbuf *m, struct rte_mempool *mp,
 		 uint32_t off, uint32_t len)
 {
 	const struct rte_mbuf *seg = m;
-	struct rte_mbuf *mc, *m_last, **prev;
+	struct rte_mbuf *mc, *m_last, *prev;
 
 	/* garbage in check */
 	__rte_mbuf_sanity_check(m, 1);
@@ -611,7 +613,7 @@ rte_pktmbuf_copy(const struct rte_mbuf *m, struct rte_mempool *mp,
 	/* copied mbuf is not indirect or external */
 	mc->ol_flags = m->ol_flags & ~(RTE_MBUF_F_INDIRECT|RTE_MBUF_F_EXTERNAL);
 
-	prev = &mc->next;
+	prev = mc;
 	m_last = mc;
 	while (len > 0) {
 		uint32_t copy_len;
@@ -629,9 +631,10 @@ rte_pktmbuf_copy(const struct rte_mbuf *m, struct rte_mempool *mp,
 				rte_pktmbuf_free(mc);
 				return NULL;
 			}
+			prev->nb_segs = 2;
+			prev->next = m_last;
 			++mc->nb_segs;
-			*prev = m_last;
-			prev = &m_last->next;
+			prev = m_last;
 		}
 
 		/*
@@ -697,7 +700,7 @@ rte_pktmbuf_dump(FILE *f, const struct rte_mbuf *m, unsigned dump_len)
 		if (len != 0)
 			rte_hexdump(f, NULL, rte_pktmbuf_mtod(m, void *), len);
 		dump_len -= len;
-		m = m->next;
+		m = (m->nb_segs == 1) ? NULL : m->next;
 		nb_segs --;
 	}
 }
