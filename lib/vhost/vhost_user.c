@@ -1809,7 +1809,7 @@ static int vhost_user_set_vring_err(struct virtio_net **pdev,
 
 	if (!(ctx->msg.payload.u64 & VHOST_USER_VRING_NOFD_MASK))
 		close(ctx->fds[0]);
-	VHOST_LOG_CONFIG(dev->ifname, INFO, "not implemented\n");
+	VHOST_LOG_CONFIG(dev->ifname, DEBUG, "not implemented\n");
 
 	return RTE_VHOST_MSG_RESULT_OK;
 }
