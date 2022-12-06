@@ -410,6 +410,10 @@ _recv_raw_pkts_vec(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_pkts,
 			split_packet += RTE_I40E_DESCS_PER_LOOP;
 
 			/* zero-out next pointers */
+			rx_pkts[pos]->nb_segs = 1;
+			rx_pkts[pos + 1]->nb_segs = 1;
+			rx_pkts[pos + 2]->nb_segs = 1;
+			rx_pkts[pos + 3]->nb_segs = 1;
 			rx_pkts[pos]->next = NULL;
 			rx_pkts[pos + 1]->next = NULL;
 			rx_pkts[pos + 2]->next = NULL;
