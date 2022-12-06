@@ -293,13 +293,19 @@ ifpga_probe_one_driver(struct rte_afu_driver *drv,
 
 	/* reference driver structure */
 	afu_dev->driver = drv;
+	/*
+	 * Reference rte_driver before probing so as to this pointer can
+	 * be used to get driver information in case of segment fault in
+	 * probing callback.
+	 */
+	afu_dev->device.driver = &drv->driver;
 
 	/* call the driver probe() function */
 	ret = drv->probe(afu_dev);
-	if (ret)
+	if (ret) {
 		afu_dev->driver = NULL;
-	else
-		afu_dev->device.driver = &drv->driver;
+		afu_dev->device.driver = NULL;
+	}
 
 	return ret;
 }
