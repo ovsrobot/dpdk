@@ -3806,6 +3806,8 @@ eth_event_callback(portid_t port_id, enum rte_eth_event_type type, void *param,
 
 	switch (type) {
 	case RTE_ETH_EVENT_NEW:
+		if (test_done == 0)
+			stop_packet_forwarding();
 		if (setup_on_probe_event)
 			setup_attached_port(port_id);
 		break;
@@ -3816,6 +3818,8 @@ eth_event_callback(portid_t port_id, enum rte_eth_event_type type, void *param,
 				"Could not set up deferred device removal\n");
 		break;
 	case RTE_ETH_EVENT_DESTROY:
+		if (test_done == 0)
+			stop_packet_forwarding();
 		ports[port_id].port_status = RTE_PORT_CLOSED;
 		printf("Port %u is closed\n", port_id);
 		if (rte_eal_alarm_set(100000, remove_invalid_ports_callback,
