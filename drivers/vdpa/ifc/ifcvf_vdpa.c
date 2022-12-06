@@ -1824,8 +1824,8 @@ static const struct rte_pci_id pci_id_ifcvf_map[] = {
 	{ .class_id = RTE_CLASS_ANY_ID,
 	  .vendor_id = IFCVF_VENDOR_ID,
 	  .device_id = IFCVF_NET_MODERN_DEVICE_ID,
-	  .subsystem_vendor_id = IFCVF_SUBSYS_VENDOR_ID,
-	  .subsystem_device_id = IFCVF_SUBSYS_DEVICE_ID,
+	  .subsystem_vendor_id = RTE_PCI_ANY_ID,
+	  .subsystem_device_id = RTE_PCI_ANY_ID,
 	},
 
 	{ .class_id = RTE_CLASS_ANY_ID,
@@ -1845,8 +1845,8 @@ static const struct rte_pci_id pci_id_ifcvf_map[] = {
 	{ .class_id = RTE_CLASS_ANY_ID,
 	  .vendor_id = IFCVF_VENDOR_ID,
 	  .device_id = IFCVF_BLK_MODERN_DEVICE_ID,
-	  .subsystem_vendor_id = IFCVF_SUBSYS_VENDOR_ID,
-	  .subsystem_device_id = IFCVF_SUBSYS_BLK_DEVICE_ID,
+	  .subsystem_vendor_id = RTE_PCI_ANY_ID,
+	  .subsystem_device_id = RTE_PCI_ANY_ID,
 	},
 
 	{ .vendor_id = 0, /* sentinel */
