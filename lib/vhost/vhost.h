@@ -987,4 +987,15 @@ mbuf_is_consumed(struct rte_mbuf *m)
 
 	return true;
 }
+
+static __rte_always_inline void
+mem_set_dump(void *ptr, size_t size, bool enable)
+{
+#ifdef MADV_DONTDUMP
+	if (madvise(ptr, size, enable ? MADV_DODUMP : MADV_DONTDUMP) == -1) {
+		rte_log(RTE_LOG_INFO, vhost_config_log_level,
+			"VHOST_CONFIG: could not set coredump preference (%s).\n", strerror(errno));
+	}
+#endif
+}
 #endif /* _VHOST_NET_CDEV_H_ */
