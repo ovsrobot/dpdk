@@ -471,15 +471,21 @@ rte_fslmc_probe(void)
 				continue;
 			}
 
+			/*
+			 * Reference rte_driver before probing so as to this
+			 * pointer can be used to get driver information in case
+			 * of segment fault in probing callback.
+			 */
+			dev->device.driver = &drv->driver;
 			if (probe_all ||
 			   (dev->device.devargs &&
 			    dev->device.devargs->policy == RTE_DEV_ALLOWED)) {
 				ret = drv->probe(drv, dev);
 				if (ret) {
+					dev->device.driver = NULL;
 					DPAA2_BUS_ERR("Unable to probe");
 				} else {
 					dev->driver = drv;
-					dev->device.driver = &drv->driver;
 				}
 			}
 			break;

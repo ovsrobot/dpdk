@@ -132,16 +132,21 @@ rte_auxiliary_probe_one_driver(struct rte_auxiliary_driver *drv,
 	}
 
 	dev->driver = drv;
+	/*
+	 * Reference rte_driver before probing so as to this pointer can
+	 * be used to get driver information in case of segment fault in
+	 * probing callback.
+	 */
+	dev->device.driver = &drv->driver;
 
 	AUXILIARY_LOG(INFO, "Probe auxiliary driver: %s device: %s (NUMA node %i)",
 		      drv->driver.name, dev->name, dev->device.numa_node);
 	ret = drv->probe(drv, dev);
 	if (ret != 0) {
 		dev->driver = NULL;
+		dev->device.driver = NULL;
 		rte_intr_instance_free(dev->intr_handle);
 		dev->intr_handle = NULL;
-	} else {
-		dev->device.driver = &drv->driver;
 	}
 
 	return ret;

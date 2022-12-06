@@ -110,6 +110,12 @@ vmbus_probe_one_driver(struct rte_vmbus_driver *dr,
 
 	/* reference driver structure */
 	dev->driver = dr;
+	/*
+	 * Reference rte_driver before probing so as to this pointer can
+	 * be used to get driver information in case of segment fault in
+	 * probing callback.
+	 */
+	dev->device.driver = &dr->driver;
 
 	if (dev->device.numa_node < 0 && rte_socket_count() > 1)
 		VMBUS_LOG(INFO, "Device %s is not NUMA-aware", guid);
@@ -119,9 +125,8 @@ vmbus_probe_one_driver(struct rte_vmbus_driver *dr,
 	ret = dr->probe(dr, dev);
 	if (ret) {
 		dev->driver = NULL;
+		dev->device.driver = NULL;
 		rte_vmbus_unmap_device(dev);
-	} else {
-		dev->device.driver = &dr->driver;
 	}
 
 	return ret;
