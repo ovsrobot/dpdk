@@ -50,8 +50,8 @@ eth_dev_find_free_port(void)
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++) {
 		/* Using shared name field to find a free port. */
 		if (eth_dev_shared_data->data[i].name[0] == '\0') {
-			RTE_ASSERT(rte_eth_devices[i].state ==
-				   RTE_ETH_DEV_UNUSED);
+			RTE_ASSERT(!rte_eth_dev_in_used(
+					rte_eth_devices[i].state));
 			return i;
 		}
 	}
@@ -208,9 +208,16 @@ rte_eth_dev_probing_finish(struct rte_eth_dev *dev)
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
 		eth_dev_fp_ops_setup(rte_eth_fp_ops + dev->data->port_id, dev);
 
+	dev->state = RTE_ETH_DEV_ALLOCATED;
 	rte_eth_dev_callback_process(dev, RTE_ETH_EVENT_NEW, NULL);
 
 	dev->state = RTE_ETH_DEV_ATTACHED;
+}
+
+bool rte_eth_dev_in_used(uint16_t dev_state)
+{
+	return dev_state == RTE_ETH_DEV_ALLOCATED ||
+		dev_state == RTE_ETH_DEV_ATTACHED;
 }
 
 int
@@ -221,7 +228,7 @@ rte_eth_dev_release_port(struct rte_eth_dev *eth_dev)
 
 	eth_dev_shared_data_prepare();
 
-	if (eth_dev->state != RTE_ETH_DEV_UNUSED)
+	if (rte_eth_dev_in_used(eth_dev->state))
 		rte_eth_dev_callback_process(eth_dev,
 				RTE_ETH_EVENT_DESTROY, NULL);
 

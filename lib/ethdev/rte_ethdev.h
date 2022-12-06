@@ -2000,7 +2000,9 @@ typedef uint16_t (*rte_tx_callback_fn)(uint16_t port_id, uint16_t queue,
 enum rte_eth_dev_state {
 	/** Device is unused before being probed. */
 	RTE_ETH_DEV_UNUSED = 0,
-	/** Device is attached when allocated in probing. */
+	/** Device is allocated and is set before reporting new event. */
+	RTE_ETH_DEV_ALLOCATED,
+	/** Device is attached when definitely probed. */
 	RTE_ETH_DEV_ATTACHED,
 	/** Device is in removed state when plug-out is detected. */
 	RTE_ETH_DEV_REMOVED,
