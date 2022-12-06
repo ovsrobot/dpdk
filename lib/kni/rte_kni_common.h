@@ -80,7 +80,11 @@ struct rte_kni_fifo {
  */
 struct rte_kni_mbuf {
 	void *buf_addr __attribute__((__aligned__(RTE_CACHE_LINE_SIZE)));
+#if RTE_IOVA_AS_PA
 	uint64_t buf_iova;
+#else
+	void *next;             /**< Physical address of next mbuf in kernel. */
+#endif
 	uint16_t data_off;      /**< Start address of data in segment buffer. */
 	char pad1[2];
 	uint16_t nb_segs;       /**< Number of segments. */
@@ -89,12 +93,16 @@ struct rte_kni_mbuf {
 	char pad2[4];
 	uint32_t pkt_len;       /**< Total pkt len: sum of all segment data_len. */
 	uint16_t data_len;      /**< Amount of data in segment buffer. */
-	char pad3[14];
-	void *pool;
+	char pad3[22];
 
 	/* fields on second cache line */
 	__attribute__((__aligned__(RTE_CACHE_LINE_MIN_SIZE)))
+#if RTE_IOVA_AS_PA
 	void *next;             /**< Physical address of next mbuf in kernel. */
+#else
+	char pad5[8];
+#endif
+	void *pool;
 };
 
 /*
