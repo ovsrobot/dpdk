@@ -920,8 +920,9 @@ i40e_recv_scattered_pkts(void *rx_queue,
 			first_seg->pkt_len =
 				(uint16_t)(first_seg->pkt_len +
 						rx_packet_len);
-			first_seg->nb_segs++;
+			last_seg->nb_segs = 2;
 			last_seg->next = rxm;
+			first_seg->nb_segs++;
 		}
 
 		/**
@@ -944,6 +945,7 @@ i40e_recv_scattered_pkts(void *rx_queue,
 		 *  the length of that CRC part from the data length of the
 		 *  previous mbuf.
 		 */
+		rxm->nb_segs = 1;
 		rxm->next = NULL;
 		if (unlikely(rxq->crc_len > 0)) {
 			first_seg->pkt_len -= RTE_ETHER_CRC_LEN;
@@ -953,6 +955,7 @@ i40e_recv_scattered_pkts(void *rx_queue,
 				last_seg->data_len =
 					(uint16_t)(last_seg->data_len -
 					(RTE_ETHER_CRC_LEN - rx_packet_len));
+				last_seg->nb_segs = 1;
 				last_seg->next = NULL;
 			} else
 				rxm->data_len = (uint16_t)(rx_packet_len -
@@ -1065,7 +1068,7 @@ i40e_calc_pkt_desc(struct rte_mbuf *tx_pkt)
 
 	while (txd != NULL) {
 		count += DIV_ROUND_UP(txd->data_len, I40E_MAX_DATA_PER_TXD);
-		txd = txd->next;
+		txd = (txd->nb_segs == 1) ? NULL : txd->next;
 	}
 
 	return count;
@@ -1282,7 +1285,7 @@ i40e_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 			txe->last_id = tx_last;
 			tx_id = txe->next_id;
 			txe = txn;
-			m_seg = m_seg->next;
+			m_seg = (m_seg->nb_segs == 1) ? NULL : m_seg->next;
 		} while (m_seg != NULL);
 
 		/* The last packet data descriptor needs End Of Packet (EOP) */

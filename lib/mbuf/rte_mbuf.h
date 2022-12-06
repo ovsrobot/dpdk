@@ -1353,10 +1353,10 @@ rte_pktmbuf_prefree_seg(struct rte_mbuf *m)
 				return NULL;
 		}
 
-		if (m->next != NULL)
-			m->next = NULL;
-		if (m->nb_segs != 1)
+		if (m->nb_segs != 1) {
 			m->nb_segs = 1;
+			m->next = NULL;
+		}
 
 		return m;
 
@@ -1370,10 +1370,10 @@ rte_pktmbuf_prefree_seg(struct rte_mbuf *m)
 				return NULL;
 		}
 
-		if (m->next != NULL)
-			m->next = NULL;
-		if (m->nb_segs != 1)
+		if (m->nb_segs != 1) {
 			m->nb_segs = 1;
+			m->next = NULL;
+		}
 		rte_mbuf_refcnt_set(m, 1);
 
 		return m;
@@ -1415,7 +1415,7 @@ static inline void rte_pktmbuf_free(struct rte_mbuf *m)
 		__rte_mbuf_sanity_check(m, 1);
 
 	while (m != NULL) {
-		m_next = m->next;
+		m_next = (m->nb_segs == 1) ? NULL : m->next;
 		rte_pktmbuf_free_seg(m);
 		m = m_next;
 	}
@@ -1497,7 +1497,7 @@ static inline void rte_pktmbuf_refcnt_update(struct rte_mbuf *m, int16_t v)
 
 	do {
 		rte_mbuf_refcnt_update(m, v);
-	} while ((m = m->next) != NULL);
+	} while ((m = ((m->nb_segs == 1) ? NULL : m->next)) != NULL);
 }
 
 /**
@@ -1540,7 +1540,7 @@ static inline uint16_t rte_pktmbuf_tailroom(const struct rte_mbuf *m)
 static inline struct rte_mbuf *rte_pktmbuf_lastseg(struct rte_mbuf *m)
 {
 	__rte_mbuf_sanity_check(m, 1);
-	while (m->next != NULL)
+	while (m->nb_segs != 1)
 		m = m->next;
 	return m;
 }
@@ -1758,20 +1758,22 @@ static inline const void *rte_pktmbuf_read(const struct rte_mbuf *m,
 static inline int rte_pktmbuf_chain(struct rte_mbuf *head, struct rte_mbuf *tail)
 {
 	struct rte_mbuf *cur_tail;
+	const unsigned int nb_segs = head->nb_segs + tail->nb_segs;
 
 	/* Check for number-of-segments-overflow */
-	if (head->nb_segs + tail->nb_segs > RTE_MBUF_MAX_NB_SEGS)
+	if (nb_segs > RTE_MBUF_MAX_NB_SEGS)
 		return -EOVERFLOW;
 
 	/* Chain 'tail' onto the old tail */
 	cur_tail = rte_pktmbuf_lastseg(head);
+	cur_tail->nb_segs = 2;
 	cur_tail->next = tail;
 
 	/* accumulate number of segments and total length.
 	 * NB: elaborating the addition like this instead of using
 	 *     -= allows us to ensure the result type is uint16_t
 	 *     avoiding compiler warnings on gcc 8.1 at least */
-	head->nb_segs = (uint16_t)(head->nb_segs + tail->nb_segs);
+	head->nb_segs = (uint16_t)nb_segs;
 	head->pkt_len += tail->pkt_len;
 
 	/* pkt_len is only set in the head */
