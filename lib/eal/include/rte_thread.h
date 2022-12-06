@@ -95,6 +95,35 @@ int rte_thread_create(rte_thread_t *thread_id,
 		rte_thread_func thread_func, void *arg);
 
 /**
+ * Create a control thread.
+ *
+ * Creates a control thread with the given name and attributes. The
+ * affinity of the new thread is based on the CPU affinity retrieved
+ * at the time rte_eal_init() was called, the dataplane and service
+ * lcores are then excluded. If setting the name of the thread fails,
+ * the error is ignored and a debug message is logged.
+ *
+ * @param thread
+ *   Filled with the thread id of the new created thread.
+ * @param name
+ *   The name of the control thread (max 16 characters including '\0').
+ * @param thread_attr
+ *   Attributes for the new thread.
+ * @param thread_func
+ *   Function to be executed by the new thread.
+ * @param arg
+ *   Argument passed to start_routine.
+ * @return
+ *   On success, returns 0; on error, it returns a negative value
+ *   corresponding to the error number.
+ */
+__rte_experimental
+int
+rte_control_thread_create(rte_thread_t *thread, const char *name,
+		const rte_thread_attr_t *thread_attr,
+		rte_thread_func thread_func, void *arg);
+
+/**
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice.
  *
