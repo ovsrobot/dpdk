@@ -765,7 +765,6 @@ static void cmd_create_bonded_device_parsed(void *parsed_result,
 
 	ports[port_id].update_conf = 1;
 	ports[port_id].bond_flag = 1;
-	ports[port_id].need_setup = 0;
 	ports[port_id].port_status = RTE_PORT_STOPPED;
 }
 

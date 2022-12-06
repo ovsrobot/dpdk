@@ -3463,15 +3463,12 @@ attach_port(char *identifier)
 		return;
 	}
 
-	/* first attach mode: event */
-	if (setup_on_probe_event) {
-		/* new ports are detected on RTE_ETH_EVENT_NEW event */
-		for (pi = 0; pi < RTE_MAX_ETHPORTS; pi++)
-			if (ports[pi].port_status == RTE_PORT_HANDLING &&
-					ports[pi].need_setup != 0)
-				setup_attached_port(pi);
+	/*
+	 * first attach mode: event, setting up attached port is done in
+	 * probing callback.
+	 */
+	if (setup_on_probe_event)
 		return;
-	}
 
 	/* second attach mode: iterator */
 	RTE_ETH_FOREACH_MATCHING_DEV(pi, identifier, &iterator) {
@@ -3502,7 +3499,6 @@ setup_attached_port(portid_t pi)
 	ports_ids[nb_ports++] = pi;
 	fwd_ports_ids[nb_fwd_ports++] = pi;
 	nb_cfg_ports = nb_fwd_ports;
-	ports[pi].need_setup = 0;
 	ports[pi].port_status = RTE_PORT_STOPPED;
 
 	printf("Port %d is attached. Now total ports is %d\n", pi, nb_ports);
@@ -3536,10 +3532,8 @@ detach_device(struct rte_device *dev)
 		TESTPMD_LOG(ERR, "Failed to detach device %s\n", rte_dev_name(dev));
 		return;
 	}
-	remove_invalid_ports();
 
 	printf("Device is detached\n");
-	printf("Now total ports is %d\n", nb_ports);
 	printf("Done\n");
 	return;
 }
@@ -3606,11 +3600,9 @@ detach_devargs(char *identifier)
 		return;
 	}
 
-	remove_invalid_ports();
-
 	printf("Device %s is detached\n", identifier);
-	printf("Now total ports is %d\n", nb_ports);
 	printf("Done\n");
+
 	rte_devargs_reset(&da);
 }
 
@@ -3774,9 +3766,20 @@ rmv_port_callback(void *arg)
 		struct rte_device *device = dev_info.device;
 		close_port(port_id);
 		detach_device(device); /* might be already removed or have more ports */
+		remove_invalid_ports();
+		printf("Now total ports is %d\n", nb_ports);
 	}
 	if (need_to_start)
 		start_packet_forwarding(0);
+}
+
+static void
+remove_invalid_ports_callback(void *arg)
+{
+	RTE_SET_USED(arg);
+
+	remove_invalid_ports();
+	printf("Now total ports is %d\n", nb_ports);
 }
 
 /* This function is used by the interrupt thread */
@@ -3803,8 +3806,8 @@ eth_event_callback(portid_t port_id, enum rte_eth_event_type type, void *param,
 
 	switch (type) {
 	case RTE_ETH_EVENT_NEW:
-		ports[port_id].need_setup = 1;
-		ports[port_id].port_status = RTE_PORT_HANDLING;
+		if (setup_on_probe_event)
+			setup_attached_port(port_id);
 		break;
 	case RTE_ETH_EVENT_INTR_RMV:
 		if (rte_eal_alarm_set(100000,
@@ -3815,6 +3818,9 @@ eth_event_callback(portid_t port_id, enum rte_eth_event_type type, void *param,
 	case RTE_ETH_EVENT_DESTROY:
 		ports[port_id].port_status = RTE_PORT_CLOSED;
 		printf("Port %u is closed\n", port_id);
+		if (rte_eal_alarm_set(100000, remove_invalid_ports_callback,
+			(void *)(intptr_t)port_id))
+			fprintf(stderr, "Could not set up deferred device released\n");
 		break;
 	case RTE_ETH_EVENT_RX_AVAIL_THRESH: {
 		uint16_t rxq_id;
