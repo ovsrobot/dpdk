@@ -27,6 +27,7 @@ reassemble_packets(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_bufs,
 	for (buf_idx = 0, pkt_idx = 0; buf_idx < nb_bufs; buf_idx++) {
 		if (end != NULL) {
 			/* processing a split packet */
+			end->nb_segs = 2;
 			end->next = rx_bufs[buf_idx];
 			rx_bufs[buf_idx]->data_len += rxq->crc_len;
 
@@ -52,6 +53,7 @@ reassemble_packets(struct i40e_rx_queue *rxq, struct rte_mbuf **rx_bufs,
 						secondlast = secondlast->next;
 					secondlast->data_len -= (rxq->crc_len -
 							end->data_len);
+					secondlast->nb_segs = 1;
 					secondlast->next = NULL;
 					rte_pktmbuf_free_seg(end);
 				}

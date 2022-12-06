@@ -594,25 +594,6 @@ struct rte_mbuf {
 
 	uint16_t buf_len;         /**< Length of segment buffer. */
 
-	struct rte_mempool *pool; /**< Pool from which mbuf was allocated. */
-
-	/* second cache line - fields only used in slow path or on TX */
-	RTE_MARKER cacheline1 __rte_cache_min_aligned;
-
-#if RTE_IOVA_AS_PA
-	/**
-	 * Next segment of scattered packet. Must be NULL in the last
-	 * segment or in case of non-segmented packet.
-	 */
-	struct rte_mbuf *next;
-#else
-	/**
-	 * Reserved for dynamic fields
-	 * when the next pointer is in first cache line (i.e. RTE_IOVA_AS_PA is 0).
-	 */
-	uint64_t dynfield2;
-#endif
-
 	/* fields to support TX offloads */
 	RTE_STD_C11
 	union {
@@ -650,6 +631,25 @@ struct rte_mbuf {
 			/* uint64_t unused:RTE_MBUF_TXOFLD_UNUSED_BITS; */
 		};
 	};
+
+	/* second cache line - fields only used in slow path or on TX */
+	RTE_MARKER cacheline1 __rte_cache_min_aligned;
+
+#if RTE_IOVA_AS_PA
+	/**
+	 * Next segment of scattered packet. Must be NULL in the last
+	 * segment or in case of non-segmented packet.
+	 */
+	struct rte_mbuf *next;
+#else
+	/**
+	 * Reserved for dynamic fields
+	 * when the next pointer is in first cache line (i.e. RTE_IOVA_AS_PA is 0).
+	 */
+	uint64_t dynfield2;
+#endif
+
+	struct rte_mempool *pool; /**< Pool from which mbuf was allocated. */
 
 	/** Shared data for external buffer attached to mbuf. See
 	 * rte_pktmbuf_attach_extbuf().
