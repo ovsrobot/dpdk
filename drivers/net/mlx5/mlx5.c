@@ -3014,7 +3014,7 @@ mlx5_eth_find_next(uint16_t port_id, struct rte_device *odev)
 	while (port_id < RTE_MAX_ETHPORTS) {
 		struct rte_eth_dev *dev = &rte_eth_devices[port_id];
 
-		if (dev->state != RTE_ETH_DEV_UNUSED &&
+		if (rte_eth_dev_in_used(dev->state) &&
 		    dev->device &&
 		    (dev->device == odev ||
 		     (dev->device->driver &&

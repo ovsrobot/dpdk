@@ -325,7 +325,7 @@ uint16_t
 rte_eth_find_next(uint16_t port_id)
 {
 	while (port_id < RTE_MAX_ETHPORTS &&
-			rte_eth_devices[port_id].state == RTE_ETH_DEV_UNUSED)
+	       !rte_eth_dev_in_used(rte_eth_devices[port_id].state))
 		port_id++;
 
 	if (port_id >= RTE_MAX_ETHPORTS)
@@ -372,7 +372,7 @@ int
 rte_eth_dev_is_valid_port(uint16_t port_id)
 {
 	if (port_id >= RTE_MAX_ETHPORTS ||
-	    (rte_eth_devices[port_id].state == RTE_ETH_DEV_UNUSED))
+	    !rte_eth_dev_in_used(rte_eth_devices[port_id].state))
 		return 0;
 	else
 		return 1;

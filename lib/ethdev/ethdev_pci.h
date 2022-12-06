@@ -164,7 +164,7 @@ rte_eth_dev_pci_generic_remove(struct rte_pci_device *pci_dev,
 	 * eth device has been released.
 	 */
 	if (rte_eal_process_type() == RTE_PROC_SECONDARY &&
-	    eth_dev->state == RTE_ETH_DEV_UNUSED)
+	    !rte_eth_dev_in_used(eth_dev->state))
 		return 0;
 
 	if (dev_uninit) {

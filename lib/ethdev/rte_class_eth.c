@@ -118,7 +118,7 @@ eth_dev_match(const struct rte_eth_dev *edev,
 	const struct rte_kvargs *kvlist = arg->kvlist;
 	unsigned int pair;
 
-	if (edev->state == RTE_ETH_DEV_UNUSED)
+	if (!rte_eth_dev_in_used(edev->state))
 		return -1;
 	if (arg->device != NULL && arg->device != edev->device)
 		return -1;

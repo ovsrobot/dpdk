@@ -1543,6 +1543,18 @@ __rte_internal
 void rte_eth_dev_probing_finish(struct rte_eth_dev *dev);
 
 /**
+ * Check if a Ethernet device state is in used or not
+ *
+ * @param dev_state
+ *   The state of the Ethernet device
+ * @return
+ *   - true if the state of the Ethernet device is allocated or attached
+ *   - false if this state is neither allocated nor attached
+ */
+__rte_internal
+bool rte_eth_dev_in_used(uint16_t dev_state);
+
+/**
  * Create memzone for HW rings.
  * malloc can't be used as the physical address is needed.
  * If the memzone is already created, then this function returns a ptr
