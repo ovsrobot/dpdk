@@ -73,3 +73,5 @@ endif
 dpdk_conf.set('RTE_CACHE_LINE_SIZE', 64)
 dpdk_conf.set('RTE_MAX_LCORE', 128)
 dpdk_conf.set('RTE_MAX_NUMA_NODES', 32)
+
+dpdk_conf.set('RTE_IOVA_AS_PA', 0)
