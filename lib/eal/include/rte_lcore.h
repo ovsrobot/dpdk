@@ -393,6 +393,7 @@ rte_lcore_dump(FILE *f);
  * @return
  *   On success, return 0; otherwise return a negative value.
  */
+__rte_deprecated
 int rte_thread_setname(pthread_t id, const char *name);
 
 /**
