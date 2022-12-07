@@ -151,6 +151,9 @@ __rte_thread_init(unsigned int lcore_id, rte_cpuset_t *cpuset)
 
 	/* acquire system unique id */
 	rte_gettid();
+	if (lcore_id == rte_get_main_lcore())
+		lcore_config[lcore_id].thread_id =
+			(pthread_t)(rte_thread_self()).opaque_id;
 
 	thread_update_affinity(cpuset);
 
