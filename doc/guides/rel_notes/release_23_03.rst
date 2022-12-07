@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Corigine nfp driver.**
+
+  * Added support for meter options.
 
 Removed Items
 -------------
