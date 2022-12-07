@@ -58,6 +58,7 @@ New Features
 * **Updated Corigine nfp driver.**
 
   * Added support for meter options.
+  * Added support for rte_flow meter action.
 
 Removed Items
 -------------
