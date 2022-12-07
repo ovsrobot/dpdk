@@ -379,6 +379,55 @@ test_ctrl_thread(void)
 }
 
 static int
+test_lcores_set_get_name(void)
+{
+	char out[RTE_LCORE_NAME_MAX_LEN];
+	char outcmp[RTE_LCORE_NAME_MAX_LEN];
+	const unsigned int lcore_id = rte_get_main_lcore();
+	const size_t outlen = sizeof(out);
+	const char empty[] = "";
+	const char valid[] = "0123456789abcde";
+	const char invalid[] = "0123456789abcdef";
+
+	memset(outcmp, 0xff, outlen);
+
+	memset(out, 0xff, outlen);
+	RTE_TEST_ASSERT(rte_lcore_set_name(lcore_id, empty) == 0,
+		"Failed to set empty lcore name.");
+	RTE_TEST_ASSERT(rte_lcore_get_name(lcore_id, out, outlen) == 0,
+		"Failed to get empty lcore name.");
+	RTE_TEST_ASSERT(strcmp(empty, out) == 0,
+		"Failed to set and get empty lcore name.");
+
+	memset(out, 0xff, outlen);
+	RTE_TEST_ASSERT(rte_lcore_set_name(lcore_id, valid) == 0,
+		"Failed to set valid lcore name.");
+	RTE_TEST_ASSERT(rte_lcore_get_name(lcore_id, out, outlen) == 0,
+		"Failed to get valid lcore name.");
+	RTE_TEST_ASSERT(strcmp(valid, out) == 0,
+		"Failed to set and get valid lcore name.");
+
+	memset(out, 0xff, outlen);
+	RTE_TEST_ASSERT(rte_lcore_set_name(lcore_id, invalid) == -ERANGE,
+		"Failed to fail set with invalid lcore name.");
+	RTE_TEST_ASSERT(memcmp(outcmp, out, outlen) == 0,
+		"Failed to preserve caller buffer after set failure.");
+
+	RTE_TEST_ASSERT(rte_lcore_get_name(lcore_id, out, outlen) == 0,
+		"Failed to get valid lcore name after set failure.");
+	RTE_TEST_ASSERT(strcmp(valid, out) == 0,
+		"Failed to preserve valid lcore name after set failure.");
+
+	memset(out, 0xff, outlen);
+	RTE_TEST_ASSERT(rte_lcore_get_name(lcore_id, out, outlen - 1) == -EINVAL,
+		"Failed to fail get with output buffer too small.");
+	RTE_TEST_ASSERT(memcmp(outcmp, out, outlen) == 0,
+		"Failed to preserve caller buffer after get failure.");
+
+	return TEST_SUCCESS;
+}
+
+static int
 test_lcores(void)
 {
 	unsigned int eal_threads_count = 0;
@@ -409,6 +458,9 @@ test_lcores(void)
 		return TEST_FAILED;
 
 	if (test_ctrl_thread() < 0)
+		return TEST_FAILED;
+
+	if (test_lcores_set_get_name() < 0)
 		return TEST_FAILED;
 
 	return TEST_SUCCESS;
