@@ -2053,7 +2053,7 @@ fwd_stats_display(void)
 				fs->rx_bad_outer_ip_csum;
 
 		if (record_core_cycles)
-			fwd_cycles += fs->core_cycles;
+			fwd_cycles += fs->busy_cycles;
 	}
 	for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
 		pt_id = fwd_ports_ids[i];
@@ -2184,6 +2184,7 @@ fwd_stats_reset(void)
 
 		memset(&fs->rx_burst_stats, 0, sizeof(fs->rx_burst_stats));
 		memset(&fs->tx_burst_stats, 0, sizeof(fs->tx_burst_stats));
+		fs->busy_cycles = 0;
 		fs->core_cycles = 0;
 	}
 }
@@ -2260,6 +2261,7 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 	tics_datum = rte_rdtsc();
 	tics_per_1sec = rte_get_timer_hz();
 #endif
+	fc->lcore_id = rte_lcore_id();
 	fsm = &fwd_streams[fc->stream_idx];
 	nb_fs = fc->stream_nb;
 	do {
@@ -2286,6 +2288,37 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 #endif
 
 	} while (! fc->stopped);
+}
+
+static int
+lcore_usage_callback(unsigned int lcore_id, uint64_t *busy_cycles, uint64_t *total_cycles)
+{
+	struct fwd_stream **fsm;
+	struct fwd_lcore *fc;
+	streamid_t nb_fs;
+	streamid_t sm_id;
+	int c;
+
+	for (c = 0; c < nb_lcores; c++) {
+		fc = fwd_lcores[c];
+		if (fc->lcore_id != lcore_id)
+			continue;
+
+		fsm = &fwd_streams[fc->stream_idx];
+		nb_fs = fc->stream_nb;
+		*busy_cycles = 0;
+		*total_cycles = 0;
+
+		for (sm_id = 0; sm_id < nb_fs; sm_id++)
+			if (!fsm[sm_id]->disabled) {
+				*busy_cycles += fsm[sm_id]->busy_cycles;
+				*total_cycles += fsm[sm_id]->core_cycles;
+			}
+
+		return 0;
+	}
+
+	return -1;
 }
 
 static int
@@ -4522,6 +4555,10 @@ main(int argc, char** argv)
 		rte_stats_bitrate_reg(bitrate_data);
 	}
 #endif
+
+	if (record_core_cycles)
+		rte_lcore_register_usage_cb(lcore_usage_callback);
+
 #ifdef RTE_LIB_CMDLINE
 	if (init_cmdline() != 0)
 		rte_exit(EXIT_FAILURE,
