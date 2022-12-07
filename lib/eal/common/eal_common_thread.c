@@ -272,6 +272,7 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 		const pthread_attr_t *attr,
 		void *(*start_routine)(void *), void *arg)
 {
+	rte_thread_t id;
 	struct rte_thread_ctrl_params *params;
 	enum __rte_ctrl_thread_status ctrl_thread_status;
 	int ret;
@@ -285,18 +286,16 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 	params->ret = 0;
 	params->ctrl_thread_status = CTRL_THREAD_LAUNCHING;
 
-	ret = pthread_create(thread, attr, ctrl_thread_init, (void *)params);
+	ret = pthread_create((pthread_t *)&id.opaque_id, attr, ctrl_thread_init, params);
 	if (ret != 0) {
 		free(params);
 		return -ret;
 	}
 
-	if (name != NULL) {
-		ret = rte_thread_setname(*thread, name);
-		if (ret < 0)
-			RTE_LOG(DEBUG, EAL,
-				"Cannot set name for ctrl thread\n");
-	}
+	if (name != NULL)
+		rte_thread_set_name(id, name);
+
+	*thread = (pthread_t)id.opaque_id;
 
 	/* Wait for the control thread to initialize successfully */
 	while ((ctrl_thread_status =
@@ -312,7 +311,7 @@ rte_ctrl_thread_create(pthread_t *thread, const char *name,
 	/* Check if the control thread encountered an error */
 	if (ctrl_thread_status == CTRL_THREAD_ERROR) {
 		/* ctrl thread is exiting */
-		pthread_join(*thread, NULL);
+		(void)rte_thread_join(id, NULL);
 	}
 
 	ret = params->ret;

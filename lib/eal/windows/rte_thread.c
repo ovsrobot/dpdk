@@ -4,7 +4,9 @@
  */
 
 #include <errno.h>
+#include <wchar.h>
 
+#include <rte_eal.h>
 #include <rte_common.h>
 #include <rte_errno.h>
 #include <rte_thread.h>
@@ -303,6 +305,45 @@ rte_thread_self(void)
 	thread_id.opaque_id = GetCurrentThreadId();
 
 	return thread_id;
+}
+
+void
+rte_thread_set_name(rte_thread_t id, const char *name)
+{
+	int ret = 0;
+	wchar_t wname[RTE_MAX_THREAD_NAME_LEN];
+	mbstate_t state = {0};
+	size_t rv;
+	HANDLE thread_handle;
+
+	thread_handle = OpenThread(THREAD_ALL_ACCESS, FALSE, id.opaque_id);
+	if (thread_handle == NULL) {
+		ret = thread_log_last_error("OpenThread()");
+		goto cleanup;
+	}
+
+	rv = mbsrtowcs(wname, &name, sizeof(wname) / sizeof(wname[0]), &state);
+	if (rv == (size_t)-1) {
+		ret = EILSEQ;
+		goto cleanup;
+	}
+
+	if (name != NULL) {
+		ret = ERANGE;
+		goto cleanup;
+	}
+
+	if (FAILED(SetThreadDescription(thread_handle, wname))) {
+		ret = EINVAL;
+		goto cleanup;
+	}
+
+cleanup:
+	if (thread_handle != NULL)
+		CloseHandle(thread_handle);
+
+	if (ret != 0)
+		RTE_LOG(DEBUG, EAL, "Cannot set name for lcore\n");
 }
 
 int

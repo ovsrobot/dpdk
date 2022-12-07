@@ -14,6 +14,38 @@
 #include "eal_private.h"
 #include "eal_thread.h"
 
+static char lcore_names[RTE_MAX_LCORE][RTE_LCORE_NAME_MAX_LEN];
+
+int
+rte_lcore_set_name(unsigned int lcore_id, const char *name)
+{
+	if (unlikely(lcore_id >= RTE_MAX_LCORE))
+		return -EINVAL;
+
+	if (strlen(name) >= RTE_LCORE_NAME_MAX_LEN)
+		return -ERANGE;
+
+	(void)strcpy(&lcore_names[lcore_id][0], name);
+
+	rte_thread_set_name((rte_thread_t){lcore_config[lcore_id].thread_id}, name);
+
+	return 0;
+}
+
+int
+rte_lcore_get_name(unsigned int lcore_id, char *name, size_t len)
+{
+	if (unlikely(lcore_id >= RTE_MAX_LCORE))
+		return -EINVAL;
+
+	if (len < RTE_LCORE_NAME_MAX_LEN)
+		return -EINVAL;
+
+	(void)strcpy(name, &lcore_names[lcore_id][0]);
+
+	return 0;
+}
+
 unsigned int rte_get_main_lcore(void)
 {
 	return rte_eal_get_configuration()->main_lcore;

@@ -143,6 +143,14 @@ __rte_experimental
 rte_thread_t rte_thread_self(void);
 
 /**
+ * @internal
+ * Set the name of the thread.
+ */
+__rte_internal
+void
+rte_thread_set_name(rte_thread_t id, const char *name);
+
+/**
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice.
  *

@@ -13,6 +13,7 @@
  */
 #include <stdio.h>
 
+#include <rte_common.h>
 #include <rte_compat.h>
 #include <rte_config.h>
 #include <rte_per_lcore.h>
@@ -25,6 +26,7 @@ extern "C" {
 #endif
 
 #define LCORE_ID_ANY     UINT32_MAX       /**< Any lcore. */
+#define RTE_LCORE_NAME_MAX_LEN RTE_MAX_THREAD_NAME_LEN
 
 RTE_DECLARE_PER_LCORE(unsigned, _lcore_id);  /**< Per thread "lcore id". */
 
@@ -88,6 +90,48 @@ rte_lcore_id(void)
  *   the id of the main lcore
  */
 unsigned int rte_get_main_lcore(void);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Sets the name of an lcore and (if supported) implicitly sets the
+ * debugging name of the lcores thread.
+ *
+ * @param lcore_id
+ *   The targeted lcore.
+ *
+ * @param name
+ *   The name to set for the specified lcore_id. strlen(name) shall be
+ *   no more than RTE_LCORE_NAME_MAX_LEN - 1 long.
+ *
+ * @return
+ *   0 on success or, -errno on failure.
+ */
+__rte_experimental
+int rte_lcore_set_name(unsigned int lcore_id, const char *name);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Gets the name of an lcore thread.
+ *
+ * @param lcore_id
+ *   The targeted lcore.
+ *
+ * @param name
+ *   The buffer used to receive the lcore name.
+ *
+ * @param len
+ *   The length of the buffer name. The buffer len shall be at
+ *   least RTE_LCORE_NAME_MAX_LEN.
+ *
+ * @return
+ *   0 on success or, -errno on failure.
+ */
+__rte_experimental
+int rte_lcore_get_name(unsigned int lcore_id, char *name, size_t len);
 
 /**
  * Return the number of execution units (lcores) on the system.

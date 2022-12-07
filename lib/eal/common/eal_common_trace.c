@@ -356,7 +356,7 @@ found:
 	/* Store the thread name */
 	char *name = header->stream_header.thread_name;
 	memset(name, 0, __RTE_TRACE_EMIT_STRING_LEN_MAX);
-	rte_thread_getname(pthread_self(), name,
+	(void)rte_lcore_get_name(rte_lcore_id(), name,
 		__RTE_TRACE_EMIT_STRING_LEN_MAX);
 
 	trace->lcore_meta[count].mem = header;

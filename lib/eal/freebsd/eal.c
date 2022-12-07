@@ -817,7 +817,10 @@ rte_eal_init(int argc, char **argv)
 		/* Set thread_name for aid in debugging. */
 		snprintf(thread_name, sizeof(thread_name),
 				"rte-worker-%d", i);
-		rte_thread_setname(lcore_config[i].thread_id, thread_name);
+		ret = rte_lcore_set_name(i, thread_name);
+		if (ret != 0)
+			RTE_LOG(DEBUG, EAL,
+				"Cannot set name for lcore\n");
 
 		ret = pthread_setaffinity_np(lcore_config[i].thread_id,
 			sizeof(rte_cpuset_t), &lcore_config[i].cpuset);

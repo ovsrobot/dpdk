@@ -32,6 +32,12 @@ int rte_sys_gettid(void)
 	return (int)lwpid;
 }
 
+void rte_thread_set_name(rte_thread_t id, const char *name)
+{
+	/* this BSD function returns no error */
+	pthread_set_name_np(id.opaque_id, name);
+}
+
 int rte_thread_setname(pthread_t id, const char *name)
 {
 	/* this BSD function returns no error */
