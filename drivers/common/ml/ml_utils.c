@@ -2,6 +2,10 @@
  * Copyright (c) 2022 Marvell.
  */
 
+#include <errno.h>
+#include <stdint.h>
+
+#include <rte_common.h>
 #include <rte_mldev.h>
 
 #include "ml_utils.h"
@@ -107,4 +111,132 @@ ml_io_format_to_str(enum rte_ml_io_format format, char *str, int len)
 	default:
 		rte_strlcpy(str, "invalid", len);
 	}
+}
+
+int
+ml_float32_to_int8(float scale, uint64_t nb_elements, void *input, void *output)
+{
+	RTE_SET_USED(scale);
+	RTE_SET_USED(nb_elements);
+	RTE_SET_USED(input);
+	RTE_SET_USED(output);
+
+	return -ENOTSUP;
+}
+
+int
+ml_int8_to_float32(float scale, uint64_t nb_elements, void *input, void *output)
+{
+	RTE_SET_USED(scale);
+	RTE_SET_USED(nb_elements);
+	RTE_SET_USED(input);
+	RTE_SET_USED(output);
+
+	return -ENOTSUP;
+}
+
+int
+ml_float32_to_uint8(float scale, uint64_t nb_elements, void *input, void *output)
+{
+	RTE_SET_USED(scale);
+	RTE_SET_USED(nb_elements);
+	RTE_SET_USED(input);
+	RTE_SET_USED(output);
+
+	return -ENOTSUP;
+}
+
+int
+ml_uint8_to_float32(float scale, uint64_t nb_elements, void *input, void *output)
+{
+	RTE_SET_USED(scale);
+	RTE_SET_USED(nb_elements);
+	RTE_SET_USED(input);
+	RTE_SET_USED(output);
+
+	return -ENOTSUP;
+}
+
+int
+ml_float32_to_int16(float scale, uint64_t nb_elements, void *input, void *output)
+{
+	RTE_SET_USED(scale);
+	RTE_SET_USED(nb_elements);
+	RTE_SET_USED(input);
+	RTE_SET_USED(output);
+
+	return -ENOTSUP;
+}
+
+int
+ml_int16_to_float32(float scale, uint64_t nb_elements, void *input, void *output)
+{
+	RTE_SET_USED(scale);
+	RTE_SET_USED(nb_elements);
+	RTE_SET_USED(input);
+	RTE_SET_USED(output);
+
+	return -ENOTSUP;
+}
+
+int
+ml_float32_to_uint16(float scale, uint64_t nb_elements, void *input, void *output)
+{
+	RTE_SET_USED(scale);
+	RTE_SET_USED(nb_elements);
+	RTE_SET_USED(input);
+	RTE_SET_USED(output);
+
+	return -ENOTSUP;
+}
+
+int
+ml_uint16_to_float32(float scale, uint64_t nb_elements, void *input, void *output)
+{
+	RTE_SET_USED(scale);
+	RTE_SET_USED(nb_elements);
+	RTE_SET_USED(input);
+	RTE_SET_USED(output);
+
+	return -ENOTSUP;
+}
+
+int
+ml_float32_to_float16(uint64_t nb_elements, void *input, void *output)
+{
+	RTE_SET_USED(nb_elements);
+	RTE_SET_USED(input);
+	RTE_SET_USED(output);
+
+	return -ENOTSUP;
+}
+
+int
+ml_float16_to_float32(uint64_t nb_elements, void *input, void *output)
+{
+	RTE_SET_USED(nb_elements);
+	RTE_SET_USED(input);
+	RTE_SET_USED(output);
+
+	return -ENOTSUP;
+}
+
+int
+ml_float32_to_bfloat16(uint64_t nb_elements, void *input, void *output)
+{
+	RTE_SET_USED(nb_elements);
+	RTE_SET_USED(input);
+	RTE_SET_USED(output);
+
+	return -ENOTSUP;
+}
+
+int
+ml_bfloat16_to_float32(uint64_t nb_elements, void *input, void *output)
+{
+	RTE_SET_USED(nb_elements);
+	RTE_SET_USED(input);
+	RTE_SET_USED(output);
+
+	return -ENOTSUP;
 }

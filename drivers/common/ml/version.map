@@ -5,5 +5,21 @@ INTERNAL {
 	ml_io_type_to_str;
 	ml_io_format_to_str;
 
+	ml_float32_to_int8;
+	ml_int8_to_float32;
+	ml_float32_to_uint8;
+	ml_uint8_to_float32;
+
+	ml_float32_to_int16;
+	ml_int16_to_float32;
+	ml_float32_to_uint16;
+	ml_uint16_to_float32;
+
+	ml_float32_to_float16;
+	ml_float16_to_float32;
+
+	ml_float32_to_bfloat16;
+	ml_bfloat16_to_float32;
+
 	local: *;
 };
