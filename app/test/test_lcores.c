@@ -8,6 +8,7 @@
 #include <rte_common.h>
 #include <rte_errno.h>
 #include <rte_lcore.h>
+#include <rte_thread.h>
 
 #include "test.h"
 
@@ -352,6 +353,18 @@ static void *ctrl_thread_loop(void *arg)
 	return NULL;
 }
 
+static uint32_t control_thread_loop(void *arg)
+{
+	struct thread_context *t = arg;
+
+	printf("Control thread running successfully\n");
+
+	/* Set the thread state to DONE */
+	t->state = Thread_DONE;
+
+	return 0;
+}
+
 static int
 test_ctrl_thread(void)
 {
@@ -370,6 +383,32 @@ test_ctrl_thread(void)
 	 * in control thread are visible to this thread.
 	 */
 	pthread_join(t->id, NULL);
+
+	/* Check if the control thread set the correct state */
+	if (t->state != Thread_DONE)
+		return -1;
+
+	return 0;
+}
+
+static int
+test_control_thread(void)
+{
+	struct thread_context ctrl_thread_context;
+	struct thread_context *t;
+
+	/* Create one control thread */
+	t = &ctrl_thread_context;
+	t->state = Thread_INIT;
+	if (rte_control_thread_create((rte_thread_t *)&t->id, "test_control_threads",
+					NULL, control_thread_loop, t) != 0)
+		return -1;
+
+	/* Wait till the control thread exits.
+	 * This also acts as the barrier such that the memory operations
+	 * in control thread are visible to this thread.
+	 */
+	rte_thread_join((rte_thread_t){(uintptr_t)t->id}, NULL);
 
 	/* Check if the control thread set the correct state */
 	if (t->state != Thread_DONE)
@@ -409,6 +448,9 @@ test_lcores(void)
 		return TEST_FAILED;
 
 	if (test_ctrl_thread() < 0)
+		return TEST_FAILED;
+
+	if (test_control_thread() < 0)
 		return TEST_FAILED;
 
 	return TEST_SUCCESS;
