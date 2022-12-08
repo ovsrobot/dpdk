@@ -5999,6 +5999,9 @@ eth_dev_handle_port_info(const char *cmd __rte_unused,
 		const char *params,
 		struct rte_tel_data *d)
 {
+#define RTE_ETH_DEV_MAX_HEX_BUFFER_LEN (sizeof(uint64_t) + 3)\
+
+	char hex_buf[RTE_ETH_DEV_MAX_HEX_BUFFER_LEN];
 	struct rte_tel_data *rxq_state, *txq_state;
 	char mac_addr[RTE_ETHER_ADDR_FMT_SIZE];
 	struct rte_eth_dev *eth_dev;
@@ -6068,13 +6071,18 @@ eth_dev_handle_port_info(const char *cmd __rte_unused,
 	rte_tel_data_add_dict_container(d, "rxq_state", rxq_state, 0);
 	rte_tel_data_add_dict_container(d, "txq_state", txq_state, 0);
 	rte_tel_data_add_dict_int(d, "numa_node", eth_dev->data->numa_node);
-	rte_tel_data_add_dict_u32(d, "dev_flags", eth_dev->data->dev_flags);
-	rte_tel_data_add_dict_u64(d, "rx_offloads",
-			eth_dev->data->dev_conf.rxmode.offloads);
-	rte_tel_data_add_dict_u64(d, "tx_offloads",
-			eth_dev->data->dev_conf.txmode.offloads);
-	rte_tel_data_add_dict_u64(d, "ethdev_rss_hf",
-			eth_dev->data->dev_conf.rx_adv_conf.rss_conf.rss_hf);
+	snprintf(hex_buf, RTE_ETH_DEV_MAX_HEX_BUFFER_LEN, "0x%x",
+		 eth_dev->data->dev_flags);
+	rte_tel_data_add_dict_string(d, "dev_flags", hex_buf);
+	snprintf(hex_buf, RTE_ETH_DEV_MAX_HEX_BUFFER_LEN, "0x%"PRIx64"",
+		 eth_dev->data->dev_conf.rxmode.offloads);
+	rte_tel_data_add_dict_string(d, "rx_offloads", hex_buf);
+	snprintf(hex_buf, RTE_ETH_DEV_MAX_HEX_BUFFER_LEN, "0x%"PRIx64"",
+		 eth_dev->data->dev_conf.txmode.offloads);
+	rte_tel_data_add_dict_string(d, "tx_offloads", hex_buf);
+	snprintf(hex_buf, RTE_ETH_DEV_MAX_HEX_BUFFER_LEN, "0x%"PRIx64"",
+		 eth_dev->data->dev_conf.rx_adv_conf.rss_conf.rss_hf);
+	rte_tel_data_add_dict_string(d, "ethdev_rss_hf", hex_buf);
 
 	return 0;
 }
