@@ -17,6 +17,11 @@ sources = files(
         'ml_utils_generic.c',
 )
 
+if arch_subdir == 'arm'
+    headers += files('ml_utils_neon.h')
+    sources += files('ml_utils_neon.c')
+endif
+
 deps += ['mldev']
 
 pmd_supports_disable_iova_as_pa = true

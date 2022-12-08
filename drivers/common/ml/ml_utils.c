@@ -120,71 +120,119 @@ ml_io_format_to_str(enum rte_ml_io_format format, char *str, int len)
 int
 ml_float32_to_int8(float scale, uint64_t nb_elements, void *input, void *output)
 {
+#if defined(__ARM_NEON__)
+	return ml_float32_to_int8_neon(scale, nb_elements, input, output);
+#else
 	return ml_float32_to_int8_generic(scale, nb_elements, input, output);
+#endif
 }
 
 int
 ml_int8_to_float32(float scale, uint64_t nb_elements, void *input, void *output)
 {
+#if defined(__ARM_NEON__)
+	return ml_int8_to_float32_neon(scale, nb_elements, input, output);
+#else
 	return ml_int8_to_float32_generic(scale, nb_elements, input, output);
+#endif
 }
 
 int
 ml_float32_to_uint8(float scale, uint64_t nb_elements, void *input, void *output)
 {
+#if defined(__ARM_NEON__)
+	return ml_float32_to_uint8_neon(scale, nb_elements, input, output);
+#else
 	return ml_float32_to_uint8_generic(scale, nb_elements, input, output);
+#endif
 }
 
 int
 ml_uint8_to_float32(float scale, uint64_t nb_elements, void *input, void *output)
 {
+#if defined(__ARM_NEON__)
+	return ml_uint8_to_float32_neon(scale, nb_elements, input, output);
+#else
 	return ml_uint8_to_float32_generic(scale, nb_elements, input, output);
+#endif
 }
 
 int
 ml_float32_to_int16(float scale, uint64_t nb_elements, void *input, void *output)
 {
+#if defined(__ARM_NEON__)
+	return ml_float32_to_int16_neon(scale, nb_elements, input, output);
+#else
 	return ml_float32_to_int16_generic(scale, nb_elements, input, output);
+#endif
 }
 
 int
 ml_int16_to_float32(float scale, uint64_t nb_elements, void *input, void *output)
 {
+#if defined(__ARM_NEON__)
+	return ml_int16_to_float32_neon(scale, nb_elements, input, output);
+#else
 	return ml_int16_to_float32_generic(scale, nb_elements, input, output);
+#endif
 }
 
 int
 ml_float32_to_uint16(float scale, uint64_t nb_elements, void *input, void *output)
 {
+#if defined(__ARM_NEON__)
+	return ml_float32_to_uint16_neon(scale, nb_elements, input, output);
+#else
 	return ml_float32_to_uint16_generic(scale, nb_elements, input, output);
+#endif
 }
 
 int
 ml_uint16_to_float32(float scale, uint64_t nb_elements, void *input, void *output)
 {
+#if defined(__ARM_NEON__)
+	return ml_uint16_to_float32_neon(scale, nb_elements, input, output);
+#else
 	return ml_uint16_to_float32_generic(scale, nb_elements, input, output);
+#endif
 }
 
 int
 ml_float32_to_float16(uint64_t nb_elements, void *input, void *output)
 {
+#if defined(__ARM_NEON__)
+	return ml_float32_to_float16_neon(scale, nb_elements, input, output);
+#else
 	return ml_float32_to_float16_generic(nb_elements, input, output);
+#endif
 }
 
 int
 ml_float16_to_float32(uint64_t nb_elements, void *input, void *output)
 {
+#if defined(__ARM_NEON__)
+	return ml_float16_to_float32_neon(scale, nb_elements, input, output);
+#else
 	return ml_float16_to_float32_generic(nb_elements, input, output);
+#endif
 }
 
 int
 ml_float32_to_bfloat16(uint64_t nb_elements, void *input, void *output)
 {
+#if defined(__ARM_FEATURE_BF16)
+	return ml_float32_to_bfloat16_neon(scale, nb_elements, input, output);
+#else
 	return ml_float32_to_bfloat16_generic(nb_elements, input, output);
+#endif
 }
 
 int
 ml_bfloat16_to_float32(uint64_t nb_elements, void *input, void *output)
 {
+#if defined(__ARM_FEATURE_BF16)
+	return ml_bfloat16_to_float32_neon(scale, nb_elements, input, output);
+#else
 	return ml_bfloat16_to_float32_generic(nb_elements, input, output);
+#endif
 }
