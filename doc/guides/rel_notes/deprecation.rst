@@ -119,3 +119,7 @@ Deprecation Notices
   Its removal has been postponed to let potential users report interest
   in maintaining it.
   In the absence of such interest, this library will be removed in DPDK 23.11.
+
+* eal: The function ``rte_ctrl_thread_create`` will be removed and
+  replaced by the new ``rte_control_thread_create`` api, continuing the
+  effort to decouple eal from platform-specific thread implementations.
