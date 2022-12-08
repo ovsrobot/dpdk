@@ -1,3 +1,12 @@
+EXPERIMENTAL {
+	global:
+
+	rte_tel_data_add_array_u32;
+	rte_tel_data_add_dict_u32;
+
+	local: *;
+};
+
 DPDK_23 {
 	global:
 

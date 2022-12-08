@@ -13,6 +13,7 @@ enum tel_container_types {
 	RTE_TEL_DICT,	      /** name-value pairs, of individual value type */
 	RTE_TEL_ARRAY_STRING, /** array of string values only */
 	RTE_TEL_ARRAY_INT,    /** array of signed, 32-bit int values */
+	RTE_TEL_ARRAY_U32,    /** array of unsigned 32-bit int values */
 	RTE_TEL_ARRAY_U64,    /** array of unsigned 64-bit int values */
 	RTE_TEL_ARRAY_CONTAINER, /** array of container structs */
 };
@@ -29,6 +30,7 @@ struct container {
 union tel_value {
 	char sval[RTE_TEL_MAX_STRING_LEN];
 	int ival;
+	uint32_t u32val;
 	uint64_t u64val;
 	struct container container;
 };
