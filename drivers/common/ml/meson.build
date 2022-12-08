@@ -9,10 +9,12 @@ endif
 
 headers = files(
         'ml_utils.h',
+        'ml_utils_generic.h',
 )
 
 sources = files(
         'ml_utils.c',
+        'ml_utils_generic.c',
 )
 
 deps += ['mldev']
