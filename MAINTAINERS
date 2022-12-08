@@ -1428,6 +1428,14 @@ F: drivers/raw/dpaa2_cmdif/
 F: doc/guides/rawdevs/dpaa2_cmdif.rst
 
 
+ML Device Drivers
+------------------------
+
+ML common code
+M: Srikanth Yalavarthi <syalavarthi@marvell.com>
+F: drivers/common/ml/
+
+
 Packet processing
 -----------------
 

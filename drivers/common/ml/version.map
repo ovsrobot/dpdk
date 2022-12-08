@@ -1,0 +1,9 @@
+INTERNAL {
+	global:
+
+	ml_io_type_size_get;
+	ml_io_type_to_str;
+	ml_io_format_to_str;
+
+	local: *;
+};
