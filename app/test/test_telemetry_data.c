@@ -279,6 +279,89 @@ test_array_with_array_string_values(void)
 }
 
 static int
+test_case_array_with_array_hex_u32_values(void)
+{
+	struct rte_tel_data *child_data = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data, RTE_TEL_STRING_VAL);
+
+	struct rte_tel_data *child_data2 = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data2, RTE_TEL_STRING_VAL);
+
+	rte_tel_data_start_array(&response_data, RTE_TEL_CONTAINER);
+
+	rte_tel_data_add_array_hex_u32_str(child_data, 0xfffffff0);
+	rte_tel_data_add_array_hex_u32_str(child_data, 0xfffffff1);
+	rte_tel_data_add_array_hex_u32_str(child_data2, 0x8ffff2);
+
+	rte_tel_data_add_array_container(&response_data, child_data, 0);
+	rte_tel_data_add_array_container(&response_data, child_data2, 0);
+
+	return CHECK_OUTPUT("[[\"0xfffffff0\",\"0xfffffff1\"],[\"0x8ffff2\"]]");
+}
+
+static int
+test_case_array_with_array_hex_u64_values(void)
+{
+	struct rte_tel_data *child_data = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data, RTE_TEL_STRING_VAL);
+
+	rte_tel_data_start_array(&response_data, RTE_TEL_CONTAINER);
+	rte_tel_data_add_array_hex_u64_str(child_data, 0xfffffffffffffff0);
+	rte_tel_data_add_array_hex_u64_str(child_data, 0xfffffffffffffff2);
+
+	rte_tel_data_add_array_container(&response_data, child_data, 0);
+
+	return CHECK_OUTPUT("[[\"0xfffffffffffffff0\",\"0xfffffffffffffff2\"]]");
+}
+
+static int
+test_case_dict_with_array_hex_u32_values(void)
+{
+	struct rte_tel_data *child_data = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data, RTE_TEL_STRING_VAL);
+
+	struct rte_tel_data *child_data2 = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data2, RTE_TEL_STRING_VAL);
+
+	rte_tel_data_start_dict(&response_data);
+
+	rte_tel_data_add_array_hex_u32_str(child_data, 0xfffffff0);
+	rte_tel_data_add_array_hex_u32_str(child_data, 0xfffffff1);
+	rte_tel_data_add_array_hex_u32_str(child_data2, 0x8ffffff0);
+	rte_tel_data_add_array_hex_u32_str(child_data2, 0x8ffffff1);
+
+	rte_tel_data_add_dict_container(&response_data, "dict_0",
+	 child_data, 0);
+	rte_tel_data_add_dict_container(&response_data, "dict_1",
+	 child_data2, 0);
+
+	return CHECK_OUTPUT("{\"dict_0\":[\"0xfffffff0\",\"0xfffffff1\"],\"dict_1\":[\"0x8ffffff0\",\"0x8ffffff1\"]}");
+}
+
+static int
+test_case_dict_with_array_hex_u64_values(void)
+{
+	struct rte_tel_data *child_data = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data, RTE_TEL_STRING_VAL);
+
+	struct rte_tel_data *child_data2 = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data2, RTE_TEL_STRING_VAL);
+
+	rte_tel_data_start_dict(&response_data);
+
+	rte_tel_data_add_array_hex_u64_str(child_data, 0xfffffffffffffff0);
+	rte_tel_data_add_array_hex_u64_str(child_data, 0xfffffffffffffff1);
+	rte_tel_data_add_array_hex_u64_str(child_data2, 0x8ffffffffffffff0);
+
+	rte_tel_data_add_dict_container(&response_data, "dict_0",
+	 child_data, 0);
+	rte_tel_data_add_dict_container(&response_data, "dict_1",
+	 child_data2, 0);
+
+	return CHECK_OUTPUT("{\"dict_0\":[\"0xfffffffffffffff0\",\"0xfffffffffffffff1\"],\"dict_1\":[\"0x8ffffffffffffff0\"]}");
+}
+
+static int
 test_case_array_u32(void)
 {
 	uint32_t i;
@@ -298,6 +381,47 @@ test_case_array_u64(void)
 	for (i = 0; i < 5; i++)
 		rte_tel_data_add_array_u64(&response_data, i);
 	return CHECK_OUTPUT("[0,1,2,3,4]");
+}
+
+static int
+test_case_array_hex_u32_str(void)
+{
+	struct rte_tel_data *child_data = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data, RTE_TEL_STRING_VAL);
+
+	struct rte_tel_data *child_data2 = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data2, RTE_TEL_STRING_VAL);
+
+	rte_tel_data_start_array(&response_data, RTE_TEL_CONTAINER);
+
+	rte_tel_data_add_array_hex_u32_str(child_data, 0xfffffff0);
+	rte_tel_data_add_array_hex_u32_str(child_data, 0xfffffff1);
+	rte_tel_data_add_array_hex_u32_str(child_data2, 0x8ffff2);
+
+	rte_tel_data_add_array_container(&response_data, child_data, 0);
+	rte_tel_data_add_array_container(&response_data, child_data2, 0);
+
+	return CHECK_OUTPUT("[[\"0xfffffff0\",\"0xfffffff1\"],[\"0x8ffff2\"]]");
+}
+
+static int
+test_case_array_hex_u64_str(void)
+{
+	struct rte_tel_data *child_data = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data, RTE_TEL_STRING_VAL);
+
+	struct rte_tel_data *child_data2 = rte_tel_data_alloc();
+	rte_tel_data_start_array(child_data2, RTE_TEL_STRING_VAL);
+
+	rte_tel_data_start_array(&response_data, RTE_TEL_CONTAINER);
+
+	rte_tel_data_add_array_hex_u64_str(child_data, 0xfffffffffffffff0);
+	rte_tel_data_add_array_hex_u64_str(child_data2, 0x8ffffffffff2);
+
+	rte_tel_data_add_array_container(&response_data, child_data, 0);
+	rte_tel_data_add_array_container(&response_data, child_data2, 0);
+
+	return CHECK_OUTPUT("[[\"0xfffffffffffffff0\"],[\"0x8ffffffffff2\"]]");
 }
 
 static int
@@ -328,6 +452,38 @@ test_case_add_dict_u64(void)
 		rte_tel_data_add_dict_u64(&response_data, name_of_value, i);
 	}
 	return CHECK_OUTPUT("{\"dict_0\":0,\"dict_1\":1,\"dict_2\":2,\"dict_3\":3,\"dict_4\":4}");
+}
+
+static int
+test_case_add_dict_hex_u32_values(void)
+{
+	int i = 0;
+	char name_of_value[8];
+
+	rte_tel_data_start_dict(&response_data);
+
+	for (i = 0; i < 3; i++) {
+		sprintf(name_of_value, "dict_%d", i);
+		rte_tel_data_add_dict_hex_u32_str(&response_data, name_of_value,
+						  0xfffffff0 + i);
+	}
+	return CHECK_OUTPUT("{\"dict_0\":\"0xfffffff0\",\"dict_1\":\"0xfffffff1\",\"dict_2\":\"0xfffffff2\"}");
+}
+
+static int
+test_case_add_dict_hex_u64_values(void)
+{
+	int i = 0;
+	char name_of_value[8];
+
+	rte_tel_data_start_dict(&response_data);
+
+	for (i = 0; i < 2; i++) {
+		sprintf(name_of_value, "dict_%d", i);
+		rte_tel_data_add_dict_hex_u64_str(&response_data, name_of_value,
+						  0xfffffffff0 + i);
+	}
+	return CHECK_OUTPUT("{\"dict_0\":\"0xfffffffff0\",\"dict_1\":\"0xfffffffff1\"}");
 }
 
 static int
@@ -509,16 +665,24 @@ telemetry_data_autotest(void)
 			test_case_add_dict_int,
 			test_case_add_dict_u32,
 			test_case_add_dict_u64,
+			test_case_array_hex_u32_str,
+			test_case_array_hex_u64_str,
 			test_case_add_dict_string,
+			test_case_add_dict_hex_u32_values,
+			test_case_add_dict_hex_u64_values,
 			test_dict_with_array_int_values,
 			test_dict_with_array_u32_values,
 			test_dict_with_array_u64_values,
 			test_dict_with_array_string_values,
+			test_case_dict_with_array_hex_u32_values,
+			test_case_dict_with_array_hex_u64_values,
 			test_dict_with_dict_values,
 			test_array_with_array_int_values,
 			test_array_with_array_u32_values,
 			test_array_with_array_u64_values,
 			test_array_with_array_string_values,
+			test_case_array_with_array_hex_u32_values,
+			test_case_array_with_array_hex_u64_values,
 			test_string_char_escaping,
 			test_array_char_escaping,
 			test_dict_char_escaping,
