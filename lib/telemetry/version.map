@@ -3,6 +3,11 @@ EXPERIMENTAL {
 
 	rte_tel_data_add_array_u32;
 	rte_tel_data_add_dict_u32;
+	rte_tel_data_add_array_hex_u32_str;
+	rte_tel_data_add_array_hex_u64_str;
+	rte_tel_data_add_dict_hex_u32_str;
+	rte_tel_data_add_dict_hex_u64_str;
+
 
 	local: *;
 };
