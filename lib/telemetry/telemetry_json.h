@@ -146,6 +146,19 @@ rte_tel_json_add_array_int(char *buf, const int len, const int used, int val)
 	return ret == 0 ? used : end + ret;
 }
 
+/* Appends a uint32_t into the JSON array in the provided buffer. */
+static inline int
+rte_tel_json_add_array_u32(char *buf, const int len, const int used,
+		uint32_t val)
+{
+	int ret, end = used - 1; /* strip off final delimiter */
+	if (used <= 2) /* assume empty, since minimum is '[]' */
+		return __json_snprintf(buf, len, "[%u]", val);
+
+	ret = __json_snprintf(buf + end, len - end, ",%u]", val);
+	return ret == 0 ? used : end + ret;
+}
+
 /* Appends a uint64_t into the JSON array in the provided buffer. */
 static inline int
 rte_tel_json_add_array_u64(char *buf, const int len, const int used,
@@ -172,6 +185,22 @@ rte_tel_json_add_array_json(char *buf, const int len, const int used,
 		return __json_snprintf(buf, len, "[%s]", str);
 
 	ret = __json_snprintf(buf + end, len - end, ",%s]", str);
+	return ret == 0 ? used : end + ret;
+}
+
+/**
+ * Add a new element with uint32_t value to the JSON object stored in the
+ * provided buffer.
+ */
+static inline int
+rte_tel_json_add_obj_u32(char *buf, const int len, const int used,
+		const char *name, uint32_t val)
+{
+	int ret, end = used - 1;
+	if (used <= 2) /* assume empty, since minimum is '{}' */
+		return __json_snprintf(buf, len, "{\"%s\":%u}", name, val);
+
+	ret = __json_snprintf(buf + end, len - end, ",\"%s\":%u}", name, val);
 	return ret == 0 ? used : end + ret;
 }
 
