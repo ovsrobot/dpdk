@@ -31,7 +31,25 @@ test_basic_array(void)
 }
 
 static int
-test_basic_obj(void)
+test_basic_obj_u32(void)
+{
+	const char *expected = "{\"weddings\":4,\"funerals\":1}";
+	char buf[1024];
+	int used = 0;
+
+	used = rte_tel_json_add_obj_u32(buf, sizeof(buf), used,
+		"weddings", 4);
+	used = rte_tel_json_add_obj_u32(buf, sizeof(buf), used,
+		"funerals", 1);
+
+	printf("%s: buf = '%s', expected = '%s'\n", __func__, buf, expected);
+	if (used != (int)strlen(expected))
+		return -1;
+	return strncmp(expected, buf, sizeof(buf));
+}
+
+static int
+test_basic_obj_u64(void)
 {
 	const char *expected = "{\"weddings\":4,\"funerals\":1}";
 	char buf[1024];
@@ -195,7 +213,8 @@ test_telemetry_json(void)
 	unsigned int i;
 	test_fn fns[] = {
 			test_basic_array,
-			test_basic_obj,
+			test_basic_obj_u32,
+			test_basic_obj_u64,
 			test_overflow_array,
 			test_overflow_obj,
 			test_large_array_element,
