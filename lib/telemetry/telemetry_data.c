@@ -15,14 +15,30 @@
 int
 rte_tel_data_start_array(struct rte_tel_data *d, enum rte_tel_value_type type)
 {
-	enum tel_container_types array_types[] = {
-			RTE_TEL_ARRAY_STRING, /* RTE_TEL_STRING_VAL = 0 */
-			RTE_TEL_ARRAY_INT,    /* RTE_TEL_INT_VAL = 1 */
-			RTE_TEL_ARRAY_U64,    /* RTE_TEL_U64_VAL = 2 */
-			RTE_TEL_ARRAY_CONTAINER, /* RTE_TEL_CONTAINER = 3 */
-			RTE_TEL_ARRAY_U32, /* RTE_TEL_U32_VAL = 4 */
+	struct {
+		enum rte_tel_value_type value_type;
+		enum tel_container_types array_type;
+	} value2array_types_map[] = {
+		{RTE_TEL_STRING_VAL, RTE_TEL_ARRAY_STRING},
+		{RTE_TEL_INT_VAL,    RTE_TEL_ARRAY_INT},
+		{RTE_TEL_U64_VAL,    RTE_TEL_ARRAY_U64},
+		{RTE_TEL_CONTAINER,  RTE_TEL_ARRAY_CONTAINER},
+		{RTE_TEL_U32_VAL,  RTE_TEL_ARRAY_U32},
 	};
-	d->type = array_types[type];
+	int array_types = -1;
+	uint16_t i;
+
+	for (i = 0; i < RTE_DIM(value2array_types_map); i++) {
+		if (type == value2array_types_map[i].value_type) {
+			array_types = value2array_types_map[i].array_type;
+			break;
+		}
+	}
+
+	if (array_types  == -1)
+		return -EINVAL;
+
+	d->type = array_types;
 	d->data_len = 0;
 	return 0;
 }
