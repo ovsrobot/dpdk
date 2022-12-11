@@ -15,6 +15,12 @@
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #endif
 
+#if RTE_IOVA_AS_PA
+	#define _PKT_DATA_OFF_U64(pkt) ((pkt)->buf_iova + (pkt)->data_off)
+#else
+	#define _PKT_DATA_OFF_U64(pkt) ((u64)(pkt)->buf_addr + (pkt)->data_off)
+#endif
+
 static __rte_always_inline uint16_t
 reassemble_packets(struct iavf_rx_queue *rxq, struct rte_mbuf **rx_bufs,
 		   uint16_t nb_bufs, uint8_t *split_flags)
@@ -421,9 +427,15 @@ iavf_rxq_rearm_common(struct iavf_rx_queue *rxq, __rte_unused bool avx512)
 		mb0 = rxp[0];
 		mb1 = rxp[1];
 
+#if RTE_IOVA_AS_PA
 		/* load buf_addr(lo 64bit) and buf_iova(hi 64bit) */
 		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, buf_iova) !=
 				offsetof(struct rte_mbuf, buf_addr) + 8);
+#else
+		/* load buf_addr(lo 64bit) and next(hi 64bit) */
+		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, next) !=
+				offsetof(struct rte_mbuf, buf_addr) + 8);
+#endif
 		vaddr0 = _mm_loadu_si128((__m128i *)&mb0->buf_addr);
 		vaddr1 = _mm_loadu_si128((__m128i *)&mb1->buf_addr);
 
