@@ -72,8 +72,14 @@ i40e_rxq_rearm(struct i40e_rx_queue *rxq)
 		}
 	}
 
+#if RTE_IOVA_AS_PA
 	const __m512i iova_offsets =  _mm512_set1_epi64
 		(offsetof(struct rte_mbuf, buf_iova));
+#else
+	const __m512i iova_offsets =  _mm512_set1_epi64
+		(offsetof(struct rte_mbuf, buf_addr));
+#endif
+
 	const __m512i headroom = _mm512_set1_epi64(RTE_PKTMBUF_HEADROOM);
 
 #ifndef RTE_LIBRTE_I40E_16BYTE_RX_DESC
@@ -993,8 +999,7 @@ vtx1(volatile struct i40e_tx_desc *txdp, struct rte_mbuf *pkt, uint64_t flags)
 		((uint64_t)flags  << I40E_TXD_QW1_CMD_SHIFT) |
 		((uint64_t)pkt->data_len << I40E_TXD_QW1_TX_BUF_SZ_SHIFT));
 
-	__m128i descriptor = _mm_set_epi64x(high_qw,
-				pkt->buf_iova + pkt->data_off);
+	__m128i descriptor = _mm_set_epi64x(high_qw, _PKT_DATA_OFF_U64(pkt));
 	_mm_store_si128((__m128i *)txdp, descriptor);
 }
 
@@ -1025,10 +1030,10 @@ vtx(volatile struct i40e_tx_desc *txdp,
 
 		__m512i desc0_3 =
 			_mm512_set_epi64
-			(hi_qw3, pkt[3]->buf_iova + pkt[3]->data_off,
-			hi_qw2, pkt[2]->buf_iova + pkt[2]->data_off,
-			hi_qw1, pkt[1]->buf_iova + pkt[1]->data_off,
-			hi_qw0, pkt[0]->buf_iova + pkt[0]->data_off);
+			(hi_qw3, _PKT_DATA_OFF_U64(pkt[3]),
+			hi_qw2, _PKT_DATA_OFF_U64(pkt[2]),
+			hi_qw1, _PKT_DATA_OFF_U64(pkt[1]),
+			hi_qw0, _PKT_DATA_OFF_U64(pkt[0]));
 		_mm512_storeu_si512((void *)txdp, desc0_3);
 	}
 

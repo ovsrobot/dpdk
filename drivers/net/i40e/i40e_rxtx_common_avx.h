@@ -15,6 +15,12 @@
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #endif
 
+#if RTE_IOVA_AS_PA
+	#define _PKT_DATA_OFF_U64(pkt) ((pkt)->buf_iova + (pkt)->data_off)
+#else
+	#define _PKT_DATA_OFF_U64(pkt) ((u64)(pkt)->buf_addr + (pkt)->data_off)
+#endif
+
 #ifdef __AVX2__
 static __rte_always_inline void
 i40e_rxq_rearm_common(struct i40e_rx_queue *rxq, __rte_unused bool avx512)
@@ -57,9 +63,15 @@ i40e_rxq_rearm_common(struct i40e_rx_queue *rxq, __rte_unused bool avx512)
 		mb0 = rxep[0].mbuf;
 		mb1 = rxep[1].mbuf;
 
+#if RTE_IOVA_AS_PA
 		/* load buf_addr(lo 64bit) and buf_iova(hi 64bit) */
 		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, buf_iova) !=
 				offsetof(struct rte_mbuf, buf_addr) + 8);
+#else
+		/* load buf_addr(lo 64bit) and next(hi 64bit) */
+		RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, next) !=
+				offsetof(struct rte_mbuf, buf_addr) + 8);
+#endif
 		vaddr0 = _mm_loadu_si128((__m128i *)&mb0->buf_addr);
 		vaddr1 = _mm_loadu_si128((__m128i *)&mb1->buf_addr);
 
