@@ -821,8 +821,7 @@ ice_vtx1(volatile struct ice_tx_desc *txdp,
 	if (offload)
 		ice_txd_enable_offload(pkt, &high_qw);
 
-	__m128i descriptor = _mm_set_epi64x(high_qw,
-				pkt->buf_iova + pkt->data_off);
+	__m128i descriptor = _mm_set_epi64x(high_qw, _PKT_DATA_OFF_U64(pkt));
 	_mm_store_si128((__m128i *)txdp, descriptor);
 }
 
@@ -869,15 +868,15 @@ ice_vtx(volatile struct ice_tx_desc *txdp,
 		__m256i desc2_3 =
 			_mm256_set_epi64x
 				(hi_qw3,
-				 pkt[3]->buf_iova + pkt[3]->data_off,
+				 _PKT_DATA_OFF_U64(pkt[3]),
 				 hi_qw2,
-				 pkt[2]->buf_iova + pkt[2]->data_off);
+				 _PKT_DATA_OFF_U64(pkt[2]));
 		__m256i desc0_1 =
 			_mm256_set_epi64x
 				(hi_qw1,
-				 pkt[1]->buf_iova + pkt[1]->data_off,
+				 _PKT_DATA_OFF_U64(pkt[1]),
 				 hi_qw0,
-				 pkt[0]->buf_iova + pkt[0]->data_off);
+				 _PKT_DATA_OFF_U64(pkt[0]));
 		_mm256_store_si256((void *)(txdp + 2), desc2_3);
 		_mm256_store_si256((void *)txdp, desc0_1);
 	}
