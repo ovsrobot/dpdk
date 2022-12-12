@@ -13,6 +13,7 @@ headers = files(
 
 sources = files(
         'ml_utils.c',
+        'ml_utils_scalar.c',
 )
 
 deps += ['mldev']
