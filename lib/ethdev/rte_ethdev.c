@@ -6068,12 +6068,13 @@ eth_dev_handle_port_info(const char *cmd __rte_unused,
 	rte_tel_data_add_dict_container(d, "rxq_state", rxq_state, 0);
 	rte_tel_data_add_dict_container(d, "txq_state", txq_state, 0);
 	rte_tel_data_add_dict_int(d, "numa_node", eth_dev->data->numa_node);
-	rte_tel_data_add_dict_u32(d, "dev_flags", eth_dev->data->dev_flags);
-	rte_tel_data_add_dict_u64(d, "rx_offloads",
+	rte_tel_data_add_dict_hex_u32_str(d, "dev_flags",
+			eth_dev->data->dev_flags);
+	rte_tel_data_add_dict_hex_u64_str(d, "rx_offloads",
 			eth_dev->data->dev_conf.rxmode.offloads);
-	rte_tel_data_add_dict_u64(d, "tx_offloads",
+	rte_tel_data_add_dict_hex_u64_str(d, "tx_offloads",
 			eth_dev->data->dev_conf.txmode.offloads);
-	rte_tel_data_add_dict_u64(d, "ethdev_rss_hf",
+	rte_tel_data_add_dict_hex_u64_str(d, "ethdev_rss_hf",
 			eth_dev->data->dev_conf.rx_adv_conf.rss_conf.rss_hf);
 
 	return 0;
