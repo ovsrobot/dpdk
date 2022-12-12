@@ -167,8 +167,9 @@ container_to_json(const struct rte_tel_data *d, char *out_buf, size_t buf_len)
 	size_t used = 0;
 	unsigned int i;
 
-	if (d->type != RTE_TEL_DICT && d->type != RTE_TEL_ARRAY_U64 &&
-		d->type != RTE_TEL_ARRAY_INT && d->type != RTE_TEL_ARRAY_STRING)
+	if (d->type != RTE_TEL_DICT && d->type != RTE_TEL_ARRAY_U32 &&
+	    d->type != RTE_TEL_ARRAY_U64 && d->type != RTE_TEL_ARRAY_INT &&
+	    d->type != RTE_TEL_ARRAY_STRING)
 		return snprintf(out_buf, buf_len, "null");
 
 	used = rte_tel_json_empty_array(out_buf, buf_len, 0);
@@ -177,6 +178,11 @@ container_to_json(const struct rte_tel_data *d, char *out_buf, size_t buf_len)
 			used = rte_tel_json_add_array_u64(out_buf,
 				buf_len, used,
 				d->data.array[i].u64val);
+	if (d->type == RTE_TEL_ARRAY_U32)
+		for (i = 0; i < d->data_len; i++)
+			used = rte_tel_json_add_array_u32(out_buf,
+				buf_len, used,
+				d->data.array[i].u32val);
 	if (d->type == RTE_TEL_ARRAY_INT)
 		for (i = 0; i < d->data_len; i++)
 			used = rte_tel_json_add_array_int(out_buf,
@@ -200,6 +206,11 @@ container_to_json(const struct rte_tel_data *d, char *out_buf, size_t buf_len)
 				used = rte_tel_json_add_obj_int(out_buf,
 						buf_len, used,
 						v->name, v->value.ival);
+				break;
+			case RTE_TEL_U32_VAL:
+				used = rte_tel_json_add_obj_u32(out_buf,
+						buf_len, used,
+						v->name, v->value.u32val);
 				break;
 			case RTE_TEL_U64_VAL:
 				used = rte_tel_json_add_obj_u64(out_buf,
@@ -268,6 +279,11 @@ output_json(const char *cmd, const struct rte_tel_data *d, int s)
 						buf_len, used,
 						v->name, v->value.ival);
 				break;
+			case RTE_TEL_U32_VAL:
+				used = rte_tel_json_add_obj_u32(cb_data_buf,
+						buf_len, used,
+						v->name, v->value.u32val);
+				break;
 			case RTE_TEL_U64_VAL:
 				used = rte_tel_json_add_obj_u64(cb_data_buf,
 						buf_len, used,
@@ -293,6 +309,7 @@ output_json(const char *cmd, const struct rte_tel_data *d, int s)
 
 	case RTE_TEL_ARRAY_STRING:
 	case RTE_TEL_ARRAY_INT:
+	case RTE_TEL_ARRAY_U32:
 	case RTE_TEL_ARRAY_U64:
 	case RTE_TEL_ARRAY_CONTAINER:
 		used = rte_tel_json_empty_array(cb_data_buf, buf_len, 0);
@@ -306,6 +323,10 @@ output_json(const char *cmd, const struct rte_tel_data *d, int s)
 				used = rte_tel_json_add_array_int(cb_data_buf,
 						buf_len, used,
 						d->data.array[i].ival);
+			else if (d->type == RTE_TEL_ARRAY_U32)
+				used = rte_tel_json_add_array_u32(cb_data_buf,
+						buf_len, used,
+						d->data.array[i].u32val);
 			else if (d->type == RTE_TEL_ARRAY_U64)
 				used = rte_tel_json_add_array_u64(cb_data_buf,
 						buf_len, used,

@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <rte_compat.h>
 
 /** Maximum length for string used in object. */
 #define RTE_TEL_MAX_STRING_LEN 128
@@ -44,6 +45,7 @@ enum rte_tel_value_type {
 	RTE_TEL_INT_VAL,    /** a signed 32-bit int value */
 	RTE_TEL_U64_VAL,    /** an unsigned 64-bit int value */
 	RTE_TEL_CONTAINER, /** a container struct */
+	RTE_TEL_U32_VAL,    /** an unsigned 32-bit int value */
 };
 
 /**
@@ -118,6 +120,21 @@ int
 rte_tel_data_add_array_int(struct rte_tel_data *d, int x);
 
 /**
+ * Add a uint32_t to an array.
+ * The array must have been started by rte_tel_data_start_array() with
+ * RTE_TEL_U32_VAL as the type parameter.
+ *
+ * @param d
+ *   The data structure passed to the callback
+ * @param x
+ *   The number to be returned in the array
+ * @return
+ *   0 on success, negative errno on error
+ */
+__rte_experimental
+int rte_tel_data_add_array_u32(struct rte_tel_data *d, uint32_t x);
+
+/**
  * Add a uint64_t to an array.
  * The array must have been started by rte_tel_data_start_array() with
  * RTE_TEL_U64_VAL as the type parameter.
@@ -188,6 +205,24 @@ rte_tel_data_add_dict_string(struct rte_tel_data *d, const char *name,
  */
 int
 rte_tel_data_add_dict_int(struct rte_tel_data *d, const char *name, int val);
+
+/**
+ * Add a uint32_t value to a dictionary.
+ * The dict must have been started by rte_tel_data_start_dict().
+ *
+ * @param d
+ *   The data structure passed to the callback
+ * @param name
+ *   The name the value is to be stored under in the dict
+ *   Must contain only alphanumeric characters or the symbols: '_' or '/'
+ * @param val
+ *   The number to be stored in the dict
+ * @return
+ *   0 on success, negative errno on error, E2BIG on string truncation of name.
+ */
+__rte_experimental
+int rte_tel_data_add_dict_u32(struct rte_tel_data *d,
+		const char *name, uint32_t val);
 
 /**
  * Add a uint64_t value to a dictionary.
