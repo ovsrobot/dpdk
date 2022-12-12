@@ -6,6 +6,7 @@ cflags += ['-Wno-strict-aliasing']
 
 includes += include_directories('../../common/iavf')
 deps += ['common_iavf', 'security', 'cryptodev']
+iova_as_pa = dpdk_conf.get('RTE_IOVA_AS_PA')
 
 sources = files(
         'iavf_ethdev.c',
@@ -32,7 +33,7 @@ if arch_subdir == 'x86'
     if cc.get_define('__AVX2__', args: machine_args) != ''
         cflags += ['-DCC_AVX2_SUPPORT']
         sources += files('iavf_rxtx_vec_avx2.c')
-    elif cc.has_argument('-mavx2')
+    elif iova_as_pa == 1 and cc.has_argument('-mavx2')
         cflags += ['-DCC_AVX2_SUPPORT']
         iavf_avx2_lib = static_library('iavf_avx2_lib',
                 'iavf_rxtx_vec_avx2.c',
@@ -52,7 +53,7 @@ if arch_subdir == 'x86'
         cc.has_argument('-mavx512f') and
         cc.has_argument('-mavx512bw'))
 
-    if iavf_avx512_cpu_support == true or iavf_avx512_cc_support == true
+    if iova_as_pa == 1 and (iavf_avx512_cpu_support == true or iavf_avx512_cc_support == true)
         cflags += ['-DCC_AVX512_SUPPORT']
         avx512_args = [cflags, '-mavx512f', '-mavx512bw']
         if cc.has_argument('-march=skylake-avx512')
