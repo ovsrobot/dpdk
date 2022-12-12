@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #undef RTE_USE_LIBBSD
 #include <stdbool.h>
@@ -11,6 +12,9 @@
 #include <rte_string_fns.h>
 
 #include "telemetry_data.h"
+
+/* The string length is equal to (sizeof(uint64_t) * 2 + 3) */
+#define RTE_TEL_HEX_UINT_MAX_STRING_LEN 19
 
 int
 rte_tel_data_start_array(struct rte_tel_data *d, enum rte_tel_value_type type)
@@ -124,6 +128,26 @@ rte_tel_data_add_array_container(struct rte_tel_data *d,
 	d->data.array[d->data_len].container.data = val;
 	d->data.array[d->data_len++].container.keep = !!keep;
 	return 0;
+}
+
+int
+rte_tel_data_add_array_hex_u32_str(struct rte_tel_data *d, uint32_t x)
+{
+	char hex_str[RTE_TEL_HEX_UINT_MAX_STRING_LEN];
+
+	snprintf(hex_str, RTE_TEL_HEX_UINT_MAX_STRING_LEN, "0x%x", x);
+
+	return rte_tel_data_add_array_string(d, hex_str);
+}
+
+int
+rte_tel_data_add_array_hex_u64_str(struct rte_tel_data *d, uint64_t x)
+{
+	char hex_str[RTE_TEL_HEX_UINT_MAX_STRING_LEN];
+
+	snprintf(hex_str, RTE_TEL_HEX_UINT_MAX_STRING_LEN, "0x%"PRIx64"", x);
+
+	return rte_tel_data_add_array_string(d, hex_str);
 }
 
 static bool
@@ -252,6 +276,28 @@ rte_tel_data_add_dict_container(struct rte_tel_data *d, const char *name,
 	e->value.container.keep = !!keep;
 	const size_t bytes = strlcpy(e->name, name, RTE_TEL_MAX_STRING_LEN);
 	return bytes < RTE_TEL_MAX_STRING_LEN ? 0 : E2BIG;
+}
+
+int
+rte_tel_data_add_dict_hex_u32_str(struct rte_tel_data *d, const char *name,
+				  uint32_t val)
+{
+	char hex_str[RTE_TEL_HEX_UINT_MAX_STRING_LEN];
+
+	snprintf(hex_str, RTE_TEL_HEX_UINT_MAX_STRING_LEN, "0x%x", val);
+
+	return rte_tel_data_add_dict_string(d, name, hex_str);
+}
+
+int
+rte_tel_data_add_dict_hex_u64_str(struct rte_tel_data *d, const char *name,
+				  uint64_t val)
+{
+	char hex_str[RTE_TEL_HEX_UINT_MAX_STRING_LEN];
+
+	snprintf(hex_str, RTE_TEL_HEX_UINT_MAX_STRING_LEN, "0x%"PRIx64"", val);
+
+	return rte_tel_data_add_dict_string(d, name, hex_str);
 }
 
 struct rte_tel_data *

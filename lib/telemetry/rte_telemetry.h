@@ -171,6 +171,38 @@ rte_tel_data_add_array_container(struct rte_tel_data *d,
 		struct rte_tel_data *val, int keep);
 
 /**
+ * Convert a uint32_t to hexadecimal encoded strings and add this string
+ * to an array.
+ * The array must have been started by rte_tel_data_start_array() with
+ * RTE_TEL_STRING_VAL as the type parameter.
+ *
+ * @param d
+ *   The data structure passed to the callback
+ * @param x
+ *   The number to be returned in the array as a hexadecimal encoded strings
+ * @return
+ *   0 on success, negative errno on error
+ */
+__rte_experimental
+int rte_tel_data_add_array_hex_u32_str(struct rte_tel_data *d, uint32_t x);
+
+/**
+ * Convert a uint64_t to hexadecimal encoded strings and add this string
+ * to an array.
+ * The array must have been started by rte_tel_data_start_array() with
+ * RTE_TEL_STRING_VAL as the type parameter.
+ *
+ * @param d
+ *   The data structure passed to the callback
+ * @param x
+ *   The number to be returned in the array as a hexadecimal encoded strings
+ * @return
+ *   0 on success, negative errno on error
+ */
+__rte_experimental
+int rte_tel_data_add_array_hex_u64_str(struct rte_tel_data *d, uint64_t x);
+
+/**
  * Add a string value to a dictionary.
  * The dict must have been started by rte_tel_data_start_dict().
  *
@@ -265,6 +297,46 @@ rte_tel_data_add_dict_u64(struct rte_tel_data *d,
 int
 rte_tel_data_add_dict_container(struct rte_tel_data *d, const char *name,
 		struct rte_tel_data *val, int keep);
+
+/**
+ * Convert a uint32_t to hexadecimal encoded strings and add this string
+ * to a dictionary.
+ * The dict must have been started by rte_tel_data_start_dict().
+ *
+ * @param d
+ *   The data structure passed to the callback
+ * @param name
+ *   The name the value is to be stored under in the dict
+ *   Must contain only alphanumeric characters or the symbols: '_' or '/'
+ * @param val
+ *   The number to be stored in the dict as a hexadecimal encoded strings
+ * @return
+ *   0 on success, negative errno on error, E2BIG on string truncation of
+ *   either name or value.
+ */
+__rte_experimental
+int rte_tel_data_add_dict_hex_u32_str(struct rte_tel_data *d,
+				      const char *name, uint32_t val);
+
+/**
+ * Convert a uint64_t to hexadecimal encoded strings and add this string
+ * to a dictionary.
+ * The dict must have been started by rte_tel_data_start_dict().
+ *
+ * @param d
+ *   The data structure passed to the callback
+ * @param name
+ *   The name the value is to be stored under in the dict
+ *   Must contain only alphanumeric characters or the symbols: '_' or '/'
+ * @param val
+ *   The number to be stored in the dict as a hexadecimal encoded strings
+ * @return
+ *   0 on success, negative errno on error, E2BIG on string truncation of
+ *   either name or value.
+ */
+__rte_experimental
+int rte_tel_data_add_dict_hex_u64_str(struct rte_tel_data *d,
+				      const char *name, uint64_t val);
 
 /**
  * This telemetry callback is used when registering a telemetry command.
