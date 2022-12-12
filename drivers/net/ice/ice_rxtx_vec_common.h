@@ -11,6 +11,12 @@
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #endif
 
+#if RTE_IOVA_AS_PA
+#define _PKT_DATA_OFF_AS_U64(pkt) ((pkt)->buf_iova + (pkt)->data_off)
+#else
+#define _PKT_DATA_OFF_AS_U64(pkt) ((u64)(pkt)->buf_addr + (pkt)->data_off)
+#endif
+
 static inline uint16_t
 ice_rx_reassemble_packets(struct ice_rx_queue *rxq, struct rte_mbuf **rx_bufs,
 			  uint16_t nb_bufs, uint8_t *split_flags)
