@@ -20,6 +20,7 @@ testpmd_sources = files('ice_testpmd.c')
 
 deps += ['hash', 'net', 'common_iavf']
 includes += include_directories('base', '../../common/iavf')
+iova_as_pa = dpdk_conf.get('RTE_IOVA_AS_PA')
 
 if arch_subdir == 'x86'
     sources += files('ice_rxtx_vec_sse.c')
@@ -34,7 +35,7 @@ if arch_subdir == 'x86'
     if cc.get_define('__AVX2__', args: machine_args) != ''
         cflags += ['-DCC_AVX2_SUPPORT']
         sources += files('ice_rxtx_vec_avx2.c')
-    elif cc.has_argument('-mavx2')
+    elif iova_as_pa == 1 and cc.has_argument('-mavx2')
         cflags += ['-DCC_AVX2_SUPPORT']
         ice_avx2_lib = static_library('ice_avx2_lib',
                 'ice_rxtx_vec_avx2.c',
@@ -55,7 +56,7 @@ if arch_subdir == 'x86'
                 cc.has_argument('-mavx512bw')
     )
 
-    if ice_avx512_cpu_support == true or ice_avx512_cc_support == true
+    if iova_as_pa == 1 and (ice_avx512_cpu_support == true or ice_avx512_cc_support == true)
         cflags += ['-DCC_AVX512_SUPPORT']
         avx512_args = [cflags, '-mavx512f', '-mavx512bw']
         if cc.has_argument('-march=skylake-avx512')
