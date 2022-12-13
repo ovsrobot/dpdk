@@ -442,6 +442,7 @@ EXPERIMENTAL {
 	rte_thread_join;
 
 	# added in 23.03
+	__rte_eal_trace_pmu_read; # WINDOWS_NO_EXPORT
 	rte_pmu; # WINDOWS_NO_EXPORT
 	rte_pmu_add_event; # WINDOWS_NO_EXPORT
 	rte_pmu_read; # WINDOWS_NO_EXPORT

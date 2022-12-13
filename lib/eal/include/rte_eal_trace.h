@@ -17,6 +17,7 @@ extern "C" {
 
 #include <rte_alarm.h>
 #include <rte_interrupts.h>
+#include <rte_pmu.h>
 #include <rte_trace_point.h>
 
 #include "eal_interrupts.h"
@@ -277,6 +278,16 @@ RTE_TRACE_POINT(
 	RTE_TRACE_POINT_ARGS(unsigned int lcore_id, const char *cpuset),
 	rte_trace_point_emit_u32(lcore_id);
 	rte_trace_point_emit_string(cpuset);
+)
+
+/* PMU */
+RTE_TRACE_POINT_FP(
+	rte_eal_trace_pmu_read,
+	RTE_TRACE_POINT_ARGS(int index),
+	uint64_t val;
+	rte_trace_point_emit_int(index);
+	val = rte_pmu_read(index);
+	rte_trace_point_emit_u64(val);
 )
 
 #ifdef __cplusplus
