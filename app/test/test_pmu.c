@@ -15,6 +15,8 @@ test_pmu_read(void)
 
 #if defined(RTE_ARCH_ARM64)
 	event = rte_pmu_add_event("cpu_cycles");
+#elif defined(RTE_ARCH_X86_64)
+	event = rte_pmu_add_event("cpu-cycles");
 #endif
 
 	while (tries--)

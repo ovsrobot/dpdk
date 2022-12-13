@@ -9,6 +9,7 @@ arch_headers = files(
         'rte_io.h',
         'rte_memcpy.h',
         'rte_pause.h',
+        'rte_pmu_pmc.h',
         'rte_power_intrinsics.h',
         'rte_prefetch.h',
         'rte_rtm.h',
