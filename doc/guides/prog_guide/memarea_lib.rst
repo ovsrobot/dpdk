@@ -43,6 +43,9 @@ The ``rte_memarea_refcnt_update()`` function is used to update the memory
 object's reference count, if the count reaches zero, the memory object will
 be freed to memarea.
 
++The ``rte_memarea_dump()`` function is used to dump the internal information
++of a memarea.
+
 Reference
 ---------
 
