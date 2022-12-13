@@ -37,6 +37,7 @@ Programmer's Guide
     hash_lib
     toeplitz_hash_lib
     efd_lib
+    memarea_lib
     member_lib
     lpm_lib
     lpm6_lib

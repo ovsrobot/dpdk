@@ -369,6 +369,7 @@ static const struct logtype logtype_strings[] = {
 	{RTE_LOGTYPE_EFD,        "lib.efd"},
 	{RTE_LOGTYPE_EVENTDEV,   "lib.eventdev"},
 	{RTE_LOGTYPE_GSO,        "lib.gso"},
+	{RTE_LOGTYPE_MEMAREA,    "lib.memarea"},
 	{RTE_LOGTYPE_USER1,      "user1"},
 	{RTE_LOGTYPE_USER2,      "user2"},
 	{RTE_LOGTYPE_USER3,      "user3"},
