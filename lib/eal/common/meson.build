@@ -38,6 +38,9 @@ sources += files(
         'rte_service.c',
         'rte_version.c',
 )
+if is_linux
+    sources += files('rte_pmu.c')
+endif
 if is_linux or is_windows
     sources += files('eal_common_dynmem.c')
 endif
