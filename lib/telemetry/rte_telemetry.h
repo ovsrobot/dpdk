@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <rte_compat.h>
 
 /** Maximum length for string used in object. */
 #define RTE_TEL_MAX_STRING_LEN 128
@@ -19,6 +20,11 @@ extern "C" {
 #define RTE_TEL_MAX_DICT_ENTRIES 256
 /** Maximum number of array entries. */
 #define RTE_TEL_MAX_ARRAY_ENTRIES 512
+
+#define RTE_TEL_U8_BITS  8
+#define RTE_TEL_U16_BITS 16
+#define RTE_TEL_U32_BITS 32
+#define RTE_TEL_U64_BITS 64
 
 /**
  * @file
@@ -154,6 +160,27 @@ rte_tel_data_add_array_container(struct rte_tel_data *d,
 		struct rte_tel_data *val, int keep);
 
 /**
+ * Convert a unsigned integer to hexadecimal encoded strings and add this string
+ * to an array.
+ * The array must have been started by rte_tel_data_start_array() with
+ * RTE_TEL_STRING_VAL as the type parameter.
+ *
+ * @param d
+ *   The data structure passed to the callback
+ * @param val
+ *   The number to be returned in the array as a hexadecimal encoded strings.
+ *   The type of ''val' can be one of uint8_t, uint16_t, uint32_t and uint64_t.
+ * @param val_bits
+ *   The total bits of the input 'val'. If val_bits is zero, the value is stored
+ *   in the array as hexadecimal encoded string without padding zero.
+ * @return
+ *   0 on success, negative errno on error
+ */
+__rte_experimental
+int rte_tel_data_add_array_uint_hex(struct rte_tel_data *d, uint64_t val,
+				    uint16_t val_bits);
+
+/**
  * Add a string value to a dictionary.
  * The dict must have been started by rte_tel_data_start_dict().
  *
@@ -230,6 +257,29 @@ rte_tel_data_add_dict_u64(struct rte_tel_data *d,
 int
 rte_tel_data_add_dict_container(struct rte_tel_data *d, const char *name,
 		struct rte_tel_data *val, int keep);
+
+/**
+ * Convert a unsigned integer to hexadecimal encoded strings and add this string
+ * to an dictionary.
+ * The dict must have been started by rte_tel_data_start_dict().
+ *
+ * @param d
+ *   The data structure passed to the callback
+ * @param name
+ *   The name of the value is to be stored in the dict
+ *   Must contain only alphanumeric characters or the symbols: '_' or '/'
+ * @param val
+ *   The number to be stored in the dict as a hexadecimal encoded strings.
+ *   The type of ''val' can be one of uint8_t, uint16_t, uint32_t and uint64_t.
+ * @param val_bits
+ *   The total bits of the input 'val'. If val_bits is zero, the value is stored
+ *   in the array as hexadecimal encoded string without padding zero.
+ * @return
+ *   0 on success, negative errno on error
+ */
+__rte_experimental
+int rte_tel_data_add_dict_uint_hex(struct rte_tel_data *d, const char *name,
+				   uint64_t val, uint16_t val_bits);
 
 /**
  * This telemetry callback is used when registering a telemetry command.

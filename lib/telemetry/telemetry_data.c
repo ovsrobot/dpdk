@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #undef RTE_USE_LIBBSD
 #include <stdbool.h>
@@ -11,6 +12,9 @@
 #include <rte_string_fns.h>
 
 #include "telemetry_data.h"
+
+#define RTE_TEL_UINT_HEX_STRING_BUFFER_LEN 64
+#define RTE_TEL_UINT_HEX_FORMAT_LEN 16
 
 int
 rte_tel_data_start_array(struct rte_tel_data *d, enum rte_tel_value_type type)
@@ -111,6 +115,33 @@ rte_tel_data_add_array_container(struct rte_tel_data *d,
 	d->data.array[d->data_len].container.data = val;
 	d->data.array[d->data_len++].container.keep = !!keep;
 	return 0;
+}
+
+int
+rte_tel_data_add_array_uint_hex(struct rte_tel_data *d, uint64_t val,
+				uint16_t val_bits)
+{
+	char hex_str[RTE_TEL_UINT_HEX_STRING_BUFFER_LEN];
+
+	switch (val_bits) {
+	case RTE_TEL_U8_BITS:
+		sprintf(hex_str, "0x%02"PRIx64"", val);
+		break;
+	case RTE_TEL_U16_BITS:
+		sprintf(hex_str, "0x%04"PRIx64"", val);
+		break;
+	case RTE_TEL_U32_BITS:
+		sprintf(hex_str, "0x%08"PRIx64"", val);
+		break;
+	case RTE_TEL_U64_BITS:
+		sprintf(hex_str, "0x%016"PRIx64"", val);
+		break;
+	default:
+		sprintf(hex_str, "0x%"PRIx64"", val);
+		break;
+	}
+
+	return rte_tel_data_add_array_string(d, hex_str);
 }
 
 static bool
@@ -218,6 +249,33 @@ rte_tel_data_add_dict_container(struct rte_tel_data *d, const char *name,
 	e->value.container.keep = !!keep;
 	const size_t bytes = strlcpy(e->name, name, RTE_TEL_MAX_STRING_LEN);
 	return bytes < RTE_TEL_MAX_STRING_LEN ? 0 : E2BIG;
+}
+
+int
+rte_tel_data_add_dict_uint_hex(struct rte_tel_data *d, const char *name,
+			       uint64_t val, uint16_t val_bits)
+{
+	char hex_str[RTE_TEL_UINT_HEX_STRING_BUFFER_LEN];
+
+	switch (val_bits) {
+	case RTE_TEL_U8_BITS:
+		sprintf(hex_str, "0x%02"PRIx64"", val);
+		break;
+	case RTE_TEL_U16_BITS:
+		sprintf(hex_str, "0x%04"PRIx64"", val);
+		break;
+	case RTE_TEL_U32_BITS:
+		sprintf(hex_str, "0x%08"PRIx64"", val);
+		break;
+	case RTE_TEL_U64_BITS:
+		sprintf(hex_str, "0x%016"PRIx64"", val);
+		break;
+	default:
+		sprintf(hex_str, "0x%"PRIx64"", val);
+		break;
+	}
+
+	return rte_tel_data_add_dict_string(d, name, hex_str);
 }
 
 struct rte_tel_data *
