@@ -28,6 +28,9 @@ struct rte_memarea {
 	void                    *area_addr;
 	struct memarea_elem_list elem_list;
 	struct memarea_elem_list free_list;
+
+	uint64_t alloc_fails;
+	uint64_t refcnt_check_fails;
 } __rte_cache_aligned;
 
 #endif /* MEMAREA_PRIVATE_H */

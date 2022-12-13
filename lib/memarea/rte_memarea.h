@@ -117,6 +117,80 @@ struct rte_memarea *rte_memarea_create(const struct rte_memarea_param *init);
 __rte_experimental
 void rte_memarea_destroy(struct rte_memarea *ma);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Allocate memory from memarea.
+ *
+ * Allocate one memory object from the memarea.
+ *
+ * @param ma
+ *   The pointer of memarea.
+ * @param size
+ *   The memory size to be allocated.
+ * @param cookie
+ *   User-provided footprint which could used to debug memory leak.
+ *
+ * @return
+ *   - NULL on error. Not enough memory, or invalid arguments (ma is NULL,
+ *     size is 0).
+ *   - Otherwise, the pointer to the allocated object.
+ */
+__rte_experimental
+void *rte_memarea_alloc(struct rte_memarea *ma, size_t size, uint32_t cookie);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Free memory to memarea.
+ *
+ * Free one memory object to the memarea. If the object's refcnt is greater
+ * than one, only the refcnt is decremented by one. Otherwise the object is
+ * released.
+ * @note The memory object must have been returned by a previous call to
+ * rte_memarea_alloc(), if it is allocated from memarea-A, it must be freed to
+ * the same memarea-A. The behaviour of rte_memarea_free() is undefined if the
+ * memarea or pointer does not match these requirements.
+ *
+ * @param ma
+ *   The pointer of memarea. If the ma is NULL, the function does nothing.
+ * @param ptr
+ *   The pointer of memory object which need be freed. If the pointer is NULL,
+ *   the function does nothing.
+ */
+__rte_experimental
+void rte_memarea_free(struct rte_memarea *ma, void *ptr);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Update memory's refcnt.
+ *
+ * Update one memory object's refcnt. When refcnt is updated to be zero, the
+ * memory object is freed.
+ *
+ * @note The memory object must have been returned by a previous call to
+ * rte_memarea_alloc(), if it is allocated from memarea-A, the refcnt update
+ * must be operated to the same memarea-A. The behaviour of
+ * rte_memarea_refcnt_update() is undefined if the memarea or pointer does not
+ * match these requirements.
+ *
+ * @note If the memory object's refcnt updated to be lower than zero, an error
+ * message will be printed, and the memory object will not freed to memrea.
+ *
+ * @param ma
+ *   The pointer of memarea.
+ * @param ptr
+ *   The pointer of memory object which need be updated refcnt.
+ * @param value
+ *   The value which need be updated.
+ */
+__rte_experimental
+void rte_memarea_refcnt_update(struct rte_memarea *ma, void *ptr, int32_t value);
+
 #ifdef __cplusplus
 }
 #endif
