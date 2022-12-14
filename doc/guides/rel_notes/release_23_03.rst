@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Intel QuickAssist Technology (QAT) crypto driver.**
+
+  * Added Asymmetric Crypto support for GEN3.
 
 Removed Items
 -------------
