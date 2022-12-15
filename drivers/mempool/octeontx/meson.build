@@ -13,3 +13,4 @@ sources = files(
 )
 
 deps += ['mbuf', 'bus_pci', 'common_octeontx']
+pmd_supports_disable_iova_as_pa = true

@@ -9,3 +9,4 @@ if not is_linux or not dpdk_conf.get('RTE_ARCH_64')
 endif
 
 sources = files('octeontx_mbox.c')
+pmd_supports_disable_iova_as_pa = true
