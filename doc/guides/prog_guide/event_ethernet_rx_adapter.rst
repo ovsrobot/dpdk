@@ -71,6 +71,24 @@ set to true. The function is passed the event device to be associated with
 the adapter and port configuration for the adapter to setup an event port
 if the adapter needs to use a service function.
 
+Event device configuration for service based adapter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When rte_event_eth_rx_adapter_create() or
+rte_event_eth_rx_adapter_create_with_params() is used for creating
+adapter instance, eventdev is reconfigured with additional
+``rte_event_dev_config::nb_event_ports`` parameter.
+This eventdev reconfig logic also increment the
+``rte_event_dev_config::nb_single_link_event_port_queues``
+parameter if the adapter event port config is of type
+``RTE_EVENT_PORT_CFG_SINGLE_LINK``.
+
+So the application is no longer need to configure the
+event device with ``rte_event_dev_config::nb_event_ports`` and
+``rte_event_dev_config::nb_single_link_event_port_queues``
+parameters required for eth_rx adapter when the adapter is created
+using above mentioned apis.
+
 Adding Rx Queues to the Adapter Instance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
