@@ -212,6 +212,19 @@ typedef int (*rte_event_timer_adapter_port_conf_cb_t)(uint16_t id,
  *
  * This function must be invoked first before any other function in the API.
  *
+ * When this API is used for creating adapter instance, eventdev is
+ * reconfigured with additional ``rte_event_dev_config::nb_event_ports``
+ * parameter during service initialization. This eventdev reconfig logic also
+ * increment the ``rte_event_dev_config::nb_single_link_event_port_queues``
+ * parameter if the adapter event port config is of type
+ * ``RTE_EVENT_PORT_CFG_SINGLE_LINK``.
+ *
+ * So the application is no longer need to account for
+ * ``rte_event_dev_config::nb_event_ports`` and
+ * ``rte_event_dev_config::nb_single_link_event_port_queues``
+ * parameters required for Timer adapter in eventdev configure when
+ * the adapter is created with this api.
+ *
  * @param conf
  *   The event timer adapter configuration structure.
  *
