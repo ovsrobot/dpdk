@@ -985,6 +985,8 @@ txa_service_id_get(uint8_t id, uint32_t *service_id)
 {
 	struct txa_service_data *txa;
 
+	rte_eventdev_trace_eth_tx_adapter_service_id_get(id, *service_id);
+
 	txa = txa_service_id_to_data(id);
 	if (txa->service_id == TXA_INVALID_SERVICE_ID)
 		return -ESRCH;
@@ -1121,6 +1123,8 @@ rte_event_eth_tx_adapter_create_ext(uint8_t id, uint8_t dev_id,
 int
 rte_event_eth_tx_adapter_event_port_get(uint8_t id, uint8_t *event_port_id)
 {
+	rte_eventdev_trace_eth_tx_adapter_event_port_get(id, *event_port_id);
+
 	TXA_CHECK_OR_ERR_RET(id);
 
 	return txa_service_event_port_get(id, event_port_id);
