@@ -382,6 +382,19 @@ int rte_event_eth_rx_adapter_create_ext(uint8_t id, uint8_t dev_id,
  * control in configuration of the service, it should use the
  * rte_event_eth_rx_adapter_create_ext() version.
  *
+ * When this API is used for creating adapter instance, eventdev is
+ * reconfigured with additional ``rte_event_dev_config::nb_event_ports``
+ * parameter during service initialization. This eventdev reconfig logic also
+ * increment the ``rte_event_dev_config::nb_single_link_event_port_queues``
+ * parameter if the adapter event port config is of type
+ * ``RTE_EVENT_PORT_CFG_SINGLE_LINK``.
+ *
+ * So the application is no longer need to account for
+ * ``rte_event_dev_config::nb_event_ports`` and
+ * ``rte_event_dev_config::nb_single_link_event_port_queues``
+ * parameters required for eth Rx adapter in eventdev configure when
+ * the adapter is created with this api.
+ *
  * @param id
  *  The identifier of the ethernet Rx event adapter.
  *
