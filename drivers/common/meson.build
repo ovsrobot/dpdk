@@ -9,4 +9,5 @@ drivers = [
         'idpf',
         'mvep',
         'octeontx',
+        'ml',
 ]
