@@ -1487,6 +1487,7 @@ struct rte_eth_conf {
 	    is needed,and the variable must be set RTE_ETH_DCB_PFC_SUPPORT. */
 	uint32_t dcb_capability_en;
 	struct rte_eth_intr_conf intr_conf; /**< Interrupt mode configuration. */
+	uint8_t nic_to_pmd_rx_metadata; /**< send rx metadata to PMD. */
 };
 
 /**
