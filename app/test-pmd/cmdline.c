@@ -610,6 +610,9 @@ static void cmd_help_long_parsed(void *parsed_result,
 			"set port (port_id) fec_mode auto|off|rs|baser\n"
 			"    set fec mode for a specific port\n\n"
 
+			"enable port <port_id> nic_to_pmd_rx_metadata"
+			"    Allow nic to pmd Rx metadata negotiation\n\n"
+
 			, list_pkt_forwarding_modes()
 		);
 	}
@@ -12621,6 +12624,60 @@ static cmdline_parse_inst_t cmd_show_port_flow_transfer_proxy = {
 	}
 };
 
+/* Allow negotiating Rx metadata between NIC and PMD */
+struct cmd_config_port_rx_metadata {
+	cmdline_fixed_string_t enable;
+	cmdline_fixed_string_t port;
+	uint16_t port_id;
+	cmdline_fixed_string_t nic_to_pmd_rx_metadata;
+};
+
+static void
+cmd_config_port_rx_metadata_parsed(void *parsed_result,
+				__rte_unused struct cmdline *cl,
+				__rte_unused void *data)
+{
+	struct cmd_config_port_rx_metadata *res = parsed_result;
+
+	if (port_id_is_invalid(res->port_id, ENABLED_WARN))
+		return;
+	if (!port_is_stopped(res->port_id)) {
+		fprintf(stderr, "Please stop port %u first\n", res->port_id);
+		return;
+	}
+
+	ports[res->port_id].dev_conf.nic_to_pmd_rx_metadata = 1;
+
+	reset_port(res->port_id);
+}
+
+
+static cmdline_parse_token_string_t cmd_config_port_rx_metadata_enable =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_port_rx_metadata, enable,
+								"enable");
+static cmdline_parse_token_string_t cmd_config_port_rx_metadata_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_port_rx_metadata, port,
+								"port");
+static cmdline_parse_token_num_t cmd_config_port_rx_metadata_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_config_port_rx_metadata, port_id,
+								RTE_UINT16);
+static cmdline_parse_token_string_t cmd_config_port_rx_metadata_nic_to_pmd_rx_metadata =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_port_rx_metadata, nic_to_pmd_rx_metadata,
+								"nic_to_pmd_rx_metadata");
+
+static cmdline_parse_inst_t cmd_config_port_rx_metadata_parse = {
+	.f = cmd_config_port_rx_metadata_parsed,
+	.data = NULL,
+	.help_str = "enable port <port_id> nic_to_pmd_rx_metadata",
+	.tokens = {
+		(void *)&cmd_config_port_rx_metadata_enable,
+		(void *)&cmd_config_port_rx_metadata_port,
+		(void *)&cmd_config_port_rx_metadata_id,
+		(void *)&cmd_config_port_rx_metadata_nic_to_pmd_rx_metadata,
+		NULL,
+	},
+};
+
 /* ******************************************************************************** */
 
 /* list of instructions */
@@ -12851,6 +12908,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_show_capability,
 	(cmdline_parse_inst_t *)&cmd_set_flex_is_pattern,
 	(cmdline_parse_inst_t *)&cmd_set_flex_spec_pattern,
+	(cmdline_parse_inst_t *)&cmd_config_port_rx_metadata_parse,
 	NULL,
 };
 
