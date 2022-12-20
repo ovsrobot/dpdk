@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added rte_flow support for matching ICMPv6 ID and sequence fields.**
+
+  Added ``icmp6_echo`` item in rte_flow to support ID and sequence
+  matching in ICMPv6 echo request/reply packets.
 
 Removed Items
 -------------

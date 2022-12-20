@@ -21,6 +21,7 @@
 #include <rte_common.h>
 #include <rte_ether.h>
 #include <rte_icmp.h>
+#include <rte_icmp6.h>
 #include <rte_ip.h>
 #include <rte_sctp.h>
 #include <rte_tcp.h>
@@ -624,6 +625,20 @@ enum rte_flow_item_type {
 	 * See struct rte_flow_item_meter_color.
 	 */
 	RTE_FLOW_ITEM_TYPE_METER_COLOR,
+
+	/**
+	 * Matches an ICMPv6 echo request.
+	 *
+	 * See struct rte_flow_item_icmp6_echo.
+	 */
+	RTE_FLOW_ITEM_TYPE_ICMP6_ECHO_REQUEST,
+
+	/**
+	 * Matches an ICMPv6 echo reply.
+	 *
+	 * See struct rte_flow_item_icmp6_echo.
+	 */
+	RTE_FLOW_ITEM_TYPE_ICMP6_ECHO_REPLY,
 };
 
 /**
@@ -1302,6 +1317,16 @@ static const struct rte_flow_item_icmp6 rte_flow_item_icmp6_mask = {
 	.code = 0xff,
 };
 #endif
+
+/**
+ * RTE_FLOW_ITEM_TYPE_ICMP6_ECHO_REQUEST
+ * RTE_FLOW_ITEM_TYPE_ICMP6_ECHO_REPLY
+ *
+ * Matches an ICMPv6 echo request or reply.
+ */
+struct rte_flow_item_icmp6_echo {
+	struct rte_icmp6_echo echo;
+};
 
 /**
  * RTE_FLOW_ITEM_TYPE_ICMP6_ND_NS
