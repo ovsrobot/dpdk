@@ -60,6 +60,12 @@ New Features
   Added ``icmp6_echo`` item in rte_flow to support ID and sequence
   matching in ICMPv6 echo request/reply packets.
 
+* **Updated Mellanox mlx5 driver.**
+
+  Updated the Mellanox mlx5 driver with new features and improvements, including:
+
+  * Added support for matching on ICMPv6 ID and sequence fields.
+
 Removed Items
 -------------
 
