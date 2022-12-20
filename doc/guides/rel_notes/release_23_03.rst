@@ -68,6 +68,10 @@ Removed Items
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+   * Removed the experimental empty poll API from the power library
+     The empty poll mechanism is superseded by the power PMD modes
+     i.e. monitor, pause and scale.
+
 
 API Changes
 -----------
