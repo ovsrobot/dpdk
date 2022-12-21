@@ -105,6 +105,17 @@ Runtime Config Options
 
     -a 80:00.0,pipeline-mode-support=1
 
+- ``Disable Mac Filter Support`` (default ``0``)
+
+  Add the feature that support to disable mac filter which will be used by ice driver
+  when setting dpdk_devargs config field in the TRex config file.
+
+  Mac filter is not disabled in default, user can choose to disable the mac filter
+  by setting ``devargs`` parameter ``mac-filter-disable``,
+  for example::
+    
+    -a 80:00.0,mac-filter-disable=1
+
 - ``Protocol extraction for per queue``
 
   Configure the RX queues to do protocol extraction into mbuf for protocol
