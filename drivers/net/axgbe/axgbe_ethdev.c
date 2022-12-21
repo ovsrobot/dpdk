@@ -353,8 +353,6 @@ axgbe_dev_start(struct rte_eth_dev *dev)
 {
 	struct axgbe_port *pdata = dev->data->dev_private;
 	int ret;
-	struct rte_eth_dev_data *dev_data = dev->data;
-	uint16_t max_pkt_len;
 
 	dev->dev_ops = &axgbe_eth_dev_ops;
 
@@ -388,17 +386,8 @@ axgbe_dev_start(struct rte_eth_dev *dev)
 	rte_bit_relaxed_clear32(AXGBE_STOPPED, &pdata->dev_state);
 	rte_bit_relaxed_clear32(AXGBE_DOWN, &pdata->dev_state);
 
-	max_pkt_len = dev_data->mtu + RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN;
-	if ((dev_data->dev_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_SCATTER) ||
-				max_pkt_len > pdata->rx_buf_size)
-		dev_data->scattered_rx = 1;
-
-	/*  Scatter Rx handling */
-	if (dev_data->scattered_rx)
-		dev->rx_pkt_burst = &eth_axgbe_recv_scattered_pkts;
-	else
-		dev->rx_pkt_burst = &axgbe_recv_pkts;
-
+	axgbe_set_rx_function(dev);
+	axgbe_set_tx_function(dev);
 	return 0;
 }
 
@@ -2145,6 +2134,46 @@ get_pci_rc_devid(void)
 	return (uint16_t)device_id;
 }
 
+/* Takes  ethdev as parameter
+ *  Used in dev_start by primary process and then
+ * in dev_init by secondary process when attaching to an existing ethdev.
+ */
+void
+axgbe_set_tx_function(struct rte_eth_dev *dev)
+{
+	struct axgbe_port *pdata = dev->data->dev_private;
+	struct axgbe_tx_queue *txq = dev->data->tx_queues[0];
+
+	if (pdata->multi_segs_tx)
+		dev->tx_pkt_burst = &axgbe_xmit_pkts_seg;
+#ifdef RTE_ARCH_X86
+	if (!txq->vector_disable &&
+			rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128)
+		dev->tx_pkt_burst = &axgbe_xmit_pkts_vec;
+#else
+		dev->tx_pkt_burst = &axgbe_xmit_pkts;
+#endif
+}
+
+void
+axgbe_set_rx_function(struct rte_eth_dev *dev)
+{
+	struct rte_eth_dev_data *dev_data = dev->data;
+	uint16_t max_pkt_len;
+	struct axgbe_port *pdata;
+
+	pdata = dev->data->dev_private;
+	max_pkt_len = dev_data->mtu + RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN;
+	if ((dev_data->dev_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_SCATTER) ||
+			max_pkt_len > pdata->rx_buf_size)
+		dev_data->scattered_rx = 1;
+	/*  Scatter Rx handling */
+	if (dev_data->scattered_rx)
+		dev->rx_pkt_burst = &eth_axgbe_recv_scattered_pkts;
+	else
+		dev->rx_pkt_burst = &axgbe_recv_pkts;
+}
+
 /*
  * It returns 0 on success.
  */
@@ -2159,17 +2188,20 @@ eth_axgbe_dev_init(struct rte_eth_dev *eth_dev)
 	int ret;
 
 	eth_dev->dev_ops = &axgbe_eth_dev_ops;
-
 	eth_dev->rx_descriptor_status = axgbe_dev_rx_descriptor_status;
 	eth_dev->tx_descriptor_status = axgbe_dev_tx_descriptor_status;
 
+	eth_dev->tx_pkt_burst = &axgbe_xmit_pkts;
+	eth_dev->rx_pkt_burst = &axgbe_recv_pkts;
 	/*
 	 * For secondary processes, we don't initialise any further as primary
 	 * has already done this work.
 	 */
-	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
+	if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
+		axgbe_set_tx_function(eth_dev);
+		axgbe_set_rx_function(eth_dev);
 		return 0;
-
+	}
 	eth_dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
 
 	pdata = eth_dev->data->dev_private;
@@ -2177,7 +2209,6 @@ eth_axgbe_dev_init(struct rte_eth_dev *eth_dev)
 	rte_bit_relaxed_set32(AXGBE_DOWN, &pdata->dev_state);
 	rte_bit_relaxed_set32(AXGBE_STOPPED, &pdata->dev_state);
 	pdata->eth_dev = eth_dev;
-
 	pci_dev = RTE_DEV_TO_PCI(eth_dev->device);
 	pdata->pci_dev = pci_dev;
 
