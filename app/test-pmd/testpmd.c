@@ -1604,8 +1604,6 @@ init_config_port_offloads(portid_t pid, uint32_t socket_id)
 	int ret;
 	int i;
 
-	eth_rx_metadata_negotiate_mp(pid);
-
 	port->dev_conf.txmode = tx_mode;
 	port->dev_conf.rxmode = rx_mode;
 
@@ -2945,6 +2943,9 @@ start_port(portid_t pid)
 				update_bonding_port_dev_conf(pi);
 				port->update_conf = 0;
 			}
+
+			if (port->nic_to_pmd_rx_metadata)
+				eth_rx_metadata_negotiate_mp(pi);
 
 			/* configure port */
 			diag = eth_dev_configure_mp(pi, nb_rxq + nb_hairpinq,

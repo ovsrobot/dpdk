@@ -3249,6 +3249,15 @@ port_flow_create(portid_t port_id,
 		}
 		id = port->flow_list->id + 1;
 	}
+
+	if (port->nic_to_pmd_rx_metadata == 0 &&
+	   (actions->type == RTE_FLOW_ACTION_TYPE_MARK ||
+	    actions->type == RTE_FLOW_ACTION_TYPE_FLAG)) {
+		fprintf(stderr,
+			"rx metadata is not negotiated with PMD\n");
+		return -EINVAL;
+	}
+
 	if (tunnel_ops->enabled) {
 		pft = port_flow_tunnel_offload_cmd_prep(port_id, pattern,
 							actions, tunnel_ops);

@@ -309,6 +309,7 @@ struct rte_port {
 	uint8_t                 need_setup;     /**< port just attached */
 	uint8_t                 need_reconfig;  /**< need reconfiguring port or not */
 	uint8_t                 need_reconfig_queues; /**< need reconfiguring queues or not */
+	uint8_t                 nic_to_pmd_rx_metadata; /**< send rx metadata to PMD. */
 	uint8_t                 rss_flag;   /**< enable rss or not */
 	uint8_t                 dcb_flag;   /**< enable dcb */
 	uint16_t                nb_rx_desc[RTE_MAX_QUEUES_PER_PORT+1]; /**< per queue rx desc number */

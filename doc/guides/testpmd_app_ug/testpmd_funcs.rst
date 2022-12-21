@@ -1558,6 +1558,12 @@ Enable or disable a per port Rx offloading on all Rx queues of a port::
 
 This command should be run when the port is stopped, or else it will fail.
 
+Enable Rx metadata negotiation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Enable NIC to PMD Rx metadata negotiation::
+   testpmd> enable port <port_id> nic_to_pmd_rx_metadata
+
 config per queue Rx offloading
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
