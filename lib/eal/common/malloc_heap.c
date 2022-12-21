@@ -717,7 +717,7 @@ malloc_get_numa_socket(void)
 			return socket_id;
 	}
 
-	return rte_socket_id_by_idx(0);
+	return rte_lcore_to_socket_id(rte_get_main_lcore());
 }
 
 void *
