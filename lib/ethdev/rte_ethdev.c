@@ -1629,6 +1629,8 @@ rte_eth_dev_reset(uint16_t port_id)
 			port_id, rte_strerror(-ret));
 	}
 	ret = dev->dev_ops->dev_reset(dev);
+	if (!ret)
+		dev->data->dev_configured = 0;
 
 	return eth_err(port_id, ret);
 }
