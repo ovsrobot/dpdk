@@ -158,7 +158,12 @@ struct axgbe_tx_queue {
  * RX/TX function prototypes
  */
 
-
+/* Takes an ethdev and sets up the tx function to be used based on
+ * the queue parameters. Used in dev_start by primary process and then
+ * in dev_init by secondary process when attaching to an existing ethdev.
+ */
+void axgbe_set_tx_function(struct rte_eth_dev *dev);
+void axgbe_set_rx_function(struct rte_eth_dev *dev);
 void axgbe_dev_tx_queue_release(struct rte_eth_dev *dev, uint16_t queue_idx);
 int  axgbe_dev_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 			      uint16_t nb_tx_desc, unsigned int socket_id,
