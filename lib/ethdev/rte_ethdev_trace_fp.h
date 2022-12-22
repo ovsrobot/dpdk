@@ -639,6 +639,115 @@ RTE_TRACE_POINT_FP(
 	rte_trace_point_emit_int(ret);
 )
 
+RTE_TRACE_POINT_FP(
+	rte_flow_trace_query,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, struct rte_flow *flow,
+		const struct rte_flow_action *action, void *data, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_ptr(flow);
+	rte_trace_point_emit_ptr(action);
+	rte_trace_point_emit_int(action->type);
+	rte_trace_point_emit_ptr(data);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_flow_trace_isolate,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, int set, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_int(set);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_flow_trace_get_restore_info,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id,
+		struct rte_mbuf *m,
+		struct rte_flow_restore_info *info),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_ptr(m);
+	rte_trace_point_emit_ptr(info);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_flow_trace_get_aged_flows,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, void **contexts,
+		uint32_t nb_contexts, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_ptr(contexts);
+	rte_trace_point_emit_u32(nb_contexts);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_flow_trace_get_q_aged_flows,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t queue_id, void **contexts,
+		uint32_t nb_contexts, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(queue_id);
+	rte_trace_point_emit_ptr(contexts);
+	rte_trace_point_emit_u32(nb_contexts);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_flow_trace_action_handle_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id,
+		struct rte_flow_action_handle *handle,
+		const void *update, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_ptr(handle);
+	rte_trace_point_emit_ptr(update);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_flow_trace_action_handle_query,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id,
+		const struct rte_flow_action_handle *handle,
+		void *data, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_ptr(handle);
+	rte_trace_point_emit_ptr(data);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_flow_trace_pick_transfer_proxy,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint16_t *proxy_port_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_ptr(proxy_port_id);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_flow_trace_async_action_handle_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t queue_id,
+		const struct rte_flow_op_attr *op_attr,
+		struct rte_flow_action_handle *action_handle,
+		const void *update, void *user_data, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(queue_id);
+	rte_trace_point_emit_ptr(op_attr);
+	rte_trace_point_emit_ptr(action_handle);
+	rte_trace_point_emit_ptr(update);
+	rte_trace_point_emit_ptr(user_data);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_flow_trace_async_action_handle_query,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t queue_id,
+		const struct rte_flow_op_attr *op_attr,
+		const struct rte_flow_action_handle *action_handle,
+		void *data, void *user_data),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(queue_id);
+	rte_trace_point_emit_ptr(op_attr);
+	rte_trace_point_emit_ptr(action_handle);
+	rte_trace_point_emit_ptr(data);
+	rte_trace_point_emit_ptr(user_data);
+)
+
 #ifdef __cplusplus
 }
 #endif
