@@ -2204,6 +2204,16 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_DROP,
 
 	/**
+	 * Skip packet drops base on RED
+	 *
+	 * Dropping of packets is based on RED when RED is configured
+	 * uing rte_eth_cman_config_set(). RED drop can be skipped
+	 * with this action
+	 *
+	 */
+	RTE_FLOW_ACTION_TYPE_SKIP_RED,
+
+	/**
 	 * Enables counters for this flow rule.
 	 *
 	 * These counters can be retrieved and reset through rte_flow_query() or
