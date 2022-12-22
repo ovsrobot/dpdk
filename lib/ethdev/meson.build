@@ -24,6 +24,7 @@ headers = files(
         'rte_ethdev.h',
         'rte_ethdev_trace.h',
         'rte_ethdev_trace_fp.h',
+        'rte_ethdev_trace_fp_burst.h',
         'rte_dev_info.h',
         'rte_flow.h',
         'rte_flow_driver.h',
