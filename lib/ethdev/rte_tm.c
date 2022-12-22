@@ -6,6 +6,8 @@
 
 #include <rte_errno.h>
 #include "rte_ethdev.h"
+#include "rte_ethdev_trace.h"
+#include "rte_ethdev_trace_fp.h"
 #include "rte_tm_driver.h"
 #include "rte_tm.h"
 
@@ -79,6 +81,7 @@ rte_tm_get_number_of_leaf_nodes(uint16_t port_id,
 	}
 
 	*n_leaf_nodes = dev->data->nb_tx_queues;
+	rte_tm_trace_get_number_of_leaf_nodes(port_id, *n_leaf_nodes);
 	return 0;
 }
 
@@ -90,6 +93,7 @@ rte_tm_node_type_get(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_type_get(port_id, node_id, is_leaf);
 	return RTE_TM_FUNC(port_id, node_type_get)(dev,
 		node_id, is_leaf, error);
 }
@@ -100,6 +104,7 @@ int rte_tm_capabilities_get(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_capabilities_get(port_id, cap);
 	return RTE_TM_FUNC(port_id, capabilities_get)(dev,
 		cap, error);
 }
@@ -111,6 +116,7 @@ int rte_tm_level_capabilities_get(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_level_capabilities_get(port_id, level_id, cap);
 	return RTE_TM_FUNC(port_id, level_capabilities_get)(dev,
 		level_id, cap, error);
 }
@@ -122,6 +128,7 @@ int rte_tm_node_capabilities_get(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_capabilities_get(port_id, node_id, cap);
 	return RTE_TM_FUNC(port_id, node_capabilities_get)(dev,
 		node_id, cap, error);
 }
@@ -133,6 +140,7 @@ int rte_tm_wred_profile_add(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_wred_profile_add(port_id, wred_profile_id, profile);
 	return RTE_TM_FUNC(port_id, wred_profile_add)(dev,
 		wred_profile_id, profile, error);
 }
@@ -143,6 +151,7 @@ int rte_tm_wred_profile_delete(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_wred_profile_delete(port_id, wred_profile_id);
 	return RTE_TM_FUNC(port_id, wred_profile_delete)(dev,
 		wred_profile_id, error);
 }
@@ -154,6 +163,8 @@ int rte_tm_shared_wred_context_add_update(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_shared_wred_context_add_update(port_id, shared_wred_context_id,
+						    wred_profile_id);
 	return RTE_TM_FUNC(port_id, shared_wred_context_add_update)(dev,
 		shared_wred_context_id, wred_profile_id, error);
 }
@@ -164,6 +175,7 @@ int rte_tm_shared_wred_context_delete(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_shared_wred_context_delete(port_id, shared_wred_context_id);
 	return RTE_TM_FUNC(port_id, shared_wred_context_delete)(dev,
 		shared_wred_context_id, error);
 }
@@ -175,6 +187,7 @@ int rte_tm_shaper_profile_add(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_shaper_profile_add(port_id, shaper_profile_id, profile);
 	return RTE_TM_FUNC(port_id, shaper_profile_add)(dev,
 		shaper_profile_id, profile, error);
 }
@@ -185,6 +198,7 @@ int rte_tm_shaper_profile_delete(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_shaper_profile_delete(port_id, shaper_profile_id);
 	return RTE_TM_FUNC(port_id, shaper_profile_delete)(dev,
 		shaper_profile_id, error);
 }
@@ -196,6 +210,8 @@ int rte_tm_shared_shaper_add_update(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_shared_shaper_add_update(port_id, shared_shaper_id,
+					      shaper_profile_id);
 	return RTE_TM_FUNC(port_id, shared_shaper_add_update)(dev,
 		shared_shaper_id, shaper_profile_id, error);
 }
@@ -206,6 +222,7 @@ int rte_tm_shared_shaper_delete(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_shared_shaper_delete(port_id, shared_shaper_id);
 	return RTE_TM_FUNC(port_id, shared_shaper_delete)(dev,
 		shared_shaper_id, error);
 }
@@ -221,6 +238,8 @@ int rte_tm_node_add(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_add(port_id, node_id, parent_node_id, priority,
+			      weight, level_id, params);
 	return RTE_TM_FUNC(port_id, node_add)(dev,
 		node_id, parent_node_id, priority, weight, level_id,
 		params, error);
@@ -232,6 +251,7 @@ int rte_tm_node_delete(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_delete(port_id, node_id);
 	return RTE_TM_FUNC(port_id, node_delete)(dev,
 		node_id, error);
 }
@@ -242,6 +262,7 @@ int rte_tm_node_suspend(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_suspend(port_id, node_id);
 	return RTE_TM_FUNC(port_id, node_suspend)(dev,
 		node_id, error);
 }
@@ -252,6 +273,7 @@ int rte_tm_node_resume(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_resume(port_id, node_id);
 	return RTE_TM_FUNC(port_id, node_resume)(dev,
 		node_id, error);
 }
@@ -262,6 +284,7 @@ int rte_tm_hierarchy_commit(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_hierarchy_commit(port_id, clear_on_fail);
 	return RTE_TM_FUNC(port_id, hierarchy_commit)(dev,
 		clear_on_fail, error);
 }
@@ -275,6 +298,8 @@ int rte_tm_node_parent_update(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_parent_update(port_id, node_id, parent_node_id,
+					priority, weight);
 	return RTE_TM_FUNC(port_id, node_parent_update)(dev,
 		node_id, parent_node_id, priority, weight, error);
 }
@@ -286,6 +311,7 @@ int rte_tm_node_shaper_update(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_shaper_update(port_id, node_id, shaper_profile_id);
 	return RTE_TM_FUNC(port_id, node_shaper_update)(dev,
 		node_id, shaper_profile_id, error);
 }
@@ -298,6 +324,8 @@ int rte_tm_node_shared_shaper_update(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_shared_shaper_update(port_id, node_id, shared_shaper_id,
+					       add);
 	return RTE_TM_FUNC(port_id, node_shared_shaper_update)(dev,
 		node_id, shared_shaper_id, add, error);
 }
@@ -309,6 +337,7 @@ int rte_tm_node_stats_update(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_stats_update(port_id, node_id, stats_mask);
 	return RTE_TM_FUNC(port_id, node_stats_update)(dev,
 		node_id, stats_mask, error);
 }
@@ -321,6 +350,8 @@ int rte_tm_node_wfq_weight_mode_update(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_wfq_weight_mode_update(port_id, node_id, wfq_weight_mode,
+						 n_sp_priorities);
 	return RTE_TM_FUNC(port_id, node_wfq_weight_mode_update)(dev,
 		node_id, wfq_weight_mode, n_sp_priorities, error);
 }
@@ -332,6 +363,7 @@ int rte_tm_node_cman_update(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_cman_update(port_id, node_id, cman);
 	return RTE_TM_FUNC(port_id, node_cman_update)(dev,
 		node_id, cman, error);
 }
@@ -343,6 +375,7 @@ int rte_tm_node_wred_context_update(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_wred_context_update(port_id, node_id, wred_profile_id);
 	return RTE_TM_FUNC(port_id, node_wred_context_update)(dev,
 		node_id, wred_profile_id, error);
 }
@@ -355,6 +388,9 @@ int rte_tm_node_shared_wred_context_update(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_shared_wred_context_update(port_id, node_id,
+						     shared_wred_context_id,
+						     add);
 	return RTE_TM_FUNC(port_id, node_shared_wred_context_update)(dev,
 		node_id, shared_wred_context_id, add, error);
 }
@@ -368,6 +404,8 @@ int rte_tm_node_stats_read(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_node_stats_read(port_id, node_id, stats, stats_mask,
+				     clear);
 	return RTE_TM_FUNC(port_id, node_stats_read)(dev,
 		node_id, stats, stats_mask, clear, error);
 }
@@ -380,6 +418,7 @@ int rte_tm_mark_vlan_dei(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_mark_vlan_dei(port_id, mark_green, mark_yellow, mark_red);
 	return RTE_TM_FUNC(port_id, mark_vlan_dei)(dev,
 		mark_green, mark_yellow, mark_red, error);
 }
@@ -392,6 +431,7 @@ int rte_tm_mark_ip_ecn(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_mark_ip_ecn(port_id, mark_green, mark_yellow, mark_red);
 	return RTE_TM_FUNC(port_id, mark_ip_ecn)(dev,
 		mark_green, mark_yellow, mark_red, error);
 }
@@ -404,6 +444,7 @@ int rte_tm_mark_ip_dscp(uint16_t port_id,
 	struct rte_tm_error *error)
 {
 	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	rte_tm_trace_mark_ip_dscp(port_id, mark_green, mark_yellow, mark_red);
 	return RTE_TM_FUNC(port_id, mark_ip_dscp)(dev,
 		mark_green, mark_yellow, mark_red, error);
 }
