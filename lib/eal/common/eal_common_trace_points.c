@@ -40,6 +40,8 @@ RTE_TRACE_POINT_REGISTER(rte_eal_trace_generic_size_t,
 	lib.eal.generic.size_t)
 RTE_TRACE_POINT_REGISTER(rte_eal_trace_generic_func,
 	lib.eal.generic.func)
+RTE_TRACE_POINT_REGISTER(rte_eal_trace_generic_char_array,
+	lib.eal.generic.char.array)
 
 RTE_TRACE_POINT_REGISTER(rte_eal_trace_alarm_set,
 	lib.eal.alarm.set)

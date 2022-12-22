@@ -177,6 +177,7 @@ test_fp_trace_points(void)
 static int
 test_generic_trace_points(void)
 {
+	uint8_t arr[32] = {0};
 	int tmp;
 
 	rte_eal_trace_generic_void();
@@ -195,6 +196,8 @@ test_generic_trace_points(void)
 	rte_eal_trace_generic_ptr(&tmp);
 	rte_eal_trace_generic_str("my string");
 	rte_eal_trace_generic_size_t(sizeof(void *));
+	rte_eal_trace_generic_char_array(arr, 32);
+	rte_eal_trace_generic_char_array(arr, 64);
 	RTE_EAL_TRACE_GENERIC_FUNC;
 
 	return TEST_SUCCESS;

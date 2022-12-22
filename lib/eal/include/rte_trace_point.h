@@ -144,6 +144,8 @@ _tp _args \
 #define rte_trace_point_emit_ptr(val)
 /** Tracepoint function payload for string datatype */
 #define rte_trace_point_emit_string(val)
+/** Tracepoint function payload for char array */
+#define rte_trace_point_emit_char_array(val, len)
 
 #endif /* __DOXYGEN__ */
 
@@ -151,6 +153,8 @@ _tp _args \
 #define __RTE_TRACE_EMIT_STRING_LEN_MAX 32
 /** @internal Macro to define event header size. */
 #define __RTE_TRACE_EVENT_HEADER_SZ sizeof(uint64_t)
+/** @internal Macro to define maximum emit length of array. */
+#define __RTE_TRACE_EMIT_ARRAY_LEN_MAX 32
 
 /**
  * Enable recording events of the given tracepoint in the trace buffer.
@@ -374,12 +378,28 @@ do { \
 	mem = RTE_PTR_ADD(mem, __RTE_TRACE_EMIT_STRING_LEN_MAX); \
 } while (0)
 
+#define rte_trace_point_emit_char_array(in, len) \
+do { \
+	if (unlikely(in == NULL)) \
+		return; \
+	if (len > __RTE_TRACE_EMIT_ARRAY_LEN_MAX) \
+		return; \
+	memcpy(mem, in, len); \
+	mem = RTE_PTR_ADD(mem, len); \
+} while (0)
+
 #else
 
 #define __rte_trace_point_emit_header_generic(t) RTE_SET_USED(t)
 #define __rte_trace_point_emit_header_fp(t) RTE_SET_USED(t)
 #define __rte_trace_point_emit(in, type) RTE_SET_USED(in)
 #define rte_trace_point_emit_string(in) RTE_SET_USED(in)
+#define rte_trace_point_emit_char_array(in, len) \
+do { \
+	RTE_SET_USED(in); \
+	RTE_SET_USED(len); \
+} while (0)
+
 
 #endif /* ALLOW_EXPERIMENTAL_API */
 #endif /* _RTE_TRACE_POINT_REGISTER_H_ */

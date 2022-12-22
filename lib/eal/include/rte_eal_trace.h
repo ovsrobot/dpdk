@@ -143,6 +143,12 @@ RTE_TRACE_POINT(
 	rte_trace_point_emit_string(func);
 )
 
+RTE_TRACE_POINT(
+	rte_eal_trace_generic_char_array,
+	RTE_TRACE_POINT_ARGS(void *in, uint8_t len),
+	rte_trace_point_emit_char_array(in, len);
+)
+
 #define RTE_EAL_TRACE_GENERIC_FUNC rte_eal_trace_generic_func(__func__)
 
 /* Interrupt */
