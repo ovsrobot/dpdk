@@ -63,6 +63,7 @@ libraries = [
         'flow_classify', # flow_classify lib depends on pkt framework table lib
         'graph',
         'node',
+        'pdcp', # pdcp lib depends on crypto and security
 ]
 
 optional_libs = [
