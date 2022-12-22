@@ -18,6 +18,7 @@ extern "C" {
 #include <rte_trace_point.h>
 
 #include "rte_ethdev.h"
+#include "rte_mtr.h"
 
 RTE_TRACE_POINT(
 	rte_ethdev_trace_configure,
@@ -1261,6 +1262,108 @@ RTE_TRACE_POINT(
 	rte_trace_point_emit_ptr(action_handle);
 	rte_trace_point_emit_ptr(user_data);
 	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT(
+	rte_mtr_trace_capabilities_get,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id,
+		struct rte_mtr_capabilities *cap),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_ptr(cap);
+)
+
+RTE_TRACE_POINT(
+	rte_mtr_trace_create,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t mtr_id,
+		struct rte_mtr_params *params, int shared),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(mtr_id);
+	rte_trace_point_emit_ptr(params);
+	rte_trace_point_emit_u32(params->meter_profile_id);
+	rte_trace_point_emit_int(params->use_prev_mtr_color);
+	rte_trace_point_emit_int(params->meter_enable);
+	rte_trace_point_emit_u64(params->stats_mask);
+	rte_trace_point_emit_u32(params->meter_policy_id);
+	rte_trace_point_emit_int(params->default_input_color);
+	rte_trace_point_emit_int(shared);
+)
+
+RTE_TRACE_POINT(
+	rte_mtr_trace_destroy,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t mtr_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(mtr_id);
+)
+
+RTE_TRACE_POINT(
+	rte_mtr_trace_meter_disable,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t mtr_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(mtr_id);
+)
+
+RTE_TRACE_POINT(
+	rte_mtr_trace_meter_enable,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t mtr_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(mtr_id);
+)
+
+RTE_TRACE_POINT(
+	rte_mtr_trace_meter_profile_add,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id,
+		uint32_t meter_profile_id,
+		struct rte_mtr_meter_profile *profile),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(meter_profile_id);
+	rte_trace_point_emit_int(profile->alg);
+	rte_trace_point_emit_int(profile->packet_mode);
+)
+
+RTE_TRACE_POINT(
+	rte_mtr_trace_meter_profile_delete,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id,
+		uint32_t meter_profile_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(meter_profile_id);
+)
+
+RTE_TRACE_POINT(
+	rte_mtr_trace_meter_policy_add,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t policy_id,
+		const struct rte_flow_action *actions),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(policy_id);
+	rte_trace_point_emit_ptr(actions);
+	rte_trace_point_emit_int(actions->type);
+	rte_trace_point_emit_ptr(actions->conf);
+)
+
+RTE_TRACE_POINT(
+	rte_mtr_trace_meter_policy_delete,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t policy_id),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(policy_id);
+)
+
+RTE_TRACE_POINT(
+	rte_mtr_trace_meter_policy_validate,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id,
+		const struct rte_flow_action *actions),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_ptr(actions);
+	rte_trace_point_emit_int(actions->type);
+	rte_trace_point_emit_ptr(actions->conf);
+)
+
+RTE_TRACE_POINT(
+	rte_mtr_trace_color_in_protocol_set,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t mtr_id,
+		enum rte_mtr_color_in_protocol proto, uint32_t priority),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(mtr_id);
+	rte_trace_point_emit_int(proto);
+	rte_trace_point_emit_u32(priority);
 )
 
 #ifdef __cplusplus
