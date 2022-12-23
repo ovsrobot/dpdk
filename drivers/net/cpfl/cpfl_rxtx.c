@@ -734,3 +734,14 @@ cpfl_stop_queues(struct rte_eth_dev *dev)
 			PMD_DRV_LOG(WARNING, "Fail to stop Tx queue %d", i);
 	}
 }
+
+void
+cpfl_set_rx_function(struct rte_eth_dev *dev)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+
+	if (vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT)
+		dev->rx_pkt_burst = idpf_splitq_recv_pkts;
+	else
+		dev->rx_pkt_burst = idpf_singleq_recv_pkts;
+}
