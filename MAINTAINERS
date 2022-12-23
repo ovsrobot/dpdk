@@ -783,6 +783,15 @@ F: drivers/common/idpf/
 F: doc/guides/nics/idpf.rst
 F: doc/guides/nics/features/idpf.ini
 
+Intel cpfl
+M: Qi Zhang <qi.z.zhang@intel.com>
+M: Jingjing Wu <jingjing.wu@intel.com>
+M: Beilei Xing <beilei.xing@intel.com>
+T: git://dpdk.org/next/dpdk-next-net-intel
+F: drivers/net/cpfl/
+F: doc/guides/nics/cpfl.rst
+F: doc/guides/nics/features/cpfl.ini
+
 Intel igc
 M: Junfeng Guo <junfeng.guo@intel.com>
 M: Simei Su <simei.su@intel.com>
