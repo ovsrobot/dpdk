@@ -242,10 +242,13 @@ cpfl_dev_start(struct rte_eth_dev *dev)
 	ret = idpf_vc_ena_dis_vport(vport, true);
 	if (ret != 0) {
 		PMD_DRV_LOG(ERR, "Failed to enable vport");
-		return ret;
+		goto err_vport;
 	}
 
 	return 0;
+
+err_vport:
+	cpfl_stop_queues(dev);
 err_mtu:
 	return ret;
 }
@@ -259,6 +262,8 @@ cpfl_dev_stop(struct rte_eth_dev *dev)
 		return 0;
 
 	idpf_vc_ena_dis_vport(vport, false);
+
+	cpfl_stop_queues(dev);
 
 	vport->stopped = 1;
 
@@ -625,6 +630,8 @@ static const struct eth_dev_ops cpfl_eth_dev_ops = {
 	.link_update			= cpfl_dev_link_update,
 	.rx_queue_start			= cpfl_rx_queue_start,
 	.tx_queue_start			= cpfl_tx_queue_start,
+	.rx_queue_stop			= cpfl_rx_queue_stop,
+	.tx_queue_stop			= cpfl_tx_queue_stop,
 	.dev_supported_ptypes_get	= cpfl_dev_supported_ptypes_get,
 };
 

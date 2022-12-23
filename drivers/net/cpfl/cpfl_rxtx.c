@@ -612,3 +612,90 @@ cpfl_tx_queue_start(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 
 	return err;
 }
+
+int
+cpfl_rx_queue_stop(struct rte_eth_dev *dev, uint16_t rx_queue_id)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+	struct idpf_rx_queue *rxq;
+	int err;
+
+	if (rx_queue_id >= dev->data->nb_rx_queues)
+		return -EINVAL;
+
+	err = idpf_switch_queue(vport, rx_queue_id, true, false);
+	if (err != 0) {
+		PMD_DRV_LOG(ERR, "Failed to switch RX queue %u off",
+			    rx_queue_id);
+		return err;
+	}
+
+	rxq = dev->data->rx_queues[rx_queue_id];
+	if (vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE) {
+		rxq->ops->release_mbufs(rxq);
+		reset_single_rx_queue(rxq);
+	} else {
+		rxq->bufq1->ops->release_mbufs(rxq->bufq1);
+		rxq->bufq2->ops->release_mbufs(rxq->bufq2);
+		reset_split_rx_queue(rxq);
+	}
+	dev->data->rx_queue_state[rx_queue_id] = RTE_ETH_QUEUE_STATE_STOPPED;
+
+	return 0;
+}
+
+int
+cpfl_tx_queue_stop(struct rte_eth_dev *dev, uint16_t tx_queue_id)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+	struct idpf_tx_queue *txq;
+	int err;
+
+	if (tx_queue_id >= dev->data->nb_tx_queues)
+		return -EINVAL;
+
+	err = idpf_switch_queue(vport, tx_queue_id, false, false);
+	if (err != 0) {
+		PMD_DRV_LOG(ERR, "Failed to switch TX queue %u off",
+			    tx_queue_id);
+		return err;
+	}
+
+	txq = dev->data->tx_queues[tx_queue_id];
+	txq->ops->release_mbufs(txq);
+	if (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SINGLE) {
+		reset_single_tx_queue(txq);
+	} else {
+		reset_split_tx_descq(txq);
+		reset_split_tx_complq(txq->complq);
+	}
+	dev->data->tx_queue_state[tx_queue_id] = RTE_ETH_QUEUE_STATE_STOPPED;
+
+	return 0;
+}
+
+void
+cpfl_stop_queues(struct rte_eth_dev *dev)
+{
+	struct idpf_rx_queue *rxq;
+	struct idpf_tx_queue *txq;
+	int i;
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		rxq = dev->data->rx_queues[i];
+		if (rxq == NULL)
+			continue;
+
+		if (cpfl_rx_queue_stop(dev, i) != 0)
+			PMD_DRV_LOG(WARNING, "Fail to stop Rx queue %d", i);
+	}
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		txq = dev->data->tx_queues[i];
+		if (txq == NULL)
+			continue;
+
+		if (cpfl_tx_queue_stop(dev, i) != 0)
+			PMD_DRV_LOG(WARNING, "Fail to stop Tx queue %d", i);
+	}
+}
