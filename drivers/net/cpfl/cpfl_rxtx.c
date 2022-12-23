@@ -745,3 +745,17 @@ cpfl_set_rx_function(struct rte_eth_dev *dev)
 	else
 		dev->rx_pkt_burst = idpf_singleq_recv_pkts;
 }
+
+void
+cpfl_set_tx_function(struct rte_eth_dev *dev)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+
+	if (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT) {
+		dev->tx_pkt_burst = idpf_splitq_xmit_pkts;
+		dev->tx_pkt_prepare = idpf_prep_pkts;
+	} else {
+		dev->tx_pkt_burst = idpf_singleq_xmit_pkts;
+		dev->tx_pkt_prepare = idpf_prep_pkts;
+	}
+}
