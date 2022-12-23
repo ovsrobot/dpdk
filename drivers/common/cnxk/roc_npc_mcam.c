@@ -12,14 +12,16 @@ npc_mcam_alloc_counter(struct npc *npc, uint16_t *ctr)
 	struct mbox *mbox = npc->mbox;
 	int rc = -ENOSPC;
 
-	req = mbox_alloc_msg_npc_mcam_alloc_counter(mbox);
+	req = mbox_alloc_msg_npc_mcam_alloc_counter(mbox_get(mbox));
 	if (req == NULL)
-		return rc;
+		goto exit;
 	req->count = 1;
 	rc = mbox_process_msg(mbox, (void *)&rsp);
 	if (rc)
-		return rc;
+		goto exit;
 	*ctr = rsp->cntr_list[0];
+exit:
+	mbox_put(mbox);
 	return rc;
 }
 
@@ -30,11 +32,14 @@ npc_mcam_free_counter(struct npc *npc, uint16_t ctr_id)
 	struct mbox *mbox = npc->mbox;
 	int rc = -ENOSPC;
 
-	req = mbox_alloc_msg_npc_mcam_free_counter(mbox);
+	req = mbox_alloc_msg_npc_mcam_free_counter(mbox_get(mbox));
 	if (req == NULL)
-		return rc;
+		goto exit;
 	req->cntr = ctr_id;
-	return mbox_process(mbox);
+	rc = mbox_process(mbox);
+exit:
+	mbox_put(mbox);
+	return rc;
 }
 
 int
@@ -45,14 +50,16 @@ npc_mcam_read_counter(struct npc *npc, uint32_t ctr_id, uint64_t *count)
 	struct mbox *mbox = npc->mbox;
 	int rc = -ENOSPC;
 
-	req = mbox_alloc_msg_npc_mcam_counter_stats(mbox);
+	req = mbox_alloc_msg_npc_mcam_counter_stats(mbox_get(mbox));
 	if (req == NULL)
-		return rc;
+		goto exit;
 	req->cntr = ctr_id;
 	rc = mbox_process_msg(mbox, (void *)&rsp);
 	if (rc)
-		return rc;
+		goto exit;
 	*count = rsp->stat;
+exit:
+	mbox_put(mbox);
 	return rc;
 }
 
@@ -63,11 +70,14 @@ npc_mcam_clear_counter(struct npc *npc, uint32_t ctr_id)
 	struct mbox *mbox = npc->mbox;
 	int rc = -ENOSPC;
 
-	req = mbox_alloc_msg_npc_mcam_clear_counter(mbox);
+	req = mbox_alloc_msg_npc_mcam_clear_counter(mbox_get(mbox));
 	if (req == NULL)
-		return rc;
+		goto exit;
 	req->cntr = ctr_id;
-	return mbox_process(mbox);
+	rc = mbox_process(mbox);
+exit:
+	mbox_put(mbox);
+	return rc;
 }
 
 int
@@ -77,11 +87,14 @@ npc_mcam_free_entry(struct npc *npc, uint32_t entry)
 	struct mbox *mbox = npc->mbox;
 	int rc = -ENOSPC;
 
-	req = mbox_alloc_msg_npc_mcam_free_entry(mbox);
+	req = mbox_alloc_msg_npc_mcam_free_entry(mbox_get(mbox));
 	if (req == NULL)
-		return rc;
+		goto exit;
 	req->entry = entry;
-	return mbox_process(mbox);
+	rc = mbox_process(mbox);
+exit:
+	mbox_put(mbox);
+	return rc;
 }
 
 int
@@ -91,11 +104,14 @@ npc_mcam_free_all_entries(struct npc *npc)
 	struct mbox *mbox = npc->mbox;
 	int rc = -ENOSPC;
 
-	req = mbox_alloc_msg_npc_mcam_free_entry(mbox);
+	req = mbox_alloc_msg_npc_mcam_free_entry(mbox_get(mbox));
 	if (req == NULL)
-		return rc;
+		goto exit;
 	req->all = 1;
-	return mbox_process(mbox);
+	rc = mbox_process(mbox);
+exit:
+	mbox_put(mbox);
+	return rc;
 }
 
 static int
@@ -315,9 +331,9 @@ npc_mcam_alloc_entries(struct npc *npc, int ref_mcam, int *alloc_entry,
 	int rc = -ENOSPC;
 	int i;
 
-	req = mbox_alloc_msg_npc_mcam_alloc_entry(mbox);
+	req = mbox_alloc_msg_npc_mcam_alloc_entry(mbox_get(mbox));
 	if (req == NULL)
-		return rc;
+		goto exit;
 	req->contig = 0;
 	req->count = req_count;
 	req->priority = prio;
@@ -325,11 +341,14 @@ npc_mcam_alloc_entries(struct npc *npc, int ref_mcam, int *alloc_entry,
 
 	rc = mbox_process_msg(mbox, (void *)&rsp);
 	if (rc)
-		return rc;
+		goto exit;
 	for (i = 0; i < rsp->count; i++)
 		alloc_entry[i] = rsp->entry_list[i];
 	*resp_count = rsp->count;
-	return 0;
+	rc = 0;
+exit:
+	mbox_put(mbox);
+	return rc;
 }
 
 int
@@ -341,9 +360,9 @@ npc_mcam_alloc_entry(struct npc *npc, struct roc_npc_flow *mcam,
 	struct mbox *mbox = npc->mbox;
 	int rc = -ENOSPC;
 
-	req = mbox_alloc_msg_npc_mcam_alloc_entry(mbox);
+	req = mbox_alloc_msg_npc_mcam_alloc_entry(mbox_get(mbox));
 	if (req == NULL)
-		return rc;
+		goto exit;
 	req->contig = 1;
 	req->count = 1;
 	req->priority = prio;
@@ -351,19 +370,22 @@ npc_mcam_alloc_entry(struct npc *npc, struct roc_npc_flow *mcam,
 
 	rc = mbox_process_msg(mbox, (void *)&rsp);
 	if (rc)
-		return rc;
+		goto exit;
 	memset(mcam, 0, sizeof(struct roc_npc_flow));
 	mcam->mcam_id = rsp->entry;
 	mcam->nix_intf = ref_mcam->nix_intf;
 	*resp_count = rsp->count;
-	return 0;
+	rc = 0;
+exit:
+	mbox_put(mbox);
+	return rc;
 }
 
 int
 npc_mcam_ena_dis_entry(struct npc *npc, struct roc_npc_flow *mcam, bool enable)
 {
 	struct npc_mcam_ena_dis_entry_req *req;
-	struct mbox *mbox = npc->mbox;
+	struct mbox *mbox = mbox_get(npc->mbox);
 	int rc = -ENOSPC;
 
 	if (enable)
@@ -372,10 +394,13 @@ npc_mcam_ena_dis_entry(struct npc *npc, struct roc_npc_flow *mcam, bool enable)
 		req = mbox_alloc_msg_npc_mcam_dis_entry(mbox);
 
 	if (req == NULL)
-		return rc;
+		goto exit;
 	req->entry = mcam->mcam_id;
 	mcam->enable = enable;
-	return mbox_process(mbox);
+	rc = mbox_process(mbox);
+exit:
+	mbox_put(mbox);
+	return rc;
 }
 
 int
@@ -399,8 +424,9 @@ npc_mcam_write_entry(struct npc *npc, struct roc_npc_flow *mcam)
 			return rc;
 	}
 
-	req = mbox_alloc_msg_npc_mcam_write_entry(mbox);
+	req = mbox_alloc_msg_npc_mcam_write_entry(mbox_get(mbox));
 	if (req == NULL) {
+		mbox_put(mbox);
 		if (mcam->use_ctr)
 			npc_mcam_free_counter(npc, ctr);
 
@@ -420,7 +446,9 @@ npc_mcam_write_entry(struct npc *npc, struct roc_npc_flow *mcam)
 		req->entry_data.kw[i] = mcam->mcam_data[i];
 		req->entry_data.kw_mask[i] = mcam->mcam_mask[i];
 	}
-	return mbox_process_msg(mbox, (void *)&rsp);
+	rc = mbox_process_msg(mbox, (void *)&rsp);
+	mbox_put(mbox);
+	return rc;
 }
 
 static void
@@ -483,7 +511,7 @@ int
 npc_mcam_fetch_kex_cfg(struct npc *npc)
 {
 	struct npc_get_kex_cfg_rsp *kex_rsp;
-	struct mbox *mbox = npc->mbox;
+	struct mbox *mbox = mbox_get(npc->mbox);
 	int rc = 0;
 
 	mbox_alloc_msg_npc_get_kex_cfg(mbox);
@@ -499,6 +527,7 @@ npc_mcam_fetch_kex_cfg(struct npc *npc)
 	npc_mcam_process_mkex_cfg(npc, kex_rsp);
 
 done:
+	mbox_put(mbox);
 	return rc;
 }
 
@@ -574,9 +603,11 @@ npc_mcam_alloc_and_write(struct npc *npc, struct roc_npc_flow *flow,
 		return NPC_ERR_MCAM_ALLOC;
 	}
 
-	req = mbox_alloc_msg_npc_mcam_write_entry(mbox);
-	if (req == NULL)
-		return -ENOSPC;
+	req = mbox_alloc_msg_npc_mcam_write_entry(mbox_get(mbox));
+	if (req == NULL) {
+		rc = -ENOSPC;
+		goto exit;
+	}
 	req->set_cntr = flow->use_ctr;
 	req->cntr = flow->ctr_id;
 	req->entry = entry;
@@ -641,13 +672,16 @@ npc_mcam_alloc_and_write(struct npc *npc, struct roc_npc_flow *flow,
 
 	rc = mbox_process_msg(mbox, (void *)&rsp);
 	if (rc != 0)
-		return rc;
+		goto exit;
 
 	flow->mcam_id = entry;
 
 	if (flow->use_ctr)
 		flow->ctr_id = ctr;
-	return 0;
+	rc = 0;
+exit:
+	mbox_put(mbox);
+	return rc;
 }
 
 static void
@@ -729,6 +763,7 @@ npc_program_mcam(struct npc *npc, struct npc_parse_state *pst, bool mcam_alloc)
 	struct idev_cfg *idev;
 	uint16_t layer_info;
 	uint64_t lt, flags;
+	struct mbox *mbox;
 
 	/* Skip till Layer A data start */
 	while (bit < NPC_PARSE_KEX_S_LA_OFFSET) {
@@ -800,12 +835,15 @@ npc_program_mcam(struct npc *npc, struct npc_parse_state *pst, bool mcam_alloc)
 		skip_base_rule = true;
 
 	if (pst->is_vf && pst->flow->nix_intf == NIX_INTF_RX && !skip_base_rule) {
-		(void)mbox_alloc_msg_npc_read_base_steer_rule(npc->mbox);
-		rc = mbox_process_msg(npc->mbox, (void *)&base_rule_rsp);
+		mbox = mbox_get(npc->mbox);
+		(void)mbox_alloc_msg_npc_read_base_steer_rule(mbox);
+		rc = mbox_process_msg(mbox, (void *)&base_rule_rsp);
 		if (rc) {
+			mbox_put(mbox);
 			plt_err("Failed to fetch VF's base MCAM entry");
 			return rc;
 		}
+		mbox_put(mbox);
 		base_entry = &base_rule_rsp->entry_data;
 		for (idx = 0; idx < ROC_NPC_MAX_MCAM_WIDTH_DWORDS; idx++) {
 			pst->flow->mcam_data[idx] |= base_entry->kw[idx];
