@@ -121,6 +121,18 @@ cpfl_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	return 0;
 }
 
+static int
+cpfl_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu __rte_unused)
+{
+	/* mtu setting is forbidden if port is start */
+	if (dev->data->dev_started) {
+		PMD_DRV_LOG(ERR, "port must be stopped before configuration");
+		return -EBUSY;
+	}
+
+	return 0;
+}
+
 static const uint32_t *
 cpfl_dev_supported_ptypes_get(struct rte_eth_dev *dev __rte_unused)
 {
@@ -634,6 +646,7 @@ static const struct eth_dev_ops cpfl_eth_dev_ops = {
 	.tx_queue_stop			= cpfl_tx_queue_stop,
 	.rx_queue_release		= cpfl_dev_rx_queue_release,
 	.tx_queue_release		= cpfl_dev_tx_queue_release,
+	.mtu_set			= cpfl_dev_mtu_set,
 	.dev_supported_ptypes_get	= cpfl_dev_supported_ptypes_get,
 };
 
