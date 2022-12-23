@@ -185,11 +185,54 @@ cpfl_dev_configure(struct rte_eth_dev *dev)
 }
 
 static int
+cpfl_dev_start(struct rte_eth_dev *dev)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+	int ret;
+
+	vport->stopped = 0;
+
+	if (dev->data->mtu > vport->max_mtu) {
+		PMD_DRV_LOG(ERR, "MTU should be less than %d", vport->max_mtu);
+		ret = -EINVAL;
+		goto err_mtu;
+	}
+
+	vport->max_pkt_len = dev->data->mtu + CPFL_ETH_OVERHEAD;
+
+	ret = idpf_vc_ena_dis_vport(vport, true);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to enable vport");
+		return ret;
+	}
+
+	return 0;
+err_mtu:
+	return ret;
+}
+
+static int
+cpfl_dev_stop(struct rte_eth_dev *dev)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+
+	if (vport->stopped == 1)
+		return 0;
+
+	idpf_vc_ena_dis_vport(vport, false);
+
+	vport->stopped = 1;
+
+	return 0;
+}
+
+static int
 cpfl_dev_close(struct rte_eth_dev *dev)
 {
 	struct idpf_vport *vport = dev->data->dev_private;
 	struct cpfl_adapter_ext *adapter = CPFL_ADAPTER_TO_EXT(vport->adapter);
 
+	cpfl_dev_stop(dev);
 	idpf_vport_deinit(vport);
 
 	adapter->cur_vports &= ~RTE_BIT32(vport->devarg_id);
@@ -538,6 +581,8 @@ static const struct eth_dev_ops cpfl_eth_dev_ops = {
 	.rx_queue_setup			= cpfl_rx_queue_setup,
 	.tx_queue_setup			= cpfl_tx_queue_setup,
 	.dev_infos_get			= cpfl_dev_info_get,
+	.dev_start			= cpfl_dev_start,
+	.dev_stop			= cpfl_dev_stop,
 	.link_update			= cpfl_dev_link_update,
 	.dev_supported_ptypes_get	= cpfl_dev_supported_ptypes_get,
 };
