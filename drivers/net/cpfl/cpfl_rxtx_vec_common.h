@@ -64,14 +64,26 @@ cpfl_tx_vec_queue_default(struct idpf_tx_queue *txq)
 }
 
 static inline int
+cpfl_rx_splitq_vec_default(struct idpf_rx_queue *rxq)
+{
+	if (rxq->bufq2->rx_buf_len < rxq->max_pkt_len)
+		return -1;
+
+	return CPFL_VECTOR_PATH;
+}
+
+static inline int
 cpfl_rx_vec_dev_check_default(struct rte_eth_dev *dev)
 {
+	struct idpf_vport *vport = dev->data->dev_private;
 	struct idpf_rx_queue *rxq;
 	int i, ret = 0;
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		rxq = dev->data->rx_queues[i];
-		ret = (cpfl_rx_vec_queue_default(rxq));
+		ret = cpfl_rx_vec_queue_default(rxq) ||
+		      (vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT &&
+		       cpfl_rx_splitq_vec_default(rxq));
 		if (ret < 0)
 			return -1;
 	}

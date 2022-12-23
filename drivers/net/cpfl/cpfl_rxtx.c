@@ -772,6 +772,20 @@ cpfl_set_rx_function(struct rte_eth_dev *dev)
 
 #ifdef RTE_ARCH_X86
 	if (vport->rxq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT) {
+#ifdef RTE_ARCH_X86
+		if (vport->rx_vec_allowed) {
+			for (i = 0; i < dev->data->nb_tx_queues; i++) {
+				rxq = dev->data->rx_queues[i];
+				(void)idpf_splitq_rx_vec_setup(rxq);
+			}
+#ifdef CC_AVX512_SUPPORT
+			if (vport->rx_use_avx512) {
+				dev->rx_pkt_burst = idpf_splitq_recv_pkts_avx512;
+				return;
+			}
+#endif
+		}
+#endif
 		dev->rx_pkt_burst = idpf_splitq_recv_pkts;
 	} else {
 		if (vport->rx_vec_allowed) {
@@ -833,6 +847,17 @@ cpfl_set_tx_function(struct rte_eth_dev *dev)
 #endif /* RTE_ARCH_X86 */
 
 	if (vport->txq_model == VIRTCHNL2_QUEUE_MODEL_SPLIT) {
+#ifdef RTE_ARCH_X86
+		if (vport->tx_vec_allowed) {
+#ifdef CC_AVX512_SUPPORT
+			if (vport->tx_use_avx512) {
+				dev->tx_pkt_burst = idpf_splitq_xmit_pkts_avx512;
+				dev->tx_pkt_prepare = idpf_prep_pkts;
+				return;
+			}
+#endif
+		}
+#endif
 		dev->tx_pkt_burst = idpf_splitq_xmit_pkts;
 		dev->tx_pkt_prepare = idpf_prep_pkts;
 	} else {
