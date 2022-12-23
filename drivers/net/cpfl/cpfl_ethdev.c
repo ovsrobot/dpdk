@@ -12,6 +12,7 @@
 #include <rte_alarm.h>
 
 #include "cpfl_ethdev.h"
+#include "cpfl_rxtx.h"
 
 #define CPFL_TX_SINGLE_Q	"tx_single"
 #define CPFL_RX_SINGLE_Q	"rx_single"
@@ -95,6 +96,17 @@ cpfl_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 
 	dev_info->max_mtu = dev_info->max_rx_pktlen - CPFL_ETH_OVERHEAD;
 	dev_info->min_mtu = RTE_ETHER_MIN_MTU;
+
+	dev_info->default_txconf = (struct rte_eth_txconf) {
+		.tx_free_thresh = CPFL_DEFAULT_TX_FREE_THRESH,
+		.tx_rs_thresh = CPFL_DEFAULT_TX_RS_THRESH,
+	};
+
+	dev_info->tx_desc_lim = (struct rte_eth_desc_lim) {
+		.nb_max = CPFL_MAX_RING_DESC,
+		.nb_min = CPFL_MIN_RING_DESC,
+		.nb_align = CPFL_ALIGN_RING_DESC,
+	};
 
 	return 0;
 }
@@ -513,6 +525,7 @@ err_adapter_init:
 static const struct eth_dev_ops cpfl_eth_dev_ops = {
 	.dev_configure			= cpfl_dev_configure,
 	.dev_close			= cpfl_dev_close,
+	.tx_queue_setup			= cpfl_tx_queue_setup,
 	.dev_infos_get			= cpfl_dev_info_get,
 	.link_update			= cpfl_dev_link_update,
 	.dev_supported_ptypes_get	= cpfl_dev_supported_ptypes_get,
