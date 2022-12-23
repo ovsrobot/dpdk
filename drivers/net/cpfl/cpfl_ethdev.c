@@ -199,6 +199,15 @@ cpfl_dev_configure(struct rte_eth_dev *dev)
 }
 
 static int
+cpfl_config_rx_queues_irqs(struct rte_eth_dev *dev)
+{
+	struct idpf_vport *vport = dev->data->dev_private;
+	uint16_t nb_rx_queues = dev->data->nb_rx_queues;
+
+	return idpf_config_irq_map(vport, nb_rx_queues);
+}
+
+static int
 cpfl_start_queues(struct rte_eth_dev *dev)
 {
 	struct idpf_rx_queue *rxq;
@@ -235,6 +244,10 @@ static int
 cpfl_dev_start(struct rte_eth_dev *dev)
 {
 	struct idpf_vport *vport = dev->data->dev_private;
+	struct idpf_adapter *base = vport->adapter;
+	struct cpfl_adapter_ext *adapter = CPFL_ADAPTER_TO_EXT(base);
+	uint16_t num_allocated_vectors = base->caps.num_allocated_vectors;
+	uint16_t req_vecs_num;
 	int ret;
 
 	vport->stopped = 0;
@@ -246,6 +259,27 @@ cpfl_dev_start(struct rte_eth_dev *dev)
 	}
 
 	vport->max_pkt_len = dev->data->mtu + CPFL_ETH_OVERHEAD;
+
+	req_vecs_num = CPFL_DFLT_Q_VEC_NUM;
+	if (req_vecs_num + adapter->used_vecs_num > num_allocated_vectors) {
+		PMD_DRV_LOG(ERR, "The accumulated request vectors' number should be less than %d",
+			    num_allocated_vectors);
+		ret = -EINVAL;
+		goto err_mtu;
+	}
+
+	ret = idpf_vc_alloc_vectors(vport, req_vecs_num);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to allocate interrupt vectors");
+		goto err_mtu;
+	}
+	adapter->used_vecs_num += req_vecs_num;
+
+	ret = cpfl_config_rx_queues_irqs(dev);
+	if (ret != 0) {
+		PMD_DRV_LOG(ERR, "Failed to configure irqs");
+		goto err_mtu;
+	}
 
 	ret = cpfl_start_queues(dev);
 	if (ret != 0) {
@@ -281,6 +315,10 @@ cpfl_dev_stop(struct rte_eth_dev *dev)
 	idpf_vc_ena_dis_vport(vport, false);
 
 	cpfl_stop_queues(dev);
+
+	idpf_config_irq_unmap(vport, dev->data->nb_rx_queues);
+
+	idpf_vc_dealloc_vectors(vport);
 
 	vport->stopped = 1;
 

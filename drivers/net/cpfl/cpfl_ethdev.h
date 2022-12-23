@@ -24,6 +24,8 @@
 
 #define CPFL_INVALID_VPORT_IDX	0xffff
 
+#define CPFL_DFLT_Q_VEC_NUM	1
+
 #define CPFL_MIN_BUF_SIZE	1024
 #define CPFL_MAX_FRAME_SIZE	9728
 
