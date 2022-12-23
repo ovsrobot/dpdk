@@ -49,6 +49,14 @@ cpfl_tx_offload_convert(uint64_t offload)
 	return ol;
 }
 
+static const struct idpf_rxq_ops def_rxq_ops = {
+	.release_mbufs = release_rxq_mbufs,
+};
+
+static const struct idpf_txq_ops def_txq_ops = {
+	.release_mbufs = release_txq_mbufs,
+};
+
 static const struct rte_memzone *
 cpfl_dma_zone_reserve(struct rte_eth_dev *dev, uint16_t queue_idx,
 		      uint16_t len, uint16_t queue_type,
@@ -177,6 +185,7 @@ cpfl_rx_split_bufq_setup(struct rte_eth_dev *dev, struct idpf_rx_queue *rxq,
 	reset_split_rx_bufq(bufq);
 	bufq->qrx_tail = hw->hw_addr + (vport->chunks_info.rx_buf_qtail_start +
 			 queue_idx * vport->chunks_info.rx_buf_qtail_spacing);
+	bufq->ops = &def_rxq_ops;
 	bufq->q_set = true;
 
 	if (bufq_id == 1) {
@@ -235,6 +244,12 @@ cpfl_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	if (check_rx_thresh(nb_desc, rx_free_thresh) != 0)
 		return -EINVAL;
 
+	/* Free memory if needed */
+	if (dev->data->rx_queues[queue_idx] != NULL) {
+		idpf_rx_queue_release(dev->data->rx_queues[queue_idx]);
+		dev->data->rx_queues[queue_idx] = NULL;
+	}
+
 	/* Setup Rx queue */
 	rxq = rte_zmalloc_socket("cpfl rxq",
 				 sizeof(struct idpf_rx_queue),
@@ -287,6 +302,7 @@ cpfl_rx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 		reset_single_rx_queue(rxq);
 		rxq->qrx_tail = hw->hw_addr + (vport->chunks_info.rx_qtail_start +
 				queue_idx * vport->chunks_info.rx_qtail_spacing);
+		rxq->ops = &def_rxq_ops;
 	} else {
 		reset_split_rx_descq(rxq);
 
@@ -399,6 +415,12 @@ cpfl_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 	if (check_tx_thresh(nb_desc, tx_rs_thresh, tx_free_thresh) != 0)
 		return -EINVAL;
 
+	/* Free memory if needed. */
+	if (dev->data->tx_queues[queue_idx] != NULL) {
+		idpf_tx_queue_release(dev->data->tx_queues[queue_idx]);
+		dev->data->tx_queues[queue_idx] = NULL;
+	}
+
 	/* Allocate the TX queue data structure. */
 	txq = rte_zmalloc_socket("cpfl txq",
 				 sizeof(struct idpf_tx_queue),
@@ -461,6 +483,7 @@ cpfl_tx_queue_setup(struct rte_eth_dev *dev, uint16_t queue_idx,
 
 	txq->qtx_tail = hw->hw_addr + (vport->chunks_info.tx_qtail_start +
 			queue_idx * vport->chunks_info.tx_qtail_spacing);
+	txq->ops = &def_txq_ops;
 	txq->q_set = true;
 	dev->data->tx_queues[queue_idx] = txq;
 
@@ -672,6 +695,18 @@ cpfl_tx_queue_stop(struct rte_eth_dev *dev, uint16_t tx_queue_id)
 	dev->data->tx_queue_state[tx_queue_id] = RTE_ETH_QUEUE_STATE_STOPPED;
 
 	return 0;
+}
+
+void
+cpfl_dev_rx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
+{
+	idpf_rx_queue_release(dev->data->rx_queues[qid]);
+}
+
+void
+cpfl_dev_tx_queue_release(struct rte_eth_dev *dev, uint16_t qid)
+{
+	idpf_tx_queue_release(dev->data->tx_queues[qid]);
 }
 
 void
