@@ -395,3 +395,26 @@ file is used by both the kernel driver and the DPDK PMD.
 
       Windows support: The DDP package is not supported on Windows so,
       loading of the package is disabled on Windows.
+
+ice: Rx path is not supported after PF or DCF add vlan offload
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If pmd does not enable Vlan offload during initialization, it will
+automatically select Rx paths that do not support offload. Even if
+Vlan offload is subsequently enabled through the API, Vlan offload
+will not work because the selected Rx path does not support Vlan
+offload.
+
+cmd_vlan_offload_parsed() goes down to the follow ethdev API functions:
+    - rte_eth_dev_set_vlan_strip_on_queue()
+    - rte_eth_dev_set_vlan_offload()
+These functions add offload settings when the port is started, running
+and processing traffic. At this time, ``rte_eth_rx_queue_setup`` api is
+needed to reroute rxq to the RX path with offload function. But at this
+time, it is possible that the original Rx path is handling packages, so
+this is not thread-safe.
+
+When applying offload on the PF or DCF, starting the ``testpmd``
+application, use the ``--rx-offloads`` startup parameter to force the
+dpdk lib to choose the Rx path with the offload function by default.
+
