@@ -14,6 +14,8 @@ extern "C" {
 
 #include "generic/rte_memcpy.h"
 
+#include <rte_common.h>
+
 #ifdef RTE_ARCH_ARM_NEON_MEMCPY
 
 #ifndef __ARM_NEON
@@ -125,6 +127,9 @@ rte_mov256(uint8_t *dst, const uint8_t *src)
 	memcpy((dst), (src), (n)) :          \
 	rte_memcpy_func((dst), (src), (n)); })
 
+__rte_nonnull_params(1, 2)
+__rte_access_param(write_only, 1, 3)
+__rte_access_param(read_only, 2, 3)
 static inline void *
 rte_memcpy_func(void *dst, const void *src, size_t n)
 {
@@ -290,6 +295,9 @@ rte_mov256(uint8_t *dst, const uint8_t *src)
 	memcpy(dst, src, 256);
 }
 
+__rte_nonnull_params(1, 2)
+__rte_access_param(write_only, 1, 3)
+__rte_access_param(read_only, 2, 3)
 static inline void *
 rte_memcpy(void *dst, const void *src, size_t n)
 {
