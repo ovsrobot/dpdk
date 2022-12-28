@@ -819,7 +819,7 @@ bnx2x_hw_stats_update(struct bnx2x_softc *sc)
 
     rte_memcpy(old, new, sizeof(struct nig_stats));
 
-    rte_memcpy(&(estats->rx_stat_ifhcinbadoctets_hi), &(pstats->mac_stx[1]),
+    rte_memcpy((struct mac_stx *)&(estats->rx_stat_ifhcinbadoctets_hi), &(pstats->mac_stx[1]),
 	   sizeof(struct mac_stx));
     estats->brb_drop_hi = pstats->brb_drop_hi;
     estats->brb_drop_lo = pstats->brb_drop_lo;
@@ -1492,9 +1492,9 @@ bnx2x_stats_init(struct bnx2x_softc *sc)
 		REG_RD(sc, NIG_REG_STAT0_BRB_TRUNCATE + port*0x38);
 	if (!CHIP_IS_E3(sc)) {
 		REG_RD_DMAE(sc, NIG_REG_STAT0_EGRESS_MAC_PKT0 + port*0x50,
-				&(sc->port.old_nig_stats.egress_mac_pkt0_lo), 2);
+				(uint32_t *)&(sc->port.old_nig_stats.egress_mac_pkt0_lo), 2);
 		REG_RD_DMAE(sc, NIG_REG_STAT0_EGRESS_MAC_PKT1 + port*0x50,
-				&(sc->port.old_nig_stats.egress_mac_pkt1_lo), 2);
+				(uint32_t *)&(sc->port.old_nig_stats.egress_mac_pkt1_lo), 2);
 	}
 
 	/* function stats */
