@@ -10,6 +10,7 @@
 #include <openssl/evp.h>	/* Needed for bpi runt block processing */
 
 #ifdef RTE_QAT_LIBIPSECMB
+#undef AES_BLOCK_SIZE
 #if defined(RTE_ARCH_ARM)
 #include <ipsec-mb.h>
 #else
