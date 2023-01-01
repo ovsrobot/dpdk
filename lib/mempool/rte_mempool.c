@@ -1265,9 +1265,14 @@ rte_mempool_dump(FILE *f, struct rte_mempool *mp)
 
 	cache_count = rte_mempool_dump_cache(f, mp);
 	common_count = rte_mempool_ops_get_count(mp);
+
 	if ((cache_count + common_count) > mp->size)
 		common_count = mp->size - cache_count;
 	fprintf(f, "  common_pool_count=%u\n", common_count);
+	fprintf(f, "  common_pool_avail_count=%u\n",
+				rte_mempool_avail_count(mp));
+	fprintf(f, "  common_pool_used_count=%u\n",
+				rte_mempool_in_use_count(mp));
 
 	/* sum and dump statistics */
 #ifdef RTE_LIBRTE_MEMPOOL_STATS
