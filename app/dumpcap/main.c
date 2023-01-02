@@ -65,8 +65,8 @@ static const char *file_prefix;
 static uint32_t snaplen = RTE_MBUF_DEFAULT_BUF_SIZE;
 static bool dump_bpf;
 static bool show_interfaces;
-static bool select_interfaces;
-const char *interface_arg;
+static uint8_t interface_arg_count = 0; /* count of interfaces configured via -i */
+static const char *interface_arg[RTE_MAX_ETHPORTS]; /*array of interface parameters */
 
 static struct {
 	uint64_t  duration;	/* nanoseconds */
@@ -242,7 +242,6 @@ static void set_default_interface(void)
 		add_interface(p, name);
 		return;
 	}
-	rte_exit(EXIT_FAILURE, "No usable interfaces found\n");
 }
 
 /* Lookup interface by name or port and add it to the list */
@@ -262,6 +261,32 @@ static void select_interface(const char *arg)
 			rte_exit(EXIT_FAILURE, "Invalid port number %u\n",
 				 port);
 		add_interface(port, name);
+	}
+}
+
+/**
+ * builds list of interfacs that capture will occur on
+ * this also validates the save format based on the number of interfaces
+ */
+static void collect_interfaces(void)
+{
+	uint8_t active;
+	struct interface *intf;
+
+	active = 0;
+
+	if (interface_arg_count == 0)
+		set_default_interface();
+	else
+		for (uint8_t i = 0; i < interface_arg_count; ++i)
+			select_interface(interface_arg[i]);
+
+	TAILQ_FOREACH(intf, &interfaces, next)
+		active++;
+
+	if ((!use_pcapng) && (active > 1)) {
+		printf("Requested pcap format, but options require pcapng; overriding\n");
+		use_pcapng = true;
 	}
 }
 
@@ -406,8 +431,8 @@ static void parse_opts(int argc, char **argv)
 			usage();
 			exit(0);
 		case 'i':
-			select_interfaces = true;
-			interface_arg = optarg;
+			interface_arg_count++;
+			interface_arg[interface_arg_count - 1] = optarg;
 			break;
 		case 'n':
 			use_pcapng = true;
@@ -840,20 +865,16 @@ int main(int argc, char **argv)
 	parse_opts(argc, argv);
 	dpdk_init();
 
+	if (rte_eth_dev_count_avail() == 0)
+		rte_exit(EXIT_FAILURE, "No usable ports found\n");
+
 	if (show_interfaces)
 		dump_interfaces();
 
-	if (rte_eth_dev_count_avail() == 0)
-		rte_exit(EXIT_FAILURE, "No Ethernet ports found\n");
-
-	if (select_interfaces)
-		select_interface(interface_arg);
+	collect_interfaces();
 
 	if (filter_str)
 		compile_filter();
-
-	if (TAILQ_EMPTY(&interfaces))
-		set_default_interface();
 
 	r = create_ring();
 	mp = create_mempool();
