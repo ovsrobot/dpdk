@@ -65,8 +65,6 @@ static const char *file_prefix;
 static uint32_t snaplen = RTE_MBUF_DEFAULT_BUF_SIZE;
 static bool dump_bpf;
 static bool show_interfaces;
-static bool select_interfaces;
-const char *interface_arg;
 
 static struct {
 	uint64_t  duration;	/* nanoseconds */
@@ -83,6 +81,7 @@ static size_t file_size;
 struct interface {
 	TAILQ_ENTRY(interface) next;
 	uint16_t port;
+	bool promisc_mode;
 	char name[RTE_ETH_NAME_MAX_LEN];
 
 	struct rte_rxtx_callback *rx_cb[RTE_MAX_QUEUES_PER_PORT];
@@ -90,7 +89,6 @@ struct interface {
 
 TAILQ_HEAD(interface_list, interface);
 static struct interface_list interfaces = TAILQ_HEAD_INITIALIZER(interfaces);
-static struct interface *port2intf[RTE_MAX_ETHPORTS];
 
 /* Can do either pcap or pcapng format output */
 typedef union {
@@ -197,29 +195,36 @@ static void add_interface(uint16_t port, const char *name)
 {
 	struct interface *intf;
 
+	if (strlen(name) >= RTE_ETH_NAME_MAX_LEN)
+		rte_exit(EXIT_FAILURE, "invalid name for interface: '%s'\n", name);
+
 	intf = malloc(sizeof(*intf));
 	if (!intf)
 		rte_exit(EXIT_FAILURE, "no memory for interface\n");
 
 	memset(intf, 0, sizeof(*intf));
 	rte_strscpy(intf->name, name, sizeof(intf->name));
+	intf->promisc_mode = promiscuous_mode;
+	intf->port = port;	/* set later */
 
-	printf("Capturing on '%s'\n", name);
-
-	port2intf[port] = intf;
 	TAILQ_INSERT_TAIL(&interfaces, intf, next);
 }
 
-/* Select all valid DPDK interfaces */
-static void select_all_interfaces(void)
+/* Name has been set but need to lookup port after eal_init */
+static void find_interfaces(void)
 {
-	char name[RTE_ETH_NAME_MAX_LEN];
-	uint16_t p;
+	struct interface *intf;
 
-	RTE_ETH_FOREACH_DEV(p) {
-		if (rte_eth_dev_get_name_by_port(p, name) < 0)
+	TAILQ_FOREACH(intf, &interfaces, next) {
+		/* if name is valid then just record port */
+		if (rte_eth_dev_get_port_by_name(intf->name, &intf->port) == 0)
 			continue;
-		add_interface(p, name);
+
+		/* maybe got passed port number string as name */
+		intf->port = get_uint(intf->name, "port_number", UINT16_MAX);
+		if (rte_eth_dev_get_name_by_port(intf->port, intf->name) < 0)
+			rte_exit(EXIT_FAILURE, "Invalid port number %u\n",
+				 intf->port);
 	}
 }
 
@@ -235,30 +240,11 @@ static void set_default_interface(void)
 	RTE_ETH_FOREACH_DEV(p) {
 		if (rte_eth_dev_get_name_by_port(p, name) < 0)
 			continue;
+
 		add_interface(p, name);
 		return;
 	}
 	rte_exit(EXIT_FAILURE, "No usable interfaces found\n");
-}
-
-/* Lookup interface by name or port and add it to the list */
-static void select_interface(const char *arg)
-{
-	uint16_t port;
-
-	if (strcmp(arg, "*") == 0)
-		select_all_interfaces();
-	else if (rte_eth_dev_get_port_by_name(arg, &port) == 0)
-		add_interface(port, arg);
-	else {
-		char name[RTE_ETH_NAME_MAX_LEN];
-
-		port = get_uint(arg, "port_number", UINT16_MAX);
-		if (rte_eth_dev_get_name_by_port(port, name) < 0)
-			rte_exit(EXIT_FAILURE, "Invalid port number %u\n",
-				 port);
-		add_interface(port, name);
-	}
 }
 
 /* Display list of possible interfaces that can be used. */
@@ -377,8 +363,7 @@ static void parse_opts(int argc, char **argv)
 			usage();
 			exit(0);
 		case 'i':
-			select_interfaces = true;
-			interface_arg = optarg;
+			add_interface(-1, optarg);
 			break;
 		case 'n':
 			use_pcapng = true;
@@ -387,7 +372,22 @@ static void parse_opts(int argc, char **argv)
 			ring_size = get_uint(optarg, "packet_limit", 0);
 			break;
 		case 'p':
-			promiscuous_mode = false;
+			/* Like dumpcap this option can occur multiple times.
+			 *
+			 * If used before the first occurrence of the -i option,
+			 * no interface will be put into the promiscuous mode.
+			 * If used after an -i option, the interface specified
+			 * by the last -i option occurring before this option
+			 * will not be put into the promiscuous mode.
+			 */
+			if (TAILQ_EMPTY(&interfaces)) {
+				promiscuous_mode = false;
+			} else {
+				struct interface *intf;
+
+				intf = TAILQ_LAST(&interfaces, interface_list);
+				intf->promisc_mode = false;
+			}
 			break;
 		case 'P':
 			use_pcapng = false;
@@ -436,7 +436,7 @@ cleanup_pdump_resources(void)
 	TAILQ_FOREACH(intf, &interfaces, next) {
 		rte_pdump_disable(intf->port,
 				  RTE_PDUMP_ALL_QUEUES, RTE_PDUMP_FLAG_RXTX);
-		if (promiscuous_mode)
+		if (intf->promisc_mode)
 			rte_eth_promiscuous_disable(intf->port);
 	}
 }
@@ -696,12 +696,17 @@ static void enable_pdump(struct rte_ring *r, struct rte_mempool *mp)
 		flags |= RTE_PDUMP_FLAG_PCAPNG;
 
 	TAILQ_FOREACH(intf, &interfaces, next) {
-		if (promiscuous_mode) {
-			ret = rte_eth_promiscuous_enable(intf->port);
-			if (ret != 0)
-				fprintf(stderr,
-					"port %u set promiscuous enable failed: %d\n",
-					intf->port, ret);
+		if (intf->promisc_mode) {
+			if (rte_eth_promiscuous_get(intf->port) == 1) {
+				/* promiscuous already enabled */
+				intf->promisc_mode = false;
+			} else {
+				ret = rte_eth_promiscuous_enable(intf->port);
+				if (ret != 0)
+					fprintf(stderr,
+						"port %u set promiscuous enable failed: %d\n",
+						intf->port, ret);
+			}
 		}
 
 		ret = rte_pdump_enable_bpf(intf->port, RTE_PDUMP_ALL_QUEUES,
@@ -711,6 +716,8 @@ static void enable_pdump(struct rte_ring *r, struct rte_mempool *mp)
 			rte_exit(EXIT_FAILURE,
 				 "Packet dump enable failed: %s\n",
 				 rte_strerror(-ret));
+
+		printf("Capturing on '%s'\n", intf->name);
 	}
 }
 
@@ -817,14 +824,13 @@ int main(int argc, char **argv)
 	if (rte_eth_dev_count_avail() == 0)
 		rte_exit(EXIT_FAILURE, "No Ethernet ports found\n");
 
-	if (select_interfaces)
-		select_interface(interface_arg);
-
 	if (filter_str)
 		compile_filter();
 
 	if (TAILQ_EMPTY(&interfaces))
 		set_default_interface();
+	else
+		find_interfaces();
 
 	r = create_ring();
 	mp = create_mempool();
