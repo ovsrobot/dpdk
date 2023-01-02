@@ -39,7 +39,7 @@ If ``-w`` option is specified, then that file is used.
 Running the Application
 -----------------------
 
-To list interfaces available for capture, use ``--list-interfaces``.
+To list interfaces available for capture, use ``-D`` or ``--list-interfaces``.
 
 To filter packets in style of *tshark*, use the ``-f`` flag.
 
@@ -52,8 +52,11 @@ Example
 .. code-block:: console
 
    # <build_dir>/app/dpdk-dumpcap --list-interfaces
-   0. 000:00:03.0
-   1. 000:00:03.1
+   Port    Name                                        Link        Promiscuous
+   0       0000:00:03.0                                Up          Enabled
+   1       0000:00:03.1                                Up          Disabled
+   2       0000:00:03.2                                Down        Disabled
+   3       0000:00:03.3                                Down        Disabled
 
    # <build_dir>/app/dpdk-dumpcap -i 0000:00:03.0 -c 6 -w /tmp/sample.pcapng
    Packets captured: 6

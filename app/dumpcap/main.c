@@ -266,11 +266,36 @@ static void dump_interfaces(void)
 {
 	char name[RTE_ETH_NAME_MAX_LEN];
 	uint16_t p;
+	struct rte_eth_link link_info;
+	char link_state[8];
+	char promisc_mode[9];
 
+	printf("%-4s\t%-40s\t%-8s\t%-12s\n",
+		"Port", "Name", "Link", "Promiscuous");
 	RTE_ETH_FOREACH_DEV(p) {
 		if (rte_eth_dev_get_name_by_port(p, name) < 0)
 			continue;
-		printf("%u. %s\n", p, name);
+
+		if (rte_eth_link_get_nowait(p, &link_info) < 0) {
+			rte_strscpy(link_state, "Unknown", sizeof(link_state));
+		}
+		else if (link_info.link_status == RTE_ETH_LINK_UP) {
+			rte_strscpy(link_state, "Up", sizeof(link_state));
+		}
+		else {
+			rte_strscpy(link_state, "Down", sizeof(link_state));
+		}
+
+		// not checking error here; should only error if given an invalid port id
+		if (rte_eth_promiscuous_get(p) == 1) {
+			rte_strscpy(promisc_mode, "Enabled", sizeof(promisc_mode));
+		}
+		else {
+			rte_strscpy(promisc_mode, "Disabled", sizeof(promisc_mode));
+		}
+
+		printf("%-4u\t%-40s\t%-8s\t%-12s\n",
+			p, name, link_state, promisc_mode);
 	}
 
 	exit(0);
