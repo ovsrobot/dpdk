@@ -84,6 +84,7 @@ struct interface {
 	TAILQ_ENTRY(interface) next;
 	uint16_t port;
 	char name[RTE_ETH_NAME_MAX_LEN];
+	int promiscuous_exit; /* 1 when promicuous is set prior to starting dumpcap */
 
 	struct rte_rxtx_callback *rx_cb[RTE_MAX_QUEUES_PER_PORT];
 };
@@ -204,6 +205,8 @@ static void add_interface(uint16_t port, const char *name)
 	memset(intf, 0, sizeof(*intf));
 	intf->port = port;
 	rte_strscpy(intf->name, name, sizeof(intf->name));
+	// not checking error here; should only error if given an invalid port id
+	intf->promiscuous_exit = rte_eth_promiscuous_get(port);
 
 	printf("Capturing on '%s'\n", name);
 
@@ -462,7 +465,7 @@ cleanup_pdump_resources(void)
 	TAILQ_FOREACH(intf, &interfaces, next) {
 		rte_pdump_disable(intf->port,
 				  RTE_PDUMP_ALL_QUEUES, RTE_PDUMP_FLAG_RXTX);
-		if (promiscuous_mode)
+		if (!intf->promiscuous_exit && promiscuous_mode)
 			rte_eth_promiscuous_disable(intf->port);
 	}
 }
