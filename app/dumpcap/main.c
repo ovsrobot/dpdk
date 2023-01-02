@@ -230,33 +230,20 @@ static void add_interface(uint16_t port, const char *name, struct interface_opts
 	TAILQ_INSERT_TAIL(&interfaces, intf, next);
 }
 
-/* Select all valid DPDK interfaces */
-static void select_all_interfaces(struct interface_opts *opts)
+/* Select available DPDK interfaces up to the limit  */
+static void select_available_interfaces(uint8_t limit, struct interface_opts *opts)
 {
 	char name[RTE_ETH_NAME_MAX_LEN];
 	uint16_t p;
+	uint8_t added = 0;
 
 	RTE_ETH_FOREACH_DEV(p) {
 		if (rte_eth_dev_get_name_by_port(p, name) < 0)
 			continue;
 		add_interface(p, name, opts);
-	}
-}
-
-/*
- * Choose interface to capture if no -i option given.
- * Select the first DPDK port, this matches what dumpcap does.
- */
-static void set_default_interface(struct interface_opts *opts)
-{
-	char name[RTE_ETH_NAME_MAX_LEN];
-	uint16_t p;
-
-	RTE_ETH_FOREACH_DEV(p) {
-		if (rte_eth_dev_get_name_by_port(p, name) < 0)
-			continue;
-		add_interface(p, name, opts);
-		return;
+		added++;
+		if (added == limit)
+			break;
 	}
 }
 
@@ -266,7 +253,7 @@ static void select_interface(struct interface_opts *opts)
 	uint16_t port;
 
 	if (strcmp(opts->intf_arg, "*") == 0)
-		select_all_interfaces(opts);
+		select_available_interfaces(RTE_MAX_ETHPORTS, opts);
 	else if (rte_eth_dev_get_port_by_name(opts->intf_arg, &port) == 0)
 		add_interface(port, opts->intf_arg, opts);
 	else {
@@ -292,7 +279,7 @@ static void collect_interfaces(void)
 	active = 0;
 
 	if (interface_arg_count == 0)
-		set_default_interface(&interface_defaults);
+		select_available_interfaces(1, &interface_defaults);
 	else
 		for (uint8_t i = 0; i < interface_arg_count; ++i)
 			select_interface(&interface_args[i]);
