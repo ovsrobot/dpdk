@@ -55,18 +55,32 @@ static const char *progname;
 static bool quit_signal;
 static bool group_read;
 static bool quiet;
-static bool promiscuous_mode = true;
 static bool use_pcapng = true;
 static char *output_name;
-static const char *filter_str;
 static unsigned int ring_size = 2048;
 static const char *capture_comment;
 static const char *file_prefix;
-static uint32_t snaplen = RTE_MBUF_DEFAULT_BUF_SIZE;
 static bool dump_bpf;
 static bool show_interfaces;
 static uint8_t interface_arg_count = 0; /* count of interfaces configured via -i */
-static const char *interface_arg[RTE_MAX_ETHPORTS]; /*array of interface parameters */
+
+/* struct representing args for each interface */
+struct interface_opts {
+	const char *intf_arg;
+	const char *filter_str;
+	bool promiscuous_mode;
+	uint32_t snaplen;
+};
+/* default parameters for interfaces */
+static struct interface_opts interface_defaults = {
+	.promiscuous_mode = true,
+	.snaplen = RTE_MBUF_DEFAULT_BUF_SIZE
+};
+//TODO this can be specified per interface but there are a few places
+// that need more review and possibly refactoring so leaving this one out
+uint32_t snaplen = RTE_MBUF_DEFAULT_BUF_SIZE;
+/* array of interface parameters */
+static struct interface_opts interface_args[RTE_MAX_ETHPORTS];
 
 static struct {
 	uint64_t  duration;	/* nanoseconds */
@@ -75,7 +89,6 @@ static struct {
 } stop;
 
 /* Running state */
-static struct rte_bpf_prm *bpf_prm;
 static uint64_t start_time, end_time;
 static uint64_t packets_received;
 static size_t file_size;
@@ -85,6 +98,8 @@ struct interface {
 	uint16_t port;
 	char name[RTE_ETH_NAME_MAX_LEN];
 	int promiscuous_exit; /* 1 when promicuous is set prior to starting dumpcap */
+	struct interface_opts *start_opts; /* cli parameters associated with interface */
+	struct rte_bpf_prm *bpf_prm;
 
 	struct rte_rxtx_callback *rx_cb[RTE_MAX_QUEUES_PER_PORT];
 };
@@ -194,7 +209,7 @@ static void auto_stop(char *opt)
 }
 
 /* Add interface to list of interfaces to capture */
-static void add_interface(uint16_t port, const char *name)
+static void add_interface(uint16_t port, const char *name, struct interface_opts *opts)
 {
 	struct interface *intf;
 
@@ -207,6 +222,7 @@ static void add_interface(uint16_t port, const char *name)
 	rte_strscpy(intf->name, name, sizeof(intf->name));
 	// not checking error here; should only error if given an invalid port id
 	intf->promiscuous_exit = rte_eth_promiscuous_get(port);
+	intf->start_opts = opts;
 
 	printf("Capturing on '%s'\n", name);
 
@@ -215,7 +231,7 @@ static void add_interface(uint16_t port, const char *name)
 }
 
 /* Select all valid DPDK interfaces */
-static void select_all_interfaces(void)
+static void select_all_interfaces(struct interface_opts *opts)
 {
 	char name[RTE_ETH_NAME_MAX_LEN];
 	uint16_t p;
@@ -223,7 +239,7 @@ static void select_all_interfaces(void)
 	RTE_ETH_FOREACH_DEV(p) {
 		if (rte_eth_dev_get_name_by_port(p, name) < 0)
 			continue;
-		add_interface(p, name);
+		add_interface(p, name, opts);
 	}
 }
 
@@ -231,7 +247,7 @@ static void select_all_interfaces(void)
  * Choose interface to capture if no -i option given.
  * Select the first DPDK port, this matches what dumpcap does.
  */
-static void set_default_interface(void)
+static void set_default_interface(struct interface_opts *opts)
 {
 	char name[RTE_ETH_NAME_MAX_LEN];
 	uint16_t p;
@@ -239,28 +255,28 @@ static void set_default_interface(void)
 	RTE_ETH_FOREACH_DEV(p) {
 		if (rte_eth_dev_get_name_by_port(p, name) < 0)
 			continue;
-		add_interface(p, name);
+		add_interface(p, name, opts);
 		return;
 	}
 }
 
 /* Lookup interface by name or port and add it to the list */
-static void select_interface(const char *arg)
+static void select_interface(struct interface_opts *opts)
 {
 	uint16_t port;
 
-	if (strcmp(arg, "*") == 0)
-		select_all_interfaces();
-	else if (rte_eth_dev_get_port_by_name(arg, &port) == 0)
-		add_interface(port, arg);
+	if (strcmp(opts->intf_arg, "*") == 0)
+		select_all_interfaces(opts);
+	else if (rte_eth_dev_get_port_by_name(opts->intf_arg, &port) == 0)
+		add_interface(port, opts->intf_arg, opts);
 	else {
 		char name[RTE_ETH_NAME_MAX_LEN];
 
-		port = get_uint(arg, "port_number", UINT16_MAX);
+		port = get_uint(opts->intf_arg, "port_number", UINT16_MAX);
 		if (rte_eth_dev_get_name_by_port(port, name) < 0)
 			rte_exit(EXIT_FAILURE, "Invalid port number %u\n",
 				 port);
-		add_interface(port, name);
+		add_interface(port, name, opts);
 	}
 }
 
@@ -276,10 +292,10 @@ static void collect_interfaces(void)
 	active = 0;
 
 	if (interface_arg_count == 0)
-		set_default_interface();
+		set_default_interface(&interface_defaults);
 	else
 		for (uint8_t i = 0; i < interface_arg_count; ++i)
-			select_interface(interface_arg[i]);
+			select_interface(&interface_args[i]);
 
 	TAILQ_FOREACH(intf, &interfaces, next)
 		active++;
@@ -330,37 +346,48 @@ static void dump_interfaces(void)
 	exit(0);
 }
 
-static void compile_filter(void)
+static void compile_filters(void)
 {
-	struct bpf_program bf;
-	pcap_t *pcap;
+	struct interface *intf;
 
-	pcap = pcap_open_dead(DLT_EN10MB, snaplen);
-	if (!pcap)
-		rte_exit(EXIT_FAILURE, "can not open pcap\n");
+	TAILQ_FOREACH(intf, &interfaces, next) {
+		if (!intf->start_opts->filter_str)
+			continue;
 
-	if (pcap_compile(pcap, &bf, filter_str,
-			 1, PCAP_NETMASK_UNKNOWN) != 0)
-		rte_exit(EXIT_FAILURE, "pcap filter string not valid (%s)\n",
-			 pcap_geterr(pcap));
+		struct bpf_program bf;
+		pcap_t *pcap;
 
-	bpf_prm = rte_bpf_convert(&bf);
-	if (bpf_prm == NULL)
-		rte_exit(EXIT_FAILURE,
-			 "bpf convert failed: %s(%d)\n",
-			 rte_strerror(rte_errno), rte_errno);
+		// pcap = pcap_open_dead(DLT_EN10MB, intf->start_opts->snaplen);
+		pcap = pcap_open_dead(DLT_EN10MB, snaplen);
+		if (!pcap)
+			rte_exit(EXIT_FAILURE, "can not open pcap\n");
 
-	if (dump_bpf) {
-		printf("cBPF program (%u insns)\n", bf.bf_len);
-		bpf_dump(&bf, 1);
-		printf("\neBPF program (%u insns)\n", bpf_prm->nb_ins);
-		rte_bpf_dump(stdout, bpf_prm->ins, bpf_prm->nb_ins);
-		exit(0);
+		if (pcap_compile(pcap, &bf, intf->start_opts->filter_str,
+				 1, PCAP_NETMASK_UNKNOWN) != 0)
+			rte_exit(EXIT_FAILURE, "pcap filter string not valid (%s)\n",
+				 pcap_geterr(pcap));
+
+		intf->bpf_prm = rte_bpf_convert(&bf);
+		if (intf->bpf_prm == NULL)
+			rte_exit(EXIT_FAILURE,
+				 "bpf convert failed: %s(%d)\n",
+				 rte_strerror(rte_errno), rte_errno);
+
+		if (dump_bpf) {
+			printf("\nPort: %d; Name: %s\n", intf->port, intf->name);
+			printf("cBPF program (%u insns)\n", bf.bf_len);
+			bpf_dump(&bf, 1);
+			printf("\neBPF program (%u insns)\n", intf->bpf_prm->nb_ins);
+			rte_bpf_dump(stdout, intf->bpf_prm->ins, intf->bpf_prm->nb_ins);
+		}
+
+		/* Don't care about original program any more */
+		pcap_freecode(&bf);
+		pcap_close(pcap);
 	}
 
-	/* Don't care about original program any more */
-	pcap_freecode(&bf);
-	pcap_close(pcap);
+	if (dump_bpf)
+		exit(0);
 }
 
 /*
@@ -421,7 +448,10 @@ static void parse_opts(int argc, char **argv)
 			show_interfaces = true;
 			break;
 		case 'f':
-			filter_str = optarg;
+			if (interface_arg_count == 0 )
+				interface_defaults.filter_str = optarg;
+			else
+				interface_args[interface_arg_count - 1].filter_str = optarg;
 			break;
 		case 'g':
 			group_read = true;
@@ -432,7 +462,13 @@ static void parse_opts(int argc, char **argv)
 			exit(0);
 		case 'i':
 			interface_arg_count++;
-			interface_arg[interface_arg_count - 1] = optarg;
+			interface_args[interface_arg_count - 1].intf_arg = optarg;
+			// set interface to global parameters when new interface is configured
+			interface_args[interface_arg_count - 1].filter_str =
+				interface_defaults.filter_str;
+			interface_args[interface_arg_count - 1].promiscuous_mode =
+				interface_defaults.promiscuous_mode;
+			// interface_args[interface_arg_count - 1].snaplen = interface_defaults.snaplen;
 			break;
 		case 'n':
 			use_pcapng = true;
@@ -441,7 +477,10 @@ static void parse_opts(int argc, char **argv)
 			ring_size = get_uint(optarg, "packet_limit", 0);
 			break;
 		case 'p':
-			promiscuous_mode = false;
+			if (interface_arg_count == 0 )
+				interface_defaults.promiscuous_mode = false;
+			else
+				interface_args[interface_arg_count - 1].promiscuous_mode = false;
 			break;
 		case 'P':
 			use_pcapng = false;
@@ -451,6 +490,12 @@ static void parse_opts(int argc, char **argv)
 			break;
 		case 's':
 			snaplen = get_uint(optarg, "snap_len", 0);
+			/*
+			if (interface_arg_count == 0 )
+				interface_defaults.snaplen = get_uint(optarg, "snap_len", 0);
+			else
+				interface_args[interface_arg_count - 1].snaplen = get_uint(optarg, "snap_len", 0);
+			*/
 			break;
 		case 'w':
 			output_name = optarg;
@@ -490,7 +535,7 @@ cleanup_pdump_resources(void)
 	TAILQ_FOREACH(intf, &interfaces, next) {
 		rte_pdump_disable(intf->port,
 				  RTE_PDUMP_ALL_QUEUES, RTE_PDUMP_FLAG_RXTX);
-		if (!intf->promiscuous_exit && promiscuous_mode)
+		if (!intf->promiscuous_exit && intf->start_opts->promiscuous_mode)
 			rte_eth_promiscuous_disable(intf->port);
 	}
 }
@@ -750,7 +795,7 @@ static void enable_pdump(struct rte_ring *r, struct rte_mempool *mp)
 		flags |= RTE_PDUMP_FLAG_PCAPNG;
 
 	TAILQ_FOREACH(intf, &interfaces, next) {
-		if (promiscuous_mode) {
+		if (intf->start_opts->promiscuous_mode) {
 			ret = rte_eth_promiscuous_enable(intf->port);
 			if (ret != 0)
 				fprintf(stderr,
@@ -759,8 +804,9 @@ static void enable_pdump(struct rte_ring *r, struct rte_mempool *mp)
 		}
 
 		ret = rte_pdump_enable_bpf(intf->port, RTE_PDUMP_ALL_QUEUES,
+					   // flags, intf->start_opts->snaplen,
 					   flags, snaplen,
-					   r, mp, bpf_prm);
+					   r, mp, intf->bpf_prm);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE,
 				 "Packet dump enable failed: %s\n",
@@ -873,8 +919,7 @@ int main(int argc, char **argv)
 
 	collect_interfaces();
 
-	if (filter_str)
-		compile_filter();
+	compile_filters();
 
 	r = create_ring();
 	mp = create_mempool();

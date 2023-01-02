@@ -41,9 +41,18 @@ Running the Application
 
 To list interfaces available for capture, use ``-D`` or ``--list-interfaces``.
 
-To filter packets in style of *tshark*, use the ``-f`` flag.
-
 To capture on multiple interfaces at once, use multiple ``-i`` flags.
+
+To filter packets in style of *tshark*, use the ``-f`` flag. This flag
+can be specified multiple times. If this flag is specified prior to ``-i``
+it sets a default filter that will be used with all interfaces. If this
+flag is specified after ``-i`` it defines a filter for that interface only.
+
+To control the promiscuous mode of an interface, use the ``-p`` flag. This flag
+can be specified multiple times. If this flag is specified prior to ``-i`` it
+sets the default mode for all interfaces. If this flag is specified after ``-i``
+it sets the mode for that interface. If you want to allow some interfaces to
+remain in promiscuous mode, this must flag must be associated with an interface.
 
 
 Example
@@ -69,6 +78,10 @@ Example
 
 Limitations
 -----------
+
+The following option of Wireshark ``dumpcap`` has a different behavior:
+
+   * ``-s`` -- snaplen is not per interface
 
 The following option of Wireshark ``dumpcap`` is not yet implemented:
 
