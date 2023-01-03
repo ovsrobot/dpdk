@@ -269,16 +269,19 @@ get_hugepage_dir(uint64_t hugepage_sz, char *hugedir, int len)
 		 * Ignore any mount that doesn't contain the --huge-dir
 		 * directory.
 		 */
-		if (strncmp(internal_conf->hugepage_dir, splitstr[MOUNTPT],
-			strlen(splitstr[MOUNTPT])) != 0) {
+		size_t mountpt_len = strlen(splitstr[MOUNTPT]);
+
+		if (strlen(internal_conf->hugepage_dir) > mountpt_len)
 			continue;
-		}
+		else if (strncmp(internal_conf->hugepage_dir, splitstr[MOUNTPT],
+			mountpt_len) != 0)
+			continue;
 
 		/*
 		 * We found a match, but only prefer it if it's a longer match
 		 * (so /mnt/1 is preferred over /mnt for matching /mnt/1/2)).
 		 */
-		if (strlen(splitstr[MOUNTPT]) > strlen(found))
+		if (mountpt_len > strlen(found))
 			strlcpy(found, splitstr[MOUNTPT], len);
 	} /* end while fgets */
 
