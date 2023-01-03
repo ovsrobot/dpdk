@@ -4769,6 +4769,21 @@ set_fwd_eth_peer(portid_t port_id, char *peer_addr)
 	}
 	peer_eth_addrs[port_id] = new_peer_addr;
 }
+void
+set_fwd_underlay_eth_peer(portid_t port_id, char *peer_addr)
+{
+	struct rte_ether_addr new_peer_addr;
+	if (!rte_eth_dev_is_valid_port(port_id)) {
+		fprintf(stderr, "Error: Invalid port number %i\n", port_id);
+		return;
+	}
+	if (rte_ether_unformat_addr(peer_addr, &new_peer_addr) < 0) {
+		fprintf(stderr, "Error: Invalid ethernet address: %s\n",
+				peer_addr);
+		return;
+	}
+	peer_underlay_eth_addrs[port_id] = new_peer_addr;
+}
 
 int
 set_fwd_lcores_list(unsigned int *lcorelist, unsigned int nb_lc)

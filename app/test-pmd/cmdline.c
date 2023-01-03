@@ -12621,6 +12621,52 @@ static cmdline_parse_inst_t cmd_show_port_flow_transfer_proxy = {
 	}
 };
 
+struct cmd_underlay_eth_peer_result {
+	cmdline_fixed_string_t set;
+	cmdline_fixed_string_t underlay_eth_peer;
+	portid_t port_id;
+	cmdline_fixed_string_t underlay_peer_addr;
+};
+
+static void cmd_set_underlay_eth_peer_parsed(void *parsed_result,
+			__rte_unused struct cmdline *cl,
+			__rte_unused void *data)
+{
+		struct cmd_underlay_eth_peer_result *res = parsed_result;
+
+		if (test_done == 0) {
+			fprintf(stderr, "Please stop forwarding first\n");
+			return;
+		}
+		if (!strcmp(res->underlay_eth_peer, "underlay-eth-peer")) {
+			set_fwd_underlay_eth_peer(res->port_id, res->underlay_peer_addr);
+			fwd_config_setup();
+		}
+}
+
+static cmdline_parse_token_string_t cmd_underlay_eth_peer_set =
+	TOKEN_STRING_INITIALIZER(struct cmd_underlay_eth_peer_result, set, "set");
+static cmdline_parse_token_string_t cmd_underlay_eth_peer =
+	TOKEN_STRING_INITIALIZER(struct cmd_underlay_eth_peer_result, underlay_eth_peer, "underlay-eth-peer");
+static cmdline_parse_token_num_t cmd_underlay_eth_peer_port_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_underlay_eth_peer_result, port_id,
+		RTE_UINT16);
+static cmdline_parse_token_string_t cmd_underlay_eth_peer_addr =
+	TOKEN_STRING_INITIALIZER(struct cmd_underlay_eth_peer_result, underlay_peer_addr, NULL);
+
+static cmdline_parse_inst_t cmd_set_fwd_underlay_eth_peer = {
+	.f = cmd_set_underlay_eth_peer_parsed,
+	.data = NULL,
+	.help_str = "set underlay-eth-peer <port_id> <peer_mac>",
+	.tokens = {
+		(void *)&cmd_underlay_eth_peer_set,
+		(void *)&cmd_underlay_eth_peer,
+		(void *)&cmd_underlay_eth_peer_port_id,
+		(void *)&cmd_underlay_eth_peer_addr,
+		NULL,
+	},
+};
+
 /* ******************************************************************************** */
 
 /* list of instructions */
@@ -12851,6 +12897,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_show_capability,
 	(cmdline_parse_inst_t *)&cmd_set_flex_is_pattern,
 	(cmdline_parse_inst_t *)&cmd_set_flex_spec_pattern,
+	(cmdline_parse_inst_t *)&cmd_set_fwd_underlay_eth_peer,
 	NULL,
 };
 

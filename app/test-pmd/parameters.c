@@ -603,6 +603,7 @@ launch_args_parse(int argc, char** argv)
 		{ "auto-start",			0, 0, 0 },
 		{ "eth-peers-configfile",	1, 0, 0 },
 		{ "eth-peer",			1, 0, 0 },
+		{ "underlay-eth-peer",		1, 0, 0 },
 #endif
 		{ "tx-first",			0, 0, 0 },
 		{ "stats-period",		1, 0, 0 },
@@ -693,6 +694,8 @@ launch_args_parse(int argc, char** argv)
 		{ "mp-alloc",			1, 0, 0 },
 		{ "tx-ip",			1, 0, 0 },
 		{ "tx-udp",			1, 0, 0 },
+		{ "utx-ip",		1, 0, 0 },
+		{ "underlay_tx_only",		0, 0, 0 },
 		{ "noisy-tx-sw-buffer-size",	1, 0, 0 },
 		{ "noisy-tx-sw-buffer-flushtime", 1, 0, 0 },
 		{ "noisy-lkup-memory",		1, 0, 0 },
@@ -803,6 +806,47 @@ launch_args_parse(int argc, char** argv)
 				nb_peer_eth_addrs++;
 			}
 #endif
+			if (!strcmp(lgopts[opt_idx].name, "underlay-eth-peer")) {
+				char *port_end;
+
+				errno = 0;
+				n = strtoul(optarg, &port_end, 10);
+				if (errno != 0 || port_end == optarg || *port_end++ != ',')
+					rte_exit(EXIT_FAILURE,
+						 "Invalid underlay-eth-peer: %s", optarg);
+				if (n >= RTE_MAX_ETHPORTS)
+					rte_exit(EXIT_FAILURE,
+						 "eth-peer: port %d >= RTE_MAX_ETHPORTS(%d)\n",
+						 n, RTE_MAX_ETHPORTS);
+
+				if (rte_ether_unformat_addr(port_end,
+						&peer_underlay_eth_addrs[n]) < 0)
+					rte_exit(EXIT_FAILURE,
+						 "Invalid ethernet address: %s\n",
+						 port_end);
+			}
+			if (!strcmp(lgopts[opt_idx].name, "utx-ip")) {
+				struct in_addr in;
+				char *end;
+
+				end = strchr(optarg, ',');
+				if (end == optarg || !end)
+					rte_exit(EXIT_FAILURE,
+						 "Invalid tx-sip: %s", optarg);
+
+				*end++ = 0;
+				if (inet_pton(AF_INET, optarg, &in) == 0)
+					rte_exit(EXIT_FAILURE,
+						 "Invalid source IP address: %s\n",
+						 optarg);
+				underlay_tx_ip_src_addr = rte_be_to_cpu_32(in.s_addr);
+
+				if (inet_pton(AF_INET, end, &in) == 0)
+					rte_exit(EXIT_FAILURE,
+						 "Invalid destination IP address: %s\n",
+						 optarg);
+				underlay_tx_ip_dst_addr = rte_be_to_cpu_32(in.s_addr);
+			}
 			if (!strcmp(lgopts[opt_idx].name, "tx-ip")) {
 				struct in_addr in;
 				char *end;

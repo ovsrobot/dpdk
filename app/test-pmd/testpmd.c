@@ -156,7 +156,10 @@ uint8_t txring_numa[RTE_MAX_ETHPORTS];
  * ports.
  */
 struct rte_ether_addr peer_eth_addrs[RTE_MAX_ETHPORTS];
-portid_t nb_peer_eth_addrs = 0;
+struct rte_ether_addr peer_underlay_eth_addrs[RTE_MAX_ETHPORTS];
+portid_t nb_peer_eth_addrs;
+portid_t nb_underlay_peer_eth_addr;
+bool is_underlay_tx_only;
 
 /*
  * Probed Target Environment.
@@ -194,6 +197,7 @@ struct fwd_engine * fwd_engines[] = {
 	&flow_gen_engine,
 	&rx_only_engine,
 	&tx_only_engine,
+	&tun_tx_only_engine,
 	&csum_fwd_engine,
 	&icmp_echo_engine,
 	&noisy_vnf_engine,
@@ -257,6 +261,7 @@ uint8_t multi_rx_mempool; /**< Enables multi-rx-mempool feature */
 uint16_t tx_pkt_length = TXONLY_DEF_PACKET_LEN; /**< TXONLY packet length. */
 uint16_t tx_pkt_seg_lengths[RTE_MAX_SEGS_PER_PKT] = {
 	TXONLY_DEF_PACKET_LEN,
+	VXLAN_TXONLY_DEF_PACKET_LEN,
 };
 uint8_t  tx_pkt_nb_segs = 1; /**< Number of segments in TXONLY packets */
 
@@ -759,6 +764,8 @@ set_def_peer_eth_addrs(void)
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++) {
 		peer_eth_addrs[i].addr_bytes[0] = RTE_ETHER_LOCAL_ADMIN_ADDR;
 		peer_eth_addrs[i].addr_bytes[5] = i;
+		peer_underlay_eth_addrs[i].addr_bytes[0] = RTE_ETHER_LOCAL_ADMIN_ADDR;
+		peer_underlay_eth_addrs[i].addr_bytes[5] = i;
 	}
 }
 
@@ -2309,7 +2316,10 @@ run_one_txonly_burst_on_core(void *fwd_arg)
 	fwd_lc = (struct fwd_lcore *) fwd_arg;
 	tmp_lcore = *fwd_lc;
 	tmp_lcore.stopped = 1;
-	run_pkt_fwd_on_lcore(&tmp_lcore, tx_only_engine.packet_fwd);
+	if (is_underlay_tx_only)
+		run_pkt_fwd_on_lcore(&tmp_lcore, tun_tx_only_engine.packet_fwd);
+	else
+		run_pkt_fwd_on_lcore(&tmp_lcore, tx_only_engine.packet_fwd);
 	return 0;
 }
 
@@ -2394,7 +2404,11 @@ start_packet_forwarding(int with_tx_first)
 	}
 
 	if (with_tx_first) {
-		port_fwd_begin = tx_only_engine.port_fwd_begin;
+		if (is_underlay_tx_only) {
+			port_fwd_begin = tun_tx_only_engine.port_fwd_begin;
+		} else {
+			port_fwd_begin = tx_only_engine.port_fwd_begin;
+		}
 		if (port_fwd_begin != NULL) {
 			for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
 				if (port_fwd_begin(fwd_ports_ids[i])) {
@@ -2420,7 +2434,11 @@ start_packet_forwarding(int with_tx_first)
 					run_one_txonly_burst_on_core);
 			rte_eal_mp_wait_lcore();
 		}
-		port_fwd_end = tx_only_engine.port_fwd_end;
+		if (is_underlay_tx_only) {
+			port_fwd_end = tun_tx_only_engine.port_fwd_end;
+		} else {
+			port_fwd_end = tx_only_engine.port_fwd_end;
+		}
 		if (port_fwd_end != NULL) {
 			for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++)
 				(*port_fwd_end)(fwd_ports_ids[i]);

@@ -423,6 +423,7 @@ extern struct fwd_engine mac_swap_engine;
 extern struct fwd_engine flow_gen_engine;
 extern struct fwd_engine rx_only_engine;
 extern struct fwd_engine tx_only_engine;
+extern struct fwd_engine tun_tx_only_engine;
 extern struct fwd_engine csum_fwd_engine;
 extern struct fwd_engine icmp_echo_engine;
 extern struct fwd_engine noisy_vnf_engine;
@@ -598,6 +599,7 @@ extern uint8_t multi_rx_mempool; /**< Enables multi-rx-mempool feature. */
  * Configuration of packet segments used by the "txonly" processing engine.
  */
 #define TXONLY_DEF_PACKET_LEN 64
+#define VXLAN_TXONLY_DEF_PACKET_LEN 128
 extern uint16_t tx_pkt_length; /**< Length of TXONLY packet */
 extern uint16_t tx_pkt_seg_lengths[RTE_MAX_SEGS_PER_PKT]; /**< Seg. lengths */
 extern uint8_t  tx_pkt_nb_segs; /**< Number of segments in TX packets */
@@ -630,8 +632,14 @@ extern int8_t tx_wthresh;
 extern uint16_t tx_udp_src_port;
 extern uint16_t tx_udp_dst_port;
 
+extern uint16_t underlay_tx_udp_src_port;
+extern uint16_t underlay_tx_udp_dst_port;
+
 extern uint32_t tx_ip_src_addr;
 extern uint32_t tx_ip_dst_addr;
+
+extern uint32_t underlay_tx_ip_src_addr;
+extern uint32_t underlay_tx_ip_dst_addr;
 
 extern struct fwd_config cur_fwd_config;
 extern struct fwd_engine *cur_fwd_eng;
@@ -644,6 +652,7 @@ extern uint16_t geneve_udp_port; /**< UDP port of tunnel GENEVE. */
 
 extern portid_t nb_peer_eth_addrs; /**< Number of peer ethernet addresses. */
 extern struct rte_ether_addr peer_eth_addrs[RTE_MAX_ETHPORTS];
+extern struct rte_ether_addr peer_underlay_eth_addrs[RTE_MAX_ETHPORTS];
 
 extern uint32_t burst_tx_delay_time; /**< Burst tx delay time(us) for mac-retry. */
 extern uint32_t burst_tx_retry_num;  /**< Burst tx retry number for mac-retry. */
@@ -892,7 +901,7 @@ int init_fwd_streams(void);
 void update_fwd_ports(portid_t new_pid);
 
 void set_fwd_eth_peer(portid_t port_id, char *peer_addr);
-
+void set_fwd_underlay_eth_peer(portid_t port_id, char *peer_addr);
 void port_mtu_set(portid_t port_id, uint16_t mtu);
 int port_action_handle_create(portid_t port_id, uint32_t id,
 			      const struct rte_flow_indir_action_conf *conf,
