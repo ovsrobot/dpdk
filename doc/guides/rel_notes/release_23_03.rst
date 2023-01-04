@@ -55,6 +55,14 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added multi-process support for axgbe PMD.**
+
+  To achieve multi-process support separate out TX and RX function
+  inside the axgbe driver and call that from a secondary process
+  when it is attaching to an already-configured NIC
+
+  Added new API functions ``axgbe_set_rx_function()``,
+  and ``axgbe_set_tx_function()`` to support multi-process.
 
 Removed Items
 -------------
