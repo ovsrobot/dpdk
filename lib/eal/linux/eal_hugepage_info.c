@@ -265,12 +265,23 @@ get_hugepage_dir(uint64_t hugepage_sz, char *hugedir, int len)
 			break;
 		}
 
+		size_t mountpt_len = strlen(splitstr[MOUNTPT]);
+		size_t hugepage_dir_len = strlen(internal_conf->hugepage_dir);
+
 		/*
 		 * Ignore any mount that doesn't contain the --huge-dir
 		 * directory.
 		 */
 		if (strncmp(internal_conf->hugepage_dir, splitstr[MOUNTPT],
-			strlen(splitstr[MOUNTPT])) != 0) {
+			mountpt_len) != 0) {
+			continue;
+		}
+		/*
+		 * Ignore any mount where hugepage_dir is not a parent path of
+		 * the mount
+		 */
+		else if(hugepage_dir_len > mountpt_len &&
+			internal_conf->hugepage_dir[mountpt_len] != '/') {
 			continue;
 		}
 
@@ -278,7 +289,7 @@ get_hugepage_dir(uint64_t hugepage_sz, char *hugedir, int len)
 		 * We found a match, but only prefer it if it's a longer match
 		 * (so /mnt/1 is preferred over /mnt for matching /mnt/1/2)).
 		 */
-		if (strlen(splitstr[MOUNTPT]) > strlen(found))
+		if (mountpt_len > strlen(found))
 			strlcpy(found, splitstr[MOUNTPT], len);
 	} /* end while fgets */
 
