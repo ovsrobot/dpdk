@@ -67,7 +67,7 @@ elif cross_compiler.endswith('clang')
     found_target = false
     # search for '-target' and use the arg that follows
     # (i.e. the value of '-target') as cross_prefix
-    foreach cross_c_arg : meson.get_cross_property('c_args')
+    foreach cross_c_arg : meson.get_external_property('c_args')
         if found_target and cross_prefix == ''
             cross_prefix = cross_c_arg
         endif
@@ -79,7 +79,7 @@ elif cross_compiler.endswith('clang')
         error('Did not find -target and its value in c_args in input cross-file.')
     endif
     linker = 'lld'
-    foreach cross_c_link_arg : meson.get_cross_property('c_link_args')
+    foreach cross_c_link_arg : meson.get_external_property('c_link_args')
         if cross_c_link_arg.startswith('-fuse-ld')
             linker = cross_c_link_arg.split('=')[1]
         endif
