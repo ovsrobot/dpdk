@@ -3197,6 +3197,19 @@ i40e_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 	qinfo->conf.offloads = txq->offloads;
 }
 
+void
+i40e_rxq_rearm_data_get(struct rte_eth_dev *dev, uint16_t queue_id,
+	struct rte_eth_rxq_rearm_data *rxq_rearm_data)
+{
+	struct i40e_rx_queue *rxq;
+
+	rxq = dev->data->rx_queues[queue_id];
+
+	rxq_rearm_data->rx_sw_ring = rxq->sw_ring;
+	rxq_rearm_data->rearm_start = &rxq->rxrearm_start;
+	rxq_rearm_data->rearm_nb = &rxq->rxrearm_nb;
+}
+
 #ifdef RTE_ARCH_X86
 static inline bool
 get_avx_supported(bool request_avx512)
@@ -3321,6 +3334,9 @@ i40e_set_rx_function(struct rte_eth_dev *dev)
 			PMD_INIT_LOG(DEBUG, "Using Vector Rx (port %d).",
 				     dev->data->port_id);
 			dev->rx_pkt_burst = i40e_recv_pkts_vec;
+#ifdef RTE_ARCH_ARM64
+			dev->rx_flush_descriptor = i40e_rx_flush_descriptor_vec;
+#endif
 		}
 #endif /* RTE_ARCH_X86 */
 	} else if (!dev->data->scattered_rx && ad->rx_bulk_alloc_allowed) {
@@ -3484,6 +3500,9 @@ i40e_set_tx_function(struct rte_eth_dev *dev)
 			PMD_INIT_LOG(DEBUG, "Using Vector Tx (port %d).",
 				     dev->data->port_id);
 			dev->tx_pkt_burst = i40e_xmit_pkts_vec;
+#ifdef RTE_ARCH_ARM64
+			dev->tx_fill_sw_ring = i40e_tx_fill_sw_ring;
+#endif
 #endif /* RTE_ARCH_X86 */
 		} else {
 			PMD_INIT_LOG(DEBUG, "Simple tx finally be used.");

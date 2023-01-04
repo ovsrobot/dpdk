@@ -739,6 +739,48 @@ i40e_xmit_fixed_burst_vec(void *__rte_restrict tx_queue,
 	return nb_pkts;
 }
 
+int
+i40e_rx_flush_descriptor_vec(void *rx_queue, uint16_t nb_rearm)
+{
+	struct i40e_rx_queue *rxq = rx_queue;
+	struct i40e_rx_entry *rxep;
+	volatile union i40e_rx_desc *rxdp;
+	uint16_t rx_id;
+	uint64x2_t dma_addr;
+	uint64_t paddr;
+	uint16_t i;
+
+	rxdp = rxq->rx_ring + rxq->rxrearm_start;
+	rxep = &rxq->sw_ring[rxq->rxrearm_start];
+
+	for (i = 0; i < nb_rearm; i++) {
+		/* Initialize rxdp descs */
+		paddr = (rxep[i].mbuf)->buf_iova + RTE_PKTMBUF_HEADROOM;
+		dma_addr = vdupq_n_u64(paddr);
+		/* flush desc with pa dma_addr */
+		vst1q_u64((uint64_t *)&rxdp++->read, dma_addr);
+	}
+
+	/* Update the descriptor initializer index */
+	rxq->rxrearm_start += nb_rearm;
+	rx_id = rxq->rxrearm_start - 1;
+
+	if (unlikely(rxq->rxrearm_start >= rxq->nb_rx_desc)) {
+		rxq->rxrearm_start = rxq->rxrearm_start - rxq->nb_rx_desc;
+		if (!rxq->rxrearm_start)
+			rx_id = rxq->nb_rx_desc - 1;
+		else
+			rx_id = rxq->rxrearm_start - 1;
+	}
+	rxq->rxrearm_nb -= nb_rearm;
+
+	rte_io_wmb();
+	/* Update the tail pointer on the NIC */
+	I40E_PCI_REG_WRITE_RELAXED(rxq->qrx_tail, rx_id);
+
+	return 0;
+}
+
 void __rte_cold
 i40e_rx_queue_release_mbufs_vec(struct i40e_rx_queue *rxq)
 {
