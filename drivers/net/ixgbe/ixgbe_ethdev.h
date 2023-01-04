@@ -625,6 +625,9 @@ void ixgbe_rxq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 void ixgbe_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 	struct rte_eth_txq_info *qinfo);
 
+void ixgbe_rxq_rearm_data_get(struct rte_eth_dev *dev, uint16_t queue_id,
+	struct rte_eth_rxq_rearm_data *rxq_rearm_data);
+
 int ixgbevf_dev_rx_init(struct rte_eth_dev *dev);
 
 void ixgbevf_dev_tx_init(struct rte_eth_dev *dev);

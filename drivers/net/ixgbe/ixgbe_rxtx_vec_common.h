@@ -129,6 +129,54 @@ ixgbe_tx_free_bufs(struct ixgbe_tx_queue *txq)
 	return txq->tx_rs_thresh;
 }
 
+int
+ixgbe_tx_fill_sw_ring(void *tx_queue,
+		struct rte_eth_rxq_rearm_data *rxq_rearm_data)
+{
+	struct ixgbe_tx_queue *txq = tx_queue;
+	struct ixgbe_tx_entry_v *txep;
+	void **rxep;
+	uint32_t status;
+	struct rte_mbuf *m;
+	int i, n;
+	int nb_rearm = 0;
+
+	if (*rxq_rearm_data->rearm_nb < txq->tx_rs_thresh ||
+			txq->nb_tx_free > txq->tx_free_thresh)
+		return 0;
+
+	/* check DD bits on threshold descriptor */
+	status = txq->tx_ring[txq->tx_next_dd].wb.status;
+	if (!(status & IXGBE_ADVTXD_STAT_DD))
+		return 0;
+
+	n = txq->tx_rs_thresh;
+
+	/* first buffer to free from S/W ring is at index
+	 * tx_next_dd - (tx_rs_thresh-1)
+	 */
+	txep = &txq->sw_ring_v[txq->tx_next_dd - (n - 1)];
+	rxep = rxq_rearm_data->rx_sw_ring;
+	rxep += *rxq_rearm_data->rearm_start;
+
+	for (i = 0; i < n; i++, rxep++) {
+		m = rte_pktmbuf_prefree_seg(txep[i].mbuf);
+		if (m != NULL) {
+			*rxep = m;
+			nb_rearm++;
+		}
+	}
+	n = nb_rearm;
+
+	/* update counters for Tx */
+	txq->nb_tx_free = (uint16_t)(txq->nb_tx_free + txq->tx_rs_thresh);
+	txq->tx_next_dd = (uint16_t)(txq->tx_next_dd + txq->tx_rs_thresh);
+	if (txq->tx_next_dd >= txq->nb_tx_desc)
+		txq->tx_next_dd = (uint16_t)(txq->tx_rs_thresh - 1);
+
+	return n;
+}
+
 static __rte_always_inline void
 tx_backlog_entry(struct ixgbe_tx_entry_v *txep,
 		 struct rte_mbuf **tx_pkts, uint16_t nb_pkts)

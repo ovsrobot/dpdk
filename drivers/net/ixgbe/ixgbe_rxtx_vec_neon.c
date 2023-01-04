@@ -633,6 +633,58 @@ ixgbe_xmit_fixed_burst_vec(void *tx_queue, struct rte_mbuf **tx_pkts,
 	return nb_pkts;
 }
 
+int
+ixgbe_rx_flush_descriptor_vec(void *rx_queue, uint16_t nb_rearm)
+{
+	struct ixgbe_rx_queue *rxq = rx_queue;
+	struct ixgbe_rx_entry *rxep;
+	volatile union ixgbe_adv_rx_desc *rxdp;
+	struct rte_mbuf *mb;
+	uint16_t rx_id;
+	uint64x2_t dma_addr;
+	uint64x2_t zero = vdupq_n_u64(0);
+	uint64_t paddr;
+	uint8x8_t p;
+	uint16_t i;
+
+	rxdp = rxq->rx_ring + rxq->rxrearm_start;
+	rxep = &rxq->sw_ring[rxq->rxrearm_start];
+
+	p = vld1_u8((uint8_t *)&rxq->mbuf_initializer);
+
+	for (i = 0; i < nb_rearm; i++) {
+		mb = rxep[i].mbuf;
+		/*
+		 * Flush mbuf with pkt template.
+		 * Data to be rearmed is 6 bytes long.
+		 */
+		vst1_u8((uint8_t *)&mb->rearm_data, p);
+		/* Initialize rxdp descs */
+		paddr = mb->buf_iova + RTE_PKTMBUF_HEADROOM;
+		dma_addr = vsetq_lane_u64(paddr, zero, 0);
+		/* flush desc with pa dma_addr */
+		vst1q_u64((uint64_t *)&rxdp++->read, dma_addr);
+	}
+
+	/* Update the descriptor initializer index */
+	rxq->rxrearm_start += nb_rearm;
+	rx_id = rxq->rxrearm_start - 1;
+
+	if (unlikely(rxq->rxrearm_start >= rxq->nb_rx_desc)) {
+		rxq->rxrearm_start = rxq->rxrearm_start - rxq->nb_rx_desc;
+		if (!rxq->rxrearm_start)
+			rx_id = rxq->nb_rx_desc - 1;
+		else
+			rx_id = rxq->rxrearm_start - 1;
+	}
+	rxq->rxrearm_nb -= nb_rearm;
+
+	/* Update the tail pointer on the NIC */
+	IXGBE_PCI_REG_WRITE(rxq->rdt_reg_addr, rx_id);
+
+	return 0;
+}
+
 static void __rte_cold
 ixgbe_tx_queue_release_mbufs_vec(struct ixgbe_tx_queue *txq)
 {
