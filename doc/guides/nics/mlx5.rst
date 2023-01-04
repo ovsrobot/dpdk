@@ -599,6 +599,9 @@ Limitations
 
 - The NIC egress flow rules on representor port are not supported.
 
+- When using DV/verbs flow engine (``dv_flow_en`` = 1/0 respectively), Match on SPI field
+  in ESP header for group 0 needs MLNX_OFED 5.6+.
+
 
 Statistics
 ----------
