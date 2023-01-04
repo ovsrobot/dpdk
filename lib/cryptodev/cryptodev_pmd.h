@@ -29,7 +29,7 @@ extern "C" {
 #include "rte_cryptodev.h"
 
 
-#define RTE_CRYPTODEV_PMD_DEFAULT_MAX_NB_QUEUE_PAIRS	8
+#define RTE_CRYPTODEV_PMD_DEFAULT_MAX_NB_QUEUE_PAIRS	64
 
 #define RTE_CRYPTODEV_PMD_NAME_ARG			("name")
 #define RTE_CRYPTODEV_PMD_MAX_NB_QP_ARG			("max_nb_queue_pairs")
