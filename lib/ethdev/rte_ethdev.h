@@ -1818,6 +1818,17 @@ struct rte_eth_txq_info {
 	uint8_t queue_state;        /**< one of RTE_ETH_QUEUE_STATE_*. */
 } __rte_cache_min_aligned;
 
+/**
+ * @internal
+ * Structure used to hold pointers to internal ethdev Rx rearm data.
+ * The main purpose is to load Rx queue rearm data in direct rearm mode.
+ */
+struct rte_eth_rxq_rearm_data {
+	void *rx_sw_ring;
+	uint16_t *rearm_start;
+	uint16_t *rearm_nb;
+} __rte_cache_min_aligned;
+
 /* Generic Burst mode flag definition, values can be ORed. */
 
 /**
@@ -3183,6 +3194,34 @@ int rte_eth_dev_set_tx_queue_stats_mapping(uint16_t port_id,
 int rte_eth_dev_set_rx_queue_stats_mapping(uint16_t port_id,
 					   uint16_t rx_queue_id,
 					   uint8_t stat_idx);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Directly put Tx freed buffers into Rx sw-ring and flush desc.
+ *
+ * @param rx_port_id
+ *   Port identifying the receive side.
+ * @param rx_queue_id
+ *   The index of the receive queue identifying the receive side.
+ *   The value must be in the range [0, nb_rx_queue - 1] previously supplied
+ *   to rte_eth_dev_configure().
+ * @param tx_port_id
+ *   Port identifying the transmit side.
+ * @param tx_queue_id
+ *   The index of the transmit queue identifying the transmit side.
+ *   The value must be in the range [0, nb_tx_queue - 1] previously supplied
+ *   to rte_eth_dev_configure().
+ * @param rxq_rearm_data
+ *   A pointer to a structure of type *rte_eth_txq_rearm_data* to be filled.
+ * @return
+ *   - 0: Success
+ */
+__rte_experimental
+int rte_eth_dev_direct_rearm(uint16_t rx_port_id, uint16_t rx_queue_id,
+		uint16_t tx_port_id, uint16_t tx_queue_id,
+		struct rte_eth_rxq_rearm_data *rxq_rearm_data);
 
 /**
  * Retrieve the Ethernet address of an Ethernet device.
@@ -4783,6 +4822,27 @@ int rte_eth_tx_queue_info_get(uint16_t port_id, uint16_t queue_id,
 	struct rte_eth_txq_info *qinfo);
 
 /**
+ * Get rearm data about given ports's Rx queue.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param queue_id
+ *   The Rx queue on the Ethernet device for which rearm data
+ *   will be got.
+ * @param rxq_rearm_data
+ *   A pointer to a structure of type *rte_eth_txq_rearm_data* to be filled.
+ *
+ * @return
+ *   - 0: Success
+ *   - -ENODEV:  If *port_id* is invalid.
+ *   - -ENOTSUP: routine is not supported by the device PMD.
+ *   - -EINVAL:  The queue_id is out of range.
+ */
+__rte_experimental
+int rte_eth_rx_queue_rearm_data_get(uint16_t port_id, uint16_t queue_id,
+		struct rte_eth_rxq_rearm_data *rxq_rearm_data);
+
+/**
  * Retrieve information about the Rx packet burst mode.
  *
  * @param port_id
@@ -6101,6 +6161,120 @@ static inline int rte_eth_tx_descriptor_status(uint16_t port_id,
 	if (*p->tx_descriptor_status == NULL)
 		return -ENOTSUP;
 	return (*p->tx_descriptor_status)(qd, offset);
+}
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Fill Rx sw-ring with Tx buffers in direct rearm mode.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param queue_id
+ *   The index of the transmit queue.
+ *   The value must be in the range [0, nb_tx_queue - 1] previously supplied
+ *   to rte_eth_dev_configure().
+ * @param rxq_rearm_data
+ *   A pointer to a structure of type *rte_eth_rxq_rearm_data* to be filled with
+ *   the rearm data of a receive queue.
+ * @return
+ *   - The number buffers correct to be filled in the Rx sw-ring.
+ *   - (-EINVAL) bad port or queue.
+ *   - (-ENODEV) bad port.
+ *   - (-ENOTSUP) if the device does not support this function.
+ *
+ */
+__rte_experimental
+static inline int rte_eth_tx_fill_sw_ring(uint16_t port_id,
+	uint16_t queue_id, struct rte_eth_rxq_rearm_data *rxq_rearm_data)
+{
+	struct rte_eth_fp_ops *p;
+	void *qd;
+
+#ifdef RTE_ETHDEV_DEBUG_TX
+	if (port_id >= RTE_MAX_ETHPORTS ||
+			queue_id >= RTE_MAX_QUEUES_PER_PORT) {
+		RTE_ETHDEV_LOG(ERR,
+			"Invalid port_id=%u or queue_id=%u\n",
+			port_id, queue_id);
+		return -EINVAL;
+	}
+#endif
+
+	p = &rte_eth_fp_ops[port_id];
+	qd = p->txq.data[queue_id];
+
+#ifdef RTE_ETHDEV_DEBUG_TX
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, 0);
+
+	if (qd == NULL) {
+		RTE_ETHDEV_LOG(ERR, "Invalid Tx queue_id=%u for port_id=%u\n",
+			queue_id, port_id);
+		return -ENODEV;
+	}
+#endif
+
+	if (p->tx_fill_sw_ring == NULL)
+		return -ENOTSUP;
+
+	return p->tx_fill_sw_ring(qd, rxq_rearm_data);
+}
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ *  Flush Rx descriptor in direct rearm mode.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param queue_id
+ *   The index of the receive queue.
+ *   The value must be in the range [0, nb_rx_queue - 1] previously supplied
+ *   to rte_eth_dev_configure().
+ *@param nb_rearm
+ *   The number of Rx sw-ring buffers need to be flushed.
+ * @return
+ *   - (0) if successful.
+ *   - (-EINVAL) bad port or queue.
+ *   - (-ENODEV) bad port.
+ *   - (-ENOTSUP) if the device does not support this function.
+ */
+__rte_experimental
+static inline int rte_eth_rx_flush_descriptor(uint16_t port_id,
+	uint16_t queue_id, uint16_t nb_rearm)
+{
+	struct rte_eth_fp_ops *p;
+	void *qd;
+
+#ifdef RTE_ETHDEV_DEBUG_RX
+	if (port_id >= RTE_MAX_ETHPORTS ||
+			queue_id >= RTE_MAX_QUEUES_PER_PORT) {
+		RTE_ETHDEV_LOG(ERR,
+			"Invalid port_id=%u or queue_id=%u\n",
+			port_id, queue_id);
+		return -EINVAL;
+	}
+#endif
+
+	p = &rte_eth_fp_ops[port_id];
+	qd = p->rxq.data[queue_id];
+
+#ifdef RTE_ETHDEV_DEBUG_RX
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, 0);
+
+	if (qd == NULL) {
+		RTE_ETHDEV_LOG(ERR, "Invalid Rx queue_id=%u for port_id=%u\n",
+			queue_id, port_id);
+		return -ENODEV;
+	}
+#endif
+
+	if (p->rx_flush_descriptor == NULL)
+		return -ENOTSUP;
+
+	return p->rx_flush_descriptor(qd, nb_rearm);
 }
 
 /**

@@ -3283,6 +3283,21 @@ rte_eth_dev_set_rx_queue_stats_mapping(uint16_t port_id, uint16_t rx_queue_id,
 }
 
 int
+rte_eth_dev_direct_rearm(uint16_t rx_port_id, uint16_t rx_queue_id,
+		uint16_t tx_port_id, uint16_t tx_rx_queue_id,
+		struct rte_eth_rxq_rearm_data *rxq_rearm_data)
+{
+	int nb_rearm = 0;
+
+	nb_rearm = rte_eth_tx_fill_sw_ring(tx_port_id, tx_rx_queue_id, rxq_rearm_data);
+
+	if (nb_rearm > 0)
+		return rte_eth_rx_flush_descriptor(rx_port_id, rx_queue_id, nb_rearm);
+
+	return 0;
+}
+
+int
 rte_eth_dev_fw_version_get(uint16_t port_id, char *fw_version, size_t fw_size)
 {
 	struct rte_eth_dev *dev;
@@ -5319,6 +5334,43 @@ rte_eth_tx_queue_info_get(uint16_t port_id, uint16_t queue_id,
 	memset(qinfo, 0, sizeof(*qinfo));
 	dev->dev_ops->txq_info_get(dev, queue_id, qinfo);
 	qinfo->queue_state = dev->data->tx_queue_state[queue_id];
+
+	return 0;
+}
+
+int
+rte_eth_rx_queue_rearm_data_get(uint16_t port_id, uint16_t queue_id,
+		struct rte_eth_rxq_rearm_data *rxq_rearm_data)
+{
+	struct rte_eth_dev *dev;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	dev = &rte_eth_devices[port_id];
+
+	if (queue_id >= dev->data->nb_rx_queues) {
+		RTE_ETHDEV_LOG(ERR, "Invalid Rx queue_id=%u\n", queue_id);
+		return -EINVAL;
+	}
+
+	if (rxq_rearm_data == NULL) {
+		RTE_ETHDEV_LOG(ERR, "Cannot get ethdev port %u Rx queue %u rearm data to NULL\n",
+			port_id, queue_id);
+		return -EINVAL;
+	}
+
+	if (dev->data->rx_queues == NULL ||
+			dev->data->rx_queues[queue_id] == NULL) {
+		RTE_ETHDEV_LOG(ERR,
+			   "Rx queue %"PRIu16" of device with port_id=%"
+			   PRIu16" has not been setup\n",
+			   queue_id, port_id);
+		return -EINVAL;
+	}
+
+	if (*dev->dev_ops->rxq_rearm_data_get == NULL)
+		return -ENOTSUP;
+
+	dev->dev_ops->rxq_rearm_data_get(dev, queue_id, rxq_rearm_data);
 
 	return 0;
 }

@@ -298,6 +298,12 @@ EXPERIMENTAL {
 	rte_flow_get_q_aged_flows;
 	rte_mtr_meter_policy_get;
 	rte_mtr_meter_profile_get;
+
+	# added in 23.03
+	rte_eth_dev_direct_rearm;
+	rte_eth_rx_flush_descriptor;
+	rte_eth_rx_queue_rearm_data_get;
+	rte_eth_tx_fill_sw_ring;
 };
 
 INTERNAL {

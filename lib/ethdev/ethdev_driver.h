@@ -59,6 +59,10 @@ struct rte_eth_dev {
 	eth_rx_descriptor_status_t rx_descriptor_status;
 	/** Check the status of a Tx descriptor */
 	eth_tx_descriptor_status_t tx_descriptor_status;
+	/** Fill Rx sw-ring with Tx buffers in direct rearm mode */
+	eth_tx_fill_sw_ring_t tx_fill_sw_ring;
+	/** Flush Rx descriptor in direct rearm mode */
+	eth_rx_flush_descriptor_t rx_flush_descriptor;
 
 	/**
 	 * Device data that is shared between primary and secondary processes
@@ -503,6 +507,10 @@ typedef void (*eth_rxq_info_get_t)(struct rte_eth_dev *dev,
 
 typedef void (*eth_txq_info_get_t)(struct rte_eth_dev *dev,
 	uint16_t tx_queue_id, struct rte_eth_txq_info *qinfo);
+
+/**< @internal Get rearm data for a receive queue of an Ethernet device. */
+typedef void (*eth_rxq_rearm_data_get_t)(struct rte_eth_dev *dev,
+	uint16_t tx_queue_id, struct rte_eth_rxq_rearm_data *rxq_rearm_data);
 
 typedef int (*eth_burst_mode_get_t)(struct rte_eth_dev *dev,
 	uint16_t queue_id, struct rte_eth_burst_mode *mode);
@@ -1215,6 +1223,8 @@ struct eth_dev_ops {
 	eth_rxq_info_get_t         rxq_info_get;
 	/** Retrieve Tx queue information */
 	eth_txq_info_get_t         txq_info_get;
+	/** Get Rx queue rearm data */
+	eth_rxq_rearm_data_get_t   rxq_rearm_data_get;
 	eth_burst_mode_get_t       rx_burst_mode_get; /**< Get Rx burst mode */
 	eth_burst_mode_get_t       tx_burst_mode_get; /**< Get Tx burst mode */
 	eth_fw_version_get_t       fw_version_get; /**< Get firmware version */
