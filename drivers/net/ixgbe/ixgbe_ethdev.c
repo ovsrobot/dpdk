@@ -3859,7 +3859,7 @@ ixgbe_fw_version_get(struct rte_eth_dev *dev, char *fw_version, size_t fw_size)
 	ixgbe_read_eeprom(hw, 0x2e, &eeprom_verh);
 	ixgbe_read_eeprom(hw, 0x2d, &eeprom_verl);
 
-	etrack_id = (eeprom_verh << 16) | eeprom_verl;
+	etrack_id = (eeprom_verl << 16) | eeprom_verh;
 	ret = snprintf(fw_version, fw_size, "0x%08x", etrack_id);
 	if (ret < 0)
 		return -EINVAL;
