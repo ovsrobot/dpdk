@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright 2019 Mellanox Technologies, Ltd
 
-if not (is_linux or (is_windows and is_ms_linker))
+if not (is_linux or is_windows)
     build = false
-    reason = 'only supported on Linux and Windows build with clang'
+    reason = 'only supported on Linux and Windows'
     subdir_done()
 endif
 
