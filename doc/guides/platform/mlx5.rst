@@ -258,13 +258,15 @@ configured by the ``ibverbs_link`` build option:
 Compilation on Windows
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The DevX SDK location must be set through two environment variables:
+The DevX SDK location must be set through CFLAGS/LDFLAGS,
+either::
 
-``DEVX_LIB_PATH``
-   path to the DevX lib file.
+   meson -Dc_args=-Idevx/inc -Dc_link_args=-Ldevx/lib
 
-``DEVX_INC_PATH``
-   path to the DevX header files.
+or::
+
+   export CFLAGS=-Idevx/inc
+   export LDFLAGS=-Ldevx/lib
 
 
 .. _mlx5_common_env:
