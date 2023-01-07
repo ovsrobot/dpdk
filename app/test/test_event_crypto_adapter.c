@@ -273,6 +273,65 @@ test_crypto_adapter_stats(void)
 }
 
 static int
+test_crypto_adapter_params(void)
+{
+	int err;
+	struct rte_event_crypto_adapter_params in_params;
+	struct rte_event_crypto_adapter_params out_params;
+
+	/* Case 1: Get the default value of mbufs processed by adapter */
+	err = rte_event_crypto_adapter_get_params(TEST_ADAPTER_ID, &out_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	/* Case 2: Set max_nb = 32 (=BATCH_SEIZE) */
+	in_params.max_nb = 32;
+
+	err = rte_event_crypto_adapter_set_params(TEST_ADAPTER_ID, &in_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	err = rte_event_crypto_adapter_get_params(TEST_ADAPTER_ID, &out_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+	TEST_ASSERT(in_params.max_nb == out_params.max_nb, "Expected %u got %u",
+		    in_params.max_nb, out_params.max_nb);
+
+	/* Case 3: Set max_nb = 192 */
+	in_params.max_nb = 192;
+
+	err = rte_event_crypto_adapter_set_params(TEST_ADAPTER_ID, &in_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	err = rte_event_crypto_adapter_get_params(TEST_ADAPTER_ID, &out_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+	TEST_ASSERT(in_params.max_nb == out_params.max_nb, "Expected %u got %u",
+		    in_params.max_nb, out_params.max_nb);
+
+	/* Case 4: Set max_nb = 256 */
+	in_params.max_nb = 256;
+
+	err = rte_event_crypto_adapter_set_params(TEST_ADAPTER_ID, &in_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	err = rte_event_crypto_adapter_get_params(TEST_ADAPTER_ID, &out_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+	TEST_ASSERT(in_params.max_nb == out_params.max_nb, "Expected %u got %u",
+		    in_params.max_nb, out_params.max_nb);
+
+	/* Case 5: Set max_nb = 30(<BATCH_SIZE) */
+	in_params.max_nb = 30;
+
+	err = rte_event_crypto_adapter_set_params(TEST_ADAPTER_ID, &in_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	/* Case 6: Set max_nb = 512 */
+	in_params.max_nb = 512;
+
+	err = rte_event_crypto_adapter_set_params(TEST_ADAPTER_ID, &in_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	return TEST_SUCCESS;
+}
+
+static int
 test_op_forward_mode(uint8_t session_less)
 {
 	struct rte_crypto_sym_xform cipher_xform;
@@ -1453,6 +1512,10 @@ static struct unit_test_suite functional_testsuite = {
 		TEST_CASE_ST(test_crypto_adapter_create,
 				test_crypto_adapter_free,
 				test_crypto_adapter_stats),
+
+		TEST_CASE_ST(test_crypto_adapter_create,
+				test_crypto_adapter_free,
+				test_crypto_adapter_params),
 
 		TEST_CASE_ST(test_crypto_adapter_conf_op_forward_mode,
 				test_crypto_adapter_stop,

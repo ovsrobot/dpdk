@@ -333,3 +333,22 @@ in struct ``rte_event_crypto_adapter_stats``. The received packet and
 enqueued event counts are a sum of the counts from the eventdev PMD callbacks
 if the callback is supported, and the counts maintained by the service function,
 if one exists.
+
+Set/Get adapter configuration parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The configuration parameters of adapter can be set/read using
+``rte_event_crypto_adapter_set_params()`` and
+``rte_event_crypto_adapter_get_params()`` respectively. The parameters that
+can be set/read are defined in ``struct rte_event_crypto_adapter_params``.
+
+``rte_event_crypto_adapter_create()`` configures the adapter with
+default value for maximum packets processed per request to 128.
+``rte_event_crypto_adapter_set_params()`` function allows to reconfigure
+maximum number of packets processed by adapter per service request. This is
+alternative to configuring the maximum packets processed per request by adapter
+by using ``rte_event_crypto_adapter_create_ext()`` with parameter
+``rte_event_crypto_adapter_conf::max_nb``.
+
+``rte_event_crypto_adapter_get_parmas()`` function retrieves the configuration
+parameters that are defined in ``struct rte_event_crypto_adapter_params``.

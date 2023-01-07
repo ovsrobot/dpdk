@@ -138,6 +138,8 @@
  *  - rte_event_crypto_adapter_stop()
  *  - rte_event_crypto_adapter_stats_get()
  *  - rte_event_crypto_adapter_stats_reset()
+ *  - rte_event_crypto_adapter_get_params()
+ *  - rte_event_crypto_adapter_set_params()
 
  * The application creates an instance using rte_event_crypto_adapter_create()
  * or rte_event_crypto_adapter_create_ext().
@@ -246,6 +248,17 @@ struct rte_event_crypto_adapter_conf {
 	 * port and dequeues crypto request events in
 	 * RTE_EVENT_CRYPTO_ADAPTER_OP_FORWARD mode.
 	 */
+	uint32_t max_nb;
+	/**< The adapter can return early if it has processed at least
+	 * max_nb crypto ops. This isn't treated as a requirement; batching
+	 * may cause the adapter to process more than max_nb crypto ops.
+	 */
+};
+
+/**
+ * Adapter configuration parameters
+ */
+struct rte_event_crypto_adapter_params {
 	uint32_t max_nb;
 	/**< The adapter can return early if it has processed at least
 	 * max_nb crypto ops. This isn't treated as a requirement; batching
@@ -593,6 +606,46 @@ rte_event_crypto_adapter_service_id_get(uint8_t id, uint32_t *service_id);
  */
 int
 rte_event_crypto_adapter_event_port_get(uint8_t id, uint8_t *event_port_id);
+
+/**
+ * Set the adapter configuration parameters
+ *
+ * This api need to be called after adding at least one qp to adapter
+ *
+ * @param id
+ *  Adapter identifier
+ *
+ * @param params
+ *  A pointer to structure of type struct rte_event_crypto_adapter_params
+ *  with configuration parameter values.
+ *
+ * @return
+ *  -  0: Success
+ *  - <0: Error code on failure
+ */
+__rte_experimental
+int
+rte_event_crypto_adapter_set_params(uint8_t id,
+		struct rte_event_crypto_adapter_params *params);
+
+/**
+ * Get the adapter configuration parameters
+ *
+ * @param id
+ *  Adapter identifier
+ *
+ * @param[out] params
+ *  A pointer to structure of type struct rte_event_crypto_adapter_params
+ *  containing valid adapter parameters when return value is 0
+ *
+ * @return
+ *  -  0: Success
+ *  - <0: Error code on failure
+ */
+__rte_experimental
+int
+rte_event_crypto_adapter_get_params(uint8_t id,
+		struct rte_event_crypto_adapter_params *params);
 
 /**
  * Retrieve vector limits for a given event dev and crypto dev pair.

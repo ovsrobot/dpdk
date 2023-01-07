@@ -1324,6 +1324,52 @@ rte_event_crypto_adapter_stats_reset(uint8_t id)
 }
 
 int
+rte_event_crypto_adapter_set_params(uint8_t id,
+		struct rte_event_crypto_adapter_params *params)
+{
+	struct event_crypto_adapter *adapter;
+
+	EVENT_CRYPTO_ADAPTER_ID_VALID_OR_ERR_RET(id, -EINVAL);
+
+	if (params == NULL) {
+		RTE_EDEV_LOG_ERR("params pointer is NULL\n");
+		return -EINVAL;
+	}
+
+	adapter = eca_id_to_adapter(id);
+	if (adapter == NULL)
+		return -EINVAL;
+
+	rte_spinlock_lock(&adapter->lock);
+	adapter->max_nb = params->max_nb;
+	rte_spinlock_unlock(&adapter->lock);
+
+	return 0;
+}
+
+int
+rte_event_crypto_adapter_get_params(uint8_t id,
+		struct rte_event_crypto_adapter_params *params)
+{
+	struct event_crypto_adapter *adapter;
+
+	EVENT_CRYPTO_ADAPTER_ID_VALID_OR_ERR_RET(id, -EINVAL);
+
+	if (params == NULL) {
+		RTE_EDEV_LOG_ERR("params pointer is NULL\n");
+		return -EINVAL;
+	}
+
+	adapter = eca_id_to_adapter(id);
+	if (adapter == NULL)
+		return -EINVAL;
+
+	params->max_nb = adapter->max_nb;
+
+	return 0;
+}
+
+int
 rte_event_crypto_adapter_service_id_get(uint8_t id, uint32_t *service_id)
 {
 	struct event_crypto_adapter *adapter;
