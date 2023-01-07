@@ -124,6 +124,8 @@ struct txa_service_data {
 	uint16_t dev_count;
 	/* Loop count to flush Tx buffers */
 	int loop_cnt;
+	/* Loop count threshold to flush Tx buffers */
+	uint16_t flush_threshold;
 	/* Per ethernet device structure */
 	struct txa_service_ethdev *txa_ethdev;
 	/* Statistics */
@@ -663,13 +665,14 @@ txa_service_func(void *args)
 		ret = 0;
 	}
 
-	if ((txa->loop_cnt++ & (TXA_FLUSH_THRESHOLD - 1)) == 0) {
+	if (txa->loop_cnt++ == txa->flush_threshold) {
 
 		struct txa_service_ethdev *tdi;
 		struct txa_service_queue_info *tqi;
 		struct rte_eth_dev *dev;
 		uint16_t i;
 
+		txa->loop_cnt = 0;
 		tdi = txa->txa_ethdev;
 		nb_tx = 0;
 
@@ -767,6 +770,7 @@ txa_service_adapter_create_ext(uint8_t id, struct rte_eventdev *dev,
 	txa->service_id = TXA_INVALID_SERVICE_ID;
 	rte_spinlock_init(&txa->tx_lock);
 	txa_service_data_array[id] = txa;
+	txa->flush_threshold = TXA_FLUSH_THRESHOLD;
 
 	return 0;
 }
@@ -1277,6 +1281,50 @@ rte_event_eth_tx_adapter_stats_reset(uint8_t id)
 	if (ret == 0)
 		ret = txa_service_stats_reset(id);
 	return ret;
+}
+
+int
+rte_event_eth_tx_adapter_set_params(uint8_t id,
+			struct rte_event_eth_tx_adapter_params *txa_params)
+{
+	struct txa_service_data *txa;
+	if (txa_lookup())
+		return -ENOMEM;
+
+	TXA_CHECK_OR_ERR_RET(id);
+
+	if (txa_params == NULL)
+		return -EINVAL;
+
+	txa = txa_service_id_to_data(id);
+	rte_spinlock_lock(&txa->tx_lock);
+	txa->flush_threshold = txa_params->flush_threshold;
+	txa->max_nb_tx = txa_params->max_nb_tx;
+	rte_spinlock_unlock(&txa->tx_lock);
+
+	return 0;
+}
+
+int
+rte_event_eth_tx_adapter_get_params(uint8_t id,
+			struct rte_event_eth_tx_adapter_params *txa_params)
+{
+	struct txa_service_data *txa;
+	if (txa_lookup())
+		return -ENOMEM;
+
+	TXA_CHECK_OR_ERR_RET(id);
+
+	if (txa_params == NULL)
+		return -EINVAL;
+
+	txa = txa_service_id_to_data(id);
+	rte_spinlock_lock(&txa->tx_lock);
+	txa_params->flush_threshold = txa->flush_threshold;
+	txa_params->max_nb_tx = txa->max_nb_tx;
+	rte_spinlock_unlock(&txa->tx_lock);
+
+	return 0;
 }
 
 int

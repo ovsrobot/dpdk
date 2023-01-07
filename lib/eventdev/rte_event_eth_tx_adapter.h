@@ -104,6 +104,21 @@ struct rte_event_eth_tx_adapter_conf {
 };
 
 /**
+ * Adapter configuration parameters
+ */
+struct rte_event_eth_tx_adapter_params {
+	uint32_t max_nb_tx;
+	/**< The adapter can return early if it has processed at least
+	 * max_nb_tx mbufs. This isn't treated as a requirement; batching may
+	 * cause the adapter to process more than max_nb_tx mbufs.
+	 */
+	uint16_t flush_threshold;
+	/**< the number of service function iteration count to
+	 * flush buffered packets.
+	 */
+};
+
+/**
  * Function type used for adapter configuration callback. The callback is
  * used to fill in members of the struct rte_event_eth_tx_adapter_conf, this
  * callback is invoked when creating a RTE service function based
@@ -501,6 +516,49 @@ rte_event_eth_tx_adapter_queue_start(uint16_t eth_dev_id, uint16_t tx_queue_id);
 __rte_experimental
 int
 rte_event_eth_tx_adapter_queue_stop(uint16_t eth_dev_id, uint16_t tx_queue_id);
+
+/**
+ * Set the configuration parameters for adapter.
+ *
+ * In case not all fields are to be updated, the suggested way to use this
+ * api is read the current values using rte_event_eth_tx_adapter_get_params()
+ * and modify the required parameters and then call
+ * rte_event_eth_tx_adapter_set_params().
+ *
+ * This API is to be used after adding at least one queue to the adapter.
+ *
+ * @param id
+ *  Adapter identifier
+ * @param params
+ *  A pointer to structure of type struct rte_event_eth_tx_adapter_params
+ *  with configuration parameter values.
+ *
+ * @return
+ * -  0: Success
+ * - <0: Error code on failure
+ */
+__rte_experimental
+int
+rte_event_eth_tx_adapter_set_params(uint8_t id,
+			struct rte_event_eth_tx_adapter_params *params);
+
+/**
+ * Get the configuration parameters of adapter.
+ *
+ * @param id
+ *  Adapter identifier
+ * @param[out] params
+ *  A pointer to structure of type struct rte_event_eth_tx_adapter_params
+ *  containing valid Tx adapter parameters when return value is 0
+ *
+ * @return
+ * -  0: Success
+ * - <0: Error code on failure
+ */
+__rte_experimental
+int
+rte_event_eth_tx_adapter_get_params(uint8_t id,
+			struct rte_event_eth_tx_adapter_params *params);
 
 #ifdef __cplusplus
 }

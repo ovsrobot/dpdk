@@ -207,3 +207,25 @@ Stop function stops the adapter runtime function from enqueueing any
 packets to the associated Tx queue. This API also frees any packets that
 may have been buffered for this queue. All inflight packets destined to the
 queue are freed by the adapter runtime until the queue is started again.
+
+Set/Get adapter configuration parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The configuration parameters of adapter can be set/read using
+``rte_event_eth_tx_adapter_set_params()`` and
+``rte_event_eth_tx_adapter_get_params()`` respectively. The parameters that
+can be set/read are defined in ``struct rte_event_eth_tx_adapter_params``.
+
+``rte_event_eth_tx_adapter_create()`` configures the adapter with
+default value of maximum packets processed per request to 128.
+``rte_event_eth_tx_adapter_set_params()`` function allows to reconfigure maximum
+number of packets processed by adapter per service request.
+This is alternative to configuring the maximum packets processed per request by
+adapter by using ``rte_event_eth_tx_adapter_create_ext()`` with parameter
+rte_event_eth_tx_adapter_conf::max_nb_tx
+
+The adapter flush threshold also can be configured using
+``rte_event_eth_tx_adapter_set_params()``.
+
+``rte_event_eth_tx_adapter_get_params()`` function retrieves the adapter params
+that are defined in ``struct rte_event_eth_tx_adapter_params``.
