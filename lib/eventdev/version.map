@@ -118,6 +118,10 @@ EXPERIMENTAL {
 	rte_event_eth_tx_adapter_instance_get;
 	rte_event_eth_tx_adapter_queue_start;
 	rte_event_eth_tx_adapter_queue_stop;
+
+	# added in 23.03
+	rte_event_eth_rx_adapter_get_params;
+	rte_event_eth_rx_adapter_set_params;
 };
 
 INTERNAL {

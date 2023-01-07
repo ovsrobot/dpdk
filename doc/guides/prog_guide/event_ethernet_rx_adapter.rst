@@ -166,6 +166,26 @@ flags for handling received packets, event queue identifier, scheduler type,
 event priority, polling frequency of the receive queue and flow identifier
 in struct ``rte_event_eth_rx_adapter_queue_conf``.
 
+Set/Get adapter configuration parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The configuration parameters of adapter can be set/read using
+``rte_event_eth_rx_adapter_set_params()`` and
+``rte_event_eth_rx_adapter_get_params()`` respectively. The parameters that
+can be set/read are defined in ``struct rte_event_eth_rx_adapter_runtime_params``.
+
+``rte_event_eth_rx_adapter_create()`` or
+``rte_event_eth_rx_adapter_create_with_params()`` configures the adapter with
+default value for maximum packets processed per request to 128.
+``rte_event_eth_rx_adapter_set_params()`` function allows to reconfigure
+maximum number of packets processed by adapter per service request. This is
+alternative to configuring the maximum packets processed per request by adapter
+by using ``rte_event_eth_rx_adapter_create_ext()`` with parameter
+``rte_event_eth_rx_adapter_conf::max_nb_rx``.
+
+``rte_event_eth_rx_adapter_get_parmas()`` function retrieves the configuration
+parameters that are defined in ``struct rte_event_eth_rx_adapter_runtime_params``.
+
 Getting and resetting Adapter queue stats
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

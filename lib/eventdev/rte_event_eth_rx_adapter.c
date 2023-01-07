@@ -35,6 +35,8 @@
 #define MAX_VECTOR_NS		1E9
 #define MIN_VECTOR_NS		1E5
 
+#define RXA_NB_RX_WORK_DEFAULT 128
+
 #define ETH_RX_ADAPTER_SERVICE_NAME_LEN	32
 #define ETH_RX_ADAPTER_MEM_NAME_LEN	32
 
@@ -1551,7 +1553,7 @@ rxa_default_conf_cb(uint8_t id, uint8_t dev_id,
 	}
 
 	conf->event_port_id = port_id;
-	conf->max_nb_rx = 128;
+	conf->max_nb_rx = RXA_NB_RX_WORK_DEFAULT;
 	if (started)
 		ret = rte_event_dev_start(dev_id);
 	rx_adapter->default_cb_arg = 1;
@@ -3433,6 +3435,51 @@ rte_event_eth_rx_adapter_instance_get(uint16_t eth_dev_id,
 	return -EINVAL;
 }
 
+int
+rte_event_eth_rx_adapter_set_params(uint8_t id,
+		struct rte_event_eth_rx_adapter_runtime_params *params)
+{
+	struct event_eth_rx_adapter *rx_adapter;
+
+	if (rxa_memzone_lookup())
+		return -ENOMEM;
+
+	if (params == NULL)
+		return -EINVAL;
+
+	rx_adapter = rxa_id_to_adapter(id);
+	if (rx_adapter == NULL)
+		return -EINVAL;
+
+	rte_spinlock_lock(&rx_adapter->rx_lock);
+	rx_adapter->max_nb_rx = params->max_nb_rx;
+	rte_spinlock_unlock(&rx_adapter->rx_lock);
+
+	return 0;
+}
+
+int
+rte_event_eth_rx_adapter_get_params(uint8_t id,
+		struct rte_event_eth_rx_adapter_runtime_params *params)
+{
+	struct event_eth_rx_adapter *rx_adapter;
+
+	if (rxa_memzone_lookup())
+		return -ENOMEM;
+
+	if (params == NULL)
+		return -EINVAL;
+
+	rx_adapter = rxa_id_to_adapter(id);
+	if (rx_adapter == NULL)
+		return -EINVAL;
+
+	params->max_nb_rx = rx_adapter->max_nb_rx;
+
+	return 0;
+}
+
+/* RX-adapter telemetry callbacks */
 #define RXA_ADD_DICT(stats, s) rte_tel_data_add_dict_u64(d, #s, stats.s)
 
 static int

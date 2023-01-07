@@ -1198,6 +1198,66 @@ adapter_intrq_instance_get(void)
 	return TEST_SUCCESS;
 }
 
+static int
+adapter_get_set_params(void)
+{
+	int err;
+	struct rte_event_eth_rx_adapter_runtime_params in_params;
+	struct rte_event_eth_rx_adapter_runtime_params out_params;
+
+	/* Case 1: Get the default value of mbufs processed by Rx adapter */
+	err = rte_event_eth_rx_adapter_get_params(TEST_INST_ID, &out_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	/* Case 2: Set max_nb_rx = 32 (=BATCH_SEIZE) */
+	in_params.max_nb_rx = 32;
+
+	err = rte_event_eth_rx_adapter_set_params(TEST_INST_ID, &in_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	err = rte_event_eth_rx_adapter_get_params(TEST_INST_ID, &out_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+	TEST_ASSERT(in_params.max_nb_rx == out_params.max_nb_rx, "Expected %u got %u",
+		    in_params.max_nb_rx, out_params.max_nb_rx);
+
+	/* Case 3: Set max_nb_rx = 192 */
+	in_params.max_nb_rx = 192;
+
+	err = rte_event_eth_rx_adapter_set_params(TEST_INST_ID, &in_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	err = rte_event_eth_rx_adapter_get_params(TEST_INST_ID, &out_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+	TEST_ASSERT(in_params.max_nb_rx == out_params.max_nb_rx, "Expected %u got %u",
+		    in_params.max_nb_rx, out_params.max_nb_rx);
+
+	/* Case 4: Set max_nb_rx = 256 */
+	in_params.max_nb_rx = 256;
+
+	err = rte_event_eth_rx_adapter_set_params(TEST_INST_ID, &in_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	err = rte_event_eth_rx_adapter_get_params(TEST_INST_ID, &out_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+	TEST_ASSERT(in_params.max_nb_rx == out_params.max_nb_rx, "Expected %u got %u",
+		    in_params.max_nb_rx, out_params.max_nb_rx);
+
+	/* Case 5: Set max_nb_rx = 30(<BATCH_SIZE) */
+	in_params.max_nb_rx = 30;
+
+	err = rte_event_eth_rx_adapter_set_params(TEST_INST_ID, &in_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	/* Case 6: Set max_nb_rx = 512 */
+	in_params.max_nb_rx = 512;
+
+	err = rte_event_eth_rx_adapter_set_params(TEST_INST_ID, &in_params);
+	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
+
+	return TEST_SUCCESS;
+}
+
+
 static struct unit_test_suite event_eth_rx_tests = {
 	.suite_name = "rx event eth adapter test suite",
 	.setup = testsuite_setup,
@@ -1218,6 +1278,8 @@ static struct unit_test_suite event_eth_rx_tests = {
 			     adapter_queue_stats_test),
 		TEST_CASE_ST(adapter_create, adapter_free,
 			     adapter_pollq_instance_get),
+		TEST_CASE_ST(adapter_create, adapter_free,
+			     adapter_get_set_params),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
