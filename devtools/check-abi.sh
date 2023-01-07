@@ -34,19 +34,10 @@ else
 	ABIDIFF_OPTIONS="$ABIDIFF_OPTIONS --headers-dir2 $incdir2"
 fi
 
-error=
-for dump in $(find $refdir -name "*.dump"); do
-	name=$(basename $dump)
-	dump2=$(find $newdir -name $name)
-	if [ -z "$dump2" ] || [ ! -e "$dump2" ]; then
-		echo "Error: cannot find $name in $newdir" >&2
-		error=1
-		continue
-	fi
-	abidiff $ABIDIFF_OPTIONS $dump $dump2 || {
+run_diff() { # <dump1> <dump2>
+	abidiff $ABIDIFF_OPTIONS $1 $2 || {
 		abiret=$?
-		echo "Error: ABI issue reported for 'abidiff $ABIDIFF_OPTIONS $dump $dump2'" >&2
-		error=1
+		echo "Error: ABI issue reported for 'abidiff $ABIDIFF_OPTIONS $1 $2'" >&2
 		echo
 		if [ $(($abiret & 3)) -ne 0 ]; then
 			echo "ABIDIFF_ERROR|ABIDIFF_USAGE_ERROR, this could be a script or environment issue." >&2
@@ -58,7 +49,23 @@ for dump in $(find $refdir -name "*.dump"); do
 			echo "ABIDIFF_ABI_INCOMPATIBLE_CHANGE, this change breaks the ABI." >&2
 		fi
 		echo
+		return $abiret
 	}
-done
+}
+export -f run_diff
+
+error=
+for dump in $(find $refdir -name "*.dump"); do
+	name=$(basename $dump)
+	dump2=$(find $newdir -name $name)
+	if [ -z "$dump2" ] || [ ! -e "$dump2" ]; then
+		echo "Error: cannot find $name in $newdir" >&2
+		error=1
+		continue
+	fi
+	echo $dump $dump2
+done |
+xargs -n2 -P0 sh -c 'run_diff $0 $1' ||
+error=1
 
 [ -z "$error" ] || [ -n "$warnonly" ]
