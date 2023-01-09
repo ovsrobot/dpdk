@@ -67,6 +67,12 @@ extern "C" {
 /**< Fixed huffman encoding is supported */
 #define RTE_COMP_FF_HUFFMAN_DYNAMIC		(1ULL << 14)
 /**< Dynamic huffman encoding is supported */
+#define RTE_COMP_FF_XXHASH32_CHECKSUM		(1ULL << 15)
+/**< xxHash-32 Checksum is supported */
+#define RTE_COMP_FF_LZ4_BLOCK_INDEPENDENCE	(1ULL << 16)
+/**< LZ4 block independent is supported */
+#define RTE_COMP_FF_LZ4_BLOCK_WITH_CHECKSUM	(1ULL << 17)
+/**< LZ4 block with checksum is supported */
 
 /** Status of comp operation */
 enum rte_comp_op_status {
@@ -109,6 +115,10 @@ enum rte_comp_algorithm {
 	/**< LZS compression algorithm
 	 * https://tools.ietf.org/html/rfc2395
 	 */
+	RTE_COMP_ALGO_LZ4,
+	/**< LZ4 compression algorithm
+	 * https://github.com/lz4/lz4
+	 */
 	RTE_COMP_ALGO_LIST_END
 };
 
@@ -149,8 +159,11 @@ enum rte_comp_checksum_type {
 	/**< Generates both Adler-32 and CRC32 checksums, concatenated.
 	 * CRC32 is in the lower 32bits, Adler-32 in the upper 32 bits.
 	 */
+	RTE_COMP_CHECKSUM_XXHASH32,
+	/**< Generates a xxHash-32 checksum, as used by lz4.
+	 * https://github.com/Cyan4973/xxHash/blob/dev/doc/xxhash_spec.md
+	 */
 };
-
 
 /** Compression Huffman Type - used by DEFLATE algorithm */
 enum rte_comp_huffman {
@@ -208,11 +221,39 @@ enum rte_comp_op_type {
 	 */
 };
 
-
 /** Parameters specific to the deflate algorithm */
 struct rte_comp_deflate_params {
 	enum rte_comp_huffman huffman;
 	/**< Compression huffman encoding type */
+};
+
+/**
+ * Block checksum flag.
+ * If this flag is set, each data block will be followed by a 4-bytes checksum,
+ * calculated by using the xxHash-32 algorithm on the raw (compressed) data
+ * block. The intention is to detect data corruption (storage or transmission
+ * errors) immediately, before decoding. Block checksum usage is optional.
+ */
+#define RTE_COMP_LZ4_FLAG_BLOCK_CHECKSUM (1 << 4)
+
+/**
+ * Block Independence flag.
+ * If this flag is set to 1, blocks are independent.
+ * If this flag is set to 0, each block depends on previous ones (up to LZ4
+ * window size, which is 64 KB). In such case, it is necessary to decode all
+ * blocks in sequence.
+ * Block dependency improves compression ratio, especially for small blocks. On
+ * the other hand, it makes random access or multi-threaded decoding impossible.
+ */
+#define RTE_COMP_LZ4_FLAG_BLOCK_INDEPENDENCE (1 << 5)
+
+/** Parameters specific to the LZ4 algorithm */
+struct rte_comp_lz4_params {
+	uint8_t flags;
+	/**< Compression LZ4 parameter flags.
+	 * Based on LZ4 standard flags:
+	 * https://github.com/lz4/lz4/blob/dev/doc/lz4_Frame_format.md#frame-descriptor
+	 */
 };
 
 /** Setup Data for compression */
@@ -222,6 +263,8 @@ struct rte_comp_compress_xform {
 	union {
 		struct rte_comp_deflate_params deflate;
 		/**< Parameters specific to the deflate algorithm */
+		struct rte_comp_lz4_params lz4;
+		/**< Parameters specific to the LZ4 algorithm */
 	}; /**< Algorithm specific parameters */
 	int level;
 	/**< Compression level */
@@ -251,6 +294,10 @@ struct rte_comp_decompress_xform {
 	 * compressed data. If window size can't be supported by the PMD then
 	 * setup of stream or private_xform should fail.
 	 */
+	union {
+		struct rte_comp_lz4_params lz4;
+		/**< Parameters specific to the LZ4 algorithm */
+	}; /**< Algorithm specific parameters */
 	enum rte_comp_hash_algorithm hash_algo;
 	/**< Hash algorithm to be used with decompress operation. Hash is always
 	 * done on plaintext.

@@ -39,6 +39,12 @@ rte_comp_get_feature_name(uint64_t flag)
 		return "HUFFMAN_FIXED";
 	case RTE_COMP_FF_HUFFMAN_DYNAMIC:
 		return "HUFFMAN_DYNAMIC";
+	case RTE_COMP_FF_XXHASH32_CHECKSUM:
+		return "XXHASH32_CHECKSUM";
+	case RTE_COMP_FF_LZ4_BLOCK_INDEPENDENCE:
+		return "LZ4_BLOCK_INDEPENDENCE";
+	case RTE_COMP_FF_LZ4_BLOCK_WITH_CHECKSUM:
+		return "LZ4_BLOCK_WITH_CHECKSUM";
 	default:
 		return NULL;
 	}

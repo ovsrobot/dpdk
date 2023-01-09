@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added LZ4 algorithm in Compressdev Library.**
+
+  Added new compression algorithm, including:
+
+  * Added support for ``RTE_COMP_ALGO_LZ4``.
+  * Added support for ``RTE_COMP_CHECKSUM_XXHASH32``.
+
 
 Removed Items
 -------------
