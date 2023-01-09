@@ -61,6 +61,7 @@ struct comp_test_data {
 	uint16_t max_sgl_segs;
 	uint32_t total_segs;
 
+	uint8_t lz4_flags;
 	enum rte_comp_huffman huffman_enc;
 	enum comp_operation test_op;
 	enum rte_comp_algorithm test_algo;

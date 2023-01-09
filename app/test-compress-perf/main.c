@@ -86,6 +86,23 @@ comp_perf_check_capabilities(struct comp_test_data *test_data, uint8_t cdev_id)
 			return -1;
 		}
 		break;
+	case RTE_COMP_ALGO_LZ4:
+		/* LZ4 flags */
+		if ((test_data->lz4_flags & RTE_COMP_LZ4_FLAG_BLOCK_CHECKSUM) &&
+		    (comp_flags & RTE_COMP_FF_LZ4_BLOCK_WITH_CHECKSUM) == 0) {
+			RTE_LOG(ERR, USER1,
+				"Compress device does not support LZ4 block with checksum\n");
+			return -1;
+		}
+
+		if ((test_data->lz4_flags &
+		     RTE_COMP_LZ4_FLAG_BLOCK_INDEPENDENCE) &&
+		    (comp_flags & RTE_COMP_FF_LZ4_BLOCK_INDEPENDENCE) == 0) {
+			RTE_LOG(ERR, USER1,
+				"Compress device does not support LZ4 independent blocks\n");
+			return -1;
+		}
+		break;
 	case RTE_COMP_ALGO_LZS:
 	case RTE_COMP_ALGO_NULL:
 		break;

@@ -61,6 +61,7 @@ New Features
 
   * Added support for ``RTE_COMP_ALGO_LZ4``.
   * Added support for ``RTE_COMP_CHECKSUM_XXHASH32``.
+  * Added support for ``lz4`` in test-compress-perf algo options.
 
 * **Allowed test single compress operation in test-compress-perf.**
 
