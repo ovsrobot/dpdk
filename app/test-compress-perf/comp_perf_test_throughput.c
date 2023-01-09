@@ -84,7 +84,7 @@ main_loop(struct cperf_benchmark_ctx *ctx, enum rte_comp_xform_type type)
 		xform = (struct rte_comp_xform) {
 			.type = RTE_COMP_COMPRESS,
 			.compress = {
-				.algo = RTE_COMP_ALGO_DEFLATE,
+				.algo = test_data->test_algo,
 				.deflate.huffman = test_data->huffman_enc,
 				.level = test_data->level,
 				.window_size = test_data->window_sz,
@@ -99,7 +99,7 @@ main_loop(struct cperf_benchmark_ctx *ctx, enum rte_comp_xform_type type)
 		xform = (struct rte_comp_xform) {
 			.type = RTE_COMP_DECOMPRESS,
 			.decompress = {
-				.algo = RTE_COMP_ALGO_DEFLATE,
+				.algo = test_data->test_algo,
 				.chksum = RTE_COMP_CHECKSUM_NONE,
 				.window_size = test_data->window_sz,
 				.hash_algo = RTE_COMP_HASH_ALGO_NONE
