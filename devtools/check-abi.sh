@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2019 Red Hat, Inc.
 
@@ -34,19 +34,18 @@ else
 	ABIDIFF_OPTIONS="$ABIDIFF_OPTIONS --headers-dir2 $incdir2"
 fi
 
-error=
-for dump in $(find $refdir -name "*.dump"); do
+run_diff() { # <dump1> <dir2>
+	dump=$1
+	newdir=$2
 	name=$(basename $dump)
 	dump2=$(find $newdir -name $name)
 	if [ -z "$dump2" ] || [ ! -e "$dump2" ]; then
 		echo "Error: cannot find $name in $newdir" >&2
-		error=1
-		continue
+		return 1
 	fi
 	abidiff $ABIDIFF_OPTIONS $dump $dump2 || {
 		abiret=$?
 		echo "Error: ABI issue reported for 'abidiff $ABIDIFF_OPTIONS $dump $dump2'" >&2
-		error=1
 		echo
 		if [ $(($abiret & 3)) -ne 0 ]; then
 			echo "ABIDIFF_ERROR|ABIDIFF_USAGE_ERROR, this could be a script or environment issue." >&2
@@ -58,7 +57,14 @@ for dump in $(find $refdir -name "*.dump"); do
 			echo "ABIDIFF_ABI_INCOMPATIBLE_CHANGE, this change breaks the ABI." >&2
 		fi
 		echo
+		return 1
 	}
-done
+}
+export -f run_diff
+
+error=
+find $refdir -name "*.dump" |
+xargs -n1 -P0 sh -c 'run_diff $0 '$newdir ||
+error=1
 
 [ -z "$error" ] || [ -n "$warnonly" ]
