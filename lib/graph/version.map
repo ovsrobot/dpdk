@@ -43,5 +43,12 @@ EXPERIMENTAL {
 	rte_node_next_stream_put;
 	rte_node_next_stream_move;
 
+	rte_pcap_trace_is_enable;
+	rte_pcap_trace_enable;
+	rte_graph_pcap_trace_init;
+	rte_num_pkt_to_capture;
+	rte_filename_to_capture_pkt;
+	rte_graph_pcap_trace_exit;
+
 	local: *;
 };

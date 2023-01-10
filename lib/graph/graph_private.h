@@ -319,6 +319,27 @@ struct rte_node *graph_node_id_to_ptr(const struct rte_graph *graph,
 struct rte_node *graph_node_name_to_ptr(const struct rte_graph *graph,
 					const char *node_name);
 
+/**
+ * @internal
+ *
+ * Capture mbuf metadata and node metadata to a pcap file.
+ *
+ * When graph pcap trace enabled, this function is invoked prior to each node
+ * and mbuf, node metadata is parsed and captured in a pcap file.
+ *
+ * @param graph
+ *   Pointer to the graph object.
+ * @param node
+ *   Pointer to the node object.
+ * @param objs
+ *   Pointer to an array of objects to be processed.
+ * @param nb_objs
+ *   Number of objects in the array.
+ */
+uint16_t rte_graph_pcap_trace_dispatch(struct rte_graph *graph __rte_unused,
+				       struct rte_node *node, void **objs,
+				       uint16_t nb_objs);
+
 /* Debug functions */
 /**
  * @internal

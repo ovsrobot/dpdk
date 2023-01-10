@@ -75,7 +75,11 @@ graph_nodes_populate(struct graph *_graph)
 		memset(node, 0, sizeof(*node));
 		node->fence = RTE_GRAPH_FENCE;
 		node->off = off;
-		node->process = graph_node->node->process;
+		if (rte_pcap_trace_is_enable()) {
+			node->process = rte_graph_pcap_trace_dispatch;
+			node->original_process = graph_node->node->process;
+		} else
+			node->process = graph_node->node->process;
 		memcpy(node->name, graph_node->node->name, RTE_GRAPH_NAMESIZE);
 		pid = graph_node->node->parent_id;
 		if (pid != RTE_NODE_ID_INVALID) { /* Cloned node */
