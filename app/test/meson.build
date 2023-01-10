@@ -13,6 +13,7 @@ test_sources = files(
         'test_alarm.c',
         'test_atomic.c',
         'test_barrier.c',
+        'test_bitcount.c',
         'test_bitops.c',
         'test_bitmap.c',
         'test_bpf.c',
@@ -160,6 +161,7 @@ test_deps += ['bus_pci', 'bus_vdev']
 fast_tests = [
         ['acl_autotest', true, true],
         ['atomic_autotest', false, true],
+        ['bitcount_autotest', true, true],
         ['bitmap_autotest', true, true],
         ['bpf_autotest', true, true],
         ['bpf_convert_autotest', true, true],
