@@ -261,7 +261,8 @@ print_usage(const char *prgname)
 		" [--eth-dest=X,MM:MM:MM:MM:MM:MM]"
 		" [--max-pkt-len PKTLEN]"
 		" [--no-numa]"
-		" [--per-port-pool]\n\n"
+		" [--per-port-pool]"
+		" [--num-pkt-cap]\n\n"
 
 		"  -p PORTMASK: Hexadecimal bitmask of ports to configure\n"
 		"  -P : Enable promiscuous mode\n"
@@ -270,8 +271,28 @@ print_usage(const char *prgname)
 		"port X\n"
 		"  --max-pkt-len PKTLEN: maximum packet length in decimal (64-9600)\n"
 		"  --no-numa: Disable numa awareness\n"
-		"  --per-port-pool: Use separate buffer pool per port\n\n",
+		"  --per-port-pool: Use separate buffer pool per port\n"
+		"  --pcap-enable: Enables pcap capture\n"
+		"  --num-pkt-cap NUMPKT: Number of packets to capture\n"
+		"  --pcap-file-name NAME: Pcap file name\n\n",
 		prgname);
+}
+
+static uint64_t
+parse_num_pkt_cap(const char *num_pkt_cap)
+{
+	uint64_t num_pkt;
+	char *end = NULL;
+
+	/* Parse decimal string */
+	num_pkt = strtoull(num_pkt_cap, &end, 10);
+	if ((num_pkt_cap[0] == '\0') || (end == NULL) || (*end != '\0'))
+		return 0;
+
+	if (num_pkt == 0)
+		return 0;
+
+	return num_pkt;
 }
 
 static int
@@ -404,6 +425,9 @@ static const char short_options[] = "p:" /* portmask */
 #define CMD_LINE_OPT_NO_NUMA	   "no-numa"
 #define CMD_LINE_OPT_MAX_PKT_LEN   "max-pkt-len"
 #define CMD_LINE_OPT_PER_PORT_POOL "per-port-pool"
+#define CMD_LINE_OPT_PCAP_ENABLE   "pcap-enable"
+#define CMD_LINE_OPT_NUM_PKT_CAP   "num-pkt-cap"
+#define CMD_LINE_OPT_PCAP_FILENAME "pcap-file-name"
 enum {
 	/* Long options mapped to a short option */
 
@@ -416,6 +440,9 @@ enum {
 	CMD_LINE_OPT_NO_NUMA_NUM,
 	CMD_LINE_OPT_MAX_PKT_LEN_NUM,
 	CMD_LINE_OPT_PARSE_PER_PORT_POOL,
+	CMD_LINE_OPT_PARSE_PCAP_ENABLE,
+	CMD_LINE_OPT_PARSE_NUM_PKT_CAP,
+	CMD_LINE_OPT_PCAP_FILENAME_CAP,
 };
 
 static const struct option lgopts[] = {
@@ -424,6 +451,9 @@ static const struct option lgopts[] = {
 	{CMD_LINE_OPT_NO_NUMA, 0, 0, CMD_LINE_OPT_NO_NUMA_NUM},
 	{CMD_LINE_OPT_MAX_PKT_LEN, 1, 0, CMD_LINE_OPT_MAX_PKT_LEN_NUM},
 	{CMD_LINE_OPT_PER_PORT_POOL, 0, 0, CMD_LINE_OPT_PARSE_PER_PORT_POOL},
+	{CMD_LINE_OPT_PCAP_ENABLE, 0, 0, CMD_LINE_OPT_PARSE_PCAP_ENABLE},
+	{CMD_LINE_OPT_NUM_PKT_CAP, 1, 0, CMD_LINE_OPT_PARSE_NUM_PKT_CAP},
+	{CMD_LINE_OPT_PCAP_FILENAME, 1, 0, CMD_LINE_OPT_PCAP_FILENAME_CAP},
 	{NULL, 0, 0, 0},
 };
 
@@ -448,6 +478,7 @@ parse_args(int argc, char **argv)
 	int option_index;
 	char **argvopt;
 	int opt, ret;
+	uint64_t num_pkt;
 
 	argvopt = argv;
 
@@ -496,6 +527,23 @@ parse_args(int argc, char **argv)
 		case CMD_LINE_OPT_PARSE_PER_PORT_POOL:
 			printf("Per port buffer pool is enabled\n");
 			per_port_pool = 1;
+			break;
+
+		case CMD_LINE_OPT_PARSE_PCAP_ENABLE:
+			printf("Packet capture enabled\n");
+			rte_pcap_trace_enable(1);
+			break;
+
+		case CMD_LINE_OPT_PARSE_NUM_PKT_CAP:
+			num_pkt = parse_num_pkt_cap(optarg);
+			rte_num_pkt_to_capture(num_pkt);
+			printf("Number of packets to capture: %"PRIu64"\n",
+			       num_pkt);
+			break;
+
+		case CMD_LINE_OPT_PCAP_FILENAME_CAP:
+			rte_filename_to_capture_pkt(optarg);
+			printf("Pcap file name: %s\n", optarg);
 			break;
 
 		default:
@@ -635,6 +683,7 @@ signal_handler(int signum)
 	if (signum == SIGINT || signum == SIGTERM) {
 		printf("\n\nSignal %d received, preparing to exit...\n",
 		       signum);
+		rte_graph_pcap_trace_exit();
 		force_quit = true;
 	}
 }
@@ -1014,6 +1063,11 @@ main(int argc, char **argv)
 	printf("\n");
 
 	check_all_ports_link_status(enabled_port_mask);
+
+	if (rte_pcap_trace_is_enable()) {
+		if (rte_graph_pcap_trace_init() < 0)
+			rte_pcap_trace_enable(0);
+	}
 
 	/* Graph Initialization */
 	nb_patterns = RTE_DIM(default_patterns);
