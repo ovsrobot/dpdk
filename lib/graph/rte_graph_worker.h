@@ -24,6 +24,7 @@
 #include <rte_memory.h>
 
 #include "rte_graph.h"
+#include "rte_graph_pcap_trace.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,6 +64,8 @@ struct rte_node {
 
 	char parent[RTE_NODE_NAMESIZE];	/**< Parent node name. */
 	char name[RTE_NODE_NAMESIZE];	/**< Name of the node. */
+
+	rte_node_process_t original_process; /**< Pcap enabled node callback */
 
 	/* Fast path area  */
 #define RTE_NODE_CTX_SZ 16
