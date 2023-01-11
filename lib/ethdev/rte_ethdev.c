@@ -5915,6 +5915,33 @@ eth_dev_handle_port_xstats(const char *cmd __rte_unused,
 	return 0;
 }
 
+static int
+eth_dev_handle_port_xstats_reset(const char *cmd __rte_unused,
+		const char *params,
+		struct rte_tel_data *d)
+{
+	int port_id, ret;
+	char *end_param;
+
+	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
+		return -1;
+
+	port_id = strtoul(params, &end_param, 0);
+	if (*end_param != '\0')
+		RTE_ETHDEV_LOG(NOTICE,
+			"Extra parameters passed to ethdev telemetry command, ignoring\n");
+	if (!rte_eth_dev_is_valid_port(port_id))
+		return -1;
+
+	ret = rte_eth_xstats_reset(port_id);
+	if (ret == 0) {
+		rte_tel_data_start_dict(d);
+		rte_tel_data_string(d, "success");
+	}
+
+	return ret;
+}
+
 #ifndef RTE_EXEC_ENV_WINDOWS
 static int
 eth_dev_handle_port_dump_priv(const char *cmd __rte_unused,
@@ -6328,6 +6355,8 @@ RTE_INIT(ethdev_init_telemetry)
 			"Returns the common stats for a port. Parameters: int port_id");
 	rte_telemetry_register_cmd("/ethdev/xstats", eth_dev_handle_port_xstats,
 			"Returns the extended stats for a port. Parameters: int port_id");
+	rte_telemetry_register_cmd("/ethdev/xstats_reset", eth_dev_handle_port_xstats_reset,
+			"Reset the extended stats for a port. Parameters: int port_id");
 #ifndef RTE_EXEC_ENV_WINDOWS
 	rte_telemetry_register_cmd("/ethdev/dump_priv", eth_dev_handle_port_dump_priv,
 			"Returns dump private information for a port. Parameters: int port_id");
