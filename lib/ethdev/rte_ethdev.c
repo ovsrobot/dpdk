@@ -5880,7 +5880,7 @@ eth_dev_handle_port_xstats(const char *cmd __rte_unused,
 	port_id = strtoul(params, &end_param, 0);
 	if (*end_param != '\0')
 		RTE_ETHDEV_LOG(NOTICE,
-			"Extra parameters passed to ethdev telemetry command, ignoring");
+			"Extra parameters passed to ethdev telemetry command, ignoring\n");
 	if (!rte_eth_dev_is_valid_port(port_id))
 		return -1;
 
@@ -5931,7 +5931,7 @@ eth_dev_handle_port_dump_priv(const char *cmd __rte_unused,
 	port_id = strtoul(params, &end_param, 0);
 	if (*end_param != '\0')
 		RTE_ETHDEV_LOG(NOTICE,
-			"Extra parameters passed to ethdev telemetry command, ignoring");
+			"Extra parameters passed to ethdev telemetry command, ignoring\n");
 	if (!rte_eth_dev_is_valid_port(port_id))
 		return -EINVAL;
 
@@ -5973,7 +5973,7 @@ eth_dev_handle_port_link_status(const char *cmd __rte_unused,
 	port_id = strtoul(params, &end_param, 0);
 	if (*end_param != '\0')
 		RTE_ETHDEV_LOG(NOTICE,
-			"Extra parameters passed to ethdev telemetry command, ignoring");
+			"Extra parameters passed to ethdev telemetry command, ignoring\n");
 	if (!rte_eth_dev_is_valid_port(port_id))
 		return -1;
 
@@ -6011,7 +6011,7 @@ eth_dev_handle_port_info(const char *cmd __rte_unused,
 	port_id = strtoul(params, &end_param, 0);
 	if (*end_param != '\0')
 		RTE_ETHDEV_LOG(NOTICE,
-			"Extra parameters passed to ethdev telemetry command, ignoring");
+			"Extra parameters passed to ethdev telemetry command, ignoring\n");
 
 	if (!rte_eth_dev_is_valid_port(port_id))
 		return -EINVAL;
