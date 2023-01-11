@@ -291,6 +291,18 @@ Limitations
 - No Tx metadata go to the E-Switch steering domain for the Flow group 0.
   The flows within group 0 and set metadata action are rejected by hardware.
 
+- Quota:
+
+  - Template API only (HWS).
+  - Quota flow action and item supported in non-root HWS tables – flow group must be > 0.
+  - Quota implemented as indirect flow action only.
+  - Maximal value for quota SET and ADD operations in INT32_MAX (2G)
+  - Application cannot use 2 consecutive ADD updates.
+    Next tokens update after ADD must always be SET.
+  - HW can reduce non-negative quota to negative value.
+  - Quota flow action cannot be used with Meter or CT flow actions in the same rule.
+  - Maximal number of HW quota and HW meter objects <= 16e6.
+
 .. note::
 
    MAC addresses not already present in the bridge table of the associated
