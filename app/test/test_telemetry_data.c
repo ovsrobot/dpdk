@@ -283,7 +283,7 @@ test_case_array_u64(void)
 {
 	int i;
 
-	rte_tel_data_start_array(&response_data, RTE_TEL_U64_VAL);
+	rte_tel_data_start_array(&response_data, RTE_TEL_UINT_VAL);
 	for (i = 0; i < 5; i++)
 		rte_tel_data_add_array_u64(&response_data, i);
 	return CHECK_OUTPUT("[0,1,2,3,4]");
@@ -310,10 +310,10 @@ test_dict_with_array_u64_values(void)
 	int i;
 
 	struct rte_tel_data *child_data = rte_tel_data_alloc();
-	rte_tel_data_start_array(child_data, RTE_TEL_U64_VAL);
+	rte_tel_data_start_array(child_data, RTE_TEL_UINT_VAL);
 
 	struct rte_tel_data *child_data2 = rte_tel_data_alloc();
-	rte_tel_data_start_array(child_data2, RTE_TEL_U64_VAL);
+	rte_tel_data_start_array(child_data2, RTE_TEL_UINT_VAL);
 
 	rte_tel_data_start_dict(&response_data);
 
@@ -336,10 +336,10 @@ test_array_with_array_u64_values(void)
 	int i;
 
 	struct rte_tel_data *child_data = rte_tel_data_alloc();
-	rte_tel_data_start_array(child_data, RTE_TEL_U64_VAL);
+	rte_tel_data_start_array(child_data, RTE_TEL_UINT_VAL);
 
 	struct rte_tel_data *child_data2 = rte_tel_data_alloc();
-	rte_tel_data_start_array(child_data2, RTE_TEL_U64_VAL);
+	rte_tel_data_start_array(child_data2, RTE_TEL_UINT_VAL);
 
 	rte_tel_data_start_array(&response_data, RTE_TEL_CONTAINER);
 
