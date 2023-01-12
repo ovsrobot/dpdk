@@ -105,6 +105,17 @@ Runtime Config Options
 
     -a 80:00.0,pipeline-mode-support=1
 
+- ``Default Mac Disable`` (default ``0``)
+
+  Add the feature that support to disable default mac which will be used by ice driver
+  when setting dpdk_devargs config field.
+
+  Default mac is not disabled in default, user can choose to disable the default mac
+  by setting ``devargs`` parameter ``default-mac-disable``,
+  for example::
+
+    -a 80:00.0,default-mac-disable=1
+
 - ``Protocol extraction for per queue``
 
   Configure the RX queues to do protocol extraction into mbuf for protocol
