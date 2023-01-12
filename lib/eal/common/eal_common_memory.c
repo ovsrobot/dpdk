@@ -1141,15 +1141,16 @@ handle_eal_heap_info_request(const char *cmd __rte_unused, const char *params,
 	rte_tel_data_start_dict(d);
 	rte_tel_data_add_dict_int(d, "Head id", heap_id);
 	rte_tel_data_add_dict_string(d, "Name", heap->name);
-	rte_tel_data_add_dict_u64(d, "Heap_size",
-				  sock_stats.heap_totalsz_bytes);
-	rte_tel_data_add_dict_u64(d, "Free_size", sock_stats.heap_freesz_bytes);
-	rte_tel_data_add_dict_u64(d, "Alloc_size",
-				  sock_stats.heap_allocsz_bytes);
-	rte_tel_data_add_dict_u64(d, "Greatest_free_size",
-				  sock_stats.greatest_free_size);
-	rte_tel_data_add_dict_u64(d, "Alloc_count", sock_stats.alloc_count);
-	rte_tel_data_add_dict_u64(d, "Free_count", sock_stats.free_count);
+	rte_tel_data_add_dict_uint(d, "Heap_size",
+				   sock_stats.heap_totalsz_bytes);
+	rte_tel_data_add_dict_uint(d, "Free_size",
+				   sock_stats.heap_freesz_bytes);
+	rte_tel_data_add_dict_uint(d, "Alloc_size",
+				   sock_stats.heap_allocsz_bytes);
+	rte_tel_data_add_dict_uint(d, "Greatest_free_size",
+				   sock_stats.greatest_free_size);
+	rte_tel_data_add_dict_uint(d, "Alloc_count", sock_stats.alloc_count);
+	rte_tel_data_add_dict_uint(d, "Free_count", sock_stats.free_count);
 
 	return 0;
 }
