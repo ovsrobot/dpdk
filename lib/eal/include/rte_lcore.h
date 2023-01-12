@@ -13,6 +13,7 @@
  */
 #include <stdio.h>
 
+#include <rte_common.h>
 #include <rte_compat.h>
 #include <rte_config.h>
 #include <rte_per_lcore.h>
@@ -349,6 +350,7 @@ rte_lcore_dump(FILE *f);
  * @return
  *   On success, return 0; otherwise return a negative value.
  */
+__rte_deprecated
 int rte_thread_setname(pthread_t id, const char *name);
 
 /**
