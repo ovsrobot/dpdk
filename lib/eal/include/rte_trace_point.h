@@ -144,6 +144,8 @@ _tp _args \
 #define rte_trace_point_emit_ptr(val)
 /** Tracepoint function payload for string datatype */
 #define rte_trace_point_emit_string(val)
+/** Tracepoint function payload for char array */
+#define rte_trace_point_emit_blob(val, len)
 
 #endif /* __DOXYGEN__ */
 
@@ -374,12 +376,27 @@ do { \
 	mem = RTE_PTR_ADD(mem, __RTE_TRACE_EMIT_STRING_LEN_MAX); \
 } while (0)
 
+#define rte_trace_point_emit_blob(in, len) \
+do { \
+	if (unlikely(in == NULL)) \
+		return; \
+	__rte_trace_point_emit(len, uint16_t); \
+	memcpy(mem, in, len); \
+	mem = RTE_PTR_ADD(mem, len); \
+} while (0)
+
 #else
 
 #define __rte_trace_point_emit_header_generic(t) RTE_SET_USED(t)
 #define __rte_trace_point_emit_header_fp(t) RTE_SET_USED(t)
 #define __rte_trace_point_emit(in, type) RTE_SET_USED(in)
 #define rte_trace_point_emit_string(in) RTE_SET_USED(in)
+#define rte_trace_point_emit_blob(in, len) \
+do { \
+	RTE_SET_USED(in); \
+	RTE_SET_USED(len); \
+} while (0)
+
 
 #endif /* ALLOW_EXPERIMENTAL_API */
 #endif /* _RTE_TRACE_POINT_REGISTER_H_ */
