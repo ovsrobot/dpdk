@@ -51,6 +51,9 @@ The application has a number of command line options similar to l3fwd::
                                    [--max-pkt-len PKTLEN]
                                    [--no-numa]
                                    [--per-port-pool]
+                                   [--pcap-enable]
+                                   [--num-pkt-cap]
+                                   [--pcap-file-name]
 
 Where,
 
@@ -68,6 +71,12 @@ Where,
 * ``--no-numa:`` Optional, disables numa awareness.
 
 * ``--per-port-pool:`` Optional, set to use independent buffer pools per port. Without this option, single buffer pool is used for all ports.
+
+* ``--pcap-enable:`` Optional, Enables packet capture in pcap format on each node with mbuf and node metadata.
+
+* ``--num-pkt-cap:`` Optional, Number of packets to be captured per core.
+
+* ``--pcap-file-name:`` Optional, Pcap filename to capture packets in.
 
 For example, consider a dual processor socket platform with 8 physical cores, where cores 0-7 and 16-23 appear on socket 0,
 while cores 8-15 and 24-31 appear on socket 1.
