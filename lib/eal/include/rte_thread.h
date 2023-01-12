@@ -146,6 +146,23 @@ rte_thread_t rte_thread_self(void);
  * @warning
  * @b EXPERIMENTAL: this API may change without prior notice.
  *
+ * Set the name of the thread.
+ *
+ * @param thread_id
+ *    The id of the thread to set name.
+ *
+ * @param thread_name
+ *    The name to set. Truncated to RTE_MAX_THREAD_NAME_LEN,
+ *    including terminating NUL if necessary.
+ */
+__rte_experimental
+void
+rte_thread_set_name(rte_thread_t thread_id, const char *thread_name);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
  * Check if 2 thread ids are equal.
  *
  * @param t1
