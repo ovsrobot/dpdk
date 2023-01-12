@@ -8,7 +8,7 @@
 #ifndef _RTE_TELEMETRY_H_
 #define _RTE_TELEMETRY_H_
 
-#include <rte_compat.h>
+#include <rte_common.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -134,7 +134,6 @@ rte_tel_data_add_array_int(struct rte_tel_data *d, int x);
  * @return
  *   0 on success, negative errno on error
  */
-__rte_experimental
 int
 rte_tel_data_add_array_uint(struct rte_tel_data *d, uint64_t x);
 
@@ -151,7 +150,8 @@ rte_tel_data_add_array_uint(struct rte_tel_data *d, uint64_t x);
  *   0 on success, negative errno on error
  */
 int
-rte_tel_data_add_array_u64(struct rte_tel_data *d, uint64_t x);
+rte_tel_data_add_array_u64(struct rte_tel_data *d, uint64_t x)
+	__rte_deprecated_msg("use 'rte_tel_data_add_array_uint' instead");
 
 /**
  * Add a container to an array. A container is an existing telemetry data
@@ -224,7 +224,6 @@ rte_tel_data_add_dict_int(struct rte_tel_data *d, const char *name, int val);
  * @return
  *   0 on success, negative errno on error, E2BIG on string truncation of name.
  */
-__rte_experimental
 int
 rte_tel_data_add_dict_uint(struct rte_tel_data *d,
 		const char *name, uint64_t val);
@@ -245,7 +244,8 @@ rte_tel_data_add_dict_uint(struct rte_tel_data *d,
  */
 int
 rte_tel_data_add_dict_u64(struct rte_tel_data *d,
-		const char *name, uint64_t val);
+		const char *name, uint64_t val)
+	__rte_deprecated_msg("use 'rte_tel_data_add_dict_uint' instead");
 
 /**
  * Add a container to a dictionary. A container is an existing telemetry data
