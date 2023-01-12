@@ -35,9 +35,13 @@ extern "C" {
 #define rte_io_rmb()	rte_mb()
 
 static __rte_always_inline void
-rte_atomic_thread_fence(int memorder)
+rte_atomic_thread_fence(rte_memory_order memorder)
 {
+#ifdef RTE_STDC_ATOMICS
+	atomic_thread_fence(memorder);
+#else
 	__atomic_thread_fence(memorder);
+#endif
 }
 
 #ifdef __cplusplus

@@ -110,6 +110,160 @@ static inline void rte_io_rmb(void);
 
 #endif /* __DOXYGEN__ */
 
+#ifdef RTE_STDC_ATOMICS
+
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L || defined(__STDC_NO_ATOMICS__)
+#error compiler does not support C11 standard atomics
+#else
+#include <stdatomic.h>
+#endif
+
+#define __rte_atomic _Atomic
+
+typedef int rte_memory_order;
+
+#define rte_memory_order_relaxed memory_order_relaxed
+#define rte_memory_order_consume memory_order_consume
+#define rte_memory_order_acquire memory_order_acquire
+#define rte_memory_order_release memory_order_release
+#define rte_memory_order_acq_rel memory_order_acq_rel
+#define rte_memory_order_seq_cst memory_order_seq_cst
+
+#define rte_atomic_store(obj, desired) \
+	atomic_store_explicit(obj, desired)
+
+#define rte_atomic_store_explicit(obj, desired, order) \
+	atomic_store_explicit(obj, desired, order)
+
+#define rte_atomic_load(obj) \
+	atomic_load_explicit(obj)
+
+#define rte_atomic_load_explicit(obj, order) \
+	atomic_load_explicit(obj, order)
+
+#define rte_atomic_exchange(obj, desired) \
+	atomic_exchange(obj, desired)
+
+#define rte_atomic_exchange_explicit(obj, desired, order) \
+	atomic_exchange_explicit(obj, desired, order)
+
+#define rte_atomic_compare_exchange_strong(obj, expected, desired) \
+	atomic_compare_exchange_strong(obj, expected, desired)
+
+#define rte_atomic_compare_exchange_strong_explicit(obj, expected, desired, success, fail) \
+	atomic_compare_exchange_strong_explicit(obj, expected, desired, success, fail)
+
+#define rte_atomic_compare_exchange_weak(obj, expected, desired) \
+	atomic_compare_exchange_weak(obj, expected, desired)
+
+#define rte_atomic_compare_exchange_weak_explicit(obj, expected, desired, success, fail) \
+	atomic_compare_exchange_weak_explicit(obj, expected, desired, success, fail)
+
+#define rte_atomic_fetch_add(obj, arg) \
+	atomic_fetch_add(obj, arg)
+
+#define rte_atomic_fetch_add_explicit(obj, arg, order) \
+	atomic_fetch_add_explicit(obj, arg, order)
+
+#define rte_atomic_fetch_sub(obj, arg) \
+	atomic_fetch_sub(obj, arg)
+
+#define rte_atomic_fetch_sub_explicit(obj, arg, order) \
+	atomic_fetch_sub_explicit(obj, arg, order)
+
+#define rte_atomic_fetch_or(obj, arg) \
+	atomic_fetch_or(obj, arg)
+
+#define rte_atomic_fetch_or_explicit(obj, arg, order) \
+	atomic_fetch_or_explicit(obj, arg, order)
+
+#define rte_atomic_fetch_xor(obj, arg) \
+	atomic_fetch_xor(obj, arg)
+
+#define rte_atomic_fetch_xor_explicit(obj, arg, order) \
+	atomic_fetch_xor_explicit(obj, arg, order)
+
+#define rte_atomic_fetch_and(obj, arg) \
+	atomic_fetch_and(obj, arg)
+
+#define rte_atomic_fetch_and_explicit(obj, arg, order) \
+	atomic_fetch_and_explicit(obj, arg, order)
+
+#else
+
+#define __rte_atomic
+
+typedef int rte_memory_order;
+
+#define rte_memory_order_relaxed __ATOMIC_RELAXED
+#define rte_memory_order_consume __ATOMIC_CONSUME
+#define rte_memory_order_acquire __ATOMIC_ACQUIRE
+#define rte_memory_order_release __ATOMIC_RELEASE
+#define rte_memory_order_acq_rel __ATOMIC_ACQ_REL
+#define rte_memory_order_seq_cst __ATOMIC_SEQ_CST
+
+#define rte_atomic_store(obj, desired) \
+	__atomic_store_n(obj, desired, rte_memory_order_seq_cst)
+
+#define rte_atomic_store_explicit(obj, desired, order) \
+	__atomic_store_n(obj, desired, order)
+
+#define rte_atomic_load(obj) \
+	__atomic_load_n(obj, rte_memory_order_seq_cst)
+
+#define rte_atomic_load_explicit(obj, order) \
+	__atomic_load_n(obj, order)
+
+#define rte_atomic_exchange(obj, desired) \
+	__atomic_exchange_n(obj, desired, rte_memory_order_seq_cst)
+
+#define rte_atomic_exchange_explicit(obj, desired, order) \
+	__atomic_exchange_n(obj, desired, order)
+
+#define rte_atomic_compare_exchange_strong(obj, expected, desired) \
+	__sync_bool_compare_and_swap(obj, expected, desired)
+
+#define rte_atomic_compare_exchange_strong_explicit(obj, expected, desired, success, fail) \
+	__atomic_compare_exchange_n(obj, expected, desired, 0, success, fail)
+
+#define rte_atomic_compare_exchange_weak(obj, expected, desired) \
+	__atomic_compare_exchange_n(obj, expected, desired, 1, rte_memory_order_seq_cst, rte_memory_order_seq_cst)
+
+#define rte_atomic_compare_exchange_weak_explicit(obj, expected, desired, success, fail) \
+	__atomic_compare_exchange_n(obj, expected, desired, 1, success, fail)
+
+#define rte_atomic_fetch_add(obj, arg) \
+	__atomic_fetch_add(obj, arg, rte_memory_order_seq_cst)
+
+#define rte_atomic_fetch_add_explicit(obj, arg, order) \
+	__atomic_fetch_add(obj, arg, order)
+
+#define rte_atomic_fetch_sub(obj, arg) \
+	__atomic_fetch_sub(obj, arg, rte_memory_order_seq_cst)
+
+#define rte_atomic_fetch_sub_explicit(obj, arg, order) \
+	__atomic_fetch_sub(obj, arg, order)
+
+#define rte_atomic_fetch_or(obj, arg) \
+	__atomic_fetch_or(obj, arg, rte_memory_order_seq_cst)
+
+#define rte_atomic_fetch_or_explicit(obj, arg, order) \
+	__atomic_fetch_or(obj, arg, order)
+
+#define rte_atomic_fetch_xor(obj, arg) \
+	__atomic_fetch_xor(obj, arg, rte_memory_order_seq_cst)
+
+#define rte_atomic_fetch_xor_explicit(obj, arg, order) \
+	__atomic_fetch_xor(obj, arg, order)
+
+#define rte_atomic_fetch_and(obj, arg) \
+	__atomic_fetch_and(obj, arg, rte_memory_order_seq_cst)
+
+#define rte_atomic_fetch_and_explicit(obj, arg, order) \
+	__atomic_fetch_and(obj, arg, order)
+
+#endif
+
 /**
  * Compiler barrier.
  *
@@ -123,7 +277,7 @@ static inline void rte_io_rmb(void);
 /**
  * Synchronization fence between threads based on the specified memory order.
  */
-static inline void rte_atomic_thread_fence(int memorder);
+static inline void rte_atomic_thread_fence(rte_memory_order memorder);
 
 /*------------------------- 16 bit atomic operations -------------------------*/
 

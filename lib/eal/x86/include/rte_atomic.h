@@ -87,12 +87,16 @@ rte_smp_mb(void)
  * used instead.
  */
 static __rte_always_inline void
-rte_atomic_thread_fence(int memorder)
+rte_atomic_thread_fence(rte_memory_order memorder)
 {
-	if (memorder == __ATOMIC_SEQ_CST)
+	if (memorder == rte_memory_order_seq_cst)
 		rte_smp_mb();
 	else
+#ifdef RTE_STDC_ATOMICS
+		atomic_thread_fence(memorder);
+#else
 		__atomic_thread_fence(memorder);
+#endif
 }
 
 /*------------------------- 16 bit atomic operations -------------------------*/
