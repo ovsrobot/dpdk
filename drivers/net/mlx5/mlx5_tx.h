@@ -166,7 +166,7 @@ struct mlx5_txq_data {
 	struct mlx5_txq_stats stats; /* TX queue counters. */
 	struct mlx5_txq_stats stats_reset; /* stats on last reset. */
 	struct mlx5_uar_data uar_data;
-	struct rte_mbuf *elts[0];
+	struct rte_mbuf * elts[];
 	/* Storage for queued packets, must be the last field. */
 } __rte_cache_aligned;
 

@@ -1149,7 +1149,7 @@ struct rte_flow_hw {
 	uint32_t age_idx;
 	cnt_id_t cnt_id;
 	uint32_t mtr_id;
-	uint8_t rule[0]; /* HWS layer data struct. */
+	uint8_t rule[]; /* HWS layer data struct. */
 } __rte_packed;
 
 #ifdef PEDANTIC
