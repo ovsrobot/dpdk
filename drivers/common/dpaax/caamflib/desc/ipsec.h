@@ -350,7 +350,7 @@ struct ipsec_encap_pdb {
 	};
 	uint32_t spi;
 	uint32_t ip_hdr_len;
-	uint8_t ip_hdr[0];
+	uint8_t ip_hdr[];
 };
 
 static inline unsigned int
