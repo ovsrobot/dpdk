@@ -15,8 +15,7 @@
 #include <rte_log.h>
 #include <rte_per_lcore.h>
 
-#include "eal_log.h"
-#include "eal_private.h"
+#include "log_internal.h"
 
 struct rte_log_dynamic_type {
 	const char *name;
