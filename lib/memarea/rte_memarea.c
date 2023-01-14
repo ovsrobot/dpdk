@@ -302,3 +302,119 @@ rte_memarea_free(struct rte_memarea *ma, void *ptr)
 	}
 	memarea_unlock(ma);
 }
+
+static const char *
+memarea_source_name(enum rte_memarea_source source)
+{
+	if (source == RTE_MEMAREA_SOURCE_HEAP)
+		return "heap";
+	else if (source == RTE_MEMAREA_SOURCE_LIBC)
+		return "libc";
+	else if (source == RTE_MEMAREA_SOURCE_MEMAREA)
+		return "memarea";
+	else
+		return "unknown";
+}
+
+static const char *
+memarea_alg_name(enum rte_memarea_algorithm alg)
+{
+	if (alg == RTE_MEMAREA_ALGORITHM_NEXTFIT)
+		return "nextfit";
+	else
+		return "unknown";
+}
+
+static uint32_t
+memarea_obj_list_num(struct rte_memarea *ma)
+{
+	struct memarea_obj *obj;
+	uint32_t num = 0;
+
+	TAILQ_FOREACH(obj, &ma->obj_list, obj_node) {
+		if (obj->magic != MEMAREA_OBJECT_ALLOCATED_MAGIC &&
+		    obj->magic != MEMAREA_OBJECT_FREE_MAGIC)
+			break;
+		num++;
+	}
+
+	return num;
+}
+
+static uint32_t
+memarea_free_list_num(struct rte_memarea *ma)
+{
+	struct memarea_obj *obj;
+	uint32_t num = 0;
+
+	TAILQ_FOREACH(obj, &ma->free_list, free_node) {
+		if (obj->magic != MEMAREA_OBJECT_ALLOCATED_MAGIC &&
+		    obj->magic != MEMAREA_OBJECT_FREE_MAGIC)
+			break;
+		num++;
+	}
+
+	return num;
+}
+
+static size_t
+memarea_free_list_size(struct rte_memarea *ma)
+{
+	struct memarea_obj *obj;
+	size_t sz = 0;
+
+	TAILQ_FOREACH(obj, &ma->free_list, free_node) {
+		if (obj->magic != MEMAREA_OBJECT_ALLOCATED_MAGIC &&
+		    obj->magic != MEMAREA_OBJECT_FREE_MAGIC)
+			break;
+		sz += obj->size;
+	}
+
+	return sz;
+}
+
+static void
+memarea_dump_all_objects(struct rte_memarea *ma, FILE *f)
+{
+	struct memarea_obj *obj;
+
+	fprintf(f, "  objects:\n");
+	TAILQ_FOREACH(obj, &ma->obj_list, obj_node) {
+		if (obj->magic != MEMAREA_OBJECT_ALLOCATED_MAGIC &&
+		    obj->magic != MEMAREA_OBJECT_FREE_MAGIC) {
+			fprintf(f, "    magic: 0x%x check fail! stop dump!\n", obj->magic);
+			break;
+		}
+		fprintf(f, "    size: 0x%zx alloc-size: 0x%zx %s\n",
+			obj->size, obj->alloc_size,
+			obj->magic == MEMAREA_OBJECT_ALLOCATED_MAGIC ? "allocated" : "free");
+	}
+}
+
+int
+rte_memarea_dump(struct rte_memarea *ma, FILE *f, bool dump_all)
+{
+	if (ma == NULL || f == NULL)
+		return -EINVAL;
+
+	memarea_lock(ma);
+	fprintf(f, "memarea name: %s\n", ma->init.name);
+	fprintf(f, "  source: %s\n", memarea_source_name(ma->init.source));
+	if (ma->init.source == RTE_MEMAREA_SOURCE_HEAP)
+		fprintf(f, "  heap-numa-socket: %d\n", ma->init.numa_socket);
+	else if (ma->init.source == RTE_MEMAREA_SOURCE_MEMAREA)
+		fprintf(f, "  source-memarea: %s\n", ma->init.src_memarea->init.name);
+	fprintf(f, "  algorithm: %s\n", memarea_alg_name(ma->init.alg));
+	fprintf(f, "  total-size: 0x%zx\n", ma->init.total_sz);
+	fprintf(f, "  mt-safe: %s\n", ma->init.mt_safe ? "yes" : "no");
+	fprintf(f, "  total-objects: %u\n", memarea_obj_list_num(ma));
+	fprintf(f, "  total-free-objects: %u\n", memarea_free_list_num(ma));
+	fprintf(f, "  total-free-objects-size: 0x%zx\n", memarea_free_list_size(ma));
+	fprintf(f, "  alloc-fails: %" PRIu64 "\n", ma->alloc_fails);
+	fprintf(f, "  magic_check_fails: %" PRIu64 "\n", ma->magic_check_fails);
+	if (dump_all)
+		memarea_dump_all_objects(ma, f);
+	memarea_unlock(ma);
+
+	return 0;
+}
