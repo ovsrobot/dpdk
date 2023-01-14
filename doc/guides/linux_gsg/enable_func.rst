@@ -55,12 +55,12 @@ Refer to the `documentation <https://www.kernel.org/doc/Documentation/vm/hugetlb
 If the driver requires using physical addresses (PA),
 the executable file must be granted additional capabilities:
 
-* ``SYS_ADMIN`` to read ``/proc/self/pagemaps``
+* ``CAP_DAC_OVERRIDE`` and ``SYS_ADMIN`` to read ``/proc/self/pagemaps``
 * ``IPC_LOCK`` to lock hugepages in memory
 
 .. code-block:: console
 
-   setcap cap_ipc_lock,cap_sys_admin+ep <executable>
+   setcap cap_dac_override,cap_ipc_lock,cap_sys_admin+ep <executable>
 
 If physical addresses are not accessible,
 the following message will appear during EAL initialization::
