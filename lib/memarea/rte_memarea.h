@@ -115,6 +115,52 @@ struct rte_memarea *rte_memarea_create(const struct rte_memarea_param *init);
 __rte_experimental
 void rte_memarea_destroy(struct rte_memarea *ma);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Allocate memory from memarea.
+ *
+ * Allocate one memory object from the memarea.
+ *
+ * @param ma
+ *   The pointer of memarea.
+ * @param size
+ *   The memory size to be allocated.
+ * @param align
+ *   If 0, the return is a pointer that is aligned for uint32_t variable.
+ *   Otherwise, the return is a pointer that is a multiple of *align*. In
+ *   this case, it must be a power of two.
+ *
+ * @return
+ *   - NULL on error. Not enough memory, or invalid arguments (ma is NULL,
+ *     size is 0, align is non-zero and not a power of two).
+ *   - Otherwise, the pointer to the allocated object.
+ */
+__rte_experimental
+void *rte_memarea_alloc(struct rte_memarea *ma, size_t size, uint32_t align);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Free memory to memarea.
+ *
+ * Free one memory object to the memarea.
+ * @note The memory object must have been returned by a previous call to
+ * rte_memarea_alloc(), if it is allocated from memarea-A, it must be freed to
+ * the same memarea-A. The behaviour of rte_memarea_free() is undefined if the
+ * memarea or pointer does not match these requirements.
+ *
+ * @param ma
+ *   The pointer of memarea. If the ma is NULL, the function does nothing.
+ * @param ptr
+ *   The pointer of memory object which need be freed. If the pointer is NULL,
+ *   the function does nothing.
+ */
+__rte_experimental
+void rte_memarea_free(struct rte_memarea *ma, void *ptr);
+
 #ifdef __cplusplus
 }
 #endif
