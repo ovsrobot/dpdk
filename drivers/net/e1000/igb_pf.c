@@ -78,7 +78,7 @@ void igb_pf_host_init(struct rte_eth_dev *eth_dev)
 
 	if (hw->mac.type == e1000_i350)
 		nb_queue = 1;
-	else if(hw->mac.type == e1000_82576)
+	else if (hw->mac.type == e1000_82576)
 		/* per datasheet, it should be 2, but 1 seems correct */
 		nb_queue = 1;
 	else
