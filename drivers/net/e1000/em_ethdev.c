@@ -872,7 +872,7 @@ eth_em_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *rte_stats)
 			E1000_DEV_PRIVATE_TO_STATS(dev->data->dev_private);
 	int pause_frames;
 
-	if(hw->phy.media_type == e1000_media_type_copper ||
+	if (hw->phy.media_type == e1000_media_type_copper ||
 			(E1000_READ_REG(hw, E1000_STATUS) & E1000_STATUS_LU)) {
 		stats->symerrs += E1000_READ_REG(hw,E1000_SYMERRS);
 		stats->sec += E1000_READ_REG(hw, E1000_SEC);
