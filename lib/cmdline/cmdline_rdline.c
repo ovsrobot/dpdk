@@ -301,7 +301,7 @@ rdline_char_in(struct rdline *rdl, char c)
 		/* delete 1 char from the left */
 		case CMDLINE_KEY_BKSPACE:
 		case CMDLINE_KEY_BKSPACE2:
-			if(!cirbuf_del_tail_safe(&rdl->left)) {
+			if (!cirbuf_del_tail_safe(&rdl->left)) {
 				rdline_puts(rdl, vt100_bs);
 				display_right_buffer(rdl, 1);
 			}
@@ -354,7 +354,7 @@ rdline_char_in(struct rdline *rdl, char c)
 		/* paste contents of kill buffer to the left side of caret */
 		case CMDLINE_KEY_CTRL_Y:
 			i=0;
-			while(CIRBUF_GET_LEN(&rdl->right) + CIRBUF_GET_LEN(&rdl->left) <
+			while (CIRBUF_GET_LEN(&rdl->right) + CIRBUF_GET_LEN(&rdl->left) <
 			      RDLINE_BUF_SIZE &&
 			      i < rdl->kill_size) {
 				cirbuf_add_tail(&rdl->left, rdl->kill_buf[i]);
@@ -404,7 +404,7 @@ rdline_char_in(struct rdline *rdl, char c)
 				/* add chars */
 				if (ret == RDLINE_RES_COMPLETE) {
 					i=0;
-					while(CIRBUF_GET_LEN(&rdl->right) + CIRBUF_GET_LEN(&rdl->left) <
+					while (CIRBUF_GET_LEN(&rdl->right) + CIRBUF_GET_LEN(&rdl->left) <
 					      RDLINE_BUF_SIZE &&
 					      i < tmp_size) {
 						cirbuf_add_tail(&rdl->left, tmp_buf[i]);
