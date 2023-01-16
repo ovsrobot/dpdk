@@ -300,7 +300,7 @@ send_single_packet(struct rte_mbuf *m, uint16_t port)
 
 	TX_LCORE_STAT_UPDATE(&qconf->tx_stat, queue, 1);
 	txmb->m_table[txmb->head] = m;
-	if(++txmb->head == len)
+	if (++txmb->head == len)
 		txmb->head = 0;
 
 	return 0;
