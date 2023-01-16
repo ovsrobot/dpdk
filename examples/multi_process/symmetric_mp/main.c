@@ -156,7 +156,7 @@ smp_parse_args(int argc, char **argv)
 
 	/* get the port numbers from the port mask */
 	RTE_ETH_FOREACH_DEV(i)
-		if(port_mask & (1 << i))
+		if (port_mask & (1 << i))
 			ports[num_ports++] = (uint8_t)i;
 
 	ret = optind-1;
@@ -471,7 +471,7 @@ main(int argc, char **argv)
 	if (num_ports & 1)
 		rte_exit(EXIT_FAILURE, "Application must use an even number of ports\n");
 	for(i = 0; i < num_ports; i++){
-		if(proc_type == RTE_PROC_PRIMARY)
+		if (proc_type == RTE_PROC_PRIMARY)
 			if (smp_port_init(ports[i], mp, (uint16_t)num_procs) < 0)
 				rte_exit(EXIT_FAILURE, "Error initialising ports\n");
 	}
