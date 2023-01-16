@@ -708,7 +708,7 @@ test_cirbuf_char_fill(void)
 		return -1;
 	}
 	/* delete buffer from tail */
-	for(i = 0; i < CMDLINE_TEST_BUFSIZE; i++)
+	for (i = 0; i < CMDLINE_TEST_BUFSIZE; i++)
 		cirbuf_del_tail_safe(&cb);
 	/* try to delete from an empty buffer */
 	if (cirbuf_del_tail_safe(&cb) >= 0) {
@@ -737,7 +737,7 @@ test_cirbuf_char_fill(void)
 		return -1;
 	}
 	/* delete buffer from head */
-	for(i = 0; i < CMDLINE_TEST_BUFSIZE; i++)
+	for (i = 0; i < CMDLINE_TEST_BUFSIZE; i++)
 		cirbuf_del_head_safe(&cb);
 	/* try to delete from an empty buffer */
 	if (cirbuf_del_head_safe(&cb) >= 0) {
