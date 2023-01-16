@@ -150,6 +150,82 @@ typedef uint16_t unaligned_uint16_t;
 #endif
 
 /**
+ * Tells compiler that the pointer arguments must be non-null.
+ *
+ * @param ...
+ *    Comma separated list of parameter indexes of pointer arguments.
+ */
+#if defined(RTE_CC_GCC) || defined(RTE_CC_CLANG)
+#define __rte_nonnull_params(...) \
+	__attribute__((nonnull(__VA_ARGS__)))
+#else
+#define __rte_nonnull_params(...)
+#endif
+
+/**
+ * Tells compiler that the memory pointed to by a pointer argument
+*  is only read, not written to, by the function.
+*  It might not be accessed at all.
+ *
+ * @param ...
+ *    Parameter index of pointer argument.
+ *    Optionally followeded by comma and parameter index of size argument.
+ */
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100400)
+#define __rte_read_only_param(...) \
+	__attribute__((access(read_only, __VA_ARGS__)))
+#else
+#define __rte_read_only_param(...)
+#endif
+
+/**
+ * Tells compiler that the memory pointed to by a pointer argument
+*  is only written to, not read, by the function.
+*  It might not be accessed at all.
+ *
+ * @param ...
+ *    Parameter index of pointer argument.
+ *    Optionally followeded by comma and parameter index of size argument.
+ */
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100400)
+#define __rte_write_only_param(...) \
+	__attribute__((access(write_only, __VA_ARGS__)))
+#else
+#define __rte_write_only_param(...)
+#endif
+
+/**
+ * Tells compiler that the memory pointed to by a pointer argument
+*  is both read and written to by the function.
+*  It might not be read, written to, or accessed at all.
+ *
+ * @param ...
+ *    Parameter index of pointer argument.
+ *    Optionally followeded by comma and parameter index of size argument.
+ */
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100400)
+#define __rte_read_write_param(...) \
+	__attribute__((access(read_write, __VA_ARGS__)))
+#else
+#define __rte_read_write_param(...)
+#endif
+
+/**
+ * Tells compiler that the memory pointed to by a pointer argument
+*  is not accessed by the function.
+ *
+ * @param ...
+ *    Parameter index of pointer argument.
+ *    Optionally followeded by comma and parameter index of size argument.
+ */
+#if defined(RTE_TOOLCHAIN_GCC) && (GCC_VERSION >= 100400)
+#define __rte_no_access_param(...) \
+	__attribute__((access(none, __VA_ARGS__)))
+#else
+#define __rte_no_access_param(...)
+#endif
+
+/**
  * Tells compiler that the function returns a value that points to
  * memory, where the size is given by the one or two arguments.
  * Used by compiler to validate object size.

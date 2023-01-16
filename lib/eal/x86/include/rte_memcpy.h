@@ -42,6 +42,9 @@ extern "C" {
  * @return
  *   Pointer to the destination data.
  */
+__rte_nonnull_params(1, 2)
+__rte_write_only_param(1, 3)
+__rte_read_only_param(2, 3)
 static __rte_always_inline void *
 rte_memcpy(void *dst, const void *src, size_t n);
 
@@ -859,6 +862,9 @@ rte_memcpy_aligned(void *dst, const void *src, size_t n)
 	return ret;
 }
 
+__rte_nonnull_params(1, 2)
+__rte_write_only_param(1, 3)
+__rte_read_only_param(2, 3)
 static __rte_always_inline void *
 rte_memcpy(void *dst, const void *src, size_t n)
 {

@@ -282,6 +282,9 @@ void rte_memcpy_ge64(uint8_t *dst, const uint8_t *src, size_t n)
 }
 
 #if RTE_CACHE_LINE_SIZE >= 128
+__rte_nonnull_params(1, 2)
+__rte_write_only_param(1, 3)
+__rte_read_only_param(2, 3)
 static __rte_always_inline
 void *rte_memcpy(void *dst, const void *src, size_t n)
 {
@@ -303,6 +306,9 @@ void *rte_memcpy(void *dst, const void *src, size_t n)
 }
 
 #else
+__rte_nonnull_params(1, 2)
+__rte_write_only_param(1, 3)
+__rte_read_only_param(2, 3)
 static __rte_always_inline
 void *rte_memcpy(void *dst, const void *src, size_t n)
 {
