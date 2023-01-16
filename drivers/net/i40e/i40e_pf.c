@@ -956,7 +956,7 @@ i40e_pf_host_process_cmd_add_vlan(struct i40e_pf_vf *vf,
 
 	for (i = 0; i < vlan_filter_list->num_elements; i++) {
 		ret = i40e_vsi_add_vlan(vf->vsi, vid[i]);
-		if(ret != I40E_SUCCESS)
+		if (ret != I40E_SUCCESS)
 			goto send_msg;
 	}
 
@@ -996,7 +996,7 @@ i40e_pf_host_process_cmd_del_vlan(struct i40e_pf_vf *vf,
 	vid = vlan_filter_list->vlan_id;
 	for (i = 0; i < vlan_filter_list->num_elements; i++) {
 		ret = i40e_vsi_delete_vlan(vf->vsi, vid[i]);
-		if(ret != I40E_SUCCESS)
+		if (ret != I40E_SUCCESS)
 			goto send_msg;
 	}
 
@@ -1577,12 +1577,12 @@ i40e_pf_host_init(struct rte_eth_dev *dev)
 	 * return if SRIOV not enabled, VF number not configured or
 	 * no queue assigned.
 	 */
-	if(!hw->func_caps.sr_iov_1_1 || pf->vf_num == 0 || pf->vf_nb_qps == 0)
+	if (!hw->func_caps.sr_iov_1_1 || pf->vf_num == 0 || pf->vf_nb_qps == 0)
 		return I40E_SUCCESS;
 
 	/* Allocate memory to store VF structure */
 	pf->vfs = rte_zmalloc("i40e_pf_vf",sizeof(*pf->vfs) * pf->vf_num, 0);
-	if(pf->vfs == NULL)
+	if (pf->vfs == NULL)
 		return -ENOMEM;
 
 	/* Disable irq0 for VFR event */
