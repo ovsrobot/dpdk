@@ -8,9 +8,11 @@ A node is a generic host that DTS connects to and manages.
 """
 
 from framework.config import (
+    Arch,
     BuildTargetConfiguration,
     ExecutionConfiguration,
     NodeConfiguration,
+    create_arch,
 )
 from framework.logger import DTSLOG, getLogger
 from framework.remote_session import OSSession, create_session
@@ -37,6 +39,7 @@ class Node(object):
     lcores: list[LogicalCore]
     _logger: DTSLOG
     _other_sessions: list[OSSession]
+    _arch: Arch
 
     def __init__(self, node_config: NodeConfiguration):
         self.config = node_config
@@ -51,6 +54,7 @@ class Node(object):
         ).filter()
 
         self._other_sessions = []
+        self._arch = create_arch(self.config)
 
         self._logger.info(f"Created node: {self.name}")
 
@@ -59,6 +63,7 @@ class Node(object):
         Perform the execution setup that will be done for each execution
         this node is part of.
         """
+        self._setup_hugepages()
         self._set_up_execution(execution_config)
 
     def _set_up_execution(self, execution_config: ExecutionConfiguration) -> None:
@@ -152,6 +157,16 @@ class Node(object):
         """
         self._logger.info("Getting CPU information.")
         self.lcores = self.main_session.get_remote_cpus(self.config.use_first_core)
+
+    def _setup_hugepages(self):
+        """
+        Setup hugepages on the Node. Different architectures can supply different
+        amounts of memory for hugepages and numa-based hugepage allocation may need
+        to be considered.
+        """
+        self.main_session.setup_hugepages(
+            self._arch.default_hugepage_memory, self._arch.hugepage_force_first_numa
+        )
 
     def close(self) -> None:
         """

@@ -19,6 +19,8 @@ import yaml
 
 from framework.settings import SETTINGS
 
+from .arch import PPC64, Arch, Arm64, i686, x86_32, x86_64
+
 
 class StrEnum(Enum):
     @staticmethod
@@ -176,3 +178,17 @@ def load_config() -> Configuration:
 
 
 CONFIGURATION = load_config()
+
+
+def create_arch(node_config: NodeConfiguration) -> Arch:
+    match node_config.arch:
+        case Architecture.x86_64:
+            return x86_64()
+        case Architecture.x86_32:
+            return x86_32()
+        case Architecture.i686:
+            return i686()
+        case Architecture.ppc64le:
+            return PPC64()
+        case Architecture.arm64:
+            return Arm64()
