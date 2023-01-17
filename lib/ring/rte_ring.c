@@ -45,6 +45,9 @@ EAL_REGISTER_TAILQ(rte_ring_tailq)
 /* by default set head/tail distance as 1/8 of ring capacity */
 #define HTD_MAX_DEF	8
 
+/* size of name of producer/consumer synchronization modes */
+#define SYNC_MODE_NAME_SZ	16
+
 /* return the size of memory occupied by a ring */
 ssize_t
 rte_ring_get_memsize_elem(unsigned int esize, unsigned int count)
@@ -454,8 +457,93 @@ ring_handle_list(const char *cmd __rte_unused,
 	return 0;
 }
 
+static void
+ring_get_sync_name_by_type(struct rte_ring *r, char *prod, char *cons)
+{
+	switch (r->prod.sync_type) {
+	case RTE_RING_SYNC_MT:
+		strcpy(prod, "MP");
+		break;
+	case RTE_RING_SYNC_ST:
+		strcpy(prod, "SP");
+		break;
+	case RTE_RING_SYNC_MT_RTS:
+		strcpy(prod, "MP_RTS");
+		break;
+	case RTE_RING_SYNC_MT_HTS:
+		strcpy(prod, "MP_HTS");
+		break;
+	default:
+		strcpy(prod, "Unknown");
+	}
+
+	switch (r->cons.sync_type) {
+	case RTE_RING_SYNC_MT:
+		strcpy(cons, "MC");
+		break;
+	case RTE_RING_SYNC_ST:
+		strcpy(cons, "SC");
+		break;
+	case RTE_RING_SYNC_MT_RTS:
+		strcpy(cons, "MC_RTS");
+		break;
+	case RTE_RING_SYNC_MT_HTS:
+		strcpy(cons, "MC_HTS");
+		break;
+	default:
+		strcpy(cons, "Unknown");
+	}
+}
+
+static int
+ring_handle_info(const char *cmd __rte_unused, const char *params,
+		struct rte_tel_data *d)
+{
+	char prod_type[SYNC_MODE_NAME_SZ];
+	char cons_type[SYNC_MODE_NAME_SZ];
+	const struct rte_memzone *mz;
+	char name[RTE_RING_NAMESIZE];
+	struct rte_ring *r;
+
+	if (params == NULL || strlen(params) == 0 ||
+		strlen(params) >= RTE_RING_NAMESIZE)
+		return -EINVAL;
+
+	strlcpy(name, params, RTE_RING_NAMESIZE);
+	r = rte_ring_lookup(name);
+	if (r == NULL)
+		return -EINVAL;
+
+	rte_tel_data_start_dict(d);
+	rte_tel_data_add_dict_string(d, "name", r->name);
+	rte_tel_data_add_dict_int(d, "socket", r->memzone->socket_id);
+	rte_tel_data_add_dict_int(d, "flags", r->flags);
+	ring_get_sync_name_by_type(r, prod_type, cons_type);
+	rte_tel_data_add_dict_string(d, "producer_type", prod_type);
+	rte_tel_data_add_dict_string(d, "consumer_type", cons_type);
+	rte_tel_data_add_dict_u64(d, "size", r->size);
+	rte_tel_data_add_dict_u64(d, "mask", r->mask);
+	rte_tel_data_add_dict_u64(d, "capacity", r->capacity);
+	rte_tel_data_add_dict_u64(d, "used_count", rte_ring_count(r));
+	rte_tel_data_add_dict_u64(d, "consumer_tail", r->cons.tail);
+	rte_tel_data_add_dict_u64(d, "consumer_head", r->cons.head);
+	rte_tel_data_add_dict_u64(d, "producer_tail", r->prod.tail);
+	rte_tel_data_add_dict_u64(d, "producer_head", r->prod.head);
+
+	mz = r->memzone;
+	rte_tel_data_add_dict_string(d, "mz_name", mz->name);
+	rte_tel_data_add_dict_int(d, "mz_len", mz->len);
+	rte_tel_data_add_dict_int(d, "mz_hugepage_sz", mz->hugepage_sz);
+	rte_tel_data_add_dict_int(d, "mz_socket_id", mz->socket_id);
+	rte_tel_data_add_dict_int(d, "mz_flags", mz->flags);
+
+	return 0;
+}
+
 RTE_INIT(ring_init_telemetry)
 {
 	rte_telemetry_register_cmd("/ring/list", ring_handle_list,
 		"Returns list of available ring. Takes no parameters");
+	rte_telemetry_register_cmd("/ring/info", ring_handle_info,
+		"Returns ring info. Parameters: ring_name.");
 }
