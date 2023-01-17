@@ -190,7 +190,7 @@ enqueue_dequeue_bulk_helper(const unsigned int flag, const int esize,
 #else
 	if (__sync_add_and_fetch(&lcore_count, 1) != 2)
 #endif
-		while(lcore_count != 2)
+		while (lcore_count != 2)
 			rte_pause();
 
 	burst = test_ring_calloc(MAX_BURST, esize);

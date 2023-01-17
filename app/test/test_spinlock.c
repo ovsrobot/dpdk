@@ -237,7 +237,7 @@ test_spinlock(void)
 	/*
 	 * Try to acquire a lock that we already own
 	 */
-	if(!rte_spinlock_recursive_trylock(&slr)) {
+	if (!rte_spinlock_recursive_trylock(&slr)) {
 		printf("rte_spinlock_recursive_trylock failed on a lock that "
 		       "we already own\n");
 		ret = -1;
