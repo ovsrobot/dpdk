@@ -1350,6 +1350,7 @@ fill_queue_buffers(struct test_op_params *op_params,
 				RTE_BBDEV_LDPC_LLR_COMPRESSION;
 		bool harq_comp = op_params->ref_dec_op->ldpc_dec.op_flags &
 				RTE_BBDEV_LDPC_HARQ_6BIT_COMPRESSION;
+
 		ldpc_llr_decimals = capabilities->cap.ldpc_dec.llr_decimals;
 		ldpc_llr_size = capabilities->cap.ldpc_dec.llr_size;
 		ldpc_cap_flags = capabilities->cap.ldpc_dec.capability_flags;
@@ -2427,7 +2428,7 @@ validate_ldpc_dec_op(struct rte_bbdev_dec_op **ops, const uint16_t n,
 					i);
 
 		if (ref_op->ldpc_dec.op_flags & RTE_BBDEV_LDPC_SOFT_OUT_ENABLE)
-			TEST_ASSERT_SUCCESS(validate_op_chain(soft_output,
+			TEST_ASSERT_SUCCESS(validate_op_so_chain(soft_output,
 					soft_data_orig),
 					"Soft output buffers (CB=%u) are not equal",
 					i);
@@ -2496,7 +2497,6 @@ validate_ldpc_enc_op(struct rte_bbdev_enc_op **ops, const uint16_t n,
 
 	return TEST_SUCCESS;
 }
-
 
 static inline int
 validate_op_fft_chain(struct rte_bbdev_op_data *op, struct op_data_entries *orig_op)
@@ -3187,11 +3187,11 @@ throughput_intr_lcore_ldpc_dec(void *arg)
 	for (j = 0; j < TEST_REPETITIONS; ++j) {
 		for (i = 0; i < num_to_process; ++i) {
 			if (!loopback)
-				rte_pktmbuf_reset(
-					ops[i]->ldpc_dec.hard_output.data);
+				rte_pktmbuf_reset(ops[i]->ldpc_dec.hard_output.data);
 			if (hc_out || loopback)
-				mbuf_reset(
-				ops[i]->ldpc_dec.harq_combined_output.data);
+				mbuf_reset(ops[i]->ldpc_dec.harq_combined_output.data);
+			if (ops[i]->ldpc_dec.soft_output.data != NULL)
+				rte_pktmbuf_reset(ops[i]->ldpc_dec.soft_output.data);
 		}
 
 		tp->start_time = rte_rdtsc_precise();
@@ -3285,7 +3285,6 @@ throughput_intr_lcore_dec(void *arg)
 			if (ops[i]->turbo_dec.soft_output.data != NULL)
 				rte_pktmbuf_reset(ops[i]->turbo_dec.soft_output.data);
 		}
-
 
 		tp->start_time = rte_rdtsc_precise();
 		for (enqueued = 0; enqueued < num_to_process;) {
@@ -3748,10 +3747,11 @@ bler_pmd_lcore_ldpc_dec(void *arg)
 	for (i = 0; i < 1; ++i) { /* Could add more iterations */
 		for (j = 0; j < num_ops; ++j) {
 			if (!loopback)
-				mbuf_reset(
-				ops_enq[j]->ldpc_dec.hard_output.data);
+				mbuf_reset(ops_enq[j]->ldpc_dec.hard_output.data);
 			if (hc_out || loopback)
 				mbuf_reset(ops_enq[j]->ldpc_dec.harq_combined_output.data);
+			if (ops_enq[j]->ldpc_dec.soft_output.data != NULL)
+				mbuf_reset(ops_enq[j]->ldpc_dec.soft_output.data);
 		}
 		if (extDdr)
 			preload_harq_ddr(tp->dev_id, queue_id, ops_enq,
@@ -3983,11 +3983,11 @@ throughput_pmd_lcore_ldpc_dec(void *arg)
 	for (i = 0; i < TEST_REPETITIONS; ++i) {
 		for (j = 0; j < num_ops; ++j) {
 			if (!loopback)
-				mbuf_reset(
-				ops_enq[j]->ldpc_dec.hard_output.data);
+				mbuf_reset(ops_enq[j]->ldpc_dec.hard_output.data);
 			if (hc_out || loopback)
-				mbuf_reset(
-				ops_enq[j]->ldpc_dec.harq_combined_output.data);
+				mbuf_reset(ops_enq[j]->ldpc_dec.harq_combined_output.data);
+			if (ops_enq[j]->ldpc_dec.soft_output.data != NULL)
+				mbuf_reset(ops_enq[j]->ldpc_dec.soft_output.data);
 		}
 		if (extDdr)
 			preload_harq_ddr(tp->dev_id, queue_id, ops_enq,
