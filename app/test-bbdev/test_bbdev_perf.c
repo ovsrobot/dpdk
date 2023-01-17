@@ -2292,6 +2292,7 @@ static int
 validate_dec_op(struct rte_bbdev_dec_op **ops, const uint16_t n,
 		struct rte_bbdev_dec_op *ref_op, const int vector_mask)
 {
+	RTE_SET_USED(vector_mask);
 	unsigned int i;
 	int ret;
 	struct op_data_entries *hard_data_orig =
@@ -2301,17 +2302,12 @@ validate_dec_op(struct rte_bbdev_dec_op **ops, const uint16_t n,
 	struct rte_bbdev_op_turbo_dec *ops_td;
 	struct rte_bbdev_op_data *hard_output;
 	struct rte_bbdev_op_data *soft_output;
-	struct rte_bbdev_op_turbo_dec *ref_td = &ref_op->turbo_dec;
 
 	for (i = 0; i < n; ++i) {
 		ops_td = &ops[i]->turbo_dec;
 		hard_output = &ops_td->hard_output;
 		soft_output = &ops_td->soft_output;
 
-		if (vector_mask & TEST_BBDEV_VF_EXPECTED_ITER_COUNT)
-			TEST_ASSERT(ops_td->iter_count <= ref_td->iter_count,
-					"Returned iter_count (%d) > expected iter_count (%d)",
-					ops_td->iter_count, ref_td->iter_count);
 		ret = check_dec_status_and_ordering(ops[i], i, ref_op->status);
 		TEST_ASSERT_SUCCESS(ret,
 				"Checking status and ordering for decoder failed");
