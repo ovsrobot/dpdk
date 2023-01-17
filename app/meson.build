@@ -28,6 +28,7 @@ apps = [
         'test-regex',
         'test-sad',
         'test-security-perf',
+        'test-dma-perf',
 ]
 
 default_cflags = machine_args + ['-DALLOW_EXPERIMENTAL_API']
