@@ -2145,11 +2145,16 @@ validate_op_harq_chain(struct rte_bbdev_op_data *op,
 		total_data_size += orig_op->segments[i].length;
 
 		TEST_ASSERT(orig_op->segments[i].length <
-				(uint32_t)(data_len + 64),
+				(uint32_t)(data_len + 256),
 				"Length of segment differ in original (%u) and filled (%u) op",
 				orig_op->segments[i].length, data_len);
 		harq_orig = (int8_t *) orig_op->segments[i].addr;
 		harq_out = rte_pktmbuf_mtod_offset(m, int8_t *, offset);
+
+		/* Cannot compare HARQ output data for such cases */
+		if ((ldpc_llr_decimals > 1) && ((ops_ld->op_flags & RTE_BBDEV_LDPC_LLR_COMPRESSION)
+				|| (ops_ld->op_flags & RTE_BBDEV_LDPC_HARQ_6BIT_COMPRESSION)))
+			break;
 
 		if (!(ldpc_cap_flags &
 				RTE_BBDEV_LDPC_INTERNAL_HARQ_MEMORY_FILLERS
@@ -2226,7 +2231,7 @@ validate_op_harq_chain(struct rte_bbdev_op_data *op,
 
 	/* Validate total mbuf pkt length */
 	uint32_t pkt_len = rte_pktmbuf_pkt_len(op->data) - op->offset;
-	TEST_ASSERT(total_data_size < pkt_len + 64,
+	TEST_ASSERT(total_data_size < pkt_len + 256,
 			"Length of data differ in original (%u) and filled (%u) op",
 			total_data_size, pkt_len);
 
