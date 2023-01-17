@@ -79,7 +79,7 @@ app_rx_thread(struct thread_conf **confs)
 		if (likely(nb_rx != 0)) {
 			APP_STATS_ADD(conf->stat.nb_rx, nb_rx);
 
-			for(i = 0; i < nb_rx; i++) {
+			for (i = 0; i < nb_rx; i++) {
 				get_pkt_sched(rx_mbufs[i],
 						&subport, &pipe, &traffic_class, &queue, &color);
 				rte_sched_port_pkt_write(conf->sched_port,
@@ -91,7 +91,7 @@ app_rx_thread(struct thread_conf **confs)
 
 			if (unlikely(rte_ring_sp_enqueue_bulk(conf->rx_ring,
 					(void **)rx_mbufs, nb_rx, NULL) == 0)) {
-				for(i = 0; i < nb_rx; i++) {
+				for (i = 0; i < nb_rx; i++) {
 					rte_pktmbuf_free(rx_mbufs[i]);
 
 					APP_STATS_ADD(conf->stat.nb_drop, 1);
@@ -137,7 +137,7 @@ app_send_packets(struct thread_conf *qconf, struct rte_mbuf **mbufs, uint32_t nb
 	uint32_t i, len;
 
 	len = qconf->n_mbufs;
-	for(i = 0; i < nb_pkt; i++) {
+	for (i = 0; i < nb_pkt; i++) {
 		qconf->m_table[len] = mbufs[i];
 		len++;
 		/* enough pkts to be sent */

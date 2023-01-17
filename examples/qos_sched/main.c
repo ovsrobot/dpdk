@@ -152,7 +152,7 @@ app_stat(void)
 	static struct rte_eth_stats tx_stats[MAX_DATA_STREAMS];
 
 	/* print statistics */
-	for(i = 0; i < nb_pfc; i++) {
+	for (i = 0; i < nb_pfc; i++) {
 		struct flow_conf *flow = &qos_conf[i];
 
 		rte_eth_stats_get(flow->rx_port, &stats);

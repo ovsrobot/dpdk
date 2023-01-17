@@ -451,7 +451,7 @@ app_parse_args(int argc, char **argv)
 	/* sanity check for cores assignment */
 	nb_lcores = app_cpu_core_count();
 
-	for(i = 0; i < nb_pfc; i++) {
+	for (i = 0; i < nb_pfc; i++) {
 		if (qos_conf[i].rx_core >= nb_lcores) {
 			RTE_LOG(ERR, APP, "pfc %u: invalid RX lcore index %u\n", i + 1,
 					qos_conf[i].rx_core);
