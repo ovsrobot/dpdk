@@ -66,6 +66,8 @@ class _Settings:
     skip_setup: bool
     dpdk_ref: Path | str
     compile_timeout: float
+    test_cases: list
+    re_run: int
 
 
 def _get_parser() -> argparse.ArgumentParser:
@@ -139,6 +141,26 @@ def _get_parser() -> argparse.ArgumentParser:
         help="[DTS_COMPILE_TIMEOUT] The timeout for compiling DPDK.",
     )
 
+    parser.add_argument(
+        "--test-cases",
+        action=_env_arg("DTS_TESTCASES"),
+        default="",
+        required=False,
+        help="[DTS_TESTCASES] Comma-separated list of test cases to execute. "
+        "Unknown test cases will be silently ignored.",
+    )
+
+    parser.add_argument(
+        "--re-run",
+        "--re_run",
+        action=_env_arg("DTS_RERUN"),
+        default=0,
+        type=int,
+        required=False,
+        help="[DTS_RERUN] Re-run each test case the specified amount of times "
+        "if a test failure occurs",
+    )
+
     return parser
 
 
@@ -162,6 +184,8 @@ def _get_settings() -> _Settings:
         skip_setup=(parsed_args.skip_setup == "Y"),
         dpdk_ref=parsed_args.dpdk_ref,
         compile_timeout=parsed_args.compile_timeout,
+        test_cases=parsed_args.test_cases.split(",") if parsed_args.test_cases else [],
+        re_run=parsed_args.re_run,
     )
 
 

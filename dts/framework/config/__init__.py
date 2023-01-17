@@ -119,6 +119,8 @@ class BuildTargetConfiguration:
 @dataclass(slots=True, frozen=True)
 class ExecutionConfiguration:
     build_targets: list[BuildTargetConfiguration]
+    perf: bool
+    func: bool
     system_under_test: NodeConfiguration
 
     @staticmethod
@@ -131,6 +133,8 @@ class ExecutionConfiguration:
 
         return ExecutionConfiguration(
             build_targets=build_targets,
+            perf=d["perf"],
+            func=d["func"],
             system_under_test=node_map[sut_name],
         )
 
