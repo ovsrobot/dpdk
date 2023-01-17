@@ -891,6 +891,7 @@ add_bbdev_dev(uint8_t dev_id, struct rte_bbdev_info *info,
 			ret = rte_bbdev_queue_configure(ad->dev_id, queue_id,
 					&qconf);
 		}
+		rte_bbdev_queue_start(ad->dev_id, queue_id);
 		if (ret != 0) {
 			printf("All queues on dev %u allocated: %u\n",
 					dev_id, queue_id);
@@ -899,8 +900,8 @@ add_bbdev_dev(uint8_t dev_id, struct rte_bbdev_info *info,
 		ad->queue_ids[queue_id] = queue_id;
 	}
 	TEST_ASSERT(queue_id != 0,
-			"ERROR Failed to configure any queues on dev %u",
-			dev_id);
+			"ERROR Failed to configure any queues on dev %u\n"
+			"\tthe device may not support or have been configured", dev_id);
 	ad->nb_queues = queue_id;
 
 	set_avail_op(ad, op_type);
@@ -3846,6 +3847,7 @@ throughput_pmd_lcore_ldpc_dec(void *arg)
 		TEST_ASSERT_SUCCESS(ret, "Validation failed!");
 	}
 
+	rte_bbdev_queue_stop(tp->dev_id, queue_id);
 	rte_bbdev_dec_op_free_bulk(ops_enq, num_ops);
 
 	double tb_len_bits = calc_ldpc_dec_TB_size(ref_op);
