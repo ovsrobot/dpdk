@@ -68,6 +68,9 @@ flow_hw_set_vlan_vid_construct(struct rte_eth_dev *dev,
 			       struct mlx5_action_construct_data *act_data,
 			       const struct mlx5_hw_actions *hw_acts,
 			       const struct rte_flow_action *action);
+static void
+flow_hw_construct_quota(struct mlx5_priv *priv,
+			struct mlx5dr_rule_action *rule_act, uint32_t qid);
 
 static __rte_always_inline uint32_t flow_hw_tx_tag_regc_mask(struct rte_eth_dev *dev);
 static __rte_always_inline uint32_t flow_hw_tx_tag_regc_value(struct rte_eth_dev *dev);
@@ -790,6 +793,9 @@ flow_hw_shared_action_translate(struct rte_eth_dev *dev,
 			MLX5_RTE_FLOW_ACTION_TYPE_METER_MARK,
 			action_src, action_dst, idx))
 			return -1;
+		break;
+	case MLX5_INDIRECT_ACTION_TYPE_QUOTA:
+		flow_hw_construct_quota(priv, &acts->rule_acts[action_dst], idx);
 		break;
 	default:
 		DRV_LOG(WARNING, "Unsupported shared action type:%d", type);
@@ -1834,6 +1840,16 @@ flow_hw_shared_action_get(struct rte_eth_dev *dev,
 	return -1;
 }
 
+static void
+flow_hw_construct_quota(struct mlx5_priv *priv,
+			struct mlx5dr_rule_action *rule_act, uint32_t qid)
+{
+	rule_act->action = priv->quota_ctx.dr_action;
+	rule_act->aso_meter.offset = qid - 1;
+	rule_act->aso_meter.init_color =
+		MLX5DR_ACTION_ASO_METER_COLOR_GREEN;
+}
+
 /**
  * Construct shared indirect action.
  *
@@ -1956,6 +1972,9 @@ flow_hw_shared_action_construct(struct rte_eth_dev *dev, uint32_t queue,
 		rule_act->aso_meter.init_color =
 			(enum mlx5dr_action_aso_meter_color)
 			rte_col_2_mlx5_col(aso_mtr->init_color);
+		break;
+	case MLX5_INDIRECT_ACTION_TYPE_QUOTA:
+		flow_hw_construct_quota(priv, rule_act, idx);
 		break;
 	default:
 		DRV_LOG(WARNING, "Unsupported shared action type:%d", type);
@@ -2262,6 +2281,11 @@ flow_hw_actions_construct(struct rte_eth_dev *dev,
 				return -1;
 			rule_acts[act_data->action_dst].action =
 					priv->hw_vport[port_action->port_id];
+			break;
+		case RTE_FLOW_ACTION_TYPE_QUOTA:
+			flow_hw_construct_quota(priv,
+						rule_acts + act_data->action_dst,
+						act_data->shared_meter.id);
 			break;
 		case RTE_FLOW_ACTION_TYPE_METER:
 			meter = action->conf;
@@ -2702,11 +2726,18 @@ __flow_hw_pull_indir_action_comp(struct rte_eth_dev *dev,
 	if (ret_comp < n_res && priv->hws_ctpool)
 		ret_comp += mlx5_aso_pull_completion(&priv->ct_mng->aso_sqs[queue],
 				&res[ret_comp], n_res - ret_comp);
+	if (ret_comp < n_res && priv->quota_ctx.sq)
+		ret_comp += mlx5_aso_pull_completion(&priv->quota_ctx.sq[queue],
+						     &res[ret_comp],
+						     n_res - ret_comp);
 	for (i = 0; i <  ret_comp; i++) {
 		job = (struct mlx5_hw_q_job *)res[i].user_data;
 		/* Restore user data. */
 		res[i].user_data = job->user_data;
-		if (job->type == MLX5_HW_Q_JOB_TYPE_DESTROY) {
+		if (MLX5_INDIRECT_ACTION_TYPE_GET(job->action) ==
+		    MLX5_INDIRECT_ACTION_TYPE_QUOTA) {
+			mlx5_quota_async_completion(dev, queue, job);
+		} else if (job->type == MLX5_HW_Q_JOB_TYPE_DESTROY) {
 			type = MLX5_INDIRECT_ACTION_TYPE_GET(job->action);
 			if (type == MLX5_INDIRECT_ACTION_TYPE_METER_MARK) {
 				idx = MLX5_INDIRECT_ACTION_IDX_GET(job->action);
@@ -3687,6 +3718,10 @@ flow_hw_validate_action_indirect(struct rte_eth_dev *dev,
 			return ret;
 		*action_flags |= MLX5_FLOW_ACTION_INDIRECT_AGE;
 		break;
+	case RTE_FLOW_ACTION_TYPE_QUOTA:
+		/* TODO: add proper quota verification */
+		*action_flags |= MLX5_FLOW_ACTION_QUOTA;
+		break;
 	default:
 		DRV_LOG(WARNING, "Unsupported shared action type: %d", type);
 		return rte_flow_error_set(error, ENOTSUP,
@@ -3724,19 +3759,17 @@ flow_hw_validate_action_raw_encap(struct rte_eth_dev *dev __rte_unused,
 }
 
 static inline uint16_t
-flow_hw_template_expand_modify_field(const struct rte_flow_action actions[],
-				     const struct rte_flow_action masks[],
-				     const struct rte_flow_action *mf_action,
-				     const struct rte_flow_action *mf_mask,
-				     struct rte_flow_action *new_actions,
-				     struct rte_flow_action *new_masks,
-				     uint64_t flags, uint32_t act_num)
+flow_hw_template_expand_modify_field(struct rte_flow_action actions[],
+				     struct rte_flow_action masks[],
+				     const struct rte_flow_action *mf_actions,
+				     const struct rte_flow_action *mf_masks,
+				     uint64_t flags, uint32_t act_num,
+				     uint32_t mf_num)
 {
 	uint32_t i, tail;
 
 	MLX5_ASSERT(actions && masks);
-	MLX5_ASSERT(new_actions && new_masks);
-	MLX5_ASSERT(mf_action && mf_mask);
+	MLX5_ASSERT(mf_num > 0);
 	if (flags & MLX5_FLOW_ACTION_MODIFY_FIELD) {
 		/*
 		 * Application action template already has Modify Field.
@@ -3787,12 +3820,10 @@ flow_hw_template_expand_modify_field(const struct rte_flow_action actions[],
 	i = 0;
 insert:
 	tail = act_num - i; /* num action to move */
-	memcpy(new_actions, actions, sizeof(actions[0]) * i);
-	new_actions[i] = *mf_action;
-	memcpy(new_actions + i + 1, actions + i, sizeof(actions[0]) * tail);
-	memcpy(new_masks, masks, sizeof(masks[0]) * i);
-	new_masks[i] = *mf_mask;
-	memcpy(new_masks + i + 1, masks + i, sizeof(masks[0]) * tail);
+	memmove(actions + i + mf_num, actions + i, sizeof(actions[0]) * tail);
+	memcpy(actions + i, mf_actions, sizeof(actions[0]) * mf_num);
+	memmove(masks + i + mf_num, masks + i, sizeof(masks[0]) * tail);
+	memcpy(masks + i, mf_masks, sizeof(masks[0]) * mf_num);
 	return i;
 }
 
@@ -4102,6 +4133,7 @@ flow_hw_dr_actions_template_handle_shared(const struct rte_flow_action *mask,
 		action_types[*curr_off] = MLX5DR_ACTION_TYP_ASO_CT;
 		*curr_off = *curr_off + 1;
 		break;
+	case RTE_FLOW_ACTION_TYPE_QUOTA:
 	case RTE_FLOW_ACTION_TYPE_METER_MARK:
 		at->actions_off[action_src] = *curr_off;
 		action_types[*curr_off] = MLX5DR_ACTION_TYP_ASO_METER;
@@ -4331,6 +4363,96 @@ flow_hw_set_vlan_vid_construct(struct rte_eth_dev *dev,
 					      &modify_action);
 }
 
+static __rte_always_inline void
+flow_hw_actions_template_replace_container(const
+					   struct rte_flow_action *actions,
+					   const
+					   struct rte_flow_action *masks,
+					   struct rte_flow_action *new_actions,
+					   struct rte_flow_action *new_masks,
+					   struct rte_flow_action **ra,
+					   struct rte_flow_action **rm,
+					   uint32_t act_num)
+{
+	memcpy(new_actions, actions, sizeof(actions[0]) * act_num);
+	memcpy(new_masks, masks, sizeof(masks[0]) * act_num);
+	*ra = (void *)(uintptr_t)new_actions;
+	*rm = (void *)(uintptr_t)new_masks;
+}
+
+#define RX_META_COPY_ACTION ((const struct rte_flow_action) {    \
+	.type = RTE_FLOW_ACTION_TYPE_MODIFY_FIELD,               \
+	.conf = &(struct rte_flow_action_modify_field){          \
+		.operation = RTE_FLOW_MODIFY_SET,                \
+		.dst = {                                         \
+			.field = (enum rte_flow_field_id)        \
+				MLX5_RTE_FLOW_FIELD_META_REG,    \
+			.level = REG_B,                          \
+		},                                               \
+		.src = {                                         \
+			.field = (enum rte_flow_field_id)        \
+				MLX5_RTE_FLOW_FIELD_META_REG,    \
+			.level = REG_C_1,                        \
+		},                                               \
+		.width = 32,                                     \
+	}                                                        \
+})
+
+#define RX_META_COPY_MASK ((const struct rte_flow_action) {      \
+	.type = RTE_FLOW_ACTION_TYPE_MODIFY_FIELD,               \
+	.conf = &(struct rte_flow_action_modify_field){          \
+		.operation = RTE_FLOW_MODIFY_SET,                \
+		.dst = {                                         \
+			.field = (enum rte_flow_field_id)        \
+				MLX5_RTE_FLOW_FIELD_META_REG,    \
+			.level = UINT32_MAX,                     \
+			.offset = UINT32_MAX,                    \
+		},                                               \
+		.src = {                                         \
+			.field = (enum rte_flow_field_id)        \
+				MLX5_RTE_FLOW_FIELD_META_REG,    \
+			.level = UINT32_MAX,                     \
+			.offset = UINT32_MAX,                    \
+		},                                               \
+		.width = UINT32_MAX,                             \
+	}                                                        \
+})
+
+#define QUOTA_COLOR_INC_ACTION ((const struct rte_flow_action) {      \
+	.type = RTE_FLOW_ACTION_TYPE_MODIFY_FIELD,                    \
+	.conf = &(struct rte_flow_action_modify_field) {              \
+		.operation = RTE_FLOW_MODIFY_ADD,                     \
+		.dst = {                                              \
+			.field = RTE_FLOW_FIELD_METER_COLOR,          \
+			.level = 0, .offset = 0                       \
+		},                                                    \
+		.src = {                                              \
+			.field = RTE_FLOW_FIELD_VALUE,                \
+			.level = 1,                                   \
+			.offset = 0,                                  \
+		},                                                    \
+		.width = 2                                            \
+	}                                                             \
+})
+
+#define QUOTA_COLOR_INC_MASK ((const struct rte_flow_action) {        \
+	.type = RTE_FLOW_ACTION_TYPE_MODIFY_FIELD,                    \
+	.conf = &(struct rte_flow_action_modify_field) {              \
+		.operation = RTE_FLOW_MODIFY_ADD,                     \
+		.dst = {                                              \
+			.field = RTE_FLOW_FIELD_METER_COLOR,          \
+			.level = UINT32_MAX,                          \
+			.offset = UINT32_MAX,                         \
+		},                                                    \
+		.src = {                                              \
+			.field = RTE_FLOW_FIELD_VALUE,                \
+			.level = 3,                                   \
+			.offset = 0                                   \
+		},                                                    \
+		.width = UINT32_MAX                                   \
+	}                                                             \
+})
+
 /**
  * Create flow action template.
  *
@@ -4369,40 +4491,9 @@ flow_hw_actions_template_create(struct rte_eth_dev *dev,
 	int set_vlan_vid_ix = -1;
 	struct rte_flow_action_modify_field set_vlan_vid_spec = {0, };
 	struct rte_flow_action_modify_field set_vlan_vid_mask = {0, };
-	const struct rte_flow_action_modify_field rx_mreg = {
-		.operation = RTE_FLOW_MODIFY_SET,
-		.dst = {
-			.field = (enum rte_flow_field_id)MLX5_RTE_FLOW_FIELD_META_REG,
-			.level = REG_B,
-		},
-		.src = {
-			.field = (enum rte_flow_field_id)MLX5_RTE_FLOW_FIELD_META_REG,
-			.level = REG_C_1,
-		},
-		.width = 32,
-	};
-	const struct rte_flow_action_modify_field rx_mreg_mask = {
-		.operation = RTE_FLOW_MODIFY_SET,
-		.dst = {
-			.field = (enum rte_flow_field_id)MLX5_RTE_FLOW_FIELD_META_REG,
-			.level = UINT32_MAX,
-			.offset = UINT32_MAX,
-		},
-		.src = {
-			.field = (enum rte_flow_field_id)MLX5_RTE_FLOW_FIELD_META_REG,
-			.level = UINT32_MAX,
-			.offset = UINT32_MAX,
-		},
-		.width = UINT32_MAX,
-	};
-	const struct rte_flow_action rx_cpy = {
-		.type = RTE_FLOW_ACTION_TYPE_MODIFY_FIELD,
-		.conf = &rx_mreg,
-	};
-	const struct rte_flow_action rx_cpy_mask = {
-		.type = RTE_FLOW_ACTION_TYPE_MODIFY_FIELD,
-		.conf = &rx_mreg_mask,
-	};
+	struct rte_flow_action mf_actions[MLX5_HW_MAX_ACTS];
+	struct rte_flow_action mf_masks[MLX5_HW_MAX_ACTS];
+	uint32_t expand_mf_num = 0;
 
 	if (mlx5_flow_hw_actions_validate(dev, attr, actions, masks,
 					  &action_flags, error))
@@ -4432,43 +4523,56 @@ flow_hw_actions_template_create(struct rte_eth_dev *dev,
 				   RTE_FLOW_ERROR_TYPE_ACTION, NULL, "Too many actions");
 		return NULL;
 	}
+	if (set_vlan_vid_ix != -1) {
+		/* If temporary action buffer was not used, copy template actions to it */
+		if (ra == actions)
+			flow_hw_actions_template_replace_container(actions,
+								   masks,
+								   tmp_action,
+								   tmp_mask,
+								   &ra, &rm,
+								   act_num);
+		flow_hw_set_vlan_vid(dev, ra, rm,
+				     &set_vlan_vid_spec, &set_vlan_vid_mask,
+				     set_vlan_vid_ix);
+		action_flags |= MLX5_FLOW_ACTION_MODIFY_FIELD;
+	}
+	if (action_flags & MLX5_FLOW_ACTION_QUOTA) {
+		mf_actions[expand_mf_num] = QUOTA_COLOR_INC_ACTION;
+		mf_masks[expand_mf_num] = QUOTA_COLOR_INC_MASK;
+		expand_mf_num++;
+	}
 	if (priv->sh->config.dv_xmeta_en == MLX5_XMETA_MODE_META32_HWS &&
 	    priv->sh->config.dv_esw_en &&
 	    (action_flags & (MLX5_FLOW_ACTION_QUEUE | MLX5_FLOW_ACTION_RSS))) {
 		/* Insert META copy */
-		if (act_num + 1 > MLX5_HW_MAX_ACTS) {
+		mf_actions[expand_mf_num] = RX_META_COPY_ACTION;
+		mf_masks[expand_mf_num] = RX_META_COPY_MASK;
+		expand_mf_num++;
+	}
+	if (expand_mf_num) {
+		if (act_num + expand_mf_num > MLX5_HW_MAX_ACTS) {
 			rte_flow_error_set(error, E2BIG,
 					   RTE_FLOW_ERROR_TYPE_ACTION,
 					   NULL, "cannot expand: too many actions");
 			return NULL;
 		}
+		if (ra == actions)
+			flow_hw_actions_template_replace_container(actions,
+								   masks,
+								   tmp_action,
+								   tmp_mask,
+								   &ra, &rm,
+								   act_num);
 		/* Application should make sure only one Q/RSS exist in one rule. */
-		pos = flow_hw_template_expand_modify_field(actions, masks,
-							   &rx_cpy,
-							   &rx_cpy_mask,
-							   tmp_action, tmp_mask,
+		pos = flow_hw_template_expand_modify_field(ra, rm,
+							   mf_actions,
+							   mf_masks,
 							   action_flags,
-							   act_num);
-		ra = tmp_action;
-		rm = tmp_mask;
-		act_num++;
+							   act_num,
+							   expand_mf_num);
+		act_num += expand_mf_num;
 		action_flags |= MLX5_FLOW_ACTION_MODIFY_FIELD;
-	}
-	if (set_vlan_vid_ix != -1) {
-		/* If temporary action buffer was not used, copy template actions to it */
-		if (ra == actions && rm == masks) {
-			for (i = 0; i < act_num; ++i) {
-				tmp_action[i] = actions[i];
-				tmp_mask[i] = masks[i];
-				if (actions[i].type == RTE_FLOW_ACTION_TYPE_END)
-					break;
-			}
-			ra = tmp_action;
-			rm = tmp_mask;
-		}
-		flow_hw_set_vlan_vid(dev, ra, rm,
-				     &set_vlan_vid_spec, &set_vlan_vid_mask,
-				     set_vlan_vid_ix);
 	}
 	act_len = rte_flow_conv(RTE_FLOW_CONV_OP_ACTIONS, NULL, 0, ra, error);
 	if (act_len <= 0)
@@ -4732,6 +4836,7 @@ flow_hw_pattern_validate(struct rte_eth_dev *dev,
 		case RTE_FLOW_ITEM_TYPE_ICMP:
 		case RTE_FLOW_ITEM_TYPE_ICMP6:
 		case RTE_FLOW_ITEM_TYPE_CONNTRACK:
+		case RTE_FLOW_ITEM_TYPE_QUOTA:
 			break;
 		case RTE_FLOW_ITEM_TYPE_INTEGRITY:
 			/*
@@ -6932,6 +7037,12 @@ flow_hw_configure(struct rte_eth_dev *dev,
 				   "Failed to set up Rx control flow templates");
 		goto err;
 	}
+	/* Initialize quotas */
+	if (port_attr->nb_quotas) {
+		ret = mlx5_flow_quota_init(dev, port_attr->nb_quotas);
+		if (ret)
+			goto err;
+	}
 	/* Initialize meter library*/
 	if (port_attr->nb_meters)
 		if (mlx5_flow_meter_init(dev, port_attr->nb_meters, 1, 1, nb_q_updated))
@@ -7031,6 +7142,7 @@ err:
 		mlx5_hws_cnt_pool_destroy(priv->sh, priv->hws_cpool);
 		priv->hws_cpool = NULL;
 	}
+	mlx5_flow_quota_destroy(dev);
 	flow_hw_free_vport_actions(priv);
 	for (i = 0; i < MLX5_HW_ACTION_FLAG_MAX; i++) {
 		if (priv->hw_drop[i])
@@ -7124,6 +7236,7 @@ flow_hw_resource_release(struct rte_eth_dev *dev)
 		flow_hw_ct_mng_destroy(dev, priv->ct_mng);
 		priv->ct_mng = NULL;
 	}
+	mlx5_flow_quota_destroy(dev);
 	for (i = 0; i < priv->nb_queue; i++) {
 		rte_ring_free(priv->hw_q[i].indir_iq);
 		rte_ring_free(priv->hw_q[i].indir_cq);
@@ -7518,6 +7631,8 @@ flow_hw_action_handle_validate(struct rte_eth_dev *dev, uint32_t queue,
 		return flow_hw_validate_action_meter_mark(dev, action, error);
 	case RTE_FLOW_ACTION_TYPE_RSS:
 		return flow_dv_action_validate(dev, conf, action, error);
+	case RTE_FLOW_ACTION_TYPE_QUOTA:
+		return 0;
 	default:
 		return rte_flow_error_set(error, ENOTSUP,
 					  RTE_FLOW_ERROR_TYPE_ACTION, NULL,
@@ -7689,6 +7804,11 @@ flow_hw_action_handle_create(struct rte_eth_dev *dev, uint32_t queue,
 	case RTE_FLOW_ACTION_TYPE_RSS:
 		handle = flow_dv_action_create(dev, conf, action, error);
 		break;
+	case RTE_FLOW_ACTION_TYPE_QUOTA:
+		aso = true;
+		handle = mlx5_quota_alloc(dev, queue, action->conf,
+					  job, push, error);
+		break;
 	default:
 		rte_flow_error_set(error, ENOTSUP, RTE_FLOW_ERROR_TYPE_ACTION,
 				   NULL, "action type not supported");
@@ -7809,6 +7929,11 @@ flow_hw_action_handle_update(struct rte_eth_dev *dev, uint32_t queue,
 	case MLX5_INDIRECT_ACTION_TYPE_RSS:
 		ret = flow_dv_action_update(dev, handle, update, error);
 		break;
+	case MLX5_INDIRECT_ACTION_TYPE_QUOTA:
+		aso = true;
+		ret = mlx5_quota_query_update(dev, queue, handle, update, NULL,
+					      job, push, error);
+		break;
 	default:
 		ret = -ENOTSUP;
 		rte_flow_error_set(error, ENOTSUP,
@@ -7920,6 +8045,8 @@ flow_hw_action_handle_destroy(struct rte_eth_dev *dev, uint32_t queue,
 		break;
 	case MLX5_INDIRECT_ACTION_TYPE_RSS:
 		ret = flow_dv_action_destroy(dev, handle, error);
+		break;
+	case MLX5_INDIRECT_ACTION_TYPE_QUOTA:
 		break;
 	default:
 		ret = -ENOTSUP;
@@ -8190,6 +8317,11 @@ flow_hw_action_handle_query(struct rte_eth_dev *dev, uint32_t queue,
 		ret = flow_hw_conntrack_query(dev, queue, act_idx, data,
 					      job, push, error);
 		break;
+	case MLX5_INDIRECT_ACTION_TYPE_QUOTA:
+		aso = true;
+		ret = mlx5_quota_query(dev, queue, handle, data,
+				       job, push, error);
+		break;
 	default:
 		ret = -ENOTSUP;
 		rte_flow_error_set(error, ENOTSUP,
@@ -8199,7 +8331,51 @@ flow_hw_action_handle_query(struct rte_eth_dev *dev, uint32_t queue,
 	}
 	if (job)
 		flow_hw_action_finalize(dev, queue, job, push, aso, ret == 0);
-	return 0;
+	return ret;
+}
+
+static int
+flow_hw_async_action_handle_query_update
+			(struct rte_eth_dev *dev, uint32_t queue,
+			 const struct rte_flow_op_attr *attr,
+			 struct rte_flow_action_handle *handle,
+			 const void *update, void *query,
+			 enum rte_flow_query_update_mode qu_mode,
+			 void *user_data, struct rte_flow_error *error)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+	bool push = flow_hw_action_push(attr);
+	bool aso = false;
+	struct mlx5_hw_q_job *job = NULL;
+	int ret = 0;
+
+	if (attr) {
+		job = flow_hw_action_job_init(priv, queue, handle, user_data,
+					      query,
+					      MLX5_HW_Q_JOB_TYPE_UPDATE_QUERY,
+					      error);
+		if (!job)
+			return -rte_errno;
+	}
+	switch (MLX5_INDIRECT_ACTION_TYPE_GET(handle)) {
+	case MLX5_INDIRECT_ACTION_TYPE_QUOTA:
+		if (qu_mode != RTE_FLOW_QU_QUERY_FIRST) {
+			ret = rte_flow_error_set
+				(error, EINVAL, RTE_FLOW_ERROR_TYPE_ACTION_CONF,
+				 NULL, "quota action must query before update");
+			break;
+		}
+		aso = true;
+		ret = mlx5_quota_query_update(dev, queue, handle,
+					      update, query, job, push, error);
+		break;
+	default:
+		ret = rte_flow_error_set(error, ENOTSUP,
+					 RTE_FLOW_ERROR_TYPE_ACTION_CONF, NULL, "update and query not supportred");
+	}
+	if (job)
+		flow_hw_action_finalize(dev, queue, job, push, aso, ret == 0);
+	return ret;
 }
 
 static int
@@ -8209,6 +8385,19 @@ flow_hw_action_query(struct rte_eth_dev *dev,
 {
 	return flow_hw_action_handle_query(dev, MLX5_HW_INV_QUEUE, NULL,
 			handle, data, NULL, error);
+}
+
+static int
+flow_hw_action_query_update(struct rte_eth_dev *dev,
+			    struct rte_flow_action_handle *handle,
+			    const void *update, void *query,
+			    enum rte_flow_query_update_mode qu_mode,
+			    struct rte_flow_error *error)
+{
+	return flow_hw_async_action_handle_query_update(dev, MLX5_HW_INV_QUEUE,
+							NULL, handle, update,
+							query, qu_mode, NULL,
+							error);
 }
 
 /**
@@ -8323,12 +8512,14 @@ const struct mlx5_flow_driver_ops mlx5_flow_hw_drv_ops = {
 	.async_action_create = flow_hw_action_handle_create,
 	.async_action_destroy = flow_hw_action_handle_destroy,
 	.async_action_update = flow_hw_action_handle_update,
+	.async_action_query_update = flow_hw_async_action_handle_query_update,
 	.async_action_query = flow_hw_action_handle_query,
 	.action_validate = flow_hw_action_validate,
 	.action_create = flow_hw_action_create,
 	.action_destroy = flow_hw_action_destroy,
 	.action_update = flow_hw_action_update,
 	.action_query = flow_hw_action_query,
+	.action_query_update = flow_hw_action_query_update,
 	.query = flow_hw_query,
 	.get_aged_flows = flow_hw_get_aged_flows,
 	.get_q_aged_flows = flow_hw_get_q_aged_flows,
