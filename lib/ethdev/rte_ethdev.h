@@ -2260,6 +2260,27 @@ int rte_eth_dev_owner_get(const uint16_t port_id,
 __rte_experimental
 int rte_eth_process_set_role(bool standby, uint32_t flags);
 
+/**@{@name Process role flags
+ * used when migrating from an application to another one.
+ * @see rte_eth_process_set_active
+ */
+/**
+ * When set on a standby process, ingress flow rules will be effective
+ * in active and standby processes, so the ingress traffic may be duplicated.
+ */
+#define RTE_ETH_PROCESS_FLAG_STANDBY_DUP_FLOW_INGRESS      RTE_BIT32(0)
+/**
+ * When set on a standby process, egress flow rules will be effective
+ * in active and standby processes, so the egress traffic may be duplicated.
+ */
+#define RTE_ETH_PROCESS_FLAG_STANDBY_DUP_FLOW_EGRESS       RTE_BIT32(1)
+/**
+ * When set on a standby process, transfer flow rules will be effective
+ * in active and standby processes, so the transfer traffic may be duplicated.
+ */
+#define RTE_ETH_PROCESS_FLAG_STANDBY_DUP_FLOW_TRANSFER     RTE_BIT32(2)
+/**@}*/
+
 /**
  * Get the number of ports which are usable for the application.
  *
