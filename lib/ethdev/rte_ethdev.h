@@ -1606,6 +1606,8 @@ struct rte_eth_conf {
 #define RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP         RTE_BIT64(3)
 /** Device supports keeping shared flow objects across restart. */
 #define RTE_ETH_DEV_CAPA_FLOW_SHARED_OBJECT_KEEP RTE_BIT64(4)
+/** Device supports process role changing. @see rte_eth_process_set_active */
+#define RTE_ETH_DEV_CAPA_PROCESS_ROLE           RTE_BIT64(5)
 /**@}*/
 
 /*
@@ -2203,6 +2205,60 @@ int rte_eth_dev_owner_delete(const uint64_t owner_id);
  */
 int rte_eth_dev_owner_get(const uint16_t port_id,
 		struct rte_eth_dev_owner *owner);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Set the role of the process to active or standby,
+ * affecting network traffic handling.
+ *
+ * If one device does not support this operation or fails,
+ * the whole operation is failed and rolled back.
+ *
+ * It is forbidden to have multiple processes with the same role
+ * unless only one of them is configured to handle the traffic.
+ *
+ * The application is active by default.
+ * The configuration from the active process is effective immediately
+ * while the configuration from the standby process is queued by hardware.
+ * When configuring the device from a standby process,
+ * it has no effect except for below situations:
+ *   - traffic not handled by the active process configuration
+ *   - no active process
+ *
+ * When a process is changed from a standby to an active role,
+ * all preceding configurations that are queued by hardware
+ * should become effective immediately.
+ * Before role transition, all the traffic handling configurations
+ * set by the active process should be flushed first.
+ *
+ * In summary, the operations are expected to happen in this order
+ * in "old" and "new" applications:
+ *   device: already configured by the old application
+ *   new:    start as active
+ *   new:    probe the same device
+ *   new:    set as standby
+ *   new:    configure the device
+ *   device: has configurations from old and new applications
+ *   old:    clear its device configuration
+ *   device: has only 1 configuration from new application
+ *   new:    set as active
+ *   device: downtime for connecting all to the new application
+ *   old:    shutdown
+ *
+ * @param standby
+ *   Role active if false, standby if true.
+ * @param flags
+ *   Role specific flags.
+ * @return
+ *   Positive value on success, -rte_errno value on error:
+ *   - (> 0) Number of switched devices.
+ *   - (-ENOTSUP) if not supported by a device.
+ *   - (-EPERM) if operation failed with a device.
+ */
+__rte_experimental
+int rte_eth_process_set_role(bool standby, uint32_t flags);
 
 /**
  * Get the number of ports which are usable for the application.

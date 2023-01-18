@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added process state in ethdev to improve live migration.**
+
+  Hot upgrade of an application may be accelerated by configuring
+  the new application in standby state while the old one is still active.
+  Such double ethdev configuration of the same device is possible
+  with the added process state API.
+
 
 Removed Items
 -------------

@@ -559,6 +559,48 @@ rte_eth_dev_owner_get(const uint16_t port_id, struct rte_eth_dev_owner *owner)
 }
 
 int
+rte_eth_process_set_role(bool standby, uint32_t flags)
+{
+	struct rte_eth_dev_info dev_info = {0};
+	struct rte_eth_dev *dev;
+	uint16_t port_id;
+	int ret = 0;
+
+	/* Check if all devices support process role. */
+	RTE_ETH_FOREACH_DEV(port_id) {
+		dev = &rte_eth_devices[port_id];
+		if (*dev->dev_ops->process_set_role != NULL &&
+			*dev->dev_ops->dev_infos_get != NULL &&
+			(*dev->dev_ops->dev_infos_get)(dev, &dev_info) == 0 &&
+			(dev_info.dev_capa & RTE_ETH_DEV_CAPA_PROCESS_ROLE) != 0)
+			continue;
+		rte_errno = ENOTSUP;
+		return -rte_errno;
+	}
+	/* Call the driver callbacks. */
+	RTE_ETH_FOREACH_DEV(port_id) {
+		dev = &rte_eth_devices[port_id];
+		if ((*dev->dev_ops->process_set_role)(dev, standby, flags) < 0)
+			goto failure;
+		ret++;
+	}
+	return ret;
+
+failure:
+	/* Rollback all changed devices in case one failed. */
+	if (ret) {
+		RTE_ETH_FOREACH_DEV(port_id) {
+			dev = &rte_eth_devices[port_id];
+			(*dev->dev_ops->process_set_role)(dev, !standby, flags);
+			if (--ret == 0)
+				break;
+		}
+	}
+	rte_errno = EPERM;
+	return -rte_errno;
+}
+
+int
 rte_eth_dev_socket_id(uint16_t port_id)
 {
 	int socket_id = SOCKET_ID_ANY;

@@ -221,6 +221,23 @@ typedef int (*eth_is_removed_t)(struct rte_eth_dev *dev);
 
 /**
  * @internal
+ * Set the role of the process to active or standby during live migration.
+ *
+ * @param dev
+ *   Port (ethdev) handle.
+ * @param standby
+ *   Role active if false, standby if true.
+ * @param flags
+ *   Role specific flags.
+ *
+ * @return
+ *   Negative value on error, 0 on success.
+ */
+typedef int (*eth_dev_process_set_role_t)(struct rte_eth_dev *dev,
+		bool standby, uint32_t flags);
+
+/**
+ * @internal
  * Function used to enable the Rx promiscuous mode of an Ethernet device.
  *
  * @param dev
@@ -1185,6 +1202,9 @@ struct eth_dev_ops {
 	eth_link_update_t          link_update;   /**< Get device link state */
 	/** Check if the device was physically removed */
 	eth_is_removed_t           is_removed;
+
+	/** Set role during live migration */
+	eth_dev_process_set_role_t process_set_role;
 
 	eth_promiscuous_enable_t   promiscuous_enable; /**< Promiscuous ON */
 	eth_promiscuous_disable_t  promiscuous_disable;/**< Promiscuous OFF */
