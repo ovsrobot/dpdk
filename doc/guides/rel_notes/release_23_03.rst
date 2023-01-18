@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added functions to atomically query and update indirect flow action.**
+
+  Added synchronous and asynchronous functions to atomically query and update
+  indirect flow action:
+
+  - ``rte_flow_action_handle_query_update``
+  - ``rte_flow_async_action_handle_query_update``
 
 Removed Items
 -------------

@@ -5622,6 +5622,113 @@ rte_flow_async_action_handle_query(uint16_t port_id,
 		void *user_data,
 		struct rte_flow_error *error);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Query_update operational mode.
+ *
+ * RTE_FLOW_QU_QUERY_FIRST
+ *   Force port to query action before update.
+ * RTE_FLOW_QU_UPDATE_FIRST
+ *   Force port to update action before update.
+ *
+ * @see rte_flow_action_handle_query_update()
+ * @see rte_flow_async_action_handle_query_update()
+ */
+enum rte_flow_query_update_mode {
+	RTE_FLOW_QU_QUERY_FIRST,  /* query before update */
+	RTE_FLOW_QU_UPDATE_FIRST, /* query after  update */
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Query and/or update indirect flow action.
+ * If update parameter is NULL the function queries indirect action.
+ * If query parameter is NULL the function updates indirect action.
+ * If both query and update not NULL, the function atomically
+ * queries and updates indirect action. Query and update carried in order
+ * specified in the mode parameter.
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param handle
+ *   Handle for the indirect action object to be updated.
+ * @param update
+ *   Update profile specification used to modify the action pointed by handle.
+ *   *update* could be with the same type of the immediate action corresponding
+ *   to the *handle* argument when creating, or a wrapper structure includes
+ *   action configuration to be updated and bit fields to indicate the member
+ *   of fields inside the action to update.
+ * @param query
+ *   Pointer to storage for the associated query data type.
+ * @param mode
+ *   Operational mode.
+ * @param error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ * 0 on success, a negative errno value otherwise and rte_errno is set.
+ * - (ENOTSUP) if underlying device does not support this functionality.
+ * - (EINVAL) - if *handle* invalid
+ */
+__rte_experimental
+int
+rte_flow_action_handle_query_update(uint16_t port_id,
+				    struct rte_flow_action_handle *handle,
+				    const void *update, void *query,
+				    enum rte_flow_query_update_mode mode,
+				    struct rte_flow_error *error);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Enqueue async indirect flow action query and/or update
+ *
+ * @param port_id
+ *   Port identifier of Ethernet device.
+ * @param queue_id
+ *   Flow queue which is used to update the rule.
+ * @param attr
+ *   Indirect action update operation attributes.
+ * @param handle
+ *   Handle for the indirect action object to be updated.
+ * @param update
+ *   Update profile specification used to modify the action pointed by handle.
+ *   *update* could be with the same type of the immediate action corresponding
+ *   to the *handle* argument when creating, or a wrapper structure includes
+ *   action configuration to be updated and bit fields to indicate the member
+ *   of fields inside the action to update.
+ * @param query
+ *   Pointer to storage for the associated query data type.
+ *   Query result returned on async completion event.
+ * @param mode
+ *   Operational mode.
+ * @param user_data
+ *   The user data that will be returned on async completion event.
+ * @param error
+ *   Perform verbose error reporting if not NULL.
+ *   PMDs initialize this structure in case of error only.
+ *
+ * @return
+ *   0 on success, a negative errno value otherwise and rte_errno is set.
+ * - (ENOTSUP) if underlying device does not support this functionality.
+ * - (EINVAL) - if *handle* invalid
+ */
+__rte_experimental
+int
+rte_flow_async_action_handle_query_update(uint16_t port_id, uint32_t queue_id,
+					  const struct rte_flow_op_attr *attr,
+					  struct rte_flow_action_handle *handle,
+					  const void *update, void *query,
+					  enum rte_flow_query_update_mode mode,
+					  void *user_data,
+					  struct rte_flow_error *error);
+
 #ifdef __cplusplus
 }
 #endif

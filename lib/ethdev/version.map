@@ -298,6 +298,11 @@ EXPERIMENTAL {
 	rte_flow_get_q_aged_flows;
 	rte_mtr_meter_policy_get;
 	rte_mtr_meter_profile_get;
+
+	# future
+	rte_flow_action_handle_query_update;
+	rte_flow_async_action_handle_query_update;
+
 };
 
 INTERNAL {
