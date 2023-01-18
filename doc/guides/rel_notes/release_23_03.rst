@@ -59,6 +59,10 @@ New Features
 
   * Added chip overheat detection support.
 
+* **Updated Wangxun txgbe driver.**
+
+  * Added chip overheat detection support.
+
 
 Removed Items
 -------------
