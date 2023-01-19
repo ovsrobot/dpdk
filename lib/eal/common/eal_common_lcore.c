@@ -2,6 +2,7 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -422,11 +423,21 @@ rte_lcore_iterate(rte_lcore_iterate_cb cb, void *arg)
 	return ret;
 }
 
+static rte_lcore_usage_cb lcore_usage_cb;
+
+void
+rte_lcore_register_usage_cb(rte_lcore_usage_cb cb)
+{
+	lcore_usage_cb = cb;
+}
+
 static int
 lcore_dump_cb(unsigned int lcore_id, void *arg)
 {
 	struct rte_config *cfg = rte_eal_get_configuration();
-	char cpuset[RTE_CPU_AFFINITY_STR_LEN];
+	char cpuset[RTE_CPU_AFFINITY_STR_LEN], usage_str[256];
+	struct rte_lcore_usage usage;
+	rte_lcore_usage_cb usage_cb;
 	const char *role;
 	FILE *f = arg;
 	int ret;
@@ -446,11 +457,25 @@ lcore_dump_cb(unsigned int lcore_id, void *arg)
 		break;
 	}
 
+	/* The callback may not set all the fields in the structure, so clear it here. */
+	memset(&usage, 0, sizeof(usage));
+	usage_str[0] = '\0';
+	/*
+	 * Guard against concurrent modification of lcore_usage_cb.
+	 * rte_lcore_register_usage_cb() should only be called once at application init
+	 * but nothing prevents and application to reset the callback to NULL.
+	 */
+	usage_cb = lcore_usage_cb;
+	if (usage_cb != NULL && usage_cb(lcore_id, &usage) == 0) {
+		snprintf(usage_str, sizeof(usage_str), ", busy cycles %"PRIu64"/%"PRIu64,
+			usage.busy_cycles, usage.total_cycles);
+	}
 	ret = eal_thread_dump_affinity(&lcore_config[lcore_id].cpuset, cpuset,
 		sizeof(cpuset));
-	fprintf(f, "lcore %u, socket %u, role %s, cpuset %s%s\n", lcore_id,
+	fprintf(f, "lcore %u, socket %u, role %s, cpuset %s%s%s\n", lcore_id,
 		rte_lcore_to_socket_id(lcore_id), role, cpuset,
-		ret == 0 ? "" : "...");
+		ret == 0 ? "" : "...", usage_str);
+
 	return 0;
 }
 
@@ -489,7 +514,9 @@ lcore_telemetry_info_cb(unsigned int lcore_id, void *arg)
 {
 	struct lcore_telemetry_info *info = arg;
 	struct rte_config *cfg = rte_eal_get_configuration();
+	struct rte_lcore_usage usage;
 	struct rte_tel_data *cpuset;
+	rte_lcore_usage_cb usage_cb;
 	const char *role;
 	unsigned int cpu;
 
@@ -522,6 +549,18 @@ lcore_telemetry_info_cb(unsigned int lcore_id, void *arg)
 		if (CPU_ISSET(cpu, &lcore_config[lcore_id].cpuset))
 			rte_tel_data_add_array_int(cpuset, cpu);
 	rte_tel_data_add_dict_container(info->d, "cpuset", cpuset, 0);
+	/* The callback may not set all the fields in the structure, so clear it here. */
+	memset(&usage, 0, sizeof(usage));
+	/*
+	 * Guard against concurrent modification of lcore_usage_cb.
+	 * rte_lcore_register_usage_cb() should only be called once at application init
+	 * but nothing prevents and application to reset the callback to NULL.
+	 */
+	usage_cb = lcore_usage_cb;
+	if (usage_cb != NULL && usage_cb(lcore_id, &usage) == 0) {
+		rte_tel_data_add_dict_u64(info->d, "total_cycles", usage.total_cycles);
+		rte_tel_data_add_dict_u64(info->d, "busy_cycles", usage.busy_cycles);
+	}
 
 	return 0;
 }
