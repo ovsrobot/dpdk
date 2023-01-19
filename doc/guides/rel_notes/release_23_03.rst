@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Introduced lock annotations.**
+
+  Added lock annotations attributes to that clang can statically analyze lock
+  correctness.
+
 * **Updated Intel QuickAssist Technology (QAT) crypto driver.**
 
   * Added support for SHA3 224/256/384/512 plain hash in QAT GEN 3.
