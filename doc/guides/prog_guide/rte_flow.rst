@@ -2952,23 +2952,27 @@ value as sequence of bytes {xxx, xxx, 0x85, xxx, xxx, xxx}.
 
 .. table:: destination/source field definition
 
-   +---------------+----------------------------------------------------------+
-   | Field         | Value                                                    |
-   +===============+==========================================================+
-   | ``field``     | ID: packet field, mark, meta, tag, immediate, pointer    |
-   +---------------+----------------------------------------------------------+
-   | ``level``     | encapsulation level of a packet field or tag array index |
-   +---------------+----------------------------------------------------------+
-   | ``offset``    | number of bits to skip at the beginning                  |
-   +---------------+----------------------------------------------------------+
-   | ``value``     | immediate value buffer (source field only, not           |
-   |               | applicable to destination) for RTE_FLOW_FIELD_VALUE      |
-   |               | field type                                               |
-   +---------------+----------------------------------------------------------+
-   | ``pvalue``    | pointer to immediate value data (source field only, not  |
-   |               | applicable to destination) for RTE_FLOW_FIELD_POINTER    |
-   |               | field type                                               |
-   +---------------+----------------------------------------------------------+
+   +-----------------+----------------------------------------------------------+
+   | Field           | Value                                                    |
+   +=================+==========================================================+
+   | ``field``       | ID: packet field, mark, meta, tag, immediate, pointer    |
+   +-----------------+----------------------------------------------------------+
+   | ``level``       | encapsulation level of a packet field or tag array index |
+   +-----------------+----------------------------------------------------------+
+   | ``flex_handle`` | flex item handle of a packet field                       |
+   +-----------------+----------------------------------------------------------+
+   | ``offset``      | number of bits to skip at the beginning                  |
+   +-----------------+----------------------------------------------------------+
+   | ``value``       | immediate value buffer (source field only, not           |
+   |                 | applicable to destination) for RTE_FLOW_FIELD_VALUE      |
+   |                 | field type                                               |
+   |                 | This field is only 16 bytes, maybe not big enough for    |
+   |                 | all NICs' flex item                                      |
+   +-----------------+----------------------------------------------------------+
+   | ``pvalue``      | pointer to immediate value data (source field only, not  |
+   |                 | applicable to destination) for RTE_FLOW_FIELD_POINTER    |
+   |                 | field type                                               |
+   +-----------------+----------------------------------------------------------+
 
 Action: ``CONNTRACK``
 ^^^^^^^^^^^^^^^^^^^^^

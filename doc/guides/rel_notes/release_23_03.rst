@@ -56,6 +56,10 @@ New Features
      =======================================================
 
 
+* ethdev: added a new field:
+
+  - modify flex item: ``rte_flow_action_modify_data.flex_handle``
+
 Removed Items
 -------------
 
