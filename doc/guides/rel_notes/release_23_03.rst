@@ -77,6 +77,33 @@ New Features
   - ``rte_flow_action_handle_query_update``
   - ``rte_flow_async_action_handle_query_update``
 
+* **Added quota flow action and quota flow item.**
+
+  Quota action limits traffic according to pre-defined configuration.
+  Quota reflects overall traffic usage regardless bandwidth.
+  Quota flow action initialized with signed tokens number value.
+  Quota flow action updates tokens number according to
+  these rules:
+  * If quota was configured to count packet length, for each packet
+  of size S, tokens number reduced by S.
+  * If quota was configured to count packets, each packet decrements
+  tokens number.
+  Quota action sets packet metadata according to a number of remaining
+  tokens number:
+  * ``PASS`` - remaining tokens number is non-negative.
+  * ``BLOCK`` - remaining tokens number is negative.
+
+  Quota flow item matches on that metadata.
+
+  - ``RTE_FLOW_ACTION_TYPE_QUOTA``
+  - ``RTE_FLOW_ITEM_TYPE_QUOTA``
+
+* **Updated testpmd to support quota flow action and item.**
+
+  Added tokens to ``token_list[]`` for flow quota action and item support.
+
+
+
 Removed Items
 -------------
 
