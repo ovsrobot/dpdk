@@ -69,6 +69,13 @@ New Features
     ``rte_event_dev_config::nb_single_link_event_port_queues`` parameter
     required for eth_rx, eth_tx, crypto and timer eventdev adapters.
 
+* **Added PMU library.**
+
+  Added a new PMU (performance measurement unit) library which allows applications
+  to perform self monitoring activities without depending on external utilities like perf.
+  After integration with :doc:`../prog_guide/trace_lib` data gathered from hardware counters
+  can be stored in CTF format for further analysis.
+
 
 Removed Items
 -------------
