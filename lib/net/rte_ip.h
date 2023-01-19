@@ -539,6 +539,27 @@ struct rte_ipv6_hdr {
 	uint8_t  dst_addr[16];	/**< IP address of destination host(s). */
 } __rte_packed;
 
+/**
+ * IPv6 Routing Extension Header
+ */
+struct rte_ipv6_routing_ext {
+	uint8_t next_hdr;			/**< Protocol, next header. */
+	uint8_t hdr_len;			/**< Header length. */
+	uint8_t type;				/**< Extension header type. */
+	uint8_t segments_left;			/**< Valid segments number. */
+	__extension__
+	union {
+		uint32_t flags;
+		struct {
+			uint8_t last_entry;	/**< The last_entry field of SRH */
+			uint8_t flag;		/**< Packet flag. */
+			uint16_t tag;		/**< Packet tag. */
+		};
+	};
+	__extension__
+	uint32_t segments[0];			/**< Each hop IPv6 address. */
+} __rte_packed;
+
 /* IPv6 vtc_flow: IPv / TC / flow_label */
 #define RTE_IPV6_HDR_FL_SHIFT 0
 #define RTE_IPV6_HDR_TC_SHIFT 20
