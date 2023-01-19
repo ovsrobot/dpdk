@@ -106,7 +106,7 @@ Features
 - Sub-Function representors.
 - Sub-Function.
 - Matching on represented port.
-
+- Modify flex item field.
 
 Limitations
 -----------
