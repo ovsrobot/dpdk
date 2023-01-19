@@ -106,6 +106,7 @@ Features
 - Sub-Function representors.
 - Sub-Function.
 - Matching on represented port.
+- Matching on IPv6 routing extension header.
 
 
 Limitations
@@ -174,6 +175,7 @@ Limitations
 
     - ``-EAGAIN`` for ``rte_eth_dev_start()``.
     - ``-EBUSY`` for ``rte_eth_dev_stop()``.
+  - Matching on ICMP6 following IPv6 routing extension header, should match ipv6_routing_ext_next_hdr instead of ICMP6.
 
 - When using Verbs flow engine (``dv_flow_en`` = 0), flow pattern without any
   specific VLAN will match for VLAN packets as well:
