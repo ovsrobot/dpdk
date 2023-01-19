@@ -15,6 +15,10 @@ test_pmu_read(void)
 	if (rte_pmu_init() < 0)
 		return TEST_FAILED;
 
+#if defined(RTE_ARCH_ARM64)
+	event = rte_pmu_add_event("cpu_cycles");
+#endif
+
 	while (tries--)
 		val += rte_pmu_read(event);
 
