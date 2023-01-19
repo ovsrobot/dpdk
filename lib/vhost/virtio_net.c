@@ -102,6 +102,7 @@ static __rte_always_inline int64_t
 vhost_async_dma_transfer_one(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		int16_t dma_id, uint16_t vchan_id, uint16_t flag_idx,
 		struct vhost_iov_iter *pkt)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	struct async_dma_vchan_info *dma_info = &dma_copy_track[dma_id].vchans[vchan_id];
 	uint16_t ring_mask = dma_info->ring_mask;
@@ -151,6 +152,7 @@ static __rte_always_inline uint16_t
 vhost_async_dma_transfer(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		int16_t dma_id, uint16_t vchan_id, uint16_t head_idx,
 		struct vhost_iov_iter *pkts, uint16_t nr_pkts)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	struct async_dma_vchan_info *dma_info = &dma_copy_track[dma_id].vchans[vchan_id];
 	int64_t ret, nr_copies = 0;
@@ -1063,6 +1065,7 @@ static __rte_always_inline int
 async_fill_seg(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		struct rte_mbuf *m, uint32_t mbuf_offset,
 		uint64_t buf_iova, uint32_t cpy_len, bool to_desc)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	struct vhost_async *async = vq->async;
 	uint64_t mapped_len;
@@ -1140,6 +1143,7 @@ static __rte_always_inline int
 mbuf_to_desc(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		struct rte_mbuf *m, struct buf_vector *buf_vec,
 		uint16_t nr_vec, uint16_t num_buffers, bool is_async)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	uint32_t vec_idx = 0;
 	uint32_t mbuf_offset, mbuf_avail;
@@ -1268,6 +1272,7 @@ vhost_enqueue_single_packed(struct virtio_net *dev,
 			    struct rte_mbuf *pkt,
 			    struct buf_vector *buf_vec,
 			    uint16_t *nr_descs)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	uint16_t nr_vec = 0;
 	uint16_t avail_idx = vq->last_avail_idx;
@@ -1328,6 +1333,7 @@ vhost_enqueue_single_packed(struct virtio_net *dev,
 static __rte_noinline uint32_t
 virtio_dev_rx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	struct rte_mbuf **pkts, uint32_t count)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	uint32_t pkt_idx = 0;
 	uint16_t num_buffers;
@@ -1497,6 +1503,7 @@ static __rte_always_inline int16_t
 virtio_dev_rx_single_packed(struct virtio_net *dev,
 			    struct vhost_virtqueue *vq,
 			    struct rte_mbuf *pkt)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	struct buf_vector buf_vec[BUF_VECTOR_MAX];
 	uint16_t nr_descs = 0;
@@ -1521,6 +1528,7 @@ virtio_dev_rx_packed(struct virtio_net *dev,
 		     struct vhost_virtqueue *__rte_restrict vq,
 		     struct rte_mbuf **__rte_restrict pkts,
 		     uint32_t count)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	uint32_t pkt_idx = 0;
 
@@ -1620,6 +1628,7 @@ rte_vhost_enqueue_burst(int vid, uint16_t queue_id,
 
 static __rte_always_inline uint16_t
 async_get_first_inflight_pkt_idx(struct vhost_virtqueue *vq)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	struct vhost_async *async = vq->async;
 
@@ -1665,6 +1674,7 @@ store_dma_desc_info_packed(struct vring_used_elem_packed *s_ring,
 static __rte_noinline uint32_t
 virtio_dev_rx_async_submit_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	struct rte_mbuf **pkts, uint32_t count, int16_t dma_id, uint16_t vchan_id)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	struct buf_vector buf_vec[BUF_VECTOR_MAX];
 	uint32_t pkt_idx = 0;
@@ -1771,6 +1781,7 @@ vhost_enqueue_async_packed(struct virtio_net *dev,
 			    struct buf_vector *buf_vec,
 			    uint16_t *nr_descs,
 			    uint16_t *nr_buffers)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	uint16_t nr_vec = 0;
 	uint16_t avail_idx = vq->last_avail_idx;
@@ -1828,6 +1839,7 @@ vhost_enqueue_async_packed(struct virtio_net *dev,
 static __rte_always_inline int16_t
 virtio_dev_rx_async_packed(struct virtio_net *dev, struct vhost_virtqueue *vq,
 			    struct rte_mbuf *pkt, uint16_t *nr_descs, uint16_t *nr_buffers)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	struct buf_vector buf_vec[BUF_VECTOR_MAX];
 
@@ -1847,6 +1859,7 @@ virtio_dev_rx_async_packed(struct virtio_net *dev, struct vhost_virtqueue *vq,
 static __rte_always_inline void
 dma_error_handler_packed(struct vhost_virtqueue *vq, uint16_t slot_idx,
 			uint32_t nr_err, uint32_t *pkt_idx)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	uint16_t descs_err = 0;
 	uint16_t buffers_err = 0;
@@ -1873,6 +1886,7 @@ dma_error_handler_packed(struct vhost_virtqueue *vq, uint16_t slot_idx,
 static __rte_noinline uint32_t
 virtio_dev_rx_async_submit_packed(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	struct rte_mbuf **pkts, uint32_t count, int16_t dma_id, uint16_t vchan_id)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	uint32_t pkt_idx = 0;
 	uint16_t n_xfer;
@@ -1942,6 +1956,7 @@ virtio_dev_rx_async_submit_packed(struct virtio_net *dev, struct vhost_virtqueue
 
 static __rte_always_inline void
 write_back_completed_descs_split(struct vhost_virtqueue *vq, uint16_t n_descs)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	struct vhost_async *async = vq->async;
 	uint16_t nr_left = n_descs;
@@ -1974,6 +1989,7 @@ write_back_completed_descs_split(struct vhost_virtqueue *vq, uint16_t n_descs)
 static __rte_always_inline void
 write_back_completed_descs_packed(struct vhost_virtqueue *vq,
 				uint16_t n_buffers)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	struct vhost_async *async = vq->async;
 	uint16_t from = async->last_buffer_idx_packed;
@@ -2038,6 +2054,7 @@ write_back_completed_descs_packed(struct vhost_virtqueue *vq,
 static __rte_always_inline uint16_t
 vhost_poll_enqueue_completed(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	struct rte_mbuf **pkts, uint16_t count, int16_t dma_id, uint16_t vchan_id)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	struct vhost_async *async = vq->async;
 	struct async_inflight_info *pkts_info = async->pkts_info;
@@ -2642,6 +2659,7 @@ desc_to_mbuf(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		  struct buf_vector *buf_vec, uint16_t nr_vec,
 		  struct rte_mbuf *m, struct rte_mempool *mbuf_pool,
 		  bool legacy_ol_flags, uint16_t slot_idx, bool is_async)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	uint32_t buf_avail, buf_offset, buf_len;
 	uint64_t buf_addr, buf_iova;
@@ -2847,6 +2865,7 @@ static uint16_t
 virtio_dev_tx_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 	struct rte_mempool *mbuf_pool, struct rte_mbuf **pkts, uint16_t count,
 	bool legacy_ol_flags)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	uint16_t i;
 	uint16_t avail_entries;
@@ -2950,6 +2969,7 @@ static uint16_t
 virtio_dev_tx_split_legacy(struct virtio_net *dev,
 	struct vhost_virtqueue *vq, struct rte_mempool *mbuf_pool,
 	struct rte_mbuf **pkts, uint16_t count)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	return virtio_dev_tx_split(dev, vq, mbuf_pool, pkts, count, true);
 }
@@ -2959,6 +2979,7 @@ static uint16_t
 virtio_dev_tx_split_compliant(struct virtio_net *dev,
 	struct vhost_virtqueue *vq, struct rte_mempool *mbuf_pool,
 	struct rte_mbuf **pkts, uint16_t count)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	return virtio_dev_tx_split(dev, vq, mbuf_pool, pkts, count, false);
 }
@@ -3085,6 +3106,7 @@ vhost_dequeue_single_packed(struct virtio_net *dev,
 			    uint16_t *buf_id,
 			    uint16_t *desc_count,
 			    bool legacy_ol_flags)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	struct buf_vector buf_vec[BUF_VECTOR_MAX];
 	uint32_t buf_len;
@@ -3133,6 +3155,7 @@ virtio_dev_tx_single_packed(struct virtio_net *dev,
 			    struct rte_mempool *mbuf_pool,
 			    struct rte_mbuf *pkts,
 			    bool legacy_ol_flags)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 
 	uint16_t buf_id, desc_count = 0;
@@ -3163,6 +3186,7 @@ virtio_dev_tx_packed(struct virtio_net *dev,
 		     struct rte_mbuf **__rte_restrict pkts,
 		     uint32_t count,
 		     bool legacy_ol_flags)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	uint32_t pkt_idx = 0;
 
@@ -3206,6 +3230,7 @@ static uint16_t
 virtio_dev_tx_packed_legacy(struct virtio_net *dev,
 	struct vhost_virtqueue *__rte_restrict vq, struct rte_mempool *mbuf_pool,
 	struct rte_mbuf **__rte_restrict pkts, uint32_t count)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	return virtio_dev_tx_packed(dev, vq, mbuf_pool, pkts, count, true);
 }
@@ -3215,6 +3240,7 @@ static uint16_t
 virtio_dev_tx_packed_compliant(struct virtio_net *dev,
 	struct vhost_virtqueue *__rte_restrict vq, struct rte_mempool *mbuf_pool,
 	struct rte_mbuf **__rte_restrict pkts, uint32_t count)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	return virtio_dev_tx_packed(dev, vq, mbuf_pool, pkts, count, false);
 }
@@ -3332,6 +3358,7 @@ static __rte_always_inline uint16_t
 async_poll_dequeue_completed(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		struct rte_mbuf **pkts, uint16_t count, int16_t dma_id,
 		uint16_t vchan_id, bool legacy_ol_flags)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	uint16_t start_idx, from, i;
 	uint16_t nr_cpl_pkts = 0;
@@ -3378,6 +3405,7 @@ static __rte_always_inline uint16_t
 virtio_dev_tx_async_split(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		struct rte_mempool *mbuf_pool, struct rte_mbuf **pkts, uint16_t count,
 		int16_t dma_id, uint16_t vchan_id, bool legacy_ol_flags)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	static bool allocerr_warned;
 	bool dropped = false;
@@ -3524,6 +3552,7 @@ virtio_dev_tx_async_split_legacy(struct virtio_net *dev,
 		struct vhost_virtqueue *vq, struct rte_mempool *mbuf_pool,
 		struct rte_mbuf **pkts, uint16_t count,
 		int16_t dma_id, uint16_t vchan_id)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	return virtio_dev_tx_async_split(dev, vq, mbuf_pool,
 				pkts, count, dma_id, vchan_id, true);
@@ -3535,6 +3564,7 @@ virtio_dev_tx_async_split_compliant(struct virtio_net *dev,
 		struct vhost_virtqueue *vq, struct rte_mempool *mbuf_pool,
 		struct rte_mbuf **pkts, uint16_t count,
 		int16_t dma_id, uint16_t vchan_id)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	return virtio_dev_tx_async_split(dev, vq, mbuf_pool,
 				pkts, count, dma_id, vchan_id, false);
@@ -3543,6 +3573,7 @@ virtio_dev_tx_async_split_compliant(struct virtio_net *dev,
 static __rte_always_inline void
 vhost_async_shadow_dequeue_single_packed(struct vhost_virtqueue *vq,
 				uint16_t buf_id, uint16_t count)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	struct vhost_async *async = vq->async;
 	uint16_t idx = async->buffer_idx_packed;
@@ -3564,6 +3595,7 @@ virtio_dev_tx_async_single_packed(struct virtio_net *dev,
 			struct rte_mbuf *pkts,
 			uint16_t slot_idx,
 			bool legacy_ol_flags)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	int err;
 	uint16_t buf_id, desc_count = 0;
@@ -3614,6 +3646,7 @@ static __rte_always_inline uint16_t
 virtio_dev_tx_async_packed(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		struct rte_mempool *mbuf_pool, struct rte_mbuf **pkts,
 		uint16_t count, uint16_t dma_id, uint16_t vchan_id, bool legacy_ol_flags)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	uint16_t pkt_idx;
 	uint16_t slot_idx = 0;
@@ -3707,6 +3740,7 @@ static uint16_t
 virtio_dev_tx_async_packed_legacy(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		struct rte_mempool *mbuf_pool, struct rte_mbuf **pkts,
 		uint16_t count, uint16_t dma_id, uint16_t vchan_id)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	return virtio_dev_tx_async_packed(dev, vq, mbuf_pool,
 				pkts, count, dma_id, vchan_id, true);
@@ -3717,6 +3751,7 @@ static uint16_t
 virtio_dev_tx_async_packed_compliant(struct virtio_net *dev, struct vhost_virtqueue *vq,
 		struct rte_mempool *mbuf_pool, struct rte_mbuf **pkts,
 		uint16_t count, uint16_t dma_id, uint16_t vchan_id)
+	__rte_exclusive_locks_required(&vq->access_lock)
 {
 	return virtio_dev_tx_async_packed(dev, vq, mbuf_pool,
 				pkts, count, dma_id, vchan_id, false);
