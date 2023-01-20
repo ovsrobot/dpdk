@@ -892,6 +892,9 @@ malloc_heap_free(struct malloc_elem *elem)
 	/* anything after this is a bonus */
 	ret = 0;
 
+	if (elem == NULL)
+		goto free_unlock;
+
 	/* ...of which we can't avail if we are in legacy mode, or if this is an
 	 * externally allocated segment.
 	 */
