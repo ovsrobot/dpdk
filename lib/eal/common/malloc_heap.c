@@ -97,6 +97,8 @@ malloc_heap_add_memory(struct malloc_heap *heap, struct rte_memseg_list *msl,
 	malloc_elem_insert(elem);
 
 	elem = malloc_elem_join_adjacent_free(elem);
+	if (elem == NULL)
+		return NULL;
 
 	malloc_elem_free_list_insert(elem);
 
