@@ -994,6 +994,47 @@ dmadev_handle_dev_stats(const char *cmd __rte_unused,
 	return 0;
 }
 
+static int
+dmadev_handle_dev_stats_reset(const char *cmd __rte_unused,
+		const char *params,
+		struct rte_tel_data *d)
+{
+	struct rte_dma_info dma_info;
+	int dev_id, ret, vchan_id;
+	const char *vchan_param;
+	char *end_param;
+
+	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
+		return -EINVAL;
+
+	dev_id = strtoul(params, &end_param, 0);
+
+	/* Function info_get validates dev_id so we don't need to. */
+	ret = rte_dma_info_get(dev_id, &dma_info);
+	if (ret < 0)
+		return -EINVAL;
+
+	/* If the device has one vchan the user does not need to supply the
+	 * vchan id and only the device id is needed, no extra parameters.
+	 */
+	if (dma_info.nb_vchans == 1 && *end_param == '\0') {
+		vchan_id = 0;
+	} else {
+		vchan_param = strtok(end_param, ",");
+		if (vchan_param == NULL || strlen(vchan_param) == 0 || !isdigit(*vchan_param))
+			return -EINVAL;
+		vchan_id = strtoul(vchan_param, &end_param, 0);
+	}
+	if (*end_param != '\0')
+		RTE_DMA_LOG(WARNING, "Extra parameters passed to dmadev telemetry command, ignoring");
+
+	ret = rte_dma_stats_reset(dev_id, vchan_id);
+	if (ret == 0)
+		rte_tel_data_string(d, "success");
+
+	return ret;
+}
+
 #ifndef RTE_EXEC_ENV_WINDOWS
 static int
 dmadev_handle_dev_dump(const char *cmd __rte_unused,
@@ -1041,6 +1082,8 @@ RTE_INIT(dmadev_init_telemetry)
 			"Returns information for a dmadev. Parameters: int dev_id");
 	rte_telemetry_register_cmd("/dmadev/stats", dmadev_handle_dev_stats,
 			"Returns the stats for a dmadev vchannel. Parameters: int dev_id, vchan_id (Optional if only one vchannel)");
+	rte_telemetry_register_cmd("/dmadev/stats_reset", dmadev_handle_dev_stats_reset,
+			"Reset the stats for a dmadev vchannel. Parameters: int dev_id, vchan_id (Optional if only one vchannel)");
 #ifndef RTE_EXEC_ENV_WINDOWS
 	rte_telemetry_register_cmd("/dmadev/dump", dmadev_handle_dev_dump,
 			"Returns dump information for a dmadev. Parameters: int dev_id");
