@@ -435,6 +435,9 @@ malloc_elem_alloc(struct malloc_elem *elem, size_t size, unsigned align,
 {
 	struct malloc_elem *new_elem = elem_start_pt(elem, size, align, bound,
 			contig);
+	if (new_elem == NULL)
+		return NULL;
+
 	const size_t old_elem_size = (uintptr_t)new_elem - (uintptr_t)elem;
 	const size_t trailer_size = elem->size - old_elem_size - size -
 		MALLOC_ELEM_OVERHEAD;
