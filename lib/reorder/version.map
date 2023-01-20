@@ -17,4 +17,5 @@ EXPERIMENTAL {
 
 	rte_reorder_seqn_dynfield_offset;
 	rte_reorder_drain_up_to_seqn;
+	rte_reorder_min_seqn_set;
 };
