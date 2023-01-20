@@ -19,6 +19,7 @@ extern "C" {
 
 #include "rte_ethdev.h"
 #include "rte_mtr.h"
+#include "rte_tm.h"
 
 RTE_TRACE_POINT_FP(
 	rte_eth_trace_call_rx_callbacks,
@@ -856,6 +857,176 @@ RTE_TRACE_POINT_FP(
 	rte_trace_point_emit_u16(port_id);
 	rte_trace_point_emit_u32(mtr_id);
 	rte_trace_point_emit_u64(stats_mask);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_get_number_of_leaf_nodes,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t n_leaf_nodes),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(n_leaf_nodes);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_node_type_get,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		int *is_leaf, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_ptr(is_leaf);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_shared_wred_context_add_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t shared_wred_context_id,
+		uint32_t wred_profile_id, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(shared_wred_context_id);
+	rte_trace_point_emit_u32(wred_profile_id);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_shared_shaper_add_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t shared_shaper_id,
+		uint32_t shaper_profile_id, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(shared_shaper_id);
+	rte_trace_point_emit_u32(shaper_profile_id);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_node_parent_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		uint32_t parent_node_id, uint32_t priority,
+		uint32_t weight, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_u32(parent_node_id);
+	rte_trace_point_emit_u32(priority);
+	rte_trace_point_emit_u32(weight);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_node_shaper_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		uint32_t shaper_profile_id, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_u32(shaper_profile_id);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_node_shared_shaper_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		uint32_t shared_shaper_id, int add, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_u32(shared_shaper_id);
+	rte_trace_point_emit_int(add);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_node_shared_wred_context_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		uint32_t shared_wred_context_id, int add, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_u32(shared_wred_context_id);
+	rte_trace_point_emit_int(add);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_node_stats_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		uint64_t stats_mask, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_u64(stats_mask);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_node_wfq_weight_mode_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		int *wfq_weight_mode, uint32_t n_sp_priorities,
+		int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_ptr(wfq_weight_mode);
+	rte_trace_point_emit_u32(n_sp_priorities);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_node_wred_context_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		uint32_t wred_profile_id, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_u32(wred_profile_id);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_node_cman_update,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		enum rte_tm_cman_mode cman, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_int(cman);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_node_stats_read,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, uint32_t node_id,
+		struct rte_tm_node_stats *stats,
+		uint64_t *stats_mask, int clear, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_u32(node_id);
+	rte_trace_point_emit_ptr(stats);
+	rte_trace_point_emit_ptr(stats_mask);
+	rte_trace_point_emit_int(clear);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_mark_vlan_dei,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, int mark_green,
+		int mark_yellow, int mark_red, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_int(mark_green);
+	rte_trace_point_emit_int(mark_yellow);
+	rte_trace_point_emit_int(mark_red);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_mark_ip_ecn,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, int mark_green,
+		int mark_yellow, int mark_red, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_int(mark_green);
+	rte_trace_point_emit_int(mark_yellow);
+	rte_trace_point_emit_int(mark_red);
+	rte_trace_point_emit_int(ret);
+)
+
+RTE_TRACE_POINT_FP(
+	rte_tm_trace_mark_ip_dscp,
+	RTE_TRACE_POINT_ARGS(uint16_t port_id, int mark_green,
+		int mark_yellow, int mark_red, int ret),
+	rte_trace_point_emit_u16(port_id);
+	rte_trace_point_emit_int(mark_green);
+	rte_trace_point_emit_int(mark_yellow);
+	rte_trace_point_emit_int(mark_red);
 	rte_trace_point_emit_int(ret);
 )
 
