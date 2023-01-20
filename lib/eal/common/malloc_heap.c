@@ -930,7 +930,7 @@ malloc_heap_free(struct malloc_elem *elem)
 		const struct rte_memseg *tmp =
 				rte_mem_virt2memseg(aligned_start, msl);
 
-		if (tmp->flags & RTE_MEMSEG_FLAG_DO_NOT_FREE) {
+		if ((tmp != NULL) && (tmp->flags & RTE_MEMSEG_FLAG_DO_NOT_FREE)) {
 			/* this is an unfreeable segment, so move start */
 			aligned_start = RTE_PTR_ADD(tmp->addr, tmp->len);
 		}

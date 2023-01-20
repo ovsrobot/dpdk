@@ -63,6 +63,8 @@ malloc_elem_find_max_iova_contig(struct malloc_elem *elem, size_t align)
 
 	cur_page = RTE_PTR_ALIGN_FLOOR(contig_seg_start, page_sz);
 	ms = rte_mem_virt2memseg(cur_page, elem->msl);
+	if (ms == NULL)
+		return 0;
 
 	/* do first iteration outside the loop */
 	page_end = RTE_PTR_ADD(cur_page, page_sz);
@@ -91,9 +93,12 @@ malloc_elem_find_max_iova_contig(struct malloc_elem *elem, size_t align)
 			 * we're not blowing past data end.
 			 */
 			ms = rte_mem_virt2memseg(contig_seg_start, elem->msl);
-			cur_page = ms->addr;
-			/* don't trigger another recalculation */
-			expected_iova = ms->iova;
+			if (ms != NULL) {
+				cur_page = ms->addr;
+
+				/* don't trigger another recalculation */
+				expected_iova = ms->iova;
+			}
 			continue;
 		}
 		/* cur_seg_end ends on a page boundary or on data end. if we're
