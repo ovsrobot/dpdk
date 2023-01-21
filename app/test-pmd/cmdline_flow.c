@@ -180,6 +180,8 @@ enum index {
 	TABLE_DESTROY_ID,
 	TABLE_INSERTION_TYPE,
 	TABLE_INSERTION_TYPE_NAME,
+	TABLE_HASH_FUNC,
+	TABLE_HASH_FUNC_NAME,
 	TABLE_GROUP,
 	TABLE_PRIORITY,
 	TABLE_INGRESS,
@@ -808,7 +810,8 @@ static const char *const modify_field_ids[] = {
 	"udp_port_src", "udp_port_dst",
 	"vxlan_vni", "geneve_vni", "gtp_teid",
 	"tag", "mark", "meta", "pointer", "value",
-	"ipv4_ecn", "ipv6_ecn", "gtp_psc_qfi", "meter_color", NULL
+	"ipv4_ecn", "ipv6_ecn", "gtp_psc_qfi", "meter_color",
+	"hash_result", NULL
 };
 
 static const char *const meter_colors[] = {
@@ -817,6 +820,10 @@ static const char *const meter_colors[] = {
 
 static const char *const table_insertion_types[] = {
 	"pattern", "index", NULL
+};
+
+static const char *const table_hash_funcs[] = {
+	"default", "linear", "crc32", "crc16", NULL
 };
 
 #define RAW_IPSEC_CONFS_MAX_NUM 8
@@ -1163,6 +1170,7 @@ static const enum index next_table_attr[] = {
 	TABLE_CREATE_ID,
 	TABLE_GROUP,
 	TABLE_INSERTION_TYPE,
+	TABLE_HASH_FUNC,
 	TABLE_PRIORITY,
 	TABLE_INGRESS,
 	TABLE_EGRESS,
@@ -2417,6 +2425,9 @@ static int parse_meter_color(struct context *ctx, const struct token *token,
 static int parse_insertion_table_type(struct context *ctx, const struct token *token,
 				      const char *str, unsigned int len, void *buf,
 				      unsigned int size);
+static int parse_hash_table_type(struct context *ctx, const struct token *token,
+				 const char *str, unsigned int len, void *buf,
+				 unsigned int size);
 static int comp_none(struct context *, const struct token *,
 		     unsigned int, char *, unsigned int);
 static int comp_boolean(struct context *, const struct token *,
@@ -2451,6 +2462,8 @@ static int comp_meter_color(struct context *, const struct token *,
 			    unsigned int, char *, unsigned int);
 static int comp_insertion_table_type(struct context *, const struct token *,
 				     unsigned int, char *, unsigned int);
+static int comp_hash_table_type(struct context *, const struct token *,
+				unsigned int, char *, unsigned int);
 
 /** Token definitions. */
 static const struct token token_list[] = {
@@ -2934,6 +2947,20 @@ static const struct token token_list[] = {
 		.help = "insertion type name",
 		.call = parse_insertion_table_type,
 		.comp = comp_insertion_table_type,
+	},
+	[TABLE_HASH_FUNC] = {
+		.name = "hash_func",
+		.help = "specify hash calculation function",
+		.next = NEXT(next_table_attr,
+			     NEXT_ENTRY(TABLE_HASH_FUNC_NAME)),
+		.args = ARGS(ARGS_ENTRY(struct buffer,
+					args.table.attr.hash_func)),
+	},
+	[TABLE_HASH_FUNC_NAME] = {
+		.name = "hash_func_name",
+		.help = "hash calculation function name",
+		.call = parse_hash_table_type,
+		.comp = comp_hash_table_type,
 	},
 	[TABLE_GROUP] = {
 		.name = "group",
@@ -10123,6 +10150,32 @@ parse_insertion_table_type(struct context *ctx, const struct token *token,
 	return ret > 0 ? (int)len : ret;
 }
 
+/** Parse Hash Calculation Table Type name */
+static int
+parse_hash_table_type(struct context *ctx, const struct token *token,
+		      const char *str, unsigned int len, void *buf,
+		      unsigned int size)
+{
+	const struct arg *arg = pop_args(ctx);
+	unsigned int i;
+	char tmp[2];
+	int ret;
+
+	(void)size;
+	/* Argument is expected. */
+	if (!arg)
+		return -1;
+	for (i = 0; table_hash_funcs[i]; ++i)
+		if (!strcmp_partial(table_hash_funcs[i], str, len))
+			break;
+	if (!table_hash_funcs[i])
+		return -1;
+	push_args(ctx, arg);
+	snprintf(tmp, sizeof(tmp), "%u", i);
+	ret = parse_int(ctx, token, tmp, strlen(tmp), buf, sizeof(i));
+	return ret > 0 ? (int)len : ret;
+}
+
 /** No completion. */
 static int
 comp_none(struct context *ctx, const struct token *token,
@@ -10439,6 +10492,20 @@ comp_insertion_table_type(struct context *ctx, const struct token *token,
 		return RTE_DIM(table_insertion_types);
 	if (ent < RTE_DIM(table_insertion_types) - 1)
 		return rte_strscpy(buf, table_insertion_types[ent], size);
+	return -1;
+}
+
+/** Complete available Hash Calculation Table types. */
+static int
+comp_hash_table_type(struct context *ctx, const struct token *token,
+		     unsigned int ent, char *buf, unsigned int size)
+{
+	RTE_SET_USED(ctx);
+	RTE_SET_USED(token);
+	if (!buf)
+		return RTE_DIM(table_hash_funcs);
+	if (ent < RTE_DIM(table_hash_funcs) - 1)
+		return rte_strscpy(buf, table_hash_funcs[ent], size);
 	return -1;
 }
 
