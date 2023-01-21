@@ -3669,6 +3669,26 @@ Enqueueing a flow rule creation operation is similar to simple creation.
 A valid handle in case of success is returned. It must be destroyed later
 by calling ``rte_flow_async_destroy()`` even if the rule is rejected by HW.
 
+Enqueue creation by index operation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Enqueueing a flow rule creation operation to insert the rule at a table index.
+
+.. code-block:: c
+
+   struct rte_flow *
+   rte_flow_async_create(uint16_t port_id,
+                         uint32_t queue_id,
+                         const struct rte_flow_op_attr *op_attr,
+                         struct rte_flow_template_table *template_table,
+                         uint32_t rule_index,
+                         const struct rte_flow_action actions[],
+                         uint8_t actions_template_index,
+                         void *user_data,
+                         struct rte_flow_error *error);
+
+A valid handle in case of success is returned. It must be destroyed later
+by calling ``rte_flow_async_destroy()`` even if the rule is rejected by HW.
+
 Enqueue destruction operation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
