@@ -719,13 +719,28 @@ swtim_callback(struct rte_timer *tim)
 	}
 }
 
-static __rte_always_inline uint64_t
+static __rte_always_inline int
 get_timeout_cycles(struct rte_event_timer *evtim,
-		   const struct rte_event_timer_adapter *adapter)
+		   const struct rte_event_timer_adapter *adapter,
+		   uint64_t *timeout_cycles)
 {
 	struct swtim *sw = swtim_pmd_priv(adapter);
-	uint64_t timeout_ns = evtim->timeout_ticks * sw->timer_tick_ns;
-	return timeout_ns * rte_get_timer_hz() / NSECPERSEC;
+	uint64_t timeout_nsecs;
+	double cycles_per_nsec;
+
+	cycles_per_nsec = (double)rte_get_timer_hz() / NSECPERSEC;
+
+	timeout_nsecs = evtim->timeout_ticks * sw->timer_tick_ns;
+	if (timeout_nsecs > sw->max_tmo_ns)
+		return -1;
+	if (timeout_nsecs < sw->timer_tick_ns)
+		return -2;
+
+	if (timeout_cycles)
+		*timeout_cycles = (uint64_t)ceil(timeout_nsecs *
+						 cycles_per_nsec);
+
+	return 0;
 }
 
 /* This function returns true if one or more (adapter) ticks have occurred since
@@ -757,23 +772,6 @@ swtim_did_tick(struct swtim *sw)
 	}
 
 	return false;
-}
-
-/* Check that event timer timeout value is in range */
-static __rte_always_inline int
-check_timeout(struct rte_event_timer *evtim,
-	      const struct rte_event_timer_adapter *adapter)
-{
-	uint64_t tmo_nsec;
-	struct swtim *sw = swtim_pmd_priv(adapter);
-
-	tmo_nsec = evtim->timeout_ticks * sw->timer_tick_ns;
-	if (tmo_nsec > sw->max_tmo_ns)
-		return -1;
-	if (tmo_nsec < sw->timer_tick_ns)
-		return -2;
-
-	return 0;
 }
 
 /* Check that event timer event queue sched type matches destination event queue
@@ -1195,21 +1193,6 @@ __swtim_arm_burst(const struct rte_event_timer_adapter *adapter,
 			break;
 		}
 
-		ret = check_timeout(evtims[i], adapter);
-		if (unlikely(ret == -1)) {
-			__atomic_store_n(&evtims[i]->state,
-					RTE_EVENT_TIMER_ERROR_TOOLATE,
-					__ATOMIC_RELAXED);
-			rte_errno = EINVAL;
-			break;
-		} else if (unlikely(ret == -2)) {
-			__atomic_store_n(&evtims[i]->state,
-					RTE_EVENT_TIMER_ERROR_TOOEARLY,
-					__ATOMIC_RELAXED);
-			rte_errno = EINVAL;
-			break;
-		}
-
 		if (unlikely(check_destination_event_queue(evtims[i],
 							   adapter) < 0)) {
 			__atomic_store_n(&evtims[i]->state,
@@ -1225,7 +1208,21 @@ __swtim_arm_burst(const struct rte_event_timer_adapter *adapter,
 		evtims[i]->impl_opaque[0] = (uintptr_t)tim;
 		evtims[i]->impl_opaque[1] = (uintptr_t)adapter;
 
-		cycles = get_timeout_cycles(evtims[i], adapter);
+		ret = get_timeout_cycles(evtims[i], adapter, &cycles);
+		if (unlikely(ret == -1)) {
+			__atomic_store_n(&evtims[i]->state,
+					RTE_EVENT_TIMER_ERROR_TOOLATE,
+					__ATOMIC_RELAXED);
+			rte_errno = EINVAL;
+			break;
+		} else if (unlikely(ret == -2)) {
+			__atomic_store_n(&evtims[i]->state,
+					RTE_EVENT_TIMER_ERROR_TOOEARLY,
+					__ATOMIC_RELAXED);
+			rte_errno = EINVAL;
+			break;
+		}
+
 		ret = rte_timer_alt_reset(sw->timer_data_id, tim, cycles,
 					  type, lcore_id, NULL, evtims[i]);
 		if (ret < 0) {
