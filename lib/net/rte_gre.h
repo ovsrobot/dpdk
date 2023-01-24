@@ -28,6 +28,8 @@ extern "C" {
  */
 __extension__
 struct rte_gre_hdr {
+	union {
+		struct {
 #if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
 	uint16_t res2:4; /**< Reserved */
 	uint16_t s:1;    /**< Sequence Number Present bit */
@@ -45,6 +47,9 @@ struct rte_gre_hdr {
 	uint16_t res3:5; /**< Reserved */
 	uint16_t ver:3;  /**< Version Number */
 #endif
+		};
+		rte_be16_t c_rsvd0_ver;
+	};
 	uint16_t proto;  /**< Protocol Type */
 } __rte_packed;
 
