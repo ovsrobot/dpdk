@@ -870,6 +870,36 @@ common_fwd_stream_receive(struct fwd_stream *fs, struct rte_mbuf **burst,
 	return nb_rx;
 }
 
+/* Returns count of dropped packets. */
+static inline uint16_t
+common_fwd_stream_transmit(struct fwd_stream *fs, struct rte_mbuf **burst,
+	unsigned int count)
+{
+	uint16_t nb_tx;
+	uint32_t retry;
+
+	nb_tx = rte_eth_tx_burst(fs->tx_port, fs->tx_queue, burst, count);
+	/*
+	 * Retry if necessary
+	 */
+	if (unlikely(nb_tx < count) && fs->retry_enabled) {
+		retry = 0;
+		while (nb_tx < count && retry++ < burst_tx_retry_num) {
+			rte_delay_us(burst_tx_delay_time);
+			nb_tx += rte_eth_tx_burst(fs->tx_port, fs->tx_queue,
+				&burst[nb_tx], count - nb_tx);
+		}
+	}
+	fs->tx_packets += nb_tx;
+	inc_tx_burst_stats(fs, nb_tx);
+	if (unlikely(nb_tx < count)) {
+		fs->fwd_dropped += (count - nb_tx);
+		rte_pktmbuf_free_bulk(&burst[nb_tx], count - nb_tx);
+	}
+
+	return count - nb_tx;
+}
+
 /* Prototypes */
 unsigned int parse_item_list(const char *str, const char *item_name,
 			unsigned int max_items,
