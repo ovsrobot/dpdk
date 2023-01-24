@@ -2263,9 +2263,15 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 	fsm = &fwd_streams[fc->stream_idx];
 	nb_fs = fc->stream_nb;
 	do {
-		for (sm_id = 0; sm_id < nb_fs; sm_id++)
-			if (!fsm[sm_id]->disabled)
-				(*pkt_fwd)(fsm[sm_id]);
+		for (sm_id = 0; sm_id < nb_fs; sm_id++) {
+			uint64_t start_tsc = 0;
+
+			if (fsm[sm_id]->disabled)
+				continue;
+			get_start_cycles(&start_tsc);
+			if (likely((*pkt_fwd)(fsm[sm_id])))
+				get_end_cycles(fsm[sm_id], start_tsc);
+		}
 #ifdef RTE_LIB_BITRATESTATS
 		if (bitrate_enabled != 0 &&
 				bitrate_lcore_id == rte_lcore_id()) {

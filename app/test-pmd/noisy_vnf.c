@@ -137,7 +137,7 @@ drop_pkts(struct rte_mbuf **pkts, uint16_t nb_rx, uint16_t nb_tx)
  *    out of the FIFO
  * 4. Cases 2 and 3 combined
  */
-static void
+static bool
 pkt_burst_noisy_vnf(struct fwd_stream *fs)
 {
 	const uint64_t freq_khz = rte_get_timer_hz() / 1000;
@@ -169,7 +169,8 @@ pkt_burst_noisy_vnf(struct fwd_stream *fs)
 		inc_tx_burst_stats(fs, nb_tx);
 		fs->tx_packets += nb_tx;
 		fs->fwd_dropped += drop_pkts(pkts_burst, nb_rx, nb_tx);
-		return;
+
+		return true;
 	}
 
 	fifo_free = rte_ring_free_count(ncf->f);
@@ -198,15 +199,16 @@ pkt_burst_noisy_vnf(struct fwd_stream *fs)
 	sim_memory_lookups(ncf, nb_enqd);
 
 flush:
-	if (ncf->do_flush) {
-		if (!ncf->prev_time)
-			now = ncf->prev_time = rte_get_timer_cycles();
-		else
-			now = rte_get_timer_cycles();
-		delta_ms = (now - ncf->prev_time) / freq_khz;
-		needs_flush = delta_ms >= noisy_tx_sw_buf_flush_time &&
-				noisy_tx_sw_buf_flush_time > 0 && !nb_tx;
-	}
+	if (!ncf->do_flush)
+		return nb_rx != 0;
+
+	if (!ncf->prev_time)
+		now = ncf->prev_time = rte_get_timer_cycles();
+	else
+		now = rte_get_timer_cycles();
+	delta_ms = (now - ncf->prev_time) / freq_khz;
+	needs_flush = delta_ms >= noisy_tx_sw_buf_flush_time &&
+			noisy_tx_sw_buf_flush_time > 0 && !nb_tx;
 	while (needs_flush && !rte_ring_empty(ncf->f)) {
 		unsigned int sent;
 		nb_deqd = rte_ring_dequeue_burst(ncf->f, (void **)tmp_pkts,
@@ -219,6 +221,8 @@ flush:
 		fs->fwd_dropped += drop_pkts(tmp_pkts, nb_deqd, sent);
 		ncf->prev_time = rte_get_timer_cycles();
 	}
+
+	return nb_tx != 0;
 }
 
 #define NOISY_STRSIZE 256
