@@ -98,6 +98,8 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* Experimental function ``rte_pcapng_copy`` was updated to support comment
+  section in enhanced packet block in pcapng library.
 
 ABI Changes
 -----------
