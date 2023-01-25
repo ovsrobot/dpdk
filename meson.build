@@ -76,11 +76,16 @@ subdir('config')
 
 # build libs and drivers
 subdir('lib')
-subdir('drivers')
 
-# build binaries and installable tools
-subdir('usertools')
-subdir('app')
+if is_ms_compiler
+    enabled_apps = []
+else
+    subdir('drivers')
+
+    # build binaries and installable tools
+    subdir('usertools')
+    subdir('app')
+endif
 
 # build docs
 subdir('doc')
