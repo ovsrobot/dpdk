@@ -37,6 +37,7 @@
 #include <rte_flow.h>
 
 #include "testpmd.h"
+#include "noisy_vnf.h"
 
 struct tx_timestamp {
 	rte_be32_t signature;
@@ -331,10 +332,9 @@ pkt_burst_transmit(struct fwd_stream *fs)
 	struct rte_mbuf *pkt;
 	struct rte_mempool *mbp;
 	struct rte_ether_hdr eth_hdr;
-	uint16_t nb_tx;
 	uint16_t nb_pkt;
+	uint16_t dropped;
 	uint16_t vlan_tci, vlan_tci_outer;
-	uint32_t retry;
 	uint64_t ol_flags = 0;
 	uint64_t tx_offloads;
 	uint64_t start_tsc = 0;
@@ -391,40 +391,14 @@ pkt_burst_transmit(struct fwd_stream *fs)
 		}
 	}
 
+
+	dropped = noisy_eth_tx_burst(fs, nb_pkt, pkts_burst);
+
 	if (nb_pkt == 0)
 		return;
 
-	nb_tx = rte_eth_tx_burst(fs->tx_port, fs->tx_queue, pkts_burst, nb_pkt);
-
-	/*
-	 * Retry if necessary
-	 */
-	if (unlikely(nb_tx < nb_pkt) && fs->retry_enabled) {
-		retry = 0;
-		while (nb_tx < nb_pkt && retry++ < burst_tx_retry_num) {
-			rte_delay_us(burst_tx_delay_time);
-			nb_tx += rte_eth_tx_burst(fs->tx_port, fs->tx_queue,
-					&pkts_burst[nb_tx], nb_pkt - nb_tx);
-		}
-	}
-	fs->tx_packets += nb_tx;
-
 	if (txonly_multi_flow)
-		RTE_PER_LCORE(_ip_var) -= nb_pkt - nb_tx;
-
-	inc_tx_burst_stats(fs, nb_tx);
-	if (unlikely(nb_tx < nb_pkt)) {
-		if (verbose_level > 0 && fs->fwd_dropped == 0)
-			printf("port %d tx_queue %d - drop "
-			       "(nb_pkt:%u - nb_tx:%u)=%u packets\n",
-			       fs->tx_port, fs->tx_queue,
-			       (unsigned) nb_pkt, (unsigned) nb_tx,
-			       (unsigned) (nb_pkt - nb_tx));
-		fs->fwd_dropped += (nb_pkt - nb_tx);
-		do {
-			rte_pktmbuf_free(pkts_burst[nb_tx]);
-		} while (++nb_tx < nb_pkt);
-	}
+		RTE_PER_LCORE(_ip_var) -= dropped;
 
 	get_end_cycles(fs, start_tsc);
 }

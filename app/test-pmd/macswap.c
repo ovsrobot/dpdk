@@ -42,6 +42,7 @@
 #else
 #include "macswap.h"
 #endif
+#include "noisy_vnf.h"
 
 /*
  * MAC swap forwarding mode: Swap the source and the destination Ethernet
@@ -53,8 +54,6 @@ pkt_burst_mac_swap(struct fwd_stream *fs)
 	struct rte_mbuf  *pkts_burst[MAX_PKT_BURST];
 	struct rte_port  *txp;
 	uint16_t nb_rx;
-	uint16_t nb_tx;
-	uint32_t retry;
 	uint64_t start_tsc = 0;
 
 	get_start_cycles(&start_tsc);
@@ -66,33 +65,16 @@ pkt_burst_mac_swap(struct fwd_stream *fs)
 				 nb_pkt_per_burst);
 	inc_rx_burst_stats(fs, nb_rx);
 	if (unlikely(nb_rx == 0))
-		return;
+		goto flush;
 
 	fs->rx_packets += nb_rx;
 	txp = &ports[fs->tx_port];
 
 	do_macswap(pkts_burst, nb_rx, txp);
 
-	nb_tx = rte_eth_tx_burst(fs->tx_port, fs->tx_queue, pkts_burst, nb_rx);
-	/*
-	 * Retry if necessary
-	 */
-	if (unlikely(nb_tx < nb_rx) && fs->retry_enabled) {
-		retry = 0;
-		while (nb_tx < nb_rx && retry++ < burst_tx_retry_num) {
-			rte_delay_us(burst_tx_delay_time);
-			nb_tx += rte_eth_tx_burst(fs->tx_port, fs->tx_queue,
-					&pkts_burst[nb_tx], nb_rx - nb_tx);
-		}
-	}
-	fs->tx_packets += nb_tx;
-	inc_tx_burst_stats(fs, nb_tx);
-	if (unlikely(nb_tx < nb_rx)) {
-		fs->fwd_dropped += (nb_rx - nb_tx);
-		do {
-			rte_pktmbuf_free(pkts_burst[nb_tx]);
-		} while (++nb_tx < nb_rx);
-	}
+flush:
+	noisy_eth_tx_burst(fs, nb_rx, pkts_burst);
+
 	get_end_cycles(fs, start_tsc);
 }
 

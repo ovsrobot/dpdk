@@ -484,34 +484,39 @@ The command line options are:
 *   ``--noisy-tx-sw-buffer-size``
 
     Set the number of maximum elements  of the FIFO queue to be created
-    for buffering packets. Only available with the noisy forwarding mode.
-    The default value is 0.
+    for buffering packets. Available with all forwarding modes except for
+    io and ieee1588. The default value is 0.
 
 *   ``--noisy-tx-sw-buffer-flushtime=N``
 
     Set the time before packets in the FIFO queue is flushed.
-    Only available with the noisy forwarding mode. The default value is 0.
+    Available with all forwarding modes except for io and ieee1588.
+    The default value is 0.
 
 *   ``--noisy-lkup-memory=N``
 
     Set the size of the noisy neighbor simulation memory buffer in MB to N.
-    Only available with the noisy forwarding mode. The default value is 0.
+    Available with all forwarding modes except for io and ieee1588.
+    The default value is 0.
 
 
 *   ``--noisy-lkup-num-reads=N``
 
     Set the number of reads to be done in noisy neighbor simulation memory buffer to N.
-    Only available with the noisy forwarding mode. The default value is 0.
+    Available with all forwarding modes except for io and ieee1588.
+    The default value is 0.
 
 *   ``--noisy-lkup-num-writes=N``
 
     Set the number of writes to be done in noisy neighbor simulation memory buffer to N.
-    Only available with the noisy forwarding mode. The default value is 0.
+    Available with all forwarding modes except for io and ieee1588.
+    The default value is 0.
 
 *   ``--noisy-lkup-num-reads-writes=N``
 
     Set the number of r/w accesses to be done in noisy neighbor simulation memory buffer to N.
-    Only available with the noisy forwarding mode. The default value is 0.
+    Available with all forwarding modes except for io and ieee1588.
+    The default value is 0.
 
 *   ``--no-iova-contig``
 

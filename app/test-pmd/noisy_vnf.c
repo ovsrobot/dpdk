@@ -32,6 +32,7 @@
 #include <rte_malloc.h>
 
 #include "testpmd.h"
+#include "noisy_vnf.h"
 
 struct noisy_config {
 	struct rte_ring *f;
@@ -44,21 +45,37 @@ struct noisy_config {
 
 struct noisy_config *noisy_cfg[RTE_MAX_ETHPORTS];
 
+struct fwd_engine noisy_vnf_engine = {
+	.fwd_mode_name  = "noisy",
+	.port_fwd_begin = NULL,
+	.port_fwd_end   = NULL,
+	.stream_init    = stream_init_noisy_vnf,
+	.packet_fwd     = pkt_burst_noisy_vnf,
+};
+
+RTE_DEFINE_PER_LCORE(uint64_t, seed);
+
+static uint64_t rnd(void)
+{
+	RTE_PER_LCORE(seed) = 1103515245U * RTE_PER_LCORE(seed) + 12345U;
+
+	return RTE_PER_LCORE(seed);
+}
+
 static inline void
 do_write(char *vnf_mem)
 {
-	uint64_t i = rte_rand();
-	uint64_t w = rte_rand();
+	uint64_t i = rnd();
 
 	vnf_mem[i % ((noisy_lkup_mem_sz * 1024 * 1024) /
-			RTE_CACHE_LINE_SIZE)] = w;
+			RTE_CACHE_LINE_SIZE)] = ~i;
 }
 
 static inline void
 do_read(char *vnf_mem)
 {
 	uint64_t r __rte_unused;
-	uint64_t i = rte_rand();
+	uint64_t i = rnd();
 
 	r = vnf_mem[i % ((noisy_lkup_mem_sz * 1024 * 1024) /
 			RTE_CACHE_LINE_SIZE)];
@@ -80,9 +97,6 @@ sim_memory_lookups(struct noisy_config *ncf, uint16_t nb_pkts)
 {
 	uint16_t i, j;
 
-	if (!ncf->do_sim)
-		return;
-
 	for (i = 0; i < nb_pkts; i++) {
 		for (j = 0; j < noisy_lkup_num_writes; j++)
 			do_write(ncf->vnf_mem);
@@ -94,15 +108,28 @@ sim_memory_lookups(struct noisy_config *ncf, uint16_t nb_pkts)
 }
 
 static uint16_t
-do_retry(uint16_t nb_rx, uint16_t nb_tx, struct rte_mbuf **pkts,
+do_retry(uint16_t nb_rx, struct rte_mbuf **pkts,
 	 struct fwd_stream *fs)
 {
 	uint32_t retry = 0;
+	uint16_t nb_tx = 0;
 
-	while (nb_tx < nb_rx && retry++ < burst_tx_retry_num) {
-		rte_delay_us(burst_tx_delay_time);
+	do {
 		nb_tx += rte_eth_tx_burst(fs->tx_port, fs->tx_queue,
 				&pkts[nb_tx], nb_rx - nb_tx);
+		if (unlikely(nb_tx < nb_rx && fs->retry_enabled))
+			rte_delay_us(burst_tx_delay_time);
+		else
+			break;
+	} while (retry++ < burst_tx_retry_num);
+
+	if (nb_tx < nb_rx && verbose_level > 0 && fs->fwd_dropped == 0) {
+		/* if the dropped packets were queued, nb_tx could be negative */
+		printf("port %d tx_queue %d - drop "
+			   "(nb_pkt:%u - nb_tx:%u)=%u packets\n",
+			   fs->tx_port, fs->tx_queue,
+			   (unsigned int) nb_rx, (unsigned int) nb_tx,
+			   (unsigned int) (nb_rx - nb_tx));
 	}
 
 	return nb_tx;
@@ -137,39 +164,38 @@ drop_pkts(struct rte_mbuf **pkts, uint16_t nb_rx, uint16_t nb_tx)
  *    out of the FIFO
  * 4. Cases 2 and 3 combined
  */
-static void
-pkt_burst_noisy_vnf(struct fwd_stream *fs)
+uint16_t
+noisy_eth_tx_burst(struct fwd_stream *fs, uint16_t nb_rx, struct rte_mbuf **pkts_burst)
 {
 	const uint64_t freq_khz = rte_get_timer_hz() / 1000;
 	struct noisy_config *ncf = noisy_cfg[fs->rx_port];
-	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 	struct rte_mbuf *tmp_pkts[MAX_PKT_BURST];
 	uint16_t nb_deqd = 0;
-	uint16_t nb_rx = 0;
 	uint16_t nb_tx = 0;
+	uint16_t total_dropped = 0;
+	uint16_t dropped = 0;
 	uint16_t nb_enqd;
 	unsigned int fifo_free;
 	uint64_t delta_ms;
 	bool needs_flush = false;
 	uint64_t now;
 
-	nb_rx = rte_eth_rx_burst(fs->rx_port, fs->rx_queue,
-			pkts_burst, nb_pkt_per_burst);
-	inc_rx_burst_stats(fs, nb_rx);
-	if (unlikely(nb_rx == 0))
-		goto flush;
-	fs->rx_packets += nb_rx;
+	if (unlikely(nb_rx == 0)) {
+		if (ncf->do_buffering)
+			goto flush;
+		else
+			return 0;
+	}
 
 	if (!ncf->do_buffering) {
-		sim_memory_lookups(ncf, nb_rx);
-		nb_tx = rte_eth_tx_burst(fs->tx_port, fs->tx_queue,
-				pkts_burst, nb_rx);
-		if (unlikely(nb_tx < nb_rx) && fs->retry_enabled)
-			nb_tx += do_retry(nb_rx, nb_tx, pkts_burst, fs);
+		if (ncf->do_sim)
+			sim_memory_lookups(ncf, nb_rx);
+		nb_tx = do_retry(nb_rx, pkts_burst, fs);
 		inc_tx_burst_stats(fs, nb_tx);
 		fs->tx_packets += nb_tx;
-		fs->fwd_dropped += drop_pkts(pkts_burst, nb_rx, nb_tx);
-		return;
+		dropped = drop_pkts(pkts_burst, nb_rx, nb_tx);
+		fs->fwd_dropped += dropped;
+		return dropped;
 	}
 
 	fifo_free = rte_ring_free_count(ncf->f);
@@ -185,17 +211,17 @@ pkt_burst_noisy_vnf(struct fwd_stream *fs)
 		nb_enqd = rte_ring_enqueue_burst(ncf->f,
 				(void **) pkts_burst, nb_deqd, NULL);
 		if (nb_deqd > 0) {
-			nb_tx = rte_eth_tx_burst(fs->tx_port,
-					fs->tx_queue, tmp_pkts,
-					nb_deqd);
-			if (unlikely(nb_tx < nb_rx) && fs->retry_enabled)
-				nb_tx += do_retry(nb_rx, nb_tx, tmp_pkts, fs);
+			nb_tx = do_retry(nb_deqd, tmp_pkts, fs);
+			fs->tx_packets += nb_tx;
 			inc_tx_burst_stats(fs, nb_tx);
-			fs->fwd_dropped += drop_pkts(tmp_pkts, nb_deqd, nb_tx);
+			dropped = drop_pkts(tmp_pkts, nb_deqd, nb_tx);
+			fs->fwd_dropped += dropped;
+			total_dropped += dropped;
 		}
 	}
 
-	sim_memory_lookups(ncf, nb_enqd);
+	if (ncf->do_sim)
+		sim_memory_lookups(ncf, nb_enqd);
 
 flush:
 	if (ncf->do_flush) {
@@ -208,23 +234,21 @@ flush:
 				noisy_tx_sw_buf_flush_time > 0 && !nb_tx;
 	}
 	while (needs_flush && !rte_ring_empty(ncf->f)) {
-		unsigned int sent;
 		nb_deqd = rte_ring_dequeue_burst(ncf->f, (void **)tmp_pkts,
 				MAX_PKT_BURST, NULL);
-		sent = rte_eth_tx_burst(fs->tx_port, fs->tx_queue,
-					 tmp_pkts, nb_deqd);
-		if (unlikely(sent < nb_deqd) && fs->retry_enabled)
-			nb_tx += do_retry(nb_rx, nb_tx, tmp_pkts, fs);
+		nb_tx = do_retry(nb_deqd, tmp_pkts, fs);
+		fs->tx_packets += nb_tx;
 		inc_tx_burst_stats(fs, nb_tx);
-		fs->fwd_dropped += drop_pkts(tmp_pkts, nb_deqd, sent);
+		dropped = drop_pkts(tmp_pkts, nb_deqd, nb_deqd);
+		fs->fwd_dropped += dropped;
+		total_dropped += dropped;
 		ncf->prev_time = rte_get_timer_cycles();
 	}
+
+	return total_dropped;
 }
 
-#define NOISY_STRSIZE 256
-#define NOISY_RING "noisy_ring_%d\n"
-
-static void
+void
 noisy_fwd_end(portid_t pi)
 {
 	rte_ring_free(noisy_cfg[pi]->f);
@@ -232,7 +256,7 @@ noisy_fwd_end(portid_t pi)
 	rte_free(noisy_cfg[pi]);
 }
 
-static int
+int
 noisy_fwd_begin(portid_t pi)
 {
 	struct noisy_config *n;
@@ -278,7 +302,7 @@ noisy_fwd_begin(portid_t pi)
 	return 0;
 }
 
-static void
+void
 stream_init_noisy_vnf(struct fwd_stream *fs)
 {
 	bool rx_stopped, tx_stopped;
@@ -290,10 +314,14 @@ stream_init_noisy_vnf(struct fwd_stream *fs)
 	fs->disabled = rx_stopped || tx_stopped;
 }
 
-struct fwd_engine noisy_vnf_engine = {
-	.fwd_mode_name  = "noisy",
-	.port_fwd_begin = noisy_fwd_begin,
-	.port_fwd_end   = noisy_fwd_end,
-	.stream_init    = stream_init_noisy_vnf,
-	.packet_fwd     = pkt_burst_noisy_vnf,
-};
+void
+pkt_burst_noisy_vnf(struct fwd_stream *fs)
+{
+	uint16_t nb_rx = 0;
+	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
+	nb_rx = rte_eth_rx_burst(fs->rx_port, fs->rx_queue,
+			pkts_burst, nb_pkt_per_burst);
+	inc_rx_burst_stats(fs, nb_rx);
+	fs->rx_packets += nb_rx;
+	noisy_eth_tx_burst(fs, nb_rx, pkts_burst);
+}
