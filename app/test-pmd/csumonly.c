@@ -48,6 +48,7 @@
 #include <rte_geneve.h>
 
 #include "testpmd.h"
+#include "noisy_vnf.h"
 
 #define IP_DEFTTL  64   /* from RFC 1340. */
 
@@ -847,12 +848,10 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 	uint8_t gro_enable;
 #endif
 	uint16_t nb_rx;
-	uint16_t nb_tx;
 	uint16_t nb_prep;
 	uint16_t i;
 	uint64_t rx_ol_flags, tx_ol_flags;
 	uint64_t tx_offloads;
-	uint32_t retry;
 	uint32_t rx_bad_ip_csum;
 	uint32_t rx_bad_l4_csum;
 	uint32_t rx_bad_outer_l4_csum;
@@ -867,8 +866,13 @@ pkt_burst_checksum_forward(struct fwd_stream *fs)
 	nb_rx = rte_eth_rx_burst(fs->rx_port, fs->rx_queue, pkts_burst,
 				 nb_pkt_per_burst);
 	inc_rx_burst_stats(fs, nb_rx);
-	if (unlikely(nb_rx == 0))
-		return;
+	if (unlikely(nb_rx == 0)) {
+		/* May still need to flush some packets */
+		nb_prep = 0;
+		tx_pkts_burst = pkts_burst;
+		goto flush;
+	}
+
 
 	fs->rx_packets += nb_rx;
 	rx_bad_ip_csum = 0;
@@ -1173,33 +1177,13 @@ tunnel_update:
 			"Preparing packet burst to transmit failed: %s\n",
 			rte_strerror(rte_errno));
 
-	nb_tx = rte_eth_tx_burst(fs->tx_port, fs->tx_queue, tx_pkts_burst,
-			nb_prep);
-
-	/*
-	 * Retry if necessary
-	 */
-	if (unlikely(nb_tx < nb_rx) && fs->retry_enabled) {
-		retry = 0;
-		while (nb_tx < nb_rx && retry++ < burst_tx_retry_num) {
-			rte_delay_us(burst_tx_delay_time);
-			nb_tx += rte_eth_tx_burst(fs->tx_port, fs->tx_queue,
-					&tx_pkts_burst[nb_tx], nb_rx - nb_tx);
-		}
-	}
-	fs->tx_packets += nb_tx;
 	fs->rx_bad_ip_csum += rx_bad_ip_csum;
 	fs->rx_bad_l4_csum += rx_bad_l4_csum;
 	fs->rx_bad_outer_l4_csum += rx_bad_outer_l4_csum;
 	fs->rx_bad_outer_ip_csum += rx_bad_outer_ip_csum;
 
-	inc_tx_burst_stats(fs, nb_tx);
-	if (unlikely(nb_tx < nb_rx)) {
-		fs->fwd_dropped += (nb_rx - nb_tx);
-		do {
-			rte_pktmbuf_free(tx_pkts_burst[nb_tx]);
-		} while (++nb_tx < nb_rx);
-	}
+flush:
+	noisy_eth_tx_burst(fs, nb_prep, tx_pkts_burst);
 
 	get_end_cycles(fs, start_tsc);
 }

@@ -74,6 +74,7 @@
 #endif
 
 #include "testpmd.h"
+#include "noisy_vnf.h"
 
 #ifndef MAP_HUGETLB
 /* FreeBSD may not have MAP_HUGETLB (in fact, it probably doesn't) */
@@ -2382,6 +2383,9 @@ start_packet_forwarding(int with_tx_first)
 		for (i = 0; i < cur_fwd_config.nb_fwd_streams; i++)
 			stream_init(fwd_streams[i]);
 
+	for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++)
+		noisy_fwd_begin(fwd_ports_ids[i]);
+
 	port_fwd_begin = cur_fwd_config.fwd_eng->port_fwd_begin;
 	if (port_fwd_begin != NULL) {
 		for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
@@ -2446,6 +2450,8 @@ stop_packet_forwarding(void)
 		fwd_lcores[lc_id]->stopped = 1;
 	printf("\nWaiting for lcores to finish...\n");
 	rte_eal_mp_wait_lcore();
+	for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++)
+		noisy_fwd_end(fwd_ports_ids[i]);
 	port_fwd_end = cur_fwd_config.fwd_eng->port_fwd_end;
 	if (port_fwd_end != NULL) {
 		for (i = 0; i < cur_fwd_config.nb_fwd_ports; i++) {
