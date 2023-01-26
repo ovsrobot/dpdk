@@ -329,6 +329,41 @@ int
 rte_lcore_iterate(rte_lcore_iterate_cb cb, void *arg);
 
 /**
+ * lcore usage statistics.
+ */
+struct rte_lcore_usage {
+	/** The total amount of time since application start, in TSC cycles. */
+	uint64_t total_cycles;
+	/** The amount of busy time since application start, in TSC cycles. */
+	uint64_t busy_cycles;
+};
+
+/**
+ * Callback to allow applications to report lcore usage.
+ *
+ * @param [in] lcore_id
+ *   The lcore to consider.
+ * @param [out] usage
+ *   Counters representing this lcore usage. This can never be NULL.
+ * @return
+ *   - 0 if fields in usage were updated successfully. The fields that the
+ *       application does not support must not be modified.
+ *   - a negative value if the information is not available or if any error occurred.
+ */
+typedef int (*rte_lcore_usage_cb)(unsigned int lcore_id, struct rte_lcore_usage *usage);
+
+/**
+ * Register a callback from an application to be called in rte_lcore_dump() and
+ * the /eal/lcore/info telemetry endpoint handler. Applications are expected to
+ * report lcore usage statistics via this callback.
+ *
+ * @param cb
+ *   The callback function.
+ */
+__rte_experimental
+void rte_lcore_register_usage_cb(rte_lcore_usage_cb cb);
+
+/**
  * List all lcores.
  *
  * @param f
