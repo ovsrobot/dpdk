@@ -4071,7 +4071,7 @@ static const struct token token_list[] = {
 		.next = NEXT(item_gre, NEXT_ENTRY(COMMON_UNSIGNED),
 			     item_param),
 		.args = ARGS(ARGS_ENTRY_HTON(struct rte_flow_item_gre,
-					     protocol)),
+					     hdr.proto)),
 	},
 	[ITEM_GRE_C_RSVD0_VER] = {
 		.name = "c_rsvd0_ver",
@@ -4082,7 +4082,7 @@ static const struct token token_list[] = {
 		.next = NEXT(item_gre, NEXT_ENTRY(COMMON_UNSIGNED),
 			     item_param),
 		.args = ARGS(ARGS_ENTRY_HTON(struct rte_flow_item_gre,
-					     c_rsvd0_ver)),
+					     hdr.c_rsvd0_ver)),
 	},
 	[ITEM_GRE_C_BIT] = {
 		.name = "c_bit",
@@ -4090,7 +4090,7 @@ static const struct token token_list[] = {
 		.next = NEXT(item_gre, NEXT_ENTRY(COMMON_BOOLEAN),
 			     item_param),
 		.args = ARGS(ARGS_ENTRY_MASK_HTON(struct rte_flow_item_gre,
-						  c_rsvd0_ver,
+						  hdr.c_rsvd0_ver,
 						  "\x80\x00\x00\x00")),
 	},
 	[ITEM_GRE_S_BIT] = {
@@ -4098,7 +4098,7 @@ static const struct token token_list[] = {
 		.help = "sequence number bit (S)",
 		.next = NEXT(item_gre, NEXT_ENTRY(COMMON_BOOLEAN), item_param),
 		.args = ARGS(ARGS_ENTRY_MASK_HTON(struct rte_flow_item_gre,
-						  c_rsvd0_ver,
+						  hdr.c_rsvd0_ver,
 						  "\x10\x00\x00\x00")),
 	},
 	[ITEM_GRE_K_BIT] = {
@@ -4106,7 +4106,7 @@ static const struct token token_list[] = {
 		.help = "key bit (K)",
 		.next = NEXT(item_gre, NEXT_ENTRY(COMMON_BOOLEAN), item_param),
 		.args = ARGS(ARGS_ENTRY_MASK_HTON(struct rte_flow_item_gre,
-						  c_rsvd0_ver,
+						  hdr.c_rsvd0_ver,
 						  "\x20\x00\x00\x00")),
 	},
 	[ITEM_FUZZY] = {
@@ -7837,7 +7837,7 @@ parse_vc_action_mplsogre_encap(struct context *ctx, const struct token *token,
 		},
 	};
 	struct rte_flow_item_gre gre = {
-		.protocol = rte_cpu_to_be_16(ETHER_TYPE_MPLS_UNICAST),
+		.hdr.proto = rte_cpu_to_be_16(ETHER_TYPE_MPLS_UNICAST),
 	};
 	struct rte_flow_item_mpls mpls = {
 		.ttl = 0,
@@ -7935,7 +7935,7 @@ parse_vc_action_mplsogre_decap(struct context *ctx, const struct token *token,
 		},
 	};
 	struct rte_flow_item_gre gre = {
-		.protocol = rte_cpu_to_be_16(ETHER_TYPE_MPLS_UNICAST),
+		.hdr.proto = rte_cpu_to_be_16(ETHER_TYPE_MPLS_UNICAST),
 	};
 	struct rte_flow_item_mpls mpls;
 	uint8_t *header;
