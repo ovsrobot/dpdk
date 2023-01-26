@@ -1390,6 +1390,8 @@ mlx5_flow_item_field_width(struct rte_eth_dev *dev,
 	case RTE_FLOW_FIELD_IPV6_ECN:
 	case RTE_FLOW_FIELD_METER_COLOR:
 		return 2;
+	case RTE_FLOW_FIELD_HASH_RESULT:
+		return 32;
 	default:
 		MLX5_ASSERT(false);
 	}
@@ -1882,6 +1884,16 @@ mlx5_flow_field_id_to_modify_info
 			else
 				info[idx].offset = data->offset;
 		}
+		break;
+	case RTE_FLOW_FIELD_HASH_RESULT:
+		MLX5_ASSERT(data->offset + width <= 32);
+		off_be = 32 - (data->offset + width);
+		info[idx] = (struct field_modify_info){4, 0,
+						       MLX5_MODI_HASH_RESULT};
+		if (mask)
+			mask[idx] = flow_modify_info_mask_32(width, off_be);
+		else
+			info[idx].offset = off_be;
 		break;
 	case RTE_FLOW_FIELD_POINTER:
 	case RTE_FLOW_FIELD_VALUE:
