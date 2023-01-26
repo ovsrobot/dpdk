@@ -50,7 +50,7 @@ struct rte_gre_hdr {
 		};
 		rte_be16_t c_rsvd0_ver;
 	};
-	uint16_t proto;  /**< Protocol Type */
+	rte_be16_t proto;  /**< Protocol Type */
 } __rte_packed;
 
 /**
