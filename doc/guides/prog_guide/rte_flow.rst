@@ -980,8 +980,7 @@ Item: ``GRE``
 
 Matches a GRE header.
 
-- ``c_rsvd0_ver``: checksum, reserved 0 and version.
-- ``protocol``: protocol type.
+- ``hdr``:  header definition (``rte_gre.h``).
 - Default ``mask`` matches protocol only.
 
 Item: ``GRE_KEY``
@@ -1000,9 +999,6 @@ Item: ``GRE_OPTION``
 Matches a GRE optional fields (checksum/key/sequence).
 This should be preceded by item ``GRE``.
 
-- ``checksum``: checksum.
-- ``key``: key.
-- ``sequence``: sequence.
 - The items in GRE_OPTION do not change bit flags(c_bit/k_bit/s_bit) in GRE
   item. The bit flags need be set with GRE item by application. When the items
   present, the corresponding bits in GRE spec and mask should be set "1" by
