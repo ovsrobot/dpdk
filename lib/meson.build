@@ -65,6 +65,13 @@ libraries = [
         'node',
 ]
 
+if is_ms_compiler
+    libraries = [
+            'kvargs',
+            'telemetry',
+    ]
+endif
+
 optional_libs = [
         'bitratestats',
         'cfgfile',
