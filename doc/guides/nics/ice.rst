@@ -395,3 +395,15 @@ file is used by both the kernel driver and the DPDK PMD.
 
       Windows support: The DDP package is not supported on Windows so,
       loading of the package is disabled on Windows.
+
+ice: Rx path does not support dynamic change
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ice driver supports fast and offload rx path. When pmd is initialized,
+the fast rx path is selected by default. Even if offload is subsequently
+enabled through the API, which will not work because the past rx path is
+still used.
+
+The ice driver does not support to change the rx path after application
+is initialized. If HW offload is required, the ``--rx-offloads`` parameter
+should be used to choose the offload Rx path by default.
