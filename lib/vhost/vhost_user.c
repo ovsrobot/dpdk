@@ -1473,7 +1473,7 @@ virtio_is_ready(struct virtio_net *dev)
 	if (dev->nr_vring < nr_vring)
 		return 0;
 
-	for (i = 0; i < nr_vring; i++) {
+	for (i = 0; i < dev->nr_vring; i++) {
 		vq = dev->virtqueue[i];
 
 		if (!vq_is_ready(dev, vq))
