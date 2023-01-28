@@ -764,6 +764,10 @@ static void cmd_help_long_parsed(void *parsed_result,
 
 			"port cleanup (port_id) txq (queue_id) (free_cnt)\n"
 			"    Cleanup txq mbufs for a specific Tx queue\n\n"
+
+			"port config (port_id) txq (queue_id) mhpsdp_hwport (value)\n"
+			"    Set the hwport value in mhpsdp "
+			"on a specific Tx queue\n\n"
 		);
 	}
 
@@ -12621,6 +12625,85 @@ static cmdline_parse_inst_t cmd_show_port_flow_transfer_proxy = {
 	}
 };
 
+/* *** configure port txq mhpsdp_hwport value *** */
+struct cmd_config_tx_mhpsdp_hwport {
+	cmdline_fixed_string_t port;
+	cmdline_fixed_string_t config;
+	portid_t portid;
+	cmdline_fixed_string_t txq;
+	uint16_t qid;
+	cmdline_fixed_string_t mhpsdp_hwport;
+	uint16_t value;
+};
+
+static void
+cmd_config_tx_mhpsdp_hwport_parsed(void *parsed_result,
+			      __rte_unused struct cmdline *cl,
+			      __rte_unused void *data)
+{
+	struct cmd_config_tx_mhpsdp_hwport *res = parsed_result;
+	struct rte_port *port;
+
+	if (port_id_is_invalid(res->portid, ENABLED_WARN))
+		return;
+
+	if (res->portid == (portid_t)RTE_PORT_ALL) {
+		printf("Invalid port id\n");
+		return;
+	}
+
+	port = &ports[res->portid];
+
+	if (strcmp(res->txq, "txq")) {
+		printf("Unknown parameter\n");
+		return;
+	}
+	if (tx_queue_id_is_invalid(res->qid))
+		return;
+
+	port->txq[res->qid].conf.tx_mhpsdp_hwport = res->value;
+
+	cmd_reconfig_device_queue(res->portid, 0, 1);
+}
+
+cmdline_parse_token_string_t cmd_config_tx_mhpsdp_hwport_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_tx_mhpsdp_hwport,
+				 port, "port");
+cmdline_parse_token_string_t cmd_config_tx_mhpsdp_hwport_config =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_tx_mhpsdp_hwport,
+				 config, "config");
+cmdline_parse_token_num_t cmd_config_tx_mhpsdp_hwport_portid =
+	TOKEN_NUM_INITIALIZER(struct cmd_config_tx_mhpsdp_hwport,
+				 portid, RTE_UINT16);
+cmdline_parse_token_string_t cmd_config_tx_mhpsdp_hwport_txq =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_tx_mhpsdp_hwport,
+				 txq, "txq");
+cmdline_parse_token_num_t cmd_config_tx_mhpsdp_hwport_qid =
+	TOKEN_NUM_INITIALIZER(struct cmd_config_tx_mhpsdp_hwport,
+			      qid, RTE_UINT16);
+cmdline_parse_token_string_t cmd_config_tx_mhpsdp_hwport_hwport =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_tx_mhpsdp_hwport,
+				 mhpsdp_hwport, "mhpsdp_hwport");
+cmdline_parse_token_num_t cmd_config_tx_mhpsdp_hwport_value =
+	TOKEN_NUM_INITIALIZER(struct cmd_config_tx_mhpsdp_hwport,
+			      value, RTE_UINT16);
+
+static cmdline_parse_inst_t cmd_config_tx_mhpsdp_hwport = {
+	.f = cmd_config_tx_mhpsdp_hwport_parsed,
+	.data = (void *)0,
+	.help_str = "port config <port_id> txq <queue_id> mhpsdp_hwport <value>",
+	.tokens = {
+		(void *)&cmd_config_tx_mhpsdp_hwport_port,
+		(void *)&cmd_config_tx_mhpsdp_hwport_config,
+		(void *)&cmd_config_tx_mhpsdp_hwport_portid,
+		(void *)&cmd_config_tx_mhpsdp_hwport_txq,
+		(void *)&cmd_config_tx_mhpsdp_hwport_qid,
+		(void *)&cmd_config_tx_mhpsdp_hwport_hwport,
+		(void *)&cmd_config_tx_mhpsdp_hwport_value,
+		NULL,
+	},
+};
+
 /* ******************************************************************************** */
 
 /* list of instructions */
@@ -12851,6 +12934,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_show_capability,
 	(cmdline_parse_inst_t *)&cmd_set_flex_is_pattern,
 	(cmdline_parse_inst_t *)&cmd_set_flex_spec_pattern,
+	(cmdline_parse_inst_t *)&cmd_config_tx_mhpsdp_hwport,
 	NULL,
 };
 

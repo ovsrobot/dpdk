@@ -1139,6 +1139,14 @@ struct rte_eth_txconf {
 
 	uint8_t tx_deferred_start; /**< Do not start queue with rte_eth_dev_start(). */
 	/**
+	 * Hardware port index for mhpsdp.
+	 * Value 0 is no port assigned and traffic could be routed between different
+	 * hardware ports, if 0 is disabled then try to match on MHPSDP_HW_PORT with
+	 * 0 will result in an error.
+	 * Value starts from 1 means that the first hw port in the mhpsdp.
+	 */
+	uint8_t tx_mhpsdp_hwport;
+	/**
 	 * Per-queue Tx offloads to be set  using RTE_ETH_TX_OFFLOAD_* flags.
 	 * Only offloads set on tx_queue_offload_capa or tx_offload_capa
 	 * fields on rte_eth_dev_info structure are allowed to be set.

@@ -1605,6 +1605,19 @@ Enable or disable a per queue Tx offloading only on a specific Tx queue::
 
 This command should be run when the port is stopped, or else it will fail.
 
+config per queue Tx mhpsdp_hwport
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Configure a mhpsdp_hwport value per queue Tx offloading only on a specific Tx queue::
+
+   testpmd> port (port_id) txq (queue_id) mhpsdp_hwport (value)
+
+* ``mhpsdp_hwport``: reflects packet can be sent to which hardware port.
+                     uses it on multiple hardware ports connect to
+                     a single DPDK port (mhpsdp).
+
+This command should be run when the port is stopped, or else it will fail.
+
 Config VXLAN Encap outer layers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
