@@ -69,6 +69,11 @@ New Features
     ``rte_event_dev_config::nb_single_link_event_port_queues`` parameter
     required for eth_rx, eth_tx, crypto and timer eventdev adapters.
 
+* **Added rte_flow support for matching MHPSDP_HW_PORT fields.**
+
+  For the multiple hardware ports connect to a single DPDK port (mhpsdp),
+  Added ``mhpsdp_hw_port`` item in rte_flow to support hardware port of
+  the packets.
 
 Removed Items
 -------------

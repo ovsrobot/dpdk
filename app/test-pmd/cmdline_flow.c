@@ -465,6 +465,8 @@ enum index {
 	ITEM_METER,
 	ITEM_METER_COLOR,
 	ITEM_METER_COLOR_NAME,
+	ITEM_MHPSDP_HW_PORT,
+	ITEM_MHPSDP_HW_PORT_VALUE,
 
 	/* Validate/create actions. */
 	ACTIONS,
@@ -1355,6 +1357,7 @@ static const enum index next_item[] = {
 	ITEM_L2TPV2,
 	ITEM_PPP,
 	ITEM_METER,
+	ITEM_MHPSDP_HW_PORT,
 	END_SET,
 	ZERO,
 };
@@ -1817,6 +1820,12 @@ static const enum index item_ppp[] = {
 
 static const enum index item_meter[] = {
 	ITEM_METER_COLOR,
+	ITEM_NEXT,
+	ZERO,
+};
+
+static const enum index item_mhpsdp_hw_port[] = {
+	ITEM_MHPSDP_HW_PORT_VALUE,
 	ITEM_NEXT,
 	ZERO,
 };
@@ -6443,6 +6452,23 @@ static const struct token token_list[] = {
 				ARGS_ENTRY(struct buffer, port)),
 		.call = parse_mp,
 	},
+	[ITEM_MHPSDP_HW_PORT] = {
+		.name = "mhpsdp_hw_port",
+		.help = "match on the hardware port of the"
+			" received packet.",
+		.priv = PRIV_ITEM(MHPSDP_HW_PORT,
+				  sizeof(struct rte_flow_item_mhpsdp_hw_port)),
+		.next = NEXT(item_mhpsdp_hw_port),
+		.call = parse_vc,
+	},
+	[ITEM_MHPSDP_HW_PORT_VALUE] = {
+		.name = "hwport",
+		.help = "hardware port value",
+		.next = NEXT(item_mhpsdp_hw_port, NEXT_ENTRY(COMMON_UNSIGNED),
+			     item_param),
+		.args = ARGS(ARGS_ENTRY(struct rte_flow_item_mhpsdp_hw_port,
+					hwport)),
+	},
 };
 
 /** Remove and return last entry from argument stack. */
@@ -10980,6 +11006,9 @@ flow_item_default_mask(const struct rte_flow_item *item)
 		break;
 	case RTE_FLOW_ITEM_TYPE_METER_COLOR:
 		mask = &rte_flow_item_meter_color_mask;
+		break;
+	case RTE_FLOW_ITEM_TYPE_MHPSDP_HW_PORT:
+		mask = &rte_flow_item_mhpsdp_hw_port_mask;
 		break;
 	default:
 		break;

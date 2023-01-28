@@ -624,6 +624,13 @@ enum rte_flow_item_type {
 	 * See struct rte_flow_item_meter_color.
 	 */
 	RTE_FLOW_ITEM_TYPE_METER_COLOR,
+
+	/**
+	 * Matches on the physical port of the received packet.
+	 *
+	 * See struct rte_flow_item_mhpsdp_hw_port.
+	 */
+	RTE_FLOW_ITEM_TYPE_MHPSDP_HW_PORT,
 };
 
 /**
@@ -2100,6 +2107,31 @@ struct rte_flow_item_meter_color {
 #ifndef __cplusplus
 static const struct rte_flow_item_meter_color rte_flow_item_meter_color_mask = {
 	.color = RTE_COLORS,
+};
+#endif
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
+ * RTE_FLOW_ITEM_TYPE_MHPSDP_HW_PORT
+ *
+ * For the multiple hardware ports connect to a single DPDK port (mhpsdp),
+ * use this item to match the hardware port of the packets.
+ */
+struct rte_flow_item_mhpsdp_hw_port {
+	/**
+	 * Hardware port in the group of multiple ports connect
+	 * to a single DPDK port. Value 1 means the first hw port.
+	 */
+	uint8_t hwport;
+};
+
+/** Default mask for RTE_FLOW_ITEM_TYPE_MHPSDP_HW_PORT. */
+#ifndef __cplusplus
+static const struct rte_flow_item_mhpsdp_hw_port
+rte_flow_item_mhpsdp_hw_port_mask = {
+	.hwport = 0xff,
 };
 #endif
 

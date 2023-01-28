@@ -3712,6 +3712,11 @@ This section lists supported pattern items and their attributes, if any.
 
   - ``color {value}``: meter color value (green/yellow/red).
 
+- ``mhpsdp_hw_port``: match hardware port in the group of multiple ports connect
+  to a single DPDK port.
+
+  - ``hwport {value}``: hardware port value.
+
 - ``send_to_kernel``: send packets to kernel.
 
 

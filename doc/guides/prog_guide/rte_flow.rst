@@ -1544,6 +1544,14 @@ Matches Color Marker set by a Meter.
 
 - ``color``: Metering color marker.
 
+Item: ``MHPSDP_HW_PORT``
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Matches on the hardware port of the received packet, the hardware port in the
+group of physical ports connected to a single DPDK port.
+
+- ``hwport``: Hardware port value.
+
 Actions
 ~~~~~~~
 
