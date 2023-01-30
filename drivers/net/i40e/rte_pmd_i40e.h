@@ -401,6 +401,22 @@ int rte_pmd_i40e_set_tx_loopback(uint16_t port,
 				 uint8_t on);
 
 /**
+ * Enable/Disable source prune on all the PF.
+ *
+ * @param port
+ *    The port identifier of the Ethernet device.
+ * @param on
+ *    1 - Enable source prune.
+ *    0 - Disable source prune.
+ * @return
+ *   - (0) if successful.
+ *   - (-ENODEV) if *port* invalid.
+ *   - (-EINVAL) if bad parameter.
+ */
+int rte_pmd_i40e_set_src_prune(uint16_t port,
+				 uint8_t on);
+
+/**
  * Enable/Disable VF unicast promiscuous mode.
  *
  * @param port

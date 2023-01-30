@@ -764,6 +764,9 @@ static void cmd_help_long_parsed(void *parsed_result,
 
 			"port cleanup (port_id) txq (queue_id) (free_cnt)\n"
 			"    Cleanup txq mbufs for a specific Tx queue\n\n"
+
+			"port config (port_id|all) src_prune (on|off)\n"
+			"    Set source prune on port_id, or all.\n\n"
 		);
 	}
 
@@ -1603,6 +1606,84 @@ static cmdline_parse_inst_t cmd_config_loopback_specific = {
 		(void *)&cmd_config_loopback_specific_id,
 		(void *)&cmd_config_loopback_specific_item,
 		(void *)&cmd_config_loopback_specific_mode,
+		NULL,
+	},
+};
+
+/* *** configure source prune for port *** */
+struct cmd_config_src_prune_result {
+	cmdline_fixed_string_t port;
+	cmdline_fixed_string_t keyword;
+	cmdline_fixed_string_t port_all; /* valid if "allports" argument == 1 */
+	uint16_t port_num;               /* valid if "allports" argument == 0 */
+	cmdline_fixed_string_t item;
+	cmdline_fixed_string_t enable;
+};
+
+static void cmd_config_src_prune_parsed(void *parsed_result,
+					__rte_unused struct cmdline *cl,
+					void *allports)
+{
+	struct cmd_config_src_prune_result *res = parsed_result;
+	int enable;
+	portid_t i;
+
+	if (!strcmp(res->enable, "on"))
+		enable = 1;
+	else
+		enable = 0;
+
+	/* all ports */
+	if (allports) {
+		RTE_ETH_FOREACH_DEV(i)
+			rte_pmd_i40e_set_src_prune(i, enable);
+	} else {
+		rte_pmd_i40e_set_src_prune(res->port_num, enable);
+	}
+}
+
+static cmdline_parse_token_string_t cmd_config_src_prune_port =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_src_prune_result, port, "port");
+static cmdline_parse_token_string_t cmd_config_src_prune_keyword =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_src_prune_result, keyword,
+				 "config");
+static cmdline_parse_token_string_t cmd_config_src_prune_portall =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_src_prune_result, port_all,
+				 "all");
+static cmdline_parse_token_num_t cmd_config_src_prune_portnum =
+	TOKEN_NUM_INITIALIZER(struct cmd_config_src_prune_result, port_num,
+			      RTE_UINT16);
+static cmdline_parse_token_string_t cmd_config_src_prune_item =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_src_prune_result,
+			item, "src_prune");
+static cmdline_parse_token_string_t cmd_config_src_prune_enable =
+	TOKEN_STRING_INITIALIZER(struct cmd_config_src_prune_result, enable,
+				 "on#off");
+
+static cmdline_parse_inst_t cmd_config_src_prune_all = {
+	.f = cmd_config_src_prune_parsed,
+	.data = (void *)1,
+	.help_str = "port config all src_prune (on|off): Set source prune on all ports.",
+	.tokens = {
+		(void *)&cmd_config_src_prune_port,
+		(void *)&cmd_config_src_prune_keyword,
+		(void *)&cmd_config_src_prune_portall,
+		(void *)&cmd_config_src_prune_item,
+		(void *)&cmd_config_src_prune_enable,
+		NULL,
+	},
+};
+
+static cmdline_parse_inst_t cmd_config_src_prune_specific = {
+	.f = cmd_config_src_prune_parsed,
+	.data = (void *)0,
+	.help_str = "port config all src_prune (on|off): Set source prune on specific port.",
+	.tokens = {
+		(void *)&cmd_config_src_prune_port,
+		(void *)&cmd_config_src_prune_keyword,
+		(void *)&cmd_config_src_prune_portnum,
+		(void *)&cmd_config_src_prune_item,
+		(void *)&cmd_config_src_prune_enable,
 		NULL,
 	},
 };
@@ -12719,6 +12800,8 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_config_speed_specific,
 	(cmdline_parse_inst_t *)&cmd_config_loopback_all,
 	(cmdline_parse_inst_t *)&cmd_config_loopback_specific,
+	(cmdline_parse_inst_t *)&cmd_config_src_prune_all,
+	(cmdline_parse_inst_t *)&cmd_config_src_prune_specific,
 	(cmdline_parse_inst_t *)&cmd_config_rx_tx,
 	(cmdline_parse_inst_t *)&cmd_config_mtu,
 	(cmdline_parse_inst_t *)&cmd_config_max_pkt_len,
@@ -12838,6 +12921,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_operate_bpf_unld_parse,
 #endif
 	(cmdline_parse_inst_t *)&cmd_config_tx_metadata_specific,
+
 	(cmdline_parse_inst_t *)&cmd_show_tx_metadata,
 	(cmdline_parse_inst_t *)&cmd_show_rx_tx_desc_status,
 	(cmdline_parse_inst_t *)&cmd_show_rx_queue_desc_used_count,
