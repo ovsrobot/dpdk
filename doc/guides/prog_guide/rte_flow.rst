@@ -1544,6 +1544,14 @@ Matches Color Marker set by a Meter.
 
 - ``color``: Metering color marker.
 
+Item: ``PHY_AFFINITY``
+^^^^^^^^^^^^^^^^^^^^^^
+
+Matches on the physical affinity of the received packet, the physical port
+in the group of physical ports connected to a single DPDK port.
+
+- ``affinity``: Physical affinity.
+
 Actions
 ~~~~~~~
 

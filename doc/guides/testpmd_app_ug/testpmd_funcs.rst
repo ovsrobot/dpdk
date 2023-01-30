@@ -3712,6 +3712,10 @@ This section lists supported pattern items and their attributes, if any.
 
   - ``color {value}``: meter color value (green/yellow/red).
 
+- ``phy_affinity``: match physical affinity.
+
+  - ``affinity {value}``: physical affinity value.
+
 - ``send_to_kernel``: send packets to kernel.
 
 

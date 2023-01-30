@@ -624,6 +624,13 @@ enum rte_flow_item_type {
 	 * See struct rte_flow_item_meter_color.
 	 */
 	RTE_FLOW_ITEM_TYPE_METER_COLOR,
+
+	/**
+	 * Matches on the physical affinity of the received packet.
+	 *
+	 * @see struct rte_flow_item_phy_affinity.
+	 */
+	RTE_FLOW_ITEM_TYPE_PHY_AFFINITY,
 };
 
 /**
@@ -2100,6 +2107,27 @@ struct rte_flow_item_meter_color {
 #ifndef __cplusplus
 static const struct rte_flow_item_meter_color rte_flow_item_meter_color_mask = {
 	.color = RTE_COLORS,
+};
+#endif
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
+ * RTE_FLOW_ITEM_TYPE_PHY_AFFINITY
+ *
+ * For the multiple hardware ports connect to a single DPDK port (mhpsdp),
+ * use this item to match the physical affinity of the packets.
+ */
+struct rte_flow_item_phy_affinity {
+	uint8_t affinity; /**< physical affinity value. */
+};
+
+/** Default mask for RTE_FLOW_ITEM_TYPE_PHY_AFFINITY. */
+#ifndef __cplusplus
+static const struct rte_flow_item_phy_affinity
+rte_flow_item_phy_affinity_mask = {
+	.affinity = 0xff,
 };
 #endif
 
