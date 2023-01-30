@@ -194,7 +194,7 @@ cmdline_poll(struct cmdline *cl)
 	else if (status > 0) {
 		c = -1;
 		read_status = cmdline_read_char(cl, &c);
-		if (read_status < 0)
+		if (read_status <= 0)
 			return read_status;
 
 		status = cmdline_in(cl, &c, 1);
