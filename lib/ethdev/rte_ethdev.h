@@ -1139,6 +1139,13 @@ struct rte_eth_txconf {
 
 	uint8_t tx_deferred_start; /**< Do not start queue with rte_eth_dev_start(). */
 	/**
+	 * Physical affinity to be set.
+	 * Value 0 is no affinity and traffic could be routed between different
+	 * physical ports, if 0 is disabled then try to match on phy_affinity 0 will
+	 * result in an error.
+	 */
+	uint8_t tx_phy_affinity;
+	/**
 	 * Per-queue Tx offloads to be set  using RTE_ETH_TX_OFFLOAD_* flags.
 	 * Only offloads set on tx_queue_offload_capa or tx_offload_capa
 	 * fields on rte_eth_dev_info structure are allowed to be set.

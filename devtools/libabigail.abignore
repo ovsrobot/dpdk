@@ -20,6 +20,11 @@
 [suppress_file]
         soname_regexp = ^librte_.*mlx.*glue\.
 
+; Ignore fields inserted in middle padding of rte_eth_txconf
+[suppress_type]
+        name = rte_eth_txconf
+        has_data_member_inserted_between = {offset_after(tx_deferred_start), offset_of(offloads)}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Experimental APIs exceptions ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
