@@ -62,8 +62,10 @@ rte_event_dev_get_dev_id(const char *name)
 				rte_event_devices[i].dev->driver->name, name,
 					 RTE_EVENTDEV_NAME_MAX_LEN) == 0) : 0);
 		if (cmp && (rte_event_devices[i].attached ==
-					RTE_EVENTDEV_ATTACHED))
+					RTE_EVENTDEV_ATTACHED)) {
+			rte_eventdev_trace_get_dev_id(name, i);
 			return i;
+		}
 	}
 	return -ENODEV;
 }
@@ -75,6 +77,9 @@ rte_event_dev_socket_id(uint8_t dev_id)
 
 	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(dev_id, -EINVAL);
 	dev = &rte_eventdevs[dev_id];
+
+	rte_eventdev_trace_socket_id(dev->data->name, dev->data->dev_id,
+		dev->data->socket_id);
 
 	return dev->data->socket_id;
 }
@@ -99,6 +104,10 @@ rte_event_dev_info_get(uint8_t dev_id, struct rte_event_dev_info *dev_info)
 	dev_info->dequeue_timeout_ns = dev->data->dev_conf.dequeue_timeout_ns;
 
 	dev_info->dev = dev->dev;
+
+	rte_eventdev_trace_info_get(dev->data->name, dev->data->dev_id,
+		dev->data->socket_id, dev->dev->name, dev_info->driver_name);
+
 	return 0;
 }
 
@@ -120,6 +129,9 @@ rte_event_eth_rx_adapter_caps_get(uint8_t dev_id, uint16_t eth_port_id,
 		*caps = RTE_EVENT_ETH_RX_ADAPTER_SW_CAP;
 	else
 		*caps = 0;
+
+	rte_eventdev_trace_eth_rx_adapter_caps_get(dev->data->name,
+		dev->data->dev_id, dev->data->socket_id, eth_port_id);
 
 	return dev->dev_ops->eth_rx_adapter_caps_get ?
 				(*dev->dev_ops->eth_rx_adapter_caps_get)(dev,
@@ -145,6 +157,9 @@ rte_event_timer_adapter_caps_get(uint8_t dev_id, uint32_t *caps)
 		*caps = RTE_EVENT_TIMER_ADAPTER_SW_CAP;
 	else
 		*caps = 0;
+
+	rte_eventdev_trace_timer_adapter_caps_get(dev->data->name,
+		dev->data->dev_id, dev->data->socket_id);
 
 	return dev->dev_ops->timer_adapter_caps_get ?
 				(*dev->dev_ops->timer_adapter_caps_get)(dev,
@@ -176,6 +191,8 @@ rte_event_crypto_adapter_caps_get(uint8_t dev_id, uint8_t cdev_id,
 	else
 		*caps = 0;
 
+	rte_eventdev_trace_crypto_adapter_caps_get(dev, cdev);
+
 	return dev->dev_ops->crypto_adapter_caps_get ?
 		(*dev->dev_ops->crypto_adapter_caps_get)
 		(dev, cdev, caps) : 0;
@@ -201,6 +218,8 @@ rte_event_eth_tx_adapter_caps_get(uint8_t dev_id, uint16_t eth_port_id,
 		*caps = RTE_EVENT_ETH_TX_ADAPTER_CAP_EVENT_VECTOR;
 	else
 		*caps = 0;
+
+	rte_eventdev_trace_eth_tx_adapter_caps_get(dev, eth_dev, eth_port_id);
 
 	return dev->dev_ops->eth_tx_adapter_caps_get ?
 			(*dev->dev_ops->eth_tx_adapter_caps_get)(dev,
@@ -524,6 +543,9 @@ rte_event_queue_default_conf_get(uint8_t dev_id, uint8_t queue_id,
 		return -ENOTSUP;
 	memset(queue_conf, 0, sizeof(struct rte_event_queue_conf));
 	(*dev->dev_ops->queue_def_conf)(dev, queue_id, queue_conf);
+
+	rte_eventdev_trace_queue_default_conf_get(dev, queue_id, queue_conf);
+
 	return 0;
 }
 
@@ -652,6 +674,9 @@ rte_event_port_default_conf_get(uint8_t dev_id, uint8_t port_id,
 		return -ENOTSUP;
 	memset(port_conf, 0, sizeof(struct rte_event_port_conf));
 	(*dev->dev_ops->port_def_conf)(dev, port_id, port_conf);
+
+	rte_eventdev_trace_port_default_conf_get(dev, port_id, port_conf);
+
 	return 0;
 }
 
@@ -759,6 +784,8 @@ rte_event_port_quiesce(uint8_t dev_id, uint8_t port_id,
 		return;
 	}
 
+	rte_eventdev_trace_port_quiesce(dev, port_id);
+
 	if (dev->dev_ops->port_quiesce)
 		(*dev->dev_ops->port_quiesce)(dev, dev->data->ports[port_id],
 					      release_cb, args);
@@ -788,6 +815,8 @@ rte_event_dev_attr_get(uint8_t dev_id, uint32_t attr_id,
 	default:
 		return -EINVAL;
 	}
+
+	rte_eventdev_trace_attr_get(dev, attr_id, *attr_value);
 
 	return 0;
 }
@@ -829,6 +858,9 @@ rte_event_port_attr_get(uint8_t dev_id, uint8_t port_id, uint32_t attr_id,
 	default:
 		return -EINVAL;
 	};
+
+	rte_eventdev_trace_port_attr_get(dev, port_id, attr_id, *attr_value);
+
 	return 0;
 }
 
@@ -850,6 +882,8 @@ rte_event_queue_attr_get(uint8_t dev_id, uint8_t queue_id, uint32_t attr_id,
 	}
 
 	conf = &dev->data->queues_cfg[queue_id];
+
+	rte_eventdev_trace_queue_attr_get(dev, conf, queue_id, attr_id);
 
 	switch (attr_id) {
 	case RTE_EVENT_QUEUE_ATTR_PRIORITY:
@@ -893,6 +927,8 @@ rte_event_queue_attr_set(uint8_t dev_id, uint8_t queue_id, uint32_t attr_id,
 			 uint64_t attr_value)
 {
 	struct rte_eventdev *dev;
+
+	rte_eventdev_trace_queue_attr_set(dev_id, queue_id, attr_id, attr_value);
 
 	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(dev_id, -EINVAL);
 	dev = &rte_eventdevs[dev_id];
@@ -1048,6 +1084,8 @@ rte_event_port_unlinks_in_progress(uint8_t dev_id, uint8_t port_id)
 {
 	struct rte_eventdev *dev;
 
+	rte_eventdev_trace_port_unlinks_in_progress(dev_id, port_id);
+
 	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(dev_id, -EINVAL);
 	dev = &rte_eventdevs[dev_id];
 	if (!is_valid_port(dev, port_id)) {
@@ -1091,6 +1129,9 @@ rte_event_port_links_get(uint8_t dev_id, uint8_t port_id,
 			++count;
 		}
 	}
+
+	rte_eventdev_trace_port_links_get(dev_id, port_id, count);
+
 	return count;
 }
 
@@ -1099,6 +1140,8 @@ rte_event_dequeue_timeout_ticks(uint8_t dev_id, uint64_t ns,
 				 uint64_t *timeout_ticks)
 {
 	struct rte_eventdev *dev;
+
+	rte_eventdev_trace_dequeue_timeout_ticks(dev_id, ns, timeout_ticks);
 
 	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(dev_id, -EINVAL);
 	dev = &rte_eventdevs[dev_id];
@@ -1124,6 +1167,8 @@ rte_event_dev_service_id_get(uint8_t dev_id, uint32_t *service_id)
 
 	if (dev->data->service_inited)
 		*service_id = dev->data->service_id;
+
+	rte_eventdev_trace_service_id_get(dev_id, *service_id);
 
 	return dev->data->service_inited ? 0 : -ESRCH;
 }
@@ -1285,6 +1330,9 @@ rte_event_vector_pool_create(const char *name, unsigned int n,
 	if (ret < 0)
 		goto err;
 
+	rte_eventdev_trace_vector_pool_create(mp, mp->name, mp->socket_id,
+		mp->size, mp->cache_size, mp->elt_size);
+
 	return mp;
 err:
 	rte_mempool_free(mp);
@@ -1331,6 +1379,8 @@ rte_event_dev_stop_flush_callback_register(uint8_t dev_id,
 	struct rte_eventdev *dev;
 
 	RTE_EDEV_LOG_DEBUG("Stop flush register dev_id=%" PRIu8, dev_id);
+
+	rte_eventdev_trace_stop_flush_callback_register(dev_id, callback, userdata);
 
 	RTE_EVENTDEV_VALID_DEVID_OR_ERR_RET(dev_id, -EINVAL);
 	dev = &rte_eventdevs[dev_id];
