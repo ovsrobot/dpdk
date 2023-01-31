@@ -2453,9 +2453,10 @@ init_power_library(void)
 		/* we're not supporting the VM channel mode */
 		env = rte_power_get_env();
 		if (env != PM_ENV_ACPI_CPUFREQ &&
-				env != PM_ENV_PSTATE_CPUFREQ) {
+				env != PM_ENV_PSTATE_CPUFREQ &&
+				env != PM_ENV_CPPC_CPUFREQ) {
 			RTE_LOG(ERR, POWER,
-				"Only ACPI and PSTATE mode are supported\n");
+				"Only ACPI, PSTATE and CPPC mode are supported\n");
 			return -1;
 		}
 	}
@@ -2639,11 +2640,13 @@ autodetect_mode(void)
 	/*
 	 * Empty poll and telemetry modes have to be specifically requested to
 	 * be enabled, but we can auto-detect between interrupt mode with or
-	 * without frequency scaling. Both ACPI and pstate can be used.
+	 * without frequency scaling. Any of ACPI, pstate and CPPC can be used.
 	 */
 	if (rte_power_check_env_supported(PM_ENV_ACPI_CPUFREQ))
 		return APP_MODE_LEGACY;
 	if (rte_power_check_env_supported(PM_ENV_PSTATE_CPUFREQ))
+		return APP_MODE_LEGACY;
+	if (rte_power_check_env_supported(PM_ENV_CPPC_CPUFREQ))
 		return APP_MODE_LEGACY;
 
 	RTE_LOG(NOTICE, L3FWD_POWER, "Frequency scaling not supported, selecting interrupt-only mode\n");
