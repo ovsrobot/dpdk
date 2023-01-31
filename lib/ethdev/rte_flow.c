@@ -76,6 +76,23 @@ rte_flow_item_flex_conv(void *buf, const void *data)
 	return src->length;
 }
 
+static size_t
+rte_flow_item_ipv6_routing_ext_conv(void *buf, const void *data)
+{
+	struct rte_flow_item_ipv6_routing_ext *dst = buf;
+	const struct rte_flow_item_ipv6_routing_ext *src = data;
+	size_t len;
+
+	if (src->hdr.hdr_len)
+		len = src->hdr.hdr_len << 3;
+	else
+		len = src->hdr.segments_left << 4;
+	if (dst == NULL)
+		return 0;
+	memcpy(dst->segments, src->segments, len);
+	return len;
+}
+
 /** Generate flow_item[] entry. */
 #define MK_FLOW_ITEM(t, s) \
 	[RTE_FLOW_ITEM_TYPE_ ## t] = { \
@@ -157,6 +174,8 @@ static const struct rte_flow_desc_data rte_flow_desc_item[] = {
 	MK_FLOW_ITEM(L2TPV2, sizeof(struct rte_flow_item_l2tpv2)),
 	MK_FLOW_ITEM(PPP, sizeof(struct rte_flow_item_ppp)),
 	MK_FLOW_ITEM(METER_COLOR, sizeof(struct rte_flow_item_meter_color)),
+	MK_FLOW_ITEM_FN(IPV6_ROUTING_EXT, sizeof(struct rte_flow_item_ipv6_routing_ext),
+			rte_flow_item_ipv6_routing_ext_conv),
 };
 
 /** Generate flow_action[] entry. */
