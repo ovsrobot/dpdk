@@ -23,6 +23,11 @@ Deprecation Notices
   rte_thread_set_name being marked as stable, and planned to be removed
   by the 23.11 release.
 
+* eal: The function ``rte_ctrl_thread_create`` is planned to be deprecated
+  starting with the 23.07 release, subject to the replacement API
+  rte_control_thread_create being marked as stable, and planned to be removed
+  by the 23.11 release.
+
 * rte_atomicNN_xxx: These APIs do not take memory order parameter. This does
   not allow for writing optimized code for all the CPU architectures supported
   in DPDK. DPDK has adopted the atomic operations from
