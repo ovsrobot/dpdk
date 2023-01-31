@@ -454,8 +454,91 @@ ring_handle_list(const char *cmd __rte_unused,
 	return 0;
 }
 
+static const char *
+ring_prod_sync_type_to_name(struct rte_ring *r)
+{
+	switch (r->prod.sync_type) {
+	case RTE_RING_SYNC_MT:
+		return "MP";
+	case RTE_RING_SYNC_ST:
+		return "SP";
+	case RTE_RING_SYNC_MT_RTS:
+		return "MP_RTS";
+	case RTE_RING_SYNC_MT_HTS:
+		return "MP_HTS";
+	default:
+		return "Unknown";
+	}
+}
+
+static const char *
+ring_cons_sync_type_to_name(struct rte_ring *r)
+{
+	switch (r->cons.sync_type) {
+	case RTE_RING_SYNC_MT:
+		return "MC";
+	case RTE_RING_SYNC_ST:
+		return "SC";
+	case RTE_RING_SYNC_MT_RTS:
+		return "MC_RTS";
+	case RTE_RING_SYNC_MT_HTS:
+		return "MC_HTS";
+	default:
+		return "Unknown";
+	}
+}
+
+static int
+ring_handle_info(const char *cmd __rte_unused, const char *params,
+		struct rte_tel_data *d)
+{
+	const struct rte_memzone *mz;
+	struct rte_ring *r;
+
+	if (params == NULL || strlen(params) == 0 ||
+		strlen(params) >= RTE_RING_NAMESIZE)
+		return -EINVAL;
+
+	r = rte_ring_lookup(params);
+	if (r == NULL)
+		return -EINVAL;
+
+	rte_mcfg_tailq_read_lock();
+
+	rte_tel_data_start_dict(d);
+	rte_tel_data_add_dict_string(d, "name", r->name);
+	rte_tel_data_add_dict_int(d, "socket", r->memzone->socket_id);
+	rte_tel_data_add_dict_int(d, "flags", r->flags);
+	rte_tel_data_add_dict_string(d, "producer_type",
+		ring_prod_sync_type_to_name(r));
+	rte_tel_data_add_dict_string(d, "consumer_type",
+		ring_cons_sync_type_to_name(r));
+	rte_tel_data_add_dict_u64(d, "size", r->size);
+	rte_tel_data_add_dict_u64(d, "mask", r->mask);
+	rte_tel_data_add_dict_u64(d, "capacity", r->capacity);
+	rte_tel_data_add_dict_u64(d, "used_count", rte_ring_count(r));
+	rte_tel_data_add_dict_u64(d, "consumer_tail", r->cons.tail);
+	rte_tel_data_add_dict_u64(d, "consumer_head", r->cons.head);
+	rte_tel_data_add_dict_u64(d, "producer_tail", r->prod.tail);
+	rte_tel_data_add_dict_u64(d, "producer_head", r->prod.head);
+
+	mz = r->memzone;
+	if (mz == NULL)
+		return 0;
+	rte_tel_data_add_dict_string(d, "mz_name", mz->name);
+	rte_tel_data_add_dict_int(d, "mz_len", mz->len);
+	rte_tel_data_add_dict_int(d, "mz_hugepage_sz", mz->hugepage_sz);
+	rte_tel_data_add_dict_int(d, "mz_socket_id", mz->socket_id);
+	rte_tel_data_add_dict_int(d, "mz_flags", mz->flags);
+
+	rte_mcfg_tailq_read_unlock();
+	return 0;
+}
+
 RTE_INIT(ring_init_telemetry)
 {
 	rte_telemetry_register_cmd("/ring/list", ring_handle_list,
 		"Returns list of available ring. Takes no parameters");
+	rte_telemetry_register_cmd("/ring/info", ring_handle_info,
+		"Returns ring info. Parameters: ring_name.");
 }
