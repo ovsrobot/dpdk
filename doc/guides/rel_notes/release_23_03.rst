@@ -69,6 +69,14 @@ New Features
     ``rte_event_dev_config::nb_single_link_event_port_queues`` parameter
     required for eth_rx, eth_tx, crypto and timer eventdev adapters.
 
+* **Added functions to atomically query and update indirect flow action.**
+
+  Added synchronous and asynchronous functions to atomically query and update
+  indirect flow action:
+
+  - ``rte_flow_action_handle_query_update``
+  - ``rte_flow_async_action_handle_query_update``
+
 
 Removed Items
 -------------
