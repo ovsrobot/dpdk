@@ -69,6 +69,11 @@ New Features
     ``rte_event_dev_config::nb_single_link_event_port_queues`` parameter
     required for eth_rx, eth_tx, crypto and timer eventdev adapters.
 
+* **Added rte_flow support for matching IPv6 routing extension header fields.**
+
+  Added ``ipv6_routing_ext`` items in rte_flow to match IPv6 routing extension
+  header.
+
 
 Removed Items
 -------------
@@ -97,6 +102,10 @@ API Changes
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+
+* net: added a new structure:
+
+    - IPv6 routing extension header ``rte_ipv6_routing_ext``.
 
 
 ABI Changes
