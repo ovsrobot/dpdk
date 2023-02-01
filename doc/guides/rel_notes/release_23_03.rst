@@ -77,6 +77,15 @@ New Features
   - ``rte_flow_action_handle_query_update``
   - ``rte_flow_async_action_handle_query_update``
 
+* **Added quota flow action and quota flow item.**
+
+  - ``RTE_FLOW_ACTION_TYPE_QUOTA``
+  - ``RTE_FLOW_ITEM_TYPE_QUOTA``
+
+* **Updated testpmd to support quota flow action and item.**
+
+  Added support for flow quota action and item.
+
 
 Removed Items
 -------------

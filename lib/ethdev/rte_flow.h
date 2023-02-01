@@ -624,7 +624,45 @@ enum rte_flow_item_type {
 	 * See struct rte_flow_item_meter_color.
 	 */
 	RTE_FLOW_ITEM_TYPE_METER_COLOR,
+
+	/**
+	 * Match Quota state
+	 *
+	 * @see struct rte_flow_item_quota
+	 */
+	 RTE_FLOW_ITEM_TYPE_QUOTA,
 };
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * QUOTA state.
+ *
+ * @see struct rte_flow_item_quota
+ */
+enum rte_flow_quota_state {
+	RTE_FLOW_QUOTA_STATE_PASS, /**< PASS quota state */
+	RTE_FLOW_QUOTA_STATE_BLOCK /**< BLOCK quota state */
+};
+
+/**
+ * RTE_FLOW_ITEM_TYPE_QUOTA
+ *
+ * Matches QUOTA state
+ */
+struct rte_flow_item_quota {
+	enum rte_flow_quota_state state;
+};
+
+/**
+ * Default mask for RTE_FLOW_ITEM_TYPE_QUOTA
+ */
+#ifndef __cplusplus
+static const struct rte_flow_item_quota rte_flow_item_quota_mask = {
+	.state = (enum rte_flow_quota_state)0xff
+};
+#endif
 
 /**
  *
@@ -2736,6 +2774,81 @@ enum rte_flow_action_type {
 	 * No associated configuration structure.
 	 */
 	RTE_FLOW_ACTION_TYPE_SEND_TO_KERNEL,
+
+	/**
+	 * Apply the quota verdict (PASS or BLOCK) to a flow.
+	 *
+	 * @see struct rte_flow_action_quota
+	 * @see struct rte_flow_query_quota
+	 * @see struct rte_flow_update_quota
+	 */
+	 RTE_FLOW_ACTION_TYPE_QUOTA,
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * QUOTA operational mode.
+ *
+ * @see struct rte_flow_action_quota
+ */
+enum rte_flow_quota_mode {
+	RTE_FLOW_QUOTA_MODE_PACKET = 1, /**< Count packets. */
+	RTE_FLOW_QUOTA_MODE_L2 = 2, /**< Count packet bytes starting from L2. */
+	RTE_FLOW_QUOTA_MODE_L3 = 3, /**< Count packet bytes starting from L3. */
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Create QUOTA action.
+ *
+ * @see RTE_FLOW_ACTION_TYPE_QUOTA
+ */
+struct rte_flow_action_quota {
+	enum rte_flow_quota_mode mode; /**< Quota operational mode. */
+	int64_t quota;                 /**< Quota value. */
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Query indirect QUOTA action.
+ *
+ * @see RTE_FLOW_ACTION_TYPE_QUOTA
+ *
+ */
+struct rte_flow_query_quota {
+	int64_t quota; /**< Quota value. */
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Indirect QUOTA update operations.
+ *
+ * @see struct rte_flow_update_quota
+ */
+enum rte_flow_update_quota_op {
+	RTE_FLOW_UPDATE_QUOTA_SET, /**< Set new quota value. */
+	RTE_FLOW_UPDATE_QUOTA_ADD, /**< Increase quota value. */
+};
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * @see RTE_FLOW_ACTION_TYPE_QUOTA
+ *
+ * Update indirect QUOTA action.
+ */
+struct rte_flow_update_quota {
+	enum rte_flow_update_quota_op op; /**< Update operation. */
+	int64_t quota;                    /**< Quota value. */
 };
 
 /**
@@ -4855,6 +4968,11 @@ struct rte_flow_port_info {
 	 */
 	uint32_t max_nb_conn_tracks;
 	/**
+	 * Maximum number of quota actions.
+	 * @see RTE_FLOW_ACTION_TYPE_QUOTA
+	 */
+	uint32_t max_nb_quotas;
+	/**
 	 * Port supported flags (RTE_FLOW_PORT_FLAG_*).
 	 */
 	uint32_t supported_flags;
@@ -4932,6 +5050,11 @@ struct rte_flow_port_attr {
 	 * @see RTE_FLOW_ACTION_TYPE_CONNTRACK
 	 */
 	uint32_t nb_conn_tracks;
+	/**
+	 * Maximum number of quota actions.
+	 * @see RTE_FLOW_ACTION_TYPE_QUOTA
+	 */
+	uint32_t nb_quotas;
 	/**
 	 * Port flags (RTE_FLOW_PORT_FLAG_*).
 	 */
