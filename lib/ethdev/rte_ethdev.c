@@ -4498,7 +4498,10 @@ rte_eth_dev_mac_addr_remove(uint16_t port_id, struct rte_ether_addr *addr)
 int
 rte_eth_dev_default_mac_addr_set(uint16_t port_id, struct rte_ether_addr *addr)
 {
+	uint64_t mac_pool_sel_bk = 0;
 	struct rte_eth_dev *dev;
+	uint32_t pool;
+	int index;
 	int ret;
 
 	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
@@ -4517,16 +4520,44 @@ rte_eth_dev_default_mac_addr_set(uint16_t port_id, struct rte_ether_addr *addr)
 	if (*dev->dev_ops->mac_addr_set == NULL)
 		return -ENOTSUP;
 
+	/* Keep address unique in dev->data->mac_addrs[]. */
+	index = eth_dev_get_mac_addr_index(port_id, addr);
+	if (index > 0) {
+		/* Remove address in dev data structure */
+		mac_pool_sel_bk = dev->data->mac_pool_sel[index];
+		ret = rte_eth_dev_mac_addr_remove(port_id, addr);
+		if (ret < 0) {
+			RTE_ETHDEV_LOG(ERR, "Cannot remove the port %u address from the rest of list.\n",
+				       port_id);
+			return ret;
+		}
+	}
 	ret = (*dev->dev_ops->mac_addr_set)(dev, addr);
 	if (ret < 0)
-		return ret;
+		goto out;
 
 	/* Update default address in NIC data structure */
 	rte_ether_addr_copy(addr, &dev->data->mac_addrs[0]);
 
 	return 0;
-}
 
+out:
+	if (index > 0) {
+		pool = 0;
+		do {
+			if (mac_pool_sel_bk & UINT64_C(1)) {
+				if (rte_eth_dev_mac_addr_add(port_id, addr,
+							     pool) != 0)
+					RTE_ETHDEV_LOG(ERR, "failed to restore MAC pool id(%u) in port %u.\n",
+						       pool, port_id);
+			}
+			mac_pool_sel_bk >>= 1;
+			pool++;
+		} while (mac_pool_sel_bk != 0);
+	}
+
+	return ret;
+}
 
 /*
  * Returns index into MAC address array of addr. Use 00:00:00:00:00:00 to find

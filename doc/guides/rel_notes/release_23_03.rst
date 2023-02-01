@@ -94,9 +94,15 @@ API Changes
      Use fixed width quotes for ``function_names`` or ``struct_names``.
      Use the past tense.
 
+
    This section is a comment. Do not overwrite or remove it.
    Also, make sure to start the actual text at the margin.
    =======================================================
+
+   * ethdev: ensured all entries in MAC address list is unique.
+     The function ``rte_eth_dev_default_mac_addr_set`` replaces the address
+     at index 0 of the address list. If the address was already in the
+     address list, it is removed from the rest of the list.
 
 
 ABI Changes
