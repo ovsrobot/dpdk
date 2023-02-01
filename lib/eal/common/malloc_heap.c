@@ -717,6 +717,10 @@ malloc_get_numa_socket(void)
 			return socket_id;
 	}
 
+	socket_id = rte_lcore_to_socket_id(rte_get_main_lcore());
+	if (socket_id != (unsigned int)SOCKET_ID_ANY)
+		return socket_id;
+
 	return rte_socket_id_by_idx(0);
 }
 
