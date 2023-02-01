@@ -2955,6 +2955,7 @@ vhost_user_check_and_alloc_queue_pair(struct virtio_net *dev,
 
 static void
 vhost_user_lock_all_queue_pairs(struct virtio_net *dev)
+	__rte_no_thread_safety_analysis
 {
 	unsigned int i = 0;
 	unsigned int vq_num = 0;
@@ -2972,6 +2973,7 @@ vhost_user_lock_all_queue_pairs(struct virtio_net *dev)
 
 static void
 vhost_user_unlock_all_queue_pairs(struct virtio_net *dev)
+	__rte_no_thread_safety_analysis
 {
 	unsigned int i = 0;
 	unsigned int vq_num = 0;
