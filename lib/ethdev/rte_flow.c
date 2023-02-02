@@ -1883,3 +1883,85 @@ rte_flow_async_action_handle_query(uint16_t port_id,
 					  action_handle, data, user_data, error);
 	return flow_err(port_id, ret, error);
 }
+
+int
+rte_flow_action_handle_query_update(uint16_t port_id,
+				    struct rte_flow_action_handle *handle,
+				    const void *update, void *query,
+				    enum rte_flow_query_update_mode mode,
+				    struct rte_flow_error *error)
+{
+	int ret;
+	struct rte_eth_dev *dev;
+	const struct rte_flow_ops *ops;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	if (!handle)
+		return -EINVAL;
+	dev = &rte_eth_devices[port_id];
+	ops = rte_flow_ops_get(port_id, error);
+	if (!ops)
+		return -ENOTSUP;
+	if (update && query) {
+		if (!ops->action_handle_query_update)
+			return -ENOTSUP;
+		if (mode != RTE_FLOW_QU_QUERY_FIRST &&
+		    mode != RTE_FLOW_QU_UPDATE_FIRST)
+			return -EINVAL;
+		ret = ops->action_handle_query_update(dev, handle, update,
+						      query, mode, error);
+	} else if (!update && query) {
+		ret = rte_flow_action_handle_query(port_id, handle, query,
+						   error);
+	} else if (update && !query) {
+		ret = rte_flow_action_handle_update(port_id, handle, update,
+						    error);
+	} else {
+		return -EINVAL;
+	}
+	return flow_err(port_id, ret, error);
+}
+
+int
+rte_flow_async_action_handle_query_update(uint16_t port_id, uint32_t queue_id,
+					  const struct rte_flow_op_attr *attr,
+					  struct rte_flow_action_handle *handle,
+					  const void *update, void *query,
+					  enum rte_flow_query_update_mode mode,
+					  void *user_data,
+					  struct rte_flow_error *error)
+{
+	int ret;
+	struct rte_eth_dev *dev;
+	const struct rte_flow_ops *ops;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port_id, -ENODEV);
+	if (!handle)
+		return -EINVAL;
+	dev = &rte_eth_devices[port_id];
+	ops = rte_flow_ops_get(port_id, error);
+	if (!ops)
+		return -ENOTSUP;
+	if (update && query) {
+		if (!ops->async_action_handle_query_update)
+			return -ENOTSUP;
+		if (mode != RTE_FLOW_QU_QUERY_FIRST &&
+		    mode != RTE_FLOW_QU_UPDATE_FIRST)
+			return -EINVAL;
+		ret = ops->async_action_handle_query_update(dev, queue_id, attr,
+							    handle, update,
+							    query, mode,
+							    user_data, error);
+	} else if (!update && query) {
+		ret = rte_flow_async_action_handle_query(port_id, queue_id,
+							 attr, handle, query,
+							 user_data, error);
+	} else if (update && !query) {
+		ret = rte_flow_async_action_handle_update(port_id, queue_id,
+							  attr, handle, update,
+							  user_data, error);
+	} else {
+		return -EINVAL;
+	}
+	return flow_err(port_id, ret, error);
+}
