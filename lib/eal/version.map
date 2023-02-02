@@ -442,6 +442,7 @@ EXPERIMENTAL {
 
 	# added in 23.03
 	rte_thread_set_name;
+	rte_lcore_register_usage_cb;
 };
 
 INTERNAL {
