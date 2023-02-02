@@ -107,6 +107,12 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* ethdev: ensured all entries in MAC address list are uniques.
+  When setting a default MAC address with the function
+  ``rte_eth_dev_default_mac_addr_set``,
+  the address is now removed from the rest of the address list
+  in order to ensure it is only at index 0 of the list.
+
 
 ABI Changes
 -----------

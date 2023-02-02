@@ -4354,6 +4354,9 @@ int rte_eth_dev_mac_addr_remove(uint16_t port_id,
 
 /**
  * Set the default MAC address.
+ * It replaces the address at index 0 of the MAC address list.
+ * If the address was already in the MAC address list,
+ * it is removed from the rest of the list.
  *
  * @param port_id
  *   The port identifier of the Ethernet device.
