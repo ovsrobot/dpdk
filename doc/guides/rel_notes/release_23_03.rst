@@ -55,9 +55,18 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added PMU library.**
+
+  Added a new PMU (performance measurement unit) library which allows applications
+  to perform self monitoring activities without depending on external utilities like perf.
+  After integration with :doc:`../prog_guide/trace_lib` data gathered from hardware counters
+  can be stored in CTF format for further analysis.
+
 * **Updated AMD axgbe driver.**
 
   * Added multi-process support.
+
+* **Added multi-process support for axgbe PMD.**
 
 * **Updated Corigine nfp driver.**
 
