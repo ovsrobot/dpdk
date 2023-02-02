@@ -111,6 +111,7 @@ test_sources = files(
         'test_reciprocal_division_perf.c',
         'test_red.c',
         'test_pie.c',
+        'test_pmu.c',
         'test_reorder.c',
         'test_rib.c',
         'test_rib6.c',

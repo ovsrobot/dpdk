@@ -1,0 +1,20 @@
+DPDK_23 {
+	local: *;
+};
+
+EXPERIMENTAL {
+	global:
+
+	per_lcore__event_group;
+	rte_pmu;
+	rte_pmu_add_event;
+	rte_pmu_fini;
+	rte_pmu_init;
+	rte_pmu_read;
+};
+
+INTERNAL {
+	global:
+
+	rte_pmu_enable_group;
+};
