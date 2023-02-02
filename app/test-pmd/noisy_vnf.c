@@ -152,6 +152,9 @@ pkt_burst_noisy_vnf(struct fwd_stream *fs)
 	uint64_t delta_ms;
 	bool needs_flush = false;
 	uint64_t now;
+	uint64_t start_tsc = 0;
+
+	get_start_cycles(&start_tsc);
 
 	nb_rx = rte_eth_rx_burst(fs->rx_port, fs->rx_queue,
 			pkts_burst, nb_pkt_per_burst);
@@ -219,6 +222,7 @@ flush:
 		fs->fwd_dropped += drop_pkts(tmp_pkts, nb_deqd, sent);
 		ncf->prev_time = rte_get_timer_cycles();
 	}
+	get_end_cycles(fs, start_tsc, nb_rx + nb_tx);
 }
 
 #define NOISY_STRSIZE 256

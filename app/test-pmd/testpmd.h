@@ -174,7 +174,8 @@ struct fwd_stream {
 #ifdef RTE_LIB_GRO
 	unsigned int gro_times;	/**< GRO operation times */
 #endif
-	uint64_t     core_cycles; /**< used for RX and TX processing */
+	uint64_t busy_cycles; /**< used with --record-core-cycles */
+	uint64_t core_cycles; /**< used with --record-core-cycles */
 	struct pkt_burst_stats rx_burst_stats;
 	struct pkt_burst_stats tx_burst_stats;
 	struct fwd_lcore *lcore; /**< Lcore being scheduled. */
@@ -360,6 +361,7 @@ struct fwd_lcore {
 	streamid_t stream_nb;    /**< number of streams in "fwd_streams" */
 	lcoreid_t  cpuid_idx;    /**< index of logical core in CPU id table */
 	volatile char stopped;   /**< stop forwarding when set */
+	unsigned int lcore_id;   /**< return value of rte_lcore_id() */
 };
 
 /*
@@ -836,10 +838,14 @@ get_start_cycles(uint64_t *start_tsc)
 }
 
 static inline void
-get_end_cycles(struct fwd_stream *fs, uint64_t start_tsc)
+get_end_cycles(struct fwd_stream *fs, uint64_t start_tsc, uint64_t nb_packets)
 {
-	if (record_core_cycles)
-		fs->core_cycles += rte_rdtsc() - start_tsc;
+	if (record_core_cycles) {
+		uint64_t cycles = rte_rdtsc() - start_tsc;
+		fs->core_cycles += cycles;
+		if (nb_packets > 0)
+			fs->busy_cycles += cycles;
+	}
 }
 
 static inline void

@@ -65,7 +65,7 @@ pkt_burst_mac_forward(struct fwd_stream *fs)
 				 nb_pkt_per_burst);
 	inc_rx_burst_stats(fs, nb_rx);
 	if (unlikely(nb_rx == 0))
-		return;
+		goto end;
 
 	fs->rx_packets += nb_rx;
 	txp = &ports[fs->tx_port];
@@ -115,7 +115,8 @@ pkt_burst_mac_forward(struct fwd_stream *fs)
 		} while (++nb_tx < nb_rx);
 	}
 
-	get_end_cycles(fs, start_tsc);
+end:
+	get_end_cycles(fs, start_tsc, nb_rx);
 }
 
 static void

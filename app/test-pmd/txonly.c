@@ -331,7 +331,7 @@ pkt_burst_transmit(struct fwd_stream *fs)
 	struct rte_mbuf *pkt;
 	struct rte_mempool *mbp;
 	struct rte_ether_hdr eth_hdr;
-	uint16_t nb_tx;
+	uint16_t nb_tx = 0;
 	uint16_t nb_pkt;
 	uint16_t vlan_tci, vlan_tci_outer;
 	uint32_t retry;
@@ -392,7 +392,7 @@ pkt_burst_transmit(struct fwd_stream *fs)
 	}
 
 	if (nb_pkt == 0)
-		return;
+		goto end;
 
 	nb_tx = rte_eth_tx_burst(fs->tx_port, fs->tx_queue, pkts_burst, nb_pkt);
 
@@ -426,7 +426,8 @@ pkt_burst_transmit(struct fwd_stream *fs)
 		} while (++nb_tx < nb_pkt);
 	}
 
-	get_end_cycles(fs, start_tsc);
+end:
+	get_end_cycles(fs, start_tsc, nb_tx);
 }
 
 static int
