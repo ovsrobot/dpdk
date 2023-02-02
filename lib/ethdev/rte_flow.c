@@ -157,6 +157,7 @@ static const struct rte_flow_desc_data rte_flow_desc_item[] = {
 	MK_FLOW_ITEM(L2TPV2, sizeof(struct rte_flow_item_l2tpv2)),
 	MK_FLOW_ITEM(PPP, sizeof(struct rte_flow_item_ppp)),
 	MK_FLOW_ITEM(METER_COLOR, sizeof(struct rte_flow_item_meter_color)),
+	MK_FLOW_ITEM(QUOTA, sizeof(struct rte_flow_item_quota)),
 };
 
 /** Generate flow_action[] entry. */
@@ -251,6 +252,7 @@ static const struct rte_flow_desc_data rte_flow_desc_action[] = {
 	MK_FLOW_ACTION(REPRESENTED_PORT, sizeof(struct rte_flow_action_ethdev)),
 	MK_FLOW_ACTION(METER_MARK, sizeof(struct rte_flow_action_meter_mark)),
 	MK_FLOW_ACTION(SEND_TO_KERNEL, 0),
+	MK_FLOW_ACTION(QUOTA, sizeof(struct rte_flow_action_quota)),
 };
 
 int
