@@ -930,7 +930,7 @@ flow_verbs_translate_item_gre(struct mlx5_flow *dev_flow,
 		.size = size,
 	};
 #else
-	static const struct rte_flow_item_gre empty_gre = {0,};
+	static const struct rte_flow_item_gre empty_gre = {{{0}}};
 	const struct rte_flow_item_gre *spec = item->spec;
 	const struct rte_flow_item_gre *mask = item->mask;
 	unsigned int size = sizeof(struct ibv_flow_spec_gre);
@@ -946,10 +946,10 @@ flow_verbs_translate_item_gre(struct mlx5_flow *dev_flow,
 		if (!mask)
 			mask = &rte_flow_item_gre_mask;
 	}
-	tunnel.val.c_ks_res0_ver = spec->c_rsvd0_ver;
-	tunnel.val.protocol = spec->protocol;
-	tunnel.mask.c_ks_res0_ver = mask->c_rsvd0_ver;
-	tunnel.mask.protocol = mask->protocol;
+	tunnel.val.c_ks_res0_ver = spec->hdr.c_rsvd0_ver;
+	tunnel.val.protocol = spec->hdr.proto;
+	tunnel.mask.c_ks_res0_ver = mask->hdr.c_rsvd0_ver;
+	tunnel.mask.protocol = mask->hdr.proto;
 	/* Remove unwanted bits from values. */
 	tunnel.val.c_ks_res0_ver &= tunnel.mask.c_ks_res0_ver;
 	tunnel.val.key &= tunnel.mask.key;

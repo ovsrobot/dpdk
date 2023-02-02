@@ -154,7 +154,7 @@ static const struct rte_flow_item_sctp dpaa2_flow_item_sctp_mask = {
 };
 
 static const struct rte_flow_item_gre dpaa2_flow_item_gre_mask = {
-	.protocol = RTE_BE16(0xffff),
+	.hdr.proto = RTE_BE16(0xffff),
 };
 
 #endif
@@ -2792,7 +2792,7 @@ dpaa2_configure_flow_gre(struct rte_flow *flow,
 		return -1;
 	}
 
-	if (!mask->protocol)
+	if (!mask->hdr.proto)
 		return 0;
 
 	index = dpaa2_flow_extract_search(
@@ -2841,8 +2841,8 @@ dpaa2_configure_flow_gre(struct rte_flow *flow,
 				&flow->qos_rule,
 				NET_PROT_GRE,
 				NH_FLD_GRE_TYPE,
-				&spec->protocol,
-				&mask->protocol,
+				&spec->hdr.proto,
+				&mask->hdr.proto,
 				sizeof(rte_be16_t));
 	if (ret) {
 		DPAA2_PMD_ERR(
@@ -2855,8 +2855,8 @@ dpaa2_configure_flow_gre(struct rte_flow *flow,
 			&flow->fs_rule,
 			NET_PROT_GRE,
 			NH_FLD_GRE_TYPE,
-			&spec->protocol,
-			&mask->protocol,
+			&spec->hdr.proto,
+			&mask->hdr.proto,
 			sizeof(rte_be16_t));
 	if (ret) {
 		DPAA2_PMD_ERR(

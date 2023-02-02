@@ -156,8 +156,8 @@ struct mlx5dr_definer_conv_data {
 	X(SET,		source_qp,		v->queue,		mlx5_rte_flow_item_sq) \
 	X(SET,		tag,			v->data,		rte_flow_item_tag) \
 	X(SET,		metadata,		v->data,		rte_flow_item_meta) \
-	X(SET_BE16,	gre_c_ver,		v->c_rsvd0_ver,		rte_flow_item_gre) \
-	X(SET_BE16,	gre_protocol_type,	v->protocol,		rte_flow_item_gre) \
+	X(SET_BE16,	gre_c_ver,		v->hdr.c_rsvd0_ver,	rte_flow_item_gre) \
+	X(SET_BE16,	gre_protocol_type,	v->hdr.proto,		rte_flow_item_gre) \
 	X(SET,		ipv4_protocol_gre,	IPPROTO_GRE,		rte_flow_item_gre) \
 	X(SET_BE32,	gre_opt_key,		v->key.key,		rte_flow_item_gre_opt) \
 	X(SET_BE32,	gre_opt_seq,		v->sequence.sequence,	rte_flow_item_gre_opt) \
@@ -1210,7 +1210,7 @@ mlx5dr_definer_conv_item_gre(struct mlx5dr_definer_conv_data *cd,
 	if (!m)
 		return 0;
 
-	if (m->c_rsvd0_ver) {
+	if (m->hdr.c_rsvd0_ver) {
 		fc = &cd->fc[MLX5DR_DEFINER_FNAME_GRE_C_VER];
 		fc->item_idx = item_idx;
 		fc->tag_set = &mlx5dr_definer_gre_c_ver_set;
@@ -1219,7 +1219,7 @@ mlx5dr_definer_conv_item_gre(struct mlx5dr_definer_conv_data *cd,
 		fc->bit_off = __mlx5_dw_bit_off(header_gre, c_rsvd0_ver);
 	}
 
-	if (m->protocol) {
+	if (m->hdr.proto) {
 		fc = &cd->fc[MLX5DR_DEFINER_FNAME_GRE_PROTOCOL];
 		fc->item_idx = item_idx;
 		fc->tag_set = &mlx5dr_definer_gre_protocol_type_set;

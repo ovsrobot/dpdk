@@ -1812,8 +1812,9 @@ static const struct nfp_flow_item_proc nfp_flow_item_proc_list[] = {
 	[RTE_FLOW_ITEM_TYPE_GRE] = {
 		.next_item = NEXT_ITEM(RTE_FLOW_ITEM_TYPE_GRE_KEY),
 		.mask_support = &(const struct rte_flow_item_gre){
-			.c_rsvd0_ver = RTE_BE16(0xa000),
-			.protocol = RTE_BE16(0xffff),
+			.hdr.c = 1,
+			.hdr.k = 1,
+			.hdr.proto = RTE_BE16(0xffff),
 		},
 		.mask_default = &rte_flow_item_gre_mask,
 		.mask_sz = sizeof(struct rte_flow_item_gre),
@@ -3144,7 +3145,7 @@ nfp_flow_action_nvgre_encap_v4(struct nfp_app_fw_flower *app_fw_flower,
 	memset(set_tun, 0, act_set_size);
 	nfp_flow_set_tun_process(set_tun, NFP_FL_TUN_GRE, 0,
 			ipv4->hdr.time_to_live, ipv4->hdr.type_of_service);
-	set_tun->tun_proto = gre->protocol;
+	set_tun->tun_proto = gre->hdr.proto;
 
 	/* Send the tunnel neighbor cmsg to fw */
 	return nfp_flower_add_tun_neigh_v4_encap(app_fw_flower, nfp_flow_meta,
@@ -3181,7 +3182,7 @@ nfp_flow_action_nvgre_encap_v6(struct nfp_app_fw_flower *app_fw_flower,
 	tos = (ipv6->hdr.vtc_flow >> RTE_IPV6_HDR_TC_SHIFT) & 0xff;
 	nfp_flow_set_tun_process(set_tun, NFP_FL_TUN_GRE, 0,
 			ipv6->hdr.hop_limits, tos);
-	set_tun->tun_proto = gre->protocol;
+	set_tun->tun_proto = gre->hdr.proto;
 
 	/* Send the tunnel neighbor cmsg to fw */
 	return nfp_flower_add_tun_neigh_v6_encap(app_fw_flower, nfp_flow_meta,
