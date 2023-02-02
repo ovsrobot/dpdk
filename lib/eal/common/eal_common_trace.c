@@ -11,6 +11,9 @@
 #include <rte_errno.h>
 #include <rte_lcore.h>
 #include <rte_per_lcore.h>
+#ifdef RTE_EXEC_ENV_LINUX
+#include <rte_pmu.h>
+#endif
 #include <rte_string_fns.h>
 
 #include "eal_trace.h"
@@ -71,8 +74,13 @@ eal_trace_init(void)
 		goto free_meta;
 
 	/* Apply global configurations */
-	STAILQ_FOREACH(arg, &trace.args, next)
+	STAILQ_FOREACH(arg, &trace.args, next) {
 		trace_args_apply(arg->val);
+#ifdef RTE_EXEC_ENV_LINUX
+		if (rte_pmu_init() == 0)
+			rte_pmu_add_events_by_pattern(arg->val);
+#endif
+	}
 
 	rte_trace_mode_set(trace.mode);
 
@@ -88,6 +96,9 @@ fail:
 void
 eal_trace_fini(void)
 {
+#ifdef RTE_EXEC_ENV_LINUX
+	rte_pmu_fini();
+#endif
 	trace_mem_free();
 	trace_metadata_destroy();
 	eal_trace_args_free();

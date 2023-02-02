@@ -17,6 +17,9 @@ extern "C" {
 
 #include <rte_alarm.h>
 #include <rte_interrupts.h>
+#ifdef RTE_EXEC_ENV_LINUX
+#include <rte_pmu.h>
+#endif
 #include <rte_trace_point.h>
 
 #include "eal_interrupts.h"
@@ -278,6 +281,16 @@ RTE_TRACE_POINT(
 	rte_trace_point_emit_u32(lcore_id);
 	rte_trace_point_emit_string(cpuset);
 )
+
+#ifdef RTE_EXEC_ENV_LINUX
+RTE_TRACE_POINT_FP(
+	rte_eal_trace_pmu_read,
+	RTE_TRACE_POINT_ARGS(unsigned int index),
+	uint64_t val;
+	val = rte_pmu_read(index);
+	rte_trace_point_emit_u64(val);
+)
+#endif
 
 #ifdef __cplusplus
 }
