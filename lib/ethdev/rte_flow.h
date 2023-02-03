@@ -624,6 +624,15 @@ enum rte_flow_item_type {
 	 * See struct rte_flow_item_meter_color.
 	 */
 	RTE_FLOW_ITEM_TYPE_METER_COLOR,
+
+	/**
+	 * Matches on the physical port of the received packet.
+	 * Used in case multiple physical ports are connected to the DPDK port.
+	 * First port is number 1.
+	 *
+	 * @see struct rte_flow_item_phy_affinity.
+	 */
+	RTE_FLOW_ITEM_TYPE_PHY_AFFINITY,
 };
 
 /**
@@ -2100,6 +2109,32 @@ struct rte_flow_item_meter_color {
 #ifndef __cplusplus
 static const struct rte_flow_item_meter_color rte_flow_item_meter_color_mask = {
 	.color = RTE_COLORS,
+};
+#endif
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
+ * RTE_FLOW_ITEM_TYPE_PHY_AFFINITY
+ *
+ * For multiple physical ports connected to a single DPDK port,
+ * match the physical port receiving the packets.
+ */
+struct rte_flow_item_phy_affinity {
+	/**
+	 * Physical port receiving the packets.
+	 * Numbering starts from 1.
+	 * Number of physical ports is reported by nb_phy_ports in rte_eth_dev_info.
+	 */
+	uint8_t affinity;
+};
+
+/** Default mask for RTE_FLOW_ITEM_TYPE_PHY_AFFINITY. */
+#ifndef __cplusplus
+static const struct rte_flow_item_phy_affinity
+rte_flow_item_phy_affinity_mask = {
+	.affinity = 0xff,
 };
 #endif
 

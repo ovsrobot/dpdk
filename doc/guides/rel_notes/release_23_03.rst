@@ -58,6 +58,7 @@ New Features
 * **Added affinity for multiple physical ports connected to a single DPDK port.**
 
   * Added Tx affinity in queue setup to map a physical port.
+  * Added Rx affinity flow matching of a physical port.
 
 * **Updated AMD axgbe driver.**
 

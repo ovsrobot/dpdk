@@ -465,6 +465,8 @@ enum index {
 	ITEM_METER,
 	ITEM_METER_COLOR,
 	ITEM_METER_COLOR_NAME,
+	ITEM_PHY_AFFINITY,
+	ITEM_PHY_AFFINITY_VALUE,
 
 	/* Validate/create actions. */
 	ACTIONS,
@@ -1355,6 +1357,7 @@ static const enum index next_item[] = {
 	ITEM_L2TPV2,
 	ITEM_PPP,
 	ITEM_METER,
+	ITEM_PHY_AFFINITY,
 	END_SET,
 	ZERO,
 };
@@ -1817,6 +1820,12 @@ static const enum index item_ppp[] = {
 
 static const enum index item_meter[] = {
 	ITEM_METER_COLOR,
+	ITEM_NEXT,
+	ZERO,
+};
+
+static const enum index item_phy_affinity[] = {
+	ITEM_PHY_AFFINITY_VALUE,
 	ITEM_NEXT,
 	ZERO,
 };
@@ -6443,6 +6452,22 @@ static const struct token token_list[] = {
 				ARGS_ENTRY(struct buffer, port)),
 		.call = parse_mp,
 	},
+	[ITEM_PHY_AFFINITY] = {
+		.name = "phy_affinity",
+		.help = "match on the physical port receiving the packets",
+		.priv = PRIV_ITEM(PHY_AFFINITY,
+				  sizeof(struct rte_flow_item_phy_affinity)),
+		.next = NEXT(item_phy_affinity),
+		.call = parse_vc,
+	},
+	[ITEM_PHY_AFFINITY_VALUE] = {
+		.name = "affinity",
+		.help = "physical affinity value",
+		.next = NEXT(item_phy_affinity, NEXT_ENTRY(COMMON_UNSIGNED),
+			     item_param),
+		.args = ARGS(ARGS_ENTRY(struct rte_flow_item_phy_affinity,
+					affinity)),
+	},
 };
 
 /** Remove and return last entry from argument stack. */
@@ -10980,6 +11005,9 @@ flow_item_default_mask(const struct rte_flow_item *item)
 		break;
 	case RTE_FLOW_ITEM_TYPE_METER_COLOR:
 		mask = &rte_flow_item_meter_color_mask;
+		break;
+	case RTE_FLOW_ITEM_TYPE_PHY_AFFINITY:
+		mask = &rte_flow_item_phy_affinity_mask;
 		break;
 	default:
 		break;

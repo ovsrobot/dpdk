@@ -1544,6 +1544,14 @@ Matches Color Marker set by a Meter.
 
 - ``color``: Metering color marker.
 
+Item: ``PHY_AFFINITY``
+^^^^^^^^^^^^^^^^^^^^^^
+
+Matches on the physical port of the received packet.
+In case of multiple physical ports, the affinity numbering starts from 1.
+
+- ``affinity``: Physical affinity.
+
 Actions
 ~~~~~~~
 
