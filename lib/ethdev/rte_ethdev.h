@@ -1139,6 +1139,14 @@ struct rte_eth_txconf {
 
 	uint8_t tx_deferred_start; /**< Do not start queue with rte_eth_dev_start(). */
 	/**
+	 * Affinity with one of the multiple physical ports connected to the DPDK port.
+	 * Value 0 means no affinity and traffic could be routed to any connected
+	 * physical port.
+	 * The first physical port is number 1 and so on.
+	 * Number of physical ports is reported by nb_phy_ports in rte_eth_dev_info.
+	 */
+	uint8_t tx_phy_affinity;
+	/**
 	 * Per-queue Tx offloads to be set  using RTE_ETH_TX_OFFLOAD_* flags.
 	 * Only offloads set on tx_queue_offload_capa or tx_offload_capa
 	 * fields on rte_eth_dev_info structure are allowed to be set.
@@ -1744,6 +1752,8 @@ struct rte_eth_dev_info {
 	/** Device redirection table size, the total number of entries. */
 	uint16_t reta_size;
 	uint8_t hash_key_size; /**< Hash key size in bytes */
+	/** Number of physical ports connected with DPDK port. */
+	uint8_t nb_phy_ports;
 	/** Bit mask of RSS offloads, the bit offset also means flow type */
 	uint64_t flow_type_rss_offloads;
 	struct rte_eth_rxconf default_rxconf; /**< Default Rx configuration */

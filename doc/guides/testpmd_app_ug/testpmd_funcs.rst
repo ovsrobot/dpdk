@@ -1605,6 +1605,19 @@ Enable or disable a per queue Tx offloading only on a specific Tx queue::
 
 This command should be run when the port is stopped, or else it will fail.
 
+config per queue Tx physical affinity
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Configure a per queue physical affinity value only on a specific Tx queue::
+
+   testpmd> port (port_id) txq (queue_id) phy_affinity (value)
+
+* ``phy_affinity``: physical port to use for sending,
+                    when multiple physical ports are connected to
+                    a single DPDK port.
+
+This command should be run when the port is stopped, otherwise it fails.
+
 Config VXLAN Encap outer layers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

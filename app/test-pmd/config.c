@@ -936,6 +936,7 @@ port_infos_display(portid_t port_id)
 		printf("unknown\n");
 		break;
 	}
+	printf("Current number of physical ports: %u\n", dev_info.nb_phy_ports);
 }
 
 void
