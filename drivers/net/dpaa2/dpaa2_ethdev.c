@@ -618,9 +618,6 @@ dpaa2_eth_dev_configure(struct rte_eth_dev *dev)
 		return ret;
 	}
 
-#if !defined(RTE_LIBRTE_IEEE1588)
-	if (rx_offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP)
-#endif
 	{
 		ret = rte_mbuf_dyn_rx_timestamp_register(
 				&dpaa2_timestamp_dynfield_offset,
@@ -2461,7 +2458,6 @@ static struct eth_dev_ops dpaa2_ethdev_ops = {
 	.rxq_info_get	      = dpaa2_rxq_info_get,
 	.txq_info_get	      = dpaa2_txq_info_get,
 	.tm_ops_get	      = dpaa2_tm_ops_get,
-#if defined(RTE_LIBRTE_IEEE1588)
 	.timesync_enable      = dpaa2_timesync_enable,
 	.timesync_disable     = dpaa2_timesync_disable,
 	.timesync_read_time   = dpaa2_timesync_read_time,
@@ -2469,7 +2465,6 @@ static struct eth_dev_ops dpaa2_ethdev_ops = {
 	.timesync_adjust_time = dpaa2_timesync_adjust_time,
 	.timesync_read_rx_timestamp = dpaa2_timesync_read_rx_timestamp,
 	.timesync_read_tx_timestamp = dpaa2_timesync_read_tx_timestamp,
-#endif
 };
 
 /* Populate the mac address from physically available (u-boot/firmware) and/or
@@ -2681,10 +2676,8 @@ dpaa2_dev_init(struct rte_eth_dev *eth_dev)
 	priv->max_mac_filters = attr.mac_filter_entries;
 	priv->max_vlan_filters = attr.vlan_filter_entries;
 	priv->flags = 0;
-#if defined(RTE_LIBRTE_IEEE1588)
-	printf("DPDK IEEE1588 is enabled\n");
 	priv->flags |= DPAA2_TX_CONF_ENABLE;
-#endif
+
 	/* Used with ``fslmc:dpni.1,drv_tx_conf=1`` */
 	if (dpaa2_get_devargs(dev->devargs, DRIVER_TX_CONF)) {
 		priv->flags |= DPAA2_TX_CONF_ENABLE;

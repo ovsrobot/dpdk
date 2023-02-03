@@ -43,12 +43,6 @@
 
 #define I40E_TXD_CMD (I40E_TX_DESC_CMD_EOP | I40E_TX_DESC_CMD_RS)
 
-#ifdef RTE_LIBRTE_IEEE1588
-#define I40E_TX_IEEE1588_TMST RTE_MBUF_F_TX_IEEE1588_TMST
-#else
-#define I40E_TX_IEEE1588_TMST 0
-#endif
-
 #define I40E_TX_CKSUM_OFFLOAD_MASK (RTE_MBUF_F_TX_IP_CKSUM |		 \
 		RTE_MBUF_F_TX_L4_MASK |		 \
 		RTE_MBUF_F_TX_TCP_SEG |		 \
@@ -66,7 +60,7 @@
 		RTE_MBUF_F_TX_VLAN |	\
 		RTE_MBUF_F_TX_TUNNEL_MASK |	\
 		RTE_MBUF_F_TX_OUTER_UDP_CKSUM |	\
-		I40E_TX_IEEE1588_TMST)
+		RTE_MBUF_F_TX_IEEE1588_TMST)
 
 #define I40E_TX_OFFLOAD_NOTSUP_MASK \
 		(RTE_MBUF_F_TX_OFFLOAD_MASK ^ I40E_TX_OFFLOAD_MASK)
@@ -192,7 +186,6 @@ i40e_rxd_error_to_pkt_flags(uint64_t qword)
 /* Function to check and set the ieee1588 timesync index and get the
  * appropriate flags.
  */
-#ifdef RTE_LIBRTE_IEEE1588
 static inline uint64_t
 i40e_get_iee15888_flags(struct rte_mbuf *mb, uint64_t qword)
 {
@@ -211,7 +204,6 @@ i40e_get_iee15888_flags(struct rte_mbuf *mb, uint64_t qword)
 
 	return pkt_flags;
 }
-#endif
 
 static inline uint64_t
 i40e_rxd_build_fdir(volatile union i40e_rx_desc *rxdp, struct rte_mbuf *mb)
@@ -529,12 +521,8 @@ i40e_rx_scan_hw_ring(struct i40e_rx_queue *rxq)
 					rxdp[j].wb.qword0.hi_dword.rss);
 			if (pkt_flags & RTE_MBUF_F_RX_FDIR)
 				pkt_flags |= i40e_rxd_build_fdir(&rxdp[j], mb);
-
-#ifdef RTE_LIBRTE_IEEE1588
 			pkt_flags |= i40e_get_iee15888_flags(mb, qword1);
-#endif
 			mb->ol_flags |= pkt_flags;
-
 		}
 
 		for (j = 0; j < I40E_LOOK_AHEAD; j++)
@@ -798,10 +786,7 @@ i40e_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 				rte_le_to_cpu_32(rxd.wb.qword0.hi_dword.rss);
 		if (pkt_flags & RTE_MBUF_F_RX_FDIR)
 			pkt_flags |= i40e_rxd_build_fdir(&rxd, rxm);
-
-#ifdef RTE_LIBRTE_IEEE1588
 		pkt_flags |= i40e_get_iee15888_flags(rxm, qword1);
-#endif
 		rxm->ol_flags |= pkt_flags;
 
 		rx_pkts[nb_rx++] = rxm;
@@ -972,10 +957,7 @@ i40e_recv_scattered_pkts(void *rx_queue,
 				rte_le_to_cpu_32(rxd.wb.qword0.hi_dword.rss);
 		if (pkt_flags & RTE_MBUF_F_RX_FDIR)
 			pkt_flags |= i40e_rxd_build_fdir(&rxd, first_seg);
-
-#ifdef RTE_LIBRTE_IEEE1588
 		pkt_flags |= i40e_get_iee15888_flags(first_seg, qword1);
-#endif
 		first_seg->ol_flags |= pkt_flags;
 
 		/* Prefetch data of first segment, if configured to do so. */
@@ -1017,11 +999,8 @@ i40e_calc_context_desc(uint64_t flags)
 	static uint64_t mask = RTE_MBUF_F_TX_OUTER_IP_CKSUM |
 		RTE_MBUF_F_TX_TCP_SEG |
 		RTE_MBUF_F_TX_QINQ |
-		RTE_MBUF_F_TX_TUNNEL_MASK;
-
-#ifdef RTE_LIBRTE_IEEE1588
-	mask |= RTE_MBUF_F_TX_IEEE1588_TMST;
-#endif
+		RTE_MBUF_F_TX_TUNNEL_MASK |
+		RTE_MBUF_F_TX_IEEE1588_TMST;
 
 	return (flags & mask) ? 1 : 0;
 }
@@ -1199,14 +1178,10 @@ i40e_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 			if (ol_flags & RTE_MBUF_F_TX_TCP_SEG)
 				cd_type_cmd_tso_mss |=
 					i40e_set_tso_ctx(tx_pkt, tx_offload);
-			else {
-#ifdef RTE_LIBRTE_IEEE1588
-				if (ol_flags & RTE_MBUF_F_TX_IEEE1588_TMST)
-					cd_type_cmd_tso_mss |=
-						((uint64_t)I40E_TX_CTX_DESC_TSYN <<
-						 I40E_TXD_CTX_QW1_CMD_SHIFT);
-#endif
-			}
+			else if (ol_flags & RTE_MBUF_F_TX_IEEE1588_TMST)
+				cd_type_cmd_tso_mss |=
+					((uint64_t)I40E_TX_CTX_DESC_TSYN <<
+					I40E_TXD_CTX_QW1_CMD_SHIFT);
 
 			ctx_txd->tunneling_params =
 				rte_cpu_to_le_32(cd_tunneling_params);
@@ -2805,9 +2780,7 @@ i40e_tx_queue_init(struct i40e_tx_queue *txq)
 	tx_ctx.base = txq->tx_ring_phys_addr / I40E_QUEUE_BASE_ADDR_UNIT;
 	tx_ctx.qlen = txq->nb_tx_desc;
 
-#ifdef RTE_LIBRTE_IEEE1588
 	tx_ctx.timesync_ena = 1;
-#endif
 	tx_ctx.rdylist = rte_le_to_cpu_16(vsi->info.qs_handle[txq->dcb_tc]);
 	if (vsi->type == I40E_VSI_FDIR)
 		tx_ctx.fd_ena = TRUE;

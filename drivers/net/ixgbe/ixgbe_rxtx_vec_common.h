@@ -276,17 +276,7 @@ ixgbe_txq_vec_setup_default(struct ixgbe_tx_queue *txq,
 static inline int
 ixgbe_rx_vec_dev_conf_condition_check_default(struct rte_eth_dev *dev)
 {
-#ifndef RTE_LIBRTE_IEEE1588
-	struct rte_eth_fdir_conf *fconf = IXGBE_DEV_FDIR_CONF(dev);
-
-	/* no fdir support */
-	if (fconf->mode != RTE_FDIR_MODE_NONE)
-		return -1;
-
-	return 0;
-#else
 	RTE_SET_USED(dev);
 	return -1;
-#endif
 }
 #endif

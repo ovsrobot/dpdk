@@ -1230,64 +1230,6 @@ bnxt_receive_function(struct rte_eth_dev *eth_dev)
 		return bnxt_recv_pkts;
 	}
 
-#if (defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM64)) && \
-	!defined(RTE_LIBRTE_IEEE1588)
-
-	/* Vector mode receive cannot be enabled if scattered rx is in use. */
-	if (eth_dev->data->scattered_rx)
-		goto use_scalar_rx;
-
-	/*
-	 * Vector mode receive cannot be enabled if Truflow is enabled or if
-	 * asynchronous completions and receive completions can be placed in
-	 * the same completion ring.
-	 */
-	if (BNXT_TRUFLOW_EN(bp) || !BNXT_NUM_ASYNC_CPR(bp))
-		goto use_scalar_rx;
-
-	/*
-	 * Vector mode receive cannot be enabled if any receive offloads outside
-	 * a limited subset have been enabled.
-	 */
-	if (eth_dev->data->dev_conf.rxmode.offloads &
-		~(RTE_ETH_RX_OFFLOAD_VLAN_STRIP |
-		  RTE_ETH_RX_OFFLOAD_KEEP_CRC |
-		  RTE_ETH_RX_OFFLOAD_IPV4_CKSUM |
-		  RTE_ETH_RX_OFFLOAD_UDP_CKSUM |
-		  RTE_ETH_RX_OFFLOAD_TCP_CKSUM |
-		  RTE_ETH_RX_OFFLOAD_OUTER_IPV4_CKSUM |
-		  RTE_ETH_RX_OFFLOAD_OUTER_UDP_CKSUM |
-		  RTE_ETH_RX_OFFLOAD_RSS_HASH |
-		  RTE_ETH_RX_OFFLOAD_VLAN_FILTER))
-		goto use_scalar_rx;
-
-#if defined(RTE_ARCH_X86) && defined(CC_AVX2_SUPPORT)
-	if (rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_256 &&
-	    rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2) == 1) {
-		PMD_DRV_LOG(INFO,
-			    "Using AVX2 vector mode receive for port %d\n",
-			    eth_dev->data->port_id);
-		bp->flags |= BNXT_FLAG_RX_VECTOR_PKT_MODE;
-		return bnxt_recv_pkts_vec_avx2;
-	}
- #endif
-	if (rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128) {
-		PMD_DRV_LOG(INFO,
-			    "Using SSE vector mode receive for port %d\n",
-			    eth_dev->data->port_id);
-		bp->flags |= BNXT_FLAG_RX_VECTOR_PKT_MODE;
-		return bnxt_recv_pkts_vec;
-	}
-
-use_scalar_rx:
-	PMD_DRV_LOG(INFO, "Vector mode receive disabled for port %d\n",
-		    eth_dev->data->port_id);
-	PMD_DRV_LOG(INFO,
-		    "Port %d scatter: %d rx offload: %" PRIX64 "\n",
-		    eth_dev->data->port_id,
-		    eth_dev->data->scattered_rx,
-		    eth_dev->data->dev_conf.rxmode.offloads);
-#endif
 	bp->flags &= ~BNXT_FLAG_RX_VECTOR_PKT_MODE;
 	return bnxt_recv_pkts;
 }
@@ -1301,44 +1243,6 @@ bnxt_transmit_function(struct rte_eth_dev *eth_dev)
 	if (BNXT_CHIP_SR2(bp))
 		return bnxt_xmit_pkts;
 
-#if defined(RTE_ARCH_X86) || defined(RTE_ARCH_ARM64) && \
-	!defined(RTE_LIBRTE_IEEE1588)
-	uint64_t offloads = eth_dev->data->dev_conf.txmode.offloads;
-
-	/*
-	 * Vector mode transmit can be enabled only if not using scatter rx
-	 * or tx offloads.
-	 */
-	if (eth_dev->data->scattered_rx ||
-	    (offloads & ~RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) ||
-	    BNXT_TRUFLOW_EN(bp))
-		goto use_scalar_tx;
-
-#if defined(RTE_ARCH_X86) && defined(CC_AVX2_SUPPORT)
-	if (rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_256 &&
-	    rte_cpu_get_flag_enabled(RTE_CPUFLAG_AVX2) == 1) {
-		PMD_DRV_LOG(INFO,
-			    "Using AVX2 vector mode transmit for port %d\n",
-			    eth_dev->data->port_id);
-		return bnxt_xmit_pkts_vec_avx2;
-	}
-#endif
-	if (rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128) {
-		PMD_DRV_LOG(INFO,
-			    "Using SSE vector mode transmit for port %d\n",
-			    eth_dev->data->port_id);
-		return bnxt_xmit_pkts_vec;
-	}
-
-use_scalar_tx:
-	PMD_DRV_LOG(INFO, "Vector mode transmit disabled for port %d\n",
-		    eth_dev->data->port_id);
-	PMD_DRV_LOG(INFO,
-		    "Port %d scatter: %d tx offload: %" PRIX64 "\n",
-		    eth_dev->data->port_id,
-		    eth_dev->data->scattered_rx,
-		    offloads);
-#endif
 	return bnxt_xmit_pkts;
 }
 

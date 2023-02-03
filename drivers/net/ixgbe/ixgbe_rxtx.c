@@ -53,11 +53,6 @@
 #include "base/ixgbe_common.h"
 #include "ixgbe_rxtx.h"
 
-#ifdef RTE_LIBRTE_IEEE1588
-#define IXGBE_TX_IEEE1588_TMST RTE_MBUF_F_TX_IEEE1588_TMST
-#else
-#define IXGBE_TX_IEEE1588_TMST 0
-#endif
 /* Bit Mask to indicate what bits required for building TX context */
 #define IXGBE_TX_OFFLOAD_MASK (RTE_MBUF_F_TX_OUTER_IPV6 |		 \
 		RTE_MBUF_F_TX_OUTER_IPV4 |		 \
@@ -70,7 +65,7 @@
 		RTE_MBUF_F_TX_MACSEC |			 \
 		RTE_MBUF_F_TX_OUTER_IP_CKSUM |		 \
 		RTE_MBUF_F_TX_SEC_OFFLOAD |	 \
-		IXGBE_TX_IEEE1588_TMST)
+		RTE_MBUF_F_TX_IEEE1588_TMST)
 
 #define IXGBE_TX_OFFLOAD_NOTSUP_MASK \
 		(RTE_MBUF_F_TX_OFFLOAD_MASK ^ IXGBE_TX_OFFLOAD_MASK)
@@ -823,10 +818,8 @@ ixgbe_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 		cmd_type_len = IXGBE_ADVTXD_DTYP_DATA |
 			IXGBE_ADVTXD_DCMD_IFCS | IXGBE_ADVTXD_DCMD_DEXT;
 
-#ifdef RTE_LIBRTE_IEEE1588
 		if (ol_flags & RTE_MBUF_F_TX_IEEE1588_TMST)
 			cmd_type_len |= IXGBE_ADVTXD_MAC_1588;
-#endif
 
 		olinfo_status = 0;
 		if (tx_ol_req) {
@@ -1436,7 +1429,6 @@ ixgbe_rxd_pkt_info_to_pkt_flags(uint16_t pkt_info)
 		RTE_MBUF_F_RX_RSS_HASH, 0, 0, 0,
 		0, 0, 0,  RTE_MBUF_F_RX_FDIR,
 	};
-#ifdef RTE_LIBRTE_IEEE1588
 	static uint64_t ip_pkt_etqf_map[8] = {
 		0, 0, 0, RTE_MBUF_F_RX_IEEE1588_PTP,
 		0, 0, 0, 0,
@@ -1447,9 +1439,6 @@ ixgbe_rxd_pkt_info_to_pkt_flags(uint16_t pkt_info)
 				ip_rss_types_map[pkt_info & 0XF];
 	else
 		return ip_rss_types_map[pkt_info & 0XF];
-#else
-	return ip_rss_types_map[pkt_info & 0XF];
-#endif
 }
 
 static inline uint64_t
@@ -1464,10 +1453,9 @@ rx_desc_status_to_pkt_flags(uint32_t rx_status, uint64_t vlan_flags)
 	 */
 	pkt_flags = (rx_status & IXGBE_RXD_STAT_VP) ?  vlan_flags : 0;
 
-#ifdef RTE_LIBRTE_IEEE1588
 	if (rx_status & IXGBE_RXD_STAT_TMST)
 		pkt_flags = pkt_flags | RTE_MBUF_F_RX_IEEE1588_TMST;
-#endif
+
 	return pkt_flags;
 }
 

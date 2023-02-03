@@ -207,20 +207,8 @@ fm10k_desc_to_pktype_v(__m128i descs[4], struct rte_mbuf **rx_pkts)
 int __rte_cold
 fm10k_rx_vec_condition_check(struct rte_eth_dev *dev)
 {
-#ifndef RTE_LIBRTE_IEEE1588
-	struct rte_eth_rxmode *rxmode = &dev->data->dev_conf.rxmode;
-
-#ifndef RTE_FM10K_RX_OLFLAGS_ENABLE
-	/* without rx ol_flags, no VP flag report */
-	if (rxmode->offloads & RTE_ETH_RX_OFFLOAD_VLAN_EXTEND)
-		return -1;
-#endif
-
-	return 0;
-#else
 	RTE_SET_USED(dev);
 	return -1;
-#endif
 }
 
 int __rte_cold

@@ -43,11 +43,6 @@
 #include "base/e1000_api.h"
 #include "e1000_ethdev.h"
 
-#ifdef RTE_LIBRTE_IEEE1588
-#define IGB_TX_IEEE1588_TMST RTE_MBUF_F_TX_IEEE1588_TMST
-#else
-#define IGB_TX_IEEE1588_TMST 0
-#endif
 /* Bit Mask to indicate what bits required for building TX context */
 #define IGB_TX_OFFLOAD_MASK (RTE_MBUF_F_TX_OUTER_IPV6 |	 \
 		RTE_MBUF_F_TX_OUTER_IPV4 |	 \
@@ -57,7 +52,7 @@
 		RTE_MBUF_F_TX_IP_CKSUM |		 \
 		RTE_MBUF_F_TX_L4_MASK |		 \
 		RTE_MBUF_F_TX_TCP_SEG |		 \
-		IGB_TX_IEEE1588_TMST)
+		RTE_MBUF_F_TX_IEEE1588_TMST)
 
 #define IGB_TX_OFFLOAD_NOTSUP_MASK \
 		(RTE_MBUF_F_TX_OFFLOAD_MASK ^ IGB_TX_OFFLOAD_MASK)
@@ -530,10 +525,8 @@ eth_igb_xmit_pkts(void *tx_queue, struct rte_mbuf **tx_pkts,
 		if (tx_ol_req & RTE_MBUF_F_TX_TCP_SEG)
 			pkt_len -= (tx_pkt->l2_len + tx_pkt->l3_len + tx_pkt->l4_len);
 		olinfo_status = (pkt_len << E1000_ADVTXD_PAYLEN_SHIFT);
-#if defined(RTE_LIBRTE_IEEE1588)
 		if (ol_flags & RTE_MBUF_F_TX_IEEE1588_TMST)
 			cmd_type_len |= E1000_ADVTXD_MAC_TSTAMP;
-#endif
 		if (tx_ol_req) {
 			/* Setup TX Advanced context descriptor if required */
 			if (new_ctx) {
@@ -746,7 +739,6 @@ rx_desc_hlen_type_rss_to_pkt_flags(struct igb_rx_queue *rxq, uint32_t hl_tp_rs)
 {
 	uint64_t pkt_flags = ((hl_tp_rs & 0x0F) == 0) ?  0 : RTE_MBUF_F_RX_RSS_HASH;
 
-#if defined(RTE_LIBRTE_IEEE1588)
 	static uint32_t ip_pkt_etqf_map[8] = {
 		0, 0, 0, RTE_MBUF_F_RX_IEEE1588_PTP,
 		0, 0, 0, 0,
@@ -760,9 +752,6 @@ rx_desc_hlen_type_rss_to_pkt_flags(struct igb_rx_queue *rxq, uint32_t hl_tp_rs)
 		pkt_flags |= ip_pkt_etqf_map[(hl_tp_rs >> 12) & 0x07];
 	else
 		pkt_flags |= ip_pkt_etqf_map[(hl_tp_rs >> 4) & 0x07];
-#else
-	RTE_SET_USED(rxq);
-#endif
 
 	return pkt_flags;
 }
@@ -776,10 +765,9 @@ rx_desc_status_to_pkt_flags(uint32_t rx_status)
 	pkt_flags = ((rx_status & E1000_RXD_STAT_VP) ?
 		RTE_MBUF_F_RX_VLAN | RTE_MBUF_F_RX_VLAN_STRIPPED : 0);
 
-#if defined(RTE_LIBRTE_IEEE1588)
 	if (rx_status & E1000_RXD_STAT_TMST)
 		pkt_flags = pkt_flags | RTE_MBUF_F_RX_IEEE1588_TMST;
-#endif
+
 	return pkt_flags;
 }
 

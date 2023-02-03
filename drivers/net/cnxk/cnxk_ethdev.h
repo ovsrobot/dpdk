@@ -48,14 +48,8 @@
 /* LPB & SPB */
 #define CNXK_NIX_NUM_POOLS_MAX 2
 
-/* If PTP is enabled additional SEND MEM DESC is required which
- * takes 2 words, hence max 7 iova address are possible
- */
-#if defined(RTE_LIBRTE_IEEE1588)
+/* PTP requires 2 words, hence max 7 IOVA addresses are possible. */
 #define CNXK_NIX_TX_NB_SEG_MAX 7
-#else
-#define CNXK_NIX_TX_NB_SEG_MAX 9
-#endif
 
 #define CNXK_NIX_TX_MSEG_SG_DWORDS                                             \
 	((RTE_ALIGN_MUL_CEIL(CNXK_NIX_TX_NB_SEG_MAX, 3) / 3) +                 \

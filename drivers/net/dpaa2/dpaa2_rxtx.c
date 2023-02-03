@@ -139,12 +139,10 @@ dpaa2_dev_rx_parse_slow(struct rte_mbuf *mbuf,
 			"(4)=0x%" PRIx64 "\t",
 			annotation->word3, annotation->word4);
 
-#if defined(RTE_LIBRTE_IEEE1588)
 	if (BIT_ISSET_AT_POS(annotation->word1, DPAA2_ETH_FAS_PTP)) {
 		mbuf->ol_flags |= RTE_MBUF_F_RX_IEEE1588_PTP;
 		mbuf->ol_flags |= RTE_MBUF_F_RX_IEEE1588_TMST;
 	}
-#endif
 
 	if (BIT_ISSET_AT_POS(annotation->word3, L2_VLAN_1_PRESENT)) {
 		vlan_tci = rte_pktmbuf_mtod_offset(mbuf, uint16_t *,
@@ -412,10 +410,9 @@ eth_mbuf_to_sg_fd(struct rte_mbuf *mbuf,
 	struct qbman_sge *sgt, *sge = NULL;
 	int i, offset = 0;
 
-#ifdef RTE_LIBRTE_IEEE1588
 	/* annotation area for timestamp in first buffer */
 	offset = 0x64;
-#endif
+
 	if (RTE_MBUF_DIRECT(mbuf) &&
 		(mbuf->data_off > (mbuf->nb_segs * sizeof(struct qbman_sge)
 		+ offset))) {
@@ -829,12 +826,10 @@ dpaa2_dev_prefetch_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 			bufs[num_rx] = eth_sg_fd_to_mbuf(fd, eth_data->port_id);
 		else
 			bufs[num_rx] = eth_fd_to_mbuf(fd, eth_data->port_id);
-#if defined(RTE_LIBRTE_IEEE1588)
 		if (bufs[num_rx]->ol_flags & RTE_MBUF_F_RX_IEEE1588_TMST) {
 			priv->rx_timestamp =
 				*dpaa2_timestamp_dynfield(bufs[num_rx]);
 		}
-#endif
 
 		if (eth_data->dev_conf.rxmode.offloads &
 				RTE_ETH_RX_OFFLOAD_VLAN_STRIP)
@@ -1050,12 +1045,10 @@ dpaa2_dev_rx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 				bufs[num_rx] = eth_fd_to_mbuf(fd,
 							eth_data->port_id);
 
-#if defined(RTE_LIBRTE_IEEE1588)
 		if (bufs[num_rx]->ol_flags & RTE_MBUF_F_RX_IEEE1588_TMST) {
 			priv->rx_timestamp =
 				*dpaa2_timestamp_dynfield(bufs[num_rx]);
 		}
-#endif
 
 		if (eth_data->dev_conf.rxmode.offloads &
 				RTE_ETH_RX_OFFLOAD_VLAN_STRIP) {
@@ -1088,13 +1081,11 @@ uint16_t dpaa2_dev_tx_conf(void *queue)
 	struct qbman_release_desc releasedesc;
 	uint32_t bpid;
 	uint64_t buf;
-#if defined(RTE_LIBRTE_IEEE1588)
 	struct rte_eth_dev_data *eth_data = dpaa2_q->eth_data;
 	struct dpaa2_dev_priv *priv = eth_data->dev_private;
 	struct dpaa2_annot_hdr *annotation;
 	void *v_addr;
 	struct rte_mbuf *mbuf;
-#endif
 
 	if (unlikely(!DPAA2_PER_LCORE_DPIO)) {
 		ret = dpaa2_affine_qbman_swp();
@@ -1177,7 +1168,6 @@ uint16_t dpaa2_dev_tx_conf(void *queue)
 			dq_storage++;
 			num_tx_conf++;
 			num_pulled++;
-#if defined(RTE_LIBRTE_IEEE1588)
 			v_addr = DPAA2_IOVA_TO_VADDR(DPAA2_GET_FD_ADDR(fd));
 			mbuf = DPAA2_INLINE_MBUF_FROM_BUF(v_addr,
 				rte_dpaa2_bpid_info[DPAA2_GET_FD_BPID(fd)].meta_data_size);
@@ -1188,7 +1178,6 @@ uint16_t dpaa2_dev_tx_conf(void *queue)
 					DPAA2_FD_PTA_SIZE);
 				priv->tx_timestamp = annotation->word2;
 			}
-#endif
 		} while (pending);
 
 	/* Last VDQ provided all packets and more packets are requested */
@@ -1259,7 +1248,6 @@ dpaa2_dev_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 	DPAA2_PMD_DP_DEBUG("===> eth_data =%p, fqid =%d\n",
 			eth_data, dpaa2_q->fqid);
 
-#ifdef RTE_LIBRTE_IEEE1588
 	/* IEEE1588 driver need pointer to tx confirmation queue
 	 * corresponding to last packet transmitted for reading
 	 * the timestamp
@@ -1269,7 +1257,6 @@ dpaa2_dev_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		dpaa2_dev_tx_conf(dpaa2_q->tx_conf_queue);
 		priv->tx_timestamp = 0;
 	}
-#endif
 
 	/*Prepare enqueue descriptor*/
 	qbman_eq_desc_clear(&eqdesc);
@@ -1326,9 +1313,7 @@ dpaa2_dev_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 						(void **)bufs, 1, 0);
 #endif
 					bufs++;
-#ifdef RTE_LIBRTE_IEEE1588
 					enable_tx_tstamp(&fd_arr[loop]);
-#endif
 					continue;
 				}
 			} else {
@@ -1354,9 +1339,7 @@ dpaa2_dev_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 							loop, 0);
 				}
 				bufs++;
-#ifdef RTE_LIBRTE_IEEE1588
 				enable_tx_tstamp(&fd_arr[loop]);
-#endif
 				continue;
 			}
 
@@ -1409,9 +1392,7 @@ dpaa2_dev_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 							loop, bpid);
 				}
 			}
-#ifdef RTE_LIBRTE_IEEE1588
 			enable_tx_tstamp(&fd_arr[loop]);
-#endif
 			bufs++;
 		}
 
