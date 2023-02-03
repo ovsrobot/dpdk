@@ -938,6 +938,7 @@ nfp_net_infos_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 	dev_info->speed_capa = RTE_ETH_LINK_SPEED_1G | RTE_ETH_LINK_SPEED_10G |
 			       RTE_ETH_LINK_SPEED_25G | RTE_ETH_LINK_SPEED_40G |
 			       RTE_ETH_LINK_SPEED_50G | RTE_ETH_LINK_SPEED_100G;
+	dev_info->dev_capa &= ~RTE_ETH_DEV_CAPA_FLOW_RULE_KEEP;
 
 	return 0;
 }
