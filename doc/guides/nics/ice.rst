@@ -105,6 +105,22 @@ Runtime Config Options
 
     -a 80:00.0,pipeline-mode-support=1
 
+- ``Default Mac Disable`` (default ``0``)
+
+  There is a requirement that if a flow rule is created, received packet is permitted
+  to pass if rule matching, or else drop.
+  But in default, a mac filter will be created and the default mac will be added into
+  lookup table during driver initialization, it makes drop action impossilbe.
+
+  Add the feature that support to disable default mac which will be used by ice driver
+  when setting dpdk_devargs config field.
+
+  Default mac is not disabled in default, user can choose to disable the default mac
+  by setting ``devargs`` parameter ``default-mac-disable``,
+  for example::
+
+    -a 80:00.0,default-mac-disable=1
+
 - ``Protocol extraction for per queue``
 
   Configure the RX queues to do protocol extraction into mbuf for protocol
