@@ -83,6 +83,10 @@ New Features
   * Added flow items to match ICMPv6 echo request and reply packets.
     Matching patterns can include ICMP identifier and sequence numbers.
 
+* **Updated Mellanox mlx5 driver.**
+
+  * Added support for matching on ICMPv6 ID and sequence fields.
+
 
 Removed Items
 -------------
