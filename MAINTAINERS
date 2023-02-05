@@ -581,6 +581,10 @@ VDEV bus driver
 F: drivers/bus/vdev/
 F: app/test/test_vdev.c
 
+Platform bus driver
+M: Tomasz Duszynski <tduszynski@marvell.com>
+F: drivers/bus/platform
+
 VMBUS bus driver
 M: Long Li <longli@microsoft.com>
 F: drivers/bus/vmbus/

@@ -59,6 +59,11 @@ New Features
 
   * Added multi-process support.
 
+* **Added platform bus support.**
+
+  A platform bus provides a way to use Linux platform devices which
+  are compatible with vfio-platform kernel driver.
+
 * **Updated Corigine nfp driver.**
 
   * Added support for meter options.
