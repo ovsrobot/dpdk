@@ -159,6 +159,26 @@ implementer_cavium = {
     }
 }
 
+implementer_nvidia = {
+    'description': 'NVIDIA',
+    'flags': [
+        ['RTE_CACHE_LINE_SIZE', 64]
+    ],
+    'part_number_config': {
+        '0x4': {
+            'march': 'armv8-a',
+            'march_features': ['crc', 'crypto', 'lse'],
+            'compiler_options': ['-march=armv8-a+crc+lse+simd'],
+            'flags': [
+                ['RTE_USE_C11_MEM_MODEL', true],
+                ['RTE_MAX_LCORE', 8],
+                ['RTE_MAX_NUMA_NODES', 1],
+                ['RTE_MACHINE', '"armv8a"']
+            ]
+        }
+    }
+}
+
 implementer_ampere = {
     'description': 'Ampere Computing',
     'flags': [
@@ -261,6 +281,7 @@ implementers = {
     '0x41': implementer_arm,
     '0x43': implementer_cavium,
     '0x48': implementer_hisilicon,
+    '0x4e': implementer_nvidia,
     '0x50': implementer_ampere,
     '0x51': implementer_qualcomm,
     '0x70': implementer_phytium,
