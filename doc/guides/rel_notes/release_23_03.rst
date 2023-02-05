@@ -78,6 +78,11 @@ New Features
     ``rte_event_dev_config::nb_single_link_event_port_queues`` parameter
     required for eth_rx, eth_tx, crypto and timer eventdev adapters.
 
+* **Added rte_flow support for matching ICMPv6 ID and sequence fields.**
+
+  * Added flow items to match ICMPv6 echo request and reply packets.
+    Matching patterns can include ICMP identifier and sequence numbers.
+
 
 Removed Items
 -------------
