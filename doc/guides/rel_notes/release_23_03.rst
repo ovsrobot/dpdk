@@ -78,6 +78,11 @@ New Features
     ``rte_event_dev_config::nb_single_link_event_port_queues`` parameter
     required for eth_rx, eth_tx, crypto and timer eventdev adapters.
 
+* **Added machine learning inference device library.**
+
+  * Added a machine learning inference device framework for management and provision of
+    hardware and software machine learning inference devices.
+
 
 Removed Items
 -------------
