@@ -78,6 +78,10 @@ New Features
     ``rte_event_dev_config::nb_single_link_event_port_queues`` parameter
     required for eth_rx, eth_tx, crypto and timer eventdev adapters.
 
+* ethdev: added a new field:
+
+  - modify flex item: ``rte_flow_action_modify_data.flex_handle``.
+
 
 Removed Items
 -------------

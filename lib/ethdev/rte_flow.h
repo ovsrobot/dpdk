@@ -3528,6 +3528,7 @@ enum rte_flow_field_id {
 	RTE_FLOW_FIELD_IPV6_ECN,	/**< IPv6 ECN. */
 	RTE_FLOW_FIELD_GTP_PSC_QFI,	/**< GTP QFI. */
 	RTE_FLOW_FIELD_METER_COLOR,	/**< Meter color marker. */
+	RTE_FLOW_FIELD_FLEX_ITEM,	/**< Flex item. */
 };
 
 /**
@@ -3541,8 +3542,11 @@ struct rte_flow_action_modify_data {
 	RTE_STD_C11
 	union {
 		struct {
-			/** Encapsulation level or tag index. */
-			uint32_t level;
+			/** Encapsulation level or tag index or flex item handle. */
+			union {
+				uint32_t level;
+				struct rte_flow_item_flex_handle *flex_handle;
+			};
 			/** Number of bits to skip from a field. */
 			uint32_t offset;
 		};
