@@ -3927,7 +3927,7 @@ static int
 ice_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 {
 #define CHECK_INTERVAL 100  /* 100ms */
-#define MAX_REPEAT_TIME 10  /* 1s (10 * 100ms) in total */
+#define MAX_REPEAT_TIME 50  /* 5s (50 * 100ms) in total */
 	struct ice_hw *hw = ICE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	struct ice_link_status link_status;
 	struct rte_eth_link link, old;
