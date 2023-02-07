@@ -335,6 +335,8 @@ perform_command(telemetry_cb fn, const char *cmd, const char *param, int s)
 {
 	struct rte_tel_data data;
 
+	memset(&data, 0, sizeof(data));
+
 	int ret = fn(cmd, param, &data);
 	if (ret < 0) {
 		char out_buf[MAX_CMD_LEN + 10];
