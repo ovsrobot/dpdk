@@ -22,7 +22,9 @@ The application has a number of command line options:
    --show-ring[=name] | --show-mempool[=name] | --iter-mempool=name |
    --show-port-private | --version | --firmware-version | --show-rss-reta |
    --show-module-eeprom | --show-rx-descriptor queue_id:offset:num |
-   --show-tx-descriptor queue_id:offset:num ]
+   --show-tx-descriptor queue_id:offset:num | --edev-stats-enable |
+   --all-edev-queues | --edev-queue=queue_num | --all-edev-ports |
+   --edev-port=port_num | --edev-dump | --edev-reset | --edev-device-stats]
 
 Parameters
 ~~~~~~~~~~
@@ -100,6 +102,44 @@ specified by queue_id, offset and num.
 queue_id: A Tx queue identifier on this port.
 offset: The offset of the descriptor starting from tail.
 num: The number of the descriptors to dump.
+
+**--edev-stats-enable**
+The edev-stats-enable parameter enables proc-info application
+to display stats for eventdev devices. If the parameter is entered
+through proc-info application command line, proc-info application will
+only dump eventdev data and exit from the application. Hence,
+this parameter is required and a must  with other eventdev parameters
+explained below. Users should not enable this flag if they desire to dump
+other proc-info application stats such as Rx/Tx descriptor dump.
+
+**--all-edev-queues**
+The all-edev-queues parameter enables stats for all eventdev queues.
+
+**--edev-queue**
+The edev-queue parameter enables stats for specified queue.
+queue_num: The queue number to get queue stats for this specified queue.
+
+**--all-edev-ports**
+The all-edev-ports parameter enables stats for all eventdev ports.
+
+**--edev-port**
+The edev-port parameter enables stats for specified port.
+queue_num: The port number to get port stats for this specified port.
+
+**--edev-dump**
+The edev-dump parameter dumps all eventdev stats.
+
+**--edev-reset**
+The edev-reset parameter resets eventdev stats after reading.
+
+**--edev-device-stats**
+The edev-device-stats parameter displays eventdev device stats.
+
+A typical command line usage for eventdev stats:
+
+    .. code-block:: console
+
+       ./dpdk-proc-info -- --edev-stats-enable --edev-port=1
 
 Limitations
 -----------
