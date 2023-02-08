@@ -255,6 +255,17 @@ endif
 # add -include rte_config to cflags
 add_project_arguments('-include', 'rte_config.h', language: 'c')
 
+stdc_atomics_enabled = get_option('enable_stdatomics')
+dpdk_conf.set('RTE_STDC_ATOMICS', stdc_atomics_enabled)
+
+if stdc_atomics_enabled
+if cc.get_id() == 'gcc' or cc.get_id() == 'clang'
+    add_project_arguments('-std=gnu11', language: 'c')
+else
+    add_project_arguments('-std=c11', language: 'c')
+endif
+endif
+
 # enable extra warnings and disable any unwanted warnings
 # -Wall is added by default at warning level 1, and -Wextra
 # at warning level 2 (DPDK default)
