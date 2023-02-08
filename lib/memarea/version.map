@@ -1,0 +1,12 @@
+EXPERIMENTAL {
+	global:
+
+	rte_memarea_create;
+	rte_memarea_destroy;
+
+	local: *;
+};
+
+INTERNAL {
+	local: *;
+};

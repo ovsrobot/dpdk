@@ -53,6 +53,7 @@ INPUT                   = @TOPDIR@/doc/api/doxy-api-index.md \
                           @TOPDIR@/lib/latencystats \
                           @TOPDIR@/lib/lpm \
                           @TOPDIR@/lib/mbuf \
+                          @TOPDIR@/lib/memarea \
                           @TOPDIR@/lib/member \
                           @TOPDIR@/lib/mempool \
                           @TOPDIR@/lib/meter \
