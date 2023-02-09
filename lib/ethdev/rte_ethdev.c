@@ -5870,19 +5870,27 @@ eth_dev_handle_port_xstats(const char *cmd __rte_unused,
 {
 	struct rte_eth_xstat *eth_xstats;
 	struct rte_eth_xstat_name *xstat_names;
+	char *end_param, *hide_param;
 	int port_id, num_xstats;
+	int hide_zero = 0;
 	int i, ret;
-	char *end_param;
 
 	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
 		return -1;
 
 	port_id = strtoul(params, &end_param, 0);
-	if (*end_param != '\0')
-		RTE_ETHDEV_LOG(NOTICE,
-			"Extra parameters passed to ethdev telemetry command, ignoring");
 	if (!rte_eth_dev_is_valid_port(port_id))
 		return -1;
+
+	if (*end_param != '\0') {
+		hide_param = strtok(end_param, ",");
+		if (hide_param == NULL || strlen(hide_param) == 0 || !isdigit(*hide_param))
+			return -EINVAL;
+		hide_zero = strtoul(hide_param, &end_param, 0);
+		if (*end_param != '\0')
+			RTE_ETHDEV_LOG(NOTICE,
+				"Extra parameters passed to ethdev telemetry command, ignoring");
+	}
 
 	num_xstats = rte_eth_xstats_get(port_id, NULL, 0);
 	if (num_xstats < 0)
@@ -5908,9 +5916,12 @@ eth_dev_handle_port_xstats(const char *cmd __rte_unused,
 	}
 
 	rte_tel_data_start_dict(d);
-	for (i = 0; i < num_xstats; i++)
+	for (i = 0; i < num_xstats; i++) {
+		if (hide_zero != 0 && eth_xstats[i].value == 0)
+			continue;
 		rte_tel_data_add_dict_uint(d, xstat_names[i].name,
 					   eth_xstats[i].value);
+	}
 	free(eth_xstats);
 	return 0;
 }
@@ -6328,7 +6339,7 @@ RTE_INIT(ethdev_init_telemetry)
 	rte_telemetry_register_cmd("/ethdev/stats", eth_dev_handle_port_stats,
 			"Returns the common stats for a port. Parameters: int port_id");
 	rte_telemetry_register_cmd("/ethdev/xstats", eth_dev_handle_port_xstats,
-			"Returns the extended stats for a port. Parameters: int port_id");
+			"Returns the extended stats for a port. Parameters: int port_id, bool hide_zero (Optional, non-zero indicates hide zero xstats)");
 #ifndef RTE_EXEC_ENV_WINDOWS
 	rte_telemetry_register_cmd("/ethdev/dump_priv", eth_dev_handle_port_dump_priv,
 			"Returns dump private information for a port. Parameters: int port_id");
