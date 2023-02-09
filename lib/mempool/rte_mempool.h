@@ -1346,6 +1346,198 @@ rte_mempool_cache_flush(struct rte_mempool_cache *cache,
 	cache->len = 0;
 }
 
+
+/**
+ * @internal used by rte_mempool_cache_zc_put_bulk() and rte_mempool_do_generic_put().
+ *
+ * Zero-copy put objects in a mempool cache backed by the specified mempool.
+ *
+ * @param cache
+ *   A pointer to the mempool cache.
+ * @param mp
+ *   A pointer to the mempool.
+ * @param n
+ *   The number of objects to be put in the mempool cache.
+ * @return
+ *   The pointer to where to put the objects in the mempool cache.
+ *   NULL if the request itself is too big for the cache, i.e.
+ *   exceeds the cache flush threshold.
+ */
+static __rte_always_inline void **
+__rte_mempool_cache_zc_put_bulk(struct rte_mempool_cache *cache,
+		struct rte_mempool *mp,
+		unsigned int n)
+{
+	void **cache_objs;
+
+	RTE_ASSERT(cache != NULL);
+	RTE_ASSERT(mp != NULL);
+
+	if (n <= cache->flushthresh - cache->len) {
+		/*
+		 * The objects can be added to the cache without crossing the
+		 * flush threshold.
+		 */
+		cache_objs = &cache->objs[cache->len];
+		cache->len += n;
+	} else if (likely(n <= cache->flushthresh)) {
+		/*
+		 * The request itself fits into the cache.
+		 * But first, the cache must be flushed to the backend, so
+		 * adding the objects does not cross the flush threshold.
+		 */
+		cache_objs = &cache->objs[0];
+		rte_mempool_ops_enqueue_bulk(mp, cache_objs, cache->len);
+		cache->len = n;
+	} else {
+		/* The request itself is too big for the cache. */
+		return NULL;
+	}
+
+	RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_bulk, 1);
+	RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, n);
+
+	return cache_objs;
+}
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: This API may change, or be removed, without prior notice.
+ *
+ * Zero-copy put objects in a mempool cache backed by the specified mempool.
+ *
+ * @param cache
+ *   A pointer to the mempool cache.
+ * @param mp
+ *   A pointer to the mempool.
+ * @param n
+ *   The number of objects to be put in the mempool cache.
+ * @return
+ *   The pointer to where to put the objects in the mempool cache.
+ *   NULL if the request itself is too big for the cache, i.e.
+ *   exceeds the cache flush threshold.
+ */
+__rte_experimental
+static __rte_always_inline void **
+rte_mempool_cache_zc_put_bulk(struct rte_mempool_cache *cache,
+		struct rte_mempool *mp,
+		unsigned int n)
+{
+	RTE_ASSERT(cache != NULL);
+	RTE_ASSERT(mp != NULL);
+
+	rte_mempool_trace_cache_zc_put_bulk(cache, mp, n);
+	return __rte_mempool_cache_zc_put_bulk(cache, mp, n);
+}
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: This API may change, or be removed, without prior notice.
+ *
+ * Zero-copy un-put objects in a mempool cache.
+ *
+ * @param cache
+ *   A pointer to the mempool cache.
+ * @param n
+ *   The number of objects not put in the mempool cache after calling
+ *   rte_mempool_cache_zc_put_bulk().
+ */
+__rte_experimental
+static __rte_always_inline void
+rte_mempool_cache_zc_put_rewind(struct rte_mempool_cache *cache,
+		unsigned int n)
+{
+	RTE_ASSERT(cache != NULL);
+	RTE_ASSERT(n <= cache->len);
+
+	rte_mempool_trace_cache_zc_put_rewind(cache, n);
+
+	cache->len -= n;
+
+	RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, (int)-n);
+}
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: This API may change, or be removed, without prior notice.
+ *
+ * Zero-copy get objects from a mempool cache backed by the specified mempool.
+ *
+ * @param cache
+ *   A pointer to the mempool cache.
+ * @param mp
+ *   A pointer to the mempool.
+ * @param n
+ *   The number of objects to be made available for extraction from the mempool cache.
+ * @return
+ *   The pointer to the objects in the mempool cache.
+ *   NULL on error; i.e. the cache + the pool does not contain 'n' objects.
+ *   With rte_errno set to the error code of the mempool dequeue function,
+ *   or EINVAL if the request itself is too big for the cache, i.e.
+ *   exceeds the cache flush threshold.
+ */
+__rte_experimental
+static __rte_always_inline void *
+rte_mempool_cache_zc_get_bulk(struct rte_mempool_cache *cache,
+		struct rte_mempool *mp,
+		unsigned int n)
+{
+	unsigned int len, size;
+
+	RTE_ASSERT(cache != NULL);
+	RTE_ASSERT(mp != NULL);
+
+	rte_mempool_trace_cache_zc_get_bulk(cache, mp, n);
+
+	len = cache->len;
+	size = cache->size;
+
+	if (n <= len) {
+		/* The request can be satisfied from the cache as is. */
+		len -= n;
+	} else if (likely(n <= size)) {
+		/*
+		 * The request itself can be satisfied from the cache.
+		 * But first, the cache must be filled from the backend;
+		 * fetch size + requested - len objects.
+		 */
+		int ret;
+
+		ret = rte_mempool_ops_dequeue_bulk(mp, &cache->objs[len], size + n - len);
+		if (unlikely(ret < 0)) {
+			/*
+			 * We are buffer constrained.
+			 * Do not fill the cache, just satisfy the request.
+			 */
+			ret = rte_mempool_ops_dequeue_bulk(mp, &cache->objs[len], n - len);
+			if (unlikely(ret < 0)) {
+				/* Unable to satisfy the request. */
+
+				RTE_MEMPOOL_STAT_ADD(mp, get_fail_bulk, 1);
+				RTE_MEMPOOL_STAT_ADD(mp, get_fail_objs, n);
+
+				rte_errno = -ret;
+				return NULL;
+			}
+
+			len = 0;
+		} else {
+			len = size;
+		}
+	} else {
+		/* The request itself is too big for the cache. */
+		rte_errno = EINVAL;
+		return NULL;
+	}
+
+	cache->len = len;
+
+	RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
+	RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_objs, n);
+
+	return &cache->objs[len];
+}
+
 /**
  * @internal Put several objects back in the mempool; used internally.
  * @param mp
@@ -1364,32 +1556,25 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 {
 	void **cache_objs;
 
-	/* No cache provided */
-	if (unlikely(cache == NULL))
+	/* No cache provided? */
+	if (unlikely(cache == NULL)) {
+		/* Increment stats now, adding in mempool always succeeds. */
+		RTE_MEMPOOL_STAT_ADD(mp, put_bulk, 1);
+		RTE_MEMPOOL_STAT_ADD(mp, put_objs, n);
+
 		goto driver_enqueue;
+	}
 
-	/* increment stat now, adding in mempool always success */
-	RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_bulk, 1);
-	RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, n);
+	/* Prepare to add the objects to the cache. */
+	cache_objs = __rte_mempool_cache_zc_put_bulk(cache, mp, n);
 
-	/* The request itself is too big for the cache */
-	if (unlikely(n > cache->flushthresh))
-		goto driver_enqueue_stats_incremented;
+	/* The request itself is too big for the cache? */
+	if (unlikely(cache_objs == NULL)) {
+		/* Increment stats now, adding in mempool always succeeds. */
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_bulk, 1);
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, put_objs, n);
 
-	/*
-	 * The cache follows the following algorithm:
-	 *   1. If the objects cannot be added to the cache without crossing
-	 *      the flush threshold, flush the cache to the backend.
-	 *   2. Add the objects to the cache.
-	 */
-
-	if (cache->len + n <= cache->flushthresh) {
-		cache_objs = &cache->objs[cache->len];
-		cache->len += n;
-	} else {
-		cache_objs = &cache->objs[0];
-		rte_mempool_ops_enqueue_bulk(mp, cache_objs, cache->len);
-		cache->len = n;
+		goto driver_enqueue;
 	}
 
 	/* Add the objects to the cache. */
@@ -1399,13 +1584,7 @@ rte_mempool_do_generic_put(struct rte_mempool *mp, void * const *obj_table,
 
 driver_enqueue:
 
-	/* increment stat now, adding in mempool always success */
-	RTE_MEMPOOL_STAT_ADD(mp, put_bulk, 1);
-	RTE_MEMPOOL_STAT_ADD(mp, put_objs, n);
-
-driver_enqueue_stats_incremented:
-
-	/* push objects to the backend */
+	/* Push the objects to the backend. */
 	rte_mempool_ops_enqueue_bulk(mp, obj_table, n);
 }
 
