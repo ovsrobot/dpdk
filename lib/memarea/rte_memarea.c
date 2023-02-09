@@ -2,8 +2,10 @@
  * Copyright(c) 2023 HiSilicon Limited
  */
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/queue.h>
 
 #include <rte_common.h>
 #include <rte_log.h>
@@ -88,6 +90,8 @@ memarea_alloc_area(const struct rte_memarea_param *init)
 					init->numa_socket);
 	else if (init->source == RTE_MEMAREA_SOURCE_LIBC)
 		ptr = memarea_alloc_from_libc(init->total_sz);
+	else if (init->source == RTE_MEMAREA_SOURCE_MEMAREA)
+		ptr = rte_memarea_alloc(init->src_ma, init->total_sz);
 
 	return ptr;
 }
@@ -99,6 +103,8 @@ memarea_free_area(const struct rte_memarea_param *init, void *ptr)
 		rte_free(ptr);
 	else if (init->source == RTE_MEMAREA_SOURCE_LIBC)
 		free(ptr);
+	else if (init->source == RTE_MEMAREA_SOURCE_MEMAREA)
+		rte_memarea_free(init->src_ma, ptr);
 }
 
 struct rte_memarea *
@@ -167,4 +173,178 @@ rte_memarea_destroy(struct rte_memarea *ma)
 		return;
 	memarea_free_area(&ma->init, ma->area_base);
 	rte_free(ma);
+}
+
+static inline void
+memarea_lock(struct rte_memarea *ma)
+{
+	if (ma->init.mt_safe)
+		rte_spinlock_lock(&ma->lock);
+}
+
+static inline void
+memarea_unlock(struct rte_memarea *ma)
+{
+	if (ma->init.mt_safe)
+		rte_spinlock_unlock(&ma->lock);
+}
+
+/**
+ * Check cookie or panic.
+ *
+ * @param status
+ *   - 0: object is supposed to be available
+ *   - 1: object is supposed to be allocated
+ *   - 2: just check that cookie is valid (available or allocated)
+ */
+static inline void
+memarea_check_cookie(const struct rte_memarea *ma, const struct memarea_objhdr *hdr, int status)
+{
+#ifdef RTE_LIBRTE_MEMAREA_DEBUG
+	static const char *const str[] = { "PASS", "FAILED" };
+	struct memarea_objtlr *tlr;
+	bool hdr_fail, tlr_fail;
+
+	if (unlikely(hdr == ma->guard_hdr))
+		return;
+
+	tlr = RTE_PTR_SUB(TAILQ_NEXT(hdr, obj_next), sizeof(struct memarea_objtlr));
+	hdr_fail = (status == 0 && hdr->cookie != MEMAREA_OBJECT_HEADER_AVAILABLE_COOKIE) ||
+		   (status == 1 && hdr->cookie != MEMAREA_OBJECT_HEADER_ALLOCATED_COOKIE) ||
+		   (status == 2 && (hdr->cookie != MEMAREA_OBJECT_HEADER_AVAILABLE_COOKIE &&
+				    hdr->cookie != MEMAREA_OBJECT_HEADER_ALLOCATED_COOKIE));
+	tlr_fail = (tlr->cookie != MEMAREA_OBJECT_TRAILER_COOKIE);
+	if (!hdr_fail && !tlr_fail)
+		return;
+
+	rte_panic("MEMAREA: %s check cookies failed! addr-%p header-cookie<0x%" PRIx64 " %s> trailer-cookie<0x%" PRIx64 " %s>\n",
+		ma->init.name, RTE_PTR_ADD(hdr, sizeof(struct memarea_objhdr)),
+		hdr->cookie, str[hdr_fail], tlr->cookie, str[tlr_fail]);
+#else
+	RTE_SET_USED(ma);
+	RTE_SET_USED(hdr);
+	RTE_SET_USED(status);
+#endif
+}
+
+static inline bool
+memarea_whether_add_node(size_t avail_sz, size_t alloc_sz)
+{
+	return (avail_sz - alloc_sz) > (sizeof(struct memarea_objhdr) +
+					MEMAREA_OBJECT_SIZE_ALIGN
+#ifdef RTE_LIBRTE_MEMAREA_DEBUG
+					+ sizeof(struct memarea_objtlr)
+
+#endif
+					);
+}
+
+static inline void
+memarea_add_node(struct rte_memarea *ma, struct memarea_objhdr *hdr, size_t alloc_sz)
+{
+#ifdef RTE_LIBRTE_MEMAREA_DEBUG
+	struct memarea_objtlr *cur_tlr;
+#endif
+	struct memarea_objhdr *new_hdr;
+
+#ifdef RTE_LIBRTE_MEMAREA_DEBUG
+	cur_tlr = RTE_PTR_ADD(hdr, sizeof(struct memarea_objhdr) + alloc_sz);
+	cur_tlr->cookie = MEMAREA_OBJECT_TRAILER_COOKIE;
+	new_hdr = RTE_PTR_ADD(cur_tlr, sizeof(struct memarea_objtlr));
+	new_hdr->cookie = MEMAREA_OBJECT_HEADER_AVAILABLE_COOKIE;
+#else
+	new_hdr = RTE_PTR_ADD(hdr, sizeof(struct memarea_objhdr) + alloc_sz);
+#endif
+	TAILQ_INSERT_AFTER(&ma->obj_list, hdr, new_hdr, obj_next);
+	TAILQ_INSERT_AFTER(&ma->avail_list, hdr, new_hdr, avail_next);
+}
+
+void *
+rte_memarea_alloc(struct rte_memarea *ma, size_t size)
+{
+	size_t align_sz = RTE_ALIGN(size, MEMAREA_OBJECT_SIZE_ALIGN);
+	struct memarea_objhdr *hdr;
+	size_t avail_sz;
+	void *ptr = NULL;
+
+	if (unlikely(ma == NULL || size == 0 || align_sz < size))
+		return ptr;
+
+	memarea_lock(ma);
+	TAILQ_FOREACH(hdr, &ma->avail_list, avail_next) {
+		memarea_check_cookie(ma, hdr, 0);
+		avail_sz = MEMAREA_OBJECT_GET_SIZE(hdr);
+		if (avail_sz < align_sz)
+			continue;
+		if (memarea_whether_add_node(avail_sz, align_sz))
+			memarea_add_node(ma, hdr, align_sz);
+		TAILQ_REMOVE(&ma->avail_list, hdr, avail_next);
+		MEMAREA_OBJECT_MARK_ALLOCATED(hdr);
+#ifdef RTE_LIBRTE_MEMAREA_DEBUG
+		hdr->cookie = MEMAREA_OBJECT_HEADER_ALLOCATED_COOKIE;
+#endif
+		ptr = RTE_PTR_ADD(hdr, sizeof(struct memarea_objhdr));
+		break;
+	}
+	memarea_unlock(ma);
+
+	return ptr;
+}
+
+static inline void
+memarea_merge_node(struct rte_memarea *ma, struct memarea_objhdr *curr,
+		   struct memarea_objhdr *next)
+{
+#ifdef RTE_LIBRTE_MEMAREA_DEBUG
+	struct memarea_objtlr *tlr;
+#endif
+	RTE_SET_USED(curr);
+	TAILQ_REMOVE(&ma->obj_list, next, obj_next);
+	TAILQ_REMOVE(&ma->avail_list, next, avail_next);
+#ifdef RTE_LIBRTE_MEMAREA_DEBUG
+	next->cookie = 0;
+	tlr = RTE_PTR_SUB(next, sizeof(struct memarea_objtlr));
+	tlr->cookie = 0;
+#endif
+}
+
+void
+rte_memarea_free(struct rte_memarea *ma, void *ptr)
+{
+	struct memarea_objhdr *hdr, *prev, *next;
+
+	if (unlikely(ma == NULL || ptr == NULL))
+		return;
+
+	hdr = RTE_PTR_SUB(ptr, sizeof(struct memarea_objhdr));
+	if (unlikely(!MEMAREA_OBJECT_IS_ALLOCATED(hdr))) {
+		RTE_MEMAREA_LOG(ERR, "detect invalid object in %s!", ma->init.name);
+		return;
+	}
+	memarea_check_cookie(ma, hdr, 1);
+
+	memarea_lock(ma);
+
+	/** 1st: add to avail list. */
+#ifdef RTE_LIBRTE_MEMAREA_DEBUG
+	hdr->cookie = MEMAREA_OBJECT_HEADER_AVAILABLE_COOKIE;
+#endif
+	TAILQ_INSERT_HEAD(&ma->avail_list, hdr, avail_next);
+
+	/** 2nd: merge if previous object is avail. */
+	prev = TAILQ_PREV(hdr, memarea_objhdr_list, obj_next);
+	if (prev != NULL && !MEMAREA_OBJECT_IS_ALLOCATED(prev)) {
+		memarea_check_cookie(ma, prev, 0);
+		memarea_merge_node(ma, prev, hdr);
+		hdr = prev;
+	}
+
+	/** 3rd: merge if next object is avail. */
+	next = TAILQ_NEXT(hdr, obj_next);
+	if (next != NULL && !MEMAREA_OBJECT_IS_ALLOCATED(next)) {
+		memarea_check_cookie(ma, next, 0);
+		memarea_merge_node(ma, hdr, next);
+	}
+
+	memarea_unlock(ma);
 }
