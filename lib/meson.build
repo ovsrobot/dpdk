@@ -42,6 +42,7 @@ libraries = [
         'kni',
         'latencystats',
         'lpm',
+        'memarea',
         'member',
         'pcapng',
         'power',
