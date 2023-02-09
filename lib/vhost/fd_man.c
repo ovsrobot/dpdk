@@ -10,8 +10,10 @@
 
 #include "fd_man.h"
 
-
-#define RTE_LOGTYPE_VHOST_FDMAN RTE_LOGTYPE_USER1
+RTE_LOG_REGISTER_SUFFIX(vhost_fdset_logtype, fdset, INFO);
+#define FDSET_LOG(level, fmt, args...)		\
+	rte_log(RTE_LOG_ ## level, vhost_fdset_logtype,	\
+		"%s(): " fmt "\n", __func__, ## args)
 
 #define FDPOLLERR (POLLERR | POLLHUP | POLLNVAL)
 
@@ -334,8 +336,8 @@ fdset_pipe_init(struct fdset *fdset)
 	int ret;
 
 	if (pipe(fdset->u.pipefd) < 0) {
-		RTE_LOG(ERR, VHOST_FDMAN,
-			"failed to create pipe for vhost fdset\n");
+		FDSET_LOG(ERR,
+			"failed to create pipe for vhost fdset");
 		return -1;
 	}
 
@@ -343,9 +345,9 @@ fdset_pipe_init(struct fdset *fdset)
 			fdset_pipe_read_cb, NULL, NULL);
 
 	if (ret < 0) {
-		RTE_LOG(ERR, VHOST_FDMAN,
-			"failed to add pipe readfd %d into vhost server fdset\n",
-			fdset->u.readfd);
+		FDSET_LOG(ERR,
+			  "failed to add pipe readfd %d into vhost server fdset",
+			  fdset->u.readfd);
 
 		fdset_pipe_uninit(fdset);
 		return -1;

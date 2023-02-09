@@ -4,6 +4,7 @@
 #include <rte_malloc.h>
 #include <rte_hash.h>
 #include <rte_jhash.h>
+#include <rte_log.h>
 #include <rte_mbuf.h>
 #include <rte_cryptodev.h>
 
@@ -16,22 +17,18 @@
 #define IV_OFFSET		(sizeof(struct rte_crypto_op) + \
 				sizeof(struct rte_crypto_sym_op))
 
-#ifdef RTE_LIBRTE_VHOST_DEBUG
-#define VC_LOG_ERR(fmt, args...)				\
-	RTE_LOG(ERR, USER1, "[%s] %s() line %u: " fmt "\n",	\
-		"Vhost-Crypto",	__func__, __LINE__, ## args)
-#define VC_LOG_INFO(fmt, args...)				\
-	RTE_LOG(INFO, USER1, "[%s] %s() line %u: " fmt "\n",	\
-		"Vhost-Crypto",	__func__, __LINE__, ## args)
+RTE_LOG_REGISTER_SUFFIX(vhost_crypto_logtype, crypto, INFO);
 
-#define VC_LOG_DBG(fmt, args...)				\
-	RTE_LOG(DEBUG, USER1, "[%s] %s() line %u: " fmt "\n",	\
-		"Vhost-Crypto",	__func__, __LINE__, ## args)
+#define VC_LOG(level, fmt, args...)				\
+	rte_log(RTE_LOG_ ## level, vhost_crypto_logtype,	\
+		"%s():%u: " fmt "\n", __func__, __LINE__, ## args)
+
+#define VC_LOG_ERR(fmt, args...)	VC_LOG(ERR, fmt, ## args)
+#define VC_LOG_INFO(fmt, args...)	VC_LOG(INFO, fmt, ## args)
+
+#ifdef RTE_LIBRTE_VHOST_DEBUG
+#define VC_LOG_DBG(fmt, args...)	VC_LOG(DEBUG, fmt, ## args)
 #else
-#define VC_LOG_ERR(fmt, args...)				\
-	RTE_LOG(ERR, USER1, "[VHOST-Crypto]: " fmt "\n", ## args)
-#define VC_LOG_INFO(fmt, args...)				\
-	RTE_LOG(INFO, USER1, "[VHOST-Crypto]: " fmt "\n", ## args)
 #define VC_LOG_DBG(fmt, args...)
 #endif
 
