@@ -58,6 +58,7 @@ headers += files(
 driver_sdk_headers = files(
         'bus_driver.h',
         'dev_driver.h',
+        'eal_trace_internal.h',
 )
 
 # special case install the generic headers, since they go in a subdir
