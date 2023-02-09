@@ -348,3 +348,101 @@ rte_memarea_free(struct rte_memarea *ma, void *ptr)
 
 	memarea_unlock(ma);
 }
+
+static const char *
+memarea_source_name(enum rte_memarea_source source)
+{
+	if (source == RTE_MEMAREA_SOURCE_HEAP)
+		return "heap";
+	else if (source == RTE_MEMAREA_SOURCE_LIBC)
+		return "libc";
+	else if (source == RTE_MEMAREA_SOURCE_MEMAREA)
+		return "memarea";
+	else
+		return "unknown";
+}
+
+static const char *
+memarea_alg_name(enum rte_memarea_algorithm alg)
+{
+	if (alg == RTE_MEMAREA_ALGORITHM_NEXTFIT)
+		return "nextfit";
+	else
+		return "unknown";
+}
+
+static void
+memarea_dump_objects_brief(struct rte_memarea *ma, FILE *f)
+{
+	uint32_t total_objs = 0, total_avail_objs = 0;
+	struct memarea_objhdr *hdr;
+	size_t total_avail_sz = 0;
+
+	TAILQ_FOREACH(hdr, &ma->obj_list, obj_next) {
+		if (hdr == ma->guard_hdr)
+			break;
+		memarea_check_cookie(ma, hdr, 2);
+		total_objs++;
+		if (!MEMAREA_OBJECT_IS_ALLOCATED(hdr)) {
+			total_avail_objs++;
+			total_avail_sz += MEMAREA_OBJECT_GET_SIZE(hdr);
+		}
+	}
+	fprintf(f, "  total-objects: %u\n", total_objs);
+	fprintf(f, "  total-avail-objects: %u\n", total_avail_objs);
+	fprintf(f, "  total-avail-objects-size: 0x%zx\n", total_avail_sz);
+}
+
+static void
+memarea_dump_objects_detail(struct rte_memarea *ma, FILE *f)
+{
+	struct memarea_objhdr *hdr;
+	size_t offset;
+	void *ptr;
+
+	fprintf(f, "  objects:\n");
+	TAILQ_FOREACH(hdr, &ma->obj_list, obj_next) {
+		if (hdr == ma->guard_hdr)
+			break;
+		memarea_check_cookie(ma, hdr, 2);
+		ptr = RTE_PTR_ADD(hdr, sizeof(struct memarea_objhdr));
+		offset = RTE_PTR_DIFF(ptr, ma->area_base);
+#ifdef RTE_LIBRTE_MEMAREA_DEBUG
+		fprintf(f, "    %p off: 0x%zx size: 0x%zx %s\n",
+			ptr, offset, MEMAREA_OBJECT_GET_SIZE(hdr),
+			MEMAREA_OBJECT_IS_ALLOCATED(hdr) ? "allocated" : "");
+#else
+		fprintf(f, "    off: 0x%zx size: 0x%zx %s\n",
+			offset, MEMAREA_OBJECT_GET_SIZE(hdr),
+			MEMAREA_OBJECT_IS_ALLOCATED(hdr) ? "allocated" : "");
+#endif
+	}
+}
+
+int
+rte_memarea_dump(struct rte_memarea *ma, FILE *f, bool dump_all)
+{
+	if (ma == NULL || f == NULL)
+		return -EINVAL;
+
+	memarea_lock(ma);
+	fprintf(f, "memarea name: %s\n", ma->init.name);
+	fprintf(f, "  source: %s\n", memarea_source_name(ma->init.source));
+	if (ma->init.source == RTE_MEMAREA_SOURCE_HEAP)
+		fprintf(f, "  heap-numa-socket: %d\n", ma->init.numa_socket);
+	else if (ma->init.source == RTE_MEMAREA_SOURCE_MEMAREA)
+		fprintf(f, "  source-memarea: %s\n", ma->init.src_ma->init.name);
+	fprintf(f, "  algorithm: %s\n", memarea_alg_name(ma->init.alg));
+	fprintf(f, "  total-size: 0x%zx\n", ma->init.total_sz);
+	fprintf(f, "  mt-safe: %s\n", ma->init.mt_safe ? "yes" : "no");
+#ifdef RTE_LIBRTE_MEMAREA_DEBUG
+	fprintf(f, "  area-base: %p\n", ma->area_base);
+	fprintf(f, "  guard-header: %p\n", ma->guard_hdr);
+#endif
+	memarea_dump_objects_brief(ma, f);
+	if (dump_all)
+		memarea_dump_objects_detail(ma, f);
+	memarea_unlock(ma);
+
+	return 0;
+}

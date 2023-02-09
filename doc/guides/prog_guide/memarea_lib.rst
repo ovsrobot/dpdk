@@ -37,6 +37,9 @@ the memarea.
 The ``rte_memarea_free()`` function is used to free one memory object which
 allocated by ``rte_memarea_alloc()``.
 
++The ``rte_memarea_dump()`` function is used to dump the internal information
++of a memarea.
+
 Debug Mode
 ----------
 
