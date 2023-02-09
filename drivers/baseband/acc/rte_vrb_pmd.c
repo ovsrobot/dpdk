@@ -2641,7 +2641,8 @@ vrb_enqueue_ldpc_dec(struct rte_bbdev_queue_data *q_data,
 /* Dequeue one encode operations from device in CB mode. */
 static inline int
 vrb_dequeue_enc_one_op_cb(struct acc_queue *q, struct rte_bbdev_enc_op **ref_op,
-		uint16_t *dequeued_ops, uint32_t *aq_dequeued, uint16_t *dequeued_descs)
+		uint16_t *dequeued_ops, uint32_t *aq_dequeued, uint16_t *dequeued_descs,
+		uint16_t max_requested_ops)
 {
 	union acc_dma_desc *desc, atom_desc;
 	union acc_dma_rsp_desc rsp;
@@ -2653,6 +2654,9 @@ vrb_dequeue_enc_one_op_cb(struct acc_queue *q, struct rte_bbdev_enc_op **ref_op,
 	desc_idx = acc_desc_idx_tail(q, *dequeued_descs);
 	desc = q->ring_addr + desc_idx;
 	atom_desc.atom_hdr = __atomic_load_n((uint64_t *)desc, __ATOMIC_RELAXED);
+
+	if (*dequeued_ops + desc->req.numCBs > max_requested_ops)
+		return -1;
 
 	/* Check fdone bit. */
 	if (!(atom_desc.rsp.val & ACC_FDONE))
@@ -2695,7 +2699,7 @@ vrb_dequeue_enc_one_op_cb(struct acc_queue *q, struct rte_bbdev_enc_op **ref_op,
 static inline int
 vrb_dequeue_enc_one_op_tb(struct acc_queue *q, struct rte_bbdev_enc_op **ref_op,
 		uint16_t *dequeued_ops, uint32_t *aq_dequeued,
-		uint16_t *dequeued_descs)
+		uint16_t *dequeued_descs, uint16_t max_requested_ops)
 {
 	union acc_dma_desc *desc, *last_desc, atom_desc;
 	union acc_dma_rsp_desc rsp;
@@ -2705,6 +2709,9 @@ vrb_dequeue_enc_one_op_tb(struct acc_queue *q, struct rte_bbdev_enc_op **ref_op,
 
 	desc = acc_desc_tail(q, *dequeued_descs);
 	atom_desc.atom_hdr = __atomic_load_n((uint64_t *)desc, __ATOMIC_RELAXED);
+
+	if (*dequeued_ops + 1 > max_requested_ops)
+		return -1;
 
 	/* Check fdone bit. */
 	if (!(atom_desc.rsp.val & ACC_FDONE))
@@ -2966,25 +2973,23 @@ vrb_dequeue_enc(struct rte_bbdev_queue_data *q_data,
 
 	cbm = op->turbo_enc.code_block_mode;
 
-	for (i = 0; i < num; i++) {
+	for (i = 0; i < avail; i++) {
 		if (cbm == RTE_BBDEV_TRANSPORT_BLOCK)
 			ret = vrb_dequeue_enc_one_op_tb(q, &ops[dequeued_ops],
 					&dequeued_ops, &aq_dequeued,
-					&dequeued_descs);
+					&dequeued_descs, num);
 		else
 			ret = vrb_dequeue_enc_one_op_cb(q, &ops[dequeued_ops],
 					&dequeued_ops, &aq_dequeued,
-					&dequeued_descs);
+					&dequeued_descs, num);
 		if (ret < 0)
-			break;
-		if (dequeued_ops >= num)
 			break;
 	}
 
 	q->aq_dequeued += aq_dequeued;
 	q->sw_ring_tail += dequeued_descs;
 
-	/* Update enqueue stats */
+	/* Update enqueue stats. */
 	q_data->queue_stats.dequeued_count += dequeued_ops;
 
 	return dequeued_ops;
@@ -3010,14 +3015,12 @@ vrb_dequeue_ldpc_enc(struct rte_bbdev_queue_data *q_data,
 		if (cbm == RTE_BBDEV_TRANSPORT_BLOCK)
 			ret = vrb_dequeue_enc_one_op_tb(q, &ops[dequeued_ops],
 					&dequeued_ops, &aq_dequeued,
-					&dequeued_descs);
+					&dequeued_descs, num);
 		else
 			ret = vrb_dequeue_enc_one_op_cb(q, &ops[dequeued_ops],
 					&dequeued_ops, &aq_dequeued,
-					&dequeued_descs);
+					&dequeued_descs, num);
 		if (ret < 0)
-			break;
-		if (dequeued_ops >= num)
 			break;
 	}
 
