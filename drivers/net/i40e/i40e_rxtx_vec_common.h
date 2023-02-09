@@ -95,17 +95,37 @@ i40e_tx_free_bufs(struct i40e_tx_queue *txq)
 
 	n = txq->tx_rs_thresh;
 
-	 /* first buffer to free from S/W ring is at index
-	  * tx_next_dd - (tx_rs_thresh-1)
-	  */
+	/* first buffer to free from S/W ring is at index
+	 * tx_next_dd - (tx_rs_thresh-1)
+	 */
 	txep = &txq->sw_ring[txq->tx_next_dd - (n - 1)];
 
 	if (txq->offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) {
-		for (i = 0; i < n; i++) {
-			free[i] = txep[i].mbuf;
-			/* no need to reset txep[i].mbuf in vector path */
+		struct rte_mempool *mp = txep[0].mbuf->pool;
+		struct rte_mempool_cache *cache = rte_mempool_default_cache(mp, rte_lcore_id());
+
+		if (!cache || n > RTE_MEMPOOL_CACHE_MAX_SIZE) {
+			for (i = 0; i < n ; i++)
+				free[i] = txep[i].mbuf;
+			if (!cache) {
+				rte_mempool_generic_put(mp, (void **)free, n, cache);
+				goto done;
+			}
+			if (n > RTE_MEMPOOL_CACHE_MAX_SIZE) {
+				rte_mempool_ops_enqueue_bulk(mp, (void **)free, n);
+				goto done;
+			}
 		}
-		rte_mempool_put_bulk(free[0]->pool, (void **)free, n);
+		void **cache_objs;
+
+		cache_objs = rte_mempool_cache_zc_put_bulk(cache, mp, n);
+		if (cache_objs) {
+			for (i = 0; i < n; i++) {
+				cache_objs[i] = txep->mbuf;
+				/* no need to reset txep[i].mbuf in vector path */
+				txep++;
+			}
+		}
 		goto done;
 	}
 
