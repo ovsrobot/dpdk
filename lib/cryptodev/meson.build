@@ -8,7 +8,6 @@ sources = files(
 )
 headers = files(
         'rte_cryptodev.h',
-        'rte_cryptodev_trace.h',
         'rte_cryptodev_trace_fp.h',
         'rte_crypto.h',
         'rte_crypto_sym.h',
@@ -19,6 +18,7 @@ indirect_headers += files(
 )
 driver_sdk_headers += files(
         'cryptodev_pmd.h',
+        'cryptodev_trace.h',
 )
 
 deps += ['kvargs', 'mbuf', 'rcu', 'telemetry']
