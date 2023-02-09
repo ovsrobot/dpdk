@@ -17,7 +17,9 @@ sources = files(
 )
 headers = files(
         'rte_mempool.h',
-        'rte_mempool_trace.h',
         'rte_mempool_trace_fp.h',
+)
+driver_sdk_headers += files(
+        'mempool_trace.h',
 )
 deps += ['ring', 'telemetry']
