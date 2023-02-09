@@ -20,7 +20,6 @@
 #include "rte_event_crypto_adapter.h"
 
 #define BATCH_SIZE 32
-#define DEFAULT_MAX_NB 128
 #define CRYPTO_ADAPTER_NAME_LEN 32
 #define CRYPTO_ADAPTER_MEM_NAME_LEN 32
 #define CRYPTO_ADAPTER_MAX_EV_ENQ_RETRIES 100
@@ -1332,6 +1331,94 @@ rte_event_crypto_adapter_stats_reset(uint8_t id)
 	}
 
 	memset(&adapter->crypto_stats, 0, sizeof(adapter->crypto_stats));
+	return 0;
+}
+
+static int
+crypto_adapter_cap_check(struct event_crypto_adapter *adapter)
+{
+	int ret;
+	uint32_t caps;
+
+	if (!adapter->nb_qps)
+		return -EINVAL;
+	ret = rte_event_crypto_adapter_caps_get(adapter->eventdev_id,
+						adapter->next_cdev_id,
+						&caps);
+	if (ret) {
+		RTE_EDEV_LOG_ERR("Failed to get adapter caps dev %" PRIu8
+			" cdev %" PRIu8, adapter->eventdev_id,
+			adapter->next_cdev_id);
+		return ret;
+	}
+
+	if ((caps & RTE_EVENT_CRYPTO_ADAPTER_CAP_INTERNAL_PORT_OP_FWD) ||
+	    (caps & RTE_EVENT_CRYPTO_ADAPTER_CAP_INTERNAL_PORT_OP_NEW))
+		return -ENOTSUP;
+
+	return 0;
+}
+
+int
+rte_event_crypto_adapter_runtime_params_set(uint8_t id,
+		struct rte_event_crypto_adapter_runtime_params *params)
+{
+	struct event_crypto_adapter *adapter;
+	int ret;
+
+	if (eca_memzone_lookup())
+		return -ENOMEM;
+
+	EVENT_CRYPTO_ADAPTER_ID_VALID_OR_ERR_RET(id, -EINVAL);
+
+	if (params == NULL) {
+		RTE_EDEV_LOG_ERR("params pointer is NULL\n");
+		return -EINVAL;
+	}
+
+	adapter = eca_id_to_adapter(id);
+	if (adapter == NULL)
+		return -EINVAL;
+
+	ret = crypto_adapter_cap_check(adapter);
+	if (ret)
+		return ret;
+
+	rte_spinlock_lock(&adapter->lock);
+	adapter->max_nb = params->max_nb;
+	rte_spinlock_unlock(&adapter->lock);
+
+	return 0;
+}
+
+int
+rte_event_crypto_adapter_runtime_params_get(uint8_t id,
+		struct rte_event_crypto_adapter_runtime_params *params)
+{
+	struct event_crypto_adapter *adapter;
+	int ret;
+
+	if (eca_memzone_lookup())
+		return -ENOMEM;
+
+
+	EVENT_CRYPTO_ADAPTER_ID_VALID_OR_ERR_RET(id, -EINVAL);
+
+	if (params == NULL) {
+		RTE_EDEV_LOG_ERR("params pointer is NULL\n");
+		return -EINVAL;
+	}
+
+	adapter = eca_id_to_adapter(id);
+	if (adapter == NULL)
+		return -EINVAL;
+
+	ret = crypto_adapter_cap_check(adapter);
+	if (ret)
+		return ret;
+
+	params->max_nb = adapter->max_nb;
+
 	return 0;
 }
 
