@@ -37,6 +37,8 @@
  *  - rte_event_eth_tx_adapter_instance_get()
  *  - rte_event_eth_tx_adapter_queue_start()
  *  - rte_event_eth_tx_adapter_queue_stop()
+ *  - rte_event_eth_tx_adapter_runtime_params_get()
+ *  - rte_event_eth_tx_adapter_runtime_params_set()
  *
  * The application creates the adapter using
  * rte_event_eth_tx_adapter_create() or rte_event_eth_tx_adapter_create_ext().
@@ -101,6 +103,33 @@ struct rte_event_eth_tx_adapter_conf {
 	 * max_nb_tx mbufs. This isn't treated as a requirement; batching may
 	 * cause the adapter to process more than max_nb_tx mbufs.
 	 */
+};
+
+#define TXA_FLUSH_THRESHOLD	1024
+/**< The default value of flush threshold for service
+ * based adapter.
+ */
+
+#define TXA_MAX_NB_TX		128
+/**< The default value for maximum number of packets processed by service
+ * based adapter per each call.
+ */
+
+/**
+ * Adapter runtime configuration parameters
+ */
+struct rte_event_eth_tx_adapter_runtime_params {
+	uint32_t max_nb_tx;
+	/**< The adapter can return early if it has processed at least
+	 * max_nb_tx mbufs. This isn't treated as a requirement; batching may
+	 * cause the adapter to process more than max_nb_tx mbufs.
+	 */
+	uint16_t flush_threshold;
+	/**< the number of service function iteration count to
+	 * flush buffered packets.
+	 */
+	uint16_t rsvd[29];
+	/**< Reserved fields for future expansion */
 };
 
 /**
@@ -515,6 +544,83 @@ rte_event_eth_tx_adapter_queue_start(uint16_t eth_dev_id, uint16_t tx_queue_id);
 __rte_experimental
 int
 rte_event_eth_tx_adapter_queue_stop(uint16_t eth_dev_id, uint16_t tx_queue_id);
+
+/**
+ * Initialize the adapter runtime configuration parameters with default values
+ *
+ * @param id
+ *  Adapter identifier
+ *
+ * @param params
+ *  A pointer to structure of type struct rte_event_eth_tx_adapter_runtime_params
+ *
+ * @return
+ *  -  0: Success
+ *  - <0: Error code on failure
+ */
+__rte_experimental
+static inline int
+rte_event_eth_tx_adapter_runtime_params_init(
+		struct rte_event_eth_tx_adapter_runtime_params *txa_params)
+{
+	if (txa_params == NULL)
+		return -EINVAL;
+
+	memset(txa_params, 0, sizeof(*txa_params));
+	txa_params->max_nb_tx = TXA_MAX_NB_TX;
+	txa_params->flush_threshold = TXA_FLUSH_THRESHOLD;
+
+	return 0;
+}
+
+/**
+ * Set the runtime configuration parameters for adapter.
+ *
+ * In case not all fields are to be updated, the suggested way to use this
+ * api is read the current values using rte_event_eth_tx_adapter_get_params(),
+ * modify the required parameters and then call
+ * rte_event_eth_tx_adapter_runtime_params_set().
+ *
+ * This API is to be used after adding at least one queue to the adapter
+ * and is supported only for service based adapter.
+ *
+ * @param id
+ *  Adapter identifier
+ * @param params
+ *  A pointer to structure of type struct rte_event_eth_tx_adapter_runtime_params
+ *  with configuration parameter values. This structure can be initialized using
+ *  rte_event_eth_tx_adapter_runtime_params_init() API to default values or
+ *  application may reset this structure and update required fields.
+ *
+ * @return
+ * -  0: Success
+ * - <0: Error code on failure
+ */
+__rte_experimental
+int
+rte_event_eth_tx_adapter_runtime_params_set(uint8_t id,
+		struct rte_event_eth_tx_adapter_runtime_params *params);
+
+/**
+ * Get the runtime configuration parameters of adapter.
+ *
+ * This API is to be used after adding at least one queue to the adapter
+ * and is supported only for service based adapter.
+ *
+ * @param id
+ *  Adapter identifier
+ * @param[out] params
+ *  A pointer to structure of type struct rte_event_eth_tx_adapter_runtime_params
+ *  containing valid Tx adapter parameters when return value is 0.
+ *
+ * @return
+ * -  0: Success
+ * - <0: Error code on failure
+ */
+__rte_experimental
+int
+rte_event_eth_tx_adapter_runtime_params_get(uint8_t id,
+		struct rte_event_eth_tx_adapter_runtime_params *params);
 
 #ifdef __cplusplus
 }
