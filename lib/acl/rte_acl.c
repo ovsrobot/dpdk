@@ -6,8 +6,10 @@
 #include <rte_string_fns.h>
 #include <rte_acl.h>
 #include <rte_tailq.h>
+#include <rte_log.h>
 
 #include "acl.h"
+#include "acl_log.h"
 
 TAILQ_HEAD(rte_acl_list, rte_tailq_entry);
 
@@ -400,15 +402,15 @@ rte_acl_create(const struct rte_acl_param *param)
 		te = rte_zmalloc("ACL_TAILQ_ENTRY", sizeof(*te), 0);
 
 		if (te == NULL) {
-			RTE_LOG(ERR, ACL, "Cannot allocate tailq entry!\n");
+			ACL_LOG(ERR, "Cannot allocate tailq entry!");
 			goto exit;
 		}
 
 		ctx = rte_zmalloc_socket(name, sz, RTE_CACHE_LINE_SIZE, param->socket_id);
 
 		if (ctx == NULL) {
-			RTE_LOG(ERR, ACL,
-				"allocation of %zu bytes on socket %d for %s failed\n",
+			ACL_LOG(ERR,
+				"allocation of %zu bytes on socket %d for %s failed",
 				sz, param->socket_id, name);
 			rte_free(te);
 			goto exit;
@@ -474,8 +476,8 @@ rte_acl_add_rules(struct rte_acl_ctx *ctx, const struct rte_acl_rule *rules,
 			((uintptr_t)rules + i * ctx->rule_sz);
 		rc = acl_check_rule(&rv->data);
 		if (rc != 0) {
-			RTE_LOG(ERR, ACL, "%s(%s): rule #%u is invalid\n",
-				__func__, ctx->name, i + 1);
+			ACL_LOG(ERR, "%s: rule #%u is invalid",
+				ctx->name, i + 1);
 			return rc;
 		}
 	}
@@ -544,3 +546,5 @@ rte_acl_list_dump(void)
 	}
 	rte_mcfg_tailq_read_unlock();
 }
+
+RTE_LOG_REGISTER_DEFAULT(acl_logtype, INFO);

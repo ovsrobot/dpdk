@@ -27,7 +27,7 @@ extern "C" {
 
 /* SDK log type */
 #define RTE_LOGTYPE_EAL        0 /**< Log related to eal. */
-#define RTE_LOGTYPE_MALLOC     1 /**< Log related to malloc. */
+				 /* was RTE_LOGTYPE_MALLOC */
 #define RTE_LOGTYPE_RING       2 /**< Log related to ring. */
 #define RTE_LOGTYPE_MEMPOOL    3 /**< Log related to mempool. */
 				 /* was RTE_LOGTYPE_TIMER */
@@ -35,7 +35,7 @@ extern "C" {
 #define RTE_LOGTYPE_HASH       6 /**< Log related to hash table. */
 #define RTE_LOGTYPE_LPM        7 /**< Log related to LPM. */
 #define RTE_LOGTYPE_KNI        8 /**< Log related to KNI. */
-#define RTE_LOGTYPE_ACL        9 /**< Log related to ACL. */
+				 /* was RTE_LOGTYPE_ACL */
 #define RTE_LOGTYPE_POWER     10 /**< Log related to power. */
 #define RTE_LOGTYPE_METER     11 /**< Log related to QoS meter. */
 #define RTE_LOGTYPE_SCHED     12 /**< Log related to QoS port scheduler. */

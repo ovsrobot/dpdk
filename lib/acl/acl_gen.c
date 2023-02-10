@@ -4,6 +4,7 @@
 
 #include <rte_acl.h>
 #include "acl.h"
+#include "acl_log.h"
 
 #define	QRANGE_MIN	((uint8_t)INT8_MIN)
 
@@ -32,18 +33,19 @@ struct rte_acl_indices {
 
 static void
 acl_gen_log_stats(const struct rte_acl_ctx *ctx,
-	const struct acl_node_counters *counts,
-	const struct rte_acl_indices *indices,
-	size_t max_size)
+		  const struct acl_node_counters *counts,
+		  const struct rte_acl_indices *indices,
+		  size_t max_size)
 {
-	RTE_LOG(DEBUG, ACL, "Gen phase for ACL \"%s\":\n"
+	ACL_LOG(DEBUG,
+		"Gen phase for ACL \"%s\":\n"
 		"runtime memory footprint on socket %d:\n"
 		"single nodes/bytes used: %d/%zu\n"
 		"quad nodes/vectors/bytes used: %d/%d/%zu\n"
 		"DFA nodes/group64/bytes used: %d/%d/%zu\n"
 		"match nodes/bytes used: %d/%zu\n"
 		"total: %zu bytes\n"
-		"max limit: %zu bytes\n",
+		"max limit: %zu bytes",
 		ctx->name, ctx->socket_id,
 		counts->single, counts->single * sizeof(uint64_t),
 		counts->quad, counts->quad_vectors,
@@ -470,9 +472,9 @@ rte_acl_gen(struct rte_acl_ctx *ctx, struct rte_acl_trie *trie,
 		XMM_SIZE;
 
 	if (total_size > max_size) {
-		RTE_LOG(DEBUG, ACL,
+		ACL_LOG(DEBUG,
 			"Gen phase for ACL ctx \"%s\" exceeds max_size limit, "
-			"bytes required: %zu, allowed: %zu\n",
+			"bytes required: %zu, allowed: %zu",
 			ctx->name, total_size, max_size);
 		return -ERANGE;
 	}
@@ -480,8 +482,8 @@ rte_acl_gen(struct rte_acl_ctx *ctx, struct rte_acl_trie *trie,
 	mem = rte_zmalloc_socket(ctx->name, total_size, RTE_CACHE_LINE_SIZE,
 			ctx->socket_id);
 	if (mem == NULL) {
-		RTE_LOG(ERR, ACL,
-			"allocation of %zu bytes on socket %d for %s failed\n",
+		ACL_LOG(ERR,
+			"allocation of %zu bytes on socket %d for %s failed",
 			total_size, ctx->socket_id, ctx->name);
 		return -ENOMEM;
 	}
