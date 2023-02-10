@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "rte_sched_log.h"
+
 #include "rte_pie.h"
 
 #ifdef __INTEL_COMPILER
@@ -16,7 +18,7 @@ int
 rte_pie_rt_data_init(struct rte_pie *pie)
 {
 	if (pie == NULL) {
-		RTE_LOG(ERR, SCHED, "%s: Invalid addr for pie\n", __func__);
+		SCHED_LOG(ERR, "Invalid addr for pie");
 		return -EINVAL;
 	}
 
@@ -38,26 +40,22 @@ rte_pie_config_init(struct rte_pie_config *pie_cfg,
 		return -1;
 
 	if (qdelay_ref <= 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for qdelay_ref\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for qdelay_ref");
 		return -EINVAL;
 	}
 
 	if (dp_update_interval <= 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for dp_update_interval\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for dp_update_interval");
 		return -EINVAL;
 	}
 
 	if (max_burst <= 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for max_burst\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for max_burst");
 		return -EINVAL;
 	}
 
 	if (tailq_th <= 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for tailq_th\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for tailq_th");
 		return -EINVAL;
 	}
 

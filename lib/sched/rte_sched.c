@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include <rte_common.h>
-#include <rte_log.h>
 #include <rte_malloc.h>
 #include <rte_cycles.h>
 #include <rte_prefetch.h>
@@ -17,6 +16,7 @@
 
 #include "rte_sched.h"
 #include "rte_sched_common.h"
+#include "rte_sched_log.h"
 #include "rte_approx.h"
 
 #ifdef __INTEL_COMPILER
@@ -324,23 +324,20 @@ pipe_profile_check(struct rte_sched_pipe_params *params,
 
 	/* Pipe parameters */
 	if (params == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter params\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter params");
 		return -EINVAL;
 	}
 
 	/* TB rate: non-zero, not greater than port rate */
 	if (params->tb_rate == 0 ||
 		params->tb_rate > rate) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for tb rate\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for tb rate");
 		return -EINVAL;
 	}
 
 	/* TB size: non-zero */
 	if (params->tb_size == 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for tb size\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for tb size");
 		return -EINVAL;
 	}
 
@@ -349,38 +346,33 @@ pipe_profile_check(struct rte_sched_pipe_params *params,
 		if ((qsize[i] == 0 && params->tc_rate[i] != 0) ||
 			(qsize[i] != 0 && (params->tc_rate[i] == 0 ||
 			params->tc_rate[i] > params->tb_rate))) {
-			RTE_LOG(ERR, SCHED,
-				"%s: Incorrect value for qsize or tc_rate\n", __func__);
+			SCHED_LOG(ERR, "Incorrect value for qsize or tc_rate");
 			return -EINVAL;
 		}
 	}
 
 	if (params->tc_rate[RTE_SCHED_TRAFFIC_CLASS_BE] == 0 ||
 		qsize[RTE_SCHED_TRAFFIC_CLASS_BE] == 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for be traffic class rate\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for be traffic class rate");
 		return -EINVAL;
 	}
 
 	/* TC period: non-zero */
 	if (params->tc_period == 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for tc period\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for tc period");
 		return -EINVAL;
 	}
 
 	/*  Best effort tc oversubscription weight: non-zero */
 	if (params->tc_ov_weight == 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for tc ov weight\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for tc ov weight");
 		return -EINVAL;
 	}
 
 	/* Queue WRR weights: non-zero */
 	for (i = 0; i < RTE_SCHED_BE_QUEUES_PER_PIPE; i++) {
 		if (params->wrr_weights[i] == 0) {
-			RTE_LOG(ERR, SCHED,
-				"%s: Incorrect value for wrr weight\n", __func__);
+			SCHED_LOG(ERR, "Incorrect value for wrr weight");
 			return -EINVAL;
 		}
 	}
@@ -396,20 +388,17 @@ subport_profile_check(struct rte_sched_subport_profile_params *params,
 
 	/* Check user parameters */
 	if (params == NULL) {
-		RTE_LOG(ERR, SCHED, "%s: "
-		"Incorrect value for parameter params\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter params");
 		return -EINVAL;
 	}
 
 	if (params->tb_rate == 0 || params->tb_rate > rate) {
-		RTE_LOG(ERR, SCHED, "%s: "
-		"Incorrect value for tb rate\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for tb rate");
 		return -EINVAL;
 	}
 
 	if (params->tb_size == 0) {
-		RTE_LOG(ERR, SCHED, "%s: "
-		"Incorrect value for tb size\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for tb size");
 		return -EINVAL;
 	}
 
@@ -417,21 +406,18 @@ subport_profile_check(struct rte_sched_subport_profile_params *params,
 		uint64_t tc_rate = params->tc_rate[i];
 
 		if (tc_rate == 0 || (tc_rate > params->tb_rate)) {
-			RTE_LOG(ERR, SCHED, "%s: "
-			"Incorrect value for tc rate\n", __func__);
+			SCHED_LOG(ERR, "Incorrect value for tc rate");
 			return -EINVAL;
 		}
 	}
 
 	if (params->tc_rate[RTE_SCHED_TRAFFIC_CLASS_BE] == 0) {
-		RTE_LOG(ERR, SCHED, "%s: "
-		"Incorrect tc rate(best effort)\n", __func__);
+		SCHED_LOG(ERR, "Incorrect tc rate(best effort)");
 		return -EINVAL;
 	}
 
 	if (params->tc_period == 0) {
-		RTE_LOG(ERR, SCHED, "%s: "
-		"Incorrect value for tc period\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for tc period");
 		return -EINVAL;
 	}
 
@@ -444,29 +430,25 @@ rte_sched_port_check_params(struct rte_sched_port_params *params)
 	uint32_t i;
 
 	if (params == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter params\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter params");
 		return -EINVAL;
 	}
 
 	/* socket */
 	if (params->socket < 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for socket id\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for socket id");
 		return -EINVAL;
 	}
 
 	/* rate */
 	if (params->rate == 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for rate\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for rate");
 		return -EINVAL;
 	}
 
 	/* mtu */
 	if (params->mtu == 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for mtu\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for mtu");
 		return -EINVAL;
 	}
 
@@ -474,8 +456,7 @@ rte_sched_port_check_params(struct rte_sched_port_params *params)
 	if (params->n_subports_per_port == 0 ||
 	    params->n_subports_per_port > 1u << 16 ||
 	    !rte_is_power_of_2(params->n_subports_per_port)) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for number of subports\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for number of subports");
 		return -EINVAL;
 	}
 
@@ -483,8 +464,7 @@ rte_sched_port_check_params(struct rte_sched_port_params *params)
 		params->n_subport_profiles == 0 ||
 		params->n_max_subport_profiles == 0 ||
 		params->n_subport_profiles > params->n_max_subport_profiles) {
-		RTE_LOG(ERR, SCHED,
-		"%s: Incorrect value for subport profiles\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for subport profiles");
 		return -EINVAL;
 	}
 
@@ -495,9 +475,8 @@ rte_sched_port_check_params(struct rte_sched_port_params *params)
 
 		status = subport_profile_check(p, params->rate);
 		if (status != 0) {
-			RTE_LOG(ERR, SCHED,
-			"%s: subport profile check failed(%d)\n",
-			__func__, status);
+			SCHED_LOG(ERR, "subport profile check failed(%d)",
+				  status);
 			return -EINVAL;
 		}
 	}
@@ -505,8 +484,7 @@ rte_sched_port_check_params(struct rte_sched_port_params *params)
 	/* n_pipes_per_subport: non-zero, power of 2 */
 	if (params->n_pipes_per_subport == 0 ||
 	    !rte_is_power_of_2(params->n_pipes_per_subport)) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for maximum pipes number\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for maximum pipes number");
 		return -EINVAL;
 	}
 
@@ -605,14 +583,15 @@ rte_sched_port_log_pipe_profile(struct rte_sched_subport *subport, uint32_t i)
 {
 	struct rte_sched_pipe_profile *p = subport->pipe_profiles + i;
 
-	RTE_LOG(DEBUG, SCHED, "Low level config for pipe profile %u:\n"
+	SCHED_LOG(DEBUG,
+		  "Low level config for pipe profile %u:\n"
 		"	Token bucket: period = %"PRIu64", credits per period = %"PRIu64", size = %"PRIu64"\n"
 		"	Traffic classes: period = %"PRIu64",\n"
 		"	credits per period = [%"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64
 		", %"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64
 		", %"PRIu64", %"PRIu64", %"PRIu64"]\n"
 		"	Best-effort traffic class oversubscription: weight = %hhu\n"
-		"	WRR cost: [%hhu, %hhu, %hhu, %hhu]\n",
+		"	WRR cost: [%hhu, %hhu, %hhu, %hhu]",
 		i,
 
 		/* Token bucket */
@@ -648,35 +627,36 @@ rte_sched_port_log_subport_profile(struct rte_sched_port *port, uint32_t i)
 {
 	struct rte_sched_subport_profile *p = port->subport_profiles + i;
 
-	RTE_LOG(DEBUG, SCHED, "Low level config for subport profile %u:\n"
-	"Token bucket: period = %"PRIu64", credits per period = %"PRIu64","
-	"size = %"PRIu64"\n"
-	"Traffic classes: period = %"PRIu64",\n"
-	"credits per period = [%"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64
-	" %"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64
-	" %"PRIu64", %"PRIu64", %"PRIu64"]\n",
-	i,
+	SCHED_LOG(DEBUG,
+		  "Low level config for subport profile %u:\n"
+		  "Token bucket: period = %"PRIu64", credits per period = %"PRIu64","
+		  "size = %"PRIu64"\n"
+		  "Traffic classes: period = %"PRIu64",\n"
+		  "credits per period = [%"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64
+		  " %"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64
+		  " %"PRIu64", %"PRIu64", %"PRIu64"]",
+		  i,
 
-	/* Token bucket */
-	p->tb_period,
-	p->tb_credits_per_period,
-	p->tb_size,
+		  /* Token bucket */
+		  p->tb_period,
+		  p->tb_credits_per_period,
+		  p->tb_size,
 
-	/* Traffic classes */
-	p->tc_period,
-	p->tc_credits_per_period[0],
-	p->tc_credits_per_period[1],
-	p->tc_credits_per_period[2],
-	p->tc_credits_per_period[3],
-	p->tc_credits_per_period[4],
-	p->tc_credits_per_period[5],
-	p->tc_credits_per_period[6],
-	p->tc_credits_per_period[7],
-	p->tc_credits_per_period[8],
-	p->tc_credits_per_period[9],
-	p->tc_credits_per_period[10],
-	p->tc_credits_per_period[11],
-	p->tc_credits_per_period[12]);
+		  /* Traffic classes */
+		  p->tc_period,
+		  p->tc_credits_per_period[0],
+		  p->tc_credits_per_period[1],
+		  p->tc_credits_per_period[2],
+		  p->tc_credits_per_period[3],
+		  p->tc_credits_per_period[4],
+		  p->tc_credits_per_period[5],
+		  p->tc_credits_per_period[6],
+		  p->tc_credits_per_period[7],
+		  p->tc_credits_per_period[8],
+		  p->tc_credits_per_period[9],
+		  p->tc_credits_per_period[10],
+		  p->tc_credits_per_period[11],
+		  p->tc_credits_per_period[12]);
 }
 
 static inline uint64_t
@@ -829,8 +809,7 @@ rte_sched_subport_check_params(struct rte_sched_subport_params *params,
 
 	/* Check user parameters */
 	if (params == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter params\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter params");
 		return -EINVAL;
 	}
 
@@ -841,14 +820,13 @@ rte_sched_subport_check_params(struct rte_sched_subport_params *params,
 		uint16_t qsize = params->qsize[i];
 
 		if (qsize != 0 && !rte_is_power_of_2(qsize)) {
-			RTE_LOG(ERR, SCHED,
-				"%s: Incorrect value for qsize\n", __func__);
+			SCHED_LOG(ERR, "Incorrect value for qsize");
 			return -EINVAL;
 		}
 	}
 
 	if (params->qsize[RTE_SCHED_TRAFFIC_CLASS_BE] == 0) {
-		RTE_LOG(ERR, SCHED, "%s: Incorrect qsize\n", __func__);
+		SCHED_LOG(ERR, "Incorrect qsize");
 		return -EINVAL;
 	}
 
@@ -856,8 +834,7 @@ rte_sched_subport_check_params(struct rte_sched_subport_params *params,
 	if (params->n_pipes_per_subport_enabled == 0 ||
 		params->n_pipes_per_subport_enabled > n_max_pipes_per_subport ||
 	    !rte_is_power_of_2(params->n_pipes_per_subport_enabled)) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for pipes number\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for pipes number");
 		return -EINVAL;
 	}
 
@@ -866,8 +843,7 @@ rte_sched_subport_check_params(struct rte_sched_subport_params *params,
 	    params->n_pipe_profiles == 0 ||
 		params->n_max_pipe_profiles == 0 ||
 		params->n_pipe_profiles > params->n_max_pipe_profiles) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for pipe profiles\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for pipe profiles");
 		return -EINVAL;
 	}
 
@@ -877,8 +853,7 @@ rte_sched_subport_check_params(struct rte_sched_subport_params *params,
 
 		status = pipe_profile_check(p, rate, &params->qsize[0]);
 		if (status != 0) {
-			RTE_LOG(ERR, SCHED,
-				"%s: Pipe profile check failed(%d)\n", __func__, status);
+			SCHED_LOG(ERR, "Pipe profile check failed(%d)", status);
 			return -EINVAL;
 		}
 	}
@@ -895,9 +870,9 @@ rte_sched_port_get_memory_footprint(struct rte_sched_port_params *port_params,
 
 	status = rte_sched_port_check_params(port_params);
 	if (status != 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Port scheduler port params check failed (%d)\n",
-			__func__, status);
+		SCHED_LOG(ERR,
+			  "Port scheduler port params check failed (%d)",
+			  status);
 
 		return 0;
 	}
@@ -909,9 +884,9 @@ rte_sched_port_get_memory_footprint(struct rte_sched_port_params *port_params,
 				port_params->n_pipes_per_subport,
 				port_params->rate);
 		if (status != 0) {
-			RTE_LOG(ERR, SCHED,
-				"%s: Port scheduler subport params check failed (%d)\n",
-				__func__, status);
+			SCHED_LOG(ERR,
+				  "Port scheduler subport params check failed (%d)",
+				status);
 
 			return 0;
 		}
@@ -940,9 +915,8 @@ rte_sched_port_config(struct rte_sched_port_params *params)
 
 	status = rte_sched_port_check_params(params);
 	if (status != 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Port scheduler params check failed (%d)\n",
-			__func__, status);
+		SCHED_LOG(ERR, "Port scheduler params check failed (%d)",
+			  status);
 		return NULL;
 	}
 
@@ -955,7 +929,7 @@ rte_sched_port_config(struct rte_sched_port_params *params)
 	port = rte_zmalloc_socket("qos_params", size0 + size1,
 				 RTE_CACHE_LINE_SIZE, params->socket);
 	if (port == NULL) {
-		RTE_LOG(ERR, SCHED, "%s: Memory allocation fails\n", __func__);
+		SCHED_LOG(ERR, "Memory allocation fails");
 
 		return NULL;
 	}
@@ -964,7 +938,7 @@ rte_sched_port_config(struct rte_sched_port_params *params)
 	port->subport_profiles  = rte_zmalloc_socket("subport_profile", size2,
 					RTE_CACHE_LINE_SIZE, params->socket);
 	if (port->subport_profiles == NULL) {
-		RTE_LOG(ERR, SCHED, "%s: Memory allocation fails\n", __func__);
+		SCHED_LOG(ERR, "Memory allocation fails");
 		rte_free(port);
 		return NULL;
 	}
@@ -1106,8 +1080,7 @@ rte_sched_red_config(struct rte_sched_port *port,
 				params->cman_params->red_params[i][j].maxp_inv) != 0) {
 				rte_sched_free_memory(port, n_subports);
 
-				RTE_LOG(NOTICE, SCHED,
-				"%s: RED configuration init fails\n", __func__);
+				SCHED_LOG(NOTICE, "RED configuration init fails");
 				return -EINVAL;
 			}
 		}
@@ -1126,8 +1099,7 @@ rte_sched_pie_config(struct rte_sched_port *port,
 
 	for (i = 0; i < RTE_SCHED_TRAFFIC_CLASSES_PER_PIPE; i++) {
 		if (params->cman_params->pie_params[i].tailq_th > params->qsize[i]) {
-			RTE_LOG(NOTICE, SCHED,
-			"%s: PIE tailq threshold incorrect\n", __func__);
+			SCHED_LOG(NOTICE, "PIE tailq threshold incorrect");
 			return -EINVAL;
 		}
 
@@ -1138,8 +1110,7 @@ rte_sched_pie_config(struct rte_sched_port *port,
 			params->cman_params->pie_params[i].tailq_th) != 0) {
 			rte_sched_free_memory(port, n_subports);
 
-			RTE_LOG(NOTICE, SCHED,
-			"%s: PIE configuration init fails\n", __func__);
+			SCHED_LOG(NOTICE, "PIE configuration init fails");
 			return -EINVAL;
 			}
 	}
@@ -1170,14 +1141,12 @@ rte_sched_subport_tc_ov_config(struct rte_sched_port *port,
 	struct rte_sched_subport *s;
 
 	if (port == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter port\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter port");
 		return -EINVAL;
 	}
 
 	if (subport_id >= port->n_subports_per_port) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter subport id\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter subport id");
 		return  -EINVAL;
 	}
 
@@ -1203,22 +1172,19 @@ rte_sched_subport_config(struct rte_sched_port *port,
 
 	/* Check user parameters */
 	if (port == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter port\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter port");
 		return 0;
 	}
 
 	if (subport_id >= port->n_subports_per_port) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for subport id\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for subport id");
 		ret = -EINVAL;
 		goto out;
 	}
 
 	if (subport_profile_id >= port->n_max_subport_profiles) {
-		RTE_LOG(ERR, SCHED, "%s: "
-			"Number of subport profile exceeds the max limit\n",
-			__func__);
+		SCHED_LOG(ERR,
+			  "Number of subport profile exceeds the max limit");
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1233,9 +1199,9 @@ rte_sched_subport_config(struct rte_sched_port *port,
 			port->n_pipes_per_subport,
 			port->rate);
 		if (status != 0) {
-			RTE_LOG(NOTICE, SCHED,
-				"%s: Port scheduler params check failed (%d)\n",
-				__func__, status);
+			SCHED_LOG(NOTICE,
+				  "Port scheduler params check failed (%d)",
+				  status);
 			ret = -EINVAL;
 			goto out;
 		}
@@ -1249,8 +1215,7 @@ rte_sched_subport_config(struct rte_sched_port *port,
 		s = rte_zmalloc_socket("subport_params", size0 + size1,
 			RTE_CACHE_LINE_SIZE, port->socket);
 		if (s == NULL) {
-			RTE_LOG(ERR, SCHED,
-				"%s: Memory allocation fails\n", __func__);
+			SCHED_LOG(ERR, "Memory allocation fails");
 			ret = -ENOMEM;
 			goto out;
 		}
@@ -1281,8 +1246,8 @@ rte_sched_subport_config(struct rte_sched_port *port,
 			s->cman_enabled = true;
 			status = rte_sched_cman_config(port, s, params, n_subports);
 			if (status) {
-				RTE_LOG(NOTICE, SCHED,
-					"%s: CMAN configuration fails\n", __func__);
+				SCHED_LOG(NOTICE,
+					  "CMAN configuration fails");
 				return status;
 			}
 		} else {
@@ -1329,8 +1294,7 @@ rte_sched_subport_config(struct rte_sched_port *port,
 		s->bmp = rte_bitmap_init(n_subport_pipe_queues, s->bmp_array,
 					bmp_mem_size);
 		if (s->bmp == NULL) {
-			RTE_LOG(ERR, SCHED,
-				"%s: Subport bitmap init error\n", __func__);
+			SCHED_LOG(ERR, "Subport bitmap init error");
 			ret = -EINVAL;
 			goto out;
 		}
@@ -1399,29 +1363,25 @@ rte_sched_pipe_config(struct rte_sched_port *port,
 	deactivate = (pipe_profile < 0);
 
 	if (port == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter port\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter port");
 		return -EINVAL;
 	}
 
 	if (subport_id >= port->n_subports_per_port) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter subport id\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter subport id");
 		ret = -EINVAL;
 		goto out;
 	}
 
 	s = port->subports[subport_id];
 	if (pipe_id >= s->n_pipes_per_subport_enabled) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter pipe id\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter pipe id");
 		ret = -EINVAL;
 		goto out;
 	}
 
 	if (!deactivate && profile >= s->n_pipe_profiles) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter pipe profile\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter pipe profile");
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1446,9 +1406,9 @@ rte_sched_pipe_config(struct rte_sched_port *port,
 		s->tc_ov = s->tc_ov_rate > subport_tc_be_rate;
 
 		if (s->tc_ov != tc_be_ov) {
-			RTE_LOG(DEBUG, SCHED,
-				"Subport %u Best-effort TC oversubscription is OFF (%.4lf >= %.4lf)\n",
-				subport_id, subport_tc_be_rate, s->tc_ov_rate);
+			SCHED_LOG(DEBUG,
+				  "Subport %u Best-effort TC oversubscription is OFF (%.4lf >= %.4lf)",
+				  subport_id, subport_tc_be_rate, s->tc_ov_rate);
 		}
 
 		/* Reset the pipe */
@@ -1488,8 +1448,8 @@ rte_sched_pipe_config(struct rte_sched_port *port,
 		s->tc_ov = s->tc_ov_rate > subport_tc_be_rate;
 
 		if (s->tc_ov != tc_be_ov) {
-			RTE_LOG(DEBUG, SCHED,
-				"Subport %u Best effort TC oversubscription is ON (%.4lf < %.4lf)\n",
+			SCHED_LOG(DEBUG,
+				"Subport %u Best effort TC oversubscription is ON (%.4lf < %.4lf)",
 				subport_id, subport_tc_be_rate, s->tc_ov_rate);
 		}
 		p->tc_ov_period_id = s->tc_ov_period_id;
@@ -1517,15 +1477,13 @@ rte_sched_subport_pipe_profile_add(struct rte_sched_port *port,
 
 	/* Port */
 	if (port == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter port\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter port");
 		return -EINVAL;
 	}
 
 	/* Subport id not exceeds the max limit */
 	if (subport_id > port->n_subports_per_port) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for subport id\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for subport id");
 		return -EINVAL;
 	}
 
@@ -1533,16 +1491,14 @@ rte_sched_subport_pipe_profile_add(struct rte_sched_port *port,
 
 	/* Pipe profiles exceeds the max limit */
 	if (s->n_pipe_profiles >= s->n_max_pipe_profiles) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Number of pipe profiles exceeds the max limit\n", __func__);
+		SCHED_LOG(ERR, "Number of pipe profiles exceeds the max limit");
 		return -EINVAL;
 	}
 
 	/* Pipe params */
 	status = pipe_profile_check(params, port->rate, &s->qsize[0]);
 	if (status != 0) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Pipe profile check failed(%d)\n", __func__, status);
+		SCHED_LOG(ERR, "Pipe profile check failed(%d)", status);
 		return -EINVAL;
 	}
 
@@ -1552,8 +1508,7 @@ rte_sched_subport_pipe_profile_add(struct rte_sched_port *port,
 	/* Pipe profile should not exists */
 	for (i = 0; i < s->n_pipe_profiles; i++)
 		if (memcmp(s->pipe_profiles + i, pp, sizeof(*pp)) == 0) {
-			RTE_LOG(ERR, SCHED,
-				"%s: Pipe profile exists\n", __func__);
+			SCHED_LOG(ERR, "Pipe profile exists");
 			return -EINVAL;
 		}
 
@@ -1580,21 +1535,18 @@ rte_sched_port_subport_profile_add(struct rte_sched_port *port,
 
 	/* Port */
 	if (port == NULL) {
-		RTE_LOG(ERR, SCHED, "%s: "
-		"Incorrect value for parameter port\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter port");
 		return -EINVAL;
 	}
 
 	if (params == NULL) {
-		RTE_LOG(ERR, SCHED, "%s: "
-		"Incorrect value for parameter profile\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter profile");
 		return -EINVAL;
 	}
 
 	if (subport_profile_id == NULL) {
-		RTE_LOG(ERR, SCHED, "%s: "
-		"Incorrect value for parameter subport_profile_id\n",
-		__func__);
+		SCHED_LOG(ERR,
+			  "Incorrect value for parameter subport_profile_id");
 		return -EINVAL;
 	}
 
@@ -1602,16 +1554,14 @@ rte_sched_port_subport_profile_add(struct rte_sched_port *port,
 
 	/* Subport profiles exceeds the max limit */
 	if (port->n_subport_profiles >= port->n_max_subport_profiles) {
-		RTE_LOG(ERR, SCHED, "%s: "
-		"Number of subport profiles exceeds the max limit\n",
-		 __func__);
+		SCHED_LOG(ERR,
+			  "Number of subport profiles exceeds the max limit");
 		return -EINVAL;
 	}
 
 	status = subport_profile_check(params, port->rate);
 	if (status != 0) {
-		RTE_LOG(ERR, SCHED,
-		"%s: subport profile check failed(%d)\n", __func__, status);
+		SCHED_LOG(ERR, "subport profile check failed (%d)", status);
 		return -EINVAL;
 	}
 
@@ -1621,8 +1571,7 @@ rte_sched_port_subport_profile_add(struct rte_sched_port *port,
 	for (i = 0; i < port->n_subport_profiles; i++)
 		if (memcmp(port->subport_profiles + i,
 		    dst, sizeof(*dst)) == 0) {
-			RTE_LOG(ERR, SCHED,
-			"%s: subport profile exists\n", __func__);
+			SCHED_LOG(ERR, "subport profile exists");
 			return -EINVAL;
 		}
 
@@ -1694,26 +1643,22 @@ rte_sched_subport_read_stats(struct rte_sched_port *port,
 
 	/* Check user parameters */
 	if (port == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter port\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter port");
 		return -EINVAL;
 	}
 
 	if (subport_id >= port->n_subports_per_port) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for subport id\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for subport id");
 		return -EINVAL;
 	}
 
 	if (stats == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter stats\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter stats");
 		return -EINVAL;
 	}
 
 	if (tc_ov == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for tc_ov\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for tc_ov");
 		return -EINVAL;
 	}
 
@@ -1742,26 +1687,22 @@ rte_sched_queue_read_stats(struct rte_sched_port *port,
 
 	/* Check user parameters */
 	if (port == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter port\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter port");
 		return -EINVAL;
 	}
 
 	if (queue_id >= rte_sched_port_queues_per_port(port)) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for queue id\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for queue id");
 		return -EINVAL;
 	}
 
 	if (stats == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter stats\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter stats");
 		return -EINVAL;
 	}
 
 	if (qlen == NULL) {
-		RTE_LOG(ERR, SCHED,
-			"%s: Incorrect value for parameter qlen\n", __func__);
+		SCHED_LOG(ERR, "Incorrect value for parameter qlen");
 		return -EINVAL;
 	}
 	subport_qmask = port->n_pipes_per_subport_log2 + 4;
@@ -3002,3 +2943,5 @@ rte_sched_port_dequeue(struct rte_sched_port *port, struct rte_mbuf **pkts, uint
 
 	return count;
 }
+
+RTE_LOG_REGISTER_DEFAULT(sched_logtype, INFO);
