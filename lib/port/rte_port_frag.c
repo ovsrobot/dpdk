@@ -7,6 +7,11 @@
 
 #include "rte_port_frag.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_frag_logtype, frag, INFO);
+#define RTE_PORT_FRAG_LOG(level, fmt, args...)		\
+	rte_log(RTE_LOG_ ## level, port_frag_logtype,	\
+		"%s: " fmt "\n", __func__, ## args)
+
 /* Max number of fragments per packet allowed */
 #define	RTE_PORT_FRAG_MAX_FRAGS_PER_PACKET 0x80
 
@@ -62,25 +67,23 @@ rte_port_ring_reader_frag_create(void *params, int socket_id, int is_ipv4)
 
 	/* Check input parameters */
 	if (conf == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Parameter conf is NULL\n", __func__);
+		RTE_PORT_FRAG_LOG(ERR, "Parameter conf is NULL");
 		return NULL;
 	}
 	if (conf->ring == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Parameter ring is NULL\n", __func__);
+		RTE_PORT_FRAG_LOG(ERR, "Parameter ring is NULL");
 		return NULL;
 	}
 	if (conf->mtu == 0) {
-		RTE_LOG(ERR, PORT, "%s: Parameter mtu is invalid\n", __func__);
+		RTE_PORT_FRAG_LOG(ERR, "Parameter mtu is invalid");
 		return NULL;
 	}
 	if (conf->pool_direct == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Parameter pool_direct is NULL\n",
-			__func__);
+		RTE_PORT_FRAG_LOG(ERR, "Parameter pool_direct is NULL");
 		return NULL;
 	}
 	if (conf->pool_indirect == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Parameter pool_indirect is NULL\n",
-			__func__);
+		RTE_PORT_FRAG_LOG(ERR, "Parameter pool_indirect is NULL");
 		return NULL;
 	}
 
@@ -88,7 +91,7 @@ rte_port_ring_reader_frag_create(void *params, int socket_id, int is_ipv4)
 	port = rte_zmalloc_socket("PORT", sizeof(*port), RTE_CACHE_LINE_SIZE,
 		socket_id);
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: port is NULL\n", __func__);
+		RTE_PORT_FRAG_LOG(ERR, "port is NULL");
 		return NULL;
 	}
 
@@ -232,7 +235,7 @@ static int
 rte_port_ring_reader_frag_free(void *port)
 {
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Parameter port is NULL\n", __func__);
+		RTE_PORT_FRAG_LOG(ERR, "Parameter port is NULL");
 		return -1;
 	}
 

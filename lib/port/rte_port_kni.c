@@ -9,6 +9,10 @@
 
 #include "rte_port_kni.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_kni_logtype, kni, INFO);
+#define RTE_PORT_KNI_LOG(level, fmt, args...)		\
+	rte_log(RTE_LOG_ ## level, port_kni_logtype,	\
+		"%s: " fmt "\n", __func__, ## args)
 /*
  * Port KNI Reader
  */
@@ -41,7 +45,7 @@ rte_port_kni_reader_create(void *params, int socket_id)
 
 	/* Check input parameters */
 	if (conf == NULL) {
-		RTE_LOG(ERR, PORT, "%s: params is NULL\n", __func__);
+		RTE_PORT_KNI_LOG(ERR, "params is NULL");
 		return NULL;
 	}
 
@@ -49,7 +53,7 @@ rte_port_kni_reader_create(void *params, int socket_id)
 	port = rte_zmalloc_socket("PORT", sizeof(*port),
 		RTE_CACHE_LINE_SIZE, socket_id);
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Failed to allocate port\n", __func__);
+		RTE_PORT_KNI_LOG(ERR, "Failed to allocate port");
 		return NULL;
 	}
 
@@ -75,7 +79,7 @@ static int
 rte_port_kni_reader_free(void *port)
 {
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: port is NULL\n", __func__);
+		RTE_PORT_KNI_LOG(ERR, "port is NULL");
 		return -EINVAL;
 	}
 
@@ -138,7 +142,7 @@ rte_port_kni_writer_create(void *params, int socket_id)
 		(conf->tx_burst_sz == 0) ||
 		(conf->tx_burst_sz > RTE_PORT_IN_BURST_SIZE_MAX) ||
 		(!rte_is_power_of_2(conf->tx_burst_sz))) {
-		RTE_LOG(ERR, PORT, "%s: Invalid input parameters\n", __func__);
+		RTE_PORT_KNI_LOG(ERR, "Invalid input parameters");
 		return NULL;
 	}
 
@@ -146,7 +150,7 @@ rte_port_kni_writer_create(void *params, int socket_id)
 	port = rte_zmalloc_socket("PORT", sizeof(*port),
 		RTE_CACHE_LINE_SIZE, socket_id);
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Failed to allocate port\n", __func__);
+		RTE_PORT_KNI_LOG(ERR, "Failed to allocate port");
 		return NULL;
 	}
 
@@ -250,7 +254,7 @@ static int
 rte_port_kni_writer_free(void *port)
 {
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Port is NULL\n", __func__);
+		RTE_PORT_KNI_LOG(ERR, "Port is NULL");
 		return -EINVAL;
 	}
 
@@ -315,7 +319,7 @@ rte_port_kni_writer_nodrop_create(void *params, int socket_id)
 		(conf->tx_burst_sz == 0) ||
 		(conf->tx_burst_sz > RTE_PORT_IN_BURST_SIZE_MAX) ||
 		(!rte_is_power_of_2(conf->tx_burst_sz))) {
-		RTE_LOG(ERR, PORT, "%s: Invalid input parameters\n", __func__);
+		RTE_PORT_KNI_LOG(ERR, "Invalid input parameters");
 		return NULL;
 	}
 
@@ -323,7 +327,7 @@ rte_port_kni_writer_nodrop_create(void *params, int socket_id)
 	port = rte_zmalloc_socket("PORT", sizeof(*port),
 		RTE_CACHE_LINE_SIZE, socket_id);
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Failed to allocate port\n", __func__);
+		RTE_PORT_KNI_LOG(ERR, "Failed to allocate port");
 		return NULL;
 	}
 
@@ -460,7 +464,7 @@ static int
 rte_port_kni_writer_nodrop_free(void *port)
 {
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Port is NULL\n", __func__);
+		RTE_PORT_KNI_LOG(ERR, "Port is NULL");
 		return -EINVAL;
 	}
 

@@ -5,11 +5,16 @@
 #include <string.h>
 #include <stdint.h>
 
+#include <rte_log.h>
 #include <rte_mbuf.h>
 #include <rte_malloc.h>
 
 #include "rte_port_eventdev.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_eventdev_logtype, eventdev, INFO);
+#define RTE_PORT_EVENTDEV_LOG(level, fmt, args...)		\
+	rte_log(RTE_LOG_ ## level, port_eventdev_logtype,	\
+		"%s: " fmt "\n", __func__, ## args)
 /*
  * Port EVENTDEV Reader
  */
@@ -45,7 +50,7 @@ rte_port_eventdev_reader_create(void *params, int socket_id)
 
 	/* Check input parameters */
 	if (conf == NULL) {
-		RTE_LOG(ERR, PORT, "%s: params is NULL\n", __func__);
+		RTE_PORT_EVENTDEV_LOG(ERR, "params is NULL");
 		return NULL;
 	}
 
@@ -53,7 +58,7 @@ rte_port_eventdev_reader_create(void *params, int socket_id)
 	port = rte_zmalloc_socket("PORT", sizeof(*port),
 		RTE_CACHE_LINE_SIZE, socket_id);
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Failed to allocate port\n", __func__);
+		RTE_PORT_EVENTDEV_LOG(ERR, "Failed to allocate port");
 		return NULL;
 	}
 
@@ -85,7 +90,7 @@ static int
 rte_port_eventdev_reader_free(void *port)
 {
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: port is NULL\n", __func__);
+		RTE_PORT_EVENTDEV_LOG(ERR, "port is NULL");
 		return -EINVAL;
 	}
 
@@ -155,7 +160,7 @@ rte_port_eventdev_writer_create(void *params, int socket_id)
 		(conf->enq_burst_sz == 0) ||
 		(conf->enq_burst_sz > RTE_PORT_IN_BURST_SIZE_MAX) ||
 		(!rte_is_power_of_2(conf->enq_burst_sz))) {
-		RTE_LOG(ERR, PORT, "%s: Invalid input parameters\n", __func__);
+		RTE_PORT_EVENTDEV_LOG(ERR, "Invalid input parameters");
 		return NULL;
 	}
 
@@ -163,7 +168,7 @@ rte_port_eventdev_writer_create(void *params, int socket_id)
 	port = rte_zmalloc_socket("PORT", sizeof(*port),
 		RTE_CACHE_LINE_SIZE, socket_id);
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Failed to allocate port\n", __func__);
+		RTE_PORT_EVENTDEV_LOG(ERR, "Failed to allocate port");
 		return NULL;
 	}
 
@@ -290,7 +295,7 @@ static int
 rte_port_eventdev_writer_free(void *port)
 {
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Port is NULL\n", __func__);
+		RTE_PORT_EVENTDEV_LOG(ERR, "Port is NULL");
 		return -EINVAL;
 	}
 
@@ -362,7 +367,7 @@ rte_port_eventdev_writer_nodrop_create(void *params, int socket_id)
 		(conf->enq_burst_sz == 0) ||
 		(conf->enq_burst_sz > RTE_PORT_IN_BURST_SIZE_MAX) ||
 		(!rte_is_power_of_2(conf->enq_burst_sz))) {
-		RTE_LOG(ERR, PORT, "%s: Invalid input parameters\n", __func__);
+		RTE_PORT_EVENTDEV_LOG(ERR, "Invalid input parameters");
 		return NULL;
 	}
 
@@ -370,7 +375,7 @@ rte_port_eventdev_writer_nodrop_create(void *params, int socket_id)
 	port = rte_zmalloc_socket("PORT", sizeof(*port),
 		RTE_CACHE_LINE_SIZE, socket_id);
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Failed to allocate port\n", __func__);
+		RTE_PORT_EVENTDEV_LOG(ERR, "Failed to allocate port");
 		return NULL;
 	}
 
@@ -530,7 +535,7 @@ static int
 rte_port_eventdev_writer_nodrop_free(void *port)
 {
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Port is NULL\n", __func__);
+		RTE_PORT_EVENTDEV_LOG(ERR, "Port is NULL");
 		return -EINVAL;
 	}
 

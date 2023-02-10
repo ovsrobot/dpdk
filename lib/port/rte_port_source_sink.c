@@ -15,6 +15,12 @@
 
 #include "rte_port_source_sink.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_source_logtype, source, INFO);
+
+#define RTE_PORT_SOURCE_LOG(level, fmt, args...)	\
+	rte_log(RTE_LOG_ ## level, port_source_logtype,	\
+		"%s: " fmt "\n", __func__, ##args)
+
 /*
  * Port SOURCE
  */
@@ -49,9 +55,9 @@ struct rte_port_source {
 
 static int
 pcap_source_load(struct rte_port_source *port,
-		const char *file_name,
-		uint32_t n_bytes_per_pkt,
-		int socket_id)
+		 const char *file_name,
+		 uint32_t n_bytes_per_pkt,
+		 int socket_id)
 {
 	uint32_t n_pkts = 0;
 	uint32_t i;
@@ -64,8 +70,8 @@ pcap_source_load(struct rte_port_source *port,
 	const uint8_t *pkt;
 	uint8_t *buff = NULL;
 	uint32_t pktmbuf_maxlen = (uint32_t)
-			(rte_pktmbuf_data_room_size(port->mempool) -
-			RTE_PKTMBUF_HEADROOM);
+		(rte_pktmbuf_data_room_size(port->mempool) -
+		 RTE_PKTMBUF_HEADROOM);
 
 	if (n_bytes_per_pkt == 0)
 		max_len = pktmbuf_maxlen;
@@ -75,8 +81,9 @@ pcap_source_load(struct rte_port_source *port,
 	/* first time open, get packet number */
 	pcap_handle = pcap_open_offline(file_name, pcap_errbuf);
 	if (pcap_handle == NULL) {
-		RTE_LOG(ERR, PORT, "Failed to open pcap file "
-			"'%s' for reading\n", file_name);
+		RTE_PORT_SOURCE_LOG(ERR,
+				    "Failed to open pcap file '%s' for reading",
+				    file_name);
 		goto error_exit;
 	}
 
@@ -86,31 +93,32 @@ pcap_source_load(struct rte_port_source *port,
 	pcap_close(pcap_handle);
 
 	port->pkt_len = rte_zmalloc_socket("PCAP",
-		(sizeof(*port->pkt_len) * n_pkts), 0, socket_id);
+					   (sizeof(*port->pkt_len) * n_pkts), 0, socket_id);
 	if (port->pkt_len == NULL) {
-		RTE_LOG(ERR, PORT, "No enough memory\n");
+		RTE_PORT_SOURCE_LOG(ERR, "Not enough memory");
 		goto error_exit;
 	}
 
 	pkt_len_aligns = rte_malloc("PCAP",
-		(sizeof(*pkt_len_aligns) * n_pkts), 0);
+				    (sizeof(*pkt_len_aligns) * n_pkts), 0);
 	if (pkt_len_aligns == NULL) {
-		RTE_LOG(ERR, PORT, "No enough memory\n");
+		RTE_PORT_SOURCE_LOG(ERR, "Not enough memory");
 		goto error_exit;
 	}
 
 	port->pkts = rte_zmalloc_socket("PCAP",
-		(sizeof(*port->pkts) * n_pkts), 0, socket_id);
+					(sizeof(*port->pkts) * n_pkts), 0, socket_id);
 	if (port->pkts == NULL) {
-		RTE_LOG(ERR, PORT, "No enough memory\n");
+		RTE_PORT_SOURCE_LOG(ERR, "Not enough memory");
 		goto error_exit;
 	}
 
 	/* open 2nd time, get pkt_len */
 	pcap_handle = pcap_open_offline(file_name, pcap_errbuf);
 	if (pcap_handle == NULL) {
-		RTE_LOG(ERR, PORT, "Failed to open pcap file "
-			"'%s' for reading\n", file_name);
+		RTE_PORT_SOURCE_LOG(ERR,
+				    "Failed to open pcap file '%s' for reading",
+				    file_name);
 		goto error_exit;
 	}
 
@@ -126,9 +134,9 @@ pcap_source_load(struct rte_port_source *port,
 
 	/* allocate a big trunk of data for pcap file load */
 	buff = rte_zmalloc_socket("PCAP",
-		total_buff_len, 0, socket_id);
+				  total_buff_len, 0, socket_id);
 	if (buff == NULL) {
-		RTE_LOG(ERR, PORT, "No enough memory\n");
+		RTE_PORT_SOURCE_LOG(ERR, "Not enough memory");
 		goto error_exit;
 	}
 
@@ -137,8 +145,9 @@ pcap_source_load(struct rte_port_source *port,
 	/* open file one last time to copy the pkt content */
 	pcap_handle = pcap_open_offline(file_name, pcap_errbuf);
 	if (pcap_handle == NULL) {
-		RTE_LOG(ERR, PORT, "Failed to open pcap file "
-			"'%s' for reading\n", file_name);
+		RTE_PORT_SOURCE_LOG(ERR,
+				    "Failed to open pcap file '%s' for reading",
+				    file_name);
 		goto error_exit;
 	}
 
@@ -155,9 +164,9 @@ pcap_source_load(struct rte_port_source *port,
 
 	rte_free(pkt_len_aligns);
 
-	RTE_LOG(INFO, PORT, "Successfully load pcap file "
-		"'%s' with %u pkts\n",
-		file_name, port->n_pkts);
+	RTE_PORT_SOURCE_LOG(INFO,
+			    "Successfully load pcap file '%s' with %u pkts",
+			    file_name, port->n_pkts);
 
 	return 0;
 
@@ -180,8 +189,8 @@ error_exit:
 	int _ret = 0;						\
 								\
 	if (file_name) {					\
-		RTE_LOG(ERR, PORT, "Source port field "		\
-			"\"file_name\" is not NULL.\n");	\
+		RTE_PORT_SOURCE_LOG(ERR, "Source port field "	\
+			"\"file_name\" is not NULL.");		\
 		_ret = -1;					\
 	}							\
 								\
@@ -199,7 +208,7 @@ rte_port_source_create(void *params, int socket_id)
 
 	/* Check input arguments*/
 	if ((p == NULL) || (p->mempool == NULL)) {
-		RTE_LOG(ERR, PORT, "%s: Invalid params\n", __func__);
+		RTE_PORT_SOURCE_LOG(ERR, "Invalid params");
 		return NULL;
 	}
 
@@ -207,7 +216,7 @@ rte_port_source_create(void *params, int socket_id)
 	port = rte_zmalloc_socket("PORT", sizeof(*port),
 			RTE_CACHE_LINE_SIZE, socket_id);
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Failed to allocate port\n", __func__);
+		RTE_PORT_SOURCE_LOG(ERR, "Failed to allocate port");
 		return NULL;
 	}
 
@@ -332,15 +341,16 @@ pcap_sink_open(struct rte_port_sink *port,
 	/** Open a dead pcap handler for opening dumper file */
 	tx_pcap = pcap_open_dead(DLT_EN10MB, 65535);
 	if (tx_pcap == NULL) {
-		RTE_LOG(ERR, PORT, "Cannot open pcap dead handler\n");
+		RTE_PORT_SOURCE_LOG(ERR, "Cannot open pcap dead handler");
 		return -1;
 	}
 
 	/* The dumper is created using the previous pcap_t reference */
 	pcap_dumper = pcap_dump_open(tx_pcap, file_name);
 	if (pcap_dumper == NULL) {
-		RTE_LOG(ERR, PORT, "Failed to open pcap file "
-			"\"%s\" for writing\n", file_name);
+		RTE_PORT_SOURCE_LOG(ERR,
+				    "Failed to open pcap file \"%s\" for writing",
+				    file_name);
 		return -1;
 	}
 
@@ -349,8 +359,9 @@ pcap_sink_open(struct rte_port_sink *port,
 	port->pkt_index = 0;
 	port->dump_finish = 0;
 
-	RTE_LOG(INFO, PORT, "Ready to dump packets to file \"%s\"\n",
-		file_name);
+	RTE_PORT_SOURCE_LOG(INFO,
+			    "Ready to dump packets to file \"%s\"",
+			    file_name);
 
 	return 0;
 }
@@ -402,8 +413,9 @@ pcap_sink_write_pkt(struct rte_port_sink *port, struct rte_mbuf *mbuf)
 
 	if ((port->max_pkts != 0) && (port->pkt_index >= port->max_pkts)) {
 		port->dump_finish = 1;
-		RTE_LOG(INFO, PORT, "Dumped %u packets to file\n",
-				port->pkt_index);
+		RTE_PORT_SOURCE_LOG(INFO,
+				    "Dumped %u packets to file",
+				    port->pkt_index);
 	}
 
 }
@@ -433,7 +445,7 @@ do {								\
 	int _ret = 0;						\
 								\
 	if (file_name) {					\
-		RTE_LOG(ERR, PORT, "Sink port field "		\
+		RTE_PORT_SOURCE_LOG(ERR, "Sink port field "	\
 			"\"file_name\" is not NULL.\n");	\
 		_ret = -1;					\
 	}							\
@@ -459,7 +471,7 @@ rte_port_sink_create(void *params, int socket_id)
 	port = rte_zmalloc_socket("PORT", sizeof(*port),
 			RTE_CACHE_LINE_SIZE, socket_id);
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Failed to allocate port\n", __func__);
+		RTE_PORT_SOURCE_LOG(ERR, "Failed to allocate port");
 		return NULL;
 	}
 

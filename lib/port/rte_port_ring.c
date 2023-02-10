@@ -10,6 +10,10 @@
 
 #include "rte_port_ring.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_ring_logtype, ring, INFO);
+#define RTE_PORT_RING_LOG(level, fmt, args...)		\
+	rte_log(RTE_LOG_ ## level, port_ring_logtype,	\
+		"%s: " fmt "\n", __func__, ## args)
 /*
  * Port RING Reader
  */
@@ -46,7 +50,7 @@ rte_port_ring_reader_create_internal(void *params, int socket_id,
 		(conf->ring == NULL) ||
 		(rte_ring_is_cons_single(conf->ring) && is_multi) ||
 		(!rte_ring_is_cons_single(conf->ring) && !is_multi)) {
-		RTE_LOG(ERR, PORT, "%s: Invalid Parameters\n", __func__);
+		RTE_PORT_RING_LOG(ERR, "Invalid Parameters");
 		return NULL;
 	}
 
@@ -54,7 +58,7 @@ rte_port_ring_reader_create_internal(void *params, int socket_id,
 	port = rte_zmalloc_socket("PORT", sizeof(*port),
 			RTE_CACHE_LINE_SIZE, socket_id);
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Failed to allocate port\n", __func__);
+		RTE_PORT_RING_LOG(ERR, "Failed to allocate port");
 		return NULL;
 	}
 
@@ -107,7 +111,7 @@ static int
 rte_port_ring_reader_free(void *port)
 {
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: port is NULL\n", __func__);
+		RTE_PORT_RING_LOG(ERR, "port is NULL");
 		return -EINVAL;
 	}
 
@@ -174,7 +178,7 @@ rte_port_ring_writer_create_internal(void *params, int socket_id,
 		(rte_ring_is_prod_single(conf->ring) && is_multi) ||
 		(!rte_ring_is_prod_single(conf->ring) && !is_multi) ||
 		(conf->tx_burst_sz > RTE_PORT_IN_BURST_SIZE_MAX)) {
-		RTE_LOG(ERR, PORT, "%s: Invalid Parameters\n", __func__);
+		RTE_PORT_RING_LOG(ERR, "Invalid Parameters");
 		return NULL;
 	}
 
@@ -182,7 +186,7 @@ rte_port_ring_writer_create_internal(void *params, int socket_id,
 	port = rte_zmalloc_socket("PORT", sizeof(*port),
 			RTE_CACHE_LINE_SIZE, socket_id);
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Failed to allocate port\n", __func__);
+		RTE_PORT_RING_LOG(ERR, "Failed to allocate port");
 		return NULL;
 	}
 
@@ -370,7 +374,7 @@ rte_port_ring_writer_free(void *port)
 	struct rte_port_ring_writer *p = port;
 
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Port is NULL\n", __func__);
+		RTE_PORT_RING_LOG(ERR, "Port is NULL");
 		return -EINVAL;
 	}
 
@@ -443,7 +447,7 @@ rte_port_ring_writer_nodrop_create_internal(void *params, int socket_id,
 		(rte_ring_is_prod_single(conf->ring) && is_multi) ||
 		(!rte_ring_is_prod_single(conf->ring) && !is_multi) ||
 		(conf->tx_burst_sz > RTE_PORT_IN_BURST_SIZE_MAX)) {
-		RTE_LOG(ERR, PORT, "%s: Invalid Parameters\n", __func__);
+		RTE_PORT_RING_LOG(ERR, "Invalid Parameters");
 		return NULL;
 	}
 
@@ -451,7 +455,7 @@ rte_port_ring_writer_nodrop_create_internal(void *params, int socket_id,
 	port = rte_zmalloc_socket("PORT", sizeof(*port),
 			RTE_CACHE_LINE_SIZE, socket_id);
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Failed to allocate port\n", __func__);
+		RTE_PORT_RING_LOG(ERR, "Failed to allocate port");
 		return NULL;
 	}
 
@@ -703,7 +707,7 @@ rte_port_ring_writer_nodrop_free(void *port)
 			port;
 
 	if (port == NULL) {
-		RTE_LOG(ERR, PORT, "%s: Port is NULL\n", __func__);
+		RTE_PORT_RING_LOG(ERR, "Port is NULL");
 		return -EINVAL;
 	}
 
