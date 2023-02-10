@@ -2204,6 +2204,17 @@ enum rte_flow_action_type {
 	RTE_FLOW_ACTION_TYPE_DROP,
 
 	/**
+	 * Skip congestion management configuration
+	 *
+	 * Using rte_eth_cman_config_set() API the application
+	 * can configure ethdev Rx queue's congestion mechanism.
+	 * Introducing RTE_FLOW_ACTION_TYPE_SKIP_CMAN flow action to skip the
+	 * congestion configuration applied to the given ethdev Rx queue.
+	 *
+	 */
+	RTE_FLOW_ACTION_TYPE_SKIP_CMAN,
+
+	/**
 	 * Enables counters for this flow rule.
 	 *
 	 * These counters can be retrieved and reset through rte_flow_query() or
