@@ -262,6 +262,7 @@ gve_tx_burst_qpl(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 	uint16_t nb_used, i;
 	uint16_t nb_tx = 0;
 	uint32_t hlen;
+	uint64_t total_len = 0;
 
 	txr = txq->tx_desc_ring;
 
@@ -299,6 +300,7 @@ gve_tx_burst_qpl(void *tx_queue, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 		hlen = ol_flags & RTE_MBUF_F_TX_TCP_SEG ?
 			(uint32_t)(tx_offload.l2_len + tx_offload.l3_len + tx_offload.l4_len) :
 			tx_pkt->pkt_len;
+		total_len += hlen;
 
 		sw_ring[sw_id] = tx_pkt;
 		if (!is_fifo_avail(txq, hlen)) {
@@ -363,6 +365,10 @@ end_of_tx:
 		txq->tx_tail = tx_tail;
 		txq->sw_tail = sw_id;
 	}
+
+	/* update stats */
+	txq->packets += nb_tx;
+	txq->bytes += total_len;
 
 	return nb_tx;
 }

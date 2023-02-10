@@ -22,8 +22,10 @@ gve_rx_refill(struct gve_rx_queue *rxq)
 		if (diag < 0) {
 			for (i = 0; i < nb_alloc; i++) {
 				nmb = rte_pktmbuf_alloc(rxq->mpool);
-				if (!nmb)
+				if (!nmb) {
+					rxq->no_mbufs++;
 					break;
+				}
 				rxq->sw_ring[idx + i] = nmb;
 			}
 			if (i != nb_alloc)
@@ -55,8 +57,10 @@ gve_rx_refill(struct gve_rx_queue *rxq)
 		if (diag < 0) {
 			for (i = 0; i < nb_alloc; i++) {
 				nmb = rte_pktmbuf_alloc(rxq->mpool);
-				if (!nmb)
+				if (!nmb) {
+					rxq->no_mbufs++;
 					break;
+				}
 				rxq->sw_ring[idx + i] = nmb;
 			}
 			nb_alloc = i;
@@ -90,6 +94,7 @@ gve_rx_burst(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 	uint16_t nb_rx, len;
 	uint64_t addr;
 	uint16_t i;
+	uint64_t total_len = 0;
 
 	rxr = rxq->rx_desc_ring;
 	nb_rx = 0;
@@ -99,10 +104,13 @@ gve_rx_burst(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 		if (GVE_SEQNO(rxd->flags_seq) != rxq->expected_seqno)
 			break;
 
-		if (rxd->flags_seq & GVE_RXF_ERR)
+		if (rxd->flags_seq & GVE_RXF_ERR) {
+			rxq->errors++;
 			continue;
+		}
 
 		len = rte_be_to_cpu_16(rxd->len) - GVE_RX_PAD;
+		total_len += len;
 		rxe = rxq->sw_ring[rx_id];
 		if (rxq->is_gqi_qpl) {
 			addr = (uint64_t)(rxq->qpl->mz->addr) + rx_id * PAGE_SIZE + GVE_RX_PAD;
@@ -137,6 +145,10 @@ gve_rx_burst(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 		rx_pkts[nb_rx] = rxe;
 		nb_rx++;
 	}
+
+	/* update stats */
+	rxq->packets += nb_rx;
+	rxq->bytes += total_len;
 
 	rxq->nb_avail += nb_rx;
 	rxq->rx_tail = rx_id;

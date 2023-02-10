@@ -81,6 +81,11 @@ struct gve_tx_queue {
 	uint32_t next_to_clean;
 	uint16_t free_thresh;
 
+	/* stats */
+	uint64_t packets;
+	uint64_t bytes;
+	uint64_t errors;
+
 	/* Only valid for DQO_QPL queue format */
 	uint16_t sw_tail;
 	uint16_t sw_ntc;
@@ -123,6 +128,12 @@ struct gve_rx_queue {
 	uint16_t free_thresh;
 	uint32_t next_avail;
 	uint32_t nb_avail;
+
+	/* stats */
+	uint64_t packets;
+	uint64_t bytes;
+	uint64_t errors;
+	uint64_t no_mbufs;
 
 	volatile rte_be32_t *qrx_tail;
 	volatile rte_be32_t *ntfy_addr;
