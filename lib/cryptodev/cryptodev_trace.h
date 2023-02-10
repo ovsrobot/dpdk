@@ -2,8 +2,8 @@
  * Copyright(C) 2020 Marvell International Ltd.
  */
 
-#ifndef _RTE_CRYPTODEV_TRACE_H_
-#define _RTE_CRYPTODEV_TRACE_H_
+#ifndef _CRYPTODEV_TRACE_H_
+#define _CRYPTODEV_TRACE_H_
 
 /**
  * @file
@@ -530,4 +530,4 @@ RTE_TRACE_POINT(
 }
 #endif
 
-#endif /* _RTE_CRYPTODEV_TRACE_H_ */
+#endif /* _CRYPTODEV_TRACE_H_ */
