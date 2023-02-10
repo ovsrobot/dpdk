@@ -10,10 +10,15 @@
 
 #define RTE_POWER_INVALID_FREQ_INDEX (~0)
 
+extern int power_logtype;
+
+#define POWER_LOG(level, fmt, args...)			\
+	rte_log(RTE_LOG_ ## level, power_logtype,	\
+		"%s(): " fmt "\n", __func__, ## args)
 
 #ifdef RTE_LIBRTE_POWER_DEBUG
 #define POWER_DEBUG_TRACE(fmt, args...) \
-		RTE_LOG(ERR, POWER, "%s: " fmt, __func__, ## args)
+	POWER_LOG(ERR, fmt, ## args)
 #else
 #define POWER_DEBUG_TRACE(fmt, args...)
 #endif

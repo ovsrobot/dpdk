@@ -10,6 +10,7 @@
 
 #include "rte_power.h"
 #include "rte_power_empty_poll.h"
+#include "power_common.h"
 
 #define INTERVALS_PER_SECOND 100     /* (10ms) */
 #define SECONDS_TO_TRAIN_FOR 2
@@ -75,7 +76,7 @@ enter_normal_state(struct priority_worker *poll_stats)
 	poll_stats->iter_counter = 0;
 	poll_stats->threshold_ctr = 0;
 	poll_stats->queue_state = MED_NORMAL;
-	RTE_LOG(INFO, POWER, "Set the power freq to MED\n");
+	POWER_LOG(INFO, "Set the power freq to MED");
 	set_power_freq(poll_stats->lcore_id, MED, false);
 
 	poll_stats->thresh[MED].threshold_percent = med_to_high_threshold;
@@ -213,11 +214,9 @@ update_stats(struct priority_worker *poll_stats)
 	if (s->thresh[s->cur_freq].base_edpi < cur_edpi) {
 
 		/* edpi mean empty poll counter difference per interval */
-		RTE_LOG(DEBUG, POWER, "cur_edpi is too large "
-				"cur edpi %"PRId64" "
-				"base edpi %"PRId64"\n",
-				cur_edpi,
-				s->thresh[s->cur_freq].base_edpi);
+		POWER_LOG(DEBUG,
+			  "cur_edpi is too large cur edpi %"PRId64" base edpi %"PRId64,
+			  cur_edpi, s->thresh[s->cur_freq].base_edpi);
 		/* Value to make us fail need debug log*/
 		return 1000UL;
 	}
@@ -247,7 +246,7 @@ update_stats_normal(struct priority_worker *poll_stats)
 		enum freq_val cur_freq = poll_stats->cur_freq;
 
 		/* edpi mean empty poll counter difference per interval */
-		RTE_LOG(DEBUG, POWER, "cure freq is %d, edpi is %"PRIu64"\n",
+		POWER_LOG(DEBUG, "cure freq is %d, edpi is %"PRIu64"",
 				cur_freq,
 				poll_stats->thresh[cur_freq].base_edpi);
 		return;
@@ -257,12 +256,12 @@ update_stats_normal(struct priority_worker *poll_stats)
 
 	if (percent > 100) {
 		/* edpi mean empty poll counter difference per interval */
-		RTE_LOG(DEBUG, POWER, "Edpi is bigger than threshold\n");
+		POWER_LOG(DEBUG, "Edpi is bigger than threshold");
 		return;
 	}
 
 	if (poll_stats->cur_freq == LOW)
-		RTE_LOG(INFO, POWER, "Purge Mode is not currently supported\n");
+		POWER_LOG(INFO, "Purge Mode is not currently supported");
 	else if (poll_stats->cur_freq == MED) {
 
 		if (percent >
@@ -272,7 +271,7 @@ update_stats_normal(struct priority_worker *poll_stats)
 				poll_stats->threshold_ctr++;
 			else {
 				set_state(poll_stats, HGH_BUSY);
-				RTE_LOG(INFO, POWER, "MOVE to HGH\n");
+				POWER_LOG(INFO, "MOVE to HGH");
 			}
 
 		} else {
@@ -289,7 +288,7 @@ update_stats_normal(struct priority_worker *poll_stats)
 				poll_stats->threshold_ctr++;
 			else {
 				set_state(poll_stats, MED_NORMAL);
-				RTE_LOG(INFO, POWER, "MOVE to MED\n");
+				POWER_LOG(INFO, "MOVE to MED");
 			}
 		} else {
 			/* reset */
@@ -332,17 +331,17 @@ empty_poll_training(struct priority_worker *poll_stats,
 
 		set_state(poll_stats, MED_NORMAL);
 
-		RTE_LOG(INFO, POWER, "LOW threshold is %"PRIu64"\n",
+		POWER_LOG(INFO, "LOW threshold is %"PRIu64"",
 				poll_stats->thresh[LOW].base_edpi);
 
-		RTE_LOG(INFO, POWER, "MED threshold is %"PRIu64"\n",
+		POWER_LOG(INFO, "MED threshold is %"PRIu64"",
 				poll_stats->thresh[MED].base_edpi);
 
 
-		RTE_LOG(INFO, POWER, "HIGH threshold is %"PRIu64"\n",
+		POWER_LOG(INFO, "HIGH threshold is %"PRIu64"",
 				poll_stats->thresh[HGH].base_edpi);
 
-		RTE_LOG(INFO, POWER, "Training is Complete for %d\n",
+		POWER_LOG(INFO, "Training is Complete for %d",
 				poll_stats->lcore_id);
 	}
 
@@ -414,7 +413,7 @@ rte_power_empty_poll_stat_init(struct ep_params **eptr, uint8_t *freq_tlb,
 		freq_index[HGH] = freq_tlb[HGH];
 	}
 
-	RTE_LOG(INFO, POWER, "Initialize the Empty Poll\n");
+	POWER_LOG(INFO, "Initialize the Empty Poll");
 
 	/* Train for pre-defined period */
 	ep_params->max_train_iter = INTERVALS_PER_SECOND * SECONDS_TO_TRAIN_FOR;
@@ -433,7 +432,7 @@ rte_power_empty_poll_stat_init(struct ep_params **eptr, uint8_t *freq_tlb,
 				avail_freqs[i],
 				NUM_FREQS);
 
-		RTE_LOG(INFO, POWER, "total avail freq is %d , lcoreid %d\n",
+		POWER_LOG(INFO, "total avail freq is %d , lcoreid %d",
 				total_avail_freqs[i],
 				i);
 
@@ -452,8 +451,7 @@ rte_power_empty_poll_stat_init(struct ep_params **eptr, uint8_t *freq_tlb,
 void
 rte_power_empty_poll_stat_free(void)
 {
-
-	RTE_LOG(INFO, POWER, "Close the Empty Poll\n");
+	POWER_LOG(INFO, "Close the Empty Poll");
 
 	rte_free(ep_params);
 }
