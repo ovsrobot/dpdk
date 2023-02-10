@@ -118,15 +118,6 @@ convention.
    The ``rte_trace_point_register.h`` header must be included before any
    inclusion of the ``rte_trace_point.h`` header.
 
-.. note::
-
-   The ``RTE_TRACE_POINT_REGISTER`` defines the placeholder for the
-   ``rte_trace_point_t`` tracepoint object. The user must export a
-   ``__<trace_function_name>`` symbol in the library ``.map`` file for this
-   tracepoint to be used out of the library, in shared builds.
-   For example, ``__app_trace_string`` will be the exported symbol in the
-   above example.
-
 Fast path tracepoint
 --------------------
 
@@ -136,6 +127,15 @@ the user must use ``RTE_TRACE_POINT_FP`` instead of ``RTE_TRACE_POINT``.
 
 ``RTE_TRACE_POINT_FP`` is compiled out by default and it can be enabled using
 the ``enable_trace_fp`` option for meson build.
+
+.. note::
+
+   The ``RTE_TRACE_POINT_REGISTER`` defines the placeholder for the
+   ``rte_trace_point_t`` tracepoint object. For fast path tracepoint, the user
+   must export a ``__<trace_function_name>`` symbol in the library ``.map``
+   file for this tracepoint to be used out of the library, in shared builds.
+   For example, ``__app_trace_string`` will be the exported symbol in the
+   above example.
 
 Event record mode
 -----------------
