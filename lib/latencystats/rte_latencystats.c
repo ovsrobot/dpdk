@@ -26,7 +26,10 @@ latencystat_cycles_per_ns(void)
 }
 
 /* Macros for printing using RTE_LOG */
-#define RTE_LOGTYPE_LATENCY_STATS RTE_LOGTYPE_USER1
+RTE_LOG_REGISTER_DEFAULT(latencystat_logtype, INFO);
+#define LATENCYSTATS_LOG(level, fmt, args...)		\
+	rte_log(RTE_LOG_ ## level, latencystat_logtype,	\
+		"%s(): " fmt "\n", __func__, ## args)
 
 static uint64_t timestamp_dynflag;
 static int timestamp_dynfield_offset = -1;
@@ -95,7 +98,7 @@ rte_latencystats_update(void)
 					latency_stats_index,
 					values, NUM_LATENCY_STATS);
 	if (ret < 0)
-		RTE_LOG(INFO, LATENCY_STATS, "Failed to push the stats\n");
+		LATENCYSTATS_LOG(INFO, "Failed to push the stats");
 
 	return ret;
 }
@@ -227,8 +230,7 @@ rte_latencystats_init(uint64_t app_samp_intvl,
 	mz = rte_memzone_reserve(MZ_RTE_LATENCY_STATS, sizeof(*glob_stats),
 					rte_socket_id(), flags);
 	if (mz == NULL) {
-		RTE_LOG(ERR, LATENCY_STATS, "Cannot reserve memory: %s:%d\n",
-			__func__, __LINE__);
+		LATENCYSTATS_LOG(ERR, "Cannot reserve memory");
 		return -ENOMEM;
 	}
 
@@ -243,8 +245,7 @@ rte_latencystats_init(uint64_t app_samp_intvl,
 	latency_stats_index = rte_metrics_reg_names(ptr_strings,
 							NUM_LATENCY_STATS);
 	if (latency_stats_index < 0) {
-		RTE_LOG(DEBUG, LATENCY_STATS,
-			"Failed to register latency stats names\n");
+		LATENCYSTATS_LOG(ERR, "Failed to register latency stats names");
 		return -1;
 	}
 
@@ -252,8 +253,8 @@ rte_latencystats_init(uint64_t app_samp_intvl,
 	ret = rte_mbuf_dyn_rx_timestamp_register(&timestamp_dynfield_offset,
 			&timestamp_dynflag);
 	if (ret != 0) {
-		RTE_LOG(ERR, LATENCY_STATS,
-			"Cannot register mbuf field/flag for timestamp\n");
+		LATENCYSTATS_LOG(ERR,
+				 "Cannot register mbuf field/flag for timestamp");
 		return -rte_errno;
 	}
 
@@ -263,9 +264,9 @@ rte_latencystats_init(uint64_t app_samp_intvl,
 
 		ret = rte_eth_dev_info_get(pid, &dev_info);
 		if (ret != 0) {
-			RTE_LOG(INFO, LATENCY_STATS,
-				"Error during getting device (port %u) info: %s\n",
-				pid, strerror(-ret));
+			LATENCYSTATS_LOG(INFO,
+					 "Error during getting device (port %u) info: %s",
+					 pid, strerror(-ret));
 
 			continue;
 		}
@@ -275,18 +276,18 @@ rte_latencystats_init(uint64_t app_samp_intvl,
 			cbs->cb = rte_eth_add_first_rx_callback(pid, qid,
 					add_time_stamps, user_cb);
 			if (!cbs->cb)
-				RTE_LOG(INFO, LATENCY_STATS, "Failed to "
-					"register Rx callback for pid=%d, "
-					"qid=%d\n", pid, qid);
+				LATENCYSTATS_LOG(INFO,
+						 "Failed to register Rx callback for pid=%d, qid=%d",
+						 pid, qid);
 		}
 		for (qid = 0; qid < dev_info.nb_tx_queues; qid++) {
 			cbs = &tx_cbs[pid][qid];
 			cbs->cb =  rte_eth_add_tx_callback(pid, qid,
 					calc_latency, user_cb);
 			if (!cbs->cb)
-				RTE_LOG(INFO, LATENCY_STATS, "Failed to "
-					"register Tx callback for pid=%d, "
-					"qid=%d\n", pid, qid);
+				LATENCYSTATS_LOG(INFO,
+						 "Failed to register Tx callback for pid=%d, qid=%d",
+						 pid, qid);
 		}
 	}
 	return 0;
@@ -307,8 +308,8 @@ rte_latencystats_uninit(void)
 
 		ret = rte_eth_dev_info_get(pid, &dev_info);
 		if (ret != 0) {
-			RTE_LOG(INFO, LATENCY_STATS,
-				"Error during getting device (port %u) info: %s\n",
+			LATENCYSTATS_LOG(INFO,
+				"Error during getting device (port %u) info: %s",
 				pid, strerror(-ret));
 
 			continue;
@@ -318,17 +319,17 @@ rte_latencystats_uninit(void)
 			cbs = &rx_cbs[pid][qid];
 			ret = rte_eth_remove_rx_callback(pid, qid, cbs->cb);
 			if (ret)
-				RTE_LOG(INFO, LATENCY_STATS, "failed to "
-					"remove Rx callback for pid=%d, "
-					"qid=%d\n", pid, qid);
+				LATENCYSTATS_LOG(INFO,
+						 "failed to remove Rx callback for pid=%d, qid=%d",
+						 pid, qid);
 		}
 		for (qid = 0; qid < dev_info.nb_tx_queues; qid++) {
 			cbs = &tx_cbs[pid][qid];
 			ret = rte_eth_remove_tx_callback(pid, qid, cbs->cb);
 			if (ret)
-				RTE_LOG(INFO, LATENCY_STATS, "failed to "
-					"remove Tx callback for pid=%d, "
-					"qid=%d\n", pid, qid);
+				LATENCYSTATS_LOG(INFO,
+						 "failed to remove Tx callback for pid=%d, qid=%d",
+						 pid, qid);
 		}
 	}
 
@@ -365,8 +366,8 @@ rte_latencystats_get(struct rte_metric_value *values, uint16_t size)
 		const struct rte_memzone *mz;
 		mz = rte_memzone_lookup(MZ_RTE_LATENCY_STATS);
 		if (mz == NULL) {
-			RTE_LOG(ERR, LATENCY_STATS,
-				"Latency stats memzone not found\n");
+			LATENCYSTATS_LOG(ERR,
+					 "Latency stats memzone not found");
 			return -ENOMEM;
 		}
 		glob_stats =  mz->addr;
