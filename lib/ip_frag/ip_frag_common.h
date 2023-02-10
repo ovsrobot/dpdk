@@ -9,8 +9,16 @@
 #include "ip_reassembly.h"
 
 /* logging macros. */
+extern int ipfrag_logtype;
+
+#define IP_FRAG_ERR(fmt, args...) \
+	rte_log(RTE_LOG_ERR, ipfrag_logtype, \
+		"%s: " fmt "\n", __func__, ## args)
+
 #ifdef RTE_LIBRTE_IP_FRAG_DEBUG
-#define	IP_FRAG_LOG(lvl, fmt, args...)	RTE_LOG(lvl, USER1, fmt, ##args)
+#define	IP_FRAG_LOG(lvl, fmt, args...)	\
+	rte_log(RTE_LOG ## lvl, ipfrag_logtype, \
+		"%s: " fmt "\n", __func__, ## args)
 #else
 #define	IP_FRAG_LOG(lvl, fmt, args...)	do {} while(0)
 #endif /* IP_FRAG_DEBUG */
@@ -111,9 +119,9 @@ ip_frag_free_immediate(struct ip_frag_pkt *fp)
 
 	for (i = 0; i < fp->last_idx; i++) {
 		if (fp->frags[i].mb != NULL) {
-			IP_FRAG_LOG(DEBUG, "%s:%d\n"
-			    "mbuf: %p, tms: %" PRIu64", key: <%" PRIx64 ", %#x>\n",
-			    __func__, __LINE__, fp->frags[i].mb, fp->start,
+			IP_FRAG_LOG(DEBUG,
+			    "mbuf: %p, tms: %" PRIu64", key: <%" PRIx64 ", %#x>",
+			    fp->frags[i].mb, fp->start,
 			    fp->key.src_dst[0], fp->key.id);
 			rte_pktmbuf_free(fp->frags[i].mb);
 			fp->frags[i].mb = NULL;
