@@ -30,6 +30,7 @@
 
 #include "rte_mempool.h"
 #include "rte_mempool_trace.h"
+#include "rte_mempool_log.h"
 
 TAILQ_HEAD(rte_mempool_list, rte_tailq_entry);
 
@@ -774,7 +775,7 @@ rte_mempool_cache_create(uint32_t size, int socket_id)
 	cache = rte_zmalloc_socket("MEMPOOL_CACHE", sizeof(*cache),
 				  RTE_CACHE_LINE_SIZE, socket_id);
 	if (cache == NULL) {
-		RTE_LOG(ERR, MEMPOOL, "Cannot allocate mempool cache.\n");
+		MEMPOOL_LOG(ERR, "Cannot allocate mempool cache.");
 		rte_errno = ENOMEM;
 		return NULL;
 	}
@@ -876,7 +877,7 @@ rte_mempool_create_empty(const char *name, unsigned n, unsigned elt_size,
 	/* try to allocate tailq entry */
 	te = rte_zmalloc("MEMPOOL_TAILQ_ENTRY", sizeof(*te), 0);
 	if (te == NULL) {
-		RTE_LOG(ERR, MEMPOOL, "Cannot allocate tailq entry!\n");
+		MEMPOOL_LOG(ERR, "Cannot allocate tailq entry!");
 		goto exit_unlock;
 	}
 
@@ -1088,25 +1089,25 @@ void rte_mempool_check_cookies(const struct rte_mempool *mp,
 
 		if (free == 0) {
 			if (cookie != RTE_MEMPOOL_HEADER_COOKIE1) {
-				RTE_LOG(CRIT, MEMPOOL,
-					"obj=%p, mempool=%p, cookie=%" PRIx64 "\n",
-					obj, (const void *) mp, cookie);
+				MEMPOOL_LOG(CRIT,
+					    "obj=%p, mempool=%p, cookie=%" PRIx64,
+					    obj, (const void *) mp, cookie);
 				rte_panic("MEMPOOL: bad header cookie (put)\n");
 			}
 			hdr->cookie = RTE_MEMPOOL_HEADER_COOKIE2;
 		} else if (free == 1) {
 			if (cookie != RTE_MEMPOOL_HEADER_COOKIE2) {
-				RTE_LOG(CRIT, MEMPOOL,
-					"obj=%p, mempool=%p, cookie=%" PRIx64 "\n",
-					obj, (const void *) mp, cookie);
+				MEMPOOL_LOG(CRIT,
+					    "obj=%p, mempool=%p, cookie=%" PRIx64,
+					    obj, (const void *) mp, cookie);
 				rte_panic("MEMPOOL: bad header cookie (get)\n");
 			}
 			hdr->cookie = RTE_MEMPOOL_HEADER_COOKIE1;
 		} else if (free == 2) {
 			if (cookie != RTE_MEMPOOL_HEADER_COOKIE1 &&
 			    cookie != RTE_MEMPOOL_HEADER_COOKIE2) {
-				RTE_LOG(CRIT, MEMPOOL,
-					"obj=%p, mempool=%p, cookie=%" PRIx64 "\n",
+				MEMPOOL_LOG(CRIT,
+					"obj=%p, mempool=%p, cookie=%" PRIx64,
 					obj, (const void *) mp, cookie);
 				rte_panic("MEMPOOL: bad header cookie (audit)\n");
 			}
@@ -1114,9 +1115,9 @@ void rte_mempool_check_cookies(const struct rte_mempool *mp,
 		tlr = rte_mempool_get_trailer(obj);
 		cookie = tlr->cookie;
 		if (cookie != RTE_MEMPOOL_TRAILER_COOKIE) {
-			RTE_LOG(CRIT, MEMPOOL,
-				"obj=%p, mempool=%p, cookie=%" PRIx64 "\n",
-				obj, (const void *) mp, cookie);
+			MEPOOL_LOG(CRIT,
+				   "obj=%p, mempool=%p, cookie=%" PRIx64,
+				   obj, (const void *) mp, cookie);
 			rte_panic("MEMPOOL: bad trailer cookie\n");
 		}
 	}
@@ -1200,7 +1201,7 @@ mempool_audit_cache(const struct rte_mempool *mp)
 		const struct rte_mempool_cache *cache;
 		cache = &mp->local_cache[lcore_id];
 		if (cache->len > RTE_DIM(cache->objs)) {
-			RTE_LOG(CRIT, MEMPOOL, "badness on cache[%u]\n",
+			MEMPOOL_LOG(CRIT, "badness on cache[%u]",
 				lcore_id);
 			rte_panic("MEMPOOL: invalid cache len\n");
 		}
@@ -1429,7 +1430,7 @@ rte_mempool_event_callback_register(rte_mempool_event_callback *func,
 
 	cb = calloc(1, sizeof(*cb));
 	if (cb == NULL) {
-		RTE_LOG(ERR, MEMPOOL, "Cannot allocate event callback!\n");
+		MEMPOOL_LOG(ERR, "Cannot allocate event callback!");
 		ret = -ENOMEM;
 		goto exit;
 	}
@@ -1563,3 +1564,5 @@ RTE_INIT(mempool_init_telemetry)
 	rte_telemetry_register_cmd("/mempool/info", mempool_handle_info,
 		"Returns mempool info. Parameters: pool_name");
 }
+
+RTE_LOG_REGISTER_DEFAULT(mempool_logtype, INFO);
