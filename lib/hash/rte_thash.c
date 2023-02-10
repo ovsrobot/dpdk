@@ -13,6 +13,12 @@
 #include <rte_log.h>
 #include <rte_malloc.h>
 
+RTE_LOG_REGISTER_SUFFIX(rte_thash_logtype, thash, INFO);
+
+#define HASH_LOG(level, fmt, args...)			\
+	rte_log(RTE_LOG_ ## level, rte_thash_logtype,	\
+		"%s(): " fmt "\n", __func__, ##args)
+
 #define THASH_NAME_LEN		64
 #define TOEPLITZ_HASH_LEN	32
 
@@ -103,6 +109,28 @@ rte_thash_gfni_supported(void)
 
 	return 0;
 };
+
+#ifndef RTE_THASH_GFNI_DEFINED
+uint32_t
+rte_thash_gfni(const uint64_t *mtrx __rte_unused,
+	const uint8_t *key __rte_unused, int len __rte_unused)
+{
+	HASH_LOG(ERR, "is undefined under given arch");
+	return 0;
+}
+
+void
+rte_thash_gfni_bulk(const uint64_t *mtrx __rte_unused,
+	int len __rte_unused, uint8_t *tuple[] __rte_unused,
+	uint32_t val[], uint32_t num)
+{
+	unsigned int i;
+
+	HASH_LOG(ERR, "is undefined under given arch");
+	for (i = 0; i < num; i++)
+		val[i] = 0;
+}
+#endif
 
 void
 rte_thash_complete_matrix(uint64_t *matrixes, const uint8_t *rss_key, int size)
@@ -240,8 +268,8 @@ rte_thash_init_ctx(const char *name, uint32_t key_len, uint32_t reta_sz,
 	/* allocate tailq entry */
 	te = rte_zmalloc("THASH_TAILQ_ENTRY", sizeof(*te), 0);
 	if (te == NULL) {
-		RTE_LOG(ERR, HASH,
-			"Can not allocate tailq entry for thash context %s\n",
+		HASH_LOG(ERR,
+			"Can not allocate tailq entry for thash context %s",
 			name);
 		rte_errno = ENOMEM;
 		goto exit;
@@ -249,7 +277,8 @@ rte_thash_init_ctx(const char *name, uint32_t key_len, uint32_t reta_sz,
 
 	ctx = rte_zmalloc(NULL, sizeof(struct rte_thash_ctx) + key_len, 0);
 	if (ctx == NULL) {
-		RTE_LOG(ERR, HASH, "thash ctx %s memory allocation failed\n",
+		HASH_LOG(ERR,
+			 "thash ctx %s memory allocation failed",
 			name);
 		rte_errno = ENOMEM;
 		goto free_te;
@@ -272,7 +301,7 @@ rte_thash_init_ctx(const char *name, uint32_t key_len, uint32_t reta_sz,
 		ctx->matrices = rte_zmalloc(NULL, key_len * sizeof(uint64_t),
 			RTE_CACHE_LINE_SIZE);
 		if (ctx->matrices == NULL) {
-			RTE_LOG(ERR, HASH, "Cannot allocate matrices\n");
+			HASH_LOG(ERR, "Cannot allocate matrices");
 			rte_errno = ENOMEM;
 			goto free_ctx;
 		}
@@ -387,8 +416,8 @@ generate_subkey(struct rte_thash_ctx *ctx, struct thash_lfsr *lfsr,
 	if (((lfsr->bits_cnt + req_bits) > (1ULL << lfsr->deg) - 1) &&
 			((ctx->flags & RTE_THASH_IGNORE_PERIOD_OVERFLOW) !=
 			RTE_THASH_IGNORE_PERIOD_OVERFLOW)) {
-		RTE_LOG(ERR, HASH,
-			"Can't generate m-sequence due to period overflow\n");
+		HASH_LOG(ERR,
+			"Can't generate m-sequence due to period overflow");
 		return -ENOSPC;
 	}
 
@@ -467,9 +496,9 @@ insert_before(struct rte_thash_ctx *ctx,
 			return ret;
 		}
 	} else if ((next_ent != NULL) && (end > next_ent->offset)) {
-		RTE_LOG(ERR, HASH,
-			"Can't add helper %s due to conflict with existing"
-			" helper %s\n", ent->name, next_ent->name);
+		HASH_LOG(ERR,
+			"Can't add helper %s due to conflict with existing helper %s",
+			 ent->name, next_ent->name);
 		rte_free(ent);
 		return -ENOSPC;
 	}
@@ -516,9 +545,9 @@ insert_after(struct rte_thash_ctx *ctx,
 	int ret;
 
 	if ((next_ent != NULL) && (end > next_ent->offset)) {
-		RTE_LOG(ERR, HASH,
-			"Can't add helper %s due to conflict with existing"
-			" helper %s\n", ent->name, next_ent->name);
+		HASH_LOG(ERR,
+			 "Can't add helper %s due to conflict with existing helper %s",
+			 ent->name, next_ent->name);
 		rte_free(ent);
 		return -EEXIST;
 	}

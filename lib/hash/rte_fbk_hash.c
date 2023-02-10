@@ -18,6 +18,12 @@
 
 #include "rte_fbk_hash.h"
 
+RTE_LOG_REGISTER_SUFFIX(fbk_hash_logtype, fbk, INFO);
+
+#define HASH_LOG(level, fmt, args...)			\
+	rte_log(RTE_LOG_ ## level, fbk_hash_logtype,	\
+		"%s(): " fmt "\n", __func__, ##args)
+
 TAILQ_HEAD(rte_fbk_hash_list, rte_tailq_entry);
 
 static struct rte_tailq_elem rte_fbk_hash_tailq = {
@@ -114,7 +120,7 @@ rte_fbk_hash_create(const struct rte_fbk_hash_params *params)
 
 	te = rte_zmalloc("FBK_HASH_TAILQ_ENTRY", sizeof(*te), 0);
 	if (te == NULL) {
-		RTE_LOG(ERR, HASH, "Failed to allocate tailq entry\n");
+		HASH_LOG(ERR, "Failed to allocate tailq entry");
 		goto exit;
 	}
 
@@ -122,7 +128,7 @@ rte_fbk_hash_create(const struct rte_fbk_hash_params *params)
 	ht = rte_zmalloc_socket(hash_name, mem_size,
 			0, params->socket_id);
 	if (ht == NULL) {
-		RTE_LOG(ERR, HASH, "Failed to allocate fbk hash table\n");
+		HASH_LOG(ERR, "Failed to allocate fbk hash table");
 		rte_free(te);
 		goto exit;
 	}
