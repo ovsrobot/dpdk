@@ -151,6 +151,17 @@ instead of zero copy mode (if available).
 
     --vdev net_af_xdp,iface=ens786f1,force_copy=1
 
+use_cni
+~~~~~~~
+
+The EAL vdev argument use_cni is used to indicate that the user wishes to
+enable the `AF_XDP Plugin for Kubernetes`_ within a DPDK application.
+
+.. _AF_XDP Plugin for Kubernetes: https://github.com/intel/afxdp-plugins-for-kubernetes
+
+.. code-block:: console
+
+	--vdev=net_af_xdp0,use_cni=1
 
 Limitations
 -----------
