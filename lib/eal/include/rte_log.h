@@ -33,7 +33,7 @@ extern "C" {
 				 /* was RTE_LOGTYPE_TIMER */
 #define RTE_LOGTYPE_PMD        5 /**< Log related to poll mode driver. */
 #define RTE_LOGTYPE_HASH       6 /**< Log related to hash table. */
-#define RTE_LOGTYPE_LPM        7 /**< Log related to LPM. */
+				 /* was RTE_LOGTYPE_LPM */
 #define RTE_LOGTYPE_KNI        8 /**< Log related to KNI. */
 				 /* was RTE_LOGTYPE_ACL */
 				 /* was RTE_LOGTYPE_POWER */
