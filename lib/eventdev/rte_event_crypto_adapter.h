@@ -138,6 +138,8 @@
  *  - rte_event_crypto_adapter_stop()
  *  - rte_event_crypto_adapter_stats_get()
  *  - rte_event_crypto_adapter_stats_reset()
+ *  - rte_event_crypto_adapter_runtime_params_get()
+ *  - rte_event_crypto_adapter_runtime_params_set()
 
  * The application creates an instance using rte_event_crypto_adapter_create()
  * or rte_event_crypto_adapter_create_ext().
@@ -251,6 +253,24 @@ struct rte_event_crypto_adapter_conf {
 	 * max_nb crypto ops. This isn't treated as a requirement; batching
 	 * may cause the adapter to process more than max_nb crypto ops.
 	 */
+};
+
+#define DEFAULT_MAX_NB 128
+/**< The default value for maximum number of packets processed by service
+ * based adapter per each call.
+ */
+
+/**
+ * Adapter runtime configuration parameters
+ */
+struct rte_event_crypto_adapter_runtime_params {
+	uint32_t max_nb;
+	/**< The adapter can return early if it has processed at least
+	 * max_nb crypto ops. This isn't treated as a requirement; batching
+	 * may cause the adapter to process more than max_nb crypto ops.
+	 */
+	uint32_t rsvd[15];
+	/**< Reserved fields for future expansion */
 };
 
 #define RTE_EVENT_CRYPTO_ADAPTER_EVENT_VECTOR	0x1
@@ -607,6 +627,76 @@ rte_event_crypto_adapter_service_id_get(uint8_t id, uint32_t *service_id);
  */
 int
 rte_event_crypto_adapter_event_port_get(uint8_t id, uint8_t *event_port_id);
+
+/**
+ * Initialize the adapter runtime configuration parameters
+ *
+ * @param params
+ *  A pointer to structure of type struct rte_event_crypto_adapter_runtime_params
+ *
+ * @return
+ *  -  0: Success
+ *  - <0: Error code on failure
+ */
+__rte_experimental
+static inline int
+rte_event_crypto_adapter_runtime_params_init(
+		struct rte_event_crypto_adapter_runtime_params *params)
+{
+	if (params == NULL)
+		return -EINVAL;
+
+	memset(params, 0, sizeof(*params));
+	params->max_nb = DEFAULT_MAX_NB;
+
+	return 0;
+}
+
+/**
+ * Set the adapter runtime configuration parameters
+ *
+ * This API needs to be called after adding at least one qp to the adapter
+ * and is supported only for the service-based adapter.
+ *
+ * @param id
+ *  Adapter identifier
+ *
+ * @param params
+ *  A pointer to structure of type struct rte_event_crypto_adapter_runtime_params
+ *  with configuration parameter values. This struct can be initialized using
+ *  rte_event_crypto_adapter_runtime_params_init() API to default values or
+ *  application may reset this struct and update required fields.
+ *
+ * @return
+ *  -  0: Success
+ *  - <0: Error code on failure
+ */
+__rte_experimental
+int
+rte_event_crypto_adapter_runtime_params_set(uint8_t id,
+		struct rte_event_crypto_adapter_runtime_params *params);
+
+/**
+ * Get the adapter runtime configuration parameters
+ *
+ * This API needs to be called after adding at least one qp to the adapter
+ * and is supported only for the service-based adapter.
+ *
+ * @param id
+ *  Adapter identifier
+ *
+ * @param[out] params
+ *  A pointer to structure of type struct rte_event_crypto_adapter_runtime_params
+ *  containing valid adapter parameters when return value is 0.
+ *
+ * @return
+ *  -  0: Success
+ *  - <0: Error code on failure
+ */
+__rte_experimental
+int
+rte_event_crypto_adapter_runtime_params_get(uint8_t id,
+		struct rte_event_crypto_adapter_runtime_params *params);
 
 /**
  * @warning
