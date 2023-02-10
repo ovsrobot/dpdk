@@ -81,8 +81,7 @@ rte_gso_segment(struct rte_mbuf *pkt,
 				indirect_pool, pkts_out, nb_pkts_out);
 	} else {
 		/* unsupported packet, skip */
-		RTE_LOG(DEBUG, GSO, "Unsupported packet type\n");
-		ret = 0;
+		ret = -EINVAL;
 	}
 
 	if (ret < 0) {
