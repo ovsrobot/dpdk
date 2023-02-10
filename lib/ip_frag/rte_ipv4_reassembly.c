@@ -120,12 +120,11 @@ rte_ipv4_frag_reassemble_packet(struct rte_ip_frag_tbl *tbl,
 	ip_len = rte_be_to_cpu_16(ip_hdr->total_length) - mb->l3_len;
 	trim = mb->pkt_len - (ip_len + mb->l3_len + mb->l2_len);
 
-	IP_FRAG_LOG(DEBUG, "%s:%d:\n"
+	IP_FRAG_LOG(DEBUG,
 		"mbuf: %p, tms: %" PRIu64 ", key: <%" PRIx64 ", %#x>"
 		"ofs: %u, len: %d, padding: %d, flags: %#x\n"
 		"tbl: %p, max_cycles: %" PRIu64 ", entry_mask: %#x, "
-		"max_entries: %u, use_entries: %u\n\n",
-		__func__, __LINE__,
+		"max_entries: %u, use_entries: %u\n",
 		mb, tms, key.src_dst[0], key.id, ip_ofs, ip_len, trim, ip_flag,
 		tbl, tbl->max_cycles, tbl->entry_mask, tbl->max_entries,
 		tbl->use_entries);
@@ -145,11 +144,10 @@ rte_ipv4_frag_reassemble_packet(struct rte_ip_frag_tbl *tbl,
 		return NULL;
 	}
 
-	IP_FRAG_LOG(DEBUG, "%s:%d:\n"
+	IP_FRAG_LOG(DEBUG,
 		"tbl: %p, max_entries: %u, use_entries: %u\n"
 		"ipv4_frag_pkt: %p, key: <%" PRIx64 ", %#x>, start: %" PRIu64
-		", total_size: %u, frag_size: %u, last_idx: %u\n\n",
-		__func__, __LINE__,
+		", total_size: %u, frag_size: %u, last_idx: %u\n",
 		tbl, tbl->max_entries, tbl->use_entries,
 		fp, fp->key.src_dst[0], fp->key.id, fp->start,
 		fp->total_size, fp->frag_size, fp->last_idx);
@@ -159,11 +157,11 @@ rte_ipv4_frag_reassemble_packet(struct rte_ip_frag_tbl *tbl,
 	mb = ip_frag_process(fp, dr, mb, ip_ofs, ip_len, ip_flag);
 	ip_frag_inuse(tbl, fp);
 
-	IP_FRAG_LOG(DEBUG, "%s:%d:\n"
+	IP_FRAG_LOG(DEBUG,
 		"mbuf: %p\n"
 		"tbl: %p, max_entries: %u, use_entries: %u\n"
 		"ipv4_frag_pkt: %p, key: <%" PRIx64 ", %#x>, start: %" PRIu64
-		", total_size: %u, frag_size: %u, last_idx: %u\n\n",
+		", total_size: %u, frag_size: %u, last_idx: %u\n",
 		__func__, __LINE__, mb,
 		tbl, tbl->max_entries, tbl->use_entries,
 		fp, fp->key.src_dst[0], fp->key.id, fp->start,
