@@ -92,15 +92,20 @@ static void kni_allocate_mbufs(struct rte_kni *kni);
 
 static volatile int kni_fd = -1;
 
+RTE_LOG_REGISTER_DEFAULT(kni_logtype, INFO);
+
+#define KNI_LOG(level, fmt, args...) \
+	rte_log(RTE_LOG_ ## level, kni_logtype,	fmt, ## args)
+
 /* Shall be called before any allocation happens */
 int
 rte_kni_init(unsigned int max_kni_ifaces __rte_unused)
 {
-	RTE_LOG(WARNING, KNI, "WARNING: KNI is deprecated and will be removed in DPDK 23.11\n");
+	KNI_LOG(WARNING, "WARNING: KNI is deprecated and will be removed in DPDK 23.11\n");
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	if (rte_eal_iova_mode() != RTE_IOVA_PA) {
-		RTE_LOG(ERR, KNI, "KNI requires IOVA as PA\n");
+		KNI_LOG(ERR, "KNI requires IOVA as PA\n");
 		return -1;
 	}
 #endif
@@ -109,7 +114,7 @@ rte_kni_init(unsigned int max_kni_ifaces __rte_unused)
 	if (kni_fd < 0) {
 		kni_fd = open("/dev/" KNI_DEVICE, O_RDWR);
 		if (kni_fd < 0) {
-			RTE_LOG(ERR, KNI,
+			KNI_LOG(ERR,
 				"Can not open /dev/%s\n", KNI_DEVICE);
 			return -1;
 		}
@@ -225,7 +230,7 @@ rte_kni_alloc(struct rte_mempool *pktmbuf_pool,
 
 	/* Check if KNI subsystem has been initialized */
 	if (kni_fd < 0) {
-		RTE_LOG(ERR, KNI, "KNI subsystem has not been initialized. Invoke rte_kni_init() first\n");
+		KNI_LOG(ERR, "KNI subsystem has not been initialized. Invoke rte_kni_init() first\n");
 		return NULL;
 	}
 
@@ -233,19 +238,19 @@ rte_kni_alloc(struct rte_mempool *pktmbuf_pool,
 
 	kni = __rte_kni_get(conf->name);
 	if (kni != NULL) {
-		RTE_LOG(ERR, KNI, "KNI already exists\n");
+		KNI_LOG(ERR, "KNI already exists\n");
 		goto unlock;
 	}
 
 	te = rte_zmalloc("KNI_TAILQ_ENTRY", sizeof(*te), 0);
 	if (te == NULL) {
-		RTE_LOG(ERR, KNI, "Failed to allocate tailq entry\n");
+		KNI_LOG(ERR, "Failed to allocate tailq entry\n");
 		goto unlock;
 	}
 
 	kni = rte_zmalloc("KNI", sizeof(struct rte_kni), RTE_CACHE_LINE_SIZE);
 	if (kni == NULL) {
-		RTE_LOG(ERR, KNI, "KNI memory allocation failed\n");
+		KNI_LOG(ERR, "KNI memory allocation failed\n");
 		goto kni_fail;
 	}
 
@@ -424,7 +429,7 @@ rte_kni_release(struct rte_kni *kni)
 
 	strlcpy(dev_info.name, kni->name, sizeof(dev_info.name));
 	if (ioctl(kni_fd, RTE_KNI_IOCTL_RELEASE, &dev_info) < 0) {
-		RTE_LOG(ERR, KNI, "Fail to release kni device\n");
+		KNI_LOG(ERR, "Fail to release kni device\n");
 		goto unlock;
 	}
 
@@ -439,7 +444,7 @@ rte_kni_release(struct rte_kni *kni)
 		usleep(1000);
 
 	if (kni_fifo_count(kni->rx_q))
-		RTE_LOG(ERR, KNI, "Fail to free all Rx-q items\n");
+		KNI_LOG(ERR, "Fail to free all Rx-q items\n");
 
 	kni_free_fifo_phy(kni->pktmbuf_pool, kni->alloc_q);
 	kni_free_fifo(kni->tx_q);
@@ -466,16 +471,16 @@ kni_config_mac_address(uint16_t port_id, uint8_t mac_addr[])
 	int ret = 0;
 
 	if (!rte_eth_dev_is_valid_port(port_id)) {
-		RTE_LOG(ERR, KNI, "Invalid port id %d\n", port_id);
+		KNI_LOG(ERR, "Invalid port id %d\n", port_id);
 		return -EINVAL;
 	}
 
-	RTE_LOG(INFO, KNI, "Configure mac address of %d", port_id);
+	KNI_LOG(INFO, "Configure mac address of %d", port_id);
 
 	ret = rte_eth_dev_default_mac_addr_set(port_id,
 					(struct rte_ether_addr *)mac_addr);
 	if (ret < 0)
-		RTE_LOG(ERR, KNI, "Failed to config mac_addr for port %d\n",
+		KNI_LOG(ERR, "Failed to config mac_addr for port %d\n",
 			port_id);
 
 	return ret;
@@ -488,11 +493,11 @@ kni_config_promiscusity(uint16_t port_id, uint8_t to_on)
 	int ret;
 
 	if (!rte_eth_dev_is_valid_port(port_id)) {
-		RTE_LOG(ERR, KNI, "Invalid port id %d\n", port_id);
+		KNI_LOG(ERR, "Invalid port id %d\n", port_id);
 		return -EINVAL;
 	}
 
-	RTE_LOG(INFO, KNI, "Configure promiscuous mode of %d to %d\n",
+	KNI_LOG(INFO, "Configure promiscuous mode of %d to %d\n",
 		port_id, to_on);
 
 	if (to_on)
@@ -501,7 +506,7 @@ kni_config_promiscusity(uint16_t port_id, uint8_t to_on)
 		ret = rte_eth_promiscuous_disable(port_id);
 
 	if (ret != 0)
-		RTE_LOG(ERR, KNI,
+		KNI_LOG(ERR,
 			"Failed to %s promiscuous mode for port %u: %s\n",
 			to_on ? "enable" : "disable", port_id,
 			rte_strerror(-ret));
@@ -516,11 +521,11 @@ kni_config_allmulticast(uint16_t port_id, uint8_t to_on)
 	int ret;
 
 	if (!rte_eth_dev_is_valid_port(port_id)) {
-		RTE_LOG(ERR, KNI, "Invalid port id %d\n", port_id);
+		KNI_LOG(ERR, "Invalid port id %d\n", port_id);
 		return -EINVAL;
 	}
 
-	RTE_LOG(INFO, KNI, "Configure allmulticast mode of %d to %d\n",
+	KNI_LOG(INFO, "Configure allmulticast mode of %d to %d\n",
 		port_id, to_on);
 
 	if (to_on)
@@ -528,7 +533,7 @@ kni_config_allmulticast(uint16_t port_id, uint8_t to_on)
 	else
 		ret = rte_eth_allmulticast_disable(port_id);
 	if (ret != 0)
-		RTE_LOG(ERR, KNI,
+		KNI_LOG(ERR,
 			"Failed to %s allmulticast mode for port %u: %s\n",
 			to_on ? "enable" : "disable", port_id,
 			rte_strerror(-ret));
@@ -551,7 +556,7 @@ rte_kni_handle_request(struct rte_kni *kni)
 		return 0; /* It is OK of can not getting the request mbuf */
 
 	if (req != kni->sync_addr) {
-		RTE_LOG(ERR, KNI, "Wrong req pointer %p\n", req);
+		KNI_LOG(ERR, "Wrong req pointer %p\n", req);
 		return -1;
 	}
 
@@ -592,7 +597,7 @@ rte_kni_handle_request(struct rte_kni *kni)
 					kni->ops.port_id, req->allmulti);
 		break;
 	default:
-		RTE_LOG(ERR, KNI, "Unknown request id %u\n", req->req_id);
+		KNI_LOG(ERR, "Unknown request id %u\n", req->req_id);
 		req->result = -EINVAL;
 		break;
 	}
@@ -603,7 +608,7 @@ rte_kni_handle_request(struct rte_kni *kni)
 	else
 		ret = 1;
 	if (ret != 1) {
-		RTE_LOG(ERR, KNI, "Fail to put the muf back to resp_q\n");
+		KNI_LOG(ERR, "Fail to put the muf back to resp_q\n");
 		return -1; /* It is an error of can't putting the mbuf back */
 	}
 
@@ -679,7 +684,7 @@ kni_allocate_mbufs(struct rte_kni *kni)
 
 	/* Check if pktmbuf pool has been configured */
 	if (kni->pktmbuf_pool == NULL) {
-		RTE_LOG(ERR, KNI, "No valid mempool for allocating mbufs\n");
+		KNI_LOG(ERR, "No valid mempool for allocating mbufs\n");
 		return;
 	}
 
@@ -690,7 +695,7 @@ kni_allocate_mbufs(struct rte_kni *kni)
 		pkts[i] = rte_pktmbuf_alloc(kni->pktmbuf_pool);
 		if (unlikely(pkts[i] == NULL)) {
 			/* Out of memory */
-			RTE_LOG(ERR, KNI, "Out of memory\n");
+			KNI_LOG(ERR, "Out of memory\n");
 			break;
 		}
 		phys[i] = va2pa(pkts[i]);
@@ -757,18 +762,18 @@ rte_kni_register_handlers(struct rte_kni *kni, struct rte_kni_ops *ops)
 	enum kni_ops_status req_status;
 
 	if (ops == NULL) {
-		RTE_LOG(ERR, KNI, "Invalid KNI request operation.\n");
+		KNI_LOG(ERR, "Invalid KNI request operation.\n");
 		return -1;
 	}
 
 	if (kni == NULL) {
-		RTE_LOG(ERR, KNI, "Invalid kni info.\n");
+		KNI_LOG(ERR, "Invalid kni info.\n");
 		return -1;
 	}
 
 	req_status = kni_check_request_register(&kni->ops);
 	if (req_status == KNI_REQ_REGISTERED) {
-		RTE_LOG(ERR, KNI, "The KNI request operation has already registered.\n");
+		KNI_LOG(ERR, "The KNI request operation has already registered.\n");
 		return -1;
 	}
 
@@ -780,7 +785,7 @@ int
 rte_kni_unregister_handlers(struct rte_kni *kni)
 {
 	if (kni == NULL) {
-		RTE_LOG(ERR, KNI, "Invalid kni info.\n");
+		KNI_LOG(ERR, "Invalid kni info.\n");
 		return -1;
 	}
 
@@ -806,7 +811,7 @@ rte_kni_update_link(struct rte_kni *kni, unsigned int linkup)
 
 	fd = open(path, O_RDWR);
 	if (fd == -1) {
-		RTE_LOG(ERR, KNI, "Failed to open file: %s.\n", path);
+		KNI_LOG(ERR, "Failed to open file: %s.\n", path);
 		return -1;
 	}
 
@@ -823,7 +828,7 @@ rte_kni_update_link(struct rte_kni *kni, unsigned int linkup)
 	new_carrier = linkup ? "1" : "0";
 	ret = write(fd, new_carrier, 1);
 	if (ret < 1) {
-		RTE_LOG(ERR, KNI, "Failed to write file: %s.\n", path);
+		KNI_LOG(ERR, "Failed to write file: %s.\n", path);
 		close(fd);
 		return -1;
 	}
