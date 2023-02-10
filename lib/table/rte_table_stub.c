@@ -8,6 +8,11 @@
 
 #include "rte_table_stub.h"
 
+RTE_LOG_REGISTER_SUFFIX(table_logtype_stub, stub, INFO);
+#define TABLE_STUB_LOG(level, fmt, args...)		\
+	rte_log(RTE_LOG_ ## level, table_logtype_stub,	\
+		"%s(): " fmt "\n", __func__, ##args)
+
 #ifdef RTE_TABLE_STATS_COLLECT
 
 #define RTE_TABLE_LPM_STATS_PKTS_IN_ADD(table, val) \
@@ -38,9 +43,7 @@ rte_table_stub_create(__rte_unused void *params,
 	stub = rte_zmalloc_socket("TABLE", size, RTE_CACHE_LINE_SIZE,
 		socket_id);
 	if (stub == NULL) {
-		RTE_LOG(ERR, TABLE,
-			"%s: Cannot allocate %u bytes for stub table\n",
-			__func__, size);
+		TABLE_STUB_LOG(ERR, "Cannot allocate %u bytes for stub table", size);
 		return NULL;
 	}
 

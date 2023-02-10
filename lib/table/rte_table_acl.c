@@ -11,6 +11,11 @@
 
 #include "rte_table_acl.h"
 
+RTE_LOG_REGISTER_SUFFIX(table_logtype_acl, acl, INFO);
+#define TABLE_ACL_LOG(level, fmt, args...)		\
+	rte_log(RTE_LOG_ ## level, table_logtype_acl,	\
+		"%s(): " fmt "\n", __func__, ##args)
+
 #ifdef RTE_TABLE_STATS_COLLECT
 
 #define RTE_TABLE_ACL_STATS_PKTS_IN_ADD(table, val) \
@@ -65,22 +70,20 @@ rte_table_acl_create(
 
 	/* Check input parameters */
 	if (p == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: Invalid value for params\n", __func__);
+		TABLE_ACL_LOG(ERR, "Invalid value for params");
 		return NULL;
 	}
 	if (p->name == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: Invalid value for name\n", __func__);
+		TABLE_ACL_LOG(ERR, "Invalid value for name");
 		return NULL;
 	}
 	if (p->n_rules == 0) {
-		RTE_LOG(ERR, TABLE, "%s: Invalid value for n_rules\n",
-			__func__);
+		TABLE_ACL_LOG(ERR, "Invalid value for n_rules");
 		return NULL;
 	}
 	if ((p->n_rule_fields == 0) ||
 	    (p->n_rule_fields > RTE_ACL_MAX_FIELDS)) {
-		RTE_LOG(ERR, TABLE, "%s: Invalid value for n_rule_fields\n",
-			__func__);
+		TABLE_ACL_LOG(ERR, "Invalid value for n_rule_fields");
 		return NULL;
 	}
 
@@ -98,9 +101,7 @@ rte_table_acl_create(
 	acl = rte_zmalloc_socket("TABLE", total_size, RTE_CACHE_LINE_SIZE,
 		socket_id);
 	if (acl == NULL) {
-		RTE_LOG(ERR, TABLE,
-			"%s: Cannot allocate %u bytes for ACL table\n",
-			__func__, total_size);
+		TABLE_ACL_LOG(ERR,"Cannot allocate %u bytes for ACL table", total_size);
 		return NULL;
 	}
 
@@ -140,7 +141,7 @@ rte_table_acl_free(void *table)
 
 	/* Check input parameters */
 	if (table == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: table parameter is NULL\n", __func__);
+		TABLE_ACL_LOG(ERR, "table parameter is NULL");
 		return -EINVAL;
 	}
 
@@ -164,8 +165,7 @@ rte_table_acl_build(struct rte_table_acl *acl, struct rte_acl_ctx **acl_ctx)
 	/* Create low level ACL table */
 	ctx = rte_acl_create(&acl->acl_params);
 	if (ctx == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: Cannot create low level ACL table\n",
-			__func__);
+		TABLE_ACL_LOG(ERR, "Cannot create low level ACL table");
 		return -1;
 	}
 
@@ -176,9 +176,7 @@ rte_table_acl_build(struct rte_table_acl *acl, struct rte_acl_ctx **acl_ctx)
 			status = rte_acl_add_rules(ctx, acl->acl_rule_list[i],
 				1);
 			if (status != 0) {
-				RTE_LOG(ERR, TABLE,
-				"%s: Cannot add rule to low level ACL table\n",
-					__func__);
+				TABLE_ACL_LOG(ERR, "Cannot add rule to low level ACL table");
 				rte_acl_free(ctx);
 				return -1;
 			}
@@ -196,9 +194,7 @@ rte_table_acl_build(struct rte_table_acl *acl, struct rte_acl_ctx **acl_ctx)
 	/* Build low level ACl table */
 	status = rte_acl_build(ctx, &acl->cfg);
 	if (status != 0) {
-		RTE_LOG(ERR, TABLE,
-			"%s: Cannot build the low level ACL table\n",
-			__func__);
+		TABLE_ACL_LOG(ERR, "Cannot build the low level ACL table");
 		rte_acl_free(ctx);
 		return -1;
 	}
@@ -226,29 +222,27 @@ rte_table_acl_entry_add(
 
 	/* Check input parameters */
 	if (table == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: table parameter is NULL\n", __func__);
+		TABLE_ACL_LOG(ERR, "table parameter is NULL");
 		return -EINVAL;
 	}
 	if (key == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: key parameter is NULL\n", __func__);
+		TABLE_ACL_LOG(ERR, "key parameter is NULL");
 		return -EINVAL;
 	}
 	if (entry == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: entry parameter is NULL\n", __func__);
+		TABLE_ACL_LOG(ERR, "entry parameter is NULL");
 		return -EINVAL;
 	}
 	if (key_found == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: key_found parameter is NULL\n",
-			__func__);
+		TABLE_ACL_LOG(ERR, "key_found parameter is NULL");
 		return -EINVAL;
 	}
 	if (entry_ptr == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: entry_ptr parameter is NULL\n",
-			__func__);
+		TABLE_ACL_LOG(ERR, "entry_ptr parameter is NULL");
 		return -EINVAL;
 	}
 	if (rule->priority > RTE_ACL_MAX_PRIORITY) {
-		RTE_LOG(ERR, TABLE, "%s: Priority is too high\n", __func__);
+		TABLE_ACL_LOG(ERR, "Priority is too high");
 		return -EINVAL;
 	}
 
@@ -291,8 +285,7 @@ rte_table_acl_entry_add(
 
 	/* Return if max rules */
 	if (free_pos_valid == 0) {
-		RTE_LOG(ERR, TABLE, "%s: Max number of rules reached\n",
-			__func__);
+		TABLE_ACL_LOG(ERR, "Max number of rules reached");
 		return -ENOSPC;
 	}
 
@@ -342,16 +335,15 @@ rte_table_acl_entry_delete(
 
 	/* Check input parameters */
 	if (table == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: table parameter is NULL\n", __func__);
+		TABLE_ACL_LOG(ERR, "table parameter is NULL");
 		return -EINVAL;
 	}
 	if (key == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: key parameter is NULL\n", __func__);
+		TABLE_ACL_LOG(ERR, "key parameter is NULL");
 		return -EINVAL;
 	}
 	if (key_found == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: key_found parameter is NULL\n",
-			__func__);
+		TABLE_ACL_LOG(ERR, "key_found parameter is NULL");
 		return -EINVAL;
 	}
 
@@ -424,29 +416,27 @@ rte_table_acl_entry_add_bulk(
 
 	/* Check input parameters */
 	if (table == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: table parameter is NULL\n", __func__);
+		TABLE_ACL_LOG(ERR, "table parameter is NULL");
 		return -EINVAL;
 	}
 	if (keys == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: keys parameter is NULL\n", __func__);
+		TABLE_ACL_LOG(ERR, "keys parameter is NULL");
 		return -EINVAL;
 	}
 	if (entries == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: entries parameter is NULL\n", __func__);
+		TABLE_ACL_LOG(ERR, "entries parameter is NULL");
 		return -EINVAL;
 	}
 	if (n_keys == 0) {
-		RTE_LOG(ERR, TABLE, "%s: 0 rules to add\n", __func__);
+		TABLE_ACL_LOG(ERR, "0 rules to add");
 		return -EINVAL;
 	}
 	if (key_found == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: key_found parameter is NULL\n",
-			__func__);
+		TABLE_ACL_LOG(ERR, "key_found parameter is NULL");
 		return -EINVAL;
 	}
 	if (entries_ptr == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: entries_ptr parameter is NULL\n",
-			__func__);
+		TABLE_ACL_LOG(ERR, "entries_ptr parameter is NULL");
 		return -EINVAL;
 	}
 
@@ -455,20 +445,18 @@ rte_table_acl_entry_add_bulk(
 		struct rte_table_acl_rule_add_params *rule;
 
 		if (keys[i] == NULL) {
-			RTE_LOG(ERR, TABLE, "%s: keys[%" PRIu32 "] parameter is NULL\n",
-					__func__, i);
+			TABLE_ACL_LOG(ERR, "keys[%" PRIu32 "] parameter is NULL\n", i);
 			return -EINVAL;
 		}
 
 		if (entries[i] == NULL) {
-			RTE_LOG(ERR, TABLE, "%s: entries[%" PRIu32 "] parameter is NULL\n",
-					__func__, i);
+			TABLE_ACL_LOG(ERR, "entries[%" PRIu32 "] parameter is NULL\n", i);
 			return -EINVAL;
 		}
 
 		rule = keys[i];
 		if (rule->priority > RTE_ACL_MAX_PRIORITY) {
-			RTE_LOG(ERR, TABLE, "%s: Priority is too high\n", __func__);
+			TABLE_ACL_LOG(ERR, "Priority is too high");
 			return -EINVAL;
 		}
 	}
@@ -604,27 +592,25 @@ rte_table_acl_entry_delete_bulk(
 
 	/* Check input parameters */
 	if (table == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: table parameter is NULL\n", __func__);
+		TABLE_ACL_LOG(ERR, "table parameter is NULL");
 		return -EINVAL;
 	}
 	if (keys == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: key parameter is NULL\n", __func__);
+		TABLE_ACL_LOG(ERR, "key parameter is NULL");
 		return -EINVAL;
 	}
 	if (n_keys == 0) {
-		RTE_LOG(ERR, TABLE, "%s: 0 rules to delete\n", __func__);
+		TABLE_ACL_LOG(ERR, "0 rules to delete");
 		return -EINVAL;
 	}
 	if (key_found == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: key_found parameter is NULL\n",
-			__func__);
+		TABLE_ACL_LOG(ERR, "key_found parameter is NULL");
 		return -EINVAL;
 	}
 
 	for (i = 0; i < n_keys; i++) {
 		if (keys[i] == NULL) {
-			RTE_LOG(ERR, TABLE, "%s: keys[%" PRIu32 "] parameter is NULL\n",
-					__func__, i);
+			TABLE_ACL_LOG(ERR, "keys[%" PRIu32 "] parameter is NULL", i);
 			return -EINVAL;
 		}
 	}

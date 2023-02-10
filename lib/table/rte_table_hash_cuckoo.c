@@ -10,6 +10,11 @@
 
 #include "rte_table_hash_cuckoo.h"
 
+RTE_LOG_REGISTER_SUFFIX(table_logtype_hash, hash, INFO);
+#define TABLE_HASH_LOG(level, fmt, args...)		\
+	rte_log(RTE_LOG_ ## level, table_logtype_hash,	\
+		"%s(): " fmt "\n", __func__, ##args)
+
 #ifdef RTE_TABLE_STATS_COLLECT
 
 #define RTE_TABLE_HASH_CUCKOO_STATS_PKTS_IN_ADD(table, val) \
@@ -47,27 +52,27 @@ static int
 check_params_create_hash_cuckoo(struct rte_table_hash_cuckoo_params *params)
 {
 	if (params == NULL) {
-		RTE_LOG(ERR, TABLE, "NULL Input Parameters.\n");
+		TABLE_HASH_LOG(ERR, "NULL Input Parameters.");
 		return -EINVAL;
 	}
 
 	if (params->name == NULL) {
-		RTE_LOG(ERR, TABLE, "Table name is NULL.\n");
+		TABLE_HASH_LOG(ERR, "Table name is NULL.");
 		return -EINVAL;
 	}
 
 	if (params->key_size == 0) {
-		RTE_LOG(ERR, TABLE, "Invalid key_size.\n");
+		TABLE_HASH_LOG(ERR, "Invalid key_size.");
 		return -EINVAL;
 	}
 
 	if (params->n_keys == 0) {
-		RTE_LOG(ERR, TABLE, "Invalid n_keys.\n");
+		TABLE_HASH_LOG(ERR, "Invalid n_keys.");
 		return -EINVAL;
 	}
 
 	if (params->f_hash == NULL) {
-		RTE_LOG(ERR, TABLE, "f_hash is NULL.\n");
+		TABLE_HASH_LOG(ERR, "f_hash is NULL.");
 		return -EINVAL;
 	}
 
@@ -94,9 +99,8 @@ rte_table_hash_cuckoo_create(void *params,
 
 	t = rte_zmalloc_socket(p->name, total_size, RTE_CACHE_LINE_SIZE, socket_id);
 	if (t == NULL) {
-		RTE_LOG(ERR, TABLE,
-			"%s: Cannot allocate %u bytes for cuckoo hash table %s\n",
-			__func__, total_size, p->name);
+		TABLE_HASH_LOG(ERR, "Cannot allocate %u bytes for cuckoo hash table %s",
+			       total_size, p->name);
 		return NULL;
 	}
 
@@ -114,9 +118,8 @@ rte_table_hash_cuckoo_create(void *params,
 	if (h_table == NULL) {
 		h_table = rte_hash_create(&hash_cuckoo_params);
 		if (h_table == NULL) {
-			RTE_LOG(ERR, TABLE,
-				"%s: failed to create cuckoo hash table %s\n",
-				__func__, p->name);
+			TABLE_HASH_LOG(ERR, "failed to create cuckoo hash table %s",
+				       p->name);
 			rte_free(t);
 			return NULL;
 		}
@@ -131,9 +134,8 @@ rte_table_hash_cuckoo_create(void *params,
 	t->key_offset = p->key_offset;
 	t->h_table = h_table;
 
-	RTE_LOG(INFO, TABLE,
-		"%s: Cuckoo hash table %s memory footprint is %u bytes\n",
-		__func__, p->name, total_size);
+	TABLE_HASH_LOG(INFO, "Cuckoo hash table %s memory footprint is %u bytes",
+		       p->name, total_size);
 	return t;
 }
 

@@ -11,7 +11,12 @@
 #include "rte_table_hash.h"
 #include "rte_lru.h"
 
-#define KEY_SIZE						8
+RTE_LOG_REGISTER_SUFFIX(table_logtype_hash8, hash8, INFO);
+#define TABLE_HASH8_LOG(level, fmt, args...)			\
+	rte_log(RTE_LOG_ ## level, table_logtype_hash8,	\
+		"%s(): " fmt "\n", __func__, ##args)
+
+#define KEY_SIZE					8
 
 #define KEYS_PER_BUCKET					4
 
@@ -101,33 +106,32 @@ check_params_create(struct rte_table_hash_params *params)
 {
 	/* name */
 	if (params->name == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: name invalid value\n", __func__);
+		TABLE_HASH8_LOG(ERR, "name invalid value");
 		return -EINVAL;
 	}
 
 	/* key_size */
 	if (params->key_size != KEY_SIZE) {
-		RTE_LOG(ERR, TABLE, "%s: key_size invalid value\n", __func__);
+		TABLE_HASH8_LOG(ERR, "key_size invalid value");
 		return -EINVAL;
 	}
 
 	/* n_keys */
 	if (params->n_keys == 0) {
-		RTE_LOG(ERR, TABLE, "%s: n_keys is zero\n", __func__);
+		TABLE_HASH8_LOG(ERR, "n_keys is zero");
 		return -EINVAL;
 	}
 
 	/* n_buckets */
 	if ((params->n_buckets == 0) ||
 		(!rte_is_power_of_2(params->n_buckets))) {
-		RTE_LOG(ERR, TABLE, "%s: n_buckets invalid value\n", __func__);
+		TABLE_HASH8_LOG(ERR, "n_buckets invalid value");
 		return -EINVAL;
 	}
 
 	/* f_hash */
 	if (params->f_hash == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: f_hash function pointer is NULL\n",
-			__func__);
+		TABLE_HASH8_LOG(ERR, "f_hash function pointer is NULL");
 		return -EINVAL;
 	}
 
@@ -173,9 +177,9 @@ rte_table_hash_create_key8_lru(void *params, int socket_id, uint32_t entry_size)
 	total_size = sizeof(struct rte_table_hash) + n_buckets * bucket_size;
 
 	if (total_size > SIZE_MAX) {
-		RTE_LOG(ERR, TABLE, "%s: Cannot allocate %" PRIu64 " bytes"
-			" for hash table %s\n",
-			__func__, total_size, p->name);
+		TABLE_HASH8_LOG(ERR,
+				"Cannot allocate %" PRIu64 " bytes for hash table %s",
+				total_size, p->name);
 		return NULL;
 	}
 
@@ -184,15 +188,15 @@ rte_table_hash_create_key8_lru(void *params, int socket_id, uint32_t entry_size)
 		RTE_CACHE_LINE_SIZE,
 		socket_id);
 	if (f == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: Cannot allocate %" PRIu64 " bytes"
-			" for hash table %s\n",
-			__func__, total_size, p->name);
+		TABLE_HASH8_LOG(ERR,
+				"Cannot allocate %" PRIu64 " bytes for hash table %s",
+				total_size, p->name);
 		return NULL;
 	}
 
-	RTE_LOG(INFO, TABLE, "%s: Hash table %s memory footprint "
-		"is %" PRIu64 " bytes\n",
-		__func__, p->name, total_size);
+	TABLE_HASH8_LOG(INFO,
+			"Hash table %s memory footprint is %" PRIu64 " bytes",
+			p->name, total_size);
 
 	/* Memory initialization */
 	f->n_buckets = n_buckets;
@@ -226,7 +230,7 @@ rte_table_hash_free_key8_lru(void *table)
 
 	/* Check input parameters */
 	if (f == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: table parameter is NULL\n", __func__);
+		TABLE_HASH8_LOG(ERR, "table parameter is NULL");
 		return -EINVAL;
 	}
 
@@ -377,9 +381,9 @@ rte_table_hash_create_key8_ext(void *params, int socket_id, uint32_t entry_size)
 		(p->n_buckets + n_buckets_ext) * bucket_size + stack_size;
 
 	if (total_size > SIZE_MAX) {
-		RTE_LOG(ERR, TABLE, "%s: Cannot allocate %" PRIu64 " bytes "
-			"for hash table %s\n",
-			__func__, total_size, p->name);
+		TABLE_HASH8_LOG(ERR,
+				"Cannot allocate %" PRIu64 " bytes for hash table %s",
+				total_size, p->name);
 		return NULL;
 	}
 
@@ -388,15 +392,14 @@ rte_table_hash_create_key8_ext(void *params, int socket_id, uint32_t entry_size)
 		RTE_CACHE_LINE_SIZE,
 		socket_id);
 	if (f == NULL) {
-		RTE_LOG(ERR, TABLE,
-			"%s: Cannot allocate %" PRIu64 " bytes "
-			"for hash table %s\n",
-			__func__, total_size, p->name);
+		TABLE_HASH8_LOG(ERR,
+				"Cannot allocate %" PRIu64 " bytes for hash table %s",
+				total_size, p->name);
 		return NULL;
 	}
-	RTE_LOG(INFO, TABLE, "%s: Hash table %s memory footprint "
-		"is %" PRIu64 " bytes\n",
-		__func__, p->name, total_size);
+	TABLE_HASH8_LOG(INFO,
+			"Hash table %s memory footprint is %" PRIu64 " bytes",
+			p->name, total_size);
 
 	/* Memory initialization */
 	f->n_buckets = p->n_buckets;
@@ -430,7 +433,7 @@ rte_table_hash_free_key8_ext(void *table)
 
 	/* Check input parameters */
 	if (f == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: table parameter is NULL\n", __func__);
+		TABLE_HASH8_LOG(ERR, "table parameter is NULL");
 		return -EINVAL;
 	}
 

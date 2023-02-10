@@ -11,6 +11,11 @@
 
 #include "rte_table_array.h"
 
+RTE_LOG_REGISTER_SUFFIX(table_logtype_array, array, INFO);
+#define TABLE_ARRAY_LOG(level, fmt, args...)		\
+	rte_log(RTE_LOG_ ## level, table_logtype_array,	\
+		"%s(): " fmt "\n", __func__, ##args)
+
 #ifdef RTE_TABLE_STATS_COLLECT
 
 #define RTE_TABLE_ARRAY_STATS_PKTS_IN_ADD(table, val) \
@@ -61,9 +66,7 @@ rte_table_array_create(void *params, int socket_id, uint32_t entry_size)
 	total_size = total_cl_size * RTE_CACHE_LINE_SIZE;
 	t = rte_zmalloc_socket("TABLE", total_size, RTE_CACHE_LINE_SIZE, socket_id);
 	if (t == NULL) {
-		RTE_LOG(ERR, TABLE,
-			"%s: Cannot allocate %u bytes for array table\n",
-			__func__, total_size);
+		TABLE_ARRAY_LOG(ERR, "Cannot allocate %u bytes for array table\n", total_size);
 		return NULL;
 	}
 
@@ -83,7 +86,7 @@ rte_table_array_free(void *table)
 
 	/* Check input parameters */
 	if (t == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: table parameter is NULL\n", __func__);
+		TABLE_ARRAY_LOG(ERR, "table parameter is NULL");
 		return -EINVAL;
 	}
 
@@ -107,25 +110,23 @@ rte_table_array_entry_add(
 
 	/* Check input parameters */
 	if (table == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: table parameter is NULL\n", __func__);
+		TABLE_ARRAY_LOG(ERR, "table parameter is NULL");
 		return -EINVAL;
 	}
 	if (key == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: key parameter is NULL\n", __func__);
+		TABLE_ARRAY_LOG(ERR, "key parameter is NULL");
 		return -EINVAL;
 	}
 	if (entry == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: entry parameter is NULL\n", __func__);
+		TABLE_ARRAY_LOG(ERR, "entry parameter is NULL");
 		return -EINVAL;
 	}
 	if (key_found == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: key_found parameter is NULL\n",
-			__func__);
+		TABLE_ARRAY_LOG(ERR, "key_found parameter is NULL");
 		return -EINVAL;
 	}
 	if (entry_ptr == NULL) {
-		RTE_LOG(ERR, TABLE, "%s: entry_ptr parameter is NULL\n",
-			__func__);
+		TABLE_ARRAY_LOG(ERR, "entry_ptr parameter is NULL");
 		return -EINVAL;
 	}
 
