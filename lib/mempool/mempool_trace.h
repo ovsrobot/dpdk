@@ -2,8 +2,8 @@
  * Copyright(C) 2020 Marvell International Ltd.
  */
 
-#ifndef _RTE_MEMPOOL_TRACE_H_
-#define _RTE_MEMPOOL_TRACE_H_
+#ifndef _MEMPOOL_TRACE_H_
+#define _MEMPOOL_TRACE_H_
 
 /**
  * @file
@@ -172,4 +172,4 @@ RTE_TRACE_POINT(
 }
 #endif
 
-#endif /* _RTE_MEMPOOL_TRACE_H_ */
+#endif /* _MEMPOOL_TRACE_H_ */
