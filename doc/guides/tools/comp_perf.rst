@@ -84,9 +84,12 @@ Application Options
 
  ``--operation [comp/decomp/comp_and_decomp]``: perform test on compression, decompression or both operations
 
- ``--algo [null/deflate/lzs]`` : perform test on algorithm null(DMA), Deflate or lzs (default: Deflate)
+ ``--algo [null/deflate/lzs/lz4]`` : perform test on algorithm null(DMA), Deflate, lzs or lz4 (default: Deflate)
 
  ``--huffman-enc [fixed/dynamic/default]``: Huffman encoding (default: dynamic)
+
+ ``--lz4-flags N``: flags to for LZ4 parameters,
+ see `LZ4 Frame Descriptor <https://github.com/lz4/lz4/blob/dev/doc/lz4_Frame_format.md#frame-descriptor>`_ (default: no flags)
 
  ``--compress-level N``: compression level, which could be a single value, list or range (default: range between 1 and 9)
 

@@ -194,13 +194,16 @@ main_loop(struct cperf_cyclecount_ctx *ctx, enum rte_comp_xform_type type)
 			.type = RTE_COMP_COMPRESS,
 			.compress = {
 				.algo = test_data->test_algo,
-				.deflate.huffman = test_data->huffman_enc,
 				.level = test_data->level,
 				.window_size = test_data->window_sz,
 				.chksum = RTE_COMP_CHECKSUM_NONE,
 				.hash_algo = RTE_COMP_HASH_ALGO_NONE
 			}
 		};
+		if (test_data->test_algo == RTE_COMP_ALGO_DEFLATE)
+			xform.compress.deflate.huffman = test_data->huffman_enc;
+		else if (test_data->test_algo == RTE_COMP_ALGO_LZ4)
+			xform.compress.lz4.flags = test_data->lz4_flags;
 		input_bufs = mem->decomp_bufs;
 		output_bufs = mem->comp_bufs;
 		out_seg_sz = test_data->out_seg_sz;
@@ -214,6 +217,8 @@ main_loop(struct cperf_cyclecount_ctx *ctx, enum rte_comp_xform_type type)
 				.hash_algo = RTE_COMP_HASH_ALGO_NONE
 			}
 		};
+		if (test_data->test_algo == RTE_COMP_ALGO_LZ4)
+			xform.decompress.lz4.flags = test_data->lz4_flags;
 		input_bufs = mem->comp_bufs;
 		output_bufs = mem->decomp_bufs;
 		out_seg_sz = test_data->seg_sz;
