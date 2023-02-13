@@ -15,6 +15,14 @@ from framework.config import (
 from framework.logger import DTSLOG, getLogger
 from framework.remote_session import OSSession, create_session
 
+from .hw import (
+    LogicalCore,
+    LogicalCoreAmount,
+    LogicalCoreList,
+    LogicalCoreListFilter,
+    lcore_filter,
+)
+
 
 class Node(object):
     """
@@ -26,6 +34,7 @@ class Node(object):
     main_session: OSSession
     config: NodeConfiguration
     name: str
+    lcores: list[LogicalCore]
     _logger: DTSLOG
     _other_sessions: list[OSSession]
 
@@ -34,6 +43,12 @@ class Node(object):
         self.name = node_config.name
         self._logger = getLogger(self.name)
         self.main_session = create_session(self.config, self.name, self._logger)
+
+        self._get_remote_cpus()
+        # filter the node lcores according to user config
+        self.lcores = LogicalCoreListFilter(
+            self.lcores, LogicalCoreList(self.config.lcores)
+        ).filter()
 
         self._other_sessions = []
 
@@ -106,6 +121,37 @@ class Node(object):
         )
         self._other_sessions.append(connection)
         return connection
+
+    def filter_lcores(
+        self,
+        filter_specifier: LogicalCoreAmount | LogicalCoreList,
+        ascending: bool = True,
+    ) -> list[LogicalCore]:
+        """
+        Filter the LogicalCores found on the Node according to specified rules:
+        Use cores from the specified amount of sockets or from the specified socket ids.
+        If sockets is specified, it takes precedence over socket_amount.
+        From each of those sockets, use only cores_per_socket of cores.
+        And for each core, use lcores_per_core of logical cores. Hypertheading
+        must be enabled for this to take effect.
+        If ascending is True, use cores with the lowest numerical id first
+        and continue in ascending order. If False, start with the highest
+        id and continue in descending order. This ordering affects which
+        sockets to consider first as well.
+        """
+        self._logger.debug(f"Filtering {filter_specifier} from {self.lcores}.")
+        return lcore_filter(
+            self.lcores,
+            filter_specifier,
+            ascending,
+        ).filter()
+
+    def _get_remote_cpus(self) -> None:
+        """
+        Scan CPUs in the remote OS and store a list of LogicalCores.
+        """
+        self._logger.info("Getting CPU information.")
+        self.lcores = self.main_session.get_remote_cpus(self.config.use_first_core)
 
     def close(self) -> None:
         """
