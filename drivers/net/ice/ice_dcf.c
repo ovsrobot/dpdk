@@ -543,6 +543,8 @@ ice_dcf_handle_vsi_update_event(struct ice_dcf_hw *hw)
 	ice_dcf_disable_irq0(hw);
 
 	for (;;) {
+		if (hw->vc_event_msg_cb == NULL)
+			pthread_exit(NULL);
 		if (ice_dcf_get_vf_resource(hw) == 0 &&
 		    ice_dcf_get_vf_vsi_map(hw) >= 0) {
 			err = 0;
@@ -759,6 +761,8 @@ ice_dcf_uninit_hw(struct rte_eth_dev *eth_dev, struct ice_dcf_hw *hw)
 	rte_intr_disable(intr_handle);
 	rte_intr_callback_unregister(intr_handle,
 				     ice_dcf_dev_interrupt_handler, hw);
+
+	hw->vc_event_msg_cb = NULL;
 
 	ice_dcf_mode_disable(hw);
 	iavf_shutdown_adminq(&hw->avf);
