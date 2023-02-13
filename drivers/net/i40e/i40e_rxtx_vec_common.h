@@ -95,18 +95,35 @@ i40e_tx_free_bufs(struct i40e_tx_queue *txq)
 
 	n = txq->tx_rs_thresh;
 
-	 /* first buffer to free from S/W ring is at index
-	  * tx_next_dd - (tx_rs_thresh-1)
-	  */
+	/* first buffer to free from S/W ring is at index
+	 * tx_next_dd - (tx_rs_thresh-1)
+	 */
 	txep = &txq->sw_ring[txq->tx_next_dd - (n - 1)];
 
 	if (txq->offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) {
+		struct rte_mempool *mp = txep[0].mbuf->pool;
+		struct rte_mempool_cache *cache = rte_mempool_default_cache(mp, rte_lcore_id());
+		void **cache_objs;
+
+		if (unlikely(!cache))
+			goto fallback;
+
+		cache_objs = rte_mempool_cache_zc_put_bulk(cache, mp, n);
+		if (unlikely(!cache_objs))
+			goto fallback;
+
 		for (i = 0; i < n; i++) {
-			free[i] = txep[i].mbuf;
+			cache_objs[i] = txep[i].mbuf;
 			/* no need to reset txep[i].mbuf in vector path */
 		}
-		rte_mempool_put_bulk(free[0]->pool, (void **)free, n);
 		goto done;
+
+fallback:
+		for (i = 0; i < n; i++)
+			free[i] = txep[i].mbuf;
+		rte_mempool_generic_put(mp, (void **)free, n, cache);
+		goto done;
+
 	}
 
 	m = rte_pktmbuf_prefree_seg(txep[0].mbuf);
