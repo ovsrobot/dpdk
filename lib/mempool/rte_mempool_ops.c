@@ -12,6 +12,7 @@
 #include <dev_driver.h>
 
 #include "rte_mempool_trace.h"
+#include "rte_mempool_log.h"
 
 /* indirect jump table to support external memory pools. */
 struct rte_mempool_ops_table rte_mempool_ops_table = {
