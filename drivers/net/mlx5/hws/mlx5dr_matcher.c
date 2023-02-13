@@ -69,12 +69,6 @@ static int mlx5dr_matcher_free_rtc_pointing(uint32_t fw_ft_type,
 		}
 	}
 
-	ret = mlx5dr_matcher_shared_update_local_ft(tbl);
-	if (ret) {
-		DR_LOG(ERR, "Failed to update local_ft in shared table");
-		return ret;
-	}
-
 	return 0;
 }
 
