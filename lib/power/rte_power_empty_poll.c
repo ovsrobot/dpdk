@@ -10,6 +10,7 @@
 
 #include "rte_power.h"
 #include "rte_power_empty_poll.h"
+#include "power_common.h"
 
 #define INTERVALS_PER_SECOND 100     /* (10ms) */
 #define SECONDS_TO_TRAIN_FOR 2
