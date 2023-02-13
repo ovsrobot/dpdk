@@ -15,6 +15,7 @@
 #include <bus_driver.h>
 #include <rte_log.h>
 #include <rte_interrupts.h>
+#include <rte_kvargs.h>
 #include <rte_memcpy.h>
 #include <rte_common.h>
 #include <rte_mempool.h>
@@ -5863,6 +5864,18 @@ eth_dev_handle_port_stats(const char *cmd __rte_unused,
 	return 0;
 }
 
+#define TEL_XSTATS_HIDE_ZERO_KEY	"hide_zero"
+#define TEL_XSTATS_HIDE_ZERO_VAL	"true"
+
+static int
+eth_dev_parse_hide_zero(const char *key, const char *value, void *extra_args)
+{
+	RTE_SET_USED(key);
+	if (strcmp(value, TEL_XSTATS_HIDE_ZERO_VAL) == 0)
+		*(bool *)extra_args = true;
+	return 0;
+}
+
 static int
 eth_dev_handle_port_xstats(const char *cmd __rte_unused,
 		const char *params,
@@ -5870,19 +5883,29 @@ eth_dev_handle_port_xstats(const char *cmd __rte_unused,
 {
 	struct rte_eth_xstat *eth_xstats;
 	struct rte_eth_xstat_name *xstat_names;
+	struct rte_kvargs *kvlist;
 	int port_id, num_xstats;
-	int i, ret;
+	bool hide_zero = false;
 	char *end_param;
+	int i, ret;
 
 	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
 		return -1;
 
 	port_id = strtoul(params, &end_param, 0);
-	if (*end_param != '\0')
-		RTE_ETHDEV_LOG(NOTICE,
-			"Extra parameters passed to ethdev telemetry command, ignoring");
 	if (!rte_eth_dev_is_valid_port(port_id))
 		return -1;
+
+	if (*end_param != '\0') {
+		kvlist = rte_kvargs_parse(end_param, NULL);
+		if (kvlist != NULL)
+			rte_kvargs_process(kvlist, TEL_XSTATS_HIDE_ZERO_KEY,
+					   eth_dev_parse_hide_zero, &hide_zero);
+		if (kvlist == NULL || !hide_zero || kvlist->count > 1)
+			RTE_ETHDEV_LOG(NOTICE,
+				"Unknown extra parameters passed to ethdev telemetry command, ignoring\n");
+		rte_kvargs_free(kvlist);
+	}
 
 	num_xstats = rte_eth_xstats_get(port_id, NULL, 0);
 	if (num_xstats < 0)
@@ -5908,9 +5931,12 @@ eth_dev_handle_port_xstats(const char *cmd __rte_unused,
 	}
 
 	rte_tel_data_start_dict(d);
-	for (i = 0; i < num_xstats; i++)
+	for (i = 0; i < num_xstats; i++) {
+		if (hide_zero && eth_xstats[i].value == 0)
+			continue;
 		rte_tel_data_add_dict_uint(d, xstat_names[i].name,
 					   eth_xstats[i].value);
+	}
 	free(eth_xstats);
 	return 0;
 }
@@ -6328,7 +6354,7 @@ RTE_INIT(ethdev_init_telemetry)
 	rte_telemetry_register_cmd("/ethdev/stats", eth_dev_handle_port_stats,
 			"Returns the common stats for a port. Parameters: int port_id");
 	rte_telemetry_register_cmd("/ethdev/xstats", eth_dev_handle_port_xstats,
-			"Returns the extended stats for a port. Parameters: int port_id");
+			"Returns the extended stats for a port. Parameters: int port_id,hide_zero=true(Optional for indicates hide zero xstats)");
 #ifndef RTE_EXEC_ENV_WINDOWS
 	rte_telemetry_register_cmd("/ethdev/dump_priv", eth_dev_handle_port_dump_priv,
 			"Returns dump private information for a port. Parameters: int port_id");
