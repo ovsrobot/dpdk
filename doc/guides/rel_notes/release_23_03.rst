@@ -105,6 +105,13 @@ New Features
   * Added support to capture packets at each graph node with packet metadata and
     node name.
 
+* **Added PMU library.**
+
+  Added a new performance monitoring unit (PMU) library which allows applications
+  to perform self monitoring activities without depending on external utilities like perf.
+  After integration with :doc:`../prog_guide/trace_lib` data gathered from hardware counters
+  can be stored in CTF format for further analysis.
+
 
 Removed Items
 -------------
