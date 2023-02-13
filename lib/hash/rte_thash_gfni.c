@@ -8,6 +8,9 @@
 #include <rte_log.h>
 #include <rte_thash_gfni.h>
 
+RTE_LOG_REGISTER_SUFFIX(hash_gfni_logtype, gfni, INFO);
+#define RTE_LOGTYPE_HASH hash_gfni_logtype
+
 uint32_t
 rte_thash_gfni(const uint64_t *mtrx __rte_unused,
 	       const uint8_t *key __rte_unused, int len __rte_unused)
