@@ -5,10 +5,14 @@
 #include <string.h>
 #include <stdint.h>
 
+#include <rte_log.h>
 #include <rte_mbuf.h>
 #include <rte_malloc.h>
 
 #include "rte_port_eventdev.h"
+
+RTE_LOG_REGISTER_SUFFIX(port_eventdev_logtype, eventdev, INFO);
+#define RTE_LOGTYPE_PORT port_eventdev_logtype
 
 /*
  * Port EVENTDEV Reader
