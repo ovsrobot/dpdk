@@ -149,6 +149,11 @@ pthread_detach(__rte_unused pthread_t thread)
 	return 0;
 }
 
+static inline void
+pthread_exit(__rte_unused void *__retval)
+{
+}
+
 static inline int
 pthread_join(__rte_unused pthread_t thread,
 	__rte_unused void **value_ptr)
