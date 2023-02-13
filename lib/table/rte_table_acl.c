@@ -11,6 +11,9 @@
 
 #include "rte_table_acl.h"
 
+RTE_LOG_REGISTER_SUFFIX(table_acl_logtype, acl, INFO);
+#define RTE_LOGTYPE_TABLE table_acl_logtype
+
 #ifdef RTE_TABLE_STATS_COLLECT
 
 #define RTE_TABLE_ACL_STATS_PKTS_IN_ADD(table, val) \
