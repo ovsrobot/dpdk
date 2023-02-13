@@ -63,6 +63,8 @@ struct comp_test_data {
 
 	enum rte_comp_huffman huffman_enc;
 	enum comp_operation test_op;
+	enum rte_comp_algorithm test_algo;
+
 	int window_sz;
 	struct range_list level_lst;
 	uint8_t level;

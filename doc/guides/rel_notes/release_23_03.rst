@@ -116,6 +116,10 @@ New Features
 
   Enable the application options for testing only compress and only decompress.
 
+* **Added algo option in test-compress-perf.**
+
+  Added support for testing other algorithms except for DEFLAT.
+
 
 Removed Items
 -------------
