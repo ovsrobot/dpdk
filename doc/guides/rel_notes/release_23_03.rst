@@ -105,6 +105,13 @@ New Features
   * Added support to capture packets at each graph node with packet metadata and
     node name.
 
+* **Added LZ4 algorithm in Compressdev Library.**
+
+  Added new compression algorithm, including:
+
+  * Added support for ``RTE_COMP_ALGO_LZ4``.
+  * Added support for ``RTE_COMP_CHECKSUM_XXHASH32``.
+
 
 Removed Items
 -------------
