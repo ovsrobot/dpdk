@@ -351,7 +351,6 @@ static const struct logtype logtype_strings[] = {
 	{RTE_LOGTYPE_EAL,        "lib.eal"},
 	{RTE_LOGTYPE_PMD,        "pmd"},
 	{RTE_LOGTYPE_HASH,       "lib.hash"},
-	{RTE_LOGTYPE_KNI,        "lib.kni"},
 	{RTE_LOGTYPE_METER,      "lib.meter"},
 	{RTE_LOGTYPE_SCHED,      "lib.sched"},
 	{RTE_LOGTYPE_PORT,       "lib.port"},
