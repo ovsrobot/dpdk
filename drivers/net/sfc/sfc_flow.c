@@ -1130,96 +1130,84 @@ sfc_flow_parse_pppoex(const struct rte_flow_item *item,
 }
 
 static const struct sfc_flow_item sfc_flow_items[] = {
-	{
-		.type = RTE_FLOW_ITEM_TYPE_VOID,
+	[RTE_FLOW_ITEM_TYPE_VOID] = {
 		.name = "VOID",
 		.prev_layer = SFC_FLOW_ITEM_ANY_LAYER,
 		.layer = SFC_FLOW_ITEM_ANY_LAYER,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_void,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_ETH,
+	[RTE_FLOW_ITEM_TYPE_ETH] = {
 		.name = "ETH",
 		.prev_layer = SFC_FLOW_ITEM_START_LAYER,
 		.layer = SFC_FLOW_ITEM_L2,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_eth,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_VLAN,
+	[RTE_FLOW_ITEM_TYPE_VLAN] = {
 		.name = "VLAN",
 		.prev_layer = SFC_FLOW_ITEM_L2,
 		.layer = SFC_FLOW_ITEM_L2,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_vlan,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_PPPOED,
+	[RTE_FLOW_ITEM_TYPE_PPPOED] = {
 		.name = "PPPOED",
 		.prev_layer = SFC_FLOW_ITEM_L2,
 		.layer = SFC_FLOW_ITEM_L2,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_pppoex,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_PPPOES,
+	[RTE_FLOW_ITEM_TYPE_PPPOES] = {
 		.name = "PPPOES",
 		.prev_layer = SFC_FLOW_ITEM_L2,
 		.layer = SFC_FLOW_ITEM_L2,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_pppoex,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_IPV4,
+	[RTE_FLOW_ITEM_TYPE_IPV4] = {
 		.name = "IPV4",
 		.prev_layer = SFC_FLOW_ITEM_L2,
 		.layer = SFC_FLOW_ITEM_L3,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_ipv4,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_IPV6,
+	[RTE_FLOW_ITEM_TYPE_IPV6] = {
 		.name = "IPV6",
 		.prev_layer = SFC_FLOW_ITEM_L2,
 		.layer = SFC_FLOW_ITEM_L3,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_ipv6,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_TCP,
+	[RTE_FLOW_ITEM_TYPE_TCP] = {
 		.name = "TCP",
 		.prev_layer = SFC_FLOW_ITEM_L3,
 		.layer = SFC_FLOW_ITEM_L4,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_tcp,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_UDP,
+	[RTE_FLOW_ITEM_TYPE_UDP] = {
 		.name = "UDP",
 		.prev_layer = SFC_FLOW_ITEM_L3,
 		.layer = SFC_FLOW_ITEM_L4,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_udp,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_VXLAN,
+	[RTE_FLOW_ITEM_TYPE_VXLAN] = {
 		.name = "VXLAN",
 		.prev_layer = SFC_FLOW_ITEM_L4,
 		.layer = SFC_FLOW_ITEM_START_LAYER,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_vxlan,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_GENEVE,
+	[RTE_FLOW_ITEM_TYPE_GENEVE] = {
 		.name = "GENEVE",
 		.prev_layer = SFC_FLOW_ITEM_L4,
 		.layer = SFC_FLOW_ITEM_START_LAYER,
 		.ctx_type = SFC_FLOW_PARSE_CTX_FILTER,
 		.parse = sfc_flow_parse_geneve,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_NVGRE,
+	[RTE_FLOW_ITEM_TYPE_NVGRE] = {
 		.name = "NVGRE",
 		.prev_layer = SFC_FLOW_ITEM_L3,
 		.layer = SFC_FLOW_ITEM_START_LAYER,
@@ -1300,21 +1288,6 @@ sfc_flow_parse_attr(struct sfc_adapter *sa,
 	return 0;
 }
 
-/* Get item from array sfc_flow_items */
-static const struct sfc_flow_item *
-sfc_flow_get_item(const struct sfc_flow_item *items,
-		  unsigned int nb_items,
-		  enum rte_flow_item_type type)
-{
-	unsigned int i;
-
-	for (i = 0; i < nb_items; i++)
-		if (items[i].type == type)
-			return &items[i];
-
-	return NULL;
-}
-
 int
 sfc_flow_parse_pattern(struct sfc_adapter *sa,
 		       const struct sfc_flow_item *flow_items,
@@ -1336,14 +1309,15 @@ sfc_flow_parse_pattern(struct sfc_adapter *sa,
 	}
 
 	for (; pattern->type != RTE_FLOW_ITEM_TYPE_END; pattern++) {
-		item = sfc_flow_get_item(flow_items, nb_flow_items,
-					 pattern->type);
-		if (item == NULL) {
+		if (pattern->type >= nb_flow_items ||
+		    flow_items[pattern->type].parse == NULL) {
 			rte_flow_error_set(error, ENOTSUP,
 					   RTE_FLOW_ERROR_TYPE_ITEM, pattern,
 					   "Unsupported pattern item");
 			return -rte_errno;
 		}
+
+		item = &flow_items[pattern->type];
 
 		/*
 		 * Omitting one or several protocol layers at the beginning
@@ -1362,7 +1336,7 @@ sfc_flow_parse_pattern(struct sfc_adapter *sa,
 		 * Allow only VOID and ETH pattern items in the inner frame.
 		 * Also check that there is only one tunneling protocol.
 		 */
-		switch (item->type) {
+		switch (pattern->type) {
 		case RTE_FLOW_ITEM_TYPE_VOID:
 		case RTE_FLOW_ITEM_TYPE_ETH:
 			break;

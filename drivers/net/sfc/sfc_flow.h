@@ -141,7 +141,6 @@ typedef int (sfc_flow_item_parse)(const struct rte_flow_item *item,
 				  struct rte_flow_error *error);
 
 struct sfc_flow_item {
-	enum rte_flow_item_type type;		/* Type of item */
 	const char *name;			/* Item name */
 	enum sfc_flow_item_layers layer;	/* Layer of item */
 	enum sfc_flow_item_layers prev_layer;	/* Previous layer of item */

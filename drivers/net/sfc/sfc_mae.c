@@ -2377,16 +2377,14 @@ sfc_mae_rule_parse_item_tunnel(const struct rte_flow_item *item,
 }
 
 static const struct sfc_flow_item sfc_flow_items[] = {
-	{
-		.type = RTE_FLOW_ITEM_TYPE_MARK,
+	[RTE_FLOW_ITEM_TYPE_MARK] = {
 		.name = "MARK",
 		.prev_layer = SFC_FLOW_ITEM_ANY_LAYER,
 		.layer = SFC_FLOW_ITEM_ANY_LAYER,
 		.ctx_type = SFC_FLOW_PARSE_CTX_MAE,
 		.parse = sfc_mae_rule_parse_item_mark,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_PORT_ID,
+	[RTE_FLOW_ITEM_TYPE_PORT_ID] = {
 		.name = "PORT_ID",
 		/*
 		 * In terms of RTE flow, this item is a META one,
@@ -2397,8 +2395,7 @@ static const struct sfc_flow_item sfc_flow_items[] = {
 		.ctx_type = SFC_FLOW_PARSE_CTX_MAE,
 		.parse = sfc_mae_rule_parse_item_port_id,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_PORT_REPRESENTOR,
+	[RTE_FLOW_ITEM_TYPE_PORT_REPRESENTOR] = {
 		.name = "PORT_REPRESENTOR",
 		/*
 		 * In terms of RTE flow, this item is a META one,
@@ -2409,8 +2406,7 @@ static const struct sfc_flow_item sfc_flow_items[] = {
 		.ctx_type = SFC_FLOW_PARSE_CTX_MAE,
 		.parse = sfc_mae_rule_parse_item_ethdev_based,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT,
+	[RTE_FLOW_ITEM_TYPE_REPRESENTED_PORT] = {
 		.name = "REPRESENTED_PORT",
 		/*
 		 * In terms of RTE flow, this item is a META one,
@@ -2421,72 +2417,63 @@ static const struct sfc_flow_item sfc_flow_items[] = {
 		.ctx_type = SFC_FLOW_PARSE_CTX_MAE,
 		.parse = sfc_mae_rule_parse_item_ethdev_based,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_ETH,
+	[RTE_FLOW_ITEM_TYPE_ETH] = {
 		.name = "ETH",
 		.prev_layer = SFC_FLOW_ITEM_START_LAYER,
 		.layer = SFC_FLOW_ITEM_L2,
 		.ctx_type = SFC_FLOW_PARSE_CTX_MAE,
 		.parse = sfc_mae_rule_parse_item_eth,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_VLAN,
+	[RTE_FLOW_ITEM_TYPE_VLAN] = {
 		.name = "VLAN",
 		.prev_layer = SFC_FLOW_ITEM_L2,
 		.layer = SFC_FLOW_ITEM_L2,
 		.ctx_type = SFC_FLOW_PARSE_CTX_MAE,
 		.parse = sfc_mae_rule_parse_item_vlan,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_IPV4,
+	[RTE_FLOW_ITEM_TYPE_IPV4] = {
 		.name = "IPV4",
 		.prev_layer = SFC_FLOW_ITEM_L2,
 		.layer = SFC_FLOW_ITEM_L3,
 		.ctx_type = SFC_FLOW_PARSE_CTX_MAE,
 		.parse = sfc_mae_rule_parse_item_ipv4,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_IPV6,
+	[RTE_FLOW_ITEM_TYPE_IPV6] = {
 		.name = "IPV6",
 		.prev_layer = SFC_FLOW_ITEM_L2,
 		.layer = SFC_FLOW_ITEM_L3,
 		.ctx_type = SFC_FLOW_PARSE_CTX_MAE,
 		.parse = sfc_mae_rule_parse_item_ipv6,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_TCP,
+	[RTE_FLOW_ITEM_TYPE_TCP] = {
 		.name = "TCP",
 		.prev_layer = SFC_FLOW_ITEM_L3,
 		.layer = SFC_FLOW_ITEM_L4,
 		.ctx_type = SFC_FLOW_PARSE_CTX_MAE,
 		.parse = sfc_mae_rule_parse_item_tcp,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_UDP,
+	[RTE_FLOW_ITEM_TYPE_UDP] = {
 		.name = "UDP",
 		.prev_layer = SFC_FLOW_ITEM_L3,
 		.layer = SFC_FLOW_ITEM_L4,
 		.ctx_type = SFC_FLOW_PARSE_CTX_MAE,
 		.parse = sfc_mae_rule_parse_item_udp,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_VXLAN,
+	[RTE_FLOW_ITEM_TYPE_VXLAN] = {
 		.name = "VXLAN",
 		.prev_layer = SFC_FLOW_ITEM_L4,
 		.layer = SFC_FLOW_ITEM_START_LAYER,
 		.ctx_type = SFC_FLOW_PARSE_CTX_MAE,
 		.parse = sfc_mae_rule_parse_item_tunnel,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_GENEVE,
+	[RTE_FLOW_ITEM_TYPE_GENEVE] = {
 		.name = "GENEVE",
 		.prev_layer = SFC_FLOW_ITEM_L4,
 		.layer = SFC_FLOW_ITEM_START_LAYER,
 		.ctx_type = SFC_FLOW_PARSE_CTX_MAE,
 		.parse = sfc_mae_rule_parse_item_tunnel,
 	},
-	{
-		.type = RTE_FLOW_ITEM_TYPE_NVGRE,
+	[RTE_FLOW_ITEM_TYPE_NVGRE] = {
 		.name = "NVGRE",
 		.prev_layer = SFC_FLOW_ITEM_L3,
 		.layer = SFC_FLOW_ITEM_START_LAYER,
