@@ -7,6 +7,9 @@
 
 #include "rte_hash_crc.h"
 
+RTE_LOG_REGISTER_SUFFIX(hash_crc_logtype, crc, INFO);
+#define RTE_LOGTYPE_HASH hash_crc_logtype
+
 /**
  * Allow or disallow use of SSE4.2/ARMv8 intrinsics for CRC32 hash
  * calculation.
