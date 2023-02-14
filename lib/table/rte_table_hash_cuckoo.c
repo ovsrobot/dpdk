@@ -10,6 +10,9 @@
 
 #include "rte_table_hash_cuckoo.h"
 
+RTE_LOG_REGISTER_SUFFIX(table_hash_logtype, hash, INFO);
+#define RTE_LOGTYPE_TABLE table_hash_logtype
+
 #ifdef RTE_TABLE_STATS_COLLECT
 
 #define RTE_TABLE_HASH_CUCKOO_STATS_PKTS_IN_ADD(table, val) \

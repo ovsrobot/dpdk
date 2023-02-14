@@ -11,6 +11,9 @@
 #include "rte_table_hash.h"
 #include "rte_lru.h"
 
+RTE_LOG_REGISTER_SUFFIX(table_hash16_logtype, hash16, INFO);
+#define RTE_LOGTYPE_TABLE table_hash16_logtype
+
 #define KEY_SIZE						16
 
 #define KEYS_PER_BUCKET					4

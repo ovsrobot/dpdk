@@ -12,6 +12,9 @@
 
 #include "rte_table_lpm_ipv6.h"
 
+RTE_LOG_REGISTER_SUFFIX(table_lpm6_logtype, lpm6, INFO);
+#define RTE_LOGTYPE_TABLE table_lpm6_logtype
+
 #define RTE_TABLE_LPM_MAX_NEXT_HOPS                        256
 
 #ifdef RTE_TABLE_STATS_COLLECT
