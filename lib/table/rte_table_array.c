@@ -11,6 +11,9 @@
 
 #include "rte_table_array.h"
 
+RTE_LOG_REGISTER_SUFFIX(table_array_logtype, array, INFO);
+#define RTE_LOGTYPE_TABLE table_array_logtype
+
 #ifdef RTE_TABLE_STATS_COLLECT
 
 #define RTE_TABLE_ARRAY_STATS_PKTS_IN_ADD(table, val) \

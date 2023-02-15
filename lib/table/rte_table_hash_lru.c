@@ -14,6 +14,9 @@
 
 #define KEYS_PER_BUCKET	4
 
+RTE_LOG_REGISTER_SUFFIX(table_hash_lru_logtype, hash_lru, INFO);
+#define RTE_LOGTYPE_TABLE table_hash_lru_logtype
+
 #ifdef RTE_TABLE_STATS_COLLECT
 
 #define RTE_TABLE_HASH_LRU_STATS_PKTS_IN_ADD(table, val) \
