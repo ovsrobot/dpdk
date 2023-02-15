@@ -23,6 +23,9 @@
 #include <rte_kni_common.h>
 #include "rte_kni_fifo.h"
 
+RTE_LOG_REGISTER_DEFAULT(kni_logtype, INFO);
+#define RTE_LOGTYPE_KNI kni_logtype
+
 #define MAX_MBUF_BURST_NUM            32
 
 /* Maximum number of ring entries */
