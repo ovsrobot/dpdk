@@ -244,7 +244,7 @@ static inline void dpaa2_flow_qos_table_extracts_log(
 	if (!dpaa2_flow_control_log)
 		return;
 
-	printf("Setup QoS table: number of extracts: %d\r\n",
+	fprintf(stdout, "Setup QoS table: number of extracts: %d\r\n",
 			priv->extract.qos_key_extract.dpkg.num_extracts);
 	for (idx = 0; idx < priv->extract.qos_key_extract.dpkg.num_extracts;
 		idx++) {
@@ -253,11 +253,11 @@ static inline void dpaa2_flow_qos_table_extracts_log(
 			priv->extract.qos_key_extract.dpkg.extracts[idx]
 			.extract.from_hdr.field,
 			string);
-		printf("%s", string);
+		fprintf(stdout, "%s", string);
 		if ((idx + 1) < priv->extract.qos_key_extract.dpkg.num_extracts)
-			printf(" / ");
+			fprintf(stdout, " / ");
 	}
-	printf("\r\n");
+	fprintf(stdout, "\r\n");
 }
 
 static inline void dpaa2_flow_fs_table_extracts_log(
@@ -269,7 +269,7 @@ static inline void dpaa2_flow_fs_table_extracts_log(
 	if (!dpaa2_flow_control_log)
 		return;
 
-	printf("Setup FS table: number of extracts of TC[%d]: %d\r\n",
+	fprintf(stdout, "Setup FS table: number of extracts of TC[%d]: %d\r\n",
 			tc_id, priv->extract.tc_key_extract[tc_id]
 			.dpkg.num_extracts);
 	for (idx = 0; idx < priv->extract.tc_key_extract[tc_id]
@@ -279,12 +279,12 @@ static inline void dpaa2_flow_fs_table_extracts_log(
 			priv->extract.tc_key_extract[tc_id].dpkg.extracts[idx]
 			.extract.from_hdr.field,
 			string);
-		printf("%s", string);
+		fprintf(stdout, "%s", string);
 		if ((idx + 1) < priv->extract.tc_key_extract[tc_id]
 			.dpkg.num_extracts)
-			printf(" / ");
+			fprintf(stdout, " / ");
 	}
-	printf("\r\n");
+	fprintf(stdout, "\r\n");
 }
 
 static inline void dpaa2_flow_qos_entry_log(
@@ -296,21 +296,21 @@ static inline void dpaa2_flow_qos_entry_log(
 	if (!dpaa2_flow_control_log)
 		return;
 
-	printf("\r\n%s QoS entry[%d] for TC[%d], extracts size is %d\r\n",
+	fprintf(stdout, "\r\n%s QoS entry[%d] for TC[%d], extracts size is %d\r\n",
 		log_info, qos_index, flow->tc_id, flow->qos_real_key_size);
 
 	key = (uint8_t *)(size_t)flow->qos_rule.key_iova;
 	mask = (uint8_t *)(size_t)flow->qos_rule.mask_iova;
 
-	printf("key:\r\n");
+	fprintf(stdout, "key:\r\n");
 	for (idx = 0; idx < flow->qos_real_key_size; idx++)
-		printf("%02x ", key[idx]);
+		fprintf(stdout, "%02x ", key[idx]);
 
-	printf("\r\nmask:\r\n");
+	fprintf(stdout, "\r\nmask:\r\n");
 	for (idx = 0; idx < flow->qos_real_key_size; idx++)
-		printf("%02x ", mask[idx]);
+		fprintf(stdout, "%02x ", mask[idx]);
 
-	printf("\r\n%s QoS ipsrc: %d, ipdst: %d\r\n", log_info,
+	fprintf(stdout, "\r\n%s QoS ipsrc: %d, ipdst: %d\r\n", log_info,
 		flow->ipaddr_rule.qos_ipsrc_offset,
 		flow->ipaddr_rule.qos_ipdst_offset);
 }
@@ -324,21 +324,21 @@ static inline void dpaa2_flow_fs_entry_log(
 	if (!dpaa2_flow_control_log)
 		return;
 
-	printf("\r\n%s FS/TC entry[%d] of TC[%d], extracts size is %d\r\n",
+	fprintf(stdout, "\r\n%s FS/TC entry[%d] of TC[%d], extracts size is %d\r\n",
 		log_info, flow->tc_index, flow->tc_id, flow->fs_real_key_size);
 
 	key = (uint8_t *)(size_t)flow->fs_rule.key_iova;
 	mask = (uint8_t *)(size_t)flow->fs_rule.mask_iova;
 
-	printf("key:\r\n");
+	fprintf(stdout, "key:\r\n");
 	for (idx = 0; idx < flow->fs_real_key_size; idx++)
-		printf("%02x ", key[idx]);
+		fprintf(stdout, "%02x ", key[idx]);
 
-	printf("\r\nmask:\r\n");
+	fprintf(stdout, "\r\nmask:\r\n");
 	for (idx = 0; idx < flow->fs_real_key_size; idx++)
-		printf("%02x ", mask[idx]);
+		fprintf(stdout, "%02x ", mask[idx]);
 
-	printf("\r\n%s FS ipsrc: %d, ipdst: %d\r\n", log_info,
+	fprintf(stdout, "\r\n%s FS ipsrc: %d, ipdst: %d\r\n", log_info,
 		flow->ipaddr_rule.fs_ipsrc_offset,
 		flow->ipaddr_rule.fs_ipdst_offset);
 }

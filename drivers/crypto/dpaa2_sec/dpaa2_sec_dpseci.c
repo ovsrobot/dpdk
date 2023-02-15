@@ -1685,7 +1685,7 @@ dpaa2_sec_dump(struct rte_crypto_op *op)
 		goto mbuf_dump;
 
 	priv = (struct ctxt_priv *)sess->ctxt;
-	printf("\n****************************************\n"
+	fprintf(stdout, "\n****************************************\n"
 		"session params:\n\tContext type:\t%d\n\tDirection:\t%s\n"
 		"\tCipher alg:\t%d\n\tAuth alg:\t%d\n\tAead alg:\t%d\n"
 		"\tCipher key len:\t%zd\n", sess->ctxt_type,
@@ -1696,7 +1696,7 @@ dpaa2_sec_dump(struct rte_crypto_op *op)
 				sess->cipher_key.length);
 		rte_hexdump(stdout, "auth key", sess->auth_key.data,
 				sess->auth_key.length);
-	printf("\tAuth key len:\t%zd\n\tIV len:\t\t%d\n\tIV offset:\t%d\n"
+	fprintf(stdout, "\tAuth key len:\t%zd\n\tIV len:\t\t%d\n\tIV offset:\t%d\n"
 		"\tdigest length:\t%d\n\tstatus:\t\t%d\n\taead auth only"
 		" len:\t%d\n\taead cipher text:\t%d\n",
 		sess->auth_key.length, sess->iv.length, sess->iv.offset,
@@ -1704,7 +1704,7 @@ dpaa2_sec_dump(struct rte_crypto_op *op)
 		sess->ext_params.aead_ctxt.auth_only_len,
 		sess->ext_params.aead_ctxt.auth_cipher_text);
 #ifdef RTE_LIBRTE_SECURITY
-	printf("PDCP session params:\n"
+	fprintf(stdout, "PDCP session params:\n"
 		"\tDomain:\t\t%d\n\tBearer:\t\t%d\n\tpkt_dir:\t%d\n\thfn_ovd:"
 		"\t%d\n\tsn_size:\t%d\n\thfn_ovd_offset:\t%d\n\thfn:\t\t%d\n"
 		"\thfn_threshold:\t0x%x\n", sess->pdcp.domain,
@@ -1714,29 +1714,29 @@ dpaa2_sec_dump(struct rte_crypto_op *op)
 
 #endif
 	bufsize = (uint8_t)priv->flc_desc[0].flc.word1_sdl;
-	printf("Descriptor Dump:\n");
+	fprintf(stdout, "Descriptor Dump:\n");
 	for (i = 0; i < bufsize; i++)
-		printf("\tDESC[%d]:0x%x\n", i, priv->flc_desc[0].desc[i]);
+		fprintf(stdout, "\tDESC[%d]:0x%x\n", i, priv->flc_desc[0].desc[i]);
 
-	printf("\n");
+	fprintf(stdout, "\n");
 mbuf_dump:
 	sym_op = op->sym;
 	if (sym_op->m_src) {
-		printf("Source mbuf:\n");
+		fprintf(stdout, "Source mbuf:\n");
 		rte_pktmbuf_dump(stdout, sym_op->m_src, sym_op->m_src->data_len);
 	}
 	if (sym_op->m_dst) {
-		printf("Destination mbuf:\n");
+		fprintf(stdout, "Destination mbuf:\n");
 		rte_pktmbuf_dump(stdout, sym_op->m_dst, sym_op->m_dst->data_len);
 	}
 
-	printf("Session address = %p\ncipher offset: %d, length: %d\n"
+	fprintf(stdout, "Session address = %p\ncipher offset: %d, length: %d\n"
 		"auth offset: %d, length:  %d\n aead offset: %d, length: %d\n"
 		, sym_op->session,
 		sym_op->cipher.data.offset, sym_op->cipher.data.length,
 		sym_op->auth.data.offset, sym_op->auth.data.length,
 		sym_op->aead.data.offset, sym_op->aead.data.length);
-	printf("\n");
+	fprintf(stdout, "\n");
 
 }
 

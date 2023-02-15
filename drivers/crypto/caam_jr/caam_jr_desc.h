@@ -116,7 +116,7 @@
 	for (__i = 0;						\
 		__i < SEC_GET_DESC_LEN(descriptor);			\
 		__i++) {						\
-		printf("0x%08x: 0x%08x\n",			\
+		fprintf(stdout, "0x%08x: 0x%08x\n",			\
 			(uint32_t)(((uint32_t *)(descriptor)) + __i),	\
 			*(((uint32_t *)(descriptor)) + __i));		\
 	}								\

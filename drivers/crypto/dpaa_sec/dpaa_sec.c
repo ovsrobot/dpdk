@@ -676,16 +676,16 @@ dpaa_sec_dump(struct dpaa_sec_op_ctx *ctx, struct dpaa_sec_qp *qp)
 		sess = SECURITY_GET_SESS_PRIV(op->sym->session);
 #endif
 	if (sess == NULL) {
-		printf("session is NULL\n");
+		fprintf(stdout, "session is NULL\n");
 		goto mbuf_dump;
 	}
 
 	cdb = &sess->cdb;
 	rte_memcpy(&c_cdb, cdb, sizeof(struct sec_cdb));
 #ifdef RTE_LIBRTE_SECURITY
-	printf("\nsession protocol type = %d\n", sess->proto_alg);
+	fprintf(stdout, "\nsession protocol type = %d\n", sess->proto_alg);
 #endif
-	printf("\n****************************************\n"
+	fprintf(stdout, "\n****************************************\n"
 		"session params:\n\tContext type:\t%d\n\tDirection:\t%s\n"
 		"\tCipher alg:\t%d\n\tAuth alg:\t%d\n\tAead alg:\t%d\n"
 		"\tCipher key len:\t%"PRIu64"\n\tCipher alg:\t%d\n"
@@ -698,7 +698,7 @@ dpaa_sec_dump(struct dpaa_sec_op_ctx *ctx, struct dpaa_sec_qp *qp)
 				sess->cipher_key.length);
 		rte_hexdump(stdout, "auth key", sess->auth_key.data,
 				sess->auth_key.length);
-	printf("\tAuth key len:\t%"PRIu64"\n\tAuth alg:\t%d\n"
+	fprintf(stdout, "\tAuth key len:\t%"PRIu64"\n\tAuth alg:\t%d\n"
 		"\tAuth algmode:\t%d\n\tIV len:\t\t%d\n\tIV offset:\t%d\n"
 		"\tdigest length:\t%d\n\tauth only len:\t\t%d\n"
 		"\taead cipher text:\t%d\n",
@@ -708,7 +708,7 @@ dpaa_sec_dump(struct dpaa_sec_op_ctx *ctx, struct dpaa_sec_qp *qp)
 		sess->digest_length, sess->auth_only_len,
 		sess->auth_cipher_text);
 #ifdef RTE_LIBRTE_SECURITY
-	printf("PDCP session params:\n"
+	fprintf(stdout, "PDCP session params:\n"
 		"\tDomain:\t\t%d\n\tBearer:\t\t%d\n\tpkt_dir:\t%d\n\thfn_ovd:"
 		"\t%d\n\tsn_size:\t%d\n\tsdap_enabled:\t%d\n\thfn_ovd_offset:"
 		"\t%d\n\thfn:\t\t%d\n"
@@ -722,63 +722,63 @@ dpaa_sec_dump(struct dpaa_sec_op_ctx *ctx, struct dpaa_sec_qp *qp)
 	c_cdb.sh_hdr.lo.word = rte_be_to_cpu_32(c_cdb.sh_hdr.lo.word);
 	bufsize = c_cdb.sh_hdr.hi.field.idlen;
 
-	printf("cdb = %p\n\n", cdb);
-	printf("Descriptor size = %d\n", bufsize);
+	fprintf(stdout, "cdb = %p\n\n", cdb);
+	fprintf(stdout, "Descriptor size = %d\n", bufsize);
 	int m;
 	for (m = 0; m < bufsize; m++)
-		printf("0x%x\n", rte_be_to_cpu_32(c_cdb.sh_desc[m]));
+		fprintf(stdout, "0x%x\n", rte_be_to_cpu_32(c_cdb.sh_desc[m]));
 
-	printf("\n");
+	fprintf(stdout, "\n");
 mbuf_dump:
 	sym_op = op->sym;
 	if (sym_op->m_src) {
-		printf("Source mbuf:\n");
+		fprintf(stdout, "Source mbuf:\n");
 		rte_pktmbuf_dump(stdout, sym_op->m_src,
 				 sym_op->m_src->data_len);
 	}
 	if (sym_op->m_dst) {
-		printf("Destination mbuf:\n");
+		fprintf(stdout, "Destination mbuf:\n");
 		rte_pktmbuf_dump(stdout, sym_op->m_dst,
 				 sym_op->m_dst->data_len);
 	}
 
-	printf("Session address = %p\ncipher offset: %d, length: %d\n"
+	fprintf(stdout, "Session address = %p\ncipher offset: %d, length: %d\n"
 		"auth offset: %d, length:  %d\n aead offset: %d, length: %d\n",
 		sym_op->session, sym_op->cipher.data.offset,
 		sym_op->cipher.data.length,
 		sym_op->auth.data.offset, sym_op->auth.data.length,
 		sym_op->aead.data.offset, sym_op->aead.data.length);
-	printf("\n");
+	fprintf(stdout, "\n");
 
-	printf("******************************************************\n");
-	printf("ctx info:\n");
-	printf("job->sg[0] output info:\n");
+	fprintf(stdout, "******************************************************\n");
+	fprintf(stdout, "ctx info:\n");
+	fprintf(stdout, "job->sg[0] output info:\n");
 	memcpy(&sg[0], &job->sg[0], sizeof(sg[0]));
-	printf("\taddr = %"PRIx64",\n\tlen = %d,\n\tfinal = %d,\n\textension = %d"
+	fprintf(stdout, "\taddr = %"PRIx64",\n\tlen = %d,\n\tfinal = %d,\n\textension = %d"
 		"\n\tbpid = %d\n\toffset = %d\n",
 		(uint64_t)sg[0].addr, sg[0].length, sg[0].final,
 		sg[0].extension, sg[0].bpid, sg[0].offset);
-	printf("\njob->sg[1] input info:\n");
+	fprintf(stdout, "\njob->sg[1] input info:\n");
 	memcpy(&sg[1], &job->sg[1], sizeof(sg[1]));
 	hw_sg_to_cpu(&sg[1]);
-	printf("\taddr = %"PRIx64",\n\tlen = %d,\n\tfinal = %d,\n\textension = %d"
+	fprintf(stdout, "\taddr = %"PRIx64",\n\tlen = %d,\n\tfinal = %d,\n\textension = %d"
 		"\n\tbpid = %d\n\toffset = %d\n",
 		(uint64_t)sg[1].addr, sg[1].length, sg[1].final,
 		sg[1].extension, sg[1].bpid, sg[1].offset);
 
-	printf("\nctx pool addr = %p\n", ctx->ctx_pool);
+	fprintf(stdout, "\nctx pool addr = %p\n", ctx->ctx_pool);
 	if (ctx->ctx_pool)
-		printf("ctx pool available counts = %d\n",
+		fprintf(stdout, "ctx pool available counts = %d\n",
 			rte_mempool_avail_count(ctx->ctx_pool));
 
-	printf("\nop pool addr = %p\n", op->mempool);
+	fprintf(stdout, "\nop pool addr = %p\n", op->mempool);
 	if (op->mempool)
-		printf("op pool available counts = %d\n",
+		fprintf(stdout, "op pool available counts = %d\n",
 			rte_mempool_avail_count(op->mempool));
 
-	printf("********************************************************\n");
-	printf("Queue data:\n");
-	printf("\tFQID = 0x%x\n\tstate = %d\n\tnb_desc = %d\n"
+	fprintf(stdout, "********************************************************\n");
+	fprintf(stdout, "Queue data:\n");
+	fprintf(stdout, "\tFQID = 0x%x\n\tstate = %d\n\tnb_desc = %d\n"
 		"\tctx_pool = %p\n\trx_pkts = %d\n\ttx_pkts"
 	       "= %d\n\trx_errs = %d\n\ttx_errs = %d\n\n",
 		qp->outq.fqid, qp->outq.state, qp->outq.nb_desc,

@@ -33,33 +33,33 @@ dump_netcfg(struct netcfg_info *cfg_ptr)
 {
 	int i;
 
-	printf("..........  DPAA Configuration  ..........\n\n");
+	fprintf(stdout, "..........  DPAA Configuration  ..........\n\n");
 
 	/* Network interfaces */
-	printf("Network interfaces: %d\n", cfg_ptr->num_ethports);
+	fprintf(stdout, "Network interfaces: %d\n", cfg_ptr->num_ethports);
 	for (i = 0; i < cfg_ptr->num_ethports; i++) {
 		struct fman_if_bpool *bpool;
 		struct fm_eth_port_cfg *p_cfg = &cfg_ptr->port_cfg[i];
 		struct fman_if *__if = p_cfg->fman_if;
 
-		printf("\n+ Fman %d, MAC %d (%s);\n",
+		fprintf(stdout, "\n+ Fman %d, MAC %d (%s);\n",
 		       __if->fman_idx, __if->mac_idx,
 		       (__if->mac_type == fman_mac_1g) ? "1G" :
 		       (__if->mac_type == fman_mac_2_5g) ? "2.5G" : "10G");
 
-		printf("\tmac_addr: " RTE_ETHER_ADDR_PRT_FMT "\n",
+		fprintf(stdout, "\tmac_addr: " RTE_ETHER_ADDR_PRT_FMT "\n",
 		       RTE_ETHER_ADDR_BYTES(&__if->mac_addr));
 
-		printf("\ttx_channel_id: 0x%02x\n",
+		fprintf(stdout, "\ttx_channel_id: 0x%02x\n",
 		       __if->tx_channel_id);
 
-		printf("\tfqid_rx_def: 0x%x\n", p_cfg->rx_def);
-		printf("\tfqid_rx_err: 0x%x\n", __if->fqid_rx_err);
+		fprintf(stdout, "\tfqid_rx_def: 0x%x\n", p_cfg->rx_def);
+		fprintf(stdout, "\tfqid_rx_err: 0x%x\n", __if->fqid_rx_err);
 
-		printf("\tfqid_tx_err: 0x%x\n", __if->fqid_tx_err);
-		printf("\tfqid_tx_confirm: 0x%x\n", __if->fqid_tx_confirm);
+		fprintf(stdout, "\tfqid_tx_err: 0x%x\n", __if->fqid_tx_err);
+		fprintf(stdout, "\tfqid_tx_confirm: 0x%x\n", __if->fqid_tx_confirm);
 		fman_if_for_each_bpool(bpool, __if)
-			printf("\tbuffer pool: (bpid=%d, count=%"PRId64
+			fprintf(stdout, "\tbuffer pool: (bpid=%d, count=%"PRId64
 			       " size=%"PRId64", addr=0x%"PRIx64")\n",
 			       bpool->bpid, bpool->count, bpool->size,
 			       bpool->addr);
