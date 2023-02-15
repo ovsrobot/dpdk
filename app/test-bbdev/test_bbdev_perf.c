@@ -3173,11 +3173,11 @@ throughput_intr_lcore_ldpc_dec(void *arg)
 	for (j = 0; j < TEST_REPETITIONS; ++j) {
 		for (i = 0; i < num_to_process; ++i) {
 			if (!loopback)
-				rte_pktmbuf_reset(ops[i]->ldpc_dec.hard_output.data);
+				mbuf_reset(ops[i]->ldpc_dec.hard_output.data);
 			if (hc_out || loopback)
 				mbuf_reset(ops[i]->ldpc_dec.harq_combined_output.data);
 			if (ops[i]->ldpc_dec.soft_output.data != NULL)
-				rte_pktmbuf_reset(ops[i]->ldpc_dec.soft_output.data);
+				mbuf_reset(ops[i]->ldpc_dec.soft_output.data);
 		}
 
 		tp->start_time = rte_rdtsc_precise();
@@ -3267,9 +3267,9 @@ throughput_intr_lcore_dec(void *arg)
 
 	for (j = 0; j < TEST_REPETITIONS; ++j) {
 		for (i = 0; i < num_to_process; ++i) {
-			rte_pktmbuf_reset(ops[i]->turbo_dec.hard_output.data);
+			mbuf_reset(ops[i]->turbo_dec.hard_output.data);
 			if (ops[i]->turbo_dec.soft_output.data != NULL)
-				rte_pktmbuf_reset(ops[i]->turbo_dec.soft_output.data);
+				mbuf_reset(ops[i]->turbo_dec.soft_output.data);
 		}
 
 		tp->start_time = rte_rdtsc_precise();
@@ -3356,7 +3356,7 @@ throughput_intr_lcore_enc(void *arg)
 
 	for (j = 0; j < TEST_REPETITIONS; ++j) {
 		for (i = 0; i < num_to_process; ++i)
-			rte_pktmbuf_reset(ops[i]->turbo_enc.output.data);
+			mbuf_reset(ops[i]->turbo_enc.output.data);
 
 		tp->start_time = rte_rdtsc_precise();
 		for (enqueued = 0; enqueued < num_to_process;) {
@@ -3444,7 +3444,7 @@ throughput_intr_lcore_ldpc_enc(void *arg)
 
 	for (j = 0; j < TEST_REPETITIONS; ++j) {
 		for (i = 0; i < num_to_process; ++i)
-			rte_pktmbuf_reset(ops[i]->turbo_enc.output.data);
+			mbuf_reset(ops[i]->turbo_enc.output.data);
 
 		tp->start_time = rte_rdtsc_precise();
 		for (enqueued = 0; enqueued < num_to_process;) {
@@ -3532,7 +3532,7 @@ throughput_intr_lcore_fft(void *arg)
 
 	for (j = 0; j < TEST_REPETITIONS; ++j) {
 		for (i = 0; i < num_to_process; ++i)
-			rte_pktmbuf_reset(ops[i]->fft.base_output.data);
+			mbuf_reset(ops[i]->fft.base_output.data);
 
 		tp->start_time = rte_rdtsc_precise();
 		for (enqueued = 0; enqueued < num_to_process;) {
