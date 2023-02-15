@@ -7,6 +7,9 @@
 
 #include "rte_port_frag.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_frag_logtype, frag, INFO);
+#define RTE_LOGTYPE_PORT port_frag_logtype
+
 /* Max number of fragments per packet allowed */
 #define	RTE_PORT_FRAG_MAX_FRAGS_PER_PACKET 0x80
 

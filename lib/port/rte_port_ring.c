@@ -10,6 +10,9 @@
 
 #include "rte_port_ring.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_ring_logtype, ring, INFO);
+#define RTE_LOGTYPE_PORT port_ring_logtype
+
 /*
  * Port RING Reader
  */
