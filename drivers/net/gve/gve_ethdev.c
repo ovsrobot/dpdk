@@ -266,7 +266,7 @@ gve_dev_close(struct rte_eth_dev *dev)
 }
 
 static int
-gve_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
+gve_dev_infos_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 {
 	struct gve_priv *priv = dev->data->dev_private;
 
@@ -319,15 +319,12 @@ gve_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
 }
 
 static int
-gve_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
+gve_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
 	uint16_t i;
 
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		struct gve_tx_queue *txq = dev->data->tx_queues[i];
-		if (txq == NULL)
-			continue;
-
 		stats->opackets += txq->packets;
 		stats->obytes += txq->bytes;
 		stats->oerrors += txq->errors;
@@ -335,9 +332,6 @@ gve_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		struct gve_rx_queue *rxq = dev->data->rx_queues[i];
-		if (rxq == NULL)
-			continue;
-
 		stats->ipackets += rxq->packets;
 		stats->ibytes += rxq->bytes;
 		stats->ierrors += rxq->errors;
@@ -348,15 +342,12 @@ gve_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 }
 
 static int
-gve_dev_stats_reset(struct rte_eth_dev *dev)
+gve_stats_reset(struct rte_eth_dev *dev)
 {
 	uint16_t i;
 
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		struct gve_tx_queue *txq = dev->data->tx_queues[i];
-		if (txq == NULL)
-			continue;
-
 		txq->packets  = 0;
 		txq->bytes = 0;
 		txq->errors = 0;
@@ -364,9 +355,6 @@ gve_dev_stats_reset(struct rte_eth_dev *dev)
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		struct gve_rx_queue *rxq = dev->data->rx_queues[i];
-		if (rxq == NULL)
-			continue;
-
 		rxq->packets  = 0;
 		rxq->bytes = 0;
 		rxq->errors = 0;
@@ -377,7 +365,7 @@ gve_dev_stats_reset(struct rte_eth_dev *dev)
 }
 
 static int
-gve_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
+gve_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 {
 	struct gve_priv *priv = dev->data->dev_private;
 	int err;
@@ -403,20 +391,144 @@ gve_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 	return 0;
 }
 
+static int
+gve_xstats_get(struct rte_eth_dev *dev, struct rte_eth_xstat *xstats, unsigned int n)
+{
+	if (xstats) {
+		uint requested = n;
+		uint64_t indx = 0;
+		struct rte_eth_xstat *xstat = xstats;
+		uint16_t i;
+
+		for (i = 0; i < dev->data->nb_rx_queues; i++) {
+			struct gve_rx_queue *rxq = dev->data->rx_queues[i];
+			xstat->id = indx++;
+			xstat->value = rxq->packets;
+			if (--requested == 0)
+				return n;
+			xstat++;
+
+			xstat->id = indx++;
+			xstat->value = rxq->bytes;
+			if (--requested == 0)
+				return n;
+			xstat++;
+
+			xstat->id = indx++;
+			xstat->value = rxq->errors;
+			if (--requested == 0)
+				return n;
+			xstat++;
+
+			xstat->id = indx++;
+			xstat->value = rxq->no_mbufs;
+			if (--requested == 0)
+				return n;
+			xstat++;
+		}
+
+		for (i = 0; i < dev->data->nb_tx_queues; i++) {
+			struct gve_tx_queue *txq = dev->data->tx_queues[i];
+			xstat->id = indx++;
+			xstat->value = txq->packets;
+			if (--requested == 0)
+				return n;
+			xstat++;
+
+			xstat->id = indx++;
+			xstat->value = txq->bytes;
+			if (--requested == 0)
+				return n;
+			xstat++;
+
+			xstat->id = indx++;
+			xstat->value = txq->errors;
+			if (--requested == 0)
+				return n;
+			xstat++;
+		}
+	}
+
+	return (dev->data->nb_rx_queues * 4) + (dev->data->nb_tx_queues * 3);
+}
+
+static int
+gve_xstats_reset(struct rte_eth_dev *dev)
+{
+	return gve_stats_reset(dev);
+}
+
+static int
+gve_xstats_get_names(struct rte_eth_dev *dev, struct rte_eth_xstat_name *xstats_names,
+						unsigned int n)
+{
+	if (xstats_names) {
+		uint requested = n;
+		struct rte_eth_xstat_name *xstats_name = xstats_names;
+		uint16_t i;
+
+		for (i = 0; i < dev->data->nb_rx_queues; i++) {
+			snprintf(xstats_name->name, sizeof(xstats_name->name),
+					"rx_q%d_packets", i);
+			if (--requested == 0)
+				return n;
+			xstats_name++;
+			snprintf(xstats_name->name, sizeof(xstats_name->name),
+					"rx_q%d_bytes", i);
+			if (--requested == 0)
+				return n;
+			xstats_name++;
+			snprintf(xstats_name->name, sizeof(xstats_name->name),
+					"rx_q%d_errors", i);
+			if (--requested == 0)
+				return n;
+			xstats_name++;
+			snprintf(xstats_name->name, sizeof(xstats_name->name),
+					"rx_q%d_no_mbufs", i);
+			if (--requested == 0)
+				return n;
+			xstats_name++;
+		}
+
+		for (i = 0; i < dev->data->nb_tx_queues; i++) {
+			snprintf(xstats_name->name, sizeof(xstats_name->name),
+					"tx_q%d_packets", i);
+			if (--requested == 0)
+				return n;
+			xstats_name++;
+			snprintf(xstats_name->name, sizeof(xstats_name->name),
+					"tx_q%d_bytes", i);
+			if (--requested == 0)
+				return n;
+			xstats_name++;
+			snprintf(xstats_name->name, sizeof(xstats_name->name),
+					"tx_q%d_errors", i);
+			if (--requested == 0)
+				return n;
+			xstats_name++;
+		}
+	}
+
+	return (dev->data->nb_rx_queues * 4) + (dev->data->nb_tx_queues * 3);
+}
+
 static const struct eth_dev_ops gve_eth_dev_ops = {
 	.dev_configure        = gve_dev_configure,
 	.dev_start            = gve_dev_start,
 	.dev_stop             = gve_dev_stop,
 	.dev_close            = gve_dev_close,
-	.dev_infos_get        = gve_dev_info_get,
+	.dev_infos_get        = gve_dev_infos_get,
 	.rx_queue_setup       = gve_rx_queue_setup,
 	.tx_queue_setup       = gve_tx_queue_setup,
 	.rx_queue_release     = gve_rx_queue_release,
 	.tx_queue_release     = gve_tx_queue_release,
 	.link_update          = gve_link_update,
-	.stats_get            = gve_dev_stats_get,
-	.stats_reset          = gve_dev_stats_reset,
-	.mtu_set              = gve_dev_mtu_set,
+	.stats_get            = gve_stats_get,
+	.stats_reset          = gve_stats_reset,
+	.mtu_set              = gve_mtu_set,
+	.xstats_get           = gve_xstats_get,
+	.xstats_reset         = gve_xstats_reset,
+	.xstats_get_names     = gve_xstats_get_names,
 };
 
 static void
