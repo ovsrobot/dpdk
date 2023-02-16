@@ -1757,3 +1757,61 @@ rte_eth_bond_8023ad_dedicated_queues_disable(uint16_t port)
 
 	return retval;
 }
+
+int
+rte_eth_bond_8023ad_dedicated_queues_get(uint16_t port_id)
+{
+	struct rte_eth_dev *dev;
+	struct bond_dev_private *internals;
+
+	if (valid_bonded_port_id(port_id) != 0)
+		return -EINVAL;
+
+	dev = &rte_eth_devices[port_id];
+	internals = dev->data->dev_private;
+
+	if (internals->mode != BONDING_MODE_8023AD)
+		return -EINVAL;
+
+	return internals->mode4.dedicated_queues.enabled;
+}
+
+void
+rte_eth_bond_8023ad_lacp_send_one(void *queue)
+{
+	uint32_t i;
+	uint16_t slave_tx_count;
+	uint16_t active_slave_count;
+	uint16_t active_slave_ids[RTE_MAX_ETHPORTS];
+	struct bond_tx_queue *bd_tx_q = queue;
+	struct bond_dev_private *internals = bd_tx_q->dev_private;
+
+	active_slave_count = internals->active_slave_count;
+	if (unlikely(active_slave_count == 0))
+		return;
+
+	rte_memcpy(active_slave_ids, internals->active_slaves,
+		sizeof(active_slave_ids[0]) * active_slave_count);
+
+	/* Check for LACP control packets and send if available */
+	for (i = 0; i < active_slave_count; i++) {
+		struct rte_mbuf *ctrl_pkt = NULL;
+		struct port *port = &bond_mode_8023ad_ports[active_slave_ids[i]];
+
+		if (likely(rte_ring_empty(port->tx_ring)))
+			continue;
+
+		if (rte_ring_dequeue(port->tx_ring, (void **)&ctrl_pkt) == 0) {
+			slave_tx_count = rte_eth_tx_prepare(active_slave_ids[i],
+					bd_tx_q->queue_id, &ctrl_pkt, 1);
+			slave_tx_count = rte_eth_tx_burst(active_slave_ids[i],
+					bd_tx_q->queue_id, &ctrl_pkt, slave_tx_count);
+			/*
+			 * Re-enqueue LAG control plane packets to buffering
+			 * ring if transmission fails so the packet won't lost.
+			 */
+			if (slave_tx_count != 1)
+				rte_ring_enqueue(port->tx_ring, ctrl_pkt);
+		}
+	}
+}
