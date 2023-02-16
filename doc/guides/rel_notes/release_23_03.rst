@@ -98,6 +98,12 @@ New Features
   * Added ``host_port_id`` in ``rte_flow_port_attr`` structure
     to reference the port hosting the shared objects.
 
+* **Added support to skip congestion management configuration.**
+
+  * Added a new action ``RTE_FLOW_ACTION_TYPE_SKIP_CMAN`` to skip
+    congestion management processing based on per flow or packet color
+    identified by rte_flow meter object
+
 * **Updated AMD axgbe driver.**
 
   * Added multi-process support.
