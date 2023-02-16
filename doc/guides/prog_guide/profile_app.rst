@@ -19,6 +19,11 @@ dedicated tasks interrupting those tasks with perf may be undesirable.
 
 In such cases, an application can use the PMU library to read such events via ``rte_pmu_read()``.
 
+Alternatively tracing library can be used which offers dedicated tracepoint
+``rte_eal_trace_pmu_event()``.
+
+Refer to :doc:`../prog_guide/trace_lib` for more details.
+
 
 Profiling on x86
 ----------------
