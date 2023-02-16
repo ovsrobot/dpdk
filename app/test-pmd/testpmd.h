@@ -175,6 +175,11 @@ struct fwd_stream {
 	unsigned int gro_times;	/**< GRO operation times */
 #endif
 	uint64_t busy_cycles; /**< used with --record-core-cycles */
+	uint64_t     core_cycles; /**< used for RX and TX processing */
+#ifdef RTE_NET_BOND
+	bool bond4_send_periodical_lacp;
+	/**< Send LACP packets periodically in forward loop */
+#endif
 	struct pkt_burst_stats rx_burst_stats;
 	struct pkt_burst_stats tx_burst_stats;
 	struct fwd_lcore *lcore; /**< Lcore being scheduled. */
@@ -580,6 +585,10 @@ extern lcoreid_t latencystats_lcore_id;
 #ifdef RTE_LIB_BITRATESTATS
 extern lcoreid_t bitrate_lcore_id;
 extern uint8_t bitrate_enabled;
+#endif
+
+#ifdef RTE_NET_BOND
+extern uint8_t bond4_lacp_fwd;
 #endif
 
 extern uint32_t max_rx_pkt_len;
