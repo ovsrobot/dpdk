@@ -6,11 +6,13 @@ DPDK_23 {
 	rte_eth_bond_8023ad_conf_get;
 	rte_eth_bond_8023ad_dedicated_queues_disable;
 	rte_eth_bond_8023ad_dedicated_queues_enable;
+	rte_eth_bond_8023ad_dedicated_queues_get;
 	rte_eth_bond_8023ad_ext_collect;
 	rte_eth_bond_8023ad_ext_collect_get;
 	rte_eth_bond_8023ad_ext_distrib;
 	rte_eth_bond_8023ad_ext_distrib_get;
 	rte_eth_bond_8023ad_ext_slowtx;
+	rte_eth_bond_8023ad_lacp_send_one;
 	rte_eth_bond_8023ad_setup;
 	rte_eth_bond_8023ad_slave_info;
 	rte_eth_bond_active_slaves_get;
