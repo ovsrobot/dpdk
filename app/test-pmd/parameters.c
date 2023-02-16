@@ -205,6 +205,9 @@ usage(char* progname)
 	printf("  --hairpin-mode=0xXX: bitmask set the hairpin port mode.\n"
 	       "    0x10 - explicit Tx rule, 0x02 - hairpin ports paired\n"
 	       "    0x01 - hairpin ports loop, 0x00 - hairpin port self\n");
+#ifdef RTE_NET_BOND
+	printf("  --bond4-lacp-fwd: enable lacp update in fwd main loop\n");
+#endif
 }
 
 #ifdef RTE_LIB_CMDLINE
@@ -705,6 +708,9 @@ launch_args_parse(int argc, char** argv)
 		{ "rx-mq-mode",                 1, 0, 0 },
 		{ "record-core-cycles",         0, 0, 0 },
 		{ "record-burst-stats",         0, 0, 0 },
+#ifdef RTE_NET_BOND
+		{ "bond4-lacp-fwd",             0, 0, 0 },
+#endif
 		{ PARAM_NUM_PROCS,              1, 0, 0 },
 		{ PARAM_PROC_ID,                1, 0, 0 },
 		{ 0, 0, 0, 0 },
@@ -1462,6 +1468,10 @@ launch_args_parse(int argc, char** argv)
 				num_procs = atoi(optarg);
 			if (!strcmp(lgopts[opt_idx].name, PARAM_PROC_ID))
 				proc_id = atoi(optarg);
+#ifdef RTE_NET_BOND
+			if (!strcmp(lgopts[opt_idx].name, "bond4-lacp-fwd"))
+				bond4_lacp_fwd = 1;
+#endif
 			break;
 		case 'h':
 			usage(argv[0]);

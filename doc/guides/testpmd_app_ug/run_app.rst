@@ -538,6 +538,10 @@ The command line options are:
 
     Enable display of RX and TX burst stats.
 
+*   ``--bond4-lacp-fwd``
+
+    Enable LACP packets sending in main forward loop to avoid LACP negotiation failed.
+
 *   ``--hairpin-mode=0xXXXX``
 
     Set the hairpin port configuration with bitmask, only valid when hairpin queues number is set::

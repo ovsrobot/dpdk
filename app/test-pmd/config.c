@@ -53,6 +53,11 @@
 #ifdef RTE_LIB_GRO
 #include <rte_gro.h>
 #endif
+#ifdef RTE_NET_BOND
+#include <rte_eth_bond.h>
+#include <rte_eth_bond_8023ad.h>
+#endif
+
 #include <rte_hexdump.h>
 
 #include "testpmd.h"
@@ -4401,6 +4406,12 @@ simple_fwd_config_setup(void)
 		fwd_streams[i]->tx_queue  = 0;
 		fwd_streams[i]->peer_addr = fwd_streams[i]->tx_port;
 		fwd_streams[i]->retry_enabled = retry_enabled;
+#ifdef RTE_NET_BOND
+		if (rte_eth_bond_8023ad_dedicated_queues_get(fwd_streams[i]->tx_port) == 0)
+			fwd_streams[i]->bond4_send_periodical_lacp = true;
+		else
+			fwd_streams[i]->bond4_send_periodical_lacp = false;
+#endif
 	}
 }
 
@@ -4462,6 +4473,12 @@ rss_fwd_config_setup(void)
 		fs->tx_queue = rxq;
 		fs->peer_addr = fs->tx_port;
 		fs->retry_enabled = retry_enabled;
+#ifdef RTE_NET_BOND
+		if (rte_eth_bond_8023ad_dedicated_queues_get(fs->tx_port) == 0)
+			fs->bond4_send_periodical_lacp = true;
+		else
+			fs->bond4_send_periodical_lacp = false;
+#endif
 		rxp++;
 		if (rxp < nb_fwd_ports)
 			continue;
@@ -4577,6 +4594,12 @@ dcb_fwd_config_setup(void)
 				fs->tx_queue = txq + j % nb_tx_queue;
 				fs->peer_addr = fs->tx_port;
 				fs->retry_enabled = retry_enabled;
+#ifdef RTE_NET_BOND
+				if (rte_eth_bond_8023ad_dedicated_queues_get(fs->tx_port) == 0)
+					fs->bond4_send_periodical_lacp = true;
+				else
+					fs->bond4_send_periodical_lacp = false;
+#endif
 			}
 			fwd_lcores[lc_id]->stream_nb +=
 				rxp_dcb_info.tc_queue.tc_rxq[i][tc].nb_queue;
