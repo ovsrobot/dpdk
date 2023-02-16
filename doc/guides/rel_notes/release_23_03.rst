@@ -117,6 +117,11 @@ New Features
   * Added support for meter options.
   * Added support for rte_flow meter action.
 
+* **Updated Marvell cnxk ethdev PMD.**
+
+  * Added support to skip RED using new action
+    ``RTE_FLOW_ACTION_TYPE_SKIP_CMAN``
+
 * **Updated NVIDIA mlx5 driver.**
 
   * Added support for matching on ICMPv6 ID and sequence fields.
