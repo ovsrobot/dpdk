@@ -7,6 +7,18 @@ Profile Your Application
 The following sections describe methods of profiling DPDK applications on
 different architectures.
 
+Performance counter based profiling
+-----------------------------------
+
+Majority of architectures support some performance monitoring unit (PMU).
+Such unit provides programmable counters that monitor specific events.
+
+Different tools gather that information, like for example perf.
+However, in some scenarios when CPU cores are isolated and run
+dedicated tasks interrupting those tasks with perf may be undesirable.
+
+In such cases, an application can use the PMU library to read such events via ``rte_pmu_read()``.
+
 
 Profiling on x86
 ----------------

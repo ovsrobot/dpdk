@@ -11,6 +11,7 @@
 libraries = [
         'kvargs', # eal depends on kvargs
         'telemetry', # basic info querying
+        'pmu',
         'eal', # everything depends on eal
         'ring',
         'rcu', # rcu depends on ring
