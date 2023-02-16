@@ -1352,6 +1352,8 @@ parse_and_check_speed_duplex(char *speedstr, char *duplexstr, uint32_t *speed)
 			*speed = RTE_ETH_LINK_SPEED_100G;
 		} else if (!strcmp(speedstr, "200000")) {
 			*speed = RTE_ETH_LINK_SPEED_200G;
+		} else if (!strcmp(speedstr, "400000")) {
+			*speed = RTE_ETH_LINK_SPEED_400G;
 		} else if (!strcmp(speedstr, "auto")) {
 			*speed = RTE_ETH_LINK_SPEED_AUTONEG;
 		} else {
