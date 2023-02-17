@@ -656,6 +656,15 @@ enum rte_flow_item_type {
 	 * @see struct rte_flow_item_icmp6_echo.
 	 */
 	RTE_FLOW_ITEM_TYPE_ICMP6_ECHO_REPLY,
+
+	/**
+	 * Matches on the aggregated port of the received packet.
+	 * Used in case multiple ports are aggregated to the a DPDK port.
+	 * First port is number 1.
+	 *
+	 * @see struct rte_flow_item_aggr_affinity.
+	 */
+	RTE_FLOW_ITEM_TYPE_AGGR_AFFINITY,
 };
 
 /**
@@ -2184,6 +2193,32 @@ struct rte_flow_item_meter_color {
 #ifndef __cplusplus
 static const struct rte_flow_item_meter_color rte_flow_item_meter_color_mask = {
 	.color = RTE_COLORS,
+};
+#endif
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice
+ *
+ * RTE_FLOW_ITEM_TYPE_AGGR_AFFINITY
+ *
+ * For multiple ports aggregated to a single DPDK port,
+ * match the aggregated port receiving the packets.
+ */
+struct rte_flow_item_aggr_affinity {
+	/**
+	 * An aggregated port receiving the packets.
+	 * Numbering starts from 1.
+	 * Number of aggregated ports is reported by rte_eth_dev_count_aggr_ports().
+	 */
+	uint8_t affinity;
+};
+
+/** Default mask for RTE_FLOW_ITEM_TYPE_AGGR_AFFINITY. */
+#ifndef __cplusplus
+static const struct rte_flow_item_aggr_affinity
+rte_flow_item_aggr_affinity_mask = {
+	.affinity = 0xff,
 };
 #endif
 

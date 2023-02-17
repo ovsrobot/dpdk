@@ -1536,6 +1536,14 @@ Matches Color Marker set by a Meter.
 
 - ``color``: Metering color marker.
 
+Item: ``AGGR_AFFINITY``
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Matches on the aggregated port of the received packet.
+In case of multiple aggregated ports, the affinity numbering starts from 1.
+
+- ``affinity``: Aggregated affinity.
+
 Actions
 ~~~~~~~
 
