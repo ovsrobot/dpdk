@@ -62,9 +62,9 @@ trap 'rm -f -- "$tmpfile"' INT TERM HUP EXIT
 
 check_spdx
 $quiet || echo
-
 check_boilerplate
-
 $quiet || echo
-echo "total: $errors errors, $warnings warnings"
+$quiet && [ $errors -eq 0 ] && [ $warnings -eq 0 ] ||
+echo "SPDX tag check: $errors errors, $warnings warnings"
+
 exit $errors
