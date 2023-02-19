@@ -8,6 +8,8 @@
 #include "rte_ip_frag.h"
 #include "ip_reassembly.h"
 
+#include <sys/queue.h>
+
 /* logging macros. */
 #ifdef RTE_LIBRTE_IP_FRAG_DEBUG
 #define	IP_FRAG_LOG(lvl, fmt, args...)	RTE_LOG(lvl, USER1, fmt, ##args)
