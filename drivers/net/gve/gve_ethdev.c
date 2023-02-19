@@ -213,6 +213,7 @@ gve_dev_start(struct rte_eth_dev *dev)
 		}
 	}
 
+	dev->data->dev_flags |= RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS;
 	dev->data->dev_started = 1;
 	gve_link_update(dev, 0);
 
@@ -332,6 +333,9 @@ gve_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		stats->opackets += txq->packets;
 		stats->obytes += txq->bytes;
 		stats->oerrors += txq->errors;
+
+		stats->q_opackets[i] = txq->packets;
+		stats->q_obytes[i] = txq->bytes;
 	}
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
@@ -343,6 +347,10 @@ gve_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		stats->ibytes += rxq->bytes;
 		stats->ierrors += rxq->errors;
 		stats->rx_nombuf += rxq->no_mbufs;
+
+		stats->q_ipackets[i] = rxq->packets;
+		stats->q_ibytes[i] = rxq->bytes;
+		stats->q_errors[i] = rxq->errors;
 	}
 
 	return 0;
