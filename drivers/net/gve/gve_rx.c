@@ -24,6 +24,7 @@ gve_rx_refill(struct gve_rx_queue *rxq)
 				nmb = rte_pktmbuf_alloc(rxq->mpool);
 				if (!nmb)
 					break;
+
 				rxq->sw_ring[idx + i] = nmb;
 			}
 			if (i != nb_alloc) {
@@ -59,9 +60,13 @@ gve_rx_refill(struct gve_rx_queue *rxq)
 				nmb = rte_pktmbuf_alloc(rxq->mpool);
 				if (!nmb)
 					break;
+
 				rxq->sw_ring[idx + i] = nmb;
 			}
-			nb_alloc = i;
+			if (i != nb_alloc) {
+				rxq->no_mbufs += nb_alloc - i;
+				nb_alloc = i;
+			}
 		}
 		rxq->nb_avail -= nb_alloc;
 		next_avail += nb_alloc;
