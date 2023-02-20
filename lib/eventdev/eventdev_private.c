@@ -107,6 +107,7 @@ void
 event_dev_fp_ops_set(struct rte_event_fp_ops *fp_op,
 		     const struct rte_eventdev *dev)
 {
+	fp_op->data = dev->data->ports;
 	fp_op->enqueue = dev->enqueue;
 	fp_op->enqueue_burst = dev->enqueue_burst;
 	fp_op->enqueue_new_burst = dev->enqueue_new_burst;
@@ -117,5 +118,4 @@ event_dev_fp_ops_set(struct rte_event_fp_ops *fp_op,
 	fp_op->txa_enqueue = dev->txa_enqueue;
 	fp_op->txa_enqueue_same_dest = dev->txa_enqueue_same_dest;
 	fp_op->ca_enqueue = dev->ca_enqueue;
-	fp_op->data = dev->data->ports;
 }
