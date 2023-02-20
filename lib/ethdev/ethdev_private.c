@@ -271,17 +271,17 @@ void
 eth_dev_fp_ops_setup(struct rte_eth_fp_ops *fpo,
 		const struct rte_eth_dev *dev)
 {
+	fpo->rxq.data = dev->data->rx_queues;
 	fpo->rx_pkt_burst = dev->rx_pkt_burst;
+	fpo->txq.data = dev->data->tx_queues;
 	fpo->tx_pkt_burst = dev->tx_pkt_burst;
 	fpo->tx_pkt_prepare = dev->tx_pkt_prepare;
 	fpo->rx_queue_count = dev->rx_queue_count;
 	fpo->rx_descriptor_status = dev->rx_descriptor_status;
 	fpo->tx_descriptor_status = dev->tx_descriptor_status;
 
-	fpo->rxq.data = dev->data->rx_queues;
 	fpo->rxq.clbk = (void **)(uintptr_t)dev->post_rx_burst_cbs;
 
-	fpo->txq.data = dev->data->tx_queues;
 	fpo->txq.clbk = (void **)(uintptr_t)dev->pre_tx_burst_cbs;
 }
 
