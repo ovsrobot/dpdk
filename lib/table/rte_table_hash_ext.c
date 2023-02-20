@@ -11,6 +11,9 @@
 
 #include "rte_table_hash.h"
 
+RTE_LOG_REGISTER_SUFFIX(table_hash_ext_logtype, hash.ext, INFO);
+#define RTE_LOGTYPE_TABLE table_hash_ext_logtype
+
 #define KEYS_PER_BUCKET	4
 
 struct bucket {
