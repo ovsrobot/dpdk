@@ -4,6 +4,7 @@
 #include <rte_malloc.h>
 #include <rte_hash.h>
 #include <rte_jhash.h>
+#include <rte_log.h>
 #include <rte_mbuf.h>
 #include <rte_cryptodev.h>
 
@@ -15,6 +16,9 @@
 #define INHDR_LEN		(sizeof(struct virtio_crypto_inhdr))
 #define IV_OFFSET		(sizeof(struct rte_crypto_op) + \
 				sizeof(struct rte_crypto_sym_op))
+
+RTE_LOG_REGISTER_SUFFIX(vhost_crypto_logtype, crypto, INFO);
+#define RTE_LOGTYPE_VHOST_CRYPTO	vhost_crypto_logtype
 
 #ifdef RTE_LIBRTE_VHOST_DEBUG
 #define VC_LOG_ERR(fmt, args...)				\
