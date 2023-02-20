@@ -7490,6 +7490,14 @@ parse_vc(struct context *ctx, const struct token *token,
 			out->args.vc.actions + out->args.vc.actions_n;
 
 		data_size = priv->size; /* configuration */
+		if (out->args.vc.masks) {
+			while (!isspace(*str))
+				str++; /* skip current token */
+			while (isspace(*str))
+				str++; /* skip blanks */
+			if (str[0] == '/')
+				data_size = 0;
+		}
 		data = (void *)RTE_ALIGN_FLOOR((uintptr_t)
 					       (out->args.vc.data - data_size),
 					       sizeof(double));
