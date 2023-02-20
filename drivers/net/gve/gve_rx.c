@@ -27,7 +27,7 @@ gve_rx_refill(struct gve_rx_queue *rxq)
 				rxq->sw_ring[idx + i] = nmb;
 			}
 			if (i != nb_alloc) {
-				rxq->no_mbufs += nb_alloc - i;
+				rxq->stats.no_mbufs += nb_alloc - i;
 				nb_alloc = i;
 			}
 		}
@@ -62,7 +62,7 @@ gve_rx_refill(struct gve_rx_queue *rxq)
 				rxq->sw_ring[idx + i] = nmb;
 			}
 			if (i != nb_alloc) {
-				rxq->no_mbufs += nb_alloc - i;
+				rxq->stats.no_mbufs += nb_alloc - i;
 				nb_alloc = i;
 			}
 		}
@@ -106,7 +106,7 @@ gve_rx_burst(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 			break;
 
 		if (rxd->flags_seq & GVE_RXF_ERR) {
-			rxq->errors++;
+			rxq->stats.errors++;
 			continue;
 		}
 
@@ -154,8 +154,8 @@ gve_rx_burst(void *rx_queue, struct rte_mbuf **rx_pkts, uint16_t nb_pkts)
 		gve_rx_refill(rxq);
 
 	if (nb_rx) {
-		rxq->packets += nb_rx;
-		rxq->bytes += bytes;
+		rxq->stats.packets += nb_rx;
+		rxq->stats.bytes += bytes;
 	}
 
 	return nb_rx;

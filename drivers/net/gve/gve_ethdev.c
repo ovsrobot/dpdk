@@ -9,6 +9,18 @@
 const char gve_version_str[] = GVE_VERSION;
 static const char gve_version_prefix[] = GVE_VERSION_PREFIX;
 
+static const struct gve_xstats_name_offset tx_xstats_name_offset[] = {
+	{ "packets", offsetof(struct gve_tx_stats, packets) },
+	{ "bytes",   offsetof(struct gve_tx_stats, bytes) },
+	{ "errors",  offsetof(struct gve_tx_stats, errors) },
+};
+
+static const struct gve_xstats_name_offset rx_xstats_name_offset[] = {
+	{ "packets", offsetof(struct gve_rx_stats, packets) },
+	{ "bytes",   offsetof(struct gve_rx_stats, bytes) },
+	{ "errors",  offsetof(struct gve_rx_stats, errors) },
+};
+
 static void
 gve_write_version(uint8_t *driver_version_register)
 {
@@ -329,9 +341,9 @@ gve_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		if (txq == NULL)
 			continue;
 
-		stats->opackets += txq->packets;
-		stats->obytes += txq->bytes;
-		stats->oerrors += txq->errors;
+		stats->opackets += txq->stats.packets;
+		stats->obytes += txq->stats.bytes;
+		stats->oerrors += txq->stats.errors;
 	}
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
@@ -339,10 +351,10 @@ gve_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		if (rxq == NULL)
 			continue;
 
-		stats->ipackets += rxq->packets;
-		stats->ibytes += rxq->bytes;
-		stats->ierrors += rxq->errors;
-		stats->rx_nombuf += rxq->no_mbufs;
+		stats->ipackets += rxq->stats.packets;
+		stats->ibytes += rxq->stats.bytes;
+		stats->ierrors += rxq->stats.errors;
+		stats->rx_nombuf += rxq->stats.no_mbufs;
 	}
 
 	return 0;
@@ -358,9 +370,7 @@ gve_dev_stats_reset(struct rte_eth_dev *dev)
 		if (txq == NULL)
 			continue;
 
-		txq->packets  = 0;
-		txq->bytes = 0;
-		txq->errors = 0;
+		memset(&txq->stats, 0, sizeof(txq->stats));
 	}
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
@@ -368,10 +378,7 @@ gve_dev_stats_reset(struct rte_eth_dev *dev)
 		if (rxq == NULL)
 			continue;
 
-		rxq->packets  = 0;
-		rxq->bytes = 0;
-		rxq->errors = 0;
-		rxq->no_mbufs = 0;
+		memset(&rxq->stats, 0, sizeof(rxq->stats));
 	}
 
 	return 0;
@@ -404,6 +411,112 @@ gve_dev_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
 	return 0;
 }
 
+static int
+gve_xstats_count(struct rte_eth_dev *dev)
+{
+	uint16_t i, count = 0;
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		if (dev->data->tx_queues[i])
+			count += RTE_DIM(tx_xstats_name_offset);
+	}
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		if (dev->data->rx_queues[i])
+			count += RTE_DIM(rx_xstats_name_offset);
+	}
+
+	return count;
+}
+
+static int
+gve_xstats_get(struct rte_eth_dev *dev,
+			struct rte_eth_xstat *xstats,
+			unsigned int size)
+{
+	uint16_t i, count = 0;
+
+	if (!xstats)
+		return (size == 0) ? gve_xstats_count(dev) : -EINVAL;
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		const struct gve_tx_queue *txq = dev->data->tx_queues[i];
+		if (!txq)
+			continue;
+
+		if (count >= size)
+			break;
+
+		uint16_t j = 0;
+		const char *stats = (const char *)&txq->stats;
+		for (j = 0; j < RTE_DIM(tx_xstats_name_offset); j++, count++) {
+			xstats[count].id = count;
+			xstats[count].value = *(const uint64_t *)
+				(stats + tx_xstats_name_offset[j].offset);
+		}
+	}
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		const struct gve_rx_queue *rxq = dev->data->rx_queues[i];
+		if (!rxq)
+			continue;
+
+		if (count >= size)
+			break;
+
+		uint16_t j = 0;
+		const char *stats = (const char *)&rxq->stats;
+		for (j = 0; j < RTE_DIM(rx_xstats_name_offset); j++, count++) {
+			xstats[count].id = count;
+			xstats[count].value = *(const uint64_t *)
+				(stats + rx_xstats_name_offset[j].offset);
+		}
+	}
+
+	return count;
+}
+
+static int
+gve_xstats_get_names(struct rte_eth_dev *dev,
+			struct rte_eth_xstat_name *xstats_names,
+			unsigned int size)
+{
+	uint16_t i, count = 0;
+
+	if (!xstats_names)
+		return (size == 0) ? gve_xstats_count(dev) : -EINVAL;
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		if (!dev->data->tx_queues[i])
+			continue;
+
+		if (count >= size)
+			break;
+
+		uint16_t j = 0;
+		for (; j < RTE_DIM(tx_xstats_name_offset); j++)
+			snprintf(xstats_names[count++].name,
+				 RTE_ETH_XSTATS_NAME_SIZE,
+				 "tx_q%u_%s", i, tx_xstats_name_offset[j].name);
+	}
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		if (!dev->data->rx_queues[i])
+			continue;
+
+		if (count >= size)
+			break;
+
+		uint16_t j = 0;
+		for (; j < RTE_DIM(rx_xstats_name_offset); j++)
+			snprintf(xstats_names[count++].name,
+				 RTE_ETH_XSTATS_NAME_SIZE,
+				 "rx_q%u_%s", i, rx_xstats_name_offset[j].name);
+	}
+
+	return count;
+}
+
 static const struct eth_dev_ops gve_eth_dev_ops = {
 	.dev_configure        = gve_dev_configure,
 	.dev_start            = gve_dev_start,
@@ -418,6 +531,8 @@ static const struct eth_dev_ops gve_eth_dev_ops = {
 	.stats_get            = gve_dev_stats_get,
 	.stats_reset          = gve_dev_stats_reset,
 	.mtu_set              = gve_dev_mtu_set,
+	.xstats_get           = gve_xstats_get,
+	.xstats_get_names     = gve_xstats_get_names,
 };
 
 static void
