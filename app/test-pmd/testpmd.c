@@ -2253,7 +2253,6 @@ flush_fwd_rx_queues(void)
 static void
 run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 {
-	struct fwd_stream **fsm;
 	uint64_t prev_tsc;
 	streamid_t nb_fs;
 	streamid_t sm_id;
@@ -2267,13 +2266,23 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 	tics_datum = rte_rdtsc();
 	tics_per_1sec = rte_get_timer_hz();
 #endif
-	fsm = &fwd_streams[fc->stream_idx];
 	nb_fs = fc->stream_nb;
 	prev_tsc = rte_rdtsc();
 	do {
-		for (sm_id = 0; sm_id < nb_fs; sm_id++)
-			if (!fsm[sm_id]->disabled)
-				(*pkt_fwd)(fsm[sm_id]);
+		for (sm_id = 0; sm_id < nb_fs; sm_id++) {
+			uint64_t start_fs_tsc = 0;
+			struct fwd_stream *fs;
+			bool busy;
+
+			fs = &fwd_streams[fc->stream_idx][sm_id];
+			if (fs->disabled)
+				continue;
+			if (record_core_cycles)
+				start_fs_tsc = rte_rdtsc();
+			busy = (*pkt_fwd)(fs);
+			if (record_core_cycles && busy)
+				fs->busy_cycles += rte_rdtsc() - start_fs_tsc;
+		}
 #ifdef RTE_LIB_BITRATESTATS
 		if (bitrate_enabled != 0 &&
 				bitrate_lcore_id == rte_lcore_id()) {
