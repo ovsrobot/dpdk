@@ -147,6 +147,9 @@ eth_ark_pci_probe(struct rte_pci_driver *pci_drv __rte_unused,
 	struct rte_eth_dev *eth_dev;
 	int ret;
 
+	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
+		ARK_PMD_LOG(INFO, "ARK probed by secondary process\n");
+
 	eth_dev = rte_eth_dev_pci_allocate(pci_dev, sizeof(struct ark_adapter));
 
 	if (eth_dev == NULL)
@@ -385,9 +388,11 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 		    0xcafef00d, ark->sysctrl.t32[4], __func__);
 
 	/* We are a single function multi-port device. */
-	ret = ark_config_device(dev);
-	if (ret)
-		return -1;
+	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+		ret = ark_config_device(dev);
+		if (ret)
+			return -1;
+	}
 
 	dev->dev_ops = &ark_eth_dev_ops;
 	dev->rx_queue_count = eth_ark_dev_rx_queue_count;
