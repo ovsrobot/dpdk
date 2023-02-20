@@ -192,6 +192,10 @@ New Features
   * Added support to capture packets at each graph node with packet metadata and
     node name.
 
+* **Added ARM support for power monitor in the power management library.**
+  * Added power monitor and wake up API support with WFE/SVE
+    instructions for Arm architecture.
+
 
 Removed Items
 -------------
