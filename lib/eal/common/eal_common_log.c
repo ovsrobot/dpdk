@@ -349,14 +349,12 @@ struct logtype {
 
 static const struct logtype logtype_strings[] = {
 	{RTE_LOGTYPE_EAL,        "lib.eal"},
-	{RTE_LOGTYPE_MALLOC,     "lib.malloc"},
 	{RTE_LOGTYPE_RING,       "lib.ring"},
 	{RTE_LOGTYPE_MEMPOOL,    "lib.mempool"},
 	{RTE_LOGTYPE_PMD,        "pmd"},
 	{RTE_LOGTYPE_HASH,       "lib.hash"},
 	{RTE_LOGTYPE_LPM,        "lib.lpm"},
 	{RTE_LOGTYPE_KNI,        "lib.kni"},
-	{RTE_LOGTYPE_ACL,        "lib.acl"},
 	{RTE_LOGTYPE_POWER,      "lib.power"},
 	{RTE_LOGTYPE_METER,      "lib.meter"},
 	{RTE_LOGTYPE_SCHED,      "lib.sched"},
