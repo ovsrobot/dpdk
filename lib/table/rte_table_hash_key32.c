@@ -11,7 +11,10 @@
 #include "rte_table_hash.h"
 #include "rte_lru.h"
 
-#define KEY_SIZE						32
+RTE_LOG_REGISTER_SUFFIX(table_hash32_logtype, hash32, INFO);
+#define RTE_LOGTYPE_TABLE table_hash32_logtype
+
+#define KEY_SIZE					32
 
 #define KEYS_PER_BUCKET					4
 
