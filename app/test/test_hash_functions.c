@@ -15,6 +15,7 @@
 #include <rte_hash.h>
 #include <rte_jhash.h>
 #include <rte_hash_crc.h>
+#include <rte_hash_xor.h>
 
 #include "test.h"
 
@@ -22,8 +23,8 @@
  * Hash values calculated for key sizes from array "hashtest_key_lens"
  * and for initial values from array "hashtest_initvals.
  * Each key will be formed by increasing each byte by 1:
- * e.g.: key size = 4, key = 0x03020100
- *       key size = 8, key = 0x0706050403020100
+ * e.g.: key size = 4, key = 0x00010203
+ *       key size = 8, key = 0x0001020304050607
  */
 static uint32_t hash_values_jhash[2][12] = {{
 	0x8ba9414b, 0xdf0d39c9,
@@ -51,6 +52,19 @@ static uint32_t hash_values_crc[2][12] = {{
 	0x789c104f, 0x53028d3e
 }
 };
+static uint32_t hash_values_xor32[2][12] = {{
+	0x00000000, 0x00010000,
+	0x00010203, 0x04040404, 0x00000000, 0x00000000,
+	0x00000000, 0x00000000, 0x0c040404, 0x000d0e0f,
+	0x04212223, 0x04040404
+},
+{
+	0xdeadbeef, 0xdeacbeef,
+	0xdeacbcec, 0xdaa9baeb, 0xdeadbeef, 0xdeadbeef,
+	0xdeadbeef, 0xdeadbeef, 0xd2a9baeb, 0xdea0b0e0,
+	0xda8c9ccc, 0xdaa9baeb
+}
+};
 
 /*******************************************************************************
  * Hash function performance test configuration section. Each performance test
@@ -61,7 +75,7 @@ static uint32_t hash_values_crc[2][12] = {{
  */
 #define HASHTEST_ITERATIONS 1000000
 #define MAX_KEYSIZE 64
-static rte_hash_function hashtest_funcs[] = {rte_jhash, rte_hash_crc};
+static rte_hash_function hashtest_funcs[] = {rte_jhash, rte_hash_crc, rte_hash_xor32};
 static uint32_t hashtest_initvals[] = {0, 0xdeadbeef};
 static uint32_t hashtest_key_lens[] = {
 	1, 2,                 /* Unusual key sizes */
@@ -84,6 +98,9 @@ get_hash_name(rte_hash_function f)
 
 	if (f == rte_hash_crc)
 		return "rte_hash_crc";
+
+	if (f == rte_hash_xor32)
+		return "rte_hash_xor32";
 
 	return "UnknownHash";
 }
@@ -171,6 +188,16 @@ verify_precalculated_hash_func_tests(void)
 				       "Expected 0x%x, but got 0x%x\n",
 				       hashtest_key_lens[i], hashtest_initvals[j],
 				       hash_values_crc[j][i], hash);
+				return -1;
+			}
+
+			hash = rte_hash_xor32(key, hashtest_key_lens[i],
+					hashtest_initvals[j]);
+			if (hash != hash_values_xor32[j][i]) {
+				printf("XOR32 for %u bytes with initial value 0x%x."
+				       " Expected 0x%x, but got 0x%x\n",
+				       hashtest_key_lens[i], hashtest_initvals[j],
+				       hash_values_xor32[j][i], hash);
 				return -1;
 			}
 		}
