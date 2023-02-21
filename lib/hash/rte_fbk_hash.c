@@ -8,6 +8,8 @@
 #include <errno.h>
 
 #include <sys/queue.h>
+
+#include <rte_cpuflags.h>
 #include <rte_eal_memconfig.h>
 #include <rte_malloc.h>
 #include <rte_common.h>
@@ -17,6 +19,9 @@
 #include <rte_tailq.h>
 
 #include "rte_fbk_hash.h"
+
+RTE_LOG_REGISTER_SUFFIX(fbk_hash_logtype, fbk, INFO);
+#define RTE_LOGTYPE_HASH fbk_hash_logtype
 
 TAILQ_HEAD(rte_fbk_hash_list, rte_tailq_entry);
 
