@@ -9,6 +9,9 @@
 
 #include "rte_port_kni.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_kni_logtype, kni, INFO);
+#define RTE_LOGTYPE_PORT port_kni_logtype
+
 /*
  * Port KNI Reader
  */
