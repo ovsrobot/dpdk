@@ -128,6 +128,7 @@ struct iavf_vsi {
 	uint16_t base_vector;
 	uint16_t msix_intr;      /* The MSIX interrupt binds to VSI */
 	struct iavf_eth_xstats eth_stats_offset;
+	struct virtchnl_eth_stats eth_stats;
 };
 
 struct rte_flow;
@@ -326,6 +327,8 @@ struct iavf_adapter {
 	struct iavf_devargs devargs;
 };
 
+typedef void (*virtchnl_callback)(struct rte_eth_dev *dev, void *args);
+
 /* IAVF_DEV_PRIVATE_TO */
 #define IAVF_DEV_PRIVATE_TO_ADAPTER(adapter) \
 	((struct iavf_adapter *)adapter)
@@ -425,8 +428,10 @@ _atomic_set_async_response_cmd(struct iavf_info *vf, enum virtchnl_ops ops)
 }
 int iavf_check_api_version(struct iavf_adapter *adapter);
 int iavf_get_vf_resource(struct iavf_adapter *adapter);
-void iavf_dev_event_handler_fini(void);
-int iavf_dev_event_handler_init(void);
+void iavf_dev_virtchnl_handler_fini(void);
+void iavf_dev_virtchnl_callback_post(struct rte_eth_dev *dev,
+			 virtchnl_callback cb, void *args);
+int iavf_dev_virtchnl_handler_init(void);
 void iavf_handle_virtchnl_msg(struct rte_eth_dev *dev);
 int iavf_enable_vlan_strip(struct iavf_adapter *adapter);
 int iavf_disable_vlan_strip(struct iavf_adapter *adapter);

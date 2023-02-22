@@ -1729,6 +1729,17 @@ iavf_update_stats(struct iavf_vsi *vsi, struct virtchnl_eth_stats *nes)
 	iavf_stat_update_32(&oes->tx_discards, &nes->tx_discards);
 }
 
+static void iavf_dev_stats_get_callback(struct rte_eth_dev *dev, void *args)
+{
+	struct virtchnl_eth_stats *eth_stats = (struct virtchnl_eth_stats *)args;
+	struct virtchnl_eth_stats *pstats = NULL;
+	struct iavf_adapter *adapter =
+		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	int ret = iavf_query_stats(adapter, &pstats);
+	if (ret == 0)
+		rte_memcpy(eth_stats, pstats, sizeof(struct virtchnl_eth_stats));
+}
+
 static int
 iavf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
@@ -1738,8 +1749,13 @@ iavf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 	struct iavf_vsi *vsi = &vf->vsi;
 	struct virtchnl_eth_stats *pstats = NULL;
 	int ret;
-
-	ret = iavf_query_stats(adapter, &pstats);
+	if (rte_thread_is_intr()) {
+		pstats = &vsi->eth_stats;
+		iavf_dev_virtchnl_callback_post(dev, iavf_dev_stats_get_callback, (void *)pstats);
+		ret = 0;
+	} else {
+		ret = iavf_query_stats(adapter, &pstats);
+	}
 	if (ret == 0) {
 		uint8_t crc_stats_len = (dev->data->dev_conf.rxmode.offloads &
 					 RTE_ETH_RX_OFFLOAD_KEEP_CRC) ? 0 :
@@ -2634,7 +2650,7 @@ iavf_dev_init(struct rte_eth_dev *eth_dev)
 	rte_ether_addr_copy((struct rte_ether_addr *)hw->mac.addr,
 			&eth_dev->data->mac_addrs[0]);
 
-	if (iavf_dev_event_handler_init())
+	if (iavf_dev_virtchnl_handler_init())
 		goto init_vf_err;
 
 	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_WB_ON_ITR) {
@@ -2791,7 +2807,7 @@ iavf_dev_uninit(struct rte_eth_dev *dev)
 
 	iavf_dev_close(dev);
 
-	iavf_dev_event_handler_fini();
+	iavf_dev_virtchnl_handler_fini();
 
 	return 0;
 }
