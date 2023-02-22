@@ -51,7 +51,8 @@
 #include "perf_core.h"
 #include "main.h"
 
-#define RTE_LOGTYPE_L3FWD_POWER RTE_LOGTYPE_USER1
+RTE_LOG_REGISTER(l3fwd_power_logtype, l3fwd.power, INFO);
+#define RTE_LOGTYPE_L3FWD_POWER l3fwd_power_logtype
 
 #define MAX_PKT_BURST 32
 
@@ -2236,7 +2237,7 @@ init_power_library(void)
 		/* init power management library */
 		ret = rte_power_init(lcore_id);
 		if (ret) {
-			RTE_LOG(ERR, POWER,
+			RTE_LOG(ERR, L3FWD_POWER,
 				"Library initialization failed on core %u\n",
 				lcore_id);
 			return ret;
@@ -2245,7 +2246,7 @@ init_power_library(void)
 		env = rte_power_get_env();
 		if (env != PM_ENV_ACPI_CPUFREQ &&
 				env != PM_ENV_PSTATE_CPUFREQ) {
-			RTE_LOG(ERR, POWER,
+			RTE_LOG(ERR, L3FWD_POWER,
 				"Only ACPI and PSTATE mode are supported\n");
 			return -1;
 		}
@@ -2263,7 +2264,7 @@ deinit_power_library(void)
 		/* deinit power management library */
 		ret = rte_power_exit(lcore_id);
 		if (ret) {
-			RTE_LOG(ERR, POWER,
+			RTE_LOG(ERR, L3FWD_POWER,
 				"Library deinitialization failed on core %u\n",
 				lcore_id);
 			return ret;
@@ -2332,7 +2333,7 @@ update_telemetry(__rte_unused struct rte_timer *tim,
 	ret = rte_metrics_update_values(RTE_METRICS_GLOBAL, telstats_index,
 					values, RTE_DIM(values));
 	if (ret < 0)
-		RTE_LOG(WARNING, POWER, "failed to update metrics\n");
+		RTE_LOG(WARNING, L3FWD_POWER, "failed to update metrics\n");
 }
 
 static int
@@ -2381,7 +2382,7 @@ launch_timer(unsigned int lcore_id)
 				rte_get_main_lcore());
 	}
 
-	RTE_LOG(INFO, POWER, "Bring up the Timer\n");
+	RTE_LOG(INFO, L3FWD_POWER, "Bring up the Timer\n");
 
 	telemetry_setup_timer();
 
@@ -2397,7 +2398,7 @@ launch_timer(unsigned int lcore_id)
 		}
 	}
 
-	RTE_LOG(INFO, POWER, "Timer_subsystem is done\n");
+	RTE_LOG(INFO, L3FWD_POWER, "Timer_subsystem is done\n");
 
 	return 0;
 }
