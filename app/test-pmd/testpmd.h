@@ -215,7 +215,7 @@ struct port_table {
 struct port_flow {
 	struct port_flow *next; /**< Next flow in list. */
 	struct port_flow *tmp; /**< Temporary linking. */
-	uint32_t id; /**< Flow rule ID. */
+	uintptr_t id; /**< Flow rule ID. */
 	struct rte_flow *flow; /**< Opaque flow object returned by PMD. */
 	struct rte_flow_conv_rule rule; /**< Saved flow rule description. */
 	enum age_action_context_type age_type; /**< Age action context type. */
@@ -948,7 +948,7 @@ int port_queue_flow_create(portid_t port_id, queueid_t queue_id,
 			   const struct rte_flow_item *pattern,
 			   const struct rte_flow_action *actions);
 int port_queue_flow_destroy(portid_t port_id, queueid_t queue_id,
-			    bool postpone, uint32_t n, const uint32_t *rule);
+			    bool postpone, uint32_t n, const uintptr_t *rule);
 int port_queue_action_handle_create(portid_t port_id, uint32_t queue_id,
 			bool postpone, uint32_t id,
 			const struct rte_flow_indir_action_conf *conf,
@@ -984,11 +984,11 @@ int port_action_handle_query(portid_t port_id, uint32_t id);
 void update_age_action_context(const struct rte_flow_action *actions,
 		     struct port_flow *pf);
 int mcast_addr_pool_destroy(portid_t port_id);
-int port_flow_destroy(portid_t port_id, uint32_t n, const uint32_t *rule);
+int port_flow_destroy(portid_t port_id, uint32_t n, const uintptr_t *rule);
 int port_flow_flush(portid_t port_id);
 int port_flow_dump(portid_t port_id, bool dump_all,
-			uint32_t rule, const char *file_name);
-int port_flow_query(portid_t port_id, uint32_t rule,
+			uintptr_t rule, const char *file_name);
+int port_flow_query(portid_t port_id, uintptr_t rule,
 		    const struct rte_flow_action *action);
 void port_flow_list(portid_t port_id, uint32_t n, const uint32_t *group);
 void port_flow_aged(portid_t port_id, uint8_t destroy);
