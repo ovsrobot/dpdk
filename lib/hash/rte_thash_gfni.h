@@ -9,16 +9,12 @@
 extern "C" {
 #endif
 
-#include <rte_compat.h>
-#include <rte_log.h>
-
 #ifdef RTE_ARCH_X86
-
 #include <rte_thash_x86_gfni.h>
-
 #endif
 
 #ifndef RTE_THASH_GFNI_DEFINED
+#include <rte_compat.h>
 
 /**
  * Calculate Toeplitz hash.
@@ -38,13 +34,8 @@ extern "C" {
  *  Calculated Toeplitz hash value.
  */
 __rte_experimental
-static inline uint32_t
-rte_thash_gfni(const uint64_t *mtrx __rte_unused,
-	const uint8_t *key __rte_unused, int len __rte_unused)
-{
-	RTE_LOG(ERR, HASH, "%s is undefined under given arch\n", __func__);
-	return 0;
-}
+uint32_t
+rte_thash_gfni(const uint64_t *mtrx, const uint8_t *key, int len);
 
 /**
  * Bulk implementation for Toeplitz hash.
@@ -67,17 +58,9 @@ rte_thash_gfni(const uint64_t *mtrx __rte_unused,
  *  Number of tuples to hash.
  */
 __rte_experimental
-static inline void
-rte_thash_gfni_bulk(const uint64_t *mtrx __rte_unused,
-	int len __rte_unused, uint8_t *tuple[] __rte_unused,
-	uint32_t val[], uint32_t num)
-{
-	unsigned int i;
-
-	RTE_LOG(ERR, HASH, "%s is undefined under given arch\n", __func__);
-	for (i = 0; i < num; i++)
-		val[i] = 0;
-}
+void
+rte_thash_gfni_bulk(const uint64_t *mtrx, int len, uint8_t *tuple[],
+		    uint32_t val[], uint32_t num);
 
 #endif /* RTE_THASH_GFNI_DEFINED */
 
