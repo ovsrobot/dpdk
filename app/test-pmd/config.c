@@ -3303,7 +3303,8 @@ port_flow_create(portid_t port_id,
 		 const struct rte_flow_attr *attr,
 		 const struct rte_flow_item *pattern,
 		 const struct rte_flow_action *actions,
-		 const struct tunnel_ops *tunnel_ops)
+		 const struct tunnel_ops *tunnel_ops,
+		 uintptr_t user_id)
 {
 	struct rte_flow *flow;
 	struct rte_port *port;
@@ -3351,17 +3352,23 @@ port_flow_create(portid_t port_id,
 	}
 	pf->next = port->flow_list;
 	pf->id = id;
+	pf->user_id = user_id;
 	pf->flow = flow;
 	port->flow_list = pf;
 	if (tunnel_ops->enabled)
 		port_flow_tunnel_offload_cmd_release(port_id, tunnel_ops, pft);
-	printf("Flow rule #%"PRIu64" created\n", pf->id);
+	if (user_id)
+		printf("Flow rule #%"PRIu64" created, user-id 0x%"PRIx64"\n",
+		       pf->id, pf->user_id);
+	else
+		printf("Flow rule #%"PRIu64" created\n", pf->id);
 	return 0;
 }
 
 /** Destroy a number of flow rules. */
 int
-port_flow_destroy(portid_t port_id, uint32_t n, const uintptr_t *rule)
+port_flow_destroy(portid_t port_id, uint32_t n, const uintptr_t *rule,
+		  bool is_user_id)
 {
 	struct rte_port *port;
 	struct port_flow **tmp;
@@ -3379,7 +3386,7 @@ port_flow_destroy(portid_t port_id, uint32_t n, const uintptr_t *rule)
 			struct rte_flow_error error;
 			struct port_flow *pf = *tmp;
 
-			if (rule[i] != pf->id)
+			if (rule[i] != (is_user_id ? pf->user_id : pf->id))
 				continue;
 			/*
 			 * Poisoning to make sure PMDs update it in case
@@ -3390,7 +3397,13 @@ port_flow_destroy(portid_t port_id, uint32_t n, const uintptr_t *rule)
 				ret = port_flow_complain(&error);
 				continue;
 			}
-			printf("Flow rule #%"PRIu64" destroyed\n", pf->id);
+			if (is_user_id)
+				printf("Flow rule #%"PRIu64" destroyed, "
+				       "user-id 0x%"PRIx64"\n",
+				       pf->id, pf->user_id);
+			else
+				printf("Flow rule #%"PRIu64" destroyed\n",
+				       pf->id);
 			*tmp = pf->next;
 			free(pf);
 			break;
@@ -3436,7 +3449,7 @@ port_flow_flush(portid_t port_id)
 /** Dump flow rules. */
 int
 port_flow_dump(portid_t port_id, bool dump_all, uintptr_t rule_id,
-		const char *file_name)
+		const char *file_name, bool is_user_id)
 {
 	int ret = 0;
 	FILE *file = stdout;
@@ -3454,7 +3467,8 @@ port_flow_dump(portid_t port_id, bool dump_all, uintptr_t rule_id,
 		port = &ports[port_id];
 		pflow = port->flow_list;
 		while (pflow) {
-			if (rule_id != pflow->id) {
+			if (rule_id !=
+			    (is_user_id ? pflow->user_id : pflow->id)) {
 				pflow = pflow->next;
 			} else {
 				tmpFlow = pflow->flow;
@@ -3496,7 +3510,7 @@ port_flow_dump(portid_t port_id, bool dump_all, uintptr_t rule_id,
 /** Query a flow rule. */
 int
 port_flow_query(portid_t port_id, uintptr_t rule,
-		const struct rte_flow_action *action)
+		const struct rte_flow_action *action, bool is_user_id)
 {
 	struct rte_flow_error error;
 	struct rte_port *port;
@@ -3514,7 +3528,7 @@ port_flow_query(portid_t port_id, uintptr_t rule,
 		return -EINVAL;
 	port = &ports[port_id];
 	for (pf = port->flow_list; pf; pf = pf->next)
-		if (pf->id == rule)
+		if ((is_user_id ? pf->user_id : pf->id) == rule)
 			break;
 	if (!pf) {
 		fprintf(stderr, "Flow rule #%"PRIu64" not found\n", rule);
@@ -3634,7 +3648,7 @@ port_flow_aged(portid_t port_id, uint8_t destroy)
 			       ctx.pf->rule.attr->egress ? 'e' : '-',
 			       ctx.pf->rule.attr->transfer ? 't' : '-');
 			if (destroy && !port_flow_destroy(port_id, 1,
-							  &ctx.pf->id))
+							  &ctx.pf->id, false))
 				total++;
 			break;
 		case ACTION_AGE_CONTEXT_TYPE_INDIRECT_ACTION:

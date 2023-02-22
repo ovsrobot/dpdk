@@ -3010,12 +3010,14 @@ following sections.
 
    flow create {port_id}
        [group {group_id}] [priority {level}] [ingress] [egress] [transfer]
-       pattern {item} [/ {item} [...]] / end
+       [user_id {user_id}] pattern {item} [/ {item} [...]] / end
        actions {action} [/ {action} [...]] / end
 
 - Destroy specific flow rules::
 
-   flow destroy {port_id} rule {rule_id} [...]
+   flow destroy {port_id} rule {rule_id} [...] [user_id]
+   [user_id] is used as an optional flag to indicate the rule_id is the
+   user_id assigned in "flow create".
 
 - Destroy all flow rules::
 
@@ -3023,7 +3025,9 @@ following sections.
 
 - Query an existing flow rule::
 
-   flow query {port_id} {rule_id} {action}
+   flow query {port_id} {rule_id} {action} [user_id]
+   [user_id] is used as an optional flag to indicate the rule_id is the
+   user_id assigned in "flow create".
 
 - List existing flow rules sorted by priority, filtered by group
   identifiers::
@@ -3040,7 +3044,9 @@ following sections.
 
   for one flow::
 
-   flow dump {port_id} rule {rule_id} {output_file}
+   flow dump {port_id} rule {rule_id} {output_file} [user_id]
+   [user_id] is used as an optional flag to indicate the rule_id is the
+   user_id assigned in "flow create".
 
 - List and destroy aged flow rules::
 
