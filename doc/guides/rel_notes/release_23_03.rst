@@ -237,6 +237,8 @@ API Changes
 * The experimental structures ``struct rte_graph_param``, ``struct rte_graph``
   and ``struct graph`` were updated to support pcap trace in the graph library.
 
+* The ``Head ip`` in the displaying of ``/eal/heap_info`` telemetry command
+  is modified to ``Heap_id`` to ensure that it can be printed.
 
 ABI Changes
 -----------
