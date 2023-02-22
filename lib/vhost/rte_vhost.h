@@ -136,6 +136,7 @@ struct rte_vhost_mem_region {
 	void	 *mmap_addr;
 	uint64_t mmap_size;
 	int fd;
+	uint64_t alignment;
 };
 
 /**
