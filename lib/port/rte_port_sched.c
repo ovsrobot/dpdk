@@ -7,6 +7,9 @@
 
 #include "rte_port_sched.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_sched_logtype, sched, INFO);
+#define RTE_LOGTYPE_PORT port_sched_logtype
+
 /*
  * Reader
  */

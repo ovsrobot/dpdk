@@ -8,6 +8,9 @@
 
 #include "rte_port_sym_crypto.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_crypto_logtype, crypto, INFO);
+#define RTE_LOGTYPE_PORT port_crypto_logtype
+
 /*
  * Port Crypto Reader
  */
