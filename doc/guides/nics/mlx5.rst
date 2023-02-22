@@ -107,6 +107,7 @@ Features
 - Sub-Function representors.
 - Sub-Function.
 - Matching on represented port.
+- Matching on aggregated affinity.
 
 
 Limitations
@@ -615,6 +616,11 @@ Limitations
 
 - The NIC egress flow rules on representor port are not supported.
 
+- Match on aggregated affinity:
+
+  - Supports NIC ingress flow in group 0.
+  - Supports E-Switch flow in group 0 and depends on
+    device-managed flow steering (DMFS) mode.
 
 Statistics
 ----------
