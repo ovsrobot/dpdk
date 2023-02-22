@@ -8,6 +8,9 @@
 
 #include "rte_table_stub.h"
 
+RTE_LOG_REGISTER_SUFFIX(table_stub_logtype, stub, INFO);
+#define RTE_LOGTYPE_TABLE table_stub_logtype
+
 #ifdef RTE_TABLE_STATS_COLLECT
 
 #define RTE_TABLE_LPM_STATS_PKTS_IN_ADD(table, val) \

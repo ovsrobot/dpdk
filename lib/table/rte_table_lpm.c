@@ -13,6 +13,9 @@
 
 #include "rte_table_lpm.h"
 
+RTE_LOG_REGISTER_SUFFIX(table_lpm_logtype, lpm, INFO);
+#define RTE_LOGTYPE_TABLE table_lpm_logtype
+
 #ifndef RTE_TABLE_LPM_MAX_NEXT_HOPS
 #define RTE_TABLE_LPM_MAX_NEXT_HOPS                        65536
 #endif
