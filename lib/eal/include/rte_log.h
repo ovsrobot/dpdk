@@ -30,7 +30,7 @@ extern "C" {
 #define RTE_LOGTYPE_MALLOC     1 /**< Log related to malloc. */
 #define RTE_LOGTYPE_RING       2 /**< Log related to ring. */
 #define RTE_LOGTYPE_MEMPOOL    3 /**< Log related to mempool. */
-#define RTE_LOGTYPE_TIMER      4 /**< Log related to timers. */
+				 /* was RTE_LOGTYPE_TIMER */
 #define RTE_LOGTYPE_PMD        5 /**< Log related to poll mode driver. */
 #define RTE_LOGTYPE_HASH       6 /**< Log related to hash table. */
 #define RTE_LOGTYPE_LPM        7 /**< Log related to LPM. */
