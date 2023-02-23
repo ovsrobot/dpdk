@@ -2418,9 +2418,50 @@ start_packet_forwarding(int with_tx_first)
 	if (!pkt_fwd_shared_rxq_check())
 		return;
 
-	if (stream_init != NULL)
-		for (i = 0; i < cur_fwd_config.nb_fwd_streams; i++)
+	if (stream_init != NULL) {
+		for (i = 0; i < cur_fwd_config.nb_fwd_streams; i++) {
+			if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
+				struct fwd_stream *fs = fwd_streams[i];
+				struct rte_eth_rxq_info rx_qinfo;
+				struct rte_eth_txq_info tx_qinfo;
+				int32_t rc;
+				rc = rte_eth_rx_queue_info_get(fs->rx_port,
+						fs->rx_queue, &rx_qinfo);
+				if (rc == 0) {
+					ports[fs->rx_port].rxq[fs->rx_queue].state =
+						rx_qinfo.queue_state;
+				} else if (rc == -ENOTSUP) {
+					/* Set the rxq state to RTE_ETH_QUEUE_STATE_STARTED
+					 * to ensure that the PMDs do not implement
+					 * rte_eth_rx_queue_info_get can forward.
+					 */
+					ports[fs->rx_port].rxq[fs->rx_queue].state =
+						RTE_ETH_QUEUE_STATE_STARTED;
+				} else {
+					TESTPMD_LOG(WARNING,
+						"Failed to get rx queue info\n");
+				}
+
+				rc = rte_eth_tx_queue_info_get(fs->tx_port,
+						fs->tx_queue, &tx_qinfo);
+				if (rc == 0) {
+					ports[fs->tx_port].txq[fs->tx_queue].state =
+						tx_qinfo.queue_state;
+				} else if (rc == -ENOTSUP) {
+					/* Set the txq state to RTE_ETH_QUEUE_STATE_STARTED
+					 * to ensure that the PMDs do not implement
+					 * rte_eth_tx_queue_info_get can forward.
+					 */
+					ports[fs->tx_port].txq[fs->tx_queue].state =
+						RTE_ETH_QUEUE_STATE_STARTED;
+				} else {
+					TESTPMD_LOG(WARNING,
+						"Failed to get tx queue info\n");
+				}
+			}
 			stream_init(fwd_streams[i]);
+		}
+	}
 
 	port_fwd_begin = cur_fwd_config.fwd_eng->port_fwd_begin;
 	if (port_fwd_begin != NULL) {
