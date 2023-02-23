@@ -155,6 +155,7 @@ New Features
 * **Updated NVIDIA mlx5 driver.**
 
   * Added support for matching on ICMPv6 ID and sequence fields.
+  * Added support for MPLSoUDP in hardware steering.
 
 * **Updated Wangxun ngbe driver.**
 
