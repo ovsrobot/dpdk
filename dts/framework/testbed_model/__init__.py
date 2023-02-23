@@ -13,6 +13,7 @@ from .dpdk import MesonArgs
 from .hw import (
     LogicalCore,
     LogicalCoreCount,
+    LogicalCoreCountFilter,
     LogicalCoreList,
     LogicalCoreListFilter,
     VirtualDevice,
