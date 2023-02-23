@@ -6,6 +6,8 @@
 Various utilities used for configuring, building and running DPDK.
 """
 
+from .hw import LogicalCoreList, VirtualDevice
+
 
 class MesonArgs(object):
     """
@@ -31,3 +33,46 @@ class MesonArgs(object):
 
     def __str__(self) -> str:
         return " ".join(f"{self.default_library} {self.dpdk_args}".split())
+
+
+class EalParameters(object):
+    def __init__(
+        self,
+        lcore_list: LogicalCoreList,
+        memory_channels: int,
+        prefix: str,
+        no_pci: bool,
+        vdevs: list[VirtualDevice],
+        other_eal_param: str,
+    ):
+        """
+        Generate eal parameters character string;
+        :param lcore_list: the list of logical cores to use.
+        :param memory_channels: the number of memory channels to use.
+        :param prefix: set file prefix string, eg:
+                        prefix='vf'
+        :param no_pci: switch of disable PCI bus eg:
+                        no_pci=True
+        :param vdevs: virtual device list, eg:
+                        vdevs=['net_ring0', 'net_ring1']
+        :param other_eal_param: user defined DPDK eal parameters, eg:
+                        other_eal_param='--single-file-segments'
+        """
+        self._lcore_list = f"-l {lcore_list}"
+        self._memory_channels = f"-n {memory_channels}"
+        self._prefix = prefix
+        if prefix:
+            self._prefix = f"--file-prefix={prefix}"
+        self._no_pci = "--no-pci" if no_pci else ""
+        self._vdevs = " ".join(f"--vdev {vdev}" for vdev in vdevs)
+        self._other_eal_param = other_eal_param
+
+    def __str__(self) -> str:
+        return (
+            f"{self._lcore_list} "
+            f"{self._memory_channels} "
+            f"{self._prefix} "
+            f"{self._no_pci} "
+            f"{self._vdevs} "
+            f"{self._other_eal_param}"
+        )
