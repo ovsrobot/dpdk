@@ -737,6 +737,40 @@ log_addr_to_gpa(struct virtio_net *dev, struct vhost_virtqueue *vq)
 	return log_gpa;
 }
 
+uint64_t
+hua_to_alignment(struct rte_vhost_memory *mem, void *ptr)
+{
+	struct rte_vhost_mem_region *r;
+	uint32_t i;
+	uintptr_t hua = (uintptr_t)ptr;
+
+	for (i = 0; i < mem->nregions; i++) {
+		r = &mem->regions[i];
+		if (hua >= r->host_user_addr &&
+			hua < r->host_user_addr + r->size) {
+			return r->alignment;
+		}
+	}
+
+	/* If region isn't found, don't align at all */
+	return 1;
+}
+
+void
+mem_set_dump(void *ptr, size_t size, bool enable, uint64_t pagesz)
+{
+#ifdef MADV_DONTDUMP
+	void *start = RTE_PTR_ALIGN_FLOOR(ptr, pagesz);
+	uintptr_t end = RTE_ALIGN_CEIL((uintptr_t)ptr + size, pagesz);
+	size_t len = end - (uintptr_t)start;
+
+	if (madvise(start, len, enable ? MADV_DODUMP : MADV_DONTDUMP) == -1) {
+		rte_log(RTE_LOG_INFO, vhost_config_log_level,
+			"VHOST_CONFIG: could not set coredump preference (%s).\n", strerror(errno));
+	}
+#endif
+}
+
 static void
 translate_ring_addresses(struct virtio_net **pdev, struct vhost_virtqueue **pvq)
 {
@@ -767,6 +801,8 @@ translate_ring_addresses(struct virtio_net **pdev, struct vhost_virtqueue **pvq)
 			return;
 		}
 
+		mem_set_dump(vq->desc_packed, len, true,
+			hua_to_alignment(dev->mem, vq->desc_packed));
 		numa_realloc(&dev, &vq);
 		*pdev = dev;
 		*pvq = vq;
@@ -782,6 +818,8 @@ translate_ring_addresses(struct virtio_net **pdev, struct vhost_virtqueue **pvq)
 			return;
 		}
 
+		mem_set_dump(vq->driver_event, len, true,
+			hua_to_alignment(dev->mem, vq->driver_event));
 		len = sizeof(struct vring_packed_desc_event);
 		vq->device_event = (struct vring_packed_desc_event *)
 					(uintptr_t)ring_addr_to_vva(dev,
@@ -793,9 +831,8 @@ translate_ring_addresses(struct virtio_net **pdev, struct vhost_virtqueue **pvq)
 			return;
 		}
 
-		mem_set_dump(vq->desc_packed, len, true);
-		mem_set_dump(vq->driver_event, len, true);
-		mem_set_dump(vq->device_event, len, true);
+		mem_set_dump(vq->device_event, len, true,
+			hua_to_alignment(dev->mem, vq->device_event));
 		vq->access_ok = true;
 		return;
 	}
@@ -812,6 +849,7 @@ translate_ring_addresses(struct virtio_net **pdev, struct vhost_virtqueue **pvq)
 		return;
 	}
 
+	mem_set_dump(vq->desc, len, true, hua_to_alignment(dev->mem, vq->desc));
 	numa_realloc(&dev, &vq);
 	*pdev = dev;
 	*pvq = vq;
@@ -827,6 +865,7 @@ translate_ring_addresses(struct virtio_net **pdev, struct vhost_virtqueue **pvq)
 		return;
 	}
 
+	mem_set_dump(vq->avail, len, true, hua_to_alignment(dev->mem, vq->avail));
 	len = sizeof(struct vring_used) +
 		sizeof(struct vring_used_elem) * vq->size;
 	if (dev->features & (1ULL << VIRTIO_RING_F_EVENT_IDX))
@@ -839,6 +878,8 @@ translate_ring_addresses(struct virtio_net **pdev, struct vhost_virtqueue **pvq)
 		return;
 	}
 
+	mem_set_dump(vq->used, len, true, hua_to_alignment(dev->mem, vq->used));
+
 	if (vq->last_used_idx != vq->used->idx) {
 		VHOST_LOG_CONFIG(dev->ifname, WARNING,
 			"last_used_idx (%u) and vq->used->idx (%u) mismatches;\n",
@@ -849,9 +890,6 @@ translate_ring_addresses(struct virtio_net **pdev, struct vhost_virtqueue **pvq)
 			"some packets maybe resent for Tx and dropped for Rx\n");
 	}
 
-	mem_set_dump(vq->desc, len, true);
-	mem_set_dump(vq->avail, len, true);
-	mem_set_dump(vq->used, len, true);
 	vq->access_ok = true;
 
 	VHOST_LOG_CONFIG(dev->ifname, DEBUG, "mapped address desc: %p\n", vq->desc);
@@ -1230,7 +1268,8 @@ vhost_user_mmap_region(struct virtio_net *dev,
 	region->mmap_addr = mmap_addr;
 	region->mmap_size = mmap_size;
 	region->host_user_addr = (uint64_t)(uintptr_t)mmap_addr + mmap_offset;
-	mem_set_dump(mmap_addr, mmap_size, false);
+	region->alignment = alignment;
+	mem_set_dump(mmap_addr, mmap_size, false, alignment);
 
 	if (dev->async_copy) {
 		if (add_guest_pages(dev, region, alignment) < 0) {
@@ -1535,7 +1574,6 @@ inflight_mem_alloc(struct virtio_net *dev, const char *name, size_t size, int *f
 		return NULL;
 	}
 
-	mem_set_dump(ptr, size, false);
 	*fd = mfd;
 	return ptr;
 }
@@ -1566,6 +1604,7 @@ vhost_user_get_inflight_fd(struct virtio_net **pdev,
 	uint64_t pervq_inflight_size, mmap_size;
 	uint16_t num_queues, queue_size;
 	struct virtio_net *dev = *pdev;
+	uint64_t alignment;
 	int fd, i, j;
 	int numa_node = SOCKET_ID_ANY;
 	void *addr;
@@ -1628,6 +1667,8 @@ vhost_user_get_inflight_fd(struct virtio_net **pdev,
 		dev->inflight_info->fd = -1;
 	}
 
+	alignment = get_blk_size(fd);
+	mem_set_dump(addr, mmap_size, false, alignment);
 	dev->inflight_info->addr = addr;
 	dev->inflight_info->size = ctx->msg.payload.inflight.mmap_size = mmap_size;
 	dev->inflight_info->fd = ctx->fds[0] = fd;
@@ -1744,10 +1785,10 @@ vhost_user_set_inflight_fd(struct virtio_net **pdev,
 		dev->inflight_info->fd = -1;
 	}
 
-	mem_set_dump(addr, mmap_size, false);
 	dev->inflight_info->fd = fd;
 	dev->inflight_info->addr = addr;
 	dev->inflight_info->size = mmap_size;
+	mem_set_dump(addr, mmap_size, false, get_blk_size(fd));
 
 	for (i = 0; i < num_queues; i++) {
 		vq = dev->virtqueue[i];
@@ -2242,6 +2283,7 @@ vhost_user_set_log_base(struct virtio_net **pdev,
 	struct virtio_net *dev = *pdev;
 	int fd = ctx->fds[0];
 	uint64_t size, off;
+	uint64_t alignment;
 	void *addr;
 	uint32_t i;
 
@@ -2280,6 +2322,7 @@ vhost_user_set_log_base(struct virtio_net **pdev,
 	 * fail when offset is not page size aligned.
 	 */
 	addr = mmap(0, size + off, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	alignment = get_blk_size(fd);
 	close(fd);
 	if (addr == MAP_FAILED) {
 		VHOST_LOG_CONFIG(dev->ifname, ERR, "mmap log base failed!\n");
@@ -2296,7 +2339,7 @@ vhost_user_set_log_base(struct virtio_net **pdev,
 	dev->log_addr = (uint64_t)(uintptr_t)addr;
 	dev->log_base = dev->log_addr + off;
 	dev->log_size = size;
-	mem_set_dump(addr, size, false);
+	mem_set_dump(addr, size + off, false, alignment);
 
 	for (i = 0; i < dev->nr_vring; i++) {
 		struct vhost_virtqueue *vq = dev->virtqueue[i];

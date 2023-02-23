@@ -149,7 +149,6 @@ vhost_user_iotlb_cache_remove_all(struct vhost_virtqueue *vq)
 	rte_rwlock_write_lock(&vq->iotlb_lock);
 
 	RTE_TAILQ_FOREACH_SAFE(node, &vq->iotlb_list, next, temp_node) {
-		mem_set_dump((void *)(uintptr_t)node->uaddr, node->size, true);
 		TAILQ_REMOVE(&vq->iotlb_list, node, next);
 		vhost_user_iotlb_pool_put(vq, node);
 	}
@@ -171,7 +170,6 @@ vhost_user_iotlb_cache_random_evict(struct vhost_virtqueue *vq)
 
 	RTE_TAILQ_FOREACH_SAFE(node, &vq->iotlb_list, next, temp_node) {
 		if (!entry_idx) {
-			mem_set_dump((void *)(uintptr_t)node->uaddr, node->size, true);
 			TAILQ_REMOVE(&vq->iotlb_list, node, next);
 			vhost_user_iotlb_pool_put(vq, node);
 			vq->iotlb_cache_nr--;
@@ -224,14 +222,16 @@ vhost_user_iotlb_cache_insert(struct virtio_net *dev, struct vhost_virtqueue *vq
 			vhost_user_iotlb_pool_put(vq, new_node);
 			goto unlock;
 		} else if (node->iova > new_node->iova) {
-			mem_set_dump((void *)(uintptr_t)node->uaddr, node->size, true);
+			mem_set_dump((void *)(uintptr_t)new_node->uaddr, new_node->size, true,
+				hua_to_alignment(dev->mem, (void *)(uintptr_t)node->uaddr));
 			TAILQ_INSERT_BEFORE(node, new_node, next);
 			vq->iotlb_cache_nr++;
 			goto unlock;
 		}
 	}
 
-	mem_set_dump((void *)(uintptr_t)node->uaddr, node->size, true);
+	mem_set_dump((void *)(uintptr_t)new_node->uaddr, new_node->size, true,
+		hua_to_alignment(dev->mem, (void *)(uintptr_t)new_node->uaddr));
 	TAILQ_INSERT_TAIL(&vq->iotlb_list, new_node, next);
 	vq->iotlb_cache_nr++;
 
@@ -259,7 +259,6 @@ vhost_user_iotlb_cache_remove(struct vhost_virtqueue *vq,
 			break;
 
 		if (iova < node->iova + node->size) {
-			mem_set_dump((void *)(uintptr_t)node->uaddr, node->size, true);
 			TAILQ_REMOVE(&vq->iotlb_list, node, next);
 			vhost_user_iotlb_pool_put(vq, node);
 			vq->iotlb_cache_nr--;
