@@ -1292,6 +1292,8 @@ int
 malloc_heap_add_external_memory(struct malloc_heap *heap,
 		struct rte_memseg_list *msl)
 {
+	rte_spinlock_lock(&heap->lock);
+
 	/* erase contents of new memory */
 	memset(msl->base_va, 0, msl->len);
 
@@ -1308,6 +1310,11 @@ malloc_heap_add_external_memory(struct malloc_heap *heap,
 	eal_memalloc_mem_event_notify(RTE_MEM_EVENT_ALLOC,
 			msl->base_va, msl->len);
 
+	/* mark it as heap segment */
+	msl->heap = 1;
+
+	rte_spinlock_unlock(&heap->lock);
+
 	return 0;
 }
 
@@ -1315,7 +1322,12 @@ int
 malloc_heap_remove_external_memory(struct malloc_heap *heap, void *va_addr,
 		size_t len)
 {
-	struct malloc_elem *elem = heap->first;
+	struct malloc_elem *elem;
+	int ret = -1;
+
+	rte_spinlock_lock(&heap->lock);
+
+	elem = heap->first;
 
 	/* find element with specified va address */
 	while (elem != NULL && elem != va_addr) {
@@ -1323,20 +1335,24 @@ malloc_heap_remove_external_memory(struct malloc_heap *heap, void *va_addr,
 		/* stop if we've blown past our VA */
 		if (elem > (struct malloc_elem *)va_addr) {
 			rte_errno = ENOENT;
-			return -1;
+			goto out;
 		}
 	}
 	/* check if element was found */
 	if (elem == NULL || elem->msl->len != len) {
 		rte_errno = ENOENT;
-		return -1;
+		goto out;
 	}
 	/* if element's size is not equal to segment len, segment is busy */
 	if (elem->state == ELEM_BUSY || elem->size != len) {
 		rte_errno = EBUSY;
-		return -1;
+		goto out;
 	}
-	return destroy_elem(elem, len);
+	ret = destroy_elem(elem, len);
+
+out:
+	rte_spinlock_unlock(&heap->lock);
+	return ret;
 }
 
 int
@@ -1372,23 +1388,30 @@ malloc_heap_create(struct malloc_heap *heap, const char *heap_name)
 int
 malloc_heap_destroy(struct malloc_heap *heap)
 {
+	int ret = -1;
+
+	rte_spinlock_lock(&heap->lock);
+
 	if (heap->alloc_count != 0) {
 		RTE_LOG(ERR, EAL, "Heap is still in use\n");
 		rte_errno = EBUSY;
-		return -1;
+		goto fail;
 	}
 	if (heap->first != NULL || heap->last != NULL) {
 		RTE_LOG(ERR, EAL, "Heap still contains memory segments\n");
 		rte_errno = EBUSY;
-		return -1;
+		goto fail;
 	}
 	if (heap->total_size != 0)
 		RTE_LOG(ERR, EAL, "Total size not zero, heap is likely corrupt\n");
 
-	/* after this, the lock will be dropped */
-	memset(heap, 0, sizeof(*heap));
-
-	return 0;
+	RTE_BUILD_BUG_ON(offsetof(struct malloc_heap, lock) != 0);
+	memset(RTE_PTR_ADD(heap, sizeof(heap->lock)), 0,
+		sizeof(*heap) - sizeof(heap->lock));
+	ret = 0;
+fail:
+	rte_spinlock_unlock(&heap->lock);
+	return ret;
 }
 
 int

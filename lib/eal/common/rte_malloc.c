@@ -436,10 +436,7 @@ rte_malloc_heap_memory_add(const char *heap_name, void *va_addr, size_t len,
 		goto unlock;
 	}
 
-	rte_spinlock_lock(&heap->lock);
 	ret = malloc_heap_add_external_memory(heap, msl);
-	msl->heap = 1; /* mark it as heap segment */
-	rte_spinlock_unlock(&heap->lock);
 
 unlock:
 	rte_mcfg_mem_write_unlock();
@@ -482,9 +479,7 @@ rte_malloc_heap_memory_remove(const char *heap_name, void *va_addr, size_t len)
 		goto unlock;
 	}
 
-	rte_spinlock_lock(&heap->lock);
 	ret = malloc_heap_remove_external_memory(heap, va_addr, len);
-	rte_spinlock_unlock(&heap->lock);
 	if (ret != 0)
 		goto unlock;
 
@@ -655,12 +650,7 @@ rte_malloc_heap_destroy(const char *heap_name)
 		goto unlock;
 	}
 	/* sanity checks done, now we can destroy the heap */
-	rte_spinlock_lock(&heap->lock);
 	ret = malloc_heap_destroy(heap);
-
-	/* if we failed, lock is still active */
-	if (ret < 0)
-		rte_spinlock_unlock(&heap->lock);
 unlock:
 	rte_mcfg_mem_write_unlock();
 
