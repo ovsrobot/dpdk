@@ -49,6 +49,15 @@ EXPERIMENTAL {
 	__rte_mempool_trace_get_contig_blocks;
 	__rte_mempool_trace_default_cache;
 	__rte_mempool_trace_cache_flush;
+	__rte_mempool_trace_ops_populate;
+	__rte_mempool_trace_ops_alloc;
+	__rte_mempool_trace_ops_free;
+	__rte_mempool_trace_set_ops_byname;
+
+	# added in 23.03
+	__rte_mempool_trace_cache_zc_put_bulk;
+	__rte_mempool_trace_cache_zc_put_rewind;
+	__rte_mempool_trace_cache_zc_get_bulk;
 };
 
 INTERNAL {
