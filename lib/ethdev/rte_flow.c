@@ -297,6 +297,10 @@ error:
 
 static inline void
 fts_enter(struct rte_eth_dev *dev)
+#ifdef RTE_EXEC_ENV_FREEBSD
+	__rte_exclusive_lock_function(dev->data->flow_ops_mutex)
+	__rte_no_thread_safety_analysis
+#endif
 {
 	if (!(dev->data->dev_flags & RTE_ETH_DEV_FLOW_OPS_THREAD_SAFE))
 		pthread_mutex_lock(&dev->data->flow_ops_mutex);
@@ -304,6 +308,10 @@ fts_enter(struct rte_eth_dev *dev)
 
 static inline void
 fts_exit(struct rte_eth_dev *dev)
+#ifdef RTE_EXEC_ENV_FREEBSD
+	__rte_unlock_function(dev->data->flow_ops_mutex)
+	__rte_no_thread_safety_analysis
+#endif
 {
 	if (!(dev->data->dev_flags & RTE_ETH_DEV_FLOW_OPS_THREAD_SAFE))
 		pthread_mutex_unlock(&dev->data->flow_ops_mutex);
