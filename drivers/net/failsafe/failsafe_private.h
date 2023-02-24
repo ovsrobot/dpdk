@@ -403,6 +403,9 @@ fs_dev(struct sub_device *sdev) {
  */
 static inline int
 fs_lock(struct rte_eth_dev *dev, unsigned int is_alarm)
+#ifdef RTE_EXEC_ENV_FREEBSD
+	__rte_exclusive_trylock_function(0, PRIV(dev)->hotplug_mutex)
+#endif
 {
 	int ret;
 
@@ -430,6 +433,9 @@ fs_lock(struct rte_eth_dev *dev, unsigned int is_alarm)
  */
 static inline void
 fs_unlock(struct rte_eth_dev *dev, unsigned int is_alarm)
+#ifdef RTE_EXEC_ENV_FREEBSD
+	__rte_unlock_function(PRIV(dev)->hotplug_mutex)
+#endif
 {
 	int ret;
 
