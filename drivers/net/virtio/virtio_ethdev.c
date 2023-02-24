@@ -1149,11 +1149,11 @@ virtio_dev_pause(struct rte_eth_dev *dev)
 {
 	struct virtio_hw *hw = dev->data->dev_private;
 
-	rte_spinlock_lock(&hw->state_lock);
+	rte_spinlock_lock(&VIRTIO_DEV_TO_HW(dev)->state_lock);
 
 	if (hw->started == 0) {
 		/* Device is just stopped. */
-		rte_spinlock_unlock(&hw->state_lock);
+		rte_spinlock_unlock(&VIRTIO_DEV_TO_HW(dev)->state_lock);
 		return -1;
 	}
 	hw->started = 0;
@@ -1174,7 +1174,7 @@ virtio_dev_resume(struct rte_eth_dev *dev)
 	struct virtio_hw *hw = dev->data->dev_private;
 
 	hw->started = 1;
-	rte_spinlock_unlock(&hw->state_lock);
+	rte_spinlock_unlock(&VIRTIO_DEV_TO_HW(dev)->state_lock);
 }
 
 /*
@@ -1217,7 +1217,7 @@ virtio_notify_peers(struct rte_eth_dev *dev)
 	}
 
 	/* If virtio port just stopped, no need to send RARP */
-	if (virtio_dev_pause(dev) < 0) {
+	if (virtio_dev_pause(dev) != 0) {
 		rte_pktmbuf_free(rarp_mbuf);
 		return;
 	}
