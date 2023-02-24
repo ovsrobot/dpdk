@@ -13,5 +13,6 @@ sources = files('esp_inb.c', 'esp_outb.c',
 
 headers = files('rte_ipsec.h', 'rte_ipsec_sa.h', 'rte_ipsec_sad.h')
 indirect_headers += files('rte_ipsec_group.h')
+annotate_locks = false
 
 deps += ['mbuf', 'net', 'cryptodev', 'security', 'hash', 'telemetry']

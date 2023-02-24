@@ -21,3 +21,4 @@ sources = files(
         'ecore_sp.c',
         'elink.c',
 )
+annotate_locks = false
