@@ -79,3 +79,4 @@ testpmd_sources += files('mlx5_testpmd.c')
 subdir(exec_env)
 
 subdir('hws')
+annotate_locks = false
