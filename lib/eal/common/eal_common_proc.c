@@ -908,6 +908,9 @@ fail:
 static int
 mp_request_sync(const char *dst, struct rte_mp_msg *req,
 	       struct rte_mp_reply *reply, const struct timespec *ts)
+#ifdef RTE_EXEC_ENV_FREEBSD
+	__rte_exclusive_locks_required(pending_requests.lock)
+#endif
 {
 	int ret;
 	pthread_condattr_t attr;
