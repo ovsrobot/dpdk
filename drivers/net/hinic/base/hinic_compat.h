@@ -224,6 +224,9 @@ static inline int hinic_mutex_destroy(pthread_mutex_t *pthreadmutex)
 }
 
 static inline int hinic_mutex_lock(pthread_mutex_t *pthreadmutex)
+#ifdef RTE_EXEC_ENV_FREEBSD
+	__rte_exclusive_trylock_function(0, *pthreadmutex)
+#endif
 {
 	int err;
 	struct timespec tout;
@@ -239,6 +242,9 @@ static inline int hinic_mutex_lock(pthread_mutex_t *pthreadmutex)
 }
 
 static inline int hinic_mutex_unlock(pthread_mutex_t *pthreadmutex)
+#ifdef RTE_EXEC_ENV_FREEBSD
+	__rte_unlock_function(*pthreadmutex)
+#endif
 {
 	return pthread_mutex_unlock(pthreadmutex);
 }
