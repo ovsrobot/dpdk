@@ -112,8 +112,11 @@ int eth_virtio_dev_init(struct rte_eth_dev *eth_dev);
 
 void virtio_interrupt_handler(void *param);
 
-int virtio_dev_pause(struct rte_eth_dev *dev);
-void virtio_dev_resume(struct rte_eth_dev *dev);
+#define VIRTIO_DEV_TO_HW(dev) ((struct virtio_hw *)(dev)->data->dev_private)
+int virtio_dev_pause(struct rte_eth_dev *dev)
+	__rte_exclusive_trylock_function(0, &VIRTIO_DEV_TO_HW(dev)->state_lock);
+void virtio_dev_resume(struct rte_eth_dev *dev)
+	__rte_unlock_function(&VIRTIO_DEV_TO_HW(dev)->state_lock);
 int virtio_dev_stop(struct rte_eth_dev *dev);
 int virtio_dev_close(struct rte_eth_dev *dev);
 int virtio_inject_pkts(struct rte_eth_dev *dev, struct rte_mbuf **tx_pkts,
