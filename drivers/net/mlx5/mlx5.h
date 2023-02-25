@@ -1656,6 +1656,13 @@ struct mlx5_hw_ctrl_flow {
 	struct rte_flow *flow;
 };
 
+/* HW Steering port configuration passed to rte_flow_configure(). */
+struct mlx5_flow_hw_attr {
+	struct rte_flow_port_attr port_attr;
+	uint16_t nb_queue;
+	struct rte_flow_queue_attr *queue_attr;
+};
+
 struct mlx5_flow_hw_ctrl_rx;
 
 struct mlx5_priv {
@@ -1763,6 +1770,7 @@ struct mlx5_priv {
 	uint32_t nb_queue; /* HW steering queue number. */
 	struct mlx5_hws_cnt_pool *hws_cpool; /* HW steering's counter pool. */
 	uint32_t hws_mark_refcnt; /* HWS mark action reference counter. */
+	struct mlx5_flow_hw_attr *hw_attr; /* HW Steering port configuration. */
 #if defined(HAVE_IBV_FLOW_DV_SUPPORT) || !defined(HAVE_INFINIBAND_VERBS_H)
 	/* Item template list. */
 	LIST_HEAD(flow_hw_itt, rte_flow_pattern_template) flow_hw_itt;
