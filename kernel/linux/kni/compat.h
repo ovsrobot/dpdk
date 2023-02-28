@@ -151,3 +151,8 @@
 	 RHEL_RELEASE_VERSION(9, 1) <= RHEL_RELEASE_CODE))
 #define HAVE_NETIF_RX_NI
 #endif
+
+/* defined in 'mm/internal.h' since v6.3 */
+#ifndef FOLL_TOUCH
+#define FOLL_TOUCH (1 << 16)
+#endif
