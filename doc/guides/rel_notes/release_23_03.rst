@@ -155,6 +155,7 @@ New Features
 * **Updated NVIDIA mlx5 driver.**
 
   * Added support for matching on ICMPv6 ID and sequence fields.
+  * Added support for Enhanced CQE Compression layout.
 
 * **Updated Wangxun ngbe driver.**
 
