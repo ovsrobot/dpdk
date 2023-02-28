@@ -240,6 +240,17 @@ get_cipher_algo(enum rte_crypto_cipher_algorithm sess_algo, size_t keylen,
 				res = -EINVAL;
 			}
 			break;
+#ifndef OPENSSL_NO_SM4
+		case RTE_CRYPTO_CIPHER_SM4_ECB:
+			*algo = EVP_sm4_ecb();
+			break;
+		case RTE_CRYPTO_CIPHER_SM4_CBC:
+			*algo = EVP_sm4_cbc();
+			break;
+		case RTE_CRYPTO_CIPHER_SM4_CTR:
+			*algo = EVP_sm4_ctr();
+			break;
+#endif
 		default:
 			res = -EINVAL;
 			break;
@@ -284,6 +295,11 @@ get_auth_algo(enum rte_crypto_auth_algorithm sessalgo,
 		case RTE_CRYPTO_AUTH_SHA512_HMAC:
 			*algo = EVP_sha512();
 			break;
+#ifndef OPENSSL_NO_SM3
+		case RTE_CRYPTO_AUTH_SM3:
+			*algo = EVP_sm3();
+			break;
+#endif
 		default:
 			res = -EINVAL;
 			break;
@@ -483,6 +499,9 @@ openssl_set_session_cipher_parameters(struct openssl_session *sess,
 	case RTE_CRYPTO_CIPHER_3DES_CBC:
 	case RTE_CRYPTO_CIPHER_AES_CBC:
 	case RTE_CRYPTO_CIPHER_AES_CTR:
+	case RTE_CRYPTO_CIPHER_SM4_ECB:
+	case RTE_CRYPTO_CIPHER_SM4_CBC:
+	case RTE_CRYPTO_CIPHER_SM4_CTR:
 		sess->cipher.mode = OPENSSL_CIPHER_LIB;
 		sess->cipher.algo = xform->cipher.algo;
 		sess->cipher.ctx = EVP_CIPHER_CTX_new();
@@ -636,6 +655,7 @@ openssl_set_session_auth_parameters(struct openssl_session *sess,
 	case RTE_CRYPTO_AUTH_SHA256:
 	case RTE_CRYPTO_AUTH_SHA384:
 	case RTE_CRYPTO_AUTH_SHA512:
+	case RTE_CRYPTO_AUTH_SM3:
 		sess->auth.mode = OPENSSL_AUTH_AS_AUTH;
 		if (get_auth_algo(xform->auth.algo,
 				&sess->auth.auth.evp_algo) != 0)
