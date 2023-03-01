@@ -68,6 +68,7 @@
 #endif
 #ifdef RTE_NET_BOND
 #include <rte_eth_bond.h>
+#include <rte_eth_bond_8023ad.h>
 #endif
 #ifdef RTE_NET_MLX5
 #include "mlx5_testpmd.h"
@@ -518,6 +519,9 @@ uint8_t bitrate_enabled;
 struct gro_status gro_ports[RTE_MAX_ETHPORTS];
 uint8_t gro_flush_cycles = GRO_DEFAULT_FLUSH_CYCLES;
 #endif
+
+uint8_t bond4_lacp_fwd;
+#define LACP_UPDATE_PERIOD 10000
 
 /*
  * hexadecimal bitmask of RX mq mode can be enabled.
@@ -2252,6 +2256,28 @@ flush_fwd_rx_queues(void)
 	}
 }
 
+static inline void
+try_lacp_send_in_fwd(struct fwd_stream **fsm, streamid_t nb_fs)
+{
+#ifdef RTE_NET_BOND
+	void *qd;
+	streamid_t sm_id;
+	struct rte_eth_fp_ops *p;
+
+	for (sm_id = 0; sm_id < nb_fs; sm_id++) {
+		/* Update bond4 LACP if dedicated queues disabled. */
+		if (fsm[sm_id]->bond4_send_periodical_lacp) {
+			p = &rte_eth_fp_ops[fsm[sm_id]->tx_port];
+			qd = p->txq.data[fsm[sm_id]->tx_queue];
+			rte_eth_bond_8023ad_lacp_send_one(qd);
+		}
+	}
+#else
+	RTE_SET_USED(fsm);
+	RTE_SET_USED(nb_fs);
+#endif
+}
+
 static void
 run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 {
@@ -2269,6 +2295,9 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 	tics_datum = rte_rdtsc();
 	tics_per_1sec = rte_get_timer_hz();
 #endif
+	uint64_t before_tsc = rte_rdtsc();
+	const uint64_t bond4_lacp_period = (rte_get_tsc_hz() + US_PER_S - 1) /
+			US_PER_S * LACP_UPDATE_PERIOD;
 	fsm = &fwd_streams[fc->stream_idx];
 	nb_fs = fc->stream_nb;
 	prev_tsc = rte_rdtsc();
@@ -2299,6 +2328,13 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 
 			fc->total_cycles += tsc - prev_tsc;
 			prev_tsc = tsc;
+		}
+		if (bond4_lacp_fwd != 0) {
+			uint64_t current_tsc = rte_rdtsc();
+			if (unlikely((current_tsc - before_tsc) > bond4_lacp_period)) {
+				try_lacp_send_in_fwd(fsm, nb_fs);
+				before_tsc = current_tsc;
+			}
 		}
 	} while (! fc->stopped);
 }
@@ -4462,6 +4498,7 @@ main(int argc, char** argv)
 #ifdef RTE_LIB_LATENCYSTATS
 	latencystats_enabled = 0;
 #endif
+	bond4_lacp_fwd = 0;
 
 	/* on FreeBSD, mlockall() is disabled by default */
 #ifdef RTE_EXEC_ENV_FREEBSD
