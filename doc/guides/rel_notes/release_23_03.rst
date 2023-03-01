@@ -197,6 +197,11 @@ New Features
   * Added support to capture packets at each graph node with packet metadata and
     node name.
 
+* **Added platform bus support.**
+
+  A platform bus provides a way to use Linux platform devices which
+  are compatible with vfio-platform kernel driver.
+
 
 Removed Items
 -------------
