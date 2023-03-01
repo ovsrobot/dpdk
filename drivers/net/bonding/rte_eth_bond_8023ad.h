@@ -331,4 +331,25 @@ rte_eth_bond_8023ad_agg_selection_get(uint16_t port_id);
 int
 rte_eth_bond_8023ad_agg_selection_set(uint16_t port_id,
 		enum rte_bond_8023ad_agg_selection agg_selection);
+
+/**
+ * Get LACP dedicated queues enable/disable for 8023ad
+ * @param port_id Bonding device id
+ * @return
+ *   0 - the port is a bonding mode 4 port with disabled dedicated queue
+ *   1 - the port is a bonding mode 4 port with enabled dedicated queue
+ *   -EINVAL - the port is not a bonding port or the bonding port's mode is not 4
+ */
+__rte_experimental
+int
+rte_eth_bond_8023ad_dedicated_queues_get(uint16_t port_id);
+
+/**
+ * Send one LACP packet for bonding port in mode 4 with disabled dedicated queue
+ * @param queue Bonding port's tx queue
+ */
+__rte_experimental
+void
+rte_eth_bond_8023ad_lacp_send_one(void *queue);
+
 #endif /* RTE_ETH_BOND_8023AD_H_ */

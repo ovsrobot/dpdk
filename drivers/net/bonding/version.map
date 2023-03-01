@@ -31,3 +31,11 @@ DPDK_23 {
 
 	local: *;
 };
+
+EXPERIMENTAL {
+	global:
+
+	# added in 22.11
+	rte_eth_bond_8023ad_dedicated_queues_get;
+	rte_eth_bond_8023ad_lacp_send_one;
+};
