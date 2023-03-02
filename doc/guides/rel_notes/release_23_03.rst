@@ -148,6 +148,12 @@ New Features
   * Added support for timesync API.
   * Added support for packet pacing (launch time offloading).
 
+* **Added Intel cpfl driver.**
+
+  * Added the new ``cpfl`` net driver
+    for Intel\ |reg| Infrastructure Processing Unit (Intel\ |reg| IPU) E2100.
+    See the :doc:`../nics/cpfl.rst` NIC guide for more details on this new driver.
+
 * **Updated Marvell cnxk ethdev driver.**
 
   * Added support to skip RED using ``RTE_FLOW_ACTION_TYPE_SKIP_CMAN``.
