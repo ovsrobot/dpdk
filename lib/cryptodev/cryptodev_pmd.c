@@ -38,6 +38,10 @@ rte_cryptodev_pmd_parse_uint_arg(const char *key __rte_unused,
 {
 	int i;
 	char *end;
+
+	if (value == NULL || extra_args == NULL)
+		return -EINVAL;
+
 	errno = 0;
 
 	i = strtol(value, &end, 10);
