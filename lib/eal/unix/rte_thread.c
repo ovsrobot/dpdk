@@ -155,6 +155,17 @@ rte_thread_create(rte_thread_t *thread_id,
 			RTE_LOG(DEBUG, EAL, "pthread_attr_setschedparam failed\n");
 			goto cleanup;
 		}
+
+		if (CPU_COUNT(&thread_attr->cpuset) > 0) {
+			ret = pthread_attr_setaffinity_np(attrp,
+				sizeof(thread_attr->cpuset),
+				&thread_attr->cpuset);
+			if (ret != 0) {
+				RTE_LOG(DEBUG, EAL,
+					"pthread_attr_setaffinity_np failed\n");
+				goto cleanup;
+			}
+		}
 	}
 
 	ret = pthread_create((pthread_t *)&thread_id->opaque_id, attrp,
@@ -162,15 +173,6 @@ rte_thread_create(rte_thread_t *thread_id,
 	if (ret != 0) {
 		RTE_LOG(DEBUG, EAL, "pthread_create failed\n");
 		goto cleanup;
-	}
-
-	if (thread_attr != NULL && CPU_COUNT(&thread_attr->cpuset) > 0) {
-		ret = rte_thread_set_affinity_by_id(*thread_id,
-			&thread_attr->cpuset);
-		if (ret != 0) {
-			RTE_LOG(DEBUG, EAL, "rte_thread_set_affinity_by_id failed\n");
-			goto cleanup;
-		}
 	}
 
 	ctx = NULL;
