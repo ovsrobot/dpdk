@@ -128,7 +128,7 @@ iavf_dev_event_handler_init(void)
 	int err = pipe(handler->fd);
 #endif
 	if (err != 0) {
-		__atomic_sub_fetch(&handler->ndev, 1, __ATOMIC_RELAXED);
+		__atomic_fetch_sub(&handler->ndev, 1, __ATOMIC_RELAXED);
 		return -1;
 	}
 
@@ -137,7 +137,7 @@ iavf_dev_event_handler_init(void)
 
 	if (rte_ctrl_thread_create(&handler->tid, "iavf-event-thread",
 				NULL, iavf_dev_event_handle, NULL)) {
-		__atomic_sub_fetch(&handler->ndev, 1, __ATOMIC_RELAXED);
+		__atomic_fetch_sub(&handler->ndev, 1, __ATOMIC_RELAXED);
 		return -1;
 	}
 
@@ -533,7 +533,7 @@ iavf_handle_virtchnl_msg(struct rte_eth_dev *dev)
 				/* read message and it's expected one */
 				if (msg_opc == vf->pend_cmd) {
 					uint32_t cmd_count =
-					__atomic_sub_fetch(&vf->pend_cmd_count,
+					__atomic_fetch_sub(&vf->pend_cmd_count,
 							1, __ATOMIC_RELAXED);
 					if (cmd_count == 0)
 						_notify_cmd(vf, msg_ret);
