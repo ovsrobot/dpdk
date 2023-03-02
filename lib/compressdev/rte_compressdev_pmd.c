@@ -40,6 +40,9 @@ rte_compressdev_pmd_parse_uint_arg(const char *key __rte_unused,
 	int i;
 	char *end;
 
+	if (value == NULL || extra_args == NULL)
+		return -EINVAL;
+
 	errno = 0;
 	i = strtol(value, &end, 10);
 	if (*end != 0 || errno != 0 || i < 0)
