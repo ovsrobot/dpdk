@@ -9,6 +9,7 @@
 #include <infiniband/verbs.h>
 
 #include "mana.h"
+#include "mana_trace.h"
 
 struct mana_range {
 	uintptr_t	start;
@@ -52,9 +53,7 @@ mana_new_pmd_mr(struct mana_mr_btree *local_tree, struct mana_priv *priv,
 			return -ENOMEM;
 		}
 
-		DRV_LOG(DEBUG,
-			"registering memory chunk start 0x%" PRIx64 " len %u",
-			ranges[i].start, ranges[i].len);
+		mana_trace_mr_chunk(ranges[i].start, ranges[i].len);
 
 		if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
 			/* Send a message to the primary to do MR */
@@ -72,8 +71,8 @@ mana_new_pmd_mr(struct mana_mr_btree *local_tree, struct mana_priv *priv,
 		ibv_mr = ibv_reg_mr(priv->ib_pd, (void *)ranges[i].start,
 				    ranges[i].len, IBV_ACCESS_LOCAL_WRITE);
 		if (ibv_mr) {
-			DRV_LOG(DEBUG, "MR lkey %u addr %p len %" PRIu64,
-				ibv_mr->lkey, ibv_mr->addr, ibv_mr->length);
+			mana_trace_mr_ibv(ibv_mr->lkey, (uintptr_t)ibv_mr->addr,
+					  ibv_mr->length);
 
 			mr = rte_calloc("MANA MR", 1, sizeof(*mr), 0);
 			mr->lkey = ibv_mr->lkey;
@@ -100,7 +99,7 @@ mana_new_pmd_mr(struct mana_mr_btree *local_tree, struct mana_priv *priv,
 			}
 		} else {
 			DRV_LOG(ERR, "MR failed at 0x%" PRIx64 " len %u",
-				ranges[i].start, ranges[i].len);
+			       ranges[i].start, ranges[i].len);
 			return -errno;
 		}
 	}
@@ -133,17 +132,14 @@ mana_find_pmd_mr(struct mana_mr_btree *local_mr_btree, struct mana_priv *priv,
 	struct mana_mr_cache *mr;
 	uint16_t idx;
 
-	DRV_LOG(DEBUG, "finding mr for mbuf addr %p len %d",
-		mbuf->buf_addr, mbuf->buf_len);
+	mana_trace_mr_search((uintptr_t)mbuf->buf_addr, mbuf->buf_len);
 
 try_again:
 	/* First try to find the MR in local queue tree */
 	mr = mana_mr_btree_lookup(local_mr_btree, &idx,
 				  (uintptr_t)mbuf->buf_addr, mbuf->buf_len);
 	if (mr) {
-		DRV_LOG(DEBUG,
-			"Local mr lkey %u addr 0x%" PRIx64 " len %" PRIu64,
-			mr->lkey, mr->addr, mr->len);
+		mana_trace_mr_found(mr->lkey, (uintptr_t)mr->addr, mr->len);
 		return mr;
 	}
 
@@ -158,13 +154,11 @@ try_again:
 	if (mr) {
 		ret = mana_mr_btree_insert(local_mr_btree, mr);
 		if (ret) {
-			DRV_LOG(DEBUG, "Failed to add MR to local tree.");
+			DRV_LOG(ERR, "Failed to add MR to local tree.");
 			return NULL;
 		}
 
-		DRV_LOG(DEBUG,
-			"Added local MR key %u addr 0x%" PRIx64 " len %" PRIu64,
-			mr->lkey, mr->addr, mr->len);
+		mana_trace_local_cache_insert(mr->lkey, mr->addr, mr->len);
 		return mr;
 	}
 
@@ -176,7 +170,7 @@ try_again:
 	ret = mana_new_pmd_mr(local_mr_btree, priv, pool);
 	if (ret) {
 		DRV_LOG(ERR, "Failed to allocate MR ret %d addr %p len %d",
-			ret, mbuf->buf_addr, mbuf->buf_len);
+		       ret, mbuf->buf_addr, mbuf->buf_len);
 		return NULL;
 	}
 
@@ -219,7 +213,7 @@ mana_mr_btree_expand(struct mana_mr_btree *bt, int n)
 		return -1;
 	}
 
-	DRV_LOG(ERR, "Expanded btree to size %d", n);
+	DRV_LOG(INFO, "Expanded btree to size %d", n);
 	bt->table = mem;
 	bt->size = n;
 
@@ -266,10 +260,7 @@ mana_mr_btree_lookup(struct mana_mr_btree *bt, uint16_t *idx,
 	if (addr + len <= table[base].addr + table[base].len)
 		return &table[base];
 
-	DRV_LOG(DEBUG,
-		"addr 0x%" PRIx64 " len %zu idx %u sum 0x%" PRIx64 " not found",
-		addr, len, *idx, addr + len);
-
+	mana_trace_btree_miss(addr, len, *idx);
 	return NULL;
 }
 
@@ -296,7 +287,7 @@ mana_mr_btree_init(struct mana_mr_btree *bt, int n, int socket)
 	};
 	bt->len = 1;
 
-	DRV_LOG(ERR, "B-tree initialized table %p size %d len %d",
+	DRV_LOG(INFO, "B-tree initialized table %p size %d len %d",
 		bt->table, n, bt->len);
 
 	return 0;
@@ -317,8 +308,7 @@ mana_mr_btree_insert(struct mana_mr_btree *bt, struct mana_mr_cache *entry)
 	uint16_t shift;
 
 	if (mana_mr_btree_lookup(bt, &idx, entry->addr, entry->len)) {
-		DRV_LOG(DEBUG, "Addr 0x%" PRIx64 " len %zu exists in btree",
-			entry->addr, entry->len);
+		mana_trace_btree_found(entry->lkey, entry->addr, entry->len);
 		return 0;
 	}
 
@@ -332,17 +322,13 @@ mana_mr_btree_insert(struct mana_mr_btree *bt, struct mana_mr_cache *entry)
 	idx++;
 	shift = (bt->len - idx) * sizeof(struct mana_mr_cache);
 	if (shift) {
-		DRV_LOG(DEBUG, "Moving %u bytes from idx %u to %u",
-			shift, idx, idx + 1);
+		mana_trace_btree_shift(shift, idx);
 		memmove(&table[idx + 1], &table[idx], shift);
 	}
 
 	table[idx] = *entry;
 	bt->len++;
 
-	DRV_LOG(DEBUG,
-		"Inserted MR b-tree table %p idx %d addr 0x%" PRIx64 " len %zu",
-		table, idx, entry->addr, entry->len);
-
+	mana_trace_btree_inserted((uintptr_t)table, idx, entry->addr, entry->len);
 	return 0;
 }

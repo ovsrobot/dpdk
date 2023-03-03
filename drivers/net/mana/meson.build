@@ -16,6 +16,7 @@ sources += files(
         'mr.c',
         'rx.c',
         'tx.c',
+        'mana_trace_points.c',
 )
 
 libnames = ['ibverbs', 'mana']
