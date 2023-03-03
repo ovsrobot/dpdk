@@ -98,4 +98,12 @@ roc_errata_nix_sdp_send_has_mtu_size_16k(void)
 		roc_model_is_cn96_a0() || roc_model_is_cn96_b0());
 }
 
+/* Errata IPBUNIXTX-39300 */
+static inline bool
+roc_errata_nix_assign_incorrect_qint(void)
+{
+	return (roc_model_is_cn10ka_a0() || roc_model_is_cnf10ka_a0() ||
+		roc_model_is_cnf10kb_a0() || roc_model_is_cn10ka_a1());
+}
+
 #endif /* _ROC_ERRATA_H_ */
