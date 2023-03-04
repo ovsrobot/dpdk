@@ -480,6 +480,27 @@ rte_log_dump(FILE *f)
 	}
 }
 
+/* get timestamp*/
+void
+rte_log_get_timestamp_prefix(char *buf, int buf_size)
+{
+    struct tm *info;
+    char date[24];
+    struct timespec ts;
+    long usec;
+
+    clock_gettime(CLOCK_REALTIME, &ts);
+    info = localtime(&ts.tv_sec);
+    usec = ts.tv_nsec / 1000;
+    if (info == NULL) {
+        snprintf(buf, buf_size, "[%s.%06ld] ", "unknown date", usec);
+        return;
+    }
+
+    strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", info);
+    snprintf(buf, buf_size, "[%s.%06ld] ", date, usec);
+}
+
 /*
  * Generates a log message The message will be sent in the stream
  * defined by the previous call to rte_openlog_stream().
@@ -489,6 +510,7 @@ rte_vlog(uint32_t level, uint32_t logtype, const char *format, va_list ap)
 {
 	FILE *f = rte_log_get_stream();
 	int ret;
+	char timestamp[64];
 
 	if (logtype >= rte_logs.dynamic_types_len)
 		return -1;
@@ -498,7 +520,8 @@ rte_vlog(uint32_t level, uint32_t logtype, const char *format, va_list ap)
 	/* save loglevel and logtype in a global per-lcore variable */
 	RTE_PER_LCORE(log_cur_msg).loglevel = level;
 	RTE_PER_LCORE(log_cur_msg).logtype = logtype;
-
+	rte_log_get_timestamp_prefix(timestamp, sizeof(timestamp));
+	fprintf(f,"%s ",timestamp);
 	ret = vfprintf(f, format, ap);
 	fflush(f);
 	return ret;
