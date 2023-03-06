@@ -85,6 +85,7 @@ struct internal_config {
 	 * per-node) non-legacy mode only.
 	 */
 	volatile int syslog_facility;	  /**< facility passed to openlog() */
+	volatile uint8_t log_timestamp;   /**< add timestamp to console output */
 	/** default interrupt mode for VFIO */
 	volatile enum rte_intr_mode vfio_intr_mode;
 	/** the shared VF token for VFIO-PCI bound PF and VFs devices */

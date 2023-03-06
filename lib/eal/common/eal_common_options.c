@@ -76,6 +76,7 @@ eal_long_options[] = {
 	{OPT_IOVA_MODE,	        1, NULL, OPT_IOVA_MODE_NUM        },
 	{OPT_LCORES,            1, NULL, OPT_LCORES_NUM           },
 	{OPT_LOG_LEVEL,         1, NULL, OPT_LOG_LEVEL_NUM        },
+	{OPT_LOG_TIMESTAMP,     0, NULL, OPT_LOG_TIMESTAMP_NUM    },
 	{OPT_TRACE,             1, NULL, OPT_TRACE_NUM            },
 	{OPT_TRACE_DIR,         1, NULL, OPT_TRACE_DIR_NUM        },
 	{OPT_TRACE_BUF_SIZE,    1, NULL, OPT_TRACE_BUF_SIZE_NUM   },
@@ -1833,6 +1834,9 @@ eal_parse_common_option(int opt, const char *optarg,
 		}
 		break;
 	}
+	case OPT_LOG_TIMESTAMP_NUM:
+		conf->log_timestamp = 1;
+		break;
 
 #ifndef RTE_EXEC_ENV_WINDOWS
 	case OPT_TRACE_NUM: {
@@ -2194,6 +2198,7 @@ eal_common_usage(void)
 	       "  --"OPT_PROC_TYPE"         Type of this process (primary|secondary|auto)\n"
 #ifndef RTE_EXEC_ENV_WINDOWS
 	       "  --"OPT_SYSLOG"            Set syslog facility\n"
+	       "  --"OPT_LOG_TIMESTAMP"     Timestamp log output\n"
 #endif
 	       "  --"OPT_LOG_LEVEL"=<level> Set global log level\n"
 	       "  --"OPT_LOG_LEVEL"=<type-match>:<level>\n"
