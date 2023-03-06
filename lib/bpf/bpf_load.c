@@ -108,9 +108,9 @@ rte_bpf_load(const struct rte_bpf_prm *prm)
 		return NULL;
 	}
 
-	rc = bpf_validate(bpf);
+	rc = rte_bpf_validate(bpf);
 	if (rc == 0) {
-		bpf_jit(bpf);
+		rte_bpf_jit(bpf);
 		if (mprotect(bpf, bpf->sz, PROT_READ) != 0)
 			rc = -ENOMEM;
 	}
