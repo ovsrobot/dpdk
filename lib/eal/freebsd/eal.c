@@ -51,6 +51,7 @@
 #include "eal_hugepages.h"
 #include "eal_options.h"
 #include "eal_memcfg.h"
+#include "eal_log.h"
 #include "eal_trace.h"
 
 #define MEMSIZE_IF_NO_HUGE_PAGE (64ULL * 1024ULL * 1024ULL)
@@ -742,6 +743,12 @@ rte_eal_init(int argc, char **argv)
 		RTE_LOG (WARNING, EAL, "Ignoring --vmware-tsc-map because "
 				"RTE_LIBRTE_EAL_VMWARE_TSC_MAP_SUPPORT is not set\n");
 #endif
+	}
+
+	if (eal_log_init(getprogname(), internal_conf->syslog_facility) < 0) {
+		rte_eal_init_alert("Cannot init logging.");
+		rte_errno = ENOMEM;
+		return -1;
 	}
 
 	/* in secondary processes, memory init may allocate additional fbarrays
