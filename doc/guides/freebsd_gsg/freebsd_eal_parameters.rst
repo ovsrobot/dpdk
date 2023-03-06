@@ -18,3 +18,35 @@ FreeBSD-specific EAL parameters
 -------------------------------
 
 There are currently no FreeBSD-specific EAL command-line parameters available.
+
+Other options
+~~~~~~~~~~~~~
+
+*   ``--syslog <syslog facility>``
+
+    Set syslog facility. Valid syslog facilities are::
+
+        auth
+        cron
+        daemon
+        ftp
+        kern
+        lpr
+        mail
+        news
+        syslog
+        user
+        uucp
+        local0
+        local1
+        local2
+        local3
+        local4
+        local5
+        local6
+        local7
+
+*   ``--log-timestamp``
+
+    Add a timestamp of seconds and microseconds to each log message
+    written to standard output.
