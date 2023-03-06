@@ -7,6 +7,10 @@ if is_windows
     subdir_done()
 endif
 
+if not get_option('enable_iova_as_pa')
+    subdir_done()
+endif
+
 sources += files(
         'virtio.c',
         'virtio_cvq.c',

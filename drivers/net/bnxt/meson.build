@@ -8,6 +8,10 @@ if is_windows
     subdir_done()
 endif
 
+if not get_option('enable_iova_as_pa')
+    subdir_done()
+endif
+
 headers = files('rte_pmd_bnxt.h')
 cflags_options = [
         '-DSUPPORT_CFA_HW_ALL=1',

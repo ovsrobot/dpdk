@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2018 Luca Boccassi <bluca@debian.org>
 
+if not get_option('enable_iova_as_pa')
+    subdir_done()
+endif
 
 cflags += ['-Wno-strict-aliasing']
 

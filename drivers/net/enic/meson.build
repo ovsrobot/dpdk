@@ -7,6 +7,10 @@ if is_windows
     subdir_done()
 endif
 
+if not get_option('enable_iova_as_pa')
+    subdir_done()
+endif
+
 sources = files(
         'base/vnic_cq.c',
         'base/vnic_dev.c',

@@ -1,4 +1,3 @@
-
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2019-2020 Intel Corporation
 
@@ -6,6 +5,10 @@ if not is_linux or not dpdk_conf.has('RTE_ARCH_X86_64')
         build = false
         reason = 'only supported on x86_64 Linux'
         subdir_done()
+endif
+
+if not get_option('enable_iova_as_pa')
+    subdir_done()
 endif
 
 sources = files(

@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2022 Intel Corporation
 
+if not get_option('enable_iova_as_pa')
+    subdir_done()
+endif
+
 deps += ['mbuf']
 
 sources = files(

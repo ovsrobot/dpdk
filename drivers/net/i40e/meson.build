@@ -13,6 +13,10 @@ if arch_subdir == 'riscv'
     subdir_done()
 endif
 
+if not get_option('enable_iova_as_pa')
+    subdir_done()
+endif
+
 cflags += ['-DPF_DRIVER',
     '-DVF_DRIVER',
     '-DINTEGRATED_VF',
