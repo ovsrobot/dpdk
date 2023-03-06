@@ -93,7 +93,7 @@ dpdk_libs_deprecated += [
 disabled_libs = []
 opt_disabled_libs = run_command(list_dir_globs, get_option('disable_libs'),
         check: true).stdout().split()
-if dpdk_conf.get('RTE_IOVA_AS_PA') == 0
+if not get_option('enable_iova_as_pa')
     opt_disabled_libs += ['kni']
 endif
 foreach l:opt_disabled_libs

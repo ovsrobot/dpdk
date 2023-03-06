@@ -109,7 +109,7 @@ foreach subpath:subdirs
         ext_deps = []
         pkgconfig_extra_libs = []
         testpmd_sources = []
-        pmd_supports_disable_iova_as_pa = false
+        require_iova_in_mbuf = true
 
         if not enable_drivers.contains(drv_path)
             build = false
@@ -127,9 +127,9 @@ foreach subpath:subdirs
             # pull in driver directory which should update all the local variables
             subdir(drv_path)
 
-            if dpdk_conf.get('RTE_IOVA_AS_PA') == 0 and not pmd_supports_disable_iova_as_pa and not always_enable.contains(drv_path)
+            if not get_option('enable_iova_as_pa') and require_iova_in_mbuf and not always_enable.contains(drv_path)
                 build = false
-                reason = 'driver does not support disabling IOVA as PA mode'
+                reason = 'requires IOVA in mbuf'
             endif
 
             # get dependency objs from strings
