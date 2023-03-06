@@ -269,6 +269,8 @@ generate_packet_burst(struct rte_mempool *mp, struct rte_mbuf **pkts_burst,
 	struct rte_mbuf *pkt_seg;
 	struct rte_mbuf *pkt;
 
+	const uint8_t pkt_seg_data_len = pkt_len / nb_pkt_segs;
+
 	for (nb_pkt = 0; nb_pkt < nb_pkt_per_burst; nb_pkt++) {
 		pkt = rte_pktmbuf_alloc(mp);
 		if (pkt == NULL) {
@@ -278,7 +280,7 @@ nomore_mbuf:
 			break;
 		}
 
-		pkt->data_len = pkt_len;
+		pkt->data_len = pkt_seg_data_len;
 		pkt_seg = pkt;
 		for (i = 1; i < nb_pkt_segs; i++) {
 			pkt_seg->next = rte_pktmbuf_alloc(mp);
@@ -288,7 +290,10 @@ nomore_mbuf:
 				goto nomore_mbuf;
 			}
 			pkt_seg = pkt_seg->next;
-			pkt_seg->data_len = pkt_len;
+			if (i != nb_pkt_segs - 1)
+				pkt_seg->data_len = pkt_seg_data_len;
+			else
+				pkt_seg->data_len = pkt_seg_data_len + pkt_len % nb_pkt_segs;
 		}
 		pkt_seg->next = NULL; /* Last segment of packet. */
 
@@ -350,6 +355,8 @@ generate_packet_burst_proto(struct rte_mempool *mp,
 	struct rte_mbuf *pkt_seg;
 	struct rte_mbuf *pkt;
 
+	const uint8_t pkt_seg_data_len = pkt_len / nb_pkt_segs;
+
 	for (nb_pkt = 0; nb_pkt < nb_pkt_per_burst; nb_pkt++) {
 		pkt = rte_pktmbuf_alloc(mp);
 		if (pkt == NULL) {
@@ -359,7 +366,7 @@ nomore_mbuf:
 			break;
 		}
 
-		pkt->data_len = pkt_len;
+		pkt->data_len = pkt_seg_data_len;
 		pkt_seg = pkt;
 		for (i = 1; i < nb_pkt_segs; i++) {
 			pkt_seg->next = rte_pktmbuf_alloc(mp);
@@ -369,7 +376,10 @@ nomore_mbuf:
 				goto nomore_mbuf;
 			}
 			pkt_seg = pkt_seg->next;
-			pkt_seg->data_len = pkt_len;
+			if (i != nb_pkt_segs - 1)
+				pkt_seg->data_len = pkt_seg_data_len;
+			else
+				pkt_seg->data_len = pkt_seg_data_len + pkt_len % nb_pkt_segs;
 		}
 		pkt_seg->next = NULL; /* Last segment of packet. */
 
