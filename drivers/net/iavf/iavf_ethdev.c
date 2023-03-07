@@ -1729,6 +1729,22 @@ iavf_update_stats(struct iavf_vsi *vsi, struct virtchnl_eth_stats *nes)
 	iavf_stat_update_32(&oes->tx_discards, &nes->tx_discards);
 }
 
+static void iavf_dev_stats_get_callback(struct rte_eth_dev *dev, void *args)
+{
+	struct virtchnl_eth_stats *eth_stats = (struct virtchnl_eth_stats *)args;
+	struct virtchnl_eth_stats *pstats = NULL;
+	struct iavf_adapter *adapter =
+		IAVF_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(dev->data->dev_private);
+	struct iavf_vsi *vsi = &vf->vsi;
+	int ret = iavf_query_stats(adapter, &pstats);
+	if (ret == 0) {
+		rte_spinlock_lock(&vsi->stats_lock);
+		rte_memcpy(eth_stats, pstats, sizeof(struct virtchnl_eth_stats));
+		rte_spinlock_unlock(&vsi->stats_lock);
+	}
+}
+
 static int
 iavf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
@@ -1738,9 +1754,17 @@ iavf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 	struct iavf_vsi *vsi = &vf->vsi;
 	struct virtchnl_eth_stats *pstats = NULL;
 	int ret;
-
-	ret = iavf_query_stats(adapter, &pstats);
+	int is_intr_thread = rte_thread_is_intr();
+	if (is_intr_thread) {
+		pstats = &vsi->eth_stats;
+		iavf_dev_virtchnl_callback_post(dev, iavf_dev_stats_get_callback, (void *)pstats);
+		ret = 0;
+	} else {
+		ret = iavf_query_stats(adapter, &pstats);
+	}
 	if (ret == 0) {
+		if (is_intr_thread)
+			rte_spinlock_lock(&vsi->stats_lock);
 		uint8_t crc_stats_len = (dev->data->dev_conf.rxmode.offloads &
 					 RTE_ETH_RX_OFFLOAD_KEEP_CRC) ? 0 :
 					 RTE_ETHER_CRC_LEN;
@@ -1754,6 +1778,8 @@ iavf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 		stats->ibytes = pstats->rx_bytes;
 		stats->ibytes -= stats->ipackets * crc_stats_len;
 		stats->obytes = pstats->tx_bytes;
+		if (is_intr_thread)
+			rte_spinlock_unlock(&vsi->stats_lock);
 	} else {
 		PMD_DRV_LOG(ERR, "Get statistics failed");
 	}
@@ -2571,9 +2597,12 @@ iavf_dev_init(struct rte_eth_dev *eth_dev)
 	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(adapter);
 	struct iavf_info *vf = IAVF_DEV_PRIVATE_TO_VF(adapter);
 	struct rte_pci_device *pci_dev = RTE_ETH_DEV_TO_PCI(eth_dev);
+	struct iavf_vsi *vsi = &vf->vsi;
 	int ret = 0;
 
 	PMD_INIT_FUNC_TRACE();
+
+	rte_spinlock_init(&vsi->stats_lock);
 
 	/* assign ops func pointer */
 	eth_dev->dev_ops = &iavf_eth_dev_ops;
@@ -2634,7 +2663,7 @@ iavf_dev_init(struct rte_eth_dev *eth_dev)
 	rte_ether_addr_copy((struct rte_ether_addr *)hw->mac.addr,
 			&eth_dev->data->mac_addrs[0]);
 
-	if (iavf_dev_event_handler_init())
+	if (iavf_dev_virtchnl_handler_init())
 		goto init_vf_err;
 
 	if (vf->vf_res->vf_cap_flags & VIRTCHNL_VF_OFFLOAD_WB_ON_ITR) {
@@ -2791,7 +2820,7 @@ iavf_dev_uninit(struct rte_eth_dev *dev)
 
 	iavf_dev_close(dev);
 
-	iavf_dev_event_handler_fini();
+	iavf_dev_virtchnl_handler_fini();
 
 	return 0;
 }
