@@ -876,7 +876,8 @@ sfc_ef100_rx_qstart(struct sfc_dp_rxq *dp_rxq, unsigned int evq_read_ptr,
 	else
 		rxq->flags &= ~SFC_EF100_RXQ_USER_MARK;
 
-	if ((unsup_rx_prefix_fields &
+	if (dp_rxq->need_ingress_mport &&
+	    (unsup_rx_prefix_fields &
 	     (1U << EFX_RX_PREFIX_FIELD_INGRESS_MPORT)) == 0)
 		rxq->flags |= SFC_EF100_RXQ_INGRESS_MPORT;
 	else

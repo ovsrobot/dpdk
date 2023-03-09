@@ -1265,6 +1265,9 @@ sfc_rx_qinit(struct sfc_adapter *sa, sfc_sw_index_t sw_index,
 	if (rc != 0)
 		goto fail_dp_rx_qcreate;
 
+	rxq_info->dp->need_ingress_mport =
+		((rxq_info->type_flags & EFX_RXQ_FLAG_INGRESS_MPORT) != 0);
+
 	evq->dp_rxq = rxq_info->dp;
 
 	rxq_info->state = SFC_RXQ_INITIALIZED;

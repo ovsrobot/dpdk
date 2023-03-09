@@ -10,6 +10,8 @@
 #ifndef _SFC_DP_RX_H
 #define _SFC_DP_RX_H
 
+#include <stdbool.h>
+
 #include <rte_mempool.h>
 #include <ethdev_driver.h>
 
@@ -27,6 +29,7 @@ extern "C" {
  */
 struct sfc_dp_rxq {
 	struct sfc_dp_queue	dpq;
+	bool			need_ingress_mport;
 };
 
 /** Datapath receive queue descriptor number limitations */
