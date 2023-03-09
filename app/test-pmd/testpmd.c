@@ -3767,6 +3767,21 @@ pmd_test_exit(void)
 #endif
 	if (ports != NULL) {
 		no_link_check = 1;
+
+		/*
+		 * SoftNIC runs on the sevice core, it uses the resources from
+		 * the testpmd application. When we run quit command, the testpmd
+		 * application stops ethdev ports first, SoftNIC will try to
+		 * access the port and sometimes that result in segmentation
+		 * error. So first closing the SoftNIC port.
+		 */
+		RTE_ETH_FOREACH_DEV(pt_id) {
+			if (!strcmp(ports[pt_id].dev_info.driver_name, "net_softnic")) {
+				stop_port(pt_id);
+				close_port(pt_id);
+			}
+		}
+
 		RTE_ETH_FOREACH_DEV(pt_id) {
 			printf("\nStopping port %d...\n", pt_id);
 			fflush(stdout);
