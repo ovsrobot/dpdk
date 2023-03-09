@@ -135,3 +135,9 @@ Deprecation Notices
   Its removal has been postponed to let potential users report interest
   in maintaining it.
   In the absence of such interest, this library will be removed in DPDK 23.11.
+
+* net/liquidio: remove LiquidIO ethdev driver. The LiquidIO product line has been substituted
+  with CN9K/CN10K OCTEON product line smart NICs located in ``drivers/net/octeon_ep/``.
+  DPDK v20.08 has categorized the LiquidIO driver as UNMAINTAINED because of the absence of
+  updates in the driver. Due to the above reasons, the driver will be unavailable from DPDK 23.07.
+ 
