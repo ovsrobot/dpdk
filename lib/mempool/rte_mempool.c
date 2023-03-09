@@ -757,9 +757,9 @@ mempool_cache_init(struct rte_mempool_cache *cache, uint32_t size)
 }
 
 /*
- * Create and initialize a cache for objects that are retrieved from and
- * returned to an underlying mempool. This structure is identical to the
- * local_cache[lcore_id] pointed to by the mempool structure.
+ * Create and initialize a user owned cache for objects that are retrieved
+ * from and returned to an underlying mempool. This structure is identical
+ * to the local_cache[lcore_id] pointed to by the mempool structure.
  */
 struct rte_mempool_cache *
 rte_mempool_cache_create(uint32_t size, int socket_id)
@@ -786,9 +786,9 @@ rte_mempool_cache_create(uint32_t size, int socket_id)
 }
 
 /*
- * Free a cache. It's the responsibility of the user to make sure that any
- * remaining objects in the cache are flushed to the corresponding
- * mempool.
+ * Free a user owned cache. It's the responsibility of the user to make
+ * sure that any remaining objects in the cache are flushed to the
+ * corresponding mempool.
  */
 void
 rte_mempool_cache_free(struct rte_mempool_cache *cache)
