@@ -1326,10 +1326,14 @@ rte_mempool_default_cache(struct rte_mempool *mp, unsigned lcore_id)
 }
 
 /**
- * Flush a user-owned mempool cache to the specified mempool.
+ * Flush a mempool cache to the specified mempool.
+ *
+ * It is application's responsibility to validate that the mempool cache
+ * belongs to the specified mempool.
  *
  * @param cache
- *   A pointer to the mempool cache.
+ *   A pointer to the mempool cache. If NULL, default mempool cache
+ *   is used if configured.
  * @param mp
  *   A pointer to the mempool.
  */
