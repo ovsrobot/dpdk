@@ -1314,10 +1314,9 @@ rte_mempool_cache_free(struct rte_mempool_cache *cache);
 static __rte_always_inline struct rte_mempool_cache *
 rte_mempool_default_cache(struct rte_mempool *mp, unsigned lcore_id)
 {
-	if (mp->cache_size == 0)
-		return NULL;
+	RTE_ASSERT(rte_lcore_id_is_valid(lcore_id));
 
-	if (lcore_id >= RTE_MAX_LCORE)
+	if (mp->cache_size == 0)
 		return NULL;
 
 	rte_mempool_trace_default_cache(mp, lcore_id,
