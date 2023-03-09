@@ -1066,7 +1066,7 @@ rte_vhost_get_vdpa_device(int vid);
  */
 __rte_experimental
 int
-rte_vhost_slave_config_change(int vid, bool need_reply);
+rte_vhost_backend_config_change(int vid, bool need_reply);
 
 /**
  * Retrieve names of statistics of a Vhost virtqueue.
