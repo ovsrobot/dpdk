@@ -22,7 +22,9 @@ The application has a number of command line options:
    --show-ring[=name] | --show-mempool[=name] | --iter-mempool=name |
    --show-port-private | --version | --firmware-version | --show-rss-reta |
    --show-module-eeprom | --show-rx-descriptor queue_id:offset:num |
-   --show-tx-descriptor queue_id:offset:num ]
+   --show-tx-descriptor queue_id:offset:num | --show-edev-queue-xstats=queue_num |
+   --show-edev-port-xstats=port_num | --edev-dump-xstats | --edev-reset-xstats |
+   --show-edev-device-xstats]
 
 Parameters
 ~~~~~~~~~~
@@ -100,6 +102,29 @@ specified by queue_id, offset and num.
 queue_id: A Tx queue identifier on this port.
 offset: The offset of the descriptor starting from tail.
 num: The number of the descriptors to dump.
+
+**--show-edev-queue-xstats**
+The show-edev-queue-xstats parameter enables stats for specified queue or all queues.
+queue_num: The queue number to get queue stats for this specified queue or * for all queues.
+
+**--show-edev-port-xstats**
+The show-edev-port-xstats parameter enables stats for specified port or all ports.
+queue_num: The port number to get port stats for this specified port or * for all ports.
+
+**--edev-dump-xstats**
+The edev-dump-xstats parameter dumps all eventdev stats.
+
+**--edev-reset-xstats**
+The edev-reset-xstats parameter resets eventdev stats after reading.
+
+**--show-edev-device-xstats**
+The show-edev-device-xstats parameter displays eventdev device stats.
+
+A typical command line usage for eventdev stats:
+
+    .. code-block:: console
+
+       ./dpdk-proc-info -- --show-edev-port-xstats=1
 
 Limitations
 -----------
