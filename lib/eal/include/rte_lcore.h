@@ -39,6 +39,20 @@ enum rte_lcore_role_t {
 };
 
 /**
+ * Check if the lcore ID is valid
+ *
+ * @param lcore_id
+ *   The identifier of the lcore.
+ *
+ * @return
+ *   True if the given lcore ID is between 0 and RTE_MAX_LCORE-1.
+ */
+static inline int rte_lcore_id_is_valid(unsigned int lcore_id)
+{
+	return (lcore_id < RTE_MAX_LCORE);
+}
+
+/**
  * Get a lcore's role.
  *
  * @param lcore_id
