@@ -941,7 +941,7 @@ bond_mode_8023ad_periodic_cb(void *arg)
 			/* Find LACP packet to this port. Do not check subtype,
 			 * it is done in function that queued packet
 			 */
-			int retval = rte_ring_dequeue(port->rx_ring,
+			int retval = rte_ring_dequeue(port->tx_ring,
 					(void **)&lacp_pkt);
 
 			if (retval != 0)
