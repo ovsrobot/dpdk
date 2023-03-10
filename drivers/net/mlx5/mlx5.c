@@ -1068,7 +1068,7 @@ mlx5_alloc_srh_flex_parser(struct rte_eth_dev *dev)
 		DRV_LOG(ERR, "Dynamic flex parser is not supported");
 		return -ENOTSUP;
 	}
-	if (__atomic_add_fetch(&priv->sh->srh_flex_parser.refcnt, 1, __ATOMIC_RELAXED) > 1)
+	if (__atomic_fetch_add(&priv->sh->srh_flex_parser.refcnt, 1, __ATOMIC_RELAXED) + 1 > 1)
 		return 0;
 
 	node.header_length_mode = MLX5_GRAPH_NODE_LEN_FIELD;
@@ -1123,7 +1123,7 @@ mlx5_free_srh_flex_parser(struct rte_eth_dev *dev)
 	struct mlx5_priv *priv = dev->data->dev_private;
 	struct mlx5_internal_flex_parser_profile *fp = &priv->sh->srh_flex_parser;
 
-	if (__atomic_sub_fetch(&fp->refcnt, 1, __ATOMIC_RELAXED))
+	if (__atomic_fetch_sub(&fp->refcnt, 1, __ATOMIC_RELAXED) - 1)
 		return;
 	if (fp->fp)
 		mlx5_devx_cmd_destroy(fp->fp);
