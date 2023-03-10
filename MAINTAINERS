@@ -1442,6 +1442,15 @@ F: drivers/raw/dpaa2_cmdif/
 F: doc/guides/rawdevs/dpaa2_cmdif.rst
 
 
+ML Device Drivers
+------------------------
+
+Marvell ML CNXK
+M: Srikanth Yalavarthi <syalavarthi@marvell.com>
+F: drivers/common/cnxk/hw/ml.h
+F: drivers/common/cnxk/roc_ml*
+
+
 Packet processing
 -----------------
 
