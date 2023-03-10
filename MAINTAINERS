@@ -1449,6 +1449,7 @@ Marvell ML CNXK
 M: Srikanth Yalavarthi <syalavarthi@marvell.com>
 F: drivers/common/cnxk/hw/ml.h
 F: drivers/common/cnxk/roc_ml*
+F: drivers/ml/cnxk/
 
 
 Packet processing

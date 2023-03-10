@@ -14,6 +14,7 @@ subdirs = [
         'mempool',        # depends on common and bus.
         'dma',            # depends on common and bus.
         'net',            # depends on common, bus, mempool
+        'ml',             # depends on common, bus, mempool
         'raw',            # depends on common, bus, dma and net.
         'crypto',         # depends on common, bus and mempool (net in future).
         'compress',       # depends on common, bus, mempool.

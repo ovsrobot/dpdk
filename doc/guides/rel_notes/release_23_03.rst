@@ -224,6 +224,13 @@ New Features
   * Test case for inferences from multiple models in ordered mode.
   * Test case for inferences from multiple models.in interleaving mode.
 
+* **Implementation of Marvell CNXK machine learning driver. **
+
+  * Added ml/cnxk driver which provides support for machine learning inference
+    operations on Marvell's CN10K series of SoC's.
+  * Added ML ROC code for ml/cnxk driver to common/cnxk.
+  * Added implementation with support for all rte_ml APIs.
+
 
 Removed Items
 -------------
