@@ -50,7 +50,7 @@ retry:
 		goto retry;
 
 	op->model_id = t->model[fid].id;
-	op->nb_batches = t->model[fid].info.batch_size;
+	op->nb_batches = t->model[fid].nb_batches;
 	op->mempool = t->op_pool;
 
 	op->input.addr = req->input;
@@ -162,7 +162,7 @@ retry:
 
 	for (i = 0; i < ops_count; i++) {
 		args->enq_ops[i]->model_id = t->model[fid].id;
-		args->enq_ops[i]->nb_batches = t->model[fid].info.batch_size;
+		args->enq_ops[i]->nb_batches = t->model[fid].nb_batches;
 		args->enq_ops[i]->mempool = t->op_pool;
 
 		args->enq_ops[i]->input.addr = args->reqs[i]->input;
@@ -357,6 +357,11 @@ test_inference_opt_dump(struct ml_options *opt)
 	ml_dump("queue_pairs", "%u", opt->queue_pairs);
 	ml_dump("queue_size", "%u", opt->queue_size);
 
+	if (opt->batches == 0)
+		ml_dump("batches", "%u (default)", opt->batches);
+	else
+		ml_dump("batches", "%u", opt->batches);
+
 	ml_dump_begin("filelist");
 	for (i = 0; i < opt->nb_filelist; i++) {
 		ml_dump_list("model", i, opt->filelist[i].model);
@@ -525,8 +530,8 @@ ml_request_initialize(struct rte_mempool *mp, void *opaque, void *obj, unsigned 
 	req->niters = 0;
 
 	/* quantize data */
-	rte_ml_io_quantize(t->cmn.opt->dev_id, t->model[t->fid].id,
-			   t->model[t->fid].info.batch_size, t->model[t->fid].input, req->input);
+	rte_ml_io_quantize(t->cmn.opt->dev_id, t->model[t->fid].id, t->model[t->fid].nb_batches,
+			   t->model[t->fid].input, req->input);
 }
 
 int
@@ -544,7 +549,7 @@ ml_inference_iomem_setup(struct ml_test *test, struct ml_options *opt, uint16_t 
 	int ret;
 
 	/* get input buffer size */
-	ret = rte_ml_io_input_size_get(opt->dev_id, t->model[fid].id, t->model[fid].info.batch_size,
+	ret = rte_ml_io_input_size_get(opt->dev_id, t->model[fid].id, t->model[fid].nb_batches,
 				       (uint64_t *)&t->model[fid].inp_qsize,
 				       (uint64_t *)&t->model[fid].inp_dsize);
 	if (ret != 0) {
@@ -553,9 +558,9 @@ ml_inference_iomem_setup(struct ml_test *test, struct ml_options *opt, uint16_t 
 	}
 
 	/* get output buffer size */
-	ret = rte_ml_io_output_size_get(
-		opt->dev_id, t->model[fid].id, t->model[fid].info.batch_size,
-		(uint64_t *)&t->model[fid].out_qsize, (uint64_t *)&t->model[fid].out_dsize);
+	ret = rte_ml_io_output_size_get(opt->dev_id, t->model[fid].id, t->model[fid].nb_batches,
+					(uint64_t *)&t->model[fid].out_qsize,
+					(uint64_t *)&t->model[fid].out_dsize);
 	if (ret != 0) {
 		ml_err("Failed to get input size, model : %s\n", opt->filelist[fid].model);
 		return ret;
@@ -700,7 +705,7 @@ ml_request_finish(struct rte_mempool *mp, void *opaque, void *obj, unsigned int 
 		return;
 
 	t->nb_used++;
-	rte_ml_io_dequantize(t->cmn.opt->dev_id, model->id, t->model[req->fid].info.batch_size,
+	rte_ml_io_dequantize(t->cmn.opt->dev_id, model->id, t->model[req->fid].nb_batches,
 			     req->output, model->output);
 }
 
