@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <getopt.h>
+#include <math.h>
 
 #include <rte_memory.h>
 #include <rte_mldev.h>
@@ -28,6 +29,7 @@ ml_options_default(struct ml_options *opt)
 	opt->queue_pairs = 1;
 	opt->queue_size = 1;
 	opt->batches = 0;
+	opt->tolerance = 0.0;
 	opt->debug = false;
 }
 
@@ -133,6 +135,13 @@ ml_parse_filelist(struct ml_options *opt, const char *arg)
 	}
 	strlcpy(opt->filelist[opt->nb_filelist].output, token, PATH_MAX);
 
+	/* reference - optional */
+	token = strtok(NULL, delim);
+	if (token != NULL)
+		strlcpy(opt->filelist[opt->nb_filelist].reference, token, PATH_MAX);
+	else
+		memset(opt->filelist[opt->nb_filelist].reference, 0, PATH_MAX);
+
 	opt->nb_filelist++;
 
 	if (opt->nb_filelist == 0) {
@@ -177,6 +186,14 @@ ml_parse_batches(struct ml_options *opt, const char *arg)
 	return parser_read_uint16(&opt->batches, arg);
 }
 
+static int
+ml_parse_tolerance(struct ml_options *opt, const char *arg)
+{
+	opt->tolerance = fabs(atof(arg));
+
+	return 0;
+}
+
 static void
 ml_dump_test_options(const char *testname)
 {
@@ -193,12 +210,13 @@ ml_dump_test_options(const char *testname)
 
 	if ((strcmp(testname, "inference_ordered") == 0) ||
 	    (strcmp(testname, "inference_interleave") == 0)) {
-		printf("\t\t--filelist         : comma separated list of model, input and output\n"
+		printf("\t\t--filelist         : comma separated list of model, input, output and reference\n"
 		       "\t\t--repetitions      : number of inference repetitions\n"
 		       "\t\t--burst_size       : inference burst size\n"
 		       "\t\t--queue_pairs      : number of queue pairs to create\n"
 		       "\t\t--queue_size       : size fo queue-pair\n"
-		       "\t\t--batches          : number of batches of input\n");
+		       "\t\t--batches          : number of batches of input\n"
+		       "\t\t--tolerance        : maximum tolerance (%%) for output validation\n");
 		printf("\n");
 	}
 }
@@ -218,12 +236,13 @@ print_usage(char *program)
 	ml_test_dump_names(ml_dump_test_options);
 }
 
-static struct option lgopts[] = {
-	{ML_TEST, 1, 0, 0},	  {ML_DEVICE_ID, 1, 0, 0},   {ML_SOCKET_ID, 1, 0, 0},
-	{ML_MODELS, 1, 0, 0},	  {ML_FILELIST, 1, 0, 0},    {ML_REPETITIONS, 1, 0, 0},
-	{ML_BURST_SIZE, 1, 0, 0}, {ML_QUEUE_PAIRS, 1, 0, 0}, {ML_QUEUE_SIZE, 1, 0, 0},
-	{ML_BATCHES, 1, 0, 0},	  {ML_DEBUG, 0, 0, 0},	     {ML_HELP, 0, 0, 0},
-	{NULL, 0, 0, 0}};
+static struct option lgopts[] = {{ML_TEST, 1, 0, 0},	   {ML_DEVICE_ID, 1, 0, 0},
+				 {ML_SOCKET_ID, 1, 0, 0},  {ML_MODELS, 1, 0, 0},
+				 {ML_FILELIST, 1, 0, 0},   {ML_REPETITIONS, 1, 0, 0},
+				 {ML_BURST_SIZE, 1, 0, 0}, {ML_QUEUE_PAIRS, 1, 0, 0},
+				 {ML_QUEUE_SIZE, 1, 0, 0}, {ML_BATCHES, 1, 0, 0},
+				 {ML_TOLERANCE, 1, 0, 0},  {ML_DEBUG, 0, 0, 0},
+				 {ML_HELP, 0, 0, 0},	   {NULL, 0, 0, 0}};
 
 static int
 ml_opts_parse_long(int opt_idx, struct ml_options *opt)
@@ -236,6 +255,7 @@ ml_opts_parse_long(int opt_idx, struct ml_options *opt)
 		{ML_FILELIST, ml_parse_filelist},     {ML_REPETITIONS, ml_parse_repetitions},
 		{ML_BURST_SIZE, ml_parse_burst_size}, {ML_QUEUE_PAIRS, ml_parse_queue_pairs},
 		{ML_QUEUE_SIZE, ml_parse_queue_size}, {ML_BATCHES, ml_parse_batches},
+		{ML_TOLERANCE, ml_parse_tolerance},
 	};
 
 	for (i = 0; i < RTE_DIM(parsermap); i++) {
