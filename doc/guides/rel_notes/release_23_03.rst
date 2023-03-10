@@ -216,6 +216,14 @@ New Features
   * Added support to capture packets at each graph node with packet metadata and
     node name.
 
+* **Added test application for machine learning inference device library.**
+
+  * Added test application for mldev library with support for multiple test cases.
+  * Test case for device operations.
+  * Test case for model operations.
+  * Test case for inferences from multiple models in ordered mode.
+  * Test case for inferences from multiple models.in interleaving mode.
+
 
 Removed Items
 -------------
