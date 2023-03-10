@@ -17,3 +17,4 @@ deps += ['bus_pci', 'dmadev']
 sources = files(
         'hisi_dmadev.c',
 )
+pmd_supports_disable_iova_as_pa = true
