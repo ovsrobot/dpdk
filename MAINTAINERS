@@ -480,6 +480,7 @@ Machine Learning device API - EXPERIMENTAL
 M: Srikanth Yalavarthi <syalavarthi@marvell.com>
 F: lib/mldev/
 F: doc/guides/prog_guide/mldev.rst
+F: app/test-mldev
 
 DMA device API - EXPERIMENTAL
 M: Chengwen Feng <fengchengwen@huawei.com>
