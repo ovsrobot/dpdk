@@ -84,7 +84,7 @@ union float32 {
 	uint32_t u;
 };
 
-__rte_weak int
+int
 rte_ml_io_float32_to_int8(float scale, uint64_t nb_elements, void *input, void *output)
 {
 	float *input_buffer;
@@ -116,7 +116,7 @@ rte_ml_io_float32_to_int8(float scale, uint64_t nb_elements, void *input, void *
 	return 0;
 }
 
-__rte_weak int
+int
 rte_ml_io_int8_to_float32(float scale, uint64_t nb_elements, void *input, void *output)
 {
 	int8_t *input_buffer;
@@ -139,7 +139,7 @@ rte_ml_io_int8_to_float32(float scale, uint64_t nb_elements, void *input, void *
 	return 0;
 }
 
-__rte_weak int
+int
 rte_ml_io_float32_to_uint8(float scale, uint64_t nb_elements, void *input, void *output)
 {
 	float *input_buffer;
@@ -171,7 +171,7 @@ rte_ml_io_float32_to_uint8(float scale, uint64_t nb_elements, void *input, void 
 	return 0;
 }
 
-__rte_weak int
+int
 rte_ml_io_uint8_to_float32(float scale, uint64_t nb_elements, void *input, void *output)
 {
 	uint8_t *input_buffer;
@@ -194,7 +194,7 @@ rte_ml_io_uint8_to_float32(float scale, uint64_t nb_elements, void *input, void 
 	return 0;
 }
 
-__rte_weak int
+int
 rte_ml_io_float32_to_int16(float scale, uint64_t nb_elements, void *input, void *output)
 {
 	float *input_buffer;
@@ -226,7 +226,7 @@ rte_ml_io_float32_to_int16(float scale, uint64_t nb_elements, void *input, void 
 	return 0;
 }
 
-__rte_weak int
+int
 rte_ml_io_int16_to_float32(float scale, uint64_t nb_elements, void *input, void *output)
 {
 	int16_t *input_buffer;
@@ -249,7 +249,7 @@ rte_ml_io_int16_to_float32(float scale, uint64_t nb_elements, void *input, void 
 	return 0;
 }
 
-__rte_weak int
+int
 rte_ml_io_float32_to_uint16(float scale, uint64_t nb_elements, void *input, void *output)
 {
 	float *input_buffer;
@@ -281,7 +281,7 @@ rte_ml_io_float32_to_uint16(float scale, uint64_t nb_elements, void *input, void
 	return 0;
 }
 
-__rte_weak int
+int
 rte_ml_io_uint16_to_float32(float scale, uint64_t nb_elements, void *input, void *output)
 {
 	uint16_t *input_buffer;
@@ -429,7 +429,7 @@ __float32_to_float16_scalar_rtn(float x)
 	return u16;
 }
 
-__rte_weak int
+int
 rte_ml_io_float32_to_float16(uint64_t nb_elements, void *input, void *output)
 {
 	float *input_buffer;
@@ -513,7 +513,7 @@ __float16_to_float32_scalar_rtx(uint16_t f16)
 	return f32.f;
 }
 
-__rte_weak int
+int
 rte_ml_io_float16_to_float32(uint64_t nb_elements, void *input, void *output)
 {
 	uint16_t *input_buffer;
@@ -614,7 +614,7 @@ bf16_pack:
 	return u16;
 }
 
-__rte_weak int
+int
 rte_ml_io_float32_to_bfloat16(uint64_t nb_elements, void *input, void *output)
 {
 	float *input_buffer;
@@ -696,7 +696,7 @@ fp32_pack:
 	return f32.f;
 }
 
-__rte_weak int
+int
 rte_ml_io_bfloat16_to_float32(uint64_t nb_elements, void *input, void *output)
 {
 	uint16_t *input_buffer;
