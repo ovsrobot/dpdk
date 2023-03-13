@@ -55,6 +55,10 @@ extern "C" {
  */
 #define RTE_HASH_EXTRA_FLAGS_RW_CONCURRENCY_LF 0x20
 
+/** Flag to disable updating data of existing key
+ */
+#define RTE_HASH_EXTRA_FLAGS_DISABLE_UPDATE_EXISTING_KEY 0x40
+
 /**
  * The type of hash value of a key.
  * It should be a value of at least 32bit with fully random pattern.

@@ -32,7 +32,8 @@
 				   RTE_HASH_EXTRA_FLAGS_RW_CONCURRENCY | \
 				   RTE_HASH_EXTRA_FLAGS_EXT_TABLE |	\
 				   RTE_HASH_EXTRA_FLAGS_NO_FREE_ON_DEL | \
-				   RTE_HASH_EXTRA_FLAGS_RW_CONCURRENCY_LF)
+				   RTE_HASH_EXTRA_FLAGS_RW_CONCURRENCY_LF | \
+				   RTE_HASH_EXTRA_FLAGS_DISABLE_UPDATE_EXISTING_KEY)
 
 #define FOR_EACH_BUCKET(CURRENT_BKT, START_BUCKET)                            \
 	for (CURRENT_BKT = START_BUCKET;                                      \
@@ -148,6 +149,7 @@ rte_hash_create(const struct rte_hash_parameters *params)
 	unsigned int readwrite_concur_support = 0;
 	unsigned int writer_takes_lock = 0;
 	unsigned int no_free_on_del = 0;
+	unsigned int no_update_data = 0;
 	uint32_t *ext_bkt_to_free = NULL;
 	uint32_t *tbl_chng_cnt = NULL;
 	struct lcore_cache *local_free_slots = NULL;
@@ -215,6 +217,9 @@ rte_hash_create(const struct rte_hash_parameters *params)
 		 */
 		no_free_on_del = 1;
 	}
+
+	if (params->extra_flag & RTE_HASH_EXTRA_FLAGS_DISABLE_UPDATE_EXISTING_KEY)
+		no_update_data = 1;
 
 	/* Store all keys and leave the first entry as a dummy entry for lookup_bulk */
 	if (use_local_cache)
@@ -428,6 +433,7 @@ rte_hash_create(const struct rte_hash_parameters *params)
 	h->ext_table_support = ext_table_support;
 	h->writer_takes_lock = writer_takes_lock;
 	h->no_free_on_del = no_free_on_del;
+	h->no_update_data = no_update_data;
 	h->readwrite_concur_lf_support = readwrite_concur_lf_support;
 
 #if defined(RTE_ARCH_X86)
@@ -699,6 +705,8 @@ search_and_update(const struct rte_hash *h, void *data, const void *key,
 			k = (struct rte_hash_key *) ((char *)keys +
 					bkt->key_idx[i] * h->key_entry_size);
 			if (rte_hash_cmp_eq(key, k->key, h) == 0) {
+				if (h->no_update_data == 1)
+					return -EALRDY;
 				/* The store to application data at *data
 				 * should not leak after the store to pdata
 				 * in the key store. i.e. pdata is the guard
