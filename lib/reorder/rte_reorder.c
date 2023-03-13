@@ -55,6 +55,28 @@ struct rte_reorder_buffer {
 static void
 rte_reorder_free_mbufs(struct rte_reorder_buffer *b);
 
+static int
+rte_reorder_dynf_register(void)
+{
+	int ret;
+
+	static const struct rte_mbuf_dynfield reorder_seqn_dynfield_desc = {
+		.name = RTE_REORDER_SEQN_DYNFIELD_NAME,
+		.size = sizeof(rte_reorder_seqn_t),
+		.align = __alignof__(rte_reorder_seqn_t),
+	};
+
+	if (rte_reorder_seqn_dynfield_offset > 0)
+		return 0;
+
+	ret = rte_mbuf_dynfield_register(&reorder_seqn_dynfield_desc);
+	if (ret < 0)
+		return ret;
+	rte_reorder_seqn_dynfield_offset = ret;
+
+	return 0;
+}
+
 struct rte_reorder_buffer *
 rte_reorder_init(struct rte_reorder_buffer *b, unsigned int bufsize,
 		const char *name, unsigned int size)
@@ -86,6 +108,12 @@ rte_reorder_init(struct rte_reorder_buffer *b, unsigned int bufsize,
 		rte_errno = EINVAL;
 		return NULL;
 	}
+	if (rte_reorder_dynf_register()) {
+		RTE_LOG(ERR, REORDER, "Failed to register mbuf field for reorder sequence"
+				      " number\n");
+		rte_errno = ENOMEM;
+		return NULL;
+	}
 
 	memset(b, 0, bufsize);
 	strlcpy(b->name, name, sizeof(b->name));
@@ -107,11 +135,6 @@ rte_reorder_create(const char *name, unsigned socket_id, unsigned int size)
 	struct rte_reorder_list *reorder_list;
 	const unsigned int bufsize = sizeof(struct rte_reorder_buffer) +
 					(2 * size * sizeof(struct rte_mbuf *));
-	static const struct rte_mbuf_dynfield reorder_seqn_dynfield_desc = {
-		.name = RTE_REORDER_SEQN_DYNFIELD_NAME,
-		.size = sizeof(rte_reorder_seqn_t),
-		.align = __alignof__(rte_reorder_seqn_t),
-	};
 
 	reorder_list = RTE_TAILQ_CAST(rte_reorder_tailq.head, rte_reorder_list);
 
@@ -129,10 +152,9 @@ rte_reorder_create(const char *name, unsigned socket_id, unsigned int size)
 		return NULL;
 	}
 
-	rte_reorder_seqn_dynfield_offset =
-		rte_mbuf_dynfield_register(&reorder_seqn_dynfield_desc);
-	if (rte_reorder_seqn_dynfield_offset < 0) {
-		RTE_LOG(ERR, REORDER, "Failed to register mbuf field for reorder sequence number\n");
+	if (rte_reorder_dynf_register()) {
+		RTE_LOG(ERR, REORDER, "Failed to register mbuf field for reorder sequence"
+				      " number\n");
 		rte_errno = ENOMEM;
 		return NULL;
 	}
