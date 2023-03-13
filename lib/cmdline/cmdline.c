@@ -176,6 +176,22 @@ cmdline_quit(struct cmdline *cl)
 	rdline_quit(&cl->rdl);
 }
 
+void
+cmdline_cancel(struct cmdline *cl)
+{
+	if (!cl)
+		return;
+
+#ifdef RTE_EXEC_ENV_WINDOWS
+	/* force the outstanding read on console to exit */
+	if (cl->oldterm.is_console_input) {
+		HANDLE handle = (HANDLE)_get_osfhandle(cl->s_in);
+
+		CancelIoEx(handle, NULL);
+	}
+#endif
+}
+
 int
 cmdline_poll(struct cmdline *cl)
 {

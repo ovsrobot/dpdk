@@ -58,6 +58,7 @@ cmdline_get_rdline(struct cmdline *cl);
 int cmdline_poll(struct cmdline *cl);
 
 void cmdline_interact(struct cmdline *cl);
+void cmdline_cancel(struct cmdline *cl);
 void cmdline_quit(struct cmdline *cl);
 
 #ifdef __cplusplus
