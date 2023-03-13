@@ -60,6 +60,16 @@ int cmdline_poll(struct cmdline *cl);
 void cmdline_interact(struct cmdline *cl);
 void cmdline_quit(struct cmdline *cl);
 
+
+/**
+ * This function causes the read() in cmdline_interact to exit.
+ *
+ * @param cl
+ *   The command line object.
+ */
+__rte_experimental
+void cmdline_cancel(struct cmdline *cl);
+
 #ifdef __cplusplus
 }
 #endif

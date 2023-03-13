@@ -84,5 +84,8 @@ EXPERIMENTAL {
 	# added in 22.07
 	cmdline_parse_check;
 
+	# added in 23.03
+	cmdline_cancel;
+
 	local: *;
 };

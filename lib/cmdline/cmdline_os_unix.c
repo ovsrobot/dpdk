@@ -51,3 +51,8 @@ cmdline_vdprintf(int fd, const char *format, va_list op)
 {
 	return vdprintf(fd, format, op);
 }
+
+void
+cmdline_cancel(__rte_unused struct cmdline *cl)
+{
+}
