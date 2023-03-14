@@ -170,6 +170,9 @@ parse_device_id(const char *key __rte_unused, const char *value,
 {
 	struct pdump_tuples *pt = extra_args;
 
+	if (value == NULL || extra_args == NULL)
+		return -EINVAL;
+
 	pt->device_id = strdup(value);
 	pt->dump_by_type = DEVICE_ID;
 
@@ -181,6 +184,9 @@ parse_queue(const char *key __rte_unused, const char *value, void *extra_args)
 {
 	unsigned long n;
 	struct pdump_tuples *pt = extra_args;
+
+	if (value == NULL || extra_args == NULL)
+		return -EINVAL;
 
 	if (!strcmp(value, "*"))
 		pt->queue = RTE_PDUMP_ALL_QUEUES;
@@ -196,6 +202,9 @@ parse_rxtxdev(const char *key, const char *value, void *extra_args)
 {
 
 	struct pdump_tuples *pt = extra_args;
+
+	if (value == NULL || extra_args == NULL)
+		return -EINVAL;
 
 	if (!strcmp(key, PDUMP_RX_DEV_ARG)) {
 		strlcpy(pt->rx_dev, value, sizeof(pt->rx_dev));
@@ -219,6 +228,9 @@ parse_uint_value(const char *key, const char *value, void *extra_args)
 	unsigned long t;
 	char *end;
 	int ret = 0;
+
+	if (value == NULL || extra_args == NULL)
+		return -EINVAL;
 
 	errno = 0;
 	v = extra_args;
