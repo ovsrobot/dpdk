@@ -64,6 +64,39 @@ static uint32_t test_index;
 
 static struct crypto_testsuite_params_asym testsuite_params = { NULL };
 
+static void
+test_crypto_rand(int len, uint8_t *buffer)
+{
+	int i;
+
+	for (i = 0; i < len; ++i)
+		buffer[i] = (uint8_t)(rand() % ((uint8_t)-1)) | 1;
+}
+
+static int
+process_crypto_request(uint8_t dev_id, struct rte_crypto_op **op,
+				struct rte_crypto_op **result_op)
+{
+	/* Process crypto operation */
+	if (rte_cryptodev_enqueue_burst(dev_id, 0, op, 1) != 1) {
+		RTE_LOG(ERR, USER1,
+			"line %u FAILED: %s",
+			__LINE__, "Error sending packet for operation");
+		return -1;
+	}
+
+	while (rte_cryptodev_dequeue_burst(dev_id, 0, result_op, 1) == 0)
+		rte_pause();
+
+	if (*result_op == NULL) {
+		RTE_LOG(ERR, USER1,
+			"line %u FAILED: %s",
+			__LINE__, "Failed to process asym crypto op");
+		return -1;
+	}
+	return 0;
+}
+
 static int
 queue_ops_rsa_sign_verify(void *sess)
 {
@@ -2196,6 +2229,219 @@ test_ecpm_all_curve(void)
 	return overall_status;
 }
 
+static void *
+dh_alice_bob_set_session(uint8_t dev_id,
+	struct rte_crypto_op *op,
+	const struct test_dh_group *group)
+{
+	struct rte_crypto_asym_xform xform = { };
+	void *sess = NULL;
+	int ret = 0;
+
+	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_DH;
+	xform.dh.g.data = group->g.data;
+	xform.dh.g.length = group->g.bytesize;
+	xform.dh.p.data = group->p.data;
+	xform.dh.p.length = group->p.bytesize;
+	ret = rte_cryptodev_asym_session_create(dev_id, &xform,
+			testsuite_params.session_mpool, &sess);
+	if (ret)
+		return NULL;
+
+	rte_crypto_op_attach_asym_session(op, sess);
+	return sess;
+}
+
+static void
+dh_alice_bob_gen_x(const struct test_dh_group *group,
+	uint8_t *private_data)
+{
+	test_crypto_rand(group->priv_ff_size, private_data);
+	if (private_data[0] > group->p.data[0])
+		private_data[0] = group->p.data[0] - 1;
+}
+
+static int
+dh_alice_bob_gen_y(struct rte_crypto_op *op,
+	const char *name,
+	const uint8_t dev_id,
+	uint8_t *y,
+	uint8_t *x,
+	const int ff_size)
+{
+	struct rte_crypto_op *result_op;
+	int ret = 0;
+
+	op->asym->dh.ke_type = RTE_CRYPTO_ASYM_KE_PUB_KEY_GENERATE;
+	op->asym->dh.pub_key.data = y;
+	op->asym->dh.priv_key.data = x;
+	op->asym->dh.priv_key.length = ff_size;
+
+	ret = process_crypto_request(dev_id, &op, &result_op);
+	TEST_ASSERT_SUCCESS(ret, "Failed to compute public key for %s", name);
+
+	return 0;
+}
+
+static int
+dh_alice_bob_shared_compute(uint8_t dev_id,
+	const char *name,
+	struct rte_crypto_op *op,
+	uint8_t *secret,
+	uint8_t *peer,
+	uint32_t peer_size)
+{
+	struct rte_crypto_op *result_op;
+	int ret = 0;
+
+	op->asym->dh.ke_type = RTE_CRYPTO_ASYM_KE_SHARED_SECRET_COMPUTE;
+	op->asym->dh.pub_key.data = peer;
+	op->asym->dh.pub_key.length = peer_size;
+	op->asym->dh.shared_secret.data = secret;
+
+	ret = process_crypto_request(dev_id, &op, &result_op);
+	TEST_ASSERT_SUCCESS(ret,
+		"Failed to compute shared secret for %s",
+		name);
+
+	return 0;
+}
+
+/* Diffie-Hellman test to verify the processed data */
+static int
+dh_alice_bob_verify(struct rte_crypto_op *alice_op,
+	struct rte_crypto_op *bob_op)
+{
+	int ret = 0;
+
+	/* Verify processed data */
+	ret = (alice_op->asym->dh.shared_secret.length ==
+			bob_op->asym->dh.shared_secret.length);
+	if (!ret) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: %s", __LINE__,
+			"Alice's and Bob's shared secret length do not match.");
+		return TEST_FAILED;
+	}
+	ret = memcmp(alice_op->asym->dh.shared_secret.data,
+		alice_op->asym->dh.shared_secret.data,
+		bob_op->asym->dh.shared_secret.length);
+	if (ret) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: %s", __LINE__,
+			"Alice's and Bob's shared secret do not match.");
+		return TEST_FAILED;
+	}
+	return TEST_SUCCESS;
+}
+
+static int
+test_dh_alice_and_bob(const void *test_data)
+{
+	uint8_t alice_x[TEST_DH_MOD_LEN] = { };
+	uint8_t alice_y[TEST_DH_MOD_LEN] = { };
+	uint8_t alice_secret[TEST_DH_MOD_LEN] = { };
+	uint8_t bob_x[TEST_DH_MOD_LEN] = { };
+	uint8_t bob_y[TEST_DH_MOD_LEN] = { };
+	uint8_t bob_secret[TEST_DH_MOD_LEN] = { };
+
+	const struct test_dh_group *group = test_data;
+	struct rte_crypto_op *alice_op = NULL;
+	struct rte_crypto_op *bob_op = NULL;
+	void *alice_session = NULL;
+	void *bob_session = NULL;
+
+	int ret = TEST_SUCCESS;
+	uint32_t alice_y_size = 0;
+	uint32_t bob_y_size = 0;
+	uint8_t dev_id = testsuite_params.valid_devs[0];
+
+	alice_op = rte_crypto_op_alloc(testsuite_params.op_mpool,
+			RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
+	if (alice_op == NULL) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: %s", __LINE__,
+			"Cannot allocate alice_op");
+		ret = TEST_FAILED;
+		goto error_exit;
+	}
+	bob_op = rte_crypto_op_alloc(testsuite_params.op_mpool,
+			RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
+	if (bob_op == NULL) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: %s", __LINE__,
+			"Cannot allocate bob_op");
+		ret = TEST_FAILED;
+		goto error_exit;
+	}
+
+	alice_session = dh_alice_bob_set_session(dev_id, alice_op,
+		group);
+	if (alice_session == NULL) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: %s", __LINE__,
+			"Cannot allocate alice_session");
+		ret = TEST_FAILED;
+		goto error_exit;
+	}
+	bob_session = dh_alice_bob_set_session(dev_id, bob_op,
+		group);
+	if (bob_session == NULL) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: %s", __LINE__,
+			"Cannot allocate bob_session");
+		ret = TEST_FAILED;
+		goto error_exit;
+	}
+
+	dh_alice_bob_gen_x(group, alice_x);
+	ret = dh_alice_bob_gen_y(alice_op, "Alice", dev_id,
+		alice_y, alice_x, group->priv_ff_size);
+	if (ret) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: %s", __LINE__,
+		"Diffie-Hellman error\n");
+		goto error_exit;
+	}
+	alice_y_size = alice_op->asym->dh.pub_key.length;
+	dh_alice_bob_gen_x(group, bob_x);
+	ret = dh_alice_bob_gen_y(bob_op, "Bob", dev_id,
+		bob_y, bob_x, group->priv_ff_size);
+	if (ret) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: %s", __LINE__,
+		"Diffie-Hellman error\n");
+		goto error_exit;
+	}
+	bob_y_size = bob_op->asym->dh.pub_key.length;
+
+	ret = dh_alice_bob_shared_compute(dev_id, "Alice", alice_op,
+		alice_secret, bob_y, bob_y_size);
+	if (ret) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: %s", __LINE__,
+		"Diffie-Hellman error, error computing Alice's shared secret");
+		goto error_exit;
+	}
+
+	ret = dh_alice_bob_shared_compute(dev_id, "Bob", bob_op, bob_secret,
+		alice_y, alice_y_size);
+	if (ret) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: %s", __LINE__,
+		"Diffie-Hellman error, error computing Bob's shared secret");
+		goto error_exit;
+	}
+
+	ret = dh_alice_bob_verify(alice_op, bob_op);
+	if (ret) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: %s", __LINE__,
+		"Diffie-Hellman error");
+		goto error_exit;
+	}
+
+error_exit:
+	if (alice_session)
+		rte_cryptodev_asym_session_free(dev_id, alice_session);
+	if (bob_session)
+		rte_cryptodev_asym_session_free(dev_id, bob_session);
+	if (alice_op)
+		rte_crypto_op_free(alice_op);
+	if (bob_op != NULL)
+		rte_crypto_op_free(bob_op);
+	return ret;
+}
+
 static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 	.suite_name = "Crypto Device OPENSSL ASYM Unit Test Suite",
 	.setup = testsuite_setup,
@@ -2215,6 +2461,22 @@ static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_mod_inv),
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_mod_exp),
 		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_one_by_one),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Diffie-Hellman Alice and Bob group 14 ikev2 test",
+			ut_setup_asym, ut_teardown_asym,
+			test_dh_alice_and_bob, &test_dh_ikev2group_14),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Diffie-Hellman Alice and Bob group 15 ikev2 test",
+			ut_setup_asym, ut_teardown_asym,
+			test_dh_alice_and_bob, &test_dh_ikev2group_15),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Diffie-Hellman Alice and Bob group 16 ikev2 test",
+			ut_setup_asym, ut_teardown_asym,
+			test_dh_alice_and_bob, &test_dh_ikev2group_16),
+		TEST_CASE_NAMED_WITH_DATA(
+			"Diffie-Hellman Alice and Bob group 24 ikev2 test",
+			ut_setup_asym, ut_teardown_asym,
+			test_dh_alice_and_bob, &test_dh_ikev2group_24),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
