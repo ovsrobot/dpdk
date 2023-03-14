@@ -562,6 +562,9 @@ static int parse_kvlist(const char *key __rte_unused,
 	char *node;
 	char *end;
 
+	if (value == NULL || data == NULL)
+		return -EINVAL;
+
 	name = strdup(value);
 
 	ret = -EINVAL;
@@ -629,6 +632,9 @@ parse_internal_args(const char *key __rte_unused, const char *value,
 	struct ring_internal_args **internal_args = data;
 	void *args;
 	int ret, n;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	/* make sure 'value' is valid pointer length */
 	if (strnlen(value, ETH_RING_INTERNAL_ARG_MAX_LEN) >=
