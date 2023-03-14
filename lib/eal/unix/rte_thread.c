@@ -16,8 +16,17 @@ struct eal_tls_key {
 	pthread_key_t thread_index;
 };
 
+enum __rte_thread_wrapper_status {
+	THREAD_WRAPPER_LAUNCHING, /* Yet to call thread_func function */
+	THREAD_WRAPPER_RUNNING, /* Thread is running successfully */
+	THREAD_WRAPPER_ERROR /* Thread thread_wrapper encountered an error */
+};
+
 struct thread_routine_ctx {
 	rte_thread_func thread_func;
+	const rte_thread_attr_t *thread_attr;
+	int thread_wrapper_ret;
+	enum __rte_thread_wrapper_status thread_wrapper_status;
 	void *routine_args;
 };
 
@@ -83,11 +92,22 @@ thread_map_os_priority_to_eal_priority(int policy, int os_pri,
 static void *
 thread_func_wrapper(void *arg)
 {
-	struct thread_routine_ctx ctx = *(struct thread_routine_ctx *)arg;
+	struct thread_routine_ctx *ctx = (struct thread_routine_ctx *)arg;
+	rte_thread_func thread_func = ctx->thread_func;
+	void *thread_args = ctx->routine_args;
 
-	free(arg);
+	if (ctx->thread_attr != NULL && CPU_COUNT(&ctx->thread_attr->cpuset) > 0) {
+		ctx->thread_wrapper_ret = rte_thread_set_affinity(&ctx->thread_attr->cpuset);
+		if (ctx->thread_wrapper_ret != 0) {
+			RTE_LOG(DEBUG, EAL, "rte_thread_set_affinity failed\n");
+			__atomic_store_n(&ctx->thread_wrapper_status,
+				THREAD_WRAPPER_ERROR, __ATOMIC_RELEASE);
+		}
+	}
+	__atomic_store_n(&ctx->thread_wrapper_status,
+		THREAD_WRAPPER_RUNNING, __ATOMIC_RELEASE);
 
-	return (void *)(uintptr_t)ctx.thread_func(ctx.routine_args);
+	return (void *)(uintptr_t)thread_func(thread_args);
 }
 
 int
@@ -98,6 +118,7 @@ rte_thread_create(rte_thread_t *thread_id,
 	int ret = 0;
 	pthread_attr_t attr;
 	pthread_attr_t *attrp = NULL;
+	enum __rte_thread_wrapper_status thread_wrapper_status;
 	struct thread_routine_ctx *ctx;
 	struct sched_param param = {
 		.sched_priority = 0,
@@ -111,7 +132,10 @@ rte_thread_create(rte_thread_t *thread_id,
 		goto cleanup;
 	}
 	ctx->routine_args = args;
+	ctx->thread_attr = thread_attr;
 	ctx->thread_func = thread_func;
+	ctx->thread_wrapper_ret = 0;
+	ctx->thread_wrapper_status = THREAD_WRAPPER_LAUNCHING;
 
 	if (thread_attr != NULL) {
 		ret = pthread_attr_init(&attr);
@@ -164,14 +188,19 @@ rte_thread_create(rte_thread_t *thread_id,
 		goto cleanup;
 	}
 
-	if (thread_attr != NULL && CPU_COUNT(&thread_attr->cpuset) > 0) {
-		ret = rte_thread_set_affinity_by_id(*thread_id,
-			&thread_attr->cpuset);
-		if (ret != 0) {
-			RTE_LOG(DEBUG, EAL, "rte_thread_set_affinity_by_id failed\n");
-			goto cleanup;
-		}
+	/* Wait for the thread wrapper to initialize thread successfully */
+	while ((thread_wrapper_status =
+		__atomic_load_n(&ctx->thread_wrapper_status,
+		__ATOMIC_ACQUIRE)) == THREAD_WRAPPER_LAUNCHING)
+		sched_yield();
+
+	/* Check if the control thread encountered an error */
+	if (thread_wrapper_status == THREAD_WRAPPER_ERROR) {
+		/* thread wrapper is exiting */
+		pthread_join((pthread_t)thread_id->opaque_id, NULL);
+		ret = ctx->thread_wrapper_ret;
 	}
+	free(ctx);
 
 	ctx = NULL;
 cleanup:
