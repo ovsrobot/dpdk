@@ -605,6 +605,13 @@ Dumps the log level for all the dpdk modules::
 
    testpmd> dump_log_types
 
+dump ethdev private
+~~~~~~~~~~~~~~~~~~~
+
+Dumps the specific ethdev port private info::
+
+   testpmd> dump_eth_priv [port_id]
+
 show (raw_encap|raw_decap)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 

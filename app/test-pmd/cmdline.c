@@ -8439,6 +8439,48 @@ static cmdline_parse_inst_t cmd_dump_one = {
 	},
 };
 
+/* ******************************************************************************** */
+
+struct cmd_dump_eth_priv_result {
+	cmdline_fixed_string_t dump;
+	portid_t port_id;
+};
+
+static cmdline_parse_token_string_t cmd_dump_eth_priv_dump =
+	TOKEN_STRING_INITIALIZER(struct cmd_dump_one_result, dump,
+				 "dump_eth_priv");
+static cmdline_parse_token_num_t cmd_dump_eth_priv_port_id =
+	TOKEN_NUM_INITIALIZER(struct cmd_dump_eth_priv_result,
+			      port_id, RTE_UINT16);
+
+static void cmd_dump_eth_priv_parsed(void *parsed_result, struct cmdline *cl,
+				     __rte_unused void *data)
+{
+	struct cmd_dump_eth_priv_result *res = parsed_result;
+	int ret;
+
+	if (!rte_eth_dev_is_valid_port(res->port_id)) {
+		cmdline_printf(cl, "Invalid port id %u\n", res->port_id);
+		return;
+	}
+
+	ret = rte_eth_dev_priv_dump(res->port_id, stdout);
+	if (ret < 0)
+		cmdline_printf(cl, "Failed to dump port id %u private info with error (%d): %s\n",
+			       res->port_id, ret, strerror(-ret));
+}
+
+static cmdline_parse_inst_t cmd_dump_eth_priv = {
+	.f = cmd_dump_eth_priv_parsed,  /* function to call */
+	.data = NULL,      /* 2nd arg of func */
+	.help_str = "dump_eth_priv <port_id>: Dump one ethdev port private info",
+	.tokens = {        /* token list, NULL terminated */
+		(void *)&cmd_dump_eth_priv_dump,
+		(void *)&cmd_dump_eth_priv_port_id,
+		NULL,
+	},
+};
+
 /* *** Filters Control *** */
 
 #define IPV4_ADDR_TO_UINT(ip_addr, ip) \
@@ -12854,6 +12896,7 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_cleanup_txq_mbufs,
 	(cmdline_parse_inst_t *)&cmd_dump,
 	(cmdline_parse_inst_t *)&cmd_dump_one,
+	(cmdline_parse_inst_t *)&cmd_dump_eth_priv,
 	(cmdline_parse_inst_t *)&cmd_flow,
 	(cmdline_parse_inst_t *)&cmd_show_port_meter_cap,
 	(cmdline_parse_inst_t *)&cmd_add_port_meter_profile_srtcm,
