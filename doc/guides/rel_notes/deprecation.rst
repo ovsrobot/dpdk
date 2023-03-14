@@ -135,3 +135,8 @@ Deprecation Notices
   Its removal has been postponed to let potential users report interest
   in maintaining it.
   In the absence of such interest, this library will be removed in DPDK 23.11.
+
+* cmdline: The function ``cmdline_poll`` does not work correctly on either
+  Linux or Windows and is unused by any part of DPDK.
+  It will be marked deprecated
+  starting in the 23.07 relead and removed in DPDK 23.11.
