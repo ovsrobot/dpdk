@@ -955,6 +955,9 @@ sfc_kvarg_perf_profile_handler(__rte_unused const char *key,
 {
 	uint32_t *value = opaque;
 
+	if (value_str == NULL || opaque == NULL)
+		return -EINVAL;
+
 	if (strcasecmp(value_str, SFC_KVARG_PERF_PROFILE_THROUGHPUT) == 0)
 		*value = EFX_EVQ_FLAGS_TYPE_THROUGHPUT;
 	else if (strcasecmp(value_str, SFC_KVARG_PERF_PROFILE_LOW_LATENCY) == 0)
