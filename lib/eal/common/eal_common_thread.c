@@ -34,7 +34,7 @@ unsigned rte_socket_id(void)
 }
 
 static int
-eal_cpuset_socket_id(rte_cpuset_t *cpusetp)
+eal_cpuset_socket_id(const rte_cpuset_t *cpusetp)
 {
 	unsigned cpu = 0;
 	int socket_id = SOCKET_ID_ANY;
@@ -62,7 +62,7 @@ eal_cpuset_socket_id(rte_cpuset_t *cpusetp)
 }
 
 static void
-thread_update_affinity(rte_cpuset_t *cpusetp)
+thread_update_affinity(const rte_cpuset_t *cpusetp)
 {
 	unsigned int lcore_id = rte_lcore_id();
 
@@ -83,7 +83,7 @@ thread_update_affinity(rte_cpuset_t *cpusetp)
 }
 
 int
-rte_thread_set_affinity(rte_cpuset_t *cpusetp)
+rte_thread_set_affinity(const rte_cpuset_t *cpusetp)
 {
 	if (rte_thread_set_affinity_by_id(rte_thread_self(), cpusetp) != 0) {
 		RTE_LOG(ERR, EAL, "rte_thread_set_affinity_by_id failed\n");
