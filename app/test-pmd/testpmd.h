@@ -6,6 +6,7 @@
 #define _TESTPMD_H_
 
 #include <stdbool.h>
+#include <signal.h>
 
 #ifdef RTE_LIB_GRO
 #include <rte_gro.h>
@@ -34,7 +35,7 @@
 #define RTE_PORT_HANDLING       (uint16_t)3
 
 extern uint8_t cl_quit;
-extern volatile uint8_t f_quit;
+extern volatile sig_atomic_t f_quit;
 
 /*
  * It is used to allocate the memory for hash key.

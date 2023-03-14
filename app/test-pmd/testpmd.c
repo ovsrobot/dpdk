@@ -228,11 +228,7 @@ struct rte_eth_xstat_name *xstats_display;
 
 unsigned int xstats_display_num; /**< Size of extended statistics to show */
 
-/*
- * In container, it cannot terminate the process which running with 'stats-period'
- * option. Set flag to exit stats period loop after received SIGINT/SIGTERM.
- */
-volatile uint8_t f_quit;
+volatile sig_atomic_t f_quit;	/* Quit testpmd from signal */
 uint8_t cl_quit; /* Quit testpmd from cmdline. */
 
 /*
