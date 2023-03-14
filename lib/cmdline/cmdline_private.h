@@ -24,7 +24,7 @@
 #define RDLINE_HISTORY_MAX_LINE 64
 
 struct rdline {
-	enum rdline_status status;
+	volatile enum rdline_status status;
 	/* rdline bufs */
 	struct cirbuf left;
 	struct cirbuf right;
