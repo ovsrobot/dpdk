@@ -224,7 +224,6 @@ cn10k_ml_ocm_tilemask_find(struct rte_ml_dev *dev, uint8_t num_tiles, uint16_t w
 	uint16_t scratch_page_start;
 	int used_last_wb_page_max;
 	uint16_t scratch_page_end;
-	uint8_t search_start_tile;
 	uint8_t search_end_tile;
 	uint8_t *local_ocm_mask;
 	int wb_page_start_curr;
@@ -235,7 +234,6 @@ cn10k_ml_ocm_tilemask_find(struct rte_ml_dev *dev, uint8_t num_tiles, uint16_t w
 	uint16_t word_id;
 	uint8_t tile_idx;
 	int max_slot_sz;
-	int start_tile;
 	int page_id;
 
 	mldev = dev->data->dev_private;
@@ -250,28 +248,14 @@ cn10k_ml_ocm_tilemask_find(struct rte_ml_dev *dev, uint8_t num_tiles, uint16_t w
 	wb_page_start = -1;
 	used_scratch_pages_max = 0;
 	used_last_wb_page_max = -1;
-	start_tile = -1;
 	max_slot_sz_curr = 0;
 	max_slot_sz = 0;
 	tile_idx = 0;
 
-	if ((start_tile != -1) && (start_tile % num_tiles != 0)) {
-		plt_err("Invalid start_tile, %d", start_tile);
-		return -1;
-	}
-
-	if (start_tile < 0) {
-		search_start_tile = 0;
-		search_end_tile = ocm->num_tiles - num_tiles;
-	} else {
-		search_start_tile = start_tile;
-		search_end_tile = start_tile;
-	}
-
-	/* nibbles + prefix '0x' */
+	search_end_tile = ocm->num_tiles - num_tiles;
 	local_ocm_mask = rte_zmalloc("local_ocm_mask", mldev->ocm.mask_words, RTE_CACHE_LINE_SIZE);
+	tile_start = 0;
 
-	tile_start = search_start_tile;
 start_search:
 	used_scratch_pages_max = 0;
 	used_last_wb_page_max = -1;
@@ -423,10 +407,8 @@ cn10k_ml_ocm_free_pages(struct rte_ml_dev *dev, uint16_t model_id)
 	wb_page_end = wb_page_start + model->model_mem_map.wb_pages - 1;
 	for (tile_id = model->addr.tile_start; tile_id <= model->addr.tile_end; tile_id++) {
 		for (page_id = wb_page_start; page_id <= wb_page_end; page_id++) {
-			ocm->tile_ocm_info[tile_id].ocm_mask[page_id / OCM_MAP_WORD_SIZE] =
-				CLEAR_BIT(ocm->tile_ocm_info[tile_id]
-						  .ocm_mask[page_id / OCM_MAP_WORD_SIZE],
-					  page_id % OCM_MAP_WORD_SIZE);
+			CLEAR_BIT(ocm->tile_ocm_info[tile_id].ocm_mask[page_id / OCM_MAP_WORD_SIZE],
+				  page_id % OCM_MAP_WORD_SIZE);
 		}
 
 		/* Update last_wb_page size */
@@ -452,10 +434,9 @@ cn10k_ml_ocm_free_pages(struct rte_ml_dev *dev, uint16_t model_id)
 			prev_start = ocm->num_pages - ocm->tile_ocm_info[tile_id].scratch_pages;
 			curr_start = ocm->num_pages - scratch_resize_pages;
 			for (page_id = prev_start; page_id < curr_start; page_id++) {
-				ocm->tile_ocm_info[tile_id].ocm_mask[page_id / OCM_MAP_WORD_SIZE] =
-					CLEAR_BIT(ocm->tile_ocm_info[tile_id]
-							  .ocm_mask[page_id / OCM_MAP_WORD_SIZE],
-						  page_id % OCM_MAP_WORD_SIZE);
+				CLEAR_BIT(ocm->tile_ocm_info[tile_id]
+						  .ocm_mask[page_id / OCM_MAP_WORD_SIZE],
+					  page_id % OCM_MAP_WORD_SIZE);
 			}
 			ocm->tile_ocm_info[tile_id].scratch_pages = scratch_resize_pages;
 		}
