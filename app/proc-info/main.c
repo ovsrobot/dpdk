@@ -879,6 +879,23 @@ show_offloads(uint64_t offloads,
 	}
 }
 
+static const char *
+rss_func_to_str(enum rte_eth_hash_function func)
+{
+	switch (func) {
+	case RTE_ETH_HASH_FUNCTION_SIMPLE_XOR:
+		return "simple_xor";
+	case RTE_ETH_HASH_FUNCTION_TOEPLITZ:
+		return "toeplitz";
+	case RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ:
+		return "symmetric_toeplitz";
+	case RTE_ETH_HASH_FUNCTION_DEFAULT:
+		return "default";
+	default:
+		return "unknown";
+	}
+}
+
 static void
 show_rss_types(uint64_t rss_types)
 {
@@ -1097,6 +1114,8 @@ show_port(void)
 			} else {
 				printf("\t  -- hf:\n");
 				show_rss_types(rss_conf.rss_hf);
+				printf("\t  -- hash algorithm: %s\n",
+					rss_func_to_str(rss_conf.func));
 				printf("\t  -- key len: %u\n",
 						rss_conf.rss_key_len);
 				printf("\t  -- key (hex): ");
