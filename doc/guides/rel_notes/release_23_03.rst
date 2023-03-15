@@ -284,8 +284,8 @@ ABI Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
-* No ABI change that would break compatibility with 22.11.
-
+* ethdev: Added "func" field to ``rte_eth_rss_conf`` structure for RSS hash
+  algorithm.
 
 Known Issues
 ------------

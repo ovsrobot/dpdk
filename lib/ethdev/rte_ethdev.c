@@ -1368,6 +1368,15 @@ rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
 		goto rollback;
 	}
 
+	if (dev_conf->rx_adv_conf.rss_conf.func >= RTE_ETH_HASH_FUNCTION_MAX) {
+		RTE_ETHDEV_LOG(WARNING,
+			"Ethdev port_id=%u invalid rss hash function (%u), modified to default value (%u)\n",
+			port_id, dev_conf->rx_adv_conf.rss_conf.func,
+			RTE_ETH_HASH_FUNCTION_DEFAULT);
+		dev->data->dev_conf.rx_adv_conf.rss_conf.func =
+			RTE_ETH_HASH_FUNCTION_DEFAULT;
+	}
+
 	/* Check if Rx RSS distribution is disabled but RSS hash is enabled. */
 	if (((dev_conf->rxmode.mq_mode & RTE_ETH_MQ_RX_RSS_FLAG) == 0) &&
 	    (dev_conf->rxmode.offloads & RTE_ETH_RX_OFFLOAD_RSS_HASH)) {
@@ -4553,6 +4562,13 @@ rte_eth_dev_rss_hash_update(uint16_t port_id,
 		return -ENOTSUP;
 	}
 
+	if (rss_conf->func >= RTE_ETH_HASH_FUNCTION_MAX) {
+		RTE_ETHDEV_LOG(NOTICE,
+			"Ethdev port_id=%u invalid rss hash function (%u), modified to default value (%u)\n",
+			port_id, rss_conf->func, RTE_ETH_HASH_FUNCTION_DEFAULT);
+		rss_conf->func = RTE_ETH_HASH_FUNCTION_DEFAULT;
+	}
+
 	if (*dev->dev_ops->rss_hash_update == NULL)
 		return -ENOTSUP;
 	ret = eth_err(port_id, (*dev->dev_ops->rss_hash_update)(dev,
@@ -4579,6 +4595,8 @@ rte_eth_dev_rss_hash_conf_get(uint16_t port_id,
 			port_id);
 		return -EINVAL;
 	}
+
+	rss_conf->func = RTE_ETH_HASH_FUNCTION_DEFAULT;
 
 	if (*dev->dev_ops->rss_hash_conf_get == NULL)
 		return -ENOTSUP;

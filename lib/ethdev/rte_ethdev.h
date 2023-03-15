@@ -174,6 +174,7 @@ extern "C" {
 
 #include "rte_ethdev_trace_fp.h"
 #include "rte_dev_info.h"
+#include "rte_flow.h"
 
 extern int rte_eth_dev_logtype;
 
@@ -461,11 +462,15 @@ struct rte_vlan_filter_conf {
  * The *rss_hf* field of the *rss_conf* structure indicates the different
  * types of IPv4/IPv6 packets to which the RSS hashing must be applied.
  * Supplying an *rss_hf* equal to zero disables the RSS feature.
+ *
+ * The *func* field of the *rss_conf* structure indicates the different
+ * types of hash algorithms applied by the RSS hashing.
  */
 struct rte_eth_rss_conf {
 	uint8_t *rss_key;    /**< If not NULL, 40-byte hash key. */
 	uint8_t rss_key_len; /**< hash key length in bytes. */
 	uint64_t rss_hf;     /**< Hash functions to apply - see below. */
+	enum rte_eth_hash_function func;	/**< Hash algorithm to apply. */
 };
 
 /*
