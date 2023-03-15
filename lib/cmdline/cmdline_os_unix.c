@@ -16,7 +16,8 @@ terminal_adjust(struct cmdline *cl)
 	tcgetattr(0, &cl->oldterm);
 
 	memcpy(&term, &cl->oldterm, sizeof(term));
-	term.c_lflag &= ~(ICANON | ECHO | ISIG);
+	term.c_lflag &= ~(ICANON | ECHO);
+	term.c_lflag |= ISIG;
 	tcsetattr(0, TCSANOW, &term);
 
 	setbuf(stdin, NULL);

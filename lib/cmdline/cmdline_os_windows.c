@@ -32,10 +32,10 @@ terminal_adjust(struct cmdline *cl)
 		mode &= ~(
 			ENABLE_LINE_INPUT |      /* no line buffering */
 			ENABLE_ECHO_INPUT |      /* no echo */
-			ENABLE_PROCESSED_INPUT | /* pass Ctrl+C to program */
 			ENABLE_MOUSE_INPUT |     /* no mouse events */
 			ENABLE_WINDOW_INPUT);    /* no window resize events */
-		mode |= ENABLE_VIRTUAL_TERMINAL_INPUT;
+		mode |= ENABLE_VIRTUAL_TERMINAL_INPUT |
+			ENABLE_PROCESSED_INPUT; /* Ctrl C processed by the system */
 		SetConsoleMode(handle, mode);
 	}
 
