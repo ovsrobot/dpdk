@@ -12,7 +12,6 @@
 #include "ice_dcf_ethdev.h"
 #include "ice_generic_flow.h"
 
-#define ICE_DCF_VSI_UPDATE_SERVICE_INTERVAL	100000 /* us */
 static rte_spinlock_t vsi_update_lock = RTE_SPINLOCK_INITIALIZER;
 
 struct ice_dcf_reset_event_param {

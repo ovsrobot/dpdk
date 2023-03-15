@@ -15,6 +15,8 @@
 #include "base/ice_type.h"
 #include "ice_logs.h"
 
+#define ICE_DCF_VSI_UPDATE_SERVICE_INTERVAL	100000 /* us */
+
 /* ICE_DCF_DEV_PRIVATE_TO */
 #define ICE_DCF_DEV_PRIVATE_TO_ADAPTER(adapter) \
 	((struct ice_dcf_adapter *)adapter)
