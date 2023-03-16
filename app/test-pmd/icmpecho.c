@@ -269,7 +269,7 @@ ipv4_hdr_cksum(struct rte_ipv4_hdr *ip_h)
  * Receive a burst of packets, lookup for ICMP echo requests, and, if any,
  * send back ICMP echo replies.
  */
-static bool
+static size_t
 reply_to_icmp_echo_rqsts(struct fwd_stream *fs)
 {
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
@@ -296,7 +296,7 @@ reply_to_icmp_echo_rqsts(struct fwd_stream *fs)
 	 */
 	nb_rx = common_fwd_stream_receive(fs, pkts_burst, nb_pkt_per_burst);
 	if (unlikely(nb_rx == 0))
-		return false;
+		return 0;
 
 	nb_replies = 0;
 	for (i = 0; i < nb_rx; i++) {
@@ -477,7 +477,7 @@ reply_to_icmp_echo_rqsts(struct fwd_stream *fs)
 	if (nb_replies > 0)
 		common_fwd_stream_transmit(fs, pkts_burst, nb_replies);
 
-	return true;
+	return nb_rx;
 }
 
 struct fwd_engine icmp_echo_engine = {

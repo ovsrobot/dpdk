@@ -2275,14 +2275,14 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 		for (sm_id = 0; sm_id < nb_fs; sm_id++) {
 			struct fwd_stream *fs = fsm[sm_id];
 			uint64_t start_fs_tsc = 0;
-			bool busy;
+			size_t pkts;
 
 			if (fs->disabled)
 				continue;
 			if (record_core_cycles)
 				start_fs_tsc = rte_rdtsc();
-			busy = (*pkt_fwd)(fs);
-			if (record_core_cycles && busy)
+			pkts = (*pkt_fwd)(fs);
+			if (record_core_cycles && pkts > 0)
 				fs->busy_cycles += rte_rdtsc() - start_fs_tsc;
 		}
 #ifdef RTE_LIB_BITRATESTATS

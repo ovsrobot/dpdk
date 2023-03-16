@@ -323,7 +323,7 @@ pkt_burst_prepare(struct rte_mbuf *pkt, struct rte_mempool *mbp,
 /*
  * Transmit a burst of multi-segments packets.
  */
-static bool
+static size_t
 pkt_burst_transmit(struct fwd_stream *fs)
 {
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
@@ -388,7 +388,7 @@ pkt_burst_transmit(struct fwd_stream *fs)
 	}
 
 	if (nb_pkt == 0)
-		return false;
+		return 0;
 
 	nb_tx = common_fwd_stream_transmit(fs, pkts_burst, nb_pkt);
 
@@ -404,7 +404,7 @@ pkt_burst_transmit(struct fwd_stream *fs)
 			       (unsigned) (nb_pkt - nb_tx));
 	}
 
-	return true;
+	return nb_tx;
 }
 
 static int

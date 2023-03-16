@@ -383,7 +383,7 @@ struct fwd_lcore {
 typedef int (*port_fwd_begin_t)(portid_t pi);
 typedef void (*port_fwd_end_t)(portid_t pi);
 typedef void (*stream_init_t)(struct fwd_stream *fs);
-typedef bool (*packet_fwd_t)(struct fwd_stream *fs);
+typedef size_t (*packet_fwd_t)(struct fwd_stream *fs);
 
 struct fwd_engine {
 	const char       *fwd_mode_name; /**< Forwarding mode name. */

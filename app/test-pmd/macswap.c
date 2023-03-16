@@ -47,7 +47,7 @@
  * MAC swap forwarding mode: Swap the source and the destination Ethernet
  * addresses of packets before forwarding them.
  */
-static bool
+static size_t
 pkt_burst_mac_swap(struct fwd_stream *fs)
 {
 	struct rte_mbuf  *pkts_burst[MAX_PKT_BURST];
@@ -58,12 +58,12 @@ pkt_burst_mac_swap(struct fwd_stream *fs)
 	 */
 	nb_rx = common_fwd_stream_receive(fs, pkts_burst, nb_pkt_per_burst);
 	if (unlikely(nb_rx == 0))
-		return false;
+		return 0;
 
 	do_macswap(pkts_burst, nb_rx, &ports[fs->tx_port]);
 	common_fwd_stream_transmit(fs, pkts_burst, nb_rx);
 
-	return true;
+	return nb_rx;
 }
 
 struct fwd_engine mac_swap_engine = {

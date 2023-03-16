@@ -110,7 +110,7 @@ sim_memory_lookups(struct noisy_config *ncf, uint16_t nb_pkts)
  *    out of the FIFO
  * 4. Cases 2 and 3 combined
  */
-static bool
+static size_t
 pkt_burst_noisy_vnf(struct fwd_stream *fs)
 {
 	const uint64_t freq_khz = rte_get_timer_hz() / 1000;
@@ -169,7 +169,7 @@ flush:
 		ncf->prev_time = rte_get_timer_cycles();
 	}
 end:
-	return nb_rx > 0 || nb_tx > 0;
+	return (nb_rx > nb_tx) ? nb_rx : nb_tx;
 }
 
 #define NOISY_STRSIZE 256

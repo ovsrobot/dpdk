@@ -89,7 +89,7 @@ forward_shared_rxq(struct fwd_stream *fs, uint16_t nb_rx,
 			  &pkts_burst[nb_rx - nb_sub_burst]);
 }
 
-static bool
+static size_t
 shared_rxq_fwd(struct fwd_stream *fs)
 {
 	struct rte_mbuf *pkts_burst[nb_pkt_per_burst];
@@ -97,10 +97,10 @@ shared_rxq_fwd(struct fwd_stream *fs)
 
 	nb_rx = common_fwd_stream_receive(fs, pkts_burst, nb_pkt_per_burst);
 	if (unlikely(nb_rx == 0))
-		return false;
+		return 0;
 	forward_shared_rxq(fs, nb_rx, pkts_burst);
 
-	return true;
+	return nb_rx;
 }
 
 static void

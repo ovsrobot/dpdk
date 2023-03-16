@@ -58,7 +58,7 @@ RTE_DEFINE_PER_LCORE(int, _next_flow);
  * terminate receive traffic.  Received traffic is simply discarded, but we
  * still do so in order to maintain traffic statistics.
  */
-static bool
+static size_t
 pkt_burst_flow_gen(struct fwd_stream *fs)
 {
 	unsigned pkt_size = tx_pkt_length - 4;	/* Adjust FCS */
@@ -168,7 +168,7 @@ pkt_burst_flow_gen(struct fwd_stream *fs)
 
 	RTE_PER_LCORE(_next_flow) = next_flow;
 
-	return true;
+	return nb_pkt;
 }
 
 static int
