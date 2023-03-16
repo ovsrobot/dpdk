@@ -526,6 +526,11 @@ uint8_t gro_flush_cycles = GRO_DEFAULT_FLUSH_CYCLES;
 enum rte_eth_rx_mq_mode rx_mq_mode = RTE_ETH_MQ_RX_VMDQ_DCB_RSS;
 
 /*
+ * Max sleep time requested in microseconds per iteration
+ */
+uint64_t max_sleep_us;
+
+/*
  * Used to set forced link speed
  */
 uint32_t eth_link_speed;
@@ -2255,6 +2260,8 @@ static void
 run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 {
 	struct fwd_stream **fsm;
+	uint64_t sleep_us = 0;
+	uint64_t sleep_cycles;
 	uint64_t prev_tsc;
 	streamid_t nb_fs;
 	streamid_t sm_id;
@@ -2284,6 +2291,8 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 			pkts = (*pkt_fwd)(fs);
 			if (record_core_cycles && pkts > 0)
 				fs->busy_cycles += rte_rdtsc() - start_fs_tsc;
+			if (pkts > nb_pkt_per_burst / 2)
+				sleep_us = 0;
 		}
 #ifdef RTE_LIB_BITRATESTATS
 		if (bitrate_enabled != 0 &&
@@ -2303,10 +2312,23 @@ run_pkt_fwd_on_lcore(struct fwd_lcore *fc, packet_fwd_t pkt_fwd)
 				latencystats_lcore_id == rte_lcore_id())
 			rte_latencystats_update();
 #endif
+		sleep_cycles = 0;
+		if (max_sleep_us) {
+			/* Check if a sleep should happen on this iteration. */
+			if (sleep_us > 0) {
+				uint64_t tsc = rte_rdtsc();
+
+				rte_delay_us_sleep(sleep_us);
+				sleep_cycles = rte_rdtsc() - tsc;
+			}
+			if (sleep_us < max_sleep_us)
+				/* Increase sleep time for next iteration. */
+				sleep_us += 1;
+		}
 		if (record_core_cycles) {
 			uint64_t tsc = rte_rdtsc();
 
-			fc->total_cycles += tsc - prev_tsc;
+			fc->total_cycles += tsc - prev_tsc - sleep_cycles;
 			prev_tsc = tsc;
 		}
 	} while (! fc->stopped);

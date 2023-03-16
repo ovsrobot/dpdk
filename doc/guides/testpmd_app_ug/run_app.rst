@@ -555,6 +555,25 @@ The command line options are:
 
     The default value is 0. Hairpin will use single port mode and implicit Tx flow mode.
 
+*   ``--max-sleep-us=N``
+
+    Set the maximum sleep in micro seconds. The default value is 0.
+
+    When `max-sleep-us` is set, the lcores running the packet forwarding may stop active polling and
+    go to sleep for an incrementing amount of time. Each time the forwarding engine processes less
+    than half a burst of packets, the sleep time will be incremented by 1 micro second, up to the
+    maximum value set by the user.
+
+    At any point, if the forwarding engine returns more than half a burst of packets, the sleep time
+    will be reset to 0.
+
+    Sleeping in the packet processing path yields back control to the kernel scheduler. The actual
+    sleep/wakeup times are not guaranteed and may differ significantly depending on system
+    configuration, allowed C-states and scheduler timer resolution (on Linux, this is controlled by
+    ``prctl(PR_SET_TIMERSLACK, nanoseconds)`` and it defaults to 10 micro seconds).
+
+    In interactive mode, the maximum sleep time can be set with ``set max_sleep N`` and displayed
+    with ``show max_sleep``.
 
 Testpmd Multi-Process Command-line Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

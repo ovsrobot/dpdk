@@ -201,6 +201,9 @@ usage(char* progname)
 	printf("  --rx-mq-mode=0xX: hexadecimal bitmask of RX mq mode can be "
 	       "enabled\n");
 	printf("  --record-core-cycles: enable measurement of CPU cycles.\n");
+	printf("  --max-sleep-us: maximum sleep time that will be requested in\n"
+	       "    microseconds per iteration of packet processing which has received zero\n"
+	       "    or a small amount of packets from the Rx queues it is polling.\n");
 	printf("  --record-burst-stats: enable display of RX and TX bursts.\n");
 	printf("  --hairpin-mode=0xXX: bitmask set the hairpin port mode.\n"
 	       "    0x10 - explicit Tx rule, 0x02 - hairpin ports paired\n"
@@ -707,6 +710,7 @@ launch_args_parse(int argc, char** argv)
 		{ "no-iova-contig",             0, 0, 0 },
 		{ "rx-mq-mode",                 1, 0, 0 },
 		{ "record-core-cycles",         0, 0, 0 },
+		{ "max-sleep-us",               1, 0, 0 },
 		{ "record-burst-stats",         0, 0, 0 },
 		{ PARAM_NUM_PROCS,              1, 0, 0 },
 		{ PARAM_PROC_ID,                1, 0, 0 },
@@ -1459,6 +1463,16 @@ launch_args_parse(int argc, char** argv)
 			}
 			if (!strcmp(lgopts[opt_idx].name, "record-core-cycles"))
 				record_core_cycles = 1;
+			if (!strcmp(lgopts[opt_idx].name, "max-sleep-us")) {
+				char *end = NULL;
+				errno = 0;
+				unsigned long sleep = strtoul(optarg, &end, 10);
+
+				if (errno != 0 || *optarg == '\0' || *end != '\0' || sleep == 0)
+					rte_exit(EXIT_FAILURE, "max-sleep-us must be > 0\n");
+
+				max_sleep_us = sleep;
+			}
 			if (!strcmp(lgopts[opt_idx].name, "record-burst-stats"))
 				record_burst_stats = 1;
 			if (!strcmp(lgopts[opt_idx].name, PARAM_NUM_PROCS))

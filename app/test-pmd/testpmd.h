@@ -780,6 +780,8 @@ extern struct mplsoudp_decap_conf mplsoudp_decap_conf;
 
 extern enum rte_eth_rx_mq_mode rx_mq_mode;
 
+extern uint64_t max_sleep_us;
+
 extern struct rte_flow_action_conntrack conntrack_context;
 
 extern int proc_id;

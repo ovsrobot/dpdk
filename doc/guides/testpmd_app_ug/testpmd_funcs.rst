@@ -637,6 +637,12 @@ Show fec mode of a port::
 
   testpmd> show port (port_id) fec_mode
 
+show max_sleep
+~~~~~~~~~~~~~~
+
+Show max_sleep in micro seconds::
+
+  testpmd> show max_sleep
 
 Configuration Functions
 -----------------------
@@ -1801,6 +1807,13 @@ Set fec mode
 Set fec mode for a specific port::
 
   testpmd> set port (port_id) fec_mode auto|off|rs|baser
+
+Set max_sleep
+~~~~~~~~~~~~
+
+Set max_sleep in micro seconds::
+
+  testpmd> set max_sleep <us>
 
 Config Sample actions list
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

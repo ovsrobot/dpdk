@@ -5521,6 +5521,82 @@ static cmdline_parse_inst_t cmd_set_link_check = {
 	},
 };
 
+/* *** SET MAX SLEEP *** */
+struct cmd_max_sleep_result {
+	cmdline_fixed_string_t set;
+	cmdline_fixed_string_t max_sleep;
+	uint64_t value;
+};
+
+static void
+cmd_max_sleep_set_parsed(void *parsed_result,
+		__rte_unused struct cmdline *cl,
+		__rte_unused void *data)
+{
+	struct cmd_max_sleep_result *res = parsed_result;
+	if ((!strcmp(res->set, "set"))
+		&& (!strcmp(res->max_sleep, "max_sleep")))
+		max_sleep_us = res->value;
+}
+
+static cmdline_parse_token_string_t cmd_max_sleep_set =
+	TOKEN_STRING_INITIALIZER(struct cmd_max_sleep_result,
+			set, "set");
+static cmdline_parse_token_string_t cmd_max_sleep =
+	TOKEN_STRING_INITIALIZER(struct cmd_max_sleep_result,
+			max_sleep, "max_sleep");
+static cmdline_parse_token_num_t cmd_max_sleep_value =
+	TOKEN_NUM_INITIALIZER(struct cmd_max_sleep_result,
+			value, RTE_UINT64);
+
+static cmdline_parse_inst_t cmd_set_max_sleep = {
+	.f = cmd_max_sleep_set_parsed,
+	.data = NULL,
+	.help_str = "set max_sleep <value>: Set the maximum sleep in micro seconds.",
+	.tokens = {
+		(void *)&cmd_max_sleep_set,
+		(void *)&cmd_max_sleep,
+		(void *)&cmd_max_sleep_value,
+		NULL,
+	},
+};
+
+/* *** SHOW MAX SLEEP *** */
+struct cmd_max_sleep_show_result {
+	cmdline_fixed_string_t show;
+	cmdline_fixed_string_t max_sleep;
+	uint64_t value;
+};
+
+static void
+cmd_max_sleep_show_parsed(void *parsed_result,
+		__rte_unused struct cmdline *cl,
+		__rte_unused void *data)
+{
+	struct cmd_max_sleep_show_result *res = parsed_result;
+	if ((!strcmp(res->show, "show"))
+		&& (!strcmp(res->max_sleep, "max_sleep")))
+		printf("max_sleep %"PRIu64" us\n", max_sleep_us);
+}
+
+static cmdline_parse_token_string_t cmd_show_max_sleep_show =
+	TOKEN_STRING_INITIALIZER(struct cmd_max_sleep_show_result,
+			show, "show");
+static cmdline_parse_token_string_t cmd_max_sleep_show =
+	TOKEN_STRING_INITIALIZER(struct cmd_max_sleep_show_result,
+			max_sleep, "max_sleep");
+
+static cmdline_parse_inst_t cmd_show_max_sleep = {
+	.f = cmd_max_sleep_show_parsed,
+	.data = NULL,
+	.help_str = "show max_sleep: Display the maximun sleep in micro seconds.",
+	.tokens = {
+		(void *)&cmd_show_max_sleep_show,
+		(void *)&cmd_max_sleep_show,
+		NULL,
+	},
+};
+
 /* *** SET FORWARDING MODE *** */
 struct cmd_set_fwd_mode_result {
 	cmdline_fixed_string_t set;
@@ -12769,6 +12845,8 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_set_allmulti_mode_all,
 	(cmdline_parse_inst_t *)&cmd_set_flush_rx,
 	(cmdline_parse_inst_t *)&cmd_set_link_check,
+	(cmdline_parse_inst_t *)&cmd_set_max_sleep,
+	(cmdline_parse_inst_t *)&cmd_show_max_sleep,
 	(cmdline_parse_inst_t *)&cmd_vlan_offload,
 	(cmdline_parse_inst_t *)&cmd_vlan_tpid,
 	(cmdline_parse_inst_t *)&cmd_rx_vlan_filter_all,
