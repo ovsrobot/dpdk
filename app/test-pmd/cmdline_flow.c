@@ -1085,16 +1085,16 @@ struct buffer {
 			uint8_t *data;
 		} vc; /**< Validate/create arguments. */
 		struct {
-			uint32_t *rule;
-			uint32_t rule_n;
+			uint64_t *rule;
+			uint64_t rule_n;
 		} destroy; /**< Destroy arguments. */
 		struct {
 			char file[128];
 			bool mode;
-			uint32_t rule;
+			uint64_t rule;
 		} dump; /**< Dump arguments. */
 		struct {
-			uint32_t rule;
+			uint64_t rule;
 			struct rte_flow_action action;
 		} query; /**< Query arguments. */
 		struct {
@@ -9683,7 +9683,7 @@ parse_qo_destroy(struct context *ctx, const struct token *token,
 		 void *buf, unsigned int size)
 {
 	struct buffer *out = buf;
-	uint32_t *flow_id;
+	uint64_t *flow_id;
 
 	/* Token name must match. */
 	if (parse_default(ctx, token, str, len, NULL, 0) < 0)
@@ -10899,7 +10899,7 @@ comp_rule_id(struct context *ctx, const struct token *token,
 	port = &ports[ctx->port];
 	for (pf = port->flow_list; pf != NULL; pf = pf->next) {
 		if (buf && i == ent)
-			return snprintf(buf, size, "%u", pf->id);
+			return snprintf(buf, size, "%"PRIu64, pf->id);
 		++i;
 	}
 	if (buf)
