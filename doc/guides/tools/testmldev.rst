@@ -116,6 +116,10 @@ The following are the command-line options supported by the test application.
         Set the tolerance value in percentage to be used for output validation. Default value
         is `0`.
 
+* ``--stats``
+
+        Enable reporting device extended stats.
+
 * ``--debug``
 
         Enable the tests to run in debug mode.
@@ -279,6 +283,7 @@ Supported command line options for inference tests are following::
         --queue_size
         --batches
         --tolerance
+        --stats
 
 
 List of files to be used for the inference tests can be specified through the option
@@ -299,6 +304,8 @@ through ``--tolerance`` option during validation. When the tolerance values is 0
 inference output and reference output are compared. When the tolerance is non-zero, element wise
 comparison of output is performed. Validation is considered as successful only when all the
 elements of the output tensor are with in the tolerance range specified.
+
+Enabling ``--stats`` would print the extended stats supported by the driver.
 
 .. Note::
 
