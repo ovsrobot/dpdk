@@ -172,8 +172,12 @@ enum rte_crypto_cipher_algorithm {
 	/**< ShangMi 4 (SM4) algorithm in ECB mode */
 	RTE_CRYPTO_CIPHER_SM4_CBC,
 	/**< ShangMi 4 (SM4) algorithm in CBC mode */
-	RTE_CRYPTO_CIPHER_SM4_CTR
+	RTE_CRYPTO_CIPHER_SM4_CTR,
 	/**< ShangMi 4 (SM4) algorithm in CTR mode */
+	RTE_CRYPTO_CIPHER_SM4_OFB,
+	/**< ShangMi 4 (SM4) algorithm in OFB mode */
+	RTE_CRYPTO_CIPHER_SM4_CFB
+	/**< ShangMi 4 (SM4) algorithm in CFB mode */
 };
 
 /** Cipher algorithm name strings */
@@ -376,6 +380,8 @@ enum rte_crypto_auth_algorithm {
 	/**< HMAC using 512 bit SHA3 algorithm. */
 	RTE_CRYPTO_AUTH_SM3,
 	/**< ShangMi 3 (SM3) algorithm */
+	RTE_CRYPTO_AUTH_SM3_HMAC,
+	/** < HMAC using Chinese SM3 algorithm */
 
 	RTE_CRYPTO_AUTH_SHAKE_128,
 	/**< 128 bit SHAKE algorithm. */
