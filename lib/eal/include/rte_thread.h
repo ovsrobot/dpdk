@@ -348,7 +348,7 @@ int rte_thread_get_affinity_by_id(rte_thread_t thread_id,
  * @return
  *   On success, return 0; otherwise return -1;
  */
-int rte_thread_set_affinity(rte_cpuset_t *cpusetp);
+int rte_thread_set_affinity(const rte_cpuset_t *cpusetp);
 
 /**
  * Get core affinity of the current thread.
