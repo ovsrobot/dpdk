@@ -31,7 +31,7 @@
 
 #define IAVF_NUM_MACADDR_MAX      64
 
-#define IAVF_DEV_WATCHDOG_PERIOD     0
+#define IAVF_DEV_WATCHDOG_PERIOD     50000 /* 0 means disabled*/
 
 #define IAVF_DEFAULT_RX_PTHRESH      8
 #define IAVF_DEFAULT_RX_HTHRESH      8

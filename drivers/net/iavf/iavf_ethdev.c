@@ -299,6 +299,7 @@ iavf_dev_watchdog(void *cb_arg)
 				"VF \"%s\" reset event detected by watchdog",
 				adapter->vf.eth_dev->data->name);
 
+			adapter->vf.link_up = false;
 			/* enter reset state with VFLR event */
 			adapter->vf.vf_reset = true;
 
@@ -2803,7 +2804,15 @@ static int
 iavf_dev_reset(struct rte_eth_dev *dev)
 {
 	int ret;
+	struct iavf_hw *hw = IAVF_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
+	ret = iavf_check_vf_reset_done(hw);
+	if (ret) {
+		PMD_DRV_LOG(ERR, "Wait too long for reset done!!!\n");
+		return ret;
+	}
+
+	PMD_DRV_LOG(DEBUG, "Start dev_reset ...\n");
 	ret = iavf_dev_uninit(dev);
 	if (ret)
 		return ret;
