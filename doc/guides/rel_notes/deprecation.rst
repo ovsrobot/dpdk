@@ -135,3 +135,6 @@ Deprecation Notices
   Its removal has been postponed to let potential users report interest
   in maintaining it.
   In the absence of such interest, this library will be removed in DPDK 23.11.
+
+* net/bnx2x: Starting from DPDK 23.07, the Marvell QLogic bnx2x driver will be removed.
+  This decision has been made to alleviate the burden of maintaining a discontinued product.
