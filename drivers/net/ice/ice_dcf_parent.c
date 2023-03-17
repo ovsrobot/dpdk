@@ -14,6 +14,9 @@
 
 #define ICE_DCF_VSI_UPDATE_SERVICE_INTERVAL	100000 /* us */
 static rte_spinlock_t vsi_update_lock = RTE_SPINLOCK_INITIALIZER;
+static rte_spinlock_t vsi_thread_lock = RTE_SPINLOCK_INITIALIZER;
+static int vsi_update_thread_num;
+
 
 struct ice_dcf_reset_event_param {
 	struct ice_dcf_hw *dcf_hw;
@@ -130,6 +133,9 @@ ice_dcf_vsi_update_service_handler(void *param)
 
 	rte_spinlock_lock(&vsi_update_lock);
 
+	if (hw->vc_event_msg_cb == NULL)
+		goto update_end;
+
 	if (!ice_dcf_handle_vsi_update_event(hw)) {
 		__atomic_store_n(&parent_adapter->dcf_state_on, true,
 				 __ATOMIC_RELAXED);
@@ -150,10 +156,14 @@ ice_dcf_vsi_update_service_handler(void *param)
 	if (hw->tm_conf.committed)
 		ice_dcf_replay_vf_bw(hw, reset_param->vf_id);
 
+update_end:
 	rte_spinlock_unlock(&vsi_update_lock);
 
 	free(param);
 
+	rte_spinlock_lock(&vsi_thread_lock);
+	vsi_update_thread_num--;
+	rte_spinlock_unlock(&vsi_thread_lock);
 	return NULL;
 }
 
@@ -183,6 +193,10 @@ start_vsi_reset_thread(struct ice_dcf_hw *dcf_hw, bool vfr, uint16_t vf_id)
 		PMD_DRV_LOG(ERR, "Failed to start the thread for reset handling");
 		free(param);
 	}
+
+	rte_spinlock_lock(&vsi_thread_lock);
+	vsi_update_thread_num++;
+	rte_spinlock_unlock(&vsi_thread_lock);
 }
 
 static uint32_t
@@ -262,6 +276,18 @@ ice_dcf_handle_pf_event_msg(struct ice_dcf_hw *dcf_hw,
 		PMD_DRV_LOG(DEBUG, "VIRTCHNL_EVENT_PF_DRIVER_CLOSE event");
 		break;
 	case VIRTCHNL_EVENT_DCF_VSI_MAP_UPDATE:
+		/* If the event handling callback is empty, the event cannot
+		 * be handled. Therefore we ignore this event.
+		 */
+		if (dcf_hw->vc_event_msg_cb == NULL) {
+			PMD_DRV_LOG(DEBUG,
+				"VIRTCHNL_EVENT_DCF_VSI_MAP_UPDATE event "
+				"received: VF%u with VSI num %u, ignore processing",
+			    pf_msg->event_data.vf_vsi_map.vf_id,
+			    pf_msg->event_data.vf_vsi_map.vsi_id);
+			break;
+		}
+
 		PMD_DRV_LOG(DEBUG, "VIRTCHNL_EVENT_DCF_VSI_MAP_UPDATE event : VF%u with VSI num %u",
 			    pf_msg->event_data.vf_vsi_map.vf_id,
 			    pf_msg->event_data.vf_vsi_map.vsi_id);
@@ -504,4 +530,15 @@ ice_dcf_uninit_parent_adapter(struct rte_eth_dev *eth_dev)
 
 	ice_flow_uninit(parent_adapter);
 	ice_dcf_uninit_parent_hw(parent_hw);
+}
+
+int ice_dcf_event_handle_num(void)
+{
+	int ret;
+
+	rte_spinlock_lock(&vsi_thread_lock);
+	ret = vsi_update_thread_num;
+	rte_spinlock_unlock(&vsi_thread_lock);
+
+	return ret;
 }

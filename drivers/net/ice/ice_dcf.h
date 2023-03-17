@@ -143,6 +143,7 @@ int ice_dcf_execute_virtchnl_cmd(struct ice_dcf_hw *hw,
 int ice_dcf_send_aq_cmd(void *dcf_hw, struct ice_aq_desc *desc,
 			void *buf, uint16_t buf_size);
 int ice_dcf_handle_vsi_update_event(struct ice_dcf_hw *hw);
+int ice_dcf_event_handle_num(void);
 int ice_dcf_init_hw(struct rte_eth_dev *eth_dev, struct ice_dcf_hw *hw);
 void ice_dcf_uninit_hw(struct rte_eth_dev *eth_dev, struct ice_dcf_hw *hw);
 int ice_dcf_configure_rss_key(struct ice_dcf_hw *hw);
