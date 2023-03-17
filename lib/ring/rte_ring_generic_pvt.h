@@ -92,8 +92,9 @@ __rte_ring_move_prod_head(struct rte_ring *r, unsigned int is_sp,
 		if (is_sp)
 			r->prod.head = *new_head, success = 1;
 		else
-			success = rte_atomic32_cmpset(&r->prod.head,
-					*old_head, *new_head);
+			success = __atomic_compare_exchange_n(&r->prod.head,
+					old_head, *new_head, 0,
+					__ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 	} while (unlikely(success == 0));
 	return n;
 }
@@ -162,8 +163,9 @@ __rte_ring_move_cons_head(struct rte_ring *r, unsigned int is_sc,
 			rte_smp_rmb();
 			success = 1;
 		} else {
-			success = rte_atomic32_cmpset(&r->cons.head, *old_head,
-					*new_head);
+			success = __atomic_compare_exchange_n(&r->cons.head,
+					old_head, *new_head, 0,
+					__ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 		}
 	} while (unlikely(success == 0));
 	return n;
