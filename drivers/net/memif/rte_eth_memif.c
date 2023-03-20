@@ -1720,6 +1720,9 @@ memif_set_role(const char *key __rte_unused, const char *value,
 {
 	enum memif_role_t *role = (enum memif_role_t *)extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	if (strstr(value, "server") != NULL) {
 		*role = MEMIF_ROLE_SERVER;
 	} else if (strstr(value, "client") != NULL) {
@@ -1742,6 +1745,9 @@ memif_set_zc(const char *key __rte_unused, const char *value, void *extra_args)
 {
 	uint32_t *flags = (uint32_t *)extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	if (strstr(value, "yes") != NULL) {
 		if (!rte_mcfg_get_single_file_segments()) {
 			MIF_LOG(ERR, "Zero-copy doesn't support multi-file segments.");
@@ -1762,6 +1768,9 @@ memif_set_id(const char *key __rte_unused, const char *value, void *extra_args)
 {
 	memif_interface_id_t *id = (memif_interface_id_t *)extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	/* even if parsing fails, 0 is a valid id */
 	*id = strtoul(value, NULL, 10);
 	return 0;
@@ -1772,6 +1781,9 @@ memif_set_bs(const char *key __rte_unused, const char *value, void *extra_args)
 {
 	unsigned long tmp;
 	uint16_t *pkt_buffer_size = (uint16_t *)extra_args;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	tmp = strtoul(value, NULL, 10);
 	if (tmp == 0 || tmp > 0xFFFF) {
@@ -1788,6 +1800,9 @@ memif_set_rs(const char *key __rte_unused, const char *value, void *extra_args)
 	unsigned long tmp;
 	memif_log2_ring_size_t *log2_ring_size =
 	    (memif_log2_ring_size_t *)extra_args;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	tmp = strtoul(value, NULL, 10);
 	if (tmp == 0 || tmp > ETH_MEMIF_MAX_LOG2_RING_SIZE) {
@@ -1840,6 +1855,9 @@ memif_set_socket_filename(const char *key __rte_unused, const char *value,
 {
 	const char **socket_filename = (const char **)extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	*socket_filename = value;
 	return 0;
 }
@@ -1848,6 +1866,9 @@ static int
 memif_set_is_socket_abstract(const char *key __rte_unused, const char *value, void *extra_args)
 {
 	uint32_t *flags = (uint32_t *)extra_args;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	if (strstr(value, "yes") != NULL) {
 		*flags |= ETH_MEMIF_FLAG_SOCKET_ABSTRACT;
@@ -1870,6 +1891,9 @@ memif_set_owner(const char *key, const char *value, void *extra_args)
 	char *end = NULL;
 	uint32_t *id = (uint32_t *)extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	val = strtoul(value, &end, 10);
 	if (*value == '\0' || *end != '\0') {
 		MIF_LOG(ERR, "Failed to parse %s: %s.", key, value);
@@ -1889,6 +1913,9 @@ memif_set_mac(const char *key __rte_unused, const char *value, void *extra_args)
 {
 	struct rte_ether_addr *ether_addr = (struct rte_ether_addr *)extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	if (rte_ether_unformat_addr(value, ether_addr) < 0)
 		MIF_LOG(WARNING, "Failed to parse mac '%s'.", value);
 	return 0;
@@ -1898,6 +1925,9 @@ static int
 memif_set_secret(const char *key __rte_unused, const char *value, void *extra_args)
 {
 	const char **secret = (const char **)extra_args;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	*secret = value;
 	return 0;
