@@ -959,6 +959,9 @@ static struct eventdev_ops dpaa_eventdev_ops = {
 static int flag_check_handler(__rte_unused const char *key,
 		const char *value, __rte_unused void *opaque)
 {
+	if (value == NULL)
+		return -EINVAL;
+
 	if (strcmp(value, "1"))
 		return -1;
 
