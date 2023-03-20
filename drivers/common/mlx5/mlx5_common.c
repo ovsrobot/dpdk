@@ -365,6 +365,11 @@ devargs_class_handler(__rte_unused const char *key,
 	char *found;
 	char *refstr = NULL;
 
+	if (class_names == NULL) {
+		*ret = -EINVAL;
+		return *ret;
+	}
+
 	*ret = 0;
 	scratch = strdup(class_names);
 	if (scratch == NULL) {
