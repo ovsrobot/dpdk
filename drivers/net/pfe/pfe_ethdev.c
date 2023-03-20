@@ -888,6 +888,9 @@ parse_integer_arg(const char *key __rte_unused,
 	char *end;
 	errno = 0;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	i = strtol(value, &end, 10);
 	if (*end != 0 || errno != 0 || i < 0 || i > 1) {
 		PFE_PMD_ERR("Supported Port IDS are 0 and 1");
