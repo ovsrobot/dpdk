@@ -1897,6 +1897,9 @@ parse_budget_arg(const char *key __rte_unused,
 	int *i = (int *)extra_args;
 	char *end;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	*i = strtol(value, &end, 10);
 	if (*i < 0 || *i > UINT16_MAX) {
 		AF_XDP_LOG(ERR, "Invalid busy_budget %i, must be >= 0 and <= %u\n",
@@ -1915,6 +1918,9 @@ parse_integer_arg(const char *key __rte_unused,
 	int *i = (int *)extra_args;
 	char *end;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	*i = strtol(value, &end, 10);
 	if (*i < 0) {
 		AF_XDP_LOG(ERR, "Argument has to be positive.\n");
@@ -1930,6 +1936,9 @@ parse_name_arg(const char *key __rte_unused,
 	       const char *value, void *extra_args)
 {
 	char *name = extra_args;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	if (strnlen(value, IFNAMSIZ) > IFNAMSIZ - 1) {
 		AF_XDP_LOG(ERR, "Invalid name %s, should be less than %u bytes.\n",
@@ -1948,6 +1957,9 @@ parse_prog_arg(const char *key __rte_unused,
 	       const char *value, void *extra_args)
 {
 	char *path = extra_args;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	if (strnlen(value, PATH_MAX) == PATH_MAX) {
 		AF_XDP_LOG(ERR, "Invalid path %s, should be less than %u bytes.\n",
