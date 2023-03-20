@@ -1034,6 +1034,9 @@ open_rx_pcap(const char *key, const char *value, void *extra_args)
 	struct pmd_devargs *rx = extra_args;
 	pcap_t *pcap = NULL;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	if (open_single_rx_pcap(pcap_filename, &pcap) < 0)
 		return -1;
 
@@ -1056,6 +1059,9 @@ open_tx_pcap(const char *key, const char *value, void *extra_args)
 	struct pmd_devargs *dumpers = extra_args;
 	pcap_dumper_t *dumper;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	if (open_single_tx_pcap(pcap_filename, &dumper) < 0)
 		return -1;
 
@@ -1076,6 +1082,9 @@ open_rx_tx_iface(const char *key, const char *value, void *extra_args)
 	const char *iface = value;
 	struct pmd_devargs *tx = extra_args;
 	pcap_t *pcap = NULL;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	if (open_single_iface(iface, &pcap) < 0)
 		return -1;
@@ -1143,6 +1152,9 @@ open_rx_iface(const char *key, const char *value, void *extra_args)
 static inline int
 rx_iface_args_process(const char *key, const char *value, void *extra_args)
 {
+	if (value == NULL)
+		return -EINVAL;
+
 	if (strcmp(key, ETH_PCAP_RX_IFACE_ARG) == 0 ||
 			strcmp(key, ETH_PCAP_RX_IFACE_IN_ARG) == 0)
 		return open_rx_iface(key, value, extra_args);
@@ -1156,6 +1168,8 @@ rx_iface_args_process(const char *key, const char *value, void *extra_args)
 static int
 open_tx_iface(const char *key, const char *value, void *extra_args)
 {
+	if (value == NULL)
+		return -EINVAL;
 	return open_iface(key, value, extra_args);
 }
 
@@ -1163,7 +1177,7 @@ static int
 select_phy_mac(const char *key __rte_unused, const char *value,
 		void *extra_args)
 {
-	if (extra_args) {
+	if (value != NULL && extra_args != NULL) {
 		const int phy_mac = atoi(value);
 		int *enable_phy_mac = extra_args;
 
@@ -1177,7 +1191,7 @@ static int
 get_infinite_rx_arg(const char *key __rte_unused,
 		const char *value, void *extra_args)
 {
-	if (extra_args) {
+	if (value != NULL && extra_args != NULL) {
 		const int infinite_rx = atoi(value);
 		int *enable_infinite_rx = extra_args;
 
