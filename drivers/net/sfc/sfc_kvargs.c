@@ -85,6 +85,9 @@ sfc_kvarg_bool_handler(__rte_unused const char *key,
 	};
 	bool *value = opaque;
 
+	if (value_str == NULL)
+		return -EINVAL;
+
 	if (sfc_kvarg_match_value(value_str, true_strs,
 				  RTE_DIM(true_strs)))
 		*value = true;
@@ -120,6 +123,9 @@ int
 sfc_kvarg_string_handler(__rte_unused const char *key,
 			 const char *value_str, void *opaque)
 {
+	if (value_str == NULL)
+		return -EINVAL;
+
 	*(const char **)opaque = value_str;
 
 	return 0;

@@ -1108,6 +1108,9 @@ sfc_kvarg_fv_variant_handler(__rte_unused const char *key,
 {
 	uint32_t *value = opaque;
 
+	if (value_str == NULL)
+		return -EINVAL;
+
 	if (strcasecmp(value_str, SFC_KVARG_FW_VARIANT_DONT_CARE) == 0)
 		*value = EFX_FW_VARIANT_DONT_CARE;
 	else if (strcasecmp(value_str, SFC_KVARG_FW_VARIANT_FULL_FEATURED) == 0)
