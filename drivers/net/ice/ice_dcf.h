@@ -105,6 +105,9 @@ struct ice_dcf_hw {
 	void (*vc_event_msg_cb)(struct ice_dcf_hw *dcf_hw,
 				uint8_t *msg, uint16_t msglen);
 
+	rte_spinlock_t vsi_thread_lock;
+	int vsi_update_thread_num;
+
 	uint8_t *arq_buf;
 
 	uint16_t num_vfs;
