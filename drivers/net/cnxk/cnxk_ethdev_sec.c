@@ -133,6 +133,9 @@ parse_max_ipsec_rules(const char *key, const char *value, void *extra_args)
 	RTE_SET_USED(key);
 	uint32_t val;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	val = atoi(value);
 
 	if (val < 1 || val > 4095)
@@ -248,6 +251,9 @@ parse_val_u32(const char *key, const char *value, void *extra_args)
 	RTE_SET_USED(key);
 	uint32_t val;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	errno = 0;
 	val = strtoul(value, NULL, 0);
 	if (errno)
@@ -264,6 +270,9 @@ parse_selftest(const char *key, const char *value, void *extra_args)
 	RTE_SET_USED(key);
 	uint32_t val;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	val = atoi(value);
 
 	*(uint8_t *)extra_args = !!(val == 1);
@@ -276,6 +285,9 @@ parse_inl_cpt_channel(const char *key, const char *value, void *extra_args)
 	RTE_SET_USED(key);
 	uint16_t chan = 0, mask = 0;
 	char *next = 0;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	/* next will point to the separator '/' */
 	chan = strtol(value, &next, 16);

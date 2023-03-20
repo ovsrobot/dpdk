@@ -25,6 +25,9 @@ parse_outb_nb_desc(const char *key, const char *value, void *extra_args)
 	RTE_SET_USED(key);
 	uint32_t val;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	val = atoi(value);
 
 	*(uint16_t *)extra_args = val;
@@ -37,6 +40,9 @@ parse_outb_nb_crypto_qs(const char *key, const char *value, void *extra_args)
 {
 	RTE_SET_USED(key);
 	uint32_t val;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	val = atoi(value);
 
@@ -54,6 +60,9 @@ parse_ipsec_in_spi_range(const char *key, const char *value, void *extra_args)
 	RTE_SET_USED(key);
 	uint32_t val;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	errno = 0;
 	val = strtoul(value, NULL, 0);
 	if (errno)
@@ -70,6 +79,9 @@ parse_ipsec_out_max_sa(const char *key, const char *value, void *extra_args)
 	RTE_SET_USED(key);
 	uint32_t val;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	errno = 0;
 	val = strtoul(value, NULL, 0);
 	if (errno)
@@ -85,6 +97,9 @@ parse_flow_max_priority(const char *key, const char *value, void *extra_args)
 {
 	RTE_SET_USED(key);
 	uint16_t val;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	val = atoi(value);
 
@@ -103,6 +118,9 @@ parse_flow_prealloc_size(const char *key, const char *value, void *extra_args)
 	RTE_SET_USED(key);
 	uint16_t val;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	val = atoi(value);
 
 	/* Limit the prealloc size to 32 */
@@ -119,6 +137,9 @@ parse_reta_size(const char *key, const char *value, void *extra_args)
 {
 	RTE_SET_USED(key);
 	uint32_t val;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	val = atoi(value);
 
@@ -144,6 +165,9 @@ parse_pre_l2_hdr_info(const char *key, const char *value, void *extra_args)
 	char *tok1 = NULL, *tok2 = NULL;
 	uint16_t off, off_mask, dir;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	RTE_SET_USED(key);
 	off = strtol(value, &tok1, 16);
 	tok1++;
@@ -164,6 +188,9 @@ parse_flag(const char *key, const char *value, void *extra_args)
 {
 	RTE_SET_USED(key);
 
+	if (value == NULL)
+		return -EINVAL;
+
 	*(uint16_t *)extra_args = atoi(value);
 
 	return 0;
@@ -174,6 +201,9 @@ parse_sqb_count(const char *key, const char *value, void *extra_args)
 {
 	RTE_SET_USED(key);
 	uint32_t val;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	val = atoi(value);
 
@@ -187,6 +217,9 @@ parse_meta_bufsize(const char *key, const char *value, void *extra_args)
 {
 	RTE_SET_USED(key);
 	uint32_t val;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	errno = 0;
 	val = strtoul(value, NULL, 0);
@@ -202,6 +235,9 @@ static int
 parse_switch_header_type(const char *key, const char *value, void *extra_args)
 {
 	RTE_SET_USED(key);
+
+	if (value == NULL)
+		return -EINVAL;
 
 	if (strcmp(value, "higig2") == 0)
 		*(uint16_t *)extra_args = ROC_PRIV_FLAGS_HIGIG;
@@ -230,6 +266,9 @@ parse_sdp_channel_mask(const char *key, const char *value, void *extra_args)
 	RTE_SET_USED(key);
 	uint16_t chan = 0, mask = 0;
 	char *next = 0;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	/* next will point to the separator '/' */
 	chan = strtol(value, &next, 16);
