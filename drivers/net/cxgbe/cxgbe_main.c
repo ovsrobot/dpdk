@@ -746,6 +746,9 @@ void cxgbe_print_port_info(struct adapter *adap)
 
 static int check_devargs_handler(const char *key, const char *value, void *p)
 {
+	if (value == NULL)
+		return -EINVAL;
+
 	if (!strncmp(key, CXGBE_DEVARG_CMN_KEEP_OVLAN, strlen(key)) ||
 	    !strncmp(key, CXGBE_DEVARG_CMN_TX_MODE_LATENCY, strlen(key)) ||
 	    !strncmp(key, CXGBE_DEVARG_VF_FORCE_LINK_UP, strlen(key))) {
