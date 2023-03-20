@@ -67,6 +67,9 @@ cnxk_gpio_parse_arg_gpiochip(const char *key __rte_unused, const char *value,
 {
 	long val;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	errno = 0;
 	val = strtol(value, NULL, 10);
 	if (errno)
@@ -81,6 +84,9 @@ static int
 cnxk_gpio_parse_arg_allowlist(const char *key __rte_unused, const char *value,
 			      void *extra_args __rte_unused)
 {
+	if (value == NULL)
+		return -EINVAL;
+
 	allowlist = strdup(value);
 	if (!allowlist)
 		return -ENOMEM;
