@@ -903,6 +903,9 @@ parse_vport(const char *key, const char *value, void *args)
 	struct idpf_devargs *devargs = args;
 	const char *pos = value;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	devargs->req_vport_nb = 0;
 
 	if (*pos == '[')
@@ -935,6 +938,9 @@ parse_bool(const char *key, const char *value, void *args)
 	int *i = args;
 	char *end;
 	int num;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	errno = 0;
 
