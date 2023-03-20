@@ -580,6 +580,8 @@ static int
 assign_numa_node(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *socket_id = opaque;
+	if (value == NULL)
+		return -EINVAL;
 	*socket_id = atoi(value);
 	if (*socket_id >= RTE_MAX_NUMA_NODES)
 		return -1;
@@ -590,6 +592,10 @@ static int
 set_do_validation(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *do_val = opaque;
+
+	if (value == NULL)
+		return -EINVAL;
+
 	*do_val = atoi(value);
 	if (*do_val != 0)
 		*do_val = 1;
@@ -600,6 +606,9 @@ static int
 set_do_test(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *do_test = opaque;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	*do_test = atoi(value);
 
