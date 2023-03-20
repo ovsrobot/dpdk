@@ -18,6 +18,7 @@ jobs:
       ABI_CHECKS: ${{ contains(matrix.config.checks, 'abi') }}
       ASAN: ${{ contains(matrix.config.checks, 'asan') }}
       BUILD_32BIT: ${{ matrix.config.cross == 'i386' }}
+      BUILD_DEBUG: ${{ contains(matrix.config.checks, 'debug') }}
       BUILD_DOCS: ${{ contains(matrix.config.checks, 'doc') }}
       CC: ccache ${{ matrix.config.compiler }}
       DEF_LIB: ${{ matrix.config.library }}
@@ -37,6 +38,9 @@ jobs:
           - os: ubuntu-20.04
             compiler: gcc
             mini: mini
+          - os: ubuntu-20.04
+            compiler: gcc
+            checks: debug
           - os: ubuntu-20.04
             compiler: gcc
             checks: abi+doc+tests
