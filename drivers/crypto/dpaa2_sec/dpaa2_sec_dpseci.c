@@ -4242,6 +4242,8 @@ check_devargs_handler(const char *key, const char *value,
 	if (!strcmp(key, "drv_strict_order")) {
 		priv->en_loose_ordered = false;
 	} else if (!strcmp(key, "drv_dump_mode")) {
+		if (value == NULL)
+			return -EINVAL;
 		dpaa2_sec_dp_dump = atoi(value);
 		if (dpaa2_sec_dp_dump > DPAA2_SEC_DP_FULL_DUMP) {
 			DPAA2_SEC_WARN("WARN: DPAA2_SEC_DP_DUMP_LEVEL is not "
