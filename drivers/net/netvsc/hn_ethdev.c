@@ -157,6 +157,9 @@ static int hn_set_parameter(const char *key, const char *value, void *opaque)
 	char *endp = NULL;
 	unsigned long v;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	v = strtoul(value, &endp, 0);
 	if (*value == '\0' || *endp != '\0') {
 		PMD_DRV_LOG(ERR, "invalid parameter %s=%s", key, value);
