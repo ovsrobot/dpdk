@@ -750,6 +750,9 @@ mana_arg_parse_callback(const char *key, const char *val, void *private)
 		return 1;
 	}
 
+	if (val == NULL)
+		return -EINVAL;
+
 	ret = rte_ether_unformat_addr(val, &conf->mac_array[conf->index]);
 	if (ret) {
 		DRV_LOG(ERR, "Invalid MAC address %s", val);
