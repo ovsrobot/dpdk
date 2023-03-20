@@ -1172,6 +1172,7 @@ idpf_adapter_ext_init(struct rte_pci_device *pci_dev, struct idpf_adapter_ext *a
 	return ret;
 
 err_get_ptype:
+	rte_eal_alarm_cancel(idpf_dev_alarm_handler, adapter);
 	idpf_adapter_deinit(base);
 err_adapter_init:
 	return ret;
