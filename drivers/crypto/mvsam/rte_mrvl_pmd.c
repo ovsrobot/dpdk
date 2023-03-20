@@ -1126,6 +1126,9 @@ parse_integer_arg(const char *key __rte_unused,
 {
 	int *i = (int *) extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	*i = atoi(value);
 	if (*i < 0) {
 		MRVL_LOG(ERR, "Argument has to be positive!");
@@ -1141,6 +1144,9 @@ parse_name_arg(const char *key __rte_unused,
 		const char *value, void *extra_args)
 {
 	struct rte_cryptodev_pmd_init_params *params = extra_args;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	if (strlen(value) >= RTE_CRYPTODEV_NAME_MAX_LEN - 1) {
 		MRVL_LOG(ERR, "Invalid name %s, should be less than %u bytes!",
