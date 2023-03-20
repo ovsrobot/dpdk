@@ -936,6 +936,9 @@ parse_integer_arg(const char *key __rte_unused,
 	int i;
 	char *end;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	errno = 0;
 
 	i = strtol(value, &end, 10);
