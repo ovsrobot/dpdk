@@ -3180,6 +3180,9 @@ mrvl_get_ifnames(const char *key __rte_unused, const char *value,
 {
 	struct mrvl_ifnames *ifnames = extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	ifnames->names[ifnames->idx++] = value;
 
 	return 0;

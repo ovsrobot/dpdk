@@ -656,12 +656,16 @@ int
 mrvl_get_cfg(const char *key __rte_unused, const char *path, void *extra_args)
 {
 	struct mrvl_cfg **cfg = extra_args;
-	struct rte_cfgfile *file = rte_cfgfile_load(path, 0);
+	struct rte_cfgfile *file;
 	uint32_t val;
 	int n, i, ret;
 	const char *entry;
 	char sec_name[32];
 
+	if (path == NULL)
+		return -EINVAL;
+
+	file = rte_cfgfile_load(path, 0);
 	if (file == NULL) {
 		MRVL_LOG(ERR, "Cannot load configuration %s\n", path);
 		return -1;
