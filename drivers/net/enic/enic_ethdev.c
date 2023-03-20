@@ -1148,6 +1148,9 @@ static int enic_parse_zero_one(const char *key,
 	struct enic *enic;
 	bool b;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	enic = (struct enic *)opaque;
 	if (strcmp(value, "0") == 0) {
 		b = false;
@@ -1172,6 +1175,9 @@ static int enic_parse_ig_vlan_rewrite(__rte_unused const char *key,
 				      void *opaque)
 {
 	struct enic *enic;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	enic = (struct enic *)opaque;
 	if (strcmp(value, "trunk") == 0) {
