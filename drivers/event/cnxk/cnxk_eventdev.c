@@ -565,6 +565,9 @@ parse_sso_kvargs_qos_dict(const char *key, const char *value, void *opaque)
 {
 	RTE_SET_USED(key);
 
+	if (value == NULL)
+		return -EINVAL;
+
 	/* Dict format [Qx-TAQ-IAQ][Qz-TAQ-IAQ] use '-' cause ',' isn't allowed.
 	 * Everything is expressed in percentages, 0 represents default.
 	 */
@@ -577,6 +580,9 @@ static int
 parse_sso_kvargs_stash_dict(const char *key, const char *value, void *opaque)
 {
 	RTE_SET_USED(key);
+
+	if (value == NULL)
+		return -EINVAL;
 
 	/* Dict format [Qx|<stash_offset>|<stash_length>] use '|' cause ','
 	 * isn't allowed.

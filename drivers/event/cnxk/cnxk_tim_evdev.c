@@ -490,6 +490,9 @@ cnxk_tim_parse_kvargs_dict(const char *key, const char *value, void *opaque)
 {
 	RTE_SET_USED(key);
 
+	if (value == NULL)
+		return -EINVAL;
+
 	/* Dict format [ring-chunk_sz-disable_npa-enable_stats] use '-' as ','
 	 * isn't allowed. 0 represents default.
 	 */
@@ -527,6 +530,9 @@ static int
 cnxk_tim_parse_kvargs_dsv(const char *key, const char *value, void *opaque)
 {
 	RTE_SET_USED(key);
+
+	if (value == NULL)
+		return -EINVAL;
 
 	/* DSV format GPIO-PTP-SYNCE-BTS use '-' as ','
 	 * isn't allowed. 0 represents default.
