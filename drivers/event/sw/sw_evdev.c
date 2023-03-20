@@ -875,6 +875,8 @@ static int
 assign_numa_node(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *socket_id = opaque;
+	if (value == NULL)
+		return -EINVAL;
 	*socket_id = atoi(value);
 	if (*socket_id >= RTE_MAX_NUMA_NODES)
 		return -1;
@@ -885,6 +887,8 @@ static int
 set_sched_quanta(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *quanta = opaque;
+	if (value == NULL)
+		return -EINVAL;
 	*quanta = atoi(value);
 	if (*quanta < 0 || *quanta >= 4096)
 		return -1;
@@ -895,6 +899,8 @@ static int
 set_credit_quanta(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *credit = opaque;
+	if (value == NULL)
+		return -EINVAL;
 	*credit = atoi(value);
 	if (*credit < 0 || *credit >= 128)
 		return -1;
@@ -905,6 +911,8 @@ static int
 set_deq_burst_sz(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *deq_burst_sz = opaque;
+	if (value == NULL)
+		return -EINVAL;
 	*deq_burst_sz = atoi(value);
 	if (*deq_burst_sz < 0 || *deq_burst_sz > SCHED_DEQUEUE_MAX_BURST_SIZE)
 		return -1;
@@ -915,6 +923,8 @@ static int
 set_min_burst_sz(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *min_burst_sz = opaque;
+	if (value == NULL)
+		return -EINVAL;
 	*min_burst_sz = atoi(value);
 	if (*min_burst_sz < 0 || *min_burst_sz > SCHED_DEQUEUE_MAX_BURST_SIZE)
 		return -1;
@@ -925,6 +935,8 @@ static int
 set_refill_once(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *refill_once_per_call = opaque;
+	if (value == NULL)
+		return -EINVAL;
 	*refill_once_per_call = atoi(value);
 	if (*refill_once_per_call < 0 || *refill_once_per_call > 1)
 		return -1;
