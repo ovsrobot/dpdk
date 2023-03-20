@@ -829,6 +829,9 @@ floating_veb_list_handler(__rte_unused const char *key,
 	int min, max;
 	bool *vf_floating_veb = opaque;
 
+	if (floating_veb_value == NULL)
+		return -EINVAL;
+
 	while (isblank(*floating_veb_value))
 		floating_veb_value++;
 
@@ -921,6 +924,9 @@ i40e_check_floating_handler(__rte_unused const char *key,
 			    const char *value,
 			    __rte_unused void *opaque)
 {
+	if (value == NULL)
+		return -EINVAL;
+
 	if (strcmp(value, "1"))
 		return -1;
 
@@ -1258,6 +1264,9 @@ i40e_parse_multi_drv_handler(__rte_unused const char *key,
 
 	pf = (struct i40e_pf *)opaque;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	errno = 0;
 	support_multi_driver = strtoul(value, &end, 10);
 	if (errno != 0 || end == value || *end != 0) {
@@ -1346,6 +1355,9 @@ read_vf_msg_config(__rte_unused const char *key,
 			       void *opaque)
 {
 	struct i40e_vf_msg_cfg *cfg = opaque;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	if (sscanf(value, "%u@%u:%u", &cfg->max_msg, &cfg->period,
 			&cfg->ignore_second) != 3) {
@@ -4692,6 +4704,9 @@ static int i40e_pf_parse_vf_queue_number_handler(const char *key,
 
 	pf = (struct i40e_pf *)opaque;
 	RTE_SET_USED(key);
+
+	if (value == NULL)
+		return -EINVAL;
 
 	errno = 0;
 	num = strtoul(value, &end, 0);
