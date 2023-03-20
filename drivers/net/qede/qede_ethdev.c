@@ -1211,6 +1211,9 @@ static int qede_args_check(const char *key, const char *val, void *opaque)
 	struct qede_dev *qdev = QEDE_INIT_QDEV(eth_dev);
 	struct ecore_dev *edev = QEDE_INIT_EDEV(qdev);
 
+	if (val == NULL)
+		return -EINVAL;
+
 	errno = 0;
 	tmp = strtoul(val, NULL, 0);
 	if (errno) {
