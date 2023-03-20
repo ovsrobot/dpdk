@@ -36,6 +36,9 @@ parse_max_pools_handler(const char *key, const char *value, void *extra_args)
 	RTE_SET_USED(key);
 	uint32_t val;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	val = rte_align32pow2(atoi(value));
 	if (val < npa_aura_size_to_u32(NPA_AURA_SZ_128))
 		val = 128;
