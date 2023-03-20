@@ -103,6 +103,9 @@ ionic_pci_devarg_cmb(const char *key __rte_unused, const char *val, void *arg)
 {
 	struct ionic_adapter *adapter = arg;
 
+	if (val == NULL)
+		return -EINVAL;
+
 	if (!strcmp(val, "1")) {
 		IONIC_PRINT(NOTICE, "%s enabled", PMD_IONIC_CMB_KVARG);
 		adapter->q_in_cmb = true;
