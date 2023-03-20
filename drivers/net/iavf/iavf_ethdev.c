@@ -2185,6 +2185,9 @@ parse_u16(__rte_unused const char *key, const char *value, void *args)
 	u16 *num = (u16 *)args;
 	u16 tmp;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	errno = 0;
 	tmp = strtoull(value, NULL, 10);
 	if (errno || !tmp) {
@@ -2815,6 +2818,9 @@ static int
 iavf_dcf_cap_check_handler(__rte_unused const char *key,
 			   const char *value, __rte_unused void *opaque)
 {
+	if (value == NULL)
+		return -EINVAL;
+
 	if (strcmp(value, "dcf"))
 		return -1;
 
