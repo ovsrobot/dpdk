@@ -46,6 +46,9 @@ eth_mac_cmp(const char *key __rte_unused,
 	struct rte_eth_dev_info dev_info;
 	uint32_t index;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	/* Parse devargs MAC address. */
 	if (rte_ether_unformat_addr(value, &mac) < 0)
 		return -1; /* invalid devargs value */
@@ -71,6 +74,9 @@ eth_representor_cmp(const char *key __rte_unused,
 
 	if ((data->dev_flags & RTE_ETH_DEV_REPRESENTOR) == 0)
 		return -1; /* not a representor port */
+
+	if (value == NULL)
+		return -EINVAL;
 
 	/* Parse devargs representor values. */
 	values = strdup(value);
