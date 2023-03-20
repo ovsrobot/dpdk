@@ -70,6 +70,9 @@ parse_integer_arg(const char *key __rte_unused,
 {
 	int *i = (int *)extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	*i = atoi(value);
 	if (*i < 0) {
 		octeontx_log_err("argument has to be positive.");
