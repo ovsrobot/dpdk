@@ -1933,6 +1933,9 @@ static int
 ice_dcf_engine_disabled_handler(__rte_unused const char *key,
 			  const char *value, __rte_unused void *opaque)
 {
+	if (value == NULL)
+		return -EINVAL;
+
 	if (strcmp(value, "off"))
 		return -1;
 
@@ -1943,6 +1946,9 @@ static int
 ice_dcf_cap_check_handler(__rte_unused const char *key,
 			  const char *value, __rte_unused void *opaque)
 {
+	if (value == NULL)
+		return -EINVAL;
+
 	if (strcmp(value, "dcf"))
 		return -1;
 

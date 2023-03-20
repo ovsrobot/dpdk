@@ -1887,6 +1887,9 @@ parse_bool(const char *key, const char *value, void *args)
 	char *end;
 	int num;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	num = strtoul(value, &end, 10);
 
 	if (num != 0 && num != 1) {
@@ -1905,6 +1908,9 @@ parse_u64(const char *key, const char *value, void *args)
 {
 	u64 *num = (u64 *)args;
 	u64 tmp;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	errno = 0;
 	tmp = strtoull(value, NULL, 16);
