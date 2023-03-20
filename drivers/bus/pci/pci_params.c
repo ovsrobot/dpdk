@@ -34,6 +34,8 @@ pci_addr_kv_cmp(const char *key __rte_unused,
 	struct rte_pci_addr *addr1 = &_addr1;
 	struct rte_pci_addr *addr2 = _addr2;
 
+	if (value == NULL)
+		return -EINVAL;
 	if (rte_pci_addr_parse(value, addr1))
 		return -1;
 	return -abs(rte_pci_addr_cmp(addr1, addr2));
