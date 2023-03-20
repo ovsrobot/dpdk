@@ -521,6 +521,9 @@ mlx4_arg_parse(const char *key, const char *val, struct mlx4_conf *conf)
 {
 	unsigned long tmp;
 
+	if (val == NULL)
+		return -EINVAL;
+
 	errno = 0;
 	tmp = strtoul(val, NULL, 0);
 	if (errno) {
