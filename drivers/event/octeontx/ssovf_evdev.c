@@ -717,6 +717,8 @@ static int
 ssovf_parsekv(const char *key __rte_unused, const char *value, void *opaque)
 {
 	int *flag = opaque;
+	if (value == NULL)
+		return -EINVAL;
 	*flag = !!atoi(value);
 	return 0;
 }
