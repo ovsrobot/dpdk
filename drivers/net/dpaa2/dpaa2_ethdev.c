@@ -2545,6 +2545,9 @@ static int
 check_devargs_handler(__rte_unused const char *key, const char *value,
 		      __rte_unused void *opaque)
 {
+	if (value == NULL)
+		return -EINVAL;
+
 	if (strcmp(value, "1"))
 		return -1;
 
