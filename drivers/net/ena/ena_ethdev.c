@@ -3444,6 +3444,9 @@ static int ena_process_uint_devarg(const char *key,
 	char *str_end;
 	uint64_t uint_value;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	uint_value = strtoull(value, &str_end, 10);
 	if (value == str_end) {
 		PMD_INIT_LOG(ERR,
@@ -3481,6 +3484,9 @@ static int ena_process_bool_devarg(const char *key,
 {
 	struct ena_adapter *adapter = opaque;
 	bool bool_value;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	/* Parse the value. */
 	if (strcmp(value, "1") == 0) {
