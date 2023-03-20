@@ -3584,6 +3584,9 @@ static int
 check_devargs_handler(__rte_unused const char *key, const char *value,
 		      __rte_unused void *opaque)
 {
+	if (value == NULL)
+		return -EINVAL;
+
 	dpaa_sec_dp_dump = atoi(value);
 	if (dpaa_sec_dp_dump > DPAA_SEC_DP_FULL_DUMP) {
 		DPAA_SEC_WARN("WARN: DPAA_SEC_DP_DUMP_LEVEL is not "
