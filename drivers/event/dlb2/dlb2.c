@@ -329,6 +329,9 @@ set_numa_node(const char *key __rte_unused, const char *value, void *opaque)
 	int *socket_id = opaque;
 	int ret;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	ret = dlb2_string_to_int(socket_id, value);
 	if (ret < 0)
 		return ret;
@@ -542,7 +545,7 @@ set_cos_bw(const char *key __rte_unused,
 {
 	struct dlb2_cos_bw *cos_bw = opaque;
 
-	if (opaque == NULL) {
+	if (value == NULL || opaque == NULL) {
 		DLB2_LOG_ERR("NULL pointer\n");
 		return -EINVAL;
 	}
