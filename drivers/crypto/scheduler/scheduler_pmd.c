@@ -272,6 +272,9 @@ parse_integer_arg(const char *key __rte_unused,
 {
 	int *i = (int *) extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	*i = atoi(value);
 	if (*i < 0) {
 		CR_SCHED_LOG(ERR, "Argument has to be positive.");
@@ -338,6 +341,9 @@ parse_corelist_arg(const char *key __rte_unused,
 {
 	struct scheduler_init_params *params = extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	params->nb_wc = 0;
 
 	const char *token = value;
@@ -367,6 +373,9 @@ parse_name_arg(const char *key __rte_unused,
 {
 	struct rte_cryptodev_pmd_init_params *params = extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	if (strlen(value) >= RTE_CRYPTODEV_NAME_MAX_LEN - 1) {
 		CR_SCHED_LOG(ERR, "Invalid name %s, should be less than "
 				"%u bytes.", value,
@@ -386,6 +395,9 @@ parse_worker_arg(const char *key __rte_unused,
 {
 	struct scheduler_init_params *param = extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	if (param->nb_workers >= RTE_CRYPTODEV_SCHEDULER_MAX_NB_WORKERS) {
 		CR_SCHED_LOG(ERR, "Too many workers.");
 		return -ENOMEM;
@@ -403,6 +415,9 @@ parse_mode_arg(const char *key __rte_unused,
 {
 	struct scheduler_init_params *param = extra_args;
 	uint32_t i;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	for (i = 0; i < RTE_DIM(scheduler_mode_map); i++) {
 		if (strcmp(value, scheduler_mode_map[i].name) == 0) {
@@ -427,6 +442,9 @@ parse_mode_param_arg(const char *key __rte_unused,
 {
 	struct scheduler_init_params *param = extra_args;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	strlcpy(param->mode_param_str, value,
 			RTE_CRYPTODEV_SCHEDULER_NAME_MAX_LEN);
 
@@ -439,6 +457,9 @@ parse_ordering_arg(const char *key __rte_unused,
 {
 	struct scheduler_init_params *param = extra_args;
 	uint32_t i;
+
+	if (value == NULL)
+		return -EINVAL;
 
 	for (i = 0; i < RTE_DIM(scheduler_ordering_map); i++) {
 		if (strcmp(value, scheduler_ordering_map[i].name) == 0) {
