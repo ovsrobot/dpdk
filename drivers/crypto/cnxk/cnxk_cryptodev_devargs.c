@@ -16,6 +16,9 @@ parse_max_qps_limit(const char *key, const char *value, void *extra_args)
 	RTE_SET_USED(key);
 	uint32_t val;
 
+	if (value == NULL)
+		return -EINVAL;
+
 	val = atoi(value);
 
 	if (val < CNXK_MAX_QPS_LIMIT_MIN || val > CNXK_MAX_QPS_LIMIT_MAX)
