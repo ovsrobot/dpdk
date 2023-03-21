@@ -1046,8 +1046,6 @@ again:
 				pthread_mutex_unlock(&vhost_user.mutex);
 				goto again;
 			}
-		} else if (vsocket->reconnect) {
-			vhost_user_remove_reconnect(vsocket);
 		}
 
 		pthread_mutex_lock(&vsocket->conn_mutex);
@@ -1080,6 +1078,8 @@ again:
 		if (vsocket->is_server) {
 			close(vsocket->socket_fd);
 			unlink(path);
+		} else if (vsocket->reconnect) {
+			vhost_user_remove_reconnect(vsocket);
 		}
 
 		pthread_mutex_destroy(&vsocket->conn_mutex);
