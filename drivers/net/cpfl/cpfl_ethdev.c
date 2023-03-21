@@ -1165,6 +1165,8 @@ cpfl_dev_alarm_handler(void *param)
 	rte_eal_alarm_set(CPFL_ALARM_INTERVAL, cpfl_dev_alarm_handler, adapter);
 }
 
+extern struct idpf_ctlq_create_info ctlq_info[IDPF_CTLQ_NUM];
+
 static int
 cpfl_adapter_ext_init(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *adapter)
 {
@@ -1180,6 +1182,19 @@ cpfl_adapter_ext_init(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *a
 	hw->subsystem_vendor_id = pci_dev->id.subsystem_vendor_id;
 
 	strncpy(adapter->name, pci_dev->device.name, PCI_PRI_STR_SIZE);
+
+	idpf_hw_pf_reset(hw);
+	ret = idpf_hw_pf_reset_check(hw);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR, "PF is still resetting");
+		goto err_reset_check;
+	}
+
+	ret = idpf_hw_mbx_init(hw, ctlq_info);
+	if (ret != 0) {
+		PMD_INIT_LOG(ERR, "Failed to init mailbox");
+		goto err_reset_check;
+	}
 
 	ret = idpf_adapter_init(base);
 	if (ret != 0) {
@@ -1212,6 +1227,8 @@ cpfl_adapter_ext_init(struct rte_pci_device *pci_dev, struct cpfl_adapter_ext *a
 err_get_ptype:
 	idpf_adapter_deinit(base);
 err_adapter_init:
+	idpf_hw_mbx_deinit(hw);
+err_reset_check:
 	return ret;
 }
 
@@ -1322,6 +1339,7 @@ cpfl_adapter_ext_deinit(struct cpfl_adapter_ext *adapter)
 {
 	rte_eal_alarm_cancel(cpfl_dev_alarm_handler, adapter);
 	idpf_adapter_deinit(&adapter->base);
+	idpf_hw_mbx_deinit(&adapter->base.hw);
 
 	rte_free(adapter->vports);
 	adapter->vports = NULL;
