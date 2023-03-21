@@ -10,8 +10,11 @@
 #include <base/virtchnl2.h>
 #include <idpf_common_logs.h>
 
+#define IDPF_RESET_WAIT_CNT	100
+
 #define IDPF_RSS_KEY_LEN	52
 
+#define IDPF_CTLQ_NUM		2
 #define IDPF_CTLQ_ID		-1
 #define IDPF_CTLQ_LEN		64
 #define IDPF_DFLT_MBX_BUF_SIZE	4096
@@ -142,6 +145,8 @@ struct idpf_cmd_info {
 	uint32_t out_size;      /* buffer size for response */
 };
 
+struct idpf_ctlq_create_info ctlq_info[IDPF_CTLQ_NUM];
+
 /* notify current command done. Only call in case execute
  * _atomic_set_cmd successfully.
  */
@@ -180,6 +185,14 @@ atomic_set_cmd(struct idpf_adapter *adapter, uint32_t ops)
 	return !ret;
 }
 
+__rte_internal
+void idpf_hw_pf_reset(struct idpf_hw *hw);
+__rte_internal
+int idpf_hw_pf_reset_check(struct idpf_hw *hw);
+__rte_internal
+int idpf_hw_mbx_init(struct idpf_hw *hw, struct idpf_ctlq_create_info *ctlq_info);
+__rte_internal
+void idpf_hw_mbx_deinit(struct idpf_hw *hw);
 __rte_internal
 int idpf_adapter_init(struct idpf_adapter *adapter);
 __rte_internal
