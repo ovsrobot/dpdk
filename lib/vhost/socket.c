@@ -498,7 +498,11 @@ remove_fd:
 static int
 vhost_user_reconnect_init(void)
 {
+	static bool reconn_init_done;
 	int ret;
+
+	if (reconn_init_done)
+		return 0;
 
 	ret = pthread_mutex_init(&reconn_list.mutex, NULL);
 	if (ret < 0) {
@@ -515,6 +519,8 @@ vhost_user_reconnect_init(void)
 			VHOST_LOG_CONFIG("thread", ERR,
 				"%s: failed to destroy reconnect mutex\n",
 				__func__);
+	} else {
+		reconn_init_done = true;
 	}
 
 	return ret;
@@ -866,6 +872,11 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 	if (!path)
 		return -1;
 
+	if ((flags & RTE_VHOST_USER_CLIENT) != 0 &&
+			(flags & RTE_VHOST_USER_NO_RECONNECT) == 0 &&
+			vhost_user_reconnect_init() != 0)
+		return -1;
+
 	pthread_mutex_lock(&vhost_user.mutex);
 
 	if (vhost_user.vsocket_cnt == MAX_VHOST_SOCKET) {
@@ -961,11 +972,7 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 	}
 
 	if ((flags & RTE_VHOST_USER_CLIENT) != 0) {
-		vsocket->reconnect = !(flags & RTE_VHOST_USER_NO_RECONNECT);
-		if (vsocket->reconnect && reconn_tid == 0) {
-			if (vhost_user_reconnect_init() != 0)
-				goto out_mutex;
-		}
+		vsocket->reconnect = (flags & RTE_VHOST_USER_NO_RECONNECT) == 0;
 	} else {
 		vsocket->is_server = true;
 	}
