@@ -154,6 +154,9 @@ ice_dcf_vsi_update_service_handler(void *param)
 
 	free(param);
 
+	__atomic_fetch_sub(&hw->vsi_update_thread_num, 1,
+		__ATOMIC_RELEASE);
+
 	return NULL;
 }
 
@@ -183,6 +186,9 @@ start_vsi_reset_thread(struct ice_dcf_hw *dcf_hw, bool vfr, uint16_t vf_id)
 		PMD_DRV_LOG(ERR, "Failed to start the thread for reset handling");
 		free(param);
 	}
+
+	__atomic_fetch_add(&dcf_hw->vsi_update_thread_num, 1,
+		__ATOMIC_RELAXED);
 }
 
 static uint32_t
