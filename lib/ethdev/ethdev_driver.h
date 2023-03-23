@@ -59,6 +59,10 @@ struct rte_eth_dev {
 	eth_rx_descriptor_status_t rx_descriptor_status;
 	/** Check the status of a Tx descriptor */
 	eth_tx_descriptor_status_t tx_descriptor_status;
+	/** Stash Tx used buffers into RX ring in buffer recycle mode */
+	eth_tx_buf_stash_t tx_buf_stash;
+	/** Refill Rx descriptors in buffer recycle mode */
+	eth_rx_descriptors_refill_t rx_descriptors_refill;
 
 	/**
 	 * Device data that is shared between primary and secondary processes
@@ -503,6 +507,10 @@ typedef void (*eth_rxq_info_get_t)(struct rte_eth_dev *dev,
 
 typedef void (*eth_txq_info_get_t)(struct rte_eth_dev *dev,
 	uint16_t tx_queue_id, struct rte_eth_txq_info *qinfo);
+
+typedef void (*eth_rxq_buf_recycle_info_get_t)(struct rte_eth_dev *dev,
+	uint16_t rx_queue_id,
+	struct rte_eth_rxq_buf_recycle_info *rxq_buf_recycle_info);
 
 typedef int (*eth_burst_mode_get_t)(struct rte_eth_dev *dev,
 	uint16_t queue_id, struct rte_eth_burst_mode *mode);
@@ -1247,6 +1255,8 @@ struct eth_dev_ops {
 	eth_rxq_info_get_t         rxq_info_get;
 	/** Retrieve Tx queue information */
 	eth_txq_info_get_t         txq_info_get;
+	/** Get Rx queue buffer recycle information */
+	eth_rxq_buf_recycle_info_get_t rxq_buf_recycle_info_get;
 	eth_burst_mode_get_t       rx_burst_mode_get; /**< Get Rx burst mode */
 	eth_burst_mode_get_t       tx_burst_mode_get; /**< Get Tx burst mode */
 	eth_fw_version_get_t       fw_version_get; /**< Get firmware version */
