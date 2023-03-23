@@ -3197,6 +3197,28 @@ i40e_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 	qinfo->conf.offloads = txq->offloads;
 }
 
+void
+i40e_rxq_buf_recycle_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
+	struct rte_eth_rxq_buf_recycle_info *rxq_buf_recycle_info)
+{
+	struct i40e_rx_queue *rxq;
+
+	rxq = dev->data->rx_queues[queue_id];
+
+	rxq_buf_recycle_info->buf_ring = (void *)rxq->sw_ring;
+	rxq_buf_recycle_info->mp = rxq->mp;
+	rxq_buf_recycle_info->buf_ring_size = rxq->nb_rx_desc;
+	rxq_buf_recycle_info->refill_request = RTE_I40E_RXQ_REARM_THRESH;
+
+#if RTE_BYTE_ORDER == RTE_BIG_ENDIAN
+	rxq_buf_recycle_info->refill_head = &rxq->rxrearm_start + 0xF;
+	rxq_buf_recycle_info->receive_tail = &rxq->rx_tail + 0xF;
+#else
+	rxq_buf_recycle_info->refill_head = &rxq->rxrearm_start;
+	rxq_buf_recycle_info->receive_tail = &rxq->rx_tail;
+#endif
+}
+
 #ifdef RTE_ARCH_X86
 static inline bool
 get_avx_supported(bool request_avx512)
@@ -3273,6 +3295,7 @@ i40e_set_rx_function(struct rte_eth_dev *dev)
 
 	if (ad->rx_vec_allowed  &&
 	    rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128) {
+		dev->rx_descriptors_refill = i40e_rx_descriptors_refill_vec;
 #ifdef RTE_ARCH_X86
 		if (dev->data->scattered_rx) {
 			if (ad->rx_use_avx512) {
@@ -3465,6 +3488,7 @@ i40e_set_tx_function(struct rte_eth_dev *dev)
 	if (ad->tx_simple_allowed) {
 		if (ad->tx_vec_allowed &&
 		    rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128) {
+			dev->tx_buf_stash = i40e_tx_buf_stash_vec;
 #ifdef RTE_ARCH_X86
 			if (ad->tx_use_avx512) {
 #ifdef CC_AVX512_SUPPORT
