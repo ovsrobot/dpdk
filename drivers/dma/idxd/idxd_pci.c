@@ -6,7 +6,6 @@
 #include <rte_devargs.h>
 #include <rte_dmadev_pmd.h>
 #include <rte_malloc.h>
-#include <rte_atomic.h>
 
 #include "idxd_internal.h"
 
@@ -136,7 +135,9 @@ idxd_pci_dev_close(struct rte_dma_dev *dev)
 	/* if this is the last WQ on the device, disable the device and free
 	 * the PCI struct
 	 */
-	is_last_wq = rte_atomic16_dec_and_test(&idxd->u.pci->ref_count);
+	// NOTE: review for potential ordering optimization
+	is_last_wq = __atomic_fetch_sub(&idxd->u.pci->ref_count, 1,
+		__ATOMIC_SEQ_CST) - 1 == 0;
 	if (is_last_wq) {
 		/* disable the device */
 		err_code = idxd_pci_dev_command(idxd, idxd_disable_dev);
@@ -350,7 +351,8 @@ idxd_dmadev_probe_pci(struct rte_pci_driver *drv, struct rte_pci_device *dev)
 				free(idxd.u.pci);
 			return ret;
 		}
-		rte_atomic16_inc(&idxd.u.pci->ref_count);
+		// NOTE: review for potential ordering optimization
+		__atomic_fetch_add(&idxd.u.pci->ref_count, 1, __ATOMIC_SEQ_CST);
 	}
 
 	return 0;
