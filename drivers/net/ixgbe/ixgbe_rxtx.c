@@ -2558,6 +2558,7 @@ ixgbe_set_tx_function(struct rte_eth_dev *dev, struct ixgbe_tx_queue *txq)
 				(rte_eal_process_type() != RTE_PROC_PRIMARY ||
 					ixgbe_txq_vec_setup(txq) == 0)) {
 			PMD_INIT_LOG(DEBUG, "Vector tx enabled.");
+			dev->tx_buf_stash = ixgbe_tx_buf_stash_vec;
 			dev->tx_pkt_burst = ixgbe_xmit_pkts_vec;
 		} else
 		dev->tx_pkt_burst = ixgbe_xmit_pkts_simple;
@@ -4852,6 +4853,7 @@ ixgbe_set_rx_function(struct rte_eth_dev *dev)
 			     RTE_IXGBE_DESCS_PER_LOOP,
 			     dev->data->port_id);
 
+		dev->rx_descriptors_refill = ixgbe_rx_descriptors_refill_vec;
 		dev->rx_pkt_burst = ixgbe_recv_pkts_vec;
 	} else if (adapter->rx_bulk_alloc_allowed) {
 		PMD_INIT_LOG(DEBUG, "Rx Burst Bulk Alloc Preconditions are "
@@ -5621,6 +5623,29 @@ ixgbe_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 	qinfo->conf.tx_rs_thresh = txq->tx_rs_thresh;
 	qinfo->conf.offloads = txq->offloads;
 	qinfo->conf.tx_deferred_start = txq->tx_deferred_start;
+}
+
+void
+ixgbe_rxq_buf_recycle_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
+	struct rte_eth_rxq_buf_recycle_info *rxq_buf_recycle_info)
+{
+	struct ixgbe_rx_queue *rxq;
+	struct ixgbe_adapter *adapter = dev->data->dev_private;
+
+	rxq = dev->data->rx_queues[queue_id];
+
+	rxq_buf_recycle_info->buf_ring = (void *)rxq->sw_ring;
+	rxq_buf_recycle_info->mp = rxq->mb_pool;
+	rxq_buf_recycle_info->buf_ring_size = rxq->nb_rx_desc;
+	rxq_buf_recycle_info->receive_tail = &rxq->rx_tail;
+
+	if (adapter->rx_vec_allowed) {
+		rxq_buf_recycle_info->refill_request = RTE_IXGBE_RXQ_REARM_THRESH;
+		rxq_buf_recycle_info->refill_head = &rxq->rxrearm_start;
+	} else {
+		rxq_buf_recycle_info->refill_request = rxq->rx_free_thresh;
+		rxq_buf_recycle_info->refill_head = &rxq->rx_free_trigger;
+	}
 }
 
 /*

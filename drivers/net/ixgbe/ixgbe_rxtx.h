@@ -295,6 +295,10 @@ int ixgbe_dev_tx_done_cleanup(void *tx_queue, uint32_t free_cnt);
 extern const uint32_t ptype_table[IXGBE_PACKET_TYPE_MAX];
 extern const uint32_t ptype_table_tn[IXGBE_PACKET_TYPE_TN_MAX];
 
+uint16_t ixgbe_tx_buf_stash_vec(void *tx_queue,
+		struct rte_eth_rxq_buf_recycle_info *rxq_buf_recycle_info);
+uint16_t ixgbe_rx_descriptors_refill_vec(void *rx_queue, uint16_t nb);
+
 uint16_t ixgbe_xmit_fixed_burst_vec(void *tx_queue, struct rte_mbuf **tx_pkts,
 				    uint16_t nb_pkts);
 int ixgbe_txq_vec_setup(struct ixgbe_tx_queue *txq);
