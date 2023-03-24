@@ -208,6 +208,8 @@ struct rte_graph_cluster_node_stats {
 	uint64_t prev_calls;	/**< Previous number of calls. */
 	uint64_t prev_objs;	/**< Previous number of processed objs. */
 	uint64_t prev_cycles;	/**< Previous number of cycles. */
+	uint64_t sched_objs;	/**< Previous number of scheduled objs. */
+	uint64_t sched_fail;	/**< Previous number of failed schedule objs. */
 
 	uint64_t realloc_count; /**< Realloc count. */
 
