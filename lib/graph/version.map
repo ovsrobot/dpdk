@@ -18,6 +18,8 @@ EXPERIMENTAL {
 	rte_graph_node_get_by_name;
 	rte_graph_obj_dump;
 	rte_graph_walk;
+	rte_graph_model_dispatch_core_bind;
+	rte_graph_model_dispatch_core_unbind;
 
 	rte_graph_cluster_stats_create;
 	rte_graph_cluster_stats_destroy;
