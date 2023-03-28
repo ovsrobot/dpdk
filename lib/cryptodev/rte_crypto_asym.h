@@ -69,7 +69,9 @@ enum rte_crypto_curve_id {
 	RTE_CRYPTO_EC_GROUP_SECP224R1 = 21,
 	RTE_CRYPTO_EC_GROUP_SECP256R1 = 23,
 	RTE_CRYPTO_EC_GROUP_SECP384R1 = 24,
-	RTE_CRYPTO_EC_GROUP_SECP521R1 = 25
+	RTE_CRYPTO_EC_GROUP_SECP521R1 = 25,
+	RTE_CRYPTO_EC_GROUP_ED25519 = 29,
+	RTE_CRYPTO_EC_GROUP_ED448 = 30
 };
 
 /**
@@ -111,6 +113,10 @@ enum rte_crypto_asym_xform_type {
 	 */
 	RTE_CRYPTO_ASYM_XFORM_ECDSA,
 	/**< Elliptic Curve Digital Signature Algorithm
+	 * Perform Signature Generation and Verification.
+	 */
+	RTE_CRYPTO_ASYM_XFORM_EDDSA,
+	/**< Edwards Curve Digital Signature Algorithm
 	 * Perform Signature Generation and Verification.
 	 */
 	RTE_CRYPTO_ASYM_XFORM_ECDH,
@@ -592,6 +598,36 @@ struct rte_crypto_ecdsa_op_param {
 };
 
 /**
+ * EDDSA operation params
+ */
+struct rte_crypto_eddsa_op_param {
+	enum rte_crypto_asym_op_type op_type;
+	/**< Signature generation or verification */
+
+	rte_crypto_uint pkey;
+	/**< Private key of the signer for signature generation */
+
+	struct rte_crypto_ec_point q;
+	/**< Public key of the signer derived from private key
+	 *	h = hash(pkey), q = (h[0-31] * B)
+	 */
+
+	rte_crypto_param message;
+	/**< Input message digest to be signed or verified */
+
+	rte_crypto_uint r;
+	/**< r component of edward curve signature
+	 *     output : for signature generation
+	 *     input  : for signature verification
+	 */
+	rte_crypto_uint s;
+	/**< s component of edward curve signature
+	 *     output : for signature generation
+	 *     input  : for signature verification
+	 */
+};
+
+/**
  * Structure for EC point multiplication operation param
  */
 struct rte_crypto_ecpm_op_param {
@@ -664,6 +700,7 @@ struct rte_crypto_asym_op {
 		struct rte_crypto_ecdh_op_param ecdh;
 		struct rte_crypto_dsa_op_param dsa;
 		struct rte_crypto_ecdsa_op_param ecdsa;
+		struct rte_crypto_eddsa_op_param eddsa;
 		struct rte_crypto_ecpm_op_param ecpm;
 	};
 	uint16_t flags;
