@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(C) 2022 Intel Corporation
+ * Copyright (c) 2022-2023 Google LLC
+ * Copyright (c) 2022-2023 Intel Corporation
+
  */
 
 #ifndef _GVE_LOGS_H_
