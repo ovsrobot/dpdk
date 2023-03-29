@@ -12,7 +12,7 @@
 #include <rte_eal.h>
 
 #include "rte_graph.h"
-#include "rte_graph_worker.h"
+#include "rte_graph_worker_common.h"
 
 extern int rte_graph_logtype;
 
