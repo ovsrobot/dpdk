@@ -57,4 +57,7 @@ INTERNAL {
 	# added in 21.11
 	rte_mempool_event_callback_register;
 	rte_mempool_event_callback_unregister;
+
+	# added in 23.07
+	rte_mempool_logtype;
 };
