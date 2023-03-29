@@ -98,6 +98,8 @@ struct graph {
 	/**< Circular buffer mask for wrap around. */
 	rte_graph_t id;
 	/**< Graph identifier. */
+	rte_graph_t parent_id;
+	/**< Parent graph identifier. */
 	unsigned int lcore_id;
 	/**< Lcore identifier where the graph prefer to run on. */
 	size_t mem_sz;
