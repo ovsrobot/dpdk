@@ -1,6 +1,5 @@
-/* SPDX-License-Identifier: MIT
- * Google Virtual Ethernet (gve) driver
- * Copyright (C) 2015-2022 Google, Inc.
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2022-2023 Google LLC
  */
 
 #ifndef _GVE_ADMINQ_H
