@@ -841,6 +841,11 @@ int rte_pipeline_ah_packet_hijack(struct rte_pipeline *p,
 int rte_pipeline_ah_packet_drop(struct rte_pipeline *p,
 	uint64_t pkts_mask);
 
+
+/** Internal Logtype used */
+extern int pipeline_logtype;
+#define RTE_LOGTYPE_PIPELINE pipeline_logtype
+
 #ifdef __cplusplus
 }
 #endif

@@ -1612,3 +1612,5 @@ int rte_pipeline_table_stats_read(struct rte_pipeline *p, uint32_t table_id,
 
 	return 0;
 }
+
+RTE_LOG_REGISTER_DEFAULT(pipeline_logtype, INFO);
