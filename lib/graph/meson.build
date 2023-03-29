@@ -16,6 +16,7 @@ sources = files(
         'graph_populate.c',
         'graph_pcap.c',
         'rte_graph_worker.c',
+        'rte_graph_model_dispatch.c',
 )
 headers = files('rte_graph.h', 'rte_graph_worker.h')
 
