@@ -15,6 +15,9 @@
 
 #include "rte_port_source_sink.h"
 
+RTE_LOG_REGISTER_SUFFIX(port_source_logtype, source, INFO);
+#define RTE_LOGTYPE_PORT port_source_logtype
+
 /*
  * Port SOURCE
  */
