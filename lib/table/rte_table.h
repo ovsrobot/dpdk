@@ -265,6 +265,10 @@ struct rte_table_ops {
 	rte_table_op_stats_read f_stats;              /**< Stats */
 };
 
+/** Internal Logtype used */
+extern int table_logtype;
+#define RTE_LOGTYPE_TABLE table_logtype
+
 #ifdef __cplusplus
 }
 #endif
