@@ -19,6 +19,7 @@
 #include <rte_compat.h>
 #include <rte_common.h>
 #include <rte_cycles.h>
+#include <rte_per_lcore.h>
 #include <rte_prefetch.h>
 #include <rte_memcpy.h>
 #include <rte_memory.h>
@@ -94,6 +95,16 @@ struct rte_node {
 		};
 	struct rte_node *nodes[] __rte_cache_min_aligned; /**< Next nodes. */
 } __rte_cache_aligned;
+
+/** Graph worker models */
+enum rte_graph_worker_model {
+	RTE_GRAPH_MODEL_DEFAULT,
+	RTE_GRAPH_MODEL_RTC = RTE_GRAPH_MODEL_DEFAULT,
+	RTE_GRAPH_MODEL_MCORE_DISPATCH,
+	RTE_GRAPH_MODEL_LIST_END
+};
+
+RTE_DECLARE_PER_LCORE(enum rte_graph_worker_model, worker_model);
 
 /**
  * @internal
@@ -489,6 +500,14 @@ rte_node_next_stream_move(struct rte_graph *graph, struct rte_node *src,
 		rte_node_enqueue(graph, src, next, src->objs, src->idx);
 	}
 }
+
+__rte_experimental
+enum rte_graph_worker_model
+rte_graph_worker_model_get(void);
+
+__rte_experimental
+int
+rte_graph_worker_model_set(enum rte_graph_worker_model model);
 
 #ifdef __cplusplus
 }
