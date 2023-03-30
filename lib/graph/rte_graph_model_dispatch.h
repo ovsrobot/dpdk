@@ -14,11 +14,48 @@
  *
  * This API allows to set core affinity with the node.
  */
+#include <rte_errno.h>
+#include <rte_mempool.h>
+#include <rte_memzone.h>
+#include <rte_ring.h>
+
 #include "rte_graph_worker_common.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define GRAPH_SCHED_WQ_SIZE_MULTIPLIER  8
+#define GRAPH_SCHED_WQ_SIZE(nb_nodes)   \
+	((typeof(nb_nodes))((nb_nodes) * GRAPH_SCHED_WQ_SIZE_MULTIPLIER))
+
+/**
+ * @internal
+ *
+ * Schedule the node to the right graph's work queue.
+ *
+ * @param node
+ *   Pointer to the scheduled node object.
+ * @param rq
+ *   Pointer to the scheduled run-queue for all graphs.
+ *
+ * @return
+ *   True on success, false otherwise.
+ */
+__rte_experimental
+bool __rte_noinline __rte_graph_sched_node_enqueue(struct rte_node *node,
+				    struct rte_graph_rq_head *rq);
+
+/**
+ * @internal
+ *
+ * Process all nodes (streams) in the graph's work queue.
+ *
+ * @param graph
+ *   Pointer to the graph object.
+ */
+__rte_experimental
+void __rte_graph_sched_wq_process(struct rte_graph *graph);
 
 /**
  * Set lcore affinity with the node.
