@@ -1536,6 +1536,134 @@ i40e_xmit_pkts_vec(void *tx_queue, struct rte_mbuf **tx_pkts,
 	return nb_tx;
 }
 
+uint16_t
+i40e_tx_buf_stash_vec(void *tx_queue,
+	struct rte_eth_rxq_buf_recycle_info *rxq_buf_recycle_info)
+{
+	struct i40e_tx_queue *txq = tx_queue;
+	struct i40e_tx_entry *txep;
+	struct rte_mbuf **rxep;
+	struct rte_mbuf *m[RTE_I40E_TX_MAX_FREE_BUF_SZ];
+	int i, j, n;
+	uint16_t avail = 0;
+	uint16_t buf_ring_size = rxq_buf_recycle_info->buf_ring_size;
+	uint16_t mask = rxq_buf_recycle_info->buf_ring_size - 1;
+	uint16_t refill_request = rxq_buf_recycle_info->refill_request;
+	uint16_t refill_head = *rxq_buf_recycle_info->refill_head;
+	uint16_t receive_tail = *rxq_buf_recycle_info->receive_tail;
+
+	/* Get available recycling Rx buffers. */
+	avail = (buf_ring_size - (refill_head - receive_tail)) & mask;
+
+	/* Check Tx free thresh and Rx available space. */
+	if (txq->nb_tx_free > txq->tx_free_thresh || avail <= txq->tx_rs_thresh)
+		return 0;
+
+	/* check DD bits on threshold descriptor */
+	if ((txq->tx_ring[txq->tx_next_dd].cmd_type_offset_bsz &
+				rte_cpu_to_le_64(I40E_TXD_QW1_DTYPE_MASK)) !=
+			rte_cpu_to_le_64(I40E_TX_DESC_DTYPE_DESC_DONE))
+		return 0;
+
+	n = txq->tx_rs_thresh;
+
+	/* Buffer recycle can only support no ring buffer wraparound.
+	 * Two case for this:
+	 *
+	 * case 1: The refill head of Rx buffer ring needs to be aligned with
+	 * buffer ring size. In this case, the number of Tx freeing buffers
+	 * should be equal to refill_request.
+	 *
+	 * case 2: The refill head of Rx ring buffer does not need to be aligned
+	 * with buffer ring size. In this case, the update of refill head can not
+	 * exceed the Rx buffer ring size.
+	 */
+	if (refill_request != n ||
+		(!refill_request && (refill_head + n > buf_ring_size)))
+		return 0;
+
+	/* First buffer to free from S/W ring is at index
+	 * tx_next_dd - (tx_rs_thresh-1).
+	 */
+	txep = &txq->sw_ring[txq->tx_next_dd - (n - 1)];
+	rxep = rxq_buf_recycle_info->buf_ring;
+	rxep += refill_head;
+
+	if (txq->offloads & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) {
+		/* Directly put mbufs from Tx to Rx. */
+		for (i = 0; i < n; i++, rxep++, txep++)
+			*rxep = txep[0].mbuf;
+	} else {
+		for (i = 0, j = 0; i < n; i++) {
+			/* Avoid txq contains buffers from expected mempoo. */
+			if (unlikely(rxq_buf_recycle_info->mp
+						!= txep[i].mbuf->pool))
+				return 0;
+
+			m[j] = rte_pktmbuf_prefree_seg(txep[i].mbuf);
+
+			/* In case 1, each of Tx buffers should be the
+			 * last reference.
+			 */
+			if (unlikely(m[j] == NULL && refill_request))
+				return 0;
+			/* In case 2, the number of valid Tx free
+			 * buffers should be recorded.
+			 */
+			j++;
+		}
+		rte_memcpy(rxep, m, sizeof(void *) * j);
+	}
+
+	/* Update counters for Tx. */
+	txq->nb_tx_free = (uint16_t)(txq->nb_tx_free + txq->tx_rs_thresh);
+	txq->tx_next_dd = (uint16_t)(txq->tx_next_dd + txq->tx_rs_thresh);
+	if (txq->tx_next_dd >= txq->nb_tx_desc)
+		txq->tx_next_dd = (uint16_t)(txq->tx_rs_thresh - 1);
+
+	return n;
+}
+
+uint16_t
+i40e_rx_descriptors_refill_vec(void *rx_queue, uint16_t nb)
+{
+	struct i40e_rx_queue *rxq = rx_queue;
+	struct i40e_rx_entry *rxep;
+	volatile union i40e_rx_desc *rxdp;
+	uint16_t rx_id;
+	uint64_t paddr;
+	uint64_t dma_addr;
+	uint16_t i;
+
+	rxdp = rxq->rx_ring + rxq->rxrearm_start;
+	rxep = &rxq->sw_ring[rxq->rxrearm_start];
+
+	for (i = 0; i < nb; i++) {
+		/* Initialize rxdp descs. */
+		paddr = (rxep[i].mbuf)->buf_iova + RTE_PKTMBUF_HEADROOM;
+		dma_addr = rte_cpu_to_le_64(paddr);
+		/* flush desc with pa dma_addr */
+		rxdp[i].read.hdr_addr = 0;
+		rxdp[i].read.pkt_addr = dma_addr;
+	}
+
+	/* Update the descriptor initializer index */
+	rxq->rxrearm_start += nb;
+	if (rxq->rxrearm_start >= rxq->nb_rx_desc)
+		rxq->rxrearm_start = 0;
+
+	rxq->rxrearm_nb -= nb;
+
+	rx_id = (uint16_t)((rxq->rxrearm_start == 0) ?
+			(rxq->nb_rx_desc - 1) : (rxq->rxrearm_start - 1));
+
+	rte_io_wmb();
+	/* Update the tail pointer on the NIC */
+	I40E_PCI_REG_WRITE_RELAXED(rxq->qrx_tail, rx_id);
+
+	return nb;
+}
+
 /*********************************************************************
  *
  *  TX simple prep functions
@@ -3197,6 +3325,30 @@ i40e_txq_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
 	qinfo->conf.offloads = txq->offloads;
 }
 
+void
+i40e_rxq_buf_recycle_info_get(struct rte_eth_dev *dev, uint16_t queue_id,
+	struct rte_eth_rxq_buf_recycle_info *rxq_buf_recycle_info)
+{
+	struct i40e_rx_queue *rxq;
+	struct i40e_adapter *ad =
+		I40E_DEV_PRIVATE_TO_ADAPTER(dev->data->dev_private);
+
+	rxq = dev->data->rx_queues[queue_id];
+
+	rxq_buf_recycle_info->buf_ring = (void *)rxq->sw_ring;
+	rxq_buf_recycle_info->mp = rxq->mp;
+	rxq_buf_recycle_info->buf_ring_size = rxq->nb_rx_desc;
+	rxq_buf_recycle_info->receive_tail = &rxq->rx_tail;
+
+	if (ad->rx_vec_allowed) {
+		rxq_buf_recycle_info->refill_request = RTE_I40E_RXQ_REARM_THRESH;
+		rxq_buf_recycle_info->refill_head = &rxq->rxrearm_start;
+	} else {
+		rxq_buf_recycle_info->refill_request = rxq->rx_free_thresh;
+		rxq_buf_recycle_info->refill_head = &rxq->rx_free_trigger;
+	}
+}
+
 #ifdef RTE_ARCH_X86
 static inline bool
 get_avx_supported(bool request_avx512)
@@ -3291,6 +3443,8 @@ i40e_set_rx_function(struct rte_eth_dev *dev)
 				dev->rx_pkt_burst = ad->rx_use_avx2 ?
 					i40e_recv_scattered_pkts_vec_avx2 :
 					i40e_recv_scattered_pkts_vec;
+				dev->rx_descriptors_refill =
+					i40e_rx_descriptors_refill_vec;
 			}
 		} else {
 			if (ad->rx_use_avx512) {
@@ -3309,9 +3463,12 @@ i40e_set_rx_function(struct rte_eth_dev *dev)
 				dev->rx_pkt_burst = ad->rx_use_avx2 ?
 					i40e_recv_pkts_vec_avx2 :
 					i40e_recv_pkts_vec;
+				dev->rx_descriptors_refill =
+					i40e_rx_descriptors_refill_vec;
 			}
 		}
 #else /* RTE_ARCH_X86 */
+		dev->rx_descriptors_refill = i40e_rx_descriptors_refill_vec;
 		if (dev->data->scattered_rx) {
 			PMD_INIT_LOG(DEBUG,
 				     "Using Vector Scattered Rx (port %d).",
@@ -3479,6 +3636,7 @@ i40e_set_tx_function(struct rte_eth_dev *dev)
 				dev->tx_pkt_burst = ad->tx_use_avx2 ?
 						    i40e_xmit_pkts_vec_avx2 :
 						    i40e_xmit_pkts_vec;
+				dev->tx_buf_stash = i40e_tx_buf_stash_vec;
 			}
 #else /* RTE_ARCH_X86 */
 			PMD_INIT_LOG(DEBUG, "Using Vector Tx (port %d).",
@@ -3488,6 +3646,7 @@ i40e_set_tx_function(struct rte_eth_dev *dev)
 		} else {
 			PMD_INIT_LOG(DEBUG, "Simple tx finally be used.");
 			dev->tx_pkt_burst = i40e_xmit_pkts_simple;
+			dev->tx_buf_stash = i40e_tx_buf_stash_vec;
 		}
 		dev->tx_pkt_prepare = i40e_simple_prep_pkts;
 	} else {

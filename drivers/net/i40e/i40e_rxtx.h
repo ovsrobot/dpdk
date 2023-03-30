@@ -233,6 +233,10 @@ uint32_t i40e_dev_rx_queue_count(void *rx_queue);
 int i40e_dev_rx_descriptor_status(void *rx_queue, uint16_t offset);
 int i40e_dev_tx_descriptor_status(void *tx_queue, uint16_t offset);
 
+uint16_t i40e_tx_buf_stash_vec(void *tx_queue,
+		struct rte_eth_rxq_buf_recycle_info *rxq_buf_recycle_info);
+uint16_t i40e_rx_descriptors_refill_vec(void *rx_queue, uint16_t nb);
+
 uint16_t i40e_recv_pkts_vec(void *rx_queue, struct rte_mbuf **rx_pkts,
 			    uint16_t nb_pkts);
 uint16_t i40e_recv_scattered_pkts_vec(void *rx_queue,
