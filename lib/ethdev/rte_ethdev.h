@@ -1820,6 +1820,29 @@ struct rte_eth_txq_info {
 	uint8_t queue_state;        /**< one of RTE_ETH_QUEUE_STATE_*. */
 } __rte_cache_min_aligned;
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this structure may change without prior notice.
+ *
+ * Ethernet device Rx queue buffer ring information structure in buffer recycle mode.
+ * Used to retrieve Rx queue buffer ring information when Tx queue stashing used buffers
+ * in Rx buffer ring.
+ */
+struct rte_eth_rxq_buf_recycle_info {
+	struct rte_mbuf **buf_ring; /**< buffer ring of Rx queue. */
+	struct rte_mempool *mp;     /**< mempool of Rx queue. */
+	uint16_t *refill_head;      /**< head of buffer ring refilling descriptors. */
+	uint16_t *receive_tail;     /**< tail of buffer ring receiving pkts. */
+	uint16_t buf_ring_size;     /**< configured number of buffer ring size. */
+	/**
+	 *  request for number of Rx refill buffers.
+	 *   For some PMD drivers, Rx refiil buffers number should be aligned with
+	 *   its buffer ring size. This is to simplify ring wraparound.
+	 *   Value 0 means that no request for this.
+	 */
+	uint16_t refill_request;
+} __rte_cache_min_aligned;
+
 /* Generic Burst mode flag definition, values can be ORed. */
 
 /**
@@ -4810,6 +4833,32 @@ int rte_eth_tx_queue_info_get(uint16_t port_id, uint16_t queue_id,
 	struct rte_eth_txq_info *qinfo);
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Retrieve buffer ring information about given ports's Rx queue in buffer recycle
+ * mode.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param queue_id
+ *   The Rx queue on the Ethernet device for which buffer ring information
+ *   will be retrieved.
+ * @param rxq_buf_recycle_info
+ *   A pointer to a structure of type *rte_eth_rxq_buf_recycle_info* to be filled.
+ *
+ * @return
+ *   - 0: Success
+ *   - -ENODEV:  If *port_id* is invalid.
+ *   - -ENOTSUP: routine is not supported by the device PMD.
+ *   - -EINVAL:  The queue_id is out of range.
+ */
+__rte_experimental
+int rte_eth_rx_queue_buf_recycle_info_get(uint16_t port_id,
+		uint16_t queue_id,
+		struct rte_eth_rxq_buf_recycle_info *rxq_buf_recycle_info);
+
+/**
  * Retrieve information about the Rx packet burst mode.
  *
  * @param port_id
@@ -5987,6 +6036,71 @@ rte_eth_rx_queue_count(uint16_t port_id, uint16_t queue_id)
 	return (int)(*p->rx_queue_count)(qd);
 }
 
+/**
+ * @internal
+ * Rx routine for rte_eth_dev_buf_recycle().
+ * Refill Rx descriptors in buffer recycle mode.
+ *
+ * @note
+ * This API can only be called by rte_eth_dev_buf_recycle().
+ * Before calling this API, rte_eth_tx_buf_stash() should be
+ * called to stash Tx used buffers into Rx buffer ring.
+ *
+ * When this functionality is not implemented in the driver, the return
+ * buffer number is 0.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param queue_id
+ *   The index of the receive queue.
+ *   The value must be in the range [0, nb_rx_queue - 1] previously supplied
+ *   to rte_eth_dev_configure().
+ *@param nb
+ *   The number of Rx descriptors to be refilled.
+ * @return
+ *   The number Rx descriptors correct to be refilled.
+ *   - ENODEV: bad port or queue (only if compiled with debug).
+ */
+static inline uint16_t rte_eth_rx_descriptors_refill(uint16_t port_id,
+		uint16_t queue_id, uint16_t nb)
+{
+	struct rte_eth_fp_ops *p;
+	void *qd;
+
+#ifdef RTE_ETHDEV_DEBUG_RX
+	if (port_id >= RTE_MAX_ETHPORTS ||
+			queue_id >= RTE_MAX_QUEUES_PER_PORT) {
+		RTE_ETHDEV_LOG(ERR,
+			"Invalid port_id=%u or queue_id=%u\n",
+			port_id, queue_id);
+		rte_errno = ENODEV;
+		return 0;
+	}
+#endif
+
+	p = &rte_eth_fp_ops[port_id];
+	qd = p->rxq.data[queue_id];
+
+#ifdef RTE_ETHDEV_DEBUG_RX
+	if (!rte_eth_dev_is_valid_port(port_id)) {
+		RTE_ETHDEV_LOG(ERR, "Invalid Rx port_id=%u\n", port_id);
+		rte_errno = ENODEV;
+		return 0;
+
+	if (qd == NULL) {
+		RTE_ETHDEV_LOG(ERR, "Invalid Rx queue_id=%u for port_id=%u\n",
+			queue_id, port_id);
+		rte_errno = ENODEV;
+		return 0;
+	}
+#endif
+
+	if (p->rx_descriptors_refill == NULL)
+		return 0;
+
+	return p->rx_descriptors_refill(qd, nb);
+}
+
 /**@{@name Rx hardware descriptor states
  * @see rte_eth_rx_descriptor_status
  */
@@ -6481,6 +6595,122 @@ rte_eth_tx_buffer(uint16_t port_id, uint16_t queue_id,
 		return 0;
 
 	return rte_eth_tx_buffer_flush(port_id, queue_id, buffer);
+}
+
+/**
+ * @internal
+ * Tx routine for rte_eth_dev_buf_recycle().
+ * Stash Tx used buffers into Rx buffer ring in buffer recycle mode.
+ *
+ * @note
+ * This API can only be called by rte_eth_dev_buf_recycle().
+ * After calling this API, rte_eth_rx_descriptors_refill() should be
+ * called to refill Rx ring descriptors.
+ *
+ * When this functionality is not implemented in the driver, the return
+ * buffer number is 0.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param queue_id
+ *   The index of the transmit queue.
+ *   The value must be in the range [0, nb_tx_queue - 1] previously supplied
+ *   to rte_eth_dev_configure().
+ * @param rxq_buf_recycle_info
+ *   A pointer to a structure of Rx queue buffer ring information in buffer
+ *   recycle mode.
+ *
+ * @return
+ *   The number buffers correct to be filled in the Rx buffer ring.
+ *   - ENODEV: bad port or queue (only if compiled with debug).
+ */
+static inline uint16_t rte_eth_tx_buf_stash(uint16_t port_id, uint16_t queue_id,
+		struct rte_eth_rxq_buf_recycle_info *rxq_buf_recycle_info)
+{
+	struct rte_eth_fp_ops *p;
+	void *qd;
+
+#ifdef RTE_ETHDEV_DEBUG_TX
+	if (port_id >= RTE_MAX_ETHPORTS ||
+			queue_id >= RTE_MAX_QUEUES_PER_PORT) {
+		RTE_ETHDEV_LOG(ERR,
+			"Invalid port_id=%u or queue_id=%u\n",
+			port_id, queue_id);
+		rte_errno = ENODEV;
+		return 0;
+	}
+#endif
+
+	p = &rte_eth_fp_ops[port_id];
+	qd = p->txq.data[queue_id];
+
+#ifdef RTE_ETHDEV_DEBUG_TX
+	if (!rte_eth_dev_is_valid_port(port_id)) {
+		RTE_ETHDEV_LOG(ERR, "Invalid Tx port_id=%u\n", port_id);
+		rte_errno = ENODEV;
+		return 0;
+
+	if (qd == NULL) {
+		RTE_ETHDEV_LOG(ERR, "Invalid Tx queue_id=%u for port_id=%u\n",
+			queue_id, port_id);
+		rte_erno = ENODEV;
+		return 0;
+	}
+#endif
+
+	if (p->tx_buf_stash == NULL)
+		return 0;
+
+	return p->tx_buf_stash(qd, rxq_buf_recycle_info);
+}
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Buffer recycle mode can let Tx queue directly put used buffers into Rx buffer
+ * ring. This avoids freeing buffers into mempool and allocating buffers from
+ * mempool.
+ *
+ * @param rx_port_id
+ *   Port identifying the receive side.
+ * @param rx_queue_id
+ *   The index of the receive queue identifying the receive side.
+ *   The value must be in the range [0, nb_rx_queue - 1] previously supplied
+ *   to rte_eth_dev_configure().
+ * @param tx_port_id
+ *   Port identifying the transmit side.
+ * @param tx_queue_id
+ *   The index of the transmit queue identifying the transmit side.
+ *   The value must be in the range [0, nb_tx_queue - 1] previously supplied
+ *   to rte_eth_dev_configure().
+ * @param rxq_recycle_info
+ *   A pointer to a structure of type *rte_eth_txq_rearm_data* to be filled.
+ * @return
+ *   - (0) on success or no recycling buffer.
+ *   - (-EINVAL) rxq_recycle_info is NULL.
+ */
+__rte_experimental
+static inline int
+rte_eth_dev_buf_recycle(uint16_t rx_port_id, uint16_t rx_queue_id,
+		uint16_t tx_port_id, uint16_t tx_queue_id,
+		struct rte_eth_rxq_buf_recycle_info *rxq_buf_recycle_info)
+{
+	/* The number of recycling buffers. */
+	uint16_t nb_buf;
+
+	if (!rxq_buf_recycle_info)
+		return -EINVAL;
+
+	/* Stash Tx used buffers into Rx buffer ring */
+	nb_buf = rte_eth_tx_buf_stash(tx_port_id, tx_queue_id,
+				rxq_buf_recycle_info);
+	/* If there are recycling buffers, refill Rx queue descriptors. */
+	if (nb_buf)
+		rte_eth_rx_descriptors_refill(rx_port_id, rx_queue_id,
+					nb_buf);
+
+	return 0;
 }
 
 /**

@@ -56,6 +56,13 @@ typedef int (*eth_rx_descriptor_status_t)(void *rxq, uint16_t offset);
 /** @internal Check the status of a Tx descriptor */
 typedef int (*eth_tx_descriptor_status_t)(void *txq, uint16_t offset);
 
+/** @internal Stash Tx used buffers into RX ring in buffer recycle mode */
+typedef uint16_t (*eth_tx_buf_stash_t)(void *txq,
+		struct rte_eth_rxq_buf_recycle_info *rxq_buf_recycle_info);
+
+/** @internal Refill Rx descriptors in buffer recycle mode */
+typedef uint16_t (*eth_rx_descriptors_refill_t)(void *rxq, uint16_t nb);
+
 /**
  * @internal
  * Structure used to hold opaque pointers to internal ethdev Rx/Tx
@@ -90,9 +97,11 @@ struct rte_eth_fp_ops {
 	eth_rx_queue_count_t rx_queue_count;
 	/** Check the status of a Rx descriptor. */
 	eth_rx_descriptor_status_t rx_descriptor_status;
+	/** Refill Rx descriptors in buffer recycle mode */
+	eth_rx_descriptors_refill_t rx_descriptors_refill;
 	/** Rx queues data. */
 	struct rte_ethdev_qdata rxq;
-	uintptr_t reserved1[3];
+	uintptr_t reserved1[4];
 	/**@}*/
 
 	/**@{*/
@@ -106,9 +115,11 @@ struct rte_eth_fp_ops {
 	eth_tx_prep_t tx_pkt_prepare;
 	/** Check the status of a Tx descriptor. */
 	eth_tx_descriptor_status_t tx_descriptor_status;
+	/** Stash Tx used buffers into RX ring in buffer recycle mode */
+	eth_tx_buf_stash_t tx_buf_stash;
 	/** Tx queues data. */
 	struct rte_ethdev_qdata txq;
-	uintptr_t reserved2[3];
+	uintptr_t reserved2[4];
 	/**@}*/
 
 } __rte_cache_aligned;
