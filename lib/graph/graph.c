@@ -284,6 +284,7 @@ rte_graph_model_dispatch_core_bind(rte_graph_t id, int lcore)
 			break;
 
 	graph->lcore_id = lcore;
+	graph->graph->lcore_id = graph->lcore_id;
 	graph->socket = rte_lcore_to_socket_id(lcore);
 
 	/* check the availability of source node */

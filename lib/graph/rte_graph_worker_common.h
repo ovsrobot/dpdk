@@ -33,6 +33,13 @@ extern "C" {
 /**
  * @internal
  *
+ * Singly-linked list head for graph schedule run-queue.
+ */
+SLIST_HEAD(rte_graph_rq_head, rte_graph);
+
+/**
+ * @internal
+ *
  * Data structure to hold graph data.
  */
 struct rte_graph {
@@ -41,6 +48,15 @@ struct rte_graph {
 	uint32_t cir_mask;	     /**< Circular buffer wrap around mask. */
 	rte_node_t nb_nodes;	     /**< Number of nodes in the graph. */
 	rte_graph_off_t *cir_start;  /**< Pointer to circular buffer. */
+	/* Graph schedule */
+	struct rte_graph_rq_head *rq __rte_cache_aligned; /* The run-queue */
+	struct rte_graph_rq_head rq_head; /* The head for run-queue list */
+
+	SLIST_ENTRY(rte_graph) rq_next;   /* The next for run-queue list */
+	unsigned int lcore_id;  /**< The graph running Lcore. */
+	struct rte_ring *wq;    /**< The work-queue for pending streams. */
+	struct rte_mempool *mp; /**< The mempool for scheduling streams. */
+	/* Graph schedule area */
 	rte_graph_off_t nodes_start; /**< Offset at which node memory starts. */
 	rte_graph_t id;	/**< Graph identifier. */
 	int socket;	/**< Socket ID where memory is allocated. */
@@ -74,6 +90,11 @@ struct rte_node {
 	/** Original process function when pcap is enabled. */
 	rte_node_process_t original_process;
 
+	RTE_STD_C11
+		union {
+		/* Fast schedule area for mcore dispatch model */
+		unsigned int lcore_id;  /**< Node running lcore. */
+		};
 	/* Fast path area  */
 #define RTE_NODE_CTX_SZ 16
 	uint8_t ctx[RTE_NODE_CTX_SZ] __rte_cache_aligned; /**< Node Context. */
