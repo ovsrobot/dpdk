@@ -83,6 +83,7 @@ submit_again:
 		rte_pause();
 
 	off += size;
+	node->total_sched_objs += size;
 	node->idx -= size;
 	if (node->idx > 0)
 		goto submit_again;
@@ -93,6 +94,8 @@ fallback:
 	if (off != 0)
 		memmove(&node->objs[0], &node->objs[off],
 			node->idx * sizeof(void *));
+
+	node->total_sched_fail += node->idx;
 
 	return false;
 }
