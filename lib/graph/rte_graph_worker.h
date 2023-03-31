@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 #include "rte_graph_model_rtc.h"
+#include "rte_graph_model_dispatch.h"
 
 /**
  * Perform graph walk on the circular buffer and invoke the process function
@@ -24,7 +25,13 @@ __rte_experimental
 static inline void
 rte_graph_walk(struct rte_graph *graph)
 {
-	rte_graph_walk_rtc(graph);
+	int model = rte_graph_worker_model_get();
+
+	if (model == RTE_GRAPH_MODEL_DEFAULT ||
+	    model == RTE_GRAPH_MODEL_RTC)
+		rte_graph_walk_rtc(graph);
+	else if (model == RTE_GRAPH_MODEL_MCORE_DISPATCH)
+		rte_graph_walk_mcore_dispatch(graph);
 }
 
 #ifdef __cplusplus
