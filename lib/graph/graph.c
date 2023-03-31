@@ -398,6 +398,7 @@ rte_graph_create(const char *name, struct rte_graph_param *prm)
 	graph->src_node_count = src_node_count;
 	graph->node_count = graph_nodes_count(graph);
 	graph->id = graph_id;
+	graph->parent_id = RTE_GRAPH_ID_INVALID;
 	graph->lcore_id = RTE_MAX_LCORE;
 	graph->num_pkt_to_capture = prm->num_pkt_to_capture;
 	if (prm->pcap_filename)
@@ -460,6 +461,115 @@ rte_graph_destroy(rte_graph_t id)
 done:
 	graph_spinlock_unlock();
 	return rc;
+}
+
+static int
+clone_name(struct graph *graph, struct graph *parent_graph, const char *name)
+{
+	ssize_t sz, rc;
+
+#define SZ RTE_GRAPH_NAMESIZE
+	rc = rte_strscpy(graph->name, parent_graph->name, SZ);
+	if (rc < 0)
+		goto fail;
+	sz = rc;
+	rc = rte_strscpy(graph->name + sz, "-", RTE_MAX((int16_t)(SZ - sz), 0));
+	if (rc < 0)
+		goto fail;
+	sz += rc;
+	sz = rte_strscpy(graph->name + sz, name, RTE_MAX((int16_t)(SZ - sz), 0));
+	if (sz < 0)
+		goto fail;
+
+	return 0;
+fail:
+	rte_errno = E2BIG;
+	return -rte_errno;
+}
+
+static rte_graph_t
+graph_clone(struct graph *parent_graph, const char *name)
+{
+	struct graph_node *graph_node;
+	struct graph *graph;
+
+	graph_spinlock_lock();
+
+	/* Don't allow to clone a node from a cloned graph */
+	if (parent_graph->parent_id != RTE_GRAPH_ID_INVALID)
+		SET_ERR_JMP(EEXIST, fail, "A cloned graph is not allowed to be cloned");
+
+	/* Create graph object */
+	graph = calloc(1, sizeof(*graph));
+	if (graph == NULL)
+		SET_ERR_JMP(ENOMEM, fail, "Failed to calloc cloned graph object");
+
+	/* Naming ceremony of the new graph. name is node->name + "-" + name */
+	if (clone_name(graph, parent_graph, name))
+		goto free;
+
+	/* Check for existence of duplicate graph */
+	if (rte_graph_from_name(graph->name) != RTE_GRAPH_ID_INVALID)
+		SET_ERR_JMP(EEXIST, free, "Found duplicate graph %s",
+			    graph->name);
+
+	/* Clone nodes from parent graph firstly */
+	STAILQ_INIT(&graph->node_list);
+	STAILQ_FOREACH(graph_node, &parent_graph->node_list, next) {
+		if (graph_node_add(graph, graph_node->node))
+			goto graph_cleanup;
+	}
+
+	/* Just update adjacency list of all nodes in the graph */
+	if (graph_adjacency_list_update(graph))
+		goto graph_cleanup;
+
+	/* Initialize the graph object */
+	graph->src_node_count = parent_graph->src_node_count;
+	graph->node_count = parent_graph->node_count;
+	graph->parent_id = parent_graph->id;
+	graph->lcore_id = parent_graph->lcore_id;
+	graph->socket = parent_graph->socket;
+	graph->id = graph_id;
+
+	/* Allocate the Graph fast path memory and populate the data */
+	if (graph_fp_mem_create(graph))
+		goto graph_cleanup;
+
+	/* Call init() of the all the nodes in the graph */
+	if (graph_node_init(graph))
+		goto graph_mem_destroy;
+
+	/* All good, Lets add the graph to the list */
+	graph_id++;
+	STAILQ_INSERT_TAIL(&graph_list, graph, next);
+
+	graph_spinlock_unlock();
+	return graph->id;
+
+graph_mem_destroy:
+	graph_fp_mem_destroy(graph);
+graph_cleanup:
+	graph_cleanup(graph);
+free:
+	free(graph);
+fail:
+	graph_spinlock_unlock();
+	return RTE_GRAPH_ID_INVALID;
+}
+
+rte_graph_t
+rte_graph_clone(rte_graph_t id, const char *name)
+{
+	struct graph *graph;
+
+	GRAPH_ID_CHECK(id);
+	STAILQ_FOREACH(graph, &graph_list, next)
+		if (graph->id == id)
+			return graph_clone(graph, name);
+
+fail:
+	return RTE_GRAPH_ID_INVALID;
 }
 
 rte_graph_t
