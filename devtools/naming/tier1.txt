@@ -1,0 +1,8 @@
+abort
+blackhat
+whitehat
+cipple
+master
+slave
+whitelist
+blacklist
