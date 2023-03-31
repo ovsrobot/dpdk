@@ -163,3 +163,19 @@ Deprecation Notices
   The new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status
   starting with DPDK 23.07 release.
+
+* mbuf: The function ``rte_mbuf_sanity_check`` will be deprecated in DPDK 23.07
+  and removed in DPDK 23.11. The new function will be ``rte_mbuf_validate``.
+
+* jobstats: The function ``rte_jobstats_abort`` will be deprecated in DPDK 23.07
+  and removed in DPDK 23.11. The new function will be ``rte_jobstats_cancel``.
+
+* bonding: References to slave will be removed in DPDK 23.11. The following
+  functions will be deprecated in DPDK 23.07, and removed in DPDK 23.11.
+  The old functions:
+  ``rte_eth_bond_8023ad_slave_info``, ``rte_eth_bond_active_slaves_get``,
+  ``rte_eth_bond_slave_add``, ``rte_eth_bond_slave_remove``, and
+  ``rte_eth_bond_slaves_get`` will be replaced by:
+  ``rte_eth_bond_8023ad_child_info``, ``rte_eth_bond_active_children_get``,
+  ``rte_eth_bond_child_add``, ``rte_eth_bond_child_remove``,
+  and ``rte_eth_bond_children_get``.
