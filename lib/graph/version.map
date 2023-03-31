@@ -48,6 +48,8 @@ EXPERIMENTAL {
 
 	rte_graph_worker_model_set;
 	rte_graph_worker_model_get;
+	__rte_graph_sched_wq_process;
+	__rte_graph_sched_node_enqueue;
 
 	rte_graph_model_dispatch_lcore_affinity_set;
 
