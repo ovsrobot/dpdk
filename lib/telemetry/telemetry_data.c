@@ -152,13 +152,21 @@ rte_tel_data_add_array_uint_hex(struct rte_tel_data *d, uint64_t val,
 static bool
 valid_name(const char *name)
 {
-	char allowed[128] = {
-			['0' ... '9'] = 1,
-			['A' ... 'Z'] = 1,
-			['a' ... 'z'] = 1,
-			['_'] = 1,
-			['/'] = 1,
-	};
+	static bool initialized;
+	static char allowed[128];
+
+	if (!initialized) {
+		int index;
+		for (index = '0'; index <= '9'; index++)
+			allowed[index] = 1;
+		for (index = 'A'; index <= 'Z'; index++)
+			allowed[index] = 1;
+		for (index = 'a'; index <= 'Z'; index++)
+			allowed[index] = 1;
+		allowed[(int)'_'] = allowed[(int)'/'] = 1;
+		initialized = true;
+	}
+
 	while (*name != '\0') {
 		if ((size_t)*name >= RTE_DIM(allowed) || allowed[(int)*name] == 0)
 			return false;
