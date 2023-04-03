@@ -30,18 +30,23 @@ __rte_format_printf(3, 4)
 static inline int
 __json_snprintf(char *buf, const int len, const char *format, ...)
 {
-	char tmp[len];
+	char *tmp = malloc(len);
 	va_list ap;
-	int ret;
+	int ret = 0;
+
+	if (tmp == NULL)
+		return ret;
 
 	va_start(ap, format);
 	ret = vsnprintf(tmp, sizeof(tmp), format, ap);
 	va_end(ap);
 	if (ret > 0 && ret < (int)sizeof(tmp) && ret < len) {
 		strcpy(buf, tmp);
-		return ret;
 	}
-	return 0; /* nothing written or modified */
+
+	free(tmp);
+
+	return ret;
 }
 
 static const char control_chars[0x20] = {
@@ -60,13 +65,17 @@ static const char control_chars[0x20] = {
 static inline int
 __json_format_str(char *buf, const int len, const char *prefix, const char *str, const char *suffix)
 {
-	char tmp[len];
 	int tmpidx = 0;
+	int ret = 0;
+	char *tmp = malloc(len);
+
+	if (tmp == NULL)
+		return ret;
 
 	while (*prefix != '\0' && tmpidx < len)
 		tmp[tmpidx++] = *prefix++;
 	if (tmpidx >= len)
-		return 0;
+		goto cleanup;
 
 	while (*str != '\0') {
 		if (*str < (int)RTE_DIM(control_chars)) {
@@ -85,19 +94,24 @@ __json_format_str(char *buf, const int len, const char *prefix, const char *str,
 		 * escaped character like "\n" without overflowing
 		 */
 		if (tmpidx > len - 2)
-			return 0;
+			goto cleanup;
 		str++;
 	}
 
 	while (*suffix != '\0' && tmpidx < len)
 		tmp[tmpidx++] = *suffix++;
 	if (tmpidx >= len)
-		return 0;
+		goto cleanup;
 
 	tmp[tmpidx] = '\0';
 
 	strcpy(buf, tmp);
-	return tmpidx;
+	ret = tmpidx;
+
+cleanup:
+	free(tmp);
+
+	return ret;
 }
 
 /* Copies an empty array into the provided buffer. */
