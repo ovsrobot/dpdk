@@ -6,6 +6,10 @@
 #ifndef _RTE_CYCLES_X86_64_H_
 #define _RTE_CYCLES_X86_64_H_
 
+#ifdef RTE_TOOLCHAIN_MSVC
+#include <intrin.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -23,6 +27,7 @@ extern int rte_cycles_vmware_tsc_map;
 static inline uint64_t
 rte_rdtsc(void)
 {
+#ifndef RTE_TOOLCHAIN_MSVC
 	union {
 		uint64_t tsc_64;
 		RTE_STD_C11
@@ -47,6 +52,9 @@ rte_rdtsc(void)
 		     "=a" (tsc.lo_32),
 		     "=d" (tsc.hi_32));
 	return tsc.tsc_64;
+#else
+	return __rdtsc();
+#endif
 }
 
 static inline uint64_t
