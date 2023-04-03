@@ -131,6 +131,8 @@ static inline void rte_atomic_thread_fence(int memorder);
 
 /*------------------------- 16 bit atomic operations -------------------------*/
 
+#ifndef RTE_TOOLCHAIN_MSVC
+
 /**
  * Atomic compare and set.
  *
@@ -1038,7 +1040,10 @@ static inline void rte_atomic64_clear(rte_atomic64_t *v)
 }
 #endif
 
+#endif
+
 /*------------------------ 128 bit atomic operations -------------------------*/
+
 
 /**
  * 128-bit integer structure.
@@ -1049,7 +1054,9 @@ typedef struct {
 	union {
 		uint64_t val[2];
 #ifdef RTE_ARCH_64
+#ifndef RTE_TOOLCHAIN_MSVC
 		__extension__ __int128 int128;
+#endif
 #endif
 	};
 } __rte_aligned(16) rte_int128_t;
