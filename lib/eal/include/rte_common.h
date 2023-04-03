@@ -65,7 +65,11 @@ extern "C" {
 /**
  * Force alignment
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_aligned(a) __attribute__((__aligned__(a)))
+#else
+#define __rte_aligned(a)
+#endif
 
 #ifdef RTE_ARCH_STRICT_ALIGN
 typedef uint64_t unaligned_uint64_t __rte_aligned(1);
@@ -88,8 +92,13 @@ typedef uint16_t unaligned_uint16_t;
 #define __rte_may_alias __attribute__((__may_alias__))
 
 /******* Macro to mark functions and fields scheduled for removal *****/
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_deprecated	__attribute__((__deprecated__))
 #define __rte_deprecated_msg(msg)	__attribute__((__deprecated__(msg)))
+#else
+#define __rte_deprecated
+#define __rte_deprecated_msg(msg)
+#endif
 
 /**
  *  Macro to mark macros and defines scheduled for removal
@@ -117,7 +126,11 @@ typedef uint16_t unaligned_uint16_t;
 /**
  * short definition to mark a function parameter unused
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_unused __attribute__((__unused__))
+#else
+#define __rte_unused
+#endif
 
 /**
  * Mark pointer as restricted with regard to pointer aliasing.
@@ -141,12 +154,16 @@ typedef uint16_t unaligned_uint16_t;
  * even if the underlying stdio implementation is ANSI-compliant,
  * so this must be overridden.
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #if RTE_CC_IS_GNU
 #define __rte_format_printf(format_index, first_arg) \
 	__attribute__((format(gnu_printf, format_index, first_arg)))
 #else
 #define __rte_format_printf(format_index, first_arg) \
 	__attribute__((format(printf, format_index, first_arg)))
+#endif
+#else
+#define __rte_format_printf(format_index, first_arg)
 #endif
 
 /**
@@ -222,7 +239,11 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 /**
  * Hint never returning function
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_noreturn __attribute__((noreturn))
+#else
+#define __rte_noreturn
+#endif
 
 /**
  * Issue a warning in case the function's return value is ignored.
@@ -247,12 +268,20 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
  *  }
  * @endcode
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_warn_unused_result __attribute__((warn_unused_result))
+#else
+#define __rte_warn_unused_result
+#endif
 
 /**
  * Force a function to be inlined
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_always_inline inline __attribute__((always_inline))
+#else
+#define __rte_always_inline
+#endif
 
 /**
  * Force a function to be noinlined
@@ -437,7 +466,11 @@ rte_is_aligned(const void * const __rte_restrict ptr, const unsigned int align)
 #define RTE_CACHE_LINE_MIN_SIZE 64
 
 /** Force alignment to cache line. */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_cache_aligned __rte_aligned(RTE_CACHE_LINE_SIZE)
+#else
+#define __rte_cache_aligned
+#endif
 
 /** Force minimum cache line alignment. */
 #define __rte_cache_min_aligned __rte_aligned(RTE_CACHE_LINE_MIN_SIZE)
