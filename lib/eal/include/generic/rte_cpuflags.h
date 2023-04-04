@@ -44,8 +44,12 @@ rte_cpu_get_intrinsics_support(struct rte_cpu_intrinsics *intrinsics);
 /**
  * Enumeration of all CPU features supported
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 __extension__
-enum rte_cpu_flag_t;
+typedef enum rte_cpu_flag_t rte_cpu_flag_t;
+#else
+typedef int rte_cpu_flag_t;
+#endif
 
 /**
  * Get name of CPU flag
@@ -56,9 +60,8 @@ enum rte_cpu_flag_t;
  *     flag name
  *     NULL if flag ID is invalid
  */
-__extension__
 const char *
-rte_cpu_get_flag_name(enum rte_cpu_flag_t feature);
+rte_cpu_get_flag_name(rte_cpu_flag_t feature);
 
 /**
  * Function for checking a CPU flag availability
@@ -70,9 +73,8 @@ rte_cpu_get_flag_name(enum rte_cpu_flag_t feature);
  *     0 if flag is not available
  *     -ENOENT if flag is invalid
  */
-__extension__
 int
-rte_cpu_get_flag_enabled(enum rte_cpu_flag_t feature);
+rte_cpu_get_flag_enabled(rte_cpu_flag_t feature);
 
 /**
  * This function checks that the currently used CPU supports the CPU features
