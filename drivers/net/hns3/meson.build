@@ -32,6 +32,7 @@ sources = files(
         'hns3_common.c',
         'hns3_dump.c',
 )
+annotate_locks = false
 
 require_iova_in_mbuf = false
 
