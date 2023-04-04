@@ -5,6 +5,9 @@
 #ifndef _RTE_RTM_H_
 #define _RTE_RTM_H_ 1
 
+#ifdef RTE_TOOLCHAIN_MSVC
+#include <immintrin.h>
+#endif
 
 /* Official RTM intrinsics interface matching gcc/icc, but works
    on older gcc compatible compilers and binutils. */
@@ -28,31 +31,47 @@ extern "C" {
 static __rte_always_inline
 unsigned int rte_xbegin(void)
 {
+#ifndef RTE_TOOLCHAIN_MSVC
 	unsigned int ret = RTE_XBEGIN_STARTED;
 
 	asm volatile(".byte 0xc7,0xf8 ; .long 0" : "+a" (ret) :: "memory");
 	return ret;
+#else
+	return _xbegin();
+#endif
 }
 
 static __rte_always_inline
 void rte_xend(void)
 {
+#ifndef RTE_TOOLCHAIN_MSVC
 	 asm volatile(".byte 0x0f,0x01,0xd5" ::: "memory");
+#else
+	_xend();
+#endif
 }
 
 /* not an inline function to workaround a clang bug with -O0 */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define rte_xabort(status) do { \
 	asm volatile(".byte 0xc6,0xf8,%P0" :: "i" (status) : "memory"); \
 } while (0)
+#else
+#define rte_xabort(status) _xabort(status)
+#endif
 
 static __rte_always_inline
 int rte_xtest(void)
 {
+#ifndef RTE_TOOLCHAIN_MSVC
 	unsigned char out;
 
 	asm volatile(".byte 0x0f,0x01,0xd6 ; setnz %0" :
 		"=r" (out) :: "memory");
 	return out;
+#else
+	return _xtest();
+#endif
 }
 
 #ifdef __cplusplus
