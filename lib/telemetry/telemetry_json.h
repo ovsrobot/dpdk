@@ -30,6 +30,7 @@ __rte_format_printf(3, 4)
 static inline int
 __json_snprintf(char *buf, const int len, const char *format, ...)
 {
+#ifndef RTE_TOOLCHAIN_MSVC
 	char tmp[len];
 	va_list ap;
 	int ret;
@@ -41,6 +42,7 @@ __json_snprintf(char *buf, const int len, const char *format, ...)
 		strcpy(buf, tmp);
 		return ret;
 	}
+#endif
 	return 0; /* nothing written or modified */
 }
 
@@ -60,6 +62,7 @@ static const char control_chars[0x20] = {
 static inline int
 __json_format_str(char *buf, const int len, const char *prefix, const char *str, const char *suffix)
 {
+#ifndef RTE_TOOLCHAIN_MSVC
 	char tmp[len];
 	int tmpidx = 0;
 
@@ -98,6 +101,9 @@ __json_format_str(char *buf, const int len, const char *prefix, const char *str,
 
 	strcpy(buf, tmp);
 	return tmpidx;
+#else
+	return 0;
+#endif
 }
 
 /* Copies an empty array into the provided buffer. */
