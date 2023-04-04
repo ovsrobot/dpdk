@@ -67,6 +67,9 @@
 #define oct_ep_read64(addr) rte_read64_relaxed((void *)(addr))
 #define oct_ep_write64(val, addr) rte_write64_relaxed((val), (void *)(addr))
 
+/* Mailbox maximum data size */
+#define MBOX_MAX_DATA_BUF_SIZE 320
+
 /* Input Request Header format */
 union otx_ep_instr_irh {
 	uint64_t u64;
@@ -488,6 +491,18 @@ struct otx_ep_device {
 
 	/* DMA buffer for SDP ISM messages */
 	const struct rte_memzone *ism_buffer_mz;
+
+	/* Mailbox lock */
+	rte_spinlock_t mbox_lock;
+
+	/* Mailbox data */
+	uint8_t mbox_data_buf[MBOX_MAX_DATA_BUF_SIZE];
+
+	/* Mailbox data index */
+	int32_t mbox_data_index;
+
+	/* Mailbox receive message length */
+	int32_t mbox_rcv_message_len;
 };
 
 int otx_ep_setup_iqs(struct otx_ep_device *otx_ep, uint32_t iq_no,
@@ -540,6 +555,16 @@ struct otx_ep_buf_free_info {
 #define OTX_EP_DROQ_BUFSZ_MASK 0xFFFF
 #define OTX_EP_CLEAR_SLIST_DBELL 0xFFFFFFFF
 #define OTX_EP_CLEAR_SDP_OUT_PKT_CNT 0xFFFFFFFFF
+
+/* Max overhead includes
+ * - Ethernet hdr
+ * - CRC
+ * - nested VLANs
+ * - octeon rx info
+ */
+#define OTX_EP_ETH_OVERHEAD \
+	(RTE_ETHER_HDR_LEN + RTE_ETHER_CRC_LEN + \
+	 (2 * RTE_VLAN_HLEN) + OTX_EP_DROQ_INFO_SIZE)
 
 /* PCI IDs */
 #define PCI_VENDOR_ID_CAVIUM			0x177D
