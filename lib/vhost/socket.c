@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 
+#include <rte_function_versioning.h>
 #include <rte_log.h>
 
 #include "fd_man.h"
@@ -43,6 +44,7 @@ struct vhost_user_socket {
 	bool async_copy;
 	bool net_compliant_ol_flags;
 	bool stats_enabled;
+	bool alloc_notify_ops;
 
 	/*
 	 * The "supported_features" indicates the feature bits the
@@ -846,6 +848,14 @@ vhost_user_socket_mem_free(struct vhost_user_socket *vsocket)
 		vsocket->path = NULL;
 	}
 
+	if (vsocket && vsocket->alloc_notify_ops) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+		free((struct rte_vhost_device_ops *)vsocket->notify_ops);
+#pragma GCC diagnostic pop
+		vsocket->notify_ops = NULL;
+	}
+
 	if (vsocket) {
 		free(vsocket);
 		vsocket = NULL;
@@ -1099,20 +1109,74 @@ again:
 /*
  * Register ops so that we can add/remove device to data core.
  */
-int
-rte_vhost_driver_callback_register(const char *path,
-	struct rte_vhost_device_ops const * const ops)
+static int
+rte_vhost_driver_callback_register__(const char *path,
+	struct rte_vhost_device_ops const * const ops, bool ops_allocated)
 {
 	struct vhost_user_socket *vsocket;
 
 	pthread_mutex_lock(&vhost_user.mutex);
 	vsocket = find_vhost_user_socket(path);
-	if (vsocket)
+	if (vsocket) {
+		if (vsocket->alloc_notify_ops) {
+			vsocket->alloc_notify_ops = false;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+			free((struct rte_vhost_device_ops *)vsocket->notify_ops);
+#pragma GCC diagnostic pop
+		}
 		vsocket->notify_ops = ops;
+		if (ops_allocated)
+			vsocket->alloc_notify_ops = true;
+	}
 	pthread_mutex_unlock(&vhost_user.mutex);
 
 	return vsocket ? 0 : -1;
 }
+
+int __vsym
+rte_vhost_driver_callback_register_v24(const char *path,
+	struct rte_vhost_device_ops const * const ops)
+{
+	return rte_vhost_driver_callback_register__(path, ops, false);
+}
+
+int __vsym
+rte_vhost_driver_callback_register_v23(const char *path,
+	struct rte_vhost_device_ops const * const ops)
+{
+	int ret;
+
+	/*
+	 * Although the ops structure is a const structure, we do need to
+	 * override the guest_notify operation. This is because with the
+	 * previous APIs it was "reserved" and if any garbage value was passed,
+	 * it could crash the application.
+	 */
+	if (ops && !ops->guest_notify) {
+		struct rte_vhost_device_ops *new_ops;
+
+		new_ops = malloc(sizeof(*new_ops));
+		if (new_ops == NULL)
+			return -1;
+
+		memcpy(new_ops, ops, sizeof(*new_ops));
+		new_ops->guest_notify = NULL;
+
+		ret = rte_vhost_driver_callback_register__(path, ops, true);
+	} else {
+		ret = rte_vhost_driver_callback_register__(path, ops, false);
+	}
+
+	return ret;
+}
+
+/* Mark the v23 function as the old version, and v24 as the default version. */
+VERSION_SYMBOL(rte_vhost_driver_callback_register, _v23, 23);
+BIND_DEFAULT_SYMBOL(rte_vhost_driver_callback_register, _v24, 24);
+MAP_STATIC_SYMBOL(int rte_vhost_driver_callback_register(const char *path,
+		struct rte_vhost_device_ops const * const ops),
+		rte_vhost_driver_callback_register_v24);
 
 struct rte_vhost_device_ops const *
 vhost_driver_callback_get(const char *path)

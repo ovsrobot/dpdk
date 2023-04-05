@@ -39,3 +39,5 @@ driver_sdk_headers = files(
         'vdpa_driver.h',
 )
 deps += ['ethdev', 'cryptodev', 'hash', 'pci', 'dmadev']
+
+use_function_versioning = true
