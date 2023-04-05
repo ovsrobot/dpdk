@@ -1230,6 +1230,8 @@ adapter_get_set_params(void)
 	/* Case 1: Get the default value of mbufs processed by Rx adapter */
 	err = rte_event_eth_rx_adapter_runtime_params_get(TEST_INST_ID,
 							  &out_params);
+	if (err == -ENOTSUP)
+		return TEST_SKIPPED;
 	TEST_ASSERT(err == 0, "Expected 0 got %d", err);
 
 	/* Case 2: Set max_nb_rx = 32 (=BATCH_SEIZE) */
