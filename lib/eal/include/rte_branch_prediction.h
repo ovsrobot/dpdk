@@ -25,7 +25,11 @@ extern "C" {
  *
  */
 #ifndef likely
+#ifndef RTE_TOOLCHAIN_MSVC
 #define likely(x)	__builtin_expect(!!(x), 1)
+#else
+#define likely(x)	(x)
+#endif
 #endif /* likely */
 
 /**
@@ -39,7 +43,11 @@ extern "C" {
  *
  */
 #ifndef unlikely
+#ifndef RTE_TOOLCHAIN_MSVC
 #define unlikely(x)	__builtin_expect(!!(x), 0)
+#else
+#define unlikely(x)	(x)
+#endif
 #endif /* unlikely */
 
 #ifdef __cplusplus
