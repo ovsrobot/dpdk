@@ -1823,6 +1823,9 @@ ixgbe_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 		staterr = rxdp->wb.upper.status_error;
 		if (!(staterr & rte_cpu_to_le_32(IXGBE_RXDADV_STAT_DD)))
 			break;
+#if defined(RTE_ARCH_LOONGARCH)
+		rte_rmb();
+#endif
 		rxd = *rxdp;
 
 		/*
@@ -2122,6 +2125,9 @@ next_desc:
 		if (!(staterr & IXGBE_RXDADV_STAT_DD))
 			break;
 
+#if defined(RTE_ARCH_LOONGARCH)
+		rte_rmb();
+#endif
 		rxd = *rxdp;
 
 		PMD_RX_LOG(DEBUG, "port_id=%u queue_id=%u rx_id=%u "
