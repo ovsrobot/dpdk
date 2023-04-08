@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added LLRS FEC mode in ethdev.**
+
+  Added RTE_ETH_FEC_LLRS to rte_eth_fec_mode.
 
 Removed Items
 -------------
