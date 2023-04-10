@@ -30,6 +30,7 @@ __umwait_wakeup(volatile void *addr)
 
 static bool wait_supported;
 static bool wait_multi_supported;
+static bool amd_mwaitx_supported;
 
 static inline uint64_t
 __get_umwait_val(const volatile void *p, const uint8_t sz)
@@ -66,6 +67,76 @@ __check_val_size(const uint8_t sz)
 }
 
 /**
+ * This function uses MONITORX/MWAITX instructions and will enter C1 state.
+ * For more information about usage of these instructions, please refer to
+ * AMD64 Architecture Programmer’s Manual.
+ */
+static inline int
+amd_power_monitorx(const struct rte_power_monitor_cond *pmc,
+		const uint64_t tsc_timestamp)
+{
+	const unsigned int lcore_id = rte_lcore_id();
+	struct power_wait_status *s;
+	uint64_t cur_value;
+
+	RTE_SET_USED(tsc_timestamp);
+
+	/* prevent non-EAL thread from using this API */
+	if (lcore_id >= RTE_MAX_LCORE)
+		return -EINVAL;
+
+	if (pmc == NULL)
+		return -EINVAL;
+
+	if (__check_val_size(pmc->size) < 0)
+		return -EINVAL;
+
+	if (pmc->fn == NULL)
+		return -EINVAL;
+
+	s = &wait_status[lcore_id];
+
+	/* update sleep address */
+	rte_spinlock_lock(&s->lock);
+	s->monitor_addr = pmc->addr;
+
+	/*
+	 * we're using raw byte codes for now as only the newest compiler
+	 * versions support this instruction natively.
+	 */
+	/* set address for MONITORX */
+	asm volatile(".byte 0x0f, 0x01, 0xfa;"
+			:
+			: "a"(pmc->addr),
+			"c"(0),  /* no extensions */
+			"d"(0)); /* no hints */
+
+	/* now that we've put this address into monitor, we can unlock */
+	rte_spinlock_unlock(&s->lock);
+
+	cur_value = __get_umwait_val(pmc->addr, pmc->size);
+
+	/* check if callback indicates we should abort */
+	if (pmc->fn(cur_value, pmc->opaque) != 0)
+		goto end;
+
+	/* execute MWAITX */
+	asm volatile(".byte 0x0f, 0x01, 0xfb;"
+			: /* ignore rflags */
+			: "a"(0), /* enter C1 */
+			"c"(0), /* no time-out */
+			"b"(0));
+
+end:
+	/* erase sleep address */
+	rte_spinlock_lock(&s->lock);
+	s->monitor_addr = NULL;
+	rte_spinlock_unlock(&s->lock);
+
+	return 0;
+}
+
+/**
  * This function uses UMONITOR/UMWAIT instructions and will enter C0.2 state.
  * For more information about usage of these instructions, please refer to
  * Intel(R) 64 and IA-32 Architectures Software Developer's Manual.
@@ -79,6 +150,9 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 	const unsigned int lcore_id = rte_lcore_id();
 	struct power_wait_status *s;
 	uint64_t cur_value;
+
+	if (amd_mwaitx_supported)
+		return amd_power_monitorx(pmc, tsc_timestamp);
 
 	/* prevent user from running this instruction if it's not supported */
 	if (!wait_supported)
@@ -126,7 +200,7 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 	asm volatile(".byte 0xf2, 0x0f, 0xae, 0xf7;"
 			: /* ignore rflags */
 			: "D"(0), /* enter C0.2 */
-			  "a"(tsc_l), "d"(tsc_h));
+			"a"(tsc_l), "d"(tsc_h));
 
 end:
 	/* erase sleep address */
@@ -170,6 +244,8 @@ RTE_INIT(rte_power_intrinsics_init) {
 		wait_supported = 1;
 	if (i.power_monitor_multi)
 		wait_multi_supported = 1;
+	if (i.amd_power_monitorx)
+		amd_mwaitx_supported = 1;
 }
 
 int
@@ -178,7 +254,7 @@ rte_power_monitor_wakeup(const unsigned int lcore_id)
 	struct power_wait_status *s;
 
 	/* prevent user from running this instruction if it's not supported */
-	if (!wait_supported)
+	if (!wait_supported && !amd_mwaitx_supported)
 		return -ENOTSUP;
 
 	/* prevent buffer overrun */

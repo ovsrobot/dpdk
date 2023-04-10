@@ -26,6 +26,8 @@ struct rte_cpu_intrinsics {
 	/**< indicates support for rte_power_pause function */
 	uint32_t power_monitor_multi : 1;
 	/**< indicates support for rte_power_monitor_multi function */
+	uint32_t amd_power_monitorx : 1;
+	/**< indicates amd support for rte_power_monitor function */
 };
 
 /**
