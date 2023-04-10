@@ -102,6 +102,7 @@ enum rte_cpu_flag_t {
 	/* (EAX 80000001h) ECX features */
 	RTE_CPUFLAG_LAHF_SAHF,              /**< LAHF_SAHF */
 	RTE_CPUFLAG_LZCNT,                  /**< LZCNT */
+	RTE_CPUFLAG_MONITORX,               /**< MONITORX */
 
 	/* (EAX 80000001h) EDX features */
 	RTE_CPUFLAG_SYSCALL,                /**< SYSCALL */

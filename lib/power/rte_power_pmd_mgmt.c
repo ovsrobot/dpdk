@@ -447,7 +447,8 @@ check_monitor(struct pmd_core_cfg *cfg, const union queue *qdata)
 	bool multimonitor_supported;
 
 	/* check if rte_power_monitor is supported */
-	if (!global_data.intrinsics_support.power_monitor) {
+	if ((!global_data.intrinsics_support.power_monitor) &&
+	    (!global_data.intrinsics_support.amd_power_monitorx)) {
 		RTE_LOG(DEBUG, POWER, "Monitoring intrinsics are not supported\n");
 		return -ENOTSUP;
 	}
