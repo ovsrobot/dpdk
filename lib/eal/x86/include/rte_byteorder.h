@@ -9,6 +9,7 @@
 extern "C" {
 #endif
 
+#include <stdlib.h>
 #include <stdint.h>
 #include <rte_common.h>
 #include <rte_config.h>
@@ -18,6 +19,7 @@ extern "C" {
 #define RTE_BYTE_ORDER RTE_LITTLE_ENDIAN
 #endif
 
+#ifndef RTE_TOOLCHAIN_MSVC
 /*
  * An architecture-optimized byte swap for a 16-bit value.
  *
@@ -46,6 +48,31 @@ static inline uint32_t rte_arch_bswap32(uint32_t _x)
 		      );
 	return x;
 }
+#else
+/*
+ * note: we may want to #pragma intrsinsic(_byteswap_u{short,long})
+ */
+
+/*
+ * An architecture-optimized byte swap for a 16-bit value.
+ *
+ * Do not use this function directly. The preferred function is rte_bswap16().
+ */
+static inline uint16_t rte_arch_bswap16(uint16_t _x)
+{
+	return _byteswap_ushort(_x);
+}
+
+/*
+ * An architecture-optimized byte swap for a 32-bit value.
+ *
+ * Do not use this function directly. The preferred function is rte_bswap32().
+ */
+static inline uint32_t rte_arch_bswap32(uint32_t _x)
+{
+	return _byteswap_ulong(_x);
+}
+#endif
 
 #ifndef RTE_FORCE_INTRINSICS
 #define rte_bswap16(x) ((uint16_t)(__builtin_constant_p(x) ?		\
