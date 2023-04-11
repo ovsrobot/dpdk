@@ -82,6 +82,8 @@ rte_smp_mb(void)
 
 #define rte_io_rmb() rte_compiler_barrier()
 
+#ifndef RTE_TOOLCHAIN_MSVC
+
 /**
  * Synchronization fence between threads based on the specified memory order.
  *
@@ -276,6 +278,8 @@ static inline int rte_atomic32_dec_and_test(rte_atomic32_t *v)
 #include "rte_atomic_32.h"
 #else
 #include "rte_atomic_64.h"
+#endif
+
 #endif
 
 #ifdef __cplusplus
