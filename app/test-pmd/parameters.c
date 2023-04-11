@@ -158,6 +158,7 @@ usage(char* progname)
 		" or total packet length.\n");
 	printf("  --multi-rx-mempool: enable multi-rx-mempool support\n");
 	printf("  --txonly-multi-flow: generate multiple flows in txonly mode\n");
+	printf("  --txonly-alter-port: alter source port when generating multiple flows in txonly mode. Source IP address is changed by default\n");
 	printf("  --tx-ip=src,dst: IP addresses in Tx-only mode\n");
 	printf("  --tx-udp=src[,dst]: UDP ports in Tx-only mode\n");
 	printf("  --eth-link-speed: force link speed.\n");
@@ -678,6 +679,7 @@ launch_args_parse(int argc, char** argv)
 		{ "txpkts",			1, 0, 0 },
 		{ "multi-rx-mempool",           0, 0, 0 },
 		{ "txonly-multi-flow",		0, 0, 0 },
+		{ "txonly-alter-port",		0, 0, 0 },
 		{ "rxq-share",			2, 0, 0 },
 		{ "eth-link-speed",		1, 0, 0 },
 		{ "disable-link-check",		0, 0, 0 },
@@ -1307,6 +1309,8 @@ launch_args_parse(int argc, char** argv)
 				multi_rx_mempool = 1;
 			if (!strcmp(lgopts[opt_idx].name, "txonly-multi-flow"))
 				txonly_multi_flow = 1;
+			if (!strcmp(lgopts[opt_idx].name, "txonly-alter-port"))
+				txonly_alter_port = 1;
 			if (!strcmp(lgopts[opt_idx].name, "rxq-share")) {
 				if (optarg == NULL) {
 					rxq_share = UINT32_MAX;

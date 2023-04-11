@@ -373,6 +373,12 @@ The command line options are:
 
     Generate multiple flows in txonly mode.
 
+*   ``--txonly-alter-port``
+
+    Alter source port when generating multiple flows in txonly mode. The default
+    behavior is to alter source IP address. This flag must be used in conjuction
+    with --txonly-multi-flow.
+
 *   ``--rxq-share=[X]``
 
     Create queues in shared Rx queue mode if device supports.
