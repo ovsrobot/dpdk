@@ -1500,15 +1500,33 @@ rte_mempool_do_generic_get(struct rte_mempool *mp, void **obj_table,
 	if (unlikely(cache == NULL))
 		goto driver_dequeue;
 
-	/* Use the cache as much as we have to return hot objects first */
-	len = RTE_MIN(remaining, cache->len);
 	cache_objs = &cache->objs[cache->len];
+
+	if (__extension__(__builtin_constant_p(n)) && n <= cache->len) {
+		/*
+		 * The request size is known at build time, and
+		 * the entire request can be satisfied from the cache,
+		 * so let the compiler unroll the fixed length copy loop.
+		 */
+		cache->len -= n;
+		for (index = 0; index < n; index++)
+			*obj_table++ = *--cache_objs;
+
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
+		RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_objs, n);
+
+		return 0;
+	}
+
+	/* Use the cache as much as we have to return hot objects first */
+	len = __extension__(__builtin_constant_p(n)) ? cache->len :
+			RTE_MIN(remaining, cache->len);
 	cache->len -= len;
 	remaining -= len;
 	for (index = 0; index < len; index++)
 		*obj_table++ = *--cache_objs;
 
-	if (remaining == 0) {
+	if (!__extension__(__builtin_constant_p(n)) && remaining == 0) {
 		/* The entire request is satisfied from the cache. */
 
 		RTE_MEMPOOL_CACHE_STAT_ADD(cache, get_success_bulk, 1);
