@@ -13,6 +13,7 @@ extern "C" {
 #include <rte_common.h>
 #include "generic/rte_prefetch.h"
 
+#ifndef RTE_TOOLCHAIN_MSVC
 static inline void rte_prefetch0(const volatile void *p)
 {
 	asm volatile ("prefetcht0 %[p]" : : [p] "m" (*(const volatile char *)p));
@@ -43,6 +44,34 @@ rte_cldemote(const volatile void *p)
 {
 	asm volatile(".byte 0x0f, 0x1c, 0x06" :: "S" (p));
 }
+#else
+static inline void rte_prefetch0(const volatile void *p)
+{
+	_mm_prefetch(p, 1);
+}
+
+static inline void rte_prefetch1(const volatile void *p)
+{
+	_mm_prefetch(p, 2);
+}
+
+static inline void rte_prefetch2(const volatile void *p)
+{
+	_mm_prefetch(p, 3);
+}
+
+static inline void rte_prefetch_non_temporal(const volatile void *p)
+{
+	_mm_prefetch(p, 0);
+}
+__rte_experimental
+static inline void
+rte_cldemote(const volatile void *p)
+{
+	_mm_cldemote(p);
+}
+#endif
+
 
 #ifdef __cplusplus
 }
