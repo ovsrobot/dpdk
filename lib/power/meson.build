@@ -18,6 +18,7 @@ sources = files(
         'power_cppc_cpufreq.c',
         'power_kvm_vm.c',
         'power_pstate_cpufreq.c',
+        'power_amd_pstate_cpufreq.c',
         'rte_power.c',
         'rte_power_intel_uncore.c',
         'rte_power_pmd_mgmt.c',

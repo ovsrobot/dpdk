@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+   * **Added amd-pstate driver support to power management library.**
+
+        Added support for amd-pstate driver which works on AMD Zen processors.
 
 Removed Items
 -------------
