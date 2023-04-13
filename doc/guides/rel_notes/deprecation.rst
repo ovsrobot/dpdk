@@ -163,3 +163,6 @@ Deprecation Notices
   The new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status
   starting with DPDK 23.07 release.
+
+* eal/x86: The enum ``rte_cpu_flag_t`` will be extended with a new cpu flag
+  ``RTE_CPUFLAG_MONITORX`` to support monitorx instruction on Epyc processors.
