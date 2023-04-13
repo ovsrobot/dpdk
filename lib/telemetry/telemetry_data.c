@@ -82,8 +82,16 @@ rte_tel_data_add_array_int_v23(struct rte_tel_data *d, int x)
 /* mark the v23 function as the older version, and v24 as the default version */
 VERSION_SYMBOL(rte_tel_data_add_array_int, _v23, 23);
 BIND_DEFAULT_SYMBOL(rte_tel_data_add_array_int, _v24, 24);
+#ifndef RTE_TOOLCHAIN_MSVC
 MAP_STATIC_SYMBOL(int rte_tel_data_add_array_int(struct rte_tel_data *d,
 		int64_t x), rte_tel_data_add_array_int_v24);
+#else
+int
+rte_tel_data_add_array_int(struct rte_tel_data *d, int64_t x)
+{
+	return rte_tel_data_add_array_int_v24(d, x);
+}
+#endif
 
 int
 rte_tel_data_add_array_uint(struct rte_tel_data *d, uint64_t x)
@@ -220,8 +228,16 @@ rte_tel_data_add_dict_int_v23(struct rte_tel_data *d, const char *name, int val)
 /* mark the v23 function as the older version, and v24 as the default version */
 VERSION_SYMBOL(rte_tel_data_add_dict_int, _v23, 23);
 BIND_DEFAULT_SYMBOL(rte_tel_data_add_dict_int, _v24, 24);
+#ifndef RTE_TOOLCHAIN_MSVC
 MAP_STATIC_SYMBOL(int rte_tel_data_add_dict_int(struct rte_tel_data *d,
 		const char *name, int64_t val), rte_tel_data_add_dict_int_v24);
+#else
+int
+rte_tel_data_add_dict_int(struct rte_tel_data *d, const char *name, int64_t val)
+{
+	return rte_tel_data_add_dict_int_v24(d, name, val);
+}
+#endif
 
 int
 rte_tel_data_add_dict_uint(struct rte_tel_data *d,
