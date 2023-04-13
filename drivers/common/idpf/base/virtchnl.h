@@ -2149,7 +2149,7 @@ VIRTCHNL_CHECK_STRUCT_LEN(12, virtchnl_quanta_cfg);
 #define VIRTCHNL_1588_PTP_CAP_GNSS		BIT(7)
 
 /**
- * virtchnl_phc_regs
+ * struct virtchnl_phc_regs
  *
  * Structure defines how the VF should access PHC related registers. The VF
  * must request VIRTCHNL_1588_PTP_CAP_PHC_REGS. If the VF has access to PHC
@@ -2211,7 +2211,7 @@ enum virtchnl_ptp_tstamp_format {
 };
 
 /**
- * virtchnl_ptp_caps
+ * struct virtchnl_ptp_caps
  *
  * Structure that defines the PTP capabilities available to the VF. The VF
  * sends VIRTCHNL_OP_1588_PTP_GET_CAPS, and must fill in the ptp_caps field
@@ -2313,7 +2313,7 @@ struct virtchnl_ptp_caps {
 VIRTCHNL_CHECK_STRUCT_LEN(48, virtchnl_ptp_caps);
 
 /**
- * virtchnl_phc_time
+ * struct virtchnl_phc_time
  * @time: PHC time in nanoseconds
  * @rsvd: Reserved for future extension
  *
@@ -2339,7 +2339,7 @@ struct virtchnl_phc_time {
 VIRTCHNL_CHECK_STRUCT_LEN(16, virtchnl_phc_time);
 
 /**
- * virtchnl_phc_adj_time
+ * struct virtchnl_phc_adj_time
  * @delta: offset requested to adjust clock by
  * @rsvd: reserved for future extension
  *
@@ -2359,7 +2359,7 @@ struct virtchnl_phc_adj_time {
 VIRTCHNL_CHECK_STRUCT_LEN(16, virtchnl_phc_adj_time);
 
 /**
- * virtchnl_phc_adj_freq
+ * struct virtchnl_phc_adj_freq
  * @scaled_ppm: frequency adjustment represented in scaled parts per million
  * @rsvd: Reserved for future extension
  *
@@ -2388,7 +2388,7 @@ struct virtchnl_phc_adj_freq {
 VIRTCHNL_CHECK_STRUCT_LEN(16, virtchnl_phc_adj_freq);
 
 /**
- * virtchnl_phc_tx_stamp
+ * struct virtchnl_phc_tx_stamp
  * @tstamp: timestamp value
  * @rsvd: Reserved for future extension
  *
@@ -2435,7 +2435,7 @@ enum virtchnl_phc_ext_ts_mode {
 };
 
 /**
- * virtchnl_phc_ext_ts
+ * struct virtchnl_phc_ext_ts
  * @mode: mode of external timestamp request
  * @rsvd: reserved for future extension
  *
@@ -2473,13 +2473,13 @@ enum virtchnl_phc_per_out_flags {
 };
 
 /**
- * virtchnl_phc_per_out
+ * struct virtchnl_phc_per_out
  * @start: absolute start time (if VIRTCHNL_PHC_PER_OUT_PHASE_START unset)
  * @phase: phase offset to start (if VIRTCHNL_PHC_PER_OUT_PHASE_START set)
  * @period: time to complete a full clock cycle (low - > high -> low)
  * @on: length of time the signal should stay high
  * @flags: flags defining the periodic output operation.
- * rsvd: reserved for future extension
+ * @rsvd: reserved for future extension
  *
  * Configuration for a periodic output signal. Used to define the signal that
  * should be generated on a given function.
@@ -2547,7 +2547,8 @@ enum virtchnl_phc_pin_cfg_flags {
 };
 
 /**
- * virtchnl_phc_set_pin
+ * struct virtchnl_phc_set_pin
+ * @flags: flags defining the bits to cfg pin
  * @pin_index: The pin to get or set
  * @func: the function type the pin is assigned to
  * @func_index: the index of the function the pin is assigned to
@@ -2591,7 +2592,7 @@ struct virtchnl_phc_set_pin {
 VIRTCHNL_CHECK_STRUCT_LEN(80, virtchnl_phc_set_pin);
 
 /**
- * virtchnl_phc_pin
+ * struct virtchnl_phc_pin
  * @pin_index: The pin to get or set
  * @func: the function type the pin is assigned to
  * @func_index: the index of the function the pin is assigned to
@@ -2618,9 +2619,10 @@ struct virtchnl_phc_pin {
 VIRTCHNL_CHECK_STRUCT_LEN(72, virtchnl_phc_pin);
 
 /**
- * virtchnl_phc_pin_cfg
+ * struct virtchnl_phc_get_pins
  * @len: length of the variable pin config array
  * @pins: variable length pin configuration array
+ * @rsvd: reserved for future extension
  *
  * Variable structure sent by the PF in reply to
  * VIRTCHNL_OP_1588_PTP_GET_PIN_CFGS. The VF does not send this structure with
@@ -2642,7 +2644,7 @@ struct virtchnl_phc_get_pins {
 VIRTCHNL_CHECK_STRUCT_LEN(80, virtchnl_phc_get_pins);
 
 /**
- * virtchnl_phc_ext_stamp
+ * struct virtchnl_phc_ext_stamp
  * @tstamp: timestamp value
  * @tstamp_rsvd: Reserved for future extension of the timestamp value.
  * @tstamp_format: format of the timstamp
