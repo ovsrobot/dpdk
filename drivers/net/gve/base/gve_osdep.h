@@ -21,8 +21,13 @@
 #include <rte_malloc.h>
 #include <rte_memcpy.h>
 #include <rte_memzone.h>
+#include <rte_version.h>
 
 #include "../gve_logs.h"
+
+#ifdef __linux__
+#include <sys/utsname.h>
+#endif
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -69,6 +74,12 @@ typedef rte_iova_t dma_addr_t;
 
 #define msleep(ms)		rte_delay_ms(ms)
 
+#define OS_VERSION_STRLEN 128
+struct os_version_string {
+	char os_version_str1[OS_VERSION_STRLEN];
+	char os_version_str2[OS_VERSION_STRLEN];
+};
+
 /* These macros are used to generate compilation errors if a struct/union
  * is not exactly the correct length. It gives a divide by zero error if
  * the struct/union is not of the correct size, otherwise it creates an
@@ -78,6 +89,12 @@ typedef rte_iova_t dma_addr_t;
 	{ gve_static_assert_##X = (n) / ((sizeof(struct X) == (n)) ? 1 : 0) }
 #define GVE_CHECK_UNION_LEN(n, X) enum gve_static_asset_enum_##X \
 	{ gve_static_assert_##X = (n) / ((sizeof(union X) == (n)) ? 1 : 0) }
+
+#ifndef LINUX_VERSION_MAJOR
+#define LINUX_VERSION_MAJOR (((LINUX_VERSION_CODE) >> 16) & 0xff)
+#define LINUX_VERSION_SUBLEVEL (((LINUX_VERSION_CODE) >> 8) & 0xff)
+#define LINUX_VERSION_PATCHLEVEL ((LINUX_VERSION_CODE) & 0xff)
+#endif
 
 static __rte_always_inline u8
 readb(volatile void *addr)
@@ -154,6 +171,25 @@ gve_free_dma_mem(struct gve_dma_mem *mem)
 	mem->zone = NULL;
 	mem->va = NULL;
 	mem->pa = 0;
+}
+
+static inline void
+populate_driver_version_strings(struct os_version_string *os_version_str)
+{
+#ifdef __linux__
+	struct utsname uts;
+	if (uname(&uts) >= 0) {
+		/* release */
+		rte_strscpy(os_version_str->os_version_str1, uts.release,
+			sizeof(os_version_str->os_version_str1));
+		/* version */
+		rte_strscpy(os_version_str->os_version_str2, uts.version,
+			sizeof(os_version_str->os_version_str2));
+	}
+#else
+	/* gVNIC is currently not supported on OS like FreeBSD */
+	RTE_SET_USED(os_version_str);
+#endif
 }
 
 #endif /* _GVE_OSDEP_H_ */

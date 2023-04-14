@@ -12,5 +12,6 @@ sources = files(
         'gve_rx.c',
         'gve_tx.c',
         'gve_ethdev.c',
+        'gve_version.c',
 )
 includes += include_directories('base')
