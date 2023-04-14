@@ -16,6 +16,7 @@
 #include <rte_compat.h>
 #include <rte_common.h>
 #include <rte_mempool.h>
+#include <rte_pdcp_hdr.h>
 #include <rte_security.h>
 
 #ifdef __cplusplus
@@ -78,6 +79,8 @@ struct rte_pdcp_entity_conf {
 	struct rte_mempool *sess_mpool;
 	/** Crypto op pool.*/
 	struct rte_mempool *cop_pool;
+	/** Mbuf pool to be used for allocating control PDUs.*/
+	struct rte_mempool *ctr_pdu_pool;
 	/**
 	 * 32 bit count value (HFN + SN) to be used for the first packet.
 	 * pdcp_xfrm.hfn would be ignored as the HFN would be derived from this value.
@@ -91,6 +94,15 @@ struct rte_pdcp_entity_conf {
 	uint8_t dev_id;
 	/** Reverse direction during IV generation. Can be used to simulate UE crypto processing.*/
 	bool reverse_iv_direction;
+	/**
+	 * Status report required (specified in TS 38.331).
+	 *
+	 * If PDCP entity is configured to send a PDCP status report, the upper layer application
+	 * may request a receiving PDCP entity to generate a PDCP status report using
+	 * ``rte_pdcp_ctrl_pdu_create``. In addition, PDCP status reports may be generated during
+	 * operations such as entity re-establishment.
+	 */
+	bool status_report_required;
 };
 /* >8 End of structure rte_pdcp_entity_conf. */
 
@@ -168,6 +180,25 @@ __rte_experimental
 int
 rte_pdcp_entity_suspend(struct rte_pdcp_entity *pdcp_entity,
 			struct rte_mbuf *out_mb[]);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Create control PDU packet of the `type` specified.
+ *
+ * @param pdcp_entity
+ *   Pointer to the PDCP entity for which the control PDU need to be generated.
+ * @param type
+ *   Type of control PDU to be generated.
+ * @return
+ *   - Control PDU generated, in case of success.
+ *   - NULL in case of failure. rte_errno will be set to error code.
+ */
+__rte_experimental
+struct rte_mbuf *
+rte_pdcp_control_pdu_create(struct rte_pdcp_entity *pdcp_entity,
+			    enum rte_pdcp_ctrl_pdu_type type);
 
 /**
  * @warning

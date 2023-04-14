@@ -67,6 +67,15 @@ Data PDUs are regular packets submitted by upper layers for transmission to
 other end. Such packets would need to be ciphered and authenticated based on
 the entity configuration.
 
+PDCP packet processing API for control PDU
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Control PDUs are used in PDCP as a communication channel between transmitting
+and receiving entities. When upper layer request for operations such
+re-establishment, receiving PDCP entity need to prepare a status report and
+send it to the other end. The API ``pdcp_ctrl_pdu_status_gen`` allows
+application to request the same.
+
 PDCP packet processing API for data PDU
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -228,6 +237,7 @@ Supported features
 - Uplink & downlink traffic
 - HFN increment
 - IV generation as required per algorithm
+- Control PDU generation
 
 Supported ciphering algorithms
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

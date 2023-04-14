@@ -415,6 +415,7 @@ create_test_conf_from_index(const int index, struct pdcp_test_conf *conf)
 
 	conf->entity.sess_mpool = ts_params->sess_pool;
 	conf->entity.cop_pool = ts_params->cop_pool;
+	conf->entity.ctr_pdu_pool = ts_params->mbuf_pool;
 	conf->entity.pdcp_xfrm.bearer = pdcp_test_bearer[index];
 	conf->entity.pdcp_xfrm.en_ordering = 0;
 	conf->entity.pdcp_xfrm.remove_duplicates = 0;
