@@ -274,13 +274,15 @@ implementers = {
 soc_generic = {
     'description': 'Generic un-optimized build for armv8 aarch64 exec mode',
     'implementer': 'generic',
-    'part_number': 'generic'
+    'part_number': 'generic',
+    'numa': true
 }
 
 soc_generic_aarch32 = {
     'description': 'Generic un-optimized build for armv8 aarch32 exec mode',
     'implementer': 'generic',
-    'part_number': 'generic_aarch32'
+    'part_number': 'generic_aarch32',
+    'numa': true
 }
 
 soc_armada = {
