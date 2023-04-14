@@ -11,5 +11,7 @@ EXPERIMENTAL {
 	rte_pdcp_pkt_post_process;
 	rte_pdcp_pkt_pre_process;
 
+	rte_pdcp_t_reordering_expiry_handle;
+
 	local: *;
 };
