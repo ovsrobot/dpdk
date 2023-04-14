@@ -15,6 +15,15 @@
 #define CDEV_INVALID_ID UINT8_MAX
 #define NB_TESTS RTE_DIM(pdcp_test_params)
 
+/* Assert that condition is true, or goto the mark */
+#define ASSERT_TRUE_OR_GOTO(cond, mark, ...) do {\
+	if (!(cond)) { \
+		RTE_LOG(ERR, USER1, "Error at: %s:%d\n", __func__, __LINE__); \
+		RTE_LOG(ERR, USER1, __VA_ARGS__); \
+		goto mark; \
+	} \
+} while (0)
+
 /* According to formula(7.2.a Window_Size) */
 #define PDCP_WINDOW_SIZE(sn_size) (1 << (sn_size - 1))
 
@@ -80,6 +89,14 @@ run_test_with_all_known_vec(const void *args)
 	test_with_conf_t test = args;
 
 	return run_test_foreach_known_vec(test, false);
+}
+
+static int
+run_test_with_all_known_vec_until_first_pass(const void *args)
+{
+	test_with_conf_t test = args;
+
+	return run_test_foreach_known_vec(test, true);
 }
 
 static inline int
@@ -868,6 +885,7 @@ test_sn_range_type(enum sn_range_type type, struct pdcp_test_conf *conf)
 
 	/* Configure Uplink to generate expected, encrypted packet */
 	pdcp_sn_to_raw_set(conf->input, new_sn, conf->entity.pdcp_xfrm.sn_size);
+	conf->entity.out_of_order_delivery = true;
 	conf->entity.reverse_iv_direction = true;
 	conf->entity.count = PDCP_SET_COUNT(new_hfn, new_sn, sn_size);
 	conf->output_len = 0;
@@ -911,6 +929,168 @@ static int
 test_sn_minus_outside(struct pdcp_test_conf *t_conf)
 {
 	return test_sn_range_type(SN_RANGE_MINUS_OUTSIDE, t_conf);
+}
+
+static struct rte_mbuf *
+generate_packet_for_dl_with_sn(struct pdcp_test_conf ul_conf, uint32_t sn)
+{
+	int ret;
+
+	ul_conf.entity.count = sn;
+	ul_conf.entity.out_of_order_delivery = true;
+	ul_conf.entity.reverse_iv_direction = true;
+	ul_conf.output_len = 0;
+
+	ret = test_attempt_single(&ul_conf);
+	if (ret != TEST_SUCCESS)
+		return NULL;
+
+	return mbuf_from_data_create(ul_conf.output, ul_conf.output_len);
+}
+
+static bool
+array_asc_sorted_check(struct rte_mbuf *m[], uint32_t len, enum rte_security_pdcp_sn_size sn_size)
+{
+	uint32_t i;
+
+	if (len < 2)
+		return true;
+
+	for (i = 0; i < (len - 1); i++) {
+		if (pdcp_sn_from_raw_get(rte_pktmbuf_mtod(m[i], void *), sn_size) >
+		    pdcp_sn_from_raw_get(rte_pktmbuf_mtod(m[i + 1], void *), sn_size))
+			return false;
+	}
+
+	return true;
+}
+
+static int
+test_reorder_gap_fill(struct pdcp_test_conf *ul_conf)
+{
+	struct rte_mbuf *m0 = NULL, *m1 = NULL, *out_mb[2] = {0};
+	uint16_t nb_success = 0, nb_err = 0;
+	struct rte_pdcp_entity *pdcp_entity;
+	struct pdcp_test_conf dl_conf;
+	int ret = TEST_FAILED, nb_out;
+	uint8_t cdev_id;
+
+	const int start_count = 0;
+
+	if (ul_conf->entity.pdcp_xfrm.pkt_dir == RTE_SECURITY_PDCP_DOWNLINK)
+		return TEST_SKIPPED;
+
+	/* Create configuration for actual testing */
+	uplink_to_downlink_convert(ul_conf, &dl_conf);
+	dl_conf.entity.count = start_count;
+
+	pdcp_entity = test_entity_create(&dl_conf, &ret);
+	if (pdcp_entity == NULL)
+		return ret;
+
+	const uint32_t sn_size = dl_conf.entity.pdcp_xfrm.sn_size;
+	cdev_id = dl_conf.entity.dev_id;
+
+	/* Send packet with SN > RX_DELIV to create a gap */
+	m1 = generate_packet_for_dl_with_sn(*ul_conf, start_count + 1);
+	ASSERT_TRUE_OR_GOTO(m1 != NULL, exit, "Could not allocate buffer for packet\n");
+
+	/* Buffered packets after insert [NULL, m1] */
+	nb_success = test_process_packets(pdcp_entity, cdev_id, &m1, 1, out_mb, &nb_err);
+	ASSERT_TRUE_OR_GOTO(nb_err == 0, exit, "Error occurred during packet process\n");
+	ASSERT_TRUE_OR_GOTO(nb_success == 0, exit, "Packet was not buffered as expected\n");
+	m1 = NULL; /* Packet was moved to PDCP lib */
+
+	/* Generate packet to fill the existing gap */
+	m0 = generate_packet_for_dl_with_sn(*ul_conf, start_count);
+	ASSERT_TRUE_OR_GOTO(m0 != NULL, exit, "Could not allocate buffer for packet\n");
+
+	/*
+	 * Buffered packets after insert [m0, m1]
+	 * Gap filled, all packets should be returned
+	 */
+	nb_success = test_process_packets(pdcp_entity, cdev_id, &m0, 1, out_mb, &nb_err);
+	ASSERT_TRUE_OR_GOTO(nb_err == 0, exit, "Error occurred during packet process\n");
+	ASSERT_TRUE_OR_GOTO(nb_success == 2, exit,
+			"Packet count mismatch (received: %i, expected: 2)\n", nb_success);
+	m0 = NULL; /* Packet was moved to out_mb */
+
+	/* Check that packets in correct order */
+	ASSERT_TRUE_OR_GOTO(array_asc_sorted_check(out_mb, nb_success, sn_size), exit,
+			"Error occurred during packet drain\n");
+
+	ret = TEST_SUCCESS;
+exit:
+	rte_pktmbuf_free(m0);
+	rte_pktmbuf_free(m1);
+	rte_pktmbuf_free_bulk(out_mb, nb_success);
+	nb_out = rte_pdcp_entity_release(pdcp_entity, out_mb);
+	rte_pktmbuf_free_bulk(out_mb, nb_out);
+	return ret;
+}
+
+static int
+test_reorder_buffer_full_window_size_sn_12(const struct pdcp_test_conf *ul_conf)
+{
+	struct rte_mbuf *m1 = NULL, **out_mb = NULL;
+	uint16_t nb_success = 0, nb_err = 0;
+	struct rte_pdcp_entity *pdcp_entity;
+	struct pdcp_test_conf dl_conf;
+	const int rx_deliv = 0;
+	int ret = TEST_FAILED;
+	size_t i, nb_out;
+	uint8_t cdev_id;
+
+	const uint32_t sn_size = ul_conf->entity.pdcp_xfrm.sn_size;
+	const uint32_t window_size = PDCP_WINDOW_SIZE(sn_size);
+
+	if (ul_conf->entity.pdcp_xfrm.pkt_dir == RTE_SECURITY_PDCP_DOWNLINK ||
+		sn_size != RTE_SECURITY_PDCP_SN_SIZE_12)
+		return TEST_SKIPPED;
+
+	/* Create configuration for actual testing */
+	uplink_to_downlink_convert(ul_conf, &dl_conf);
+	dl_conf.entity.count = rx_deliv;
+
+	pdcp_entity = test_entity_create(&dl_conf, &ret);
+	if (pdcp_entity == NULL)
+		return ret;
+
+	ASSERT_TRUE_OR_GOTO(pdcp_entity->max_pkt_cache >= window_size, exit,
+			"PDCP max packet cache is too small");
+	cdev_id = dl_conf.entity.dev_id;
+	out_mb = rte_zmalloc(NULL, pdcp_entity->max_pkt_cache * sizeof(uintptr_t), 0);
+	ASSERT_TRUE_OR_GOTO(out_mb != NULL, exit,
+			"Could not allocate buffer for holding out_mb buffers\n");
+
+	/* Send packets with SN > RX_DELIV to create a gap */
+	for (i = rx_deliv + 1; i < window_size; i++) {
+		m1 = generate_packet_for_dl_with_sn(*ul_conf, i);
+		ASSERT_TRUE_OR_GOTO(m1 != NULL, exit, "Could not allocate buffer for packet\n");
+		/* Buffered packets after insert [NULL, m1] */
+		nb_success = test_process_packets(pdcp_entity, cdev_id, &m1, 1, out_mb, &nb_err);
+		ASSERT_TRUE_OR_GOTO(nb_err == 0, exit, "Error occurred during packet buffering\n");
+		ASSERT_TRUE_OR_GOTO(nb_success == 0, exit, "Packet was not buffered as expected\n");
+	}
+
+	m1 = generate_packet_for_dl_with_sn(*ul_conf, rx_deliv);
+	ASSERT_TRUE_OR_GOTO(m1 != NULL, exit, "Could not allocate buffer for packet\n");
+	/* Insert missing packet */
+	nb_success = test_process_packets(pdcp_entity, cdev_id, &m1, 1, out_mb, &nb_err);
+	ASSERT_TRUE_OR_GOTO(nb_err == 0, exit, "Error occurred during packet buffering\n");
+	ASSERT_TRUE_OR_GOTO(nb_success == window_size, exit,
+			"Packet count mismatch (received: %i, expected: %i)\n",
+			nb_success, window_size);
+	m1 = NULL;
+
+	ret = TEST_SUCCESS;
+exit:
+	rte_pktmbuf_free(m1);
+	rte_pktmbuf_free_bulk(out_mb, nb_success);
+	nb_out = rte_pdcp_entity_release(pdcp_entity, out_mb);
+	rte_pktmbuf_free_bulk(out_mb, nb_out);
+	rte_free(out_mb);
+	return ret;
 }
 
 static int
@@ -969,10 +1149,25 @@ static struct unit_test_suite hfn_sn_test_cases  = {
 	}
 };
 
+static struct unit_test_suite reorder_test_cases  = {
+	.suite_name = "PDCP reorder",
+	.unit_test_cases = {
+		TEST_CASE_NAMED_WITH_DATA("test_reorder_gap_fill",
+			ut_setup_pdcp, ut_teardown_pdcp,
+			run_test_with_all_known_vec, test_reorder_gap_fill),
+		TEST_CASE_NAMED_WITH_DATA("test_reorder_buffer_full_window_size_sn_12",
+			ut_setup_pdcp, ut_teardown_pdcp,
+			run_test_with_all_known_vec_until_first_pass,
+			test_reorder_buffer_full_window_size_sn_12),
+		TEST_CASES_END() /**< NULL terminate unit test array */
+	}
+};
+
 struct unit_test_suite *test_suites[] = {
 	NULL, /* Place holder for known_vector_cases */
 	&combined_mode_cases,
 	&hfn_sn_test_cases,
+	&reorder_test_cases,
 	NULL /* End of suites list */
 };
 
