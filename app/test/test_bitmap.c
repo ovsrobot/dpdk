@@ -71,6 +71,29 @@ test_bitmap_scan_operations(struct rte_bitmap *bmp)
 		return TEST_FAILED;
 	}
 
+	/* Scan reset with count check. */
+	__rte_bitmap_scan_init_at(bmp, pos + RTE_BITMAP_SLAB_BIT_SIZE);
+	if (!rte_bitmap_scan(bmp, &pos, &out_slab)) {
+		printf("Failed to get slab from bitmap.\n");
+		return TEST_FAILED;
+	}
+
+	if (slab2_magic != out_slab) {
+		printf("Scan init at operation failed.\n");
+		return TEST_FAILED;
+	}
+
+	__rte_bitmap_scan_init_at(bmp, pos + 2 * RTE_BITMAP_SLAB_BIT_SIZE);
+	if (!rte_bitmap_scan(bmp, &pos, &out_slab)) {
+		printf("Failed to get slab from bitmap.\n");
+		return TEST_FAILED;
+	}
+
+	if (slab1_magic != out_slab) {
+		printf("Scan init at operation failed.\n");
+		return TEST_FAILED;
+	}
+
 	/* Test scan when a cline is half full */
 	rte_bitmap_reset(bmp);
 	for (i = 0; i < MAX_BITS; i++)

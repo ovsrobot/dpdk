@@ -138,6 +138,28 @@ __rte_bitmap_scan_init(struct rte_bitmap *bmp)
 }
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Bitmap initialize internal scan pointers at the given position for the scan function.
+ * @see rte_bitmap_scan()
+ *
+ * @param bmp
+ *   Handle to bitmap instance
+ * @param pos
+ *   Bit position to start scan
+ */
+__rte_experimental
+static inline void
+__rte_bitmap_scan_init_at(struct rte_bitmap *bmp, uint32_t pos)
+{
+	bmp->index1 = pos >> (RTE_BITMAP_SLAB_BIT_SIZE_LOG2 + RTE_BITMAP_CL_BIT_SIZE_LOG2);
+	bmp->offset1 = (pos >> RTE_BITMAP_CL_BIT_SIZE_LOG2) & RTE_BITMAP_SLAB_BIT_MASK;
+	bmp->index2 = pos >> RTE_BITMAP_SLAB_BIT_SIZE_LOG2;
+	bmp->go2 = 1;
+}
+
+/**
  * Bitmap memory footprint calculation
  *
  * @param n_bits
