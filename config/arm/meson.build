@@ -598,28 +598,30 @@ if update_flags
         enable_drivers += ',' + soc_config.get('enable_drivers', '')
     endif
 
-    if implementers.has_key(implementer_id)
-        implementer_config = implementers[implementer_id]
-    else
-        error('Unsupported Arm implementer: @0@. '.format(implementer_id) +
-              'Please add support for it or use the generic ' +
-              '(-Dplatform=generic) build.')
+    if not implementers.has_key(implementer_id)
+        implementer_id = 'generic'
     endif
+
+    implementer_config = implementers[implementer_id]
+    part_number_config = implementer_config['part_number_config']
+
+    if not part_number_config.has_key(part_number)
+        implementer_id = 'generic'
+
+        if dpdk_conf.get('RTE_ARCH_32')
+            part_number = 'generic_aarch32'
+        else
+            part_number = 'generic'
+        endif
+
+        implementer_config = implementers[implementer_id]
+        part_number_config = implementer_config['part_number_config']
+    endif
+
+    part_number_config = part_number_config[part_number]
 
     message('Arm implementer: ' + implementer_config['description'])
     message('Arm part number: ' + part_number)
-
-    part_number_config = implementer_config['part_number_config']
-    if part_number_config.has_key(part_number)
-        # use the specified part_number machine args if found
-        part_number_config = part_number_config[part_number]
-    else
-        # unknown part number
-        error('Unsupported part number @0@ of implementer @1@. '
-              .format(part_number, implementer_id) +
-              'Please add support for it or use the generic ' +
-              '(-Dplatform=generic) build.')
-    endif
 
     # add/overwrite flags in the proper order
     dpdk_flags = flags_common + implementer_config['flags'] + part_number_config.get('flags', []) + soc_flags
