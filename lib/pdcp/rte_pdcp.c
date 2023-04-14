@@ -12,6 +12,8 @@
 #include "pdcp_entity.h"
 #include "pdcp_process.h"
 
+static int bitmap_mem_offset;
+
 static int
 pdcp_entity_size_get(const struct rte_pdcp_entity_conf *conf)
 {
@@ -19,9 +21,12 @@ pdcp_entity_size_get(const struct rte_pdcp_entity_conf *conf)
 
 	size = sizeof(struct rte_pdcp_entity) + sizeof(struct entity_priv);
 
-	if (conf->pdcp_xfrm.pkt_dir == RTE_SECURITY_PDCP_DOWNLINK)
+	if (conf->pdcp_xfrm.pkt_dir == RTE_SECURITY_PDCP_DOWNLINK) {
 		size += sizeof(struct entity_priv_dl_part);
-	else if (conf->pdcp_xfrm.pkt_dir == RTE_SECURITY_PDCP_UPLINK)
+		size = RTE_CACHE_LINE_ROUNDUP(size);
+		bitmap_mem_offset = size;
+		size += pdcp_cnt_bitmap_get_memory_footprint(conf);
+	} else if (conf->pdcp_xfrm.pkt_dir == RTE_SECURITY_PDCP_UPLINK)
 		size += sizeof(struct entity_priv_ul_part);
 	else
 		return -EINVAL;
@@ -34,11 +39,24 @@ pdcp_dl_establish(struct rte_pdcp_entity *entity, const struct rte_pdcp_entity_c
 {
 	const uint32_t window_size = pdcp_window_size_get(conf->pdcp_xfrm.sn_size);
 	struct entity_priv_dl_part *dl = entity_dl_part_get(entity);
+	void *bitmap_mem;
+	int ret;
 
 	entity->max_pkt_cache = RTE_MAX(entity->max_pkt_cache, window_size);
 	dl->t_reorder.handle = conf->t_reordering;
 
-	return pdcp_reorder_create(&dl->reorder, window_size);
+	ret = pdcp_reorder_create(&dl->reorder, window_size);
+	if (ret)
+		return ret;
+
+	bitmap_mem = RTE_PTR_ADD(entity, bitmap_mem_offset);
+	ret = pdcp_cnt_bitmap_create(dl, bitmap_mem, window_size);
+	if (ret) {
+		pdcp_reorder_destroy(&dl->reorder);
+		return ret;
+	}
+
+	return 0;
 }
 
 struct rte_pdcp_entity *
@@ -109,10 +127,6 @@ rte_pdcp_entity_establish(const struct rte_pdcp_entity_conf *conf)
 		if (ret)
 			goto crypto_sess_destroy;
 	}
-
-	ret = pdcp_cnt_ring_create(entity, conf);
-	if (ret)
-		goto crypto_sess_destroy;
 
 	return entity;
 
@@ -192,6 +206,7 @@ struct rte_mbuf *
 rte_pdcp_control_pdu_create(struct rte_pdcp_entity *pdcp_entity,
 			    enum rte_pdcp_ctrl_pdu_type type)
 {
+	struct entity_priv_dl_part *dl;
 	struct entity_priv *en_priv;
 	struct rte_mbuf *m;
 	int ret;
@@ -202,6 +217,7 @@ rte_pdcp_control_pdu_create(struct rte_pdcp_entity *pdcp_entity,
 	}
 
 	en_priv = entity_priv_get(pdcp_entity);
+	dl = entity_dl_part_get(pdcp_entity);
 
 	m = rte_pktmbuf_alloc(en_priv->ctr_pdu_pool);
 	if (m == NULL) {
@@ -211,7 +227,7 @@ rte_pdcp_control_pdu_create(struct rte_pdcp_entity *pdcp_entity,
 
 	switch (type) {
 	case RTE_PDCP_CTRL_PDU_TYPE_STATUS_REPORT:
-		ret = pdcp_ctrl_pdu_status_gen(en_priv, m);
+		ret = pdcp_ctrl_pdu_status_gen(en_priv, dl, m);
 		break;
 	default:
 		ret = -ENOTSUP;
