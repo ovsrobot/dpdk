@@ -247,6 +247,8 @@ rte_pdcp_pkt_post_process(const struct rte_pdcp_entity *entity,
 	return entity->post_process(entity, in_mb, out_mb, num, nb_err);
 }
 
+#include <rte_pdcp_group.h>
+
 #ifdef __cplusplus
 }
 #endif
