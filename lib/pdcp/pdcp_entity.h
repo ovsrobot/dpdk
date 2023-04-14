@@ -10,6 +10,7 @@
 #include <rte_mempool.h>
 #include <rte_pdcp.h>
 #include <rte_security.h>
+#include <rte_spinlock.h>
 
 #include "pdcp_reorder.h"
 
@@ -162,6 +163,8 @@ struct entity_priv {
 		uint64_t is_status_report_required : 1;
 		/** Is out-of-order delivery enabled */
 		uint64_t is_out_of_order_delivery : 1;
+		/** Is thread safety disabled */
+		uint64_t is_thread_safety_disabled : 1;
 	} flags;
 	/** Crypto op pool. */
 	struct rte_mempool *cop_pool;
@@ -175,6 +178,8 @@ struct entity_priv {
 	uint8_t dev_id;
 };
 
+typedef rte_spinlock_t pdcp_lock_t;
+
 struct entity_priv_dl_part {
 	/** PDCP would need to track the count values that are already received.*/
 	struct pdcp_cnt_bitmap bitmap;
@@ -182,6 +187,8 @@ struct entity_priv_dl_part {
 	struct pdcp_t_reordering t_reorder;
 	/** Reorder packet buffer */
 	struct pdcp_reorder reorder;
+	/* Lock to protect concurrent updates */
+	pdcp_lock_t lock;
 	/** Bitmap memory region */
 	uint8_t bitmap_mem[0];
 };
@@ -255,6 +262,45 @@ static inline uint32_t
 pdcp_hfn_max(enum rte_security_pdcp_sn_size sn_size)
 {
 	return (1 << (32 - sn_size)) - 1;
+}
+
+static inline uint32_t
+pdcp_atomic_inc(const struct entity_priv *en_priv, uint32_t *val)
+{
+	if (en_priv->flags.is_thread_safety_disabled)
+		return (*val)++;
+	else
+		return __atomic_fetch_add(val, 1, __ATOMIC_RELAXED);
+}
+
+static inline void
+pdcp_lock_init(const struct rte_pdcp_entity *entity)
+{
+	struct entity_priv_dl_part *dl = entity_dl_part_get(entity);
+	struct entity_priv *en_priv = entity_priv_get(entity);
+
+	if (!en_priv->flags.is_thread_safety_disabled)
+		rte_spinlock_init(&dl->lock);
+}
+
+static inline void
+pdcp_lock_lock(const struct rte_pdcp_entity *entity)
+{
+	struct entity_priv_dl_part *dl = entity_dl_part_get(entity);
+	struct entity_priv *en_priv = entity_priv_get(entity);
+
+	if (!en_priv->flags.is_thread_safety_disabled)
+		rte_spinlock_lock(&dl->lock);
+}
+
+static inline void
+pdcp_lock_unlock(const struct rte_pdcp_entity *entity)
+{
+	struct entity_priv_dl_part *dl = entity_dl_part_get(entity);
+	struct entity_priv *en_priv = entity_priv_get(entity);
+
+	if (!en_priv->flags.is_thread_safety_disabled)
+		rte_spinlock_unlock(&dl->lock);
 }
 
 #endif /* PDCP_ENTITY_H */

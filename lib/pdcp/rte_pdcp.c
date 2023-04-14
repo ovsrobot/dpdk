@@ -72,6 +72,8 @@ pdcp_dl_establish(struct rte_pdcp_entity *entity, const struct rte_pdcp_entity_c
 	if (ret)
 		return ret;
 
+	pdcp_lock_init(entity);
+
 	return 0;
 }
 

@@ -137,6 +137,8 @@ struct rte_pdcp_entity_conf {
 	bool is_slrb;
 	/** Enable security offload on the device specified. */
 	bool en_sec_offload;
+	/** Disable usage of synchronization primitives for entity. */
+	bool disable_thread_safety;
 	/** Device on which security/crypto session need to be created. */
 	uint8_t dev_id;
 	/** Reverse direction during IV generation. Can be used to simulate UE crypto processing.*/
