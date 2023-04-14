@@ -4,6 +4,9 @@
 #ifndef TEST_CRYPTODEV_H_
 #define TEST_CRYPTODEV_H_
 
+#include <rte_crypto.h>
+#include <rte_cryptodev.h>
+
 #define HEX_DUMP 0
 
 #define FALSE                           0
