@@ -460,6 +460,8 @@ typedef uint64_t rte_iova_t;
 
 /*********** Structure alignment markers ********/
 
+#ifndef RTE_TOOLCHAIN_MSVC
+
 /** Generic marker for any place in a structure. */
 __extension__ typedef void    *RTE_MARKER[0];
 /** Marker for 1B alignment in a structure. */
@@ -470,6 +472,8 @@ __extension__ typedef uint16_t RTE_MARKER16[0];
 __extension__ typedef uint32_t RTE_MARKER32[0];
 /** Marker for 8B alignment in a structure. */
 __extension__ typedef uint64_t RTE_MARKER64[0];
+
+#endif
 
 /**
  * Combines 32b inputs most significant set bits into the least
