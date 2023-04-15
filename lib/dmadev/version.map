@@ -1,6 +1,7 @@
 EXPERIMENTAL {
 	global:
 
+	# added in 21.11
 	rte_dma_close;
 	rte_dma_configure;
 	rte_dma_count_avail;
@@ -16,6 +17,15 @@ EXPERIMENTAL {
 	rte_dma_stop;
 	rte_dma_vchan_setup;
 	rte_dma_vchan_status;
+
+	# added in 23.07
+	__rte_dma_trace_burst_capacity;
+	__rte_dma_trace_completed;
+	__rte_dma_trace_completed_status;
+	__rte_dma_trace_copy;
+	__rte_dma_trace_copy_sg;
+	__rte_dma_trace_fill;
+	__rte_dma_trace_submit;
 
 	local: *;
 };
