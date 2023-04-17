@@ -162,7 +162,7 @@ Features
 - Sub-Function.
 - Matching on represented port.
 - Matching on aggregated affinity.
-
+- Push or remove IPv6 routing extension.
 
 Limitations
 -----------
@@ -693,6 +693,13 @@ Limitations
   while the other flow groups are limited to the current process.
   The flow engine of a process cannot move from active to standby mode
   if preceding active application rules are still present and vice versa.
+
+- IPv6 routing extension push or remove:
+
+  - Supported only with HW Steering enabled (``dv_flow_en`` = 2).
+  - Supported in non-zero group (No limits on transfer domain if `fdb_def_rule_en` = 1 which is default).
+  - Only supports TCP or UDP as next layer.
+  - IPv6 routing header must be the only present extension.
 
 
 Statistics
