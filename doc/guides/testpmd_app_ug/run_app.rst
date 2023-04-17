@@ -519,6 +519,15 @@ The command line options are:
     Set the number of r/w accesses to be done in noisy neighbor simulation memory buffer to N.
     Only available with the noisy forwarding mode. The default value is 0.
 
+*   ``--noisy-fwd-mode=mode``
+
+    Set the noisy vnf forwarding mode where ``mode`` is one of the following::
+
+       io (the default)
+       mac
+       macswap
+       5tswap
+
 *   ``--no-iova-contig``
 
     Enable to create mempool which is not IOVA contiguous. Valid only with --mp-alloc=anon.

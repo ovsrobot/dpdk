@@ -196,6 +196,7 @@ usage(char* progname)
 	printf("  --noisy-lkup-num-writes=N: do N random writes per packet\n");
 	printf("  --noisy-lkup-num-reads=N: do N random reads per packet\n");
 	printf("  --noisy-lkup-num-reads-writes=N: do N random reads and writes per packet\n");
+	printf("  --noisy-fwd-mode=mode: set the fwd mode\n");
 	printf("  --no-iova-contig: mempool memory can be IOVA non contiguous. "
 	       "valid only with --mp-alloc=anon\n");
 	printf("  --rx-mq-mode=0xX: hexadecimal bitmask of RX mq mode can be "
@@ -704,6 +705,7 @@ launch_args_parse(int argc, char** argv)
 		{ "noisy-lkup-num-writes",	1, 0, 0 },
 		{ "noisy-lkup-num-reads",	1, 0, 0 },
 		{ "noisy-lkup-num-reads-writes", 1, 0, 0 },
+		{ "noisy-fwd-mode",             1, 0, 0 },
 		{ "no-iova-contig",             0, 0, 0 },
 		{ "rx-mq-mode",                 1, 0, 0 },
 		{ "record-core-cycles",         0, 0, 0 },
@@ -1443,6 +1445,21 @@ launch_args_parse(int argc, char** argv)
 				else
 					rte_exit(EXIT_FAILURE,
 						 "noisy-lkup-num-reads-writes must be >= 0\n");
+			}
+			if (!strcmp(lgopts[opt_idx].name,
+				    "noisy-fwd-mode")) {
+				if (!strcmp(optarg, "io"))
+					noisy_fwd_mode = NOISY_FWD_MODE_IO;
+				else if (!strcmp(optarg, "mac"))
+					noisy_fwd_mode = NOISY_FWD_MODE_MAC;
+				else if (!strcmp(optarg, "macswap"))
+					noisy_fwd_mode = NOISY_FWD_MODE_MACSWAP;
+				else if (!strcmp(optarg, "5tswap"))
+					noisy_fwd_mode = NOISY_FWD_MODE_5TSWAP;
+				else
+					rte_exit(EXIT_FAILURE, "noisy-fwd-mode %s invalid -"
+						 " must b a valid fwd mode\n",
+						 optarg);
 			}
 			if (!strcmp(lgopts[opt_idx].name, "no-iova-contig"))
 				mempool_flags = RTE_MEMPOOL_F_NO_IOVA_CONTIG;
