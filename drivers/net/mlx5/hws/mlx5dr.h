@@ -45,6 +45,8 @@ enum mlx5dr_action_type {
 	MLX5DR_ACTION_TYP_PUSH_VLAN,
 	MLX5DR_ACTION_TYP_ASO_METER,
 	MLX5DR_ACTION_TYP_ASO_CT,
+	MLX5DR_ACTION_TYP_IPV6_ROUTING_POP,
+	MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH,
 	MLX5DR_ACTION_TYP_MAX,
 };
 
@@ -185,6 +187,12 @@ struct mlx5dr_rule_action {
 			uint32_t offset;
 			uint8_t *data;
 		} reformat;
+
+		struct {
+			uint32_t offset;
+			uint8_t *data;
+			uint8_t *mhdr;
+		} recom;
 
 		struct {
 			rte_be32_t vlan_hdr;
@@ -613,5 +621,38 @@ int mlx5dr_send_queue_action(struct mlx5dr_context *ctx,
  * @return zero on success non zero otherwise.
  */
 int mlx5dr_debug_dump(struct mlx5dr_context *ctx, FILE *f);
+
+/* Check if mlx5dr action template contain srv6 push or pop actions.
+ *
+ * @param[in] at
+ *	The action template going to be parsed.
+ * @return true if containing srv6 push/pop action, false otherwise.
+ */
+bool
+mlx5dr_action_template_contain_srv6(struct mlx5dr_action_template *at);
+
+/* Create multiple direct actions combination action.
+ *
+ * @param[in] ctx
+ *	The context in which the new action will be created.
+ * @param[in] type
+ *	Type of direct rule action.
+ * @param[in] data_sz
+ *	Size in bytes of data.
+ * @param[in] inline_data
+ *	Header data array in case of inline action.
+ * @param[in] log_bulk_size
+ *	Number of unique values used with this pattern.
+ * @param[in] flags
+ *	Action creation flags. (enum mlx5dr_action_flags)
+ * @return pointer to mlx5dr_action on success NULL otherwise.
+ */
+struct mlx5dr_action *
+mlx5dr_action_create_recombination(struct mlx5dr_context *ctx,
+				   enum mlx5dr_action_type type,
+				   size_t data_sz,
+				   void *inline_data,
+				   uint32_t log_bulk_size,
+				   uint32_t flags);
 
 #endif

@@ -19,6 +19,7 @@ static const uint32_t action_order_arr[MLX5DR_TABLE_TYPE_MAX][MLX5DR_ACTION_TYP_
 	[MLX5DR_TABLE_TYPE_NIC_RX] = {
 		BIT(MLX5DR_ACTION_TYP_TAG),
 		BIT(MLX5DR_ACTION_TYP_TNL_L2_TO_L2) |
+		BIT(MLX5DR_ACTION_TYP_IPV6_ROUTING_POP) |
 		BIT(MLX5DR_ACTION_TYP_TNL_L3_TO_L2),
 		BIT(MLX5DR_ACTION_TYP_POP_VLAN),
 		BIT(MLX5DR_ACTION_TYP_POP_VLAN),
@@ -29,6 +30,7 @@ static const uint32_t action_order_arr[MLX5DR_TABLE_TYPE_MAX][MLX5DR_ACTION_TYP_
 		BIT(MLX5DR_ACTION_TYP_PUSH_VLAN),
 		BIT(MLX5DR_ACTION_TYP_MODIFY_HDR),
 		BIT(MLX5DR_ACTION_TYP_L2_TO_TNL_L2) |
+		BIT(MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH) |
 		BIT(MLX5DR_ACTION_TYP_L2_TO_TNL_L3),
 		BIT(MLX5DR_ACTION_TYP_FT) |
 		BIT(MLX5DR_ACTION_TYP_MISS) |
@@ -46,6 +48,7 @@ static const uint32_t action_order_arr[MLX5DR_TABLE_TYPE_MAX][MLX5DR_ACTION_TYP_
 		BIT(MLX5DR_ACTION_TYP_PUSH_VLAN),
 		BIT(MLX5DR_ACTION_TYP_MODIFY_HDR),
 		BIT(MLX5DR_ACTION_TYP_L2_TO_TNL_L2) |
+		BIT(MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH) |
 		BIT(MLX5DR_ACTION_TYP_L2_TO_TNL_L3),
 		BIT(MLX5DR_ACTION_TYP_FT) |
 		BIT(MLX5DR_ACTION_TYP_MISS) |
@@ -54,6 +57,7 @@ static const uint32_t action_order_arr[MLX5DR_TABLE_TYPE_MAX][MLX5DR_ACTION_TYP_
 	},
 	[MLX5DR_TABLE_TYPE_FDB] = {
 		BIT(MLX5DR_ACTION_TYP_TNL_L2_TO_L2) |
+		BIT(MLX5DR_ACTION_TYP_IPV6_ROUTING_POP) |
 		BIT(MLX5DR_ACTION_TYP_TNL_L3_TO_L2),
 		BIT(MLX5DR_ACTION_TYP_POP_VLAN),
 		BIT(MLX5DR_ACTION_TYP_POP_VLAN),
@@ -64,6 +68,7 @@ static const uint32_t action_order_arr[MLX5DR_TABLE_TYPE_MAX][MLX5DR_ACTION_TYP_
 		BIT(MLX5DR_ACTION_TYP_PUSH_VLAN),
 		BIT(MLX5DR_ACTION_TYP_MODIFY_HDR),
 		BIT(MLX5DR_ACTION_TYP_L2_TO_TNL_L2) |
+		BIT(MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH) |
 		BIT(MLX5DR_ACTION_TYP_L2_TO_TNL_L3),
 		BIT(MLX5DR_ACTION_TYP_FT) |
 		BIT(MLX5DR_ACTION_TYP_MISS) |
@@ -225,6 +230,18 @@ static void mlx5dr_action_put_shared_stc(struct mlx5dr_action *action,
 
 	if (action->flags & MLX5DR_ACTION_FLAG_HWS_FDB)
 		mlx5dr_action_put_shared_stc_nic(ctx, stc_type, MLX5DR_TABLE_TYPE_FDB);
+}
+
+bool mlx5dr_action_template_contain_srv6(struct mlx5dr_action_template *at)
+{
+	int i = 0;
+
+	for (i = 0; i < at->num_actions; i++) {
+		if (at->action_type_arr[i] == MLX5DR_ACTION_TYP_IPV6_ROUTING_POP ||
+		    at->action_type_arr[i] == MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH)
+			return true;
+	}
+	return false;
 }
 
 static void mlx5dr_action_print_combo(enum mlx5dr_action_type *user_actions)
@@ -501,6 +518,7 @@ static void mlx5dr_action_fill_stc_attr(struct mlx5dr_action *action,
 		attr->dest_tir_num = obj->id;
 		break;
 	case MLX5DR_ACTION_TYP_TNL_L3_TO_L2:
+	case MLX5DR_ACTION_TYP_IPV6_ROUTING_POP:
 	case MLX5DR_ACTION_TYP_MODIFY_HDR:
 		attr->action_offset = MLX5DR_ACTION_OFFSET_DW6;
 		if (action->modify_header.num_of_actions == 1) {
@@ -529,10 +547,14 @@ static void mlx5dr_action_fill_stc_attr(struct mlx5dr_action *action,
 		attr->remove_header.end_anchor = MLX5_HEADER_ANCHOR_INNER_MAC;
 		break;
 	case MLX5DR_ACTION_TYP_L2_TO_TNL_L2:
+	case MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH:
 		attr->action_type = MLX5_IFC_STC_ACTION_TYPE_HEADER_INSERT;
 		attr->action_offset = MLX5DR_ACTION_OFFSET_DW6;
 		attr->insert_header.encap = 1;
-		attr->insert_header.insert_anchor = MLX5_HEADER_ANCHOR_PACKET_START;
+		if (action->type == MLX5DR_ACTION_TYP_L2_TO_TNL_L2)
+			attr->insert_header.insert_anchor = MLX5_HEADER_ANCHOR_PACKET_START;
+		else
+			attr->insert_header.insert_anchor = MLX5_HEADER_ANCHOR_TCP_UDP;
 		attr->insert_header.arg_id = action->reformat.arg_obj->id;
 		attr->insert_header.header_size = action->reformat.header_size;
 		break;
@@ -1453,6 +1475,90 @@ free_mh_obj:
 }
 
 static int
+mlx5dr_action_handle_ipv6_routing_pop(struct mlx5dr_context *ctx,
+				      struct mlx5dr_action *action)
+{
+	uint8_t mh_data[MLX5DR_ACTION_REFORMAT_DATA_SIZE] = {0};
+	void *dev = flow_hw_get_dev_from_ctx(ctx);
+	int mh_data_size, ret;
+	uint8_t *srv6_data;
+	uint8_t anchor_id;
+
+	if (dev == NULL) {
+		DR_LOG(ERR, "Invalid dev handle for IPv6 routing pop\n");
+		return -1;
+	}
+	ret = flow_dv_ipv6_routing_pop_mhdr_cmd(dev, mh_data, &anchor_id);
+	if (ret < 0) {
+		DR_LOG(ERR, "Failed to generate modify-header pattern for IPv6 routing pop\n");
+		return -1;
+	}
+	srv6_data = mh_data + MLX5DR_MODIFY_ACTION_SIZE * ret;
+	/* Remove SRv6 headers */
+	MLX5_SET(stc_ste_param_remove, srv6_data, action_type,
+		 MLX5_MODIFICATION_TYPE_REMOVE);
+	MLX5_SET(stc_ste_param_remove, srv6_data, decap, 0x1);
+	MLX5_SET(stc_ste_param_remove, srv6_data, remove_start_anchor, anchor_id);
+	MLX5_SET(stc_ste_param_remove, srv6_data, remove_end_anchor,
+		 MLX5_HEADER_ANCHOR_TCP_UDP);
+	mh_data_size = (ret + 1) * MLX5DR_MODIFY_ACTION_SIZE;
+
+	ret = mlx5dr_pat_arg_create_modify_header(ctx, action, mh_data_size,
+						  (__be64 *)mh_data, 0);
+	if (ret) {
+		DR_LOG(ERR, "Failed allocating modify-header for IPv6 routing pop\n");
+		return ret;
+	}
+
+	ret = mlx5dr_action_create_stcs(action, NULL);
+	if (ret)
+		goto free_mh_obj;
+
+	ret = mlx5dr_arg_write_inline_arg_data(ctx,
+					       action->modify_header.arg_obj->id,
+					       mh_data, mh_data_size);
+	if (ret) {
+		DR_LOG(ERR, "Failed writing INLINE arg IPv6 routing pop");
+		goto clean_stc;
+	}
+
+	return 0;
+
+clean_stc:
+	mlx5dr_action_destroy_stcs(action);
+free_mh_obj:
+	mlx5dr_pat_arg_destroy_modify_header(ctx, action);
+	return ret;
+}
+
+static int mlx5dr_action_handle_ipv6_routing_push(struct mlx5dr_context *ctx,
+						  size_t data_sz,
+						  void *data,
+						  uint32_t bulk_size,
+						  struct mlx5dr_action *action)
+{
+	int ret;
+
+	ret = mlx5dr_action_handle_reformat_args(ctx, data_sz, data, bulk_size, action);
+	if (ret) {
+		DR_LOG(ERR, "Failed to create args for ipv6 routing push");
+		return ret;
+	}
+
+	ret = mlx5dr_action_create_stcs(action, NULL);
+	if (ret) {
+		DR_LOG(ERR, "Failed to create stc for ipv6 routing push");
+		goto free_arg;
+	}
+
+	return 0;
+
+free_arg:
+	mlx5dr_cmd_destroy_obj(action->reformat.arg_obj);
+	return ret;
+}
+
+static int
 mlx5dr_action_create_reformat_hws(struct mlx5dr_context *ctx,
 				  size_t data_sz,
 				  void *data,
@@ -1482,6 +1588,78 @@ mlx5dr_action_create_reformat_hws(struct mlx5dr_context *ctx,
 	}
 
 	return ret;
+}
+
+static int
+mlx5dr_action_create_push_pop_hws(struct mlx5dr_context *ctx,
+				  size_t data_sz,
+				  void *data,
+				  uint32_t bulk_size,
+				  struct mlx5dr_action *action)
+{
+	int ret;
+
+	switch (action->type) {
+	case MLX5DR_ACTION_TYP_IPV6_ROUTING_POP:
+		ret = mlx5dr_action_handle_ipv6_routing_pop(ctx, action);
+		break;
+
+	case MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH:
+		*((uint8_t *)data) = 0;
+		ret = mlx5dr_action_handle_ipv6_routing_push(ctx, data_sz, data,
+							     bulk_size, action);
+		break;
+
+	default:
+		assert(false);
+		rte_errno = ENOTSUP;
+		return rte_errno;
+	}
+
+	return ret;
+}
+
+static struct mlx5dr_action *
+mlx5dr_action_create_push_pop(struct mlx5dr_context *ctx,
+			      enum mlx5dr_action_type action_type,
+			      size_t data_sz,
+			      void *inline_data,
+			      uint32_t log_bulk_size,
+			      uint32_t flags)
+{
+	struct mlx5dr_action *action;
+	int ret;
+
+	action = mlx5dr_action_create_generic(ctx, flags, action_type);
+	if (!action)
+		return NULL;
+
+	if (mlx5dr_action_is_root_flags(flags)) {
+		DR_LOG(ERR, "IPv6 routing push/pop is not supported over root");
+		rte_errno = ENOTSUP;
+		goto free_action;
+	}
+
+	if (!mlx5dr_action_is_hws_flags(flags) ||
+	    ((flags & MLX5DR_ACTION_FLAG_SHARED) && log_bulk_size)) {
+		DR_LOG(ERR, "Push/pop flags don't fit HWS (flags: %x)\n", flags);
+		rte_errno = EINVAL;
+		goto free_action;
+	}
+
+	ret = mlx5dr_action_create_push_pop_hws(ctx, data_sz, inline_data,
+						log_bulk_size, action);
+	if (ret) {
+		DR_LOG(ERR, "Failed to create push/pop HWS.\n");
+		rte_errno = EINVAL;
+		goto free_action;
+	}
+
+	return action;
+
+free_action:
+	simple_free(action);
+	return NULL;
 }
 
 struct mlx5dr_action *
@@ -1529,6 +1707,169 @@ mlx5dr_action_create_reformat(struct mlx5dr_context *ctx,
 	ret = mlx5dr_action_create_reformat_hws(ctx, data_sz, inline_data, log_bulk_size, action);
 	if (ret) {
 		DR_LOG(ERR, "Failed to create reformat.\n");
+		rte_errno = EINVAL;
+		goto free_action;
+	}
+
+	return action;
+
+free_action:
+	simple_free(action);
+	return NULL;
+}
+
+static int
+mlx5dr_action_create_recom_hws(struct mlx5dr_context *ctx,
+			       size_t data_sz,
+			       void *data,
+			       uint32_t bulk_size,
+			       struct mlx5dr_action *action)
+{
+	struct mlx5_modification_cmd cmd[MLX5_MHDR_MAX_CMD];
+	void *eth_dev = flow_hw_get_dev_from_ctx(ctx);
+	struct mlx5dr_action *sub_action;
+	int ret;
+
+	if (eth_dev == NULL) {
+		DR_LOG(ERR, "Invalid dev handle for recombination action");
+		rte_errno = EINVAL;
+		return rte_errno;
+	}
+	memset(cmd, 0, sizeof(cmd));
+	switch (action->type) {
+	case MLX5DR_ACTION_TYP_IPV6_ROUTING_POP:
+		ret = flow_dv_generate_ipv6_routing_pop_mhdr1(eth_dev, NULL,
+							      cmd, MLX5_MHDR_MAX_CMD);
+		if (ret < 0) {
+			DR_LOG(ERR, "Failed to generate IPv6 routing pop action1 pattern");
+			rte_errno = EINVAL;
+			return rte_errno;
+		}
+		sub_action = mlx5dr_action_create_modify_header(ctx,
+				sizeof(struct mlx5_modification_cmd) * ret,
+				(__be64 *)cmd, 0, action->flags);
+		if (!sub_action) {
+			DR_LOG(ERR, "Failed to create IPv6 routing pop action1");
+			rte_errno = EINVAL;
+			return rte_errno;
+		}
+		action->recom.action1 = sub_action;
+		memset(cmd, 0, sizeof(struct mlx5_modification_cmd) * MLX5_MHDR_MAX_CMD);
+		ret = flow_dv_generate_ipv6_routing_pop_mhdr2(eth_dev, NULL,
+							      cmd, MLX5_MHDR_MAX_CMD);
+		if (ret < 0) {
+			DR_LOG(ERR, "Failed to generate IPv6 routing pop action2 pattern");
+			goto err;
+		}
+		sub_action = mlx5dr_action_create_modify_header(ctx,
+				sizeof(struct mlx5_modification_cmd) * ret,
+				(__be64 *)cmd, 0, action->flags);
+		if (!sub_action) {
+			DR_LOG(ERR, "Failed to create IPv6 routing pop action2");
+			goto err;
+		}
+		action->recom.action2 = sub_action;
+		sub_action = mlx5dr_action_create_push_pop(ctx,
+				MLX5DR_ACTION_TYP_IPV6_ROUTING_POP,
+				data_sz, data, bulk_size, action->flags);
+		if (!sub_action) {
+			DR_LOG(ERR, "Failed to create IPv6 routing pop action3");
+			goto err;
+		}
+		action->recom.action3 = sub_action;
+		break;
+	case MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH:
+		ret = flow_dv_generate_ipv6_routing_push_mhdr1(eth_dev, NULL,
+							       cmd, MLX5_MHDR_MAX_CMD);
+		if (ret < 0) {
+			DR_LOG(ERR, "Failed to generate IPv6 routing push action2 pattern");
+			rte_errno = EINVAL;
+			return rte_errno;
+		}
+		sub_action = mlx5dr_action_create_modify_header(ctx,
+				sizeof(struct mlx5_modification_cmd) * ret,
+				(__be64 *)cmd, 0, action->flags | MLX5DR_ACTION_FLAG_SHARED);
+		if (!sub_action) {
+			DR_LOG(ERR, "Failed to create IPv6 routing push action2");
+			rte_errno = EINVAL;
+			return rte_errno;
+		}
+		action->recom.action2 = sub_action;
+		memset(cmd, 0, sizeof(struct mlx5_modification_cmd) * MLX5_MHDR_MAX_CMD);
+		ret = flow_dv_generate_ipv6_routing_push_mhdr2(eth_dev, NULL, cmd,
+							       MLX5_MHDR_MAX_CMD, data);
+		if (ret < 0) {
+			DR_LOG(ERR, "Failed to generate IPv6 routing push action3 pattern");
+			goto err;
+		}
+		sub_action = mlx5dr_action_create_modify_header(ctx,
+				sizeof(struct mlx5_modification_cmd) * ret,
+				(__be64 *)cmd, bulk_size, action->flags);
+		if (!sub_action) {
+			DR_LOG(ERR, "Failed to create IPv6 routing push action3");
+			goto err;
+		}
+		action->recom.action3 = sub_action;
+		sub_action = mlx5dr_action_create_push_pop(ctx,
+				MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH,
+				data_sz, data, bulk_size, action->flags);
+		if (!sub_action) {
+			DR_LOG(ERR, "Failed to create IPv6 routing push action1");
+			goto err;
+		}
+		action->recom.action1 = sub_action;
+		break;
+	default:
+		assert(false);
+		rte_errno = ENOTSUP;
+		return rte_errno;
+	}
+
+	return 0;
+
+err:
+	if (action->recom.action1)
+		mlx5dr_action_destroy(action->recom.action1);
+	if (action->recom.action2)
+		mlx5dr_action_destroy(action->recom.action2);
+	if (action->recom.action3)
+		mlx5dr_action_destroy(action->recom.action3);
+	rte_errno = EINVAL;
+	return rte_errno;
+}
+
+struct mlx5dr_action *
+mlx5dr_action_create_recombination(struct mlx5dr_context *ctx,
+				   enum mlx5dr_action_type action_type,
+				   size_t data_sz,
+				   void *inline_data,
+				   uint32_t log_bulk_size,
+				   uint32_t flags)
+{
+	struct mlx5dr_action *action;
+	int ret;
+
+	action = mlx5dr_action_create_generic(ctx, flags, action_type);
+	if (!action)
+		return NULL;
+
+	if (!mlx5dr_action_is_hws_flags(flags) ||
+	    ((flags & MLX5DR_ACTION_FLAG_SHARED) && log_bulk_size)) {
+		DR_LOG(ERR, "Recom flags don't fit HWS (flags: %x)\n", flags);
+		rte_errno = EINVAL;
+		goto free_action;
+	}
+
+	if (action_type == MLX5DR_ACTION_TYP_IPV6_ROUTING_POP && log_bulk_size) {
+		DR_LOG(ERR, "IPv6 POP must be shared");
+		rte_errno = EINVAL;
+		goto free_action;
+	}
+
+	ret = mlx5dr_action_create_recom_hws(ctx, data_sz, inline_data,
+					     log_bulk_size, action);
+	if (ret) {
+		DR_LOG(ERR, "Failed to create recombination.\n");
 		rte_errno = EINVAL;
 		goto free_action;
 	}
@@ -1676,6 +2017,43 @@ static void mlx5dr_action_destroy_hws(struct mlx5dr_action *action)
 	case MLX5DR_ACTION_TYP_L2_TO_TNL_L2:
 		mlx5dr_action_destroy_stcs(action);
 		mlx5dr_cmd_destroy_obj(action->reformat.arg_obj);
+		break;
+	case MLX5DR_ACTION_TYP_IPV6_ROUTING_POP:
+		if (action->recom.action1) {
+			mlx5dr_action_destroy_stcs(action->recom.action1);
+			mlx5dr_pat_arg_destroy_modify_header(action->recom.action1->ctx,
+							     action->recom.action1);
+			simple_free(action->recom.action1);
+		}
+		if (action->recom.action2) {
+			mlx5dr_action_destroy_stcs(action->recom.action2);
+			mlx5dr_pat_arg_destroy_modify_header(action->recom.action2->ctx,
+							     action->recom.action2);
+			simple_free(action->recom.action2);
+		}
+		if (action->recom.action3) {
+			mlx5dr_action_destroy_stcs(action->recom.action3);
+			mlx5dr_pat_arg_destroy_modify_header(action->recom.action3->ctx,
+							     action->recom.action3);
+			simple_free(action->recom.action3);
+		}
+		break;
+	case MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH:
+		if (action->recom.action1) {
+			mlx5dr_action_destroy_stcs(action->recom.action1);
+			mlx5dr_cmd_destroy_obj(action->recom.action1->reformat.arg_obj);
+			simple_free(action->recom.action1);
+		}
+		if (action->recom.action2) {
+			mlx5dr_action_destroy_stcs(action->recom.action2);
+			simple_free(action->recom.action2);
+		}
+		if (action->recom.action3) {
+			mlx5dr_action_destroy_stcs(action->recom.action3);
+			mlx5dr_pat_arg_destroy_modify_header(action->recom.action3->ctx,
+							     action->recom.action3);
+			simple_free(action->recom.action3);
+		}
 		break;
 	}
 }

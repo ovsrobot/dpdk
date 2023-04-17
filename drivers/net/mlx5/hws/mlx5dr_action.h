@@ -131,6 +131,11 @@ struct mlx5dr_action {
 					uint32_t header_size;
 				} reformat;
 				struct {
+					struct mlx5dr_action *action1;
+					struct mlx5dr_action *action2;
+					struct mlx5dr_action *action3;
+				} recom;
+				struct {
 					struct mlx5dr_devx_obj *devx_obj;
 					uint8_t return_reg_id;
 				} aso;
