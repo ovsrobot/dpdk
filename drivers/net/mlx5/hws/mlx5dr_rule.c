@@ -40,11 +40,35 @@ static void mlx5dr_rule_skip(struct mlx5dr_matcher *matcher,
 	}
 }
 
+static void mlxdr_rule_set_wqe_rtc_id(struct mlx5dr_send_ring_dep_wqe *wqe,
+				      struct mlx5dr_matcher *matcher,
+				      bool reparse, bool mirror)
+{
+	if (!mirror && !reparse) {
+		wqe->rtc_0 = matcher->match_ste.rtc_0_no_reparse->id;
+		wqe->retry_rtc_0 = matcher->col_matcher ?
+			matcher->col_matcher->match_ste.rtc_0_no_reparse->id : 0;
+	} else if (!mirror && reparse) {
+		wqe->rtc_0 = matcher->match_ste.rtc_0_reparse->id;
+		wqe->retry_rtc_0 = matcher->col_matcher ?
+			matcher->col_matcher->match_ste.rtc_0_reparse->id : 0;
+	} else if (mirror && reparse) {
+		wqe->rtc_1 = matcher->match_ste.rtc_1_reparse->id;
+		wqe->retry_rtc_1 = matcher->col_matcher ?
+			matcher->col_matcher->match_ste.rtc_1_reparse->id : 0;
+	} else if (mirror && !reparse) {
+		wqe->rtc_1 = matcher->match_ste.rtc_1_no_reparse->id;
+		wqe->retry_rtc_1 = matcher->col_matcher ?
+			matcher->col_matcher->match_ste.rtc_1_no_reparse->id : 0;
+	}
+}
+
 static void mlx5dr_rule_init_dep_wqe(struct mlx5dr_send_ring_dep_wqe *dep_wqe,
 				     struct mlx5dr_rule *rule,
 				     const struct rte_flow_item *items,
 				     struct mlx5dr_match_template *mt,
-				     void *user_data)
+				     void *user_data,
+				     bool reparse)
 {
 	struct mlx5dr_matcher *matcher = rule->matcher;
 	struct mlx5dr_table *tbl = matcher->tbl;
@@ -56,9 +80,7 @@ static void mlx5dr_rule_init_dep_wqe(struct mlx5dr_send_ring_dep_wqe *dep_wqe,
 	switch (tbl->type) {
 	case MLX5DR_TABLE_TYPE_NIC_RX:
 	case MLX5DR_TABLE_TYPE_NIC_TX:
-		dep_wqe->rtc_0 = matcher->match_ste.rtc_0->id;
-		dep_wqe->retry_rtc_0 = matcher->col_matcher ?
-				       matcher->col_matcher->match_ste.rtc_0->id : 0;
+		mlxdr_rule_set_wqe_rtc_id(dep_wqe, matcher, reparse, false);
 		dep_wqe->rtc_1 = 0;
 		dep_wqe->retry_rtc_1 = 0;
 		break;
@@ -67,18 +89,14 @@ static void mlx5dr_rule_init_dep_wqe(struct mlx5dr_send_ring_dep_wqe *dep_wqe,
 		mlx5dr_rule_skip(matcher, mt, items, &skip_rx, &skip_tx);
 
 		if (!skip_rx) {
-			dep_wqe->rtc_0 = matcher->match_ste.rtc_0->id;
-			dep_wqe->retry_rtc_0 = matcher->col_matcher ?
-					       matcher->col_matcher->match_ste.rtc_0->id : 0;
+			mlxdr_rule_set_wqe_rtc_id(dep_wqe, matcher, reparse, false);
 		} else {
 			dep_wqe->rtc_0 = 0;
 			dep_wqe->retry_rtc_0 = 0;
 		}
 
 		if (!skip_tx) {
-			dep_wqe->rtc_1 = matcher->match_ste.rtc_1->id;
-			dep_wqe->retry_rtc_1 = matcher->col_matcher ?
-					       matcher->col_matcher->match_ste.rtc_1->id : 0;
+			mlxdr_rule_set_wqe_rtc_id(dep_wqe, matcher, reparse, true);
 		} else {
 			dep_wqe->rtc_1 = 0;
 			dep_wqe->retry_rtc_1 = 0;
@@ -265,8 +283,9 @@ static int mlx5dr_rule_create_hws_fw_wqe(struct mlx5dr_rule *rule,
 	}
 
 	mlx5dr_rule_create_init(rule, &ste_attr, &apply);
-	mlx5dr_rule_init_dep_wqe(&match_wqe, rule, items, mt, attr->user_data);
-	mlx5dr_rule_init_dep_wqe(&range_wqe, rule, items, mt, attr->user_data);
+	/* FW WQE doesn't look on rtc reparse, use default REPARSE_ALWAYS. */
+	mlx5dr_rule_init_dep_wqe(&match_wqe, rule, items, mt, attr->user_data, true);
+	mlx5dr_rule_init_dep_wqe(&range_wqe, rule, items, mt, attr->user_data, true);
 
 	ste_attr.direct_index = 0;
 	ste_attr.rtc_0 = match_wqe.rtc_0;
@@ -348,6 +367,7 @@ static int mlx5dr_rule_create_hws(struct mlx5dr_rule *rule,
 	struct mlx5dr_actions_apply_data apply;
 	struct mlx5dr_send_engine *queue;
 	uint8_t total_stes, action_stes;
+	bool matcher_reparse;
 	int i, ret;
 
 	/* Insert rule using FW WQE if cannot use GTA WQE */
@@ -368,7 +388,9 @@ static int mlx5dr_rule_create_hws(struct mlx5dr_rule *rule,
 	 * dep_wqe buffers (ctrl, data) are also reused for all STE writes.
 	 */
 	dep_wqe = mlx5dr_send_add_new_dep_wqe(queue);
-	mlx5dr_rule_init_dep_wqe(dep_wqe, rule, items, mt, attr->user_data);
+	/* Jumbo matcher reparse is off. */
+	matcher_reparse = !is_jumbo && (at->setters[1].flags & ASF_REPARSE);
+	mlx5dr_rule_init_dep_wqe(dep_wqe, rule, items, mt, attr->user_data, matcher_reparse);
 
 	ste_attr.wqe_ctrl = &dep_wqe->wqe_ctrl;
 	ste_attr.wqe_data = &dep_wqe->wqe_data;
@@ -389,9 +411,6 @@ static int mlx5dr_rule_create_hws(struct mlx5dr_rule *rule,
 			mlx5dr_send_abort_new_dep_wqe(queue);
 			return ret;
 		}
-		/* Skip RX/TX based on the dep_wqe init */
-		ste_attr.rtc_0 = dep_wqe->rtc_0 ? matcher->action_ste.rtc_0->id : 0;
-		ste_attr.rtc_1 = dep_wqe->rtc_1 ? matcher->action_ste.rtc_1->id : 0;
 		/* Action STEs are written to a specific index last to first */
 		ste_attr.direct_index = rule->action_ste_idx + action_stes;
 		apply.next_direct_idx = ste_attr.direct_index;
@@ -400,7 +419,7 @@ static int mlx5dr_rule_create_hws(struct mlx5dr_rule *rule,
 	}
 
 	for (i = total_stes; i-- > 0;) {
-		mlx5dr_action_apply_setter(&apply, setter--, !i && is_jumbo);
+		mlx5dr_action_apply_setter(&apply, setter, !i && is_jumbo);
 
 		if (i == 0) {
 			/* Handle last match STE.
@@ -431,9 +450,21 @@ static int mlx5dr_rule_create_hws(struct mlx5dr_rule *rule,
 			ste_attr.direct_index = mlx5dr_matcher_is_insert_by_idx(matcher) ?
 						attr->rule_idx : 0;
 		} else {
+			if (setter->flags & ASF_REPARSE) {
+				ste_attr.rtc_0 = dep_wqe->rtc_0 ?
+					matcher->action_ste.rtc_0_reparse->id : 0;
+				ste_attr.rtc_1 = dep_wqe->rtc_1 ?
+					matcher->action_ste.rtc_1_reparse->id : 0;
+			} else {
+				ste_attr.rtc_0 = dep_wqe->rtc_0 ?
+					matcher->action_ste.rtc_0_no_reparse->id : 0;
+				ste_attr.rtc_1 = dep_wqe->rtc_1 ?
+					matcher->action_ste.rtc_1_no_reparse->id : 0;
+			}
 			apply.next_direct_idx = --ste_attr.direct_index;
 		}
 
+		setter--;
 		mlx5dr_send_ste(queue, &ste_attr);
 	}
 

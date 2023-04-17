@@ -43,8 +43,10 @@ struct mlx5dr_match_template {
 
 struct mlx5dr_matcher_match_ste {
 	struct mlx5dr_pool_chunk ste;
-	struct mlx5dr_devx_obj *rtc_0;
-	struct mlx5dr_devx_obj *rtc_1;
+	struct mlx5dr_devx_obj *rtc_0_reparse;
+	struct mlx5dr_devx_obj *rtc_1_reparse;
+	struct mlx5dr_devx_obj *rtc_0_no_reparse;
+	struct mlx5dr_devx_obj *rtc_1_no_reparse;
 	struct mlx5dr_pool *pool;
 	/* Currently not support FDB aliased */
 	struct mlx5dr_devx_obj *aliased_rtc_0;
@@ -53,8 +55,10 @@ struct mlx5dr_matcher_match_ste {
 struct mlx5dr_matcher_action_ste {
 	struct mlx5dr_pool_chunk ste;
 	struct mlx5dr_pool_chunk stc;
-	struct mlx5dr_devx_obj *rtc_0;
-	struct mlx5dr_devx_obj *rtc_1;
+	struct mlx5dr_devx_obj *rtc_0_reparse;
+	struct mlx5dr_devx_obj *rtc_1_reparse;
+	struct mlx5dr_devx_obj *rtc_0_no_reparse;
+	struct mlx5dr_devx_obj *rtc_1_no_reparse;
 	struct mlx5dr_pool *pool;
 	uint8_t max_stes;
 };

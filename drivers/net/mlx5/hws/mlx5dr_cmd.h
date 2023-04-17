@@ -51,6 +51,7 @@ struct mlx5dr_cmd_rtc_create_attr {
 	uint8_t match_definer_1;
 	bool is_frst_jumbo;
 	bool is_scnd_range;
+	uint8_t is_reparse;
 };
 
 struct mlx5dr_cmd_alias_obj_create_attr {

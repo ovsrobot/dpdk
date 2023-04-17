@@ -283,7 +283,10 @@ mlx5dr_cmd_rtc_create(struct ibv_context *ctx,
 	MLX5_SET(rtc, attr, ste_table_base_id, rtc_attr->ste_base);
 	MLX5_SET(rtc, attr, ste_table_offset, rtc_attr->ste_offset);
 	MLX5_SET(rtc, attr, miss_flow_table_id, rtc_attr->miss_ft_id);
-	MLX5_SET(rtc, attr, reparse_mode, MLX5_IFC_RTC_REPARSE_ALWAYS);
+	if (rtc_attr->is_reparse)
+		MLX5_SET(rtc, attr, reparse_mode, MLX5_IFC_RTC_REPARSE_ALWAYS);
+	else
+		MLX5_SET(rtc, attr, reparse_mode, MLX5_IFC_RTC_REPARSE_NEVER);
 
 	devx_obj->obj = mlx5_glue->devx_obj_create(ctx, in, sizeof(in), out, sizeof(out));
 	if (!devx_obj->obj) {

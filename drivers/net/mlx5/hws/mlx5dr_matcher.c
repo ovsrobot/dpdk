@@ -101,7 +101,7 @@ static int mlx5dr_matcher_shared_create_alias_rtc(struct mlx5dr_matcher *matcher
 						ctx->ibv_ctx,
 						ctx->local_ibv_ctx,
 						ctx->caps->shared_vhca_id,
-						matcher->match_ste.rtc_0->id,
+						matcher->match_ste.rtc_0_reparse->id,
 						MLX5_GENERAL_OBJ_TYPE_RTC,
 						&matcher->match_ste.aliased_rtc_0);
 	if (ret) {
@@ -156,7 +156,7 @@ static uint32_t
 mlx5dr_matcher_connect_get_rtc0(struct mlx5dr_matcher *matcher)
 {
 	if (!matcher->match_ste.aliased_rtc_0)
-		return matcher->match_ste.rtc_0->id;
+		return matcher->match_ste.rtc_0_reparse->id;
 	else
 		return matcher->match_ste.aliased_rtc_0->id;
 }
@@ -233,10 +233,10 @@ connect:
 
 	/* Connect to next */
 	if (next) {
-		if (next->match_ste.rtc_0)
-			ft_attr.rtc_id_0 = next->match_ste.rtc_0->id;
-		if (next->match_ste.rtc_1)
-			ft_attr.rtc_id_1 = next->match_ste.rtc_1->id;
+		if (next->match_ste.rtc_0_reparse)
+			ft_attr.rtc_id_0 = next->match_ste.rtc_0_reparse->id;
+		if (next->match_ste.rtc_1_reparse)
+			ft_attr.rtc_id_1 = next->match_ste.rtc_1_reparse->id;
 
 		ret = mlx5dr_cmd_flow_table_modify(matcher->end_ft, &ft_attr);
 		if (ret) {
@@ -248,10 +248,10 @@ connect:
 	/* Connect to previous */
 	ft = prev ? prev->end_ft : tbl->ft;
 
-	if (matcher->match_ste.rtc_0)
-		ft_attr.rtc_id_0 = matcher->match_ste.rtc_0->id;
-	if (matcher->match_ste.rtc_1)
-		ft_attr.rtc_id_1 = matcher->match_ste.rtc_1->id;
+	if (matcher->match_ste.rtc_0_reparse)
+		ft_attr.rtc_id_0 = matcher->match_ste.rtc_0_reparse->id;
+	if (matcher->match_ste.rtc_1_reparse)
+		ft_attr.rtc_id_1 = matcher->match_ste.rtc_1_reparse->id;
 
 	ret = mlx5dr_cmd_flow_table_modify(ft, &ft_attr);
 	if (ret) {
@@ -296,10 +296,10 @@ static int mlx5dr_matcher_disconnect(struct mlx5dr_matcher *matcher)
 
 	if (next) {
 		/* Connect previous end FT to next RTC if exists */
-		if (next->match_ste.rtc_0)
-			ft_attr.rtc_id_0 = next->match_ste.rtc_0->id;
-		if (next->match_ste.rtc_1)
-			ft_attr.rtc_id_1 = next->match_ste.rtc_1->id;
+		if (next->match_ste.rtc_0_reparse)
+			ft_attr.rtc_id_0 = next->match_ste.rtc_0_reparse->id;
+		if (next->match_ste.rtc_1_reparse)
+			ft_attr.rtc_id_1 = next->match_ste.rtc_1_reparse->id;
 	} else {
 		/* Matcher is last, point prev end FT to default miss */
 		mlx5dr_cmd_set_attr_connect_miss_tbl(tbl->ctx,
@@ -470,10 +470,11 @@ static int mlx5dr_matcher_create_rtc(struct mlx5dr_matcher *matcher,
 	struct mlx5dr_pool_chunk *ste;
 	int ret;
 
+	rtc_attr.is_reparse = true;
 	switch (rtc_type) {
 	case DR_MATCHER_RTC_TYPE_MATCH:
-		rtc_0 = &matcher->match_ste.rtc_0;
-		rtc_1 = &matcher->match_ste.rtc_1;
+		rtc_0 = &matcher->match_ste.rtc_0_reparse;
+		rtc_1 = &matcher->match_ste.rtc_1_reparse;
 		ste_pool = matcher->match_ste.pool;
 		ste = &matcher->match_ste.ste;
 		ste->order = attr->table.sz_col_log + attr->table.sz_row_log;
@@ -537,8 +538,8 @@ static int mlx5dr_matcher_create_rtc(struct mlx5dr_matcher *matcher,
 		break;
 
 	case DR_MATCHER_RTC_TYPE_STE_ARRAY:
-		rtc_0 = &matcher->action_ste.rtc_0;
-		rtc_1 = &matcher->action_ste.rtc_1;
+		rtc_0 = &matcher->action_ste.rtc_0_reparse;
+		rtc_1 = &matcher->action_ste.rtc_1_reparse;
 		ste_pool = matcher->action_ste.pool;
 		ste = &matcher->action_ste.ste;
 		ste->order = rte_log2_u32(matcher->action_ste.max_stes) +
@@ -558,6 +559,7 @@ static int mlx5dr_matcher_create_rtc(struct mlx5dr_matcher *matcher,
 		return rte_errno;
 	}
 
+rertc:
 	devx_obj = mlx5dr_pool_chunk_get_base_devx_obj(ste_pool, ste);
 
 	rtc_attr.pd = ctx->pd_num;
@@ -574,8 +576,8 @@ static int mlx5dr_matcher_create_rtc(struct mlx5dr_matcher *matcher,
 
 	*rtc_0 = mlx5dr_cmd_rtc_create(ctx->ibv_ctx, &rtc_attr);
 	if (!*rtc_0) {
-		DR_LOG(ERR, "Failed to create matcher RTC of type %s",
-		       mlx5dr_matcher_rtc_type_to_str(rtc_type));
+		DR_LOG(ERR, "Failed to create matcher RTC of type %s, reparse %u",
+		       mlx5dr_matcher_rtc_type_to_str(rtc_type), rtc_attr.is_reparse);
 		goto free_ste;
 	}
 
@@ -590,10 +592,23 @@ static int mlx5dr_matcher_create_rtc(struct mlx5dr_matcher *matcher,
 
 		*rtc_1 = mlx5dr_cmd_rtc_create(ctx->ibv_ctx, &rtc_attr);
 		if (!*rtc_1) {
-			DR_LOG(ERR, "Failed to create peer matcher RTC of type %s",
-			       mlx5dr_matcher_rtc_type_to_str(rtc_type));
+			DR_LOG(ERR, "Failed to create peer matcher RTC of type %s, reparse %u",
+			       mlx5dr_matcher_rtc_type_to_str(rtc_type), rtc_attr.is_reparse);
 			goto destroy_rtc_0;
 		}
+	}
+
+	/* RTC is created in reparse then no_reparse order and fw wqe. */
+	if (rtc_attr.is_reparse && !mlx5dr_matcher_req_fw_wqe(matcher)) {
+		rtc_attr.is_reparse = false;
+		if (rtc_type == DR_MATCHER_RTC_TYPE_MATCH) {
+			rtc_0 = &matcher->match_ste.rtc_0_no_reparse;
+			rtc_1 = &matcher->match_ste.rtc_1_no_reparse;
+		} else {
+			rtc_0 = &matcher->action_ste.rtc_0_no_reparse;
+			rtc_1 = &matcher->action_ste.rtc_1_no_reparse;
+		}
+		goto rertc;
 	}
 
 	return 0;
@@ -609,21 +624,25 @@ free_ste:
 static void mlx5dr_matcher_destroy_rtc(struct mlx5dr_matcher *matcher,
 				       enum mlx5dr_matcher_rtc_type rtc_type)
 {
+	struct mlx5dr_devx_obj *rtc_0, *rtc_1, *rtc_2, *rtc_3;
 	struct mlx5dr_table *tbl = matcher->tbl;
-	struct mlx5dr_devx_obj *rtc_0, *rtc_1;
 	struct mlx5dr_pool_chunk *ste;
 	struct mlx5dr_pool *ste_pool;
 
 	switch (rtc_type) {
 	case DR_MATCHER_RTC_TYPE_MATCH:
-		rtc_0 = matcher->match_ste.rtc_0;
-		rtc_1 = matcher->match_ste.rtc_1;
+		rtc_0 = matcher->match_ste.rtc_0_reparse;
+		rtc_1 = matcher->match_ste.rtc_1_reparse;
+		rtc_2 = matcher->match_ste.rtc_0_no_reparse;
+		rtc_3 = matcher->match_ste.rtc_1_no_reparse;
 		ste_pool = matcher->match_ste.pool;
 		ste = &matcher->match_ste.ste;
 		break;
 	case DR_MATCHER_RTC_TYPE_STE_ARRAY:
-		rtc_0 = matcher->action_ste.rtc_0;
-		rtc_1 = matcher->action_ste.rtc_1;
+		rtc_0 = matcher->action_ste.rtc_0_reparse;
+		rtc_1 = matcher->action_ste.rtc_1_reparse;
+		rtc_2 = matcher->action_ste.rtc_0_no_reparse;
+		rtc_3 = matcher->action_ste.rtc_1_no_reparse;
 		ste_pool = matcher->action_ste.pool;
 		ste = &matcher->action_ste.ste;
 		break;
@@ -631,10 +650,15 @@ static void mlx5dr_matcher_destroy_rtc(struct mlx5dr_matcher *matcher,
 		return;
 	}
 
-	if (tbl->type == MLX5DR_TABLE_TYPE_FDB)
+	if (tbl->type == MLX5DR_TABLE_TYPE_FDB) {
 		mlx5dr_cmd_destroy_obj(rtc_1);
+		if (rtc_3)
+			mlx5dr_cmd_destroy_obj(rtc_3);
+	}
 
 	mlx5dr_cmd_destroy_obj(rtc_0);
+	if (rtc_2)
+		mlx5dr_cmd_destroy_obj(rtc_2);
 	if (rtc_type == DR_MATCHER_RTC_TYPE_MATCH)
 		mlx5dr_pool_chunk_free(ste_pool, ste);
 }
