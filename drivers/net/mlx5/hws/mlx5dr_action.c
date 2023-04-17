@@ -2319,6 +2319,57 @@ mlx5dr_action_setter_modify_header(struct mlx5dr_actions_apply_data *apply,
 }
 
 static void
+mlx5dr_action_setter_ipv6_routing_pop1(struct mlx5dr_actions_apply_data *apply,
+				       struct mlx5dr_actions_wqe_setter *setter)
+{
+	struct mlx5dr_rule_action *rule_action;
+	struct mlx5dr_action *action;
+
+	rule_action = &apply->rule_action[setter->idx_double];
+	action = rule_action->action;
+	MLX5_ASSERT(action->type == MLX5DR_ACTION_TYP_IPV6_ROUTING_POP);
+	rule_action->action = action->recom.action1;
+	MLX5_ASSERT(rule_action->action->flags & MLX5DR_ACTION_FLAG_SHARED);
+	MLX5_ASSERT(rule_action->action->type == MLX5DR_ACTION_TYP_MODIFY_HDR);
+	mlx5dr_action_setter_modify_header(apply, setter);
+	rule_action->action = action;
+}
+
+static void
+mlx5dr_action_setter_ipv6_routing_pop2(struct mlx5dr_actions_apply_data *apply,
+				       struct mlx5dr_actions_wqe_setter *setter)
+{
+	struct mlx5dr_rule_action *rule_action;
+	struct mlx5dr_action *action;
+
+	rule_action = &apply->rule_action[setter->idx_double];
+	action = rule_action->action;
+	MLX5_ASSERT(action->type == MLX5DR_ACTION_TYP_IPV6_ROUTING_POP);
+	rule_action->action = action->recom.action2;
+	MLX5_ASSERT(rule_action->action->flags & MLX5DR_ACTION_FLAG_SHARED);
+	MLX5_ASSERT(rule_action->action->type == MLX5DR_ACTION_TYP_MODIFY_HDR);
+	mlx5dr_action_setter_modify_header(apply, setter);
+	rule_action->action = action;
+}
+
+static void
+mlx5dr_action_setter_ipv6_routing_pop3(struct mlx5dr_actions_apply_data *apply,
+				       struct mlx5dr_actions_wqe_setter *setter)
+{
+	struct mlx5dr_rule_action *rule_action;
+	struct mlx5dr_action *action;
+
+	rule_action = &apply->rule_action[setter->idx_double];
+	action = rule_action->action;
+	MLX5_ASSERT(action->type == MLX5DR_ACTION_TYP_IPV6_ROUTING_POP);
+	rule_action->action = action->recom.action3;
+	MLX5_ASSERT(rule_action->action->flags & MLX5DR_ACTION_FLAG_SHARED);
+	MLX5_ASSERT(rule_action->action->type == MLX5DR_ACTION_TYP_IPV6_ROUTING_POP);
+	mlx5dr_action_setter_modify_header(apply, setter);
+	rule_action->action = action;
+}
+
+static void
 mlx5dr_action_setter_insert_ptr(struct mlx5dr_actions_apply_data *apply,
 				struct mlx5dr_actions_wqe_setter *setter)
 {
@@ -2344,6 +2395,60 @@ mlx5dr_action_setter_insert_ptr(struct mlx5dr_actions_apply_data *apply,
 				 rule_action->reformat.data,
 				 rule_action->action->reformat.header_size);
 	}
+}
+
+static void
+mlx5dr_action_setter_ipv6_routing_push1(struct mlx5dr_actions_apply_data *apply,
+					struct mlx5dr_actions_wqe_setter *setter)
+{
+	struct mlx5dr_rule_action *rule_action;
+	struct mlx5dr_rule_action tmp;
+
+	rule_action = &apply->rule_action[setter->idx_double];
+	tmp = *rule_action;
+	MLX5_ASSERT(rule_action->action->type == MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH);
+	rule_action->action = tmp.action->recom.action1;
+	MLX5_ASSERT(rule_action->action->type == MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH);
+	rule_action->reformat.offset = tmp.recom.offset;
+	rule_action->reformat.data = tmp.recom.data;
+	mlx5dr_action_setter_insert_ptr(apply, setter);
+	*rule_action = tmp;
+}
+
+static void
+mlx5dr_action_setter_ipv6_routing_push2(struct mlx5dr_actions_apply_data *apply,
+					struct mlx5dr_actions_wqe_setter *setter)
+{
+	struct mlx5dr_rule_action *rule_action;
+	struct mlx5dr_action *action;
+
+	rule_action = &apply->rule_action[setter->idx_double];
+	action = rule_action->action;
+	MLX5_ASSERT(action->type == MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH);
+	rule_action->action = action->recom.action2;
+	MLX5_ASSERT(rule_action->action->flags & MLX5DR_ACTION_FLAG_SHARED);
+	MLX5_ASSERT(rule_action->action->type == MLX5DR_ACTION_TYP_MODIFY_HDR);
+	mlx5dr_action_setter_modify_header(apply, setter);
+	rule_action->action = action;
+}
+
+static void
+mlx5dr_action_setter_ipv6_routing_push3(struct mlx5dr_actions_apply_data *apply,
+					struct mlx5dr_actions_wqe_setter *setter)
+{
+	struct mlx5dr_rule_action *rule_action;
+	struct mlx5dr_rule_action tmp;
+
+	rule_action = &apply->rule_action[setter->idx_double];
+	tmp = *rule_action;
+	MLX5_ASSERT(rule_action->action->type == MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH);
+	rule_action->action = tmp.action->recom.action3;
+	MLX5_ASSERT(rule_action->action->type == MLX5DR_ACTION_TYP_MODIFY_HDR);
+	rule_action->modify_header.offset = tmp.recom.offset;
+	rule_action->modify_header.data = tmp.recom.mhdr;
+	MLX5_ASSERT(rule_action->action->modify_header.num_of_actions > 1);
+	mlx5dr_action_setter_modify_header(apply, setter);
+	*rule_action = tmp;
 }
 
 static void
@@ -2550,6 +2655,45 @@ int mlx5dr_action_template_process(struct mlx5dr_action_template *at)
 			setter = mlx5dr_action_setter_find_first(last_setter, ASF_DOUBLE | ASF_REMOVE);
 			setter->flags |= ASF_DOUBLE | ASF_REPARSE | ASF_MODIFY;
 			setter->set_double = &mlx5dr_action_setter_push_vlan;
+			setter->idx_double = i;
+			break;
+
+		case MLX5DR_ACTION_TYP_IPV6_ROUTING_POP:
+			/* Double internal modify header list */
+			setter = mlx5dr_action_setter_find_first(last_setter,
+								 ASF_DOUBLE | ASF_REMOVE);
+			setter->flags |= ASF_DOUBLE | ASF_MODIFY | ASF_REPARSE;
+			setter->set_double = &mlx5dr_action_setter_ipv6_routing_pop1;
+			setter->idx_double = i;
+			setter++;
+			setter->flags |= ASF_DOUBLE | ASF_MODIFY | ASF_REPARSE;
+			setter->set_double = &mlx5dr_action_setter_ipv6_routing_pop2;
+			setter->idx_double = i;
+			setter++;
+			/* restore IPv6 protocol + pop via modify list. */
+			setter->flags |= ASF_DOUBLE | ASF_MODIFY | ASF_REPARSE;
+			setter->set_double = &mlx5dr_action_setter_ipv6_routing_pop3;
+			setter->idx_double = i;
+			break;
+
+		case MLX5DR_ACTION_TYP_IPV6_ROUTING_PUSH:
+			/* Double insert header with pointer */
+			setter = mlx5dr_action_setter_find_first(last_setter, ASF_DOUBLE);
+			/* Can't squeeze with reparsing setter */
+			if (setter->flags & ASF_REPARSE)
+				setter++;
+			setter->flags |= ASF_DOUBLE;
+			setter->set_double = &mlx5dr_action_setter_ipv6_routing_push1;
+			setter->idx_double = i;
+			setter++;
+			/* Set IPv6 protocol to 0x2b */
+			setter->flags |= ASF_DOUBLE | ASF_MODIFY | ASF_REPARSE;
+			setter->set_double = &mlx5dr_action_setter_ipv6_routing_push2;
+			setter->idx_double = i;
+			setter++;
+			/* Load next hop IPv6 address and restore srv6.next_hdr */
+			setter->flags |= ASF_DOUBLE | ASF_MODIFY | ASF_REPARSE;
+			setter->set_double = &mlx5dr_action_setter_ipv6_routing_push3;
 			setter->idx_double = i;
 			break;
 
