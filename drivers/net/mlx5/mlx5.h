@@ -2314,4 +2314,33 @@ void mlx5_flex_parser_clone_free_cb(void *tool_ctx,
 int mlx5_alloc_srh_flex_parser(struct rte_eth_dev *dev);
 
 void mlx5_free_srh_flex_parser(struct rte_eth_dev *dev);
+
+int
+flow_dv_generate_ipv6_routing_pop_mhdr1(struct rte_eth_dev *dev,
+					const struct rte_flow_attr *attr,
+					struct mlx5_modification_cmd *cmd,
+					uint32_t cmd_num);
+
+int
+flow_dv_generate_ipv6_routing_pop_mhdr2(struct rte_eth_dev *dev,
+					const struct rte_flow_attr *attr,
+					struct mlx5_modification_cmd *cmd,
+					uint32_t cmd_num);
+
+int
+flow_dv_generate_ipv6_routing_push_mhdr1(struct rte_eth_dev *dev,
+					 const struct rte_flow_attr *attr,
+					 struct mlx5_modification_cmd *cmd,
+					 uint32_t cmd_num);
+
+int
+flow_dv_generate_ipv6_routing_push_mhdr2(struct rte_eth_dev *dev,
+					 const struct rte_flow_attr *attr,
+					 struct mlx5_modification_cmd *cmd,
+					 uint32_t cmd_num, uint8_t *buf);
+
+int
+flow_dv_ipv6_routing_pop_mhdr_cmd(struct rte_eth_dev *dev, uint8_t *mh_data,
+				  uint8_t *anchor_id);
+
 #endif /* RTE_PMD_MLX5_H_ */

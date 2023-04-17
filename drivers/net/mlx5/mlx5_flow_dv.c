@@ -2129,6 +2129,392 @@ flow_dv_convert_action_modify_field
 }
 
 /**
+ * Generate the 1st modify header data for IPv6 routing pop.
+ *
+ * @param[in] dev
+ *   Pointer to the rte_eth_dev structure.
+ * @param[in] attr
+ *   Pointer to the rte_flow table attribute.
+ * @param[in,out] cmd
+ *   Pointer to modify header command buffer.
+ * @param[in] cmd_num
+ *   Modify header command number.
+ *
+ * @return
+ *   Positive on success, a negative value otherwise.
+ */
+int
+flow_dv_generate_ipv6_routing_pop_mhdr1(struct rte_eth_dev *dev,
+					const struct rte_flow_attr *attr,
+					struct mlx5_modification_cmd *cmd,
+					uint32_t cmd_num)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+	struct rte_flow_action_modify_data data;
+	struct field_modify_info field[MLX5_ACT_MAX_MOD_FIELDS] = {
+				{0, 0, MLX5_MODI_OUT_NONE} };
+	struct field_modify_info dcopy[MLX5_ACT_MAX_MOD_FIELDS] = {
+				{0, 0, MLX5_MODI_OUT_NONE} };
+	uint32_t mask[MLX5_ACT_MAX_MOD_FIELDS] = { 0 };
+	struct rte_flow_item item = {
+		.spec = NULL,
+		.mask = NULL
+	};
+	union {
+		struct mlx5_flow_dv_modify_hdr_resource resource;
+		uint8_t data[sizeof(struct mlx5_flow_dv_modify_hdr_resource) +
+			     sizeof(struct mlx5_modification_cmd) * MLX5_MHDR_MAX_CMD];
+	} dummy;
+	struct mlx5_flow_dv_modify_hdr_resource *resource;
+	uint32_t value = 0;
+	struct rte_flow_error error;
+
+#define IPV6_ROUTING_POP_MHDR_NUM1 3
+	if (cmd_num < IPV6_ROUTING_POP_MHDR_NUM1) {
+		DRV_LOG(ERR, "Not enough modify header buffer");
+		return -1;
+	}
+	memset(&data, 0, sizeof(data));
+	memset(&dummy, 0, sizeof(dummy));
+	/* save next_hdr to seg_left. */
+	data.field = RTE_FLOW_FIELD_FLEX_ITEM;
+	data.flex_handle = (struct rte_flow_item_flex_handle *)
+			   (uintptr_t)&priv->sh->srh_flex_parser.flex;
+	data.offset = offsetof(struct rte_ipv6_routing_ext, segments_left) * CHAR_BIT;
+	/* For COPY fill the destination field (dcopy) without mask. */
+	mlx5_flow_field_id_to_modify_info(&data, dcopy, NULL, 8, dev, attr, &error);
+	/* Then construct the source field (field) with mask. */
+	data.offset = offsetof(struct rte_ipv6_routing_ext, next_hdr) * CHAR_BIT;
+	mlx5_flow_field_id_to_modify_info(&data, field, mask, 8, dev, attr, &error);
+	item.mask = &mask;
+	resource = &dummy.resource;
+	if (flow_dv_convert_modify_action(&item, field, dcopy, resource,
+					  MLX5_MODIFICATION_TYPE_COPY, &error)) {
+		DRV_LOG(ERR, "Generate save srv6 next header modify header failed");
+		return -1;
+	}
+	MLX5_ASSERT(resource->actions_num == 1);
+	/* add nop. */
+	resource->actions[1].data0 = 0;
+	resource->actions[1].action_type = MLX5_MODIFICATION_TYPE_NOP;
+	resource->actions[1].data0 = RTE_BE32(resource->actions[1].data0);
+	resource->actions[1].data1 = 0;
+	resource->actions_num += 1;
+	/* clear srv6 next_hdr. */
+	memset(&field, 0, sizeof(field));
+	memset(&dcopy, 0, sizeof(dcopy));
+	memset(&mask, 0, sizeof(mask));
+	mlx5_flow_field_id_to_modify_info(&data, field, mask, 8, dev, attr, &error);
+	item.spec = (void *)(uintptr_t)&value;
+	if (flow_dv_convert_modify_action(&item, field, dcopy, resource,
+					  MLX5_MODIFICATION_TYPE_SET, &error)) {
+		DRV_LOG(ERR, "Generate clear srv6 next header modify header failed");
+		return -1;
+	}
+	MLX5_ASSERT(resource->actions_num == IPV6_ROUTING_POP_MHDR_NUM1);
+#undef IPV6_ROUTING_POP_MHDR_NUM1
+	memcpy(cmd, resource->actions,
+	       resource->actions_num * sizeof(struct mlx5_modification_cmd));
+	return resource->actions_num;
+}
+
+/**
+ * Generate the 2nd modify header data for IPv6 routing pop.
+ *
+ * @param[in] dev
+ *   Pointer to the rte_eth_dev structure.
+ * @param[in] attr
+ *   Pointer to the rte_flow table attribute.
+ * @param[in,out] cmd
+ *   Pointer to modify header command buffer.
+ * @param[in] cmd_num
+ *   Modify header command number.
+ *
+ * @return
+ *   Positive on success, a negative value otherwise.
+ */
+int
+flow_dv_generate_ipv6_routing_pop_mhdr2(struct rte_eth_dev *dev,
+					const struct rte_flow_attr *attr,
+					struct mlx5_modification_cmd *cmd,
+					uint32_t cmd_num)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+	struct rte_flow_action_modify_data data;
+	struct field_modify_info field[MLX5_ACT_MAX_MOD_FIELDS] = {
+				{0, 0, MLX5_MODI_OUT_NONE} };
+	struct field_modify_info dcopy[MLX5_ACT_MAX_MOD_FIELDS] = {
+				{0, 0, MLX5_MODI_OUT_NONE} };
+	uint32_t mask[MLX5_ACT_MAX_MOD_FIELDS] = { 0 };
+	struct rte_flow_item item = {
+		.spec = NULL,
+		.mask = NULL
+	};
+	union {
+		struct mlx5_flow_dv_modify_hdr_resource resource;
+		uint8_t data[sizeof(struct mlx5_flow_dv_modify_hdr_resource) +
+			     sizeof(struct mlx5_modification_cmd) * MLX5_MHDR_MAX_CMD];
+	} dummy;
+	struct mlx5_flow_dv_modify_hdr_resource *resource;
+	struct rte_flow_error error;
+
+#define IPV6_ROUTING_POP_MHDR_NUM2 5
+	if (cmd_num < IPV6_ROUTING_POP_MHDR_NUM2) {
+		DRV_LOG(ERR, "Note enough modify header buffer");
+		return -1;
+	}
+	memset(&data, 0, sizeof(data));
+	memset(&dummy, 0, sizeof(dummy));
+	resource = &dummy.resource;
+	item.mask = &mask;
+	data.field = RTE_FLOW_FIELD_IPV6_DST;
+	data.level = 0;
+	data.offset = 0;
+	mlx5_flow_field_id_to_modify_info(&data, dcopy, NULL, 128, dev, attr, &error);
+	data.field = RTE_FLOW_FIELD_FLEX_ITEM;
+	data.offset = 32;
+	data.flex_handle = (struct rte_flow_item_flex_handle *)
+			   (uintptr_t)&priv->sh->srh_flex_parser.flex;
+	mlx5_flow_field_id_to_modify_info(&data, field, mask, 128, dev, attr, &error);
+	if (flow_dv_convert_modify_action(&item, field, dcopy, resource,
+					  MLX5_MODIFICATION_TYPE_COPY, &error)) {
+		DRV_LOG(ERR, "Generate load final IPv6 address modify header failed");
+		return -1;
+	}
+	MLX5_ASSERT(resource->actions_num == 4);
+	memset(&field, 0, sizeof(field));
+	memset(&dcopy, 0, sizeof(dcopy));
+	memset(&mask, 0, sizeof(mask));
+	/* copy seg_left to srv6.next_hdr */
+	data.offset = offsetof(struct rte_ipv6_routing_ext, next_hdr) * CHAR_BIT;
+	mlx5_flow_field_id_to_modify_info(&data, dcopy, NULL, 8, dev, attr, &error);
+	data.offset = offsetof(struct rte_ipv6_routing_ext, segments_left) * CHAR_BIT;
+	mlx5_flow_field_id_to_modify_info(&data, field, mask, 8, dev, attr, &error);
+	if (flow_dv_convert_modify_action(&item, field, dcopy, resource,
+					  MLX5_MODIFICATION_TYPE_COPY, &error)) {
+		DRV_LOG(ERR, "Generate restore srv6 next header modify header failed");
+		return -1;
+	}
+	MLX5_ASSERT(resource->actions_num == IPV6_ROUTING_POP_MHDR_NUM2);
+#undef IPV6_ROUTING_POP_MHDR_NUM2
+	memcpy(cmd, resource->actions,
+	       resource->actions_num * sizeof(struct mlx5_modification_cmd));
+	return resource->actions_num;
+}
+
+/**
+ * Generate the 2nd modify header data for IPv6 routing push.
+ *
+ * @param[in] dev
+ *   Pointer to the rte_eth_dev structure.
+ * @param[in] attr
+ *   Pointer to the rte_flow table attribute.
+ * @param[in,out] cmd
+ *   Pointer to modify header command buffer.
+ * @param[in] cmd_num
+ *   Modify header command number.
+ *
+ * @return
+ *   Positive on success, a negative value otherwise.
+ */
+int
+flow_dv_generate_ipv6_routing_push_mhdr1(struct rte_eth_dev *dev,
+					 const struct rte_flow_attr *attr,
+					 struct mlx5_modification_cmd *cmd,
+					 uint32_t cmd_num)
+{
+	struct rte_flow_action_modify_data data;
+	struct field_modify_info field[MLX5_ACT_MAX_MOD_FIELDS] = {
+				{0, 0, MLX5_MODI_OUT_NONE} };
+	struct field_modify_info dcopy[MLX5_ACT_MAX_MOD_FIELDS] = {
+				{0, 0, MLX5_MODI_OUT_NONE} };
+	uint32_t mask[MLX5_ACT_MAX_MOD_FIELDS] = { 0 };
+	struct rte_flow_item item = {
+		.spec = NULL,
+		.mask = NULL
+	};
+	union {
+		struct mlx5_flow_dv_modify_hdr_resource resource;
+		uint8_t data[sizeof(struct mlx5_flow_dv_modify_hdr_resource) +
+			     sizeof(struct mlx5_modification_cmd) * MLX5_MHDR_MAX_CMD];
+	} dummy;
+	struct mlx5_flow_dv_modify_hdr_resource *resource;
+	struct rte_flow_error error;
+	uint8_t value;
+
+#define IPV6_ROUTING_PUSH_MHDR_NUM1 1
+	if (cmd_num < IPV6_ROUTING_PUSH_MHDR_NUM1) {
+		DRV_LOG(ERR, "Not enough modify header buffer");
+		return -1;
+	}
+	memset(&data, 0, sizeof(data));
+	memset(&dummy, 0, sizeof(dummy));
+	resource = &dummy.resource;
+	/* Set IPv6 proto to 0x2b. */
+	data.field = RTE_FLOW_FIELD_IPV6_PROTO;
+	mlx5_flow_field_id_to_modify_info(&data, field, mask, 8, dev, attr, &error);
+	resource = &dummy.resource;
+	item.mask = &mask;
+	value = IPPROTO_ROUTING;
+	item.spec = (void *)(uintptr_t)&value;
+	if (flow_dv_convert_modify_action(&item, field, dcopy, resource,
+					  MLX5_MODIFICATION_TYPE_SET, &error)) {
+		DRV_LOG(ERR, "Generate modify IPv6 protocol to 0x2b failed");
+		return -1;
+	}
+	MLX5_ASSERT(resource->actions_num == IPV6_ROUTING_PUSH_MHDR_NUM1);
+#undef IPV6_ROUTING_PUSH_MHDR_NUM1
+	memcpy(cmd, resource->actions,
+	       resource->actions_num * sizeof(struct mlx5_modification_cmd));
+	return resource->actions_num;
+}
+
+/**
+ * Generate the 2nd modify header data for IPv6 routing push.
+ *
+ * @param[in] dev
+ *   Pointer to the rte_eth_dev structure.
+ * @param[in] attr
+ *   Pointer to the rte_flow table attribute.
+ * @param[in,out] cmd
+ *   Pointer to modify header command buffer.
+ * @param[in] cmd_num
+ *   Modify header command number.
+ *
+ * @return
+ *   Positive on success, a negative value otherwise.
+ */
+int
+flow_dv_generate_ipv6_routing_push_mhdr2(struct rte_eth_dev *dev,
+					 const struct rte_flow_attr *attr,
+					 struct mlx5_modification_cmd *cmd,
+					 uint32_t cmd_num, uint8_t *buf)
+{
+	struct mlx5_priv *priv = dev->data->dev_private;
+	struct rte_flow_action_modify_data data;
+	struct field_modify_info field[MLX5_ACT_MAX_MOD_FIELDS] = {
+				{0, 0, MLX5_MODI_OUT_NONE} };
+	struct field_modify_info dcopy[MLX5_ACT_MAX_MOD_FIELDS] = {
+				{0, 0, MLX5_MODI_OUT_NONE} };
+	uint32_t mask[MLX5_ACT_MAX_MOD_FIELDS] = { 0 };
+	struct rte_flow_item item = {
+		.spec = NULL,
+		.mask = NULL
+	};
+	union {
+		struct mlx5_flow_dv_modify_hdr_resource resource;
+		uint8_t data[sizeof(struct mlx5_flow_dv_modify_hdr_resource) +
+			     sizeof(struct mlx5_modification_cmd) * MLX5_MHDR_MAX_CMD];
+	} dummy;
+	struct mlx5_flow_dv_modify_hdr_resource *resource;
+	struct rte_flow_error error;
+	uint8_t next_hdr = *buf;
+
+#define IPV6_ROUTING_PUSH_MHDR_NUM2 5
+	if (cmd_num < IPV6_ROUTING_PUSH_MHDR_NUM2) {
+		DRV_LOG(ERR, "Not enough modify header buffer");
+		return -1;
+	}
+	memset(&data, 0, sizeof(data));
+	memset(&dummy, 0, sizeof(dummy));
+	resource = &dummy.resource;
+	item.mask = &mask;
+	item.spec = buf + sizeof(struct rte_ipv6_routing_ext) +
+		(*(buf + 3) - 1) * 16; /* seg_left-1 IPv6 address */
+	data.field = RTE_FLOW_FIELD_IPV6_DST;
+	mlx5_flow_field_id_to_modify_info(&data, field, mask, 128, dev, attr, &error);
+	if (flow_dv_convert_modify_action(&item, field, dcopy, resource,
+					  MLX5_MODIFICATION_TYPE_SET, &error)) {
+		DRV_LOG(ERR, "Generate load srv6 next hop modify header failed");
+		return -1;
+	}
+	MLX5_ASSERT(resource->actions_num == 4);
+	memset(&field, 0, sizeof(field));
+	memset(&mask, 0, sizeof(mask));
+	data.field = RTE_FLOW_FIELD_FLEX_ITEM;
+	data.flex_handle = (struct rte_flow_item_flex_handle *)
+			   (uintptr_t)&priv->sh->srh_flex_parser.flex;
+	data.offset = offsetof(struct rte_ipv6_routing_ext, next_hdr) * CHAR_BIT;
+	item.spec = (void *)(uintptr_t)&next_hdr;
+	mlx5_flow_field_id_to_modify_info(&data, field, mask, 8, dev, attr, &error);
+	if (flow_dv_convert_modify_action(&item, field, dcopy, resource,
+					  MLX5_MODIFICATION_TYPE_SET, &error)) {
+		DRV_LOG(ERR, "Generate srv6 next header restore modify header failed");
+		return -1;
+	}
+	MLX5_ASSERT(resource->actions_num == IPV6_ROUTING_PUSH_MHDR_NUM2);
+#undef IPV6_ROUTING_PUSH_MHDR_NUM2
+	memcpy(cmd, resource->actions,
+	       resource->actions_num * sizeof(struct mlx5_modification_cmd));
+	return resource->actions_num;
+}
+
+/**
+ * Generate IPv6 routing pop modification_cmd.
+ *
+ * @param[in] dev
+ *   Pointer to the rte_eth_dev structure.
+ * @param[in,out] mh_data
+ *   Pointer to modify header data buffer.
+ * @param[in,out] anchor_id
+ *   Anchor ID for REMOVE command.
+ *
+ * @return
+ *   Positive on success, a negative value otherwise.
+ */
+int
+flow_dv_ipv6_routing_pop_mhdr_cmd(struct rte_eth_dev *dev, uint8_t *mh_data,
+				  uint8_t *anchor_id)
+{
+	struct rte_flow_action_modify_data data;
+	struct field_modify_info field[MLX5_ACT_MAX_MOD_FIELDS] = {
+				{0, 0, MLX5_MODI_OUT_NONE} };
+	struct field_modify_info dcopy[MLX5_ACT_MAX_MOD_FIELDS] = {
+				{0, 0, MLX5_MODI_OUT_NONE} };
+	uint32_t mask[MLX5_ACT_MAX_MOD_FIELDS] = { 0  };
+	struct rte_flow_item item = {
+		.spec = NULL,
+		.mask = NULL
+	};
+	union {
+		struct mlx5_flow_dv_modify_hdr_resource resource;
+		uint8_t data[sizeof(struct mlx5_flow_dv_modify_hdr_resource) +
+			     sizeof(struct mlx5_modification_cmd) * MLX5_MHDR_MAX_CMD];
+	} dummy;
+	struct mlx5_flow_dv_modify_hdr_resource *resource;
+	struct rte_flow_error error;
+	struct mlx5_priv *priv = dev->data->dev_private;
+
+	if (!priv || !priv->sh->cdev->config.hca_attr.flex.parse_graph_anchor) {
+		DRV_LOG(ERR, "Doesn't support srv6 as reformat anchor");
+		return -1;
+	}
+	/* Restore IPv6 protocol from flex parser. */
+	memset(&data, 0, sizeof(data));
+	memset(&dummy, 0, sizeof(dummy));
+	data.field = RTE_FLOW_FIELD_IPV6_PROTO;
+	mlx5_flow_field_id_to_modify_info(&data, dcopy, NULL, 8, dev, NULL, &error);
+	/* Then construct the source field (field) with mask. */
+	data.field = RTE_FLOW_FIELD_FLEX_ITEM;
+	data.flex_handle = (struct rte_flow_item_flex_handle *)
+			   (uintptr_t)&priv->sh->srh_flex_parser.flex;
+	data.offset = offsetof(struct rte_ipv6_routing_ext, next_hdr) * CHAR_BIT;
+	mlx5_flow_field_id_to_modify_info(&data, field, mask, 8, dev, NULL, &error);
+	item.mask = &mask;
+	resource = &dummy.resource;
+	if (flow_dv_convert_modify_action(&item, field, dcopy, resource,
+					  MLX5_MODIFICATION_TYPE_COPY,
+					  &error)) {
+		DRV_LOG(ERR, "Generate copy IPv6 protocol from srv6 next header failed");
+		return -1;
+	}
+	MLX5_ASSERT(resource->actions_num == 1);
+	memcpy(mh_data, resource->actions, sizeof(struct mlx5_modification_cmd));
+	*anchor_id = priv->sh->srh_flex_parser.flex.devx_fp->anchor_id;
+	return 1;
+}
+
+/**
  * Validate MARK item.
  *
  * @param[in] dev
