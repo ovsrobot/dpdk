@@ -2666,4 +2666,19 @@ flow_hw_get_srh_flex_parser_byte_off_from_ctx(void *dr_ctx __rte_unused)
 #endif
 	return UINT32_MAX;
 }
+
+static __rte_always_inline void *
+flow_hw_get_dev_from_ctx(void *dr_ctx)
+{
+	uint16_t port;
+	struct mlx5_priv *priv;
+
+	MLX5_ETH_FOREACH_DEV(port, NULL) {
+		priv = rte_eth_devices[port].data->dev_private;
+		if (priv->dr_ctx == dr_ctx)
+			return &rte_eth_devices[port];
+	}
+	return NULL;
+}
+
 #endif /* RTE_PMD_MLX5_FLOW_H_ */

@@ -1323,6 +1323,7 @@ struct mlx5_flex_pattern_field {
 	uint16_t shift:5;
 	uint16_t reg_id:5;
 };
+
 #define MLX5_INVALID_SAMPLE_REG_ID 0x1F
 
 /* Port flex item context. */
