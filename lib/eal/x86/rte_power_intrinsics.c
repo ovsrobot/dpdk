@@ -109,9 +109,13 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 	 */
 
 	/* set address for UMONITOR */
+#ifndef RTE_TOOLCHAIN_MSVC
 	asm volatile(".byte 0xf3, 0x0f, 0xae, 0xf7;"
 			:
 			: "D"(pmc->addr));
+#else
+	_umonitor(pmc->addr);
+#endif
 
 	/* now that we've put this address into monitor, we can unlock */
 	rte_spinlock_unlock(&s->lock);
@@ -123,10 +127,14 @@ rte_power_monitor(const struct rte_power_monitor_cond *pmc,
 		goto end;
 
 	/* execute UMWAIT */
+#ifndef RTE_TOOLCHAIN_MSVC
 	asm volatile(".byte 0xf2, 0x0f, 0xae, 0xf7;"
 			: /* ignore rflags */
 			: "D"(0), /* enter C0.2 */
 			  "a"(tsc_l), "d"(tsc_h));
+#else
+	_umwait(tsc_l, tsc_h);
+#endif
 
 end:
 	/* erase sleep address */
@@ -153,10 +161,14 @@ rte_power_pause(const uint64_t tsc_timestamp)
 		return -ENOTSUP;
 
 	/* execute TPAUSE */
+#ifndef RTE_TOOLCHAIN_MSVC
 	asm volatile(".byte 0x66, 0x0f, 0xae, 0xf7;"
 			: /* ignore rflags */
 			: "D"(0), /* enter C0.2 */
 			"a"(tsc_l), "d"(tsc_h));
+#else
+	_tpause(tsc_l, tsc_h);
+#endif
 
 	return 0;
 }
