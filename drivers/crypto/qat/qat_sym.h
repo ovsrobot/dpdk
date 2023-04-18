@@ -20,6 +20,11 @@
 #include "qat_sym_session.h"
 #include "qat_crypto.h"
 #include "qat_logs.h"
+#if defined(RTE_ARCH_ARM)
+#include <ipsec-mb.h>
+#else
+#include <intel-ipsec-mb.h>
+#endif
 
 #define BYTE_LENGTH    8
 /* bpi is only used for partial blocks of DES and AES
@@ -134,33 +139,16 @@ uint16_t
 qat_sym_dequeue_burst(void *qp, struct rte_crypto_op **ops,
 		uint16_t nb_ops);
 
-/** Encrypt a single partial block
- *  Depends on openssl libcrypto
- *  Uses ECB+XOR to do CFB encryption, same result, more performant
- */
-static inline int
-bpi_cipher_encrypt(uint8_t *src, uint8_t *dst,
-		uint8_t *iv, int ivlen, int srclen,
-		void *bpi_ctx)
+static __rte_always_inline void
+bpi_cipher_job(uint8_t *src, uint8_t *dst, uint8_t *iv, int srclen,
+		uint64_t *expkey, IMB_MGR *m, uint8_t docsis_key_len)
 {
-	EVP_CIPHER_CTX *ctx = (EVP_CIPHER_CTX *)bpi_ctx;
-	int encrypted_ivlen;
-	uint8_t encrypted_iv[BPI_MAX_ENCR_IV_LEN];
-	uint8_t *encr = encrypted_iv;
-
-	/* ECB method: encrypt the IV, then XOR this with plaintext */
-	if (EVP_EncryptUpdate(ctx, encrypted_iv, &encrypted_ivlen, iv, ivlen)
-								<= 0)
-		goto cipher_encrypt_err;
-
-	for (; srclen != 0; --srclen, ++dst, ++src, ++encr)
-		*dst = *src ^ *encr;
-
-	return 0;
-
-cipher_encrypt_err:
-	QAT_DP_LOG(ERR, "libcrypto ECB cipher encrypt failed");
-	return -EINVAL;
+	if (docsis_key_len == ICP_QAT_HW_AES_128_KEY_SZ)
+		IMB_AES128_CFB_ONE(m, dst, src, (uint64_t *)iv, expkey, srclen);
+	else if (docsis_key_len == ICP_QAT_HW_AES_256_KEY_SZ)
+		IMB_AES256_CFB_ONE(m, dst, src, (uint64_t *)iv, expkey, srclen);
+	else if (docsis_key_len == ICP_QAT_HW_DES_KEY_SZ)
+		des_cfb_one(dst, src, (uint64_t *)iv, expkey, srclen);
 }
 
 static inline uint32_t
@@ -207,8 +195,8 @@ qat_bpicipher_postprocess(struct qat_sym_session *ctx,
 				"BPI: dst before post-process:",
 				dst, last_block_len);
 #endif
-		bpi_cipher_encrypt(last_block, dst, iv, block_len,
-				last_block_len, ctx->bpi_ctx);
+		bpi_cipher_job(last_block, dst, iv, last_block_len, ctx->expkey,
+			ctx->mb_mgr, ctx->docsis_key_len);
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 		QAT_DP_HEXDUMP_LOG(DEBUG, "BPI: src after post-process:",
 				last_block, last_block_len);
@@ -279,7 +267,7 @@ qat_sym_preprocess_requests(void **ops, uint16_t nb_ops)
 		if (op->sess_type == RTE_CRYPTO_OP_SECURITY_SESSION) {
 			ctx = SECURITY_GET_SESS_PRIV(op->sym->session);
 
-			if (ctx == NULL || ctx->bpi_ctx == NULL)
+			if (ctx == NULL || ctx->mb_mgr == NULL)
 				continue;
 
 			qat_crc_generate(ctx, op);
@@ -327,7 +315,7 @@ qat_sym_process_response(void **op, uint8_t *resp, void *op_cookie,
 	} else {
 		rx_op->status = RTE_CRYPTO_OP_STATUS_SUCCESS;
 
-		if (sess->bpi_ctx) {
+		if (sess->mb_mgr) {
 			qat_bpicipher_postprocess(sess, rx_op);
 #ifdef RTE_LIB_SECURITY
 			if (is_docsis_sec)

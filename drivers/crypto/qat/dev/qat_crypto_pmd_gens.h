@@ -17,31 +17,6 @@
 	(ICP_QAT_FW_COMN_STATUS_FLAG_OK == \
 	ICP_QAT_FW_COMN_RESP_CRYPTO_STAT_GET(resp->comn_hdr.comn_status))
 
-static __rte_always_inline int
-op_bpi_cipher_decrypt(uint8_t *src, uint8_t *dst,
-		uint8_t *iv, int ivlen, int srclen,
-		void *bpi_ctx)
-{
-	EVP_CIPHER_CTX *ctx = (EVP_CIPHER_CTX *)bpi_ctx;
-	int encrypted_ivlen;
-	uint8_t encrypted_iv[BPI_MAX_ENCR_IV_LEN];
-	uint8_t *encr = encrypted_iv;
-
-	/* ECB method: encrypt (not decrypt!) the IV, then XOR with plaintext */
-	if (EVP_EncryptUpdate(ctx, encrypted_iv, &encrypted_ivlen, iv, ivlen)
-								<= 0)
-		goto cipher_decrypt_err;
-
-	for (; srclen != 0; --srclen, ++dst, ++src, ++encr)
-		*dst = *src ^ *encr;
-
-	return 0;
-
-cipher_decrypt_err:
-	QAT_DP_LOG(ERR, "libcrypto ECB cipher decrypt for BPI IV failed");
-	return -EINVAL;
-}
-
 static __rte_always_inline uint32_t
 qat_bpicipher_preprocess(struct qat_sym_session *ctx,
 				struct rte_crypto_op *op)
@@ -82,8 +57,8 @@ qat_bpicipher_preprocess(struct qat_sym_session *ctx,
 			QAT_DP_HEXDUMP_LOG(DEBUG, "BPI: dst before pre-process:",
 			dst, last_block_len);
 #endif
-		op_bpi_cipher_decrypt(last_block, dst, iv, block_len,
-				last_block_len, ctx->bpi_ctx);
+		bpi_cipher_job(last_block, dst, iv, last_block_len, ctx->expkey,
+			ctx->mb_mgr, ctx->docsis_key_len);
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 		QAT_DP_HEXDUMP_LOG(DEBUG, "BPI: src after pre-process:",
 			last_block, last_block_len);
@@ -231,7 +206,7 @@ qat_sym_convert_op_to_vec_cipher(struct rte_crypto_op *op,
 		cipher_ofs = op->sym->cipher.data.offset >> 3;
 		break;
 	case 0:
-		if (ctx->bpi_ctx) {
+		if (ctx->mb_mgr) {
 			/* DOCSIS - only send complete blocks to device.
 			 * Process any partial block using CFB mode.
 			 * Even if 0 complete blocks, still send this to device

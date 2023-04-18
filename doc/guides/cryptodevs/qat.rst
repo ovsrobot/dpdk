@@ -294,18 +294,11 @@ by comma. When the same parameter is used more than once first occurrence of the
 is used.
 Maximum threshold that can be set is 32.
 
-Running QAT PMD with Intel IPSEC MB library for symmetric precomputes function
+Running QAT PMD with Intel IPsec MB library for symmetric precomputes function
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The QAT PMD use Openssl library for partial hash calculation in symmetirc precomputes function by
-default, the following parameter is allow QAT PMD switch over to multi-buffer job API if Intel
-IPSEC MB library installed on system.
-
-- qat_ipsec_mb_lib
-
-To use this feature the user must set the parameter on process start as a device additional parameter::
-
-  -a 03:01.1,qat_ipsec_mb_lib=1
+The QAT PMD uses Intel IPsec MB library for partial hash calculation in symmetric precomputes function by
+default, the minimum required version of IPsec MB library is v1.4.
 
 
 Device and driver naming

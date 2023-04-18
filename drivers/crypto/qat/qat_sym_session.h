@@ -15,6 +15,12 @@
 #include "icp_qat_fw.h"
 #include "icp_qat_fw_la.h"
 
+#if defined(RTE_ARCH_ARM)
+#include <ipsec-mb.h>
+#else
+#include <intel-ipsec-mb.h>
+#endif
+
 /*
  * Key Modifier (KM) value used in KASUMI algorithm in F9 mode to XOR
  * Integrity Key (IK)
@@ -87,7 +93,6 @@ struct qat_sym_session {
 	enum icp_qat_hw_auth_algo qat_hash_alg;
 	enum icp_qat_hw_auth_op auth_op;
 	enum icp_qat_hw_auth_mode auth_mode;
-	void *bpi_ctx;
 	struct qat_sym_cd cd;
 	uint8_t *cd_cur_ptr;
 	phys_addr_t cd_paddr;
@@ -118,6 +123,10 @@ struct qat_sym_session {
 	uint32_t slice_types;
 	enum qat_sym_proto_flag qat_proto_flag;
 	qat_sym_build_request_t build_request[2];
+	IMB_MGR *mb_mgr;
+	uint64_t expkey[4*15];
+	uint32_t dust[4*15];
+	uint8_t docsis_key_len;
 };
 
 int
