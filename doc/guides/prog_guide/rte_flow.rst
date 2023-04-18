@@ -3300,6 +3300,12 @@ The ``quota`` value is reduced according to ``mode`` setting.
    | ``RTE_FLOW_QUOTA_MODE_L3``      | Count packet bytes starting from L3 |
    +------------------+----------------------------------------------------+
 
+Action: ``INDIRECT_LIST``
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The new ``INDIRECT_LIST`` flow action references one or many flow actions.
+Extends the ``INDIRECT`` flow action.
+
 Negative types
 ~~~~~~~~~~~~~~
 

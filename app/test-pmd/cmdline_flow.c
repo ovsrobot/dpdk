@@ -145,6 +145,7 @@ enum index {
 
 	/* Queue indirect action arguments */
 	QUEUE_INDIRECT_ACTION_CREATE,
+	QUEUE_INDIRECT_ACTION_LIST_CREATE,
 	QUEUE_INDIRECT_ACTION_UPDATE,
 	QUEUE_INDIRECT_ACTION_DESTROY,
 	QUEUE_INDIRECT_ACTION_QUERY,
@@ -157,6 +158,7 @@ enum index {
 	QUEUE_INDIRECT_ACTION_TRANSFER,
 	QUEUE_INDIRECT_ACTION_CREATE_POSTPONE,
 	QUEUE_INDIRECT_ACTION_SPEC,
+	QUEUE_INDIRECT_ACTION_LIST,
 
 	/* Queue indirect action update arguments */
 	QUEUE_INDIRECT_ACTION_UPDATE_POSTPONE,
@@ -242,6 +244,7 @@ enum index {
 
 	/* Indirect action arguments */
 	INDIRECT_ACTION_CREATE,
+	INDIRECT_ACTION_LIST_CREATE,
 	INDIRECT_ACTION_UPDATE,
 	INDIRECT_ACTION_DESTROY,
 	INDIRECT_ACTION_QUERY,
@@ -253,6 +256,7 @@ enum index {
 	INDIRECT_ACTION_EGRESS,
 	INDIRECT_ACTION_TRANSFER,
 	INDIRECT_ACTION_SPEC,
+	INDIRECT_ACTION_LIST,
 
 	/* Indirect action destroy arguments */
 	INDIRECT_ACTION_DESTROY_ID,
@@ -626,6 +630,7 @@ enum index {
 	ACTION_SAMPLE_INDEX,
 	ACTION_SAMPLE_INDEX_VALUE,
 	ACTION_INDIRECT,
+	ACTION_INDIRECT_LIST,
 	ACTION_SHARED_INDIRECT,
 	INDIRECT_ACTION_PORT,
 	INDIRECT_ACTION_ID2PTR,
@@ -1266,6 +1271,7 @@ static const enum index next_qia_create_attr[] = {
 	QUEUE_INDIRECT_ACTION_TRANSFER,
 	QUEUE_INDIRECT_ACTION_CREATE_POSTPONE,
 	QUEUE_INDIRECT_ACTION_SPEC,
+	QUEUE_INDIRECT_ACTION_LIST,
 	ZERO,
 };
 
@@ -1294,6 +1300,7 @@ static const enum index next_ia_create_attr[] = {
 	INDIRECT_ACTION_EGRESS,
 	INDIRECT_ACTION_TRANSFER,
 	INDIRECT_ACTION_SPEC,
+	INDIRECT_ACTION_LIST,
 	ZERO,
 };
 
@@ -2013,6 +2020,7 @@ static const enum index next_action[] = {
 	ACTION_AGE_UPDATE,
 	ACTION_SAMPLE,
 	ACTION_INDIRECT,
+	ACTION_INDIRECT_LIST,
 	ACTION_SHARED_INDIRECT,
 	ACTION_MODIFY_FIELD,
 	ACTION_CONNTRACK,
@@ -2289,6 +2297,7 @@ static const enum index next_action_sample[] = {
 	ACTION_RAW_ENCAP,
 	ACTION_VXLAN_ENCAP,
 	ACTION_NVGRE_ENCAP,
+	ACTION_REPRESENTED_PORT,
 	ACTION_NEXT,
 	ZERO,
 };
@@ -3425,6 +3434,12 @@ static const struct token token_list[] = {
 		.name = "action",
 		.help = "specify action to create indirect handle",
 		.next = NEXT(next_action),
+	},
+	[QUEUE_INDIRECT_ACTION_LIST] = {
+		.name = "list",
+		.help = "specify actions for indirect handle list",
+		.next = NEXT(NEXT_ENTRY(ACTIONS, END)),
+		.call = parse_qia,
 	},
 	/* Top-level command. */
 	[PUSH] = {
@@ -6775,6 +6790,14 @@ static const struct token token_list[] = {
 		.args = ARGS(ARGS_ENTRY_ARB(0, sizeof(uint32_t))),
 		.call = parse_vc,
 	},
+	[ACTION_INDIRECT_LIST] = {
+		.name = "indirect_list",
+		.help = "apply indirect list action by id",
+		.priv = PRIV_ACTION(INDIRECT_LIST, 0),
+		.next = NEXT(next_ia),
+		.args = ARGS(ARGS_ENTRY_ARB(0, sizeof(uint32_t))),
+		.call = parse_vc,
+	},
 	[ACTION_SHARED_INDIRECT] = {
 		.name = "shared_indirect",
 		.help = "apply indirect action by id and port",
@@ -6822,6 +6845,12 @@ static const struct token token_list[] = {
 		.name = "action",
 		.help = "specify action to create indirect handle",
 		.next = NEXT(next_action),
+	},
+	[INDIRECT_ACTION_LIST] = {
+		.name = "list",
+		.help = "specify actions for indirect handle list",
+		.next = NEXT(NEXT_ENTRY(ACTIONS, END)),
+		.call = parse_ia,
 	},
 	[ACTION_POL_G] = {
 		.name = "g_actions",
@@ -7181,6 +7210,9 @@ parse_ia(struct context *ctx, const struct token *token,
 		return len;
 	case INDIRECT_ACTION_QU_MODE:
 		return len;
+	case INDIRECT_ACTION_LIST:
+		out->command = INDIRECT_ACTION_LIST_CREATE;
+		return len;
 	default:
 		return -1;
 	}
@@ -7277,6 +7309,9 @@ parse_qia(struct context *ctx, const struct token *token,
 	case QUEUE_INDIRECT_ACTION_CREATE_POSTPONE:
 		return len;
 	case QUEUE_INDIRECT_ACTION_QU_MODE:
+		return len;
+	case QUEUE_INDIRECT_ACTION_LIST:
+		out->command = QUEUE_INDIRECT_ACTION_LIST_CREATE;
 		return len;
 	default:
 		return -1;
@@ -7454,10 +7489,12 @@ parse_vc(struct context *ctx, const struct token *token,
 			return -1;
 		break;
 	case ACTIONS:
-		out->args.vc.actions =
+		out->args.vc.actions = out->args.vc.pattern ?
 			(void *)RTE_ALIGN_CEIL((uintptr_t)
 					       (out->args.vc.pattern +
 						out->args.vc.pattern_n),
+					       sizeof(double)) :
+			(void *)RTE_ALIGN_CEIL((uintptr_t)(out + 1),
 					       sizeof(double));
 		ctx->object = out->args.vc.actions;
 		ctx->objmask = NULL;
@@ -11532,6 +11569,7 @@ cmd_flow_parsed(const struct buffer *in)
 				     in->args.aged.destroy);
 		break;
 	case QUEUE_INDIRECT_ACTION_CREATE:
+	case QUEUE_INDIRECT_ACTION_LIST_CREATE:
 		port_queue_action_handle_create(
 				in->port, in->queue, in->postpone,
 				in->args.vc.attr.group,
@@ -11567,6 +11605,7 @@ cmd_flow_parsed(const struct buffer *in)
 						      in->args.vc.actions);
 		break;
 	case INDIRECT_ACTION_CREATE:
+	case INDIRECT_ACTION_LIST_CREATE:
 		port_action_handle_create(
 				in->port, in->args.vc.attr.group,
 				&((const struct rte_flow_indir_action_conf) {

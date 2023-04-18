@@ -228,7 +228,12 @@ struct port_indirect_action {
 	struct port_indirect_action *next; /**< Next flow in list. */
 	uint32_t id; /**< Indirect action ID. */
 	enum rte_flow_action_type type; /**< Action type. */
-	struct rte_flow_action_handle *handle;	/**< Indirect action handle. */
+	union {
+		struct rte_flow_action_handle *handle;
+		/**< Indirect action handle. */
+		struct rte_flow_action_list_handle *list_handle;
+		/**< Indirect action list handle*/
+	};
 	enum age_action_context_type age_type; /**< Age action context type. */
 };
 

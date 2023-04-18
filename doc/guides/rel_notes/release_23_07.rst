@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+   * **Added indirect list flow action.**
+
+     * ``RTE_FLOW_ACTION_TYPE_INDIRECT_LIST``
+
 
 Removed Items
 -------------
