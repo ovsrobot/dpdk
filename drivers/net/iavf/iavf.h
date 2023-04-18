@@ -304,6 +304,7 @@ struct iavf_devargs {
 	uint8_t proto_xtr_dflt;
 	uint8_t proto_xtr[IAVF_MAX_QUEUE_NUM];
 	uint16_t quanta_size;
+	uint32_t watchdog_period; /* microseconds */
 };
 
 struct iavf_security_ctx;

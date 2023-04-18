@@ -36,6 +36,7 @@
 /* devargs */
 #define IAVF_PROTO_XTR_ARG         "proto_xtr"
 #define IAVF_QUANTA_SIZE_ARG       "quanta_size"
+#define IAVF_RESET_WATCHDOG_ARG    "watchdog_period"
 
 uint64_t iavf_timestamp_dynflag;
 int iavf_timestamp_dynfield_offset = -1;
@@ -43,6 +44,7 @@ int iavf_timestamp_dynfield_offset = -1;
 static const char * const iavf_valid_args[] = {
 	IAVF_PROTO_XTR_ARG,
 	IAVF_QUANTA_SIZE_ARG,
+	IAVF_RESET_WATCHDOG_ARG,
 	NULL
 };
 
@@ -301,15 +303,23 @@ iavf_dev_watchdog(void *cb_arg)
 
 			/* enter reset state with VFLR event */
 			adapter->vf.vf_reset = true;
+			adapter->vf.link_up = false;
 
 			rte_eth_dev_callback_process(adapter->vf.eth_dev,
 				RTE_ETH_EVENT_INTR_RESET, NULL);
 		}
 	}
 
+#if (IAVF_DEV_WATCHDOG_PERIOD > 0)
 	/* re-alarm watchdog */
 	rc = rte_eal_alarm_set(IAVF_DEV_WATCHDOG_PERIOD,
 			&iavf_dev_watchdog, cb_arg);
+#else
+	/* re-alarm watchdog by devargs */
+	if (adapter->devargs.watchdog_period)
+		rc = rte_eal_alarm_set(adapter->devargs.watchdog_period,
+				&iavf_dev_watchdog, cb_arg);
+#endif
 
 	if (rc)
 		PMD_DRV_LOG(ERR, "Failed \"%s\" to reset device watchdog alarm",
@@ -317,23 +327,37 @@ iavf_dev_watchdog(void *cb_arg)
 }
 
 static void
-iavf_dev_watchdog_enable(struct iavf_adapter *adapter __rte_unused)
+iavf_dev_watchdog_enable(struct iavf_adapter *adapter)
 {
 #if (IAVF_DEV_WATCHDOG_PERIOD > 0)
-	PMD_DRV_LOG(INFO, "Enabling device watchdog");
+	PMD_DRV_LOG(INFO, "Enabling device watchdog, macro: %dμs", IAVF_DEV_WATCHDOG_PERIOD);
 	adapter->vf.watchdog_enabled = true;
 	if (rte_eal_alarm_set(IAVF_DEV_WATCHDOG_PERIOD,
 			&iavf_dev_watchdog, (void *)adapter))
 		PMD_DRV_LOG(ERR, "Failed to enabled device watchdog");
+#else
+	if (adapter->devargs.watchdog_period) {
+		PMD_DRV_LOG(INFO, "Enabling device watchdog, devargs: %dμs",
+				adapter->devargs.watchdog_period);
+		adapter->vf.watchdog_enabled = true;
+		if (rte_eal_alarm_set(adapter->devargs.watchdog_period,
+				&iavf_dev_watchdog, (void *)adapter))
+			PMD_DRV_LOG(ERR, "Failed to enabled device watchdog");
+	}
 #endif
 }
 
 static void
-iavf_dev_watchdog_disable(struct iavf_adapter *adapter __rte_unused)
+iavf_dev_watchdog_disable(struct iavf_adapter *adapter)
 {
 #if (IAVF_DEV_WATCHDOG_PERIOD > 0)
 	PMD_DRV_LOG(INFO, "Disabling device watchdog");
 	adapter->vf.watchdog_enabled = false;
+#else
+	if (adapter->devargs.watchdog_period) {
+		PMD_DRV_LOG(INFO, "Disabling device watchdog");
+		adapter->vf.watchdog_enabled = false;
+	}
 #endif
 }
 
@@ -2201,6 +2225,25 @@ parse_u16(__rte_unused const char *key, const char *value, void *args)
 	return 0;
 }
 
+static int
+iavf_parse_watchdog_period(__rte_unused const char *key, const char *value, void *args)
+{
+	u32 *num = (u32 *)args;
+	u32 tmp;
+
+	errno = 0;
+	tmp = strtoul(value, NULL, 10);
+	if (errno || !tmp) {
+		PMD_DRV_LOG(WARNING, "%s: \"%s\" is not a valid u32",
+				key, value);
+		return -1;
+	}
+
+	*num = tmp;
+
+	return 0;
+}
+
 static int iavf_parse_devargs(struct rte_eth_dev *dev)
 {
 	struct iavf_adapter *ad =
@@ -2229,6 +2272,11 @@ static int iavf_parse_devargs(struct rte_eth_dev *dev)
 
 	ret = rte_kvargs_process(kvlist, IAVF_QUANTA_SIZE_ARG,
 				 &parse_u16, &ad->devargs.quanta_size);
+	if (ret)
+		goto bail;
+
+	ret = rte_kvargs_process(kvlist, IAVF_RESET_WATCHDOG_ARG,
+				 &iavf_parse_watchdog_period, &ad->devargs.watchdog_period);
 	if (ret)
 		goto bail;
 

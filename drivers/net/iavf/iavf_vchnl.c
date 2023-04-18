@@ -433,9 +433,12 @@ iavf_handle_pf_event_msg(struct rte_eth_dev *dev, uint8_t *msg,
 	switch (pf_msg->event) {
 	case VIRTCHNL_EVENT_RESET_IMPENDING:
 		PMD_DRV_LOG(DEBUG, "VIRTCHNL_EVENT_RESET_IMPENDING event");
-		vf->vf_reset = true;
-		iavf_dev_event_post(dev, RTE_ETH_EVENT_INTR_RESET,
-					      NULL, 0);
+		vf->link_up = false;
+		if (!vf->vf_reset) {
+			vf->vf_reset = true;
+			iavf_dev_event_post(dev, RTE_ETH_EVENT_INTR_RESET,
+				NULL, 0);
+		}
 		break;
 	case VIRTCHNL_EVENT_LINK_CHANGE:
 		PMD_DRV_LOG(DEBUG, "VIRTCHNL_EVENT_LINK_CHANGE event");
