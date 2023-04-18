@@ -299,6 +299,8 @@ EXPERIMENTAL {
 	rte_flow_action_handle_query_update;
 	rte_flow_async_action_handle_query_update;
 	rte_flow_async_create_by_index;
+	rte_flow_update;
+	rte_flow_async_update;
 };
 
 INTERNAL {

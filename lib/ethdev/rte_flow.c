@@ -441,6 +441,29 @@ rte_flow_destroy(uint16_t port_id,
 				  NULL, rte_strerror(ENOSYS));
 }
 
+int
+rte_flow_update(uint16_t port_id,
+		struct rte_flow *flow,
+		const struct rte_flow_action actions[],
+		struct rte_flow_error *error)
+{
+	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
+	int ret;
+
+	if (unlikely(!ops))
+		return -rte_errno;
+	if (likely(!!ops->update)) {
+		fts_enter(dev);
+		ret = ops->update(dev, flow, actions, error);
+		fts_exit(dev);
+		return flow_err(port_id, ret, error);
+	}
+	return rte_flow_error_set(error, ENOSYS,
+				  RTE_FLOW_ERROR_TYPE_UNSPECIFIED,
+				  NULL, rte_strerror(ENOSYS));
+}
+
 /* Destroy all flow rules associated with a port. */
 int
 rte_flow_flush(uint16_t port_id,
@@ -1983,6 +2006,26 @@ rte_flow_async_destroy(uint16_t port_id,
 				     user_data, ret);
 
 	return ret;
+}
+
+int
+rte_flow_async_update(uint16_t port_id,
+		      uint32_t queue_id,
+		      const struct rte_flow_op_attr *op_attr,
+		      struct rte_flow *flow,
+		      const struct rte_flow_action actions[],
+		      uint8_t actions_template_index,
+		      void *user_data,
+		      struct rte_flow_error *error)
+{
+	struct rte_eth_dev *dev = &rte_eth_devices[port_id];
+	const struct rte_flow_ops *ops = rte_flow_ops_get(port_id, error);
+
+	return flow_err(port_id,
+			ops->async_update(dev, queue_id, op_attr, flow,
+					  actions, actions_template_index,
+					  user_data, error),
+			error);
 }
 
 int
