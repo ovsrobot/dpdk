@@ -695,6 +695,9 @@ qat_sym_session_configure_auth(struct rte_cryptodev *dev,
 	session->digest_length = auth_xform->digest_length;
 
 	switch (auth_xform->algo) {
+	case RTE_CRYPTO_AUTH_SM3_HMAC:
+		session->qat_hash_alg = ICP_QAT_HW_AUTH_ALGO_SM3;
+		session->auth_mode = ICP_QAT_HW_AUTH_MODE2;
 	case RTE_CRYPTO_AUTH_SM3:
 		session->qat_hash_alg = ICP_QAT_HW_AUTH_ALGO_SM3;
 		session->auth_mode = ICP_QAT_HW_AUTH_MODE0;
