@@ -47,6 +47,7 @@
 					ICP_QAT_HW_CIPHER_DECRYPT)
 
 #define QAT_AES_CMAC_CONST_RB 0x87
+#define QAT_PREFIX_TABLE_SZ	128
 
 #define QAT_CRYPTO_SLICE_SPC	1
 #define QAT_CRYPTO_SLICE_UCS	2
@@ -77,6 +78,7 @@ typedef int (*qat_sym_build_request_t)(void *in_op, struct qat_sym_session *ctx,
 struct qat_sym_cd {
 	struct icp_qat_hw_cipher_algo_blk cipher;
 	struct icp_qat_hw_auth_algo_blk hash;
+	uint8_t prefix_state[QAT_PREFIX_TABLE_SZ] __rte_cache_aligned;
 } __rte_packed __rte_cache_aligned;
 
 struct qat_sym_session {

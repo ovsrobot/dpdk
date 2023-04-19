@@ -80,6 +80,10 @@ struct icp_qat_fw_la_bulk_req {
 #define ICP_QAT_FW_LA_PARTIAL_END 2
 #define QAT_LA_PARTIAL_BITPOS 0
 #define QAT_LA_PARTIAL_MASK 0x3
+#define QAT_FW_LA_MODE2_BITPOS 5
+#define QAT_FW_LA_MODE2 1
+#define QAT_FW_LA_NO_MODE2 0
+#define QAT_FW_LA_MODE2_MASK 0x1
 #define ICP_QAT_FW_LA_FLAGS_BUILD(zuc_proto, gcm_iv_len, auth_rslt, proto, \
 	cmp_auth, ret_auth, update_state, \
 	ciph_iv, ciphcfg, partial) \
@@ -186,6 +190,12 @@ struct icp_qat_fw_la_bulk_req {
 #define ICP_QAT_FW_LA_PARTIAL_SET(flags, val) \
 	QAT_FIELD_SET(flags, val, QAT_LA_PARTIAL_BITPOS, \
 	QAT_LA_PARTIAL_MASK)
+
+#define ICP_QAT_FW_HASH_FLAG_MODE2_SET(flags, val) \
+	QAT_FIELD_SET(flags, \
+		val, \
+		QAT_FW_LA_MODE2_BITPOS, \
+		QAT_FW_LA_MODE2_MASK)
 
 struct icp_qat_fw_cipher_req_hdr_cd_pars {
 	union {
