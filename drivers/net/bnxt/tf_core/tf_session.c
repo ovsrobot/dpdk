@@ -141,8 +141,6 @@ tf_session_create(struct tf *tfp,
 	/* Return the allocated session id */
 	session_id->id = session->session_id.id;
 
-	session->shadow_copy = parms->open_cfg->shadow_copy;
-
 	/* Init session client list */
 	ll_init(&session->client_ll);
 
@@ -200,7 +198,6 @@ tf_session_create(struct tf *tfp,
 
 	rc = tf_dev_bind(tfp,
 			 parms->open_cfg->device_type,
-			 session->shadow_copy,
 			 &parms->open_cfg->resources,
 			 parms->open_cfg->wc_num_slices,
 			 &session->dev);
@@ -992,8 +989,6 @@ tf_session_set_db(struct tf *tfp,
 	return rc;
 }
 
-#ifdef TF_TCAM_SHARED
-
 int
 tf_session_get_tcam_shared_db(struct tf *tfp,
 			      void **tcam_shared_db_handle)
@@ -1034,43 +1029,41 @@ tf_session_set_tcam_shared_db(struct tf *tfp,
 
 int
 tf_session_get_sram_db(struct tf *tfp,
-		       void **sram_handle)
+                       void **sram_handle)
 {
-	struct tf_session *tfs = NULL;
-	int rc = 0;
+        struct tf_session *tfs = NULL;
+        int rc = 0;
 
-	*sram_handle = NULL;
+        *sram_handle = NULL;
 
-	if (tfp == NULL)
-		return (-EINVAL);
+        if (tfp == NULL)
+                return (-EINVAL);
 
-	rc = tf_session_get_session_internal(tfp, &tfs);
-	if (rc)
-		return rc;
+        rc = tf_session_get_session_internal(tfp, &tfs);
+        if (rc)
+                return rc;
 
-	*sram_handle = tfs->sram_handle;
-	return rc;
+        *sram_handle = tfs->sram_handle;
+        return rc;
 }
 
 int
 tf_session_set_sram_db(struct tf *tfp,
-		       void *sram_handle)
+                       void *sram_handle)
 {
-	struct tf_session *tfs = NULL;
-	int rc = 0;
+        struct tf_session *tfs = NULL;
+        int rc = 0;
 
-	if (tfp == NULL)
-		return (-EINVAL);
+        if (tfp == NULL)
+                return (-EINVAL);
 
-	rc = tf_session_get_session_internal(tfp, &tfs);
-	if (rc)
-		return rc;
+        rc = tf_session_get_session_internal(tfp, &tfs);
+        if (rc)
+                return rc;
 
-	tfs->sram_handle = sram_handle;
-	return rc;
+        tfs->sram_handle = sram_handle;
+        return rc;
 }
-
-#endif /* TF_TCAM_SHARED */
 
 int
 tf_session_get_global_db(struct tf *tfp,
