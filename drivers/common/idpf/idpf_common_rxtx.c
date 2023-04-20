@@ -1582,12 +1582,36 @@ idpf_qc_splitq_rx_vec_setup(struct idpf_rx_queue *rxq)
 void
 idpf_dev_read_time_hw(void *cb_arg)
 {
-#ifdef RTE_ARCH_X86_64
 	struct idpf_adapter *ad = (struct idpf_adapter *)cb_arg;
 	uint32_t hi, lo, lo2;
 	int rc = 0;
+#ifndef IDPF_ACC_TIMESTAMP
 	struct idpf_hw *hw = &ad->hw;
+#endif /*  !IDPF_ACC_TIMESTAMP */
 
+#ifdef IDPF_ACC_TIMESTAMP
+
+	lo = idpf_mmap_r32(IDPF_ACC_GLTSYN_TIME_L);
+	hi = idpf_mmap_r32(IDPF_ACC_GLTSYN_TIME_H);
+	DRV_LOG(DEBUG, "lo : %X,", lo);
+	DRV_LOG(DEBUG, "hi : %X,", hi);
+	/*
+	 * On typical system, the delta between lo and lo2 is ~1000ns,
+	 * so 10000 seems a large-enough but not overly-big guard band.
+	 */
+	if (lo > (UINT32_MAX - IDPF_TIMESYNC_REG_WRAP_GUARD_BAND))
+		lo2 = idpf_mmap_r32(IDPF_ACC_GLTSYN_TIME_L);
+	else
+		lo2 = lo;
+
+	if (lo2 < lo) {
+		lo = idpf_mmap_r32(IDPF_ACC_GLTSYN_TIME_L);
+		hi = idpf_mmap_r32(IDPF_ACC_GLTSYN_TIME_H);
+	}
+
+	ad->time_hw = ((uint64_t)hi << 32) | lo;
+
+#else  /* !IDPF_ACC_TIMESTAMP */
 	IDPF_WRITE_REG(hw, GLTSYN_CMD_SYNC_0_0, PF_GLTSYN_CMD_SYNC_SHTIME_EN_M);
 	IDPF_WRITE_REG(hw, GLTSYN_CMD_SYNC_0_0,
 		       PF_GLTSYN_CMD_SYNC_EXEC_CMD_M | PF_GLTSYN_CMD_SYNC_SHTIME_EN_M);
@@ -1608,9 +1632,7 @@ idpf_dev_read_time_hw(void *cb_arg)
 	}
 
 	ad->time_hw = ((uint64_t)hi << 32) | lo;
-#else  /* !RTE_ARCH_X86_64 */
-	ad->time_hw = 0;
-#endif /* RTE_ARCH_X86_64 */
+#endif /* IDPF_ACC_TIMESTAMP */
 
 	/* re-alarm watchdog */
 	rc = rte_eal_alarm_set(1000 * 1000, &idpf_dev_read_time_hw, cb_arg);

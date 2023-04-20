@@ -316,6 +316,9 @@ endif
 if get_option('mbuf_refcnt_atomic')
     dpdk_conf.set('RTE_MBUF_REFCNT_ATOMIC', true)
 endif
+if get_option('enable_acc_timestamp')
+    dpdk_conf.set('IDPF_ACC_TIMESTAMP', true)
+endif
 dpdk_conf.set10('RTE_IOVA_IN_MBUF', get_option('enable_iova_as_pa'))
 
 compile_time_cpuflags = []
