@@ -529,6 +529,8 @@ cpfl_rx_queue_init(struct rte_eth_dev *dev, uint16_t rx_queue_id)
 	    frame_size > rxq->rx_buf_len)
 		dev->data->scattered_rx = 1;
 
+	if (dev->data->dev_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP)
+		rxq->ts_enable = TRUE;
 	err = idpf_qc_ts_mbuf_register(rxq);
 	if (err != 0) {
 		PMD_DRV_LOG(ERR, "fail to register timestamp mbuf %u",
