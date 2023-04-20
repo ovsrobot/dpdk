@@ -80,7 +80,9 @@ bad=$(for commit in $commits ; do
 		continue
 	drv=$(echo "$files" | grep '^drivers/' | cut -d "/" -f 2,3 | sort -u)
 	drvgrp=$(echo "$drv" | cut -d "/" -f 1 | uniq)
-	if [ $(echo "$drvgrp" | wc -l) -gt 1 ] ; then
+	drvpmd=$(echo "$drv" | cut -d "/" -f 2 | uniq)
+	if [ $(echo "$drvgrp" | wc -l) -gt 1 ] && \
+	   [ $(echo "$drvpmd" | wc -l) -gt 1 ] ; then
 		echo "$headline" | grep -v '^drivers:'
 	elif [ $(echo "$drv" | wc -l) -gt 1 ] ; then
 		echo "$headline" | grep -v "^drivers/$drvgrp"
