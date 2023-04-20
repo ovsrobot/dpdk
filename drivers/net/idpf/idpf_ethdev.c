@@ -761,6 +761,12 @@ idpf_dev_start(struct rte_eth_dev *dev)
 		goto err_vec;
 	}
 
+	if (dev->data->dev_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
+		rte_eal_alarm_set(1000 * 1000,
+				  &idpf_dev_read_time_hw,
+				  (void *)base);
+	}
+
 	ret = idpf_vc_vectors_alloc(vport, req_vecs_num);
 	if (ret != 0) {
 		PMD_DRV_LOG(ERR, "Failed to allocate interrupt vectors");
@@ -810,6 +816,7 @@ static int
 idpf_dev_stop(struct rte_eth_dev *dev)
 {
 	struct idpf_vport *vport = dev->data->dev_private;
+	struct idpf_adapter *base = vport->adapter;
 
 	if (vport->stopped == 1)
 		return 0;
@@ -821,6 +828,11 @@ idpf_dev_stop(struct rte_eth_dev *dev)
 	idpf_vport_irq_unmap_config(vport, dev->data->nb_rx_queues);
 
 	idpf_vc_vectors_dealloc(vport);
+
+	if (dev->data->dev_conf.rxmode.offloads & RTE_ETH_RX_OFFLOAD_TIMESTAMP) {
+		rte_eal_alarm_cancel(idpf_dev_read_time_hw,
+				     base);
+	}
 
 	vport->stopped = 1;
 
