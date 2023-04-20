@@ -69,5 +69,8 @@ INTERNAL {
 	idpf_vport_rss_config;
 	idpf_vport_stats_update;
 
+	idpf_timestamp_dynfield_offset;
+	idpf_timestamp_dynflag;
+
 	local: *;
 };

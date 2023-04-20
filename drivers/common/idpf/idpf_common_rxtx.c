@@ -354,7 +354,7 @@ int
 idpf_qc_ts_mbuf_register(struct idpf_rx_queue *rxq)
 {
 	int err;
-	if ((rxq->offloads & IDPF_RX_OFFLOAD_TIMESTAMP) != 0) {
+	if (!rxq->ts_enable && (rxq->offloads & IDPF_RX_OFFLOAD_TIMESTAMP)) {
 		/* Register mbuf field and flag for Rx timestamp */
 		err = rte_mbuf_dyn_rx_timestamp_register(&idpf_timestamp_dynfield_offset,
 							 &idpf_timestamp_dynflag);
@@ -363,6 +363,7 @@ idpf_qc_ts_mbuf_register(struct idpf_rx_queue *rxq)
 				"Cannot register mbuf field/flag for timestamp");
 			return -EINVAL;
 		}
+		rxq->ts_enable = TRUE;
 	}
 	return 0;
 }

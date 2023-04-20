@@ -142,6 +142,8 @@ struct idpf_rx_queue {
 	struct idpf_rx_queue *bufq2;
 
 	uint64_t offloads;
+
+	bool ts_enable; /* if timestamp is enabled */
 };
 
 struct idpf_tx_entry {
