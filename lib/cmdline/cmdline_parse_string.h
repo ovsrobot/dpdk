@@ -14,7 +14,7 @@ extern "C" {
 #endif
 
 /* size of a parsed string */
-#define STR_TOKEN_SIZE 128
+#define STR_TOKEN_SIZE 1024
 
 /* size of a parsed multi string */
 #define STR_MULTI_TOKEN_SIZE 4096
