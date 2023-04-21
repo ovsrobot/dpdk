@@ -878,6 +878,10 @@ cpfl_dev_close(struct rte_eth_dev *dev)
 	struct cpfl_adapter_ext *adapter = CPFL_ADAPTER_TO_EXT(vport->adapter);
 
 	cpfl_dev_stop(dev);
+	if (cpfl_vport->p2p_mp) {
+		rte_mempool_free(cpfl_vport->p2p_mp);
+		cpfl_vport->p2p_mp = NULL;
+	}
 
 	cpfl_p2p_queue_grps_del(vport);
 
@@ -919,6 +923,8 @@ static const struct eth_dev_ops cpfl_eth_dev_ops = {
 	.xstats_get_names		= cpfl_dev_xstats_get_names,
 	.xstats_reset			= cpfl_dev_xstats_reset,
 	.hairpin_cap_get		= cpfl_hairpin_cap_get,
+	.rx_hairpin_queue_setup		= cpfl_rx_hairpin_queue_setup,
+	.tx_hairpin_queue_setup		= cpfl_tx_hairpin_queue_setup,
 };
 
 static int
