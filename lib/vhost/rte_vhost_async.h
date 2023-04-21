@@ -287,6 +287,17 @@ int
 rte_vhost_async_dma_unconfigure(int16_t dma_id, uint16_t vchan_id);
 
 __rte_experimental
+uint16_t rte_vhost_submit_ingress_mirroring_burst(int vid, uint16_t queue_id,
+		int mirror_vid, uint16_t mirror_queue_id,
+		struct rte_mbuf **pkts, uint16_t count,
+		int16_t dma_id, uint16_t vchan_id);
+
+__rte_experimental
+uint16_t rte_vhost_poll_ingress_completed(int vid, uint16_t queue_id, int mr_vid,
+		uint16_t mr_queue_id, struct rte_mbuf **pkts, uint16_t count,
+		int16_t dma_id, uint16_t vchan_id);
+
+__rte_experimental
 uint16_t rte_vhost_async_try_egress_burst(int vid, uint16_t queue_id,
 		int mr_vid, uint16_t mr_queue_id,
 		struct rte_mempool *mbuf_pool, struct rte_mbuf **pkts, uint16_t count,

@@ -98,6 +98,8 @@ EXPERIMENTAL {
 	# added in 22.11
 	rte_vhost_async_dma_unconfigure;
 	rte_vhost_vring_call_nonblock;
+	rte_vhost_submit_ingress_mirroring_burst;
+	rte_vhost_poll_ingress_completed;
 	rte_vhost_async_try_egress_burst;
 };
 
