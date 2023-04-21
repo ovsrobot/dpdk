@@ -55,6 +55,9 @@
 
 #define IDPF_ALARM_INTERVAL	50000 /* us */
 
+extern int idpf_timestamp_dynfield_offset;
+extern uint64_t idpf_timestamp_dynflag;
+
 struct idpf_vport_param {
 	struct idpf_adapter_ext *adapter;
 	uint16_t devarg_id; /* arg id from user */
