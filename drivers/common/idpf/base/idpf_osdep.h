@@ -24,6 +24,13 @@
 #include <rte_random.h>
 #include <rte_io.h>
 
+#ifdef IDPF_ACC_TIMESTAMP
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#endif /* IDPF_ACC_TIMESTAMP */
+
 #define INLINE inline
 #define STATIC static
 
@@ -360,5 +367,46 @@ idpf_hweight32(u32 num)
 	LIST_FOREACH(pos, head, list)
 
 #endif
+
+#ifdef IDPF_ACC_TIMESTAMP
+#define IDPF_ACC_TIMESYNC_BASE_ADDR 0x480D500000
+#define IDPF_ACC_GLTSYN_TIME_H (IDPF_ACC_TIMESYNC_BASE_ADDR + 0x1C)
+#define IDPF_ACC_GLTSYN_TIME_L (IDPF_ACC_TIMESYNC_BASE_ADDR + 0x10)
+
+inline uint32_t
+idpf_mmap_r32(uint64_t pa)
+{
+	int fd;
+	void *bp, *vp;
+	uint32_t rval = 0xdeadbeef;
+	uint32_t ps, ml, of;
+
+	fd = open("/dev/mem", (O_RDWR | O_SYNC));
+	if (fd == -1) {
+		perror("/dev/mem");
+		return -1;
+	}
+	ml = ps = getpagesize();
+	of = (uint32_t)pa & (ps - 1);
+	if (of + (sizeof(uint32_t) * 4) > ps)
+		ml *= 2;
+	bp = mmap(NULL, ml, (PROT_READ | PROT_WRITE), MAP_SHARED, fd, pa & ~(uint64_t)(ps - 1));
+	if (bp == MAP_FAILED) {
+		perror("mmap");
+		goto done;
+	}
+
+	vp = (char *)bp + of;
+
+	rval = *(volatile uint32_t *)vp;
+	if (munmap(bp, ml) == -1)
+		perror("munmap");
+done:
+	close(fd);
+
+	return rval;
+}
+
+#endif /* IDPF_ACC_TIMESTAMP */
 
 #endif /* _IDPF_OSDEP_H_ */
