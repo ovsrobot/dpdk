@@ -2335,7 +2335,8 @@ RTE_INIT(ipsec_mb_register_aesni_mb)
 			RTE_CRYPTODEV_FF_IN_PLACE_SGL |
 			RTE_CRYPTODEV_FF_OOP_SGL_IN_SGL_OUT |
 			RTE_CRYPTODEV_FF_OOP_LB_IN_SGL_OUT |
-			RTE_CRYPTODEV_FF_OOP_SGL_IN_LB_OUT;
+			RTE_CRYPTODEV_FF_OOP_SGL_IN_LB_OUT |
+			RTE_CRYPTODEV_FF_DIGEST_ENCRYPTED;
 
 	aesni_mb_data->internals_priv_size = 0;
 	aesni_mb_data->ops = &aesni_mb_pmd_ops;
