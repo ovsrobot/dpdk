@@ -142,7 +142,6 @@ struct idpf_rx_queue {
 	struct idpf_rx_queue *bufq2;
 
 	uint64_t offloads;
-	uint32_t hw_register_set;
 };
 
 struct idpf_tx_entry {
@@ -300,4 +299,6 @@ __rte_internal
 uint16_t idpf_dp_singleq_recv_scatter_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 			  uint16_t nb_pkts);
 
+__rte_internal
+void idpf_dev_read_time_hw(void *cb_arg);
 #endif /* _IDPF_COMMON_RXTX_H_ */
