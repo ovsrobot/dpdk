@@ -104,6 +104,8 @@ int cpfl_hairpin_txq_config(struct idpf_vport *vport, struct cpfl_tx_queue *cpfl
 int cpfl_hairpin_rx_bufq_config(struct cpfl_vport *cpfl_vport);
 int cpfl_hairpin_rxq_config(struct idpf_vport *vport, struct cpfl_rx_queue *cpfl_rxq);
 int cpfl_switch_hairpin_bufq_complq(struct cpfl_vport *cpfl_vport, bool on);
+int cpfl_switch_hairpin_complq(struct cpfl_vport *cpfl_vport, bool on);
+int cpfl_switch_hairpin_bufq(struct cpfl_vport *cpfl_vport, bool on);
 int cpfl_switch_hairpin_rxtx_queue(struct cpfl_vport *cpfl_vport, uint16_t qid,
 				   bool rx, bool on);
 #endif /* _CPFL_RXTX_H_ */
