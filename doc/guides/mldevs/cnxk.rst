@@ -231,11 +231,11 @@ Total number of extended stats would be equal to 6 x number of models loaded.
    +---+---------------------+----------------------------------------------+
    | 3 | Max-HW-Latency      | Maximum hardware latency                     |
    +---+---------------------+----------------------------------------------+
-   | 4 | Avg-HW-Latency      | Average firmware latency                     |
+   | 4 | Avg-FW-Latency      | Average firmware latency                     |
    +---+---------------------+----------------------------------------------+
-   | 5 | Avg-HW-Latency      | Minimum firmware latency                     |
+   | 5 | Min-FW-Latency      | Minimum firmware latency                     |
    +---+---------------------+----------------------------------------------+
-   | 6 | Avg-HW-Latency      | Maximum firmware latency                     |
+   | 6 | Max-FW-Latency      | Maximum firmware latency                     |
    +---+---------------------+----------------------------------------------+
 
 Latency values reported by the PMD through xstats can have units,
