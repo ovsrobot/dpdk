@@ -14,10 +14,10 @@
 int
 ml_model_load(struct ml_test *test, struct ml_options *opt, struct ml_model *model, uint16_t fid)
 {
-	struct test_common *t = ml_test_priv(test);
 	struct rte_ml_model_params model_params;
-	FILE *fp;
 	int ret;
+
+	RTE_SET_USED(test);
 
 	if (model->state == MODEL_LOADED)
 		return 0;
@@ -26,31 +26,10 @@ ml_model_load(struct ml_test *test, struct ml_options *opt, struct ml_model *mod
 		return -EINVAL;
 
 	/* read model binary */
-	fp = fopen(opt->filelist[fid].model, "r");
-	if (fp == NULL) {
-		ml_err("Failed to open model file : %s\n", opt->filelist[fid].model);
-		return -1;
-	}
-
-	fseek(fp, 0, SEEK_END);
-	model_params.size = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-
-	model_params.addr = rte_malloc_socket("ml_model", model_params.size,
-					      t->dev_info.min_align_size, opt->socket_id);
-	if (model_params.addr == NULL) {
-		ml_err("Failed to allocate memory for model: %s\n", opt->filelist[fid].model);
-		fclose(fp);
-		return -ENOMEM;
-	}
-
-	if (fread(model_params.addr, 1, model_params.size, fp) != model_params.size) {
-		ml_err("Failed to read model file : %s\n", opt->filelist[fid].model);
-		rte_free(model_params.addr);
-		fclose(fp);
-		return -1;
-	}
-	fclose(fp);
+	ret = ml_read_file(opt->filelist[fid].model, &model_params.size,
+			   (char **)&model_params.addr);
+	if (ret != 0)
+		return ret;
 
 	/* load model to device */
 	ret = rte_ml_model_load(opt->dev_id, &model_params, &model->id);
