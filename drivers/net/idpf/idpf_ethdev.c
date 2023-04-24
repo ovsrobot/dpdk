@@ -765,6 +765,13 @@ idpf_dev_start(struct rte_eth_dev *dev)
 		rte_eal_alarm_set(1000 * 1000,
 				  &idpf_dev_read_time_hw,
 				  (void *)base);
+		/* Register mbuf field and flag for Rx timestamp */
+		ret = rte_mbuf_dyn_rx_timestamp_register(&idpf_timestamp_dynfield_offset,
+							 &idpf_timestamp_dynflag);
+		if (ret != 0) {
+			PMD_DRV_LOG(ERR, "Cannot register mbuf field/flag for timestamp");
+			return -EINVAL;
+		}
 	}
 
 	ret = idpf_vc_vectors_alloc(vport, req_vecs_num);
