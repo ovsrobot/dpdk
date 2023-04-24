@@ -4,6 +4,7 @@
 
 #include <rte_mbuf_dyn.h>
 #include <rte_errno.h>
+#include <rte_alarm.h>
 
 #include "idpf_common_rxtx.h"
 
@@ -442,56 +443,23 @@ idpf_qc_split_rxq_mbufs_alloc(struct idpf_rx_queue *rxq)
 	return 0;
 }
 
-#define IDPF_TIMESYNC_REG_WRAP_GUARD_BAND  10000
 /* Helper function to convert a 32b nanoseconds timestamp to 64b. */
 static inline uint64_t
-idpf_tstamp_convert_32b_64b(struct idpf_adapter *ad, uint32_t flag,
-			    uint32_t in_timestamp)
+idpf_tstamp_convert_32b_64b(uint64_t time_hw, uint32_t in_timestamp)
 {
-#ifdef RTE_ARCH_X86_64
-	struct idpf_hw *hw = &ad->hw;
 	const uint64_t mask = 0xFFFFFFFF;
-	uint32_t hi, lo, lo2, delta;
+	const uint32_t half_overflow_duration = 0x1 << 31;
+	uint32_t delta;
 	uint64_t ns;
 
-	if (flag != 0) {
-		IDPF_WRITE_REG(hw, GLTSYN_CMD_SYNC_0_0, PF_GLTSYN_CMD_SYNC_SHTIME_EN_M);
-		IDPF_WRITE_REG(hw, GLTSYN_CMD_SYNC_0_0, PF_GLTSYN_CMD_SYNC_EXEC_CMD_M |
-			       PF_GLTSYN_CMD_SYNC_SHTIME_EN_M);
-		lo = IDPF_READ_REG(hw, PF_GLTSYN_SHTIME_L_0);
-		hi = IDPF_READ_REG(hw, PF_GLTSYN_SHTIME_H_0);
-		/*
-		 * On typical system, the delta between lo and lo2 is ~1000ns,
-		 * so 10000 seems a large-enough but not overly-big guard band.
-		 */
-		if (lo > (UINT32_MAX - IDPF_TIMESYNC_REG_WRAP_GUARD_BAND))
-			lo2 = IDPF_READ_REG(hw, PF_GLTSYN_SHTIME_L_0);
-		else
-			lo2 = lo;
-
-		if (lo2 < lo) {
-			lo = IDPF_READ_REG(hw, PF_GLTSYN_SHTIME_L_0);
-			hi = IDPF_READ_REG(hw, PF_GLTSYN_SHTIME_H_0);
-		}
-
-		ad->time_hw = ((uint64_t)hi << 32) | lo;
-	}
-
-	delta = (in_timestamp - (uint32_t)(ad->time_hw & mask));
-	if (delta > (mask / 2)) {
-		delta = ((uint32_t)(ad->time_hw & mask) - in_timestamp);
-		ns = ad->time_hw - delta;
+	delta = (in_timestamp - (uint32_t)(time_hw & mask));
+	if (delta > half_overflow_duration) {
+		delta = ((uint32_t)(time_hw & mask) - in_timestamp);
+		ns = time_hw - delta;
 	} else {
-		ns = ad->time_hw + delta;
+		ns = time_hw + delta;
 	}
-
 	return ns;
-#else /* !RTE_ARCH_X86_64 */
-	RTE_SET_USED(ad);
-	RTE_SET_USED(flag);
-	RTE_SET_USED(in_timestamp);
-	return 0;
-#endif /* RTE_ARCH_X86_64 */
 }
 
 #define IDPF_RX_FLEX_DESC_ADV_STATUS0_XSUM_S				\
@@ -659,9 +627,6 @@ idpf_dp_splitq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 	rx_desc_ring = rxq->rx_ring;
 	ptype_tbl = rxq->adapter->ptype_tbl;
 
-	if ((rxq->offloads & IDPF_RX_OFFLOAD_TIMESTAMP) != 0)
-		rxq->hw_register_set = 1;
-
 	while (nb_rx < nb_pkts) {
 		rx_desc = &rx_desc_ring[rx_id];
 
@@ -720,10 +685,8 @@ idpf_dp_splitq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 		if (idpf_timestamp_dynflag > 0 &&
 		    (rxq->offloads & IDPF_RX_OFFLOAD_TIMESTAMP)) {
 			/* timestamp */
-			ts_ns = idpf_tstamp_convert_32b_64b(ad,
-							    rxq->hw_register_set,
+			ts_ns = idpf_tstamp_convert_32b_64b(ad->time_hw,
 							    rte_le_to_cpu_32(rx_desc->ts_high));
-			rxq->hw_register_set = 0;
 			*RTE_MBUF_DYNFIELD(rxm,
 					   idpf_timestamp_dynfield_offset,
 					   rte_mbuf_timestamp_t *) = ts_ns;
@@ -1077,9 +1040,6 @@ idpf_dp_singleq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 	rx_ring = rxq->rx_ring;
 	ptype_tbl = rxq->adapter->ptype_tbl;
 
-	if ((rxq->offloads & IDPF_RX_OFFLOAD_TIMESTAMP) != 0)
-		rxq->hw_register_set = 1;
-
 	while (nb_rx < nb_pkts) {
 		rxdp = &rx_ring[rx_id];
 		rx_status0 = rte_le_to_cpu_16(rxdp->flex_nic_wb.status_error0);
@@ -1142,10 +1102,8 @@ idpf_dp_singleq_recv_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 		if (idpf_timestamp_dynflag > 0 &&
 		    (rxq->offloads & IDPF_RX_OFFLOAD_TIMESTAMP) != 0) {
 			/* timestamp */
-			ts_ns = idpf_tstamp_convert_32b_64b(ad,
-					    rxq->hw_register_set,
+			ts_ns = idpf_tstamp_convert_32b_64b(ad->time_hw,
 					    rte_le_to_cpu_32(rxd.flex_nic_wb.flex_ts.ts_high));
-			rxq->hw_register_set = 0;
 			*RTE_MBUF_DYNFIELD(rxm,
 					   idpf_timestamp_dynfield_offset,
 					   rte_mbuf_timestamp_t *) = ts_ns;
@@ -1272,10 +1230,8 @@ idpf_dp_singleq_recv_scatter_pkts(void *rx_queue, struct rte_mbuf **rx_pkts,
 		if (idpf_timestamp_dynflag > 0 &&
 		    (rxq->offloads & IDPF_RX_OFFLOAD_TIMESTAMP) != 0) {
 			/* timestamp */
-			ts_ns = idpf_tstamp_convert_32b_64b(ad,
-				rxq->hw_register_set,
+			ts_ns = idpf_tstamp_convert_32b_64b(ad->time_hw,
 				rte_le_to_cpu_32(rxd.flex_nic_wb.flex_ts.ts_high));
-			rxq->hw_register_set = 0;
 			*RTE_MBUF_DYNFIELD(rxm,
 					   idpf_timestamp_dynfield_offset,
 					   rte_mbuf_timestamp_t *) = ts_ns;
@@ -1620,4 +1576,44 @@ idpf_qc_splitq_rx_vec_setup(struct idpf_rx_queue *rxq)
 {
 	rxq->bufq2->ops = &def_rx_ops_vec;
 	return idpf_rxq_vec_setup_default(rxq->bufq2);
+}
+
+#define IDPF_TIMESYNC_REG_WRAP_GUARD_BAND	10000
+void
+idpf_dev_read_time_hw(void *cb_arg)
+{
+#ifdef RTE_ARCH_X86_64
+	struct idpf_adapter *ad = (struct idpf_adapter *)cb_arg;
+	uint32_t hi, lo, lo2;
+	int rc = 0;
+	struct idpf_hw *hw = &ad->hw;
+
+	IDPF_WRITE_REG(hw, GLTSYN_CMD_SYNC_0_0, PF_GLTSYN_CMD_SYNC_SHTIME_EN_M);
+	IDPF_WRITE_REG(hw, GLTSYN_CMD_SYNC_0_0,
+		       PF_GLTSYN_CMD_SYNC_EXEC_CMD_M | PF_GLTSYN_CMD_SYNC_SHTIME_EN_M);
+	lo = IDPF_READ_REG(hw, PF_GLTSYN_SHTIME_L_0);
+	hi = IDPF_READ_REG(hw, PF_GLTSYN_SHTIME_H_0);
+	/*
+	 * On typical system, the delta between lo and lo2 is ~1000ns,
+	 * so 10000 seems a large-enough but not overly-big guard band.
+	 */
+	if (lo > (UINT32_MAX - IDPF_TIMESYNC_REG_WRAP_GUARD_BAND))
+		lo2 = IDPF_READ_REG(hw, PF_GLTSYN_SHTIME_L_0);
+	else
+		lo2 = lo;
+
+	if (lo2 < lo) {
+		lo = IDPF_READ_REG(hw, PF_GLTSYN_SHTIME_L_0);
+		hi = IDPF_READ_REG(hw, PF_GLTSYN_SHTIME_H_0);
+	}
+
+	ad->time_hw = ((uint64_t)hi << 32) | lo;
+#else  /* !RTE_ARCH_X86_64 */
+	ad->time_hw = 0;
+#endif /* RTE_ARCH_X86_64 */
+
+	/* re-alarm watchdog */
+	rc = rte_eal_alarm_set(1000 * 1000, &idpf_dev_read_time_hw, cb_arg);
+	if (rc)
+		DRV_LOG(ERR, "Failed to reset device watchdog alarm");
 }
