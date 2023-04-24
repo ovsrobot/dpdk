@@ -857,12 +857,6 @@ insert_value(struct idpf_devargs *devargs, uint16_t id)
 			return 0;
 	}
 
-	if (devargs->req_vport_nb >= RTE_DIM(devargs->req_vports)) {
-		PMD_INIT_LOG(ERR, "Total vport number can't be > %d",
-			     IDPF_MAX_VPORT_NUM);
-		return -EINVAL;
-	}
-
 	devargs->req_vports[devargs->req_vport_nb] = id;
 	devargs->req_vport_nb++;
 
@@ -879,12 +873,10 @@ parse_range(const char *value, struct idpf_devargs *devargs)
 
 	result = sscanf(value, "%hu%n-%hu%n", &lo, &n, &hi, &n);
 	if (result == 1) {
-		if (lo >= IDPF_MAX_VPORT_NUM)
-			return NULL;
 		if (insert_value(devargs, lo) != 0)
 			return NULL;
 	} else if (result == 2) {
-		if (lo > hi || hi >= IDPF_MAX_VPORT_NUM)
+		if (lo > hi)
 			return NULL;
 		for (i = lo; i <= hi; i++) {
 			if (insert_value(devargs, i) != 0)
@@ -969,40 +961,40 @@ idpf_parse_devargs(struct rte_pci_device *pci_dev, struct idpf_adapter_ext *adap
 		return -EINVAL;
 	}
 
-	/* check parsed devargs */
-	if (adapter->cur_vport_nb + idpf_args->req_vport_nb >
-	    IDPF_MAX_VPORT_NUM) {
-		PMD_INIT_LOG(ERR, "Total vport number can't be > %d",
-			     IDPF_MAX_VPORT_NUM);
-		ret = -EINVAL;
-		goto bail;
-	}
-
-	for (i = 0; i < idpf_args->req_vport_nb; i++) {
-		if (adapter->cur_vports & RTE_BIT32(idpf_args->req_vports[i])) {
-			PMD_INIT_LOG(ERR, "Vport %d has been created",
-				     idpf_args->req_vports[i]);
-			ret = -EINVAL;
-			goto bail;
-		}
-	}
-
 	ret = rte_kvargs_process(kvlist, IDPF_VPORT, &parse_vport,
 				 idpf_args);
 	if (ret != 0)
-		goto bail;
+		goto fail;
 
 	ret = rte_kvargs_process(kvlist, IDPF_TX_SINGLE_Q, &parse_bool,
 				 &adapter->base.is_tx_singleq);
 	if (ret != 0)
-		goto bail;
+		goto fail;
 
 	ret = rte_kvargs_process(kvlist, IDPF_RX_SINGLE_Q, &parse_bool,
 				 &adapter->base.is_rx_singleq);
 	if (ret != 0)
-		goto bail;
+		goto fail;
 
-bail:
+	/* check parsed devargs */
+	if (adapter->cur_vport_nb + idpf_args->req_vport_nb >
+	    adapter->max_vport_nb) {
+		PMD_INIT_LOG(ERR, "Total vport number can't be > %d",
+			     adapter->max_vport_nb);
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	for (i = 0; i < idpf_args->req_vport_nb; i++) {
+		if (adapter->cur_vports & RTE_BIT32(idpf_args->req_vports[i])) {
+			PMD_INIT_LOG(ERR, "Vport %d has been requested",
+				     idpf_args->req_vports[i]);
+			ret = -EINVAL;
+			goto fail;
+		}
+	}
+
+fail:
 	rte_kvargs_free(kvlist);
 	return ret;
 }
@@ -1152,7 +1144,8 @@ idpf_adapter_ext_init(struct rte_pci_device *pci_dev, struct idpf_adapter_ext *a
 
 	rte_eal_alarm_set(IDPF_ALARM_INTERVAL, idpf_dev_alarm_handler, adapter);
 
-	adapter->max_vport_nb = adapter->base.caps.max_vports;
+	adapter->max_vport_nb = adapter->base.caps.max_vports > IDPF_MAX_VPORT_NUM ?
+				IDPF_MAX_VPORT_NUM : adapter->base.caps.max_vports;
 
 	adapter->vports = rte_zmalloc("vports",
 				      adapter->max_vport_nb *
