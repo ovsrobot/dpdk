@@ -20,6 +20,7 @@ DPDK Tools User Guides
     cryptoperf
     comp_perf
     testeventdev
+    testgraph
     testregex
     testmldev
     dts
