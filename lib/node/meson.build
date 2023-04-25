@@ -17,6 +17,7 @@ sources = files(
         'null.c',
         'pkt_cls.c',
         'pkt_drop.c',
+        'punt_kernel.c',
 )
 headers = files('rte_node_ip4_api.h', 'rte_node_eth_api.h')
 # Strict-aliasing rules are violated by uint8_t[] to context size casts.

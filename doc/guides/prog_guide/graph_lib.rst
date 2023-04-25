@@ -392,3 +392,13 @@ null
 ~~~~
 This node ignores the set of objects passed to it and reports that all are
 processed.
+
+punt_kernel
+~~~~~~~~~~~
+This node punts the packets to kernel using a raw socket interface. For sending
+the received packets, raw socket uses the packet's destination IP address in
+sockaddr_in address structure and node uses ``sendto`` function to send data
+on the raw socket.
+
+Aftering sending the burst of packets to kernel, this node redirects the same
+objects to pkt_drop node to free up the packet buffers.
