@@ -402,3 +402,10 @@ on the raw socket.
 
 Aftering sending the burst of packets to kernel, this node redirects the same
 objects to pkt_drop node to free up the packet buffers.
+
+kernel_recv
+~~~~~~~~~~~
+This node receives packets from kernel over a raw socket interface. Uses ``poll``
+function to poll on the socket fd for ``POLLIN`` events to read the packets from
+raw socket to stream buffer and does ``rte_node_next_stream_move()`` when there
+are received packets.
