@@ -6,6 +6,7 @@
 #include "idpf_prototype.h"
 #include <virtchnl.h>
 
+struct idpf_dma_mem send_dma_mem = { 0 };
 
 /**
  * idpf_set_mac_type - Sets MAC type
@@ -132,6 +133,15 @@ int idpf_init_hw(struct idpf_hw *hw, struct idpf_ctlq_size ctlq_size)
 
 	idpf_free(hw, q_info);
 
+	/*
+	 * Need an initial static buffer to copy DMA memory to send
+	 * for drivers that do not allow this allocation at runtime
+	 */
+	send_dma_mem.va = (struct idpf_dma_mem *)
+		idpf_alloc_dma_mem(hw, &send_dma_mem, 4096);
+	if (!send_dma_mem.va)
+		return -ENOMEM;
+
 	return 0;
 }
 
@@ -152,7 +162,6 @@ int idpf_send_msg_to_cp(struct idpf_hw *hw, int v_opcode,
 			int v_retval, u8 *msg, u16 msglen)
 {
 	struct idpf_ctlq_msg ctlq_msg = { 0 };
-	struct idpf_dma_mem dma_mem = { 0 };
 	int status;
 
 	ctlq_msg.opcode = idpf_mbq_opc_send_msg_to_pf;
@@ -162,18 +171,10 @@ int idpf_send_msg_to_cp(struct idpf_hw *hw, int v_opcode,
 	ctlq_msg.cookie.mbx.chnl_opcode = v_opcode;
 
 	if (msglen > 0) {
-		dma_mem.va = (struct idpf_dma_mem *)
-			  idpf_alloc_dma_mem(hw, &dma_mem, msglen);
-		if (!dma_mem.va)
-			return -ENOMEM;
-
-		idpf_memcpy(dma_mem.va, msg, msglen, IDPF_NONDMA_TO_DMA);
-		ctlq_msg.ctx.indirect.payload = &dma_mem;
+		idpf_memcpy(send_dma_mem.va, msg, msglen, IDPF_NONDMA_TO_DMA);
+		ctlq_msg.ctx.indirect.payload = &send_dma_mem;
 	}
 	status = idpf_ctlq_send(hw, hw->asq, 1, &ctlq_msg);
-
-	if (dma_mem.va)
-		idpf_free_dma_mem(hw, &dma_mem);
 
 	return status;
 }
@@ -262,6 +263,9 @@ exit:
  */
 int idpf_deinit_hw(struct idpf_hw *hw)
 {
+	if (send_dma_mem.va)
+		idpf_free_dma_mem(hw, &send_dma_mem);
+
 	hw->asq = NULL;
 	hw->arq = NULL;
 
