@@ -9,7 +9,7 @@
 #include "ice_flow.h"
 #include "ice_switch.h"
 
-#define ICE_PF_RESET_WAIT_COUNT	300
+#define ICE_PF_RESET_WAIT_COUNT	500
 
 static const char * const ice_link_mode_str_low[] = {
 	ice_arr_elem_idx(0, "100BASE_TX"),
@@ -248,6 +248,12 @@ static enum ice_status ice_set_mac_type(struct ice_hw *hw)
 	case ICE_DEV_ID_E825C_1GBE:
 	case ICE_DEV_ID_E825X:
 		hw->mac_type = ICE_MAC_GENERIC;
+		break;
+	case ICE_DEV_ID_E830_BACKPLANE:
+	case ICE_DEV_ID_E830_QSFP56:
+	case ICE_DEV_ID_E830_SFP:
+	case ICE_DEV_ID_E830_SFP_DD:
+		hw->mac_type = ICE_MAC_E830;
 		break;
 	default:
 		hw->mac_type = ICE_MAC_UNKNOWN;
