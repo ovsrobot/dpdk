@@ -2897,6 +2897,10 @@ enum ice_aqc_driver_params {
 	ICE_AQC_DRIVER_PARAM_CLK_IDX_TMR0 = 0,
 	/* OS clock index for PTP timer Domain 1 */
 	ICE_AQC_DRIVER_PARAM_CLK_IDX_TMR1,
+	/* Request ID to recalibrate PHC logic */
+	ICE_AQC_DRIVER_PARAM_PHC_RECALC,
+	/* Indicates that PTP clock controller failed */
+	ICE_AQC_DRIVER_PARAM_PTP_CC_FAILED,
 
 	/* Add new parameters above */
 	ICE_AQC_DRIVER_PARAM_MAX = 16,

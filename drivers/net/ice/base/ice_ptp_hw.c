@@ -2028,47 +2028,6 @@ enum ice_status ice_phy_cfg_tx_offset_e822(struct ice_hw *hw, u8 port)
 }
 
 /**
- * ice_phy_cfg_fixed_tx_offset_e822 - Configure Tx offset for bypass mode
- * @hw: pointer to the HW struct
- * @port: the PHY port to configure
- *
- * Calculate and program the fixed Tx offset, and indicate that the offset is
- * ready. This can be used when operating in bypass mode.
- */
-static enum ice_status
-ice_phy_cfg_fixed_tx_offset_e822(struct ice_hw *hw, u8 port)
-{
-	enum ice_ptp_link_spd link_spd;
-	enum ice_ptp_fec_mode fec_mode;
-	enum ice_status status;
-	u64 total_offset;
-
-	status = ice_phy_get_speed_and_fec_e822(hw, port, &link_spd, &fec_mode);
-	if (status)
-		return status;
-
-	total_offset = ice_calc_fixed_tx_offset_e822(hw, link_spd);
-
-	/* Program the fixed Tx offset into the P_REG_TOTAL_TX_OFFSET_L
-	 * register, then indicate that the Tx offset is ready. After this,
-	 * timestamps will be enabled.
-	 *
-	 * Note that this skips including the more precise offsets generated
-	 * by the Vernier calibration.
-	 */
-	status = ice_write_64b_phy_reg_e822(hw, port, P_REG_TOTAL_TX_OFFSET_L,
-					    total_offset);
-	if (status)
-		return status;
-
-	status = ice_write_phy_reg_e822(hw, port, P_REG_TX_OR, 1);
-	if (status)
-		return status;
-
-	return ICE_SUCCESS;
-}
-
-/**
  * ice_phy_calc_pmd_adj_e822 - Calculate PMD adjustment for Rx
  * @hw: pointer to the HW struct
  * @port: the PHY port to adjust for
@@ -2348,43 +2307,33 @@ enum ice_status ice_phy_cfg_rx_offset_e822(struct ice_hw *hw, u8 port)
 	return ICE_SUCCESS;
 }
 
+
 /**
- * ice_phy_cfg_fixed_rx_offset_e822 - Configure fixed Rx offset for bypass mode
+ * ice_ptp_clear_phy_offset_ready_e822 - Clear PHY TX_/RX_OFFSET_READY registers
  * @hw: pointer to the HW struct
- * @port: the PHY port to configure
  *
- * Calculate and program the fixed Rx offset, and indicate that the offset is
- * ready. This can be used when operating in bypass mode.
+ * Clear PHY TX_/RX_OFFSET_READY registers, effectively marking all transmitted
+ * and received timestamps as invalid.
  */
-static enum ice_status
-ice_phy_cfg_fixed_rx_offset_e822(struct ice_hw *hw, u8 port)
+static enum ice_status ice_ptp_clear_phy_offset_ready_e822(struct ice_hw *hw)
 {
-	enum ice_ptp_link_spd link_spd;
-	enum ice_ptp_fec_mode fec_mode;
-	enum ice_status status;
-	u64 total_offset;
+	u8 port;
 
-	status = ice_phy_get_speed_and_fec_e822(hw, port, &link_spd, &fec_mode);
-	if (status)
-		return status;
+	for (port = 0; port < hw->phy_ports; port++) {
+		enum ice_status status;
 
-	total_offset = ice_calc_fixed_rx_offset_e822(hw, link_spd);
+		status = ice_write_phy_reg_e822(hw, port, P_REG_TX_OR, 0);
+		if (status) {
+			ice_warn(hw, "Failed to clear PHY TX_OFFSET_READY register\n");
+			return status;
+		}
 
-	/* Program the fixed Rx offset into the P_REG_TOTAL_RX_OFFSET_L
-	 * register, then indicate that the Rx offset is ready. After this,
-	 * timestamps will be enabled.
-	 *
-	 * Note that this skips including the more precise offsets generated
-	 * by Vernier calibration.
-	 */
-	status = ice_write_64b_phy_reg_e822(hw, port, P_REG_TOTAL_RX_OFFSET_L,
-					    total_offset);
-	if (status)
-		return status;
-
-	status = ice_write_phy_reg_e822(hw, port, P_REG_RX_OR, 1);
-	if (status)
-		return status;
+		status = ice_write_phy_reg_e822(hw, port, P_REG_RX_OR, 0);
+		if (status) {
+			ice_warn(hw, "Failed to clear PHY RX_OFFSET_READY register\n");
+			return status;
+		}
+	}
 
 	return ICE_SUCCESS;
 }
@@ -2665,24 +2614,6 @@ ice_start_phy_timer_e822(struct ice_hw *hw, u8 port, bool bypass)
 	status = ice_sync_phy_timer_e822(hw, port);
 	if (status)
 		return status;
-
-	if (bypass) {
-		val |= P_REG_PS_BYPASS_MODE_M;
-		/* Enter BYPASS mode, enabling timestamps immediately. */
-		status = ice_write_phy_reg_e822(hw, port, P_REG_PS, val);
-		if (status)
-			return status;
-
-		/* Program the fixed Tx offset */
-		status = ice_phy_cfg_fixed_tx_offset_e822(hw, port);
-		if (status)
-			return status;
-
-		/* Program the fixed Rx offset */
-		status = ice_phy_cfg_fixed_rx_offset_e822(hw, port);
-		if (status)
-			return status;
-	}
 
 	ice_debug(hw, ICE_DBG_PTP, "Enabled clock on PHY port %u\n", port);
 
@@ -3839,6 +3770,25 @@ ice_ptp_adj_clock_at_time(struct ice_hw *hw, u64 at_time, s32 adj)
 		return status;
 
 	return ice_ptp_tmr_cmd(hw, ICE_PTP_ADJ_TIME_AT_TIME, true);
+}
+
+/**
+ * ice_ptp_clear_phy_offset_ready - Clear PHY TX_/RX_OFFSET_READY registers
+ * @hw: pointer to the HW struct
+ *
+ * Clear PHY TX_/RX_OFFSET_READY registers, effectively marking all transmitted
+ * and received timestamps as invalid.
+ */
+enum ice_status ice_ptp_clear_phy_offset_ready(struct ice_hw *hw)
+{
+	switch (hw->phy_model) {
+	case ICE_PHY_E810:
+		return ICE_SUCCESS;
+	case ICE_PHY_E822:
+		return ice_ptp_clear_phy_offset_ready_e822(hw);
+	default:
+		return ICE_ERR_NOT_SUPPORTED;
+	}
 }
 
 /**
