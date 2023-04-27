@@ -76,13 +76,10 @@
 /* Intel(R) Ethernet Connection E825-C for backplane */
 #define ICE_DEV_ID_E825C_BACKPLANE	0x579C
 /* Intel(R) Ethernet Connection E825-C for QSFP */
-#define ICE_DEV_ID_E825C_QSFP	        0x579D
+#define ICE_DEV_ID_E825C_QSFP		0x579D
 /* Intel(R) Ethernet Connection E825-C for SFP */
-#define ICE_DEV_ID_E825C_SFP	        0x579E
+#define ICE_DEV_ID_E825C_SFP		0x579E
 /* Intel(R) Ethernet Connection E825-C 1GbE */
-#define ICE_DEV_ID_E825C_1GBE	        0x579F
-/* Intel(R) Ethernet Connection E825-X */
-#define ICE_DEV_ID_E825X	        0x0DCD
-
-
+#define ICE_DEV_ID_E825C_SGMII		0x579F
+#define ICE_DEV_ID_C825X		0x0DCD
 #endif /* _ICE_DEVIDS_H_ */

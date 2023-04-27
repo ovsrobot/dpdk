@@ -444,6 +444,7 @@ static u32 ice_get_pkg_segment_id(enum ice_mac_type mac_type)
 		break;
 	case ICE_MAC_GENERIC:
 	case ICE_MAC_GENERIC_3K:
+	case ICE_MAC_GENERIC_3K_E825:
 	default:
 		seg_id = SEGMENT_TYPE_ICE_E810;
 		break;
@@ -466,6 +467,9 @@ static u32 ice_get_pkg_sign_type(enum ice_mac_type mac_type)
 		break;
 	case ICE_MAC_GENERIC_3K:
 		sign_type = SEGMENT_SIGN_TYPE_RSA3K;
+		break;
+	case ICE_MAC_GENERIC_3K_E825:
+		sign_type = SEGMENT_SIGN_TYPE_RSA3K_E825;
 		break;
 	case ICE_MAC_GENERIC:
 	default:
@@ -1632,8 +1636,10 @@ ice_get_sw_fv_list(struct ice_hw *hw, struct ice_prot_lkup_ext *lkups,
 			}
 		}
 	} while (fv);
-	if (LIST_EMPTY(fv_list))
+	if (LIST_EMPTY(fv_list)) {
+		ice_warn(hw, "Required profiles not found in currently loaded DDP package");
 		return ICE_ERR_CFG;
+	}
 	return ICE_SUCCESS;
 
 err:

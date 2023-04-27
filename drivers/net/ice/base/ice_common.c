@@ -241,13 +241,17 @@ static enum ice_status ice_set_mac_type(struct ice_hw *hw)
 	case ICE_DEV_ID_E823C_QSFP:
 	case ICE_DEV_ID_E823C_SFP:
 	case ICE_DEV_ID_E823C_SGMII:
+		hw->mac_type = ICE_MAC_GENERIC;
+		break;
 	case ICE_DEV_ID_E824S:
+		hw->mac_type = ICE_MAC_GENERIC_3K;
+		break;
 	case ICE_DEV_ID_E825C_BACKPLANE:
 	case ICE_DEV_ID_E825C_QSFP:
 	case ICE_DEV_ID_E825C_SFP:
-	case ICE_DEV_ID_E825C_1GBE:
-	case ICE_DEV_ID_E825X:
-		hw->mac_type = ICE_MAC_GENERIC;
+	case ICE_DEV_ID_C825X:
+	case ICE_DEV_ID_E825C_SGMII:
+		hw->mac_type = ICE_MAC_GENERIC_3K_E825;
 		break;
 	case ICE_DEV_ID_E830_BACKPLANE:
 	case ICE_DEV_ID_E830_QSFP56:
@@ -273,7 +277,8 @@ static enum ice_status ice_set_mac_type(struct ice_hw *hw)
 bool ice_is_generic_mac(struct ice_hw *hw)
 {
 	return (hw->mac_type == ICE_MAC_GENERIC ||
-		hw->mac_type == ICE_MAC_GENERIC_3K);
+		hw->mac_type == ICE_MAC_GENERIC_3K ||
+		hw->mac_type == ICE_MAC_GENERIC_3K_E825);
 }
 
 /**
