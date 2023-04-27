@@ -19,7 +19,7 @@
 #define ICE_MPLS_ETHER_ID		0x8847
 #define ICE_ETH_P_8021Q			0x8100
 
-/* Dummy ethernet header needed in the ice_aqc_sw_rules_elem
+/* Dummy ethernet header needed in the ice_sw_rule_*
  * struct to configure any switch filter rules.
  * {DA (6 bytes), SA(6 bytes),
  * Ether type (2 bytes for header without VLAN tag) OR
@@ -3744,7 +3744,8 @@ static void ice_fill_sw_info(struct ice_hw *hw, struct ice_fltr_info *fi)
  */
 static void
 ice_fill_sw_rule(struct ice_hw *hw, struct ice_fltr_info *f_info,
-		 struct ice_aqc_sw_rules_elem *s_rule, enum ice_adminq_opc opc)
+		 struct ice_sw_rule_lkup_rx_tx *s_rule,
+		 enum ice_adminq_opc opc)
 {
 	u16 vlan_id = ICE_MAX_VLAN_ID + 1;
 	u16 vlan_tpid = ICE_ETH_P_8021Q;
@@ -3756,15 +3757,14 @@ ice_fill_sw_rule(struct ice_hw *hw, struct ice_fltr_info *f_info,
 	u8 q_rgn;
 
 	if (opc == ice_aqc_opc_remove_sw_rules) {
-		s_rule->pdata.lkup_tx_rx.act = 0;
-		s_rule->pdata.lkup_tx_rx.index =
-			CPU_TO_LE16(f_info->fltr_rule_id);
-		s_rule->pdata.lkup_tx_rx.hdr_len = 0;
+		s_rule->act = 0;
+		s_rule->index = CPU_TO_LE16(f_info->fltr_rule_id);
+		s_rule->hdr_len = 0;
 		return;
 	}
 
 	eth_hdr_sz = sizeof(dummy_eth_header);
-	eth_hdr = s_rule->pdata.lkup_tx_rx.hdr;
+	eth_hdr = s_rule->hdr_data;
 
 	/* initialize the ether header with a dummy header */
 	ice_memcpy(eth_hdr, dummy_eth_header, eth_hdr_sz, ICE_NONDMA_TO_NONDMA);
@@ -3849,14 +3849,14 @@ ice_fill_sw_rule(struct ice_hw *hw, struct ice_fltr_info *f_info,
 		break;
 	}
 
-	s_rule->type = (f_info->flag & ICE_FLTR_RX) ?
+	s_rule->hdr.type = (f_info->flag & ICE_FLTR_RX) ?
 		CPU_TO_LE16(ICE_AQC_SW_RULES_T_LKUP_RX) :
 		CPU_TO_LE16(ICE_AQC_SW_RULES_T_LKUP_TX);
 
 	/* Recipe set depending on lookup type */
-	s_rule->pdata.lkup_tx_rx.recipe_id = CPU_TO_LE16(f_info->lkup_type);
-	s_rule->pdata.lkup_tx_rx.src = CPU_TO_LE16(f_info->src);
-	s_rule->pdata.lkup_tx_rx.act = CPU_TO_LE32(act);
+	s_rule->recipe_id = CPU_TO_LE16(f_info->lkup_type);
+	s_rule->src = CPU_TO_LE16(f_info->src);
+	s_rule->act = CPU_TO_LE32(act);
 
 	if (daddr)
 		ice_memcpy(eth_hdr + ICE_ETH_DA_OFFSET, daddr, ETH_ALEN,
@@ -3871,7 +3871,7 @@ ice_fill_sw_rule(struct ice_hw *hw, struct ice_fltr_info *f_info,
 
 	/* Create the switch rule with the final dummy Ethernet header */
 	if (opc != ice_aqc_opc_update_sw_rules)
-		s_rule->pdata.lkup_tx_rx.hdr_len = CPU_TO_LE16(eth_hdr_sz);
+		s_rule->hdr_len = CPU_TO_LE16(eth_hdr_sz);
 }
 
 /**
@@ -3888,7 +3888,8 @@ static enum ice_status
 ice_add_marker_act(struct ice_hw *hw, struct ice_fltr_mgmt_list_entry *m_ent,
 		   u16 sw_marker, u16 l_id)
 {
-	struct ice_aqc_sw_rules_elem *lg_act, *rx_tx;
+	struct ice_sw_rule_lkup_rx_tx *rx_tx;
+	struct ice_sw_rule_lg_act *lg_act;
 	/* For software marker we need 3 large actions
 	 * 1. FWD action: FWD TO VSI or VSI LIST
 	 * 2. GENERIC VALUE action to hold the profile ID
@@ -3909,18 +3910,19 @@ ice_add_marker_act(struct ice_hw *hw, struct ice_fltr_mgmt_list_entry *m_ent,
 	 *    1. Large Action
 	 *    2. Look up Tx Rx
 	 */
-	lg_act_size = (u16)ICE_SW_RULE_LG_ACT_SIZE(num_lg_acts);
-	rules_size = lg_act_size + ICE_SW_RULE_RX_TX_ETH_HDR_SIZE;
-	lg_act = (struct ice_aqc_sw_rules_elem *)ice_malloc(hw, rules_size);
+	lg_act_size = (u16)ice_struct_size(lg_act, act, num_lg_acts);
+	rules_size = lg_act_size +
+		     ice_struct_size(rx_tx, hdr_data, DUMMY_ETH_HDR_LEN);
+	lg_act = (struct ice_sw_rule_lg_act *)ice_malloc(hw, rules_size);
 	if (!lg_act)
 		return ICE_ERR_NO_MEMORY;
 
-	rx_tx = (struct ice_aqc_sw_rules_elem *)((u8 *)lg_act + lg_act_size);
+	rx_tx = (struct ice_sw_rule_lkup_rx_tx *)((u8 *)lg_act + lg_act_size);
 
 	/* Fill in the first switch rule i.e. large action */
-	lg_act->type = CPU_TO_LE16(ICE_AQC_SW_RULES_T_LG_ACT);
-	lg_act->pdata.lg_act.index = CPU_TO_LE16(l_id);
-	lg_act->pdata.lg_act.size = CPU_TO_LE16(num_lg_acts);
+	lg_act->hdr.type = CPU_TO_LE16(ICE_AQC_SW_RULES_T_LG_ACT);
+	lg_act->index = CPU_TO_LE16(l_id);
+	lg_act->size = CPU_TO_LE16(num_lg_acts);
 
 	/* First action VSI forwarding or VSI list forwarding depending on how
 	 * many VSIs
@@ -3932,13 +3934,13 @@ ice_add_marker_act(struct ice_hw *hw, struct ice_fltr_mgmt_list_entry *m_ent,
 	act |= (id << ICE_LG_ACT_VSI_LIST_ID_S) & ICE_LG_ACT_VSI_LIST_ID_M;
 	if (m_ent->vsi_count > 1)
 		act |= ICE_LG_ACT_VSI_LIST;
-	lg_act->pdata.lg_act.act[0] = CPU_TO_LE32(act);
+	lg_act->act[0] = CPU_TO_LE32(act);
 
 	/* Second action descriptor type */
 	act = ICE_LG_ACT_GENERIC;
 
 	act |= (1 << ICE_LG_ACT_GENERIC_VALUE_S) & ICE_LG_ACT_GENERIC_VALUE_M;
-	lg_act->pdata.lg_act.act[1] = CPU_TO_LE32(act);
+	lg_act->act[1] = CPU_TO_LE32(act);
 
 	act = (ICE_LG_ACT_GENERIC_OFF_RX_DESC_PROF_IDX <<
 	       ICE_LG_ACT_GENERIC_OFFSET_S) & ICE_LG_ACT_GENERIC_OFFSET_M;
@@ -3948,24 +3950,22 @@ ice_add_marker_act(struct ice_hw *hw, struct ice_fltr_mgmt_list_entry *m_ent,
 	act |= (sw_marker << ICE_LG_ACT_GENERIC_VALUE_S) &
 		ICE_LG_ACT_GENERIC_VALUE_M;
 
-	lg_act->pdata.lg_act.act[2] = CPU_TO_LE32(act);
+	lg_act->act[2] = CPU_TO_LE32(act);
 
 	/* call the fill switch rule to fill the lookup Tx Rx structure */
 	ice_fill_sw_rule(hw, &m_ent->fltr_info, rx_tx,
 			 ice_aqc_opc_update_sw_rules);
 
 	/* Update the action to point to the large action ID */
-	rx_tx->pdata.lkup_tx_rx.act =
-		CPU_TO_LE32(ICE_SINGLE_ACT_PTR |
-			    ((l_id << ICE_SINGLE_ACT_PTR_VAL_S) &
-			     ICE_SINGLE_ACT_PTR_VAL_M));
+	rx_tx->act = CPU_TO_LE32(ICE_SINGLE_ACT_PTR |
+				 ((l_id << ICE_SINGLE_ACT_PTR_VAL_S) &
+				  ICE_SINGLE_ACT_PTR_VAL_M));
 
 	/* Use the filter rule ID of the previously created rule with single
 	 * act. Once the update happens, hardware will treat this as large
 	 * action
 	 */
-	rx_tx->pdata.lkup_tx_rx.index =
-		CPU_TO_LE16(m_ent->fltr_info.fltr_rule_id);
+	rx_tx->index = CPU_TO_LE16(m_ent->fltr_info.fltr_rule_id);
 
 	status = ice_aq_sw_rules(hw, lg_act, rules_size, 2,
 				 ice_aqc_opc_update_sw_rules, NULL);
@@ -3989,8 +3989,8 @@ static enum ice_status
 ice_add_counter_act(struct ice_hw *hw, struct ice_fltr_mgmt_list_entry *m_ent,
 		    u16 counter_id, u16 l_id)
 {
-	struct ice_aqc_sw_rules_elem *lg_act;
-	struct ice_aqc_sw_rules_elem *rx_tx;
+	struct ice_sw_rule_lkup_rx_tx *rx_tx;
+	struct ice_sw_rule_lg_act *lg_act;
 	enum ice_status status;
 	/* 2 actions will be added while adding a large action counter */
 	const int num_acts = 2;
@@ -4008,18 +4008,20 @@ ice_add_counter_act(struct ice_hw *hw, struct ice_fltr_mgmt_list_entry *m_ent,
 	 * 1. Large Action
 	 * 2. Look up Tx Rx
 	 */
-	lg_act_size = (u16)ICE_SW_RULE_LG_ACT_SIZE(num_acts);
-	rules_size = lg_act_size + ICE_SW_RULE_RX_TX_ETH_HDR_SIZE;
-	lg_act = (struct ice_aqc_sw_rules_elem *)ice_malloc(hw, rules_size);
+	lg_act_size = (u16)ice_struct_size(lg_act, act, num_acts);
+	rules_size = lg_act_size +
+		     ice_struct_size(rx_tx, hdr_data, DUMMY_ETH_HDR_LEN);
+	lg_act = (struct ice_sw_rule_lg_act *)ice_malloc(hw, rules_size);
 	if (!lg_act)
 		return ICE_ERR_NO_MEMORY;
 
-	rx_tx = (struct ice_aqc_sw_rules_elem *)((u8 *)lg_act + lg_act_size);
+	rx_tx = (struct ice_sw_rule_lkup_rx_tx *)((u8 *)lg_act +
+						      lg_act_size);
 
 	/* Fill in the first switch rule i.e. large action */
-	lg_act->type = CPU_TO_LE16(ICE_AQC_SW_RULES_T_LG_ACT);
-	lg_act->pdata.lg_act.index = CPU_TO_LE16(l_id);
-	lg_act->pdata.lg_act.size = CPU_TO_LE16(num_acts);
+	lg_act->hdr.type = CPU_TO_LE16(ICE_AQC_SW_RULES_T_LG_ACT);
+	lg_act->index = CPU_TO_LE16(l_id);
+	lg_act->size = CPU_TO_LE16(num_acts);
 
 	/* First action VSI forwarding or VSI list forwarding depending on how
 	 * many VSIs
@@ -4032,13 +4034,13 @@ ice_add_counter_act(struct ice_hw *hw, struct ice_fltr_mgmt_list_entry *m_ent,
 		ICE_LG_ACT_VSI_LIST_ID_M;
 	if (m_ent->vsi_count > 1)
 		act |= ICE_LG_ACT_VSI_LIST;
-	lg_act->pdata.lg_act.act[0] = CPU_TO_LE32(act);
+	lg_act->act[0] = CPU_TO_LE32(act);
 
 	/* Second action counter ID */
 	act = ICE_LG_ACT_STAT_COUNT;
 	act |= (counter_id << ICE_LG_ACT_STAT_COUNT_S) &
 		ICE_LG_ACT_STAT_COUNT_M;
-	lg_act->pdata.lg_act.act[1] = CPU_TO_LE32(act);
+	lg_act->act[1] = CPU_TO_LE32(act);
 
 	/* call the fill switch rule to fill the lookup Tx Rx structure */
 	ice_fill_sw_rule(hw, &m_ent->fltr_info, rx_tx,
@@ -4046,14 +4048,14 @@ ice_add_counter_act(struct ice_hw *hw, struct ice_fltr_mgmt_list_entry *m_ent,
 
 	act = ICE_SINGLE_ACT_PTR;
 	act |= (l_id << ICE_SINGLE_ACT_PTR_VAL_S) & ICE_SINGLE_ACT_PTR_VAL_M;
-	rx_tx->pdata.lkup_tx_rx.act = CPU_TO_LE32(act);
+	rx_tx->act = CPU_TO_LE32(act);
 
 	/* Use the filter rule ID of the previously created rule with single
 	 * act. Once the update happens, hardware will treat this as large
 	 * action
 	 */
 	f_rule_id = m_ent->fltr_info.fltr_rule_id;
-	rx_tx->pdata.lkup_tx_rx.index = CPU_TO_LE16(f_rule_id);
+	rx_tx->index = CPU_TO_LE16(f_rule_id);
 
 	status = ice_aq_sw_rules(hw, lg_act, rules_size, 2,
 				 ice_aqc_opc_update_sw_rules, NULL);
@@ -4115,7 +4117,7 @@ ice_update_vsi_list_rule(struct ice_hw *hw, u16 *vsi_handle_arr, u16 num_vsi,
 			 u16 vsi_list_id, bool remove, enum ice_adminq_opc opc,
 			 enum ice_sw_lkup_type lkup_type)
 {
-	struct ice_aqc_sw_rules_elem *s_rule;
+	struct ice_sw_rule_vsi_list *s_rule;
 	enum ice_status status;
 	u16 s_rule_size;
 	u16 rule_type;
@@ -4140,8 +4142,8 @@ ice_update_vsi_list_rule(struct ice_hw *hw, u16 *vsi_handle_arr, u16 num_vsi,
 	else
 		return ICE_ERR_PARAM;
 
-	s_rule_size = (u16)ICE_SW_RULE_VSI_LIST_SIZE(num_vsi);
-	s_rule = (struct ice_aqc_sw_rules_elem *)ice_malloc(hw, s_rule_size);
+	s_rule_size = (u16)ice_struct_size(s_rule, vsi, num_vsi);
+	s_rule = (struct ice_sw_rule_vsi_list *)ice_malloc(hw, s_rule_size);
 	if (!s_rule)
 		return ICE_ERR_NO_MEMORY;
 	for (i = 0; i < num_vsi; i++) {
@@ -4150,13 +4152,13 @@ ice_update_vsi_list_rule(struct ice_hw *hw, u16 *vsi_handle_arr, u16 num_vsi,
 			goto exit;
 		}
 		/* AQ call requires hw_vsi_id(s) */
-		s_rule->pdata.vsi_list.vsi[i] =
+		s_rule->vsi[i] =
 			CPU_TO_LE16(ice_get_hw_vsi_num(hw, vsi_handle_arr[i]));
 	}
 
-	s_rule->type = CPU_TO_LE16(rule_type);
-	s_rule->pdata.vsi_list.number_vsi = CPU_TO_LE16(num_vsi);
-	s_rule->pdata.vsi_list.index = CPU_TO_LE16(vsi_list_id);
+	s_rule->hdr.type = CPU_TO_LE16(rule_type);
+	s_rule->number_vsi = CPU_TO_LE16(num_vsi);
+	s_rule->index = CPU_TO_LE16(vsi_list_id);
 
 	status = ice_aq_sw_rules(hw, s_rule, s_rule_size, 1, opc, NULL);
 
@@ -4205,11 +4207,12 @@ ice_create_pkt_fwd_rule(struct ice_hw *hw, struct ice_sw_recipe *recp_list,
 			struct ice_fltr_list_entry *f_entry)
 {
 	struct ice_fltr_mgmt_list_entry *fm_entry;
-	struct ice_aqc_sw_rules_elem *s_rule;
+	struct ice_sw_rule_lkup_rx_tx *s_rule;
 	enum ice_status status;
 
-	s_rule = (struct ice_aqc_sw_rules_elem *)
-		ice_malloc(hw, ICE_SW_RULE_RX_TX_ETH_HDR_SIZE);
+	s_rule = (struct ice_sw_rule_lkup_rx_tx *)
+		ice_malloc(hw, ice_struct_size(s_rule, hdr_data,
+					       DUMMY_ETH_HDR_LEN));
 	if (!s_rule)
 		return ICE_ERR_NO_MEMORY;
 	fm_entry = (struct ice_fltr_mgmt_list_entry *)
@@ -4230,17 +4233,17 @@ ice_create_pkt_fwd_rule(struct ice_hw *hw, struct ice_sw_recipe *recp_list,
 	ice_fill_sw_rule(hw, &fm_entry->fltr_info, s_rule,
 			 ice_aqc_opc_add_sw_rules);
 
-	status = ice_aq_sw_rules(hw, s_rule, ICE_SW_RULE_RX_TX_ETH_HDR_SIZE, 1,
-				 ice_aqc_opc_add_sw_rules, NULL);
+	status = ice_aq_sw_rules(hw, s_rule,
+				 ice_struct_size(s_rule, hdr_data,
+						 DUMMY_ETH_HDR_LEN),
+				 1, ice_aqc_opc_add_sw_rules, NULL);
 	if (status) {
 		ice_free(hw, fm_entry);
 		goto ice_create_pkt_fwd_rule_exit;
 	}
 
-	f_entry->fltr_info.fltr_rule_id =
-		LE16_TO_CPU(s_rule->pdata.lkup_tx_rx.index);
-	fm_entry->fltr_info.fltr_rule_id =
-		LE16_TO_CPU(s_rule->pdata.lkup_tx_rx.index);
+	f_entry->fltr_info.fltr_rule_id = LE16_TO_CPU(s_rule->index);
+	fm_entry->fltr_info.fltr_rule_id = LE16_TO_CPU(s_rule->index);
 
 	/* The book keeping entries will get removed when base driver
 	 * calls remove filter AQ command
@@ -4263,21 +4266,24 @@ ice_create_pkt_fwd_rule_exit:
 static enum ice_status
 ice_update_pkt_fwd_rule(struct ice_hw *hw, struct ice_fltr_info *f_info)
 {
-	struct ice_aqc_sw_rules_elem *s_rule;
+	struct ice_sw_rule_lkup_rx_tx *s_rule;
 	enum ice_status status;
 
-	s_rule = (struct ice_aqc_sw_rules_elem *)
-		ice_malloc(hw, ICE_SW_RULE_RX_TX_ETH_HDR_SIZE);
+	s_rule = (struct ice_sw_rule_lkup_rx_tx *)
+		ice_malloc(hw, ice_struct_size(s_rule, hdr_data,
+					       DUMMY_ETH_HDR_LEN));
 	if (!s_rule)
 		return ICE_ERR_NO_MEMORY;
 
 	ice_fill_sw_rule(hw, f_info, s_rule, ice_aqc_opc_update_sw_rules);
 
-	s_rule->pdata.lkup_tx_rx.index = CPU_TO_LE16(f_info->fltr_rule_id);
+	s_rule->index = CPU_TO_LE16(f_info->fltr_rule_id);
 
 	/* Update switch rule with new rule set to forward VSI list */
-	status = ice_aq_sw_rules(hw, s_rule, ICE_SW_RULE_RX_TX_ETH_HDR_SIZE, 1,
-				 ice_aqc_opc_update_sw_rules, NULL);
+	status = ice_aq_sw_rules(hw, s_rule,
+				 ice_struct_size(s_rule, hdr_data,
+						 DUMMY_ETH_HDR_LEN),
+				 1, ice_aqc_opc_update_sw_rules, NULL);
 
 	ice_free(hw, s_rule);
 	return status;
@@ -4742,10 +4748,10 @@ ice_remove_rule_internal(struct ice_hw *hw, struct ice_sw_recipe *recp_list,
 
 	if (remove_rule) {
 		/* Remove the lookup rule */
-		struct ice_aqc_sw_rules_elem *s_rule;
+		struct ice_sw_rule_lkup_rx_tx *s_rule;
 
-		s_rule = (struct ice_aqc_sw_rules_elem *)
-			ice_malloc(hw, ICE_SW_RULE_RX_TX_NO_HDR_SIZE);
+		s_rule = (struct ice_sw_rule_lkup_rx_tx *)
+			ice_malloc(hw, ice_struct_size(s_rule, hdr_data, 0));
 		if (!s_rule) {
 			status = ICE_ERR_NO_MEMORY;
 			goto exit;
@@ -4755,8 +4761,8 @@ ice_remove_rule_internal(struct ice_hw *hw, struct ice_sw_recipe *recp_list,
 				 ice_aqc_opc_remove_sw_rules);
 
 		status = ice_aq_sw_rules(hw, s_rule,
-					 ICE_SW_RULE_RX_TX_NO_HDR_SIZE, 1,
-					 ice_aqc_opc_remove_sw_rules, NULL);
+					 ice_struct_size(s_rule, hdr_data, 0),
+					 1, ice_aqc_opc_remove_sw_rules, NULL);
 
 		/* Remove a book keeping from the list */
 		ice_free(hw, s_rule);
@@ -4872,7 +4878,7 @@ ice_add_mac_rule(struct ice_hw *hw, struct LIST_HEAD_TYPE *m_list,
 		 struct ice_switch_info *sw, u8 lport)
 {
 	struct ice_sw_recipe *recp_list = &sw->recp_list[ICE_SW_LKUP_MAC];
-	struct ice_aqc_sw_rules_elem *s_rule, *r_iter;
+	struct ice_sw_rule_lkup_rx_tx *s_rule, *r_iter;
 	struct ice_fltr_list_entry *m_list_itr;
 	struct LIST_HEAD_TYPE *rule_head;
 	u16 total_elem_left, s_rule_size;
@@ -4933,8 +4939,8 @@ ice_add_mac_rule(struct ice_hw *hw, struct LIST_HEAD_TYPE *m_list,
 	}
 
 	/* Allocate switch rule buffer for the bulk update for unicast */
-	s_rule_size = ICE_SW_RULE_RX_TX_ETH_HDR_SIZE;
-	s_rule = (struct ice_aqc_sw_rules_elem *)
+	s_rule_size = ice_struct_size(s_rule, hdr_data, DUMMY_ETH_HDR_LEN);
+	s_rule = (struct ice_sw_rule_lkup_rx_tx *)
 		ice_calloc(hw, num_unicast, s_rule_size);
 	if (!s_rule) {
 		status = ICE_ERR_NO_MEMORY;
@@ -4950,7 +4956,7 @@ ice_add_mac_rule(struct ice_hw *hw, struct LIST_HEAD_TYPE *m_list,
 		if (IS_UNICAST_ETHER_ADDR(mac_addr)) {
 			ice_fill_sw_rule(hw, &m_list_itr->fltr_info, r_iter,
 					 ice_aqc_opc_add_sw_rules);
-			r_iter = (struct ice_aqc_sw_rules_elem *)
+			r_iter = (struct ice_sw_rule_lkup_rx_tx *)
 				((u8 *)r_iter + s_rule_size);
 		}
 	}
@@ -4960,7 +4966,7 @@ ice_add_mac_rule(struct ice_hw *hw, struct LIST_HEAD_TYPE *m_list,
 	/* Call AQ switch rule in AQ_MAX chunk */
 	for (total_elem_left = num_unicast; total_elem_left > 0;
 	     total_elem_left -= elem_sent) {
-		struct ice_aqc_sw_rules_elem *entry = r_iter;
+		struct ice_sw_rule_lkup_rx_tx *entry = r_iter;
 
 		elem_sent = MIN_T(u8, total_elem_left,
 				  (ICE_AQ_MAX_BUF_LEN / s_rule_size));
@@ -4969,7 +4975,7 @@ ice_add_mac_rule(struct ice_hw *hw, struct LIST_HEAD_TYPE *m_list,
 					 NULL);
 		if (status)
 			goto ice_add_mac_exit;
-		r_iter = (struct ice_aqc_sw_rules_elem *)
+		r_iter = (struct ice_sw_rule_lkup_rx_tx *)
 			((u8 *)r_iter + (elem_sent * s_rule_size));
 	}
 
@@ -4983,7 +4989,7 @@ ice_add_mac_rule(struct ice_hw *hw, struct LIST_HEAD_TYPE *m_list,
 
 		if (IS_UNICAST_ETHER_ADDR(mac_addr)) {
 			f_info->fltr_rule_id =
-				LE16_TO_CPU(r_iter->pdata.lkup_tx_rx.index);
+				LE16_TO_CPU(r_iter->index);
 			f_info->fltr_act = ICE_FWD_TO_VSI;
 			/* Create an entry to track this MAC address */
 			fm_entry = (struct ice_fltr_mgmt_list_entry *)
@@ -4999,7 +5005,7 @@ ice_add_mac_rule(struct ice_hw *hw, struct LIST_HEAD_TYPE *m_list,
 			 */
 
 			LIST_ADD(&fm_entry->list_entry, rule_head);
-			r_iter = (struct ice_aqc_sw_rules_elem *)
+			r_iter = (struct ice_sw_rule_lkup_rx_tx *)
 				((u8 *)r_iter + s_rule_size);
 		}
 	}
@@ -8521,7 +8527,7 @@ ice_find_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
  */
 static enum ice_status
 ice_fill_adv_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
-			  struct ice_aqc_sw_rules_elem *s_rule,
+			  struct ice_sw_rule_lkup_rx_tx *s_rule,
 			  const u8 *dummy_pkt, u16 pkt_len,
 			  const struct ice_dummy_pkt_offsets *offsets)
 {
@@ -8531,7 +8537,7 @@ ice_fill_adv_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 	/* Start with a packet with a pre-defined/dummy content. Then, fill
 	 * in the header values to be looked up or matched.
 	 */
-	pkt = s_rule->pdata.lkup_tx_rx.hdr;
+	pkt = s_rule->hdr_data;
 
 	ice_memcpy(pkt, dummy_pkt, pkt_len, ICE_NONDMA_TO_NONDMA);
 
@@ -8636,7 +8642,7 @@ ice_fill_adv_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 					 ((u16 *)&lkups[i].m_u)[j]);
 	}
 
-	s_rule->pdata.lkup_tx_rx.hdr_len = CPU_TO_LE16(pkt_len);
+	s_rule->hdr_len = CPU_TO_LE16(pkt_len);
 
 	return ICE_SUCCESS;
 }
@@ -8922,15 +8928,15 @@ ice_set_lg_action_entry(u8 act_type, union lg_act_entry *lg_entry)
  * Fill a large action to hold software marker and link the lookup rule
  * with an action pointing to this larger action
  */
-static struct ice_aqc_sw_rules_elem *
+static struct ice_sw_rule_lg_act *
 ice_fill_sw_marker_lg_act(struct ice_hw *hw, u32 sw_marker, u16 l_id,
 			  u16 lkup_rule_sz, u16 lg_act_size, u16 num_lg_acts,
-			  struct ice_aqc_sw_rules_elem *s_rule)
+			  struct ice_sw_rule_lkup_rx_tx *s_rule)
 {
-	struct ice_aqc_sw_rules_elem *rx_tx, *lg_act;
+	struct ice_sw_rule_lkup_rx_tx *rx_tx;
 	const u16 offset_generic_md_word_0 = 0;
 	const u16 offset_generic_md_word_1 = 1;
-	enum ice_status status = ICE_SUCCESS;
+	struct ice_sw_rule_lg_act *lg_act;
 	union lg_act_entry lg_e_lo;
 	union lg_act_entry lg_e_hi;
 	const u8 priority = 0x3;
@@ -8939,19 +8945,19 @@ ice_fill_sw_marker_lg_act(struct ice_hw *hw, u32 sw_marker, u16 l_id,
 
 	/* For software marker we need 2 large actions for 32 bit mark id */
 	rules_size = lg_act_size + lkup_rule_sz;
-	lg_act = (struct ice_aqc_sw_rules_elem *)ice_malloc(hw, rules_size);
+	lg_act = (struct ice_sw_rule_lg_act *)ice_malloc(hw, rules_size);
 	if (!lg_act)
 		return NULL;
 
-	rx_tx = (struct ice_aqc_sw_rules_elem *)((u8 *)lg_act + lg_act_size);
+	rx_tx = (struct ice_sw_rule_lkup_rx_tx *)((u8 *)lg_act + lg_act_size);
 
 	ice_memcpy(rx_tx, s_rule, lkup_rule_sz, ICE_NONDMA_TO_NONDMA);
 	ice_free(hw, s_rule);
 	s_rule = NULL;
 
-	lg_act->type = CPU_TO_LE16(ICE_AQC_SW_RULES_T_LG_ACT);
-	lg_act->pdata.lg_act.index = CPU_TO_LE16(l_id);
-	lg_act->pdata.lg_act.size = CPU_TO_LE16(num_lg_acts);
+	lg_act->hdr.type = CPU_TO_LE16(ICE_AQC_SW_RULES_T_LG_ACT);
+	lg_act->index = CPU_TO_LE16(l_id);
+	lg_act->size = CPU_TO_LE16(num_lg_acts);
 
 	/* GENERIC VALUE action to hold the software marker ID low 16 bits */
 	/* and set in meta data index 4 by default. */
@@ -8959,7 +8965,7 @@ ice_fill_sw_marker_lg_act(struct ice_hw *hw, u32 sw_marker, u16 l_id,
 	lg_e_lo.generic_act.offset = offset_generic_md_word_0;
 	lg_e_lo.generic_act.priority = priority;
 	act = ice_set_lg_action_entry(ICE_LG_ACT_GENERIC, &lg_e_lo);
-	lg_act->pdata.lg_act.act[0] = CPU_TO_LE32(act);
+	lg_act->act[0] = CPU_TO_LE32(act);
 
 	if (num_lg_acts == 1)
 		return lg_act;
@@ -8971,7 +8977,7 @@ ice_fill_sw_marker_lg_act(struct ice_hw *hw, u32 sw_marker, u16 l_id,
 	lg_e_hi.generic_act.offset = offset_generic_md_word_1;
 	lg_e_hi.generic_act.priority = priority;
 	act = ice_set_lg_action_entry(ICE_LG_ACT_GENERIC, &lg_e_hi);
-	lg_act->pdata.lg_act.act[1] = CPU_TO_LE32(act);
+	lg_act->act[1] = CPU_TO_LE32(act);
 
 	return lg_act;
 }
@@ -9000,11 +9006,12 @@ ice_add_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 		 struct ice_rule_query_data *added_entry)
 {
 	struct ice_adv_fltr_mgmt_list_entry *m_entry, *adv_fltr = NULL;
-	u16 lg_act_size, lg_act_id = ICE_INVAL_LG_ACT_INDEX;
+	u16 lg_act_sz, lg_act_id = ICE_INVAL_LG_ACT_INDEX;
 	u16 rid = 0, i, pkt_len, rule_buf_sz, vsi_handle;
 	const struct ice_dummy_pkt_offsets *pkt_offsets;
-	struct ice_aqc_sw_rules_elem *s_rule = NULL;
-	struct ice_aqc_sw_rules_elem *rx_tx;
+	struct ice_sw_rule_lg_act *lg_rule = NULL;
+	struct ice_sw_rule_lkup_rx_tx *s_rule = NULL;
+	struct ice_sw_rule_lkup_rx_tx *rx_tx;
 	struct LIST_HEAD_TYPE *rule_head;
 	struct ice_switch_info *sw;
 	u16 nb_lg_acts_mark = 1;
@@ -9093,8 +9100,8 @@ ice_add_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 		}
 		return status;
 	}
-	rule_buf_sz = ICE_SW_RULE_RX_TX_NO_HDR_SIZE + pkt_len;
-	s_rule = (struct ice_aqc_sw_rules_elem *)ice_malloc(hw, rule_buf_sz);
+	rule_buf_sz = ice_struct_size(s_rule, hdr_data, 0) + pkt_len;
+	s_rule = (struct ice_sw_rule_lkup_rx_tx *)ice_malloc(hw, rule_buf_sz);
 	if (!s_rule)
 		return ICE_ERR_NO_MEMORY;
 	if (!rinfo->flags_info.act_valid)
@@ -9145,24 +9152,23 @@ ice_add_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 		goto err_ice_add_adv_rule;
 	}
 
-	/* set the rule LOOKUP type based on caller specified 'RX'
+	/* Set the rule LOOKUP type based on caller specified 'Rx'
 	 * instead of hardcoding it to be either LOOKUP_TX/RX
 	 *
-	 * for 'RX' set the source to be the port number
-	 * for 'TX' set the source to be the source HW VSI number (determined
+	 * for 'Rx' set the source to be the port number
+	 * for 'Tx' set the source to be the source HW VSI number (determined
 	 * by caller)
 	 */
 	if (rinfo->rx) {
-		s_rule->type = CPU_TO_LE16(ICE_AQC_SW_RULES_T_LKUP_RX);
-		s_rule->pdata.lkup_tx_rx.src =
-			CPU_TO_LE16(hw->port_info->lport);
+		s_rule->hdr.type = CPU_TO_LE16(ICE_AQC_SW_RULES_T_LKUP_RX);
+		s_rule->src = CPU_TO_LE16(hw->port_info->lport);
 	} else {
-		s_rule->type = CPU_TO_LE16(ICE_AQC_SW_RULES_T_LKUP_TX);
-		s_rule->pdata.lkup_tx_rx.src = CPU_TO_LE16(rinfo->sw_act.src);
+		s_rule->hdr.type = CPU_TO_LE16(ICE_AQC_SW_RULES_T_LKUP_TX);
+		s_rule->src = CPU_TO_LE16(rinfo->sw_act.src);
 	}
 
-	s_rule->pdata.lkup_tx_rx.recipe_id = CPU_TO_LE16(rid);
-	s_rule->pdata.lkup_tx_rx.act = CPU_TO_LE32(act);
+	s_rule->recipe_id = CPU_TO_LE16(rid);
+	s_rule->act = CPU_TO_LE32(act);
 
 	status = ice_fill_adv_dummy_packet(lkups, lkups_cnt, s_rule, pkt,
 					   pkt_len, pkt_offsets);
@@ -9172,7 +9178,7 @@ ice_add_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 	if (rinfo->tun_type != ICE_NON_TUN &&
 	    rinfo->tun_type != ICE_SW_TUN_AND_NON_TUN) {
 		status = ice_fill_adv_packet_tun(hw, rinfo->tun_type,
-						 s_rule->pdata.lkup_tx_rx.hdr,
+						 s_rule->hdr_data,
 						 pkt_offsets);
 		if (status)
 			goto err_ice_add_adv_rule;
@@ -9180,18 +9186,19 @@ ice_add_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 
 	rx_tx = s_rule;
 	if (rinfo->sw_act.fltr_act == ICE_SET_MARK) {
-		lg_act_size = (u16)ICE_SW_RULE_LG_ACT_SIZE(nb_lg_acts_mark);
-		s_rule = ice_fill_sw_marker_lg_act(hw, rinfo->sw_act.markid,
-						   lg_act_id, rule_buf_sz,
-						   lg_act_size, nb_lg_acts_mark,
-						   s_rule);
-		if (!s_rule)
+		lg_act_sz = (u16)ice_struct_size(lg_rule, act, nb_lg_acts_mark);
+		lg_rule = ice_fill_sw_marker_lg_act(hw, rinfo->sw_act.markid,
+						    lg_act_id, rule_buf_sz,
+						    lg_act_sz, nb_lg_acts_mark,
+						    s_rule);
+		if (!lg_rule)
 			goto err_ice_add_adv_rule;
 
-		rule_buf_sz += lg_act_size;
+		s_rule = (struct ice_sw_rule_lkup_rx_tx *)lg_rule;
+		rule_buf_sz += lg_act_sz;
 		num_rules += 1;
-		rx_tx = (struct ice_aqc_sw_rules_elem *)
-			((u8 *)s_rule + lg_act_size);
+		rx_tx = (struct ice_sw_rule_lkup_rx_tx *)
+			((u8 *)s_rule + lg_act_sz);
 	}
 
 	status = ice_aq_sw_rules(hw, (struct ice_aqc_sw_rules *)s_rule,
@@ -9221,7 +9228,7 @@ ice_add_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 	adv_fltr->lkups_cnt = lkups_cnt;
 	adv_fltr->rule_info = *rinfo;
 	adv_fltr->rule_info.fltr_rule_id =
-		LE16_TO_CPU(rx_tx->pdata.lkup_tx_rx.index);
+		LE16_TO_CPU(rx_tx->index);
 	adv_fltr->rule_info.lg_id = LE16_TO_CPU(lg_act_id);
 	sw = hw->switch_info;
 	sw->recp_list[rid].adv_rule = true;
@@ -9363,9 +9370,9 @@ ice_rem_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 {
 	struct ice_adv_fltr_mgmt_list_entry *list_elem;
 	struct ice_prot_lkup_ext lkup_exts;
+	bool remove_rule = false;
 	struct ice_lock *rule_lock; /* Lock to protect filter rule list */
 	enum ice_status status = ICE_SUCCESS;
-	bool remove_rule = false;
 	u16 i, rid, vsi_handle;
 
 	ice_memset(&lkup_exts, 0, sizeof(lkup_exts), ICE_NONDMA_MEM);
@@ -9416,23 +9423,21 @@ ice_rem_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 	}
 	ice_release_lock(rule_lock);
 	if (remove_rule) {
-		struct ice_aqc_sw_rules_elem *s_rule;
+		struct ice_sw_rule_lkup_rx_tx *s_rule;
 		u16 rule_buf_sz;
 
 		if (rinfo->sw_act.fltr_act == ICE_SET_MARK)
 			ice_free_sw_marker_lg(hw, list_elem->rule_info.lg_id,
 					      rinfo->sw_act.markid);
-		rule_buf_sz = ICE_SW_RULE_RX_TX_NO_HDR_SIZE;
-		s_rule = (struct ice_aqc_sw_rules_elem *)
+		rule_buf_sz = ice_struct_size(s_rule, hdr_data, 0);
+		s_rule = (struct ice_sw_rule_lkup_rx_tx *)
 			ice_malloc(hw, rule_buf_sz);
 		if (!s_rule)
 			return ICE_ERR_NO_MEMORY;
-		s_rule->pdata.lkup_tx_rx.act = 0;
-		s_rule->pdata.lkup_tx_rx.index =
-			CPU_TO_LE16(list_elem->rule_info.fltr_rule_id);
-		s_rule->pdata.lkup_tx_rx.hdr_len = 0;
-		status = ice_aq_sw_rules(hw, (struct ice_aqc_sw_rules *)s_rule,
-					 rule_buf_sz, 1,
+		s_rule->act = 0;
+		s_rule->index = CPU_TO_LE16(list_elem->rule_info.fltr_rule_id);
+		s_rule->hdr_len = 0;
+		status = ice_aq_sw_rules(hw, s_rule, rule_buf_sz, 1,
 					 ice_aqc_opc_remove_sw_rules, NULL);
 		if (status == ICE_SUCCESS || status == ICE_ERR_DOES_NOT_EXIST) {
 			struct ice_switch_info *sw = hw->switch_info;
@@ -9488,20 +9493,20 @@ ice_rem_adv_rule_by_id(struct ice_hw *hw,
 
 /**
  * ice_rem_adv_rule_for_vsi - removes existing advanced switch rules for a
- *                       given VSI handle
+ *                            given VSI handle
  * @hw: pointer to the hardware structure
  * @vsi_handle: VSI handle for which we are supposed to remove all the rules.
  *
  * This function is used to remove all the rules for a given VSI and as soon
  * as removing a rule fails, it will return immediately with the error code,
- * else it will return ICE_SUCCESS
+ * else it will return success.
  */
 enum ice_status ice_rem_adv_rule_for_vsi(struct ice_hw *hw, u16 vsi_handle)
 {
 	struct ice_adv_fltr_mgmt_list_entry *list_itr, *tmp_entry;
 	struct ice_vsi_list_map_info *map_info;
-	struct LIST_HEAD_TYPE *list_head;
 	struct ice_adv_rule_info rinfo;
+	struct LIST_HEAD_TYPE *list_head;
 	struct ice_switch_info *sw;
 	enum ice_status status;
 	u8 rid;
