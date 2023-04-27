@@ -1397,6 +1397,37 @@ ice_copy_rxq_ctx_to_hw(struct ice_hw *hw, u8 *ice_rxq_ctx, u32 rxq_index)
 	return ICE_SUCCESS;
 }
 
+/**
+ * ice_copy_rxq_ctx_from_hw - Copy rxq context register from HW
+ * @hw: pointer to the hardware structure
+ * @ice_rxq_ctx: pointer to the rxq context
+ * @rxq_index: the index of the Rx queue
+ *
+ * Copies rxq context from HW register space to dense structure
+ */
+static enum ice_status
+ice_copy_rxq_ctx_from_hw(struct ice_hw *hw, u8 *ice_rxq_ctx, u32 rxq_index)
+{
+	u8 i;
+
+	if (!ice_rxq_ctx)
+		return ICE_ERR_BAD_PTR;
+
+	if (rxq_index > QRX_CTRL_MAX_INDEX)
+		return ICE_ERR_PARAM;
+
+	/* Copy each dword separately from HW */
+	for (i = 0; i < ICE_RXQ_CTX_SIZE_DWORDS; i++) {
+		u32 *ctx = (u32 *)(ice_rxq_ctx + (i * sizeof(u32)));
+
+		*ctx = rd32(hw, QRX_CONTEXT(i, rxq_index));
+
+		ice_debug(hw, ICE_DBG_QCTX, "qrxdata[%d]: %08X\n", i, *ctx);
+	}
+
+	return ICE_SUCCESS;
+}
+
 /* LAN Rx Queue Context */
 static const struct ice_ctx_ele ice_rlan_ctx_info[] = {
 	/* Field		Width	LSB */
@@ -1446,6 +1477,32 @@ ice_write_rxq_ctx(struct ice_hw *hw, struct ice_rlan_ctx *rlan_ctx,
 
 	ice_set_ctx(hw, (u8 *)rlan_ctx, ctx_buf, ice_rlan_ctx_info);
 	return ice_copy_rxq_ctx_to_hw(hw, ctx_buf, rxq_index);
+}
+
+/**
+ * ice_read_rxq_ctx - Read rxq context from HW
+ * @hw: pointer to the hardware structure
+ * @rlan_ctx: pointer to the rxq context
+ * @rxq_index: the index of the Rx queue
+ *
+ * Read rxq context from HW register space and then converts it from dense
+ * structure to sparse
+ */
+enum ice_status
+ice_read_rxq_ctx(struct ice_hw *hw, struct ice_rlan_ctx *rlan_ctx,
+		 u32 rxq_index)
+{
+	u8 ctx_buf[ICE_RXQ_CTX_SZ] = { 0 };
+	enum ice_status status;
+
+	if (!rlan_ctx)
+		return ICE_ERR_BAD_PTR;
+
+	status = ice_copy_rxq_ctx_from_hw(hw, ctx_buf, rxq_index);
+	if (status)
+		return status;
+
+	return ice_get_ctx(ctx_buf, (u8 *)rlan_ctx, ice_rlan_ctx_info);
 }
 
 /**
@@ -4883,7 +4940,7 @@ ice_aq_get_internal_data(struct ice_hw *hw, u8 cluster_id, u16 table_id,
  * @ce_info:  a description of the struct to be filled
  */
 static void
-ice_read_byte(u8 *src_ctx, u8 *dest_ctx, struct ice_ctx_ele *ce_info)
+ice_read_byte(u8 *src_ctx, u8 *dest_ctx, const struct ice_ctx_ele *ce_info)
 {
 	u8 dest_byte, mask;
 	u8 *src, *target;
@@ -4901,7 +4958,7 @@ ice_read_byte(u8 *src_ctx, u8 *dest_ctx, struct ice_ctx_ele *ce_info)
 
 	ice_memcpy(&dest_byte, src, sizeof(dest_byte), ICE_DMA_TO_NONDMA);
 
-	dest_byte &= ~(mask);
+	dest_byte &= mask;
 
 	dest_byte >>= shift_width;
 
@@ -4919,7 +4976,7 @@ ice_read_byte(u8 *src_ctx, u8 *dest_ctx, struct ice_ctx_ele *ce_info)
  * @ce_info:  a description of the struct to be filled
  */
 static void
-ice_read_word(u8 *src_ctx, u8 *dest_ctx, struct ice_ctx_ele *ce_info)
+ice_read_word(u8 *src_ctx, u8 *dest_ctx, const struct ice_ctx_ele *ce_info)
 {
 	u16 dest_word, mask;
 	u8 *src, *target;
@@ -4941,7 +4998,7 @@ ice_read_word(u8 *src_ctx, u8 *dest_ctx, struct ice_ctx_ele *ce_info)
 	/* the data in the memory is stored as little endian so mask it
 	 * correctly
 	 */
-	src_word &= ~(CPU_TO_LE16(mask));
+	src_word &= CPU_TO_LE16(mask);
 
 	/* get the data back into host order before shifting */
 	dest_word = LE16_TO_CPU(src_word);
@@ -4962,7 +5019,7 @@ ice_read_word(u8 *src_ctx, u8 *dest_ctx, struct ice_ctx_ele *ce_info)
  * @ce_info:  a description of the struct to be filled
  */
 static void
-ice_read_dword(u8 *src_ctx, u8 *dest_ctx, struct ice_ctx_ele *ce_info)
+ice_read_dword(u8 *src_ctx, u8 *dest_ctx, const struct ice_ctx_ele *ce_info)
 {
 	u32 dest_dword, mask;
 	__le32 src_dword;
@@ -4992,7 +5049,7 @@ ice_read_dword(u8 *src_ctx, u8 *dest_ctx, struct ice_ctx_ele *ce_info)
 	/* the data in the memory is stored as little endian so mask it
 	 * correctly
 	 */
-	src_dword &= ~(CPU_TO_LE32(mask));
+	src_dword &= CPU_TO_LE32(mask);
 
 	/* get the data back into host order before shifting */
 	dest_dword = LE32_TO_CPU(src_dword);
@@ -5013,7 +5070,7 @@ ice_read_dword(u8 *src_ctx, u8 *dest_ctx, struct ice_ctx_ele *ce_info)
  * @ce_info:  a description of the struct to be filled
  */
 static void
-ice_read_qword(u8 *src_ctx, u8 *dest_ctx, struct ice_ctx_ele *ce_info)
+ice_read_qword(u8 *src_ctx, u8 *dest_ctx, const struct ice_ctx_ele *ce_info)
 {
 	u64 dest_qword, mask;
 	__le64 src_qword;
@@ -5043,7 +5100,7 @@ ice_read_qword(u8 *src_ctx, u8 *dest_ctx, struct ice_ctx_ele *ce_info)
 	/* the data in the memory is stored as little endian so mask it
 	 * correctly
 	 */
-	src_qword &= ~(CPU_TO_LE64(mask));
+	src_qword &= CPU_TO_LE64(mask);
 
 	/* get the data back into host order before shifting */
 	dest_qword = LE64_TO_CPU(src_qword);
@@ -5064,7 +5121,7 @@ ice_read_qword(u8 *src_ctx, u8 *dest_ctx, struct ice_ctx_ele *ce_info)
  * @ce_info:  a description of the structure to be read from
  */
 enum ice_status
-ice_get_ctx(u8 *src_ctx, u8 *dest_ctx, struct ice_ctx_ele *ce_info)
+ice_get_ctx(u8 *src_ctx, u8 *dest_ctx, const struct ice_ctx_ele *ce_info)
 {
 	int f;
 
