@@ -237,10 +237,11 @@ void ice_phy_cfg_lane_e822(struct ice_hw *hw, u8 port);
 enum ice_status
 ice_stop_phy_timer_e822(struct ice_hw *hw, u8 port, bool soft_reset);
 enum ice_status
-ice_start_phy_timer_e822(struct ice_hw *hw, u8 port, bool bypass);
+ice_start_phy_timer_e822(struct ice_hw *hw, u8 port);
 enum ice_status ice_phy_cfg_tx_offset_e822(struct ice_hw *hw, u8 port);
 enum ice_status ice_phy_cfg_rx_offset_e822(struct ice_hw *hw, u8 port);
-enum ice_status ice_phy_exit_bypass_e822(struct ice_hw *hw, u8 port);
+enum ice_status
+ice_phy_cfg_intr_e822(struct ice_hw *hw, u8 quad, bool ena, u8 threshold);
 
 /* E810 family functions */
 bool ice_is_gps_present_e810t(struct ice_hw *hw);

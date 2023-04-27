@@ -2584,20 +2584,15 @@ ice_stop_phy_timer_e822(struct ice_hw *hw, u8 port, bool soft_reset)
  * ice_start_phy_timer_e822 - Start the PHY clock timer
  * @hw: pointer to the HW struct
  * @port: the PHY port to start
- * @bypass: if true, start the PHY in bypass mode
  *
  * Start the clock of a PHY port. This must be done as part of the flow to
  * re-calibrate Tx and Rx timestamping offsets whenever the clock time is
  * initialized or when link speed changes.
  *
- * Bypass mode enables timestamps immediately without waiting for Vernier
- * calibration to complete. Hardware will still continue taking Vernier
- * measurements on Tx or Rx of packets, but they will not be applied to
- * timestamps. Use ice_phy_exit_bypass_e822 to exit bypass mode once hardware
- * has completed offset calculation.
+ * Hardware will take Vernier measurements on Tx or Rx of packets.
  */
 enum ice_status
-ice_start_phy_timer_e822(struct ice_hw *hw, u8 port, bool bypass)
+ice_start_phy_timer_e822(struct ice_hw *hw, u8 port)
 {
 	enum ice_status status;
 	u32 lo, hi, val;
@@ -2721,6 +2716,43 @@ ice_get_phy_tx_tstamp_ready_e822(struct ice_hw *hw, u8 quad, u64 *tstamp_ready)
 	return ICE_SUCCESS;
 }
 
+/**
+ * ice_phy_cfg_intr_e822 - Configure TX timestamp interrupt
+ * @hw: pointer to the HW struct
+ * @quad: the timestamp quad
+ * @ena: enable or disable interrupt
+ * @threshold: interrupt threshold
+ *
+ * Configure TX timestamp interrupt for the specified quad
+ */
+
+enum ice_status
+ice_phy_cfg_intr_e822(struct ice_hw *hw, u8 quad, bool ena, u8 threshold)
+{
+	enum ice_status err;
+	u32 val;
+
+	err = ice_read_quad_reg_e822(hw, quad,
+				     Q_REG_TX_MEM_GBL_CFG,
+				     &val);
+	if (err)
+		return err;
+
+	if (ena) {
+		val |= Q_REG_TX_MEM_GBL_CFG_INTR_ENA_M;
+		val &= ~Q_REG_TX_MEM_GBL_CFG_INTR_THR_M;
+		val |= ((threshold << Q_REG_TX_MEM_GBL_CFG_INTR_THR_S) &
+			Q_REG_TX_MEM_GBL_CFG_INTR_THR_M);
+	} else {
+		val &= ~Q_REG_TX_MEM_GBL_CFG_INTR_ENA_M;
+	}
+
+	err = ice_write_quad_reg_e822(hw, quad,
+				      Q_REG_TX_MEM_GBL_CFG,
+				      val);
+
+	return err;
+}
 
 /* E810 functions
  *
