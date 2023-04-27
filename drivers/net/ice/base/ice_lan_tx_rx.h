@@ -747,7 +747,7 @@ enum ice_rxdid {
 	ICE_RXDID_FLEX_NIC		= 2,
 	ICE_RXDID_FLEX_NIC_2		= 6,
 	ICE_RXDID_HW			= 7,
-	ICE_RXDID_GSC			= 9,
+	ICE_RXDID_GCS			= 9,
 	ICE_RXDID_COMMS_GENERIC		= 16,
 	ICE_RXDID_COMMS_AUX_VLAN	= 17,
 	ICE_RXDID_COMMS_AUX_IPV4	= 18,
@@ -1069,14 +1069,14 @@ enum ice_tx_desc_len_fields {
 struct ice_tx_ctx_desc {
 	__le32 tunneling_params;
 	__le16 l2tag2;
-	__le16 gsc;
+	__le16 gcs;
 	__le64 qw1;
 };
 
-#define ICE_TX_GSC_DESC_START	0  /* 7 BITS */
-#define ICE_TX_GSC_DESC_OFFSET	7  /* 4 BITS */
-#define ICE_TX_GSC_DESC_TYPE	11 /* 2 BITS */
-#define ICE_TX_GSC_DESC_ENA	13 /* 1 BIT */
+#define ICE_TX_GCS_DESC_START	0  /* 7 BITS */
+#define ICE_TX_GCS_DESC_OFFSET	7  /* 4 BITS */
+#define ICE_TX_GCS_DESC_TYPE	11 /* 2 BITS */
+#define ICE_TX_GCS_DESC_ENA	13 /* 1 BIT */
 
 #define ICE_TXD_CTX_QW1_DTYPE_S	0
 #define ICE_TXD_CTX_QW1_DTYPE_M	(0xFUL << ICE_TXD_CTX_QW1_DTYPE_S)
@@ -1188,8 +1188,9 @@ struct ice_tlan_ctx {
 	u8 drop_ena;
 	u8 cache_prof_idx;
 	u8 pkt_shaper_prof_idx;
-	u8 gsc_ena;
+	u8 gcs_ena;
 	u8 int_q_state;	/* width not needed - internal - DO NOT WRITE!!! */
+	u16 tail;
 };
 
 /* LAN Tx Completion Queue data */
