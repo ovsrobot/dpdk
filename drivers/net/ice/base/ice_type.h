@@ -43,6 +43,24 @@ static inline int ice_ilog2(u64 n)
 	return -1;
 }
 
+/**
+ * ice_fls - find the most significant bit set in a u64
+ * @n: u64 value to scan for a bit
+ *
+ * Returns: 0 if no bits found, otherwise the index of the highest bit that was
+ * set, like ice_fls(0x20) == 6. This means this is returning a *1 based*
+ * count, and that the maximum largest value returned is 64!
+ */
+static inline unsigned int ice_fls(u64 n)
+{
+	int ret;
+
+	ret = ice_ilog2(n);
+
+	/* add one to turn to the ilog2 value into a 1 based index */
+	return ret >= 0 ? ret + 1 : 0;
+}
+
 static inline bool ice_is_tc_ena(ice_bitmap_t bitmap, u8 tc)
 {
 	return ice_is_bit_set(&bitmap, tc);
