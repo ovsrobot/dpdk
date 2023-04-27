@@ -49,6 +49,7 @@ static const struct ice_dummy_pkt_offsets dummy_gre_tcp_packet_offsets[] = {
 	{ ICE_IPV4_OFOS,	14 },
 	{ ICE_NVGRE,		34 },
 	{ ICE_MAC_IL,		42 },
+	{ ICE_ETYPE_IL,		54 },
 	{ ICE_IPV4_IL,		56 },
 	{ ICE_TCP_IL,		76 },
 	{ ICE_PROTOCOL_LAST,	0 },
@@ -73,7 +74,8 @@ static const u8 dummy_gre_tcp_packet[] = {
 	0x00, 0x00, 0x00, 0x00,	/* ICE_MAC_IL 42 */
 	0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00,
-	0x08, 0x00,
+
+	0x08, 0x00,		/* ICE_ETYPE_IL 54 */
 
 	0x45, 0x00, 0x00, 0x14,	/* ICE_IPV4_IL 56 */
 	0x00, 0x00, 0x00, 0x00,
@@ -94,6 +96,7 @@ static const struct ice_dummy_pkt_offsets dummy_gre_udp_packet_offsets[] = {
 	{ ICE_IPV4_OFOS,	14 },
 	{ ICE_NVGRE,		34 },
 	{ ICE_MAC_IL,		42 },
+	{ ICE_ETYPE_IL,		54 },
 	{ ICE_IPV4_IL,		56 },
 	{ ICE_UDP_ILOS,		76 },
 	{ ICE_PROTOCOL_LAST,	0 },
@@ -118,7 +121,8 @@ static const u8 dummy_gre_udp_packet[] = {
 	0x00, 0x00, 0x00, 0x00,	/* ICE_MAC_IL 42 */
 	0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00,
-	0x08, 0x00,
+
+	0x08, 0x00,		/* ICE_ETYPE_IL 54 */
 
 	0x45, 0x00, 0x00, 0x14,	/* ICE_IPV4_IL 56 */
 	0x00, 0x00, 0x00, 0x00,
@@ -167,7 +171,8 @@ static const u8 dummy_udp_tun_tcp_packet[] = {
 	0x00, 0x00, 0x00, 0x00, /* ICE_MAC_IL 50 */
 	0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00,
-	0x08, 0x00,
+
+	0x08, 0x00,		/* ICE_ETYPE_IL 62*/
 
 	0x45, 0x00, 0x00, 0x28, /* ICE_IPV4_IL 64 */
 	0x00, 0x01, 0x00, 0x00,
@@ -191,6 +196,7 @@ static const struct ice_dummy_pkt_offsets dummy_udp_tun_udp_packet_offsets[] = {
 	{ ICE_GENEVE,		42 },
 	{ ICE_VXLAN_GPE,	42 },
 	{ ICE_MAC_IL,		50 },
+	{ ICE_ETYPE_IL,		62 },
 	{ ICE_IPV4_IL,		64 },
 	{ ICE_UDP_ILOS,		84 },
 	{ ICE_PROTOCOL_LAST,	0 },
@@ -218,7 +224,8 @@ static const u8 dummy_udp_tun_udp_packet[] = {
 	0x00, 0x00, 0x00, 0x00, /* ICE_MAC_IL 50 */
 	0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00,
-	0x08, 0x00,
+
+	0x08, 0x00,		/* ICE_ETYPE_IL 62 */
 
 	0x45, 0x00, 0x00, 0x1c, /* ICE_IPV4_IL 64 */
 	0x00, 0x01, 0x00, 0x00,
@@ -2216,6 +2223,7 @@ static struct ice_prof_type_entry ice_prof_type_tbl[ICE_GTPU_PROFILE] = {
 /**
  * ice_get_tun_type_for_recipe - get tunnel type for the recipe
  * @rid: recipe ID that we are populating
+ * @vlan: flag of vlan protocol
  */
 static enum ice_sw_tunnel_type ice_get_tun_type_for_recipe(u8 rid, bool vlan)
 {
@@ -2224,7 +2232,8 @@ static enum ice_sw_tunnel_type ice_get_tun_type_for_recipe(u8 rid, bool vlan)
 	u8 pppoe_profile[7] = {34, 35, 36, 37, 38, 39, 40};
 	u8 non_tun_profile[6] = {4, 5, 6, 7, 8, 9};
 	enum ice_sw_tunnel_type tun_type;
-	u16 i, j, k, profile_num = 0;
+	u16 i, j, profile_num = 0;
+	u16 k;
 	bool non_tun_valid = false;
 	bool pppoe_valid = false;
 	bool vxlan_valid = false;
@@ -3355,6 +3364,8 @@ ice_aq_add_update_mir_rule(struct ice_hw *hw, u16 rule_type, u16 dest_vsi,
 			else /* remove VSI from mirror rule */
 				mr_list[i] = CPU_TO_LE16(id);
 		}
+
+		desc.flags |= CPU_TO_LE16(ICE_AQ_FLAG_RD);
 	}
 
 	cmd = &desc.params.add_update_rule;
@@ -6984,6 +6995,7 @@ static const struct ice_prot_ext_tbl_entry ice_prot_ext[ICE_PROTOCOL_LAST] = {
 	{ ICE_MAC_OFOS,		{ 0, 2, 4, 6, 8, 10, 12 } },
 	{ ICE_MAC_IL,		{ 0, 2, 4, 6, 8, 10, 12 } },
 	{ ICE_ETYPE_OL,		{ 0 } },
+	{ ICE_ETYPE_IL,		{ 0 } },
 	{ ICE_VLAN_OFOS,	{ 2, 0 } },
 	{ ICE_IPV4_OFOS,	{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 18 } },
 	{ ICE_IPV4_IL,		{ 0, 2, 4, 6, 8, 10, 12, 14, 16, 18 } },
@@ -7021,6 +7033,7 @@ static struct ice_protocol_entry ice_prot_id_tbl[ICE_PROTOCOL_LAST] = {
 	{ ICE_MAC_OFOS,		ICE_MAC_OFOS_HW },
 	{ ICE_MAC_IL,		ICE_MAC_IL_HW },
 	{ ICE_ETYPE_OL,		ICE_ETYPE_OL_HW },
+	{ ICE_ETYPE_IL,		ICE_ETYPE_IL_HW },
 	{ ICE_VLAN_OFOS,	ICE_VLAN_OL_HW },
 	{ ICE_IPV4_OFOS,	ICE_IPV4_OFOS_HW },
 	{ ICE_IPV4_IL,		ICE_IPV4_IL_HW },
@@ -7051,6 +7064,8 @@ static struct ice_protocol_entry ice_prot_id_tbl[ICE_PROTOCOL_LAST] = {
  * ice_find_recp - find a recipe
  * @hw: pointer to the hardware structure
  * @lkup_exts: extension sequence to match
+ * @tun_type: tunnel type of switch filter
+ * @priority: priority of switch filter
  *
  * Returns index of matching recipe, or ICE_MAX_NUM_RECIPES if not found.
  */
@@ -8961,13 +8976,11 @@ ice_fill_adv_packet_tun(struct ice_hw *hw, enum ice_sw_tunnel_type tun_type,
 		if (!ice_get_open_tunnel_port(hw, TNL_VXLAN, &open_port))
 			return ICE_ERR_CFG;
 		break;
-
 	case ICE_SW_TUN_GENEVE:
 	case ICE_SW_TUN_GENEVE_VLAN:
 		if (!ice_get_open_tunnel_port(hw, TNL_GENEVE, &open_port))
 			return ICE_ERR_CFG;
 		break;
-
 	default:
 		/* Nothing needs to be done for this tunnel type */
 		return ICE_SUCCESS;
@@ -9579,7 +9592,6 @@ ice_add_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 err_ice_add_adv_rule:
 	if (status && rinfo->sw_act.fltr_act == ICE_SET_MARK)
 		ice_free_sw_marker_lg(hw, lg_act_id, rinfo->sw_act.markid);
-
 	if (status && adv_fltr) {
 		ice_free(hw, adv_fltr->lkups);
 		ice_free(hw, adv_fltr);
@@ -9861,8 +9873,7 @@ enum ice_status ice_rem_adv_rule_for_vsi(struct ice_hw *hw, u16 vsi_handle)
 				if (!map_info)
 					continue;
 
-				if (!ice_is_bit_set(map_info->vsi_map,
-						    vsi_handle))
+				if (!ice_is_bit_set(map_info->vsi_map, vsi_handle))
 					continue;
 			} else if (rinfo.sw_act.vsi_handle != vsi_handle) {
 				continue;
@@ -9871,7 +9882,6 @@ enum ice_status ice_rem_adv_rule_for_vsi(struct ice_hw *hw, u16 vsi_handle)
 			rinfo.sw_act.vsi_handle = vsi_handle;
 			status = ice_rem_adv_rule(hw, list_itr->lkups,
 						  list_itr->lkups_cnt, &rinfo);
-
 			if (status)
 				return status;
 		}
