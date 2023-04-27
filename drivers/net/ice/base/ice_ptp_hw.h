@@ -235,38 +235,7 @@ bool ice_is_pca9575_present(struct ice_hw *hw);
 
 void
 ice_ptp_process_cgu_err(struct ice_hw *hw, struct ice_rq_event_info *event);
-/* ETH56G family functions */
-enum ice_status
-ice_read_phy_reg_eth56g(struct ice_hw *hw, u8 port, u16 offset, u32 *val);
-enum ice_status
-ice_write_phy_reg_eth56g(struct ice_hw *hw, u8 port, u16 offset, u32 val);
-enum ice_status
-ice_read_phy_mem_eth56g(struct ice_hw *hw, u8 port, u16 offset, u32 *val);
-enum ice_status
-ice_write_phy_mem_eth56g(struct ice_hw *hw, u8 port, u16 offset, u32 val);
 
-enum ice_status
-ice_ptp_prep_port_adj_eth56g(struct ice_hw *hw, u8 port, s64 time,
-			     bool lock_sbq);
-
-enum ice_status
-ice_ptp_read_phy_incval_eth56g(struct ice_hw *hw, u8 port, u64 *incval);
-enum ice_status
-ice_ptp_read_port_capture_eth56g(struct ice_hw *hw, u8 port,
-				 u64 *tx_ts, u64 *rx_ts);
-enum ice_status
-ice_ptp_one_port_cmd_eth56g(struct ice_hw *hw, u8 port,
-			    enum ice_ptp_tmr_cmd cmd, bool lock_sbq);
-enum ice_status
-ice_ptp_read_tx_hwtstamp_status_eth56g(struct ice_hw *hw, u32 *ts_status);
-enum ice_status
-ice_stop_phy_timer_eth56g(struct ice_hw *hw, u8 port, bool soft_reset);
-enum ice_status
-ice_start_phy_timer_eth56g(struct ice_hw *hw, u8 port, bool bypass);
-enum ice_status ice_phy_cfg_tx_offset_eth56g(struct ice_hw *hw, u8 port);
-enum ice_status ice_phy_cfg_rx_offset_eth56g(struct ice_hw *hw, u8 port);
-
-enum ice_status ice_ptp_init_phy_cfg(struct ice_hw *hw);
 
 #define PFTSYN_SEM_BYTES	4
 
@@ -528,12 +497,6 @@ enum ice_status ice_ptp_init_phy_cfg(struct ice_hw *hw);
 #define ICE_E810T_SMA_MIN_BIT	3
 #define ICE_E810T_SMA_MAX_BIT	7
 #define ICE_E810T_P1_OFFSET	8
-/* 56G PHY quad register base addresses */
-#define ICE_PHY0_BASE			0x092000
-#define ICE_PHY1_BASE			0x126000
-#define ICE_PHY2_BASE			0x1BA000
-#define ICE_PHY3_BASE			0x24E000
-#define ICE_PHY4_BASE			0x2E2000
 
 /* Timestamp memory */
 #define PHY_PTP_LANE_ADDR_STEP		0x98
@@ -602,6 +565,5 @@ enum ice_status ice_ptp_init_phy_cfg(struct ice_hw *hw);
 #define PHY_TSTAMP_U(x) (((x) * 8) + 4)
 
 #define PHY_REG_REVISION		0x85000
-#define PHY_REVISION_ETH56G		0x10200
 
 #endif /* _ICE_PTP_HW_H_ */
