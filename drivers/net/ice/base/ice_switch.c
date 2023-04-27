@@ -7390,6 +7390,17 @@ ice_find_free_recp_res_idx(struct ice_hw *hw, const ice_bitmap_t *profiles,
 	return (u16)ice_bitmap_hweight(free_idx, ICE_MAX_FV_WORDS);
 }
 
+static void ice_set_recipe_index(unsigned long idx, u8 *bitmap)
+{
+	u32 byte = idx / BITS_PER_BYTE;
+	u32 bit = idx % BITS_PER_BYTE;
+
+	if (byte >= 8)
+		return;
+
+	bitmap[byte] |= 1 << bit;
+}
+
 /**
  * ice_add_sw_recipe - function to call AQ calls to create switch recipe
  * @hw: pointer to hardware structure
@@ -7517,10 +7528,10 @@ ice_add_sw_recipe(struct ice_hw *hw, struct ice_sw_recipe *rm,
 		}
 
 		/* fill recipe dependencies */
-		ice_zero_bitmap((ice_bitmap_t *)buf[recps].recipe_bitmap,
-				ICE_MAX_NUM_RECIPES);
-		ice_set_bit(buf[recps].recipe_indx,
-			    (ice_bitmap_t *)buf[recps].recipe_bitmap);
+		ice_memset(buf[recps].recipe_bitmap, 0,
+			   sizeof(buf[recps].recipe_bitmap), ICE_NONDMA_MEM);
+		ice_set_recipe_index(buf[recps].recipe_indx,
+				     buf[recps].recipe_bitmap);
 		buf[recps].content.act_ctrl_fwd_priority = rm->priority;
 		recps++;
 	}
@@ -8305,18 +8316,26 @@ ice_find_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 			 lkups[i].m_u.ethertype.ethtype_id ==
 				CPU_TO_BE16(0xFFFF))
 			outer_ipv6 = true;
+		else if (lkups[i].type == ICE_ETYPE_IL &&
+			 lkups[i].h_u.ethertype.ethtype_id ==
+				CPU_TO_BE16(ICE_IPV6_ETHER_ID) &&
+			 lkups[i].m_u.ethertype.ethtype_id ==
+				CPU_TO_BE16(0xFFFF))
+			inner_ipv6 = true;
+		else if (lkups[i].type == ICE_PPPOE) {
+			pppoe = true;
+			if (lkups[i].h_u.pppoe_hdr.ppp_prot_id ==
+				CPU_TO_BE16(ICE_PPP_IPV6_PROTO_ID) &&
+			    lkups[i].m_u.pppoe_hdr.ppp_prot_id ==
+				CPU_TO_BE16(0xFFFF))
+				outer_ipv6 = true;
+		}
 		else if (lkups[i].type == ICE_IPV4_OFOS &&
 			 lkups[i].h_u.ipv4_hdr.protocol ==
 				ICE_IPV4_NVGRE_PROTO_ID &&
 			 lkups[i].m_u.ipv4_hdr.protocol ==
 				0xFF)
 			gre = true;
-		else if (lkups[i].type == ICE_PPPOE &&
-			 lkups[i].h_u.pppoe_hdr.ppp_prot_id ==
-				CPU_TO_BE16(ICE_PPP_IPV6_PROTO_ID) &&
-			 lkups[i].m_u.pppoe_hdr.ppp_prot_id ==
-				0xFFFF)
-			outer_ipv6 = true;
 		else if (lkups[i].type == ICE_IPV4_IL &&
 			 lkups[i].h_u.ipv4_hdr.protocol ==
 				ICE_TCP_PROTO_ID &&
@@ -8371,6 +8390,34 @@ ice_find_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 			*offsets = dummy_qinq_ipv4_packet_offsets;
 			return;
 		}
+	}
+
+	if (tun_type == ICE_SW_IPV4_TCP) {
+		*pkt = dummy_tcp_packet;
+		*pkt_len = sizeof(dummy_tcp_packet);
+		*offsets = dummy_tcp_packet_offsets;
+		return;
+	}
+
+	if (tun_type == ICE_SW_IPV4_UDP) {
+		*pkt = dummy_udp_packet;
+		*pkt_len = sizeof(dummy_udp_packet);
+		*offsets = dummy_udp_packet_offsets;
+		return;
+	}
+
+	if (tun_type == ICE_SW_IPV6_TCP) {
+		*pkt = dummy_tcp_ipv6_packet;
+		*pkt_len = sizeof(dummy_tcp_ipv6_packet);
+		*offsets = dummy_tcp_ipv6_packet_offsets;
+		return;
+	}
+
+	if (tun_type == ICE_SW_IPV6_UDP) {
+		*pkt = dummy_udp_ipv6_packet;
+		*pkt_len = sizeof(dummy_udp_ipv6_packet);
+		*offsets = dummy_udp_ipv6_packet_offsets;
+		return;
 	}
 
 	if (tun_type == ICE_SW_TUN_PPPOE_IPV6_QINQ) {
@@ -8811,6 +8858,7 @@ ice_fill_adv_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 			len = sizeof(struct ice_ether_hdr);
 			break;
 		case ICE_ETYPE_OL:
+		case ICE_ETYPE_IL:
 			len = sizeof(struct ice_ethtype_hdr);
 			break;
 		case ICE_VLAN_OFOS:
@@ -8843,9 +8891,6 @@ ice_fill_adv_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 			len = sizeof(struct ice_udp_tnl_hdr);
 			break;
 
-		case ICE_PPPOE:
-			len = sizeof(struct ice_pppoe_hdr);
-			break;
 		case ICE_ESP:
 			len = sizeof(struct ice_esp_hdr);
 			break;
@@ -8855,12 +8900,15 @@ ice_fill_adv_dummy_packet(struct ice_adv_lkup_elem *lkups, u16 lkups_cnt,
 		case ICE_AH:
 			len = sizeof(struct ice_ah_hdr);
 			break;
+		case ICE_GTP_NO_PAY:
+		case ICE_GTP:
+			len = sizeof(struct ice_udp_gtp_hdr);
+			break;
+		case ICE_PPPOE:
+			len = sizeof(struct ice_pppoe_hdr);
+			break;
 		case ICE_L2TPV3:
 			len = sizeof(struct ice_l2tpv3_sess_hdr);
-			break;
-		case ICE_GTP:
-		case ICE_GTP_NO_PAY:
-			len = sizeof(struct ice_udp_gtp_hdr);
 			break;
 		default:
 			return ICE_ERR_PARAM;
