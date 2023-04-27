@@ -184,8 +184,8 @@ ice_ptp_one_port_cmd_e822(struct ice_hw *hw, u8 port,
 			  enum ice_ptp_tmr_cmd cmd, bool lock_sbq);
 void ice_ptp_reset_ts_memory_quad_e822(struct ice_hw *hw, u8 quad);
 enum ice_status
-ice_cfg_cgu_pll_e822(struct ice_hw *hw, enum ice_time_ref_freq clk_freq,
-		     enum ice_clk_src clk_src);
+ice_cfg_cgu_pll_e822(struct ice_hw *hw, enum ice_time_ref_freq *clk_freq,
+		     enum ice_clk_src *clk_src);
 
 /**
  * ice_e822_time_ref - Get the current TIME_REF from capabilities

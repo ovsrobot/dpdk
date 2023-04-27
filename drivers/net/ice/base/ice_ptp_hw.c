@@ -218,8 +218,8 @@ static const char *ice_clk_src_str(u8 clk_src)
  * time reference, enabling the PLL which drives the PTP hardware clock.
  */
 enum ice_status
-ice_cfg_cgu_pll_e822(struct ice_hw *hw, enum ice_time_ref_freq clk_freq,
-		     enum ice_clk_src clk_src)
+ice_cfg_cgu_pll_e822(struct ice_hw *hw, enum ice_time_ref_freq *clk_freq,
+		     enum ice_clk_src *clk_src)
 {
 	union tspll_ro_bwm_lf bwm_lf;
 	union nac_cgu_dword19 dw19;
@@ -228,18 +228,18 @@ ice_cfg_cgu_pll_e822(struct ice_hw *hw, enum ice_time_ref_freq clk_freq,
 	union nac_cgu_dword9 dw9;
 	enum ice_status status;
 
-	if (clk_freq >= NUM_ICE_TIME_REF_FREQ) {
-		ice_warn(hw, "Invalid TIME_REF frequency %u\n", clk_freq);
+	if (*clk_freq >= NUM_ICE_TIME_REF_FREQ) {
+		ice_warn(hw, "Invalid TIME_REF frequency %u\n", *clk_freq);
 		return ICE_ERR_PARAM;
 	}
 
-	if (clk_src >= NUM_ICE_CLK_SRC) {
-		ice_warn(hw, "Invalid clock source %u\n", clk_src);
+	if (*clk_src >= NUM_ICE_CLK_SRC) {
+		ice_warn(hw, "Invalid clock source %u\n", *clk_src);
 		return ICE_ERR_PARAM;
 	}
 
-	if (clk_src == ICE_CLK_SRC_TCX0 &&
-	    clk_freq != ICE_TIME_REF_FREQ_25_000) {
+	if (*clk_src == ICE_CLK_SRC_TCX0 &&
+	    *clk_freq != ICE_TIME_REF_FREQ_25_000) {
 		ice_warn(hw, "TCX0 only supports 25 MHz frequency\n");
 		return ICE_ERR_PARAM;
 	}
@@ -273,7 +273,7 @@ ice_cfg_cgu_pll_e822(struct ice_hw *hw, enum ice_time_ref_freq clk_freq,
 	}
 
 	/* Set the frequency */
-	dw9.field.time_ref_freq_sel = clk_freq;
+	dw9.field.time_ref_freq_sel = *clk_freq;
 	status = ice_write_cgu_reg_e822(hw, NAC_CGU_DWORD9, dw9.val);
 	if (status)
 		return status;
@@ -283,7 +283,7 @@ ice_cfg_cgu_pll_e822(struct ice_hw *hw, enum ice_time_ref_freq clk_freq,
 	if (status)
 		return status;
 
-	dw19.field.tspll_fbdiv_intgr = e822_cgu_params[clk_freq].feedback_div;
+	dw19.field.tspll_fbdiv_intgr = e822_cgu_params[*clk_freq].feedback_div;
 	dw19.field.tspll_ndivratio = 1;
 
 	status = ice_write_cgu_reg_e822(hw, NAC_CGU_DWORD19, dw19.val);
@@ -295,7 +295,7 @@ ice_cfg_cgu_pll_e822(struct ice_hw *hw, enum ice_time_ref_freq clk_freq,
 	if (status)
 		return status;
 
-	dw22.field.time1588clk_div = e822_cgu_params[clk_freq].post_pll_div;
+	dw22.field.time1588clk_div = e822_cgu_params[*clk_freq].post_pll_div;
 	dw22.field.time1588clk_sel_div2 = 0;
 
 	status = ice_write_cgu_reg_e822(hw, NAC_CGU_DWORD22, dw22.val);
@@ -307,9 +307,9 @@ ice_cfg_cgu_pll_e822(struct ice_hw *hw, enum ice_time_ref_freq clk_freq,
 	if (status)
 		return status;
 
-	dw24.field.ref1588_ck_div = e822_cgu_params[clk_freq].refclk_pre_div;
-	dw24.field.tspll_fbdiv_frac = e822_cgu_params[clk_freq].frac_n_div;
-	dw24.field.time_ref_sel = clk_src;
+	dw24.field.ref1588_ck_div = e822_cgu_params[*clk_freq].refclk_pre_div;
+	dw24.field.tspll_fbdiv_frac = e822_cgu_params[*clk_freq].frac_n_div;
+	dw24.field.time_ref_sel = *clk_src;
 
 	status = ice_write_cgu_reg_e822(hw, NAC_CGU_DWORD24, dw24.val);
 	if (status)
@@ -341,6 +341,9 @@ ice_cfg_cgu_pll_e822(struct ice_hw *hw, enum ice_time_ref_freq clk_freq,
 		  ice_clk_freq_str(dw9.field.time_ref_freq_sel),
 		  bwm_lf.field.plllock_true_lock_cri ? "locked" : "unlocked");
 
+	*clk_freq = (enum ice_time_ref_freq)dw9.field.time_ref_freq_sel;
+	*clk_src = (enum ice_clk_src)dw24.field.time_ref_sel;
+
 	return ICE_SUCCESS;
 }
 
@@ -354,6 +357,8 @@ static enum ice_status ice_init_cgu_e822(struct ice_hw *hw)
 {
 	struct ice_ts_func_info *ts_info = &hw->func_caps.ts_func_info;
 	union tspll_cntr_bist_settings cntr_bist;
+	enum ice_time_ref_freq time_ref_freq;
+	enum ice_clk_src clk_src;
 	enum ice_status status;
 
 	status = ice_read_cgu_reg_e822(hw, TSPLL_CNTR_BIST_SETTINGS,
@@ -373,8 +378,9 @@ static enum ice_status ice_init_cgu_e822(struct ice_hw *hw)
 	/* Configure the CGU PLL using the parameters from the function
 	 * capabilities.
 	 */
-	status = ice_cfg_cgu_pll_e822(hw, ts_info->time_ref,
-				      (enum ice_clk_src)ts_info->clk_src);
+	time_ref_freq = (enum ice_time_ref_freq)ts_info->time_ref;
+	clk_src = (enum ice_clk_src)ts_info->clk_src;
+	status = ice_cfg_cgu_pll_e822(hw, &time_ref_freq, &clk_src);
 	if (status)
 		return status;
 
@@ -2023,6 +2029,7 @@ enum ice_status ice_phy_cfg_tx_offset_e822(struct ice_hw *hw, u8 port)
 	status = ice_write_phy_reg_e822(hw, port, P_REG_TX_OR, 1);
 	if (status)
 		return status;
+
 
 	return ICE_SUCCESS;
 }
