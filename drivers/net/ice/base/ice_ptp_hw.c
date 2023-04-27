@@ -1020,34 +1020,31 @@ ice_read_phy_tstamp_e822(struct ice_hw *hw, u8 quad, u8 idx, u64 *tstamp)
 }
 
 /**
- * ice_clear_phy_tstamp_e822 - Clear a timestamp from the quad block
+ * ice_clear_phy_tstamp_e822 - Drop a timestamp from the quad block
  * @hw: pointer to the HW struct
  * @quad: the quad to read from
  * @idx: the timestamp index to reset
  *
- * Clear a timestamp, resetting its valid bit, from the PHY quad block that is
- * shared between the internal PHYs on the E822 devices.
+ * Read the timetamp out of the quad to clear its timestamp status bit from
+ * the PHY quad block that is shared between the internal PHYs of the E822
+ * devices.
+ *
+ * Note that software cannot directly write the quad memory bank registers,
+ * and must use ice_ptp_reset_ts_memory_quad_e822 for that purpose.
+ *
+ * This function should only be called on an idx whose bit is set according to
+ * ice_get_phy_tx_tstamp_ready.
  */
 static enum ice_status
 ice_clear_phy_tstamp_e822(struct ice_hw *hw, u8 quad, u8 idx)
 {
 	enum ice_status status;
-	u16 lo_addr, hi_addr;
+	u64 unused_tstamp;
 
-	lo_addr = (u16)TS_L(Q_REG_TX_MEMORY_BANK_START, idx);
-	hi_addr = (u16)TS_H(Q_REG_TX_MEMORY_BANK_START, idx);
-
-	status = ice_write_quad_reg_e822(hw, quad, lo_addr, 0);
+	status = ice_read_phy_tstamp_e822(hw, quad, idx, &unused_tstamp);
 	if (status) {
-		ice_debug(hw, ICE_DBG_PTP, "Failed to clear low PTP timestamp register, status %d\n",
-			  status);
-		return status;
-	}
-
-	status = ice_write_quad_reg_e822(hw, quad, hi_addr, 0);
-	if (status) {
-		ice_debug(hw, ICE_DBG_PTP, "Failed to clear high PTP timestamp register, status %d\n",
-			  status);
+		ice_debug(hw, ICE_DBG_PTP, "Failed to read the timestamp register for quad %u, idx %u, status %d\n",
+			  quad, idx, status);
 		return status;
 	}
 
@@ -2926,29 +2923,40 @@ ice_read_phy_tstamp_e810(struct ice_hw *hw, u8 lport, u8 idx, u64 *tstamp)
  * @lport: the lport to read from
  * @idx: the timestamp index to reset
  *
- * Clear a timestamp, resetting its valid bit, from the timestamp block of the
- * external PHY on the E810 device.
+ * Read the timestamp and then forcibly overwrite its value to clear the valid
+ * bit from the timestamp block of the external PHY on the E810 device.
+ *
+ * This function should only be called on an idx whose bit is set according to
+ * ice_get_phy_tx_tstamp_ready.
  */
 static enum ice_status
 ice_clear_phy_tstamp_e810(struct ice_hw *hw, u8 lport, u8 idx)
 {
 	enum ice_status status;
 	u32 lo_addr, hi_addr;
+	u64 unused_tstamp;
+
+	status = ice_read_phy_tstamp_e810(hw, lport, idx, &unused_tstamp);
+	if (status) {
+		ice_debug(hw, ICE_DBG_PTP, "Failed to read the timestamp register for lport %u, idx %u, status %d\n",
+			  lport, idx, status);
+		return status;
+	}
 
 	lo_addr = TS_EXT(LOW_TX_MEMORY_BANK_START, lport, idx);
 	hi_addr = TS_EXT(HIGH_TX_MEMORY_BANK_START, lport, idx);
 
 	status = ice_write_phy_reg_e810(hw, lo_addr, 0);
 	if (status) {
-		ice_debug(hw, ICE_DBG_PTP, "Failed to clear low PTP timestamp register, status %d\n",
-			  status);
+		ice_debug(hw, ICE_DBG_PTP, "Failed to clear low PTP timestamp register for lport %u, idx %u, status %d\n",
+			  lport, idx, status);
 		return status;
 	}
 
 	status = ice_write_phy_reg_e810(hw, hi_addr, 0);
 	if (status) {
-		ice_debug(hw, ICE_DBG_PTP, "Failed to clear high PTP timestamp register, status %d\n",
-			  status);
+		ice_debug(hw, ICE_DBG_PTP, "Failed to clear high PTP timestamp register for lport %u, idx %u, status %d\n",
+			  lport, idx, status);
 		return status;
 	}
 
