@@ -131,9 +131,12 @@ u64 ice_ptp_read_src_incval(struct ice_hw *hw);
 bool ice_ptp_lock(struct ice_hw *hw);
 void ice_ptp_unlock(struct ice_hw *hw);
 void ice_ptp_src_cmd(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd);
-enum ice_status ice_ptp_init_time(struct ice_hw *hw, u64 time);
-enum ice_status ice_ptp_write_incval(struct ice_hw *hw, u64 incval);
-enum ice_status ice_ptp_write_incval_locked(struct ice_hw *hw, u64 incval);
+enum ice_status ice_ptp_init_time(struct ice_hw *hw, u64 time,
+				  bool wr_main_tmr);
+enum ice_status ice_ptp_write_incval(struct ice_hw *hw, u64 incval,
+				     bool wr_main_tmr);
+enum ice_status ice_ptp_write_incval_locked(struct ice_hw *hw, u64 incval,
+					    bool wr_main_tmr);
 enum ice_status ice_ptp_adj_clock(struct ice_hw *hw, s32 adj, bool lock_sbq);
 enum ice_status
 ice_ptp_adj_clock_at_time(struct ice_hw *hw, u64 at_time, s32 adj);
