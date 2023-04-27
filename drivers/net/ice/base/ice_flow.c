@@ -1132,6 +1132,7 @@ ice_flow_proc_seg_hdrs(struct ice_flow_prof_params *params)
 			ice_and_bitmap(params->ptypes, params->ptypes, src,
 				       ICE_FLOW_PTYPE_MAX);
 		}
+
 		if ((hdrs & ICE_FLOW_SEG_HDR_IPV4) &&
 		    (hdrs & ICE_FLOW_SEG_HDR_IPV_OTHER)) {
 			src = i ?
@@ -1371,7 +1372,7 @@ ice_flow_xtract_pkt_flags(struct ice_hw *hw,
  */
 static enum ice_status
 ice_flow_xtract_fld(struct ice_hw *hw, struct ice_flow_prof_params *params,
-		    u8 seg, enum ice_flow_field fld, u64 match)
+		    u8 seg, enum ice_flow_field fld, ice_bitmap_t *match)
 {
 	enum ice_flow_field sib = ICE_FLOW_FIELD_IDX_MAX;
 	u8 fv_words = (u8)hw->blk[params->blk].es.fvw;
@@ -1420,7 +1421,7 @@ ice_flow_xtract_fld(struct ice_hw *hw, struct ice_flow_prof_params *params,
 		/* If the sibling field is also included, that field's
 		 * mask needs to be included.
 		 */
-		if (match & BIT(sib))
+		if (ice_is_bit_set(match, sib))
 			sib_mask = ice_flds_info[sib].mask;
 		break;
 	case ICE_FLOW_FIELD_IDX_IPV6_TTL:
@@ -1451,7 +1452,7 @@ ice_flow_xtract_fld(struct ice_hw *hw, struct ice_flow_prof_params *params,
 		/* If the sibling field is also included, that field's
 		 * mask needs to be included.
 		 */
-		if (match & BIT(sib))
+		if (ice_is_bit_set(match, sib))
 			sib_mask = ice_flds_info[sib].mask;
 		break;
 	case ICE_FLOW_FIELD_IDX_IPV4_SA:
@@ -1722,15 +1723,16 @@ ice_flow_create_xtrct_seq(struct ice_hw *hw,
 	}
 
 	for (i = 0; i < params->prof->segs_cnt; i++) {
-		u64 match = params->prof->segs[i].match;
+		ice_declare_bitmap(match, ICE_FLOW_FIELD_IDX_MAX);
 		enum ice_flow_field j;
 
-		ice_for_each_set_bit(j, (ice_bitmap_t *)&match,
-				     ICE_FLOW_FIELD_IDX_MAX) {
+		ice_cp_bitmap(match, params->prof->segs[i].match,
+			      ICE_FLOW_FIELD_IDX_MAX);
+		ice_for_each_set_bit(j, match, ICE_FLOW_FIELD_IDX_MAX) {
 			status = ice_flow_xtract_fld(hw, params, i, j, match);
 			if (status)
 				return status;
-			ice_clear_bit(j, (ice_bitmap_t *)&match);
+			ice_clear_bit(j, match);
 		}
 
 		/* Process raw matching bytes */
@@ -1789,7 +1791,7 @@ ice_flow_acl_def_entry_frmt(struct ice_flow_prof_params *params)
 		struct ice_flow_seg_info *seg = &params->prof->segs[i];
 		u16 j;
 
-		ice_for_each_set_bit(j, (ice_bitmap_t *)&seg->match,
+		ice_for_each_set_bit(j, seg->match,
 				     (u16)ICE_FLOW_FIELD_IDX_MAX) {
 			struct ice_flow_fld_info *fld = &seg->fields[j];
 
@@ -1932,7 +1934,10 @@ ice_flow_find_prof_conds(struct ice_hw *hw, enum ice_block blk,
 			for (i = 0; i < segs_cnt; i++)
 				if (segs[i].hdrs != p->segs[i].hdrs ||
 				    ((conds & ICE_FLOW_FIND_PROF_CHK_FLDS) &&
-				     segs[i].match != p->segs[i].match))
+				     (ice_cmp_bitmap(segs[i].match,
+						     p->segs[i].match,
+						     ICE_FLOW_FIELD_IDX_MAX) ==
+				       false)))
 					break;
 
 			/* A match is found if all segments are matched */
@@ -2432,7 +2437,7 @@ ice_flow_acl_set_xtrct_seq(struct ice_hw *hw, struct ice_flow_prof *prof)
 			struct ice_flow_seg_info *seg = &prof->segs[i];
 			u16 j;
 
-			ice_for_each_set_bit(j, (ice_bitmap_t *)&seg->match,
+			ice_for_each_set_bit(j, seg->match,
 					     ICE_FLOW_FIELD_IDX_MAX) {
 				info = &seg->fields[j];
 
@@ -2601,7 +2606,8 @@ ice_flow_set_hw_prof(struct ice_hw *hw, u16 dest_vsi_handle,
 			idx = i;
 		params->es[idx].prot_id = prof->fv[i].proto_id;
 		params->es[idx].off = prof->fv[i].offset;
-		params->mask[idx] = CPU_TO_BE16(prof->fv[i].msk);
+		params->mask[idx] = (((prof->fv[i].msk) << 8) & 0xff00) |
+				    (((prof->fv[i].msk) >> 8) & 0x00ff);
 	}
 
 	switch (prof->flags) {
@@ -3002,7 +3008,7 @@ ice_flow_acl_frmt_entry(struct ice_hw *hw, struct ice_flow_prof *prof,
 		struct ice_flow_seg_info *seg = &prof->segs[i];
 		u16 j;
 
-		ice_for_each_set_bit(j, (ice_bitmap_t *)&seg->match,
+		ice_for_each_set_bit(j, seg->match,
 				     (u16)ICE_FLOW_FIELD_IDX_MAX) {
 			struct ice_flow_fld_info *info = &seg->fields[j];
 
@@ -3534,7 +3540,7 @@ enum ice_status ice_flow_rem_entry(struct ice_hw *hw, enum ice_block blk,
 	if (entry_h == ICE_FLOW_ENTRY_HANDLE_INVAL)
 		return ICE_ERR_PARAM;
 
-	entry = ICE_FLOW_ENTRY_PTR((intptr_t)entry_h);
+	entry = ICE_FLOW_ENTRY_PTR(entry_h);
 
 	/* Retain the pointer to the flow profile as the entry will be freed */
 	prof = entry->prof;
@@ -3576,11 +3582,9 @@ ice_flow_set_fld_ext(struct ice_flow_seg_info *seg, enum ice_flow_field fld,
 		     enum ice_flow_fld_match_type field_type, u16 val_loc,
 		     u16 mask_loc, u16 last_loc)
 {
-	u64 bit = BIT_ULL(fld);
-
-	seg->match |= bit;
+	ice_set_bit(fld, seg->match);
 	if (field_type == ICE_FLOW_FLD_TYPE_RANGE)
-		seg->range |= bit;
+		ice_set_bit(fld, seg->range);
 
 	seg->fields[fld].type = field_type;
 	seg->fields[fld].src.val = val_loc;
@@ -3741,7 +3745,7 @@ enum ice_status ice_flow_rem_vsi_prof(struct ice_hw *hw, enum ice_block blk, u16
 }
 
 #define ICE_FLOW_RSS_SEG_HDR_L2_MASKS \
-(ICE_FLOW_SEG_HDR_ETH | ICE_FLOW_SEG_HDR_ETH_NON_IP | ICE_FLOW_SEG_HDR_VLAN)
+(ICE_FLOW_SEG_HDR_ETH | ICE_FLOW_SEG_HDR_VLAN)
 
 #define ICE_FLOW_RSS_SEG_HDR_L3_MASKS \
 	(ICE_FLOW_SEG_HDR_IPV4 | ICE_FLOW_SEG_HDR_IPV6)
@@ -3856,6 +3860,7 @@ enum ice_status ice_rem_vsi_rss_cfg(struct ice_hw *hw, u16 vsi_handle)
 	const enum ice_block blk = ICE_BLK_RSS;
 	struct ice_flow_prof *p, *t;
 	enum ice_status status = ICE_SUCCESS;
+	u16 vsig;
 
 	if (!ice_is_vsi_valid(hw, vsi_handle))
 		return ICE_ERR_PARAM;
@@ -3865,7 +3870,16 @@ enum ice_status ice_rem_vsi_rss_cfg(struct ice_hw *hw, u16 vsi_handle)
 
 	ice_acquire_lock(&hw->rss_locks);
 	LIST_FOR_EACH_ENTRY_SAFE(p, t, &hw->fl_profs[blk], ice_flow_prof,
-				 l_entry)
+				 l_entry) {
+		int ret;
+
+		/* check if vsig is already removed */
+		ret = ice_vsig_find_vsi(hw, blk,
+					ice_get_hw_vsi_num(hw, vsi_handle),
+					&vsig);
+		if (!ret && !vsig)
+			break;
+
 		if (ice_is_bit_set(p->vsis, vsi_handle)) {
 			status = ice_flow_disassoc_prof(hw, blk, p, vsi_handle);
 			if (status)
@@ -3877,6 +3891,7 @@ enum ice_status ice_rem_vsi_rss_cfg(struct ice_hw *hw, u16 vsi_handle)
 					break;
 			}
 		}
+	}
 	ice_release_lock(&hw->rss_locks);
 
 	return status;
@@ -3918,6 +3933,14 @@ ice_rem_rss_list(struct ice_hw *hw, u16 vsi_handle, struct ice_flow_prof *prof)
 {
 	enum ice_rss_cfg_hdr_type hdr_type;
 	struct ice_rss_cfg *r, *tmp;
+	u64 seg_match = 0;
+	u16 i;
+
+	/* convert match bitmap to u64 for hash field comparison */
+	ice_for_each_set_bit(i, prof->segs[prof->segs_cnt - 1].match,
+			     ICE_FLOW_FIELD_IDX_MAX) {
+		seg_match |= 1ULL << i;
+	}
 
 	/* Search for RSS hash fields associated to the VSI that match the
 	 * hash configurations associated to the flow profile. If found
@@ -3926,7 +3949,7 @@ ice_rem_rss_list(struct ice_hw *hw, u16 vsi_handle, struct ice_flow_prof *prof)
 	hdr_type = ice_get_rss_hdr_type(prof);
 	LIST_FOR_EACH_ENTRY_SAFE(r, tmp, &hw->rss_list_head,
 				 ice_rss_cfg, l_entry)
-		if (r->hash.hash_flds == prof->segs[prof->segs_cnt - 1].match &&
+		if (r->hash.hash_flds == seg_match &&
 		    r->hash.addl_hdrs == prof->segs[prof->segs_cnt - 1].hdrs &&
 		    r->hash.hdr_type == hdr_type) {
 			ice_clear_bit(vsi_handle, r->vsis);
@@ -3951,11 +3974,18 @@ ice_add_rss_list(struct ice_hw *hw, u16 vsi_handle, struct ice_flow_prof *prof)
 {
 	enum ice_rss_cfg_hdr_type hdr_type;
 	struct ice_rss_cfg *r, *rss_cfg;
+	u64 seg_match = 0;
+	u16 i;
+
+	ice_for_each_set_bit(i, prof->segs[prof->segs_cnt - 1].match,
+			     ICE_FLOW_FIELD_IDX_MAX) {
+		seg_match |= 1ULL << i;
+	}
 
 	hdr_type = ice_get_rss_hdr_type(prof);
 	LIST_FOR_EACH_ENTRY(r, &hw->rss_list_head,
 			    ice_rss_cfg, l_entry)
-		if (r->hash.hash_flds == prof->segs[prof->segs_cnt - 1].match &&
+		if (r->hash.hash_flds == seg_match &&
 		    r->hash.addl_hdrs == prof->segs[prof->segs_cnt - 1].hdrs &&
 		    r->hash.hdr_type == hdr_type) {
 			ice_set_bit(vsi_handle, r->vsis);
@@ -3966,7 +3996,7 @@ ice_add_rss_list(struct ice_hw *hw, u16 vsi_handle, struct ice_flow_prof *prof)
 	if (!rss_cfg)
 		return ICE_ERR_NO_MEMORY;
 
-	rss_cfg->hash.hash_flds = prof->segs[prof->segs_cnt - 1].match;
+	rss_cfg->hash.hash_flds = seg_match;
 	rss_cfg->hash.addl_hdrs = prof->segs[prof->segs_cnt - 1].hdrs;
 	rss_cfg->hash.hdr_type = hdr_type;
 	rss_cfg->hash.symm = prof->cfg.symm;
