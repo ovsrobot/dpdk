@@ -1962,14 +1962,19 @@ ice_calc_fixed_tx_offset_e822(struct ice_hw *hw, enum ice_ptp_link_spd link_spd)
  * adjust Tx timestamps by. This is calculated by combining some known static
  * latency along with the Vernier offset computations done by hardware.
  *
- * This function must be called only after the offset registers are valid,
- * i.e. after the Vernier calibration wait has passed, to ensure that the PHY
- * has measured the offset.
+ * This function will not return successfully until the Tx offset calculations
+ * have been completed, which requires waiting until at least one packet has
+ * been transmitted by the device. It is safe to call this function
+ * periodically until calibration succeeds, as it will only program the offset
+ * once.
  *
  * To avoid overflow, when calculating the offset based on the known static
  * latency values, we use measurements in 1/100th of a nanosecond, and divide
  * the TUs per second up front. This avoids overflow while allowing
  * calculation of the adjustment using integer arithmetic.
+ *
+ * Returns zero on success, ICE_ERR_NOT_READY if the hardware vernier offset
+ * calibration has not completed, or another error code on failure.
  */
 enum ice_status ice_phy_cfg_tx_offset_e822(struct ice_hw *hw, u8 port)
 {
@@ -1977,6 +1982,28 @@ enum ice_status ice_phy_cfg_tx_offset_e822(struct ice_hw *hw, u8 port)
 	enum ice_ptp_fec_mode fec_mode;
 	enum ice_status status;
 	u64 total_offset, val;
+	u32 reg;
+
+	/* Nothing to do if we've already programmed the offset */
+	status = ice_read_phy_reg_e822(hw, port, P_REG_TX_OR, &reg);
+	if (status) {
+		ice_debug(hw, ICE_DBG_PTP, "Failed to read TX_OR for port %u, status %d\n",
+			  port, status);
+		return status;
+	}
+
+	if (reg)
+		return ICE_SUCCESS;
+
+	status = ice_read_phy_reg_e822(hw, port, P_REG_TX_OV_STATUS, &reg);
+	if (status) {
+		ice_debug(hw, ICE_DBG_PTP, "Failed to read TX_OV_STATUS for port %u, status %d\n",
+			  port, status);
+		return status;
+	}
+
+	if (!(reg & P_REG_TX_OV_STATUS_OV_M))
+		return ICE_ERR_NOT_READY;
 
 	status = ice_phy_get_speed_and_fec_e822(hw, port, &link_spd, &fec_mode);
 	if (status)
@@ -2030,6 +2057,7 @@ enum ice_status ice_phy_cfg_tx_offset_e822(struct ice_hw *hw, u8 port)
 	if (status)
 		return status;
 
+	ice_info(hw, "Port=%d Tx vernier offset calibration complete\n", port);
 
 	return ICE_SUCCESS;
 }
@@ -2236,6 +2264,11 @@ ice_calc_fixed_rx_offset_e822(struct ice_hw *hw, enum ice_ptp_link_spd link_spd)
  * measurements taken in hardware with some data about known fixed delay as
  * well as adjusting for multi-lane alignment delay.
  *
+ * This function will not return successfully until the Rx offset calculations
+ * have been completed, which requires waiting until at least one packet has
+ * been received by the device. It is safe to call this function periodically
+ * until calibration succeeds, as it will only program the offset once.
+ *
  * This function must be called only after the offset registers are valid,
  * i.e. after the Vernier calibration wait has passed, to ensure that the PHY
  * has measured the offset.
@@ -2244,6 +2277,9 @@ ice_calc_fixed_rx_offset_e822(struct ice_hw *hw, enum ice_ptp_link_spd link_spd)
  * latency values, we use measurements in 1/100th of a nanosecond, and divide
  * the TUs per second up front. This avoids overflow while allowing
  * calculation of the adjustment using integer arithmetic.
+ *
+ * Returns zero on success, ICE_ERR_NOT_READY if the hardware vernier offset
+ * calibration has not completed, or another error code on failure.
  */
 enum ice_status ice_phy_cfg_rx_offset_e822(struct ice_hw *hw, u8 port)
 {
@@ -2251,6 +2287,28 @@ enum ice_status ice_phy_cfg_rx_offset_e822(struct ice_hw *hw, u8 port)
 	enum ice_ptp_fec_mode fec_mode;
 	u64 total_offset, pmd, val;
 	enum ice_status status;
+	u32 reg;
+
+	/* Nothing to do if we've already programmed the offset */
+	status = ice_read_phy_reg_e822(hw, port, P_REG_RX_OR, &reg);
+	if (status) {
+		ice_debug(hw, ICE_DBG_PTP, "Failed to read RX_OR for port %u, status %d\n",
+			  port, status);
+		return status;
+	}
+
+	if (reg)
+		return ICE_SUCCESS;
+
+	status = ice_read_phy_reg_e822(hw, port, P_REG_RX_OV_STATUS, &reg);
+	if (status) {
+		ice_debug(hw, ICE_DBG_PTP, "Failed to read RX_OV_STATUS for port %u, status %d\n",
+			  port, status);
+		return status;
+	}
+
+	if (!(reg & P_REG_RX_OV_STATUS_OV_M))
+		return ICE_ERR_NOT_READY;
 
 	status = ice_phy_get_speed_and_fec_e822(hw, port, &link_spd, &fec_mode);
 	if (status)
@@ -2311,9 +2369,10 @@ enum ice_status ice_phy_cfg_rx_offset_e822(struct ice_hw *hw, u8 port)
 	if (status)
 		return status;
 
+	ice_info(hw, "Port=%d Rx vernier offset calibration complete\n", port);
+
 	return ICE_SUCCESS;
 }
-
 
 /**
  * ice_ptp_clear_phy_offset_ready_e822 - Clear PHY TX_/RX_OFFSET_READY registers
@@ -2424,7 +2483,8 @@ static enum ice_status ice_sync_phy_timer_e822(struct ice_hw *hw, u8 port)
 		return ICE_ERR_NOT_READY;
 	}
 
-	status = ice_read_phy_and_phc_time_e822(hw, port, &phy_time, &phc_time);
+	status = ice_read_phy_and_phc_time_e822(hw, port, &phy_time,
+						&phc_time);
 	if (status)
 		goto err_unlock;
 
@@ -3175,17 +3235,18 @@ ice_get_phy_tx_tstamp_ready_e810(struct ice_hw *hw, u8 port, u64 *tstamp_ready)
  * @hw: pointer to the hw struct
  * @pca9575_handle: GPIO controller's handle
  *
- * Find and return the GPIO controller's handle in the netlist.
- * When found - the value will be cached in the hw structure and following calls
- * will return cached value
+ * Find and return the GPIO controller's handle by checking what drives clock
+ * mux pin. When found - the value will be cached in the hw structure and
+ * following calls will return cached value.
  */
 static enum ice_status
 ice_get_pca9575_handle(struct ice_hw *hw, u16 *pca9575_handle)
 {
+	u8 node_part_number, idx, node_type_ctx_clk_mux, node_part_num_clk_mux;
+	struct ice_aqc_get_link_topo_pin cmd_pin;
+	u16 node_handle, clock_mux_handle;
 	struct ice_aqc_get_link_topo cmd;
-	u8 node_part_number, idx;
 	enum ice_status status;
-	u16 node_handle;
 
 	if (!hw || !pca9575_handle)
 		return ICE_ERR_PARAM;
@@ -3197,11 +3258,46 @@ ice_get_pca9575_handle(struct ice_hw *hw, u16 *pca9575_handle)
 	}
 
 	memset(&cmd, 0, sizeof(cmd));
+	memset(&cmd_pin, 0, sizeof(cmd_pin));
 
-	/* Set node type to GPIO controller */
+	node_type_ctx_clk_mux = (ICE_AQC_LINK_TOPO_NODE_TYPE_CLK_MUX <<
+				 ICE_AQC_LINK_TOPO_NODE_TYPE_S);
+	node_type_ctx_clk_mux |= (ICE_AQC_LINK_TOPO_NODE_CTX_GLOBAL <<
+				  ICE_AQC_LINK_TOPO_NODE_CTX_S);
+	node_part_num_clk_mux = ICE_ACQ_GET_LINK_TOPO_NODE_NR_GEN_CLK_MUX;
+
+	/* Look for CLOCK MUX handle in the netlist */
+	status = ice_find_netlist_node(hw, node_type_ctx_clk_mux,
+				       node_part_num_clk_mux,
+				       &clock_mux_handle);
+	if (status)
+		return ICE_ERR_NOT_SUPPORTED;
+
+	/* Take CLOCK MUX GPIO pin */
+	cmd_pin.input_io_params = (ICE_AQC_LINK_TOPO_INPUT_IO_TYPE_GPIO <<
+				   ICE_AQC_LINK_TOPO_INPUT_IO_TYPE_S);
+	cmd_pin.input_io_params |= (ICE_AQC_LINK_TOPO_IO_FUNC_CLK_IN <<
+				    ICE_AQC_LINK_TOPO_INPUT_IO_FUNC_S);
+	cmd_pin.addr.handle = CPU_TO_LE16(clock_mux_handle);
+	cmd_pin.addr.topo_params.node_type_ctx =
+		(ICE_AQC_LINK_TOPO_NODE_TYPE_CLK_MUX <<
+		 ICE_AQC_LINK_TOPO_NODE_TYPE_S);
+	cmd_pin.addr.topo_params.node_type_ctx |=
+		(ICE_AQC_LINK_TOPO_NODE_CTX_PROVIDED <<
+		 ICE_AQC_LINK_TOPO_NODE_CTX_S);
+
+	status = ice_aq_get_netlist_node_pin(hw, &cmd_pin, &node_handle);
+	if (status)
+		return ICE_ERR_NOT_SUPPORTED;
+
+	/* Check what is driving the pin */
 	cmd.addr.topo_params.node_type_ctx =
-		(ICE_AQC_LINK_TOPO_NODE_TYPE_M &
-		 ICE_AQC_LINK_TOPO_NODE_TYPE_GPIO_CTRL);
+		(ICE_AQC_LINK_TOPO_NODE_TYPE_GPIO_CTRL <<
+		 ICE_AQC_LINK_TOPO_NODE_TYPE_S);
+	cmd.addr.topo_params.node_type_ctx |=
+		(ICE_AQC_LINK_TOPO_NODE_CTX_GLOBAL <<
+		 ICE_AQC_LINK_TOPO_NODE_CTX_S);
+	cmd.addr.handle = CPU_TO_LE16(node_handle);
 
 #define SW_PCA9575_SFP_TOPO_IDX		2
 #define SW_PCA9575_QSFP_TOPO_IDX	1
@@ -3215,13 +3311,12 @@ ice_get_pca9575_handle(struct ice_hw *hw, u16 *pca9575_handle)
 		return ICE_ERR_NOT_SUPPORTED;
 
 	cmd.addr.topo_params.index = idx;
-
 	status = ice_aq_get_netlist_node(hw, &cmd, &node_part_number,
 					 &node_handle);
 	if (status)
 		return ICE_ERR_NOT_SUPPORTED;
 
-	/* Verify if we found the right IO expander type */
+	/* Verify if PCA9575 drives the pin */
 	if (node_part_number != ICE_ACQ_GET_LINK_TOPO_NODE_NR_PCA9575)
 		return ICE_ERR_NOT_SUPPORTED;
 
