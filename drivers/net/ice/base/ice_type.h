@@ -693,9 +693,11 @@ struct ice_hw_common_caps {
 	bool sec_rev_disabled;
 	bool update_disabled;
 	bool nvm_unified_update;
+	bool netlist_auth;
 #define ICE_NVM_MGMT_SEC_REV_DISABLED		BIT(0)
 #define ICE_NVM_MGMT_UPDATE_DISABLED		BIT(1)
 #define ICE_NVM_MGMT_UNIFIED_UPD_SUPPORT	BIT(3)
+#define ICE_NVM_MGMT_NETLIST_AUTH_SUPPORT	BIT(5)
 	/* PCIe reset avoidance */
 	bool pcie_reset_avoidance; /* false: not supported, true: supported */
 	/* Post update reset restriction */
@@ -1458,6 +1460,7 @@ enum ice_sw_fwd_act_type {
 	ICE_FWD_TO_QGRP,
 	ICE_SET_MARK,
 	ICE_DROP_PACKET,
+	ICE_LG_ACTION,
 	ICE_INVAL_ACT
 };
 

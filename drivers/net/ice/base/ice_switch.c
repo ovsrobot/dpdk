@@ -2520,7 +2520,7 @@ ice_free_sw_marker_lg(struct ice_hw *hw, u16 marker_lg_id, u32 sw_marker)
 		return ICE_ERR_NO_MEMORY;
 
 	sw_buf->num_elems = CPU_TO_LE16(num_elems);
-	if (sw_marker == (sw_marker & 0xFFFF))
+	if (sw_marker <= 0xFFFF)
 		sw_buf->res_type = CPU_TO_LE16(ICE_AQC_RES_TYPE_WIDE_TABLE_1);
 	else
 		sw_buf->res_type = CPU_TO_LE16(ICE_AQC_RES_TYPE_WIDE_TABLE_2);
@@ -4299,9 +4299,9 @@ enum ice_status ice_update_sw_rule_bridge_mode(struct ice_hw *hw)
 {
 	struct ice_fltr_mgmt_list_entry *fm_entry;
 	enum ice_status status = ICE_SUCCESS;
+	struct ice_switch_info *sw = NULL;
 	struct LIST_HEAD_TYPE *rule_head;
 	struct ice_lock *rule_lock; /* Lock to protect filter rule list */
-	struct ice_switch_info *sw;
 	sw = hw->switch_info;
 
 	rule_lock = &sw->recp_list[ICE_SW_LKUP_MAC].filt_rule_lock;
@@ -5545,7 +5545,7 @@ ice_cfg_dflt_vsi(struct ice_port_info *pi, u16 vsi_handle, bool set,
 		 u8 direction)
 {
 	struct ice_fltr_list_entry f_list_entry;
-	struct ice_sw_recipe *recp_list;
+	struct ice_sw_recipe *recp_list = NULL;
 	struct ice_fltr_info f_info;
 	struct ice_hw *hw = pi->hw;
 	enum ice_status status;
@@ -8699,6 +8699,36 @@ ice_fill_adv_packet_tun(struct ice_hw *hw, enum ice_sw_tunnel_type tun_type,
 }
 
 /**
+ * ice_fill_adv_packet_vlan - fill dummy packet with VLAN tag type
+ * @vlan_type: VLAN tag type
+ * @pkt: dummy packet to fill in
+ * @offsets: offset info for the dummy packet
+ */
+static enum ice_status
+ice_fill_adv_packet_vlan(u16 vlan_type, u8 *pkt,
+			 const struct ice_dummy_pkt_offsets *offsets)
+{
+	u16 i;
+
+	/* Find VLAN header and insert VLAN TPID */
+	for (i = 0; offsets[i].type != ICE_PROTOCOL_LAST; i++) {
+		if (offsets[i].type == ICE_VLAN_OFOS ||
+		    offsets[i].type == ICE_VLAN_EX) {
+			struct ice_vlan_hdr *hdr;
+			u16 offset;
+
+			offset = offsets[i].offset;
+			hdr = (struct ice_vlan_hdr *)&pkt[offset];
+			hdr->type = CPU_TO_BE16(vlan_type);
+
+			return ICE_SUCCESS;
+		}
+	}
+
+	return ICE_ERR_CFG;
+}
+
+/**
  * ice_find_adv_rule_entry - Search a rule entry
  * @hw: pointer to the hardware structure
  * @lkups: lookup elements or match criteria for the advanced recipe, one
@@ -9131,7 +9161,7 @@ ice_add_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 		       ICE_SINGLE_ACT_Q_REGION_M;
 		break;
 	case ICE_SET_MARK:
-		if (rinfo->sw_act.markid != (rinfo->sw_act.markid & 0xFFFF))
+		if (rinfo->sw_act.markid > 0xFFFF)
 			nb_lg_acts_mark += 1;
 		/* Allocate a hardware table entry to hold large act. */
 		status = ice_alloc_res_lg_act(hw, &lg_act_id, nb_lg_acts_mark);
@@ -9180,6 +9210,14 @@ ice_add_adv_rule(struct ice_hw *hw, struct ice_adv_lkup_elem *lkups,
 		status = ice_fill_adv_packet_tun(hw, rinfo->tun_type,
 						 s_rule->hdr_data,
 						 pkt_offsets);
+		if (status)
+			goto err_ice_add_adv_rule;
+	}
+
+	if (rinfo->vlan_type != 0 && ice_is_dvm_ena(hw)) {
+		status = ice_fill_adv_packet_vlan(rinfo->vlan_type,
+						  s_rule->hdr_data,
+						  pkt_offsets);
 		if (status)
 			goto err_ice_add_adv_rule;
 	}
@@ -9752,7 +9790,7 @@ enum ice_status
 ice_replay_vsi_all_fltr(struct ice_hw *hw, struct ice_port_info *pi,
 			u16 vsi_handle)
 {
-	struct ice_switch_info *sw;
+	struct ice_switch_info *sw = NULL;
 	enum ice_status status;
 	u8 i;
 
