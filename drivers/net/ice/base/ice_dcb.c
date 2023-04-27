@@ -1370,7 +1370,7 @@ ice_add_dscp_tc_bw_tlv(struct ice_lldp_org_tlv *tlv,
 			   ICE_DSCP_SUBTYPE_TCBW);
 	tlv->ouisubtype = HTONL(ouisubtype);
 
-	/* First Octet after subtype
+	/* First Octect after subtype
 	 * ----------------------------
 	 * | RSV | CBS | RSV | Max TCs |
 	 * | 1b  | 1b  | 3b  | 3b      |
@@ -1624,7 +1624,7 @@ ice_update_port_tc_tree_cfg(struct ice_port_info *pi,
 		/* new TC */
 		status = ice_sched_query_elem(pi->hw, teid2, &elem);
 		if (!status)
-			status = ice_sched_add_node(pi, 1, &elem);
+			status = ice_sched_add_node(pi, 1, &elem, NULL);
 		if (status)
 			break;
 		/* update the TC number */

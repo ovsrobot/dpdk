@@ -992,9 +992,11 @@ struct ice_sched_node {
 	u8 num_children;
 	u8 tc_num;
 	u8 owner;
+	u8 cgd;				/* Valid only for Layer 2 */
 #define ICE_SCHED_NODE_OWNER_LAN	0
 #define ICE_SCHED_NODE_OWNER_AE		1
 #define ICE_SCHED_NODE_OWNER_RDMA	2
+#define ICE_MAX_CGD_PER_PORT		4
 };
 
 /* Access Macros for Tx Sched Elements data */
@@ -1213,6 +1215,7 @@ struct ice_port_info {
 	struct ice_bw_type_info tc_node_bw_t_info[ICE_MAX_TRAFFIC_CLASS];
 	struct ice_qos_cfg qos_cfg;
 	u8 is_vf:1;
+	u8 is_custom_tx_enabled:1;
 };
 
 struct ice_switch_info {

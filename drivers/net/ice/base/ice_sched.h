@@ -7,6 +7,8 @@
 
 #include "ice_common.h"
 
+#define SCHED_NODE_NAME_MAX_LEN 32
+
 #define ICE_SCHED_5_LAYERS	5
 #define ICE_SCHED_9_LAYERS	9
 
@@ -37,6 +39,31 @@
 #define ICE_PSM_CLK_416MHZ_IN_HZ 416666667
 #define ICE_PSM_CLK_446MHZ_IN_HZ 446428571
 #define ICE_PSM_CLK_390MHZ_IN_HZ 390625000
+
+/* bit definitions per recipe */
+#define ICE_RECIPE_BIT_INCL_IPG_AND_PREAMBLE        BIT(4)
+#define ICE_RECIPE_BIT_INCL_OFFSET                  BIT(3)
+#define ICE_RECIPE_BIT_INCL_ESP_TRAILER             BIT(2)
+#define ICE_RECIPE_BIT_INCL_L2_PADDING              BIT(1)
+#define ICE_RECIPE_BIT_INCL_CRC                     BIT(0)
+
+/* protocol IDs from factory parsing program */
+#define ICE_PROT_ID_MAC_OUTER_1             0x01
+#define ICE_PROT_ID_MAC_OUTER_2             0x02
+#define ICE_PROT_ID_MAC_INNER_LAST          0x04
+#define ICE_PROT_ID_IPV4_OUTER_1            0x20
+#define ICE_PROT_ID_IPV4_INNER_LAST         0x21
+#define ICE_PROT_ID_IPV6_OUTER_1            0x28
+#define ICE_PROT_ID_IPV6_INNER_LAST         0x29
+
+/* Packet adjustment profile ID */
+#define ICE_ADJ_PROFILE_ID 0
+#define ICE_DWORDS_PER_ADJ 8
+
+#define PSM_CLK_SRC_367_MHZ 0x0
+#define PSM_CLK_SRC_416_MHZ 0x1
+#define PSM_CLK_SRC_446_MHZ 0x2
+#define PSM_CLK_SRC_390_MHZ 0x3
 
 struct rl_profile_params {
 	u32 bw;			/* in Kbps */
@@ -96,7 +123,38 @@ enum ice_status
 ice_aq_query_sched_elems(struct ice_hw *hw, u16 elems_req,
 			 struct ice_aqc_txsched_elem_data *buf, u16 buf_size,
 			 u16 *elems_ret, struct ice_sq_cd *cd);
+
+enum ice_status
+ice_sched_set_node_bw_lmt(struct ice_port_info *pi, struct ice_sched_node *node,
+			  enum ice_rl_type rl_type, u32 bw);
+
+enum ice_status
+ice_sched_set_node_bw(struct ice_port_info *pi, struct ice_sched_node *node,
+		      enum ice_rl_type rl_type, u32 bw, u8 layer_num);
+
+enum ice_status
+ice_sched_add_elems(struct ice_port_info *pi, struct ice_sched_node *tc_node,
+		    struct ice_sched_node *parent, u8 layer, u16 num_nodes,
+		    u16 *num_nodes_added, u32 *first_node_teid,
+		    struct ice_sched_node **prealloc_node);
+
+enum ice_status
+ice_sched_move_nodes(struct ice_port_info *pi, struct ice_sched_node *parent,
+		     u16 num_items, u32 *list);
+
+enum ice_status
+ice_sched_set_node_priority(struct ice_port_info *pi, struct ice_sched_node *node,
+			    u16 priority);
+enum ice_status
+ice_sched_set_node_weight(struct ice_port_info *pi, struct ice_sched_node *node,
+			  u16 weight);
+
 enum ice_status ice_sched_init_port(struct ice_port_info *pi);
+enum ice_status ice_sched_add_dflt_l2_nodes(struct ice_port_info *pi);
+enum ice_status ice_sched_clear_l2_nodes(struct ice_port_info *pi);
+enum ice_status ice_sched_set_dflt_cgd_to_tc_map(struct ice_port_info *pi);
+enum ice_status
+ice_sched_copy_cgd(struct ice_port_info *src, struct ice_port_info *dst, u8 num_cgd);
 enum ice_status ice_sched_query_res_alloc(struct ice_hw *hw);
 void ice_sched_get_psm_clk_freq(struct ice_hw *hw);
 
@@ -112,7 +170,11 @@ ice_sched_find_node_by_teid(struct ice_sched_node *start_node, u32 teid);
 /* Add a scheduling node into SW DB for given info */
 enum ice_status
 ice_sched_add_node(struct ice_port_info *pi, u8 layer,
-		   struct ice_aqc_txsched_elem_data *info);
+		   struct ice_aqc_txsched_elem_data *info,
+		   struct ice_sched_node *prealloc_node);
+void
+ice_sched_update_parent(struct ice_sched_node *new_parent,
+			struct ice_sched_node *node);
 void ice_free_sched_node(struct ice_port_info *pi, struct ice_sched_node *node);
 struct ice_sched_node *ice_sched_get_tc_node(struct ice_port_info *pi, u8 tc);
 struct ice_sched_node *
@@ -221,6 +283,9 @@ enum ice_status
 ice_sched_cfg_sibl_node_prio(struct ice_port_info *pi,
 			     struct ice_sched_node *node, u8 priority);
 enum ice_status
+ice_cfg_root_node_bw_lmt(struct ice_port_info *pi, u32 bw,
+			 enum ice_rl_type rl_type);
+enum ice_status
 ice_cfg_tc_node_bw_alloc(struct ice_port_info *pi, u8 tc,
 			 enum ice_rl_type rl_type, u8 bw_alloc);
 enum ice_status ice_cfg_rl_burst_size(struct ice_hw *hw, u32 bytes);
@@ -229,7 +294,7 @@ void ice_sched_replay_agg(struct ice_hw *hw);
 enum ice_status ice_sched_replay_tc_node_bw(struct ice_port_info *pi);
 enum ice_status ice_replay_vsi_agg(struct ice_hw *hw, u16 vsi_handle);
 enum ice_status ice_sched_replay_root_node_bw(struct ice_port_info *pi);
-enum ice_status
-ice_sched_replay_q_bw(struct ice_port_info *pi, struct ice_q_ctx *q_ctx);
+enum ice_status ice_sched_replay_q_bw(struct ice_port_info *pi, struct ice_q_ctx *q_ctx);
 
+void ice_cfg_pkt_len_adj_profiles(struct ice_hw *hw);
 #endif /* _ICE_SCHED_H_ */
