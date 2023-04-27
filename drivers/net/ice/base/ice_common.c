@@ -85,118 +85,36 @@ static const char * const ice_link_mode_str_high[] = {
 	ice_arr_elem_idx(3, "100G_AUI2_AOC_ACC"),
 	ice_arr_elem_idx(4, "100G_AUI2"),
 };
-/**
- * dump_phy_type - helper function that prints PHY type strings
- * @hw: pointer to the HW structure
- * @phy: 64 bit PHY type to decipher
- * @i: bit index within phy
- * @phy_string: string corresponding to bit i in phy
- * @prefix: prefix string to differentiate multiple dumps
- */
-static void
-dump_phy_type(struct ice_hw *hw, u64 phy, u8 i, const char *phy_string,
-	      const char *prefix)
-{
-	if (phy & BIT_ULL(i))
-		ice_debug(hw, ICE_DBG_PHY, "%s: bit(%d): %s\n", prefix, i,
-			  phy_string);
-}
 
 /**
- * ice_dump_phy_type_low - helper function to dump phy_type_low
+ * ice_dump_phy_type - helper function to dump phy_type
  * @hw: pointer to the HW structure
  * @low: 64 bit value for phy_type_low
- * @prefix: prefix string to differentiate multiple dumps
- */
-static void
-ice_dump_phy_type_low(struct ice_hw *hw, u64 low, const char *prefix)
-{
-	ice_debug(hw, ICE_DBG_PHY, "%s: phy_type_low: 0x%016llx\n", prefix,
-		  (unsigned long long)low);
-
-	dump_phy_type(hw, low, 0, "100BASE_TX", prefix);
-	dump_phy_type(hw, low, 1, "100M_SGMII", prefix);
-	dump_phy_type(hw, low, 2, "1000BASE_T", prefix);
-	dump_phy_type(hw, low, 3, "1000BASE_SX", prefix);
-	dump_phy_type(hw, low, 4, "1000BASE_LX", prefix);
-	dump_phy_type(hw, low, 5, "1000BASE_KX", prefix);
-	dump_phy_type(hw, low, 6, "1G_SGMII", prefix);
-	dump_phy_type(hw, low, 7, "2500BASE_T", prefix);
-	dump_phy_type(hw, low, 8, "2500BASE_X", prefix);
-	dump_phy_type(hw, low, 9, "2500BASE_KX", prefix);
-	dump_phy_type(hw, low, 10, "5GBASE_T", prefix);
-	dump_phy_type(hw, low, 11, "5GBASE_KR", prefix);
-	dump_phy_type(hw, low, 12, "10GBASE_T", prefix);
-	dump_phy_type(hw, low, 13, "10G_SFI_DA", prefix);
-	dump_phy_type(hw, low, 14, "10GBASE_SR", prefix);
-	dump_phy_type(hw, low, 15, "10GBASE_LR", prefix);
-	dump_phy_type(hw, low, 16, "10GBASE_KR_CR1", prefix);
-	dump_phy_type(hw, low, 17, "10G_SFI_AOC_ACC", prefix);
-	dump_phy_type(hw, low, 18, "10G_SFI_C2C", prefix);
-	dump_phy_type(hw, low, 19, "25GBASE_T", prefix);
-	dump_phy_type(hw, low, 20, "25GBASE_CR", prefix);
-	dump_phy_type(hw, low, 21, "25GBASE_CR_S", prefix);
-	dump_phy_type(hw, low, 22, "25GBASE_CR1", prefix);
-	dump_phy_type(hw, low, 23, "25GBASE_SR", prefix);
-	dump_phy_type(hw, low, 24, "25GBASE_LR", prefix);
-	dump_phy_type(hw, low, 25, "25GBASE_KR", prefix);
-	dump_phy_type(hw, low, 26, "25GBASE_KR_S", prefix);
-	dump_phy_type(hw, low, 27, "25GBASE_KR1", prefix);
-	dump_phy_type(hw, low, 28, "25G_AUI_AOC_ACC", prefix);
-	dump_phy_type(hw, low, 29, "25G_AUI_C2C", prefix);
-	dump_phy_type(hw, low, 30, "40GBASE_CR4", prefix);
-	dump_phy_type(hw, low, 31, "40GBASE_SR4", prefix);
-	dump_phy_type(hw, low, 32, "40GBASE_LR4", prefix);
-	dump_phy_type(hw, low, 33, "40GBASE_KR4", prefix);
-	dump_phy_type(hw, low, 34, "40G_XLAUI_AOC_ACC", prefix);
-	dump_phy_type(hw, low, 35, "40G_XLAUI", prefix);
-	dump_phy_type(hw, low, 36, "50GBASE_CR2", prefix);
-	dump_phy_type(hw, low, 37, "50GBASE_SR2", prefix);
-	dump_phy_type(hw, low, 38, "50GBASE_LR2", prefix);
-	dump_phy_type(hw, low, 39, "50GBASE_KR2", prefix);
-	dump_phy_type(hw, low, 40, "50G_LAUI2_AOC_ACC", prefix);
-	dump_phy_type(hw, low, 41, "50G_LAUI2", prefix);
-	dump_phy_type(hw, low, 42, "50G_AUI2_AOC_ACC", prefix);
-	dump_phy_type(hw, low, 43, "50G_AUI2", prefix);
-	dump_phy_type(hw, low, 44, "50GBASE_CP", prefix);
-	dump_phy_type(hw, low, 45, "50GBASE_SR", prefix);
-	dump_phy_type(hw, low, 46, "50GBASE_FR", prefix);
-	dump_phy_type(hw, low, 47, "50GBASE_LR", prefix);
-	dump_phy_type(hw, low, 48, "50GBASE_KR_PAM4", prefix);
-	dump_phy_type(hw, low, 49, "50G_AUI1_AOC_ACC", prefix);
-	dump_phy_type(hw, low, 50, "50G_AUI1", prefix);
-	dump_phy_type(hw, low, 51, "100GBASE_CR4", prefix);
-	dump_phy_type(hw, low, 52, "100GBASE_SR4", prefix);
-	dump_phy_type(hw, low, 53, "100GBASE_LR4", prefix);
-	dump_phy_type(hw, low, 54, "100GBASE_KR4", prefix);
-	dump_phy_type(hw, low, 55, "100G_CAUI4_AOC_ACC", prefix);
-	dump_phy_type(hw, low, 56, "100G_CAUI4", prefix);
-	dump_phy_type(hw, low, 57, "100G_AUI4_AOC_ACC", prefix);
-	dump_phy_type(hw, low, 58, "100G_AUI4", prefix);
-	dump_phy_type(hw, low, 59, "100GBASE_CR_PAM4", prefix);
-	dump_phy_type(hw, low, 60, "100GBASE_KR_PAM4", prefix);
-	dump_phy_type(hw, low, 61, "100GBASE_CP2", prefix);
-	dump_phy_type(hw, low, 62, "100GBASE_SR2", prefix);
-	dump_phy_type(hw, low, 63, "100GBASE_DR", prefix);
-}
-
-/**
- * ice_dump_phy_type_high - helper function to dump phy_type_high
- * @hw: pointer to the HW structure
  * @high: 64 bit value for phy_type_high
  * @prefix: prefix string to differentiate multiple dumps
  */
 static void
-ice_dump_phy_type_high(struct ice_hw *hw, u64 high, const char *prefix)
+ice_dump_phy_type(struct ice_hw *hw, u64 low, u64 high, const char *prefix)
 {
+	u32 i;
+
+	ice_debug(hw, ICE_DBG_PHY, "%s: phy_type_low: 0x%016llx\n", prefix,
+		  (unsigned long long)low);
+
+	for (i = 0; i < ARRAY_SIZE(ice_link_mode_str_low); i++) {
+		if (low & BIT_ULL(i))
+			ice_debug(hw, ICE_DBG_PHY, "%s:   bit(%d): %s\n",
+				  prefix, i, ice_link_mode_str_low[i]);
+	}
+
 	ice_debug(hw, ICE_DBG_PHY, "%s: phy_type_high: 0x%016llx\n", prefix,
 		  (unsigned long long)high);
 
-	dump_phy_type(hw, high, 0, "100GBASE_KR2_PAM4", prefix);
-	dump_phy_type(hw, high, 1, "100G_CAUI2_AOC_ACC", prefix);
-	dump_phy_type(hw, high, 2, "100G_CAUI2", prefix);
-	dump_phy_type(hw, high, 3, "100G_AUI2_AOC_ACC", prefix);
-	dump_phy_type(hw, high, 4, "100G_AUI2", prefix);
+	for (i = 0; i < ARRAY_SIZE(ice_link_mode_str_high); i++) {
+		if (high & BIT_ULL(i))
+			ice_debug(hw, ICE_DBG_PHY, "%s:   bit(%d): %s\n",
+				  prefix, i, ice_link_mode_str_high[i]);
+	}
 }
 
 /**
@@ -551,23 +469,30 @@ ice_aq_get_phy_caps(struct ice_port_info *pi, bool qual_mods, u8 report_mode,
 		cmd->param0 |= CPU_TO_LE16(ICE_AQC_GET_PHY_RQM);
 
 	cmd->param0 |= CPU_TO_LE16(report_mode);
+
 	status = ice_aq_send_cmd(hw, &desc, pcaps, pcaps_size, cd);
 
 	ice_debug(hw, ICE_DBG_LINK, "get phy caps dump\n");
 
-	if (report_mode == ICE_AQC_REPORT_TOPO_CAP_MEDIA)
+	switch (report_mode) {
+	case ICE_AQC_REPORT_TOPO_CAP_MEDIA:
 		prefix = "phy_caps_media";
-	else if (report_mode == ICE_AQC_REPORT_TOPO_CAP_NO_MEDIA)
+		break;
+	case ICE_AQC_REPORT_TOPO_CAP_NO_MEDIA:
 		prefix = "phy_caps_no_media";
-	else if (report_mode == ICE_AQC_REPORT_ACTIVE_CFG)
+		break;
+	case ICE_AQC_REPORT_ACTIVE_CFG:
 		prefix = "phy_caps_active";
-	else if (report_mode == ICE_AQC_REPORT_DFLT_CFG)
+		break;
+	case ICE_AQC_REPORT_DFLT_CFG:
 		prefix = "phy_caps_default";
-	else
+		break;
+	default:
 		prefix = "phy_caps_invalid";
+	}
 
-	ice_dump_phy_type_low(hw, LE64_TO_CPU(pcaps->phy_type_low), prefix);
-	ice_dump_phy_type_high(hw, LE64_TO_CPU(pcaps->phy_type_high), prefix);
+	ice_dump_phy_type(hw, LE64_TO_CPU(pcaps->phy_type_low),
+			  LE64_TO_CPU(pcaps->phy_type_high), prefix);
 
 	ice_debug(hw, ICE_DBG_LINK, "%s: report_mode = 0x%x\n",
 		  prefix, report_mode);
