@@ -41,6 +41,14 @@ enum ice_ptp_fec_mode {
 	ICE_PTP_FEC_MODE_RS_FEC
 };
 
+/* Main timer mode */
+enum ice_src_tmr_mode {
+	ICE_SRC_TMR_MODE_NANOSECONDS,
+	ICE_SRC_TMR_MODE_LOCKED,
+
+	NUM_ICE_SRC_TMR_MODE
+};
+
 /**
  * struct ice_time_ref_info_e822
  * @pll_freq: Frequency of PLL that drives timer ticks in Hz
@@ -123,7 +131,10 @@ extern const struct ice_vernier_info_e822 e822_vernier[NUM_ICE_PTP_LNK_SPD];
 /* Increment value to generate nanoseconds in the GLTSYN_TIME_L register for
  * the E810 devices. Based off of a PLL with an 812.5 MHz frequency.
  */
-#define ICE_PTP_NOMINAL_INCVAL_E810 0x13b13b13bULL
+
+#define ICE_E810_PLL_FREQ		812500000
+#define ICE_PTP_NOMINAL_INCVAL_E810	0x13b13b13bULL
+#define E810_OUT_PROP_DELAY_NS 1
 
 /* Device agnostic functions */
 u8 ice_get_ptp_src_clock_index(struct ice_hw *hw);
@@ -144,9 +155,13 @@ enum ice_status
 ice_read_phy_tstamp(struct ice_hw *hw, u8 block, u8 idx, u64 *tstamp);
 enum ice_status
 ice_clear_phy_tstamp(struct ice_hw *hw, u8 block, u8 idx);
+void ice_ptp_reset_ts_memory(struct ice_hw *hw);
 enum ice_status ice_ptp_init_phc(struct ice_hw *hw);
-
+enum ice_status
+ice_get_phy_tx_tstamp_ready(struct ice_hw *hw, u8 block, u64 *tstamp_ready);
 /* E822 family functions */
+#define LOCKED_INCVAL_E822 0x100000000ULL
+
 enum ice_status
 ice_read_phy_reg_e822(struct ice_hw *hw, u8 port, u16 offset, u32 *val);
 enum ice_status
@@ -166,6 +181,7 @@ ice_ptp_read_port_capture_e822(struct ice_hw *hw, u8 port,
 enum ice_status
 ice_ptp_one_port_cmd_e822(struct ice_hw *hw, u8 port,
 			  enum ice_ptp_tmr_cmd cmd, bool lock_sbq);
+void ice_ptp_reset_ts_memory_quad_e822(struct ice_hw *hw, u8 quad);
 enum ice_status
 ice_cfg_cgu_pll_e822(struct ice_hw *hw, enum ice_time_ref_freq clk_freq,
 		     enum ice_clk_src clk_src);
@@ -236,9 +252,83 @@ enum ice_status ice_read_sma_ctrl_e810t(struct ice_hw *hw, u8 *data);
 enum ice_status ice_write_sma_ctrl_e810t(struct ice_hw *hw, u8 data);
 bool ice_is_pca9575_present(struct ice_hw *hw);
 
+/*
+ * ice_is_e830
+ * @hw: pointer to the hardware structure
+ *
+ * returns true if the device is E830 based, false if not.
+ */
+static inline bool ice_is_e830(struct ice_hw *hw)
+{
+	return hw->mac_type == ICE_MAC_E830;
+}
+
 void
 ice_ptp_process_cgu_err(struct ice_hw *hw, struct ice_rq_event_info *event);
 
+enum ice_status ice_ptp_init_phy_model(struct ice_hw *hw);
+
+/**
+ * ice_ptp_get_pll_freq - Get PLL frequency
+ * @hw: Board private structure
+ */
+static inline u64
+ice_ptp_get_pll_freq(struct ice_hw *hw)
+{
+	switch (hw->phy_model) {
+	case ICE_PHY_E810:
+		return ICE_E810_PLL_FREQ;
+	case ICE_PHY_E822:
+		return ice_e822_pll_freq(ice_e822_time_ref(hw));
+	default:
+		return 0;
+	}
+}
+
+static inline u64
+ice_prop_delay(struct ice_hw *hw)
+{
+	switch (hw->phy_model) {
+	case ICE_PHY_E810:
+		return E810_OUT_PROP_DELAY_NS;
+	case ICE_PHY_E822:
+		return ice_e822_pps_delay(ice_e822_time_ref(hw));
+	default:
+		return 0;
+	}
+}
+
+static inline enum ice_time_ref_freq
+ice_time_ref(struct ice_hw *hw)
+{
+	switch (hw->phy_model) {
+	case ICE_PHY_E810:
+	case ICE_PHY_E822:
+		return ice_e822_time_ref(hw);
+	default:
+		return ICE_TIME_REF_FREQ_INVALID;
+	}
+}
+
+static inline u64
+ice_get_base_incval(struct ice_hw *hw, enum ice_src_tmr_mode src_tmr_mode)
+{
+	switch (hw->phy_model) {
+
+	case ICE_PHY_E810:
+		return ICE_PTP_NOMINAL_INCVAL_E810;
+	case ICE_PHY_E822:
+		if (src_tmr_mode == ICE_SRC_TMR_MODE_NANOSECONDS &&
+		    ice_e822_time_ref(hw) < NUM_ICE_TIME_REF_FREQ)
+			return ice_e822_nominal_incval(ice_e822_time_ref(hw));
+		else
+			return LOCKED_INCVAL_E822;
+
+		break;
+	default:
+		return 0;
+	}
+}
 
 #define PFTSYN_SEM_BYTES	4
 

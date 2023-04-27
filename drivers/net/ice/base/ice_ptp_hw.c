@@ -448,6 +448,17 @@ static void ice_ptp_clean_cmd(struct ice_hw *hw)
 	ice_flush(hw);
 }
 
+/**
+ * ice_ptp_zero_syn_dlay - Set synchronization delay to zero
+ * @hw: pointer to HW struct
+ *
+ * Zero E810 and E830 specific PTP hardware clock synchronization delay.
+ */
+static void ice_ptp_zero_syn_dlay(struct ice_hw *hw)
+{
+	wr32(hw, GLTSYN_SYNC_DLAY, 0);
+	ice_flush(hw);
+}
 
 /* ----------------------------------------------------------------------------
  * E822 family functions
@@ -1035,6 +1046,33 @@ ice_clear_phy_tstamp_e822(struct ice_hw *hw, u8 quad, u8 idx)
 	}
 
 	return ICE_SUCCESS;
+}
+
+/**
+ * ice_ptp_reset_ts_memory_quad_e822 - Clear all timestamps from the quad block
+ * @hw: pointer to the HW struct
+ * @quad: the quad to read from
+ *
+ * Clear all timestamps from the PHY quad block that is shared between the
+ * internal PHYs on the E822 devices.
+ */
+void ice_ptp_reset_ts_memory_quad_e822(struct ice_hw *hw, u8 quad)
+{
+	ice_write_quad_reg_e822(hw, quad, Q_REG_TS_CTRL, Q_REG_TS_CTRL_M);
+	ice_write_quad_reg_e822(hw, quad, Q_REG_TS_CTRL, ~(u32)Q_REG_TS_CTRL_M);
+}
+
+/**
+ * ice_ptp_reset_ts_memory_e822 - Clear all timestamps from all quad blocks
+ * @hw: pointer to the HW struct
+ */
+static void ice_ptp_reset_ts_memory_e822(struct ice_hw *hw)
+{
+	u8 quad;
+
+	for (quad = 0; quad < ICE_MAX_QUAD; quad++) {
+		ice_ptp_reset_ts_memory_quad_e822(hw, quad);
+	}
 }
 
 /**
@@ -2652,88 +2690,42 @@ ice_start_phy_timer_e822(struct ice_hw *hw, u8 port, bool bypass)
 }
 
 /**
- * ice_phy_exit_bypass_e822 - Exit bypass mode, after vernier calculations
+ * ice_get_phy_tx_tstamp_ready_e822 - Read Tx memory status register
  * @hw: pointer to the HW struct
- * @port: the PHY port to configure
+ * @quad: the timestamp quad to read from
+ * @tstamp_ready: contents of the Tx memory status register
  *
- * After hardware finishes vernier calculations for the Tx and Rx offset, this
- * function can be used to exit bypass mode by updating the total Tx and Rx
- * offsets, and then disabling bypass. This will enable hardware to include
- * the more precise offset calibrations, increasing precision of the generated
- * timestamps.
- *
- * This cannot be done until hardware has measured the offsets, which requires
- * waiting until at least one packet has been sent and received by the device.
+ * Read the Q_REG_TX_MEMORY_STATUS register indicating which timestamps in
+ * the PHY are ready. A set bit means the corresponding timestamp is valid and
+ * ready to be captured from the PHY timestamp block.
  */
-enum ice_status ice_phy_exit_bypass_e822(struct ice_hw *hw, u8 port)
+static enum ice_status
+ice_get_phy_tx_tstamp_ready_e822(struct ice_hw *hw, u8 quad, u64 *tstamp_ready)
 {
 	enum ice_status status;
-	u32 val;
+	u32 hi, lo;
 
-	status = ice_read_phy_reg_e822(hw, port, P_REG_TX_OV_STATUS, &val);
+	status = ice_read_quad_reg_e822(hw, quad, Q_REG_TX_MEMORY_STATUS_U,
+					&hi);
 	if (status) {
-		ice_debug(hw, ICE_DBG_PTP, "Failed to read TX_OV_STATUS for port %u, status %d\n",
-			  port, status);
+		ice_debug(hw, ICE_DBG_PTP, "Failed to read TX_MEMORY_STATUS_U for quad %u, status %d\n",
+			  quad, status);
 		return status;
 	}
 
-	if (!(val & P_REG_TX_OV_STATUS_OV_M)) {
-		ice_debug(hw, ICE_DBG_PTP, "Tx offset is not yet valid for port %u\n",
-			  port);
-		return ICE_ERR_NOT_READY;
-	}
-
-	status = ice_read_phy_reg_e822(hw, port, P_REG_RX_OV_STATUS, &val);
+	status = ice_read_quad_reg_e822(hw, quad, Q_REG_TX_MEMORY_STATUS_L,
+					&lo);
 	if (status) {
-		ice_debug(hw, ICE_DBG_PTP, "Failed to read RX_OV_STATUS for port %u, status %d\n",
-			  port, status);
+		ice_debug(hw, ICE_DBG_PTP, "Failed to read TX_MEMORY_STATUS_L for quad %u, status %d\n",
+			  quad, status);
 		return status;
 	}
 
-	if (!(val & P_REG_TX_OV_STATUS_OV_M)) {
-		ice_debug(hw, ICE_DBG_PTP, "Rx offset is not yet valid for port %u\n",
-			  port);
-		return ICE_ERR_NOT_READY;
-	}
-
-	status = ice_phy_cfg_tx_offset_e822(hw, port);
-	if (status) {
-		ice_debug(hw, ICE_DBG_PTP, "Failed to program total Tx offset for port %u, status %d\n",
-			  port, status);
-		return status;
-	}
-
-	status = ice_phy_cfg_rx_offset_e822(hw, port);
-	if (status) {
-		ice_debug(hw, ICE_DBG_PTP, "Failed to program total Rx offset for port %u, status %d\n",
-			  port, status);
-		return status;
-	}
-
-	/* Exit bypass mode now that the offset has been updated */
-	status = ice_read_phy_reg_e822(hw, port, P_REG_PS, &val);
-	if (status) {
-		ice_debug(hw, ICE_DBG_PTP, "Failed to read P_REG_PS for port %u, status %d\n",
-			  port, status);
-		return status;
-	}
-
-	if (!(val & P_REG_PS_BYPASS_MODE_M))
-		ice_debug(hw, ICE_DBG_PTP, "Port %u not in bypass mode\n",
-			  port);
-
-	val &= ~P_REG_PS_BYPASS_MODE_M;
-	status = ice_write_phy_reg_e822(hw, port, P_REG_PS, val);
-	if (status) {
-		ice_debug(hw, ICE_DBG_PTP, "Failed to disable bypass for port %u, status %d\n",
-			  port, status);
-		return status;
-	}
-
-	ice_info(hw, "Exiting bypass mode on PHY port %u\n", port);
+	*tstamp_ready = (u64)hi << 32 | (u64)lo;
 
 	return ICE_SUCCESS;
 }
+
 
 /* E810 functions
  *
@@ -3218,6 +3210,22 @@ ice_ptp_port_cmd_e810(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd,
 	return ICE_SUCCESS;
 }
 
+/**
+ * ice_get_phy_tx_tstamp_ready_e810 - Read Tx memory status register
+ * @hw: pointer to the HW struct
+ * @port: the PHY port to read
+ * @tstamp_ready: contents of the Tx memory status register
+ *
+ * E810 devices do not use a Tx memory status register. Instead simply
+ * indicate that all timestamps are currently ready.
+ */
+static enum ice_status
+ice_get_phy_tx_tstamp_ready_e810(struct ice_hw *hw, u8 port, u64 *tstamp_ready)
+{
+	*tstamp_ready = 0xFFFFFFFFFFFFFFFF;
+	return ICE_SUCCESS;
+}
+
 /* E810T SMA functions
  *
  * The following functions operate specifically on E810T hardware and are used
@@ -3445,6 +3453,23 @@ bool ice_is_pca9575_present(struct ice_hw *hw)
 	return false;
 }
 
+/* E830 functions
+ *
+ * The following functions operate on the E830 series devices.
+ *
+ */
+
+/**
+ * ice_ptp_init_phc_e830 - Perform E830 specific PHC initialization
+ * @hw: pointer to HW struct
+ *
+ * Perform E830-specific PTP hardware clock initialization steps.
+ */
+static enum ice_status ice_ptp_init_phc_e830(struct ice_hw *hw)
+{
+	ice_ptp_zero_syn_dlay(hw);
+	return ICE_SUCCESS;
+}
 /* Device agnostic functions
  *
  * The following functions implement shared behavior common to both E822/E823
@@ -3501,6 +3526,29 @@ void ice_ptp_unlock(struct ice_hw *hw)
 	wr32(hw, PFTSYN_SEM + (PFTSYN_SEM_BYTES * hw->pf_id), 0);
 }
 
+#define ICE_DEVID_MASK 0xFFF8
+
+/**
+ * ice_ptp_init_phy_model - Initialize hw->phy_model based on device type
+ * @hw: pointer to the HW structure
+ *
+ * Determine the PHY model for the device, and initialize hw->phy_model
+ * for use by other functions.
+ */
+enum ice_status ice_ptp_init_phy_model(struct ice_hw *hw)
+{
+
+	if (ice_is_e810(hw))
+		hw->phy_model = ICE_PHY_E810;
+	else if (ice_is_e830(hw))
+		hw->phy_model = ICE_PHY_E830;
+	else
+		hw->phy_model = ICE_PHY_E822;
+	hw->phy_ports = ICE_NUM_EXTERNAL_PORTS;
+
+	return ICE_SUCCESS;
+}
+
 /**
  * ice_ptp_tmr_cmd - Prepare and trigger a timer sync command
  * @hw: pointer to HW struct
@@ -3521,16 +3569,20 @@ ice_ptp_tmr_cmd(struct ice_hw *hw, enum ice_ptp_tmr_cmd cmd, bool lock_sbq)
 	ice_ptp_src_cmd(hw, cmd);
 
 	/* Next, prepare the ports */
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_E810:
 		status = ice_ptp_port_cmd_e810(hw, cmd, lock_sbq);
 		break;
 	case ICE_PHY_E822:
 		status = ice_ptp_port_cmd_e822(hw, cmd, lock_sbq);
 		break;
+	case ICE_PHY_E830:
+		status = ICE_SUCCESS;
+		break;
 	default:
 		status = ICE_ERR_NOT_SUPPORTED;
 	}
+
 	if (status) {
 		ice_debug(hw, ICE_DBG_PTP, "Failed to prepare PHY ports for timer command %u, status %d\n",
 			  cmd, status);
@@ -3577,12 +3629,15 @@ enum ice_status ice_ptp_init_time(struct ice_hw *hw, u64 time,
 
 	/* PHY Clks */
 	/* Fill Rx and Tx ports and send msg to PHY */
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_E810:
 		status = ice_ptp_prep_phy_time_e810(hw, time & 0xFFFFFFFF);
 		break;
 	case ICE_PHY_E822:
 		status = ice_ptp_prep_phy_time_e822(hw, time & 0xFFFFFFFF);
+		break;
+	case ICE_PHY_E830:
+		status = ICE_SUCCESS;
 		break;
 	default:
 		status = ICE_ERR_NOT_SUPPORTED;
@@ -3623,12 +3678,15 @@ enum ice_status ice_ptp_write_incval(struct ice_hw *hw, u64 incval,
 		wr32(hw, GLTSYN_SHADJ_H(tmr_idx), ICE_HI_DWORD(incval));
 	}
 
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_E810:
 		status = ice_ptp_prep_phy_incval_e810(hw, incval);
 		break;
 	case ICE_PHY_E822:
 		status = ice_ptp_prep_phy_incval_e822(hw, incval);
+		break;
+	case ICE_PHY_E830:
+		status = ICE_SUCCESS;
 		break;
 	default:
 		status = ICE_ERR_NOT_SUPPORTED;
@@ -3693,7 +3751,7 @@ enum ice_status ice_ptp_adj_clock(struct ice_hw *hw, s32 adj, bool lock_sbq)
 	wr32(hw, GLTSYN_SHADJ_L(tmr_idx), 0);
 	wr32(hw, GLTSYN_SHADJ_H(tmr_idx), adj);
 
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_E810:
 		status = ice_ptp_prep_phy_adj_e810(hw, adj, lock_sbq);
 		break;
@@ -3751,7 +3809,7 @@ ice_ptp_adj_clock_at_time(struct ice_hw *hw, u64 at_time, s32 adj)
 	wr32(hw, GLTSYN_SHTIME_H(tmr_idx), time_hi);
 
 	/* Prepare PHY port adjustments */
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_E810:
 		status = ice_ptp_prep_phy_adj_e810(hw, adj, true);
 		break;
@@ -3766,7 +3824,7 @@ ice_ptp_adj_clock_at_time(struct ice_hw *hw, u64 at_time, s32 adj)
 		return status;
 
 	/* Set target time for each PHY port */
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_E810:
 		status = ice_ptp_prep_phy_adj_target_e810(hw, time_lo);
 		break;
@@ -3797,49 +3855,58 @@ ice_ptp_adj_clock_at_time(struct ice_hw *hw, u64 at_time, s32 adj)
 enum ice_status
 ice_read_phy_tstamp(struct ice_hw *hw, u8 block, u8 idx, u64 *tstamp)
 {
-	enum ice_status status;
-
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_E810:
-		status = ice_read_phy_tstamp_e810(hw, block, idx, tstamp);
-		break;
+		return ice_read_phy_tstamp_e810(hw, block, idx, tstamp);
 	case ICE_PHY_E822:
-		status = ice_read_phy_tstamp_e822(hw, block, idx, tstamp);
-		break;
+		return ice_read_phy_tstamp_e822(hw, block, idx, tstamp);
 	default:
-		status = ICE_ERR_NOT_SUPPORTED;
+		return ICE_ERR_NOT_SUPPORTED;
 	}
-
-	return status;
 }
 
 /**
- * ice_clear_phy_tstamp - Clear a timestamp from the timestamp block
+ * ice_clear_phy_tstamp - Drop a timestamp from the timestamp block
  * @hw: pointer to the HW struct
  * @block: the block to read from
  * @idx: the timestamp index to reset
  *
- * Clear a timestamp, resetting its valid bit, from the timestamp block. For
- * E822 devices, the block is the quad to clear from. For E810 devices, the
- * block is the logical port to clear from.
+ * Drop a timestamp from the timestamp block by reading it. This will reset
+ * the memory status bit allowing the timestamp index to be reused. For E822
+ * devices, the block is the quad to clear from. For E810 devices, the block
+ * is the logical port to clear from.
+ *
+ * This function should only be called on a timestamp index whose valid bit
+ * is set according to ice_get_phy_tx_tstamp_ready.
  */
 enum ice_status
 ice_clear_phy_tstamp(struct ice_hw *hw, u8 block, u8 idx)
 {
-	enum ice_status status;
-
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_E810:
-		status = ice_clear_phy_tstamp_e810(hw, block, idx);
-		break;
+		return ice_clear_phy_tstamp_e810(hw, block, idx);
 	case ICE_PHY_E822:
-		status = ice_clear_phy_tstamp_e822(hw, block, idx);
-		break;
+		return ice_clear_phy_tstamp_e822(hw, block, idx);
 	default:
-		status = ICE_ERR_NOT_SUPPORTED;
+		return ICE_ERR_NOT_SUPPORTED;
 	}
+}
 
-	return status;
+/**
+ * ice_ptp_reset_ts_memory - Reset timestamp memory for all blocks
+ * @hw: pointer to the HW struct
+ */
+void ice_ptp_reset_ts_memory(struct ice_hw *hw)
+{
+	switch (hw->phy_model) {
+	case ICE_PHY_E822:
+		ice_ptp_reset_ts_memory_e822(hw);
+		break;
+	case ICE_PHY_E810:
+	case ICE_PHY_E830:
+	default:
+		return;
+	}
 }
 
 /**
@@ -3850,7 +3917,6 @@ ice_clear_phy_tstamp(struct ice_hw *hw, u8 block, u8 idx)
  */
 enum ice_status ice_ptp_init_phc(struct ice_hw *hw)
 {
-	enum ice_status status;
 	u8 src_idx = hw->func_caps.ts_func_info.tmr_index_owned;
 
 	/* Enable source clocks */
@@ -3859,16 +3925,41 @@ enum ice_status ice_ptp_init_phc(struct ice_hw *hw)
 	/* Clear event status indications for auxiliary pins */
 	(void)rd32(hw, GLTSYN_STAT(src_idx));
 
-	switch (hw->phy_cfg) {
+	switch (hw->phy_model) {
 	case ICE_PHY_E810:
-		status = ice_ptp_init_phc_e810(hw);
-		break;
+		return ice_ptp_init_phc_e810(hw);
 	case ICE_PHY_E822:
-		status = ice_ptp_init_phc_e822(hw);
+		return ice_ptp_init_phc_e822(hw);
+	case ICE_PHY_E830:
+		return ice_ptp_init_phc_e830(hw);
+	default:
+		return ICE_ERR_NOT_SUPPORTED;
+	}
+}
+
+/**
+ * ice_get_phy_tx_tstamp_ready - Read PHY Tx memory status indication
+ * @hw: pointer to the HW struct
+ * @block: the timestamp block to check
+ * @tstamp_ready: storage for the PHY Tx memory status information
+ *
+ * Check the PHY for Tx timestamp memory status. This reports a 64 bit value
+ * which indicates which timestamps in the block may be captured. A set bit
+ * means the timestamp can be read. An unset bit means the timestamp is not
+ * ready and software should avoid reading the register.
+ */
+enum ice_status
+ice_get_phy_tx_tstamp_ready(struct ice_hw *hw, u8 block, u64 *tstamp_ready)
+{
+	switch (hw->phy_model) {
+	case ICE_PHY_E810:
+		return ice_get_phy_tx_tstamp_ready_e810(hw, block,
+							tstamp_ready);
+	case ICE_PHY_E822:
+		return ice_get_phy_tx_tstamp_ready_e822(hw, block,
+							tstamp_ready);
 		break;
 	default:
-		status = ICE_ERR_NOT_SUPPORTED;
+		return ICE_ERR_NOT_SUPPORTED;
 	}
-
-	return status;
 }

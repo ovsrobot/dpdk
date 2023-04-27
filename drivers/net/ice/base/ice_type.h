@@ -760,7 +760,9 @@ enum ice_time_ref_freq {
 	ICE_TIME_REF_FREQ_156_250	= 4,
 	ICE_TIME_REF_FREQ_245_760	= 5,
 
-	NUM_ICE_TIME_REF_FREQ
+	NUM_ICE_TIME_REF_FREQ,
+
+	ICE_TIME_REF_FREQ_INVALID	= -1,
 };
 
 /* Clock source specification */
@@ -1246,11 +1248,12 @@ struct ice_switch_info {
 	ice_declare_bitmap(prof_res_bm[ICE_MAX_NUM_PROFILES], ICE_MAX_FV_WORDS);
 };
 
-/* PHY configuration */
-enum ice_phy_cfg {
-	ICE_PHY_E810 = 1,
+/* PHY model */
+enum ice_phy_model {
+	ICE_PHY_UNSUP = -1,
+	ICE_PHY_E810  = 1,
 	ICE_PHY_E822,
-	ICE_PHY_ETH56G,
+	ICE_PHY_E830,
 };
 
 /* Port hardware description */
@@ -1277,7 +1280,8 @@ struct ice_hw {
 	u8 revision_id;
 
 	u8 pf_id;		/* device profile info */
-	enum ice_phy_cfg phy_cfg;
+	enum ice_phy_model phy_model;
+	u8 phy_ports;
 	u8 logical_pf_id;
 
 	u16 max_burst_size;	/* driver sets this value */
@@ -1311,7 +1315,6 @@ struct ice_hw {
 			      void *buf, u16 buf_size);
 	void *aq_send_cmd_param;
 	u8 dcf_enabled;		/* Device Config Function */
-
 	u8 api_branch;		/* API branch version */
 	u8 api_maj_ver;		/* API major version */
 	u8 api_min_ver;		/* API minor version */
@@ -1665,7 +1668,6 @@ struct ice_aq_get_set_rss_lut_params {
 /* AQ API version for report default configuration */
 #define ICE_FW_API_REPORT_DFLT_CFG_MAJ		1
 #define ICE_FW_API_REPORT_DFLT_CFG_MIN		7
-
 #define ICE_FW_API_REPORT_DFLT_CFG_PATCH	3
 
 /* FW version for FEC disable in Auto FEC mode */
