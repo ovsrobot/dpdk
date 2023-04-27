@@ -342,6 +342,93 @@ ice_aq_manage_mac_read(struct ice_hw *hw, void *buf, u16 buf_size,
 }
 
 /**
+ * ice_phy_maps_to_media
+ * @phy_type_low: PHY type low bits
+ * @phy_type_high: PHY type high bits
+ * @media_mask_low: media type PHY type low bitmask
+ * @media_mask_high: media type PHY type high bitmask
+ *
+ * Return true if PHY type [low|high] bits are only of media type PHY types
+ * [low|high] bitmask.
+ */
+static bool
+ice_phy_maps_to_media(u64 phy_type_low, u64 phy_type_high,
+		      u64 media_mask_low, u64 media_mask_high)
+{
+	/* check if a PHY type exist for media type */
+	if (!(phy_type_low & media_mask_low ||
+	      phy_type_high & media_mask_high))
+		return false;
+
+	/* check that PHY types are only of media type */
+	if (!(phy_type_low & ~media_mask_low) &&
+	    !(phy_type_high & ~media_mask_high))
+		return true;
+
+	return false;
+}
+
+/**
+ * ice_set_media_type - Sets media type
+ * @pi: port information structure
+ *
+ * Set ice_port_info PHY media type based on PHY type. This should be called
+ * from Get PHY caps with media.
+ */
+static void ice_set_media_type(struct ice_port_info *pi)
+{
+	enum ice_media_type *media_type;
+	u64 phy_type_high, phy_type_low;
+
+	phy_type_high = pi->phy.phy_type_high;
+	phy_type_low = pi->phy.phy_type_low;
+	media_type = &pi->phy.media_type;
+
+	/* if no media, then media type is NONE */
+	if (!(pi->phy.link_info.link_info & ICE_AQ_MEDIA_AVAILABLE))
+		*media_type = ICE_MEDIA_NONE;
+	/* else if PHY types are only BASE-T, then media type is BASET */
+	else if (ice_phy_maps_to_media(phy_type_low, phy_type_high,
+				       ICE_MEDIA_BASET_PHY_TYPE_LOW_M, 0))
+		*media_type = ICE_MEDIA_BASET;
+	/* else if any PHY type is BACKPLANE, then media type is BACKPLANE */
+	else if (phy_type_low & ICE_MEDIA_BP_PHY_TYPE_LOW_M ||
+		 phy_type_high & ICE_MEDIA_BP_PHY_TYPE_HIGH_M)
+		*media_type = ICE_MEDIA_BACKPLANE;
+	/* else if PHY types are only optical, or optical and C2M, then media
+	 * type is FIBER
+	 */
+	else if (ice_phy_maps_to_media(phy_type_low, phy_type_high,
+				       ICE_MEDIA_OPT_PHY_TYPE_LOW_M,
+				       ICE_MEDIA_OPT_PHY_TYPE_HIGH_M) ||
+		 ((phy_type_low & ICE_MEDIA_OPT_PHY_TYPE_LOW_M ||
+		   phy_type_high & ICE_MEDIA_OPT_PHY_TYPE_HIGH_M) &&
+		  (phy_type_low & ICE_MEDIA_C2M_PHY_TYPE_LOW_M ||
+		   phy_type_high & ICE_MEDIA_C2C_PHY_TYPE_HIGH_M)))
+		*media_type = ICE_MEDIA_FIBER;
+	/* else if PHY types are only DA, or DA and C2C, then media type DA */
+	else if (ice_phy_maps_to_media(phy_type_low, phy_type_high,
+				       ICE_MEDIA_DAC_PHY_TYPE_LOW_M,
+				       ICE_MEDIA_DAC_PHY_TYPE_HIGH_M) ||
+		 ((phy_type_low & ICE_MEDIA_DAC_PHY_TYPE_LOW_M ||
+		   phy_type_high & ICE_MEDIA_DAC_PHY_TYPE_HIGH_M) &&
+		  (phy_type_low & ICE_MEDIA_C2C_PHY_TYPE_LOW_M ||
+		   phy_type_high & ICE_MEDIA_C2C_PHY_TYPE_HIGH_M)))
+		*media_type = ICE_MEDIA_DA;
+	/* else if PHY types are only C2M or only C2C, then media is AUI */
+	else if (ice_phy_maps_to_media(phy_type_low, phy_type_high,
+				       ICE_MEDIA_C2M_PHY_TYPE_LOW_M,
+				       ICE_MEDIA_C2M_PHY_TYPE_HIGH_M) ||
+		 ice_phy_maps_to_media(phy_type_low, phy_type_high,
+				       ICE_MEDIA_C2C_PHY_TYPE_LOW_M,
+				       ICE_MEDIA_C2C_PHY_TYPE_HIGH_M))
+		*media_type = ICE_MEDIA_AUI;
+
+	else
+		*media_type = ICE_MEDIA_UNKNOWN;
+}
+
+/**
  * ice_aq_get_phy_caps - returns PHY capabilities
  * @pi: port information structure
  * @qual_mods: report qualified modules
@@ -425,6 +512,9 @@ ice_aq_get_phy_caps(struct ice_port_info *pi, bool qual_mods, u8 report_mode,
 		ice_memcpy(pi->phy.link_info.module_type, &pcaps->module_type,
 			   sizeof(pi->phy.link_info.module_type),
 			   ICE_NONDMA_TO_NONDMA);
+		ice_set_media_type(pi);
+		ice_debug(hw, ICE_DBG_LINK, "%s: media_type = 0x%x\n", prefix,
+			  pi->phy.media_type);
 	}
 
 	return status;
@@ -530,155 +620,6 @@ ice_find_netlist_node(struct ice_hw *hw, u8 node_type_ctx, u8 node_part_number,
 	return ICE_ERR_DOES_NOT_EXIST;
 }
 
-/**
- * ice_is_media_cage_present
- * @pi: port information structure
- *
- * Returns true if media cage is present, else false. If no cage, then
- * media type is backplane or BASE-T.
- */
-static bool ice_is_media_cage_present(struct ice_port_info *pi)
-{
-	struct ice_aqc_get_link_topo *cmd;
-	struct ice_aq_desc desc;
-
-	cmd = &desc.params.get_link_topo;
-
-	ice_fill_dflt_direct_cmd_desc(&desc, ice_aqc_opc_get_link_topo);
-
-	cmd->addr.topo_params.node_type_ctx =
-		(ICE_AQC_LINK_TOPO_NODE_CTX_PORT <<
-		 ICE_AQC_LINK_TOPO_NODE_CTX_S);
-
-	/* set node type */
-	cmd->addr.topo_params.node_type_ctx |=
-		(ICE_AQC_LINK_TOPO_NODE_TYPE_M &
-		 ICE_AQC_LINK_TOPO_NODE_TYPE_CAGE);
-
-	/* Node type cage can be used to determine if cage is present. If AQC
-	 * returns error (ENOENT), then no cage present. If no cage present then
-	 * connection type is backplane or BASE-T.
-	 */
-	return ice_aq_get_netlist_node(pi->hw, cmd, NULL, NULL);
-}
-
-/**
- * ice_get_media_type - Gets media type
- * @pi: port information structure
- */
-static enum ice_media_type ice_get_media_type(struct ice_port_info *pi)
-{
-	struct ice_link_status *hw_link_info;
-
-	if (!pi)
-		return ICE_MEDIA_UNKNOWN;
-
-	hw_link_info = &pi->phy.link_info;
-	if (hw_link_info->phy_type_low && hw_link_info->phy_type_high)
-		/* If more than one media type is selected, report unknown */
-		return ICE_MEDIA_UNKNOWN;
-
-	if (hw_link_info->phy_type_low) {
-		/* 1G SGMII is a special case where some DA cable PHYs
-		 * may show this as an option when it really shouldn't
-		 * be since SGMII is meant to be between a MAC and a PHY
-		 * in a backplane. Try to detect this case and handle it
-		 */
-		if (hw_link_info->phy_type_low == ICE_PHY_TYPE_LOW_1G_SGMII &&
-		    (hw_link_info->module_type[ICE_AQC_MOD_TYPE_IDENT] ==
-		    ICE_AQC_MOD_TYPE_BYTE1_SFP_PLUS_CU_ACTIVE ||
-		    hw_link_info->module_type[ICE_AQC_MOD_TYPE_IDENT] ==
-		    ICE_AQC_MOD_TYPE_BYTE1_SFP_PLUS_CU_PASSIVE))
-			return ICE_MEDIA_DA;
-
-		switch (hw_link_info->phy_type_low) {
-		case ICE_PHY_TYPE_LOW_1000BASE_SX:
-		case ICE_PHY_TYPE_LOW_1000BASE_LX:
-		case ICE_PHY_TYPE_LOW_10GBASE_SR:
-		case ICE_PHY_TYPE_LOW_10GBASE_LR:
-		case ICE_PHY_TYPE_LOW_25GBASE_SR:
-		case ICE_PHY_TYPE_LOW_25GBASE_LR:
-		case ICE_PHY_TYPE_LOW_40GBASE_SR4:
-		case ICE_PHY_TYPE_LOW_40GBASE_LR4:
-		case ICE_PHY_TYPE_LOW_50GBASE_SR2:
-		case ICE_PHY_TYPE_LOW_50GBASE_LR2:
-		case ICE_PHY_TYPE_LOW_50GBASE_SR:
-		case ICE_PHY_TYPE_LOW_50GBASE_FR:
-		case ICE_PHY_TYPE_LOW_50GBASE_LR:
-		case ICE_PHY_TYPE_LOW_100GBASE_SR4:
-		case ICE_PHY_TYPE_LOW_100GBASE_LR4:
-		case ICE_PHY_TYPE_LOW_100GBASE_SR2:
-		case ICE_PHY_TYPE_LOW_100GBASE_DR:
-			return ICE_MEDIA_FIBER;
-		case ICE_PHY_TYPE_LOW_10G_SFI_AOC_ACC:
-		case ICE_PHY_TYPE_LOW_25G_AUI_AOC_ACC:
-		case ICE_PHY_TYPE_LOW_40G_XLAUI_AOC_ACC:
-		case ICE_PHY_TYPE_LOW_50G_LAUI2_AOC_ACC:
-		case ICE_PHY_TYPE_LOW_50G_AUI2_AOC_ACC:
-		case ICE_PHY_TYPE_LOW_50G_AUI1_AOC_ACC:
-		case ICE_PHY_TYPE_LOW_100G_CAUI4_AOC_ACC:
-		case ICE_PHY_TYPE_LOW_100G_AUI4_AOC_ACC:
-			return ICE_MEDIA_FIBER;
-		case ICE_PHY_TYPE_LOW_100BASE_TX:
-		case ICE_PHY_TYPE_LOW_1000BASE_T:
-		case ICE_PHY_TYPE_LOW_2500BASE_T:
-		case ICE_PHY_TYPE_LOW_5GBASE_T:
-		case ICE_PHY_TYPE_LOW_10GBASE_T:
-		case ICE_PHY_TYPE_LOW_25GBASE_T:
-			return ICE_MEDIA_BASET;
-		case ICE_PHY_TYPE_LOW_10G_SFI_DA:
-		case ICE_PHY_TYPE_LOW_25GBASE_CR:
-		case ICE_PHY_TYPE_LOW_25GBASE_CR_S:
-		case ICE_PHY_TYPE_LOW_25GBASE_CR1:
-		case ICE_PHY_TYPE_LOW_40GBASE_CR4:
-		case ICE_PHY_TYPE_LOW_50GBASE_CR2:
-		case ICE_PHY_TYPE_LOW_50GBASE_CP:
-		case ICE_PHY_TYPE_LOW_100GBASE_CR4:
-		case ICE_PHY_TYPE_LOW_100GBASE_CR_PAM4:
-		case ICE_PHY_TYPE_LOW_100GBASE_CP2:
-			return ICE_MEDIA_DA;
-		case ICE_PHY_TYPE_LOW_25G_AUI_C2C:
-		case ICE_PHY_TYPE_LOW_40G_XLAUI:
-		case ICE_PHY_TYPE_LOW_50G_LAUI2:
-		case ICE_PHY_TYPE_LOW_50G_AUI2:
-		case ICE_PHY_TYPE_LOW_50G_AUI1:
-		case ICE_PHY_TYPE_LOW_100G_AUI4:
-		case ICE_PHY_TYPE_LOW_100G_CAUI4:
-			if (ice_is_media_cage_present(pi))
-				return ICE_MEDIA_AUI;
-			/* fall-through */
-		case ICE_PHY_TYPE_LOW_1000BASE_KX:
-		case ICE_PHY_TYPE_LOW_2500BASE_KX:
-		case ICE_PHY_TYPE_LOW_2500BASE_X:
-		case ICE_PHY_TYPE_LOW_5GBASE_KR:
-		case ICE_PHY_TYPE_LOW_10GBASE_KR_CR1:
-		case ICE_PHY_TYPE_LOW_10G_SFI_C2C:
-		case ICE_PHY_TYPE_LOW_25GBASE_KR:
-		case ICE_PHY_TYPE_LOW_25GBASE_KR1:
-		case ICE_PHY_TYPE_LOW_25GBASE_KR_S:
-		case ICE_PHY_TYPE_LOW_40GBASE_KR4:
-		case ICE_PHY_TYPE_LOW_50GBASE_KR_PAM4:
-		case ICE_PHY_TYPE_LOW_50GBASE_KR2:
-		case ICE_PHY_TYPE_LOW_100GBASE_KR4:
-		case ICE_PHY_TYPE_LOW_100GBASE_KR_PAM4:
-			return ICE_MEDIA_BACKPLANE;
-		}
-	} else {
-		switch (hw_link_info->phy_type_high) {
-		case ICE_PHY_TYPE_HIGH_100G_AUI2:
-		case ICE_PHY_TYPE_HIGH_100G_CAUI2:
-			if (ice_is_media_cage_present(pi))
-				return ICE_MEDIA_AUI;
-			/* fall-through */
-		case ICE_PHY_TYPE_HIGH_100GBASE_KR2_PAM4:
-			return ICE_MEDIA_BACKPLANE;
-		case ICE_PHY_TYPE_HIGH_100G_CAUI2_AOC_ACC:
-		case ICE_PHY_TYPE_HIGH_100G_AUI2_AOC_ACC:
-			return ICE_MEDIA_FIBER;
-		}
-	}
-	return ICE_MEDIA_UNKNOWN;
-}
 
 /**
  * ice_aq_get_link_info
@@ -696,7 +637,6 @@ ice_aq_get_link_info(struct ice_port_info *pi, bool ena_lse,
 	struct ice_aqc_get_link_status_data link_data = { 0 };
 	struct ice_aqc_get_link_status *resp;
 	struct ice_link_status *li_old, *li;
-	enum ice_media_type *hw_media_type;
 	struct ice_fc_info *hw_fc_info;
 	bool tx_pause, rx_pause;
 	struct ice_aq_desc desc;
@@ -708,7 +648,6 @@ ice_aq_get_link_info(struct ice_port_info *pi, bool ena_lse,
 		return ICE_ERR_PARAM;
 	hw = pi->hw;
 	li_old = &pi->phy.link_info_old;
-	hw_media_type = &pi->phy.media_type;
 	li = &pi->phy.link_info;
 	hw_fc_info = &pi->fc;
 
@@ -730,7 +669,6 @@ ice_aq_get_link_info(struct ice_port_info *pi, bool ena_lse,
 	li->link_speed = LE16_TO_CPU(link_data.link_speed);
 	li->phy_type_low = LE64_TO_CPU(link_data.phy_type_low);
 	li->phy_type_high = LE64_TO_CPU(link_data.phy_type_high);
-	*hw_media_type = ice_get_media_type(pi);
 	li->link_info = link_data.link_info;
 	li->link_cfg_err = link_data.link_cfg_err;
 	li->an_info = link_data.an_info;
@@ -761,7 +699,6 @@ ice_aq_get_link_info(struct ice_port_info *pi, bool ena_lse,
 		  (unsigned long long)li->phy_type_low);
 	ice_debug(hw, ICE_DBG_LINK, "	phy_type_high = 0x%llx\n",
 		  (unsigned long long)li->phy_type_high);
-	ice_debug(hw, ICE_DBG_LINK, "	media_type = 0x%x\n", *hw_media_type);
 	ice_debug(hw, ICE_DBG_LINK, "	link_info = 0x%x\n", li->link_info);
 	ice_debug(hw, ICE_DBG_LINK, "	link_cfg_err = 0x%x\n", li->link_cfg_err);
 	ice_debug(hw, ICE_DBG_LINK, "	an_info = 0x%x\n", li->an_info);
@@ -4087,6 +4024,51 @@ ice_aq_read_topo_dev_nvm(struct ice_hw *hw,
 	return ICE_SUCCESS;
 }
 
+static u16 ice_lut_type_to_size(u16 lut_type)
+{
+	switch (lut_type) {
+	case ICE_LUT_VSI:
+		return ICE_LUT_VSI_SIZE;
+	case ICE_LUT_GLOBAL:
+		return ICE_LUT_GLOBAL_SIZE;
+	case ICE_LUT_PF:
+		return ICE_LUT_PF_SIZE;
+	default:
+		return 0;
+	}
+}
+
+static u16 ice_lut_size_to_flag(u16 lut_size)
+{
+	u16 f = 0;
+
+	switch (lut_size) {
+	case ICE_LUT_GLOBAL_SIZE:
+		f = ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_512_FLAG;
+		break;
+	case ICE_LUT_PF_SIZE:
+		f = ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_2K_FLAG;
+		break;
+	default:
+		break;
+	}
+	return f << ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_S;
+}
+
+int ice_lut_size_to_type(int lut_size)
+{
+	switch (lut_size) {
+	case ICE_LUT_VSI_SIZE:
+		return ICE_LUT_VSI;
+	case ICE_LUT_GLOBAL_SIZE:
+		return ICE_LUT_GLOBAL;
+	case ICE_LUT_PF_SIZE:
+		return ICE_LUT_PF;
+	default:
+		return -1;
+	}
+}
+
 /**
  * __ice_aq_get_set_rss_lut
  * @hw: pointer to the hardware structure
@@ -4098,7 +4080,7 @@ ice_aq_read_topo_dev_nvm(struct ice_hw *hw,
 static enum ice_status
 __ice_aq_get_set_rss_lut(struct ice_hw *hw, struct ice_aq_get_set_rss_lut_params *params, bool set)
 {
-	u16 flags = 0, vsi_id, lut_type, lut_size, glob_lut_idx, vsi_handle;
+	u16 flags, vsi_id, lut_type, lut_size, glob_lut_idx = 0, vsi_handle;
 	struct ice_aqc_get_set_rss_lut *cmd_resp;
 	struct ice_aq_desc desc;
 	enum ice_status status;
@@ -4109,16 +4091,22 @@ __ice_aq_get_set_rss_lut(struct ice_hw *hw, struct ice_aq_get_set_rss_lut_params
 
 	vsi_handle = params->vsi_handle;
 	lut = params->lut;
+	lut_type = params->lut_type;
+	lut_size = ice_lut_type_to_size(lut_type);
+	cmd_resp = &desc.params.get_set_rss_lut;
+	if (lut_type == ICE_LUT_GLOBAL)
+		glob_lut_idx = params->global_lut_id;
 
-	if (!ice_is_vsi_valid(hw, vsi_handle) || !lut)
+	if (!lut || !lut_size || !ice_is_vsi_valid(hw, vsi_handle))
 		return ICE_ERR_PARAM;
 
-	lut_size = params->lut_size;
-	lut_type = params->lut_type;
-	glob_lut_idx = params->global_lut_id;
-	vsi_id = ice_get_hw_vsi_num(hw, vsi_handle);
+	if (lut_size > params->lut_size)
+		return ICE_ERR_INVAL_SIZE;
 
-	cmd_resp = &desc.params.get_set_rss_lut;
+	if (set && lut_size != params->lut_size)
+		return ICE_ERR_PARAM;
+
+	vsi_id = ice_get_hw_vsi_num(hw, vsi_handle);
 
 	if (set) {
 		ice_fill_dflt_direct_cmd_desc(&desc, ice_aqc_opc_set_rss_lut);
@@ -4132,61 +4120,15 @@ __ice_aq_get_set_rss_lut(struct ice_hw *hw, struct ice_aq_get_set_rss_lut_params
 					ICE_AQC_GSET_RSS_LUT_VSI_ID_M) |
 				       ICE_AQC_GSET_RSS_LUT_VSI_VALID);
 
-	switch (lut_type) {
-	case ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_VSI:
-	case ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_PF:
-	case ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_GLOBAL:
-		flags |= ((lut_type << ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_S) &
-			  ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_M);
-		break;
-	default:
-		status = ICE_ERR_PARAM;
-		goto ice_aq_get_set_rss_lut_exit;
-	}
+	flags = ice_lut_size_to_flag(lut_size) |
+		 ((lut_type << ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_S) &
+		  ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_M) |
+		 ((glob_lut_idx << ICE_AQC_GSET_RSS_LUT_GLOBAL_IDX_S) &
+		  ICE_AQC_GSET_RSS_LUT_GLOBAL_IDX_M);
 
-	if (lut_type == ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_GLOBAL) {
-		flags |= ((glob_lut_idx << ICE_AQC_GSET_RSS_LUT_GLOBAL_IDX_S) &
-			  ICE_AQC_GSET_RSS_LUT_GLOBAL_IDX_M);
-
-		if (!set)
-			goto ice_aq_get_set_rss_lut_send;
-	} else if (lut_type == ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_PF) {
-		if (!set)
-			goto ice_aq_get_set_rss_lut_send;
-	} else {
-		goto ice_aq_get_set_rss_lut_send;
-	}
-
-	/* LUT size is only valid for Global and PF table types */
-	switch (lut_size) {
-	case ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_128:
-		flags |= (ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_128_FLAG <<
-			  ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_S) &
-			 ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_M;
-		break;
-	case ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_512:
-		flags |= (ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_512_FLAG <<
-			  ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_S) &
-			 ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_M;
-		break;
-	case ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_2K:
-		if (lut_type == ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_PF) {
-			flags |= (ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_2K_FLAG <<
-				  ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_S) &
-				 ICE_AQC_GSET_RSS_LUT_TABLE_SIZE_M;
-			break;
-		}
-		/* fall-through */
-	default:
-		status = ICE_ERR_PARAM;
-		goto ice_aq_get_set_rss_lut_exit;
-	}
-
-ice_aq_get_set_rss_lut_send:
 	cmd_resp->flags = CPU_TO_LE16(flags);
 	status = ice_aq_send_cmd(hw, &desc, lut, lut_size, NULL);
-
-ice_aq_get_set_rss_lut_exit:
+	params->lut_size = LE16_TO_CPU(desc.datalen);
 	return status;
 }
 
