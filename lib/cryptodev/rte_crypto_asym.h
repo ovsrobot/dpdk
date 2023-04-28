@@ -119,6 +119,8 @@ enum rte_crypto_asym_xform_type {
 	/**< Elliptic Curve Point Multiplication */
 	RTE_CRYPTO_ASYM_XFORM_ECFPM,
 	/**< Elliptic Curve Fixed Point Multiplication */
+	RTE_CRYPTO_ASYM_XFORM_SM2,
+	/**< ShangMi 2. Performs Encrypt, Decrypt, Sign and Verify. */
 	RTE_CRYPTO_ASYM_XFORM_TYPE_LIST_END
 	/**< End of list */
 };
@@ -383,6 +385,20 @@ struct rte_crypto_ec_xform {
 };
 
 /**
+ * Asymmetric SM2 transform data
+ *
+ * Structure describing SM2 xform params
+ *
+ */
+struct rte_crypto_sm2_xform {
+	rte_crypto_uint pkey;
+	/**< Private key of the signer for signature generation */
+
+	struct rte_crypto_ec_point q;
+	/**< Public key of the signer for verification */
+};
+
+/**
  * Operations params for modular operations:
  * exponentiation and multiplicative inverse
  *
@@ -637,7 +653,66 @@ struct rte_crypto_asym_xform {
 		/**< EC xform parameters, used by elliptic curve based
 		 * operations.
 		 */
+
+		struct rte_crypto_sm2_xform sm2;
+		/**< SM2 xform parameters */
 	};
+};
+
+/**
+ * SM2 operation params
+ */
+struct rte_crypto_sm2_op_param {
+	enum rte_crypto_asym_op_type op_type;
+	/**< Signature generation or verification */
+
+	rte_crypto_param message;
+	/**<
+	 * Pointer to input data
+	 * - to be encrypted for SM2 public encrypt.
+	 * - to be signed for SM2 sign generation.
+	 * - to be authenticated for SM2 sign verification.
+	 *
+	 * Pointer to output data
+	 * - for SM2 private decrypt.
+	 * In this case the underlying array should have been
+	 * allocated with enough memory to hold plaintext output
+	 * (atleast encrypted text length). The message.length field
+	 * will be overwritten by the PMD with the decrypted length.
+	 */
+
+	rte_crypto_param cipher;
+	/**<
+	 * Pointer to input data
+	 * - to be decrypted for SM2 private decrypt.
+	 *
+	 * Pointer to output data
+	 * - for SM2 public encrypt.
+	 * In this case the underlying array should have been allocated
+	 * with enough memory to hold ciphertext output (atleast X bytes
+	 * for prime field curve of N bytes and for message M bytes,
+	 * where X = (C1 + C2 + C3) and computed based on SM2 RFC as
+	 * C1 (1 + N + N), C2 = M, C3 = N. The cipher.length field will
+	 * be overwritten by the PMD with the encrypted length.
+	 */
+
+	rte_crypto_uint id;
+	/**< The SM2 id used by signer and verifier and is in interval
+	 * (1, n-1).
+	 */
+
+	rte_crypto_uint r;
+	/**< r component of elliptic curve signature
+	 *     output : for signature generation (of atleast N bytes
+	 *              where prime field length is N bytes)
+	 *     input  : for signature verification
+	 */
+	rte_crypto_uint s;
+	/**< s component of elliptic curve signature
+	 *     output : for signature generation (of atleast N bytes
+	 *              where prime field length is N bytes)
+	 *     input  : for signature verification
+	 */
 };
 
 /**
@@ -665,6 +740,7 @@ struct rte_crypto_asym_op {
 		struct rte_crypto_dsa_op_param dsa;
 		struct rte_crypto_ecdsa_op_param ecdsa;
 		struct rte_crypto_ecpm_op_param ecpm;
+		struct rte_crypto_sm2_op_param sm2;
 	};
 	uint16_t flags;
 	/**<

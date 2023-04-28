@@ -55,6 +55,9 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added SM2 algorithm in cryptodev library.**
+
+  Added SM2 algorithm with prime field curve support.
 
 Removed Items
 -------------
