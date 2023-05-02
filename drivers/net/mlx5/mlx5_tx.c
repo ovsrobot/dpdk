@@ -85,7 +85,7 @@ static int
 mlx5_tx_error_cqe_handle(struct mlx5_txq_data *__rte_restrict txq,
 			 volatile struct mlx5_err_cqe *err_cqe)
 {
-	if (err_cqe->syndrome != MLX5_CQE_SYNDROME_WR_FLUSH_ERR) {
+	if (mlx5_critical_syndrome(err_cqe->syndrome)) {
 		const uint16_t wqe_m = ((1 << txq->wqe_n) - 1);
 		struct mlx5_txq_ctrl *txq_ctrl =
 				container_of(txq, struct mlx5_txq_ctrl, txq);
@@ -217,7 +217,7 @@ mlx5_tx_handle_completion(struct mlx5_txq_data *__rte_restrict txq,
 			}
 			/*
 			 * We are going to fetch all entries with
-			 * MLX5_CQE_SYNDROME_WR_FLUSH_ERR status.
+			 * non-critical error syndromes.
 			 * The send queue is supposed to be empty.
 			 */
 			ring_doorbell = true;

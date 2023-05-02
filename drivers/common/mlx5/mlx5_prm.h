@@ -5238,4 +5238,21 @@ mlx5_ts_format_conv(uint32_t ts_format)
 			MLX5_QPC_TIMESTAMP_FORMAT_DEFAULT;
 }
 
+/**
+ * Check if an error CQE syndrome is critical.
+ *
+ * @param syndrome
+ *   Error CQE syndrome to check.
+ *
+ * @return
+ *   Positive value if critical, 0 otherwise.
+ */
+static inline uint32_t
+mlx5_critical_syndrome(uint8_t syndrome)
+{
+	return (syndrome == MLX5_CQE_SYNDROME_LOCAL_QP_OP_ERR ||
+		syndrome == MLX5_CQE_SYNDROME_LOCAL_PROT_ERR ||
+		syndrome == MLX5_CQE_SYNDROME_WR_FLUSH_ERR);
+}
+
 #endif /* RTE_PMD_MLX5_PRM_H_ */

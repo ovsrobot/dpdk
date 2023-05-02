@@ -479,9 +479,7 @@ mlx5_rx_err_handle(struct mlx5_rxq_data *rxq, uint8_t vec,
 		for (i = 0; i < (int)err_n; i++) {
 			u.cqe = &(*rxq->cqes)[(rxq->cq_ci - vec - i) & cqe_mask];
 			if (MLX5_CQE_OPCODE(u.cqe->op_own) == MLX5_CQE_RESP_ERR) {
-				if (u.err_cqe->syndrome == MLX5_CQE_SYNDROME_LOCAL_QP_OP_ERR ||
-				    u.err_cqe->syndrome == MLX5_CQE_SYNDROME_LOCAL_PROT_ERR ||
-				    u.err_cqe->syndrome == MLX5_CQE_SYNDROME_WR_FLUSH_ERR)
+				if (mlx5_critical_syndrome(u.err_cqe->syndrome))
 					critical_syndrome = true;
 				break;
 			}
