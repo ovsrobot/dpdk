@@ -41,6 +41,10 @@ extern "C" {
 #define RTE_STD_C11
 #endif
 
+#ifdef RTE_TOOLCHAIN_MSVC
+#define __extension__
+#endif
+
 /*
  * RTE_TOOLCHAIN_GCC is defined if the target is built with GCC,
  * while a host application (like pmdinfogen) may have another compiler.
@@ -65,7 +69,11 @@ extern "C" {
 /**
  * Force alignment
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_aligned(a) __attribute__((__aligned__(a)))
+#else
+#define __rte_aligned(a)
+#endif
 
 #ifdef RTE_ARCH_STRICT_ALIGN
 typedef uint64_t unaligned_uint64_t __rte_aligned(1);
@@ -80,16 +88,29 @@ typedef uint16_t unaligned_uint16_t;
 /**
  * Force a structure to be packed
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_packed __attribute__((__packed__))
+#else
+#define __rte_packed
+#endif
 
 /**
  * Macro to mark a type that is not subject to type-based aliasing rules
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_may_alias __attribute__((__may_alias__))
+#else
+#define __rte_may_alias
+#endif
 
 /******* Macro to mark functions and fields scheduled for removal *****/
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_deprecated	__attribute__((__deprecated__))
 #define __rte_deprecated_msg(msg)	__attribute__((__deprecated__(msg)))
+#else
+#define __rte_deprecated
+#define __rte_deprecated_msg(msg)
+#endif
 
 /**
  *  Macro to mark macros and defines scheduled for removal
@@ -110,14 +131,22 @@ typedef uint16_t unaligned_uint16_t;
 /**
  * Force symbol to be generated even if it appears to be unused.
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_used __attribute__((used))
+#else
+#define __rte_used
+#endif
 
 /*********** Macros to eliminate unused variable warnings ********/
 
 /**
  * short definition to mark a function parameter unused
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_unused __attribute__((__unused__))
+#else
+#define __rte_unused
+#endif
 
 /**
  * Mark pointer as restricted with regard to pointer aliasing.
@@ -141,12 +170,16 @@ typedef uint16_t unaligned_uint16_t;
  * even if the underlying stdio implementation is ANSI-compliant,
  * so this must be overridden.
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #if RTE_CC_IS_GNU
 #define __rte_format_printf(format_index, first_arg) \
 	__attribute__((format(gnu_printf, format_index, first_arg)))
 #else
 #define __rte_format_printf(format_index, first_arg) \
 	__attribute__((format(printf, format_index, first_arg)))
+#endif
+#else
+#define __rte_format_printf(format_index, first_arg)
 #endif
 
 /**
@@ -222,7 +255,11 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
 /**
  * Hint never returning function
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_noreturn __attribute__((noreturn))
+#else
+#define __rte_noreturn
+#endif
 
 /**
  * Issue a warning in case the function's return value is ignored.
@@ -247,12 +284,20 @@ static void __attribute__((destructor(RTE_PRIO(prio)), used)) func(void)
  *  }
  * @endcode
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_warn_unused_result __attribute__((warn_unused_result))
+#else
+#define __rte_warn_unused_result
+#endif
 
 /**
  * Force a function to be inlined
  */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_always_inline inline __attribute__((always_inline))
+#else
+#define __rte_always_inline
+#endif
 
 /**
  * Force a function to be noinlined
@@ -437,7 +482,11 @@ rte_is_aligned(const void * const __rte_restrict ptr, const unsigned int align)
 #define RTE_CACHE_LINE_MIN_SIZE 64
 
 /** Force alignment to cache line. */
+#ifndef RTE_TOOLCHAIN_MSVC
 #define __rte_cache_aligned __rte_aligned(RTE_CACHE_LINE_SIZE)
+#else
+#define __rte_cache_aligned
+#endif
 
 /** Force minimum cache line alignment. */
 #define __rte_cache_min_aligned __rte_aligned(RTE_CACHE_LINE_MIN_SIZE)
@@ -812,12 +861,17 @@ rte_log2_u64(uint64_t v)
  *  struct wrapper *w = container_of(x, struct wrapper, c);
  */
 #ifndef container_of
+#ifndef RTE_TOOLCHAIN_MSVC
 #define container_of(ptr, type, member)	__extension__ ({		\
 			const typeof(((type *)0)->member) *_ptr = (ptr); \
 			__rte_unused type *_target_ptr =	\
 				(type *)(ptr);				\
 			(type *)(((uintptr_t)_ptr) - offsetof(type, member)); \
 		})
+#else
+#define container_of(ptr, type, member) \
+			((type *)((uintptr_t)(ptr) - offsetof(type, member)))
+#endif
 #endif
 
 /** Swap two variables. */
