@@ -11,6 +11,12 @@ here.
 Deprecation Notices
 -------------------
 
+* C Compiler: From DPDK 23.11 onwards,
+  building DPDK will require a C compiler which supports the C11 standard, or later.
+  Please note:
+     - C11 is supported from GCC version 5 onwards, and is the default language version in that release
+     - C11 is the default compilation mode in Clang from version 3.6
+
 * kvargs: The function ``rte_kvargs_process`` will get a new parameter
   for returning key match count. It will ease handling of no-match case.
 
