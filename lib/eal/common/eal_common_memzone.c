@@ -22,6 +22,10 @@
 #include "eal_private.h"
 #include "eal_memcfg.h"
 
+#define RTE_DEFAULT_MAX_MEMZONE 2560
+
+static size_t memzone_max = RTE_DEFAULT_MAX_MEMZONE;
+
 static inline const struct rte_memzone *
 memzone_lookup_thread_unsafe(const char *name)
 {
@@ -81,8 +85,9 @@ memzone_reserve_aligned_thread_unsafe(const char *name, size_t len,
 	/* no more room in config */
 	if (arr->count >= arr->len) {
 		RTE_LOG(ERR, EAL,
-		"%s(): Number of requested memzone segments exceeds RTE_MAX_MEMZONE\n",
-			__func__);
+		"%s(): Number of requested memzone segments exceeds max "
+		"memzone segments (%d >= %d)\n",
+			__func__, arr->count, arr->len);
 		rte_errno = ENOSPC;
 		return NULL;
 	}
@@ -396,7 +401,7 @@ rte_eal_memzone_init(void)
 
 	if (rte_eal_process_type() == RTE_PROC_PRIMARY &&
 			rte_fbarray_init(&mcfg->memzones, "memzone",
-			RTE_MAX_MEMZONE, sizeof(struct rte_memzone))) {
+			rte_memzone_max_get(), sizeof(struct rte_memzone))) {
 		RTE_LOG(ERR, EAL, "Cannot allocate memzone list\n");
 		ret = -1;
 	} else if (rte_eal_process_type() == RTE_PROC_SECONDARY &&
@@ -429,4 +434,21 @@ void rte_memzone_walk(void (*func)(const struct rte_memzone *, void *),
 		i = rte_fbarray_find_next_used(arr, i + 1);
 	}
 	rte_rwlock_read_unlock(&mcfg->mlock);
+}
+
+int
+rte_memzone_max_set(size_t max)
+{
+	/* Setting max memzone must occur befaore calling rte_eal_init() */
+	if (eal_get_internal_configuration()->init_complete > 0)
+		return -1;
+
+	memzone_max = max;
+	return 0;
+}
+
+size_t
+rte_memzone_max_get(void)
+{
+	return memzone_max;
 }

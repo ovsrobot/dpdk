@@ -305,6 +305,26 @@ void rte_memzone_dump(FILE *f);
 void rte_memzone_walk(void (*func)(const struct rte_memzone *, void *arg),
 		      void *arg);
 
+/**
+ * Set max memzone value
+ *
+ * @param max
+ *   Value of max memzone allocations
+ * @return
+ *  0 on success, -1 otherwise
+ */
+__rte_experimental
+int rte_memzone_max_set(size_t max);
+
+/**
+ * Get max memzone value
+ *
+ * @return
+ *   Value of max memzone allocations
+ */
+__rte_experimental
+size_t rte_memzone_max_get(void);
+
 #ifdef __cplusplus
 }
 #endif
