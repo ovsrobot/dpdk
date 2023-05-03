@@ -5,11 +5,70 @@
 #include <errno.h>
 
 #include <rte_common.h>
+#include <rte_malloc.h>
 #include <rte_memory.h>
 #include <rte_mldev.h>
 
 #include "ml_common.h"
 #include "test_common.h"
+
+int
+ml_read_file(char *file, size_t *size, char **buffer)
+{
+	char *file_buffer = NULL;
+	long file_size = 0;
+	int ret = 0;
+	FILE *fp;
+
+	fp = fopen(file, "r");
+	if (fp == NULL) {
+		ml_err("Failed to open file: %s\n", file);
+		return -EIO;
+	}
+
+	if (fseek(fp, 0, SEEK_END) == 0) {
+		file_size = ftell(fp);
+		if (file_size == -1) {
+			ret = -EIO;
+			goto error;
+		}
+
+		file_buffer = malloc(file_size);
+		if (file_buffer == NULL) {
+			ml_err("Failed to allocate memory: %s\n", file);
+			ret = -ENOMEM;
+			goto error;
+		}
+
+		if (fseek(fp, 0, SEEK_SET) != 0) {
+			ret = -EIO;
+			goto error;
+		}
+
+		if (fread(file_buffer, sizeof(char), file_size, fp) != (unsigned long)file_size) {
+			ml_err("Failed to read file : %s\n", file);
+			ret = -EIO;
+			goto error;
+		}
+		fclose(fp);
+	} else {
+		ret = -EIO;
+		goto error;
+	}
+
+	*buffer = file_buffer;
+	*size = file_size;
+
+	return 0;
+
+error:
+	free(file_buffer);
+
+	if (fp != NULL)
+		fclose(fp);
+
+	return ret;
+}
 
 bool
 ml_test_cap_check(struct ml_options *opt)
