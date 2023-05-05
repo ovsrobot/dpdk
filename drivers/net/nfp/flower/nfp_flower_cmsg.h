@@ -380,7 +380,8 @@ enum nfp_flower_cmsg_port_vnic_type {
 static inline char*
 nfp_flower_cmsg_get_data(struct rte_mbuf *m)
 {
-	return rte_pktmbuf_mtod(m, char *) + 4 + 4 + NFP_FLOWER_CMSG_HLEN;
+	return rte_pktmbuf_mtod_offset(m, char *,
+				       4 + 4 + NFP_FLOWER_CMSG_HLEN);
 }
 
 /*
