@@ -47,7 +47,7 @@ extern "C" {
  */
 struct rte_memzone {
 
-#define RTE_MEMZONE_NAMESIZE 32       /**< Maximum length of memory zone name.*/
+#define RTE_MEMZONE_NAMESIZE 64       /**< Maximum length of memory zone name.*/
 	char name[RTE_MEMZONE_NAMESIZE];  /**< Name of the memory zone. */
 
 	rte_iova_t iova;                  /**< Start IO address. */

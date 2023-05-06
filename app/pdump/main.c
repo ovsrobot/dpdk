@@ -42,15 +42,15 @@
 #define PDUMP_MSIZE_ARG "mbuf-size"
 #define PDUMP_NUM_MBUFS_ARG "total-num-mbufs"
 
-#define VDEV_NAME_FMT "net_pcap_%s_%d"
+#define VDEV_NAME_FMT "net_pcap_%s_%s_p%d_q%d_%d"
 #define VDEV_PCAP_ARGS_FMT "tx_pcap=%s"
 #define VDEV_IFACE_ARGS_FMT "tx_iface=%s"
 #define TX_STREAM_SIZE 64
 
-#define MP_NAME "pdump_pool_%d"
+#define MP_NAME "pdump_pool_%s_p%d_q%d_%d"
 
-#define RX_RING "rx_ring_%d"
-#define TX_RING "tx_ring_%d"
+#define RX_RING "rx_ring_%s_p%d_q%d_%d"
+#define TX_RING "tx_ring_%s_p%d_q%d_%d"
 
 #define RX_STR "rx"
 #define TX_STR "tx"
@@ -633,11 +633,14 @@ create_mp_ring_vdev(void)
 	char vdev_name[SIZE];
 	char vdev_args[SIZE];
 	char ring_name[SIZE];
+	const char *device_name;
 	char mempool_name[SIZE];
 
 	for (i = 0; i < num_tuples; i++) {
 		pt = &pdump_t[i];
-		snprintf(mempool_name, SIZE, MP_NAME, i);
+		device_name = pt->device_id != NULL ?  pt->device_id : "dev";
+		snprintf(mempool_name, SIZE, MP_NAME, device_name, pt->port,
+			  pt->queue, i);
 		mbuf_pool = rte_mempool_lookup(mempool_name);
 		if (mbuf_pool == NULL) {
 			/* create mempool */
@@ -658,7 +661,8 @@ create_mp_ring_vdev(void)
 		if (pt->dir == RTE_PDUMP_FLAG_RXTX) {
 			/* if captured packets has to send to the same vdev */
 			/* create rx_ring */
-			snprintf(ring_name, SIZE, RX_RING, i);
+			snprintf(ring_name, SIZE, RX_RING, device_name,
+				 pt->port, pt->queue, i);
 			pt->rx_ring = rte_ring_create(ring_name, pt->ring_size,
 					rte_socket_id(), 0);
 			if (pt->rx_ring == NULL) {
@@ -669,7 +673,8 @@ create_mp_ring_vdev(void)
 			}
 
 			/* create tx_ring */
-			snprintf(ring_name, SIZE, TX_RING, i);
+			snprintf(ring_name, SIZE, TX_RING, device_name,
+				 pt->port, pt->queue, i);
 			pt->tx_ring = rte_ring_create(ring_name, pt->ring_size,
 					rte_socket_id(), 0);
 			if (pt->tx_ring == NULL) {
@@ -681,7 +686,8 @@ create_mp_ring_vdev(void)
 
 			/* create vdevs */
 			snprintf(vdev_name, sizeof(vdev_name),
-				 VDEV_NAME_FMT, RX_STR, i);
+				 VDEV_NAME_FMT, RX_STR, device_name,
+				 pt->port, pt->queue, i);
 			(pt->rx_vdev_stream_type == IFACE) ?
 			snprintf(vdev_args, sizeof(vdev_args),
 				 VDEV_IFACE_ARGS_FMT, pt->rx_dev) :
@@ -711,7 +717,8 @@ create_mp_ring_vdev(void)
 				pt->tx_vdev_id = portid;
 			else {
 				snprintf(vdev_name, sizeof(vdev_name),
-					 VDEV_NAME_FMT, TX_STR, i);
+					 VDEV_NAME_FMT, TX_STR, device_name,
+					 pt->port, pt->queue, i);
 				(pt->rx_vdev_stream_type == IFACE) ?
 				snprintf(vdev_args, sizeof(vdev_args),
 					 VDEV_IFACE_ARGS_FMT, pt->tx_dev) :
@@ -741,7 +748,8 @@ create_mp_ring_vdev(void)
 		} else if (pt->dir == RTE_PDUMP_FLAG_RX) {
 
 			/* create rx_ring */
-			snprintf(ring_name, SIZE, RX_RING, i);
+			snprintf(ring_name, SIZE, RX_RING, device_name,
+				 pt->port, pt->queue, i);
 			pt->rx_ring = rte_ring_create(ring_name, pt->ring_size,
 					rte_socket_id(), 0);
 			if (pt->rx_ring == NULL) {
@@ -751,7 +759,8 @@ create_mp_ring_vdev(void)
 			}
 
 			snprintf(vdev_name, sizeof(vdev_name),
-				 VDEV_NAME_FMT, RX_STR, i);
+				 VDEV_NAME_FMT, RX_STR, device_name,
+				 pt->port, pt->queue, i);
 			(pt->rx_vdev_stream_type == IFACE) ?
 			snprintf(vdev_args, sizeof(vdev_args),
 				 VDEV_IFACE_ARGS_FMT, pt->rx_dev) :
@@ -778,7 +787,8 @@ create_mp_ring_vdev(void)
 		} else if (pt->dir == RTE_PDUMP_FLAG_TX) {
 
 			/* create tx_ring */
-			snprintf(ring_name, SIZE, TX_RING, i);
+			snprintf(ring_name, SIZE, TX_RING, device_name,
+				 pt->port, pt->queue, i);
 			pt->tx_ring = rte_ring_create(ring_name, pt->ring_size,
 					rte_socket_id(), 0);
 			if (pt->tx_ring == NULL) {
@@ -788,7 +798,8 @@ create_mp_ring_vdev(void)
 			}
 
 			snprintf(vdev_name, sizeof(vdev_name),
-				 VDEV_NAME_FMT, TX_STR, i);
+				 VDEV_NAME_FMT, TX_STR, device_name,
+				 pt->port, pt->queue, i);
 			(pt->tx_vdev_stream_type == IFACE) ?
 			snprintf(vdev_args, sizeof(vdev_args),
 				 VDEV_IFACE_ARGS_FMT, pt->tx_dev) :
