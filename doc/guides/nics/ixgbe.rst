@@ -461,3 +461,18 @@ show bypass config
 Show the bypass configuration for a bypass enabled NIC using the lowest port on the NIC::
 
    testpmd> show bypass config (port_id)
+
+VF driver is not multi-process safe
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Core dump may occur when we start secondary processes on the VF port.
+Mainstream Linux distributions have the ASLR feature enabled by default,
+and the text segment of the process memory space is randomized.
+The secondary process calls the function address shared by the primary
+process, resulting in a core dump.
+
+   .. Note::
+
+          Support for ASLR features varies by distribution. Redhat and
+          Centos series distributions work fine. Ubuntu distributions
+          will core dump, other Linux distributions are unknown.
