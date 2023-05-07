@@ -162,6 +162,7 @@ Features
 - Sub-Function.
 - Matching on represented port.
 - Matching on aggregated affinity.
+- Flow quota.
 
 
 Limitations
@@ -694,6 +695,15 @@ Limitations
   The flow engine of a process cannot move from active to standby mode
   if preceding active application rules are still present and vice versa.
 
+- Quota:
+
+  - Quota implemented for HWS / template API.
+  - Maximal value for quota SET and ADD operations in INT32_MAX (2GB).
+  - Application cannot use 2 consecutive ADD updates.
+    Next tokens update after ADD must always be SET.
+  - Quota flow action cannot be used with Meter or CT flow actions in the same rule.
+  - Quota flow action and item supported in non-root HWS tables.
+  - Maximal number of HW quota and HW meter objects <= 16e6.
 
 Statistics
 ----------
