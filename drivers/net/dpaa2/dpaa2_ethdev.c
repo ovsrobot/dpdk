@@ -829,7 +829,7 @@ dpaa2_dev_rx_queue_setup(struct rte_eth_dev *dev,
 						dpaa2_q->cgid, &taildrop);
 		} else {
 			/*enabling per rx queue congestion control */
-			taildrop.threshold = CONG_THRESHOLD_RX_BYTES_Q;
+			taildrop.threshold = nb_rx_desc * 1024;
 			taildrop.units = DPNI_CONGESTION_UNIT_BYTES;
 			taildrop.oal = CONG_RX_OAL;
 			DPAA2_PMD_DEBUG("Enabling Byte based Drop on queue= %d",
