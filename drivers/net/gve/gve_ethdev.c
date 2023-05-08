@@ -5,21 +5,13 @@
 #include "gve_ethdev.h"
 #include "base/gve_adminq.h"
 #include "base/gve_register.h"
-
-const char gve_version_str[] = GVE_VERSION;
-static const char gve_version_prefix[] = GVE_VERSION_PREFIX;
+#include "base/gve_osdep.h"
+#include "gve_version.h"
 
 static void
 gve_write_version(uint8_t *driver_version_register)
 {
-	const char *c = gve_version_prefix;
-
-	while (*c) {
-		writeb(*c, driver_version_register);
-		c++;
-	}
-
-	c = gve_version_str;
+	const char *c = gve_version_string();
 	while (*c) {
 		writeb(*c, driver_version_register);
 		c++;
@@ -262,6 +254,48 @@ gve_dev_close(struct rte_eth_dev *dev)
 
 	dev->data->mac_addrs = NULL;
 
+	return err;
+}
+
+static int
+gve_verify_driver_compatibility(struct gve_priv *priv)
+{
+	struct gve_driver_info *driver_info;
+	int err;
+
+	driver_info = rte_zmalloc("driver info", sizeof(struct gve_driver_info), 0);
+	if (driver_info == NULL) {
+		PMD_DRV_LOG(ERR,
+			    "Could not alloc for driver compatibility");
+		return -ENOMEM;
+	}
+	*driver_info = (struct gve_driver_info) {
+		.os_type = 5, /* DPDK */
+		.driver_major = GVE_VERSION_MAJOR,
+		.driver_minor = GVE_VERSION_MINOR,
+		.driver_sub = GVE_VERSION_SUB,
+		.os_version_major = cpu_to_be32(DPDK_VERSION_MAJOR),
+		.os_version_minor = cpu_to_be32(DPDK_VERSION_MINOR),
+		.os_version_sub = cpu_to_be32(DPDK_VERSION_SUB),
+		.driver_capability_flags = {
+			cpu_to_be64(GVE_DRIVER_CAPABILITY_FLAGS1),
+			cpu_to_be64(GVE_DRIVER_CAPABILITY_FLAGS2),
+			cpu_to_be64(GVE_DRIVER_CAPABILITY_FLAGS3),
+			cpu_to_be64(GVE_DRIVER_CAPABILITY_FLAGS4),
+		},
+	};
+
+	populate_driver_version_strings((char *)driver_info->os_version_str1,
+			(char *)driver_info->os_version_str2);
+
+	err = gve_adminq_verify_driver_compatibility(priv,
+		sizeof(struct gve_driver_info), (dma_addr_t)driver_info);
+
+	/* It's ok if the device doesn't support this */
+	if (err == -EOPNOTSUPP)
+		err = 0;
+
+	rte_free(driver_info);
 	return err;
 }
 
@@ -671,6 +705,11 @@ gve_init_priv(struct gve_priv *priv, bool skip_describe_device)
 	if (err) {
 		PMD_DRV_LOG(ERR, "Failed to alloc admin queue: err=%d", err);
 		return err;
+	}
+	err = gve_verify_driver_compatibility(priv);
+	if (err) {
+		PMD_DRV_LOG(ERR, "Could not verify driver compatibility: err=%d", err);
+		goto free_adminq;
 	}
 
 	if (skip_describe_device)
