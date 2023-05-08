@@ -7,10 +7,17 @@ if is_windows
     subdir_done()
 endif
 
+if is_freebsd
+    build = false
+    reason = 'not supported on FreeBSD'
+    subdir_done()
+endif
+
 sources = files(
         'base/gve_adminq.c',
         'gve_rx.c',
         'gve_tx.c',
         'gve_ethdev.c',
+        'gve_version.c',
 )
 includes += include_directories('base')
