@@ -46,5 +46,7 @@ EXPERIMENTAL {
 	rte_graph_worker_model_set;
 	rte_graph_worker_model_get;
 
+	rte_graph_model_dispatch_lcore_affinity_set;
+
 	local: *;
 };
