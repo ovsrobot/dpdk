@@ -120,7 +120,7 @@ struct rte_ring_hts_headtail {
 struct rte_ring {
 	char name[RTE_RING_NAMESIZE] __rte_cache_aligned;
 	/**< Name of the ring. */
-	int flags;               /**< Flags supplied at creation. */
+	uint32_t flags;               /**< Flags supplied at creation. */
 	const struct rte_memzone *memzone;
 			/**< Memzone, if any, containing the rte_ring */
 	uint32_t size;           /**< Size of ring. */
