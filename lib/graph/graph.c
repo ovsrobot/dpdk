@@ -449,6 +449,10 @@ rte_graph_destroy(rte_graph_t id)
 	while (graph != NULL) {
 		tmp = STAILQ_NEXT(graph, next);
 		if (graph->id == id) {
+			/* Destroy the schedule work queue if has */
+			if (rte_graph_worker_model_get() == RTE_GRAPH_MODEL_MCORE_DISPATCH)
+				graph_sched_wq_destroy(graph);
+
 			/* Call fini() of the all the nodes in the graph */
 			graph_node_fini(graph);
 			/* Destroy graph fast path memory */
@@ -542,6 +546,11 @@ graph_clone(struct graph *parent_graph, const char *name, struct rte_graph_param
 	/* Allocate the Graph fast path memory and populate the data */
 	if (graph_fp_mem_create(graph))
 		goto graph_cleanup;
+
+	/* Create the graph schedule work queue */
+	if (rte_graph_worker_model_get() == RTE_GRAPH_MODEL_MCORE_DISPATCH &&
+	    graph_sched_wq_create(graph, parent_graph, prm))
+		goto graph_mem_destroy;
 
 	/* Call init() of the all the nodes in the graph */
 	if (graph_node_init(graph))
