@@ -41,6 +41,8 @@
 static struct rte_lpm *ipv4_l3fwd_lpm_lookup_struct[NB_SOCKETS];
 static struct rte_lpm6 *ipv6_l3fwd_lpm_lookup_struct[NB_SOCKETS];
 
+extern struct lcore_stats stats[RTE_MAX_LCORE];
+
 /* Performing LPM-based lookups. 8< */
 static inline uint16_t
 lpm_get_ipv4_dst_port(const struct rte_ipv4_hdr *ipv4_hdr,
@@ -153,6 +155,7 @@ lpm_main_loop(__rte_unused void *dummy)
 	struct lcore_conf *qconf;
 	const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) /
 		US_PER_S * BURST_TX_DRAIN_US;
+	bool start_count = 0;
 
 	lcore_id = rte_lcore_id();
 	qconf = &lcore_conf[lcore_id];
@@ -207,8 +210,22 @@ lpm_main_loop(__rte_unused void *dummy)
 			queueid = qconf->rx_queue_list[i].queue_id;
 			nb_rx = rte_eth_rx_burst(portid, queueid, pkts_burst,
 				MAX_PKT_BURST);
-			if (nb_rx == 0)
-				continue;
+			if (start_count == 0) {
+				if (nb_rx != 0)
+					start_count = 1;
+			}
+
+			if (start_count == 1) {
+				stats[lcore_id].nb_rx_pkts[i] += nb_rx;
+				stats[lcore_id].num_loop[i]++;
+				if (nb_rx < MAX_PKT_BURST && nb_rx > 0)
+					stats[lcore_id].no_full_loop[i]++;
+
+				if (nb_rx == 0) {
+					stats[lcore_id].none_loop[i]++;
+					continue;
+				}
+			}
 
 #if defined RTE_ARCH_X86 || defined __ARM_NEON \
 			 || defined RTE_ARCH_PPC_64
@@ -221,6 +238,11 @@ lpm_main_loop(__rte_unused void *dummy)
 		}
 
 		cur_tsc = rte_rdtsc();
+	}
+
+	for (i = 0; i < n_rx_q; ++i) {
+		stats[lcore_id].none_loop_per[i] = (float)stats[lcore_id].none_loop[i]/stats[lcore_id].num_loop[i]*100;
+		stats[lcore_id].no_full_loop_per[i] = (float)stats[lcore_id].no_full_loop[i]/stats[lcore_id].num_loop[i]*100;
 	}
 
 	return 0;

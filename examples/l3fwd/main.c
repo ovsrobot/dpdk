@@ -53,6 +53,8 @@
 
 #define MAX_LCORE_PARAMS 1024
 
+struct lcore_stats stats[RTE_MAX_LCORE];
+
 uint16_t nb_rxd = RX_DESC_DEFAULT;
 uint16_t nb_txd = TX_DESC_DEFAULT;
 
@@ -1591,6 +1593,26 @@ main(int argc, char **argv)
 
 	} else {
 		rte_eal_mp_wait_lcore();
+
+		for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++) {
+			if (rte_lcore_is_enabled(lcore_id) == 0)
+				continue;
+			qconf = &lcore_conf[lcore_id];
+			for (queue = 0; queue < qconf->n_rx_queue; ++queue) {
+				printf("\nlcore id:%d\n", lcore_id);
+				printf("queue_id:%d\n",queue);
+				printf("Rx pkt %d\n", stats[lcore_id].nb_rx_pkts[queue]);
+				printf("loop number: %d, 0 pkts loop:%d, <32 pkts loop:%d\n",
+					stats[lcore_id].num_loop[queue], stats[lcore_id].none_loop[queue], stats[lcore_id].no_full_loop[queue]);
+				printf("0 pkts loop percentage:%.2f%%, <32 pkts loop percentage:%.2f%%\n",
+					stats[lcore_id].none_loop_per[queue], stats[lcore_id].no_full_loop_per[queue]);
+				printf("------------------------------------\n\n");
+
+			}
+		}
+
+		nic_xstats_display(0);
+		nic_xstats_display(1);
 
 		RTE_ETH_FOREACH_DEV(portid) {
 			if ((enabled_port_mask & (1 << portid)) == 0)
