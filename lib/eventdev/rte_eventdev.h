@@ -1944,7 +1944,7 @@ __rte_event_enqueue_burst(uint8_t dev_id, uint8_t port_id,
 	 * Allow zero cost non burst mode routine invocation if application
 	 * requests nb_events as const one
 	 */
-	if (nb_events == 1)
+	if (__extension__(__builtin_constant_p(nb_events)) && nb_events == 1)
 		return (fp_ops->enqueue)(port, ev);
 	else
 		return fn(port, ev, nb_events);
@@ -2200,7 +2200,7 @@ rte_event_dequeue_burst(uint8_t dev_id, uint8_t port_id, struct rte_event ev[],
 	 * Allow zero cost non burst mode routine invocation if application
 	 * requests nb_events as const one
 	 */
-	if (nb_events == 1)
+	if (__extension__(__builtin_constant_p(nb_events)) && nb_events == 1)
 		return (fp_ops->dequeue)(port, ev, timeout_ticks);
 	else
 		return (fp_ops->dequeue_burst)(port, ev, nb_events,
