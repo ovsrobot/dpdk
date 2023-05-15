@@ -329,6 +329,19 @@ Additional Options
 
     -a 18:01.0,cap=dcf,acl=off
 
+- ``Control IAVF reset watchdog``
+
+  By default, the reset watchdog is enabled when link state changes to down.
+  The default period is 2000us, defined by ``IAVF_DEV_WATCHDOG_PERIOD``.
+  The user can set ``watchdog_period`` to adjust the watchdog period
+  (microseconds), or set it to 0 to disable the watchdog.
+
+    -a 18:01.0,watchdog_period=5000 (change period to 5000 microseconds)
+
+    or
+
+    -a 18:01.0,watchdog_period=0 (disable reset watchdog)
+
 .. _figure_ice_dcf:
 
 .. figure:: img/ice_dcf.*
