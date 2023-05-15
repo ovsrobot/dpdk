@@ -673,6 +673,54 @@ pci_vfio_mmap_bar(int vfio_dev_fd, struct mapped_pci_resource *vfio_res,
 	return 0;
 }
 
+static int
+pci_vfio_sparse_mmap_bar(int vfio_dev_fd, struct mapped_pci_resource *vfio_res,
+		int bar_index, int additional_flags)
+{
+	struct pci_map *bar = &vfio_res->maps[bar_index];
+	struct vfio_region_sparse_mmap_area *sparse;
+	void *bar_addr;
+	uint32_t i;
+
+	if (bar->size == 0) {
+		RTE_LOG(DEBUG, EAL, "Bar size is 0, skip BAR%d\n", bar_index);
+		return 0;
+	}
+
+	/* reserve the address using an inaccessible mapping */
+	bar_addr = mmap(bar->addr, bar->size, 0, MAP_PRIVATE |
+			MAP_ANONYMOUS | additional_flags, -1, 0);
+	if (bar_addr != MAP_FAILED) {
+		void *map_addr = NULL;
+		for (i = 0; i < bar->nr_areas; i++) {
+			sparse = &bar->areas[i];
+			if (sparse->size) {
+				void *addr = RTE_PTR_ADD(bar_addr, (uintptr_t)sparse->offset);
+				map_addr = pci_map_resource(addr, vfio_dev_fd,
+					bar->offset + sparse->offset, sparse->size,
+					RTE_MAP_FORCE_ADDRESS);
+				if (map_addr == NULL) {
+					munmap(bar_addr, bar->size);
+					RTE_LOG(ERR, EAL, "Failed to map pci BAR%d\n",
+						bar_index);
+					goto err_map;
+				}
+			}
+		}
+	} else {
+		RTE_LOG(ERR, EAL, "Failed to create inaccessible mapping for BAR%d\n",
+			bar_index);
+		goto err_map;
+	}
+
+	bar->addr = bar_addr;
+	return 0;
+
+err_map:
+	bar->nr_areas = 0;
+	return -1;
+}
+
 /*
  * region info may contain capability headers, so we need to keep reallocating
  * the memory until we match allocated memory size with argsz.
@@ -875,6 +923,8 @@ pci_vfio_map_resource_primary(struct rte_pci_device *dev)
 
 	for (i = 0; i < vfio_res->nb_maps; i++) {
 		void *bar_addr;
+		struct vfio_info_cap_header *hdr;
+		struct vfio_region_info_cap_sparse_mmap *sparse;
 
 		ret = pci_vfio_get_region_info(vfio_dev_fd, &reg, i);
 		if (ret < 0) {
@@ -920,12 +970,33 @@ pci_vfio_map_resource_primary(struct rte_pci_device *dev)
 		maps[i].size = reg->size;
 		maps[i].path = NULL; /* vfio doesn't have per-resource paths */
 
-		ret = pci_vfio_mmap_bar(vfio_dev_fd, vfio_res, i, 0);
-		if (ret < 0) {
-			RTE_LOG(ERR, EAL, "%s mapping BAR%i failed: %s\n",
-					pci_addr, i, strerror(errno));
-			free(reg);
-			goto err_vfio_res;
+		hdr = pci_vfio_info_cap(reg, VFIO_REGION_INFO_CAP_SPARSE_MMAP);
+
+		if (hdr != NULL) {
+			sparse = container_of(hdr,
+				struct vfio_region_info_cap_sparse_mmap, header);
+			if (sparse->nr_areas > 0) {
+				maps[i].nr_areas = sparse->nr_areas;
+				maps[i].areas = sparse->areas;
+			}
+		}
+
+		if (maps[i].nr_areas > 0) {
+			ret = pci_vfio_sparse_mmap_bar(vfio_dev_fd, vfio_res, i, 0);
+			if (ret < 0) {
+				RTE_LOG(ERR, EAL, "%s sparse mapping BAR%i failed: %s\n",
+						pci_addr, i, strerror(errno));
+				free(reg);
+				goto err_vfio_res;
+			}
+		} else {
+			ret = pci_vfio_mmap_bar(vfio_dev_fd, vfio_res, i, 0);
+			if (ret < 0) {
+				RTE_LOG(ERR, EAL, "%s mapping BAR%i failed: %s\n",
+						pci_addr, i, strerror(errno));
+				free(reg);
+				goto err_vfio_res;
+			}
 		}
 
 		dev->mem_resource[i].addr = maps[i].addr;
@@ -1008,11 +1079,20 @@ pci_vfio_map_resource_secondary(struct rte_pci_device *dev)
 	maps = vfio_res->maps;
 
 	for (i = 0; i < vfio_res->nb_maps; i++) {
-		ret = pci_vfio_mmap_bar(vfio_dev_fd, vfio_res, i, MAP_FIXED);
-		if (ret < 0) {
-			RTE_LOG(ERR, EAL, "%s mapping BAR%i failed: %s\n",
-					pci_addr, i, strerror(errno));
-			goto err_vfio_dev_fd;
+		if (maps[i].nr_areas > 0) {
+			ret = pci_vfio_sparse_mmap_bar(vfio_dev_fd, vfio_res, i, 0);
+			if (ret < 0) {
+				RTE_LOG(ERR, EAL, "%s sparse mapping BAR%i failed: %s\n",
+						pci_addr, i, strerror(errno));
+				goto err_vfio_dev_fd;
+			}
+		} else {
+			ret = pci_vfio_mmap_bar(vfio_dev_fd, vfio_res, i, 0);
+			if (ret < 0) {
+				RTE_LOG(ERR, EAL, "%s mapping BAR%i failed: %s\n",
+						pci_addr, i, strerror(errno));
+				goto err_vfio_dev_fd;
+			}
 		}
 
 		dev->mem_resource[i].addr = maps[i].addr;
@@ -1062,7 +1142,7 @@ find_and_unmap_vfio_resource(struct mapped_pci_res_list *vfio_res_list,
 		break;
 	}
 
-	if  (vfio_res == NULL)
+	if (vfio_res == NULL)
 		return vfio_res;
 
 	RTE_LOG(INFO, EAL, "Releasing PCI mapped resource for %s\n",
