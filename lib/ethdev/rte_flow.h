@@ -3740,8 +3740,8 @@ enum rte_flow_field_id {
 	RTE_FLOW_FIELD_START = 0,	/**< Start of a packet. */
 	RTE_FLOW_FIELD_MAC_DST,		/**< Destination MAC Address. */
 	RTE_FLOW_FIELD_MAC_SRC,		/**< Source MAC Address. */
-	RTE_FLOW_FIELD_VLAN_TYPE,	/**< 802.1Q Tag Identifier. */
-	RTE_FLOW_FIELD_VLAN_ID,		/**< 802.1Q VLAN Identifier. */
+	RTE_FLOW_FIELD_VLAN_TYPE,	/**< VLAN Tag Identifier. */
+	RTE_FLOW_FIELD_VLAN_ID,		/**< VLAN Identifier. */
 	RTE_FLOW_FIELD_MAC_TYPE,	/**< EtherType. */
 	RTE_FLOW_FIELD_IPV4_DSCP,	/**< IPv4 DSCP. */
 	RTE_FLOW_FIELD_IPV4_TTL,	/**< IPv4 Time To Live. */
@@ -3775,7 +3775,8 @@ enum rte_flow_field_id {
 	RTE_FLOW_FIELD_HASH_RESULT,	/**< Hash result. */
 	RTE_FLOW_FIELD_GENEVE_OPT_TYPE,	/**< GENEVE option type */
 	RTE_FLOW_FIELD_GENEVE_OPT_CLASS,/**< GENEVE option class */
-	RTE_FLOW_FIELD_GENEVE_OPT_DATA	/**< GENEVE option data */
+	RTE_FLOW_FIELD_GENEVE_OPT_DATA,	/**< GENEVE option data */
+	RTE_FLOW_FIELD_MPLS		/**< MPLS header. */
 };
 
 /**
@@ -3821,22 +3822,38 @@ struct rte_flow_action_modify_data {
 					 * Values other than @p 0 are not
 					 * necessarily supported.
 					 *
+					 * @note that for MPLS field,
+					 * encapsulation level also include
+					 * tunnel since MPLS may appear in
+					 * outer, inner or tunnel.
+					 *
 					 * For RTE_FLOW_FIELD_TAG it represents
 					 * the tag element in the tag array.
 					 */
 					uint8_t level;
-					/**
-					 * Geneve option type. relevant only
-					 * for RTE_FLOW_FIELD_GENEVE_OPT_XXXX
-					 * modification type.
-					 */
-					uint8_t type;
-					/**
-					 * Geneve option class. relevant only
-					 * for RTE_FLOW_FIELD_GENEVE_OPT_XXXX
-					 * modification type.
-					 */
-					rte_be16_t class_id;
+					union {
+						/**
+						 * Header level inside
+						 * encapsulation level.
+						 */
+						uint8_t sub_level;
+						/**
+						 * Geneve option identifier.
+						 * relevant only for
+						 * RTE_FLOW_FIELD_GENEVE_OPT_XXXX
+						 * modification type.
+						 */
+						struct {
+							/**
+							 * Geneve option type.
+							 */
+							uint8_t type;
+							/**
+							 * Geneve option class.
+							 */
+							rte_be16_t class_id;
+						};
+					};
 				};
 				struct rte_flow_item_flex_handle *flex_handle;
 			};

@@ -2937,6 +2937,10 @@ as well as any tag element in the tag array:
 For the tag array (in case of multiple tags are supported and present)
 ``level`` translates directly into the array index.
 
+- ``sub_level`` is the index of the header inside encapsulation level.
+  It is used for modify either ``VLAN`` or ``MPLS`` headers which multiple of
+  them might be supported in same encapsulation level.
+
 ``type`` is used to specify (along with ``class_id``) the Geneve option which
 is being modified.
 This field is relevant only for ``RTE_FLOW_FIELD_GENEVE_OPT_XXXX`` type.
@@ -3001,6 +3005,8 @@ value as sequence of bytes {xxx, xxx, 0x85, xxx, xxx, xxx}.
    | ``field``       | ID: packet field, mark, meta, tag, immediate, pointer    |
    +-----------------+----------------------------------------------------------+
    | ``level``       | encapsulation level of a packet field or tag array index |
+   +-----------------+----------------------------------------------------------+
+   | ``sub_level``   | header level inside encapsulation level                  |
    +-----------------+----------------------------------------------------------+
    | ``type``        | geneve option type                                       |
    +-----------------+----------------------------------------------------------+
