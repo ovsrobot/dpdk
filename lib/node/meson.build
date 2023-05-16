@@ -14,6 +14,7 @@ sources = files(
         'ip4_lookup.c',
         'ip6_lookup.c',
         'ip4_rewrite.c',
+        'ip6_rewrite.c',
         'log.c',
         'null.c',
         'pkt_cls.c',
