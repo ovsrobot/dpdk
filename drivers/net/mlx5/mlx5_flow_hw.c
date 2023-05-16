@@ -3546,10 +3546,8 @@ flow_hw_validate_action_modify_field(const struct rte_flow_action *action,
 				     const struct rte_flow_action *mask,
 				     struct rte_flow_error *error)
 {
-	const struct rte_flow_action_modify_field *action_conf =
-		action->conf;
-	const struct rte_flow_action_modify_field *mask_conf =
-		mask->conf;
+	const struct rte_flow_action_modify_field *action_conf = action->conf;
+	const struct rte_flow_action_modify_field *mask_conf = mask->conf;
 
 	if (action_conf->operation != mask_conf->operation)
 		return rte_flow_error_set(error, EINVAL,
@@ -3604,6 +3602,11 @@ flow_hw_validate_action_modify_field(const struct rte_flow_action *action,
 		return rte_flow_error_set(error, EINVAL,
 				RTE_FLOW_ERROR_TYPE_ACTION, action,
 				"modifying Geneve VNI is not supported");
+	/* Due to HW bug, tunnel MPLS header is read only. */
+	if (action_conf->dst.field == RTE_FLOW_FIELD_MPLS)
+		return rte_flow_error_set(error, EINVAL,
+				RTE_FLOW_ERROR_TYPE_ACTION, action,
+				"MPLS cannot be used as destination");
 	return 0;
 }
 
@@ -4134,9 +4137,8 @@ mlx5_flow_hw_actions_validate(struct rte_eth_dev *dev,
 			action_flags |= MLX5_FLOW_ACTION_METER;
 			break;
 		case RTE_FLOW_ACTION_TYPE_MODIFY_FIELD:
-			ret = flow_hw_validate_action_modify_field(action,
-									mask,
-									error);
+			ret = flow_hw_validate_action_modify_field(action, mask,
+								   error);
 			if (ret < 0)
 				return ret;
 			action_flags |= MLX5_FLOW_ACTION_MODIFY_FIELD;
