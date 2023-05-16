@@ -12273,14 +12273,27 @@ cmd_show_rx_tx_desc_status_parsed(void *parsed_result,
 		__rte_unused void *data)
 {
 	struct cmd_show_rx_tx_desc_status_result *res = parsed_result;
+	struct rte_eth_rxq_info rxq_info;
+	struct rte_eth_txq_info txq_info;
 	int rc;
 
-	if (!rte_eth_dev_is_valid_port(res->cmd_pid)) {
-		fprintf(stderr, "invalid port id %u\n", res->cmd_pid);
-		return;
-	}
-
 	if (!strcmp(res->cmd_keyword, "rxq")) {
+		if (rte_eth_rx_queue_info_get(res->cmd_pid, res->cmd_qid, &rxq_info)) {
+			fprintf(stderr, "Failed to get port %u Rx queue %u info\n",
+				res->cmd_pid, res->cmd_qid);
+			return;
+		}
+
+		if (rxq_info.queue_state != RTE_ETH_QUEUE_STATE_STARTED) {
+			fprintf(stderr, "Rx queue %u not started\n", res->cmd_qid);
+			return;
+		}
+
+		if (res->cmd_did >= rxq_info.nb_desc) {
+			fprintf(stderr, "Invalid desc id %u\n", res->cmd_did);
+			return;
+		}
+
 		rc = rte_eth_rx_descriptor_status(res->cmd_pid, res->cmd_qid,
 					     res->cmd_did);
 		if (rc < 0) {
@@ -12296,6 +12309,22 @@ cmd_show_rx_tx_desc_status_parsed(void *parsed_result,
 		else
 			printf("Desc status = UNAVAILABLE\n");
 	} else if (!strcmp(res->cmd_keyword, "txq")) {
+		if (rte_eth_tx_queue_info_get(res->cmd_pid, res->cmd_qid, &txq_info)) {
+			fprintf(stderr, "Failed to get port %u Tx queue %u info\n",
+				res->cmd_pid, res->cmd_qid);
+			return;
+		}
+
+		if (txq_info.queue_state != RTE_ETH_QUEUE_STATE_STARTED) {
+			fprintf(stderr, "Tx queue %u not started\n", res->cmd_qid);
+			return;
+		}
+
+		if (res->cmd_did >= txq_info.nb_desc) {
+			fprintf(stderr, "Invalid desc id %u\n", res->cmd_did);
+			return;
+		}
+
 		rc = rte_eth_tx_descriptor_status(res->cmd_pid, res->cmd_qid,
 					     res->cmd_did);
 		if (rc < 0) {
@@ -12373,10 +12402,17 @@ cmd_show_rx_queue_desc_used_count_parsed(void *parsed_result,
 		__rte_unused void *data)
 {
 	struct cmd_show_rx_queue_desc_used_count_result *res = parsed_result;
+	struct rte_eth_rxq_info rxq_info;
 	int rc;
 
-	if (!rte_eth_dev_is_valid_port(res->cmd_pid)) {
-		fprintf(stderr, "invalid port id %u\n", res->cmd_pid);
+	if (rte_eth_rx_queue_info_get(res->cmd_pid, res->cmd_qid, &rxq_info)) {
+		fprintf(stderr, "Failed to get port %u Rx queue %u info\n",
+			res->cmd_pid, res->cmd_qid);
+		return;
+	}
+
+	if (rxq_info.queue_state != RTE_ETH_QUEUE_STATE_STARTED) {
+		fprintf(stderr, "Rx queue %u not started\n", res->cmd_qid);
 		return;
 	}
 
