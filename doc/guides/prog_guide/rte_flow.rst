@@ -2937,6 +2937,14 @@ as well as any tag element in the tag array:
 For the tag array (in case of multiple tags are supported and present)
 ``level`` translates directly into the array index.
 
+``type`` is used to specify (along with ``class_id``) the Geneve option which
+is being modified.
+This field is relevant only for ``RTE_FLOW_FIELD_GENEVE_OPT_XXXX`` type.
+
+``class_id`` is used to specify (along with ``type``) the Geneve option which
+is being modified.
+This field is relevant only for ``RTE_FLOW_FIELD_GENEVE_OPT_XXXX`` type.
+
 ``flex_handle`` is used to specify the flex item pointer which is being
 modified. ``flex_handle`` and ``level`` are mutually exclusive.
 
@@ -2993,6 +3001,10 @@ value as sequence of bytes {xxx, xxx, 0x85, xxx, xxx, xxx}.
    | ``field``       | ID: packet field, mark, meta, tag, immediate, pointer    |
    +-----------------+----------------------------------------------------------+
    | ``level``       | encapsulation level of a packet field or tag array index |
+   +-----------------+----------------------------------------------------------+
+   | ``type``        | geneve option type                                       |
+   +-----------------+----------------------------------------------------------+
+   | ``class_id``    | geneve option class ID                                   |
    +-----------------+----------------------------------------------------------+
    | ``flex_handle`` | flex item handle of a packet field                       |
    +-----------------+----------------------------------------------------------+
