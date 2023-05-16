@@ -1009,8 +1009,11 @@ rte_mempool_avail_count(const struct rte_mempool *mp)
 
 	count = rte_mempool_ops_get_count(mp);
 
-	if (mp->cache_size == 0)
+	if (mp->cache_size == 0) {
+		if (count > mp->size)
+			return mp->size;
 		return count;
+	}
 
 	for (lcore_id = 0; lcore_id < RTE_MAX_LCORE; lcore_id++)
 		count += mp->local_cache[lcore_id].len;
