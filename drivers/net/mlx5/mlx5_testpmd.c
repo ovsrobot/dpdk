@@ -561,6 +561,64 @@ cmdline_parse_inst_t mlx5_cmd_unmap_ext_rxq = {
 	}
 };
 
+/* Set flow engine mode with flags command. */
+struct mlx5_cmd_set_flow_engine_mode {
+	cmdline_fixed_string_t mlx5;
+	cmdline_fixed_string_t set;
+	cmdline_fixed_string_t flow_engine;
+	uint8_t mode;
+	uint32_t flags;
+};
+
+
+static void
+mlx5_cmd_set_flow_engine_mode_parsed(void *parsed_result,
+				     __rte_unused struct cmdline *cl,
+				     __rte_unused void *data)
+{
+	struct mlx5_cmd_set_flow_engine_mode *res = parsed_result;
+	int ret;
+
+	ret = rte_pmd_mlx5_flow_engine_set_mode((enum mlx5_flow_engine_mode)res->mode, res->flags);
+
+	if (ret < 0)
+		fprintf(stderr, "Fail to set flow_engine to %s mode with flags %x, error %s\n",
+			!res->mode ? "active" : "standby", res->flags, strerror(-ret));
+	else
+		TESTPMD_LOG(DEBUG, "Set %d ports flow_engine to %s mode with flags %x\n", ret,
+			    !res->mode ? "active" : "standby", res->flags);
+}
+
+cmdline_parse_token_string_t mlx5_cmd_set_flow_engine_mode_mlx5 =
+	TOKEN_STRING_INITIALIZER(struct mlx5_cmd_set_flow_engine_mode, mlx5,
+				 "mlx5");
+cmdline_parse_token_string_t mlx5_cmd_set_flow_engine_mode_set =
+	TOKEN_STRING_INITIALIZER(struct mlx5_cmd_set_flow_engine_mode, set,
+				 "set");
+cmdline_parse_token_string_t mlx5_cmd_set_flow_engine_mode_flow_engine =
+	TOKEN_STRING_INITIALIZER(struct mlx5_cmd_set_flow_engine_mode, flow_engine,
+				 "flow_engine");
+cmdline_parse_token_num_t mlx5_cmd_set_flow_engine_mode_mode =
+	TOKEN_NUM_INITIALIZER(struct mlx5_cmd_set_flow_engine_mode, mode,
+			      RTE_UINT8);
+cmdline_parse_token_num_t mlx5_cmd_set_flow_engine_mode_flags =
+	TOKEN_NUM_INITIALIZER(struct mlx5_cmd_set_flow_engine_mode, flags,
+			      RTE_UINT32);
+
+cmdline_parse_inst_t mlx5_cmd_set_flow_engine_mode = {
+	.f = &mlx5_cmd_set_flow_engine_mode_parsed,
+	.data = NULL,
+	.help_str = "mlx5 set flow_engine <0|1> (flag)",
+	.tokens = {
+		(void *)&mlx5_cmd_set_flow_engine_mode_mlx5,
+		(void *)&mlx5_cmd_set_flow_engine_mode_set,
+		(void *)&mlx5_cmd_set_flow_engine_mode_flow_engine,
+		(void *)&mlx5_cmd_set_flow_engine_mode_mode,
+		(void *)&mlx5_cmd_set_flow_engine_mode_flags,
+		NULL,
+	}
+};
+
 static struct testpmd_driver_commands mlx5_driver_cmds = {
 	.commands = {
 		{
@@ -587,6 +645,11 @@ static struct testpmd_driver_commands mlx5_driver_cmds = {
 			.ctx = &mlx5_cmd_unmap_ext_rxq,
 			.help = "mlx5 port (port_id) ext_rxq unmap (sw_queue_id)\n"
 				"    Unmap external Rx queue ethdev index mapping\n\n",
+		},
+		{
+			.ctx = &mlx5_cmd_set_flow_engine_mode,
+			.help = "mlx5 set flow_engine (mode) (flag)\n"
+				"    Set flow_engine to the specific mode with flags.\n\n"
 		},
 		{
 			.ctx = NULL,
