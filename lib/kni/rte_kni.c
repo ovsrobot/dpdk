@@ -660,7 +660,8 @@ kni_allocate_mbufs(struct rte_kni *kni)
 	int i, ret;
 	struct rte_mbuf *pkts[MAX_MBUF_BURST_NUM];
 	void *phys[MAX_MBUF_BURST_NUM];
-	int allocq_free;
+	int allocq_free, allocq_count;
+	uint32_t allocq;
 
 	RTE_BUILD_BUG_ON(offsetof(struct rte_mbuf, pool) !=
 			 offsetof(struct rte_kni_mbuf, pool));
@@ -682,10 +683,26 @@ kni_allocate_mbufs(struct rte_kni *kni)
 		RTE_LOG(ERR, KNI, "No valid mempool for allocating mbufs\n");
 		return;
 	}
-
+	/* First, getting allocation count from alloc_q. alloc_q is allocated in this function 
+	 * and/or kni_alloc function from mempool.
+	 * If alloc_q is completely removed, it shall be allocated again.
+	 * */
+	allocq = kni_fifo_count(kni->alloc_q);
+	/* How many free allocation is possible from mempool. */
 	allocq_free = kni_fifo_free_count(kni->alloc_q);
-	allocq_free = (allocq_free > MAX_MBUF_BURST_NUM) ?
-		MAX_MBUF_BURST_NUM : allocq_free;
+	/* Allocated alloc_q count shall be max MAX_MBUF_BURST_NUM. */
+	allocq_count = MAX_MBUF_BURST_NUM - (int)allocq;
+	/* Try to figure out how many allocation is possible. allocq_free is max possible.*/
+	allocq_free = (allocq_free > MAX_MBUF_BURST_NUM )? MAX_MBUF_BURST_NUM : allocq_free;
+	/* Buffer is not removed so no need re-allocate*/
+
+	if(!allocq_count) {
+		/* Buffer is not removed so no need re-allocation*/
+		return;
+	} else if (allocq_free > allocq_count) {
+		allocq_free = allocq_count;
+	}
+
 	for (i = 0; i < allocq_free; i++) {
 		pkts[i] = rte_pktmbuf_alloc(kni->pktmbuf_pool);
 		if (unlikely(pkts[i] == NULL)) {
