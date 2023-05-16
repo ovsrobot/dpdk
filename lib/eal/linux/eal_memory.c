@@ -1001,6 +1001,8 @@ remap_needed_hugepages(struct hugepage_file *hugepages, int n_pages)
 		if (cur->size == 0)
 			break;
 
+		if (cur_page - seg_start_page >= RTE_MAX_MEMSEG_PER_LIST)
+			new_memseg = 1;
 		if (cur_page == 0)
 			new_memseg = 1;
 		else if (cur->socket_id != prev->socket_id)
