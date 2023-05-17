@@ -27,7 +27,6 @@ DPDK_23 {
 	rte_mbuf_dynflag_register;
 	rte_mbuf_dynflag_register_bitnum;
 	rte_mbuf_platform_mempool_ops;
-	rte_mbuf_sanity_check;
 	rte_mbuf_set_platform_mempool_ops;
 	rte_mbuf_set_user_mempool_ops;
 	rte_mbuf_user_mempool_ops;
@@ -39,6 +38,7 @@ DPDK_23 {
 	rte_pktmbuf_pool_create;
 	rte_pktmbuf_pool_create_by_ops;
 	rte_pktmbuf_pool_init;
+	rte_mbuf_validate;
 
 	local: *;
 };

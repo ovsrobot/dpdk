@@ -339,13 +339,13 @@ rte_pktmbuf_priv_flags(struct rte_mempool *mp)
 
 #ifdef RTE_LIBRTE_MBUF_DEBUG
 
-/**  check mbuf type in debug mode */
-#define __rte_mbuf_sanity_check(m, is_h) rte_mbuf_sanity_check(m, is_h)
+/**  do mbuf type in debug mode */
+#define __rte_mbuf_validate(m, is_h) rte_mbuf_validate(m, is_h)
 
 #else /*  RTE_LIBRTE_MBUF_DEBUG */
 
-/**  check mbuf type in debug mode */
-#define __rte_mbuf_sanity_check(m, is_h) do { } while (0)
+/**  ignore mbuf checks if not in debug mode */
+#define __rte_mbuf_validate(m, is_h) do { } while (0)
 
 #endif /*  RTE_LIBRTE_MBUF_DEBUG */
 
@@ -514,7 +514,7 @@ rte_mbuf_ext_refcnt_update(struct rte_mbuf_ext_shared_info *shinfo,
 
 
 /**
- * Sanity checks on an mbuf.
+ * Consistency checks on an mbuf.
  *
  * Check the consistency of the given mbuf. The function will cause a
  * panic if corruption is detected.
@@ -526,12 +526,19 @@ rte_mbuf_ext_refcnt_update(struct rte_mbuf_ext_shared_info *shinfo,
  *   of a packet (in this case, some fields like nb_segs are not checked)
  */
 void
-rte_mbuf_sanity_check(const struct rte_mbuf *m, int is_header);
+rte_mbuf_validate(const struct rte_mbuf *m, int is_header);
+
+/* Older deprecated name for rte_mbuf_validate() */
+static inline __rte_deprecated
+void rte_mbuf_sanity_check(const struct rte_mbuf *m, int is_header)
+{
+	rte_mbuf_validate(m, is_header);
+}
 
 /**
- * Sanity checks on a mbuf.
+ * Do consistency checks on a mbuf.
  *
- * Almost like rte_mbuf_sanity_check(), but this function gives the reason
+ * Almost like rte_mbuf_validate(), but this function gives the reason
  * if corruption is detected rather than panic.
  *
  * @param m
@@ -551,7 +558,7 @@ int rte_mbuf_check(const struct rte_mbuf *m, int is_header,
 		   const char **reason);
 
 /**
- * Sanity checks on a reinitialized mbuf in debug mode.
+ * Do checks on a reinitialized mbuf in debug mode.
  *
  * Check the consistency of the given reinitialized mbuf.
  * The function will cause a panic if corruption is detected.
@@ -563,16 +570,16 @@ int rte_mbuf_check(const struct rte_mbuf *m, int is_header,
  *   The mbuf to be checked.
  */
 static __rte_always_inline void
-__rte_mbuf_raw_sanity_check(__rte_unused const struct rte_mbuf *m)
+__rte_mbuf_raw_validate(__rte_unused const struct rte_mbuf *m)
 {
 	RTE_ASSERT(rte_mbuf_refcnt_read(m) == 1);
 	RTE_ASSERT(m->next == NULL);
 	RTE_ASSERT(m->nb_segs == 1);
-	__rte_mbuf_sanity_check(m, 0);
+	__rte_mbuf_validate(m, 0);
 }
 
 /** For backwards compatibility. */
-#define MBUF_RAW_ALLOC_CHECK(m) __rte_mbuf_raw_sanity_check(m)
+#define MBUF_RAW_ALLOC_CHECK(m) __rte_mbuf_raw_validate(m)
 
 /**
  * Allocate an uninitialized mbuf from mempool *mp*.
@@ -599,7 +606,7 @@ static inline struct rte_mbuf *rte_mbuf_raw_alloc(struct rte_mempool *mp)
 
 	if (rte_mempool_get(mp, (void **)&m) < 0)
 		return NULL;
-	__rte_mbuf_raw_sanity_check(m);
+	__rte_mbuf_raw_validate(m);
 	return m;
 }
 
@@ -622,7 +629,7 @@ rte_mbuf_raw_free(struct rte_mbuf *m)
 {
 	RTE_ASSERT(!RTE_MBUF_CLONED(m) &&
 		  (!RTE_MBUF_HAS_EXTBUF(m) || RTE_MBUF_HAS_PINNED_EXTBUF(m)));
-	__rte_mbuf_raw_sanity_check(m);
+	__rte_mbuf_raw_validate(m);
 	rte_mempool_put(m->pool, m);
 }
 
@@ -886,7 +893,7 @@ static inline void rte_pktmbuf_reset(struct rte_mbuf *m)
 	rte_pktmbuf_reset_headroom(m);
 
 	m->data_len = 0;
-	__rte_mbuf_sanity_check(m, 1);
+	__rte_mbuf_validate(m, 1);
 }
 
 /**
@@ -942,22 +949,22 @@ static inline int rte_pktmbuf_alloc_bulk(struct rte_mempool *pool,
 	switch (count % 4) {
 	case 0:
 		while (idx != count) {
-			__rte_mbuf_raw_sanity_check(mbufs[idx]);
+			__rte_mbuf_raw_validate(mbufs[idx]);
 			rte_pktmbuf_reset(mbufs[idx]);
 			idx++;
 			/* fall-through */
 	case 3:
-			__rte_mbuf_raw_sanity_check(mbufs[idx]);
+			__rte_mbuf_raw_validate(mbufs[idx]);
 			rte_pktmbuf_reset(mbufs[idx]);
 			idx++;
 			/* fall-through */
 	case 2:
-			__rte_mbuf_raw_sanity_check(mbufs[idx]);
+			__rte_mbuf_raw_validate(mbufs[idx]);
 			rte_pktmbuf_reset(mbufs[idx]);
 			idx++;
 			/* fall-through */
 	case 1:
-			__rte_mbuf_raw_sanity_check(mbufs[idx]);
+			__rte_mbuf_raw_validate(mbufs[idx]);
 			rte_pktmbuf_reset(mbufs[idx]);
 			idx++;
 			/* fall-through */
@@ -1185,8 +1192,8 @@ static inline void rte_pktmbuf_attach(struct rte_mbuf *mi, struct rte_mbuf *m)
 	mi->pkt_len = mi->data_len;
 	mi->nb_segs = 1;
 
-	__rte_mbuf_sanity_check(mi, 1);
-	__rte_mbuf_sanity_check(m, 0);
+	__rte_mbuf_validate(mi, 1);
+	__rte_mbuf_validate(m, 0);
 }
 
 /**
@@ -1341,7 +1348,7 @@ static inline int __rte_pktmbuf_pinned_extbuf_decref(struct rte_mbuf *m)
 static __rte_always_inline struct rte_mbuf *
 rte_pktmbuf_prefree_seg(struct rte_mbuf *m)
 {
-	__rte_mbuf_sanity_check(m, 0);
+	__rte_mbuf_validate(m, 0);
 
 	if (likely(rte_mbuf_refcnt_read(m) == 1)) {
 
@@ -1412,7 +1419,7 @@ static inline void rte_pktmbuf_free(struct rte_mbuf *m)
 	struct rte_mbuf *m_next;
 
 	if (m != NULL)
-		__rte_mbuf_sanity_check(m, 1);
+		__rte_mbuf_validate(m, 1);
 
 	while (m != NULL) {
 		m_next = m->next;
@@ -1493,7 +1500,7 @@ rte_pktmbuf_copy(const struct rte_mbuf *m, struct rte_mempool *mp,
  */
 static inline void rte_pktmbuf_refcnt_update(struct rte_mbuf *m, int16_t v)
 {
-	__rte_mbuf_sanity_check(m, 1);
+	__rte_mbuf_validate(m, 1);
 
 	do {
 		rte_mbuf_refcnt_update(m, v);
@@ -1510,7 +1517,7 @@ static inline void rte_pktmbuf_refcnt_update(struct rte_mbuf *m, int16_t v)
  */
 static inline uint16_t rte_pktmbuf_headroom(const struct rte_mbuf *m)
 {
-	__rte_mbuf_sanity_check(m, 0);
+	__rte_mbuf_validate(m, 0);
 	return m->data_off;
 }
 
@@ -1524,7 +1531,7 @@ static inline uint16_t rte_pktmbuf_headroom(const struct rte_mbuf *m)
  */
 static inline uint16_t rte_pktmbuf_tailroom(const struct rte_mbuf *m)
 {
-	__rte_mbuf_sanity_check(m, 0);
+	__rte_mbuf_validate(m, 0);
 	return (uint16_t)(m->buf_len - rte_pktmbuf_headroom(m) -
 			  m->data_len);
 }
@@ -1539,7 +1546,7 @@ static inline uint16_t rte_pktmbuf_tailroom(const struct rte_mbuf *m)
  */
 static inline struct rte_mbuf *rte_pktmbuf_lastseg(struct rte_mbuf *m)
 {
-	__rte_mbuf_sanity_check(m, 1);
+	__rte_mbuf_validate(m, 1);
 	while (m->next != NULL)
 		m = m->next;
 	return m;
@@ -1583,7 +1590,7 @@ static inline struct rte_mbuf *rte_pktmbuf_lastseg(struct rte_mbuf *m)
 static inline char *rte_pktmbuf_prepend(struct rte_mbuf *m,
 					uint16_t len)
 {
-	__rte_mbuf_sanity_check(m, 1);
+	__rte_mbuf_validate(m, 1);
 
 	if (unlikely(len > rte_pktmbuf_headroom(m)))
 		return NULL;
@@ -1618,7 +1625,7 @@ static inline char *rte_pktmbuf_append(struct rte_mbuf *m, uint16_t len)
 	void *tail;
 	struct rte_mbuf *m_last;
 
-	__rte_mbuf_sanity_check(m, 1);
+	__rte_mbuf_validate(m, 1);
 
 	m_last = rte_pktmbuf_lastseg(m);
 	if (unlikely(len > rte_pktmbuf_tailroom(m_last)))
@@ -1646,7 +1653,7 @@ static inline char *rte_pktmbuf_append(struct rte_mbuf *m, uint16_t len)
  */
 static inline char *rte_pktmbuf_adj(struct rte_mbuf *m, uint16_t len)
 {
-	__rte_mbuf_sanity_check(m, 1);
+	__rte_mbuf_validate(m, 1);
 
 	if (unlikely(len > m->data_len))
 		return NULL;
@@ -1678,7 +1685,7 @@ static inline int rte_pktmbuf_trim(struct rte_mbuf *m, uint16_t len)
 {
 	struct rte_mbuf *m_last;
 
-	__rte_mbuf_sanity_check(m, 1);
+	__rte_mbuf_validate(m, 1);
 
 	m_last = rte_pktmbuf_lastseg(m);
 	if (unlikely(len > m_last->data_len))
@@ -1700,7 +1707,7 @@ static inline int rte_pktmbuf_trim(struct rte_mbuf *m, uint16_t len)
  */
 static inline int rte_pktmbuf_is_contiguous(const struct rte_mbuf *m)
 {
-	__rte_mbuf_sanity_check(m, 1);
+	__rte_mbuf_validate(m, 1);
 	return m->nb_segs == 1;
 }
 
