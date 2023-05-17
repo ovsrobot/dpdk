@@ -293,7 +293,7 @@ bcmfs5_mdst_desc(uint64_t addr, unsigned int len_div_16)
 }
 
 static bool
-bcmfs5_sanity_check(struct bcmfs_qp_message *msg)
+bcmfs5_message_check(struct bcmfs_qp_message *msg)
 {
 	unsigned int i = 0;
 
@@ -389,8 +389,8 @@ bcmfs5_enqueue_single_request_qp(struct bcmfs_qp *qp, void *op)
 	struct bcmfs_queue *txq = &qp->tx_q;
 	struct bcmfs_qp_message *msg = (struct bcmfs_qp_message *)op;
 
-	/* Do sanity check on message */
-	if (!bcmfs5_sanity_check(msg)) {
+	/* Do check on message */
+	if (!bcmfs5_message_check(msg)) {
 		BCMFS_DP_LOG(ERR, "Invalid msg on queue %d", qp->qpair_id);
 		return -EIO;
 	}
