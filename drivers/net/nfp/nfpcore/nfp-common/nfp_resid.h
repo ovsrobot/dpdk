@@ -184,19 +184,6 @@ NFP_CPP_ID_ISLAND_of(uint32_t id)
 	}))
 
 /*
- *  Do a general sanity check on the ME ID.
- * The check is on the highest possible island ID for the chip family and the
- * microengine number must  be a master ID.
- * @param meid      ME ID as created by NFP6000_MEID
- */
-#define NFP6000_MEID_IS_VALID(meid) \
-	(__extension__ ({ \
-		typeof(meid) _a = (meid); \
-		((((_a) >> 4) < 64) && (((_a) >> 4) >= 0) && \
-		 (((_a) & 0xF) >= 4)) \
-	}))
-
-/*
  *  Extract island ID from ME ID.
  * @param meid   ME ID as created by NFP6000_MEID
  */
