@@ -207,7 +207,7 @@ static int ecore_exe_queue_step(struct bnx2x_softc *sc,
 			break;
 	}
 
-	/* Sanity check */
+	/* Argument check */
 	if (!cur_len)
 		return ECORE_SUCCESS;
 
