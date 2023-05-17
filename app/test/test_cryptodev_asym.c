@@ -594,17 +594,6 @@ static int
 load_test_vectors(void)
 {
 	uint32_t i = 0, v_size = 0;
-	/* Load MODINV vector*/
-	v_size = RTE_DIM(modinv_test_case);
-	for (i = 0; i < v_size; i++) {
-		if (test_vector.size >= (TEST_VECTOR_SIZE)) {
-			RTE_LOG(DEBUG, USER1,
-				"TEST_VECTOR_SIZE too small\n");
-			return -1;
-		}
-		test_vector.address[test_vector.size] = &modinv_test_case[i];
-		test_vector.size++;
-	}
 	/* Load RSA vector*/
 	v_size = RTE_DIM(rsa_test_case_list);
 	for (i = 0; i < v_size; i++) {
@@ -1339,32 +1328,26 @@ error_exit:
 }
 
 static int
-test_mod_inv(void)
+modular_multiplicative_inverse(const void *test_data)
 {
-	struct rte_mempool *op_mpool = params->op_mpool;
-	struct rte_mempool *sess_mpool = params->session_mpool;
-	uint8_t dev_id = params->valid_devs[0];
-	struct rte_crypto_asym_op *asym_op = NULL;
-	struct rte_crypto_op *op = NULL, *result_op = NULL;
-	void *sess = NULL;
-	int status = TEST_SUCCESS;
+	const struct modinv_test_data *vector = test_data;
+	uint8_t input[TEST_DATA_SIZE] = { 0 };
+	uint8_t modulus[TEST_DATA_SIZE] = { 0 };
+	uint8_t result[TEST_DATA_SIZE] = { 0 };
 	struct rte_cryptodev_asym_capability_idx cap_idx;
 	const struct rte_cryptodev_asymmetric_xform_capability *capability;
-	uint8_t input[TEST_DATA_SIZE] = {0};
-	int ret = 0;
-	uint8_t result[sizeof(mod_p)] = { 0 };
+	struct rte_crypto_asym_xform xform = { };
+	const uint8_t dev_id = params->valid_devs[0];
 
-	if (rte_cryptodev_asym_get_xform_enum(
-		&modinv_xform.xform_type, "modinv") < 0) {
-		RTE_LOG(ERR, USER1,
-				 "Invalid ASYM algorithm specified\n");
-		return -1;
-	}
+	memcpy(input, vector->base.data, vector->base.len);
+	memcpy(modulus, vector->modulus.data, vector->modulus.len);
 
-	cap_idx.type = modinv_xform.xform_type;
+	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_MODINV;
+	xform.modex.modulus.data = modulus;
+	xform.modex.modulus.length = vector->modulus.len;
+	cap_idx.type = xform.xform_type;
 	capability = rte_cryptodev_asym_capability_get(dev_id,
 					&cap_idx);
-
 	if (capability == NULL) {
 		RTE_LOG(INFO, USER1,
 			"Device doesn't support MOD INV. Test Skipped\n");
@@ -1372,81 +1355,31 @@ test_mod_inv(void)
 	}
 
 	if (rte_cryptodev_asym_xform_capability_check_modlen(
-		capability,
-		modinv_xform.modinv.modulus.length)) {
+			capability,
+			xform.modinv.modulus.length)) {
 		RTE_LOG(ERR, USER1,
-				 "Invalid MODULUS length specified\n");
-				return TEST_SKIPPED;
-		}
-
-	ret = rte_cryptodev_asym_session_create(dev_id, &modinv_xform, sess_mpool, &sess);
-	if (ret < 0) {
-		RTE_LOG(ERR, USER1, "line %u "
-				"FAILED: %s", __LINE__,
-				"Session creation failed");
-		status = (ret == -ENOTSUP) ? TEST_SKIPPED : TEST_FAILED;
-		goto error_exit;
+			 "Invalid MODULUS length specified\n");
+		return TEST_SKIPPED;
 	}
-
-	/* generate crypto op data structure */
-	op = rte_crypto_op_alloc(op_mpool, RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
-	if (!op) {
-		RTE_LOG(ERR, USER1,
-			"line %u FAILED: %s",
-			__LINE__, "Failed to allocate asymmetric crypto "
-			"operation struct");
-		status = TEST_FAILED;
-		goto error_exit;
+	if (rte_cryptodev_asym_session_create(dev_id, &xform,
+			params->session_mpool, &self->sess) < 0) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: Session creation failed",
+			__LINE__);
+		return TEST_FAILED;
 	}
+	rte_crypto_op_attach_asym_session(self->op, self->sess);
 
-	asym_op = op->asym;
-	memcpy(input, base, sizeof(base));
-	asym_op->modinv.base.data = input;
-	asym_op->modinv.base.length = sizeof(base);
-	asym_op->modinv.result.data = result;
-	asym_op->modinv.result.length = sizeof(result);
+	self->op->asym->modinv.base.data = input;
+	self->op->asym->modinv.base.length = vector->base.len;
+	self->op->asym->modinv.result.data = result;
 
-	/* attach asymmetric crypto session to crypto operations */
-	rte_crypto_op_attach_asym_session(op, sess);
-
-	RTE_LOG(DEBUG, USER1, "Process ASYM operation");
-
-	/* Process crypto operation */
-	if (rte_cryptodev_enqueue_burst(dev_id, 0, &op, 1) != 1) {
-		RTE_LOG(ERR, USER1,
-			"line %u FAILED: %s",
-			__LINE__, "Error sending packet for operation");
-		status = TEST_FAILED;
-		goto error_exit;
-	}
-
-	while (rte_cryptodev_dequeue_burst(dev_id, 0, &result_op, 1) == 0)
-		rte_pause();
-
-	if (result_op == NULL) {
-		RTE_LOG(ERR, USER1,
-				"line %u FAILED: %s",
-				__LINE__, "Failed to process asym crypto op");
-		status = TEST_FAILED;
-		goto error_exit;
-	}
-
-	ret = verify_modinv(mod_inv, result_op);
-	if (ret) {
-		RTE_LOG(ERR, USER1,
-			 "operation verification failed\n");
-		status = TEST_FAILED;
-	}
-
-error_exit:
-	if (sess)
-		rte_cryptodev_asym_session_free(dev_id, sess);
-
-	rte_crypto_op_free(op);
-
-	TEST_ASSERT_EQUAL(status, 0, "Test failed");
-
-	return status;
+	TEST_ASSERT_SUCCESS(send(&self->op, &self->result_op),
+		"Failed to process crypto op");
+	TEST_ASSERT_BUFFERS_ARE_EQUAL(vector->inverse.data,
+		self->result_op->asym->modinv.result.data,
+		self->result_op->asym->modinv.result.length,
+		"operation verification failed\n");
+	return TEST_SUCCESS;
 }
 
 static int
@@ -2148,8 +2081,10 @@ static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 				test_rsa_enc_dec_crt),
 		TEST_CASE_ST(setup_generic, teardown_generic,
 				test_rsa_sign_verify_crt),
-		TEST_CASE_ST(setup_generic, teardown_generic, test_mod_inv),
 		TEST_CASE_ST(setup_generic, teardown_generic, test_one_by_one),
+		/* Modular Multiplicative Inverse */
+		TC_DATA_GENERIC(modular_multiplicative_inverse,
+			modinv_test_case),
 		/* Modular Exponentiation */
 		TC_DATA_GENERIC(modular_exponentiation,
 			modex_test_case_m128_b20_e3),
@@ -2169,6 +2104,9 @@ static struct unit_test_suite cryptodev_qat_asym_testsuite  = {
 	.teardown = testsuite_teardown,
 	.unit_test_cases = {
 		TEST_CASE_ST(setup_generic, teardown_generic, test_one_by_one),
+		/* Modular Multiplicative Inverse */
+		TC_DATA_GENERIC(modular_multiplicative_inverse,
+			modinv_test_case),
 		/* Modular Exponentiation */
 		TC_DATA_GENERIC(modular_exponentiation,
 			modex_test_case_m128_b20_e3),
