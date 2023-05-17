@@ -32,6 +32,7 @@
 #endif
 #define ASYM_TEST_MSG_LEN 256
 #define TEST_VECTOR_SIZE 256
+#define DEQ_TIMEOUT 50
 
 static int gbl_driver_id;
 struct crypto_testsuite_params_asym {
@@ -62,6 +63,38 @@ struct test_cases_array {
 static struct test_cases_array test_vector = {0, { NULL } };
 
 static uint32_t test_index;
+
+static int send(struct rte_crypto_op **op,
+		struct rte_crypto_op **result_op)
+{
+	int ticks = 0;
+
+	if (rte_cryptodev_enqueue_burst(params->valid_devs[0], 0,
+			op, 1) != 1) {
+		RTE_LOG(ERR, USER1,
+			"line %u FAILED: Error sending packet for operation on device %d",
+			__LINE__, params->valid_devs[0]);
+		return TEST_FAILED;
+	}
+	while (rte_cryptodev_dequeue_burst(params->valid_devs[0], 0,
+			result_op, 1) == 0) {
+		rte_delay_ms(1);
+		ticks++;
+		if (ticks >= DEQ_TIMEOUT) {
+			RTE_LOG(ERR, USER1,
+				"line %u FAILED: Cannot dequeue the crypto op on device %d",
+				__LINE__, params->valid_devs[0]);
+			return TEST_FAILED;
+		}
+	}
+	TEST_ASSERT_NOT_NULL(*result_op,
+			"line %u FAILED: Failed to process asym crypto op",
+			__LINE__);
+	TEST_ASSERT_SUCCESS((*result_op)->status,
+			"line %u FAILED: Failed to process asym crypto op, error status received",
+			__LINE__);
+	return TEST_SUCCESS;
+}
 
 static int
 queue_ops_rsa_sign_verify(void *sess)
@@ -1417,113 +1450,60 @@ error_exit:
 }
 
 static int
-test_mod_exp(void)
+modular_exponentiation(const void *test_data)
 {
-	struct rte_mempool *op_mpool = params->op_mpool;
-	struct rte_mempool *sess_mpool = params->session_mpool;
-	uint8_t dev_id = params->valid_devs[0];
-	struct rte_crypto_asym_op *asym_op = NULL;
-	struct rte_crypto_op *op = NULL, *result_op = NULL;
-	void *sess = NULL;
-	int status = TEST_SUCCESS;
+	const struct modex_test_data *vector = test_data;
+	uint8_t input[TEST_DATA_SIZE] = { 0 };
+	uint8_t exponent[TEST_DATA_SIZE] = { 0 };
+	uint8_t modulus[TEST_DATA_SIZE] = { 0 };
+	uint8_t result[TEST_DATA_SIZE] = { 0 };
 	struct rte_cryptodev_asym_capability_idx cap_idx;
 	const struct rte_cryptodev_asymmetric_xform_capability *capability;
-	uint8_t input[TEST_DATA_SIZE] = {0};
-	int ret = 0;
-	uint8_t result[sizeof(mod_p)] = { 0 };
+	struct rte_crypto_asym_xform xform = { };
+	const uint8_t dev_id = params->valid_devs[0];
 
-	if (rte_cryptodev_asym_get_xform_enum(&modex_xform.xform_type,
-		"modexp")
-		< 0) {
-		RTE_LOG(ERR, USER1,
-				"Invalid ASYM algorithm specified\n");
-		return -1;
-	}
+	memcpy(input, vector->base.data, vector->base.len);
+	memcpy(exponent, vector->exponent.data, vector->exponent.len);
+	memcpy(modulus, vector->modulus.data, vector->modulus.len);
 
-	/* check for modlen capability */
-	cap_idx.type = modex_xform.xform_type;
+	xform.xform_type = RTE_CRYPTO_ASYM_XFORM_MODEX;
+	xform.modex.exponent.data = exponent;
+	xform.modex.exponent.length = vector->exponent.len;
+	xform.modex.modulus.data = modulus;
+	xform.modex.modulus.length = vector->modulus.len;
+
+	cap_idx.type = xform.xform_type;
 	capability = rte_cryptodev_asym_capability_get(dev_id, &cap_idx);
-
 	if (capability == NULL) {
 		RTE_LOG(INFO, USER1,
 			"Device doesn't support MOD EXP. Test Skipped\n");
 		return TEST_SKIPPED;
 	}
-
 	if (rte_cryptodev_asym_xform_capability_check_modlen(
-			capability, modex_xform.modex.modulus.length)) {
-		RTE_LOG(ERR, USER1,
-				"Invalid MODULUS length specified\n");
-				return TEST_SKIPPED;
-		}
-
-	/* Create op, create session, and process packets. 8< */
-	op = rte_crypto_op_alloc(op_mpool, RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
-	if (!op) {
-		RTE_LOG(ERR, USER1,
-			"line %u FAILED: %s",
-			__LINE__, "Failed to allocate asymmetric crypto "
-			"operation struct");
-		status = TEST_FAILED;
-		goto error_exit;
+			capability, xform.modex.modulus.length)) {
+		RTE_LOG(INFO, USER1,
+			"Invalid MODULUS length specified, not supported on this device\n"
+		);
+		return TEST_SKIPPED;
 	}
-
-	ret = rte_cryptodev_asym_session_create(dev_id, &modex_xform, sess_mpool, &sess);
-	if (ret < 0) {
-		RTE_LOG(ERR, USER1,
-				 "line %u "
-				"FAILED: %s", __LINE__,
-				"Session creation failed");
-		status = (ret == -ENOTSUP) ? TEST_SKIPPED : TEST_FAILED;
-		goto error_exit;
+	if (rte_cryptodev_asym_session_create(dev_id, &xform,
+			params->session_mpool, &self->sess) < 0) {
+		RTE_LOG(ERR, USER1, "line %u FAILED: Session creation failed",
+			__LINE__);
+		return TEST_FAILED;
 	}
+	rte_crypto_op_attach_asym_session(self->op, self->sess);
+	self->op->asym->modex.base.data = input;
+	self->op->asym->modex.base.length = vector->base.len;
+	self->op->asym->modex.result.data = result;
 
-	asym_op = op->asym;
-	memcpy(input, base, sizeof(base));
-	asym_op->modex.base.data = input;
-	asym_op->modex.base.length = sizeof(base);
-	asym_op->modex.result.data = result;
-	asym_op->modex.result.length = sizeof(result);
-	/* attach asymmetric crypto session to crypto operations */
-	rte_crypto_op_attach_asym_session(op, sess);
-
-	RTE_LOG(DEBUG, USER1, "Process ASYM operation");
-	/* Process crypto operation */
-	if (rte_cryptodev_enqueue_burst(dev_id, 0, &op, 1) != 1) {
-		RTE_LOG(ERR, USER1,
-				"line %u FAILED: %s",
-				__LINE__, "Error sending packet for operation");
-		status = TEST_FAILED;
-		goto error_exit;
-	}
-
-	while (rte_cryptodev_dequeue_burst(dev_id, 0, &result_op, 1) == 0)
-		rte_pause();
-
-	if (result_op == NULL) {
-		RTE_LOG(ERR, USER1,
-				"line %u FAILED: %s",
-				__LINE__, "Failed to process asym crypto op");
-		status = TEST_FAILED;
-		goto error_exit;
-	}
-	/* >8 End of create op, create session, and process packets section. */
-	ret = verify_modexp(mod_exp, result_op);
-	if (ret) {
-		RTE_LOG(ERR, USER1,
-			 "operation verification failed\n");
-		status = TEST_FAILED;
-	}
-
-error_exit:
-	if (sess != NULL)
-		rte_cryptodev_asym_session_free(dev_id, sess);
-
-	rte_crypto_op_free(op);
-
-	TEST_ASSERT_EQUAL(status, 0, "Test failed");
-
-	return status;
+	TEST_ASSERT_SUCCESS(send(&self->op, &self->result_op),
+		"Failed to process crypto op");
+	TEST_ASSERT_BUFFERS_ARE_EQUAL(vector->reminder.data,
+			self->result_op->asym->modex.result.data,
+			self->result_op->asym->modex.result.length,
+			"operation verification failed\n");
+	return TEST_SUCCESS;
 }
 
 static int
@@ -2146,6 +2126,12 @@ teardown_generic(void)
 	self->result_op = NULL;
 }
 
+#define TC_DATA_GENERIC(func, data) \
+	TEST_CASE_NAMED_WITH_DATA(	\
+		data.description,	\
+		setup_generic, teardown_generic,	\
+		func, &data)
+
 static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 	.suite_name = "Crypto Device OPENSSL ASYM Unit Test Suite",
 	.setup = testsuite_setup,
@@ -2162,9 +2148,17 @@ static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 				test_rsa_enc_dec_crt),
 		TEST_CASE_ST(setup_generic, teardown_generic,
 				test_rsa_sign_verify_crt),
-		TEST_CASE_ST(setup_generic, teardown_generic, test_mod_exp),
 		TEST_CASE_ST(setup_generic, teardown_generic, test_mod_inv),
 		TEST_CASE_ST(setup_generic, teardown_generic, test_one_by_one),
+		/* Modular Exponentiation */
+		TC_DATA_GENERIC(modular_exponentiation,
+			modex_test_case_m128_b20_e3),
+		TC_DATA_GENERIC(modular_exponentiation,
+			modex_test_case_m60_b50_e40),
+		TC_DATA_GENERIC(modular_exponentiation,
+			modex_test_case_m255_b20_e10),
+		TC_DATA_GENERIC(modular_exponentiation,
+			modex_test_case_m448_b50_e40),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
@@ -2175,6 +2169,15 @@ static struct unit_test_suite cryptodev_qat_asym_testsuite  = {
 	.teardown = testsuite_teardown,
 	.unit_test_cases = {
 		TEST_CASE_ST(setup_generic, teardown_generic, test_one_by_one),
+		/* Modular Exponentiation */
+		TC_DATA_GENERIC(modular_exponentiation,
+			modex_test_case_m128_b20_e3),
+		TC_DATA_GENERIC(modular_exponentiation,
+			modex_test_case_m60_b50_e40),
+		TC_DATA_GENERIC(modular_exponentiation,
+			modex_test_case_m255_b20_e10),
+		TC_DATA_GENERIC(modular_exponentiation,
+			modex_test_case_m448_b50_e40),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
@@ -2189,11 +2192,19 @@ static struct unit_test_suite cryptodev_octeontx_asym_testsuite  = {
 				test_rsa_enc_dec_crt),
 		TEST_CASE_ST(setup_generic, teardown_generic,
 				test_rsa_sign_verify_crt),
-		TEST_CASE_ST(setup_generic, teardown_generic, test_mod_exp),
 		TEST_CASE_ST(setup_generic, teardown_generic,
 			     test_ecdsa_sign_verify_all_curve),
 		TEST_CASE_ST(setup_generic, teardown_generic,
 				test_ecpm_all_curve),
+		/* Modular Exponentiation */
+		TC_DATA_GENERIC(modular_exponentiation,
+			modex_test_case_m128_b20_e3),
+		TC_DATA_GENERIC(modular_exponentiation,
+			modex_test_case_m60_b50_e40),
+		TC_DATA_GENERIC(modular_exponentiation,
+			modex_test_case_m255_b20_e10),
+		TC_DATA_GENERIC(modular_exponentiation,
+			modex_test_case_m448_b50_e40),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
