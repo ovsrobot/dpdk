@@ -7,16 +7,6 @@
 
 /* Below Apis compare resulted buffer to original test vector */
 
-static inline int rsa_verify(struct rsa_test_data *rsa_param,
-		struct rte_crypto_op *result_op)
-{
-	if (memcmp(rsa_param->data,
-				result_op->asym->rsa.message.data,
-				result_op->asym->rsa.message.length))
-		return -1;
-	return 0;
-}
-
 static inline int verify_ecdsa_sign(uint8_t *sign_r,
 		uint8_t *sign_s, struct rte_crypto_op *result_op)
 {
