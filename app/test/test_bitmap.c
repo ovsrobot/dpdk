@@ -33,7 +33,7 @@ test_bitmap_scan_operations(struct rte_bitmap *bmp)
 	}
 
 	if (slab1_magic != out_slab) {
-		printf("Scan operation sanity failed.\n");
+		printf("Scan operation magic number check failed.\n");
 		return TEST_FAILED;
 	}
 
@@ -43,7 +43,7 @@ test_bitmap_scan_operations(struct rte_bitmap *bmp)
 	}
 
 	if (slab2_magic != out_slab) {
-		printf("Scan operation sanity failed.\n");
+		printf("Scan operation magic number check failed.\n");
 		return TEST_FAILED;
 	}
 

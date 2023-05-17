@@ -927,7 +927,7 @@ test_dma(void)
 {
 	int i;
 
-	/* basic sanity on dmadev infrastructure */
+	/* basic validation on dmadev infrastructure */
 	if (test_apis() < 0)
 		ERR_RETURN("Error performing API tests\n");
 
