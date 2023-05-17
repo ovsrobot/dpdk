@@ -315,6 +315,9 @@ struct rte_crypto_rsa_xform {
 		struct rte_crypto_rsa_priv_key_qt qt;
 		/**< qt - Private key in quintuple format */
 	};
+
+	struct rte_crypto_rsa_padding padding;
+	/**< RSA padding information */
 };
 
 /**
@@ -446,9 +449,6 @@ struct rte_crypto_rsa_op_param {
 	 * at least RSA key size). The sign.length field should
 	 * be 0 and will be overwritten by the PMD with the signature length.
 	 */
-
-	struct rte_crypto_rsa_padding padding;
-	/**< RSA padding information */
 };
 
 /**

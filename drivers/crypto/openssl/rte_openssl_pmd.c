@@ -2513,7 +2513,7 @@ process_openssl_rsa_op_evp(struct rte_crypto_op *cop,
 		struct openssl_asym_session *sess)
 {
 	struct rte_crypto_asym_op *op = cop->asym;
-	uint32_t pad = (op->rsa.padding.type);
+	uint32_t pad = sess->u.r.pad;
 	uint8_t *tmp;
 	size_t outlen = 0;
 	int ret = -1;
@@ -2670,7 +2670,7 @@ process_openssl_rsa_op(struct rte_crypto_op *cop,
 	int ret = 0;
 	struct rte_crypto_asym_op *op = cop->asym;
 	RSA *rsa = sess->u.r.rsa;
-	uint32_t pad = (op->rsa.padding.type);
+	uint32_t pad = sess->u.r.pad;
 	uint8_t *tmp;
 
 	cop->status = RTE_CRYPTO_OP_STATUS_SUCCESS;

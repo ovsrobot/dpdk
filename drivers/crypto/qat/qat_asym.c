@@ -353,7 +353,7 @@ rsa_set_pub_input(struct icp_qat_fw_pke_request *qat_req,
 	alg_bytesize = qat_function.bytesize;
 
 	if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_ENCRYPT) {
-		switch (asym_op->rsa.padding.type) {
+		switch (xform->rsa.padding.type) {
 		case RTE_CRYPTO_RSA_PADDING_NONE:
 			SET_PKE_LN(asym_op->rsa.message, alg_bytesize, 0);
 			break;
@@ -365,7 +365,7 @@ rsa_set_pub_input(struct icp_qat_fw_pke_request *qat_req,
 		}
 		HEXDUMP("RSA Message", cookie->input_array[0], alg_bytesize);
 	} else {
-		switch (asym_op->rsa.padding.type) {
+		switch (xform->rsa.padding.type) {
 		case RTE_CRYPTO_RSA_PADDING_NONE:
 			SET_PKE_LN(asym_op->rsa.sign, alg_bytesize, 0);
 			break;
@@ -451,7 +451,7 @@ rsa_set_priv_input(struct icp_qat_fw_pke_request *qat_req,
 
 	if (asym_op->rsa.op_type ==
 			RTE_CRYPTO_ASYM_OP_DECRYPT) {
-		switch (asym_op->rsa.padding.type) {
+		switch (xform->rsa.padding.type) {
 		case RTE_CRYPTO_RSA_PADDING_NONE:
 			SET_PKE_LN(asym_op->rsa.cipher,	alg_bytesize, 0);
 			HEXDUMP("RSA ciphertext", cookie->input_array[0],
@@ -465,7 +465,7 @@ rsa_set_priv_input(struct icp_qat_fw_pke_request *qat_req,
 
 	} else if (asym_op->rsa.op_type ==
 			RTE_CRYPTO_ASYM_OP_SIGN) {
-		switch (asym_op->rsa.padding.type) {
+		switch (xform->rsa.padding.type) {
 		case RTE_CRYPTO_RSA_PADDING_NONE:
 			SET_PKE_LN(asym_op->rsa.message, alg_bytesize, 0);
 			HEXDUMP("RSA text to be signed", cookie->input_array[0],
@@ -505,7 +505,8 @@ rsa_set_input(struct icp_qat_fw_pke_request *qat_req,
 
 static uint8_t
 rsa_collect(struct rte_crypto_asym_op *asym_op,
-		const struct qat_asym_op_cookie *cookie)
+		const struct qat_asym_op_cookie *cookie,
+		const struct rte_crypto_asym_xform *xform)
 {
 	uint32_t alg_bytesize = cookie->alg_bytesize;
 
@@ -521,7 +522,7 @@ rsa_collect(struct rte_crypto_asym_op *asym_op,
 			HEXDUMP("RSA Encrypted data", cookie->output_array[0],
 				alg_bytesize);
 		} else {
-			switch (asym_op->rsa.padding.type) {
+			switch (xform->rsa.padding.type) {
 			case RTE_CRYPTO_RSA_PADDING_NONE:
 				rte_memcpy(asym_op->rsa.cipher.data,
 						cookie->output_array[0],
@@ -538,7 +539,7 @@ rsa_collect(struct rte_crypto_asym_op *asym_op,
 		}
 	} else {
 		if (asym_op->rsa.op_type == RTE_CRYPTO_ASYM_OP_DECRYPT) {
-			switch (asym_op->rsa.padding.type) {
+			switch (xform->rsa.padding.type) {
 			case RTE_CRYPTO_RSA_PADDING_NONE:
 				rte_memcpy(asym_op->rsa.message.data,
 					cookie->output_array[0],
@@ -1009,7 +1010,7 @@ qat_asym_collect_response(struct rte_crypto_op *op,
 	case RTE_CRYPTO_ASYM_XFORM_MODINV:
 		return modinv_collect(asym_op, cookie, xform);
 	case RTE_CRYPTO_ASYM_XFORM_RSA:
-		return rsa_collect(asym_op, cookie);
+		return rsa_collect(asym_op, cookie, xform);
 	case RTE_CRYPTO_ASYM_XFORM_ECDSA:
 		return ecdsa_collect(asym_op, cookie);
 	case RTE_CRYPTO_ASYM_XFORM_ECPM:
