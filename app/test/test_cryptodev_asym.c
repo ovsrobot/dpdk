@@ -41,12 +41,13 @@ struct crypto_testsuite_params_asym {
 	struct rte_cryptodev_qp_conf qp_conf;
 	uint8_t valid_devs[RTE_CRYPTO_MAX_DEVS];
 	uint8_t valid_dev_count;
-};
+} _testsuite_params, *params = &_testsuite_params;
 
-struct crypto_unittest_params {
+static struct ut_args {
 	void *sess;
 	struct rte_crypto_op *op;
-};
+	struct rte_crypto_op *result_op;
+} _args, *self = &_args;
 
 union test_case_structure {
 	struct modex_test_data modex;
@@ -62,14 +63,11 @@ static struct test_cases_array test_vector = {0, { NULL } };
 
 static uint32_t test_index;
 
-static struct crypto_testsuite_params_asym testsuite_params = { NULL };
-
 static int
 queue_ops_rsa_sign_verify(void *sess)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *op_mpool = ts_params->op_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *op_mpool = params->op_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_op *op, *result_op;
 	struct rte_crypto_asym_op *asym_op;
 	uint8_t output_buf[TEST_DATA_SIZE];
@@ -158,9 +156,8 @@ error_exit:
 static int
 queue_ops_rsa_enc_dec(void *sess)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *op_mpool = ts_params->op_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *op_mpool = params->op_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_op *op, *result_op;
 	struct rte_crypto_asym_op *asym_op;
 	uint8_t cipher_buf[TEST_DATA_SIZE] = {0};
@@ -299,7 +296,7 @@ test_cryptodev_asym_ver(struct rte_crypto_op *op,
 }
 
 static int
-test_cryptodev_asym_op(struct crypto_testsuite_params_asym *ts_params,
+test_cryptodev_asym_op(struct crypto_testsuite_params_asym *params,
 	union test_case_structure *data_tc,
 	char *test_msg, int sessionless, enum rte_crypto_asym_op_type type,
 	enum rte_crypto_rsa_priv_key_type key_type)
@@ -311,7 +308,7 @@ test_cryptodev_asym_op(struct crypto_testsuite_params_asym *ts_params,
 	void *sess = NULL;
 	struct rte_cryptodev_asym_capability_idx cap_idx;
 	const struct rte_cryptodev_asymmetric_xform_capability *capability;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	uint8_t dev_id = params->valid_devs[0];
 	uint8_t input[TEST_DATA_SIZE] = {0};
 	uint8_t *result = NULL;
 
@@ -330,7 +327,7 @@ test_cryptodev_asym_op(struct crypto_testsuite_params_asym *ts_params,
 	}
 
 	/* Generate crypto op data structure */
-	op = rte_crypto_op_alloc(ts_params->op_mpool,
+	op = rte_crypto_op_alloc(params->op_mpool,
 		RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
 
 	if (!op) {
@@ -451,7 +448,7 @@ test_cryptodev_asym_op(struct crypto_testsuite_params_asym *ts_params,
 
 	if (!sessionless) {
 		ret = rte_cryptodev_asym_session_create(dev_id, &xform_tc,
-				ts_params->session_mpool, &sess);
+				params->session_mpool, &sess);
 		if (ret < 0) {
 			snprintf(test_msg, ASYM_TEST_MSG_LEN,
 					"line %u "
@@ -524,7 +521,7 @@ test_one_case(const void *test_case, int sessionless)
 
 	if (tc.modex.xform_type == RTE_CRYPTO_ASYM_XFORM_MODEX
 			|| tc.modex.xform_type == RTE_CRYPTO_ASYM_XFORM_MODINV) {
-		status = test_cryptodev_asym_op(&testsuite_params, &tc, test_msg,
+		status = test_cryptodev_asym_op(params, &tc, test_msg,
 				sessionless, 0, 0);
 		printf("  %u) TestCase %s %s\n", test_index++,
 			tc.modex.description, test_msg);
@@ -534,7 +531,7 @@ test_one_case(const void *test_case, int sessionless)
 				if (tc.rsa_data.op_type_flags & (1 << i)) {
 					if (tc.rsa_data.key_exp) {
 						status = test_cryptodev_asym_op(
-							&testsuite_params, &tc,
+							params, &tc,
 							test_msg, sessionless, i,
 							RTE_RSA_KEY_TYPE_EXP);
 					}
@@ -544,7 +541,7 @@ test_one_case(const void *test_case, int sessionless)
 							RTE_CRYPTO_ASYM_OP_DECRYPT ||
 							i == RTE_CRYPTO_ASYM_OP_SIGN)) {
 						status = test_cryptodev_asym_op(
-							&testsuite_params,
+							params,
 							&tc, test_msg, sessionless, i,
 							RTE_RSA_KEY_TYPE_QT);
 					}
@@ -564,17 +561,6 @@ static int
 load_test_vectors(void)
 {
 	uint32_t i = 0, v_size = 0;
-	/* Load MODEX vector*/
-	v_size = RTE_DIM(modex_test_case);
-	for (i = 0; i < v_size; i++) {
-		if (test_vector.size >= (TEST_VECTOR_SIZE)) {
-			RTE_LOG(DEBUG, USER1,
-				"TEST_VECTOR_SIZE too small\n");
-			return -1;
-		}
-		test_vector.address[test_vector.size] = &modex_test_case[i];
-		test_vector.size++;
-	}
 	/* Load MODINV vector*/
 	v_size = RTE_DIM(modinv_test_case);
 	for (i = 0; i < v_size; i++) {
@@ -604,9 +590,8 @@ static int
 test_one_by_one(void)
 {
 	int status = TEST_SUCCESS;
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
 	uint32_t i = 0;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_cryptodev_info dev_info;
 	int sessionless = 0;
 
@@ -637,9 +622,8 @@ test_one_by_one(void)
 static int
 test_rsa_sign_verify(void)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	void *sess = NULL;
 	struct rte_cryptodev_info dev_info;
 	int ret, status = TEST_SUCCESS;
@@ -677,9 +661,8 @@ error_exit:
 static int
 test_rsa_enc_dec(void)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	void *sess = NULL;
 	struct rte_cryptodev_info dev_info;
 	int ret, status = TEST_SUCCESS;
@@ -717,9 +700,8 @@ error_exit:
 static int
 test_rsa_sign_verify_crt(void)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	void *sess = NULL;
 	struct rte_cryptodev_info dev_info;
 	int ret, status = TEST_SUCCESS;
@@ -757,9 +739,8 @@ error_exit:
 static int
 test_rsa_enc_dec_crt(void)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	void *sess = NULL;
 	struct rte_cryptodev_info dev_info;
 	int ret, status = TEST_SUCCESS;
@@ -797,26 +778,25 @@ error_exit:
 static int
 testsuite_setup(void)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
 	uint8_t valid_devs[RTE_CRYPTO_MAX_DEVS];
 	struct rte_cryptodev_info info;
 	int ret, dev_id = -1;
 	uint32_t i, nb_devs;
 	uint16_t qp_id;
 
-	memset(ts_params, 0, sizeof(*ts_params));
+	memset(params, 0, sizeof(*params));
 
 	test_vector.size = 0;
 	load_test_vectors();
 
 	/* Device, op pool and session configuration for asymmetric crypto. 8< */
-	ts_params->op_mpool = rte_crypto_op_pool_create(
+	params->op_mpool = rte_crypto_op_pool_create(
 			"CRYPTO_ASYM_OP_POOL",
 			RTE_CRYPTO_OP_TYPE_ASYMMETRIC,
 			TEST_NUM_BUFS, 0,
 			0,
 			rte_socket_id());
-	if (ts_params->op_mpool == NULL) {
+	if (params->op_mpool == NULL) {
 		RTE_LOG(ERR, USER1, "Can't create ASYM_CRYPTO_OP_POOL\n");
 		return TEST_FAILED;
 	}
@@ -854,7 +834,7 @@ testsuite_setup(void)
 	for (i = 0; i < nb_devs ; i++) {
 		rte_cryptodev_info_get(valid_devs[i], &info);
 		if (info.feature_flags & RTE_CRYPTODEV_FF_ASYMMETRIC_CRYPTO) {
-			dev_id = ts_params->valid_devs[0] = valid_devs[i];
+			dev_id = params->valid_devs[0] = valid_devs[i];
 			break;
 		}
 	}
@@ -866,106 +846,58 @@ testsuite_setup(void)
 	}
 
 	/* Set valid device count */
-	ts_params->valid_dev_count = nb_devs;
+	params->valid_dev_count = nb_devs;
 
 	/* configure device with num qp */
-	ts_params->conf.nb_queue_pairs = info.max_nb_queue_pairs;
-	ts_params->conf.socket_id = SOCKET_ID_ANY;
-	ts_params->conf.ff_disable = RTE_CRYPTODEV_FF_SECURITY |
+	params->conf.nb_queue_pairs = info.max_nb_queue_pairs;
+	params->conf.socket_id = SOCKET_ID_ANY;
+	params->conf.ff_disable = RTE_CRYPTODEV_FF_SECURITY |
 			RTE_CRYPTODEV_FF_SYMMETRIC_CRYPTO;
 	TEST_ASSERT_SUCCESS(rte_cryptodev_configure(dev_id,
-			&ts_params->conf),
+			&params->conf),
 			"Failed to configure cryptodev %u with %u qps",
-			dev_id, ts_params->conf.nb_queue_pairs);
+			dev_id, params->conf.nb_queue_pairs);
 
 	/* configure qp */
-	ts_params->qp_conf.nb_descriptors = DEFAULT_NUM_OPS_INFLIGHT;
-	ts_params->qp_conf.mp_session = ts_params->session_mpool;
+	params->qp_conf.nb_descriptors = DEFAULT_NUM_OPS_INFLIGHT;
+	params->qp_conf.mp_session = params->session_mpool;
 	for (qp_id = 0; qp_id < info.max_nb_queue_pairs; qp_id++) {
 		TEST_ASSERT_SUCCESS(rte_cryptodev_queue_pair_setup(
-			dev_id, qp_id, &ts_params->qp_conf,
+			dev_id, qp_id, &params->qp_conf,
 			rte_cryptodev_socket_id(dev_id)),
 			"Failed to setup queue pair %u on cryptodev %u ASYM",
 			qp_id, dev_id);
 	}
 
-	ts_params->session_mpool = rte_cryptodev_asym_session_pool_create(
+	params->session_mpool = rte_cryptodev_asym_session_pool_create(
 			"test_asym_sess_mp", TEST_NUM_SESSIONS, 0, 0,
 			SOCKET_ID_ANY);
 
-	TEST_ASSERT_NOT_NULL(ts_params->session_mpool,
+	TEST_ASSERT_NOT_NULL(params->session_mpool,
 			"session mempool allocation failed");
 	/* >8 End of device, op pool and session configuration for asymmetric crypto section. */
+
+	TEST_ASSERT_SUCCESS(rte_cryptodev_start(params->valid_devs[0]),
+						"Failed to start cryptodev %u",
+						params->valid_devs[0]);
+
 	return TEST_SUCCESS;
 }
 
 static void
 testsuite_teardown(void)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-
-	/* Reset device */
-	ts_params->qp_conf.mp_session = NULL;
-	ts_params->conf.ff_disable = 0;
-	if (rte_cryptodev_configure(ts_params->valid_devs[0], &ts_params->conf))
-		RTE_LOG(DEBUG, USER1, "Could not reset cryptodev\n");
-
-	if (ts_params->op_mpool != NULL) {
-		RTE_LOG(DEBUG, USER1, "CRYPTO_OP_POOL count %u\n",
-		rte_mempool_avail_count(ts_params->op_mpool));
+	params->qp_conf.mp_session = NULL;
+	params->conf.ff_disable = 0;
+	if (params->op_mpool != NULL) {
+		rte_mempool_free(params->op_mpool);
+		params->op_mpool = NULL;
 	}
-
-	/* Free session mempools */
-	if (ts_params->session_mpool != NULL) {
-		rte_mempool_free(ts_params->session_mpool);
-		ts_params->session_mpool = NULL;
+	if (params->session_mpool != NULL) {
+		rte_mempool_free(params->session_mpool);
+		params->session_mpool = NULL;
 	}
-}
-
-static int
-ut_setup_asym(void)
-{
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-
-	uint16_t qp_id;
-
-	/* Reconfigure device to default parameters */
-	ts_params->conf.socket_id = SOCKET_ID_ANY;
-
-	TEST_ASSERT_SUCCESS(rte_cryptodev_configure(ts_params->valid_devs[0],
-			&ts_params->conf),
-			"Failed to configure cryptodev %u",
-			ts_params->valid_devs[0]);
-
-	for (qp_id = 0; qp_id < ts_params->conf.nb_queue_pairs ; qp_id++) {
-		TEST_ASSERT_SUCCESS(rte_cryptodev_queue_pair_setup(
-			ts_params->valid_devs[0], qp_id,
-			&ts_params->qp_conf,
-			rte_cryptodev_socket_id(ts_params->valid_devs[0])),
-			"Failed to setup queue pair %u on cryptodev %u",
-			qp_id, ts_params->valid_devs[0]);
-	}
-
-	rte_cryptodev_stats_reset(ts_params->valid_devs[0]);
-
-	/* Start the device */
-	TEST_ASSERT_SUCCESS(rte_cryptodev_start(ts_params->valid_devs[0]),
-						"Failed to start cryptodev %u",
-						ts_params->valid_devs[0]);
-
-	return TEST_SUCCESS;
-}
-
-static void
-ut_teardown_asym(void)
-{
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_cryptodev_stats stats;
-
-	rte_cryptodev_stats_get(ts_params->valid_devs[0], &stats);
-
-	/* Stop the device */
-	rte_cryptodev_stop(ts_params->valid_devs[0]);
+	rte_cryptodev_stop(params->valid_devs[0]);
 }
 
 static inline void print_asym_capa(
@@ -1008,8 +940,7 @@ static inline void print_asym_capa(
 static int
 test_capability(void)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_cryptodev_info dev_info;
 	const struct rte_cryptodev_capabilities *dev_capa;
 	int i = 0;
@@ -1045,10 +976,9 @@ test_capability(void)
 static int
 test_dh_gen_shared_sec(struct rte_crypto_asym_xform *xfrm)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *op_mpool = ts_params->op_mpool;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *op_mpool = params->op_mpool;
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_op *asym_op = NULL;
 	struct rte_crypto_op *op = NULL, *result_op = NULL;
 	void *sess = NULL;
@@ -1127,10 +1057,9 @@ error_exit:
 static int
 test_dh_gen_priv_key(struct rte_crypto_asym_xform *xfrm)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *op_mpool = ts_params->op_mpool;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *op_mpool = params->op_mpool;
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_op *asym_op = NULL;
 	struct rte_crypto_op *op = NULL, *result_op = NULL;
 	void *sess = NULL;
@@ -1207,10 +1136,9 @@ error_exit:
 static int
 test_dh_gen_pub_key(struct rte_crypto_asym_xform *xfrm)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *op_mpool = ts_params->op_mpool;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *op_mpool = params->op_mpool;
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_op *asym_op = NULL;
 	struct rte_crypto_op *op = NULL, *result_op = NULL;
 	void *sess = NULL;
@@ -1295,10 +1223,9 @@ error_exit:
 static int
 test_dh_gen_kp(struct rte_crypto_asym_xform *xfrm)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *op_mpool = ts_params->op_mpool;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *op_mpool = params->op_mpool;
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_op *asym_op = NULL;
 	struct rte_crypto_op *op = NULL, *result_op = NULL;
 	void *sess = NULL;
@@ -1381,10 +1308,9 @@ error_exit:
 static int
 test_mod_inv(void)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *op_mpool = ts_params->op_mpool;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *op_mpool = params->op_mpool;
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_op *asym_op = NULL;
 	struct rte_crypto_op *op = NULL, *result_op = NULL;
 	void *sess = NULL;
@@ -1493,10 +1419,9 @@ error_exit:
 static int
 test_mod_exp(void)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *op_mpool = ts_params->op_mpool;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *op_mpool = params->op_mpool;
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_op *asym_op = NULL;
 	struct rte_crypto_op *op = NULL, *result_op = NULL;
 	void *sess = NULL;
@@ -1641,10 +1566,9 @@ test_dh_keygenration(void)
 static int
 test_dsa_sign(struct rte_crypto_dsa_op_param *dsa_op)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *op_mpool = ts_params->op_mpool;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *op_mpool = params->op_mpool;
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_op *asym_op = NULL;
 	struct rte_crypto_op *op = NULL, *result_op = NULL;
 	void *sess = NULL;
@@ -1724,10 +1648,9 @@ error_exit:
 static int
 test_dsa_verify(struct rte_crypto_dsa_op_param *dsa_op)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *op_mpool = ts_params->op_mpool;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	struct rte_mempool *op_mpool = params->op_mpool;
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_asym_op *asym_op = NULL;
 	struct rte_crypto_op *op = NULL, *result_op = NULL;
 	void *sess = NULL;
@@ -1837,12 +1760,11 @@ test_dsa(void)
 static int
 test_ecdsa_sign_verify(enum curve curve_id)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	struct rte_mempool *op_mpool = ts_params->op_mpool;
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	struct rte_mempool *op_mpool = params->op_mpool;
 	struct crypto_testsuite_ecdsa_params input_params;
 	void *sess = NULL;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_op *result_op = NULL;
 	uint8_t output_buf_r[TEST_DATA_SIZE];
 	uint8_t output_buf_s[TEST_DATA_SIZE];
@@ -2038,12 +1960,11 @@ test_ecdsa_sign_verify_all_curve(void)
 static int
 test_ecpm(enum curve curve_id)
 {
-	struct crypto_testsuite_params_asym *ts_params = &testsuite_params;
-	struct rte_mempool *sess_mpool = ts_params->session_mpool;
-	struct rte_mempool *op_mpool = ts_params->op_mpool;
+	struct rte_mempool *sess_mpool = params->session_mpool;
+	struct rte_mempool *op_mpool = params->op_mpool;
 	struct crypto_testsuite_ecpm_params input_params;
 	void *sess = NULL;
-	uint8_t dev_id = ts_params->valid_devs[0];
+	uint8_t dev_id = params->valid_devs[0];
 	struct rte_crypto_op *result_op = NULL;
 	uint8_t output_buf_x[TEST_DATA_SIZE];
 	uint8_t output_buf_y[TEST_DATA_SIZE];
@@ -2196,25 +2117,54 @@ test_ecpm_all_curve(void)
 	return overall_status;
 }
 
+static int
+setup_generic(void)
+{
+	memset(self, 0, sizeof(*self));
+	self->op = rte_crypto_op_alloc(params->op_mpool,
+			RTE_CRYPTO_OP_TYPE_ASYMMETRIC);
+	if (!self->op) {
+		RTE_LOG(ERR, USER1,
+			"line %u FAILED: Failed to allocate asymmetric crypto operation struct",
+			__LINE__);
+		return TEST_FAILED;
+	}
+	return TEST_SUCCESS;
+}
+
+static void
+teardown_generic(void)
+{
+	uint8_t dev_id = params->valid_devs[0];
+
+	if (self->sess != NULL)
+		rte_cryptodev_asym_session_free(dev_id, self->sess);
+	if (self->op != NULL)
+		rte_crypto_op_free(self->op);
+	self->sess = NULL;
+	self->op = NULL;
+	self->result_op = NULL;
+}
+
 static struct unit_test_suite cryptodev_openssl_asym_testsuite  = {
 	.suite_name = "Crypto Device OPENSSL ASYM Unit Test Suite",
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
 	.unit_test_cases = {
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_capability),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_dsa),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
+		TEST_CASE_ST(setup_generic, teardown_generic, test_capability),
+		TEST_CASE_ST(setup_generic, teardown_generic, test_dsa),
+		TEST_CASE_ST(setup_generic, teardown_generic,
 				test_dh_keygenration),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_rsa_enc_dec),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
+		TEST_CASE_ST(setup_generic, teardown_generic, test_rsa_enc_dec),
+		TEST_CASE_ST(setup_generic, teardown_generic,
 				test_rsa_sign_verify),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
+		TEST_CASE_ST(setup_generic, teardown_generic,
 				test_rsa_enc_dec_crt),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
+		TEST_CASE_ST(setup_generic, teardown_generic,
 				test_rsa_sign_verify_crt),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_mod_inv),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_mod_exp),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_one_by_one),
+		TEST_CASE_ST(setup_generic, teardown_generic, test_mod_exp),
+		TEST_CASE_ST(setup_generic, teardown_generic, test_mod_inv),
+		TEST_CASE_ST(setup_generic, teardown_generic, test_one_by_one),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
@@ -2224,7 +2174,7 @@ static struct unit_test_suite cryptodev_qat_asym_testsuite  = {
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
 	.unit_test_cases = {
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_one_by_one),
+		TEST_CASE_ST(setup_generic, teardown_generic, test_one_by_one),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
 };
@@ -2234,15 +2184,15 @@ static struct unit_test_suite cryptodev_octeontx_asym_testsuite  = {
 	.setup = testsuite_setup,
 	.teardown = testsuite_teardown,
 	.unit_test_cases = {
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_capability),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
+		TEST_CASE_ST(setup_generic, teardown_generic, test_capability),
+		TEST_CASE_ST(setup_generic, teardown_generic,
 				test_rsa_enc_dec_crt),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
+		TEST_CASE_ST(setup_generic, teardown_generic,
 				test_rsa_sign_verify_crt),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym, test_mod_exp),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
+		TEST_CASE_ST(setup_generic, teardown_generic, test_mod_exp),
+		TEST_CASE_ST(setup_generic, teardown_generic,
 			     test_ecdsa_sign_verify_all_curve),
-		TEST_CASE_ST(ut_setup_asym, ut_teardown_asym,
+		TEST_CASE_ST(setup_generic, teardown_generic,
 				test_ecpm_all_curve),
 		TEST_CASES_END() /**< NULL terminate unit test array */
 	}
