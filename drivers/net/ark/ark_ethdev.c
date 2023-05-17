@@ -358,10 +358,10 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 	ARK_PMD_LOG(NOTICE, "Arkville HW Commit_ID: %08x\n",
 		    rte_be_to_cpu_32(ark->sysctrl.t32[0x20 / 4]));
 
-	/* If HW sanity test fails, return an error */
+	/* If HW test fails, return an error */
 	if (ark->sysctrl.t32[4] != 0xcafef00d) {
 		ARK_PMD_LOG(ERR,
-			    "HW Sanity test has failed, expected constant"
+			    "HW test has failed, expected constant"
 			    " 0x%x, read 0x%x (%s)\n",
 			    0xcafef00d,
 			    ark->sysctrl.t32[4], __func__);
@@ -380,7 +380,7 @@ eth_ark_dev_init(struct rte_eth_dev *dev)
 	}
 
 	ARK_PMD_LOG(DEBUG,
-		    "HW Sanity test has PASSED, expected constant"
+		    "HW test has PASSED, expected constant"
 		    " 0x%x, read 0x%x (%s)\n",
 		    0xcafef00d, ark->sysctrl.t32[4], __func__);
 
@@ -601,7 +601,7 @@ eth_ark_dev_start(struct rte_eth_dev *dev)
 		pthread_t thread;
 
 		/* Delay packet generatpr start allow the hardware to be ready
-		 * This is only used for sanity checking with internal generator
+		 * This is only used for checking with internal generator
 		 */
 		char tname[32];
 		snprintf(tname, sizeof(tname), "ark-delay-pg-%d",
