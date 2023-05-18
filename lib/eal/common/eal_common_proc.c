@@ -309,7 +309,8 @@ retry:
 			break;
 		}
 	}
-	/* sanity-check the response */
+
+	/* Check that the response is valid */
 	if (m->msg.num_fds < 0 || m->msg.num_fds > RTE_MP_MAX_FD_NUM) {
 		RTE_LOG(ERR, EAL, "invalid number of fd's received\n");
 		return -1;
