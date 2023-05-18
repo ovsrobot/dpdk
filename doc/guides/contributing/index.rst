@@ -18,3 +18,4 @@ Contributor's Guidelines
     vulnerability
     stable
     cheatsheet
+    new_library
