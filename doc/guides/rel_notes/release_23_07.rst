@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+   * **Added flow matching of tx queue.**
+
+     Added ``RTE_FLOW_ITEM_TYPE_TX_QUEUE`` rte_flow pattern to match tx queue of
+     send packet.
+
 
 Removed Items
 -------------
