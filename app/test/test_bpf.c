@@ -3329,9 +3329,9 @@ error:
 	return ret;
 }
 
-/* Basic sanity test can we match a IP packet */
+/* Basic test can we match a IP packet */
 static int
-test_bpf_filter_sanity(pcap_t *pcap)
+test_bpf_filter_match(pcap_t *pcap)
 {
 	const uint32_t plen = 100;
 	struct rte_mbuf mb, *m;
@@ -3463,7 +3463,7 @@ test_bpf_convert(void)
 		return -1;
 	}
 
-	rc = test_bpf_filter_sanity(pcap);
+	rc = test_bpf_filter_match(pcap);
 	for (i = 0; i < RTE_DIM(sample_filters); i++)
 		rc |= test_bpf_filter(pcap, sample_filters[i]);
 
