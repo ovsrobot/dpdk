@@ -514,7 +514,7 @@ error:
 }
 
 /**
- * Perform basic sanity checks on a pattern item.
+ * Perform basic checks on a pattern item.
  *
  * @param[in] item
  *   Item specification.
@@ -730,7 +730,7 @@ fill:
 			goto exit_item_not_supported;
 		proc = next;
 		/*
-		 * Perform basic sanity checks only once, while handle is
+		 * Perform basic checks only once, while handle is
 		 * not allocated.
 		 */
 		if (flow == &temp) {
@@ -799,7 +799,7 @@ fill:
 				rss_key = mlx4_rss_hash_key_default;
 				rss_key_len = MLX4_RSS_HASH_KEY_SIZE;
 			}
-			/* Sanity checks. */
+			/* Input checks. */
 			for (i = 0; i < rss->queue_num; ++i)
 				if (rss->queue[i] >=
 				    ETH_DEV(priv)->data->nb_rx_queues)
