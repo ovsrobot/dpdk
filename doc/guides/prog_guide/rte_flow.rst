@@ -3702,6 +3702,7 @@ Asynchronous operations
 -----------------------
 
 Flow rules management can be done via special lockless flow management queues.
+
 - Queue operations are asynchronous and not thread-safe.
 
 - Operations can thus be invoked by the app's datapath,
