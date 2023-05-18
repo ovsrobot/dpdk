@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(C) 2022 Intel Corporation
 
-if is_windows
+if not is_linux
     build = false
-    reason = 'not supported on Windows'
+    reason = 'only supported on Linux'
     subdir_done()
 endif
 
@@ -12,5 +12,6 @@ sources = files(
         'gve_rx.c',
         'gve_tx.c',
         'gve_ethdev.c',
+        'gve_version.c',
 )
 includes += include_directories('base')
