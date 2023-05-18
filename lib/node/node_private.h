@@ -26,7 +26,7 @@ extern int rte_node_logtype;
  */
 struct node_mbuf_priv1 {
 	union {
-		/* IP4 rewrite */
+		/* IP4/IP6 rewrite */
 		struct {
 			uint16_t nh;
 			uint16_t ttl;
@@ -43,6 +43,7 @@ static const struct rte_mbuf_dynfield node_mbuf_priv1_dynfield_desc = {
 	.align = __alignof__(struct node_mbuf_priv1),
 };
 extern int node_mbuf_priv1_dynfield_offset;
+extern int ip6_node_mbuf_priv1_dynfield_offset;
 
 /**
  * Node mbuf private area 2.
