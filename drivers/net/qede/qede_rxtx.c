@@ -1383,7 +1383,7 @@ qede_rx_process_tpa_end_cqe(struct qede_dev *qdev,
 					     cqe->len_list[0]);
 	/* Update total length and frags based on end TPA */
 	rx_mb = rxq->tpa_info[cqe->tpa_agg_index].tpa_head;
-	/* TODO:  Add Sanity Checks */
+	/* TODO:  Add more checks */
 	rx_mb->nb_segs = cqe->num_of_bds;
 	rx_mb->pkt_len = cqe->total_packet_len;
 
@@ -2211,7 +2211,7 @@ qede_xmit_prep_pkts(__rte_unused void *p_txq, struct rte_mbuf **tx_pkts,
 
 #ifdef RTE_LIBRTE_QEDE_DEBUG_TX
 static inline void
-qede_mpls_tunn_tx_sanity_check(struct rte_mbuf *mbuf,
+qede_mpls_tunn_tx_basic_check(struct rte_mbuf *mbuf,
 			       struct qede_tx_queue *txq)
 {
 	if (((mbuf->outer_l2_len + mbuf->outer_l3_len) / 2) > 0xff)
@@ -2473,7 +2473,7 @@ qede_xmit_pkts(void *p_txq, struct rte_mbuf **tx_pkts, uint16_t nb_pkts)
 						RTE_MBUF_F_TX_TUNNEL_MPLSINUDP) {
 				mplsoudp_flg = true;
 #ifdef RTE_LIBRTE_QEDE_DEBUG_TX
-				qede_mpls_tunn_tx_sanity_check(mbuf, txq);
+				qede_mpls_tunn_tx_basic_check(mbuf, txq);
 #endif
 				/* Outer L4 offset in two byte words */
 				tunn_l4_hdr_start_offset =

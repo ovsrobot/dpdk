@@ -107,7 +107,7 @@ extern enum rta_sec_era rta_sec_era;
 
 /*
  * ONE - should always be set. Combination of ONE (always
- * set) and ZRO (always clear) forms an endianness sanity check
+ * set) and ZRO (always clear) forms an endianness check
  */
 #define HDR_ONE			BIT(23)
 #define HDR_ZRO			BIT(15)
