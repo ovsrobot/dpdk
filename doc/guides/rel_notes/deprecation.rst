@@ -163,3 +163,6 @@ Deprecation Notices
   The new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status
   starting with DPDK 23.07 release.
+
+* mbuf: The function ``rte_mbuf_sanity_check`` will be deprecated in DPDK 23.07
+  and removed in DPDK 23.11. The new function will be ``rte_mbuf_verify``.

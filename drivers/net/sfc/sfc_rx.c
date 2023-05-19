@@ -120,7 +120,7 @@ sfc_efx_rx_qrefill(struct sfc_efx_rxq *rxq)
 		     ++i, id = (id + 1) & rxq->ptr_mask) {
 			m = objs[i];
 
-			__rte_mbuf_raw_sanity_check(m);
+			__rte_mbuf_raw_verify(m);
 
 			rxd = &rxq->sw_desc[id];
 			rxd->mbuf = m;
