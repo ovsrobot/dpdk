@@ -300,7 +300,7 @@ static int opdl_add_deps(struct opdl_evdev *device,
 	struct opdl_queue *queue_deps = &device->queue[deps_q_id];
 	struct opdl_stage *dep_stages[OPDL_PORTS_MAX];
 
-	/* sanity check that all stages are for same opdl ring */
+	/* check that all stages are for same opdl ring */
 	for (i = 0; i < queue->nb_ports; i++) {
 		struct opdl_ring *r =
 			opdl_stage_get_opdl_ring(stage_for_port(queue, i));
