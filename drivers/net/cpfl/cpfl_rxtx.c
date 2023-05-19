@@ -1031,6 +1031,34 @@ cpfl_switch_hairpin_bufq_complq(struct cpfl_vport *cpfl_vport, bool on)
 }
 
 int
+cpfl_switch_hairpin_complq(struct cpfl_vport *cpfl_vport, bool on)
+{
+	struct idpf_vport *vport = &cpfl_vport->base;
+	uint32_t type;
+	int err, queue_id;
+
+	type = VIRTCHNL2_QUEUE_TYPE_TX_COMPLETION;
+	queue_id = cpfl_vport->p2p_tx_complq->queue_id;
+	err = idpf_vc_ena_dis_one_queue(vport, queue_id, type, on);
+
+	return err;
+}
+
+int
+cpfl_switch_hairpin_bufq(struct cpfl_vport *cpfl_vport, bool on)
+{
+	struct idpf_vport *vport = &cpfl_vport->base;
+	uint32_t type;
+	int err, queue_id;
+
+	type = VIRTCHNL2_QUEUE_TYPE_RX_BUFFER;
+	queue_id = cpfl_vport->p2p_rx_bufq->queue_id;
+	err = idpf_vc_ena_dis_one_queue(vport, queue_id, type, on);
+
+	return err;
+}
+
+int
 cpfl_switch_hairpin_rxtx_queue(struct cpfl_vport *cpfl_vport, uint16_t logic_qid,
 			       bool rx, bool on)
 {
