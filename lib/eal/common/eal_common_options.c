@@ -1623,24 +1623,15 @@ int
 eal_parse_common_option(int opt, const char *optarg,
 			struct internal_config *conf)
 {
-	static int b_used;
-	static int a_used;
-
 	switch (opt) {
 	case 'b':
-		if (a_used)
-			goto ba_conflict;
 		if (eal_option_device_add(RTE_DEVTYPE_BLOCKED, optarg) < 0)
 			return -1;
-		b_used = 1;
 		break;
 
 	case 'a':
-		if (b_used)
-			goto ba_conflict;
 		if (eal_option_device_add(RTE_DEVTYPE_ALLOWED, optarg) < 0)
 			return -1;
-		a_used = 1;
 		break;
 	/* coremask */
 	case 'c': {
@@ -1929,11 +1920,6 @@ eal_parse_common_option(int opt, const char *optarg,
 	}
 
 	return 0;
-
-ba_conflict:
-	RTE_LOG(ERR, EAL,
-		"Options allow (-a) and block (-b) can't be used at the same time\n");
-	return -1;
 }
 
 static void
