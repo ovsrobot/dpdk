@@ -163,3 +163,15 @@ Deprecation Notices
   The new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status
   starting with DPDK 23.07 release.
+
+* bonding: References to slave will be removed in DPDK 23.11. The following
+  functions will be deprecated in DPDK 23.07, and removed in DPDK 23.11.
+  The old functions:
+  ``rte_eth_bond_8023ad_slave_info``,
+  ``rte_eth_bond_active_slaves_get``,
+  ``rte_eth_bond_slave_add``, ``rte_eth_bond_slave_remove``, and
+  ``rte_eth_bond_slaves_get`` will be replaced by:
+  ``rte_eth_bond_8023ad_member_info``,
+  ``rte_eth_bond_active_members_get``,
+  ``rte_eth_bond_member_add``, ``rte_eth_bond_member_remove``,
+  and ``rte_eth_bond_members_get``.
