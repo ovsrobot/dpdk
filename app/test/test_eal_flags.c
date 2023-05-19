@@ -314,7 +314,7 @@ get_number_of_sockets(void)
 
 /*
  * Test that the app doesn't run with invalid allow option.
- * Final tests ensures it does run with valid options as sanity check (one
+ * Final tests ensures it does run with valid options as basic test (one
  * test for with Domain+BDF, second for just with BDF)
  */
 static int
@@ -382,7 +382,7 @@ test_allow_flag(void)
 
 /*
  * Test that the app doesn't run with invalid blocklist option.
- * Final test ensures it does run with valid options as sanity check
+ * Final test ensures it does run with valid options as basic check.
  */
 static int
 test_invalid_b_flag(void)
@@ -429,7 +429,7 @@ test_invalid_b_flag(void)
 
 /*
  *  Test that the app doesn't run with invalid vdev option.
- *  Final test ensures it does run with valid options as sanity check
+ *  Final test ensures it does run with valid options basic check.
  */
 static int
 test_invalid_vdev_flag(void)
@@ -554,7 +554,7 @@ test_missing_c_flag(void)
 	/* bad coremask value */
 	const char *argv3[] = { prgname, prefix, mp_flag,
 				"-c", "error" };
-	/* sanity check of tests - valid coremask value */
+	/* check of tests - valid coremask value */
 	const char *argv4[] = { prgname, prefix, mp_flag,
 				"-c", "1" };
 	/* -l flag but no corelist value */
@@ -581,7 +581,7 @@ test_missing_c_flag(void)
 				"-l", RTE_STR(RTE_MAX_LCORE) };
 	const char * const argv14[] = { prgname, prefix, mp_flag,
 				"-l", "1-"RTE_STR(RTE_MAX_LCORE) };
-	/* sanity check test - valid corelist value */
+	/* check test - valid corelist value */
 	const char * const argv15[] = { prgname, prefix, mp_flag,
 				 "-l", "1-2,3" };
 
@@ -613,7 +613,7 @@ test_missing_c_flag(void)
 				 "--lcores", "(4-7)=(1,3)" };
 	const char * const argv28[] = { prgname, prefix, mp_flag,
 				 "--lcores", "[4-7]@(1,3)" };
-	/* sanity check of tests - valid lcores value */
+	/* more complex valid lcores value */
 	const char * const argv29[] = { prgname, prefix, mp_flag,
 				 "--lcores",
 				 "0-1,2@(5-7),(3-5)@(0,2),(0,6),7"};
@@ -744,7 +744,7 @@ test_main_lcore_flag(void)
 
 /*
  * Test that the app doesn't run with invalid -n flag option.
- * Final test ensures it does run with valid options as sanity check
+ * Final test ensures it does run with valid options as basic check.
  * Since -n is not compulsory for MP, we instead use --no-huge and --no-shconf
  * flags.
  */
@@ -772,10 +772,10 @@ test_invalid_n_flag(void)
 	/* zero is invalid */
 	const char *argv3[] = { prgname, prefix, no_huge, no_shconf,
 				"-n", "0" };
-	/* sanity test - check with good value */
+	/* check with good value */
 	const char *argv4[] = { prgname, prefix, no_huge, no_shconf,
 				"-n", "2" };
-	/* sanity test - check with no -n flag */
+	/* check with no -n flag */
 	const char *argv5[] = { prgname, prefix, no_huge, no_shconf};
 
 	if (launch_proc(argv1) == 0
@@ -977,7 +977,7 @@ test_misc_flags(void)
 	 * All cases, apart from the first, app should run.
 	 * No further testing of output done.
 	 */
-	/* sanity check - failure with invalid option */
+	/* failure with invalid option */
 	const char *argv0[] = {prgname, prefix, mp_flag, "--invalid-opt"};
 
 	/* With --no-pci */
