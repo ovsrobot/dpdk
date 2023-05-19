@@ -82,8 +82,13 @@ qat_bpicipher_preprocess(struct qat_sym_session *ctx,
 			QAT_DP_HEXDUMP_LOG(DEBUG, "BPI: dst before pre-process:",
 			dst, last_block_len);
 #endif
+#ifdef RTE_QAT_OPENSSL
 		op_bpi_cipher_decrypt(last_block, dst, iv, block_len,
 				last_block_len, ctx->bpi_ctx);
+#else
+		bpi_cipher_ipsec(last_block, dst, iv, last_block_len, ctx->expkey,
+			ctx->mb_mgr, ctx->docsis_key_len);
+#endif
 #if RTE_LOG_DP_LEVEL >= RTE_LOG_DEBUG
 		QAT_DP_HEXDUMP_LOG(DEBUG, "BPI: src after pre-process:",
 			last_block, last_block_len);
@@ -231,7 +236,12 @@ qat_sym_convert_op_to_vec_cipher(struct rte_crypto_op *op,
 		cipher_ofs = op->sym->cipher.data.offset >> 3;
 		break;
 	case 0:
+
+#ifdef RTE_QAT_OPENSSL
 		if (ctx->bpi_ctx) {
+#else
+		if (ctx->mb_mgr) {
+#endif
 			/* DOCSIS - only send complete blocks to device.
 			 * Process any partial block using CFB mode.
 			 * Even if 0 complete blocks, still send this to device
