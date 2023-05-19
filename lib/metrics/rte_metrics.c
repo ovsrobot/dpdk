@@ -120,7 +120,7 @@ rte_metrics_reg_names(const char * const *names, uint16_t cnt_names)
 	uint16_t idx_name;
 	uint16_t idx_base;
 
-	/* Some sanity checks */
+	/* Some consistency checks */
 	if (cnt_names < 1 || names == NULL)
 		return -EINVAL;
 	for (idx_name = 0; idx_name < cnt_names; idx_name++)
