@@ -891,6 +891,47 @@ cpfl_start_queues(struct rte_eth_dev *dev)
 		}
 	}
 
+	/* For non-manual bind hairpin queues, enable Tx queue and Rx queue,
+	 * then enable Tx completion queue and Rx buffer queue.
+	 */
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		cpfl_txq = dev->data->tx_queues[i];
+		if (cpfl_txq->hairpin_info.hairpin_q && !cpfl_vport->p2p_manual_bind) {
+			err = cpfl_switch_hairpin_rxtx_queue(cpfl_vport,
+							     i - cpfl_vport->nb_data_txq,
+							     false, true);
+			if (err)
+				PMD_DRV_LOG(ERR, "Failed to switch hairpin TX queue %u on",
+					    i);
+			else
+				cpfl_txq->base.q_started = true;
+		}
+	}
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		cpfl_rxq = dev->data->rx_queues[i];
+		if (cpfl_rxq->hairpin_info.hairpin_q && !cpfl_vport->p2p_manual_bind) {
+			err = cpfl_switch_hairpin_rxtx_queue(cpfl_vport,
+							     i - cpfl_vport->nb_data_rxq,
+							     true, true);
+			if (err)
+				PMD_DRV_LOG(ERR, "Failed to switch hairpin RX queue %u on",
+					    i);
+			else
+				cpfl_rxq->base.q_started = true;
+		}
+	}
+
+	if (!cpfl_vport->p2p_manual_bind &&
+	    cpfl_vport->p2p_tx_complq != NULL &&
+	    cpfl_vport->p2p_rx_bufq != NULL) {
+		err = cpfl_switch_hairpin_bufq_complq(cpfl_vport, true);
+		if (err != 0) {
+			PMD_DRV_LOG(ERR, "Failed to switch hairpin Tx complq and Rx bufq");
+			return err;
+		}
+	}
+
 	return err;
 }
 
