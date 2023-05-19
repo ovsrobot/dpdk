@@ -13,6 +13,10 @@
 #define CPFL_MIN_RING_DESC	32
 #define CPFL_MAX_RING_DESC	4096
 #define CPFL_DMA_MEM_ALIGN	4096
+#define CPFL_MAX_HAIRPINQ_RX_2_TX	1
+#define CPFL_MAX_HAIRPINQ_TX_2_RX	1
+#define CPFL_MAX_HAIRPINQ_NB_DESC	1024
+#define CPFL_MAX_P2P_NB_QUEUES		16
 /* Base address of the HW descriptor ring should be 128B aligned. */
 #define CPFL_RING_BASE_ALIGN	128
 
