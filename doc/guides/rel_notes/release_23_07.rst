@@ -84,6 +84,9 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
+* The ``level`` field in experimental structure
+  ``struct rte_flow_action_modify_data`` was reduced to 8 bits.
+
 
 ABI Changes
 -----------
