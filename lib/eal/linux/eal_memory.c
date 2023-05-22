@@ -657,12 +657,12 @@ unmap_unneeded_hugepages(struct hugepage_file *hugepg_tbl,
 }
 
 static int
-remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
+remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end, int *mapped_seg_len)
 {
 	struct rte_mem_config *mcfg = rte_eal_get_configuration()->mem_config;
 	struct rte_memseg_list *msl;
 	struct rte_fbarray *arr;
-	int cur_page, seg_len;
+	int cur_page, seg_len, cur_len;
 	unsigned int msl_idx;
 	int ms_idx;
 	uint64_t page_sz;
@@ -692,8 +692,9 @@ remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 
 		/* leave space for a hole if array is not empty */
 		empty = arr->count == 0;
+		cur_len = RTE_MIN((unsigned int)seg_len, arr->len - arr->count - (empty ? 0 : 1));
 		ms_idx = rte_fbarray_find_next_n_free(arr, 0,
-				seg_len + (empty ? 0 : 1));
+				cur_len + (empty ? 0 : 1));
 
 		/* memseg list is full? */
 		if (ms_idx < 0)
@@ -704,12 +705,12 @@ remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 		 */
 		if (!empty)
 			ms_idx++;
+		*mapped_seg_len = cur_len;
 		break;
 	}
 	if (msl_idx == RTE_MAX_MEMSEG_LISTS) {
-		RTE_LOG(ERR, EAL, "Could not find space for memseg. Please increase %s and/or %s in configuration.\n",
-				RTE_STR(RTE_MAX_MEMSEG_PER_TYPE),
-				RTE_STR(RTE_MAX_MEM_MB_PER_TYPE));
+		RTE_LOG(ERR, EAL, "Could not find space for memseg. Please increase RTE_MAX_MEMSEG_PER_LIST "
+				"RTE_MAX_MEMSEG_PER_TYPE and/or RTE_MAX_MEM_MB_PER_TYPE in configuration.\n");
 		return -1;
 	}
 
@@ -725,6 +726,8 @@ remap_segment(struct hugepage_file *hugepages, int seg_start, int seg_end)
 		void *addr;
 		int fd;
 
+		if (cur_page - seg_start == *mapped_seg_len)
+			break;
 		fd = open(hfile->filepath, O_RDWR);
 		if (fd < 0) {
 			RTE_LOG(ERR, EAL, "Could not open '%s': %s\n",
@@ -986,7 +989,7 @@ prealloc_segments(struct hugepage_file *hugepages, int n_pages)
 static int
 remap_needed_hugepages(struct hugepage_file *hugepages, int n_pages)
 {
-	int cur_page, seg_start_page, new_memseg, ret;
+	int cur_page, seg_start_page, new_memseg, ret, mapped_seg_len = 0;
 
 	seg_start_page = 0;
 	for (cur_page = 0; cur_page < n_pages; cur_page++) {
@@ -1023,21 +1026,27 @@ remap_needed_hugepages(struct hugepage_file *hugepages, int n_pages)
 			/* if this isn't the first time, remap segment */
 			if (cur_page != 0) {
 				ret = remap_segment(hugepages, seg_start_page,
-						cur_page);
+						cur_page, &mapped_seg_len);
 				if (ret != 0)
 					return -1;
 			}
+			cur_page = seg_start_page + mapped_seg_len;
 			/* remember where we started */
 			seg_start_page = cur_page;
+			mapped_seg_len = 0;
 		}
 		/* continuation of previous memseg */
 	}
 	/* we were stopped, but we didn't remap the last segment, do it now */
 	if (cur_page != 0) {
-		ret = remap_segment(hugepages, seg_start_page,
-				cur_page);
-		if (ret != 0)
-			return -1;
+		while (seg_start_page < n_pages) {
+			ret = remap_segment(hugepages, seg_start_page,
+					cur_page, &mapped_seg_len);
+			if (ret != 0)
+				return -1;
+			seg_start_page = seg_start_page + mapped_seg_len;
+			mapped_seg_len = 0;
+		}
 	}
 	return 0;
 }
