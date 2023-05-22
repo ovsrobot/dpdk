@@ -1016,7 +1016,9 @@ rte_crypto_mbuf_to_vec(const struct rte_mbuf *mb, uint32_t ofs, uint32_t len,
 		left -= seglen;
 	}
 
-	RTE_ASSERT(left == 0);
+	if (left != 0)
+		RTE_ASSERT(false);
+
 	return i;
 }
 
