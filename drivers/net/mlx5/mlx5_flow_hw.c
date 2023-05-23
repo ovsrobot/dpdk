@@ -1022,9 +1022,11 @@ flow_hw_modify_field_compile(struct rte_eth_dev *dev,
 		    conf->dst.field == RTE_FLOW_FIELD_TAG ||
 		    conf->dst.field == RTE_FLOW_FIELD_METER_COLOR ||
 		    conf->dst.field == (enum rte_flow_field_id)MLX5_RTE_FLOW_FIELD_META_REG) {
+			uint8_t tag_index = flow_tag_index_get(&conf->dst);
+
 			value = *(const unaligned_uint32_t *)item.spec;
 			if (conf->dst.field == RTE_FLOW_FIELD_TAG &&
-			    conf->dst.level == MLX5_LINEAR_HASH_TAG_INDEX)
+			    tag_index == MLX5_LINEAR_HASH_TAG_INDEX)
 				value = rte_cpu_to_be_32(value << 16);
 			else
 				value = rte_cpu_to_be_32(value);
@@ -2055,9 +2057,11 @@ flow_hw_modify_field_construct(struct mlx5_hw_q_job *job,
 	    mhdr_action->dst.field == RTE_FLOW_FIELD_TAG ||
 	    mhdr_action->dst.field == RTE_FLOW_FIELD_METER_COLOR ||
 	    mhdr_action->dst.field == (enum rte_flow_field_id)MLX5_RTE_FLOW_FIELD_META_REG) {
+		uint8_t tag_index = flow_tag_index_get(&mhdr_action->dst);
+
 		value_p = (unaligned_uint32_t *)values;
 		if (mhdr_action->dst.field == RTE_FLOW_FIELD_TAG &&
-		    mhdr_action->dst.level == MLX5_LINEAR_HASH_TAG_INDEX)
+		    tag_index == MLX5_LINEAR_HASH_TAG_INDEX)
 			*value_p = rte_cpu_to_be_32(*value_p << 16);
 		else
 			*value_p = rte_cpu_to_be_32(*value_p);
@@ -3546,11 +3550,16 @@ flow_hw_validate_action_modify_field(const struct rte_flow_action *action,
 				     const struct rte_flow_action *mask,
 				     struct rte_flow_error *error)
 {
-	const struct rte_flow_action_modify_field *action_conf =
-		action->conf;
-	const struct rte_flow_action_modify_field *mask_conf =
-		mask->conf;
+	const struct rte_flow_action_modify_field *action_conf = action->conf;
+	const struct rte_flow_action_modify_field *mask_conf = mask->conf;
+	int ret;
 
+	ret = flow_validate_modify_field_level(&action_conf->dst, error);
+	if (ret)
+		return ret;
+	ret = flow_validate_modify_field_level(&action_conf->src, error);
+	if (ret)
+		return ret;
 	if (action_conf->operation != mask_conf->operation)
 		return rte_flow_error_set(error, EINVAL,
 				RTE_FLOW_ERROR_TYPE_ACTION, action,

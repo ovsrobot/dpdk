@@ -1896,16 +1896,17 @@ mlx5_flow_field_id_to_modify_info
 	case RTE_FLOW_FIELD_TAG:
 		{
 			MLX5_ASSERT(data->offset + width <= 32);
+			uint8_t tag_index = flow_tag_index_get(data);
 			int reg;
 
-			off_be = (data->level == MLX5_LINEAR_HASH_TAG_INDEX) ?
+			off_be = (tag_index == MLX5_LINEAR_HASH_TAG_INDEX) ?
 				 16 - (data->offset + width) + 16 : data->offset;
 			if (priv->sh->config.dv_flow_en == 2)
 				reg = flow_hw_get_reg_id(RTE_FLOW_ITEM_TYPE_TAG,
-							 data->level);
+							 tag_index);
 			else
 				reg = mlx5_flow_get_reg_id(dev, MLX5_APP_TAG,
-							   data->level, error);
+							   tag_index, error);
 			if (reg < 0)
 				return;
 			MLX5_ASSERT(reg != REG_NON);
@@ -1985,7 +1986,7 @@ mlx5_flow_field_id_to_modify_info
 		{
 			uint32_t meta_mask = priv->sh->dv_meta_mask;
 			uint32_t meta_count = __builtin_popcount(meta_mask);
-			uint32_t reg = data->level;
+			uint8_t reg = flow_tag_index_get(data);
 
 			RTE_SET_USED(meta_count);
 			MLX5_ASSERT(data->offset + width <= meta_count);
@@ -5252,6 +5253,14 @@ flow_dv_validate_action_modify_field(struct rte_eth_dev *dev,
 	ret = flow_dv_validate_action_modify_hdr(action_flags, action, error);
 	if (ret)
 		return ret;
+	ret = flow_validate_modify_field_level(&action_modify_field->dst,
+					       error);
+	if (ret)
+		return ret;
+	ret = flow_validate_modify_field_level(&action_modify_field->src,
+					       error);
+	if (ret)
+		return ret;
 	if (action_modify_field->src.field == RTE_FLOW_FIELD_FLEX_ITEM ||
 	    action_modify_field->dst.field == RTE_FLOW_FIELD_FLEX_ITEM)
 		return rte_flow_error_set(error, ENOTSUP,
@@ -5279,12 +5288,6 @@ flow_dv_validate_action_modify_field(struct rte_eth_dev *dev,
 			return rte_flow_error_set(error, EINVAL,
 					RTE_FLOW_ERROR_TYPE_ACTION, action,
 					"destination offset is too big");
-		if (action_modify_field->dst.level &&
-		    action_modify_field->dst.field != RTE_FLOW_FIELD_TAG)
-			return rte_flow_error_set(error, ENOTSUP,
-					RTE_FLOW_ERROR_TYPE_ACTION, action,
-					"inner header fields modification"
-					" is not supported");
 	}
 	if (action_modify_field->src.field != RTE_FLOW_FIELD_VALUE &&
 	    action_modify_field->src.field != RTE_FLOW_FIELD_POINTER) {
@@ -5298,12 +5301,6 @@ flow_dv_validate_action_modify_field(struct rte_eth_dev *dev,
 			return rte_flow_error_set(error, EINVAL,
 					RTE_FLOW_ERROR_TYPE_ACTION, action,
 					"source offset is too big");
-		if (action_modify_field->src.level &&
-		    action_modify_field->src.field != RTE_FLOW_FIELD_TAG)
-			return rte_flow_error_set(error, ENOTSUP,
-					RTE_FLOW_ERROR_TYPE_ACTION, action,
-					"inner header fields modification"
-					" is not supported");
 	}
 	if ((action_modify_field->dst.field ==
 	     action_modify_field->src.field) &&
