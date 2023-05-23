@@ -30,6 +30,7 @@ struct idev_cfg {
 	struct roc_bphy *bphy;
 	struct roc_cpt *cpt;
 	struct roc_sso *sso;
+	struct roc_mcs *mcs;
 	struct nix_inl_dev *nix_inl_dev;
 	struct idev_nix_inl_cfg inl_cfg;
 	plt_spinlock_t nix_inl_dev_lock;

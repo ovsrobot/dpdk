@@ -275,7 +275,12 @@ struct mbox_msghdr {
 	M(NIX_SPI_TO_SA_ADD, 0x8026, nix_spi_to_sa_add, nix_spi_to_sa_add_req, \
 	  nix_spi_to_sa_add_rsp)                                               \
 	M(NIX_SPI_TO_SA_DELETE, 0x8027, nix_spi_to_sa_delete,                  \
-	  nix_spi_to_sa_delete_req, msg_rsp)
+	  nix_spi_to_sa_delete_req, msg_rsp)                                   \
+	/* MCS mbox IDs (range 0xa000 - 0xbFFF) */                                                 \
+	M(MCS_ALLOC_RESOURCES, 0xa000, mcs_alloc_resources, mcs_alloc_rsrc_req,                    \
+	  mcs_alloc_rsrc_rsp)                                                                      \
+	M(MCS_FREE_RESOURCES, 0xa001, mcs_free_resources, mcs_free_rsrc_req, msg_rsp)              \
+	M(MCS_GET_HW_INFO, 0xa00b, mcs_get_hw_info, msg_req, mcs_hw_info)                          \
 
 /* Messages initiated by AF (range 0xC00 - 0xDFF) */
 #define MBOX_UP_CGX_MESSAGES                                                   \
@@ -652,6 +657,64 @@ struct cgx_set_link_mode_rsp {
 	struct mbox_msghdr hdr;
 	int __io status;
 };
+
+/* MCS mbox structures */
+enum mcs_direction {
+	MCS_RX,
+	MCS_TX,
+};
+
+enum mcs_rsrc_type {
+	MCS_RSRC_TYPE_FLOWID,
+	MCS_RSRC_TYPE_SECY,
+	MCS_RSRC_TYPE_SC,
+	MCS_RSRC_TYPE_SA,
+};
+
+struct mcs_alloc_rsrc_req {
+	struct mbox_msghdr hdr;
+	uint8_t __io rsrc_type;
+	uint8_t __io rsrc_cnt; /* Resources count */
+	uint8_t __io mcs_id;   /* MCS block ID */
+	uint8_t __io dir;      /* Macsec ingress or egress side */
+	uint8_t __io all;      /* Allocate all resource type one each */
+	uint64_t __io rsvd;
+};
+
+struct mcs_alloc_rsrc_rsp {
+	struct mbox_msghdr hdr;
+	uint8_t __io flow_ids[128]; /* Index of reserved entries */
+	uint8_t __io secy_ids[128];
+	uint8_t __io sc_ids[128];
+	uint8_t __io sa_ids[256];
+	uint8_t __io rsrc_type;
+	uint8_t __io rsrc_cnt; /* No of entries reserved */
+	uint8_t __io mcs_id;
+	uint8_t __io dir;
+	uint8_t __io all;
+	uint8_t __io rsvd[256];
+};
+
+struct mcs_free_rsrc_req {
+	struct mbox_msghdr hdr;
+	uint8_t __io rsrc_id; /* Index of the entry to be freed */
+	uint8_t __io rsrc_type;
+	uint8_t __io mcs_id;
+	uint8_t __io dir;
+	uint8_t __io all; /* Free all the cam resources */
+	uint64_t __io rsvd;
+};
+
+struct mcs_hw_info {
+	struct mbox_msghdr hdr;
+	uint8_t __io num_mcs_blks; /* Number of MCS blocks */
+	uint8_t __io tcam_entries; /* RX/TX Tcam entries per mcs block */
+	uint8_t __io secy_entries; /* RX/TX SECY entries per mcs block */
+	uint8_t __io sc_entries;   /* RX/TX SC CAM entries per mcs block */
+	uint16_t __io sa_entries;  /* PN table entries = SA entries */
+	uint64_t __io rsvd[16];
+};
+
 
 /* NPA mbox message formats */
 

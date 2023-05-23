@@ -40,4 +40,10 @@ roc_feature_nix_has_reass(void)
 	return roc_model_is_cn10ka();
 }
 
+static inline bool
+roc_feature_nix_has_macsec(void)
+{
+	return roc_model_is_cn10kb();
+}
+
 #endif
