@@ -12,6 +12,11 @@
 
 #include <rte_ip_frag.h>
 
+enum ip_frag_lookup_func {
+	REASSEMBLY_LOOKUP_SCALAR = 0,
+	REASSEMBLY_LOOKUP_NEON,
+};
+
 enum {
 	IP_LAST_FRAG_IDX,    /* index of last fragment */
 	IP_FIRST_FRAG_IDX,   /* index of first fragment */
@@ -83,6 +88,7 @@ struct rte_ip_frag_tbl {
 	struct ip_frag_pkt *last;     /* last used entry. */
 	struct ip_pkt_list lru;       /* LRU list for table entries. */
 	struct ip_frag_tbl_stat stat; /* statistics counters. */
+	enum ip_frag_lookup_func lookup_fn;	/* hash table lookup function. */
 	__extension__ struct ip_frag_pkt pkt[]; /* hash table. */
 };
 
