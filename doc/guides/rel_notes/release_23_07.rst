@@ -84,8 +84,12 @@ API Changes
    Also, make sure to start the actual text at the margin.
    =======================================================
 
-* The ``level`` field in experimental structure
-  ``struct rte_flow_action_modify_data`` was reduced to 8 bits.
+* ethdev: in experimental structure ``struct rte_flow_action_modify_data``:
+
+  * ``level`` field was reduced to 8 bits.
+
+  * ``tag_index`` field replaced ``level`` field in representing tag array for
+    ``RTE_FLOW_FIELD_TAG`` type.
 
 
 ABI Changes
