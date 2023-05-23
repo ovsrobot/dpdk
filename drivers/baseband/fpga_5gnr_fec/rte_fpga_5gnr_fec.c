@@ -573,6 +573,10 @@ fpga_queue_start(struct rte_bbdev *dev, uint16_t queue_id)
 		return -1;
 	}
 #endif
+	if (dev->data->queues[queue_id].queue_private == NULL) {
+		rte_bbdev_log(ERR, "Cannot start invalid queue %d", queue_id);
+		return -1;
+	}
 	struct fpga_queue *q = dev->data->queues[queue_id].queue_private;
 	uint32_t offset = FPGA_5GNR_FEC_RING_CTRL_REGS +
 			(sizeof(struct fpga_ring_ctrl_reg) * q->q_idx);
