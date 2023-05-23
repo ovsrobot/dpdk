@@ -716,6 +716,15 @@ malloc_get_numa_socket(void)
 		if (conf->socket_mem[socket_id] != 0)
 			return socket_id;
 	}
+	/* Trying to allocate memory on the main lcore numa node.
+	 * especially when the DPDK application is started only on one numa node.
+	 */
+	socket_id = rte_lcore_to_socket_id(rte_get_main_lcore());
+	/* When the socket_id obtained in the main lcore numa is SOCKET_ID_ANY,
+	 * The probability of finding memory on rte_socket_id_by_idx(0) is higher.
+	 */
+	if (socket_id != (unsigned int)SOCKET_ID_ANY)
+		return socket_id;
 
 	return rte_socket_id_by_idx(0);
 }
