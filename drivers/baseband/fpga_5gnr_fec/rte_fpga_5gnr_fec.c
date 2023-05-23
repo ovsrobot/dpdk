@@ -879,6 +879,8 @@ get_k0(uint16_t n_cb, uint16_t z_c, uint8_t bg, uint8_t rv_index)
 {
 	if (rv_index == 0)
 		return 0;
+	if (z_c == 0)
+		return 0;
 	uint16_t n = (bg == 1 ? N_ZC_1 : N_ZC_2) * z_c;
 	if (n_cb == n) {
 		if (rv_index == 1)
