@@ -294,6 +294,19 @@ by comma. When the same parameter is used more than once first occurrence of the
 is used.
 Maximum threshold that can be set is 32.
 
+Running QAT PMD with insecure crypto algorithms
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A few insecure crypto algorithms are deprecated from QAT drivers. This needs to be reflected in DPDK QAT PMD.
+DPDK QAT PMD has by default disabled all the insecure crypto algorithms from Gen 1,2,3 and 4.
+A PMD parameter is used to enable the capability.
+
+- qat_legacy_capa
+
+To use this feature the user must set the parameter on process start as a device additional parameter::
+
+  -a b1:01.2,qat_legacy_capa=1
+
 Running QAT PMD with Intel IPSEC MB library for symmetric precomputes function
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
