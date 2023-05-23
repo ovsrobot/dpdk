@@ -5,7 +5,9 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#include <rte_cpuflags.h>
 #include <rte_log.h>
+#include <rte_vect.h>
 
 #include "ip_frag_common.h"
 
@@ -74,6 +76,14 @@ rte_ip_frag_table_create(uint32_t bucket_num, uint32_t bucket_entries,
 	tbl->nb_buckets = bucket_num;
 	tbl->bucket_entries = bucket_entries;
 	tbl->entry_mask = (tbl->nb_entries - 1) & ~(tbl->bucket_entries  - 1);
+
+#if defined(RTE_ARCH_ARM64)
+	if (rte_cpu_get_flag_enabled(RTE_CPUFLAG_NEON) &&
+	    rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128)
+		tbl->lookup_fn = REASSEMBLY_LOOKUP_NEON;
+	else
+#endif
+		tbl->lookup_fn = REASSEMBLY_LOOKUP_SCALAR;
 
 	TAILQ_INIT(&(tbl->lru));
 	return tbl;
