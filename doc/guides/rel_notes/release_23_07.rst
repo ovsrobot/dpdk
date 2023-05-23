@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+   * **Added flow rule update to the Flow API.**
+
+     * Added API for updating the action list in the already existing rule.
+       Introduced both rte_flow_actions_update() and
+       rte_flow_async_actions_update() functions.
 
 Removed Items
 -------------
