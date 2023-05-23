@@ -65,10 +65,13 @@ static void
 thread_update_affinity(rte_cpuset_t *cpusetp)
 {
 	unsigned int lcore_id = rte_lcore_id();
+	int socket_id;
+
+	/* find socket ID from cpuset */
+	socket_id = eal_cpuset_socket_id(cpusetp);
 
 	/* store socket_id in TLS for quick access */
-	RTE_PER_LCORE(_socket_id) =
-		eal_cpuset_socket_id(cpusetp);
+	RTE_PER_LCORE(_socket_id) = socket_id;
 
 	/* store cpuset in TLS for quick access */
 	memmove(&RTE_PER_LCORE(_cpuset), cpusetp,
@@ -76,9 +79,20 @@ thread_update_affinity(rte_cpuset_t *cpusetp)
 
 	if (lcore_id != (unsigned)LCORE_ID_ANY) {
 		/* EAL thread will update lcore_config */
-		lcore_config[lcore_id].socket_id = RTE_PER_LCORE(_socket_id);
+		lcore_config[lcore_id].socket_id = socket_id;
 		memmove(&lcore_config[lcore_id].cpuset, cpusetp,
 			sizeof(rte_cpuset_t));
+		
+		/*
+		 * lcore_id is not LCORE_ID_ANY, meaning this is a DPDK lcore,
+		 * so having a valid NUMA affinity for this lcore is important.
+		 * However, if cpuset includes cores from multiple NUMA nodes,
+		 * the socket ID will be set to SOCKET_ID_ANY. Notify the user
+		 * about it if that happens.
+		 */
+		if (socket_id == SOCKET_ID_ANY)
+			RTE_LOG(INFO, EAL, "DPDK lcore %u has NUMA affinity set to SOCKET_ID_ANY\n",
+					lcore_id);
 	}
 }
 
