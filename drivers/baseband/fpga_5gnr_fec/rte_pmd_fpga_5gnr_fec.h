@@ -25,26 +25,26 @@
 extern "C" {
 #endif
 
-/** Number of Virtual Functions FPGA 5GNR FEC supports */
+/** Number of Virtual Functions FPGA 5GNR FEC supports. */
 #define FPGA_5GNR_FEC_NUM_VFS 8
 
 /**
  * Structure to pass FPGA 5GNR FEC configuration.
  */
 struct rte_fpga_5gnr_fec_conf {
-	/** 1 if PF is used for dataplane, 0 for VFs */
+	/** 1 if PF is used for dataplane, 0 for VFs. */
 	bool pf_mode_en;
-	/** Number of UL queues per VF */
+	/** Number of UL queues per VF. */
 	uint8_t vf_ul_queues_number[FPGA_5GNR_FEC_NUM_VFS];
-	/** Number of DL queues per VF */
+	/** Number of DL queues per VF. */
 	uint8_t vf_dl_queues_number[FPGA_5GNR_FEC_NUM_VFS];
-	/** UL bandwidth. Needed only for VC schedule algorithm */
+	/** UL bandwidth. Needed only for VC schedule algorithm. */
 	uint8_t ul_bandwidth;
-	/** DL bandwidth. Needed only for VC schedule algorithm */
+	/** DL bandwidth. Needed only for VC schedule algorithm. */
 	uint8_t dl_bandwidth;
-	/** UL Load Balance */
+	/** UL Load Balance. */
 	uint8_t ul_load_balance;
-	/** DL Load Balance */
+	/** DL Load Balance. */
 	uint8_t dl_load_balance;
 };
 
