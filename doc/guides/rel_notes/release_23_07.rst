@@ -27,6 +27,12 @@ New Features
 .. This section should contain new features added in this release.
    Sample format:
 
+   * **Added actions to push or remove the specific type of IPv6 extension.**
+
+     Added ``RTE_FLOW_ACTION_TYPE_IPV6_EXT_PUSH`` and ``RTE_FLOW_ACTION_TYPE_IPV6_EXT_PUSH``
+     to push or remove the specific IPv6 extension into or from the packets.
+     Push always put the new extension as the last one due to the next header awareness.
+
    * **Add a title in the past tense with a full stop.**
 
      Add a short 1-2 sentence description in the past tense.

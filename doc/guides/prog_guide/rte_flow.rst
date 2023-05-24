@@ -3300,6 +3300,27 @@ The ``quota`` value is reduced according to ``mode`` setting.
    | ``RTE_FLOW_QUOTA_MODE_L3``      | Count packet bytes starting from L3 |
    +------------------+----------------------------------------------------+
 
+Action: ``IPV6_EXT_PUSH``
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Add an IPv6 extension into IPv6 header and its template is provided in
+its data buffer with the specific type as defined in the
+``rte_flow_action_ipv6_ext_push`` definition.
+
+This action modifies the payload of matched flows. The data supplied must
+be a valid extension in the specified type, it should be added the last one
+if preceding extension existed. When applied to the original packet the
+resulting packet must be a valid packet.
+
+Action: ``IPV6_EXT_REMOVE``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Remove an IPv6 extension whose type is provided in its type as defined in
+the ``rte_flow_action_ipv6_ext_remove``.
+
+This action modifies the payload of matched flow and the packet should be
+valid after removing.
+
 Negative types
 ~~~~~~~~~~~~~~
 
