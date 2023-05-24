@@ -163,3 +163,7 @@ Deprecation Notices
   The new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status
   starting with DPDK 23.07 release.
+
+* ethdev: The enum ``rte_eth_hash_function`` will be extended to add
+  new subtype value ``RTE_ETH_HASH_FUNCTION_SYMMETRIC_TOEPLITZ_SORT`` in
+  DPDK 23.11.
