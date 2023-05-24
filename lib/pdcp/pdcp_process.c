@@ -369,7 +369,7 @@ pdcp_pre_process_uplane_sn_12_ul_set_sn(struct entity_priv *en_priv, struct rte_
 		return false;
 
 	/* Update sequence num in the PDU header */
-	*count = en_priv->state.tx_next++;
+	*count = pdcp_atomic_inc(en_priv, &en_priv->state.tx_next);
 	sn = pdcp_sn_from_count_get(*count, RTE_SECURITY_PDCP_SN_SIZE_12);
 
 	pdu_hdr->d_c = RTE_PDCP_PDU_TYPE_DATA;
@@ -451,7 +451,7 @@ pdcp_pre_process_uplane_sn_18_ul_set_sn(struct entity_priv *en_priv, struct rte_
 		return false;
 
 	/* Update sequence num in the PDU header */
-	*count = en_priv->state.tx_next++;
+	*count = pdcp_atomic_inc(en_priv, &en_priv->state.tx_next);
 	sn = pdcp_sn_from_count_get(*count, RTE_SECURITY_PDCP_SN_SIZE_18);
 
 	pdu_hdr->d_c = RTE_PDCP_PDU_TYPE_DATA;
@@ -561,7 +561,7 @@ pdcp_pre_process_cplane_sn_12_ul(const struct rte_pdcp_entity *entity, struct rt
 			memset(mac_i, 0, RTE_PDCP_MAC_I_LEN);
 
 		/* Update sequence number in the PDU header */
-		count = en_priv->state.tx_next++;
+		count = pdcp_atomic_inc(en_priv, &en_priv->state.tx_next);
 		sn = pdcp_sn_from_count_get(count, RTE_SECURITY_PDCP_SN_SIZE_12);
 
 		pdu_hdr->sn_11_8 = ((sn & 0xf00) >> 8);
@@ -654,7 +654,9 @@ pdcp_pre_process_uplane_sn_12_dl_flags(const struct rte_pdcp_entity *entity,
 	nb_cop = rte_crypto_op_bulk_alloc(en_priv->cop_pool, RTE_CRYPTO_OP_TYPE_SYMMETRIC, cop,
 					  num);
 
+	pdcp_lock_lock(entity);
 	const uint32_t rx_deliv = en_priv->state.rx_deliv;
+	pdcp_lock_unlock(entity);
 
 	for (i = 0; i < nb_cop; i++) {
 		mb = in_mb[i];
@@ -717,7 +719,9 @@ pdcp_pre_process_uplane_sn_18_dl_flags(const struct rte_pdcp_entity *entity,
 	nb_cop = rte_crypto_op_bulk_alloc(en_priv->cop_pool, RTE_CRYPTO_OP_TYPE_SYMMETRIC, cop,
 					  num);
 
+	pdcp_lock_lock(entity);
 	const uint32_t rx_deliv = en_priv->state.rx_deliv;
+	pdcp_lock_unlock(entity);
 
 	for (i = 0; i < nb_cop; i++) {
 		mb = in_mb[i];
@@ -781,7 +785,9 @@ pdcp_pre_process_cplane_sn_12_dl(const struct rte_pdcp_entity *entity, struct rt
 	nb_cop = rte_crypto_op_bulk_alloc(en_priv->cop_pool, RTE_CRYPTO_OP_TYPE_SYMMETRIC, cop,
 					  num);
 
+	pdcp_lock_lock(entity);
 	const uint32_t rx_deliv = en_priv->state.rx_deliv;
+	pdcp_lock_unlock(entity);
 
 	for (i = 0; i < nb_cop; i++) {
 		mb = in_mb[i];
@@ -923,6 +929,8 @@ pdcp_post_process_uplane_sn_12_dl_flags(const struct rte_pdcp_entity *entity,
 	struct rte_mbuf *mb;
 	uint32_t count;
 
+	pdcp_lock_lock(entity);
+
 	for (i = 0; i < num; i++) {
 		mb = in_mb[i];
 		if (unlikely(mb->ol_flags & RTE_MBUF_F_RX_SEC_OFFLOAD_FAILED))
@@ -948,6 +956,8 @@ pdcp_post_process_uplane_sn_12_dl_flags(const struct rte_pdcp_entity *entity,
 error:
 		err_mb[nb_err++] = mb;
 	}
+
+	pdcp_lock_unlock(entity);
 
 	if (unlikely(nb_err != 0))
 		rte_memcpy(&out_mb[nb_success], err_mb, nb_err * sizeof(struct rte_mbuf *));
@@ -989,6 +999,7 @@ pdcp_post_process_uplane_sn_18_dl_flags(const struct rte_pdcp_entity *entity,
 	int32_t rsn = 0;
 	uint32_t count;
 
+	pdcp_lock_lock(entity);
 
 	for (i = 0; i < num; i++) {
 		mb = in_mb[i];
@@ -1016,6 +1027,8 @@ pdcp_post_process_uplane_sn_18_dl_flags(const struct rte_pdcp_entity *entity,
 error:
 		err_mb[nb_err++] = mb;
 	}
+
+	pdcp_lock_unlock(entity);
 
 	if (unlikely(nb_err != 0))
 		rte_memcpy(&out_mb[nb_success], err_mb, nb_err * sizeof(struct rte_mbuf *));
@@ -1057,6 +1070,8 @@ pdcp_post_process_cplane_sn_12_dl(const struct rte_pdcp_entity *entity,
 	uint32_t count;
 	int32_t rsn;
 
+	pdcp_lock_lock(entity);
+
 	for (i = 0; i < num; i++) {
 		mb = in_mb[i];
 		if (unlikely(mb->ol_flags & RTE_MBUF_F_RX_SEC_OFFLOAD_FAILED))
@@ -1081,6 +1096,8 @@ pdcp_post_process_cplane_sn_12_dl(const struct rte_pdcp_entity *entity,
 error:
 		err_mb[nb_err++] = mb;
 	}
+
+	pdcp_lock_unlock(entity);
 
 	if (unlikely(nb_err != 0))
 		rte_memcpy(&out_mb[nb_success], err_mb, nb_err * sizeof(struct rte_mbuf *));
@@ -1244,6 +1261,13 @@ pdcp_entity_priv_populate(struct entity_priv *en_priv, const struct rte_pdcp_ent
 	 * Indicate whether the outoforder delivery is enabled for PDCP entity.
 	 */
 	en_priv->flags.is_out_of_order_delivery = conf->out_of_order_delivery;
+
+	/**
+	 * flags.disable_thread_safety
+	 *
+	 * Indicate whether the thread safety is disabled for PDCP entity.
+	 */
+	en_priv->flags.is_thread_safety_disabled = conf->disable_thread_safety;
 
 	/**
 	 * hdr_sz

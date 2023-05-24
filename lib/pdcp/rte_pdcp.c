@@ -72,6 +72,8 @@ pdcp_dl_establish(struct rte_pdcp_entity *entity, const struct rte_pdcp_entity_c
 	if (ret)
 		return ret;
 
+	pdcp_lock_init(entity);
+
 	return 0;
 }
 
@@ -276,6 +278,8 @@ rte_pdcp_t_reordering_expiry_handle(const struct rte_pdcp_entity *entity, struct
 	 *   performing header decompression, if not decompressed before:
 	 */
 
+	pdcp_lock_lock(entity);
+
 	/*   - all stored PDCP SDU(s) with associated COUNT value(s) < RX_REORD; */
 	nb_out = pdcp_reorder_up_to_get(&dl->reorder, out_mb, capacity, en_priv->state.rx_reord);
 	capacity -= nb_out;
@@ -306,6 +310,8 @@ rte_pdcp_t_reordering_expiry_handle(const struct rte_pdcp_entity *entity, struct
 	} else {
 		dl->t_reorder.state = TIMER_EXPIRED;
 	}
+
+	pdcp_lock_unlock(entity);
 
 	return nb_out;
 }
