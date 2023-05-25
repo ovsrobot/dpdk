@@ -334,6 +334,10 @@ The following is an overview of some key Vhost API functions:
   Clean DMA vChannel finished to use. After this function is called,
   the specified DMA vChannel should no longer be used by the Vhost library.
 
+* ``rte_vhost_driver_set_max_queue_num(path, max_queue_pairs)``
+
+  Set the maximum number of queue pairs supported by the device.
+
 Vhost-user Implementations
 --------------------------
 

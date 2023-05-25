@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added Vhost API to set maximum queue pairs supported
+
+  Introduced ``rte_vhost_driver_set_max_queue_num()`` to be able to limit the
+  maximum number of supported queue pairs, required for VDUSE support.
+
 
 Removed Items
 -------------
