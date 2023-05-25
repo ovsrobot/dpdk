@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added new algorithms to cryptodev.**
+
+  * Added symmetric hash algorithm SM3-HMAC.
+  * Added symmetric cipher algorithm ShangMi 4 (SM4) in CFB and OFB modes.
+
 
 Removed Items
 -------------

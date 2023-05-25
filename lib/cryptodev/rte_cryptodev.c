@@ -94,7 +94,9 @@ rte_crypto_cipher_algorithm_strings[] = {
 	[RTE_CRYPTO_CIPHER_ZUC_EEA3]	= "zuc-eea3",
 	[RTE_CRYPTO_CIPHER_SM4_ECB]	= "sm4-ecb",
 	[RTE_CRYPTO_CIPHER_SM4_CBC]	= "sm4-cbc",
-	[RTE_CRYPTO_CIPHER_SM4_CTR]	= "sm4-ctr"
+	[RTE_CRYPTO_CIPHER_SM4_CTR]	= "sm4-ctr",
+	[RTE_CRYPTO_CIPHER_SM4_CFB]	= "sm4-cfb",
+	[RTE_CRYPTO_CIPHER_SM4_OFB]	= "sm4-ofb"
 };
 
 /**
@@ -127,7 +129,9 @@ crypto_cipher_algorithm_strings[] = {
 	[RTE_CRYPTO_CIPHER_ZUC_EEA3]	= "zuc-eea3",
 	[RTE_CRYPTO_CIPHER_SM4_ECB]	= "sm4-ecb",
 	[RTE_CRYPTO_CIPHER_SM4_CBC]	= "sm4-cbc",
-	[RTE_CRYPTO_CIPHER_SM4_CTR]	= "sm4-ctr"
+	[RTE_CRYPTO_CIPHER_SM4_CTR]	= "sm4-ctr",
+	[RTE_CRYPTO_CIPHER_SM4_CFB]	= "sm4-cfb",
+	[RTE_CRYPTO_CIPHER_SM4_OFB]	= "sm4-ofb"
 };
 
 /**
@@ -182,7 +186,8 @@ rte_crypto_auth_algorithm_strings[] = {
 	[RTE_CRYPTO_AUTH_KASUMI_F9]	= "kasumi-f9",
 	[RTE_CRYPTO_AUTH_SNOW3G_UIA2]	= "snow3g-uia2",
 	[RTE_CRYPTO_AUTH_ZUC_EIA3]	= "zuc-eia3",
-	[RTE_CRYPTO_AUTH_SM3]		= "sm3"
+	[RTE_CRYPTO_AUTH_SM3]		= "sm3",
+	[RTE_CRYPTO_AUTH_SM3_HMAC]	= "sm3-hmac"
 };
 
 /**
@@ -227,6 +232,7 @@ crypto_auth_algorithm_strings[] = {
 	[RTE_CRYPTO_AUTH_SNOW3G_UIA2]	= "snow3g-uia2",
 	[RTE_CRYPTO_AUTH_ZUC_EIA3]	= "zuc-eia3",
 	[RTE_CRYPTO_AUTH_SM3]		= "sm3",
+	[RTE_CRYPTO_AUTH_SM3_HMAC]	= "sm3",
 
 	[RTE_CRYPTO_AUTH_SHAKE_128]	 = "shake-128",
 	[RTE_CRYPTO_AUTH_SHAKE_256]	 = "shake-256",
