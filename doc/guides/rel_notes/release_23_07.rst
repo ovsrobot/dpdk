@@ -55,6 +55,13 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Add mbufs recycling support. **
+  Added ``rte_eth_recycle_rx_queue_info_get`` and ``rte_eth_recycle_mbufs``
+  APIs which allow the user to copy used mbufs from the Tx mbuf ring
+  into the Rx mbuf ring. This feature supports the case that the Rx Ethernet
+  device is different from the Tx Ethernet device with respective driver
+  callback functions in ``rte_eth_recycle_mbufs``.
+
 
 Removed Items
 -------------
