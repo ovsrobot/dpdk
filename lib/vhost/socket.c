@@ -18,6 +18,7 @@
 #include <rte_log.h>
 
 #include "fd_man.h"
+#include "vduse.h"
 #include "vhost.h"
 #include "vhost_user.h"
 
@@ -35,6 +36,7 @@ struct vhost_user_socket {
 	int socket_fd;
 	struct sockaddr_un un;
 	bool is_server;
+	bool is_vduse;
 	bool reconnect;
 	bool iommu_support;
 	bool use_builtin_virtio_net;
@@ -992,18 +994,21 @@ rte_vhost_driver_register(const char *path, uint64_t flags)
 #endif
 	}
 
-	if ((flags & RTE_VHOST_USER_CLIENT) != 0) {
-		vsocket->reconnect = !(flags & RTE_VHOST_USER_NO_RECONNECT);
-		if (vsocket->reconnect && reconn_tid == 0) {
-			if (vhost_user_reconnect_init() != 0)
-				goto out_mutex;
-		}
+	if (!strncmp("/dev/vduse/", path, strlen("/dev/vduse/"))) {
+		vsocket->is_vduse = true;
 	} else {
-		vsocket->is_server = true;
-	}
-	ret = create_unix_socket(vsocket);
-	if (ret < 0) {
-		goto out_mutex;
+		if ((flags & RTE_VHOST_USER_CLIENT) != 0) {
+			vsocket->reconnect = !(flags & RTE_VHOST_USER_NO_RECONNECT);
+			if (vsocket->reconnect && reconn_tid == 0) {
+				if (vhost_user_reconnect_init() != 0)
+					goto out_mutex;
+			}
+		} else {
+			vsocket->is_server = true;
+		}
+		ret = create_unix_socket(vsocket);
+		if (ret < 0)
+			goto out_mutex;
 	}
 
 	vhost_user.vsockets[vhost_user.vsocket_cnt++] = vsocket;
@@ -1068,7 +1073,9 @@ again:
 		if (strcmp(vsocket->path, path))
 			continue;
 
-		if (vsocket->is_server) {
+		if (vsocket->is_vduse) {
+			vduse_device_destroy(path);
+		} else if (vsocket->is_server) {
 			/*
 			 * If r/wcb is executing, release vhost_user's
 			 * mutex lock, and try again since the r/wcb
@@ -1170,6 +1177,9 @@ rte_vhost_driver_start(const char *path)
 
 	if (!vsocket)
 		return -1;
+
+	if (vsocket->is_vduse)
+		return vduse_device_create(path);
 
 	if (fdset_tid == 0) {
 		/**

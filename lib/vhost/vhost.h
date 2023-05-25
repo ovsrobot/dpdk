@@ -524,6 +524,8 @@ struct virtio_net {
 
 	int			postcopy_ufd;
 	int			postcopy_listening;
+	int			vduse_ctrl_fd;
+	int			vduse_dev_fd;
 
 	struct vhost_virtqueue	*cvq;
 
