@@ -246,7 +246,7 @@ pci_uio_alloc_resource(struct rte_pci_device *dev,
 	snprintf(devname, sizeof(devname), "/dev/uio%u", uio_num);
 
 	/* save fd if in primary process */
-	fd = open(devname, O_RDWR);
+	fd = open(devname, O_RDWR | O_CLOEXEC);
 	if (fd < 0) {
 		RTE_LOG(ERR, EAL, "Cannot open %s: %s\n",
 			devname, strerror(errno));
