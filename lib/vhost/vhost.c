@@ -44,6 +44,7 @@ static const struct vhost_vq_stats_name_off vhost_vq_stat_strings[] = {
 	{"size_1024_1518_packets", offsetof(struct vhost_virtqueue, stats.size_bins[6])},
 	{"size_1519_max_packets",  offsetof(struct vhost_virtqueue, stats.size_bins[7])},
 	{"guest_notifications",    offsetof(struct vhost_virtqueue, stats.guest_notifications)},
+	{"guest_notifications_error",    offsetof(struct vhost_virtqueue, stats.guest_notifications_error)},
 	{"iotlb_hits",             offsetof(struct vhost_virtqueue, stats.iotlb_hits)},
 	{"iotlb_misses",           offsetof(struct vhost_virtqueue, stats.iotlb_misses)},
 	{"inflight_submitted",     offsetof(struct vhost_virtqueue, stats.inflight_submitted)},
@@ -694,6 +695,11 @@ vhost_new_device(struct vhost_backend_ops *ops)
 
 	if (ops->iotlb_miss == NULL) {
 		VHOST_LOG_CONFIG("device", ERR, "missing IOTLB miss backend op.\n");
+		return -1;
+	}
+
+	if (ops->inject_irq == NULL) {
+		VHOST_LOG_CONFIG("device", ERR, "missing IRQ injection backend op.\n");
 		return -1;
 	}
 
