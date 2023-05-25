@@ -1551,6 +1551,13 @@ Matches flow quota state set by quota action.
 
 - ``state``: Flow quota state
 
+Item: ``IB_BTH``
+^^^^^^^^^^^^^^^^
+
+Matches an InfiniBand base transport header in RoCE packet.
+
+- ``hdr``: InfiniBand base transport header definition (``rte_ib.h``).
+
 Actions
 ~~~~~~~
 

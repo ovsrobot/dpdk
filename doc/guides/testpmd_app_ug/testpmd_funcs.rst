@@ -3781,6 +3781,13 @@ This section lists supported pattern items and their attributes, if any.
 
 - ``send_to_kernel``: send packets to kernel.
 
+- ``ib_bth``: match InfiniBand BTH(base transport header).
+
+  - ``opcode {unsigned}``: Opcode.
+  - ``pkey {unsigned}``: Partition key.
+  - ``dst_qp {unsigned}``: Destination Queue Pair.
+  - ``psn {unsigned}``: Packet Sequence Number.
+
 
 Actions list
 ^^^^^^^^^^^^
