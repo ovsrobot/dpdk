@@ -56,6 +56,12 @@ New Features
      =======================================================
 
 
+* **Added ethdev Rx/Tx queue ID check API.**
+
+  Added ethdev Rx/Tx queue ID check API which provides functions
+  for check if Rx/Tx queue is available.
+
+
 Removed Items
 -------------
 

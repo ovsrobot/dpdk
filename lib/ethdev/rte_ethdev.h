@@ -2666,6 +2666,42 @@ int rte_eth_dev_socket_id(uint16_t port_id);
 int rte_eth_dev_is_valid_port(uint16_t port_id);
 
 /**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Check if Rx queue is available.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param queue_id
+ *  The index of the receive queue.
+ * @return
+ *   - -ENODEV: if *port_id* is invalid.
+ *   - -EINVAL: if queue is out of range or not been setup.
+ *   - 0 if Rx queue is available.
+ */
+__rte_experimental
+int rte_eth_dev_rxq_avail(uint16_t port_id, uint16_t queue_id);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change, or be removed, without prior notice
+ *
+ * Check if Tx queue is available.
+ *
+ * @param port_id
+ *   The port identifier of the Ethernet device.
+ * @param queue_id
+ *  The index of the transmit queue.
+ * @return
+ *   - -ENODEV: if *port_id* is invalid.
+ *   - -EINVAL: if queue is out of range or not been setup.
+ *   - 0 if Tx queue is available.
+ */
+__rte_experimental
+int rte_eth_dev_txq_avail(uint16_t port_id, uint16_t queue_id);
+
+/**
  * Start specified Rx queue of a port. It is used when rx_deferred_start
  * flag of the specified queue is true.
  *
