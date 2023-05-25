@@ -42,6 +42,8 @@ testpmd_sources = files('i40e_testpmd.c')
 deps += ['hash']
 includes += include_directories('base')
 
+sources += files('i40e_recycle_mbufs_vec_common.c')
+
 if arch_subdir == 'x86'
     sources += files('i40e_rxtx_vec_sse.c')
 
