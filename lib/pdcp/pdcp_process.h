@@ -7,6 +7,16 @@
 
 #include <rte_pdcp.h>
 
+typedef uint32_t rte_pdcp_dynfield_t;
+
+extern int rte_pdcp_dynfield_offset;
+
+static inline rte_pdcp_dynfield_t *
+pdcp_dynfield(struct rte_mbuf *mbuf)
+{
+	return RTE_MBUF_DYNFIELD(mbuf, rte_pdcp_dynfield_offset, rte_pdcp_dynfield_t *);
+}
+
 int
 pdcp_process_func_set(struct rte_pdcp_entity *entity, const struct rte_pdcp_entity_conf *conf);
 
