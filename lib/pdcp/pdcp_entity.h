@@ -9,6 +9,7 @@
 #include <rte_crypto_sym.h>
 #include <rte_mempool.h>
 #include <rte_pdcp.h>
+#include <rte_rwlock.h>
 #include <rte_security.h>
 
 #include "pdcp_reorder.h"
@@ -162,6 +163,8 @@ struct entity_priv {
 		uint64_t is_status_report_required : 1;
 		/** Is out-of-order delivery enabled */
 		uint64_t is_out_of_order_delivery : 1;
+		/** Is thread safety enabled. */
+		uint64_t is_thread_safety_enabled : 1;
 	} flags;
 	/** Crypto op pool. */
 	struct rte_mempool *cop_pool;
@@ -182,6 +185,8 @@ struct entity_priv_dl_part {
 	struct pdcp_t_reordering t_reorder;
 	/** Reorder packet buffer */
 	struct pdcp_reorder reorder;
+	/* Lock to protect concurrent updates */
+	rte_rwlock_t rwl;
 	/** Bitmap memory region */
 	uint8_t bitmap_mem[0];
 };
@@ -255,6 +260,65 @@ static inline uint32_t
 pdcp_hfn_max(enum rte_security_pdcp_sn_size sn_size)
 {
 	return (1 << (32 - sn_size)) - 1;
+}
+
+static inline uint32_t
+pdcp_atomic_inc(uint32_t *val, const bool mt_safe)
+{
+	if (mt_safe)
+		return __atomic_fetch_add(val, 1, __ATOMIC_RELAXED);
+	else
+		return (*val)++;
+}
+
+static inline void
+pdcp_lock_init(const struct rte_pdcp_entity *entity)
+{
+	struct entity_priv_dl_part *dl = entity_dl_part_get(entity);
+	struct entity_priv *en_priv = entity_priv_get(entity);
+
+	if (en_priv->flags.is_thread_safety_enabled)
+		rte_rwlock_init(&dl->rwl);
+}
+
+static inline void
+pdcp_read_lock(const struct rte_pdcp_entity *entity)
+{
+	struct entity_priv_dl_part *dl = entity_dl_part_get(entity);
+	struct entity_priv *en_priv = entity_priv_get(entity);
+
+	if (en_priv->flags.is_thread_safety_enabled)
+		rte_rwlock_read_lock(&dl->rwl);
+}
+
+static inline void
+pdcp_read_unlock(const struct rte_pdcp_entity *entity)
+{
+	struct entity_priv_dl_part *dl = entity_dl_part_get(entity);
+	struct entity_priv *en_priv = entity_priv_get(entity);
+
+	if (en_priv->flags.is_thread_safety_enabled)
+		rte_rwlock_read_unlock(&dl->rwl);
+}
+
+static inline void
+pdcp_write_lock(const struct rte_pdcp_entity *entity)
+{
+	struct entity_priv_dl_part *dl = entity_dl_part_get(entity);
+	struct entity_priv *en_priv = entity_priv_get(entity);
+
+	if (en_priv->flags.is_thread_safety_enabled)
+		rte_rwlock_write_lock(&dl->rwl);
+}
+
+static inline void
+pdcp_write_unlock(const struct rte_pdcp_entity *entity)
+{
+	struct entity_priv_dl_part *dl = entity_dl_part_get(entity);
+	struct entity_priv *en_priv = entity_priv_get(entity);
+
+	if (en_priv->flags.is_thread_safety_enabled)
+		rte_rwlock_write_unlock(&dl->rwl);
 }
 
 #endif /* PDCP_ENTITY_H */
