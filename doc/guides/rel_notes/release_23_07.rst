@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added SM2 asymmetric algorithm in cryptodev.**
+
+  Added support for ShamMi 2 (SM2) asymmetric crypto algorithm
+  along with prime field curve support.
+
 
 Removed Items
 -------------
