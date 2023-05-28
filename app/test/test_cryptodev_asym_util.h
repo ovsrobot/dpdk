@@ -26,15 +26,6 @@ static inline int verify_modinv(uint8_t *mod_inv,
 	return 0;
 }
 
-static inline int verify_modexp(uint8_t *mod_exp,
-		struct rte_crypto_op *result_op)
-{
-	if (memcmp(mod_exp, result_op->asym->modex.result.data,
-				result_op->asym->modex.result.length))
-		return -1;
-	return 0;
-}
-
 static inline int verify_ecdsa_sign(uint8_t *sign_r,
 		uint8_t *sign_s, struct rte_crypto_op *result_op)
 {
