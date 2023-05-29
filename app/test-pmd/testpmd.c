@@ -2502,8 +2502,7 @@ start_packet_forwarding(int with_tx_first)
 		return;
 
 	if (stream_init != NULL) {
-		if (rte_eal_process_type() == RTE_PROC_SECONDARY)
-			update_queue_state();
+		update_queue_state();
 		for (i = 0; i < cur_fwd_config.nb_fwd_streams; i++)
 			stream_init(fwd_streams[i]);
 	}
@@ -2860,9 +2859,6 @@ rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
 				    socket_id, rx_conf, mp);
 	}
 
-	ports[port_id].rxq[rx_queue_id].state = rx_conf->rx_deferred_start ?
-						RTE_ETH_QUEUE_STATE_STOPPED :
-						RTE_ETH_QUEUE_STATE_STARTED;
 	return ret;
 }
 
@@ -3129,9 +3125,6 @@ start_port(portid_t pid)
 			port->need_reconfig_queues = 0;
 			/* setup tx queues */
 			for (qi = 0; qi < nb_txq; qi++) {
-				struct rte_eth_txconf *conf =
-							&port->txq[qi].conf;
-
 				if ((numa_support) &&
 					(txring_numa[pi] != NUMA_NO_CONFIG))
 					diag = rte_eth_tx_queue_setup(pi, qi,
@@ -3144,13 +3137,8 @@ start_port(portid_t pid)
 						port->socket_id,
 						&(port->txq[qi].conf));
 
-				if (diag == 0) {
-					port->txq[qi].state =
-						conf->tx_deferred_start ?
-						RTE_ETH_QUEUE_STATE_STOPPED :
-						RTE_ETH_QUEUE_STATE_STARTED;
+				if (diag == 0)
 					continue;
-				}
 
 				/* Fail to setup tx queue, return */
 				if (port->port_status == RTE_PORT_HANDLING)
@@ -3266,8 +3254,7 @@ start_port(portid_t pid)
 		pl[cfg_pi++] = pi;
 	}
 
-	if (rte_eal_process_type() == RTE_PROC_SECONDARY)
-		update_queue_state();
+	update_queue_state();
 
 	if (at_least_one_port_successfully_started && !no_link_check)
 		check_all_ports_link_status(RTE_PORT_ALL);
