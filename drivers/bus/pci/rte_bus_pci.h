@@ -69,6 +69,19 @@ void rte_pci_unmap_device(struct rte_pci_device *dev);
 void rte_pci_dump(FILE *f);
 
 /**
+ * Return PCI device address of an rte_device
+ *
+ * @param dev
+ *   A pointer to a rte_device structure describing the device
+ *   to use
+ *
+ * @return
+ *   PCI address of the device on success, NULL if no driver
+ *   is found for the device.
+ */
+const struct rte_pci_addr * rte_pci_get_addr(const struct rte_device *dev);
+
+/**
  * Find device's extended PCI capability.
  *
  *  @param dev

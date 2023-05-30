@@ -884,6 +884,21 @@ rte_pci_set_bus_master(struct rte_pci_device *dev, bool enable)
 	return 0;
 }
 
+const struct rte_pci_addr *
+rte_pci_get_addr(const struct rte_device *dev)
+{
+	const struct rte_pci_device *pci_dev;
+
+	if (!dev) {
+		rte_errno = EINVAL;
+		return NULL;
+	}
+
+	pci_dev = RTE_DEV_TO_PCI_CONST(dev);
+
+	return &pci_dev->addr;
+}
+
 struct rte_pci_bus rte_pci_bus = {
 	.bus = {
 		.scan = rte_pci_scan,
