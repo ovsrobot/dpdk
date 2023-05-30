@@ -7111,6 +7111,55 @@ eth_dev_handle_port_macs(const char *cmd __rte_unused,
 	return 0;
 }
 
+static int
+eth_dev_handle_port_flow_ctrl(const char *cmd __rte_unused,
+		const char *params,
+		struct rte_tel_data *d)
+{
+	struct rte_eth_fc_conf fc_conf;
+	unsigned long port_id;
+	char *end_param;
+	bool rx_fc_en;
+	bool tx_fc_en;
+	int ret;
+
+	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
+		return -EINVAL;
+
+	port_id = strtoul(params, &end_param, 0);
+	if (*end_param != '\0')
+		RTE_ETHDEV_LOG(NOTICE,
+			"Extra parameters passed to ethdev telemetry command, ignoring\n");
+
+	if (port_id >= UINT16_MAX || !rte_eth_dev_is_valid_port(port_id))
+		return -EINVAL;
+
+	ret = rte_eth_dev_flow_ctrl_get(port_id, &fc_conf);
+	if (ret != 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"Failed to get flow ctrl info, ret = %d\n", ret);
+		return ret;
+	}
+
+	rx_fc_en = fc_conf.mode == RTE_ETH_FC_RX_PAUSE ||
+		   fc_conf.mode == RTE_ETH_FC_FULL;
+	tx_fc_en = fc_conf.mode == RTE_ETH_FC_TX_PAUSE ||
+		   fc_conf.mode == RTE_ETH_FC_FULL;
+
+	rte_tel_data_start_dict(d);
+	rte_tel_data_add_dict_uint_hex(d, "high_waterline", fc_conf.high_water, 0);
+	rte_tel_data_add_dict_uint_hex(d, "low_waterline", fc_conf.low_water, 0);
+	rte_tel_data_add_dict_uint_hex(d, "pause_time", fc_conf.pause_time, 0);
+	rte_tel_data_add_dict_string(d, "send_xon", fc_conf.send_xon ? "on" : "off");
+	rte_tel_data_add_dict_string(d, "mac_ctrl_frame_fwd",
+			fc_conf.mac_ctrl_frame_fwd ? "on" : "off");
+	rte_tel_data_add_dict_string(d, "rx_pause", rx_fc_en ? "on" : "off");
+	rte_tel_data_add_dict_string(d, "tx_pause", tx_fc_en ? "on" : "off");
+	rte_tel_data_add_dict_string(d, "autoneg", fc_conf.autoneg ? "on" : "off");
+
+	return 0;
+}
+
 RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO);
 
 RTE_INIT(ethdev_init_telemetry)
@@ -7134,4 +7183,6 @@ RTE_INIT(ethdev_init_telemetry)
 			"Returns module EEPROM info with SFF specs. Parameters: int port_id");
 	rte_telemetry_register_cmd("/ethdev/macs", eth_dev_handle_port_macs,
 			"Returns the MAC addresses for a port. Parameters: int port_id");
+	rte_telemetry_register_cmd("/ethdev/flow_ctrl", eth_dev_handle_port_flow_ctrl,
+			"Returns flow ctrl info for a port. Parameters: unsigned port_id");
 }
