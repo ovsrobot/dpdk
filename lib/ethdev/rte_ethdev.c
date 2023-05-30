@@ -7422,6 +7422,90 @@ eth_dev_handle_port_dcb(const char *cmd __rte_unused,
 	return eth_dev_add_dcb_info(port_id, d);
 }
 
+static int
+eth_dev_add_rss_info(struct rte_eth_rss_conf *rss_conf, struct rte_tel_data *d)
+{
+	const uint32_t key_len = rss_conf->rss_key_len * 2 + 1;
+	char *rss_key;
+	char *key;
+	uint32_t i;
+	int ret;
+
+	key = rte_malloc(NULL, key_len, 0);
+	if (key == NULL)
+		return -ENOMEM;
+
+	rss_key = rte_malloc(NULL, key_len, 0);
+	if (rss_key == NULL) {
+		ret = -ENOMEM;
+		goto free_key;
+	}
+
+	rte_tel_data_start_dict(d);
+	rte_tel_data_add_dict_uint_hex(d, "rss_hf", rss_conf->rss_hf, 0);
+	rte_tel_data_add_dict_uint(d, "rss_key_len", rss_conf->rss_key_len);
+
+	memset(rss_key, 0, key_len);
+	for (i = 0; i < rss_conf->rss_key_len; i++) {
+		ret = snprintf(key, key_len, "%02x", rss_conf->rss_key[i]);
+		if (ret < 0)
+			goto free_rss_key;
+		strlcat(rss_key, key, key_len);
+	}
+	ret = rte_tel_data_add_dict_string(d, "rss_key", rss_key);
+
+free_rss_key:
+	rte_free(rss_key);
+free_key:
+	rte_free(key);
+	return ret;
+}
+
+static int
+eth_dev_handle_port_rss_info(const char *cmd __rte_unused,
+		const char *params,
+		struct rte_tel_data *d)
+{
+	struct rte_eth_dev_info dev_info;
+	struct rte_eth_rss_conf rss_conf;
+	unsigned long port_id;
+	char *end_param;
+	int ret;
+
+	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
+		return -EINVAL;
+
+	port_id = strtoul(params, &end_param, 0);
+	if (*end_param != '\0')
+		RTE_ETHDEV_LOG(NOTICE,
+			"Extra parameters passed to ethdev telemetry command, ignoring\n");
+
+	if (port_id >= UINT16_MAX || !rte_eth_dev_is_valid_port(port_id))
+		return -EINVAL;
+
+	ret = rte_eth_dev_info_get(port_id, &dev_info);
+	if (ret != 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"Failed to get device info, ret = %d\n", ret);
+		return ret;
+	}
+
+	rss_conf.rss_key_len = dev_info.hash_key_size;
+	rss_conf.rss_key = rte_malloc(NULL, dev_info.hash_key_size, 0);
+	if (rss_conf.rss_key == NULL)
+		return -ENOMEM;
+
+	ret = rte_eth_dev_rss_hash_conf_get(port_id, &rss_conf);
+	if (ret != 0) {
+		rte_free(rss_conf.rss_key);
+		return ret;
+	}
+
+	ret = eth_dev_add_rss_info(&rss_conf, d);
+	rte_free(rss_conf.rss_key);
+	return ret;
+}
+
 RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO);
 
 RTE_INIT(ethdev_init_telemetry)
@@ -7453,4 +7537,6 @@ RTE_INIT(ethdev_init_telemetry)
 			"Returns Tx queue info for a port. Parameters: unsigned port_id, unsigned queue_id (Optional if only one queue)");
 	rte_telemetry_register_cmd("/ethdev/dcb", eth_dev_handle_port_dcb,
 			"Returns DCB info for a port. Parameters: unsigned port_id");
+	rte_telemetry_register_cmd("/ethdev/rss_info", eth_dev_handle_port_rss_info,
+			"Returns RSS info for a port. Parameters: unsigned port_id");
 }
