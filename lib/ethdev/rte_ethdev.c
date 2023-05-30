@@ -160,6 +160,16 @@ enum {
 	STAT_QMAP_RX
 };
 
+static const struct {
+	uint32_t capa;
+	const char *name;
+} rte_eth_fec_capa_name[] = {
+	{ RTE_ETH_FEC_MODE_CAPA_MASK(NOFEC),	"off"	},
+	{ RTE_ETH_FEC_MODE_CAPA_MASK(AUTO),	"auto"	},
+	{ RTE_ETH_FEC_MODE_CAPA_MASK(BASER),	"baser"	},
+	{ RTE_ETH_FEC_MODE_CAPA_MASK(RS),	"rs"	},
+};
+
 int
 rte_eth_iterator_init(struct rte_dev_iterator *iter, const char *devargs_str)
 {
@@ -7506,6 +7516,139 @@ eth_dev_handle_port_rss_info(const char *cmd __rte_unused,
 	return ret;
 }
 
+static const char *
+eth_dev_fec_capa_to_string(uint32_t fec_capa)
+{
+	uint32_t i;
+
+	for (i = 0; i < RTE_DIM(rte_eth_fec_capa_name); i++) {
+		if ((fec_capa & rte_eth_fec_capa_name[i].capa) != 0)
+			return rte_eth_fec_capa_name[i].name;
+	}
+
+	return "unknown";
+}
+
+static void
+eth_dev_fec_capas_to_string(uint32_t fec_capa, char *fec_name, uint32_t len)
+{
+	bool valid = false;
+	size_t count = 0;
+	uint32_t i;
+
+	for (i = 0; i < RTE_DIM(rte_eth_fec_capa_name); i++) {
+		if ((fec_capa & rte_eth_fec_capa_name[i].capa) != 0) {
+			strlcat(fec_name, rte_eth_fec_capa_name[i].name, len);
+			count = strlcat(fec_name, " ", len);
+			valid = true;
+		}
+	}
+
+	if (!valid)
+		count = snprintf(fec_name, len, "unknown ");
+
+	if (count >= len) {
+		RTE_ETHDEV_LOG(WARNING, "FEC capa names may be truncated\n");
+		count = len;
+	}
+
+	fec_name[count - 1] = '\0';
+}
+
+static int
+eth_dev_get_fec_capability(uint16_t port_id, struct rte_tel_data *d)
+{
+	struct rte_eth_fec_capa *speed_fec_capa;
+	char fec_name[RTE_TEL_MAX_STRING_LEN];
+	char speed[RTE_TEL_MAX_STRING_LEN];
+	uint32_t capa_num;
+	uint32_t i, j;
+	int ret;
+
+	ret = rte_eth_fec_get_capability(port_id, NULL, 0);
+	if (ret <= 0)
+		return ret == 0 ? -EINVAL : ret;
+
+	capa_num = ret;
+	speed_fec_capa = calloc(capa_num, sizeof(struct rte_eth_fec_capa));
+	if (speed_fec_capa == NULL)
+		return -ENOMEM;
+
+	ret = rte_eth_fec_get_capability(port_id, speed_fec_capa, capa_num);
+	if (ret <= 0) {
+		ret = ret == 0 ? -EINVAL : ret;
+		goto out;
+	}
+
+	for (i = 0; i < capa_num; i++) {
+		memset(fec_name, 0, RTE_TEL_MAX_STRING_LEN);
+		eth_dev_fec_capas_to_string(speed_fec_capa[i].capa, fec_name,
+					    RTE_TEL_MAX_STRING_LEN);
+
+		memset(speed, 0, RTE_TEL_MAX_STRING_LEN);
+		ret = snprintf(speed, RTE_TEL_MAX_STRING_LEN, "%s",
+			rte_eth_link_speed_to_str(speed_fec_capa[i].speed));
+		if (ret < 0)
+			goto out;
+
+		for (j = 0; j < strlen(speed); j++) {
+			if (speed[j] == ' ')
+				speed[j] = '_';
+		}
+
+		rte_tel_data_add_dict_string(d, speed, fec_name);
+	}
+
+out:
+	free(speed_fec_capa);
+	return ret > 0 ? 0 : ret;
+}
+
+static int
+eth_dev_handle_port_fec(const char *cmd __rte_unused,
+		const char *params,
+		struct rte_tel_data *d)
+{
+	struct rte_tel_data *fec_capas;
+	unsigned long port_id;
+	uint32_t fec_mode;
+	char *end_param;
+	int ret;
+
+	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
+		return -EINVAL;
+
+	port_id = strtoul(params, &end_param, 0);
+	if (*end_param != '\0')
+		RTE_ETHDEV_LOG(NOTICE,
+			"Extra parameters passed to ethdev telemetry command, ignoring\n");
+
+	if (port_id >= UINT16_MAX || !rte_eth_dev_is_valid_port(port_id))
+		return -EINVAL;
+
+	ret = rte_eth_fec_get(port_id, &fec_mode);
+	if (ret != 0)
+		return ret;
+
+	rte_tel_data_start_dict(d);
+	rte_tel_data_add_dict_string(d, "fec_mode",
+				     eth_dev_fec_capa_to_string(fec_mode));
+
+	fec_capas = rte_tel_data_alloc();
+	if (fec_capas == NULL)
+		return -ENOMEM;
+
+	rte_tel_data_start_dict(fec_capas);
+	ret = eth_dev_get_fec_capability(port_id, fec_capas);
+	if (ret != 0) {
+		rte_tel_data_free(fec_capas);
+		return ret;
+	}
+
+	rte_tel_data_add_dict_container(d, "fec_capability", fec_capas, 0);
+	return 0;
+}
+
 RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO);
 
 RTE_INIT(ethdev_init_telemetry)
@@ -7539,4 +7682,6 @@ RTE_INIT(ethdev_init_telemetry)
 			"Returns DCB info for a port. Parameters: unsigned port_id");
 	rte_telemetry_register_cmd("/ethdev/rss_info", eth_dev_handle_port_rss_info,
 			"Returns RSS info for a port. Parameters: unsigned port_id");
+	rte_telemetry_register_cmd("/ethdev/fec", eth_dev_handle_port_fec,
+			"Returns FEC info for a port. Parameters: unsigned port_id");
 }
