@@ -582,7 +582,7 @@ process_outer_cksums(void *outer_l3_hdr, struct testpmd_offload_info *info,
 		else
 			ipv4_hdr->hdr_checksum = rte_ipv4_cksum(ipv4_hdr);
 	} else
-		ol_flags |= RTE_MBUF_F_TX_OUTER_IPV6;
+		ol_flags |= RTE_MBUF_F_TX_OUTER_IPV6 | RTE_MBUF_F_TX_L4_MASK;
 
 	if (info->outer_l4_proto != IPPROTO_UDP)
 		return ol_flags;
