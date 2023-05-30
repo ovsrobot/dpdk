@@ -7339,6 +7339,89 @@ eth_dev_handle_port_txq(const char *cmd __rte_unused,
 	return 0;
 }
 
+static int
+eth_dev_add_dcb_tc(struct rte_eth_dcb_info *dcb_info, struct rte_tel_data *d)
+{
+	struct rte_tel_data *tcds[RTE_ETH_DCB_NUM_TCS] = {NULL};
+	struct rte_eth_dcb_tc_queue_mapping *tcq;
+	char bw_percent[RTE_TEL_MAX_STRING_LEN];
+	char name[RTE_TEL_MAX_STRING_LEN];
+	struct rte_tel_data *tcd;
+	uint32_t i;
+
+	for (i = 0; i < dcb_info->nb_tcs; i++) {
+		tcd = rte_tel_data_alloc();
+		if (tcd == NULL) {
+			while (i-- > 0)
+				rte_tel_data_free(tcds[i]);
+			return -ENOMEM;
+		}
+
+		tcds[i] = tcd;
+		rte_tel_data_start_dict(tcd);
+
+		rte_tel_data_add_dict_uint(tcd, "priority", dcb_info->prio_tc[i]);
+		snprintf(bw_percent, RTE_TEL_MAX_STRING_LEN,
+			"%u%%", dcb_info->tc_bws[i]);
+		rte_tel_data_add_dict_string(tcd, "bw_percent", bw_percent);
+
+		tcq = &dcb_info->tc_queue;
+		rte_tel_data_add_dict_uint(tcd, "rxq_base", tcq->tc_rxq[0][i].base);
+		rte_tel_data_add_dict_uint(tcd, "txq_base", tcq->tc_txq[0][i].base);
+		rte_tel_data_add_dict_uint(tcd, "nb_rxq", tcq->tc_rxq[0][i].nb_queue);
+		rte_tel_data_add_dict_uint(tcd, "nb_txq", tcq->tc_txq[0][i].nb_queue);
+
+		snprintf(name, RTE_TEL_MAX_STRING_LEN, "tc%u", i);
+		rte_tel_data_add_dict_container(d, name, tcd, 0);
+	}
+
+	return 0;
+}
+
+static int
+eth_dev_add_dcb_info(uint16_t port_id, struct rte_tel_data *d)
+{
+	struct rte_eth_dcb_info dcb_info;
+	int ret;
+
+	ret = rte_eth_dev_get_dcb_info(port_id, &dcb_info);
+	if (ret != 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"Failed to get dcb info, ret = %d\n", ret);
+		return ret;
+	}
+
+	rte_tel_data_start_dict(d);
+	rte_tel_data_add_dict_uint(d, "tc_num", dcb_info.nb_tcs);
+
+	if (dcb_info.nb_tcs > 0)
+		return eth_dev_add_dcb_tc(&dcb_info, d);
+
+	return 0;
+}
+
+static int
+eth_dev_handle_port_dcb(const char *cmd __rte_unused,
+		const char *params,
+		struct rte_tel_data *d)
+{
+	unsigned long port_id;
+	char *end_param;
+
+	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
+		return -EINVAL;
+
+	port_id = strtoul(params, &end_param, 0);
+	if (*end_param != '\0')
+		RTE_ETHDEV_LOG(NOTICE,
+			"Extra parameters passed to ethdev telemetry command, ignoring\n");
+
+	if (port_id >= UINT16_MAX || !rte_eth_dev_is_valid_port(port_id))
+		return -EINVAL;
+
+	return eth_dev_add_dcb_info(port_id, d);
+}
+
 RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO);
 
 RTE_INIT(ethdev_init_telemetry)
@@ -7368,4 +7451,6 @@ RTE_INIT(ethdev_init_telemetry)
 			"Returns Rx queue info for a port. Parameters: unsigned port_id, unsigned queue_id (Optional if only one queue)");
 	rte_telemetry_register_cmd("/ethdev/tx_queue", eth_dev_handle_port_txq,
 			"Returns Tx queue info for a port. Parameters: unsigned port_id, unsigned queue_id (Optional if only one queue)");
+	rte_telemetry_register_cmd("/ethdev/dcb", eth_dev_handle_port_dcb,
+			"Returns DCB info for a port. Parameters: unsigned port_id");
 }
