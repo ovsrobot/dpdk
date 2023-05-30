@@ -7160,6 +7160,131 @@ eth_dev_handle_port_flow_ctrl(const char *cmd __rte_unused,
 	return 0;
 }
 
+static int
+parse_queue_params(const char *params, bool is_rx,
+		unsigned long *port_id, unsigned long *queue_id)
+{
+	struct rte_eth_dev *dev;
+	const char *qid_param;
+	uint16_t nb_queues;
+	char *end_param;
+
+	if (params == NULL || strlen(params) == 0 || !isdigit(*params))
+		return -EINVAL;
+
+	*port_id = strtoul(params, &end_param, 0);
+	if (*port_id >= UINT16_MAX || !rte_eth_dev_is_valid_port(*port_id))
+		return -EINVAL;
+
+	dev = &rte_eth_devices[*port_id];
+	nb_queues = is_rx ? dev->data->nb_rx_queues : dev->data->nb_tx_queues;
+	if (nb_queues == 1 && *end_param == '\0')
+		*queue_id = 0;
+	else {
+		qid_param = strtok(end_param, ",");
+		if (!qid_param || strlen(qid_param) == 0 || !isdigit(*qid_param))
+			return -EINVAL;
+
+		*queue_id = strtoul(qid_param, &end_param, 0);
+	}
+	if (*end_param != '\0')
+		RTE_ETHDEV_LOG(NOTICE,
+			"Extra parameters passed to ethdev telemetry command, ignoring\n");
+
+	if (*queue_id >= UINT16_MAX)
+		return -EINVAL;
+
+	return 0;
+}
+
+static int
+eth_dev_add_burst_mode(unsigned long port_id, unsigned long queue_id,
+			bool is_rx, struct rte_tel_data *d)
+{
+	struct rte_eth_burst_mode mode;
+	int ret;
+
+	if (is_rx)
+		ret = rte_eth_rx_burst_mode_get(port_id, queue_id, &mode);
+	else
+		ret = rte_eth_tx_burst_mode_get(port_id, queue_id, &mode);
+
+	if (ret == -ENOTSUP)
+		return 0;
+
+	if (ret != 0) {
+		RTE_ETHDEV_LOG(ERR,
+			"Failed to get burst mode for port %lu\n", port_id);
+		return ret;
+	}
+
+	rte_tel_data_add_dict_uint(d, "burst_flags", mode.flags);
+	rte_tel_data_add_dict_string(d, "burst_mode", mode.info);
+	return 0;
+}
+
+static int
+eth_dev_handle_port_rxq(const char *cmd __rte_unused,
+		const char *params,
+		struct rte_tel_data *d)
+{
+	struct rte_eth_thresh *rx_thresh;
+	unsigned long port_id, queue_id;
+	struct rte_eth_rxconf *rxconf;
+	struct rte_eth_rxq_info qinfo;
+	struct rte_tel_data *offload;
+	int ret;
+
+	ret = parse_queue_params(params, true, &port_id, &queue_id);
+	if (ret != 0)
+		return ret;
+
+	ret = rte_eth_rx_queue_info_get(port_id, queue_id, &qinfo);
+	if (ret != 0)
+		return ret;
+
+	rte_tel_data_start_dict(d);
+	rte_tel_data_add_dict_string(d, "mempool_name", qinfo.mp->name);
+	rte_tel_data_add_dict_uint(d, "socket_id", qinfo.mp->socket_id);
+
+	rx_thresh = &qinfo.conf.rx_thresh;
+	rte_tel_data_add_dict_uint(d, "host_threshold", rx_thresh->hthresh);
+	rte_tel_data_add_dict_uint(d, "prefetch_threshold", rx_thresh->pthresh);
+	rte_tel_data_add_dict_uint(d, "writeback_threshold", rx_thresh->wthresh);
+
+	rxconf = &qinfo.conf;
+	rte_tel_data_add_dict_uint(d, "free_threshold", rxconf->rx_free_thresh);
+	rte_tel_data_add_dict_string(d, "rx_drop_en",
+			rxconf->rx_drop_en == 0 ? "off" : "on");
+	rte_tel_data_add_dict_string(d, "deferred_start",
+			rxconf->rx_deferred_start == 0 ? "off" : "on");
+	rte_tel_data_add_dict_uint(d, "rx_nseg", rxconf->rx_nseg);
+	rte_tel_data_add_dict_uint(d, "share_group", rxconf->share_group);
+	rte_tel_data_add_dict_uint(d, "share_qid", rxconf->share_qid);
+
+	offload = rte_tel_data_alloc();
+	if (offload == NULL)
+		return -ENOMEM;
+
+	eth_dev_parse_rx_offloads(rxconf->offloads, offload);
+	rte_tel_data_add_dict_container(d, "offloads", offload, 0);
+
+	rte_tel_data_add_dict_uint(d, "rx_nmempool", rxconf->rx_nmempool);
+
+	rte_tel_data_add_dict_string(d, "scattered_rx",
+			qinfo.scattered_rx == 0 ? "off" : "on");
+	rte_tel_data_add_dict_uint(d, "queue_state", qinfo.queue_state);
+	rte_tel_data_add_dict_uint(d, "nb_desc", qinfo.nb_desc);
+	rte_tel_data_add_dict_uint(d, "rx_buf_size", qinfo.rx_buf_size);
+	rte_tel_data_add_dict_uint(d, "avail_thresh", qinfo.avail_thresh);
+
+	ret = eth_dev_add_burst_mode(port_id, queue_id, true, d);
+	if (ret != 0)
+		rte_tel_data_free(offload);
+
+	return ret;
+}
+
 RTE_LOG_REGISTER_DEFAULT(rte_eth_dev_logtype, INFO);
 
 RTE_INIT(ethdev_init_telemetry)
@@ -7185,4 +7310,6 @@ RTE_INIT(ethdev_init_telemetry)
 			"Returns the MAC addresses for a port. Parameters: int port_id");
 	rte_telemetry_register_cmd("/ethdev/flow_ctrl", eth_dev_handle_port_flow_ctrl,
 			"Returns flow ctrl info for a port. Parameters: unsigned port_id");
+	rte_telemetry_register_cmd("/ethdev/rx_queue", eth_dev_handle_port_rxq,
+			"Returns Rx queue info for a port. Parameters: unsigned port_id, unsigned queue_id (Optional if only one queue)");
 }
