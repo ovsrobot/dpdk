@@ -305,6 +305,36 @@ void rte_memzone_dump(FILE *f);
 void rte_memzone_walk(void (*func)(const struct rte_memzone *, void *arg),
 		      void *arg);
 
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Set max memzone count.
+ *
+ * This function can only be called prior to rte_eal_init().
+ *
+ * @param max
+ *   Maximum number of memzones
+ * @return
+ *  0 on success, -1 otherwise
+ */
+__rte_experimental
+int rte_memzone_max_set(size_t max);
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice
+ *
+ * Get the maximum number of memzones.
+ *
+ * @note: The maximum value will not change after calling rte_eal_init().
+ *
+ * @return
+ *   Maximum number of memzones
+ */
+__rte_experimental
+size_t rte_memzone_max_get(void);
+
 #ifdef __cplusplus
 }
 #endif
