@@ -274,7 +274,7 @@ rte_memzone_free(const struct rte_memzone *mz)
 	if (mz == NULL)
 		return -EINVAL;
 
-	rte_strlcpy(name, mz->name, RTE_MEMZONE_NAMESIZE);
+	strlcpy(name, mz->name, RTE_MEMZONE_NAMESIZE);
 	mcfg = rte_eal_get_configuration()->mem_config;
 	arr = &mcfg->memzones;
 

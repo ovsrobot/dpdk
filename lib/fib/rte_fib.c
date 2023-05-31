@@ -208,7 +208,7 @@ rte_fib_create(const char *name, int socket_id, struct rte_fib_conf *conf)
 		goto free_te;
 	}
 
-	rte_strlcpy(fib->name, name, sizeof(fib->name));
+	strlcpy(fib->name, name, sizeof(fib->name));
 	fib->rib = rib;
 	fib->type = conf->type;
 	fib->def_nh = conf->default_nh;

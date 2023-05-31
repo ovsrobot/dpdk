@@ -522,7 +522,7 @@ rte_rib6_create(const char *name, int socket_id,
 		goto free_te;
 	}
 
-	rte_strlcpy(rib->name, name, sizeof(rib->name));
+	strlcpy(rib->name, name, sizeof(rib->name));
 	rib->tree = NULL;
 	rib->max_nodes = conf->max_nodes;
 	rib->node_pool = node_pool;

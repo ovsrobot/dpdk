@@ -255,7 +255,7 @@ rte_thash_init_ctx(const char *name, uint32_t key_len, uint32_t reta_sz,
 		goto free_te;
 	}
 
-	rte_strlcpy(ctx->name, name, sizeof(ctx->name));
+	strlcpy(ctx->name, name, sizeof(ctx->name));
 	ctx->key_len = key_len;
 	ctx->reta_sz_log = reta_sz;
 	LIST_INIT(&ctx->head);
@@ -574,7 +574,7 @@ rte_thash_add_helper(struct rte_thash_ctx *ctx, const char *name, uint32_t len,
 	if (ent == NULL)
 		return -ENOMEM;
 
-	rte_strlcpy(ent->name, name, sizeof(ent->name));
+	strlcpy(ent->name, name, sizeof(ent->name));
 	ent->offset = start;
 	ent->len = end - start;
 	ent->tuple_offset = offset;
