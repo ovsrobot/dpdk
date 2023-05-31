@@ -215,7 +215,7 @@
 
 #define plt_lcore_id rte_lcore_id
 
-#define plt_strlcpy rte_strlcpy
+#define plt_strlcpy strlcpy
 
 #define PLT_TEL_INT_VAL              RTE_TEL_INT_VAL
 #define PLT_TEL_STRING_VAL           RTE_TEL_STRING_VAL

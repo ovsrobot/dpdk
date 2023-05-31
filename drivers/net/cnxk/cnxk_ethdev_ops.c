@@ -753,12 +753,12 @@ cnxk_nix_fw_version_get(struct rte_eth_dev *eth_dev, char *fw_version,
 {
 	struct cnxk_eth_dev *dev = cnxk_eth_pmd_priv(eth_dev);
 	const char *str = roc_npc_profile_name_get(&dev->npc);
-	uint32_t size = strlen(str) + 1;
+	size_t size = strlen(str) + 1;
 
 	if (fw_size > size)
 		fw_size = size;
 
-	rte_strlcpy(fw_version, str, fw_size);
+	strlcpy(fw_version, str, fw_size);
 
 	if (fw_size < size)
 		return size;

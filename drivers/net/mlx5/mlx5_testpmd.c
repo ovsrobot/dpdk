@@ -179,7 +179,7 @@ mlx5_test_extend_devargs(char *identifier, char *extend)
 			    strerror(errno));
 		return -1;
 	}
-	rte_strlcpy(un.sun_path, path, sizeof(un.sun_path));
+	strlcpy(un.sun_path, path, sizeof(un.sun_path));
 	if (connect(socket_fd, (struct sockaddr *)&un, sizeof(un)) < 0) {
 		TESTPMD_LOG(ERR, "Failed to connect %s: %s\n", un.sun_path,
 			    strerror(errno));

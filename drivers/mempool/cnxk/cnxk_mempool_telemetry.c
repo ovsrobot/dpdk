@@ -39,7 +39,7 @@ mempool_tel_handle_info(const char *cmd __rte_unused, const char *params,
 	if (params == NULL || strlen(params) == 0)
 		return -EINVAL;
 
-	rte_strlcpy(name, params, RTE_MEMZONE_NAMESIZE);
+	strlcpy(name, params, RTE_MEMZONE_NAMESIZE);
 
 	rte_tel_data_start_dict(d);
 	mp_arg.pool_name = name;
