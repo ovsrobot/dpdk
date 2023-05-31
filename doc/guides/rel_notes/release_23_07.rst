@@ -54,6 +54,9 @@ New Features
      This section is a comment. Do not overwrite or remove it.
      Also, make sure to start the actual text at the margin.
      =======================================================
+* **Added flow matching of infiniband BTH.**
+
+  Added ``RTE_FLOW_ITEM_TYPE_IB_BTH`` to match infiniband BTH fields.
 
 
 Removed Items
