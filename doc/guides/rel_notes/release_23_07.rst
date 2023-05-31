@@ -55,6 +55,11 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Added MMIO read and write APIs to PCI bus.**
+
+  Introduced ``rte_pci_mmio_read()`` and ``rte_pci_mmio_write()`` APIs to PCI
+  bus so that PCI drivers can access PCI memory resources when they are not
+  mapped to process address space.
 
 Removed Items
 -------------
