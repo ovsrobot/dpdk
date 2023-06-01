@@ -185,12 +185,7 @@ static struct rte_ring
 	struct ipsec_mb_qp *qp, unsigned int ring_size, int socket_id)
 {
 	struct rte_ring *r;
-	char ring_name[RTE_CRYPTODEV_NAME_MAX_LEN];
-
-	unsigned int n = rte_strlcpy(ring_name, qp->name, sizeof(ring_name));
-
-	if (n >= sizeof(ring_name))
-		return NULL;
+	const char *ring_name = qp->name;
 
 	r = rte_ring_lookup(ring_name);
 	if (r) {
