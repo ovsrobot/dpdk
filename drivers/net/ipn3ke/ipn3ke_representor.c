@@ -124,8 +124,7 @@ ipn3ke_rpst_dev_start(struct rte_eth_dev *dev)
 	rawdev = hw->rawdev;
 
 	memset(attr_name, 0, sizeof(attr_name));
-	snprintf(attr_name, IPN3KE_RAWDEV_ATTR_LEN_MAX, "%s",
-			"LineSideBaseMAC");
+	strlcpy(attr_name, "LineSideBaseMAC", IPN3KE_RAWDEV_ATTR_LEN_MAX);
 	rawdev->dev_ops->attr_get(rawdev, attr_name, &base_mac);
 	rte_ether_addr_copy((struct rte_ether_addr *)&base_mac,
 			&rpst->mac_addr);
@@ -2330,19 +2329,17 @@ __rte_unused unsigned int limit)
 
 	/* Get stats from ipn3ke_rpst_stats */
 	for (i = 0; i < IPN3KE_RPST_ETH_XSTATS_CNT; i++) {
-		snprintf(xstats_names[count].name,
-			 sizeof(xstats_names[count].name),
-			 "%s",
-			 ipn3ke_rpst_stats_strings[i].name);
+		strlcpy(xstats_names[count].name,
+			ipn3ke_rpst_stats_strings[i].name,
+			sizeof(xstats_names[count].name));
 		count++;
 	}
 
 	/* Get individual stats from ipn3ke_rpst_hw_port */
 	for (i = 0; i < IPN3KE_RPST_HW_PORT_XSTATS_CNT; i++) {
-		snprintf(xstats_names[count].name,
-			 sizeof(xstats_names[count].name),
-			 "%s",
-			 ipn3ke_rpst_hw_port_strings[i].name);
+		strlcpy(xstats_names[count].name,
+			ipn3ke_rpst_hw_port_strings[i].name,
+			sizeof(xstats_names[count].name));
 		count++;
 	}
 

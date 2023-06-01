@@ -208,8 +208,7 @@ ionic_dev_fw_version_get(struct rte_eth_dev *eth_dev,
 	struct ionic_adapter *adapter = lif->adapter;
 	int ret;
 
-	ret = snprintf(fw_version, fw_size, "%s",
-		 adapter->fw_version);
+	ret = strlcpy(fw_version, adapter->fw_version, fw_size);
 	if (ret < 0)
 		return -EINVAL;
 
@@ -705,9 +704,9 @@ ionic_dev_xstats_get_names(__rte_unused struct rte_eth_dev *eth_dev,
 
 	if (xstats_names != NULL) {
 		for (i = 0; i < IONIC_NB_HW_STATS; i++) {
-			snprintf(xstats_names[i].name,
-					sizeof(xstats_names[i].name),
-					"%s", rte_ionic_xstats_strings[i].name);
+			strlcpy(xstats_names[i].name,
+				rte_ionic_xstats_strings[i].name,
+				sizeof(xstats_names[i].name));
 		}
 	}
 
@@ -725,9 +724,9 @@ ionic_dev_xstats_get_names_by_id(struct rte_eth_dev *eth_dev,
 	if (!ids) {
 		if (xstats_names != NULL) {
 			for (i = 0; i < IONIC_NB_HW_STATS; i++) {
-				snprintf(xstats_names[i].name,
-					sizeof(xstats_names[i].name),
-					"%s", rte_ionic_xstats_strings[i].name);
+				strlcpy(xstats_names[i].name,
+					rte_ionic_xstats_strings[i].name,
+					sizeof(xstats_names[i].name));
 			}
 		}
 
