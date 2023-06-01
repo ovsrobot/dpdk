@@ -313,8 +313,8 @@ dpaa2_dev_rx_burst_mode_get(struct rte_eth_dev *dev,
 	/* Update Rx offload info */
 	for (i = 0; i < RTE_DIM(rx_offload_map); i++) {
 		if (eth_conf->rxmode.offloads & rx_offload_map[i].flags) {
-			snprintf(mode->info, sizeof(mode->info), "%s",
-				rx_offload_map[i].output);
+			strlcpy(mode->info, rx_offload_map[i].output,
+				sizeof(mode->info));
 			ret = 0;
 			break;
 		}
@@ -348,8 +348,8 @@ dpaa2_dev_tx_burst_mode_get(struct rte_eth_dev *dev,
 	/* Update Tx offload info */
 	for (i = 0; i < RTE_DIM(tx_offload_map); i++) {
 		if (eth_conf->txmode.offloads & tx_offload_map[i].flags) {
-			snprintf(mode->info, sizeof(mode->info), "%s",
-				tx_offload_map[i].output);
+			strlcpy(mode->info, tx_offload_map[i].output,
+				sizeof(mode->info));
 			ret = 0;
 			break;
 		}
