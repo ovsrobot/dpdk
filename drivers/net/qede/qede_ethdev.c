@@ -238,8 +238,8 @@ qede_fw_version_get(struct rte_eth_dev *dev, char *fw_ver, size_t fw_size)
 	size_t size;
 
 	if (IS_PF(edev))
-		snprintf(ver_str, QEDE_PMD_DRV_VER_STR_SIZE, "%s",
-			 QEDE_PMD_FW_VERSION);
+		strlcpy(ver_str, QEDE_PMD_FW_VERSION,
+			QEDE_PMD_DRV_VER_STR_SIZE);
 	else
 		snprintf(ver_str, QEDE_PMD_DRV_VER_STR_SIZE, "%d.%d.%d.%d",
 			 info->fw_major, info->fw_minor,
@@ -374,11 +374,9 @@ static void qede_print_adapter_info(struct rte_eth_dev *dev)
 		  ECORE_IS_BB(edev) ? "BB" : "AH",
 		  'A' + edev->chip_rev,
 		  (int)edev->chip_metal);
-	snprintf(ver_str, QEDE_PMD_DRV_VER_STR_SIZE, "%s",
-		 QEDE_PMD_DRV_VERSION);
+	strlcpy(ver_str, QEDE_PMD_DRV_VERSION, QEDE_PMD_DRV_VER_STR_SIZE);
 	DP_INFO(edev, " %-20s: %s\n", "Driver version", ver_str);
-	snprintf(ver_str, QEDE_PMD_DRV_VER_STR_SIZE, "%s",
-		 QEDE_PMD_BASE_VERSION);
+	strlcpy(ver_str, QEDE_PMD_BASE_VERSION, QEDE_PMD_DRV_VER_STR_SIZE);
 	DP_INFO(edev, " %-20s: %s\n", "Base version", ver_str);
 	qede_fw_version_get(dev, ver_str, sizeof(ver_str));
 	DP_INFO(edev, " %-20s: %s\n", "Firmware version", ver_str);
