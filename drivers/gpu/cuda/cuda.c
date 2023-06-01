@@ -291,7 +291,7 @@ cuda_loader(void)
 	char cuda_path[1024];
 
 	if (getenv("CUDA_PATH_L") == NULL)
-		snprintf(cuda_path, 1024, "%s", "libcuda.so");
+		strlcpy(cuda_path, "libcuda.so", 1024);
 	else
 		snprintf(cuda_path, 1024, "%s/%s", getenv("CUDA_PATH_L"), "libcuda.so");
 

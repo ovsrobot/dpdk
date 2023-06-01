@@ -20,7 +20,7 @@ gdrcopy_loader(void)
 	char gdrcopy_path[1024];
 
 	if (getenv("GDRCOPY_PATH_L") == NULL)
-		snprintf(gdrcopy_path, 1024, "%s", "libgdrapi.so");
+		strlcpy(gdrcopy_path, "libgdrapi.so", 1024);
 	else
 		snprintf(gdrcopy_path, 1024, "%s/%s", getenv("GDRCOPY_PATH_L"), "libgdrapi.so");
 
