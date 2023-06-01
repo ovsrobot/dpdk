@@ -246,15 +246,14 @@ cnxk_sso_xstats_get_names(const struct rte_eventdev *event_dev,
 	unsigned int i;
 
 	for (i = 0; i < CNXK_SSO_NUM_HWS_XSTATS; i++) {
-		snprintf(xstats_names_copy[i].name,
-			 sizeof(xstats_names_copy[i].name), "%s",
-			 sso_hws_xstats[i].name);
+		strlcpy(xstats_names_copy[i].name, sso_hws_xstats[i].name,
+			sizeof(xstats_names_copy[i].name));
 	}
 
 	for (; i < CNXK_SSO_NUM_XSTATS; i++) {
-		snprintf(xstats_names_copy[i].name,
-			 sizeof(xstats_names_copy[i].name), "%s",
-			 sso_hwgrp_xstats[i - CNXK_SSO_NUM_HWS_XSTATS].name);
+		strlcpy(xstats_names_copy[i].name,
+			sso_hwgrp_xstats[i - CNXK_SSO_NUM_HWS_XSTATS].name,
+			sizeof(xstats_names_copy[i].name));
 	}
 
 	switch (mode) {
