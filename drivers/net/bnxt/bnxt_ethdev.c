@@ -2983,8 +2983,8 @@ bnxt_rx_burst_mode_get(struct rte_eth_dev *dev, __rte_unused uint16_t queue_id,
 
 	for (i = 0; i < RTE_DIM(bnxt_rx_burst_info); i++) {
 		if (pkt_burst == bnxt_rx_burst_info[i].pkt_burst) {
-			snprintf(mode->info, sizeof(mode->info), "%s",
-				 bnxt_rx_burst_info[i].info);
+			strlcpy(mode->info, bnxt_rx_burst_info[i].info,
+				sizeof(mode->info));
 			return 0;
 		}
 	}
@@ -3017,8 +3017,8 @@ bnxt_tx_burst_mode_get(struct rte_eth_dev *dev, __rte_unused uint16_t queue_id,
 
 	for (i = 0; i < RTE_DIM(bnxt_tx_burst_info); i++) {
 		if (pkt_burst == bnxt_tx_burst_info[i].pkt_burst) {
-			snprintf(mode->info, sizeof(mode->info), "%s",
-				 bnxt_tx_burst_info[i].info);
+			strlcpy(mode->info, bnxt_tx_burst_info[i].info,
+				sizeof(mode->info));
 			return 0;
 		}
 	}
