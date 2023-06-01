@@ -49,8 +49,7 @@ mlx5_list_create(const char *name, void *ctx, bool lcores_share,
 	if (!list)
 		return NULL;
 	if (name)
-		snprintf(list->l_const.name,
-			 sizeof(list->l_const.name), "%s", name);
+		strlcpy(list->l_const.name, name, sizeof(list->l_const.name));
 	list->l_const.ctx = ctx;
 	list->l_const.lcores_share = lcores_share;
 	list->l_const.cb_create = cb_create;
@@ -422,7 +421,7 @@ mlx5_hlist_create(const char *name, uint32_t size, bool direct_key,
 		return NULL;
 	}
 	if (name)
-		snprintf(h->l_const.name, sizeof(h->l_const.name), "%s", name);
+		strlcpy(h->l_const.name, name, sizeof(h->l_const.name));
 	h->l_const.ctx = ctx;
 	h->l_const.lcores_share = lcores_share;
 	h->l_const.cb_create = cb_create;

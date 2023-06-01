@@ -897,7 +897,7 @@ mlx5_get_device_guid(const struct rte_pci_addr *dev, uint8_t *guid, size_t len)
 		}
 	} while (strchr(ptr->d_name, '.') || strchr(ptr->d_name, '_') ||
 		 strchr(ptr->d_name, 'v'));
-	snprintf(cur_ifname, sizeof(cur_ifname), "%s", ptr->d_name);
+	strlcpy(cur_ifname, ptr->d_name, sizeof(cur_ifname));
 	closedir(dir);
 	snprintf(tmp + strlen(tmp), sizeof(tmp) - strlen(tmp),
 			"/%s/phys_switch_id", cur_ifname);
