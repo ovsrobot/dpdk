@@ -16,6 +16,7 @@
 #include <rte_malloc.h>
 #include <rte_memzone.h>
 #include <rte_rawdev_pmd.h>
+#include <rte_string_fns.h>
 
 #include "afu_pmd_core.h"
 
@@ -225,7 +226,7 @@ static int afu_shared_data_alloc(const char *name,
 		return -EINVAL;
 
 	/* name format is afu_?|??:??.? which is unique */
-	snprintf(mz_name, sizeof(mz_name), "%s", name);
+	strlcpy(mz_name, name, sizeof(mz_name));
 
 	mz = rte_memzone_lookup(mz_name);
 	if (!mz) {
