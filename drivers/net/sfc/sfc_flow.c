@@ -7,6 +7,8 @@
  * for Solarflare) and Solarflare Communications, Inc.
  */
 
+#include <stdbool.h>
+
 #include <rte_byteorder.h>
 #include <rte_tailq.h>
 #include <rte_common.h>
@@ -2405,7 +2407,7 @@ sfc_flow_parse_rte_to_mae(struct rte_eth_dev *dev,
 	if (rc != 0)
 		goto fail;
 
-	rc = sfc_mae_rule_parse_pattern(sa, pattern, spec_mae, error);
+	rc = sfc_mae_rule_parse_pattern(sa, pattern, flow, error);
 	if (rc != 0)
 		goto fail;
 
@@ -2421,7 +2423,7 @@ sfc_flow_parse_rte_to_mae(struct rte_eth_dev *dev,
 		 */
 	}
 
-	rc = sfc_mae_rule_parse_actions(sa, actions, spec_mae, error);
+	rc = sfc_mae_rule_parse_actions(sa, actions, flow, error);
 	if (rc != 0)
 		goto fail;
 
@@ -2613,14 +2615,14 @@ sfc_flow_create(struct rte_eth_dev *dev,
 	struct rte_flow *flow;
 
 	sfc_adapter_lock(sa);
-	flow = sfc_flow_create_locked(sa, attr, pattern, actions, error);
+	flow = sfc_flow_create_locked(sa, false, attr, pattern, actions, error);
 	sfc_adapter_unlock(sa);
 
 	return flow;
 }
 
 struct rte_flow *
-sfc_flow_create_locked(struct sfc_adapter *sa,
+sfc_flow_create_locked(struct sfc_adapter *sa, bool internal,
 		       const struct rte_flow_attr *attr,
 		       const struct rte_flow_item pattern[],
 		       const struct rte_flow_action actions[],
@@ -2634,6 +2636,8 @@ sfc_flow_create_locked(struct sfc_adapter *sa,
 	flow = sfc_flow_zmalloc(error);
 	if (flow == NULL)
 		goto fail_no_mem;
+
+	flow->internal = internal;
 
 	rc = sfc_flow_parse(sa->eth_dev, attr, pattern, actions, flow, error);
 	if (rc != 0)
@@ -2711,10 +2715,14 @@ sfc_flow_flush(struct rte_eth_dev *dev,
 	struct sfc_adapter *sa = sfc_adapter_by_eth_dev(dev);
 	struct rte_flow *flow;
 	int ret = 0;
+	void *tmp;
 
 	sfc_adapter_lock(sa);
 
-	while ((flow = TAILQ_FIRST(&sa->flow_list)) != NULL) {
+	RTE_TAILQ_FOREACH_SAFE(flow, &sa->flow_list, entries, tmp) {
+		if (flow->internal)
+			continue;
+
 		if (sa->state == SFC_ETHDEV_STARTED) {
 			int rc;
 
@@ -2842,10 +2850,14 @@ void
 sfc_flow_fini(struct sfc_adapter *sa)
 {
 	struct rte_flow *flow;
+	void *tmp;
 
 	SFC_ASSERT(sfc_adapter_is_locked(sa));
 
-	while ((flow = TAILQ_FIRST(&sa->flow_list)) != NULL) {
+	RTE_TAILQ_FOREACH_SAFE(flow, &sa->flow_list, entries, tmp) {
+		if (flow->internal)
+			continue;
+
 		TAILQ_REMOVE(&sa->flow_list, flow, entries);
 		sfc_flow_free(sa, flow);
 	}
