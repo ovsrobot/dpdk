@@ -3740,7 +3740,7 @@ cryptodev_dpaa_sec_probe(struct rte_dpaa_driver *dpaa_drv __rte_unused,
 	if (rte_eal_process_type() != RTE_PROC_PRIMARY)
 		return 0;
 
-	snprintf(cryptodev_name, sizeof(cryptodev_name), "%s", dpaa_dev->name);
+	strlcpy(cryptodev_name, dpaa_dev->name, sizeof(cryptodev_name));
 
 	cryptodev = rte_cryptodev_pmd_allocate(cryptodev_name, rte_socket_id());
 	if (cryptodev == NULL)
