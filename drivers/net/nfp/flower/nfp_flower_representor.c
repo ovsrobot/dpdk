@@ -600,7 +600,7 @@ nfp_flower_pf_repr_init(struct rte_eth_dev *eth_dev,
 	repr->repr_type        = init_repr_data->repr_type;
 	repr->app_fw_flower    = init_repr_data->app_fw_flower;
 
-	snprintf(repr->name, sizeof(repr->name), "%s", init_repr_data->name);
+	strlcpy(repr->name, init_repr_data->name, sizeof(repr->name));
 
 	eth_dev->dev_ops = &nfp_flower_pf_repr_dev_ops;
 	eth_dev->rx_pkt_burst = nfp_flower_pf_recv_pkts;
@@ -671,7 +671,7 @@ nfp_flower_repr_init(struct rte_eth_dev *eth_dev,
 	repr->repr_type        = init_repr_data->repr_type;
 	repr->app_fw_flower    = init_repr_data->app_fw_flower;
 
-	snprintf(repr->name, sizeof(repr->name), "%s", init_repr_data->name);
+	strlcpy(repr->name, init_repr_data->name, sizeof(repr->name));
 
 	eth_dev->dev_ops = &nfp_flower_repr_dev_ops;
 	eth_dev->rx_pkt_burst = nfp_flower_repr_rx_burst;
