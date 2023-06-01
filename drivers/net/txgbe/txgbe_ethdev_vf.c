@@ -357,9 +357,9 @@ static int txgbevf_dev_xstats_get_names(__rte_unused struct rte_eth_dev *dev,
 
 	if (xstats_names != NULL)
 		for (i = 0; i < TXGBEVF_NB_XSTATS; i++)
-			snprintf(xstats_names[i].name,
-				sizeof(xstats_names[i].name),
-				"%s", rte_txgbevf_stats_strings[i].name);
+			strlcpy(xstats_names[i].name,
+				rte_txgbevf_stats_strings[i].name,
+				sizeof(xstats_names[i].name));
 	return TXGBEVF_NB_XSTATS;
 }
 
