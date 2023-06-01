@@ -1006,9 +1006,8 @@ atl_dev_xstats_get_names(struct rte_eth_dev *dev __rte_unused,
 
 	if (xstats_names) {
 		for (i = 0; i < size && i < count; i++) {
-			snprintf(xstats_names[i].name,
-				RTE_ETH_XSTATS_NAME_SIZE, "%s",
-				atl_xstats_tbl[i].name);
+			strlcpy(xstats_names[i].name, atl_xstats_tbl[i].name,
+				RTE_ETH_XSTATS_NAME_SIZE);
 		}
 	}
 
