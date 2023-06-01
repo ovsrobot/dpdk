@@ -1802,9 +1802,9 @@ static int iavf_dev_xstats_get_names(__rte_unused struct rte_eth_dev *dev,
 
 	if (xstats_names != NULL)
 		for (i = 0; i < IAVF_NB_XSTATS; i++) {
-			snprintf(xstats_names[i].name,
-				sizeof(xstats_names[i].name),
-				"%s", rte_iavf_stats_strings[i].name);
+			strlcpy(xstats_names[i].name,
+				rte_iavf_stats_strings[i].name,
+				sizeof(xstats_names[i].name));
 		}
 	return IAVF_NB_XSTATS;
 }

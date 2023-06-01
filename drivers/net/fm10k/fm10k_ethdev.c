@@ -1244,9 +1244,9 @@ static int fm10k_xstats_get_names(__rte_unused struct rte_eth_dev *dev,
 
 		/* Global stats */
 		for (i = 0; i < FM10K_NB_HW_XSTATS; i++) {
-			snprintf(xstats_names[count].name,
-				sizeof(xstats_names[count].name),
-				"%s", fm10k_hw_stats_strings[count].name);
+			strlcpy(xstats_names[count].name,
+				fm10k_hw_stats_strings[count].name,
+				sizeof(xstats_names[count].name));
 			count++;
 		}
 

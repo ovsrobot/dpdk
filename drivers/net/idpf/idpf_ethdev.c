@@ -384,9 +384,9 @@ static int idpf_dev_xstats_get_names(__rte_unused struct rte_eth_dev *dev,
 
 	if (xstats_names)
 		for (i = 0; i < IDPF_NB_XSTATS; i++) {
-			snprintf(xstats_names[i].name,
-				 sizeof(xstats_names[i].name),
-				 "%s", rte_idpf_stats_strings[i].name);
+			strlcpy(xstats_names[i].name,
+				rte_idpf_stats_strings[i].name,
+				sizeof(xstats_names[i].name));
 		}
 	return IDPF_NB_XSTATS;
 }

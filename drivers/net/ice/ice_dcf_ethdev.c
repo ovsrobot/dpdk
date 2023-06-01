@@ -1549,9 +1549,9 @@ static int ice_dcf_xstats_get_names(__rte_unused struct rte_eth_dev *dev,
 
 	if (xstats_names != NULL)
 		for (i = 0; i < ICE_DCF_NB_XSTATS; i++) {
-			snprintf(xstats_names[i].name,
-				sizeof(xstats_names[i].name),
-				"%s", rte_ice_dcf_stats_strings[i].name);
+			strlcpy(xstats_names[i].name,
+				rte_ice_dcf_stats_strings[i].name,
+				sizeof(xstats_names[i].name));
 		}
 	return ICE_DCF_NB_XSTATS;
 }
