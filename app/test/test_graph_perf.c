@@ -294,8 +294,9 @@ graph_node_count_edges(uint32_t stage, uint16_t node, uint16_t nodes_per_stage,
 	for (i = 0; i < nodes_per_stage && edges < MAX_EDGES_PER_NODE; i++) {
 		if (edge_map[stage + 1][i][node]) {
 			ename[edges] = malloc(sizeof(char) * RTE_NODE_NAMESIZE);
-			snprintf(ename[edges], RTE_NODE_NAMESIZE, "%s",
-				 rte_node_id_to_name(node_map[stage + 1][i]));
+			strlcpy(ename[edges],
+				rte_node_id_to_name(node_map[stage + 1][i]),
+				RTE_NODE_NAMESIZE);
 			node_data->next_nodes[edges] = node_map[stage + 1][i];
 			node_data->next_percentage[edges] =
 				edge_map[stage + 1][i][node];
@@ -405,9 +406,9 @@ graph_init(const char *gname, uint8_t nb_srcs, uint8_t nb_sinks,
 				graph_data->nb_nodes++;
 				goto pattern_name_free;
 			}
-			snprintf(node_patterns[graph_data->nb_nodes],
-				 RTE_NODE_NAMESIZE, "%s",
-				 rte_node_id_to_name(node_map[i][j]));
+			strlcpy(node_patterns[graph_data->nb_nodes],
+				rte_node_id_to_name(node_map[i][j]),
+				RTE_NODE_NAMESIZE);
 			node_data =
 				&graph_data->node_data[graph_data->nb_nodes];
 			node_data->node_id = node_map[i][j];
@@ -467,8 +468,8 @@ graph_init(const char *gname, uint8_t nb_srcs, uint8_t nb_sinks,
 			graph_data->nb_nodes++;
 			goto pattern_name_free;
 		}
-		snprintf(node_patterns[graph_data->nb_nodes], RTE_NODE_NAMESIZE,
-			 "%s", rte_node_id_to_name(src_nodes[i]));
+		strlcpy(node_patterns[graph_data->nb_nodes],
+			rte_node_id_to_name(src_nodes[i]), RTE_NODE_NAMESIZE);
 		node_data = &graph_data->node_data[graph_data->nb_nodes];
 		node_data->node_id = src_nodes[i];
 		node_data->is_sink = false;
@@ -479,8 +480,9 @@ graph_init(const char *gname, uint8_t nb_srcs, uint8_t nb_sinks,
 			if (!src_map[i][j])
 				continue;
 			ename[edges] = malloc(sizeof(char) * RTE_NODE_NAMESIZE);
-			snprintf(ename[edges], RTE_NODE_NAMESIZE, "%s",
-				 rte_node_id_to_name(node_map[0][j]));
+			strlcpy(ename[edges],
+				rte_node_id_to_name(node_map[0][j]),
+				RTE_NODE_NAMESIZE);
 			node_data->next_nodes[edges] = node_map[0][j];
 			node_data->next_percentage[edges] = src_map[i][j];
 			edges++;
@@ -524,8 +526,8 @@ graph_init(const char *gname, uint8_t nb_srcs, uint8_t nb_sinks,
 			graph_data->nb_nodes++;
 			goto pattern_name_free;
 		}
-		snprintf(node_patterns[graph_data->nb_nodes], RTE_NODE_NAMESIZE,
-			 "%s", rte_node_id_to_name(snk_nodes[i]));
+		strlcpy(node_patterns[graph_data->nb_nodes],
+			rte_node_id_to_name(snk_nodes[i]), RTE_NODE_NAMESIZE);
 		node_data = &graph_data->node_data[graph_data->nb_nodes];
 		node_data->node_id = snk_nodes[i];
 		node_data->is_sink = true;
@@ -543,8 +545,9 @@ graph_init(const char *gname, uint8_t nb_srcs, uint8_t nb_sinks,
 			if (!snk_map[i][j])
 				continue;
 			ename[edges] = malloc(sizeof(char) * RTE_NODE_NAMESIZE);
-			snprintf(ename[edges], RTE_NODE_NAMESIZE, "%s",
-				 rte_node_id_to_name(snk_nodes[j]));
+			strlcpy(ename[edges],
+				rte_node_id_to_name(snk_nodes[j]),
+				RTE_NODE_NAMESIZE);
 			node_data->next_nodes[edges] = snk_nodes[j];
 			node_data->next_percentage[edges] = snk_map[i][j];
 			edges++;

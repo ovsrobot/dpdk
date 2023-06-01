@@ -176,7 +176,7 @@ get_current_prefix(char *prefix, int size)
 		return NULL;
 
 	/* get the prefix */
-	snprintf(prefix, size, "%s", basename(dirname(buf)));
+	strlcpy(prefix, basename(dirname(buf)), size);
 
 	return prefix;
 }

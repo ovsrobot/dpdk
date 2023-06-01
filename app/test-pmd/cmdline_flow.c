@@ -10028,7 +10028,7 @@ parse_hex_string(const char *src, uint8_t *dst, uint32_t *size)
 		char tmp[3], *end = tmp;
 		uint32_t read_lim = left & 1 ? 1 : 2;
 
-		snprintf(tmp, read_lim + 1, "%s", src);
+		strlcpy(tmp, src, read_lim + 1);
 		*dst = strtoul(tmp, &end, 16);
 		if (*end) {
 			*dst = 0;
@@ -11404,7 +11404,7 @@ cmd_flow_get_help(cmdline_parse_token_hdr_t *hdr, char *dst, unsigned int size)
 	if (!size)
 		return -1;
 	/* Set token type and update global help with details. */
-	strlcpy(dst, (token->type ? token->type : "TOKEN"), size);
+	strlcpy(dst, token->type ? : "TOKEN", size);
 	if (token->help)
 		cmd_flow.help_str = token->help;
 	else
@@ -12220,7 +12220,7 @@ cmd_set_raw_get_help(cmdline_parse_token_hdr_t *hdr, char *dst,
 	if (!size)
 		return -1;
 	/* Set token type and update global help with details. */
-	snprintf(dst, size, "%s", (token->type ? token->type : "TOKEN"));
+	strlcpy(dst, token->type ? : "TOKEN", size);
 	if (token->help)
 		cmd_set_raw.help_str = token->help;
 	else
