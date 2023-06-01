@@ -219,26 +219,26 @@ mlx5_rx_burst_mode_get(struct rte_eth_dev *dev,
 		return -rte_errno;
 	}
 	if (pkt_burst == mlx5_rx_burst) {
-		snprintf(mode->info, sizeof(mode->info), "%s", "Scalar");
+		strlcpy(mode->info, "Scalar", sizeof(mode->info));
 	} else if (pkt_burst == mlx5_rx_burst_mprq) {
-		snprintf(mode->info, sizeof(mode->info), "%s", "Multi-Packet RQ");
+		strlcpy(mode->info, "Multi-Packet RQ", sizeof(mode->info));
 	} else if (pkt_burst == mlx5_rx_burst_vec) {
 #if defined RTE_ARCH_X86_64
-		snprintf(mode->info, sizeof(mode->info), "%s", "Vector SSE");
+		strlcpy(mode->info, "Vector SSE", sizeof(mode->info));
 #elif defined RTE_ARCH_ARM64
-		snprintf(mode->info, sizeof(mode->info), "%s", "Vector Neon");
+		strlcpy(mode->info, "Vector Neon", sizeof(mode->info));
 #elif defined RTE_ARCH_PPC_64
-		snprintf(mode->info, sizeof(mode->info), "%s", "Vector AltiVec");
+		strlcpy(mode->info, "Vector AltiVec", sizeof(mode->info));
 #else
 		return -EINVAL;
 #endif
 	} else if (pkt_burst == mlx5_rx_burst_mprq_vec) {
 #if defined RTE_ARCH_X86_64
-		snprintf(mode->info, sizeof(mode->info), "%s", "MPRQ Vector SSE");
+		strlcpy(mode->info, "MPRQ Vector SSE", sizeof(mode->info));
 #elif defined RTE_ARCH_ARM64
-		snprintf(mode->info, sizeof(mode->info), "%s", "MPRQ Vector Neon");
+		strlcpy(mode->info, "MPRQ Vector Neon", sizeof(mode->info));
 #elif defined RTE_ARCH_PPC_64
-		snprintf(mode->info, sizeof(mode->info), "%s", "MPRQ Vector AltiVec");
+		strlcpy(mode->info, "MPRQ Vector AltiVec", sizeof(mode->info));
 #else
 		return -EINVAL;
 #endif
