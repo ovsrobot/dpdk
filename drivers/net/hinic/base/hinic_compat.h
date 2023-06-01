@@ -19,6 +19,7 @@
 #include <rte_spinlock.h>
 #include <rte_cycles.h>
 #include <rte_log.h>
+#include <rte_string_fns.h>
 
 typedef uint8_t   u8;
 typedef int8_t    s8;

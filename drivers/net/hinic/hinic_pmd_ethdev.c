@@ -786,7 +786,7 @@ static int hinic_fw_version_get(struct rte_eth_dev *dev, char *fw_version,
 	if (fw_size < strlen(fw_ver) + 1)
 		return (strlen(fw_ver) + 1);
 
-	snprintf(fw_version, fw_size, "%s", fw_ver);
+	strlcpy(fw_version, fw_ver, fw_size);
 
 	return 0;
 }
@@ -2302,9 +2302,9 @@ static int hinic_dev_xstats_get_names(struct rte_eth_dev *dev,
 
 	/* get vport stats */
 	for (i = 0; i < HINIC_VPORT_XSTATS_NUM; i++) {
-		snprintf(xstats_names[count].name,
-			 sizeof(xstats_names[count].name),
-			 "%s", hinic_vport_stats_strings[i].name);
+		strlcpy(xstats_names[count].name,
+			hinic_vport_stats_strings[i].name,
+			sizeof(xstats_names[count].name));
 		count++;
 	}
 
@@ -2313,9 +2313,9 @@ static int hinic_dev_xstats_get_names(struct rte_eth_dev *dev,
 
 	/* get phy port stats */
 	for (i = 0; i < HINIC_PHYPORT_XSTATS_NUM; i++) {
-		snprintf(xstats_names[count].name,
-			 sizeof(xstats_names[count].name),
-			 "%s", hinic_phyport_stats_strings[i].name);
+		strlcpy(xstats_names[count].name,
+			hinic_phyport_stats_strings[i].name,
+			sizeof(xstats_names[count].name));
 		count++;
 	}
 

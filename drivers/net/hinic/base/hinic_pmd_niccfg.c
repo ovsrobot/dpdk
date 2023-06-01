@@ -1337,7 +1337,7 @@ int hinic_get_mgmt_version(void *hwdev, char *fw)
 		return -EIO;
 	}
 
-	snprintf(fw, HINIC_MGMT_VERSION_MAX_LEN, "%s", fw_ver.ver);
+	strlcpy(fw, (const char *)fw_ver.ver, HINIC_MGMT_VERSION_MAX_LEN);
 
 	return 0;
 }
@@ -2115,5 +2115,3 @@ int hinic_set_fdir_tcam_rule_filter(void *hwdev, bool enable)
 
 	return err;
 }
-
-
