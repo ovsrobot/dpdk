@@ -505,8 +505,8 @@ fips_test_parse_one_json_group(void)
 
 			switch (json_typeof(param)) {
 			case JSON_STRING:
-				snprintf(json_value, sizeof(json_value), "%s",
-						 json_string_value(param));
+				strlcpy(json_value, json_string_value(param),
+					sizeof(json_value));
 				break;
 
 			case JSON_INTEGER:
@@ -550,8 +550,8 @@ fips_test_parse_one_json_case(void)
 
 		switch (json_typeof(param)) {
 		case JSON_STRING:
-			snprintf(info.one_line_text, MAX_LINE_CHAR, "%s",
-					 json_string_value(param));
+			strlcpy(info.one_line_text, json_string_value(param),
+				MAX_LINE_CHAR);
 			break;
 
 		case JSON_INTEGER:

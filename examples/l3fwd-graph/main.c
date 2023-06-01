@@ -546,7 +546,7 @@ parse_args(int argc, char **argv)
 			break;
 
 		case CMD_LINE_OPT_PCAP_FILENAME_CAP:
-			rte_strlcpy(pcap_filename, optarg,
+			strlcpy(pcap_filename, optarg,
 				    sizeof(pcap_filename));
 			printf("Pcap file name: %s\n", pcap_filename);
 			break;

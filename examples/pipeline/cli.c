@@ -3164,7 +3164,7 @@ cmd_ipsec_sa_add(char **tokens,
 			goto free;
 		}
 
-		snprintf(out, out_size, "%s", line);
+		strlcpy(out, line, out_size);
 		out_size -= strlen(out);
 		out += strlen(out);
 
