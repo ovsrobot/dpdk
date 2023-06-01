@@ -1025,9 +1025,9 @@ axgbe_dev_xstats_get_names(__rte_unused struct rte_eth_dev *dev,
 
 	if (n >= AXGBE_XSTATS_COUNT && xstats_names) {
 		for (i = 0; i < AXGBE_XSTATS_COUNT; ++i) {
-			snprintf(xstats_names[i].name,
-				 RTE_ETH_XSTATS_NAME_SIZE, "%s",
-				 axgbe_xstats_strings[i].name);
+			strlcpy(xstats_names[i].name,
+				axgbe_xstats_strings[i].name,
+				RTE_ETH_XSTATS_NAME_SIZE);
 		}
 	}
 
