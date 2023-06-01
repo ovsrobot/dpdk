@@ -380,9 +380,9 @@ static int cpfl_dev_xstats_get_names(__rte_unused struct rte_eth_dev *dev,
 
 	if (xstats_names) {
 		for (i = 0; i < CPFL_NB_XSTATS; i++) {
-			snprintf(xstats_names[i].name,
-				 sizeof(xstats_names[i].name),
-				 "%s", rte_cpfl_stats_strings[i].name);
+			strlcpy(xstats_names[i].name,
+				rte_cpfl_stats_strings[i].name,
+				sizeof(xstats_names[i].name));
 		}
 	}
 	return CPFL_NB_XSTATS;
