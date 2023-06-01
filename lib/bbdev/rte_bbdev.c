@@ -212,7 +212,7 @@ rte_bbdev_allocate(const char *name)
 	bbdev->data->dev_id = dev_id;
 	bbdev->state = RTE_BBDEV_INITIALIZED;
 
-	ret = snprintf(bbdev->data->name, RTE_BBDEV_NAME_MAX_LEN, "%s", name);
+	ret = strlcpy(bbdev->data->name, name, RTE_BBDEV_NAME_MAX_LEN);
 	if ((ret < 0) || (ret >= RTE_BBDEV_NAME_MAX_LEN)) {
 		rte_bbdev_log(ERR, "Copying device name \"%s\" failed", name);
 		return NULL;

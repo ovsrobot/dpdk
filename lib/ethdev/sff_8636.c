@@ -203,16 +203,19 @@ static void sff_8636_show_ext_identifier(const uint8_t *data, struct rte_tel_dat
 
 	switch (data[SFF_8636_EXT_ID_OFFSET] & SFF_8636_EXT_ID_EPWR_CLASS_MASK) {
 	case SFF_8636_EXT_ID_PWR_CLASS_LEGACY:
-		snprintf(val_string, sizeof(val_string), "%s", "");
+		strlcpy(val_string, "", sizeof(val_string));
 		break;
 	case SFF_8636_EXT_ID_PWR_CLASS_5:
-		snprintf(val_string, sizeof(val_string), "%s", "4.0W max. Power consumption, ");
+		strlcpy(val_string, "4.0W max. Power consumption, ",
+			sizeof(val_string));
 		break;
 	case SFF_8636_EXT_ID_PWR_CLASS_6:
-		snprintf(val_string, sizeof(val_string), "%s", "4.5W max. Power consumption, ");
+		strlcpy(val_string, "4.5W max. Power consumption, ",
+			sizeof(val_string));
 		break;
 	case SFF_8636_EXT_ID_PWR_CLASS_7:
-		snprintf(val_string, sizeof(val_string), "%s", "5.0W max. Power consumption, ");
+		strlcpy(val_string, "5.0W max. Power consumption, ",
+			sizeof(val_string));
 		break;
 	}
 
