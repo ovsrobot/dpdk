@@ -16,9 +16,7 @@
 #define NIX_XSTATS_NAME_PRINT(xstats_names, count, xstats, index)              \
 	do {                                                                   \
 		if (xstats_names)                                              \
-			snprintf(xstats_names[count].name,                     \
-				 sizeof(xstats_names[count].name), "%s",       \
-				 xstats[index].name);                          \
+			strlcpy(xstats_names[count].name, xstats[index].name, sizeof(xstats_names[count].name));                          \
 	} while (0)
 
 int
