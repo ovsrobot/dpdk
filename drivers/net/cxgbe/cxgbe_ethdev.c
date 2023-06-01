@@ -928,9 +928,8 @@ static int cxgbe_dev_xstats(struct rte_eth_dev *dev,
 	count = 0;
 	for (i = 0; i < nstats; i++, count++) {
 		if (xstats_names != NULL)
-			snprintf(xstats_names[count].name,
-				 sizeof(xstats_names[count].name),
-				 "%s", xstats_str[i].name);
+			strlcpy(xstats_names[count].name, xstats_str[i].name,
+				sizeof(xstats_names[count].name));
 		if (xstats != NULL) {
 			stats_ptr = RTE_PTR_ADD(&ps,
 						xstats_str[i].offset);
@@ -1043,8 +1042,8 @@ int cxgbe_dev_xstats_get_names_by_id(struct rte_eth_dev *dev,
 			ret = -EINVAL;
 			goto out_err;
 		}
-		rte_strlcpy(xnames[i].name, xnames_copy[ids[i]].name,
-			    sizeof(xnames[i].name));
+		strlcpy(xnames[i].name, xnames_copy[ids[i]].name,
+			sizeof(xnames[i].name));
 	}
 
 	ret = n;
