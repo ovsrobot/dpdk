@@ -1176,9 +1176,9 @@ hns3_imissed_stats_name_get(struct rte_eth_dev *dev,
 	imissed_stats_num = hns3_get_imissed_stats_num(hns);
 
 	for (i = 0; i < imissed_stats_num; i++) {
-		snprintf(xstats_names[cnt].name,
-			 sizeof(xstats_names[cnt].name),
-			 "%s", hns3_imissed_stats_strings[i].name);
+		strlcpy(xstats_names[cnt].name,
+			hns3_imissed_stats_strings[i].name,
+			sizeof(xstats_names[cnt].name));
 		cnt++;
 	}
 
@@ -1228,9 +1228,9 @@ hns3_dev_xstats_get_names(struct rte_eth_dev *dev,
 	if (!hns->is_vf) {
 		/* Get MAC name from hw->hw_xstats.mac_stats struct */
 		for (i = 0; i < HNS3_NUM_MAC_STATS; i++) {
-			snprintf(xstats_names[count].name,
-				 sizeof(xstats_names[count].name),
-				 "%s", hns3_mac_strings[i].name);
+			strlcpy(xstats_names[count].name,
+				hns3_mac_strings[i].name,
+				sizeof(xstats_names[count].name));
 			count++;
 		}
 	}
@@ -1238,9 +1238,9 @@ hns3_dev_xstats_get_names(struct rte_eth_dev *dev,
 	hns3_imissed_stats_name_get(dev, xstats_names, &count);
 
 	for (i = 0; i < HNS3_NUM_RESET_XSTATS; i++) {
-		snprintf(xstats_names[count].name,
-			 sizeof(xstats_names[count].name),
-			 "%s", hns3_reset_stats_strings[i].name);
+		strlcpy(xstats_names[count].name,
+			hns3_reset_stats_strings[i].name,
+			sizeof(xstats_names[count].name));
 		count++;
 	}
 
@@ -1418,8 +1418,8 @@ hns3_dev_xstats_get_names_by_id(struct rte_eth_dev *dev,
 			rte_free(names_copy);
 			return -EINVAL;
 		}
-		snprintf(xstats_names[i].name, sizeof(xstats_names[i].name),
-			 "%s", names_copy[ids[i]].name);
+		strlcpy(xstats_names[i].name, names_copy[ids[i]].name,
+			sizeof(xstats_names[i].name));
 	}
 
 	rte_free(names_copy);

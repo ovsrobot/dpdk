@@ -2795,8 +2795,8 @@ hns3_rx_burst_mode_get(struct rte_eth_dev *dev, __rte_unused uint16_t queue_id,
 
 	for (i = 0; i < RTE_DIM(burst_infos); i++) {
 		if (pkt_burst == burst_infos[i].pkt_burst) {
-			snprintf(mode->info, sizeof(mode->info), "%s",
-				 burst_infos[i].info);
+			strlcpy(mode->info, burst_infos[i].info,
+				sizeof(mode->info));
 			ret = 0;
 			break;
 		}
@@ -4290,8 +4290,8 @@ hns3_tx_burst_mode_get(struct rte_eth_dev *dev, __rte_unused uint16_t queue_id,
 
 	for (i = 0; i < RTE_DIM(burst_infos); i++) {
 		if (pkt_burst == burst_infos[i].pkt_burst) {
-			snprintf(mode->info, sizeof(mode->info), "%s",
-				 burst_infos[i].info);
+			strlcpy(mode->info, burst_infos[i].info,
+				sizeof(mode->info));
 			ret = 0;
 			break;
 		}

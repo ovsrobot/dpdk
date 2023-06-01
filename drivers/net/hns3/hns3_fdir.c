@@ -843,7 +843,7 @@ int hns3_fdir_filter_init(struct hns3_adapter *hns)
 
 	fdir_hash_params.socket_id = rte_socket_id();
 	TAILQ_INIT(&fdir_info->fdir_list);
-	snprintf(fdir_hash_name, RTE_HASH_NAMESIZE, "%s", hns->hw.data->name);
+	strlcpy(fdir_hash_name, hns->hw.data->name, RTE_HASH_NAMESIZE);
 	fdir_info->hash_handle = rte_hash_create(&fdir_hash_params);
 	if (fdir_info->hash_handle == NULL) {
 		PMD_INIT_LOG(ERR, "Create FDIR hash handle fail!");
