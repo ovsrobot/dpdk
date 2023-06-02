@@ -36,6 +36,27 @@ enum rte_node_ip4_lookup_next {
 };
 
 /**
+ * IP4 reassembly next nodes.
+ */
+enum rte_node_ip4_reassembly_next {
+	RTE_NODE_IP4_REASSEMBLY_NEXT_MAX,
+	/**< Number of next nodes of reassembly node. */
+};
+
+/**
+ * Reassembly configure structure.
+ * @see rte_node_ip4_reassembly_configure
+ */
+struct rte_node_ip4_reassembly_cfg {
+	struct rte_ip_frag_tbl *tbl;
+	/**< Reassembly fragmentation table. */
+	struct rte_ip_frag_death_row *dr;
+	/**< Reassembly deathrow table. */
+	rte_node_t node_id;
+	/**< Node identifier to configure. */
+};
+
+/**
  * Add ipv4 route to lookup table.
  *
  * @param ip
@@ -72,6 +93,20 @@ int rte_node_ip4_route_add(uint32_t ip, uint8_t depth, uint16_t next_hop,
 __rte_experimental
 int rte_node_ip4_rewrite_add(uint16_t next_hop, uint8_t *rewrite_data,
 			     uint8_t rewrite_len, uint16_t dst_port);
+
+/**
+ * Add reassembly node configuration data.
+ *
+ * @param cfg
+ *   Pointer to the configuration structure.
+ * @param cnt
+ *   Number of configuration structures passed.
+ *
+ * @return
+ *   0 on success, negative otherwise.
+ */
+__rte_experimental
+int rte_node_ip4_reassembly_configure(struct rte_node_ip4_reassembly_cfg *cfg, uint16_t cnt);
 
 #ifdef __cplusplus
 }
