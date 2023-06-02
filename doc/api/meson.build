@@ -41,6 +41,13 @@ if get_option('werror')
     cdata.set('WARN_AS_ERROR', 'YES')
 endif
 
+doxygen_version = run_command('doxygen', '--version', check: true).stdout().strip()
+if doxygen_version.version_compare('>=1.9.7')
+    cdata.set('TS_PREFIX', '')
+else
+    cdata.set('TS_PREFIX', 'HTML_')
+endif
+
 doxy_conf = configure_file(input: 'doxy-api.conf.in',
         output: 'doxy-api.conf',
         configuration: cdata)
