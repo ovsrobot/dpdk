@@ -982,7 +982,7 @@ rte_bbdev_op_pool_create(const char *name, enum rte_bbdev_op_type type,
  */
 static inline int
 rte_bbdev_enc_op_alloc_bulk(struct rte_mempool *mempool,
-		struct rte_bbdev_enc_op **ops, uint16_t num_ops)
+		struct rte_bbdev_enc_op **ops, unsigned int num_ops)
 {
 	struct rte_bbdev_op_pool_private *priv;
 
@@ -1013,7 +1013,7 @@ rte_bbdev_enc_op_alloc_bulk(struct rte_mempool *mempool,
  */
 static inline int
 rte_bbdev_dec_op_alloc_bulk(struct rte_mempool *mempool,
-		struct rte_bbdev_dec_op **ops, uint16_t num_ops)
+		struct rte_bbdev_dec_op **ops, unsigned int num_ops)
 {
 	struct rte_bbdev_op_pool_private *priv;
 
@@ -1045,7 +1045,7 @@ rte_bbdev_dec_op_alloc_bulk(struct rte_mempool *mempool,
 __rte_experimental
 static inline int
 rte_bbdev_fft_op_alloc_bulk(struct rte_mempool *mempool,
-		struct rte_bbdev_fft_op **ops, uint16_t num_ops)
+		struct rte_bbdev_fft_op **ops, unsigned int num_ops)
 {
 	struct rte_bbdev_op_pool_private *priv;
 
