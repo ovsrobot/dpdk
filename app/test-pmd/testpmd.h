@@ -116,6 +116,13 @@ enum {
 	QUEUE_JOB_TYPE_ACTION_QUERY,
 };
 
+enum {
+	NOISY_FWD_MODE_IO,
+	NOISY_FWD_MODE_MAC,
+	NOISY_FWD_MODE_MACSWAP,
+	NOISY_FWD_MODE_5TSWAP
+};
+
 /**
  * The data structure associated with RX and TX packet burst statistics
  * that are recorded for each forwarding stream.
@@ -561,6 +568,7 @@ extern uint64_t noisy_lkup_mem_sz;
 extern uint64_t noisy_lkup_num_writes;
 extern uint64_t noisy_lkup_num_reads;
 extern uint64_t noisy_lkup_num_reads_writes;
+extern int noisy_fwd_mode;
 
 extern uint8_t dcb_config;
 

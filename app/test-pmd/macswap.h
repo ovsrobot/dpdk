@@ -9,7 +9,7 @@
 
 static inline void
 do_macswap(struct rte_mbuf *pkts[], uint16_t nb,
-		struct rte_port *txp)
+	   struct rte_port *txp)
 {
 	struct rte_ether_hdr *eth_hdr;
 	struct rte_mbuf *mb;

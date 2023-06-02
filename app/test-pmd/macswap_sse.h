@@ -9,7 +9,7 @@
 
 static inline void
 do_macswap(struct rte_mbuf *pkts[], uint16_t nb,
-		struct rte_port *txp)
+	   struct rte_port *txp)
 {
 	struct rte_ether_hdr *eth_hdr[4];
 	struct rte_mbuf *mb[4];
@@ -29,7 +29,7 @@ do_macswap(struct rte_mbuf *pkts[], uint16_t nb,
 
 	ol_flags = ol_flags_init(txp->dev_conf.txmode.offloads);
 	vlan_qinq_set(pkts, nb, ol_flags,
-			txp->tx_vlan_id, txp->tx_vlan_id_outer);
+		      txp->tx_vlan_id, txp->tx_vlan_id_outer);
 
 	i = 0;
 	r = nb;
