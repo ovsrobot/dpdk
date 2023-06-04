@@ -61,6 +61,10 @@ New Features
   along with prime field curve support.
 
 
+* **Updated OpenSSL crypto driver for SM2 support.**
+
+  Added SM2 algorithm support in asymmetric crypto operations.
+
 Removed Items
 -------------
 
