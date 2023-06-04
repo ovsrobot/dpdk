@@ -70,6 +70,9 @@ New Features
     The caller is responsible to request this offload
     only when the target header is an IPv4-based one.
 
+  * Added support for transfer flow action INDIRECT
+    with subtype COUNT, for aggregated statistics.
+
 
 Removed Items
 -------------
