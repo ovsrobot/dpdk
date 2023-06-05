@@ -29,6 +29,16 @@
 extern "C" {
 #endif
 
+/** Graph worker models */
+enum rte_graph_worker_model {
+	RTE_GRAPH_MODEL_DEFAULT,
+	/**< Default graph model*/
+	RTE_GRAPH_MODEL_RTC = RTE_GRAPH_MODEL_DEFAULT,
+	/**< Run-To-Completion model. It is the default model. */
+	RTE_GRAPH_MODEL_MCORE_DISPATCH
+	/**< Dispatch model to support cross-core dispatching within core affinity. */
+};
+
 /**
  * @internal
  *
@@ -50,6 +60,7 @@ struct rte_graph {
 	/** Number of packets to capture per core. */
 	uint64_t nb_pkt_to_capture;
 	char pcap_filename[RTE_GRAPH_PCAP_FILE_SZ];  /**< Pcap filename. */
+	enum rte_graph_worker_model model; /**< graph model */
 	uint64_t fence;			/**< Fence. */
 } __rte_cache_aligned;
 
@@ -489,6 +500,14 @@ rte_node_next_stream_move(struct rte_graph *graph, struct rte_node *src,
 		rte_node_enqueue(graph, src, next, src->objs, src->idx);
 	}
 }
+
+__rte_experimental
+enum rte_graph_worker_model
+rte_graph_worker_model_get(void);
+
+__rte_experimental
+int
+rte_graph_worker_model_set(enum rte_graph_worker_model model);
 
 #ifdef __cplusplus
 }
