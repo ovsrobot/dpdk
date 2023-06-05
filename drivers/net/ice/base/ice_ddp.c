@@ -1014,15 +1014,32 @@ void ice_free_seg(struct ice_hw *hw)
 }
 
 /**
- * ice_chk_pkg_version - check package version for compatibility with driver
+ * ice_chk_pkg_vesrion_customize - check package version for GRE_EXTEND support
  * @pkg_ver: pointer to a version structure to check
  *
- * Check to make sure that the package about to be downloaded is compatible with
- * the driver. To be compatible, the major and minor components of the package
+ * To be compatible, the major and minor components of the package
  * version must match our ICE_PKG_SUPP_VER_MAJ and ICE_PKG_SUPP_VER_MNR
  * definitions.
  */
-static enum ice_ddp_state ice_chk_pkg_version(struct ice_pkg_ver *pkg_ver)
+static enum ice_ddp_state
+ice_chk_pkg_vesrion_customize(struct ice_pkg_ver *pkg_ver)
+{
+	if (pkg_ver->major == ICE_PKG_SUPP_VER_CUSTOM_MAJ)
+		return ICE_DDP_PKG_SUCCESS;
+	else
+		return ICE_DDP_PKG_ERR;
+}
+
+/**
+ * ice_chk_pkg_vesrion_general - check package version for general package
+ * @pkg_ver: pointer to a version structure to check
+ *
+ * To be compatible, the major and minor components of the package
+ * version must match our ICE_PKG_SUPP_VER_MAJ and ICE_PKG_SUPP_VER_MNR
+ * definitions.
+ */
+static enum ice_ddp_state
+ice_chk_pkg_vesrion_general(struct ice_pkg_ver *pkg_ver)
 {
 	if (pkg_ver->major > ICE_PKG_SUPP_VER_MAJ ||
 	    (pkg_ver->major == ICE_PKG_SUPP_VER_MAJ &&
@@ -1034,6 +1051,22 @@ static enum ice_ddp_state ice_chk_pkg_version(struct ice_pkg_ver *pkg_ver)
 		return ICE_DDP_PKG_FILE_VERSION_TOO_LOW;
 
 	return ICE_DDP_PKG_SUCCESS;
+}
+
+/**
+ * ice_chk_pkg_version - check package version for compatibility with driver
+ * @pkg_ver: pointer to a version structure to check
+ *
+ * Check to make sure that the package about to be downloaded is compatible with
+ * the driver.
+ */
+static enum ice_ddp_state ice_chk_pkg_version(struct ice_pkg_ver *pkg_ver)
+{
+	if (!ice_chk_pkg_vesrion_general(pkg_ver) ||
+	    !ice_chk_pkg_vesrion_customize(pkg_ver))
+		return ICE_DDP_PKG_SUCCESS;
+	else
+		return ICE_DDP_PKG_ERR;
 }
 
 /**

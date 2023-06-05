@@ -15,6 +15,7 @@
 /* Package minimal version supported */
 #define ICE_PKG_SUPP_VER_MAJ	1
 #define ICE_PKG_SUPP_VER_MNR	3
+#define ICE_PKG_SUPP_VER_CUSTOM_MAJ  255
 
 /* Package format version */
 #define ICE_PKG_FMT_VER_MAJ	1
