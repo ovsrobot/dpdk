@@ -26,6 +26,9 @@ __rte_experimental
 static inline void
 rte_graph_walk(struct rte_graph *graph)
 {
+#define RTE_GRAPH_MODEL_RTC 0
+#define RTE_GRAPH_MODEL_MCORE_DISPATCH 1
+
 #if !defined(RTE_GRAPH_MODEL_SELECT) || RTE_GRAPH_MODEL_SELECT == RTE_GRAPH_MODEL_RTC
 	rte_graph_walk_rtc(graph);
 #elif RTE_GRAPH_MODEL_SELECT == RTE_GRAPH_MODEL_MCORE_DISPATCH
