@@ -661,6 +661,115 @@ test_create_graph(void)
 }
 
 static int
+test_graph_clone(void)
+{
+	rte_graph_t cloned_graph_id = RTE_GRAPH_ID_INVALID;
+	rte_graph_t main_graph_id = RTE_GRAPH_ID_INVALID;
+	struct rte_graph_param graph_conf;
+
+	main_graph_id = rte_graph_from_name("worker0");
+	if (main_graph_id == RTE_GRAPH_ID_INVALID) {
+		printf("Must create main graph first\n");
+		return -1;
+	}
+
+	graph_conf.dispatch.mp_capacity = 1024;
+	graph_conf.dispatch.wq_size_max = 32;
+
+	cloned_graph_id = rte_graph_clone(main_graph_id, "cloned-test0", &graph_conf);
+
+	if (cloned_graph_id == RTE_GRAPH_ID_INVALID) {
+		printf("Graph creation failed with error = %d\n", rte_errno);
+		return -1;
+	}
+
+	if (strcmp(rte_graph_id_to_name(cloned_graph_id), "worker0-cloned-test0")) {
+		printf("Cloned graph should name as %s but get %s\n", "worker0-cloned-test",
+		       rte_graph_id_to_name(cloned_graph_id));
+		return -1;
+	}
+	return 0;
+}
+
+static int
+test_graph_model_mcore_dispatch_node_lcore_affinity_set(void)
+{
+	rte_graph_t cloned_graph_id = RTE_GRAPH_ID_INVALID;
+	unsigned int worker_lcore = RTE_MAX_LCORE;
+	rte_node_t nid = RTE_NODE_ID_INVALID;
+	char node_name[64] = "test_node00";
+	struct rte_node *node;
+	int ret;
+
+	worker_lcore = rte_get_next_lcore(worker_lcore, true, 1);
+	ret = rte_graph_model_mcore_dispatch_node_lcore_affinity_set(node_name, worker_lcore);
+	if (ret == 0)
+		printf("Set node %s affinity to lcore %u\n", node_name, worker_lcore);
+
+	nid = rte_node_from_name(node_name);
+	cloned_graph_id = rte_graph_clone(graph_id, "cloned-test1", NULL);
+	node = rte_graph_node_get(cloned_graph_id, nid);
+
+	if (node->dispatch.lcore_id != worker_lcore) {
+		printf("set node affinity failed\n");
+		return -1;
+	}
+	return 0;
+}
+
+static int
+test_graph_model_mcore_dispatch_core_bind_unbind(void)
+{
+	rte_graph_t cloned_graph_id = RTE_GRAPH_ID_INVALID;
+	unsigned int worker_lcore = RTE_MAX_LCORE;
+	struct rte_graph *graph;
+	int ret;
+
+	worker_lcore = rte_get_next_lcore(worker_lcore, true, 1);
+	cloned_graph_id = rte_graph_clone(graph_id, "cloned-test2", NULL);
+
+	ret = rte_graph_model_mcore_dispatch_core_bind(cloned_graph_id, worker_lcore);
+	if (ret != 0) {
+		printf("bind graph %d to lcore %u failed\n", graph_id, worker_lcore);
+		return -1;
+	}
+
+	graph = rte_graph_lookup("worker0-cloned-test2");
+
+	if (graph->lcore_id != worker_lcore) {
+		printf("bind graph %s(id:%d) with lcore %u failed\n",
+		       graph->name, graph->id, worker_lcore);
+		return -1;
+	}
+
+	rte_graph_model_mcore_dispatch_core_unbind(cloned_graph_id);
+	if (graph->lcore_id != RTE_MAX_LCORE) {
+		printf("unbind graph %s(id:%d) failed %d\n",
+		       graph->name, graph->id, graph->lcore_id);
+		return -1;
+	}
+	return 0;
+}
+
+static int
+test_graph_worker_model_set_get(void)
+{
+	int ret;
+
+	ret = rte_graph_worker_model_set(RTE_GRAPH_MODEL_MCORE_DISPATCH);
+	if (ret != 0) {
+		printf("Set graph mcore dispatch model failed\n");
+		return -1;
+	}
+
+	if (rte_graph_worker_model_get() != RTE_GRAPH_MODEL_MCORE_DISPATCH) {
+		printf("Get graph worker model failed\n");
+		return -1;
+	}
+	return 0;
+}
+
+static int
 test_graph_walk(void)
 {
 	struct rte_graph *graph = rte_graph_lookup("worker0");
@@ -837,6 +946,10 @@ static struct unit_test_suite graph_testsuite = {
 		TEST_CASE(test_update_edges),
 		TEST_CASE(test_lookup_functions),
 		TEST_CASE(test_create_graph),
+		TEST_CASE(test_graph_clone),
+		TEST_CASE(test_graph_model_mcore_dispatch_node_lcore_affinity_set),
+		TEST_CASE(test_graph_model_mcore_dispatch_core_bind_unbind),
+		TEST_CASE(test_graph_worker_model_set_get),
 		TEST_CASE(test_graph_lookup_functions),
 		TEST_CASE(test_graph_walk),
 		TEST_CASE(test_print_stats),
