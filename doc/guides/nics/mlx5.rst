@@ -162,6 +162,7 @@ Features
 - Sub-Function.
 - Matching on represented port.
 - Matching on aggregated affinity.
+- Matching on IB BTH.
 
 
 Limitations
