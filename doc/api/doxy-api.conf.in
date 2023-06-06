@@ -124,10 +124,11 @@ EXAMPLE_RECURSIVE       = YES
 
 OUTPUT_DIRECTORY        = @OUTPUT@
 STRIP_FROM_PATH         = @STRIP_FROM_PATH@
-GENERATE_HTML           = YES
-HTML_OUTPUT             = @HTML_OUTPUT@
+GENERATE_HTML           = @GENERATE_HTML@
+HTML_OUTPUT             = html
 GENERATE_LATEX          = NO
-GENERATE_MAN            = NO
+GENERATE_MAN            = @GENERATE_MAN@
+MAN_LINKS               = YES
 
 HAVE_DOT                = NO
 

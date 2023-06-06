@@ -29,11 +29,11 @@ example = custom_target('examples.dox',
         install_dir: htmldir,
         build_by_default: get_option('enable_docs'))
 
+#set up common doxygen configuration
 cdata = configuration_data()
 cdata.set('VERSION', meson.project_version())
 cdata.set('API_EXAMPLES', join_paths(dpdk_build_root, 'doc', 'api', 'examples.dox'))
 cdata.set('OUTPUT', join_paths(dpdk_build_root, 'doc', 'api'))
-cdata.set('HTML_OUTPUT', 'html')
 cdata.set('TOPDIR', dpdk_source_root)
 cdata.set('STRIP_FROM_PATH', ' '.join([dpdk_source_root, join_paths(dpdk_build_root, 'doc', 'api')]))
 cdata.set('WARN_AS_ERROR', 'NO')
@@ -41,14 +41,31 @@ if get_option('werror')
     cdata.set('WARN_AS_ERROR', 'YES')
 endif
 
-doxy_conf = configure_file(input: 'doxy-api.conf.in',
-        output: 'doxy-api.conf',
-        configuration: cdata)
+# configure HTML doxygen run
+html_cdata = configuration_data()
+html_cdata.merge_from(cdata)
+html_cdata.set('GENERATE_HTML', 'YES')
+html_cdata.set('GENERATE_MAN', 'NO')
 
-doxy_build = custom_target('doxygen',
+doxy_html_conf = configure_file(input: 'doxy-api.conf.in',
+        output: 'doxy-api-html.conf',
+        configuration: html_cdata)
+
+# configure manpage doxygen run
+man_cdata = configuration_data()
+man_cdata.merge_from(cdata)
+man_cdata.set('GENERATE_HTML', 'NO')
+man_cdata.set('GENERATE_MAN', 'YES')
+
+doxy_man_conf = configure_file(input: 'doxy-api.conf.in',
+        output: 'doxy-api-man.conf',
+        configuration: man_cdata)
+
+# do doxygen runs
+doxy_html_build = custom_target('doxygen-html',
         depends: example,
         depend_files: 'doxy-api-index.md',
-        input: doxy_conf,
+        input: doxy_html_conf,
         output: 'html',
         depfile: 'html.d',
         command: [generate_doxygen, '@OUTPUT@', doxygen, '@INPUT@'],
@@ -56,5 +73,24 @@ doxy_build = custom_target('doxygen',
         install_dir: htmldir,
         build_by_default: get_option('enable_docs'))
 
-doc_targets += doxy_build
-doc_target_names += 'Doxygen_API'
+doc_targets += doxy_html_build
+doc_target_names += 'Doxygen_API(HTML)'
+
+doxy_man_build = custom_target('doxygen-man',
+        depends: example,
+        depend_files: 'doxy-api-index.md',
+        input: doxy_man_conf,
+        output: 'man',
+        depfile: 'man.d',
+        command: [generate_doxygen, '@OUTPUT@', doxygen, '@INPUT@'],
+        install: get_option('enable_docs'),
+        install_dir: get_option('datadir'),
+        build_by_default: get_option('enable_docs'))
+
+doc_targets += doxy_man_build
+doc_target_names += 'Doxygen_API(Manpage)'
+
+mandb = find_program('mandb', required: false)
+if mandb.found() and get_option('enable_docs') and meson.version().version_compare('>=0.55.0')
+    meson.add_install_script(mandb)
+endif
