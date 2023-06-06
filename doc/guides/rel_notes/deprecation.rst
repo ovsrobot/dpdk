@@ -118,6 +118,9 @@ Deprecation Notices
   The legacy actions should be removed
   once ``MODIFY_FIELD`` alternative is implemented in drivers.
 
+* ethdev: Add "func" field to ``rte_eth_rss_conf`` structure for
+  RSS hash algorithm in DPDK 23.11.
+
 * net/bnx2x: Starting from DPDK 23.07, the Marvell QLogic bnx2x driver will be removed.
   This decision has been made to alleviate the burden of maintaining a discontinued product.
 
