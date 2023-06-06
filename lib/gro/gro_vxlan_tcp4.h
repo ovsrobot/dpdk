@@ -5,6 +5,7 @@
 #ifndef _GRO_VXLAN_TCP4_H_
 #define _GRO_VXLAN_TCP4_H_
 
+#include "gro_tcp.h"
 #include "gro_tcp4.h"
 
 #define GRO_VXLAN_TCP4_TBL_MAX_ITEM_NUM (1024UL * 1024UL)
@@ -36,7 +37,7 @@ struct gro_vxlan_tcp4_flow {
 };
 
 struct gro_vxlan_tcp4_item {
-	struct gro_tcp4_item inner_item;
+	struct gro_tcp_item inner_item;
 	/* IPv4 ID in the outer IPv4 header */
 	uint16_t outer_ip_id;
 	/* Indicate if outer IPv4 ID can be ignored */
