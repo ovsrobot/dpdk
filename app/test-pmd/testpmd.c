@@ -365,6 +365,11 @@ uint64_t noisy_lkup_num_reads;
 uint64_t noisy_lkup_num_reads_writes;
 
 /*
+ * Configurable sub-forwarding mode for the noisy_vnf forwarding mode.
+ */
+enum noisy_fwd_mode noisy_fwd_mode;
+
+/*
  * Receive Side Scaling (RSS) configuration.
  */
 uint64_t rss_hf = RTE_ETH_RSS_IP; /* RSS IP by default. */
