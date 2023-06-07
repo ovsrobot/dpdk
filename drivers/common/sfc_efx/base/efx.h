@@ -4276,6 +4276,7 @@ typedef enum efx_mae_field_id_e {
 	 * or by using dedicated field-specific helper APIs.
 	 */
 	EFX_MAE_FIELD_RECIRC_ID,
+	EFX_MAE_FIELD_CT_MARK,
 	EFX_MAE_FIELD_NIDS
 } efx_mae_field_id_t;
 
@@ -4461,6 +4462,12 @@ extern	__checkReturn			efx_rc_t
 efx_mae_match_spec_recirc_id_set(
 	__in				efx_mae_match_spec_t *spec,
 	__in				uint8_t recirc_id);
+
+LIBEFX_API
+extern	__checkReturn			efx_rc_t
+efx_mae_match_spec_ct_mark_set(
+	__in				efx_mae_match_spec_t *spec,
+	__in				uint32_t ct_mark);
 
 LIBEFX_API
 extern	__checkReturn			efx_rc_t
