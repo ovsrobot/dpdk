@@ -55,6 +55,21 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Updated Solarflare network PMD.**
+
+  Updated the Solarflare ``sfc_efx`` driver with changes including:
+
+  * Added partial support for transfer flow actions SET_IPV4_DST,
+    SET_TP_DST, SET_IPV4_SRC and SET_TP_SRC on SN1000 SmartNICs.
+    It is required that the innermost pattern items provide the
+    full set of exact match criteria: EtherType, IP DST, IP SRC,
+    TP protocol ID, TP DST and TP SRC. The IPv4 and TP actions
+    must be requested simultaneously in the same flow. These
+    actions operate on the outermost frame, at the point
+    where action VXLAN_DECAP (if any) has done its job.
+    The caller is responsible to request this offload
+    only when the target header is an IPv4-based one.
+
 
 Removed Items
 -------------
