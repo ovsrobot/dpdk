@@ -110,6 +110,8 @@ struct rte_node {
 			unsigned int lcore_id;  /**< Node running lcore. */
 		} dispatch;
 	};
+	uint64_t total_sched_objs; /**< Number of objects scheduled. */
+	uint64_t total_sched_fail; /**< Number of scheduled failure. */
 	/* Fast path area  */
 #define RTE_NODE_CTX_SZ 16
 	uint8_t ctx[RTE_NODE_CTX_SZ] __rte_cache_aligned; /**< Node Context. */
