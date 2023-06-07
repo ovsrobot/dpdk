@@ -4195,6 +4195,7 @@ typedef struct efx_mae_limits_s {
 		uint32_t		eml_max_n_counters;
 		uint32_t		eml_max_n_action_counters;
 	};
+	uint32_t			eml_max_n_conntrack_counters;
 } efx_mae_limits_t;
 
 LIBEFX_API
@@ -4789,6 +4790,7 @@ efx_mae_action_set_fill_in_eh_id(
  */
 typedef enum efx_counter_type_e {
 	EFX_COUNTER_TYPE_ACTION = 0,
+	EFX_COUNTER_TYPE_CONNTRACK,
 } efx_counter_type_t;
 
 typedef struct efx_counter_s {
