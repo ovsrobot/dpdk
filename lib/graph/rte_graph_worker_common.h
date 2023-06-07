@@ -29,6 +29,13 @@
 extern "C" {
 #endif
 
+/** Graph worker models */
+/* If adding new entry, then update graph_model_is_valid API. */
+#define RTE_GRAPH_MODEL_RTC 0 /**< Run-To-Completion model. It is the default model. */
+#define RTE_GRAPH_MODEL_DEFAULT RTE_GRAPH_MODEL_RTC /**< Default graph model. */
+#define RTE_GRAPH_MODEL_MCORE_DISPATCH 1
+/**< Dispatch model to support cross-core dispatching within core affinity. */
+
 /**
  * @internal
  *
@@ -41,6 +48,7 @@ struct rte_graph {
 	rte_node_t nb_nodes;	     /**< Number of nodes in the graph. */
 	rte_graph_off_t *cir_start;  /**< Pointer to circular buffer. */
 	rte_graph_off_t nodes_start; /**< Offset at which node memory starts. */
+	uint32_t model;		     /**< graph model */
 	rte_graph_t id;	/**< Graph identifier. */
 	int socket;	/**< Socket ID where memory is allocated. */
 	char name[RTE_GRAPH_NAMESIZE];	/**< Name of the graph. */
@@ -488,6 +496,59 @@ rte_node_next_stream_move(struct rte_graph *graph, struct rte_node *src,
 	} else { /* Move the objects from src node to dst node */
 		rte_node_enqueue(graph, src, next, src->objs, src->idx);
 	}
+}
+
+/**
+ * Test the validity of model.
+ *
+ * @param id
+ *   Node id to check.
+ *
+ * @return
+ *   true if graph model is valid, false otherwise.
+ */
+static __rte_always_inline
+bool
+graph_model_is_valid(uint32_t model)
+{
+	if (model > RTE_GRAPH_MODEL_MCORE_DISPATCH)
+		return false;
+
+	return true;
+}
+
+/**
+ * @note This function does not perform any locking, and is only safe to call
+ *    before graph running. It will set all graphs the same model.
+ *
+ * @param model
+ *   Name of the graph worker model.
+ *
+ * @return
+ *   0 on success, -1 otherwise.
+ */
+__rte_experimental
+int rte_graph_worker_model_set(uint32_t model);
+
+/**
+ * Get the graph worker model
+ *
+ * @note All graph will use the same model and this function will get model from the first one
+ *
+ * @param graph
+ *   Graph pointer.
+ *
+ * @return
+ *   Graph worker model on success.
+ */
+__rte_experimental
+static inline uint32_t
+rte_graph_worker_model_get(struct rte_graph *graph)
+{
+	if (!graph_model_is_valid(graph->model))
+		return -EINVAL;
+
+	return graph->model;
 }
 
 #ifdef __cplusplus
