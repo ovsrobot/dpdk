@@ -36,6 +36,13 @@
 [suppress_type]
         type_kind = enum
         changed_enumerators = RTE_CRYPTO_ASYM_XFORM_ECPM, RTE_CRYPTO_ASYM_XFORM_TYPE_LIST_END
+; Ignore changes to rte_security_ops MACsec APIs which are experimental
+[suppress_type]
+        name = rte_security_ops
+        has_data_member_inserted_between =
+        {
+                offset_of(security_macsec_sc_create_t), offset_of(security_macsec_sa_stats_get_t)
+        }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Temporary exceptions till next major ABI version ;
