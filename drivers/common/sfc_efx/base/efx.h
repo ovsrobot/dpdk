@@ -4191,7 +4191,10 @@ typedef struct efx_mae_limits_s {
 	uint32_t			eml_max_n_outer_prios;
 	uint32_t			eml_encap_types_supported;
 	uint32_t			eml_encap_header_size_limit;
-	uint32_t			eml_max_n_counters;
+	union {
+		uint32_t		eml_max_n_counters;
+		uint32_t		eml_max_n_action_counters;
+	};
 } efx_mae_limits_t;
 
 LIBEFX_API
@@ -4780,6 +4783,14 @@ efx_mae_action_set_fill_in_eh_id(
 	__in				efx_mae_actions_t *spec,
 	__in				const efx_mae_eh_id_t *eh_idp);
 
+/*
+ * Counter types that may be supported by the match-action engine.
+ * Each counter type maintains its own counter ID namespace in FW.
+ */
+typedef enum efx_counter_type_e {
+	EFX_COUNTER_TYPE_ACTION = 0,
+} efx_counter_type_t;
+
 typedef struct efx_counter_s {
 	uint32_t id;
 } efx_counter_t;
@@ -4809,6 +4820,8 @@ efx_mae_action_set_alloc(
 	__out				efx_mae_aset_id_t *aset_idp);
 
 /*
+ * Allocates MAE counter(s) of type EFX_COUNTER_TYPE_ACTION.
+ *
  * Generation count has two purposes:
  *
  * 1) Distinguish between counter packets that belong to freed counter
@@ -4832,10 +4845,34 @@ efx_mae_counters_alloc(
 	__out_ecount(n_counters)	efx_counter_t *countersp,
 	__out_opt			uint32_t *gen_countp);
 
+/*
+ * Allocates MAE counter(s) of the specified type. Other
+ * than that, behaves like efx_mae_counters_alloc().
+ */
+LIBEFX_API
+extern	__checkReturn			efx_rc_t
+efx_mae_counters_alloc_type(
+	__in				efx_nic_t *enp,
+	__in				efx_counter_type_t type,
+	__in				uint32_t n_counters,
+	__out				uint32_t *n_allocatedp,
+	__out_ecount(n_counters)	efx_counter_t *countersp,
+	__out_opt			uint32_t *gen_countp);
+
 LIBEFX_API
 extern	__checkReturn			efx_rc_t
 efx_mae_counters_free(
 	__in				efx_nic_t *enp,
+	__in				uint32_t n_counters,
+	__out				uint32_t *n_freedp,
+	__in_ecount(n_counters)		const efx_counter_t *countersp,
+	__out_opt			uint32_t *gen_countp);
+
+LIBEFX_API
+extern	__checkReturn			efx_rc_t
+efx_mae_counters_free_type(
+	__in				efx_nic_t *enp,
+	__in				efx_counter_type_t type,
 	__in				uint32_t n_counters,
 	__out				uint32_t *n_freedp,
 	__in_ecount(n_counters)		const efx_counter_t *countersp,
