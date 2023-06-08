@@ -346,6 +346,8 @@ rte_cryptodev_get_cipher_algo_enum(enum rte_crypto_cipher_algorithm *algo_enum,
 	int ret = -1;	/* Invalid string */
 
 	for (i = 1; i < RTE_DIM(crypto_cipher_algorithm_strings); i++) {
+		if (crypto_cipher_algorithm_strings[i] == NULL)
+			continue;
 		if (strcmp(algo_string, crypto_cipher_algorithm_strings[i]) == 0) {
 			*algo_enum = (enum rte_crypto_cipher_algorithm) i;
 			ret = 0;
@@ -366,6 +368,8 @@ rte_cryptodev_get_auth_algo_enum(enum rte_crypto_auth_algorithm *algo_enum,
 	int ret = -1;	/* Invalid string */
 
 	for (i = 1; i < RTE_DIM(crypto_auth_algorithm_strings); i++) {
+		if (crypto_auth_algorithm_strings[i] == NULL)
+			continue;
 		if (strcmp(algo_string, crypto_auth_algorithm_strings[i]) == 0) {
 			*algo_enum = (enum rte_crypto_auth_algorithm) i;
 			ret = 0;
@@ -386,6 +390,8 @@ rte_cryptodev_get_aead_algo_enum(enum rte_crypto_aead_algorithm *algo_enum,
 	int ret = -1;	/* Invalid string */
 
 	for (i = 1; i < RTE_DIM(crypto_aead_algorithm_strings); i++) {
+		if (crypto_aead_algorithm_strings[i] == NULL）
+			continue;
 		if (strcmp(algo_string, crypto_aead_algorithm_strings[i]) == 0) {
 			*algo_enum = (enum rte_crypto_aead_algorithm) i;
 			ret = 0;
@@ -406,6 +412,8 @@ rte_cryptodev_asym_get_xform_enum(enum rte_crypto_asym_xform_type *xform_enum,
 	int ret = -1;	/* Invalid string */
 
 	for (i = 1; i < RTE_DIM(crypto_asym_xform_strings); i++) {
+		if (crypto_asym_xform_strings[i] = NULL)
+			continue;
 		if (strcmp(xform_string,
 			crypto_asym_xform_strings[i]) == 0) {
 			*xform_enum = (enum rte_crypto_asym_xform_type) i;
