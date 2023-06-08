@@ -20,4 +20,4 @@ sources = files(
 )
 headers = files('rte_graph.h', 'rte_graph_worker.h')
 
-deps += ['eal', 'pcapng']
+deps += ['eal', 'pcapng', 'mempool', 'ring']
