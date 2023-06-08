@@ -894,6 +894,7 @@ bond_ethdev_update_tlb_slave_cb(void *arg)
 	uint8_t update_stats = 0;
 	uint16_t slave_id;
 	uint16_t i;
+	int ret;
 
 	internals->slave_update_idx++;
 
@@ -903,7 +904,10 @@ bond_ethdev_update_tlb_slave_cb(void *arg)
 
 	for (i = 0; i < internals->active_slave_count; i++) {
 		slave_id = internals->active_slaves[i];
-		rte_eth_stats_get(slave_id, &slave_stats);
+		ret = rte_eth_stats_get(slave_id, &slave_stats);
+		if (ret)
+			goto OUT;
+
 		tx_bytes = slave_stats.obytes - tlb_last_obytets[slave_id];
 		bandwidth_left(slave_id, tx_bytes,
 				internals->slave_update_idx, &bwg_array[i]);
@@ -922,6 +926,7 @@ bond_ethdev_update_tlb_slave_cb(void *arg)
 	for (i = 0; i < slave_count; i++)
 		internals->tlb_slaves_order[i] = bwg_array[i].slave;
 
+OUT:
 	rte_eal_alarm_set(REORDER_PERIOD_MS * 1000, bond_ethdev_update_tlb_slave_cb,
 			(struct bond_dev_private *)internals);
 }
