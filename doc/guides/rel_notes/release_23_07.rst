@@ -67,6 +67,11 @@ New Features
   to PCI bus so that PCI drivers can access PCI memory resources
   when they are not mapped to process address space.
 
+* **Added SM2 asymmetric algorithm in cryptodev.**
+
+  Added support for ShamMi 2 (SM2) asymmetric crypto algorithm
+  along with prime field curve support.
+
 
 Removed Items
 -------------
