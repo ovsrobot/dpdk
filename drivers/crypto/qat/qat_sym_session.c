@@ -25,9 +25,7 @@
 #include <rte_log.h>
 #include <rte_malloc.h>
 #include <rte_crypto_sym.h>
-#ifdef RTE_LIB_SECURITY
 #include <rte_security_driver.h>
-#endif
 
 #include "qat_logs.h"
 #include "qat_sym_session.h"
@@ -2597,7 +2595,6 @@ int qat_sym_validate_zuc_key(int key_len, enum icp_qat_hw_cipher_algo *alg)
 	return 0;
 }
 
-#ifdef RTE_LIB_SECURITY
 static int
 qat_sec_session_check_docsis(struct rte_security_session_conf *conf)
 {
@@ -2746,4 +2743,3 @@ qat_security_session_get_size(void *device __rte_unused)
 {
 	return sizeof(struct qat_sym_session);
 }
-#endif
