@@ -380,6 +380,7 @@ eal_log_level_parse(int argc, char **argv)
 	argvopt = argv;
 	optind = 1;
 	optreset = 1;
+	opterr = 0;
 
 	while ((opt = getopt_long(argc, argvopt, eal_short_options,
 				  eal_long_options, &option_index)) != EOF) {
@@ -423,6 +424,7 @@ eal_parse_args(int argc, char **argv)
 	argvopt = argv;
 	optind = 1;
 	optreset = 1;
+	opterr = 1;
 
 	while ((opt = getopt_long(argc, argvopt, eal_short_options,
 				  eal_long_options, &option_index)) != EOF) {
