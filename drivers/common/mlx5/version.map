@@ -158,5 +158,13 @@ INTERNAL {
 
 	mlx5_os_interrupt_handler_create; # WINDOWS_NO_EXPORT
 	mlx5_os_interrupt_handler_destroy; # WINDOWS_NO_EXPORT
+
+	__rte_pmd_mlx5_trace_tx_entry;
+	__rte_pmd_mlx5_trace_tx_exit;
+	__rte_pmd_mlx5_trace_tx_wqe;
+	__rte_pmd_mlx5_trace_tx_wait;
+	__rte_pmd_mlx5_trace_tx_push;
+	__rte_pmd_mlx5_trace_tx_complete;
+
 	local: *;
 };
