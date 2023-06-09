@@ -68,7 +68,7 @@ Once configured, to build and then install DPDK system-wide use:
 
         cd build
         ninja
-        ninja install
+        meson install
         ldconfig
 
 The last two commands above generally need to be run as root,
