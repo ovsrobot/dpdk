@@ -19,6 +19,8 @@
 
 #include "mlx5.h"
 #include "mlx5_autoconf.h"
+#include "mlx5_trace.h"
+#include "mlx5_rxtx.h"
 
 /* TX burst subroutines return codes. */
 enum mlx5_txcmp_code {
@@ -763,6 +765,9 @@ mlx5_tx_cseg_init(struct mlx5_txq_data *__rte_restrict txq,
 	cs->flags = RTE_BE32(MLX5_COMP_ONLY_FIRST_ERR <<
 			     MLX5_COMP_MODE_OFFSET);
 	cs->misc = RTE_BE32(0);
+	if (__rte_trace_point_fp_is_enabled() && !loc->pkts_sent)
+		rte_pmd_mlx5_trace_tx_entry(txq->port_id, txq->idx);
+	rte_pmd_mlx5_trace_tx_wqe((txq->wqe_ci << 8) | opcode);
 }
 
 /**
@@ -1687,6 +1692,7 @@ mlx5_tx_schedule_send(struct mlx5_txq_data *restrict txq,
 		if (txq->wait_on_time) {
 			/* The wait on time capability should be used. */
 			ts -= sh->txpp.skew;
+			rte_pmd_mlx5_trace_tx_wait(ts);
 			mlx5_tx_cseg_init(txq, loc, wqe,
 					  1 + sizeof(struct mlx5_wqe_wseg) /
 					      MLX5_WSEG_SIZE,
@@ -1701,6 +1707,7 @@ mlx5_tx_schedule_send(struct mlx5_txq_data *restrict txq,
 			if (unlikely(wci < 0))
 				return MLX5_TXCMP_CODE_SINGLE;
 			/* Build the WAIT WQE with specified completion. */
+			rte_pmd_mlx5_trace_tx_wait(ts - sh->txpp.skew);
 			mlx5_tx_cseg_init(txq, loc, wqe,
 					  1 + sizeof(struct mlx5_wqe_qseg) /
 					      MLX5_WSEG_SIZE,
@@ -1805,6 +1812,7 @@ mlx5_tx_packet_multi_tso(struct mlx5_txq_data *__rte_restrict txq,
 	wqe = txq->wqes + (txq->wqe_ci & txq->wqe_m);
 	loc->wqe_last = wqe;
 	mlx5_tx_cseg_init(txq, loc, wqe, 0, MLX5_OPCODE_TSO, olx);
+	rte_pmd_mlx5_trace_tx_push(loc->mbuf, txq->wqe_ci);
 	ds = mlx5_tx_mseg_build(txq, loc, wqe, vlan, inlen, 1, olx);
 	wqe->cseg.sq_ds = rte_cpu_to_be_32(txq->qp_num_8s | ds);
 	txq->wqe_ci += (ds + 3) / 4;
@@ -1887,6 +1895,7 @@ mlx5_tx_packet_multi_send(struct mlx5_txq_data *__rte_restrict txq,
 	wqe = txq->wqes + (txq->wqe_ci & txq->wqe_m);
 	loc->wqe_last = wqe;
 	mlx5_tx_cseg_init(txq, loc, wqe, ds, MLX5_OPCODE_SEND, olx);
+	rte_pmd_mlx5_trace_tx_push(loc->mbuf, txq->wqe_ci);
 	mlx5_tx_eseg_none(txq, loc, wqe, olx);
 	dseg = &wqe->dseg[0];
 	do {
@@ -2110,6 +2119,7 @@ do_build:
 	wqe = txq->wqes + (txq->wqe_ci & txq->wqe_m);
 	loc->wqe_last = wqe;
 	mlx5_tx_cseg_init(txq, loc, wqe, 0, MLX5_OPCODE_SEND, olx);
+	rte_pmd_mlx5_trace_tx_push(loc->mbuf, txq->wqe_ci);
 	ds = mlx5_tx_mseg_build(txq, loc, wqe, vlan, inlen, 0, olx);
 	wqe->cseg.sq_ds = rte_cpu_to_be_32(txq->qp_num_8s | ds);
 	txq->wqe_ci += (ds + 3) / 4;
@@ -2313,8 +2323,8 @@ mlx5_tx_burst_tso(struct mlx5_txq_data *__rte_restrict txq,
 		 */
 		wqe = txq->wqes + (txq->wqe_ci & txq->wqe_m);
 		loc->wqe_last = wqe;
-		mlx5_tx_cseg_init(txq, loc, wqe, ds,
-				  MLX5_OPCODE_TSO, olx);
+		mlx5_tx_cseg_init(txq, loc, wqe, ds, MLX5_OPCODE_TSO, olx);
+		rte_pmd_mlx5_trace_tx_push(loc->mbuf, txq->wqe_ci);
 		dseg = mlx5_tx_eseg_data(txq, loc, wqe, vlan, hlen, 1, olx);
 		dptr = rte_pktmbuf_mtod(loc->mbuf, uint8_t *) + hlen - vlan;
 		dlen -= hlen - vlan;
@@ -2683,6 +2693,7 @@ next_empw:
 			/* Update sent data bytes counter. */
 			slen += dlen;
 #endif
+			rte_pmd_mlx5_trace_tx_push(loc->mbuf, txq->wqe_ci);
 			mlx5_tx_dseg_ptr
 				(txq, loc, dseg,
 				 rte_pktmbuf_mtod(loc->mbuf, uint8_t *),
@@ -2921,6 +2932,7 @@ mlx5_tx_burst_empw_inline(struct mlx5_txq_data *__rte_restrict txq,
 				tlen += sizeof(struct rte_vlan_hdr);
 				if (room < tlen)
 					break;
+				rte_pmd_mlx5_trace_tx_push(loc->mbuf, txq->wqe_ci);
 				dseg = mlx5_tx_dseg_vlan(txq, loc, dseg,
 							 dptr, dlen, olx);
 #ifdef MLX5_PMD_SOFT_COUNTERS
@@ -2930,6 +2942,7 @@ mlx5_tx_burst_empw_inline(struct mlx5_txq_data *__rte_restrict txq,
 			} else {
 				if (room < tlen)
 					break;
+				rte_pmd_mlx5_trace_tx_push(loc->mbuf, txq->wqe_ci);
 				dseg = mlx5_tx_dseg_empw(txq, loc, dseg,
 							 dptr, dlen, olx);
 			}
@@ -2975,6 +2988,7 @@ pointer_empw:
 			if (MLX5_TXOFF_CONFIG(VLAN))
 				MLX5_ASSERT(!(loc->mbuf->ol_flags &
 					    RTE_MBUF_F_TX_VLAN));
+			rte_pmd_mlx5_trace_tx_push(loc->mbuf, txq->wqe_ci);
 			mlx5_tx_dseg_ptr(txq, loc, dseg, dptr, dlen, olx);
 			/* We have to store mbuf in elts.*/
 			txq->elts[txq->elts_head++ & txq->elts_m] = loc->mbuf;
@@ -3189,6 +3203,7 @@ single_inline:
 				loc->wqe_last = wqe;
 				mlx5_tx_cseg_init(txq, loc, wqe, seg_n,
 						  MLX5_OPCODE_SEND, olx);
+				rte_pmd_mlx5_trace_tx_push(loc->mbuf, txq->wqe_ci);
 				mlx5_tx_eseg_data(txq, loc, wqe,
 						  vlan, inlen, 0, olx);
 				txq->wqe_ci += wqe_n;
@@ -3251,6 +3266,7 @@ single_min_inline:
 				loc->wqe_last = wqe;
 				mlx5_tx_cseg_init(txq, loc, wqe, ds,
 						  MLX5_OPCODE_SEND, olx);
+				rte_pmd_mlx5_trace_tx_push(loc->mbuf, txq->wqe_ci);
 				dseg = mlx5_tx_eseg_data(txq, loc, wqe, vlan,
 							 txq->inlen_mode,
 							 0, olx);
@@ -3292,6 +3308,7 @@ single_part_inline:
 				loc->wqe_last = wqe;
 				mlx5_tx_cseg_init(txq, loc, wqe, 4,
 						  MLX5_OPCODE_SEND, olx);
+				rte_pmd_mlx5_trace_tx_push(loc->mbuf, txq->wqe_ci);
 				mlx5_tx_eseg_dmin(txq, loc, wqe, vlan, olx);
 				dptr = rte_pktmbuf_mtod(loc->mbuf, uint8_t *) +
 				       MLX5_ESEG_MIN_INLINE_SIZE - vlan;
@@ -3333,6 +3350,7 @@ single_no_inline:
 			loc->wqe_last = wqe;
 			mlx5_tx_cseg_init(txq, loc, wqe, 3,
 					  MLX5_OPCODE_SEND, olx);
+			rte_pmd_mlx5_trace_tx_push(loc->mbuf, txq->wqe_ci);
 			mlx5_tx_eseg_none(txq, loc, wqe, olx);
 			mlx5_tx_dseg_ptr
 				(txq, loc, &wqe->dseg[0],
@@ -3702,6 +3720,9 @@ burst_exit:
 #endif
 	if (MLX5_TXOFF_CONFIG(INLINE) && loc.mbuf_free)
 		__mlx5_tx_free_mbuf(txq, pkts, loc.mbuf_free, olx);
+	/* Trace productive bursts only. */
+	if (__rte_trace_point_fp_is_enabled() && loc.pkts_sent)
+		rte_pmd_mlx5_trace_tx_exit(loc.pkts_sent, pkts_n);
 	return loc.pkts_sent;
 }
 
