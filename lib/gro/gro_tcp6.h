@@ -2,22 +2,24 @@
  * Copyright(c) 2017 Intel Corporation
  */
 
-#ifndef _GRO_TCP4_H_
-#define _GRO_TCP4_H_
+#ifndef _GRO_TCP6_H_
+#define _GRO_TCP6_H_
 
 #include <gro_tcp_internal.h>
 
-#define GRO_TCP4_TBL_MAX_ITEM_NUM (1024UL * 1024UL)
+#define INVALID_ARRAY_INDEX 0xffffffffUL
+#define GRO_TCP6_TBL_MAX_ITEM_NUM (1024UL * 1024UL)
 
-/* Header fields representing common fields in TCP flow */
-struct tcp4_flow_key {
+/* Header fields representing a TCP/IPv6 flow */
+struct tcp6_flow_key {
 	struct cmn_tcp_key cmn_key;
-	uint32_t ip_src_addr;
-	uint32_t ip_dst_addr;
+	uint8_t  src_addr[16];
+	uint8_t  dst_addr[16];
+	rte_be32_t vtc_flow;
 };
 
-struct gro_tcp4_flow {
-	struct tcp4_flow_key key;
+struct gro_tcp6_flow {
+	struct tcp6_flow_key key;
 	/*
 	 * The index of the first packet in the flow.
 	 * INVALID_ARRAY_INDEX indicates an empty flow.
@@ -26,13 +28,13 @@ struct gro_tcp4_flow {
 };
 
 /*
- * TCP/IPv4 reassembly table structure.
+ * TCP/IPv6 reassembly table structure.
  */
-struct gro_tcp4_tbl {
+struct gro_tcp6_tbl {
 	/* item array */
 	struct gro_tcp_item *items;
 	/* flow array */
-	struct gro_tcp4_flow *flows;
+	struct gro_tcp6_flow *flows;
 	/* current item number */
 	uint32_t item_num;
 	/* current flow num */
@@ -44,12 +46,12 @@ struct gro_tcp4_tbl {
 };
 
 /**
- * This function creates a TCP/IPv4 reassembly table.
+ * This function creates a TCP/IPv6 reassembly table.
  *
  * @param socket_id
- *  Socket index for allocating the TCP/IPv4 reassemble table
+ *  Socket index for allocating the TCP/IPv6 reassemble table
  * @param max_flow_num
- *  The maximum number of flows in the TCP/IPv4 GRO table
+ *  The maximum number of flows in the TCP/IPv6 GRO table
  * @param max_item_per_flow
  *  The maximum number of packets per flow
  *
@@ -57,20 +59,20 @@ struct gro_tcp4_tbl {
  *  - Return the table pointer on success.
  *  - Return NULL on failure.
  */
-void *gro_tcp4_tbl_create(uint16_t socket_id,
+void *gro_tcp6_tbl_create(uint16_t socket_id,
 		uint16_t max_flow_num,
 		uint16_t max_item_per_flow);
 
 /**
- * This function destroys a TCP/IPv4 reassembly table.
+ * This function destroys a TCP/IPv6 reassembly table.
  *
  * @param tbl
- *  Pointer pointing to the TCP/IPv4 reassembly table.
+ *  Pointer pointing to the TCP/IPv6 reassembly table.
  */
-void gro_tcp4_tbl_destroy(void *tbl);
+void gro_tcp6_tbl_destroy(void *tbl);
 
 /**
- * This function merges a TCP/IPv4 packet. It doesn't process the packet,
+ * This function merges a TCP/IPv6 packet. It doesn't process the packet,
  * which has SYN, FIN, RST, PSH, CWR, ECE or URG set, or doesn't have
  * payload.
  *
@@ -84,7 +86,7 @@ void gro_tcp4_tbl_destroy(void *tbl);
  * @param pkt
  *  Packet to reassemble
  * @param tbl
- *  Pointer pointing to the TCP/IPv4 reassembly table
+ *  Pointer pointing to the TCP/IPv6 reassembly table
  * @start_time
  *  The time when the packet is inserted into the table
  *
@@ -94,16 +96,16 @@ void gro_tcp4_tbl_destroy(void *tbl);
  *  - Return a negative value for invalid parameters or no available
  *    space in the table.
  */
-int32_t gro_tcp4_reassemble(struct rte_mbuf *pkt,
-		struct gro_tcp4_tbl *tbl,
+int32_t gro_tcp6_reassemble(struct rte_mbuf *pkt,
+		struct gro_tcp6_tbl *tbl,
 		uint64_t start_time);
 
 /**
- * This function flushes timeout packets in a TCP/IPv4 reassembly table,
+ * This function flushes timeout packets in a TCP/IPv6 reassembly table,
  * and without updating checksums.
  *
  * @param tbl
- *  TCP/IPv4 reassembly table pointer
+ *  TCP/IPv6 reassembly table pointer
  * @param flush_timestamp
  *  Flush packets which are inserted into the table before or at the
  *  flush_timestamp.
@@ -116,32 +118,44 @@ int32_t gro_tcp4_reassemble(struct rte_mbuf *pkt,
  * @return
  *  The number of flushed packets
  */
-uint16_t gro_tcp4_tbl_timeout_flush(struct gro_tcp4_tbl *tbl,
+uint16_t gro_tcp6_tbl_timeout_flush(struct gro_tcp6_tbl *tbl,
 		uint64_t flush_timestamp,
 		struct rte_mbuf **out,
 		uint16_t nb_out);
 
 /**
- * This function returns the number of the packets in a TCP/IPv4
+ * This function returns the number of the packets in a TCP/IPv6
  * reassembly table.
  *
  * @param tbl
- *  TCP/IPv4 reassembly table pointer
+ *  TCP/IPv6 reassembly table pointer
  *
  * @return
  *  The number of packets in the table
  */
-uint32_t gro_tcp4_tbl_pkt_count(void *tbl);
+uint32_t gro_tcp6_tbl_pkt_count(void *tbl);
 
 /*
- * Check if two TCP/IPv4 packets belong to the same flow.
+ * Check if two TCP/IPv6 packets belong to the same flow.
  */
 static inline int
-is_same_tcp4_flow(struct tcp4_flow_key k1, struct tcp4_flow_key k2)
+is_same_tcp6_flow(struct tcp6_flow_key *k1, struct tcp6_flow_key *k2)
 {
-	return ((k1.ip_src_addr == k2.ip_src_addr) &&
-			(k1.ip_dst_addr == k2.ip_dst_addr) &&
-			is_common_tcp_key(&k1.cmn_key, &k2.cmn_key));
+	rte_be32_t vtc_flow_diff;
+
+	if (memcmp(&k1->src_addr, &k2->src_addr, 16)
+		return 0;
+	if (memcmp(&k1->dst_addr, &k2->dst_addr, 16)
+		return 0;
+	/*
+	 * IP version (4) Traffic Class (8) Flow Label (20)
+	 * All fields except Traffic class should be same
+	 */
+	vtc_flow_diff = (k1->vtc_flow ^ k2->vtc_flow);
+	if (vtc_flow_diff & htonl(0xF00FFFFF))
+		return 0;
+
+	return is_common_tcp_key(&k1->cmn_key, &k2->cmn_key);
 }
 
 #endif
