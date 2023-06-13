@@ -139,6 +139,11 @@ New Features
   for new capability registers, large passthrough BAR and some
   performance enhancements for UPT.
 
+* **Updated Marvell cnxk ethdev driver.**
+
+  Added support for Inline MACsec processing using rte_security framework
+  for CN103 platform.
+
 * **Added new algorithms to cryptodev.**
 
   * Added asymmetric algorithm ShangMi 2 (SM2) along with prime field curve support.
