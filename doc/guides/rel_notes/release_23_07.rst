@@ -170,6 +170,9 @@ New Features
 
   See :doc:`../prog_guide/pdcp_lib` for more information.
 
+* **Updated INTEL e1000 driver.**
+
+  * Added support for new I219 devices.
 
 Removed Items
 -------------
