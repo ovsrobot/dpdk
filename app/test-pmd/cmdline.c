@@ -39,6 +39,7 @@
 #include <rte_gro.h>
 #endif
 #include <rte_mbuf_dyn.h>
+#include <rte_trace.h>
 
 #include <cmdline_rdline.h>
 #include <cmdline_parse.h>
@@ -12745,6 +12746,40 @@ static cmdline_parse_inst_t cmd_config_tx_affinity_map = {
 	},
 };
 
+#ifndef RTE_EXEC_ENV_WINDOWS
+/* *** SAVE_TRACE *** */
+
+struct cmd_save_trace_result {
+	cmdline_fixed_string_t save;
+};
+
+static void cmd_save_trace_parsed(__rte_unused void *parsed_result,
+				  __rte_unused struct cmdline *cl,
+				  __rte_unused void *data)
+{
+	int rc;
+
+	rc = rte_trace_save();
+	if (rc)
+		printf("Save trace failed with error: %d\n", rc);
+	else
+		printf("Trace saved successfully\n");
+}
+
+static cmdline_parse_token_string_t cmd_save_trace_save =
+	TOKEN_STRING_INITIALIZER(struct cmd_save_trace_result, save, "save_trace");
+
+static cmdline_parse_inst_t cmd_save_trace = {
+	.f = cmd_save_trace_parsed,
+	.data = NULL,
+	.help_str = "save_trace: save tracing buffer",
+	.tokens = {
+		(void *)&cmd_save_trace_save,
+		NULL,
+	},
+};
+#endif
+
 /* ******************************************************************************** */
 
 /* list of instructions */
@@ -12979,6 +13014,9 @@ static cmdline_parse_ctx_t builtin_ctx[] = {
 	(cmdline_parse_inst_t *)&cmd_show_port_cman_config,
 	(cmdline_parse_inst_t *)&cmd_set_port_cman_config,
 	(cmdline_parse_inst_t *)&cmd_config_tx_affinity_map,
+#ifndef RTE_EXEC_ENV_WINDOWS
+	(cmdline_parse_inst_t *)&cmd_save_trace,
+#endif
 	NULL,
 };
 
