@@ -204,6 +204,24 @@ efx_loopback_type_name(
 
 #endif	/* EFSYS_OPT_LOOPBACK */
 
+	__checkReturn	efx_rc_t
+efx_port_vlan_strip_set(
+	__in		efx_nic_t *enp,
+	__in		boolean_t enabled)
+{
+	efx_port_t *epp = &(enp->en_port);
+	efx_nic_cfg_t *encp = &(enp->en_nic_cfg);
+
+	EFSYS_ASSERT3U(enp->en_magic, ==, EFX_NIC_MAGIC);
+
+	if (enabled && !encp->enc_rx_vlan_stripping_supported)
+		return ENOTSUP;
+
+	epp->ep_vlan_strip = enabled;
+
+	return 0;
+}
+
 			void
 efx_port_fini(
 	__in		efx_nic_t *enp)
