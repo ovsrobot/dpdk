@@ -19,6 +19,7 @@ sources += files(
         'mlx5_common_mp.c',
         'mlx5_common_mr.c',
         'mlx5_malloc.c',
+        'mlx5_trace.c',
         'mlx5_common_pci.c',
         'mlx5_common_devx.c',
         'mlx5_common_utils.c',
