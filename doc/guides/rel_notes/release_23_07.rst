@@ -170,6 +170,12 @@ New Features
 
   See :doc:`../prog_guide/pdcp_lib` for more information.
 
+* **Updated Solarflare network PMD.**
+
+  Updated the Solarflare ``sfc_efx`` driver with changes including:
+
+  * Added VLAN stripping support on SN1000 SmartNICs
+
 
 Removed Items
 -------------

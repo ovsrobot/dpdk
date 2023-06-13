@@ -938,6 +938,9 @@ sfc_rx_get_offload_mask(struct sfc_adapter *sa)
 	if (encp->enc_tunnel_encapsulations_supported == 0)
 		no_caps |= RTE_ETH_RX_OFFLOAD_OUTER_IPV4_CKSUM;
 
+	if (encp->enc_rx_vlan_stripping_supported == 0)
+		no_caps |= RTE_ETH_RX_OFFLOAD_VLAN_STRIP;
+
 	return ~no_caps;
 }
 
@@ -1109,6 +1112,7 @@ sfc_rx_qinit(struct sfc_adapter *sa, sfc_sw_index_t sw_index,
 	struct sfc_rxq *rxq;
 	struct sfc_dp_rx_qcreate_info info;
 	struct sfc_dp_rx_hw_limits hw_limits;
+	struct sfc_port *port = &sa->port;
 	uint16_t rx_free_thresh;
 	const char *error;
 
@@ -1192,6 +1196,9 @@ sfc_rx_qinit(struct sfc_adapter *sa, sfc_sw_index_t sw_index,
 	if ((sa->negotiated_rx_metadata & RTE_ETH_RX_METADATA_USER_MARK) != 0 ||
 	    sfc_ft_is_active(sa))
 		rxq_info->type_flags |= EFX_RXQ_FLAG_USER_MARK;
+
+	if (port->vlan_strip)
+		rxq_info->type_flags |= EFX_RXQ_FLAG_VLAN_STRIPPED_TCI;
 
 	rc = sfc_ev_qinit(sa, SFC_EVQ_TYPE_RX, sw_index,
 			  evq_entries, socket_id, &evq);
