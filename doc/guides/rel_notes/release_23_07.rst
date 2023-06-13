@@ -170,6 +170,11 @@ New Features
 
   See :doc:`../prog_guide/pdcp_lib` for more information.
 
+* **Extended port ID flow action item in CNXK.**
+
+  ``RTE_FLOW_ACTION_TYPE_PORT_ID`` action used to redirect traffic to VFs only.
+  This has been extended to redirect traffic from one PF port to another PF
+  port also.
 
 Removed Items
 -------------
