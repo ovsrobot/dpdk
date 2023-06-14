@@ -177,13 +177,11 @@ cmd_quit_parsed(__rte_unused void *parsed_result,
 	rte_eal_mp_wait_lcore();
 	in_test = 0;
 
-	/* Stop traffic and Close port. */
+	/* Stop traffic only. */
 	rte_rawdev_stop(dev_id);
-	rte_rawdev_close(dev_id);
-	if (eth_port_id < RTE_MAX_ETHPORTS && fwd_mode == IOFWD) {
+	if (eth_port_id < RTE_MAX_ETHPORTS && fwd_mode == IOFWD)
 		rte_eth_dev_stop(eth_port_id);
-		rte_eth_dev_close(eth_port_id);
-	}
+	/* Ports will be closed at rte_eal_cleanup() in the main loop. */
 
 	cmdline_quit(cl);
 }
