@@ -1113,6 +1113,7 @@ flow_modify_field_support_tag_array(enum rte_flow_field_id field)
 {
 	switch (field) {
 	case RTE_FLOW_FIELD_TAG:
+	case RTE_FLOW_FIELD_MPLS:
 		return true;
 	default:
 		break;
