@@ -170,6 +170,12 @@ New Features
 
   See :doc:`../prog_guide/pdcp_lib` for more information.
 
+* **Updated Solarflare network PMD.**
+
+  Updated the Solarflare ``sfc_efx`` driver with changes including:
+
+  * Added support for configuring FEC mode, querying FEC capabilities and
+    current FEC mode from a device.
 
 Removed Items
 -------------
