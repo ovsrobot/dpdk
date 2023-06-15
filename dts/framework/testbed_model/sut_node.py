@@ -1,14 +1,21 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2010-2014 Intel Corporation
 # Copyright(c) 2023 PANTHEON.tech s.r.o.
+# Copyright(c) 2022-2023 University of New Hampshire
 
 import os
 import tarfile
 import time
 from pathlib import PurePath
 
-from framework.config import BuildTargetConfiguration, NodeConfiguration
-from framework.remote_session import CommandResult, OSSession
+from framework.config import (
+    BuildTargetConfiguration,
+    BuildTargetVersionInfo,
+    InteractiveApp,
+    NodeConfiguration,
+    NodeVersionInfo,
+)
+from framework.remote_session import CommandResult, InteractiveShell, OSSession
 from framework.settings import SETTINGS
 from framework.utils import EnvVarsDict, MesonArgs
 
@@ -26,13 +33,17 @@ class SutNode(Node):
 
     _dpdk_prefix_list: list[str]
     _dpdk_timestamp: str
-    _build_target_config: BuildTargetConfiguration | None
+    _build_target_config: BuildTargetConfiguration
     _env_vars: EnvVarsDict
     _remote_tmp_dir: PurePath
     __remote_dpdk_dir: PurePath | None
-    _dpdk_version: str | None
     _app_compile_timeout: float
     _dpdk_kill_session: OSSession | None
+    _dpdk_version: str | None
+    _os_name: str | None
+    _os_version: str | None
+    _kernel_version: str | None
+    _compiler_version: str | None
 
     def __init__(self, node_config: NodeConfiguration):
         super(SutNode, self).__init__(node_config)
@@ -41,12 +52,16 @@ class SutNode(Node):
         self._env_vars = EnvVarsDict()
         self._remote_tmp_dir = self.main_session.get_remote_tmp_dir()
         self.__remote_dpdk_dir = None
-        self._dpdk_version = None
         self._app_compile_timeout = 90
         self._dpdk_kill_session = None
         self._dpdk_timestamp = (
             f"{str(os.getpid())}_{time.strftime('%Y%m%d%H%M%S', time.localtime())}"
         )
+        self._dpdk_version = None
+        self._os_name = None
+        self._os_version = None
+        self._kernel_version = None
+        self._compiler_version = None
 
     @property
     def _remote_dpdk_dir(self) -> PurePath:
@@ -75,6 +90,44 @@ class SutNode(Node):
             )
         return self._dpdk_version
 
+    @property
+    def os_name(self) -> str:
+        if self._os_name is None:
+            self._os_name = self.main_session.get_os_name()
+        return self._os_name
+
+    @property
+    def os_version(self) -> str:
+        if self._os_version is None:
+            self._os_version = self.main_session.get_os_version()
+        return self._os_version
+
+    @property
+    def kernel_version(self) -> str:
+        if self._kernel_version is None:
+            self._kernel_version = self.main_session.get_kernel_version()
+        return self._kernel_version
+
+    @property
+    def compiler_version(self) -> str:
+        if self._compiler_version is None:
+            self._compiler_version = self.main_session.get_compiler_version(
+                self._build_target_config.compiler.name
+            )
+        return self._compiler_version
+
+    def get_node_versions(self) -> NodeVersionInfo:
+        return NodeVersionInfo(
+            os_name=self.os_name,
+            os_version=self.os_version,
+            kernel_version=self.kernel_version,
+        )
+
+    def get_build_target_versions(self) -> BuildTargetVersionInfo:
+        return BuildTargetVersionInfo(
+            dpdk_version=self.dpdk_version, compiler_version=self.compiler_version
+        )
+
     def _guess_dpdk_remote_dir(self) -> PurePath:
         return self.main_session.guess_dpdk_remote_dir(self._remote_tmp_dir)
 
@@ -84,6 +137,10 @@ class SutNode(Node):
         """
         Setup DPDK on the SUT node.
         """
+        # we want to ensure that dpdk_version and compiler_version is reset for new
+        # build targets
+        self._dpdk_version = None
+        self._compiler_version = None
         self._configure_build_target(build_target_config)
         self._copy_dpdk_tarball()
         self._build_dpdk()
@@ -260,6 +317,49 @@ class SutNode(Node):
         """
         return self.main_session.send_command(
             f"{app_path} {eal_args}", timeout, verify=True
+        )
+
+    def create_interactive_shell(
+        self,
+        shell_type: InteractiveApp,
+        path_to_app: PurePath | None = None,
+        timeout: float = SETTINGS.timeout,
+        eal_parameters: str = "",
+        app_parameters="",
+    ) -> InteractiveShell:
+        """Create a handler for an interactive session.
+
+        This method is a factory that calls a method in OSSession to create shells for
+        different DPDK applications.
+
+        Args:
+            shell_type: Enum value representing the desired application.
+            path_to_app: Represents a path to the application you are attempting to
+                launch. This path will be executed at the start of the app
+                initialization. If one isn't provided, the default specified in the
+                enumeration will be used.
+            timeout: Timeout for the ssh channel
+            eal_parameters: List of EAL parameters to use to launch the app. This is
+                ignored for base "shell" types.
+            app_parameters: Command-line flags to pass into the application on launch.
+        Returns:
+            Instance of the desired interactive application.
+        """
+        default_path: PurePath | None
+        # if we just want a default shell, there is no need to append the DPDK build
+        # directory to the path
+        if shell_type.name == "shell":
+            default_path = None
+        else:
+            default_path = self.main_session.join_remote_path(
+                self.remote_dpdk_build_dir, *shell_type.get_path()
+            )
+        return self.main_session.interactive_session.create_interactive_shell(
+            shell_type,
+            path_to_app or default_path,
+            timeout,
+            eal_parameters,
+            app_parameters,
         )
 
 

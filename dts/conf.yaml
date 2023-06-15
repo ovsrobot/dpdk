@@ -10,6 +10,8 @@ executions:
         compiler_wrapper: ccache
     perf: false
     func: true
+    vdevs: #names of virtual devices to be used for testing
+      - "crypto_openssl"
     test_suites:
       - hello_world
     system_under_test: "SUT 1"
@@ -20,6 +22,17 @@ nodes:
     arch: x86_64
     os: linux
     lcores: ""
+    ports:
+      - pci: "0000:00:08.0"
+        dpdk_os_driver: vfio-pci
+        os_driver: i40e
+        peer_node: "TG 1"
+        peer_pci: "0000:00:08.0"
+      - pci: "0000:00:08.1"
+        dpdk_os_driver: vfio-pci
+        os_driver: i40e
+        peer_node: "TG 1"
+        peer_pci: "0000:00:08.1"
     use_first_core: false
     memory_channels: 4
     hugepages:  # optional; if removed, will use system hugepage configuration

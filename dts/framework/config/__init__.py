@@ -73,6 +73,21 @@ class HugepageConfiguration:
 
 
 @dataclass(slots=True, frozen=True)
+class PortConfig:
+    id: int
+    node: str
+    pci: str
+    dpdk_os_driver: str
+    os_driver: str
+    peer_node: str
+    peer_pci: str
+
+    @staticmethod
+    def from_dict(id: int, node: str, d: dict) -> "PortConfig":
+        return PortConfig(id=id, node=node, **d)
+
+
+@dataclass(slots=True, frozen=True)
 class NodeConfiguration:
     name: str
     hostname: str
@@ -84,6 +99,7 @@ class NodeConfiguration:
     use_first_core: bool
     memory_channels: int
     hugepages: HugepageConfiguration | None
+    ports: list[PortConfig]
 
     @staticmethod
     def from_dict(d: dict) -> "NodeConfiguration":
@@ -92,18 +108,46 @@ class NodeConfiguration:
             if "force_first_numa" not in hugepage_config:
                 hugepage_config["force_first_numa"] = False
             hugepage_config = HugepageConfiguration(**hugepage_config)
+        common_config = {
+            "name": d["name"],
+            "hostname": d["hostname"],
+            "user": d["user"],
+            "password": d.get("password"),
+            "arch": Architecture(d["arch"]),
+            "os": OS(d["os"]),
+            "lcores": d.get("lcores", "1"),
+            "use_first_core": d.get("use_first_core", False),
+            "memory_channels": d.get("memory_channels", 1),
+            "hugepages": hugepage_config,
+            "ports": [
+                PortConfig.from_dict(i, d["name"], port)
+                for i, port in enumerate(d["ports"])
+            ],
+        }
 
-        return NodeConfiguration(
-            name=d["name"],
-            hostname=d["hostname"],
-            user=d["user"],
-            password=d.get("password"),
-            arch=Architecture(d["arch"]),
-            os=OS(d["os"]),
-            lcores=d.get("lcores", "1"),
-            use_first_core=d.get("use_first_core", False),
-            memory_channels=d.get("memory_channels", 1),
-            hugepages=hugepage_config,
+        return NodeConfiguration(**common_config)
+
+
+@dataclass(slots=True)
+class NodeVersionInfo:
+    """Class to hold important versions within the node.
+
+    This class, unlike the NodeConfiguration class, cannot be generated at the start.
+    This is because we need to initialize a connection with the node before we can
+    collet the information needed in this class. Therefore, it cannot be a part of
+    the configuration class above.
+    """
+
+    os_name: str
+    os_version: str
+    kernel_version: str
+
+    @staticmethod
+    def from_dict(d: dict):
+        return NodeVersionInfo(
+            os_name=d["os_name"],
+            os_version=d["os_version"],
+            kernel_version=d["kernel_version"],
         )
 
 
@@ -125,6 +169,24 @@ class BuildTargetConfiguration:
             compiler=Compiler(d["compiler"]),
             compiler_wrapper=d.get("compiler_wrapper", ""),
             name=f"{d['arch']}-{d['os']}-{d['cpu']}-{d['compiler']}",
+        )
+
+
+@dataclass(slots=True)
+class BuildTargetVersionInfo:
+    """Class to hold important versions within the build target.
+
+    This is very similar to the NodeVersionInfo class, it just instead holds information
+    for the build target.
+    """
+
+    dpdk_version: str
+    compiler_version: str
+
+    @staticmethod
+    def from_dict(d: dict):
+        return BuildTargetVersionInfo(
+            dpdk_version=d["dpdk_version"], compiler_version=d["compiler_version"]
         )
 
 
@@ -157,6 +219,8 @@ class ExecutionConfiguration:
     func: bool
     test_suites: list[TestSuiteConfig]
     system_under_test: NodeConfiguration
+    vdevs: list[str]
+    skip_smoke_tests: bool
 
     @staticmethod
     def from_dict(d: dict, node_map: dict) -> "ExecutionConfiguration":
@@ -167,14 +231,18 @@ class ExecutionConfiguration:
             map(TestSuiteConfig.from_dict, d["test_suites"])
         )
         sut_name = d["system_under_test"]
+        list_of_vdevs = d["vdevs"]
+        skip_smoke_tests = d["skip_smoke_tests"] if "skip_smoke_tests" in d else False
         assert sut_name in node_map, f"Unknown SUT {sut_name} in execution {d}"
 
         return ExecutionConfiguration(
             build_targets=build_targets,
             perf=d["perf"],
             func=d["func"],
+            skip_smoke_tests=skip_smoke_tests,
             test_suites=test_suites,
             system_under_test=node_map[sut_name],
+            vdevs=list_of_vdevs,
         )
 
 
@@ -221,3 +289,27 @@ def load_config() -> Configuration:
 
 
 CONFIGURATION = load_config()
+
+
+@unique
+class InteractiveApp(Enum):
+    """An enum that represents different supported interactive applications
+
+    The values in this enum must all be set to objects that have a key called
+    "default_path" where "default_path" represents an array for the path to the
+    application. This default path will be passed into the handler class for the
+    application so that it can start the application. For every key other than
+    the default shell option, the path will be appended to the path to the DPDK
+    build directory for the current SUT node.
+    """
+
+    shell = {"default_path": [""]}
+    testpmd = {"default_path": ["app", "dpdk-testpmd"]}
+
+    def get_path(self):
+        """A method for getting the default paths of an application
+
+        Returns:
+            String array that represents an OS agnostic path to the application.
+        """
+        return self.value["default_path"]

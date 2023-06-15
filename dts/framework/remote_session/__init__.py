@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright(c) 2023 PANTHEON.tech s.r.o.
+# Copyright(c) 2022-2023 University of New Hampshire
 
 """
 The package provides modules for managing remote connections to a remote host (node),
@@ -17,7 +18,14 @@ from framework.logger import DTSLOG
 
 from .linux_session import LinuxSession
 from .os_session import OSSession
-from .remote import CommandResult, RemoteSession, SSHSession
+from .remote import (
+    CommandResult,
+    InteractiveRemoteSession,
+    InteractiveShell,
+    RemoteSession,
+    SSHSession,
+    TestPmdShell,
+)
 
 
 def create_session(

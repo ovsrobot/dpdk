@@ -219,3 +219,33 @@ class PosixSession(OSSession):
 
     def get_dpdk_file_prefix(self, dpdk_prefix) -> str:
         return ""
+
+    def get_compiler_version(self, compiler_name: str) -> str:
+        match compiler_name:
+            case "gcc":
+                return self.send_command(f"{compiler_name} --version", 60).stdout.split(
+                    "\n"
+                )[0]
+            case "clang":
+                return self.send_command(f"{compiler_name} --version", 60).stdout.split(
+                    "\n"
+                )[0]
+            case "msvc":
+                return self.send_command("cl", 60).stdout
+            case "icc":
+                return self.send_command(f"{compiler_name} -V", 60).stdout
+            case _:
+                raise ValueError(f"Unknown compiler {compiler_name}")
+
+    def get_os_name(self) -> str:
+        return self.send_command(
+            "awk -F= '$1==\"NAME\" {print $2}' /etc/os-release", 60
+        ).stdout
+
+    def get_os_version(self) -> str:
+        return self.send_command(
+            "awk -F= '$1==\"VERSION\" {print $2}' /etc/os-release", 60, True
+        ).stdout
+
+    def get_kernel_version(self) -> str:
+        return self.send_command("uname -r", 60).stdout

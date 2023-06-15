@@ -12,7 +12,13 @@ from framework.settings import SETTINGS
 from framework.testbed_model import LogicalCore
 from framework.utils import EnvVarsDict, MesonArgs
 
-from .remote import CommandResult, RemoteSession, create_remote_session
+from .remote import (
+    CommandResult,
+    InteractiveRemoteSession,
+    RemoteSession,
+    create_interactive_session,
+    create_remote_session,
+)
 
 
 class OSSession(ABC):
@@ -26,6 +32,7 @@ class OSSession(ABC):
     name: str
     _logger: DTSLOG
     remote_session: RemoteSession
+    interactive_session: InteractiveRemoteSession
 
     def __init__(
         self,
@@ -37,6 +44,7 @@ class OSSession(ABC):
         self.name = name
         self._logger = logger
         self.remote_session = create_remote_session(node_config, name, logger)
+        self.interactive_session = create_interactive_session(node_config, name, logger)
 
     def close(self, force: bool = False) -> None:
         """
@@ -172,4 +180,28 @@ class OSSession(ABC):
         Get the node's Hugepage Size, configure the specified amount of hugepages
         if needed and mount the hugepages if needed.
         If force_first_numa is True, configure hugepages just on the first socket.
+        """
+
+    @abstractmethod
+    def get_compiler_version(self, compiler_name: str) -> str:
+        """
+        Get installed version of compiler used for DPDK
+        """
+
+    @abstractmethod
+    def get_os_name(self) -> str:
+        """
+        Get name of OS for the node
+        """
+
+    @abstractmethod
+    def get_os_version(self) -> str:
+        """
+        Get version of OS for the node
+        """
+
+    @abstractmethod
+    def get_kernel_version(self) -> str:
+        """
+        Get kernel version for the node
         """
