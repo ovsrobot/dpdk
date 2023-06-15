@@ -170,6 +170,8 @@ New Features
 
   See :doc:`../prog_guide/pdcp_lib` for more information.
 
+* **Added support for TCP/IPv6 GRO.**
+  * Enhanced the existing library to support GRO for TCP packets over IPv6 network.
 
 Removed Items
 -------------
