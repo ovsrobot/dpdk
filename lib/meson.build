@@ -92,20 +92,18 @@ dpdk_libs_deprecated += [
         'kni',
 ]
 
-disabled_libs = []
-opt_disabled_libs = run_command(list_dir_globs, get_option('disable_libs'),
+disable_libs = run_command(list_dir_globs, get_option('disable_libs'),
         check: true).stdout().split()
-if dpdk_conf.get('RTE_IOVA_IN_MBUF') == 0
-    opt_disabled_libs += ['kni']
+enable_libs = run_command(list_dir_globs, get_option('enable_libs'),
+        check: true).stdout().split()
+if enable_libs.length() == 0
+    enable_libs = []
+    foreach l:run_command(list_dir_globs, '*', check: true).stdout().split()
+        if l not in dpdk_libs_deprecated
+            enable_libs += [l]
+        endif
+    endforeach
 endif
-foreach l:opt_disabled_libs
-    if not optional_libs.contains(l)
-        warning('Cannot disable mandatory library "@0@"'.format(l))
-        continue
-    endif
-    disabled_libs += l
-endforeach
-
 
 default_cflags = machine_args
 default_cflags += ['-DALLOW_EXPERIMENTAL_API']
@@ -114,8 +112,6 @@ default_cflags += ['-DALLOW_INTERNAL_API']
 if cc.has_argument('-Wno-format-truncation')
     default_cflags += '-Wno-format-truncation'
 endif
-
-enabled_libs = [] # used to print summary at the end
 
 foreach l:libraries
     build = true
@@ -141,13 +137,25 @@ foreach l:libraries
         deps += ['eal']
     endif
 
-    if disabled_libs.contains(l)
+    if not enable_libs.contains(l)
+        build = false
+        reason = 'not in enabled libraries build config'
+    elif disable_libs.contains(l)
         build = false
         reason = 'explicitly disabled via build config'
-        if dpdk_libs_deprecated.contains(l)
+    endif
+
+    if not build
+        if not optional_libs.contains(l)
+            warning('Cannot disable mandatory library "@0@"'.format(l))
+            build = true
+            reason = '<unknown reason>'
+        elif dpdk_libs_deprecated.contains(l)
             reason += ' (deprecated lib)'
         endif
-    else
+    endif
+
+    if build
         if dpdk_libs_deprecated.contains(l)
             warning('Enabling deprecated library, "@0@"'.format(l))
         endif
@@ -183,7 +191,7 @@ foreach l:libraries
         continue
     endif
 
-    enabled_libs += name
+    dpdk_libs_enabled += name
     dpdk_conf.set('RTE_LIB_' + name.to_upper(), 1)
     install_headers(headers)
     install_headers(indirect_headers)
