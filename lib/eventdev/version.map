@@ -131,6 +131,20 @@ EXPERIMENTAL {
 	rte_event_eth_tx_adapter_runtime_params_init;
 	rte_event_eth_tx_adapter_runtime_params_set;
 	rte_event_timer_remaining_ticks_get;
+
+	rte_event_dispatcher_create;
+	rte_event_dispatcher_free;
+	rte_event_dispatcher_service_id_get;
+	rte_event_dispatcher_bind_port_to_lcore;
+	rte_event_dispatcher_unbind_port_from_lcore;
+	rte_event_dispatcher_register;
+	rte_event_dispatcher_unregister;
+	rte_event_dispatcher_finalize_register;
+	rte_event_dispatcher_finalize_unregister;
+	rte_event_dispatcher_start;
+	rte_event_dispatcher_stop;
+	rte_event_dispatcher_stats_get;
+	rte_event_dispatcher_stats_reset;
 };
 
 INTERNAL {
