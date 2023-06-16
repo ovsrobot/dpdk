@@ -61,6 +61,7 @@ Programmer's Guide
     event_ethernet_tx_adapter
     event_timer_adapter
     event_crypto_adapter
+    event_dispatcher
     qos_framework
     power_man
     packet_classif_access_ctrl
