@@ -250,6 +250,8 @@ fast_tests = [
         ['thash_autotest', true, true],
         ['threads_autotest', true, true],
         ['trace_autotest', true, true],
+        ['graph_autotest', true, true],
+        ['node_list_dump', true, true],
 ]
 
 # Tests known to have issues or which don't belong in other tests lists.
@@ -298,6 +300,7 @@ perf_test_names = [
         'trace_perf_autotest',
         'ipsec_perf_autotest',
         'thash_perf_autotest',
+        'graph_perf_autotest',
 ]
 
 driver_test_names = [
