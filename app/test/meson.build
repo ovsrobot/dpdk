@@ -61,8 +61,6 @@ test_sources = files(
         'test_fib6.c',
         'test_fib6_perf.c',
         'test_func_reentrancy.c',
-        'test_graph.c',
-        'test_graph_perf.c',
         'test_hash.c',
         'test_hash_functions.c',
         'test_hash_multiwriter.c',
@@ -250,8 +248,6 @@ fast_tests = [
         ['thash_autotest', true, true],
         ['threads_autotest', true, true],
         ['trace_autotest', true, true],
-        ['graph_autotest', true, true],
-        ['node_list_dump', true, true],
 ]
 
 # Tests known to have issues or which don't belong in other tests lists.
@@ -300,7 +296,6 @@ perf_test_names = [
         'trace_perf_autotest',
         'ipsec_perf_autotest',
         'thash_perf_autotest',
-        'graph_perf_autotest',
 ]
 
 driver_test_names = [
@@ -365,6 +360,13 @@ endif
 if dpdk_conf.has('RTE_LIB_FLOW_CLASSIFY')
     test_sources += 'test_flow_classify.c'
     fast_tests += [['flow_classify_autotest', false, true]]
+endif
+if dpdk_conf.has('RTE_LIB_GRAPH')
+    test_sources += 'test_graph.c'
+    fast_tests += [['graph_autotest', true, true]]
+    fast_tests += [['node_list_dump', true, true]]
+    test_sources += 'test_graph_perf.c'
+    perf_test_names += 'graph_perf_autotest'
 endif
 if dpdk_conf.has('RTE_LIB_METRICS')
     test_sources += ['test_metrics.c']
