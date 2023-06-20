@@ -131,6 +131,7 @@ New Features
   * Added support for CQE compression on Windows.
   * Added support for enhanced multi-packet write on Windows.
   * Added support for quota flow action and item.
+  * Added support for AES-GCM crypto.
 
 * **Added vmxnet3 version 7 support.**
 
