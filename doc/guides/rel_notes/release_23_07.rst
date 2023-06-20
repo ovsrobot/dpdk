@@ -155,6 +155,7 @@ New Features
   * Added support for SM3 hash operations.
   * Added support for AES-CCM in cn9k and cn10k drivers.
   * Added support for RAW cryptodev APIs in cn10k driver.
+  * Added support for SM4 operations in cn10k driver.
 
 * **Updated OpenSSL crypto driver.**
 
