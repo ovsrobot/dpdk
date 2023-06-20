@@ -1,6 +1,8 @@
 ..  SPDX-License-Identifier: BSD-3-Clause
     Copyright(c) 2020 Intel Corporation.
 
+.. _telemetry_library:
+
 Telemetry Library
 =================
 
