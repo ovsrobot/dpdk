@@ -170,6 +170,12 @@ New Features
 
   See :doc:`../prog_guide/pdcp_lib` for more information.
 
+* **Added DMA device performance test application.**
+
+  Added an new application to test the performance of DMA device and CPU.
+
+  See the :doc:`../tools/dmaperf` for more details.
+
 
 Removed Items
 -------------
