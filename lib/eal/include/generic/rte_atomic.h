@@ -55,6 +55,11 @@ static inline void rte_rmb(void);
  * Guarantees that the LOAD and STORE operations that precede the
  * rte_smp_mb() call are globally visible across the lcores
  * before the LOAD and STORE operations that follows it.
+ *
+ * @note
+ *  This function is deprecated. It adds complexity to the memory model
+ *  used by this project. C11 memory model should always be used.
+ *  rte_atomic_thread_fence() should be used instead.
  */
 static inline void rte_smp_mb(void);
 
@@ -64,6 +69,11 @@ static inline void rte_smp_mb(void);
  * Guarantees that the STORE operations that precede the
  * rte_smp_wmb() call are globally visible across the lcores
  * before the STORE operations that follows it.
+ *
+ * @note
+ *  This function is deprecated. It adds complexity to the memory model
+ *  used by this project. C11 memory model should always be used.
+ *  rte_atomic_thread_fence() should be used instead.
  */
 static inline void rte_smp_wmb(void);
 
@@ -73,6 +83,11 @@ static inline void rte_smp_wmb(void);
  * Guarantees that the LOAD operations that precede the
  * rte_smp_rmb() call are globally visible across the lcores
  * before the LOAD operations that follows it.
+ *
+ * @note
+ *  This function is deprecated. It adds complexity to the memory model
+ *  used by this project. C11 memory model should always be used.
+ *  rte_atomic_thread_fence() should be used instead.
  */
 static inline void rte_smp_rmb(void);
 ///@}
