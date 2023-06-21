@@ -28,6 +28,10 @@ enum mlx5_mem_flags {
 	/* Memory should be allocated from rte hugepage. */
 	MLX5_MEM_ZERO = 1 << 2,
 	/* Memory should be cleared to zero. */
+	MLX5_MEM_FALLBACK_ANY_SOCKET = 1 << 3,
+	/* Memory can be allocated on any socket if
+	 * it fails to allocate on the given socket.
+	 */
 };
 
 /**

@@ -1728,7 +1728,8 @@ mlx5_rxq_new(struct rte_eth_dev *dev, uint16_t idx, uint16_t desc,
 		desc >>= mprq_log_actual_stride_num;
 		alloc_size += desc * sizeof(struct mlx5_mprq_buf *);
 	}
-	tmpl = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO, alloc_size, 0, socket);
+	tmpl = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO |
+			   MLX5_MEM_FALLBACK_ANY_SOCKET, alloc_size, 0, socket);
 	if (!tmpl) {
 		rte_errno = ENOMEM;
 		return NULL;

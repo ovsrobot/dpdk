@@ -393,7 +393,8 @@ mlx5_txpp_create_clock_queue(struct mlx5_dev_ctx_shared *sh)
 	struct mlx5_txpp_wq *wq = &sh->txpp.clock_queue;
 	int ret;
 
-	sh->txpp.tsa = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO,
+	sh->txpp.tsa = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO |
+				   MLX5_MEM_FALLBACK_ANY_SOCKET,
 				   MLX5_TXPP_REARM_SQ_SIZE *
 				   sizeof(struct mlx5_txpp_ts),
 				   0, sh->numa_node);

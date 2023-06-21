@@ -223,7 +223,8 @@ mlx5_mr_btree_init(struct mlx5_mr_btree *bt, int n, int socket)
 	}
 	MLX5_ASSERT(!bt->table && !bt->size);
 	memset(bt, 0, sizeof(*bt));
-	bt->table = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO,
+	bt->table = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO |
+				MLX5_MEM_FALLBACK_ANY_SOCKET,
 				sizeof(struct mr_cache_entry) * n,
 				0, socket);
 	if (bt->table == NULL) {
@@ -767,7 +768,7 @@ alloc_resources:
 	      (void *)addr, data.start, data.end, msl->page_sz, ms_n);
 	/* Size of memory for bitmap. */
 	bmp_size = rte_bitmap_get_memory_footprint(ms_n);
-	mr = mlx5_malloc(MLX5_MEM_RTE |  MLX5_MEM_ZERO,
+	mr = mlx5_malloc(MLX5_MEM_RTE |  MLX5_MEM_ZERO | MLX5_MEM_FALLBACK_ANY_SOCKET,
 			 RTE_ALIGN_CEIL(sizeof(*mr), RTE_CACHE_LINE_SIZE) +
 			 bmp_size, RTE_CACHE_LINE_SIZE, msl->socket_id);
 	if (mr == NULL) {

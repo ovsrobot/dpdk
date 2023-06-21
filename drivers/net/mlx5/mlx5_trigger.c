@@ -55,7 +55,8 @@ mlx5_txq_start(struct rte_eth_dev *dev)
 	for (i = 0; i != priv->txqs_n; ++i) {
 		struct mlx5_txq_ctrl *txq_ctrl = mlx5_txq_get(dev, i);
 		struct mlx5_txq_data *txq_data = &txq_ctrl->txq;
-		uint32_t flags = MLX5_MEM_RTE | MLX5_MEM_ZERO;
+		uint32_t flags = MLX5_MEM_RTE | MLX5_MEM_ZERO |
+				 MLX5_MEM_FALLBACK_ANY_SOCKET;
 
 		if (!txq_ctrl)
 			continue;
@@ -180,7 +181,8 @@ mlx5_rxq_ctrl_prepare(struct rte_eth_dev *dev, struct mlx5_rxq_ctrl *rxq_ctrl,
 			return ret;
 	}
 	MLX5_ASSERT(!rxq_ctrl->obj);
-	rxq_ctrl->obj = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO,
+	rxq_ctrl->obj = mlx5_malloc(MLX5_MEM_RTE | MLX5_MEM_ZERO |
+				    MLX5_MEM_FALLBACK_ANY_SOCKET,
 				    sizeof(*rxq_ctrl->obj), 0,
 				    rxq_ctrl->socket);
 	if (!rxq_ctrl->obj) {

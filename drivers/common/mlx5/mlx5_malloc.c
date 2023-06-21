@@ -182,6 +182,13 @@ mlx5_malloc(uint32_t flags, size_t size, unsigned int align, int socket)
 			addr = rte_zmalloc_socket(NULL, size, align, socket);
 		else
 			addr = rte_malloc_socket(NULL, size, align, socket);
+		if (!addr && socket != SOCKET_ID_ANY &&
+		    (flags & MLX5_MEM_FALLBACK_ANY_SOCKET)) {
+			if (flags & MLX5_MEM_ZERO)
+				addr = rte_zmalloc_socket(NULL, size, align, SOCKET_ID_ANY);
+			else
+				addr = rte_malloc_socket(NULL, size, align, SOCKET_ID_ANY);
+		}
 		mlx5_mem_update_msl(addr);
 #ifdef RTE_LIBRTE_MLX5_DEBUG
 		if (addr)
