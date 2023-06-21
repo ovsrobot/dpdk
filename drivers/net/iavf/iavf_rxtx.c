@@ -3919,7 +3919,7 @@ iavf_set_tx_function(struct rte_eth_dev *dev)
 
 	check_ret = iavf_tx_vec_dev_check(dev);
 
-	if (check_ret >= 0 &&
+	if ((check_ret == IAVF_VECTOR_PATH || check_ret == IAVF_VECTOR_OFFLOAD_PATH) &&
 	    rte_vect_get_max_simd_bitwidth() >= RTE_VECT_SIMD_128) {
 		/* SSE not support offload path yet. */
 		if (check_ret == IAVF_VECTOR_PATH) {
