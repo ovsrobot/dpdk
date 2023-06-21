@@ -92,17 +92,20 @@ dpdk_libs_deprecated += [
         'kni',
 ]
 
-disabled_libs = []
-opt_disabled_libs = run_command(list_dir_globs, get_option('disable_libs'),
-        check: true).stdout().split()
-foreach l:opt_disabled_libs
-    if not optional_libs.contains(l)
-        warning('Cannot disable mandatory library "@0@"'.format(l))
-        continue
-    endif
-    disabled_libs += l
-endforeach
+disable_libs = run_command(list_dir_globs, get_option('disable_libs'), check: true).stdout().split()
 
+enable_libs = run_command(list_dir_globs, get_option('enable_libs'), check: true).stdout().split()
+if enable_libs.length() == 0
+    enable_libs += optional_libs
+endif
+
+always_enable = []
+foreach l:libraries
+    if not optional_libs.contains(l)
+        always_enable += l
+    endif
+endforeach
+enable_libs += always_enable
 
 default_cflags = machine_args
 default_cflags += ['-DALLOW_EXPERIMENTAL_API']
@@ -139,11 +142,21 @@ foreach l:libraries
     if dpdk_libs_deprecated.contains(l) and not get_option('enable_deprecated_libs')
         build = false
         reason = 'deprecated libraries disabled via build config'
-    elif disabled_libs.contains(l)
+    elif not enable_libs.contains(l)
         build = false
-        reason = 'explicitly disabled via build config'
+        reason = 'not in enabled libraries build config'
         if dpdk_libs_deprecated.contains(l)
             reason += ' (deprecated lib)'
+        endif
+    elif disable_libs.contains(l)
+        if always_enable.contains(l)
+            warning('Cannot disable mandatory library "@0@"'.format(l))
+        else
+            build = false
+            reason = 'explicitly disabled via build config'
+            if dpdk_libs_deprecated.contains(l)
+                reason += ' (deprecated lib)'
+            endif
         endif
     endif
 
