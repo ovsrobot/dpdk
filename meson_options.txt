@@ -10,7 +10,7 @@ option('disable_apps', type: 'string', value: '', description:
        'Comma-separated list of apps to explicitly disable.')
 option('disable_drivers', type: 'string', value: '', description:
        'Comma-separated list of drivers to explicitly disable.')
-option('disable_libs', type: 'string', value: 'flow_classify,kni', description:
+option('disable_libs', type: 'string', value: '', description:
        'Comma-separated list of libraries to explicitly disable. [NOTE: not all libs can be disabled]')
 option('drivers_install_subdir', type: 'string', value: 'dpdk/pmds-<VERSION>', description:
        'Subdirectory of libdir where to install PMDs. Defaults to using a versioned subdirectory.')
@@ -18,6 +18,8 @@ option('enable_docs', type: 'boolean', value: false, description:
        'build documentation')
 option('enable_apps', type: 'string', value: '', description:
        'Comma-separated list of apps to build. If unspecified, build all apps.')
+option('enable_deprecated_libs', type: 'boolean', value: false, description:
+       'Add deprecated libraries to the list of optional libraries to build')
 option('enable_drivers', type: 'string', value: '', description:
        'Comma-separated list of drivers to build. If unspecified, build all drivers.')
 option('enable_driver_sdk', type: 'boolean', value: false, description:

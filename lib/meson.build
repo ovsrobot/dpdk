@@ -136,13 +136,18 @@ foreach l:libraries
         deps += ['eal']
     endif
 
-    if disabled_libs.contains(l)
+    if dpdk_libs_deprecated.contains(l) and not get_option('enable_deprecated_libs')
+        build = false
+        reason = 'deprecated libraries disabled via build config'
+    elif disabled_libs.contains(l)
         build = false
         reason = 'explicitly disabled via build config'
         if dpdk_libs_deprecated.contains(l)
             reason += ' (deprecated lib)'
         endif
-    else
+    endif
+
+    if build
         if dpdk_libs_deprecated.contains(l)
             warning('Enabling deprecated library, "@0@"'.format(l))
         endif
