@@ -18,8 +18,8 @@ test_bitmap_scan_operations(struct rte_bitmap *bmp)
 {
 	uint64_t slab1_magic = 0xBADC0FFEEBADF00D;
 	uint64_t slab2_magic = 0xFEEDDEADDEADF00D;
+	int i, nb_clear, nb_set, next_cl;
 	uint32_t pos = 0, start_pos;
-	int i, nb_clear, nb_set;
 	uint64_t out_slab = 0;
 
 	rte_bitmap_reset(bmp);
@@ -68,6 +68,37 @@ test_bitmap_scan_operations(struct rte_bitmap *bmp)
 
 	if (slab1_magic != out_slab) {
 		printf("Scan reset operation failed.\n");
+		return TEST_FAILED;
+	}
+
+	/* Scan with offset check. */
+	if (!rte_bitmap_scan_from_offset(bmp, RTE_BITMAP_SLAB_BIT_SIZE, &pos, &out_slab)) {
+		printf("Failed to get slab from bitmap with scan from offset.\n");
+		return TEST_FAILED;
+	}
+
+	if (slab2_magic != out_slab) {
+		printf("Scan from offset operation failed.\n");
+		return TEST_FAILED;
+	}
+
+	/* Scan with offset wrap around check. */
+	if (!rte_bitmap_scan_from_offset(bmp, 2 * RTE_BITMAP_SLAB_BIT_SIZE, &pos, &out_slab)) {
+		printf("Failed to get slab from bitmap with scan from offset.\n");
+		return TEST_FAILED;
+	}
+
+	if (slab1_magic != out_slab) {
+		printf("Scan from offset with wrap around operation failed.\n");
+		return TEST_FAILED;
+	}
+
+	/* Test scan when the bit set is on a next cline */
+	rte_bitmap_reset(bmp);
+	next_cl = RTE_MIN(RTE_BITMAP_CL_BIT_SIZE, MAX_BITS);
+	rte_bitmap_set(bmp, next_cl);
+	if (!rte_bitmap_scan_from_offset(bmp, 0, &pos, &out_slab)) {
+		printf("Failed to get slab from next cache line from bitmap.\n");
 		return TEST_FAILED;
 	}
 
