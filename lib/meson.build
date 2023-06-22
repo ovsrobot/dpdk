@@ -70,6 +70,7 @@ libraries = [
 optional_libs = [
         'bbdev',
         'bitratestats',
+        'bpf',
         'cfgfile',
         'compressdev',
         'dmadev',

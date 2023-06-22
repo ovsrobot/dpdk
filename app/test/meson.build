@@ -15,7 +15,6 @@ test_sources = files(
         'test_barrier.c',
         'test_bitops.c',
         'test_bitmap.c',
-        'test_bpf.c',
         'test_byteorder.c',
         'test_cksum.c',
         'test_cksum_perf.c',
@@ -152,8 +151,6 @@ fast_tests = [
         ['acl_autotest', true, true],
         ['atomic_autotest', false, true],
         ['bitmap_autotest', true, true],
-        ['bpf_autotest', true, true],
-        ['bpf_convert_autotest', true, true],
         ['bitops_autotest', true, true],
         ['byteorder_autotest', true, true],
         ['cksum_autotest', true, true],
@@ -343,6 +340,13 @@ if dpdk_conf.has('RTE_EVENT_SKELETON')
     test_deps += 'event_skeleton'
 endif
 
+if dpdk_conf.has('RTE_LIB_BPF')
+    test_sources += 'test_bpf.c'
+    fast_tests += [
+        ['bpf_autotest', true, true],
+        ['bpf_convert_autotest', true, true],
+    ]
+endif
 if dpdk_conf.has('RTE_LIB_DMADEV')
     test_sources += ['test_dmadev.c', 'test_dmadev_api.c']
     driver_test_names += 'dmadev_autotest'
