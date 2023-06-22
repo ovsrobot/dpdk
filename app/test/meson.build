@@ -96,7 +96,6 @@ test_sources = files(
         'test_reciprocal_division_perf.c',
         'test_red.c',
         'test_pie.c',
-        'test_reorder.c',
         'test_rib.c',
         'test_rib6.c',
         'test_ring.c',
@@ -221,7 +220,6 @@ fast_tests = [
         ['power_autotest', true, true],
         ['power_kvm_vm_autotest', false, true],
         ['power_intel_uncore_autotest', true, true],
-        ['reorder_autotest', true, true],
         ['service_autotest', true, true],
         ['thash_autotest', true, true],
         ['threads_autotest', true, true],
@@ -381,6 +379,10 @@ if dpdk_conf.has('RTE_LIB_MEMBER')
     test_sources += ['test_member.c', 'test_member_perf.c']
     fast_tests += [['member_autotest', true, true]]
     perf_test_names += 'member_perf_autotest'
+endif
+if dpdk_conf.has('RTE_LIB_REORDER')
+    test_sources += 'test_reorder.c'
+    fast_tests += [['reorder_autotest', true, true]]
 endif
 if not is_windows and dpdk_conf.has('RTE_LIB_TELEMETRY')
     test_sources += ['test_telemetry_json.c', 'test_telemetry_data.c']

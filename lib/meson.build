@@ -95,6 +95,7 @@ optional_libs = [
         'power',
         'rawdev',
         'regexdev',
+        'reorder',
         'table',
         'vhost',
 ]
