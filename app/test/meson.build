@@ -41,19 +41,12 @@ test_sources = files(
         'test_devargs.c',
         'test_distributor.c',
         'test_distributor_perf.c',
-        'test_dmadev.c',
-        'test_dmadev_api.c',
         'test_eal_flags.c',
         'test_eal_fs.c',
         'test_efd.c',
         'test_efd_perf.c',
         'test_errno.c',
         'test_ethdev_link.c',
-        'test_event_crypto_adapter.c',
-        'test_event_eth_rx_adapter.c',
-        'test_event_ring.c',
-        'test_event_timer_adapter.c',
-        'test_eventdev.c',
         'test_external_mem.c',
         'test_fbarray.c',
         'test_fib.c',
@@ -105,7 +98,6 @@ test_sources = files(
         'test_power_intel_uncore.c',
         'test_prefetch.c',
         'test_rand_perf.c',
-        'test_rawdev.c',
         'test_rcu_qsbr.c',
         'test_rcu_qsbr_perf.c',
         'test_reciprocal_division.c',
@@ -129,7 +121,6 @@ test_sources = files(
         'test_sched.c',
         'test_security.c',
         'test_security_inline_macsec.c',
-        'test_security_inline_proto.c',
         'test_seqlock.c',
         'test_service_cores.c',
         'test_spinlock.c',
@@ -188,7 +179,6 @@ fast_tests = [
         ['eal_fs_autotest', true, true],
         ['errno_autotest', true, true],
         ['ethdev_link_status', true, true],
-        ['event_ring_autotest', true, true],
         ['fib_autotest', true, true],
         ['fib6_autotest', true, true],
         ['func_reentrancy_autotest', false, true],
@@ -234,7 +224,6 @@ fast_tests = [
         ['version_autotest', true, true],
         ['crc_autotest', true, true],
         ['distributor_autotest', false, true],
-        ['eventdev_common_autotest', true, true],
         ['fbarray_autotest', true, true],
         ['hash_readwrite_func_autotest', false, true],
         ['ipsec_autotest', true, true],
@@ -321,7 +310,6 @@ driver_test_names = [
         'cryptodev_sw_snow3g_autotest',
         'cryptodev_sw_zuc_autotest',
         'cryptodev_uadk_autotest',
-        'dmadev_autotest',
 ]
 
 dump_test_names = []
@@ -359,6 +347,25 @@ if dpdk_conf.has('RTE_EVENT_SKELETON')
     test_deps += 'event_skeleton'
 endif
 
+if dpdk_conf.has('RTE_LIB_DMADEV')
+    test_sources += ['test_dmadev.c', 'test_dmadev_api.c']
+    driver_test_names += 'dmadev_autotest'
+endif
+if dpdk_conf.has('RTE_LIB_EVENTDEV')
+    test_sources += [
+        'test_event_eth_rx_adapter.c',
+        'test_event_ring.c',
+        'test_event_timer_adapter.c',
+        'test_eventdev.c',
+    ]
+    fast_tests += [
+        ['event_ring_autotest', true, true],
+        ['eventdev_common_autotest', true, true],
+    ]
+    if dpdk_conf.has('RTE_LIB_CRYPTODEV')
+        test_sources += 'test_event_crypto_adapter.c'
+    endif
+endif
 if dpdk_conf.has('RTE_LIB_FLOW_CLASSIFY')
     test_sources += 'test_flow_classify.c'
     fast_tests += [['flow_classify_autotest', false, true]]
@@ -403,6 +410,7 @@ if dpdk_conf.has('RTE_LIB_EVENTDEV') and dpdk_conf.has('RTE_NET_RING')
     test_sources += 'test_pmd_ring.c'
     test_sources += 'test_event_eth_tx_adapter.c'
     test_sources += 'sample_packet_forward.c'
+    test_sources += 'test_security_inline_proto.c'
     fast_tests += [['ring_pmd_autotest', true, true]]
     perf_test_names += 'ring_pmd_perf_autotest'
     fast_tests += [['event_eth_tx_adapter_autotest', false, true]]
@@ -425,6 +433,7 @@ if dpdk_conf.has('RTE_NET_NULL')
     fast_tests += [['vdev_autotest', true, true]]
 endif
 if dpdk_conf.has('RTE_RAW_SKELETON')
+    test_sources += 'test_rawdev.c'
     test_deps += 'raw_skeleton'
     fast_tests += [['rawdev_autotest', true, true]]
 endif
