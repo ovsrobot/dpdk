@@ -82,6 +82,7 @@ optional_libs = [
         'gro',
         'gso',
         'kni',
+        'ip_frag',
         'jobstats',
         'latencystats',
         'member',
