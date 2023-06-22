@@ -370,6 +370,7 @@ typedef struct efx_port_s {
 	uint32_t		ep_default_adv_cap_mask;
 	uint32_t		ep_phy_cap_mask;
 	boolean_t		ep_mac_drain;
+	boolean_t		ep_vlan_strip;
 #if EFSYS_OPT_BIST
 	efx_bist_type_t		ep_current_bist;
 #endif
