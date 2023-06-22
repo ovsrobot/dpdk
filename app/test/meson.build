@@ -58,7 +58,6 @@ test_sources = files(
         'test_hash_perf.c',
         'test_hash_readwrite_lf_perf.c',
         'test_interrupts.c',
-        'test_ipfrag.c',
         'test_ipsec.c',
         'test_ipsec_sad.c',
         'test_ipsec_perf.c',
@@ -175,7 +174,6 @@ fast_tests = [
         ['func_reentrancy_autotest', false, true],
         ['hash_autotest', true, true],
         ['interrupt_autotest', true, true],
-        ['ipfrag_autotest', false, true],
         ['lcores_autotest', true, true],
         ['logs_autotest', true, true],
         ['lpm_autotest', true, true],
@@ -370,6 +368,10 @@ endif
 if dpdk_conf.has('RTE_LIB_EFD')
     test_sources += ['test_efd.c', 'test_efd_perf.c']
     perf_test_names += ['efd_autotest', 'efd_perf_autotest']
+endif
+if dpdk_conf.has('RTE_IP_FRAG')
+    test_sources += 'test_ipfrag.c'
+    fast_tests += [['ipfrag_autotest', false, true]]
 endif
 if dpdk_conf.has('RTE_LIB_METRICS')
     test_sources += ['test_metrics.c']
