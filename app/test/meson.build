@@ -42,8 +42,6 @@ test_sources = files(
         'test_distributor_perf.c',
         'test_eal_flags.c',
         'test_eal_fs.c',
-        'test_efd.c',
-        'test_efd_perf.c',
         'test_errno.c',
         'test_ethdev_link.c',
         'test_external_mem.c',
@@ -259,9 +257,7 @@ perf_test_names = [
         'barrier_autotest',
         'hash_multiwriter_autotest',
         'timer_racecond_autotest',
-        'efd_autotest',
         'hash_functions_autotest',
-        'efd_perf_autotest',
         'lpm6_perf_autotest',
         'rib6_slow_autotest',
         'fib6_slow_autotest',
@@ -369,6 +365,10 @@ endif
 if dpdk_conf.has('RTE_LIB_FLOW_CLASSIFY')
     test_sources += 'test_flow_classify.c'
     fast_tests += [['flow_classify_autotest', false, true]]
+endif
+if dpdk_conf.has('RTE_LIB_EFD')
+    test_sources += ['test_efd.c', 'test_efd_perf.c']
+    perf_test_names += ['efd_autotest', 'efd_perf_autotest']
 endif
 if dpdk_conf.has('RTE_LIB_METRICS')
     test_sources += ['test_metrics.c']
