@@ -73,6 +73,7 @@ optional_libs = [
         'bpf',
         'cfgfile',
         'compressdev',
+        'distributor',
         'dmadev',
         'efd',
         'eventdev',
