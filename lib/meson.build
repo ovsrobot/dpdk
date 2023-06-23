@@ -74,6 +74,7 @@ optional_libs = [
         'cfgfile',
         'compressdev',
         'dmadev',
+        'efd',
         'eventdev',
         'flow_classify',
         'gpudev',
