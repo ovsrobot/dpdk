@@ -76,8 +76,6 @@ test_sources = files(
         'test_malloc.c',
         'test_malloc_perf.c',
         'test_mbuf.c',
-        'test_member.c',
-        'test_member_perf.c',
         'test_memcpy.c',
         'test_memcpy_perf.c',
         'test_memory.c',
@@ -227,7 +225,6 @@ fast_tests = [
         ['ipsec_autotest', true, true],
         ['kni_autotest', false, true],
         ['kvargs_autotest', true, true],
-        ['member_autotest', true, true],
         ['power_cpufreq_autotest', false, true],
         ['power_autotest', true, true],
         ['power_kvm_vm_autotest', false, true],
@@ -265,7 +262,6 @@ perf_test_names = [
         'timer_racecond_autotest',
         'efd_autotest',
         'hash_functions_autotest',
-        'member_perf_autotest',
         'efd_perf_autotest',
         'lpm6_perf_autotest',
         'rib6_slow_autotest',
@@ -378,6 +374,11 @@ endif
 if dpdk_conf.has('RTE_LIB_METRICS')
     test_sources += ['test_metrics.c']
     fast_tests += [['metrics_autotest', true, true]]
+endif
+if dpdk_conf.has('RTE_LIB_MEMBER')
+    test_sources += ['test_member.c', 'test_member_perf.c']
+    fast_tests += [['member_autotest', true, true]]
+    perf_test_names += 'member_perf_autotest'
 endif
 if not is_windows and dpdk_conf.has('RTE_LIB_TELEMETRY')
     test_sources += ['test_telemetry_json.c', 'test_telemetry_data.c']
