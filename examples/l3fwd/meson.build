@@ -7,14 +7,19 @@
 # DPDK instance, use 'make'
 
 allow_experimental_apis = true
-deps += ['acl', 'hash', 'lpm', 'fib', 'eventdev']
+deps += ['acl', 'hash', 'lpm', 'fib']
 sources = files(
         'l3fwd_acl.c',
         'l3fwd_em.c',
-        'l3fwd_event.c',
-        'l3fwd_event_internal_port.c',
-        'l3fwd_event_generic.c',
         'l3fwd_fib.c',
         'l3fwd_lpm.c',
         'main.c',
 )
+if dpdk_conf.has('RTE_LIB_EVENTDEV')
+    sources += files(
+            'l3fwd_event.c',
+            'l3fwd_event_internal_port.c',
+            'l3fwd_event_generic.c',
+    )
+    deps += 'eventdev'
+endif
