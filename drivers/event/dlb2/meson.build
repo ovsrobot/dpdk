@@ -7,7 +7,7 @@ if not is_linux or not dpdk_conf.has('RTE_ARCH_X86_64')
         subdir_done()
 endif
 
-if dpdk_conf.get('RTE_IOVA_IN_MBUF') == 0
+if dpdk_conf.get('RTE_IOVA_IN_MBUF') == 0 or not dpdk_conf.has('RTE_LIB_EVENTDEV')
     subdir_done()
 endif
 
