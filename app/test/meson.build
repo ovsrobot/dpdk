@@ -38,8 +38,6 @@ test_sources = files(
         'test_cycles.c',
         'test_debug.c',
         'test_devargs.c',
-        'test_distributor.c',
-        'test_distributor_perf.c',
         'test_eal_flags.c',
         'test_eal_fs.c',
         'test_errno.c',
@@ -214,7 +212,6 @@ fast_tests = [
         ['user_delay_us', true, true],
         ['version_autotest', true, true],
         ['crc_autotest', true, true],
-        ['distributor_autotest', false, true],
         ['fbarray_autotest', true, true],
         ['hash_readwrite_func_autotest', false, true],
         ['ipsec_autotest', true, true],
@@ -263,7 +260,6 @@ perf_test_names = [
         'rcu_qsbr_perf_autotest',
         'red_perf',
         'pie_perf',
-        'distributor_perf_autotest',
         'pmd_perf_autotest',
         'service_perf_autotest',
         'stack_perf_autotest',
@@ -363,6 +359,11 @@ endif
 if dpdk_conf.has('RTE_LIB_FLOW_CLASSIFY')
     test_sources += 'test_flow_classify.c'
     fast_tests += [['flow_classify_autotest', false, true]]
+endif
+if dpdk_conf.has('RTE_LIB_DISTRIBUTOR')
+    test_sources += ['test_distributor.c', 'test_distributor_perf.c']
+    fast_tests += [['distributor_autotest', false, true]]
+    perf_test_names += 'distributor_perf_autotest'
 endif
 if dpdk_conf.has('RTE_LIB_EFD')
     test_sources += ['test_efd.c', 'test_efd_perf.c']
