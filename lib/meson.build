@@ -82,6 +82,7 @@ optional_libs = [
         'kni',
         'jobstats',
         'latencystats',
+        'member',
         'metrics',
         'mldev',
         'node',
