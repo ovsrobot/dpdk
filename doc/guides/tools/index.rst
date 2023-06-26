@@ -23,3 +23,4 @@ DPDK Tools User Guides
     testregex
     testmldev
     dts
+    dmaperf
