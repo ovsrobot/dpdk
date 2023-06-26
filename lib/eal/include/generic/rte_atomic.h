@@ -55,6 +55,11 @@ static inline void rte_rmb(void);
  * Guarantees that the LOAD and STORE operations that precede the
  * rte_smp_mb() call are globally visible across the lcores
  * before the LOAD and STORE operations that follows it.
+ *
+ * @note
+ *  This function is deprecated. It provides fence synchronization
+ *  primitive but doesn't take memory order parameter.
+ *  rte_atomic_thread_fence() should be used instead.
  */
 static inline void rte_smp_mb(void);
 
@@ -64,6 +69,11 @@ static inline void rte_smp_mb(void);
  * Guarantees that the STORE operations that precede the
  * rte_smp_wmb() call are globally visible across the lcores
  * before the STORE operations that follows it.
+ *
+ * @note
+ *  This function is deprecated. It provides fence synchronization
+ *  primitive but doesn't take memory order parameter.
+ *  rte_atomic_thread_fence() should be used instead.
  */
 static inline void rte_smp_wmb(void);
 
@@ -73,6 +83,11 @@ static inline void rte_smp_wmb(void);
  * Guarantees that the LOAD operations that precede the
  * rte_smp_rmb() call are globally visible across the lcores
  * before the LOAD operations that follows it.
+ *
+ * @note
+ *  This function is deprecated. It provides fence synchronization
+ *  primitive but doesn't take memory order parameter.
+ *  rte_atomic_thread_fence() should be used instead.
  */
 static inline void rte_smp_rmb(void);
 ///@}
@@ -122,6 +137,10 @@ static inline void rte_io_rmb(void);
 
 /**
  * Synchronization fence between threads based on the specified memory order.
+ *
+ * @param memorder
+ *   The memory order defined by compiler atomic builtin at:
+ *   https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html
  */
 static inline void rte_atomic_thread_fence(int memorder);
 
