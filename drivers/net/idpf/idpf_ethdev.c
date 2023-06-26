@@ -1310,6 +1310,8 @@ idpf_dev_vport_init(struct rte_eth_dev *dev, void *init_params)
 err_mac_addrs:
 	adapter->vports[param->idx] = NULL;  /* reset */
 	idpf_vport_deinit(vport);
+	adapter->cur_vports &= ~RTE_BIT32(param->devarg_id);
+	adapter->cur_vport_nb--;
 err:
 	return ret;
 }
