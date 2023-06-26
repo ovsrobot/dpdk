@@ -55,6 +55,10 @@ New Features
      Also, make sure to start the actual text at the margin.
      =======================================================
 
+* **Intel QuickAssist Technology (QAT) supports on Ampere Altra platform.**
+
+  Tested with ipsec-secgw sample application and cryptodev_qat_autotest.
+
 * **Added AMD CDX bus support.**
 
   CDX bus driver has been added to support AMD CDX bus,
