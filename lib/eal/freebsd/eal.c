@@ -364,7 +364,7 @@ eal_get_hugepage_mem_size(void)
 	return (size < SIZE_MAX) ? (size_t)(size) : SIZE_MAX;
 }
 
-/* Parse the arguments for --log-level only */
+/* Parse the arguments for --log-level and --syslog */
 static void
 eal_log_level_parse(int argc, char **argv)
 {
@@ -386,20 +386,18 @@ eal_log_level_parse(int argc, char **argv)
 	while ((opt = getopt_long(argc, argvopt, eal_short_options,
 				  eal_long_options, &option_index)) != EOF) {
 
-		int ret;
-
-		/* getopt is not happy, stop right now */
-		if (opt == '?')
+		switch (opt) {
+		case OPT_SYSLOG_NUM:		/* fallthrough */
+		case OPT_LOG_LEVEL_NUM:
+			if (eal_parse_common_option(opt, optarg, internal_conf) < 0)
+				goto error;
 			break;
-
-		ret = (opt == OPT_LOG_LEVEL_NUM) ?
-		    eal_parse_common_option(opt, optarg, internal_conf) : 0;
-
-		/* common parser is not happy */
-		if (ret < 0)
-			break;
+		case '?':
+			/* getopt is not happy, stop right now */
+			goto error;
+		}
 	}
-
+error:
 	/* restore getopt lib */
 	optind = old_optind;
 	optopt = old_optopt;
@@ -437,8 +435,8 @@ eal_parse_args(int argc, char **argv)
 			goto out;
 		}
 
-		/* eal_log_level_parse() already handled this option */
-		if (opt == OPT_LOG_LEVEL_NUM)
+		/* eal_log_level_parse() already handled these */
+		if (opt == OPT_LOG_LEVEL_NUM || opt == OPT_SYSLOG_NUM)
 			continue;
 
 		ret = eal_parse_common_option(opt, optarg, internal_conf);
@@ -615,6 +613,12 @@ rte_eal_init(int argc, char **argv)
 	/* set log level as early as possible */
 	eal_log_level_parse(argc, argv);
 
+	if (eal_log_init(getprogname(), internal_conf->syslog_facility) < 0) {
+		rte_eal_init_alert("Cannot init logging.");
+		rte_errno = ENOMEM;
+		return -1;
+	}
+
 	if (rte_eal_cpu_init() < 0) {
 		rte_eal_init_alert("Cannot detect lcores.");
 		rte_errno = ENOTSUP;
@@ -760,12 +764,6 @@ rte_eal_init(int argc, char **argv)
 		RTE_LOG (WARNING, EAL, "Ignoring --vmware-tsc-map because "
 				"RTE_LIBRTE_EAL_VMWARE_TSC_MAP_SUPPORT is not set\n");
 #endif
-	}
-
-	if (eal_log_init(getprogname(), internal_conf->syslog_facility) < 0) {
-		rte_eal_init_alert("Cannot init logging.");
-		rte_errno = ENOMEM;
-		return -1;
 	}
 
 	/* in secondary processes, memory init may allocate additional fbarrays
