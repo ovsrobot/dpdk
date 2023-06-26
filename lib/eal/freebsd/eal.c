@@ -388,6 +388,7 @@ eal_log_level_parse(int argc, char **argv)
 
 		switch (opt) {
 		case OPT_SYSLOG_NUM:		/* fallthrough */
+		case OPT_LOG_TIMESTAMP_NUM:	/* fallthrough */
 		case OPT_LOG_LEVEL_NUM:
 			if (eal_parse_common_option(opt, optarg, internal_conf) < 0)
 				goto error;
@@ -436,7 +437,8 @@ eal_parse_args(int argc, char **argv)
 		}
 
 		/* eal_log_level_parse() already handled these */
-		if (opt == OPT_LOG_LEVEL_NUM || opt == OPT_SYSLOG_NUM)
+		if (opt == OPT_SYSLOG_NUM ||
+		    opt == OPT_LOG_TIMESTAMP_NUM || opt == OPT_LOG_LEVEL_NUM)
 			continue;
 
 		ret = eal_parse_common_option(opt, optarg, internal_conf);

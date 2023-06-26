@@ -84,7 +84,10 @@ struct internal_config {
 	/**< true if storing all pages within single files (per-page-size,
 	 * per-node) non-legacy mode only.
 	 */
+	volatile uint8_t log_timestamp;   /**< add timestamp to console output */
 	volatile int syslog_facility;	  /**< facility passed to openlog() */
+	struct timespec log_start_time;	  /**< when logging was started */
+
 	/** default interrupt mode for VFIO */
 	volatile enum rte_intr_mode vfio_intr_mode;
 	/** the shared VF token for VFIO-PCI bound PF and VFs devices */
