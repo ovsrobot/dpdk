@@ -11,6 +11,10 @@ here.
 Deprecation Notices
 -------------------
 
+* build: Enabling deprecated libraries (``flow_classify``, ``kni``) won't be
+  possible anymore through the use of the ``disable_libs`` build option. A
+  new build option for deprecated libraries will be introduced instead.
+
 * kvargs: The function ``rte_kvargs_process`` will get a new parameter
   for returning key match count. It will ease handling of no-match case.
 
