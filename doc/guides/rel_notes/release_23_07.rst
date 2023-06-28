@@ -141,6 +141,10 @@ New Features
   * Added support for quota flow action and item.
   * Added support for flow rule update.
 
+* **Updated Intel ice driver.**
+
+  * Added support for link speed change.
+
 * **Updated Solarflare network PMD.**
 
   * Added support for configuring FEC mode, querying FEC capabilities and
