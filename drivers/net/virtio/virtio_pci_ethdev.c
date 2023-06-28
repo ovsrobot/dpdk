@@ -44,23 +44,23 @@ virtio_remap_pci(struct rte_pci_device *pci_dev, struct virtio_pci_dev *dev)
 {
 	struct virtio_hw *hw = &dev->hw;
 
-	if (dev->modern) {
-		/*
-		 * We don't have to re-parse the PCI config space, since
-		 * rte_pci_map_device() makes sure the mapped address
-		 * in secondary process would equal to the one mapped in
-		 * the primary process: error will be returned if that
-		 * requirement is not met.
-		 *
-		 * That said, we could simply reuse all cap pointers
-		 * (such as dev_cfg, common_cfg, etc.) parsed from the
-		 * primary process, which is stored in shared memory.
-		 */
-		if (rte_pci_map_device(pci_dev)) {
-			PMD_INIT_LOG(DEBUG, "failed to map pci device!");
-			return -1;
-		}
-	} else {
+	/*
+	 * We don't have to re-parse the PCI config space, since
+	 * rte_pci_map_device() makes sure the mapped address
+	 * in secondary process would equal to the one mapped in
+	 * the primary process: error will be returned if that
+	 * requirement is not met.
+	 *
+	 * That said, we could simply reuse all cap pointers
+	 * (such as dev_cfg, common_cfg, etc.) parsed from the
+	 * primary process, which is stored in shared memory.
+	 */
+	if (rte_pci_map_device(pci_dev)) {
+		PMD_INIT_LOG(DEBUG, "failed to map pci device!");
+		return -1;
+	}
+
+	if (!dev->modern) {
 		if (vtpci_legacy_ioport_map(hw) < 0)
 			return -1;
 	}
