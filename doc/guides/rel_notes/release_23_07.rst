@@ -200,6 +200,9 @@ New Features
 
   Enhanced the GRO library to support TCP packets over IPv6 network.
 
+* **Updated Intel igc driver.**
+
+  * Added support for I225-LMVP.
 
 Removed Items
 -------------
