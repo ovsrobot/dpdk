@@ -125,6 +125,10 @@ New Features
   which are being upstreamed:
   https://lore.kernel.org/all/20230419134329.346825-1-maxime.coquelin@redhat.com/
 
+* **Updated Intel iavf driver.**
+
+  * Added support for Rx timestamp offload on vector path.
+
 * **Updated Marvell cnxk ethdev driver.**
 
   * Added support for reassembly of multi-segment packets.
