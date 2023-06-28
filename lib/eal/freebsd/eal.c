@@ -52,6 +52,7 @@
 #include "eal_hugepages.h"
 #include "eal_options.h"
 #include "eal_memcfg.h"
+#include "eal_log.h"
 #include "eal_trace.h"
 
 #define MEMSIZE_IF_NO_HUGE_PAGE (64ULL * 1024ULL * 1024ULL)
@@ -363,48 +364,6 @@ eal_get_hugepage_mem_size(void)
 	return (size < SIZE_MAX) ? (size_t)(size) : SIZE_MAX;
 }
 
-/* Parse the arguments for --log-level only */
-static void
-eal_log_level_parse(int argc, char **argv)
-{
-	int opt;
-	char **argvopt;
-	int option_index;
-	const int old_optind = optind;
-	const int old_optopt = optopt;
-	const int old_optreset = optreset;
-	char * const old_optarg = optarg;
-	struct internal_config *internal_conf =
-		eal_get_internal_configuration();
-
-	argvopt = argv;
-	optind = 1;
-	optreset = 1;
-
-	while ((opt = getopt_long(argc, argvopt, eal_short_options,
-				  eal_long_options, &option_index)) != EOF) {
-
-		int ret;
-
-		/* getopt is not happy, stop right now */
-		if (opt == '?')
-			break;
-
-		ret = (opt == OPT_LOG_LEVEL_NUM) ?
-		    eal_parse_common_option(opt, optarg, internal_conf) : 0;
-
-		/* common parser is not happy */
-		if (ret < 0)
-			break;
-	}
-
-	/* restore getopt lib */
-	optind = old_optind;
-	optopt = old_optopt;
-	optreset = old_optreset;
-	optarg = old_optarg;
-}
-
 /* Parse the argument given in the command line of the application */
 static int
 eal_parse_args(int argc, char **argv)
@@ -610,7 +569,11 @@ rte_eal_init(int argc, char **argv)
 	eal_save_args(argc, argv);
 
 	/* set log level as early as possible */
-	eal_log_level_parse(argc, argv);
+	if (eal_log_level_parse(argc, argv) < 0) {
+		rte_eal_init_alert("invalid log option.");
+		rte_errno = EINVAL;
+		return -1;
+	}
 
 	if (rte_eal_cpu_init() < 0) {
 		rte_eal_init_alert("Cannot detect lcores.");
@@ -757,6 +720,12 @@ rte_eal_init(int argc, char **argv)
 		RTE_LOG (WARNING, EAL, "Ignoring --vmware-tsc-map because "
 				"RTE_LIBRTE_EAL_VMWARE_TSC_MAP_SUPPORT is not set\n");
 #endif
+	}
+
+	if (eal_log_init(getprogname(), internal_conf->syslog_facility) < 0) {
+		rte_eal_init_alert("Cannot init logging.");
+		rte_errno = ENOMEM;
+		return -1;
 	}
 
 	/* in secondary processes, memory init may allocate additional fbarrays
