@@ -80,6 +80,7 @@ eal_log_level_parse(int argc, char *const argv[])
 				  eal_long_options, &option_index)) != EOF) {
 
 		switch (opt) {
+		case OPT_SYSLOG_NUM:
 		case OPT_LOG_LEVEL_NUM:
 			if (eal_parse_common_option(opt, optarg, internal_conf) < 0)
 				return -1;
