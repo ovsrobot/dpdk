@@ -200,6 +200,17 @@ New Features
 
   Enhanced the GRO library to support TCP packets over IPv6 network.
 
+* **Updated Intel e1000 driver.**
+
+  * Added support for new I219 devices.
+
+* **Updated Intel igc driver.**
+
+  * Added suuport for I225-LMVP.
+
+* **Updated Intel ice driver.**
+
+  * Added suuport for new E823 devices.
 
 Removed Items
 -------------
