@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <syslog.h>
+#include <unistd.h>
 
 #include <rte_log.h>
 
@@ -23,8 +24,7 @@ console_log_write(__rte_unused void *c, const char *buf, size_t size)
 	ssize_t ret;
 
 	/* write on stderr */
-	ret = fwrite(buf, 1, size, stderr);
-	fflush(stderr);
+	ret = write(STDERR_FILENO, buf, size);
 
 	/* Syslog error levels are from 0 to 7, so subtract 1 to convert */
 	syslog(rte_log_cur_msg_loglevel() - 1, "%.*s", (int)size, buf);
