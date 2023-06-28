@@ -106,6 +106,8 @@ eal_log_level_parse(int argc, char **argv)
 	struct internal_config *internal_conf =
 		eal_get_internal_configuration();
 
+	opterr = 0;
+
 	argvopt = argv;
 
 	eal_reset_internal_config(internal_conf);
@@ -143,6 +145,7 @@ eal_parse_args(int argc, char **argv)
 		eal_get_internal_configuration();
 
 	argvopt = argv;
+	opterr = 1;
 
 	while ((opt = getopt_long(argc, argvopt, eal_short_options,
 		eal_long_options, &option_index)) != EOF) {
