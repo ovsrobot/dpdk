@@ -141,6 +141,11 @@ New Features
   * Added support for quota flow action and item.
   * Added support for flow rule update.
 
+* **Updated Intel ice driver.**
+
+  * Added support for double vlan, include outer vlan stripping,
+    port-based outer vlan insertion and outer vlan tag type setting.
+
 * **Updated Solarflare network PMD.**
 
   * Added support for configuring FEC mode, querying FEC capabilities and
