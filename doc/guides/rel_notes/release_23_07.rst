@@ -200,6 +200,13 @@ New Features
 
   Enhanced the GRO library to support TCP packets over IPv6 network.
 
+* **Updated Intel idpf PMD.**
+
+  Added support for Intel IPU E2100 VF whose device id is 0x145c.
+
+* **Updated Intel cpfl PMD.**
+
+  Added support for hairpin queue.
 
 Removed Items
 -------------
