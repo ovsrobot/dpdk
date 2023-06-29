@@ -22,6 +22,7 @@ int eal_log_level_parse(int argc, char * const argv[]);
  * Determine where log data is written when no call to rte_openlog_stream.
  */
 void eal_log_set_default(FILE *default_log);
+FILE *eal_log_get_default(void);
 
 /*
  * Save a log option for later.
