@@ -9,6 +9,8 @@
 #include <rte_log.h>
 
 #include "eal_log.h"
+#include "eal_internal_cfg.h"
+#include "eal_private.h"
 
 /*
  * default log function
@@ -24,6 +26,15 @@ console_log_write(__rte_unused void *c, const char *buf, size_t size)
 
 	/* Syslog error levels are from 0 to 7, so subtract 1 to convert */
 	syslog(rte_log_cur_msg_loglevel() - 1, "%.*s", (int)size, buf);
+
+#ifdef RTE_EXEC_ENV_LINUX
+	/* Handle glibc quirk: write function should return the number of bytes
+	 * copied from buf, or 0 on error. (The function must not return a negative value.)
+	 * FreeBSD expects that write function behaves like write(2).
+	 */
+	if (ret < 0)
+		ret = 0;
+#endif
 
 	return ret;
 }
