@@ -15,12 +15,7 @@ from packaging.version import Version
 # set the version in environment for sphinx to pick up
 os.environ['DPDK_VERSION'] = version
 
-# for sphinx version >= 1.7 add parallelism using "-j auto"
-ver = run([sphinx, '--version'], stdout=PIPE,
-          stderr=STDOUT).stdout.decode().split()[-1]
 sphinx_cmd = [sphinx] + extra_args
-if Version(ver) >= Version('1.7'):
-    sphinx_cmd += ['-j', 'auto']
 
 # find all the files sphinx will process so we can write them as dependencies
 srcfiles = []
