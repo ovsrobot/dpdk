@@ -1099,6 +1099,15 @@ pci_vfio_map_resource_secondary(struct rte_pci_device *dev)
 	maps = vfio_res->maps;
 
 	for (i = 0; i < vfio_res->nb_maps; i++) {
+		/* chk for io port region */
+		ret = pci_vfio_is_ioport_bar(dev, vfio_dev_fd, i);
+		if (ret < 0) {
+			goto err_vfio_dev_fd;
+		} else if (ret) {
+			RTE_LOG(INFO, EAL, "Ignore mapping IO port bar(%d)\n", i);
+			continue;
+		}
+
 		if (maps[i].nr_areas > 0) {
 			ret = pci_vfio_sparse_mmap_bar(vfio_dev_fd, vfio_res, i, MAP_FIXED);
 			if (ret < 0) {
