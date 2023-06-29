@@ -235,6 +235,7 @@ eal_log_level_parse(int argc, char *const argv[])
 	int option_index, opt;
 	const int old_optind = optind;
 	const int old_optopt = optopt;
+	const int old_opterr = opterr;
 	char * const old_optarg = optarg;
 #ifdef RTE_EXEC_ENV_FREEBSD
 	const int old_optreset = optreset;
@@ -242,6 +243,7 @@ eal_log_level_parse(int argc, char *const argv[])
 #endif
 
 	optind = 1;
+	opterr = 0;
 
 	while ((opt = getopt_long(argc, argv, eal_short_options,
 				  eal_long_options, &option_index)) != EOF) {
@@ -263,6 +265,7 @@ out:
 	optind = old_optind;
 	optopt = old_optopt;
 	optarg = old_optarg;
+	opterr = old_opterr;
 #ifdef RTE_EXEC_ENV_FREEBSD
 	optreset = old_optreset;
 #endif
