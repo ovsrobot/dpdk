@@ -200,6 +200,12 @@ New Features
 
   Enhanced the GRO library to support TCP packets over IPv6 network.
 
+* **Updated Intel iavf driver.**
+
+  * Added new RX and TX paths in the AVX2 code to use HW offload
+    features. When the HW offload features are configured to be used, the
+    offload paths are chosen automatically. In parallel the support for HW
+    offload features was removed from the legacy AVX2 paths.
 
 Removed Items
 -------------
