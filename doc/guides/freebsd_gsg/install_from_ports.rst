@@ -23,7 +23,7 @@ Installing the DPDK Package for FreeBSD
 
 DPDK can be installed on FreeBSD using the command::
 
-	pkg install dpdk
+	pkg install dpdk20.11
 
 After the installation of the DPDK package, instructions will be printed on
 how to install the kernel modules required to use the DPDK. A more
@@ -51,7 +51,7 @@ a pre-compiled binary package.
 On a system with the ports collection installed in ``/usr/ports``, the DPDK
 can be installed using the commands::
 
-    cd /usr/ports/net/dpdk
+    cd /usr/ports/net/dpdk20.11
 
     make install
 
@@ -123,3 +123,4 @@ via the contigmem module, and 4 NIC ports bound to the nic_uio module::
 
    For an explanation of the command-line parameters that can be passed to an
    DPDK application, see section :ref:`running_sample_app`.
+
