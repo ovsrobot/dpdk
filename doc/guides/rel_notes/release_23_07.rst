@@ -200,6 +200,10 @@ New Features
 
   Enhanced the GRO library to support TCP packets over IPv6 network.
 
+* **Added 4th Gen Intel® Xeon® Processors support for Intel NTB.**
+
+  Added NTB device support for 4th Gen Intel® Xeon® Processors platform.
+
 
 Removed Items
 -------------
