@@ -200,6 +200,10 @@ New Features
 
   Enhanced the GRO library to support TCP packets over IPv6 network.
 
+* **Added Sapphire Rapids (Gen4) support for Intel NTB.**
+
+  Added NTB device support (4th generation) for Intel Sapphire Rapids platform.
+
 
 Removed Items
 -------------
