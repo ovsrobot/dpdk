@@ -313,6 +313,7 @@ enum index {
 	ITEM_IPV4,
 	ITEM_IPV4_VER_IHL,
 	ITEM_IPV4_TOS,
+	ITEM_IPV4_LENGTH,
 	ITEM_IPV4_ID,
 	ITEM_IPV4_FRAGMENT_OFFSET,
 	ITEM_IPV4_TTL,
@@ -1604,6 +1605,7 @@ static const enum index item_vlan[] = {
 static const enum index item_ipv4[] = {
 	ITEM_IPV4_VER_IHL,
 	ITEM_IPV4_TOS,
+	ITEM_IPV4_LENGTH,
 	ITEM_IPV4_ID,
 	ITEM_IPV4_FRAGMENT_OFFSET,
 	ITEM_IPV4_TTL,
@@ -4227,6 +4229,14 @@ static const struct token token_list[] = {
 			     item_param),
 		.args = ARGS(ARGS_ENTRY_HTON(struct rte_flow_item_ipv4,
 					     hdr.type_of_service)),
+	},
+	[ITEM_IPV4_LENGTH] = {
+		.name = "length",
+		.help = "total length",
+		.next = NEXT(item_ipv4, NEXT_ENTRY(COMMON_UNSIGNED),
+			     item_param),
+		.args = ARGS(ARGS_ENTRY_HTON(struct rte_flow_item_ipv4,
+					     hdr.total_length)),
 	},
 	[ITEM_IPV4_ID] = {
 		.name = "packet_id",
