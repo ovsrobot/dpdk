@@ -1610,7 +1610,7 @@ driver_dequeue:
  * Get several objects from the mempool.
  *
  * If cache is enabled, objects will be retrieved first from cache,
- * subsequently from the common pool. Note that it can return -ENOENT when
+ * subsequently from the common pool. Note that it can return -ENOBUFS when
  * the local cache and common pool are empty, even if cache from other
  * lcores are full.
  *
@@ -1624,7 +1624,7 @@ driver_dequeue:
  *   A pointer to a mempool cache structure. May be NULL if not needed.
  * @return
  *   - 0: Success; objects taken.
- *   - -ENOENT: Not enough entries in the mempool; no object is retrieved.
+ *   - -ENOBUFS: Not enough entries in the mempool; no object is retrieved.
  */
 static __rte_always_inline int
 rte_mempool_generic_get(struct rte_mempool *mp, void **obj_table,
@@ -1646,7 +1646,7 @@ rte_mempool_generic_get(struct rte_mempool *mp, void **obj_table,
  * mempool creation time (see flags).
  *
  * If cache is enabled, objects will be retrieved first from cache,
- * subsequently from the common pool. Note that it can return -ENOENT when
+ * subsequently from the common pool. Note that it can return -ENOBUFS when
  * the local cache and common pool are empty, even if cache from other
  * lcores are full.
  *
@@ -1658,7 +1658,7 @@ rte_mempool_generic_get(struct rte_mempool *mp, void **obj_table,
  *   The number of objects to get from the mempool to obj_table.
  * @return
  *   - 0: Success; objects taken
- *   - -ENOENT: Not enough entries in the mempool; no object is retrieved.
+ *   - -ENOBUFS: Not enough entries in the mempool; no object is retrieved.
  */
 static __rte_always_inline int
 rte_mempool_get_bulk(struct rte_mempool *mp, void **obj_table, unsigned int n)
@@ -1677,7 +1677,7 @@ rte_mempool_get_bulk(struct rte_mempool *mp, void **obj_table, unsigned int n)
  * mempool creation (see flags).
  *
  * If cache is enabled, objects will be retrieved first from cache,
- * subsequently from the common pool. Note that it can return -ENOENT when
+ * subsequently from the common pool. Note that it can return -ENOBUFS when
  * the local cache and common pool are empty, even if cache from other
  * lcores are full.
  *
@@ -1687,7 +1687,7 @@ rte_mempool_get_bulk(struct rte_mempool *mp, void **obj_table, unsigned int n)
  *   A pointer to a void * pointer (object) that will be filled.
  * @return
  *   - 0: Success; objects taken.
- *   - -ENOENT: Not enough entries in the mempool; no object is retrieved.
+ *   - -ENOBUFS: Not enough entries in the mempool; no object is retrieved.
  */
 static __rte_always_inline int
 rte_mempool_get(struct rte_mempool *mp, void **obj_p)
