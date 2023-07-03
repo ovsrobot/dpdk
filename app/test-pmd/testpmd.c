@@ -2479,13 +2479,22 @@ update_tx_queue_state(uint16_t port_id, uint16_t queue_id)
 static void
 update_queue_state(void)
 {
+	struct rte_port *port;
+	uint16_t nb_rx_queues;
+	uint16_t nb_tx_queues;
 	portid_t pi;
 	queueid_t qi;
 
 	RTE_ETH_FOREACH_DEV(pi) {
-		for (qi = 0; qi < nb_rxq; qi++)
+		port = &ports[pi];
+		if (eth_dev_info_get_print_err(pi, &port->dev_info) != 0)
+			continue;
+
+		nb_rx_queues = RTE_MIN(nb_rxq, port->dev_info.nb_rx_queues);
+		nb_tx_queues = RTE_MIN(nb_txq, port->dev_info.nb_tx_queues);
+		for (qi = 0; qi < nb_rx_queues; qi++)
 			update_rx_queue_state(pi, qi);
-		for (qi = 0; qi < nb_txq; qi++)
+		for (qi = 0; qi < nb_tx_queues; qi++)
 			update_tx_queue_state(pi, qi);
 	}
 }
