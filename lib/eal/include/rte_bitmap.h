@@ -137,6 +137,29 @@ __rte_bitmap_scan_init(struct rte_bitmap *bmp)
 }
 
 /**
+ * Bitmap initialize internal scan pointers at the given position for the scan function.
+ *
+ * Note: for private/internal use, for public:
+ * @see rte_bitmap_scan_from_offset()
+ *
+ * @param bmp
+ *   Handle to bitmap instance
+ * @param pos
+ *   Bit position to start scan
+ */
+static inline void
+__rte_bitmap_scan_init_at(struct rte_bitmap *bmp, uint32_t pos)
+{
+	uint64_t *slab1;
+
+	bmp->index1 = pos >> (RTE_BITMAP_SLAB_BIT_SIZE_LOG2 + RTE_BITMAP_CL_BIT_SIZE_LOG2);
+	bmp->offset1 = (pos >> RTE_BITMAP_CL_BIT_SIZE_LOG2) & RTE_BITMAP_SLAB_BIT_MASK;
+	bmp->index2 = pos >> RTE_BITMAP_SLAB_BIT_SIZE_LOG2;
+	slab1 = bmp->array1 + bmp->index1;
+	bmp->go2 = *slab1 & (1llu << bmp->offset1);
+}
+
+/**
  * Bitmap memory footprint calculation
  *
  * @param n_bits
@@ -588,6 +611,38 @@ rte_bitmap_scan(struct rte_bitmap *bmp, uint32_t *pos, uint64_t *slab)
 
 	/* Empty bitmap */
 	return 0;
+}
+
+/**
+ * @warning
+ * @b EXPERIMENTAL: this API may change without prior notice.
+ *
+ * Bitmap scan from the given offset.
+ * Function will reset internal scan state to start scanning from the offset
+ * position.
+ * @see rte_bitmap_scan()
+ *
+ * @param bmp
+ *   Handle to bitmap instance
+ * @param offset
+ *   Bit offset to start scan
+ * @param pos
+ *   When function call returns 1, pos contains the position of the next set
+ *   bit, otherwise not modified
+ * @param slab
+ *   When function call returns 1, slab contains the value of the entire 64-bit
+ *   slab where the bit indicated by pos is located.
+ *   When function call returns 0, slab is not modified.
+ * @return
+ *   0 if there is no bit set in the bitmap, 1 otherwise
+ */
+__rte_experimental
+static inline int
+rte_bitmap_scan_from_offset(struct rte_bitmap *bmp, uint32_t offset,
+			    uint32_t *pos, uint64_t *slab)
+{
+	__rte_bitmap_scan_init_at(bmp, offset);
+	return rte_bitmap_scan(bmp, pos, slab);
 }
 
 #ifdef __cplusplus
