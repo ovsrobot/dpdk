@@ -200,6 +200,9 @@ New Features
 
   Enhanced the GRO library to support TCP packets over IPv6 network.
 
+* **Added GVE PMD enabling for DQO.**
+
+  Added GVE PMD enabling for DQO queue format.
 
 Removed Items
 -------------
