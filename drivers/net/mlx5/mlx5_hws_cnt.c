@@ -453,7 +453,7 @@ mlx5_hws_cnt_service_thread_create(struct mlx5_dev_ctx_shared *sh)
 		DRV_LOG(ERR, "Failed to create HW steering's counter service thread.");
 		return -ENOSYS;
 	}
-	snprintf(name, CNT_THREAD_NAME_MAX - 1, "%s/svc@%d",
+	snprintf(name, CNT_THREAD_NAME_MAX - 1, "dpdk-mlx5-hws-%s/svc@%d",
 		 sh->ibdev_name, service_core);
 	rte_thread_set_name((rte_thread_t){(uintptr_t)sh->cnt_svc->service_thread},
 		name);
