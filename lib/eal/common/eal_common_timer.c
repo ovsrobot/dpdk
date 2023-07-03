@@ -42,10 +42,14 @@ estimate_tsc_freq(void)
 	RTE_LOG(WARNING, EAL, "WARNING: TSC frequency estimated roughly"
 		" - clock timings may be less accurate.\n");
 	/* assume that the rte_delay_us_sleep() will sleep for 1 second */
-	uint64_t start = rte_rdtsc();
+	uint64_t start, elapsed;
+
+	start = rte_rdtsc();
 	rte_delay_us_sleep(US_PER_S);
+	elapsed = rte_rdtsc() - start;
+
 	/* Round up to 10Mhz. 1E7 ~ 10Mhz */
-	return RTE_ALIGN_MUL_NEAR(rte_rdtsc() - start, CYC_PER_10MHZ);
+	return RTE_ALIGN_MUL_NEAR(elapsed, CYC_PER_10MHZ);
 }
 
 void
