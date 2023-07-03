@@ -200,6 +200,9 @@ New Features
 
   Enhanced the GRO library to support TCP packets over IPv6 network.
 
+* **Added document for VFIO live migration of Intel E810 device.**
+
+  * Steps to live migrate Intel E810 VFIO devices.
 
 Removed Items
 -------------
