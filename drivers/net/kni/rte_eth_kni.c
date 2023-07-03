@@ -163,7 +163,7 @@ eth_kni_dev_start(struct rte_eth_dev *dev)
 		internals->stop_thread = 0;
 
 		ret = rte_ctrl_thread_create(&internals->thread,
-			"kni_handle_req", NULL,
+			"dpdk-kni-req", NULL,
 			kni_handle_request, internals);
 		if (ret) {
 			PMD_LOG(ERR,

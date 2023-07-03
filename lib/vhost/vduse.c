@@ -455,7 +455,7 @@ vduse_device_create(const char *path)
 			return -1;
 		}
 
-		ret = rte_ctrl_thread_create(&fdset_tid, "vduse-events", NULL,
+		ret = rte_ctrl_thread_create(&fdset_tid, "dpdk-vduse-evt", NULL,
 				fdset_event_dispatch, &vduse.fdset);
 		if (ret != 0) {
 			VHOST_LOG_CONFIG(path, ERR, "failed to create vduse fdset handling thread\n");
