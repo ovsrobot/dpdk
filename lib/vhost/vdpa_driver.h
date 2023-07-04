@@ -81,6 +81,9 @@ struct rte_vdpa_dev_ops {
 
 	/** get device type: net device, blk device... */
 	int (*get_dev_type)(struct rte_vdpa_device *dev, uint32_t *type);
+
+	/** Get the notify reply flag */
+	int (*get_notify_reply_flag)(int vid, bool *need_reply);
 };
 
 /**
