@@ -40,3 +40,24 @@ osdep_iface_mac_get(const char *if_name, struct rte_ether_addr *mac)
 	close(if_fd);
 	return 0;
 }
+
+int
+osdep_iface_mtu_set(const char *if_name, uint16_t mtu)
+{
+	struct ifreq ifr;
+	int if_fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+	if (if_fd == -1)
+		return -errno;
+
+	rte_strscpy(ifr.ifr_name, if_name, sizeof(ifr.ifr_name));
+	ifr.ifr_mtu = mtu;
+	if (ioctl(if_fd, SIOCSIFMTU, &ifr)) {
+		PMD_LOG(ERR, "%s mtu set to %d failed\n", if_name, mtu);
+		close(if_fd);
+		return -errno;
+	}
+
+	close(if_fd);
+	return 0;
+}
