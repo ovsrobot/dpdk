@@ -622,6 +622,107 @@ which belongs to the destination VF on the VM.
    Inter-VM Communication
 
 
+Live Migrating a VM running DPDK
+--------------------------------
+
+Live migration refers to the process of moving a running virtual machine (VM) or application
+between different physical machines without disconnecting the client or application
+(see https://en.wikipedia.org/wiki/Live_migration for more information).
+
+This part describes how to migrate a Virtual Machine which has a iavf device.
+
+The following describes a target environment:
+
+*   Host Operating System: Ubuntu 20.04.5
+
+*   Guest Operating System: Ubuntu 20.04.5
+
+*   Linux Kernel Version: 5.15.0-72-generic
+
+*   Target Applications: dpdk-testpmd
+
+*   Ice Kernel Driver Version: 1.11.17.1 `<https://www.intel.com/content/www/us/en/download/19630>`_
+
+*   Qemu Version: 7.2
+
+The setup procedure is as follows:
+
+#.  Before booting the Host OS, open **BIOS setup** and enable **Intel® VT features**.
+
+#.  In the Host OS
+
+    Install the ice driver and migration driver:
+
+    .. code-block:: console
+
+        insmod ice.ko
+        insmod ice-vfio-pci.ko
+
+    Create 2 VFs and bind them to vfio pci driver:
+
+    .. code-block:: console
+
+        echo 2 > /sys/bus/pci/devices/0000:ca:00.1/sriov_numvfs
+        echo "8086 1889" > /sys/bus/pci/drivers/ice-vfio-pci/new_id
+        dpdk-devbind.py -b ice-vfio-pci 0000:ca:11.0
+        dpdk-devbind.py -b ice-vfio-pci 0000:ca:11.1
+
+    .. note::
+
+        The command above creates two vfs for device 0000:ca:00.1:
+
+    .. code-block:: console
+
+        0000:ca:11.0 'Ethernet Adaptive Virtual Function 1889' if= drv=ice-vfio-pci unused=iavf
+        0000:ca:11.1 'Ethernet Adaptive Virtual Function 1889' if= drv=ice-vfio-pci unused=iavf
+
+#.  Now, start the migration source Virtual Machine by running the following command:
+
+    .. code-block:: console
+
+        qemu/build/x86_64-softmmu/qemu-system-x86_64 -enable-kvm -cpu host -m 4G -smp 1 -device vfio-pci,host=0000:ca:11.0,x-enable-migration=true,x-pre-copy-dirty-page-tracking=off -drive file=ubuntu-2004.qcow2 -nic user,hostfwd=tcp::5555-:22 -monitor stdio
+
+    .. note::
+        The vfio-pci,host=0000:ca:11.0 value indicates that you want to attach a vfio PCI device
+        to a Virtual Machine and the respective (Bus:Device.Function) numbers should be passed,
+        x-enable-migration=true indicates that this VF supports migration. Dirty page tracking
+        is not supported, so set x-pre-copy-dirty-page-tracking=off.
+
+#.  In VM, install iavf driver and vfio-pci driver
+
+    .. code-block:: console
+
+        insmod iavf.ko
+        modprobe vfio enable_unsafe_noiommu_mode=1
+        moodprobe vfio-pci
+
+#.  Bind net device to vfio-pci driver and launch dpdk-testpmd
+
+    .. code-block:: console
+
+        dpdk-testpmd -l 0-1 -- -i
+        testpmd> set txpkts 64
+        testpmd> start tx_first
+
+#. Start the migration destination Virtual Machine
+
+    .. code-block:: console
+
+        qemu/build/x86_64-softmmu/qemu-system-x86_64 -enable-kvm -cpu host -m 4G -smp 1 -device vfio-pci,host=0000:ca:11.1,x-enable-migration=true,x-pre-copy-dirty-page-tracking=off -drive file=ubuntu-2004.qcow2 -nic user,hostfwd=tcp::5556-:22 -monitor stdio -incoming tcp:127.0.0.1:4444
+
+ #. Start migration by issuing the command in qemu console
+
+    .. code-block:: console
+
+        migrate -d tcp:127.0.0.1:4444
+
+#. Log in the destination VM, and dpdk-testpmd is not interrupt
+
+.. note::
+
+        Host kernel version above 5.17 is currently not supported due to kAPI change.
+
+
 Windows Support
 ---------------
 
