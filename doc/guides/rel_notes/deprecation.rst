@@ -118,6 +118,10 @@ Deprecation Notices
   The legacy actions should be removed
   once ``MODIFY_FIELD`` alternative is implemented in drivers.
 
+* ethdev: The Ethernet device data structure ``struct rte_eth_dev`` and
+  the fast-path ethdev flat array ``struct rte_eth_fp_ops`` will be updated
+  with new fields to support mbufs recycle mode from DPDK 23.11.
+
 * cryptodev: The function ``rte_cryptodev_cb_fn`` will be updated
   to have another parameter ``qp_id`` to return the queue pair ID
   which got error interrupt to the application,
