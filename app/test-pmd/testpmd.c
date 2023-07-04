@@ -2477,12 +2477,15 @@ update_tx_queue_state(uint16_t port_id, uint16_t queue_id)
 }
 
 static void
-update_queue_state(void)
+update_queue_state(portid_t pid)
 {
 	portid_t pi;
 	queueid_t qi;
 
 	RTE_ETH_FOREACH_DEV(pi) {
+		if (pid != pi && pid != (portid_t)RTE_PORT_ALL)
+			continue;
+
 		for (qi = 0; qi < nb_rxq; qi++)
 			update_rx_queue_state(pi, qi);
 		for (qi = 0; qi < nb_txq; qi++)
@@ -2530,7 +2533,7 @@ start_packet_forwarding(int with_tx_first)
 		return;
 
 	if (stream_init != NULL) {
-		update_queue_state();
+		update_queue_state(RTE_PORT_ALL);
 		for (i = 0; i < cur_fwd_config.nb_fwd_streams; i++)
 			stream_init(fwd_streams[i]);
 	}
@@ -3293,7 +3296,7 @@ start_port(portid_t pid)
 		pl[cfg_pi++] = pi;
 	}
 
-	update_queue_state();
+	update_queue_state(pid);
 
 	if (at_least_one_port_successfully_started && !no_link_check)
 		check_all_ports_link_status(RTE_PORT_ALL);
