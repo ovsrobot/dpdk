@@ -3365,13 +3365,14 @@ rte_vhost_backend_config_change(int vid, bool need_reply)
 static int vhost_user_backend_set_vring_host_notifier(struct virtio_net *dev,
 						    int index, int fd,
 						    uint64_t offset,
-						    uint64_t size)
+						    uint64_t size,
+							bool need_reply)
 {
 	int ret;
 	struct vhu_msg_context ctx = {
 		.msg = {
 			.request.backend = VHOST_USER_BACKEND_VRING_HOST_NOTIFIER_MSG,
-			.flags = VHOST_USER_VERSION | VHOST_USER_NEED_REPLY,
+			.flags = VHOST_USER_VERSION,
 			.size = sizeof(ctx.msg.payload.area),
 			.payload.area = {
 				.u64 = index & VHOST_USER_VRING_IDX_MASK,
@@ -3388,7 +3389,13 @@ static int vhost_user_backend_set_vring_host_notifier(struct virtio_net *dev,
 		ctx.fd_num = 1;
 	}
 
-	ret = send_vhost_backend_message_process_reply(dev, &ctx);
+	if (!need_reply)
+		ret = send_vhost_backend_message(dev, &ctx);
+	else {
+		ctx.msg.flags |= VHOST_USER_NEED_REPLY;
+		ret = send_vhost_backend_message_process_reply(dev, &ctx);
+	}
+
 	if (ret < 0)
 		VHOST_LOG_CONFIG(dev->ifname, ERR, "failed to set host notifier (%d)\n", ret);
 
@@ -3402,6 +3409,7 @@ int rte_vhost_host_notifier_ctrl(int vid, uint16_t qid, bool enable)
 	int vfio_device_fd, ret = 0;
 	uint64_t offset, size;
 	unsigned int i, q_start, q_last;
+	bool need_reply;
 
 	dev = get_device(vid);
 	if (!dev)
@@ -3440,6 +3448,11 @@ int rte_vhost_host_notifier_ctrl(int vid, uint16_t qid, bool enable)
 	if (vfio_device_fd < 0)
 		return -ENOTSUP;
 
+	if (vdpa_dev->ops->get_notify_reply_flag == NULL)
+		need_reply = true;
+	else
+		vdpa_dev->ops->get_notify_reply_flag(vid, &need_reply);
+
 	if (enable) {
 		for (i = q_start; i <= q_last; i++) {
 			if (vdpa_dev->ops->get_notify_area(vid, i, &offset,
@@ -3449,7 +3462,7 @@ int rte_vhost_host_notifier_ctrl(int vid, uint16_t qid, bool enable)
 			}
 
 			if (vhost_user_backend_set_vring_host_notifier(dev, i,
-					vfio_device_fd, offset, size) < 0) {
+					vfio_device_fd, offset, size, need_reply) < 0) {
 				ret = -EFAULT;
 				goto disable;
 			}
@@ -3458,7 +3471,7 @@ int rte_vhost_host_notifier_ctrl(int vid, uint16_t qid, bool enable)
 disable:
 		for (i = q_start; i <= q_last; i++) {
 			vhost_user_backend_set_vring_host_notifier(dev, i, -1,
-					0, 0);
+					0, 0, need_reply);
 		}
 	}
 
