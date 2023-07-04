@@ -153,3 +153,8 @@ Deprecation Notices
   The new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status
   starting with DPDK 23.07 release.
+
+* security: New sa option ``ingress_oop`` would be added in structure
+  ``rte_security_ipsec_sa_options`` to support out of place processing
+  for inline inbound SA's from DPDK 23.11. ``reserved_opts`` field in the
+  same struct would be removed as discussed in techboard meeting.
