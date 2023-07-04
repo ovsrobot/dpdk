@@ -6,7 +6,9 @@
 
 #include <net/if.h>
 #include <net/if_dl.h>
+#include <sys/ioctl.h>
 #include <sys/sysctl.h>
+#include <unistd.h>
 
 #include <rte_malloc.h>
 #include <rte_memcpy.h>
@@ -55,5 +57,26 @@ osdep_iface_mac_get(const char *if_name, struct rte_ether_addr *mac)
 	rte_memcpy(mac->addr_bytes, LLADDR(sdl), RTE_ETHER_ADDR_LEN);
 
 	rte_free(buf);
+	return 0;
+}
+
+int
+osdep_iface_mtu_set(const char *if_name, uint16_t mtu)
+{
+	struct ifreq ifr = { };
+	int if_fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+	if (if_fd == -1)
+		return -errno;
+
+	strlcpy(ifr.ifr_name, if_name, sizeof(ifr.ifr_name));
+	ifr.ifr_mtu = mtu;
+	if (ioctl(if_fd, SIOCSIFMTU, &ifr)) {
+		PMD_LOG(ERR, "%s mtu set to %d failed\n", if_name, mtu);
+		close(if_fd);
+		return -errno;
+	}
+
+	close(if_fd);
 	return 0;
 }

@@ -5,6 +5,7 @@
  */
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <time.h>
 
 #include <pcap.h>
@@ -495,8 +496,13 @@ eth_pcap_tx(void *queue, struct rte_mbuf **bufs, uint16_t nb_pkts)
 		 */
 		ret = pcap_sendpacket(pcap,
 			rte_pktmbuf_read(mbuf, 0, len, temp_data), len);
-		if (unlikely(ret != 0))
+		if (unlikely(ret != 0)) {
+			/* Oversize packet dropped due to MTU */
+			if (errno == EMSGSIZE)
+				continue;
 			break;
+		}
+
 		num_tx++;
 		tx_bytes += len;
 		rte_pktmbuf_free(mbuf);
@@ -808,6 +814,46 @@ eth_stats_reset(struct rte_eth_dev *dev)
 	return 0;
 }
 
+static int
+eth_mtu_set(struct rte_eth_dev *dev, uint16_t mtu)
+{
+	struct pmd_internals *internals = dev->data->dev_private;
+	unsigned int i;
+	bool is_supported = false;
+	int ret;
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		struct pcap_rx_queue *queue = &internals->rx_queue[i];
+
+		if ((strcmp(queue->type, ETH_PCAP_IFACE_ARG) == 0) ||
+		    (strcmp(queue->type, ETH_PCAP_RX_IFACE_ARG) == 0) ||
+		    (strcmp(queue->type, ETH_PCAP_RX_IFACE_IN_ARG) == 0)) {
+			ret = osdep_iface_mtu_set(queue->name, mtu);
+			if (ret < 0)
+				return ret;
+			is_supported = true;
+		}
+	}
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		struct pcap_tx_queue *queue = &internals->tx_queue[i];
+
+		if ((strcmp(queue->type, ETH_PCAP_IFACE_ARG) == 0) ||
+		    (strcmp(queue->type, ETH_PCAP_TX_IFACE_ARG) == 0)) {
+			ret = osdep_iface_mtu_set(queue->name, mtu);
+			if (ret < 0)
+				return ret;
+			is_supported = true;
+		}
+	}
+
+	if (!is_supported)
+		return -ENOTSUP;
+
+	PMD_LOG(INFO, "MTU set %s %u\n", dev->device->name, mtu);
+	return 0;
+}
+
 static inline void
 infinite_rx_ring_free(struct rte_ring *pkts)
 {
@@ -1005,6 +1051,7 @@ static const struct eth_dev_ops ops = {
 	.link_update = eth_link_update,
 	.stats_get = eth_stats_get,
 	.stats_reset = eth_stats_reset,
+	.mtu_set = eth_mtu_set,
 };
 
 static int

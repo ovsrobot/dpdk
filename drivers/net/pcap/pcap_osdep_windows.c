@@ -116,3 +116,10 @@ osdep_iface_mac_get(const char *device_name, struct rte_ether_addr *mac)
 	free(info);
 	return ret;
 }
+
+int
+osdep_iface_mtu_set(__rte_unused const char *device_name, __rte_unused uint16_t mtu)
+{
+	PMD_LOG(ERR, "mtu set not supported on Windows\n");
+	return -ENOTSUP;
+}
