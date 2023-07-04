@@ -42,18 +42,6 @@ opdl_event_enqueue_burst(void *port,
 }
 
 uint16_t
-opdl_event_enqueue(void *port, const struct rte_event *ev)
-{
-	struct opdl_port *p = port;
-
-	if (unlikely(!p->opdl->data->dev_started))
-		return 0;
-
-
-	return p->enq(p, ev, 1);
-}
-
-uint16_t
 opdl_event_dequeue_burst(void *port,
 			 struct rte_event *ev,
 			 uint16_t num,
@@ -714,7 +702,6 @@ opdl_probe(struct rte_vdev_device *vdev)
 
 	dev->dev_ops = &evdev_opdl_ops;
 
-	dev->enqueue = opdl_event_enqueue;
 	dev->enqueue_burst = opdl_event_enqueue_burst;
 	dev->enqueue_new_burst = opdl_event_enqueue_burst;
 	dev->enqueue_forward_burst = opdl_event_enqueue_burst;

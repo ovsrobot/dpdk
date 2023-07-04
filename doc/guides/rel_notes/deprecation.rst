@@ -153,3 +153,7 @@ Deprecation Notices
   The new port library API (functions rte_swx_port_*)
   will gradually transition from experimental to stable status
   starting with DPDK 23.07 release.
+
+* eventdev: The single-event enqueue operation, used by static inline
+  burst-enqueue functions in <rte_eventdev.h>, has been removed,
+  breaking the ABI. The API remains unaffected.

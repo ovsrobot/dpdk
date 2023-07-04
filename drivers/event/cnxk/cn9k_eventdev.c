@@ -434,7 +434,6 @@ cn9k_sso_fp_fns_set(struct rte_eventdev *event_dev)
 #undef T
 	};
 
-	event_dev->enqueue = cn9k_sso_hws_enq;
 	event_dev->enqueue_burst = cn9k_sso_hws_enq_burst;
 	event_dev->enqueue_new_burst = cn9k_sso_hws_enq_new_burst;
 	event_dev->enqueue_forward_burst = cn9k_sso_hws_enq_fwd_burst;
@@ -469,7 +468,6 @@ cn9k_sso_fp_fns_set(struct rte_eventdev *event_dev)
 				      sso_hws_tx_adptr_enq);
 
 	if (dev->dual_ws) {
-		event_dev->enqueue = cn9k_sso_hws_dual_enq;
 		event_dev->enqueue_burst = cn9k_sso_hws_dual_enq_burst;
 		event_dev->enqueue_new_burst = cn9k_sso_hws_dual_enq_new_burst;
 		event_dev->enqueue_forward_burst =

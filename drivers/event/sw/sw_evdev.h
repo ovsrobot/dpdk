@@ -288,7 +288,6 @@ sw_pmd_priv_const(const struct rte_eventdev *eventdev)
 	return eventdev->data->dev_private;
 }
 
-uint16_t sw_event_enqueue(void *port, const struct rte_event *ev);
 uint16_t sw_event_enqueue_burst(void *port, const struct rte_event ev[],
 		uint16_t num);
 

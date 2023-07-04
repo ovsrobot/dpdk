@@ -112,12 +112,6 @@ dpaa_event_enqueue_burst(void *port, const struct rte_event ev[],
 	return nb_events;
 }
 
-static uint16_t
-dpaa_event_enqueue(void *port, const struct rte_event *ev)
-{
-	return dpaa_event_enqueue_burst(port, ev, 1);
-}
-
 static void drain_4_bytes(int fd, fd_set *fdset)
 {
 	if (FD_ISSET(fd, fdset)) {
@@ -1008,7 +1002,6 @@ dpaa_event_dev_create(const char *name, const char *params)
 	priv = eventdev->data->dev_private;
 
 	eventdev->dev_ops       = &dpaa_eventdev_ops;
-	eventdev->enqueue       = dpaa_event_enqueue;
 	eventdev->enqueue_burst = dpaa_event_enqueue_burst;
 
 	if (dpaa_event_check_flags(params)) {

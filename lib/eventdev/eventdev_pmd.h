@@ -159,8 +159,6 @@ struct rte_eventdev {
 	uint8_t attached : 1;
 	/**< Flag indicating the device is attached */
 
-	event_enqueue_t enqueue;
-	/**< Pointer to PMD enqueue function. */
 	event_enqueue_burst_t enqueue_burst;
 	/**< Pointer to PMD enqueue burst function. */
 	event_enqueue_burst_t enqueue_new_burst;

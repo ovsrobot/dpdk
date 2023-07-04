@@ -1080,7 +1080,6 @@ sw_probe(struct rte_vdev_device *vdev)
 		return -EFAULT;
 	}
 	dev->dev_ops = &evdev_sw_ops;
-	dev->enqueue = sw_event_enqueue;
 	dev->enqueue_burst = sw_event_enqueue_burst;
 	dev->enqueue_new_burst = sw_event_enqueue_burst;
 	dev->enqueue_forward_burst = sw_event_enqueue_burst;

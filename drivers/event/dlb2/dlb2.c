@@ -1503,10 +1503,6 @@ error_exit:
 }
 
 static inline uint16_t
-dlb2_event_enqueue_delayed(void *event_port,
-			   const struct rte_event events[]);
-
-static inline uint16_t
 dlb2_event_enqueue_burst_delayed(void *event_port,
 				 const struct rte_event events[],
 				 uint16_t num);
@@ -1697,7 +1693,6 @@ dlb2_hw_create_ldb_port(struct dlb2_eventdev *dlb2,
 	 * performance reasons.
 	 */
 	if (qm_port->token_pop_mode == DELAYED_POP) {
-		dlb2->event_dev->enqueue = dlb2_event_enqueue_delayed;
 		dlb2->event_dev->enqueue_burst =
 			dlb2_event_enqueue_burst_delayed;
 		dlb2->event_dev->enqueue_new_burst =
@@ -3142,13 +3137,6 @@ dlb2_event_enqueue_burst_delayed(void *event_port,
 }
 
 static inline uint16_t
-dlb2_event_enqueue(void *event_port,
-		   const struct rte_event events[])
-{
-	return __dlb2_event_enqueue_burst(event_port, events, 1, false);
-}
-
-static inline uint16_t
 dlb2_event_enqueue_delayed(void *event_port,
 			   const struct rte_event events[])
 {
@@ -4585,7 +4573,6 @@ dlb2_entry_points_init(struct rte_eventdev *dev)
 	/* Expose PMD's eventdev interface */
 
 	dev->dev_ops = &dlb2_eventdev_entry_ops;
-	dev->enqueue = dlb2_event_enqueue;
 	dev->enqueue_burst = dlb2_event_enqueue_burst;
 	dev->enqueue_new_burst = dlb2_event_enqueue_new_burst;
 	dev->enqueue_forward_burst = dlb2_event_enqueue_forward_burst;

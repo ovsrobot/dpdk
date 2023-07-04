@@ -132,12 +132,6 @@ sw_event_enqueue_burst(void *port, const struct rte_event ev[], uint16_t num)
 }
 
 uint16_t
-sw_event_enqueue(void *port, const struct rte_event *ev)
-{
-	return sw_event_enqueue_burst(port, ev, 1);
-}
-
-uint16_t
 sw_event_dequeue_burst(void *port, struct rte_event *ev, uint16_t num,
 		uint64_t wait)
 {

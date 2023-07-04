@@ -365,7 +365,6 @@ cn9k_sso_hws_get_work_empty(uint64_t base, struct rte_event *ev,
 }
 
 /* CN9K Fastpath functions. */
-uint16_t __rte_hot cn9k_sso_hws_enq(void *port, const struct rte_event *ev);
 uint16_t __rte_hot cn9k_sso_hws_enq_burst(void *port,
 					  const struct rte_event ev[],
 					  uint16_t nb_events);

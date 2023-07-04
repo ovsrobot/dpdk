@@ -6,15 +6,6 @@
 #include "rte_eventdev.h"
 
 static uint16_t
-dummy_event_enqueue(__rte_unused void *port,
-		    __rte_unused const struct rte_event *ev)
-{
-	RTE_EDEV_LOG_ERR(
-		"event enqueue requested for unconfigured event device");
-	return 0;
-}
-
-static uint16_t
 dummy_event_enqueue_burst(__rte_unused void *port,
 			  __rte_unused const struct rte_event ev[],
 			  __rte_unused uint16_t nb_events)
@@ -86,7 +77,6 @@ event_dev_fp_ops_reset(struct rte_event_fp_ops *fp_op)
 {
 	static void *dummy_data[RTE_MAX_QUEUES_PER_PORT];
 	static const struct rte_event_fp_ops dummy = {
-		.enqueue = dummy_event_enqueue,
 		.enqueue_burst = dummy_event_enqueue_burst,
 		.enqueue_new_burst = dummy_event_enqueue_burst,
 		.enqueue_forward_burst = dummy_event_enqueue_burst,
@@ -107,7 +97,6 @@ void
 event_dev_fp_ops_set(struct rte_event_fp_ops *fp_op,
 		     const struct rte_eventdev *dev)
 {
-	fp_op->enqueue = dev->enqueue;
 	fp_op->enqueue_burst = dev->enqueue_burst;
 	fp_op->enqueue_new_burst = dev->enqueue_new_burst;
 	fp_op->enqueue_forward_burst = dev->enqueue_forward_burst;

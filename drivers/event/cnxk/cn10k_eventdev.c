@@ -412,7 +412,6 @@ cn10k_sso_fp_fns_set(struct rte_eventdev *event_dev)
 #undef T
 	};
 
-	event_dev->enqueue = cn10k_sso_hws_enq;
 	event_dev->enqueue_burst = cn10k_sso_hws_enq_burst;
 	event_dev->enqueue_new_burst = cn10k_sso_hws_enq_new_burst;
 	event_dev->enqueue_forward_burst = cn10k_sso_hws_enq_fwd_burst;

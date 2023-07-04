@@ -1929,14 +1929,8 @@ __rte_event_enqueue_burst(uint8_t dev_id, uint8_t port_id,
 	}
 #endif
 	rte_eventdev_trace_enq_burst(dev_id, port_id, ev, nb_events, (void *)fn);
-	/*
-	 * Allow zero cost non burst mode routine invocation if application
-	 * requests nb_events as const one
-	 */
-	if (nb_events == 1)
-		return (fp_ops->enqueue)(port, ev);
-	else
-		return fn(port, ev, nb_events);
+
+	return fn(port, ev, nb_events);
 }
 
 /**
