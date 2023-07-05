@@ -373,6 +373,11 @@ rte_vdev_uninit(const char *name)
 
 	TAILQ_REMOVE(&vdev_device_list, dev, next);
 	rte_devargs_remove(dev->device.devargs);
+	if (rte_eal_process_type() == RTE_PROC_SECONDARY &&
+	    dev->device.devargs != NULL) {
+		rte_devargs_reset(dev->device.devargs);
+		free(dev->device.devargs);
+	}
 	free(dev);
 
 unlock:
