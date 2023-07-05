@@ -94,3 +94,15 @@ examples are highlighted below.
 There are many more examples shown in the following chapters. Each of the
 documented sample applications show how to compile, configure and run the
 application as well as explaining the main functionality of the code.
+
+Driver specific Sample Application
+----------------------------------
+
+There are cases where existing sample applications may not be suitable to test
+a new driver contribution. In such cases a new driver specific sample application
+can be added to specific drivers sub-directory in the examples folder with prior
+approval from DPDK technical board. e.g.
+
+* :doc:`NTB Sample Application<ntb>`: The NTB Sample Application,
+  or ``ntb`` application demonstrates how to use NTB rawdev driver for
+  packet based processing between two systems..
