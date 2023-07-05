@@ -651,6 +651,11 @@ main(int argc, char **argv)
 		cdev_id = enabled_cdevs[cdev_index];
 
 		uint8_t socket_id = rte_cryptodev_socket_id(cdev_id);
+		/* range check the socket_id, negative values become big
+		 * positive ones due to use of unsigned value
+		 */
+		if (socket_id >= RTE_MAX_NUMA_NODES)
+			socket_id = 0;
 
 		ctx[i] = cperf_testmap[opts.test].constructor(
 				session_pool_socket[socket_id].sess_mp,
