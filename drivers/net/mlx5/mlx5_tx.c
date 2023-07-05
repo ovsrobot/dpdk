@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <rte_trace_point_register.h>
 #include <rte_mbuf.h>
 #include <rte_mempool.h>
 #include <rte_prefetch.h>
@@ -232,6 +233,15 @@ mlx5_tx_handle_completion(struct mlx5_txq_data *__rte_restrict txq,
 		MLX5_ASSERT((txq->fcqs[txq->cq_ci & txq->cqe_m] >> 16) ==
 			    cqe->wqe_counter);
 #endif
+		if (__rte_trace_point_fp_is_enabled()) {
+			uint64_t ts = rte_be_to_cpu_64(cqe->timestamp);
+			uint16_t wqe_id = rte_be_to_cpu_16(cqe->wqe_counter);
+
+			if (txq->rt_timestamp)
+				ts = mlx5_txpp_convert_rx_ts(NULL, ts);
+			rte_pmd_mlx5_trace_tx_complete(txq->port_id, txq->idx,
+						       wqe_id, ts);
+		}
 		ring_doorbell = true;
 		++txq->cq_ci;
 		last_cqe = cqe;
@@ -752,3 +762,22 @@ mlx5_tx_burst_mode_get(struct rte_eth_dev *dev,
 	}
 	return -EINVAL;
 }
+
+/* TX burst subroutines trace points. */
+RTE_TRACE_POINT_REGISTER(rte_pmd_mlx5_trace_tx_entry,
+	pmd.net.mlx5.tx.entry)
+
+RTE_TRACE_POINT_REGISTER(rte_pmd_mlx5_trace_tx_exit,
+	pmd.net.mlx5.tx.exit)
+
+RTE_TRACE_POINT_REGISTER(rte_pmd_mlx5_trace_tx_wqe,
+	pmd.net.mlx5.tx.wqe)
+
+RTE_TRACE_POINT_REGISTER(rte_pmd_mlx5_trace_tx_wait,
+	pmd.net.mlx5.tx.wait)
+
+RTE_TRACE_POINT_REGISTER(rte_pmd_mlx5_trace_tx_push,
+	pmd.net.mlx5.tx.push)
+
+RTE_TRACE_POINT_REGISTER(rte_pmd_mlx5_trace_tx_complete,
+	pmd.net.mlx5.tx.complete)
