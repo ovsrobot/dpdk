@@ -52,6 +52,28 @@ static void cmd_quit_parsed(__rte_unused void *parsed_result,
 			    struct cmdline *cl,
 			    __rte_unused void *data)
 {
+	uint16_t port_id;
+	char dev_name[RTE_DEV_NAME_MAX_LEN];
+	struct rte_devargs da;
+
+	RTE_ETH_FOREACH_DEV(port_id) {
+		rte_eth_dev_get_name_by_port(port_id, dev_name);
+		memset(&da, 0, sizeof(da));
+
+		if (rte_devargs_parsef(&da, "%s", dev_name)) {
+			cmdline_printf(cl,
+				       "cannot parse devargs for device %s\n",
+				       dev_name);
+		}
+		printf("detaching before quit...\n");
+		if (!rte_eal_hotplug_remove(rte_bus_name(da.bus), da.name))
+			cmdline_printf(cl, "detached device %s\n",
+				da.name);
+		else
+			cmdline_printf(cl, "failed to detach device %s\n",
+				da.name);
+
+	}
 	cmdline_quit(cl);
 }
 
