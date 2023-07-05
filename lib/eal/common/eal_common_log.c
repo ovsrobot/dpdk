@@ -2,6 +2,7 @@
  * Copyright(c) 2010-2014 Intel Corporation
  */
 
+#include <getopt.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
@@ -16,6 +17,8 @@
 #include <rte_per_lcore.h>
 
 #include "eal_log.h"
+#include "eal_internal_cfg.h"
+#include "eal_options.h"
 #include "eal_private.h"
 
 struct rte_log_dynamic_type {
@@ -221,6 +224,52 @@ log_save_level(uint32_t priority, const char *regex, const char *pattern)
 fail:
 	free(opt_ll);
 	return -1;
+}
+
+
+/* Parse the all arguments looking for --log-level */
+int
+eal_log_level_parse(int argc, char * const argv[])
+{
+	struct internal_config *internal_conf = eal_get_internal_configuration();
+	int option_index, opt;
+	const int old_optind = optind;
+	const int old_optopt = optopt;
+	const int old_opterr = opterr;
+	char *old_optarg = optarg;
+#ifdef RTE_EXEC_ENV_FREEBSD
+	const int old_optreset = optreset;
+	optreset = 1;
+#endif
+
+	optind = 1;
+	opterr = 0;
+
+	while ((opt = getopt_long(argc, argv, eal_short_options,
+				  eal_long_options, &option_index)) != EOF) {
+
+		switch (opt) {
+		case OPT_LOG_LEVEL_NUM:
+			if (eal_parse_common_option(opt, optarg, internal_conf) < 0)
+				return -1;
+			break;
+		case '?':
+			/* getopt is not happy, stop right now */
+			goto out;
+		default:
+			continue;
+		}
+	}
+out:
+	/* restore getopt lib */
+	optind = old_optind;
+	optopt = old_optopt;
+	optarg = old_optarg;
+	opterr = old_opterr;
+#ifdef RTE_EXEC_ENV_FREEBSD
+	optreset = old_optreset;
+#endif
+	return 0;
 }
 
 int
