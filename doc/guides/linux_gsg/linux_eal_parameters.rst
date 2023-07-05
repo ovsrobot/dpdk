@@ -135,3 +135,8 @@ Other options
         local5
         local6
         local7
+
+*   ``--log-timestamp``
+
+    Add a timestamp of seconds and microseconds to each log message
+    written to standard output.
