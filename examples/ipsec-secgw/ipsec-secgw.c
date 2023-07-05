@@ -1699,6 +1699,11 @@ cryptodevs_init(enum eh_pkt_transfer_mode mode)
 
 		total_nb_qps += qp;
 		dev_conf.socket_id = rte_cryptodev_socket_id(cdev_id);
+		/* range check the socket_id - negative values become big
+		 * positive ones due to use of unsigned value
+		 */
+		if (dev_conf.socket_id >= RTE_MAX_NUMA_NODES)
+			dev_conf.socket_id = 0;
 		dev_conf.nb_queue_pairs = qp;
 		dev_conf.ff_disable = RTE_CRYPTODEV_FF_ASYMMETRIC_CRYPTO;
 
