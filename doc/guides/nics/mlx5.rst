@@ -2071,3 +2071,81 @@ where:
 * ``sw_queue_id``: queue index in range [64536, 65535].
   This range is the highest 1000 numbers.
 * ``hw_queue_id``: queue index given by HW in queue creation.
+
+
+Tx datapath tracing
+^^^^^^^^^^^^^^^^^^^
+
+The mlx5 provides the Tx datapath tracing capability with extra debug
+information - when and how packets were scheduled and when the actual
+sending was completed by the NIC hardware. The feature engages the
+existing DPDK datapath tracing capability.
+
+Usage of the mlx5 Tx datapath tracing:
+
+#. Build DPDK application with enabled datapath tracking
+
+   * The meson option should be specified: ``--enable_trace_fp=true``
+   * The c_args should be specified:  ``-DALLOW_EXPERIMENTAL_API``
+
+   .. code-block:: console
+
+      meson configure --buildtype=debug -Denable_trace_fp=true
+         -Dc_args='-DRTE_LIBRTE_MLX5_DEBUG -DRTE_ENABLE_ASSERT -DALLOW_EXPERIMENTAL_API' build
+
+      meson configure --buildtype=release -Denable_trace_fp=true
+         -Dc_args='-DRTE_ENABLE_ASSERT -DALLOW_EXPERIMENTAL_API' build
+
+#. Configure the NIC
+
+   If the sending completion timings are important the NIC should be configured
+   to provide realtime timestamps, the ``REAL_TIME_CLOCK_ENABLE`` NV settings
+   parameter should be configured as TRUE.
+
+   .. code-block:: console
+
+      mlxconfig -d /dev/mst/mt4125_pciconf0 s REAL_TIME_CLOCK_ENABLE=1
+
+#. Run application with EAL parameters configuring the tracing in mlx5 Tx datapath
+
+    * ``--trace=pmd.net.mlx5.tx`` - the regular expression enabling the tracepoints
+      with matching names at least "pmd.net.mlx5.tx" must be enabled to gather all
+      events needed to analyze mlx5 Tx datapath and its timings. By default all
+      tracepoints are disabled.
+
+#. Store the file with gathered tracing information
+
+#. Install or build the ``babeltrace2`` package
+
+   The gathered trace data can be analyzed with a developed Python script.
+   To parse the trace, the data script uses the ``babeltrace2`` library.
+   The package should be either installed or built from source code as
+   shown below.
+
+   .. code-block:: console
+
+      git clone https://github.com/efficios/babeltrace.git
+      cd babeltrace
+      ./bootstrap
+      ./configure -help
+      ./configure --disable-api-doc --disable-man-pages
+                  --disable-python-bindings-doc --enable-python-plugins
+                  --enable-python-binding
+
+#. Run analyzing scrypt (in Python) to combine related events (packet firing and
+   completion) and see the output in human-readable view
+
+   The analyzing script is located in the folder: ``./drivers/net/mlx5/tools``
+   It requires Python3.6, ``babeltrace2`` packages and it takes the only parameter
+   of trace data file.
+
+   .. code-block:: console
+
+      ./mlx5_trace.py /var/log/rte-2023-01-23-AM-11-52-39
+
+#. Interpreting the Script Output Data
+
+   All the timings are given in nanoseconds.
+   The list of Tx bursts per port/queue is presented in the output.
+   Each list element contains the list of built WQEs with specific opcodes, and
+   each WQE contains the list of the encompassed packets to send.
