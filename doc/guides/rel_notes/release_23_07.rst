@@ -185,6 +185,12 @@ New Features
 
   * Added SM2 algorithm support in asymmetric crypto operations.
 
+* **Added mcore dispatch model in rte_graph library.**
+
+  * Added set, get and validate model APIs to enhance graph framework
+    to chose different walk models.
+  * Added mcore dispatch model to support cross-core dispatching mechanism.
+
 * **Added PDCP Library.**
 
   Added an experimental library to provide PDCP UL and DL processing of packets.
@@ -199,6 +205,11 @@ New Features
 * **Added TCP/IPv6 support in GRO library.**
 
   Enhanced the GRO library to support TCP packets over IPv6 network.
+
+* **Update l3fwd-graph sample application.**
+
+  Added a new cmdline option ``--model`` which can be used to chose
+  RTC or mcore dispatch model.
 
 
 Removed Items
