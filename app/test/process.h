@@ -15,9 +15,11 @@
 #include <string.h> /* strerror */
 #include <unistd.h> /* readlink */
 #include <dirent.h>
+#include <fcntl.h>
 
 #include <rte_string_fns.h> /* strlcpy */
 
+#define MAX_EXTRA_ARGS 32
 #ifdef RTE_EXEC_ENV_FREEBSD
 #define self "curproc"
 #define exe "file"
@@ -34,6 +36,50 @@ extern uint16_t flag_for_send_pkts;
 #endif
 #endif
 
+/* get cmdline form PID. Read process info form /proc/$PID. */
+static char *get_cmdline_from_pid(pid_t pid, char *buf, int len)
+{
+	char filename[PATH_MAX];
+	char *name = NULL;
+	int fd;
+	int ret;
+
+	if (pid < 1 || buf == NULL || len < 0) {
+		printf("%s: illegal param\n", __func__);
+		return NULL;
+	}
+
+	snprintf(filename, PATH_MAX, "/proc/%d/cmdline", pid);
+	memset(buf, 0, len);
+	fd = open(filename, O_RDONLY);
+	if (fd < 0) {
+		perror("open:");
+		return NULL;
+	}
+	ret = read(fd, buf, len);
+	close(fd);
+
+	if (ret < 0)
+		return NULL;
+
+	if (buf[ret-1] == '\n')
+		buf[--ret] = 0;
+
+	name = buf;
+	while (ret) {
+		if (((unsigned char)*name) < ' ')
+			*name = ' ';
+		name++;
+		ret--;
+	}
+	*name = 0;
+
+	if (buf[0])
+		return buf;
+
+	return NULL;
+}
+
 /*
  * launches a second copy of the test process using the given argv parameters,
  * which should include argv[0] as the process name. To identify in the
@@ -44,9 +90,15 @@ static inline int
 process_dup(const char *const argv[], int numargs, const char *env_value)
 {
 	int num;
-	char *argv_cpy[numargs + 1];
-	int i, status;
+	char *argv_cpy[MAX_EXTRA_ARGS];
+	int i, status, n, s, j;
 	char path[32];
+	char buf[1024];
+	char *token;
+	char str_1[] = "-a";
+	char str_2[] = " ";
+	char *argv_str[MAX_EXTRA_ARGS];
+	char *argv_copy[MAX_EXTRA_ARGS];
 #ifdef RTE_LIB_PDUMP
 #ifdef RTE_NET_RING
 	pthread_t thread;
@@ -113,10 +165,32 @@ process_dup(const char *const argv[], int numargs, const char *env_value)
 			closedir(dir);
 		}
 #endif
+		/* Add the -a parameter to the child process start parameter */
+		get_cmdline_from_pid(getppid(), buf, 1024);
+		token = strtok(buf, str_2);
+		argv_str[0] = strdup(token);
+		n = 0;
+		j = 0;
+		while (token != NULL) {
+			n = n + 1;
+			argv_str[n] = strdup(token);
+			token = strtok(NULL, str_2);
+		}
+		for (s = 0; s < n; s++) {
+			if (strcmp(argv_str[s], str_1) == 0 ||
+				strcmp(argv_str[s + 1], str_1) == 0) {
+				argv_copy[j] = strdup(argv_str[s + 1]);
+				j++;
+			}
+		}
+		for (s = 0; s < j; s++)
+			argv_cpy[numargs + s] = strdup(argv_copy[s]);
+
 		printf("Running binary with argv[]:");
-		for (i = 0; i < num; i++)
+		for (i = 0; i < num + j; i++)
 			printf("'%s' ", argv_cpy[i]);
 		printf("\n");
+		argv_cpy[numargs + j] = NULL;
 		fflush(stdout);
 
 		/* set the environment variable */
