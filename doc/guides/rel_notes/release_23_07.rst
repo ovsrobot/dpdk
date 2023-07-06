@@ -200,6 +200,9 @@ New Features
 
   Enhanced the GRO library to support TCP packets over IPv6 network.
 
+* **Updated Intel iavf driver.**
+
+  Added the document for iavf driver live migration based on KVM vfio migration.
 
 Removed Items
 -------------
