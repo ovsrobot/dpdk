@@ -1014,9 +1014,9 @@ mlx4_tx_burst(void *dpdk_txq, struct rte_mbuf **pkts, uint16_t pkts_n)
 			 * loopback in eSwitch, so that VFs and PF can
 			 * communicate with each other.
 			 */
-			srcrb.flags16[0] = *(rte_pktmbuf_mtod(buf, uint16_t *));
-			ctrl->imm = *(rte_pktmbuf_mtod_offset(buf, uint32_t *,
-					      sizeof(uint16_t)));
+			srcrb.flags16[0] = *rte_pktmbuf_mtod(buf, uint16_t *);
+			ctrl->imm = *rte_pktmbuf_mtod_offset(buf, uint32_t *,
+							     sizeof(uint16_t));
 		} else {
 			ctrl->imm = 0;
 		}
