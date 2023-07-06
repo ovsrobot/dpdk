@@ -672,8 +672,7 @@ tap_write_mbufs(struct tx_queue *txq, uint16_t num_mbufs,
 			if (seg_len > l234_hlen) {
 				iovecs[k].iov_len = seg_len - l234_hlen;
 				iovecs[k].iov_base =
-					rte_pktmbuf_mtod(seg, char *) +
-						l234_hlen;
+					rte_pktmbuf_mtod_offset(seg, char *, l234_hlen);
 				tap_tx_l4_add_rcksum(iovecs[k].iov_base,
 					iovecs[k].iov_len, l4_cksum,
 					&l4_raw_cksum);
