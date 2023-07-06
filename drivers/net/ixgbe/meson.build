@@ -17,6 +17,7 @@ sources = files(
         'ixgbe_rxtx.c',
         'ixgbe_tm.c',
         'ixgbe_vf_representor.c',
+	'ixgbe_recycle_mbufs_vec_common.c',
         'rte_pmd_ixgbe.c',
 )
 
