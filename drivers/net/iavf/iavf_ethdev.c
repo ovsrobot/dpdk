@@ -1379,6 +1379,24 @@ iavf_dev_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
 	err = iavf_add_del_vlan(adapter, vlan_id, on);
 	if (err)
 		return -EIO;
+	/* for i40e in-tree kernel driver, it will set strip on when setting
+	 * filter on. To be consistent with dpdk, disable strip again.
+	 */
+	if (adapter->hw.vendor_id == IAVF_INTEL_VENDOR_ID) {
+		switch (adapter->hw.device_id) {
+		case IAVF_DEV_ID_VF:
+		case IAVF_DEV_ID_VF_HV:
+		case IAVF_DEV_ID_X722_VF:
+			if (on && !adapter->is_strip) {
+				err = iavf_disable_vlan_strip(adapter);
+				if (err)
+					return -EIO;
+			}
+			break;
+		default:
+			break;
+		}
+	}
 	return 0;
 }
 

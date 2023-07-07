@@ -325,6 +325,7 @@ struct iavf_adapter {
 	bool closed;
 	uint16_t fdir_ref_cnt;
 	struct iavf_devargs devargs;
+	bool is_strip; /* only for vlan v1 */
 };
 
 /* IAVF_DEV_PRIVATE_TO */

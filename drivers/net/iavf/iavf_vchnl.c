@@ -589,6 +589,7 @@ iavf_enable_vlan_strip(struct iavf_adapter *adapter)
 		PMD_DRV_LOG(ERR, "Failed to execute command of"
 			    " OP_ENABLE_VLAN_STRIPPING");
 
+	adapter->is_strip = true;
 	return ret;
 }
 
@@ -611,6 +612,7 @@ iavf_disable_vlan_strip(struct iavf_adapter *adapter)
 			    " OP_DISABLE_VLAN_STRIPPING");
 
 	return ret;
+	adapter->is_strip = false;
 }
 
 #define VIRTCHNL_VERSION_MAJOR_START 1
