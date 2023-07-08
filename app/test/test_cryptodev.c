@@ -3153,8 +3153,9 @@ test_snow3g_authentication(const struct snow3g_hash_test_data *tdata)
 				ut_params->op);
 	ut_params->obuf = ut_params->op->sym->m_src;
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
-	ut_params->digest = rte_pktmbuf_mtod(ut_params->obuf, uint8_t *)
-			+ plaintext_pad_len;
+	ut_params->digest = rte_pktmbuf_mtod_offset(ut_params->obuf,
+						    uint8_t *,
+						    plaintext_pad_len);
 
 	/* Validate obuf */
 	TEST_ASSERT_BUFFERS_ARE_EQUAL(
@@ -3247,8 +3248,9 @@ test_snow3g_authentication_verify(const struct snow3g_hash_test_data *tdata)
 				ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 	ut_params->obuf = ut_params->op->sym->m_src;
-	ut_params->digest = rte_pktmbuf_mtod(ut_params->obuf, uint8_t *)
-				+ plaintext_pad_len;
+	ut_params->digest = rte_pktmbuf_mtod_offset(ut_params->obuf,
+						    uint8_t *,
+						    plaintext_pad_len);
 
 	/* Validate obuf */
 	if (ut_params->op->status == RTE_CRYPTO_OP_STATUS_SUCCESS)
@@ -3337,8 +3339,9 @@ test_kasumi_authentication(const struct kasumi_hash_test_data *tdata)
 
 	ut_params->obuf = ut_params->op->sym->m_src;
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
-	ut_params->digest = rte_pktmbuf_mtod(ut_params->obuf, uint8_t *)
-			+ plaintext_pad_len;
+	ut_params->digest = rte_pktmbuf_mtod_offset(ut_params->obuf,
+						    uint8_t *,
+						    plaintext_pad_len);
 
 	/* Validate obuf */
 	TEST_ASSERT_BUFFERS_ARE_EQUAL(
@@ -3425,8 +3428,9 @@ test_kasumi_authentication_verify(const struct kasumi_hash_test_data *tdata)
 				ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 	ut_params->obuf = ut_params->op->sym->m_src;
-	ut_params->digest = rte_pktmbuf_mtod(ut_params->obuf, uint8_t *)
-				+ plaintext_pad_len;
+	ut_params->digest = rte_pktmbuf_mtod_offset(ut_params->obuf,
+						    uint8_t *,
+						    plaintext_pad_len);
 
 	/* Validate obuf */
 	if (ut_params->op->status == RTE_CRYPTO_OP_STATUS_SUCCESS)
@@ -4879,8 +4883,9 @@ test_zuc_cipher_auth(const struct wireless_test_data *tdata)
 			tdata->validDataLenInBits.len,
 			"ZUC Ciphertext data not as expected");
 
-	ut_params->digest = rte_pktmbuf_mtod(ut_params->obuf, uint8_t *)
-	    + plaintext_pad_len;
+	ut_params->digest = rte_pktmbuf_mtod_offset(ut_params->obuf,
+						    uint8_t *,
+						    plaintext_pad_len);
 
 	/* Validate obuf */
 	TEST_ASSERT_BUFFERS_ARE_EQUAL(
@@ -4994,8 +4999,9 @@ test_snow3g_cipher_auth(const struct snow3g_test_data *tdata)
 			tdata->validDataLenInBits.len,
 			"SNOW 3G Ciphertext data not as expected");
 
-	ut_params->digest = rte_pktmbuf_mtod(ut_params->obuf, uint8_t *)
-	    + plaintext_pad_len;
+	ut_params->digest = rte_pktmbuf_mtod_offset(ut_params->obuf,
+						    uint8_t *,
+						    plaintext_pad_len);
 
 	/* Validate obuf */
 	TEST_ASSERT_BUFFERS_ARE_EQUAL(
@@ -5020,6 +5026,7 @@ test_snow3g_auth_cipher(const struct snow3g_test_data *tdata,
 	unsigned int plaintext_len;
 	unsigned int ciphertext_pad_len;
 	unsigned int ciphertext_len;
+	unsigned int digest_offset;
 
 	struct rte_cryptodev_info dev_info;
 
@@ -5163,9 +5170,12 @@ test_snow3g_auth_cipher(const struct snow3g_test_data *tdata,
 		debug_hexdump(stdout, "ciphertext expected:",
 			tdata->ciphertext.data, tdata->ciphertext.len >> 3);
 
-		ut_params->digest = rte_pktmbuf_mtod(ut_params->obuf, uint8_t *)
-			+ (tdata->digest.offset_bytes == 0 ?
-		plaintext_pad_len : tdata->digest.offset_bytes);
+		if (tdata->digest.offset_bytes == 0)
+			digest_offset = plaintext_pad_len;
+		else
+			digest_offset = tdata->digest.offset_bytes;
+		ut_params->digest = rte_pktmbuf_mtod_offset(ut_params->obuf,
+						    uint8_t *, digest_offset);
 
 		debug_hexdump(stdout, "digest:", ut_params->digest,
 			tdata->digest.len);
@@ -5432,6 +5442,7 @@ test_kasumi_auth_cipher(const struct kasumi_test_data *tdata,
 	unsigned int plaintext_len;
 	unsigned int ciphertext_pad_len;
 	unsigned int ciphertext_len;
+	unsigned int digest_offset;
 
 	struct rte_cryptodev_info dev_info;
 
@@ -5577,10 +5588,12 @@ test_kasumi_auth_cipher(const struct kasumi_test_data *tdata,
 		debug_hexdump(stdout, "ciphertext expected:",
 			tdata->ciphertext.data, tdata->ciphertext.len >> 3);
 
-		ut_params->digest = rte_pktmbuf_mtod(
-			ut_params->obuf, uint8_t *) +
-			(tdata->digest.offset_bytes == 0 ?
-			plaintext_pad_len : tdata->digest.offset_bytes);
+		if (tdata->digest.offset_bytes == 0)
+			digest_offset = plaintext_pad_len;
+		else
+			digest_offset = tdata->digest.offset_bytes;
+		ut_params->digest = rte_pktmbuf_mtod_offset(ut_params->obuf,
+						    uint8_t *, digest_offset);
 
 		debug_hexdump(stdout, "digest:", ut_params->digest,
 			tdata->digest.len);
@@ -5924,8 +5937,9 @@ test_kasumi_cipher_auth(const struct kasumi_test_data *tdata)
 	ciphertext = rte_pktmbuf_mtod_offset(ut_params->obuf, uint8_t *,
 				tdata->validCipherOffsetInBits.len >> 3);
 
-	ut_params->digest = rte_pktmbuf_mtod(ut_params->obuf, uint8_t *)
-			+ plaintext_pad_len;
+	ut_params->digest = rte_pktmbuf_mtod_offset(ut_params->obuf,
+						    uint8_t *,
+						    plaintext_pad_len);
 
 	const uint8_t *reference_ciphertext = tdata->ciphertext.data +
 				(tdata->validCipherOffsetInBits.len >> 3);
@@ -6344,8 +6358,9 @@ test_zuc_authentication(const struct wireless_test_data *tdata,
 				ut_params->op);
 	TEST_ASSERT_NOT_NULL(ut_params->op, "failed to retrieve obuf");
 	ut_params->obuf = ut_params->op->sym->m_src;
-	ut_params->digest = rte_pktmbuf_mtod(ut_params->obuf, uint8_t *)
-			+ plaintext_pad_len;
+	ut_params->digest = rte_pktmbuf_mtod_offset(ut_params->obuf,
+						    uint8_t *,
+						    plaintext_pad_len);
 
 	if (auth_op != RTE_CRYPTO_AUTH_OP_VERIFY) {
 		/* Validate obuf */
@@ -6380,6 +6395,7 @@ test_zuc_auth_cipher(const struct wireless_test_data *tdata,
 	unsigned int plaintext_len;
 	unsigned int ciphertext_pad_len;
 	unsigned int ciphertext_len;
+	unsigned int digest_offset;
 
 	struct rte_cryptodev_info dev_info;
 
@@ -6531,10 +6547,12 @@ test_zuc_auth_cipher(const struct wireless_test_data *tdata,
 		debug_hexdump(stdout, "ciphertext expected:",
 			tdata->ciphertext.data, tdata->ciphertext.len >> 3);
 
-		ut_params->digest = rte_pktmbuf_mtod(
-			ut_params->obuf, uint8_t *) +
-			(tdata->digest.offset_bytes == 0 ?
-			plaintext_pad_len : tdata->digest.offset_bytes);
+		if (tdata->digest.offset_bytes == 0)
+			digest_offset = plaintext_pad_len;
+		else
+			digest_offset =  tdata->digest.offset_bytes;
+		ut_params->digest = rte_pktmbuf_mtod_offset(ut_params->obuf,
+					    uint8_t *, digest_offset);
 
 		debug_hexdump(stdout, "digest:", ut_params->digest,
 			tdata->digest.len);
@@ -7819,6 +7837,7 @@ test_mixed_auth_cipher(const struct mixed_cipher_auth_test_data *tdata,
 	unsigned int plaintext_len;
 	unsigned int ciphertext_pad_len;
 	unsigned int ciphertext_len;
+	unsigned int digest_offset;
 
 	struct rte_cryptodev_info dev_info;
 	struct rte_crypto_op *op;
@@ -7959,9 +7978,13 @@ test_mixed_auth_cipher(const struct mixed_cipher_auth_test_data *tdata,
 				tdata->ciphertext.data,
 				tdata->ciphertext.len_bits >> 3);
 
-		ut_params->digest = rte_pktmbuf_mtod(ut_params->obuf, uint8_t *)
-				+ (tdata->digest_enc.offset == 0 ?
-		plaintext_pad_len : tdata->digest_enc.offset);
+		if (tdata->digest_enc.offset == 0)
+			digest_offset = plaintext_pad_len;
+		else
+			digest_offset = tdata->digest_enc.offset;
+
+		ut_params->digest = rte_pktmbuf_mtod_offset(ut_params->obuf,
+					    uint8_t *, digest_offset);
 
 		debug_hexdump(stdout, "digest:", ut_params->digest,
 				tdata->digest_enc.len);
