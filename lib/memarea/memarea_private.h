@@ -22,10 +22,20 @@
 #define MEMAREA_OBJECT_GET_SIZE(hdr) \
 		((uintptr_t)TAILQ_NEXT((hdr), obj_next) - (uintptr_t)(hdr) - \
 		 sizeof(struct memarea_objhdr) - sizeof(struct memarea_objtlr))
+#define MEMAREA_SPLIT_OBJECT_MIN_SIZE \
+		(sizeof(struct memarea_objhdr) + MEMAREA_OBJECT_SIZE_ALIGN + \
+		 sizeof(struct memarea_objtlr))
+#define MEMAREA_SPLIT_OBJECT_GET_HEADER(hdr, alloc_sz) \
+		RTE_PTR_ADD(hdr, sizeof(struct memarea_objhdr) + alloc_sz + \
+			    sizeof(struct memarea_objtlr))
 #else
 #define MEMAREA_OBJECT_GET_SIZE(hdr) \
 		((uintptr_t)TAILQ_NEXT((hdr), obj_next) - (uintptr_t)(hdr) - \
 		 sizeof(struct memarea_objhdr))
+#define MEMAREA_SPLIT_OBJECT_MIN_SIZE \
+		(sizeof(struct memarea_objhdr) + MEMAREA_OBJECT_SIZE_ALIGN)
+#define MEMAREA_SPLIT_OBJECT_GET_HEADER(hdr, alloc_sz) \
+		RTE_PTR_ADD(hdr, sizeof(struct memarea_objhdr) + alloc_sz)
 #endif
 
 struct memarea_objhdr {
